@@ -21,7 +21,8 @@
 #' directory. This function make them easy to access. This function was
 #' taken from tidyverse/readr.
 #'
-#' @param file Name of file. If `NULL`, the example files will be listed.
+#' @param file string. Name of file. If `NULL`, the example files will
+#'   be listed.
 #' @export
 #' @examples
 #' playbase_example()

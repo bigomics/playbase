@@ -7,14 +7,15 @@
 playbase_example(file = NULL)
 }
 \arguments{
-\item{file}{Name of file. If `NULL`, the example files will be listed.}
+\item{file}{string. Name of file. If `NULL`, the example files will
+be listed.}
 }
 \description{
-omp comes bundled with a number of sample files in its `inst/extdata`
+`playbase` comes bundled with a number of sample files in its `inst/extdata`
 directory. This function make them easy to access. This function was
 taken from tidyverse/readr.
 }
 \examples{
-omp_example()
-omp_example("counts.csv")
+playbase_example()
+playbase_example("counts.csv")
 }
