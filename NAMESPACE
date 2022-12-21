@@ -2,4 +2,8 @@
 
 export("%>%")
 export(playbase_example)
+export(read_contrasts)
+export(read_counts)
+export(read_expression)
+export(read_samples)
 importFrom(magrittr,"%>%")

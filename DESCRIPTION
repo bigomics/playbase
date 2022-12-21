@@ -17,6 +17,10 @@ Depends:
     R (>= 2.10)
 biocViews:
 Imports: 
+    AnnotationDbi,
+    data.table,
     magrittr,
     Matrix,
+    org.Hs.eg.db,
+    org.Mm.eg.db,
     plotly
