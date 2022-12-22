@@ -9,9 +9,9 @@
 #' @examples
 #' counts <- read_counts(playbase::example_file("counts.csv"))
 read_counts <- function(file, convert_names = FALSE) {
-  df <- .read_as_matrix(file)
+  df <- read_as_matrix(file)
 
-  is_valid <- .validate_counts(df)
+  is_valid <- validate_counts(df)
   if (!is_valid) stop("Counts file is not valid.")
 
   # convert to gene names (needed for biological effects)
@@ -40,10 +40,10 @@ read_counts <- function(file, convert_names = FALSE) {
 #' @examples
 #' counts <- read_expression(playbase::example_file("counts.csv"))
 read_expression <- function(file, convert_names = TRUE) {
-  df <- .read_as_matrix(file)
+  df <- read_as_matrix(file)
   df <- df**2
 
-  is_valid <- .validate_counts(df)
+  is_valid <- validate_counts(df)
   if (!is_valid) stop("Expression file is not valid.")
 
   # convert to gene names (needed for biological effects)
@@ -72,9 +72,9 @@ read_expression <- function(file, convert_names = TRUE) {
 #' @examples
 #' samples <- read_samples(playbase::example_file("samples.csv"))
 read_samples <- function(file) {
-  df <- .read_as_matrix(file)
+  df <- read_as_matrix(file)
 
-  is_valid <- .validate_samples(df)
+  is_valid <- validate_samples(df)
   if (!is_valid) stop("Samples file is not valid.")
 
   as.data.frame(df)
@@ -90,9 +90,9 @@ read_samples <- function(file) {
 #' @examples
 #' contrasts <- read_contrasts(playbase::example_file("contrasts.csv"))
 read_contrasts <- function(file) {
-  df <- .read_as_matrix(file)
+  df <- read_as_matrix(file)
 
-  is_valid <- .validate_contrasts(df)
+  is_valid <- validate_contrasts(df)
   if (!is_valid) stop("Contrasts file is not valid.")
 
   df
@@ -108,7 +108,7 @@ read_contrasts <- function(file) {
 #'
 #' @examples
 #' x <- 1
-.read_as_matrix <- function(file) {
+read_as_matrix <- function(file) {
   x0 <- data.table::fread(
     file = file,
     check.names = FALSE,
@@ -136,10 +136,10 @@ read_contrasts <- function(file) {
 #' @param data matrix.
 #'
 #' @return boolean. true if data is valid
-.validate_counts <- function(data) {
-  t1 <- .check_duplicate_rows(data)
-  t2 <- .check_empty_rows(data)
-  t3 <- .check_duplicate_cols(data)
+validate_counts <- function(data) {
+  t1 <- check_duplicate_rows(data)
+  t2 <- check_empty_rows(data)
+  t3 <- check_duplicate_cols(data)
   return(t2 && t3)
 }
 
@@ -154,11 +154,11 @@ read_contrasts <- function(file) {
 #' @param data matrix.
 #'
 #' @return boolean. true if data is valid
-.validate_samples <- function(data) {
-  t1 <- .check_duplicate_rows(data)
-  t2 <- .check_empty_rows(data)
-  t3 <- .check_duplicate_cols(data)
-  t4 <- .check_max_samples(data)
+validate_samples <- function(data) {
+  t1 <- check_duplicate_rows(data)
+  t2 <- check_empty_rows(data)
+  t3 <- check_duplicate_cols(data)
+  t4 <- check_max_samples(data)
   return(t1 & t2 & t3 & t4)
 }
 
@@ -173,32 +173,32 @@ read_contrasts <- function(file) {
 #' @param data matrix.
 #'
 #' @return boolean. true if data is valid
-.validate_contrasts <- function(data) {
-  t1 <- .check_duplicate_rows(data)
-  t2 <- .check_empty_rows(data)
-  t3 <- .check_duplicate_cols(data)
+validate_contrasts <- function(data) {
+  t1 <- check_duplicate_rows(data)
+  t2 <- check_empty_rows(data)
+  t3 <- check_duplicate_cols(data)
   vs_names <- colnames(data)[-1]
   t4 <- all(grepl("_vs_", vs_names))
   return(t1 & t2 & t3 & t4)
 }
 
-.check_duplicate_rows <- function(data) {
+check_duplicate_rows <- function(data) {
   rn <- setdiff(data[[1]], c("", "NA", NA))
   t1 <- sum(duplicated(rn)) == 0
   return(t1)
 }
 
-.check_empty_rows <- function(data) {
+check_empty_rows <- function(data) {
   t1 <- nrow(data) > 0
   return(t1)
 }
 
-.check_duplicate_cols <- function(data) {
+check_duplicate_cols <- function(data) {
   t1 <- sum(duplicated(colnames(data))) == 0
   return(t1)
 }
 
-.check_max_samples <- function(data, max_samples = 2000) {
+check_max_samples <- function(data, max_samples = 2000) {
   MAXSAMPLES <- as.integer(max_samples)
   t1 <- (ncol(data) - 1) <= MAXSAMPLES
   return(t1)
