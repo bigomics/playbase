@@ -8,7 +8,7 @@
 #'
 #' @examples
 #' counts <- read_counts(playbase::example_file("counts.csv"))
-read_counts <- function(file, convert_names = TRUE) {
+read_counts <- function(file, convert_names = FALSE) {
   df <- .read_as_matrix(file)
 
   is_valid <- .validate_counts(df)
@@ -17,7 +17,7 @@ read_counts <- function(file, convert_names = TRUE) {
   # convert to gene names (needed for biological effects)
   if (convert_names) {
     pp <- rownames(df)
-    rownames(df) <- .probe2symbol(pp)
+    rownames(df) <- .probe_to_symbol(pp)
     sel <- !(rownames(df) %in% c(NA, "", "NA"))
     df <- df[sel, ]
     xx <- tapply(
@@ -49,7 +49,7 @@ read_expression <- function(file, convert_names = TRUE) {
   # convert to gene names (needed for biological effects)
   if (convert_names) {
     pp <- rownames(df)
-    rownames(df) <- .probe2symbol(pp)
+    rownames(df) <- .probe_to_symbol(pp)
     sel <- !(rownames(df) %in% c(NA, "", "NA"))
     df <- df[sel, ]
     xx <- tapply(

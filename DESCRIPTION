@@ -19,8 +19,21 @@ biocViews:
 Imports: 
     AnnotationDbi,
     data.table,
+    EnsDb.Hsapiens.v86,
+    EnsDb.Mmusculus.v79,
+    GenomicFeatures,
+    igraph,
+    irlba,
+    limma,
     magrittr,
     Matrix,
     org.Hs.eg.db,
     org.Mm.eg.db,
-    plotly
+    plotly,
+    Rtsne,
+    scran,
+    Seurat,
+    TxDb.Hsapiens.UCSC.hg19.knownGene,
+    TxDb.Mmusculus.UCSC.mm10.knownGene,
+    umap,
+    uwot
