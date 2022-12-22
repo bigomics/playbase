@@ -65,7 +65,6 @@ create_pgx <- function(counts,
                        cluster.contrasts = FALSE,
                        do.clustergenes = TRUE,
                        only.proteincoding = TRUE) {
-
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("dimension of counts and X do not match\n")
   }

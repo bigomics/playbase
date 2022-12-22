@@ -1,54 +1,39 @@
-logCPM <- function(counts, total=1e6, prior=1) {
+logCPM <- function(counts, total = 1e6, prior = 1) {
   ## Transform to logCPM (log count-per-million) if total counts is
   ## larger than 1e6, otherwise scale to previous avarage total count.
-  ##
-  ##
-  if(is.null(total)) {
-    ##total <- nrow(counts)
-    ##total <- mean(colSums(counts1!=0)) ## avg. number of expr genes
-    total0 <- mean(Matrix::colSums(counts,na.rm=TRUE)) ## previous sum
-    total <- ifelse( total0 < 1e6, total0, 1e6 )
-    message("[logCPM] setting column sums to = ",round(total,2))
+  if (is.null(total)) {
+    total0 <- mean(Matrix::colSums(counts, na.rm = TRUE)) ## previous sum
+    total <- ifelse(total0 < 1e6, total0, 1e6)
   }
-  if(any(class(counts)=="dgCMatrix")) {
+  if (any(class(counts) == "dgCMatrix")) {
     ## fast/sparse calculate CPM
     cpm <- counts
-    cpm[is.na(cpm)] <- 0  ## OK??
-    cpm@x <- total * cpm@x / rep.int(Matrix::colSums(cpm), diff(cpm@p))  ## fast divide by columns sum
+    cpm[is.na(cpm)] <- 0 ## OK??
+    cpm@x <- total * cpm@x / rep.int(Matrix::colSums(cpm), diff(cpm@p)) ## fast divide by columns sum
     cpm@x <- log2(prior + cpm@x)
     return(cpm)
   } else {
-    cpm <- t(t(counts) / Matrix::colSums(counts,na.rm=TRUE)) * total
+    cpm <- t(t(counts) / Matrix::colSums(counts, na.rm = TRUE)) * total
     x <- log2(prior + cpm)
     return(x)
   }
 }
 
-pgx.clusterSamples2 <- function(pgx, methods=c("pca","tsne","umap"), dims=c(2,3),
-                                reduce.sd=1000, reduce.pca=50, perplexity=30,
-                                center.rows=TRUE, scale.rows=FALSE,
-                                X=NULL, umap.pkg="uwot", replace.orig=TRUE )
-{
-  if(!is.null(X)) {
-    message("using provided X matrix...")
-  } else if(!is.null(pgx$X)) {
-    message("using pgx$X matrix...")
+pgx.clusterSamples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2, 3),
+                                reduce.sd = 1000, reduce.pca = 50, perplexity = 30,
+                                center.rows = TRUE, scale.rows = FALSE,
+                                X = NULL, umap.pkg = "uwot", replace.orig = TRUE) {
+  if (!is.null(X)) {
+    invisible()
+  } else if (!is.null(pgx$X)) {
     X <- pgx$X
   } else {
-    message("using logCPM(pgx$counts)...")
-    ## X <- log2(1 + pgx$counts)
-    X <- logCPM(pgx$counts, total=NULL)
+    X <- logCPM(pgx$counts, total = NULL)
   }
-  dim(X)
-  ##sdx <- apply(X,1,sd)
-  ##X <- X[head(order(-sdx),reduce.sd),]
-  ##if(center.rows) X <- X  - rowMeans(X)
-  ##if(scale.rows)  X <- X / (1e-6+apply(X,1,sd))
-  ##if(rank.tf) X <- scale(apply(X,2,rank))  ## works nicely
 
-  dim(X)
   clust.pos <- pgx.clusterBigMatrix(
-    X, methods = methods,
+    X,
+    methods = methods,
     dims = dims,
     perplexity = perplexity,
     center.features = center.rows,
@@ -58,126 +43,110 @@ pgx.clusterSamples2 <- function(pgx, methods=c("pca","tsne","umap"), dims=c(2,3)
     find.clusters = FALSE,
     umap.pkg = umap.pkg
   )
-  names(clust.pos)
-  ##clust.index <- paste0("c",clust.pos$membership)
+
   clust.index <- clust.pos$membership
   clust.pos$membership <- NULL
-  table(clust.index)
 
-  if(replace.orig) {
-    message("[pgx.clusterSamples2] update tsne2d/tsne3d and 'cluster' pheno...")
+  if (replace.orig) {
     pgx$samples$cluster <- clust.index
     pgx$tsne2d <- clust.pos[["tsne2d"]]
     pgx$tsne3d <- clust.pos[["tsne3d"]]
-  } else {
-    message("[pgx.clusterSamples2] skipping tsne2d/tsne3d update...")
   }
 
   pgx$cluster <- NULL
-  pgx$cluster$pos  <- clust.pos
+  pgx$cluster$pos <- clust.pos
   pgx$cluster$index <- clust.index
 
-  message("[pgx.clusterSamples2] done!")
   pgx
 }
 
 
-pgx.inferGender <- function(X, gene_name=NULL) {
+pgx.inferGender <- function(X, gene_name = NULL) {
   ## List of cell cycle markers, from Tirosh et al, 2015
   ##
-  ##cc.genes <- readLines(con = "../opt/seurat/regev_lab_cell_cycle_genes.txt")
-  if(is.null(gene_name)) gene_name <- toupper(sub(".*:","",rownames(X)))
-  if(0) {
-    X <- log2(1+ngs$counts)
-    gene_name = rownames(X)
-    x.genes <- rownames(ngs$genes)[grep("X",ngs$genes$chr)]
-    y.genes <- rownames(ngs$genes)[grep("Y",ngs$genes$chr)]
-    x.genes
-    y.genes
-  } else {
-    y.genes = intersect(c("DDX3Y","RPS4Y1","USP9Y","KDM5D"),gene_name)
-    y.genes
-    x.genes = intersect(c("XIST"),gene_name)
-    x.genes
-  }
-  if( length(y.genes)==0 && length(x.genes)==0 ) {
-    cat("warning:: could not determine sex. missing some X/Y marker genes\n")
+  if (is.null(gene_name)) gene_name <- toupper(sub(".*:", "", rownames(X)))
+
+  y.genes <- intersect(c("DDX3Y", "RPS4Y1", "USP9Y", "KDM5D"), gene_name)
+  y.genes
+  x.genes <- intersect(c("XIST"), gene_name)
+  x.genes
+
+  if (length(y.genes) == 0 && length(x.genes) == 0) {
+    warning("Could not determine sex. missing some X/Y marker genes\n")
     sex <- rep(NA, ncol(X))
     return(sex)
   }
   sex <- rep(NA, ncol(X))
-  if( length(y.genes)>0 && length(x.genes)>0 ) {
-    x.expr <- colMeans(X[match(x.genes, gene_name),,drop=FALSE])
-    y.expr <- colMeans(X[match(y.genes, gene_name),,drop=FALSE])
-    x.expr
-    y.expr
+  if (length(y.genes) > 0 && length(x.genes) > 0) {
+    x.expr <- colMeans(X[match(x.genes, gene_name), , drop = FALSE])
+    y.expr <- colMeans(X[match(y.genes, gene_name), , drop = FALSE])
     mean.expr <- colMeans(X)
-    ##plot(x.expr, y.expr)
     sex <- rep(NA, ncol(X))
-    sex <- ifelse( x.expr > mean.expr & y.expr < mean.expr, "F", sex)
-    sex <- ifelse( y.expr > mean.expr & x.expr < mean.expr, "M", sex)
-    sex
+    sex <- ifelse(x.expr > mean.expr & y.expr < mean.expr, "F", sex)
+    sex <- ifelse(y.expr > mean.expr & x.expr < mean.expr, "M", sex)
     return(sex)
   }
   return(sex)
 }
 
-pgx.inferCellCyclePhase <- function(counts)
-{
+pgx.inferCellCyclePhase <- function(counts) {
   ## List of cell cycle markers, from Tirosh et al, 2015
   ##
-  ##cc.genes <- readLines(con = "../opt/seurat/regev_lab_cell_cycle_genes.txt")
-  cc.genes = strsplit("MCM5 PCNA TYMS FEN1 MCM2 MCM4 RRM1 UNG GINS2 MCM6 CDCA7 DTL PRIM1 UHRF1 MLF1IP HELLS RFC2 RPA2 NASP RAD51AP1 GMNN WDR76 SLBP CCNE2 UBR7 POLD3 MSH2 ATAD2 RAD51 RRM2 CDC45 CDC6 EXO1 TIPIN DSCC1 BLM CASP8AP2 USP1 CLSPN POLA1 CHAF1B BRIP1 E2F8 HMGB2 CDK1 NUSAP1 UBE2C BIRC5 TPX2 TOP2A NDC80 CKS2 NUF2 CKS1B MKI67 TMPO CENPF TACC3 FAM64A SMC4 CCNB2 CKAP2L CKAP2 AURKB BUB1 KIF11 ANP32E TUBB4B GTSE1 KIF20B HJURP CDCA3 HN1 CDC20 TTK CDC25C KIF2C RANGAP1 NCAPD2 DLGAP5 CDCA2 CDCA8 ECT2 KIF23 HMMR AURKA PSRC1 ANLN LBR CKAP5 CENPE CTCF NEK2 G2E3 GAS2L3 CBX5 CENPA",split=" ")[[1]]
+  cc.genes <- c(
+    "MCM5", "PCNA", "TYMS", "FEN1", "MCM2", "MCM4", "RRM1", "UNG",
+    "GINS2", "MCM6", "CDCA7", "DTL", "PRIM1", "UHRF1", "MLF1IP",
+    "HELLS", "RFC2", "RPA2", "NASP", "RAD51AP1", "GMNN", "WDR76",
+    "SLBP", "CCNE2", "UBR7", "POLD3", "MSH2", "ATAD2", "RAD51", "RRM2",
+    "CDC45", "CDC6", "EXO1", "TIPIN", "DSCC1", "BLM", "CASP8AP2",
+    "USP1", "CLSPN", "POLA1", "CHAF1B", "BRIP1", "E2F8", "HMGB2",
+    "CDK1", "NUSAP1", "UBE2C", "BIRC5", "TPX2", "TOP2A", "NDC80",
+    "CKS2", "NUF2", "CKS1B", "MKI67", "TMPO", "CENPF", "TACC3", "FAM64A",
+    "SMC4", "CCNB2", "CKAP2L", "CKAP2", "AURKB", "BUB1", "KIF11",
+    "ANP32E", "TUBB4B", "GTSE1", "KIF20B", "HJURP", "CDCA3", "HN1",
+    "CDC20", "TTK", "CDC25C", "KIF2C", "RANGAP1", "NCAPD2", "DLGAP5",
+    "CDCA2", "CDCA8", "ECT2", "KIF23", "HMMR", "AURKA", "PSRC1",
+    "ANLN", "LBR", "CKAP5", "CENPE", "CTCF", "NEK2", "G2E3", "GAS2L3",
+    "CBX5", "CENPA"
+  )
   s_genes <- cc.genes[1:43]
   g2m_genes <- cc.genes[44:97]
 
   ## Create our Seurat object and complete the initalization steps
-  rownames(counts) <- toupper(rownames(counts))  ## mouse...
-  ##counts1 <- cbind(counts,counts,counts,counts,counts,counts)
+  rownames(counts) <- toupper(rownames(counts)) ## mouse...
   obj <- Seurat::CreateSeuratObject(counts)
-  obj <- Seurat::NormalizeData(obj, verbose=0)
-  suppressWarnings( obj <- Seurat::CellCycleScoring(obj, s.features=s_genes,
-                                                    g2m.features=g2m_genes, set.ident=TRUE))
-  ## view cell cycle scores and phase assignments
-  ##head(x = obj@meta.data)
-  ##table(obj@meta.data$Phase)
+  obj <- Seurat::NormalizeData(obj, verbose = 0)
+  suppressWarnings(obj <- Seurat::CellCycleScoring(obj,
+    s.features = s_genes,
+    g2m.features = g2m_genes, set.ident = TRUE
+  ))
   s.score <- obj@meta.data$S.Score
   g2m.score <- obj@meta.data$G2M.Score
   phase <- obj@meta.data$Phase
-  if(is.null(phase) || length(phase)==0) return(NULL)
+  if (is.null(phase) || length(phase) == 0) {
+    return(NULL)
+  }
   return(phase)
 }
 
-compute.cellcycle.gender <- function(ngs, rna.counts=ngs$counts)
-{
+compute.cellcycle.gender <- function(ngs, rna.counts = ngs$counts) {
   pp <- rownames(rna.counts)
-  is.mouse = (mean(grepl("[a-z]",gsub(".*:|.*\\]","",pp))) > 0.8)
-  is.mouse
-  if(!is.mouse) {
-    if(1) {
-      message("estimating cell cycle (using Seurat)...")
-      ngs$samples$cell.cycle <- NULL
-      ngs$samples$.cell.cycle <- NULL
-      ##counts <- ngs$counts
-      counts <- rna.counts
-      rownames(counts) <- toupper(ngs$genes[rownames(counts),"gene_name"])
-      res <- try(pgx.inferCellCyclePhase(counts) )  ## can give bins error
-      if(class(res)!="try-error") {
-        ngs$samples$.cell_cycle <- res
-        table(ngs$samples$.cell_cycle)
-      }
+  is.mouse <- (mean(grepl("[a-z]", gsub(".*:|.*\\]", "", pp))) > 0.8)
+  if (!is.mouse) {
+    ngs$samples$cell.cycle <- NULL
+    ngs$samples$.cell.cycle <- NULL
+    counts <- rna.counts
+    rownames(counts) <- toupper(ngs$genes[rownames(counts), "gene_name"])
+    res <- try(pgx.inferCellCyclePhase(counts)) ## can give bins error
+    if (class(res) != "try-error") {
+      ngs$samples$.cell_cycle <- res
+      table(ngs$samples$.cell_cycle)
     }
-    if(!(".gender" %in% colnames(ngs$samples) )) {
-      message("estimating gender...")
+    if (!(".gender" %in% colnames(ngs$samples))) {
       ngs$samples$.gender <- NULL
-      X <- log2(1+rna.counts)
-      gene_name <- ngs$genes[rownames(X),"gene_name"]
-      ngs$samples$.gender <- pgx.inferGender( X, gene_name )
-      table(ngs$samples$.gender)
-    } else {
-      message("gender already estimated. skipping...")
+      X <- log2(1 + rna.counts)
+      gene_name <- ngs$genes[rownames(X), "gene_name"]
+      ngs$samples$.gender <- pgx.inferGender(X, gene_name)
     }
-    Matrix::head(ngs$samples)
   }
   return(ngs)
 }
@@ -284,24 +253,33 @@ alias2hugo <- function(s, org = NULL, na.orig = TRUE) {
   mm.symbol <- unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
   if (is.null(org)) {
     is.human <- mean(s %in% hs.symbol, na.rm = TRUE) > mean(s %in% mm.symbol,
-                                                            na.rm = TRUE)
+      na.rm = TRUE
+    )
     org <- ifelse(is.human, "hs", "mm")
   }
   nna <- which(!is.na(s) & s != "" & s != " ")
   s1 <- trimws(s[nna])
   hugo <- NULL
   if (org == "hs") {
-    eg <- sapply(AnnotationDbi::mget(s1, envir = org.Hs.eg.db::org.Hs.egALIAS2EG,
-                                     ifnotfound = NA), "[", 1)
+    eg <- sapply(AnnotationDbi::mget(s1,
+      envir = org.Hs.eg.db::org.Hs.egALIAS2EG,
+      ifnotfound = NA
+    ), "[", 1)
     eg[is.na(eg)] <- "unknown"
-    hugo <- sapply(AnnotationDbi::mget(eg, envir = org.Hs.eg.db::org.Hs.egSYMBOL,
-                                       ifnotfound = NA), "[", 1)
+    hugo <- sapply(AnnotationDbi::mget(eg,
+      envir = org.Hs.eg.db::org.Hs.egSYMBOL,
+      ifnotfound = NA
+    ), "[", 1)
   } else if (org == "mm") {
-    eg <- sapply(AnnotationDbi::mget(s1, envir = org.Mm.eg.db::org.Mm.egALIAS2EG,
-                                     ifnotfound = NA), "[", 1)
+    eg <- sapply(AnnotationDbi::mget(s1,
+      envir = org.Mm.eg.db::org.Mm.egALIAS2EG,
+      ifnotfound = NA
+    ), "[", 1)
     eg[is.na(eg)] <- "unknown"
-    hugo <- sapply(AnnotationDbi::mget(eg, envir = org.Mm.eg.db::org.Mm.egSYMBOL,
-                                       ifnotfound = NA), "[", 1)
+    hugo <- sapply(AnnotationDbi::mget(eg,
+      envir = org.Mm.eg.db::org.Mm.egSYMBOL,
+      ifnotfound = NA
+    ), "[", 1)
   } else {
     stop("[alias2hugo] invalid organism")
   }
@@ -341,35 +319,34 @@ makeDirectContrasts <- function(Y, ref, na.rm = TRUE) {
   nlevel <- apply(Y, 2, function(y) length(unique(y)))
   if (any(nlevel < 2)) {
     notlevely <- colnames(Y)[which(nlevel < 2)]
-    message("warning:: not enough levels: ", notlevely)
   }
   ii <- which(nlevel > 1)
-  ii
   if (length(ii) == 0) {
-    message("warning:: no valid phenotypes")
+    warning("no valid phenotypes")
     return(NULL)
   }
-
 
   Y <- Y[, ii, drop = FALSE]
   ref <- ref[ii]
 
   ## make contrast
-  exp.matrix <- makeDirectContrasts000(Y = Y, ref = ref,
-                                       na.rm = na.rm, warn = FALSE)
+  exp.matrix <- makeDirectContrasts000(
+    Y = Y, ref = ref,
+    na.rm = na.rm, warn = FALSE
+  )
   exp.matrix <- sign(exp.matrix)
   no.vs <- grep("_vs_|_VS_", colnames(exp.matrix), invert = TRUE)
-  no.vs
   if (length(no.vs) > 0) {
-    colnames(exp.matrix)[no.vs] <- paste0(colnames(exp.matrix)[no.vs],
-                                          ":Y_vs_N")
+    colnames(exp.matrix)[no.vs] <- paste0(
+      colnames(exp.matrix)[no.vs],
+      ":Y_vs_N"
+    )
   }
   exp.matrix0 <- exp.matrix
   if (all(grepl("_vs_|_VS_", colnames(exp.matrix0)))) {
     exp.matrix0 <- contrastAsLabels(exp.matrix0)
   }
   group <- pgx.getConditions(exp.matrix0)
-  table(group)
   if (length(levels(group)) > 0.5 * nrow(exp.matrix)) {
     warning("contrast matrix looks degenerate.
         consider removing a contrast.\n")
@@ -388,15 +365,18 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
   all <- c("all", "other", "others", "rest")
   full <- c("*", "full")
   has.ref <- rep(NA, ncol(Y))
-  for (i in 1:ncol(Y)) has.ref[i] <- (ref[i] %in% Y[, i] || ref[i] %in% c(all, full))
-  has.ref
+  for (i in 1:ncol(Y)) {
+    has.ref[i] <- (ref[i] %in% Y[, i] || ref[i] %in% c(all, full))
+  }
   if (!all(has.ref)) {
     stop("ERROR:: reference ", which(!has.ref), " not in phenotype matrix\n")
     return(NULL)
   }
 
   contr.matrix <- c()
-  if (length(ref) < ncol(Y)) ref <- Matrix::head(rep(ref, 99), ncol(Y))
+  if (length(ref) < ncol(Y)) {
+    ref <- Matrix::head(rep(ref, 99), ncol(Y))
+  }
   ref.pattern <- "wt|contr|ctr|untreat|normal|^neg|ref|^no$|^0$|^0h$|scrambl|none|dmso|vehicle"
   i <- 1
   for (i in 1:ncol(Y)) {
@@ -405,7 +385,6 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
     x <- as.character(Y[, i])
     x[is.na(x) | x == "NA"] <- "_"
     detect.ref <- any(grepl(ref.pattern, x, ignore.case = TRUE))
-    detect.ref
     if (is.na(ref1) && detect.ref) {
       ref1 <- grep(ref.pattern, x, ignore.case = TRUE, value = TRUE)
       ref1 <- sort(ref1)[1]
@@ -416,7 +395,6 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
     if (ref1 %in% full) {
       levels <- names(table(x))
       levels <- setdiff(levels, c(NA, "NA"))
-      levels
       if (length(levels) > 1) {
         cc <- makeFullContrasts(levels)
         m1 <- m1[, rownames(cc)] %*% cc
@@ -505,10 +483,12 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
       type <- NULL
     }
   }
+
   if (is.null(type)) {
     warning("invalid type: ", type, "\n")
     return(NULL)
   }
+
   if (!type %in% c(
     "ensembl", "ensemblTRANS", "unigene", "refseq",
     "accnum", "uniprot", "symbol"

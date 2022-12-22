@@ -32,10 +32,10 @@ plotting functions operate.
 library(playbase)
 
 ## example files can be accessed via the example_file() function
-counts <- playbase::read_counts(playbase::example_file('counts.csv'))
-samples <- playbase::read_samples(playbase::example_file('samples.csv'))
-contrasts <- playbase::read_contrasts(playbase::example_file('contrasts.csv'))
+counts <- playbase::read_counts(playbase::example_file("counts.csv"))
+samples <- playbase::read_samples(playbase::example_file("samples.csv"))
+contrasts <- playbase::read_contrasts(playbase::example_file("contrasts.csv"))
 
 ## create a pgx object
-#pgx <- playbase::create_pgx(counts, samples, contrasts)
+# pgx <- playbase::create_pgx(counts, samples, contrasts)
 ```
