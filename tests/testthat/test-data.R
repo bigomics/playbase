@@ -1,5 +1,5 @@
 test_that("example files exist", {
-  all_files <- playbase::playbase_example()
+  all_files <- playbase::example_file()
   expect(
       sum(!c(
           'counts.csv',

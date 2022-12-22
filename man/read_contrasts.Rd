@@ -16,5 +16,5 @@ matrix. the file with the data
 Read contrasts data from file
 }
 \examples{
-contrasts <- read_contrasts(playbase::playbase_example('contrasts.csv'))
+contrasts <- read_contrasts(playbase::example_file("contrasts.csv"))
 }

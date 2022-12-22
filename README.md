@@ -31,5 +31,10 @@ plotting functions operate.
 ``` r
 library(playbase)
 
-## example files can be accessed via playbase_example
+## example files can be accessed via playbase_example()
+counts <- playbase::read_counts(playbase::example_file('counts.csv'))
+#> 
+#> 
+samples <- playbase::read_samples(playbase::example_file('samples.csv'))
+contrasts <- playbase::read_contrasts(playbase::example_file('contrasts.csv'))
 ```

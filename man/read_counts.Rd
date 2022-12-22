@@ -16,5 +16,5 @@ matrix. the file with the data
 Read counts data from file
 }
 \examples{
-counts <- read_counts(playbase::playbase_example('counts.csv'))
+counts <- read_counts(playbase::example_file("counts.csv"))
 }

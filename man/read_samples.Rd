@@ -16,5 +16,5 @@ dataframe the file with the data
 Read samples data from file
 }
 \examples{
-samples <- read_samples(playbase::playbase_example('samples.csv'))
+samples <- read_samples(playbase::example_file("samples.csv"))
 }

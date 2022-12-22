@@ -25,12 +25,12 @@
 #'   be listed.
 #' @export
 #' @examples
-#' playbase_example()
-#' playbase_example("counts.csv")
-playbase_example <- function(file = NULL) {
-    if (is.null(file)) {
-        dir(system.file("extdata", package = "playbase"))
-    } else {
-        system.file("extdata", file, package = "playbase", mustWork = TRUE)
-    }
+#' example_file()
+#' example_file("counts.csv")
+example_file <- function(file = NULL) {
+  if (is.null(file)) {
+    dir(system.file("extdata", package = "playbase"))
+  } else {
+    system.file("extdata", file, package = "playbase", mustWork = TRUE)
+  }
 }

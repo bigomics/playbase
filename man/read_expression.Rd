@@ -16,5 +16,5 @@ matrix. the file with the data
 Read expression data from file
 }
 \examples{
-counts <- read_expression(playbase::playbase_example('counts.csv'))
+counts <- read_expression(playbase::example_file("counts.csv"))
 }
