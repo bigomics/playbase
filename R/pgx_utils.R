@@ -1,4 +1,6 @@
-logCPM <- function(counts, total = 1e6, prior = 1) {
+
+#logCPM
+log_cpm <- function(counts, total = 1e6, prior = 1) {
   ## Transform to logCPM (log count-per-million) if total counts is
   ## larger than 1e6, otherwise scale to previous avarage total count.
   if (is.null(total)) {
@@ -19,7 +21,8 @@ logCPM <- function(counts, total = 1e6, prior = 1) {
   }
 }
 
-pgx.clusterSamples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2, 3),
+#pgx.clusterSamples2
+cluster_samples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2, 3),
                                 reduce.sd = 1000, reduce.pca = 50, perplexity = 30,
                                 center.rows = TRUE, scale.rows = FALSE,
                                 X = NULL, umap.pkg = "uwot", replace.orig = TRUE) {
@@ -28,10 +31,10 @@ pgx.clusterSamples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = 
   } else if (!is.null(pgx$X)) {
     X <- pgx$X
   } else {
-    X <- logCPM(pgx$counts, total = NULL)
+    X <- log_cpm(pgx$counts, total = NULL)
   }
 
-  clust.pos <- pgx.clusterBigMatrix(
+  clust.pos <- cluster_big_matrix(
     X,
     methods = methods,
     dims = dims,
@@ -60,16 +63,14 @@ pgx.clusterSamples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = 
   pgx
 }
 
-
-pgx.inferGender <- function(X, gene_name = NULL) {
+#pgx.inferGender
+infer_gender <- function(X, gene_name = NULL) {
   ## List of cell cycle markers, from Tirosh et al, 2015
   ##
   if (is.null(gene_name)) gene_name <- toupper(sub(".*:", "", rownames(X)))
 
   y.genes <- intersect(c("DDX3Y", "RPS4Y1", "USP9Y", "KDM5D"), gene_name)
-  y.genes
   x.genes <- intersect(c("XIST"), gene_name)
-  x.genes
 
   if (length(y.genes) == 0 && length(x.genes) == 0) {
     warning("Could not determine sex. missing some X/Y marker genes\n")
@@ -89,7 +90,8 @@ pgx.inferGender <- function(X, gene_name = NULL) {
   return(sex)
 }
 
-pgx.inferCellCyclePhase <- function(counts) {
+#pgx.inferCellCyclePhase
+infer_cell_cycle_phase <- function(counts) {
   ## List of cell cycle markers, from Tirosh et al, 2015
   ##
   cc.genes <- c(
@@ -128,7 +130,8 @@ pgx.inferCellCyclePhase <- function(counts) {
   return(phase)
 }
 
-compute.cellcycle.gender <- function(ngs, rna.counts = ngs$counts) {
+#compute.cellcycle.gender
+compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
   pp <- rownames(rna.counts)
   is.mouse <- (mean(grepl("[a-z]", gsub(".*:|.*\\]", "", pp))) > 0.8)
   if (!is.mouse) {
@@ -136,7 +139,7 @@ compute.cellcycle.gender <- function(ngs, rna.counts = ngs$counts) {
     ngs$samples$.cell.cycle <- NULL
     counts <- rna.counts
     rownames(counts) <- toupper(ngs$genes[rownames(counts), "gene_name"])
-    res <- try(pgx.inferCellCyclePhase(counts)) ## can give bins error
+    res <- try(infer_cell_cycle_phase(counts)) ## can give bins error
     if (class(res) != "try-error") {
       ngs$samples$.cell_cycle <- res
       table(ngs$samples$.cell_cycle)
@@ -145,13 +148,14 @@ compute.cellcycle.gender <- function(ngs, rna.counts = ngs$counts) {
       ngs$samples$.gender <- NULL
       X <- log2(1 + rna.counts)
       gene_name <- ngs$genes[rownames(X), "gene_name"]
-      ngs$samples$.gender <- pgx.inferGender(X, gene_name)
+      ngs$samples$.gender <- infer_gender(X, gene_name)
     }
   }
   return(ngs)
 }
 
-ngs.getGeneAnnotation <- function(genes) {
+#ngs.getGeneAnnotation
+get_gene_annotation <- function(genes) {
   hs.genes <- unique(unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL)))
   mm.genes <- unique(unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL)))
 
@@ -248,7 +252,8 @@ ngs.getGeneAnnotation <- function(genes) {
   annot
 }
 
-alias2hugo <- function(s, org = NULL, na.orig = TRUE) {
+#alias2hugo
+alias_to_hugo <- function(s, org = NULL, na.orig = TRUE) {
   hs.symbol <- unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
   mm.symbol <- unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
   if (is.null(org)) {
@@ -290,8 +295,9 @@ alias2hugo <- function(s, org = NULL, na.orig = TRUE) {
   return(hugo0)
 }
 
-contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
-  contrastAsLabels.col <- function(contr, contr.name) {
+#contrastAsLabels
+contrast_as_labels <- function(contr.matrix, as.factor = FALSE) {
+  contrast_as_labels_col <- function(contr, contr.name) {
     grp1 <- gsub(".*[:]|_vs_.*", "", contr.name)
     grp0 <- gsub(".*_vs_|@.*", "", contr.name)
     x <- rep(NA, length(contr))
@@ -305,16 +311,27 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
   for (i in 1:ncol(contr.matrix)) {
     contr <- contr.matrix[, i]
     contr.name <- colnames(contr.matrix)[i]
-    k1 <- contrastAsLabels.col(contr, contr.name)
+    k1 <- contrast_as_labels_col(contr, contr.name)
     K <- cbind(K, k1)
   }
-  ## colnames(K) <- sub("[:].*",colnames(contr.matrix))
   colnames(K) <- colnames(contr.matrix)
   rownames(K) <- rownames(contr.matrix)
   K
 }
 
-makeDirectContrasts <- function(Y, ref, na.rm = TRUE) {
+#pgx.getConditions
+get_conditions <- function(exp.matrix, nmax=3) {
+  group <- apply(exp.matrix,1,paste,collapse="_")
+  group <- factor(group)
+  if(ncol(exp.matrix) > nmax) {
+    ngroup <- length(unique(group))
+    levels(group) <- paste0("group",1:ngroup)
+  }
+  as.character(group)
+}
+
+#makeDirectContrasts
+make_direct_contrasts <- function(Y, ref, na.rm = TRUE) {
   ## check enough levels
   nlevel <- apply(Y, 2, function(y) length(unique(y)))
   if (any(nlevel < 2)) {
@@ -330,7 +347,7 @@ makeDirectContrasts <- function(Y, ref, na.rm = TRUE) {
   ref <- ref[ii]
 
   ## make contrast
-  exp.matrix <- makeDirectContrasts000(
+  exp.matrix <- make_direct_contrasts_helper(
     Y = Y, ref = ref,
     na.rm = na.rm, warn = FALSE
   )
@@ -344,9 +361,9 @@ makeDirectContrasts <- function(Y, ref, na.rm = TRUE) {
   }
   exp.matrix0 <- exp.matrix
   if (all(grepl("_vs_|_VS_", colnames(exp.matrix0)))) {
-    exp.matrix0 <- contrastAsLabels(exp.matrix0)
+    exp.matrix0 <- contrast_as_labels(exp.matrix0)
   }
-  group <- pgx.getConditions(exp.matrix0)
+  group <- get_conditions(exp.matrix0)
   if (length(levels(group)) > 0.5 * nrow(exp.matrix)) {
     warning("contrast matrix looks degenerate.
         consider removing a contrast.\n")
@@ -358,7 +375,8 @@ makeDirectContrasts <- function(Y, ref, na.rm = TRUE) {
   list(contr.matrix = contr.matrix, group = group, exp.matrix = exp.matrix)
 }
 
-makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
+#makeDirectContrasts000
+make_direct_contrasts_helper <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
   if (NCOL(Y) == 1) Y <- data.frame(Y = Y)
 
   ## check
@@ -396,7 +414,7 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
       levels <- names(table(x))
       levels <- setdiff(levels, c(NA, "NA"))
       if (length(levels) > 1) {
-        cc <- makeFullContrasts(levels)
+        cc <- make_full_contrasts(levels)
         m1 <- m1[, rownames(cc)] %*% cc
       }
     } else if (!is.na(ref1) && !(ref1 %in% all)) {
@@ -444,7 +462,7 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
 #'
 #' @examples
 #' x <- 1
-.probe_to_symbol <- function(probes, type = NULL, org = "human", keep.na = FALSE) {
+probe_to_symbol <- function(probes, type = NULL, org = "human", keep.na = FALSE) {
   ## strip postfix for ensemble codes
   if (mean(grepl("^ENS", probes)) > 0.5) {
     probes <- gsub("[.].*", "", probes)

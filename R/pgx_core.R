@@ -22,17 +22,6 @@
 #'    - cluster
 #'    - cluster.genes
 #'
-#' This function relies on the following internal functions:
-#'  - .probe_to_symbol (probe2symbol)
-#'  - .get_gene_annotation (ngs.getGeneAnnotation)
-#'  - .compute_cellcycle_gender (compute.cellcycle.gender)
-#'  - .cluster_samples2  (pgx.clusterSamples2)
-#'  - .find_louvain_clusters (pgx.findLouvainClusters)
-#'  - .make_direct_contrasts (makeDirectContrasts)
-#'  - .contrast_as_labels (contrastAsLabels)
-#'  - .log_cpm (logCPM)
-#'  - .cluster_genes (pgx.clusterGenes)
-#'
 #' This functoin performs the following actions in order on the data:
 #'  - unknown
 #'
@@ -80,7 +69,7 @@ create_pgx <- function(counts,
   is.numbered <- all(sapply(type.convert(data.frame(contrasts)), class) %in% c("numeric", "integer"))
   ct.type <- c("labeled (new style)", "numbered (old style)")[1 + 1 * is.numbered]
   if (is.numbered) {
-    contrasts <- contrastAsLabels(contrasts)
+    contrasts <- contrast_as_labels(contrasts)
   }
 
   ## convert group-wise contrast to sample-wise
@@ -171,7 +160,7 @@ create_pgx <- function(counts,
   ## -------------------------------------------------------------------
   ## convert probe-IDs to gene symbol (do not translate yet to HUGO)
   ## -------------------------------------------------------------------
-  symbol <- .probe_to_symbol(rownames(counts), type = NULL) ## auto-convert function
+  symbol <- probe_to_symbol(rownames(counts), type = NULL) ## auto-convert function
   if (mean(rownames(counts) == symbol, na.rm = TRUE) < 0.5) { ## why??
     jj <- which(!is.na(symbol))
     counts <- as.matrix(counts[jj, ])
@@ -207,7 +196,7 @@ create_pgx <- function(counts,
   gene1 <- sapply(gene0, function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
 
   if (convert.hugo) {
-    gene1 <- alias2hugo(gene1) ## convert to latest HUGO
+    gene1 <- alias_to_hugo(gene1) ## convert to latest HUGO
   }
   ndup <- sum(duplicated(gene1))
 
@@ -231,7 +220,7 @@ create_pgx <- function(counts,
   ## -------------------------------------------------------------------
   ## create gene annotation if not given (no HUGO conversion)
   ## -------------------------------------------------------------------
-  pgx$genes <- ngs.getGeneAnnotation(genes = rownames(pgx$counts))
+  pgx$genes <- get_gene_annotation(genes = rownames(pgx$counts))
   rownames(pgx$genes) <- rownames(pgx$counts)
   pgx$genes[is.na(pgx$genes)] <- ""
 
@@ -289,7 +278,7 @@ create_pgx <- function(counts,
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
-  pgx <- compute.cellcycle.gender(pgx)
+  pgx <- compute_cellcycle_gender(pgx)
 
   ## -------------------------------------------------------------------
   ## Batch-correction (if requested. WARNING: changes counts )
@@ -324,7 +313,7 @@ create_pgx <- function(counts,
   ## for doing differential analysis.
   ## -------------------------------------------------------------------
   if (do.cluster) {
-    pgx <- pgx.clusterSamples2(
+    pgx <- cluster_samples2(
       pgx,
       dims = c(2, 3),
       perplexity = NULL,
@@ -333,10 +322,10 @@ create_pgx <- function(counts,
 
     ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
     posx <- scale(cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]]))
-    idx <- pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
+    idx <- find_louvain_clusters(posx, level = 1, prefix = "c", small.zero = 0.0)
     if (length(unique(idx)) == 1) {
       ## try again with finer settings if single cluster...
-      idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
+      idx <- find_louvain_clusters(posx, level = 2, prefix = "c", small.zero = 0.01)
     }
     pgx$samples$cluster <- idx
   }
@@ -345,8 +334,8 @@ create_pgx <- function(counts,
     ## Add cluster contrasts
     Y <- pgx$samples[, "cluster", drop = FALSE]
     if (length(unique(Y)) > 1) {
-      ct <- makeDirectContrasts(Y, ref = "others")
-      ctx <- contrastAsLabels(ct$exp.matrix)
+      ct <- make_direct_contrasts(Y, ref = "others")
+      ctx <- contrast_as_labels(ct$exp.matrix)
       if (ncol(pgx$contrasts) == 0) {
         pgx$contrasts <- ctx
       } else {
@@ -359,7 +348,7 @@ create_pgx <- function(counts,
   ## Add normalized log-expression
   ## -------------------------------------------------------------------
   if (is.null(pgx$X)) {
-    pgx$X <- logCPM(pgx$counts, total = 1e6, prior = 1)
+    pgx$X <- log_cpm(pgx$counts, total = 1e6, prior = 1)
   }
 
   if (!all(dim(pgx$X) == dim(pgx$counts))) {
@@ -367,7 +356,7 @@ create_pgx <- function(counts,
   }
 
   if (do.clustergenes) {
-    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "gene")
+    pgx <- cluster_genes(pgx, methods = "umap", dims = c(2, 3), level = "gene")
   }
 
   return(pgx)

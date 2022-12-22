@@ -1,4 +1,6 @@
-pos.compact <- function(pos, d = 0.01) {
+
+#pos.compact
+pos_compact <- function(pos, d = 0.01) {
   ## make positions more dense removing white space
   for (i in 1:ncol(pos)) {
     x <- pos[, i]
@@ -11,7 +13,8 @@ pos.compact <- function(pos, d = 0.01) {
   pos
 }
 
-pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2, 3),
+#pgx.clusterGenes
+cluster_genes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2, 3),
                              reduce.pca = 50, perplexity = 30, level = "gene",
                              rank.tf = FALSE, center.rows = TRUE, scale.rows = FALSE,
                              X = NULL, umap.pkg = "uwot") {
@@ -35,7 +38,7 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
     X <- scale(apply(X, 2, rank))
   } ## works nicely
 
-  clust <- pgx.clusterBigMatrix(
+  clust <- cluster_big_matrix(
     t(X),
     methods = methods,
     dims = dims,
@@ -55,7 +58,7 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
   ## remove empty space in tSNE/UMAP
   ii <- grep("tsne|umap", names(clust))
   if (length(ii) > 0) {
-    clust[ii] <- lapply(clust[ii], pos.compact) ## make more compact
+    clust[ii] <- lapply(clust[ii], pos_compact) ## make more compact
   }
 
   ## put in slot 'gene cluster'
@@ -73,7 +76,8 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
   pgx
 }
 
-pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix = "c",
+#pgx.findLouvainClusters
+find_louvain_clusters <- function(X, graph.method = "dist", level = 1, prefix = "c",
                                     gamma = 1, small.zero = 0.01) {
   ## find clusters from t-SNE positions
   idx <- NULL
@@ -88,7 +92,7 @@ pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix 
   }
 
   ## should we iteratively cluster (louvain)???
-  hc <- hclustGraph(gr, k = level) ##
+  hc <- hclust_graph(gr, k = level) ##
   idx <- hc[, min(level, ncol(hc))]
 
   if (!is.null(idx) && small.zero > 0) {
@@ -105,7 +109,8 @@ pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix 
   return(idx)
 }
 
-pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c(2, 3),
+#pgx.clusterBigMatrix
+cluster_big_matrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c(2, 3),
                                  perplexity = 30, reduce.sd = 1000, reduce.pca = 50,
                                  center.features = TRUE, scale.features = FALSE,
                                  find.clusters = FALSE, svd.gamma = 1, umap.pkg = "uwot") {
@@ -255,10 +260,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
 
   all.pos$membership <- NULL
   if (find.clusters) {
-    warning("*** DEPRECATED *** please call seperately")
-    idx <- pgx.findLouvainClusters(t(X), level = 1, prefix = "c", small.zero = 0.01)
-    table(idx)
-    all.pos$membership <- idx[1:dimx[2]]
+    stop("*** DEPRECATED *** please call find.clusters seperately")
   }
 
   return(all.pos)

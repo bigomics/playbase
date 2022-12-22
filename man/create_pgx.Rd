@@ -57,17 +57,6 @@ The pgx object is a list containing the following elements:
    - cluster
    - cluster.genes
 
-This function relies on the following internal functions:
- - .probe_to_symbol (probe2symbol)
- - .get_gene_annotation (ngs.getGeneAnnotation)
- - .compute_cellcycle_gender (compute.cellcycle.gender)
- - .cluster_samples2  (pgx.clusterSamples2)
- - .find_louvain_clusters (pgx.findLouvainClusters)
- - .make_direct_contrasts (makeDirectContrasts)
- - .contrast_as_labels (contrastAsLabels)
- - .log_cpm (logCPM)
- - .cluster_genes (pgx.clusterGenes)
-
 This functoin performs the following actions in order on the data:
  - unknown
 }

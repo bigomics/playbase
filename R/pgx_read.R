@@ -17,7 +17,7 @@ read_counts <- function(file, convert_names = FALSE) {
   # convert to gene names (needed for biological effects)
   if (convert_names) {
     pp <- rownames(df)
-    rownames(df) <- .probe_to_symbol(pp)
+    rownames(df) <- probe_to_symbol(pp)
     sel <- !(rownames(df) %in% c(NA, "", "NA"))
     df <- df[sel, ]
     xx <- tapply(
@@ -49,7 +49,7 @@ read_expression <- function(file, convert_names = TRUE) {
   # convert to gene names (needed for biological effects)
   if (convert_names) {
     pp <- rownames(df)
-    rownames(df) <- .probe_to_symbol(pp)
+    rownames(df) <- probe_to_symbol(pp)
     sel <- !(rownames(df) %in% c(NA, "", "NA"))
     df <- df[sel, ]
     xx <- tapply(
