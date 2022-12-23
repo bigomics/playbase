@@ -1,4 +1,4 @@
-#hclustGraph
+# hclustGraph
 hclust_graph <- function(g, k = NULL, mc.cores = 2) {
   ## Hierarchical clustering of graph using iterative Louvain
   ## clustering on different levels. If k=NULL iterates until

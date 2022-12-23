@@ -1,5 +1,5 @@
 
-#pos.compact
+# pos.compact
 pos_compact <- function(pos, d = 0.01) {
   ## make positions more dense removing white space
   for (i in 1:ncol(pos)) {
@@ -13,11 +13,11 @@ pos_compact <- function(pos, d = 0.01) {
   pos
 }
 
-#pgx.clusterGenes
+# pgx.clusterGenes
 cluster_genes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2, 3),
-                             reduce.pca = 50, perplexity = 30, level = "gene",
-                             rank.tf = FALSE, center.rows = TRUE, scale.rows = FALSE,
-                             X = NULL, umap.pkg = "uwot") {
+                          reduce.pca = 50, perplexity = 30, level = "gene",
+                          rank.tf = FALSE, center.rows = TRUE, scale.rows = FALSE,
+                          X = NULL, umap.pkg = "uwot") {
   if (!is.null(X)) {
     invisible()
   } else if (!is.null(pgx$X) && level == "gene") {
@@ -76,9 +76,9 @@ cluster_genes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2, 3
   pgx
 }
 
-#pgx.findLouvainClusters
+# pgx.findLouvainClusters
 find_louvain_clusters <- function(X, graph.method = "dist", level = 1, prefix = "c",
-                                    gamma = 1, small.zero = 0.01) {
+                                  gamma = 1, small.zero = 0.01) {
   ## find clusters from t-SNE positions
   idx <- NULL
 
@@ -109,11 +109,11 @@ find_louvain_clusters <- function(X, graph.method = "dist", level = 1, prefix = 
   return(idx)
 }
 
-#pgx.clusterBigMatrix
+# pgx.clusterBigMatrix
 cluster_big_matrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c(2, 3),
-                                 perplexity = 30, reduce.sd = 1000, reduce.pca = 50,
-                                 center.features = TRUE, scale.features = FALSE,
-                                 find.clusters = FALSE, svd.gamma = 1, umap.pkg = "uwot") {
+                               perplexity = 30, reduce.sd = 1000, reduce.pca = 50,
+                               center.features = TRUE, scale.features = FALSE,
+                               find.clusters = FALSE, svd.gamma = 1, umap.pkg = "uwot") {
   methods <- intersect(methods, c("pca", "tsne", "umap"))
   if (length(methods) == 0) methods <- "pca"
 
@@ -141,7 +141,7 @@ cluster_big_matrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c(2
 
   ## impute on row median
   if (any(is.na(X))) {
-    X <- imputeMedian(X)
+    X <- impute_median(X)
   }
 
   if (ncol(X) <= 6) X <- cbind(X, X, X, X, X, X)

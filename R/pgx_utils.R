@@ -1,5 +1,5 @@
 
-#logCPM
+# logCPM
 log_cpm <- function(counts, total = 1e6, prior = 1) {
   ## Transform to logCPM (log count-per-million) if total counts is
   ## larger than 1e6, otherwise scale to previous avarage total count.
@@ -21,11 +21,11 @@ log_cpm <- function(counts, total = 1e6, prior = 1) {
   }
 }
 
-#pgx.clusterSamples2
+# pgx.clusterSamples2
 cluster_samples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2, 3),
-                                reduce.sd = 1000, reduce.pca = 50, perplexity = 30,
-                                center.rows = TRUE, scale.rows = FALSE,
-                                X = NULL, umap.pkg = "uwot", replace.orig = TRUE) {
+                             reduce.sd = 1000, reduce.pca = 50, perplexity = 30,
+                             center.rows = TRUE, scale.rows = FALSE,
+                             X = NULL, umap.pkg = "uwot", replace.orig = TRUE) {
   if (!is.null(X)) {
     invisible()
   } else if (!is.null(pgx$X)) {
@@ -63,7 +63,7 @@ cluster_samples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
   pgx
 }
 
-#pgx.inferGender
+# pgx.inferGender
 infer_gender <- function(X, gene_name = NULL) {
   ## List of cell cycle markers, from Tirosh et al, 2015
   ##
@@ -90,7 +90,7 @@ infer_gender <- function(X, gene_name = NULL) {
   return(sex)
 }
 
-#pgx.inferCellCyclePhase
+# pgx.inferCellCyclePhase
 infer_cell_cycle_phase <- function(counts) {
   ## List of cell cycle markers, from Tirosh et al, 2015
   ##
@@ -130,7 +130,7 @@ infer_cell_cycle_phase <- function(counts) {
   return(phase)
 }
 
-#compute.cellcycle.gender
+# compute.cellcycle.gender
 compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
   pp <- rownames(rna.counts)
   is.mouse <- (mean(grepl("[a-z]", gsub(".*:|.*\\]", "", pp))) > 0.8)
@@ -154,7 +154,7 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
   return(ngs)
 }
 
-#ngs.getGeneAnnotation
+# ngs.getGeneAnnotation
 get_gene_annotation <- function(genes) {
   hs.genes <- unique(unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL)))
   mm.genes <- unique(unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL)))
@@ -252,7 +252,7 @@ get_gene_annotation <- function(genes) {
   annot
 }
 
-#alias2hugo
+# alias2hugo
 alias_to_hugo <- function(s, org = NULL, na.orig = TRUE) {
   hs.symbol <- unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
   mm.symbol <- unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
@@ -295,7 +295,7 @@ alias_to_hugo <- function(s, org = NULL, na.orig = TRUE) {
   return(hugo0)
 }
 
-#contrastAsLabels
+# contrastAsLabels
 contrast_as_labels <- function(contr.matrix, as.factor = FALSE) {
   contrast_as_labels_col <- function(contr, contr.name) {
     grp1 <- gsub(".*[:]|_vs_.*", "", contr.name)
@@ -319,18 +319,18 @@ contrast_as_labels <- function(contr.matrix, as.factor = FALSE) {
   K
 }
 
-#pgx.getConditions
-get_conditions <- function(exp.matrix, nmax=3) {
-  group <- apply(exp.matrix,1,paste,collapse="_")
+# pgx.getConditions
+get_conditions <- function(exp.matrix, nmax = 3) {
+  group <- apply(exp.matrix, 1, paste, collapse = "_")
   group <- factor(group)
-  if(ncol(exp.matrix) > nmax) {
+  if (ncol(exp.matrix) > nmax) {
     ngroup <- length(unique(group))
-    levels(group) <- paste0("group",1:ngroup)
+    levels(group) <- paste0("group", 1:ngroup)
   }
   as.character(group)
 }
 
-#makeDirectContrasts
+# makeDirectContrasts
 make_direct_contrasts <- function(Y, ref, na.rm = TRUE) {
   ## check enough levels
   nlevel <- apply(Y, 2, function(y) length(unique(y)))
@@ -375,7 +375,7 @@ make_direct_contrasts <- function(Y, ref, na.rm = TRUE) {
   list(contr.matrix = contr.matrix, group = group, exp.matrix = exp.matrix)
 }
 
-#makeDirectContrasts000
+# makeDirectContrasts000
 make_direct_contrasts_helper <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
   if (NCOL(Y) == 1) Y <- data.frame(Y = Y)
 
@@ -554,4 +554,23 @@ probe_to_symbol <- function(probes, type = NULL, org = "human", keep.na = FALSE)
   names(symbol) <- NULL
 
   return(symbol)
+}
+
+
+impute_median <- function(X) {
+  if(NCOL(X)==1) {
+    mx <- median(X,na.rm=TRUE)
+  } else {
+    mx <- apply(X,1,median,na.rm=TRUE)
+  }
+  mx[is.na(mx)] <- median(mx,na.rm=TRUE)
+  impX <- X
+  impX[is.na(impX)] <- 0
+  impX <- impX + is.na(X) * mx
+  return(impX)
+}
+
+all_genetest_methods <- function() {
+  c("ttest","ttest.welch","voom.limma","trend.limma","notrend.limma",
+    "deseq2.wald","deseq2.lrt","edger.qlf","edger.lrt")
 }

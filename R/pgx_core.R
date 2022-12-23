@@ -361,3 +361,108 @@ create_pgx <- function(counts,
 
   return(pgx)
 }
+
+
+
+#' Compute the pgx object
+#'
+#' This function works on a pgx object that has already been created from
+#' counts/samples/contrasts data using the `pgx_create()` function.
+#'
+#' @param ngs
+#' @param max.genes
+#' @param max.genesets
+#' @param gx.methods
+#' @param gset.methods
+#' @param do.cluster
+#' @param use.design
+#' @param prune.samples
+#' @param extra.methods
+#' @param lib.dir
+#' @param progress
+#'
+#' @return a list (representing a pgx object)
+#' @export
+#'
+#' @examples
+#' x <- 1
+compute_pgx <- function(ngs,
+                        max.genes = 19999,
+                        max.genesets = 9999,
+                        gx.methods = c("ttest.welch", "trend.limma", "edger.qlf"),
+                        gset.methods = c("fisher", "gsva", "fgsea"),
+                        do.cluster = TRUE,
+                        use.design = TRUE,
+                        prune.samples = FALSE,
+                        extra.methods = c(
+                          "meta.go", "deconv", "infer",
+                          "drugs", "wordcloud"
+                        ),
+                        lib.dir = "../lib",
+                        progress = NULL) {
+  ## ======================================================================
+  ## ======================================================================
+  ## ======================================================================
+
+  if (!"contrasts" %in% names(ngs)) {
+    stop("No contrasts found in pgx object")
+  }
+
+  ## make proper contrast matrix
+  contr.matrix <- ngs$contrasts
+  contr.values <- unique(as.vector(contr.matrix))
+  is.numcontrast <- all(contr.values %in% c(NA, -1, 0, 1))
+  is.numcontrast <- is.numcontrast && (-1 %in% contr.values) && (1 %in% contr.values)
+  if (!is.numcontrast) {
+    contr.matrix <- make_contrasts_from_label_matrix(contr.matrix)
+    contr.matrix <- sign(contr.matrix) ## sign is fine
+  }
+
+  ## select valid contrasts
+  sel <- Matrix::colSums(contr.matrix == -1) > 0 & Matrix::colSums(contr.matrix == 1) > 0
+  contr.matrix <- contr.matrix[, sel, drop = FALSE]
+
+  ## ======================================================================
+  ngs$timings <- c()
+  GENETEST.METHODS <- c(
+    "ttest", "ttest.welch", "ttest.rank",
+    "voom.limma", "trend.limma", "notrend.limma",
+    "edger.qlf", "edger.lrt", "deseq2.wald", "deseq2.lrt"
+  )
+  GENESETTEST.METHODS <- c(
+    "fisher", "gsva", "ssgsea", "spearman",
+    "camera", "fry", "fgsea"
+  ) ## no GSEA, too slow...
+
+  ## ------------------ gene level tests ---------------------
+  ngs <- test_genes(
+    ngs, contr.matrix,
+    max.features = max.genes,
+    test.methods = gx.methods,
+    use.design = use.design,
+    prune.samples = prune.samples
+  )
+
+  ## ------------------ gene set tests -----------------------
+  ngs <- test_genesets(
+    ngs,
+    max.features = max.genesets,
+    test.methods = gset.methods,
+    lib.dir = lib.dir
+  )
+
+  if (do.cluster) {
+    ## gsetX not ready!!
+    ngs <- cluster_genes(
+      ngs,
+      methods = "umap",
+      dims = c(2, 3),
+      level = "geneset"
+    )
+  }
+
+  ## ------------------ extra analyses ---------------------
+  ngs <- compute.extra(ngs, extra = extra.methods, lib.dir = lib.dir)
+
+  return(ngs)
+}
