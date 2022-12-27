@@ -33,9 +33,9 @@ test_genes <- function(pgx, contr.matrix, max.features = 1000,
 
 # compute.testGenesSingleOmics
 test_genes_singleomics <- function(pgx, contr.matrix, max.features = 1000,
-                                    filter.low = TRUE, remove.outputs = TRUE,
-                                    use.design = TRUE, prune.samples = FALSE,
-                                    test.methods = c("trend.limma", "deseq2.wald", "edger.qlf")) {
+                                   filter.low = TRUE, remove.outputs = TRUE,
+                                   use.design = TRUE, prune.samples = FALSE,
+                                   test.methods = c("trend.limma", "deseq2.wald", "edger.qlf")) {
   message("[compute.testGenesSingleOmics] called")
   contr.matrix0 <- contr.matrix ## SAVE
 

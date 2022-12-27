@@ -148,7 +148,8 @@ test_genesets <- function(pgx, max.features = 1000, lib.dir = "../lib",
   Y <- pgx$samples
   gc()
 
-  gset.meta <- gset.fitContrastsWithAllMethods(
+  # gset.fitContrastsWithAllMethods(
+  gset.meta <- fit_geneset_contrasts_with_all_methods(
     gmt = gmt, X = X, Y = Y, G = G,
     design = design, ## genes=GENES,
     contr.matrix = contr.matrix, methods = test.methods,
@@ -160,20 +161,6 @@ test_genesets <- function(pgx, max.features = 1000, lib.dir = "../lib",
 
   pgx$timings <- rbind(pgx$timings, gset.meta$timings)
   pgx$gset.meta <- gset.meta
-
-  if (0) {
-    ## average expression of geneset members
-    n1 <- Matrix::rowSums(G != 0)
-    n2 <- Matrix::rowMeans(abs(pgx$X) > 1)
-    table(n1 > 20 & n2 > 0.05)
-    ## ii  <- which( n1 > 20 & n2 > 0.05 ) ## make faster...
-    ii <- Matrix::head(order(-1 * n1 * n2), 4000) ## make faster...
-    G1 <- Matrix::t(G[ii, ] != 0)
-    X1 <- pgx$X[ii, ]
-    ng <- Matrix::colSums(G[ii, ] != 0)
-    meta.matrix <- as.matrix(G1 %*% X1) / ng
-    dim(meta.matrix)
-  }
 
   names(pgx$gset.meta$matrices)
   ## pgx$gsetX = pgx$gset.meta$matrices[["fc"]]  ## META or average FC??!

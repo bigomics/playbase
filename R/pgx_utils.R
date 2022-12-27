@@ -558,12 +558,12 @@ probe_to_symbol <- function(probes, type = NULL, org = "human", keep.na = FALSE)
 
 
 impute_median <- function(X) {
-  if(NCOL(X)==1) {
-    mx <- median(X,na.rm=TRUE)
+  if (NCOL(X) == 1) {
+    mx <- median(X, na.rm = TRUE)
   } else {
-    mx <- apply(X,1,median,na.rm=TRUE)
+    mx <- apply(X, 1, median, na.rm = TRUE)
   }
-  mx[is.na(mx)] <- median(mx,na.rm=TRUE)
+  mx[is.na(mx)] <- median(mx, na.rm = TRUE)
   impX <- X
   impX[is.na(impX)] <- 0
   impX <- impX + is.na(X) * mx
@@ -571,6 +571,8 @@ impute_median <- function(X) {
 }
 
 all_genetest_methods <- function() {
-  c("ttest","ttest.welch","voom.limma","trend.limma","notrend.limma",
-    "deseq2.wald","deseq2.lrt","edger.qlf","edger.lrt")
+  c(
+    "ttest", "ttest.welch", "voom.limma", "trend.limma", "notrend.limma",
+    "deseq2.wald", "deseq2.lrt", "edger.qlf", "edger.lrt"
+  )
 }

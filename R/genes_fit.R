@@ -4,10 +4,12 @@ fit_contrasts_with_all_methods <- function(counts, X = NULL, samples, design, co
                                            prior.cpm = 1, prune.samples = FALSE,
                                            conform.output = TRUE, do.filter = TRUE, cpm.scale = 1e6,
                                            remove.batch = TRUE,
-                                           methods = c("ttest","ttest.welch","voom.limma",
-                                                       "trend.limma","notrend.limma",
-                                                       "deseq2.wald","deseq2.lrt",
-                                                       "edger.qlf","edger.lrt"),
+                                           methods = c(
+                                             "ttest", "ttest.welch", "voom.limma",
+                                             "trend.limma", "notrend.limma",
+                                             "deseq2.wald", "deseq2.lrt",
+                                             "edger.qlf", "edger.lrt"
+                                           ),
                                            correct.AveExpr = TRUE, custom = NULL, custom.name = NULL) {
   ## --------------------------------------------------------------
   ## Run all tests on raw counts

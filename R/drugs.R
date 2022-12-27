@@ -1,0 +1,167 @@
+# pgx.computeDrugEnrichment
+compute_drug_enrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor"),
+                                    nmin = 15, nprune = 250, contrast = NULL) {
+  ## 'obj'   : can be ngs object or fold-change matrix
+  ## X       : drugs profiles (may have multiple for one drug)
+  ## xdrugs : drug associated with profile
+
+  names(obj)
+  if ("gx.meta" %in% names(obj)) {
+    F <- get_meta_matrix(obj)$fc
+    ## check if multi-omics
+    is.multiomics <- any(grepl("\\[gx\\]|\\[mrna\\]", rownames(F)))
+    is.multiomics
+    if (is.multiomics) {
+      jj <- grep("\\[gx\\]|\\[mrna\\]", rownames(F))
+      F <- F[jj, , drop = FALSE]
+    }
+    rownames(F) <- toupper(sub(".*:|.*\\]", "", rownames(F)))
+    ## colnames(F) <- names(obj$gx.meta$meta)
+    F <- F[order(-rowMeans(F**2)), , drop = FALSE]
+    F <- F[!duplicated(rownames(F)), , drop = FALSE]
+    dim(F)
+  } else {
+    ## it is a matrix
+    F <- obj
+  }
+
+  if (is.null(contrast)) {
+    contrast <- colnames(F)
+  }
+  contrast <- intersect(contrast, colnames(F))
+  contrast
+  F <- F[, contrast, drop = FALSE]
+
+  ## create drug meta sets
+  meta.gmt <- tapply(colnames(X), xdrugs, list)
+  meta.gmt <- meta.gmt[which(sapply(meta.gmt, length) >= nmin)]
+  length(meta.gmt)
+  if (length(meta.gmt) == 0) {
+    message("WARNING::: pgx.computeDrugEnrichment : no valid genesets!!")
+    return(NULL)
+  }
+
+  ## first level (rank) correlation
+  message("Calculating first level rank correlation ...")
+  gg <- intersect(rownames(X), rownames(F))
+  length(gg)
+  if (length(gg) < 20) {
+    message("WARNING::: pgx.computeDrugEnrichment : not enough common genes!!")
+    return(NULL)
+  }
+  if (any(class(X) == "dgCMatrix")) {
+    dbg("[pgx.computeDrugEnrichment] X is 0/1 sparse matrix")
+    ## gene set enrichment by rank correlation
+    fx <- apply(F[gg, , drop = FALSE], 2, rank)
+    R1 <- qlcMatrix::corSparse(X[gg, ], fx)
+  } else {
+    dbg("[pgx.computeDrugEnrichment] X is full matrix")
+    rnk1 <- apply(X[gg, , drop = FALSE], 2, rank, na.last = "keep")
+    rnk2 <- apply(F[gg, , drop = FALSE], 2, rank, na.last = "keep")
+    system.time(R1 <- stats::cor(rnk1, rnk2, use = "pairwise"))
+  }
+  R1 <- as.matrix(R1)
+  R1[is.nan(R1)] <- 0
+  R1[is.infinite(R1)] <- 0
+  R1 <- R1 + 1e-8 * matrix(rnorm(length(R1)), nrow(R1), ncol(R1))
+  colnames(R1) <- colnames(F)
+  rownames(R1) <- colnames(X)
+  dim(R1)
+
+  ## experiment to drug
+  results <- list()
+  if ("cor" %in% methods) {
+    message("Calculating drug enrichment using rank correlation ...")
+
+    ## D <- model.matrix( ~ 0 + xdrugs)
+    D <- Matrix::sparse.model.matrix(~ 0 + xdrugs)
+    dim(D)
+    colnames(D) <- sub("^xdrugs", "", colnames(D))
+    rownames(D) <- colnames(X) ## not necessary..
+    rho2 <- qlcMatrix::corSparse(D, R1)
+    rownames(rho2) <- colnames(D)
+    colnames(rho2) <- colnames(R1)
+    rho2 <- rho2[order(-rowMeans(rho2**2)), , drop = FALSE]
+    cor.pvalue <- function(x, n) pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
+    P <- apply(rho2, 2, cor.pvalue, n = nrow(D))
+    Q <- apply(P, 2, p.adjust, method = "fdr")
+    results[["cor"]] <- list(X = rho2, Q = Q, P = P)
+  }
+
+  if ("GSEA" %in% methods) {
+    message("Calculating drug enrichment using GSEA ...")
+    res0 <- list()
+    i <- 1
+    for (i in 1:ncol(R1)) {
+      suppressWarnings(res0[[i]] <- fgsea::fgseaSimple(meta.gmt, stats = R1[, i], nperm = 10000))
+    }
+    names(res0) <- colnames(R1)
+    length(res0)
+
+    mNES <- sapply(res0, function(x) x$NES)
+    mQ <- sapply(res0, function(x) x$padj)
+    mP <- sapply(res0, function(x) x$pval)
+    if (length(res0) == 1) {
+      mNES <- cbind(mNES)
+      mP <- cbind(mP)
+      mQ <- cbind(mQ)
+    }
+
+    pw <- res0[[1]]$pathway
+    rownames(mNES) <- rownames(mQ) <- rownames(mP) <- pw
+    colnames(mNES) <- colnames(mQ) <- colnames(mP) <- colnames(F)
+    msize <- res0[[1]]$size
+    dim(R1)
+    results[["GSEA"]] <- list(X = mNES, Q = mQ, P = mP, size = msize)
+  }
+  names(results)
+
+  ## this takes only the top matching drugs for each comparison to
+  ## reduce the size of the matrices
+  nprune
+  if (nprune > 0) {
+    message("[pgx.computeDrugEnrichment] pruning : nprune = ", nprune)
+    k <- 1
+    for (k in 1:length(results)) {
+      res <- results[[k]]
+      ## reduce solution set with top-N of each comparison??
+      ## mtop <- apply(abs(res$X), 2, function(x) Matrix::head(order(-x),nprune)) ## absolute NES!!
+      rx <- apply(abs(res$X), 2, rank)
+      rownames(rx) <- rownames(res$X)
+      mtop <- names(head(sort(rowMeans(rx), decreasing = TRUE), nprune))
+      top.idx <- unique(unlist(meta.gmt[mtop]))
+      length(top.idx)
+      results[[k]]$X <- res$X[mtop, , drop = FALSE]
+      results[[k]]$P <- res$P[mtop, , drop = FALSE]
+      results[[k]]$Q <- res$Q[mtop, , drop = FALSE]
+      results[[k]]$size <- res$size[mtop]
+    }
+  }
+
+  ## reduce large stats object
+  sel.drugs <- unique(unlist(sapply(results, function(res) rownames(res$X))))
+  sel <- which(xdrugs %in% sel.drugs)
+  results$stats <- R1[sel, ]
+
+  if (0) {
+    ## UMAP clustering
+    message("[pgx.computeDrugEnrichment] UMAP clustering...")
+    cX <- scale(X[, sel], center = FALSE)
+    cX <- cX - rowMeans(cX)
+    cX <- scale(cX, center = TRUE)
+    pos <- uwot::umap(t(cX), fast_sgd = TRUE)
+    dim(pos)
+    rownames(pos) <- colnames(cX)
+    results$clust <- pos
+    results$stats <- R1[rownames(pos), , drop = FALSE]
+  }
+
+  if (0) {
+    pgx.scatterPlotXY.BASE(pos, var = 2**R1[rownames(pos), 1])
+    pgx.scatterPlotXY.BASE(pos, var = log(colMeans(X**2)))
+  }
+
+  message("[pgx.computeDrugEnrichment] done!")
+
+  return(results)
+}

@@ -462,7 +462,7 @@ compute_pgx <- function(ngs,
   }
 
   ## ------------------ extra analyses ---------------------
-  ngs <- compute.extra(ngs, extra = extra.methods, lib.dir = lib.dir)
+  ngs <- compute_extra(ngs, extra = extra.methods, lib.dir = lib.dir)
 
   return(ngs)
 }
