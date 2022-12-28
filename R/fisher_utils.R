@@ -29,29 +29,12 @@ geneset_fisher2 <- function(genes.up, genes.dn, genesets, background = NULL,
 geneset_fisher <- function(genes, genesets, background = NULL,
                            fdr = 0.05, mc = TRUE, sort.by = "zratio", nmin = 3,
                            min.genes = 15, max.genes = 500, method = "fast.fisher",
-                           check.background = TRUE, common.genes = TRUE, verbose = 1) {
+                           check.background = TRUE, common.genes = TRUE, verbose = 0) {
   ## NEED RETHINK
 
-  if (0) {
-    min.genes <- -10
-    max.genes <- 500
-    background <- NULL
-    fdr <- 1
-    mc <- TRUE
-    sort.by <- "zratio"
-    nmin <- 3
-    verbose <- 1
-    genesets <- readRDS("../files/gmt-all.rds")
-    genes <- head(rownames(ngs$X), 300)
-    genesets <- ngs$gmt.all
-    background <- rownames(ngs$X)
-  }
   if (is.null(background)) {
     ## background <- unique(c(unlist(genesets),genes))
     background <- unique(unlist(genesets))
-    if (verbose > 0) {
-      cat("setting background to ", length(background), "genes covered\n")
-    }
   }
 
   if (check.background) {
@@ -65,20 +48,12 @@ geneset_fisher <- function(genes, genesets, background = NULL,
     genesets.len <- sapply(genesets, length)
     genesets <- genesets[order(-genesets.len)]
     if (sum(duplicated(names(genesets))) > 0) {
-      if (verbose > 0) cat("warning: duplicated gene set names. taking largest.\n")
       genesets <- genesets[which(!duplicated(names(genesets)))]
     }
     genesets.len <- sapply(genesets, length)
     genesets <- genesets[genesets.len >= min.genes & genesets.len <= max.genes]
-    if (verbose > 0) {
-      cat(
-        "testing", length(genesets), "genesets with", length(genes),
-        "genes (background", length(background), "genes)\n"
-      )
-    }
-    length(genesets)
     if (length(genesets) == 0) {
-      cat("warning: no gene sets passed size filter\n")
+      warning("No gene sets passed size filter\n")
       rr <- data.frame(
         p.value = NA, q.value = NA, ratio0 = NA, ratio1 = NA,
         zratio = NA, n.size = NA, n.overlap = NA, genes = NA
@@ -97,10 +72,8 @@ geneset_fisher <- function(genes, genesets, background = NULL,
 
   ## this can become slow... PLEASE OPTIMIZE!!!!
   a <- unlist(parallel::mclapply(genesets, function(x) sum(x %in% genes)))
-  ## b <- unlist(parallel::mclapply(genesets, function(x) sum(!(x %in% genes))))
   b <- (n.size - a)
   c <- unlist(parallel::mclapply(genesets, function(x) sum(!(genes %in% x))))
-  ## d <- unlist(parallel::mclapply(genesets, function(x) sum(!(bg0 %in% x))))
   d <- (nbackground1 - b)
   odd.ratio <- (a / c) / (b / d) ## note: not exactly same as from fishertest
 
@@ -137,17 +110,14 @@ geneset_fisher <- function(genes, genesets, background = NULL,
     pv[ii] <- pv1
   } else if (method == "fisher") {
     if (mc) {
-      ## cat("multicore testing\n")
       pv <- unlist(parallel::mclapply(genesets, test.fisher))
     } else {
-      i <- 1
       for (i in 1:length(genesets)) {
         pv[i] <- test.fisher(genesets[[i]])
       }
     }
   } else if (method == "chisq") {
     if (mc) {
-      ## cat("multicore testing\n")
       pv <- unlist(parallel::mclapply(genesets, test.chisq))
     } else {
       for (i in 1:length(genesets)) {
@@ -182,6 +152,5 @@ geneset_fisher <- function(genes, genesets, background = NULL,
       rr <- rr[order(rr$odd.ratio, decreasing = TRUE), ]
     }
   }
-  dim(rr)
   rr
 }

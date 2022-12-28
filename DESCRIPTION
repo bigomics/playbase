@@ -10,7 +10,8 @@ License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 Suggests: 
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    NNLM
 Config/testthat/edition: 3
 RoxygenNote: 7.2.2
 Depends: 
@@ -35,10 +36,10 @@ Imports:
     magrittr,
     Matrix,
     matrixTests,
-    NNLM,
     org.Hs.eg.db,
     org.Mm.eg.db,
     parallel,
+    pcaMethods,
     plotly,
     qlcMatrix,
     rhdf5,
