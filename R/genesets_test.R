@@ -15,7 +15,6 @@ test_genesets <- function(pgx, max.features = 1000, lib.dir = "../lib",
   ## -----------------------------------------------------------
   G <- readRDS(file.path(lib.dir, "gset-sparseG-XL.rds"))
   G <- Matrix::t(G)
-  dim(G)
 
   ## -----------------------------------------------------------
   ## Filter genes
@@ -29,20 +28,15 @@ test_genesets <- function(pgx, max.features = 1000, lib.dir = "../lib",
   genes <- unique(as.character(pgx$genes$gene_name))
   genes <- toupper(genes) ## handle mouse genes...
   G <- G[rownames(G) %in% genes, ]
-  dim(G)
 
   ## -----------------------------------------------------------
   ## Filter gene sets
   ## -----------------------------------------------------------
 
   ## filter gene sets on size
-  cat("Filtering gene sets on size...\n")
   gmt.size <- Matrix::colSums(G != 0)
-  summary(gmt.size)
   size.ok <- (gmt.size >= 15 & gmt.size <= 1000)
   G <- G[, which(size.ok)]
-  dim(G)
-  table(sub(":.*", "", colnames(G)))
 
   ## -----------------------------------------------------------
   ## create the full GENE matrix (always collapsed by gene)
@@ -56,7 +50,6 @@ test_genesets <- function(pgx, max.features = 1000, lib.dir = "../lib",
   } else {
     data.type <- gsub("\\[|\\].*", "", rownames(pgx$counts))
     jj <- which(data.type %in% c("gx", "mrna"))
-    length(jj)
     if (length(jj) == 0) {
       stop("FATAL. could not find gx/mrna values.")
     }
@@ -66,12 +59,10 @@ test_genesets <- function(pgx, max.features = 1000, lib.dir = "../lib",
   ## if reduced samples
   ss <- rownames(pgx$model.parameters$exp.matrix)
   X <- X[, ss, drop = FALSE]
-  dim(X)
 
   ## -----------------------------------------------------------
   ## create the GENESETxGENE matrix
   ## -----------------------------------------------------------
-  cat("Matching gene set matrix...\n")
   gg <- toupper(rownames(X)) ## accomodate for mouse...
   ii <- intersect(gg, rownames(G))
   G <- G[ii, , drop = FALSE]
@@ -82,27 +73,19 @@ test_genesets <- function(pgx, max.features = 1000, lib.dir = "../lib",
   G <- rbind(G, matX)
   G <- G[match(gg, rownames(G)), , drop = FALSE]
   rownames(G) <- rownames(X) ## original name (e.g. mouse)
-  dim(G)
-  dim(X)
 
   ## -----------------------------------------------------------
   ## Prioritize gene sets by fast rank-correlation
   ## -----------------------------------------------------------
   if (is.null(max.features)) max.features <- 20000
   if (max.features < 0) max.features <- 20000
-  max.features
 
   if (max.features > 0) {
-    cat("Reducing gene set matrix...\n")
-
     ## Reduce gene sets by selecting top varying genesets. We use the
     ## very fast sparse rank-correlation for approximate single sample
     ## geneset activation.
     cX <- X - rowMeans(X, na.rm = TRUE) ## center!
-    dim(cX)
     gsetX <- qlcMatrix::corSparse(G[, ], apply(cX[, ], 2, rank))
-    ## gsetX = limma::normalizeQuantiles(gsetX) ##???
-    ## grp <- pgx$samples$group
     grp <- pgx$model.parameters$group
     gsetX.bygroup <- NULL
     if (!is.null(grp)) {
@@ -116,32 +99,25 @@ test_genesets <- function(pgx, max.features = 1000, lib.dir = "../lib",
     must.include <- "hallmark|kegg|^go|^celltype"
     jj <- unique(c(jj, grep(must.include, colnames(G), ignore.case = TRUE)))
     jj <- jj[order(colnames(G)[jj])]
-    length(jj)
     G <- G[, jj, drop = FALSE]
     remove(gsetX)
     remove(gsetX.bygroup)
   }
-  dim(G)
 
   ## -----------------------------------------------------------
   ## get design and contrast matrix
   ## -----------------------------------------------------------
   design <- pgx$model.parameters$design
   contr.matrix <- pgx$model.parameters$contr.matrix
-  ## contr.matrix
-  ## exp.matrix = (design %*% contr.matrix)
 
   ALL.GSET.METHODS <- c(
     "fisher", "ssgsea", "gsva", "spearman", "camera", "fry",
     "fgsea", "gsea.permPH", "gsea.permGS", "gseaPR"
   )
-  test.methods
 
   ## -----------------------------------------------------------
   ## Run methods
   ## -----------------------------------------------------------
-  cat(">>> Testing gene sets with methods:", test.methods, "\n")
-  test.methods
 
   ## convert to gene list
   gmt <- lapply(apply(G != 0, 2, which), names)
@@ -157,13 +133,10 @@ test_genesets <- function(pgx, max.features = 1000, lib.dir = "../lib",
   )
 
   rownames(gset.meta$timings) <- paste("[test.genesets]", rownames(gset.meta$timings))
-  print(gset.meta$timings)
 
   pgx$timings <- rbind(pgx$timings, gset.meta$timings)
   pgx$gset.meta <- gset.meta
 
-  names(pgx$gset.meta$matrices)
-  ## pgx$gsetX = pgx$gset.meta$matrices[["fc"]]  ## META or average FC??!
   pgx$gsetX <- pgx$gset.meta$matrices[["meta"]] ## META or average FC??!
   pgx$GMT <- G[, rownames(pgx$gsetX)]
 

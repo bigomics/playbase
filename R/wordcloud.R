@@ -1,7 +1,6 @@
 # pgx.calculateWordCloud
 calculate_word_cloud <- function(ngs, progress = NULL, pg.unit = 1) {
   if (is.null(ngs$gset.meta)) {
-    cat("[pgx.calculateWordCloud] FATAL ERROR: no gset.meta in object\n")
     return(NULL)
   }
 
@@ -10,7 +9,6 @@ calculate_word_cloud <- function(ngs, progress = NULL, pg.unit = 1) {
   ## get gset meta foldchange-matrix
   S <- sapply(ngs$gset.meta$meta, function(x) x$meta.fx)
   rownames(S) <- rownames(ngs$gset.meta$meta[[1]])
-  ## S <- S[order(-apply(S,1,sd)),]
   S <- S[order(-rowMeans(S**2)), , drop = FALSE]
 
   ## exclude down, GSE gene sets??????
@@ -42,7 +40,6 @@ calculate_word_cloud <- function(ngs, progress = NULL, pg.unit = 1) {
   idx <- do.call(rbind, idx)
 
   W <- Matrix::sparseMatrix(idx[, 1], idx[, 2], x = 1)
-  dim(W)
   rownames(W) <- names(words2)
   colnames(W) <- terms
 
@@ -50,10 +47,9 @@ calculate_word_cloud <- function(ngs, progress = NULL, pg.unit = 1) {
   nn <- Matrix::colSums(W, na.rm = TRUE)
   nr <- nn / nrow(W)
   W <- W[, which(nn >= 3 & nr <= 0.5), drop = FALSE]
-  dim(W)
 
   if (ncol(W) < 1) {
-    message("[pgx.calculateWordCloud] WARNING:: no valid words left")
+    warning("[pgx.calculateWordCloud] WARNING:: no valid words left")
     return(NULL)
   }
 
@@ -63,20 +59,16 @@ calculate_word_cloud <- function(ngs, progress = NULL, pg.unit = 1) {
   if (!is.null(progress)) progress$inc(0.3 * pg.unit, detail = "computing GSEA")
 
   ## compute for average contrast
-
   rms.FC <- Matrix::rowMeans(S**2)**0.5
   rms.FC <- rms.FC + 0.01 * rnorm(length(rms.FC))
   gmt <- apply(W, 2, function(x) names(which(x != 0)))
   suppressWarnings(res <- fgsea::fgseaSimple(gmt, rms.FC, nperm = 1000))
   res$leadingEdge <- sapply(res$leadingEdge, paste, collapse = "//")
-  ## res$leadingEdge <- NULL
   colnames(res)[1] <- "word"
 
   ## --------- only significant and positive
-  ## res <- res[(res$padj < 0.20 & res$NES>0),]
   res <- res[(res$padj < 1 & res$NES > 0), ]
   res <- res[order(-abs(res$NES)), ]
-  dim(res)
 
   ## now compute significant terms for all contrasts
   all.gsea <- list()
@@ -87,7 +79,6 @@ calculate_word_cloud <- function(ngs, progress = NULL, pg.unit = 1) {
     gmt1 <- gmt[as.character(res$word)]
     res1 <- fgsea::fgseaSimple(gmt1, fc, nperm = 1000)
     res1$leadingEdge <- sapply(res1$leadingEdge, paste, collapse = "//")
-    ## res$leadingEdge <- NULL
     colnames(res1)[1] <- "word"
     all.gsea[[colnames(S)[i]]] <- res1
   }
@@ -95,20 +86,14 @@ calculate_word_cloud <- function(ngs, progress = NULL, pg.unit = 1) {
 
   if (!is.null(progress)) progress$inc(0.25 * pg.unit, detail = "clustering")
 
-
-
-
   if (NCOL(W) <= 3) {
     ## t-SNE doesn't like 1-2 columns...
     W <- cbind(W, W, W, W, W)
     W <- W + 1e-2 * matrix(rnorm(length(W)), nrow(W), ncol(W))
   }
   nb <- floor(pmin(pmax(ncol(W) / 4, 2), 10))
-  message("[pgx.calculateWordCloud] dim(W) = ", paste(dim(W), collapse = "x"))
-  message("[pgx.calculateWordCloud] setting perplexity = ", nb)
   pos1 <- Rtsne::Rtsne(t(as.matrix(W)),
     perplexity = nb,
-    ## pca =TRUE, partial_pca =TRUE,
     check_duplicates = FALSE
   )$Y
   pos2 <- uwot::umap(t(as.matrix(W)), n_neighbors = nb)
@@ -118,5 +103,5 @@ calculate_word_cloud <- function(ngs, progress = NULL, pg.unit = 1) {
   pos2 <- pos2[match(res$word, rownames(pos2)), ]
 
   all.res <- list(gsea = all.gsea, S = S, W = W, tsne = pos1, umap = pos2)
-  all.res
+  return(all.res)
 }

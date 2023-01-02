@@ -35,7 +35,6 @@ pgx_deconvolution <- function(X, ref,
                               ),
                               add.unknown = FALSE,
                               normalize.mat = TRUE) {
-
   if (max(X) < 50 || min(X) < 0) {
     warning("pgx_deconvolution: is X really counts? (not logarithmic)\n")
   }

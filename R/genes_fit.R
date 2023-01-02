@@ -822,7 +822,6 @@ fit_contrasts_with_deseq2 <- function(counts, group, contr.matrix, design,
 fit_contrasts_with_deseq2_nodesign <- function(counts, contr.matrix, test = "Wald",
                                                prune.samples = FALSE,
                                                conform.output = FALSE, X = NULL) {
-
   counts <- round(counts)
   if (is.null(X)) {
     X <- edgeR::cpm(counts, log = TRUE)
