@@ -10,8 +10,7 @@ License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 Suggests: 
-    testthat (>= 3.0.0),
-    NNLM
+    testthat (>= 3.0.0)
 Config/testthat/edition: 3
 RoxygenNote: 7.2.2
 Depends: 
@@ -36,6 +35,7 @@ Imports:
     magrittr,
     Matrix,
     matrixTests,
+    NNLM,
     org.Hs.eg.db,
     org.Mm.eg.db,
     parallel,
@@ -52,3 +52,5 @@ Imports:
     TxDb.Mmusculus.UCSC.mm10.knownGene,
     umap,
     uwot
+Remotes:
+    linxihui/NNLM
