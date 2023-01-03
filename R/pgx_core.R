@@ -22,8 +22,14 @@
 #'    - cluster
 #'    - cluster.genes
 #'
-#' This functoin performs the following actions in order on the data:
-#'  - unknown
+#' This function performs the following actions in order on the data:
+#'  - process inputs (counts/samples/contrasts)
+#'  -
+#'
+#' Notes:
+#'  - consider making "pgx_options" function/object to contain
+#'    all of the possible options / parameters that can be passed
+#'    to the "create_pgx" and "compute_pgx" functions
 #'
 #' @param counts dataframe. The counts of the data
 #' @param samples dataframe. The samples of the data
@@ -465,4 +471,34 @@ compute_pgx <- function(ngs,
   ngs <- compute_extra(ngs, extra = extra.methods, lib.dir = lib.dir)
 
   return(ngs)
+}
+
+
+pgx_options <- function(is.logx = NULL,
+                        batch.correct = TRUE,
+                        auto.scale = TRUE,
+                        filter.genes = TRUE,
+                        prune.samples = FALSE,
+                        only.known = TRUE,
+                        only.hugo = TRUE,
+                        convert.hugo = TRUE,
+                        do.cluster = TRUE,
+                        cluster.contrasts = FALSE,
+                        do.clustergenes = TRUE,
+                        only.proteincoding = TRUE) {
+  opts <- list(
+    'is.logx' = is.logx,
+    'batch.correct' = batch.correct,
+    'auto.scale' = auto.scale,
+    'filter.genes' = filter.genes,
+    'prune.samples' = prune.samples,
+    'only.known' = only.known,
+    'only.hugo' = only.hugo,
+    'convert.hugo' = convert.hugo,
+    'do.cluster' = do.cluster,
+    'cluster.contrasts' = cluster.contrasts,
+    'do.clustergenes' = do.clustergenes,
+    'only.proteincoding' = only.proteincoding
+  )
+  return(opts)
 }
