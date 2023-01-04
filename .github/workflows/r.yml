@@ -36,7 +36,6 @@ jobs:
       - name: Install dependencies
         run: |
           install.packages(c("remotes", "rcmdcheck", "devtools"))
-          devtools::install_github("linxihui/NNLM")
           remotes::install_deps(dependencies = TRUE)
         shell: Rscript {0}
       - name: Check
