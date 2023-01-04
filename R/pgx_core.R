@@ -22,9 +22,13 @@
 #'    - cluster
 #'    - cluster.genes
 #'
-#' This function performs the following actions in order on the data:
-#'  - process inputs (counts/samples/contrasts)
-#'  -
+#' This function generally does the following:
+#'  - handles missing values, repeat values, etc.
+#'  - scales or normalizes the data
+#'  - annotates genes
+#'  - infers the cell cycle / gender
+#'  - performs batch correction
+#'  - clusters the data
 #'
 #' Notes:
 #'  - consider making "pgx_options" function/object to contain
@@ -313,7 +317,6 @@ create_pgx <- function(counts,
     remove(cX)
   }
 
-
   ## -------------------------------------------------------------------
   ## Pre-calculate t-SNE for and get clusters early so we can use it
   ## for doing differential analysis.
@@ -375,7 +378,12 @@ create_pgx <- function(counts,
 #' This function works on a pgx object that has already been created from
 #' counts/samples/contrasts data using the `pgx_create()` function.
 #'
-#' @param ngs datatype
+#' It performs the following functions:
+#'  - runs all standard statistical methods on genes
+#'  - runs all standard statistical methods on genesets
+#'  - computes any extra statistical methods as specified
+#'
+#' @param pgx datatype
 #' @param max.genes datatype
 #' @param max.genesets datatype
 #' @param gx.methods datatype
@@ -392,7 +400,7 @@ create_pgx <- function(counts,
 #'
 #' @examples
 #' x <- 1
-compute_pgx <- function(ngs,
+compute_pgx <- function(pgx,
                         max.genes = 19999,
                         max.genesets = 9999,
                         gx.methods = c("ttest.welch", "trend.limma", "edger.qlf"),
@@ -410,12 +418,12 @@ compute_pgx <- function(ngs,
   ## ======================================================================
   ## ======================================================================
 
-  if (!"contrasts" %in% names(ngs)) {
+  if (!"contrasts" %in% names(pgx)) {
     stop("No contrasts found in pgx object")
   }
 
   ## make proper contrast matrix
-  contr.matrix <- ngs$contrasts
+  contr.matrix <- pgx$contrasts
   contr.values <- unique(as.vector(contr.matrix))
   is.numcontrast <- all(contr.values %in% c(NA, -1, 0, 1))
   is.numcontrast <- is.numcontrast && (-1 %in% contr.values) && (1 %in% contr.values)
@@ -429,7 +437,7 @@ compute_pgx <- function(ngs,
   contr.matrix <- contr.matrix[, sel, drop = FALSE]
 
   ## ======================================================================
-  ngs$timings <- c()
+  pgx$timings <- c()
   GENETEST.METHODS <- c(
     "ttest", "ttest.welch", "ttest.rank",
     "voom.limma", "trend.limma", "notrend.limma",
@@ -441,8 +449,8 @@ compute_pgx <- function(ngs,
   ) ## no GSEA, too slow...
 
   ## ------------------ gene level tests ---------------------
-  ngs <- test_genes(
-    ngs, contr.matrix,
+  pgx <- test_genes(
+    pgx, contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
     use.design = use.design,
@@ -450,8 +458,8 @@ compute_pgx <- function(ngs,
   )
 
   ## ------------------ gene set tests -----------------------
-  ngs <- test_genesets(
-    ngs,
+  pgx <- test_genesets(
+    pgx,
     max.features = max.genesets,
     test.methods = gset.methods,
     lib.dir = lib.dir
@@ -459,8 +467,8 @@ compute_pgx <- function(ngs,
 
   if (do.cluster) {
     ## gsetX not ready!!
-    ngs <- cluster_genes(
-      ngs,
+    pgx <- cluster_genes(
+      pgx,
       methods = "umap",
       dims = c(2, 3),
       level = "geneset"
@@ -468,9 +476,9 @@ compute_pgx <- function(ngs,
   }
 
   ## ------------------ extra analyses ---------------------
-  ngs <- compute_extra(ngs, extra = extra.methods, lib.dir = lib.dir)
+  pgx <- compute_extra(pgx, extra = extra.methods, lib.dir = lib.dir)
 
-  return(ngs)
+  return(pgx)
 }
 
 
