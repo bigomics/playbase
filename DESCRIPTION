@@ -38,7 +38,6 @@ Imports:
     Matrix,
     matrixTests,
     metap,
-    NNLM,
     org.Hs.eg.db,
     org.Mm.eg.db,
     parallel,
@@ -56,5 +55,3 @@ Imports:
     TxDb.Mmusculus.UCSC.mm10.knownGene,
     umap,
     uwot
-Remotes:
-    github::linxihui/NNLM
