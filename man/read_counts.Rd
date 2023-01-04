@@ -8,6 +8,8 @@ read_counts(file, convert_names = FALSE)
 }
 \arguments{
 \item{file}{string. path to file}
+
+\item{convert_names}{boolean.}
 }
 \value{
 matrix. the file with the data

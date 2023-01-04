@@ -2,6 +2,7 @@
 #' Read counts data from file
 #'
 #' @param file string. path to file
+#' @param convert_names boolean.
 #'
 #' @return matrix. the file with the data
 #' @export
@@ -33,6 +34,7 @@ read_counts <- function(file, convert_names = FALSE) {
 #' Read expression data from file
 #'
 #' @param file string. path to file
+#' @param convert_names boolean.
 #'
 #' @return matrix. the file with the data
 #' @export

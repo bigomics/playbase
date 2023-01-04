@@ -57,4 +57,4 @@ Imports:
     umap,
     uwot
 Remotes:
-    linxihui/NNLM
+    github::linxihui/NNLM

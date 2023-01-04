@@ -38,6 +38,19 @@
 #' @param counts dataframe. The counts of the data
 #' @param samples dataframe. The samples of the data
 #' @param contrasts dataframe. The contrasts of the data
+#' @param X datatype
+#' @param is.logx datatype
+#' @param batch.correct datatype
+#' @param auto.scale datatype
+#' @param filter.genes datatype
+#' @param prune.samples datatype
+#' @param only.known datatype
+#' @param only.hugo datatype
+#' @param convert.hugo datatype
+#' @param do.cluster datatype
+#' @param cluster.contrasts datatype
+#' @param do.clustergenes datatype
+#' @param only.proteincoding datatype
 #'
 #' @return a list (pgx object)
 #' @export

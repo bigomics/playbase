@@ -8,6 +8,8 @@ read_expression(file, convert_names = TRUE)
 }
 \arguments{
 \item{file}{string. path to file}
+
+\item{convert_names}{boolean.}
 }
 \value{
 matrix. the file with the data

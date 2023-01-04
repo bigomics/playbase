@@ -29,6 +29,32 @@ create_pgx(
 \item{samples}{dataframe. The samples of the data}
 
 \item{contrasts}{dataframe. The contrasts of the data}
+
+\item{X}{datatype}
+
+\item{is.logx}{datatype}
+
+\item{batch.correct}{datatype}
+
+\item{auto.scale}{datatype}
+
+\item{filter.genes}{datatype}
+
+\item{prune.samples}{datatype}
+
+\item{only.known}{datatype}
+
+\item{only.hugo}{datatype}
+
+\item{convert.hugo}{datatype}
+
+\item{do.cluster}{datatype}
+
+\item{cluster.contrasts}{datatype}
+
+\item{do.clustergenes}{datatype}
+
+\item{only.proteincoding}{datatype}
 }
 \value{
 a list (pgx object)
@@ -57,9 +83,13 @@ The pgx object is a list containing the following elements:
    - cluster
    - cluster.genes
 
-This function performs the following actions in order on the data:
- - process inputs (counts/samples/contrasts)
- -
+This function generally does the following:
+ - handles missing values, repeat values, etc.
+ - scales or normalizes the data
+ - annotates genes
+ - infers the cell cycle / gender
+ - performs batch correction
+ - clusters the data
 
 Notes:
  - consider making "pgx_options" function/object to contain

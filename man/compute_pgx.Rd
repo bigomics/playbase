@@ -5,7 +5,7 @@
 \title{Compute the pgx object}
 \usage{
 compute_pgx(
-  ngs,
+  pgx,
   max.genes = 19999,
   max.genesets = 9999,
   gx.methods = c("ttest.welch", "trend.limma", "edger.qlf"),
@@ -19,7 +19,7 @@ compute_pgx(
 )
 }
 \arguments{
-\item{ngs}{datatype}
+\item{pgx}{datatype}
 
 \item{max.genes}{datatype}
 
@@ -47,6 +47,12 @@ a list (representing a pgx object)
 \description{
 This function works on a pgx object that has already been created from
 counts/samples/contrasts data using the `pgx_create()` function.
+}
+\details{
+It performs the following functions:
+ - runs all standard statistical methods on genes
+ - runs all standard statistical methods on genesets
+ - computes any extra statistical methods as specified
 }
 \examples{
 x <- 1
