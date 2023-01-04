@@ -3,6 +3,7 @@
 export(compute_pgx)
 export(create_pgx)
 export(example_file)
+export(pgx_options)
 export(read_contrasts)
 export(read_counts)
 export(read_expression)

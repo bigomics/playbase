@@ -57,8 +57,14 @@ The pgx object is a list containing the following elements:
    - cluster
    - cluster.genes
 
-This functoin performs the following actions in order on the data:
- - unknown
+This function performs the following actions in order on the data:
+ - process inputs (counts/samples/contrasts)
+ -
+
+Notes:
+ - consider making "pgx_options" function/object to contain
+   all of the possible options / parameters that can be passed
+   to the "create_pgx" and "compute_pgx" functions
 }
 \examples{
 counts <- read_counts(example_file("counts.csv"))

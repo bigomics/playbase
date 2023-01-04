@@ -375,17 +375,17 @@ create_pgx <- function(counts,
 #' This function works on a pgx object that has already been created from
 #' counts/samples/contrasts data using the `pgx_create()` function.
 #'
-#' @param ngs
-#' @param max.genes
-#' @param max.genesets
-#' @param gx.methods
-#' @param gset.methods
-#' @param do.cluster
-#' @param use.design
-#' @param prune.samples
-#' @param extra.methods
-#' @param lib.dir
-#' @param progress
+#' @param ngs datatype
+#' @param max.genes datatype
+#' @param max.genesets datatype
+#' @param gx.methods datatype
+#' @param gset.methods datatype
+#' @param do.cluster datatype
+#' @param use.design datatype
+#' @param prune.samples datatype
+#' @param extra.methods datatype
+#' @param lib.dir datatype
+#' @param progress datatype
 #'
 #' @return a list (representing a pgx object)
 #' @export
@@ -474,6 +474,29 @@ compute_pgx <- function(ngs,
 }
 
 
+#' Alter the pgx options list
+#'
+#' This function creates the options list which will be used (eventually) to
+#' control how the pgx object is created and computed.
+#'
+#' @param is.logx boolean.
+#' @param batch.correct boolean.
+#' @param auto.scale boolean.
+#' @param filter.genes boolean.
+#' @param prune.samples boolean.
+#' @param only.known boolean.
+#' @param only.hugo boolean.
+#' @param convert.hugo boolean.
+#' @param do.cluster boolean.
+#' @param cluster.contrasts boolean.
+#' @param do.clustergenes boolean.
+#' @param only.proteincoding boolean.
+#'
+#' @return list of options
+#' @export
+#'
+#' @examples
+#' opt <- pgx_options()
 pgx_options <- function(is.logx = NULL,
                         batch.correct = TRUE,
                         auto.scale = TRUE,
