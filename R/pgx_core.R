@@ -412,7 +412,12 @@ create_pgx <- function(counts,
 #' @export
 #'
 #' @examples
-#' x <- 1
+#' counts <- read_counts(example_file("counts.csv"))
+#' samples <- read_samples(example_file("samples.csv"))
+#' contrasts <- read_contrasts(example_file("contrasts.csv"))
+#' ## takes too long
+#' # mypgx <- create_pgx(counts, samples, contrasts)
+#' # mypgx <- compute_pgx(mypgx)
 compute_pgx <- function(pgx,
                         max.genes = 19999,
                         max.genesets = 9999,

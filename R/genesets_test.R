@@ -7,13 +7,13 @@ test_genesets <- function(pgx, max.features = 1000, lib.dir = "../lib",
   ##
   ##
   if (!"X" %in% names(pgx)) {
-    stop("[compute.testGenesets] FATAL : object must have normalized matrix X")
+    stop("FATAL : object must have normalized matrix X")
   }
 
   ## -----------------------------------------------------------
   ## Load huge geneset matrix
   ## -----------------------------------------------------------
-  G <- readRDS(file.path(lib.dir, "gset-sparseG-XL.rds"))
+  G <- playbase::GSET_SPARSEG_XL # now an internal dataset
   G <- Matrix::t(G)
 
   ## -----------------------------------------------------------

@@ -36,22 +36,21 @@ test_genes_singleomics <- function(pgx, contr.matrix, max.features = 1000,
                                    filter.low = TRUE, remove.outputs = TRUE,
                                    use.design = TRUE, prune.samples = FALSE,
                                    test.methods = c("trend.limma", "deseq2.wald", "edger.qlf")) {
-  message("[compute.testGenesSingleOmics] called")
   contr.matrix0 <- contr.matrix ## SAVE
 
   ## -----------------------------------------------------------------------------
   ## Check parameters, decide group level
   ## -----------------------------------------------------------------------------
   if (!("counts" %in% names(pgx))) {
-    stop("[compute.testGenesSingleOmics] FATAL: cannot find counts in pgx object")
+    stop("[test_genes_singleomics] FATAL: cannot find counts in pgx object")
   }
   if (!("X" %in% names(pgx))) {
-    stop("[compute.testGenesSingleOmics] FATAL: cannot find normalized expression X in pgx object")
+    stop("[test_genes_singleomics] FATAL: cannot find normalized expression X in pgx object")
   }
 
   is.expmatrix <- all(rownames(contr.matrix) %in% rownames(pgx$samples))
   if (!is.expmatrix) {
-    stop("[compute.testGenesSingleOmics] FATAL: contrast must be sample-wise")
+    stop("[test_genes_singleomics] FATAL: contrast must be sample-wise")
   }
 
   stat.group <- NULL
@@ -110,7 +109,7 @@ test_genes_singleomics <- function(pgx, contr.matrix, max.features = 1000,
     design <- model.matrix(~ 0 + stat.group) ## clean design no batch effects...
     colnames(design) <- sub("^stat.group", "", colnames(design))
     if (is.null(names(stat.group))) {
-      stop("[compute.testGenesSingleOmics] FATAL:: stat.group must have names")
+      stop("[test_genes_singleomics] FATAL:: stat.group must have names")
     }
     rownames(design) <- names(stat.group)
 

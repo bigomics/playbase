@@ -121,7 +121,7 @@ fit_geneset_contrasts_with_all_methods <- function(gmt, X, Y, G, design, contr.m
       jj <- match(names(gmt), rownames(zx.gsva))
       zx.gsva <- zx.gsva[jj, colnames(X)] ## make sure..
       zx.gsva[is.na(zx.gsva)] <- 0
-      all.results[["gsva"]] <- gset.fitContrastsWithLIMMA(
+      all.results[["gsva"]] <- fit_geneset_contrasts_with_limma(
         zx.gsva, contr.matrix,
         design = design, trend = TRUE, conform.output = TRUE
       )
@@ -149,7 +149,6 @@ fit_geneset_contrasts_with_all_methods <- function(gmt, X, Y, G, design, contr.m
 
   k <- 1
   .fit_this_contrast_with_method <- function(method, k) {
-    ## cat("fitting contrast",colnames(contr.matrix)[k],"\n")
     jj <- which(exp.matrix[, k] != 0)
     yy <- 1 * (exp.matrix[jj, k] > 0)
     xx <- X[, jj]
@@ -187,7 +186,6 @@ fit_geneset_contrasts_with_all_methods <- function(gmt, X, Y, G, design, contr.m
         genes.up <- head(unique(c(genes.up, genes.up0)), 100)
       }
 
-      ## cat("fisher: testing...\n")
       tt <- system.time({
         output <- geneset_fisher2(genes.up, genes.dn,
           genesets = gmt, fdr = 1.0,

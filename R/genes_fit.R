@@ -180,7 +180,6 @@ fit_contrasts_with_all_methods <- function(counts, X = NULL, samples, design, co
   ## "corrections" ...
   ## ----------------------------------------------------------------------
   if (correct.AveExpr) {
-    message("[ngs.fitContrastsWithAllMethods] correcting AveExpr values...")
     ## Some methods like edgeR and Deseq2 compute some weird
     ## normalized expression matrix. We need to "correct" for
     ## those.

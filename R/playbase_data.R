@@ -15,6 +15,16 @@
 "GEIGER_PGX"
 
 
+#' Some kind of sparse matrix dataset?
+#'
+#' No idea what this data is but it is used in `test_genesets`.
+#'
+#' @format ## `GSET_SPARSEG_XL`
+#' A dgCMatrix / Matrix object
+#' @source unknown
+"GSET_SPARSEG_XL"
+
+
 #' Get path to omp example dataset(s)
 #'
 #' `playbase` comes bundled with a number of sample files in its `inst/extdata`
