@@ -1,6 +1,9 @@
 # gset.fitContrastsWithAllMethods
-fit_geneset_contrasts_with_all_methods <- function(gmt, X, Y, G, design, contr.matrix, methods,
-                                                   mc.threads = 1, mc.cores = NULL, batch.correct = TRUE) {
+fit_geneset_contrasts_with_all_methods <- function(gmt, X, Y, G, design,
+                                                   contr.matrix, methods,
+                                                   mc.threads = 1,
+                                                   mc.cores = NULL,
+                                                   batch.correct = TRUE) {
   ALL.GENESET.METHODS <- c(
     "fisher", "ssgsea", "gsva", "spearman", "camera", "fry",
     "gsea.permPH", "gsea.permGS", "gseaPR", "fgsea"
@@ -9,7 +12,8 @@ fit_geneset_contrasts_with_all_methods <- function(gmt, X, Y, G, design, contr.m
   timings <- c()
 
   if (is.null(mc.cores)) {
-    mc.cores <- round(0.5 * parallel::detectCores(all.tests = TRUE, logical = FALSE))
+    mc.cores <- round(0.5 * parallel::detectCores(all.tests = TRUE,
+                                                  logical = FALSE))
     mc.cores <- pmax(mc.cores, 1)
     mc.cores <- pmin(mc.cores, 16)
   }
@@ -72,8 +76,6 @@ fit_geneset_contrasts_with_all_methods <- function(gmt, X, Y, G, design, contr.m
   G <- G[rownames(X), names(gmt)]
 
   if ("spearman" %in% methods) {
-    cat("fitting contrasts using spearman/limma... \n")
-
     ## single-sample gene set enrichment using (fast) rank correlation
     xx1 <- X - rowMeans(X, na.rm = TRUE) ## center it...
     xx1 <- apply(xx1, 2, rank, na.last = "keep") ## rank correlation (like spearman)
@@ -362,7 +364,6 @@ fit_geneset_contrasts_with_all_methods <- function(gmt, X, Y, G, design, contr.m
 
   method <- "gsva"
   .fit_contrasts_with_method <- function(method) {
-    cat("fitting contrasts using", method, "... \n")
     results <- list()
     timings <- c()
     ncontrasts <- ncol(contr.matrix)

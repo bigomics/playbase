@@ -467,6 +467,7 @@ compute_pgx <- function(pgx,
   ) ## no GSEA, too slow...
 
   ## ------------------ gene level tests ---------------------
+  message('Testing genes...')
   pgx <- test_genes(
     pgx, contr.matrix,
     max.features = max.genes,
@@ -476,6 +477,7 @@ compute_pgx <- function(pgx,
   )
 
   ## ------------------ gene set tests -----------------------
+  message('Testing genesets...')
   pgx <- test_genesets(
     pgx,
     max.features = max.genesets,
@@ -494,6 +496,7 @@ compute_pgx <- function(pgx,
   }
 
   ## ------------------ extra analyses ---------------------
+  message('Computing extra methods...')
   pgx <- compute_extra(pgx, extra = extra.methods, lib.dir = lib.dir)
 
   return(pgx)

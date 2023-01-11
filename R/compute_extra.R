@@ -1,34 +1,41 @@
 # compute.extra
-compute_extra <- function(ngs, extra = EXTRA.MODULES, lib.dir = FILES, sigdb = NULL) {
-  compute_extra_helper(ngs, extra = extra, lib.dir = lib.dir, sigdb = sigdb)
+compute_extra <- function(pgx,
+                          extra = c("meta.go", "deconv", "infer",
+                                    "drugs", "wordcloud"),
+                          lib.dir = '../lib', sigdb = NULL) {
+  compute_extra_helper(pgx, extra = extra, lib.dir = lib.dir, sigdb = sigdb)
 }
 
 # pgx.computeExtra
-compute_extra_helper <- function(ngs, extra = c(
-                                   "meta.go", "deconv", "infer", "drugs",
-                                   "connectivity", "wordcloud"
+compute_extra_helper <- function(pgx, extra = c(
+                                   "meta.go", "deconv", "infer",
+                                   "drugs", "wordcloud"
                                  ),
-                                 lib.dir = FILES, sigdb = NULL) {
+                                 lib.dir = '../lib', sigdb = NULL) {
   timings <- c()
-  libx.dir <- paste0(FILES, "x") ## ../libx
+
+  libx.dir <- '../libx'
+
+  EXTRA.MODULES = c("meta.go", "deconv", "infer", "drugs", ## "graph",
+                    "connectivity", "wordcloud")
 
   extra <- intersect(extra, EXTRA.MODULES)
   if (length(extra) == 0) {
-    return(ngs)
+    return(pgx)
   }
 
   ## detect if it is single or multi-omics
-  single.omics <- !any(grepl("\\[", rownames(ngs$counts)))
+  single.omics <- !any(grepl("\\[", rownames(pgx$counts)))
   if (single.omics) {
-    rna.counts <- ngs$counts
+    rna.counts <- pgx$counts
   } else {
-    data.type <- gsub("\\[|\\].*", "", rownames(ngs$counts))
+    data.type <- gsub("\\[|\\].*", "", rownames(pgx$counts))
     jj <- which(data.type %in% c("gx", "mrna"))
     length(jj)
     if (length(jj) == 0) {
       stop("FATAL. could not find gx/mrna values.")
     }
-    rna.counts <- ngs$counts[jj, ]
+    rna.counts <- pgx$counts[jj, ]
     ## rownames(rna.counts) <- gsub(".*:|.*\\]","",rownames(rna.counts))
     is.logged <- (min(rna.counts, na.rm = TRUE) < 0 || max(rna.counts, na.rm = TRUE) < 50)
     if (is.logged) {
@@ -38,15 +45,15 @@ compute_extra_helper <- function(ngs, extra = c(
 
   if ("meta.go" %in% extra) {
     tt <- system.time({
-      ngs$meta.go <- compute_core_go_graph(ngs, fdr = 0.20)
+      pgx$meta.go <- compute_core_go_graph(pgx, fdr = 0.20)
     })
     timings <- rbind(timings, c("meta.go", tt))
   }
 
   if ("deconv" %in% extra) {
     tt <- system.time({
-      ngs <- compute_deconvolution(
-        ngs,
+      pgx <- compute_deconvolution(
+        pgx,
         lib.dir = lib.dir[1], rna.counts = rna.counts,
         full = FALSE
       )
@@ -56,13 +63,13 @@ compute_extra_helper <- function(ngs, extra = c(
 
   if ("infer" %in% extra) {
     tt <- system.time({
-      ngs <- compute_cellcycle_gender(ngs, rna.counts = rna.counts)
+      pgx <- compute_cellcycle_gender(pgx, rna.counts = rna.counts)
     })
     timings <- rbind(timings, c("infer", tt))
   }
 
   if ("drugs" %in% extra) {
-    ngs$drugs <- NULL ## reset??
+    pgx$drugs <- NULL ## reset??
     cmap.dir <- file.path(libx.dir, "cmap")
     if (!dir.exists(cmap.dir)) {
       cmap.dir <- file.path(lib.dir, "cmap") ## look for default lib
@@ -73,12 +80,12 @@ compute_extra_helper <- function(ngs, extra = c(
 
     if (dir.exists(cmap.dir)) {
       tt <- system.time({
-        ngs <- compute_drug_activity_enrichment(ngs, cmap.dir)
+        pgx <- compute_drug_activity_enrichment(pgx, cmap.dir)
       })
       timings <- rbind(timings, c("drugs", tt))
 
       tt <- system.time({
-        ngs <- compute_drug_sensitivity_enrichment(ngs, cmap.dir)
+        pgx <- compute_drug_sensitivity_enrichment(pgx, cmap.dir)
       })
       timings <- rbind(timings, c("drugs-sx", tt))
     }
@@ -86,17 +93,17 @@ compute_extra_helper <- function(ngs, extra = c(
 
   if ("graph" %in% extra) {
     tt <- system.time({
-      ngs <- compute_omics_graphs(ngs)
+      pgx <- compute_omics_graphs(pgx)
     })
     timings <- rbind(timings, c("graph", tt))
   }
 
   if ("wordcloud" %in% extra) {
     tt <- system.time({
-      res <- calculate_word_cloud(ngs, progress = NULL, pg.unit = 1)
+      res <- calculate_word_cloud(pgx, progress = NULL, pg.unit = 1)
     })
     timings <- rbind(timings, c("wordcloud", tt))
-    ngs$wordcloud <- res
+    pgx$wordcloud <- res
     remove(res)
   }
 
@@ -113,11 +120,11 @@ compute_extra_helper <- function(ngs, extra = c(
       if (file.exists(db)) {
         ntop <- 1000
         ## in memory for many comparisons
-        meta <- get_meta_fold_change_matrix(ngs, what = "meta")
+        meta <- get_meta_fold_change_matrix(pgx, what = "meta")
         inmemory <- ifelse(ncol(meta$fc) > 50, TRUE, FALSE)
         tt <- system.time({
           scores <- compute_connectivity_scores(
-            ngs, db,
+            pgx, db,
             ntop = ntop, contrasts = NULL,
             remove.le = TRUE, inmemory = inmemory
           )
@@ -125,11 +132,11 @@ compute_extra_helper <- function(ngs, extra = c(
         timings <- rbind(timings, c("connectivity", tt))
 
         db0 <- sub(".*/", "", db)
-        ngs$connectivity[[db0]] <- scores
+        pgx$connectivity[[db0]] <- scores
         remove(scores)
       }
     }
-    names(ngs$connectivity)
+    names(pgx$connectivity)
   }
 
   ## ------------------------------------------------------
@@ -155,12 +162,12 @@ compute_extra_helper <- function(ngs, extra = c(
   }
   rownames(timings0) <- paste("[extra]", rownames(timings0))
 
-  ngs$timings <- rbind(ngs$timings, timings0)
-  return(ngs)
+  pgx$timings <- rbind(pgx$timings, timings0)
+  return(pgx)
 }
 
 # compute.deconvolution
-compute_deconvolution <- function(ngs, lib.dir, rna.counts = ngs$counts, full = FALSE) {
+compute_deconvolution <- function(pgx, lib.dir, rna.counts = pgx$counts, full = FALSE) {
   ## list of reference matrices
   refmat <- list()
   readSIG <- function(f) read.csv(file.path(lib.dir, "sig", f), row.names = 1, check.names = FALSE)
@@ -189,54 +196,54 @@ compute_deconvolution <- function(ngs, lib.dir, rna.counts = ngs$counts, full = 
     methods <- c("DCQ", "DeconRNAseq", "I-NNLS", "NNLM", "cor")
   }
 
-  ## counts <- ngs$counts
+  ## counts <- pgx$counts
   counts <- rna.counts
-  rownames(counts) <- toupper(ngs$genes[rownames(counts), "gene_name"])
+  rownames(counts) <- toupper(pgx$genes[rownames(counts), "gene_name"])
   res <- pgx_multiple_deconvolution(counts, refmat = refmat, method = methods)
 
-  ngs$deconv <- res$results
+  pgx$deconv <- res$results
   if (!is.null(res$timings)) {
     rownames(res$timings) <- paste0("[deconvolution]", rownames(res$timings))
     res$timings
-    ngs$timings <- rbind(ngs$timings, res$timings)
+    pgx$timings <- rbind(pgx$timings, res$timings)
   }
   remove(refmat)
   remove(res)
 
-  return(ngs)
+  return(pgx)
 }
 
 # compute.cellcycle.gender
-compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
+compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
   pp <- rownames(rna.counts)
   is.mouse <- (mean(grepl("[a-z]", gsub(".*:|.*\\]", "", pp))) > 0.8)
   if (!is.mouse) {
-    ngs$samples$cell.cycle <- NULL
-    ngs$samples$.cell.cycle <- NULL
+    pgx$samples$cell.cycle <- NULL
+    pgx$samples$.cell.cycle <- NULL
     counts <- rna.counts
-    rownames(counts) <- toupper(ngs$genes[rownames(counts), "gene_name"])
+    rownames(counts) <- toupper(pgx$genes[rownames(counts), "gene_name"])
     res <- try(infer_cell_cycle_phase(counts)) ## can give bins error
     if (class(res) != "try-error") {
-      ngs$samples$.cell_cycle <- res
+      pgx$samples$.cell_cycle <- res
     }
-    if (!(".gender" %in% colnames(ngs$samples))) {
-      ngs$samples$.gender <- NULL
+    if (!(".gender" %in% colnames(pgx$samples))) {
+      pgx$samples$.gender <- NULL
       X <- log2(1 + rna.counts)
-      gene_name <- ngs$genes[rownames(X), "gene_name"]
-      ngs$samples$.gender <- infer_gender(X, gene_name)
+      gene_name <- pgx$genes[rownames(X), "gene_name"]
+      pgx$samples$.gender <- infer_gender(X, gene_name)
     }
-    Matrix::head(ngs$samples)
+    Matrix::head(pgx$samples)
   }
-  return(ngs)
+  return(pgx)
 }
 
 # compute.drugActivityEnrichment
-compute_drug_activity_enrichment <- function(ngs, cmap.dir) {
+compute_drug_activity_enrichment <- function(pgx, cmap.dir) {
   ## -------------- drug enrichment
   ref.db <- dir(cmap.dir, pattern = "^L1000-.*rds$")
   if (length(ref.db) == 0) {
     warning("Missing drug activity database")
-    return(ngs)
+    return(pgx)
   }
   names(ref.db) <- sub("-", "/", gsub("_.*", "", ref.db))
   f <- ref.db[1]
@@ -254,7 +261,7 @@ compute_drug_activity_enrichment <- function(ngs, cmap.dir) {
     NPRUNE <- 250
     fname <- names(ref.db)[i]
     out1 <- compute_drug_enrichment(
-      ngs, X, xdrugs,
+      pgx, X, xdrugs,
       methods = c("GSEA", "cor"),
       nmin = 3, nprune = NPRUNE, contrast = NULL
     )
@@ -286,23 +293,23 @@ compute_drug_activity_enrichment <- function(ngs, cmap.dir) {
 
     ## --------------- attach results to object
     db <- names(ref.db)[i]
-    ngs$drugs[[db]] <- out1[["GSEA"]]
-    ngs$drugs[[db]][["annot"]] <- annot0[, c("drug", "moa", "target")]
-    ngs$drugs[[db]][["clust"]] <- out1[["clust"]]
-    ngs$drugs[[db]][["stats"]] <- out1[["stats"]]
+    pgx$drugs[[db]] <- out1[["GSEA"]]
+    pgx$drugs[[db]][["annot"]] <- annot0[, c("drug", "moa", "target")]
+    pgx$drugs[[db]][["clust"]] <- out1[["clust"]]
+    pgx$drugs[[db]][["stats"]] <- out1[["stats"]]
   }
 
   remove(X)
   remove(xdrugs)
-  return(ngs)
+  return(pgx)
 }
 
 # compute.drugSensitivityEnrichment
-compute_drug_sensitivity_enrichment <- function(ngs, cmap.dir) {
+compute_drug_sensitivity_enrichment <- function(pgx, cmap.dir) {
   ref.db <- dir(cmap.dir, pattern = "sensitivity.*rds$")
   if (length(ref.db) == 0) {
     warning("Missing drug sensitivity database")
-    return(ngs)
+    return(pgx)
   }
   names(ref.db) <- sub("-", "/", gsub("_.*", "", ref.db))
   ref <- ref.db[1]
@@ -313,7 +320,7 @@ compute_drug_sensitivity_enrichment <- function(ngs, cmap.dir) {
 
     NPRUNE <- 250
     out1 <- compute_drug_enrichment(
-      ngs, X, xdrugs,
+      pgx, X, xdrugs,
       methods = c("GSEA", "cor"),
       nmin = 10, nprune = NPRUNE, contrast = NULL
     )
@@ -327,25 +334,25 @@ compute_drug_sensitivity_enrichment <- function(ngs, cmap.dir) {
       rownames(annot0) <- rownames(out1[["GSEA"]]$X)
 
       s1 <- names(ref.db)[i]
-      ngs$drugs[[s1]] <- out1[["GSEA"]]
-      ngs$drugs[[s1]][["annot"]] <- annot0[, c("moa", "target")]
-      ngs$drugs[[s1]][["clust"]] <- out1[["clust"]]
-      ngs$drugs[[s1]][["stats"]] <- out1[["stats"]]
+      pgx$drugs[[s1]] <- out1[["GSEA"]]
+      pgx$drugs[[s1]][["annot"]] <- annot0[, c("moa", "target")]
+      pgx$drugs[[s1]][["clust"]] <- out1[["clust"]]
+      pgx$drugs[[s1]][["stats"]] <- out1[["stats"]]
     }
   } ## end of for rr
 
   remove(X)
   remove(xdrugs)
-  return(ngs)
+  return(pgx)
 }
 
 # compute.omicsGraphs
-compute_omics_graphs <- function(ngs) {
-  ngs$omicsnet <- create_omics_graph(ngs)
-  ngs$pathscores <- compute_path_scores(ngs$omicsnet, strict.pos = FALSE)
+compute_omics_graphs <- function(pgx) {
+  pgx$omicsnet <- create_omics_graph(pgx)
+  pgx$pathscores <- compute_path_scores(pgx$omicsnet, strict.pos = FALSE)
 
   ## compute reduced graph
-  ngs$omicsnet.reduced <- reduce_omics_graph(ngs)
-  ngs$pathscores.reduced <- compute_path_scores(ngs$omicsnet.reduced, strict.pos = FALSE)
-  return(ngs)
+  pgx$omicsnet.reduced <- reduce_omics_graph(pgx)
+  pgx$pathscores.reduced <- compute_path_scores(pgx$omicsnet.reduced, strict.pos = FALSE)
+  return(pgx)
 }
