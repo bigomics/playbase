@@ -55,5 +55,10 @@ It performs the following functions:
  - computes any extra statistical methods as specified
 }
 \examples{
-x <- 1
+counts <- read_counts(example_file("counts.csv"))
+samples <- read_samples(example_file("samples.csv"))
+contrasts <- read_contrasts(example_file("contrasts.csv"))
+## takes too long
+# mypgx <- create_pgx(counts, samples, contrasts)
+# mypgx <- compute_pgx(mypgx)
 }

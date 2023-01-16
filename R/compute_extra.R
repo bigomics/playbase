@@ -16,7 +16,7 @@ compute_extra_helper <- function(pgx, extra = c(
 
   libx.dir <- '../libx'
 
-  EXTRA.MODULES = c("meta.go", "deconv", "infer", "drugs", ## "graph",
+  EXTRA.MODULES = c("meta.go", "deconv", "infer", "drugs",
                     "connectivity", "wordcloud")
 
   extra <- intersect(extra, EXTRA.MODULES)
@@ -170,17 +170,16 @@ compute_extra_helper <- function(pgx, extra = c(
 compute_deconvolution <- function(pgx, lib.dir, rna.counts = pgx$counts, full = FALSE) {
   ## list of reference matrices
   refmat <- list()
-  readSIG <- function(f) read.csv(file.path(lib.dir, "sig", f), row.names = 1, check.names = FALSE)
-  LM22 <- read.csv(file.path(lib.dir, "sig/LM22.txt"), sep = "\t", row.names = 1)
+  LM22 <- playbase::LM22
   refmat[["Immune cell (LM22)"]] <- LM22
-  refmat[["Immune cell (ImmProt)"]] <- readSIG("immprot-signature1000.csv")
-  refmat[["Immune cell (DICE)"]] <- readSIG("DICE-signature1000.csv")
-  refmat[["Immune cell (ImmunoStates)"]] <- readSIG("ImmunoStates_matrix.csv")
-  refmat[["Tissue (HPA)"]] <- readSIG("rna_tissue_matrix.csv")
-  refmat[["Tissue (GTEx)"]] <- readSIG("GTEx_rna_tissue_tpm.csv")
-  refmat[["Cell line (HPA)"]] <- readSIG("HPA_rna_celline.csv")
-  refmat[["Cell line (CCLE)"]] <- readSIG("CCLE_rna_celline.csv")
-  refmat[["Cancer type (CCLE)"]] <- readSIG("CCLE_rna_cancertype.csv")
+  refmat[["Immune cell (ImmProt)"]] <- playbase::IMMPROT_SIGNATURE1000
+  refmat[["Immune cell (DICE)"]] <- playbase::DICE_SIGNATURE1000
+  refmat[["Immune cell (ImmunoStates)"]] <- playbase::IMMUNOSTATES_MATRIX
+  refmat[["Tissue (HPA)"]] <- playbase::RNA_TISSUE_MATRIX
+  refmat[["Tissue (GTEx)"]] <- playbase::GTEX_RNA_TISSUE_TPM
+  refmat[["Cell line (HPA)"]] <- playbase::HPA_RNA_CELLINE
+  refmat[["Cell line (CCLE)"]] <- playbase::CCLE_RNA_CELLINE
+  refmat[["Cancer type (CCLE)"]] <- playbase::CCLE_RNA_CANCERTYPE
 
   ## list of methods to compute
   methods <- c("DCQ", "DeconRNAseq", "I-NNLS", "NNLM", "cor", "CIBERSORT", "EPIC")
@@ -250,12 +249,9 @@ compute_drug_activity_enrichment <- function(pgx, cmap.dir) {
 
   for (i in 1:length(ref.db)) {
     f <- ref.db[i]
-    message("[compute.drugActivityEnrichment] reading L1000 reference: ", f)
     X <- readRDS(file = file.path(cmap.dir, f))
     xdrugs <- gsub("[_@].*$", "", colnames(X))
     ndrugs <- length(table(xdrugs))
-    message("number of profiles: ", ncol(X))
-    message("number of drugs: ", ndrugs)
     is.drug <- grepl("activity|drug|ChemPert", f, ignore.case = TRUE)
 
     NPRUNE <- 250

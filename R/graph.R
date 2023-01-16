@@ -49,8 +49,6 @@ hclust_graph <- function(g, k = NULL, mc.cores = 2) {
 
 # pgx.computeCoreGOgraph
 compute_core_go_graph <- function(ngs, fdr = 0.05) {
-  require(igraph)
-
   ## test if there are GO terms
   mx <- ngs$gset.meta$meta[[1]]
   jj <- grep("^GO", rownames(mx))

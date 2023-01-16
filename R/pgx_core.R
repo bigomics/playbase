@@ -130,7 +130,7 @@ create_pgx <- function(counts,
   kk <- intersect(colnames(counts), rownames(samples))
   counts <- counts[, kk, drop = FALSE]
   samples <- samples[kk, , drop = FALSE]
-  samples <- type.convert(samples) ## automatic type conversion
+  samples <- type.convert(samples, as.is=TRUE) ## automatic type conversion
   if (!is.null(X)) X <- X[, kk, drop = FALSE]
   if (all(kk %in% rownames(contrasts))) {
     contrasts <- contrasts[kk, , drop = FALSE]
@@ -494,6 +494,7 @@ compute_pgx <- function(pgx,
       level = "geneset"
     )
   }
+  return(pgx)
 
   ## ------------------ extra analyses ---------------------
   message('Computing extra methods...')
