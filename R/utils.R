@@ -1,4 +1,4 @@
-#' @export
+
 mem.proc <- function(digits=0) {
   mem <- "[? MB]"
   if(Sys.info()["sysname"] %in% c("Linux")) {
@@ -13,7 +13,6 @@ mem.proc <- function(digits=0) {
   mem
 }
 
-#' @export
 info <- function(..., type="INFO") {
   dd <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
   msg = "some message"
@@ -24,5 +23,4 @@ info <- function(..., type="INFO") {
   message(paste0(type,dd,mm," --- ",sub("\n$","",paste(msg,collapse=" "))))
 }
 
-#' @export
 dbg <- function(...) info(..., type="DBUG")
