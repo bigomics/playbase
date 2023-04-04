@@ -53,7 +53,7 @@
 #' @param only.proteincoding datatype
 #'
 #' @return a list (pgx object)
-
+#' @export
 #'
 #' @examples
 #' counts <- read_counts(example_file("counts.csv"))
@@ -61,7 +61,6 @@
 #' contrasts <- read_contrasts(example_file("contrasts.csv"))
 #' ## takes too long
 #' # my_pgx <- create_pgx(counts, samples, contrasts)
-#' @export
 create_pgx <- function(counts,
                        samples,
                        contrasts,
@@ -410,7 +409,7 @@ create_pgx <- function(counts,
 #' @param progress datatype
 #'
 #' @return a list (representing a pgx object)
-
+#' @export
 #'
 #' @examples
 #' counts <- read_counts(example_file("counts.csv"))
@@ -419,7 +418,6 @@ create_pgx <- function(counts,
 #' ## takes too long
 #' # mypgx <- create_pgx(counts, samples, contrasts)
 #' # mypgx <- compute_pgx(mypgx)
-#' @export
 compute_pgx <- function(pgx,
                         max.genes = 19999,
                         max.genesets = 9999,
@@ -525,11 +523,10 @@ compute_pgx <- function(pgx,
 #' @param only.proteincoding boolean.
 #'
 #' @return list of options
-
+#' @export
 #'
 #' @examples
 #' opt <- pgx_options()
-#' @export
 pgx_options <- function(is.logx = NULL,
                         batch.correct = TRUE,
                         auto.scale = TRUE,

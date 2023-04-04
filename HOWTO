@@ -1,0 +1,28 @@
+# Files
+
+Remove ui-* files (shiny) related:
+
+rm R/ui-* R/auth.R
+
+From the original R folder the following files are kept:
+
+cp R.save/pgx_core.R R.save/pgx_read.R R.save/playbase-data.R R.save/playbase-package.R R/
+
+# SED
+
+1. remove all @export comments and prepend @export comment before all
+functions:
+
+for i in *.r *.R; do sed -i "s/#' @export//" $i; done
+for f in *.r *.R; do sed -i -E "/^[a-z|A-Z|._|0-9]+ <- function/i #' @export" $f; done
+
+2. Make documentation and install
+
+make doc && make install
+
+# Add namespace for playbase function in original code
+
+library(addns)
+setwd("~/Playground/omicsplayground-test/")  ## some test copy of OP
+addns::add_ns(path = "components/", packages = c("playbase"))
+

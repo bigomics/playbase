@@ -5,11 +5,10 @@
 #' @param convert_names boolean.
 #'
 #' @return matrix. the file with the data
-
+#' @export
 #'
 #' @examples
 #' counts <- read_counts(playbase::example_file("counts.csv"))
-#' @export
 read_counts <- function(file, convert_names = FALSE) {
   df <- read_as_matrix(file)
 
@@ -38,11 +37,10 @@ read_counts <- function(file, convert_names = FALSE) {
 #' @param convert_names boolean.
 #'
 #' @return matrix. the file with the data
-
+#' @export
 #'
 #' @examples
 #' counts <- read_expression(playbase::example_file("counts.csv"))
-#' @export
 read_expression <- function(file, convert_names = TRUE) {
   df <- read_as_matrix(file)
   df <- df**2
@@ -71,11 +69,10 @@ read_expression <- function(file, convert_names = TRUE) {
 #' @param file string. path to file
 #'
 #' @return dataframe the file with the data
-
+#' @export
 #'
 #' @examples
 #' samples <- read_samples(playbase::example_file("samples.csv"))
-#' @export
 read_samples <- function(file) {
   df <- read_as_matrix(file)
 
@@ -90,11 +87,10 @@ read_samples <- function(file) {
 #' @param file string. path to file
 #'
 #' @return matrix. the file with the data
-
+#' @export
 #'
 #' @examples
 #' contrasts <- read_contrasts(playbase::example_file("contrasts.csv"))
-#' @export
 read_contrasts <- function(file) {
   df <- read_as_matrix(file)
 
@@ -114,7 +110,6 @@ read_contrasts <- function(file) {
 #'
 #' @examples
 #' x <- 1
-#' @export
 read_as_matrix <- function(file) {
   x0 <- data.table::fread(
     file = file,
@@ -143,7 +138,6 @@ read_as_matrix <- function(file) {
 #' @param data matrix.
 #'
 #' @return boolean. true if data is valid
-#' @export
 validate_counts <- function(data) {
   t1 <- check_duplicate_rows(data)
   t2 <- check_empty_rows(data)
@@ -162,7 +156,6 @@ validate_counts <- function(data) {
 #' @param data matrix.
 #'
 #' @return boolean. true if data is valid
-#' @export
 validate_samples <- function(data) {
   t1 <- check_duplicate_rows(data)
   t2 <- check_empty_rows(data)
@@ -182,7 +175,6 @@ validate_samples <- function(data) {
 #' @param data matrix.
 #'
 #' @return boolean. true if data is valid
-#' @export
 validate_contrasts <- function(data) {
   t1 <- check_duplicate_rows(data)
   t2 <- check_empty_rows(data)
@@ -192,26 +184,22 @@ validate_contrasts <- function(data) {
   return(t1 & t2 & t3 & t4)
 }
 
-#' @export
 check_duplicate_rows <- function(data) {
   rn <- setdiff(data[[1]], c("", "NA", NA))
   t1 <- sum(duplicated(rn)) == 0
   return(t1)
 }
 
-#' @export
 check_empty_rows <- function(data) {
   t1 <- nrow(data) > 0
   return(t1)
 }
 
-#' @export
 check_duplicate_cols <- function(data) {
   t1 <- sum(duplicated(colnames(data))) == 0
   return(t1)
 }
 
-#' @export
 check_max_samples <- function(data, max_samples = 2000) {
   MAXSAMPLES <- as.integer(max_samples)
   t1 <- (ncol(data) - 1) <= MAXSAMPLES
