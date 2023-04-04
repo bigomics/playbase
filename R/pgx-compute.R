@@ -599,7 +599,7 @@ if(0) {
 .EXTRA.METHODS = c("meta.go","deconv","infer","drugs","wordcloud")
 
 #' @export
-pgx.computePGX <- function(ngs,
+pgx.computePGX <- function(pgx,
                            max.genes = 19999, max.genesets = 9999,
                            gx.methods = c("ttest.welch","trend.limma","edger.qlf"),
                            gset.methods = c("fisher","gsva","fgsea"),
@@ -612,12 +612,12 @@ pgx.computePGX <- function(ngs,
     ##======================================================================
     ##======================================================================
 
-    if(!"contrasts" %in% names(ngs)) {
+    if(!"contrasts" %in% names(pgx)) {
         stop("[pgx.computePGX] FATAL:: no contrasts in object")
     }
 
     ## make proper contrast matrix
-    contr.matrix <- ngs$contrasts
+    contr.matrix <- pgx$contrasts
     contr.values <- unique(as.vector(contr.matrix))
     is.numcontrast <- all(contr.values %in% c(NA,-1,0,1))
     is.numcontrast <- is.numcontrast && (-1 %in% contr.values) && (1 %in% contr.values)
@@ -635,7 +635,7 @@ pgx.computePGX <- function(ngs,
     ##======================================================================
     ##======================================================================
 
-    ngs$timings <- c()
+    pgx$timings <- c()
     GENETEST.METHODS = c("ttest","ttest.welch","ttest.rank",
                          "voom.limma","trend.limma","notrend.limma",
                          "edger.qlf","edger.lrt","deseq2.wald","deseq2.lrt")
@@ -646,31 +646,31 @@ pgx.computePGX <- function(ngs,
     if(!is.null(progress)) progress$inc(0.1, detail = "testing genes")
     message("[pgx.computePGX] testing genes...")
 
-    ngs <- compute.testGenes(
-        ngs, contr.matrix,
+    pgx <- compute.testGenes(
+        pgx, contr.matrix,
         max.features = max.genes,
         test.methods = gx.methods,
         use.design = use.design,
         prune.samples = prune.samples
     )
-    Matrix::head(ngs$gx.meta$meta[[1]])
+    Matrix::head(pgx$gx.meta$meta[[1]])
 
     ## ------------------ gene set tests -----------------------
     if(!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
     message("[pgx.computePGX] testing genesets...")
     ##max.features=max.genes;test.methods=gset.methods
-    ngs <- compute.testGenesets(
-        ngs, max.features = max.genesets,
+    pgx <- compute.testGenesets(
+        pgx, max.features = max.genesets,
         test.methods = gset.methods,
         lib.dir = lib.dir )
-    Matrix::head(ngs$gset.meta$meta[[1]])
+    Matrix::head(pgx$gset.meta$meta[[1]])
 
 
     if(do.cluster) {
         message("[pgx.computePGX] clustering genes...")
         ##ngs <- pgx.clusterGenes(ngs, methods='umap', dims=c(2,3), level='gene')
-        ngs <- pgx.clusterGenes(ngs, methods='umap', dims=c(2,3), level='geneset')  ## gsetX not ready!!
+        pgx <- pgx.clusterGenes(pgx, methods='umap', dims=c(2,3), level='geneset')  ## gsetX not ready!!
     }
 
 
@@ -680,11 +680,11 @@ pgx.computePGX <- function(ngs,
 
     ##extra <- c("meta.go","deconv","infer","drugs")
     ##extra <- c("meta.go","infer","drugs")
-    ngs <- compute.extra(ngs, extra=extra.methods, lib.dir=lib.dir)
+    pgx <- compute.extra(pgx, extra=extra.methods, lib.dir=lib.dir)
 
     message("[pgx.computePGX] done!")
-    ngs$timings
-    return(ngs)
+    pgx$timings
+    return(pgx)
 }
 
 
