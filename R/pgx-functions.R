@@ -966,9 +966,9 @@ getHSGeneInfo <- function(eg, as.link=TRUE) {
                   ##"PMID" = org.Hs.eg.db::org.Hs.egPMID,
                   "GO" = org.Hs.eg.db::org.Hs.egGO)
 
-    info <- lapply(env.list, function(env) mget(eg, envir=env, ifnotfound=NA)[[1]])
+    info <- lapply(env.list, function(env) AnnotationDbi::mget(eg, envir=env, ifnotfound=NA)[[1]])
     names(info) <- names(env.list)
-    gene.symbol <- toupper(mget(as.character(eg), envir=org.Hs.eg.db::org.Hs.egSYMBOL))[1]
+    gene.symbol <- toupper(AnnotationDbi::mget(as.character(eg), envir=org.Hs.eg.db::org.Hs.egSYMBOL))[1]
     info[["symbol"]] <- gene.symbol
 
     ## create link to GeneCards
@@ -989,7 +989,7 @@ getHSGeneInfo <- function(eg, as.link=TRUE) {
         kegg.id = info[["KEGG"]][[i]]
         kegg.id = setdiff(kegg.id,NA)
         if(length(kegg.id)>0) {
-            kegg.name = mget(kegg.id, envir=KEGG.db::KEGGPATHID2NAME, ifnotfound=NA)[[1]]
+            kegg.name = AnnotationDbi::mget(kegg.id, envir=KEGG.db::KEGGPATHID2NAME, ifnotfound=NA)[[1]]
             if(!is.na(kegg.name) && as.link) {
                 info[["KEGG"]][[i]] <- gsub("KEGGNAME",kegg.name,gsub("KEGGID",kegg.id,kegg.link))
             } else {
@@ -1008,14 +1008,14 @@ getHSGeneInfo <- function(eg, as.link=TRUE) {
         info[["GO"]] <- info[["GO"]][sel]
 
         ## sometimes GO.db is broken...
-        suppressWarnings( try.out <- try(AnnotationDbi::Term(mget("GO:0000001", envir=GO.db::GOTERM,
+        suppressWarnings( try.out <- try(AnnotationDbi::Term(AnnotationDbi::mget("GO:0000001", envir=GO.db::GOTERM,
                                                                   ifnotfound=NA)[[1]])))
         go.ok <- (class(try.out) !="try-error")
         if(go.ok && length(sel)>0) {
             i=1
             for(i in 1:length(info[["GO"]])) {
                 go_id = info[["GO"]][[i]][[1]]
-                go_term = AnnotationDbi::Term(mget(go_id, envir=GO.db::GOTERM, ifnotfound=NA)[[1]])
+                go_term = AnnotationDbi::Term(AnnotationDbi::mget(go_id, envir=GO.db::GOTERM, ifnotfound=NA)[[1]])
                 if(as.link) {
                     info[["GO"]][[i]] = gsub("GOTERM",go_term,gsub("GOID",go_id,amigo.link))
                 } else {
