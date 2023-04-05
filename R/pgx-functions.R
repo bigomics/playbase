@@ -311,33 +311,33 @@ probe2symbol <- function(probes, type=NULL, org="human", keep.na=FALSE)
     if(is.null(type)) {
 
         hs.list <- list(
-            "human.ensembl" = unlist(as.list(org.Hs.egENSEMBL)),
-            "human.ensemblTRANS" = unlist(as.list(org.Hs.egENSEMBLTRANS)),
+            "human.ensembl" = unlist(as.list(org.Hs.eg.db::org.Hs.egENSEMBL)),
+            "human.ensemblTRANS" = unlist(as.list(org.Hs.eg.db::org.Hs.egENSEMBLTRANS)),
             #"human.unigene" = unlist(as.list(org.Hs.egUNIGENE)),
-            "human.refseq"  = unlist(as.list(org.Hs.egREFSEQ)),
-            "human.accnum"  = unlist(as.list(org.Hs.egACCNUM)),
-            "human.uniprot" = unlist(as.list(org.Hs.egUNIPROT)),
-            "human.symbol"  = unlist(as.list(org.Hs.egSYMBOL))
+            "human.refseq"  = unlist(as.list(org.Hs.eg.db::org.Hs.egREFSEQ)),
+            "human.accnum"  = unlist(as.list(org.Hs.eg.db::org.Hs.egACCNUM)),
+            "human.uniprot" = unlist(as.list(org.Hs.eg.db::org.Hs.egUNIPROT)),
+            "human.symbol"  = unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
             )
 
         mm.list <- list(
-            "mouse.ensembl" = unlist(as.list(org.Mm.egENSEMBL)),
-            "mouse.ensemblTRANS" = unlist(as.list(org.Mm.egENSEMBLTRANS)),
+            "mouse.ensembl" = unlist(as.list(org.Mm.eg.db::org.Mm.egENSEMBL)),
+            "mouse.ensemblTRANS" = unlist(as.list(org.Mm.eg.db::org.Mm.egENSEMBLTRANS)),
             #"mouse.unigene" = unlist(as.list(org.Mm.egUNIGENE)),
-            "mouse.refseq"  = unlist(as.list(org.Mm.egREFSEQ)),
-            "mouse.accnum"  = unlist(as.list(org.Mm.egACCNUM)),
-            "mouse.uniprot" = unlist(as.list(org.Mm.egUNIPROT)),
-            "mouse.symbol"  = unlist(as.list(org.Mm.egSYMBOL))
+            "mouse.refseq"  = unlist(as.list(org.Mm.eg.db::org.Mm.egREFSEQ)),
+            "mouse.accnum"  = unlist(as.list(org.Mm.eg.db::org.Mm.egACCNUM)),
+            "mouse.uniprot" = unlist(as.list(org.Mm.eg.db::org.Mm.egUNIPROT)),
+            "mouse.symbol"  = unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
         )
 
         rn.list <- list(
-          "rat.ensembl" = unlist(as.list(org.Rn.egENSEMBL)),
-          "rat.ensemblTRANS" = unlist(as.list(org.Rn.egENSEMBLTRANS)),
+          "rat.ensembl" = unlist(as.list(org.Rn.eg.db::org.Rn.egENSEMBL)),
+          "rat.ensemblTRANS" = unlist(as.list(org.Rn.eg.db::org.Rn.egENSEMBLTRANS)),
           #"rat.unigene" = unlist(as.list(org.Rn.egUNIGENE)),
-          "rat.refseq"  = unlist(as.list(org.Rn.egREFSEQ)),
-          "rat.accnum"  = unlist(as.list(org.Rn.egACCNUM)),
-          "rat.uniprot" = unlist(as.list(org.Rn.egUNIPROT)),
-          "rat.symbol"  = unlist(as.list(org.Rn.egSYMBOL))
+          "rat.refseq"  = unlist(as.list(org.Rn.eg.db::org.Rn.egREFSEQ)),
+          "rat.accnum"  = unlist(as.list(org.Rn.eg.db::org.Rn.egACCNUM)),
+          "rat.uniprot" = unlist(as.list(org.Rn.eg.db::org.Rn.egUNIPROT)),
+          "rat.symbol"  = unlist(as.list(org.Rn.eg.db::org.Rn.egSYMBOL))
         )
 
         id.list <- c(hs.list, mm.list, rn.list)
