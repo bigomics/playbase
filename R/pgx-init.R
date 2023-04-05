@@ -43,7 +43,7 @@ if(1 && file.exists(INIT.FILE)) {
     GENE.SUMMARY = array(GENE.SUMMARY[,1], dimnames=list(rownames(GENE.SUMMARY)))
 
     ## GENExGENE <- readRDS(file=file.path(FILES,"GENExGENE-cosSparseKNN500-XL.rds"))
-    GSETxGENE <- readRDS(file.path(FILES,"gset-sparseG-XL.rds"))
+    GSETxGENE <- playbase::GSET_SPARSEG_XL #readRDS(file.path(FILES,"gset-sparseG-XL.rds"))
     load(file.path(FILES,"gmt-all.rda"),verbose=1)
     GSETS = gmt.all;remove(gmt.all)
 
