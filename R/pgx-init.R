@@ -18,7 +18,7 @@ INIT.FILE
 
 file.exists(INIT.FILE)
 
-if(1 && file.exists(INIT.FILE)) {    
+if(1 && file.exists(INIT.FILE)) {
 
     message("[INIT] loading cached INIT file ",INIT.FILE)
     t0 <- Sys.time()
@@ -26,15 +26,14 @@ if(1 && file.exists(INIT.FILE)) {
     message("Loading cache took: ", round(Sys.time() - t0), " seconds")
 
 } else {
-    
+
     message("[INIT] no INIT file! building INIT from scratch.")
-    message("[INIT] INIT.FILE = ", INIT.FILE)    
+    message("[INIT] INIT.FILE = ", INIT.FILE)
     t0 <- Sys.time()
 
     oldvars <- ls()
 
     ## All gene families in Human UPPER CASE
-    require(org.Hs.eg.db)
     GENE.TITLE  = unlist(as.list(org.Hs.egGENENAME))
     GENE.SYMBOL = unlist(as.list(org.Hs.egSYMBOL))
     names(GENE.TITLE) = GENE.SYMBOL
@@ -42,7 +41,7 @@ if(1 && file.exists(INIT.FILE)) {
     GSET.PREFIX.REGEX="^BIOCARTA_|^C2_|^C3_|^C7_|^CHEA_|^GOBP_|^GOCC_|^GOMF_|^HALLMARK_|^KEA_|^KEGG_|^PID_|^REACTOME_|^ST_"
     GENE.SUMMARY = read.csv(file.path(FILES,"gene-summary.csv"),row.names=1)
     GENE.SUMMARY = array(GENE.SUMMARY[,1], dimnames=list(rownames(GENE.SUMMARY)))
-    
+
     ## GENExGENE <- readRDS(file=file.path(FILES,"GENExGENE-cosSparseKNN500-XL.rds"))
     GSETxGENE <- readRDS(file.path(FILES,"gset-sparseG-XL.rds"))
     load(file.path(FILES,"gmt-all.rda"),verbose=1)
@@ -70,7 +69,7 @@ if(1 && file.exists(INIT.FILE)) {
     getGSETS <- function(gs) {
         lapply(iGSETS[gs],function(i) GSET.GENES[i])
     }
-        
+
     message("[INIT] parsing collections...")
     COLLECTIONS <- pgx.getGeneSetCollections(names(GSETS), min.size=10, max.size=99999)
     COLLECTIONS <- COLLECTIONS[order(names(COLLECTIONS))]
@@ -99,7 +98,7 @@ if(1 && file.exists(INIT.FILE)) {
     ##load( file.path(FILES,"allMA-pub.rda"), verbose=1)
     ##load(file.path(FILES,"allFoldChanges-pub-8k.rda"))
     ##PROFILES <- list(M=allM, A=allA, FC=allFC)
-    ##allFC <- pgx.readDatasetProfiles(PGX.DIR, file="datasets-allFC.csv") 
+    ##allFC <- pgx.readDatasetProfiles(PGX.DIR, file="datasets-allFC.csv")
     ##PROFILES <- list(FC=allFC)
     ##remove(allA)
     ##remove(allM)
@@ -108,7 +107,7 @@ if(1 && file.exists(INIT.FILE)) {
     ##-----------------------------------------------------------------------------
     ## Colors
     ##-----------------------------------------------------------------------------
-        
+
     COLORS = rep(RColorBrewer::brewer.pal(8,"Set2"),99)
     COLORS = rep(c(ggsci::pal_npg("nrc", alpha = 0.7)(10),
                    ggsci::pal_aaas("default", alpha = 0.7)(10),
@@ -125,9 +124,9 @@ if(1 && file.exists(INIT.FILE)) {
     newvars
 
     message("Creating global init took: ", round(Sys.time() - t0), " seconds")
-    message("[INIT] saving INIT file ", INIT.FILE)    
+    message("[INIT] saving INIT file ", INIT.FILE)
     save( list=newvars, file=INIT.FILE)
-}    
+}
 }
 
 #' @export
@@ -157,11 +156,11 @@ pgx.initialize <- function(pgx) {
     if(FALSE && !all(vars.needed %in% colnames(pgx$samples))) {
         vars.missing <- setdiff(vars.needed, colnames(pgx$samples))
         msg <- paste("invalid pgx object. missing variables in object: ",vars.missing)
-        message("[pgx-init.R] *** WARNING ***",msg)        
+        message("[pgx-init.R] *** WARNING ***",msg)
         ##stop(msg)
         return(NULL)
     }
-    
+
     ## for COMPATIBILITY: if no counts, estimate from X
     if(is.null(pgx$counts)) {
         cat("WARNING:: no counts table. estimating from X\n")
@@ -176,7 +175,7 @@ pgx.initialize <- function(pgx) {
     }
     pgx$counts <- as.matrix(pgx$counts)
     if(!is.null(pgx$X)) pgx$X <- as.matrix(pgx$X)
-    
+
     ##----------------------------------------------------------------
     ## model parameters
     ##----------------------------------------------------------------
@@ -193,7 +192,7 @@ pgx.initialize <- function(pgx) {
         names(group) <- rownames(pgx$model.parameters$exp.matrix)
         pgx$model.parameters$group <- group
     }
-    
+
     if(is.null(pgx$model.parameters$group)) {
         stop("[pgx.initialize] FATAL: group is null!!!")
     }
@@ -236,7 +235,7 @@ pgx.initialize <- function(pgx) {
         pgx$contrasts <- new.contr
     }
 
-    
+
     ##----------------------------------------------------------------
     ## Tidy up phenotype matrix (important!!!): get numbers/integers
     ## into numeric, categorical into factors....
@@ -252,7 +251,7 @@ pgx.initialize <- function(pgx) {
     if(any(is.numfac)) {
         for(i in which(is.numfac)) pgx$samples[,i] <- as.character(pgx$samples[,i])
     }
-    
+
     ## clean up: pgx$Y is a cleaned up pgx$samples
     kk = grep("batch|lib.size|norm.factor|repl|donor|clone|sample|barcode",
               colnames(pgx$samples),invert=TRUE,value=TRUE)
@@ -260,7 +259,7 @@ pgx.initialize <- function(pgx) {
               colnames(pgx$samples),invert=TRUE,value=TRUE)
     pgx$Y = pgx$samples[colnames(pgx$X),kk,drop=FALSE]
     pgx$Y <- type.convert(pgx$Y)   ## autoconvert to datatypes
-    
+
     ## *****************************************************************
     ## ******************NEED RETHINK***********************************
     ## *****************************************************************
@@ -283,7 +282,6 @@ pgx.initialize <- function(pgx) {
 
     ## Add chromosome annotation if not
     if(!("chr" %in% names(pgx$genes))) {
-        require(org.Hs.eg.db)
         symbol = sapply(as.list(org.Hs.egSYMBOL),"[",1)  ## some have multiple chroms..
         CHR = sapply(as.list(org.Hs.egCHR),"[",1)  ## some have multiple chroms..
         MAP <- sapply(as.list(org.Hs.egMAP),"[",1)  ## some have multiple chroms..
@@ -305,11 +303,11 @@ pgx.initialize <- function(pgx) {
     }
     famsize <- sapply(pgx$families, length)
     pgx$families <- pgx$families[which(famsize>=10)]
-    
+
     all.genes <- sort(rownames(pgx$genes))
     pgx$families[["<all>"]] <- all.genes
     ## rownames(pgx$GMT) <- toupper(rownames(pgx$GMT)) ## everything to human...
-    
+
     ##-----------------------------------------------------------------------------
     ## Recompute geneset meta.fx as average fold-change of genes
     ##-----------------------------------------------------------------------------
@@ -335,14 +333,14 @@ pgx.initialize <- function(pgx) {
     if(("OS.years" %in% pheno && "OS.status" %in% pheno)) {
         message("found OS survival data")
         event <- ( pgx$Y$OS.status %in% c("DECEASED","DEAD","1","yes","YES","dead"))
-        pgx$Y$OS.survival <- ifelse(event, pgx$Y$OS.years, -pgx$Y$OS.years)            
+        pgx$Y$OS.survival <- ifelse(event, pgx$Y$OS.years, -pgx$Y$OS.years)
     }
 
     ## cBioportal coding
     if(("OS_MONTHS" %in% pheno && "OS_STATUS" %in% pheno)) {
         message("[pgx.initialize] found OS survival data\n")
         event <- ( pgx$Y$OS_STATUS %in% c("DECEASED","DEAD","1","yes","YES","dead"))
-        pgx$Y$OS.survival <- ifelse(event, pgx$Y$OS_MONTHS, -pgx$Y$OS_MONTHS)            
+        pgx$Y$OS.survival <- ifelse(event, pgx$Y$OS_MONTHS, -pgx$Y$OS_MONTHS)
     }
 
     ##-----------------------------------------------------------------------------
@@ -368,7 +366,7 @@ pgx.initialize <- function(pgx) {
         any(c("gender","sex") %in% tolower(colnames(pgx$Y)))) {
         pgx$Y$.gender <- NULL
     }
-        
+
     ##-----------------------------------------------------------------------------
     ## Keep compatible with OLD formats
     ##-----------------------------------------------------------------------------
@@ -387,15 +385,15 @@ pgx.initialize <- function(pgx) {
         if("combo" %in% names(pgx$drugs)) {
             dd2 <- pgx$drugs[["combo"]]
             combo <- rownames(dd2$X)
-            aa2 <- pgx.createComboDrugAnnot(combo, aa1)             
+            aa2 <- pgx.createComboDrugAnnot(combo, aa1)
             dd2[["annot"]] <- aa2
             pgx$drugs[["activity-combo/L1000"]] <- dd2
         }
         pgx$drugs$mono  <- NULL
         pgx$drugs$annot <- NULL
-        pgx$drugs$combo <- NULL        
+        pgx$drugs$combo <- NULL
     }
-    
+
     ##-----------------------------------------------------------------------------
     ## remove large deprecated outputs from objects
     ##-----------------------------------------------------------------------------

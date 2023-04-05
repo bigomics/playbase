@@ -302,9 +302,6 @@ mouse2human <- function(x) {
 #' @export
 probe2symbol <- function(probes, type=NULL, org="human", keep.na=FALSE)
 {
-    require(org.Hs.eg.db)
-    require(org.Mm.eg.db)
-    require(org.Rn.eg.db)
 
     ## strip postfix for ensemble codes
     if(mean(grepl("^ENS",probes))>0.5) {
@@ -1143,7 +1140,6 @@ pgx.getGeneFamilies <- function(genes, FILES="../files", min.size=10, max.size=5
     is.mouse = (mean(grepl("[a-z]",sub(".*:","",genes))) > 0.8)
     is.mouse
     if(is.mouse) {
-        require(org.Mm.eg.db)
         mouse.genes = as.character(unlist(as.list(org.Mm.egSYMBOL)))
         names(mouse.genes) = toupper(mouse.genes)
         families <- parallel::mclapply(families, function(s)
@@ -1374,8 +1370,6 @@ extremeCorrelation <- function(query_sig, ref_set, n=200) {
 #' @export
 alias2hugo <- function(s, org=NULL, na.orig=TRUE) {
 
-    require(org.Hs.eg.db)
-    require(org.Mm.eg.db)
 
     hs.symbol <- unlist(as.list(org.Hs.egSYMBOL))
     mm.symbol <- unlist(as.list(org.Mm.egSYMBOL))

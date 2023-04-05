@@ -4,9 +4,9 @@
 ##
 
 if(0) {
-    
+
     devtools::install_github("broadinstitute/inferCNV")
-    
+
 
     CreateInfercnvObject(raw_counts_matrix, gene_order_file, annotations_file,
                          ref_group_names, delim = "\t")
@@ -27,7 +27,6 @@ pgx.inferCNV <- function(ngs, refgroup=NULL, progress=NULL ) {
     ##
     ## BiocManager::install("infercnv")
     ##devtools::install_github("broadinstitute/infercnv", ref="RELEASE_3_9")
-    require(org.Hs.eg.db)
     symbol <- as.vector(as.list(org.Hs.egSYMBOL))
     chrloc <- as.list(org.Hs.egCHRLOC)
     chr <- as.vector(sapply(chrloc,function(x) names(x)[1]))
@@ -47,7 +46,7 @@ pgx.inferCNV <- function(ngs, refgroup=NULL, progress=NULL ) {
                  !is.na(genes$start) & !is.na(genes$stop) )
     length(jj)
     genes <- genes[jj,]
-    
+
     ## prepare data objects
     gg <- intersect(rownames(genes),rownames(ngs$counts))
     length(gg)
@@ -59,7 +58,7 @@ pgx.inferCNV <- function(ngs, refgroup=NULL, progress=NULL ) {
         ## if no reference group is given, we create a reference by
         ## random sampling of genes.
         ##
-        ##        
+        ##
         ref = t(apply(data, 1, function(x) sample(x,50,replace=TRUE)))
         dim(ref)
         colnames(ref) <- paste0("random.",1:ncol(ref))
@@ -75,30 +74,30 @@ pgx.inferCNV <- function(ngs, refgroup=NULL, progress=NULL ) {
     kk <- which(annots[,1] %in% selgrp)
     data <- data[,kk]
     annots <- annots[colnames(data),,drop=FALSE]
-    
+
     ## From inferCNV vignette
     infercnv_obj <- infercnv::CreateInfercnvObject(
-                                  raw_counts_matrix = data, 
+                                  raw_counts_matrix = data,
                                   gene_order_file = genes,
                                   annotations_file = annots,
                                   ref_group_names = refgroup)
-    
+
     out_dir = "/tmp/Rtmpn8rPtL/file19b68b27f09/"
     out_dir = tempfile()
     ##system(paste("mkdir -p",outdir))
-    ##unlink(out_dir,recursive=TRUE)   
+    ##unlink(out_dir,recursive=TRUE)
     cat("DBG pgx.inferCNV:: setting out_dir=",out_dir,"\n")
-    
+
     infercnv_obj <- infercnv::run(infercnv_obj,
-                                  cutoff = 1, ## 
-                                  out_dir = out_dir, 
-                                  cluster_by_groups = TRUE, 
+                                  cutoff = 1, ##
+                                  out_dir = out_dir,
+                                  cluster_by_groups = TRUE,
                                   ##denoise = TRUE,
                                   ##HMM = TRUE,  ## slow...
                                   num_threads = 4,
                                   no_plot = FALSE)
 
-    
+
     ##dir(out_dir)
     img.file <- paste0(out_dir,"/infercnv.png")
     ##cnv <- read.table(file.path(out_dir,"expr.infercnv.dat"),check.names=FALSE)
@@ -110,7 +109,7 @@ pgx.inferCNV <- function(ngs, refgroup=NULL, progress=NULL ) {
 
     dim(cnv)
     dim(genes)
-    
+
     genes = genes[rownames(cnv),]
     pos = (genes$start + genes$stop)/2
     ichr <- as.integer(sub("X",23,sub("Y",24,sub("chr","",genes$chr))))
@@ -120,13 +119,13 @@ pgx.inferCNV <- function(ngs, refgroup=NULL, progress=NULL ) {
     logcnv = log2(cnv[jj,]/mean(cnv,na.rm=TRUE))  ## logarithmic
 
 
-    
+
     img <- png::readPNG(img.file)
 
     res <- list(cna=logcnv, chr=chr, pos=pos, png=img)
 
     if(0) {
-        
+
         par(mfrow=c(1,1))
         grid::grid.raster(img)
 
@@ -140,13 +139,13 @@ pgx.inferCNV <- function(ngs, refgroup=NULL, progress=NULL ) {
         grp = (ngs$samples$group)
         annot = ngs$samples[,1:2]
         jj = seq(1,nrow(res$cna),50)
-        
+
         gx.splitmap(
             res$cna[jj,],
             split=res$chr[jj], splitx=grp,
             scale="row.center", col.annot=annot,
             cluster.rows=FALSE)
-        
+
         X = res$cna[jj,]
         annot = annot
         idx = as.character(res$chr)[jj]
@@ -156,7 +155,7 @@ pgx.inferCNV <- function(ngs, refgroup=NULL, progress=NULL ) {
 
         source("../R/pgx-plotting.R")
         pgx.splitHeatmapX(
-            X = res$cna[jj,], lmar=200, 
+            X = res$cna[jj,], lmar=200,
             annot = annot, row_clust=FALSE,
             idx=res$chr[jj], splitx=grp,
             xtips=NULL, ytips=NULL,
@@ -167,7 +166,7 @@ pgx.inferCNV <- function(ngs, refgroup=NULL, progress=NULL ) {
     ## clean up folder??
     unlink(out_dir,recursive=TRUE)
 
-    return(res)    
+    return(res)
 }
 
 ##nsmooth=80;downsample=10
@@ -178,7 +177,6 @@ pgx.CNAfromExpression <- function(ngs, nsmooth=40)
     ## values.
     ##
     ##
-    require(org.Hs.eg.db)    
     symbol <- as.vector(as.list(org.Hs.egSYMBOL))
     chrloc <- as.list(org.Hs.egCHRLOC)
     chr <- as.vector(sapply(chrloc,function(x) names(x)[1]))
@@ -215,7 +213,7 @@ pgx.CNAfromExpression <- function(ngs, nsmooth=40)
     cna <- cna[rownames(genes),]
     cna0 <- cna
     dim(cna0)
-    
+
     ##---------------------------------------------------------------------
     ## apply 'crude' moving average filter (THIS SHOULD BE IMPROVED!)
     ##---------------------------------------------------------------------
@@ -226,7 +224,7 @@ pgx.CNAfromExpression <- function(ngs, nsmooth=40)
     cna <- cna - apply(cna,1,median,na.rm=TRUE)
     rownames(cna) <- rownames(cna0)
     dim(cna)
-        
+
     res <- list(cna=cna, chr=genes$chr, pos=genes$pos)
     return(res)
 }
@@ -237,7 +235,7 @@ pgx.plotCNAHeatmap <- function(ngs, res, annot=NA, pca.filter=-1, lwd=1,
                                downsample=10,
                                order.by="clust", clip=0, lab.cex=0.6 )
 {
-    
+
     cna <- res$cna
     chr <- res$chr
     chr <- as.character(chr)
@@ -269,14 +267,14 @@ pgx.plotCNAHeatmap <- function(ngs, res, annot=NA, pca.filter=-1, lwd=1,
     pos <- pos[ii]
     chr <- chr[ii]
     table(chr)
-    
+
     ## ensure order on chrpos
     ichr <- as.integer(sub("X",23,sub("Y",24,sub("chr","",chr))))
     jj <- order(ichr, pos)
     cna <- cna[jj,]
     chr <- chr[jj]
     pos <- pos[jj]
-    
+
     ## center/scale
     cna <- cna - rowMeans(cna,na.rm=TRUE)
     cna <- cna / max(abs(cna),na.rm=TRUE)
@@ -295,7 +293,7 @@ pgx.plotCNAHeatmap <- function(ngs, res, annot=NA, pca.filter=-1, lwd=1,
         rownames(cna2) <- rownames(cna)
         cna <- cna2
     }
-    
+
     ## sort/order
     hc <- NULL
     sv1 <- NULL

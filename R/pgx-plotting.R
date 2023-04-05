@@ -1234,7 +1234,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale=TRUE,
     if(is.null(main)) main <- probe
     ##if(ncol(X) <= 20) {
     if(!grouped) {
-        ## NOT GROUPED BARPLOTS      
+        ## NOT GROUPED BARPLOTS
         nx = length(gx)
         if(is.null(ylab)) {
             ylab = "expression (log2CPM)"
@@ -1244,7 +1244,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale=TRUE,
         klr[is.na(klr)] <- "#e5e5e5"
 
       if(plotlib=="plotly") {
-        
+
           fig <- pgx.barplot.PLOTLY(
             data = data.frame(
               gx = gx,
@@ -1265,7 +1265,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale=TRUE,
           return(fig)
 
       } else {
-        
+
           ## plot using base graphics
           gx.min = 0
           if(min(gx)<0) gx.min <- min(gx)
@@ -1277,7 +1277,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale=TRUE,
 
     } else {
 
-        ## GROUPED PLOTS      
+        ## GROUPED PLOTS
         if(is.null(ylab)) {
             ylab = "expression (log2CPM)"
             if(!logscale) ylab = "expression (CPM)"
@@ -1305,7 +1305,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale=TRUE,
             yaxistitle = ylab,
             xaxistitle = xlab,
             annotations = plotly.annotations,
-            margin = plotly.margin            
+            margin = plotly.margin
           )
           return(fig)
 
@@ -2271,7 +2271,6 @@ plot.ggbarplot <- function(mat, xlab="x", ylab="y", srt=0, main=NULL,
                       legend.pos = c(0.016,1), legend.cex = 1,
                       bar_width=0.7, base_size=12, group.name="group")
 {
-    require(ggplot2)
 
     if(NCOL(mat)==1) mat <- rbind(mat)
     mat <- mat[nrow(mat):1,,drop=FALSE]
@@ -2697,10 +2696,9 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
                                      opacity=1, label.clusters=FALSE, labels=NULL,
                                      legend.ysp=0.85, legend.pos = "bottomleft",
                                      tooltip=NULL, theme=NULL, set.par=TRUE,
-                                     label.type=c("text","box"), base_size=11, 
+                                     label.type=c("text","box"), base_size=11,
                                      title=NULL, nrows=NULL,  barscale=0.8 )
 {
-    require(ggplot2)
 
     if(0) {
         cex.lab=0.8; cex.title=1.2; cex.clust=1.5; cex.legend=1;
@@ -3066,7 +3064,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
 
     var <- var[match(rownames(pos),names(var))]
     names(var) <- rownames(pos)
-    
+
     if(is.null(type)) {
         type <- c("numeric","factor")[1 + class(var) %in% c("factor","character")]
     }
@@ -3188,10 +3186,10 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
             cmin = -cmax
         }
     }
-    
+
     ## remove NA??
     ##df <- df[!is.na(df$value),]
-    
+
     ##---------------- call PLOTLY -----------
     if(is.null(source)) source <- paste0(sample(LETTERS,10),collapse='')
     ##plt <- plotly::plot_ly(df,
@@ -3231,13 +3229,13 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
             key = ~label,
             mode = "markers",
             type = "scattergl")
-    
+
     if(!is.null(hilight)) {
 
         jj <- which(rownames(df) %in% hilight)
         col1 = 'transparent'
         if(!is.null(hilight.col)) col1 <- hilight.col
-        
+
         plt <- plt %>%
             ##add_trace(
             plotly::add_markers(
@@ -3755,7 +3753,6 @@ corclust <- function(x) {
 ## Override add_col_annotation to be able to suppress titles
 ##
 ##
-require(iheatmapr)
 #setMethod(add_col_annotation,
 #          c(p = "Iheatmap"),
 #' @export
@@ -4102,7 +4099,7 @@ pgx.barplot.PLOTLY <- function(
     grouped = TRUE #true will calculate mean +/- (sd) across groups
     annotations = NULL
   }
-  
+
   # calculate error bars
 
   # calculate summary statistics for groups
@@ -4116,7 +4113,7 @@ pgx.barplot.PLOTLY <- function(
   } else {
     data_stats <- data
   }
-  
+
   ngroups <- length(unique(data_stats[[1]]))
   bargap <- ifelse(ngroups == 2, 0.5, NA)
 
@@ -4127,7 +4124,7 @@ pgx.barplot.PLOTLY <- function(
       thickness = 1,
       color = "#000000")
   }
-  
+
   p <- plotly::plot_ly(
     data = data_stats,
     x = data_stats[[x]],
@@ -4158,6 +4155,6 @@ pgx.barplot.PLOTLY <- function(
       annotations = annotations
     ) %>%
     plotly_default()
-  
+
   return(p)
 }

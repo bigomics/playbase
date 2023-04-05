@@ -766,7 +766,6 @@ pgx.plotForwardProjection <- function(gr, gene, cex=1, fx=NULL,
 #' @export
 pgx.computeCoreGOgraph <- function(ngs, fdr=0.05)
 {
-    require(igraph)
 
     ## test if there are GO terms
     mx = ngs$gset.meta$meta[[1]]

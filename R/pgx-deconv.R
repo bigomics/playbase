@@ -653,7 +653,7 @@ pgx.deconvolution <- function(X, ref, methods=DECONV.METHODS,
         dbg("[pgx.deconvolution] calculating DeconRNAseq...")
 
         ## uses psych::pca() from pcaMethods
-        require(pcaMethods)  ## uses pcaMethods::prep
+        ## uses pcaMethods::prep
         drs <- NULL
         stime <- system.time(suppressMessages(suppressWarnings(
             drs <- try(DeconRNASeq::DeconRNASeq(data.frame(mat, check.names=FALSE),

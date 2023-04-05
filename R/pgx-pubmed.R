@@ -18,15 +18,13 @@ if(0) {
 #' @export
 pmid.getGeneContext <- function(gene, keyword)
 {
-    require(org.Hs.eg.db)
-    require(org.Mm.eg.db)    
 
     gene1 <- c(gene,sub("([0-9])","-\\1",gene))
     ##gene1 <- paste0(paste0("^",gene1),"|[\\(, ]",gene1,"[\\)-,\\( ]|",gene1,"$")
     gene1 <- paste0("^",gene1,"$|^",gene1,"[-]")
     gene1 <- paste(gene1,collapse="|")
     gene1
-    
+
     if(gene %in% biomaRt::keys(org.Hs.egALIAS2EG)) {
         gname <- get(get(gene, org.Hs.egALIAS2EG),org.Hs.egGENENAME)
         gname <- gsub("[, -]",".",gname)
@@ -37,7 +35,7 @@ pmid.getGeneContext <- function(gene, keyword)
         gene1 <- paste0(gene1,"|",gname)
     }
     gene1
-    
+
     rif.words <- colnames(GENERIF.MATRIX)
     ii <- grepl(gene1, rif.words, ignore.case=TRUE)
     match0 <- rowSums(GENERIF.MATRIX[,ii,drop=FALSE]) >0
@@ -62,8 +60,8 @@ pmid.getGeneContext <- function(gene, keyword)
     if(nrow(A)==2 && ncol(A)==2) {
         pv <- fisher.test(A, alternative="greater")$p.value
     }
-    pv    
-    
+    pv
+
     context1 <- NULL
     if(1) {
         match2 <- ((match0 * match1)>0)
@@ -83,9 +81,7 @@ pmid.getGeneContext <- function(gene, keyword)
 #' @export
 pmid.getPubMedContext <- function(gene, context) {
     ##install.packages("RISmed")
-    require(org.Hs.eg.db)
-    require(org.Mm.eg.db)    
-    
+
     res <- EUtilsSummary(
         paste0(gene,"[sym] AND ",context),
         type="esearch", db="pubmed", datetype='pdat',
@@ -107,7 +103,7 @@ pmid.getPubMedContext <- function(gene, context) {
         if(!any(hit)) return(NULL)
         s <- paste(s[hit], collapse=".")
         sub("^[ ]*","",s)
-    }        
+    }
     fetch <- EUtilsGet(res)
     tt <- ArticleTitle(fetch)
     aa <- AbstractText(fetch)
@@ -123,10 +119,7 @@ pmid.getPubMedContext <- function(gene, context) {
 
 #' @export
 pmid.buildMatrix <- function() {
-    
-    require(org.Hs.eg.db)
-    ##require(org.Mm.eg.db)    
-    
+
     pmid   <- as.list(org.Hs.egPMID2EG)
     symbol <- as.list(org.Hs.egSYMBOL)
     eg <- names(symbol)
@@ -134,16 +127,16 @@ pmid.buildMatrix <- function() {
     names(symbol) <- as.character(eg)
     ngene <- sapply(pmid,length)
     pmid <- pmid[which(ngene <=10)]
-    
+
     ## collapse duplicates
     pmid.gg <- sapply(pmid,paste,collapse=",")
     idx <- tapply(names(pmid), pmid.gg, function(x) x)
     pmid <- pmid[sapply(idx,"[",1)]
     idx <- lapply(idx, function(x) paste0("PMID:",x))
     names(pmid) <- sapply(idx,paste,collapse=",")
-    
+
     ## build PMID2SYMBOL matrix
-    
+
     idx0 <- parallel::mclapply(1:length(pmid), function(i) cbind(i, which(eg %in% pmid[[i]])),
                      mc.cores=NCORE)
     idx <- do.call(rbind,idx0)
@@ -159,8 +152,8 @@ pmid.buildMatrix <- function() {
 
 #' @export
 pmid.buildGraph <- function(P) {
-    
-    
+
+
     ##P <- readRDS(file="PMID2SYMBOL_sparsematrix.rds")
     dim(P)
     P <- P[which(Matrix::rowSums(P) <= 10),]
@@ -170,7 +163,7 @@ pmid.buildGraph <- function(P) {
     ##P <- P[sample(nrow(P),5000),]
     P[1:10,1:10]
     dim(P)
-    
+
     ## create graph from overlap
     M <- P[,] %*% t(P[,])
     dim(M)
@@ -182,7 +175,7 @@ pmid.buildGraph <- function(P) {
     gr <- igraph::subgraph.edges(gr, which(igraph::E(gr)$weight>0))
     ##gr
     ##saveRDS(gr, file="PMID2SYMBOL_xgraph_01.rds")
-    
+
     P <- P[igraph::V(gr)$name,]
     pmids <- parallel::mclapply(igraph::V(gr)$name,function(x) gsub("PMID:","",strsplit(x,split=",")[[1]]))
     nref <- sapply(pmids,length)
@@ -192,13 +185,13 @@ pmid.buildGraph <- function(P) {
     igraph::V(gr)$size <- nref
     igraph::V(gr)$genes <- vgenes
     igraph::V(gr)$pmid  <- pmids
-    return(gr)    
+    return(gr)
 }
 
 
 #' @export
 pmid.annotateEdges <- function(gr) {
-    
+
     ee <- igraph::get.edges(gr, igraph::E(gr))
     dim(ee)
     g1 <- igraph::V(gr)[ee[,1]]$genes
@@ -212,7 +205,7 @@ pmid.annotateEdges <- function(gr) {
 
 #' @export
 pmid.extractGene <- function(gr, gene, nmin=3) {
-    
+
     jj <- c()
     for(g in gene) {
         j1 <- which(sapply(igraph::V(gr)$genes, function(s) (gene %in% s)))
