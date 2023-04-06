@@ -45,6 +45,7 @@ if (0) {
 #' x <- 1
 #' @export
 pgx.createFromFiles <- function(count.file, samples.file, contrasts.file = NULL,
+                                lib.dir = FILES,
                                 gxmethods = "trend.limma,edger.qlf,edger.lrt",
                                 gsetmethods = "fisher,gsva,fgsea",
                                 extra = "meta.go,deconv,infer,drugs,wordcloud") {
@@ -137,7 +138,7 @@ pgx.createFromFiles <- function(count.file, samples.file, contrasts.file = NULL,
     do.cluster = TRUE,
     use.design = TRUE,
     prune.samples = FALSE,
-    lib.dir = FILES,
+    lib.dir = lib.dir,
     progress = NULL
   )
 
@@ -603,7 +604,8 @@ pgx.computePGX <- function(pgx,
                            gset.methods = c("fisher", "gsva", "fgsea"),
                            do.cluster = TRUE, use.design = TRUE, prune.samples = FALSE,
                            extra.methods = .EXTRA.METHODS,
-                           lib.dir = "../lib", progress = NULL) {
+                           lib.dir,  ## must specify
+                           progress = NULL) {
   ## ======================================================================
   ## ======================================================================
   ## ======================================================================

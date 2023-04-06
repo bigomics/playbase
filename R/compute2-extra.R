@@ -9,16 +9,16 @@ EXTRA.MODULES = c("meta.go","deconv","infer","drugs", ## "graph",
                   "connectivity","wordcloud")
 
 #' @export
-compute.extra <- function(ngs, extra=EXTRA.MODULES, lib.dir=FILES, sigdb=NULL) {
+compute.extra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
     pgx.computeExtra(ngs, extra=extra, lib.dir=lib.dir, sigdb=sigdb)
 }
 
 #' @export
-pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir=FILES, sigdb=NULL) {
+pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
 
     timings <- c()
-    libx.dir <- paste0(FILES,'x')  ## ../libx
-    libx.dir
+    libx.dir <- paste0(sub("/$","",lib.dir),'x')  ## ../libx yikes....
+    message("[pgx.computeExtra] setting libx.dir =",libx.dir)
 
     extra <- intersect(extra, EXTRA.MODULES)
     if(length(extra)==0) {
