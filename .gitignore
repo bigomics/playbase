@@ -3,6 +3,9 @@
 .RData
 .Ruserdata
 
+# backup
+*~
+
 # History files
 .Rhistory
 .Rapp.history

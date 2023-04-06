@@ -7,7 +7,6 @@ DECONV.METHODS = c("I-NNLS","CIBERSORT","DCQ","DeconRNAseq","EPIC","NNLM",
                    "cor","SingleR")
 
 ##low.th=0.01;add.unknown=1;collapse="no";min.prob=0.2
-#' @export
 pgx.inferCellType <- function(counts, low.th=0.01, add.unknown=FALSE,
                               min.prob=0.2, min.count=3, scalex=FALSE,
                               normalize.mat = TRUE, method="NNLM",
@@ -94,7 +93,6 @@ pgx.inferCellType <- function(counts, low.th=0.01, add.unknown=FALSE,
 }
 
 ##low.th=0.01;add.unknown=0;celltype0=NULL;min.prob=0.2;min.count=3
-#' @export
 pgx.inferCellTypeLM22 <- function(counts, low.th=0.01, add.unknown=FALSE,
                                   normalize.mat = TRUE, method="NNLM",
                                   min.count=3, celltype0=NULL, min.prob=0.2)
@@ -183,7 +181,6 @@ pgx.inferCellTypeLM22 <- function(counts, low.th=0.01, add.unknown=FALSE,
     res
 }
 
-#' @export
 pgx.checkCellTypeMarkers <- function(counts, min.count=3, markers=NULL)
 {
     ## Checks if markers are expressed (positive markers) or
@@ -259,7 +256,6 @@ pgx.checkCellTypeMarkers <- function(counts, min.count=3, markers=NULL)
 }
 
 
-#' @export
 pgx.simplifyCellTypes <- function(ct, low.th=0.01)
 {
     ## Simplifies cell types names from LM22, DICE, ImmProt and
@@ -315,7 +311,6 @@ pgx.simplifyCellTypes <- function(ct, low.th=0.01)
     ct
 }
 
-#' @export
 pgx.purify <- function( X, ref, k=3, method=2) {
 
     if(0) {
@@ -375,11 +370,8 @@ pgx.purify <- function( X, ref, k=3, method=2) {
 
 
 ##counts=ngs$counts
-#' @export
 pgx.inferCellCyclePhase <- function(counts)
 {
-
-
     ## List of cell cycle markers, from Tirosh et al, 2015
     ##
     ##cc.genes <- readLines(con = "../opt/seurat/regev_lab_cell_cycle_genes.txt")
@@ -405,7 +397,6 @@ pgx.inferCellCyclePhase <- function(counts)
 }
 
 ##counts=ngs$counts
-#' @export
 pgx.scoreCellCycle <- function(counts)
 {
 
@@ -438,7 +429,6 @@ pgx.scoreCellCycle <- function(counts)
     return(df)
 }
 
-#' @export
 pgx.inferGender <- function(X, gene_name=NULL) {
     ## List of cell cycle markers, from Tirosh et al, 2015
     ##
@@ -480,7 +470,6 @@ pgx.inferGender <- function(X, gene_name=NULL) {
 }
 
 ##counts=ngs$counts
-#' @export
 pgx.multipleDeconvolution <- function(counts, refmat, methods=DECONV.METHODS)
 {
     methods
@@ -518,7 +507,6 @@ pgx.multipleDeconvolution <- function(counts, refmat, methods=DECONV.METHODS)
 }
 
 ##X=as.matrix(2**ngs$X);methods="NNLM"
-#' @export
 pgx.deconvolution <- function(X, ref, methods=DECONV.METHODS,
                               add.unknown=FALSE, normalize.mat=TRUE)
 {
@@ -653,7 +641,7 @@ pgx.deconvolution <- function(X, ref, methods=DECONV.METHODS,
         dbg("[pgx.deconvolution] calculating DeconRNAseq...")
 
         ## uses psych::pca() from pcaMethods
-        ## uses pcaMethods::prep
+        require(pcaMethods)  ## uses pcaMethods::prep
         drs <- NULL
         stime <- system.time(suppressMessages(suppressWarnings(
             drs <- try(DeconRNASeq::DeconRNASeq(data.frame(mat, check.names=FALSE),
