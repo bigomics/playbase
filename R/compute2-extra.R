@@ -417,57 +417,6 @@ compute.drugSensitivityEnrichment <- function(ngs, cmap.dir)
     return(ngs)
 }
 
-##ref="CTRPv2";lib.dir="../lib"
-#' @export
-compute.genePerturbationEnrichment.DEPRECATED <- function(ngs, lib.dir)
-{
-    L1000.FILE = "l1000_gpert_n10g1766.csv.gz"
-    L1000.FILE = "l1000_gpert_n8g5812.csv.gz"
-    L1000.FILE = "l1000_gpert.csv.gz"
-
-    message("[compute.drugActivityEnrichment] reading L1000 reference: ",L1000.FILE)
-    ##X <- readRDS(file=file.path(lib.dir,L1000.FILE))
-    X <- fread.csv(file=file.path(lib.dir,L1000.FILE))
-
-    ## -------------- drug enrichment
-    xdrugs <- gsub("_.*$","",colnames(X))
-    ndrugs <- length(table(xdrugs))
-    ndrugs
-    message("number of profiles: ",ncol(X))
-    message("number of gene perturbations: ",ndrugs)
-    dim(X)
-
-    NPRUNE=-1
-    NPRUNE=250
-    res <- pgx.computeDrugEnrichment(
-        ngs, X, xdrugs, methods=c("GSEA","cor"),
-        nmin=3, nprune=NPRUNE, contrast=NULL )
-
-    if(is.null(res)) {
-        cat("[compute.genePerturbationEnrichment] WARNING:: computing failed!\n")
-        return(ngs)
-    }
-
-    ## attach annotation
-    dd <- rownames(res[["GSEA"]]$X)
-    ##d1 <- sub(".*-","",dd)
-    d1 <- dd
-    d2 <- sub("-.*","",dd)
-    annot0 <- data.frame(drug=dd, moa=d1, target=d2)
-    rownames(annot0) <- dd
-    Matrix::head(annot0)
-
-    dim(res[["GSEA"]]$X)
-
-    ##ngs$drugs <- NULL
-    ngs$drugs[["gene/L1000"]]  <- res[["GSEA"]]
-    ngs$drugs[["gene/L1000"]][["annot"]] <- annot0[,c("drug","moa","target")]
-
-    remove(X)
-    remove(xdrugs)
-    return(ngs)
-}
-
 ## ------------------ Omics graphs --------------------------------
 #' @export
 compute.omicsGraphs <- function(ngs) {
