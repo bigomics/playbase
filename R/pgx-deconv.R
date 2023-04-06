@@ -14,9 +14,6 @@ pgx.inferCellType <- function(counts, low.th=0.01, add.unknown=FALSE,
 {
     ## infer cell type from markers
     if(is.null(markers)) {
-        ##M = read.csv(file.path(FILES,"sig/LM22.txt"),row.names=1,sep="\t",check.names=FALSE)
-        ##colnames(M) <- gsub(" ","_",sub(" ",".",sub(" ","_",colnames(M))))
-        ##colnames(M) <- sub("Macrophages_","Macrophages.",colnames(M))
         message("[pgx.inferCellType] using database: 'signature-immuneMeta.csv'")
         M = read.csv(file.path(FILES,"signature-immuneMeta.csv"),row.names=1,check.names=FALSE)
         M <- as.matrix(M)

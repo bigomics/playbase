@@ -137,7 +137,6 @@ pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir=FILES, sigdb=NULL
 
         ## ngs$connectivity <- NULL  ## clean up
         if(is.null(sigdb)) {
-            ##sigdb <- dir(c(FILES,FILESX), pattern="sigdb-.*h5", full.names=TRUE)
             lib.dir2 <- unique(c(lib.dir,libx.dir))  ### NEED BETTER SOLUTION!!!
             sig.dir <- c(SIGDB.DIR,lib.dir2)
             sigdb <- dir(sig.dir, pattern="^sigdb-.*h5$", full.names=TRUE)
@@ -199,7 +198,6 @@ pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir=FILES, sigdb=NULL
 }
 
 ## -------------- deconvolution analysis --------------------------------
-##lib.dir=FILES;rna.counts=ngs$counts;full=FALSE
 #' @export
 compute.deconvolution <- function(ngs, lib.dir, rna.counts=ngs$counts, full=FALSE) {
 
