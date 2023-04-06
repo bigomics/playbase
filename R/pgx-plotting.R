@@ -2376,7 +2376,7 @@ pgx.scatterPlotXY <- function(..., plotlib="base") {
     }
 }
 
-@export
+#' @export
 pgx.scatterPlotXY.BASE <- function(pos, var=NULL, type=NULL, col=NULL, title="",
                                    zlim=NULL, zlog=FALSE, zsym=FALSE, softmax=FALSE, pch=20,
                                    cex=NULL, cex.lab=1, cex.title=1.2, cex.legend=1,
