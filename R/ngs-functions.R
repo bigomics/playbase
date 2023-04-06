@@ -7,8 +7,8 @@
 ngs.getGeneAnnotation <- function(genes)
 {
 
-    hs.genes <- unique(unlist(as.list(org.Hs.egSYMBOL)))
-    mm.genes <- unique(unlist(as.list(org.Mm.egSYMBOL)))
+    hs.genes <- unique(unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL)))
+    mm.genes <- unique(unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL)))
 
     ## if multiple genes, take first
     genes0 <- genes ## save
@@ -22,12 +22,12 @@ ngs.getGeneAnnotation <- function(genes)
     txlen=SYMBOL=CHRLOC=MAP=NULL
     if(is.human) {
         message("detected organism: human")
-        GENE.TITLE = unlist(as.list(org.Hs.egGENENAME))
-        SYMBOL = unlist(as.list(org.Hs.egSYMBOL))
+        GENE.TITLE = unlist(as.list(org.Hs.eg.db::org.Hs.egGENENAME))
+        SYMBOL = unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
         names(GENE.TITLE) = SYMBOL
-        CHRLOC = as.list(org.Hs.egCHRLOC)
+        CHRLOC = as.list(org.Hs.eg.db::org.Hs.egCHRLOC)
         CHRLOC <- CHRLOC[match(names(SYMBOL),names(CHRLOC))]
-        MAP = as.list(org.Hs.egMAP)
+        MAP = as.list(org.Hs.eg.db::org.Hs.egMAP)
         MAP = MAP[match(names(SYMBOL),names(MAP))]
         MAP = sapply(MAP,paste,collapse="|")
         names(CHRLOC) = SYMBOL
