@@ -2363,7 +2363,7 @@ pgx.violinPlot <- function(x, y, group=NULL, xlab='', ylab='',
     fig
 }
 
-@export
+#' @export
 pgx.scatterPlotXY <- function(..., plotlib="base") {
     if(plotlib=="plotly") {
         pgx.scatterPlotXY.PLOTLY(...)
