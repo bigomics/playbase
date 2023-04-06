@@ -1371,7 +1371,7 @@ extremeCorrelation <- function(query_sig, ref_set, n=200) {
 alias2hugo <- function(s, org=NULL, na.orig=TRUE) {
 
 
-    hs.symbol <- unlist(as.list(org.Hs.egSYMBOL))
+    hs.symbol <- unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
     mm.symbol <- unlist(as.list(org.Mm.egSYMBOL))
     if(is.null(org)) {
         is.human <- mean(s %in% hs.symbol,na.rm=TRUE) > mean(s %in% mm.symbol,na.rm=TRUE)

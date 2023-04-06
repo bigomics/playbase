@@ -34,8 +34,8 @@ if(1 && file.exists(INIT.FILE)) {
     oldvars <- ls()
 
     ## All gene families in Human UPPER CASE
-    GENE.TITLE  = unlist(as.list(org.Hs.egGENENAME))
-    GENE.SYMBOL = unlist(as.list(org.Hs.egSYMBOL))
+    GENE.TITLE  = unlist(as.list(org.Hs.eg.db::org.Hs.egGENENAME))
+    GENE.SYMBOL = unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
     names(GENE.TITLE) = GENE.SYMBOL
     ##GSET.PREFIX.REGEX = paste(paste0("^",GSET.PREFIXES,"_"),collapse="|")
     GSET.PREFIX.REGEX="^BIOCARTA_|^C2_|^C3_|^C7_|^CHEA_|^GOBP_|^GOCC_|^GOMF_|^HALLMARK_|^KEA_|^KEGG_|^PID_|^REACTOME_|^ST_"
@@ -282,7 +282,7 @@ pgx.initialize <- function(pgx) {
 
     ## Add chromosome annotation if not
     if(!("chr" %in% names(pgx$genes))) {
-        symbol = sapply(as.list(org.Hs.egSYMBOL),"[",1)  ## some have multiple chroms..
+        symbol = sapply(as.list(org.Hs.eg.db::org.Hs.egSYMBOL),"[",1)  ## some have multiple chroms..
         CHR = sapply(as.list(org.Hs.egCHR),"[",1)  ## some have multiple chroms..
         MAP <- sapply(as.list(org.Hs.egMAP),"[",1)  ## some have multiple chroms..
         names(CHR) = names(MAP) = symbol

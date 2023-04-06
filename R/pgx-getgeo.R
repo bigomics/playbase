@@ -470,7 +470,7 @@ pgx.getSymbolFromFeatureData <- function(fdata) {
     symbol <- NULL
 
     ## If there is a symbol column, than it is easy
-    SYMBOL <- as.character(unlist(as.list(org.Hs.egSYMBOL)))
+    SYMBOL <- as.character(unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL)))
     symbol.col <- grep("symbol|gene|hugo",colnames(fdata),ignore.case=TRUE)
     symbol.col
     ok.symbol <- apply( fdata[,symbol.col,drop=FALSE], 2,

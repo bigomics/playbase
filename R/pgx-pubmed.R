@@ -120,8 +120,8 @@ pmid.getPubMedContext <- function(gene, context) {
 #' @export
 pmid.buildMatrix <- function() {
 
-    pmid   <- as.list(org.Hs.egPMID2EG)
-    symbol <- as.list(org.Hs.egSYMBOL)
+    pmid   <- as.list(org.Hs.eg.db::org.Hs.egPMID2EG)
+    symbol <- as.list(org.Hs.eg.db::org.Hs.egSYMBOL)
     eg <- names(symbol)
     symbol <- sapply(symbol,"[",1)
     names(symbol) <- as.character(eg)
