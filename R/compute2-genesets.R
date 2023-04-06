@@ -5,7 +5,8 @@
 
 ##max.features=8000;lib.dir=FILES;test.methods = c("gsva","camera","fgsea")
 #' @export
-compute.testGenesets <- function(pgx, max.features=1000, lib.dir="../lib",
+compute.testGenesets <- function(pgx,
+                                 max.features=1000, 
                                  test.methods = c("gsva","camera","fgsea"),
                                  remove.outputs=TRUE )
 {

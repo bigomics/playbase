@@ -663,8 +663,7 @@ pgx.computePGX <- function(pgx,
   pgx <- compute.testGenesets(
     pgx,
     max.features = max.genesets,
-    test.methods = gset.methods,
-    lib.dir = lib.dir
+    test.methods = gset.methods
   )
   Matrix::head(pgx$gset.meta$meta[[1]])
 
