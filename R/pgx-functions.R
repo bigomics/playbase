@@ -965,7 +965,10 @@ getHSGeneInfo <- function(eg, as.link=TRUE) {
 
     info <- lapply(env.list, function(env) AnnotationDbi::mget(eg, envir=env, ifnotfound=NA)[[1]])
     names(info) <- names(env.list)
-    gene.symbol <- toupper(AnnotationDbi::mget(as.character(eg), envir=org.Hs.eg.db::org.Hs.egSYMBOL))[1]
+    gene.symbol <- toupper(AnnotationDbi::mget(
+                        as.character(eg),
+                        envir=org.Hs.eg.db::org.Hs.egSYMBOL
+                   ))[1]
     info[["symbol"]] <- gene.symbol
 
     ## create link to GeneCards
@@ -1140,7 +1143,7 @@ pgx.getGeneFamilies <- function(genes, FILES="../files", min.size=10, max.size=5
     is.mouse = (mean(grepl("[a-z]",sub(".*:","",genes))) > 0.8)
     is.mouse
     if(is.mouse) {
-        mouse.genes = as.character(unlist(as.list(org.Mm.egSYMBOL)))
+        mouse.genes = as.character(unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL)))
         names(mouse.genes) = toupper(mouse.genes)
         families <- parallel::mclapply(families, function(s)
             setdiff(as.character(mouse.genes[toupper(s)]),NA),
@@ -1369,10 +1372,8 @@ extremeCorrelation <- function(query_sig, ref_set, n=200) {
 ##s=symbol;org="hs"
 #' @export
 alias2hugo <- function(s, org=NULL, na.orig=TRUE) {
-
-
     hs.symbol <- unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
-    mm.symbol <- unlist(as.list(org.Mm.egSYMBOL))
+    mm.symbol <- unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
     if(is.null(org)) {
         is.human <- mean(s %in% hs.symbol,na.rm=TRUE) > mean(s %in% mm.symbol,na.rm=TRUE)
         org <- ifelse(is.human,"hs","mm")

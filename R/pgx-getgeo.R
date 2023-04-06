@@ -483,7 +483,7 @@ pgx.getSymbolFromFeatureData <- function(fdata) {
     }
 
     ## If there is an ENTREZ column, than it is easy
-    ENTREZ <- biomaRt::keys(org.Hs.egSYMBOL)
+    ENTREZ <- biomaRt::keys(org.Hs.eg.db::org.Hs.egSYMBOL)
     entrez.col <- grep("entrez",colnames(fdata),ignore.case=TRUE)
     entrez.col
     entrez.match <- apply( fdata[,entrez.col,drop=FALSE], 2,
@@ -499,7 +499,7 @@ pgx.getSymbolFromFeatureData <- function(fdata) {
     }
 
     ## If there is an REFSEQ column
-    REFSEQ <- unlist(as.list(org.Hs.egREFSEQ))
+    REFSEQ <- unlist(as.list(org.Hs.eg.db::org.Hs.egREFSEQ))
     refseq.col <- grep("refseq",colnames(fdata),ignore.case=TRUE)
     refseq.col
     refseq.match <- apply( fdata[,refseq.col,drop=FALSE], 2,
