@@ -7,6 +7,7 @@
 ## Plotting functions
 ########################################################################
 
+#' @export
 heatmapWithAnnot <- function(F, anno.type=c('boxplot','barplot'),
                              bar.height=NULL, map.height=NULL,
                              row_fontsize=9, column_fontsize=9,
@@ -80,6 +81,7 @@ heatmapWithAnnot <- function(F, anno.type=c('boxplot','barplot'),
 
 }
 
+#' @export
 repelwords <- function (x, y, words, cex = 1, rotate90 = FALSE,
                         xlim = c(-Inf, Inf), ylim = c(-Inf, Inf),
                         tstep=0.1, rstep = 0.1, maxiter=2000, ...)
@@ -166,6 +168,7 @@ repelwords <- function (x, y, words, cex = 1, rotate90 = FALSE,
 
 
 ##level="geneset";contrasts=NULL
+#' @export
 pgx.ActivationMatrix <- function(pgx, features=NULL, contrasts=NULL,
                                  n = 50, qsize=TRUE,
                                  cex=1, cex.row=1, cex.col=1, srt=90,
@@ -276,6 +279,7 @@ pgx.ActivationMatrix <- function(pgx, features=NULL, contrasts=NULL,
     p
 }
 
+#' @export
 pgx.scatterPlot <- function(pgx, pheno=NULL, gene=NULL,
                             contrast=NULL, level="gene",
                             plotlib="base", pos=NULL, ...)
@@ -345,6 +349,7 @@ pgx.scatterPlot <- function(pgx, pheno=NULL, gene=NULL,
     plt
 }
 
+#' @export
 plot.SPLOM <- function(F, F2=NULL, hilight=NULL, cex=0.5, cex.axis=1, cex.space=0.2)
 {
 
@@ -398,10 +403,8 @@ plot.SPLOM <- function(F, F2=NULL, hilight=NULL, cex=0.5, cex.axis=1, cex.space=
     }
 }
 
-pgx.plotFoldchangeSPLOM <- function(pgx, contrasts=NULL) {
 
-}
-
+#' @export
 pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast=NULL)
 {
     ##------------------------------------------------------------------------
@@ -463,6 +466,7 @@ pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast=NULL)
 
 }
 
+#' @export
 pgx.SankeyFromMRF.PLOTLY <- function(M, R, F, fill=TRUE, labels=NULL)
 {
 
@@ -579,6 +583,7 @@ pgx.SankeyFromMRF.PLOTLY <- function(M, R, F, fill=TRUE, labels=NULL)
 
 }
 
+#' @export
 pgx.SankeyFromPhenotypes.PLOTLY <- function(pgx, phenotypes, mat=NULL,
                                             fill=NULL, nmin=1, title="")
 {
@@ -672,8 +677,7 @@ pgx.SankeyFromPhenotypes.PLOTLY <- function(pgx, phenotypes, mat=NULL,
     fig
 }
 
-
-## fill=NULL;title="";nmin=5
+#' @export
 pgx.SankeyFromPhenotypes.GGPLOT <- function(pgx, phenotypes, mat=NULL, fill=NULL,
                                             sort=FALSE, nmin=1, title="")
 {
@@ -755,6 +759,7 @@ pgx.SankeyFromPhenotypes.GGPLOT <- function(pgx, phenotypes, mat=NULL, fill=NULL
     p
 }
 
+#' @export
 plot_grid.sharedAxisLabels <- function(plotList, nrow) {
     np <- length(plotList)
     np
@@ -771,6 +776,7 @@ plot_grid.sharedAxisLabels <- function(plotList, nrow) {
     cowplot::plot_grid(plotlist=plotList, nrow=nrow, labels=NA)
 }
 
+#' @export
 pgx.plotContrast <- function(pgx, contrast=NULL, type='scatter',
                              set.par=TRUE, par.sq=FALSE, ...)
 {
@@ -810,6 +816,7 @@ pgx.plotContrast <- function(pgx, contrast=NULL, type='scatter',
     plist
 }
 
+#' @export
 pgx.Volcano <- function(pgx, contrast, level="gene", methods='meta',
                         psig=0.05, fc=1, cex=1, cex.lab=1, ntop=20,
                         p.min=NULL, fc.max=NULL, hilight=NULL, ## hilight2=NULL,
@@ -862,6 +869,7 @@ pgx.Volcano <- function(pgx, contrast, level="gene", methods='meta',
     p
 }
 
+#' @export
 pgx.plotMA <- function(pgx, contrast, level="gene", psig=0.05, fc=1,
                        cex=1, cex.lab=0.8, hilight=NULL, ntop=20,
                        plotlib="base")
@@ -908,6 +916,7 @@ pgx.plotMA <- function(pgx, contrast, level="gene", psig=0.05, fc=1,
     p
 }
 
+#' @export
 pgx.contrastScatter <- function(pgx, contrast, hilight=NULL,
                                 cex=1, cex.lab=0.8,
                                 psig=0.05, fc=1, level="gene",
@@ -978,6 +987,7 @@ pgx.contrastScatter <- function(pgx, contrast, hilight=NULL,
     ##plotlib="base"
 }
 
+#' @export
 pgx.plotGeneUMAP <- function(pgx, contrast=NULL, value=NULL,
                              pos=NULL, ntop=20, cex=1, cex.lab=0.8,
                              hilight=NULL, title=NULL, zfix=FALSE,
@@ -1072,6 +1082,7 @@ pgx.plotGeneUMAP <- function(pgx, contrast=NULL, value=NULL,
     return(plist)
 }
 
+#' @export
 pgx.plotExpression <- function(pgx, probe, comp, logscale=TRUE,
                                level="gene", grouped=FALSE, srt=NULL, cex=1,
                                collapse.others=TRUE, showothers=TRUE,
@@ -1306,6 +1317,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale=TRUE,
     }
 }
 
+#' @export
 pgx.plotOmicsNetwork <- function(pgx, gene=NULL, reduced=NULL, levels=c("gene","geneset"),
                                  contrast=NULL, layout=NULL, colorcluster=FALSE,
                                  hilight=NULL )
@@ -1448,7 +1460,7 @@ pgx.plotOmicsNetwork <- function(pgx, gene=NULL, reduced=NULL, levels=c("gene","
 
 }
 
-## gene1="TOPORS";gene2="KCNN4";col="black";cex=1;k=11;samples=NULL;cex.names=1;lab.unit=NULL
+#' @export
 pgx.cytoPlot <- function(pgx, gene1, gene2, cex=1, col="grey60",
                          lab.unit=NULL, cex.names=1, samples=NULL, k=11)
 {
@@ -1535,6 +1547,7 @@ pgx.cytoPlot <- function(pgx, gene1, gene2, cex=1, col="grey60",
 
 }
 
+#' @export
 pgx.plotPhenotypeMatrix <- function(annot)
 {
     ## ------- set colors
@@ -1593,7 +1606,7 @@ pgx.plotPhenotypeMatrix <- function(annot)
 }
 
 ##annot=ngs$Y
-annot.ht=5;cluster.samples=TRUE
+#' @export
 pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht=5, cluster.samples=TRUE)
 {
 
@@ -1677,7 +1690,7 @@ pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht=5, cluster.samples=TRUE)
 
 }
 
-##splitx="cell.family";top.mode="specific";row_annot_width=0.03;ntop=50
+#' @export
 pgx.splitHeatmap <- function(ngs, splitx=NULL, top.mode="specific",
                              annot.pheno = NULL, row_annot_width=0.03,
                              scale="row.center", ntop=50, colors=NULL,
@@ -1750,6 +1763,7 @@ pgx.splitHeatmap <- function(ngs, splitx=NULL, top.mode="specific",
 ## Lower level R level plotting functions
 ##=================================================================================
 
+#' @export
 plot.gghist <- function(x) {
     dplyr::as_tibble(x) %>%
         tidyr::pivot_longer(
@@ -1762,6 +1776,7 @@ plot.gghist <- function(x) {
         ggplot2::coord_cartesian(ylim=c(0,0.6), xlim=c(0,3))
 }
 
+#' @export
 plotly2ggplot <- function (plot, width=NULL, height=NULL, scale=1, hjust=0, vjust=0)
 {
     tmpfile <- tempfile()
@@ -1784,7 +1799,7 @@ plotly2ggplot <- function (plot, width=NULL, height=NULL, scale=1, hjust=0, vjus
     return(gg)
 }
 
-##cex=1;main=NULL;xlab=NULL;ylab=NULL;yth=1;tooltips=NULL;cex.text=1
+#' @export
 gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL,
                           ylab=NULL, yth=1, tooltips=NULL, cex.text=1)
 {
@@ -1938,6 +1953,7 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL,
 
 }
 
+#' @export
 ggenplot <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ylab=NULL)
 {
     if(is.null(xlab))
@@ -2005,6 +2021,7 @@ ggenplot <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ylab=NULL)
 
 }
 
+#' @export
 plot.ggsplom <- function(F, F2=NULL, title_cex=2, no.axes=FALSE, ...)
 {
     if(is.null(F2)) {
@@ -2068,7 +2085,7 @@ plot.ggsplom <- function(F, F2=NULL, title_cex=2, no.axes=FALSE, ...)
 
 }
 
-##col=NULL;pch=20;xlab="";ylab="";cex=1;opacity=1;main=""
+#' @export
 plot.ggscatterFILL <- function(x, y=NULL, col=NULL, shape=NULL,
                           main=NULL, cex=1,
                           pch=20, legend=TRUE,  xlab=NULL, ylab=NULL,
@@ -2119,6 +2136,7 @@ plot.ggscatterFILL <- function(x, y=NULL, col=NULL, shape=NULL,
     p
 }
 
+#' @export
 plot.ggscatter <- function(x, y=NULL, col=NULL, main=NULL,
                       cex=1, col.scale=NULL, shape=NULL, pch=20,
                       legend=TRUE, legend.ysp=0.8, cex.legend=1,
@@ -2190,7 +2208,7 @@ plot.ggscatter <- function(x, y=NULL, col=NULL, main=NULL,
     p
 }
 
-##srt=30;xlab=ylab="";n.dodge=1;cex=1;ylab=xlab=""
+#' @export
 plot.ggviolin <- function(x, y, group=NULL, main="", ylim=NULL, add.dots=TRUE,
                      col="#AAAAAA", cex=1, xlab="", ylab="y", srt=0,
                      pdodge=1.5, n.dodge=1, base_size=13)
@@ -2225,8 +2243,7 @@ plot.ggviolin <- function(x, y, group=NULL, main="", ylim=NULL, add.dots=TRUE,
 }
 
 
-
-##group.name="group";xlab="x";ylab="y";srt=0;main=NULL;base_size=14
+#' @export
 plot.ggbarplot <- function(mat, xlab="x", ylab="y", srt=0, main=NULL,
                       las=NULL, col=NULL, beside=FALSE,
                       legend.pos = c(0.016,1), legend.cex = 1,
@@ -2281,7 +2298,7 @@ plot.ggbarplot <- function(mat, xlab="x", ylab="y", srt=0, main=NULL,
     p
 }
 
-##jitter=TRUE;vcol="lightcyan2";maxbee=200;xth=0
+#' @export
 pgx.violinPlot <- function(x, y, group=NULL, xlab='', ylab='',
                            srt=0, cex.lab=1, cex.main=1.1,
                            jitter=0.015, vcol="grey85",
@@ -2346,6 +2363,7 @@ pgx.violinPlot <- function(x, y, group=NULL, xlab='', ylab='',
     fig
 }
 
+@export
 pgx.scatterPlotXY <- function(..., plotlib="base") {
     if(plotlib=="plotly") {
         pgx.scatterPlotXY.PLOTLY(...)
@@ -2358,6 +2376,7 @@ pgx.scatterPlotXY <- function(..., plotlib="base") {
     }
 }
 
+@export
 pgx.scatterPlotXY.BASE <- function(pos, var=NULL, type=NULL, col=NULL, title="",
                                    zlim=NULL, zlog=FALSE, zsym=FALSE, softmax=FALSE, pch=20,
                                    cex=NULL, cex.lab=1, cex.title=1.2, cex.legend=1,
@@ -2644,6 +2663,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var=NULL, type=NULL, col=NULL, title="",
     invisible(out)
 }
 
+#' @export
 pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NULL,
                                      cex.lab=0.8, cex.title=1.2, cex.clust=1.5,
                                      cex.legend=1, cex.axis=1, gridcolor=NULL, bgcolor=NULL,
@@ -3011,6 +3031,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
     plt
 }
 
+#' @export
 pgx.scatterPlotXY.PLOTLY <- function(pos,
                                      var=NULL, type=NULL, col=NULL,
                                      cex=NULL, cex.lab=0.8, cex.title=1.2,
@@ -3407,6 +3428,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     plt
 }
 
+#' @export
 pgx.scatterPlotXY.D3 <- function(pos, var=NULL, type=NULL, col=NULL, cex=1,
                                   cex.lab=0.8, cex.title=1.2, cex.clust=1.5, cex.legend=1,
                                   zoom=1, legend=TRUE, bty='n', hilight=NULL,
@@ -3446,6 +3468,7 @@ pgx.scatterPlotXY.D3 <- function(pos, var=NULL, type=NULL, col=NULL, cex=1,
     plt
 }
 
+#' @export
 plotWidget.PLEASECHECK <- function(plt,file,width=8,height=8) {
     HTMLFILE <- paste0(tempfile(),"_plotwidget.html")
     HTMLFILE
@@ -3455,6 +3478,7 @@ plotWidget.PLEASECHECK <- function(plt,file,width=8,height=8) {
     webshot::webshot(HTMLFILE, file=file, vwidth=width*res,vheight=height*res)
 }
 
+#' @export
 pgx.plotSampleClustering <- function(x, dim=2,
                                      method=c("tsne","umap","pca"),
                                      ntop=1000, ...)
@@ -3473,6 +3497,7 @@ pgx.plotSampleClustering <- function(x, dim=2,
 
 }
 
+#' @export
 pgx.stackedBarplot <- function(x,
                                showlegend,
                                ylab = NULL,
@@ -3509,8 +3534,8 @@ pgx.stackedBarplot <- function(x,
 
 }
 
-
 ## for plotly
+#' @export
 darkmode <- function(p, dim=2) {
     font.par <- list(
         color = "#AAA"
@@ -3537,6 +3562,7 @@ darkmode <- function(p, dim=2) {
     return(p)
 }
 
+#' @export
 myplot_ly <- function(..., theme="default") {
     ## 'Themed' plotly
     ##
@@ -3564,6 +3590,7 @@ myplot_ly <- function(..., theme="default") {
     return(p)
 }
 
+#' @export
 plotlyMA <- function(x, y, names, source="plot1",
                      group.names=c("group1","group2"),
                      xlab = "average expression (log2.CPM)",
@@ -3677,7 +3704,7 @@ plotlyMA <- function(x, y, names, source="plot1",
     p
 }
 
-##lfc=1;psig=0.05;showlegend=FALSE;xlab=ylab="";group.names=c("group1","group2");highlight=NULL
+#' @export
 plotlyVolcano <- function(x, y, names, source="plot1", group.names=c("group1","group2"),
                           xlab="effect size (logFC)", ylab="significance (-log10p)",
                           lfc=1, psig=0.05, showlegend=TRUE, highlight=NULL,
@@ -3797,6 +3824,7 @@ plotlyVolcano <- function(x, y, names, source="plot1", group.names=c("group1","g
     p
 }
 
+#' @export
 corclust <- function(x) {
     dd <- as.dist(1 - stats::cor(t(x),use="pairwise"))
     hc <- fastcluster::hclust(dd, method="ward.D2" )
@@ -3866,7 +3894,7 @@ iheatmapr.add_col_annotation <- function(p,
             return(p)
           }#)
 
-
+#' @export
 pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
                                        xtips=NULL, ytips=NULL, row_clust=TRUE,
                                        row_annot_width=0.03, scale="row.center",
@@ -4073,7 +4101,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
 }
 
 
-## too many unnecessary options... Cedric?
+#' @export
 pgx.boxplot.PLOTLY <- function(
   data,
   x = NULL,
@@ -4114,6 +4142,7 @@ pgx.boxplot.PLOTLY <- function(
 
 }
 
+#' @export
 pgx.barplot.PLOTLY <- function(
     data,
     x = NULL,
