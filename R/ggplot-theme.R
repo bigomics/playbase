@@ -3,8 +3,6 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-library(systemfonts)
-
 #' The plot theme to be used for figures in the OmicsPlayground app.
 #'
 #' @param style (string) Overall color style of text labels.
