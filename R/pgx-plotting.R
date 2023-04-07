@@ -2817,7 +2817,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
         if(!is.null(theme)) {
             plt <- plt + theme
         } else {
-            plt <- plt + plotly::theme_bw(
+            plt <- plt + ggplot2::theme_bw(
               base_size = base_size
             )
         }
