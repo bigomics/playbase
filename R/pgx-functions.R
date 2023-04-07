@@ -955,20 +955,19 @@ getMyGeneInfo <- function(eg, fields=c("symbol","name","alias","map_location","s
 #' @export
 getHSGeneInfo <- function(eg, as.link=TRUE) {
 
-    env.list <- c("symbol" = org.Hs.eg.db::org.Hs.egSYMBOL,
-                  "name" = org.Hs.eg.db::org.Hs.egGENENAME,
-                  "map_location" = org.Hs.eg.db::org.Hs.egMAP,
-                  "OMIM" = org.Hs.eg.db::org.Hs.egOMIM,
-                  "KEGG" = org.Hs.eg.db::org.Hs.egPATH,
-                  ##"PMID" = org.Hs.eg.db::org.Hs.egPMID,
-                  "GO" = org.Hs.eg.db::org.Hs.egGO)
+  env.list <- c(
+      "symbol" = org.Hs.eg.db::org.Hs.egSYMBOL,
+      "name" = org.Hs.eg.db::org.Hs.egGENENAME,
+      "map_location" = org.Hs.eg.db::org.Hs.egMAP,
+      "OMIM" = org.Hs.eg.db::org.Hs.egOMIM,
+      "KEGG" = org.Hs.eg.db::org.Hs.egPATH,
+      ##"PMID" = org.Hs.eg.db::org.Hs.egPMID,
+      "GO" = org.Hs.eg.db::org.Hs.egGO)
 
     info <- lapply(env.list, function(env) AnnotationDbi::mget(eg, envir=env, ifnotfound=NA)[[1]])
     names(info) <- names(env.list)
-    gene.symbol <- toupper(AnnotationDbi::mget(
-                        as.character(eg),
-                        envir=org.Hs.eg.db::org.Hs.egSYMBOL
-                   ))[1]
+    gene.symbol <- toupper(AnnotationDbi::mget(as.character(eg),
+                           envir = org.Hs.eg.db::org.Hs.egSYMBOL))[1]
     info[["symbol"]] <- gene.symbol
 
     ## create link to GeneCards
