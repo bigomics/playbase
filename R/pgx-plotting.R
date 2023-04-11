@@ -3415,7 +3415,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                   l = 10,
                   r = 10,
                   b = 10,
-                  t = ifelse(title.y>=1, 80, 10)
+                  t = 10
                 )
             )
     } else {
