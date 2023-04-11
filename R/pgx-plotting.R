@@ -1228,7 +1228,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale=TRUE,
     if(is.null(main)) main <- probe
     ##if(ncol(X) <= 20) {
     if(!grouped) {
-        ## NOT GROUPED BARPLOTS      
+        ## NOT GROUPED BARPLOTS
         nx = length(gx)
         if(is.null(ylab)) {
             ylab = "expression (log2CPM)"
@@ -1238,7 +1238,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale=TRUE,
         klr[is.na(klr)] <- "#e5e5e5"
 
       if(plotlib=="plotly") {
-        
+
           fig <- pgx.barplot.PLOTLY(
             data = data.frame(
               gx = gx,
@@ -1259,7 +1259,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale=TRUE,
           return(fig)
 
       } else {
-        
+
           ## plot using base graphics
           gx.min = 0
           if(min(gx)<0) gx.min <- min(gx)
@@ -1271,7 +1271,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale=TRUE,
 
     } else {
 
-        ## GROUPED PLOTS      
+        ## GROUPED PLOTS
         if(is.null(ylab)) {
             ylab = "expression (log2CPM)"
             if(!logscale) ylab = "expression (CPM)"
@@ -1299,7 +1299,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale=TRUE,
             yaxistitle = ylab,
             xaxistitle = xlab,
             annotations = plotly.annotations,
-            margin = plotly.margin            
+            margin = plotly.margin
           )
           return(fig)
 
@@ -2249,7 +2249,6 @@ plot.ggbarplot <- function(mat, xlab="x", ylab="y", srt=0, main=NULL,
                       legend.pos = c(0.016,1), legend.cex = 1,
                       bar_width=0.7, base_size=12, group.name="group")
 {
-    require(ggplot2)
 
     if(NCOL(mat)==1) mat <- rbind(mat)
     mat <- mat[nrow(mat):1,,drop=FALSE]
@@ -2675,11 +2674,9 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
                                      opacity=1, label.clusters=FALSE, labels=NULL,
                                      legend.ysp=0.85, legend.pos = "bottomleft",
                                      tooltip=NULL, theme=NULL, set.par=TRUE,
-                                     label.type=c("text","box"), base_size=11, 
+                                     label.type=c("text","box"), base_size=11,
                                      title=NULL, barscale=0.8, axis=TRUE, box=TRUE )
 {
-    require(ggplot2)
-
     if(0) {
         cex.lab=0.8; cex.title=1.2; cex.clust=1.5; cex.legend=1;
         zoom=1; legend=TRUE; bty='n'; hilight=NULL;
@@ -2809,22 +2806,22 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
                 size = 1.8*cex,
                 fill = pt.col,
                 color = "#444444",
-                stroke = 0.2                
+                stroke = 0.2
             ) +
             scale_color_manual(
                 values = col1,
                 name = title,
                 na.value = "#DDDDDD44"
             )
-        
+
         if(!is.null(theme)) {
             plt <- plt + theme
         } else {
-            plt <- plt + theme_bw(
-              base_size = base_size              
-            ) 
+            plt <- plt + ggplot2::theme_bw(
+              base_size = base_size
+            )
         }
-        
+
         ## label cluster
         if(label.clusters) {
             ## Put a cluster label at the median position of the group
@@ -2974,20 +2971,20 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
                          point.padding = grid::unit(0.2, "lines")
                      )
     }
-    
+
 
     if(!is.null(bgcolor)) {
       plt <- plt + theme(
         panel.background = element_rect(fill=bgcolor)
       )
     }
-    
+
     if(!is.null(gridcolor)) {
       plt <- plt + theme(
         panel.grid.major = element_line(
           size = 0.4,
           linetype = 'solid',
-          colour = gridcolor), 
+          colour = gridcolor),
         panel.grid.minor = element_line(
           size = 0.15,
           linetype = 'solid',
@@ -2998,7 +2995,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
     if(box) {
       plt <- plt +
         theme(
-          panel.border = element_rect(fill=NA, color="grey20", size=0.15)          
+          panel.border = element_rect(fill=NA, color="grey20", size=0.15)
         )
     }
 
@@ -3027,7 +3024,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
               axis.ticks.y = element_blank()
             )
     }
-    
+
     plt
 }
 
@@ -3078,7 +3075,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
 
     var <- var[match(rownames(pos),names(var))]
     names(var) <- rownames(pos)
-    
+
     if(is.null(type)) {
         type <- c("numeric","factor")[1 + class(var) %in% c("factor","character")]
     }
@@ -3118,12 +3115,12 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     )
     if(!is.null(tooltip) && length(tooltip)==length(var)) {
       tooltip1 <- paste0(tooltip1,"<br>",tooltip)
-    } 
+    }
     if(!is.null(tooltip) && tooltip==FALSE) {
       tooltip1 = NA
       hoverinfo = "none"
     }
-  
+
     label1 <- rownames(pos)
     if(!is.null(labels) && labels[1]!=FALSE) label1 <- labels
     label1 <- gsub('[)(]','',label1)  ## HTML labels do not like it...
@@ -3202,10 +3199,10 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
             cmin = -cmax
         }
     }
-    
+
     ## remove NA??
     ##df <- df[!is.na(df$value),]
-    
+
     ##---------------- call PLOTLY -----------
     if(is.null(source)) source <- paste0(sample(LETTERS,10),collapse='')
     ##plt <- plotly::plot_ly(df,
@@ -3259,7 +3256,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
             key = ~label,
             mode = "markers",
             type = "scattergl")
-    
+
     if(!is.null(hilight)) {
         jj <- which(rownames(df) %in% hilight)
         col1 = 'transparent'
@@ -3352,18 +3349,18 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
         plt <- plt %>% plotly::layout(
             xaxis = list(gridcolor = gridcolor),
             yaxis = list(gridcolor = gridcolor)
-        )        
+        )
     }
 
     if(!is.null(bgcolor)) {
         plt <- plt %>% plotly::layout(
             plot_bgcolor = bgcolor
-        )        
+        )
     }
-  
+
     if(box==TRUE) {
         plt <- plt %>%
-          plotly::layout(    
+          plotly::layout(
             shapes = list(
               list(
                 type = "rect",
@@ -3373,7 +3370,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                   width = 0.1
                 ),
                 xref = "paper",
-                yref = "paper",        
+                yref = "paper",
                 y0 = -0.0, y1 = 1.0,
                 x0 = -0.0, x1 = 1.0
               )
@@ -3381,7 +3378,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
           )
     }
 
-  
+
     ## add legend and title
     plt <- plt %>%
         plotly::layout(
@@ -3395,7 +3392,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                 titlefont = list(size = 12*cex.axis)
             )
         )
-  
+
     if(!is.null(title) && title!="") {
         plt <- plt %>%
             plotly::layout(
@@ -3834,7 +3831,6 @@ corclust <- function(x) {
 ## Override add_col_annotation to be able to suppress titles
 ##
 ##
-require(iheatmapr)
 #setMethod(add_col_annotation,
 #          c(p = "Iheatmap"),
 iheatmapr.add_col_annotation <- function(p,
@@ -4184,7 +4180,7 @@ pgx.barplot.PLOTLY <- function(
 
   if(is.null(x)) x <- 1
   if(is.null(y)) y <- 2
-  
+
   # calculate error bars
   # calculate summary statistics for groups
   if(grouped) {
@@ -4195,7 +4191,7 @@ pgx.barplot.PLOTLY <- function(
           c(mean = mean(val), sd = sd(val))))
     colnames(data) <- c(x, y, "sd")
   }
-  
+
   ngroups <- length(unique(data[[x]]))
   bargap <- ifelse(ngroups == 2, 0.5, NA)
 
@@ -4218,7 +4214,7 @@ pgx.barplot.PLOTLY <- function(
     }
     data[["short.x"]] <- factor(sx, levels=sx)
   }
-  
+
   p <- plotly::plot_ly(
     data = data,
     x = data[["short.x"]],
@@ -4262,6 +4258,6 @@ pgx.barplot.PLOTLY <- function(
       annotations = annotations
     ) %>%
     plotly_default()
-  
+
   return(p)
 }

@@ -920,9 +920,6 @@ parse_geo_series_matrix <- function(SERIES_FILE,
     ## https://gist.github.com/SimonLarsen
     ## https://gist.github.com/SimonLarsen/66f27c188039129f3510669b992b2c99
 
-    library(data.table)
-    library(foreach)
-
     if(0) {
         args <- commandArgs(TRUE)
         ## Input files ####
