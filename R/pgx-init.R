@@ -152,15 +152,6 @@ pgx.initialize <- function(pgx) {
         return(NULL)
     }
 
-    vars.needed <- c("group")
-    if(FALSE && !all(vars.needed %in% colnames(pgx$samples))) {
-        vars.missing <- setdiff(vars.needed, colnames(pgx$samples))
-        msg <- paste("invalid pgx object. missing variables in object: ",vars.missing)
-        message("[pgx-init.R] *** WARNING ***",msg)
-        ##stop(msg)
-        return(NULL)
-    }
-
     ## for COMPATIBILITY: if no counts, estimate from X
     if(is.null(pgx$counts)) {
         cat("WARNING:: no counts table. estimating from X\n")

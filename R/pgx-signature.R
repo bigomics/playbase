@@ -13,11 +13,11 @@ if(!exists("SIGDB.DIR") && exists("FILESX")) {
 }
 
 #' @export
-pgx.computeConnectivityScores <- function(ngs, sigdb, ntop=1000, contrasts=NULL,
+pgx.computeConnectivityScores <- function(pgx, sigdb, ntop=1000, contrasts=NULL,
                                           remove.le=FALSE, inmemory=FALSE )
 {
 
-    meta = pgx.getMetaFoldChangeMatrix(ngs, what="meta")
+    meta = pgx.getMetaFoldChangeMatrix(pgx, what="meta")
     colnames(meta$fc)
 
     is.h5ref <- grepl("h5$",sigdb)
@@ -536,13 +536,14 @@ pgx.createSignatureDatabaseH5 <- function(pgx.files, h5.file, update.only=FALSE)
         for(i in 1:length(pgx.files)) {
             if(!file.exists(pgx.files[i])) next()
             cat(".")
-            try.error <- try( load(pgx.files[i], verbose=0) )
-            if(class(try.error)=="try-error") next()
-            meta <- pgx.getMetaFoldChangeMatrix(ngs, what="meta")
+            ##try.error <- try( load(pgx.files[i], verbose=0) )
+            pgx <- try(local(get(load(pgx.files[i], verbose=0)))) ## override any name
+            if("try-error" %in% class(pgx)) next()
+            meta <- pgx.getMetaFoldChangeMatrix(pgx, what="meta")
             rownames(meta$fc) <- toupper(rownames(meta$fc))  ## mouse-friendly
-            pgx <- gsub(".*[/]|[.]pgx$","",pgx.files[i])
-            colnames(meta$fc) <- paste0("[",pgx,"] ",colnames(meta$fc))
-            F[[ pgx ]] <- meta$fc
+            pgxfile <- gsub(".*[/]|[.]pgx$","",pgx.files[i])
+            colnames(meta$fc) <- paste0("[",pgxfile,"] ",colnames(meta$fc))
+            F[[ pgxfile ]] <- meta$fc
         }
         cat("\n")
 

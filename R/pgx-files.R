@@ -458,43 +458,42 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
     ngs <- NULL
     for(pgxfile in pgx.missing) {
 
-        pgxfile
-        try.error <- try( load(file.path(pgx.dir1,pgxfile),verbose=0) )
-        if(class(try.error)=="try-error") {
+        pgxfile1 <- file.path(pgx.dir1,pgxfile)
+        ##try.error <- try( load(file.path(pgx.dir1,pgxfile),verbose=0) )
+        pgx <- try(local(get(load(pgxfile1, verbose = 0)))) ## override any name
+
+        if("try-error" %in% class(pgx)) {
             message(paste("[initDatasetFolder1] ERROR in loading PGX file:",pgxfile,". skipping\n"))
             next()
         }                
 
-        message("[initDatasetFolder1] pgxfile = ",pgxfile)
-        message("[initDatasetFolder1] names(ngs) = ", paste(names(ngs),collapse=' '))
-
-        if(!pgx.checkObject(ngs)) {
+        if(!pgx.checkObject(pgx)) {
             message(paste("[initDatasetFolder1] INVALID PGX object",pgxfile,". Skipping"))
             next()            
         }
 
         ## check if name exists
-        ##if(is.null(ngs$name)) ngs$name <- sub(".pgx$","",pgxfile)
-        ngs$name <- sub(".pgx$","",pgxfile)  ## force filename as name
+        ##if(is.null(pgx$name)) pgx$name <- sub(".pgx$","",pgxfile)
+        pgx$name <- sub(".pgx$","",pgxfile)  ## force filename as name
         
         ##---------------------------------------------
         ## extract the meta FC matrix
         ##---------------------------------------------
-        ## rownames(ngs$X) <- toupper(sub(".*:","",rownames(ngs$X)))
-        meta <- pgx.getMetaFoldChangeMatrix(ngs, what="meta")
+        ## rownames(pgx$X) <- toupper(sub(".*:","",rownames(pgx$X)))
+        meta <- pgx.getMetaFoldChangeMatrix(pgx, what="meta")
         rownames(meta$fc) <- toupper(rownames(meta$fc))
         missing.FC[[pgxfile]] <- meta$fc
 
         ##---------------------------------------------
         ## compile the info for update
         ##---------------------------------------------
-        pgxinfo <- pgx.updateInfoPGX(pgxinfo, ngs)
+        pgxinfo <- pgx.updateInfoPGX(pgxinfo, pgx)
         Matrix::tail(pgxinfo)
         ## pgxinfo <- rbind( pgxinfo, this.info)
 
     }
 
-    ngs <- NULL
+    pgx <- NULL
     rownames(pgxinfo) <- NULL    
     pgxinfo <- data.frame(pgxinfo)    
 
@@ -579,34 +578,34 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
 
 
 #' @export
-pgx.updateInfoPGX <- function(pgxinfo, ngs, remove.old=TRUE)
+pgx.updateInfoPGX <- function(pgxinfo, pgx, remove.old=TRUE)
 {
 
     cond = grep("title|source|group|batch|sample|patient|donor|repl|clone|cluster|lib.size|^[.]",
-                colnames(ngs$samples),invert=TRUE,value=TRUE)
+                colnames(pgx$samples),invert=TRUE,value=TRUE)
     cond = grep("title|source|batch|sample|patient|donor|repl|clone|cluster|lib.size|^[.]",
-                colnames(ngs$samples),invert=TRUE,value=TRUE)
+                colnames(pgx$samples),invert=TRUE,value=TRUE)
     cond
 
-    is.mouse = (mean(grepl("[a-z]",ngs$genes$gene_name))>0.8)
+    is.mouse = (mean(grepl("[a-z]",pgx$genes$gene_name))>0.8)
     organism = c("human","mouse")[1 + is.mouse]
-    if("organism" %in% names(ngs)) organism <- ngs$organism
+    if("organism" %in% names(pgx)) organism <- pgx$organism
     
     this.date <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-    date = ifelse(is.null(ngs$date), this.date, as.character(ngs$date))
-    dataset.name <- ngs$name
-    ## dataset.name <- ifelse(is.null(ngs$name), pgxfile, ngs$name)
+    date = ifelse(is.null(pgx$date), this.date, as.character(pgx$date))
+    dataset.name <- pgx$name
+    ## dataset.name <- ifelse(is.null(pgx$name), pgxfile, pgx$name)
         
     this.info <- c(
         dataset = dataset.name,
         ## author = "", ## add author? maintainer? owner??
-        collection = ngs$collection,
-        datatype = ifelse(is.null(ngs$datatype),"", ngs$datatype),
-        description = ifelse(is.null(ngs$description),"", ngs$description),
+        collection = pgx$collection,
+        datatype = ifelse(is.null(pgx$datatype),"", pgx$datatype),
+        description = ifelse(is.null(pgx$description),"", pgx$description),
         organism = organism,
-        nsamples = nrow(ngs$samples),
-        ngenes = nrow(ngs$X),
-        nsets = nrow(ngs$gsetX),
+        nsamples = nrow(pgx$samples),
+        ngenes = nrow(pgx$X),
+        nsets = nrow(pgx$gsetX),
         conditions = paste(cond,collapse=" "),
         date = as.character(date),
         path = NULL
