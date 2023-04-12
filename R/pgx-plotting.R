@@ -3959,16 +3959,22 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
     length(xx)
 
     ## ------- set colors
-    colors0 = rep("Set2", ncol(annot))
-    names(colors0) = colnames(annot)
+    
+    if (!is.null(annot)) {
+        colors0 = rep("Set2", ncol(annot))
+        names(colors0) = colnames(annot)
 
-    if(!is.null(colors) && any(names(colors) %in% names(colors0))) {
-        for(v in intersect(names(colors), names(colors0))) colors0[[v]] <- colors[[v]]
+        if(!is.null(colors) && any(names(colors) %in% names(colors0))) {
+            for(v in intersect(names(colors), names(colors0))) colors0[[v]] <- colors[[v]]
+        }
+
+        ## ------- annot need to be factor
+        annotF <- data.frame(as.list(annot),stringsAsFactors=TRUE)
+        rownames(annotF) = rownames(annot)    
+    } else {
+        colors0 = NULL
     }
-
-    ## ------- annot need to be factor
-    annotF <- data.frame(as.list(annot),stringsAsFactors=TRUE)
-    rownames(annotF) = rownames(annot)
+    
 
     grid_params <- iheatmapr::setup_colorbar_grid(
         nrows = 5,
@@ -4007,11 +4013,15 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
         iheatmapr::add_col_dendro(hc, size = 0.06) %>%
         ##add_row_dendro(hr, size = dd) %>%
         iheatmapr::add_row_title("Genes") %>%
-        iheatmapr::add_col_title(names(xx)[1], side="top") %>%
-        iheatmapr.add_col_annotation(
-            size = col_annot_height, buffer = 0.005, side="bottom",
-            colors = colors0, show_title=TRUE,
-            annotF[colnames(xx[[1]]),,drop=FALSE])
+        iheatmapr::add_col_title(names(xx)[1], side="top")
+
+    if (!is.null(annot)) {
+        plt <- plt %>%
+            iheatmapr.add_col_annotation(
+                size = col_annot_height, buffer = 0.005, side="bottom",
+                colors = colors0, show_title=TRUE,
+                annotF[colnames(xx[[1]]),,drop=FALSE])
+        }
     ##plt
     length(xx)
     dim(X)
