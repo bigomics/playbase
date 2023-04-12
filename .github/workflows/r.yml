@@ -6,16 +6,14 @@
 # See https://github.com/r-lib/actions/tree/master/examples#readme for
 # additional example workflows available for the R community.
 
-name: R
+name: R package check
 
 env:
   GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  schedule:
+    - cron: "0 0 * * *"
 
 permissions:
   contents: read
