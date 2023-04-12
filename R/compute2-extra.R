@@ -9,7 +9,7 @@ EXTRA.MODULES = c("meta.go","deconv","infer","drugs", ## "graph",
                   "connectivity","wordcloud")
 
 #' @export
-compute.extra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
+compute_extra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
     pgx.computeExtra(ngs, extra=extra, lib.dir=lib.dir, sigdb=sigdb)
 }
 
@@ -61,7 +61,7 @@ pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
     if("deconv" %in% extra) {
         message(">>> computing deconvolution")
         tt <- system.time({
-            ngs <- compute.deconvolution(
+            ngs <- compute_deconvolution(
                 ngs, lib.dir=lib.dir[1], rna.counts=rna.counts,
                 full=FALSE)
         })
@@ -72,7 +72,7 @@ pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
     if("infer" %in% extra) {
         message(">>> inferring extra phenotypes...")
         tt <- system.time({
-            ngs <- compute.cellcycle.gender(ngs, rna.counts=rna.counts)
+            ngs <- compute_cellcycle_gender(ngs, rna.counts=rna.counts)
         })
         timings <- rbind(timings, c("infer", tt))
         message("<<< done!")
@@ -93,13 +93,13 @@ pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
 
             message(">>> Computing drug activity enrichment...")
             tt <- system.time({
-                ngs <- compute.drugActivityEnrichment(ngs, cmap.dir)
+                ngs <- compute_drugActivityEnrichment(ngs, cmap.dir)
             })
             timings <- rbind(timings, c("drugs", tt))
 
             message(">>> Computing drug sensitivity enrichment...")
             tt <- system.time({
-                ngs <- compute.drugSensitivityEnrichment(ngs, cmap.dir)
+                ngs <- compute_drugSensitivityEnrichment(ngs, cmap.dir)
             })
             timings <- rbind(timings, c("drugs-sx", tt))
 
@@ -115,7 +115,7 @@ pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
     if("graph" %in% extra) {
         message(">>> computing OmicsGraphs...")
         tt <- system.time({
-            ngs <- compute.omicsGraphs(ngs)
+            ngs <- compute_omicsGraphs(ngs)
         })
         timings <- rbind(timings, c("graph", tt))
         message("<<< done!")
@@ -199,7 +199,7 @@ pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
 
 ## -------------- deconvolution analysis --------------------------------
 #' @export
-compute.deconvolution <- function(ngs, lib.dir, rna.counts=ngs$counts, full=FALSE) {
+compute_deconvolution <- function(ngs, lib.dir, rna.counts=ngs$counts, full=FALSE) {
 
     ## list of reference matrices
     refmat <- list()
@@ -248,7 +248,7 @@ compute.deconvolution <- function(ngs, lib.dir, rna.counts=ngs$counts, full=FALS
 
 ## -------------- infer sample characteristics --------------------------------
 #' @export
-compute.cellcycle.gender <- function(ngs, rna.counts=ngs$counts)
+compute_cellcycle_gender <- function(ngs, rna.counts=ngs$counts)
 {
     pp <- rownames(rna.counts)
     is.mouse = (mean(grepl("[a-z]",gsub(".*:|.*\\]","",pp))) > 0.8)
@@ -283,7 +283,7 @@ compute.cellcycle.gender <- function(ngs, rna.counts=ngs$counts)
 }
 
 #' @export
-compute.drugActivityEnrichment <- function(ngs, cmap.dir) {
+compute_drugActivityEnrichment <- function(ngs, cmap.dir) {
 
     ## -------------- drug enrichment
     cmap.dir
@@ -291,7 +291,7 @@ compute.drugActivityEnrichment <- function(ngs, cmap.dir) {
     ref.db <- dir(cmap.dir, pattern='^L1000-.*rds$')
     ref.db
     if(length(ref.db)==0) {
-        message("[compute.drugActivityEnrichment] Warning:: missing drug activity database")
+        message("[compute_drugActivityEnrichment] Warning:: missing drug activity database")
         return(ngs)
     }
     names(ref.db) <- sub("-","/",gsub("_.*","",ref.db))
@@ -301,7 +301,7 @@ compute.drugActivityEnrichment <- function(ngs, cmap.dir) {
     i=2
     for(i in 1:length(ref.db)) {
         f <- ref.db[i]
-        message("[compute.drugActivityEnrichment] reading L1000 reference: ",f)
+        message("[compute_drugActivityEnrichment] reading L1000 reference: ",f)
         X <- readRDS(file=file.path(cmap.dir,f))
         ##X <- fread.csv(file=file.path(cmap.dir,L1000.FILE))
         xdrugs <- gsub("[_@].*$","",colnames(X))
@@ -320,7 +320,7 @@ compute.drugActivityEnrichment <- function(ngs, cmap.dir) {
             nmin=3, nprune=NPRUNE, contrast=NULL )
 
         if(is.null(out1)) {
-            message("[compute.drugActivityEnrichment] WARNING:: pgx.computeDrugEnrichment failed!")
+            message("[compute_drugActivityEnrichment] WARNING:: pgx.computeDrugEnrichment failed!")
             next()
         }
 
@@ -364,13 +364,13 @@ compute.drugActivityEnrichment <- function(ngs, cmap.dir) {
 
 ##ref="CTRPv2";cmap.dir="../lib";combo=FALSE
 #' @export
-compute.drugSensitivityEnrichment <- function(ngs, cmap.dir)
+compute_drugSensitivityEnrichment <- function(ngs, cmap.dir)
 {
 
     ref.db <- dir(cmap.dir, pattern='sensitivity.*rds$')
     ref.db
     if(length(ref.db)==0) {
-        message("[compute.drugSensitivityEnrichment] Warning:: missing drug sensitivity database")
+        message("[compute_drugSensitivityEnrichment] Warning:: missing drug sensitivity database")
         return(ngs)
     }
     names(ref.db) <- sub("-","/",gsub("_.*","",ref.db))
@@ -419,7 +419,7 @@ compute.drugSensitivityEnrichment <- function(ngs, cmap.dir)
 
 ## ------------------ Omics graphs --------------------------------
 #' @export
-compute.omicsGraphs <- function(ngs) {
+compute_omicsGraphs <- function(ngs) {
     ## gr1$layout <- gr1$layout[igraph::V(gr1)$name,]  ## uncomment to keep entire layout
     ngs$omicsnet <- pgx.createOmicsGraph(ngs)
     ngs$pathscores <- pgx.computePathscores(ngs$omicsnet, strict.pos=FALSE)

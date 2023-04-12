@@ -94,7 +94,7 @@ matrix.prodSPARSE <- function( ..., na.fill=1) {
 
 
 #' @export
-merge.similarities <- function(S.list, sparse=NULL)
+merge_similarities <- function(S.list, sparse=NULL)
 {
     length(S.list)
     if(is.null(sparse)) sparse = is(S.list[[1]], "sparseMatrix")
@@ -153,15 +153,15 @@ merge.similarities <- function(S.list, sparse=NULL)
 }
 
 #' @export
-tcosine.similarity <- function(X, Y=NULL, method=NULL) {
+tcosine_similarity <- function(X, Y=NULL, method=NULL) {
     if(!is.null(Y)) {
-        return( cosine.similarity( t(X), Y=t(Y), method=method))
+        return( cosine_similarity( t(X), Y=t(Y), method=method))
     }
-    return( cosine.similarity( t(X), Y=NULL, method=method))
+    return( cosine_similarity( t(X), Y=NULL, method=method))
 }
 
 #' @export
-cosine.similarity <- function(X, Y=NULL, method=NULL)
+cosine_similarity <- function(X, Y=NULL, method=NULL)
 {
     
     ## sparse cosine: A.B / (|A||B|)
@@ -209,7 +209,7 @@ tcosine.sparse <- function(X, k=100, th=0.01, block=100, ties.method="random",
         j0 <- (i-1)*block + 1
         j1 <- min((i-1)*block + block,nrow(X))
         jj = j0:j1
-        ##rho = tcosine.similarity( X[jj,], X[,] )
+        ##rho = tcosine_similarity( X[jj,], X[,] )
         if(gpu==TRUE) {
             
             rho <- gpuTcrossprod(X[jj,], X[,])
@@ -254,7 +254,7 @@ tcosine.sparse.paral <- function(X, th=0.01, k=100, mc.cores=4, blocksize=100,
                                  verbose=1){
     ##
     ## Normalizing X then doing tcrossprod is same as doing
-    ## tcosine.similarity on non-normalized X.
+    ## tcosine_similarity on non-normalized X.
     ##
     X = X / (1e-20 + Matrix::rowSums(X**2)**0.5)
     iter = ceiling(nrow(X)/blocksize)
@@ -292,38 +292,7 @@ tcosine.sparse.paral <- function(X, th=0.01, k=100, mc.cores=4, blocksize=100,
 }
 
 #' @export
-seq.similarity.paral.SAVE <- function(aln, th=0.75, k=500, mc.core=100, blocksize=1000){
-    na = which(is.na(aln))
-    no.na = which(!is.na(aln))
-    y = seq.encode(aln[no.na], fill.na=1, verbose=0)
-    ##y = y / (1e-20 + Matrix::rowSums(y,na.rm=TRUE))
-    y = y / (1e-20 + Matrix::rowSums(y**2)**0.5)
-    print(dim(y))
-    rownames(y)=no.na
-
-    iter = ceiling(nrow(y)/blocksize)
-    sim <-c()
-    for(i in 1:iter){
-        down=i*blocksize-blocksize+1
-        up=min(i*blocksize,nrow(y))
-        print(paste0(down," - ",up))
-        s<-mclapply(down:up, function(j){
-            cr = tcrossprod(y[j,], y);
-            cr = Matrix::head(sort(cr[1,],decreasing = TRUE),k)
-            cr = cr[which(cr>=th)];
-            if(length(cr)>0) {data.frame(from=rep(rownames(y)[j],length(cr)),to=names(cr),val=as.numeric(cr))} else {data.frame(from="",to="",val="")[0,]}
-        }, mc.cores = mc.core)
-        sim[down:up] <- s
-    }
-    if(length(na)>0){
-        sim[length(no.na)+1] <-list(data.frame(from=na,to=rep(1,length(na)),val=NA))
-    }
-    return(sim)
-}
-
-
-#' @export
-cosine.similarity.EXACT <- function(X) {
+cosine_similarity.EXACT <- function(X) {
     vec.cos <- function(a,b) {
         j <- which(!is.na(a) & !is.na(b))
         as.numeric( sum(a[j]*b[j]) / sum(a[j]**2)**0.5 / sum(b[j]**2)**0.5)
@@ -351,7 +320,7 @@ jaccard_similarity <- function(m)
 }
 
 #' @export
-length.similarityEXACT <- function(x,p=1)
+length_similarityEXACT <- function(x,p=1)
 {
     D = 1.0*abs(outer(x, x, FUN='-'))
     L = 1.0*abs(outer(x, x, FUN='pmax'))
@@ -361,16 +330,16 @@ length.similarityEXACT <- function(x,p=1)
 }
 
 #' @export
-length.similaritySPARSE <- function(x,r=0.1)
+length_similaritySPARSE <- function(x,r=0.1)
 {
-    X = length.encode(x,r=r)
-    S = cosine.similarity(t(X))
+    X = length_encode(x,r=r)
+    S = cosine_similarity(t(X))
     rownames(S) <- colnames(S) <- NULL
     return(S)
 }
 
 #' @export
-length.encode <- function(x, r=0.1, a=0.25)
+length_encode <- function(x, r=0.1, a=0.25)
 {
     
     x0 = x
@@ -391,7 +360,7 @@ length.encode <- function(x, r=0.1, a=0.25)
     colnames(M) <- NULL
     rownames(M) <- NULL
     if(r==0) {
-        S = cosine.similarity(t(M))
+        S = cosine_similarity(t(M))
         return(S)
     }
     n = ceiling(r/dx)
@@ -411,9 +380,9 @@ length.encode <- function(x, r=0.1, a=0.25)
 
 if(0) {
     x[1]=NA
-    length.encode(x, r=0.1, a=0.5)
-    length.encode(x, r=0.1, a=0.33)
-    length.encode(x, r=0.1, a=0.25)
+    length_encode(x, r=0.1, a=0.5)
+    length_encode(x, r=0.1, a=0.33)
+    length_encode(x, r=0.1, a=0.25)
 
 }
 
@@ -497,7 +466,7 @@ knn.predict <- function(data, pred.var, x.var=NULL, K, samples=NULL, ntest=0.33 
     pos = dist.xy = NULL
     ##system.time( dist.xy <- 1 - qlcMatrix::corSparse( t(X[j1,]), t(X[j0,]) ) )
     if(sum(is.na(X))>0) {
-        system.time( dist.xy <- 1 - cosine.similarity( t(X[j1,]), t(X[j0,]) ) )
+        system.time( dist.xy <- 1 - cosine_similarity( t(X[j1,]), t(X[j0,]) ) )
     } else {
         system.time( dist.xy <- 1 - qlcMatrix::cosSparse( t(X[j1,]), t(X[j0,]) ) )
     }

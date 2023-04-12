@@ -471,7 +471,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
-  ngs <- compute.cellcycle.gender(ngs)
+  ngs <- compute_cellcycle_gender(ngs)
   Matrix::head(ngs$samples)
 
   ## -------------------------------------------------------------------
@@ -648,7 +648,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
   message("[pgx.computePGX] testing genes...")
 
-  pgx <- compute.testGenes(
+  pgx <- compute_testGenes(
     pgx, contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
@@ -662,7 +662,7 @@ pgx.computePGX <- function(pgx,
 
   message("[pgx.computePGX] testing genesets...")
   ## max.features=max.genes;test.methods=gset.methods
-  pgx <- compute.testGenesets(
+  pgx <- compute_testGenesets(
     pgx,
     max.features = max.genesets,
     test.methods = gset.methods
@@ -683,7 +683,7 @@ pgx.computePGX <- function(pgx,
 
   ## extra <- c("meta.go","deconv","infer","drugs")
   ## extra <- c("meta.go","infer","drugs")
-  pgx <- compute.extra(pgx, extra = extra.methods, lib.dir = lib.dir)
+  pgx <- compute_extra(pgx, extra = extra.methods, lib.dir = lib.dir)
 
   message("[pgx.computePGX] done!")
   pgx$timings

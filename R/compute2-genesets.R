@@ -5,7 +5,7 @@
 
 ##max.features=8000;lib.dir=FILES;test.methods = c("gsva","camera","fgsea")
 #' @export
-compute.testGenesets <- function(pgx,
+compute_testGenesets <- function(pgx,
                                  max.features=1000, 
                                  test.methods = c("gsva","camera","fgsea"),
                                  remove.outputs=TRUE )
@@ -15,7 +15,7 @@ compute.testGenesets <- function(pgx,
     ##
     ##
     if(!"X" %in% names(pgx)) {
-        stop("[compute.testGenesets] FATAL : object must have normalized matrix X")
+        stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
     }
 
     ##-----------------------------------------------------------

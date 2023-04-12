@@ -839,13 +839,8 @@ gx.snrtest <- function(X,y,ref.class,nperm=200) {
 }
 
 #' @export
-seq.limma <- function(countdata, y, method="edgeR") {
+seq_limma <- function(countdata, y, method="edgeR") {
     ## https://bioinformatics-core-shared-training.github.io/RNAseq-R/rna-seq-de.nb.html
-    
-    
-    
-    
-
     if( min(countdata)<0 || !all(countdata%%1==0) ) {
         cat("WARNING:: input X should be integer counts! Proceed on own risk\n")
     }

@@ -527,12 +527,6 @@ pgx.PC_correlation <- function(X, pheno, nv=3, stat="F", plot=TRUE, main=NULL) {
         if(is.null(main)) main <- tt0
         ## R <- R[,ncol(R):1]
         plt <- plot_ggbarplot(t(R), ylab=stat0, srt=45, group.name="") +
-            ## ggplot2::theme(
-            ##     legend.key.size = grid::unit(0.65,"lines"),
-            ##     legend.key.height = grid::unit(0.35,"lines"),
-            ##     legend.text = ggplot2::element_text(size=9),
-            ##     legend.justification = c(1,1),
-            ##     legend.position = c(0.98,0.98)) +
             ggplot2::theme(plot.margin = ggplot2::margin(2,2,0,2,"mm"),
                   plot.title = ggplot2::element_text(size=12)) +
             ggplot2::xlab("") + ggplot2::ggtitle(main)
