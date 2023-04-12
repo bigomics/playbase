@@ -62,7 +62,7 @@ pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
         message(">>> computing deconvolution")
         tt <- system.time({
             ngs <- compute_deconvolution(
-                ngs, lib.dir=lib.dir[1], rna.counts=rna.counts,
+                ngs, rna.counts=rna.counts,
                 full=FALSE)
         })
         timings <- rbind(timings, c("deconv", tt))
@@ -199,21 +199,20 @@ pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
 
 ## -------------- deconvolution analysis --------------------------------
 #' @export
-compute_deconvolution <- function(ngs, lib.dir, rna.counts=ngs$counts, full=FALSE) {
+compute_deconvolution <- function(ngs, rna.counts=ngs$counts, full=FALSE) {
 
     ## list of reference matrices
     refmat <- list()
-    readSIG <- function(f) read.csv(file.path(lib.dir,"sig",f), row.names=1, check.names=FALSE)
-    LM22 <- read.csv(file.path(lib.dir,"sig/LM22.txt"),sep="\t",row.names=1)
-    refmat[["Immune cell (LM22)"]] <- LM22
-    refmat[["Immune cell (ImmProt)"]] <- readSIG("immprot-signature1000.csv")
-    refmat[["Immune cell (DICE)"]] <- readSIG("DICE-signature1000.csv")
-    refmat[["Immune cell (ImmunoStates)"]] <- readSIG("ImmunoStates_matrix.csv")
-    refmat[["Tissue (HPA)"]]       <- readSIG("rna_tissue_matrix.csv")
-    refmat[["Tissue (GTEx)"]]      <- readSIG("GTEx_rna_tissue_tpm.csv")
-    refmat[["Cell line (HPA)"]]    <- readSIG("HPA_rna_celline.csv")
-    refmat[["Cell line (CCLE)"]]   <- readSIG("CCLE_rna_celline.csv")
-    refmat[["Cancer type (CCLE)"]] <- readSIG("CCLE_rna_cancertype.csv")
+    #readSIG <- function(f) read.csv(file.path(lib.dir,"sig",f), row.names=1, check.names=FALSE)
+    refmat[["Immune cell (LM22)"]] <- playbase::LM22 # read.csv(file.path(lib.dir,"sig/LM22.txt"),sep="\t",row.names=1)
+    refmat[["Immune cell (ImmProt)"]] <- playbase::IMMPROT_SIGNATURE1000 #readSIG("immprot-signature1000.csv")
+    refmat[["Immune cell (DICE)"]] <- playbase::DICE_SIGNATURE1000 #readSIG("DICE-signature1000.csv")
+    refmat[["Immune cell (ImmunoStates)"]] <- playbase::IMMUNOSTATES_MATRIX #readSIG("ImmunoStates_matrix.csv")
+    refmat[["Tissue (HPA)"]]       <- playbase::RNA_TISSUE_MATRIX #readSIG("rna_tissue_matrix.csv")
+    refmat[["Tissue (GTEx)"]]      <- playbase::GTEX_RNA_TISSUE_TPM #readSIG("GTEx_rna_tissue_tpm.csv")
+    refmat[["Cell line (HPA)"]]    <- playbase::HPA_RNA_CELLINE #readSIG("HPA_rna_celline.csv")
+    refmat[["Cell line (CCLE)"]]   <- playbase::CCLE_RNA_CELLINE #readSIG("CCLE_rna_celline.csv")
+    refmat[["Cancer type (CCLE)"]] <- playbase::CCLE_RNA_CANCERTYPE #readSIG("CCLE_rna_cancertype.csv")
 
     ## list of methods to compute
     ##methods = DECONV.METHODS
