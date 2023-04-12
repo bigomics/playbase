@@ -93,7 +93,7 @@ pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
 
             message(">>> Computing drug activity enrichment...")
             tt <- system.time({
-                ngs <- compute_drugActivityEnrichment(ngs, cmap.dir)
+                ngs <- compute_drugActivityEnrichment(ngs)
             })
             timings <- rbind(timings, c("drugs", tt))
 
@@ -282,36 +282,30 @@ compute_cellcycle_gender <- function(ngs, rna.counts=ngs$counts)
 }
 
 #' @export
-compute_drugActivityEnrichment <- function(ngs, cmap.dir) {
+compute_drugActivityEnrichment <- function(ngs) {
 
     ## -------------- drug enrichment
-    cmap.dir
-    dir(cmap.dir, pattern='.*rds$')
-    ref.db <- dir(cmap.dir, pattern='^L1000-.*rds$')
-    ref.db
+    # get drug activity databases
+    ref.db <- grep('L1000_*',data(package='playbase')$results[,'Item'],value=T)
+    ref.db <- ref.db[ref.db != 'L1000_REPRURPOSING_DRUGS']
+
     if(length(ref.db)==0) {
         message("[compute_drugActivityEnrichment] Warning:: missing drug activity database")
         return(ngs)
     }
     names(ref.db) <- sub("-","/",gsub("_.*","",ref.db))
-    ref.db
-    f <- ref.db[1]
 
-    i=2
     for(i in 1:length(ref.db)) {
+
         f <- ref.db[i]
         message("[compute_drugActivityEnrichment] reading L1000 reference: ",f)
-        X <- readRDS(file=file.path(cmap.dir,f))
-        ##X <- fread.csv(file=file.path(cmap.dir,L1000.FILE))
+        X <- get(f)
         xdrugs <- gsub("[_@].*$","",colnames(X))
         ndrugs <- length(table(xdrugs))
-        ndrugs
         message("number of profiles: ",ncol(X))
         message("number of drugs: ",ndrugs)
-        dim(X)
         is.drug <- grepl("activity|drug|ChemPert",f,ignore.case=TRUE)
 
-        NPRUNE=-1
         NPRUNE=250
         fname <- names(ref.db)[i]
         out1 <- pgx.computeDrugEnrichment(
@@ -326,14 +320,12 @@ compute_drugActivityEnrichment <- function(ngs, cmap.dir) {
         ## --------------- attach annotation
         annot0 <- NULL
         if(is.drug) {
-            annot0 <- read.csv(file.path(cmap.dir,"L1000_repurposing_drugs.txt"),
-                               sep="\t", comment.char="#")
+            annot0 <- playbase::L1000_REPRURPOSING_DRUGS
             annot0$drug <- annot0$pert_iname
             rownames(annot0) <- annot0$pert_iname
         } else {
             ## gene perturbation OE/LIG/SH
             dd <- rownames(out1[["GSEA"]]$X)
-            ##d1 <- sub(".*-","",dd)
             d1 <- dd
             d2 <- sub("-.*","",dd)
             annot0 <- data.frame(drug=dd, moa=d1, target=d2)
