@@ -345,7 +345,7 @@ pgx.scatterPlot <- function(pgx, pheno=NULL, gene=NULL,
 }
 
 #' @export
-plot.SPLOM <- function(F, F2=NULL, hilight=NULL, cex=0.5, cex.axis=1, cex.space=0.2)
+plot_SPLOM <- function(F, F2=NULL, hilight=NULL, cex=0.5, cex.axis=1, cex.space=0.2)
 {
 
     if(is.null(F2)) F2 <- F
@@ -1759,7 +1759,7 @@ pgx.splitHeatmap <- function(ngs, splitx=NULL, top.mode="specific",
 ##=================================================================================
 
 #' @export
-plot.gghist <- function(x) {
+plot_gghist <- function(x) {
     dplyr::as_tibble(x) %>%
         tidyr::pivot_longer(
             cols=everything(),
@@ -2017,7 +2017,7 @@ ggenplot <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ylab=NULL)
 }
 
 #' @export
-plot.ggsplom <- function(F, F2=NULL, title_cex=2, no.axes=FALSE, ...)
+plot_ggsplom <- function(F, F2=NULL, title_cex=2, no.axes=FALSE, ...)
 {
     if(is.null(F2)) {
         F2 <- F
@@ -2035,12 +2035,12 @@ plot.ggsplom <- function(F, F2=NULL, title_cex=2, no.axes=FALSE, ...)
     for(i in 1:ncol(F)) {
         for(j in 1:ncol(F2)) {
             if(i==j && symm) {
-                p1 <- plot.ggscatter(0,0,cex=0) +
+                p1 <- plot_ggscatter(0,0,cex=0) +
                     ggplot2::theme_void() +
                     ggplot2::geom_text(x=0,y=0,label=colnames(F)[i],size=title_cex)
             } else {
-                p1 <- plot.ggscatter(F[,i], F[,j] ) +
-                ##p1 <- plot.ggscatter(F[,i], F2[,j], ... ) +
+                p1 <- plot_ggscatter(F[,i], F[,j] ) +
+                ##p1 <- plot_ggscatter(F[,i], F2[,j], ... ) +
                     ggplot2::xlim(lim0) + ggplot2::ylim(lim1) +
                     ggplot2::xlab(colnames(F)[i]) +
                     ggplot2::ylab(colnames(F2)[j])
@@ -2081,7 +2081,7 @@ plot.ggsplom <- function(F, F2=NULL, title_cex=2, no.axes=FALSE, ...)
 }
 
 #' @export
-plot.ggscatterFILL <- function(x, y=NULL, col=NULL, shape=NULL,
+plot_ggscatterFILL <- function(x, y=NULL, col=NULL, shape=NULL,
                           main=NULL, cex=1,
                           pch=20, legend=TRUE,  xlab=NULL, ylab=NULL,
                           legend.ysp=0.8, cex.legend=1,
@@ -2132,7 +2132,7 @@ plot.ggscatterFILL <- function(x, y=NULL, col=NULL, shape=NULL,
 }
 
 #' @export
-plot.ggscatter <- function(x, y=NULL, col=NULL, main=NULL,
+plot_ggscatter <- function(x, y=NULL, col=NULL, main=NULL,
                       cex=1, col.scale=NULL, shape=NULL, pch=20,
                       legend=TRUE, legend.ysp=0.8, cex.legend=1,
                       legend.pos = "right",
@@ -2204,7 +2204,7 @@ plot.ggscatter <- function(x, y=NULL, col=NULL, main=NULL,
 }
 
 #' @export
-plot.ggviolin <- function(x, y, group=NULL, main="", ylim=NULL, add.dots=TRUE,
+plot_ggviolin <- function(x, y, group=NULL, main="", ylim=NULL, add.dots=TRUE,
                      col="#AAAAAA", cex=1, xlab="", ylab="y", srt=0,
                      pdodge=1.5, n.dodge=1, base_size=13)
 {
@@ -2239,7 +2239,7 @@ plot.ggviolin <- function(x, y, group=NULL, main="", ylim=NULL, add.dots=TRUE,
 
 
 #' @export
-plot.ggbarplot <- function(mat, xlab="x", ylab="y", srt=0, main=NULL,
+plot_ggbarplot <- function(mat, xlab="x", ylab="y", srt=0, main=NULL,
                       las=NULL, col=NULL, beside=FALSE,
                       legend.pos = c(0.016,1), legend.cex = 1,
                       bar_width=0.7, base_size=12, group.name="group")
@@ -2324,7 +2324,7 @@ pgx.violinPlot <- function(x, y, group=NULL, xlab='', ylab='',
     }
     if(plotlib=='ggplot') {
         d1 <- !is.null(maxbee) && maxbee>0
-        fig <- plot.ggviolin( y, x, add.dots=d1, xlab=xlab, ylab=ylab, srt=srt,
+        fig <- plot_ggviolin( y, x, add.dots=d1, xlab=xlab, ylab=ylab, srt=srt,
                              main=main, cex.main=cex.main)
     }
     if(plotlib=='plotly') {

@@ -526,7 +526,7 @@ pgx.PC_correlation <- function(X, pheno, nv=3, stat="F", plot=TRUE, main=NULL) {
         tt0   <- c("PC correlation","PC variation")[1 + 1*(stat=="F")]
         if(is.null(main)) main <- tt0
         ## R <- R[,ncol(R):1]
-        plt <- plot.ggbarplot(t(R), ylab=stat0, srt=45, group.name="") +
+        plt <- plot_ggbarplot(t(R), ylab=stat0, srt=45, group.name="") +
             ## ggplot2::theme(
             ##     legend.key.size = grid::unit(0.65,"lines"),
             ##     legend.key.height = grid::unit(0.35,"lines"),
