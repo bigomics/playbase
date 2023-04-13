@@ -133,3 +133,4 @@ Imports:
     xgboost
 Remotes:
     linxihui/NNLM
+    ropensci/iheatmapr
