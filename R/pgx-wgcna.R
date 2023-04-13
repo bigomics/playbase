@@ -5,6 +5,24 @@
 ##
 
 #' @export
+labels2rainbow <- function(net) {
+      hc <- net$dendrograms[[1]]
+      nc <- length(unique(net$colors))
+      n <- length(net$colors)
+      ii <- hc$order
+      col1 <- labels2colors(net$colors)
+      col.rnk <- rank(tapply(1:n, col1[ii], mean))
+      new.col <- rainbow(nc)[col.rnk]
+      ## new.col <- heat.colors(nc)[col.rnk]
+      names(new.col) <- names(col.rnk)
+      new.col["grey"] <- "#AAAAAA"
+      new.col
+      new.col <- new.col[col1]
+      names(new.col) <- net$colors
+      new.col
+    }
+
+#' @export
 pgx.wgcna <- function(
     pgx,
     minmodsize = 30,
