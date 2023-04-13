@@ -75,7 +75,7 @@ pgx.wgcna <- function(
     ## get colors of eigengene modules
     me.genes <- tapply(names(net$colors), net$colors, list)
     names(me.genes) <- paste0("ME", names(me.genes))
-    color1 <- labels2rainbow(net)
+    color1 <- playbase::labels2rainbow(net)
     me.colors <- color1[!duplicated(color1)]
     names(me.colors) <- paste0("ME", names(me.colors))
     me.colors <- me.colors[names(me.genes)]
