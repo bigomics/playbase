@@ -168,6 +168,13 @@ pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
         names(ngs$connectivity)
     }
 
+
+    if("wgcna" %in% extra) {
+        message(">>> computing wgcna...")
+        
+        ngs$wgcna <- playbase::wgcna(pgx)
+        }
+
     ##------------------------------------------------------
     ## pretty collapse all timings
     ##------------------------------------------------------
