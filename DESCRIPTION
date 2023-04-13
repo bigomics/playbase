@@ -132,6 +132,6 @@ Imports:
     wordcloud,
     xgboost
 Remotes:
-    linxihui/NNLM
-    ncullen93/KEGG.db
+    linxihui/NNLM,
+    ncullen93/KEGG.db,
     ropensci/iheatmapr
