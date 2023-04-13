@@ -530,12 +530,11 @@ pgx.testPhenoCorrelation <- function(df, plot=TRUE, cex=1)
     kruskal.P <- NULL
     if(ncol(dc)>0) {
         kruskal.P <- matrix(NA,ncol(dd),ncol(dc))
-        i=1;j=2
         for(i in 1:ncol(dd)) {
+        for(j in 1:ncol(dc)) {
             kk <- which( !is.na(dc[,j]) & !is.na(dd[,i]) )
             if(length(unique(dd[kk,i])) < 2) next
-            for(j in 1:ncol(dc)) {
-                kruskal.P[i,j] <- kruskal.test(dc[kk,j], dd[kk,i])$p.value
+            kruskal.P[i,j] <- kruskal.test(dc[kk,j], dd[kk,i])$p.value
             }
         }
         rownames(kruskal.P) <- colnames(dd)
@@ -555,7 +554,7 @@ pgx.testPhenoCorrelation <- function(df, plot=TRUE, cex=1)
         rownames(cor.P) <- colnames(dc)
         colnames(cor.P) <- colnames(dc)
     }
-    
+
     P <- matrix(NA,ncol(df),ncol(df))
     rownames(P) <- colnames(P) <- colnames(df)
 
@@ -576,17 +575,17 @@ pgx.testPhenoCorrelation <- function(df, plot=TRUE, cex=1)
         jj <- match(colnames(cor.P),colnames(P))
         P[ii,jj] <- cor.P
     }
-    
+
     ij <- which(!is.na(P),arr.ind=TRUE)
     qv <- p.adjust(P[ij], method="BH")
     Q <- P
     Q[ij] <- qv
-    
+
     P[is.na(P)] <- 0
     P <- (P + t(P))/2
     Q[is.na(Q)] <- 0
     Q <- (Q + t(Q))/2
-    
+
     if(plot==TRUE) {
 
         logP <- -log10(P+1e-8)
@@ -595,23 +594,23 @@ pgx.testPhenoCorrelation <- function(df, plot=TRUE, cex=1)
         ##par(oma=c(0,0,0,1))
         ##psych::cor.plot( 
         corrplot::corrplot(
-          corr = logQ, 
-          type = "upper",        
-          col = omics_pal_c("blue_red")(25),
-          is.corr = FALSE, 
-          mar = c(0, 0, 0, 2),
-          p.mat = Q, 
-          sig.level = 0.05, 
-          #insig = "blank",
-          tl.cex = cex, 
-          tl.col = omics_colors("super_dark_grey"), 
-          tl.offset = 1,
-          cl.align.text = "l", 
-          cl.offset = 0.25, 
-          cl.cex = 0.7, 
-          pch.col = omics_colors("super_dark_grey"),
-          order = "hclust",
-          number.digits = 2
+            corr = logQ, 
+            type = "upper",        
+            col = omics_pal_c("blue_red")(25),
+            is.corr = FALSE, 
+            mar = c(0, 0, 0, 2),
+            p.mat = Q, 
+            sig.level = 0.05, 
+            #insig = "blank",
+            tl.cex = cex, 
+            tl.col = omics_colors("super_dark_grey"), 
+            tl.offset = 1,
+            cl.align.text = "l", 
+            cl.offset = 0.25, 
+            cl.cex = 0.7, 
+            pch.col = omics_colors("super_dark_grey"),
+            order = "hclust",
+            number.digits = 2
         )
         
     }
