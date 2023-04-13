@@ -392,7 +392,7 @@ compute_testGenesMultiOmics <- function(pgx, contr.matrix, max.features=1000,
 
         ## do test
         pgx1 <- compute_testGenesSingleOmics(
-            pgx=pgx1, type=type,
+            pgx=pgx1,
             contr.matrix=contr.matrix,
             max.features=max.features,
             test.methods=test.methods)

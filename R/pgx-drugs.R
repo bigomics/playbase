@@ -31,7 +31,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods=c("GSEA","cor"),
     ## 'obj'   : can be ngs object or fold-change matrix
     ## X       : drugs profiles (may have multiple for one drug)
     ## xdrugs : drug associated with profile
-    
+
     names(obj)
     if("gx.meta" %in% names(obj)) {
         F <- pgx.getMetaMatrix(obj)$fc
@@ -66,7 +66,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods=c("GSEA","cor"),
         message("WARNING::: pgx.computeDrugEnrichment : no valid genesets!!")
         return(NULL)
     }
-    
+
     ## first level (rank) correlation
     message("Calculating first level rank correlation ...")
     gg <- intersect(rownames(X), rownames(F))
@@ -77,28 +77,28 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods=c("GSEA","cor"),
     }
     if(any(class(X)=="dgCMatrix")) {
         dbg("[pgx.computeDrugEnrichment] X is 0/1 sparse matrix")
-        ## gene set enrichment by rank correlation 
+        ## gene set enrichment by rank correlation
         fx <- apply(F[gg,,drop=FALSE],2,rank)
         R1 <- qlcMatrix::corSparse(X[gg,], fx)
     } else {
-        dbg("[pgx.computeDrugEnrichment] X is full matrix")        
+        dbg("[pgx.computeDrugEnrichment] X is full matrix")
         rnk1 <- apply(X[gg,,drop=FALSE],2,rank,na.last="keep")
         rnk2 <- apply(F[gg,,drop=FALSE],2,rank,na.last="keep")
         system.time(R1 <- stats::cor(rnk1, rnk2, use="pairwise"))
     }
     R1 <- as.matrix(R1)
     R1[is.nan(R1)] <- 0
-    R1[is.infinite(R1)] <- 0        
+    R1[is.infinite(R1)] <- 0
     R1 <- R1 + 1e-8*matrix(rnorm(length(R1)),nrow(R1),ncol(R1))
     colnames(R1) <- colnames(F)
     rownames(R1) <- colnames(X)
     dim(R1)
-       
+
     ## experiment to drug
     results <- list()
     if("cor" %in% methods) {
         message("Calculating drug enrichment using rank correlation ...")
-        
+
         ##D <- model.matrix( ~ 0 + xdrugs)
         D <- Matrix::sparse.model.matrix( ~ 0 + xdrugs)
         dim(D)
@@ -123,7 +123,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods=c("GSEA","cor"),
         }
         names(res0) <- colnames(R1)
         length(res0)
-        
+
         mNES <- sapply(res0, function(x) x$NES)
         mQ   <- sapply(res0, function(x) x$padj)
         mP   <- sapply(res0, function(x) x$pval)
@@ -132,21 +132,21 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods=c("GSEA","cor"),
             mP <- cbind(mP)
             mQ <- cbind(mQ)
         }
-        
+
         pw <- res0[[1]]$pathway
         rownames(mNES) <- rownames(mQ) <- rownames(mP) <- pw
         colnames(mNES) <- colnames(mQ) <- colnames(mP) <- colnames(F)
         msize <- res0[[1]]$size
-        dim(R1)        
+        dim(R1)
         results[["GSEA"]] <- list( X=mNES, Q=mQ, P=mP, size=msize)
     }
     names(results)
 
     ## this takes only the top matching drugs for each comparison to
     ## reduce the size of the matrices
-    nprune    
+    nprune
     if(nprune > 0) {
-        message("[pgx.computeDrugEnrichment] pruning : nprune = ", nprune)        
+        message("[pgx.computeDrugEnrichment] pruning : nprune = ", nprune)
         k=1
         for(k in 1:length(results)) {
             res <- results[[k]]
@@ -165,7 +165,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods=c("GSEA","cor"),
     }
 
     ## reduce large stats object
-    sel.drugs <- unique(unlist(sapply(results,function(res) rownames(res$X))))    
+    sel.drugs <- unique(unlist(sapply(results,function(res) rownames(res$X))))
     sel <- which(xdrugs %in% sel.drugs)
     results$stats <- R1[sel,]
 
@@ -181,14 +181,14 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods=c("GSEA","cor"),
         results$clust <- pos
         results$stats <- R1[rownames(pos),,drop=FALSE]
     }
-        
+
     if(0) {
         pgx.scatterPlotXY.BASE(pos, var=2**R1[rownames(pos),1])
         pgx.scatterPlotXY.BASE(pos, var=log(colMeans(X**2)))
     }
 
     message("[pgx.computeDrugEnrichment] done!")
-    
+
     return(results)
 }
 
@@ -198,7 +198,7 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
                                        ntop=10, nsample=20, nprune=250,
                                        contrasts=NULL, res.mono=NULL )
 {
-    
+
     if(0) {
         X <- readRDS(file=file.path(FILES,"l1000_es.rds"))
         xdrugs <- gsub("_.*$","",colnames(X))
@@ -232,7 +232,7 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
         cat("Calculating single drug enrichment using GSEA ...\n")
         er.mono <- pgx.computeDrugEnrichment(
             obj, X, xdrugs, methods="GSEA",
-            nprune=nprune, contrasts=NULL )
+            nprune=nprune, contrast = NULL)
         er.mono <- er.mono[["GSEA"]]
         names(er.mono)
     } else {
@@ -289,7 +289,8 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
     cat("Calculating drug-combo enrichment using GSEA ...\n")
     dim(comboX)
     res.combo <- pgx.computeDrugEnrichment(
-        obj, X=comboX, xdrugs=combo.drugs, methods="GSEA", nprune=nprune)
+        obj, X=comboX, xdrugs=combo.drugs, methods="GSEA", nprune=nprune,
+        contrast = NULL)
     res.combo <- res.combo[["GSEA"]]
     names(res.combo)
 

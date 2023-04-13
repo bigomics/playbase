@@ -2325,7 +2325,7 @@ pgx.violinPlot <- function(x, y, group=NULL, xlab='', ylab='',
     if(plotlib=='ggplot') {
         d1 <- !is.null(maxbee) && maxbee>0
         fig <- plot_ggviolin( y, x, add.dots=d1, xlab=xlab, ylab=ylab, srt=srt,
-                             main=main, cex.main=cex.main)
+                             main=main, cex=cex.main)
     }
     if(plotlib=='plotly') {
         df = data.frame(x=x, y=y, group=0)
@@ -3057,7 +3057,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     }
 
     if(!is.null(var) && NCOL(var)>1) {
-        var <- setNames(var[,1], names=rownames(var))
+        var <- setNames(var[,1], rownames(var))
     }
     if(!is.null(var) && length(var)==nrow(pos) && is.null(names(var)) ) {
         names(var) <- rownames(pos)
@@ -3476,8 +3476,8 @@ pgx.plotSampleClustering <- function(x, dim=2,
 {
     method = method[1]
     clust <- pgx.clusterMatrix(
-        x, is.logx=TRUE, perplexity=NULL,
-        ntop=ntop, sv.rank=-1, dims=dim,
+        x, perplexity=NULL,
+        ntop=ntop, dims=dim,
         row.center=TRUE, row.scale=FALSE,
         find.clusters=FALSE, kclust=1,
         prefix="C", clust.detect = "louvain",
@@ -3959,7 +3959,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
     length(xx)
 
     ## ------- set colors
-    
+
     if (!is.null(annot)) {
         colors0 = rep("Set2", ncol(annot))
         names(colors0) = colnames(annot)
@@ -3970,11 +3970,11 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
 
         ## ------- annot need to be factor
         annotF <- data.frame(as.list(annot),stringsAsFactors=TRUE)
-        rownames(annotF) = rownames(annot)    
+        rownames(annotF) = rownames(annot)
     } else {
         colors0 = NULL
     }
-    
+
 
     grid_params <- iheatmapr::setup_colorbar_grid(
         nrows = 5,

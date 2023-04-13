@@ -144,7 +144,7 @@ pgx.inferCNV <- function(ngs, refgroup=NULL, progress=NULL ) {
             res$cna[jj,],
             split=res$chr[jj], splitx=grp,
             scale="row.center", col.annot=annot,
-            cluster.rows=FALSE)
+            cluster_rows=FALSE)
 
         X = res$cna[jj,]
         annot = annot
