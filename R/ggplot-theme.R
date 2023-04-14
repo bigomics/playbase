@@ -31,7 +31,6 @@
 #'               axistitle = "none", panelborder = TRUE)
 #' }
 #'
-
 #' @export
 theme_omics <- function(style = "default", base_size = 15,
                         grid = "xy", axistitle = "xy", axistext = "xy",
@@ -228,7 +227,6 @@ theme_omics <- function(style = "default", base_size = 15,
 #'   theme_omics() + guide_discrete(aes = "fill")
 #' }
 #'
-
 #' @export
 guide_discrete <- function(aes = "color", reverse = FALSE, ...) {
   if(!aes %in% c("color", "fill", "shape", "size", "alpha")) stop('aes must be one of "color", "fill", "shape", "size" or "alpha"')
@@ -301,7 +299,6 @@ guide_discrete <- function(aes = "color", reverse = FALSE, ...) {
 #'   theme_omics() + guide_continuous(aes = "fill")
 #' }
 #'
-
 #' @export
 guide_continuous <- function(aes = "color", type = "bar", width = .4, ...) {
   if(!aes %in% c("color", "fill", "alpha")) stop('aes must be one of "color", "fill" or "alpha"')

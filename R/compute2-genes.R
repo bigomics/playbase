@@ -19,7 +19,21 @@ if(0) {
     test.methods=c("trend.limma","edger.qlf","deseq2.wald")
 }
 
+
+#' Title
+#'
+#' @param pgx
+#' @param contr.matrix
+#' @param max.features
+#' @param test.methods
+#' @param use.design
+#' @param prune.samples
+#' @param remove.outputs
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_testGenes <- function(pgx, contr.matrix, max.features=1000,
                               test.methods=c("trend.limma","deseq2.wald","edger.qlf"),
                               use.design = TRUE, prune.samples=FALSE,
@@ -65,7 +79,22 @@ if(0) {
 }
 
 ##contr.matrix=pgx$contrasts
+
+#' Title
+#'
+#' @param pgx
+#' @param contr.matrix
+#' @param max.features
+#' @param filter.low
+#' @param remove.outputs
+#' @param use.design
+#' @param prune.samples
+#' @param test.methods
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features=1000,
                                          filter.low = TRUE, remove.outputs=TRUE,
                                          use.design = TRUE, prune.samples=FALSE,
@@ -350,7 +379,21 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features=1000,
     return(pgx)
 }
 
+
+#' Title
+#'
+#' @param pgx
+#' @param contr.matrix
+#' @param max.features
+#' @param test.methods
+#' @param use.design
+#' @param prune.samples
+#' @param remove.outputs
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_testGenesMultiOmics <- function(pgx, contr.matrix, max.features=1000,
                                         test.methods=c("trend.limma","deseq2.wald","edger.qlf"),
                                         use.design=TRUE, prune.samples = FALSE,

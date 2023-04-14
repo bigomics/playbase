@@ -9,12 +9,33 @@
 
 ##fdr=1.0;mc=TRUE;sort.by="zratio";nmin=3;min.genes=10;max.genes=500;method="fisher";common.genes=TRUE;check.background=TRUE;verbose=TRUE
 
+
+#' Title
+#'
+#' @param genes.up
+#' @param genes.dn
+#' @param genesets
+#' @param background
+#' @param fdr
+#' @param mc
+#' @param sort.by
+#' @param nmin
+#' @param verbose
+#' @param min.genes
+#' @param max.genes
+#' @param method
+#' @param check.background
+#' @param common.genes
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gset.fisher2 <- function(genes.up, genes.dn, genesets, background=NULL,
                          fdr=0.05, mc=TRUE, sort.by="zratio", nmin=3, verbose=1,
                          min.genes=15, max.genes=500, method="fast.fisher",
                          check.background=TRUE, common.genes=TRUE )
-{    
+{
     ft.up = gset.fisher(genes=genes.up, genesets=genesets, background=background,
                         fdr=1, mc=mc, sort.by=sort.by, nmin=nmin, verbose=verbose,
                         min.genes=min.genes, max.genes=max.genes, method=method,
@@ -33,14 +54,34 @@ gset.fisher2 <- function(genes.up, genes.dn, genesets, background=NULL,
     return(ft.res)
 }
 
+
+#' Title
+#'
+#' @param genes
+#' @param genesets
+#' @param background
+#' @param fdr
+#' @param mc
+#' @param sort.by
+#' @param nmin
+#' @param min.genes
+#' @param max.genes
+#' @param method
+#' @param check.background
+#' @param common.genes
+#' @param verbose
+#'
+#' @return
 #' @export
-gset.fisher <- function(genes, genesets, background=NULL, 
+#'
+#' @examples
+gset.fisher <- function(genes, genesets, background=NULL,
                         fdr=0.05, mc=TRUE, sort.by="zratio", nmin=3,
                         min.genes=15, max.genes=500, method="fast.fisher",
                         check.background=TRUE,  common.genes=TRUE, verbose=1)
 {
     ## NEED RETHINK
-    
+
     if(0) {
         min.genes=-10;max.genes=500;background=NULL;fdr=1;mc=TRUE;sort.by="zratio";nmin=3;verbose=1
         genesets=readRDS("../files/gmt-all.rds")
@@ -58,7 +99,7 @@ gset.fisher <- function(genes, genesets, background=NULL,
         genes <- intersect(genes, background)
         genesets <- parallel::mclapply( genesets, function(s) intersect(s, background))
     }
-    
+
     ## select
     if(!is.null(min.genes) && min.genes>0) {
         genesets.len <- sapply(genesets,length)
@@ -112,7 +153,7 @@ gset.fisher <- function(genes, genesets, background=NULL,
     }
     test.chisq <- function(gs) {
         a0 <- table(background %in% gs, background %in% genes)
-        if(NCOL(a0)==1 || colSums(a0)[2]==0) return(NA)        
+        if(NCOL(a0)==1 || colSums(a0)[2]==0) return(NA)
         chisq.test(a0)$p.value
     }
     pv <- rep(NA, length(genesets))

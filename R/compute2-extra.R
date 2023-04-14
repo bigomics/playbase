@@ -8,12 +8,34 @@
 EXTRA.MODULES = c("meta.go","deconv","infer","drugs", ## "graph",
                   "connectivity","wordcloud")
 
+
+#' Title
+#'
+#' @param ngs
+#' @param extra
+#' @param lib.dir
+#' @param sigdb
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_extra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
     pgx.computeExtra(ngs, extra=extra, lib.dir=lib.dir, sigdb=sigdb)
 }
 
+
+#' Title
+#'
+#' @param ngs
+#' @param extra
+#' @param lib.dir
+#' @param sigdb
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
 
     timings <- c()
@@ -198,7 +220,17 @@ pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
 }
 
 ## -------------- deconvolution analysis --------------------------------
+
+#' Title
+#'
+#' @param ngs
+#' @param rna.counts
+#' @param full
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_deconvolution <- function(ngs, rna.counts=ngs$counts, full=FALSE) {
 
     ## list of reference matrices
@@ -246,7 +278,16 @@ compute_deconvolution <- function(ngs, rna.counts=ngs$counts, full=FALSE) {
 }
 
 ## -------------- infer sample characteristics --------------------------------
+
+#' Title
+#'
+#' @param ngs
+#' @param rna.counts
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_cellcycle_gender <- function(ngs, rna.counts=ngs$counts)
 {
     pp <- rownames(rna.counts)
@@ -281,7 +322,15 @@ compute_cellcycle_gender <- function(ngs, rna.counts=ngs$counts)
     return(ngs)
 }
 
+
+#' Title
+#'
+#' @param ngs
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_drugActivityEnrichment <- function(ngs) {
 
     ## -------------- drug enrichment
@@ -354,7 +403,16 @@ compute_drugActivityEnrichment <- function(ngs) {
 }
 
 ##ref="CTRPv2";cmap.dir="../lib";combo=FALSE
+
+#' Title
+#'
+#' @param ngs
+#' @param cmap.dir
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_drugSensitivityEnrichment <- function(ngs, cmap.dir)
 {
 
@@ -409,7 +467,15 @@ compute_drugSensitivityEnrichment <- function(ngs, cmap.dir)
 }
 
 ## ------------------ Omics graphs --------------------------------
+
+#' Title
+#'
+#' @param ngs
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_omicsGraphs <- function(ngs) {
     ## gr1$layout <- gr1$layout[igraph::V(gr1)$name,]  ## uncomment to keep entire layout
     ngs$omicsnet <- pgx.createOmicsGraph(ngs)

@@ -7,12 +7,33 @@
 ##================ rank correlation based geneset testing ================
 ##========================================================================
 
+
+#' Title
+#'
+#' @param rnk
+#' @param gset
+#' @param compute.p
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gset.cor <- function(rnk, gset, compute.p=FALSE) {
     gset.rankcor(rnk=rnk, gset=gset, compute.p=compute.p, use.rank=FALSE)
 }
 
+
+#' Title
+#'
+#' @param rnk
+#' @param gset
+#' @param compute.p
+#' @param use.rank
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gset.rankcor <- function(rnk, gset, compute.p=FALSE, use.rank=TRUE)
 {
     if(!any(class(gset) %in% c("Matrix","dgCMatrix","matrix","array")) ) {
@@ -28,7 +49,7 @@ gset.rankcor <- function(rnk, gset, compute.p=FALSE, use.rank=TRUE)
     n1 <- sum(rownames(rnk) %in% colnames(gset), na.rm=TRUE)
     n2 <- sum(rownames(rnk) %in% rownames(gset), na.rm=TRUE)
     if( n1 > n2 ) gset <- t(gset)
-    
+
     gg <- intersect(rownames(gset),rownames(rnk))
     rnk1 <- rnk[gg,,drop=FALSE]
     if(use.rank) {
@@ -37,7 +58,7 @@ gset.rankcor <- function(rnk, gset, compute.p=FALSE, use.rank=TRUE)
     rho1 <- qlcMatrix::corSparse(gset[gg,], rnk1)
     rownames(rho1) <- colnames(gset)
     colnames(rho1) <- colnames(rnk1)
-    
+
     ## compute p-value by permutation
     pv=qv=NULL
     if(compute.p) {
@@ -54,6 +75,6 @@ gset.rankcor <- function(rnk, gset, compute.p=FALSE, use.rank=TRUE)
         df = list(rho=rho1, p.value=pv, q.value=qv)
     } else {
         df = list(rho=rho1, p.value=NA, q.value=NA)
-    }    
+    }
     df
 }

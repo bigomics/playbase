@@ -4,9 +4,20 @@
 ##
 
 ##max.features=8000;lib.dir=FILES;test.methods = c("gsva","camera","fgsea")
+
+#' Title
+#'
+#' @param pgx
+#' @param max.features
+#' @param test.methods
+#' @param remove.outputs
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_testGenesets <- function(pgx,
-                                 max.features=1000, 
+                                 max.features=1000,
                                  test.methods = c("gsva","camera","fgsea"),
                                  remove.outputs=TRUE )
 {
