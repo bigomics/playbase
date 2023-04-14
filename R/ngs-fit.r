@@ -27,7 +27,30 @@ methods
 ##-------------------- FIT ALL CONTRASTS --------------------------------------
 ##-----------------------------------------------------------------------------
 
+
+#' Title
+#'
+#' @param counts
+#' @param X
+#' @param samples
+#' @param design
+#' @param contr.matrix
+#' @param genes
+#' @param prior.cpm
+#' @param prune.samples
+#' @param conform.output
+#' @param do.filter
+#' @param cpm.scale
+#' @param remove.batch
+#' @param methods
+#' @param correct.AveExpr
+#' @param custom
+#' @param custom.name
+#'
+#' @return
 #' @export
+#'
+#' @examples
 ngs.fitContrastsWithAllMethods <- function(counts, X=NULL, samples, design, contr.matrix, genes=NULL,
                                            prior.cpm=1, prune.samples=FALSE,
                                            conform.output=TRUE, do.filter=TRUE, cpm.scale=1e6,
@@ -385,7 +408,19 @@ ngs.fitContrastsWithAllMethods <- function(counts, X=NULL, samples, design, cont
 ##--------------------------------------------------------------------------------------------
 
 ##dge=fish1$cooked;trend=TRUE
+
+#' Title
+#'
+#' @param X
+#' @param contr.matrix
+#' @param design
+#' @param method
+#' @param conform.output
+#'
+#' @return
 #' @export
+#'
+#' @examples
 ngs.fitContrastsWithTTEST <- function( X, contr.matrix, design, method="welch",
                                       conform.output=0)
 {
@@ -430,7 +465,23 @@ ngs.fitContrastsWithTTEST <- function( X, contr.matrix, design, method="welch",
 
 
 ##trend=TRUE;robust=TRUE
+
+#' Title
+#'
+#' @param X
+#' @param contr.matrix
+#' @param design
+#' @param method
+#' @param trend
+#' @param robust
+#' @param prune.samples
+#' @param conform.output
+#' @param plot
+#'
+#' @return
 #' @export
+#'
+#' @examples
 ngs.fitContrastsWithLIMMA <- function( X, contr.matrix, design, method=c("voom","limma"),
                                       trend=TRUE, robust=TRUE, prune.samples=FALSE,
                                       conform.output=FALSE, plot=FALSE)
@@ -534,7 +585,24 @@ ngs.fitContrastsWithLIMMA <- function( X, contr.matrix, design, method=c("voom",
 }
 
 ##method="qlf";robust=TRUE;plot=FALSE;conform.output=TRUE
+
+#' Title
+#'
+#' @param counts
+#' @param group
+#' @param contr.matrix
+#' @param design
+#' @param method
+#' @param prune.samples
+#' @param X
+#' @param conform.output
+#' @param robust
+#' @param plot
+#'
+#' @return
 #' @export
+#'
+#' @examples
 ngs.fitContrastsWithEDGER <- function( counts, group, contr.matrix, design,
                                       method=c("qlf","lrt"), prune.samples=FALSE, X=NULL,
                                       conform.output=FALSE, robust=TRUE, plot=TRUE)
@@ -644,7 +712,21 @@ ngs.fitContrastsWithEDGER <- function( counts, group, contr.matrix, design,
 
 
 ##method="qlf";plot=TRUE;robust=FALSE;plot=TRUE;conform.output=TRUE
+
+#' Title
+#'
+#' @param dge
+#' @param contr.matrix
+#' @param method
+#' @param X
+#' @param conform.output
+#' @param robust
+#' @param plot
+#'
+#' @return
 #' @export
+#'
+#' @examples
 .ngs.fitContrastsWithEDGER.nodesign <- function( dge, contr.matrix, method=c("qlf","lrt"), X=NULL,
                                                 conform.output=FALSE, robust=TRUE, plot=TRUE)
 {
@@ -725,7 +807,22 @@ ngs.fitContrastsWithEDGER <- function( counts, group, contr.matrix, design,
     return(res)
 }
 
+
+#' Title
+#'
+#' @param counts
+#' @param contr.matrix
+#' @param group
+#' @param method
+#' @param X
+#' @param conform.output
+#' @param robust
+#' @param plot
+#'
+#' @return
 #' @export
+#'
+#' @examples
 .ngs.fitContrastsWithEDGER.nodesign.pruned <- function( counts, contr.matrix, group=NULL,
                                                        method=c("qlf","lrt"), X=NULL,
                                                        conform.output=FALSE, robust=TRUE, plot=TRUE)
@@ -822,7 +919,23 @@ ngs.fitContrastsWithEDGER <- function( counts, group, contr.matrix, design,
 }
 
 
+
+#' Title
+#'
+#' @param counts
+#' @param group
+#' @param contr.matrix
+#' @param design
+#' @param X
+#' @param genes
+#' @param test
+#' @param prune.samples
+#' @param conform.output
+#'
+#' @return
 #' @export
+#'
+#' @examples
 ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
                                         X=NULL, genes=NULL, test="Wald", prune.samples=FALSE,
                                         conform.output=FALSE)
@@ -949,7 +1062,20 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
 }
 
 ##dds=fish2$dds.object
+
+#' Title
+#'
+#' @param counts
+#' @param contr.matrix
+#' @param test
+#' @param prune.samples
+#' @param conform.output
+#' @param X
+#'
+#' @return
 #' @export
+#'
+#' @examples
 .ngs.fitConstrastsWithDESEQ2.nodesign <- function(counts, contr.matrix, test="Wald",
                                                   prune.samples = FALSE,
                                                   conform.output=FALSE, X=NULL)

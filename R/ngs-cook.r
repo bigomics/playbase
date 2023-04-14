@@ -20,11 +20,25 @@ if(0) {
 ##--------------------------------------------------------------------------------------------
 
 ##txi = ngs.importSalmon(sf.files)
+
+#' Title
+#'
+#' @param counts
+#' @param samples
+#' @param genes
+#' @param normalization
+#' @param filter
+#' @param prior.cpm
+#' @param remove.batch
+#'
+#' @return
 #' @export
+#'
+#' @examples
 ngs.cookForEDGER <- function( counts, samples=NULL, genes=NULL, normalization="none",
                              filter=TRUE, prior.cpm=0, remove.batch=TRUE )
 {
-    
+
 
     if(all(c("counts","samples","genes") %in% names(counts))) {
         samples = counts$samples
@@ -40,8 +54,8 @@ ngs.cookForEDGER <- function( counts, samples=NULL, genes=NULL, normalization="n
     ##------------------------------------------------------------
     ## Now create an DGEList object (see also tximport Vignette)
     ##------------------------------------------------------------
-    
-    
+
+
     cooked <- edgeR::DGEList( round(counts), group=NULL)  ## we like integer counts...
     cooked$samples$group <- NULL
     cooked$samples = cbind(cooked$samples, samples)
@@ -105,11 +119,25 @@ ngs.cookForEDGER <- function( counts, samples=NULL, genes=NULL, normalization="n
 }
 
 
+
+#' Title
+#'
+#' @param counts
+#' @param samples
+#' @param genes
+#' @param remove.batch
+#' @param test
+#' @param prior.cpm
+#' @param filter
+#'
+#' @return
 #' @export
+#'
+#' @examples
 ngs.cookForDESEQ2 <- function(counts, samples, genes, remove.batch=TRUE,
                               test="Wald", prior.cpm=0, filter=TRUE )
 {
-    
+
 
     if(all(c("counts","samples","genes") %in% names(counts))) {
         samples = counts$samples
@@ -156,7 +184,7 @@ ngs.cookForDESEQ2 <- function(counts, samples, genes, remove.batch=TRUE,
     ## Now create an DEseq2 object (see also tximport Vignette)
     ##------------------------------------------------------------
     Matrix::head(samples)
-    
+
     if(!("group" %in% colnames(samples))) {
         stop("samples must have 'group' column for DESeq")
     } else {

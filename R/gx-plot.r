@@ -3,7 +3,27 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
+
+#' Title
+#'
+#' @param x
+#' @param main
+#' @param cex.main
+#' @param cex.names
+#' @param cex.legend
+#' @param srt
+#' @param xlab
+#' @param ylab
+#' @param group
+#' @param group.names
+#' @param bar.names
+#' @param voff
+#' @param legend
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.barplot <- function(x, main="", cex.main=1.2, cex.names=0.85,
                        cex.legend=0.9, srt=0, xlab='', ylab='',
                        group=NULL, group.names=NULL, bar.names=NULL,
@@ -27,7 +47,7 @@ gx.barplot <- function(x, main="", cex.main=1.2, cex.names=0.85,
     is.multi = (NCOL(x)>1)
     is.multi
     if(!is.multi) space <- c(0.2,0)
-    
+
     barplot(x, beside=TRUE, col=col1,
             main=main, cex.main=cex.main,
             xlab=xlab, ylab=ylab, ylim=ylim,
@@ -36,7 +56,7 @@ gx.barplot <- function(x, main="", cex.main=1.2, cex.names=0.85,
             names.arg = rep('',length(x)),
             ## names.arg = rep(rownames(x),ncol(x)),
             mgp=c(2,0.9,0) )
-    
+
     if(is.multi) {
         sp0 <- nrow(x)+space[2]
         tx0 <- sp0*(0:(ncol(x)-1)) + 1
@@ -57,7 +77,7 @@ gx.barplot <- function(x, main="", cex.main=1.2, cex.names=0.85,
         } else {
             text( tx2, -voff*str.ht, group.names, cex=cex.names,
                  srt=srt, xpd=TRUE, pos=2, offset=0)
-        }        
+        }
 
     } else {
 
@@ -65,7 +85,7 @@ gx.barplot <- function(x, main="", cex.main=1.2, cex.names=0.85,
              srt=srt, xpd=TRUE, pos=2, offset=0*str.ht)
 
     }
-    
+
     if(legend) {
         nn <- names(x)
         if(is.multi) nn <- rownames(x)
@@ -73,20 +93,44 @@ gx.barplot <- function(x, main="", cex.main=1.2, cex.names=0.85,
                xpd=TRUE, bty='n', inset=c(-0.0,-0.04), cex=cex.legend,
                y.intersp=0.8, x.intersp=0.3)
     }
-    
+
 }
 
 
 ##x=gx;y=ngs$samples$group;
 ##bee=bar=TRUE;offx=3;sig.stars=FALSE;xoff=0;srt=60;max.points=-1;ymax=NULL;bee.cex=0.3;max.stars=5
+
+#' Title
+#'
+#' @param x
+#' @param y
+#' @param first
+#' @param width
+#' @param bar
+#' @param bee
+#' @param sig.stars
+#' @param ymax
+#' @param bee.cex
+#' @param max.stars
+#' @param srt
+#' @param xoff
+#' @param names.cex
+#' @param names
+#' @param max.points
+#' @param col
+#' @param ...
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.b3plot <- function(x, y, first=NULL,
                       width=1, bar=TRUE, bee=TRUE, sig.stars=FALSE,
                       ymax=NULL, bee.cex=0.3, max.stars=5, srt=NULL, xoff=0,
                       names.cex=1, names=TRUE, max.points=100, col="grey80",
                       ...)
 {
-    
+
     ##
     stats.segments <- function(x, y, xoffset=0, lwd=2) {
         bx = boxplot(y ~ x, plot=FALSE)
@@ -132,7 +176,7 @@ gx.b3plot <- function(x, y, first=NULL,
         sig = sig[jj]
         yc = yc[,jj,drop=FALSE]
     }
-    
+
     ##dx = (max(x,na.rm=TRUE)-min(x,na.rm=TRUE))*0.11
     dx = max(x,na.rm=TRUE)*0.11
     ylim = c(xoff,max(x)*1.3)
@@ -150,7 +194,7 @@ gx.b3plot <- function(x, y, first=NULL,
         col <- col[match(names(mx),names(col))]
         col[is.na(col)] <- "grey90"
     }
-    
+
     ##par(mfrow=c(1,1));srt=60
     ##bx = barplot( mx-xoff, width=0.6666, space=0.5, ylim=ylim, offset=xoff, names.arg=NA)
     bx = barplot( mx, width=0.6666, space=0.5, ylim=ylim, offset=xoff,
@@ -197,7 +241,17 @@ gx.b3plot <- function(x, y, first=NULL,
     }
 }
 
+
+#' Title
+#'
+#' @param gx
+#' @param main
+#' @param ylim
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.hist <- function(gx, main="",ylim=NULL) {
     h0 <- hist(as.vector(gx), breaks=120, main=main,
                col="grey",freq=FALSE, ylim=ylim, xlab="signal")
