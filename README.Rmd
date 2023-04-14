@@ -16,6 +16,7 @@ knitr::opts_chunk$set(
 # playbase
 
 <!-- badges: start -->
+[![R package check](https://github.com/bigomics/playbase/actions/workflows/r.yml/badge.svg)](https://github.com/bigomics/playbase/actions/workflows/r.yml)
 <!-- badges: end -->
 
 The `playbase´ package contains the core back-end functionality for the OmicsPlayground. This package allows you to run, develop, and test any essential functions used in the OmicsPlayground directly in the R console without needing to worry about the R Shiny front-end code.
@@ -42,10 +43,10 @@ samples <- playbase::read_samples(playbase::example_file("samples.csv"))
 contrasts <- playbase::read_contrasts(playbase::example_file("contrasts.csv"))
 
 ## create a pgx object (new style)
-pgx <- playbase::create_pgx(counts, samples, contrasts)
+#pgx <- playbase::create_pgx(counts, samples, contrasts)
 
 ## old style still works
-pgx <- playbase::pgx.createPGX(counts, samples, contrasts)
+#pgx <- playbase::pgx.createPGX(counts, samples, contrasts)
 
 ```
 
@@ -54,6 +55,6 @@ pgx <- playbase::pgx.createPGX(counts, samples, contrasts)
 
 ```{r namespace}
 library(addns)
-addns::add_ns(path = "R/", packages = c("playbase"))
-adds::rm_imports(path = "R/")
+#addns::add_ns(path = "R/", packages = c("playbase"))
+#adds::rm_imports(path = "R/")
 ```

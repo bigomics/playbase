@@ -4,6 +4,9 @@
 # playbase
 
 <!-- badges: start -->
+
+[![R package
+check](https://github.com/bigomics/playbase/actions/workflows/r.yml/badge.svg)](https://github.com/bigomics/playbase/actions/workflows/r.yml)
 <!-- badges: end -->
 
 The \`playbase´ package contains the core back-end functionality for the
@@ -30,12 +33,26 @@ plotting functions operate.
 
 ``` r
 library(playbase)
+#> 
+#> 
+#> 
 
 ## example files can be accessed via the example_file() function
 counts <- playbase::read_counts(playbase::example_file("counts.csv"))
 samples <- playbase::read_samples(playbase::example_file("samples.csv"))
 contrasts <- playbase::read_contrasts(playbase::example_file("contrasts.csv"))
 
-## create a pgx object
-# pgx <- playbase::create_pgx(counts, samples, contrasts)
+## create a pgx object (new style)
+#pgx <- playbase::create_pgx(counts, samples, contrasts)
+
+## old style still works
+#pgx <- playbase::pgx.createPGX(counts, samples, contrasts)
+```
+
+## Adding namespace
+
+``` r
+library(addns)
+#addns::add_ns(path = "R/", packages = c("playbase"))
+#adds::rm_imports(path = "R/")
 ```
