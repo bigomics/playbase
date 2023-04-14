@@ -3,24 +3,6 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-ALL.GENESET.METHODS = c("fisher","ssgsea","gsva", "spearman", "camera", "fry",
-                        ##"plage", "cuda.gsea", "enricher",
-                        "gsea.permPH","gsea.permGS","gseaPR","fgsea")
-methods=ALL.GENESET.METHODS
-methods=c("fisher","ssgsea","gsva","fgsea","gseaPR")
-methods=c("gsva","camera")
-methods=c("fisher","gsva","fgsea")
-use.multicore=TRUE
-
-mc.threads=1
-if(0) {
-    X=ngs$X;Y=ngs$samples;design=ngs$model.parameters$design;G=ngs$GMT
-    contr.matrix=ngs$model.parameters$contr.matrix;
-    mc.cores=1;mc.threads=1;batch.correct=TRUE
-    methods=c("fisher","gsva","fgsea")
-}
-
-
 #' Title
 #'
 #' @param gmt
@@ -41,6 +23,10 @@ if(0) {
 gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, methods,
                                             mc.threads=1, mc.cores=NULL, batch.correct=TRUE)
 {
+
+  ALL.GENESET.METHODS = c("fisher","ssgsea","gsva", "spearman", "camera", "fry",
+                          "gsea.permPH","gsea.permGS","gseaPR","fgsea")
+
     timings <- c()
 
     if(is.null(mc.cores)) {

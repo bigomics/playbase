@@ -7,9 +7,6 @@
 ##======================== Fisher test based =============================
 ##========================================================================
 
-##fdr=1.0;mc=TRUE;sort.by="zratio";nmin=3;min.genes=10;max.genes=500;method="fisher";common.genes=TRUE;check.background=TRUE;verbose=TRUE
-
-
 #' Title
 #'
 #' @param genes.up
@@ -215,8 +212,3 @@ gset.fisher <- function(genes, genesets, background=NULL,
     dim(rr)
     rr
 }
-
-##========================================================================
-##======================= end of file ====================================
-##========================================================================
-

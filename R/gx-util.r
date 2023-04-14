@@ -25,8 +25,6 @@ imputeMedian <- function(X) {
     return(impX)
 }
 
-##X=ngs$count;y=ngs$samples$group
-
 #' Title
 #'
 #' @param X

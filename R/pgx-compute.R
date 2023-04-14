@@ -3,32 +3,6 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-
-if (0) {
-  X <- NULL
-  is.logx <- NULL
-  do.cluster <- TRUE
-  auto.scale <- TRUE
-  only.known <- TRUE
-  max.genes <- max.genesets <- 25000
-  lib.dir <- FILES
-  progress <- NULL
-  only.hugo <- 1
-  extra.methods <- c("meta.go", "deconv", "infer", "drugs", "wordcloud")
-  gx.methods <- c("trend.limma")
-  gset.methods <- c("fisher", "gsva")
-  only.hugo <- TRUE
-  only.proteincoding <- TRUE
-  rik.orf <- FALSE
-  prune.samples <- FALSE
-  do.clustergenes <- cluster.contrasts <- batch.correct <- TRUE
-
-  counts <- ngs$counts
-  samples <- ngs$samples
-  contrasts <- ngs$contrasts
-}
-
-
 #' Create a pgx object
 #'
 #' This function creates a pgx object from files, which is the core object in the
@@ -579,31 +553,31 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   return(ngs)
 }
 
-if (0) {
-  max.genes <- 19999
-  max.genesets <- 9999
-  gx.methods <- c("trend.limma")
-  gset.methods <- c("fisher")
-  extra.methods <- c()
 
-  gx.methods <- c("ttest.welch", "trend.limma", "edger.qlf")
-  gset.methods <- c("fisher", "gsva", "fgsea")
-  extra.methods <- c("meta.go", "deconv", "infer", "drugs", "wordcloud")
-
-  do.cluster <- TRUE
-  use.design <- TRUE
-  prune.samples <- FALSE
-}
-
-.EXTRA.METHODS <- c("meta.go", "deconv", "infer", "drugs", "wordcloud")
-
+#' Title
+#'
+#' @param pgx
+#' @param max.genes
+#' @param max.genesets
+#' @param gx.methods
+#' @param gset.methods
+#' @param do.cluster
+#' @param use.design
+#' @param prune.samples
+#' @param extra.methods
+#' @param lib.dir
+#' @param progress
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.computePGX <- function(pgx,
                            max.genes = 19999, max.genesets = 9999,
                            gx.methods = c("ttest.welch", "trend.limma", "edger.qlf"),
                            gset.methods = c("fisher", "gsva", "fgsea"),
                            do.cluster = TRUE, use.design = TRUE, prune.samples = FALSE,
-                           extra.methods = .EXTRA.METHODS,
+                           extra.methods = c("meta.go", "deconv", "infer", "drugs", "wordcloud"),
                            lib.dir,  ## must specify
                            progress = NULL) {
   ## ======================================================================
@@ -689,9 +663,3 @@ pgx.computePGX <- function(pgx,
   pgx$timings
   return(pgx)
 }
-
-
-
-## =====================================================================================
-## ========================== END OF FILE ==============================================
-## =====================================================================================

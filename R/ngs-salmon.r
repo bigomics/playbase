@@ -3,19 +3,18 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-## add me
-if(0) {
-    source("https://bioconductor.org/biocLite.R")
-    biocLite("tximport")
-    biocLite("edgeR")
-    biocLite("limma")
-    biocLite("DESeq2")
-    biocLite("ensembldb")
-    biocLite("EnsDb.Hsapiens.v86")
 
-}
-##eg=100
+
+#' Title
+#'
+#' @param sampleTable
+#' @param gencode
+#' @param txi
+#'
+#' @return
 #' @export
+#'
+#' @examples
 ngs.rawSalmon <- function(sampleTable, gencode, txi=NULL)
 {
     if(is.null(txi)) {
@@ -48,8 +47,18 @@ ngs.rawSalmon <- function(sampleTable, gencode, txi=NULL)
     return(raw)
 }
 
-##count.type="lengthScaledTPM";organism="Hsapiens";txOut=FALSE
+
+#' Title
+#'
+#' @param sf.files
+#' @param count.type
+#' @param organism
+#' @param txOut
+#'
+#' @return
 #' @export
+#'
+#' @examples
 ngs.tximportSalmon <- function(sf.files, count.type="lengthScaledTPM", organism="Hsapiens",
                                txOut=FALSE)
 {
@@ -60,9 +69,9 @@ ngs.tximportSalmon <- function(sf.files, count.type="lengthScaledTPM", organism=
     ##biocLite("ensembldb")
     ##biocLite("EnsDb.Hsapiens.v86")
     ##biocLite("EnsDb.Mmusculus.v79")
-    
-    
-    if(organism=="Hsapiens") {                
+
+
+    if(organism=="Hsapiens") {
         edb <- EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86
         org <- org.Hs.eg.db::org.Hs.eg.db
     }
@@ -89,7 +98,7 @@ ngs.tximportSalmon <- function(sf.files, count.type="lengthScaledTPM", organism=
     if(1) {
         ## Add REFSEQ????
         cat("quering biomaRt...\n")
-        
+
         ensembl <- biomaRt::useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
         bm.res <- biomaRt::getBM(
             attributes = c("refseq_mrna","ensembl_gene_id", "ensembl_transcript_id", "external_gene_name"),
@@ -126,7 +135,7 @@ ngs.tximportSalmon <- function(sf.files, count.type="lengthScaledTPM", organism=
     ## is essential for LIMMA/VOOM and Deseq2 handles this fine (see
     ## code for DESeqDataSetFromTximport)
     ##count.type="lengthScaledTPM"
-    
+
     if(txOut==FALSE) {
         ## collapse gene level
         txi <- tximport(sf.files, type="salmon",
@@ -166,9 +175,16 @@ ngs.tximportSalmon <- function(sf.files, count.type="lengthScaledTPM", organism=
     return(txi)
 }
 
-##keys = sub("[.].*$","",rownames(txi$counts))
-##gencode <- read.delim("files/ngs/Gencode.v22.Genes.Annotation.txt")
+#' Title
+#'
+#' @param keys
+#' @param keytype
+#' @param gencode
+#'
+#' @return
 #' @export
+#'
+#' @examples
 ngs.getGeneAnnot <- function(keys, keytype, gencode)
 {
 
@@ -197,6 +213,3 @@ ngs.getGeneAnnot <- function(keys, keytype, gencode)
     return(genes)
 }
 
-##--------------------------------------------------------------------------------------------
-##------------------------------------ END OF FILE -------------------------------------------
-##--------------------------------------------------------------------------------------------

@@ -9,18 +9,6 @@
 ##
 ########################################################################
 
-if(0) {
-    load("../data/geiger2016-arginine.pgx")
-    X <- ngs$X
-    pheno <- ngs$samples$time
-}
-
-
-REF.CLASS = c("ctrl","ctr","control","dmso","nt","0","0h","0hr",
-              "non","no","not","neg","negative","ref","veh","vehicle",
-              "wt","wildtype","untreated","normal","false","healthy")
-
-
 #' Title
 #'
 #' @param X
@@ -41,13 +29,13 @@ REF.CLASS = c("ctrl","ctr","control","dmso","nt","0","0h","0hr",
 #' @examples
 gx.limma <- function(X, pheno, B=NULL, remove.na = TRUE,
                      fdr=0.05, compute.means=TRUE, lfc=0.20,
-                     max.na=0.20, ref=REF.CLASS, trend=FALSE, verbose=1 )
+                     max.na=0.20, ref= c("ctrl","ctr","control","dmso","nt","0","0h","0hr",
+                                         "non","no","not","neg","negative","ref","veh","vehicle",
+                                         "wt","wildtype","untreated","normal","false","healthy"),
+                     trend=FALSE, verbose=1 )
 {
 
-    if(0) {
-        fdr=0.05;compute.means=TRUE;lfc=0.20;ref=REF.CLASS
-        max.na=0.2;trend=FALSE;verbose=1;B=NULL
-    }
+
     if(sum(duplicated(rownames(X)))>0) {
         cat("WARNING:: matrix has duplicated rownames\n")
     }
@@ -178,13 +166,12 @@ gx.limma <- function(X, pheno, B=NULL, remove.na = TRUE,
 #'
 #' @examples
 gx.limma.SAVE <- function(X, pheno, fdr=0.05, compute.means=TRUE, lfc=0.20,
-                          max.na=0.20, ref=REF.CLASS, trend=FALSE, verbose=1 )
+                          max.na=0.20, ref=c("ctrl","ctr","control","dmso","nt","0","0h","0hr",
+                                             "non","no","not","neg","negative","ref","veh","vehicle",
+                                             "wt","wildtype","untreated","normal","false","healthy"),
+                          trend=FALSE, verbose=1 )
 {
 
-    if(0) {
-        fdr=0.05;compute.means=TRUE;lfc=0.20;ref=REF.CLASS
-        max.na=0.2;ref=REF.CLASS;trend=FALSE;verbose=1
-    }
     if(sum(duplicated(rownames(X)))>0) {
         cat("WARNING:: matrix has duplicated rownames\n")
     }
@@ -292,13 +279,13 @@ gx.limma.SAVE <- function(X, pheno, fdr=0.05, compute.means=TRUE, lfc=0.20,
 #'
 #' @examples
 gx.limmaF <- function(X, pheno, B=NULL, fdr=0.05, compute.means=TRUE, lfc=0.20,
-                      max.na=0.20, ref=REF.CLASS, trend=FALSE, verbose=1 )
+                      max.na=0.20, ref=c("ctrl","ctr","control","dmso","nt","0","0h","0hr",
+                                         "non","no","not","neg","negative","ref","veh","vehicle",
+                                         "wt","wildtype","untreated","normal","false","healthy"),
+                      trend=FALSE, verbose=1 )
 {
 
-    if(0) {
-        fdr=0.05;compute.means=TRUE;lfc=0.20;ref=REF.CLASS;max.na=0.20;
-        trend=TRUE;verbose=1
-    }
+
     if(sum(duplicated(rownames(X)))>0) {
         cat("matrix has duplicated rownames. please remove.\n")
     }
@@ -476,10 +463,12 @@ gx.meanFstats <- function(X, pheno) {
 #' @export
 #'
 #' @examples
-gx.limma.paired <- function(X, pheno, pair, fdr=0.05, lfc=0.20, ref=REF.CLASS,
+gx.limma.paired <- function(X, pheno, pair, fdr=0.05, lfc=0.20,
+                            ref=c("ctrl","ctr","control","dmso","nt","0","0h","0hr",
+                                  "non","no","not","neg","negative","ref","veh","vehicle",
+                                  "wt","wildtype","untreated","normal","false","healthy"),
                             compute.means=FALSE, trend=FALSE )
 {
-    ##fdr=0.05;lfc=0.20;ref=REF.CLASS;compute.means=TRUE
     ## LIMMA
 
     cat("Paired LIMMA\n")
@@ -586,7 +575,10 @@ gx.limma.paired <- function(X, pheno, pair, fdr=0.05, lfc=0.20, ref=REF.CLASS,
 #'
 #' @examples
 gx.limma.two.factorial <- function(X, factors, fdr=0.05, lfc=0.20, trend=FALSE,
-                                   ref=REF.CLASS, compute.means=TRUE)
+                                   ref=c("ctrl","ctr","control","dmso","nt","0","0h","0hr",
+                                         "non","no","not","neg","negative","ref","veh","vehicle",
+                                         "wt","wildtype","untreated","normal","false","healthy"),
+                                   compute.means=TRUE)
 {
 
     ## LIMMA
@@ -805,7 +797,6 @@ gx.test.groups <- function(sig, class.label, fdr=0.20,
 }
 
 
-##ref.class="CTRL"
 
 #' Title
 #'

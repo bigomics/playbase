@@ -3,43 +3,6 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-
-## https://cran.r-project.org/web/packages/GREP2/vignettes/vignette.html
-if(0) {
-    install.packages(c("devtools", "XML", "parallel", "utils", "rentrez", "RCurl"))
-    source("https://bioconductor.org/biocLite.R")
-    biocLite(c("GEOquery", "Biobase", "tximport", "AnnotationDbi",
-               "EnsDb.Hsapiens.v86",  "EnsDb.Mmusculus.v79", "EnsDb.Rnorvegicus.v79",
-               "org.Rn.eg.db", "org.Hs.eg.db", "org.Mm.eg.db"))
-    devtools::install_github("uc-bd2k/GREP2")
-
-    ## also need install FastQC and salmon:
-    ## >> sudo apt install fastqc salmon sra-toolkit
-}
-
-options(warn=-1)
-
-## Sys.setenv(PATH="/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/opt/sratoolkit/bin")
-
-if(0) {
-    ##------------------------------------------------
-    ## How to use
-    ##------------------------------------------------
-
-    FASTQ  = "/home/kwee/Projects/Data/fastq-examples/"  ## folder where FASTQ file are
-    OUTPUT = "/tmp/fastq-out/"  ## output folder
-    INDEX = "/data/Projects/Data/salmon_index"     ## existing or where to save Salmon index
-
-    fastq_dir=FASTQ;destdir=OUTPUT;indexdir=INDEX;nthread=4;do.qc=FALSE
-    instrument="HiSeq";library_layout="SINGLE"
-    nthread=24
-    pgx.fastq2counts(fastq_dir=FASTQ, destdir=OUTPUT, indexdir=INDEX, nthread=4, do.qc=FALSE)
-
-    dir(OUTPUT)
-    dir(paste0(OUTPUT,"/files_csv"))  ## counts are here
-
-}
-
 #' @export
 pgx.fastq2counts <- function(fastq_dir, destdir, indexdir, nthread=4, do.qc=FALSE,
                              species = c("human","mouse","rat"),

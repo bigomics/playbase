@@ -6,11 +6,15 @@
 ##================================================================================
 ##========================= CONNECTIVITY FUNCTIONS ===============================
 ##================================================================================
-##ntop=1000;contrasts=NULL;remove.le=FALSE;inmemory=TRUE
 
-if(!exists("SIGDB.DIR") && exists("FILESX")) {
+getSIGDB.DIR <- function() {
+  if(!exists("SIGDB.DIR") && exists("FILESX")) {
     SIGDB.DIR <- c(FILESX,file.path(FILESX,"sigdb"))
+  } else {
+    SIDDB.DIR
+  }
 }
+
 
 #' @export
 pgx.computeConnectivityScores <- function(pgx, sigdb, ntop=1000, contrasts=NULL,
@@ -874,7 +878,7 @@ pgx.computeGeneSetExpression <- function(X, gmt, method=NULL,
 
 #' @export
 sigdb.getConnectivityFullPath <- function(sigdb) {
-    db.exists <- sapply(SIGDB.DIR, function(d) file.exists(file.path(d,sigdb)))
+    db.exists <- sapply(getSIGDB.DIR(), function(d) file.exists(file.path(d,sigdb)))
     db.exists
     db.dir <- names(which(db.exists))[1]
     db.dir
@@ -904,7 +908,7 @@ sigdb.getConnectivityMatrix <- function(sigdb, select=NULL, genes=NULL)
     if(!is.null(select)) warning("[getConnectivityMatrix] length(select)=",length(select))
     if(!is.null(genes))  warning("[getConnectivityMatrix] length(genes)=",length(genes))
 
-    db.exists <- sapply( SIGDB.DIR, function(d) file.exists(file.path(d,sigdb)))
+    db.exists <- sapply( getSIGDB.DIR(), function(d) file.exists(file.path(d,sigdb)))
     X <- NULL
     if(any(db.exists)) {
         db.dir <- names(which(db.exists))[1]
@@ -966,7 +970,7 @@ sigdb.getEnrichmentMatrix <- function(sigdb, select=NULL, nc=-1)
         obj %in% gsub("^/|^//","",xobjs)
     }
 
-    db.exists <- sapply( SIGDB.DIR, function(d) file.exists(file.path(d,sigdb)))
+    db.exists <- sapply( getSIGDB.DIR(), function(d) file.exists(file.path(d,sigdb)))
     db.exists
     Y <- NULL
     if(any(db.exists)) {
@@ -1028,7 +1032,7 @@ sigdb.getSignatureMatrix <- function(sigdb) {
         stop("getEnrichmentMatrix:: only for H5 database files")
     }
 
-    db.exists <- sapply( SIGDB.DIR, function(d) file.exists(file.path(d,sigdb)))
+    db.exists <- sapply( getSIGDB.DIR(), function(d) file.exists(file.path(d,sigdb)))
     db.exists
     up=dn=NULL
     if(any(db.exists)) {

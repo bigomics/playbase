@@ -13,7 +13,9 @@ gx.limma(
   compute.means = TRUE,
   lfc = 0.2,
   max.na = 0.2,
-  ref = REF.CLASS,
+  ref = c("ctrl", "ctr", "control", "dmso", "nt", "0", "0h", "0hr", "non", "no", "not",
+    "neg", "negative", "ref", "veh", "vehicle", "wt", "wildtype", "untreated", "normal",
+    "false", "healthy"),
   trend = FALSE,
   verbose = 1
 )

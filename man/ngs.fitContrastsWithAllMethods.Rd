@@ -17,7 +17,8 @@ ngs.fitContrastsWithAllMethods(
   do.filter = TRUE,
   cpm.scale = 1e+06,
   remove.batch = TRUE,
-  methods = ALL.GENETEST.METHODS,
+  methods = c("ttest", "ttest.welch", "voom.limma", "trend.limma", "notrend.limma",
+    "deseq2.wald", "deseq2.lrt", "edger.qlf", "edger.lrt"),
   correct.AveExpr = TRUE,
   custom = NULL,
   custom.name = NULL

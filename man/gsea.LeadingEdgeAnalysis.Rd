@@ -7,7 +7,7 @@
 gsea.LeadingEdgeAnalysis(
   output.dir,
   ntop = 100,
-  gsea.program = GSEA.JAR,
+  gsea.program = "/opt/GSEA/gsea-3.0.jar",
   xmx = 10
 )
 }

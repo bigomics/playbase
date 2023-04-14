@@ -3,21 +3,17 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-if(0) {
 
-    devtools::install_github("broadinstitute/inferCNV")
-
-
-    CreateInfercnvObject(raw_counts_matrix, gene_order_file, annotations_file,
-                         ref_group_names, delim = "\t")
-
-
-}
-
-##nsmooth=80;downsample=10
-##load("../pgx/tcga-prad-gx.pgx")
-refgroup=NULL
+#' Title
+#'
+#' @param ngs
+#' @param refgroup
+#' @param progress
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.inferCNV <- function(ngs, refgroup=NULL, progress=NULL ) {
 
     ## InferCNV: Inferring copy number alterations from tumor single
@@ -169,8 +165,16 @@ pgx.inferCNV <- function(ngs, refgroup=NULL, progress=NULL ) {
     return(res)
 }
 
-##nsmooth=80;downsample=10
+
+#' Title
+#'
+#' @param ngs
+#' @param nsmooth
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.CNAfromExpression <- function(ngs, nsmooth=40)
 {
     ## This estimates CNV by local smoothing of relative expression
@@ -230,7 +234,23 @@ pgx.CNAfromExpression <- function(ngs, nsmooth=40)
 }
 
 
+
+#' Title
+#'
+#' @param ngs
+#' @param res
+#' @param annot
+#' @param pca.filter
+#' @param lwd
+#' @param downsample
+#' @param order.by
+#' @param clip
+#' @param lab.cex
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.plotCNAHeatmap <- function(ngs, res, annot=NA, pca.filter=-1, lwd=1,
                                downsample=10,
                                order.by="clust", clip=0, lab.cex=0.6 )

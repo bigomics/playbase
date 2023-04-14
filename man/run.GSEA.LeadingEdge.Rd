@@ -9,7 +9,7 @@ run.GSEA.LeadingEdge(
   gmt,
   xmx = 10,
   rpt.label = "gsea_leadingedge",
-  gsea.program = GSEA.JAR,
+  gsea.program = "/opt/GSEA/gsea-3.0.jar",
   outdir = "."
 )
 }

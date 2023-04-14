@@ -21,7 +21,7 @@ run.GSEA.preranked(
   chip = "GENE_SYMBOL.chip",
   collapse = FALSE,
   do.leading.edge = FALSE,
-  gsea.program = GSEA.JAR,
+  gsea.program = "/opt/GSEA/gsea-3.0.jar",
   quiet = FALSE
 )
 }

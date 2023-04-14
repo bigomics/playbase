@@ -3,17 +3,6 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-##=============================================================================
-##==========    Platform global and user settings =============================
-##=============================================================================
-
-USER.GENESETTEST.METHODS <- NULL
-USER.GENETEST.METHODS <- NULL
-
-##=============================================================================
-##===================    Platform helper functions ============================
-##=============================================================================
-
 #' @export
 pgx.phenoMatrix <- function(pgx, phenotype) {
     y <- pgx$samples[,phenotype]
@@ -23,7 +12,6 @@ pgx.phenoMatrix <- function(pgx, phenotype) {
     as.matrix(mm)
 }
 
-cex=1
 #' @export
 text_repel.NOTWORKING <- function( x, y, text, cex=1, force=1e-7, maxiter=20000)
 {

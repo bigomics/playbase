@@ -3,8 +3,6 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-##max.features=8000;lib.dir=FILES;test.methods = c("gsva","camera","fgsea")
-
 #' Title
 #'
 #' @param pgx
@@ -213,8 +211,3 @@ compute_testGenesets <- function(pgx,
 
     return(pgx)
 }
-
-
-
-##rm(list=setdiff(ls(),SAVE.PARAMS))
-

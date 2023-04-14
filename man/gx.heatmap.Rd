@@ -11,7 +11,7 @@ gx.heatmap(
   dist.method = "pearson",
   col.dist.method = "euclidean",
   plot.method = "heatmap.2",
-  col = BLUERED64,
+  col = colorRampPalette(c("royalblue3", "grey90", "indianred3"))(64),
   softmax = FALSE,
   scale = "row",
   verbose = 1,

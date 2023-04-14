@@ -9,15 +9,6 @@
 ##
 ########################################################################
 
-
-if(0) {
-    use.design=TRUE;dist.method="cor";center.x=center.m=replace=FALSE;b.method="new"
-    x = ngs$X
-    y = as.character(ngs$samples$rx)
-    ref = 'DMSO'
-}
-
-
 #' Title
 #'
 #' @param x

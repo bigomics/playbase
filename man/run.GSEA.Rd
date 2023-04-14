@@ -25,7 +25,7 @@ run.GSEA(
   xmx = 10,
   force.permute = FALSE,
   metric = c("Signal2Noise", "Diff_of_Classes", "Pearson"),
-  gsea.program = GSEA.JAR,
+  gsea.program = "/opt/GSEA/gsea-3.0.jar",
   quiet = FALSE
 )
 }

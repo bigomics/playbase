@@ -4,7 +4,12 @@
 \alias{compute_extra}
 \title{Title}
 \usage{
-compute_extra(ngs, extra = EXTRA.MODULES, lib.dir, sigdb = NULL)
+compute_extra(
+  ngs,
+  extra = c("meta.go", "deconv", "infer", "drugs", "connectivity", "wordcloud"),
+  lib.dir,
+  sigdb = NULL
+)
 }
 \arguments{
 \item{sigdb}{}

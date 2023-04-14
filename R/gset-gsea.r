@@ -3,13 +3,6 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-## Script to run GSEA Analysis from R
-##
-
-GSEA.JAR="/opt/GSEA/gsea2-2.2.4.jar"
-GSEA.JAR="/opt/GSEA/gsea-3.0.jar"
-
-
 #' Title
 #'
 #' @param gmt
@@ -118,8 +111,6 @@ write.cls <- function(y, file, name="") {
     }
 }
 
-
-##dir="/home/share/datasets/gmt/";nrows=-1
 
 #' Title
 #'
@@ -303,7 +294,7 @@ run.GSEA <- function( X, y, gmt, output.dir=NULL, fdr=0.25, set.min=15,
                      sort.y="ref.last", ref.type=c("0","NT","REF","DMSO","WT","LOW"),
                      make.sets=TRUE, clean.files=TRUE, xmx=10, force.permute=FALSE,
                      metric=c("Signal2Noise","Diff_of_Classes","Pearson"),
-                     gsea.program=GSEA.JAR, quiet=FALSE )
+                     gsea.program="/opt/GSEA/gsea-3.0.jar", quiet=FALSE )
 {
     if(0) {
         fdr=0.25;set.min=15;set.max=500;output.dir="test/";
@@ -613,7 +604,7 @@ run.GSEA.preranked <- function( rnk, gmt, output.dir=NULL, fdr=0.25,
                                rpt.label="preranked", make.sets=TRUE,
                                clean.files=TRUE, xmx=10, scoring="weighted",
                                chip="GENE_SYMBOL.chip", collapse=FALSE,
-                               do.leading.edge=FALSE, gsea.program=GSEA.JAR,
+                               do.leading.edge=FALSE, gsea.program="/opt/GSEA/gsea-3.0.jar",
                                quiet=FALSE )
 {
     if(0) {
@@ -822,7 +813,7 @@ run.GSEA.preranked <- function( rnk, gmt, output.dir=NULL, fdr=0.25,
 #' @export
 #'
 #' @examples
-gsea.LeadingEdgeAnalysis <- function(output.dir, ntop=100, gsea.program=GSEA.JAR, xmx=10)
+gsea.LeadingEdgeAnalysis <- function(output.dir, ntop=100, gsea.program="/opt/GSEA/gsea-3.0.jar", xmx=10)
 {
     ## gsea.type="Gsea";ntop=20;xmx=16
     cat(">>> performing LeadingEdge analysis <<<\n")
@@ -890,7 +881,7 @@ gsea.LeadingEdgeAnalysis <- function(output.dir, ntop=100, gsea.program=GSEA.JAR
 #'
 #' @examples
 run.GSEA.LeadingEdge <- function(rpt.path, gmt, xmx=10, rpt.label="gsea_leadingedge",
-                                 gsea.program=GSEA.JAR, outdir=".")
+                                 gsea.program="/opt/GSEA/gsea-3.0.jar", outdir=".")
 {
     gmt0 <- gmt
     ## gmt0 <- lapply(gmt0, function(s) paste("'",s,"'",sep=""))

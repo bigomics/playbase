@@ -3,23 +3,9 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-## add me
-if(0) {
-    source("https://bioconductor.org/biocLite.R")
-    biocLite("tximport")
-    biocLite("edgeR")
-    biocLite("limma")
-    biocLite("DESeq2")
-    biocLite("ensembldb")
-    biocLite("EnsDb.Hsapiens.v86")
-
-}
-
 ##--------------------------------------------------------------------------------------------
 ##----------------------------- COOKING (i.e. preparing data) --------------------------------
 ##--------------------------------------------------------------------------------------------
-
-##txi = ngs.importSalmon(sf.files)
 
 #' Title
 #'
@@ -252,8 +238,3 @@ ngs.cookForDESEQ2 <- function(counts, samples, genes, remove.batch=TRUE,
     return(dds)
 }
 
-
-
-##--------------------------------------------------------------------------------------------
-##------------------------------------ END OF FILE -------------------------------------------
-##--------------------------------------------------------------------------------------------

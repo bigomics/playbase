@@ -3,12 +3,6 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-##extra <- c("meta.go","deconv","infer","drugs")
-##extra <- c("wordcloud")
-EXTRA.MODULES = c("meta.go","deconv","infer","drugs", ## "graph",
-                  "connectivity","wordcloud")
-
-
 #' Title
 #'
 #' @param ngs
@@ -20,7 +14,8 @@ EXTRA.MODULES = c("meta.go","deconv","infer","drugs", ## "graph",
 #' @export
 #'
 #' @examples
-compute_extra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
+compute_extra <- function(ngs, extra=c("meta.go","deconv","infer","drugs", ## "graph",
+                                       "connectivity","wordcloud"), lib.dir, sigdb=NULL) {
     pgx.computeExtra(ngs, extra=extra, lib.dir=lib.dir, sigdb=sigdb)
 }
 
@@ -401,8 +396,6 @@ compute_drugActivityEnrichment <- function(ngs) {
     remove(xdrugs)
     return(ngs)
 }
-
-##ref="CTRPv2";cmap.dir="../lib";combo=FALSE
 
 #' Title
 #'

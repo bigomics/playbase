@@ -3,26 +3,6 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-## add me
-if(0) {
-    source("https://bioconductor.org/biocLite.R")
-    biocLite("tximport")
-    biocLite("edgeR")
-    biocLite("limma")
-    biocLite("DESeq2")
-    biocLite("ensembldb")
-    biocLite("EnsDb.Hsapiens.v86")
-
-}
-
-ALL.GENETEST.METHODS=c("ttest","ttest.welch","voom.limma","trend.limma","notrend.limma",
-                       "deseq2.wald","deseq2.lrt","edger.qlf","edger.lrt")
-##ALL.GENETEST.METHODS=c("ttest","ttest.welch","voom.limma","trend.limma",
-##                       "edger.qlf","edger.lrt","deseq2.wald")
-methods=ALL.GENETEST.METHODS
-methods=c("ttest.welch","trend.limma","deseq2.wald","edger.qlf")
-methods
-
 ##-----------------------------------------------------------------------------
 ##-------------------- FIT ALL CONTRASTS --------------------------------------
 ##-----------------------------------------------------------------------------
@@ -54,7 +34,9 @@ methods
 ngs.fitContrastsWithAllMethods <- function(counts, X=NULL, samples, design, contr.matrix, genes=NULL,
                                            prior.cpm=1, prune.samples=FALSE,
                                            conform.output=TRUE, do.filter=TRUE, cpm.scale=1e6,
-                                           remove.batch=TRUE, methods=ALL.GENETEST.METHODS,
+                                           remove.batch=TRUE,
+                                           methods=c("ttest","ttest.welch","voom.limma","trend.limma","notrend.limma",
+                                                     "deseq2.wald","deseq2.lrt","edger.qlf","edger.lrt"),
                                            correct.AveExpr=TRUE,custom=NULL, custom.name=NULL )
 {
     ##--------------------------------------------------------------
@@ -62,17 +44,13 @@ ngs.fitContrastsWithAllMethods <- function(counts, X=NULL, samples, design, cont
     ##--------------------------------------------------------------
 
 
-    if(0) {
-        do.filter=FALSE;conform.output=TRUE;remove.batch=FALSE;prior.cpm=1;
-        custom=NULL;custom.name=NULL;cpm.scale=1e6;prune.samples=FALSE
-        counts=ngs$counts;X=ngs$X;samples=ngs$samples;genes=NULL;correct.AveExpr=TRUE
-        design=ngs$model.parameters$design;contr.matrix=ngs$model.parameters$contr.matrix
-    }
 
     if(methods[1]=="*") {
-        methods <- ALL.GENETEST.METHODS
+        methods <- c("ttest","ttest.welch","voom.limma","trend.limma","notrend.limma",
+                     "deseq2.wald","deseq2.lrt","edger.qlf","edger.lrt")
     }
-    methods <- intersect(methods, ALL.GENETEST.METHODS)
+    methods <- intersect(methods, c("ttest","ttest.welch","voom.limma","trend.limma","notrend.limma",
+                                    "deseq2.wald","deseq2.lrt","edger.qlf","edger.lrt"))
 
     message("[ngs.fitContrastsWithAllMethods] calculating methods : ", methods)
     message("[ngs.fitContrastsWithAllMethods] prune.samples = ", prune.samples)

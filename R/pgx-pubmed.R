@@ -3,16 +3,8 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-NCORE <- parallel::detectCores(all.tests = FALSE, logical = TRUE)/2
-NCORE
-BLUERED <- colorRampPalette(
-    rev(c("#67001F", "#B2182B", "#D6604D", "#F4A582", "#FDDBC7", "#FFFFFF", "#D1E5F0",
-          "#92C5DE", "#4393C3", "#2166AC", "#053061")))
-
-if(0) {
-    GENERIF.MATRIX <- readRDS(file=file.path(FILES,"geneRIF-matrix.rds"))
-    gene="Socs3";context=c("inflamm","cancer")
-    gene="Socs3";context="."
+NCORE <- function() {
+  parallel::detectCores(all.tests = FALSE, logical = TRUE)/2
 }
 
 #' @export
@@ -138,7 +130,7 @@ pmid.buildMatrix <- function() {
     ## build PMID2SYMBOL matrix
 
     idx0 <- parallel::mclapply(1:length(pmid), function(i) cbind(i, which(eg %in% pmid[[i]])),
-                     mc.cores=NCORE)
+                     mc.cores=NCORE())
     idx <- do.call(rbind,idx0)
     dim(idx)
     P <- Matrix::sparseMatrix( i=idx[,1], j=idx[,2], x=rep(1,nrow(idx)),
@@ -180,7 +172,7 @@ pmid.buildGraph <- function(P) {
     pmids <- parallel::mclapply(igraph::V(gr)$name,function(x) gsub("PMID:","",strsplit(x,split=",")[[1]]))
     nref <- sapply(pmids,length)
     ##vgenes <- apply(P[igraph::V(gr)$name,],1,function(x) paste(names(which(x!=0)),collapse=","))
-    vgenes <- parallel::mclapply(1:nrow(P),function(i) names(which(P[i,]!=0)), mc.cores=NCORE)
+    vgenes <- parallel::mclapply(1:nrow(P),function(i) names(which(P[i,]!=0)), mc.cores=NCORE())
     vgenes2 <- unlist(sapply(vgenes,paste,collapse=","))
     igraph::V(gr)$size <- nref
     igraph::V(gr)$genes <- vgenes
@@ -218,7 +210,7 @@ pmid.extractGene <- function(gr, gene, nmin=3) {
     if(verbose>0) cat("annotating edges...\n")
     gr1 <- pmid.annotateEdges(gr1)
     ##nshared <- sapply(igraph::E(gr1)$genes,length)
-    nshared <- unlist(parallel::mclapply(igraph::E(gr1)$genes,length,mc.cores=NCORE))
+    nshared <- unlist(parallel::mclapply(igraph::E(gr1)$genes,length,mc.cores=NCORE()))
     ee <- which(!( nshared==1 & sapply(igraph::E(gr1)$genes,"[",1) %in% gene))
     gr1 <- igraph::subgraph.edges(gr1, ee, delete.vertices=TRUE)
     cmp <- igraph::components(gr1)

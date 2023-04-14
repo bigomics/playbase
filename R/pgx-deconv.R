@@ -3,8 +3,6 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-DECONV.METHODS = c("I-NNLS","CIBERSORT","DCQ","DeconRNAseq","EPIC","NNLM",
-                   "cor","SingleR")
 
 #' @export
 pgx.inferCellType <- function(counts, low.th=0.01, add.unknown=FALSE,
@@ -470,7 +468,9 @@ pgx.inferGender <- function(X, gene_name=NULL) {
 }
 
 #' @export
-pgx.multipleDeconvolution <- function(counts, refmat, methods=DECONV.METHODS)
+pgx.multipleDeconvolution <- function(counts, refmat,
+                                      methods=c("I-NNLS","CIBERSORT","DCQ","DeconRNAseq","EPIC","NNLM",
+                                                "cor","SingleR"))
 {
     methods
     timings <- c()
@@ -507,7 +507,9 @@ pgx.multipleDeconvolution <- function(counts, refmat, methods=DECONV.METHODS)
 }
 
 #' @export
-pgx.deconvolution <- function(X, ref, methods=DECONV.METHODS,
+pgx.deconvolution <- function(X, ref,
+                              methods=c("I-NNLS","CIBERSORT","DCQ","DeconRNAseq","EPIC","NNLM",
+                                        "cor","SingleR"),
                               add.unknown=FALSE, normalize.mat=TRUE)
 {
 
