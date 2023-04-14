@@ -6,7 +6,7 @@
 ##extra <- c("meta.go","deconv","infer","drugs")
 ##extra <- c("wordcloud")
 EXTRA.MODULES = c("meta.go","deconv","infer","drugs", ## "graph",
-                  "connectivity","wordcloud")
+                  "connectivity","wordcloud", "wgcna")
 
 #' @export
 compute_extra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
@@ -172,7 +172,7 @@ pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
     if("wgcna" %in% extra) {
         message(">>> computing wgcna...")
         
-        ngs$wgcna <- playbase::wgcna(pgx)
+        ngs$wgcna <- playbase::pgx.wgcna(pgx)
         }
 
     ##------------------------------------------------------

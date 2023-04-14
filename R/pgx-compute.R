@@ -595,7 +595,7 @@ if (0) {
   prune.samples <- FALSE
 }
 
-.EXTRA.METHODS <- c("meta.go", "deconv", "infer", "drugs", "wordcloud")
+.EXTRA.METHODS <- c("meta.go", "deconv", "infer", "drugs", "wordcloud", "wgcna")
 
 #' @export
 pgx.computePGX <- function(pgx,
