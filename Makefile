@@ -9,5 +9,6 @@ check:
 	R -e "devtools::check()"
 
 install:
-	R CMD INSTALL ../playbase_0.1.0.tar.gz
+	R CMD INSTALL .
+#	R CMD INSTALL ../playbase_0.1.0.tar.gz
 
