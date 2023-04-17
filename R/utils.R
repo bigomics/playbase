@@ -24,3 +24,5 @@ info <- function(..., type="INFO") {
 }
 
 dbg <- function(...) info(..., type="DBUG")
+
+prep <- function(...) pcaMethods::prep(...)
