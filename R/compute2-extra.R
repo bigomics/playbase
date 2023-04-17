@@ -21,7 +21,6 @@ compute_extra <- function(ngs, extra=c("meta.go","deconv","infer","drugs", ## "g
     libx.dir <- paste0(sub("/$","",lib.dir),'x')  ## ../libx yikes....
     message("[compute_extra] setting libx.dir =",libx.dir)
 
-    extra <- intersect(extra, EXTRA.MODULES)
     if(length(extra)==0) {
         return(ngs)
     }
