@@ -172,7 +172,7 @@ pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
     if("wgcna" %in% extra) {
         message(">>> computing wgcna...")
         
-        ngs$wgcna <- playbase::pgx.wgcna(pgx)
+        ngs$wgcna <- playbase::pgx.wgcna(pgx, lib.dir = lib.dir)
         }
 
     ##------------------------------------------------------
