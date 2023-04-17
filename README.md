@@ -7,6 +7,9 @@
 
 [![R package
 check](https://github.com/bigomics/playbase/actions/workflows/r.yml/badge.svg)](https://github.com/bigomics/playbase/actions/workflows/r.yml)
+[![Codecov test
+coverage](https://codecov.io/gh/bigomics/playbase/branch/master/graph/badge.svg)](https://app.codecov.io/gh/bigomics/playbase?branch=master)
+
 <!-- badges: end -->
 
 The \`playbase´ package contains the core back-end functionality for the
