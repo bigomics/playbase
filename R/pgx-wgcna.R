@@ -25,6 +25,7 @@ labels2rainbow <- function(net) {
 #' @export
 pgx.wgcna <- function(
     pgx,
+    lib.dir,
     minmodsize = 30,
     power = 6,
     cutheight = 0.25,
@@ -38,7 +39,7 @@ pgx.wgcna <- function(
 
     datExpr <- t(head(X, ngenes))
     #progress$inc(0.1, "Computing WGCNA modules...")
-    #require(WGCNA)
+    require(WGCNA) #fun fact: if we dont source WGCNA, blockwiseModules does not work
     net <- WGCNA::blockwiseModules(
         datExpr,
         power = power,
@@ -106,7 +107,10 @@ pgx.wgcna <- function(
         #message("[wgcna.compute] >>> Calculating WGCNA module enrichments...")
         #progress$inc(0, "Calculating module enrichment...")
 
-        gmt <- getGSETS(grep("HALLMARK|GOBP|^C[1-9]", names(iGSETS), value = TRUE))
+        gmt <- getGSETS(
+            grep("HALLMARK|GOBP|^C[1-9]", names(iGSETS), value = TRUE),
+            lib.dir = lib.dir
+            )
         gse <- NULL
         ## bg <- unlist(me.genes)
         bg <- toupper(rownames(pgx$X))
