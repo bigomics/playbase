@@ -620,7 +620,7 @@ pgx.deconvolution <- function(X, ref,
         mat1 <- mat
         colnames(mat1) <- 1:ncol(mat)  ## EPIC doesnt like duplicated column names...
         stime <- system.time( try(
-            out <- EPIC(bulk = mat1, reference = ref.list)
+            out <- EPIC::EPIC(bulk = mat1, reference = ref.list)
         ))
         remove(mat1)
         if(!is.null(out)) {
@@ -642,13 +642,19 @@ pgx.deconvolution <- function(X, ref,
         if("package:Seurat" %in% search()) detach("package:Seurat", unload=TRUE)
         dbg("[pgx.deconvolution] calculating DeconRNAseq...")
 
-        ## uses psych::pca() from pcaMethods
-        ## uses pcaMethods::prep
+        ## DeconRNASeq need psych and pcaMethods, so we temporarily
+        ## load the library...
+        require(psych)
+        require(pcaMethods)
         drs <- NULL
         stime <- system.time(suppressMessages(suppressWarnings(
             drs <- try(DeconRNASeq::DeconRNASeq(data.frame(mat, check.names=FALSE),
                                    data.frame(ref, check.names=FALSE))$out.all)
         )))
+        ## ... and quickly remove these
+        detach("package:psych")
+        detach("package:pcaMethods")
+
         timings[["DeconRNAseq"]] <- stime
         class(drs)
         if(!is.null(drs) && class(drs)!="try-error") {
@@ -784,7 +790,7 @@ pgx.deconvolution <- function(X, ref,
     if("SingleR" %in% methods) {
         dbg("[pgx.deconvolution] calculating SingleR...")
         stime <- system.time(
-            sr1 <- SingleR(test=mat, ref=ref, labels=colnames(ref))
+            sr1 <- SingleR::SingleR(test=mat, ref=ref, labels=colnames(ref))
         )
         timings[["SingleR"]] <- stime
         cat("deconvolution using SingleR took",stime[3],"s\n")

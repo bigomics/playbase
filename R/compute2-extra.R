@@ -230,7 +230,7 @@ compute_deconvolution <- function(ngs, rna.counts=ngs$counts, full=FALSE) {
     ## methods <- c("NNLM","cor")
 
     if(full==FALSE) {
-        ## Fast methods, subset of references
+        ## Faster methods, subset of references
         sel = c("Immune cell (LM22)","Immune cell (ImmunoStates)",
                 "Immune cell (DICE)","Immune cell (ImmProt)",
                 "Tissue (GTEx)","Cell line (HPA)","Cancer type (CCLE)")
