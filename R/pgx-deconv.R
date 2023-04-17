@@ -355,7 +355,7 @@ pgx.purify <- function( X, ref, k=3, method=2) {
         x.contaminant <- res.nmf$W[,1:k] %*% res.nmf$H[1:k,]
         x.purified <- pmax(X - x.contaminant,0)
     } else {
-        cat("fatal error:: unknown method\n")
+        dbg("fatal error:: unknown method\n")
         stop()
     }
 
@@ -446,7 +446,7 @@ pgx.inferGender <- function(X, gene_name=NULL) {
         x.genes
     }
     if( length(y.genes)==0 && length(x.genes)==0 ) {
-        cat("warning:: could not determine sex. missing some X/Y marker genes\n")
+        dbg("warning:: could not determine sex. missing some X/Y marker genes\n")
         sex <- rep(NA, ncol(X))
         return(sex)
     }
@@ -514,7 +514,7 @@ pgx.deconvolution <- function(X, ref,
 {
 
     if(max(X)<50 || min(X)<0) {
-        cat("WARNING:: pgx.deconvolution: is X really counts? (not logarithmic)\n")
+        dbg("WARNING:: pgx.deconvolution: is X really counts? (not logarithmic)\n")
     }
 
 
@@ -589,7 +589,7 @@ pgx.deconvolution <- function(X, ref,
         ## CIBERSORT
         ##source(file.path(FILES,CIBERSORT.code))
         source(CIBERSORT.code)
-        cat("starting deconvolution using CIBERSORT...\n")
+        dbg("starting deconvolution using CIBERSORT...\n")
         ciber.out <- NULL
         stime <- system.time(
             ##try( ciber.out <- CIBERSORT(ref, mat, perm=0, QN=TRUE) )
@@ -597,11 +597,11 @@ pgx.deconvolution <- function(X, ref,
         )
         if(!is.null(ciber.out)) {
             timings[["CIBERSORT"]] <- stime
-            cat("deconvolution using CIBERSORT took",stime[3],"s\n")
+            dbg("deconvolution using CIBERSORT took",stime[3],"s\n")
             ciber.out <- ciber.out[,!(colnames(ciber.out) %in% c("P-value","Correlation","RMSE"))]
             results[["CIBERSORT"]] <- ciber.out
         } else {
-            cat("WARNING:: CIBERSORT failed\n")
+            dbg("WARNING:: CIBERSORT failed\n")
         }
     }
 
@@ -624,46 +624,44 @@ pgx.deconvolution <- function(X, ref,
         ))
         remove(mat1)
         if(!is.null(out)) {
-            message(paste0("deconvolution using EPIC took",stime[3],"s\n"))
+            dbg(paste0("deconvolution using EPIC took",stime[3],"s\n"))
             timings[["EPIC"]] <- stime
             out.mat <- out[["cellFractions"]]
             colnames(out.mat) <- sub("otherCells","other_cells",colnames(out.mat))
             rownames(out.mat) <- colnames(mat)
             results[["EPIC"]] <- out.mat
         } else {
-            message("WARNING:: EPIC fail (no pun intended...)\n")
+            dbg("WARNING:: EPIC fail (no pun intended...)\n")
         }
     }
 
-    if("DeconRNAseq" %in% methods) {
+    if(FALSE && "DeconRNAseq" %in% methods) {
+        ## IK17.04.2023 ************ BROKEN *******************
+        ## ---- needs psych & pcaMethods inside namespace----
+        
         ## DeconRNAseq
-        ##BiocManager::install("DeconRNASeq", version = "3.8")
-        ##BiocManager::install("DeconRNASeq")
         if("package:Seurat" %in% search()) detach("package:Seurat", unload=TRUE)
         dbg("[pgx.deconvolution] calculating DeconRNAseq...")
 
         ## DeconRNASeq need psych and pcaMethods, so we temporarily
         ## load the library...
-        require(psych)
-        require(pcaMethods)
+        ##require(psych);require(pcaMethods)
         drs <- NULL
         stime <- system.time(suppressMessages(suppressWarnings(
             drs <- try(DeconRNASeq::DeconRNASeq(data.frame(mat, check.names=FALSE),
                                    data.frame(ref, check.names=FALSE))$out.all)
         )))
         ## ... and quickly remove these
-        detach("package:psych")
-        detach("package:pcaMethods")
+        ##detach("package:psych");detach("package:pcaMethods")
 
         timings[["DeconRNAseq"]] <- stime
         class(drs)
         if(!is.null(drs) && class(drs)!="try-error") {
-            cat("deconvolution using DeconRNAseq took",stime[3],"s\n")
+            dbg("deconvolution using DeconRNAseq took",stime[3],"s\n")
             rownames(drs) <- colnames(mat)
-            ##colnames(drs) <- colnames(ref)
             results[["DeconRNAseq"]] <- drs
         } else {
-            cat("WARNING:: DeconRNAseq failed\n")
+            dbg("*** WARNING ***:: DeconRNAseq failed\n")
         }
     }
 
@@ -685,10 +683,10 @@ pgx.deconvolution <- function(X, ref,
             ))
         if(!is.null(res.dcq) && class(res.dcq)!="try-error") {
             timings[["DCQ"]] <- stime
-            cat("deconvolution using DCQ took",stime[3],"s\n")
+            dbg("deconvolution using DCQ took",stime[3],"s\n")
             results[["DCQ"]] <- res.dcq$average
         } else {
-            cat("WARNING:: DCQ failed\n")
+            dbg("WARNING:: DCQ failed\n")
         }
     }
 
@@ -739,7 +737,7 @@ pgx.deconvolution <- function(X, ref,
             res.abbas <- try(apply(YY,2,function(y) GetFractions.Abbas(XX, y, w=NA)))
         )
         timings[["I-NNLS"]] <- stime
-        cat("deconvolution using I-NNLS took",stime[3],"s\n")
+        dbg("deconvolution using I-NNLS took",stime[3],"s\n")
         if(!is.null(res.abbas) && class(res.abbas)!="try-error") {
             rownames(res.abbas) <- colnames(ref)
             results[["I-NNLS"]] <- t(res.abbas)
@@ -759,7 +757,7 @@ pgx.deconvolution <- function(X, ref,
             cf <- NNLM::nnlm(x1,x2)$coefficients[-1,,drop=FALSE]
         )
         timings[["NNLM"]] <- stime
-        cat("deconvolution using NNLM took",stime[3],"s\n")
+        dbg("deconvolution using NNLM took",stime[3],"s\n")
         results[["NNLM"]] <- t(cf)
 
         ## very much the same as I-NNLS
@@ -783,7 +781,7 @@ pgx.deconvolution <- function(X, ref,
             cf <- stats::cor(r1,r2,use="pairwise")
         )
         timings[["cor"]] <- stime
-        cat("deconvolution using COR took",stime[3],"s\n")
+        dbg("deconvolution using COR took",stime[3],"s\n")
         results[["cor"]] <- cf
     }
 
@@ -793,7 +791,7 @@ pgx.deconvolution <- function(X, ref,
             sr1 <- SingleR::SingleR(test=mat, ref=ref, labels=colnames(ref))
         )
         timings[["SingleR"]] <- stime
-        cat("deconvolution using SingleR took",stime[3],"s\n")
+        dbg("deconvolution using SingleR took",stime[3],"s\n")
         results[["SingleR"]] <- sr1$scores
     }
     ## clean up
