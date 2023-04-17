@@ -1651,6 +1651,28 @@ correctMarchSeptemberGenes <- function(gg) {
 #' @export
 cor.pvalue <- function(x,n) pnorm(-abs(x/((1-x**2)/(n-2))**0.5))
 
+#' @export
+getGSETS <- function(gs,lib.dir) {
+  GENE.SYMBOL = unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
+  FAMILIES <- playbase::pgx.getGeneFamilies(GENE.SYMBOL, FILES=lib.dir, min.size=10, max.size=9999)
+  fam.file <- file.path(lib.dir,"custom-families.gmt")
+  if(file.exists(fam.file)) {
+      custom.gmt = read.gmt(file.path(FILES,"custom-families.gmt"),add.source=TRUE)
+      names(custom.gmt)
+      FAMILIES= c(FAMILIES, custom.gmt)
+  }
+  FAMILIES[["<all>"]] <- GENE.SYMBOL
+  f1 <- FAMILIES
+  names(f1) <- paste0("FAMILY:",names(f1))
+  names(f1) <- sub("FAMILY:<all>","<all>",names(f1))
+  GSETS <- c(playbase::GSETS,f1)
+
+  GSET.GENES <- sort(unique(unlist(GSETS)))  ## slow...
+  iGSETS <- parallel::mclapply(GSETS, function(a) match(a,GSET.GENES))  ## slow...
+  names(iGSETS) <- names(GSETS)
+  lapply(iGSETS[gs],function(i) GSET.GENES[i])
+}
+
 ##=====================================================================================
 ##=========================== END OF FILE =============================================
 ##=====================================================================================
