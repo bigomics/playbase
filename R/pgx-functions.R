@@ -1652,12 +1652,12 @@ correctMarchSeptemberGenes <- function(gg) {
 cor.pvalue <- function(x,n) pnorm(-abs(x/((1-x**2)/(n-2))**0.5))
 
 #' @export
-getGSETS <- function(gs,lib.dir) {
+getGSETS <- function(gs, lib.dir) {
   GENE.SYMBOL = unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
   FAMILIES <- playbase::pgx.getGeneFamilies(GENE.SYMBOL, FILES=lib.dir, min.size=10, max.size=9999)
   fam.file <- file.path(lib.dir,"custom-families.gmt")
   if(file.exists(fam.file)) {
-      custom.gmt = read.gmt(file.path(FILES,"custom-families.gmt"),add.source=TRUE)
+      custom.gmt = read.gmt(file.path(lib.dir,"custom-families.gmt"),add.source=TRUE)
       names(custom.gmt)
       FAMILIES= c(FAMILIES, custom.gmt)
   }
