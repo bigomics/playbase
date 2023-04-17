@@ -14,6 +14,15 @@
 #' @source Geiger2016
 "GEIGER_PGX"
 
+#' Gene sets?
+#'
+#' No idea what this data is but it is used in across entire OPG.
+#'
+#' @format ## `GSETS`
+#' A GSETS / list object
+#' @source unknown
+"GSETS"
+
 
 #' Some kind of sparse matrix dataset?
 #'
