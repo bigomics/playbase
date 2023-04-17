@@ -16,26 +16,10 @@
 #' @examples
 compute_extra <- function(ngs, extra=c("meta.go","deconv","infer","drugs", ## "graph",
                                        "connectivity","wordcloud"), lib.dir, sigdb=NULL) {
-    pgx.computeExtra(ngs, extra=extra, lib.dir=lib.dir, sigdb=sigdb)
-}
-
-
-#' Title
-#'
-#' @param ngs
-#' @param extra
-#' @param lib.dir
-#' @param sigdb
-#'
-#' @return
-#' @export
-#'
-#' @examples
-pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
 
     timings <- c()
     libx.dir <- paste0(sub("/$","",lib.dir),'x')  ## ../libx yikes....
-    message("[pgx.computeExtra] setting libx.dir =",libx.dir)
+    message("[compute_extra] setting libx.dir =",libx.dir)
 
     extra <- intersect(extra, EXTRA.MODULES)
     if(length(extra)==0) {
@@ -104,7 +88,7 @@ pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
         if(!dir.exists(cmap.dir)) {
             message("Warning:: missing CMAP files. Skipping drug connectivity analysis!")
         }
-        dbg("[pgx.computeExtra] cmap.dir = ",cmap.dir)
+        dbg("[compute_extra] cmap.dir = ",cmap.dir)
 
         if(dir.exists(cmap.dir)) {
 

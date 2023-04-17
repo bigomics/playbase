@@ -279,7 +279,6 @@ if(0) {
 }
 
 
-##verbose=TRUE;file="datasets-allFC.csv"
 #' @export
 pgx.readDatasetProfiles <- function(pgx.dir, file="datasets-allFC.csv",
                                     verbose=TRUE)
