@@ -638,7 +638,6 @@ pgx.deconvolution <- function(X, ref,
     if(FALSE && "DeconRNAseq" %in% methods) {
         ## IK17.04.2023 ************ BROKEN *******************
         ## ---- needs psych & pcaMethods inside namespace----
-        
         ## DeconRNAseq
         if("package:Seurat" %in% search()) detach("package:Seurat", unload=TRUE)
         dbg("[pgx.deconvolution] calculating DeconRNAseq...")
