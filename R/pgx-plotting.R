@@ -1795,7 +1795,7 @@ plotly2ggplot <- function (plot, width=NULL, height=NULL, scale=1, hjust=0, vjus
 }
 
 #' @export
-gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL,
+gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ticklen=0.25,
                           ylab=NULL, yth=1, tooltips=NULL, cex.text=1)
 {
     if(is.null(xlab))
@@ -1826,8 +1826,8 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL,
     qq <- range(fc)
     ##qq <- c(min(fc,na.rm=TRUE),max(fc,na.rm=TRUE)) * 0.8
     y1 <- qq[2]
-    y0 <- qq[1]
-    dy <- 0.2*(y1-y0)
+    y0 <- 0.8 * qq[1]
+    dy <- ticklen*(y1-y0)
     if(max(rnk.trace) >= abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y1)
     if(max(rnk.trace) < abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y0)
 
@@ -1875,41 +1875,58 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL,
     ii = seq(1,nrow(df),round(nrow(df)/200))
     fig <- plotly::plot_ly() %>%
         plotly::add_trace(
-            x = ~df$x[ii], y = ~df$y[ii],
-            type = 'scatter', fill = 'tozeroy',
+            ## -------- grey ordered line
+            x = ~df$x[ii],
+            y = ~df$y[ii],
+            type = 'scatter',
+            mode = "lines",
+            fill = 'tozeroy',
             fillcolor = '#BBBBBB',
+            line = list( color = '#BBBBBB', width=0 ),
             hoverinfo = 'skip',
             mode = 'none' )  %>%
         plotly::add_trace(
+            ## -------- green score line
             x = ~df$x, y = ~df$trace,
-            type = 'scatter', mode = 'lines',
+            type = 'scatter',
+            mode = 'lines',
             hoverinfo = 'skip',
             line = list(
                 color = '#00EE00',
                 width = 4
             ))  %>%
         plotly::add_trace(
-            ## orange points of genes
-            x = ~df$x[jj], y = ~df$y[jj],
+            ## -------- orange points of genes
+            x = ~df$x[jj],
+            y = ~df$y[jj],
             type = 'scatter', ## fill = 'toself', ## mode = 'none',
+            mode = "markers",
             marker = list( color = '#FF8C00', size=cex*6 ),
             text = tooltips2,
-            hoveron = 'points', hoverinfo='text') %>%
+            hoveron = 'points',
+            hoverinfo='text') %>%
         plotly::add_segments(
-            x = df$x[jj], xend = df$x[jj],
-            y = y0 - 0.98*dy, yend = y0,
-            type = 'scatter', mode='lines',
+            ## -------- black segments1
+            x = df$x[jj],
+            xend = df$x[jj],
+            y = y0 - 0.98*dy,
+            yend = y0,
+            type = 'scatter',
+            mode='lines',
             line = list(color = '#444444', width=1.5*cex),
             text = rownames(df)[jj],
-            hoveron = 'points', hoverinfo='text'
+            hoveron = 'points',
+            hoverinfo='text'
         )
 
     ## colorbar/color scale
     for(i in 1:nrow(cbar)) {
         fig <- fig %>%
             plotly::add_segments(
-                x = cbar$x[i], xend = cbar$xend[i],
-                y = y0 - 0.9*dy, yend = y0 - 0.9*dy,
+                x = cbar$x[i],
+                xend = cbar$xend[i],
+                y = y0 - 0.95*dy,
+                yend = y0 - 0.95*dy,
                 ##type = 'scatter', mode='lines',
                 line = list(color=cbar$color[i], width=32)
         )
