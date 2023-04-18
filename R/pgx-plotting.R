@@ -1894,20 +1894,21 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ticklen=0.25,
                 width = cex*4
             ))  %>%
         plotly::add_trace(
-            ## -------- orange points of genes
+            ## -------- black points of (geneset genes)
             x = ~df$x[jj],
             y = ~df$y[jj],
             type = 'scatter', ## fill = 'toself', ## mode = 'none',
             mode = "markers",
             marker = list(
-              color = '#FF8C00',
+              ## color = '#FF8C00',
+              color = '#444444',              
               size = cex*6
             ),
             text = tooltips2,
             hoveron = 'points',
             hoverinfo='text') %>%
         plotly::add_segments(
-            ## -------- black segments1
+            ## -------- black segments1 (geneset genes)
             x = df$x[jj],
             xend = df$x[jj],
             y = y0 - 0.98*dy,
