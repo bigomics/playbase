@@ -1796,7 +1796,7 @@ plotly2ggplot <- function (plot, width=NULL, height=NULL, scale=1, hjust=0, vjus
 
 #' @export
 gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ticklen=0.25,
-                          ylab=NULL, yth=1, tooltips=NULL, cex.text=1)
+                          ylab=NULL, yth=1, tooltips=NULL, cex.text=1, cbar.width=32)
 {
     if(is.null(xlab))
         xlab <- "Rank in ordered dataset"
@@ -1822,9 +1822,7 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ticklen=0.25,
     rnk.trace <- (r1 - r0)
     rnk.trace <- rnk.trace / max(abs(rnk.trace)) * 0.8
 
-    qq <- quantile(fc,probs=c(0.005,0.995),na.rm=TRUE)
     qq <- range(fc)
-    ##qq <- c(min(fc,na.rm=TRUE),max(fc,na.rm=TRUE)) * 0.8
     y1 <- qq[2]
     y0 <- 0.8 * qq[1]
     dy <- ticklen*(y1-y0)
@@ -1847,7 +1845,7 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ticklen=0.25,
     cpal <- colorspace::diverge_hcl(64)
 
     ## colorbar segments
-    db <-  nrow(df)/11
+    db <- nrow(df)/11
     bb <- round(seq(1, nrow(df), db))
     cbar.x    <- df$x[bb]
     cbar.xend <- df$x[c(bb[-1],nrow(df))]
@@ -1868,7 +1866,7 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ticklen=0.25,
     jj <- which(rownames(df) %in% gset)
     tooltips2 = rownames(df)[jj]
     if(!is.null(tooltips)) {
-        sel.tt <- match(rownames(df)[jj],names(tooltips))
+        sel.tt <- match(tooltips2,names(tooltips))
         tooltips2 <- paste0('<b>',tooltips2,'</b><br>',tooltips[sel.tt])
     }
 
@@ -1893,7 +1891,7 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ticklen=0.25,
             hoverinfo = 'skip',
             line = list(
                 color = '#00EE00',
-                width = 4
+                width = cex*4
             ))  %>%
         plotly::add_trace(
             ## -------- orange points of genes
@@ -1901,7 +1899,10 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ticklen=0.25,
             y = ~df$y[jj],
             type = 'scatter', ## fill = 'toself', ## mode = 'none',
             mode = "markers",
-            marker = list( color = '#FF8C00', size=cex*6 ),
+            marker = list(
+              color = '#FF8C00',
+              size = cex*6
+            ),
             text = tooltips2,
             hoveron = 'points',
             hoverinfo='text') %>%
@@ -1928,7 +1929,7 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ticklen=0.25,
                 y = y0 - 0.95*dy,
                 yend = y0 - 0.95*dy,
                 ##type = 'scatter', mode='lines',
-                line = list(color=cbar$color[i], width=32)
+                line = list(color=cbar$color[i], width=cbar.width)
         )
     }
 
@@ -1954,10 +1955,9 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ticklen=0.25,
     fig <- fig %>%
         plotly::layout(
             font = list(size=12*cex.text),
-            title = list(text=main, y=0.99),
+            title = list(text=main, y=0.99, font=list(size=18*cex.text)),
             xaxis = list(title = xlab, gridwidth=0.3),
-            yaxis = list(title = ylab, gridwidth=0.3,
-                         range=c(y0-1.1*dy,y1) )) %>%
+            yaxis = list(title = ylab, gridwidth=0.3, range=c(y0-1.1*dy,y1) )) %>%
         plotly::config(toImageButtonOptions = list(format = "svg")) %>%
         plotly::hide_legend()
 
@@ -1992,9 +1992,7 @@ ggenplot <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ylab=NULL)
     rnk.trace <- (r1 - r0)
     rnk.trace <- rnk.trace / max(abs(rnk.trace)) * 0.8
 
-    qq <- quantile(fc,probs=c(0.005,0.995),na.rm=TRUE)
     qq <- range(fc)
-    ##qq <- c(min(fc,na.rm=TRUE),max(fc,na.rm=TRUE)) * 0.8
     y1 <- qq[2]
     y0 <- qq[1]
     dy <- 0.2*(y1-y0)
@@ -3811,7 +3809,7 @@ plotlyVolcano <- function(x, y, names, source="plot1", group.names=c("group1","g
         plotly::config(displayModeBar = displayModeBar)
 
     xann <- c(0.01,0.99)
-    yann <- c(1,1)*1.04
+    yann <- c(1,1)*1.02
     ann.text <- paste("UP in", group.names[c(2,1)])
 
     p <- p %>%
