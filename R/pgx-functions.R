@@ -1652,25 +1652,36 @@ correctMarchSeptemberGenes <- function(gg) {
 cor.pvalue <- function(x,n) pnorm(-abs(x/((1-x**2)/(n-2))**0.5))
 
 #' @export
-getGSETS <- function(gs, lib.dir) {
-  GENE.SYMBOL = unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
-  FAMILIES <- pgx.getGeneFamilies(GENE.SYMBOL, FILES=lib.dir, min.size=10, max.size=9999)
-  fam.file <- file.path(lib.dir,"custom-families.gmt")
-  if(file.exists(fam.file)) {
-      custom.gmt = read.gmt(file.path(lib.dir,"custom-families.gmt"),add.source=TRUE)
-      names(custom.gmt)
-      FAMILIES= c(FAMILIES, custom.gmt)
-  }
-  FAMILIES[["<all>"]] <- GENE.SYMBOL
-  f1 <- FAMILIES
-  names(f1) <- paste0("FAMILY:",names(f1))
-  names(f1) <- sub("FAMILY:<all>","<all>",names(f1))
-  GSETS <- c(GSETS,f1)
+getGSETS <- function(pattern, lib.dir, custom_families_file = "custom-families.gmt") {
+    #get gene symbols
+    GENE.SYMBOL = unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
+    # get f1 and families
+    FAMILIES <- pgx.getGeneFamilies(GENE.SYMBOL, FILES=lib.dir, min.size=10, max.size=9999)
+    fam.file <- file.path(lib.dir,custom_families_file)
+    if(file.exists(fam.file)) {
+        custom.gmt = read.gmt(file.path(lib.dir,custom_families_file),add.source=TRUE)
+        names(custom.gmt)
+        FAMILIES= c(FAMILIES, custom.gmt)
+    }
+    FAMILIES[["<all>"]] <- GENE.SYMBOL
+    f1 <- FAMILIES
+    names(f1) <- paste0("FAMILY:",names(f1))
+    names(f1) <- sub("FAMILY:<all>","<all>",names(f1))
 
-  GSET.GENES <- sort(unique(unlist(GSETS)))  ## slow...
-  iGSETS <- parallel::mclapply(GSETS, function(a) match(a,GSET.GENES))  ## slow...
-  names(iGSETS) <- names(GSETS)
-  lapply(iGSETS[gs],function(i) GSET.GENES[i])
+    # get GSETS
+    GSETS <- c(playbase::GSETS,f1)
+
+    # to get iGSETS
+    GSET.GENES <- sort(unique(unlist(GSETS)))  ## slow...
+    iGSETS <- parallel::mclapply(GSETS, function(a) match(a,GSET.GENES))  ## slow...
+    gs = grep(pattern, names(iGSETS), value = TRUE)
+    names(iGSETS) <- names(GSETS)
+
+
+
+
+    lapply(iGSETS[gs],function(i) GSET.GENES[i])
+  
 }
 
 ##=====================================================================================

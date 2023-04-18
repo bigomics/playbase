@@ -108,7 +108,7 @@ pgx.wgcna <- function(
         #progress$inc(0, "Calculating module enrichment...")
 
         gmt <- getGSETS(
-            grep("HALLMARK|GOBP|^C[1-9]", names(iGSETS), value = TRUE),
+            pattern = "HALLMARK|GOBP|^C[1-9]",
             lib.dir = lib.dir
             )
         gse <- NULL
