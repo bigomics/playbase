@@ -635,17 +635,18 @@ pgx.deconvolution <- function(X, ref,
         }
     }
 
-    if(FALSE && "DeconRNAseq" %in% methods) {
+    if("DeconRNAseq" %in% methods) {
         ## IK17.04.2023 ************ BROKEN *******************
         ## ---- needs psych & pcaMethods inside namespace----
-        
+
         ## DeconRNAseq
         if("package:Seurat" %in% search()) detach("package:Seurat", unload=TRUE)
         dbg("[pgx.deconvolution] calculating DeconRNAseq...")
 
         ## DeconRNASeq need psych and pcaMethods, so we temporarily
         ## load the library...
-        ##require(psych);require(pcaMethods)
+        require(psych)
+        require(pcaMethods)
         drs <- NULL
         stime <- system.time(suppressMessages(suppressWarnings(
             drs <- try(DeconRNASeq::DeconRNASeq(data.frame(mat, check.names=FALSE),
