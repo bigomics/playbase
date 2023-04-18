@@ -1652,7 +1652,7 @@ correctMarchSeptemberGenes <- function(gg) {
 cor.pvalue <- function(x,n) pnorm(-abs(x/((1-x**2)/(n-2))**0.5))
 
 #' @export
-getGSETS <- function(pattern, lib.dir, custom_families_file = "custom-families.gmt") {
+getGSETS_playbase <- function(pattern, lib.dir = FILES, custom_families_file = "custom-families.gmt") {
     #get gene symbols
     GENE.SYMBOL = unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
     # get f1 and families
