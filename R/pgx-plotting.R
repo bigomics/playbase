@@ -3313,7 +3313,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     if(label.clusters) {
         mpos <- apply(pos,2,function(x) tapply(x,z1,median))
         # If there is only one cluster
-        if(length(unique(z1))){
+        if(length(unique(z1)) == 1){
           mpos <- data.frame(mpos[1], mpos[2])
           mlab <- unique(z1)
         } else {
