@@ -3312,7 +3312,13 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     ## label cluster
     if(label.clusters) {
         mpos <- apply(pos,2,function(x) tapply(x,z1,median))
-        mlab <- rownames(mpos)
+        # If there is only one cluster
+        if(length(unique(z1)) == 1){
+          mpos <- data.frame(mpos[1], mpos[2])
+          mlab <- unique(z1)
+        } else {
+          mlab <- rownames(mpos)
+        }
         ##if(!is.null(labels)) mlab <- labels[rownames(mpos)]
         plt <- plt %>%
             plotly::add_annotations(
