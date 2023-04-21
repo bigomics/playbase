@@ -214,15 +214,15 @@ compute_deconvolution <- function(ngs, rna.counts=ngs$counts, full=FALSE) {
     ## list of reference matrices
     refmat <- list()
     #readSIG <- function(f) read.csv(file.path(lib.dir,"sig",f), row.names=1, check.names=FALSE)
-    refmat[["Immune cell (LM22)"]] <- playbase::LM22 # read.csv(file.path(lib.dir,"sig/LM22.txt"),sep="\t",row.names=1)
-    refmat[["Immune cell (ImmProt)"]] <- playbase::IMMPROT_SIGNATURE1000 #readSIG("immprot-signature1000.csv")
-    refmat[["Immune cell (DICE)"]] <- playbase::DICE_SIGNATURE1000 #readSIG("DICE-signature1000.csv")
-    refmat[["Immune cell (ImmunoStates)"]] <- playbase::IMMUNOSTATES_MATRIX #readSIG("ImmunoStates_matrix.csv")
-    refmat[["Tissue (HPA)"]]       <- playbase::RNA_TISSUE_MATRIX #readSIG("rna_tissue_matrix.csv")
-    refmat[["Tissue (GTEx)"]]      <- playbase::GTEX_RNA_TISSUE_TPM #readSIG("GTEx_rna_tissue_tpm.csv")
-    refmat[["Cell line (HPA)"]]    <- playbase::HPA_RNA_CELLINE #readSIG("HPA_rna_celline.csv")
-    refmat[["Cell line (CCLE)"]]   <- playbase::CCLE_RNA_CELLINE #readSIG("CCLE_rna_celline.csv")
-    refmat[["Cancer type (CCLE)"]] <- playbase::CCLE_RNA_CANCERTYPE #readSIG("CCLE_rna_cancertype.csv")
+    refmat[["Immune cell (LM22)"]] <- playdata::LM22 # read.csv(file.path(lib.dir,"sig/LM22.txt"),sep="\t",row.names=1)
+    refmat[["Immune cell (ImmProt)"]] <- playdata::IMMPROT_SIGNATURE1000 #readSIG("immprot-signature1000.csv")
+    refmat[["Immune cell (DICE)"]] <- playdata::DICE_SIGNATURE1000 #readSIG("DICE-signature1000.csv")
+    refmat[["Immune cell (ImmunoStates)"]] <- playdata::IMMUNOSTATES_MATRIX #readSIG("ImmunoStates_matrix.csv")
+    refmat[["Tissue (HPA)"]]       <- playdata::RNA_TISSUE_MATRIX #readSIG("rna_tissue_matrix.csv")
+    refmat[["Tissue (GTEx)"]]      <- playdata::GTEX_RNA_TISSUE_TPM #readSIG("GTEx_rna_tissue_tpm.csv")
+    refmat[["Cell line (HPA)"]]    <- playdata::HPA_RNA_CELLINE #readSIG("HPA_rna_celline.csv")
+    refmat[["Cell line (CCLE)"]]   <- playdata::CCLE_RNA_CELLINE #readSIG("CCLE_rna_celline.csv")
+    refmat[["Cancer type (CCLE)"]] <- playdata::CCLE_RNA_CANCERTYPE #readSIG("CCLE_rna_cancertype.csv")
 
     ## list of methods to compute
     ##methods = DECONV.METHODS
@@ -347,7 +347,7 @@ compute_drugActivityEnrichment <- function(ngs) {
         ## --------------- attach annotation
         annot0 <- NULL
         if(is.drug) {
-            annot0 <- playbase::L1000_REPRURPOSING_DRUGS
+            annot0 <- playdata::L1000_REPRURPOSING_DRUGS
             annot0$drug <- annot0$pert_iname
             rownames(annot0) <- annot0$pert_iname
         } else {

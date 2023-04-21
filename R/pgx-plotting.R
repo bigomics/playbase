@@ -1901,7 +1901,7 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ticklen=0.25,
             mode = "markers",
             marker = list(
               ## color = '#FF8C00',
-              color = '#444444',              
+              color = '#444444',
               size = cex*6
             ),
             text = tooltips2,
@@ -2179,7 +2179,7 @@ plot_ggscatter <- function(x, y=NULL, col=NULL, main=NULL,
     if(!is.null(col)) df$col <- col
     if(!is.null(shape)) df$shape <- shape
     Matrix::head(df)
-    is.factor <- class(type.convert(as.character(col)))=="factor"
+    is.factor <- class(type.convert(as.character(col), as.is=TRUE))=="factor"
     if(is.factor) {
         p <- ggplot2::ggplot(df, ggplot2::aes(y=y, x=x, color=col, shape=shape)) +
             ggplot2::geom_point(size = 2.0*cex) +

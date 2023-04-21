@@ -30,7 +30,7 @@ compute_testGenesets <- function(pgx,
     ##-----------------------------------------------------------
     ## Load huge geneset matrix
     ##-----------------------------------------------------------
-    G <- playbase::GSET_SPARSEG_XL
+    G <- playdata::GSET_SPARSEG_XL
     G <- Matrix::t(G)
     dim(G)
 
