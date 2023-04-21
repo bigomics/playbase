@@ -121,5 +121,6 @@ And extra modules are as follows:
 - deconv
 - infer
 - drugs
+- graph
 - connectivity
 - wordcloud
