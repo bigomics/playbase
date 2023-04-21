@@ -5,6 +5,47 @@
 
 ##access.dirs=FILESX
 
+#' @export
+pgx.load <- function(file, verbose=0) {
+  local(get(load(file, verbose=verbose)))
+}
+
+#' @export
+ngs.save <- function(ngs, file, update.date=TRUE, light=TRUE, system=FALSE) {
+  message("warning: ngs.save() is deprecated. please use pgx.save()")
+  pgx.save(ngs, file=file, update.date=update.date, light=light, system=system)    
+}
+
+#' @export
+pgx.save <- function(pgx, file, update.date=TRUE, light=TRUE, system=FALSE) {
+
+    if(update.date||is.null(pgx$date)) pgx$date <- Sys.Date()
+
+    if(light) {
+        ## ------- make a light version
+        pgx$gx.meta$outputs <- NULL
+        pgx$gset.meta$outputs <- NULL
+        pgx$model.parameters$efit <- NULL
+        pgx$gmt.all <- NULL
+        pgx$families <- NULL
+        pgx$collections <- NULL
+        ## pgx$counts <- NULL
+        pgx$gset.meta$matrices <- NULL
+    }
+    if(system==FALSE) {
+        ## remove system (is big...)
+        pgx$omicsnet <- NULL
+        pgx$omicsnet.reduced <- NULL
+    }
+    sort(sapply(pgx, object.size)) / 1e9
+    sum(sapply(pgx, object.size)) / 1e9
+
+    cat(">>> saving PGX file to",file,"\n")
+    file <- iconv(file, from = '', to = 'ASCII//TRANSLIT')
+    save(pgx, file=file)
+}
+
+
 ##filter.get="omicsplayground";from=NULL;to=NULL;unique=TRUE
 #' @export
 pgx.parseAccessLogs <- function(logs.dir, from=NULL, to=NULL,
@@ -331,7 +372,6 @@ pgx.readDatasetProfiles1 <- function(pgx.dir, file="datasets-allFC.csv",
 }
 
 
-file="datasets-info.csv";force=FALSE
 #' @export
 pgx.scanInfoFile <- function(pgx.dir, file="datasets-info.csv", force=FALSE, verbose=TRUE)
 {
