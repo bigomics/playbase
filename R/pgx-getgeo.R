@@ -8,7 +8,6 @@
 ## Query GEO
 ##-------------------------------------------------------------------------------------
 
-
 #' @export
 pgx.getGEOseries <- function(id, archs.h5="human_matrix.h5", convert.hugo=TRUE)
 {
@@ -992,27 +991,5 @@ parse_geo_series_matrix <- function(SERIES_FILE,
     res$values <- ex
     res$anno <- anno1
     res
-
-}
-
-if(0) {
-
-    geo <- parse_geo_series_matrix(
-        SERIES_FILE = "GSE44770_series_matrix.txt",
-        PLATFORM_FILE = "platform.txt",
-        GENE_COLUMN = "ORF",
-        EXPRESSION_OUTPUT_FILE = "expression.csv",
-        ANNOTATION_OUTPUT_FILE = "samples.csv",
-        write.file=TRUE
-    )
-
-    names(geo)
-    head(geo$values)
-    min(geo$values, na.rm=TRUE)
-    head(geo$anno)
-
-    counts <- 2**(pmax(3 + 3*geo$values,0))
-    hist( log2(counts[,1]), breaks=100)
-    write.csv(counts, file="counts.csv")
 
 }
