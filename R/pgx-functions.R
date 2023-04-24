@@ -856,35 +856,6 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat=2, max.ncat=20, remove.dup
 }
 
 
-#' @export
-ngs.save <- function(ngs, file, update.date=TRUE, light=TRUE, system=FALSE) {
-
-    if(update.date||is.null(ngs$date)) ngs$date <- Sys.Date()
-
-    if(light) {
-        ## ------- make a light version
-        ngs$gx.meta$outputs <- NULL
-        ngs$gset.meta$outputs <- NULL
-        ngs$model.parameters$efit <- NULL
-        ngs$gmt.all <- NULL
-        ngs$families <- NULL
-        ngs$collections <- NULL
-        ## ngs$counts <- NULL
-        ngs$gset.meta$matrices <- NULL
-    }
-    if(system==FALSE) {
-        ## remove system (is big...)
-        ngs$omicsnet <- NULL
-        ngs$omicsnet.reduced <- NULL
-    }
-    sort(sapply(ngs, object.size)) / 1e9
-    sum(sapply(ngs, object.size)) / 1e9
-
-    cat(">>> saving PGX file to",file,"\n")
-    file <- iconv(file, from = '', to = 'ASCII//TRANSLIT')
-    save(ngs, file=file)
-}
-
 ##comp=1;level="geneset";probe=rownames(ngs$gsetX)[1]
 #' @export
 getLevels <- function(Y) {

@@ -1796,7 +1796,8 @@ plotly2ggplot <- function (plot, width=NULL, height=NULL, scale=1, hjust=0, vjus
 
 #' @export
 gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ticklen=0.25,
-                          ylab=NULL, yth=1, tooltips=NULL, cex.text=1, cbar.width=32)
+                          ylab=NULL, yth=1, tooltips=NULL, cex.text=1, cex.title=1.4,
+                          cbar.width=32)
 {
     if(is.null(xlab))
         xlab <- "Rank in ordered dataset"
@@ -1861,7 +1862,6 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ticklen=0.25,
     ##cat("irnk=",irnk,"\n")
     cbar <- data.frame( x=cbar.x, xend=cbar.xend, color=cc[irnk])
 
-    cex.title=1
     df$text = rownames(df)
     jj <- which(rownames(df) %in% gset)
     tooltips2 = rownames(df)[jj]
@@ -1956,7 +1956,7 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ticklen=0.25,
     fig <- fig %>%
         plotly::layout(
             font = list(size=12*cex.text),
-            title = list(text=main, y=0.99, font=list(size=18*cex.text)),
+            title = list(text=main, y=0.99, font=list(size=12*cex.title)),
             xaxis = list(title = xlab, gridwidth=0.3),
             yaxis = list(title = ylab, gridwidth=0.3, range=c(y0-1.1*dy,y1) )) %>%
         plotly::config(toImageButtonOptions = list(format = "svg")) %>%
@@ -3382,7 +3382,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                 type = "rect",
                 ##fillcolor = "red",
                 line = list(
-                  color = "#888",
+                  color = "#666",
                   width = 0.1
                 ),
                 xref = "paper",
