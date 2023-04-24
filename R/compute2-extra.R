@@ -313,7 +313,7 @@ compute_drugActivityEnrichment <- function(ngs) {
 
     ## -------------- drug enrichment
     # get drug activity databases
-    ref.db <- grep('L1000_*',data(package='playbase')$results[,'Item'],value=T)
+    ref.db <- grep('L1000_*',data(package='playdata')$results[,'Item'],value=T)
     ref.db <- ref.db[ref.db != 'L1000_REPRURPOSING_DRUGS']
 
     if(length(ref.db)==0) {
