@@ -282,7 +282,6 @@ pgx.initDatasetFolder <- function(pgx.dir, verbose=TRUE, force=FALSE)
     ##
     i=1
     for(i in 1:length(pgx.dir)) {
-        ## pgx.initDatasetFolder(pgx.dir[i], verbose=verbose, force=force)
         if(!dir.exists(pgx.dir[i])) next()
 
         ## skip if no pgx files
@@ -498,11 +497,12 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
     for(pgxfile in pgx.missing) {
 
         pgxfile1 <- file.path(pgx.dir1,pgxfile)
+        pgxfile1 <- paste0(sub("[.]pgx$","",pgxfile1),".pgx")
         ##try.error <- try( load(file.path(pgx.dir1,pgxfile),verbose=0) )
         pgx <- try(local(get(load(pgxfile1, verbose = 0)))) ## override any name
 
         if("try-error" %in% class(pgx)) {
-            message(paste("[initDatasetFolder1] ERROR in loading PGX file:",pgxfile,". skipping\n"))
+            message(paste("[initDatasetFolder1] ERROR in loading PGX file:",pgxfile1,". skipping\n"))
             next()
         }                
 
