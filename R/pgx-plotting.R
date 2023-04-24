@@ -3382,7 +3382,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                 type = "rect",
                 ##fillcolor = "red",
                 line = list(
-                  color = "#888",
+                  color = "#666",
                   width = 0.1
                 ),
                 xref = "paper",
