@@ -3,27 +3,30 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-ALL.GENESET.METHODS = c("fisher","ssgsea","gsva", "spearman", "camera", "fry",
-                        ##"plage", "cuda.gsea", "enricher",
-                        "gsea.permPH","gsea.permGS","gseaPR","fgsea")
-methods=ALL.GENESET.METHODS
-methods=c("fisher","ssgsea","gsva","fgsea","gseaPR")
-methods=c("gsva","camera")
-methods=c("fisher","gsva","fgsea")
-use.multicore=TRUE
-
-mc.threads=1
-if(0) {
-    X=ngs$X;Y=ngs$samples;design=ngs$model.parameters$design;G=ngs$GMT
-    contr.matrix=ngs$model.parameters$contr.matrix;
-    mc.cores=1;mc.threads=1;batch.correct=TRUE
-    methods=c("fisher","gsva","fgsea")
-}
-
+#' Title
+#'
+#' @param gmt
+#' @param X
+#' @param Y
+#' @param G
+#' @param design
+#' @param contr.matrix
+#' @param methods
+#' @param mc.threads
+#' @param mc.cores
+#' @param batch.correct
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, methods,
                                             mc.threads=1, mc.cores=NULL, batch.correct=TRUE)
 {
+
+  ALL.GENESET.METHODS = c("fisher","ssgsea","gsva", "spearman", "camera", "fry",
+                          "gsea.permPH","gsea.permGS","gseaPR","fgsea")
+
     timings <- c()
 
     if(is.null(mc.cores)) {
@@ -586,7 +589,19 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
 
 ##trend=TRUE;gsetX=zx.gsva;conform.output=TRUE
 ##trend=TRUE;gsetX=zx.rnkcorr;conform.output=TRUE
+
+#' Title
+#'
+#' @param gsetX
+#' @param contr.matrix
+#' @param design
+#' @param trend
+#' @param conform.output
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gset.fitContrastsWithLIMMA <- function( gsetX, contr.matrix, design,
                                        trend=TRUE,conform.output=FALSE)
 {
@@ -664,7 +679,15 @@ gset.fitContrastsWithLIMMA <- function( gsetX, contr.matrix, design,
 ##======================================================================
 
 ##path="output_GSEA"
+
+#' Title
+#'
+#' @param path
+#'
+#' @return
 #' @export
+#'
+#' @examples
 getGeneSetTables <- function(path) {
     dd = dir(path,full.names=TRUE)
     dd
@@ -718,7 +741,17 @@ getGeneSetTables <- function(path) {
 ##======================= GSEA METHODS =================================
 ##======================================================================
 
+
+#' Title
+#'
+#' @param gmt
+#' @param bg
+#' @param use.multicore
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gmt2mat.nocheck <- function(gmt, bg=NULL, use.multicore=TRUE)
 {
     ##max.genes=-1;ntop=-1;sparse=TRUE;bg=NULL;normalize=FALSE;r=0.01;use.multicore=TRUE
@@ -756,13 +789,30 @@ gmt2mat.nocheck <- function(gmt, bg=NULL, use.multicore=TRUE)
     D
 }
 
+
+#' Title
+#'
+#' @param s
+#' @param n
+#'
+#' @return
 #' @export
+#'
+#' @examples
 shortstring <- function(s,n) {
     s=as.character(s);
     ifelse(nchar(s)<=n,s,paste0(substring(s,1,n),"..."))
 }
 
+
+#' Title
+#'
+#' @param path
+#'
+#' @return
 #' @export
+#'
+#' @examples
 getGseaOutputDir <- function(path) {
     ## untangle Gsea subfolder
     gsea_dir = dir(path)[grep("\\.Gsea\\.",dir(path))]
@@ -775,7 +825,15 @@ getGseaOutputDir <- function(path) {
     return(gsea_dir)
 }
 
+
+#' Title
+#'
+#' @param path
+#'
+#' @return
 #' @export
+#'
+#' @examples
 getGseaTable <- function(path) {
     ff = dir(path,full.names=TRUE)
     report_name = ff[grep("gsea_report.txt$",ff)]
@@ -790,7 +848,16 @@ getGseaTable <- function(path) {
     return(R)
 }
 
+
+#' Title
+#'
+#' @param gsets
+#' @param gsea_dir
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gseaSnapshot <- function(gsets, gsea_dir) {
     enplots = dir(gsea_dir, pattern="enplot_")
     enplots0 = dir(gsea_dir, pattern="enplot_", full.names=TRUE)

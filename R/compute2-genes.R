@@ -3,23 +3,20 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-## Workflow for differential expression analysis (at gene level)
-##
-## Input:  contr.matrix to be defined using group as levels
-##
-##
-##
-##
-##
-
-##SAVE.PARAMS <- ls()
-if(0) {
-    max.features=20000;type="counts"
-    test.methods=c("ttest.welch","trend.limma","edger.qlf","deseq2.wald")
-    test.methods=c("trend.limma","edger.qlf","deseq2.wald")
-}
-
+#' Title
+#'
+#' @param pgx
+#' @param contr.matrix
+#' @param max.features
+#' @param test.methods
+#' @param use.design
+#' @param prune.samples
+#' @param remove.outputs
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_testGenes <- function(pgx, contr.matrix, max.features=1000,
                               test.methods=c("trend.limma","deseq2.wald","edger.qlf"),
                               use.design = TRUE, prune.samples=FALSE,
@@ -56,16 +53,21 @@ compute_testGenes <- function(pgx, contr.matrix, max.features=1000,
     return(pgx)
 }
 
-if(0) {
-    test.methods=c("trend.limma")
-    test.methods=c("ttest.welch","trend.limma","edger.qlf")
-    max.features=25000;type="counts";filter.low=TRUE
-    use.design = TRUE; prune.samples=FALSE;
-    contr.matrix = pgx$contrast
-}
-
-##contr.matrix=pgx$contrasts
+#' Title
+#'
+#' @param pgx
+#' @param contr.matrix
+#' @param max.features
+#' @param filter.low
+#' @param remove.outputs
+#' @param use.design
+#' @param prune.samples
+#' @param test.methods
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features=1000,
                                          filter.low = TRUE, remove.outputs=TRUE,
                                          use.design = TRUE, prune.samples=FALSE,
@@ -350,7 +352,21 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features=1000,
     return(pgx)
 }
 
+
+#' Title
+#'
+#' @param pgx
+#' @param contr.matrix
+#' @param max.features
+#' @param test.methods
+#' @param use.design
+#' @param prune.samples
+#' @param remove.outputs
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_testGenesMultiOmics <- function(pgx, contr.matrix, max.features=1000,
                                         test.methods=c("trend.limma","deseq2.wald","edger.qlf"),
                                         use.design=TRUE, prune.samples = FALSE,
@@ -427,7 +443,4 @@ compute_testGenesMultiOmics <- function(pgx, contr.matrix, max.features=1000,
     return(pgx)
 }
 
-## ---------- clean up ----------------
-##contr.matrix <- contr.matrix0  ## RESTORE
-##rm(list=setdiff(ls(),SAVE.PARAMS))
 

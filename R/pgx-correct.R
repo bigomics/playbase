@@ -7,7 +7,6 @@
 ##
 ##
 
-## max.rho=0.3;batch.par="*";max.iter=10;hc.top=50;partype=NULL;pca.correct=hc.correct=1;sva.correct=mnn.correct=nnm.correct=0;bio.correct=c("mito","ribo","cell_cycle","gender");lib.correct=TRUE
 #' @export
 pgx.superBatchCorrect <- function(X, pheno, model.par, partype=NULL,
                                   batch.par="*", ## batch.cov="*",
@@ -31,7 +30,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype=NULL,
 
     ## tidy up pheno matrix?? get correct parameter types
     ##pheno <- tidy.dataframe(pheno)
-    pheno <- type.convert(pheno)
+    pheno <- type.convert(pheno, as.is=TRUE)
 
     message("[pgx.superBatchCorrect] 1 : dim.pheno = ",paste(dim(pheno),collapse='x'))
     message("[pgx.superBatchCorrect] 1 : model.par = ",paste(model.par,collapse='x'))

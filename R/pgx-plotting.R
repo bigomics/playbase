@@ -1795,8 +1795,9 @@ plotly2ggplot <- function (plot, width=NULL, height=NULL, scale=1, hjust=0, vjus
 }
 
 #' @export
-gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL,
-                          ylab=NULL, yth=1, tooltips=NULL, cex.text=1)
+gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ticklen=0.25,
+                          ylab=NULL, yth=1, tooltips=NULL, cex.text=1, cex.title=1.4,
+                          cbar.width=32)
 {
     if(is.null(xlab))
         xlab <- "Rank in ordered dataset"
@@ -1822,12 +1823,10 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL,
     rnk.trace <- (r1 - r0)
     rnk.trace <- rnk.trace / max(abs(rnk.trace)) * 0.8
 
-    qq <- quantile(fc,probs=c(0.005,0.995),na.rm=TRUE)
     qq <- range(fc)
-    ##qq <- c(min(fc,na.rm=TRUE),max(fc,na.rm=TRUE)) * 0.8
     y1 <- qq[2]
-    y0 <- qq[1]
-    dy <- 0.2*(y1-y0)
+    y0 <- 0.8 * qq[1]
+    dy <- ticklen*(y1-y0)
     if(max(rnk.trace) >= abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y1)
     if(max(rnk.trace) < abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y0)
 
@@ -1847,7 +1846,7 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL,
     cpal <- colorspace::diverge_hcl(64)
 
     ## colorbar segments
-    db <-  nrow(df)/11
+    db <- nrow(df)/11
     bb <- round(seq(1, nrow(df), db))
     cbar.x    <- df$x[bb]
     cbar.xend <- df$x[c(bb[-1],nrow(df))]
@@ -1863,55 +1862,75 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL,
     ##cat("irnk=",irnk,"\n")
     cbar <- data.frame( x=cbar.x, xend=cbar.xend, color=cc[irnk])
 
-    cex.title=1
     df$text = rownames(df)
     jj <- which(rownames(df) %in% gset)
     tooltips2 = rownames(df)[jj]
     if(!is.null(tooltips)) {
-        sel.tt <- match(rownames(df)[jj],names(tooltips))
+        sel.tt <- match(tooltips2,names(tooltips))
         tooltips2 <- paste0('<b>',tooltips2,'</b><br>',tooltips[sel.tt])
     }
 
     ii = seq(1,nrow(df),round(nrow(df)/200))
     fig <- plotly::plot_ly() %>%
         plotly::add_trace(
-            x = ~df$x[ii], y = ~df$y[ii],
-            type = 'scatter', fill = 'tozeroy',
+            ## -------- grey ordered line
+            x = ~df$x[ii],
+            y = ~df$y[ii],
+            type = 'scatter',
+            mode = "lines",
+            fill = 'tozeroy',
             fillcolor = '#BBBBBB',
+            line = list( color = '#BBBBBB', width=0 ),
             hoverinfo = 'skip',
             mode = 'none' )  %>%
         plotly::add_trace(
+            ## -------- green score line
             x = ~df$x, y = ~df$trace,
-            type = 'scatter', mode = 'lines',
+            type = 'scatter',
+            mode = 'lines',
             hoverinfo = 'skip',
             line = list(
                 color = '#00EE00',
-                width = 4
+                width = cex*4
             ))  %>%
         plotly::add_trace(
-            ## orange points of genes
-            x = ~df$x[jj], y = ~df$y[jj],
+            ## -------- black points of (geneset genes)
+            x = ~df$x[jj],
+            y = ~df$y[jj],
             type = 'scatter', ## fill = 'toself', ## mode = 'none',
-            marker = list( color = '#FF8C00', size=cex*6 ),
+            mode = "markers",
+            marker = list(
+              ## color = '#FF8C00',
+              color = '#444444',
+              size = cex*6
+            ),
             text = tooltips2,
-            hoveron = 'points', hoverinfo='text') %>%
+            hoveron = 'points',
+            hoverinfo='text') %>%
         plotly::add_segments(
-            x = df$x[jj], xend = df$x[jj],
-            y = y0 - 0.98*dy, yend = y0,
-            type = 'scatter', mode='lines',
+            ## -------- black segments1 (geneset genes)
+            x = df$x[jj],
+            xend = df$x[jj],
+            y = y0 - 0.98*dy,
+            yend = y0,
+            type = 'scatter',
+            mode='lines',
             line = list(color = '#444444', width=1.5*cex),
             text = rownames(df)[jj],
-            hoveron = 'points', hoverinfo='text'
+            hoveron = 'points',
+            hoverinfo='text'
         )
 
     ## colorbar/color scale
     for(i in 1:nrow(cbar)) {
         fig <- fig %>%
             plotly::add_segments(
-                x = cbar$x[i], xend = cbar$xend[i],
-                y = y0 - 0.9*dy, yend = y0 - 0.9*dy,
+                x = cbar$x[i],
+                xend = cbar$xend[i],
+                y = y0 - 0.95*dy,
+                yend = y0 - 0.95*dy,
                 ##type = 'scatter', mode='lines',
-                line = list(color=cbar$color[i], width=32)
+                line = list(color=cbar$color[i], width=cbar.width)
         )
     }
 
@@ -1937,10 +1956,9 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL,
     fig <- fig %>%
         plotly::layout(
             font = list(size=12*cex.text),
-            title = list(text=main, y=0.99),
+            title = list(text=main, y=0.99, font=list(size=12*cex.title)),
             xaxis = list(title = xlab, gridwidth=0.3),
-            yaxis = list(title = ylab, gridwidth=0.3,
-                         range=c(y0-1.1*dy,y1) )) %>%
+            yaxis = list(title = ylab, gridwidth=0.3, range=c(y0-1.1*dy,y1) )) %>%
         plotly::config(toImageButtonOptions = list(format = "svg")) %>%
         plotly::hide_legend()
 
@@ -1975,9 +1993,7 @@ ggenplot <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ylab=NULL)
     rnk.trace <- (r1 - r0)
     rnk.trace <- rnk.trace / max(abs(rnk.trace)) * 0.8
 
-    qq <- quantile(fc,probs=c(0.005,0.995),na.rm=TRUE)
     qq <- range(fc)
-    ##qq <- c(min(fc,na.rm=TRUE),max(fc,na.rm=TRUE)) * 0.8
     y1 <- qq[2]
     y0 <- qq[1]
     dy <- 0.2*(y1-y0)
@@ -2163,7 +2179,7 @@ plot_ggscatter <- function(x, y=NULL, col=NULL, main=NULL,
     if(!is.null(col)) df$col <- col
     if(!is.null(shape)) df$shape <- shape
     Matrix::head(df)
-    is.factor <- class(type.convert(as.character(col)))=="factor"
+    is.factor <- class(type.convert(as.character(col), as.is=TRUE))=="factor"
     if(is.factor) {
         p <- ggplot2::ggplot(df, ggplot2::aes(y=y, x=x, color=col, shape=shape)) +
             ggplot2::geom_point(size = 2.0*cex) +
@@ -3296,7 +3312,13 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     ## label cluster
     if(label.clusters) {
         mpos <- apply(pos,2,function(x) tapply(x,z1,median))
-        mlab <- rownames(mpos)
+        # If there is only one cluster
+        if(length(unique(z1)) == 1){
+          mpos <- data.frame(mpos[1], mpos[2])
+          mlab <- unique(z1)
+        } else {
+          mlab <- rownames(mpos)
+        }
         ##if(!is.null(labels)) mlab <- labels[rownames(mpos)]
         plt <- plt %>%
             plotly::add_annotations(
@@ -3360,7 +3382,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                 type = "rect",
                 ##fillcolor = "red",
                 line = list(
-                  color = "#888",
+                  color = "#666",
                   width = 0.1
                 ),
                 xref = "paper",
@@ -3794,7 +3816,7 @@ plotlyVolcano <- function(x, y, names, source="plot1", group.names=c("group1","g
         plotly::config(displayModeBar = displayModeBar)
 
     xann <- c(0.01,0.99)
-    yann <- c(1,1)*1.04
+    yann <- c(1,1)*1.02
     ann.text <- paste("UP in", group.names[c(2,1)])
 
     p <- p %>%

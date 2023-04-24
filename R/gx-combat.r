@@ -9,21 +9,24 @@
 ##
 ########################################################################
 
-
-if(0) {
-    use.design=TRUE;dist.method="cor";center.x=center.m=replace=FALSE;b.method="new"
-    x = ngs$X
-    y = as.character(ngs$samples$rx)
-    ref = 'DMSO'
-}
-
+#' Title
+#'
+#' @param x
+#' @param y
+#' @param ref
+#' @param k
+#' @param dist.method
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.nearestReferenceCorrection.DEPRECATED <- function(x, y, ref, k=3, dist.method="cor")
 {
     ## Nearest-neighbour matching for batch correction. This
     ## implementation substracts explicitly the nearest matching
     ## neighbour. It does not work well with multiple groups.
-    
+
     ## distance metric for matching
     x1 = Matrix::head(x[order(-apply(x,1,sd)),],2000)
     if(dist.method=="cor") {
@@ -39,7 +42,7 @@ gx.nearestReferenceCorrection.DEPRECATED <- function(x, y, ref, k=3, dist.method
         jj <- which(!(y %in% ref))
         D[i,jj] <- NA
     }
-    
+
     dx <- x
     j=1
     pairings <- matrix(NA,ncol(x),k)
@@ -56,15 +59,30 @@ gx.nearestReferenceCorrection.DEPRECATED <- function(x, y, ref, k=3, dist.method
     return(res)
 }
 
+
+#' Title
+#'
+#' @param X
+#' @param y
+#' @param use.design
+#' @param dist.method
+#' @param center.x
+#' @param center.m
+#' @param sdtop
+#' @param replace
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.nnmcorrect <- function(X, y, use.design=TRUE, dist.method="cor",
                           center.x=TRUE, center.m=TRUE, sdtop=1000,
-                          replace=FALSE) 
+                          replace=FALSE)
 {
     ## Nearest-neighbour matching for batch correction. This
     ## implementation creates a fully paired dataset with nearest
     ## matching neighbours when pairs are missing.
-    
+
     ## compute distance matrix for NNM-pairing
     ##y <- factor(as.character(y))
     y1 <- paste0("y=",y)
@@ -85,27 +103,27 @@ gx.nnmcorrect <- function(X, y, use.design=TRUE, dist.method="cor",
         sdx <- apply(dX,1,sd)
         ii <- Matrix::head(order(-sdx),sdtop)
         ##D <- 1 - stats::cor(dX[ii,])
-        D <- 1 - crossprod(scale(dX[ii,])) / (length(ii)-1)  ## faster        
+        D <- 1 - crossprod(scale(dX[ii,])) / (length(ii)-1)  ## faster
     } else {
-        message("[gx.nnmcorrect] computing distance matrix D...\n")        
+        message("[gx.nnmcorrect] computing distance matrix D...\n")
         D <- as.matrix(dist(t(dX)))
     }
     remove(dX)
     D[is.na(D)] <- 0  ## might have NA
-    
+
     ## find neighbours
-    message("[gx.nnmcorrect] finding nearest neighbours...")        
-    B <- t(apply(D,1,function(r) tapply(r,y1,function(s)names(which.min(s)))))   
+    message("[gx.nnmcorrect] finding nearest neighbours...")
+    B <- t(apply(D,1,function(r) tapply(r,y1,function(s)names(which.min(s)))))
     rownames(B) <- colnames(X)
     Matrix::head(B)
-    
+
     ## imputing full paired data set
     kk <- match(as.vector(B), rownames(B))
     full.y <- y1[kk]
     full.pairs <- rep(rownames(B),ncol(B))
     full.X <- X[,kk]
     dim(full.X)
-    
+
     ## remove pairing effect
     message("[gx.nnmcorrect] remove pairing effect...")
     if(use.design) {
@@ -115,9 +133,9 @@ gx.nnmcorrect <- function(X, y, use.design=TRUE, dist.method="cor",
     } else {
         full.X <- limma::removeBatchEffect(full.X, batch=full.pairs)
     }
-    
+
     ## now contract to original samples
-    message("[gx.nnmcorrect] matching result...")    
+    message("[gx.nnmcorrect] matching result...")
     full.idx <- rownames(B)[kk]
     cX <- do.call(cbind, tapply(1:ncol(full.X), full.idx,
                                 function(i) rowMeans(full.X[,i,drop=FALSE])))
@@ -130,7 +148,21 @@ gx.nnmcorrect <- function(X, y, use.design=TRUE, dist.method="cor",
 
 
 pairs=NULL;dist.method="cor"
+
+#' Title
+#'
+#' @param X
+#' @param y
+#' @param pairs
+#' @param use.design
+#' @param center.x
+#' @param center.m
+#' @param dist.method
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.nnmcorrect2.NOTWORKING <- function(X, y, pairs=NULL, use.design=TRUE,
                                       center.x=TRUE, center.m=TRUE,
                                       dist.method="cor")
@@ -138,12 +170,12 @@ gx.nnmcorrect2.NOTWORKING <- function(X, y, pairs=NULL, use.design=TRUE,
     ## Nearest-neighbour matching for batch correction. This
     ## implementation creates a fully paired dataset with nearest
     ## matching neighbours when pairs are missing.
-    
-    
+
+
     y1  <- paste0("y=",y)
     dX  <- scale(X)
     if(center.x)
-        dX <- dX - rowMeans(dX,na.rm=TRUE)    
+        dX <- dX - rowMeans(dX,na.rm=TRUE)
     if(center.m) {
         mX <- tapply(1:ncol(dX), y1, function(i) rowMeans(dX[,i,drop=FALSE],na.rm=TRUE))
         mX <- do.call(cbind,mX)
@@ -174,15 +206,15 @@ gx.nnmcorrect2.NOTWORKING <- function(X, y, pairs=NULL, use.design=TRUE,
     full.pairs <- pairs
     full.pairs[is.na(pairs)] <- nnb.best[is.na(pairs)]
     full.pairs
-    
+
     ## batch correction on full-pair info
     mod = NULL
     if(use.design) {
         mod <- model.matrix(~y)
-        ##cX <- sva::ComBat(X, batch=full.pairs, mod=mod)        
+        ##cX <- sva::ComBat(X, batch=full.pairs, mod=mod)
         cX <- limma::removeBatchEffect(X, batch=full.pairs, design=mod)
     } else {
-        ##cX <- sva::ComBat(X, batch=full.pairs)        
+        ##cX <- sva::ComBat(X, batch=full.pairs)
         cX <- limma::removeBatchEffect(X, batch=full.pairs)
     }
     cX
@@ -190,13 +222,24 @@ gx.nnmcorrect2.NOTWORKING <- function(X, y, pairs=NULL, use.design=TRUE,
     return(res)
 }
 
+
+#' Title
+#'
+#' @param x
+#' @param y
+#' @param k
+#' @param dist.method
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.nnmcorrect.OLD <- function(x, y, k=3, dist.method="cor")
 {
     ## Nearest-neighbour matching for batch correction. This
     ## implementation substracts explicitly the nearest matching
     ## neighbour. It does not work well with multiple groups.
-    
+
     ## distance metric for matching
     if(dist.method=="cor") {
         D <- 1 - stats::cor(x)
@@ -211,7 +254,7 @@ gx.nnmcorrect.OLD <- function(x, y, k=3, dist.method="cor")
         jj <- which(y == y[i])
         D[i,jj] <- NA
     }
-    
+
     dx <- x
     j=1
     pairings <- matrix(NA,ncol(x),k)
@@ -222,12 +265,22 @@ gx.nnmcorrect.OLD <- function(x, y, k=3, dist.method="cor")
         dx[,j] <- x[,j] - rowMeans(x[,nn,drop=FALSE])
         pairings[j,] <- Matrix::head(c(nn,rep(NA,k)),k)
     }
-    cx <- rowMeans(x) + dx / 2    
+    cx <- rowMeans(x) + dx / 2
     res <- list(X=cx, pairings=pairings)
     return(res)
 }
 
+
+#' Title
+#'
+#' @param x
+#' @param y
+#' @param k
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.nnmcorrect.SAVE <- function(x, y, k=3) {
     ##-----------------------------------------------------
     ## nearest-neighbour matching for batch correction
@@ -246,12 +299,20 @@ gx.nnmcorrect.SAVE <- function(x, y, k=3) {
     return(nx)
 }
 
+
+#' Title
+#'
+#' @param X
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.qnormalize <- function(X) {
     ##-----------------------------------------------------
     ## quantile normalization
     ##-----------------------------------------------------
-    
+
     if( max(X, na.rm=TRUE) < 40 && min(X, na.rm=TRUE) > 0) {
         tmp <- normalize.qspline( 2**X, na.rm=TRUE, verbose=FALSE)
         tmp <- log2(tmp)

@@ -3,24 +3,24 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-##extra <- c("meta.go","deconv","infer","drugs")
-##extra <- c("wordcloud")
-EXTRA.MODULES = c("meta.go","deconv","infer","drugs", ## "graph",
-                  "connectivity","wordcloud", "wgcna")
-
+#' Title
+#'
+#' @param ngs
+#' @param extra
+#' @param lib.dir
+#' @param sigdb
+#'
+#' @return
 #' @export
-compute_extra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
-    pgx.computeExtra(ngs, extra=extra, lib.dir=lib.dir, sigdb=sigdb)
-}
-
-#' @export
-pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
+#'
+#' @examples
+compute_extra <- function(ngs, extra=c("meta.go","deconv","infer","drugs", ## "graph",
+  "connectivity","wordcloud","wgcna"), lib.dir, sigdb=NULL) {
 
     timings <- c()
     libx.dir <- paste0(sub("/$","",lib.dir),'x')  ## ../libx yikes....
-    message("[pgx.computeExtra] setting libx.dir =",libx.dir)
+    message("[compute_extra] setting libx.dir =",libx.dir)
 
-    extra <- intersect(extra, EXTRA.MODULES)
     if(length(extra)==0) {
         return(ngs)
     }
@@ -87,7 +87,7 @@ pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
         if(!dir.exists(cmap.dir)) {
             message("Warning:: missing CMAP files. Skipping drug connectivity analysis!")
         }
-        dbg("[pgx.computeExtra] cmap.dir = ",cmap.dir)
+        dbg("[compute_extra] cmap.dir = ",cmap.dir)
 
         if(dir.exists(cmap.dir)) {
 
@@ -205,21 +205,31 @@ pgx.computeExtra <- function(ngs, extra=EXTRA.MODULES, lib.dir, sigdb=NULL) {
 }
 
 ## -------------- deconvolution analysis --------------------------------
+
+#' Title
+#'
+#' @param ngs
+#' @param rna.counts
+#' @param full
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_deconvolution <- function(ngs, rna.counts=ngs$counts, full=FALSE) {
 
     ## list of reference matrices
     refmat <- list()
     #readSIG <- function(f) read.csv(file.path(lib.dir,"sig",f), row.names=1, check.names=FALSE)
-    refmat[["Immune cell (LM22)"]] <- playbase::LM22 # read.csv(file.path(lib.dir,"sig/LM22.txt"),sep="\t",row.names=1)
-    refmat[["Immune cell (ImmProt)"]] <- playbase::IMMPROT_SIGNATURE1000 #readSIG("immprot-signature1000.csv")
-    refmat[["Immune cell (DICE)"]] <- playbase::DICE_SIGNATURE1000 #readSIG("DICE-signature1000.csv")
-    refmat[["Immune cell (ImmunoStates)"]] <- playbase::IMMUNOSTATES_MATRIX #readSIG("ImmunoStates_matrix.csv")
-    refmat[["Tissue (HPA)"]]       <- playbase::RNA_TISSUE_MATRIX #readSIG("rna_tissue_matrix.csv")
-    refmat[["Tissue (GTEx)"]]      <- playbase::GTEX_RNA_TISSUE_TPM #readSIG("GTEx_rna_tissue_tpm.csv")
-    refmat[["Cell line (HPA)"]]    <- playbase::HPA_RNA_CELLINE #readSIG("HPA_rna_celline.csv")
-    refmat[["Cell line (CCLE)"]]   <- playbase::CCLE_RNA_CELLINE #readSIG("CCLE_rna_celline.csv")
-    refmat[["Cancer type (CCLE)"]] <- playbase::CCLE_RNA_CANCERTYPE #readSIG("CCLE_rna_cancertype.csv")
+    refmat[["Immune cell (LM22)"]] <- playdata::LM22 # read.csv(file.path(lib.dir,"sig/LM22.txt"),sep="\t",row.names=1)
+    refmat[["Immune cell (ImmProt)"]] <- playdata::IMMPROT_SIGNATURE1000 #readSIG("immprot-signature1000.csv")
+    refmat[["Immune cell (DICE)"]] <- playdata::DICE_SIGNATURE1000 #readSIG("DICE-signature1000.csv")
+    refmat[["Immune cell (ImmunoStates)"]] <- playdata::IMMUNOSTATES_MATRIX #readSIG("ImmunoStates_matrix.csv")
+    refmat[["Tissue (HPA)"]]       <- playdata::RNA_TISSUE_MATRIX #readSIG("rna_tissue_matrix.csv")
+    refmat[["Tissue (GTEx)"]]      <- playdata::GTEX_RNA_TISSUE_TPM #readSIG("GTEx_rna_tissue_tpm.csv")
+    refmat[["Cell line (HPA)"]]    <- playdata::HPA_RNA_CELLINE #readSIG("HPA_rna_celline.csv")
+    refmat[["Cell line (CCLE)"]]   <- playdata::CCLE_RNA_CELLINE #readSIG("CCLE_rna_celline.csv")
+    refmat[["Cancer type (CCLE)"]] <- playdata::CCLE_RNA_CANCERTYPE #readSIG("CCLE_rna_cancertype.csv")
 
     ## list of methods to compute
     ##methods = DECONV.METHODS
@@ -227,7 +237,7 @@ compute_deconvolution <- function(ngs, rna.counts=ngs$counts, full=FALSE) {
     ## methods <- c("NNLM","cor")
 
     if(full==FALSE) {
-        ## Fast methods, subset of references
+        ## Faster methods, subset of references
         sel = c("Immune cell (LM22)","Immune cell (ImmunoStates)",
                 "Immune cell (DICE)","Immune cell (ImmProt)",
                 "Tissue (GTEx)","Cell line (HPA)","Cancer type (CCLE)")
@@ -253,7 +263,16 @@ compute_deconvolution <- function(ngs, rna.counts=ngs$counts, full=FALSE) {
 }
 
 ## -------------- infer sample characteristics --------------------------------
+
+#' Title
+#'
+#' @param ngs
+#' @param rna.counts
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_cellcycle_gender <- function(ngs, rna.counts=ngs$counts)
 {
     pp <- rownames(rna.counts)
@@ -288,7 +307,15 @@ compute_cellcycle_gender <- function(ngs, rna.counts=ngs$counts)
     return(ngs)
 }
 
+
+#' Title
+#'
+#' @param ngs
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_drugActivityEnrichment <- function(ngs) {
 
     ## -------------- drug enrichment
@@ -327,7 +354,7 @@ compute_drugActivityEnrichment <- function(ngs) {
         ## --------------- attach annotation
         annot0 <- NULL
         if(is.drug) {
-            annot0 <- playbase::L1000_REPRURPOSING_DRUGS
+            annot0 <- playdata::L1000_REPRURPOSING_DRUGS
             annot0$drug <- annot0$pert_iname
             rownames(annot0) <- annot0$pert_iname
         } else {
@@ -360,8 +387,15 @@ compute_drugActivityEnrichment <- function(ngs) {
     return(ngs)
 }
 
-##ref="CTRPv2";cmap.dir="../lib";combo=FALSE
+#' Title
+#'
+#' @param ngs
+#' @param cmap.dir
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_drugSensitivityEnrichment <- function(ngs, cmap.dir)
 {
 
@@ -416,7 +450,15 @@ compute_drugSensitivityEnrichment <- function(ngs, cmap.dir)
 }
 
 ## ------------------ Omics graphs --------------------------------
+
+#' Title
+#'
+#' @param ngs
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_omicsGraphs <- function(ngs) {
     ## gr1$layout <- gr1$layout[igraph::V(gr1)$name,]  ## uncomment to keep entire layout
     ngs$omicsnet <- pgx.createOmicsGraph(ngs)

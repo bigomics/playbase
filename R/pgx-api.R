@@ -4,7 +4,15 @@
 ##
 
 
+
+#' Title
+#'
+#' @param pgx
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.getModelGroups <- function(pgx) {
     model <- pgx$model.parameters$design
     if(is.null(model)) {
@@ -15,8 +23,16 @@ pgx.getModelGroups <- function(pgx) {
     group
 }
 
-##methods=c("trend.limma","edger.qlf","deseq2.wald")
+#' Title
+#'
+#' @param pgx
+#' @param methods
+#' @param level
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.getMetaMatrix <- function(pgx, methods="meta", level="gene")
 {
     fc0 = NULL
@@ -63,20 +79,50 @@ pgx.getMetaMatrix <- function(pgx, methods="meta", level="gene")
     return(res)
 }
 
-## old...
+
+#' Title
+#'
+#' @param pgx
+#' @param what
+#' @param level
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.getMetaFoldChangeMatrix <- function(pgx, what="meta", level="gene")
 {
     pgx.getMetaMatrix(pgx, methods=what, level=level)
 }
 
+
+#' Title
+#'
+#' @param pgx
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.getContrasts <- function(pgx) {
     names(pgx$gx.meta$meta)
 }
 
-n=10
+
+
+#' Title
+#'
+#' @param pgx
+#' @param n
+#' @param ng
+#' @param dir
+#' @param sym
+#' @param filt
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.getTopGeneSets <- function(pgx, n=10, ng=100, dir=0, sym=FALSE, filt=NULL) {
     ## Gets top marker genes for all comparisons
     ##
@@ -102,7 +148,19 @@ pgx.getTopGeneSets <- function(pgx, n=10, ng=100, dir=0, sym=FALSE, filt=NULL) {
     list( gsets=topgs, genes=gs.genes, top.genes=top.genes )
 }
 
+
+#' Title
+#'
+#' @param pgx
+#' @param n
+#' @param dir
+#' @param sym
+#' @param filt
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.getMarkerGenes <- function(pgx, n=10, dir=0, sym=FALSE, filt=NULL) {
     ## Gets top marker genes for all comparisons
     ##
@@ -126,7 +184,17 @@ pgx.getMarkerGenes <- function(pgx, n=10, dir=0, sym=FALSE, filt=NULL) {
     markers
 }
 
+
+#' Title
+#'
+#' @param pgx
+#' @param nmin
+#' @param extended
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.getFamilies <- function(pgx, lib.dir,  nmin=10, extended=FALSE) {
     if(extended) {
         # fam <- grep("^[<].*|^FAMILY|^TISSUE|^COMPARTMENT|^CELLTYPE|^GOCC|^DISEASE|^CUSTOM",

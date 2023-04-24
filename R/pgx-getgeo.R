@@ -4,46 +4,9 @@
 ##
 
 
-if(0) {
-
-    devtools::install_github("mensxmachina/BioDataome")
-
-    res <- GEOquery::getGEO(id)
-    a1 <- (parsePhenoFromName(geo.getTitle(geo[[1]])))
-    a2 <- (parsePhenoFromName(geo.getTitle(geo[[2]])))
-
-    OPG = "/home/kwee/bigomics/omicsplayground"
-    RDIR = file.path(OPG,"R")
-    FILES = file.path(OPG,"lib")
-    PGX.DIR = file.path(OPG,"data")
-    source(file.path(RDIR,"pgx-include.R"))
-
-
-    fd <- data.table::fread("~/Downloads/GSE56192_GeneLevel_Raw_data.csv")
-    X <- as.matrix(fd[,3:ncol(fd)])
-    rownames(X) <- fd$gene_symbol
-    dim(X)
-    meta1 <- pgx.getGeoMetadata("GSE56192")
-    meta2 <- pgx.getGeoMetadata.fromGSM(colnames(X))
-
-
-    ## BiocManager::install("GEOmetadb")
-    id = "GSE21653"  ## BRCA
-    id = "GSE10846"  ## DLBCL
-    id = "GSE53784" ## WINJEV
-    id = "GSE56192" ## SARS
-
-}
-
-
 ##-------------------------------------------------------------------------------------
 ## Query GEO
 ##-------------------------------------------------------------------------------------
-id="GSE100035"
-id="GSE102908"
-id="GSE102908"
-id="GSE141499"
-##ARCHSH5 = file.path(FILESX,"human_matrix.h5")
 
 #' @export
 pgx.getGEOseries <- function(id, archs.h5="human_matrix.h5", convert.hugo=TRUE)
@@ -1028,27 +991,5 @@ parse_geo_series_matrix <- function(SERIES_FILE,
     res$values <- ex
     res$anno <- anno1
     res
-
-}
-
-if(0) {
-
-    geo <- parse_geo_series_matrix(
-        SERIES_FILE = "GSE44770_series_matrix.txt",
-        PLATFORM_FILE = "platform.txt",
-        GENE_COLUMN = "ORF",
-        EXPRESSION_OUTPUT_FILE = "expression.csv",
-        ANNOTATION_OUTPUT_FILE = "samples.csv",
-        write.file=TRUE
-    )
-
-    names(geo)
-    head(geo$values)
-    min(geo$values, na.rm=TRUE)
-    head(geo$anno)
-
-    counts <- 2**(pmax(3 + 3*geo$values,0))
-    hist( log2(counts[,1]), breaks=100)
-    write.csv(counts, file="counts.csv")
 
 }

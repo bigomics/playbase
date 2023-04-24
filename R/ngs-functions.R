@@ -3,7 +3,15 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
+
+#' Title
+#'
+#' @param genes
+#'
+#' @return
 #' @export
+#'
+#' @examples
 ngs.getGeneAnnotation <- function(genes)
 {
 
@@ -113,19 +121,44 @@ ngs.getGeneAnnotation <- function(genes)
     annot
 }
 
+
+#' Title
+#'
+#' @param ngs
+#'
+#' @return
 #' @export
+#'
+#' @examples
 ngs.detectOrganism <- function(ngs) {
     lowcase.ratio <- mean(grepl("[a-z]",substring(rownames(ngs$counts),2,100)))
     c("human","mouse")[1 + 1*(lowcase.ratio>0.5)]
 }
 
+
+#' Title
+#'
+#' @param ngs
+#' @param genes
+#'
+#' @return
 #' @export
+#'
+#' @examples
 ngs.matchFeatures <- function(ngs, genes) {
     jj <- match(toupper(genes), toupper(ngs$genes$gene_name))
     rownames(ngs$genes)[jj]
 }
 
+
+#' Title
+#'
+#' @param ngs
+#'
+#' @return
 #' @export
+#'
+#' @examples
 ngs.collapseByGeneSLOW <- function(ngs) {
     ##sum(duplicated(ngs$genes$gene_name))
     x1 = apply(ngs$counts, 2, function(x) tapply(x, ngs$genes$gene_name, sum))
@@ -136,7 +169,15 @@ ngs.collapseByGeneSLOW <- function(ngs) {
     return(ngs)
 }
 
+
+#' Title
+#'
+#' @param ngs
+#'
+#' @return
 #' @export
+#'
+#' @examples
 ngs.collapseByGene <- function(ngs) {
     ##sum(duplicated(ngs$genes$gene_name))
     gene <- as.character(ngs$genes$gene_name)

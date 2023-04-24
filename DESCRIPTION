@@ -85,6 +85,7 @@ Imports:
     partykit,
     patchwork,
     pcaMethods,
+    playdata,
     plotly,
     pls,
     plyr,
@@ -133,6 +134,7 @@ Imports:
     wordcloud,
     xgboost
 Remotes:
-    linxihui/NNLM
-    ncullen93/KEGG.db
+    bigomics/playdata,
+    linxihui/NNLM,
+    ncullen93/KEGG.db,
     ropensci/iheatmapr

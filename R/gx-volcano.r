@@ -4,7 +4,39 @@
 ##
 
 
+
+#' Title
+#'
+#' @param x
+#' @param pv
+#' @param gene
+#' @param ma_plot
+#' @param ma
+#' @param p.sig
+#' @param lfc
+#' @param render
+#' @param n
+#' @param highlight
+#' @param main
+#' @param cex
+#' @param lab.cex
+#' @param nlab
+#' @param xlim
+#' @param ylim
+#' @param use.fdr
+#' @param xlab
+#' @param ylab
+#' @param use.rpkm
+#' @param maxchar
+#' @param hi.col
+#' @param cex.main
+#' @param axes
+#' @param cex.axis
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot=FALSE, ma=NULL, p.sig=0.05, lfc=1,
                               render="scatterD3", n=1000, highlight=NULL, main="",
                               cex=1, lab.cex=1, nlab=10, xlim=NULL, ylim=NULL, use.fdr=FALSE,
@@ -27,7 +59,7 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot=FALSE, ma=NULL, p.sig=0.05, l
     x <- x[jj]
     pv <- pv[jj]
     gene <- gene[jj]
-    
+
     if(n>0) {
         jj = unique(c(1:100,head(sample(1:length(x),replace=TRUE),n-100)))
         if(!is.null(highlight)) {
@@ -92,9 +124,9 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot=FALSE, ma=NULL, p.sig=0.05, l
 
     gene.txt <- substring(gene,1,30)  ## shortened for labels
     plt <- NULL
-    
+
     if(render=="scatterD3") {
-        
+
         tooltip_text = paste(gene,"<br>x=",round(x,digits=3),
                              "<br>p=",round(pv,digits=4) )
         jj = order(klr)
@@ -109,9 +141,9 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot=FALSE, ma=NULL, p.sig=0.05, l
             lab = labjj, labels_size = lab.cex*10,
             tooltip_text = tooltip_text[jj], caption=main,
             tooltips = TRUE, colors = c("2"=hi.col,"1"="#BBBBBB") )
-        
+
     } else if(render=="plotly") {
-        
+
         gene2 = paste0("  ",gene.txt, "  ")
         ann = data.frame(gene=gene2, x=x, y=y)[jj,,drop=FALSE]
         ann.left  = ann[which(ann$x<0),]
@@ -125,15 +157,15 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot=FALSE, ma=NULL, p.sig=0.05, l
             plt <- plt  %>%
                 plotly::add_annotations(x=ann.left$x, y=ann.left$y, text=ann.left$gene,
                                 xref='x', yref='y', xanchor='right', showarrow=FALSE,
-                                font=list(size=10*lab.cex, color=hi.col) ) 
+                                font=list(size=10*lab.cex, color=hi.col) )
         }
         if(lab.cex > 0  && nrow(ann.right)>0) {
             plt <- plt  %>%
                 plotly::add_annotations(x=ann.right$x, y=ann.right$y, text=ann.right$gene,
                                 xref='x', yref='y', xanchor='left', showarrow=FALSE,
-                                font=list(size=10*lab.cex, color=hi.col) ) 
+                                font=list(size=10*lab.cex, color=hi.col) )
         }
-        ##plt 
+        ##plt
 
     } else {
         ##ylim=NULL;cex=1;main="";p.sig=0.05;lab.cex=1
@@ -167,7 +199,31 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot=FALSE, ma=NULL, p.sig=0.05, l
 }
 
 ##n=1000;cex=1;highlight=rownames(X)[1:500];nlab=10;ma.plot=FALSE;use.fdr=TRUE
+
+#' Title
+#'
+#' @param tab
+#' @param render
+#' @param n
+#' @param highlight
+#' @param p.sig
+#' @param cex
+#' @param lab.cex
+#' @param nlab
+#' @param xlim
+#' @param ylim
+#' @param use.fdr
+#' @param use.rpkm
+#' @param ma.plot
+#' @param cex.main
+#' @param main
+#' @param cex.axis
+#' @param axes
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.volcanoPlot.LIMMA <- function(tab, render="scatterD3", n=1000, highlight=NULL, p.sig=0.05,
                                  cex=1, lab.cex=1, nlab=15, xlim=NULL, ylim=NULL, use.fdr=FALSE,
                                  use.rpkm=FALSE, ma.plot=FALSE, cex.main=1.2,
@@ -263,7 +319,7 @@ gx.volcanoPlot.LIMMA <- function(tab, render="scatterD3", n=1000, highlight=NULL
                "<br>adj.P.Val=",round(tab$adj.P.Val,digits=4))
 
     if(render=="scatterD3") {
-        
+
         scatterD3::scatterD3(x=x, y=y, point_size = cex*10, point_opacity=0.66,
                   xlab=xlab, ylab=ylab, col_var=klr, legend_width=0,
                   lab = lab, labels_size = lab.cex*8.5, tooltip_text = tt,
@@ -271,7 +327,7 @@ gx.volcanoPlot.LIMMA <- function(tab, render="scatterD3", n=1000, highlight=NULL
                   caption=main )
 
     } else if(render=="plotly") {
-        
+
         gene2 = paste0("  ",gene, "  ")
         ann = data.frame(gene=gene2, x=x, y=y)[jj,,drop=FALSE]
         ann.left  = ann[which(ann$x<0),]

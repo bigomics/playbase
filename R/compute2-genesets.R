@@ -3,10 +3,19 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-##max.features=8000;lib.dir=FILES;test.methods = c("gsva","camera","fgsea")
+#' Title
+#'
+#' @param pgx
+#' @param max.features
+#' @param test.methods
+#' @param remove.outputs
+#'
+#' @return
 #' @export
+#'
+#' @examples
 compute_testGenesets <- function(pgx,
-                                 max.features=1000, 
+                                 max.features=1000,
                                  test.methods = c("gsva","camera","fgsea"),
                                  remove.outputs=TRUE )
 {
@@ -21,7 +30,7 @@ compute_testGenesets <- function(pgx,
     ##-----------------------------------------------------------
     ## Load huge geneset matrix
     ##-----------------------------------------------------------
-    G <- playbase::GSET_SPARSEG_XL
+    G <- playdata::GSET_SPARSEG_XL
     G <- Matrix::t(G)
     dim(G)
 
@@ -202,8 +211,3 @@ compute_testGenesets <- function(pgx,
 
     return(pgx)
 }
-
-
-
-##rm(list=setdiff(ls(),SAVE.PARAMS))
-

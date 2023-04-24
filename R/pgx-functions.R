@@ -3,17 +3,6 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-##=============================================================================
-##==========    Platform global and user settings =============================
-##=============================================================================
-
-USER.GENESETTEST.METHODS <- NULL
-USER.GENETEST.METHODS <- NULL
-
-##=============================================================================
-##===================    Platform helper functions ============================
-##=============================================================================
-
 #' @export
 pgx.phenoMatrix <- function(pgx, phenotype) {
     y <- pgx$samples[,phenotype]
@@ -23,7 +12,6 @@ pgx.phenoMatrix <- function(pgx, phenotype) {
     as.matrix(mm)
 }
 
-cex=1
 #' @export
 text_repel.NOTWORKING <- function( x, y, text, cex=1, force=1e-7, maxiter=20000)
 {
@@ -868,35 +856,6 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat=2, max.ncat=20, remove.dup
 }
 
 
-#' @export
-ngs.save <- function(ngs, file, update.date=TRUE, light=TRUE, system=FALSE) {
-
-    if(update.date||is.null(ngs$date)) ngs$date <- Sys.Date()
-
-    if(light) {
-        ## ------- make a light version
-        ngs$gx.meta$outputs <- NULL
-        ngs$gset.meta$outputs <- NULL
-        ngs$model.parameters$efit <- NULL
-        ngs$gmt.all <- NULL
-        ngs$families <- NULL
-        ngs$collections <- NULL
-        ## ngs$counts <- NULL
-        ngs$gset.meta$matrices <- NULL
-    }
-    if(system==FALSE) {
-        ## remove system (is big...)
-        ngs$omicsnet <- NULL
-        ngs$omicsnet.reduced <- NULL
-    }
-    sort(sapply(ngs, object.size)) / 1e9
-    sum(sapply(ngs, object.size)) / 1e9
-
-    cat(">>> saving PGX file to",file,"\n")
-    file <- iconv(file, from = '', to = 'ASCII//TRANSLIT')
-    save(ngs, file=file)
-}
-
 ##comp=1;level="geneset";probe=rownames(ngs$gsetX)[1]
 #' @export
 getLevels <- function(Y) {
@@ -1577,7 +1536,7 @@ expandPhenoMatrix <- function(pheno, collapse=TRUE, drop.ref=TRUE) {
     nlevel <- apply(a1,2,function(x) length(setdiff(unique(x),NA)))
     nterms <- colSums(!is.na(a1))
     ##y.class <- sapply(a1,class)
-    y.class <- sapply(type.convert(pheno),class)
+    y.class <- sapply(type.convert(pheno, as.is=TRUE),class)
     ##y.isnum <- apply(a1,2,is.num)
     y.isnum <- (y.class %in% c("numeric","integer"))
     nlevel

@@ -3,13 +3,21 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-## source(file.path(RDIR,"pgx-functions.R"))
-
 ##----------------------------------------------------------------------
 ## Auto-detection helper functions
 ##----------------------------------------------------------------------
 
+
+#' Title
+#'
+#' @param pgx
+#' @param contrast
+#' @param as.factor
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.getContrastGroups <- function(pgx, contrast, as.factor=TRUE) {
     exp.matrix <- pgx$model.parameters$exp.matrix
     grp <- contrastAsLabels(exp.matrix[,contrast,drop=FALSE],as.factor=as.factor)
@@ -20,12 +28,28 @@ pgx.getContrastGroups <- function(pgx, contrast, as.factor=TRUE) {
     grp
 }
 
+
+#' Title
+#'
+#' @param Y
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.detect_batch_params <- function(Y) {
     grep("batch|cell.line|patient|mouse|sample|repl|strain", colnames(Y), value=TRUE)
 }
 
+
+#' Title
+#'
+#' @param Y
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.detect_timevar <- function(Y) {
     has.time <- any(grepl("time|hour|hr|day", colnames(Y)))
     has.time
@@ -35,7 +59,16 @@ pgx.detect_timevar <- function(Y) {
     ttvar
 }
 
+
+#' Title
+#'
+#' @param exp.matrix
+#' @param nmax
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.getConditions <- function(exp.matrix, nmax=3) {
     ##
     ##
@@ -50,7 +83,16 @@ pgx.getConditions <- function(exp.matrix, nmax=3) {
     as.character(group)
 }
 
+
+#' Title
+#'
+#' @param pheno
+#' @param contr.matrix
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.expMatrix <- function(pheno, contr.matrix) {
 
     ctx <- rownames(contr.matrix)
@@ -76,7 +118,18 @@ pgx.expMatrix <- function(pheno, contr.matrix) {
 ## Contrast creation functions
 ##-----------------------------------------------------------------------------
 
+
+#' Title
+#'
+#' @param data
+#' @param vars
+#' @param strata
+#' @param ref
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.makeStratifiedContrastsDF <- function(data, vars, strata, ref) {
 
     dstrata <- data[,strata]
@@ -121,7 +174,17 @@ pgx.makeStratifiedContrastsDF <- function(data, vars, strata, ref) {
     res
 }
 
+
+#' Title
+#'
+#' @param Y
+#' @param strata
+#' @param ref
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.makeStratifiedContrasts <- function(Y, strata, ref) {
 
     S <- model.matrix( ~ 0 + strata)
@@ -166,13 +229,30 @@ pgx.makeStratifiedContrasts <- function(Y, strata, ref) {
     res
 }
 
-## for compatibility...
+
+#' Title
+#'
+#' @param Y
+#' @param ref
+#' @param na.rm
+#'
+#' @return
 #' @export
+#'
+#' @examples
 makeDirectContrasts2 <- function(Y, ref, na.rm=TRUE) {
     makeDirectContrasts(Y=Y, ref=ref, na.rm=na.rm)
 }
 
+
+#' Title
+#'
+#' @param exp.matrix
+#'
+#' @return
 #' @export
+#'
+#' @examples
 expmat2contrast <- function(exp.matrix) {
     group <- apply(exp.matrix,1,paste,collapse="_")
     table(group)
@@ -188,8 +268,16 @@ expmat2contrast <- function(exp.matrix) {
     list(contr.matrix=contr.matrix, group=group, exp.matrix=exp.matrix)
 }
 
-##Y=ngs$samples;na.rm=TRUE
+#' Title
+#'
+#' @param Y
+#' @param ref
+#' @param na.rm
+#'
+#' @return
 #' @export
+#'
+#' @examples
 makeDirectContrasts <- function(Y, ref, na.rm=TRUE)
 {
 
@@ -234,8 +322,18 @@ makeDirectContrasts <- function(Y, ref, na.rm=TRUE)
     list(contr.matrix=contr.matrix, group=group, exp.matrix=exp.matrix)
 }
 
-##Y=pgx$samples$celltype;ref='*'
+
+#' Title
+#'
+#' @param Y
+#' @param ref
+#' @param na.rm
+#' @param warn
+#'
+#' @return
 #' @export
+#'
+#' @examples
 makeDirectContrasts000 <- function(Y, ref, na.rm=TRUE, warn=FALSE) {
     ## if(warn) warning("makeDirectContrasts is deprectated. please use makeDirectContrasts2()")
     if(NCOL(Y)==1) Y <- data.frame(Y=Y)
@@ -313,7 +411,16 @@ makeDirectContrasts000 <- function(Y, ref, na.rm=TRUE, warn=FALSE) {
     sign(contr.matrix)
 }
 
+
+#' Title
+#'
+#' @param labels
+#' @param by.sample
+#'
+#' @return
 #' @export
+#'
+#' @examples
 makeFullContrasts <- function(labels, by.sample=FALSE) {
     levels <- sort(unique(as.character(labels)))
     cc <- t(combn(levels,2))
@@ -334,7 +441,18 @@ makeFullContrasts <- function(labels, by.sample=FALSE) {
     return(contr.matrix)
 }
 
+
+#' Title
+#'
+#' @param clusters
+#' @param min.freq
+#' @param full
+#' @param by.sample
+#'
+#' @return
 #' @export
+#'
+#' @examples
 makeClusterContrasts <- function(clusters, min.freq=0.01, full=FALSE,
                                  by.sample=FALSE ) {
     ## make model matrix for cluster_i vs. rest
@@ -368,8 +486,16 @@ makeClusterContrasts <- function(clusters, min.freq=0.01, full=FALSE,
     return(m1)
 }
 
-##mingrp=3;contrasts=c("genotype:mut_vs_WT")
+#' Title
+#'
+#' @param df
+#' @param contrasts
+#' @param mingrp
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.makeSpecificContrasts <- function(df, contrasts, mingrp=3)
 {
 
@@ -402,8 +528,21 @@ pgx.makeSpecificContrasts <- function(df, contrasts, mingrp=3)
     return(res)
 }
 
-## mingrp=3;slen=20;ref=NULL;fix.degenerate=FALSE;skip.hidden=TRUE
+
+#' Title
+#'
+#' @param df
+#' @param strata.var
+#' @param mingrp
+#' @param slen
+#' @param ref
+#' @param fix.degenerate
+#' @param skip.hidden
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp=3, slen=20, ref=NULL,
                                            fix.degenerate=FALSE, skip.hidden=TRUE )
 {
@@ -450,8 +589,20 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp=3, slen=20, r
 }
 
 
-##mingrp=3;slen=20;ref=NULL;fix.degenerate=FALSE;skip.hidden=TRUE
+
+#' Title
+#'
+#' @param df
+#' @param mingrp
+#' @param slen
+#' @param ref
+#' @param fix.degenerate
+#' @param skip.hidden
+#'
+#' @return
 #' @export
+#'
+#' @examples
 pgx.makeAutoContrasts <- function(df, mingrp=3, slen=20, ref=NULL,
                                  fix.degenerate=FALSE, skip.hidden=TRUE )
 {
@@ -558,7 +709,7 @@ pgx.makeAutoContrasts <- function(df, mingrp=3, slen=20, ref=NULL,
     dim(df)
 
     ## ----------- use type.convert to infer parameters
-    df <- type.convert(data.frame(df,check.names=FALSE))
+    df <- type.convert(data.frame(df,check.names=FALSE), as.is=TRUE)
 
     ## ----------- convert numeric variables into bins
     ii <- which(sapply(df,class) %in% c("integer","numeric"))
@@ -700,7 +851,15 @@ pgx.makeAutoContrasts <- function(df, mingrp=3, slen=20, ref=NULL,
     list(group = xc, contr.matrix = K2, exp.matrix=K)
 }
 
+
+#' Title
+#'
+#' @param contr.matrix
+#'
+#' @return
 #' @export
+#'
+#' @examples
 normalizeContrasts <- function(contr.matrix) {
     ## normalize to zero mean and symmetric sum-to-one. Any NA to zero.
     for(i in 1:ncol(contr.matrix)) {
@@ -711,7 +870,18 @@ normalizeContrasts <- function(contr.matrix) {
     contr.matrix
 }
 
+
+#' Title
+#'
+#' @param main.group
+#' @param ref.group
+#' @param groups
+#' @param comparisons
+#'
+#' @return
 #' @export
+#'
+#' @examples
 makeContrastsFromPairs <- function(main.group, ref.group, groups=NULL, comparisons=NULL) {
 
     if(is.null(comparisons)) comparisons <- paste0(main.group,"_vs_",ref.group)
@@ -743,7 +913,16 @@ makeContrastsFromPairs <- function(main.group, ref.group, groups=NULL, compariso
     contr.matrix
 }
 
+
+#' Title
+#'
+#' @param contr.matrix
+#' @param as.factor
+#'
+#' @return
 #' @export
+#'
+#' @examples
 contrastAsLabels <- function(contr.matrix, as.factor=FALSE) {
     contrastAsLabels.col <- function(contr, contr.name) {
         grp1 <- gsub(".*[:]|_vs_.*","",contr.name)
@@ -768,7 +947,15 @@ contrastAsLabels <- function(contr.matrix, as.factor=FALSE) {
     K
 }
 
+
+#' Title
+#'
+#' @param lab.matrix
+#'
+#' @return
 #' @export
+#'
+#' @examples
 makeContrastsFromLabelMatrix <- function(lab.matrix) {
     ct.names <- colnames(lab.matrix)
     main.grp <- sapply(strsplit(ct.names, split="_vs_"),"[",1)
@@ -789,8 +976,3 @@ makeContrastsFromLabelMatrix <- function(lab.matrix) {
     }
     contr.mat
 }
-
-
-##=====================================================================================
-##=========================== END OF FILE =============================================
-##=====================================================================================

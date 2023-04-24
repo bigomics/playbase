@@ -9,34 +9,40 @@
 ##
 ########################################################################
 
-if(0) {
-    load("../data/geiger2016-arginine.pgx")
-    X <- ngs$X
-    pheno <- ngs$samples$time
-}
-
-
-REF.CLASS = c("ctrl","ctr","control","dmso","nt","0","0h","0hr",
-              "non","no","not","neg","negative","ref","veh","vehicle",
-              "wt","wildtype","untreated","normal","false","healthy")
-
+#' Title
+#'
+#' @param X
+#' @param pheno
+#' @param B
+#' @param remove.na
+#' @param fdr
+#' @param compute.means
+#' @param lfc
+#' @param max.na
+#' @param ref
+#' @param trend
+#' @param verbose
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.limma <- function(X, pheno, B=NULL, remove.na = TRUE,
                      fdr=0.05, compute.means=TRUE, lfc=0.20,
-                     max.na=0.20, ref=REF.CLASS, trend=FALSE, verbose=1 )
+                     max.na=0.20, ref= c("ctrl","ctr","control","dmso","nt","0","0h","0hr",
+                                         "non","no","not","neg","negative","ref","veh","vehicle",
+                                         "wt","wildtype","untreated","normal","false","healthy"),
+                     trend=FALSE, verbose=1 )
 {
-    
-    if(0) {
-        fdr=0.05;compute.means=TRUE;lfc=0.20;ref=REF.CLASS
-        max.na=0.2;trend=FALSE;verbose=1;B=NULL
-    }
+
+
     if(sum(duplicated(rownames(X)))>0) {
         cat("WARNING:: matrix has duplicated rownames\n")
     }
 
     if(!is.null(B) && NCOL(B)==1) {
         B <- matrix(B,ncol=1)
-        rownames(B) <- rownames(pheno) 
+        rownames(B) <- rownames(pheno)
         colnames(B) <- "batch"
     }
 
@@ -48,7 +54,7 @@ gx.limma <- function(X, pheno, B=NULL, remove.na = TRUE,
         pheno <- c(pheno,pheno)
         if(!is.null(B)) B <- rbind(B,B)
     }
-    
+
     ## filter probes and samples??
     ii <- which( rowMeans(is.na(X)) <= max.na )
     jj <- 1:ncol(X)
@@ -77,7 +83,7 @@ gx.limma <- function(X, pheno, B=NULL, remove.na = TRUE,
     is.ref <- (toupper(pheno0) %in% toupper(ref))
     ref.detected <- (sum(is.ref)>0 && sum(!is.ref)>0)
     ref.detected
-    
+
     ##if(!is.null(ref) && sum( toupper(pheno0) %in% ref)>0 ) {
     if(ref.detected) {
         pheno.ref <- unique(pheno0[which(toupper(pheno0) %in% toupper(ref))])
@@ -114,7 +120,7 @@ gx.limma <- function(X, pheno, B=NULL, remove.na = TRUE,
     }
     top <- top[rownames(X0),]
     Matrix::head(top)
-    
+
     ## only significant
     top <- top[ which(top$adj.P.Val <= fdr & abs(top$logFC)>=lfc ), ]
     if(verbose>0) cat("found",nrow(top),"significant at fdr=",fdr,"and minimal FC=",lfc,"\n")
@@ -143,16 +149,29 @@ gx.limma <- function(X, pheno, B=NULL, remove.na = TRUE,
     return(top)
 }
 
-
+#' Title
+#'
+#' @param X
+#' @param pheno
+#' @param fdr
+#' @param compute.means
+#' @param lfc
+#' @param max.na
+#' @param ref
+#' @param trend
+#' @param verbose
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.limma.SAVE <- function(X, pheno, fdr=0.05, compute.means=TRUE, lfc=0.20,
-                          max.na=0.20, ref=REF.CLASS, trend=FALSE, verbose=1 )
+                          max.na=0.20, ref=c("ctrl","ctr","control","dmso","nt","0","0h","0hr",
+                                             "non","no","not","neg","negative","ref","veh","vehicle",
+                                             "wt","wildtype","untreated","normal","false","healthy"),
+                          trend=FALSE, verbose=1 )
 {
-    
-    if(0) {
-        fdr=0.05;compute.means=TRUE;lfc=0.20;ref=REF.CLASS
-        max.na=0.2;ref=REF.CLASS;trend=FALSE;verbose=1
-    }
+
     if(sum(duplicated(rownames(X)))>0) {
         cat("WARNING:: matrix has duplicated rownames\n")
     }
@@ -182,7 +201,7 @@ gx.limma.SAVE <- function(X, pheno, fdr=0.05, compute.means=TRUE, lfc=0.20,
     ref <- toupper(ref)
     ## is.ref <- grepl(paste(ref,collapse="|"),pheno0)
     is.ref <- (toupper(pheno0) %in% toupper(ref))
-    ref.detected <- (sum(is.ref)>0 && sum(!is.ref)>0)    
+    ref.detected <- (sum(is.ref)>0 && sum(!is.ref)>0)
 
     ##if(!is.null(ref) && sum( toupper(pheno0) %in% ref)>0 ) {
     if(ref.detected) {
@@ -211,103 +230,7 @@ gx.limma.SAVE <- function(X, pheno, fdr=0.05, compute.means=TRUE, lfc=0.20,
     }
     top <- top[rownames(X0),]
     Matrix::head(top)
-    
-    ## only significant
-    top <- top[ which(top$adj.P.Val <= fdr & abs(top$logFC)>=lfc ), ]
-    if(verbose>0) cat("found",nrow(top),"significant at fdr=",fdr,"and minimal FC=",lfc,"\n")
 
-    if(compute.means && nrow(top)>0 ) {
-        avg <- t(apply(X0[rownames(top),], 1,
-                         function(x) tapply(x, pheno0, mean, na.rm=TRUE)))
-        avg <- avg[,as.character(bb),drop=FALSE]
-        colnames(avg) <- paste0("AveExpr.",colnames(avg))
-        top <- cbind(top, avg)
-    }
-    top$B <- NULL
-
-    if(is.single) {
-        top$P.Value <- NA
-        top$adj.P.Val <- NA
-        top$t <- NA
-    }
-
-    ## reorder on fold change
-    top <- top[ order(abs(top$logFC),decreasing=TRUE),]
-    ##colnames(top) <-   sub("logFC","logR",colnames(top))
-
-    ## unlist???
-    ##top = do.call(cbind, top)
-    return(top)
-}
-
-#' @export
-gx.limma.SAVE <- function(X, pheno, fdr=0.05, compute.means=TRUE, lfc=0.20,
-                          max.na=0.20, ref=REF.CLASS, trend=FALSE, verbose=1 )
-{
-    
-    if(0) {
-        fdr=0.05;compute.means=TRUE;lfc=0.20;ref=REF.CLASS
-        max.na=0.2;ref=REF.CLASS;trend=FALSE;verbose=1
-    }
-    if(sum(duplicated(rownames(X)))>0) {
-        cat("WARNING:: matrix has duplicated rownames\n")
-    }
-    ## detect single sample case
-    is.single = (max(table(pheno))==1)
-    if(is.single) {
-        cat("WARNING:: no replicates, no stats...\n")
-        X <- cbind(X,X)
-        pheno <- c(pheno,pheno)
-    }
-
-    ## filter probes and samples
-    ii <- which( rowMeans(is.na(X)) <= max.na )
-    jj <- which(!is.na(pheno) )
-    if(verbose>0) cat(sum(is.na(pheno)>0),"with missing phenotype\n")
-    X0 <- X[ii,jj]
-    pheno0 <- as.character(pheno[jj])
-    X0 <- X0[!(rownames(X0) %in% c(NA,"","NA")),]
-    if(verbose>0) {
-        cat("analyzing",ncol(X0),"samples\n")
-        cat("testing",nrow(X0),"features\n")
-    }
-
-    ## auto-detect reference
-    pheno.ref <- c()
-    ref.detected <- FALSE
-    ref <- toupper(ref)
-    ## is.ref <- grepl(paste(ref,collapse="|"),pheno0)
-    is.ref <- (toupper(pheno0) %in% toupper(ref))
-    ref.detected <- (sum(is.ref)>0 && sum(!is.ref)>0)    
-
-    ##if(!is.null(ref) && sum( toupper(pheno0) %in% ref)>0 ) {
-    if(ref.detected) {
-        pheno.ref <- unique(pheno0[which(toupper(pheno0) %in% toupper(ref))])
-        if(verbose>0) cat("setting reference to y=",pheno.ref,"\n")
-        bb <- c(pheno.ref, sort(setdiff(unique(pheno0),pheno.ref)) )
-    } else {
-        if(verbose>0) cat("WARNING: could not auto-detect reference\n")
-        bb <- as.character(sort(unique(pheno0)))
-        if(verbose>0) cat("setting reference to first class",bb[1],"\n")
-    }
-    if(length(bb)!=2) {
-        stop("gx.limma::fatal error:only two class comparisons")
-        return
-    }
-    design <- cbind(1, pheno0==bb[2])
-    colnames(design) <- c( "WT", "2vs1" )
-    d1 <- colnames(design)[1]
-    d2 <- colnames(design)[2]
-    fit <- limma::lmFit( X0, design)
-    fit <- limma::eBayes(fit, trend=trend)
-    top <- limma::topTable(fit, coef=d2, number=nrow(X0))
-    if("ID" %in% colnames(top)) {
-        rownames(top) <- top$ID
-        top$ID <- NULL
-    }
-    top <- top[rownames(X0),]
-    Matrix::head(top)
-    
     ## only significant
     top <- top[ which(top$adj.P.Val <= fdr & abs(top$logFC)>=lfc ), ]
     if(verbose>0) cat("found",nrow(top),"significant at fdr=",fdr,"and minimal FC=",lfc,"\n")
@@ -337,15 +260,32 @@ gx.limma.SAVE <- function(X, pheno, fdr=0.05, compute.means=TRUE, lfc=0.20,
 }
 
 
+
+#' Title
+#'
+#' @param X
+#' @param pheno
+#' @param B
+#' @param fdr
+#' @param compute.means
+#' @param lfc
+#' @param max.na
+#' @param ref
+#' @param trend
+#' @param verbose
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.limmaF <- function(X, pheno, B=NULL, fdr=0.05, compute.means=TRUE, lfc=0.20,
-                      max.na=0.20, ref=REF.CLASS, trend=FALSE, verbose=1 )
+                      max.na=0.20, ref=c("ctrl","ctr","control","dmso","nt","0","0h","0hr",
+                                         "non","no","not","neg","negative","ref","veh","vehicle",
+                                         "wt","wildtype","untreated","normal","false","healthy"),
+                      trend=FALSE, verbose=1 )
 {
-    
-    if(0) {
-        fdr=0.05;compute.means=TRUE;lfc=0.20;ref=REF.CLASS;max.na=0.20;
-        trend=TRUE;verbose=1
-    }
+
+
     if(sum(duplicated(rownames(X)))>0) {
         cat("matrix has duplicated rownames. please remove.\n")
     }
@@ -358,7 +298,7 @@ gx.limmaF <- function(X, pheno, B=NULL, fdr=0.05, compute.means=TRUE, lfc=0.20,
     }
     if(!is.null(B) && NCOL(B)==1) {
         B <- matrix(B,ncol=1)
-        rownames(B) <- rownames(pheno) 
+        rownames(B) <- rownames(pheno)
         colnames(B) <- "batch"
     }
 
@@ -398,7 +338,7 @@ gx.limmaF <- function(X, pheno, B=NULL, fdr=0.05, compute.means=TRUE, lfc=0.20,
         if(verbose>0) cat("WARNING: could not auto-detect reference\n")
         bb <- as.character(sort(unique(pheno0)))
         if(verbose>0) cat("setting reference to first class",bb[1],"\n")
-        pheno1 <- relevel(factor(pheno0), ref=bb[1])        
+        pheno1 <- relevel(factor(pheno0), ref=bb[1])
     }
     if(0 && length(bb)!=2) {
         stop("gx.limma::fatal error:only two class comparisons")
@@ -429,7 +369,7 @@ gx.limmaF <- function(X, pheno, B=NULL, fdr=0.05, compute.means=TRUE, lfc=0.20,
     }
     top <- top[,setdiff(colnames(top),colnames(design)),drop=FALSE]
     top <- top[rownames(X0),]
-    
+
     ## compute average
     avg <- do.call(cbind,tapply(1:ncol(X0), pheno1, function(i)
         rowMeans(X0[,i,drop=FALSE])))
@@ -440,7 +380,7 @@ gx.limmaF <- function(X, pheno, B=NULL, fdr=0.05, compute.means=TRUE, lfc=0.20,
         top <- cbind(logFC=maxFC, top)
         rownames(top) <- rownames(X0)
     }
-    
+
     ## only significant
     top <- top[ which(top$adj.P.Val <= fdr & abs(top$logFC)>=lfc ), ]
     if(verbose>0) cat("found",nrow(top),"significant at fdr=",fdr,"and minimal FC=",lfc,"\n")
@@ -469,7 +409,16 @@ gx.limmaF <- function(X, pheno, B=NULL, fdr=0.05, compute.means=TRUE, lfc=0.20,
 }
 
 
+
+#' Title
+#'
+#' @param X
+#' @param pheno
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.meanFstats <- function(X, pheno) {
     getF <- function(x,y) {
         ii <- which(!is.na(y))
@@ -498,13 +447,30 @@ gx.meanFstats <- function(X, pheno) {
 
 
 ## two-factorial design, no interaction
+
+#' Title
+#'
+#' @param X
+#' @param pheno
+#' @param pair
+#' @param fdr
+#' @param lfc
+#' @param ref
+#' @param compute.means
+#' @param trend
+#'
+#' @return
 #' @export
-gx.limma.paired <- function(X, pheno, pair, fdr=0.05, lfc=0.20, ref=REF.CLASS,
+#'
+#' @examples
+gx.limma.paired <- function(X, pheno, pair, fdr=0.05, lfc=0.20,
+                            ref=c("ctrl","ctr","control","dmso","nt","0","0h","0hr",
+                                  "non","no","not","neg","negative","ref","veh","vehicle",
+                                  "wt","wildtype","untreated","normal","false","healthy"),
                             compute.means=FALSE, trend=FALSE )
 {
-    ##fdr=0.05;lfc=0.20;ref=REF.CLASS;compute.means=TRUE
     ## LIMMA
-    
+
     cat("Paired LIMMA\n")
     cat("analyzing",ncol(X),"samples\n")
     X <- X[!(rownames(X) %in% c(NA,"","NA")),]
@@ -593,13 +559,30 @@ gx.limma.paired <- function(X, pheno, pair, fdr=0.05, lfc=0.20, ref=REF.CLASS,
 
 ## two-factorial design
 ##ref=c("CTRL","DMSO","NT")
+
+#' Title
+#'
+#' @param X
+#' @param factors
+#' @param fdr
+#' @param lfc
+#' @param trend
+#' @param ref
+#' @param compute.means
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.limma.two.factorial <- function(X, factors, fdr=0.05, lfc=0.20, trend=FALSE,
-                                   ref=REF.CLASS, compute.means=TRUE)
+                                   ref=c("ctrl","ctr","control","dmso","nt","0","0h","0hr",
+                                         "non","no","not","neg","negative","ref","veh","vehicle",
+                                         "wt","wildtype","untreated","normal","false","healthy"),
+                                   compute.means=TRUE)
 {
 
     ## LIMMA
-    
+
     cat("Two-factorial LIMMA\n")
     cat("analyzing",ncol(X),"samples\n")
     X <- X[!(rownames(X) %in% c(NA,"","NA")),]
@@ -722,7 +705,20 @@ gx.limma.two.factorial <- function(X, factors, fdr=0.05, lfc=0.20, trend=FALSE,
     return(res)
 }
 
+
+#' Title
+#'
+#' @param sig
+#' @param class.label
+#' @param fdr
+#' @param test.method
+#' @param running.name
+#' @param output.to.file
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.test.groups <- function(sig, class.label, fdr=0.20,
                            test.method=c("wilcox","limma","ttest","fisher"),
                            running.name=NULL,
@@ -744,7 +740,7 @@ gx.test.groups <- function(sig, class.label, fdr=0.20,
     names(pv) <- rownames(sig)
     if(test.method=="limma") {
         cat("performing Limma test\n")
-        
+
         design <- cbind( 1, class.label==bb[2])
         if(is.null(running.name)) running.name <-  paste(bb[2],bb[1],sep="vs")
         colnames(design) <- c( "WT", running.name )
@@ -777,7 +773,7 @@ gx.test.groups <- function(sig, class.label, fdr=0.20,
     }
 
     ## qvalue
-    
+
     qv <- rep(NA, nrow(sig))
     kk <- which(!is.na(pv))
     qv[kk] <- qvalue::qvalue(pv[kk])$qvalue
@@ -801,8 +797,18 @@ gx.test.groups <- function(sig, class.label, fdr=0.20,
 }
 
 
-##ref.class="CTRL"
+
+#' Title
+#'
+#' @param X
+#' @param y
+#' @param ref.class
+#' @param nperm
+#'
+#' @return
 #' @export
+#'
+#' @examples
 gx.snrtest <- function(X,y,ref.class,nperm=200) {
     ## http://software.broadinstitute.org/gsea/doc/GSEAUserGuideFrame.html
     this.X <- X
@@ -838,7 +844,17 @@ gx.snrtest <- function(X,y,ref.class,nperm=200) {
     res
 }
 
+
+#' Title
+#'
+#' @param countdata
+#' @param y
+#' @param method
+#'
+#' @return
 #' @export
+#'
+#' @examples
 seq_limma <- function(countdata, y, method="edgeR") {
     ## https://bioinformatics-core-shared-training.github.io/RNAseq-R/rna-seq-de.nb.html
     if( min(countdata)<0 || !all(countdata%%1==0) ) {
