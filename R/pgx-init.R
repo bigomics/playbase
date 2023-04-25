@@ -240,8 +240,7 @@ pgx.initialize <- function(pgx) {
         dd <- pgx$drugs[["mono"]]
         aa1 <- pgx$drugs[["annot"]]
         if(is.null(aa1)) {
-            aa1 <- read.csv(file.path(FILES,"L1000_repurposing_drugs.txt"),
-                            sep="\t", comment.char="#")
+          aa1 <- playdata::L1000_REPURPOSING_DRUGS
             aa1$drug <- aa1$pert_iname
             rownames(aa1) <- aa1$pert_iname
         }

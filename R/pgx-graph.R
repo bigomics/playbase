@@ -181,11 +181,9 @@ pgx.createOmicsGraph <- function(ngs, do.intersect=TRUE )
     ##----------------------------------------------------------------------
     ## Read in gene/geneset graph structure
     ##----------------------------------------------------------------------
-    ##gr <- readRDS(file.path(FILES,"pgx-graph-geneXgset-XL.rds"))
     gr <- readRDS(file.path(FILES,"pgx-graph-geneXgset-XL-snn20.rds"))
     table(igraph::V(gr)$level)
 
-    ##load(file = file.path(FILES,"gset-sparseG-XL.rda"), verbose=1)
     ##G <- igraph::as_adjacency_matrix(gr)
     ##dim(G)
 

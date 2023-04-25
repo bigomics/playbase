@@ -171,7 +171,7 @@ compute_extra <- function(ngs, extra=c("meta.go","deconv","infer","drugs", ## "g
 
     if("wgcna" %in% extra) {
         message(">>> computing wgcna...")
-        
+
         ngs$wgcna <- playbase::pgx.wgcna(pgx, lib.dir = lib.dir)
         }
 
@@ -321,7 +321,7 @@ compute_drugActivityEnrichment <- function(ngs) {
     ## -------------- drug enrichment
     # get drug activity databases
     ref.db <- grep('L1000_*',data(package='playdata')$results[,'Item'],value=T)
-    ref.db <- ref.db[ref.db != 'L1000_REPRURPOSING_DRUGS']
+    ref.db <- ref.db[ref.db != 'L1000_REPURPOSING_DRUGS']
 
     if(length(ref.db)==0) {
         message("[compute_drugActivityEnrichment] Warning:: missing drug activity database")
@@ -354,7 +354,7 @@ compute_drugActivityEnrichment <- function(ngs) {
         ## --------------- attach annotation
         annot0 <- NULL
         if(is.drug) {
-            annot0 <- playdata::L1000_REPRURPOSING_DRUGS
+            annot0 <- playdata::L1000_REPURPOSING_DRUGS
             annot0$drug <- annot0$pert_iname
             rownames(annot0) <- annot0$pert_iname
         } else {
