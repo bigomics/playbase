@@ -8,7 +8,6 @@ pgx.createFromFiles(
   count.file,
   samples.file,
   contrasts.file = NULL,
-  lib.dir = FILES,
   gxmethods = "trend.limma,edger.qlf,edger.lrt",
   gsetmethods = "fisher,gsva,fgsea",
   extra = "meta.go,deconv,infer,drugs,wordcloud"
