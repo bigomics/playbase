@@ -13,7 +13,7 @@ pgx.inferCellType <- function(counts, low.th=0.01, add.unknown=FALSE,
     ## infer cell type from markers
     if(is.null(markers)) {
         message("[pgx.inferCellType] using database: 'signature-immuneMeta.csv'")
-        M = read.csv(file.path(FILES,"signature-immuneMeta.csv"),row.names=1,check.names=FALSE)
+        M <- playdata::SIGNATURE_IMMUNEMETA
         M <- as.matrix(M)
     } else {
         message("[pgx.inferCellType] using provided markers list")
