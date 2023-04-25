@@ -3,8 +3,6 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-##access.dirs=FILESX
-
 #' @export
 pgx.load <- function(file, verbose=0) {
   local(get(load(file, verbose=verbose)))
@@ -13,7 +11,7 @@ pgx.load <- function(file, verbose=0) {
 #' @export
 ngs.save <- function(ngs, file, update.date=TRUE, light=TRUE, system=FALSE) {
   message("warning: ngs.save() is deprecated. please use pgx.save()")
-  pgx.save(ngs, file=file, update.date=update.date, light=light, system=system)    
+  pgx.save(ngs, file=file, update.date=update.date, light=light, system=system)
 }
 
 #' @export
@@ -51,8 +49,7 @@ pgx.save <- function(pgx, file, update.date=TRUE, light=TRUE, system=FALSE) {
 pgx.parseAccessLogs <- function(logs.dir, from=NULL, to=NULL,
                                 filter.get=NULL, unique = TRUE)
 {
-    
-    ##logs.dir <- c(FILESX, file.path(FILESX,"apache2"),"/var/www/html/logs","/var/log/apache2")
+
     logs.dir <- logs.dir[dir.exists(logs.dir)]
     if(length(logs.dir)==0) return(NULL)
     logs.dir
@@ -62,7 +59,7 @@ pgx.parseAccessLogs <- function(logs.dir, from=NULL, to=NULL,
     access.files <- unlist(access.files)
     ##access.files <- grep("shinyproxy",access.files,value=TRUE,invert=TRUE)
     access.files
-    
+
     access.logs <- lapply(access.files, function(f)
         suppressMessages(suppressWarnings(try(read.table(f)))))
     ##access.logs <- lapply(access.files, function(f)
@@ -71,7 +68,7 @@ pgx.parseAccessLogs <- function(logs.dir, from=NULL, to=NULL,
     access.logs <- access.logs[sapply(access.logs,nrow)>0]
     length(access.logs)
     if(length(access.logs)==0) return(NULL)
-    
+
     i=3
     for(i in 1:length(access.logs)) {
         df <- data.frame(access.logs[[i]])
@@ -81,9 +78,9 @@ pgx.parseAccessLogs <- function(logs.dir, from=NULL, to=NULL,
         }
         access.logs[[i]] <- df[,cols]
         colnames(access.logs[[i]]) <- c("ip","date","get")
-    }    
+    }
     remove(df)
-    
+
     ## Filter access log
     acc <- do.call(rbind, access.logs)
     dim(acc)
@@ -94,12 +91,12 @@ pgx.parseAccessLogs <- function(logs.dir, from=NULL, to=NULL,
     }
     dim(acc)
     Matrix::head(acc)
-    
+
     ## Extract visiting period
     ## if the operating system is not windows set the timezone to LC_TIME
     if(Sys.info()["sysname"] != "Windows") {
         Sys.setlocale("LC_TIME","en_US.UTF-8")
-    }   
+    }
     ##Sys.setlocale("LC_TIME","C") ## just to make sure
     acc$date <- gsub("[:].*|\\[","",as.character(acc[,"date"]))
     acc$date <- as.Date(acc$date, format = "%d/%b/%Y")
@@ -109,16 +106,16 @@ pgx.parseAccessLogs <- function(logs.dir, from=NULL, to=NULL,
     to.date <- Matrix::tail(acc$date,1)
     from.to <- paste(from.date,"-",to.date)
     from.to
-    
+
     ## Extract IP
     acc.ip <- as.character(acc[,"ip"])
     ##loc <- ip_api(unique(acc.ip))
     unique.ip <- unique(acc.ip)
     ## unique.hostname <- ip_to_hostname(unique.ip)  ## takes loooonnnggg... time!!
     ## names(unique.hostname)  <- unique.ip
-    
+
     ## create lookup-table for IP to country
-    
+
     file <- system.file("extdata","GeoLite2-Country.mmdb", package = "rgeolocate")
     loc  <- rgeolocate::maxmind(unique.ip, file, c("country_code","country_name"))
     loc$ip <- unique.ip
@@ -127,7 +124,7 @@ pgx.parseAccessLogs <- function(logs.dir, from=NULL, to=NULL,
     loc$country_name[which(loc$ip %in% c("127.0.0.1"))] <- "<local.ip>"
     ##loc$country_code[which(loc$ip %in% c("127.0.0.1"))] <- "<local.ip>"
     loc$country_name[is.na(loc$country_name)] <- "(unknown)"
-    
+
     country_codes <- unique(loc$country_code)
     names(country_codes) <- loc[match(country_codes,loc$country_code),"country_name"]
     country_codes["(unknown)"] = "(unknown)"
@@ -149,15 +146,15 @@ pgx.parseAccessLogs <- function(logs.dir, from=NULL, to=NULL,
         ii <- which(acc.cc=="US")
         getDodgy(acc[ii,],100)
         ii <- which(acc.cc=="CN")
-        getDodgy(acc[ii,],100)        
+        getDodgy(acc[ii,],100)
     }
-    
+
     ## cumulative table: counting total number of hits since start
     acc$days <- acc$date - from.date + 1
-    ndays <- max(acc$days)    
+    ndays <- max(acc$days)
     ncountries <- length(unique(acc$country_code))
     M <- matrix(0, nrow=ncountries, ncol=ndays)
-    rownames(M) <- sort(unique(acc$country_code)) 
+    rownames(M) <- sort(unique(acc$country_code))
     d = 1
     for(d in 1:ndays) {
         jj <- which(acc$days <= d)
@@ -169,7 +166,7 @@ pgx.parseAccessLogs <- function(logs.dir, from=NULL, to=NULL,
     }
     M[is.na(M)] <- 0
     colnames(M) <- as.character(from.date + 1:ncol(M) -1 )
-    
+
     ## weekly table: counting hits per week since start
     week.since <- seq(from.date, max(acc$date), 7)
     W <- matrix(0, nrow=ncountries, ncol=length(week.since)-1)
@@ -186,11 +183,11 @@ pgx.parseAccessLogs <- function(logs.dir, from=NULL, to=NULL,
         tt[is.na(tt)] <- 0
         W[,i] <- tt
     }
-    
+
     if(0) {
         barplot(Matrix::colSums(W,na.rm=TRUE),las=3, main="unique.IP")
     }
-    
+
     ## final table
     if(unique) {
         tt <- table(as.character(loc$country_name))  ## unique IP
@@ -207,7 +204,7 @@ pgx.parseAccessLogs <- function(logs.dir, from=NULL, to=NULL,
     sum(df$count,na.rm=TRUE)
     M <- M[match(df$country_code, rownames(M)),]
     W <- W[match(df$country_code, rownames(W)),]
-    
+
     res <- list(visitors=df, period=from.to, from=from.date, to=to.date,
                 table=M, weekly=W, access=acc)
     return(res)
@@ -215,7 +212,7 @@ pgx.parseAccessLogs <- function(logs.dir, from=NULL, to=NULL,
 
 #' @export
 h5exists <- function(h5.file, obj) {
-        
+
     xobjs <- apply(rhdf5::h5ls(h5.file)[,1:2],1,paste,collapse="/")
     obj %in% gsub("^/|^//","",xobjs)
 }
@@ -223,21 +220,21 @@ h5exists <- function(h5.file, obj) {
 ##h5.file="test.h5";chunk=100
 #' @export
 pgx.saveMatrixH5 <- function(X, h5.file, chunk=NULL, del=TRUE )
-{   
-    
+{
+
     if(del) unlink(h5.file)
-    
+
     if(is.null(chunk)) {
-        if(del) rhdf5::h5createFile(h5.file)    
+        if(del) rhdf5::h5createFile(h5.file)
         ## rhdf5::h5createGroup("myhdf5file.h5","foo")
         ## A = matrix(1:10,nr=5,nc=2)
-        ## rhdf5::h5write(A, "myhdf5file.h5","foo/A")    
-        rhdf5::h5createGroup(h5.file,"data")    
+        ## rhdf5::h5write(A, "myhdf5file.h5","foo/A")
+        rhdf5::h5createGroup(h5.file,"data")
         rhdf5::h5write( X, h5.file, "data/matrix")
     } else {
-        if(del) rhdf5::h5createFile(h5.file)    
+        if(del) rhdf5::h5createFile(h5.file)
         if(del) rhdf5::h5createGroup(h5.file,"data")
-        if(h5exists(h5.file,"data/matrix")) rhdf5::h5delete(h5.file, "data/matrix")        
+        if(h5exists(h5.file,"data/matrix")) rhdf5::h5delete(h5.file, "data/matrix")
         rhdf5::h5createDataset(
             h5.file, "data/matrix",
             c(nrow(X),ncol(X)),
@@ -254,8 +251,8 @@ pgx.saveMatrixH5 <- function(X, h5.file, chunk=NULL, del=TRUE )
     }
 
     rhdf5::h5write( rownames(X), h5.file, "data/rownames")
-    rhdf5::h5write( colnames(X), h5.file, "data/colnames")    
-    
+    rhdf5::h5write( colnames(X), h5.file, "data/colnames")
+
     rhdf5::h5closeAll()
 }
 
@@ -296,26 +293,17 @@ pgx.initDatasetFolder <- function(pgx.dir, verbose=TRUE, force=FALSE)
             message("[initDatasetFolder] too many files in",pgx.dir[i],". Please init manually")
             next()
         }
-        
+
         pgx.initDatasetFolder1 (
             pgx.dir[i],
             allfc.file = "datasets-allFC.csv",
             info.file = "datasets-info.csv",
             force = force,
             verbose = verbose
-        )    
+        )
 
     }
 
-}
-
-if(0) {
-    ##h5ls(h5.file)
-    pgx.createSignatureDatabaseH5( pgx.files, h5.file, update.only=FALSE)
-    rhdf5::h5ls(h5.file)
-    pgx.addEnrichmentSignaturesH5(h5.file, X=NULL, mc.cores=8,
-                                  lib.dir=FILES, methods=c("gsea"))
-    rhdf5::h5ls(h5.file)
 }
 
 
@@ -361,12 +349,12 @@ pgx.readDatasetProfiles1 <- function(pgx.dir, file="datasets-allFC.csv",
     } else {
         if(verbose) message("[readDatasetProfiles1] Found existing dataset profiles matrix")
     }
-    
+
     allFC <- fread.csv(file=file.path(pgx.dir, file),
                            row.names=1, check.names=FALSE)
     allFC <- as.matrix(allFC)
     if(verbose) message("[readDatasetProfiles1] dataset profiles matrix : dim=",dim(allFC))
-    dim(allFC)    
+    dim(allFC)
     return(allFC)
 }
 
@@ -376,12 +364,12 @@ pgx.scanInfoFile <- function(pgx.dir, file="datasets-info.csv", force=FALSE, ver
 {
     pgxinfo <- NULL
     i=1
-    for(i in 1:length(pgx.dir)) {        
-        pgx.initDatasetFolder1(pgx.dir[i], force=force, verbose=TRUE)        
+    for(i in 1:length(pgx.dir)) {
+        pgx.initDatasetFolder1(pgx.dir[i], force=force, verbose=TRUE)
         pgxinfo.file <- file.path(pgx.dir[i], file)
-        if(!file.exists(pgxinfo.file)) next()  ## really?? no updating??        
+        if(!file.exists(pgxinfo.file)) next()  ## really?? no updating??
         info = fread.csv(pgxinfo.file, stringsAsFactors=FALSE, row.names=1)
-        dim(info)       
+        dim(info)
         info$path <- pgx.dir[i]
         if(is.null(pgxinfo)) {
             pgxinfo <- info
@@ -408,7 +396,7 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
     if(!dir.exists(pgx.dir1)) {
         stop(paste("[initDatasetFolder1] FATAL ERROR : folder",pgx.dir,"does not exist"))
     }
-    
+
     ## all public datasets
     pgx.dir1 <- pgx.dir1[1]  ## only one folder!!!
     pgx.files <- dir(pgx.dir1, pattern="[.]pgx$")
@@ -423,7 +411,7 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
 
     info.file1 <- file.path(pgx.dir1, info.file)
     has.info <- file.exists(info.file1)
-    
+
     ##----------------------------------------------------------------------
     ## If an allFC file exits, check if it is done for all PGX files
     ##----------------------------------------------------------------------
@@ -444,7 +432,7 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
         pgx.missing0 <- setdiff(pgx.missing0, files.done)
         pgx.delete0  <- setdiff(files.done, pgx.files)
     }
-    
+
     if(!force && has.info) {
         if(verbose) message("[initDatasetFolder1] checking which pgx files already in PGX info...")
         pgxinfo = fread.csv(info.file1, stringsAsFactors=FALSE, row.names=1)
@@ -452,25 +440,25 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
         pgxinfo.files <- unique(sub(".pgx$","",pgxinfo$dataset))
         jj <- which(!(pgx.missing1 %in% pgxinfo.files))
         pgx.missing1 = pgx.missing1[jj]
-        pgx.delete1  <- setdiff(pgxinfo.files, pgx.files)        
+        pgx.delete1  <- setdiff(pgxinfo.files, pgx.files)
     }
-   
+
     ##----------------------------------------------------------------------
     ## Check if it is done for all PGX files
     ##----------------------------------------------------------------------
-    
+
     ## files to be done either for allFC or missing in INFO
     pgx.missing <- unique(c(pgx.missing0, pgx.missing1))
-    pgx.delete  <- unique(c(pgx.delete0, pgx.delete1))  
+    pgx.delete  <- unique(c(pgx.delete0, pgx.delete1))
     if(verbose) message("[initDatasetFolder1] FORCE = ",force)
-    
+
     if(length(pgx.missing)==0 && length(pgx.delete)==0) {
         if(verbose) message("[initDatasetFolder1] no update required. use FORCE=1 for forced update.")
         return(NULL)
     }
     if(verbose) message("[initDatasetFolder1] scanning ",length(pgx.missing)," PGX files in folder ",pgx.dir1)
-    if(verbose) message("[initDatasetFolder1] deleting ",length(pgx.delete)," old items in info file")  
-        
+    if(verbose) message("[initDatasetFolder1] deleting ",length(pgx.delete)," old items in info file")
+
     ##----------------------------------------------------------------------
     ## Reread allFC file. Before we only read the header.
     ##----------------------------------------------------------------------
@@ -480,7 +468,7 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
         allFC <- fread.csv(allfc.file1,row.names=1,check.names=FALSE)
     }
     dim(allFC)
-  
+
     ##----------------------------------------------------------------------
     ## For all new PGX files, load the PGX file and get the meta FC
     ## matrix.
@@ -491,8 +479,8 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
     message("[initDatasetFolder1] missing pgx = ",pgx.missing)
     pgxfile = pgx.missing[1]
     pgxinfo.changed = FALSE
-    pgxfc.changed = FALSE  
-  
+    pgxfc.changed = FALSE
+
     ngs <- NULL
     for(pgxfile in pgx.missing) {
 
@@ -504,13 +492,13 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
         if("try-error" %in% class(pgx)) {
             message(paste("[initDatasetFolder1] ERROR in loading PGX file:",pgxfile1,". skipping\n"))
             next()
-        }                
+        }
 
         if(!pgx.checkObject(pgx)) {
             message(paste("[initDatasetFolder1] INVALID PGX object",pgxfile,". Skipping"))
-            next()            
+            next()
         }
-        
+
         ##---------------------------------------------
         ## extract the meta FC matrix
         ##---------------------------------------------
@@ -519,7 +507,7 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
           meta <- pgx.getMetaFoldChangeMatrix(pgx, what="meta")
           rownames(meta$fc) <- toupper(rownames(meta$fc))
           missing.FC[[pgxfile]] <- meta$fc
-          pgxfc.changed <- TRUE          
+          pgxfc.changed <- TRUE
         }
 
         ##---------------------------------------------
@@ -533,18 +521,18 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
     }
 
     pgx <- NULL
-    
+
     ##----------------------------------------------------------------------
     ## Update the INFO meta file
-    ##----------------------------------------------------------------------    
-    rownames(pgxinfo) <- NULL    
-    pgxinfo <- data.frame(pgxinfo)    
+    ##----------------------------------------------------------------------
+    rownames(pgxinfo) <- NULL
+    pgxinfo <- data.frame(pgxinfo)
 
     ## remove unneccessary entries if forced.
     sel.delete <- which(!sub(".pgx$","",pgxinfo$dataset) %in% pgx.files)
     if(length(sel.delete)) {
       pgxinfo <- pgxinfo[-sel.delete,,drop=FALSE]
-      pgxinfo.changed <- TRUE      
+      pgxinfo.changed <- TRUE
     }
 
     if(pgxinfo.changed) {
@@ -552,17 +540,17 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
       write.csv(pgxinfo, file = info.file1)
       Sys.chmod(info.file1, "0666")
     }
-  
+
     ##----------------------------------------------------------------------
     ## Update the ALL.FC meta file
     ##----------------------------------------------------------------------
 
-    ## remove unneccessary entries if forced. 
+    ## remove unneccessary entries if forced.
     fc.done <- gsub("^\\[|\\].*","",colnames(allFC))
     sel.deleteFC <- which(!fc.done %in% pgx.files)
     if(length(sel.deleteFC)) {
       allFC <- allFC[, -sel.deleteFC]
-      pgxfc.changed <- TRUE       
+      pgxfc.changed <- TRUE
     }
 
     if(length(missing.FC)==0 && !pgxfc.changed) {
@@ -575,7 +563,7 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
       all.gg <- toupper(as.character(unlist(sapply(missing.FC, rownames))))
       gg.tbl <- table(all.gg)
       table(gg.tbl)
-      
+
       ## Conform the multiple metaFC matrices
       gg <- names(gg.tbl)
       length(gg)
@@ -584,7 +572,7 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
         rownames(x) <- gg
         return(x)
       })
-      
+
       ## append file name in front of contrast names
       id <- paste0("[",sub("[.]pgx","",names(missing.FC)),"]")
       id
@@ -593,7 +581,7 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
       }
       allFC.new <- do.call(cbind, missing.FC)
       allFC.new <- as.matrix(allFC.new)
-      
+
       if(is.null(allFC)) {
         allFC <- allFC.new
       } else {
@@ -606,14 +594,14 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
         rownames(allFC) <- gg
       }
       dim(allFC)
-      
+
       ## restrict to 20000 genes
       allfc.sd <- apply(allFC, 1, sd, na.rm=TRUE)
       allfc.nna <- rowMeans(!is.na(allFC))
       jj <- Matrix::head( order(-allfc.sd * allfc.nna), 20000)
       allFC <- allFC[jj,,drop=FALSE]
       dim(allFC)
-      pgxfc.changed <- TRUE      
+      pgxfc.changed <- TRUE
     }
 
     ## delete old entries
@@ -637,7 +625,7 @@ pgx.deleteInfoPGX <- function(pgxinfo, pgxname)
     if(!is.null(sel)) pgxinfo <- pgxinfo[sel,,drop=FALSE]
     pgxinfo
 }
-  
+
 #' @export
 pgx.updateInfoPGX <- function(pgxinfo, pgx, remove.old=TRUE)
 {
@@ -651,13 +639,13 @@ pgx.updateInfoPGX <- function(pgxinfo, pgx, remove.old=TRUE)
     is.mouse = (mean(grepl("[a-z]",pgx$genes$gene_name))>0.8)
     organism = c("human","mouse")[1 + is.mouse]
     if("organism" %in% names(pgx)) organism <- pgx$organism
-    
+
     this.date <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
     date = ifelse(is.null(pgx$date), this.date, as.character(pgx$date))
     dataset.name <- pgx$name
     ## dataset.name <- ifelse(is.null(pgx$name), pgxfile, pgx$name)
     creator <- ifelse("creator" %in% names(pgx), pgx$creator, "")
-  
+
     this.info <- c(
         dataset = dataset.name,
         ## author = "", ## add author? maintainer? owner??
@@ -688,7 +676,7 @@ pgx.updateInfoPGX <- function(pgxinfo, pgx, remove.old=TRUE)
         for(i in which.factor) {
             pgxinfo[,i] <- as.character(pgxinfo[,i])
         }
-        
+
         ## remove existing entries??
         if(remove.old && nrow(pgxinfo)>0 ) {
             d1 <- sub("[.]pgx$","",pgxinfo$dataset)
@@ -698,7 +686,7 @@ pgx.updateInfoPGX <- function(pgxinfo, pgx, remove.old=TRUE)
               pgxinfo <- pgxinfo[sel,,drop=FALSE]
             }
         }
-        
+
         ## merge with same columns
         info.cols <- colnames(pgxinfo)
         info.cols <- unique(c(info.cols, names(this.info)))
@@ -710,7 +698,7 @@ pgx.updateInfoPGX <- function(pgxinfo, pgx, remove.old=TRUE)
         }
         match(info.cols,colnames(pgxinfo1))
         pgxinfo1 = pgxinfo1[,match(info.cols,colnames(pgxinfo1)),drop=FALSE]
-        colnames(pgxinfo1) = info.cols        
+        colnames(pgxinfo1) = info.cols
         pgxinfo <- rbind( pgxinfo1, this.info)
     } else {
         pgxinfo <- data.frame(rbind(this.info))

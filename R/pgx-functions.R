@@ -1029,14 +1029,13 @@ pgx.getGeneFamilies <- function(genes, FILES="../files", min.size=10, max.size=5
     families <- list()
     families[["<all>"]] = genes  ## X is sorted
 
-    gmt.kea  <- read.gmt(file.path(FILES,"gmt/kinase_substrates_kea.gmt"))
-    gmt.chea <- read.gmt(file.path(FILES,"gmt/tf_targets_chea.gmt"))
+    gmt.kea <- read.gmt(playdata::get_file("kinase_substrates_kea.gmt"))
+    gmt.chea <- read.gmt(playdata::get_file("tf_targets_chea.gmt"))
     families[["Kinases (KEA)"]] = names(gmt.kea)
     families[["Transcription factors (ChEA)"]] = names(gmt.chea)
 
     ## Read standard HGNC gene families (www.genefamilies.org)
-    ##gmt.hgnc <- read.gmt(file.path(FILES,"gmt/hgnc_genefamilies.gmt"))
-    gmt.hgnc <- read.gmt(file.path(FILES,"gmt/hgnc_genefamilies_EDITED.gmt"))
+    gmt.hgnc <- read.gmt(playdata::get_file("hgnc_genefamilies_EDITED.gmt"))
 
     gmt.hgnc.size <- sapply(gmt.hgnc,length)
     gmt.hgnc <- gmt.hgnc[ which( gmt.hgnc.size >=50 & gmt.hgnc.size <= 1000)]
@@ -1647,7 +1646,7 @@ getGSETS_playbase.SAVE <- function(pattern, lib.dir, custom_families_file = "cus
     names(iGSETS) <- names(GSETS)
 
     lapply(iGSETS[gs],function(i) GSET.GENES[i])
-  
+
 }
 
 ##=====================================================================================

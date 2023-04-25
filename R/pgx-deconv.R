@@ -587,7 +587,6 @@ pgx.deconvolution <- function(X, ref,
     CIBERSORT.code <- "/opt/CIBERSORT/CIBERSORTmat.R"
     if("CIBERSORT" %in% methods && file.exists(CIBERSORT.code)) {
         ## CIBERSORT
-        ##source(file.path(FILES,CIBERSORT.code))
         source(CIBERSORT.code)
         dbg("starting deconvolution using CIBERSORT...\n")
         ciber.out <- NULL
