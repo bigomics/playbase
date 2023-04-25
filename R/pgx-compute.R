@@ -575,6 +575,7 @@ pgx.computePGX <- function(pgx,
                            gset.methods = c("fisher", "gsva", "fgsea"),
                            do.cluster = TRUE, use.design = TRUE, prune.samples = FALSE,
                            extra.methods = c("meta.go", "deconv", "infer", "drugs", "wordcloud"),
+                           libx.dir = NULL,
                            progress = NULL) {
   ## ======================================================================
   ## ======================================================================
@@ -589,7 +590,6 @@ pgx.computePGX <- function(pgx,
   contr.values <- unique(as.vector(contr.matrix))
   is.numcontrast <- all(contr.values %in% c(NA, -1, 0, 1))
   is.numcontrast <- is.numcontrast && (-1 %in% contr.values) && (1 %in% contr.values)
-  is.numcontrast
   if (!is.numcontrast) {
     contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
     contr.matrix <- sign(contr.matrix) ## sign is fine
@@ -631,7 +631,6 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
   message("[pgx.computePGX] testing genesets...")
-  ## max.features=max.genes;test.methods=gset.methods
   pgx <- compute_testGenesets(
     pgx,
     max.features = max.genesets,
@@ -642,7 +641,6 @@ pgx.computePGX <- function(pgx,
 
   if (do.cluster) {
     message("[pgx.computePGX] clustering genes...")
-    ## ngs <- pgx.clusterGenes(ngs, methods='umap', dims=c(2,3), level='gene')
     pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset") ## gsetX not ready!!
   }
 
@@ -651,9 +649,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
   message("[pgx.computePGX] computing extra modules...")
 
-  ## extra <- c("meta.go","deconv","infer","drugs")
-  ## extra <- c("meta.go","infer","drugs")
-  pgx <- compute_extra(pgx, extra = extra.methods)
+  pgx <- compute_extra(pgx, extra = extra.methods, libx.dir = libx.dir)
 
   message("[pgx.computePGX] done!")
   pgx$timings
