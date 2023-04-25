@@ -2190,7 +2190,11 @@ plot_ggscatter <- function(x, y=NULL, col=NULL, main=NULL,
             ggplot2::geom_point(size = 2.0*cex) +
             ggplot2::ggtitle(main) + ggplot2::xlab(xlab) + ggplot2::ylab(ylab)
         if(!is.null(col.scale)) {
-            p <- p + ggplot2::scale_color_gradient( low=col.scale[1], high=col.scale[2] )
+            if(class(col) %in% c("numeric", "integer")){
+              p <- p + ggplot2::scale_color_gradient( low=col.scale[1], high=col.scale[2] )
+            } else {
+              p <- p + ggplot2::scale_fill_gradient( low=col.scale[1], high=col.scale[2] )
+            }
         }
     }
     p
