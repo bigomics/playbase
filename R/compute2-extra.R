@@ -15,7 +15,7 @@
 #'
 #' @examples
 compute_extra <- function(ngs, extra=c("meta.go","deconv","infer","drugs", ## "graph",
-                                       "connectivity","wordcloud"), lib.dir, sigdb=NULL) {
+  "connectivity","wordcloud","wgcna"), lib.dir, sigdb=NULL) {
 
     timings <- c()
     libx.dir <- paste0(sub("/$","",lib.dir),'x')  ## ../libx yikes....
@@ -167,6 +167,13 @@ compute_extra <- function(ngs, extra=c("meta.go","deconv","infer","drugs", ## "g
         }
         names(ngs$connectivity)
     }
+
+
+    if("wgcna" %in% extra) {
+        message(">>> computing wgcna...")
+        
+        ngs$wgcna <- playbase::pgx.wgcna(pgx, lib.dir = lib.dir)
+        }
 
     ##------------------------------------------------------
     ## pretty collapse all timings

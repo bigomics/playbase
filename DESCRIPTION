@@ -130,6 +130,7 @@ Imports:
     viridis,
     visNetwork,
     webshot,
+    WGCNA,
     wordcloud,
     xgboost
 Remotes:
