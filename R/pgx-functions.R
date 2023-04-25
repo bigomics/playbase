@@ -990,7 +990,7 @@ getHSGeneInfo <- function(eg, as.link=TRUE) {
 
 ##levels="gene";contrast="Bmem_activation";layout=NULL;gene="IRF4";layout="layout_with_fr";hilight=NULL
 #' @export
-pgx.getGeneFamilies <- function(genes, FILES="../files", min.size=10, max.size=500)
+pgx.getGeneFamilies <- function(genes, min.size=10, max.size=500)
 {
 
     ##dir="/home/share/datasets/gmt/";nrows=-1
@@ -1624,7 +1624,7 @@ getGSETS_playbase.SAVE <- function(pattern, lib.dir, custom_families_file = "cus
     #get gene symbols
     GENE.SYMBOL = unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
     # get f1 and families
-    FAMILIES <- pgx.getGeneFamilies(GENE.SYMBOL, FILES=lib.dir, min.size=10, max.size=9999)
+    FAMILIES <- pgx.getGeneFamilies(GENE.SYMBOL, min.size=10, max.size=9999)
     fam.file <- file.path(lib.dir,custom_families_file)
     if(file.exists(fam.file)) {
         custom.gmt = read.gmt(file.path(lib.dir,custom_families_file),add.source=TRUE)
