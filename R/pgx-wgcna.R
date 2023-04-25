@@ -25,7 +25,6 @@ labels2rainbow <- function(net) {
 #' @export
 pgx.wgcna <- function(
     pgx,
-    lib.dir,
     minmodsize = 30,
     power = 6,
     cutheight = 0.25,
@@ -101,7 +100,7 @@ pgx.wgcna <- function(
         }
         #progress$inc(0.2)
     }
-    
+
 
     if (1) {
         #message("[wgcna.compute] >>> Calculating WGCNA module enrichments...")

@@ -119,7 +119,6 @@ pgx.parseAccessLogs <- function(logs.dir, from=NULL, to=NULL,
     file <- system.file("extdata","GeoLite2-Country.mmdb", package = "rgeolocate")
     loc  <- rgeolocate::maxmind(unique.ip, file, c("country_code","country_name"))
     loc$ip <- unique.ip
-    ##file <- file.path(lib.dir,"GeoLite2-City.mmdb")
     ##loc <- rgeolocate::maxmind(ip, file, c("country_code", "country_name", "city_name"))
     loc$country_name[which(loc$ip %in% c("127.0.0.1"))] <- "<local.ip>"
     ##loc$country_code[which(loc$ip %in% c("127.0.0.1"))] <- "<local.ip>"

@@ -19,7 +19,6 @@
 #' x <- 1
 #' @export
 pgx.createFromFiles <- function(count.file, samples.file, contrasts.file = NULL,
-                                lib.dir = FILES,
                                 gxmethods = "trend.limma,edger.qlf,edger.lrt",
                                 gsetmethods = "fisher,gsva,fgsea",
                                 extra = "meta.go,deconv,infer,drugs,wordcloud") {
@@ -112,7 +111,6 @@ pgx.createFromFiles <- function(count.file, samples.file, contrasts.file = NULL,
     do.cluster = TRUE,
     use.design = TRUE,
     prune.samples = FALSE,
-    lib.dir = lib.dir,
     progress = NULL
   )
 
@@ -565,7 +563,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 #' @param use.design
 #' @param prune.samples
 #' @param extra.methods
-#' @param lib.dir
 #' @param progress
 #'
 #' @return
@@ -578,7 +575,6 @@ pgx.computePGX <- function(pgx,
                            gset.methods = c("fisher", "gsva", "fgsea"),
                            do.cluster = TRUE, use.design = TRUE, prune.samples = FALSE,
                            extra.methods = c("meta.go", "deconv", "infer", "drugs", "wordcloud"),
-                           lib.dir,  ## must specify
                            progress = NULL) {
   ## ======================================================================
   ## ======================================================================
@@ -657,7 +653,7 @@ pgx.computePGX <- function(pgx,
 
   ## extra <- c("meta.go","deconv","infer","drugs")
   ## extra <- c("meta.go","infer","drugs")
-  pgx <- compute_extra(pgx, extra = extra.methods, lib.dir = lib.dir)
+  pgx <- compute_extra(pgx, extra = extra.methods)
 
   message("[pgx.computePGX] done!")
   pgx$timings

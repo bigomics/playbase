@@ -7,7 +7,6 @@
 #'
 #' @param ngs
 #' @param extra
-#' @param lib.dir
 #' @param sigdb
 #'
 #' @return
@@ -15,11 +14,9 @@
 #'
 #' @examples
 compute_extra <- function(ngs, extra=c("meta.go","deconv","infer","drugs", ## "graph",
-  "connectivity","wordcloud","wgcna"), lib.dir, sigdb=NULL) {
+  "connectivity","wordcloud","wgcna"), sigdb=NULL, libx.dir=NULL) {
 
     timings <- c()
-    libx.dir <- paste0(sub("/$","",lib.dir),'x')  ## ../libx yikes....
-    message("[compute_extra] setting libx.dir =",libx.dir)
 
     if(length(extra)==0) {
         return(ngs)
@@ -80,14 +77,6 @@ compute_extra <- function(ngs, extra=c("meta.go","deconv","infer","drugs", ## "g
 
     if("drugs" %in% extra) {
         ngs$drugs <- NULL  ## reset??
-        cmap.dir <- file.path(libx.dir,"cmap")
-        if(!dir.exists(cmap.dir)) {
-            cmap.dir <- file.path(lib.dir,"cmap")  ## look for default lib
-        }
-        if(!dir.exists(cmap.dir)) {
-            message("Warning:: missing CMAP files. Skipping drug connectivity analysis!")
-        }
-        dbg("[compute_extra] cmap.dir = ",cmap.dir)
 
         if(dir.exists(cmap.dir)) {
 
@@ -99,15 +88,9 @@ compute_extra <- function(ngs, extra=c("meta.go","deconv","infer","drugs", ## "g
 
             message(">>> Computing drug sensitivity enrichment...")
             tt <- system.time({
-                ngs <- compute_drugSensitivityEnrichment(ngs, cmap.dir)
+                ngs <- compute_drugSensitivityEnrichment(ngs, libx.dir)
             })
             timings <- rbind(timings, c("drugs-sx", tt))
-
-            ## message(">>> Computing gene perturbation enrichment...")
-            ## tt <- system.time({
-            ##     ngs <- compute.genePerturbationEnrichment(ngs, lib.dir=cmap.dir)
-            ## })
-            ##timings <- rbind(timings, c("drugs-gene", tt))
         }
         message("<<< done!")
     }
@@ -132,15 +115,17 @@ compute_extra <- function(ngs, extra=c("meta.go","deconv","infer","drugs", ## "g
         message("<<< done!")
     }
 
+    # I THINK THIS REQUIRES libx.dir TO BE SET TO FIND sigdb-.h5 FILES (-Nick)
     if("connectivity" %in% extra) {
         message(">>> computing connectivity scores...")
 
         ## ngs$connectivity <- NULL  ## clean up
+
+        # try to find sigdb in libx dir if not specified
         if(is.null(sigdb)) {
-            lib.dir2 <- unique(c(lib.dir,libx.dir))  ### NEED BETTER SOLUTION!!!
-            sig.dir <- c(SIGDB.DIR,lib.dir2)
-            sigdb <- dir(sig.dir, pattern="^sigdb-.*h5$", full.names=TRUE)
-            sigdb
+          if (is.null(libx.dir)) message('WARNING: no libx.dir passed into compute_extra(),
+          so there will be no sigdb that can found for computing connectivity scores')
+            sigdb <- dir(file.path(libx.dir, 'sigdb'), pattern="^sigdb-.*h5$", full.names=TRUE)
         }
 
         db <- sigdb[1]
@@ -172,7 +157,7 @@ compute_extra <- function(ngs, extra=c("meta.go","deconv","infer","drugs", ## "g
     if("wgcna" %in% extra) {
         message(">>> computing wgcna...")
 
-        ngs$wgcna <- playbase::pgx.wgcna(pgx, lib.dir = lib.dir)
+        ngs$wgcna <- playbase::pgx.wgcna(pgx)
         }
 
     ##------------------------------------------------------
@@ -220,16 +205,15 @@ compute_deconvolution <- function(ngs, rna.counts=ngs$counts, full=FALSE) {
 
     ## list of reference matrices
     refmat <- list()
-    #readSIG <- function(f) read.csv(file.path(lib.dir,"sig",f), row.names=1, check.names=FALSE)
-    refmat[["Immune cell (LM22)"]] <- playdata::LM22 # read.csv(file.path(lib.dir,"sig/LM22.txt"),sep="\t",row.names=1)
-    refmat[["Immune cell (ImmProt)"]] <- playdata::IMMPROT_SIGNATURE1000 #readSIG("immprot-signature1000.csv")
-    refmat[["Immune cell (DICE)"]] <- playdata::DICE_SIGNATURE1000 #readSIG("DICE-signature1000.csv")
-    refmat[["Immune cell (ImmunoStates)"]] <- playdata::IMMUNOSTATES_MATRIX #readSIG("ImmunoStates_matrix.csv")
-    refmat[["Tissue (HPA)"]]       <- playdata::RNA_TISSUE_MATRIX #readSIG("rna_tissue_matrix.csv")
-    refmat[["Tissue (GTEx)"]]      <- playdata::GTEX_RNA_TISSUE_TPM #readSIG("GTEx_rna_tissue_tpm.csv")
-    refmat[["Cell line (HPA)"]]    <- playdata::HPA_RNA_CELLINE #readSIG("HPA_rna_celline.csv")
-    refmat[["Cell line (CCLE)"]]   <- playdata::CCLE_RNA_CELLINE #readSIG("CCLE_rna_celline.csv")
-    refmat[["Cancer type (CCLE)"]] <- playdata::CCLE_RNA_CANCERTYPE #readSIG("CCLE_rna_cancertype.csv")
+    refmat[["Immune cell (LM22)"]] <- playdata::LM22
+    refmat[["Immune cell (ImmProt)"]] <- playdata::IMMPROT_SIGNATURE1000
+    refmat[["Immune cell (DICE)"]] <- playdata::DICE_SIGNATURE1000
+    refmat[["Immune cell (ImmunoStates)"]] <- playdata::IMMUNOSTATES_MATRIX
+    refmat[["Tissue (HPA)"]]       <- playdata::RNA_TISSUE_MATRIX
+    refmat[["Tissue (GTEx)"]]      <- playdata::GTEX_RNA_TISSUE_TPM
+    refmat[["Cell line (HPA)"]]    <- playdata::HPA_RNA_CELLINE
+    refmat[["Cell line (CCLE)"]]   <- playdata::CCLE_RNA_CELLINE
+    refmat[["Cancer type (CCLE)"]] <- playdata::CCLE_RNA_CANCERTYPE
 
     ## list of methods to compute
     ##methods = DECONV.METHODS

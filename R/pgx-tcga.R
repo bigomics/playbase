@@ -5,7 +5,7 @@
 
 
 #' @export
-pgx.testTCGAsurvival <- function(sig, matrix_file, lib.dir, ntop=100, deceased.only=TRUE,
+pgx.testTCGAsurvival <- function(sig, matrix_file, ntop=100, deceased.only=TRUE,
                                  min.cases=10, sortby.p = FALSE, plot=TRUE, verbose=1 )
 {
 
@@ -63,8 +63,7 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, lib.dir, ntop=100, deceased.o
     ## Read the survival data
     if(verbose) message("[pgx.testTCGAsurvival] reading TCGA survival data...")
 
-    surv.file <- file.path(lib.dir, "rtcga-survival.csv")
-    surv <- read.csv(surv.file, row.names=1)
+    surv <- playdata::RTCGA_SURVIVAL
     Matrix::head(surv)
     surv$months <- round(surv$times/365*12, 2)
     surv$status <- surv$patient.vital_status
