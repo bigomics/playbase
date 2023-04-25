@@ -4,7 +4,7 @@
 \alias{compute_drugSensitivityEnrichment}
 \title{Title}
 \usage{
-compute_drugSensitivityEnrichment(ngs, cmap.dir)
+compute_drugSensitivityEnrichment(ngs, libx.dir)
 }
 \arguments{
 \item{cmap.dir}{}

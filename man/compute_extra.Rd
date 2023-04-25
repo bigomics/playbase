@@ -7,8 +7,8 @@
 compute_extra(
   ngs,
   extra = c("meta.go", "deconv", "infer", "drugs", "connectivity", "wordcloud", "wgcna"),
-  lib.dir,
-  sigdb = NULL
+  sigdb = NULL,
+  libx.dir = NULL
 )
 }
 \arguments{

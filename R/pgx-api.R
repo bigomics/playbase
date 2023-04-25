@@ -196,7 +196,6 @@ pgx.getMarkerGenes <- function(pgx, n=10, dir=0, sym=FALSE, filt=NULL) {
 #'
 #' @examples
 pgx.getFamilies <- function(pgx, nmin=10, extended=FALSE) {
-##  pgx.getFamilies <- function(pgx, lib.dir,  nmin=10, extended=FALSE) {
     if(extended) {
         # fam <- grep("^[<].*|^FAMILY|^TISSUE|^COMPARTMENT|^CELLTYPE|^GOCC|^DISEASE|^CUSTOM",
         #             names(iGSETS),value=TRUE)

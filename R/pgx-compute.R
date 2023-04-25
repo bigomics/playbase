@@ -19,7 +19,6 @@
 #' x <- 1
 #' @export
 pgx.createFromFiles <- function(count.file, samples.file, contrasts.file = NULL,
-                                lib.dir = FILES,
                                 gxmethods = "trend.limma,edger.qlf,edger.lrt",
                                 gsetmethods = "fisher,gsva,fgsea",
                                 extra = "meta.go,deconv,infer,drugs,wordcloud") {
@@ -112,7 +111,6 @@ pgx.createFromFiles <- function(count.file, samples.file, contrasts.file = NULL,
     do.cluster = TRUE,
     use.design = TRUE,
     prune.samples = FALSE,
-    lib.dir = lib.dir,
     progress = NULL
   )
 
@@ -565,7 +563,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 #' @param use.design
 #' @param prune.samples
 #' @param extra.methods
-#' @param lib.dir
 #' @param progress
 #'
 #' @return
@@ -578,7 +575,7 @@ pgx.computePGX <- function(pgx,
                            gset.methods = c("fisher", "gsva", "fgsea"),
                            do.cluster = TRUE, use.design = TRUE, prune.samples = FALSE,
                            extra.methods = c("meta.go", "deconv", "infer", "drugs", "wordcloud"),
-                           lib.dir,  ## must specify
+                           libx.dir = NULL,
                            progress = NULL) {
   ## ======================================================================
   ## ======================================================================
@@ -593,7 +590,6 @@ pgx.computePGX <- function(pgx,
   contr.values <- unique(as.vector(contr.matrix))
   is.numcontrast <- all(contr.values %in% c(NA, -1, 0, 1))
   is.numcontrast <- is.numcontrast && (-1 %in% contr.values) && (1 %in% contr.values)
-  is.numcontrast
   if (!is.numcontrast) {
     contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
     contr.matrix <- sign(contr.matrix) ## sign is fine
@@ -635,7 +631,6 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
   message("[pgx.computePGX] testing genesets...")
-  ## max.features=max.genes;test.methods=gset.methods
   pgx <- compute_testGenesets(
     pgx,
     max.features = max.genesets,
@@ -646,7 +641,6 @@ pgx.computePGX <- function(pgx,
 
   if (do.cluster) {
     message("[pgx.computePGX] clustering genes...")
-    ## ngs <- pgx.clusterGenes(ngs, methods='umap', dims=c(2,3), level='gene')
     pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset") ## gsetX not ready!!
   }
 
@@ -655,9 +649,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
   message("[pgx.computePGX] computing extra modules...")
 
-  ## extra <- c("meta.go","deconv","infer","drugs")
-  ## extra <- c("meta.go","infer","drugs")
-  pgx <- compute_extra(pgx, extra = extra.methods, lib.dir = lib.dir)
+  pgx <- compute_extra(pgx, extra = extra.methods, libx.dir = libx.dir)
 
   message("[pgx.computePGX] done!")
   pgx$timings

@@ -1619,13 +1619,14 @@ getGSETS_playbase <- function(gsets=NULL, pattern=NULL) {
   lapply(playdata::iGSETS[gsets],function(idx) playdata::GSET_GENES[idx])
 }
 
+#' Note: this function needs to be refactored since lib.dir will not exist
 #' @export
 getGSETS_playbase.SAVE <- function(pattern, lib.dir, custom_families_file = "custom-families.gmt") {
     #get gene symbols
     GENE.SYMBOL = unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
     # get f1 and families
     FAMILIES <- pgx.getGeneFamilies(GENE.SYMBOL, min.size=10, max.size=9999)
-    fam.file <- file.path(lib.dir,custom_families_file)
+    fam.file <- file.path(lib.dir, custom_families_file)
     if(file.exists(fam.file)) {
         custom.gmt = read.gmt(file.path(lib.dir,custom_families_file),add.source=TRUE)
         names(custom.gmt)
