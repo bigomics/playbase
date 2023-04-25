@@ -199,14 +199,6 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
                                        contrasts=NULL, res.mono=NULL )
 {
 
-    if(0) {
-        X <- readRDS(file=file.path(FILES,"l1000_es.rds"))
-        xdrugs <- gsub("_.*$","",colnames(X))
-        length(table(xdrugs))
-        dim(X)
-        ntop=10;nsample=20
-    }
-
     if("gx.meta" %in% names(obj)) {
         F <- sapply(obj$gx.meta$meta,function(x) x$meta.fx)
         rownames(F) <- rownames(obj$gx.meta$meta[[1]])
