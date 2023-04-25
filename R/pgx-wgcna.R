@@ -107,10 +107,7 @@ pgx.wgcna <- function(
         #message("[wgcna.compute] >>> Calculating WGCNA module enrichments...")
         #progress$inc(0, "Calculating module enrichment...")
 
-        gmt <- getGSETS_playbase(
-            pattern = "HALLMARK|GOBP|^C[1-9]",
-            lib.dir = lib.dir
-            )
+        gmt <- getGSETS_playbase( pattern = "HALLMARK|GOBP|^C[1-9]")
         gse <- NULL
         ## bg <- unlist(me.genes)
         bg <- toupper(rownames(pgx$X))

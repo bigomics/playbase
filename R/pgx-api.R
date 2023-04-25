@@ -195,19 +195,20 @@ pgx.getMarkerGenes <- function(pgx, n=10, dir=0, sym=FALSE, filt=NULL) {
 #' @export
 #'
 #' @examples
-pgx.getFamilies <- function(pgx, lib.dir,  nmin=10, extended=FALSE) {
+pgx.getFamilies <- function(pgx, nmin=10, extended=FALSE) {
+##  pgx.getFamilies <- function(pgx, lib.dir,  nmin=10, extended=FALSE) {
     if(extended) {
         # fam <- grep("^[<].*|^FAMILY|^TISSUE|^COMPARTMENT|^CELLTYPE|^GOCC|^DISEASE|^CUSTOM",
         #             names(iGSETS),value=TRUE)
         # fam <- grep("^[<].*|^FAMILY|^COMPARTMENT|^CUSTOM",names(iGSETS),value=TRUE)
-        fam <- "^[<].*|^FAMILY|^COMPARTMENT|^CUSTOM"
+        fam.pattern <- "^[<].*|^FAMILY|^COMPARTMENT|^CUSTOM"
     } else {
         # fam <- grep("^[<].*|^FAMILY|^CUSTOM",names(iGSETS),value=TRUE)
-        fam <- "^[<].*|^FAMILY|^CUSTOM"
+        fam.pattern <- "^[<].*|^FAMILY|^CUSTOM"
     }
     xgenes <- toupper(rownames(pgx$X))
     xgenes <- toupper(pgx$genes$gene_name)
-    gg <- getGSETS_playbase(fam, lib.dir = lib.dir)
-    jj <- which(sapply(gg,function(x) sum(x %in% xgenes)) >= nmin)
-    sort(fam[jj])
+    gsets <- getGSETS_playbase(pattern = fam.pattern)
+    jj <- which(sapply(gsets,function(x) sum(x %in% xgenes)) >= nmin)
+    sort(names(gsets)[jj])  ## sort alphabetically
 }

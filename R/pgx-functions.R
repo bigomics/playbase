@@ -1611,7 +1611,17 @@ correctMarchSeptemberGenes <- function(gg) {
 cor.pvalue <- function(x,n) pnorm(-abs(x/((1-x**2)/(n-2))**0.5))
 
 #' @export
-getGSETS_playbase <- function(pattern, lib.dir = FILES, custom_families_file = "custom-families.gmt") {
+getGSETS_playbase <- function(gsets=NULL, pattern=NULL) {
+  if(is.null(gsets)) gsets <- names(playdata::iGSETS)
+  if(!is.null(pattern)) {
+    gsets <- grep(pattern, gsets, value=TRUE)
+  }
+  gsets <- intersect(gsets, names(playdata::iGSETS))
+  lapply(playdata::iGSETS[gsets],function(idx) playdata::GSET_GENES[idx])
+}
+
+#' @export
+getGSETS_playbase.SAVE <- function(pattern, lib.dir, custom_families_file = "custom-families.gmt") {
     #get gene symbols
     GENE.SYMBOL = unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
     # get f1 and families
@@ -1635,9 +1645,6 @@ getGSETS_playbase <- function(pattern, lib.dir = FILES, custom_families_file = "
     iGSETS <- parallel::mclapply(GSETS, function(a) match(a,GSET.GENES))  ## slow...
     gs = grep(pattern, names(iGSETS), value = TRUE)
     names(iGSETS) <- names(GSETS)
-
-
-
 
     lapply(iGSETS[gs],function(i) GSET.GENES[i])
   
