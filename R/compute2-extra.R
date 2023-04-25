@@ -320,20 +320,15 @@ compute_drugActivityEnrichment <- function(ngs) {
 
     ## -------------- drug enrichment
     # get drug activity databases
-    ref.db <- grep('L1000_*',data(package='playdata')$results[,'Item'],value=T)
-    ref.db <- ref.db[ref.db != 'L1000_REPURPOSING_DRUGS']
-
-    if(length(ref.db)==0) {
-        message("[compute_drugActivityEnrichment] Warning:: missing drug activity database")
-        return(ngs)
-    }
-    names(ref.db) <- sub("-","/",gsub("_.*","",ref.db))
+    ref.db <- list(
+      'L1000_ACTIVITYS_N20D1011' = playdata::L1000_ACTIVITYS_N20D1011
+    )
 
     for(i in 1:length(ref.db)) {
 
-        f <- ref.db[i]
+        f <- names(ref.db)[i]
         message("[compute_drugActivityEnrichment] reading L1000 reference: ",f)
-        X <- get(f)
+        X <- ref.db[[i]]
         xdrugs <- gsub("[_@].*$","",colnames(X))
         ndrugs <- length(table(xdrugs))
         message("number of profiles: ",ncol(X))
