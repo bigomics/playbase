@@ -161,10 +161,10 @@ pgx.initialize <- function(pgx) {
     if("hgnc_symbol" %in% colnames(pgx$genes) ) {
         hgenes <- toupper(pgx$genes$hgnc_symbol)
         genes  <- pgx$genes$gene_name
-        pgx$families <- lapply(playbase::FAMILIES, function(x) setdiff(genes[match(x,hgenes)],NA))
+        pgx$families <- lapply(playdata::FAMILIES, function(x) setdiff(genes[match(x,hgenes)],NA))
     } else {
         genes <- toupper(pgx$genes$gene_name)
-        pgx$families <- lapply(playbase::FAMILIES, function(x) intersect(x,genes))
+        pgx$families <- lapply(playdata::FAMILIES, function(x) intersect(x,genes))
     }
     famsize <- sapply(pgx$families, length)
     pgx$families <- pgx$families[which(famsize>=10)]
