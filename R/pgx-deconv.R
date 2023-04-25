@@ -95,7 +95,7 @@ pgx.inferCellTypeLM22 <- function(counts, low.th=0.01, add.unknown=FALSE,
     ## Two-pass (2-level) cell type identification using LM22
     ##
     ##
-    M = read.csv(file.path(FILES,"sig/LM22.txt"),row.names=1,sep="\t",check.names=FALSE)
+    M <- playdata::LM22
     M <- as.matrix(M)
     colnames(M) <- gsub(" ","_",sub(" ",".",sub(" ","_",colnames(M))))
     colnames(M) <- sub("Macrophages_","Macrophages.",colnames(M))
