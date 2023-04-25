@@ -183,8 +183,7 @@ pgx.initialize <- function(pgx) {
         gs <- pgx$gset.meta$meta[[i]]
         fc <- pgx$gx.meta$meta[[i]]$meta.fx
         names(fc) <- rownames(pgx$gx.meta$meta[[i]])
-        fc <- fc[which(toupper(names(fc)) %in% colnames(GSETxGENE))]
-        ## G1 <- GSETxGENE[rownames(gs),toupper(names(fc))]
+        fc <- fc[which(toupper(names(fc)) %in% colnames(playdata::GSETxGENE))]
         G1 <- Matrix::t(pgx$GMT[names(fc),rownames(gs)])
         mx <- (G1 %*% fc)[,1]
         pgx$gset.meta$meta[[i]]$meta.fx <- mx
