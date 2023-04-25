@@ -14,6 +14,7 @@ pgx.computePGX(
   use.design = TRUE,
   prune.samples = FALSE,
   extra.methods = c("meta.go", "deconv", "infer", "drugs", "wordcloud"),
+  libx.dir = NULL,
   progress = NULL
 )
 }

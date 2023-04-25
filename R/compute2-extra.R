@@ -87,12 +87,14 @@ compute_extra <- function(ngs, extra = c(
     })
     timings <- rbind(timings, c("drugs", tt))
 
-    if (dir.exists(cmap.dir)) {
+    if (!is.null(libx.dir)) {
       message(">>> Computing drug sensitivity enrichment...")
       tt <- system.time({
         ngs <- compute_drugSensitivityEnrichment(ngs, libx.dir)
       })
       timings <- rbind(timings, c("drugs-sx", tt))
+    } else {
+      message(">>> Skipping drug sensitivity enrichment (no libx.dir)...")
     }
     message("<<< done!")
   }
@@ -119,48 +121,49 @@ compute_extra <- function(ngs, extra = c(
 
   # I THINK THIS REQUIRES libx.dir TO BE SET TO FIND sigdb-.h5 FILES (-Nick)
   if ("connectivity" %in% extra) {
-    message(">>> computing connectivity scores...")
-
-    ## ngs$connectivity <- NULL  ## clean up
 
     # try to find sigdb in libx dir if not specified
-    if (is.null(sigdb)) {
-      if (is.null(libx.dir)) message("WARNING: no libx.dir passed into compute_extra(),
-          so there will be no sigdb that can found for computing connectivity scores")
-      sigdb <- dir(file.path(libx.dir, "sigdb"), pattern = "^sigdb-.*h5$", full.names = TRUE)
-    }
-
-    db <- sigdb[1]
-    for (db in sigdb) {
-      if (file.exists(db)) {
-        ntop <- 10000
-        ntop <- 1000
-        message("computing connectivity scores for ", db)
-        ## in memory for many comparisons
-        meta <- pgx.getMetaFoldChangeMatrix(ngs, what = "meta")
-        inmemory <- ifelse(ncol(meta$fc) > 50, TRUE, FALSE)
-        inmemory
-        tt <- system.time({
-          scores <- pgx.computeConnectivityScores(
-            ngs, db,
-            ntop = ntop, contrasts = NULL,
-            remove.le = TRUE, inmemory = inmemory
-          )
-        })
-        timings <- rbind(timings, c("connectivity", tt))
-
-        db0 <- sub(".*/", "", db)
-        ngs$connectivity[[db0]] <- scores
-        remove(scores)
+    if (!is.null(libx.dir) | !is.null(sigdb)) {
+      message(">>> Computing connectivity scores...")
+      if (is.null(sigdb)) {
+        sigdb <- dir(file.path(libx.dir, "sigdb"), pattern = "^sigdb-.*h5$", full.names = TRUE)
       }
+
+      db <- sigdb[1]
+      for (db in sigdb) {
+        if (file.exists(db)) {
+          ntop <- 10000
+          ntop <- 1000
+          message("computing connectivity scores for ", db)
+          ## in memory for many comparisons
+          meta <- pgx.getMetaFoldChangeMatrix(ngs, what = "meta")
+          inmemory <- ifelse(ncol(meta$fc) > 50, TRUE, FALSE)
+          inmemory
+          tt <- system.time({
+            scores <- pgx.computeConnectivityScores(
+              ngs, db,
+              ntop = ntop, contrasts = NULL,
+              remove.le = TRUE, inmemory = inmemory
+            )
+          })
+          timings <- rbind(timings, c("connectivity", tt))
+
+          db0 <- sub(".*/", "", db)
+          ngs$connectivity[[db0]] <- scores
+          remove(scores)
+        }
+      }
+
+    } else {
+      message(">>> Skipping connectivity scores (no libx.dir)...")
     }
-    names(ngs$connectivity)
+
+
   }
 
 
   if ("wgcna" %in% extra) {
-    message(">>> computing wgcna...")
-
+    message(">>> Computing wgcna...")
     ngs$wgcna <- playbase::pgx.wgcna(pgx)
   }
 
@@ -380,6 +383,8 @@ compute_drugActivityEnrichment <- function(ngs) {
 #'
 #' @examples
 compute_drugSensitivityEnrichment <- function(ngs, libx.dir) {
+
+  if (is.null(libx.dir)) message('ERROR: Need libx.dir if you call compute_drugSensitivityEnrichment')
   cmap.dir <- file.path(libx.dir, "cmap")
 
   ref.db <- dir(cmap.dir, pattern = "sensitivity.*rds$")
