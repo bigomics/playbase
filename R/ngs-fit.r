@@ -52,11 +52,6 @@ ngs.fitContrastsWithAllMethods <- function(counts, X=NULL, samples, design, cont
     methods <- intersect(methods, c("ttest","ttest.welch","voom.limma","trend.limma","notrend.limma",
                                     "deseq2.wald","deseq2.lrt","edger.qlf","edger.lrt"))
 
-    message("[ngs.fitContrastsWithAllMethods] calculating methods : ", methods)
-    message("[ngs.fitContrastsWithAllMethods] prune.samples = ", prune.samples)
-
-    ##cat("dim(X) = ",dim(X),"\n")
-
     ## If degenerate set design to NULL
     if(!is.null(design) && ncol(design)>=ncol(X) ) {
         ## "no-replicate" design!!!
@@ -65,7 +60,6 @@ ngs.fitContrastsWithAllMethods <- function(counts, X=NULL, samples, design, cont
         design <- NULL
     }
 
-    message("[ngs.fitContrastsWithAllMethods] 2 : ")
     ##------------------------------------------------------------------
     ## define transformation methods: log2CPM for counts
     ##------------------------------------------------------------------
@@ -92,7 +86,6 @@ ngs.fitContrastsWithAllMethods <- function(counts, X=NULL, samples, design, cont
             group <- NULL
         }
     }
-    message("[ngs.fitContrastsWithAllMethods] [ngs.fitContrastsWithAllMethods] 3 : ")
 
     timings <- list()
     outputs = list()

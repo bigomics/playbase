@@ -161,10 +161,10 @@ pgx.initialize <- function(pgx) {
     if("hgnc_symbol" %in% colnames(pgx$genes) ) {
         hgenes <- toupper(pgx$genes$hgnc_symbol)
         genes  <- pgx$genes$gene_name
-        pgx$families <- lapply(FAMILIES, function(x) setdiff(genes[match(x,hgenes)],NA))
+        pgx$families <- lapply(playdata::FAMILIES, function(x) setdiff(genes[match(x,hgenes)],NA))
     } else {
         genes <- toupper(pgx$genes$gene_name)
-        pgx$families <- lapply(FAMILIES, function(x) intersect(x,genes))
+        pgx$families <- lapply(playdata::FAMILIES, function(x) intersect(x,genes))
     }
     famsize <- sapply(pgx$families, length)
     pgx$families <- pgx$families[which(famsize>=10)]
@@ -183,8 +183,7 @@ pgx.initialize <- function(pgx) {
         gs <- pgx$gset.meta$meta[[i]]
         fc <- pgx$gx.meta$meta[[i]]$meta.fx
         names(fc) <- rownames(pgx$gx.meta$meta[[i]])
-        fc <- fc[which(toupper(names(fc)) %in% colnames(GSETxGENE))]
-        ## G1 <- GSETxGENE[rownames(gs),toupper(names(fc))]
+        fc <- fc[which(toupper(names(fc)) %in% colnames(playdata::GSETxGENE))]
         G1 <- Matrix::t(pgx$GMT[names(fc),rownames(gs)])
         mx <- (G1 %*% fc)[,1]
         pgx$gset.meta$meta[[i]]$meta.fx <- mx

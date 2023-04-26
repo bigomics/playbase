@@ -123,12 +123,12 @@ compute_extra <- function(ngs, extra = c(
   if ("connectivity" %in% extra) {
 
     # try to find sigdb in libx dir if not specified
-    if (!is.null(libx.dir) | !is.null(sigdb)) {
+    if (!is.null(libx.dir) || !is.null(sigdb)) {
       message(">>> Computing connectivity scores...")
       if (is.null(sigdb)) {
         sigdb <- dir(file.path(libx.dir, "sigdb"), pattern = "^sigdb-.*h5$", full.names = TRUE)
       }
-
+      
       db <- sigdb[1]
       for (db in sigdb) {
         if (file.exists(db)) {
@@ -157,7 +157,6 @@ compute_extra <- function(ngs, extra = c(
     } else {
       message(">>> Skipping connectivity scores (no libx.dir)...")
     }
-
 
   }
 
