@@ -10,7 +10,7 @@
 #' @examples
 #' counts <- read_counts(playbase::example_file("counts.csv"))
 #' @export
-read_counts <- function(file, convert_names = TRUE) {
+read_counts <- function(file, convert_names = FALSE) {
   df <- read.as_matrix(file)
 
   is_valid <- validate_counts(df)
