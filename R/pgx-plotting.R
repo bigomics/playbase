@@ -1902,7 +1902,7 @@ gsea.enplotly <- function(fc, gset, cex=1, main=NULL, xlab=NULL, ticklen=0.25,
             marker = list(
               ## color = '#FF8C00',
               color = '#444444',
-              size = cex*6
+              size = cex*4
             ),
             text = tooltips2,
             hoveron = 'points',
