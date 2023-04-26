@@ -1341,9 +1341,13 @@ alias2hugo <- function(s, org=NULL, na.orig=TRUE) {
     s1 <- trimws(s[nna])
     hugo <- NULL
     if(org == "hs") {
-        hugo <- limma::alias2SymbolTable( s1, species="Hs")
+        hugo <- suppressWarnings(
+          limma::alias2SymbolTable( s1, species="Hs")
+        )
     } else if(org == "mm") {
-        hugo <- limma::alias2SymbolTable( s1, species="Mm")
+        hugo <- suppressWarnings(
+          limma::alias2SymbolTable( s1, species="Mm")
+        )
     } else {
         stop("[alias2hugo] invalid organism")
     }

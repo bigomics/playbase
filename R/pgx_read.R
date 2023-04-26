@@ -10,8 +10,8 @@
 #' @examples
 #' counts <- read_counts(playbase::example_file("counts.csv"))
 #' @export
-read_counts <- function(file, convert_names = FALSE) {
-  df <- read_as_matrix(file)
+read_counts <- function(file, convert_names = TRUE) {
+  df <- read.as_matrix(file)
 
   is_valid <- validate_counts(df)
   if (!is_valid) stop("Counts file is not valid.")
@@ -44,7 +44,7 @@ read_counts <- function(file, convert_names = FALSE) {
 #' counts <- read_expression(playbase::example_file("counts.csv"))
 #' @export
 read_expression <- function(file, convert_names = TRUE) {
-  df <- read_as_matrix(file)
+  df <- read.as_matrix(file)
   df <- df**2
 
   is_valid <- validate_counts(df)
@@ -77,7 +77,7 @@ read_expression <- function(file, convert_names = TRUE) {
 #' samples <- read_samples(playbase::example_file("samples.csv"))
 #' @export
 read_samples <- function(file) {
-  df <- read_as_matrix(file)
+  df <- read.as_matrix(file)
 
   is_valid <- validate_samples(df)
   if (!is_valid) stop("Samples file is not valid.")
@@ -96,40 +96,12 @@ read_samples <- function(file) {
 #' contrasts <- read_contrasts(playbase::example_file("contrasts.csv"))
 #' @export
 read_contrasts <- function(file) {
-  df <- read_as_matrix(file)
+  df <- read.as_matrix(file)
 
   is_valid <- validate_contrasts(df)
   if (!is_valid) stop("Contrasts file is not valid.")
 
   df
-}
-
-#' Read a file as a matrix
-#'
-#' This function is used to read counts/samples/contrasts data from file.
-#'
-#' @param file string. filepath to data
-#'
-#' @return matrix
-#'
-#' @examples
-#' x <- 1
-#' @export
-read_as_matrix <- function(file) {
-  x0 <- data.table::fread(
-    file = file,
-    check.names = FALSE,
-    header = TRUE,
-    blank.lines.skip = TRUE,
-    stringsAsFactors = FALSE
-  )
-  x <- NULL
-  sel <- which(!as.character(x0[[1]]) %in% c("", " ", "NA", "na", NA))
-  if (length(sel)) {
-    x <- as.matrix(x0[sel, -1, drop = FALSE])
-    rownames(x) <- x0[[1]][sel]
-  }
-  return(x)
 }
 
 

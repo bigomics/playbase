@@ -4,7 +4,7 @@
 \alias{read_counts}
 \title{Read counts data from file}
 \usage{
-read_counts(file, convert_names = FALSE)
+read_counts(file, convert_names = TRUE)
 }
 \arguments{
 \item{file}{string. path to file}
