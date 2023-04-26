@@ -736,7 +736,7 @@ pgx.deconvolution <- function(X, ref,
         )
         timings[["I-NNLS"]] <- stime
         dbg("deconvolution using I-NNLS took",stime[3],"s\n")
-        if(!is.null(res.abbas) && class(res.abbas)!="try-error") {
+        if(!is.null(res.abbas) && class(res.abbas)[1]!="try-error") {
             rownames(res.abbas) <- colnames(ref)
             results[["I-NNLS"]] <- t(res.abbas)
         }
