@@ -25,7 +25,7 @@ pgx.save <- function(pgx, file, update.date=TRUE, light=TRUE, system=FALSE) {
         pgx$gset.meta$outputs <- NULL
         pgx$model.parameters$efit <- NULL
         pgx$gmt.all <- NULL
-        pgx$families <- NULL
+        ##pgx$families <- NULL
         pgx$collections <- NULL
         ## pgx$counts <- NULL
         pgx$gset.meta$matrices <- NULL
