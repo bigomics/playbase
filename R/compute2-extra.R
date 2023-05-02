@@ -11,8 +11,6 @@
 #'
 #' @return
 #' @export
-#'
-#' @examples
 compute_extra <- function(ngs, extra = c(
                             "meta.go", "deconv", "infer", "drugs", ## "graph",
                             "connectivity", "wordcloud", "wgcna"
@@ -128,7 +126,7 @@ compute_extra <- function(ngs, extra = c(
       if (is.null(sigdb)) {
         sigdb <- dir(file.path(libx.dir, "sigdb"), pattern = "^sigdb-.*h5$", full.names = TRUE)
       }
-      
+
       db <- sigdb[1]
       for (db in sigdb) {
         if (file.exists(db)) {
