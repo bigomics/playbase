@@ -3861,6 +3861,7 @@ iheatmapr.add_col_annotation <- function(p,
                    buffer = 0.015,
                    inner_buffer = buffer / 2,
                    show_title = TRUE,
+                   show_legend = TRUE,
                    layout = list()){
 
             side <- match.arg(side)
@@ -3879,6 +3880,7 @@ iheatmapr.add_col_annotation <- function(p,
                                     name = colnames(x)[i],
                                     title = colnames(x)[i],
                                     colors = tmp_colors,
+                                    show_colorbar = show_legend,
                                     side = side,
                                     size = size,
                                     buffer = if (i == 1)
@@ -3915,7 +3917,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
                                        xtips=NULL, ytips=NULL, row_clust=TRUE,
                                        row_annot_width=0.03, scale="row.center",
                                        colors=NULL, lmar=60,
-                                       rowcex=1, colcex=1)
+                                       rowcex=1, colcex=1, show_legend = TRUE)
 {
 
     ## constants
@@ -4024,6 +4026,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
         prepend_value = "Value: ")
 
     x1 <- xx[[1]]
+
     ##x1 <- x1[nrow(x1):1,]
     plt <- iheatmapr::main_heatmap(
         x1, name = "expression",
@@ -4046,11 +4049,13 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
             iheatmapr.add_col_annotation(
                 size = col_annot_height, buffer = 0.005, side="bottom",
                 colors = colors0, show_title=TRUE,
-                annotF[colnames(xx[[1]]),,drop=FALSE])
+                annotF[colnames(xx[[1]]),,drop=FALSE],
+                show_legend = show_legend)
         }
     ##plt
     length(xx)
     dim(X)
+
     if(ncol(X)<100 && colcex>0) {
         plt <- plt %>% iheatmapr::add_col_labels(
                            side="bottom", size=0.15*ex,
@@ -4084,7 +4089,8 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
                 iheatmapr.add_col_annotation(
                     size = col_annot_height, buffer = 0.005, side="bottom",
                     colors = colors0, show_title=FALSE,
-                    data.frame(annotF[colnames(x1),,drop=FALSE]))
+                    data.frame(annotF[colnames(x1),,drop=FALSE]),
+                    show_legend = show_legend)
 
             if(ncol(X)<100 && colcex>0) {
                 plt <- plt %>%
@@ -4100,7 +4106,8 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
     if(!is.null(idx) && !is.null(row_annot_width) && row_annot_width>0 ) {
         plt <- iheatmapr::add_row_annotation(
             plt, data.frame("gene.group"=idx),
-            size = row_annot_width*ex)
+            size = row_annot_width*ex,
+            show_colorbar = show_legend)
     }
 
     ## ----------- add gene/geneset names
