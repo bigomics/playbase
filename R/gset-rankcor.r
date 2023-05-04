@@ -10,9 +10,9 @@
 
 #' Title
 #'
-#' @param rnk
-#' @param gset
-#' @param compute.p
+#' @param rnk value
+#' @param gset value
+#' @param compute.p value
 #'
 #' @return
 #' @export
@@ -25,10 +25,10 @@ gset.cor <- function(rnk, gset, compute.p=FALSE) {
 
 #' Title
 #'
-#' @param rnk
-#' @param gset
-#' @param compute.p
-#' @param use.rank
+#' @param rnk value
+#' @param gset value
+#' @param compute.p value
+#' @param use.rank value
 #'
 #' @return
 #' @export

@@ -8,9 +8,9 @@
 #' This function creates a pgx object from files, which is the core object in the
 #' OmicsPlayground.
 #'
-#' @param counts.file string
-#' @param samples.file string
-#' @param contrasts.file string
+#' @param counts.file string value
+#' @param samples.file string value
+#' @param contrasts.file string value
 #'
 #' @return list. represents a pgx object
 
@@ -125,22 +125,22 @@ pgx.createFromFiles <- function(count.file, samples.file, contrasts.file = NULL,
 #' This function creates a pgx object, which is the core object in the
 #' OmicsPlayground.
 #'
-#' @param counts dataframe.
-#' @param samples dataframe.
-#' @param contrasts dataframe
-#' @param X dataframe.
-#' @param is.logx boolean.
-#' @param batch.correct boolean.
-#' @param auto.scale boolean.
-#' @param filter.genes boolean.
-#' @param prune.samples boolean.
-#' @param only.known boolean.
-#' @param only.hugo boolean.
-#' @param convert.hugo boolean.
-#' @param do.cluster boolean.
-#' @param cluster.contrasts boolean.
-#' @param do.clustergenes boolean.
-#' @param only.proteincoding boolean.
+#' @param counts dataframe. value
+#' @param samples dataframe. value
+#' @param contrasts dataframe value
+#' @param X dataframe. value
+#' @param is.logx boolean. value
+#' @param batch.correct boolean. value
+#' @param auto.scale boolean. value
+#' @param filter.genes boolean. value
+#' @param prune.samples boolean. value
+#' @param only.known boolean. value
+#' @param only.hugo boolean. value
+#' @param convert.hugo boolean. value
+#' @param do.cluster boolean. value
+#' @param cluster.contrasts boolean. value
+#' @param do.clustergenes boolean. value
+#' @param only.proteincoding boolean. value
 #'
 #' @return list. represents a pgx object
 
@@ -554,16 +554,16 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 
 #' Title
 #'
-#' @param pgx
-#' @param max.genes
-#' @param max.genesets
-#' @param gx.methods
-#' @param gset.methods
-#' @param do.cluster
-#' @param use.design
-#' @param prune.samples
-#' @param extra.methods
-#' @param progress
+#' @param pgx value
+#' @param max.genes value
+#' @param max.genesets value
+#' @param gx.methods value
+#' @param gset.methods value
+#' @param do.cluster value
+#' @param use.design value
+#' @param prune.samples value
+#' @param extra.methods value
+#' @param progress value
 #'
 #' @return
 #' @export

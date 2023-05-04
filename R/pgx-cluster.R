@@ -7,17 +7,17 @@
 
 #' Title
 #'
-#' @param pgx
-#' @param methods
-#' @param dims
-#' @param reduce.pca
-#' @param perplexity
-#' @param level
-#' @param rank.tf
-#' @param center.rows
-#' @param scale.rows
-#' @param X
-#' @param umap.pkg
+#' @param pgx value
+#' @param methods value
+#' @param dims value
+#' @param reduce.pca value
+#' @param perplexity value
+#' @param level value
+#' @param rank.tf value
+#' @param center.rows value
+#' @param scale.rows value
+#' @param X value
+#' @param umap.pkg value
 #'
 #' @return
 #' @export
@@ -95,17 +95,17 @@ pgx.clusterGenes <- function(pgx, methods=c("pca","tsne","umap"), dims=c(2,3),
 
 #' Title
 #'
-#' @param pgx
-#' @param methods
-#' @param dims
-#' @param reduce.sd
-#' @param reduce.pca
-#' @param perplexity
-#' @param center.rows
-#' @param scale.rows
-#' @param X
-#' @param umap.pkg
-#' @param replace.orig
+#' @param pgx value
+#' @param methods value
+#' @param dims value
+#' @param reduce.sd value
+#' @param reduce.pca value
+#' @param perplexity value
+#' @param center.rows value
+#' @param scale.rows value
+#' @param X value
+#' @param umap.pkg value
+#' @param replace.orig value
 #'
 #' @return
 #' @export
@@ -173,20 +173,20 @@ pgx.clusterSamples2 <- function(pgx, methods=c("pca","tsne","umap"), dims=c(2,3)
 
 #' Title
 #'
-#' @param pgx
-#' @param X
-#' @param skipifexists
-#' @param perplexity
-#' @param ntop
-#' @param npca
-#' @param prefix
-#' @param kclust
-#' @param dims
-#' @param find.clusters
-#' @param clust.detect
-#' @param row.center
-#' @param row.scale
-#' @param method
+#' @param pgx value
+#' @param X value
+#' @param skipifexists value
+#' @param perplexity value
+#' @param ntop value
+#' @param npca value
+#' @param prefix value
+#' @param kclust value
+#' @param dims value
+#' @param find.clusters value
+#' @param clust.detect value
+#' @param row.center value
+#' @param row.scale value
+#' @param method value
 #'
 #' @return
 #' @export
@@ -243,10 +243,10 @@ pgx.clusterSamples <- function(pgx, X=NULL, skipifexists=FALSE, perplexity=30,
 
 #' Title
 #'
-#' @param X
-#' @param method
-#' @param top.sd
-#' @param npca
+#' @param X value
+#' @param method value
+#' @param top.sd value
+#' @param npca value
 #'
 #' @return
 #' @export
@@ -348,17 +348,17 @@ pgx.FindClusters <- function(X, method=c("kmeans","hclust","louvain","meta"),
 
 #' Title
 #'
-#' @param X
-#' @param methods
-#' @param dims
-#' @param perplexity
-#' @param reduce.sd
-#' @param reduce.pca
-#' @param center.features
-#' @param scale.features
-#' @param find.clusters
-#' @param svd.gamma
-#' @param umap.pkg
+#' @param X value
+#' @param methods value
+#' @param dims value
+#' @param perplexity value
+#' @param reduce.sd value
+#' @param reduce.pca value
+#' @param center.features value
+#' @param scale.features value
+#' @param find.clusters value
+#' @param svd.gamma value
+#' @param umap.pkg value
 #'
 #' @return
 #' @export
@@ -557,18 +557,18 @@ pgx.clusterBigMatrix <- function(X, methods=c("pca","tsne","umap"), dims=c(2,3),
 
 #' Title
 #'
-#' @param X
-#' @param perplexity
-#' @param dims
-#' @param ntop
-#' @param npca
-#' @param prefix
-#' @param row.center
-#' @param row.scale
-#' @param find.clusters
-#' @param kclust
-#' @param clust.detect
-#' @param method
+#' @param X value
+#' @param perplexity value
+#' @param dims value
+#' @param ntop value
+#' @param npca value
+#' @param prefix value
+#' @param row.center value
+#' @param row.scale value
+#' @param find.clusters value
+#' @param kclust value
+#' @param clust.detect value
+#' @param method value
 #'
 #' @return
 #' @export
@@ -694,11 +694,11 @@ pgx.clusterMatrix <- function(X, perplexity=30, dims=c(2,3),
 
 #' Title
 #'
-#' @param X
-#' @param prefix
-#' @param level
-#' @param gamma
-#' @param small.zero
+#' @param X value
+#' @param prefix value
+#' @param level value
+#' @param gamma value
+#' @param small.zero value
 #'
 #' @return
 #' @export
@@ -752,12 +752,12 @@ pgx.findLouvainClusters.SNN <- function(X, prefix='c', level=1, gamma=1, small.z
 
 #' Title
 #'
-#' @param X
-#' @param graph.method
-#' @param level
-#' @param prefix
-#' @param gamma
-#' @param small.zero
+#' @param X value
+#' @param graph.method value
+#' @param level value
+#' @param prefix value
+#' @param gamma value
+#' @param small.zero value
 #'
 #' @return
 #' @export

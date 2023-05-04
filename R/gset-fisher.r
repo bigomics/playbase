@@ -9,20 +9,20 @@
 
 #' Title
 #'
-#' @param genes.up
-#' @param genes.dn
-#' @param genesets
-#' @param background
-#' @param fdr
-#' @param mc
-#' @param sort.by
-#' @param nmin
-#' @param verbose
-#' @param min.genes
-#' @param max.genes
-#' @param method
-#' @param check.background
-#' @param common.genes
+#' @param genes.up value
+#' @param genes.dn value
+#' @param genesets value
+#' @param background value
+#' @param fdr value
+#' @param mc value
+#' @param sort.by value
+#' @param nmin value
+#' @param verbose value
+#' @param min.genes value
+#' @param max.genes value
+#' @param method value
+#' @param check.background value
+#' @param common.genes value
 #'
 #' @return
 #' @export
@@ -54,19 +54,19 @@ gset.fisher2 <- function(genes.up, genes.dn, genesets, background=NULL,
 
 #' Title
 #'
-#' @param genes
-#' @param genesets
-#' @param background
-#' @param fdr
-#' @param mc
-#' @param sort.by
-#' @param nmin
-#' @param min.genes
-#' @param max.genes
-#' @param method
-#' @param check.background
-#' @param common.genes
-#' @param verbose
+#' @param genes value
+#' @param genesets value
+#' @param background value
+#' @param fdr value
+#' @param mc value
+#' @param sort.by value
+#' @param nmin value
+#' @param min.genes value
+#' @param max.genes value
+#' @param method value
+#' @param check.background value
+#' @param common.genes value
+#' @param verbose value
 #'
 #' @return
 #' @export

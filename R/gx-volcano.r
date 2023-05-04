@@ -7,31 +7,31 @@
 
 #' Title
 #'
-#' @param x
-#' @param pv
-#' @param gene
-#' @param ma_plot
-#' @param ma
-#' @param p.sig
-#' @param lfc
-#' @param render
-#' @param n
-#' @param highlight
-#' @param main
-#' @param cex
-#' @param lab.cex
-#' @param nlab
-#' @param xlim
-#' @param ylim
-#' @param use.fdr
-#' @param xlab
-#' @param ylab
-#' @param use.rpkm
-#' @param maxchar
-#' @param hi.col
-#' @param cex.main
-#' @param axes
-#' @param cex.axis
+#' @param x value
+#' @param pv value
+#' @param gene value
+#' @param ma_plot value
+#' @param ma value
+#' @param p.sig value
+#' @param lfc value
+#' @param render value
+#' @param n value
+#' @param highlight value
+#' @param main value
+#' @param cex value
+#' @param lab.cex value
+#' @param nlab value
+#' @param xlim value
+#' @param ylim value
+#' @param use.fdr value
+#' @param xlab value
+#' @param ylab value
+#' @param use.rpkm value
+#' @param maxchar value
+#' @param hi.col value
+#' @param cex.main value
+#' @param axes value
+#' @param cex.axis value
 #'
 #' @return
 #' @export
@@ -202,23 +202,23 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot=FALSE, ma=NULL, p.sig=0.05, l
 
 #' Title
 #'
-#' @param tab
-#' @param render
-#' @param n
-#' @param highlight
-#' @param p.sig
-#' @param cex
-#' @param lab.cex
-#' @param nlab
-#' @param xlim
-#' @param ylim
-#' @param use.fdr
-#' @param use.rpkm
-#' @param ma.plot
-#' @param cex.main
-#' @param main
-#' @param cex.axis
-#' @param axes
+#' @param tab value
+#' @param render value
+#' @param n value
+#' @param highlight value
+#' @param p.sig value
+#' @param cex value
+#' @param lab.cex value
+#' @param nlab value
+#' @param xlim value
+#' @param ylim value
+#' @param use.fdr value
+#' @param use.rpkm value
+#' @param ma.plot value
+#' @param cex.main value
+#' @param main value
+#' @param cex.axis value
+#' @param axes value
 #'
 #' @return
 #' @export

@@ -5,13 +5,13 @@
 
 #' Title
 #'
-#' @param pgx
-#' @param contr.matrix
-#' @param max.features
-#' @param test.methods
-#' @param use.design
-#' @param prune.samples
-#' @param remove.outputs
+#' @param pgx value
+#' @param contr.matrix value
+#' @param max.features value
+#' @param test.methods value
+#' @param use.design value
+#' @param prune.samples value
+#' @param remove.outputs value
 #'
 #' @return
 #' @export
@@ -55,14 +55,14 @@ compute_testGenes <- function(pgx, contr.matrix, max.features=1000,
 
 #' Title
 #'
-#' @param pgx
-#' @param contr.matrix
-#' @param max.features
-#' @param filter.low
-#' @param remove.outputs
-#' @param use.design
-#' @param prune.samples
-#' @param test.methods
+#' @param pgx value
+#' @param contr.matrix value
+#' @param max.features value
+#' @param filter.low value
+#' @param remove.outputs value
+#' @param use.design value
+#' @param prune.samples value
+#' @param test.methods value
 #'
 #' @return
 #' @export
@@ -355,13 +355,13 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features=1000,
 
 #' Title
 #'
-#' @param pgx
-#' @param contr.matrix
-#' @param max.features
-#' @param test.methods
-#' @param use.design
-#' @param prune.samples
-#' @param remove.outputs
+#' @param pgx value
+#' @param contr.matrix value
+#' @param max.features value
+#' @param test.methods value
+#' @param use.design value
+#' @param prune.samples value
+#' @param remove.outputs value
 #'
 #' @return
 #' @export

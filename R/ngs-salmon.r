@@ -7,9 +7,9 @@
 
 #' Title
 #'
-#' @param sampleTable
-#' @param gencode
-#' @param txi
+#' @param sampleTable value
+#' @param gencode value
+#' @param txi value
 #'
 #' @return
 #' @export
@@ -50,10 +50,10 @@ ngs.rawSalmon <- function(sampleTable, gencode, txi=NULL)
 
 #' Title
 #'
-#' @param sf.files
-#' @param count.type
-#' @param organism
-#' @param txOut
+#' @param sf.files value
+#' @param count.type value
+#' @param organism value
+#' @param txOut value
 #'
 #' @return
 #' @export
@@ -177,9 +177,9 @@ ngs.tximportSalmon <- function(sf.files, count.type="lengthScaledTPM", organism=
 
 #' Title
 #'
-#' @param keys
-#' @param keytype
-#' @param gencode
+#' @param keys value
+#' @param keytype value
+#' @param gencode value
 #'
 #' @return
 #' @export

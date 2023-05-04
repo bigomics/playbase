@@ -6,10 +6,10 @@
 
 #' Title
 #'
-#' @param X
-#' @param splitx
-#' @param n
-#' @param ...
+#' @param X value
+#' @param splitx value
+#' @param n value
+#' @param ... value
 #'
 #' @return
 #' @export
@@ -31,10 +31,10 @@ gx.markermap <- function(X, splitx, n=5, ...)
 
 #' Title
 #'
-#' @param X
-#' @param nv
-#' @param ngenes
-#' @param ...
+#' @param X value
+#' @param nv value
+#' @param ngenes value
+#' @param ... value
 #'
 #' @return
 #' @export
@@ -54,9 +54,9 @@ gx.PCAheatmap <- function(X, nv=5, ngenes=10, ...) {
 
 #' Title
 #'
-#' @param X
-#' @param nv
-#' @param ngenes
+#' @param X value
+#' @param nv value
+#' @param ngenes value
 #'
 #' @return
 #' @export
@@ -78,10 +78,10 @@ gx.PCAcomponents <- function(X, nv=20, ngenes) {
 
 #' Title
 #'
-#' @param X
-#' @param main
-#' @param cex
-#' @param clust
+#' @param X value
+#' @param main value
+#' @param cex value
+#' @param clust value
 #'
 #' @return
 #' @export
@@ -106,44 +106,44 @@ gx.imagemap <- function(X, main="", cex=1, clust=TRUE)
 
 #' Title
 #'
-#' @param gx
-#' @param split
-#' @param splitx
-#' @param clust.method
-#' @param dist.method
-#' @param col.dist.method
-#' @param plot.method
-#' @param scale
-#' @param softmax
-#' @param order.groups
-#' @param symm.scale
-#' @param cluster_rows
-#' @param cluster_columns
-#' @param sort_columns
-#' @param col.annot
-#' @param row.annot
-#' @param annot.ht
-#' @param nmax
-#' @param cmax
-#' @param main
-#' @param verbose
-#' @param denoise
-#' @param cexRow
-#' @param cexCol
-#' @param mar
-#' @param rownames_width
-#' @param rowlab.maxlen
-#' @param title_cex
-#' @param column_title_rot
-#' @param column_names_rot
-#' @param show_legend
-#' @param show_key
-#' @param zlim
-#' @param show_rownames
-#' @param lab.len
-#' @param key.offset
-#' @param show_colnames
-#' @param use.nclust
+#' @param gx value
+#' @param split value
+#' @param splitx value
+#' @param clust.method value
+#' @param dist.method value
+#' @param col.dist.method value
+#' @param plot.method value
+#' @param scale value
+#' @param softmax value
+#' @param order.groups value
+#' @param symm.scale value
+#' @param cluster_rows value
+#' @param cluster_columns value
+#' @param sort_columns value
+#' @param col.annot value
+#' @param row.annot value
+#' @param annot.ht value
+#' @param nmax value
+#' @param cmax value
+#' @param main value
+#' @param verbose value
+#' @param denoise value
+#' @param cexRow value
+#' @param cexCol value
+#' @param mar value
+#' @param rownames_width value
+#' @param rowlab.maxlen value
+#' @param title_cex value
+#' @param column_title_rot value
+#' @param column_names_rot value
+#' @param show_legend value
+#' @param show_key value
+#' @param zlim value
+#' @param show_rownames value
+#' @param lab.len value
+#' @param key.offset value
+#' @param show_colnames value
+#' @param use.nclust value
 #'
 #' @return
 #' @export
@@ -646,25 +646,25 @@ gx.splitmap <- function(gx, split=5, splitx=NULL,
 
 #' Title
 #'
-#' @param gx
-#' @param values
-#' @param clust.method
-#' @param dist.method
-#' @param col.dist.method
-#' @param plot.method
-#' @param col
-#' @param softmax
-#' @param scale
-#' @param verbose
-#' @param symm
-#' @param col.annot
-#' @param row.annot
-#' @param annot.ht
-#' @param nmax
-#' @param cmax
-#' @param show_colnames
-#' @param indent.names
-#' @param ...
+#' @param gx value
+#' @param values value
+#' @param clust.method value
+#' @param dist.method value
+#' @param col.dist.method value
+#' @param plot.method value
+#' @param col value
+#' @param softmax value
+#' @param scale value
+#' @param verbose value
+#' @param symm value
+#' @param col.annot value
+#' @param row.annot value
+#' @param annot.ht value
+#' @param nmax value
+#' @param cmax value
+#' @param show_colnames value
+#' @param indent.names value
+#' @param ... value
 #'
 #' @return
 #' @export
@@ -980,23 +980,23 @@ gx.heatmap <- function(gx, values=NULL,
 
 #' Title
 #'
-#' @param x
-#' @param nc
-#' @param nr
-#' @param na
-#' @param q
-#' @param p
-#' @param method
-#' @param nca
-#' @param col.annot
-#' @param row.annot
-#' @param plot
-#' @param na.fill
-#' @param nrlab
-#' @param nclab
-#' @param labrow
-#' @param labcol
-#' @param ...
+#' @param x value
+#' @param nc value
+#' @param nr value
+#' @param na value
+#' @param q value
+#' @param p value
+#' @param method value
+#' @param nca value
+#' @param col.annot value
+#' @param row.annot value
+#' @param plot value
+#' @param na.fill value
+#' @param nrlab value
+#' @param nclab value
+#' @param labrow value
+#' @param labcol value
+#' @param ... value
 #'
 #' @return
 #' @export
@@ -1169,10 +1169,10 @@ clustermap <- function(x, nc=6, nr=6, na=4, q=0.80, p=2,
 
 #' Title
 #'
-#' @param x
-#' @param m
-#' @param n
-#' @param ...
+#' @param x value
+#' @param m value
+#' @param n value
+#' @param ... value
 #'
 #' @return
 #' @export
@@ -1221,9 +1221,9 @@ frozenmap <- function(x, m=8, n=8, ...) {
 
 #' Title
 #'
-#' @param x
-#' @param p
-#' @param method
+#' @param x value
+#' @param p value
+#' @param method value
 #'
 #' @return
 #' @export
@@ -1291,57 +1291,57 @@ if(0) {
 
 #' Title
 #'
-#' @param x
-#' @param Rowv
-#' @param Colv
-#' @param distfun
-#' @param hclustfun
-#' @param dendrogram
-#' @param symm
-#' @param scale
-#' @param na.rm
-#' @param revC
-#' @param add.expr
-#' @param breaks
-#' @param symbreaks
-#' @param col
-#' @param colsep
-#' @param rowsep
-#' @param sepcolor
-#' @param sepwidth
-#' @param cellnote
-#' @param notecex
-#' @param notecol
-#' @param na.color
-#' @param trace
-#' @param tracecol
-#' @param hline
-#' @param vline
-#' @param linecol
-#' @param margins
-#' @param ColSideColors
-#' @param RowSideColors
-#' @param side.height.fraction
-#' @param cexRow
-#' @param cexCol
-#' @param labRow
-#' @param labCol
-#' @param key
-#' @param keysize
-#' @param density.info
-#' @param denscol
-#' @param symkey
-#' @param densadj
-#' @param main
-#' @param xlab
-#' @param ylab
-#' @param lmat
-#' @param lhei
-#' @param lwid
-#' @param NumColSideColors
-#' @param NumRowSideColors
-#' @param KeyValueName
-#' @param ...
+#' @param x value
+#' @param Rowv value
+#' @param Colv value
+#' @param distfun value
+#' @param hclustfun value
+#' @param dendrogram value
+#' @param symm value
+#' @param scale value
+#' @param na.rm value
+#' @param revC value
+#' @param add.expr value
+#' @param breaks value
+#' @param symbreaks value
+#' @param col value
+#' @param colsep value
+#' @param rowsep value
+#' @param sepcolor value
+#' @param sepwidth value
+#' @param cellnote value
+#' @param notecex value
+#' @param notecol value
+#' @param na.color value
+#' @param trace value
+#' @param tracecol value
+#' @param hline value
+#' @param vline value
+#' @param linecol value
+#' @param margins value
+#' @param ColSideColors value
+#' @param RowSideColors value
+#' @param side.height.fraction value
+#' @param cexRow value
+#' @param cexCol value
+#' @param labRow value
+#' @param labCol value
+#' @param key value
+#' @param keysize value
+#' @param density.info value
+#' @param denscol value
+#' @param symkey value
+#' @param densadj value
+#' @param main value
+#' @param xlab value
+#' @param ylab value
+#' @param lmat value
+#' @param lhei value
+#' @param lwid value
+#' @param NumColSideColors value
+#' @param NumRowSideColors value
+#' @param KeyValueName value
+#' @param ... value
 #'
 #' @return
 #' @export

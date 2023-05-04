@@ -5,9 +5,9 @@
 
 #' Title
 #'
-#' @param ngs
-#' @param extra
-#' @param sigdb
+#' @param ngs value
+#' @param extra value
+#' @param sigdb value
 #'
 #' @return
 #' @export
@@ -197,9 +197,9 @@ compute_extra <- function(ngs, extra = c(
 
 #' Title
 #'
-#' @param ngs
-#' @param rna.counts
-#' @param full
+#' @param ngs value
+#' @param rna.counts value
+#' @param full value
 #'
 #' @return
 #' @export
@@ -255,8 +255,8 @@ compute_deconvolution <- function(ngs, rna.counts = ngs$counts, full = FALSE) {
 
 #' Title
 #'
-#' @param ngs
-#' @param rna.counts
+#' @param ngs value
+#' @param rna.counts value
 #'
 #' @return
 #' @export
@@ -298,7 +298,7 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
 
 #' Title
 #'
-#' @param ngs
+#' @param ngs value
 #'
 #' @return
 #' @export
@@ -372,8 +372,8 @@ compute_drugActivityEnrichment <- function(ngs) {
 
 #' Title
 #'
-#' @param ngs
-#' @param cmap.dir
+#' @param ngs value
+#' @param cmap.dir value
 #'
 #' @return
 #' @export
@@ -436,7 +436,7 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir) {
 
 #' Title
 #'
-#' @param ngs
+#' @param ngs value
 #'
 #' @return
 #' @export

@@ -5,10 +5,10 @@
 
 #' Title
 #'
-#' @param pgx
-#' @param max.features
-#' @param test.methods
-#' @param remove.outputs
+#' @param pgx value
+#' @param max.features value
+#' @param test.methods value
+#' @param remove.outputs value
 #'
 #' @return
 #' @export

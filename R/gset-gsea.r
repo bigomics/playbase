@@ -5,12 +5,12 @@
 
 #' Title
 #'
-#' @param gmt
-#' @param max.genes
-#' @param ntop
-#' @param sparse
-#' @param bg
-#' @param use.multicore
+#' @param gmt value
+#' @param max.genes value
+#' @param ntop value
+#' @param sparse value
+#' @param bg value
+#' @param use.multicore value
 #'
 #' @return
 #' @export
@@ -68,8 +68,8 @@ gmt2mat <- function(gmt, max.genes=-1, ntop=-1, sparse=TRUE,
 
 #' Title
 #'
-#' @param X
-#' @param file
+#' @param X value
+#' @param file value
 #'
 #' @return
 #' @export
@@ -86,9 +86,9 @@ write.gct <- function(X, file) {
 
 #' Title
 #'
-#' @param y
-#' @param file
-#' @param name
+#' @param y value
+#' @param file value
+#' @param name value
 #'
 #' @return
 #' @export
@@ -114,10 +114,10 @@ write.cls <- function(y, file, name="") {
 
 #' Title
 #'
-#' @param gmt.file
-#' @param dir
-#' @param add.source
-#' @param nrows
+#' @param gmt.file value
+#' @param dir value
+#' @param add.source value
+#' @param nrows value
 #'
 #' @return
 #' @export
@@ -154,9 +154,9 @@ read.gmt <- function(gmt.file, dir=NULL, add.source=FALSE, nrows=-1) {
 
 #' Title
 #'
-#' @param gmt
-#' @param file
-#' @param source
+#' @param gmt value
+#' @param file value
+#' @param source value
 #'
 #' @return
 #' @export
@@ -173,7 +173,7 @@ write.gmt <- function(gmt, file, source=NA) {
 
 #' Title
 #'
-#' @param s
+#' @param s value
 #'
 #' @return
 #' @export
@@ -188,15 +188,15 @@ gsea.clean_names <- function(s) {
 
 #' Title
 #'
-#' @param X
-#' @param gmt
-#' @param design
-#' @param contr.matrix
-#' @param output_dir
-#' @param set.min
-#' @param set.max
-#' @param fdr
-#' @param skip.done
+#' @param X value
+#' @param gmt value
+#' @param design value
+#' @param contr.matrix value
+#' @param output_dir value
+#' @param set.min value
+#' @param set.max value
+#' @param fdr value
+#' @param skip.done value
 #'
 #' @return
 #' @export
@@ -261,28 +261,28 @@ gsea.fitAllContrasts <- function( X, gmt, design, contr.matrix, output_dir,
 
 #' Title
 #'
-#' @param X
-#' @param y
-#' @param gmt
-#' @param output.dir
-#' @param fdr
-#' @param set.min
-#' @param set.max
-#' @param topgs
-#' @param nperm
-#' @param permute
-#' @param scoring
-#' @param do.leading.edge
-#' @param rpt.label
-#' @param sort.y
-#' @param ref.type
-#' @param make.sets
-#' @param clean.files
-#' @param xmx
-#' @param force.permute
-#' @param metric
-#' @param gsea.program
-#' @param quiet
+#' @param X value
+#' @param y value
+#' @param gmt value
+#' @param output.dir value
+#' @param fdr value
+#' @param set.min value
+#' @param set.max value
+#' @param topgs value
+#' @param nperm value
+#' @param permute value
+#' @param scoring value
+#' @param do.leading.edge value
+#' @param rpt.label value
+#' @param sort.y value
+#' @param ref.type value
+#' @param make.sets value
+#' @param clean.files value
+#' @param xmx value
+#' @param force.permute value
+#' @param metric value
+#' @param gsea.program value
+#' @param quiet value
 #'
 #' @return
 #' @export
@@ -576,24 +576,24 @@ run.GSEA <- function( X, y, gmt, output.dir=NULL, fdr=0.25, set.min=15,
 
 #' Title
 #'
-#' @param rnk
-#' @param gmt
-#' @param output.dir
-#' @param fdr
-#' @param set.min
-#' @param set.max
-#' @param topgs
-#' @param nperm
-#' @param rpt.label
-#' @param make.sets
-#' @param clean.files
-#' @param xmx
-#' @param scoring
-#' @param chip
-#' @param collapse
-#' @param do.leading.edge
-#' @param gsea.program
-#' @param quiet
+#' @param rnk value
+#' @param gmt value
+#' @param output.dir value
+#' @param fdr value
+#' @param set.min value
+#' @param set.max value
+#' @param topgs value
+#' @param nperm value
+#' @param rpt.label value
+#' @param make.sets value
+#' @param clean.files value
+#' @param xmx value
+#' @param scoring value
+#' @param chip value
+#' @param collapse value
+#' @param do.leading.edge value
+#' @param gsea.program value
+#' @param quiet value
 #'
 #' @return
 #' @export
@@ -804,10 +804,10 @@ run.GSEA.preranked <- function( rnk, gmt, output.dir=NULL, fdr=0.25,
 
 #' Title
 #'
-#' @param output.dir
-#' @param ntop
-#' @param gsea.program
-#' @param xmx
+#' @param output.dir value
+#' @param ntop value
+#' @param gsea.program value
+#' @param xmx value
 #'
 #' @return
 #' @export
@@ -869,12 +869,12 @@ gsea.LeadingEdgeAnalysis <- function(output.dir, ntop=100, gsea.program="/opt/GS
 
 #' Title
 #'
-#' @param rpt.path
-#' @param gmt
-#' @param xmx
-#' @param rpt.label
-#' @param gsea.program
-#' @param outdir
+#' @param rpt.path value
+#' @param gmt value
+#' @param xmx value
+#' @param rpt.label value
+#' @param gsea.program value
+#' @param outdir value
 #'
 #' @return
 #' @export
@@ -901,8 +901,8 @@ run.GSEA.LeadingEdge <- function(rpt.path, gmt, xmx=10, rpt.label="gsea_leadinge
 
 #' Title
 #'
-#' @param X
-#' @param Y
+#' @param X value
+#' @param Y value
 #'
 #' @return
 #' @export
@@ -933,21 +933,21 @@ gsea.snr <- function(X, Y) {
 
 #' Title
 #'
-#' @param X
-#' @param gmt
-#' @param Y
-#' @param fdr
-#' @param set.min
-#' @param set.max
-#' @param topgs
-#' @param nperm
-#' @param rpt.label
-#' @param output.dir
-#' @param xmx
-#' @param scoring
-#' @param sort.y
-#' @param ref.type
-#' @param clean.files
+#' @param X value
+#' @param gmt value
+#' @param Y value
+#' @param fdr value
+#' @param set.min value
+#' @param set.max value
+#' @param topgs value
+#' @param nperm value
+#' @param rpt.label value
+#' @param output.dir value
+#' @param xmx value
+#' @param scoring value
+#' @param sort.y value
+#' @param ref.type value
+#' @param clean.files value
 #'
 #' @return
 #' @export
@@ -1063,20 +1063,20 @@ justGSEA <- function(X, gmt, Y=NULL, fdr=1, set.min=15, set.max=500, topgs=100, 
 
 #' Title
 #'
-#' @param X
-#' @param sets
-#' @param concepts
-#' @param Y
-#' @param fdr
-#' @param set.min
-#' @param set.max
-#' @param topgs
-#' @param nperm
-#' @param rpt.label
-#' @param output.dir
-#' @param xmx
-#' @param scoring
-#' @param clean.files
+#' @param X value
+#' @param sets value
+#' @param concepts value
+#' @param Y value
+#' @param fdr value
+#' @param set.min value
+#' @param set.max value
+#' @param topgs value
+#' @param nperm value
+#' @param rpt.label value
+#' @param output.dir value
+#' @param xmx value
+#' @param scoring value
+#' @param clean.files value
 #'
 #' @return
 #' @export
@@ -1118,9 +1118,9 @@ path="../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut_ut"
 
 #' Title
 #'
-#' @param path
-#' @param i
-#' @param raster.png
+#' @param path value
+#' @param i value
+#' @param raster.png value
 #'
 #' @return
 #' @export
@@ -1205,9 +1205,9 @@ getGseaOutput <- function(path, i=1, raster.png=FALSE) {
 
 #' Title
 #'
-#' @param gsea
-#' @param gsets
-#' @param ncol
+#' @param gsea value
+#' @param gsets value
+#' @param ncol value
 #'
 #' @return
 #' @export
@@ -1229,12 +1229,12 @@ gseaPlotEnplots <- function(gsea, gsets=NULL, ncol=5) {
 
 #' Title
 #'
-#' @param gsea
-#' @param maxrow
-#' @param maxcol
-#' @param gsets
-#' @param render
-#' @param info.text
+#' @param gsea value
+#' @param maxrow value
+#' @param maxcol value
+#' @param gsets value
+#' @param render value
+#' @param info.text value
 #'
 #' @return
 #' @export
@@ -1286,7 +1286,7 @@ gseaLeadingEdgeHeatmap <- function(gsea, maxrow=60, maxcol=60, gsets=NULL,
 
 #' Title
 #'
-#' @param n
+#' @param n value
 #'
 #' @return
 #' @export
@@ -1299,13 +1299,13 @@ gseaLeadingEdgeHeatmap <- function(gsea, maxrow=60, maxcol=60, gsets=NULL,
 
 #' Title
 #'
-#' @param scores
-#' @param names
-#' @param xlab
-#' @param xlim
-#' @param cex.text
-#' @param main
-#' @param n
+#' @param scores value
+#' @param names value
+#' @param xlab value
+#' @param xlim value
+#' @param cex.text value
+#' @param main value
+#' @param n value
 #'
 #' @return
 #' @export
@@ -1334,20 +1334,20 @@ gsea.barplot <- function(scores, names=NULL, xlab='score', xlim = NULL,
 
 #' Title
 #'
-#' @param rnk
-#' @param gset
-#' @param names
-#' @param main
-#' @param decreasing
-#' @param cex
-#' @param cex.main
-#' @param len.main
-#' @param lab.line
-#' @param cex.lab
-#' @param main.line
-#' @param xlab
-#' @param res
-#' @param ylab
+#' @param rnk value
+#' @param gset value
+#' @param names value
+#' @param main value
+#' @param decreasing value
+#' @param cex value
+#' @param cex.main value
+#' @param len.main value
+#' @param lab.line value
+#' @param cex.lab value
+#' @param main.line value
+#' @param xlab value
+#' @param res value
+#' @param ylab value
 #'
 #' @return
 #' @export
@@ -1432,18 +1432,18 @@ gsea.enplot <- function(rnk, gset, names=NULL, main=NULL,
 
 #' Title
 #'
-#' @param rnk
-#' @param gset.up
-#' @param gset.dn
-#' @param names
-#' @param main
-#' @param decreasing
-#' @param cex.main
-#' @param len.main
-#' @param sum.trace
-#' @param res
-#' @param xlab
-#' @param ylab
+#' @param rnk value
+#' @param gset.up value
+#' @param gset.dn value
+#' @param names value
+#' @param main value
+#' @param decreasing value
+#' @param cex.main value
+#' @param len.main value
+#' @param sum.trace value
+#' @param res value
+#' @param xlab value
+#' @param ylab value
 #'
 #' @return
 #' @export
@@ -1555,31 +1555,31 @@ if(0) {
 
 #' Title
 #'
-#' @param x
-#' @param rft
-#' @param cft
-#' @param rmax
-#' @param cmax
-#' @param main
-#' @param cex.main
-#' @param xnames
-#' @param ynames
-#' @param cft.lab
-#' @param rft.lab
-#' @param cexRow
-#' @param cexCol
-#' @param scale
-#' @param rsort
-#' @param csort
-#' @param p
-#' @param mar
-#' @param layout.reset
-#' @param sort.decreasing
-#' @param col
-#' @param legend
-#' @param cex.legend
-#' @param layout.widths
-#' @param layout.heights
+#' @param x value
+#' @param rft value
+#' @param cft value
+#' @param rmax value
+#' @param cmax value
+#' @param main value
+#' @param cex.main value
+#' @param xnames value
+#' @param ynames value
+#' @param cft.lab value
+#' @param rft.lab value
+#' @param cexRow value
+#' @param cexCol value
+#' @param scale value
+#' @param rsort value
+#' @param csort value
+#' @param p value
+#' @param mar value
+#' @param layout.reset value
+#' @param sort.decreasing value
+#' @param col value
+#' @param legend value
+#' @param cex.legend value
+#' @param layout.widths value
+#' @param layout.heights value
 #'
 #' @return
 #' @export
@@ -1745,8 +1745,8 @@ gsea.ftplot <- function(x, rft="var", cft="var",
 
 #' Title
 #'
-#' @param output.dir
-#' @param pattern
+#' @param output.dir value
+#' @param pattern value
 #'
 #' @return
 #' @export
@@ -1788,14 +1788,14 @@ gsea.quick_report <- function(output.dir, pattern=NULL) {
 
 #' Title
 #'
-#' @param values
-#' @param names
-#' @param mar
-#' @param offset
-#' @param clust
-#' @param main
-#' @param cex
-#' @param col
+#' @param values value
+#' @param names value
+#' @param mar value
+#' @param offset value
+#' @param clust value
+#' @param main value
+#' @param cex value
+#' @param col value
 #'
 #' @return
 #' @export
@@ -1834,9 +1834,9 @@ gsea.radarplot <- function( values, names=NULL, mar=c(2,5,3,5)*2,
 
 #' Title
 #'
-#' @param gsea.dir
-#' @param gs
-#' @param output.pdf
+#' @param gsea.dir value
+#' @param gs value
+#' @param output.pdf value
 #'
 #' @return
 #' @export

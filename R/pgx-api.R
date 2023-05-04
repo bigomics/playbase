@@ -7,7 +7,7 @@
 
 #' Title
 #'
-#' @param pgx
+#' @param pgx value
 #'
 #' @return
 #' @export
@@ -25,9 +25,9 @@ pgx.getModelGroups <- function(pgx) {
 
 #' Title
 #'
-#' @param pgx
-#' @param methods
-#' @param level
+#' @param pgx value
+#' @param methods value
+#' @param level value
 #'
 #' @return
 #' @export
@@ -82,9 +82,9 @@ pgx.getMetaMatrix <- function(pgx, methods="meta", level="gene")
 
 #' Title
 #'
-#' @param pgx
-#' @param what
-#' @param level
+#' @param pgx value
+#' @param what value
+#' @param level value
 #'
 #' @return
 #' @export
@@ -98,7 +98,7 @@ pgx.getMetaFoldChangeMatrix <- function(pgx, what="meta", level="gene")
 
 #' Title
 #'
-#' @param pgx
+#' @param pgx value
 #'
 #' @return
 #' @export
@@ -112,12 +112,12 @@ pgx.getContrasts <- function(pgx) {
 
 #' Title
 #'
-#' @param pgx
-#' @param n
-#' @param ng
-#' @param dir
-#' @param sym
-#' @param filt
+#' @param pgx value
+#' @param n value
+#' @param ng value
+#' @param dir value
+#' @param sym value
+#' @param filt value
 #'
 #' @return
 #' @export
@@ -151,11 +151,11 @@ pgx.getTopGeneSets <- function(pgx, n=10, ng=100, dir=0, sym=FALSE, filt=NULL) {
 
 #' Title
 #'
-#' @param pgx
-#' @param n
-#' @param dir
-#' @param sym
-#' @param filt
+#' @param pgx value
+#' @param n value
+#' @param dir value
+#' @param sym value
+#' @param filt value
 #'
 #' @return
 #' @export
@@ -187,9 +187,9 @@ pgx.getMarkerGenes <- function(pgx, n=10, dir=0, sym=FALSE, filt=NULL) {
 
 #' Title
 #'
-#' @param pgx
-#' @param nmin
-#' @param extended
+#' @param pgx value
+#' @param nmin value
+#' @param extended value
 #'
 #' @return
 #' @export

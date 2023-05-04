@@ -10,9 +10,9 @@
 
 #' Title
 #'
-#' @param pgx
-#' @param contrast
-#' @param as.factor
+#' @param pgx value
+#' @param contrast value
+#' @param as.factor value
 #'
 #' @return
 #' @export
@@ -31,7 +31,7 @@ pgx.getContrastGroups <- function(pgx, contrast, as.factor=TRUE) {
 
 #' Title
 #'
-#' @param Y
+#' @param Y value
 #'
 #' @return
 #' @export
@@ -44,7 +44,7 @@ pgx.detect_batch_params <- function(Y) {
 
 #' Title
 #'
-#' @param Y
+#' @param Y value
 #'
 #' @return
 #' @export
@@ -62,8 +62,8 @@ pgx.detect_timevar <- function(Y) {
 
 #' Title
 #'
-#' @param exp.matrix
-#' @param nmax
+#' @param exp.matrix value
+#' @param nmax value
 #'
 #' @return
 #' @export
@@ -86,8 +86,8 @@ pgx.getConditions <- function(exp.matrix, nmax=3) {
 
 #' Title
 #'
-#' @param pheno
-#' @param contr.matrix
+#' @param pheno value
+#' @param contr.matrix value
 #'
 #' @return
 #' @export
@@ -121,10 +121,10 @@ pgx.expMatrix <- function(pheno, contr.matrix) {
 
 #' Title
 #'
-#' @param data
-#' @param vars
-#' @param strata
-#' @param ref
+#' @param data value
+#' @param vars value
+#' @param strata value
+#' @param ref value
 #'
 #' @return
 #' @export
@@ -177,9 +177,9 @@ pgx.makeStratifiedContrastsDF <- function(data, vars, strata, ref) {
 
 #' Title
 #'
-#' @param Y
-#' @param strata
-#' @param ref
+#' @param Y value
+#' @param strata value
+#' @param ref value
 #'
 #' @return
 #' @export
@@ -232,9 +232,9 @@ pgx.makeStratifiedContrasts <- function(Y, strata, ref) {
 
 #' Title
 #'
-#' @param Y
-#' @param ref
-#' @param na.rm
+#' @param Y value
+#' @param ref value
+#' @param na.rm value
 #'
 #' @return
 #' @export
@@ -247,7 +247,7 @@ makeDirectContrasts2 <- function(Y, ref, na.rm=TRUE) {
 
 #' Title
 #'
-#' @param exp.matrix
+#' @param exp.matrix value
 #'
 #' @return
 #' @export
@@ -270,9 +270,9 @@ expmat2contrast <- function(exp.matrix) {
 
 #' Title
 #'
-#' @param Y
-#' @param ref
-#' @param na.rm
+#' @param Y value
+#' @param ref value
+#' @param na.rm value
 #'
 #' @return
 #' @export
@@ -325,10 +325,10 @@ makeDirectContrasts <- function(Y, ref, na.rm=TRUE)
 
 #' Title
 #'
-#' @param Y
-#' @param ref
-#' @param na.rm
-#' @param warn
+#' @param Y value
+#' @param ref value
+#' @param na.rm value
+#' @param warn value
 #'
 #' @return
 #' @export
@@ -414,8 +414,8 @@ makeDirectContrasts000 <- function(Y, ref, na.rm=TRUE, warn=FALSE) {
 
 #' Title
 #'
-#' @param labels
-#' @param by.sample
+#' @param labels value
+#' @param by.sample value
 #'
 #' @return
 #' @export
@@ -444,10 +444,10 @@ makeFullContrasts <- function(labels, by.sample=FALSE) {
 
 #' Title
 #'
-#' @param clusters
-#' @param min.freq
-#' @param full
-#' @param by.sample
+#' @param clusters value
+#' @param min.freq value
+#' @param full value
+#' @param by.sample value
 #'
 #' @return
 #' @export
@@ -488,9 +488,9 @@ makeClusterContrasts <- function(clusters, min.freq=0.01, full=FALSE,
 
 #' Title
 #'
-#' @param df
-#' @param contrasts
-#' @param mingrp
+#' @param df value
+#' @param contrasts value
+#' @param mingrp value
 #'
 #' @return
 #' @export
@@ -531,13 +531,13 @@ pgx.makeSpecificContrasts <- function(df, contrasts, mingrp=3)
 
 #' Title
 #'
-#' @param df
-#' @param strata.var
-#' @param mingrp
-#' @param slen
-#' @param ref
-#' @param fix.degenerate
-#' @param skip.hidden
+#' @param df value
+#' @param strata.var value
+#' @param mingrp value
+#' @param slen value
+#' @param ref value
+#' @param fix.degenerate value
+#' @param skip.hidden value
 #'
 #' @return
 #' @export
@@ -592,12 +592,12 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp=3, slen=20, r
 
 #' Title
 #'
-#' @param df
-#' @param mingrp
-#' @param slen
-#' @param ref
-#' @param fix.degenerate
-#' @param skip.hidden
+#' @param df value
+#' @param mingrp value
+#' @param slen value
+#' @param ref value
+#' @param fix.degenerate value
+#' @param skip.hidden value
 #'
 #' @return
 #' @export
@@ -854,7 +854,7 @@ pgx.makeAutoContrasts <- function(df, mingrp=3, slen=20, ref=NULL,
 
 #' Title
 #'
-#' @param contr.matrix
+#' @param contr.matrix value
 #'
 #' @return
 #' @export
@@ -873,10 +873,10 @@ normalizeContrasts <- function(contr.matrix) {
 
 #' Title
 #'
-#' @param main.group
-#' @param ref.group
-#' @param groups
-#' @param comparisons
+#' @param main.group value
+#' @param ref.group value
+#' @param groups value
+#' @param comparisons value
 #'
 #' @return
 #' @export
@@ -916,8 +916,8 @@ makeContrastsFromPairs <- function(main.group, ref.group, groups=NULL, compariso
 
 #' Title
 #'
-#' @param contr.matrix
-#' @param as.factor
+#' @param contr.matrix value
+#' @param as.factor value
 #'
 #' @return
 #' @export
@@ -950,7 +950,7 @@ contrastAsLabels <- function(contr.matrix, as.factor=FALSE) {
 
 #' Title
 #'
-#' @param lab.matrix
+#' @param lab.matrix value
 #'
 #' @return
 #' @export

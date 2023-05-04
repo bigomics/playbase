@@ -11,17 +11,17 @@
 
 #' Title
 #'
-#' @param X
-#' @param pheno
-#' @param B
-#' @param remove.na
-#' @param fdr
-#' @param compute.means
-#' @param lfc
-#' @param max.na
-#' @param ref
-#' @param trend
-#' @param verbose
+#' @param X value
+#' @param pheno value
+#' @param B value
+#' @param remove.na value
+#' @param fdr value
+#' @param compute.means value
+#' @param lfc value
+#' @param max.na value
+#' @param ref value
+#' @param trend value
+#' @param verbose value
 #'
 #' @return
 #' @export
@@ -151,15 +151,15 @@ gx.limma <- function(X, pheno, B=NULL, remove.na = TRUE,
 
 #' Title
 #'
-#' @param X
-#' @param pheno
-#' @param fdr
-#' @param compute.means
-#' @param lfc
-#' @param max.na
-#' @param ref
-#' @param trend
-#' @param verbose
+#' @param X value
+#' @param pheno value
+#' @param fdr value
+#' @param compute.means value
+#' @param lfc value
+#' @param max.na value
+#' @param ref value
+#' @param trend value
+#' @param verbose value
 #'
 #' @return
 #' @export
@@ -263,16 +263,16 @@ gx.limma.SAVE <- function(X, pheno, fdr=0.05, compute.means=TRUE, lfc=0.20,
 
 #' Title
 #'
-#' @param X
-#' @param pheno
-#' @param B
-#' @param fdr
-#' @param compute.means
-#' @param lfc
-#' @param max.na
-#' @param ref
-#' @param trend
-#' @param verbose
+#' @param X value
+#' @param pheno value
+#' @param B value
+#' @param fdr value
+#' @param compute.means value
+#' @param lfc value
+#' @param max.na value
+#' @param ref value
+#' @param trend value
+#' @param verbose value
 #'
 #' @return
 #' @export
@@ -412,8 +412,8 @@ gx.limmaF <- function(X, pheno, B=NULL, fdr=0.05, compute.means=TRUE, lfc=0.20,
 
 #' Title
 #'
-#' @param X
-#' @param pheno
+#' @param X value
+#' @param pheno value
 #'
 #' @return
 #' @export
@@ -450,14 +450,14 @@ gx.meanFstats <- function(X, pheno) {
 
 #' Title
 #'
-#' @param X
-#' @param pheno
-#' @param pair
-#' @param fdr
-#' @param lfc
-#' @param ref
-#' @param compute.means
-#' @param trend
+#' @param X value
+#' @param pheno value
+#' @param pair value
+#' @param fdr value
+#' @param lfc value
+#' @param ref value
+#' @param compute.means value
+#' @param trend value
 #'
 #' @return
 #' @export
@@ -562,13 +562,13 @@ gx.limma.paired <- function(X, pheno, pair, fdr=0.05, lfc=0.20,
 
 #' Title
 #'
-#' @param X
-#' @param factors
-#' @param fdr
-#' @param lfc
-#' @param trend
-#' @param ref
-#' @param compute.means
+#' @param X value
+#' @param factors value
+#' @param fdr value
+#' @param lfc value
+#' @param trend value
+#' @param ref value
+#' @param compute.means value
 #'
 #' @return
 #' @export
@@ -708,12 +708,12 @@ gx.limma.two.factorial <- function(X, factors, fdr=0.05, lfc=0.20, trend=FALSE,
 
 #' Title
 #'
-#' @param sig
-#' @param class.label
-#' @param fdr
-#' @param test.method
-#' @param running.name
-#' @param output.to.file
+#' @param sig value
+#' @param class.label value
+#' @param fdr value
+#' @param test.method value
+#' @param running.name value
+#' @param output.to.file value
 #'
 #' @return
 #' @export
@@ -800,10 +800,10 @@ gx.test.groups <- function(sig, class.label, fdr=0.20,
 
 #' Title
 #'
-#' @param X
-#' @param y
-#' @param ref.class
-#' @param nperm
+#' @param X value
+#' @param y value
+#' @param ref.class value
+#' @param nperm value
 #'
 #' @return
 #' @export
@@ -847,9 +847,9 @@ gx.snrtest <- function(X,y,ref.class,nperm=200) {
 
 #' Title
 #'
-#' @param countdata
-#' @param y
-#' @param method
+#' @param countdata value
+#' @param y value
+#' @param method value
 #'
 #' @return
 #' @export

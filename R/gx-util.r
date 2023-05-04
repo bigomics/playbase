@@ -6,7 +6,7 @@
 
 #' Title
 #'
-#' @param X
+#' @param X value
 #'
 #' @return
 #' @export
@@ -27,8 +27,8 @@ imputeMedian <- function(X) {
 
 #' Title
 #'
-#' @param X
-#' @param y
+#' @param X value
+#' @param y value
 #'
 #' @return
 #' @export
@@ -41,7 +41,7 @@ averageByGroup <- function(X, y) {
 
 #' Title
 #'
-#' @param x
+#' @param x value
 #'
 #' @return
 #' @export
@@ -55,7 +55,7 @@ gmean <- function(x) {
 
 #' Title
 #'
-#' @param x
+#' @param x value
 #'
 #' @return
 #' @export
@@ -73,9 +73,9 @@ mat2hugo <- function(x) {
 
 #' Title
 #'
-#' @param gx
-#' @param main
-#' @param ylim
+#' @param gx value
+#' @param main value
+#' @param ylim value
 #'
 #' @return
 #' @export
@@ -99,10 +99,10 @@ gx.hist <- function(gx, main="",ylim=NULL) {
 
 #' Title
 #'
-#' @param z
-#' @param zlim
-#' @param col
-#' @param breaks
+#' @param z value
+#' @param zlim value
+#' @param col value
+#' @param breaks value
 #'
 #' @return
 #' @export
@@ -133,12 +133,12 @@ val2col <- function(z, zlim, col = heat.colors(12), breaks){
 
 #' Title
 #'
-#' @param genes
-#' @param remove.non.hugo
-#' @param silent
-#' @param take.only.first
-#' @param split.char
-#' @param unknown
+#' @param genes value
+#' @param remove.non.hugo value
+#' @param silent value
+#' @param take.only.first value
+#' @param split.char value
+#' @param unknown value
 #'
 #' @return
 #' @export
@@ -185,8 +185,8 @@ symbol2hugo <- function(genes, remove.non.hugo=TRUE, silent=FALSE,
 
 #' Title
 #'
-#' @param X
-#' @param symbol
+#' @param X value
+#' @param symbol value
 #'
 #' @return
 #' @export

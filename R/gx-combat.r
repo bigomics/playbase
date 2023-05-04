@@ -11,11 +11,11 @@
 
 #' Title
 #'
-#' @param x
-#' @param y
-#' @param ref
-#' @param k
-#' @param dist.method
+#' @param x value
+#' @param y value
+#' @param ref value
+#' @param k value
+#' @param dist.method value
 #'
 #' @return
 #' @export
@@ -62,14 +62,14 @@ gx.nearestReferenceCorrection.DEPRECATED <- function(x, y, ref, k=3, dist.method
 
 #' Title
 #'
-#' @param X
-#' @param y
-#' @param use.design
-#' @param dist.method
-#' @param center.x
-#' @param center.m
-#' @param sdtop
-#' @param replace
+#' @param X value
+#' @param y value
+#' @param use.design value
+#' @param dist.method value
+#' @param center.x value
+#' @param center.m value
+#' @param sdtop value
+#' @param replace value
 #'
 #' @return
 #' @export
@@ -151,13 +151,13 @@ pairs=NULL;dist.method="cor"
 
 #' Title
 #'
-#' @param X
-#' @param y
-#' @param pairs
-#' @param use.design
-#' @param center.x
-#' @param center.m
-#' @param dist.method
+#' @param X value
+#' @param y value
+#' @param pairs value
+#' @param use.design value
+#' @param center.x value
+#' @param center.m value
+#' @param dist.method value
 #'
 #' @return
 #' @export
@@ -225,10 +225,10 @@ gx.nnmcorrect2.NOTWORKING <- function(X, y, pairs=NULL, use.design=TRUE,
 
 #' Title
 #'
-#' @param x
-#' @param y
-#' @param k
-#' @param dist.method
+#' @param x value
+#' @param y value
+#' @param k value
+#' @param dist.method value
 #'
 #' @return
 #' @export
@@ -273,9 +273,9 @@ gx.nnmcorrect.OLD <- function(x, y, k=3, dist.method="cor")
 
 #' Title
 #'
-#' @param x
-#' @param y
-#' @param k
+#' @param x value
+#' @param y value
+#' @param k value
 #'
 #' @return
 #' @export
@@ -302,7 +302,7 @@ gx.nnmcorrect.SAVE <- function(x, y, k=3) {
 
 #' Title
 #'
-#' @param X
+#' @param X value
 #'
 #' @return
 #' @export

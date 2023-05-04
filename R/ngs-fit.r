@@ -10,22 +10,22 @@
 
 #' Title
 #'
-#' @param counts
-#' @param X
-#' @param samples
-#' @param design
-#' @param contr.matrix
-#' @param genes
-#' @param prior.cpm
-#' @param prune.samples
-#' @param conform.output
-#' @param do.filter
-#' @param cpm.scale
-#' @param remove.batch
-#' @param methods
-#' @param correct.AveExpr
-#' @param custom
-#' @param custom.name
+#' @param counts value
+#' @param X value
+#' @param samples value
+#' @param design value
+#' @param contr.matrix value
+#' @param genes value
+#' @param prior.cpm value
+#' @param prune.samples value
+#' @param conform.output value
+#' @param do.filter value
+#' @param cpm.scale value
+#' @param remove.batch value
+#' @param methods value
+#' @param correct.AveExpr value
+#' @param custom value
+#' @param custom.name value
 #'
 #' @return
 #' @export
@@ -382,11 +382,11 @@ ngs.fitContrastsWithAllMethods <- function(counts, X=NULL, samples, design, cont
 
 #' Title
 #'
-#' @param X
-#' @param contr.matrix
-#' @param design
-#' @param method
-#' @param conform.output
+#' @param X value
+#' @param contr.matrix value
+#' @param design value
+#' @param method value
+#' @param conform.output value
 #'
 #' @return
 #' @export
@@ -439,15 +439,15 @@ ngs.fitContrastsWithTTEST <- function( X, contr.matrix, design, method="welch",
 
 #' Title
 #'
-#' @param X
-#' @param contr.matrix
-#' @param design
-#' @param method
-#' @param trend
-#' @param robust
-#' @param prune.samples
-#' @param conform.output
-#' @param plot
+#' @param X value
+#' @param contr.matrix value
+#' @param design value
+#' @param method value
+#' @param trend value
+#' @param robust value
+#' @param prune.samples value
+#' @param conform.output value
+#' @param plot value
 #'
 #' @return
 #' @export
@@ -559,16 +559,16 @@ ngs.fitContrastsWithLIMMA <- function( X, contr.matrix, design, method=c("voom",
 
 #' Title
 #'
-#' @param counts
-#' @param group
-#' @param contr.matrix
-#' @param design
-#' @param method
-#' @param prune.samples
-#' @param X
-#' @param conform.output
-#' @param robust
-#' @param plot
+#' @param counts value
+#' @param group value
+#' @param contr.matrix value
+#' @param design value
+#' @param method value
+#' @param prune.samples value
+#' @param X value
+#' @param conform.output value
+#' @param robust value
+#' @param plot value
 #'
 #' @return
 #' @export
@@ -686,13 +686,13 @@ ngs.fitContrastsWithEDGER <- function( counts, group, contr.matrix, design,
 
 #' Title
 #'
-#' @param dge
-#' @param contr.matrix
-#' @param method
-#' @param X
-#' @param conform.output
-#' @param robust
-#' @param plot
+#' @param dge value
+#' @param contr.matrix value
+#' @param method value
+#' @param X value
+#' @param conform.output value
+#' @param robust value
+#' @param plot value
 #'
 #' @return
 #' @export
@@ -781,14 +781,14 @@ ngs.fitContrastsWithEDGER <- function( counts, group, contr.matrix, design,
 
 #' Title
 #'
-#' @param counts
-#' @param contr.matrix
-#' @param group
-#' @param method
-#' @param X
-#' @param conform.output
-#' @param robust
-#' @param plot
+#' @param counts value
+#' @param contr.matrix value
+#' @param group value
+#' @param method value
+#' @param X value
+#' @param conform.output value
+#' @param robust value
+#' @param plot value
 #'
 #' @return
 #' @export
@@ -893,15 +893,15 @@ ngs.fitContrastsWithEDGER <- function( counts, group, contr.matrix, design,
 
 #' Title
 #'
-#' @param counts
-#' @param group
-#' @param contr.matrix
-#' @param design
-#' @param X
-#' @param genes
-#' @param test
-#' @param prune.samples
-#' @param conform.output
+#' @param counts value
+#' @param group value
+#' @param contr.matrix value
+#' @param design value
+#' @param X value
+#' @param genes value
+#' @param test value
+#' @param prune.samples value
+#' @param conform.output value
 #'
 #' @return
 #' @export
@@ -1036,12 +1036,12 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
 
 #' Title
 #'
-#' @param counts
-#' @param contr.matrix
-#' @param test
-#' @param prune.samples
-#' @param conform.output
-#' @param X
+#' @param counts value
+#' @param contr.matrix value
+#' @param test value
+#' @param prune.samples value
+#' @param conform.output value
+#' @param X value
 #'
 #' @return
 #' @export

@@ -9,13 +9,13 @@
 
 #' Title
 #'
-#' @param counts
-#' @param samples
-#' @param genes
-#' @param normalization
-#' @param filter
-#' @param prior.cpm
-#' @param remove.batch
+#' @param counts value
+#' @param samples value
+#' @param genes value
+#' @param normalization value
+#' @param filter value
+#' @param prior.cpm value
+#' @param remove.batch value
 #'
 #' @return
 #' @export
@@ -108,13 +108,13 @@ ngs.cookForEDGER <- function( counts, samples=NULL, genes=NULL, normalization="n
 
 #' Title
 #'
-#' @param counts
-#' @param samples
-#' @param genes
-#' @param remove.batch
-#' @param test
-#' @param prior.cpm
-#' @param filter
+#' @param counts value
+#' @param samples value
+#' @param genes value
+#' @param remove.batch value
+#' @param test value
+#' @param prior.cpm value
+#' @param filter value
 #'
 #' @return
 #' @export

@@ -6,7 +6,7 @@
 
 #' Title
 #'
-#' @param genes
+#' @param genes value
 #'
 #' @return
 #' @export
@@ -124,7 +124,7 @@ ngs.getGeneAnnotation <- function(genes)
 
 #' Title
 #'
-#' @param ngs
+#' @param ngs value
 #'
 #' @return
 #' @export
@@ -138,8 +138,8 @@ ngs.detectOrganism <- function(ngs) {
 
 #' Title
 #'
-#' @param ngs
-#' @param genes
+#' @param ngs value
+#' @param genes value
 #'
 #' @return
 #' @export
@@ -153,7 +153,7 @@ ngs.matchFeatures <- function(ngs, genes) {
 
 #' Title
 #'
-#' @param ngs
+#' @param ngs value
 #'
 #' @return
 #' @export
@@ -172,7 +172,7 @@ ngs.collapseByGeneSLOW <- function(ngs) {
 
 #' Title
 #'
-#' @param ngs
+#' @param ngs value
 #'
 #' @return
 #' @export

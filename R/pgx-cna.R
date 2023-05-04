@@ -6,9 +6,9 @@
 
 #' Title
 #'
-#' @param ngs
-#' @param refgroup
-#' @param progress
+#' @param ngs value
+#' @param refgroup value
+#' @param progress value
 #'
 #' @return
 #' @export
@@ -168,8 +168,8 @@ pgx.inferCNV <- function(ngs, refgroup=NULL, progress=NULL ) {
 
 #' Title
 #'
-#' @param ngs
-#' @param nsmooth
+#' @param ngs value
+#' @param nsmooth value
 #'
 #' @return
 #' @export
@@ -237,15 +237,15 @@ pgx.CNAfromExpression <- function(ngs, nsmooth=40)
 
 #' Title
 #'
-#' @param ngs
-#' @param res
-#' @param annot
-#' @param pca.filter
-#' @param lwd
-#' @param downsample
-#' @param order.by
-#' @param clip
-#' @param lab.cex
+#' @param ngs value
+#' @param res value
+#' @param annot value
+#' @param pca.filter value
+#' @param lwd value
+#' @param downsample value
+#' @param order.by value
+#' @param clip value
+#' @param lab.cex value
 #'
 #' @return
 #' @export

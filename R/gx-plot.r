@@ -6,19 +6,19 @@
 
 #' Title
 #'
-#' @param x
-#' @param main
-#' @param cex.main
-#' @param cex.names
-#' @param cex.legend
-#' @param srt
-#' @param xlab
-#' @param ylab
-#' @param group
-#' @param group.names
-#' @param bar.names
-#' @param voff
-#' @param legend
+#' @param x value
+#' @param main value
+#' @param cex.main value
+#' @param cex.names value
+#' @param cex.legend value
+#' @param srt value
+#' @param xlab value
+#' @param ylab value
+#' @param group value
+#' @param group.names value
+#' @param bar.names value
+#' @param voff value
+#' @param legend value
 #'
 #' @return
 #' @export
@@ -102,23 +102,23 @@ gx.barplot <- function(x, main="", cex.main=1.2, cex.names=0.85,
 
 #' Title
 #'
-#' @param x
-#' @param y
-#' @param first
-#' @param width
-#' @param bar
-#' @param bee
-#' @param sig.stars
-#' @param ymax
-#' @param bee.cex
-#' @param max.stars
-#' @param srt
-#' @param xoff
-#' @param names.cex
-#' @param names
-#' @param max.points
-#' @param col
-#' @param ...
+#' @param x value
+#' @param y value
+#' @param first value
+#' @param width value
+#' @param bar value
+#' @param bee value
+#' @param sig.stars value
+#' @param ymax value
+#' @param bee.cex value
+#' @param max.stars value
+#' @param srt value
+#' @param xoff value
+#' @param names.cex value
+#' @param names value
+#' @param max.points value
+#' @param col value
+#' @param ... value
 #'
 #' @return
 #' @export
@@ -244,9 +244,9 @@ gx.b3plot <- function(x, y, first=NULL,
 
 #' Title
 #'
-#' @param gx
-#' @param main
-#' @param ylim
+#' @param gx value
+#' @param main value
+#' @param ylim value
 #'
 #' @return
 #' @export

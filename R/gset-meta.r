@@ -5,16 +5,16 @@
 
 #' Title
 #'
-#' @param gmt
-#' @param X
-#' @param Y
-#' @param G
-#' @param design
-#' @param contr.matrix
-#' @param methods
-#' @param mc.threads
-#' @param mc.cores
-#' @param batch.correct
+#' @param gmt value
+#' @param X value
+#' @param Y value
+#' @param G value
+#' @param design value
+#' @param contr.matrix value
+#' @param methods value
+#' @param mc.threads value
+#' @param mc.cores value
+#' @param batch.correct value
 #'
 #' @return
 #' @export
@@ -592,11 +592,11 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
 
 #' Title
 #'
-#' @param gsetX
-#' @param contr.matrix
-#' @param design
-#' @param trend
-#' @param conform.output
+#' @param gsetX value
+#' @param contr.matrix value
+#' @param design value
+#' @param trend value
+#' @param conform.output value
 #'
 #' @return
 #' @export
@@ -682,7 +682,7 @@ gset.fitContrastsWithLIMMA <- function( gsetX, contr.matrix, design,
 
 #' Title
 #'
-#' @param path
+#' @param path value
 #'
 #' @return
 #' @export
@@ -744,9 +744,9 @@ getGeneSetTables <- function(path) {
 
 #' Title
 #'
-#' @param gmt
-#' @param bg
-#' @param use.multicore
+#' @param gmt value
+#' @param bg value
+#' @param use.multicore value
 #'
 #' @return
 #' @export
@@ -792,8 +792,8 @@ gmt2mat.nocheck <- function(gmt, bg=NULL, use.multicore=TRUE)
 
 #' Title
 #'
-#' @param s
-#' @param n
+#' @param s value
+#' @param n value
 #'
 #' @return
 #' @export
@@ -807,7 +807,7 @@ shortstring <- function(s,n) {
 
 #' Title
 #'
-#' @param path
+#' @param path value
 #'
 #' @return
 #' @export
@@ -828,7 +828,7 @@ getGseaOutputDir <- function(path) {
 
 #' Title
 #'
-#' @param path
+#' @param path value
 #'
 #' @return
 #' @export
@@ -851,8 +851,8 @@ getGseaTable <- function(path) {
 
 #' Title
 #'
-#' @param gsets
-#' @param gsea_dir
+#' @param gsets value
+#' @param gsea_dir value
 #'
 #' @return
 #' @export
