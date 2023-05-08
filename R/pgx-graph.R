@@ -77,14 +77,6 @@ pgx.computeShortestPath <- function(graph, contrast, niter=1, r=0.01,
                                     output="vpath")
 {
 
-    if(0) {
-        graph <- ngs$omicsnet
-        graph <- ngs$omicsnet.reduced
-        tf.genes <- FAMILIES[["Transcription factors (ChEA)"]]
-        graph <- pgx.createVipGeneLayer(graph, tf.genes, z=0, reconnect=20)
-        niter=10;r=0.10;contrast=3;output="both"
-    }
-
     ## add source/sink
     graph <- pgx._addSourceSink(graph)
 
@@ -446,10 +438,6 @@ pgx.createVipGeneLayer <- function(gr, genes, z=0, reconnect=40) {
     ## Create seperate VIP layer from given genes and remove peeping
     ## links.
     ##
-    if(0) {
-        genes <- FAMILIES[[11]]
-        reconnect=100;z=0
-    }
 
     vname <- sub(".*\\}","",igraph::V(gr)$name)
     vip <- igraph::V(gr)[which(vname %in% genes)]
