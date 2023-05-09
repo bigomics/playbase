@@ -5,7 +5,7 @@
 
 
 # This file is supposed to run from the root Playground folder
-if(basename(getwd()) %in% c("playbase","playbase-main")) {
+if(!basename(getwd()) %in% c("playbase","playbase-main")) {
   stop("This file is supposed to run from the root playbase folder")
 }
 
