@@ -587,14 +587,12 @@ fastcorSAVE <- function(x){
 
 #' @export
 fastcor <- function(a) {
-    a = Matrix::Matrix(a) ## automatically switch to sparse
-    ##a <- as(a, "dgCMatrix")
-    ##b <- as(b, "dgCMatrix")
+    a = Matrix::Matrix(a)
     n <- nrow(a)
-    muX <- colMeans(a)
-    system.time( covmat <- (as.matrix(crossprod(a)) - n*tcrossprod(muX))/(n-1) )
+    muX <- Matrix::colMeans(a)
+    system.time(covmat <- (as.matrix(Matrix::crossprod(a)) - n*Matrix::tcrossprod(muX))/(n-1))
     sdvec <- sqrt(diag(covmat))
-    r <- covmat / tcrossprod(sdvec)
+    r <- covmat/tcrossprod(sdvec)
     r
 }
 

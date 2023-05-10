@@ -217,8 +217,10 @@ BIG.NOTUSED <- c(
 )
 remove.pkgs(BIG.NOTUSED)
 
+##---------------------------------------------------------------------
+## Write license file of the used/installed packages
+##---------------------------------------------------------------------
 if(1) {
-    ## Write license file of the used/installed packages
     lisc <- installed.packages(fields = "License")
     sel <- which(lisc[,"Package"] %in% INSTALLED.PKGS)
     lisc1 <- lisc[sel,]
@@ -231,6 +233,4 @@ if(1) {
     lisc.text <- apply(lisc2, 1, function(s) paste0(s,collapse=''))
     write(lisc.text, "RPackageLicenses.txt")
 ##  lisc2[grep("LGPL|AGPL|GPL-3",lisc2[,"License"]),]
-
-
 }
