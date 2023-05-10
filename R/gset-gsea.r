@@ -151,6 +151,24 @@ read.gmt <- function(gmt.file, dir=NULL, add.source=FALSE, nrows=-1) {
     gset
 }
 
+#' Convert long vector of genes and pathways (eg. cols from data.frame) to gmt format
+#'
+#' @param genes a long vector of genes
+#' @param gs_name a long vector of gene sets/pathway names matching the genes vector length
+#' @param source value
+#'
+#' @return
+#' @export
+#'
+#' @examples
+convert.gmt <- function(genes, gs_name) {
+    if(length(genes) != length(gs_name)){
+        stop("genes and gs_name must be the same length")
+    }
+    gmt <- tapply( genes, gs_name, list)
+    gmt <- lapply(gmt, as.character)
+    return(gmt)
+}
 
 #' Title
 #'
