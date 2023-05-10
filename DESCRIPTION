@@ -85,7 +85,6 @@ Imports:
     partykit,
     patchwork,
     pcaMethods,
-    playdata,
     plotly,
     pls,
     plyr,
