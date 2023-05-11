@@ -49,7 +49,7 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
     gmt <- lapply( gmt, function(s) intersect(s, rownames(X)))
     gmt.size <- sapply(gmt, length)
     summary(gmt.size)
-    keep = (gmt.size >= 15 & gmt.size < 99999)
+    keep = (gmt.size >= 10 & gmt.size < 200)
     table(keep)
     gmt <- gmt[which(keep)]
     length(gmt)
