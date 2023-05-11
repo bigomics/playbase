@@ -7,7 +7,11 @@
 gsea.enplotPDF(gsea.dir, gs, output.pdf)
 }
 \arguments{
-\item{output.pdf}{}
+\item{gsea.dir}{value}
+
+\item{gs}{value}
+
+\item{output.pdf}{value}
 }
 \description{
 Title

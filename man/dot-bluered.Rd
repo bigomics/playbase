@@ -7,7 +7,7 @@
 .bluered(n = 64)
 }
 \arguments{
-\item{n}{}
+\item{n}{value}
 }
 \description{
 Title

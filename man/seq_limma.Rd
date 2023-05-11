@@ -7,7 +7,11 @@
 seq_limma(countdata, y, method = "edgeR")
 }
 \arguments{
-\item{method}{}
+\item{countdata}{value}
+
+\item{y}{value}
+
+\item{method}{value}
 }
 \description{
 Title

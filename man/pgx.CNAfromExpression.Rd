@@ -7,7 +7,9 @@
 pgx.CNAfromExpression(ngs, nsmooth = 40)
 }
 \arguments{
-\item{nsmooth}{}
+\item{ngs}{value}
+
+\item{nsmooth}{value}
 }
 \description{
 Title

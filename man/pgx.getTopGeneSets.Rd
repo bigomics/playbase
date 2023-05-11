@@ -7,7 +7,17 @@
 pgx.getTopGeneSets(pgx, n = 10, ng = 100, dir = 0, sym = FALSE, filt = NULL)
 }
 \arguments{
-\item{filt}{}
+\item{pgx}{value}
+
+\item{n}{value}
+
+\item{ng}{value}
+
+\item{dir}{value}
+
+\item{sym}{value}
+
+\item{filt}{value}
 }
 \description{
 Title

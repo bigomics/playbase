@@ -7,7 +7,13 @@
 read.gmt(gmt.file, dir = NULL, add.source = FALSE, nrows = -1)
 }
 \arguments{
-\item{nrows}{}
+\item{gmt.file}{value}
+
+\item{dir}{value}
+
+\item{add.source}{value}
+
+\item{nrows}{value}
 }
 \description{
 Title

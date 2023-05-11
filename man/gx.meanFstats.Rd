@@ -7,7 +7,9 @@
 gx.meanFstats(X, pheno)
 }
 \arguments{
-\item{pheno}{}
+\item{X}{value}
+
+\item{pheno}{value}
 }
 \description{
 Title

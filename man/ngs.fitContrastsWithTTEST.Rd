@@ -13,7 +13,15 @@ ngs.fitContrastsWithTTEST(
 )
 }
 \arguments{
-\item{conform.output}{}
+\item{X}{value}
+
+\item{contr.matrix}{value}
+
+\item{design}{value}
+
+\item{method}{value}
+
+\item{conform.output}{value}
 }
 \description{
 Title

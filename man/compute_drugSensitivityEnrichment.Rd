@@ -7,7 +7,9 @@
 compute_drugSensitivityEnrichment(ngs, libx.dir)
 }
 \arguments{
-\item{cmap.dir}{}
+\item{ngs}{value}
+
+\item{cmap.dir}{value}
 }
 \description{
 Title

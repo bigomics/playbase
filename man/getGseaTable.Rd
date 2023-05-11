@@ -7,7 +7,7 @@
 getGseaTable(path)
 }
 \arguments{
-\item{path}{}
+\item{path}{value}
 }
 \description{
 Title

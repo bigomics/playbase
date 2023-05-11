@@ -7,7 +7,11 @@
 pgx.makeStratifiedContrasts(Y, strata, ref)
 }
 \arguments{
-\item{ref}{}
+\item{Y}{value}
+
+\item{strata}{value}
+
+\item{ref}{value}
 }
 \description{
 Title

@@ -12,7 +12,13 @@ makeClusterContrasts(
 )
 }
 \arguments{
-\item{by.sample}{}
+\item{clusters}{value}
+
+\item{min.freq}{value}
+
+\item{full}{value}
+
+\item{by.sample}{value}
 }
 \description{
 Title

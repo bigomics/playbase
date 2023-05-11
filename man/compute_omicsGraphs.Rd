@@ -7,7 +7,7 @@
 compute_omicsGraphs(ngs)
 }
 \arguments{
-\item{ngs}{}
+\item{ngs}{value}
 }
 \description{
 Title

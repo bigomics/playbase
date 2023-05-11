@@ -13,7 +13,15 @@ gset.fitContrastsWithLIMMA(
 )
 }
 \arguments{
-\item{conform.output}{}
+\item{gsetX}{value}
+
+\item{contr.matrix}{value}
+
+\item{design}{value}
+
+\item{trend}{value}
+
+\item{conform.output}{value}
 }
 \description{
 Title

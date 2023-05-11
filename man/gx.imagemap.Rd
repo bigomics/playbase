@@ -7,7 +7,13 @@
 gx.imagemap(X, main = "", cex = 1, clust = TRUE)
 }
 \arguments{
-\item{clust}{}
+\item{X}{value}
+
+\item{main}{value}
+
+\item{cex}{value}
+
+\item{clust}{value}
 }
 \description{
 Title

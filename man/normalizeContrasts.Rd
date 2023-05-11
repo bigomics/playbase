@@ -7,7 +7,7 @@
 normalizeContrasts(contr.matrix)
 }
 \arguments{
-\item{contr.matrix}{}
+\item{contr.matrix}{value}
 }
 \description{
 Title

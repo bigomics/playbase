@@ -12,7 +12,13 @@ gsea.LeadingEdgeAnalysis(
 )
 }
 \arguments{
-\item{xmx}{}
+\item{output.dir}{value}
+
+\item{ntop}{value}
+
+\item{gsea.program}{value}
+
+\item{xmx}{value}
 }
 \description{
 Title

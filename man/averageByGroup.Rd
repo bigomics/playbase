@@ -7,7 +7,9 @@
 averageByGroup(mat, group, FUN = mean)
 }
 \arguments{
-\item{y}{}
+\item{X}{value}
+
+\item{y}{value}
 }
 \description{
 Title

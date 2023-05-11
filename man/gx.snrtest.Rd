@@ -7,7 +7,13 @@
 gx.snrtest(X, y, ref.class, nperm = 200)
 }
 \arguments{
-\item{nperm}{}
+\item{X}{value}
+
+\item{y}{value}
+
+\item{ref.class}{value}
+
+\item{nperm}{value}
 }
 \description{
 Title

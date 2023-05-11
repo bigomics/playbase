@@ -7,7 +7,7 @@
 makeContrastsFromLabelMatrix(lab.matrix)
 }
 \arguments{
-\item{lab.matrix}{}
+\item{lab.matrix}{value}
 }
 \description{
 Title

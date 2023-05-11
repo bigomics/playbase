@@ -24,37 +24,37 @@ pgx.createPGX(
 )
 }
 \arguments{
-\item{counts}{dataframe.}
+\item{counts}{dataframe. value}
 
-\item{samples}{dataframe.}
+\item{samples}{dataframe. value}
 
-\item{contrasts}{dataframe}
+\item{contrasts}{dataframe value}
 
-\item{X}{dataframe.}
+\item{X}{dataframe. value}
 
-\item{is.logx}{boolean.}
+\item{is.logx}{boolean. value}
 
-\item{batch.correct}{boolean.}
+\item{batch.correct}{boolean. value}
 
-\item{auto.scale}{boolean.}
+\item{auto.scale}{boolean. value}
 
-\item{filter.genes}{boolean.}
+\item{filter.genes}{boolean. value}
 
-\item{prune.samples}{boolean.}
+\item{prune.samples}{boolean. value}
 
-\item{only.known}{boolean.}
+\item{only.known}{boolean. value}
 
-\item{only.hugo}{boolean.}
+\item{only.hugo}{boolean. value}
 
-\item{convert.hugo}{boolean.}
+\item{convert.hugo}{boolean. value}
 
-\item{do.cluster}{boolean.}
+\item{do.cluster}{boolean. value}
 
-\item{cluster.contrasts}{boolean.}
+\item{cluster.contrasts}{boolean. value}
 
-\item{do.clustergenes}{boolean.}
+\item{do.clustergenes}{boolean. value}
 
-\item{only.proteincoding}{boolean.}
+\item{only.proteincoding}{boolean. value}
 }
 \value{
 list. represents a pgx object

@@ -7,7 +7,9 @@
 gx.collapse2symbol(X, symbol)
 }
 \arguments{
-\item{symbol}{}
+\item{X}{value}
+
+\item{symbol}{value}
 }
 \description{
 Title

@@ -7,7 +7,11 @@
 gseaPlotEnplots(gsea, gsets = NULL, ncol = 5)
 }
 \arguments{
-\item{ncol}{}
+\item{gsea}{value}
+
+\item{gsets}{value}
+
+\item{ncol}{value}
 }
 \description{
 Title

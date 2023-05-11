@@ -7,7 +7,7 @@
 expmat2contrast(exp.matrix)
 }
 \arguments{
-\item{exp.matrix}{}
+\item{exp.matrix}{value}
 }
 \description{
 Title

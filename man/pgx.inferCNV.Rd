@@ -7,7 +7,11 @@
 pgx.inferCNV(ngs, refgroup = NULL, progress = NULL)
 }
 \arguments{
-\item{progress}{}
+\item{ngs}{value}
+
+\item{refgroup}{value}
+
+\item{progress}{value}
 }
 \description{
 Title

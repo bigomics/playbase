@@ -7,7 +7,11 @@
 makeDirectContrasts(Y, ref, na.rm = TRUE)
 }
 \arguments{
-\item{na.rm}{}
+\item{Y}{value}
+
+\item{ref}{value}
+
+\item{na.rm}{value}
 }
 \description{
 Title

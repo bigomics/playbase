@@ -7,7 +7,13 @@
 makeDirectContrasts000(Y, ref, na.rm = TRUE, warn = FALSE)
 }
 \arguments{
-\item{warn}{}
+\item{Y}{value}
+
+\item{ref}{value}
+
+\item{na.rm}{value}
+
+\item{warn}{value}
 }
 \description{
 Title

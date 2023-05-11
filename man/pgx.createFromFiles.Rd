@@ -14,11 +14,11 @@ pgx.createFromFiles(
 )
 }
 \arguments{
-\item{samples.file}{string}
+\item{samples.file}{string value}
 
-\item{contrasts.file}{string}
+\item{contrasts.file}{string value}
 
-\item{counts.file}{string}
+\item{counts.file}{string value}
 }
 \value{
 list. represents a pgx object

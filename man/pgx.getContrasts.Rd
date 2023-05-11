@@ -7,7 +7,7 @@
 pgx.getContrasts(pgx)
 }
 \arguments{
-\item{pgx}{}
+\item{pgx}{value}
 }
 \description{
 Title

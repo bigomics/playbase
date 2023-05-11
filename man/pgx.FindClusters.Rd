@@ -12,7 +12,13 @@ pgx.FindClusters(
 )
 }
 \arguments{
-\item{npca}{}
+\item{X}{value}
+
+\item{method}{value}
+
+\item{top.sd}{value}
+
+\item{npca}{value}
 }
 \description{
 Title

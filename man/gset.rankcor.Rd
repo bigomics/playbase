@@ -7,7 +7,13 @@
 gset.rankcor(rnk, gset, compute.p = FALSE, use.rank = TRUE)
 }
 \arguments{
-\item{use.rank}{}
+\item{rnk}{value}
+
+\item{gset}{value}
+
+\item{compute.p}{value}
+
+\item{use.rank}{value}
 }
 \description{
 Title

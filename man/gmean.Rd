@@ -7,7 +7,7 @@
 gmean(x)
 }
 \arguments{
-\item{x}{}
+\item{x}{value}
 }
 \description{
 Title

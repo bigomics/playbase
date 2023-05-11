@@ -7,7 +7,11 @@
 ngs.rawSalmon(sampleTable, gencode, txi = NULL)
 }
 \arguments{
-\item{txi}{}
+\item{sampleTable}{value}
+
+\item{gencode}{value}
+
+\item{txi}{value}
 }
 \description{
 Title

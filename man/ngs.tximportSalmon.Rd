@@ -12,7 +12,13 @@ ngs.tximportSalmon(
 )
 }
 \arguments{
-\item{txOut}{}
+\item{sf.files}{value}
+
+\item{count.type}{value}
+
+\item{organism}{value}
+
+\item{txOut}{value}
 }
 \description{
 Title

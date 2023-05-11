@@ -7,7 +7,9 @@
 gsea.quick_report(output.dir, pattern = NULL)
 }
 \arguments{
-\item{pattern}{}
+\item{output.dir}{value}
+
+\item{pattern}{value}
 }
 \description{
 Title

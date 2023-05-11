@@ -7,7 +7,13 @@
 gx.PCAheatmap(X, nv = 5, ngenes = 10, ...)
 }
 \arguments{
-\item{...}{}
+\item{X}{value}
+
+\item{nv}{value}
+
+\item{ngenes}{value}
+
+\item{...}{value}
 }
 \description{
 Title

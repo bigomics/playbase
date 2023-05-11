@@ -7,7 +7,11 @@
 gx.nnmcorrect.SAVE(x, y, k = 3)
 }
 \arguments{
-\item{k}{}
+\item{x}{value}
+
+\item{y}{value}
+
+\item{k}{value}
 }
 \description{
 Title

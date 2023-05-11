@@ -7,7 +7,9 @@
 makeFullContrasts(labels, by.sample = FALSE)
 }
 \arguments{
-\item{by.sample}{}
+\item{labels}{value}
+
+\item{by.sample}{value}
 }
 \description{
 Title

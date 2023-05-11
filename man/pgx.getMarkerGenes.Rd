@@ -7,7 +7,15 @@
 pgx.getMarkerGenes(pgx, n = 10, dir = 0, sym = FALSE, filt = NULL)
 }
 \arguments{
-\item{filt}{}
+\item{pgx}{value}
+
+\item{n}{value}
+
+\item{dir}{value}
+
+\item{sym}{value}
+
+\item{filt}{value}
 }
 \description{
 Title

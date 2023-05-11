@@ -7,7 +7,7 @@
 ngs.collapseByGene(ngs)
 }
 \arguments{
-\item{ngs}{}
+\item{ngs}{value}
 }
 \description{
 Title

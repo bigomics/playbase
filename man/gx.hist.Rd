@@ -9,7 +9,11 @@ gx.hist(gx, main = "", ylim = NULL)
 gx.hist(gx, main = "", ylim = NULL)
 }
 \arguments{
-\item{ylim}{}
+\item{gx}{value}
+
+\item{main}{value}
+
+\item{ylim}{value}
 }
 \description{
 Title

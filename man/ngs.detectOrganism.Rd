@@ -7,7 +7,7 @@
 ngs.detectOrganism(ngs)
 }
 \arguments{
-\item{ngs}{}
+\item{ngs}{value}
 }
 \description{
 Title
