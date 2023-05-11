@@ -541,11 +541,11 @@ read.as_matrix <- function(file)
 
 ##check.names=FALSE;row.names=1;stringsAsFactors=FALSE;header=TRUE
 #' @export
-fread.csv <- function(file, check.names=FALSE, row.names=1,
+fread.csv <- function(file, check.names=FALSE, row.names=1, sep='auto',
                       stringsAsFactors=FALSE, header=TRUE, asMatrix=TRUE)
 {
 
-    df <- data.table::fread(file=file, check.names=check.names, header=header)
+    df <- data.table::fread(file=file, check.names=check.names, header=header, sep=sep)
     x <- data.frame(df[,2:ncol(df)], stringsAsFactors=stringsAsFactors,
                     check.names=check.names)
     is.num <- all(sapply(x,class)=="numeric")
