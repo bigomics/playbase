@@ -475,7 +475,7 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
 
     info.cols <- NULL
     missing.FC <- list()
-    message("[initDatasetFolder1] missing pgx = ",pgx.missing)
+    message("[initDatasetFolder1] missing pgx = ",paste(pgx.missing,collapse=" "))
     pgxfile = pgx.missing[1]
     pgxinfo.changed = FALSE
     pgxfc.changed = FALSE
@@ -483,6 +483,8 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
     ngs <- NULL
     for(pgxfile in pgx.missing) {
 
+        cat(".")
+      
         pgxfile1 <- file.path(pgx.dir1,pgxfile)
         pgxfile1 <- paste0(sub("[.]pgx$","",pgxfile1),".pgx")
         ##try.error <- try( load(file.path(pgx.dir1,pgxfile),verbose=0) )

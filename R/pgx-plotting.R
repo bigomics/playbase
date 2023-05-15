@@ -1607,18 +1607,9 @@ pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht=5, cluster.samples=TRUE)
 
     cvar <- pgx.getCategoricalPhenotypes(
         annot, min.ncat=2, max.ncat=10, remove.dup=FALSE)
-    cvar
-
-    ##if(length(unique(annot$group)) > 0.33*nrow(annot)) {
-    ##    cvar <- setdiff(cvar,"group")
-    ##}
-
     fvar <- pgx.getNumericalPhenotypes(annot)
-    fvar
-
     annot.cvar <- annot[,cvar,drop=FALSE]
     annot.fvar <- annot[,fvar,drop=FALSE]
-
     annot.df <- cbind( annot.fvar, annot.cvar )
     colnames(annot.df) <- paste(colnames(annot.df),"        ")
 
@@ -1640,8 +1631,8 @@ pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht=5, cluster.samples=TRUE)
     for(i in 1:length(npar)) {
         prm = colnames(annot.df)[i]
         klrs = rev(grey.colors(npar[i],start=0.4,end=0.85))  ## continous scale
-        if(npar[i]==1) klrs = omics_colors("mid_grey")
-        if(npar[i]>3 & !isnum[i]) klrs = rep(omics_pal_d()(8),99)[1:npar[i]]
+        if(npar[i]==1) klrs = "#d8d8d8" ## omics_colors("mid_grey")
+        if(npar[i]>3 && !isnum[i]) klrs = rep(RColorBrewer::brewer.pal(8,"Set2"),99)[1:npar[i]]
         ##if(!is.binary[i] & !isnum[i]) klrs = rep(RColorBrewer::brewer.pal(8,"Set2"),99)[1:npar[i]]
         ##if(npar[i]==2) klrs = rep(RColorBrewer::brewer.pal(2,"Paired"),99)[1:npar[i]]
         names(klrs) = sort(unique(annot.df[,i]))
@@ -1655,12 +1646,8 @@ pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht=5, cluster.samples=TRUE)
         df = annot.df,
         ##df2 = annot.fvar[,,drop=FALSE],
         col = ann.colors,
-        na_col = omics_colors("super_dark_grey"),
-        ##annotation_height = grid::unit(annot.ht, "mm"),
+        na_col = "#3b4252", ## omics_colors("super_dark_grey"),        
         simple_anno_size = grid::unit(annot.ht,"mm"),  ## BioC 3.8!!
-        ##show_annotation_name = (i==ngrp),
-        ##annotation_name_gp = grid::gpar(fontsize=3.3*annot.ht),
-        ##annotation_legend_param = aa
         show_legend = show.legend
     )
 
@@ -2482,9 +2469,10 @@ pgx.scatterPlotXY.BASE <- function(pos, var=NULL, type=NULL, col=NULL, title="",
         z1 <- factor(var)
         nz <- length(levels(z1))
         if(is.null(col) && nz>2) {
-            col1 <- c(omics_pal_d("muted")(8), #RColorBrewer::brewer.pal(8,"Set1"),
-                      omics_pal_d("default")(8), #RColorBrewer::brewer.pal(8,"Set2"),
-                      omics_pal_d("dark")(8)) #RColorBrewer::brewer.pal(12,"Set3"))
+            col1 <- c(RColorBrewer::brewer.pal(8,"Set1"), #omics_pal_d("muted")(8), 
+                      RColorBrewer::brewer.pal(8,"Set2"), #omics_pal_d("default")(8), 
+                      RColorBrewer::brewer.pal(12,"Set3")) #omics_pal_d("dark")(8)) 
+
         } else if(is.null(col) && nz==2) {
             col1 <- rev(grey.colors(2, end=0.8))
             col1 <- c("#AAAAAA55","#555555FF")
@@ -2783,17 +2771,18 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
         if(!is.null(col)) {
             col1 <- col
         } else if(nz==2) {
-            col1 <- omics_colors("light_grey", "red")
+            ## col1 <- omics_colors("light_grey", "red")
+            col1 <- c("#eeeeee","#f23451")
         } else if(nz==1) {
-            col1 <- omics_colors("super_dark_grey")
+            col1 <- "#3b4252" ## omics_colors("super_dark_grey")
         } else {
-          col1 <- c(omics_pal_d("muted")(8), #RColorBrewer::brewer.pal(8,"Set1"),
-                    omics_pal_d("default")(8), #RColorBrewer::brewer.pal(8,"Set2"),
-                    omics_pal_d("dark")(8)) #RColorBrewer::brewer.pal(12,"Set3"))
+          col1 <- c(RColorBrewer::brewer.pal(8,"Set1"),
+                    RColorBrewer::brewer.pal(8,"Set2"),
+                    RColorBrewer::brewer.pal(12,"Set3"))
         }
         col1 <- Matrix::head(rep(col1,99),nz)
         pt.col <- col1[z1]
-        pt.col[is.na(pt.col)] <- omics_colors("mid_grey")
+        pt.col[is.na(pt.col)] <- "#d8d8d8" ## omics_colors("mid_grey")
         if(opacity<1) {
             pt.col <- add_opacity(pt.col, opacity**0.33)
             col1 <- add_opacity(col1, opacity**0.33)
@@ -4140,9 +4129,9 @@ pgx.boxplot.PLOTLY <- function(
   x = NULL,
   y = NULL,
   title = NULL,
-  color = omics_colors("brand_blue"),
-  fillcolor = omics_colors("light_blue"),
-  linecolor = omics_colors("brand_blue"),
+  color = "#3181de", #omics_colors("brand_blue"),
+  fillcolor = "#2fb5e3", #omics_colors("light_blue"),
+  linecolor = "#3181de", #omics_colors("brand_blue"),
   hoverinfo = "y",
   hoverformat = ".2f",
   yaxistitle = FALSE,
@@ -4181,9 +4170,9 @@ pgx.barplot.PLOTLY <- function(
     x = NULL,
     y = NULL,
     title = NULL,
-    color = omics_colors("brand_blue"),
-    fillcolor = omics_colors("light_blue"),
-    linecolor = omics_colors("brand_blue"),
+    color = "#3181de", #omics_colors("brand_blue"),
+    fillcolor = "#2fb5e3", #omics_colors("light_blue"),
+    linecolor = "#3181de", #omics_colors("brand_blue"),
     titlecolor = "#1f77b4",
     hoverinfo = "y",
     hoverformat = ".2f",
@@ -4197,24 +4186,6 @@ pgx.barplot.PLOTLY <- function(
     grouped = TRUE, #true will calculate mean +/- (sd) across groups
     annotations = NULL
 ) {
-
-  if(0) {
-    title = NULL
-    color = omics_colors("brand_blue")
-    fillcolor = omics_colors("light_blue")
-    linecolor = omics_colors("brand_blue")
-    titlecolor = "#1f77b4"
-    hoverinfo = "y"
-    hoverformat = ".2f"
-    yaxistitle = FALSE
-    xaxistitle = FALSE
-    yrange = NULL
-    font_family = "Lato"
-    margin = list(l = 10, r = 10, b = 10, t = 10)
-    grouped = TRUE #true will calculate mean +/- (sd) across groups
-    annotations = NULL
-  }
-
   if(is.null(x)) x <- 1
   if(is.null(y)) y <- 2
 
