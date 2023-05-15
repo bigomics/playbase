@@ -56,7 +56,7 @@ compute_testGenesets <- function(pgx,
     cat("Filtering gene sets on size...\n")
     gmt.size = Matrix::colSums(G!=0)
     summary(gmt.size)
-    size.ok <- (gmt.size >= 15 & gmt.size <= 200 )
+    size.ok <- (gmt.size >= 15 & gmt.size <= 1000 )
     G <- G[, which(size.ok)]
     dim(G)
     table(sub(":.*","",colnames(G)))
