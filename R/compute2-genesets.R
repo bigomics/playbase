@@ -3,6 +3,22 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
+#' Normalize geneset matrix by row
+#'
+#' @param g a sparse matrix (eg. genesets x genes)
+#'
+#' @return
+#' @export
+#'
+#' @examples
+normalize_matrix_by_row <- function(G){
+        # efficient normalization using linear algebra
+        row_sums <- rowSums(G)
+        D <- Matrix::Diagonal(x = 1/row_sums)
+        G_scaled <- D %*% G
+        return(G_scaled)
+    }
+
 #' Title
 #'
 #' @param pgx value
@@ -46,29 +62,15 @@ compute_testGenesets <- function(pgx,
     genes <- toupper(genes)  ## handle mouse genes...
     G <- G[,colnames(G) %in% genes]
     dim(G)
-    
-    normalize_gset_row <- function(G){
-        # efficient normalization using linear algebra
-        row_sums <- rowSums(G)
-        D <- Matrix::Diagonal(x = 1/row_sums)
-        G_scaled <- D %*% G
-        return(G_scaled)
-    }
-    
+
     # Normalize G after removal of genes
 
-    G <- playbase::normalize_gset_row(G)
+    G <- playbase::normalize_matrix_by_row(G)
 
     # Transpose G
 
     G <- Matrix::t(G)
     dim(G)
-
-    
-
-    
-
-    
 
     ##-----------------------------------------------------------
     ## Filter gene sets
