@@ -31,8 +31,7 @@ compute_testGenesets <- function(pgx,
     ## Load huge geneset matrix
     ##-----------------------------------------------------------
     G <- playdata::GSET_SPARSEG_XL
-    G <- Matrix::t(G)
-    dim(G)
+    
 
     ##-----------------------------------------------------------
     ## Filter genes
@@ -45,8 +44,31 @@ compute_testGenesets <- function(pgx,
     ##genes = Matrix::head(as.character(unlist(as.list(org.Hs.egSYMBOL))),1000)
     genes = unique(as.character(pgx$genes$gene_name))
     genes <- toupper(genes)  ## handle mouse genes...
-    G <- G[rownames(G) %in% genes,]
+    G <- G[,colnames(G) %in% genes]
     dim(G)
+    
+    normalize_gset_row <- function(G){
+        # efficient normalization using linear algebra
+        row_sums <- rowSums(G)
+        D <- Matrix::Diagonal(x = 1/row_sums)
+        G_scaled <- D %*% G
+        return(G_scaled)
+    }
+    
+    # Normalize G after removal of genes
+
+    G <- playbase::normalize_gset_row(G)
+
+    # Transpose G
+
+    G <- Matrix::t(G)
+    dim(G)
+
+    
+
+    
+
+    
 
     ##-----------------------------------------------------------
     ## Filter gene sets
