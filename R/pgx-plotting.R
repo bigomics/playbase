@@ -2555,7 +2555,11 @@ pgx.scatterPlotXY.BASE <- function(pos, var=NULL, type=NULL, col=NULL, title="",
         ##cpal <- rev(viridis::viridis(11))
         cpal <- colorspace::diverge_hcl(64, c=60, l=c(30,100), power=1)
         cpal <- colorRampPalette(c("#313695","#FFFFDF","#A50026"))(64)
-        cpal <- colorRampPalette(c("#3136B5","#FFFFDF","#B50026"))(64)
+        if(!is.null(col)) {
+          cpal <- colorRampPalette(col)(64)        
+        } else {
+          cpal <- colorRampPalette(c("#3136B5","#FFFFDF","#B50026"))(64)
+        }
         cpal <- sapply(1:length(cpal),function(i) add_opacity(cpal[i],0.2+0.8*abs(i-32.5)/32))
         ##cpal <- rev(RColorBrewer::brewer.pal(11,"RdYlBu"))
         pt.col <- cpal[1+ceiling(z1*(length(cpal)-1))]
@@ -2802,16 +2806,17 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
         jj <- order(-table(pt.col)[pt.col]) ## plot less frequent points last...
         df <- df[jj,]
         pt.col <- pt.col[jj]
-        plt <- ggplot(df, aes(x,y), legend=legend) +
-            geom_point(
+        cex1 <- cex[jj]
+        plt <- ggplot2::ggplot(df, ggplot2::aes(x,y), legend=legend) +
+            ggplot2::geom_point(
                 shape = 21,
                 alpha = opacity,
-                size = 1.8*cex,
+                size = 1.8*cex1,
                 fill = pt.col,
                 color = "#444444",
                 stroke = 0.2
             ) +
-            scale_color_manual(
+            ggplot2::scale_color_manual(
                 values = col1,
                 name = title,
                 na.value = "#DDDDDD44"
@@ -2836,7 +2841,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
             plt <- plt +
                 labelFUN(
                     data = df1,
-                    aes(x=x, y=y, label=name),
+                    ggplot2::aes(x=x, y=y, label=name),
                     size = 3.0 * cex.clust,
                     color = "black",
                     label.size = 0.10,
@@ -2853,23 +2858,23 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
         if(legend && nlev <= 10) {
             ## plt <- plt + theme(legend.position = "bottom")
             plt <- plt +
-                theme(
-                    legend.title = element_blank(),
-                    legend.text = element_text(size=9*cex.legend),
+                ggplot2::theme(
+                    legend.title = ggplot2::element_blank(),
+                    legend.text = ggplot2::element_text(size=9*cex.legend),
                     legend.key.size = grid::unit(legend.ysp*0.8*cex.legend,"lines"),
                     legend.key.height = grid::unit(legend.ysp*0.8*cex.legend,"lines"),
                     legend.key = element_rect(color="transparent", fill=scales::alpha("white",0.0)),
                     legend.justification = legend.justification,
                     legend.position = legend.position,
-                    legend.background = element_rect(fill=scales::alpha("white",0.5)),
+                    legend.background = ggplot2::element_rect(fill=scales::alpha("white",0.5)),
                     legend.margin = margin(0,4,4,4),
                     legend.box.just = "right",
-                    legend.box.background = element_rect(color="#888888", size=0.25),
+                    legend.box.background = ggplot2::element_rect(color="#888888", size=0.25),
                     legend.box.margin = margin(0.8,1,1,1)
                 ) +
-                guides(color = guide_legend(override.aes=list(size=2.8*cex.legend)))
+                ggplot2::guides(color = ggplot2::guide_legend(override.aes=list(size=2.8*cex.legend)))
         } else {
-            plt <- plt + theme(legend.position = "none")
+            plt <- plt + ggplot2::theme(legend.position = "none")
         }
 
     }
@@ -2894,44 +2899,47 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
         if(!is.null(labels) && length(labels)==nrow(pos)) label1 <- labels
         df <- data.frame( x=pos[,1], y=pos[,2], name=rownames(pos),
                          variable=z, text=tooltip, label=label1 )
-        df <- df[order(abs(z),na.last=FALSE),] ## strongest last??
-
+        jj <- order(abs(z),na.last=FALSE)
+        df <- df[jj,] ## strongest last??
+        cex1 <- cex[jj]
+        
         ## determine range for colorbar
         zr <- range(z)
         if(!is.null(zlim)) zr <- zlim
         if(zsym && min(zr,na.rm=TRUE)<0 ) zr <- c(-1,1)*max(abs(zr),na.rm=TRUE)
         zz <- round(c(zr[1], zr[2]),digits=2)
 
-        plt <- ggplot(df, aes(x, y, fill=variable)) +
-            geom_point(
+        plt <- ggplot2::ggplot(df, ggplot2::aes(x, y, fill=variable)) +
+            ggplot2::geom_point(
                 shape = 21,
                 alpha = opacity,
-                size = 1.8 * cex,
+                size = 1.8 * cex1,
                 color = "#444444",
                 stroke = 0.2
             ) +
-            scale_fill_gradientn(
+            ggplot2::scale_fill_gradientn(
                 colors = cpal,
                 breaks = zz,
                 labels = c(zz[1],zz[2]),
                 na.value = "#DDDDDD44") +
-            expand_limits(color = zr + c(-0.01,0.01))
+            ggplot2::expand_limits(color = zr + c(-0.01,0.01))
 
         ## colorscale bar
         if(legend) {
             xmax <- round(max(z,na.rm=TRUE),2)
             xmin <- round(min(z,na.rm=TRUE),2)
             plt <- plt +
-                guides(colour = guide_colourbar(
+                ggplot2::guides(
+                  colour = ggplot2::guide_colourbar(
                   barwidth  = 0.5*barscale,
                   barheight = 2.2*barscale
                 )) +
-                theme(legend.title = element_blank(),
-                      legend.text = element_text(size=9*cex.legend),
+                ggplot2::theme(legend.title = ggplot2::element_blank(),
+                      legend.text = ggplot2::element_text(size=9*cex.legend),
                       legend.justification = legend.justification,
                       legend.position = legend.position,
-                      legend.background = element_blank(),
-                      legend.key = element_blank())
+                      legend.background = ggplot2::element_blank(),
+                      legend.key = ggplot2::element_blank())
         } else {
             plt <- plt + theme(legend.position="none")
         }
@@ -2942,10 +2950,10 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
         sel <- which(df$name %in% hilight)
         if(is.null(hilight.col)) hilight.col <- 'transparent'
         plt <- plt +
-            geom_point(
+            ggplot2::geom_point(
                 ##data = subset(df, name %in% hilight),
                 data = df[sel,],
-                mapping = aes(x,y),
+                mapping = ggplot2::aes(x,y),
                 size = 2.0 * hilight.cex,
                 shape = 21,
                 stroke = 0.5 * hilight.lwd,
@@ -2962,7 +2970,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
         ##geom_text_repel(
         plt <- plt + labelFUN(
                          data = subset(df, name %in% hilight2),
-                         aes(label = label),
+                         ggplot2::aes(label = label),
                          size = 3.0*cex.lab,
                          color = "black",
                          label.size = 0.08,
@@ -2977,18 +2985,18 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
 
 
     if(!is.null(bgcolor)) {
-      plt <- plt + theme(
-        panel.background = element_rect(fill=bgcolor)
+      plt <- plt + ggplot2::theme(
+        panel.background = ggplot2::element_rect(fill=bgcolor)
       )
     }
 
     if(!is.null(gridcolor)) {
-      plt <- plt + theme(
-        panel.grid.major = element_line(
+      plt <- plt + ggplot2::theme(
+        panel.grid.major = ggplot2::element_line(
           size = 0.4,
           linetype = 'solid',
           colour = gridcolor),
-        panel.grid.minor = element_line(
+        panel.grid.minor = ggplot2::element_line(
           size = 0.15,
           linetype = 'solid',
           colour = gridcolor)
@@ -2997,34 +3005,34 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
 
     if(box) {
       plt <- plt +
-        theme(
-          panel.border = element_rect(fill=NA, color="grey20", size=0.15)
+        ggplot2::theme(
+          panel.border = ggplot2::element_rect(fill=NA, color="grey20", size=0.15)
         )
     }
 
     ## additional theme
     plt <- plt +
-        xlim(xlim[1], xlim[2]) +
-        ylim(ylim[1], ylim[2]) +
-        xlab(xlab) +  ylab(ylab) + ggtitle(title) +
-        theme(
-            plot.title = element_text(size=11*cex.title, hjust=0, vjust=-1),
-            axis.text.x = element_text(size=7*cex.axis),
-            axis.text.y = element_text(size=7*cex.axis),
-            axis.title.x = element_text(size=9*cex.axis, vjust=+2),
-            axis.title.y = element_text(size=9*cex.axis, vjust=+0),
-            plot.margin = margin(1,1,1,1, "mm")  ##??
+        ggplot2::xlim(xlim[1], xlim[2]) +
+        ggplot2::ylim(ylim[1], ylim[2]) +
+        ggplot2::xlab(xlab) +  ggplot2::ylab(ylab) + ggplot2::ggtitle(title) +
+        ggplot2::theme(
+            plot.title = ggplot2::element_text(size=28*cex.title, hjust=0, vjust=-1),
+            axis.text.x = ggplot2::element_text(size=18*cex.axis),
+            axis.text.y = ggplot2::element_text(size=18*cex.axis),
+            axis.title.x = ggplot2::element_text(size=22*cex.axis, vjust=+2),
+            axis.title.y = ggplot2::element_text(size=22*cex.axis, vjust=+0),
+            plot.margin = ggplot2::margin(1,1,1,1, "mm")  ##??
         )
 
     if(axis==FALSE) {
           plt <- plt +
-            theme(
-              axis.title.x = element_blank(),
-              axis.text.x = element_blank(),
-              axis.ticks.x = element_blank(),
-              axis.title.y = element_blank(),
-              axis.text.y = element_blank(),
-              axis.ticks.y = element_blank()
+            ggplot2::theme(
+              axis.title.x = ggplot2::element_blank(),
+              axis.text.x = ggplot2::element_blank(),
+              axis.ticks.x = ggplot2::element_blank(),
+              axis.title.y = ggplot2::element_blank(),
+              axis.text.y = ggplot2::element_blank(),
+              axis.ticks.y = ggplot2::element_blank()
             )
     }
 
@@ -3159,13 +3167,19 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
 
         ## prepare dataframe
         df <- data.frame(
-            x = pos[,1], y = pos[,2], name = rownames(pos),
-            value = z1, text = tooltip1, label = label1)
+          x = pos[,1],
+          y = pos[,2],
+          name = rownames(pos),
+          value = z1,
+          size = 7*cex,          
+          text = tooltip1,
+          label = label1
+        )
 
         ## plot less frequent points first... (NEED RETHINK)
         jj <- order(-table(z1)[z1])
         df <- df[jj,]
-
+        
     }
 
     ## Plot the continous variables
@@ -3187,6 +3201,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
           y = pos[,2],
           name = rownames(pos),
           value = z,
+          size = 7*cex,
           text = tooltip1,
           label = label1
         )
@@ -3227,7 +3242,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                 text = ~text,
                 hoverinfo = hoverinfo,
                 marker = list(
-                  size = 7*cex,
+                  size = ~size,
                   opacity = opacity,
                   color = '#DDDDDD44'
                 ),
@@ -3248,7 +3263,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
             text = ~text,
             hoverinfo = hoverinfo,
             marker = list(
-              size = 7*cex,
+              size = ~size,
               opacity = opacity,
               line = list(
                 color = '#444444',
