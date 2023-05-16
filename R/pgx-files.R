@@ -420,7 +420,6 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
     pgx.missing1 <- pgx.files
     pgx.delete0 <- c()
     pgx.delete1 <- c()
-    force
 
     allFC <-NULL
     if(!force && has.fc) {
@@ -550,12 +549,13 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
     fc.done <- gsub("^\\[|\\].*","",colnames(allFC))
     sel.deleteFC <- which(!fc.done %in% pgx.files)
     if(length(sel.deleteFC)) {
-      allFC <- allFC[, -sel.deleteFC]
+      allFC <- allFC[, -sel.deleteFC, drop=FALSE]
       pgxfc.changed <- TRUE
     }
 
     if(length(missing.FC)==0 && !pgxfc.changed) {
         ## no change in info
+        dbg("[initDatasetFolder1] allFC file complete. no change needed.")
         return(NULL)
     }
 
