@@ -16,6 +16,7 @@ normalize_matrix_by_row <- function(G){
         row_sums <- Matrix::rowSums(G)
         D <- Matrix::Diagonal(x = 1/row_sums)
         G_scaled <- D %*% G
+        rownames(G_scaled) <- rownames(G)
         return(G_scaled)
     }
 
