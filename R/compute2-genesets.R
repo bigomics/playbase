@@ -13,7 +13,7 @@
 #' @examples
 normalize_matrix_by_row <- function(G){
         # efficient normalization using linear algebra
-        row_sums <- rowSums(G)
+        row_sums <- Matrix::rowSums(G)
         D <- Matrix::Diagonal(x = 1/row_sums)
         G_scaled <- D %*% G
         return(G_scaled)
@@ -61,7 +61,6 @@ compute_testGenesets <- function(pgx,
     genes = unique(as.character(pgx$genes$gene_name))
     genes <- toupper(genes)  ## handle mouse genes...
     G <- G[,colnames(G) %in% genes]
-    dim(G)
 
     # Normalize G after removal of genes
 
