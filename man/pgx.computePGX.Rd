@@ -42,3 +42,16 @@ pgx.computePGX(
 \description{
 Title
 }
+\examples{
+
+# first step is to create pgx 
+pgx <- playbase::pgx.createPGX(
+ counts = playbase::COUNTS,
+ samples = playbase::SAMPLES,
+ contrasts = playbase::CONTRASTS)
+)
+
+# once pgx is created, we can compute the modules
+pgx <- playbase::pgx.computePGX(
+  pgx = pgx
+}

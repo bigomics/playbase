@@ -569,6 +569,18 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 #' @export
 #'
 #' @examples
+#' 
+#' # first step is to create pgx 
+#' pgx <- playbase::pgx.createPGX(
+#'  counts = playbase::COUNTS,
+#'  samples = playbase::SAMPLES,
+#'  contrasts = playbase::CONTRASTS)
+#' )
+#' 
+#' # once pgx is created, we can compute the modules
+#' pgx <- playbase::pgx.computePGX(
+#'   pgx = pgx
+#  )
 pgx.computePGX <- function(pgx,
                            max.genes = 19999, max.genesets = 9999,
                            gx.methods = c("ttest.welch", "trend.limma", "edger.qlf"),
