@@ -586,6 +586,8 @@ pgx.testPhenoCorrelation <- function(df, plot=TRUE, cex=1)
     Q[is.na(Q)] <- 0
     Q <- (Q + t(Q))/2
 
+    BLUERED <- colorRampPalette(c("blue3","white","red3"))
+  
     if(plot==TRUE) {
 
         logP <- -log10(P+1e-8)
@@ -596,19 +598,19 @@ pgx.testPhenoCorrelation <- function(df, plot=TRUE, cex=1)
         corrplot::corrplot(
             corr = logQ,
             type = "upper",
-            col = omics_pal_c("blue_red")(25),
+            col = BLUERED(25), ## omics_pal_c("blue_red")(25),
             is.corr = FALSE,
             mar = c(0, 0, 0, 2),
             p.mat = Q,
             sig.level = 0.05,
             #insig = "blank",
             tl.cex = cex,
-            tl.col = omics_colors("super_dark_grey"),
+            tl.col = "#3b4252", ## omics_colors("super_dark_grey"),
             tl.offset = 1,
             cl.align.text = "l",
             cl.offset = 0.25,
             cl.cex = 0.7,
-            pch.col = omics_colors("super_dark_grey"),
+            pch.col = "#3b4252", ## omics_colors("super_dark_grey"),
             order = "hclust",
             number.digits = 2
         )
