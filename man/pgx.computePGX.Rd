@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-compute.R
 \name{pgx.computePGX}
 \alias{pgx.computePGX}
-\title{Title}
+\title{Main function to populate pgx with results}
 \usage{
 pgx.computePGX(
   pgx,
@@ -40,7 +40,7 @@ pgx.computePGX(
 \item{progress}{value}
 }
 \description{
-Title
+Main function to populate pgx with results
 }
 \examples{
 
@@ -48,10 +48,11 @@ Title
 pgx <- playbase::pgx.createPGX(
  counts = playbase::COUNTS,
  samples = playbase::SAMPLES,
- contrasts = playbase::CONTRASTS)
+ contrasts = playbase::CONTRASTS
 )
 
 # once pgx is created, we can compute the modules
 pgx <- playbase::pgx.computePGX(
   pgx = pgx
+ )
 }

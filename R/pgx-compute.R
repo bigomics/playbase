@@ -146,8 +146,18 @@ pgx.createFromFiles <- function(count.file, samples.file, contrasts.file = NULL,
 
 #'
 #' @examples
-#' x <- 1
-#' @export
+#' 
+#' # first step is to create pgx 
+#' pgx <- playbase::pgx.createPGX(
+#'  counts = playbase::COUNTS,
+#'  samples = playbase::SAMPLES,
+#'  contrasts = playbase::CONTRASTS
+#' )
+#' 
+#' # once pgx is created, we can compute the modules
+#' pgx <- playbase::pgx.computePGX(
+#'   pgx = pgx
+#'  )
 pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
                           is.logx = NULL, batch.correct = TRUE,
                           auto.scale = TRUE, filter.genes = TRUE, prune.samples = FALSE,
@@ -552,7 +562,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 }
 
 
-#' Title
+#' Main function to populate pgx with results
 #'
 #' @param pgx value
 #' @param max.genes value
@@ -574,13 +584,13 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 #' pgx <- playbase::pgx.createPGX(
 #'  counts = playbase::COUNTS,
 #'  samples = playbase::SAMPLES,
-#'  contrasts = playbase::CONTRASTS)
+#'  contrasts = playbase::CONTRASTS
 #' )
 #' 
 #' # once pgx is created, we can compute the modules
 #' pgx <- playbase::pgx.computePGX(
 #'   pgx = pgx
-#  )
+#'  )
 pgx.computePGX <- function(pgx,
                            max.genes = 19999, max.genesets = 9999,
                            gx.methods = c("ttest.welch", "trend.limma", "edger.qlf"),
