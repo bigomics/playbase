@@ -2725,7 +2725,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
     }
     if(is.null(hilight.cex))
         hilight.cex = cex
-
+    
     ## normalize pos
     if(is.null(xlim)) xlim <- range(pos[,1])
     if(is.null(ylim)) ylim <- range(pos[,2])
@@ -2806,7 +2806,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
         jj <- order(-table(pt.col)[pt.col]) ## plot less frequent points last...
         df <- df[jj,]
         pt.col <- pt.col[jj]
-        cex1 <- cex[jj]
+        cex1 <- ifelse(length(cex)>1, cex[jj], cex)
         plt <- ggplot2::ggplot(df, ggplot2::aes(x,y), legend=legend) +
             ggplot2::geom_point(
                 shape = 21,
@@ -2901,7 +2901,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
                          variable=z, text=tooltip, label=label1 )
         jj <- order(abs(z),na.last=FALSE)
         df <- df[jj,] ## strongest last??
-        cex1 <- cex[jj]
+        cex1 <- ifelse(length(cex)>1, cex[jj], cex)
         
         ## determine range for colorbar
         zr <- range(z)
@@ -3016,7 +3016,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var=NULL, type=NULL, col=NULL, cex=NUL
         ggplot2::ylim(ylim[1], ylim[2]) +
         ggplot2::xlab(xlab) +  ggplot2::ylab(ylab) + ggplot2::ggtitle(title) +
         ggplot2::theme(
-            plot.title = ggplot2::element_text(size=28*cex.title, hjust=0, vjust=-1),
+            plot.title = ggplot2::element_text(size=22*cex.title, hjust=0, vjust=-1),
             axis.text.x = ggplot2::element_text(size=18*cex.axis),
             axis.text.y = ggplot2::element_text(size=18*cex.axis),
             axis.title.x = ggplot2::element_text(size=22*cex.axis, vjust=+2),

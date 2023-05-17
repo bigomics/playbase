@@ -594,7 +594,6 @@ pgx.initDatasetFolder1 <- function( pgx.dir1,
         allFC <- cbind(allFC, allFC.new)
         rownames(allFC) <- gg
       }
-      dim(allFC)
 
       ## restrict to 20000 genes
       allfc.sd <- apply(allFC, 1, sd, na.rm=TRUE)
