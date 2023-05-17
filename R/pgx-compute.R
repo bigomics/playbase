@@ -143,7 +143,7 @@ pgx.createFromFiles <- function(count.file, samples.file, contrasts.file = NULL,
 #' @param only.proteincoding boolean. value
 #'
 #' @return list. represents a pgx object
-
+#' @export
 #'
 #' @examples
 #' 
