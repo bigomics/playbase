@@ -15,17 +15,6 @@
 #' @return list. represents a pgx object
 #' @export 
 #' @examples
-#' # first step is to create pgx 
-#' pgx <- playbase::pgx.createPGX(
-#'  counts = playbase::COUNTS,
-#'  samples = playbase::SAMPLES,
-#'  contrasts = playbase::CONTRASTS
-#' )
-#' 
-#' # once pgx is created, we can compute the modules
-#' pgx <- playbase::pgx.computePGX(
-#'   pgx = pgx
-#' )
 pgx.createFromFiles <- function(count.file, samples.file, contrasts.file = NULL,
                                 gxmethods = "trend.limma,edger.qlf,edger.lrt",
                                 gsetmethods = "fisher,gsva,fgsea",
@@ -133,9 +122,9 @@ pgx.createFromFiles <- function(count.file, samples.file, contrasts.file = NULL,
 #' This function creates a pgx object, which is the core object in the
 #' OmicsPlayground.
 #'
-#' @param counts dataframe. value
-#' @param samples dataframe. value
-#' @param contrasts dataframe value
+#' @param counts.file a playbase::COUNTS file
+#' @param samples.file a playbase::SAMPLES file
+#' @param contrasts.file a playbase::CONTRASTS file
 #' @param X dataframe. value
 #' @param is.logx boolean. value
 #' @param batch.correct boolean. value
@@ -154,7 +143,6 @@ pgx.createFromFiles <- function(count.file, samples.file, contrasts.file = NULL,
 #' @export
 #'
 #' @examples
-#' 
 #' # first step is to create pgx 
 #' pgx <- playbase::pgx.createPGX(
 #'  counts = playbase::COUNTS,
@@ -165,6 +153,22 @@ pgx.createFromFiles <- function(count.file, samples.file, contrasts.file = NULL,
 #' # once pgx is created, we can compute the modules
 #' pgx <- playbase::pgx.computePGX(
 #'   pgx = pgx
+#' )
+#' 
+#' # if you want a more minimal (and quick) example for testing, use the settings below
+#' 
+#' pgx <- playbase::pgx.createPGX(
+#'  counts = playbase::COUNTS,
+#'  samples = playbase::SAMPLES,
+#'  contrasts = playbase::CONTRASTS[1]
+#' )
+#' 
+#' pgx <- playbase::pgx.computePGX(
+#'   pgx = pgx,
+#'   max.genes = 10000,
+#'   max.genesets = 1000,
+#'   gx.methods = c("ttest.welch"),
+#'   gset.methods = c("fisher")
 #' )
 pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
                           is.logx = NULL, batch.correct = TRUE,
@@ -587,7 +591,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 #' @export
 #'
 #' @examples
-#' 
 #' # first step is to create pgx 
 #' pgx <- playbase::pgx.createPGX(
 #'  counts = playbase::COUNTS,
@@ -598,6 +601,22 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 #' # once pgx is created, we can compute the modules
 #' pgx <- playbase::pgx.computePGX(
 #'   pgx = pgx
+#' )
+#' 
+#' # if you want a more minimal (and quick) example for testing, use the settings below
+#' 
+#' pgx <- playbase::pgx.createPGX(
+#'  counts = playbase::COUNTS,
+#'  samples = playbase::SAMPLES,
+#'  contrasts = playbase::CONTRASTS[1]
+#' )
+#' 
+#' pgx <- playbase::pgx.computePGX(
+#'   pgx = pgx,
+#'   max.genes = 10000,
+#'   max.genesets = 1000,
+#'   gx.methods = c("ttest.welch"),
+#'   gset.methods = c("fisher")
 #' )
 pgx.computePGX <- function(pgx,
                            max.genes = 19999, 

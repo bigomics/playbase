@@ -7,13 +7,13 @@
 pgx.computePGX(
   pgx,
   max.genes = 19999,
-  max.genesets = 9999,
+  max.genesets = 5000,
   gx.methods = c("ttest.welch", "trend.limma", "edger.qlf"),
   gset.methods = c("fisher", "gsva", "fgsea"),
   do.cluster = TRUE,
   use.design = TRUE,
   prune.samples = FALSE,
-  extra.methods = c("meta.go", "deconv", "infer", "drugs", "wordcloud"),
+  extra.methods = c("meta.go", "infer", "deconv", "drugs", "wordcloud", "wgcna")[c(1, 2)],
   libx.dir = NULL,
   progress = NULL
 )
@@ -43,7 +43,6 @@ pgx.computePGX(
 Main function to populate pgx with results
 }
 \examples{
-
 # first step is to create pgx 
 pgx <- playbase::pgx.createPGX(
  counts = playbase::COUNTS,
@@ -54,5 +53,21 @@ pgx <- playbase::pgx.createPGX(
 # once pgx is created, we can compute the modules
 pgx <- playbase::pgx.computePGX(
   pgx = pgx
- )
+)
+
+# if you want a more minimal (and quick) example for testing, use the settings below
+
+pgx <- playbase::pgx.createPGX(
+ counts = playbase::COUNTS,
+ samples = playbase::SAMPLES,
+ contrasts = playbase::CONTRASTS[1]
+)
+
+pgx <- playbase::pgx.computePGX(
+  pgx = pgx,
+  max.genes = 10000,
+  max.genesets = 1000,
+  gx.methods = c("ttest.welch"),
+  gset.methods = c("fisher")
+)
 }
