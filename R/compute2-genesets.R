@@ -219,6 +219,22 @@ compute_testGenesets <- function(pgx,
     pgx$gsetX = pgx$gset.meta$matrices[["meta"]]  ## META or average FC??!
     pgx$GMT <- G[,rownames(pgx$gsetX)]
 
+    # calculate gset info and store as pgx$gset.meta
+
+    gset.size <- Matrix::colSums(pgx$GMT != 0)
+
+    gset.size.raw <- playdata::GSET_SIZE
+
+    gset.idx <- match(names(gset.size), names(gset.size.raw))
+
+    gset.fraction <-  gset.size/gset.size.raw[gset.idx]
+
+    pgx$gset.meta$info <- data.frame(
+        gset.size.raw = gset.size.raw[gset.idx],
+        gset.size = gset.size,
+        gset.fraction = gset.fraction
+    )
+    
     ##-----------------------------------------------------------------------
     ##------------------------ clean up -------------------------------------
     ##-----------------------------------------------------------------------
