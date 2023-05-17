@@ -36,20 +36,20 @@ plotting functions operate.
 
 ``` r
 library(playbase)
-#> 
-#> 
-#> 
 
-## example files can be accessed via the example_file() function
-counts <- playbase::read_counts(playbase::example_file("counts.csv"))
-samples <- playbase::read_samples(playbase::example_file("samples.csv"))
-contrasts <- playbase::read_contrasts(playbase::example_file("contrasts.csv"))
+# Here we create a pgx object that can be used in Omics Playground.
 
-## create a pgx object (new style)
-#pgx <- playbase::create_pgx(counts, samples, contrasts)
+# Step 1. create a pgx object
+pgx <- playbase::pgx.createPGX(
+ counts = playbase::COUNTS,
+ samples = playbase::SAMPLES,
+ contrasts = playbase::CONTRASTS
+)
+# Step 2. Populate pgx object with results
+pgx <- playbase::pgx.computePGX(
+  pgx = pgx
+ )
 
-## old style still works
-#pgx <- playbase::pgx.createPGX(counts, samples, contrasts)
 ```
 
 ## Adding namespace
