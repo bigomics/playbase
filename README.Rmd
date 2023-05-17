@@ -51,7 +51,7 @@ pgx <- playbase::pgx.createPGX(
 # once pgx is created, we can compute the modules
 pgx <- playbase::pgx.computePGX(
   pgx = pgx
- )
+)
 ```
 
 ## Adding namespace

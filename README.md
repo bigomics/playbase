@@ -48,7 +48,7 @@ pgx <- playbase::pgx.createPGX(
 # Step 2. Populate pgx object with results
 pgx <- playbase::pgx.computePGX(
   pgx = pgx
- )
+)
 
 ```
 

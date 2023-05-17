@@ -8,16 +8,24 @@
 #' This function creates a pgx object from files, which is the core object in the
 #' OmicsPlayground.
 #'
-#' @param counts.file string value
-#' @param samples.file string value
-#' @param contrasts.file string value
+#' @param counts.file a playbase::COUNTS file
+#' @param samples.file a playbase::SAMPLES file
+#' @param contrasts.file a playbase::CONTRASTS file
 #'
 #' @return list. represents a pgx object
-
-#'
+#' @export 
 #' @examples
-#' x <- 1
-#' @export
+#' # first step is to create pgx 
+#' pgx <- playbase::pgx.createPGX(
+#'  counts = playbase::COUNTS,
+#'  samples = playbase::SAMPLES,
+#'  contrasts = playbase::CONTRASTS
+#' )
+#' 
+#' # once pgx is created, we can compute the modules
+#' pgx <- playbase::pgx.computePGX(
+#'   pgx = pgx
+#' )
 pgx.createFromFiles <- function(count.file, samples.file, contrasts.file = NULL,
                                 gxmethods = "trend.limma,edger.qlf,edger.lrt",
                                 gsetmethods = "fisher,gsva,fgsea",
@@ -157,7 +165,7 @@ pgx.createFromFiles <- function(count.file, samples.file, contrasts.file = NULL,
 #' # once pgx is created, we can compute the modules
 #' pgx <- playbase::pgx.computePGX(
 #'   pgx = pgx
-#'  )
+#' )
 pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
                           is.logx = NULL, batch.correct = TRUE,
                           auto.scale = TRUE, filter.genes = TRUE, prune.samples = FALSE,
@@ -590,13 +598,16 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 #' # once pgx is created, we can compute the modules
 #' pgx <- playbase::pgx.computePGX(
 #'   pgx = pgx
-#'  )
+#' )
 pgx.computePGX <- function(pgx,
-                           max.genes = 19999, max.genesets = 9999,
+                           max.genes = 19999, 
+                           max.genesets = 5000,
                            gx.methods = c("ttest.welch", "trend.limma", "edger.qlf"),
                            gset.methods = c("fisher", "gsva", "fgsea"),
-                           do.cluster = TRUE, use.design = TRUE, prune.samples = FALSE,
-                           extra.methods = c("meta.go", "deconv", "infer", "drugs", "wordcloud"),
+                           do.cluster = TRUE,
+                           use.design = TRUE,
+                           prune.samples = FALSE,
+                           extra.methods = c("meta.go","infer", "deconv","drugs", "wordcloud", "wgcna")[c(1,2)],
                            libx.dir = NULL,
                            progress = NULL) {
   ## ======================================================================
