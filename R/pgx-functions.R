@@ -575,10 +575,8 @@ tagDuplicates <- function(s) {
 
 #' @export
 wrapHyperLink <- function(s, gs) {
-
     gs = as.character(gs)
     s1 = s = as.character(s)
-    
     ## GEO/GSE accession
     jj <- grep("GSE[0-9]",gs, ignore.case = TRUE)
     if(length(jj)) {
@@ -592,15 +590,6 @@ wrapHyperLink <- function(s, gs) {
     if(length(jj)) {
         acc = sub("[-_ ].*","",gsub("^.*GDS","GDS",gs[jj], ignore.case = TRUE))
         url = paste0("https://www.ncbi.nlm.nih.gov/sites/GDSbrowser?acc=",acc)
-        s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
-    }
-
-    ## KEGG accession
-    jj <- grep("HSA-[0-9][0-9]|hsa[0-9][0-9]",gs)
-    if(length(jj)) {
-        id = sub("^.*HSA-|.*hsa","hsa",gs[jj])
-        id = sub("[-_ ].*","",id)
-        url = paste0("https://www.genome.jp/kegg-bin/show_pathway?map=",id,"&show_description=show")
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
 
@@ -663,7 +652,7 @@ wrapHyperLink <- function(s, gs) {
         url <- paste0(base_url, URLencode(id))
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
-    # LNCHUB accession
+    # BIOPLEX accession
     jj <- grep("BIOPLEX:",gs)
     if(length(jj)) {
         # bioplanet is down, placeholder for when it comes back alive
@@ -680,7 +669,6 @@ wrapHyperLink <- function(s, gs) {
 
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")  
     }
-
     return(s1)
 }
 
