@@ -576,15 +576,15 @@ tagDuplicates <- function(s) {
 #' @export
 wrapHyperLink <- function(s, gs) {
 
-    s = "PATHWAY:Complement Activation_Homo sapiens_WP545_HSA"
-    gs = "PATHWAY:Complement Activation_Homo sapiens_WP545_HSA"
+    s = "DRUG:cyclophosphamide mus musculus gpl13209 gse27423 chdir up"
+    gs = "DRUG:cyclophosphamide mus musculus gpl13209 gse27423 chdir up"
 
     ## GEO/GSE accession
     gs = as.character(gs)
     s1 = s = as.character(s)
-    jj <- grep("GSE[0-9]",gs)
+    jj <- grep("GSE[0-9]",gs, ignore.case = TRUE)
     if(length(jj)) {
-        acc = sub("[-_ ].*","",gsub("^.*GSE","GSE",gs[jj]))
+        acc = sub("[-_ ].*","",gsub("^.*GSE","GSE",gs[jj], ignore.case = TRUE))
         url = paste0("https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=",acc)
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
@@ -608,7 +608,6 @@ wrapHyperLink <- function(s, gs) {
 
     ## Wikipathways
     jj <- grep("_WP[0-9][0-9]",gs)
-
     if(length(jj)) {
         id = sub("^.*_WP","WP",gs[jj])
         id = stringr::str_extract(id, "WP\\d+")
