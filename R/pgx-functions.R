@@ -576,13 +576,24 @@ tagDuplicates <- function(s) {
 #' @export
 wrapHyperLink <- function(s, gs) {
 
-    s = "DRUG:cyclophosphamide mus musculus gpl13209 gse27423 chdir up"
-    gs = "DRUG:cyclophosphamide mus musculus gpl13209 gse27423 chdir up"
+    s = "DRUG:estradiol homo sapiens gpl570 gds3315 chdir down"
+    gs = "DRUG:estradiol homo sapiens gpl570 gds3315 chdir down"
 
-    ## GEO/GSE accession
+    
     gs = as.character(gs)
     s1 = s = as.character(s)
+    
+    
+    ## GEO/GSE accession
     jj <- grep("GSE[0-9]",gs, ignore.case = TRUE)
+    if(length(jj)) {
+        acc = sub("[-_ ].*","",gsub("^.*GSE","GSE",gs[jj], ignore.case = TRUE))
+        url = paste0("https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=",acc)
+        s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
+    }
+
+    ## GDS accession
+    jj <- grep("GDS[0-9]",gs, ignore.case = TRUE)
     if(length(jj)) {
         acc = sub("[-_ ].*","",gsub("^.*GSE","GSE",gs[jj], ignore.case = TRUE))
         url = paste0("https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=",acc)
