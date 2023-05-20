@@ -576,8 +576,8 @@ tagDuplicates <- function(s) {
 #' @export
 wrapHyperLink <- function(s, gs) {
 
-    s = "ELSEVIER:Chromosome Condensation"
-    gs = "ELSEVIER:Chromosome Condensation"
+    s = "PATHWAY:Complement Activation_Homo sapiens_WP545_HSA"
+    gs = "PATHWAY:Complement Activation_Homo sapiens_WP545_HSA"
 
     ## GEO/GSE accession
     gs = as.character(gs)
@@ -608,8 +608,10 @@ wrapHyperLink <- function(s, gs) {
 
     ## Wikipathways
     jj <- grep("_WP[0-9][0-9]",gs)
+
     if(length(jj)) {
         id = sub("^.*_WP","WP",gs[jj])
+        id = stringr::str_extract(id, "WP\\d+")
         url = paste0("https://www.wikipathways.org/index.php/Pathway:",id)
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
