@@ -576,8 +576,8 @@ tagDuplicates <- function(s) {
 #' @export
 wrapHyperLink <- function(s, gs) {
 
-    s = "LNCHUB:APOBEC3B-AS1"
-    gs = "LNCHUB:APOBEC3B-AS1"    
+    s = "BIOPLEX:ZNF704_619279"
+    gs = "BIOPLEX:ZNF704_619279"
     gs = as.character(gs)
     s1 = s = as.character(s)
     
@@ -665,6 +665,23 @@ wrapHyperLink <- function(s, gs) {
         base_url = paste0("https://maayanlab.cloud/lnchub/?lnc=")
         url <- paste0(base_url, URLencode(id))
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
+    }
+    # LNCHUB accession
+    jj <- grep("BIOPLEX:",gs)
+    if(length(jj)) {
+        # bioplanet is down, placeholder for when it comes back alive
+        base_url =  "https://bioplex.hms.harvard.edu/explorer/externalQuery.php?geneQuery="
+        url = sapply(gs[jj], function(x) {
+            split_x <- strsplit(x, "_")[[1]]
+            if (length(split_x) > 1) {
+                url <- paste0(base_url, URLencode(split_x[[2]]))
+                return(url)
+            } else {
+                return(base_url)
+                }
+            })
+
+        s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")  
     }
 
     return(s1)
