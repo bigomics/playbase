@@ -576,10 +576,8 @@ tagDuplicates <- function(s) {
 #' @export
 wrapHyperLink <- function(s, gs) {
 
-    s = "DRUG:estradiol homo sapiens gpl570 gds3315 chdir down"
-    gs = "DRUG:estradiol homo sapiens gpl570 gds3315 chdir down"
-
-    
+    s = "LNCHUB:APOBEC3B-AS1"
+    gs = "LNCHUB:APOBEC3B-AS1"    
     gs = as.character(gs)
     s1 = s = as.character(s)
     
@@ -595,12 +593,12 @@ wrapHyperLink <- function(s, gs) {
     ## GDS accession
     jj <- grep("GDS[0-9]",gs, ignore.case = TRUE)
     if(length(jj)) {
-        acc = sub("[-_ ].*","",gsub("^.*GSE","GSE",gs[jj], ignore.case = TRUE))
-        url = paste0("https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=",acc)
+        acc = sub("[-_ ].*","",gsub("^.*GDS","GDS",gs[jj], ignore.case = TRUE))
+        url = paste0("https://www.ncbi.nlm.nih.gov/sites/GDSbrowser?acc=",acc)
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
 
-    ## KEGG
+    ## KEGG accession
     jj <- grep("HSA-[0-9][0-9]|hsa[0-9][0-9]",gs)
     if(length(jj)) {
         id = sub("^.*HSA-|.*hsa","hsa",gs[jj])
@@ -609,7 +607,7 @@ wrapHyperLink <- function(s, gs) {
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
 
-    ## Reactome (afer doing KEGG???)
+    ## Reactome accession
     jj <- grep("R-HSA-[0-9][0-9]",gs)
     if(length(jj)) {
         id = sub("^.*R-HSA-","R-HSA-",gs[jj])
@@ -617,7 +615,7 @@ wrapHyperLink <- function(s, gs) {
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
 
-    ## Wikipathways
+    ## Wikipathways accession
     jj <- grep("_WP[0-9][0-9]",gs)
     if(length(jj)) {
         id = sub("^.*_WP","WP",gs[jj])
@@ -626,7 +624,7 @@ wrapHyperLink <- function(s, gs) {
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
 
-    ## MSigDB
+    ## MSigDB accession
     jj <- grep("^H:|^C[1-8]:|HALLMARK",gs)
     if(length(jj)) {
         gs1 = sub("^.*:","",gs[jj])
@@ -634,7 +632,7 @@ wrapHyperLink <- function(s, gs) {
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
 
-    ## GO reference
+    ## GO accession
     jj <- grep("\\(GO_.*\\)$",gs)
     if(length(jj)) {
         id = gsub("^.*\\(GO_|\\)$","",gs[jj])
@@ -642,8 +640,7 @@ wrapHyperLink <- function(s, gs) {
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
 
-    ## ELSEVIRE reference
-    
+    ## ELSEVIRE accession
     jj <- grep("ELSEVIER:",gs)
     if(length(jj)) {
         id = sub("^.*:","",gs[jj])
@@ -652,6 +649,7 @@ wrapHyperLink <- function(s, gs) {
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
 
+    # BIOPLANET accession
     jj <- grep("BIOPLANET:",gs)
     if(length(jj)) {
         # bioplanet is down, placeholder for when it comes back alive
@@ -659,8 +657,15 @@ wrapHyperLink <- function(s, gs) {
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
 
-
-
+    # LNCHUB accession
+    jj <- grep("LNCHUB:",gs)
+    if(length(jj)) {
+        # bioplanet is down, placeholder for when it comes back alive
+        id = sub("^.*:","",gs[jj])
+        base_url = paste0("https://maayanlab.cloud/lnchub/?lnc=")
+        url <- paste0(base_url, URLencode(id))
+        s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
+    }
 
     return(s1)
 }
