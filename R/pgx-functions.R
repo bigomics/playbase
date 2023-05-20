@@ -576,6 +576,9 @@ tagDuplicates <- function(s) {
 #' @export
 wrapHyperLink <- function(s, gs) {
 
+    s = "ELSEVIER:Chromosome Condensation"
+    gs = "ELSEVIER:Chromosome Condensation"
+
     ## GEO/GSE accession
     gs = as.character(gs)
     s1 = s = as.character(s)
@@ -626,6 +629,26 @@ wrapHyperLink <- function(s, gs) {
         url = paste0("http://amigo.geneontology.org/amigo/term/GO:",id)
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
+
+    ## ELSEVIRE reference
+    
+    jj <- grep("ELSEVIER:",gs)
+    if(length(jj)) {
+        id = sub("^.*:","",gs[jj])
+        base_url = paste0("https://mammalcedfx.pathwaystudio.com/app/sd")
+        url <- paste0(base_url, "?full=true&layout=flat&entitylist=", URLencode(id), "&separator=", ",")
+        s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
+    }
+
+    jj <- grep("BIOPLANET:",gs)
+    if(length(jj)) {
+        # bioplanet is down, placeholder for when it comes back alive
+        url <- "https://tripod.nih.gov/bioplanet/"
+        s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
+    }
+
+
+
 
     return(s1)
 }
