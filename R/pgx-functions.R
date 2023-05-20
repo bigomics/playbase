@@ -576,11 +576,8 @@ tagDuplicates <- function(s) {
 #' @export
 wrapHyperLink <- function(s, gs) {
 
-    s = "BIOPLEX:ZNF704_619279"
-    gs = "BIOPLEX:ZNF704_619279"
     gs = as.character(gs)
     s1 = s = as.character(s)
-    
     
     ## GEO/GSE accession
     jj <- grep("GSE[0-9]",gs, ignore.case = TRUE)
