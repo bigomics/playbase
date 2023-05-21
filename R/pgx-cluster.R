@@ -304,16 +304,14 @@ pgx.FindClusters <- function(X, method=c("kmeans","hclust","louvain","meta"),
     ## perform Louvain clustering
     if("louvain" %in% method) {
         message("perform Louvain clustering...")
-
-
         ##dist = as.dist(dist(t(X))) ## use 3D distance??
         ##gr = igraph::graph_from_adjacency_matrix(1.0/dist, diag=FALSE, mode="undirected")
         gr <- scran::buildSNNGraph(X)
         ##idx <- igraph::cluster_louvain(gr)$membership
         ##table(idx)
         ##gr.idx <- igraph::cluster_louvain(gr)$membership
-        gr.idx <- hclustGraph(gr,k=3)  ## iterative cluster until level3
-        rownames(gr.idx) <- rownames(X)
+        gr.idx <- hclustGraph(gr,k=4)  ## iterative cluster until level3
+        rownames(gr.idx) <- colnames(X)
         nc <- apply(gr.idx,2,function(x) length(unique(x)))
         colnames(gr.idx) <- paste0("louvain.",nc)
         dim(gr.idx)
