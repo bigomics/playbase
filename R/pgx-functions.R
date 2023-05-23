@@ -376,8 +376,11 @@ probe2symbol <- function(probes, type=NULL, org="human", keep.na=FALSE)
 
     } else {
         org
+        require(org.Hs.eg.db)
+        require(org.Mm.eg.db)
+        require(org.Rn.eg.db)
         if(org=="human") {
-            symbol0 <- AnnotationDbi::mapIds(org.Hs.eg.db, probes, 'SYMBOL', toupper(type))
+            symbol0 <- AnnotationDbi::mapIds(org.Hs.eg.db), probes, 'SYMBOL', toupper(type))
         }
         if(org=="mouse") {
             symbol0 <- AnnotationDbi::mapIds(org.Mm.eg.db, probes, 'SYMBOL', toupper(type))
