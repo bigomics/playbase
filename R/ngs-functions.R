@@ -60,10 +60,10 @@ ngs.getGeneAnnotation <- function(genes)
     }
     if(is.mouse) {
         message("detected organism: mouse")
-        GENE.TITLE = unlist(as.list(org.Mm.egGENENAME))
-        SYMBOL = unlist(as.list(org.Mm.egSYMBOL))
+        GENE.TITLE = unlist(as.list(org.Mm.eg.db::org.Mm.egGENENAME))
+        SYMBOL = unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
         names(GENE.TITLE) = SYMBOL
-        CHRLOC = as.list(org.Mm.egCHRLOC)
+        CHRLOC = as.list(org.Mm.eg.db::org.Mm.egCHRLOC)
         CHRLOC <- CHRLOC[match(names(SYMBOL),names(CHRLOC))]
         names(CHRLOC) = SYMBOL
         MAP <- NULL ## no map for mouse???
