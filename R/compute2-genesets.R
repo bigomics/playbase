@@ -33,6 +33,7 @@ normalize_matrix_by_row <- function(G){
 #' @examples
 compute_testGenesets <- function(pgx,
                                  max.features=1000,
+                                 custom.genesets=NULL,
                                  test.methods = c("gsva","camera","fgsea"),
                                  remove.outputs=TRUE )
 {
@@ -44,11 +45,25 @@ compute_testGenesets <- function(pgx,
         stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
     }
 
+    # Load custom genesets (if user provided)
+
+    if(!is.null(custom.gene)) {
+        cG <- custom.genesets$gmt
+
+        # convert gmt to OPG standard
+
+        "CUSTOM:"
+
+        # convert gmt standard to SPARSE matrix
+
+    }
+
+
     ##-----------------------------------------------------------
     ## Load huge geneset matrix
     ##-----------------------------------------------------------
     G <- playdata::GSET_SPARSEG_XL
-    
+
 
     ##-----------------------------------------------------------
     ## Filter genes
@@ -250,4 +265,48 @@ compute_testGenesets <- function(pgx,
     remove(gmt)
 
     return(pgx)
+}
+
+
+
+#' Clean gmt file function
+#'
+#' @param gmt.all a list of gmt files
+#' @param gmt.db a vector of gmt database names
+#'
+#' @return
+#' @export
+#'
+#' @examples
+clean_gmt <- function(gmt.all, gmt.db){
+    gmt.db = toupper(gmt.db)
+    for(i in 1:length(gmt.all)) {
+    names(gmt.all[[i]]) <- sub("\\(GO:","(GO_",names(gmt.all[[i]]))
+    names(gmt.all[[i]]) <- gsub("%","_",names(gmt.all[[i]])) # substitute % sign in wikipathways
+    names(gmt.all[[i]]) <- sub(":","",names(gmt.all[[i]]))
+    ## names(gmt.all[[i]]) <- tolower(names(gmt.all[[i]]))
+    names(gmt.all[[i]]) <- paste0(toupper(gmt.db[i]),":",names(gmt.all[[i]]))
+    }
+    j0 = grep("_up", names(gmt.all))
+    j1 = grep("_down", names(gmt.all))
+    for(i in j0) {
+        names(gmt.all[[i]]) <- paste0(names(gmt.all[[i]])," (up)")
+    }
+    for(i in j1) {
+        names(gmt.all[[i]]) <- paste0(names(gmt.all[[i]])," (down)")
+    }
+    names(gmt.all) <- NULL
+    gmt.all <- unlist(gmt.all,recursive=FALSE, use.names=TRUE)
+    length(gmt.all)
+
+    ## get rid of trailing numeric values
+    gmt.all <-  mclapply(gmt.all, function(x) gsub("[,].*","",x), mc.cores=1)
+
+    ## order by length and take out duplicated sets (only by name)
+    gmt.all <- gmt.all[order(-sapply(gmt.all,length))]
+    gmt.all <- gmt.all[!duplicated(names(gmt.all))]
+
+    gmt.all <- gmt.all[order(names(gmt.all))]
+
+    return(gmt.all)
 }
