@@ -33,7 +33,7 @@ normalize_matrix_by_row <- function(G){
 #' @examples
 compute_testGenesets <- function(pgx,
                                  max.features=1000,
-                                 custom.genesets=NULL,
+                                 custom.geneset=NULL,
                                  test.methods = c("gsva","camera","fgsea"),
                                  remove.outputs=TRUE )
 {
@@ -47,12 +47,16 @@ compute_testGenesets <- function(pgx,
 
     # Load custom genesets (if user provided)
 
-    if(!is.null(custom.gene)) {
-        cG <- custom.genesets$gmt
+    if(!is.null(custom.geneset)) {
+        custom_gmt <- custom.genesets$gmt
 
         # convert gmt to OPG standard
 
-        "CUSTOM:"
+        custom_gmt <- playbase::clean_gmt(custom_gmt,"CUSTOM")
+
+        # convert gmt standard to SPARSE matrix
+
+        custom_gmt <- playbase::createSparseGenesetMatrix(custom_gmt)
 
         # convert gmt standard to SPARSE matrix
 
@@ -339,13 +343,13 @@ createSparseGenesetMatrix <- function(
     genes <- genes[ !is.na(annot$chr) ]
     
     ## Filter genesets with permitted genes (official and min.sharing)
-    gmt.all <- mclapply(gmt.all, function(s) intersect(s,genes))
+    gmt.all <- parallel::mclapply(gmt.all, function(s) intersect(s,genes))
     gmt.size <- sapply(gmt.all,length)
     # gmt.all <- gmt.all[which(gmt.size >= 15 & gmt.size <= 200)]
     gmt.all <- gmt.all[which(gmt.size >= min.geneset.size & gmt.size <= min.geneset.size)] #legacy
     ## build huge sparsematrix gene x genesets
     genes <- sort(genes)
-    idx.j <- mclapply(gmt.all[], function(s) match(s,genes))
+    idx.j <- parallel::mclapply(gmt.all[], function(s) match(s,genes))
     idx.i <- lapply(1:length(gmt.all), function(i) rep(i,length(idx.j[[i]])))
     ii <- unlist(idx.i)
     jj <- unlist(idx.j)
