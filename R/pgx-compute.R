@@ -623,7 +623,7 @@ pgx.computePGX <- function(pgx,
                            max.genesets = 5000,
                            gx.methods = c("ttest.welch", "trend.limma", "edger.qlf"),
                            gset.methods = c("fisher", "gsva", "fgsea"),
-                           custom.genesets = NULL,
+                           custom.geneset = NULL,
                            do.cluster = TRUE,
                            use.design = TRUE,
                            prune.samples = FALSE,
@@ -686,7 +686,7 @@ pgx.computePGX <- function(pgx,
   message("[pgx.computePGX] testing genesets...")
   pgx <- compute_testGenesets(
     pgx,
-    custom.genesets = custom.genesets,
+    custom.geneset = custom.geneset,
     max.features = max.genesets,
     test.methods = gset.methods
   )
