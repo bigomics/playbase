@@ -52,14 +52,13 @@ compute_testGenesets <- function(pgx,
 
         # convert gmt to OPG standard
 
-        custom_gmt <- playbase::clean_gmt(custom_gmt,"CUSTOM")
+        custom_gmt <- clean_gmt(custom_gmt,rep("CUSTOM",length(custom_gmt)))
 
         # convert gmt standard to SPARSE matrix
 
         custom_gmt <- playbase::createSparseGenesetMatrix(custom_gmt)
 
-        # convert gmt standard to SPARSE matrix
-
+        # add custom genesets to the geneset matrix
     }
 
 
@@ -298,7 +297,7 @@ clean_gmt <- function(gmt.all, gmt.db){
     gmt.all <- unlist(gmt.all,recursive=FALSE, use.names=TRUE)
 
     ## get rid of trailing numeric values
-    gmt.all <-  mclapply(gmt.all, function(x) gsub("[,].*","",x), mc.cores=1)
+    gmt.all <-  parallel::mclapply(gmt.all, function(x) gsub("[,].*","",x), mc.cores=1)
 
     ## order by length and take out duplicated sets (only by name)
     gmt.all <- gmt.all[order(-sapply(gmt.all,length))]
