@@ -175,7 +175,7 @@ compute_testGenesets <- function(pgx,
         }
         names(sdx) <- colnames(G)
         jj = Matrix::head(order(-sdx), max.features)
-        must.include <- "hallmark|kegg|^go|^celltype|^pathway"
+        must.include <- "hallmark|kegg|^go|^celltype|^pathway|^custom"
         jj = unique( c(jj, grep(must.include,colnames(G),ignore.case=TRUE)))
         jj = jj[order(colnames(G)[jj])]
         G = G[,jj,drop=FALSE]
