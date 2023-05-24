@@ -83,19 +83,14 @@ compute_testGenesets <- function(pgx,
     G <- playbase::normalize_matrix_by_row(G)
     custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
 
+    # combine standard genesets with custom genesets
+
+    G <- playbase::marge_sparse_matrix(G,custom_gmt)
+
     # Transpose G
 
     G <- Matrix::t(G)
     custom_gmt <- Matrix::t(custom_gmt)
-
-
-
-
-    # combine standard genesets with custom genesets
-
-    combined_gmt <- Matrix::rbind2(G, custom_gmt)
-    combined_gmt <- as(combined_gmt, "sparseMatrix")
-    
 
     ##-----------------------------------------------------------
     ## Filter gene sets
