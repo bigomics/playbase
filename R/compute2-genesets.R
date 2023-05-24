@@ -48,15 +48,15 @@ compute_testGenesets <- function(pgx,
     # Load custom genesets (if user provided)
 
     if(!is.null(custom.geneset)) {
-        custom_gmt <- custom.genesets$gmt
+        custom_gmt <- list(CUSTOM = custom.geneset$gmt)
 
         # convert gmt to OPG standard
 
-        custom_gmt <- clean_gmt(custom_gmt,rep("CUSTOM",length(custom_gmt)))
+        custom_gmt <- playbase::clean_gmt(custom_gmt,"CUSTOM")
 
         # convert gmt standard to SPARSE matrix
 
-        custom_gmt <- playbase::createSparseGenesetMatrix(custom_gmt)
+        custom_gmt <- playbase::createSparseGenesetMatrix(custom_gmt, min_gene_frequency=1)
 
         # add custom genesets to the geneset matrix
     }
@@ -318,9 +318,10 @@ clean_gmt <- function(gmt.all, gmt.db){
 #'
 #' @examples
 createSparseGenesetMatrix <- function(
-    gmt.all,
+    gmt.all = custom_gmt,
     min.geneset.size = 15,
-    max.geneset.size = 500) {
+    max.geneset.size = 500,
+    min_gene_frequency= 10) {
     
     ## ----------- Get all official gene symbols
     symbol <- as.list(org.Hs.eg.db::org.Hs.egSYMBOL)
@@ -335,7 +336,7 @@ createSparseGenesetMatrix <- function(
     genes.table <- table(unlist(gmt.all))
     
     #genes <- names(which( genes.table >= 10 & genes.table <= 1000  ))
-    genes <- names(which( genes.table >= 10 ))
+    genes <- names(which( genes.table >= min_gene_frequency ))
     genes <- genes[grep("^LOC|RIK$",genes,invert=TRUE)]
     genes <- intersect(genes, known.symbols)
     annot <- playbase::ngs.getGeneAnnotation(genes)
@@ -345,7 +346,7 @@ createSparseGenesetMatrix <- function(
     gmt.all <- parallel::mclapply(gmt.all, function(s) intersect(s,genes))
     gmt.size <- sapply(gmt.all,length)
     # gmt.all <- gmt.all[which(gmt.size >= 15 & gmt.size <= 200)]
-    gmt.all <- gmt.all[which(gmt.size >= min.geneset.size & gmt.size <= min.geneset.size)] #legacy
+    gmt.all <- gmt.all[which(gmt.size >= min.geneset.size & gmt.size <= max.geneset.size)] #legacy
     ## build huge sparsematrix gene x genesets
     genes <- sort(genes)
     idx.j <- parallel::mclapply(gmt.all[], function(s) match(s,genes))
