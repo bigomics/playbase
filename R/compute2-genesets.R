@@ -205,7 +205,7 @@ compute_testGenesets <- function(pgx,
     Y <- pgx$samples
     gc()
 
-    gset.meta = gset.fitContrastsWithAllMethods(
+    gset.meta = playbase::gset.fitContrastsWithAllMethods(
         gmt = gmt, X = X, Y = Y, G = G,
         design = design, ## genes=GENES,
         contr.matrix = contr.matrix, methods = test.methods,
@@ -243,10 +243,7 @@ compute_testGenesets <- function(pgx,
 
     gset.size.raw <- playdata::GSET_SIZE
 
-    #TODO add custom GSETS here
-    #TODO add custom GSETS here
-    #TODO add custom GSETS here
-    #TODO add custom GSETS here
+    # TODO add custom GSETS here
 
     gset.idx <- match(names(gset.size), names(gset.size.raw))
 
