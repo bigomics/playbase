@@ -238,7 +238,11 @@ compute_testGenesets <- function(pgx,
 
     gset.size.raw <- playdata::GSET_SIZE
 
-    # TODO add custom GSETS here
+    # combine standard genesets with custom genesets size vector
+
+    if(!is.null(custom.geneset)) {
+        gset.size.raw <- c(gset.size.raw, custom.geneset$info$GSET_SIZE)
+    }
 
     gset.idx <- match(names(gset.size), names(gset.size.raw))
 
