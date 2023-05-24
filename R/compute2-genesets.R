@@ -50,7 +50,7 @@ compute_testGenesets <- function(pgx,
     if(!is.null(custom.geneset)) {
         
         # convert gmt standard to SPARSE matrix
-        custom_gmt <- playbase::createSparseGenesetMatrix(custom_geneset$gmt, min_gene_frequency=1)
+        custom_gmt <- playbase::createSparseGenesetMatrix(custom.geneset$gmt, min_gene_frequency=1)
 
     }
 
