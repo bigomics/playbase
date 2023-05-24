@@ -24,37 +24,37 @@ pgx.createPGX(
 )
 }
 \arguments{
-\item{counts}{dataframe.}
+\item{X}{dataframe. value}
 
-\item{samples}{dataframe.}
+\item{is.logx}{boolean. value}
 
-\item{contrasts}{dataframe}
+\item{batch.correct}{boolean. value}
 
-\item{X}{dataframe.}
+\item{auto.scale}{boolean. value}
 
-\item{is.logx}{boolean.}
+\item{filter.genes}{boolean. value}
 
-\item{batch.correct}{boolean.}
+\item{prune.samples}{boolean. value}
 
-\item{auto.scale}{boolean.}
+\item{only.known}{boolean. value}
 
-\item{filter.genes}{boolean.}
+\item{only.hugo}{boolean. value}
 
-\item{prune.samples}{boolean.}
+\item{convert.hugo}{boolean. value}
 
-\item{only.known}{boolean.}
+\item{do.cluster}{boolean. value}
 
-\item{only.hugo}{boolean.}
+\item{cluster.contrasts}{boolean. value}
 
-\item{convert.hugo}{boolean.}
+\item{do.clustergenes}{boolean. value}
 
-\item{do.cluster}{boolean.}
+\item{only.proteincoding}{boolean. value}
 
-\item{cluster.contrasts}{boolean.}
+\item{counts.file}{a playbase::COUNTS file}
 
-\item{do.clustergenes}{boolean.}
+\item{samples.file}{a playbase::SAMPLES file}
 
-\item{only.proteincoding}{boolean.}
+\item{contrasts.file}{a playbase::CONTRASTS file}
 }
 \value{
 list. represents a pgx object
@@ -64,5 +64,31 @@ This function creates a pgx object, which is the core object in the
 OmicsPlayground.
 }
 \examples{
-x <- 1
+# first step is to create pgx 
+pgx <- playbase::pgx.createPGX(
+ counts = playbase::COUNTS,
+ samples = playbase::SAMPLES,
+ contrasts = playbase::CONTRASTS
+)
+
+# once pgx is created, we can compute the modules
+pgx <- playbase::pgx.computePGX(
+  pgx = pgx
+)
+
+# if you want a more minimal (and quick) example for testing, use the settings below
+
+pgx <- playbase::pgx.createPGX(
+ counts = playbase::COUNTS,
+ samples = playbase::SAMPLES,
+ contrasts = playbase::CONTRASTS[1]
+)
+
+pgx <- playbase::pgx.computePGX(
+  pgx = pgx,
+  max.genes = 10000,
+  max.genesets = 1000,
+  gx.methods = c("ttest.welch"),
+  gset.methods = c("fisher")
+)
 }

@@ -7,7 +7,11 @@
 pgx.getContrastGroups(pgx, contrast, as.factor = TRUE)
 }
 \arguments{
-\item{as.factor}{}
+\item{pgx}{value}
+
+\item{contrast}{value}
+
+\item{as.factor}{value}
 }
 \description{
 Title

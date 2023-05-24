@@ -7,7 +7,11 @@
 write.cls(y, file, name = "")
 }
 \arguments{
-\item{name}{}
+\item{y}{value}
+
+\item{file}{value}
+
+\item{name}{value}
 }
 \description{
 Title

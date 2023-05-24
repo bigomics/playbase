@@ -7,7 +7,13 @@
 gx.nnmcorrect.OLD(x, y, k = 3, dist.method = "cor")
 }
 \arguments{
-\item{dist.method}{}
+\item{x}{value}
+
+\item{y}{value}
+
+\item{k}{value}
+
+\item{dist.method}{value}
 }
 \description{
 Title

@@ -7,7 +7,11 @@
 pgx.makeSpecificContrasts(df, contrasts, mingrp = 3)
 }
 \arguments{
-\item{mingrp}{}
+\item{df}{value}
+
+\item{contrasts}{value}
+
+\item{mingrp}{value}
 }
 \description{
 Title

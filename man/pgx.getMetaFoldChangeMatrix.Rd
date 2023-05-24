@@ -7,7 +7,11 @@
 pgx.getMetaFoldChangeMatrix(pgx, what = "meta", level = "gene")
 }
 \arguments{
-\item{level}{}
+\item{pgx}{value}
+
+\item{what}{value}
+
+\item{level}{value}
 }
 \description{
 Title

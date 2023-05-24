@@ -12,7 +12,13 @@ compute_testGenesets(
 )
 }
 \arguments{
-\item{remove.outputs}{}
+\item{pgx}{value}
+
+\item{max.features}{value}
+
+\item{test.methods}{value}
+
+\item{remove.outputs}{value}
 }
 \description{
 Title

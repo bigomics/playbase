@@ -7,7 +7,9 @@
 compute_cellcycle_gender(ngs, rna.counts = ngs$counts)
 }
 \arguments{
-\item{rna.counts}{}
+\item{ngs}{value}
+
+\item{rna.counts}{value}
 }
 \description{
 Title

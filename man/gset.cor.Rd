@@ -7,7 +7,11 @@
 gset.cor(rnk, gset, compute.p = FALSE)
 }
 \arguments{
-\item{compute.p}{}
+\item{rnk}{value}
+
+\item{gset}{value}
+
+\item{compute.p}{value}
 }
 \description{
 Title

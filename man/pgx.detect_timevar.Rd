@@ -7,7 +7,7 @@
 pgx.detect_timevar(Y)
 }
 \arguments{
-\item{Y}{}
+\item{Y}{value}
 }
 \description{
 Title

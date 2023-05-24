@@ -7,7 +7,11 @@
 pgx.getFamilies(pgx, nmin = 10, extended = FALSE)
 }
 \arguments{
-\item{extended}{}
+\item{pgx}{value}
+
+\item{nmin}{value}
+
+\item{extended}{value}
 }
 \description{
 Title

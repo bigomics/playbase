@@ -7,7 +7,11 @@
 ngs.getGeneAnnot(keys, keytype, gencode)
 }
 \arguments{
-\item{gencode}{}
+\item{keys}{value}
+
+\item{keytype}{value}
+
+\item{gencode}{value}
 }
 \description{
 Title

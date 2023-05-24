@@ -7,7 +7,7 @@
 gsea.clean_names(s)
 }
 \arguments{
-\item{s}{}
+\item{s}{value}
 }
 \description{
 Title

@@ -7,7 +7,9 @@
 ngs.matchFeatures(ngs, genes)
 }
 \arguments{
-\item{genes}{}
+\item{ngs}{value}
+
+\item{genes}{value}
 }
 \description{
 Title

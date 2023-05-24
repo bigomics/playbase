@@ -7,7 +7,11 @@
 pgx.getMetaMatrix(pgx, methods = "meta", level = "gene")
 }
 \arguments{
-\item{level}{}
+\item{pgx}{value}
+
+\item{methods}{value}
+
+\item{level}{value}
 }
 \description{
 Title

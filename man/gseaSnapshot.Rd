@@ -7,7 +7,9 @@
 gseaSnapshot(gsets, gsea_dir)
 }
 \arguments{
-\item{gsea_dir}{}
+\item{gsets}{value}
+
+\item{gsea_dir}{value}
 }
 \description{
 Title

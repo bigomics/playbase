@@ -12,7 +12,13 @@ makeContrastsFromPairs(
 )
 }
 \arguments{
-\item{comparisons}{}
+\item{main.group}{value}
+
+\item{ref.group}{value}
+
+\item{groups}{value}
+
+\item{comparisons}{value}
 }
 \description{
 Title

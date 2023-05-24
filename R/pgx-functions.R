@@ -575,27 +575,25 @@ tagDuplicates <- function(s) {
 
 #' @export
 wrapHyperLink <- function(s, gs) {
-
-    ## GEO/GSE accession
     gs = as.character(gs)
     s1 = s = as.character(s)
-    jj <- grep("GSE[0-9]",gs)
+    ## GEO/GSE accession
+    jj <- grep("GSE[0-9]",gs, ignore.case = TRUE)
     if(length(jj)) {
-        acc = sub("[-_ ].*","",gsub("^.*GSE","GSE",gs[jj]))
+        acc = sub("[-_ ].*","",gsub("^.*GSE","GSE",gs[jj], ignore.case = TRUE))
         url = paste0("https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=",acc)
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
 
-    ## KEGG
-    jj <- grep("HSA-[0-9][0-9]|hsa[0-9][0-9]",gs)
+    ## GDS accession
+    jj <- grep("GDS[0-9]",gs, ignore.case = TRUE)
     if(length(jj)) {
-        id = sub("^.*HSA-|.*hsa","hsa",gs[jj])
-        id = sub("[-_ ].*","",id)
-        url = paste0("https://www.genome.jp/kegg-bin/show_pathway?map=",id,"&show_description=show")
+        acc = sub("[-_ ].*","",gsub("^.*GDS","GDS",gs[jj], ignore.case = TRUE))
+        url = paste0("https://www.ncbi.nlm.nih.gov/sites/GDSbrowser?acc=",acc)
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
 
-    ## Reactome (afer doing KEGG???)
+    ## Reactome accession
     jj <- grep("R-HSA-[0-9][0-9]",gs)
     if(length(jj)) {
         id = sub("^.*R-HSA-","R-HSA-",gs[jj])
@@ -603,15 +601,16 @@ wrapHyperLink <- function(s, gs) {
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
 
-    ## Wikipathways
+    ## Wikipathways accession
     jj <- grep("_WP[0-9][0-9]",gs)
     if(length(jj)) {
         id = sub("^.*_WP","WP",gs[jj])
+        id = stringr::str_extract(id, "WP\\d+")
         url = paste0("https://www.wikipathways.org/index.php/Pathway:",id)
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
 
-    ## MSigDB
+    ## MSigDB accession
     jj <- grep("^H:|^C[1-8]:|HALLMARK",gs)
     if(length(jj)) {
         gs1 = sub("^.*:","",gs[jj])
@@ -619,7 +618,7 @@ wrapHyperLink <- function(s, gs) {
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
 
-    ## GO reference
+    ## GO accession
     jj <- grep("\\(GO_.*\\)$",gs)
     if(length(jj)) {
         id = gsub("^.*\\(GO_|\\)$","",gs[jj])
@@ -627,6 +626,49 @@ wrapHyperLink <- function(s, gs) {
         s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
     }
 
+    ## ELSEVIRE accession
+    jj <- grep("ELSEVIER:",gs)
+    if(length(jj)) {
+        id = sub("^.*:","",gs[jj])
+        base_url = paste0("https://mammalcedfx.pathwaystudio.com/app/sd")
+        url <- paste0(base_url, "?full=true&layout=flat&entitylist=", URLencode(id), "&separator=", ",")
+        s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
+    }
+
+    # BIOPLANET accession
+    jj <- grep("BIOPLANET:",gs)
+    if(length(jj)) {
+        # bioplanet is down, placeholder for when it comes back alive
+        url <- "https://tripod.nih.gov/bioplanet/"
+        s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
+    }
+
+    # LNCHUB accession
+    jj <- grep("LNCHUB:",gs)
+    if(length(jj)) {
+        # bioplanet is down, placeholder for when it comes back alive
+        id = sub("^.*:","",gs[jj])
+        base_url = paste0("https://maayanlab.cloud/lnchub/?lnc=")
+        url <- paste0(base_url, URLencode(id))
+        s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")
+    }
+    # BIOPLEX accession
+    jj <- grep("BIOPLEX:",gs)
+    if(length(jj)) {
+        # bioplanet is down, placeholder for when it comes back alive
+        base_url =  "https://bioplex.hms.harvard.edu/explorer/externalQuery.php?geneQuery="
+        url = sapply(gs[jj], function(x) {
+            split_x <- strsplit(x, "_")[[1]]
+            if (length(split_x) > 1) {
+                url <- paste0(base_url, URLencode(split_x[[2]]))
+                return(url)
+            } else {
+                return(base_url)
+                }
+            })
+
+        s1[jj] <- paste0("<a href='",url,"' target='_blank'>",s[jj],"</a>")  
+    }
     return(s1)
 }
 

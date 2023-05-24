@@ -7,7 +7,13 @@
 val2col(z, zlim, col = heat.colors(12), breaks)
 }
 \arguments{
-\item{breaks}{}
+\item{z}{value}
+
+\item{zlim}{value}
+
+\item{col}{value}
+
+\item{breaks}{value}
 }
 \description{
 Title

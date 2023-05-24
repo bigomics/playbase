@@ -3,6 +3,23 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
+#' Normalize geneset matrix by row
+#'
+#' @param g a sparse matrix (eg. genesets x genes)
+#'
+#' @return
+#' @export
+#'
+#' @examples
+normalize_matrix_by_row <- function(G){
+        # efficient normalization using linear algebra
+        row_sums <- Matrix::rowSums(G)
+        D <- Matrix::Diagonal(x = 1/row_sums)
+        G_scaled <- D %*% G
+        rownames(G_scaled) <- rownames(G)
+        return(G_scaled)
+    }
+
 #' Title
 #'
 #' @param pgx value
@@ -31,8 +48,7 @@ compute_testGenesets <- function(pgx,
     ## Load huge geneset matrix
     ##-----------------------------------------------------------
     G <- playdata::GSET_SPARSEG_XL
-    G <- Matrix::t(G)
-    dim(G)
+    
 
     ##-----------------------------------------------------------
     ## Filter genes
@@ -45,7 +61,15 @@ compute_testGenesets <- function(pgx,
     ##genes = Matrix::head(as.character(unlist(as.list(org.Hs.egSYMBOL))),1000)
     genes = unique(as.character(pgx$genes$gene_name))
     genes <- toupper(genes)  ## handle mouse genes...
-    G <- G[rownames(G) %in% genes,]
+    G <- G[,colnames(G) %in% genes]
+
+    # Normalize G after removal of genes
+
+    G <- playbase::normalize_matrix_by_row(G)
+
+    # Transpose G
+
+    G <- Matrix::t(G)
     dim(G)
 
     ##-----------------------------------------------------------
@@ -56,7 +80,7 @@ compute_testGenesets <- function(pgx,
     cat("Filtering gene sets on size...\n")
     gmt.size = Matrix::colSums(G!=0)
     summary(gmt.size)
-    size.ok <- (gmt.size >= 15 & gmt.size <= 1000 )
+    size.ok <- (gmt.size >= 15 & gmt.size <= 400 )
     G <- G[, which(size.ok)]
     dim(G)
     table(sub(":.*","",colnames(G)))
@@ -130,7 +154,7 @@ compute_testGenesets <- function(pgx,
         }
         names(sdx) <- colnames(G)
         jj = Matrix::head(order(-sdx), max.features)
-        must.include <- "hallmark|kegg|^go|^celltype"
+        must.include <- "hallmark|kegg|^go|^celltype|^pathway"
         jj = unique( c(jj, grep(must.include,colnames(G),ignore.case=TRUE)))
         jj = jj[order(colnames(G)[jj])]
         length(jj)
@@ -195,6 +219,22 @@ compute_testGenesets <- function(pgx,
     pgx$gsetX = pgx$gset.meta$matrices[["meta"]]  ## META or average FC??!
     pgx$GMT <- G[,rownames(pgx$gsetX)]
 
+    # calculate gset info and store as pgx$gset.meta
+
+    gset.size <- Matrix::colSums(pgx$GMT != 0)
+
+    gset.size.raw <- playdata::GSET_SIZE
+
+    gset.idx <- match(names(gset.size), names(gset.size.raw))
+
+    gset.fraction <-  gset.size/gset.size.raw[gset.idx]
+
+    pgx$gset.meta$info <- data.frame(
+        gset.size.raw = gset.size.raw[gset.idx],
+        gset.size = gset.size,
+        gset.fraction = gset.fraction
+    )
+    
     ##-----------------------------------------------------------------------
     ##------------------------ clean up -------------------------------------
     ##-----------------------------------------------------------------------

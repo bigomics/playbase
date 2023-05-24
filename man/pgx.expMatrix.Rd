@@ -7,7 +7,9 @@
 pgx.expMatrix(pheno, contr.matrix)
 }
 \arguments{
-\item{contr.matrix}{}
+\item{pheno}{value}
+
+\item{contr.matrix}{value}
 }
 \description{
 Title

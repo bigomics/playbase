@@ -7,7 +7,7 @@
 pgx.detect_batch_params(Y)
 }
 \arguments{
-\item{Y}{}
+\item{Y}{value}
 }
 \description{
 Title

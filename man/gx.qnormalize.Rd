@@ -7,7 +7,7 @@
 gx.qnormalize(X)
 }
 \arguments{
-\item{X}{}
+\item{X}{value}
 }
 \description{
 Title

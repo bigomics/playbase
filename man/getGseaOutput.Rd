@@ -7,7 +7,11 @@
 getGseaOutput(path, i = 1, raster.png = FALSE)
 }
 \arguments{
-\item{raster.png}{}
+\item{path}{value}
+
+\item{i}{value}
+
+\item{raster.png}{value}
 }
 \description{
 Title

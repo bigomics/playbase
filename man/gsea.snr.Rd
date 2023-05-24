@@ -7,7 +7,9 @@
 gsea.snr(X, Y)
 }
 \arguments{
-\item{Y}{}
+\item{X}{value}
+
+\item{Y}{value}
 }
 \description{
 Title

@@ -7,7 +7,7 @@
 compute_drugActivityEnrichment(ngs)
 }
 \arguments{
-\item{ngs}{}
+\item{ngs}{value}
 }
 \description{
 Title

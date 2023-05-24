@@ -14,11 +14,11 @@ pgx.createFromFiles(
 )
 }
 \arguments{
-\item{samples.file}{string}
+\item{samples.file}{a playbase::SAMPLES file}
 
-\item{contrasts.file}{string}
+\item{contrasts.file}{a playbase::CONTRASTS file}
 
-\item{counts.file}{string}
+\item{counts.file}{a playbase::COUNTS file}
 }
 \value{
 list. represents a pgx object
@@ -26,7 +26,4 @@ list. represents a pgx object
 \description{
 This function creates a pgx object from files, which is the core object in the
 OmicsPlayground.
-}
-\examples{
-x <- 1
 }

@@ -7,7 +7,7 @@
 mat2hugo(x)
 }
 \arguments{
-\item{x}{}
+\item{x}{value}
 }
 \description{
 Title

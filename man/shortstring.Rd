@@ -7,7 +7,9 @@
 shortstring(s, n, dots = 1)
 }
 \arguments{
-\item{n}{}
+\item{s}{value}
+
+\item{n}{value}
 }
 \description{
 Title

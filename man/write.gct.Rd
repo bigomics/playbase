@@ -7,7 +7,9 @@
 write.gct(X, file)
 }
 \arguments{
-\item{file}{}
+\item{X}{value}
+
+\item{file}{value}
 }
 \description{
 Title

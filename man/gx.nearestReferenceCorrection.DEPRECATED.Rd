@@ -7,7 +7,15 @@
 gx.nearestReferenceCorrection.DEPRECATED(x, y, ref, k = 3, dist.method = "cor")
 }
 \arguments{
-\item{dist.method}{}
+\item{x}{value}
+
+\item{y}{value}
+
+\item{ref}{value}
+
+\item{k}{value}
+
+\item{dist.method}{value}
 }
 \description{
 Title

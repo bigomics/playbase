@@ -7,7 +7,7 @@
 ngs.getGeneAnnotation(genes)
 }
 \arguments{
-\item{genes}{}
+\item{genes}{value}
 }
 \description{
 Title

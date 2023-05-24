@@ -7,7 +7,13 @@
 gx.markermap(X, splitx, n = 5, ...)
 }
 \arguments{
-\item{...}{}
+\item{X}{value}
+
+\item{splitx}{value}
+
+\item{n}{value}
+
+\item{...}{value}
 }
 \description{
 Title

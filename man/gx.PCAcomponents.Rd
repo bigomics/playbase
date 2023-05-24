@@ -7,7 +7,11 @@
 gx.PCAcomponents(X, nv = 20, ngenes)
 }
 \arguments{
-\item{ngenes}{}
+\item{X}{value}
+
+\item{nv}{value}
+
+\item{ngenes}{value}
 }
 \description{
 Title

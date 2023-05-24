@@ -12,7 +12,11 @@ compute_extra(
 )
 }
 \arguments{
-\item{sigdb}{}
+\item{ngs}{value}
+
+\item{extra}{value}
+
+\item{sigdb}{value}
 }
 \description{
 Title

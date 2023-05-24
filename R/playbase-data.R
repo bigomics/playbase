@@ -19,3 +19,26 @@ example_file <- function(file = NULL) {
     system.file("extdata", file, package = "playbase", mustWork = TRUE)
   }
 }
+
+#' Example sample data from unknown GEO dataset
+#'
+#' @format ## `SAMPLES`
+#' data.frame
+#' @source unknown
+"SAMPLES"
+
+#' Example contrasts data from unknown GEO dataset
+#'
+#' @format ## `CONTRASTS`
+#' data.frame with rows and columns as contrasts, values are -1, 0 or 1.
+#' @source unknown
+"CONTRASTS"
+
+#' Example counts data from unknown GEO dataset
+#'
+#' @format ## `COUNTS`
+#' data.frame with genes as rows and samples as columns
+#' @source unknown
+"COUNTS"
+
+

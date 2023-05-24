@@ -7,7 +7,11 @@
 gmt2mat.nocheck(gmt, bg = NULL, use.multicore = TRUE)
 }
 \arguments{
-\item{use.multicore}{}
+\item{gmt}{value}
+
+\item{bg}{value}
+
+\item{use.multicore}{value}
 }
 \description{
 Title

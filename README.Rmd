@@ -39,17 +39,19 @@ The first step in any OmicsPlayground analysis is to upload data which can be us
 ```{r example}
 library(playbase)
 
-## example files can be accessed via the example_file() function
-counts <- playbase::read_counts(playbase::example_file("counts.csv"))
-samples <- playbase::read_samples(playbase::example_file("samples.csv"))
-contrasts <- playbase::read_contrasts(playbase::example_file("contrasts.csv"))
+## with two functions, we can create a pgx object that can be used in Omics Playground.
 
-## create a pgx object (new style)
-#pgx <- playbase::create_pgx(counts, samples, contrasts)
+# first step is to create pgx 
+pgx <- playbase::pgx.createPGX(
+ counts = playbase::COUNTS,
+ samples = playbase::SAMPLES,
+ contrasts = playbase::CONTRASTS
+)
 
-## old style still works
-#pgx <- playbase::pgx.createPGX(counts, samples, contrasts)
-
+# once pgx is created, we can compute the modules
+pgx <- playbase::pgx.computePGX(
+  pgx = pgx
+)
 ```
 
 ## Adding namespace

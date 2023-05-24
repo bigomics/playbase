@@ -7,7 +7,9 @@
 pgx.getConditions(exp.matrix, nmax = 3)
 }
 \arguments{
-\item{nmax}{}
+\item{exp.matrix}{value}
+
+\item{nmax}{value}
 }
 \description{
 Title

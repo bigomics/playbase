@@ -13,7 +13,15 @@ pgx.findLouvainClusters.SNN(
 )
 }
 \arguments{
-\item{small.zero}{}
+\item{X}{value}
+
+\item{prefix}{value}
+
+\item{level}{value}
+
+\item{gamma}{value}
+
+\item{small.zero}{value}
 }
 \description{
 Title

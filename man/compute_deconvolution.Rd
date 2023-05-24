@@ -7,7 +7,11 @@
 compute_deconvolution(ngs, rna.counts = ngs$counts, full = FALSE)
 }
 \arguments{
-\item{full}{}
+\item{ngs}{value}
+
+\item{rna.counts}{value}
+
+\item{full}{value}
 }
 \description{
 Title

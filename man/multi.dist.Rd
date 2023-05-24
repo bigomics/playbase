@@ -7,7 +7,11 @@
 multi.dist(x, p = 4, method = c("pearson", "euclidean", "manhattan"))
 }
 \arguments{
-\item{method}{}
+\item{x}{value}
+
+\item{p}{value}
+
+\item{method}{value}
 }
 \description{
 Title

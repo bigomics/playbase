@@ -7,7 +7,11 @@
 write.gmt(gmt, file, source = NA)
 }
 \arguments{
-\item{source}{}
+\item{gmt}{value}
+
+\item{file}{value}
+
+\item{source}{value}
 }
 \description{
 Title

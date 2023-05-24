@@ -7,7 +7,9 @@
 contrastAsLabels(contr.matrix, as.factor = FALSE)
 }
 \arguments{
-\item{as.factor}{}
+\item{contr.matrix}{value}
+
+\item{as.factor}{value}
 }
 \description{
 Title

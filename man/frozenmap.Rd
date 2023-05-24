@@ -7,7 +7,13 @@
 frozenmap(x, m = 8, n = 8, ...)
 }
 \arguments{
-\item{...}{}
+\item{x}{value}
+
+\item{m}{value}
+
+\item{n}{value}
+
+\item{...}{value}
 }
 \description{
 Title
