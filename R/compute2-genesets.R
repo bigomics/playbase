@@ -53,20 +53,16 @@ compute_testGenesets <- function(pgx,
         # convert gmt to OPG standard
 
         custom_gmt <- playbase::clean_gmt(custom_gmt,"CUSTOM")
-
+        
         # convert gmt standard to SPARSE matrix
-
-        custom_gmt <- playbase::createSparseGenesetMatrix(custom_gmt, min_gene_frequency=1)
-
-        # add custom genesets to the geneset matrix
+        custom_gmt <- createSparseGenesetMatrix(custom_gmt, min_gene_frequency=1)
     }
-
-
+    
     ##-----------------------------------------------------------
     ## Load huge geneset matrix
     ##-----------------------------------------------------------
-    G <- playdata::GSET_SPARSEG_XL
 
+    G <- playdata::GSET_SPARSEG_XL
 
     ##-----------------------------------------------------------
     ## Filter genes
@@ -318,7 +314,7 @@ clean_gmt <- function(gmt.all, gmt.db){
 #'
 #' @examples
 createSparseGenesetMatrix <- function(
-    gmt.all = custom_gmt,
+    gmt.all,
     min.geneset.size = 15,
     max.geneset.size = 500,
     min_gene_frequency= 10) {
