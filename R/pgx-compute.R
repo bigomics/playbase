@@ -323,7 +323,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## convert probe-IDs to gene symbol (do not translate yet to HUGO)
   ## -------------------------------------------------------------------
   message("[createPGX] converting probes to symbol...")
-  symbol <- probe2symbol(rownames(counts), type = NULL) ## auto-convert function
+  symbol <- playbase::probe2symbol(rownames(counts), type = NULL) ## auto-convert function
   if (mean(rownames(counts) == symbol, na.rm = TRUE) < 0.5) { ## why??
     jj <- which(!is.na(symbol))
     counts <- as.matrix(counts[jj, ])
