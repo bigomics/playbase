@@ -55,7 +55,8 @@ compute_testGenesets <- function(pgx,
         custom_gmt <- playbase::clean_gmt(custom_gmt,"CUSTOM")
         
         # convert gmt standard to SPARSE matrix
-        custom_gmt <- createSparseGenesetMatrix(custom_gmt, min_gene_frequency=1)
+        custom_gmt <- playbase::createSparseGenesetMatrix(custom_gmt, min_gene_frequency=1)
+
     }
 
     ##-----------------------------------------------------------
@@ -76,21 +77,23 @@ compute_testGenesets <- function(pgx,
     genes = unique(as.character(pgx$genes$gene_name))
     genes <- toupper(genes)  ## handle mouse genes...
     G <- G[,colnames(G) %in% genes]
-    custom_gmt <- custom_gmt[,colnames(custom_gmt) %in% genes]
-
+    
     # Normalize G after removal of genes
 
     G <- playbase::normalize_matrix_by_row(G)
-    custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
 
-    # combine standard genesets with custom genesets
-
-    G <- playbase::marge_sparse_matrix(G,custom_gmt)
+    if(!is.null(custom.geneset)) {
+        
+        custom_gmt <- custom_gmt[,colnames(custom_gmt) %in% genes]
+        custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
+        
+        # combine standard genesets with custom genesets
+        G <- playbase::merge_sparse_matrix(G,custom_gmt)
+    }
 
     # Transpose G
 
     G <- Matrix::t(G)
-    custom_gmt <- Matrix::t(custom_gmt)
 
     ##-----------------------------------------------------------
     ## Filter gene sets
@@ -378,7 +381,7 @@ createSparseGenesetMatrix <- function(
 #' @export
 #'
 #' @examples
-marge_sparse_matrix <- function(m1, m2) {
+merge_sparse_matrix <- function(m1, m2) {
     num_cols1 <- ncol(m1)
     num_cols2 <- ncol(m2)
 
@@ -405,7 +408,6 @@ marge_sparse_matrix <- function(m1, m2) {
     }
     
     combined_gmt <- Matrix::rbind2(m1, m2)
-
 
   return(combined_gmt)
 }
