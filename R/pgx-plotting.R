@@ -1169,9 +1169,6 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale=TRUE,
     }
 
     xgroup <- c("other",grp0.name,grp1.name)[1 + 1*(ct<0) + 2*(ct>0)]
-    table(xgroup)
-
-    ## currently cast to character... :(
     names(xgroup) <- rownames(pgx$samples)
     jj <- which(!(xgroup %in% xgroup[samples]))
     jj
@@ -1180,8 +1177,6 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale=TRUE,
         xgroup[jj] <- "other"
     }
     names(xgroup) <- rownames(expmat)
-    table(xgroup)
-    class(xgroup)
 
     if(class(xgroup)=="character") {
         xgroup <- as.character(xgroup)
@@ -1585,16 +1580,20 @@ pgx.plotPhenotypeMatrix <- function(annot)
 
     col_annot_height = 11
     plt <- plt %>%
-        add_col_annotation(
+        iheatmapr::add_col_annotation(
             ##annotF[colnames(X),,drop=FALSE],
-            annotF[,],
-            size = col_annot_height, buffer = 0.005, side="bottom",
-            colors = colors0, show_title=TRUE)
+            annotation = annotF[,],
+            size = col_annot_height,
+            buffer = 0.005, side="bottom",
+            ## show_title=TRUE,            
+            colors = colors0
+         )
     colcex = 1
     if(nrow(annot)<100 && colcex>0) {
         plt <- plt %>% iheatmapr::add_col_labels(
-                           side="bottom", size=20*ncol(annot)/6,
-                           font=list(size=11*colcex))
+                           side = "bottom",
+                           size = 20*ncol(annot)/6,
+                           font = list(size=11*colcex))
     }
 
     return(plt)
@@ -3550,9 +3549,7 @@ pgx.stackedBarplot <- function(x,
       showlegend = showlegend,
       barmode = 'stack',
       yaxis = list(title = ylab),
-      xaxis = list(title = xlab)) %>%
-    plotly_default()
-
+      xaxis = list(title = xlab))
 }
 
 ## for plotly
@@ -3890,7 +3887,8 @@ iheatmapr.add_col_annotation <- function(p,
                                     buffer = if (i == 1)
                                       buffer else inner_buffer,
                                     layout = layout,
-                                    show_title = show_title)
+                                    show_title = show_title
+                                    )
               } else if (is.numeric(x[,i])){
                 if (!is.null(colors) && colnames(x)[i] %in% names(colors)){
                   tmp_colors <- colors[[colnames(x)[i]]]
@@ -3991,7 +3989,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
     length(xx)
 
     ## ------- set colors
-
     if (!is.null(annot)) {
         colors0 = rep("Set2", ncol(annot))
         names(colors0) = colnames(annot)
@@ -4007,7 +4004,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
         colors0 = NULL
     }
 
-
     grid_params <- iheatmapr::setup_colorbar_grid(
         nrows = 5,
         y_length = 0.16,
@@ -4019,9 +4015,11 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
     ## maximize plot area
     mar <- list(l = 50, r = 50, b = 100, t = 100, pad = 4)
     mar <- list(l = lmar, r = 0, b = 5, t = 0, pad = 3)
-
     ex <- ncol(X)/ncol(xx[[1]])  ## expansion factor
-    hc <- fastcluster::hclust(as.dist(1 - stats::cor(xx[[1]],use="pairwise")))
+    hc = NULL
+    if(NCOL(xx[[1]])>1) {
+      hc <- fastcluster::hclust(as.dist(1 - stats::cor(xx[[1]],use="pairwise")))
+    }
     dd <- 0.08 * ex ## left dendrogram width
 
     hovertemplate = "Row: %{y} <br>Column: %{x}<br>Value: %{z}<extra> </extra>"
@@ -4039,35 +4037,45 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
         y = ytips[rownames(x1)],
         tooltip = tooltip,
         ## hovertemplate = hovertemplate,
-        layout = list(margin = mar) ) %>%
-        ##add_col_clustering() %>%
-        ##add_row_clustering() %>%
-        ##add_row_clustering(method="groups", groups=idx) %>%
-        iheatmapr::add_col_dendro(hc, size = 0.06) %>%
-        ##add_row_dendro(hr, size = dd) %>%
-        iheatmapr::add_row_title("Genes") %>%
-        iheatmapr::add_col_title(names(xx)[1], side="top")
+        layout = list(margin = mar) ) 
+
+    if(!is.null(hc)) {
+      plt <- plt %>% iheatmapr::add_col_dendro(hc, size = 0.06)
+      ##add_col_clustering() %>%
+      ##add_row_clustering() %>%
+      ##add_row_clustering(method="groups", groups=idx) %>%
+      ##iheatmapr::add_col_dendro(hc, size = 0.06) %>%
+      ##add_row_dendro(hr, size = dd) %>%
+    }
+  
+#    plt <- plt %>%
+#        iheatmapr::add_row_title("Genes") %>%
+
+    if(length(xx)>1) {
+      plt <- plt %>% iheatmapr::add_col_title(names(xx)[1], side="top")
+    }
 
     if (!is.null(annot)) {
         plt <- plt %>%
             iheatmapr.add_col_annotation(
-                size = col_annot_height, buffer = 0.005, side="bottom",
-                colors = colors0, show_title=TRUE,
-                annotF[colnames(xx[[1]]),,drop=FALSE],
-                show_legend = show_legend)
-        }
-    ##plt
+                annotation = annotF[colnames(xx[[1]]),,drop=FALSE],
+                size = col_annot_height,
+                buffer = 0.005, side="bottom",
+                show_legend = show_legend, show_title=TRUE,
+                colors = colors0
+            )
+    }
     length(xx)
     dim(X)
 
     if(ncol(X)<100 && colcex>0) {
         plt <- plt %>% iheatmapr::add_col_labels(
-                           side="bottom", size=0.15*ex,
+                           side = "bottom",
+                           size = 0.10*colcex,
                            font=list(size=11*colcex))
     }
 
     if(length(xx)>1) {
-
         sizes = sapply(xx, ncol) / ncol(xx[[1]])
         sizes
         i=5
@@ -4075,10 +4083,13 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
         for(i in 2:length(xx)) {
 
             x1 <- xx[[i]]
-            if(ncol(x1)==1) x1 <- cbind(x1,x1)
+            ##if(ncol(x1)==1) x1 <- cbind(x1,x1)  ##???
             ##x1 <- x1[nrow(x1):1,]
-            hc <- fastcluster::hclust(as.dist(1 - stats::cor(x1,use="pairwise")))
-
+            hc = NULL
+            if(NCOL(x1)>1) {
+              hc <- fastcluster::hclust(as.dist(1 - stats::cor(x1,use="pairwise")))
+            }
+          
             plt <- plt %>%
                 iheatmapr::add_main_heatmap(
                     x1, , name = "expression",
@@ -4086,21 +4097,31 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
                     y = ytips[rownames(x1)],
                     tooltip = tooltip,
                     ## hovertemplate = hovertemplate,
-                    size=sizes[i], buffer = 0.007*ex) %>%
-                ##add_col_clustering() %>%
-                iheatmapr::add_col_dendro(hc, size = 0.06) %>%
+                    size = sizes[i],
+                    buffer = 0.007*ex
+                ) 
+
+            if(!is.null(hc)) {
+              plt <- plt %>%  
+                iheatmapr::add_col_dendro(hc, size = 0.06) 
+              ##add_col_clustering() %>%
+            }
+            plt <- plt %>%
                 iheatmapr::add_col_title(names(xx)[i], side="top") %>%
                 iheatmapr.add_col_annotation(
-                    size = col_annot_height, buffer = 0.005, side="bottom",
-                    colors = colors0, show_title=FALSE,
-                    data.frame(annotF[colnames(x1),,drop=FALSE]),
-                    show_legend = show_legend)
-
+                    annotation = data.frame(annotF[colnames(x1),,drop=FALSE]),
+                    size = col_annot_height,
+                    buffer = 0.005, side="bottom",
+                    show_title=FALSE, show_legend = show_legend,
+                    colors = colors0                    
+                 )
+          
             if(ncol(X)<100 && colcex>0) {
                 plt <- plt %>%
-                    iheatmapr::add_col_labels(side="bottom",
-                                   size=0.15*ex,
-                                   font=list(size=11*colcex))
+                    iheatmapr::add_col_labels(
+                               side = "bottom",
+                               size = 0.10*colcex,
+                               font = list(size=11*colcex))
             }
         }
 
@@ -4109,14 +4130,13 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
     ## ----------- row annotation (i.e. gene groups)
     if(!is.null(idx) && !is.null(row_annot_width) && row_annot_width>0 ) {
         plt <- iheatmapr::add_row_annotation(
-            plt, data.frame("gene.group"=idx),
+            plt, data.frame("gene.module"=idx),
             size = row_annot_width*ex,
             show_colorbar = show_legend)
     }
 
     ## ----------- add gene/geneset names
     if(rowcex > 0) {
-
         gnames <- rownames(X)
         gnames <- gsub("[&].*[;]","",gnames) ## HTML special garbage...
         gnames <- gsub("^.*:","",gnames) ## strip prefix
@@ -4127,7 +4147,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
         maxlen <- max(sapply(gnames,nchar))
         w = ifelse(maxlen >= 20, 0.45, 0.20)
         s1 <- ifelse(maxlen >= 20, 9, 11)*rowcex
-
         plt <- iheatmapr::add_row_labels(
             plt, side="right", ticktext = gnames,
             size=w*ex, font=list(size=s1) )
@@ -4174,9 +4193,7 @@ pgx.boxplot.PLOTLY <- function(
       xaxis = list(title = xaxistitle),
       font = list(family = font_family),
       margin = margin
-    ) %>%
-    plotly_default()
-
+    )
 }
 
 #' @export
@@ -4279,8 +4296,7 @@ pgx.barplot.PLOTLY <- function(
       margin = margin,
       bargap = bargap,
       annotations = annotations
-    ) %>%
-    plotly_default()
+    ) 
 
   return(p)
 }
