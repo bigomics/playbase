@@ -47,8 +47,7 @@ compute_testGenesets <- function(pgx,
 
     # Load custom genesets (if user provided)
 
-    if(!is.null(custom.geneset)) {
-        
+    if(!is.null(custom.geneset$gmt)) {
         # convert gmt standard to SPARSE matrix
         custom_gmt <- playbase::createSparseGenesetMatrix(custom.geneset$gmt, min_gene_frequency=1)
 
@@ -77,7 +76,7 @@ compute_testGenesets <- function(pgx,
 
     G <- playbase::normalize_matrix_by_row(G)
 
-    if(!is.null(custom.geneset)) {
+    if(!is.null(custom.geneset$gmt)) {
         
         custom_gmt <- custom_gmt[,colnames(custom_gmt) %in% genes]
         custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
@@ -240,7 +239,7 @@ compute_testGenesets <- function(pgx,
 
     # combine standard genesets with custom genesets size vector
 
-    if(!is.null(custom.geneset)) {
+    if(!is.null(custom.geneset$gmt)) {
         gset.size.raw <- c(gset.size.raw, custom.geneset$info$GSET_SIZE)
     }
 
