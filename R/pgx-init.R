@@ -4,7 +4,7 @@
 ##
 
 #' @export
-pgx.initialize <- function(pgx) {
+pgx.initialize <- function(pgx, generalized = FALSE) {
 
     ##---------------------------------------------------------------------
     ## This function must be called after creation of a PGX object
@@ -14,9 +14,17 @@ pgx.initialize <- function(pgx) {
     message("[pgx.initialize] initializing pgx object")
 
     ##----------------- check object
-    obj.needed <- c("genes", ## "deconv","collections", "families", "counts",
+    
+    obj.needed <- c("genes",
                     "GMT","gset.meta","gsetX","gx.meta","model.parameters",
                     "samples","tsne2d","X")
+    if(generalized){
+        obj.needed <- c("genes",
+                    "gx.meta","model.parameters",
+                    "samples","tsne2d","X")
+
+    }
+    
     all(obj.needed %in% names(pgx))
     if(!all(obj.needed %in% names(pgx))) {
         obj.missing <- setdiff(obj.needed, names(pgx))
