@@ -400,6 +400,14 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   if(!generalized){
     message("[createPGX] annotating genes...")
     ngs$genes <- playbase::ngs.getGeneAnnotation(genes = rownames(ngs$counts))
+    browser()
+    rownames(ngs$genes) <- rownames(ngs$counts)
+    ngs$genes[is.na(ngs$genes)] <- ""
+  }
+
+  if(generalized){
+    # check what getGeneAnnotation returns
+    ngs$genes <- rownames(ngs$counts)
     rownames(ngs$genes) <- rownames(ngs$counts)
     ngs$genes[is.na(ngs$genes)] <- ""
   }
@@ -633,7 +641,8 @@ pgx.computePGX <- function(pgx,
                            prune.samples = FALSE,
                            extra.methods = c("meta.go","infer", "deconv","drugs", "wordcloud", "wgcna")[c(1,2)],
                            libx.dir = NULL,
-                           progress = NULL) {
+                           progress = NULL,
+                           generalized = FALSE) {
   ## ======================================================================
   ## ======================================================================
   ## ======================================================================
@@ -641,14 +650,13 @@ pgx.computePGX <- function(pgx,
   if (!"contrasts" %in% names(pgx)) {
     stop("[pgx.computePGX] FATAL:: no contrasts in object")
   }
-
   ## make proper contrast matrix
   contr.matrix <- pgx$contrasts
   contr.values <- unique(as.vector(contr.matrix))
   is.numcontrast <- all(contr.values %in% c(NA, -1, 0, 1))
   is.numcontrast <- is.numcontrast && (-1 %in% contr.values) && (1 %in% contr.values)
   if (!is.numcontrast) {
-    contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
+    contr.matrix <- playbase::makeContrastsFromLabelMatrix(contr.matrix)
     contr.matrix <- sign(contr.matrix) ## sign is fine
   }
 
@@ -675,7 +683,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
   message("[pgx.computePGX] testing genes...")
 
-  pgx <- compute_testGenes(
+  pgx <- playbase::compute_testGenes(
     pgx, contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
@@ -688,25 +696,38 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
   message("[pgx.computePGX] testing genesets...")
-  pgx <- compute_testGenesets(
-    pgx,
-    max.features = max.genesets,
-    test.methods = gset.methods
-  )
-  Matrix::head(pgx$gset.meta$meta[[1]])
+
+  number_genes_in_genesets <- sum(toupper(rownames(pgx$counts)) %in% toupper(colnames(playdata::GSET_SPARSEG_XL)))
+
+  if(number_genes_in_genesets > 300){
+    # only proceed with genesets if we have more than 300 genes mapping 
+    pgx <- compute_testGenesets_generalized(
+      pgx,
+      max.features = max.genesets,
+      test.methods = gset.methods
+    )
+
+    if (do.cluster) {
+      # compute geneset cluster if we HAVE geneset enrichment
+      message("[pgx.computePGX] clustering genes...")
+      pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset") ## gsetX not ready!!
+      }
+    }
 
 
-  if (do.cluster) {
-    message("[pgx.computePGX] clustering genes...")
-    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset") ## gsetX not ready!!
+  if(number_genes_in_genesets <= 300){
+    # compute gene cluster if we did not run geneset enrichment
+    if (do.cluster) {
+        message("[pgx.computePGX] clustering genes...")
+        pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "gene") ## gsetX not ready!!    
+    }
   }
-
 
   ## ------------------ extra analyses ---------------------
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
   message("[pgx.computePGX] computing extra modules...")
 
-  pgx <- compute_extra(pgx, extra = extra.methods, libx.dir = libx.dir)
+  pgx <- playbase::compute_extra(pgx, extra = extra.methods, libx.dir = libx.dir)
 
   message("[pgx.computePGX] done!")
   pgx$timings
