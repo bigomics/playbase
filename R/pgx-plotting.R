@@ -4071,8 +4071,8 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
     if(ncol(X)<100 && colcex>0) {
         plt <- plt %>% iheatmapr::add_col_labels(
                            side = "bottom",
-                           size = 0.10*colcex,
-                           font=list(size=11*colcex))
+                           size = 0.15*colcex,
+                           font = list(size=11*colcex))
     }
 
     if(length(xx)>1) {
@@ -4120,7 +4120,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
                 plt <- plt %>%
                     iheatmapr::add_col_labels(
                                side = "bottom",
-                               size = 0.10*colcex,
+                               size = 0.15*colcex,
                                font = list(size=11*colcex))
             }
         }
