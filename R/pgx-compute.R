@@ -15,18 +15,19 @@
 #' @return list. represents a pgx object
 #' @export 
 #' @examples
-pgx.createFromFiles <- function(count.file, samples.file, contrasts.file = NULL,
+pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL,
                                 gxmethods = "trend.limma,edger.qlf,edger.lrt",
                                 gsetmethods = "fisher,gsva,fgsea",
                                 extra = "meta.go,deconv,infer,drugs,wordcloud") {
   ## compile sample table
-  samples <- fread(samples.file, header = TRUE)
+  samples <- data.table::fread(samples.file, header = TRUE)
   samples <- data.frame(samples, check.names = FALSE, row.names = 1)
 
-  ## read counts table
-  counts <- fread(counts.file)
-  counts <- as.matrix(data.frame(counts, check.names = FALSE, row.names = 1))
-  head(counts)
+  ## read counts table (allow dup rownames)
+  counts <- data.table::fread(counts.file)
+  counts.rownames <- counts[[1]]
+  counts <- as.matrix(counts[,-1])
+  rownames(counts) <- counts.rownames
 
   ## undo logarithm if necessary
   if (max(counts) < 100) {
@@ -199,14 +200,16 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   is.numbered <- all(unique(as.vector(contrasts)) %in% c(-1, 0, 1))
   is.numbered <- all(sapply(type.convert(data.frame(contrasts), as.is=TRUE), class) %in% c("numeric", "integer"))
   ct.type <- c("labeled (new style)", "numbered (old style)")[1 + 1 * is.numbered]
+  is.numbered
   if (is.numbered) {
     ## contrasts <- makeContrastsFromLabelMatrix(contrasts)
     contrasts <- contrastAsLabels(contrasts)
   }
 
   ## convert group-wise contrast to sample-wise
-  grp.idx <- grep("group|condition", tolower(colnames(samples)))
+  grp.idx <- grep("group|condition", tolower(colnames(samples)))[1]
   is.group.contrast <- all(rownames(contrasts) %in% samples[, grp.idx])
+  is.group.contrast
   if (is.group.contrast && nrow(contrasts) < nrow(samples)) {
     ## group
     grp <- as.character(samples[, grp.idx])
@@ -251,7 +254,8 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   guess.log <- (min(counts, na.rm = TRUE) < 0 || max(counts, na.rm = TRUE) < 100)
   guess.log <- guess.log && is.null(X) && (is.null(is.logx) || is.logx == TRUE)
   guess.log
-  if (is.null(is.logx)) is.logx <- guess.log
+  if (is.null(is.logx))
+    is.logx <- guess.log
   is.logx
   if (is.logx) {
     cat("[createPGX] input assumed log-expression (logarithm)\n")
