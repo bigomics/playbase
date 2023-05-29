@@ -627,6 +627,7 @@ pgx.computePGX <- function(pgx,
                            max.genesets = 5000,
                            gx.methods = c("ttest.welch", "trend.limma", "edger.qlf"),
                            gset.methods = c("fisher", "gsva", "fgsea"),
+                           custom.geneset = c(gmt = NULL, info = NULL),
                            do.cluster = TRUE,
                            use.design = TRUE,
                            prune.samples = FALSE,
@@ -647,7 +648,7 @@ pgx.computePGX <- function(pgx,
   is.numcontrast <- all(contr.values %in% c(NA, -1, 0, 1))
   is.numcontrast <- is.numcontrast && (-1 %in% contr.values) && (1 %in% contr.values)
   if (!is.numcontrast) {
-    contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
+    contr.matrix <- playbase::makeContrastsFromLabelMatrix(contr.matrix)
     contr.matrix <- sign(contr.matrix) ## sign is fine
   }
 
@@ -674,7 +675,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
   message("[pgx.computePGX] testing genes...")
 
-  pgx <- compute_testGenes(
+  pgx <- playbase::compute_testGenes(
     pgx, contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
@@ -689,6 +690,7 @@ pgx.computePGX <- function(pgx,
   message("[pgx.computePGX] testing genesets...")
   pgx <- compute_testGenesets(
     pgx,
+    custom.geneset = custom.geneset,
     max.features = max.genesets,
     test.methods = gset.methods
   )
