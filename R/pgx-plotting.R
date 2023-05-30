@@ -3246,7 +3246,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                   color = '#DDDDDD44'
                 ),
                 showlegend = FALSE,
-                key = ~label,
+                key = ~name,
                 mode = "markers",
                 type = "scattergl"
             )
@@ -3270,7 +3270,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
               )
             ),
             showlegend = FALSE,
-            key = ~label,
+            key = ~name,
             mode = "markers",
             type = "scattergl")
 
@@ -3307,7 +3307,9 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
         plt <- plt %>%
                 plotly::add_annotations(
                     data = df[jj,,drop=FALSE],
-                    x = ~x,  y = ~y, text = ~label,
+                    x = ~x,
+                    y = ~y,
+                    text = ~label,
                     ##textposition = "top center",
                     yanchor = "bottom",
                     xanchor = "center",  ## left,center,right
