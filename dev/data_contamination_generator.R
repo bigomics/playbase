@@ -15,10 +15,21 @@ create_dir <- function(directory){
 
 
 # get template data
-inputs_files <- list(
+input_files <- list(
     samples = playbase::SAMPLES,
-    counts = playbase::COUNTS,
-    contrasts = playbase::CONTRASTS
+    counts = playbase::COUNTS[1:300,], # reduce size to speed up tests
+    contrasts = playbase::CONTRASTS[,1:2] # reduce size to speed up tests
+)
+
+# special characters
+
+characters <- list(
+    digits = c(0,1,9),
+    punctuation = c( ".", "-", "?", "!", ';', ":", ","),
+    special = c("~", "@", "#", "$", "%", "_", "+", " "),
+    escape = c("\\"),
+    control = c("\n", "\t", "\r", "\b", "\a", "\f", "\v"),
+    noncontrol = c("\u")
 )
 
 # generate tsv and csv files for all input files
@@ -34,29 +45,14 @@ lapply(names(inputs_files), function(x) {
 
 
 
-# generating samples columns with continuous and discrete values
+# generating samples, counts and contrast columns with continuous and discrete values as metadata
 
 # generating sample values with special characters
 
 # check first column input that has not name
 
+# generate files with file names (count1.csv, Counts.csv...)
 
+# generate counts with different gene names Must it be -1/0/+1 or can we use condition names? 
 
-# samples.csv file:
-# - Must it be called samples.csv? Is tab allowed?
-# - Column headers - special characters ok? How about spaces? Can they be? Which are OK, or must be avoided?
-# - Columns can they be continuous or must be discrete?
-# - Sample values  - special characters ok? How about spaces? Can they be? Which are OK, or must be avoided?
-# - Must the first column have no name? (please check!)
-
-# counts.csv file:
-# - Must it be called counts.csv? Is tab allowed?
-# - Column headers - special characters ok? Can they be? Which are OK, or must be avoided?
-# - Columns can they be fractional or must they be integer (raw) count?
-
-# contrasts.csv file:
-# - Must it be called counts.csv? Is tab allowed?
-# - Column headers - special characters ok? How about spaces? Can they be? Which are OK, or must be avoided?
-# - Column header special format? need _vs_ ? What is numerator / denominator?
-# - Sample values  - special characters ok? How about spaces? Can they be? Which are OK, or must be avoided?
-# - Must it be -1/0/+1 or can we use condition names? 
+# check if `` fixes the char problem in R
