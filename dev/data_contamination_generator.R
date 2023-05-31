@@ -27,15 +27,15 @@ input_files <- list(
     contrasts = playbase::CONTRASTS # reduce size to speed up tests
 )
 
-# output files, each element on the list is a test
-output <- list() 
+# output_char files, each element on the list is a test
+output_char <- list()
 
 # special characters
 create_dir("data-test/filetype")
 
 characters <- list(
     digits = c(0,1,9),
-    punctuation = c( ".", "-", "?", "!", ';', ":", ","),
+    punctuation = c( ".", "-", "?", "!", ';', ":", ","),z
     special = c("~", "@", "#", "$", "%", "_", "+", " "),
     escape = c("\\"),
     control = c("\\n", "\\t", "\\r", "\\b", "\\a", "\\f", "\\v"),
@@ -65,8 +65,17 @@ lapply(unlist(characters), function (x){
 
     return(list(sample = sample, contrast = contrast, count = count))
 
-}) -> output$prepend_header
+}) -> output_char$prepend_header
 
+# add special characters to sample metadata AND contrast file
+
+# TODO
+# TODO
+# TODO
+
+lapply(unlist(characters), function (x){
+    return()
+}) -> output_char$prepend_header
 
 # append header with special characters
 
@@ -82,7 +91,7 @@ lapply(unlist(characters), function (x){
 
     return(list(sample = sample, contrast = contrast, count = count))
 
-}) -> output$append_header
+}) -> output_char$append_header
 
 lapply(unlist(characters), function (x){
     #x = unlist(characters)[1]
@@ -96,7 +105,7 @@ lapply(unlist(characters), function (x){
 
     return(list(sample = sample, contrast = contrast, count = count))
 
-}) -> output$middle_header
+}) -> output_char$middle_header
 
 # generating sample values with special characters
 
@@ -112,16 +121,18 @@ lapply(unlist(characters), function (x){
     
     return(list(sample = sample, contrast = contrast, count = count))
 
-}) -> output$sample_values
-
-
+}) -> output_char$sample_values
 
 # generating samples, counts and contrast columns with continuous and discrete values as metadata
 
+samples <- input_files$samples
 
+samples$continuous <- rnorm(nrow(samples))
 
-
-
+output_metadata_continuous <- list(
+    samples = samples,
+    counts = input_files$counts,
+    contrasts = input_files$contrasts)
 
 # check first column input that has not name
 
