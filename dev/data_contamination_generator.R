@@ -45,10 +45,28 @@ characters <- list(
 
 # generate tsv and csv files for all input files
 
-lapply(names(inputs_files), function(x) {   
+create_dir("data-test/first_column_name")
+
+lapply(names(input_files), function(x) {
+
+    #x = inputs_files[[1]]
+
+    matrix_colname <- input_files[[x]]
+
+    rowname_df <- data.frame(row_name = rownames(matrix_colname))
+
+    matrix_colname <- cbind(rowname_df, matrix_colname)
+
+    write.table(matrix_colname, file = paste0("data-test//first_column_name//",x, ".csv"), sep = ",", quote = FALSE, row.names = FALSE)
+})
+
+# generate tsv and csv files for all input files
+
+lapply(names(input_files), function(x) {
     write.table(inputs_files[[x]], file = paste0("data-test//filetype//",x, ".tsv"), sep = "\t", quote = FALSE, row.names = TRUE)
     write.table(inputs_files[[x]], file = paste0("data-test//filetype//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
 })
+
 
 # generating files with different header names
 # special characters ok? How about spaces? Can they be? Which are OK, or must be avoided?
@@ -156,7 +174,6 @@ output_metadata_continuous <- list(
     counts = input_files$counts,
     contrasts = input_files$contrasts)
 
-# check first column input that has not name
 
 # generate files with file names (count1.csv, Counts.csv...)
 
