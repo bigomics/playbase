@@ -35,7 +35,7 @@ create_dir("data-test/filetype")
 
 characters <- list(
     digits = c(0,1,9),
-    punctuation = c( ".", "-", "?", "!", ';', ":", ","),z
+    punctuation = c( ".", "-", "?", "!", ';', ":", ","),
     special = c("~", "@", "#", "$", "%", "_", "+", " "),
     escape = c("\\"),
     control = c("\\n", "\\t", "\\r", "\\b", "\\a", "\\f", "\\v"),
@@ -66,12 +66,6 @@ lapply(unlist(characters), function (x){
     return(list(sample = sample, contrast = contrast, count = count))
 
 }) -> output_char$prepend_header
-
-# add special characters to sample metadata AND contrast file
-
-# TODO
-# TODO
-# TODO
 
 lapply(unlist(characters), function (x){
     return()
@@ -107,7 +101,16 @@ lapply(unlist(characters), function (x){
 
 }) -> output_char$middle_header
 
-# generating sample values with special characters
+# add special characters to sample metadata AND contrast file
+
+
+# TODO
+# TODO
+# TODO
+
+
+
+# generating sample names with special characters
 
 lapply(unlist(characters), function (x){
     #x = unlist(characters)[1]
@@ -115,13 +118,13 @@ lapply(unlist(characters), function (x){
     contrast <- input_files$contrast
     count <- input_files$count
 
-    sample[,1] <- paste0(x, sample[,1])
-    sample[,2] <- paste0(sample[,2], x)
+    rownames(sample) <- paste0(x, rownames(sample))
 
+    colnames(count) <-  rownames(sample)
     
     return(list(sample = sample, contrast = contrast, count = count))
 
-}) -> output_char$sample_values
+}) -> output_char$sample_names
 
 # generating samples, counts and contrast columns with continuous and discrete values as metadata
 
