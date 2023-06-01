@@ -37,6 +37,7 @@ characters <- list(
     digits = c(0,1,9),
     punctuation = c( ".", "-", "?", "!", ';', ":", ","),
     special = c("~", "@", "#", "$", "%", "_", "+", " "),
+    quotation = c("'", '"'),
     escape = c("\\"),
     control = c("\\n", "\\t", "\\r", "\\b", "\\a", "\\f", "\\v"),
     noncontrol = c("\\u")
@@ -101,13 +102,31 @@ lapply(unlist(characters), function (x){
 
 }) -> output_char$middle_header
 
-# add special characters to sample metadata AND contrast file
+# add special characters to sample metadata AND respective contrast
 
+lapply(unlist(characters), function (x){
+    #x = unlist(characters)[1]
+    sample <- input_files$samples
+    contrast <- input_files$contrast
+    count <- input_files$count
 
-# TODO
-# TODO
-# TODO
+    sample[,1] <- paste0(x, sample[,1])
 
+    rownames(contrast) <- paste0(x, rownames(contrast))
+
+    contrast_split <- strsplit(colnames(contrast), split = "_")
+
+    contrast_contaminated <-lapply(contrast_split, function(idx){
+        idx = contrast_split[[1]]
+        idx[3] <- paste0(x, idx[3])
+        paste(idx, collapse = "_")
+    })
+
+    colnames(contrast) <- contrast_contaminated    
+    
+    return(list(sample = sample, contrast = contrast, count = count))
+
+}) -> output_char$sample_metadata
 
 
 # generating sample names with special characters
