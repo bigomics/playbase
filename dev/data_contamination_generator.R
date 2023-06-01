@@ -31,7 +31,6 @@ input_files <- list(
 output_char <- list()
 
 # special characters
-create_dir("data-test/filetype")
 
 characters <- list(
     digits = c(0,1,9),
@@ -49,7 +48,7 @@ create_dir("data-test/first_column_name")
 
 lapply(names(input_files), function(x) {
 
-    #x = inputs_files[[1]]
+    #x = input_files[[1]]
 
     matrix_colname <- input_files[[x]]
 
@@ -60,16 +59,79 @@ lapply(names(input_files), function(x) {
     write.table(matrix_colname, file = paste0("data-test//first_column_name//",x, ".csv"), sep = ",", quote = FALSE, row.names = FALSE)
 })
 
-# generate tsv and csv files for all input files
+# generate files with file names (count1.csv, Counts.csv...)
+
+create_dir("data-test/filenames")
 
 lapply(names(input_files), function(x) {
-    write.table(inputs_files[[x]], file = paste0("data-test//filetype//",x, ".tsv"), sep = "\t", quote = FALSE, row.names = TRUE)
-    write.table(inputs_files[[x]], file = paste0("data-test//filetype//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
+
+    # filename with first capital letter
+    write.table(matrix_colname, file = paste0("data-test//filenames//",stringr::str_to_title(x), ".csv"), sep = ",", quote = FALSE, row.names = FALSE)
+    # filename in all capital letters
+    write.table(matrix_colname, file = paste0("data-test//filenames//",stringr::str_to_upper(x),".csv"), sep = ",", quote = FALSE, row.names = FALSE)
+    # prepent before filaname
+    write.table(matrix_colname, file = file.path("data-test//filenames//",paste0("lalalala01_",x,".csv")), sep = ",", quote = FALSE, row.names = FALSE)
+    # append after filename
+    write.table(matrix_colname, file = file.path("data-test//filenames//",paste0(x,"_lalalala01_",".csv")), sep = ",", quote = FALSE, row.names = FALSE)
+
 })
 
 
+
+
+
+
+# generate tsv and csv files for all input files
+
+create_dir("data-test/filetype")
+
+lapply(names(input_files), function(x) {
+    write.table(input_files[[x]], file = paste0("data-test//filetype//",x, ".tsv"), sep = "\t", quote = FALSE, row.names = TRUE)
+    write.table(input_files[[x]], file = paste0("data-test//filetype//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
+    write.table(input_files[[x]], file = paste0("data-test//filetype//",x, ".txt"), quote = FALSE, row.names = TRUE)
+})
+
+# generate counts with different gene names Must it be -1/0/+1 or can we use condition names? 
+
+
+create_dir("data-test/contrastinputs")
+
+lapply(names(input_files), function(x) {
+    x = input_files[["contrast"]]
+
+    if(x == "contrasts"){
+        # prepara long contrast (-1/1)
+
+
+
+        c1 <- 
+
+        # prepare group-based short contrast (-1/1)
+
+        c2 <- 
+        # prepare contrast with variable names (phenotypes) in cells
+
+    }else{
+        write.table(input_files[[x]], file = paste0("data-test//filetype//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
+    }
+
+    
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # generating files with different header names
-# special characters ok? How about spaces? Can they be? Which are OK, or must be avoided?
 
 # prepend header with special characters
 lapply(unlist(characters), function (x){
@@ -174,9 +236,3 @@ output_metadata_continuous <- list(
     counts = input_files$counts,
     contrasts = input_files$contrasts)
 
-
-# generate files with file names (count1.csv, Counts.csv...)
-
-# generate counts with different gene names Must it be -1/0/+1 or can we use condition names? 
-
-# check if `` fixes the char problem in R
