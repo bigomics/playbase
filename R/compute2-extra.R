@@ -304,12 +304,34 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
 #' @export
 #'
 #' @examples
-compute_drugActivityEnrichment <- function(ngs) {
+compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
   ## -------------- drug enrichment
   # get drug activity databases
-  ref.db <- list(
-    "L1000_ACTIVITYS_N20D1011" = playdata::L1000_ACTIVITYS_N20D1011
+
+  #ngs=pgx
+  #libx.dir = params$libx.dir
+  
+  if (is.null(libx.dir)) message('WARNING Need libx.dir if you call compute_full_drugActivityEnrichment')
+  
+  cmap.dir <- file.path(libx.dir, "cmap")
+  file.gene.db <- dir(cmap.dir, pattern = "n8m20g5812.*rds$")
+
+  if (length(gene.db)>1) message('WARNING multiple gene.db files found. Using first one.')
+
+  gene.db <- readRDS(file.path(cmap.dir,file.gene.db[1]))
+
+  View(gene.db)
+
+  
+
+  if(file.exists(gene.db)){
+    ref.db <- list(
+    "L1000_ACTIVITYS_N20D1011" = playdata::L1000_ACTIVITYS_N20D1011,
+    "L1000_GENE_PERTURBATION" = gene.db
   )
+
+  }
+  
 
   for (i in 1:length(ref.db)) {
     f <- names(ref.db)[i]
