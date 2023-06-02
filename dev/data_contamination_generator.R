@@ -64,15 +64,15 @@ lapply(names(input_files), function(x) {
 create_dir("data-test/filenames")
 
 lapply(names(input_files), function(x) {
-
+    
     # filename with first capital letter
-    write.table(matrix_colname, file = paste0("data-test//filenames//",stringr::str_to_title(x), ".csv"), sep = ",", quote = FALSE, row.names = FALSE)
+    write.table(input_files[[x]], file = paste0("data-test//filenames//",stringr::str_to_title(x), ".csv"), sep = ",", quote = FALSE, row.names = FALSE)
     # filename in all capital letters
-    write.table(matrix_colname, file = paste0("data-test//filenames//",stringr::str_to_upper(x),".csv"), sep = ",", quote = FALSE, row.names = FALSE)
+    write.table(input_files[[x]], file = paste0("data-test//filenames//",stringr::str_to_upper(x),".csv"), sep = ",", quote = FALSE, row.names = FALSE)
     # prepent before filaname
-    write.table(matrix_colname, file = file.path("data-test//filenames//",paste0("lalalala01_",x,".csv")), sep = ",", quote = FALSE, row.names = FALSE)
+    write.table(input_files[[x]], file = file.path("data-test//filenames//",paste0("lalalala01_",x,".csv")), sep = ",", quote = FALSE, row.names = FALSE)
     # append after filename
-    write.table(matrix_colname, file = file.path("data-test//filenames//",paste0(x,"_lalalala01_",".csv")), sep = ",", quote = FALSE, row.names = FALSE)
+    write.table(input_files[[x]], file = file.path("data-test//filenames//",paste0(x,"_lalalala01_",".csv")), sep = ",", quote = FALSE, row.names = FALSE)
 
 })
 
@@ -137,19 +137,6 @@ lapply(names(input_files), function(x) {
         write.table(input_files[[x]], file = paste0("data-test//contrastinputs//short_integer//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
     }
 })
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 # generating files with different header names
 
@@ -228,7 +215,6 @@ lapply(unlist(characters), function (x){
 
 }) -> output_char$sample_metadata
 
-
 # generating sample names with special characters
 
 lapply(unlist(characters), function (x){
@@ -255,4 +241,3 @@ output_metadata_continuous <- list(
     samples = samples,
     counts = input_files$counts,
     contrasts = input_files$contrasts)
-
