@@ -81,7 +81,7 @@ compute_extra <- function(ngs, extra = c(
 
     message(">>> Computing drug activity enrichment...")
     tt <- system.time({
-      ngs <- compute_drugActivityEnrichment(ngs)
+      ngs <- compute_drugActivityEnrichment(ngs, libx.dir = libx.dir)
     })
     timings <- rbind(timings, c("drugs", tt))
 
@@ -320,7 +320,7 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
 
   gene.db <- readRDS(file.path(cmap.dir,file.gene.db[1]))
 
-  if(file.exists(gene.db)){
+  if(file.exists(file.path(cmap.dir,file.gene.db[1]))){
     ref.db <- list(
       "L1000_ACTIVITYS_N20D1011" = playdata::L1000_ACTIVITYS_N20D1011,
       "L1000_GENE_PERTURBATION" = gene.db
@@ -343,7 +343,7 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
 
     NPRUNE <- 250
     fname <- names(ref.db)[i]
-    out1 <- pgx.computeDrugEnrichment(
+    out1 <- playbase::pgx.computeDrugEnrichment(
       ngs, X, xdrugs,
       methods = c("GSEA", "cor"),
       nmin = 3, nprune = NPRUNE, contrast = NULL
