@@ -76,11 +76,6 @@ lapply(names(input_files), function(x) {
 
 })
 
-
-
-
-
-
 # generate tsv and csv files for all input files
 
 create_dir("data-test/filetype")
@@ -95,27 +90,52 @@ lapply(names(input_files), function(x) {
 
 
 create_dir("data-test/contrastinputs")
+create_dir("data-test/contrastinputs/short_condition")
+create_dir("data-test/contrastinputs/short_condition_inverse")
+create_dir("data-test/contrastinputs/short_integer")
 
 lapply(names(input_files), function(x) {
-    x = input_files[["contrast"]]
-
-    if(x == "contrasts"){
-        # prepara long contrast (-1/1)
-
-
-
-        c1 <- 
-
-        # prepare group-based short contrast (-1/1)
-
-        c2 <- 
-        # prepare contrast with variable names (phenotypes) in cells
-
-    }else{
-        write.table(input_files[[x]], file = paste0("data-test//filetype//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
+    
+    if(x == "samples"){
+        sample <- input_files[[x]]
+        #simplify case
+        colnames(sample) <- colnames(sample)[c(2,1,3)]
+        write.table(sample, file = paste0("data-test//contrastinputs//short_condition//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
+        write.table(sample, file = paste0("data-test//contrastinputs//short_condition_inverse//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
+        write.table(sample, file = paste0("data-test//contrastinputs//short_integer//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
     }
 
+    if(x == "contrasts"){
+        
+        # prepara short integer contrast (-1/1)
+
+        c1 <- data.frame(
+            act_vs_notact = c(1,-1)
+        )
+        rownames(c1) <- c("act","notact")
+        write.table(c1, file = paste0("data-test//contrastinputs//short_integer//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
+        
+        # prepara short phenotype contrast contrast (act/noact)
+
+        c2 <- c1
+
+        c1$act_vs_notact <- c("act", "notact")
+        write.table(c2, file = paste0("data-test//contrastinputs//short_condition//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
+
+        # prepara short integer contrast reverse
+
+        c3 <- c2 
+
+        c3$act_vs_notact <- c(-1,1)
+        write.table(c3, file = paste0("data-test//contrastinputs//short_condition_inverse//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
+
+    }
     
+    if(x == "counts"){
+        write.table(input_files[[x]], file = paste0("data-test//contrastinputs//short_condition//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
+        write.table(input_files[[x]], file = paste0("data-test//contrastinputs//short_condition_inverse//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
+        write.table(input_files[[x]], file = paste0("data-test//contrastinputs//short_integer//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
+    }
 })
 
 
