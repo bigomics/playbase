@@ -400,9 +400,8 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
 #' @export
 #'
 #' @examples
-compute_drugSensitivityEnrichment <- function(ngs, libx.dir) {
+compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
 
-  if (is.null(libx.dir)) message('ERROR: Need libx.dir if you call compute_drugSensitivityEnrichment')
   cmap.dir <- file.path(libx.dir, "cmap")
 
   ref.db <- dir(cmap.dir, pattern = "sensitivity.*rds$")
