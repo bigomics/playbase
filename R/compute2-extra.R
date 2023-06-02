@@ -317,10 +317,11 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
   file.gene.db <- dir(cmap.dir, pattern = "n8m20g5812.*rds$")
 
   if (length(file.gene.db)>1) message('WARNING multiple gene.db files found. Using first one.')
-
-  gene.db <- readRDS(file.path(cmap.dir,file.gene.db[1]))
+  
 
   if(file.exists(file.path(cmap.dir,file.gene.db[1]))){
+    gene.db <- readRDS(file.path(cmap.dir,file.gene.db[1]))
+    
     ref.db <- list(
       "L1000_ACTIVITYS_N20D1011" = playdata::L1000_ACTIVITYS_N20D1011,
       "L1000_GENE_PERTURBATION" = gene.db
