@@ -17,6 +17,8 @@ compute_extra <- function(ngs, extra = c(
                           ), sigdb = NULL, libx.dir = NULL) {
   timings <- c()
 
+  #ngs = pgx
+
   if (length(extra) == 0) {
     return(ngs)
   }
@@ -318,7 +320,6 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
 
   if (length(file.gene.db)>1) message('WARNING multiple gene.db files found. Using first one.')
   
-
   if(file.exists(file.path(cmap.dir,file.gene.db[1]))){
     gene.db <- readRDS(file.path(cmap.dir,file.gene.db[1]))
     
@@ -345,9 +346,13 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
     NPRUNE <- 250
     fname <- names(ref.db)[i]
     out1 <- playbase::pgx.computeDrugEnrichment(
-      ngs, X, xdrugs,
+      obj = ngs,
+      X = X,
+      xdrugs = xdrugs,
       methods = c("GSEA", "cor"),
-      nmin = 3, nprune = NPRUNE, contrast = NULL
+      nmin = 3,
+      nprune = NPRUNE,
+      contrast = NULL
     )
 
     if (is.null(out1)) {
