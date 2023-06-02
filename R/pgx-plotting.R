@@ -3935,6 +3935,9 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
     if(is.null(names(xtips))) names(xtips) = colnames(X)
     if(is.null(names(ytips))) names(ytips) = rownames(X)
 
+    PLOTLY_COLORS <- c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+      "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf")
+
     ## --------- scaling
     if("row.center" %in% scale) X <- X - rowMeans(X, na.rm=TRUE)
     if("row" %in% scale) X <- t(scale(t(X)))
@@ -4126,7 +4129,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
                                font = list(size=11*colcex))
             }
         }
-
     }
 
     ## ----------- row annotation (i.e. gene groups)
@@ -4134,6 +4136,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx=NULL, splitx=NULL,
         plt <- iheatmapr::add_row_annotation(
             plt, data.frame("gene.module"=idx),
             size = row_annot_width*ex,
+            colors = paste0(PLOTLY_COLORS,"88"),
             show_colorbar = show_legend)
     }
 

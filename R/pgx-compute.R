@@ -16,7 +16,7 @@
 #' @export 
 #' @examples
 pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL,
-                                gxmethods = "trend.limma,edger.qlf,edger.lrt",
+                                gxmethods = "trend.limma,edger.qlf,deseq2.wald",
                                 gsetmethods = "fisher,gsva,fgsea",
                                 extra = "meta.go,deconv,infer,drugs,wordcloud") {
   ## compile sample table
@@ -43,19 +43,15 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
   ## parse requested phenotypes
   if (!is.null(contrasts.file) && file.exists(contrasts.file)) {
     cat("reading contrasts file", contrasts.file, "\n")
-    contrasts <- fread(contrasts.file, header = TRUE)
+    contrasts <- data.table::fread(contrasts.file, header = TRUE)
     contrasts <- data.frame(contrasts, check.names = FALSE, row.names = 1)
   } else {
+    ## take first (not-dotted) column as phenotype vector
     pheno <- head(grep("^[.]", colnames(samples), value = TRUE, invert = TRUE), 1)
-    # pheno <- strsplit(pheno,split=",")[[1]]
     pheno <- intersect(pheno, colnames(samples))
-    pheno
     Y <- samples[, pheno, drop = FALSE]
     ## automatically guess contrasts
     ac <- pgx.makeAutoContrasts(Y, mingrp = 3, slen = 20, ref = NA)
-    is.null(ac)
-    table(ac$group)
-    head(ac$contr.matrix)
     contrasts <- contrastAsLabels(ac$exp.matrix)
   }
 
@@ -488,13 +484,14 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
       cX <- log2(1 + ngs$counts)
       bx <- ngs$sample[, b]
 
+      message("[createPGX] batch correcting for counts using LIMMA\n")
       cX <- limma::removeBatchEffect(cX, batch = bx) ## in log-space
       cX <- pmax(2**cX - 1, 0)
       cX[zz] <- 0
-      ngs$counts <- cX ## batch corrected counts...
+      ngs$counts <- pmax(cX,0) ## batch corrected counts...
 
       if (!is.null(ngs$X)) {
-        message("[createPGX] batch correcting for logX\n")
+        message("[createPGX] batch correcting for logX using LIMMA\n")
         ngs$X <- limma::removeBatchEffect(ngs$X, batch = bx) ## in log-space
         ngs$X[zz] <- 0
       }

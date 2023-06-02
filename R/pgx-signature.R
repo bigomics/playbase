@@ -11,7 +11,7 @@ getSIGDB.DIR <- function() {
   if(!exists("SIGDB.DIR") && exists("FILESX")) {
     SIGDB.DIR <- c(FILESX,file.path(FILESX,"sigdb"))
   } else {
-    SIDDB.DIR
+    SIGDB.DIR
   }
 }
 
@@ -887,8 +887,6 @@ sigdb.getConnectivityFullPath <- function(sigdb) {
 #' @export
 sigdb.getConnectivityContrasts <- function(sigdb) {
     db <- getConnectivityFullPath(sigdb)
-    dbg("[getConnectivityContrasts] sigdb=",sigdb)
-    dbg("[getConnectivityContrasts] db=",db)
     rhdf5::h5read(db, "data/colnames")
 }
 
