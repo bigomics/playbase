@@ -81,9 +81,9 @@ lapply(names(input_files), function(x) {
 create_dir("data-test/filetype")
 
 lapply(names(input_files), function(x) {
-    write.table(input_files[[x]], file = paste0("data-test//filetype//",x, ".tsv"), sep = "\t", quote = FALSE, row.names = TRUE)
-    write.table(input_files[[x]], file = paste0("data-test//filetype//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
-    write.table(input_files[[x]], file = paste0("data-test//filetype//",x, ".txt"), quote = FALSE, row.names = TRUE)
+    write.table(input_files[[x]], file = paste0("data-test//filetype//",x, ".tsv"), sep = "\t", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(input_files[[x]], file = paste0("data-test//filetype//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(input_files[[x]], file = paste0("data-test//filetype//",x, ".txt"), quote = FALSE, row.names = TRUE, col.names=NA)
 })
 
 # generate counts with different gene names Must it be -1/0/+1 or can we use condition names? 
@@ -100,9 +100,9 @@ lapply(names(input_files), function(x) {
         sample <- input_files[[x]]
         #simplify case
         colnames(sample) <- colnames(sample)[c(2,1,3)]
-        write.table(sample, file = paste0("data-test//contrastinputs//short_condition//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
-        write.table(sample, file = paste0("data-test//contrastinputs//short_condition_inverse//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
-        write.table(sample, file = paste0("data-test//contrastinputs//short_integer//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
+        write.table(sample, file = paste0("data-test//contrastinputs//short_condition//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+        write.table(sample, file = paste0("data-test//contrastinputs//short_condition_inverse//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+        write.table(sample, file = paste0("data-test//contrastinputs//short_integer//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
     }
 
     if(x == "contrasts"){
@@ -113,28 +113,28 @@ lapply(names(input_files), function(x) {
             act_vs_notact = c(1,-1)
         )
         rownames(c1) <- c("act","notact")
-        write.table(c1, file = paste0("data-test//contrastinputs//short_integer//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
+        write.table(c1, file = paste0("data-test//contrastinputs//short_integer//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
         
         # prepara short phenotype contrast contrast (act/noact)
 
         c2 <- c1
 
         c1$act_vs_notact <- c("act", "notact")
-        write.table(c2, file = paste0("data-test//contrastinputs//short_condition//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
+        write.table(c2, file = paste0("data-test//contrastinputs//short_condition//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
 
         # prepara short integer contrast reverse
 
         c3 <- c2 
 
         c3$act_vs_notact <- c(-1,1)
-        write.table(c3, file = paste0("data-test//contrastinputs//short_condition_inverse//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
+        write.table(c3, file = paste0("data-test//contrastinputs//short_condition_inverse//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
 
     }
     
     if(x == "counts"){
-        write.table(input_files[[x]], file = paste0("data-test//contrastinputs//short_condition//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
-        write.table(input_files[[x]], file = paste0("data-test//contrastinputs//short_condition_inverse//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
-        write.table(input_files[[x]], file = paste0("data-test//contrastinputs//short_integer//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE)
+        ?write.table(input_files[[x]], file = paste0("data-test//contrastinputs//short_condition//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+        write.table(input_files[[x]], file = paste0("data-test//contrastinputs//short_condition_inverse//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+        write.table(input_files[[x]], file = paste0("data-test//contrastinputs//short_integer//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
     }
 })
 
