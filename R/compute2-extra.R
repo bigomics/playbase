@@ -426,7 +426,7 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
 
     NPRUNE <- -1
     NPRUNE <- 250
-    out1 <- pgx.computeDrugEnrichment(
+    out1 <- playbase::pgx.computeDrugEnrichment(
       ngs, X, xdrugs,
       methods = c("GSEA", "cor"),
       nmin = 10, nprune = NPRUNE, contrast = NULL
