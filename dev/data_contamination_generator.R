@@ -79,12 +79,14 @@ lapply(names(input_files), function(x) {
 
 # generate tsv and csv files for all input files
 
-create_dir("data-test/filetype")
+create_dir("data-test/filetype/csv")
+create_dir("data-test/filetype/tsv")
+create_dir("data-test/filetype/txt")
 
 lapply(names(input_files), function(x) {
-    write.table(input_files[[x]], file = paste0("data-test//filetype//",x, ".tsv"), sep = "\t", quote = FALSE, row.names = TRUE, col.names=NA)
-    write.table(input_files[[x]], file = paste0("data-test//filetype//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
-    write.table(input_files[[x]], file = paste0("data-test//filetype//",x, ".txt"), quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(input_files[[x]], file = paste0("data-test//filetype//tsv//",x, ".tsv"), sep = "\t", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(input_files[[x]], file = paste0("data-test//filetype//csv//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(input_files[[x]], file = paste0("data-test//filetype//txt//",x, ".txt"), quote = FALSE, row.names = TRUE, col.names=NA)
 })
 
 # generate counts with different gene names Must it be -1/0/+1 or can we use condition names? 
