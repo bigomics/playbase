@@ -15,11 +15,17 @@ filepath <- filepaths[unlist(directories_with_files)]
 
 # same upload as opg
 
+lapply(filepath, function(x){
+    #x = filepath[1]
+    samples_file <- list.files(x, pattern = "ampl", full.names = TRUE, ignore.case = TRUE)
+    counts_file <- list.files(x, pattern = "unt", full.names = TRUE, ignore.case = TRUE)
+    contrasts_file <- list.files(x, pattern = "ntra", full.names = TRUE, ignore.case = TRUE)
 
+    samples <- playbase::read.as_matrix(samples_file)
+    counts <- playbase::read.as_matrix(counts_file)
+    contrasts <- playbase::read.as_matrix(contrasts_file)
+})
 
-samples <- playbase::read.as_matrix(fn2)
-counts <- playbase::read.as_matrix(fn2)
-contrasts <- playbase::read.as_matrix(fn2)
 
 
 
