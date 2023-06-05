@@ -372,7 +372,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 
   if (convert.hugo) {
     message("[createPGX] converting to HUGO symbols...")
-    gene1 <- alias2hugo(gene1) ## convert to latest HUGO
+    gene1 <- playbase::alias2hugo(gene1) ## convert to latest HUGO
   } else {
     message("[createPGX] skip conversion to HUGO symbols")
   }
