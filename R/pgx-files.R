@@ -211,29 +211,22 @@ pgx.parseAccessLogs <- function(logs.dir, from=NULL, to=NULL,
 
 #' @export
 h5exists <- function(h5.file, obj) {
-
     xobjs <- apply(rhdf5::h5ls(h5.file)[,1:2],1,paste,collapse="/")
     obj %in% gsub("^/|^//","",xobjs)
 }
 
 ##h5.file="test.h5";chunk=100
 #' @export
-pgx.saveMatrixH5 <- function(X, h5.file, chunk=NULL, del=TRUE )
+pgx.saveMatrixH5 <- function(X, h5.file, chunk=NULL )
 {
+    if(file.exists(h5.file)) unlink(h5.file)
 
-    if(del) unlink(h5.file)
+    rhdf5::h5createFile(h5.file)
+    rhdf5::h5createGroup(h5.file,"data")
 
     if(is.null(chunk)) {
-        if(del) rhdf5::h5createFile(h5.file)
-        ## rhdf5::h5createGroup("myhdf5file.h5","foo")
-        ## A = matrix(1:10,nr=5,nc=2)
-        ## rhdf5::h5write(A, "myhdf5file.h5","foo/A")
-        rhdf5::h5createGroup(h5.file,"data")
         rhdf5::h5write( X, h5.file, "data/matrix")
     } else {
-        if(del) rhdf5::h5createFile(h5.file)
-        if(del) rhdf5::h5createGroup(h5.file,"data")
-        if(h5exists(h5.file,"data/matrix")) rhdf5::h5delete(h5.file, "data/matrix")
         rhdf5::h5createDataset(
             h5.file, "data/matrix",
             c(nrow(X),ncol(X)),
@@ -248,12 +241,12 @@ pgx.saveMatrixH5 <- function(X, h5.file, chunk=NULL, del=TRUE )
             index = list(1:nrow(X),1:ncol(X))
         )
     }
-
     rhdf5::h5write( rownames(X), h5.file, "data/rownames")
     rhdf5::h5write( colnames(X), h5.file, "data/colnames")
 
     rhdf5::h5closeAll()
 }
+
 
 #' @export
 pgx.readOptions <- function(file = "./OPTIONS") {
@@ -366,7 +359,8 @@ pgx.scanInfoFile <- function(pgx.dir, file="datasets-info.csv", force=FALSE, ver
         pgx.initDatasetFolder1(pgx.dir[i], force=force, verbose=TRUE)
         pgxinfo.file <- file.path(pgx.dir[i], file)
         if(!file.exists(pgxinfo.file)) next()  ## really?? no updating??
-        info = fread.csv(pgxinfo.file, stringsAsFactors=FALSE, row.names=1, sep=',')
+        ## do not use fread.csv or fread here!! see issue #441
+        info = read.csv(pgxinfo.file, stringsAsFactors=FALSE, row.names=1, sep=',')
         dim(info)
         info$path <- pgx.dir[i]
         if(is.null(pgxinfo)) {
