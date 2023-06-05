@@ -16,7 +16,7 @@ pgx.calculateWordCloud <- function(ngs, progress=NULL, pg.unit=1) {
     }
     
     if(!is.null(progress)) progress$set(message = "WordCloud", value = 0)
-    
+
     ## get gset meta foldchange-matrix
     S <- sapply( ngs$gset.meta$meta, function(x) x$meta.fx)
     rownames(S) <- rownames(ngs$gset.meta$meta[[1]])
@@ -85,7 +85,7 @@ pgx.calculateWordCloud <- function(ngs, progress=NULL, pg.unit=1) {
     res <- res[(res$padj < 1 & res$NES>0),]
     res <- res[order(-abs(res$NES)),]
     dim(res)
-    
+
     ## now compute significant terms for all contrasts
     all.gsea <- list()
     for(i in 1:ncol(S)) {
@@ -122,6 +122,15 @@ pgx.calculateWordCloud <- function(ngs, progress=NULL, pg.unit=1) {
     colnames(pos1) = colnames(pos2) = c("x","y")
     pos1 = pos1[match(res$word,rownames(pos1)),]
     pos2 = pos2[match(res$word,rownames(pos2)),]
+    
+
+    # sometimes we have words that NA is tsne, make sure we remove them (likely special characters) in windows or wsl
+    pos1 <- pos1[!is.na(rownames(pos1)),]
+    pos2 <- pos2[!is.na(rownames(pos2)),]
+    
+    ordered_words <- all.gsea[[1]]$word
+    res$tsne <- res$tsne[ordered_words,]
+    res$umap <- res$umap[ordered_words,]
     
     all.res = list(gsea=all.gsea, S=S, W=W, tsne=pos1, umap=pos2)
     all.res
