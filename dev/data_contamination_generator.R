@@ -61,19 +61,20 @@ lapply(names(input_files), function(x) {
 
 # generate files with file names (count1.csv, Counts.csv...)
 
-create_dir("data-test/filenames")
+create_dir("data-test/filenames/firstcapitalletter")
+create_dir("data-test/filenames/allcapitalletters")
+create_dir("data-test/filenames/prepend")
+create_dir("data-test/filenames/append")
 
 lapply(names(input_files), function(x) {
-    
     # filename with first capital letter
-    write.table(input_files[[x]], file = paste0("data-test//filenames//",stringr::str_to_title(x), ".csv"), sep = ",", quote = FALSE, row.names = FALSE)
+    write.table(input_files[[x]], file = paste0("data-test//filenames//firstcapitalletter//",stringr::str_to_title(x), ".csv"), sep = ",", quote = FALSE, row.names = FALSE)
     # filename in all capital letters
-    write.table(input_files[[x]], file = paste0("data-test//filenames//",stringr::str_to_upper(x),".csv"), sep = ",", quote = FALSE, row.names = FALSE)
-    # prepent before filaname
-    write.table(input_files[[x]], file = file.path("data-test//filenames//",paste0("lalalala01_",x,".csv")), sep = ",", quote = FALSE, row.names = FALSE)
+    write.table(input_files[[x]], file = paste0("data-test//filenames//allcapitalletters//",stringr::str_to_upper(x),".csv"), sep = ",", quote = FALSE, row.names = FALSE)
+    # prepend before filaname
+    write.table(input_files[[x]], file = file.path("data-test//filenames//prepend//",paste0("lalalala01_",x,".csv")), sep = ",", quote = FALSE, row.names = FALSE)
     # append after filename
-    write.table(input_files[[x]], file = file.path("data-test//filenames//",paste0(x,"_lalalala01_",".csv")), sep = ",", quote = FALSE, row.names = FALSE)
-
+    write.table(input_files[[x]], file = file.path("data-test//filenames//append",paste0(x,"_lalalala01_",".csv")), sep = ",", quote = FALSE, row.names = FALSE)
 })
 
 # generate tsv and csv files for all input files
@@ -132,7 +133,7 @@ lapply(names(input_files), function(x) {
     }
     
     if(x == "counts"){
-        ?write.table(input_files[[x]], file = paste0("data-test//contrastinputs//short_condition//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+        write.table(input_files[[x]], file = paste0("data-test//contrastinputs//short_condition//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
         write.table(input_files[[x]], file = paste0("data-test//contrastinputs//short_condition_inverse//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
         write.table(input_files[[x]], file = paste0("data-test//contrastinputs//short_integer//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
     }
