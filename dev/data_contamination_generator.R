@@ -68,13 +68,13 @@ create_dir("data-test/filenames/append")
 
 lapply(names(input_files), function(x) {
     # filename with first capital letter
-    write.table(input_files[[x]], file = paste0("data-test//filenames//firstcapitalletter//",stringr::str_to_title(x), ".csv"), sep = ",", quote = FALSE, row.names = FALSE)
+    write.table(input_files[[x]], file = paste0("data-test//filenames//firstcapitalletter//",stringr::str_to_title(x), ".csv"), sep = ",", quote = FALSE, row.names = TRUE,col.names=NA)
     # filename in all capital letters
-    write.table(input_files[[x]], file = paste0("data-test//filenames//allcapitalletters//",stringr::str_to_upper(x),".csv"), sep = ",", quote = FALSE, row.names = FALSE)
+    write.table(input_files[[x]], file = paste0("data-test//filenames//allcapitalletters//",stringr::str_to_upper(x),".csv"), sep = ",", quote = FALSE, row.names = TRUE,col.names=NA)
     # prepend before filaname
-    write.table(input_files[[x]], file = file.path("data-test//filenames//prepend//",paste0("lalalala01_",x,".csv")), sep = ",", quote = FALSE, row.names = FALSE)
+    write.table(input_files[[x]], file = file.path("data-test//filenames//prepend//",paste0("lalalala01_",x,".csv")), sep = ",", quote = FALSE, row.names = TRUE,col.names=NA)
     # append after filename
-    write.table(input_files[[x]], file = file.path("data-test//filenames//append",paste0(x,"_lalalala01_",".csv")), sep = ",", quote = FALSE, row.names = FALSE)
+    write.table(input_files[[x]], file = file.path("data-test//filenames//append",paste0(x,"_lalalala01_",".csv")), sep = ",", quote = FALSE, row.names = TRUE,col.names=NA)
 })
 
 # generate tsv and csv files for all input files
@@ -84,6 +84,7 @@ create_dir("data-test/filetype/tsv")
 create_dir("data-test/filetype/txt")
 
 lapply(names(input_files), function(x) {
+
     write.table(input_files[[x]], file = paste0("data-test//filetype//tsv//",x, ".tsv"), sep = "\t", quote = FALSE, row.names = TRUE, col.names=NA)
     write.table(input_files[[x]], file = paste0("data-test//filetype//csv//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
     write.table(input_files[[x]], file = paste0("data-test//filetype//txt//",x, ".txt"), quote = FALSE, row.names = TRUE, col.names=NA)
