@@ -7,14 +7,6 @@
 ##========================= CONNECTIVITY FUNCTIONS ===============================
 ##================================================================================
 
-getSIGDB.DIR <- function() {
-  if(!exists("SIGDB.DIR") && exists("FILESX")) {
-    SIGDB.DIR <- c(FILESX,file.path(FILESX,"sigdb"))
-  } else {
-    SIGDB.DIR
-  }
-}
-
 
 #' @export
 pgx.computeConnectivityScores <- function(pgx, sigdb, ntop=1000, contrasts=NULL,
@@ -38,7 +30,7 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop=1000, contrasts=NULL,
         h5.file <- sigdb
     }
     if(is.null(h5.file)) {
-        cat("[pgx.computeConnectivityScores] ERROR: could not H5 file\n")
+        cat("[pgx.computeConnectivityScores] ERROR: could not open H5 file\n")
         return(NULL)
     }
 
@@ -73,8 +65,8 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop=1000, contrasts=NULL,
         for(j in 1:length(scores)) scores[[j]]$leadingEdge <- NULL
     }
 
-    names(scores)
-    return(scores)
+  names(scores)
+  return(scores)
 }
 
 ## ntop=1000;nsig=100;nperm=10000
@@ -157,8 +149,7 @@ pgx.correlateSignatureH5.inmemory <- function(F, h5.file, nsig=100, ntop=1000, n
         gmt <- rbind(sig100.up, sig100.dn)
         gmt <- unlist(apply(gmt, 2, list),recursive=FALSE)
         names(gmt) <- cn[sel.idx]
-        length(gmt)
-
+      
         ## use entire fc vector
         system.time(res1 <- fgsea::fgseaSimple(gmt, abs(fc), nperm=nperm))  ## really unsigned???
         dim(res1)
@@ -176,12 +167,6 @@ pgx.correlateSignatureH5.inmemory <- function(F, h5.file, nsig=100, ntop=1000, n
 
         gc()
 
-    }
-
-    if(0) {
-        res$rho.p <- cor.pvalue(res$rho, n=length(gg))
-        res$meta.p  <- apply( res[,c("pval","rho.p")], 1, function(p) metap::sumz(p)$p)
-        res <- res[order(res$meta.p),]
     }
     remove(matG)
     gc()
@@ -500,24 +485,11 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only=FALSE)
 
     rhdf5::h5closeAll()
     ## return(X)
-
-    ## check NA!!! sometimes it is set to large negative
-    if(0) {
-        rhdf5::h5ls(h5.file)
-        X  <- rhdf5::h5read(h5.file, "data/matrix")
-        Matrix::head(X[,1])
-        ##X[which(X < -999999)] <- NA
-        ##head(X[,1])
-        ##h5write( X, h5.file, "data/matrix")  ## can write list??
-        ##h5closeAll()
-    }
-
-}
+}  ## end of pgx.createCreedsSigDB
 
 #' @export
-pgx.createSignatureDatabaseH5 <- function(pgx.files, h5.file, update.only=FALSE)
+pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only=FALSE)
 {
-
 
     h5exists <- function(h5.file, obj) {
         xobjs <- apply(rhdf5::h5ls(h5.file)[,1:2],1,paste,collapse="/")
@@ -535,7 +507,7 @@ pgx.createSignatureDatabaseH5 <- function(pgx.files, h5.file, update.only=FALSE)
         ## make big FC signature matrix
         ##--------------------------------------------------
         F <- list()
-        cat("reading FC from",length(pgx.files),"pgx files ")
+        cat("[pgx.createSignatureDatabaseH5] reading FC from",length(pgx.files),"pgx files ")
         i=1
         for(i in 1:length(pgx.files)) {
             if(!file.exists(pgx.files[i])) next()
@@ -564,89 +536,91 @@ pgx.createSignatureDatabaseH5 <- function(pgx.files, h5.file, update.only=FALSE)
         table(is.na(gannot$chr))
         sel <- which(!is.na(gannot$chr))
         X <- X[sel,,drop=FALSE]
-        dim(X)
-
-        pgx.saveMatrixH5(X, h5.file, chunk=c(nrow(X),1))
-
-        if(0) {
-            rhdf5::h5ls(h5.file)
-            rhdf5::h5write( X, h5.file, "data/matrix")  ## can write list??
-            rhdf5::h5write( colnames(X), h5.file,"data/colnames")
-            rhdf5::h5write( rownames(X), h5.file,"data/rownames")
-        }
         remove(F)
     }
     dim(X)
 
-    ##--------------------------------------------------
-    ## Calculate top100 gene signatures
-    ##--------------------------------------------------
-    cat("Creating top-100 signatures...\n")
+    pgx.createSignatureDatabaseH5.fromMatrix(
+      X = X,
+      h5.file = h5.file,
+      update.only = update.only
+    )
+    
+}
 
-    if(!update.only || !h5exists(h5.file, "signature")) {
-        ## X  <- rhdf5::h5read(h5.file, "data/matrix")
-        rn <- rhdf5::h5read(h5.file,"data/rownames")
-        cn <- rhdf5::h5read(h5.file,"data/colnames")
-        rhdf5::h5ls(h5.file)
+#' @export
+pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only=FALSE)
+{
 
-        dim(X)
-        ##X <- X[,1:100]
-        X[is.na(X)] <- 0
-        orderx <- apply(X,2,function(x) {
-            idx=order(x);
-            list(DN=head(idx,100),UP=rev(Matrix::tail(idx,100)))
-        })
-        sig100.dn <- sapply(orderx,"[[","DN")
-        sig100.dn <- apply(sig100.dn, 2, function(i) rn[i])
-        sig100.up <- sapply(orderx,"[[","UP")
-        sig100.up <- apply(sig100.up, 2, function(i) rn[i])
-
-        if(!h5exists(h5.file, "signature")) rhdf5::h5createGroup(h5.file,"signature")
-        rhdf5::h5write( sig100.dn, h5.file, "signature/sig100.dn")  ## can write list???
-        rhdf5::h5write( sig100.up, h5.file, "signature/sig100.up")  ## can write list??
-
-        remove(orderx)
+  file.exists(h5.file)
+  if(file.exists(h5.file)) unlink(h5.file)
+  ##chunk=c(nrow(X),1)
+  pgx.saveMatrixH5(X, h5.file, chunk=c(nrow(X),1))
+  
+  ##--------------------------------------------------
+  ## Calculate top100 gene signatures
+  ##--------------------------------------------------
+  cat("[pgx.createSignatureDatabaseH5.fromMatrix] Creating top-100 signatures...")
+  
+  if(!update.only || !h5exists(h5.file, "signature")) {
+    ## X  <- rhdf5::h5read(h5.file, "data/matrix")
+    rn <- rhdf5::h5read(h5.file,"data/rownames")
+    cn <- rhdf5::h5read(h5.file,"data/colnames")
+    rhdf5::h5ls(h5.file)
+    
+    dim(X)
+    ##X <- X[,1:100]
+    X[is.na(X)] <- 0
+    orderx <- apply(X,2,function(x) {
+      idx=order(x);
+      list(DN=head(idx,100),UP=rev(Matrix::tail(idx,100)))
+    })
+    sig100.dn <- sapply(orderx,"[[","DN")
+    sig100.dn <- apply(sig100.dn, 2, function(i) rn[i])
+    sig100.up <- sapply(orderx,"[[","UP")
+    sig100.up <- apply(sig100.up, 2, function(i) rn[i])
+    
+    if(!h5exists(h5.file, "signature")) rhdf5::h5createGroup(h5.file,"signature")
+    rhdf5::h5write( sig100.dn, h5.file, "signature/sig100.dn")  ## can write list???
+    rhdf5::h5write( sig100.up, h5.file, "signature/sig100.up")  ## can write list??
+    
+    remove(orderx)
         remove(sig100.dn)
-        remove(sig100.up)
-    }
+    remove(sig100.up)
+  }
 
     ##--------------------------------------------------
     ## Precalculate t-SNE/UMAP
     ##--------------------------------------------------
-    dim(X)
-
     if(!update.only || !h5exists(h5.file, "clustering")) {
-
-        if(!h5exists(h5.file, "clustering")) rhdf5::h5createGroup(h5.file,"clustering")
-        rhdf5::h5ls(h5.file)
-
-        pos <- pgx.clusterBigMatrix(
-            abs(X),  ## on absolute foldchange!!
-            methods=c("pca","tsne","umap"),
-            dims=c(2,3),
-            reduce.sd = 2000,
-            reduce.pca = 200 )
-        names(pos)
-
-        rhdf5::h5write( pos[["pca2d"]], h5.file, "clustering/pca2d")  ## can write list??
-        rhdf5::h5write( pos[["pca3d"]], h5.file, "clustering/pca3d")  ## can write list??
-        rhdf5::h5write( pos[["tsne2d"]], h5.file, "clustering/tsne2d")  ## can write list??
-        rhdf5::h5write( pos[["tsne3d"]], h5.file, "clustering/tsne3d")  ## can write list??
-        rhdf5::h5write( pos[["umap2d"]], h5.file, "clustering/umap2d")  ## can write list??
-        rhdf5::h5write( pos[["umap3d"]], h5.file, "clustering/umap3d")  ## can write list??
-
+      
+      if(!h5exists(h5.file, "clustering")) rhdf5::h5createGroup(h5.file,"clustering")
+      rhdf5::h5ls(h5.file)
+      
+      pos <- pgx.clusterBigMatrix(
+        abs(X),  ## on absolute foldchange!!
+        methods=c("pca","tsne","umap"),
+        dims=c(2,3),
+        reduce.sd = 2000,
+        reduce.pca = 200 )
+      names(pos)
+      
+      rhdf5::h5write( pos[["pca2d"]], h5.file, "clustering/pca2d")  ## can write list??
+      rhdf5::h5write( pos[["pca3d"]], h5.file, "clustering/pca3d")  ## can write list??
+      rhdf5::h5write( pos[["tsne2d"]], h5.file, "clustering/tsne2d")  ## can write list??
+      rhdf5::h5write( pos[["tsne3d"]], h5.file, "clustering/tsne3d")  ## can write list??
+      rhdf5::h5write( pos[["umap2d"]], h5.file, "clustering/umap2d")  ## can write list??
+      rhdf5::h5write( pos[["umap3d"]], h5.file, "clustering/umap3d")  ## can write list??
     }
-
+  
     rhdf5::h5closeAll()
     ## return(X)
 }
 
 #' @export
 pgx.addEnrichmentSignaturesH5 <- function(h5.file, X=NULL, mc.cores=0,
-                                          methods = c("gsea","gsva") )
+                                          methods = c("gsea","rankcor")[2] )
 {
-
-
     h5exists <- function(h5.file, obj) {
         xobjs <- apply(rhdf5::h5ls(h5.file)[,1:2],1,paste,collapse="/")
         obj %in% gsub("^/|^//","",xobjs)
@@ -661,19 +635,18 @@ pgx.addEnrichmentSignaturesH5 <- function(h5.file, X=NULL, mc.cores=0,
         X[which(X < -999999)] <- NA
     }
 
+    ##---------------------- ONLY HALLMARK FOR NOW -----------------------
     ##sig100.dn <- rhdf5::h5read(h5.file, "signature/sig100.dn")
     ##sig100.up <- rhdf5::h5read(h5.file, "signature/sig100.up")
     G <- playdata::GSET_SPARSEG_XL
     dim(G)
     sel <- grep("HALLMARK|C[1-9]|^GO", rownames(G))
     sel <- grep("HALLMARK", rownames(G))
-    sel <- grep("HALLMARK|KEGG", rownames(G))
     length(sel)
-
-    G <- G[sel,,drop=FALSE]
+    genes <- intersect(colnames(G),rownames(X))
+    G <- G[sel,genes,drop=FALSE]
+    X <- X[genes,]
     gmt <- apply(G, 1, function(x) colnames(G)[which(x!=0)])
-    ##X <- X[,1:20]
-    ##X[is.na(X)] <- 0
 
     if(!h5exists(h5.file, "enrichment")) {
         rhdf5::h5createGroup(h5.file,"enrichment")
@@ -681,47 +654,34 @@ pgx.addEnrichmentSignaturesH5 <- function(h5.file, X=NULL, mc.cores=0,
     if(h5exists(h5.file, "enrichment/genesets")) {
         rhdf5::h5delete(h5.file, "enrichment/genesets")
     }
-    ##h5write(names(gmt), h5.file, "enrichment/genesets")
+    rhdf5::h5write(names(gmt), h5.file, "enrichment/genesets")
 
     if("gsea" %in% methods) {
-        cat("[pgx.addEnrichmentSignaturesH5] starting fGSEA for",length(gmt),"gene sets...\n")
-
+        cat("[pgx.addEnrichmentSignaturesH5] starting fGSEA for",length(gmt),"gene sets...")
         i=1
-        F1 <- parallel::mclapply(1:ncol(X), function(i) {
+        F1 <- parallel::mclapply(colnames(X), function(i) {
             xi <- X[,i]
-            xi[is.na(xi)] <- 0
+            xi <- xi[!is.na(xi)] 
             xi <- xi + 1e-3*rnorm(length(xi))
             res1 <- fgsea::fgseaSimple(gmt, xi, nperm=10000, nproc=mc.cores)
             r <- res1$NES
             names(r) <- res1$pathway
             r
         })
-
-        cat("[pgx.addEnrichmentSignaturesH5] length(F1)=",length(F1),"\n")
         F1 <- do.call(cbind, F1)
-        cat("[pgx.addEnrichmentSignaturesH5] 1: dim(F1)=",dim(F1),"\n")
-        ## rownames(F1) <- names(gmt)
-        ## colnames(F1) <- colnames(X)
         F1 <- F1[match(names(gmt),rownames(F1)),,drop=FALSE]
         F1[is.na(F1)] <- 0
-        cat("[pgx.addEnrichmentSignaturesH5] 2: dim(F1)=",dim(F1),"\n")
+        colnames(F1) <- colnames(X)
         if(h5exists(h5.file, "enrichment/GSEA")) rhdf5::h5delete(h5.file, "enrichment/GSEA")
-        if(h5exists(h5.file, "enrichment/genesets")) rhdf5::h5delete(h5.file, "enrichment/genesets")
         rhdf5::h5write(F1, h5.file, "enrichment/GSEA")
-        rhdf5::h5write(rownames(F1), h5.file, "enrichment/genesets")
     }
-    if("gsva" %in% methods) {
-        cat("[pgx.addEnrichmentSignaturesH5] starting GSVA for",length(gmt),"gene sets...\n")
 
-        ## mc.cores = 4
-        F2 <- GSVA::gsva(X, gmt, method="gsva", parallel.sz=mc.cores)
-        cat("[pgx.addEnrichmentSignaturesH5] dim(F2)=",dim(F2),"\n")
-        F2 <- F2[match(names(gmt),rownames(F2)),,drop=FALSE]
-        F2[is.na(F2)] <- 0
-        if(h5exists(h5.file, "enrichment/GSVA")) rhdf5::h5delete(h5.file, "enrichment/GSVA")
-        if(h5exists(h5.file, "enrichment/genesets")) rhdf5::h5delete(h5.file, "enrichment/genesets")
-        rhdf5::h5write(F2, h5.file, "enrichment/GSVA")
-        rhdf5::h5write(rownames(F2), h5.file, "enrichment/genesets")
+    if("rankcor" %in% methods) {
+        F3 <- gset.rankcor(X, Matrix::t(G))$rho
+        F3 <- F3[match(names(gmt),rownames(F3)),,drop=FALSE]
+        F3[is.na(F3)] <- 0
+        if(h5exists(h5.file, "enrichment/rankcor")) rhdf5::h5delete(h5.file, "enrichment/rankcor")
+        rhdf5::h5write(F3, h5.file, "enrichment/rankcor")
     }
 
     rhdf5::h5ls(h5.file)
@@ -860,14 +820,6 @@ pgx.computeGeneSetExpression <- function(X, gmt, method=NULL,
     gs <- Reduce(intersect, lapply(S,rownames))
     S <- lapply(S, function(x) x[gs,])
 
-    if(0) {
-        ## show pairs
-        names(S)
-        dim(S[[1]])
-        pairs(sapply(S,function(x) x[,1])) ## corr by genesets
-        pairs(sapply(S,function(x) x[1,])) ## corr by sample
-    }
-
     return(S)
 }
 
@@ -875,8 +827,21 @@ pgx.computeGeneSetExpression <- function(X, gmt, method=NULL,
 ##========================= SIGDB H5 FUNCTIONS ===================================
 ##================================================================================
 
+## IK 2.6.23: going to rewrite following functions without global
+## SIGDB.DIR. For the moment seems these functions are duplicated in
+## omicsplayground/components/board.connectivity
+
+getSIGDB.DIR <- function() {
+  if(!exists("SIGDB.DIR") && exists("FILESX")) {
+    SIGDB.DIR <- c(FILESX,file.path(FILESX,"sigdb"))
+  } else {
+    SIGDB.DIR
+  }
+}
+
+
 #' @export
-sigdb.getConnectivityFullPath <- function(sigdb) {
+sigdb.getConnectivityFullPath.DEPRECATED <- function(sigdb) {
     db.exists <- sapply(getSIGDB.DIR(), function(d) file.exists(file.path(d,sigdb)))
     db.exists
     db.dir <- names(which(db.exists))[1]
@@ -885,70 +850,61 @@ sigdb.getConnectivityFullPath <- function(sigdb) {
 }
 
 #' @export
-sigdb.getConnectivityContrasts <- function(sigdb) {
-    db <- getConnectivityFullPath(sigdb)
-    rhdf5::h5read(db, "data/colnames")
+sigdb.getConnectivityContrasts <- function(sigdb, path=NULL) {
+    if(!is.null(path)) {
+      sigdb <- file.path(path, sigdb)
+#    } else {
+#      sigdb <- getConnectivityFullPath(sigdb)
+    }
+    if(!file.exists(sigdb)) return(NULL)
+    rhdf5::h5read(sigdb, "data/colnames")
 }
 
 #' @export
-sigdb.getConnectivityMatrix <- function(sigdb, select=NULL, genes=NULL)
+sigdb.getConnectivityMatrix <- function(sigdb, select=NULL, genes=NULL, path=NULL)
 {
-    if(0) {
-        sigdb = "sigdb-archs4.h5"
-        sigdb = "sigdb-creeds.h5"
-    }
     if(sigdb=="" || is.null(sigdb)) {
         warning("[getConnectivityMatrix] ***WARNING*** sigdb=",sigdb)
         return(NULL)
     }
+    if(!is.null(path)) {
+      sigdb <- file.path(path, sigdb)
+    }
+    if(!file.exists(sigdb)) {
+        warning("[getConnectivityMatrix] ***WARNING*** file ",sigdb,"not found")
+        return(NULL)
+    }
 
-    if(!is.null(select)) warning("[getConnectivityMatrix] length(select)=",length(select))
-    if(!is.null(genes))  warning("[getConnectivityMatrix] length(genes)=",length(genes))
-
-    db.exists <- sapply( getSIGDB.DIR(), function(d) file.exists(file.path(d,sigdb)))
-    X <- NULL
-    if(any(db.exists)) {
-        db.dir <- names(which(db.exists))[1]
-        db.dir
-        if(grepl("csv$",sigdb)) {
-            X <- read.csv(file.path(db.dir, sigdb), row.names=1, check.names=FALSE)
-            X <- as.matrix(X)
-            X <- X[,colMeans(is.na(X)) < 0.99,drop=FALSE]  ## omit empty columns
-            if(!is.null(genes)) X <- X[intersect(genes,rownames(X)),,drop=FALSE]
-            if(!is.null(select)) X <- X[, intersect(select,colnames(X))]
-        }
-        if(grepl("h5$",sigdb)) {
-            h5.file <- file.path(db.dir, sigdb)
-            cn <- rhdf5::h5read(h5.file, "data/colnames")
-            rn <- rhdf5::h5read(h5.file, "data/rownames")
-            rowidx <- 1:length(rn)
-            colidx <- 1:length(cn)
-            if(!is.null(genes)) rowidx <- match(intersect(genes,rn),rn)
-            if(!is.null(select)) colidx <- match(intersect(select,cn),cn)
-
-            nr <- length(rowidx)
-            nc <- length(colidx)
-            dbg("*** WARNING *** reading large H5 file:",nr,"x",nc,"")
-
-            X  <- rhdf5::h5read(h5.file, "data/matrix", index = list(rowidx,colidx) )
-            rownames(X) <- rn[rowidx]
-            colnames(X) <- cn[colidx]
-        }
+    ##db.exists <- sapply( getSIGDB.DIR(), function(d) file.exists(file.path(d,sigdb)))
+    if(grepl("csv$",sigdb)) {
+      X <- read.csv(sigdb, row.names=1, check.names=FALSE)
+      X <- as.matrix(X)
+      X <- X[,colMeans(is.na(X)) < 0.99,drop=FALSE]  ## omit empty columns
+      if(!is.null(genes)) X <- X[intersect(genes,rownames(X)),,drop=FALSE]
+      if(!is.null(select)) X <- X[, intersect(select,colnames(X))]
+    } else if(grepl("h5$",sigdb)) {
+      cn <- rhdf5::h5read(sigdb, "data/colnames")
+      rn <- rhdf5::h5read(sigdb, "data/rownames")
+      rowidx <- 1:length(rn)
+      colidx <- 1:length(cn)
+      if(!is.null(genes)) rowidx <- match(intersect(genes,rn),rn)
+      if(!is.null(select)) colidx <- match(intersect(select,cn),cn)      
+      nr <- length(rowidx)
+      nc <- length(colidx)
+      dbg("[sigdb.getConnectivityMatrix] *WARNING* reading large H5 file:",nr,"x",nc,"")      
+      X  <- rhdf5::h5read(sigdb, "data/matrix", index = list(rowidx,colidx) )
+      rownames(X) <- rn[rowidx]
+      colnames(X) <- cn[colidx]
     } else {
         cat("[getConnectivityMatrix] WARNING: could not retrieve matrix\n")
-        ## X <- as.matrix(PROFILES$FC)
-        ## X <- X[,colMeans(is.na(X)) < 0.99,drop=FALSE]  ## omit empty columns
-        ## if(!is.null(genes)) X <- X[intersect(genes,rownames(X)),,drop=FALSE]
-        ## if(!is.null(select)) X <- X[, intersect(select,colnames(X))]
     }
-    class(X)
     return(X)
 }
 
 #' @export
-sigdb.getEnrichmentMatrix <- function(sigdb, select=NULL, nc=-1)
+sigdb.getEnrichmentMatrix <- function(sigdb, select=NULL, path=NULL,
+                                      which=c("gsea","rankcor")[1])
 {
-
     if(sigdb=="" || is.null(sigdb)) {
         dbg("[getEnrichmentMatrix] ***WARNING*** sigdb=",sigdb)
         return(NULL)
@@ -961,88 +917,74 @@ sigdb.getEnrichmentMatrix <- function(sigdb, select=NULL, nc=-1)
         stop("getEnrichmentMatrix:: only for H5 database files")
         return(NULL)
     }
+    if(!is.null(path)) {
+      sigdb <- file.path(path, sigdb)
+    }
+    if(!file.exists(sigdb)) {
+        warning("[sigdb.getEnrichmentMatrix] *WARNING* file ",sigdb,"not found")
+        return(NULL)
+    }
 
     h5exists <- function(h5.file, obj) {
         xobjs <- apply(rhdf5::h5ls(h5.file)[,1:2],1,paste,collapse="/")
         obj %in% gsub("^/|^//","",xobjs)
     }
 
-    db.exists <- sapply( getSIGDB.DIR(), function(d) file.exists(file.path(d,sigdb)))
-    db.exists
-    Y <- NULL
-    if(any(db.exists)) {
-        db.dir <- names(which(db.exists))[1]
-        db.dir
-        h5.file <- file.path(db.dir, sigdb)
-        cn <- rhdf5::h5read(h5.file, "data/colnames")
-
-        has.gs   <- h5exists(h5.file, "enrichment/genesets")
-        has.gsea <- h5exists(h5.file, "enrichment/GSEA")
-        if(!has.gs && has.gsea) {
-            dbg("[getEnrichmentMatrix] WARNING: PGX object has no enrichment results")
-            return(NULL)
-        }
-
-        rn <- rhdf5::h5read(h5.file, "enrichment/genesets")
-        rowidx <- 1:length(rn)
-        colidx <- 1:length(cn)
-        if(!is.null(select)) colidx <- match(intersect(select,cn),cn)
-        Y  <- rhdf5::h5read(h5.file, "enrichment/GSEA", index = list(rowidx,colidx) )
-        rownames(Y) <- rn[rowidx]
-        colnames(Y) <- cn[colidx]
-        dim(Y)
-        sdy <- apply(Y,1,sd)
-        Y <- Y[order(-sdy),]
-    }
-
-    ## cluster genesets into larger groups
-    if(nc>0) {
-        hc <- fastcluster::hclust(dist(Y[,]))
-        idx <- paste0("h",cutree(hc, nc))
-        Y2 <- tapply( 1:nrow(Y), idx, function(i) colMeans(Y[i,,drop=FALSE]))
-        Y2 <- do.call(rbind, Y2)
-        idx.names <- tapply(rownames(Y),idx,paste,collapse=",")
-        idx.names <- gsub("H:HALLMARK_","",idx.names)
-        idx.names <- gsub("C2:KEGG_","",idx.names)
-        rownames(Y2) <- as.character(idx.names[rownames(Y2)])
-        Y <- Y2
-    }
-
-    if(nrow(Y)==0) {
+    cn <- rhdf5::h5read(sigdb, "data/colnames")
+    has.gs   <- h5exists(sigdb, "enrichment/genesets")
+    if(!has.gs) {
+        dbg("[getEnrichmentMatrix] WARNING: PGX object has no enrichment results")
         return(NULL)
     }
 
-    class(Y)
+    rn <- rhdf5::h5read(sigdb, "enrichment/genesets")
+    rowidx <- 1:length(rn)
+    colidx <- 1:length(cn)
+    if(!is.null(select)) colidx <- match(intersect(select,cn),cn)
+
+    has.gsea <- h5exists(sigdb, "enrichment/GSEA")
+    has.rankcor <- h5exists(sigdb, "enrichment/rankcor")
+    Y <- NULL
+    if(which == "gsea" && has.gsea) {
+      Y  <- rhdf5::h5read(sigdb, "enrichment/GSEA", index = list(rowidx,colidx) )
+    }
+    if(which == "rankcor" && has.rankcor) {
+      Y  <- rhdf5::h5read(sigdb, "enrichment/rankcor", index = list(rowidx,colidx) )
+    }
+    if(is.null(Y) || nrow(Y)==0) {
+        return(NULL)
+    }
+    rownames(Y) <- rn[rowidx]
+    colnames(Y) <- cn[colidx]
+
     return(Y)
 }
 
 #' @export
-sigdb.getSignatureMatrix <- function(sigdb) {
+sigdb.getSignatureMatrix <- function(sigdb, path=NULL) {
 
     if(sigdb=="" || is.null(sigdb)) {
         dbg("[getEnrichmentMatrix] ***WARNING*** sigdb=",sigdb)
         return(NULL)
     }
-    if(!is.null(select)) dbg("[getEnrichmentMatrix] length(select)=",length(select))
-
     if(!grepl("h5$",sigdb)) {
         stop("getEnrichmentMatrix:: only for H5 database files")
     }
-
-    db.exists <- sapply( getSIGDB.DIR(), function(d) file.exists(file.path(d,sigdb)))
-    db.exists
-    up=dn=NULL
-    if(any(db.exists)) {
-        db.dir <- names(which(db.exists))[1]
-        db.dir
-        h5.file <- file.path(db.dir, sigdb)
-        rhdf5::h5ls(h5.file)
-        cn <- rhdf5::h5read(h5.file, "data/colnames")
-        dn <- rhdf5::h5read(h5.file, "signature/sig100.dn")
-        up <- rhdf5::h5read(h5.file, "signature/sig100.up")
-        colnames(dn) <- cn
-        colnames(up) <- cn
+    if(!is.null(path)) {
+      sigdb <- file.path(path, sigdb)
     }
+    if(!file.exists(sigdb)) {
+        warning("[sigdb.getEnrichmentMatrix] *WARNING* file ",sigdb,"not found")
+        return(NULL)
+    }
+
+    rhdf5::h5ls(sigdb)
+    cn <- rhdf5::h5read(sigdb, "data/colnames")
+    dn <- rhdf5::h5read(sigdb, "signature/sig100.dn")
+    up <- rhdf5::h5read(sigdb, "signature/sig100.up")
+    colnames(dn) <- cn
+    colnames(up) <- cn
+
     list(up=up, dn=dn)
 }
 

@@ -135,7 +135,7 @@ compute_extra <- function(ngs, extra = c(
           message("computing connectivity scores for ", db)
           ## in memory for many comparisons
           meta <- pgx.getMetaFoldChangeMatrix(ngs, what = "meta")
-          inmemory <- ifelse(ncol(meta$fc) > 50, TRUE, FALSE)
+          inmemory <- ifelse(ncol(meta$fc) > 50, TRUE, FALSE)  ## NEED RETHINK!! reverse?
           inmemory
           tt <- system.time({
             scores <- pgx.computeConnectivityScores(
@@ -155,7 +155,6 @@ compute_extra <- function(ngs, extra = c(
     } else {
       message(">>> Skipping connectivity scores (no libx.dir)...")
     }
-
   }
 
 
