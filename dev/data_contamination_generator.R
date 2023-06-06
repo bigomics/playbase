@@ -160,15 +160,16 @@ lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/ch
 # prepend header with special characters
 lapply(1:length(unlist(characters)), function (x){
     #x = 1
+    char <- unlist(characters)[[x]]
     
     filename = names(unlist(characters))[x]
     sample <- input_files$samples
     contrast <- input_files$contrast
     count <- input_files$count
 
-    colnames(sample) <- paste0(x, colnames(sample))
+    colnames(sample) <- paste0(char, colnames(sample))
 
-    colnames(contrast) <- paste0(x, colnames(contrast))
+    colnames(contrast) <- paste0(char, colnames(contrast))
 
     write.table(sample, file = paste0("data-test//chars//prepend_header//",filename, "//sample.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
     write.table(contrast, file = paste0("data-test//chars//prepend_header//",filename, "//contrast.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
@@ -176,24 +177,21 @@ lapply(1:length(unlist(characters)), function (x){
 
 })
 
-lapply(unlist(characters), function (x){
-    return()
-}) -> output_char$prepend_header
-
 # add special characters to sample metadata AND respective contrast
 
 lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/chars/sample_contrast_phenotype/",x)))
 
 lapply(1:length(unlist(characters)), function (x){
-    #x = 1
+    
+    char <- unlist(characters)[[x]]
     filename = names(unlist(characters))[x]
     sample <- input_files$samples
     contrast <- input_files$contrast
     count <- input_files$count
 
-    sample[,1] <- paste0(x, sample[,1])
+    sample[,1] <- paste0(char, sample[,1])
 
-    rownames(contrast) <- paste0(x, rownames(contrast))
+    rownames(contrast) <- paste0(char, rownames(contrast))
 
     contrast_split <- strsplit(colnames(contrast), split = "_")
 
@@ -219,11 +217,12 @@ lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/ch
 lapply(1:length(unlist(characters)), function (x){
     #x = 1
     filename = names(unlist(characters))[x]
+    char <- unlist(characters)[[x]]
     sample <- input_files$samples
     contrast <- input_files$contrast
     count <- input_files$count
 
-    rownames(sample) <- paste0(x, rownames(sample))
+    rownames(sample) <- paste0(char, rownames(sample))
 
     colnames(count) <-  rownames(sample)
     

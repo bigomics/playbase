@@ -1,4 +1,4 @@
-,25act12h_vs_notact,25act24h_vs_notact,25act48h_vs_notact,25act72h_vs_notact,25act96h_vs_notact,25act_vs_notact
+,\bact12h_vs_notact,\bact24h_vs_notact,\bact48h_vs_notact,\bact72h_vs_notact,\bact96h_vs_notact,\bact_vs_notact
 notact,-1,-1,-1,-1,-1,-1
 act12h,1,0,0,0,0,1
 act24h,0,1,0,0,0,1

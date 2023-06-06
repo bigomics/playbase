@@ -1,4 +1,4 @@
-,16act12h_vs_notact,16act24h_vs_notact,16act48h_vs_notact,16act72h_vs_notact,16act96h_vs_notact,16act_vs_notact
+,_act12h_vs_notact,_act24h_vs_notact,_act48h_vs_notact,_act72h_vs_notact,_act96h_vs_notact,_act_vs_notact
 notact,-1,-1,-1,-1,-1,-1
 act12h,1,0,0,0,0,1
 act24h,0,1,0,0,0,1

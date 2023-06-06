@@ -1,7 +1,7 @@
 ,act12h_vs_26notact,act12h_vs_26notact,act12h_vs_26notact,act12h_vs_26notact,act12h_vs_26notact,act12h_vs_26notact
-26notact,-1,-1,-1,-1,-1,-1
-26act12h,1,0,0,0,0,1
-26act24h,0,1,0,0,0,1
-26act48h,0,0,1,0,0,1
-26act72h,0,0,0,1,0,1
-26act96h,0,0,0,0,1,1
+\anotact,-1,-1,-1,-1,-1,-1
+\aact12h,1,0,0,0,0,1
+\aact24h,0,1,0,0,0,1
+\aact48h,0,0,1,0,0,1
+\aact72h,0,0,0,1,0,1
+\aact96h,0,0,0,0,1,1

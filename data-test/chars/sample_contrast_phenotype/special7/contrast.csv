@@ -1,7 +1,7 @@
 ,act12h_vs_17notact,act12h_vs_17notact,act12h_vs_17notact,act12h_vs_17notact,act12h_vs_17notact,act12h_vs_17notact
-17notact,-1,-1,-1,-1,-1,-1
-17act12h,1,0,0,0,0,1
-17act24h,0,1,0,0,0,1
-17act48h,0,0,1,0,0,1
-17act72h,0,0,0,1,0,1
-17act96h,0,0,0,0,1,1
++notact,-1,-1,-1,-1,-1,-1
++act12h,1,0,0,0,0,1
++act24h,0,1,0,0,0,1
++act48h,0,0,1,0,0,1
++act72h,0,0,0,1,0,1
++act96h,0,0,0,0,1,1
