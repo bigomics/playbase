@@ -853,8 +853,6 @@ sigdb.getConnectivityFullPath.DEPRECATED <- function(sigdb) {
 sigdb.getConnectivityContrasts <- function(sigdb, path=NULL) {
     if(!is.null(path)) {
       sigdb <- file.path(path, sigdb)
-#    } else {
-#      sigdb <- getConnectivityFullPath(sigdb)
     }
     if(!file.exists(sigdb)) return(NULL)
     rhdf5::h5read(sigdb, "data/colnames")
