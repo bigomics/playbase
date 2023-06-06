@@ -1,0 +1,19 @@
+test,playbase_error,OPG_error
+data-test//contrastinputs/short_condition,No error,No error
+data-test//contrastinputs/short_condition_inverse,No error,Github issue opened
+data-test//contrastinputs/short_integer,No error,No error
+data-test//example_data,No error,No error
+data-test//filenames/allcapitalletters,No error,No error
+data-test//filenames/append,No error,No error
+data-test//filenames/firstcapitalletter,No error,No error
+data-test//filenames/prepend,No error,No error
+data-test//filetype/csv,No error,No error
+data-test//filetype/tsv,No error,Many problems
+data-test//filetype/txt,"Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
+",Close to success
+data-test//first_column_name,No error,No error
+,,
+,,
+,,
+todo,,
+"check randomly reordered rownames in samples, counts and contrasts",,

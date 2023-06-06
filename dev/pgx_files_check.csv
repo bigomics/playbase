@@ -1,0 +1,12 @@
+"","gx","gset"
+"allcapitalletters.pgx",1,1
+"append.pgx",1,1
+"csv.pgx",1,1
+"example_data.pgx",1,1
+"first_column_name.pgx",1,1
+"firstcapitalletter.pgx",1,1
+"prepend.pgx",1,1
+"short_condition.pgx",0.923090660548206,1
+"short_condition_inverse.pgx",0.820622389125653,-0.947989789344023
+"short_integer.pgx",0.923090660548206,1
+"tsv.pgx",1,1

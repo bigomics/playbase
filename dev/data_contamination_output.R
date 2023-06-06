@@ -87,11 +87,18 @@ write.csv(error_table, "dev//error_table.csv", row.names = FALSE)
 create_dir("dev//pgx")
 
 lapply(1:length(pgx_files), function(x){
-  #x = 1
+  #x = 2
   pgx_test <- pgx_files[[x]]
   filename <- stringr::str_extract(filepaths[[x]], "(?<=/)[^/]*$")
+  
 
   if (is.null(pgx_test$error)) {
+    pgx_test$result$name <- "empty"
+    pgx_test$result$description <- "empty"
+    pgx_test$result$datatype <- "empty"
+    pgx_test$result$creator <- "empty"
+    pgx_test$result$date <- "empty"
+
     playbase::pgx.save(pgx_test$result, file = paste0("dev//pgx//",filename,".pgx"))
   }
 })
