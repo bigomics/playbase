@@ -11,6 +11,8 @@ create_dir <- function(directory){
     }
 }
 
+output <- data.frame(filepaths = list.dirs("data-test/", recursive = TRUE))
+
 createPGX_safe <- purrr::safely(function(x) {
   pgx <- playbase::pgx.createPGX(
     counts = x$COUNTS,
@@ -25,31 +27,31 @@ createPGX_safe <- purrr::safely(function(x) {
   pgx
 })
 
-filepaths <- list.dirs("data-test/", recursive = TRUE)
-
-lapply(filepaths,function(x){
+unlist(lapply(output$filepaths,function(x){
     any(grepl("\\..+", dir(x), ignore.case = TRUE))
-}) -> directories_with_files
+})) -> directories_with_files
 
-filepaths <- filepaths[unlist(directories_with_files)]
-
+output$directories_with_files <- directories_with_files
 # same upload as opg
 
-lapply(filepaths, function(x){
-    print(x)
-    #x = filepaths[[4]]
-    samples_file <- list.files(x, pattern = "ampl", full.names = TRUE, ignore.case = TRUE)
-    counts_file <- list.files(x, pattern = "unt", full.names = TRUE, ignore.case = TRUE)
-    contrasts_file <- list.files(x, pattern = "ntra", full.names = TRUE, ignore.case = TRUE)
+data_files <- list()
+for (i in 1:nrow(output)) {
+  #i = 1
+  x <- output[i,]
+
+  if (x[2] == TRUE) {
+    samples_file <- list.files(x$filepaths, pattern = "ampl", full.names = TRUE, ignore.case = TRUE)
+    counts_file <- list.files(x$filepaths, pattern = "unt", full.names = TRUE, ignore.case = TRUE)
+    contrasts_file <- list.files(x$filepaths, pattern = "ntra", full.names = TRUE, ignore.case = TRUE)
 
     SAMPLES <- playbase::read.as_matrix(samples_file)
     COUNTS <- playbase::read.as_matrix(counts_file)
     CONTRASTS <- playbase::read.as_matrix(contrasts_file)
 
-    return(list(SAMPLES = SAMPLES, COUNTS = COUNTS, CONTRASTS = CONTRASTS))
-
-}) -> data_files
-
+    # append the list of files to data_files
+    data_files[[i]] <- list(SAMPLES = SAMPLES, COUNTS = COUNTS, CONTRASTS = CONTRASTS)
+  }
+}
 # run pgx create
 
 lapply(data_files, function(x){
