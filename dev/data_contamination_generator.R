@@ -155,9 +155,13 @@ lapply(names(input_files), function(x) {
 
 # generating files with different header names
 
+lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/chars/prepend_header/",x)))
+
 # prepend header with special characters
-lapply(unlist(characters), function (x){
-    #x = unlist(characters)[1]
+lapply(1:length(unlist(characters)), function (x){
+    #x = 1
+    
+    filename = names(unlist(characters))[x]
     sample <- input_files$samples
     contrast <- input_files$contrast
     count <- input_files$count
@@ -166,48 +170,23 @@ lapply(unlist(characters), function (x){
 
     colnames(contrast) <- paste0(x, colnames(contrast))
 
-    return(list(sample = sample, contrast = contrast, count = count))
+    write.table(sample, file = paste0("data-test//chars//prepend_header//",filename, "//sample.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(contrast, file = paste0("data-test//chars//prepend_header//",filename, "//contrast.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(count, file = paste0("data-test//chars//prepend_header//",filename, "//count.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
 
-}) -> output_char$prepend_header
+})
 
 lapply(unlist(characters), function (x){
     return()
 }) -> output_char$prepend_header
 
-# append header with special characters
-
-lapply(unlist(characters), function (x){
-    #x = unlist(characters)[1]
-    sample <- input_files$samples
-    contrast <- input_files$contrast
-    count <- input_files$count
-
-    colnames(sample) <- paste0(colnames(sample),x)
-
-    colnames(contrast) <- paste0(colnames(contrast),x)
-
-    return(list(sample = sample, contrast = contrast, count = count))
-
-}) -> output_char$append_header
-
-lapply(unlist(characters), function (x){
-    #x = unlist(characters)[1]
-    sample <- input_files$samples
-    contrast <- input_files$contrast
-    count <- input_files$count
-
-    colnames(sample) <- add_character_in_second_position(colnames(sample),x)
-
-    colnames(contrast) <- add_character_in_second_position(colnames(contrast),x)
-
-    return(list(sample = sample, contrast = contrast, count = count))
-
-}) -> output_char$middle_header
-
 # add special characters to sample metadata AND respective contrast
 
-lapply(unlist(characters), function (x){
-    #x = unlist(characters)[1]
+lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/chars/sample_contrast_phenotype/",x)))
+
+lapply(1:length(unlist(characters)), function (x){
+    #x = 1
+    filename = names(unlist(characters))[x]
     sample <- input_files$samples
     contrast <- input_files$contrast
     count <- input_files$count
@@ -226,14 +205,20 @@ lapply(unlist(characters), function (x){
 
     colnames(contrast) <- contrast_contaminated    
     
-    return(list(sample = sample, contrast = contrast, count = count))
+    write.table(sample, file = paste0("data-test//chars//sample_contrast_phenotype//",filename, "//sample.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(contrast, file = paste0("data-test//chars//sample_contrast_phenotype//",filename, "//contrast.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(count, file = paste0("data-test//chars//sample_contrast_phenotype//",filename, "//count.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
 
-}) -> output_char$sample_metadata
+
+})
 
 # generating sample names with special characters
 
-lapply(unlist(characters), function (x){
-    #x = unlist(characters)[1]
+lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/chars/sample_names/",x)))
+
+lapply(1:length(unlist(characters)), function (x){
+    #x = 1
+    filename = names(unlist(characters))[x]
     sample <- input_files$samples
     contrast <- input_files$contrast
     count <- input_files$count
@@ -242,17 +227,7 @@ lapply(unlist(characters), function (x){
 
     colnames(count) <-  rownames(sample)
     
-    return(list(sample = sample, contrast = contrast, count = count))
-
-}) -> output_char$sample_names
-
-# generating samples, counts and contrast columns with continuous and discrete values as metadata
-
-samples <- input_files$samples
-
-samples$continuous <- rnorm(nrow(samples))
-
-output_metadata_continuous <- list(
-    samples = samples,
-    counts = input_files$counts,
-    contrasts = input_files$contrasts)
+    write.table(sample, file = paste0("data-test//chars//sample_names//",filename, "//sample.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(contrast, file = paste0("data-test//chars//sample_names//",filename, "//contrast.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(count, file = paste0("data-test//chars//sample_names//",filename, "//count.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+})
