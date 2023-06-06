@@ -53,6 +53,53 @@ lapply(names(input_files), function(x) {
 })
 
 
+# randomize sample file
+
+create_dir("data-test/randomize_sample_name")
+
+lapply(names(input_files), function(x) {
+    #x = "counts"
+    if(x == "samples"){
+        sample <- input_files[[x]]
+        # randomize the row order of the sample
+        sample <- sample[sample(nrow(sample)),]
+        rownames(sample) <- rownames(sample)[sample(nrow(sample))]
+
+        write.table(sample, file = paste0("data-test//randomize_sample_name//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    }
+    if(x == "contrasts"){
+        write.table(input_files[[x]], file = paste0("data-test//randomize_sample_name//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+        
+    }
+    
+    if(x == "counts"){
+        count = input_files[[x]]
+        write.table(input_files[[x]], file = paste0("data-test//randomize_sample_name//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    }
+})
+
+
+# randomize counts file
+
+create_dir("data-test/randomize_counts")
+
+lapply(names(input_files), function(x) {
+    #x = "counts"
+    if(x == "counts"){
+        count <- input_files[[x]]
+        # randomize the row order of the sample
+        count <- count[,sample(ncol(count))]
+        write.table(sample, file = paste0("data-test//randomize_counts//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    }
+    if(x == "samples"){
+        write.table(input_files[[x]], file = paste0("data-test//randomize_counts//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    }
+    
+    if(x == "contrasts"){
+        write.table(input_files[[x]], file = paste0("data-test//randomize_counts//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    }
+})
+
 # generate tsv and csv files for all input files
 
 create_dir("data-test/first_column_name")
@@ -95,14 +142,12 @@ create_dir("data-test/filetype/tsv")
 create_dir("data-test/filetype/txt")
 
 lapply(names(input_files), function(x) {
-
     write.table(input_files[[x]], file = paste0("data-test//filetype//tsv//",x, ".tsv"), sep = "\t", quote = FALSE, row.names = TRUE, col.names=NA)
     write.table(input_files[[x]], file = paste0("data-test//filetype//csv//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
     write.table(input_files[[x]], file = paste0("data-test//filetype//txt//",x, ".txt"), quote = FALSE, row.names = TRUE, col.names=NA)
 })
 
 # generate counts with different gene names Must it be -1/0/+1 or can we use condition names? 
-
 
 create_dir("data-test/contrastinputs")
 create_dir("data-test/contrastinputs/short_condition")
