@@ -19,13 +19,15 @@ add_character_in_second_position <- function(string, character) {
   return(new_string)
 }
 
-
 # get template data
 input_files <- list(
     samples = playbase::SAMPLES,
     counts = playbase::COUNTS[1:300,], # reduce size to speed up tests
     contrasts = playbase::CONTRASTS # reduce size to speed up tests
 )
+
+input_files[["contrasts"]]$act_vs_notact <- c(-1,1,1,1,1,1)
+
 
 # output_char files, each element on the list is a test
 output_char <- list()
@@ -41,6 +43,15 @@ characters <- list(
     control = c("\\n", "\\t", "\\r", "\\b", "\\a", "\\f", "\\v"),
     noncontrol = c("\\u")
 )
+
+# generate tsv and csv files for all input files
+
+create_dir("data-test/example_data")
+
+lapply(names(input_files), function(x) {
+    write.table(input_files[[x]], file = paste0("data-test//example_data//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE,col.names=NA)
+})
+
 
 # generate tsv and csv files for all input files
 
