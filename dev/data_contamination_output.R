@@ -67,7 +67,6 @@ lapply(data_files, function(x){
   
 # create a table with results from error and the filename associated with it.
 
-
 error_table <- lapply(1:length(pgx_files), function(x){
   #x = 10
   pgx_test <- pgx_files[[x]]
@@ -96,12 +95,11 @@ write.csv(error_table, "dev//error_table.csv", row.names = FALSE)
 create_dir("dev//pgx")
 
 lapply(1:length(pgx_files), function(x){
-  #x = 2
+  #x = 10
   pgx_test <- pgx_files[[x]]
-  filename <- stringr::str_extract(filepaths[[x]], "(?<=/)[^/]*$")
+  filename <- stringr::str_extract(output$filepaths[[x]], "(?<=/)[^/]*$")
   
-
-  if (is.null(pgx_test$error)) {
+  if (is.null(pgx_test$error) & output$directories_with_files[x] == TRUE) {
     pgx_test$result$name <- "empty"
     pgx_test$result$description <- "empty"
     pgx_test$result$datatype <- "empty"
