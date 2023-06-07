@@ -23,7 +23,7 @@ example_gset <- as.numeric(example_data_truth$gset.meta$meta$"act_vs_notact"[,"f
 
 contrast_to_test <- "act_vs_notact"
 
-pgx_files_check <- data.frame(filesname = filesname)
+pgx_files_check <- data.frame(id = filesname)
 
 lapply(1:length(pgx_files), function(idx){
   #idx = 28
@@ -52,4 +52,15 @@ pgx_files_check <- cbind(pgx_files_check, res)
 
 # save pgx_files_check as csv
 
-write.csv(pgx_files_check, file = "dev//pgx_files_check.csv", row.names = TRUE)
+error_table <- read.csv("dev//error_table.csv", stringsAsFactors = FALSE)
+
+error_table$id <- paste0(gsub("/","_", error_table$filename),".pgx")
+
+# combine the two columns by the column id, keeping all rows from pgx_files_check
+
+merged_data <- merge(error_table, pgx_files_check, by = "id", all.x = TRUE)
+
+write.csv(merged_data, file = "dev//full_tests.csv", row.names = TRUE)
+
+
+
