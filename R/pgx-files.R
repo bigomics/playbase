@@ -592,14 +592,6 @@ pgx.initDatasetFolder <- function( pgx.dir,
       Sys.chmod(allfc.file1, "0666")
     }
 
-    ## update sigdb
-    if(pgxfc.changed) {
-       sigdb <- file.path(pgx.dir, "datasets-sigdb.h5")
-       unlink(sigdb)
-       if(verbose) message("[initDatasetFolder] writing signature DB to",sigdb,"...")       
-       pgx.createSignatureDatabaseH5.fromMatrix(sigdb, X=allFC)
-       pgx.addEnrichmentSignaturesH5(sigdb, X=allFC, methods = "rankcor")
-    }
 }
 
 #' @export
