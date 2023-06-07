@@ -225,21 +225,20 @@ lapply(names(input_files), function(x) {
 
 # generating files with different header names
 
-lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/chars/prepend_header/",x)))
+lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/chars/prepend_header_contrast_sample/",x)))
 
 # prepend header with special characters
 lapply(1:length(unlist(characters)), function (x){
-    #x = 1
-    char <- unlist(characters)[[x]]
-    
+    #x = 14
+    char <- unlist(characters)[[x]]   
     filename = names(unlist(characters))[x]
     sample <- input_files$samples
     contrast <- input_files$contrast
     count <- input_files$count
 
     colnames(sample) <- paste0(char, colnames(sample))
-
     colnames(contrast) <- paste0(char, colnames(contrast))
+    
 
     write.table(sample, file = paste0("data-test//chars//prepend_header//",filename, "//sample.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
     write.table(contrast, file = paste0("data-test//chars//prepend_header//",filename, "//contrast.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
@@ -252,7 +251,7 @@ lapply(1:length(unlist(characters)), function (x){
 lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/chars/sample_contrast_phenotype/",x)))
 
 lapply(1:length(unlist(characters)), function (x){
-    
+    #x =22
     char <- unlist(characters)[[x]]
     filename = names(unlist(characters))[x]
     sample <- input_files$samples
@@ -266,12 +265,13 @@ lapply(1:length(unlist(characters)), function (x){
     contrast_split <- strsplit(colnames(contrast), split = "_")
 
     contrast_contaminated <-lapply(contrast_split, function(idx){
-        idx = contrast_split[[1]]
-        idx[3] <- paste0(x, idx[3])
+        #idx = contrast_split[[1]]
+        #idx = contrast_split[[1]]
+        idx[3] <- paste0(char, idx[3])
         paste(idx, collapse = "_")
     })
 
-    colnames(contrast) <- contrast_contaminated    
+    colnames(contrast) <- contrast_contaminated
     
     write.table(sample, file = paste0("data-test//chars//sample_contrast_phenotype//",filename, "//sample.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
     write.table(contrast, file = paste0("data-test//chars//sample_contrast_phenotype//",filename, "//contrast.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
