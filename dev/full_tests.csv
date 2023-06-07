@@ -1,0 +1,117 @@
+"","id","filename","playbase_error","gx","gset"
+"1","data-test_.pgx","data-test/","Error: No file available",NA,NA
+"2","data-test__chars.pgx","data-test//chars","Error: No file available",NA,NA
+"3","data-test__chars_prepend_header_contrast_sample.pgx","data-test//chars/prepend_header_contrast_sample","Error: No file available",NA,NA
+"4","data-test__chars_prepend_header_contrast_sample_control1.pgx","data-test//chars/prepend_header_contrast_sample/control1","Error: No file available",NA,NA
+"5","data-test__chars_prepend_header_contrast_sample_control2.pgx","data-test//chars/prepend_header_contrast_sample/control2","Error: No file available",NA,NA
+"6","data-test__chars_prepend_header_contrast_sample_control3.pgx","data-test//chars/prepend_header_contrast_sample/control3","Error: No file available",NA,NA
+"7","data-test__chars_prepend_header_contrast_sample_control4.pgx","data-test//chars/prepend_header_contrast_sample/control4","Error: No file available",NA,NA
+"8","data-test__chars_prepend_header_contrast_sample_control5.pgx","data-test//chars/prepend_header_contrast_sample/control5","Error: No file available",NA,NA
+"9","data-test__chars_prepend_header_contrast_sample_control6.pgx","data-test//chars/prepend_header_contrast_sample/control6","Error: No file available",NA,NA
+"10","data-test__chars_prepend_header_contrast_sample_control7.pgx","data-test//chars/prepend_header_contrast_sample/control7","Error: No file available",NA,NA
+"11","data-test__chars_prepend_header_contrast_sample_digits1.pgx","data-test//chars/prepend_header_contrast_sample/digits1","Error: No file available",NA,NA
+"12","data-test__chars_prepend_header_contrast_sample_digits2.pgx","data-test//chars/prepend_header_contrast_sample/digits2","Error: No file available",NA,NA
+"13","data-test__chars_prepend_header_contrast_sample_digits3.pgx","data-test//chars/prepend_header_contrast_sample/digits3","Error: No file available",NA,NA
+"14","data-test__chars_prepend_header_contrast_sample_escape.pgx","data-test//chars/prepend_header_contrast_sample/escape","Error: No file available",NA,NA
+"15","data-test__chars_prepend_header_contrast_sample_noncontrol.pgx","data-test//chars/prepend_header_contrast_sample/noncontrol","Error: No file available",NA,NA
+"16","data-test__chars_prepend_header_contrast_sample_punctuation1.pgx","data-test//chars/prepend_header_contrast_sample/punctuation1","Error: No file available",NA,NA
+"17","data-test__chars_prepend_header_contrast_sample_punctuation2.pgx","data-test//chars/prepend_header_contrast_sample/punctuation2","Error: No file available",NA,NA
+"18","data-test__chars_prepend_header_contrast_sample_punctuation3.pgx","data-test//chars/prepend_header_contrast_sample/punctuation3","Error: No file available",NA,NA
+"19","data-test__chars_prepend_header_contrast_sample_punctuation4.pgx","data-test//chars/prepend_header_contrast_sample/punctuation4","Error: No file available",NA,NA
+"20","data-test__chars_prepend_header_contrast_sample_punctuation5.pgx","data-test//chars/prepend_header_contrast_sample/punctuation5","Error: No file available",NA,NA
+"21","data-test__chars_prepend_header_contrast_sample_punctuation6.pgx","data-test//chars/prepend_header_contrast_sample/punctuation6","Error: No file available",NA,NA
+"22","data-test__chars_prepend_header_contrast_sample_punctuation7.pgx","data-test//chars/prepend_header_contrast_sample/punctuation7","Error: No file available",NA,NA
+"23","data-test__chars_prepend_header_contrast_sample_quotation1.pgx","data-test//chars/prepend_header_contrast_sample/quotation1","Error: No file available",NA,NA
+"24","data-test__chars_prepend_header_contrast_sample_quotation2.pgx","data-test//chars/prepend_header_contrast_sample/quotation2","Error: No file available",NA,NA
+"25","data-test__chars_prepend_header_contrast_sample_special1.pgx","data-test//chars/prepend_header_contrast_sample/special1","Error: No file available",NA,NA
+"26","data-test__chars_prepend_header_contrast_sample_special2.pgx","data-test//chars/prepend_header_contrast_sample/special2","Error: No file available",NA,NA
+"27","data-test__chars_prepend_header_contrast_sample_special3.pgx","data-test//chars/prepend_header_contrast_sample/special3","Error: No file available",NA,NA
+"28","data-test__chars_prepend_header_contrast_sample_special4.pgx","data-test//chars/prepend_header_contrast_sample/special4","Error: No file available",NA,NA
+"29","data-test__chars_prepend_header_contrast_sample_special5.pgx","data-test//chars/prepend_header_contrast_sample/special5","Error: No file available",NA,NA
+"30","data-test__chars_prepend_header_contrast_sample_special6.pgx","data-test//chars/prepend_header_contrast_sample/special6","Error: No file available",NA,NA
+"31","data-test__chars_prepend_header_contrast_sample_special7.pgx","data-test//chars/prepend_header_contrast_sample/special7","Error: No file available",NA,NA
+"32","data-test__chars_prepend_header_contrast_sample_special8.pgx","data-test//chars/prepend_header_contrast_sample/special8","Error: No file available",NA,NA
+"33","data-test__chars_sample_contrast_phenotype.pgx","data-test//chars/sample_contrast_phenotype","Error: No file available",NA,NA
+"34","data-test__chars_sample_contrast_phenotype_control1.pgx","data-test//chars/sample_contrast_phenotype/control1","No error",1,1
+"35","data-test__chars_sample_contrast_phenotype_control2.pgx","data-test//chars/sample_contrast_phenotype/control2","No error",1,1
+"36","data-test__chars_sample_contrast_phenotype_control3.pgx","data-test//chars/sample_contrast_phenotype/control3","No error",1,1
+"37","data-test__chars_sample_contrast_phenotype_control4.pgx","data-test//chars/sample_contrast_phenotype/control4","No error",1,1
+"38","data-test__chars_sample_contrast_phenotype_control5.pgx","data-test//chars/sample_contrast_phenotype/control5","No error",1,1
+"39","data-test__chars_sample_contrast_phenotype_control6.pgx","data-test//chars/sample_contrast_phenotype/control6","No error",1,1
+"40","data-test__chars_sample_contrast_phenotype_control7.pgx","data-test//chars/sample_contrast_phenotype/control7","No error",1,1
+"41","data-test__chars_sample_contrast_phenotype_digits1.pgx","data-test//chars/sample_contrast_phenotype/digits1","No error",1,1
+"42","data-test__chars_sample_contrast_phenotype_digits2.pgx","data-test//chars/sample_contrast_phenotype/digits2","No error",1,1
+"43","data-test__chars_sample_contrast_phenotype_digits3.pgx","data-test//chars/sample_contrast_phenotype/digits3","No error",1,1
+"44","data-test__chars_sample_contrast_phenotype_escape.pgx","data-test//chars/sample_contrast_phenotype/escape","No error",1,1
+"45","data-test__chars_sample_contrast_phenotype_noncontrol.pgx","data-test//chars/sample_contrast_phenotype/noncontrol","No error",1,1
+"46","data-test__chars_sample_contrast_phenotype_punctuation1.pgx","data-test//chars/sample_contrast_phenotype/punctuation1","No error",1,1
+"47","data-test__chars_sample_contrast_phenotype_punctuation2.pgx","data-test//chars/sample_contrast_phenotype/punctuation2","No error",1,1
+"48","data-test__chars_sample_contrast_phenotype_punctuation3.pgx","data-test//chars/sample_contrast_phenotype/punctuation3","No error",1,1
+"49","data-test__chars_sample_contrast_phenotype_punctuation4.pgx","data-test//chars/sample_contrast_phenotype/punctuation4","No error",1,1
+"50","data-test__chars_sample_contrast_phenotype_punctuation5.pgx","data-test//chars/sample_contrast_phenotype/punctuation5","No error",1,1
+"51","data-test__chars_sample_contrast_phenotype_punctuation6.pgx","data-test//chars/sample_contrast_phenotype/punctuation6","Error in contr.matrix[, i]: subscript out of bounds
+",1,1
+"52","data-test__chars_sample_contrast_phenotype_punctuation7.pgx","data-test//chars/sample_contrast_phenotype/punctuation7","Error in `[.data.frame`(contr.matrix, , i): undefined columns selected
+",NA,NA
+"53","data-test__chars_sample_contrast_phenotype_quotation1.pgx","data-test//chars/sample_contrast_phenotype/quotation1","No error",1,1
+"54","data-test__chars_sample_contrast_phenotype_quotation2.pgx","data-test//chars/sample_contrast_phenotype/quotation2","No error",1,1
+"55","data-test__chars_sample_contrast_phenotype_special1.pgx","data-test//chars/sample_contrast_phenotype/special1","No error",1,1
+"56","data-test__chars_sample_contrast_phenotype_special2.pgx","data-test//chars/sample_contrast_phenotype/special2","Error in contr.matrix[, i]: subscript out of bounds
+",1,1
+"57","data-test__chars_sample_contrast_phenotype_special3.pgx","data-test//chars/sample_contrast_phenotype/special3","No error",1,1
+"58","data-test__chars_sample_contrast_phenotype_special4.pgx","data-test//chars/sample_contrast_phenotype/special4","No error",1,1
+"59","data-test__chars_sample_contrast_phenotype_special5.pgx","data-test//chars/sample_contrast_phenotype/special5","No error",1,1
+"60","data-test__chars_sample_contrast_phenotype_special6.pgx","data-test//chars/sample_contrast_phenotype/special6","No error",1,1
+"61","data-test__chars_sample_contrast_phenotype_special7.pgx","data-test//chars/sample_contrast_phenotype/special7","No error",1,1
+"62","data-test__chars_sample_contrast_phenotype_special8.pgx","data-test//chars/sample_contrast_phenotype/special8","Error in contr.matrix[, i]: subscript out of bounds
+",1,1
+"63","data-test__chars_sample_names.pgx","data-test//chars/sample_names","Error: No file available",NA,NA
+"64","data-test__chars_sample_names_control1.pgx","data-test//chars/sample_names/control1","No error",1,1
+"65","data-test__chars_sample_names_control2.pgx","data-test//chars/sample_names/control2","No error",1,1
+"66","data-test__chars_sample_names_control3.pgx","data-test//chars/sample_names/control3","No error",1,1
+"67","data-test__chars_sample_names_control4.pgx","data-test//chars/sample_names/control4","No error",1,1
+"68","data-test__chars_sample_names_control5.pgx","data-test//chars/sample_names/control5","No error",1,1
+"69","data-test__chars_sample_names_control6.pgx","data-test//chars/sample_names/control6","No error",1,1
+"70","data-test__chars_sample_names_control7.pgx","data-test//chars/sample_names/control7","No error",1,1
+"71","data-test__chars_sample_names_digits1.pgx","data-test//chars/sample_names/digits1","No error",1,1
+"72","data-test__chars_sample_names_digits2.pgx","data-test//chars/sample_names/digits2","No error",1,1
+"73","data-test__chars_sample_names_digits3.pgx","data-test//chars/sample_names/digits3","No error",1,1
+"74","data-test__chars_sample_names_escape.pgx","data-test//chars/sample_names/escape","No error",1,1
+"75","data-test__chars_sample_names_noncontrol.pgx","data-test//chars/sample_names/noncontrol","No error",1,1
+"76","data-test__chars_sample_names_punctuation1.pgx","data-test//chars/sample_names/punctuation1","No error",1,1
+"77","data-test__chars_sample_names_punctuation2.pgx","data-test//chars/sample_names/punctuation2","No error",1,1
+"78","data-test__chars_sample_names_punctuation3.pgx","data-test//chars/sample_names/punctuation3","No error",1,1
+"79","data-test__chars_sample_names_punctuation4.pgx","data-test//chars/sample_names/punctuation4","No error",1,1
+"80","data-test__chars_sample_names_punctuation5.pgx","data-test//chars/sample_names/punctuation5","No error",1,1
+"81","data-test__chars_sample_names_punctuation6.pgx","data-test//chars/sample_names/punctuation6","No error",1,1
+"82","data-test__chars_sample_names_punctuation7.pgx","data-test//chars/sample_names/punctuation7","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
+",NA,NA
+"83","data-test__chars_sample_names_quotation1.pgx","data-test//chars/sample_names/quotation1","No error",1,1
+"84","data-test__chars_sample_names_quotation2.pgx","data-test//chars/sample_names/quotation2","No error",1,1
+"85","data-test__chars_sample_names_special1.pgx","data-test//chars/sample_names/special1","No error",1,1
+"86","data-test__chars_sample_names_special2.pgx","data-test//chars/sample_names/special2","No error",1,1
+"87","data-test__chars_sample_names_special3.pgx","data-test//chars/sample_names/special3","No error",1,1
+"88","data-test__chars_sample_names_special4.pgx","data-test//chars/sample_names/special4","No error",1,1
+"89","data-test__chars_sample_names_special5.pgx","data-test//chars/sample_names/special5","No error",1,1
+"90","data-test__chars_sample_names_special6.pgx","data-test//chars/sample_names/special6","No error",1,1
+"91","data-test__chars_sample_names_special7.pgx","data-test//chars/sample_names/special7","No error",1,1
+"92","data-test__chars_sample_names_special8.pgx","data-test//chars/sample_names/special8","No error",1,1
+"93","data-test__contrastinputs.pgx","data-test//contrastinputs","Error: No file available",NA,NA
+"94","data-test__contrastinputs_short_condition.pgx","data-test//contrastinputs/short_condition","No error",0.923090660548206,1
+"95","data-test__contrastinputs_short_condition_inverse.pgx","data-test//contrastinputs/short_condition_inverse","No error",0.820622389125653,-0.947989789344023
+"96","data-test__contrastinputs_short_integer.pgx","data-test//contrastinputs/short_integer","No error",0.923090660548206,1
+"97","data-test__example_data.pgx","data-test//example_data","No error",1,1
+"98","data-test__filenames.pgx","data-test//filenames","Error: No file available",NA,NA
+"99","data-test__filenames_allcapitalletters.pgx","data-test//filenames/allcapitalletters","No error",1,1
+"100","data-test__filenames_append.pgx","data-test//filenames/append","No error",1,1
+"101","data-test__filenames_firstcapitalletter.pgx","data-test//filenames/firstcapitalletter","No error",1,1
+"102","data-test__filenames_prepend.pgx","data-test//filenames/prepend","No error",1,1
+"103","data-test__filetype.pgx","data-test//filetype","Error: No file available",NA,NA
+"104","data-test__filetype_csv.pgx","data-test//filetype/csv","No error",1,1
+"105","data-test__filetype_tsv.pgx","data-test//filetype/tsv","No error",1,1
+"106","data-test__filetype_txt.pgx","data-test//filetype/txt","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
+",NA,NA
+"107","data-test__first_column_name.pgx","data-test//first_column_name","No error",1,1
+"108","data-test__randomize_counts.pgx","data-test//randomize_counts","No error",1,1
+"109","data-test__randomize_sample_name.pgx","data-test//randomize_sample_name","No error",0.988295106236353,0.710350085456328
+"110","data-test__randomize_sample_rows.pgx","data-test//randomize_sample_rows","No error",1,1
