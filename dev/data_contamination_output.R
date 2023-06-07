@@ -64,17 +64,24 @@ lapply(data_files, function(x){
     )
     res
 }) -> pgx_files
-
+  
 # create a table with results from error and the filename associated with it.
 
 
 error_table <- lapply(1:length(pgx_files), function(x){
   #x = 10
   pgx_test <- pgx_files[[x]]
-  if (!is.null(pgx_test$error)) {
-      return(data.frame(filename = filepaths[[x]], playbase_error = as.character(pgx_test$error), stringsAsFactors = FALSE))
-  } else {
-      return(data.frame(filename = filepaths[[x]], playbase_error = "No error", stringsAsFactors = FALSE))
+
+  if (output$directories_with_files[x] == TRUE) {
+    if (!is.null(pgx_test$error)) {
+        return(data.frame(filename = output$filepaths[[x]], playbase_error = as.character(pgx_test$error), stringsAsFactors = FALSE))
+    } else {
+        return(data.frame(filename = output$filepaths[[x]], playbase_error = "No error", stringsAsFactors = FALSE))
+    }
+  }
+  
+  if (output$directories_with_files[x] == FALSE) {
+    return(data.frame(filename = output$filepaths[[x]], playbase_error = "Error: No file available", stringsAsFactors = FALSE))
   }
 })
 
