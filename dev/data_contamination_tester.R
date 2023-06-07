@@ -23,15 +23,18 @@ example_gset <- as.numeric(example_data_truth$gset.meta$meta$"act_vs_notact"[,"f
 
 contrast_to_test <- "act_vs_notact"
 
-lapply(pgx_files, function(x){
-  #x = pgx_files[[10]]
+lapply(1:length(pgx_files), function(idx){
+  #idx = 28
+  print(idx)
+  x = pgx_files[[idx]]
+  filesname[idx]
   contrast_default <- contrast_to_test
 
   if(!contrast_to_test %in% names(x$gx.meta$meta)) {
-    contrast_default <- grep(contrast_to_test, names(x$gx.meta$meta), value = TRUE, ignore.case = TRUE)
+    contrast_default <- grep(contrast_default, names(x$gx.meta$meta), value = TRUE, ignore.case = TRUE)
   }
-  gx <- cor(x$gx.meta$meta$"act_vs_notact"$"avg.1", example_gx)
-  gset <- cor(as.numeric(x$gset.meta$meta$"act_vs_notact"[,"fc"]), example_gset)
+  gx <- cor(x$gx.meta$meta[[contrast_default]]$"avg.1", example_gx)
+  gset <- cor(as.numeric(x$gset.meta$meta[[contrast_default]][,"fc"]), example_gset)
 
   return(data.frame(gx = gx, gset = gset))
 
