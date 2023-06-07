@@ -53,7 +53,7 @@ lapply(names(input_files), function(x) {
 })
 
 
-# randomize sample file
+# randomize sample file and also rows
 
 create_dir("data-test/randomize_sample_name")
 
@@ -62,7 +62,6 @@ lapply(names(input_files), function(x) {
     if(x == "samples"){
         sample <- input_files[[x]]
         # randomize the row order of the sample
-        sample <- sample[sample(nrow(sample)),]
         rownames(sample) <- rownames(sample)[sample(nrow(sample))]
 
         write.table(sample, file = paste0("data-test//randomize_sample_name//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
@@ -79,6 +78,32 @@ lapply(names(input_files), function(x) {
 })
 
 
+# randomize sample file and also rows
+
+create_dir("data-test/randomize_sample_rows")
+
+lapply(names(input_files), function(x) {
+    #x = "counts"
+    if(x == "samples"){
+        sample <- input_files[[x]]
+        # randomize the row order of the sample
+        sample <- sample[sample(nrow(sample)),]
+
+        write.table(sample, file = paste0("data-test//randomize_sample_rows//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    }
+    if(x == "contrasts"){
+        write.table(input_files[[x]], file = paste0("data-test//randomize_sample_rows//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+        
+    }
+    
+    if(x == "counts"){
+        count = input_files[[x]]
+        write.table(input_files[[x]], file = paste0("data-test//randomize_sample_rows//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    }
+})
+
+
+
 # randomize counts file
 
 create_dir("data-test/randomize_counts")
@@ -89,7 +114,7 @@ lapply(names(input_files), function(x) {
         count <- input_files[[x]]
         # randomize the row order of the sample
         count <- count[,sample(ncol(count))]
-        write.table(sample, file = paste0("data-test//randomize_counts//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+        write.table(count, file = paste0("data-test//randomize_counts//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
     }
     if(x == "samples"){
         write.table(input_files[[x]], file = paste0("data-test//randomize_counts//",x, ".csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
