@@ -203,15 +203,21 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   }
 
   ## convert group-wise contrast to sample-wise
+  
   grp.idx <- grep("group|condition", tolower(colnames(samples)))[1]
-  is.group.contrast <- all(rownames(contrasts) %in% samples[, grp.idx])
-  is.group.contrast
-  if (is.group.contrast && nrow(contrasts) < nrow(samples)) {
-    ## group
-    grp <- as.character(samples[, grp.idx])
-    contrasts.new <- contrasts[grp, , drop = FALSE]
-    rownames(contrasts.new) <- rownames(samples)
-    contrasts <- contrasts.new
+  
+  if (any(!is.na(grp.idx))) {
+    # only run the code below if we identify at least one group
+    
+    is.group.contrast <- all(rownames(contrasts) %in% samples[, grp.idx])
+    is.group.contrast
+    if (is.group.contrast && nrow(contrasts) < nrow(samples)) {
+      ## group
+      grp <- as.character(samples[, grp.idx])
+      contrasts.new <- contrasts[grp, , drop = FALSE]
+      rownames(contrasts.new) <- rownames(samples)
+      contrasts <- contrasts.new
+    }
   }
 
   ## sanity check...
@@ -366,7 +372,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 
   if (convert.hugo) {
     message("[createPGX] converting to HUGO symbols...")
-    gene1 <- alias2hugo(gene1) ## convert to latest HUGO
+    gene1 <- playbase::alias2hugo(gene1) ## convert to latest HUGO
   } else {
     message("[createPGX] skip conversion to HUGO symbols")
   }
@@ -395,7 +401,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## create gene annotation if not given (no HUGO conversion)
   ## -------------------------------------------------------------------
   message("[createPGX] annotating genes...")
-  ngs$genes <- ngs.getGeneAnnotation(genes = rownames(ngs$counts))
+  ngs$genes <- playbase::ngs.getGeneAnnotation(genes = rownames(ngs$counts))
   rownames(ngs$genes) <- rownames(ngs$counts)
   ngs$genes[is.na(ngs$genes)] <- ""
 
@@ -418,8 +424,8 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## Filter genes?
   ## -------------------------------------------------------------------
   cap.fraction <- mean(grepl("^[A-Z][a-z]+", rownames(ngs$counts)), na.rm = TRUE)
-  dbg("[createPGX: filter genes] rownames.ngs.counts = ", head(rownames(ngs$counts)))
-  dbg("[createPGX: filter genes] cap.frac = ", cap.fraction)
+  message("[createPGX: filter genes] rownames.ngs.counts = ", head(rownames(ngs$counts)))
+  message("[createPGX: filter genes] cap.frac = ", cap.fraction)
 
   is.mouse <- (cap.fraction > 0.9)
   org <- ifelse(is.mouse, "mouse", "human")
@@ -465,7 +471,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
-  ngs <- compute_cellcycle_gender(ngs)
+  ngs <- playbase::compute_cellcycle_gender(ngs)
   Matrix::head(ngs$samples)
 
   ## -------------------------------------------------------------------
@@ -508,7 +514,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     message("[createPGX] clustering samples...")
     ## if(!is.null(progress)) progress$inc(0.01, detail = "clustering")
     ## ngs <- pgx.clusterSamples(ngs, skipifexists=FALSE, perplexity=NULL)
-    ngs <- pgx.clusterSamples2(
+    ngs <- playbase::pgx.clusterSamples2(
       ngs,
       dims = c(2, 3),
       ## replace.orig = FALSE,
@@ -520,11 +526,11 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     ## posx <- scale(do.call(cbind,ngs$cluster$pos))
     posx <- scale(cbind(ngs$cluster$pos[["umap2d"]], ngs$cluster$pos[["tsne2d"]]))
     ## posx <- scale(cbind(ngs$cluster$pos[["umap3d"]],ngs$cluster$pos[["tsne3d"]]))
-    idx <- pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
+    idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
     table(idx)
     if (length(unique(idx)) == 1) {
       ## try again with finer settings if single cluster...
-      idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
+      idx <- playbase::pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
     }
     ngs$samples$cluster <- idx
     Matrix::head(ngs$samples)
@@ -538,8 +544,8 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     if (length(unique(Y)) < 2) {
       message("[createPGX] warning: only one cluster.")
     } else {
-      ct <- makeDirectContrasts(Y, ref = "others")
-      ctx <- contrastAsLabels(ct$exp.matrix)
+      ct <- playbase::makeDirectContrasts(Y, ref = "others")
+      ctx <- playbase::contrastAsLabels(ct$exp.matrix)
       if (ncol(ngs$contrasts) == 0) {
         ngs$contrasts <- ctx
       } else {
@@ -554,7 +560,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   if (is.null(ngs$X)) {
     message("[createPGX] calculating log-expression matrix X...")
     ## ngs$X <- logCPM(ngs$counts, total=NULL)
-    ngs$X <- logCPM(ngs$counts, total = 1e6, prior = 1)
+    ngs$X <- playbase::logCPM(ngs$counts, total = 1e6, prior = 1)
     ## ngs$X <- limma::normalizeQuantiles(ngs$X)  ## Sure ???
     dim(ngs$X)
   } else {
@@ -567,7 +573,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 
   if (do.clustergenes) {
     message("[createPGX] clustering genes...")
-    ngs <- pgx.clusterGenes(ngs, methods = "umap", dims = c(2, 3), level = "gene")
+    ngs <- playbase::pgx.clusterGenes(ngs, methods = "umap", dims = c(2, 3), level = "gene")
     ## ngs <- pgx.clusterGenes(ngs, methods='umap', dims=c(2,3), level='geneset')  ## gsetX not ready!!
   }
 
