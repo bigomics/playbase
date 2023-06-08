@@ -34,7 +34,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods=c("GSEA","cor"),
 
     names(obj)
     if("gx.meta" %in% names(obj)) {
-        F <- pgx.getMetaMatrix(obj)$fc
+        F <- playbase::pgx.getMetaMatrix(obj)$fc
         ## check if multi-omics
         is.multiomics <- any(grepl("\\[gx\\]|\\[mrna\\]",rownames(F)))
         is.multiomics
@@ -167,7 +167,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods=c("GSEA","cor"),
     ## reduce large stats object
     sel.drugs <- unique(unlist(sapply(results,function(res) rownames(res$X))))
     sel <- which(xdrugs %in% sel.drugs)
-    results$stats <- R1[sel,]
+    results$stats <- R1[sel,,drop = FALSE]
 
     if(0) {
         ## UMAP clustering

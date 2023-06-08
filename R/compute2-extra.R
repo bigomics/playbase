@@ -17,6 +17,8 @@ compute_extra <- function(ngs, extra = c(
                           ), sigdb = NULL, libx.dir = NULL) {
   timings <- c()
 
+  #ngs = pgx
+
   if (length(extra) == 0) {
     return(ngs)
   }
@@ -81,7 +83,7 @@ compute_extra <- function(ngs, extra = c(
 
     message(">>> Computing drug activity enrichment...")
     tt <- system.time({
-      ngs <- compute_drugActivityEnrichment(ngs)
+      ngs <- compute_drugActivityEnrichment(ngs, libx.dir = libx.dir)
     })
     timings <- rbind(timings, c("drugs", tt))
 
@@ -303,12 +305,32 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
 #' @export
 #'
 #' @examples
-compute_drugActivityEnrichment <- function(ngs) {
+compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
   ## -------------- drug enrichment
   # get drug activity databases
-  ref.db <- list(
-    "L1000_ACTIVITYS_N20D1011" = playdata::L1000_ACTIVITYS_N20D1011
-  )
+
+  #ngs=pgx
+  #libx.dir = params$libx.dir
+  
+  if (is.null(libx.dir)) message('WARNING Need libx.dir if you call compute_full_drugActivityEnrichment')
+  
+  cmap.dir <- file.path(libx.dir, "cmap")
+  file.gene.db <- dir(cmap.dir, pattern = "n8m20g5812.*rds$")
+
+  if (length(file.gene.db)>1) message('WARNING multiple gene.db files found. Using first one.')
+  
+  if(file.exists(file.path(cmap.dir,file.gene.db[1]))){
+    gene.db <- readRDS(file.path(cmap.dir,file.gene.db[1]))
+    
+    ref.db <- list(
+      "L1000_ACTIVITYS_N20D1011" = playdata::L1000_ACTIVITYS_N20D1011,
+      "L1000_GENE_PERTURBATION" = gene.db
+    )
+    } else {
+    ref.db <- list(
+      "L1000_ACTIVITYS_N20D1011" = playdata::L1000_ACTIVITYS_N20D1011
+    )
+  }
 
   for (i in 1:length(ref.db)) {
     f <- names(ref.db)[i]
@@ -322,10 +344,14 @@ compute_drugActivityEnrichment <- function(ngs) {
 
     NPRUNE <- 250
     fname <- names(ref.db)[i]
-    out1 <- pgx.computeDrugEnrichment(
-      ngs, X, xdrugs,
+    out1 <- playbase::pgx.computeDrugEnrichment(
+      obj = ngs,
+      X = X,
+      xdrugs = xdrugs,
       methods = c("GSEA", "cor"),
-      nmin = 3, nprune = NPRUNE, contrast = NULL
+      nmin = 3,
+      nprune = NPRUNE,
+      contrast = NULL
     )
 
     if (is.null(out1)) {
@@ -378,9 +404,8 @@ compute_drugActivityEnrichment <- function(ngs) {
 #' @export
 #'
 #' @examples
-compute_drugSensitivityEnrichment <- function(ngs, libx.dir) {
+compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
 
-  if (is.null(libx.dir)) message('ERROR: Need libx.dir if you call compute_drugSensitivityEnrichment')
   cmap.dir <- file.path(libx.dir, "cmap")
 
   ref.db <- dir(cmap.dir, pattern = "sensitivity.*rds$")
@@ -400,7 +425,7 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir) {
 
     NPRUNE <- -1
     NPRUNE <- 250
-    out1 <- pgx.computeDrugEnrichment(
+    out1 <- playbase::pgx.computeDrugEnrichment(
       ngs, X, xdrugs,
       methods = c("GSEA", "cor"),
       nmin = 10, nprune = NPRUNE, contrast = NULL
