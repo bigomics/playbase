@@ -775,6 +775,27 @@ pgx.checkPGX <- function(
         
       }
 
+      if (type == "SAMPLES") {
+        
+        # PGX CHECK HERE #TODO
+
+        feature_names <- rownames(df_clean)
+        
+        # check for duplicated rownames (but pass)
+        
+        ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
+        
+        if (length(x = ANY_DUPLICATED) > 0 && PASS) {
+          check_return$e6 <- ANY_DUPLICATED
+        }
+        
+        
+        } else if (nrow(df0) > 1 && NCOL(df0) >= 1) {
+          df <- as.data.frame(df0)
+          matname <- "samples.csv"
+        }
+          }
+
       # general checks
 
       # check for empty df
