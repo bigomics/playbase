@@ -734,10 +734,14 @@ pgx.checkPGX <- function(
 
     # test <- c("ASAD", "ASAD", "tDSAD", "ASAD", "DSDREEWREW") 
 
-    #df <- playbase::COUNTS
+    #df <- playbase::SAMPLES
 
     # set two random rows to zero
     #df_clean[,4] <- 0
+
+    #df_clean[4,] <- df_clean[,1]
+
+    #rownames(df_clean)[4] <- rownames(df_clean)[1]
 
     if (type == "COUNTS" || type == "EXPRESSION") {
         
@@ -748,7 +752,7 @@ pgx.checkPGX <- function(
         ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
         
         if (length(x = ANY_DUPLICATED) > 0 && PASS) {
-          check_return$e6 <- ANY_DUPLICATED
+          check_return$e1 <- ANY_DUPLICATED
         }
 
         # check for zero count rows, remove them
@@ -786,15 +790,9 @@ pgx.checkPGX <- function(
         ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
         
         if (length(x = ANY_DUPLICATED) > 0 && PASS) {
-          check_return$e6 <- ANY_DUPLICATED
+          check_return$e1 <- ANY_DUPLICATED
         }
-        
-        
-        } else if (nrow(df0) > 1 && NCOL(df0) >= 1) {
-          df <- as.data.frame(df0)
-          matname <- "samples.csv"
-        }
-          }
+      }
 
       # general checks
 
