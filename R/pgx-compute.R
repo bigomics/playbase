@@ -739,7 +739,7 @@ pgx.checkPGX <- function(
     # set two random rows to zero
     #df_clean[,4] <- 0
 
-    if (type == "COUNTS") {
+    if (type == "COUNTS" || type == "EXPRESSION") {
         
         feature_names <- rownames(df_clean)
         
@@ -789,10 +789,6 @@ pgx.checkPGX <- function(
           pass = FALSE
           
         }
-
-
-
-
 
       return(df = df_clean, checks = checks, warning_type = warning_type) 
   }

@@ -54,5 +54,3 @@ example_file <- function(file = NULL) {
 #' list of genes (targeted by a microRNA), and the list name is the microRNA
 #' @source C3: regulatory target gene sets, MIR: microRNA targets from https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp
 "EXAMPLE_GMT"
-
-
