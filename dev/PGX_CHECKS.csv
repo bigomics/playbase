@@ -1,5 +1,5 @@
 ﻿error,file_type,checks,warning_type,title,message,Description
-e1,SAMPLES,Check duplicate samples,,,,Check duplicate samples
+e1,SAMPLES,Check duplicate samples,error,Duplicated samples,"Your samples file has duplicated entries, this is not allowed, please correct.",Check duplicate samples
 e2,SAMPLES,Check that genes are not converted to dates in Excel,,,,Check that genes are not converted to dates in Excel
 e3,SAMPLES,Check zero rows/columns,,,,Check zero rows/columns
 e4,SAMPLES,Check that samples match counts,,,,Check that samples match counts
