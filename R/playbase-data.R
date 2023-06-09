@@ -41,6 +41,13 @@ example_file <- function(file = NULL) {
 #' @source unknown
 "COUNTS"
 
+#' Checks performed by the pgx.CHECK function
+#'
+#' @format ## `data.frame`
+#' rows are checks, columns are description of the check performed.
+"PGX_CHECKS"
+
+
 #' Example GMT (geneset matrix transpose) of genes targeted by microRNA
 #'
 #' @format ## `GMT`

@@ -721,7 +721,7 @@ pgx.computePGX <- function(pgx,
 #' @export
 #'
 #' @examples
-pgx.computePGX <- function(
+pgx.checkPGX <- function(
   df,
   type = c("samples", "counts", "contrasts")[0],
   autocorrect = TRUE
