@@ -806,6 +806,6 @@ pgx.checkPGX <- function(
         }
 
       return(
-        list(df = df_clean, checks = checks_return, PASS = PASS)
+        list(df = df_clean, checks = check_return, PASS = PASS)
         ) 
   }
