@@ -723,8 +723,7 @@ pgx.computePGX <- function(pgx,
 #' @examples
 pgx.checkPGX <- function(
   df,
-  type = c("SAMPLES", "COUNTS","EXPRESSION", "CONTRASTS")[0],
-  autocorrect = TRUE
+  type = c("SAMPLES", "COUNTS","EXPRESSION", "CONTRASTS")[0]
   ) {
     df_clean <- df
 
@@ -752,7 +751,7 @@ pgx.checkPGX <- function(
         ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
         
         if (length(x = ANY_DUPLICATED) > 0 && PASS) {
-          check_return$e1 <- ANY_DUPLICATED
+          check_return$e6 <- ANY_DUPLICATED
         }
 
         # check for zero count rows, remove them
@@ -785,12 +784,13 @@ pgx.checkPGX <- function(
 
         feature_names <- rownames(df_clean)
         
-        # check for duplicated rownames (but pass)
+        # check for duplicated rownames
         
         ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
         
         if (length(x = ANY_DUPLICATED) > 0 && PASS) {
           check_return$e1 <- ANY_DUPLICATED
+          PASS = FALSE
         }
       }
 
@@ -805,23 +805,24 @@ pgx.checkPGX <- function(
         ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
         
         if (length(x = ANY_DUPLICATED) > 0 && PASS) {
+          check_return$e11 <- ANY_DUPLICATED
           PASS = FALSE
-          check_return$e12 <- ANY_DUPLICATED
         }
+
       }
 
       # general checks
 
       # check for empty df
 
-        IS_DF_EMPTY <- dim(df_clean)[1] == 0 && dim(df_clean)[2] == 0
+        IS_DF_EMPTY <- dim(df_clean)[1] == 0 || dim(df_clean)[2] == 0
 
         if (!IS_DF_EMPTY) {
           df_clean <- as.matrix(df_clean)
         }
 
         if (IS_DF_EMPTY) {
-          e17 <- "empty dataframe"
+          check_return$e15 <- "empty dataframe"
           pass = FALSE          
         }
 
