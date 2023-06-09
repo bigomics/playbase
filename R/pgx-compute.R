@@ -710,3 +710,52 @@ pgx.computePGX <- function(pgx,
   pgx$timings
   return(pgx)
 }
+
+
+#' Check input files for pgx.computePGX
+#'
+#' @param df a data.frame correcponding to the input file as described in Omics Playground documentation
+#' @param type one of "counts", "samples", "contrasts"
+#'
+#' @return
+#' @export
+#'
+#' @examples
+pgx.computePGX <- function(
+  df,
+  type = c("samples", "counts", "contrasts")[0],
+  autocorrect = TRUE
+  ) {
+
+  checks <- list()
+  
+  # general checks
+  
+  # checks for samples
+
+    # check duplicate samples
+    # check that genes are not converted to dates in excel
+    # check zero rows/columns
+    # check that samples match counts
+    # check that samples match contrasts
+  
+  # checks for counts
+    # check duplicate genes
+    # check duplicate col names for samples
+    # check columns that are not in samples file
+    # check zero rows/columns
+    # check zero standard deviation.
+
+  # checks for contrasts
+
+    # check if its long or short contrast
+    # check that long contrast match samples
+    # check that short format colname of contrast matches the cell -1 and 1 values
+    # check zero rows/columns
+
+  # general checks
+
+    # check that the end output files have >1 row and >1 col in each case.
+
+  return(df = df_clean, checks = checks, warning_type = warning_type) 
+  }
