@@ -1,25 +1,16 @@
-﻿ID,file_type,checks,warning_type,Description
-1,SAMPLES,Check duplicate samples,Check duplicate samples,Check duplicate samples
-2,SAMPLES,Check that genes are not converted to dates in Excel,Check that genes are not converted to dates in Excel,Check that genes are not converted to dates in Excel
-3,SAMPLES,Check zero rows/columns,Check zero rows/columns,Check zero rows/columns
-4,SAMPLES,Check that samples match counts,Check that samples match counts,Check that samples match counts
-5,SAMPLES,Check that samples match contrasts,Check that samples match contrasts,Check that samples match contrasts
-6,COUNTS,Check duplicate genes,Check duplicate genes,Check duplicate genes
-7,COUNTS,Check duplicate column names for samples,Check duplicate column names for samples,Check duplicate column names for samples
-8,COUNTS,Check columns that are not in the samples file,Check columns that are not in the samples file,Check columns that are not in the samples file
-9,COUNTS,Check zero rows/columns,Check zero rows/columns,Check zero rows/columns
-10,COUNTS,Check zero standard deviation,Check zero standard deviation,Check zero standard deviation
-11,CONTRASTS,Check if it's a long or short contrast,Check if it's a long or short contrast,Check if it's a long or short contrast
-12,CONTRASTS,Check that long contrast matches samples,Check that long contrast matches samples,Check that long contrast matches samples
-13,CONTRASTS,Check that short format column name of contrast matches the cell -1 and 1 values,Check that short format column name of contrast matches the cell -1 and 1 values,Check that short format column name of contrast matches the cell -1 and 1 values
-14,CONTRASTS,Check zero rows/columns,Check zero rows/columns,Check zero rows/columns
-15,GENERAL,Check that the end output files have >1 row and >1 column in each case.,Check that the end output files have >1 row and >1 column in each case.,Check that the end output files have >1 row and >1 column in each case.
-16,,,,
-17,,,,
-18,,,,
-19,,,,
-20,,,,
-21,,,,
-22,,,,
-23,,,,
-24,,,,
+﻿ID,file_type,checks,warning_type,title,message,Description
+1,SAMPLES,Check duplicate samples,,,,Check duplicate samples
+2,SAMPLES,Check that genes are not converted to dates in Excel,,,,Check that genes are not converted to dates in Excel
+3,SAMPLES,Check zero rows/columns,,,,Check zero rows/columns
+4,SAMPLES,Check that samples match counts,,,,Check that samples match counts
+5,SAMPLES,Check that samples match contrasts,,,,Check that samples match contrasts
+6,COUNTS,Check duplicate genes,warning,Duplicated gene names,"Your count or expression matrix has duplicated gene names, and they will be merged.",Check duplicate genes
+7,COUNTS,Check duplicate column names for samples,,,,Check duplicate column names for samples
+8,COUNTS,Check columns that are not in the samples file,,,,Check columns that are not in the samples file
+9,COUNTS,Check zero rows,warning,Rows with only zero values,Your count or expression matrix has rows with all zeros. These will be removed.,Check zero rows
+10,COUNTS,Check zero standard deviation,error,Zero standard deviation,Your count or expression matrix has samples with zero standard deviation. Please remove.,Check zero standard deviation
+11,CONTRASTS,Check if it's a long or short contrast,,,,Check if it's a long or short contrast
+12,CONTRASTS,Check that long contrast matches samples,,,,Check that long contrast matches samples
+13,CONTRASTS,Check that short contrast validity,,,,Check that short format column name of contrast matches the cell -1 and 1 values
+14,CONTRASTS,Check zero columns,error,No contrasts defined.,You must define at least 1 contrast,Check if we have at least one contrast.
+15,GENERAL,Check that the end output files have >1 row and >1 column in each case.,error,Empty matrix.,"Your matrix is empty, with zero rows and zero columns.",Check that the end output files have >1 row and >1 column in each case.
