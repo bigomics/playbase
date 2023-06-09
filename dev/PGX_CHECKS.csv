@@ -1,4 +1,4 @@
-﻿ID,file_type,checks,warning_type,title,message,Description
+﻿id,file_type,checks,warning_type,title,message,Description
 1,SAMPLES,Check duplicate samples,,,,Check duplicate samples
 2,SAMPLES,Check that genes are not converted to dates in Excel,,,,Check that genes are not converted to dates in Excel
 3,SAMPLES,Check zero rows/columns,,,,Check zero rows/columns
