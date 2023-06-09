@@ -1,17 +1,18 @@
 ﻿error,file_type,checks,warning_type,title,message,Description
-e1,SAMPLES,Check duplicate samples,error,Duplicated samples,"Your samples file has duplicated entries, this is not allowed, please correct.",Check duplicate samples
+e1,SAMPLES,Check duplicate samples,error,Duplicated samples.,"Your samples file has duplicated entries, this is not allowed, please correct.",Check duplicate samples
 e2,SAMPLES,Check that genes are not converted to dates in Excel,,,,Check that genes are not converted to dates in Excel
 e3,SAMPLES,Check zero rows/columns,,,,Check zero rows/columns
 e4,SAMPLES,Check that samples match counts,,,,Check that samples match counts
 e5,SAMPLES,Check that samples match contrasts,,,,Check that samples match contrasts
-e6,COUNTS,Check duplicate genes,warning,Duplicated gene names,"Your count or expression matrix has duplicated gene names, and they will be merged.",Check duplicate genes
+e6,COUNTS,Check duplicate genes,warning,Duplicated gene names.,"Your count or expression matrix has duplicated gene names, and they will be merged.",Check duplicate genes
 e7,COUNTS,Check duplicate column names for samples,,,,Check duplicate column names for samples
 e8,COUNTS,Check columns that are not in the samples file,,,,Check columns that are not in the samples file
-e9,COUNTS,Check zero rows,warning,Rows with only zero values,Your count or expression matrix has rows with all zeros. These will be removed.,Check zero rows and remove them
-e10,COUNTS,Check zero columns,warning,Columns with only zero values,Your count or expression matrix has columns with all zeros. These will be removed.,Check zero columns and remove them
-e11,COUNTS,Check zero standard deviation,error,Zero standard deviation,Your count or expression matrix has samples with zero standard deviation. Please remove.,Check zero standard deviation
-e12,CONTRASTS,Check if it's a long or short contrast,,,,Check if it's a long or short contrast
-e13,CONTRASTS,Check that long contrast matches samples,,,,Check that long contrast matches samples
-e14,CONTRASTS,Check that short contrast validity,,,,Check that short format column name of contrast matches the cell -1 and 1 values
-e15,CONTRASTS,Check zero columns,error,No contrasts defined.,You must define at least 1 contrast,Check if we have at least one contrast.
-e16,GENERAL,Check that the end output files have >1 row and >1 column in each case.,error,Empty matrix.,"Your matrix is empty, with zero rows and zero columns.",Check that the end output files have >1 row and >1 column in each case.
+e9,COUNTS,Check zero rows,warning,Rows with only zero values.,Your count or expression matrix has rows with all zeros. These will be removed.,Check zero rows and remove them
+e10,COUNTS,Check zero columns,warning,Columns with only zero values.,Your count or expression matrix has columns with all zeros. These will be removed.,Check zero columns and remove them
+e11,COUNTS,Check zero standard deviation,error,Zero standard deviation.,Your count or expression matrix has samples with zero standard deviation. Please remove.,Check zero standard deviation
+e12,CONTRASTS,Check duplicate rows,error,Duplicated rows in contrasts.,"Your contrasts file has duplicated rows. This is now allowed, please correct.",
+e13,CONTRASTS,Check if it's a long or short contrast,,,,Check if it's a long or short contrast
+e14,CONTRASTS,Check that long contrast matches samples,,,,Check that long contrast matches samples
+e15,CONTRASTS,Check that short contrast validity,,,,Check that short format column name of contrast matches the cell -1 and 1 values
+e16,CONTRASTS,Check zero columns,error,No contrasts defined.,You must define at least 1 contrast.,Check if we have at least one contrast.
+e17,GENERAL,Check that the end output files have >1 row and >1 column in each case.,error,Empty matrix.,"Your matrix is empty, with zero rows and zero columns.",Check that the end output files have >1 row and >1 column in each case.
