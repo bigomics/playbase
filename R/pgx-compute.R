@@ -723,39 +723,76 @@ pgx.computePGX <- function(pgx,
 #' @examples
 pgx.checkPGX <- function(
   df,
-  type = c("samples", "counts", "contrasts")[0],
+  type = c("SAMPLES", "COUNTS","EXPRESSION", "CONTRASTS")[0],
   autocorrect = TRUE
   ) {
+    df_clean <- df
 
-  checks <- list()
-  
-  # general checks
-  
-  # checks for samples
+    PASS = TRUE
 
-    # check duplicate samples
-    # check that genes are not converted to dates in excel
-    # check zero rows/columns
-    # check that samples match counts
-    # check that samples match contrasts
-  
-  # checks for counts
-    # check duplicate genes
-    # check duplicate col names for samples
-    # check columns that are not in samples file
-    # check zero rows/columns
-    # check zero standard deviation.
+    check_return <- list()
 
-  # checks for contrasts
+    # test <- c("ASAD", "ASAD", "tDSAD", "ASAD", "DSDREEWREW") 
 
-    # check if its long or short contrast
-    # check that long contrast match samples
-    # check that short format colname of contrast matches the cell -1 and 1 values
-    # check zero rows/columns
+    #df <- playbase::COUNTS
 
-  # general checks
+    # set two random rows to zero
+    #df_clean[,4] <- 0
 
-    # check that the end output files have >1 row and >1 col in each case.
+    if (type == "COUNTS") {
+        
+        feature_names <- rownames(df_clean)
+        
+        # check for duplicated rownames (but pass)
+        
+        ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
+        
+        if (length(x = ANY_DUPLICATED) > 0 && PASS) {
+          check_return$e6 <- ANY_DUPLICATED
+        }
 
-  return(df = df_clean, checks = checks, warning_type = warning_type) 
+        # check for zero count rows, remove them
+        
+        ANY_ROW_ZERO <- which(rowSums(df_clean)==0)
+
+        if (length(ANY_ROW_ZERO) > 0 && PASS) {
+          # get the row names with all zeros
+          check_return$e9 <- names(ANY_ROW_ZERO)
+          # remove the rownames with all zeros by using check_return$e9
+          df_clean <- df_clean[!(rownames(df_clean) %in% check_return$e9), ]
+        }
+
+        # check for zero count columns, remove them
+        
+        ANY_COLUMN_ZERO <- which(colSums(df_clean)==0)
+
+        if (length(ANY_COLUMN_ZERO) > 0 && PASS) {
+          # return columns as e10
+          check_return$e10 <- names(ANY_COLUMN_ZERO)
+          # remove the column names with all zeros by using check_return$e9
+          df_clean <- df_clean[, !(colnames(df_clean) %in% check_return$e10)]
+        }
+        
+      }
+
+      # general checks
+
+      # check for empty df
+
+        IS_DF_EMPTY <- c(!nrow(df_clean) > 1 && NCOL(df_clean) > 1)
+
+        if (!IS_DF_EMPTY) {
+          df_clean <- as.matrix(df_clean)
+        }
+
+        if (IS_DF_EMPTY) {
+          pass = FALSE
+          
+        }
+
+
+
+
+
+      return(df = df_clean, checks = checks, warning_type = warning_type) 
   }
