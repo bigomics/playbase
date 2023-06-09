@@ -731,23 +731,10 @@ pgx.checkPGX <- function(
 
     check_return <- list()
 
-    # test <- c("ASAD", "ASAD", "tDSAD", "ASAD", "DSDREEWREW") 
-
-    #df <- playbase::CONTRASTS
-
-    # set two random rows to zero
-    #df_clean[,4] <- 0
-
-    #df_clean[4,] <- df_clean[,1]
-
-    #rownames(df_clean)[4] <- rownames(df_clean)[1]
-
     if (type == "COUNTS" || type == "EXPRESSION") {
-        
         feature_names <- rownames(df_clean)
         
         # check for duplicated rownames (but pass)
-        
         ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
         
         if (length(x = ANY_DUPLICATED) > 0 && PASS) {
@@ -759,18 +746,18 @@ pgx.checkPGX <- function(
         ANY_ROW_ZERO <- which(rowSums(df_clean)==0)
 
         if (length(ANY_ROW_ZERO) > 0 && PASS) {
+          
           # get the row names with all zeros
           check_return$e9 <- names(ANY_ROW_ZERO)
+          
           # remove the rownames with all zeros by using check_return$e9
           df_clean <- df_clean[!(rownames(df_clean) %in% check_return$e9), ]
         }
 
         # check for zero count columns, remove them
-        
         ANY_COLUMN_ZERO <- which(colSums(df_clean)==0)
 
         if (length(ANY_COLUMN_ZERO) > 0 && PASS) {
-          # return columns as e10
           check_return$e10 <- names(ANY_COLUMN_ZERO)
           # remove the column names with all zeros by using check_return$e9
           df_clean <- df_clean[, !(colnames(df_clean) %in% check_return$e10)]
@@ -779,9 +766,6 @@ pgx.checkPGX <- function(
       }
 
       if (type == "SAMPLES") {
-        
-        # PGX CHECK HERE #TODO
-
         feature_names <- rownames(df_clean)
         
         # check for duplicated rownames
@@ -795,13 +779,9 @@ pgx.checkPGX <- function(
       }
 
       if (type == "CONTRASTS") {
-        
         feature_names <- rownames(df_clean)
-              
-        # PGX CHECK HERE #TODO
 
         # check for duplicated rownames (but pass)
-  
         ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
         
         if (length(x = ANY_DUPLICATED) > 0 && PASS) {
@@ -811,20 +791,19 @@ pgx.checkPGX <- function(
 
       }
 
-      # general checks
+      # general checks for all data types
 
       # check for empty df
-
         IS_DF_EMPTY <- dim(df_clean)[1] == 0 || dim(df_clean)[2] == 0
 
         if (!IS_DF_EMPTY) {
           df_clean <- as.matrix(df_clean)
         }
 
-        if (IS_DF_EMPTY) {
+        if (IS_DF_EMPTY && PASS) {
           check_return$e15 <- "empty dataframe"
           pass = FALSE          
         }
 
-      return(df = df_clean, checks = checks, warning_type = warning_type) 
+      return(df = df_clean, checks = checks_return, PASS = PASS) 
   }
