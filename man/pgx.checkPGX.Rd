@@ -4,11 +4,7 @@
 \alias{pgx.checkPGX}
 \title{Check input files for pgx.computePGX}
 \usage{
-pgx.checkPGX(
-  df,
-  type = c("samples", "counts", "contrasts")[0],
-  autocorrect = TRUE
-)
+pgx.checkPGX(df, type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")[0])
 }
 \arguments{
 \item{df}{a data.frame correcponding to the input file as described in Omics Playground documentation}
