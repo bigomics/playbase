@@ -5,20 +5,20 @@
 \title{Create a pgx object}
 \usage{
 pgx.createFromFiles(
-  count.file,
+  counts.file,
   samples.file,
   contrasts.file = NULL,
-  gxmethods = "trend.limma,edger.qlf,edger.lrt",
+  gxmethods = "trend.limma,edger.qlf,deseq2.wald",
   gsetmethods = "fisher,gsva,fgsea",
   extra = "meta.go,deconv,infer,drugs,wordcloud"
 )
 }
 \arguments{
+\item{counts.file}{a playbase::COUNTS file}
+
 \item{samples.file}{a playbase::SAMPLES file}
 
 \item{contrasts.file}{a playbase::CONTRASTS file}
-
-\item{counts.file}{a playbase::COUNTS file}
 }
 \value{
 list. represents a pgx object

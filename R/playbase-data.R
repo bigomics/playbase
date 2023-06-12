@@ -41,11 +41,16 @@ example_file <- function(file = NULL) {
 #' @source unknown
 "COUNTS"
 
+#' Checks performed by the pgx.CHECK function
+#'
+#' @format ## `data.frame`
+#' rows are checks, columns are description of the check performed.
+"PGX_CHECKS"
+
+
 #' Example GMT (geneset matrix transpose) of genes targeted by microRNA
 #'
 #' @format ## `GMT`
 #' list of genes (targeted by a microRNA), and the list name is the microRNA
 #' @source C3: regulatory target gene sets, MIR: microRNA targets from https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp
 "EXAMPLE_GMT"
-
-
