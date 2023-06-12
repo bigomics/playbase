@@ -350,9 +350,11 @@ pgx.readDatasetProfiles <- function(pgx.dir, file="datasets-allFC.csv",
 #' @export
 pgx.scanInfoFile <- function(pgx.dir, file="datasets-info.csv", force=FALSE, verbose=TRUE)
 {
+  pgx.files <- dir(pgx.dir, pattern="[.]pgx$")
+  if(length(pgx.files)==0) return(NULL)  ## no files!
   pgx.initDatasetFolder(pgx.dir, force=force, verbose=TRUE)
   pgxinfo.file <- file.path(pgx.dir, file)
-  if(!file.exists(pgxinfo.file)) next()  ## really?? no updating??
+  if(!file.exists(pgxinfo.file)) return(NULL)  ## no info??
   ## do not use fread.csv or fread here!! see issue #441
   pgxinfo = read.csv(pgxinfo.file, stringsAsFactors=FALSE, row.names=1, sep=',')
   pgxinfo$path <- pgx.dir
@@ -380,6 +382,15 @@ pgx.initDatasetFolder <- function( pgx.dir,
     pgx.files <- dir(pgx.dir, pattern="[.]pgx$")
     pgx.files <- sub("[.]pgx$","",pgx.files) ## strip pgx
 
+    dbg("[pgx.initDatasetFolder] length(pgx.files) = ",length(pgx.files))
+    if(length(pgx.files)==0) {
+        allfc.file1 <- file.path(pgx.dir, allfc.file)
+        info.file1 <- file.path(pgx.dir, info.file)      
+        unlink(info.file1)
+        unlink(allfc.file1)        
+        return(NULL)
+    }
+  
     ##----------------------------------------------------------------------
     ## If an allFC file exists
     ##----------------------------------------------------------------------
@@ -412,8 +423,8 @@ pgx.initDatasetFolder <- function( pgx.dir,
 
     if(!force && has.info) {
         if(verbose) message("[initDatasetFolder] checking which pgx files already in PGX info...")
-        pgxinfo = fread.csv(info.file1, stringsAsFactors=FALSE, row.names=1, sep=',')
-        ##pgxinfo = read.csv(info.file1, stringsAsFactors=FALSE, row.names=1)        
+        ## do not use fread! quoting bug
+        pgxinfo = read.csv(info.file1, stringsAsFactors=FALSE, row.names=1, sep=',')        
         pgxinfo.files <- unique(sub(".pgx$","",pgxinfo$dataset))
         jj <- which(!(pgx.missing1 %in% pgxinfo.files))
         pgx.missing1 = pgx.missing1[jj]
