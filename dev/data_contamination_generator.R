@@ -229,7 +229,7 @@ lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/ch
 
 # prepend header with special characters
 lapply(1:length(unlist(characters)), function (x){
-    #x = 14
+    #x = 1
     char <- unlist(characters)[[x]]   
     filename = names(unlist(characters))[x]
     sample <- input_files$samples
@@ -240,9 +240,9 @@ lapply(1:length(unlist(characters)), function (x){
     colnames(contrast) <- paste0(char, colnames(contrast))
     
 
-    write.table(sample, file = paste0("data-test//chars//prepend_header//",filename, "//sample.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
-    write.table(contrast, file = paste0("data-test//chars//prepend_header//",filename, "//contrast.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
-    write.table(count, file = paste0("data-test//chars//prepend_header//",filename, "//count.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(sample, file = paste0("data-test//chars//prepend_header_contrast_sample//",filename, "//sample.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(contrast, file = paste0("data-test//chars//prepend_header_contrast_sample//",filename, "//contrast.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(count, file = paste0("data-test//chars//prepend_header_contrast_sample//",filename, "//count.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
 
 })
 
