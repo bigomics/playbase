@@ -13,7 +13,7 @@
 #' @param contrasts.file a playbase::CONTRASTS file
 #'
 #' @return list. represents a pgx object
-#' @export 
+#' @export
 #' @examples
 pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL,
                                 gxmethods = "trend.limma,edger.qlf,deseq2.wald",
@@ -140,26 +140,26 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 #' @export
 #'
 #' @examples
-#' # first step is to create pgx 
+#' # first step is to create pgx
 #' pgx <- playbase::pgx.createPGX(
 #'  counts = playbase::COUNTS,
 #'  samples = playbase::SAMPLES,
 #'  contrasts = playbase::CONTRASTS
 #' )
-#' 
+#'
 #' # once pgx is created, we can compute the modules
 #' pgx <- playbase::pgx.computePGX(
 #'   pgx = pgx
 #' )
-#' 
+#'
 #' # if you want a more minimal (and quick) example for testing, use the settings below
-#' 
+#'
 #' pgx <- playbase::pgx.createPGX(
 #'  counts = playbase::COUNTS,
 #'  samples = playbase::SAMPLES,
 #'  contrasts = playbase::CONTRASTS[1]
 #' )
-#' 
+#'
 #' pgx <- playbase::pgx.computePGX(
 #'   pgx = pgx,
 #'   max.genes = 10000,
@@ -203,12 +203,12 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   }
 
   ## convert group-wise contrast to sample-wise
-  
+
   grp.idx <- grep("group|condition", tolower(colnames(samples)))[1]
-  
+
   if (any(!is.na(grp.idx))) {
     # only run the code below if we identify at least one group
-    
+
     is.group.contrast <- all(rownames(contrasts) %in% samples[, grp.idx])
     is.group.contrast
     if (is.group.contrast && nrow(contrasts) < nrow(samples)) {
@@ -598,26 +598,26 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 #' @export
 #'
 #' @examples
-#' # first step is to create pgx 
+#' # first step is to create pgx
 #' pgx <- playbase::pgx.createPGX(
 #'  counts = playbase::COUNTS,
 #'  samples = playbase::SAMPLES,
 #'  contrasts = playbase::CONTRASTS
 #' )
-#' 
+#'
 #' # once pgx is created, we can compute the modules
 #' pgx <- playbase::pgx.computePGX(
 #'   pgx = pgx
 #' )
-#' 
+#'
 #' # if you want a more minimal (and quick) example for testing, use the settings below
-#' 
+#'
 #' pgx <- playbase::pgx.createPGX(
 #'  counts = playbase::COUNTS,
 #'  samples = playbase::SAMPLES,
 #'  contrasts = playbase::CONTRASTS[1]
 #' )
-#' 
+#'
 #' pgx <- playbase::pgx.computePGX(
 #'   pgx = pgx,
 #'   max.genes = 10000,
@@ -626,7 +626,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 #'   gset.methods = c("fisher")
 #' )
 pgx.computePGX <- function(pgx,
-                           max.genes = 19999, 
+                           max.genes = 19999,
                            max.genesets = 5000,
                            gx.methods = c("ttest.welch", "trend.limma", "edger.qlf"),
                            gset.methods = c("fisher", "gsva", "fgsea"),
@@ -716,102 +716,3 @@ pgx.computePGX <- function(pgx,
   pgx$timings
   return(pgx)
 }
-
-
-#' Check input files for pgx.computePGX
-#'
-#' @param df a data.frame correcponding to the input file as described in Omics Playground documentation
-#' @param type one of "counts", "samples", "contrasts"
-#'
-#' @return
-#' @export
-#'
-#' @examples
-pgx.checkPGX <- function(
-  df,
-  type = c("SAMPLES", "COUNTS","EXPRESSION", "CONTRASTS")[0]
-  ) {
-    df_clean <- df
-
-    PASS = TRUE
-
-    check_return <- list()
-
-    if (type == "COUNTS" || type == "EXPRESSION") {
-        feature_names <- rownames(df_clean)
-        
-        # check for duplicated rownames (but pass)
-        ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
-        
-        if (length(x = ANY_DUPLICATED) > 0 && PASS) {
-          check_return$e6 <- ANY_DUPLICATED
-        }
-
-        # check for zero count rows, remove them
-        
-        ANY_ROW_ZERO <- which(rowSums(df_clean)==0)
-
-        if (length(ANY_ROW_ZERO) > 0 && PASS) {
-          
-          # get the row names with all zeros
-          check_return$e9 <- names(ANY_ROW_ZERO)
-          
-          # remove the rownames with all zeros by using check_return$e9
-          df_clean <- df_clean[!(rownames(df_clean) %in% check_return$e9), ]
-        }
-
-        # check for zero count columns, remove them
-        ANY_COLUMN_ZERO <- which(colSums(df_clean)==0)
-
-        if (length(ANY_COLUMN_ZERO) > 0 && PASS) {
-          check_return$e10 <- names(ANY_COLUMN_ZERO)
-          # remove the column names with all zeros by using check_return$e9
-          df_clean <- df_clean[, !(colnames(df_clean) %in% check_return$e10)]
-        }
-        
-      }
-
-      if (type == "SAMPLES") {
-        feature_names <- rownames(df_clean)
-        
-        # check for duplicated rownames
-        
-        ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
-        
-        if (length(x = ANY_DUPLICATED) > 0 && PASS) {
-          check_return$e1 <- ANY_DUPLICATED
-          PASS = FALSE
-        }
-      }
-
-      if (type == "CONTRASTS") {
-        feature_names <- rownames(df_clean)
-
-        # check for duplicated rownames (but pass)
-        ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
-        
-        if (length(x = ANY_DUPLICATED) > 0 && PASS) {
-          check_return$e11 <- ANY_DUPLICATED
-          PASS = FALSE
-        }
-
-      }
-
-      # general checks for all data types
-
-      # check for empty df
-        IS_DF_EMPTY <- dim(df_clean)[1] == 0 || dim(df_clean)[2] == 0
-
-        if (!IS_DF_EMPTY) {
-          df_clean <- as.matrix(df_clean)
-        }
-
-        if (IS_DF_EMPTY && PASS) {
-          check_return$e15 <- "empty dataframe"
-          pass = FALSE          
-        }
-
-      return(
-        list(df = df_clean, checks = check_return, PASS = PASS)
-        ) 
-  }
