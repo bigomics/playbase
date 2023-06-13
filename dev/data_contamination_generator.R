@@ -225,9 +225,10 @@ lapply(names(input_files), function(x) {
 
 # generating files with different header names
 
+# prepend header with special characters
+
 lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/chars/prepend_header_contrast_sample/",x)))
 
-# prepend header with special characters
 lapply(1:length(unlist(characters)), function (x){
     #x = 1
     char <- unlist(characters)[[x]]   
@@ -239,16 +240,37 @@ lapply(1:length(unlist(characters)), function (x){
     colnames(sample) <- paste0(char, colnames(sample))
     colnames(contrast) <- paste0(char, colnames(contrast))
     
-
     write.table(sample, file = paste0("data-test//chars//prepend_header_contrast_sample//",filename, "//sample.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
     write.table(contrast, file = paste0("data-test//chars//prepend_header_contrast_sample//",filename, "//contrast.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
     write.table(count, file = paste0("data-test//chars//prepend_header_contrast_sample//",filename, "//count.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
 
 })
 
-# add special characters to sample metadata AND respective contrast
 
-lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/chars/sample_contrast_phenotype/",x)))
+# append header with special characters in the middle
+
+lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/chars/append_center_header_contrast_sample/",x)))
+
+lapply(1:length(unlist(characters)), function (x){
+    #x = 1
+    char <- unlist(characters)[[x]]   
+    filename = names(unlist(characters))[x]
+    sample <- input_files$samples
+    contrast <- input_files$contrast
+    count <- input_files$count
+
+    colnames(sample) <- add_character_in_second_position(colnames(sample), char)
+    colnames(contrast) <- add_character_in_second_position(colnames(contrast), char)
+    
+    write.table(sample, file = paste0("data-test//chars//prepend_header_contrast_sample//",filename, "//sample.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(contrast, file = paste0("data-test//chars//prepend_header_contrast_sample//",filename, "//contrast.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(count, file = paste0("data-test//chars//prepend_header_contrast_sample//",filename, "//count.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+
+})
+
+# add special characters to sample metadata AND respective contrast (append)
+
+lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/chars/sample_contrast_phenotype_append/",x)))
 
 lapply(1:length(unlist(characters)), function (x){
     #x =22
@@ -268,6 +290,40 @@ lapply(1:length(unlist(characters)), function (x){
         #idx = contrast_split[[1]]
         #idx = contrast_split[[1]]
         idx[3] <- paste0(char, idx[3])
+        paste(idx, collapse = "_")
+    })
+
+    colnames(contrast) <- contrast_contaminated
+    
+    write.table(sample, file = paste0("data-test//chars//sample_contrast_phenotype//",filename, "//sample.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(contrast, file = paste0("data-test//chars//sample_contrast_phenotype//",filename, "//contrast.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(count, file = paste0("data-test//chars//sample_contrast_phenotype//",filename, "//count.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+
+
+})
+
+# add special characters to sample metadata AND respective contrast (middle)
+
+lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/chars/sample_contrast_phenotype_middle/",x)))
+
+lapply(1:length(unlist(characters)), function (x){
+    #x =1
+    char <- unlist(characters)[[x]]
+    filename = names(unlist(characters))[x]
+    sample <- input_files$samples
+    contrast <- input_files$contrast
+    count <- input_files$count
+
+    sample[,1] <-  add_character_in_second_position(sample[,1],char)
+
+    rownames(contrast) <- add_character_in_second_position(rownames(contrast),char)
+
+    contrast_split <- strsplit(colnames(contrast), split = "_")
+
+    contrast_contaminated <-lapply(contrast_split, function(idx){
+        #idx = contrast_split[[1]]
+        #idx = contrast_split[[1]]
+        idx[3] <- add_character_in_second_position(idx[3],char)
         paste(idx, collapse = "_")
     })
 
