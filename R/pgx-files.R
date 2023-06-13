@@ -247,6 +247,23 @@ pgx.saveMatrixH5 <- function(X, h5.file, chunk=NULL )
     rhdf5::h5closeAll()
 }
 
+#' @export
+pgx.readMatrixH5 <- function(h5.file, select=NULL, rows=NULL) {
+    if(is.null(select) && is.null(rows)) {
+        X  <- rhdf5::h5read(h5.file, "data/matrix")
+        rn <- rhdf5::h5read(h5.file,"data/rownames")
+        cn <- rhdf5::h5read(h5.file,"data/colnames")
+    }
+    if(!is.null(select) || !is.null(rows)) {
+        X  <- rhdf5::h5read(h5.file, "data/matrix", index = list(rows, select))
+        rn <- rhdf5::h5read(h5.file,"data/rownames", index = list(rows))
+        cn <- rhdf5::h5read(h5.file,"data/colnames", index = list(select))
+    }
+    rownames(X) <- rn
+    colnames(X) <- cn
+    X[which(X < -999999)] <- NA
+    as.matrix(X)
+}
 
 #' @export
 pgx.readOptions <- function(file = "./OPTIONS") {
@@ -352,7 +369,10 @@ pgx.scanInfoFile <- function(pgx.dir, file="datasets-info.csv", force=FALSE, ver
 {
   pgx.files <- dir(pgx.dir, pattern="[.]pgx$")
   if(length(pgx.files)==0) return(NULL)  ## no files!
-  pgx.initDatasetFolder(pgx.dir, force=force, verbose=TRUE)
+
+  ## before reading the info file, we need to update for new files
+  pgx.initDatasetFolder(pgx.dir, force=force, verbose=TRUE)  
+
   pgxinfo.file <- file.path(pgx.dir, file)
   if(!file.exists(pgxinfo.file)) return(NULL)  ## no info??
   ## do not use fread.csv or fread here!! see issue #441
@@ -376,7 +396,8 @@ pgx.initDatasetFolder <- function( pgx.dir,
     if(!dir.exists(pgx.dir)) {
         stop(paste("[initDatasetFolder] FATAL ERROR : folder",pgx.dir,"does not exist"))
     }
-
+    dbg("[pgx.initDatasetFolder] *** called ***")
+  
     ## all public datasets
     pgx.dir <- pgx.dir[1]  ## only one folder!!!
     pgx.files <- dir(pgx.dir, pattern="[.]pgx$")
@@ -575,6 +596,7 @@ pgx.initDatasetFolder <- function( pgx.dir,
       if(is.null(allFC)) {
         allFC <- allFC.new
       } else {
+        ## Add any new FC profiles to the existing allFC
         gg <- sort(unique(c(rownames(allFC), rownames(allFC.new))))
         j1 <- match(gg, rownames(allFC))
         j2 <- match(gg, rownames(allFC.new))
