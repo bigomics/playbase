@@ -279,67 +279,6 @@ pgx.readOptions <- function(file = "./OPTIONS") {
     opt
 }
 
-##pgx.dir=PGX.DIR;verbose=TRUE;force=FALSE
-#' @export
-pgx.initDatasetFolder.REMOVE <- function(pgx.dir, verbose=TRUE, force=FALSE)
-{
-    ## Initialized information file for multiple folders.
-    ##
-    ##
-    i=1
-    for(i in 1:length(pgx.dir)) {
-        if(!dir.exists(pgx.dir[i])) next()
-
-        ## skip if no pgx files
-        npgx <- length(dir(pgx.dir[i],"pgx$"))
-        if(npgx==0) {
-            message("[initDatasetFolder] no pgx files in",pgx.dir[i])
-            next()
-        }
-
-        ## skip if too many...
-        if(npgx > 100 && force==FALSE) {
-            message("[initDatasetFolder] too many files in",pgx.dir[i],". Please init manually")
-            next()
-        }
-
-        pgx.initDatasetFolder(
-            pgx.dir[i],
-            allfc.file = "datasets-allFC.csv",
-            info.file = "datasets-info.csv",
-            force = force,
-            verbose = verbose
-        )
-
-    }
-
-}
-
-
-pgx.readDatasetProfiles.REMOVE <- function(pgx.dir, file="datasets-allFC.csv",
-                                    verbose=TRUE)
-{
-    F <- NULL
-    pgx.dir <- unique(pgx.dir)
-    i=1
-    for(i in 1:length(pgx.dir)) {
-        if(!dir.exists(pgx.dir[i])) next()
-        f1 <- pgx.readDatasetProfiles1(pgx.dir[i], file=file,
-                                       verbose=verbose)
-        if(is.null(F)) {
-            F <- f1
-        } else {
-            gg <- sort(unique(rownames(F),rownames(f1)))
-            gg <- setdiff(gg, c(NA,""))
-            F <- cbind( F[match(gg,rownames(F)),,drop=FALSE],
-                       f1[match(gg,rownames(f1)),,drop=FALSE] )
-            rownames(F) <- gg
-        }
-    }
-    dim(F)
-    return(F)
-}
-
 #' @export
 pgx.readDatasetProfiles <- function(pgx.dir, file="datasets-allFC.csv",
                                      verbose=TRUE)
