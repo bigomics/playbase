@@ -9,4 +9,4 @@
 library(testthat)
 library(playbase)
 
-test_check("playbase")
+testthat::test_check("playbase")
