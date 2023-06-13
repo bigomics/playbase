@@ -27,7 +27,7 @@ input_files <- list(
 )
 
 input_files[["contrasts"]]$act_vs_notact <- c(-1,1,1,1,1,1)
-
+input_files[["contrasts"]] <- input_files[["contrasts"]][,c("act_vs_notact"), drop = FALSE]
 
 # output_char files, each element on the list is a test
 output_char <- list()
