@@ -944,10 +944,10 @@ sigdb.getEnrichmentMatrix <- function(sigdb, select=NULL, path=NULL,
     has.gsea <- h5exists(sigdb, "enrichment/GSEA")
     has.rankcor <- h5exists(sigdb, "enrichment/rankcor")
     Y <- NULL
-    if(which == "gsea" && has.gsea) {
+    if(is.null(Y) && "gsea" %in% which  && has.gsea) {
       Y  <- rhdf5::h5read(sigdb, "enrichment/GSEA", index = list(rowidx,colidx) )
     }
-    if(which == "rankcor" && has.rankcor) {
+    if(is.null(Y) && "rankcor" %in% which && has.rankcor) {
       Y  <- rhdf5::h5read(sigdb, "enrichment/rankcor", index = list(rowidx,colidx) )
     }
     if(is.null(Y) || nrow(Y)==0) {
