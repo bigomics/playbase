@@ -599,6 +599,18 @@ pgx.initDatasetFolder <- function( pgx.dir,
       remove(AA)
     }
 
+    ## update sigdb or create if not exists
+    sigdb <- file.path(pgx.dir, "datasets-sigdb.h5")  
+    if(!file.exists(sigdb) || pgxfc.changed) {
+       ## NEED RETHINK!!!! HERE???
+       if(file.exists(sigdb)) unlink(sigdb)
+       if(verbose) message("[initDatasetFolder] creating signature DB to",sigdb,"...")       
+       pgx.createSignatureDatabaseH5.fromMatrix(sigdb, X=allFC)
+       if(verbose) message("[initDatasetFolder] add enrichment signature to",sigdb,"...")       
+       pgx.addEnrichmentSignaturesH5(sigdb, X=allFC, methods = "rankcor")
+    }
+
+  
 }
 
 #' @export
