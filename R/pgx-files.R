@@ -586,10 +586,10 @@ pgx.initDatasetFolder <- function( pgx.dir,
       pgxfc.changed <- TRUE
     }
   
-    ## delete old entries
+    ## save modified allFC
     if(pgxfc.changed) {
       ## check for duplicates
-      if(verbose) message("[initDatasetFolder] writing updated allFC to",allfc.file1,"...")
+      if(verbose) message("[initDatasetFolder] allFC changed. updating file to",allfc.file1,"...")
       allFC <- allFC[,!duplicated(colnames(allFC)),drop=FALSE]
       allFC <- allFC[,order(colnames(allFC)),drop=FALSE]
       AA <- data.frame(rownames=rownames(allFC), allFC, check.names=FALSE)
