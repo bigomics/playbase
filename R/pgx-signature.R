@@ -551,43 +551,44 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only=FALSE)
 #' @export
 pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only=FALSE)
 {
-
-  file.exists(h5.file)
-  if(file.exists(h5.file)) unlink(h5.file)
-  ##chunk=c(nrow(X),1)
-  pgx.saveMatrixH5(X, h5.file, chunk=c(nrow(X),1))
+    if(file.exists(h5.file)) unlink(h5.file)
+    ##chunk=c(nrow(X),1)
+    dbg("[pgx.createSignatureDatabaseH5.fromMatrix] Saving signature matrix...")  
+    pgx.saveMatrixH5(X, h5.file, chunk=c(nrow(X),1))
+    dbg("[pgx.createSignatureDatabaseH5.fromMatrix] ... saving done")
   
-  ##--------------------------------------------------
-  ## Calculate top100 gene signatures
-  ##--------------------------------------------------
-  cat("[pgx.createSignatureDatabaseH5.fromMatrix] Creating top-100 signatures...")
-  
-  if(!update.only || !h5exists(h5.file, "signature")) {
-    ## X  <- rhdf5::h5read(h5.file, "data/matrix")
-    rn <- rhdf5::h5read(h5.file,"data/rownames")
-    cn <- rhdf5::h5read(h5.file,"data/colnames")
-    rhdf5::h5ls(h5.file)
+    ##--------------------------------------------------
+    ## Calculate top100 gene signatures
+    ##--------------------------------------------------
     
-    dim(X)
-    ##X <- X[,1:100]
-    X[is.na(X)] <- 0
-    orderx <- apply(X,2,function(x) {
-      idx=order(x);
-      list(DN=head(idx,100),UP=rev(Matrix::tail(idx,100)))
-    })
-    sig100.dn <- sapply(orderx,"[[","DN")
-    sig100.dn <- apply(sig100.dn, 2, function(i) rn[i])
-    sig100.up <- sapply(orderx,"[[","UP")
-    sig100.up <- apply(sig100.up, 2, function(i) rn[i])
-    
-    if(!h5exists(h5.file, "signature")) rhdf5::h5createGroup(h5.file,"signature")
-    rhdf5::h5write( sig100.dn, h5.file, "signature/sig100.dn")  ## can write list???
-    rhdf5::h5write( sig100.up, h5.file, "signature/sig100.up")  ## can write list??
-    
-    remove(orderx)
-        remove(sig100.dn)
-    remove(sig100.up)
-  }
+    if(!update.only || !h5exists(h5.file, "signature")) {
+      dbg("[pgx.createSignatureDatabaseH5.fromMatrix] Creating top-100 signatures...")    
+      ## X  <- rhdf5::h5read(h5.file, "data/matrix")
+      rn <- rhdf5::h5read(h5.file,"data/rownames")
+      cn <- rhdf5::h5read(h5.file,"data/colnames")
+      rhdf5::h5ls(h5.file)
+      dim(X)
+      X[is.na(X)] <- 0
+      orderx <- apply(X,2,function(x) {
+        idx = order(x);
+        list(
+          DN = head(idx,100),
+          UP = rev(tail(idx,100))
+        )
+      })
+      sig100.dn <- sapply(orderx,"[[","DN")
+      sig100.dn <- apply(sig100.dn, 2, function(i) rn[i])
+      sig100.up <- sapply(orderx,"[[","UP")
+      sig100.up <- apply(sig100.up, 2, function(i) rn[i])
+      
+      if(!h5exists(h5.file, "signature")) rhdf5::h5createGroup(h5.file,"signature")
+      rhdf5::h5write( sig100.dn, h5.file, "signature/sig100.dn")  ## can write list???
+      rhdf5::h5write( sig100.up, h5.file, "signature/sig100.up")  ## can write list??
+      
+      remove(orderx)
+      remove(sig100.dn)
+      remove(sig100.up)
+    }
 
     ##--------------------------------------------------
     ## Precalculate t-SNE/UMAP

@@ -324,13 +324,16 @@ pgx.scanInfoFile <- function(pgx.dir, file="datasets-info.csv", force=FALSE, ver
 pgx.initDatasetFolder <- function( pgx.dir,
                                   allfc.file = "datasets-allFC.csv",
                                   info.file = "datasets-info.csv",
-                                  force=FALSE, verbose=TRUE)
+                                  force = FALSE, delete.old = FALSE,
+                                  new.pgx = NULL,
+                                  verbose = TRUE)
 {
     ##
     ## Initialize file information file for SINGLE folder
     ##
     ##
-    ##allfc.file = "datasets-allFC.csv";info.file = "datasets-info.csv";force=FALSE;verbose=TRUE
+
+##  allfc.file = "datasets-allFC.csv";info.file = "datasets-info.csv";force=FALSE;verbose=TRUE;delete.old=FALSE;new.pgx=NULL
     
     if(!dir.exists(pgx.dir)) {
         stop(paste("[initDatasetFolder] FATAL ERROR : folder",pgx.dir,"does not exist"))
@@ -345,9 +348,11 @@ pgx.initDatasetFolder <- function( pgx.dir,
     dbg("[pgx.initDatasetFolder] length(pgx.files) = ",length(pgx.files))
     if(length(pgx.files)==0) {
         allfc.file1 <- file.path(pgx.dir, allfc.file)
-        info.file1 <- file.path(pgx.dir, info.file)      
-        unlink(info.file1)
-        unlink(allfc.file1)        
+        info.file1  <- file.path(pgx.dir, info.file)
+        if(delete.old) {
+          unlink(info.file1)
+          unlink(allfc.file1)
+        }
         return(NULL)
     }
   
@@ -374,11 +379,11 @@ pgx.initDatasetFolder <- function( pgx.dir,
     allFC <-NULL
     if(!force && has.fc) {
         if(verbose) message("[initDatasetFolder] checking which pgx files already done in allFC...")
-        allFC <- read.csv(allfc.file1,row.names=1,check.names=FALSE,nrows=5)  ## just HEADER!!!
-        dim(allFC)
-        files.done <- gsub("^\\[|\\].*","",colnames(allFC))
-        pgx.missing0 <- setdiff(pgx.missing0, files.done)
-        pgx.delete0  <- setdiff(files.done, pgx.files)
+        allFC <- data.table::fread(allfc.file1,check.names=FALSE,nrows=1) ## HEADER!!!        
+        pgx.done <- gsub("^\\[|\\].*","",colnames(allFC)[-1])
+        pgx.missing0 <- setdiff(pgx.missing0, pgx.done)
+        pgx.delete0  <- setdiff(pgx.done, pgx.files)
+        allFC <-NULL        
     }
 
     if(!force && has.info) {
@@ -386,8 +391,7 @@ pgx.initDatasetFolder <- function( pgx.dir,
         ## do not use fread! quoting bug
         pgxinfo = read.csv(info.file1, stringsAsFactors=FALSE, row.names=1, sep=',')        
         pgxinfo.files <- unique(sub(".pgx$","",pgxinfo$dataset))
-        jj <- which(!(pgx.missing1 %in% pgxinfo.files))
-        pgx.missing1 = pgx.missing1[jj]
+        pgx.missing1 <- setdiff(pgx.missing1, pgxinfo.files)
         pgx.delete1  <- setdiff(pgxinfo.files, pgx.files)
     }
 
@@ -398,25 +402,53 @@ pgx.initDatasetFolder <- function( pgx.dir,
     ## files to be done either for allFC or missing in INFO
     pgx.missing <- unique(c(pgx.missing0, pgx.missing1))
     pgx.delete  <- unique(c(pgx.delete0, pgx.delete1))
-    if(verbose) message("[initDatasetFolder] FORCE = ",force)
 
+    pgxinfo.changed = FALSE
+    pgxfc.changed = FALSE
+
+    ## these pgx need forced update
+    if(!is.null(new.pgx)) {
+       new.pgx <- sub(".pgx$","",new.pgx)
+       new.pgx <- intersect(new.pgx, pgx.files)  ## only existing pgx
+       pgx.delete  <- union(pgx.delete, new.pgx)
+       pgx.missing <- union(pgx.missing, new.pgx)
+       pgx.missing0 <- union(pgx.missing0, new.pgx)
+       pgx.missing1 <- union(pgx.missing1, new.pgx)
+       sel1 <- which(pgxinfo$dataset %in% new.pgx)
+       if(length(sel1)) {
+           pgxinfo <- pgxinfo[-sel1,]
+           pgxinfo.changed <- TRUE       
+       }
+    }
+  
     if(length(pgx.missing)==0 && length(pgx.delete)==0) {
         if(verbose) message("[initDatasetFolder] no update required. use FORCE=1 for forced update.")
         return(NULL)
     }
-    if(verbose) message("[initDatasetFolder] scanning ",length(pgx.missing)," PGX files in folder ",pgx.dir)
-    if(verbose) message("[initDatasetFolder] deleting ",length(pgx.delete)," old items in info file")
+    if(verbose) message("[initDatasetFolder] folder has ",length(pgx.missing)," new PGX files")
+    if(verbose) message("[initDatasetFolder] info-file has ",length(pgx.delete)," old items")
 
     ##----------------------------------------------------------------------
     ## Reread allFC file. Before we only read the header.
     ##----------------------------------------------------------------------
     allFC <-NULL
-    if(!force && file.exists(allfc.file1)) {
+    if(!force && file.exists(allfc.file1) && length(pgx.missing)>0) {
         ##allFC <- read.csv(allfc.file1,row.names=1,check.names=FALSE)
         allFC <- fread.csv(allfc.file1,row.names=1,check.names=FALSE)
     }
     dim(allFC)
 
+    ## these pgx need forced update, so remove
+    if(!is.null(allFC) && !is.null(new.pgx)) {
+       new.pgx <- sub(".pgx$","",new.pgx)
+       allfc.pgx <- gsub("^\\[|\\].*","",colnames(allFC))
+       sel2 <- which(allfc.pgx %in% new.pgx)
+       if(length(sel2)) {
+          allFC <- allFC[,-sel2,drop=FALSE]
+          pgxfc.changed <- TRUE         
+       }
+    }  
+  
     ##----------------------------------------------------------------------
     ## For all new PGX files, load the PGX file and get the meta FC
     ## matrix.
@@ -426,9 +458,7 @@ pgx.initDatasetFolder <- function( pgx.dir,
     missing.FC <- list()
     message("[initDatasetFolder] missing pgx = ",paste(pgx.missing,collapse=" "))
     pgxfile = pgx.missing[1]
-    pgxinfo.changed = FALSE
-    pgxfc.changed = FALSE
-
+  
     ngs <- NULL
     for(pgxfile in pgx.missing) {
 
@@ -479,7 +509,7 @@ pgx.initDatasetFolder <- function( pgx.dir,
 
     ## remove unneccessary entries if forced.
     sel.delete <- which(!sub(".pgx$","",pgxinfo$dataset) %in% pgx.files)
-    if(length(sel.delete)) {
+    if(length(sel.delete) && delete.old) {
       pgxinfo <- pgxinfo[-sel.delete,,drop=FALSE]
       pgxinfo.changed <- TRUE
     }
@@ -495,20 +525,22 @@ pgx.initDatasetFolder <- function( pgx.dir,
     ##----------------------------------------------------------------------
 
     ## remove unneccessary entries if forced.
-    fc.done <- gsub("^\\[|\\].*","",colnames(allFC))
-    sel.deleteFC <- which(!fc.done %in% pgx.files)
-    if(length(sel.deleteFC)) {
-      allFC <- allFC[, -sel.deleteFC, drop=FALSE]
-      pgxfc.changed <- TRUE
+    if(!is.null(allFC) && delete.old) {
+      fc.done <- gsub("^\\[|\\].*","",colnames(allFC))
+      sel.deleteFC <- which(!fc.done %in% pgx.files)
+      if(length(sel.deleteFC)) {
+        allFC <- allFC[, -sel.deleteFC, drop=FALSE]
+        pgxfc.changed <- TRUE
+      }
     }
 
     if(length(missing.FC)==0 && !pgxfc.changed) {
         ## no change in info
-        dbg("[initDatasetFolder] allFC file complete. no change needed.")
+        dbg("[initDatasetFolder] allFC complete. no change needed.")
         return(NULL)
     }
 
-    if( length(missing.FC)>0) {
+    if(length(missing.FC)>0) {
       ## find most common genes
       all.gg <- toupper(as.character(unlist(sapply(missing.FC, rownames))))
       gg.tbl <- table(all.gg)
@@ -553,15 +585,18 @@ pgx.initDatasetFolder <- function( pgx.dir,
       dim(allFC)
       pgxfc.changed <- TRUE
     }
-
+  
     ## delete old entries
     if(pgxfc.changed) {
       ## check for duplicates
+      if(verbose) message("[initDatasetFolder] writing updated allFC to",allfc.file1,"...")
       allFC <- allFC[,!duplicated(colnames(allFC)),drop=FALSE]
       allFC <- allFC[,order(colnames(allFC)),drop=FALSE]
-      if(verbose) message("[initDatasetFolder] writing updated all fold-changes to",allfc.file1,"...")
-      write.csv(allFC, file=allfc.file1)
+      AA <- data.frame(rownames=rownames(allFC), allFC, check.names=FALSE)
+      ##write.csv(allFC, file=allfc.file1)
+      data.table::fwrite(AA, file=allfc.file1)
       Sys.chmod(allfc.file1, "0666")
+      remove(AA)
     }
 
 }
