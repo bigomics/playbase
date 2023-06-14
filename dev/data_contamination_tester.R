@@ -26,7 +26,7 @@ contrast_to_test <- "act_vs_notact"
 pgx_files_check <- data.frame(id = filesname)
 
 lapply(1:length(pgx_files), function(idx){
-  #idx = 28
+  #idx = 1
   print(idx)
   x = pgx_files[[idx]]
   filesname[idx]
@@ -46,7 +46,6 @@ lapply(1:length(pgx_files), function(idx){
 }) -> res
 
 res <- do.call(rbind,res)
-
 
 pgx_files_check <- cbind(pgx_files_check, res)
 

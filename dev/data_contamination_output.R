@@ -95,7 +95,7 @@ write.csv(error_table, "dev//error_table.csv", row.names = FALSE)
 create_dir("dev//pgx")
 
 lapply(1:length(pgx_files), function(x){
-  #x = 10
+  #x = 171
   pgx_test <- pgx_files[[x]]
   #filename <- stringr::str_extract(output$filepaths[[x]], "(?<=/)[^/]*$")
 

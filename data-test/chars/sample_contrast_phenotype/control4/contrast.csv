@@ -1,7 +1,0 @@
-,act12h_vs_\bnotact,act24h_vs_\bnotact,act48h_vs_\bnotact,act72h_vs_\bnotact,act96h_vs_\bnotact,act_vs_\bnotact
-\bnotact,-1,-1,-1,-1,-1,-1
-\bact12h,1,0,0,0,0,1
-\bact24h,0,1,0,0,0,1
-\bact48h,0,0,1,0,0,1
-\bact72h,0,0,0,1,0,1
-\bact96h,0,0,0,0,1,1
