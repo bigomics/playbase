@@ -342,15 +342,14 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
     message("number of drugs: ", ndrugs)
     is.drug <- grepl("activity|drug|ChemPert", f, ignore.case = TRUE)
 
-    NPRUNE <- 250
     fname <- names(ref.db)[i]
     out1 <- playbase::pgx.computeDrugEnrichment(
       obj = ngs,
       X = X,
       xdrugs = xdrugs,
       methods = c("GSEA", "cor"),
-      nmin = 3,
-      nprune = NPRUNE,
+      nmin = 10,
+      nprune = 1000,
       contrast = NULL
     )
 
@@ -423,12 +422,12 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
     length(table(xdrugs))
     dim(X)
 
-    NPRUNE <- -1
-    NPRUNE <- 250
     out1 <- playbase::pgx.computeDrugEnrichment(
       ngs, X, xdrugs,
       methods = c("GSEA", "cor"),
-      nmin = 10, nprune = NPRUNE, contrast = NULL
+      nmin = 10,
+      nprune = 1000,
+      contrast = NULL
     )
 
     if (!is.null(out1)) {
