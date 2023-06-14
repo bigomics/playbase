@@ -1,6 +1,6 @@
-test_that("example files exist", {
+testthat::test_that("example files exist", {
   all_files <- playbase::example_file()
-  expect(
+  testthat::expect(
     sum(!c(
       "counts.csv",
       "contrasts.csv",
