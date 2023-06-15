@@ -1,7 +1,7 @@
-,\fact_vs_notact
-notact,-1
-act12h,1
-act24h,1
-act48h,1
-act72h,1
-act96h,1
+,\fact_vs_\fnotact
+\fnotact,-1
+\fact12h,1
+\fact24h,1
+\fact48h,1
+\fact72h,1
+\fact96h,1

@@ -36,7 +36,7 @@ output$directories_with_files <- directories_with_files
 
 data_files <- list()
 for (i in 1:nrow(output)) {
-  #i = 1
+  #i = 11
   x <- output[i,]
 
   if (x[2] == TRUE) {
@@ -55,7 +55,7 @@ for (i in 1:nrow(output)) {
 # run pgx create
 
 lapply(data_files, function(x){
-    #x = data_files[[10]]
+    #x = data_files[[11]]
     res <- tryCatch(
     createPGX_safe(x),
     error = function(e) {

@@ -1,7 +1,7 @@
-,\ract_vs_notact
-notact,-1
-act12h,1
-act24h,1
-act48h,1
-act72h,1
-act96h,1
+,\ract_vs_\rnotact
+\rnotact,-1
+\ract12h,1
+\ract24h,1
+\ract48h,1
+\ract72h,1
+\ract96h,1

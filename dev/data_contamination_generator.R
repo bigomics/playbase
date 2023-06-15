@@ -102,8 +102,6 @@ lapply(names(input_files), function(x) {
     }
 })
 
-
-
 # randomize counts file
 
 create_dir("data-test/randomize_counts")
@@ -238,7 +236,19 @@ lapply(1:length(unlist(characters)), function (x){
     count <- input_files$count
 
     colnames(sample) <- paste0(char, colnames(sample))
-    colnames(contrast) <- paste0(char, colnames(contrast))
+    
+    contrast_split <- strsplit(colnames(contrast), "_")
+    sample[,1] <- paste0(char, sample[,1])
+    rownames(contrast) <- paste0(char, rownames(contrast))
+
+    contrast_contaminated <-lapply(contrast_split, function(idx){
+        #idx = contrast_split[[1]]
+        #idx = contrast_split[[1]]
+        idx[1] <- paste0(char, idx[1])
+        idx[3] <- paste0(char, idx[3])
+        paste(idx, collapse = "_")
+    })
+    colnames(contrast) <- contrast_contaminated
     
     write.table(sample, file = paste0("data-test//chars//prepend_header_contrast_sample//",filename, "//sample.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
     write.table(contrast, file = paste0("data-test//chars//prepend_header_contrast_sample//",filename, "//contrast.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
@@ -249,7 +259,7 @@ lapply(1:length(unlist(characters)), function (x){
 
 # append header with special characters in the middle
 
-lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/chars/append_middle_header_contrast_sample/",x)))
+lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/chars/append_middle_contrast_sample/",x)))
 
 lapply(1:length(unlist(characters)), function (x){
     #x = 1
@@ -259,13 +269,21 @@ lapply(1:length(unlist(characters)), function (x){
     contrast <- input_files$contrast
     count <- input_files$count
 
-    colnames(sample) <- add_character_in_second_position(colnames(sample), char)
-    colnames(contrast) <- add_character_in_second_position(colnames(contrast), char)
+    sample[,1] <- add_character_in_second_position(sample[,1], char)
+    rownames(contrast) <- add_character_in_second_position(rownames(contrast), char)
     
-    write.table(sample, file = paste0("data-test//chars//append_middle_header_contrast_sample//",filename, "//sample.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
-    write.table(contrast, file = paste0("data-test//chars//append_middle_header_contrast_sample//",filename, "//contrast.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
-    write.table(count, file = paste0("data-test//chars//append_middle_header_contrast_sample//",filename, "//count.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
-
+    contrast_contaminated <-lapply(contrast_split, function(idx){
+        #idx = contrast_split[[1]]
+        #idx = contrast_split[[1]]
+        idx[1] <- add_character_in_second_position(idx[1], char)
+        idx[3] <- add_character_in_second_position(idx[3], char)
+        paste(idx, collapse = "_")
+    })
+    colnames(contrast) <- contrast_contaminated
+    
+    write.table(sample, file = paste0("data-test//chars//append_middle_contrast_sample//",filename, "//sample.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(contrast, file = paste0("data-test//chars//append_middle_contrast_sample//",filename, "//contrast.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(count, file = paste0("data-test//chars//append_middle_contrast_sample//",filename, "//count.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
 })
 
 # add special characters to sample metadata AND respective contrast (append)
@@ -332,8 +350,6 @@ lapply(1:length(unlist(characters)), function (x){
     write.table(sample, file = paste0("data-test//chars//sample_contrast_phenotype_middle//",filename, "//sample.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
     write.table(contrast, file = paste0("data-test//chars//sample_contrast_phenotype_middle//",filename, "//contrast.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
     write.table(count, file = paste0("data-test//chars//sample_contrast_phenotype_middle//",filename, "//count.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
-
-
 })
 
 # generating sample names with special characters

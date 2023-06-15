@@ -1,7 +1,7 @@
-,\tact_vs_notact
-notact,-1
-act12h,1
-act24h,1
-act48h,1
-act72h,1
-act96h,1
+,\tact_vs_\tnotact
+\tnotact,-1
+\tact12h,1
+\tact24h,1
+\tact48h,1
+\tact72h,1
+\tact96h,1
