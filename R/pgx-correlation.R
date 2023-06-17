@@ -657,8 +657,6 @@ pgx.getGeneCorrelation <- function(gene, xref) {
     if(!is.null(R) && NCOL(R)>0) {
         R[is.na(R)] <- 0
         R[is.nan(R)] <- 0
-        # if(NCOL(R)==1) R <- matrix(R, ncol=1)
-        rownames(R) <- rho.genes
         R <- R[which(rowSums(R!=0,na.rm=TRUE)>0),,drop=FALSE]
         ## geneset rho has no sign (=cosine correlation) so we use the sign of others
         if(ncol(R)>1 && "gene sets" %in% colnames(R)) {
