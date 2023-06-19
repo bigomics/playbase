@@ -1,65 +1,38 @@
 "filename","playbase_error"
 "data-test/","Error: No file available"
 "data-test//chars","Error: No file available"
-"data-test//chars/append_middle_header_contrast_sample","Error: No file available"
-"data-test//chars/append_middle_header_contrast_sample/control1","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
+"data-test//chars/append_middle_contrast_sample","Error: No file available"
+"data-test//chars/append_middle_contrast_sample/control1","No error"
+"data-test//chars/append_middle_contrast_sample/control2","No error"
+"data-test//chars/append_middle_contrast_sample/control3","No error"
+"data-test//chars/append_middle_contrast_sample/control4","No error"
+"data-test//chars/append_middle_contrast_sample/control5","No error"
+"data-test//chars/append_middle_contrast_sample/control6","No error"
+"data-test//chars/append_middle_contrast_sample/control7","No error"
+"data-test//chars/append_middle_contrast_sample/digits1","No error"
+"data-test//chars/append_middle_contrast_sample/digits2","No error"
+"data-test//chars/append_middle_contrast_sample/digits3","No error"
+"data-test//chars/append_middle_contrast_sample/escape","No error"
+"data-test//chars/append_middle_contrast_sample/noncontrol","No error"
+"data-test//chars/append_middle_contrast_sample/punctuation1","No error"
+"data-test//chars/append_middle_contrast_sample/punctuation2","No error"
+"data-test//chars/append_middle_contrast_sample/punctuation3","No error"
+"data-test//chars/append_middle_contrast_sample/punctuation4","No error"
+"data-test//chars/append_middle_contrast_sample/punctuation5","No error"
+"data-test//chars/append_middle_contrast_sample/punctuation6","Error in contr.matrix[, i]: subscript out of bounds
 "
-"data-test//chars/append_middle_header_contrast_sample/control2","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
+"data-test//chars/append_middle_contrast_sample/punctuation7","Error in playbase::pgx.createPGX(counts = x$COUNTS, samples = x$SAMPLES, : [createPGX] FATAL :: matrices do not match
 "
-"data-test//chars/append_middle_header_contrast_sample/control3","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/control4","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/control5","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/control6","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/control7","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/digits1","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/digits2","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/digits3","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/escape","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/noncontrol","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/punctuation1","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/punctuation2","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/punctuation3","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/punctuation4","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/punctuation5","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/punctuation6","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/punctuation7","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/quotation1","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/quotation2","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/special1","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/special2","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/special3","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/special4","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/special5","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/special6","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/special7","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
-"data-test//chars/append_middle_header_contrast_sample/special8","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
-"
+"data-test//chars/append_middle_contrast_sample/quotation1","No error"
+"data-test//chars/append_middle_contrast_sample/quotation2","No error"
+"data-test//chars/append_middle_contrast_sample/special1","No error"
+"data-test//chars/append_middle_contrast_sample/special2","No error"
+"data-test//chars/append_middle_contrast_sample/special3","No error"
+"data-test//chars/append_middle_contrast_sample/special4","No error"
+"data-test//chars/append_middle_contrast_sample/special5","No error"
+"data-test//chars/append_middle_contrast_sample/special6","No error"
+"data-test//chars/append_middle_contrast_sample/special7","No error"
+"data-test//chars/append_middle_contrast_sample/special8","No error"
 "data-test//chars/prepend_header_contrast_sample","Error: No file available"
 "data-test//chars/prepend_header_contrast_sample/control1","No error"
 "data-test//chars/prepend_header_contrast_sample/control2","No error"
@@ -78,8 +51,9 @@
 "data-test//chars/prepend_header_contrast_sample/punctuation3","No error"
 "data-test//chars/prepend_header_contrast_sample/punctuation4","No error"
 "data-test//chars/prepend_header_contrast_sample/punctuation5","No error"
-"data-test//chars/prepend_header_contrast_sample/punctuation6","No error"
-"data-test//chars/prepend_header_contrast_sample/punctuation7","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
+"data-test//chars/prepend_header_contrast_sample/punctuation6","Error in contr.matrix[, i]: subscript out of bounds
+"
+"data-test//chars/prepend_header_contrast_sample/punctuation7","Error in `[.data.frame`(contr.matrix, , i): undefined columns selected
 "
 "data-test//chars/prepend_header_contrast_sample/quotation1","No error"
 "data-test//chars/prepend_header_contrast_sample/quotation2","No error"
@@ -91,7 +65,8 @@
 "data-test//chars/prepend_header_contrast_sample/special5","No error"
 "data-test//chars/prepend_header_contrast_sample/special6","No error"
 "data-test//chars/prepend_header_contrast_sample/special7","No error"
-"data-test//chars/prepend_header_contrast_sample/special8","No error"
+"data-test//chars/prepend_header_contrast_sample/special8","Error in contr.matrix[, i]: subscript out of bounds
+"
 "data-test//chars/sample_contrast_phenotype_append","Error: No file available"
 "data-test//chars/sample_contrast_phenotype_append/control1","No error"
 "data-test//chars/sample_contrast_phenotype_append/control2","No error"
@@ -146,7 +121,7 @@
 "data-test//chars/sample_contrast_phenotype_middle/punctuation5","No error"
 "data-test//chars/sample_contrast_phenotype_middle/punctuation6","Error in contr.matrix[, i]: subscript out of bounds
 "
-"data-test//chars/sample_contrast_phenotype_middle/punctuation7","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
+"data-test//chars/sample_contrast_phenotype_middle/punctuation7","Error in playbase::pgx.createPGX(counts = x$COUNTS, samples = x$SAMPLES, : [createPGX] FATAL :: matrices do not match
 "
 "data-test//chars/sample_contrast_phenotype_middle/quotation1","No error"
 "data-test//chars/sample_contrast_phenotype_middle/quotation2","No error"
@@ -177,7 +152,7 @@
 "data-test//chars/sample_names/punctuation4","No error"
 "data-test//chars/sample_names/punctuation5","No error"
 "data-test//chars/sample_names/punctuation6","No error"
-"data-test//chars/sample_names/punctuation7","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
+"data-test//chars/sample_names/punctuation7","Error in if (totratio > 6) {: missing value where TRUE/FALSE needed
 "
 "data-test//chars/sample_names/quotation1","No error"
 "data-test//chars/sample_names/quotation2","No error"
@@ -202,7 +177,7 @@
 "data-test//filetype","Error: No file available"
 "data-test//filetype/csv","No error"
 "data-test//filetype/tsv","No error"
-"data-test//filetype/txt","Error in `[.data.frame`(samples, , grp.idx): undefined columns selected
+"data-test//filetype/txt","Error in playbase::pgx.createPGX(counts = x$COUNTS, samples = x$SAMPLES, : [createPGX] FATAL :: matrices do not match
 "
 "data-test//first_column_name","No error"
 "data-test//randomize_counts","No error"
