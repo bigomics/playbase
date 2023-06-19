@@ -180,6 +180,6 @@
 "166","data-test__filetype_txt.pgx","data-test//filetype/txt","Error in playbase::pgx.createPGX(counts = x$COUNTS, samples = x$SAMPLES, : [createPGX] FATAL :: matrices do not match
 ",NA,NA
 "167","data-test__first_column_name.pgx","data-test//first_column_name","No error",1,1
-"168","data-test__randomize_counts.pgx","data-test//randomize_counts","No error",0.799383935699313,1
-"169","data-test__randomize_sample_name.pgx","data-test//randomize_sample_name","No error",0.777169984498478,-0.765603826090799
+"168","data-test__randomize_counts.pgx","data-test//randomize_counts","No error",0.807692652328127,1
+"169","data-test__randomize_sample_name.pgx","data-test//randomize_sample_name","No error",0.815422503064484,0.673061780632343
 "170","data-test__randomize_sample_rows.pgx","data-test//randomize_sample_rows","No error",1,1
