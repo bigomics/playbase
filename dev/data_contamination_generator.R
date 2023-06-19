@@ -259,7 +259,7 @@ lapply(1:length(unlist(characters)), function (x){
 
 # append header with special characters in the middle
 
-lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/chars/append_middle_contrast_sample/",x)))
+lapply(names(unlist(characters)), function(x) create_dir(file.path("data-test/chars/sample_contrast_phenotype_middle/",x)))
 
 lapply(1:length(unlist(characters)), function (x){
     #x = 1
@@ -281,9 +281,9 @@ lapply(1:length(unlist(characters)), function (x){
     })
     colnames(contrast) <- contrast_contaminated
     
-    write.table(sample, file = paste0("data-test//chars//append_middle_contrast_sample//",filename, "//sample.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
-    write.table(contrast, file = paste0("data-test//chars//append_middle_contrast_sample//",filename, "//contrast.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
-    write.table(count, file = paste0("data-test//chars//append_middle_contrast_sample//",filename, "//count.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(sample, file = paste0("data-test//chars//sample_contrast_phenotype_middle//",filename, "//sample.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(contrast, file = paste0("data-test//chars//sample_contrast_phenotype_middle//",filename, "//contrast.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
+    write.table(count, file = paste0("data-test//chars//sample_contrast_phenotype_middle//",filename, "//count.csv"), sep = ",", quote = FALSE, row.names = TRUE, col.names=NA)
 })
 
 # add special characters to sample metadata AND respective contrast (append)
