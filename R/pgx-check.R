@@ -124,11 +124,12 @@ pgx.checkPGX_all <- function(
   samples = SAMPLES
   counts = COUNTS
   contrasts = CONTRASTS
-
   PASS = TRUE
 
   check_return <- list()
 
+  
+  # Check that rownames(samples) match colnames(counts)
   SAMPLE_NAMES_NOT_MATCHING_COUNTS <- rownames(samples)[!rownames(samples) %in% colnames(counts)]
 
   if (length(SAMPLE_NAMES_NOT_MATCHING_COUNTS) && PASS) {
@@ -136,15 +137,26 @@ pgx.checkPGX_all <- function(
     pass = FALSE
   }
 
-  # check that contrasts are in long format
-  if(dim(samples)[1] == dim(contrasts)[1]){
-    
+  # Check that rownames(samples) match long contrast rownames.
+
+  
+  if(dim(samples)[1] == dim(contrasts)[1]){ # check that contrasts are in long format
     SAMPLE_NAMES_NOT_MATCHING_CONTRASTS <- rownames(samples)[!rownames(samples) %in% rownames(contrasts)]
 
-  if (length(SAMPLE_NAMES_NOT_MATCHING_CONTRASTS) && PASS) {
-    check_return$e17 <- SAMPLE_NAMES_NOT_MATCHING_CONTRASTS
-    pass = FALSE
+    if (length(SAMPLE_NAMES_NOT_MATCHING_CONTRASTS) && PASS) {
+      check_return$e17 <- SAMPLE_NAMES_NOT_MATCHING_CONTRASTS
+      pass = FALSE
+    }
   }
+
+  # Check that counts have the same order as samples.
+
+  MATCH_SAMPLES_COUNTS_ORDER <- all(diff(match(rownames(samples), colnames(counts)))>0)
+
+  if(!MATCH_SAMPLES_COUNTS_ORDER && PASS){
+    check_return$e18 <- "samples and counts do not have the same order"
+    pass = TRUE
+    counts <- counts[,match(rownames(samples), colnames(counts))]
   }
 
   return(
