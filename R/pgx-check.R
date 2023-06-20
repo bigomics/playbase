@@ -5,8 +5,7 @@
 #' @param type character. One of "SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS" - The type
 #'  of data file to check.
 #'
-#' @return a list with three elements: `df` that is the cleaned version of the
-#'  input data frame, `checks` which contains the status of the checks, and
+#' @return a list with two elements: `checks` which contains the status of the checks, and
 #'  `PASS` which contains the overall status of the check.
 #' @export
 #'
@@ -97,6 +96,63 @@ pgx.checkPGX <- function(
   }
 
   return(
-    list(df = df_clean, checks = check_return, PASS = PASS)
+    list(
+      df = df_clean,
+      checks = check_return,
+      PASS = PASS)
+  )
+}
+
+#' Check all input files for pgx.computePGX
+#'
+#' @param SAMPLE data.frame. The data frame corresponding to the input file as in playbase::SAMPLES
+#' @param COUNTS data.frame. The data frame corresponding to the input file as in playbase::COUNTS 
+#' @param CONTRASTS data.frame. The data frame corresponding to the input file as in playbase::CONTRASTS
+#'
+#' @return a list with FIVE elements: SAMPLES, COUNTS and CONTRASTS that are the cleaned version of the
+#'  input data frames, `checks` which contains the status of the checks, and
+#'  `PASS` which contains the overall status of the check.
+#' @export
+#'
+#' @examples
+pgx.checkPGX_all <- function(
+    SAMPLES,
+    COUNTS,
+    CONTRASTS
+) {
+
+  samples = SAMPLES
+  counts = COUNTS
+  contrasts = CONTRASTS
+
+  PASS = TRUE
+
+  check_return <- list()
+
+  SAMPLE_NAMES_NOT_MATCHING_COUNTS <- rownames(samples)[!rownames(samples) %in% colnames(counts)]
+
+  if (length(SAMPLE_NAMES_NOT_MATCHING_COUNTS) && PASS) {
+    check_return$e16 <- SAMPLE_NAMES_NOT_MATCHING_COUNTS
+    pass = FALSE
+  }
+
+  # check that contrasts are in long format
+  if(dim(samples)[1] == dim(contrasts)[1]){
+    
+    SAMPLE_NAMES_NOT_MATCHING_CONTRASTS <- rownames(samples)[!rownames(samples) %in% rownames(contrasts)]
+
+  if (length(SAMPLE_NAMES_NOT_MATCHING_CONTRASTS) && PASS) {
+    check_return$e17 <- SAMPLE_NAMES_NOT_MATCHING_CONTRASTS
+    pass = FALSE
+  }
+  }
+
+  return(
+    list(
+      SAMPLES = samples,
+      COUNTS = counts,
+      contrasts,
+      checks = check_return,
+      PASS = PASS)
   )
 }
