@@ -131,7 +131,7 @@ pgx.checkPGX_all <- function(
   # Check that rownames(samples) match colnames(counts)
   SAMPLE_NAMES_NOT_MATCHING_COUNTS <- intersect(
     rownames(samples),
-    colnames(uploaded$counts.csv)
+    colnames(counts)
   )
 
   
@@ -159,6 +159,7 @@ pgx.checkPGX_all <- function(
     counts <- counts[, SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS, drop = FALSE]
     pass = TRUE
   }
+
 
   # Check that rownames(samples) match long contrast rownames.
 
@@ -193,3 +194,73 @@ pgx.checkPGX_all <- function(
       PASS = PASS)
   )
 }
+
+
+#' Check all input files for pgx.computePGX
+#'
+#' @param SAMPLE data.frame. The data frame corresponding to the input file as in playbase::SAMPLES
+#' @param COUNTS data.frame. The data frame corresponding to the input file as in playbase::COUNTS 
+#' @param CONTRASTS data.frame. The data frame corresponding to the input file as in playbase::CONTRASTS
+#'
+#' @return a list with FIVE elements: SAMPLES, COUNTS and CONTRASTS that are the cleaned version of the
+#'  input data frames, `checks` which contains the status of the checks, and
+#'  `PASS` which contains the overall status of the check.
+#' @export
+#'
+#' @examples
+
+
+contrasts_conversion <- function(SAMPLES, CONTRASTS){
+  samples1 <- SAMPLES
+  contrasts1 <- CONTRASTS``
+  group.col <- grep("group", tolower(colnames(samples1)))
+  old1 <- (length(group.col) > 0 &&
+    nrow(contrasts1) < nrow(samples1) &&
+    all(rownames(contrasts1) %in% samples1[, group.col[1]])
+  )
+  old2 <- all(rownames(contrasts1) == rownames(samples1)) &&
+    all(unique(as.vector(contrasts1)) %in% c(-1, 0, 1, NA))
+
+  old.style <- (old1 || old2)
+  if (old.style && old1) {
+    message("[UploadModule] WARNING: converting old1 style contrast to new format")
+    new.contrasts <- samples1[, 0]
+    if (NCOL(contrasts1) > 0) {
+      new.contrasts <- playbase::contrastAsLabels(contrasts1)
+      grp <- as.character(samples1[, group.col])
+      new.contrasts <- new.contrasts[grp, , drop = FALSE]
+      rownames(new.contrasts) <- rownames(samples1)
+    }
+    contrasts1 <- new.contrasts
+  }
+  if (old.style && old2) {
+    message("[UploadModule] WARNING: converting old2 style contrast to new format")
+    new.contrasts <- samples1[, 0]
+    if (NCOL(contrasts1) > 0) {
+      new.contrasts <- playbase::contrastAsLabels(contrasts1)
+      rownames(new.contrasts) <- rownames(samples1)
+    }
+    contrasts1 <- new.contrasts
+  }
+
+  dbg("[UploadModule] 1 : dim.contrasts1 = ", dim(contrasts1))
+  dbg("[UploadModule] 1 : dim.samples1   = ", dim(samples1))
+
+  ok.contrast <- length(intersect(rownames(samples1), rownames(contrasts1))) > 0
+  if (ok.contrast && NCOL(contrasts1) > 0) {
+    ## always clean up
+    contrasts1 <- apply(contrasts1, 2, as.character)
+    rownames(contrasts1) <- rownames(samples1)
+    for (i in 1:ncol(contrasts1)) {
+      isz <- (contrasts1[, i] %in% c(NA, "NA", "NA ", "", " ", "  ", "   ", " NA"))
+      if (length(isz)) contrasts1[isz, i] <- NA
+    }
+    uploaded[["contrasts.csv"]] <- contrasts1
+    status["contrasts.csv"] <- "OK"
+  } else {
+    uploaded[["contrasts.csv"]] <- NULL
+    status["contrasts.csv"] <- "ERROR: dimension mismatch"
+  }
+  
+}
+
