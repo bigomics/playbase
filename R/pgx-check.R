@@ -153,8 +153,14 @@ pgx.checkPGX_all <- function(
           )
 
 
-  if (n.ok > 0 && n.ok < nsamples && PASS) {
+  if (n.ok > 0 && length(SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS) < nsamples && PASS) {
     check_return$e19 <- SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS
+
+    samples <- samples[SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS, , drop = FALSE]
+    counts <- counts[, SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS, drop = FALSE]
+
+
+
     pass = TRUE
   }
 
