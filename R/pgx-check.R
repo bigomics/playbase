@@ -163,7 +163,7 @@ pgx.checkPGX_all <- function(
     list(
       SAMPLES = samples,
       COUNTS = counts,
-      contrasts,
+      CONTRASTS = contrasts,
       checks = check_return,
       PASS = PASS)
   )
