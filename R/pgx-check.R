@@ -160,24 +160,7 @@ pgx.checkPGX_all <- function(
       counts <- counts[, SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS, drop = FALSE]
       pass = TRUE
     }
-   }
 
-   if (!is.null(samples) && !is.null(contrasts)) {
-    contrasts <- contrasts_conversion(samples, contrasts)
-
-    # Check that rownames(samples) match long contrast rownames.
-
-    if(dim(samples)[1] == dim(contrasts)[1]){ # check that contrasts are in long format
-      SAMPLE_NAMES_NOT_MATCHING_CONTRASTS <- intersect(
-      rownames(samples),
-      rownames(contrasts)
-      )
-    }
-
-    if (length(SAMPLE_NAMES_NOT_MATCHING_CONTRASTS) == 0 && PASS) {
-      check_return$e17 <- SAMPLE_NAMES_NOT_MATCHING_CONTRASTS
-      pass = FALSE
-    }
     # Check that counts have the same order as samples.
 
     MATCH_SAMPLES_COUNTS_ORDER <- all(diff(match(rownames(samples), colnames(counts)))>0)
@@ -188,7 +171,24 @@ pgx.checkPGX_all <- function(
       counts <- counts[,match(rownames(samples), colnames(counts))]
       }
    }
+   
+   if (!is.null(samples) && !is.null(contrasts)) {
+    contrasts <- playbase::contrasts_conversion(samples, contrasts)
 
+    # Check that rownames(samples) match long contrast rownames.
+
+    if(dim(samples)[1] == dim(contrasts)[1]){ # check that contrasts are in long format
+      SAMPLE_NAMES_NOT_MATCHING_CONTRASTS <- c(
+        setdiff(rownames(samples),rownames(contrasts)),
+        setdiff(rownames(contrasts),rownames(samples))
+        )
+    }
+
+    if (length(SAMPLE_NAMES_NOT_MATCHING_CONTRASTS) > 0 && PASS) {
+      check_return$e17 <- SAMPLE_NAMES_NOT_MATCHING_CONTRASTS
+      pass = FALSE
+    }
+   }
     return(
       list(
         SAMPLES = samples,
