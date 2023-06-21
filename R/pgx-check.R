@@ -123,75 +123,79 @@ pgx.checkPGX_all <- function(
 
   samples = SAMPLES
   counts = COUNTS
-  contrasts = playbase::contrasts_conversion(CONTRASTS)
+  contrasts = CONTRASTS
   PASS = TRUE
 
   check_return <- list()
-  
-  # Check that rownames(samples) match colnames(counts)
-  SAMPLE_NAMES_NOT_MATCHING_COUNTS <- intersect(
-    rownames(samples),
-    colnames(counts)
-  )
 
-  
-  if (length(SAMPLE_NAMES_NOT_MATCHING_COUNTS) == 0 && PASS) {
-    check_return$e16 <- SAMPLE_NAMES_NOT_MATCHING_COUNTS
-    pass = FALSE
-  }
+   if (!is.null(samples) && !is.null(COUNTS)) {
+    # Check that rownames(samples) match colnames(counts)
+    SAMPLE_NAMES_NOT_MATCHING_COUNTS <- intersect(
+      rownames(samples),
+      colnames(counts)
+    )
 
-  # Check that rownames(samples) match colnames(counts)
-  SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS <- intersect(
-    rownames(samples),
-    colnames(counts)
-  )
-  
-  nsamples <- max(ncol(counts, nrow(samples))
-  
-  if (
-    length(SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS) > 0 && 
-    length(SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS) < nsamples &&
-    PASS
-    ) {
-    TOTAL_SAMPLES_NAMES <- unique(rownames(samples),colnames(counts))
-    check_return$e19 <- TOTAL_SAMPLES_NAMES[!TOTAL_SAMPLES_NAMES %in% SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS]
-    samples <- samples[SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS, , drop = FALSE]
-    counts <- counts[, SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS, drop = FALSE]
-    pass = TRUE
-  }
+    
+    if (length(SAMPLE_NAMES_NOT_MATCHING_COUNTS) == 0 && PASS) {
+      check_return$e16 <- SAMPLE_NAMES_NOT_MATCHING_COUNTS
+      pass = FALSE
+    }
 
-  # Check that rownames(samples) match long contrast rownames.
+    # Check that rownames(samples) match colnames(counts)
+    SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS <- intersect(
+      rownames(samples),
+      colnames(counts)
+    )
+    
+    nsamples <- max(ncol(counts, nrow(samples))
+    
+    if (
+      length(SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS) > 0 && 
+      length(SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS) < nsamples &&
+      PASS
+      ) {
+      TOTAL_SAMPLES_NAMES <- unique(rownames(samples),colnames(counts))
+      check_return$e19 <- TOTAL_SAMPLES_NAMES[!TOTAL_SAMPLES_NAMES %in% SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS]
+      samples <- samples[SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS, , drop = FALSE]
+      counts <- counts[, SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS, drop = FALSE]
+      pass = TRUE
+    }
+   }
 
-  if(dim(samples)[1] == dim(contrasts)[1]){ # check that contrasts are in long format
-    SAMPLE_NAMES_NOT_MATCHING_CONTRASTS <- intersect(
-    rownames(samples),
-    rownames(contrasts)
-  )
+   if (!is.null(samples) && !is.null(contrasts)) {
+    contrasts <- contrasts_conversion(samples, contrasts)
+
+    # Check that rownames(samples) match long contrast rownames.
+
+    if(dim(samples)[1] == dim(contrasts)[1]){ # check that contrasts are in long format
+      SAMPLE_NAMES_NOT_MATCHING_CONTRASTS <- intersect(
+      rownames(samples),
+      rownames(contrasts)
+      )
+    }
 
     if (length(SAMPLE_NAMES_NOT_MATCHING_CONTRASTS) == 0 && PASS) {
       check_return$e17 <- SAMPLE_NAMES_NOT_MATCHING_CONTRASTS
       pass = FALSE
     }
-  }
+    # Check that counts have the same order as samples.
 
-  # Check that counts have the same order as samples.
+    MATCH_SAMPLES_COUNTS_ORDER <- all(diff(match(rownames(samples), colnames(counts)))>0)
 
-  MATCH_SAMPLES_COUNTS_ORDER <- all(diff(match(rownames(samples), colnames(counts)))>0)
+    if(!MATCH_SAMPLES_COUNTS_ORDER && PASS){
+      check_return$e18 <- "samples and counts do not have the same order"
+      pass = TRUE
+      counts <- counts[,match(rownames(samples), colnames(counts))]
+    }
 
-  if(!MATCH_SAMPLES_COUNTS_ORDER && PASS){
-    check_return$e18 <- "samples and counts do not have the same order"
-    pass = TRUE
-    counts <- counts[,match(rownames(samples), colnames(counts))]
-  }
-
-  return(
-    list(
-      SAMPLES = samples,
-      COUNTS = counts,
-      CONTRASTS = contrasts,
-      checks = check_return,
-      PASS = PASS)
-  )
+    return(
+      list(
+        SAMPLES = samples,
+        COUNTS = counts,
+        CONTRASTS = contrasts,
+        checks = check_return,
+        PASS = PASS)
+    )
 }
 
 
