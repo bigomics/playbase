@@ -64,23 +64,19 @@ compute_testGenesets <- function(pgx,
     ##-----------------------------------------------------------
 
     ## filter genes only in dataset
-
-    ##
-    ##GENE.TITLE = unlist(as.list(org.Hs.egGENENAME))
-    ##genes = Matrix::head(as.character(unlist(as.list(org.Hs.egSYMBOL))),1000)
     genes = unique(as.character(pgx$genes$gene_name))
     genes <- toupper(genes)  ## handle mouse genes...
     G <- G[,colnames(G) %in% genes]
-    
+
     # Normalize G after removal of genes
 
     G <- playbase::normalize_matrix_by_row(G)
 
     if(!is.null(custom.geneset$gmt)) {
-        
+
         custom_gmt <- custom_gmt[,colnames(custom_gmt) %in% genes]
         custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
-        
+
         # combine standard genesets with custom genesets
         G <- playbase::merge_sparse_matrix(G,custom_gmt)
     }
@@ -157,8 +153,6 @@ compute_testGenesets <- function(pgx,
         cX <- X - rowMeans(X, na.rm=TRUE)  ## center!
         dim(cX)
         gsetX = qlcMatrix::corSparse( G[,], apply( cX[,],2,rank) )
-        ## gsetX = limma::normalizeQuantiles(gsetX) ##???
-        ##grp <- pgx$samples$group
         grp <- pgx$model.parameters$group
         gsetX.bygroup <- NULL
         if(!is.null(grp)) {
@@ -181,8 +175,6 @@ compute_testGenesets <- function(pgx,
     ##-----------------------------------------------------------
     design = pgx$model.parameters$design
     contr.matrix = pgx$model.parameters$contr.matrix
-    ##contr.matrix
-    ##exp.matrix = (design %*% contr.matrix)
 
     ALL.GSET.METHODS=c("fisher","ssgsea","gsva", "spearman", "camera", "fry",
                        "fgsea","gsea.permPH","gsea.permGS","gseaPR")
@@ -212,23 +204,8 @@ compute_testGenesets <- function(pgx,
     pgx$timings <- rbind(pgx$timings, gset.meta$timings)
     pgx$gset.meta <- gset.meta
 
-    if(0) {
-        ## average expression of geneset members
-        n1 <- Matrix::rowSums(G!=0)
-        n2 <- Matrix::rowMeans(abs(pgx$X) > 1)
-        table( n1 > 20 & n2 > 0.05 )
-        ##ii  <- which( n1 > 20 & n2 > 0.05 ) ## make faster...
-        ii <- Matrix::head(order( -1*n1*n2 ),4000) ## make faster...
-        G1 <- Matrix::t(G[ii,]!=0)
-        X1 <- pgx$X[ii,]
-        ng <- Matrix::colSums(G[ii,]!=0)
-        meta.matrix <- as.matrix(G1 %*% X1) / ng
-        dim(meta.matrix)
-    }
-
     names(pgx$gset.meta$matrices)
-    ##pgx$gsetX = pgx$gset.meta$matrices[["fc"]]  ## META or average FC??!
-    pgx$gsetX = pgx$gset.meta$matrices[["meta"]]  ## META or average FC??!
+    pgx$gsetX = pgx$gset.meta$matrices[["meta"]]  ## META or average FC?
     pgx$GMT <- G[,rownames(pgx$gsetX)]
 
     # calculate gset info and store as pgx$gset.meta
@@ -252,7 +229,7 @@ compute_testGenesets <- function(pgx,
         gset.size = gset.size,
         gset.fraction = gset.fraction
     )
-    
+
     ##-----------------------------------------------------------------------
     ##------------------------ clean up -------------------------------------
     ##-----------------------------------------------------------------------
@@ -287,7 +264,6 @@ clean_gmt <- function(gmt.all, gmt.db){
     names(gmt.all[[i]]) <- sub("\\(GO:","(GO_",names(gmt.all[[i]]))
     names(gmt.all[[i]]) <- gsub("%","_",names(gmt.all[[i]])) # substitute % sign in wikipathways
     names(gmt.all[[i]]) <- sub(":","",names(gmt.all[[i]]))
-    ## names(gmt.all[[i]]) <- tolower(names(gmt.all[[i]]))
     names(gmt.all[[i]]) <- paste0(toupper(gmt.db[i]),":",names(gmt.all[[i]]))
     }
     j0 = grep("_up", names(gmt.all))
@@ -327,30 +303,27 @@ createSparseGenesetMatrix <- function(
     min.geneset.size = 15,
     max.geneset.size = 500,
     min_gene_frequency= 10) {
-    
+
     ## ----------- Get all official gene symbols
     symbol <- as.list(org.Hs.eg.db::org.Hs.egSYMBOL)
     known.symbols <- sort(unique(unlist(symbol)))
-    
+
     ##------------- filter by size
     gmt.size <- sapply(gmt.all,length)
 
     gmt.all <- gmt.all[which(gmt.size >= 15 & gmt.size <= 1000)]
-    
+
     ## ------------- filter genes by minimum frequency and chrom
     genes.table <- table(unlist(gmt.all))
-    
-    #genes <- names(which( genes.table >= 10 & genes.table <= 1000  ))
     genes <- names(which( genes.table >= min_gene_frequency ))
     genes <- genes[grep("^LOC|RIK$",genes,invert=TRUE)]
     genes <- intersect(genes, known.symbols)
     annot <- playbase::ngs.getGeneAnnotation(genes)
     genes <- genes[ !is.na(annot$chr) ]
-    
+
     ## Filter genesets with permitted genes (official and min.sharing)
     gmt.all <- parallel::mclapply(gmt.all, function(s) intersect(s,genes))
     gmt.size <- sapply(gmt.all,length)
-    # gmt.all <- gmt.all[which(gmt.size >= 15 & gmt.size <= 200)]
     gmt.all <- gmt.all[which(gmt.size >= min.geneset.size & gmt.size <= max.geneset.size)] #legacy
     ## build huge sparsematrix gene x genesets
     genes <- sort(genes)
@@ -358,7 +331,7 @@ createSparseGenesetMatrix <- function(
     idx.i <- lapply(1:length(gmt.all), function(i) rep(i,length(idx.j[[i]])))
     ii <- unlist(idx.i)
     jj <- unlist(idx.j)
-    
+
     G <- Matrix::sparseMatrix( i=ii, j=jj, x=rep(1,length(ii)),
                       dims = c(length(gmt.all), length(genes)) )
     colnames(G) = genes
@@ -381,7 +354,7 @@ merge_sparse_matrix <- function(m1, m2) {
     num_cols2 <- ncol(m2)
 
     gene_vector <- unique(c(colnames(m1), colnames(m2)))
-  
+
     if (num_cols1 < length(gene_vector)) {
         num_missing_cols <- length(gene_vector) - num_cols1
         zero_cols <- Matrix::Matrix(0, nrow = nrow(m1), ncol = num_missing_cols, sparse = TRUE)
@@ -392,7 +365,7 @@ merge_sparse_matrix <- function(m1, m2) {
 
         m1 <- m1[, gene_vector]
     }
-  
+
     if (num_cols2 < length(gene_vector)) {
         num_missing_cols <- length(gene_vector) - num_cols2
         zero_cols <- Matrix::Matrix(0, nrow = nrow(m2), ncol = num_missing_cols, sparse = TRUE)
@@ -401,7 +374,7 @@ merge_sparse_matrix <- function(m1, m2) {
         m2 <- cbind(m2, zero_cols)
         m2 <- m2[, gene_vector]
     }
-    
+
     combined_gmt <- Matrix::rbind2(m1, m2)
 
   return(combined_gmt)
