@@ -134,18 +134,39 @@ pgx.checkPGX_all <- function(
     colnames(uploaded$counts.csv)
   )
 
+  
   if (length(SAMPLE_NAMES_NOT_MATCHING_COUNTS) == 0 && PASS) {
     check_return$e16 <- SAMPLE_NAMES_NOT_MATCHING_COUNTS
     pass = FALSE
   }
 
+  # Check that rownames(samples) match colnames(counts)
+  SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS <- intersect(
+    rownames(samples),
+    colnames(counts)
+  )
+
+  nsamples <- max(ncol(counts, nrow(samples))
+  ok.samples <- intersect(
+            rownames(uploaded$samples.csv),
+            colnames(uploaded$counts.csv)
+          )
+
+
+  if (n.ok > 0 && n.ok < nsamples && PASS) {
+    check_return$e19 <- SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS
+    pass = TRUE
+  }
+
   # Check that rownames(samples) match long contrast rownames.
 
-  
   if(dim(samples)[1] == dim(contrasts)[1]){ # check that contrasts are in long format
-    SAMPLE_NAMES_NOT_MATCHING_CONTRASTS <- rownames(samples)[!rownames(samples) %in% rownames(contrasts)]
+    SAMPLE_NAMES_NOT_MATCHING_CONTRASTS <- intersect(
+    rownames(samples),
+    rownames(contrasts)
+  )
 
-    if (length(SAMPLE_NAMES_NOT_MATCHING_CONTRASTS) && PASS) {
+    if (length(SAMPLE_NAMES_NOT_MATCHING_CONTRASTS) == 0 && PASS) {
       check_return$e17 <- SAMPLE_NAMES_NOT_MATCHING_CONTRASTS
       pass = FALSE
     }
