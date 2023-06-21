@@ -220,9 +220,7 @@ compute_deconvolution <- function(ngs, rna.counts = ngs$counts, full = FALSE) {
   refmat[["Cancer type (CCLE)"]] <- playdata::CCLE_RNA_CANCERTYPE
 
   ## list of methods to compute
-  ## methods = DECONV.METHODS
   methods <- c("DCQ", "DeconRNAseq", "I-NNLS", "NNLM", "cor", "CIBERSORT", "EPIC")
-  ## methods <- c("NNLM","cor")
 
   if (full == FALSE) {
     ## Faster methods, subset of references
@@ -268,18 +266,16 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
   is.mouse <- (mean(grepl("[a-z]", gsub(".*:|.*\\]", "", pp))) > 0.8)
   is.mouse
   if (!is.mouse) {
-    if (1) {
-      message("estimating cell cycle (using Seurat)...")
-      ngs$samples$cell.cycle <- NULL
-      ngs$samples$.cell.cycle <- NULL
-      ## counts <- ngs$counts
-      counts <- rna.counts
-      rownames(counts) <- toupper(ngs$genes[rownames(counts), "gene_name"])
-      res <- try(pgx.inferCellCyclePhase(counts)) ## can give bins error
-      if (class(res) != "try-error") {
-        ngs$samples$.cell_cycle <- res
-        table(ngs$samples$.cell_cycle)
-      }
+    message("estimating cell cycle (using Seurat)...")
+    ngs$samples$cell.cycle <- NULL
+    ngs$samples$.cell.cycle <- NULL
+    ## counts <- ngs$counts
+    counts <- rna.counts
+    rownames(counts) <- toupper(ngs$genes[rownames(counts), "gene_name"])
+    res <- try(pgx.inferCellCyclePhase(counts)) ## can give bins error
+    if (class(res) != "try-error") {
+      ngs$samples$.cell_cycle <- res
+      table(ngs$samples$.cell_cycle)
     }
     if (!(".gender" %in% colnames(ngs$samples))) {
       message("estimating gender...")
@@ -311,17 +307,17 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
 
   #ngs=pgx
   #libx.dir = params$libx.dir
-  
+
   if (is.null(libx.dir)) message('WARNING Need libx.dir if you call compute_full_drugActivityEnrichment')
-  
+
   cmap.dir <- file.path(libx.dir, "cmap")
   file.gene.db <- dir(cmap.dir, pattern = "n8m20g5812.*rds$")
 
   if (length(file.gene.db)>1) message('WARNING multiple gene.db files found. Using first one.')
-  
+
   if(file.exists(file.path(cmap.dir,file.gene.db[1]))){
     gene.db <- readRDS(file.path(cmap.dir,file.gene.db[1]))
-    
+
     ref.db <- list(
       "L1000_ACTIVITYS_N20D1011" = playdata::L1000_ACTIVITYS_N20D1011,
       "L1000_GENE_PERTURBATION" = gene.db
@@ -466,13 +462,11 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
 #'
 #' @examples
 compute_omicsGraphs <- function(ngs) {
-  ## gr1$layout <- gr1$layout[igraph::V(gr1)$name,]  ## uncomment to keep entire layout
   ngs$omicsnet <- pgx.createOmicsGraph(ngs)
   ngs$pathscores <- pgx.computePathscores(ngs$omicsnet, strict.pos = FALSE)
 
   ## compute reduced graph
   ngs$omicsnet.reduced <- pgx.reduceOmicsGraph(ngs)
   ngs$pathscores.reduced <- pgx.computePathscores(ngs$omicsnet.reduced, strict.pos = FALSE)
-  ## save(ngs, file=rda.file)
   return(ngs)
 }

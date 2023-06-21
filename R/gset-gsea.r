@@ -19,9 +19,6 @@
 gmt2mat <- function(gmt, max.genes=-1, ntop=-1, sparse=TRUE,
                     bg=NULL, use.multicore=TRUE)
 {
-    ##max.genes=-1;ntop=-1;sparse=TRUE;bg=NULL;normalize=FALSE;r=0.01;use.multicore=TRUE
-
-
     gmt <- gmt[order(-sapply(gmt,length))]
     gmt <- gmt[!duplicated(names(gmt))]
     if(ntop>0) {
@@ -31,7 +28,6 @@ gmt2mat <- function(gmt, max.genes=-1, ntop=-1, sparse=TRUE,
     if(is.null(bg)) {
         bg <- names(sort(table(unlist(gmt)),decreasing=TRUE))
     }
-    ##bg <- setdiff(bg,c(NA,""))
     if(max.genes<0) max.genes <- length(bg)
     gg <- bg
     gg <- Matrix::head(bg, n=max.genes)
@@ -99,12 +95,10 @@ write.cls <- function(y, file, name="") {
     is.numeric = (length(setdiff(unique(y),NA)) > 3)
     if(is.numeric) {
         write("#numeric", file=file, append=FALSE)
-        ##write("#correlation", file=cls.file, append=TRUE)
         suppressWarnings( write(paste0("#",name), file=file, append=TRUE))
         suppressWarnings( write(paste(y, collapse=" "), file=file, append=TRUE ))
     } else {
         write(paste(length(y),"2 1",sep=" "), file=file, append=FALSE)
-        ##cls.types <- paste("#RED BLUE")
         cls.types <- paste("#",paste(unique(y),collapse=" "),sep="")
         suppressWarnings( write(cls.types, file=file, append=TRUE))
         suppressWarnings( write( paste(y,collapse=" "), file=file, append=TRUE ) )
@@ -127,10 +121,8 @@ read.gmt <- function(gmt.file, dir=NULL, add.source=FALSE, nrows=-1) {
     f0 <- gmt.file
     if(strtrim(gmt.file,1)=="/") dir=NULL
     if(!is.null(dir)) f0 <- paste(sub("/$","",dir),"/",gmt.file,sep="")
-    ##cat("reading GMT from file",file,"\n")
     gmt <- read.csv(f0,sep="!",header=FALSE,comment.char="#",nrows=nrows)[,1]
     gmt <- as.character(gmt)
-##    gmt <- gsub("[\t]+","\t",gmt)
     gmt <- sapply(gmt,strsplit,split="\t")
     names(gmt) <- NULL
     gmt.name <- sapply(gmt,"[",1)
@@ -139,7 +131,6 @@ read.gmt <- function(gmt.file, dir=NULL, add.source=FALSE, nrows=-1) {
         if(length(x)<3) return("")
         paste(x[3:length(x)],collapse=" ")
     })
-    ##gmt.genes <- gsub("[\t]+"," ",gmt.genes)
     gset <- strsplit(gmt.genes,split="[ \t]")
     gset <- lapply(gset, function(x) setdiff(x,c("","NA",NA)))
     names(gset) <- gmt.name
@@ -147,7 +138,6 @@ read.gmt <- function(gmt.file, dir=NULL, add.source=FALSE, nrows=-1) {
     if(add.source) {
         names(gset) <- paste0(names(gset)," (",gmt.source,")")
     }
-    ## gset <- gset[which(lapply(gset,length)>0)]
     gset
 }
 
@@ -181,7 +171,6 @@ convert.gmt <- function(genes, gs_name) {
 #'
 #' @examples
 write.gmt <- function(gmt, file, source=NA) {
-    ##gg <- lapply(gmt,paste,collapse=" ")
     gg <- lapply(gmt,paste,collapse="\t")
     if(is.na(source)) source=names(gmt)
     ee <- paste(names(gmt),"\t",source,"\t",gg,sep="")
@@ -224,7 +213,6 @@ gsea.fitAllContrasts <- function( X, gmt, design, contr.matrix, output_dir,
                                  set.min=15, set.max=500, fdr=0.25, skip.done=TRUE  )
 {
     exp.matrix = (design %*%  contr.matrix)
-    ##gmt = c(gmt.h,gmt.cp[1:500])  ## just testing
     length(gmt)
     comparisons = colnames(contr.matrix)
     outputs = list()
@@ -314,16 +302,6 @@ run.GSEA <- function( X, y, gmt, output.dir=NULL, fdr=0.25, set.min=15,
                      metric=c("Signal2Noise","Diff_of_Classes","Pearson"),
                      gsea.program="/opt/GSEA/gsea-3.0.jar", quiet=FALSE )
 {
-    if(0) {
-        fdr=0.25;set.min=15;set.max=500;output.dir="test/";
-        topgs=100;nperm=100;permute="phenotype";xmx=16;rpt.label="gsea"
-        sort.y="ref.last";ref.type=c("0","NT","REF","DMSO","WT","LOW")
-        make.sets=TRUE;clean.file=TRUE;scoring="weighted"
-        gsea.program=GSEA.JAR;quiet=FALSE
-    }
-
-    ##gsea.program <- "/opt/GSEA/gsea2-2.0.13.jar"
-    ##gsea.program <- "/opt/GSEA/gsea2-2.2.4.jar"
     if(!file.exists(gsea.program)) {
         stop("run.GSEA:: cannot find GSEA program ",gsea.program,". Please install GSEA.\n")
     }
@@ -339,7 +317,6 @@ run.GSEA <- function( X, y, gmt, output.dir=NULL, fdr=0.25, set.min=15,
         output.dir = tempdir()
     } else {
         output.dir = paste(sub("/$","", output.dir),"/",sep="")
-        ##output.dir = paste(getwd(),output.dir,sep="/")
     }
     output.dir <- sub("//$","/",paste(output.dir,"/",sep=""))
     if(!quiet) cat("output.dir=",output.dir,"\n")
@@ -418,7 +395,6 @@ run.GSEA <- function( X, y, gmt, output.dir=NULL, fdr=0.25, set.min=15,
     gct.file = paste(output.dir,rpt.label2,".gct",sep="")
     cls.file = paste(output.dir,rpt.label2,".cls",sep="")
     gmt.file = paste(output.dir,rpt.label2,".gmt",sep="")
-    ##rpt.file = paste(output.dir,"gsea_report_for_",rpt.label,".txt",sep="")
     rpt.file = paste(output.dir,rpt.label2,".gsea_report.txt",sep="")
     gX <- data.frame( NAME=rownames(X), DESCRIPTION=NA, X)
     write("#1.2", file=gct.file)
@@ -436,7 +412,6 @@ run.GSEA <- function( X, y, gmt, output.dir=NULL, fdr=0.25, set.min=15,
         suppressWarnings( write( paste(y,collapse=" "), file=cls.file, append=TRUE ))
     } else {
         write("#numeric", file=cls.file, append=FALSE)
-        ##write("#correlation", file=cls.file, append=TRUE)
         suppressWarnings(write(paste0("#",rpt.label2), file=cls.file, append=TRUE))
         suppressWarnings(write( paste(y, collapse=" "), file=cls.file, append=TRUE))
     }
@@ -445,7 +420,6 @@ run.GSEA <- function( X, y, gmt, output.dir=NULL, fdr=0.25, set.min=15,
     gmt <- gmt[which(!is.na(names(gmt)))]
     gmt <- gmt[which(!(names(gmt) %in% c("",NA,"NA"," ")))]
     gmt <- gmt[order(-sapply(gmt,length))]
-    ##gmt <- gmt[!duplicated(names(gmt))]
     gmt.origname <- names(gmt)
     altname <- toupper(gsub("[-+: *?!$,'|\\]","_",names(gmt)))
     altname <- gsub("[)(]","",altname)
@@ -458,14 +432,12 @@ run.GSEA <- function( X, y, gmt, output.dir=NULL, fdr=0.25, set.min=15,
     gmt <- gmt[jj]
     altname <- altname[jj]
     gmt.origname <- gmt.origname[jj]
-    ##gmt.sets <- sapply( altname, function(s) paste(s,"\tNA\t",paste(gmt[[s]],collapse="\t"),sep=""))
     gmt.sets <- sapply( altname, function(s) paste(s,"\t",s,"\t",paste(gmt[[s]],collapse="\t"),sep=""))
     write(gmt.sets, file=gmt.file)
     if(nperm<0) return(NULL)
     if(!quiet) cat("analyzing",length(gmt.sets),"gene sets and",nrow(X),"genes\n")
 
     ## define proper metrics
-    ##metric = "Signal2Noise"
     metric = metric[1]
     if(!is.categorical) metric = "Pearson"
 
@@ -537,19 +509,18 @@ run.GSEA <- function( X, y, gmt, output.dir=NULL, fdr=0.25, set.min=15,
     if(length(jj)>0) {
         rjj <- rownames(res)[jj]
         res$DB[jj] <- sapply(strsplit(rjj,split=":"),"[",1)
-        ##res$GS[jj] <- sapply(strsplit(rjj,split=":"),"[",2)
     }
 
     ## filter on FDR, reorder
     res <- res[order(abs(res$NES),decreasing=TRUE),]
-    if(TRUE && fdr < 1) {
+    if(fdr < 1) {
         if("FDR.q.val" %in% colnames(res)) jj <- which(res$FDR.q.val <= fdr)
         if("FDR q-val" %in% colnames(res)) jj <- which(res[,"FDR q-val"] <= fdr)
         res <- res[ jj, ]
     }
 
     ## annotate with leading edge genes
-    if(TRUE && nrow(res)>0 ) {
+    if(nrow(res)>0 ) {
         edge.genes <- rep("",nrow(res))
         i=1
         for(i in 1:nrow(res)) {
@@ -580,11 +551,8 @@ run.GSEA <- function( X, y, gmt, output.dir=NULL, fdr=0.25, set.min=15,
     ## cleanup
     if(clean.files) {
         unlink(gmt.file)
-        ##unlink(rnk.file)
-        ##unlink(cls.file)
         unlink(gct.file)
         if(substring(output.dir,1,4)=="/tmp") {
-            ## system(paste("rm -r",output.dir))
             unlink(output.dir, recursive=TRUE, force=TRUE)
         }
     }
@@ -625,13 +593,6 @@ run.GSEA.preranked <- function( rnk, gmt, output.dir=NULL, fdr=0.25,
                                do.leading.edge=FALSE, gsea.program="/opt/GSEA/gsea-3.0.jar",
                                quiet=FALSE )
 {
-    if(0) {
-        output.dir="test"
-        fdr=1;set.min=15;set.max=500;topgs=20;nperm=1000;rpt.label="test";
-        make.sets=TRUE;xmx=16;scoring="weighted";do.leading.edge=TRUE
-    }
-    ##gsea.program <- "/opt/GSEA/gsea2-2.0.13.jar"
-    ##gsea.program <- "/opt/GSEA/gsea2-2.2.4.jar"
     if(!file.exists(gsea.program)) {
         stop("run.GSEA.preranked:: cannot find GSEA program ",gsea.program,"\n")
     }
@@ -670,7 +631,6 @@ run.GSEA.preranked <- function( rnk, gmt, output.dir=NULL, fdr=0.25,
     gmt <- gmt[which(!(names(gmt) %in% c("",NA,"NA"," ")))]
     gmt <- lapply(gmt, intersect, names(rnk))  ## remove genes out of ranked list
     gmt <- gmt[order(-sapply(gmt,length))]
-    ##gmt <- gmt[!duplicated(names(gmt))]
     gmt.origname <- names(gmt)
     altname <- toupper(gsub("[-+: *?!$,'|\\]","_",names(gmt)))
     altname <- gsub("__|___|____","_",altname)
@@ -708,14 +668,12 @@ run.GSEA.preranked <- function( rnk, gmt, output.dir=NULL, fdr=0.25,
     gsea.par <- sub("%GSMAX",set.max,gsea.par)
     gsea.par <- sub("%SCORING",scoring,gsea.par)
     gsea.par <- sub("%CHIP",chip,gsea.par)
-    #gsea.par <- sub("%COLLAPSE",tolower(collapse,gsea.par))
     gsea.par <- sub("%COLLAPSE",collapse,gsea.par)
     gsea.cmd <- paste(gsea.cmd,gsea.par)
 
     ## run GSEA
     out.file <- paste(output.dir,"gsea_run.out",sep="")
     if(!quiet) cat("executing GSEA...\n",gsea.cmd,"\n")
-    ##system(gsea.cmd)
     system( paste(gsea.cmd," > ",out.file,sep="" ) )
     if(!quiet) cat("\t[OK]\n")
 
@@ -770,19 +728,18 @@ run.GSEA.preranked <- function( rnk, gmt, output.dir=NULL, fdr=0.25,
     if(length(jj)>0) {
         rjj <- rownames(res)[jj]
         res$DB[jj] <- sapply(strsplit(rjj,split=":"),"[",1)
-        ##res$GS[jj] <- sapply(strsplit(rjj,split=":"),"[",2)
     }
 
     ## filter on FDR, reorder
     res <- res[order(abs(res$NES),decreasing=TRUE),]
-    if(TRUE && fdr < 1) {
+    if(fdr < 1) {
         if("FDR.q.val" %in% colnames(res)) jj <- which(res$FDR.q.val <= fdr)
         if("FDR q-val" %in% colnames(res)) jj <- which(res[,"FDR q-val"] <= fdr)
         res <- res[ jj, ]
     }
 
     ## annotate with leading edge genes
-    if(TRUE && nrow(res)>0 ) {
+    if(nrow(res)>0 ) {
         edge.genes <- rep("",nrow(res))
         i=1
         for(i in 1:nrow(res)) {
@@ -810,9 +767,7 @@ run.GSEA.preranked <- function( rnk, gmt, output.dir=NULL, fdr=0.25,
     ## cleanup big files
     if(clean.files) {
         unlink(gmt.file)
-        ##unlink(rnk.file)
         if(substring(output.dir,1,4)=="/tmp") {
-            ## system(paste("rm -r",output.dir))
             unlink(output.dir, recursive=TRUE, force=TRUE)
         }
     }
@@ -857,7 +812,6 @@ gsea.LeadingEdgeAnalysis <- function(output.dir, ntop=100, gsea.program="/opt/GS
     rpt.prefix <- gsub("/","",rpt.prefix)
 
     ## add leading-edge analysis
-    ##nset=20
     f0 <- dir(output.dir, pattern="[.]GseaPreranked[.][0.9]*")
     f1 <- dir(output.dir, pattern="[.]Gsea[.][0.9]*")
     gsea.type="Gsea"
@@ -902,7 +856,6 @@ run.GSEA.LeadingEdge <- function(rpt.path, gmt, xmx=10, rpt.label="gsea_leadinge
                                  gsea.program="/opt/GSEA/gsea-3.0.jar", outdir=".")
 {
     gmt0 <- gmt
-    ## gmt0 <- lapply(gmt0, function(s) paste("'",s,"'",sep=""))
     gmt0 <- paste(gmt0,collapse=",")
     gsea.cmd <- paste("java -Xmx%XMXm -cp ",gsea.program," xtools.gsea.LeadingEdgeTool")
     gsea.par <- "-dir %PATH -gsets %GMT -out %OUT -rpt_label %RPT"
@@ -976,11 +929,6 @@ justGSEA <- function(X, gmt, Y=NULL, fdr=1, set.min=15, set.max=500, topgs=100, 
                      sort.y="ref.last", ref.type=c("0","nt","ref","dmso","wt","dsmo"),
                      clean.files=TRUE)
 {
-    if(0) {
-        fdr=1.0;set.min=15;set.max=500;topgs=100;nperm=1000
-        rpt.label="test";output.dir="test";
-        xmx=16;scoring="weighted";clean.files=FALSE
-    }
     if( is.vector(X)) {
         nx <- names(X)
         X <- matrix(X,ncol=1)
@@ -1008,7 +956,6 @@ justGSEA <- function(X, gmt, Y=NULL, fdr=1, set.min=15, set.max=500, topgs=100, 
             }
             rnk <- X[,j]
             names(rnk) <- rownames(X)
-            ##res <- run.GSEA.preranked(rnk, gmt, do.leading.edge=FALSE)
             res <- matrix(NA,nrow=0,ncol=0)
             res <- run.GSEA.preranked(rnk, gmt=gmt,
                                       output.dir=output.dir0, rpt.label=rpt.label,
@@ -1043,7 +990,6 @@ justGSEA <- function(X, gmt, Y=NULL, fdr=1, set.min=15, set.max=500, topgs=100, 
             rpt.label0 <- rpt.label
             if(NCOL(Y)>1 && !is.null(output.dir)) {
                 rpt.label0 <- colnames(Y)[j]
-                ##rpt.label0 <- paste("phenotype",j,"_",colnames(Y)[j],sep="")
                 output.dir0 <- paste(output.dir,"/",rpt.label0,sep="")
             }
             output.dir0
@@ -1130,9 +1076,6 @@ justGCEA <- function(X, sets, concepts, Y=NULL, fdr=1, set.min=15, set.max=500,
 ##======================== ACCESS FUNCTIONS ==============================
 ##========================================================================
 
-##path=all.outputs[7]
-path="../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut_ut"
-
 
 #' Title
 #'
@@ -1144,7 +1087,7 @@ path="../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut_ut"
 #' @export
 #'
 #' @examples
-getGseaOutput <- function(path, i=1, raster.png=FALSE) {
+getGseaOutput <- function(path="../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut_ut", i=1, raster.png=FALSE) {
     ## untangle Gsea subfolder
     gsea_dir = dir(path, full.names=TRUE)[grep("\\.Gsea\\.",dir(path))]
     gsea_dir
@@ -1290,9 +1233,8 @@ gseaLeadingEdgeHeatmap <- function(gsea, maxrow=60, maxcol=60, gsets=NULL,
 
         heatmaply(LEmat)
     } else {
-        gx.heatmap( LEmat-1e-8, scale="none", ##col= rev(heat.colors(16)),
+        gx.heatmap( LEmat-1e-8, scale="none",
                    mar=c(8,20), cexCol=0.9, cexRow=0.9,
-                   ##symm=TRUE, zlim=c(-1,1),
                    keysize=0.4, key=FALSE)
     }
 }
@@ -1334,7 +1276,6 @@ gsea.barplot <- function(scores, names=NULL, xlab='score', xlim = NULL,
 {
     if(!is.null(names)) names(scores) <- names
     scores <- rev(Matrix::head(scores[order(-abs(scores))],n))
-    ##names(gx) <- gs
     col1 <- c("lightskyblue1","rosybrown1")[1 + 1*(scores>0)]
     if(min(scores,na.rm=TRUE)==0 && max(scores,na.rm=TRUE)==0) {
         xlim <- c(0,1)
@@ -1377,10 +1318,6 @@ gsea.enplot <- function(rnk, gset, names=NULL, main=NULL,
                         xlab="Rank in ordered dataset", res=1200,
                         ylab="Rank metric" )
 {
-    if(0) {
-        names=NULL;main=NULL;decreasing=TRUE;cex.main=0.9;len.main=40;cex=1
-        xlab="Rank in ordered dataset";res=1200;ylab="Ranked list metric"
-    }
     if(!is.null(names)) names(rnk) <- names
     rnk <- rnk[!is.na(rnk)]
     rnk <- rnk[order(rnk+1e-8*rnorm(length(rnk)), decreasing=decreasing)]
@@ -1392,7 +1329,6 @@ gsea.enplot <- function(rnk, gset, names=NULL, main=NULL,
     y1 <- qq[2]
     y0 <- qq[1]
     dy <- 0.25*(y1-y0)
-    ##par(mgp=c(2.3,0.6,0))
     plot( ii, rnk[ii], type="h", col="grey", ylim=c(y0-dy,y1),
          xlab=NA, ylab=NA, xaxt='n')
     mtext(xlab, 1, line=lab.line[1], cex=cex.lab)
@@ -1401,11 +1337,9 @@ gsea.enplot <- function(rnk, gset, names=NULL, main=NULL,
 
     ## gene set barcode
     jj <- match(gset, names(rnk))
-    ##points(jj, rnk[jj], col="grey30",lwd=1, type="h")
     w1 <- ifelse(length(jj)<100,0.6,0.3)
     w1 <- ifelse(length(jj)<50,1,w1)
     arrows(jj, (y0 - dy), jj, y0, col="grey10", lwd=w1*cex, length=0)
-    ##arrows(jj, (y0 - 0.66*dy), jj, y0, col="grey30", lwd=1, length=0)
 
     ## red/blue bar at bottom
     kk <- c(seq(1,length(rnk)*0.99,floor(length(rnk)/20)),length(rnk))
@@ -1427,7 +1361,6 @@ gsea.enplot <- function(rnk, gset, names=NULL, main=NULL,
     n1 <- sum(names(rnk) %in% gset)
     r0 <- cumsum(x0==0) / sum(x0==0)
     r1 <- cumsum(x0) / (1e-4+sum(x0))
-    ##mx <- quantile(abs(rnk),probs=1)
     rnk.trace <- (r1 - r0)
     rnk.trace <- rnk.trace / max(abs(rnk.trace)) * 0.9
     if(max(rnk.trace) >= abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y1)
@@ -1443,9 +1376,6 @@ gsea.enplot <- function(rnk, gset, names=NULL, main=NULL,
     title(main=tt.main, cex.main=cex.main, line=main.line)
 
 }
-
-
-##names=NULL;main=NULL;decreasing=TRUE;cex.main=0.9;len.main=40;xlab="Rank in ordered dataset";res=1200;ylab="Ranked list metric"
 
 
 #' Title
@@ -1473,8 +1403,6 @@ gsea.enplot.UPDN <- function(rnk, gset.up, gset.dn, names=NULL, main=NULL,
                             xlab="Rank in ordered dataset",
                             ylab="Ranked list metric" )
 {
-    ##names=NULL;main=NULL;decreasing=TRUE;cex.main=0.9;len.main=40;
-    ##xlab="Rank in ordered dataset";res=1200;ylab="Ranked list metric"
     if(!is.null(names)) names(rnk) <- names
     rnk <- rnk[!is.na(rnk)]
     rnk <- rnk[order(rnk+1e-8*rnorm(length(rnk)), decreasing=decreasing)]
@@ -1486,7 +1414,6 @@ gsea.enplot.UPDN <- function(rnk, gset.up, gset.dn, names=NULL, main=NULL,
     y1 <- qq[2]
     y0 <- qq[1]
     dy <- 0.25*(y1-y0)
-    ##par(mgp=c(2.3,0.6,0))
     plot( ii, rnk[ii], type="h", col="grey", ylim=c(y0-1.25*dy,y1),
          xlab=NA, ylab=ylab, xaxt='n')
     mtext(xlab, 1, line=1.2, cex=0.7)
@@ -1494,12 +1421,9 @@ gsea.enplot.UPDN <- function(rnk, gset.up, gset.dn, names=NULL, main=NULL,
 
     ## gene set barcode
     jj <- match(gset.dn, names(rnk))
-    ##arrows(jj, (y0 - dy), jj, y0, col="grey30", lwd=1, length=0)
     arrows(jj, (y0 - dy), jj, y0 - 0.5*dy , col="grey30", lwd=1, length=0)
-    ##arrows(jj, 0, jj, -1, col="grey30", lwd=1, length=0)
     jj <- match(gset.up, names(rnk))
     arrows(jj, (y0 - 0.5*dy), jj, y0, col="grey30", lwd=1, length=0)
-    ##arrows(jj, 0, jj, 1, col="grey30", lwd=1, length=0)
 
     ## color legend
     kk <- c(seq(1,length(rnk)*0.95,floor(length(rnk)/10)),length(rnk))
@@ -1509,7 +1433,6 @@ gsea.enplot.UPDN <- function(rnk, gset.up, gset.dn, names=NULL, main=NULL,
         r1 <- (r/max(abs(rnk),na.rm=TRUE))
         r1 <- abs(r1)**0.66 * sign(r1)
         irnk <- round(10 + 10*r1)
-        ##cat("irnk=",irnk,"\n")
         cc <- gplots::bluered(20)[irnk]
         rect(kk[i], y0-1.30*dy, kk[i+1], y0-1.05*dy, col=cc, border=NA)
     }
@@ -1521,7 +1444,6 @@ gsea.enplot.UPDN <- function(rnk, gset.up, gset.dn, names=NULL, main=NULL,
     n1 <- sum(names(rnk) %in% gset.dn)
     r0 <- cumsum(x0==0) / sum(x0==0)
     r1 <- cumsum(x0) / (1e-4+sum(x0))
-    ##mx <- quantile(abs(rnk),probs=1)
     trace.dn <- (r1 - r0)
     trace.dn <- trace.dn / max(abs(trace.dn)) * 0.8
     if(max(trace.dn) >= abs(min(trace.dn))) trace.dn <- trace.dn * abs(y1)
@@ -1536,7 +1458,6 @@ gsea.enplot.UPDN <- function(rnk, gset.up, gset.dn, names=NULL, main=NULL,
     n1 <- sum(names(rnk) %in% gset.up)
     r0 <- cumsum(x0==0) / sum(x0==0)
     r1 <- cumsum(x0) / (1e-4+sum(x0))
-    ##mx <- quantile(abs(rnk),probs=1)
     trace.up <- (r1 - r0)
     trace.up <- trace.up / max(abs(trace.up)) * 0.8
     if(max(trace.up) >= abs(min(trace.up))) trace.up <- trace.up * abs(y1)
@@ -1558,16 +1479,6 @@ gsea.enplot.UPDN <- function(rnk, gset.up, gset.dn, names=NULL, main=NULL,
 
 
 
-}
-
-if(0) {
-    xnames=rownames(X);ynames=colnames(X);
-    cexRow=cexCol=0.6
-    rsort=csort="hclust"
-    rmax=30; cmax=80
-    mar=c(8,4,4,2);layout.widths=c(0.2,0.3,1);layout.heights=c(0.2,0.3,1)
-    cft.lab="col metric";rft.lab="row metric"
-    layout.reset=TRUE
 }
 
 
@@ -1615,19 +1526,7 @@ gsea.ftplot <- function(x, rft="var", cft="var",
                         layout.widths=c(0.15,0.15,1),
                         layout.heights=c(0.15,0.15,1) )
 {
-    if(0) {
-        rft=var;cft=var
-        rmax=40; cmax=-1; main=""; cex.main=1.5
-        xnames=rownames(x); ynames=colnames(x)
-        cft.lab="col metric"; rft.lab="row metric"
-        cexRow=0.65; cexCol=0.65; scale="rows"
-        rsort="hclust"; csort="hclust"; p=1
-        mar=c(8,4,4,2); layout.reset=TRUE
-        sort.decreasing=FALSE; col=bluered(64)
-        legend=NULL; cex.legend=1
-        layout.widths=c(0.2,0.25,1)
-        layout.heights=c(0.2,0.25,1)
-    }
+
     if(class(rft)=="character") {
         rft.lab <- rft
         rft <- apply(x,1,function(x) do.call(rft,list(x,na.rm=TRUE)))
@@ -1663,27 +1562,20 @@ gsea.ftplot <- function(x, rft="var", cft="var",
     } else if(rsort=="metric") {
         rc.order <- order(-rft * order.sign)
     } else {
-        ##cat("no row sorting\n")
         rc.order <- 1:length(rft)
     }
     if(csort=="hclust") {
         cc <- fastcluster::hclust(as.dist(1 - stats::cor(x,use="pairwise")))
-        ##rc <- fastcluster::hclust(multi.dist(x))
-        ##cc <- fastcluster::hclust(multi.dist(t(x)))
         cc.order <- cc$order
     } else if(csort=="metric") {
         cc.order <- order(cft * order.sign)
     } else {
-        ##cat("no column sorting\n")
         cc.order <- 1:length(cft)
     }
 
     ##------------------------------------------------------------
     ## start plotting area
     ##------------------------------------------------------------
-    ##if(rsort!="hclust") layout.widths[1] <- 0.05
-    ##if(csort!="hclust") layout.heights[1] <- 0.05
-
     plotly::layout(matrix(c(6,6,1,6,6,2,5,4,3), 3, 3, byrow=TRUE),
            widths=layout.widths, heights=layout.heights)
     ## upper dendrogram (or skip)
@@ -1693,12 +1585,10 @@ gsea.ftplot <- function(x, rft="var", cft="var",
     } else {
         par(mar=c(0.5,0,mar[3],0))
         frame()
-        ## mtext("sorted by metric",1,padj=-2,cex=0.7)
     }
     title(main, cex.main=cex.main*1.5, line=0)
 
     ## column-feature barplot
-    ##cft.jj <- 0.2*(cft.jj/max(abs(cft.jj)))
     par(mar=c(1,1.4,0,mar[4]+1.4))
     k0 <- "grey"
     barplot(cft[cc.order], width=5/6, las=3,
@@ -1711,11 +1601,9 @@ gsea.ftplot <- function(x, rft="var", cft="var",
     ## heatmap
     par(mar=c(mar[1],1.4,1,mar[4]+1.4))
     xx <- x[rc.order,cc.order]
-    ##xx <- t(apply(xx,1,rank))
     if(scale=="row") xx <- t(scale(t(xx),center=TRUE))
     if(scale=="col") xx <- scale(xx,center=TRUE)
     zlim1 = c(-1,1)*max(abs(xx**p),na.rm=TRUE)
-    ##if(min(xx,na.rm=TRUE)>=0) zlim1[1] <- 0
     Matrix::image(1:ncol(xx), 1:nrow(xx), t(abs(xx)**p * sign(xx)),
           col=col, zlim=zlim1, xaxt="n", xlab="", ylab="", yaxt="n")
     if(!is.null(xnames)) {
@@ -1741,7 +1629,6 @@ gsea.ftplot <- function(x, rft="var", cft="var",
     } else {
         par(mar=c(0,0,0,0))
         frame()
-        ##mtext("sorted by metric",4,padj=-2,cex=0.7)
     }
 
     ## legend
@@ -1758,8 +1645,6 @@ gsea.ftplot <- function(x, rft="var", cft="var",
         par(mar=c(4,4,2,2))
     }
 }
-
-##output.dir="gsea_output";pattern="*"
 
 #' Title
 #'
@@ -1823,8 +1708,6 @@ gsea.radarplot <- function( values, names=NULL, mar=c(2,5,3,5)*2,
                            offset=0.1, clust=TRUE, main="",
                            cex=0.8, col=c("steelblue2","tomato"))
 {
-    ##par(mfrow=c(2,1))
-    ##par(mar=c(0,0,4,0))
     mx <- values
     if(is.null(names(mx)) & is.null(names)) {
         stop("value need names")
@@ -1836,12 +1719,10 @@ gsea.radarplot <- function( values, names=NULL, mar=c(2,5,3,5)*2,
     colnames(M) <- names(values)
     rownames(M) <- c("neg","pos","unit")
     jj <- 1:ncol(M)
-    ##jj <- fastcluster::hclust(as.dist(1-cor(M,use="pairwise")))$order
     if(clust) jj <- fastcluster::hclust(dist(t(M)))$order
     M <- M[,jj]
     ii <- 1:3
     if(sum(mx<0)==0) ii <- c(2,3)
-    ##c0 <- c("steelblue2","tomato")[1+1*(k==1)]
     c0 <- c(col, NA)
     stars( M[ii,,drop=FALSE], radius=TRUE, cex=cex,
           locations = c(0, 0), key.loc=c(0, 0), lty=1,

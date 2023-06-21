@@ -77,15 +77,7 @@ gset.fisher <- function(genes, genesets, background=NULL,
                         min.genes=15, max.genes=500, method="fast.fisher",
                         check.background=TRUE,  common.genes=TRUE, verbose=1)
 {
-    ## NEED RETHINK
-
-    if(0) {
-        min.genes=-10;max.genes=500;background=NULL;fdr=1;mc=TRUE;sort.by="zratio";nmin=3;verbose=1
-        genesets=readRDS("../files/gmt-all.rds")
-        genes=head(rownames(ngs$X),300);genesets=ngs$gmt.all;background=rownames(ngs$X)
-    }
     if( is.null(background) ) {
-        ##background <- unique(c(unlist(genesets),genes))
         background <- unique(unlist(genesets))
         if(verbose>0)
             cat("setting background to ",length(background),"genes covered\n")
@@ -126,12 +118,10 @@ gset.fisher <- function(genes, genesets, background=NULL,
     nbackground0 = length(background)
     nbackground1 = length(bg0)
 
-    ## this can become slow... PLEASE OPTIMIZE!!!!
+    ## this can become slow
     a <- unlist(parallel::mclapply(genesets, function(x) sum(x %in% genes)))
-    ##b <- unlist(parallel::mclapply(genesets, function(x) sum(!(x %in% genes))))
     b <- (n.size - a)
     c <- unlist(parallel::mclapply(genesets, function(x) sum(!(genes %in% x))))
-    ##d <- unlist(parallel::mclapply(genesets, function(x) sum(!(bg0 %in% x))))
     d <- (nbackground1 - b)
     odd.ratio <- (a/c) / (b/d)    ## note: not exactly same as from fishertest
 
@@ -142,7 +132,6 @@ gset.fisher <- function(genes, genesets, background=NULL,
     }
 
     ## compute fisher-test (should be one-sided?)
-    ##gg <- unique(c(unlist(genesets),genes))
     test.fisher <- function(gs) {
         a0 <- table(background %in% gs, background %in% genes)
         if(NCOL(a0)==1 || colSums(a0)[2]==0) return(NA)
@@ -164,7 +153,6 @@ gset.fisher <- function(genes, genesets, background=NULL,
         pv[ii] <- pv1
     } else if(method=="fisher") {
         if(mc) {
-            ##cat("multicore testing\n")
             pv <- unlist(parallel::mclapply( genesets, test.fisher ))
         } else {
             i=1
@@ -174,7 +162,6 @@ gset.fisher <- function(genes, genesets, background=NULL,
         }
     } else if(method=="chisq") {
         if(mc) {
-            ##cat("multicore testing\n")
             pv <- unlist(parallel::mclapply( genesets, test.chisq ))
         } else {
             for(i in 1:length(genesets)) {
