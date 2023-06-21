@@ -145,22 +145,18 @@ pgx.checkPGX_all <- function(
     rownames(samples),
     colnames(counts)
   )
-
+  
   nsamples <- max(ncol(counts, nrow(samples))
-  ok.samples <- intersect(
-            rownames(uploaded$samples.csv),
-            colnames(uploaded$counts.csv)
-          )
-
-
-  if (n.ok > 0 && length(SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS) < nsamples && PASS) {
-    check_return$e19 <- SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS
-
+  
+  if (
+    length(SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS) > 0 && 
+    length(SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS) < nsamples &&
+    PASS
+    ) {
+    TOTAL_SAMPLES_NAMES <- unique(rownames(samples),colnames(counts))
+    check_return$e19 <- TOTAL_SAMPLES_NAMES[!TOTAL_SAMPLES_NAMES %in% SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS]
     samples <- samples[SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS, , drop = FALSE]
     counts <- counts[, SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS, drop = FALSE]
-
-
-
     pass = TRUE
   }
 
