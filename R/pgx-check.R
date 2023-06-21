@@ -123,7 +123,7 @@ pgx.checkPGX_all <- function(
 
   samples = SAMPLES
   counts = COUNTS
-  contrasts = CONTRASTS
+  contrasts = playbase::contrasts_conversion(CONTRASTS)
   PASS = TRUE
 
   check_return <- list()
@@ -160,7 +160,6 @@ pgx.checkPGX_all <- function(
     pass = TRUE
   }
 
-
   # Check that rownames(samples) match long contrast rownames.
 
   if(dim(samples)[1] == dim(contrasts)[1]){ # check that contrasts are in long format
@@ -196,20 +195,15 @@ pgx.checkPGX_all <- function(
 }
 
 
-#' Check all input files for pgx.computePGX
+#' Convert contrasts for OPG
 #'
 #' @param SAMPLE data.frame. The data frame corresponding to the input file as in playbase::SAMPLES
-#' @param COUNTS data.frame. The data frame corresponding to the input file as in playbase::COUNTS 
 #' @param CONTRASTS data.frame. The data frame corresponding to the input file as in playbase::CONTRASTS
 #'
-#' @return a list with FIVE elements: SAMPLES, COUNTS and CONTRASTS that are the cleaned version of the
-#'  input data frames, `checks` which contains the status of the checks, and
-#'  `PASS` which contains the overall status of the check.
+#' @return converted contrast df
 #' @export
 #'
 #' @examples
-
-
 contrasts_conversion <- function(SAMPLES, CONTRASTS){
   samples1 <- SAMPLES
   contrasts1 <- CONTRASTS``
@@ -255,12 +249,9 @@ contrasts_conversion <- function(SAMPLES, CONTRASTS){
       isz <- (contrasts1[, i] %in% c(NA, "NA", "NA ", "", " ", "  ", "   ", " NA"))
       if (length(isz)) contrasts1[isz, i] <- NA
     }
-    uploaded[["contrasts.csv"]] <- contrasts1
-    status["contrasts.csv"] <- "OK"
-  } else {
-    uploaded[["contrasts.csv"]] <- NULL
-    status["contrasts.csv"] <- "ERROR: dimension mismatch"
   }
+
+  return(contrasts1)
   
 }
 
