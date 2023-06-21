@@ -128,7 +128,7 @@ pgx.checkPGX_all <- function(
 
   check_return <- list()
 
-   if (!is.null(samples) && !is.null(COUNTS)) {
+   if (!is.null(samples) && !is.null(counts)) {
     # Check that rownames(samples) match colnames(counts)
     SAMPLE_NAMES_NOT_MATCHING_COUNTS <- intersect(
       rownames(samples),
@@ -147,14 +147,14 @@ pgx.checkPGX_all <- function(
       colnames(counts)
     )
     
-    nsamples <- max(ncol(counts, nrow(samples)))
+    nsamples <- max(ncol(counts), nrow(samples))
     
     if (
       length(SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS) > 0 && 
       length(SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS) < nsamples &&
       PASS
       ) {
-      TOTAL_SAMPLES_NAMES <- unique(rownames(samples),colnames(counts))
+      TOTAL_SAMPLES_NAMES <- unique(c(rownames(samples),colnames(counts)))
       check_return$e19 <- TOTAL_SAMPLES_NAMES[!TOTAL_SAMPLES_NAMES %in% SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS]
       samples <- samples[SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS, , drop = FALSE]
       counts <- counts[, SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS, drop = FALSE]
