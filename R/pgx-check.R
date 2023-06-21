@@ -116,9 +116,9 @@ pgx.checkPGX <- function(
 #'
 #' @examples
 pgx.checkPGX_all <- function(
-    SAMPLES,
-    COUNTS,
-    CONTRASTS
+    SAMPLES = NULL,
+    COUNTS = NULL,
+    CONTRASTS = NULL
 ) {
 
   samples = SAMPLES
@@ -127,12 +127,14 @@ pgx.checkPGX_all <- function(
   PASS = TRUE
 
   check_return <- list()
-
   
   # Check that rownames(samples) match colnames(counts)
-  SAMPLE_NAMES_NOT_MATCHING_COUNTS <- rownames(samples)[!rownames(samples) %in% colnames(counts)]
+  SAMPLE_NAMES_NOT_MATCHING_COUNTS <- intersect(
+    rownames(samples),
+    colnames(uploaded$counts.csv)
+  )
 
-  if (length(SAMPLE_NAMES_NOT_MATCHING_COUNTS) && PASS) {
+  if (length(SAMPLE_NAMES_NOT_MATCHING_COUNTS) == 0 && PASS) {
     check_return$e16 <- SAMPLE_NAMES_NOT_MATCHING_COUNTS
     pass = FALSE
   }
