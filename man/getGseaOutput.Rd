@@ -4,7 +4,11 @@
 \alias{getGseaOutput}
 \title{Title}
 \usage{
-getGseaOutput(path, i = 1, raster.png = FALSE)
+getGseaOutput(
+  path = "../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut_ut",
+  i = 1,
+  raster.png = FALSE
+)
 }
 \arguments{
 \item{path}{value}

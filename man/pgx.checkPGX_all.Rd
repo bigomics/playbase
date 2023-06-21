@@ -4,7 +4,7 @@
 \alias{pgx.checkPGX_all}
 \title{Check all input files for pgx.computePGX}
 \usage{
-pgx.checkPGX_all(SAMPLES, COUNTS, CONTRASTS)
+pgx.checkPGX_all(SAMPLES = NULL, COUNTS = NULL, CONTRASTS = NULL)
 }
 \arguments{
 \item{COUNTS}{data.frame. The data frame corresponding to the input file as in playbase::COUNTS}

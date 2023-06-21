@@ -147,7 +147,7 @@ pgx.checkPGX_all <- function(
       colnames(counts)
     )
     
-    nsamples <- max(ncol(counts, nrow(samples))
+    nsamples <- max(ncol(counts, nrow(samples)))
     
     if (
       length(SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS) > 0 && 
@@ -186,7 +186,8 @@ pgx.checkPGX_all <- function(
       check_return$e18 <- "samples and counts do not have the same order"
       pass = TRUE
       counts <- counts[,match(rownames(samples), colnames(counts))]
-    }
+      }
+   }
 
     return(
       list(
@@ -197,7 +198,6 @@ pgx.checkPGX_all <- function(
         PASS = PASS)
     )
 }
-
 
 #' Convert contrasts for OPG
 #'
@@ -210,7 +210,7 @@ pgx.checkPGX_all <- function(
 #' @examples
 contrasts_conversion <- function(SAMPLES, CONTRASTS){
   samples1 <- SAMPLES
-  contrasts1 <- CONTRASTS``
+  contrasts1 <- CONTRASTS
   group.col <- grep("group", tolower(colnames(samples1)))
   old1 <- (length(group.col) > 0 &&
     nrow(contrasts1) < nrow(samples1) &&
