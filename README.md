@@ -37,15 +37,40 @@ plotting functions operate.
 ``` r
 library(playbase)
 
+# Here we check that your input files do not have problems
+
+playbase::PGX_CHECKS # These are the possible errors you can encounter
+
+# individual file checks
+
+SAMPLES = playbase::pgx.checkINPUT(playbase::SAMPLES, type = "SAMPLES")
+COUNTS = playbase::pgx.checkINPUT(playbase::COUNTS, type = "COUNTS")
+CONTRASTS = playbase::pgx.checkINPUT(playbase::SAMPLES, type = "CONTRASTS")
+
+# Checks across input files
+
+INPUTS_CHECKED <- pgx.crosscheckINPUT(SAMPLES, COUNTS, CONTRASTS)
+
+SAMPLES = INPUTS_CHECKED$SAMPLES
+COUNTS = INPUTS_CHECKED$COUNTS
+CONTRASTS = INPUTS_CHECKED$CONTRASTS
+
+```
+These new checked files `SAMPLES`, `COUNTS` and `CONTRASTS` can be used safely in the next step.
+
+``` r
 # Here we create a pgx object that can be used in Omics Playground.
 
 # Step 1. create a pgx object
+
 pgx <- playbase::pgx.createPGX(
- counts = playbase::COUNTS,
  samples = playbase::SAMPLES,
+ counts = playbase::COUNTS,
  contrasts = playbase::CONTRASTS
 )
+
 # Step 2. Populate pgx object with results
+
 pgx <- playbase::pgx.computePGX(
   pgx = pgx
 )
