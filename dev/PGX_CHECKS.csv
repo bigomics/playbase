@@ -4,8 +4,8 @@ e2,,SAMPLES,Check that genes are not converted to dates in Excel,,,,Check that g
 e3,,SAMPLES,Check zero rows/columns,,,,Check zero rows/columns
 e4,,SAMPLES,Check that samples match counts,,,,Check that samples match counts
 e5,,SAMPLES,Check that samples match contrasts,,,,Check that samples match contrasts
-e6,,COUNTS,Check duplicated sample names in counts.csv,error,Duplicated sample names in counts.csv.,"Your count or expression matrix has duplicated sample names, please correct.",Check duplicated sample names in counts.csv
-e7,,COUNTS,Check duplicate feature names in counts.csv,warning,,,Check duplicate feature names in counts.csv
+e6,,COUNTS,Check duplicated sample names in counts.csv,error,Duplicated sample names in counts.csv.,"Your count or expression matrix has duplicated sample names in the columns, please correct.",Check duplicated sample names in counts.csv
+e7,,COUNTS,Check duplicate feature names in counts.csv,warning,Duplicated feature names in counts.csv.,"Your count or expression matrix has duplicated feature names, they will be merged.",Check duplicate feature names in counts.csv
 e8,,COUNTS,Check columns that are not in the samples file,,,,Check columns that are not in the samples file
 e9,,COUNTS,Check zero rows,warning,Rows with only zero values.,Your count or expression matrix has rows with all zeros. These will be removed.,Check zero rows and remove them
 e10,,COUNTS,Check zero columns,warning,Columns with only zero values.,Your count or expression matrix has columns with all zeros. These will be removed.,Check zero columns and remove them
