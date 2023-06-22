@@ -10,7 +10,7 @@
 #' @export
 #'
 #' @examples
-pgx.checkPGX <- function(
+pgx.checkINPUT <- function(
     df,
     type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")
 ) {
@@ -103,7 +103,7 @@ pgx.checkPGX <- function(
   )
 }
 
-#' Check all input files for pgx.computePGX
+#' Cross check input files for pgx.computePGX
 #'
 #' @param SAMPLE data.frame. The data frame corresponding to the input file as in playbase::SAMPLES
 #' @param COUNTS data.frame. The data frame corresponding to the input file as in playbase::COUNTS 
@@ -115,7 +115,7 @@ pgx.checkPGX <- function(
 #' @export
 #'
 #' @examples
-pgx.checkPGX_all <- function(
+pgx.crosscheckINPUT <- function(
     SAMPLES = NULL,
     COUNTS = NULL,
     CONTRASTS = NULL
@@ -171,7 +171,7 @@ pgx.checkPGX_all <- function(
       counts <- counts[,match(rownames(samples), colnames(counts))]
       }
    }
-   
+
    if (!is.null(samples) && !is.null(contrasts)) {
     contrasts <- playbase::contrasts_conversion(samples, contrasts)
 
