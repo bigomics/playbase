@@ -186,6 +186,8 @@ pgx.crosscheckINPUT <- function(
 
     # Check that rownames(samples) match long contrast rownames.
 
+    SAMPLE_NAMES_NOT_MATCHING_CONTRASTS <- NULL
+
     if(dim(samples)[1] != dim(contrasts)[1] && PASS){ # check that contrasts are in long format
       SAMPLE_NAMES_NOT_MATCHING_CONTRASTS <- c(
         setdiff(rownames(samples),rownames(contrasts)),
