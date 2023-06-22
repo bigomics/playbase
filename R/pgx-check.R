@@ -182,6 +182,8 @@ pgx.crosscheckINPUT <- function(
       check_return$e20 <- rownames(contrasts)[!rownames(contrasts) %in% rownames(samples)]
     }
 
+    contrasts_check_results <- contrasts_check_results$CONTRASTS
+
     # Check that rownames(samples) match long contrast rownames.
 
     if(dim(samples)[1] == dim(contrasts)[1] && PASS){ # check that contrasts are in long format
@@ -272,7 +274,7 @@ contrasts_conversion_check <- function(SAMPLES, CONTRASTS){
     }
   }
 
-  return(contrasts1, PASS)
+  return(CONTRASTS = contrasts1, PASS = PASS)
   
 }
 
