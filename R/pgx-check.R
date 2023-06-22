@@ -265,7 +265,7 @@ contrasts_conversion_check <- function(SAMPLES, CONTRASTS, PASS){
     # check that dimentions of contrasts match samples
     if(dim(contrasts1)[1] != dim(samples1)[1] && PASS){
       PASS = FALSE
-      return(CONTRASTS = contrasts1, PASS = PASS)
+      return(list(CONTRASTS = contrasts1, PASS = PASS))
     }
     rownames(contrasts1) <- rownames(samples1)
     for (i in 1:ncol(contrasts1)) {
@@ -274,7 +274,7 @@ contrasts_conversion_check <- function(SAMPLES, CONTRASTS, PASS){
     }
   }
 
-  return(CONTRASTS = contrasts1, PASS = PASS)
+  return(list(CONTRASTS = contrasts1, PASS = PASS))
   
 }
 
