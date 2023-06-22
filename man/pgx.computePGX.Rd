@@ -44,7 +44,7 @@ pgx.computePGX(
 Main function to populate pgx with results
 }
 \examples{
-# first step is to create pgx 
+# first step is to create pgx
 pgx <- playbase::pgx.createPGX(
  counts = playbase::COUNTS,
  samples = playbase::SAMPLES,
