@@ -1371,13 +1371,15 @@ extremeCorrelation <- function(query_sig, ref_set, n=200) {
     return(rho)
 }
 
-##s=symbol;org="hs"
+#' Convert any gene alias to official gene symbol
+#' 
 #' @export
 alias2hugo <- function(s, org=NULL, na.orig=TRUE) {
+    ## determine if we deal with human or mouse
     hs.symbol <- unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
     mm.symbol <- unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
     if(is.null(org)) {
-        is.human <- mean(s %in% hs.symbol,na.rm=TRUE) > mean(s %in% mm.symbol,na.rm=TRUE)
+        is.human <- mean(s %in% hs.symbol,na.rm=TRUE) >= mean(s %in% mm.symbol,na.rm=TRUE)
         org <- ifelse(is.human,"hs","mm")
     }
     org
