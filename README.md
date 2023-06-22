@@ -56,7 +56,7 @@ COUNTS = INPUTS_CHECKED$COUNTS
 CONTRASTS = INPUTS_CHECKED$CONTRASTS
 
 ```
-These new checked files `SAMPLES`, `COUNTS` and `CONTRASTS` can be used safely in the next step.
+If no errors are reported (and PASS is TRUE), these new checked files `SAMPLES`, `COUNTS` and `CONTRASTS` can be used safely in the next step.
 
 ``` r
 # Here we create a pgx object that can be used in Omics Playground.
