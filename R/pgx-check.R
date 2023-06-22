@@ -168,7 +168,6 @@ pgx.crosscheckINPUT <- function(
       check_return$e19 <- TOTAL_SAMPLES_NAMES[!TOTAL_SAMPLES_NAMES %in% SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS]
       samples <- samples[SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS, , drop = FALSE]
       counts <- counts[, SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS, drop = FALSE]
-      pass = TRUE
     }
 
     # Check that counts have the same order as samples.
@@ -177,7 +176,6 @@ pgx.crosscheckINPUT <- function(
 
     if(!MATCH_SAMPLES_COUNTS_ORDER && PASS){
       check_return$e18 <- "samples and counts do not have the same order"
-      pass = TRUE
       counts <- counts[,match(rownames(samples), colnames(counts))]
       }
    }
@@ -192,7 +190,7 @@ pgx.crosscheckINPUT <- function(
       check_return$e20 <- rownames(contrasts)[!rownames(contrasts) %in% rownames(samples)]
     }
 
-    contrasts_check_results <- contrasts_check_results$CONTRASTS
+    contrasts <- contrasts_check_results$CONTRASTS
 
     # Check that rownames(samples) match long contrast rownames.
 
@@ -209,7 +207,6 @@ pgx.crosscheckINPUT <- function(
       check_return$e17 <- SAMPLE_NAMES_NOT_MATCHING_CONTRASTS
     }
    }
-
     return(
       list(
         SAMPLES = samples,
@@ -284,8 +281,6 @@ contrasts_conversion_check <- function(SAMPLES, CONTRASTS, PASS){
       if (length(isz)) contrasts1[isz, i] <- NA
     }
   }
-
   return(list(CONTRASTS = contrasts1, PASS = PASS))
-  
 }
 
