@@ -173,11 +173,18 @@ pgx.crosscheckINPUT <- function(
    }
 
    if (!is.null(samples) && !is.null(contrasts)) {
-    contrasts <- playbase::contrasts_conversion(samples, contrasts)
+    
+    # Conver contrasts and Check that rows names of contrasts match rownames of samples.
+    contrasts_check_results <- playbase::contrasts_conversion_check(samples, contrasts)
+
+    if (contrasts_check_results$PASS == FALSE && PASS) {
+      PASS = FALSE
+      check_return$e20 <- rownames(contrasts)[!rownames(contrasts) %in% rownames(samples)]
+    }
 
     # Check that rownames(samples) match long contrast rownames.
 
-    if(dim(samples)[1] == dim(contrasts)[1]){ # check that contrasts are in long format
+    if(dim(samples)[1] == dim(contrasts)[1] && PASS){ # check that contrasts are in long format
       SAMPLE_NAMES_NOT_MATCHING_CONTRASTS <- c(
         setdiff(rownames(samples),rownames(contrasts)),
         setdiff(rownames(contrasts),rownames(samples))
@@ -189,8 +196,6 @@ pgx.crosscheckINPUT <- function(
       pass = FALSE
     }
    }
-
-
 
     return(
       list(
