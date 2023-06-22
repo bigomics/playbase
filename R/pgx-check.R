@@ -189,6 +189,9 @@ pgx.crosscheckINPUT <- function(
       pass = FALSE
     }
    }
+
+
+
     return(
       list(
         SAMPLES = samples,
@@ -208,9 +211,12 @@ pgx.crosscheckINPUT <- function(
 #' @export
 #'
 #' @examples
-contrasts_conversion <- function(SAMPLES, CONTRASTS){
+contrasts_conversion_check <- function(SAMPLES, CONTRASTS){
+  
   samples1 <- SAMPLES
   contrasts1 <- CONTRASTS
+  PASS = TRUE
+
   group.col <- grep("group", tolower(colnames(samples1)))
   old1 <- (length(group.col) > 0 &&
     nrow(contrasts1) < nrow(samples1) &&
@@ -248,6 +254,12 @@ contrasts_conversion <- function(SAMPLES, CONTRASTS){
   if (ok.contrast && NCOL(contrasts1) > 0) {
     ## always clean up
     contrasts1 <- apply(contrasts1, 2, as.character)
+    
+    # check that dimentions of contrasts match samples
+    if(dim(contrasts1)[1] != dim(samples1)[1]){
+      PASS = FALSE
+      return(contrast1, PASS)
+    }  
     rownames(contrasts1) <- rownames(samples1)
     for (i in 1:ncol(contrasts1)) {
       isz <- (contrasts1[, i] %in% c(NA, "NA", "NA ", "", " ", "  ", "   ", " NA"))
@@ -255,7 +267,7 @@ contrasts_conversion <- function(SAMPLES, CONTRASTS){
     }
   }
 
-  return(contrasts1)
+  return(contrasts1, PASS)
   
 }
 
