@@ -22,13 +22,23 @@ pgx.checkINPUT <- function(
   check_return <- list()
 
   if (datatype == "COUNTS" || datatype == "EXPRESSION") {
+    sample_names <- colnames(df_clean)
+
+    # check for duplicated colnanes (gives error)
+    ANY_DUPLICATED <- unique(sample_names[which(duplicated(sample_names))])
+
+    if (length(x = ANY_DUPLICATED) > 0 && PASS) {
+      PASS = FALSE
+      check_return$e6 <- ANY_DUPLICATED
+    }
+
     feature_names <- rownames(df_clean)
 
     # check for duplicated rownames (but pass)
     ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
 
     if (length(x = ANY_DUPLICATED) > 0 && PASS) {
-      check_return$e6 <- ANY_DUPLICATED
+      check_return$e7 <- ANY_DUPLICATED
     }
 
     # check for zero count rows, remove them
