@@ -27,7 +27,7 @@ pgx.checkINPUT <- function(
     # check for duplicated colnanes (gives error)
     ANY_DUPLICATED <- unique(sample_names[which(duplicated(sample_names))])
 
-    if (length(x = ANY_DUPLICATED) > 0 && PASS) {
+    if (length(ANY_DUPLICATED) > 0 && PASS) {
       PASS = FALSE
       check_return$e6 <- ANY_DUPLICATED
     }
@@ -37,7 +37,7 @@ pgx.checkINPUT <- function(
     # check for duplicated rownames (but pass)
     ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
 
-    if (length(x = ANY_DUPLICATED) > 0 && PASS) {
+    if (length(ANY_DUPLICATED) > 0 && PASS) {
       check_return$e7 <- ANY_DUPLICATED
     }
 

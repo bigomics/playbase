@@ -4,7 +4,7 @@
 \alias{contrasts_conversion_check}
 \title{Convert contrasts for OPG}
 \usage{
-contrasts_conversion_check(SAMPLES, CONTRASTS)
+contrasts_conversion_check(SAMPLES, CONTRASTS, PASS)
 }
 \arguments{
 \item{CONTRASTS}{data.frame. The data frame corresponding to the input file as in playbase::CONTRASTS}
