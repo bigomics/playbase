@@ -5,13 +5,12 @@
 #' @param type character. One of "SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS" - The type
 #'  of data file to check.
 #'
-#' @return a list with three elements: `df` that is the cleaned version of the
-#'  input data frame, `checks` which contains the status of the checks, and
+#' @return a list with two elements: `checks` which contains the status of the checks, and
 #'  `PASS` which contains the overall status of the check.
 #' @export
 #'
 #' @examples
-pgx.checkPGX <- function(
+pgx.checkINPUT <- function(
     df,
     type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")
 ) {
@@ -23,13 +22,23 @@ pgx.checkPGX <- function(
   check_return <- list()
 
   if (datatype == "COUNTS" || datatype == "EXPRESSION") {
+    sample_names <- colnames(df_clean)
+
+    # check for duplicated colnanes (gives error)
+    ANY_DUPLICATED <- unique(sample_names[which(duplicated(sample_names))])
+
+    if (length(ANY_DUPLICATED) > 0 && PASS) {
+      PASS = FALSE
+      check_return$e6 <- ANY_DUPLICATED
+    }
+
     feature_names <- rownames(df_clean)
 
     # check for duplicated rownames (but pass)
     ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
 
-    if (length(x = ANY_DUPLICATED) > 0 && PASS) {
-      check_return$e6 <- ANY_DUPLICATED
+    if (length(ANY_DUPLICATED) > 0 && PASS) {
+      check_return$e7 <- ANY_DUPLICATED
     }
 
     # check for zero count rows, remove them
@@ -97,6 +106,181 @@ pgx.checkPGX <- function(
   }
 
   return(
-    list(df = df_clean, checks = check_return, PASS = PASS)
+    list(
+      df = df_clean,
+      checks = check_return,
+      PASS = PASS)
   )
 }
+
+#' Cross check input files for pgx.computePGX
+#'
+#' @param SAMPLE data.frame. The data frame corresponding to the input file as in playbase::SAMPLES
+#' @param COUNTS data.frame. The data frame corresponding to the input file as in playbase::COUNTS 
+#' @param CONTRASTS data.frame. The data frame corresponding to the input file as in playbase::CONTRASTS
+#'
+#' @return a list with FIVE elements: SAMPLES, COUNTS and CONTRASTS that are the cleaned version of the
+#'  input data frames, `checks` which contains the status of the checks, and
+#'  `PASS` which contains the overall status of the check.
+#' @export
+#'
+#' @examples
+pgx.crosscheckINPUT <- function(
+    SAMPLES = NULL,
+    COUNTS = NULL,
+    CONTRASTS = NULL
+) {
+
+  samples = SAMPLES
+  counts = COUNTS
+  contrasts = CONTRASTS
+  PASS = TRUE
+
+  check_return <- list()
+
+   if (!is.null(samples) && !is.null(counts)) {
+    # Check that rownames(samples) match colnames(counts)
+    SAMPLE_NAMES_NOT_MATCHING_COUNTS <- intersect(
+      rownames(samples),
+      colnames(counts)
+    )
+
+    
+    if (length(SAMPLE_NAMES_NOT_MATCHING_COUNTS) == 0 && PASS) {
+      check_return$e16 <- SAMPLE_NAMES_NOT_MATCHING_COUNTS
+      pass = FALSE
+    }
+
+    # Check that rownames(samples) match colnames(counts)
+    SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS <- intersect(
+      rownames(samples),
+      colnames(counts)
+    )
+    
+    nsamples <- max(ncol(counts), nrow(samples))
+    
+    if (
+      length(SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS) > 0 && 
+      length(SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS) < nsamples &&
+      PASS
+      ) {
+      TOTAL_SAMPLES_NAMES <- unique(c(rownames(samples),colnames(counts)))
+      check_return$e19 <- TOTAL_SAMPLES_NAMES[!TOTAL_SAMPLES_NAMES %in% SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS]
+      samples <- samples[SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS, , drop = FALSE]
+      counts <- counts[, SAMPLE_NAMES_PARTIAL_MATCHING_COUNTS, drop = FALSE]
+    }
+
+    # Check that counts have the same order as samples.
+
+    MATCH_SAMPLES_COUNTS_ORDER <- all(diff(match(rownames(samples), colnames(counts)))>0)
+
+    if(!MATCH_SAMPLES_COUNTS_ORDER && PASS){
+      check_return$e18 <- "samples and counts do not have the same order"
+      counts <- counts[,match(rownames(samples), colnames(counts))]
+      }
+   }
+
+   if (!is.null(samples) && !is.null(contrasts)) {
+    
+    # Conver contrasts and Check that rows names of contrasts match rownames of samples.
+    contrasts_check_results <- playbase::contrasts_conversion_check(samples, contrasts, PASS)
+
+    if (contrasts_check_results$PASS == FALSE && PASS) {
+      PASS = FALSE
+      check_return$e20 <- rownames(contrasts)[!rownames(contrasts) %in% rownames(samples)]
+    }
+
+    contrasts <- contrasts_check_results$CONTRASTS
+
+    # Check that rownames(samples) match long contrast rownames.
+
+    SAMPLE_NAMES_NOT_MATCHING_CONTRASTS <- NULL
+
+    if(dim(contrasts)[1] > dim(samples)[1] && PASS){ # check that contrasts are in long format
+      SAMPLE_NAMES_NOT_MATCHING_CONTRASTS <- c(
+        setdiff(rownames(samples),rownames(contrasts)),
+        setdiff(rownames(contrasts),rownames(samples))
+        )
+    }
+
+    if (length(SAMPLE_NAMES_NOT_MATCHING_CONTRASTS) > 0 && PASS) {
+      check_return$e17 <- SAMPLE_NAMES_NOT_MATCHING_CONTRASTS
+    }
+   }
+    return(
+      list(
+        SAMPLES = samples,
+        COUNTS = counts,
+        CONTRASTS = contrasts,
+        checks = check_return,
+        PASS = PASS)
+    )
+}
+
+#' Convert contrasts for OPG
+#'
+#' @param SAMPLE data.frame. The data frame corresponding to the input file as in playbase::SAMPLES
+#' @param CONTRASTS data.frame. The data frame corresponding to the input file as in playbase::CONTRASTS
+#'
+#' @return converted contrast df
+#' @export
+#'
+#' @examples
+contrasts_conversion_check <- function(SAMPLES, CONTRASTS, PASS){
+  
+  samples1 <- SAMPLES
+  contrasts1 <- CONTRASTS
+  PASS = PASS
+
+  group.col <- grep("group", tolower(colnames(samples1)))
+  old1 <- (length(group.col) > 0 &&
+    nrow(contrasts1) < nrow(samples1) &&
+    all(rownames(contrasts1) %in% samples1[, group.col[1]])
+  )
+  old2 <- all(rownames(contrasts1) == rownames(samples1)) &&
+    all(unique(as.vector(contrasts1)) %in% c(-1, 0, 1, NA))
+
+  old.style <- (old1 || old2)
+  if (old.style && old1) {
+    message("[UploadModule] WARNING: converting old1 style contrast to new format")
+    new.contrasts <- samples1[, 0]
+    if (NCOL(contrasts1) > 0) {
+      new.contrasts <- playbase::contrastAsLabels(contrasts1)
+      grp <- as.character(samples1[, group.col])
+      new.contrasts <- new.contrasts[grp, , drop = FALSE]
+      rownames(new.contrasts) <- rownames(samples1)
+    }
+    contrasts1 <- new.contrasts
+  }
+  if (old.style && old2) {
+    message("[UploadModule] WARNING: converting old2 style contrast to new format")
+    new.contrasts <- samples1[, 0]
+    if (NCOL(contrasts1) > 0) {
+      new.contrasts <- playbase::contrastAsLabels(contrasts1)
+      rownames(new.contrasts) <- rownames(samples1)
+    }
+    contrasts1 <- new.contrasts
+  }
+
+  dbg("[UploadModule] 1 : dim.contrasts1 = ", dim(contrasts1))
+  dbg("[UploadModule] 1 : dim.samples1   = ", dim(samples1))
+
+  ok.contrast <- length(intersect(rownames(samples1), rownames(contrasts1))) > 0
+  if (ok.contrast && NCOL(contrasts1) > 0 && PASS) {
+    ## always clean up
+    contrasts1 <- apply(contrasts1, 2, as.character)
+    
+    # check that dimentions of contrasts match samples
+    if(dim(contrasts1)[1] != dim(samples1)[1] && PASS){
+      PASS = FALSE
+      return(list(CONTRASTS = contrasts1, PASS = PASS))
+    }
+    rownames(contrasts1) <- rownames(samples1)
+    for (i in 1:ncol(contrasts1)) {
+      isz <- (contrasts1[, i] %in% c(NA, "NA", "NA ", "", " ", "  ", "   ", " NA"))
+      if (length(isz)) contrasts1[isz, i] <- NA
+    }
+  }
+  return(list(CONTRASTS = contrasts1, PASS = PASS))
+}
+

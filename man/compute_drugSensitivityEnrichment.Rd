@@ -4,7 +4,7 @@
 \alias{compute_drugSensitivityEnrichment}
 \title{Title}
 \usage{
-compute_drugSensitivityEnrichment(ngs, libx.dir)
+compute_drugSensitivityEnrichment(ngs, libx.dir = NULL)
 }
 \arguments{
 \item{ngs}{value}

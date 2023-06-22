@@ -4,7 +4,7 @@
 \alias{compute_drugActivityEnrichment}
 \title{Title}
 \usage{
-compute_drugActivityEnrichment(ngs)
+compute_drugActivityEnrichment(ngs, libx.dir = NULL)
 }
 \arguments{
 \item{ngs}{value}

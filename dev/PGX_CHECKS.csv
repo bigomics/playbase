@@ -1,16 +1,21 @@
-﻿error,file_type,checks,warning_type,title,message,Description
-e1,SAMPLES,Check duplicate samples,error,Duplicated samples.,"Your samples file has duplicated entries, this is not allowed, please correct.",Check duplicate samples
-e2,SAMPLES,Check that genes are not converted to dates in Excel,,,,Check that genes are not converted to dates in Excel
-e3,SAMPLES,Check zero rows/columns,,,,Check zero rows/columns
-e4,SAMPLES,Check that samples match counts,,,,Check that samples match counts
-e5,SAMPLES,Check that samples match contrasts,,,,Check that samples match contrasts
-e6,COUNTS,Check duplicate genes,warning,Duplicated gene names.,"Your count or expression matrix has duplicated gene names, and they will be merged.",Check duplicate genes
-e7,COUNTS,Check duplicate column names for samples,,,,Check duplicate column names for samples
-e8,COUNTS,Check columns that are not in the samples file,,,,Check columns that are not in the samples file
-e9,COUNTS,Check zero rows,warning,Rows with only zero values.,Your count or expression matrix has rows with all zeros. These will be removed.,Check zero rows and remove them
-e10,COUNTS,Check zero columns,warning,Columns with only zero values.,Your count or expression matrix has columns with all zeros. These will be removed.,Check zero columns and remove them
-e11,CONTRASTS,Check duplicate rows,error,Duplicated rows in contrasts.,"Your contrasts file has duplicated rows. This is now allowed, please correct.",
-e12,CONTRASTS,Check if it's a long or short contrast,,,,Check if it's a long or short contrast
-e13,CONTRASTS,Check that long contrast matches samples,,,,Check that long contrast matches samples
-e14,CONTRASTS,Check that short contrast validity,,,,Check that short format column name of contrast matches the cell -1 and 1 values
-e15,GENERAL,Check that the end output files does not have 0 columns or zero rows,error,Empty matrix.,"Your matrix is empty, with zero rows and zero columns.",Check that the end output files have >1 row and >1 column in each case.
+﻿error,,file_type,checks,warning_type,title,message,Description
+e1,,SAMPLES,Check duplicate samples,error,Duplicated samples.,"Your samples file has duplicated entries, this is not allowed, please correct.",Check duplicate samples
+e2,,SAMPLES,Check that genes are not converted to dates in Excel,,,,Check that genes are not converted to dates in Excel
+e3,,SAMPLES,Check zero rows/columns,,,,Check zero rows/columns
+e4,,SAMPLES,Check that samples match counts,,,,Check that samples match counts
+e5,,SAMPLES,Check that samples match contrasts,,,,Check that samples match contrasts
+e6,,COUNTS,Check duplicated sample names in counts.csv,error,Duplicated sample names in counts.csv.,"Your count or expression matrix has duplicated sample names in the columns, please correct.",Check duplicated sample names in counts.csv
+e7,,COUNTS,Check duplicate feature names in counts.csv,warning,Duplicated feature names in counts.csv.,"Your count or expression matrix has duplicated feature names, they will be merged.",Check duplicate feature names in counts.csv
+e8,,COUNTS,Check columns that are not in the samples file,,,,Check columns that are not in the samples file
+e9,,COUNTS,Check zero rows,warning,Rows with only zero values.,Your count or expression matrix has rows with all zeros. These will be removed.,Check zero rows and remove them
+e10,,COUNTS,Check zero columns,warning,Columns with only zero values.,Your count or expression matrix has columns with all zeros. These will be removed.,Check zero columns and remove them
+e11,,CONTRASTS,Check duplicate rows,error,Duplicated rows in contrasts.,"Your contrasts file has duplicated rows. This is now allowed, please correct.",
+e12,,CONTRASTS,Check if it's a long or short contrast,,,,Check if it's a long or short contrast
+e13,,CONTRASTS,Check that long contrast matches samples,,,,Check that long contrast matches samples
+e14,,CONTRASTS,Check that short contrast validity,,,,Check that short format column name of contrast matches the cell -1 and 1 values
+e15,,GENERAL,Check that the end output files does not have 0 columns or zero rows,error,Empty matrix.,"Your matrix is empty, with zero rows and zero columns.",Check that the end output files have >1 row and >1 column in each case.
+e16,,"SAMPLES, COUNTS",Check that rownames(samples) match colnames(counts),error,Inconsistent sample names and count names,No one of your samples names are matching the column names in the counts file.,Check that rownames(samples) match colnames(genes)
+e17,,"SAMPLES, CONTRASTS",Check that rownames(samples) match long contrast rownames.,warning,Inconsistent sample names and contrast names.,Your input files have samples names not matching the names in contrasts or counts.,Check that rownames(samples) match colnames(genes)
+e18,,COUNTS,Check that counts have the same order as samples.,warning,Order of samples in contrast file does not match sample file.,We will re-order your contrast columns.,Check that counts have the same order as samples.
+e19,,"SAMPLES, COUNTS",Check that rownames(samples) match colnames(counts) partially,warning,Some sample names not matching count names,Some of your samples names are matching the column names in the counts file.,Check that rownames(samples) match colnames(genes)
+e20,,"SAMPLES, CONTRASTS",Check that rows names of contrasts match rownames of samples.,error,Inconsistent sample and contrast names.,Your input files have contrast names not matching the sample namenames in contrasts.,Check that rows names of contrasts match rownames of samples.
