@@ -175,7 +175,7 @@ pgx.crosscheckINPUT <- function(
    if (!is.null(samples) && !is.null(contrasts)) {
     
     # Conver contrasts and Check that rows names of contrasts match rownames of samples.
-    contrasts_check_results <- playbase::contrasts_conversion_check(samples, contrasts)
+    contrasts_check_results <- playbase::contrasts_conversion_check(samples, contrasts, PASS)
 
     if (contrasts_check_results$PASS == FALSE && PASS) {
       PASS = FALSE
@@ -186,7 +186,7 @@ pgx.crosscheckINPUT <- function(
 
     # Check that rownames(samples) match long contrast rownames.
 
-    if(dim(samples)[1] == dim(contrasts)[1] && PASS){ # check that contrasts are in long format
+    if(dim(samples)[1] != dim(contrasts)[1] && PASS){ # check that contrasts are in long format
       SAMPLE_NAMES_NOT_MATCHING_CONTRASTS <- c(
         setdiff(rownames(samples),rownames(contrasts)),
         setdiff(rownames(contrasts),rownames(samples))
@@ -218,11 +218,11 @@ pgx.crosscheckINPUT <- function(
 #' @export
 #'
 #' @examples
-contrasts_conversion_check <- function(SAMPLES, CONTRASTS){
+contrasts_conversion_check <- function(SAMPLES, CONTRASTS, PASS){
   
   samples1 <- SAMPLES
   contrasts1 <- CONTRASTS
-  PASS = TRUE
+  PASS = PASS
 
   group.col <- grep("group", tolower(colnames(samples1)))
   old1 <- (length(group.col) > 0 &&
@@ -258,15 +258,15 @@ contrasts_conversion_check <- function(SAMPLES, CONTRASTS){
   dbg("[UploadModule] 1 : dim.samples1   = ", dim(samples1))
 
   ok.contrast <- length(intersect(rownames(samples1), rownames(contrasts1))) > 0
-  if (ok.contrast && NCOL(contrasts1) > 0) {
+  if (ok.contrast && NCOL(contrasts1) > 0 && PASS) {
     ## always clean up
     contrasts1 <- apply(contrasts1, 2, as.character)
     
     # check that dimentions of contrasts match samples
-    if(dim(contrasts1)[1] != dim(samples1)[1]){
+    if(dim(contrasts1)[1] != dim(samples1)[1] && PASS){
       PASS = FALSE
-      return(contrast1, PASS)
-    }  
+      return(CONTRASTS = contrasts1, PASS = PASS)
+    }
     rownames(contrasts1) <- rownames(samples1)
     for (i in 1:ncol(contrasts1)) {
       isz <- (contrasts1[, i] %in% c(NA, "NA", "NA ", "", " ", "  ", "   ", " NA"))
