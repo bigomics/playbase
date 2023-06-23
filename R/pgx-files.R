@@ -401,9 +401,11 @@ pgx.scanInfoFile <- function(
   return(
     list(
       INITDATASETFOLDER = INITDATASETFOLDER,
+      pgxinfo = pgxinfo,
+      pgx.files = pgx.files,
       pgx.missing = pgx.missing,
       pgx.missing0 = pgx.missing0,
-      pgx.missing1 = pgx.missing1,
+      pgx.missing1 = pgx.missing1
       ))
   
 }
@@ -414,6 +416,8 @@ pgx.initDatasetFolder <- function(pgx.dir,
                                   info.file = "datasets-info.csv",
                                   force = FALSE,
                                   delete.old = FALSE,
+                                  pgxinfo = NULL,
+                                  pgx.files = NULL,
                                   pgx.missing = NULL,
                                   pgx.missing1 = NULL,
                                   pgx.missing0 = NULL,
