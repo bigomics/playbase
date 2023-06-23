@@ -311,7 +311,8 @@ pgx.scanInfoFile <- function(
   info.file = "datasets-info.csv",
   force=FALSE,
   new.pgx = NULL,
-  verbose=TRUE)
+  verbose=TRUE
+  )
 {
   INITDATASETFOLDER = TRUE
   
@@ -400,9 +401,10 @@ pgx.scanInfoFile <- function(
   return(
     list(
       INITDATASETFOLDER = INITDATASETFOLDER,
-      pgx.missing = pgx.missing
-      )
-    )
+      pgx.missing = pgx.missing,
+      pgx.missing0 = pgx.missing0,
+      pgx.missing1 = pgx.missing1,
+      ))
   
 }
 
@@ -413,6 +415,8 @@ pgx.initDatasetFolder <- function(pgx.dir,
                                   force = FALSE,
                                   delete.old = FALSE,
                                   pgx.missing = NULL,
+                                  pgx.missing1 = NULL,
+                                  pgx.missing0 = NULL,
                                   new.pgx = NULL,
                                   verbose = TRUE)
 {
@@ -757,8 +761,6 @@ pgxinfo.deletePgx <- function(pgx.dir, pgxname, file="datasets-info.csv",
       sigdb.removeDataset(h5.file, pgxname)
       ##rhdf5::h5ls(h5.file)
     }
-   
-    ## return(pgxinfo)
 }
 
 
