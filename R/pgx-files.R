@@ -306,36 +306,14 @@ pgx.readDatasetProfiles <- function(pgx.dir, file="datasets-allFC.csv",
 #' @export
 pgx.scanInfoFile <- function(pgx.dir, file="datasets-info.csv", force=FALSE, verbose=TRUE)
 {
+  INITDATASETFOLDER = TRUE
+  
   pgx.files <- dir(pgx.dir, pattern="[.]pgx$")
   if(length(pgx.files)==0) return(NULL)  ## no files!
 
-  ## before reading the info file, we need to update for new files
-  pgx.initDatasetFolder(pgx.dir, force=force, verbose=TRUE)  
+  ## only run pgx.initDatasetFolder if pgx are changed
 
-  pgxinfo.file <- file.path(pgx.dir, file)
-  if(!file.exists(pgxinfo.file)) return(NULL)  ## no info??
-  ## do not use fread.csv or fread here!! see issue #441
-  pgxinfo = read.csv(pgxinfo.file, stringsAsFactors=FALSE, row.names=1, sep=',')
-  pgxinfo$path <- pgx.dir
-  return(pgxinfo)
-}
-
-#' @export
-pgx.initDatasetFolder <- function( pgx.dir,
-                                  allfc.file = "datasets-allFC.csv",
-                                  info.file = "datasets-info.csv",
-                                  force = FALSE, delete.old = FALSE,
-                                  new.pgx = NULL,
-                                  verbose = TRUE)
-{
-    ##
-    ## Initialize file information file for SINGLE folder
-    ##
-    ##
-
-##  allfc.file = "datasets-allFC.csv";info.file = "datasets-info.csv";force=FALSE;verbose=TRUE;delete.old=FALSE;new.pgx=NULL
-    
-    if(!dir.exists(pgx.dir)) {
+  if(!dir.exists(pgx.dir)) {
         stop(paste("[initDatasetFolder] FATAL ERROR : folder",pgx.dir,"does not exist"))
     }
     dbg("[pgx.initDatasetFolder] *** called ***")
@@ -423,8 +401,33 @@ pgx.initDatasetFolder <- function( pgx.dir,
   
     if(length(pgx.missing)==0 && length(pgx.delete)==0) {
         if(verbose) message("[initDatasetFolder] no update required. use FORCE=1 for forced update.")
-        return(NULL)
-    }
+        return(INITDATASETFOLDER = FALSE)
+  }
+
+  return(INITDATASETFOLDER)
+
+  ## before reading the info file, we need to update for new files
+  pgx.initDatasetFolder(pgx.dir, force=force, verbose=TRUE)  
+
+  
+}
+
+#' @export
+pgx.initDatasetFolder <- function( pgx.dir,
+                                  allfc.file = "datasets-allFC.csv",
+                                  info.file = "datasets-info.csv",
+                                  force = FALSE, delete.old = FALSE,
+                                  new.pgx = NULL,
+                                  verbose = TRUE)
+{
+    ##
+    ## Initialize file information file for SINGLE folder
+    ##
+    ##
+
+##  allfc.file = "datasets-allFC.csv";info.file = "datasets-info.csv";force=FALSE;verbose=TRUE;delete.old=FALSE;new.pgx=NULL
+    
+  
     if(verbose) message("[initDatasetFolder] folder has ",length(pgx.missing)," new PGX files")
     if(verbose) message("[initDatasetFolder] info-file has ",length(pgx.delete)," old items")
 
@@ -610,7 +613,12 @@ pgx.initDatasetFolder <- function( pgx.dir,
        pgx.addEnrichmentSignaturesH5(sigdb, X=allFC, methods = "rankcor")
     }
 
-  
+    pgxinfo.file <- file.path(pgx.dir, file)
+    if(!file.exists(pgxinfo.file)) return(NULL)  ## no info??
+    ## do not use fread.csv or fread here!! see issue #441
+    pgxinfo = read.csv(pgxinfo.file, stringsAsFactors=FALSE, row.names=1, sep=',')
+    pgxinfo$path <- pgx.dir
+    return(pgxinfo) 
 }
 
 
