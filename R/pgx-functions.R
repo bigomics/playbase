@@ -904,16 +904,22 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat=2, max.ncat=20, remove.dup
 ##comp=1;level="geneset";probe=rownames(ngs$gsetX)[1]
 #' @export
 getLevels <- function(Y) {
-    yy = Y[,grep("title|name|sample|patient",colnames(Y),invert=TRUE),drop=FALSE]   ## NEED RETHINK!!!!
-    is.grpvar  = apply(yy,2,function(y) max(table(y))>1)
-    is.numeric = apply(yy,2,function(y) (length(table(y))/length(y)) > 0.5)
-    is.grpvar = is.grpvar & !is.numeric
-    yy = yy[,is.grpvar,drop=FALSE]
-    ##yy = yy[,which(apply(yy,2,function(x) length(unique(x)))<20),drop=FALSE]
-    ##levels = setdiff(unique(as.vector(apply(yy,2,as.character))),c("",NA))
-    levels = lapply(1:ncol(yy), function(i) unique(paste0(colnames(yy)[i],"=",yy[,i])))
-    levels = sort(unlist(levels))
-    return(levels)
+    if (is.null(Y)) {
+        return(NULL)
+        } else if (nrow(Y) == 0) {
+        return(NULL)
+        } else {
+        yy = Y[,grep("title|name|sample|patient",colnames(Y),invert=TRUE),drop=FALSE]   ## NEED RETHINK!!!!
+        is.grpvar  = apply(yy,2,function(y) max(table(y))>1)
+        is.numeric = apply(yy,2,function(y) (length(table(y))/length(y)) > 0.5)
+        is.grpvar = is.grpvar & !is.numeric
+        yy = yy[,is.grpvar,drop=FALSE]
+        ##yy = yy[,which(apply(yy,2,function(x) length(unique(x)))<20),drop=FALSE]
+        ##levels = setdiff(unique(as.vector(apply(yy,2,as.character))),c("",NA))
+        levels = lapply(1:ncol(yy), function(i) unique(paste0(colnames(yy)[i],"=",yy[,i])))
+        levels = sort(unlist(levels))
+        return(levels)
+    }
 }
 
 #' @export
