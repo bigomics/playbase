@@ -310,6 +310,7 @@ pgx.scanInfoFile <- function(
   allfc.file = "datasets-allFC.csv",
   info.file = "datasets-info.csv",
   force=FALSE,
+  new.pgx = NULL,
   verbose=TRUE)
 {
   INITDATASETFOLDER = TRUE
@@ -387,24 +388,6 @@ pgx.scanInfoFile <- function(
     ## files to be done either for allFC or missing in INFO
     pgx.missing <- unique(c(pgx.missing0, pgx.missing1))
     pgx.delete  <- unique(c(pgx.delete0, pgx.delete1))
-
-    pgxinfo.changed = FALSE
-    pgxfc.changed = FALSE
-
-    ## these pgx need forced update
-    if(!is.null(new.pgx)) {
-       new.pgx <- sub(".pgx$","",new.pgx)
-       new.pgx <- intersect(new.pgx, pgx.files)  ## only existing pgx
-       pgx.delete  <- union(pgx.delete, new.pgx)
-       pgx.missing <- union(pgx.missing, new.pgx)
-       pgx.missing0 <- union(pgx.missing0, new.pgx)
-       pgx.missing1 <- union(pgx.missing1, new.pgx)
-       sel1 <- which(pgxinfo$dataset %in% new.pgx)
-       if(length(sel1)) {
-           pgxinfo <- pgxinfo[-sel1,]
-           pgxinfo.changed <- TRUE       
-       }
-    }
   
     if(length(pgx.missing)==0 && length(pgx.delete)==0) {
         if(verbose) message("[initDatasetFolder] no update required. use FORCE=1 for forced update.")
