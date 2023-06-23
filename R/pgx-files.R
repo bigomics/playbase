@@ -424,10 +424,7 @@ pgx.initDatasetFolder <- function( pgx.dir,
     ## Initialize file information file for SINGLE folder
     ##
     ##
-
-##  allfc.file = "datasets-allFC.csv";info.file = "datasets-info.csv";force=FALSE;verbose=TRUE;delete.old=FALSE;new.pgx=NULL
     
-  
     if(verbose) message("[initDatasetFolder] folder has ",length(pgx.missing)," new PGX files")
     if(verbose) message("[initDatasetFolder] info-file has ",length(pgx.delete)," old items")
 
