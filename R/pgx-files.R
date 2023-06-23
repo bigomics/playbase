@@ -391,13 +391,18 @@ pgx.scanInfoFile <- function(
   
     if(length(pgx.missing)==0 && length(pgx.delete)==0) {
         if(verbose) message("[initDatasetFolder] no update required. use FORCE=1 for forced update.")
-        return(INITDATASETFOLDER = FALSE)
+        INITDATASETFOLDER = FALSE
   }
 
   if(verbose) message("[initDatasetFolder] folder has ",length(pgx.missing)," new PGX files")
   if(verbose) message("[initDatasetFolder] info-file has ",length(pgx.delete)," old items")
 
-  return(INITDATASETFOLDER = INITDATASETFOLDER, pgx.missing = pgx.missing)
+  return(
+    list(
+      INITDATASETFOLDER = INITDATASETFOLDER,
+      pgx.missing = pgx.missing
+      )
+    )
   
 }
 
