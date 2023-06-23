@@ -394,11 +394,10 @@ pgx.scanInfoFile <- function(
         return(INITDATASETFOLDER = FALSE)
   }
 
+  if(verbose) message("[initDatasetFolder] folder has ",length(pgx.missing)," new PGX files")
+  if(verbose) message("[initDatasetFolder] info-file has ",length(pgx.delete)," old items")
+
   return(INITDATASETFOLDER)
-
-  ## before reading the info file, we need to update for new files
-  pgx.initDatasetFolder(pgx.dir, force=force, verbose=TRUE)  
-
   
 }
 
@@ -410,19 +409,12 @@ pgx.initDatasetFolder <- function( pgx.dir,
                                   new.pgx = NULL,
                                   verbose = TRUE)
 {
-    ##
-    ## Initialize file information file for SINGLE folder
-    ##
-    ##
-    
-    if(verbose) message("[initDatasetFolder] folder has ",length(pgx.missing)," new PGX files")
-    if(verbose) message("[initDatasetFolder] info-file has ",length(pgx.delete)," old items")
-
     ##----------------------------------------------------------------------
     ## Reread allFC file. Before we only read the header.
     ##----------------------------------------------------------------------
     allFC <-NULL
-    if(!force && file.exists(allfc.file1) && length(pgx.missing)>0) {
+    allfc.file1 <- allfc.file
+    if(!force && file.exists(allfc.file1)) {
         ##allFC <- read.csv(allfc.file1,row.names=1,check.names=FALSE)
         allFC <- fread.csv(allfc.file1,row.names=1,check.names=FALSE)
     }
@@ -608,7 +600,6 @@ pgx.initDatasetFolder <- function( pgx.dir,
     pgxinfo$path <- pgx.dir
     return(pgxinfo) 
 }
-
 
 #' Update PGX-table with new pgx object. 
 #'
