@@ -834,5 +834,18 @@ pgxinfo.read <- function(pgx.dir, file="datasets-info.csv", match=TRUE)
     sel <- pgxinfo.datasets %in% pgx.files1
     pgxinfo <- pgxinfo[sel,,drop=FALSE]
   }
+  info.colnames <- c( "dataset", "datatype", "description", "nsamples",
+            "ngenes", "nsets", "conditions", "organism", "date", "creator" )
+  if (is.null(pgxinfo)) {
+    aa <- rep(NA, length(info.colnames))
+    names(aa) <- info.colnames
+    pgxinfo <- data.frame(rbind(aa))[0, ]
+  }
+  ## add missing columns fields
+  missing.cols <- setdiff(info.colnames,colnames(pgxinfo))
+  for(s in missing.cols) info[[s]] <- rep(NA,nrow(pgxinfo))
+  ii <- match(info.colnames,colnames(pgxinfo))
+  pgxinfo <- pgxinfo[,ii]
+  pgxinfo$path <- pgx.dir
   return(pgxinfo)
 }
