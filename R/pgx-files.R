@@ -397,24 +397,27 @@ pgx.scanInfoFile <- function(
   if(verbose) message("[initDatasetFolder] folder has ",length(pgx.missing)," new PGX files")
   if(verbose) message("[initDatasetFolder] info-file has ",length(pgx.delete)," old items")
 
-  return(INITDATASETFOLDER)
+  return(INITDATASETFOLDER = INITDATASETFOLDER, pgx.missing = pgx.missing)
   
 }
 
 #' @export
-pgx.initDatasetFolder <- function( pgx.dir,
+pgx.initDatasetFolder <- function(pgx.dir,
                                   allfc.file = "datasets-allFC.csv",
                                   info.file = "datasets-info.csv",
-                                  force = FALSE, delete.old = FALSE,
+                                  force = FALSE,
+                                  delete.old = FALSE,
+                                  pgx.missing = NULL,
                                   new.pgx = NULL,
                                   verbose = TRUE)
 {
     ##----------------------------------------------------------------------
     ## Reread allFC file. Before we only read the header.
     ##----------------------------------------------------------------------
+    
     allFC <-NULL
     allfc.file1 <- allfc.file
-    if(!force && file.exists(allfc.file1)) {
+    if(!force && file.exists(allfc.file1) && length(pgx.missing)>0) {
         ##allFC <- read.csv(allfc.file1,row.names=1,check.names=FALSE)
         allFC <- fread.csv(allfc.file1,row.names=1,check.names=FALSE)
     }
@@ -429,7 +432,7 @@ pgx.initDatasetFolder <- function( pgx.dir,
           allFC <- allFC[,-sel2,drop=FALSE]
           pgxfc.changed <- TRUE         
        }
-    }  
+    } 
   
     ##----------------------------------------------------------------------
     ## For all new PGX files, load the PGX file and get the meta FC
