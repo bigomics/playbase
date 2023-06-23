@@ -64,7 +64,7 @@ This function creates a pgx object, which is the core object in the
 OmicsPlayground.
 }
 \examples{
-# first step is to create pgx 
+# first step is to create pgx
 pgx <- playbase::pgx.createPGX(
  counts = playbase::COUNTS,
  samples = playbase::SAMPLES,
