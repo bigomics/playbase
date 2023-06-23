@@ -304,7 +304,13 @@ pgx.readDatasetProfiles <- function(pgx.dir, file="datasets-allFC.csv",
 }
 
 #' @export
-pgx.scanInfoFile <- function(pgx.dir, file="datasets-info.csv", force=FALSE, verbose=TRUE)
+pgx.scanInfoFile <- function(
+  pgx.dir,
+  file="datasets-info.csv",
+  allfc.file = "datasets-allFC.csv",
+  info.file = "datasets-info.csv",
+  force=FALSE,
+  verbose=TRUE)
 {
   INITDATASETFOLDER = TRUE
   
@@ -331,6 +337,7 @@ pgx.scanInfoFile <- function(pgx.dir, file="datasets-info.csv", force=FALSE, ver
           unlink(info.file1)
           unlink(allfc.file1)
         }
+        # should return FALSE?
         return(NULL)
     }
   
