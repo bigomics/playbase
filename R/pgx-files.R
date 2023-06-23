@@ -600,10 +600,11 @@ pgx.initDatasetFolder <- function( pgx.dir,
        pgx.addEnrichmentSignaturesH5(sigdb, X=allFC, methods = "rankcor")
     }
 
-    pgxinfo.file <- file.path(pgx.dir, file)
-    if(!file.exists(pgxinfo.file)) return(NULL)  ## no info??
-    ## do not use fread.csv or fread here!! see issue #441
-    pgxinfo = read.csv(pgxinfo.file, stringsAsFactors=FALSE, row.names=1, sep=',')
+    # pgxinfo.file <- file.path(pgx.dir, file)
+    # if(!file.exists(pgxinfo.file)) return(NULL)  ## no info??
+    # ## do not use fread.csv or fread here!! see issue #441
+    # pgxinfo = read.csv(pgxinfo.file, stringsAsFactors=FALSE, row.names=1, sep=',')
+    pgxinfo <- playbase::pgxinfo.read(pgx.dir)
     pgxinfo$path <- pgx.dir
     return(pgxinfo) 
 }
