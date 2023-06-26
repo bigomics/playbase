@@ -38,17 +38,16 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop=1000, contrasts=NULL,
         contrasts <- colnames(meta$fc)
     }
     contrasts <- intersect(contrasts, colnames(meta$fc))
+    F <- meta$fc[,contrasts]
 
     if(inmemory) {
-        F = meta$fc[,contrasts]
         scores <- pgx.correlateSignatureH5.inmemory(
-            meta$fc, h5.file = h5.file,
+            F, h5.file = h5.file,
             nsig=100, ntop=ntop, nperm=9999)
     } else {
         scores <- list()
-        ct <- contrasts[1]
-        for(ct in contrasts) {
-            fc <- meta$fc[,ct]
+        for(ct in colnames(F)) {
+            fc <- F[,ct]
             names(fc) <- rownames(meta$fc)
             names(fc) <- toupper(names(fc)) ## for MOUSE!!
             res <- pgx.correlateSignatureH5(

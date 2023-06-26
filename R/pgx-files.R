@@ -44,171 +44,6 @@ pgx.save <- function(pgx, file, update.date=TRUE, light=TRUE, system=FALSE) {
 }
 
 
-##filter.get="omicsplayground";from=NULL;to=NULL;unique=TRUE
-#' @export
-pgx.parseAccessLogs <- function(logs.dir, from=NULL, to=NULL,
-                                filter.get=NULL, unique = TRUE)
-{
-
-    logs.dir <- logs.dir[dir.exists(logs.dir)]
-    if(length(logs.dir)==0) return(NULL)
-    logs.dir
-    access.files <- lapply(logs.dir, dir, pattern="access.log",
-                           full.names=TRUE, recursive=TRUE )
-    access.files
-    access.files <- unlist(access.files)
-    ##access.files <- grep("shinyproxy",access.files,value=TRUE,invert=TRUE)
-    access.files
-
-    access.logs <- lapply(access.files, function(f)
-        suppressMessages(suppressWarnings(try(read.table(f)))))
-    ##access.logs <- lapply(access.files, function(f)
-    ##    suppressMessages(suppressWarnings(try(data.table::fread(f,sep=" ")))))
-    access.logs <- access.logs[sapply(access.logs,class)!="try-error"]
-    access.logs <- access.logs[sapply(access.logs,nrow)>0]
-    length(access.logs)
-    if(length(access.logs)==0) return(NULL)
-
-    i=3
-    for(i in 1:length(access.logs)) {
-        df <- data.frame(access.logs[[i]])
-        cols <- c("V1","V4","V6")
-        if(mean(grepl(":80$",df[,"V1"])) > 0.9) {
-            cols <- c("V2","V5","V7")
-        }
-        access.logs[[i]] <- df[,cols]
-        colnames(access.logs[[i]]) <- c("ip","date","get")
-    }
-    remove(df)
-
-    ## Filter access log
-    acc <- do.call(rbind, access.logs)
-    dim(acc)
-
-    if(!is.null(filter.get)) {
-        sel <- grep(filter.get,acc[,"get"])
-        acc <- acc[sel,]
-    }
-    dim(acc)
-    Matrix::head(acc)
-
-    ## Extract visiting period
-    ## if the operating system is not windows set the timezone to LC_TIME
-    if(Sys.info()["sysname"] != "Windows") {
-        Sys.setlocale("LC_TIME","en_US.UTF-8")
-    }
-    ##Sys.setlocale("LC_TIME","C") ## just to make sure
-    acc$date <- gsub("[:].*|\\[","",as.character(acc[,"date"]))
-    acc$date <- as.Date(acc$date, format = "%d/%b/%Y")
-    acc <- acc[order(acc$date),]
-
-    from.date <- Matrix::head(acc$date,1)
-    to.date <- Matrix::tail(acc$date,1)
-    from.to <- paste(from.date,"-",to.date)
-    from.to
-
-    ## Extract IP
-    acc.ip <- as.character(acc[,"ip"])
-    ##loc <- ip_api(unique(acc.ip))
-    unique.ip <- unique(acc.ip)
-    ## unique.hostname <- ip_to_hostname(unique.ip)  ## takes loooonnnggg... time!!
-    ## names(unique.hostname)  <- unique.ip
-
-    ## create lookup-table for IP to country
-
-    file <- system.file("extdata","GeoLite2-Country.mmdb", package = "rgeolocate")
-    loc  <- rgeolocate::maxmind(unique.ip, file, c("country_code","country_name"))
-    loc$ip <- unique.ip
-    ##loc <- rgeolocate::maxmind(ip, file, c("country_code", "country_name", "city_name"))
-    loc$country_name[which(loc$ip %in% c("127.0.0.1"))] <- "<local.ip>"
-    ##loc$country_code[which(loc$ip %in% c("127.0.0.1"))] <- "<local.ip>"
-    loc$country_name[is.na(loc$country_name)] <- "(unknown)"
-
-    country_codes <- unique(loc$country_code)
-    names(country_codes) <- loc[match(country_codes,loc$country_code),"country_name"]
-    country_codes["(unknown)"] = "(unknown)"
-
-    ## now map IP to country_code
-    acc$country_code <- loc$country_code[match(acc.ip,loc$ip)]
-    acc$country_name <- loc$country_name[match(acc.ip,loc$ip)]
-    acc$country_code[is.na(acc$country_code)] <- "(unknown)"
-    acc$country_name[is.na(acc$country_name)] <- "(unknown)"
-    Matrix::tail(sort(table(acc$country_code)),40)
-
-    if(0) {
-        getDodgy <- function(acc0,n=100) {
-            ii <- grep("omicsplayground",acc0[,"get"],invert=TRUE)
-            ii <- ii[which(nchar(as.character(acc0[ii,"get"])) > 20)]
-            Matrix::head(acc0[ii,],n=n)
-        }
-        Matrix::tail(sort(table(acc$country_code)),40)
-        ii <- which(acc.cc=="US")
-        getDodgy(acc[ii,],100)
-        ii <- which(acc.cc=="CN")
-        getDodgy(acc[ii,],100)
-    }
-
-    ## cumulative table: counting total number of hits since start
-    acc$days <- acc$date - from.date + 1
-    ndays <- max(acc$days)
-    ncountries <- length(unique(acc$country_code))
-    M <- matrix(0, nrow=ncountries, ncol=ndays)
-    rownames(M) <- sort(unique(acc$country_code))
-    d = 1
-    for(d in 1:ndays) {
-        jj <- which(acc$days <= d)
-        if(unique) jj <- jj[which(!duplicated(acc$ip[jj]))]  ## unique per day
-        tt <- table(as.character(acc$country_code[jj]))
-        tt <- tt[match(rownames(M),names(tt))]
-        tt[is.na(tt)] <- 0
-        M[,d] <- tt
-    }
-    M[is.na(M)] <- 0
-    colnames(M) <- as.character(from.date + 1:ncol(M) -1 )
-
-    ## weekly table: counting hits per week since start
-    week.since <- seq(from.date, max(acc$date), 7)
-    W <- matrix(0, nrow=ncountries, ncol=length(week.since)-1)
-    rownames(W) <- sort(unique(acc$country_code))
-    colnames(W) <- paste0("week.",1:ncol(W))
-    i = 1
-    acc0 <- acc
-    ## acc0 <- acc[!duplicated(acc$ip),] ## unique, new visitors
-    for(i in 1:(ncol(W)-1)) {
-        jj <- which(acc0$date >= week.since[i] & acc0$date < week.since[i+1] )
-        if(unique) jj <- jj[which(!duplicated(acc0$ip[jj]))]
-        tt <- table(as.character(acc0$country_code[jj]))
-        tt <- tt[match(rownames(W),names(tt))]
-        tt[is.na(tt)] <- 0
-        W[,i] <- tt
-    }
-
-    if(0) {
-        barplot(Matrix::colSums(W,na.rm=TRUE),las=3, main="unique.IP")
-    }
-
-    ## final table
-    if(unique) {
-        tt <- table(as.character(loc$country_name))  ## unique IP
-    } else {
-        tt <- table(as.character(acc$country_name))  ## full access log
-    }
-    sum(tt)
-    cc <- country_codes[names(tt)]
-    names(cc) <- names(tt)
-    df <- data.frame( country_name = names(tt),
-                     country_code = cc,
-                     count = (as.integer(tt)))
-    df <- df[order(-df$count),]
-    sum(df$count,na.rm=TRUE)
-    M <- M[match(df$country_code, rownames(M)),]
-    W <- W[match(df$country_code, rownames(W)),]
-
-    res <- list(visitors=df, period=from.to, from=from.date, to=to.date,
-                table=M, weekly=W, access=acc)
-    return(res)
-}
-
 #' @export
 h5exists <- function(h5.file, obj) {
     xobjs <- apply(rhdf5::h5ls(h5.file)[,1:2],1,paste,collapse="/")
@@ -280,8 +115,7 @@ pgx.readOptions <- function(file = "./OPTIONS") {
 }
 
 #' @export
-pgx.readDatasetProfiles <- function(pgx.dir, file="datasets-allFC.csv",
-                                     verbose=TRUE)
+pgx.readDatasetProfiles <- function(pgx.dir, file="datasets-allFC.csv", verbose=TRUE)
 {
     if(!dir.exists(pgx.dir)) {
         stop(paste("[readDatasetProfiles1] FATAL ERROR : folder",pgx.dir,"does not exist"))
@@ -305,23 +139,23 @@ pgx.readDatasetProfiles <- function(pgx.dir, file="datasets-allFC.csv",
 
 #' @export
 pgx.scanInfoFile <- function(
-  pgx.dir,
-  file="datasets-info.csv",
-  allfc.file = "datasets-allFC.csv",
-  info.file = "datasets-info.csv",
-  force=FALSE,
-  new.pgx = NULL,
-  verbose=TRUE
-  )
+    pgx.dir,
+    file = "datasets-info.csv",
+    allfc.file = "datasets-allFC.csv",
+    info.file = "datasets-info.csv",
+    force=FALSE,
+    new.pgx = NULL,
+    verbose=TRUE
+    )
 {
-  INITDATASETFOLDER = TRUE
+    INITDATASETFOLDER = TRUE
   
-  pgx.files <- dir(pgx.dir, pattern="[.]pgx$")
-  if(length(pgx.files)==0) return(NULL)  ## no files!
+    pgx.files <- dir(pgx.dir, pattern="[.]pgx$")
+    if(length(pgx.files)==0) return(NULL)  ## no files!
+    
+    ## only run pgx.initDatasetFolder if pgx are changed
 
-  ## only run pgx.initDatasetFolder if pgx are changed
-
-  if(!dir.exists(pgx.dir)) {
+    if(!dir.exists(pgx.dir)) {
         stop(paste("[initDatasetFolder] FATAL ERROR : folder",pgx.dir,"does not exist"))
     }
     dbg("[pgx.initDatasetFolder] *** called ***")
@@ -335,10 +169,8 @@ pgx.scanInfoFile <- function(
     if(length(pgx.files)==0) {
         allfc.file1 <- file.path(pgx.dir, allfc.file)
         info.file1  <- file.path(pgx.dir, info.file)
-        if(delete.old) {
-          unlink(info.file1)
-          unlink(allfc.file1)
-        }
+        file.remove(info.file1)
+        file.remove(allfc.file1)
         # should return FALSE?
         return(NULL)
     }
@@ -421,12 +253,12 @@ pgx.scanInfoFile <- function(
       pgxinfo = pgxinfo,
       pgx.files = pgx.files,
       pgxinfo.changed = pgxinfo.changed,
-      pgxfc.changed = pgxinfo.changed,
+      pgxfc.changed = pgxfc.changed,
       info.file1 = info.file1,
       pgx.missing = pgx.missing,
       pgx.missing0 = pgx.missing0,
       pgx.missing1 = pgx.missing1
-      ))
+    ))
   
 }
 
@@ -452,8 +284,8 @@ pgx.initDatasetFolder <- function(pgx.dir,
     ##----------------------------------------------------------------------
     
     allFC <-NULL
-    allfc.file1 <- allfc.file
-    if(!force && file.exists(allfc.file1) && length(pgx.missing)>0) {
+    allfc.file1 <- file.path(pgx.dir, allfc.file)
+      if(!force && file.exists(allfc.file1) && length(pgx.missing)>0) {
         ##allFC <- read.csv(allfc.file1,row.names=1,check.names=FALSE)
         allFC <- fread.csv(allfc.file1,row.names=1,check.names=FALSE)
     }
@@ -474,7 +306,6 @@ pgx.initDatasetFolder <- function(pgx.dir,
     ## For all new PGX files, load the PGX file and get the meta FC
     ## matrix.
     ##----------------------------------------------------------------------
-
     info.cols <- NULL
     missing.FC <- list()
     message("[initDatasetFolder] missing pgx = ",paste(pgx.missing,collapse=" "))
@@ -610,7 +441,7 @@ pgx.initDatasetFolder <- function(pgx.dir,
     ## save modified allFC
     if(pgxfc.changed) {
       ## check for duplicates
-      if(verbose) message("[initDatasetFolder] allFC changed. updating file to",allfc.file1,"...")
+      if(verbose) message("[initDatasetFolder] allFC changed. updating file: ",allfc.file1)
       allFC <- allFC[,!duplicated(colnames(allFC)),drop=FALSE]
       allFC <- allFC[,order(colnames(allFC)),drop=FALSE]
       AA <- data.frame(rownames=rownames(allFC), allFC, check.names=FALSE)
@@ -620,7 +451,7 @@ pgx.initDatasetFolder <- function(pgx.dir,
       remove(AA)
     }
 
-    ## update sigdb or create if not exists
+    ## update user sigdb or create if not exists
     sigdb <- file.path(pgx.dir, "datasets-sigdb.h5")  
     if(!file.exists(sigdb) || pgxfc.changed) {
        ## NEED RETHINK!!!! HERE???
@@ -640,12 +471,12 @@ pgx.initDatasetFolder <- function(pgx.dir,
     return(pgxinfo) 
 }
 
+
 #' Update PGX-table with new pgx object. 
 #'
 #' @export
 pgx.updateInfoPGX <- function(pgxinfo, pgx, remove.old=TRUE)
 {
-
     cond = grep("title|source|group|batch|sample|patient|donor|repl|clone|cluster|lib.size|^[.]",
                 colnames(pgx$samples),invert=TRUE,value=TRUE)
     cond = grep("title|source|batch|sample|patient|donor|repl|clone|cluster|lib.size|^[.]",
@@ -733,13 +564,13 @@ if(0) {
   pgxname="example-data"
 }
 
-#' Delete pgx entry in datasets-info table in files
+#' Delete pgx entry in datasets-info table in files (WIP)
 #'
 #' @export
-pgxinfo.deletePgx <- function(pgx.dir, pgxname, file="datasets-info.csv",
+pgxinfo.deletePgx <- function(pgx.dir, pgxname,
                               delete.fc = FALSE)
 {
-    info.file <- file.path(pgx.dir, file)
+    info.file <- file.path(pgx.dir, "datasets-info.csv")
     pgxname <- sub("[.]pgx$","",pgxname)
     pgxinfo <- read.csv(info.file, row.names=1)
     pgxinfo
@@ -791,7 +622,7 @@ pgxinfo.deletePgx <- function(pgx.dir, pgxname, file="datasets-info.csv",
 }
 
 
-#' Update PGX-info file with new pgx object
+#' Update PGX-info file with new pgx object (WIP)
 #'
 #' @export
 pgxinfo.addPgx <- function(pgx.dir, pgx, file="datasets-info.csv",
@@ -846,6 +677,8 @@ pgxinfo.addPgx <- function(pgx.dir, pgx, file="datasets-info.csv",
     } 
 }
 
+#' Read dataset information file (aka PGX info)
+#' 
 #' @export
 pgxinfo.read <- function(pgx.dir, file="datasets-info.csv", match=TRUE)
 {
@@ -876,4 +709,427 @@ pgxinfo.read <- function(pgx.dir, file="datasets-info.csv", match=TRUE)
   pgxinfo <- pgxinfo[,ii]
   pgxinfo$path <- pgx.dir
   return(pgxinfo)
+}
+
+
+#' Checks if any of metadata files (info, allFC, sigdb) need
+#' update. All pgx files in the datafolder should be included.
+#' 
+#' @export
+pgxinfo.needUpdate <- function(
+    pgx.dir,
+    verbose=TRUE
+    )
+{
+    if(!dir.exists(pgx.dir)) {
+        stop(paste("[pgxinfo.needUpdate] FATAL ERROR : folder",pgx.dir,"does not exist"))
+    }
+
+    pgx.dir <- pgx.dir[1]  ## only one folder!!!
+    pgx.files <- dir(pgx.dir, pattern="[.]pgx$")
+    if(length(pgx.files)==0) return(FALSE)  ## no files!
+    
+    dbg("[pgxinfo.needUpdate] *** called ***")
+  
+    ## all public datasets
+    pgx.files  <- sub("[.]pgx$","",pgx.files) ## strip pgx
+  
+    ##----------------------------------------------------------------------
+    ## If an allFC file exists
+    ##----------------------------------------------------------------------
+    allfc.file = "datasets-allFC.csv"
+    info.file = "datasets-info.csv"
+    sigdb.file = "datasets-sigdb.h5"
+
+    allfc.file1 <- file.path(pgx.dir, allfc.file)
+    has.fc <- file.exists(allfc.file1)
+
+    info.file1 <- file.path(pgx.dir, info.file)
+    has.info <- file.exists(info.file1)
+
+    sigdb.file1 <- file.path(pgx.dir, sigdb.file)
+    has.sigdb <- file.exists(sigdb.file1)
+
+    if(!has.fc || !has.info || !has.sigdb) return(TRUE)
+    
+    ##----------------------------------------------------------------------
+    ## If an allFC exists, check if it is done for all PGX files
+    ##----------------------------------------------------------------------
+
+    if(verbose) message("[pgxinfo.needUpdate] checking which pgx already done in allFC...")
+    allFC <- data.table::fread(allfc.file1,check.names=FALSE,nrows=1) ## HEADER!!!        
+    fc.files <- gsub("^\\[|\\].*","",colnames(allFC)[-1])
+    fc.files  <- sub("[.]pgx$","",fc.files) ## strip pgx
+    fc.complete <- all(pgx.files %in% fc.files)
+    fc.complete    
+
+    if(verbose) message("[pgxinfo.needUpdate] checking which pgx already in PGX info...")
+    ## do not use fread! quoting bug
+    pgxinfo = read.csv(info.file1, stringsAsFactors=FALSE, row.names=1, sep=',')        
+    info.files <- unique(sub(".pgx$","",pgxinfo$dataset))
+    info.complete <- all(pgx.files %in% info.files)
+    info.complete
+
+    if(verbose) message("[pgxinfo.needUpdate] checking which pgx already in sigdb...")
+    cn <- rhdf5::h5read(sigdb.file1,"data/colnames")
+    h5.files <- gsub("^\\[|\\].*","",cn)
+    h5.files  <- sub("[.]pgx$","",h5.files) ## strip pgx
+    h5.complete <- all(pgx.files %in% h5.files)
+
+    if(!fc.complete || !info.complete || !h5.complete) return(TRUE)    
+
+    ## No update needed
+    return(FALSE)
+}
+
+
+
+#' Update 
+#' 
+#' @export
+pgxinfo.updateDatasetFolder <- function(pgx.dir,
+                                        force = FALSE,
+                                        delete.old = FALSE,
+                                        new.pgx = NULL,
+                                        verbose = TRUE)
+{
+    ## only run pgx.initDatasetFolder if pgx are changed
+    if(!dir.exists(pgx.dir)) {
+        stop(paste("[pgx.updateDatasetFolder] FATAL ERROR : folder",pgx.dir,"does not exist"))
+    }
+    dbg("[pgx.updateDatasetFolder] *** called ***")
+  
+    pgx.files <- dir(pgx.dir, pattern="[.]pgx$")
+    dbg("[pgx.updateDatasetFolder] length(pgx.files) = ",length(pgx.files))
+    if(length(pgx.files)==0) {
+        allfc.file1 <- file.path(pgx.dir, allfc.file)
+        info.file1  <- file.path(pgx.dir, info.file)
+        file.remove(info.file1)
+        file.remove(allfc.file1)
+        # should return FALSE?
+        return(NULL)
+    }
+    
+    ## all public datasets
+    pgx.dir <- pgx.dir[1]  ## only one folder!!!
+    pgx.files <- dir(pgx.dir, pattern="[.]pgx$")
+    pgx.files <- sub("[.]pgx$","",pgx.files) ## strip pgx
+
+    ##----------------------------------------------------------------------
+    ## If an allFC file exists
+    ##----------------------------------------------------------------------
+
+    allfc.file <- file.path(pgx.dir, "datasets-allFC.csv")
+    has.fc <- file.exists(allfc.file)
+
+    info.file <- file.path(pgx.dir, "datasets-info.csv")
+    has.info <- file.exists(info.file)
+
+    sigdb.file <- file.path(pgx.dir, "datasets-sigdb.h5")
+    has.sigdb <- file.exists(sigdb.file)
+
+    tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")
+    
+    if(force) {
+        has.fc <- FALSE
+        has.info <- FALSE
+        has.sigdb <- FALSE        
+    }
+    
+    ##----------------------------------------------------------------------
+    ## If an allFC file exits, check if it is done for all PGX files
+    ##----------------------------------------------------------------------
+
+    pgxinfo <- NULL
+    fc.missing <- pgx.files
+    info.missing <- pgx.files
+    h5.missing <- pgx.files
+    fc.delete <- c()
+    info.delete <- c()
+    h5.delete <- c()
+    
+    allFC <-NULL
+    if(has.fc) {
+        if(verbose) message("[initDatasetFolder] checking which pgx files already done in allFC...")
+        allFC <- data.table::fread(allfc.file,check.names=FALSE,nrows=1) ## HEADER!!!        
+        fc.files <- gsub("^\\[|\\].*","",colnames(allFC)[-1])
+        fc.missing <- setdiff(pgx.files, fc.files)
+        fc.delete  <- setdiff(fc.files, pgx.files)
+        allFC <-NULL        
+    }
+
+    if(has.info) {
+        if(verbose) message("[initDatasetFolder] checking which pgx files already in PGX info...")
+        ## do not use fread! quoting bug
+        pgxinfo = read.csv(info.file, stringsAsFactors=FALSE, row.names=1, sep=',')        
+        pgxinfo.files <- unique(sub(".pgx$","",pgxinfo$dataset))
+        info.missing <- setdiff(pgx.files, pgxinfo.files)
+        info.delete  <- setdiff(pgxinfo.files, pgx.files)
+    }
+
+    if(has.sigdb) {
+        if(verbose) message("[initDatasetFolder] checking which pgx files already in sigdb...")
+        cn <- rhdf5::h5read(sigdb.file,"data/colnames")
+        h5.files <- gsub("^\\[|\\].*","",cn)
+        h5.files  <- sub("[.]pgx$","",h5.files) ## strip pgx
+        h5.missing <- setdiff(pgx.files, h5.files)
+        h5.delete  <- setdiff(h5.files, pgx.files)
+    }
+    
+    ##----------------------------------------------------------------------
+    ## Check if it is done for all PGX files
+    ##----------------------------------------------------------------------
+
+    ## files to be done either for allFC or missing in INFO
+    pgx.missing <- unique(c(fc.missing, info.missing))
+    pgx.delete  <- unique(c(fc.delete, info.delete))
+
+    pgxinfo.changed = FALSE
+    pgxfc.changed = FALSE
+
+    ## these pgx need forced update
+    if(!is.null(new.pgx)) {
+       new.pgx <- sub(".pgx$","",new.pgx)
+       new.pgx <- intersect(new.pgx, pgx.files)  ## only existing pgx
+       pgx.delete  <- union(pgx.delete, new.pgx)
+       pgx.missing <- union(pgx.missing, new.pgx)
+       fc.missing <- union(fc.missing, new.pgx)
+       info.missing <- union(info.missing, new.pgx)
+       sel1 <- which(pgxinfo$dataset %in% new.pgx)
+       if(length(sel1)) {
+           pgxinfo <- pgxinfo[-sel1,]
+           pgxinfo.changed <- TRUE
+       }
+    }
+
+    if(verbose) message("[initDatasetFolder] length(pgx.missing) = ",length(pgx.missing),"")
+    if(verbose) message("[initDatasetFolder] length(pgx.delete) =  ",length(pgx.delete),"")
+
+    ## nothing to do???
+    if(length(pgx.missing)==0 && length(h5.missing)==0 ) {
+        if(verbose) message("[updateDatasetFolder] no update required. FORCE=1 for forced update.")
+        return()
+    }
+    
+    ## pgxinfo and allFC OK, but sigdb not upto date
+    if(length(pgx.missing)==0 && length(h5.missing)>0 ) {
+        ## Update SIGDB file using allFC
+        allFC <- fread.csv(allfc.file,row.names=1,check.names=FALSE)
+        ## update user sigdb or create if not exists
+        if(file.exists(sigdb.file)) unlink(sigdb.file)
+        if(verbose) message("[updateDatasetFolder] creating sig DB: ",sigdb.file,"...")       
+        pgx.createSignatureDatabaseH5.fromMatrix(sigdb.file, X=allFC)
+        pgx.addEnrichmentSignaturesH5(sigdb.file, X=allFC, methods = "rankcor")
+        h5.missing <- NULL
+    }
+
+    tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")  
+    if(!file.exists(tsne.file)) {
+       ## write t-SNE file
+        rhdf5::h5ls(sigdb.file)
+        cn <- rhdf5::h5read(sigdb.file, "data/colnames")
+        tsne <- rhdf5::h5read(sigdb.file, "clustering/tsne2d")                
+        rownames(tsne) <- cn
+        colnames(tsne) <- paste0("tsne.",1:2)
+        write.csv(tsne, file=tsne.file)
+    }
+
+    if(length(pgx.missing)==0 && length(h5.missing)==0 ) {
+        if(verbose) message("[updateDatasetFolder] no update required. FORCE=1 for forced update.")
+        return()
+    }
+    
+    ##----------------------------------------------------------------------
+    ## Reread allFC file. Before we only read the header.
+    ##----------------------------------------------------------------------
+    allFC <-NULL
+    ##allfc.file <- file.path(pgx.dir, allfc.file)
+    if(!force && file.exists(allfc.file) && length(pgx.missing)>0) {
+        ##allFC <- read.csv(allfc.file,row.names=1,check.names=FALSE)
+        allFC <- fread.csv(allfc.file,row.names=1,check.names=FALSE)
+    }
+    dim(allFC)
+
+    ## these pgx need forced update, so remove
+    if(!is.null(allFC) && !is.null(new.pgx)) {
+       new.pgx <- sub(".pgx$","",new.pgx)
+       allfc.pgx <- gsub("^\\[|\\].*","",colnames(allFC))
+       sel2 <- which(allfc.pgx %in% new.pgx)
+       if(length(sel2)) {
+          allFC <- allFC[,-sel2,drop=FALSE]
+          pgxfc.changed <- TRUE         
+       }
+    } 
+  
+    ##----------------------------------------------------------------------
+    ## For all new PGX files, load the PGX file and get the meta FC
+    ## matrix.
+    ##----------------------------------------------------------------------
+    info.cols <- NULL
+    missing.FC <- list()
+    message("[updateDatasetFolder] missing pgx = ",paste(pgx.missing,collapse=" "))
+    pgxfile = pgx.missing[1]
+  
+    ngs <- NULL
+    for(pgxfile in pgx.missing) {
+
+        cat(".")
+        pgxfile1 <- file.path(pgx.dir,pgxfile)
+        pgxfile1 <- paste0(sub("[.]pgx$","",pgxfile1),".pgx")
+        ##try.error <- try( load(file.path(pgx.dir,pgxfile),verbose=0) )
+        pgx <- try(local(get(load(pgxfile1, verbose = 0)))) ## override any name
+
+        if("try-error" %in% class(pgx)) {
+            message(paste("[updateDatasetFolder] ERROR in loading PGX file:",pgxfile1,". skipping\n"))
+            next()
+        }
+
+        if(!pgx.checkObject(pgx)) {
+            message(paste("[updateDatasetFolder] INVALID PGX object",pgxfile,". Skipping"))
+            next()
+        }
+
+        ##---------------------------------------------
+        ## extract the meta FC matrix
+        ##---------------------------------------------
+        ## rownames(pgx$X) <- toupper(sub(".*:","",rownames(pgx$X)))
+        if(pgxfile %in% fc.missing) {
+          meta <- pgx.getMetaFoldChangeMatrix(pgx, what="meta")
+          rownames(meta$fc) <- toupper(rownames(meta$fc))
+          missing.FC[[pgxfile]] <- meta$fc
+          pgxfc.changed <- TRUE
+        }
+
+        ##---------------------------------------------
+        ## compile the info for update
+        ##---------------------------------------------
+        if(pgxfile %in% info.missing) {
+          pgx$name <- sub(".pgx$","",pgxfile)  ## force filename as name
+          pgxinfo <- pgx.updateInfoPGX(pgxinfo, pgx)
+          pgxinfo.changed <- TRUE
+        }
+    }
+
+    pgx <- NULL
+
+    ##----------------------------------------------------------------------
+    ## Update the INFO meta file
+    ##----------------------------------------------------------------------
+    rownames(pgxinfo) <- NULL
+    pgxinfo <- data.frame(pgxinfo, check.names=FALSE)
+
+    ## remove unneccessary entries if forced.
+    sel.delete <- which(!sub(".pgx$","",pgxinfo$dataset) %in% pgx.files)
+    if(length(sel.delete) && delete.old) {
+      pgxinfo <- pgxinfo[-sel.delete,,drop=FALSE]
+      pgxinfo.changed <- TRUE
+    }
+
+    if(pgxinfo.changed) {
+      if(verbose) message("[initDatasetFolder] writing updated PGX.INFO file to ",info.file,"...")
+      write.csv(pgxinfo, file = info.file)
+      Sys.chmod(info.file, "0666")
+    }
+
+    ##----------------------------------------------------------------------
+    ## Update the ALL.FC meta file
+    ##----------------------------------------------------------------------
+
+    ## remove unneccessary entries if forced.
+    if(!is.null(allFC) && delete.old) {
+      fc.files <- gsub("^\\[|\\].*","",colnames(allFC))
+      sel.deleteFC <- which(!fc.files %in% pgx.files)
+      if(length(sel.deleteFC)) {
+        allFC <- allFC[, -sel.deleteFC, drop=FALSE]
+        pgxfc.changed <- TRUE
+      }
+    }
+
+    if(length(missing.FC)==0 && !pgxfc.changed) {
+        ## no change in info
+        dbg("[initDatasetFolder] allFC complete. no change needed.")
+        return(NULL)
+    }
+
+    if(length(missing.FC)>0) {
+      ## find most common genes
+      all.gg <- toupper(as.character(unlist(sapply(missing.FC, rownames))))
+      gg.tbl <- table(all.gg)
+      table(gg.tbl)
+
+      ## Conform the multiple metaFC matrices
+      gg <- names(gg.tbl)
+      length(gg)
+      missing.FC <- lapply(missing.FC, function(x) {
+        x <- x[match(gg,toupper(rownames(x))),,drop=FALSE]
+        rownames(x) <- gg
+        return(x)
+      })
+
+      ## append file name in front of contrast names
+      id <- paste0("[",sub("[.]pgx","",names(missing.FC)),"]")
+      id
+      for(i in 1:length(missing.FC)) {
+        colnames(missing.FC[[i]]) <- paste0(id[i]," ",colnames(missing.FC[[i]]))
+      }
+      allFC.new <- do.call(cbind, missing.FC)
+      allFC.new <- as.matrix(allFC.new)
+
+      if(is.null(allFC)) {
+        allFC <- allFC.new
+      } else {
+        ## Add any new FC profiles to the existing allFC
+        gg <- sort(unique(c(rownames(allFC), rownames(allFC.new))))
+        j1 <- match(gg, rownames(allFC))
+        j2 <- match(gg, rownames(allFC.new))
+        allFC <- allFC[j1,,drop=FALSE]
+        allFC.new <- allFC.new[j2,,drop=FALSE]
+        allFC <- cbind(allFC, allFC.new)
+        rownames(allFC) <- gg
+      }
+
+      ## restrict to 20000 genes
+      allfc.sd <- apply(allFC, 1, sd, na.rm=TRUE)
+      allfc.nna <- rowMeans(!is.na(allFC))
+      jj <- Matrix::head( order(-allfc.sd * allfc.nna), 20000)
+      allFC <- allFC[jj,,drop=FALSE]
+      dim(allFC)
+      pgxfc.changed <- TRUE
+    }
+  
+    ## save modified allFC
+    if(pgxfc.changed) {
+      ## check for duplicates
+      if(verbose) message("[initDatasetFolder] allFC changed. updating file: ",allfc.file)
+      allFC <- allFC[,!duplicated(colnames(allFC)),drop=FALSE]
+      allFC <- allFC[,order(colnames(allFC)),drop=FALSE]
+      AA <- data.frame(rownames=rownames(allFC), allFC, check.names=FALSE)
+      ##write.csv(allFC, file=allfc.file)
+      data.table::fwrite(AA, file=allfc.file)
+      Sys.chmod(allfc.file, "0666")
+      remove(AA)
+    }
+
+    ## update user sigdb or create if not exists
+    sigdb <- file.path(pgx.dir, "datasets-sigdb.h5")  
+    if(!file.exists(sigdb) || pgxfc.changed) {
+       ## NEED RETHINK!!!! HERE???
+       if(file.exists(sigdb)) unlink(sigdb)
+       if(verbose) message("[initDatasetFolder] creating signature DB to",sigdb,"...")       
+       pgx.createSignatureDatabaseH5.fromMatrix(sigdb, X=allFC)
+       if(verbose) message("[initDatasetFolder] add enrichment signature to",sigdb,"...")       
+       pgx.addEnrichmentSignaturesH5(sigdb, X=allFC, methods = "rankcor")
+    }
+
+    tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")  
+    if(!file.exists(tsne.file) || pgxfc.changed) {
+        rhdf5::h5ls(sigdb)
+        cn <- rhdf5::h5read(sigdb, "data/colnames")
+        tsne <- rhdf5::h5read(sigdb, "clustering/tsne2d")                
+        rownames(tsne) <- cn
+        colnames(tsne) <- paste0("tsne.",1:2)
+        write.csv(tsne, file=tsne.file)
+    }
+    
+    return()
 }
