@@ -304,38 +304,24 @@ pgx.readDatasetProfiles <- function(pgx.dir, file="datasets-allFC.csv",
 }
 
 #' @export
-pgx.scanInfoFile <- function(pgx.dir, file="datasets-info.csv", force=FALSE, verbose=TRUE)
+pgx.scanInfoFile <- function(
+  pgx.dir,
+  file="datasets-info.csv",
+  allfc.file = "datasets-allFC.csv",
+  info.file = "datasets-info.csv",
+  force=FALSE,
+  new.pgx = NULL,
+  verbose=TRUE
+  )
 {
+  INITDATASETFOLDER = TRUE
+  
   pgx.files <- dir(pgx.dir, pattern="[.]pgx$")
   if(length(pgx.files)==0) return(NULL)  ## no files!
 
-  ## before reading the info file, we need to update for new files
-  pgx.initDatasetFolder(pgx.dir, force=force, verbose=TRUE)  
+  ## only run pgx.initDatasetFolder if pgx are changed
 
-  pgxinfo.file <- file.path(pgx.dir, file)
-  if(!file.exists(pgxinfo.file)) return(NULL)  ## no info??
-  ## do not use fread.csv or fread here!! see issue #441
-  pgxinfo = read.csv(pgxinfo.file, stringsAsFactors=FALSE, row.names=1, sep=',')
-  pgxinfo$path <- pgx.dir
-  return(pgxinfo)
-}
-
-#' @export
-pgx.initDatasetFolder <- function( pgx.dir,
-                                  allfc.file = "datasets-allFC.csv",
-                                  info.file = "datasets-info.csv",
-                                  force = FALSE, delete.old = FALSE,
-                                  new.pgx = NULL,
-                                  verbose = TRUE)
-{
-    ##
-    ## Initialize file information file for SINGLE folder
-    ##
-    ##
-
-##  allfc.file = "datasets-allFC.csv";info.file = "datasets-info.csv";force=FALSE;verbose=TRUE;delete.old=FALSE;new.pgx=NULL
-    
-    if(!dir.exists(pgx.dir)) {
+  if(!dir.exists(pgx.dir)) {
         stop(paste("[initDatasetFolder] FATAL ERROR : folder",pgx.dir,"does not exist"))
     }
     dbg("[pgx.initDatasetFolder] *** called ***")
@@ -353,6 +339,7 @@ pgx.initDatasetFolder <- function( pgx.dir,
           unlink(info.file1)
           unlink(allfc.file1)
         }
+        # should return FALSE?
         return(NULL)
     }
   
@@ -417,21 +404,55 @@ pgx.initDatasetFolder <- function( pgx.dir,
        sel1 <- which(pgxinfo$dataset %in% new.pgx)
        if(length(sel1)) {
            pgxinfo <- pgxinfo[-sel1,]
-           pgxinfo.changed <- TRUE       
+           pgxinfo.changed <- TRUE
        }
     }
-  
     if(length(pgx.missing)==0 && length(pgx.delete)==0) {
         if(verbose) message("[initDatasetFolder] no update required. use FORCE=1 for forced update.")
-        return(NULL)
-    }
-    if(verbose) message("[initDatasetFolder] folder has ",length(pgx.missing)," new PGX files")
-    if(verbose) message("[initDatasetFolder] info-file has ",length(pgx.delete)," old items")
+        INITDATASETFOLDER = FALSE
+  }
 
+  if(verbose) message("[initDatasetFolder] folder has ",length(pgx.missing)," new PGX files")
+  if(verbose) message("[initDatasetFolder] info-file has ",length(pgx.delete)," old items")
+
+  return(
+    list(
+      INITDATASETFOLDER = INITDATASETFOLDER,
+      pgxinfo = pgxinfo,
+      pgx.files = pgx.files,
+      pgxinfo.changed = pgxinfo.changed,
+      pgxfc.changed = pgxinfo.changed,
+      info.file1 = info.file1,
+      pgx.missing = pgx.missing,
+      pgx.missing0 = pgx.missing0,
+      pgx.missing1 = pgx.missing1
+      ))
+  
+}
+
+#' @export
+pgx.initDatasetFolder <- function(pgx.dir,
+                                  allfc.file = "datasets-allFC.csv",
+                                  info.file = "datasets-info.csv",
+                                  info.file1 = NULL,
+                                  force = FALSE,
+                                  delete.old = FALSE,
+                                  pgxinfo = NULL,
+                                  pgx.files = NULL,
+                                  pgxinfo.changed = NULL,
+                                  pgxfc.changed = NULL,
+                                  pgx.missing = NULL,
+                                  pgx.missing1 = NULL,
+                                  pgx.missing0 = NULL,
+                                  new.pgx = NULL,
+                                  verbose = TRUE)
+{
     ##----------------------------------------------------------------------
     ## Reread allFC file. Before we only read the header.
     ##----------------------------------------------------------------------
+    
     allFC <-NULL
+    allfc.file1 <- allfc.file
     if(!force && file.exists(allfc.file1) && length(pgx.missing)>0) {
         ##allFC <- read.csv(allfc.file1,row.names=1,check.names=FALSE)
         allFC <- fread.csv(allfc.file1,row.names=1,check.names=FALSE)
@@ -447,7 +468,7 @@ pgx.initDatasetFolder <- function( pgx.dir,
           allFC <- allFC[,-sel2,drop=FALSE]
           pgxfc.changed <- TRUE         
        }
-    }  
+    } 
   
     ##----------------------------------------------------------------------
     ## For all new PGX files, load the PGX file and get the meta FC
@@ -610,9 +631,14 @@ pgx.initDatasetFolder <- function( pgx.dir,
        pgx.addEnrichmentSignaturesH5(sigdb, X=allFC, methods = "rankcor")
     }
 
-  
+    # pgxinfo.file <- file.path(pgx.dir, file)
+    # if(!file.exists(pgxinfo.file)) return(NULL)  ## no info??
+    # ## do not use fread.csv or fread here!! see issue #441
+    # pgxinfo = read.csv(pgxinfo.file, stringsAsFactors=FALSE, row.names=1, sep=',')
+    pgxinfo <- playbase::pgxinfo.read(pgx.dir)
+    pgxinfo$path <- pgx.dir
+    return(pgxinfo) 
 }
-
 
 #' Update PGX-table with new pgx object. 
 #'
@@ -762,8 +788,6 @@ pgxinfo.deletePgx <- function(pgx.dir, pgxname, file="datasets-info.csv",
       sigdb.removeDataset(h5.file, pgxname)
       ##rhdf5::h5ls(h5.file)
     }
-   
-    ## return(pgxinfo)
 }
 
 
@@ -838,5 +862,18 @@ pgxinfo.read <- function(pgx.dir, file="datasets-info.csv", match=TRUE)
     sel <- pgxinfo.datasets %in% pgx.files1
     pgxinfo <- pgxinfo[sel,,drop=FALSE]
   }
+  info.colnames <- c( "dataset", "datatype", "description", "nsamples",
+            "ngenes", "nsets", "conditions", "organism", "date", "creator" )
+  if (is.null(pgxinfo)) {
+    aa <- rep(NA, length(info.colnames))
+    names(aa) <- info.colnames
+    pgxinfo <- data.frame(rbind(aa))[0, ]
+  }
+  ## add missing columns fields
+  missing.cols <- setdiff(info.colnames,colnames(pgxinfo))
+  for(s in missing.cols) info[[s]] <- rep(NA,nrow(pgxinfo))
+  ii <- match(info.colnames,colnames(pgxinfo))
+  pgxinfo <- pgxinfo[,ii]
+  pgxinfo$path <- pgx.dir
   return(pgxinfo)
 }
