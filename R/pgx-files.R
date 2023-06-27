@@ -158,14 +158,12 @@ pgx.scanInfoFile <- function(
   if (!dir.exists(pgx.dir)) {
     stop(paste("[initDatasetFolder] FATAL ERROR : folder", pgx.dir, "does not exist"))
   }
-  dbg("[pgx.initDatasetFolder] *** called ***")
 
   ## all public datasets
   pgx.dir <- pgx.dir[1] ## only one folder!!!
   pgx.files <- dir(pgx.dir, pattern = "[.]pgx$")
   pgx.files <- sub("[.]pgx$", "", pgx.files) ## strip pgx
 
-  dbg("[pgx.initDatasetFolder] length(pgx.files) = ", length(pgx.files))
   if (length(pgx.files) == 0) {
     allfc.file1 <- file.path(pgx.dir, allfc.file)
     info.file1 <- file.path(pgx.dir, info.file)
@@ -736,8 +734,6 @@ pgxinfo.needUpdate <- function(
     return(FALSE)
   } ## no files!
 
-  dbg("[pgxinfo.needUpdate] *** called ***")
-
   ## all public datasets
   pgx.files <- sub("[.]pgx$", "", pgx.files) ## strip pgx
 
@@ -807,10 +803,8 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   if (!dir.exists(pgx.dir)) {
     stop(paste("[pgx.updateDatasetFolder] FATAL ERROR : folder", pgx.dir, "does not exist"))
   }
-  dbg("[pgx.updateDatasetFolder] *** called ***")
 
   pgx.files <- dir(pgx.dir, pattern = "[.]pgx$")
-  dbg("[pgx.updateDatasetFolder] length(pgx.files) = ", length(pgx.files))
   if (length(pgx.files) == 0) {
     allfc.file1 <- file.path(pgx.dir, allfc.file)
     info.file1 <- file.path(pgx.dir, info.file)
@@ -1056,7 +1050,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
 
   if (length(missing.FC) == 0 && !pgxfc.changed) {
     ## no change in info
-    dbg("[initDatasetFolder] allFC complete. no change needed.")
+    dbg("[pgxinfo.updateDatasetFolder] allFC complete. no change needed.")
     return(NULL)
   }
 
