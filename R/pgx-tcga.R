@@ -26,14 +26,6 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop=100, deceased.only=TRUE,
     genes <- c(Matrix::head(names(sig),ntop),tail(names(sig),ntop))
     Matrix::head(genes)
 
-    ## Read the H5 matrix file
-    ## aa <- rhdf5::h5ls(matrix_file)[,1:2]
-    ## aa
-    ## ii <- which(aa[,1]=="/meta")[-1]
-    ## aa.head <- lapply(ii,function(i) Matrix::head(rhdf5::h5read(matrix_file, paste0("/meta/",aa[i,2]))))
-    ## names(aa.head) <- aa[ii,2]
-    ## aa.head
-
     if(verbose) message("[pgx.testTCGAsurvival] extracting expression from H5 matrix file")
 
     h5.samples = rhdf5::h5read(matrix_file, "/meta/gdc_cases.submitter_id")
