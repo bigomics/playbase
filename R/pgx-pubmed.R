@@ -17,12 +17,12 @@ pmid.getGeneContext <- function(gene, keyword)
     gene1 <- paste(gene1,collapse="|")
     gene1
 
-    if(gene %in% biomaRt::keys(org.Hs.egALIAS2EG)) {
-        gname <- get(get(gene, org.Hs.egALIAS2EG),org.Hs.egGENENAME)
+    if(gene %in% biomaRt::keys(org.Hs.eg.db::org.Hs.egALIAS2EG)) {
+        gname <- get(get(gene, org.Hs.eg.db::org.Hs.egALIAS2EG), org.Hs.eg.db::org.Hs.egGENENAME)
         gname <- gsub("[, -]",".",gname)
         gene1 <- paste0(gene1,"|",gname)
-    } else if(gene %in% biomaRt::keys(org.Mm.egALIAS2EG)) {
-        gname <- get(get(gene, org.Mm.egALIAS2EG),org.Mm.egGENENAME)
+    } else if(gene %in% biomaRt::keys(org.Mm.eg.db::org.Mm.egALIAS2EG)) {
+        gname <- get(get(gene, org.Mm.eg.db::org.Mm.egALIAS2EG),org.Mm.eg.db::org.Mm.egGENENAME)
         gname <- gsub("[, -]",".",gname)
         gene1 <- paste0(gene1,"|",gname)
     }
@@ -87,7 +87,7 @@ pmid.getPubMedContext <- function(gene, context) {
     gene1 <- paste(gene1,collapse="|")
     gene1
     ##gname <- get(get("Hmox1", org.Mm.egALIAS2EG),org.Mm.egGENENAME)
-    gname <- get(get(toupper(gene), org.Hs.egALIAS2EG),org.Hs.egGENENAME)
+    gname <- get(get(toupper(gene), org.Hs.eg.db::org.Hs.egALIAS2EG), org.Hs.eg.db::org.Hs.egGENENAME)
     gene2 <- paste0(gene1,"|",gsub("[ -]",".",gname))
     extractRIF <- function(a) {
         s <- strsplit(a,split="[.;:]")[[1]]
