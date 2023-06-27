@@ -54,7 +54,6 @@ gx.nearestReferenceCorrection.DEPRECATED <- function(x, y, ref, k=3, dist.method
         dx[,j] <- x[,j] - rowMeans(x[,nn,drop=FALSE]) + avgref
         pairings[j,] <- Matrix::head(c(nn,rep(NA,k)),k)
     }
-    ##cx <- dx - rowMeans(dx) + rowMeans(x)
     res <- list(X=dx, pairings=pairings)
     return(res)
 }
