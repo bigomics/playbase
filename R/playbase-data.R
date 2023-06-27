@@ -1,4 +1,3 @@
-
 #' Get path to omp example dataset(s)
 #'
 #' `playbase` comes bundled with a number of sample files in its `inst/extdata`

@@ -17,7 +17,7 @@ compute_extra <- function(ngs, extra = c(
                           ), sigdb = NULL, libx.dir = NULL) {
   timings <- c()
 
-  #ngs = pgx
+  # ngs = pgx
 
   if (length(extra) == 0) {
     return(ngs)
@@ -121,7 +121,6 @@ compute_extra <- function(ngs, extra = c(
 
   # I THINK THIS REQUIRES libx.dir TO BE SET TO FIND sigdb-.h5 FILES (-Nick)
   if ("connectivity" %in% extra) {
-
     # try to find sigdb in libx dir if not specified
     if (!is.null(libx.dir) || !is.null(sigdb)) {
       message(">>> Computing connectivity scores...")
@@ -137,7 +136,7 @@ compute_extra <- function(ngs, extra = c(
           message("computing connectivity scores for ", db)
           ## in memory for many comparisons
           meta <- pgx.getMetaFoldChangeMatrix(ngs, what = "meta")
-          inmemory <- ifelse(ncol(meta$fc) > 50, TRUE, FALSE)  ## NEED RETHINK!! reverse?
+          inmemory <- ifelse(ncol(meta$fc) > 50, TRUE, FALSE) ## NEED RETHINK!! reverse?
           inmemory
           tt <- system.time({
             scores <- pgx.computeConnectivityScores(
@@ -153,7 +152,6 @@ compute_extra <- function(ngs, extra = c(
           remove(scores)
         }
       }
-
     } else {
       message(">>> Skipping connectivity scores (no libx.dir)...")
     }
@@ -305,24 +303,24 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
   ## -------------- drug enrichment
   # get drug activity databases
 
-  #ngs=pgx
-  #libx.dir = params$libx.dir
+  # ngs=pgx
+  # libx.dir = params$libx.dir
 
-  if (is.null(libx.dir)) message('WARNING Need libx.dir if you call compute_full_drugActivityEnrichment')
+  if (is.null(libx.dir)) message("WARNING Need libx.dir if you call compute_full_drugActivityEnrichment")
 
   cmap.dir <- file.path(libx.dir, "cmap")
   file.gene.db <- dir(cmap.dir, pattern = "n8m20g5812.*rds$")
 
-  if (length(file.gene.db)>1) message('WARNING multiple gene.db files found. Using first one.')
+  if (length(file.gene.db) > 1) message("WARNING multiple gene.db files found. Using first one.")
 
-  if(file.exists(file.path(cmap.dir,file.gene.db[1]))){
-    gene.db <- readRDS(file.path(cmap.dir,file.gene.db[1]))
+  if (file.exists(file.path(cmap.dir, file.gene.db[1]))) {
+    gene.db <- readRDS(file.path(cmap.dir, file.gene.db[1]))
 
     ref.db <- list(
       "L1000_ACTIVITYS_N20D1011" = playdata::L1000_ACTIVITYS_N20D1011,
       "L1000_GENE_PERTURBATION" = gene.db
     )
-    } else {
+  } else {
     ref.db <- list(
       "L1000_ACTIVITYS_N20D1011" = playdata::L1000_ACTIVITYS_N20D1011
     )
@@ -400,7 +398,6 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
 #'
 #' @examples
 compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
-
   cmap.dir <- file.path(libx.dir, "cmap")
 
   ref.db <- dir(cmap.dir, pattern = "sensitivity.*rds$")

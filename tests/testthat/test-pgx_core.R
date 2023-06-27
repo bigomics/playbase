@@ -1,4 +1,6 @@
-if (!identical(Sys.getenv("NOT_CRAN"), "true")) return()
+if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
+  return()
+}
 
 # this takes too long
 testthat::test_that("createPGX and computePGX works on default example", {
@@ -7,7 +9,7 @@ testthat::test_that("createPGX and computePGX works on default example", {
     my_pgx <- pgx <- playbase::pgx.createPGX(
       counts = playbase::COUNTS,
       samples = playbase::SAMPLES,
-      contrasts = playbase::CONTRASTS[,1, drop = FALSE]
+      contrasts = playbase::CONTRASTS[, 1, drop = FALSE]
     )
   )
   # compute pgx from the created pgx with default methods
@@ -15,7 +17,7 @@ testthat::test_that("createPGX and computePGX works on default example", {
     my_pgx <- playbase::pgx.computePGX(
       my_pgx,
       gx.methods = c("ttest.welch"),
-      gset.methods = c("fisher"))
+      gset.methods = c("fisher")
+    )
   )
 })
-

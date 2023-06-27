@@ -41,11 +41,11 @@ library(playbase)
 
 ## with two functions, we can create a pgx object that can be used in Omics Playground.
 
-# first step is to create pgx 
+# first step is to create pgx
 pgx <- playbase::pgx.createPGX(
- counts = playbase::COUNTS,
- samples = playbase::SAMPLES,
- contrasts = playbase::CONTRASTS
+  counts = playbase::COUNTS,
+  samples = playbase::SAMPLES,
+  contrasts = playbase::CONTRASTS
 )
 
 # once pgx is created, we can compute the modules
@@ -59,8 +59,8 @@ pgx <- playbase::pgx.computePGX(
 
 ```{r namespace}
 library(addns)
-#addns::add_ns(path = "R/", packages = c("playbase"))
-#adds::rm_imports(path = "R/")
+# addns::add_ns(path = "R/", packages = c("playbase"))
+# adds::rm_imports(path = "R/")
 ```
 
 ## The pgx object
