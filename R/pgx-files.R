@@ -149,9 +149,12 @@ pgx.scanInfoFile <- function(
     )
 {
     INITDATASETFOLDER = TRUE
-  
+
     pgx.files <- dir(pgx.dir, pattern="[.]pgx$")
-    if(length(pgx.files)==0) return(NULL)  ## no files!
+    if(length(pgx.files)==0) {
+      out <- list(INITDATASETFOLDER = FALSE)
+      return(out)  ## no files!
+    }
     
     ## only run pgx.initDatasetFolder if pgx are changed
 
