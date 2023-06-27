@@ -37,7 +37,6 @@ pgx.wgcna <- function(
     X <- X[!duplicated(rownames(X)), ]
 
     datExpr <- t(head(X, ngenes))
-    #progress$inc(0.1, "Computing WGCNA modules...")
     require(WGCNA) #fun fact: if we dont source WGCNA, blockwiseModules does not work
     net <- WGCNA::blockwiseModules(
         datExpr,
