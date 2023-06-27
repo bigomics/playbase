@@ -231,8 +231,6 @@ pgx.ActivationMatrix <- function(pgx, features = NULL, contrasts = NULL,
       cl.cex = 0.6,
       mar = c(10, 0, 1, 0)
     )
-    ## mtext(1:ncol(F1), side=1, line=-5, at=1:ncol(F1),
-    ## srt=30, cex=0.8)
     text(1:ncol(F2), 0, colnames.f2,
       srt = srt, xpd = TRUE, adj = 1, cex = 0.8 * cex.col
     )
