@@ -210,10 +210,8 @@ gx.nnmcorrect2.NOTWORKING <- function(X, y, pairs=NULL, use.design=TRUE,
     mod = NULL
     if(use.design) {
         mod <- model.matrix(~y)
-        ##cX <- sva::ComBat(X, batch=full.pairs, mod=mod)
         cX <- limma::removeBatchEffect(X, batch=full.pairs, design=mod)
     } else {
-        ##cX <- sva::ComBat(X, batch=full.pairs)
         cX <- limma::removeBatchEffect(X, batch=full.pairs)
     }
     cX
