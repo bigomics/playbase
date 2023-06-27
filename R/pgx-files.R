@@ -278,17 +278,16 @@ pgx.initDatasetFolder <- function(pgx.dir,
                                   pgx.missing0 = NULL,
                                   new.pgx = NULL,
                                   update.sigdb = TRUE,
-                                  verbose = TRUE)
-{
-  ##----------------------------------------------------------------------
+                                  verbose = TRUE) {
+  ## ----------------------------------------------------------------------
   ## Reread allFC file. Before we only read the header.
-  ##----------------------------------------------------------------------
-  
-  allFC <-NULL
+  ## ----------------------------------------------------------------------
+
+  allFC <- NULL
   allfc.file1 <- file.path(pgx.dir, allfc.file)
-    if(!force && file.exists(allfc.file1) && length(pgx.missing)>0) {
-      ##allFC <- read.csv(allfc.file1,row.names=1,check.names=FALSE)
-      allFC <- fread.csv(allfc.file1,row.names=1,check.names=FALSE)
+  if (!force && file.exists(allfc.file1) && length(pgx.missing) > 0) {
+    ## allFC <- read.csv(allfc.file1,row.names=1,check.names=FALSE)
+    allFC <- fread.csv(allfc.file1, row.names = 1, check.names = FALSE)
   }
   dim(allFC)
 
