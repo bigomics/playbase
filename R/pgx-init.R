@@ -148,8 +148,8 @@ pgx.initialize <- function(pgx) {
     ## Add chromosome annotation if not
     if(!("chr" %in% names(pgx$genes))) {
         symbol = sapply(as.list(org.Hs.eg.db::org.Hs.egSYMBOL),"[",1)  ## some have multiple chroms..
-        CHR = sapply(as.list(org.Hs.egCHR),"[",1)  ## some have multiple chroms..
-        MAP <- sapply(as.list(org.Hs.egMAP),"[",1)  ## some have multiple chroms..
+        CHR = sapply(as.list(org.Hs.eg.db::org.Hs.egCHR),"[",1)  ## some have multiple chroms..
+        MAP <- sapply(as.list(org.Hs.eg.db::org.Hs.egMAP),"[",1)  ## some have multiple chroms..
         names(CHR) = names(MAP) = symbol
         pgx$genes$chr <- CHR[pgx$genes$gene_name]
         pgx$genes$map <- MAP[pgx$genes$gene_name]
