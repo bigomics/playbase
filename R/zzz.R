@@ -1,4 +1,4 @@
 # Welcome message
-.onLoad <- function(...){
+.onLoad <- function(...) {
   options(quietly = T)
 }
