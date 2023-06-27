@@ -64,7 +64,6 @@ pgx.inferCellType <- function(counts, low.th=0.01, add.unknown=FALSE,
         P <- tapply(1:ncol(P), colnames(P), function(i) rowSums(P[,i,drop=FALSE]))
     } else if(collapse=="mean") {
         P <- tapply(1:ncol(P), colnames(P), function(i) rowMeans(P[,i,drop=FALSE]))
-    ## } else if(collapse=="max") {
     } else {
         P <- tapply(1:ncol(P), colnames(P), function(i) apply(P[,i,drop=FALSE],1,max))
     }
