@@ -280,6 +280,7 @@ pgx.initDatasetFolder <- function(pgx.dir,
                                   pgx.missing1 = NULL,
                                   pgx.missing0 = NULL,
                                   new.pgx = NULL,
+                                  update.sigdb = TRUE,
                                   verbose = TRUE)
 {
     ##----------------------------------------------------------------------
@@ -456,7 +457,7 @@ pgx.initDatasetFolder <- function(pgx.dir,
 
     ## update user sigdb or create if not exists
     sigdb <- file.path(pgx.dir, "datasets-sigdb.h5")  
-    if(!file.exists(sigdb) || pgxfc.changed) {
+    if(update.sigdb && (!file.exists(sigdb) || pgxfc.changed)) {
        ## NEED RETHINK!!!! HERE???
        if(file.exists(sigdb)) unlink(sigdb)
        if(verbose) message("[initDatasetFolder] creating signature DB to",sigdb,"...")       
