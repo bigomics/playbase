@@ -38,17 +38,16 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop=1000, contrasts=NULL,
         contrasts <- colnames(meta$fc)
     }
     contrasts <- intersect(contrasts, colnames(meta$fc))
+    F <- meta$fc[,contrasts]
 
     if(inmemory) {
-        F = meta$fc[,contrasts]
         scores <- pgx.correlateSignatureH5.inmemory(
-            meta$fc, h5.file = h5.file,
+            F, h5.file = h5.file,
             nsig=100, ntop=ntop, nperm=9999)
     } else {
         scores <- list()
-        ct <- contrasts[1]
-        for(ct in contrasts) {
-            fc <- meta$fc[,ct]
+        for(ct in colnames(F)) {
+            fc <- F[,ct]
             names(fc) <- rownames(meta$fc)
             names(fc) <- toupper(names(fc)) ## for MOUSE!!
             res <- pgx.correlateSignatureH5(
@@ -986,6 +985,66 @@ sigdb.getSignatureMatrix <- function(sigdb, path=NULL) {
 
     list(up=up, dn=dn)
 }
+
+sigdb.removeDataset <- function(h5.file, pgxname) {
+
+   ## delete columns from H5 file
+   dd <- rhdf5::h5ls(h5.file)
+   dd
+   cn <- rhdf5::h5read(h5.file,"data/colnames")
+   del <- grep(paste0("\\[",pgxname,"\\]"), cn)
+   slots <- sub("^/*","",paste0(dd$group,"/",dd$name))
+   h5.removeRows <- function(h5.file, slot, rows) {
+     if(!slot %in% slots) return()
+     X <- rhdf5::h5read(h5.file, slot)
+     if(length(dim(X))==1) X <- X[-rows]
+     if(length(dim(X))>1)  X <- X[-rows,,drop=FALSE]
+     rhdf5::h5delete(h5.file, slot)
+     rhdf5::h5write(X, h5.file, slot)
+   }
+   h5.removeCols <- function(h5.file, slot, cols, chunk=TRUE) {
+     if(!slot %in% slots) return()
+     X <- rhdf5::h5read(h5.file, slot)
+     X <- X[,-cols,drop=FALSE]
+     rhdf5::h5delete(h5.file, slot)        
+     if(!chunk) {
+         rhdf5::h5write( X, h5.file, slot)
+     } else {
+         rhdf5::h5createDataset(
+             h5.file, slot,
+             c(nrow(X),ncol(X)),
+             ##storage.mode = "integer",
+             chunk = c(nrow(X),1),
+             level = 7
+         )
+         rhdf5::h5write(
+             X,
+             file = h5.file,
+             name = "data/matrix",
+             index = list(1:nrow(X),1:ncol(X))
+         )
+     }
+   }
+
+   rhdf5::h5ls(h5.file)
+   if(!is.null(del) && length(del)>0) {
+     h5.removeRows(h5.file, "clustering/pca2d", del)
+     h5.removeRows(h5.file, "clustering/pca3d", del)
+     h5.removeRows(h5.file, "clustering/tsne2d", del)
+     h5.removeRows(h5.file, "clustering/tsne3d", del)
+     h5.removeRows(h5.file, "clustering/umap2d", del)
+     h5.removeRows(h5.file, "clustering/umap3d", del)
+     h5.removeRows(h5.file, "data/colnames", del)
+     h5.removeCols(h5.file, "data/matrix", del)
+     h5.removeCols(h5.file, "enrichment/gsea", del)
+     h5.removeCols(h5.file, "enrichment/rankcor", del)
+     h5.removeCols(h5.file, "signature/sig100.dn", del)
+     h5.removeCols(h5.file, "signature/sig100.up", del)
+   }
+
+
+}
+
 
 ##================================================================================
 ##=============================== END OF FILE ====================================
