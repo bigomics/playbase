@@ -24,7 +24,7 @@ pgx.inferCNV <- function(ngs, refgroup=NULL, progress=NULL ) {
     ## BiocManager::install("infercnv")
     ##devtools::install_github("broadinstitute/infercnv", ref="RELEASE_3_9")
     symbol <- as.vector(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
-    chrloc <- as.list(org.Hs.egCHRLOC)
+    chrloc <- as.list(org.Hs.eg.db::org.Hs.egCHRLOC)
     chr <- as.vector(sapply(chrloc,function(x) names(x)[1]))
     pos <- abs(as.integer(as.vector(sapply(chrloc,function(x) x[1]))))
     chr[sapply(chr,is.null)] <- NA
@@ -182,7 +182,7 @@ pgx.CNAfromExpression <- function(ngs, nsmooth=40)
     ##
     ##
     symbol <- as.vector(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
-    chrloc <- as.list(org.Hs.egCHRLOC)
+    chrloc <- as.list(org.Hs.eg.db::org.Hs.egCHRLOC)
     chr <- as.vector(sapply(chrloc,function(x) names(x)[1]))
     pos <- abs(as.integer(as.vector(sapply(chrloc,function(x) x[1]))))
     chr[sapply(chr,is.null)] <- NA
