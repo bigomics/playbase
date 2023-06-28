@@ -464,7 +464,6 @@ pgx.initDatasetFolder <- function(pgx.dir,
   # ## do not use fread.csv or fread here!! see issue #441
   # pgxinfo = read.csv(pgxinfo.file, stringsAsFactors=FALSE, row.names=1, sep=',')
   pgxinfo <- playbase::pgxinfo.read(pgx.dir)
-  pgxinfo$path <- pgx.dir
   return(pgxinfo)
 }
 
