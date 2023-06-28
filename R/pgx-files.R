@@ -865,7 +865,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
 
   allFC <- NULL
   if (has.fc) {
-    if (verbose) message("[initDatasetFolder] checking which pgx files already done in allFC...")
+    if (verbose) message("[pgxinfo.updateDatasetFolder] checking which pgx files already done in allFC...")
     allFC <- data.table::fread(allfc.file, check.names = FALSE, nrows = 1) ## HEADER!!!
     fc.files <- gsub("^\\[|\\].*", "", colnames(allFC)[-1])
     fc.missing <- setdiff(pgx.files, fc.files)
@@ -874,7 +874,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   }
 
   if (has.info) {
-    if (verbose) message("[initDatasetFolder] checking which pgx files already in PGX info...")
+    if (verbose) message("[pgxinfo.updateDatasetFolder] checking which pgx files already in PGX info...")
     ## do not use fread! quoting bug
     pgxinfo <- read.csv(info.file, stringsAsFactors = FALSE, row.names = 1, sep = ",")
     pgxinfo.files <- unique(sub(".pgx$", "", pgxinfo$dataset))
@@ -883,6 +883,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   }
 
   valid.h5 <- function(h5.file) {
+    if(!file.exists(h5.file)) return(FALSE)
     H <- rhdf5::h5ls(h5.file)
     ok1 <- all(c("matrix", "colnames", "rownames", "data") %in% H[, "name"])
     ok2 <- all(c("/clustering", "/data", "/enrichment", "/signature") %in% H[, "group"])
@@ -891,7 +892,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   valid.h5(sigdb.file)
 
   if (has.sigdb && valid.h5(sigdb.file)) {
-    if (verbose) message("[initDatasetFolder] checking which pgx files already in sigdb...")
+    if (verbose) message("[pgxinfo.updateDatasetFolder] checking which pgx files already in sigdb...")
     cn <- rhdf5::h5read(sigdb.file, "data/colnames")
     h5.files <- gsub("^\\[|\\].*", "", cn)
     h5.files <- sub("[.]pgx$", "", h5.files) ## strip pgx
@@ -925,8 +926,8 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     }
   }
 
-  if (verbose) message("[initDatasetFolder] length(pgx.missing) = ", length(pgx.missing), "")
-  if (verbose) message("[initDatasetFolder] length(pgx.delete) =  ", length(pgx.delete), "")
+  if (verbose) message("[pgxinfo.updateDatasetFolder] length(pgx.missing) = ", length(pgx.missing), "")
+  if (verbose) message("[pgxinfo.updateDatasetFolder] length(pgx.delete) =  ", length(pgx.delete), "")
 
   ## nothing to do???
   if (length(pgx.missing) == 0 && length(h5.missing) == 0) {
