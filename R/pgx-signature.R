@@ -903,12 +903,8 @@ sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL, path
 sigdb.getEnrichmentMatrix <- function(sigdb, select = NULL, path = NULL,
                                       which = c("gsea", "rankcor")[1]) {
   if (sigdb == "" || is.null(sigdb)) {
-    dbg("[getEnrichmentMatrix] ***WARNING*** sigdb=", sigdb)
+    dbg("[getEnrichmentMatrix] *WARNING* could not find sigdb=", sigdb)
     return(NULL)
-  }
-  if (!is.null(select)) {
-    dbg("[getEnrichmentMatrix] length(select)=", length(select))
-    dbg("[getEnrichmentMatrix] Matrix::head(select)=", head(select))
   }
   if (!grepl("h5$", sigdb)) {
     stop("getEnrichmentMatrix:: only for H5 database files")
