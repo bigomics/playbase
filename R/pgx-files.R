@@ -137,7 +137,7 @@ pgx.readDatasetProfiles <- function(pgx.dir, file = "datasets-allFC.csv", verbos
 }
 
 #' @export
-pgx.scanInfoFile <- function(
+pgx.scanInfoFile.DEPRECATED <- function(
     pgx.dir,
     file = "datasets-info.csv",
     allfc.file = "datasets-allFC.csv",
@@ -261,7 +261,7 @@ pgx.scanInfoFile <- function(
 }
 
 #' @export
-pgx.initDatasetFolder <- function(pgx.dir,
+pgx.initDatasetFolder.DEPRECATED <- function(pgx.dir,
                                   allfc.file = "datasets-allFC.csv",
                                   info.file = "datasets-info.csv",
                                   info.file1 = NULL,
