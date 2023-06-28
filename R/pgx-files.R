@@ -441,7 +441,7 @@ pgx.initDatasetFolder.DEPRECATED <- function(pgx.dir,
     if (verbose) message("[initDatasetFolder] allFC changed. updating file: ", allfc.file1)
     allFC <- allFC[, !duplicated(colnames(allFC)), drop = FALSE]
     allFC <- allFC[, order(colnames(allFC)), drop = FALSE]
-    allFC <- round(allFC, digits=4)    
+    allFC <- round(allFC, digits = 4)
     AA <- data.frame(rownames = rownames(allFC), allFC, check.names = FALSE)
     ## write.csv(allFC, file=allfc.file1)
     data.table::fwrite(AA, file = allfc.file1)
@@ -595,7 +595,7 @@ pgxinfo.deletePgx <- function(pgx.dir, pgxname,
     del
     if (length(del) > 0) {
       allFC <- allFC[, -del, drop = FALSE]
-      allFC <- round(allFC, digits=4)      
+      allFC <- round(allFC, digits = 4)
       allFC1 <- data.frame(gene = rownames(allFC), allFC, check.names = FALSE)
       data.table::fwrite(allFC1, allfc.file) ## HEADER!!!
     }
@@ -657,7 +657,7 @@ pgxinfo.addPgx <- function(pgx.dir, pgx, file = "datasets-info.csv",
     F1 <- F1[match(rownames(allFC), rownames(F1)), ]
     colnames(F1) <- paste0("[", pgxname, "] ", colnames(F1))
     allFC <- cbind(allFC, F1)
-    allFC <- round(allFC, digits=4)
+    allFC <- round(allFC, digits = 4)
     allFC1 <- data.frame(gene = rownames(allFC), allFC, check.names = FALSE)
     data.table::fwrite(allFC1, allfc.file) ## HEADER!!!
 
@@ -778,7 +778,7 @@ pgxinfo.needUpdate <- function(
   info.complete
 
   h5.complete <- TRUE
-  if(check.sigdb) {
+  if (check.sigdb) {
     if (verbose) message("[pgxinfo.needUpdate] checking which pgx already in sigdb...")
     H <- rhdf5::h5ls(sigdb.file1)
     H
@@ -794,7 +794,7 @@ pgxinfo.needUpdate <- function(
       h5.complete <- all(pgx.files %in% h5.files)
     }
   }
-  
+
   if (!fc.complete || !info.complete || !h5.complete) {
     return(TRUE)
   }
@@ -1125,7 +1125,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     if (verbose) message("[pgxinfo.updateDatasetFolder] allFC changed. updating file: ", allfc.file)
     allFC <- allFC[, !duplicated(colnames(allFC)), drop = FALSE]
     allFC <- allFC[, order(colnames(allFC)), drop = FALSE]
-    allFC <- round(allFC, digits=4)
+    allFC <- round(allFC, digits = 4)
     AA <- data.frame(rownames = rownames(allFC), allFC, check.names = FALSE)
     ## write.csv(allFC, file=allfc.file)
     data.table::fwrite(AA, file = allfc.file)
@@ -1135,7 +1135,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
 
   ## update user sigdb or create if not exists
   sigdb <- file.path(pgx.dir, "datasets-sigdb.h5")
-  if(update.sigdb) {
+  if (update.sigdb) {
     if (!file.exists(sigdb) || pgxfc.changed) {
       ## NEED RETHINK!!!! HERE???
       if (file.exists(sigdb)) unlink(sigdb)
@@ -1144,7 +1144,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
       if (verbose) message("[pgxinfo.updateDatasetFolder] add enrichment signature to", sigdb, "...")
       pgx.addEnrichmentSignaturesH5(sigdb, X = allFC, methods = "rankcor")
     }
-    
+
     tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")
     if (!file.exists(tsne.file) || pgxfc.changed) {
       rhdf5::h5ls(sigdb)
@@ -1155,6 +1155,6 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
       write.csv(tsne, file = tsne.file)
     }
   }
-  
+
   return()
 }
