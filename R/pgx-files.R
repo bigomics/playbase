@@ -52,11 +52,12 @@ h5exists <- function(h5.file, obj) {
 ## h5.file="test.h5";chunk=100
 #' @export
 pgx.saveMatrixH5 <- function(X, h5.file, chunk = NULL) {
-  if (file.exists(h5.file)) unlink(h5.file)
 
+  if (file.exists(h5.file)) unlink(h5.file) 
   rhdf5::h5createFile(h5.file)
   rhdf5::h5createGroup(h5.file, "data")
-
+  X <- as.matrix(X)
+  
   if (is.null(chunk)) {
     rhdf5::h5write(X, h5.file, "data/matrix")
   } else {
@@ -83,7 +84,7 @@ pgx.saveMatrixH5 <- function(X, h5.file, chunk = NULL) {
 #' @export
 pgx.readMatrixH5 <- function(h5.file, select = NULL, rows = NULL) {
   if (is.null(select) && is.null(rows)) {
-    X <- rhdf5::h5read(h5.file, "data/matrix")
+    X  <- rhdf5::h5read(h5.file, "data/matrix")
     rn <- rhdf5::h5read(h5.file, "data/rownames")
     cn <- rhdf5::h5read(h5.file, "data/colnames")
   }
@@ -751,7 +752,7 @@ pgxinfo.needUpdate <- function(
 
   sigdb.file1 <- file.path(pgx.dir, sigdb.file)
   has.sigdb <- file.exists(sigdb.file1)
-
+  
   if (!has.fc || !has.info || !has.sigdb) {
     return(TRUE)
   }
@@ -775,10 +776,20 @@ pgxinfo.needUpdate <- function(
   info.complete
 
   if (verbose) message("[pgxinfo.needUpdate] checking which pgx already in sigdb...")
-  cn <- rhdf5::h5read(sigdb.file1, "data/colnames")
-  h5.files <- gsub("^\\[|\\].*", "", cn)
-  h5.files <- sub("[.]pgx$", "", h5.files) ## strip pgx
-  h5.complete <- all(pgx.files %in% h5.files)
+  H <- rhdf5::h5ls(sigdb.file1)
+  H
+  h.group <- H[,"group"]
+  h.name <- H[,"name"]  
+  h5.complete1 <- all( c("matrix","colnames","rownames","data") %in% h.name)
+  h5.complete2 <- all( c("/clustering","/data","/enrichment","/signature") %in% h.group)  
+  h5.complete <- h5.complete1 && h5.complete2
+  h5.complete
+  if(h5.complete) {
+    cn <- rhdf5::h5read(sigdb.file1, "data/colnames")
+    h5.files <- gsub("^\\[|\\].*", "", cn)
+    h5.files <- sub("[.]pgx$", "", h5.files) ## strip pgx
+    h5.complete <- all(pgx.files %in% h5.files)
+  }
 
   if (!fc.complete || !info.complete || !h5.complete) {
     return(TRUE)
@@ -832,11 +843,13 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   has.sigdb <- file.exists(sigdb.file)
 
   tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")
-
+  has.tsne <- file.exists(tsne.file)
+  
   if (force) {
     has.fc <- FALSE
     has.info <- FALSE
     has.sigdb <- FALSE
+    has.tsne <- FALSE    
   }
 
   ## ----------------------------------------------------------------------
@@ -870,7 +883,15 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     info.delete <- setdiff(pgxinfo.files, pgx.files)
   }
 
-  if (has.sigdb) {
+  valid.h5 <- function(h5.file) {
+    H <- rhdf5::h5ls(h5.file)
+    ok1 <- all( c("matrix","colnames","rownames","data") %in% H[,"name"])
+    ok2 <- all( c("/clustering","/data","/enrichment","/signature") %in% H[,"group"])  
+    ok1 && ok2
+  }
+  valid.h5(sigdb.file)
+  
+  if (has.sigdb && valid.h5(sigdb.file) ) {
     if (verbose) message("[initDatasetFolder] checking which pgx files already in sigdb...")
     cn <- rhdf5::h5read(sigdb.file, "data/colnames")
     h5.files <- gsub("^\\[|\\].*", "", cn)

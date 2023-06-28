@@ -552,7 +552,7 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALS
 pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = FALSE) {
   if (file.exists(h5.file)) unlink(h5.file)
   ## chunk=c(nrow(X),1)
-  dbg("[pgx.createSignatureDatabaseH5.fromMatrix] Saving signature matrix...")
+  dbg("[pgx.createSignatureDatabaseH5.fromMatrix] Saving signature data matrix...")
   pgx.saveMatrixH5(X, h5.file, chunk = c(nrow(X), 1))
   dbg("[pgx.createSignatureDatabaseH5.fromMatrix] ... saving done")
 
