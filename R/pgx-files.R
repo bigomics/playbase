@@ -685,21 +685,22 @@ pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE) {
     return(NULL)
   } ## no files!
 
+  pgxinfo <- NULL
   pgxinfo.file <- file.path(pgx.dir, file)
-  if (!file.exists(pgxinfo.file)) {
-    return(NULL)
-  } ## no info??
-  ## do not use fread.csv or fread here!! see issue #441
-  pgxinfo <- read.csv(pgxinfo.file, stringsAsFactors = FALSE, row.names = 1, sep = ",")
-  if (match) {
-    pgx.files1 <- sub("[.]pgx$", "", pgx.files)
-    pgxinfo.datasets <- sub("[.]pgx$", "", pgxinfo$dataset)
-    sel <- pgxinfo.datasets %in% pgx.files1
-    pgxinfo <- pgxinfo[sel, , drop = FALSE]
+  if (file.exists(pgxinfo.file)) {
+    ## do not use fread.csv or fread here!! see issue #441
+    pgxinfo <- read.csv(pgxinfo.file, stringsAsFactors = FALSE, row.names = 1, sep = ",")
+    if (match) {
+      pgx.files1 <- sub("[.]pgx$", "", pgx.files)
+      pgxinfo.datasets <- sub("[.]pgx$", "", pgxinfo$dataset)
+      sel <- pgxinfo.datasets %in% pgx.files1
+      pgxinfo <- pgxinfo[sel, , drop = FALSE]
+    }
   }
   info.colnames <- c(
     "dataset", "datatype", "description", "nsamples",
-    "ngenes", "nsets", "conditions", "organism", "date", "creator"
+    "ngenes", "nsets", "conditions", "organism", "date",
+    "creator"
   )
   if (is.null(pgxinfo)) {
     aa <- rep(NA, length(info.colnames))
@@ -708,10 +709,9 @@ pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE) {
   }
   ## add missing columns fields
   missing.cols <- setdiff(info.colnames, colnames(pgxinfo))
-  for (s in missing.cols) info[[s]] <- rep(NA, nrow(pgxinfo))
+  for (s in missing.cols) pgxinfo[[s]] <- rep(NA, nrow(pgxinfo))
   ii <- match(info.colnames, colnames(pgxinfo))
   pgxinfo <- pgxinfo[, ii]
-  pgxinfo$path <- pgx.dir
   return(pgxinfo)
 }
 
