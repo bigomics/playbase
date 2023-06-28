@@ -552,9 +552,9 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALS
 pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = FALSE) {
   if (file.exists(h5.file)) unlink(h5.file)
   ## chunk=c(nrow(X),1)
-  dbg("[pgx.createSignatureDatabaseH5.fromMatrix] Saving signature data matrix...")
+  dbg("[pgx.createSignatureDatabaseH5.fromMatrix] saving data matrix...")
+  X <- as.matrix(X)
   pgx.saveMatrixH5(X, h5.file, chunk = c(nrow(X), 1))
-  dbg("[pgx.createSignatureDatabaseH5.fromMatrix] ... saving done")
 
   ## --------------------------------------------------
   ## Calculate top100 gene signatures
@@ -580,6 +580,7 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
     sig100.up <- sapply(orderx, "[[", "UP")
     sig100.up <- apply(sig100.up, 2, function(i) rn[i])
 
+    dbg("[pgx.createSignatureDatabaseH5.fromMatrix] saving top-100 signatures...")    
     if (!h5exists(h5.file, "signature")) rhdf5::h5createGroup(h5.file, "signature")
     rhdf5::h5write(sig100.dn, h5.file, "signature/sig100.dn") ## can write list???
     rhdf5::h5write(sig100.up, h5.file, "signature/sig100.up") ## can write list??
@@ -595,7 +596,8 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
   if (!update.only || !h5exists(h5.file, "clustering")) {
     if (!h5exists(h5.file, "clustering")) rhdf5::h5createGroup(h5.file, "clustering")
     rhdf5::h5ls(h5.file)
-
+    dbg("[pgx.createSignatureDatabaseH5.fromMatrix] compute clustering...")
+    
     pos <- pgx.clusterBigMatrix(
       abs(X), ## on absolute foldchange!!
       methods = c("pca", "tsne", "umap"),
@@ -612,6 +614,8 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
     rhdf5::h5write(pos[["umap2d"]], h5.file, "clustering/umap2d") ## can write list??
     rhdf5::h5write(pos[["umap3d"]], h5.file, "clustering/umap3d") ## can write list??
   }
+
+  dbg("[pgx.createSignatureDatabaseH5.fromMatrix] closing file...")  
 
   rhdf5::h5closeAll()
   ## return(X)

@@ -811,7 +811,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
                                         verbose = TRUE) {
   ## only run pgx.initDatasetFolder if pgx are changed
   if (!dir.exists(pgx.dir)) {
-    stop(paste("[pgx.updateDatasetFolder] FATAL ERROR : folder", pgx.dir, "does not exist"))
+    stop(paste("[pgxinfo.updateDatasetFolder] FATAL ERROR : folder", pgx.dir, "does not exist"))
   }
 
   pgx.files <- dir(pgx.dir, pattern = "[.]pgx$")
@@ -931,7 +931,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
 
   ## nothing to do???
   if (length(pgx.missing) == 0 && length(h5.missing) == 0) {
-    if (verbose) message("[updateDatasetFolder] no update required. FORCE=1 for forced update.")
+    if (verbose) message("[pgxinfo.updateDatasetFolder] no update required. FORCE=1 for forced update.")
     return()
   }
 
@@ -939,6 +939,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   if (length(pgx.missing) == 0 && length(h5.missing) > 0) {
     ## Update SIGDB file using allFC
     allFC <- fread.csv(allfc.file, row.names = 1, check.names = FALSE)
+    allFC <- as.matrix(allFC)
     ## update user sigdb or create if not exists
     if (file.exists(sigdb.file)) unlink(sigdb.file)
     if (verbose) message("[updateDatasetFolder] creating sig DB: ", sigdb.file, "...")
@@ -971,6 +972,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   if (!force && file.exists(allfc.file) && length(pgx.missing) > 0) {
     ## allFC <- read.csv(allfc.file,row.names=1,check.names=FALSE)
     allFC <- fread.csv(allfc.file, row.names = 1, check.names = FALSE)
+    allFC <- as.matrix(allFC)
   }
   dim(allFC)
 
@@ -1049,7 +1051,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   }
 
   if (pgxinfo.changed) {
-    if (verbose) message("[initDatasetFolder] writing updated PGX.INFO file to ", info.file, "...")
+    if (verbose) message("[pgxinfo.updateDatasetFolder] writing updated PGX.INFO file to ", info.file, "...")
     write.csv(pgxinfo, file = info.file)
     Sys.chmod(info.file, "0666")
   }
@@ -1123,7 +1125,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   ## save modified allFC
   if (pgxfc.changed) {
     ## check for duplicates
-    if (verbose) message("[initDatasetFolder] allFC changed. updating file: ", allfc.file)
+    if (verbose) message("[pgxinfo.updateDatasetFolder] allFC changed. updating file: ", allfc.file)
     allFC <- allFC[, !duplicated(colnames(allFC)), drop = FALSE]
     allFC <- allFC[, order(colnames(allFC)), drop = FALSE]
     AA <- data.frame(rownames = rownames(allFC), allFC, check.names = FALSE)
@@ -1138,9 +1140,9 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   if (!file.exists(sigdb) || pgxfc.changed) {
     ## NEED RETHINK!!!! HERE???
     if (file.exists(sigdb)) unlink(sigdb)
-    if (verbose) message("[initDatasetFolder] creating signature DB to", sigdb, "...")
+    if (verbose) message("[pgxinfo.updateDatasetFolder] creating signature DB to", sigdb, "...")
     pgx.createSignatureDatabaseH5.fromMatrix(sigdb, X = allFC)
-    if (verbose) message("[initDatasetFolder] add enrichment signature to", sigdb, "...")
+    if (verbose) message("[pgxinfo.updateDatasetFolder] add enrichment signature to", sigdb, "...")
     pgx.addEnrichmentSignaturesH5(sigdb, X = allFC, methods = "rankcor")
   }
 
