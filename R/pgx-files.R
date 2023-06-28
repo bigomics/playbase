@@ -262,21 +262,21 @@ pgx.scanInfoFile.DEPRECATED <- function(
 
 #' @export
 pgx.initDatasetFolder.DEPRECATED <- function(pgx.dir,
-                                  allfc.file = "datasets-allFC.csv",
-                                  info.file = "datasets-info.csv",
-                                  info.file1 = NULL,
-                                  force = FALSE,
-                                  delete.old = FALSE,
-                                  pgxinfo = NULL,
-                                  pgx.files = NULL,
-                                  pgxinfo.changed = NULL,
-                                  pgxfc.changed = NULL,
-                                  pgx.missing = NULL,
-                                  pgx.missing1 = NULL,
-                                  pgx.missing0 = NULL,
-                                  new.pgx = NULL,
-                                  update.sigdb = TRUE,
-                                  verbose = TRUE) {
+                                             allfc.file = "datasets-allFC.csv",
+                                             info.file = "datasets-info.csv",
+                                             info.file1 = NULL,
+                                             force = FALSE,
+                                             delete.old = FALSE,
+                                             pgxinfo = NULL,
+                                             pgx.files = NULL,
+                                             pgxinfo.changed = NULL,
+                                             pgxfc.changed = NULL,
+                                             pgx.missing = NULL,
+                                             pgx.missing1 = NULL,
+                                             pgx.missing0 = NULL,
+                                             new.pgx = NULL,
+                                             update.sigdb = TRUE,
+                                             verbose = TRUE) {
   ## ----------------------------------------------------------------------
   ## Reread allFC file. Before we only read the header.
   ## ----------------------------------------------------------------------
