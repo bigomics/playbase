@@ -883,7 +883,9 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   }
 
   valid.h5 <- function(h5.file) {
-    if(!file.exists(h5.file)) return(FALSE)
+    if (!file.exists(h5.file)) {
+      return(FALSE)
+    }
     H <- rhdf5::h5ls(h5.file)
     ok1 <- all(c("matrix", "colnames", "rownames", "data") %in% H[, "name"])
     ok2 <- all(c("/clustering", "/data", "/enrichment", "/signature") %in% H[, "group"])
