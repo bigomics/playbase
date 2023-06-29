@@ -810,8 +810,10 @@ pgxinfo.needUpdate <- function(
   }
 
   ## Return checks
-  has.files <- (!has.fc || !has.info || (check.sigdb && !has.sigdb))   
-  is.complete <- (!fc.complete || !info.complete || (check.sigdb && !h5.complete) )
+  has.files <- (has.fc && has.info)
+  if(check.sigdb) has.files <- has.files && has.sigdb
+  is.complete <- (fc.complete && info.complete)
+  if(check.sigdb) is.complete <- is.complete && h5.complete
   
   return(has.files && is.complete)
 }
