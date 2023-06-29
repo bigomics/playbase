@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-gsea.r
 \name{gsea.fitAllContrasts}
 \alias{gsea.fitAllContrasts}
-\title{Title}
+\title{Perform GSEA analysis for all contrasts}
 \usage{
 gsea.fitAllContrasts(
   X,
@@ -17,24 +17,28 @@ gsea.fitAllContrasts(
 )
 }
 \arguments{
-\item{X}{value}
+\item{X}{The expression matrix.}
 
-\item{gmt}{value}
+\item{gmt}{The gene set collection in GMT format.}
 
-\item{design}{value}
+\item{design}{The design matrix.}
 
-\item{contr.matrix}{value}
+\item{contr.matrix}{The contrast matrix.}
 
-\item{output_dir}{value}
+\item{output_dir}{The directory to save the GSEA results.}
 
-\item{set.min}{value}
+\item{set.min}{The minimum size of gene sets to consider in the analysis.}
 
-\item{set.max}{value}
+\item{set.max}{The maximum size of gene sets to consider in the analysis.}
 
-\item{fdr}{value}
+\item{fdr}{The false discovery rate (FDR) threshold.}
 
-\item{skip.done}{value}
+\item{skip.done}{Logical value indicating whether to skip the contrasts that have already been analyzed and have existing results in the output directory.}
+}
+\value{
+A list of GSEA analysis results for each contrast.
 }
 \description{
-Title
+This function performs GSEA (Gene Set Enrichment Analysis) analysis for all the contrasts specified in the design matrix.
+It iterates over the contrasts, runs GSEA for each contrast, and saves the results in the specified output directory.
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-gsea.r
 \name{run.GSEA}
 \alias{run.GSEA}
-\title{Title}
+\title{Run Gene Set Enrichment Analysis (GSEA)}
 \usage{
 run.GSEA(
   X,
@@ -30,50 +30,53 @@ run.GSEA(
 )
 }
 \arguments{
-\item{X}{value}
+\item{X}{The gene expression data matrix.}
 
-\item{y}{value}
+\item{y}{The phenotype vector.}
 
-\item{gmt}{value}
+\item{gmt}{The gene set collection in GMT format.}
 
-\item{output.dir}{value}
+\item{output.dir}{Directory where the output files will be saved. Default is NULL, which creates a temporary directory.}
 
-\item{fdr}{value}
+\item{fdr}{False discovery rate (FDR) threshold for filtering results. Default is 0.25.}
 
-\item{set.min}{value}
+\item{set.min}{Minimum size of gene sets to consider. Default is 15.}
 
-\item{set.max}{value}
+\item{set.max}{Maximum size of gene sets to consider. Default is 500.}
 
-\item{topgs}{value}
+\item{topgs}{Number of top gene sets to report. Default is 100.}
 
-\item{nperm}{value}
+\item{nperm}{Number of permutations for statistical significance estimation. Default is 1000.}
 
-\item{permute}{value}
+\item{permute}{Permutation type, either "phenotype" or "gene_set". Default is "phenotype".}
 
-\item{scoring}{value}
+\item{scoring}{The scoring scheme for ranking genes. Default is "weighted".}
 
-\item{do.leading.edge}{value}
+\item{do.leading.edge}{Whether to compute the leading edge genes for each gene set. Default is FALSE.}
 
-\item{rpt.label}{value}
+\item{rpt.label}{The label to use for the output files. Default is "gsea".}
 
-\item{sort.y}{value}
+\item{sort.y}{The sorting order of the phenotype classes. Default is "ref.last".}
 
-\item{ref.type}{value}
+\item{ref.type}{The reference class or classes in the phenotype vector. Default is c("0", "NT", "REF", "DMSO", "WT", "LOW").}
 
-\item{make.sets}{value}
+\item{make.sets}{Whether to create gene sets using the gene expression data. Default is TRUE.}
 
-\item{clean.files}{value}
+\item{clean.files}{Whether to remove old files in the output directory. Default is TRUE.}
 
-\item{xmx}{value}
+\item{xmx}{Maximum memory allocation for GSEA in gigabytes. Default is 10.}
 
-\item{force.permute}{value}
+\item{force.permute}{Whether to force gene_set permutation when there are fewer than 7 samples. Default is FALSE.}
 
-\item{metric}{value}
+\item{metric}{The metric for ranking genes. Default is c("Signal2Noise", "Diff_of_Classes", "Pearson").}
 
-\item{gsea.program}{value}
+\item{gsea.program}{Path to the GSEA program JAR file. Default is "/opt/GSEA/gsea-3.0.jar".}
 
-\item{quiet}{value}
+\item{quiet}{Whether to suppress console output during the analysis. Default is FALSE.}
+}
+\value{
+A data frame containing the GSEA results, including normalized enrichment score (NES), nominal p-value (NOM p-val), and false discovery rate (FDR) q-value.
 }
 \description{
-Title
+This function performs Gene Set Enrichment Analysis (GSEA) on the given gene expression data.
 }

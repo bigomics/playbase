@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-gsea.r
 \name{gsea.ftplot}
 \alias{gsea.ftplot}
-\title{Title}
+\title{gsea.ftplot}
 \usage{
 gsea.ftplot(
   x,
@@ -33,56 +33,59 @@ gsea.ftplot(
 )
 }
 \arguments{
-\item{x}{value}
+\item{x}{The input data matrix.}
 
-\item{rft}{value}
+\item{rft}{The metric to use for row ordering. If character, the metric function will be applied to each row of the matrix \code{x}.}
 
-\item{cft}{value}
+\item{cft}{The metric to use for column ordering. If character, the metric function will be applied to each column of the matrix \code{x}.}
 
-\item{rmax}{value}
+\item{rmax}{The maximum number of rows to include in the plot.}
 
-\item{cmax}{value}
+\item{cmax}{The maximum number of columns to include in the plot.}
 
-\item{main}{value}
+\item{main}{The title of the plot.}
 
-\item{cex.main}{value}
+\item{cex.main}{The size of the main title.}
 
-\item{xnames}{value}
+\item{xnames}{The names to use for the rows of the matrix.}
 
-\item{ynames}{value}
+\item{ynames}{The names to use for the columns of the matrix.}
 
-\item{cft.lab}{value}
+\item{cft.lab}{The label for the column metric.}
 
-\item{rft.lab}{value}
+\item{rft.lab}{The label for the row metric.}
 
-\item{cexRow}{value}
+\item{cexRow}{The size of the row names.}
 
-\item{cexCol}{value}
+\item{cexCol}{The size of the column names.}
 
-\item{scale}{value}
+\item{scale}{The scaling method for the heatmap. Options are "rows" (scale rows) and "cols" (scale columns).}
 
-\item{rsort}{value}
+\item{rsort}{The method for ordering the rows. Options are "hclust" (hierarchical clustering), "metric" (order by metric value), and "none" (no ordering).}
 
-\item{csort}{value}
+\item{csort}{The method for ordering the columns. Options are "hclust" (hierarchical clustering), "metric" (order by metric value), and "none" (no ordering).}
 
-\item{p}{value}
+\item{p}{The power to raise the heatmap values to.}
 
-\item{mar}{value}
+\item{mar}{The margin sizes for the plot.}
 
-\item{layout.reset}{value}
+\item{layout.reset}{Whether to reset the layout after plotting.}
 
-\item{sort.decreasing}{value}
+\item{sort.decreasing}{Whether to sort the metric values in decreasing order.}
 
-\item{col}{value}
+\item{col}{The color palette for the heatmap.}
 
-\item{legend}{value}
+\item{legend}{The legend labels for the heatmap colors.}
 
-\item{cex.legend}{value}
+\item{cex.legend}{The size of the legend labels.}
 
-\item{layout.widths}{value}
+\item{layout.widths}{The widths of the plot layout.}
 
-\item{layout.heights}{value}
+\item{layout.heights}{The heights of the plot layout.}
+}
+\value{
+None
 }
 \description{
-Title
+A function to generate a GSEA (Gene Set Enrichment Analysis) plot.
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-gsea.r
 \name{gseaLeadingEdgeHeatmap}
 \alias{gseaLeadingEdgeHeatmap}
-\title{Title}
+\title{Leading Edge Heatmap}
 \usage{
 gseaLeadingEdgeHeatmap(
   gsea,
@@ -14,18 +14,22 @@ gseaLeadingEdgeHeatmap(
 )
 }
 \arguments{
-\item{gsea}{value}
+\item{gsea}{An object containing GSEA results.}
 
-\item{maxrow}{value}
+\item{maxrow}{Maximum number of rows to display in the heatmap.}
 
-\item{maxcol}{value}
+\item{maxcol}{Maximum number of columns to display in the heatmap.}
 
-\item{gsets}{value}
+\item{gsets}{A character vector specifying the gene sets to include in the analysis.}
 
-\item{render}{value}
+\item{render}{The rendering method for the heatmap. Options are "gx.heatmap", "d3heatmap", or "heatmaply".}
 
-\item{info.text}{value}
+\item{info.text}{Logical indicating whether to display additional information text.}
+}
+\value{
+NULL if the leading edge matrix is too small (less than or equal to 1 row or 1 column),
+otherwise, it returns the generated heatmap visualization.
 }
 \description{
-Title
+Generates a heatmap visualization of the leading edge analysis results.
 }

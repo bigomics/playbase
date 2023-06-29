@@ -2,19 +2,23 @@
 % Please edit documentation in R/gset-gsea.r
 \name{read.gmt}
 \alias{read.gmt}
-\title{Title}
+\title{Read data from a GMT file}
 \usage{
 read.gmt(gmt.file, dir = NULL, add.source = FALSE, nrows = -1)
 }
 \arguments{
-\item{gmt.file}{value}
+\item{gmt.file}{The path to the GMT file.}
 
-\item{dir}{value}
+\item{dir}{(Optional) The directory where the GMT file is located.}
 
-\item{add.source}{value}
+\item{add.source}{(Optional) Specifies whether to include the source information in the gene sets' names.}
 
-\item{nrows}{value}
+\item{nrows}{(Optional) The number of rows to read from the GMT file.}
+}
+\value{
+A list of gene sets, where each gene set is represented as a character vector of gene names.
 }
 \description{
-Title
+This function reads data from a GMT (Gene Matrix Transposed) file format.
+The GMT format is commonly used to store gene sets or gene annotations.
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-gsea.r
 \name{justGSEA}
 \alias{justGSEA}
-\title{Title}
+\title{Run GSEA analysis using pre-ranked or phenotype comparison mode}
 \usage{
 justGSEA(
   X,
@@ -23,36 +23,41 @@ justGSEA(
 )
 }
 \arguments{
-\item{X}{value}
+\item{X}{The gene expression matrix or pre-ranked gene list.}
 
-\item{gmt}{value}
+\item{gmt}{The GMT file or gene set collection.}
 
-\item{Y}{value}
+\item{Y}{The class labels or binary matrix indicating the phenotypes for phenotype comparison mode.}
 
-\item{fdr}{value}
+\item{fdr}{The false discovery rate (FDR) threshold for selecting significant gene sets. Default is 1.}
 
-\item{set.min}{value}
+\item{set.min}{The minimum gene set size. Default is 15.}
 
-\item{set.max}{value}
+\item{set.max}{The maximum gene set size. Default is 500.}
 
-\item{topgs}{value}
+\item{topgs}{The number of top gene sets to report. Default is 100.}
 
-\item{nperm}{value}
+\item{nperm}{The number of permutations for estimating the statistical significance. Default is 1000.}
 
-\item{rpt.label}{value}
+\item{rpt.label}{The label for the analysis report. Default is "analysis".}
 
-\item{output.dir}{value}
+\item{output.dir}{The output directory for saving the results. Default is NULL (results are not saved).}
 
-\item{xmx}{value}
+\item{xmx}{The maximum memory allocation for the GSEA program in gigabytes (GB). Default is 10.}
 
-\item{scoring}{value}
+\item{scoring}{The scoring scheme for ranking genes. Default is "weighted".}
 
-\item{sort.y}{value}
+\item{sort.y}{The sorting order of phenotypes for phenotype comparison mode. Default is "ref.last".}
 
-\item{ref.type}{value}
+\item{ref.type}{The reference type for phenotype comparison mode. Default is "0".}
 
-\item{clean.files}{value}
+\item{clean.files}{Logical value indicating whether to clean intermediate files. Default is TRUE.}
+}
+\value{
+A list containing the results of the GSEA analysis, including q-values and NES (Normalized Enrichment Scores).
 }
 \description{
-Title
+This function performs Gene Set Enrichment Analysis (GSEA) using either pre-ranked mode or phenotype comparison mode.
+In pre-ranked mode, the function performs GSEA on a pre-ranked gene list. In phenotype comparison mode,
+the function compares different phenotypes to identify enriched gene sets.
 }

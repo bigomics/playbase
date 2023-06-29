@@ -2,17 +2,18 @@
 % Please edit documentation in R/gset-gsea.r
 \name{write.gmt}
 \alias{write.gmt}
-\title{Title}
+\title{Write gene sets to GMT file}
 \usage{
 write.gmt(gmt, file, source = NA)
 }
 \arguments{
-\item{gmt}{value}
+\item{gmt}{A list of gene sets in GMT format, where each gene set is represented as a character vector of gene names.}
 
-\item{file}{value}
+\item{file}{The file path to write the GMT file.}
 
-\item{source}{value}
+\item{source}{A character vector specifying the source of each gene set. If not provided, the names of the gene sets are used as the source.}
 }
 \description{
-Title
+This function writes gene sets in GMT (Gene Matrix Transposed) format to a file.
+The GMT format is commonly used to store gene sets or gene annotations.
 }

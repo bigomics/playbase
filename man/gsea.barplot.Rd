@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-gsea.r
 \name{gsea.barplot}
 \alias{gsea.barplot}
-\title{Title}
+\title{GSEA Barplot}
 \usage{
 gsea.barplot(
   scores,
@@ -15,20 +15,23 @@ gsea.barplot(
 )
 }
 \arguments{
-\item{scores}{value}
+\item{scores}{A numeric vector of GSEA scores.}
 
-\item{names}{value}
+\item{names}{A character vector of names for the scores.}
 
-\item{xlab}{value}
+\item{xlab}{The label for the x-axis.}
 
-\item{xlim}{value}
+\item{xlim}{The limits for the x-axis.}
 
-\item{cex.text}{value}
+\item{cex.text}{The size of the text labels.}
 
-\item{main}{value}
+\item{main}{The main title of the plot.}
 
-\item{n}{value}
+\item{n}{The number of scores to display in the barplot.}
+}
+\value{
+barplot
 }
 \description{
-Title
+Generates a barplot visualization of GSEA scores.
 }

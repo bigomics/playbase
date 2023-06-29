@@ -7,27 +7,40 @@
 ## ======================== Fisher test based =============================
 ## ========================================================================
 
-#' Title
+#' Perform Fisher's exact test on gene sets
 #'
-#' @param genes.up value
-#' @param genes.dn value
-#' @param genesets value
-#' @param background value
-#' @param fdr value
-#' @param mc value
-#' @param sort.by value
-#' @param nmin value
-#' @param verbose value
-#' @param min.genes value
-#' @param max.genes value
-#' @param method value
-#' @param check.background value
-#' @param common.genes value
+#' This function performs Fisher's exact test on two sets of genes, `genes.up` and
+#' `genes.dn`, within a given set of gene sets (`genesets`). It returns a data frame
+#' containing the results of the test, including the sign of the fold change (positive
+#' or negative) and relevant statistics such as p-values, q-values, and odds ratios.
 #'
-#' @return
+#' @param genes.up A character vector containing the names of genes in the "up" set.
+#' @param genes.dn A character vector containing the names of genes in the "down" set.
+#' @param genesets A list of gene sets, where each element is a character vector
+#'                 representing a gene set.
+#' @param background A character vector containing the names of genes in the background set.
+#'                   Defaults to `NULL`, which means all genes are considered.
+#' @param fdr The false discovery rate (FDR) threshold for multiple testing adjustment.
+#'            Defaults to 0.05.
+#' @param mc A logical value indicating whether to perform multiple testing adjustment
+#'           using Monte Carlo simulation. Defaults to `TRUE`.
+#' @param sort.by The statistic used to sort the results. Defaults to "zratio".
+#' @param nmin The minimum number of genes required in a gene set for the test to be performed.
+#' @param verbose A numeric value indicating the level of verbosity. Defaults to 1.
+#' @param min.genes The minimum number of genes in a gene set to be considered. Defaults to 15.
+#' @param max.genes The maximum number of genes in a gene set to be considered. Defaults to 500.
+#' @param method The method used for computing p-values. Defaults to "fast.fisher".
+#' @param check.background A logical value indicating whether to check the presence of genes in
+#'                         the background set. Defaults to `TRUE`.
+#' @param common.genes A logical value indicating whether to use only genes common to both the
+#'                     input gene sets and the background set. Defaults to `TRUE`.
+#'
 #' @export
 #'
-#' @examples
+#' @return A data frame containing the results of the Fisher's exact test. The data frame
+#'         includes columns such as "sign" (fold change sign), "odd.ratio" (odds ratio),
+#'         "p.value" (p-value), "q.value" (adjusted p-value), and others.
+#'
 gset.fisher2 <- function(genes.up, genes.dn, genesets, background = NULL,
                          fdr = 0.05, mc = TRUE, sort.by = "zratio", nmin = 3, verbose = 1,
                          min.genes = 15, max.genes = 500, method = "fast.fisher",
@@ -55,26 +68,39 @@ gset.fisher2 <- function(genes.up, genes.dn, genesets, background = NULL,
 }
 
 
-#' Title
+#' Perform Fisher's exact test on gene sets
 #'
-#' @param genes value
-#' @param genesets value
-#' @param background value
-#' @param fdr value
-#' @param mc value
-#' @param sort.by value
-#' @param nmin value
-#' @param min.genes value
-#' @param max.genes value
-#' @param method value
-#' @param check.background value
-#' @param common.genes value
-#' @param verbose value
+#' This function performs Fisher's exact test on a set of genes within a given set of gene sets.
+#' It returns a data frame containing the results of the test, including p-values, q-values,
+#' odds ratios, and gene set overlaps.
 #'
-#' @return
+#' @param genes A character vector containing the names of genes.
+#' @param genesets A list of gene sets, where each element is a character vector
+#'                 representing a gene set.
+#' @param background A character vector containing the names of genes in the background set.
+#'                   Defaults to `NULL`, which means all genes are considered.
+#' @param fdr The false discovery rate (FDR) threshold for multiple testing adjustment.
+#'            Defaults to 0.05.
+#' @param mc A logical value indicating whether to perform multiple testing adjustment
+#'           using Monte Carlo simulation. Defaults to `TRUE`.
+#' @param sort.by The statistic used to sort the results. Defaults to "zratio".
+#' @param nmin The minimum number of genes required in a gene set for the test to be performed.
+#' @param min.genes The minimum number of genes in a gene set to be considered. Defaults to 15.
+#' @param max.genes The maximum number of genes in a gene set to be considered. Defaults to 500.
+#' @param method The method used for computing p-values. Defaults to "fast.fisher".
+#' @param check.background A logical value indicating whether to check the presence of genes in
+#'                         the background set. Defaults to `TRUE`.
+#' @param common.genes A logical value indicating whether to use only genes common to both the
+#'                     input gene set and the background set. Defaults to `TRUE`.
+#' @param verbose A numeric value indicating the level of verbosity. Defaults to 1.
+#'
 #' @export
 #'
-#' @examples
+#' @return A data frame containing the results of the Fisher's exact test. The data frame
+#'         includes columns such as "p.value" (p-value), "q.value" (adjusted p-value),
+#'         "odd.ratio" (odds ratio), "overlap" (gene set overlap), and optionally "genes"
+#'         (common genes).
+#'
 gset.fisher <- function(genes, genesets, background = NULL,
                         fdr = 0.05, mc = TRUE, sort.by = "zratio", nmin = 3,
                         min.genes = 15, max.genes = 500, method = "fast.fisher",

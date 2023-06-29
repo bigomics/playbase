@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-gsea.r
 \name{gsea.radarplot}
 \alias{gsea.radarplot}
-\title{Title}
+\title{gsea.radarplot}
 \usage{
 gsea.radarplot(
   values,
@@ -16,22 +16,25 @@ gsea.radarplot(
 )
 }
 \arguments{
-\item{values}{value}
+\item{values}{A numeric vector of values.}
 
-\item{names}{value}
+\item{names}{A character vector of names for the values (optional).}
 
-\item{mar}{value}
+\item{mar}{A numeric vector of margins (default: c(2, 5, 3, 5) * 2).}
 
-\item{offset}{value}
+\item{offset}{A numeric value specifying the offset (default: 0.1).}
 
-\item{clust}{value}
+\item{clust}{A logical value indicating whether clustering should be performed (default: TRUE).}
 
-\item{main}{value}
+\item{main}{A character string specifying the plot title (default: "").}
 
-\item{cex}{value}
+\item{cex}{A numeric value specifying the character expansion factor (default: 0.8).}
 
-\item{col}{value}
+\item{col}{A character vector of colors for the radar plot (default: c("steelblue2", "tomato")).}
+}
+\value{
+a plot
 }
 \description{
-Title
+A function to generate a radar plot for visualization of values.
 }

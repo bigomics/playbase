@@ -2,17 +2,22 @@
 % Please edit documentation in R/gset-gsea.r
 \name{gseaPlotEnplots}
 \alias{gseaPlotEnplots}
-\title{Title}
+\title{Plot GSEA Enrichment Plots}
 \usage{
 gseaPlotEnplots(gsea, gsets = NULL, ncol = 5)
 }
 \arguments{
-\item{gsea}{value}
+\item{gsea}{The GSEA analysis results obtained from \code{\link{getGseaOutput}}.}
 
-\item{gsets}{value}
+\item{gsets}{Optional character vector specifying the gene sets to plot.
+If NULL (default), all available gene sets will be plotted.}
 
-\item{ncol}{value}
+\item{ncol}{The number of columns in the grid arrangement of plots.
+Defaults to 5.}
+}
+\value{
+None
 }
 \description{
-Title
+Plot the GSEA enrichment plots from the GSEA analysis results.
 }

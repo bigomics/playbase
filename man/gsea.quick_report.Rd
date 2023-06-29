@@ -2,15 +2,18 @@
 % Please edit documentation in R/gset-gsea.r
 \name{gsea.quick_report}
 \alias{gsea.quick_report}
-\title{Title}
+\title{gsea.quick_report}
 \usage{
 gsea.quick_report(output.dir, pattern = NULL)
 }
 \arguments{
-\item{output.dir}{value}
+\item{output.dir}{The directory containing the metaGSEA results.}
 
-\item{pattern}{value}
+\item{pattern}{A pattern to match specific files in the directory (optional).}
+}
+\value{
+A data frame with the summary of metaGSEA results.
 }
 \description{
-Title
+A function to generate a quick report of metaGSEA results in a specified folder.
 }

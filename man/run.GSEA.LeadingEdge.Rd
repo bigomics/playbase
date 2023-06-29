@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-gsea.r
 \name{run.GSEA.LeadingEdge}
 \alias{run.GSEA.LeadingEdge}
-\title{Title}
+\title{Run LeadingEdge analysis for GSEA results}
 \usage{
 run.GSEA.LeadingEdge(
   rpt.path,
@@ -14,18 +14,23 @@ run.GSEA.LeadingEdge(
 )
 }
 \arguments{
-\item{rpt.path}{value}
+\item{rpt.path}{The path to the GSEA result folder.}
 
-\item{gmt}{value}
+\item{gmt}{A character vector specifying the gene sets to analyze.}
 
-\item{xmx}{value}
+\item{xmx}{The maximum memory allocation for the GSEA program in gigabytes (default: 10).}
 
-\item{rpt.label}{value}
+\item{rpt.label}{The label for the GSEA report (default: "gsea_leadingedge").}
 
-\item{gsea.program}{value}
+\item{gsea.program}{The path to the GSEA program JAR file (default: "/opt/GSEA/gsea-3.0.jar").}
 
-\item{outdir}{value}
+\item{outdir}{The output directory where the leading edge analysis results will be stored (default: ".").}
+}
+\value{
+The function runs the leading edge analysis and does not return any value.
 }
 \description{
-Title
+This function runs the LeadingEdge analysis for Gene Set Enrichment Analysis (GSEA) results.
+It analyzes the leading edge genes of enriched gene sets to identify key genes and their
+contribution to the enrichment signal.
 }

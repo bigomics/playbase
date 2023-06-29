@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-gsea.r
 \name{run.GSEA.preranked}
 \alias{run.GSEA.preranked}
-\title{Title}
+\title{Run GSEA Preranked}
 \usage{
 run.GSEA.preranked(
   rnk,
@@ -26,42 +26,45 @@ run.GSEA.preranked(
 )
 }
 \arguments{
-\item{rnk}{value}
+\item{rnk}{A named numeric vector representing the preranked gene list.}
 
-\item{gmt}{value}
+\item{gmt}{A named list where each element represents a gene set with the set name as the element name and a character vector of gene names as the element value.}
 
-\item{output.dir}{value}
+\item{output.dir}{The output directory where the GSEA results will be stored. If NULL, a temporary directory will be created.}
 
-\item{fdr}{value}
+\item{fdr}{The false discovery rate (FDR) threshold for filtering enriched gene sets.}
 
-\item{set.min}{value}
+\item{set.min}{The minimum size of gene sets to be considered in the analysis.}
 
-\item{set.max}{value}
+\item{set.max}{The maximum size of gene sets to be considered in the analysis.}
 
-\item{topgs}{value}
+\item{topgs}{The number of top gene sets to report.}
 
-\item{nperm}{value}
+\item{nperm}{The number of permutations for computing the enrichment statistics.}
 
-\item{rpt.label}{value}
+\item{rpt.label}{The label used for naming the GSEA report files.}
 
-\item{make.sets}{value}
+\item{make.sets}{Logical indicating whether to create gene set files.}
 
-\item{clean.files}{value}
+\item{clean.files}{Logical indicating whether to clean up intermediate files.}
 
-\item{xmx}{value}
+\item{xmx}{The maximum memory allocation for the Java virtual machine (in gigabytes).}
 
-\item{scoring}{value}
+\item{scoring}{The scoring scheme for ranking genes. Options are "weighted" or "classic".}
 
-\item{chip}{value}
+\item{chip}{The chip file specifying the gene symbol to probe mapping.}
 
-\item{collapse}{value}
+\item{collapse}{Logical indicating whether to collapse probes to gene symbols.}
 
-\item{do.leading.edge}{value}
+\item{do.leading.edge}{Logical indicating whether to perform leading edge analysis.}
 
-\item{gsea.program}{value}
+\item{gsea.program}{The path to the GSEA program JAR file.}
 
-\item{quiet}{value}
+\item{quiet}{Logical indicating whether to suppress console output.}
+}
+\value{
+A data frame containing the GSEA results.
 }
 \description{
-Title
+Run Gene Set Enrichment Analysis (GSEA) on preranked gene list.
 }

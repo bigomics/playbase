@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-fisher.r
 \name{gset.fisher2}
 \alias{gset.fisher2}
-\title{Title}
+\title{Perform Fisher's exact test on gene sets}
 \usage{
 gset.fisher2(
   genes.up,
@@ -22,34 +22,48 @@ gset.fisher2(
 )
 }
 \arguments{
-\item{genes.up}{value}
+\item{genes.up}{A character vector containing the names of genes in the "up" set.}
 
-\item{genes.dn}{value}
+\item{genes.dn}{A character vector containing the names of genes in the "down" set.}
 
-\item{genesets}{value}
+\item{genesets}{A list of gene sets, where each element is a character vector
+representing a gene set.}
 
-\item{background}{value}
+\item{background}{A character vector containing the names of genes in the background set.
+Defaults to `NULL`, which means all genes are considered.}
 
-\item{fdr}{value}
+\item{fdr}{The false discovery rate (FDR) threshold for multiple testing adjustment.
+Defaults to 0.05.}
 
-\item{mc}{value}
+\item{mc}{A logical value indicating whether to perform multiple testing adjustment
+using Monte Carlo simulation. Defaults to `TRUE`.}
 
-\item{sort.by}{value}
+\item{sort.by}{The statistic used to sort the results. Defaults to "zratio".}
 
-\item{nmin}{value}
+\item{nmin}{The minimum number of genes required in a gene set for the test to be performed.}
 
-\item{verbose}{value}
+\item{verbose}{A numeric value indicating the level of verbosity. Defaults to 1.}
 
-\item{min.genes}{value}
+\item{min.genes}{The minimum number of genes in a gene set to be considered. Defaults to 15.}
 
-\item{max.genes}{value}
+\item{max.genes}{The maximum number of genes in a gene set to be considered. Defaults to 500.}
 
-\item{method}{value}
+\item{method}{The method used for computing p-values. Defaults to "fast.fisher".}
 
-\item{check.background}{value}
+\item{check.background}{A logical value indicating whether to check the presence of genes in
+the background set. Defaults to `TRUE`.}
 
-\item{common.genes}{value}
+\item{common.genes}{A logical value indicating whether to use only genes common to both the
+input gene sets and the background set. Defaults to `TRUE`.}
+}
+\value{
+A data frame containing the results of the Fisher's exact test. The data frame
+        includes columns such as "sign" (fold change sign), "odd.ratio" (odds ratio),
+        "p.value" (p-value), "q.value" (adjusted p-value), and others.
 }
 \description{
-Title
+This function performs Fisher's exact test on two sets of genes, `genes.up` and
+`genes.dn`, within a given set of gene sets (`genesets`). It returns a data frame
+containing the results of the test, including the sign of the fold change (positive
+or negative) and relevant statistics such as p-values, q-values, and odds ratios.
 }

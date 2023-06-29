@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-gsea.r
 \name{gmt2mat}
 \alias{gmt2mat}
-\title{Title}
+\title{Convert GMT file to binary matrix}
 \usage{
 gmt2mat(
   gmt,
@@ -14,18 +14,30 @@ gmt2mat(
 )
 }
 \arguments{
-\item{gmt}{value}
+\item{gmt}{A list representing the GMT file, where each element is a character
+vector representing a gene set.}
 
-\item{max.genes}{value}
+\item{max.genes}{The maximum number of genes to include in the binary matrix.
+Defaults to -1, which includes all genes.}
 
-\item{ntop}{value}
+\item{ntop}{The number of top genes to consider for each gene set. Defaults to -1,
+which includes all genes.}
 
-\item{sparse}{value}
+\item{sparse}{A logical value indicating whether to create a sparse matrix
+(from the 'Matrix' package) or a dense matrix. Defaults to `TRUE`.}
 
-\item{bg}{value}
+\item{bg}{A character vector representing the background set of genes. Defaults to `NULL`,
+which considers all unique genes from the gene sets.}
 
-\item{use.multicore}{value}
+\item{use.multicore}{A logical value indicating whether to use parallel processing
+(via the 'parallel' package) for faster execution. Defaults to `TRUE`.}
+}
+\value{
+A binary matrix representing the presence or absence of genes in each gene set.
+        Rows correspond to genes, and columns correspond to gene sets.
 }
 \description{
-Title
+This function converts a GMT file (Gene Matrix Transposed) to a binary matrix,
+where rows represent genes and columns represent gene sets. The binary matrix
+indicates the presence or absence of genes in each gene set.
 }

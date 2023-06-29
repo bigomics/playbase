@@ -2,17 +2,21 @@
 % Please edit documentation in R/gset-gsea.r
 \name{write.cls}
 \alias{write.cls}
-\title{Title}
+\title{Write data to a CLS file}
 \usage{
 write.cls(y, file, name = "")
 }
 \arguments{
-\item{y}{value}
+\item{y}{The vector of class labels or clustering assignments.}
 
-\item{file}{value}
+\item{file}{The file path to save the CLS file.}
 
-\item{name}{value}
+\item{name}{(Optional) The name of the CLS file.}
+}
+\value{
+None
 }
 \description{
-Title
+This function writes data to a CLS (CLustering Solutions) file format.
+The CLS format is commonly used to store class labels or clustering assignments.
 }
