@@ -53,9 +53,9 @@ h5exists <- function(h5.file, obj) {
 #' @export
 pgx.saveMatrixH5 <- function(X, h5.file, chunk = NULL) {
   if (file.exists(h5.file)) unlink(h5.file)
-
   rhdf5::h5createFile(h5.file)
   rhdf5::h5createGroup(h5.file, "data")
+  X <- as.matrix(X)
 
   if (is.null(chunk)) {
     rhdf5::h5write(X, h5.file, "data/matrix")
@@ -137,7 +137,7 @@ pgx.readDatasetProfiles <- function(pgx.dir, file = "datasets-allFC.csv", verbos
 }
 
 #' @export
-pgx.scanInfoFile <- function(
+pgx.scanInfoFile.DEPRECATED <- function(
     pgx.dir,
     file = "datasets-info.csv",
     allfc.file = "datasets-allFC.csv",
@@ -158,14 +158,12 @@ pgx.scanInfoFile <- function(
   if (!dir.exists(pgx.dir)) {
     stop(paste("[initDatasetFolder] FATAL ERROR : folder", pgx.dir, "does not exist"))
   }
-  dbg("[pgx.initDatasetFolder] *** called ***")
 
   ## all public datasets
   pgx.dir <- pgx.dir[1] ## only one folder!!!
   pgx.files <- dir(pgx.dir, pattern = "[.]pgx$")
   pgx.files <- sub("[.]pgx$", "", pgx.files) ## strip pgx
 
-  dbg("[pgx.initDatasetFolder] length(pgx.files) = ", length(pgx.files))
   if (length(pgx.files) == 0) {
     allfc.file1 <- file.path(pgx.dir, allfc.file)
     info.file1 <- file.path(pgx.dir, info.file)
@@ -263,21 +261,22 @@ pgx.scanInfoFile <- function(
 }
 
 #' @export
-pgx.initDatasetFolder <- function(pgx.dir,
-                                  allfc.file = "datasets-allFC.csv",
-                                  info.file = "datasets-info.csv",
-                                  info.file1 = NULL,
-                                  force = FALSE,
-                                  delete.old = FALSE,
-                                  pgxinfo = NULL,
-                                  pgx.files = NULL,
-                                  pgxinfo.changed = NULL,
-                                  pgxfc.changed = NULL,
-                                  pgx.missing = NULL,
-                                  pgx.missing1 = NULL,
-                                  pgx.missing0 = NULL,
-                                  new.pgx = NULL,
-                                  verbose = TRUE) {
+pgx.initDatasetFolder.DEPRECATED <- function(pgx.dir,
+                                             allfc.file = "datasets-allFC.csv",
+                                             info.file = "datasets-info.csv",
+                                             info.file1 = NULL,
+                                             force = FALSE,
+                                             delete.old = FALSE,
+                                             pgxinfo = NULL,
+                                             pgx.files = NULL,
+                                             pgxinfo.changed = NULL,
+                                             pgxfc.changed = NULL,
+                                             pgx.missing = NULL,
+                                             pgx.missing1 = NULL,
+                                             pgx.missing0 = NULL,
+                                             new.pgx = NULL,
+                                             update.sigdb = TRUE,
+                                             verbose = TRUE) {
   ## ----------------------------------------------------------------------
   ## Reread allFC file. Before we only read the header.
   ## ----------------------------------------------------------------------
@@ -442,6 +441,7 @@ pgx.initDatasetFolder <- function(pgx.dir,
     if (verbose) message("[initDatasetFolder] allFC changed. updating file: ", allfc.file1)
     allFC <- allFC[, !duplicated(colnames(allFC)), drop = FALSE]
     allFC <- allFC[, order(colnames(allFC)), drop = FALSE]
+    allFC <- round(allFC, digits = 4)
     AA <- data.frame(rownames = rownames(allFC), allFC, check.names = FALSE)
     ## write.csv(allFC, file=allfc.file1)
     data.table::fwrite(AA, file = allfc.file1)
@@ -451,7 +451,7 @@ pgx.initDatasetFolder <- function(pgx.dir,
 
   ## update user sigdb or create if not exists
   sigdb <- file.path(pgx.dir, "datasets-sigdb.h5")
-  if (!file.exists(sigdb) || pgxfc.changed) {
+  if (update.sigdb && (!file.exists(sigdb) || pgxfc.changed)) {
     ## NEED RETHINK!!!! HERE???
     if (file.exists(sigdb)) unlink(sigdb)
     if (verbose) message("[initDatasetFolder] creating signature DB to", sigdb, "...")
@@ -465,7 +465,6 @@ pgx.initDatasetFolder <- function(pgx.dir,
   # ## do not use fread.csv or fread here!! see issue #441
   # pgxinfo = read.csv(pgxinfo.file, stringsAsFactors=FALSE, row.names=1, sep=',')
   pgxinfo <- playbase::pgxinfo.read(pgx.dir)
-  pgxinfo$path <- pgx.dir
   return(pgxinfo)
 }
 
@@ -596,6 +595,7 @@ pgxinfo.deletePgx <- function(pgx.dir, pgxname,
     del
     if (length(del) > 0) {
       allFC <- allFC[, -del, drop = FALSE]
+      allFC <- round(allFC, digits = 4)
       allFC1 <- data.frame(gene = rownames(allFC), allFC, check.names = FALSE)
       data.table::fwrite(allFC1, allfc.file) ## HEADER!!!
     }
@@ -657,6 +657,7 @@ pgxinfo.addPgx <- function(pgx.dir, pgx, file = "datasets-info.csv",
     F1 <- F1[match(rownames(allFC), rownames(F1)), ]
     colnames(F1) <- paste0("[", pgxname, "] ", colnames(F1))
     allFC <- cbind(allFC, F1)
+    allFC <- round(allFC, digits = 4)
     allFC1 <- data.frame(gene = rownames(allFC), allFC, check.names = FALSE)
     data.table::fwrite(allFC1, allfc.file) ## HEADER!!!
 
@@ -686,21 +687,22 @@ pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE) {
     return(NULL)
   } ## no files!
 
+  pgxinfo <- NULL
   pgxinfo.file <- file.path(pgx.dir, file)
-  if (!file.exists(pgxinfo.file)) {
-    return(NULL)
-  } ## no info??
-  ## do not use fread.csv or fread here!! see issue #441
-  pgxinfo <- read.csv(pgxinfo.file, stringsAsFactors = FALSE, row.names = 1, sep = ",")
-  if (match) {
-    pgx.files1 <- sub("[.]pgx$", "", pgx.files)
-    pgxinfo.datasets <- sub("[.]pgx$", "", pgxinfo$dataset)
-    sel <- pgxinfo.datasets %in% pgx.files1
-    pgxinfo <- pgxinfo[sel, , drop = FALSE]
+  if (file.exists(pgxinfo.file)) {
+    ## do not use fread.csv or fread here!! see issue #441
+    pgxinfo <- read.csv(pgxinfo.file, stringsAsFactors = FALSE, row.names = 1, sep = ",")
+    if (match) {
+      pgx.files1 <- sub("[.]pgx$", "", pgx.files)
+      pgxinfo.datasets <- sub("[.]pgx$", "", pgxinfo$dataset)
+      sel <- pgxinfo.datasets %in% pgx.files1
+      pgxinfo <- pgxinfo[sel, , drop = FALSE]
+    }
   }
   info.colnames <- c(
     "dataset", "datatype", "description", "nsamples",
-    "ngenes", "nsets", "conditions", "organism", "date", "creator"
+    "ngenes", "nsets", "conditions", "organism", "date",
+    "creator"
   )
   if (is.null(pgxinfo)) {
     aa <- rep(NA, length(info.colnames))
@@ -709,10 +711,9 @@ pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE) {
   }
   ## add missing columns fields
   missing.cols <- setdiff(info.colnames, colnames(pgxinfo))
-  for (s in missing.cols) info[[s]] <- rep(NA, nrow(pgxinfo))
+  for (s in missing.cols) pgxinfo[[s]] <- rep(NA, nrow(pgxinfo))
   ii <- match(info.colnames, colnames(pgxinfo))
   pgxinfo <- pgxinfo[, ii]
-  pgxinfo$path <- pgx.dir
   return(pgxinfo)
 }
 
@@ -723,6 +724,7 @@ pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE) {
 #' @export
 pgxinfo.needUpdate <- function(
     pgx.dir,
+    check.sigdb = TRUE,
     verbose = TRUE) {
   if (!dir.exists(pgx.dir)) {
     stop(paste("[pgxinfo.needUpdate] FATAL ERROR : folder", pgx.dir, "does not exist"))
@@ -733,8 +735,6 @@ pgxinfo.needUpdate <- function(
   if (length(pgx.files) == 0) {
     return(FALSE)
   } ## no files!
-
-  dbg("[pgxinfo.needUpdate] *** called ***")
 
   ## all public datasets
   pgx.files <- sub("[.]pgx$", "", pgx.files) ## strip pgx
@@ -755,7 +755,7 @@ pgxinfo.needUpdate <- function(
   sigdb.file1 <- file.path(pgx.dir, sigdb.file)
   has.sigdb <- file.exists(sigdb.file1)
 
-  if (!has.fc || !has.info || !has.sigdb) {
+  if (!has.fc || !has.info || (check.sigdb && !has.sigdb)) {
     return(TRUE)
   }
 
@@ -777,11 +777,23 @@ pgxinfo.needUpdate <- function(
   info.complete <- all(pgx.files %in% info.files)
   info.complete
 
-  if (verbose) message("[pgxinfo.needUpdate] checking which pgx already in sigdb...")
-  cn <- rhdf5::h5read(sigdb.file1, "data/colnames")
-  h5.files <- gsub("^\\[|\\].*", "", cn)
-  h5.files <- sub("[.]pgx$", "", h5.files) ## strip pgx
-  h5.complete <- all(pgx.files %in% h5.files)
+  h5.complete <- TRUE
+  if (check.sigdb) {
+    if (verbose) message("[pgxinfo.needUpdate] checking which pgx already in sigdb...")
+    H <- rhdf5::h5ls(sigdb.file1)
+    H
+    h.group <- H[, "group"]
+    h.name <- H[, "name"]
+    h5.complete1 <- all(c("matrix", "colnames", "rownames", "data") %in% h.name)
+    h5.complete2 <- all(c("/clustering", "/data", "/enrichment", "/signature") %in% h.group)
+    h5.complete <- h5.complete1 && h5.complete2
+    if (h5.complete) {
+      cn <- rhdf5::h5read(sigdb.file1, "data/colnames")
+      h5.files <- gsub("^\\[|\\].*", "", cn)
+      h5.files <- sub("[.]pgx$", "", h5.files) ## strip pgx
+      h5.complete <- all(pgx.files %in% h5.files)
+    }
+  }
 
   if (!fc.complete || !info.complete || !h5.complete) {
     return(TRUE)
@@ -800,15 +812,14 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
                                         force = FALSE,
                                         delete.old = FALSE,
                                         new.pgx = NULL,
+                                        update.sigdb = TRUE,
                                         verbose = TRUE) {
   ## only run pgx.initDatasetFolder if pgx are changed
   if (!dir.exists(pgx.dir)) {
-    stop(paste("[pgx.updateDatasetFolder] FATAL ERROR : folder", pgx.dir, "does not exist"))
+    stop(paste("[pgxinfo.updateDatasetFolder] FATAL ERROR : folder", pgx.dir, "does not exist"))
   }
-  dbg("[pgx.updateDatasetFolder] *** called ***")
 
   pgx.files <- dir(pgx.dir, pattern = "[.]pgx$")
-  dbg("[pgx.updateDatasetFolder] length(pgx.files) = ", length(pgx.files))
   if (length(pgx.files) == 0) {
     allfc.file1 <- file.path(pgx.dir, allfc.file)
     info.file1 <- file.path(pgx.dir, info.file)
@@ -837,11 +848,13 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   has.sigdb <- file.exists(sigdb.file)
 
   tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")
+  has.tsne <- file.exists(tsne.file)
 
   if (force) {
     has.fc <- FALSE
     has.info <- FALSE
     has.sigdb <- FALSE
+    has.tsne <- FALSE
   }
 
   ## ----------------------------------------------------------------------
@@ -858,7 +871,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
 
   allFC <- NULL
   if (has.fc) {
-    if (verbose) message("[initDatasetFolder] checking which pgx files already done in allFC...")
+    if (verbose) message("[pgxinfo.updateDatasetFolder] checking which pgx files already done in allFC...")
     allFC <- data.table::fread(allfc.file, check.names = FALSE, nrows = 1) ## HEADER!!!
     fc.files <- gsub("^\\[|\\].*", "", colnames(allFC)[-1])
     fc.missing <- setdiff(pgx.files, fc.files)
@@ -867,7 +880,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   }
 
   if (has.info) {
-    if (verbose) message("[initDatasetFolder] checking which pgx files already in PGX info...")
+    if (verbose) message("[pgxinfo.updateDatasetFolder] checking which pgx files already in PGX info...")
     ## do not use fread! quoting bug
     pgxinfo <- read.csv(info.file, stringsAsFactors = FALSE, row.names = 1, sep = ",")
     pgxinfo.files <- unique(sub(".pgx$", "", pgxinfo$dataset))
@@ -875,8 +888,19 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     info.delete <- setdiff(pgxinfo.files, pgx.files)
   }
 
-  if (has.sigdb) {
-    if (verbose) message("[initDatasetFolder] checking which pgx files already in sigdb...")
+  valid.h5 <- function(h5.file) {
+    if (!file.exists(h5.file)) {
+      return(FALSE)
+    }
+    H <- rhdf5::h5ls(h5.file)
+    ok1 <- all(c("matrix", "colnames", "rownames", "data") %in% H[, "name"])
+    ok2 <- all(c("/clustering", "/data", "/enrichment", "/signature") %in% H[, "group"])
+    ok1 && ok2
+  }
+  valid.h5(sigdb.file)
+
+  if (has.sigdb && valid.h5(sigdb.file)) {
+    if (verbose) message("[pgxinfo.updateDatasetFolder] checking which pgx files already in sigdb...")
     cn <- rhdf5::h5read(sigdb.file, "data/colnames")
     h5.files <- gsub("^\\[|\\].*", "", cn)
     h5.files <- sub("[.]pgx$", "", h5.files) ## strip pgx
@@ -910,36 +934,26 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     }
   }
 
-  if (verbose) message("[initDatasetFolder] length(pgx.missing) = ", length(pgx.missing), "")
-  if (verbose) message("[initDatasetFolder] length(pgx.delete) =  ", length(pgx.delete), "")
+  if (verbose) message("[pgxinfo.updateDatasetFolder] length(pgx.missing) = ", length(pgx.missing), "")
+  if (verbose) message("[pgxinfo.updateDatasetFolder] length(pgx.delete) =  ", length(pgx.delete), "")
 
   ## nothing to do???
   if (length(pgx.missing) == 0 && length(h5.missing) == 0) {
-    if (verbose) message("[updateDatasetFolder] no update required. FORCE=1 for forced update.")
+    if (verbose) message("[pgxinfo.updateDatasetFolder] no update required. FORCE=1 for forced update.")
     return()
   }
 
   ## pgxinfo and allFC OK, but sigdb not upto date
-  if (length(pgx.missing) == 0 && length(h5.missing) > 0) {
+  if (update.sigdb && length(pgx.missing) == 0 && length(h5.missing) > 0) {
     ## Update SIGDB file using allFC
     allFC <- fread.csv(allfc.file, row.names = 1, check.names = FALSE)
+    allFC <- as.matrix(allFC)
     ## update user sigdb or create if not exists
     if (file.exists(sigdb.file)) unlink(sigdb.file)
     if (verbose) message("[updateDatasetFolder] creating sig DB: ", sigdb.file, "...")
     pgx.createSignatureDatabaseH5.fromMatrix(sigdb.file, X = allFC)
     pgx.addEnrichmentSignaturesH5(sigdb.file, X = allFC, methods = "rankcor")
     h5.missing <- NULL
-  }
-
-  tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")
-  if (!file.exists(tsne.file)) {
-    ## write t-SNE file
-    rhdf5::h5ls(sigdb.file)
-    cn <- rhdf5::h5read(sigdb.file, "data/colnames")
-    tsne <- rhdf5::h5read(sigdb.file, "clustering/tsne2d")
-    rownames(tsne) <- cn
-    colnames(tsne) <- paste0("tsne.", 1:2)
-    write.csv(tsne, file = tsne.file)
   }
 
   if (length(pgx.missing) == 0 && length(h5.missing) == 0) {
@@ -955,6 +969,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   if (!force && file.exists(allfc.file) && length(pgx.missing) > 0) {
     ## allFC <- read.csv(allfc.file,row.names=1,check.names=FALSE)
     allFC <- fread.csv(allfc.file, row.names = 1, check.names = FALSE)
+    allFC <- as.matrix(allFC)
   }
   dim(allFC)
 
@@ -1033,7 +1048,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   }
 
   if (pgxinfo.changed) {
-    if (verbose) message("[initDatasetFolder] writing updated PGX.INFO file to ", info.file, "...")
+    if (verbose) message("[pgxinfo.updateDatasetFolder] writing updated PGX.INFO file to ", info.file, "...")
     write.csv(pgxinfo, file = info.file)
     Sys.chmod(info.file, "0666")
   }
@@ -1054,7 +1069,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
 
   if (length(missing.FC) == 0 && !pgxfc.changed) {
     ## no change in info
-    dbg("[initDatasetFolder] allFC complete. no change needed.")
+    dbg("[pgxinfo.updateDatasetFolder] allFC complete. no change needed.")
     return(NULL)
   }
 
@@ -1107,9 +1122,10 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   ## save modified allFC
   if (pgxfc.changed) {
     ## check for duplicates
-    if (verbose) message("[initDatasetFolder] allFC changed. updating file: ", allfc.file)
+    if (verbose) message("[pgxinfo.updateDatasetFolder] allFC changed. updating file: ", allfc.file)
     allFC <- allFC[, !duplicated(colnames(allFC)), drop = FALSE]
     allFC <- allFC[, order(colnames(allFC)), drop = FALSE]
+    allFC <- round(allFC, digits = 4)
     AA <- data.frame(rownames = rownames(allFC), allFC, check.names = FALSE)
     ## write.csv(allFC, file=allfc.file)
     data.table::fwrite(AA, file = allfc.file)
@@ -1119,23 +1135,25 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
 
   ## update user sigdb or create if not exists
   sigdb <- file.path(pgx.dir, "datasets-sigdb.h5")
-  if (!file.exists(sigdb) || pgxfc.changed) {
-    ## NEED RETHINK!!!! HERE???
-    if (file.exists(sigdb)) unlink(sigdb)
-    if (verbose) message("[initDatasetFolder] creating signature DB to", sigdb, "...")
-    pgx.createSignatureDatabaseH5.fromMatrix(sigdb, X = allFC)
-    if (verbose) message("[initDatasetFolder] add enrichment signature to", sigdb, "...")
-    pgx.addEnrichmentSignaturesH5(sigdb, X = allFC, methods = "rankcor")
-  }
+  if (update.sigdb) {
+    if (!file.exists(sigdb) || pgxfc.changed) {
+      ## NEED RETHINK!!!! HERE???
+      if (file.exists(sigdb)) unlink(sigdb)
+      if (verbose) message("[pgxinfo.updateDatasetFolder] creating signature DB to", sigdb, "...")
+      pgx.createSignatureDatabaseH5.fromMatrix(sigdb, X = allFC)
+      if (verbose) message("[pgxinfo.updateDatasetFolder] add enrichment signature to", sigdb, "...")
+      pgx.addEnrichmentSignaturesH5(sigdb, X = allFC, methods = "rankcor")
+    }
 
-  tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")
-  if (!file.exists(tsne.file) || pgxfc.changed) {
-    rhdf5::h5ls(sigdb)
-    cn <- rhdf5::h5read(sigdb, "data/colnames")
-    tsne <- rhdf5::h5read(sigdb, "clustering/tsne2d")
-    rownames(tsne) <- cn
-    colnames(tsne) <- paste0("tsne.", 1:2)
-    write.csv(tsne, file = tsne.file)
+    tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")
+    if (!file.exists(tsne.file) || pgxfc.changed) {
+      rhdf5::h5ls(sigdb)
+      cn <- rhdf5::h5read(sigdb, "data/colnames")
+      tsne <- rhdf5::h5read(sigdb, "clustering/tsne2d")
+      rownames(tsne) <- cn
+      colnames(tsne) <- paste0("tsne.", 1:2)
+      write.csv(tsne, file = tsne.file)
+    }
   }
 
   return()
