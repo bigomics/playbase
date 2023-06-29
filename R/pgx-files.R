@@ -738,7 +738,8 @@ pgxinfo.needUpdate <- function(
 
   ## all public datasets
   pgx.files <- sub("[.]pgx$", "", pgx.files) ## strip pgx
-
+  dbg("[pgxinfo.needUpdate] number of PGX files: ",length(pgx.files))
+  
   ## ----------------------------------------------------------------------
   ## If an allFC file exists
   ## ----------------------------------------------------------------------
@@ -755,6 +756,10 @@ pgxinfo.needUpdate <- function(
   sigdb.file1 <- file.path(pgx.dir, sigdb.file)
   has.sigdb <- file.exists(sigdb.file1)
 
+  dbg("[pgxinfo.needUpdate] has datasets-allFC.csv : ",has.fc)
+  dbg("[pgxinfo.needUpdate] has datasets-info.csv  : ",has.info)
+  dbg("[pgxinfo.needUpdate] has datasets-sigdb.h5  : ",has.sigdb)
+  
   if (!has.fc || !has.info || (check.sigdb && !has.sigdb)) {
     return(TRUE)
   }
@@ -768,6 +773,7 @@ pgxinfo.needUpdate <- function(
   fc.files <- gsub("^\\[|\\].*", "", colnames(allFC)[-1])
   fc.files <- sub("[.]pgx$", "", fc.files) ## strip pgx
   fc.complete <- all(pgx.files %in% fc.files)
+  fc.missing <- setdiff(pgx.files, fc.files)
   fc.complete
 
   if (verbose) message("[pgxinfo.needUpdate] checking which pgx already in PGX info...")
@@ -775,26 +781,30 @@ pgxinfo.needUpdate <- function(
   pgxinfo <- read.csv(info.file1, stringsAsFactors = FALSE, row.names = 1, sep = ",")
   info.files <- unique(sub(".pgx$", "", pgxinfo$dataset))
   info.complete <- all(pgx.files %in% info.files)
+  info.missing <- setdiff(pgx.files, info.files)
   info.complete
 
   h5.complete <- TRUE
+  h5.missing <- NA
   if (check.sigdb) {
     if (verbose) message("[pgxinfo.needUpdate] checking which pgx already in sigdb...")
     H <- rhdf5::h5ls(sigdb.file1)
-    H
-    h.group <- H[, "group"]
-    h.name <- H[, "name"]
-    h5.complete1 <- all(c("matrix", "colnames", "rownames", "data") %in% h.name)
-    h5.complete2 <- all(c("/clustering", "/data", "/enrichment", "/signature") %in% h.group)
-    h5.complete <- h5.complete1 && h5.complete2
-    if (h5.complete) {
+    h5.ok1 <- all(c("matrix", "colnames", "rownames", "data") %in% H$name)
+    h5.ok2 <- all(c("/clustering", "/data", "/enrichment", "/signature") %in% H$group)
+    h5.ok <- (h5.ok1 && h5.ok2)
+    if (h5.ok) {
       cn <- rhdf5::h5read(sigdb.file1, "data/colnames")
       h5.files <- gsub("^\\[|\\].*", "", cn)
       h5.files <- sub("[.]pgx$", "", h5.files) ## strip pgx
       h5.complete <- all(pgx.files %in% h5.files)
+      h5.missing <- setdiff(pgx.files, h5.files)
     }
   }
 
+  dbg("[pgxinfo.needUpdate] nr missing files in allFC : ",length(fc.missing))
+  dbg("[pgxinfo.needUpdate] nr missing files in info  : ",length(info.missing))
+  dbg("[pgxinfo.needUpdate] nr missing files in sigdb : ",length(h5.missing))  
+  
   if (!fc.complete || !info.complete || !h5.complete) {
     return(TRUE)
   }
