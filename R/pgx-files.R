@@ -738,8 +738,8 @@ pgxinfo.needUpdate <- function(
 
   ## all public datasets
   pgx.files <- sub("[.]pgx$", "", pgx.files) ## strip pgx
-  dbg("[pgxinfo.needUpdate] number of PGX files: ",length(pgx.files))
-  
+  dbg("[pgxinfo.needUpdate] number of PGX files: ", length(pgx.files))
+
   ## ----------------------------------------------------------------------
   ## If an allFC file exists
   ## ----------------------------------------------------------------------
@@ -756,10 +756,10 @@ pgxinfo.needUpdate <- function(
   sigdb.file1 <- file.path(pgx.dir, sigdb.file)
   has.sigdb <- file.exists(sigdb.file1)
 
-  dbg("[pgxinfo.needUpdate] has datasets-allFC.csv : ",has.fc)
-  dbg("[pgxinfo.needUpdate] has datasets-info.csv  : ",has.info)
-  dbg("[pgxinfo.needUpdate] has datasets-sigdb.h5  : ",has.sigdb)
-  
+  dbg("[pgxinfo.needUpdate] has datasets-allFC.csv : ", has.fc)
+  dbg("[pgxinfo.needUpdate] has datasets-info.csv  : ", has.info)
+  dbg("[pgxinfo.needUpdate] has datasets-sigdb.h5  : ", has.sigdb)
+
   if (!has.fc || !has.info || (check.sigdb && !has.sigdb)) {
     return(TRUE)
   }
@@ -801,10 +801,10 @@ pgxinfo.needUpdate <- function(
     }
   }
 
-  dbg("[pgxinfo.needUpdate] nr missing files in allFC : ",length(fc.missing))
-  dbg("[pgxinfo.needUpdate] nr missing files in info  : ",length(info.missing))
-  dbg("[pgxinfo.needUpdate] nr missing files in sigdb : ",length(h5.missing))  
-  
+  dbg("[pgxinfo.needUpdate] nr missing files in allFC : ", length(fc.missing))
+  dbg("[pgxinfo.needUpdate] nr missing files in info  : ", length(info.missing))
+  dbg("[pgxinfo.needUpdate] nr missing files in sigdb : ", length(h5.missing))
+
   if (!fc.complete || !info.complete || !h5.complete) {
     return(TRUE)
   }
