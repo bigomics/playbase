@@ -2,17 +2,22 @@
 % Please edit documentation in R/compute2-extra.R
 \name{compute_deconvolution}
 \alias{compute_deconvolution}
-\title{Title}
+\title{Compute Deconvolution}
 \usage{
 compute_deconvolution(ngs, rna.counts = ngs$counts, full = FALSE)
 }
 \arguments{
-\item{ngs}{value}
+\item{ngs}{An object containing the input data for analysis.}
 
-\item{rna.counts}{value}
+\item{rna.counts}{A matrix or data frame of RNA expression counts. Defaults to the counts in the input object.}
 
-\item{full}{value}
+\item{full}{A logical value indicating whether to use the full set of reference matrices and methods (TRUE),
+or a subset of faster methods and references (FALSE).}
+}
+\value{
+An updated object with deconvolution results.
 }
 \description{
-Title
+This function performs deconvolution analysis on the input RNA expression data using various reference matrices
+and methods. It estimates the abundance of different cell types or tissue components present in the data.
 }

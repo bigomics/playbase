@@ -3,20 +3,22 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-#' Title
+#' Compute Test Genes
 #'
-#' @param pgx value
-#' @param contr.matrix value
-#' @param max.features value
-#' @param test.methods value
-#' @param use.design value
-#' @param prune.samples value
-#' @param remove.outputs value
+#' This function computes gene tests based on the input data and contrast matrix.
+#' It performs different test methods depending on whether the data is single-omics or multi-omics.
+#' For single-omics data or when there is only one data type, it uses the \code{compute_testGenesSingleOmics} function.
+#' For multi-omics data with the possibility of missing values, it uses the \code{compute_testGenesMultiOmics} function.
 #'
-#' @return
+#' @param pgx An object containing the input data for analysis.
+#' @param contr.matrix The contrast matrix for the gene tests.
+#' @param max.features The maximum number of features to consider in the gene tests.
+#' @param test.methods The test methods to use for gene testing.
+#' @param use.design A logical value indicating whether to use the design matrix in the analysis.
+#' @param prune.samples A logical value indicating whether to prune samples with missing data.
+#' @param remove.outputs A logical value indicating whether to remove intermediate outputs.
+#' @return An updated object with gene test results.
 #' @export
-#'
-#' @examples
 compute_testGenes <- function(pgx, contr.matrix, max.features = 1000,
                               test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
                               use.design = TRUE, prune.samples = FALSE,
@@ -52,21 +54,21 @@ compute_testGenes <- function(pgx, contr.matrix, max.features = 1000,
   return(pgx)
 }
 
-#' Title
+#' Compute Test Genes for Single-Omics Data
 #'
-#' @param pgx value
-#' @param contr.matrix value
-#' @param max.features value
-#' @param filter.low value
-#' @param remove.outputs value
-#' @param use.design value
-#' @param prune.samples value
-#' @param test.methods value
+#' This function computes gene tests for single-omics data based on the input data and contrast matrix.
+#' It performs various steps such as normalization, creating a design matrix, filtering genes, and fitting the data using different test methods.
 #'
-#' @return
+#' @param pgx An object containing the input data for analysis.
+#' @param contr.matrix The contrast matrix for the gene tests.
+#' @param max.features The maximum number of features to consider in the gene tests.
+#' @param filter.low A logical value indicating whether to filter low-expressed genes.
+#' @param remove.outputs A logical value indicating whether to remove intermediate outputs.
+#' @param use.design A logical value indicating whether to use the design matrix in the analysis.
+#' @param prune.samples A logical value indicating whether to prune samples with missing data.
+#' @param test.methods The test methods to use for gene testing.
+#' @return An updated object with gene test results for single-omics data.
 #' @export
-#'
-#' @examples
 compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
                                          filter.low = TRUE, remove.outputs = TRUE,
                                          use.design = TRUE, prune.samples = FALSE,
@@ -317,20 +319,21 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
 }
 
 
-#' Title
+#' Compute Multi-Omics Test Genes
 #'
-#' @param pgx value
-#' @param contr.matrix value
-#' @param max.features value
-#' @param test.methods value
-#' @param use.design value
-#' @param prune.samples value
-#' @param remove.outputs value
+#' Computes test genes for multi-omics data.
 #'
-#' @return
+#' @param pgx A data object representing multi-omics data.
+#' @param contr.matrix A contrast matrix specifying the experimental design.
+#' @param max.features Maximum number of features to consider.
+#' @param test.methods Methods to use for testing.
+#' @param use.design Logical indicating whether to use the experimental design.
+#' @param prune.samples Logical indicating whether to prune samples.
+#' @param remove.outputs Logical indicating whether to remove outputs.
+#'
+#' @return The updated \code{pgx} object with computed test genes.
+#'
 #' @export
-#'
-#' @examples
 compute_testGenesMultiOmics <- function(pgx, contr.matrix, max.features = 1000,
                                         test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
                                         use.design = TRUE, prune.samples = FALSE,

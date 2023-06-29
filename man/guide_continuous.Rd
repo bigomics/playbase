@@ -20,10 +20,14 @@ A nicely styled colorbar for continuous aesthetics (color, fill and alpha)
 \examples{
 \dontrun{
 library(ggplot2)
-ggplot(mpg, aes(cty, hwy)) + geom_point(aes(color = displ)) +
-  theme_omics() + guide_continuous()
-ggplot(mpg, aes(class)) + geom_bar(aes(fill = manufacturer)) +
-  theme_omics() + guide_continuous(aes = "fill")
+ggplot(mpg, aes(cty, hwy)) +
+  geom_point(aes(color = displ)) +
+  theme_omics() +
+  guide_continuous()
+ggplot(mpg, aes(class)) +
+  geom_bar(aes(fill = manufacturer)) +
+  theme_omics() +
+  guide_continuous(aes = "fill")
 }
 
 }

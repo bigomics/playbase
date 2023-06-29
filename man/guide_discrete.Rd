@@ -22,10 +22,14 @@ size and alpha)
 \examples{
 \dontrun{
 library(ggplot2)
-ggplot(mpg, aes(cty, displ)) + geom_point(aes(color = manufacturer)) +
-  theme_omics() + guide_discrete()
-ggplot(mpg, aes(class)) + geom_bar(aes(fill = manufacturer)) +
-  theme_omics() + guide_discrete(aes = "fill")
+ggplot(mpg, aes(cty, displ)) +
+  geom_point(aes(color = manufacturer)) +
+  theme_omics() +
+  guide_discrete()
+ggplot(mpg, aes(class)) +
+  geom_bar(aes(fill = manufacturer)) +
+  theme_omics() +
+  guide_discrete(aes = "fill")
 }
 
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/compute2-genes.R
 \name{compute_testGenesMultiOmics}
 \alias{compute_testGenesMultiOmics}
-\title{Title}
+\title{Compute Multi-Omics Test Genes}
 \usage{
 compute_testGenesMultiOmics(
   pgx,
@@ -15,20 +15,23 @@ compute_testGenesMultiOmics(
 )
 }
 \arguments{
-\item{pgx}{value}
+\item{pgx}{A data object representing multi-omics data.}
 
-\item{contr.matrix}{value}
+\item{contr.matrix}{A contrast matrix specifying the experimental design.}
 
-\item{max.features}{value}
+\item{max.features}{Maximum number of features to consider.}
 
-\item{test.methods}{value}
+\item{test.methods}{Methods to use for testing.}
 
-\item{use.design}{value}
+\item{use.design}{Logical indicating whether to use the experimental design.}
 
-\item{prune.samples}{value}
+\item{prune.samples}{Logical indicating whether to prune samples.}
 
-\item{remove.outputs}{value}
+\item{remove.outputs}{Logical indicating whether to remove outputs.}
+}
+\value{
+The updated \code{pgx} object with computed test genes.
 }
 \description{
-Title
+Computes test genes for multi-omics data.
 }
