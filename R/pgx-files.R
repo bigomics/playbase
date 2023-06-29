@@ -766,7 +766,7 @@ pgxinfo.needUpdate <- function(
   ## If an allFC exists, check if it is done for all PGX files
   ## ----------------------------------------------------------------------
 
-  fc.complete = info.complete = h5.complete = NA
+  fc.complete = info.complete = h5.complete = TRUE
   fc.missing = info.missing = h5.missing = pgx.files
   
   if(has.fc) {
