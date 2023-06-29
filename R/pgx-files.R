@@ -759,9 +759,9 @@ pgxinfo.needUpdate <- function(
   if (verbose) {
     dbg("[pgxinfo.needUpdate] has datasets-allFC.csv : ", has.fc)
     dbg("[pgxinfo.needUpdate] has datasets-info.csv  : ", has.info)
-    if(check.sigdb) dbg("[pgxinfo.needUpdate] has datasets-sigdb.h5  : ", has.sigdb)
+    if (check.sigdb) dbg("[pgxinfo.needUpdate] has datasets-sigdb.h5  : ", has.sigdb)
   }
-  
+
   if (!has.fc || !has.info || (check.sigdb && !has.sigdb)) {
     return(TRUE)
   }
@@ -806,10 +806,10 @@ pgxinfo.needUpdate <- function(
   if (verbose) {
     dbg("[pgxinfo.needUpdate] nr missing files in allFC : ", length(fc.missing))
     dbg("[pgxinfo.needUpdate] nr missing files in info  : ", length(info.missing))
-    if(check.sigdb) dbg("[pgxinfo.needUpdate] nr missing files in sigdb : ", length(h5.missing))
+    if (check.sigdb) dbg("[pgxinfo.needUpdate] nr missing files in sigdb : ", length(h5.missing))
   }
-  
-  if (!fc.complete || !info.complete || (check.sigdb && !h5.complete) ) {
+
+  if (!fc.complete || !info.complete || (check.sigdb && !h5.complete)) {
     return(TRUE)
   }
 
