@@ -766,10 +766,10 @@ pgxinfo.needUpdate <- function(
   ## If an allFC exists, check if it is done for all PGX files
   ## ----------------------------------------------------------------------
 
-  fc.complete = info.complete = h5.complete = TRUE
-  fc.missing = info.missing = h5.missing = pgx.files
-  
-  if(has.fc) {
+  fc.complete <- info.complete <- h5.complete <- TRUE
+  fc.missing <- info.missing <- h5.missing <- pgx.files
+
+  if (has.fc) {
     if (verbose) message("[pgxinfo.needUpdate] checking which pgx already done in allFC...")
     allFC <- data.table::fread(allfc.file1, check.names = FALSE, nrows = 1) ## HEADER!!!
     fc.files <- gsub("^\\[|\\].*", "", colnames(allFC)[-1])
@@ -778,7 +778,7 @@ pgxinfo.needUpdate <- function(
     fc.missing <- setdiff(pgx.files, fc.files)
   }
 
-  if(has.info) {
+  if (has.info) {
     if (verbose) message("[pgxinfo.needUpdate] checking which pgx already in PGX info...")
     ## do not use fread! quoting bug
     pgxinfo <- read.csv(info.file1, stringsAsFactors = FALSE, row.names = 1, sep = ",")
@@ -788,7 +788,7 @@ pgxinfo.needUpdate <- function(
     info.complete
   }
 
-  if(has.sigdb && check.sigdb) {  
+  if (has.sigdb && check.sigdb) {
     if (verbose) message("[pgxinfo.needUpdate] checking which pgx already in sigdb...")
     H <- rhdf5::h5ls(sigdb.file1)
     h5.ok1 <- all(c("matrix", "colnames", "rownames", "data") %in% H$name)
@@ -810,9 +810,9 @@ pgxinfo.needUpdate <- function(
   }
 
   ## Return checks
-  has.files <- (!has.fc || !has.info || (check.sigdb && !has.sigdb))   
-  is.complete <- (!fc.complete || !info.complete || (check.sigdb && !h5.complete) )
-  
+  has.files <- (!has.fc || !has.info || (check.sigdb && !has.sigdb))
+  is.complete <- (!fc.complete || !info.complete || (check.sigdb && !h5.complete))
+
   return(has.files && is.complete)
 }
 
