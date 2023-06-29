@@ -953,7 +953,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
 
   ## nothing to do???
   if (length(pgx.missing) == 0 && length(h5.missing) == 0) {
-    if (verbose) message("[pgxinfo.updateDatasetFolder] no update required. FORCE=1 for forced update.")
+    if (verbose) message("[pgxinfo.updateDatasetFolder] no update required. Use FORCE for forced update.")
     return()
   }
 
@@ -971,7 +971,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   }
 
   if (length(pgx.missing) == 0 && length(h5.missing) == 0) {
-    if (verbose) message("[updateDatasetFolder] no update required. FORCE=1 for forced update.")
+    if (verbose) message("[updateDatasetFolder] no update required. Use FORCE for forced update.")
     return()
   }
 
