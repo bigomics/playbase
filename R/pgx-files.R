@@ -805,7 +805,7 @@ pgxinfo.needUpdate <- function(
   dbg("[pgxinfo.needUpdate] nr missing files in info  : ", length(info.missing))
   dbg("[pgxinfo.needUpdate] nr missing files in sigdb : ", length(h5.missing))
 
-  if (!fc.complete || !info.complete || !h5.complete) {
+  if (!fc.complete || !info.complete || (check.sigdb && !h5.complete) ) {
     return(TRUE)
   }
 
