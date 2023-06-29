@@ -767,7 +767,7 @@ pgxinfo.needUpdate <- function(
   ## ----------------------------------------------------------------------
 
   fc.complete = info.complete = h5.complete = NA
-  fc.missing = info.missing = h5.missing = c()
+  fc.missing = info.missing = h5.missing = pgx.files
   
   if(has.fc) {
     if (verbose) message("[pgxinfo.needUpdate] checking which pgx already done in allFC...")
