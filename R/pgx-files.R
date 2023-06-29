@@ -785,7 +785,7 @@ pgxinfo.needUpdate <- function(
   info.complete
 
   h5.complete <- TRUE
-  h5.missing <- NA
+  h5.missing <- c()
   if (check.sigdb) {
     if (verbose) message("[pgxinfo.needUpdate] checking which pgx already in sigdb...")
     H <- rhdf5::h5ls(sigdb.file1)
