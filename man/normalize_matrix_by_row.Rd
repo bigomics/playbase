@@ -2,13 +2,16 @@
 % Please edit documentation in R/compute2-genesets.R
 \name{normalize_matrix_by_row}
 \alias{normalize_matrix_by_row}
-\title{Normalize geneset matrix by row}
+\title{Normalize Matrix by Row}
 \usage{
 normalize_matrix_by_row(G)
 }
 \arguments{
-\item{g}{a sparse matrix (eg. genesets x genes)}
+\item{G}{The matrix to be normalized.}
+}
+\value{
+The normalized matrix.
 }
 \description{
-Normalize geneset matrix by row
+Normalizes a matrix by dividing each row by the sum of its elements.
 }

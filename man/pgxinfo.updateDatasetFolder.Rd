@@ -9,6 +9,7 @@ pgxinfo.updateDatasetFolder(
   force = FALSE,
   delete.old = FALSE,
   new.pgx = NULL,
+  update.sigdb = TRUE,
   verbose = TRUE
 )
 }

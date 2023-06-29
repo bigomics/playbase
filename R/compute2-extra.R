@@ -3,13 +3,17 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-#' Title
+#' Compute Extra Analysis
 #'
-#' @param ngs value
-#' @param extra value
-#' @param sigdb value
+#' This function computes additional analysis based on the input data, such as GO core graph,
+#' deconvolution, phenotype inference, drug activity enrichment, OmicsGraphs, WordCloud statistics,
+#' connectivity scores, and wgcna.
 #'
-#' @return
+#' @param ngs An object containing the input data for analysis.
+#' @param extra A character vector specifying which additional analyses to perform.
+#' @param sigdb A character vector specifying the path to the sigdb-.h5 files for connectivity scores.
+#' @param libx.dir The directory where the sigdb-.h5 files are located.
+#' @return An updated object with additional analysis results.
 #' @export
 compute_extra <- function(ngs, extra = c(
                             "meta.go", "deconv", "infer", "drugs", ## "graph",
@@ -194,16 +198,17 @@ compute_extra <- function(ngs, extra = c(
 
 ## -------------- deconvolution analysis --------------------------------
 
-#' Title
+#' Compute Deconvolution
 #'
-#' @param ngs value
-#' @param rna.counts value
-#' @param full value
+#' This function performs deconvolution analysis on the input RNA expression data using various reference matrices
+#' and methods. It estimates the abundance of different cell types or tissue components present in the data.
 #'
-#' @return
+#' @param ngs An object containing the input data for analysis.
+#' @param rna.counts A matrix or data frame of RNA expression counts. Defaults to the counts in the input object.
+#' @param full A logical value indicating whether to use the full set of reference matrices and methods (TRUE),
+#'   or a subset of faster methods and references (FALSE).
+#' @return An updated object with deconvolution results.
 #' @export
-#'
-#' @examples
 compute_deconvolution <- function(ngs, rna.counts = ngs$counts, full = FALSE) {
   ## list of reference matrices
   refmat <- list()
@@ -250,15 +255,16 @@ compute_deconvolution <- function(ngs, rna.counts = ngs$counts, full = FALSE) {
 
 ## -------------- infer sample characteristics --------------------------------
 
-#' Title
+#' Compute Cell Cycle and Gender Inference
 #'
-#' @param ngs value
-#' @param rna.counts value
+#' This function performs cell cycle phase inference and gender estimation based on the input RNA expression data.
+#' The cell cycle phase inference is performed using the Seurat package.
 #'
-#' @return
+#' @param ngs An object containing the input data for analysis.
+#' @param rna.counts A matrix or data frame of RNA expression counts.
+#'   Defaults to the counts in the input object.
+#' @return An updated object with cell cycle and gender inference results.
 #' @export
-#'
-#' @examples
 compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
   pp <- rownames(rna.counts)
   is.mouse <- (mean(grepl("[a-z]", gsub(".*:|.*\\]", "", pp))) > 0.8)
@@ -291,14 +297,17 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
 }
 
 
-#' Title
+#' Compute Drug Activity Enrichment
 #'
-#' @param ngs value
+#' This function performs drug activity enrichment analysis based on the input RNA expression data.
+#' It uses drug activity databases to compute enrichment scores and attach the results to the input object.
+#' The drug activity databases include L1000_ACTIVITYS_N20D1011 and L1000_GENE_PERTURBATION.
 #'
-#' @return
+#' @param ngs An object containing the input data for analysis.
+#' @param libx.dir The directory path where the drug activity databases are located.
+#'   This is required if calling the function compute_full_drugActivityEnrichment.
+#' @return An updated object with drug activity enrichment results.
 #' @export
-#'
-#' @examples
 compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
   ## -------------- drug enrichment
   # get drug activity databases
@@ -388,15 +397,17 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
   return(ngs)
 }
 
-#' Title
+
+#' Compute Drug Sensitivity Enrichment
 #'
-#' @param ngs value
-#' @param cmap.dir value
+#' This function performs drug sensitivity enrichment analysis based on the input RNA expression data.
+#' It uses drug sensitivity databases to compute enrichment scores and attach the results to the input object.
+#' The drug sensitivity databases are located in the specified directory (libx.dir).
 #'
-#' @return
+#' @param ngs An object containing the input data for analysis.
+#' @param libx.dir The directory path where the drug sensitivity databases are located.
+#' @return An updated object with drug sensitivity enrichment results.
 #' @export
-#'
-#' @examples
 compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
   cmap.dir <- file.path(libx.dir, "cmap")
 
@@ -450,14 +461,15 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
 
 ## ------------------ Omics graphs --------------------------------
 
-#' Title
+#' Compute Omics Graphs
 #'
-#' @param ngs value
+#' This function computes omics graphs and path scores based on the input data.
+#' It creates the omics graph using the input object and calculates path scores using the omics graph.
+#' It also computes a reduced graph and path scores based on the reduced graph.
 #'
-#' @return
+#' @param ngs An object containing the input data for analysis.
+#' @return An updated object with omics graphs and path scores.
 #' @export
-#'
-#' @examples
 compute_omicsGraphs <- function(ngs) {
   ngs$omicsnet <- pgx.createOmicsGraph(ngs)
   ngs$pathscores <- pgx.computePathscores(ngs$omicsnet, strict.pos = FALSE)

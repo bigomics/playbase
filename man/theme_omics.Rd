@@ -43,12 +43,18 @@ The plot theme to be used for figures in the OmicsPlayground app.
 \examples{
 \dontrun{
 library(ggplot2)
-ggplot(mpg, aes(class)) + geom_bar() + theme_omics()
-ggplot(mpg, aes(class)) + geom_bar() +
+ggplot(mpg, aes(class)) +
+  geom_bar() +
+  theme_omics()
+ggplot(mpg, aes(class)) +
+  geom_bar() +
   theme_omics(style = "light", grid = "xy", margin = 20)
-ggplot(mpg, aes(class)) + geom_bar() +
-  theme_omics(grid = "none", axistext = "x",
-              axistitle = "none", panelborder = TRUE)
+ggplot(mpg, aes(class)) +
+  geom_bar() +
+  theme_omics(
+    grid = "none", axistext = "x",
+    axistitle = "none", panelborder = TRUE
+  )
 }
 
 }

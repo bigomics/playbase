@@ -2,7 +2,7 @@
 % Please edit documentation in R/compute2-genes.R
 \name{compute_testGenesSingleOmics}
 \alias{compute_testGenesSingleOmics}
-\title{Title}
+\title{Compute Test Genes for Single-Omics Data}
 \usage{
 compute_testGenesSingleOmics(
   pgx,
@@ -16,22 +16,26 @@ compute_testGenesSingleOmics(
 )
 }
 \arguments{
-\item{pgx}{value}
+\item{pgx}{An object containing the input data for analysis.}
 
-\item{contr.matrix}{value}
+\item{contr.matrix}{The contrast matrix for the gene tests.}
 
-\item{max.features}{value}
+\item{max.features}{The maximum number of features to consider in the gene tests.}
 
-\item{filter.low}{value}
+\item{filter.low}{A logical value indicating whether to filter low-expressed genes.}
 
-\item{remove.outputs}{value}
+\item{remove.outputs}{A logical value indicating whether to remove intermediate outputs.}
 
-\item{use.design}{value}
+\item{use.design}{A logical value indicating whether to use the design matrix in the analysis.}
 
-\item{prune.samples}{value}
+\item{prune.samples}{A logical value indicating whether to prune samples with missing data.}
 
-\item{test.methods}{value}
+\item{test.methods}{The test methods to use for gene testing.}
+}
+\value{
+An updated object with gene test results for single-omics data.
 }
 \description{
-Title
+This function computes gene tests for single-omics data based on the input data and contrast matrix.
+It performs various steps such as normalization, creating a design matrix, filtering genes, and fitting the data using different test methods.
 }

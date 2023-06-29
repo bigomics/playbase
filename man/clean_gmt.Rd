@@ -2,15 +2,18 @@
 % Please edit documentation in R/compute2-genesets.R
 \name{clean_gmt}
 \alias{clean_gmt}
-\title{Clean gmt file function}
+\title{Clean GMT}
 \usage{
 clean_gmt(gmt.all, gmt.db)
 }
 \arguments{
-\item{gmt.all}{a list of gmt files}
+\item{gmt.all}{A list representing the GMT object.}
 
-\item{gmt.db}{a vector of gmt database names}
+\item{gmt.db}{A character vector representing the GMT database.}
+}
+\value{
+The cleaned GMT object.
 }
 \description{
-Clean gmt file function
+Cleans the GMT (Gene Matrix Transposed) object by modifying its names and removing duplicates.
 }

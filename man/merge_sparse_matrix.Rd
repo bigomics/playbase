@@ -2,15 +2,18 @@
 % Please edit documentation in R/compute2-genesets.R
 \name{merge_sparse_matrix}
 \alias{merge_sparse_matrix}
-\title{Merge two sparse matrices}
+\title{Merge Sparse Matrix}
 \usage{
 merge_sparse_matrix(m1, m2)
 }
 \arguments{
-\item{m1}{matrix 1 in Matrix format}
+\item{m1}{The first sparse matrix.}
 
-\item{m2}{matrix 2 in Matrix format}
+\item{m2}{The second sparse matrix.}
+}
+\value{
+A merged sparse matrix with combined columns and matching gene order.
 }
 \description{
-Merge two sparse matrices
+Merges two sparse matrices by combining their columns and ensuring the same gene order.
 }

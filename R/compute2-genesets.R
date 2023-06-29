@@ -3,14 +3,15 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-#' Normalize geneset matrix by row
+#' Normalize Matrix by Row
 #'
-#' @param g a sparse matrix (eg. genesets x genes)
+#' Normalizes a matrix by dividing each row by the sum of its elements.
 #'
-#' @return
+#' @param G The matrix to be normalized.
+#'
+#' @return The normalized matrix.
+#'
 #' @export
-#'
-#' @examples
 normalize_matrix_by_row <- function(G) {
   # efficient normalization using linear algebra
   row_sums <- Matrix::rowSums(G)
@@ -20,17 +21,19 @@ normalize_matrix_by_row <- function(G) {
   return(G_scaled)
 }
 
-#' Title
+#' Compute Test Genesets
 #'
-#' @param pgx value
-#' @param max.features value
-#' @param test.methods value
-#' @param remove.outputs value
+#' Computes test genesets for the given multi-omics data.
 #'
-#' @return
+#' @param pgx A data object representing multi-omics data.
+#' @param max.features Maximum number of features to consider.
+#' @param custom.geneset Custom geneset object.
+#' @param test.methods Methods to use for testing.
+#' @param remove.outputs Logical indicating whether to remove large outputs.
+#'
+#' @return The updated \code{pgx} object with computed test genesets.
+#'
 #' @export
-#'
-#' @examples
 compute_testGenesets <- function(pgx,
                                  max.features = 1000,
                                  custom.geneset = NULL,
@@ -248,15 +251,16 @@ compute_testGenesets <- function(pgx,
 
 
 
-#' Clean gmt file function
+#' Clean GMT
 #'
-#' @param gmt.all a list of gmt files
-#' @param gmt.db a vector of gmt database names
+#' Cleans the GMT (Gene Matrix Transposed) object by modifying its names and removing duplicates.
 #'
-#' @return
+#' @param gmt.all A list representing the GMT object.
+#' @param gmt.db A character vector representing the GMT database.
+#'
+#' @return The cleaned GMT object.
+#'
 #' @export
-#'
-#' @examples
 clean_gmt <- function(gmt.all, gmt.db) {
   gmt.db <- toupper(gmt.db)
   for (i in 1:length(gmt.all)) {
@@ -288,15 +292,18 @@ clean_gmt <- function(gmt.all, gmt.db) {
   return(gmt.all)
 }
 
-#' Build sparse gene set matrix
+#' Create Sparse Geneset Matrix
 #'
-#' @param gmt.all a list of gmt files
-#' @param gmt.db a vector of gmt database names
+#' Creates a sparse matrix representation of genesets from a given GMT file, filtered by size and gene frequency.
 #'
-#' @return
+#' @param gmt.all The list of genesets in GMT format.
+#' @param min.geneset.size The minimum size of a geneset to be included in the matrix. Default is 15.
+#' @param max.geneset.size The maximum size of a geneset to be included in the matrix. Default is 500.
+#' @param min_gene_frequency The minimum frequency of a gene to be included in the matrix. Default is 10.
+#'
+#' @return A sparse matrix representing the filtered genesets.
+#'
 #' @export
-#'
-#' @examples
 createSparseGenesetMatrix <- function(
     gmt.all,
     min.geneset.size = 15,
@@ -340,15 +347,16 @@ createSparseGenesetMatrix <- function(
   return(G)
 }
 
-#' Merge two sparse matrices
+#' Merge Sparse Matrix
 #'
-#' @param m1 matrix 1 in Matrix format
-#' @param m2 matrix 2 in Matrix format
+#' Merges two sparse matrices by combining their columns and ensuring the same gene order.
 #'
-#' @return
+#' @param m1 The first sparse matrix.
+#' @param m2 The second sparse matrix.
+#'
+#' @return A merged sparse matrix with combined columns and matching gene order.
+#'
 #' @export
-#'
-#' @examples
 merge_sparse_matrix <- function(m1, m2) {
   num_cols1 <- ncol(m1)
   num_cols2 <- ncol(m2)

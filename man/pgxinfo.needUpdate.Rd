@@ -5,7 +5,7 @@
 \title{Checks if any of metadata files (info, allFC, sigdb) need
 update. All pgx files in the datafolder should be included.}
 \usage{
-pgxinfo.needUpdate(pgx.dir, verbose = TRUE)
+pgxinfo.needUpdate(pgx.dir, check.sigdb = TRUE, verbose = TRUE)
 }
 \description{
 Checks if any of metadata files (info, allFC, sigdb) need

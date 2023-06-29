@@ -2,13 +2,18 @@
 % Please edit documentation in R/compute2-extra.R
 \name{compute_omicsGraphs}
 \alias{compute_omicsGraphs}
-\title{Title}
+\title{Compute Omics Graphs}
 \usage{
 compute_omicsGraphs(ngs)
 }
 \arguments{
-\item{ngs}{value}
+\item{ngs}{An object containing the input data for analysis.}
+}
+\value{
+An updated object with omics graphs and path scores.
 }
 \description{
-Title
+This function computes omics graphs and path scores based on the input data.
+It creates the omics graph using the input object and calculates path scores using the omics graph.
+It also computes a reduced graph and path scores based on the reduced graph.
 }
