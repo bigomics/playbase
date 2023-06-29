@@ -762,33 +762,33 @@ pgxinfo.needUpdate <- function(
     if(check.sigdb) dbg("[pgxinfo.needUpdate] has datasets-sigdb.h5  : ", has.sigdb)
   }
   
-  if (!has.fc || !has.info || (check.sigdb && !has.sigdb)) {
-    return(TRUE)
-  }
-
   ## ----------------------------------------------------------------------
   ## If an allFC exists, check if it is done for all PGX files
   ## ----------------------------------------------------------------------
 
-  if (verbose) message("[pgxinfo.needUpdate] checking which pgx already done in allFC...")
-  allFC <- data.table::fread(allfc.file1, check.names = FALSE, nrows = 1) ## HEADER!!!
-  fc.files <- gsub("^\\[|\\].*", "", colnames(allFC)[-1])
-  fc.files <- sub("[.]pgx$", "", fc.files) ## strip pgx
-  fc.complete <- all(pgx.files %in% fc.files)
-  fc.missing <- setdiff(pgx.files, fc.files)
-  fc.complete
+  fc.complete = info.complete = h5.complete = NA
+  fc.missing = info.missing = h5.missing = c()
+  
+  if(has.fc) {
+    if (verbose) message("[pgxinfo.needUpdate] checking which pgx already done in allFC...")
+    allFC <- data.table::fread(allfc.file1, check.names = FALSE, nrows = 1) ## HEADER!!!
+    fc.files <- gsub("^\\[|\\].*", "", colnames(allFC)[-1])
+    fc.files <- sub("[.]pgx$", "", fc.files) ## strip pgx
+    fc.complete <- all(pgx.files %in% fc.files)
+    fc.missing <- setdiff(pgx.files, fc.files)
+  }
 
-  if (verbose) message("[pgxinfo.needUpdate] checking which pgx already in PGX info...")
-  ## do not use fread! quoting bug
-  pgxinfo <- read.csv(info.file1, stringsAsFactors = FALSE, row.names = 1, sep = ",")
-  info.files <- unique(sub(".pgx$", "", pgxinfo$dataset))
-  info.complete <- all(pgx.files %in% info.files)
-  info.missing <- setdiff(pgx.files, info.files)
-  info.complete
+  if(has.info) {
+    if (verbose) message("[pgxinfo.needUpdate] checking which pgx already in PGX info...")
+    ## do not use fread! quoting bug
+    pgxinfo <- read.csv(info.file1, stringsAsFactors = FALSE, row.names = 1, sep = ",")
+    info.files <- unique(sub(".pgx$", "", pgxinfo$dataset))
+    info.complete <- all(pgx.files %in% info.files)
+    info.missing <- setdiff(pgx.files, info.files)
+    info.complete
+  }
 
-  h5.complete <- TRUE
-  h5.missing <- c()
-  if (check.sigdb) {
+  if(has.sigdb && check.sigdb) {  
     if (verbose) message("[pgxinfo.needUpdate] checking which pgx already in sigdb...")
     H <- rhdf5::h5ls(sigdb.file1)
     h5.ok1 <- all(c("matrix", "colnames", "rownames", "data") %in% H$name)
@@ -808,13 +808,12 @@ pgxinfo.needUpdate <- function(
     dbg("[pgxinfo.needUpdate] nr missing files in info  : ", length(info.missing))
     if(check.sigdb) dbg("[pgxinfo.needUpdate] nr missing files in sigdb : ", length(h5.missing))
   }
-  
-  if (!fc.complete || !info.complete || (check.sigdb && !h5.complete) ) {
-    return(TRUE)
-  }
 
-  ## No update needed
-  return(FALSE)
+  ## Return checks
+  has.files <- (!has.fc || !has.info || (check.sigdb && !has.sigdb))   
+  is.complete <- (!fc.complete || !info.complete || (check.sigdb && !h5.complete) )
+  
+  return(has.files && is.complete)
 }
 
 
