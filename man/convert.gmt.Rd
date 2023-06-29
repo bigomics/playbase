@@ -2,17 +2,19 @@
 % Please edit documentation in R/gset-gsea.r
 \name{convert.gmt}
 \alias{convert.gmt}
-\title{Convert long vector of genes and pathways (eg. cols from data.frame) to gmt format}
+\title{Convert gene sets to GMT format}
 \usage{
 convert.gmt(genes, gs_name)
 }
 \arguments{
-\item{genes}{a long vector of genes}
+\item{genes}{A character vector of gene names.}
 
-\item{gs_name}{a long vector of gene sets/pathway names matching the genes vector length}
-
-\item{source}{value}
+\item{gs_name}{A character vector of gene set names corresponding to the genes.}
+}
+\value{
+A list of gene sets in GMT format, where each gene set is represented as a character vector of gene names.
 }
 \description{
-Convert long vector of genes and pathways (eg. cols from data.frame) to gmt format
+This function converts a set of genes and their corresponding gene set names to the GMT (Gene Matrix Transposed) format.
+The GMT format is commonly used to store gene sets or gene annotations.
 }

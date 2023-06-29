@@ -2,17 +2,17 @@
 % Please edit documentation in R/gset-gsea.r
 \name{gsea.enplotPDF}
 \alias{gsea.enplotPDF}
-\title{Title}
+\title{gsea.enplotPDF}
 \usage{
 gsea.enplotPDF(gsea.dir, gs, output.pdf)
 }
 \arguments{
-\item{gsea.dir}{value}
+\item{gsea.dir}{A character string specifying the directory path containing GSEA results.}
 
-\item{gs}{value}
+\item{gs}{A character vector of gene sets to include in the ensemble plots.}
 
-\item{output.pdf}{value}
+\item{output.pdf}{A character string specifying the output PDF file path.}
 }
 \description{
-Title
+A function to generate a PDF file containing ensemble plots for GSEA results.
 }

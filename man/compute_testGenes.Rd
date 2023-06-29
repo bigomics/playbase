@@ -2,7 +2,7 @@
 % Please edit documentation in R/compute2-genes.R
 \name{compute_testGenes}
 \alias{compute_testGenes}
-\title{Title}
+\title{Compute Test Genes}
 \usage{
 compute_testGenes(
   pgx,
@@ -15,20 +15,26 @@ compute_testGenes(
 )
 }
 \arguments{
-\item{pgx}{value}
+\item{pgx}{An object containing the input data for analysis.}
 
-\item{contr.matrix}{value}
+\item{contr.matrix}{The contrast matrix for the gene tests.}
 
-\item{max.features}{value}
+\item{max.features}{The maximum number of features to consider in the gene tests.}
 
-\item{test.methods}{value}
+\item{test.methods}{The test methods to use for gene testing.}
 
-\item{use.design}{value}
+\item{use.design}{A logical value indicating whether to use the design matrix in the analysis.}
 
-\item{prune.samples}{value}
+\item{prune.samples}{A logical value indicating whether to prune samples with missing data.}
 
-\item{remove.outputs}{value}
+\item{remove.outputs}{A logical value indicating whether to remove intermediate outputs.}
+}
+\value{
+An updated object with gene test results.
 }
 \description{
-Title
+This function computes gene tests based on the input data and contrast matrix.
+It performs different test methods depending on whether the data is single-omics or multi-omics.
+For single-omics data or when there is only one data type, it uses the \code{compute_testGenesSingleOmics} function.
+For multi-omics data with the possibility of missing values, it uses the \code{compute_testGenesMultiOmics} function.
 }

@@ -2,15 +2,20 @@
 % Please edit documentation in R/compute2-extra.R
 \name{compute_cellcycle_gender}
 \alias{compute_cellcycle_gender}
-\title{Title}
+\title{Compute Cell Cycle and Gender Inference}
 \usage{
 compute_cellcycle_gender(ngs, rna.counts = ngs$counts)
 }
 \arguments{
-\item{ngs}{value}
+\item{ngs}{An object containing the input data for analysis.}
 
-\item{rna.counts}{value}
+\item{rna.counts}{A matrix or data frame of RNA expression counts.
+Defaults to the counts in the input object.}
+}
+\value{
+An updated object with cell cycle and gender inference results.
 }
 \description{
-Title
+This function performs cell cycle phase inference and gender estimation based on the input RNA expression data.
+The cell cycle phase inference is performed using the Seurat package.
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/compute2-genesets.R
 \name{createSparseGenesetMatrix}
 \alias{createSparseGenesetMatrix}
-\title{Build sparse gene set matrix}
+\title{Create Sparse Geneset Matrix}
 \usage{
 createSparseGenesetMatrix(
   gmt.all,
@@ -12,10 +12,17 @@ createSparseGenesetMatrix(
 )
 }
 \arguments{
-\item{gmt.all}{a list of gmt files}
+\item{gmt.all}{The list of genesets in GMT format.}
 
-\item{gmt.db}{a vector of gmt database names}
+\item{min.geneset.size}{The minimum size of a geneset to be included in the matrix. Default is 15.}
+
+\item{max.geneset.size}{The maximum size of a geneset to be included in the matrix. Default is 500.}
+
+\item{min_gene_frequency}{The minimum frequency of a gene to be included in the matrix. Default is 10.}
+}
+\value{
+A sparse matrix representing the filtered genesets.
 }
 \description{
-Build sparse gene set matrix
+Creates a sparse matrix representation of genesets from a given GMT file, filtered by size and gene frequency.
 }

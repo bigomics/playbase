@@ -3,199 +3,238 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-##========================================================================
-##======================== Fisher test based =============================
-##========================================================================
+## ========================================================================
+## ======================== Fisher test based =============================
+## ========================================================================
 
-#' Title
+#' Perform Fisher's exact test on gene sets
 #'
-#' @param genes.up value
-#' @param genes.dn value
-#' @param genesets value
-#' @param background value
-#' @param fdr value
-#' @param mc value
-#' @param sort.by value
-#' @param nmin value
-#' @param verbose value
-#' @param min.genes value
-#' @param max.genes value
-#' @param method value
-#' @param check.background value
-#' @param common.genes value
+#' This function performs Fisher's exact test on two sets of genes, `genes.up` and
+#' `genes.dn`, within a given set of gene sets (`genesets`). It returns a data frame
+#' containing the results of the test, including the sign of the fold change (positive
+#' or negative) and relevant statistics such as p-values, q-values, and odds ratios.
 #'
-#' @return
+#' @param genes.up A character vector containing the names of genes in the "up" set.
+#' @param genes.dn A character vector containing the names of genes in the "down" set.
+#' @param genesets A list of gene sets, where each element is a character vector
+#'                 representing a gene set.
+#' @param background A character vector containing the names of genes in the background set.
+#'                   Defaults to `NULL`, which means all genes are considered.
+#' @param fdr The false discovery rate (FDR) threshold for multiple testing adjustment.
+#'            Defaults to 0.05.
+#' @param mc A logical value indicating whether to perform multiple testing adjustment
+#'           using Monte Carlo simulation. Defaults to `TRUE`.
+#' @param sort.by The statistic used to sort the results. Defaults to "zratio".
+#' @param nmin The minimum number of genes required in a gene set for the test to be performed.
+#' @param verbose A numeric value indicating the level of verbosity. Defaults to 1.
+#' @param min.genes The minimum number of genes in a gene set to be considered. Defaults to 15.
+#' @param max.genes The maximum number of genes in a gene set to be considered. Defaults to 500.
+#' @param method The method used for computing p-values. Defaults to "fast.fisher".
+#' @param check.background A logical value indicating whether to check the presence of genes in
+#'                         the background set. Defaults to `TRUE`.
+#' @param common.genes A logical value indicating whether to use only genes common to both the
+#'                     input gene sets and the background set. Defaults to `TRUE`.
+#'
 #' @export
 #'
-#' @examples
-gset.fisher2 <- function(genes.up, genes.dn, genesets, background=NULL,
-                         fdr=0.05, mc=TRUE, sort.by="zratio", nmin=3, verbose=1,
-                         min.genes=15, max.genes=500, method="fast.fisher",
-                         check.background=TRUE, common.genes=TRUE )
-{
-    ft.up = gset.fisher(genes=genes.up, genesets=genesets, background=background,
-                        fdr=1, mc=mc, sort.by=sort.by, nmin=nmin, verbose=verbose,
-                        min.genes=min.genes, max.genes=max.genes, method=method,
-                        check.background=check.background, common.genes=common.genes)
-    ft.dn = gset.fisher(genes=genes.dn, genesets=genesets, background=background,
-                        fdr=1, mc=mc, sort.by=sort.by, nmin=nmin, verbose=verbose,
-                        min.genes=min.genes, max.genes=max.genes, method=method,
-                        check.background=check.background, common.genes=common.genes)
-    ft.up = ft.up[rownames(ft.dn),]
-    ft.sign = c(-1,1)[1+1*(ft.up$p.value < ft.dn$p.value)]
-    ft1 = cbind(sign=ft.sign, ft.up)[which(ft.sign>0),,drop=FALSE]
-    ft2 = cbind(sign=ft.sign, ft.dn)[which(ft.sign<0),,drop=FALSE]
-    ft.res = rbind(ft1, ft2)
-    ft.res$sign = ft.res$sign * ft.res$odd.ratio
-    ft.res = ft.res[ which(ft.res$q.value <= fdr),,drop=FALSE]
-    return(ft.res)
+#' @return A data frame containing the results of the Fisher's exact test. The data frame
+#'         includes columns such as "sign" (fold change sign), "odd.ratio" (odds ratio),
+#'         "p.value" (p-value), "q.value" (adjusted p-value), and others.
+#'
+gset.fisher2 <- function(genes.up, genes.dn, genesets, background = NULL,
+                         fdr = 0.05, mc = TRUE, sort.by = "zratio", nmin = 3, verbose = 1,
+                         min.genes = 15, max.genes = 500, method = "fast.fisher",
+                         check.background = TRUE, common.genes = TRUE) {
+  ft.up <- gset.fisher(
+    genes = genes.up, genesets = genesets, background = background,
+    fdr = 1, mc = mc, sort.by = sort.by, nmin = nmin, verbose = verbose,
+    min.genes = min.genes, max.genes = max.genes, method = method,
+    check.background = check.background, common.genes = common.genes
+  )
+  ft.dn <- gset.fisher(
+    genes = genes.dn, genesets = genesets, background = background,
+    fdr = 1, mc = mc, sort.by = sort.by, nmin = nmin, verbose = verbose,
+    min.genes = min.genes, max.genes = max.genes, method = method,
+    check.background = check.background, common.genes = common.genes
+  )
+  ft.up <- ft.up[rownames(ft.dn), ]
+  ft.sign <- c(-1, 1)[1 + 1 * (ft.up$p.value < ft.dn$p.value)]
+  ft1 <- cbind(sign = ft.sign, ft.up)[which(ft.sign > 0), , drop = FALSE]
+  ft2 <- cbind(sign = ft.sign, ft.dn)[which(ft.sign < 0), , drop = FALSE]
+  ft.res <- rbind(ft1, ft2)
+  ft.res$sign <- ft.res$sign * ft.res$odd.ratio
+  ft.res <- ft.res[which(ft.res$q.value <= fdr), , drop = FALSE]
+  return(ft.res)
 }
 
 
-#' Title
+#' Perform Fisher's exact test on gene sets
 #'
-#' @param genes value
-#' @param genesets value
-#' @param background value
-#' @param fdr value
-#' @param mc value
-#' @param sort.by value
-#' @param nmin value
-#' @param min.genes value
-#' @param max.genes value
-#' @param method value
-#' @param check.background value
-#' @param common.genes value
-#' @param verbose value
+#' This function performs Fisher's exact test on a set of genes within a given set of gene sets.
+#' It returns a data frame containing the results of the test, including p-values, q-values,
+#' odds ratios, and gene set overlaps.
 #'
-#' @return
+#' @param genes A character vector containing the names of genes.
+#' @param genesets A list of gene sets, where each element is a character vector
+#'                 representing a gene set.
+#' @param background A character vector containing the names of genes in the background set.
+#'                   Defaults to `NULL`, which means all genes are considered.
+#' @param fdr The false discovery rate (FDR) threshold for multiple testing adjustment.
+#'            Defaults to 0.05.
+#' @param mc A logical value indicating whether to perform multiple testing adjustment
+#'           using Monte Carlo simulation. Defaults to `TRUE`.
+#' @param sort.by The statistic used to sort the results. Defaults to "zratio".
+#' @param nmin The minimum number of genes required in a gene set for the test to be performed.
+#' @param min.genes The minimum number of genes in a gene set to be considered. Defaults to 15.
+#' @param max.genes The maximum number of genes in a gene set to be considered. Defaults to 500.
+#' @param method The method used for computing p-values. Defaults to "fast.fisher".
+#' @param check.background A logical value indicating whether to check the presence of genes in
+#'                         the background set. Defaults to `TRUE`.
+#' @param common.genes A logical value indicating whether to use only genes common to both the
+#'                     input gene set and the background set. Defaults to `TRUE`.
+#' @param verbose A numeric value indicating the level of verbosity. Defaults to 1.
+#'
 #' @export
 #'
-#' @examples
-gset.fisher <- function(genes, genesets, background=NULL,
-                        fdr=0.05, mc=TRUE, sort.by="zratio", nmin=3,
-                        min.genes=15, max.genes=500, method="fast.fisher",
-                        check.background=TRUE,  common.genes=TRUE, verbose=1)
-{
-    if( is.null(background) ) {
-        background <- unique(unlist(genesets))
-        if(verbose>0)
-            cat("setting background to ",length(background),"genes covered\n")
+#' @return A data frame containing the results of the Fisher's exact test. The data frame
+#'         includes columns such as "p.value" (p-value), "q.value" (adjusted p-value),
+#'         "odd.ratio" (odds ratio), "overlap" (gene set overlap), and optionally "genes"
+#'         (common genes).
+#'
+gset.fisher <- function(genes, genesets, background = NULL,
+                        fdr = 0.05, mc = TRUE, sort.by = "zratio", nmin = 3,
+                        min.genes = 15, max.genes = 500, method = "fast.fisher",
+                        check.background = TRUE, common.genes = TRUE, verbose = 1) {
+  if (is.null(background)) {
+    background <- unique(unlist(genesets))
+    if (verbose > 0) {
+      cat("setting background to ", length(background), "genes covered\n")
     }
+  }
 
-    if(check.background) {
-        ## restrict on background
-        genes <- intersect(genes, background)
-        genesets <- parallel::mclapply( genesets, function(s) intersect(s, background))
+  if (check.background) {
+    ## restrict on background
+    genes <- intersect(genes, background)
+    genesets <- parallel::mclapply(genesets, function(s) intersect(s, background))
+  }
+
+  ## select
+  if (!is.null(min.genes) && min.genes > 0) {
+    genesets.len <- sapply(genesets, length)
+    genesets <- genesets[order(-genesets.len)]
+    if (sum(duplicated(names(genesets))) > 0) {
+      if (verbose > 0) cat("warning: duplicated gene set names. taking largest.\n")
+      genesets <- genesets[which(!duplicated(names(genesets)))]
     }
-
-    ## select
-    if(!is.null(min.genes) && min.genes>0) {
-        genesets.len <- sapply(genesets,length)
-        genesets <- genesets[order(-genesets.len)]
-        if(sum(duplicated(names(genesets)))>0) {
-            if(verbose>0) cat("warning: duplicated gene set names. taking largest.\n")
-            genesets <- genesets[which(!duplicated(names(genesets)))]
-        }
-        genesets.len <- sapply(genesets,length)
-        genesets <- genesets[ genesets.len >= min.genes & genesets.len <= max.genes]
-        if(verbose>0) cat("testing",length(genesets),"genesets with",length(genes),
-                          "genes (background",length(background),"genes)\n")
-        length(genesets)
-        if(length(genesets)==0) {
-            cat("warning: no gene sets passed size filter\n")
-            rr <- data.frame(p.value=NA, q.value=NA, ratio0=NA, ratio1=NA,
-                             zratio=NA, n.size=NA, n.overlap=NA, genes=NA)
-            rownames(rr) <- NULL
-            return( rr[0,] )
-        }
+    genesets.len <- sapply(genesets, length)
+    genesets <- genesets[genesets.len >= min.genes & genesets.len <= max.genes]
+    if (verbose > 0) {
+      cat(
+        "testing", length(genesets), "genesets with", length(genes),
+        "genes (background", length(background), "genes)\n"
+      )
     }
-
-    ## odd ratio
-    ## see http://jura.wi.mit.edu/bio/education/hot_topics/enrichment/Gene_list_enrichment_Mar10.pdf
-    n.size = sapply(genesets,length)
-    bg0 <- setdiff(background,genes)
-    nbackground0 = length(background)
-    nbackground1 = length(bg0)
-
-    ## this can become slow
-    a <- unlist(parallel::mclapply(genesets, function(x) sum(x %in% genes)))
-    b <- (n.size - a)
-    c <- unlist(parallel::mclapply(genesets, function(x) sum(!(genes %in% x))))
-    d <- (nbackground1 - b)
-    odd.ratio <- (a/c) / (b/d)    ## note: not exactly same as from fishertest
-
-    ## intersection genes (slow..)
-    commongenes <- NULL
-    if(common.genes) {
-        commongenes <- unlist(lapply(genesets, function(x) paste(sort(intersect(genes,x)),collapse="|")))
+    length(genesets)
+    if (length(genesets) == 0) {
+      cat("warning: no gene sets passed size filter\n")
+      rr <- data.frame(
+        p.value = NA, q.value = NA, ratio0 = NA, ratio1 = NA,
+        zratio = NA, n.size = NA, n.overlap = NA, genes = NA
+      )
+      rownames(rr) <- NULL
+      return(rr[0, ])
     }
+  }
 
-    ## compute fisher-test (should be one-sided?)
-    test.fisher <- function(gs) {
-        a0 <- table(background %in% gs, background %in% genes)
-        if(NCOL(a0)==1 || colSums(a0)[2]==0) return(NA)
-        fisher.test(a0, alternative="greater")$p.value
+  ## odd ratio
+  ## see http://jura.wi.mit.edu/bio/education/hot_topics/enrichment/Gene_list_enrichment_Mar10.pdf
+  n.size <- sapply(genesets, length)
+  bg0 <- setdiff(background, genes)
+  nbackground0 <- length(background)
+  nbackground1 <- length(bg0)
+
+  ## this can become slow
+  a <- unlist(parallel::mclapply(genesets, function(x) sum(x %in% genes)))
+  b <- (n.size - a)
+  c <- unlist(parallel::mclapply(genesets, function(x) sum(!(genes %in% x))))
+  d <- (nbackground1 - b)
+  odd.ratio <- (a / c) / (b / d) ## note: not exactly same as from fishertest
+
+  ## intersection genes (slow..)
+  commongenes <- NULL
+  if (common.genes) {
+    commongenes <- unlist(lapply(genesets, function(x) paste(sort(intersect(genes, x)), collapse = "|")))
+  }
+
+  ## compute fisher-test (should be one-sided?)
+  test.fisher <- function(gs) {
+    a0 <- table(background %in% gs, background %in% genes)
+    if (NCOL(a0) == 1 || colSums(a0)[2] == 0) {
+      return(NA)
     }
-    test.chisq <- function(gs) {
-        a0 <- table(background %in% gs, background %in% genes)
-        if(NCOL(a0)==1 || colSums(a0)[2]==0) return(NA)
-        chisq.test(a0)$p.value
+    fisher.test(a0, alternative = "greater")$p.value
+  }
+  test.chisq <- function(gs) {
+    a0 <- table(background %in% gs, background %in% genes)
+    if (NCOL(a0) == 1 || colSums(a0)[2] == 0) {
+      return(NA)
     }
-    pv <- rep(NA, length(genesets))
-    names(pv) <- names(genesets)
-    if(method=="fast.fisher") {
-        ## this is really fast...
-        pv <- rep(NA,length(a))
-        ii <- 1:length(a)
-        ii <- which((a+c)>0)
-        pv1 <- corpora::fisher.pval( a[ii], (a+b)[ii], c[ii], (c+d)[ii], alternative="greater")
-        pv[ii] <- pv1
-    } else if(method=="fisher") {
-        if(mc) {
-            pv <- unlist(parallel::mclapply( genesets, test.fisher ))
-        } else {
-            i=1
-            for(i in 1:length(genesets)) {
-                pv[i] <- test.fisher( genesets[[i]] )
-            }
-        }
-    } else if(method=="chisq") {
-        if(mc) {
-            pv <- unlist(parallel::mclapply( genesets, test.chisq ))
-        } else {
-            for(i in 1:length(genesets)) {
-                pv[i] <- test.chisq( genesets[[i]] )
-            }
-        }
+    chisq.test(a0)$p.value
+  }
+  pv <- rep(NA, length(genesets))
+  names(pv) <- names(genesets)
+  if (method == "fast.fisher") {
+    ## this is really fast...
+    pv <- rep(NA, length(a))
+    ii <- 1:length(a)
+    ii <- which((a + c) > 0)
+    pv1 <- corpora::fisher.pval(a[ii], (a + b)[ii], c[ii], (c + d)[ii], alternative = "greater")
+    pv[ii] <- pv1
+  } else if (method == "fisher") {
+    if (mc) {
+      pv <- unlist(parallel::mclapply(genesets, test.fisher))
     } else {
-        stop("unknown method")
+      i <- 1
+      for (i in 1:length(genesets)) {
+        pv[i] <- test.fisher(genesets[[i]])
+      }
     }
-
-    ## compute q-value
-    qv <- rep(NA,length(pv))
-    qv <- p.adjust(pv, method="fdr")
-
-    ## results
-    v1 = as.character(paste0(a,"/",n.size))
-    rr <- data.frame(p.value=pv, q.value=qv, odd.ratio=odd.ratio, overlap=v1)
-    if(!is.null(commongenes)) {
-        rr <- cbind(rr, genes=commongenes)
+  } else if (method == "chisq") {
+    if (mc) {
+      pv <- unlist(parallel::mclapply(genesets, test.chisq))
+    } else {
+      for (i in 1:length(genesets)) {
+        pv[i] <- test.chisq(genesets[[i]])
+      }
     }
-    rownames(rr) <- names(genesets)
+  } else {
+    stop("unknown method")
+  }
 
+  ## compute q-value
+  qv <- rep(NA, length(pv))
+  qv <- p.adjust(pv, method = "fdr")
+
+  ## results
+  v1 <- as.character(paste0(a, "/", n.size))
+  rr <- data.frame(p.value = pv, q.value = qv, odd.ratio = odd.ratio, overlap = v1)
+  if (!is.null(commongenes)) {
+    rr <- cbind(rr, genes = commongenes)
+  }
+  rownames(rr) <- names(genesets)
+
+  ## sort
+  if (nrow(rr) > 0) {
+    ## filter
+    jj <- which(rr$q.value <= fdr & n.size >= nmin)
+    rr <- rr[jj, ]
     ## sort
-    if(nrow(rr)>0) {
-        ## filter
-        jj <- which(rr$q.value <= fdr & n.size >= nmin )
-        rr <- rr[jj,]
-        ## sort
-        if(sort.by %in% c("pvalue","p.value","p")) {
-            rr <- rr[ order(rr$p.value),]
-        } else {
-            rr <- rr[ order(rr$odd.ratio,decreasing=TRUE),]
-        }
+    if (sort.by %in% c("pvalue", "p.value", "p")) {
+      rr <- rr[order(rr$p.value), ]
+    } else {
+      rr <- rr[order(rr$odd.ratio, decreasing = TRUE), ]
     }
-    dim(rr)
-    rr
+  }
+  dim(rr)
+  rr
 }

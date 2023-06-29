@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-gsea.r
 \name{justGCEA}
 \alias{justGCEA}
-\title{Title}
+\title{Run GCEA (Gene Concept Enrichment Analysis) using GSEA}
 \usage{
 justGCEA(
   X,
@@ -22,34 +22,38 @@ justGCEA(
 )
 }
 \arguments{
-\item{X}{value}
+\item{X}{The gene expression matrix or pre-ranked gene list.}
 
-\item{sets}{value}
+\item{sets}{The gene set collection for gene set analysis.}
 
-\item{concepts}{value}
+\item{concepts}{The gene concept collection for concept analysis.}
 
-\item{Y}{value}
+\item{Y}{The class labels or binary matrix indicating the phenotypes for phenotype comparison mode.}
 
-\item{fdr}{value}
+\item{fdr}{The false discovery rate (FDR) threshold for selecting significant gene sets. Default is 1.}
 
-\item{set.min}{value}
+\item{set.min}{The minimum gene set size. Default is 15.}
 
-\item{set.max}{value}
+\item{set.max}{The maximum gene set size. Default is 500.}
 
-\item{topgs}{value}
+\item{topgs}{The number of top gene sets to report. Default is 100.}
 
-\item{nperm}{value}
+\item{nperm}{The number of permutations for estimating the statistical significance. Default is 1000.}
 
-\item{rpt.label}{value}
+\item{rpt.label}{The label for the analysis report. Default is "analysis".}
 
-\item{output.dir}{value}
+\item{output.dir}{The output directory for saving the results. Default is NULL (results are not saved).}
 
-\item{xmx}{value}
+\item{xmx}{The maximum memory allocation for the GSEA program in gigabytes (GB). Default is 10.}
 
-\item{scoring}{value}
+\item{scoring}{The scoring scheme for ranking genes. Default is "weighted".}
 
-\item{clean.files}{value}
+\item{clean.files}{Logical value indicating whether to clean intermediate files. Default is TRUE.}
+}
+\value{
+A list containing the results of the GCEA analysis, including gene set analysis results (gsea) and concept analysis results (gcea).
 }
 \description{
-Title
+This function performs Gene Concept Enrichment Analysis (GCEA) using Gene Set Enrichment Analysis (GSEA).
+It combines gene set analysis and concept analysis to identify enriched gene sets and concepts.
 }

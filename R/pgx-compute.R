@@ -26,7 +26,7 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
   ## read counts table (allow dup rownames)
   counts <- data.table::fread(counts.file)
   counts.rownames <- counts[[1]]
-  counts <- as.matrix(counts[,-1])
+  counts <- as.matrix(counts[, -1])
   rownames(counts) <- counts.rownames
 
   ## undo logarithm if necessary
@@ -142,9 +142,9 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 #' @examples
 #' # first step is to create pgx
 #' pgx <- playbase::pgx.createPGX(
-#'  counts = playbase::COUNTS,
-#'  samples = playbase::SAMPLES,
-#'  contrasts = playbase::CONTRASTS
+#'   counts = playbase::COUNTS,
+#'   samples = playbase::SAMPLES,
+#'   contrasts = playbase::CONTRASTS
 #' )
 #'
 #' # once pgx is created, we can compute the modules
@@ -155,9 +155,9 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 #' # if you want a more minimal (and quick) example for testing, use the settings below
 #'
 #' pgx <- playbase::pgx.createPGX(
-#'  counts = playbase::COUNTS,
-#'  samples = playbase::SAMPLES,
-#'  contrasts = playbase::CONTRASTS[1]
+#'   counts = playbase::COUNTS,
+#'   samples = playbase::SAMPLES,
+#'   contrasts = playbase::CONTRASTS[1]
 #' )
 #'
 #' pgx <- playbase::pgx.computePGX(
@@ -194,7 +194,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## contrast matrix
   colnames(contrasts)
   is.numbered <- all(unique(as.vector(contrasts)) %in% c(-1, 0, 1))
-  is.numbered <- all(sapply(type.convert(data.frame(contrasts), as.is=TRUE), class) %in% c("numeric", "integer"))
+  is.numbered <- all(sapply(type.convert(data.frame(contrasts), as.is = TRUE), class) %in% c("numeric", "integer"))
   ct.type <- c("labeled (new style)", "numbered (old style)")[1 + 1 * is.numbered]
   is.numbered
   if (is.numbered) {
@@ -243,7 +243,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   kk <- intersect(colnames(counts), rownames(samples))
   counts <- counts[, kk, drop = FALSE]
   samples <- samples[kk, , drop = FALSE]
-  samples <- type.convert(samples, as.is=TRUE) ## automatic type conversion
+  samples <- type.convert(samples, as.is = TRUE) ## automatic type conversion
   if (!is.null(X)) X <- X[, kk, drop = FALSE]
   if (all(kk %in% rownames(contrasts))) {
     contrasts <- contrasts[kk, , drop = FALSE]
@@ -256,8 +256,9 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   guess.log <- (min(counts, na.rm = TRUE) < 0 || max(counts, na.rm = TRUE) < 100)
   guess.log <- guess.log && is.null(X) && (is.null(is.logx) || is.logx == TRUE)
   guess.log
-  if (is.null(is.logx))
+  if (is.null(is.logx)) {
     is.logx <- guess.log
+  }
   is.logx
   if (is.logx) {
     cat("[createPGX] input assumed log-expression (logarithm)\n")
@@ -494,7 +495,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
       cX <- limma::removeBatchEffect(cX, batch = bx) ## in log-space
       cX <- pmax(2**cX - 1, 0)
       cX[zz] <- 0
-      ngs$counts <- pmax(cX,0) ## batch corrected counts...
+      ngs$counts <- pmax(cX, 0) ## batch corrected counts...
 
       if (!is.null(ngs$X)) {
         message("[createPGX] batch correcting for logX using LIMMA\n")
@@ -600,9 +601,9 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 #' @examples
 #' # first step is to create pgx
 #' pgx <- playbase::pgx.createPGX(
-#'  counts = playbase::COUNTS,
-#'  samples = playbase::SAMPLES,
-#'  contrasts = playbase::CONTRASTS
+#'   counts = playbase::COUNTS,
+#'   samples = playbase::SAMPLES,
+#'   contrasts = playbase::CONTRASTS
 #' )
 #'
 #' # once pgx is created, we can compute the modules
@@ -613,9 +614,9 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 #' # if you want a more minimal (and quick) example for testing, use the settings below
 #'
 #' pgx <- playbase::pgx.createPGX(
-#'  counts = playbase::COUNTS,
-#'  samples = playbase::SAMPLES,
-#'  contrasts = playbase::CONTRASTS[1]
+#'   counts = playbase::COUNTS,
+#'   samples = playbase::SAMPLES,
+#'   contrasts = playbase::CONTRASTS[1]
 #' )
 #'
 #' pgx <- playbase::pgx.computePGX(
@@ -634,7 +635,7 @@ pgx.computePGX <- function(pgx,
                            do.cluster = TRUE,
                            use.design = TRUE,
                            prune.samples = FALSE,
-                           extra.methods = c("meta.go","infer", "deconv","drugs", "wordcloud", "wgcna")[c(1,2)],
+                           extra.methods = c("meta.go", "infer", "deconv", "drugs", "wordcloud", "wgcna")[c(1, 2)],
                            libx.dir = NULL,
                            progress = NULL) {
   ## ======================================================================

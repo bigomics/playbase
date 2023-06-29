@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-gsea.r
 \name{gsea.enplot.UPDN}
 \alias{gsea.enplot.UPDN}
-\title{Title}
+\title{GSEA Enrichment Plot (Up/Down Genes)}
 \usage{
 gsea.enplot.UPDN(
   rnk,
@@ -20,30 +20,33 @@ gsea.enplot.UPDN(
 )
 }
 \arguments{
-\item{rnk}{value}
+\item{rnk}{A numeric vector representing the ranked list.}
 
-\item{gset.up}{value}
+\item{gset.up}{A character vector specifying the gene set for up-regulated genes.}
 
-\item{gset.dn}{value}
+\item{gset.dn}{A character vector specifying the gene set for down-regulated genes.}
 
-\item{names}{value}
+\item{names}{A character vector of names for the ranked list.}
 
-\item{main}{value}
+\item{main}{The main title of the plot.}
 
-\item{decreasing}{value}
+\item{decreasing}{Logical indicating whether the ranked list should be sorted in decreasing order.}
 
-\item{cex.main}{value}
+\item{cex.main}{The size of the main title text.}
 
-\item{len.main}{value}
+\item{len.main}{The maximum number of characters for the main title before line breaks are applied.}
 
-\item{sum.trace}{value}
+\item{sum.trace}{Logical indicating whether to plot the sum of the traces for up-regulated and down-regulated genes.}
 
-\item{res}{value}
+\item{res}{The resolution of the plot.}
 
-\item{xlab}{value}
+\item{xlab}{The label for the x-axis.}
 
-\item{ylab}{value}
+\item{ylab}{The label for the y-axis.}
+}
+\value{
+a plot
 }
 \description{
-Title
+Generates an enrichment plot for GSEA analysis with separate traces for up-regulated and down-regulated genes.
 }

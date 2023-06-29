@@ -2,7 +2,7 @@
 % Please edit documentation in R/compute2-genesets.R
 \name{compute_testGenesets}
 \alias{compute_testGenesets}
-\title{Title}
+\title{Compute Test Genesets}
 \usage{
 compute_testGenesets(
   pgx,
@@ -13,14 +13,19 @@ compute_testGenesets(
 )
 }
 \arguments{
-\item{pgx}{value}
+\item{pgx}{A data object representing multi-omics data.}
 
-\item{max.features}{value}
+\item{max.features}{Maximum number of features to consider.}
 
-\item{test.methods}{value}
+\item{custom.geneset}{Custom geneset object.}
 
-\item{remove.outputs}{value}
+\item{test.methods}{Methods to use for testing.}
+
+\item{remove.outputs}{Logical indicating whether to remove large outputs.}
+}
+\value{
+The updated \code{pgx} object with computed test genesets.
 }
 \description{
-Title
+Computes test genesets for the given multi-omics data.
 }

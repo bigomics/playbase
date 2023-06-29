@@ -2,7 +2,7 @@
 % Please edit documentation in R/compute2-extra.R
 \name{compute_extra}
 \alias{compute_extra}
-\title{Title}
+\title{Compute Extra Analysis}
 \usage{
 compute_extra(
   ngs,
@@ -12,12 +12,19 @@ compute_extra(
 )
 }
 \arguments{
-\item{ngs}{value}
+\item{ngs}{An object containing the input data for analysis.}
 
-\item{extra}{value}
+\item{extra}{A character vector specifying which additional analyses to perform.}
 
-\item{sigdb}{value}
+\item{sigdb}{A character vector specifying the path to the sigdb-.h5 files for connectivity scores.}
+
+\item{libx.dir}{The directory where the sigdb-.h5 files are located.}
+}
+\value{
+An updated object with additional analysis results.
 }
 \description{
-Title
+This function computes additional analysis based on the input data, such as GO core graph,
+deconvolution, phenotype inference, drug activity enrichment, OmicsGraphs, WordCloud statistics,
+connectivity scores, and wgcna.
 }

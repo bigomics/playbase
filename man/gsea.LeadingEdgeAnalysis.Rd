@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-gsea.r
 \name{gsea.LeadingEdgeAnalysis}
 \alias{gsea.LeadingEdgeAnalysis}
-\title{Title}
+\title{Perform LeadingEdge analysis for GSEA results}
 \usage{
 gsea.LeadingEdgeAnalysis(
   output.dir,
@@ -12,14 +12,19 @@ gsea.LeadingEdgeAnalysis(
 )
 }
 \arguments{
-\item{output.dir}{value}
+\item{output.dir}{The output directory where GSEA results are stored.}
 
-\item{ntop}{value}
+\item{ntop}{The number of leading edge genes to analyze (default: 100).}
 
-\item{gsea.program}{value}
+\item{gsea.program}{The path to the GSEA program JAR file (default: "/opt/GSEA/gsea-3.0.jar").}
 
-\item{xmx}{value}
+\item{xmx}{The maximum memory allocation for the GSEA program in gigabytes (default: 10).}
+}
+\value{
+The function performs the leading edge analysis and does not return any value.
 }
 \description{
-Title
+This function performs the LeadingEdge analysis for Gene Set Enrichment Analysis (GSEA) results.
+It analyzes the leading edge genes of enriched gene sets to identify key genes and their
+contribution to the enrichment signal.
 }

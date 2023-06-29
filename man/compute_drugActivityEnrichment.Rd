@@ -2,13 +2,21 @@
 % Please edit documentation in R/compute2-extra.R
 \name{compute_drugActivityEnrichment}
 \alias{compute_drugActivityEnrichment}
-\title{Title}
+\title{Compute Drug Activity Enrichment}
 \usage{
 compute_drugActivityEnrichment(ngs, libx.dir = NULL)
 }
 \arguments{
-\item{ngs}{value}
+\item{ngs}{An object containing the input data for analysis.}
+
+\item{libx.dir}{The directory path where the drug activity databases are located.
+This is required if calling the function compute_full_drugActivityEnrichment.}
+}
+\value{
+An updated object with drug activity enrichment results.
 }
 \description{
-Title
+This function performs drug activity enrichment analysis based on the input RNA expression data.
+It uses drug activity databases to compute enrichment scores and attach the results to the input object.
+The drug activity databases include L1000_ACTIVITYS_N20D1011 and L1000_GENE_PERTURBATION.
 }

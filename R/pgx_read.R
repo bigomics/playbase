@@ -1,4 +1,3 @@
-
 #' Read counts data from file
 #'
 #' @param file string. path to file

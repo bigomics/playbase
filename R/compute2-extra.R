@@ -3,13 +3,17 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-#' Title
+#' Compute Extra Analysis
 #'
-#' @param ngs value
-#' @param extra value
-#' @param sigdb value
+#' This function computes additional analysis based on the input data, such as GO core graph,
+#' deconvolution, phenotype inference, drug activity enrichment, OmicsGraphs, WordCloud statistics,
+#' connectivity scores, and wgcna.
 #'
-#' @return
+#' @param ngs An object containing the input data for analysis.
+#' @param extra A character vector specifying which additional analyses to perform.
+#' @param sigdb A character vector specifying the path to the sigdb-.h5 files for connectivity scores.
+#' @param libx.dir The directory where the sigdb-.h5 files are located.
+#' @return An updated object with additional analysis results.
 #' @export
 compute_extra <- function(ngs, extra = c(
                             "meta.go", "deconv", "infer", "drugs", ## "graph",
@@ -17,7 +21,7 @@ compute_extra <- function(ngs, extra = c(
                           ), sigdb = NULL, libx.dir = NULL) {
   timings <- c()
 
-  #ngs = pgx
+  # ngs = pgx
 
   if (length(extra) == 0) {
     return(ngs)
@@ -121,7 +125,6 @@ compute_extra <- function(ngs, extra = c(
 
   # I THINK THIS REQUIRES libx.dir TO BE SET TO FIND sigdb-.h5 FILES (-Nick)
   if ("connectivity" %in% extra) {
-
     # try to find sigdb in libx dir if not specified
     if (!is.null(libx.dir) || !is.null(sigdb)) {
       message(">>> Computing connectivity scores...")
@@ -137,7 +140,7 @@ compute_extra <- function(ngs, extra = c(
           message("computing connectivity scores for ", db)
           ## in memory for many comparisons
           meta <- pgx.getMetaFoldChangeMatrix(ngs, what = "meta")
-          inmemory <- ifelse(ncol(meta$fc) > 50, TRUE, FALSE)  ## NEED RETHINK!! reverse?
+          inmemory <- ifelse(ncol(meta$fc) > 50, TRUE, FALSE) ## NEED RETHINK!! reverse?
           inmemory
           tt <- system.time({
             scores <- pgx.computeConnectivityScores(
@@ -153,7 +156,6 @@ compute_extra <- function(ngs, extra = c(
           remove(scores)
         }
       }
-
     } else {
       message(">>> Skipping connectivity scores (no libx.dir)...")
     }
@@ -196,16 +198,17 @@ compute_extra <- function(ngs, extra = c(
 
 ## -------------- deconvolution analysis --------------------------------
 
-#' Title
+#' Compute Deconvolution
 #'
-#' @param ngs value
-#' @param rna.counts value
-#' @param full value
+#' This function performs deconvolution analysis on the input RNA expression data using various reference matrices
+#' and methods. It estimates the abundance of different cell types or tissue components present in the data.
 #'
-#' @return
+#' @param ngs An object containing the input data for analysis.
+#' @param rna.counts A matrix or data frame of RNA expression counts. Defaults to the counts in the input object.
+#' @param full A logical value indicating whether to use the full set of reference matrices and methods (TRUE),
+#'   or a subset of faster methods and references (FALSE).
+#' @return An updated object with deconvolution results.
 #' @export
-#'
-#' @examples
 compute_deconvolution <- function(ngs, rna.counts = ngs$counts, full = FALSE) {
   ## list of reference matrices
   refmat <- list()
@@ -252,15 +255,16 @@ compute_deconvolution <- function(ngs, rna.counts = ngs$counts, full = FALSE) {
 
 ## -------------- infer sample characteristics --------------------------------
 
-#' Title
+#' Compute Cell Cycle and Gender Inference
 #'
-#' @param ngs value
-#' @param rna.counts value
+#' This function performs cell cycle phase inference and gender estimation based on the input RNA expression data.
+#' The cell cycle phase inference is performed using the Seurat package.
 #'
-#' @return
+#' @param ngs An object containing the input data for analysis.
+#' @param rna.counts A matrix or data frame of RNA expression counts.
+#'   Defaults to the counts in the input object.
+#' @return An updated object with cell cycle and gender inference results.
 #' @export
-#'
-#' @examples
 compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
   pp <- rownames(rna.counts)
   is.mouse <- (mean(grepl("[a-z]", gsub(".*:|.*\\]", "", pp))) > 0.8)
@@ -293,36 +297,39 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
 }
 
 
-#' Title
+#' Compute Drug Activity Enrichment
 #'
-#' @param ngs value
+#' This function performs drug activity enrichment analysis based on the input RNA expression data.
+#' It uses drug activity databases to compute enrichment scores and attach the results to the input object.
+#' The drug activity databases include L1000_ACTIVITYS_N20D1011 and L1000_GENE_PERTURBATION.
 #'
-#' @return
+#' @param ngs An object containing the input data for analysis.
+#' @param libx.dir The directory path where the drug activity databases are located.
+#'   This is required if calling the function compute_full_drugActivityEnrichment.
+#' @return An updated object with drug activity enrichment results.
 #' @export
-#'
-#' @examples
 compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
   ## -------------- drug enrichment
   # get drug activity databases
 
-  #ngs=pgx
-  #libx.dir = params$libx.dir
+  # ngs=pgx
+  # libx.dir = params$libx.dir
 
-  if (is.null(libx.dir)) message('WARNING Need libx.dir if you call compute_full_drugActivityEnrichment')
+  if (is.null(libx.dir)) message("WARNING Need libx.dir if you call compute_full_drugActivityEnrichment")
 
   cmap.dir <- file.path(libx.dir, "cmap")
   file.gene.db <- dir(cmap.dir, pattern = "n8m20g5812.*rds$")
 
-  if (length(file.gene.db)>1) message('WARNING multiple gene.db files found. Using first one.')
+  if (length(file.gene.db) > 1) message("WARNING multiple gene.db files found. Using first one.")
 
-  if(file.exists(file.path(cmap.dir,file.gene.db[1]))){
-    gene.db <- readRDS(file.path(cmap.dir,file.gene.db[1]))
+  if (file.exists(file.path(cmap.dir, file.gene.db[1]))) {
+    gene.db <- readRDS(file.path(cmap.dir, file.gene.db[1]))
 
     ref.db <- list(
       "L1000_ACTIVITYS_N20D1011" = playdata::L1000_ACTIVITYS_N20D1011,
       "L1000_GENE_PERTURBATION" = gene.db
     )
-    } else {
+  } else {
     ref.db <- list(
       "L1000_ACTIVITYS_N20D1011" = playdata::L1000_ACTIVITYS_N20D1011
     )
@@ -390,17 +397,18 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
   return(ngs)
 }
 
-#' Title
-#'
-#' @param ngs value
-#' @param cmap.dir value
-#'
-#' @return
-#' @export
-#'
-#' @examples
-compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
 
+#' Compute Drug Sensitivity Enrichment
+#'
+#' This function performs drug sensitivity enrichment analysis based on the input RNA expression data.
+#' It uses drug sensitivity databases to compute enrichment scores and attach the results to the input object.
+#' The drug sensitivity databases are located in the specified directory (libx.dir).
+#'
+#' @param ngs An object containing the input data for analysis.
+#' @param libx.dir The directory path where the drug sensitivity databases are located.
+#' @return An updated object with drug sensitivity enrichment results.
+#' @export
+compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
   cmap.dir <- file.path(libx.dir, "cmap")
 
   ref.db <- dir(cmap.dir, pattern = "sensitivity.*rds$")
@@ -453,14 +461,15 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
 
 ## ------------------ Omics graphs --------------------------------
 
-#' Title
+#' Compute Omics Graphs
 #'
-#' @param ngs value
+#' This function computes omics graphs and path scores based on the input data.
+#' It creates the omics graph using the input object and calculates path scores using the omics graph.
+#' It also computes a reduced graph and path scores based on the reduced graph.
 #'
-#' @return
+#' @param ngs An object containing the input data for analysis.
+#' @return An updated object with omics graphs and path scores.
 #' @export
-#'
-#' @examples
 compute_omicsGraphs <- function(ngs) {
   ngs$omicsnet <- pgx.createOmicsGraph(ngs)
   ngs$pathscores <- pgx.computePathscores(ngs$omicsnet, strict.pos = FALSE)

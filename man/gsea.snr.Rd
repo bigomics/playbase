@@ -2,15 +2,20 @@
 % Please edit documentation in R/gset-gsea.r
 \name{gsea.snr}
 \alias{gsea.snr}
-\title{Title}
+\title{Calculate Signal-to-Noise ratio for GSEA}
 \usage{
 gsea.snr(X, Y)
 }
 \arguments{
-\item{X}{value}
+\item{X}{The gene expression matrix.}
 
-\item{Y}{value}
+\item{Y}{The class labels or binary matrix indicating the two classes (0 and 1).}
+}
+\value{
+A matrix of Signal-to-Noise ratios for each gene in the expression matrix.
 }
 \description{
-Title
+This function calculates the Signal-to-Noise ratio (SNR) for Gene Set Enrichment Analysis (GSEA).
+It measures the difference in the means of two classes (0 and 1) relative to the standard deviation.
+The SNR is used to rank genes and assess their relevance in the context of gene set enrichment.
 }

@@ -2,13 +2,17 @@
 % Please edit documentation in R/gset-gsea.r
 \name{gsea.clean_names}
 \alias{gsea.clean_names}
-\title{Title}
+\title{Clean names for GSEA analysis}
 \usage{
 gsea.clean_names(s)
 }
 \arguments{
-\item{s}{value}
+\item{s}{A vector or list with names to be cleaned.}
+}
+\value{
+A character vector or list with cleaned names.
 }
 \description{
-Title
+This function cleans the names of a vector or list for use in GSEA (Gene Set Enrichment Analysis) analysis.
+It replaces special characters and consecutive underscores in the names with a single underscore.
 }

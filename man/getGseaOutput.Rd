@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-gsea.r
 \name{getGseaOutput}
 \alias{getGseaOutput}
-\title{Title}
+\title{Retrieve GSEA Output}
 \usage{
 getGseaOutput(
   path = "../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut_ut",
@@ -11,12 +11,15 @@ getGseaOutput(
 )
 }
 \arguments{
-\item{path}{value}
+\item{path}{The path to the GSEA output directory.}
 
-\item{i}{value}
+\item{i}{The index of the GSEA output folder to retrieve. Default is 1.}
 
-\item{raster.png}{value}
+\item{raster.png}{Logical value indicating whether to convert PNG images to raster format using grid::rasterGrob. Default is FALSE.}
+}
+\value{
+A list containing the retrieved GSEA output files and data.
 }
 \description{
-Title
+This function retrieves the output files and data generated from a GSEA analysis.
 }
