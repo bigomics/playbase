@@ -726,7 +726,6 @@ pgx.ReclusterSignatureDatabase <- function(h5.file, reduce.sd = 1000, reduce.pca
 #' @export
 pgx.computeMultiOmicsGSE <- function(X, gmt, omx.type,
                                      method = NULL, center = TRUE) {
-
   if (is.null(omx.type)) {
     omx.type <- gsub("[:=].*", "", rownames(X))
   }

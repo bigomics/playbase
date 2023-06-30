@@ -174,7 +174,6 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
       q.val <- round(surv.q[study], 3)
       pq <- c(paste("p=", p.val), paste("q=", q.val))
       legend("topright", pq, bty = "n", cex = 0.9, y.intersp = 0.85)
-
     } ## end of for
   }
   return(surv.p)

@@ -860,8 +860,6 @@ pgx.createSeuratObject <- function(counts, aggr.csv = NULL,
 
 #' @export
 pgx.createSeurateFigures <- function(obj) {
-
-
   caption1 <- paste("Project:", obj@project.name, "   Date:", Sys.Date())
   caption1
   fig <- list()

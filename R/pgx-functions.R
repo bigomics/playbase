@@ -14,7 +14,6 @@ pgx.phenoMatrix <- function(pgx, phenotype) {
 
 #' @export
 text_repel.NOTWORKING <- function(x, y, text, cex = 1, force = 1e-7, maxiter = 20000) {
-
   ## x and y posiitons as a dataframe
   df <- data.frame(x = x, y = y, text = text)
   w <- diff(range(x))

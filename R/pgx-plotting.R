@@ -430,7 +430,6 @@ pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast = NULL) {
   M <- list()
   i <- 1
   for (i in 1:(length(X) - 1)) {
-
     mm <- pmax(X[[i]], 0) %*% t(pmax(X[[i + 1]], 0))
     mm <- mm**4
     mm <- mm / mean(mm)
@@ -694,7 +693,6 @@ pgx.SankeyFromPhenotypes.GGPLOT <- function(pgx, phenotypes, mat = NULL, fill = 
     n0 <- sum(N[zap.tiny])
     df <- df[!zap.tiny, ]
     N <- N[!zap.tiny]
-
   }
   df <- data.frame(df)
   df$Frequency <- N
@@ -778,7 +776,6 @@ plot_grid.sharedAxisLabels <- function(plotList, nrow) {
 #' @export
 pgx.plotContrast <- function(pgx, contrast = NULL, type = "scatter",
                              set.par = TRUE, par.sq = FALSE, ...) {
-
   if (is.null(contrast)) {
     contrast <- colnames(pgx$model.parameters$exp.matrix)
   }
@@ -918,7 +915,6 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
                                 cex = 1, cex.lab = 0.8,
                                 psig = 0.05, fc = 1, level = "gene",
                                 ntop = 20, dir = 0, plotlib = "base") {
-
   if (is.numeric(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
   exp.matrix <- pgx$model.parameters$exp.matrix
   ct <- exp.matrix[, contrast]
@@ -1090,7 +1086,6 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
                                plotly.annotations = NULL,
                                plotly.margin = NULL,
                                plotlib = "base") {
-
   if (is.null(probe)) {
     return(NULL)
   }
@@ -2422,7 +2417,6 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
                                    tooltip = NULL, theme = NULL, set.par = TRUE,
                                    axt = "s", xaxs = TRUE, yaxs = TRUE,
                                    labels = NULL, label.type = NULL, opacity = 1) {
-
   ## automatically set pointsize of dots
   if (is.null(cex)) {
     nr <- nrow(pos)
@@ -2705,7 +2699,6 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
                                      tooltip = NULL, theme = NULL, set.par = TRUE,
                                      label.type = c("text", "box"), base_size = 11,
                                      title = NULL, barscale = 0.8, axis = TRUE, box = TRUE) {
-
   if (!is.null(var) && !is.null(ncol(var))) {
     var <- var[, 1]
   }
@@ -3076,7 +3069,6 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                                      title = "", title.y = 1, gridcolor = NULL,
                                      source = NULL, key = NULL,
                                      displayModeBar = FALSE) {
-
   if (!is.null(var) && NCOL(var) > 1) {
     var <- setNames(var[, 1], rownames(var))
   }

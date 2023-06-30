@@ -6,7 +6,6 @@
 
 #' @export
 pgx.computePathscores <- function(graph, strict.pos = TRUE) {
-
   ## add source/sink
   graph <- pgx._addSourceSink(graph)
 
@@ -596,7 +595,6 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
 #' @export
 pgx.plotForwardProjection <- function(gr, gene, cex = 1, fx = NULL,
                                       features = NULL, main = NULL, plot = TRUE) {
-
   if (!is.null(features)) {
     gr <- pgx.createVipGeneLayer(gr, genes)
   }

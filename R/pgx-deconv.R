@@ -310,7 +310,6 @@ pgx.simplifyCellTypes <- function(ct, low.th = 0.01) {
 
 #' @export
 pgx.purify <- function(X, ref, k = 3, method = 2) {
-
   ## ----------------------------------------------------------------------
   ## Using NNLM
   ## ----------------------------------------------------------------------
@@ -562,7 +561,7 @@ pgx.deconvolution <- function(X, ref,
   }
 
   ## conform??
- 
+
   timings <- list()
   results <- list()
   methods

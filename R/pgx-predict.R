@@ -385,7 +385,7 @@ pgx.makeTriSystemGraph <- function(data, Y, nfeat = 25, numedge = 100, posonly =
       pp <- NULL
       ## if(k<3)
       pp <- data.frame(from = p1[idx[, 1]], to = p2[idx[, 2]], rho = rho[idx])
-    
+
       jj <- which(sub("[0-9]:", "", pp$from) == sub("[0-9]:", "", pp$to))
       if (length(jj)) {
         pp$rho[jj] <- 0.01 ## no self loops across levels
@@ -535,7 +535,6 @@ pgx.survivalVariableImportance <- function(X, time, status,
     fit_rf <- randomForestSRC::rfsrc(survival::Surv(time, status) ~ ., data = df)
     vimp <- randomForestSRC::vimp(fit_rf)$importance
     imp[["randomForest"]] <- vimp
-
   }
 
   if ("boruta" %in% methods) {
