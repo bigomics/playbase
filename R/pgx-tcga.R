@@ -162,12 +162,12 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
       last.row
 
       plot(fit,
-           col = 2:3, lwd = 2, main = study,
-           xlab = xlab, ylab = ylab, cex.main = 1.1
+        col = 2:3, lwd = 2, main = study,
+        xlab = xlab, ylab = ylab, cex.main = 1.1
       )
       legend("bottomleft", legend.labs,
-             pch = "-", lwd = 2, col = 2:3,
-             cex = 0.9, y.intersp = 0.85
+        pch = "-", lwd = 2, col = 2:3,
+        cex = 0.9, y.intersp = 0.85
       )
 
       p.val <- round(surv.p[study], 3)
