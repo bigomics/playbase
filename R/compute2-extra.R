@@ -376,11 +376,9 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
       rownames(annot0) <- dd
     }
 
-    if (1) {
-      annot0 <- annot0[match(rownames(out1[["GSEA"]]$X), rownames(annot0)), ]
-      rownames(annot0) <- rownames(out1[["GSEA"]]$X)
-      Matrix::head(annot0)
-    }
+    annot0 <- annot0[match(rownames(out1[["GSEA"]]$X), rownames(annot0)), ]
+    rownames(annot0) <- rownames(out1[["GSEA"]]$X)
+    Matrix::head(annot0)
 
     ## --------------- attach results to object
     db <- names(ref.db)[i]

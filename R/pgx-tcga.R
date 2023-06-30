@@ -152,44 +152,29 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
       ## legend.labs <- paste(c("negative","positive"),"correlated")
       legend.labs <- paste(c("rho<0", "rho>0"))
       legend.labs <- paste(c("neg.cor", "pos.cor"))
-      if (1) {
-        xlab <- ylab <- ""
-        is.first <- (i %% nc == 1)
-        if (is.first) ylab <- "survival probability"
 
-        last.row <- ((i - 1) %/% 7 == (nplots - 1) %/% 7)
-        if (last.row) xlab <- "time (days)"
-        last.row
+      xlab <- ylab <- ""
+      is.first <- (i %% nc == 1)
+      if (is.first) ylab <- "survival probability"
 
-        plot(fit,
-          col = 2:3, lwd = 2, main = study,
-          xlab = xlab, ylab = ylab, cex.main = 1.1
-        )
-        legend("bottomleft", legend.labs,
-          pch = "-", lwd = 2, col = 2:3,
-          cex = 0.9, y.intersp = 0.85
-        )
+      last.row <- ((i - 1) %/% 7 == (nplots - 1) %/% 7)
+      if (last.row) xlab <- "time (days)"
+      last.row
 
-        p.val <- round(surv.p[study], 3)
-        q.val <- round(surv.q[study], 3)
-        pq <- c(paste("p=", p.val), paste("q=", q.val))
-        legend("topright", pq, bty = "n", cex = 0.9, y.intersp = 0.85)
-      } else {
-        survminer::ggsurvplot(
-          fit,
-          data = sel.data,
-          size = 1, # change line size
-          ## palette = c("#E7B800", "#2E9FDF"),# custom color palettes
-          conf.int = TRUE, # Add confidence interval
-          pval = TRUE, # Add p-value
-          risk.table = TRUE, # Add risk table
-          risk.table.col = "strata", # Risk table color by groups
-          ## legend.labs = c("Male", "Female"),    # Change legend labels
-          legend.labs = legend.labs,
-          risk.table.height = 0.20, # Useful to change when you have multiple groups
-          ggtheme = ggplot2::theme_bw() # Change ggplot2 theme
-        )
-      } ## end of if
+      plot(fit,
+        col = 2:3, lwd = 2, main = study,
+        xlab = xlab, ylab = ylab, cex.main = 1.1
+      )
+      legend("bottomleft", legend.labs,
+        pch = "-", lwd = 2, col = 2:3,
+        cex = 0.9, y.intersp = 0.85
+      )
+
+      p.val <- round(surv.p[study], 3)
+      q.val <- round(surv.q[study], 3)
+      pq <- c(paste("p=", p.val), paste("q=", q.val))
+      legend("topright", pq, bty = "n", cex = 0.9, y.intersp = 0.85)
+
     } ## end of for
   }
   return(surv.p)
@@ -396,15 +381,6 @@ pgx.getTCGA.multiomics.TOBEFINISHED <- function(studies, genes = NULL, batch.cor
   ## BiocManager::install("cgdsr")
 
   mycgds <- cgdsr::CGDS("http://www.cbioportal.org/")
-  if (0) {
-    all.studies <- sort(cgdsr::getCancerStudies(mycgds)[, 1])
-    tcga.studies <- grep("_tcga$", all.studies, value = TRUE)
-    all.studies <- tcga.studies
-    all.studies
-    mystudy <- "ov_tcga"
-    mystudy <- "brca_tcga"
-    mystudy <- "thca_tcga"
-  }
   ## all.profiles <- list()
   ## for(mystudy in all.studies) {
   ##     myprofiles <- cgdsr::getGeneticProfiles(mycgds,mystudy)[,1]

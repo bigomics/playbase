@@ -824,12 +824,6 @@ silac.ttest <- function(X, group1, group2, method = "limma") {
     stop("ERROR:: unknown method")
   }
 
-  if (0) {
-    ## testing area, Show the differences in p-value of methods.
-    pv <- cbind(t.test = p1$P.Value, t.genefilter = p2$P.Value, limma = p3$P.Value)
-    jj <- which(!is.nan(p1$P.Value))
-    pairs(pv[jj, ])
-  }
 
   ## set NaN p.values to 1??
   out1$P.Value[which(is.nan(out1$P.Value))] <- 1

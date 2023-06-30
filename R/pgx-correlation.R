@@ -40,12 +40,10 @@ pgx.plotPartialCorrelationGraph <- function(res, gene, rho.min = 0.1, nsize = -1
   nn <- rownames(res$cor)
   ## rho.min=0.1
 
-  if (0) {
-    qgraph::qgraph(res, layout = "spring", labels = nn)
-    qgraph::qgraph(res, layout = "spring", labels = nn, minimum = 0.1)
-    ## qgraph(res, layout = "spring", labels=nn, threshold=rho.min)
-    ## qgraph(res, layout = "spring", labels=nn, minimum="sig", sampleSize=25)
-  }
+  qgraph::qgraph(res, layout = "spring", labels = nn)
+  qgraph::qgraph(res, layout = "spring", labels = nn, minimum = 0.1)
+  ## qgraph(res, layout = "spring", labels=nn, threshold=rho.min)
+  ## qgraph(res, layout = "spring", labels=nn, minimum="sig", sampleSize=25)
 
   R <- cov2cor(res$w)
   diag(R) <- 0

@@ -852,13 +852,7 @@ pgx.createSeuratObject <- function(counts, aggr.csv = NULL,
   obj <- Seurat::FindClusters(obj)
 
   ## Pre-calculate markers
-  if (0) {
-    ## cannot store the results somewhere????
-    Seurat::Idents(obj) <- "seurat_clusters"
-    markers <- Seurat::FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, thresh.use = 0.25)
-    attributes(obj)$markers <- list()
-    attributes(obj)$markers[["seurat_clusters"]] <- markers
-  }
+
   message("Finished!")
   obj
 }
@@ -866,12 +860,7 @@ pgx.createSeuratObject <- function(counts, aggr.csv = NULL,
 
 #' @export
 pgx.createSeurateFigures <- function(obj) {
-  if (0) {
-    obj <- pgx.createSeuratObject(pgx)
-    source(file.path(RDIR, "pgx-include.R"))
-    pgx.SampleClusterPanel(pgx, pheno = "cluster", pheno2 = c("cell.type", "batch", "phenotype"))
-    pgx.SampleClusterPanel(pgx, pheno = "cell.type", pheno2 = c("cluster", "batch", "phenotype"))
-  }
+
 
   caption1 <- paste("Project:", obj@project.name, "   Date:", Sys.Date())
   caption1
@@ -890,10 +879,6 @@ pgx.createSeurateFigures <- function(obj) {
     pt.size = 0.15, ncol = 4
   )
   vplot <- vplot & ggplot2::xlab(NULL)
-  if (0) {
-    table(obj$library_id)
-    vplot
-  }
 
   q1 <- Seurat::FeaturePlot(obj, features = "nCount_RNA")
   q2 <- Seurat::FeaturePlot(obj, features = "nFeature_RNA")
@@ -1129,198 +1114,8 @@ pgx.createSeurateFigures <- function(obj) {
 
   fig[["phenotypes"]] <- fig2
 
-
-  ## ----------------------------------------------------------------------
-  ## Gene families
-  ## ----------------------------------------------------------------------
-  if (0) {
-    sort(table(sub(":.*", "", colnames(pgx$GMT))))
-
-    G1 <- pgx$GMT[, grep("HGNC", colnames(pgx$GMT), value = TRUE)]
-    hgnc.list <- lapply(apply(G1 != 0, 2, which), names)
-    percent <- lapply(
-      lapply(apply(G1 != 0, 2, which), names),
-      function(gg) Matrix::colSums(obj[["RNA"]]@counts[gg, ] / Matrix::colSums(obj[["RNA"]]@counts))
-    )
-    percent <- round(100 * do.call(cbind, percent), digits = 2)
-    colnames(percent) <- gsub("[ ]", ".", sub("HGNC:", "percent.", colnames(percent)))
-    obj@meta.data <- obj@meta.data[, !colnames(obj@meta.data) %in% colnames(percent)]
-    obj@meta.data <- cbind(obj@meta.data, percent)
-    dd <- list()
-    for (p in colnames(percent)) {
-      dd[[p]] <- Seurat::FeaturePlot(obj, features = p)
-    }
-    patchwork::wrap_plots(dd, ncol = 3) & theme0
-
-    ## markers with LIMMA (multifactorial)
-    y <- obj$cell.type
-    design <- model.matrix(~ 1 + y)
-    res <- limma::eBayes(limma::lmFit(obj[["RNA"]]@data, design))
-    top <- limma::topTable(res, number = 1000)
-    top <- top[order(top$P.Value), ]
-    Matrix::head(top, 20)
-  }
-
-  ## ----------------------------------------------------------------------
-  ## Specific DE markers
-  ## ----------------------------------------------------------------------
-
-  if (0) {
-    Seurat::Idents(obj) <- "phenotype"
-    Matrix::head(obj@meta.data)
-    stats <- Seurat::FindMarkers(
-      obj,
-      ident.1 = "treated", ident.2 = "untreated",
-      logfc.threshold = 0.1, ## min.pct = 0.1,
-      verbose = FALSE
-    )
-    Matrix::head(stats)
-    top.deg <- Matrix::head(rownames(stats), 9)
-
-    vp1 <- Seurat::VlnPlot(obj,
-      features = top.deg, split.plot = FALSE,
-      split.by = "phenotype", group.by = "cell.type",
-      pt.size = 0.15, ncol = 3, log = TRUE
-    )
-    vp1 <- vp1 & ggplot2::xlab("")
-    vp1 <- vp1 & ggplot2::ylab("expression")
-    vp1 <- vp1 & theme0
-    vp1
-
-    ggplot2::theme(plot.margin = ggplot2::margin(0, 0, 0, 0, "cm"))
-    vplot2 <- vplot2 & theme0
-    ## vplot2
-
-    h1 <- Seurat::DoHeatmap(obj, features = top$gene, angle = 0, size = 4) + Seurat::NoLegend()
-    fig4 <- (vplot2) / h1
-  }
-
   ## ----------------------------------------------------------------------
   ## Return all figures
   ## ----------------------------------------------------------------------
   return(fig)
-}
-
-
-if (0) {
-  ##
-  ## From Seurat vignette: standard QC filtering
-  ##
-  ##
-
-  obj <- Seurat::CreateSeuratObject(counts)
-  obj <- Seurat::AddMetaData(obj, sample.id, col.name = "Sample.id")
-  obj
-  slotNames(obj[["RNA"]])
-  table(Seurat::Idents(obj))
-
-  Matrix::head(obj@meta.data)
-  mt.genes <- rownames(obj)[grep("^MT-", rownames(obj), ignore.case = TRUE)]
-  C <- Seurat::GetAssayData(object = obj, slot = "counts")
-  percent.mito <- Matrix::colSums(C[mt.genes, ]) / Matrix::colSums(C) * 100
-  hist(percent.mito, breaks = 100)
-  obj <- Seurat::AddMetaData(obj, percent.mito, col.name = "percent.mito")
-
-  rb.genes <- rownames(obj)[grep("^RP[SL]", rownames(obj), ignore.case = TRUE)]
-  percent.ribo <- Matrix::colSums(C[rb.genes, ]) / Matrix::colSums(C) * 100
-  obj <- Seurat::AddMetaData(obj, percent.ribo, col.name = "percent.ribo")
-
-  Seurat::VlnPlot(obj,
-    features = c("nFeature_RNA", "nCount_RNA", "percent.mito", "percent.ribo"),
-    group.by = "Sample.id", pt.size = 0.1, ncol = 4
-  ) + Seurat::NoLegend()
-  Seurat::FeatureScatter(obj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
-  Seurat::FeatureScatter(obj, feature1 = "nFeature_RNA", feature2 = "percent.mito")
-  Seurat::FeatureScatter(obj, feature1 = "percent.ribo", feature2 = "nFeature_RNA")
-
-  ## QC select cells
-  obj <- subset(obj, subset = nFeature_RNA > 200 & nFeature_RNA < 7500 &
-    percent.mito < 10 & percent.ribo < 50)
-  dim(obj)
-
-  ## total count normalization
-  hist(Matrix::colSums(exp(obj[["RNA"]]@data[, 1:1000])), breaks = 100)
-  obj <- Seurat::NormalizeData(obj, normalization.method = "LogNormalize", scale.factor = 10000)
-  hist(Matrix::colSums(exp(obj[["RNA"]]@data[, 1:1000])), breaks = 100)
-
-  ## Find highly variable top 2000 genes
-  obj <- Seurat::FindVariableFeatures(obj, selection.method = "vst", nfeatures = 2000)
-  Seurat::VariableFeaturePlot(obj)
-
-  ## scale (=standardize????) really??? you will loose fold-change!
-  all.genes <- rownames(obj)
-  obj <- Seurat::ScaleData(obj, features = all.genes)
-
-  obj <- Seurat::RunPCA(obj, features = VariableFeatures(object = obj))
-  Seurat::ElbowPlot(obj)
-}
-
-
-if (0) {
-  ##
-  ## From Seurat vignette: Batch correction
-  ##
-
-
-  batch <- c(
-    "BioReplicate1", "BioReplicate2", "BioReplicate3", "BioReplicate4",
-    "Sample1", "Sample2", "Sample3", "Sample4", "Sample5", "Sample6",
-    "Tattoo1", "Tattoo2", "Tattoo3", "Tattoo4"
-  )
-  treatment <- c(
-    "control", "control", "control", "control",
-    "treated", "treated", "treated", "treated", "control", "control",
-    "neg_control", "neg_control", "neg_control", "neg_control"
-  )
-
-  obj.list <- list()
-  i <- 1
-  for (i in 1:length(outputs)) {
-    data.10x <- Seurat::Read10X(data.dir = file.path(outputs[i], "/outs/filtered_feature_bc_matrix"))
-    dim(data.10x)
-    ## data.10x <- data.10x[,1:1000]  ## just subsample FTM...
-    celseq <- Seurat::CreateSeuratObject(data.10x, min.cells = 5)
-    ## celseq <- FilterCells(celseq, subset.names = "nGene", low.thresholds = 800)
-    celseq <- subset(celseq, subset = nFeature_RNA > 500)
-    ## -----
-    celseq[["percent.mt"]] <- Seurat::PercentageFeatureSet(celseq, pattern = "^mt-")
-    celseq <- subset(celseq, subset = percent.mt < 5)
-    ## head(celseq@meta.data, 5)
-    ## VlnPlot(celseq, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3, pt.size = 0.3)
-    ## -----
-    ## celseq <- Seurat::NormalizeData(celseq)
-    celseq <- Seurat::NormalizeData(
-      object = celseq, normalization.method = "LogNormalize",
-      scale.factor = 10000
-    )
-    celseq <- Seurat::FindVariableFeatures(celseq,
-      selection.method = "vst",
-      do.plot = F, display.progress = F
-    )
-    ## celseq$batch <- gsub(".*/|_scRNA","",outputs[i])
-    celseq$batch <- batch[i]
-    celseq$treatment <- treatment[i]
-    obj.list[[i]] <- celseq
-  }
-
-  NUM.CC <- 20
-  anchors <- Seurat::FindIntegrationAnchors(obj.list,
-    dims = 1:NUM.CC,
-    ## anchor.features=9999,
-    verbose = FALSE
-  )
-  integrated <- Seurat::IntegrateData(
-    anchorset = anchors,
-    dims = 1:NUM.CC,
-    verbose = FALSE
-  )
-  dim(integrated)
-  Seurat::DefaultAssay(integrated) <- "integrated"
-  dim(integrated)
-
-  ## obj <- Seurat::CreateSeuratObject(counts)
-  ## obj <- Seurat::AddMetaData(obj, sample.id, col.name = "Sample.id")
-  ## obj
-  ## slotNames(obj[["RNA"]])
-  ## table(Seurat::Idents(obj))
 }

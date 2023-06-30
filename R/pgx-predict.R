@@ -385,11 +385,10 @@ pgx.makeTriSystemGraph <- function(data, Y, nfeat = 25, numedge = 100, posonly =
       pp <- NULL
       ## if(k<3)
       pp <- data.frame(from = p1[idx[, 1]], to = p2[idx[, 2]], rho = rho[idx])
-      if (1) {
-        jj <- which(sub("[0-9]:", "", pp$from) == sub("[0-9]:", "", pp$to))
-        if (length(jj)) {
-          pp$rho[jj] <- 0.01 ## no self loops across levels
-        }
+    
+      jj <- which(sub("[0-9]:", "", pp$from) == sub("[0-9]:", "", pp$to))
+      if (length(jj)) {
+        pp$rho[jj] <- 0.01 ## no self loops across levels
       }
       self.edges <- data.frame(from = p1, to = p1, rho = 0)
       edge.list[[k]] <- rbind(pp, self.edges)
@@ -537,23 +536,6 @@ pgx.survivalVariableImportance <- function(X, time, status,
     vimp <- randomForestSRC::vimp(fit_rf)$importance
     imp[["randomForest"]] <- vimp
 
-    if (0) {
-      df <- data.frame(time = time + 0.01, status = status, t(X))
-      tfit <- rpart::rpart(survival::Surv(time, status) ~ ., data = df)
-      plot(tfit)
-      text(tfit)
-
-      ## install.packages("partykit")
-
-      (tfit2 <- partykit::as.party(tfit))
-      plot(tfit2)
-
-      (tfit3 <- partykit::as.party(rpart::prune(tfit, cp = 0.04)))
-      plot(tfit3)
-
-      (tfit3 <- partykit::as.party(rpart::prune(tfit, cp = 0.05)))
-      plot(tfit3)
-    }
   }
 
   if ("boruta" %in% methods) {
@@ -642,21 +624,20 @@ pgx.multiclassVariableImportance <- function(X, y,
   table(y)
 
   ## resample to minimum size to balance groups
-  if (1) {
-    NFOLD <- 5
-    ## NSIZE = max(max(table(y)),20)
-    NSIZE <- 20
-    jj <- unlist(tapply(1:length(y), y, function(ii) {
-      if (length(ii) < NSIZE) ii <- sample(ii, NSIZE, replace = TRUE)
-      return(ii)
-    }))
-    cat(
-      "pgx.multiclassVariableImportance:: augmenting data from",
-      length(y), "to", length(jj), "samples\n"
-    )
-    X <- X[, jj]
-    y <- y[jj]
-  }
+  NFOLD <- 5
+  ## NSIZE = max(max(table(y)),20)
+  NSIZE <- 20
+  jj <- unlist(tapply(1:length(y), y, function(ii) {
+    if (length(ii) < NSIZE) ii <- sample(ii, NSIZE, replace = TRUE)
+    return(ii)
+  }))
+  cat(
+    "pgx.multiclassVariableImportance:: augmenting data from",
+    length(y), "to", length(jj), "samples\n"
+  )
+  X <- X[, jj]
+  y <- y[jj]
+
 
   if ("glmnet" %in% methods) {
     fam <- "multinomial"
@@ -772,21 +753,20 @@ pgx.variableImportance <- function(X, y,
   table(y)
 
   ## resample to minimum size to balance groups
-  if (1) {
-    NFOLD <- 5
-    ## NSIZE = max(max(table(y)),20)
-    NSIZE <- 20
-    jj <- unlist(tapply(1:length(y), y, function(ii) {
-      if (length(ii) < NSIZE) ii <- sample(ii, NSIZE, replace = TRUE)
-      return(ii)
-    }))
-    cat(
-      "pgx.variableImportance:: augmenting data from",
-      length(y), "to", length(jj), "\n"
-    )
-    X <- X[, jj]
-    y <- y[jj]
-  }
+
+  NFOLD <- 5
+  ## NSIZE = max(max(table(y)),20)
+  NSIZE <- 20
+  jj <- unlist(tapply(1:length(y), y, function(ii) {
+    if (length(ii) < NSIZE) ii <- sample(ii, NSIZE, replace = TRUE)
+    return(ii)
+  }))
+  cat(
+    "pgx.variableImportance:: augmenting data from",
+    length(y), "to", length(jj), "\n"
+  )
+  X <- X[, jj]
+  y <- y[jj]
 
   if ("glmnet" %in% methods) {
     out0 <- glmnet::cv.glmnet(t(X), y,
@@ -895,71 +875,4 @@ pgx.variableImportance <- function(X, y,
   dim(P)
   P <- P[xnames, , drop = FALSE]
   return(P)
-}
-
-
-## ----------------------------------------------------------------------
-## combine all importance values
-## ----------------------------------------------------------------------
-
-if (0) {
-  source("../R/gx-heatmap.r")
-  source("../R/gx-limma.r")
-  load("../pgx/GSE10846-dlbcl-mRNA-8k.pgx", verbose = 1)
-
-  y <- factor(ngs$samples$dlbcl.type)
-  y1 <- 1 * (ngs$samples$dlbcl.type == "GCB")
-  X <- as.matrix(ngs$X)
-  X <- as.matrix(ngs$gsetX)
-  mod1 <- model.matrix(~y)
-  X <- ComBat(X, batch = ngs$samples$Chemotherapy, mod = mod1)
-
-  ## pre-select using LIMMA
-  res <- gx.limma(X, y, fdr = 1, lfc = 0)
-  jj <- which(res[, "adj.P.Val"] < 0.05 & abs(res[, "logFC"]) > 1)
-  length(jj)
-  X <- X[rownames(res)[jj], , drop = FALSE]
-  ## X <- Matrix::head(X[order(-apply(X,1,sd)),],500)
-  sdx <- apply(X, 1, sd)
-  dim(X)
-
-  ## ----------------------------------------------------------------------
-  ## compute importance values
-  ## ----------------------------------------------------------------------
-  methods <- c("glmnet", "randomforest", "boruta", "xgboost")
-  methods <- c("glmnet", "randomforest", "xgboost")
-  P <- pgx.variableImportance(X, y, methods = methods)
-  P <- t(t(P) / apply(P, 2, max, na.rm = TRUE))
-  P <- pmax(P, 0.1)
-  P <- P[order(-rowSums(P, na.rm = TRUE)), , drop = FALSE]
-  Matrix::head(P)
-
-  par(mfrow = c(2, 2), mar = c(8, 4, 2, 2))
-  frame()
-  barplot(t(Matrix::head(P, 30)), las = 1, horiz = TRUE)
-  klr <- grey.colors(ncol(P))
-  legend("topright", legend = colnames(P), fill = klr)
-
-  R <- (apply(P, 2, rank) / nrow(P))**4
-  R <- R[order(-rowSums(R)), , drop = FALSE]
-  frame()
-  barplot(t(Matrix::head(R, 30)), las = 1, horiz = TRUE)
-  legend("topright", legend = colnames(R), fill = klr)
-
-  par(mfrow = c(4, 4), mar = c(4, 4, 2, 2))
-  for (i in 1:16) {
-    g <- rownames(R)[i]
-    boxplot(X[g, , drop = FALSE] ~ y, col = "grey90", main = g)
-  }
-  Matrix::head(res[rownames(R), ])
-
-  ## install.packages("rpart.plot")
-
-
-  sel <- Matrix::head(rownames(R), 100)
-  sel <- Matrix::head(rownames(R), 20)
-  df <- data.frame(y = y, t(X[sel, , drop = FALSE]))
-  rf <- rpart::rpart(y ~ ., data = df)
-  par(mfrow = c(1, 1), mar = c(4, 4, 2, 2) * 0)
-  rpart.plot(rf)
 }

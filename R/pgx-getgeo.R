@@ -136,20 +136,6 @@ pgx.getGEOcounts <- function(id, archs.h5) {
   dim(expr)
   max(expr)
 
-  if (0) {
-    ## already done in getGEO functions...
-    ## perform linear transformation (unlog) if required
-    qx <- as.numeric(quantile(expr, c(0.0, 0.25, 0.5, 0.75, 0.99, 1.0), na.rm = T))
-    qx
-    is.count <- (qx[5] > 100) || (qx[6] - qx[1] > 50 && qx[2] > 0) ||
-      (qx[2] > 0 && qx[2] < 1 && qx[4] > 1 && qx[4] < 2) ## from GEO2R script
-    is.count
-    if (!is.count) {
-      ## expr[which(expr <= 0 | is.na(expr))] <- 0 ## really???
-      expr <- 2**expr
-    }
-  }
-
   dim(expr)
   list(expr = expr, source = src)
 }
@@ -892,24 +878,6 @@ parse_geo_series_matrix <- function(SERIES_FILE,
   ##
   ## https://gist.github.com/SimonLarsen
   ## https://gist.github.com/SimonLarsen/66f27c188039129f3510669b992b2c99
-
-  if (0) {
-    args <- commandArgs(TRUE)
-    ## Input files ####
-    ## Series Matrix File
-    SERIES_FILE <- args[1]
-    ## Platform data table obtained from GEO.
-    PLATFORM_FILE <- args[2]
-
-    ## Parameters ####
-    ## Column containing gene IDs in platform file #
-    ## Generally "ENTREZ_GENE_ID" or "GENE"
-    GENE_COLUMN <- if (!is.na(args[3])) args[3] else "ENTREZ_GENE_ID"
-
-    ## Output files ####
-    EXPRESSION_OUTPUT_FILE <- if (!is.na(args[4])) args[4] else "expression.csv"
-    ANNOTATION_OUTPUT_FILE <- if (!is.na(args[5])) args[5] else "annotation.csv"
-  }
 
   ## Read characteristics
   con <- file(SERIES_FILE, "r")

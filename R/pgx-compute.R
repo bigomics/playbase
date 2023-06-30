@@ -57,12 +57,10 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 
   head(contrasts)
 
-  if (0) {
-    ## reduce sample table? Only phenotypes in contrasts
-    vv <- unique(sub("[:].*", "", colnames(contrasts)))
-    vv
-    samples <- data.frame(samples[, vv, drop = FALSE])
-  }
+  ## reduce sample table? Only phenotypes in contrasts
+  vv <- unique(sub("[:].*", "", colnames(contrasts)))
+  vv
+  samples <- data.frame(samples[, vv, drop = FALSE])
 
   ## other params
   gx.methods <- strsplit(gxmethods, split = ",")[[1]]

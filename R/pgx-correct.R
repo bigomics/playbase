@@ -328,19 +328,15 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     ## mod0x = model.matrix( ~1, df)
     mod1x <- cbind(1, mod1)
     mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
-    if (0) {
-      ## original method using SVA
-      n.sv <- num.sv(cX, mod1x, method = "be")
-      n.sv
-    } else {
-      ## fast method using SmartSVA
-      pp <- paste0(model.par, collapse = "+")
-      pp
-      lm.expr <- paste0("lm(t(cX) ~ ", pp, ", data=pheno)")
-      X.r <- t(resid(eval(parse(text = lm.expr))))
-      n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
-      n.sv
-    }
+
+    ## fast method using SmartSVA
+    pp <- paste0(model.par, collapse = "+")
+    pp
+    lm.expr <- paste0("lm(t(cX) ~ ", pp, ", data=pheno)")
+    X.r <- t(resid(eval(parse(text = lm.expr))))
+    n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
+    n.sv
+
     cX1 <- Matrix::head(cX[order(-apply(cX, 1, sd)), ], 1000) ## top 1000 genes only (faster)
     sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = n.sv)$sv)
     ## sv <- SmartSVA::smartsva.cpp(cX, mod1x, mod0=mod0x, n.sv=n.sv)$sv
@@ -923,20 +919,15 @@ pgx.svaCorrect <- function(X, pheno, nmax = -1) {
   ## mod0 = NULL
 
   message("Estimating number of surrogate variables...")
-  if (0) {
-    ## original method using SVA
-    n.sv <- sva::num.sv(X, mod1x, method = "be")
-    n.sv
-  } else {
-    ## fast method using SmartSVA
-    ## X.r <- t(resid(lm(t(X) ~ var, data=df)))
-    pp <- paste0(colnames(pheno), collapse = "+")
-    pp
-    lm.expr <- paste0("lm(t(X) ~ ", pp, ", data=pheno)")
-    X.r <- t(stats::resid(eval(parse(text = lm.expr))))
-    n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
-    n.sv
-  }
+
+  ## fast method using SmartSVA
+  ## X.r <- t(resid(lm(t(X) ~ var, data=df)))
+  pp <- paste0(colnames(pheno), collapse = "+")
+  pp
+  lm.expr <- paste0("lm(t(X) ~ ", pp, ", data=pheno)")
+  X.r <- t(stats::resid(eval(parse(text = lm.expr))))
+  n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
+  n.sv
   suppressWarnings(min1 <- min(sapply(apply(pheno, 2, table), min)))
   n.sv <- min(n.sv, min1)
   n.sv

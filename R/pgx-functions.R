@@ -14,21 +14,7 @@ pgx.phenoMatrix <- function(pgx, phenotype) {
 
 #' @export
 text_repel.NOTWORKING <- function(x, y, text, cex = 1, force = 1e-7, maxiter = 20000) {
-  if (0) {
-    ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg, label = rownames(mtcars))) +
-      ggplot2::geom_point() +
-      ggrepel::geom_text_repel()
 
-    x <- mtcars[, "wt"]
-    y <- mtcars[, "mpg"]
-    text <- rownames(mtcars)
-
-    labx <- out[, 3]
-    laby <- out[, 4]
-    ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
-      ggplot2::geom_point() +
-      ggplot2::geom_text(x = labx, y = laby, label = rownames(mtcars))
-  }
   ## x and y posiitons as a dataframe
   df <- data.frame(x = x, y = y, text = text)
   w <- diff(range(x))
@@ -940,12 +926,7 @@ getMyGeneInfo <- function(eg, fields = c("symbol", "name", "alias", "map_locatio
   names(info) <- fields
   info <- lapply(info, function(x) ifelse(length(x) == 3, x[[3]], "(not available)"))
   info <- sapply(info, paste, collapse = ",")
-  if (0) {
-    rifs <- biomaRt::getGene(eg, fields = "generif")[[1]]
-    collapse.rif <- function(r) paste0(r$text, " (PMID=", r$pubmed, ")")
-    rifs <- rifs[which(sapply(rifs, length) > 2)]
-    xrif <- sapply(rifs[[3]], function(rr) collapse.rif(rr))
-  }
+
   return(info)
 }
 

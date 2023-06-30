@@ -6,10 +6,6 @@
 
 #' @export
 pgx.computePathscores <- function(graph, strict.pos = TRUE) {
-  if (0) {
-    graph <- ngs$omicsnet
-    graph <- ngs$omicsnet.reduced
-  }
 
   ## add source/sink
   graph <- pgx._addSourceSink(graph)
@@ -53,18 +49,6 @@ pgx.computePathscores <- function(graph, strict.pos = TRUE) {
     P[, i] <- path.score
   }
   dim(P)
-
-  if (0) {
-    P1 <- P[grep("\\{gene\\}", rownames(P)), ]
-    jj <- order(-rowMeans(P1**2))
-    Matrix::head(P1[jj, ])
-    Matrix::head(graph$members[rownames(P1)[jj]])
-
-    P2 <- P[grep("\\{geneset\\}", rownames(P)), ]
-    jj <- order(-rowMeans(P2**2))
-    Matrix::head(P2[jj, ], 10)
-    Matrix::head(graph$members[rownames(P2)[jj]])
-  }
 
   return(P)
 }
@@ -114,13 +98,6 @@ pgx.computeShortestPath <- function(graph, contrast, niter = 1, r = 0.01,
   vfreq <- sort(table(unlist(vpath)), decreasing = TRUE)
 
   ## efreq <- sort(table(unlist(epath)),decreasing=TRUE)
-  if (0) {
-    Matrix::head(vfreq)
-    vtop <- names(vfreq)
-    Matrix::head(graph$members[vtop])
-    fc[vtop]
-    graph$members[ends(graph, epath[[2]])]
-  }
 
   res <- list(vpath = vpath, epath = epath, vfreq = vfreq)
   return(res)
@@ -233,24 +210,22 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   ## ----------------------------------------------------------------------
   ## should we recreate the SNNgraph in the intralayers????
   ## ----------------------------------------------------------------------
-  if (1) {
-    table(igraph::V(gr1)$level)
-    ## this connect all points with at least 3 neighbours
-    sel1 <- which(igraph::V(gr1)$level == "gene")
-    pos1 <- gr$layout[igraph::V(gr1)[sel1]$name, ]
-    Matrix::head(pos1)
-    r1 <- scran::buildSNNGraph(t(pos1), k = 3)
-    igraph::V(r1)$name <- igraph::V(gr1)[sel1]$name
+  table(igraph::V(gr1)$level)
+  ## this connect all points with at least 3 neighbours
+  sel1 <- which(igraph::V(gr1)$level == "gene")
+  pos1 <- gr$layout[igraph::V(gr1)[sel1]$name, ]
+  Matrix::head(pos1)
+  r1 <- scran::buildSNNGraph(t(pos1), k = 3)
+  igraph::V(r1)$name <- igraph::V(gr1)[sel1]$name
 
-    sel2 <- which(igraph::V(gr1)$level == "geneset")
-    pos2 <- gr$layout[igraph::V(gr1)[sel2]$name, ]
-    Matrix::head(pos2)
-    r2 <- scran::buildSNNGraph(t(pos2), k = 3)
-    igraph::V(r2)$name <- igraph::V(gr1)[sel2]$name
-    new.gr <- igraph::graph.union(gr1, r1)
-    new.gr <- igraph::graph.union(new.gr, r2)
-    gr1 <- new.gr
-  }
+  sel2 <- which(igraph::V(gr1)$level == "geneset")
+  pos2 <- gr$layout[igraph::V(gr1)[sel2]$name, ]
+  Matrix::head(pos2)
+  r2 <- scran::buildSNNGraph(t(pos2), k = 3)
+  igraph::V(r2)$name <- igraph::V(gr1)[sel2]$name
+  new.gr <- igraph::graph.union(gr1, r1)
+  new.gr <- igraph::graph.union(new.gr, r2)
+  gr1 <- new.gr
 
   ## get rid of all weight attributes
   attr <- igraph::edge_attr_names(gr1)
@@ -385,30 +360,28 @@ pgx.reduceOmicsGraph <- function(ngs) {
   gr1$layout <- scale(rpos)
   ## gr1 <- scran::buildSNNGraph(t(rpos), k=20)
 
-  if (1) {
-    ## should we recreate the SNNgraph in the intralayers????
-    ## this connect all points with at least 3 neighbours
-    vtype <- gsub("\\}.*|^\\{", "", igraph::V(gr1)$name)
-    sel1 <- which(vtype == "gene")
-    pos1 <- gr1$layout[igraph::V(gr1)[sel1]$name, ]
-    Matrix::head(pos1)
-    r1 <- scran::buildSNNGraph(t(pos1), k = 3)
-    igraph::V(r1)$name <- rownames(pos1)
+  ## should we recreate the SNNgraph in the intralayers????
+  ## this connect all points with at least 3 neighbours
+  vtype <- gsub("\\}.*|^\\{", "", igraph::V(gr1)$name)
+  sel1 <- which(vtype == "gene")
+  pos1 <- gr1$layout[igraph::V(gr1)[sel1]$name, ]
+  Matrix::head(pos1)
+  r1 <- scran::buildSNNGraph(t(pos1), k = 3)
+  igraph::V(r1)$name <- rownames(pos1)
 
-    sel2 <- which(vtype == "geneset")
-    pos2 <- gr1$layout[igraph::V(gr1)[sel2]$name, ]
-    Matrix::head(pos2)
-    r2 <- scran::buildSNNGraph(t(pos2), k = 3)
-    igraph::V(r2)$name <- rownames(pos2)
-    new.gr <- igraph::graph.union(r1, r2)
-    new.gr <- igraph::remove.edge.attribute(new.gr, "weight_1")
-    new.gr <- igraph::remove.edge.attribute(new.gr, "weight_2")
-    new.gr <- igraph::graph.union(gr1, new.gr)
-    igraph::edge_attr_names(new.gr)
-    jj <- which(is.na(igraph::E(new.gr)$weight))
-    igraph::E(new.gr)$weight[jj] <- 0 ## actually we should recompute this....
-    gr1 <- new.gr
-  }
+  sel2 <- which(vtype == "geneset")
+  pos2 <- gr1$layout[igraph::V(gr1)[sel2]$name, ]
+  Matrix::head(pos2)
+  r2 <- scran::buildSNNGraph(t(pos2), k = 3)
+  igraph::V(r2)$name <- rownames(pos2)
+  new.gr <- igraph::graph.union(r1, r2)
+  new.gr <- igraph::remove.edge.attribute(new.gr, "weight_1")
+  new.gr <- igraph::remove.edge.attribute(new.gr, "weight_2")
+  new.gr <- igraph::graph.union(gr1, new.gr)
+  igraph::edge_attr_names(new.gr)
+  jj <- which(is.na(igraph::E(new.gr)$weight))
+  igraph::E(new.gr)$weight[jj] <- 0 ## actually we should recompute this....
+  gr1 <- new.gr
 
   ## ------------------------------------------------------------
   ## add some graph data
@@ -485,20 +458,18 @@ pgx.createVipGeneLayer <- function(gr, genes, z = 0, reconnect = 40) {
   ## ----------------------------------------------------------------------
   ## Reconnect VIP links with more neighbours (looks nicer)
   ## ----------------------------------------------------------------------
-  if (1) {
-    cat("createVipGeneLayer:: reconnecting VIP nodes within VIP layer\n")
-    pos1 <- gr1$layout[vip, 1:2]
-    gr2 <- scran::buildSNNGraph(t(pos1), k = 5)
-    ## V(gr2)$name <- sub(".*\\}","",rownames(pos1))
-    igraph::V(gr2)$name <- rownames(pos1)
-    gr2$layout <- pos1
-    vv <- igraph::get.edgelist(gr2)
-    rho <- rowMeans(gr1$scaled.data[vv[, 1], ] * gr1$scaled.data[vv[, 2], ]) ## rho
-    vname1 <- igraph::V(gr1)$name
-    ee1 <- cbind(match(vv[, 1], vname1), match(vv[, 2], vname1))
-    jj <- which(rowSums(is.na(ee1)) == 0)
-    gr1 <- igraph::add_edges(gr1, edges = as.vector(t(ee1[jj, ])), weight = rho[jj])
-  }
+  cat("createVipGeneLayer:: reconnecting VIP nodes within VIP layer\n")
+  pos1 <- gr1$layout[vip, 1:2]
+  gr2 <- scran::buildSNNGraph(t(pos1), k = 5)
+  ## V(gr2)$name <- sub(".*\\}","",rownames(pos1))
+  igraph::V(gr2)$name <- rownames(pos1)
+  gr2$layout <- pos1
+  vv <- igraph::get.edgelist(gr2)
+  rho <- rowMeans(gr1$scaled.data[vv[, 1], ] * gr1$scaled.data[vv[, 2], ]) ## rho
+  vname1 <- igraph::V(gr1)$name
+  ee1 <- cbind(match(vv[, 1], vname1), match(vv[, 2], vname1))
+  jj <- which(rowSums(is.na(ee1)) == 0)
+  gr1 <- igraph::add_edges(gr1, edges = as.vector(t(ee1[jj, ])), weight = rho[jj])
 
   return(gr1)
 }
@@ -625,12 +596,6 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
 #' @export
 pgx.plotForwardProjection <- function(gr, gene, cex = 1, fx = NULL,
                                       features = NULL, main = NULL, plot = TRUE) {
-  if (0) {
-    cex <- 4
-    gene <- "CDK4"
-    fx <- main <- NULL
-    gr <- ngs$omicsnet
-  }
 
   if (!is.null(features)) {
     gr <- pgx.createVipGeneLayer(gr, genes)

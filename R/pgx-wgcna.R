@@ -78,51 +78,47 @@ pgx.wgcna <- function(
   me.colors <- me.colors[names(me.genes)]
   # progress$inc(0.4, "")
 
-  if (1) {
-    # message("[wgcna.compute] >>> Calculating WGCNA clustering...")
-    # progress$inc(0.1, "Computing dim reductions...")
+  # message("[wgcna.compute] >>> Calculating WGCNA clustering...")
+  # progress$inc(0.1, "Computing dim reductions...")
 
-    X1 <- t(datExpr)
-    X1 <- t(scale(datExpr))
-    ## pos <- Rtsne::Rtsne(X1)$Y
-    ## dissTOM <- 1 - abs(cor(datExpr))**6
-    dissTOM <- 1 - WGCNA::TOMsimilarityFromExpr(datExpr, power = power)
-    rownames(dissTOM) <- colnames(dissTOM) <- colnames(datExpr)
-    clust <- playbase::pgx.clusterBigMatrix(dissTOM, methods = c("umap", "tsne", "pca"), dims = c(2))
-    ## pos <- playbase::pgx.clusterBigMatrix(t(X1), methods="tsne", dims=2)[[1]]
-    ## pos <- playbase::pgx.clusterBigMatrix(dissTOM, methods="pca", dims=2)[[1]]
-    names(clust)
-    if ("cluster.genes" %in% names(pgx)) {
-      clust[["umap2d"]] <- pgx$cluster.genes$pos[["umap2d"]][colnames(datExpr), ]
-    }
-    # progress$inc(0.2)
+  X1 <- t(datExpr)
+  X1 <- t(scale(datExpr))
+  ## pos <- Rtsne::Rtsne(X1)$Y
+  ## dissTOM <- 1 - abs(cor(datExpr))**6
+  dissTOM <- 1 - WGCNA::TOMsimilarityFromExpr(datExpr, power = power)
+  rownames(dissTOM) <- colnames(dissTOM) <- colnames(datExpr)
+  clust <- playbase::pgx.clusterBigMatrix(dissTOM, methods = c("umap", "tsne", "pca"), dims = c(2))
+  ## pos <- playbase::pgx.clusterBigMatrix(t(X1), methods="tsne", dims=2)[[1]]
+  ## pos <- playbase::pgx.clusterBigMatrix(dissTOM, methods="pca", dims=2)[[1]]
+  names(clust)
+  if ("cluster.genes" %in% names(pgx)) {
+    clust[["umap2d"]] <- pgx$cluster.genes$pos[["umap2d"]][colnames(datExpr), ]
   }
+  # progress$inc(0.2)
 
+  # message("[wgcna.compute] >>> Calculating WGCNA module enrichments...")
+  # progress$inc(0, "Calculating module enrichment...")
 
-  if (1) {
-    # message("[wgcna.compute] >>> Calculating WGCNA module enrichments...")
-    # progress$inc(0, "Calculating module enrichment...")
-
-    gmt <- getGSETS_playbase(pattern = "HALLMARK|GOBP|^C[1-9]")
-    gse <- NULL
-    ## bg <- unlist(me.genes)
-    bg <- toupper(rownames(pgx$X))
-    i <- 1
-    for (i in 1:length(me.genes)) {
-      gg <- toupper(me.genes[[i]])
-      rr <- playbase::gset.fisher(gg, gmt, background = bg, fdr = 1)
-      rr <- cbind(
-        module = names(me.genes)[i],
-        geneset = rownames(rr), rr
-      )
-      rr <- rr[order(rr$p.value), , drop = FALSE]
-      if (i == 1) gse <- rr
-      if (i > 1) gse <- rbind(gse, rr)
-    }
-    rownames(gse) <- NULL
-
-    # progress$inc(0.3)
+  gmt <- getGSETS_playbase(pattern = "HALLMARK|GOBP|^C[1-9]")
+  gse <- NULL
+  ## bg <- unlist(me.genes)
+  bg <- toupper(rownames(pgx$X))
+  i <- 1
+  for (i in 1:length(me.genes)) {
+    gg <- toupper(me.genes[[i]])
+    rr <- playbase::gset.fisher(gg, gmt, background = bg, fdr = 1)
+    rr <- cbind(
+      module = names(me.genes)[i],
+      geneset = rownames(rr), rr
+    )
+    rr <- rr[order(rr$p.value), , drop = FALSE]
+    if (i == 1) gse <- rr
+    if (i > 1) gse <- rbind(gse, rr)
   }
+  rownames(gse) <- NULL
+
+  # progress$inc(0.3)
+
   ## construct results object
   return(
     list(

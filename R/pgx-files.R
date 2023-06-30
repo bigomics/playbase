@@ -557,12 +557,6 @@ pgx.updateInfoPGX <- function(pgxinfo, pgx, remove.old = TRUE) {
 ## PGXINFO methods (preferred API)
 ## ================================================================================
 
-if (0) {
-  pgx.dir <- "~/Playground/omicsplayground/data"
-  file <- "datasets-info.csv"
-  pgxname <- "example-data"
-}
-
 #' Delete pgx entry in datasets-info table in files (WIP)
 #'
 #' @export

@@ -169,24 +169,6 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
   sel <- which(xdrugs %in% sel.drugs)
   results$stats <- R1[sel, , drop = FALSE]
 
-  if (0) {
-    ## UMAP clustering
-    message("[pgx.computeDrugEnrichment] UMAP clustering...")
-    cX <- scale(X[, sel], center = FALSE)
-    cX <- cX - rowMeans(cX)
-    cX <- scale(cX, center = TRUE)
-    pos <- uwot::umap(t(cX), fast_sgd = TRUE)
-    dim(pos)
-    rownames(pos) <- colnames(cX)
-    results$clust <- pos
-    results$stats <- R1[rownames(pos), , drop = FALSE]
-  }
-
-  if (0) {
-    pgx.scatterPlotXY.BASE(pos, var = 2**R1[rownames(pos), 1])
-    pgx.scatterPlotXY.BASE(pos, var = log(colMeans(X**2)))
-  }
-
   message("[pgx.computeDrugEnrichment] done!")
 
   return(results)

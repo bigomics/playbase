@@ -310,11 +310,6 @@ pgx.simplifyCellTypes <- function(ct, low.th = 0.01) {
 
 #' @export
 pgx.purify <- function(X, ref, k = 3, method = 2) {
-  if (0) {
-    X <- 2**ngs$X
-    X <- Matrix::head(X[order(-apply(ngs$X, 1, sd)), ], 1000)
-    ref <- "hepatocyte"
-  }
 
   ## ----------------------------------------------------------------------
   ## Using NNLM
@@ -436,19 +431,10 @@ pgx.inferGender <- function(X, gene_name = NULL) {
   ##
   ## cc.genes <- readLines(con = "../opt/seurat/regev_lab_cell_cycle_genes.txt")
   if (is.null(gene_name)) gene_name <- toupper(sub(".*:", "", rownames(X)))
-  if (0) {
-    X <- log2(1 + ngs$counts)
-    gene_name <- rownames(X)
-    x.genes <- rownames(ngs$genes)[grep("X", ngs$genes$chr)]
-    y.genes <- rownames(ngs$genes)[grep("Y", ngs$genes$chr)]
-    x.genes
-    y.genes
-  } else {
-    y.genes <- intersect(c("DDX3Y", "RPS4Y1", "USP9Y", "KDM5D"), gene_name)
-    y.genes
-    x.genes <- intersect(c("XIST"), gene_name)
-    x.genes
-  }
+  y.genes <- intersect(c("DDX3Y", "RPS4Y1", "USP9Y", "KDM5D"), gene_name)
+  y.genes
+  x.genes <- intersect(c("XIST"), gene_name)
+  x.genes
   if (length(y.genes) == 0 && length(x.genes) == 0) {
     dbg("warning:: could not determine sex. missing some X/Y marker genes\n")
     sex <- rep(NA, ncol(X))
@@ -576,15 +562,7 @@ pgx.deconvolution <- function(X, ref,
   }
 
   ## conform??
-  if (0) {
-    length(gg)
-    ## ref <- ref[gg,]
-    ## mat <- mat[gg,]
-    qx <- limma::normalizeQuantiles(cbind(ref[gg, ], mat[gg, ]))
-    ref <- qx[, colnames(ref)]
-    mat <- mat[, colnames(mat)]
-  }
-
+ 
   timings <- list()
   results <- list()
   methods

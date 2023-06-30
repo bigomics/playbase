@@ -70,12 +70,10 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
   clust.index <- clust$membership
   clust$membership <- NULL
 
-  if (1) {
-    ## remove empty space in tSNE/UMAP
-    ii <- grep("tsne|umap", names(clust))
-    if (length(ii) > 0) {
-      clust[ii] <- lapply(clust[ii], pos.compact) ## make more compact
-    }
+  ## remove empty space in tSNE/UMAP
+  ii <- grep("tsne|umap", names(clust))
+  if (length(ii) > 0) {
+    clust[ii] <- lapply(clust[ii], pos.compact) ## make more compact
   }
 
   ## put in slot 'gene cluster'
@@ -258,10 +256,8 @@ pgx.clusterSamples <- function(pgx, X = NULL, skipifexists = FALSE, perplexity =
 #' @examples
 pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"),
                              top.sd = 1000, npca = 50) {
-  if (0) {
-    top.sd <- 1000
-    npca <- 50
-  }
+  top.sd <- 1000
+  npca <- 50
   message("[FindClusters] called...")
 
   km.sizes <- c(2, 3, 4, 5, 7, 10, 15, 20, 25, 50, 100)

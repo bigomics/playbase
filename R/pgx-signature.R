@@ -255,12 +255,6 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   res$score <- res$R2 * res$NES
   res <- res[order(res$score, decreasing = TRUE), ]
 
-  if (0) {
-    res$rho.p <- cor.pvalue(res$rho, n = length(gg))
-    res$meta.p <- apply(res[, c("pval", "rho.p")], 1, function(p) metap::sumz(p)$p)
-    res <- res[order(res$meta.p), ]
-  }
-
   Matrix::head(res)
   return(res)
 }
@@ -348,12 +342,6 @@ pgx.correlateSignature.matrix <- function(fc, refmat, nsig = 100, ntop = 1000, n
   res$R2 <- rho[jj]**2
   res$score <- res$R2 * res$NES
   res <- res[order(res$score, decreasing = TRUE), ]
-
-  if (0) {
-    res$rho.p <- cor.pvalue(res$rho, n = length(gg))
-    res$meta.p <- apply(res[, c("pval", "rho.p")], 1, function(p) metap::sumz(p)$p)
-    res <- res[order(res$meta.p), ]
-  }
 
   Matrix::head(res)
   return(res)
@@ -447,16 +435,14 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
     remove(sig100.up, sig100.dn, msig100.up, msig100.dn)
 
     ## check NA!!! sometimes it is set to large negative
-    if (1) {
-      rhdf5::h5ls(h5.file)
-      X <- rhdf5::h5read(h5.file, "data/matrix")
-      Matrix::head(X[, 1])
-      X[which(X < -999999)] <- NA
-      Matrix::head(X[, 1])
-      dim(X)
-      rhdf5::h5write(X, h5.file, "data/matrix") ## can write list??
-      rhdf5::h5closeAll()
-    }
+    rhdf5::h5ls(h5.file)
+    X <- rhdf5::h5read(h5.file, "data/matrix")
+    Matrix::head(X[, 1])
+    X[which(X < -999999)] <- NA
+    Matrix::head(X[, 1])
+    dim(X)
+    rhdf5::h5write(X, h5.file, "data/matrix") ## can write list??
+    rhdf5::h5closeAll()
   }
   dim(X)
 
@@ -740,11 +726,7 @@ pgx.ReclusterSignatureDatabase <- function(h5.file, reduce.sd = 1000, reduce.pca
 #' @export
 pgx.computeMultiOmicsGSE <- function(X, gmt, omx.type,
                                      method = NULL, center = TRUE) {
-  if (0) {
-    omx.type <- c("MRNA", "MIR")[1 + grepl("^MIR", rownames(X))]
-    table(omx.type)
-    omx.type <- sample(c("MRNA", "CNV"), nrow(X), replace = TRUE)
-  }
+
   if (is.null(omx.type)) {
     omx.type <- gsub("[:=].*", "", rownames(X))
   }

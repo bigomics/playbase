@@ -430,21 +430,11 @@ pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast = NULL) {
   M <- list()
   i <- 1
   for (i in 1:(length(X) - 1)) {
-    if (0) {
-      k1 <- rownames(X[[i]])[max.col(t(X[[i]]))] ## only max???
-      k2 <- rownames(X[[i + 1]])[max.col(t(X[[i + 1]]))] ## only max???
-      ## M[[i]] <- log(1+table(k1,k2))
-      mm <- table(k1, k2)
-      ii <- match(rownames(X[[i]]), rownames(mm))
-      jj <- match(rownames(X[[i + 1]]), colnames(mm))
-      mm <- mm[ii, jj]
-      rownames(mm) <- rownames(X[[i]])
-      colnames(mm) <- rownames(X[[i + 1]])
-    } else {
-      mm <- pmax(X[[i]], 0) %*% t(pmax(X[[i + 1]], 0))
-      mm <- mm**4
-      mm <- mm / mean(mm)
-    }
+
+    mm <- pmax(X[[i]], 0) %*% t(pmax(X[[i + 1]], 0))
+    mm <- mm**4
+    mm <- mm / mean(mm)
+
     M[[i]] <- mm
   }
 
@@ -704,10 +694,7 @@ pgx.SankeyFromPhenotypes.GGPLOT <- function(pgx, phenotypes, mat = NULL, fill = 
     n0 <- sum(N[zap.tiny])
     df <- df[!zap.tiny, ]
     N <- N[!zap.tiny]
-    if (0) {
-      df <- rbind(df, "other")
-      N <- c(N, n0)
-    }
+
   }
   df <- data.frame(df)
   df$Frequency <- N
@@ -791,10 +778,7 @@ plot_grid.sharedAxisLabels <- function(plotList, nrow) {
 #' @export
 pgx.plotContrast <- function(pgx, contrast = NULL, type = "scatter",
                              set.par = TRUE, par.sq = FALSE, ...) {
-  if (0) {
-    contrast <- colnames(pgx$model.parameters$exp.matrix)
-    contrast
-  }
+
   if (is.null(contrast)) {
     contrast <- colnames(pgx$model.parameters$exp.matrix)
   }
@@ -934,10 +918,7 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
                                 cex = 1, cex.lab = 0.8,
                                 psig = 0.05, fc = 1, level = "gene",
                                 ntop = 20, dir = 0, plotlib = "base") {
-  if (0) {
-    contrast <- colnames(pgx$model.parameters$exp.matrix)[1]
-    contrast
-  }
+
   if (is.numeric(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
   exp.matrix <- pgx$model.parameters$exp.matrix
   ct <- exp.matrix[, contrast]
@@ -1109,21 +1090,6 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
                                plotly.annotations = NULL,
                                plotly.margin = NULL,
                                plotlib = "base") {
-  if (0) {
-    logscale <- TRUE
-    level <- "gene"
-    grouped <- TRUE
-    srt <- 90
-    collapse.others <- 1
-    max.points <- -1
-    main <- NULL
-    xlab <- NULL
-    ylab <- NULL
-    names <- TRUE
-    group.names <- NULL
-    probe <- rownames(pgx$X)[1]
-    comp <- 1
-  }
 
   if (is.null(probe)) {
     return(NULL)
@@ -1513,12 +1479,7 @@ pgx.cytoPlot <- function(pgx, gene1, gene2, cex = 1, col = "grey60",
   j2 <- samples[which(x1 > m1 & x2 < m2)]
   j3 <- samples[which(x1 > m1 & x2 > m2)]
   j4 <- samples[which(x1 < m1 & x2 < m2)]
-  if (0) {
-    j1 <- c(j1, sample(samples, 5))
-    j2 <- c(j2, sample(samples, 5))
-    j3 <- c(j3, sample(samples, 5))
-    j4 <- c(j4, sample(samples, 5))
-  }
+
   z1 <- z2 <- z3 <- z4 <- NULL
   if (length(j1) > 1) z1 <- MASS::kde2d(x1[j1], x2[j1], n = 50)
   if (length(j2) > 1) z2 <- MASS::kde2d(x1[j2], x2[j2], n = 50)
@@ -2461,49 +2422,6 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
                                    tooltip = NULL, theme = NULL, set.par = TRUE,
                                    axt = "s", xaxs = TRUE, yaxs = TRUE,
                                    labels = NULL, label.type = NULL, opacity = 1) {
-  if (0) {
-    var <- NULL
-    type <- NULL
-    col <- NULL
-    title <- ""
-    zlim <- NULL
-    zlog <- FALSE
-    zsym <- FALSE
-    softmax <- FALSE
-    pch <- 20
-    cex <- NULL
-    cex.lab <- 1
-    cex.title <- 1.2
-    cex.legend <- 1
-    zoom <- 1
-    legend <- TRUE
-    bty <- "o"
-    legend.ysp <- 0.85
-    legend.pos <- "bottomleft"
-    lab.pos <- NULL
-    repel <- TRUE
-    xlab <- NULL
-    ylab <- NULL
-    xlim <- NULL
-    ylim <- NULL
-    dlim <- 0.05
-    hilight2 <- hilight
-    hilight.cex <- NULL
-    lab.xpd <- TRUE
-    hilight <- NULL
-    hilight.col <- NULL
-    hilight.lwd <- 0.8
-    label.clusters <- FALSE
-    cex.clust <- 1.5
-    rstep <- 0.1
-    tooltip <- NULL
-    theme <- NULL
-    set.par <- TRUE
-    axt <- "s"
-    labels <- NULL
-    label.type <- NULL
-    opacity <- 1
-  }
 
   ## automatically set pointsize of dots
   if (is.null(cex)) {
@@ -2787,37 +2705,6 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
                                      tooltip = NULL, theme = NULL, set.par = TRUE,
                                      label.type = c("text", "box"), base_size = 11,
                                      title = NULL, barscale = 0.8, axis = TRUE, box = TRUE) {
-  if (0) {
-    cex.lab <- 0.8
-    cex.title <- 1.2
-    cex.clust <- 1.5
-    cex.legend <- 1
-    zoom <- 1
-    legend <- TRUE
-    bty <- "n"
-    hilight <- NULL
-    zlim <- NULL
-    zlog <- FALSE
-    softmax <- FALSE
-    zsym <- FALSE
-    xlab <- NULL
-    ylab <- NULL
-    xlim <- NULL
-    ylim <- NULL
-    hilight2 <- hilight
-    hilight.col <- "black"
-    hilight.lwd <- 0.8
-    hilight.cex <- NULL
-    opacity <- 1
-    label.clusters <- FALSE
-    labels <- NULL
-    legend.ysp <- 0.85
-    legend.pos <- "bottomleft"
-    tooltip <- NULL
-    theme <- NULL
-    set.par <- TRUE
-    label.type <- "text"
-  }
 
   if (!is.null(var) && !is.null(ncol(var))) {
     var <- var[, 1]
@@ -3189,44 +3076,6 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                                      title = "", title.y = 1, gridcolor = NULL,
                                      source = NULL, key = NULL,
                                      displayModeBar = FALSE) {
-  if (0) {
-    var <- NULL
-    type <- NULL
-    col <- NULL
-    cex <- NULL
-    cex.lab <- 0.8
-    cex.title <- 1.2
-    cex.clust <- 1.5
-    cex.legend <- 1
-    xlab <- NULL
-    ylab <- NULL
-    xlim <- NULL
-    ylim <- NULL
-    axis <- TRUE
-    zoom <- 1
-    legend <- TRUE
-    bty <- "n"
-    hilight <- NULL
-    hilight2 <- hilight
-    hilight.col <- NULL
-    hilight.cex <- NULL
-    hilight.lwd <- 0.8
-    zlim <- NULL
-    zlog <- FALSE
-    zsym <- FALSE
-    softmax <- FALSE
-    opacity <- 1
-    label.clusters <- FALSE
-    labels <- NULL
-    label.type <- NULL
-    tooltip <- NULL
-    theme <- NULL
-    set.par <- TRUE
-    title <- ""
-    source <- NULL
-    key <- NULL
-    displayModeBar <- FALSE
-  }
 
   if (!is.null(var) && NCOL(var) > 1) {
     var <- setNames(var[, 1], rownames(var))
