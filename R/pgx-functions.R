@@ -367,17 +367,14 @@ probe2symbol <- function(probes, type = NULL, org = "human", keep.na = FALSE) {
     ## symbol0 <- lapply(symbol0, function(s) intersect(s,all.symbols))
   } else {
     org
-    require(org.Hs.eg.db)
-    require(org.Mm.eg.db)
-    require(org.Rn.eg.db)
     if (org == "human") {
-      symbol0 <- AnnotationDbi::mapIds(org.Hs.eg.db, probes, "SYMBOL", toupper(type))
+      symbol0 <- AnnotationDbi::mapIds(org.Hs.eg.db::org.Hs.eg.db, probes, "SYMBOL", toupper(type))
     }
     if (org == "mouse") {
-      symbol0 <- AnnotationDbi::mapIds(org.Mm.eg.db, probes, "SYMBOL", toupper(type))
+      symbol0 <- AnnotationDbi::mapIds(org.Mm.eg.db::org.Mm.eg.db, probes, "SYMBOL", toupper(type))
     }
     if (org == "rat") {
-      symbol0 <- AnnotationDbi::mapIds(org.Rn.eg.db, probes, "SYMBOL", toupper(type))
+      symbol0 <- AnnotationDbi::mapIds(org.Rn.eg.db::org.Rn.eg.db, probes, "SYMBOL", toupper(type))
     }
   }
 
@@ -1712,7 +1709,7 @@ getGSETS_playbase.SAVE <- function(pattern, lib.dir, custom_families_file = "cus
   names(f1) <- sub("FAMILY:<all>", "<all>", names(f1))
 
   # get GSETS
-  GSETS <- c(playbase::GSETS, f1)
+  GSETS <- c(playdata::GSETS, f1)
 
   # to get iGSETS
   GSET.GENES <- sort(unique(unlist(GSETS))) ## slow...
