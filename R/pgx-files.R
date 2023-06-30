@@ -784,7 +784,7 @@ pgxinfo.needUpdate <- function(
     pgxinfo <- read.csv(info.file1, stringsAsFactors = FALSE, row.names = 1, sep = ",")
     info.files <- unique(sub(".pgx$", "", pgxinfo$dataset))
     info.complete <- all(pgx.files %in% info.files)
-    info.missing  <- setdiff(pgx.files, info.files)
+    info.missing <- setdiff(pgx.files, info.files)
     info.complete
   }
 
