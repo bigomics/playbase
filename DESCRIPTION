@@ -116,7 +116,6 @@ Imports:
     stringr,
     SummarizedExperiment,
     survival,
-    survminer,
     sva,
     systemfonts,
     tidyr,
