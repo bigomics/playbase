@@ -606,7 +606,7 @@ pgx.survivalVariableImportance <- function(X, time, status,
   }
 
   if ("pls" %in% methods) {
-    res <- pls::plsRcox(t(X), time = time, event = status, nt = 5)
+    res <- plsRcox::plsRcox(t(X), time = time, event = status, nt = 5)
     summary(res)
     cf <- res$Coeffs[, 1]
     cf[is.na(cf)] <- 0

@@ -87,6 +87,7 @@ Imports:
     playdata,
     plotly,
     pls,
+    plsRcox,
     plyr,
     png,
     ppcor,
