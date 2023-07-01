@@ -124,7 +124,6 @@ strwrap2 <- function(str, n) {
 
 #' @export
 add_opacity <- function(hexcol, opacity) {
-
   col1 <- rep(NA, length(hexcol))
   ii <- which(!is.na(hexcol))
   rgba <- strsplit(gsub("rgba\\(|\\)", "", plotly::toRGB(hexcol[ii], opacity)), split = ",")
@@ -141,8 +140,6 @@ logCPM <- function(counts, total = 1e6, prior = 1) {
   ##
   ##
   if (is.null(total)) {
-
-
     total0 <- mean(Matrix::colSums(counts, na.rm = TRUE)) ## previous sum
     total <- ifelse(total0 < 1e6, total0, 1e6)
     message("[logCPM] setting column sums to = ", round(total, 2))
@@ -278,7 +275,6 @@ probe2symbol <- function(probes, type = NULL, org = "human", keep.na = FALSE) {
     hs.list <- list(
       "human.ensembl" = unlist(as.list(org.Hs.eg.db::org.Hs.egENSEMBL)),
       "human.ensemblTRANS" = unlist(as.list(org.Hs.eg.db::org.Hs.egENSEMBLTRANS)),
-
       "human.refseq" = unlist(as.list(org.Hs.eg.db::org.Hs.egREFSEQ)),
       "human.accnum" = unlist(as.list(org.Hs.eg.db::org.Hs.egACCNUM)),
       "human.uniprot" = unlist(as.list(org.Hs.eg.db::org.Hs.egUNIPROT)),
@@ -288,7 +284,6 @@ probe2symbol <- function(probes, type = NULL, org = "human", keep.na = FALSE) {
     mm.list <- list(
       "mouse.ensembl" = unlist(as.list(org.Mm.eg.db::org.Mm.egENSEMBL)),
       "mouse.ensemblTRANS" = unlist(as.list(org.Mm.eg.db::org.Mm.egENSEMBLTRANS)),
-
       "mouse.refseq" = unlist(as.list(org.Mm.eg.db::org.Mm.egREFSEQ)),
       "mouse.accnum" = unlist(as.list(org.Mm.eg.db::org.Mm.egACCNUM)),
       "mouse.uniprot" = unlist(as.list(org.Mm.eg.db::org.Mm.egUNIPROT)),
@@ -298,7 +293,6 @@ probe2symbol <- function(probes, type = NULL, org = "human", keep.na = FALSE) {
     rn.list <- list(
       "rat.ensembl" = unlist(as.list(org.Rn.eg.db::org.Rn.egENSEMBL)),
       "rat.ensemblTRANS" = unlist(as.list(org.Rn.eg.db::org.Rn.egENSEMBLTRANS)),
-
       "rat.refseq" = unlist(as.list(org.Rn.eg.db::org.Rn.egREFSEQ)),
       "rat.accnum" = unlist(as.list(org.Rn.eg.db::org.Rn.egACCNUM)),
       "rat.uniprot" = unlist(as.list(org.Rn.eg.db::org.Rn.egUNIPROT)),
@@ -346,10 +340,6 @@ probe2symbol <- function(probes, type = NULL, org = "human", keep.na = FALSE) {
     } else {
       symbol0 <- probes
     }
-
-
-
-
   } else {
     org
     require(org.Hs.eg.db)
@@ -446,7 +436,6 @@ trimsame0 <- function(s, split = " ", summarize = FALSE, rev = FALSE) {
 #' @export
 dbg.BAK <- function(...) {
   if (exists("DEBUG") && DEBUG) {
-
     msg <- sapply(list(...), paste, collapse = " ")
     message(cat(paste0("[DBG] ", sub("\n$", "", paste(msg, collapse = " ")), "\n")))
   }
@@ -696,10 +685,6 @@ is.POSvsNEG <- function(pgx) {
     is.pn <- rep(NA, length(grp1))
     i <- 1
     for (i in 1:length(grp1)) {
-
-
-
-
       j1 <- grep(grp1[i], rownames(cntrmat), fixed = TRUE)
       j2 <- grep(grp2[i], rownames(cntrmat), fixed = TRUE)
       grp1.sign <- mean(cntrmat[j1, i], na.rm = TRUE)
@@ -708,7 +693,6 @@ is.POSvsNEG <- function(pgx) {
       grp2.sign
       if (!is.nan(grp1.sign) && !is.nan(grp2.sign)) {
         is.pn[i] <- (grp1.sign > grp2.sign)
-
       }
     }
     is.pn
@@ -722,8 +706,6 @@ is.POSvsNEG <- function(pgx) {
     is.pn <- rep(NA, length(grp1))
     i <- 1
     for (i in 1:length(grp1)) {
-
-
       a1 <- apply(pgx$samples, 1, function(a) mean(grepl(grp1[i], a)))
       a2 <- apply(pgx$samples, 1, function(a) mean(grepl(grp2[i], a)))
       j1 <- which(a1 > a2) ## samples with phenotype  more in grp1
@@ -919,8 +901,6 @@ selectSamplesFromSelectedLevels <- function(Y, levels) {
 #' @export
 #' @export
 getMyGeneInfo <- function(eg, fields = c("symbol", "name", "alias", "map_location", "summary")) {
-
-
   info <- lapply(fields, function(f) biomaRt::getGene(eg, fields = f)[[1]])
   names(info) <- fields
   info <- lapply(info, function(x) ifelse(length(x) == 3, x[[3]], "(not available)"))
@@ -938,7 +918,6 @@ getHSGeneInfo <- function(eg, as.link = TRUE) {
     "map_location" = org.Hs.eg.db::org.Hs.egMAP,
     "OMIM" = org.Hs.eg.db::org.Hs.egOMIM,
     "KEGG" = org.Hs.eg.db::org.Hs.egPATH,
-
     "GO" = org.Hs.eg.db::org.Hs.egGO
   )
 
@@ -1013,7 +992,6 @@ getHSGeneInfo <- function(eg, as.link = TRUE) {
 
 #' @export
 pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
-
   read.gmt <- function(gmt.file, dir = NULL, add.source = FALSE, nrows = -1) {
     f0 <- gmt.file
     if (strtrim(gmt.file, 1) == "/") dir <- NULL
@@ -1157,25 +1135,7 @@ pgx.getGeneSetCollections <- function(gsets, min.size = 10, max.size = 500) {
     "Hallmark collection" = gsets[grep("HALLMARK", gsets)],
     "KEGG pathways" = kegg0,
     "KEGG metabolic pathways" = kegg0[grep("^00|^01", getKeggID(kegg0))],
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     "Pathway related" = gsets[grep("pathway", gsets, ignore.case = TRUE)],
-
     "Metabolism related" = gsets[grep("metaboli", gsets, ignore.case = TRUE)],
     "Signalling related" = gsets[grep("signal", gsets, ignore.case = TRUE)],
     "T-cell related" = gsets[grep("tcell|t-cell|t[ ]cell", gsets, ignore.case = TRUE)],
@@ -1223,8 +1183,6 @@ filterFamily <- function(genes, family, ngs) {
 
 #' @export
 filterProbes <- function(genes, gg) {
-
-
   ## check probe name, short probe name or gene name for match
   p0 <- (toupper(sub(".*:", "", rownames(genes))) %in% toupper(gg))
   p1 <- (toupper(rownames(genes)) %in% toupper(gg))
@@ -1238,8 +1196,6 @@ filterProbes <- function(genes, gg) {
 
 #' @export
 computeFeatureScore <- function(X, Y, features) {
-
-
   sdx <- apply(X, 1, sd)
   names(sdx) <- rownames(X)
   S <- matrix(NA, nrow = length(features), ncol = ncol(Y))
@@ -1317,8 +1273,6 @@ is.Date <- function(x) {
 
 #' @export
 averageByGroup <- function(mat, group, FUN = mean) {
-
-
   out <- do.call(cbind, tapply(
     1:ncol(mat), group,
     function(i) rowMeans(mat[, i, drop = FALSE])
@@ -1467,7 +1421,6 @@ shortstring <- function(s, n, dots = 1) {
 
 #' @export
 shortstring0 <- function(s, n, dots = 1) {
-
   s0 <- iconv(as.character(s), to = "UTF-8")
   s0 <- gsub("[&].*[;]", "", s0) ## HTML special garbage...
   jj <- which(nchar(s0) > n)
@@ -1502,7 +1455,6 @@ color_from_middle <- function(data, color1, color2) {
 
 #' @export
 tidy.dataframe <- function(Y) {
-
   Y <- Y[, which(colMeans(is.na(Y)) < 1), drop = FALSE]
   Y <- apply(Y, 2, function(x) sub("^NA$", NA, x)) ## all characters
   Y <- Y[, which(colMeans(is.na(Y)) < 1), drop = FALSE]
@@ -1604,7 +1556,6 @@ expandPhenoMatrix <- function(pheno, collapse = TRUE, drop.ref = TRUE) {
   m1 <- list()
   for (i in 1:ncol(a1)) {
     if (a1.isnum[i]) {
-
       suppressWarnings(x <- as.numeric(a1[, i]))
       m0 <- matrix((x > median(x, na.rm = TRUE)), ncol = 1)
       colnames(m0) <- "high"

@@ -72,7 +72,6 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
     names(fx) <- rownames(ngs$X)
   } else {
     stop("FATAL:: mixHivePlot: unknown contrast/conditions=", ct, "\n")
-
   }
   Matrix::head(fx)
   fx <- fx / max(abs(fx), na.rm = TRUE)
@@ -103,7 +102,6 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
 
   jj <- which(hpd$edges$looping)
   if (showloops && length(jj)) {
-
     hpd$edges[jj, ]
     hpd$edges$color <- psych::alpha("grey70", 0.2)
     hpd$edges$color[jj] <- psych::alpha("red3", 0.3)
@@ -134,8 +132,6 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   plotHive(hpd,
     ch = 5, bkgnd = "white",
     axLabs = axis.names,
-
-
     axLab.gpar = grid::gpar(
       col = "black", fontsize = 18 * cex,
       lwd = 4, fontface = "bold"
@@ -182,9 +178,7 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
     grid::grid.text(lab,
       ## x = 10 + rx[,1], y = rx[,2],
       x = px[, 1], y = px[, 2],
-
       default.units = "native", just = "left",
-
       gp = grid::gpar(fontsize = 12 * cex, col = "black")
     )
 
@@ -229,7 +223,6 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
     )
     legend("topright",
       legend = names(klrpal),
-
       y.intersp = 0.85, inset = c(0.15, 0.03)
     )
 
@@ -527,9 +520,6 @@ pgx.survivalVariableImportance <- function(X, time, status,
   }
 
   if ("randomforest" %in% methods) {
-
-
-
     ##
     df <- data.frame(time = time, status = status, t(X))
     fit_rf <- randomForestSRC::rfsrc(survival::Surv(time, status) ~ ., data = df)
@@ -538,8 +528,6 @@ pgx.survivalVariableImportance <- function(X, time, status,
   }
 
   if ("boruta" %in% methods) {
-
-
     imp4 <- rep(0, nrow(X))
     niter <- 4
     for (k in 1:niter) {
@@ -555,7 +543,6 @@ pgx.survivalVariableImportance <- function(X, time, status,
   }
 
   if ("xgboost" %in% methods) {
-
     yy <- ifelse(!status, -time, time)
     bst <- xgboost::xgboost(
       data = t(X), label = yy, booster = "gbtree",
@@ -659,8 +646,6 @@ pgx.multiclassVariableImportance <- function(X, y,
   }
 
   if ("randomforest" %in% methods) {
-
-
     ##
     fit_rf <- randomForest::randomForest(t(X), factor(y))
     imp[["randomForest"]] <- fit_rf$importance[, 1]
@@ -684,8 +669,6 @@ pgx.multiclassVariableImportance <- function(X, y,
   }
 
   if ("xgboost" %in% methods) {
-
-
     ny <- length(table(y))
     yy <- as.integer(factor(y)) - 1
     bst <- xgboost::xgboost(
@@ -801,8 +784,6 @@ pgx.variableImportance <- function(X, y,
   }
 
   if ("randomforest" %in% methods) {
-
-
     ##
 
     fit_rf <- randomForest::randomForest(t(X), factor(y))
@@ -810,8 +791,6 @@ pgx.variableImportance <- function(X, y,
   }
 
   if ("boruta" %in% methods) {
-
-
     imp4 <- rep(0, nrow(X))
     niter <- 4
     for (k in 1:niter) {
@@ -827,8 +806,6 @@ pgx.variableImportance <- function(X, y,
   }
 
   if ("xgboost" %in% methods) {
-
-
     y1 <- as.integer(factor(y)) - 1
     bst <- xgboost::xgboost(
       data = t(X), label = y1, booster = "gbtree",
@@ -856,8 +833,6 @@ pgx.variableImportance <- function(X, y,
   }
 
   if ("pls" %in% methods) {
-
-
     ##
 
     n <- min(25, nrow(X))

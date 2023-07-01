@@ -7,7 +7,6 @@
 #' @export
 pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = TRUE,
                                  min.cases = 10, sortby.p = FALSE, plot = TRUE, verbose = 1) {
-
   if (!file.exists(matrix_file)) {
     stop("cannot find TCGA H5 matrix file")
   }
@@ -233,7 +232,6 @@ pgx.selectTCGAstudies <- function(cancertype, variables) {
 
   res <- list(
     studies = sel.studies,
-
     clinicalData = sel.clin
   )
   return(res)
@@ -447,8 +445,6 @@ pgx.getTCGA.multiomics.TOBEFINISHED <- function(studies, genes = NULL, batch.cor
 
 #' @export
 pgx.getTCGAproteomics <- function() {
-
-
   GenomicDataCommons::status()
 
   qfiles <- GenomicDataCommons::files() %>% filter(~ cases.project.project_id == "TCGA-BRCA" &

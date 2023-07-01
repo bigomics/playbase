@@ -74,7 +74,6 @@ matrix.prodSPARSE <- function(..., na.fill = 1) {
       mx <- 1
       if (na.fill == "mean") {
         mx <- mean(matlist[[i]], na.rm = TRUE)
-
       }
       jj <- which(is.na(matlist[[i]]), arr.ind = TRUE)
       matlist[[i]][jj] <- mx
@@ -273,7 +272,6 @@ tcosine.sparse.paral <- function(X, th = 0.01, k = 100, mc.cores = 4, blocksize 
       jj <- as.vector(which(cr >= th))
       jj <- Matrix::head(jj[order(cr[jj], decreasing = TRUE)], k)
       if (length(jj) > 0) {
-
         data.frame(from = rep(j, length(jj)), to = jj, val = as.numeric(cr[jj]))
       } else {
         data.frame(from = NA, to = NA, val = NA)[0, ]

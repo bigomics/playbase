@@ -33,7 +33,6 @@ ngs.hiveplot <- function(ngs, pheno, level = 1, ntop = 400, main = "", axis.lab 
 #' @export
 omx.makeHivePlotData_ <- function(res, rho.min = 0.15, cxi = 0.11, use.alpha = TRUE,
                                   ntop = 1000, ew = 4, nv = 10, dx.dir = c(-1, 1), rx = 2.2) {
-
   ## omics score
   res <- res[order(-abs(res[, "score"])), ]
   if (ntop > 0) res <- Matrix::head(res, ntop)

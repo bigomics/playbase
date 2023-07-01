@@ -206,7 +206,6 @@ pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
 
     fam.pattern <- "^[<].*|^FAMILY|^COMPARTMENT|^CUSTOM"
   } else {
-
     fam.pattern <- "^[<].*|^FAMILY|^CUSTOM"
   }
   xgenes <- toupper(rownames(pgx$X))

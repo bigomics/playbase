@@ -334,7 +334,6 @@ makeDirectContrasts <- function(Y, ref, na.rm = TRUE) {
 #'
 #' @examples
 makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
-
   if (NCOL(Y) == 1) Y <- data.frame(Y = Y)
 
   ## check
@@ -382,7 +381,6 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
       m1 <- m1[, !colnames(m1) %in% c("NA", "_"), drop = FALSE]
       colnames(m1) <- paste0(colnames(m1), "_vs_", ref1)
     } else if (!is.na(ref1) && (ref1 %in% all)) {
-
       m1 <- t(t(m1 == 1) / Matrix::colSums(m1 == 1) - t(m1 == 0) / Matrix::colSums(m1 == 0))
 
       m1 <- m1[, !colnames(m1) %in% c("NA", "_"), drop = FALSE]

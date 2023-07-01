@@ -107,7 +107,6 @@ pgx.fastq2counts <- function(fastq_dir, destdir, indexdir, nthread = 4, do.qc = 
 
       dest.dir = fastq_dir,
       threads = nthread,
-
       trimgalore = "trim_galore"
     )
 
@@ -352,7 +351,6 @@ run_tximport_kallisto <- function(srr_id, species = c("human", "mouse", "rat"), 
   txi.t <- tximport::tximport(files,
     type = "kallisto", tx2gene = tx2gene,
     txOut = TRUE,
-
     dropInfReps = TRUE
   )
   txi.g <- tximport::summarizeToGene(txi.t, tx2gene,

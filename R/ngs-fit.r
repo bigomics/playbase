@@ -421,12 +421,6 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
 #' @examples
 ngs.fitContrastsWithTTEST <- function(X, contr.matrix, design, method = "welch",
                                       conform.output = 0) {
-
-
-
-
-
-
   tables <- list()
   i <- 1
   exp.matrix <- contr.matrix
@@ -453,7 +447,6 @@ ngs.fitContrastsWithTTEST <- function(X, contr.matrix, design, method = "welch",
       k2 <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
       tables[[i]] <- tables[[i]][, k1]
       colnames(tables[[i]]) <- k2
-
     }
   }
   res <- list(tables = tables)
@@ -512,7 +505,6 @@ ngs.fitContrastsWithLIMMA <- function(X, contr.matrix, design, method = c("voom"
     i <- 1
     exp1 <- (design1 %*% contr1)
     for (i in 1:ncol(contr1)) {
-
       top <- limma::topTable(efit, coef = i, sort.by = "none", number = Inf, adjust.method = "BH")
       j1 <- which(exp1[, i] > 0)
       j2 <- which(exp1[, i] < 0)
@@ -540,7 +532,6 @@ ngs.fitContrastsWithLIMMA <- function(X, contr.matrix, design, method = c("voom"
       design1 <- model.matrix(~ 0 + y)
       X1 <- X[, kk, drop = FALSE]
       if (method == "voom") {
-
         v <- limma::voom(2**X1, design1, plot = FALSE)
         suppressMessages(vfit <- limma::lmFit(v, design1))
         trend <- FALSE ## no need
@@ -645,7 +636,6 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
     fit <- edgeR::glmQLFit(dge, design, robust = robust)
   } else if (method == "lrt") {
     fit <- edgeR::glmFit(dge, design, robust = robust)
-
   } else {
     stop("unknown method")
   }
@@ -655,7 +645,6 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
   tables <- list()
   i <- 1
   for (i in 1:ncol(contr.matrix)) {
-
     cntr <- contr.matrix[, i]
     if (method == "qlf") {
       ct <- edgeR::glmQLFTest(fit, contrast = cntr)
@@ -696,7 +685,6 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
       k2 <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
       tables[[i]] <- tables[[i]][, k1]
       colnames(tables[[i]]) <- k2
-
     }
   }
   res <- list(tables = tables)
@@ -748,14 +736,12 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
     ct <- contr.matrix[, i]
     y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
     design1 <- model.matrix(~ 0 + y)
-  
-    if (method == "qlf") {
 
+    if (method == "qlf") {
       fit <- edgeR::glmQLFit(dge, design1, robust = robust)
       ctx <- contr0[colnames(coef(fit)), ]
       res <- edgeR::glmQLFTest(fit, contrast = ctx)
     } else if (method == "lrt") {
-
       fit <- edgeR::glmFit(dge, design1, robust = robust)
       ctx <- contr0[colnames(coef(fit)), ]
       res <- edgeR::glmLRT(fit, contrast = ctx)
@@ -792,7 +778,6 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
       k2 <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
       tables[[i]] <- tables[[i]][, k1]
       colnames(tables[[i]]) <- k2
-
     }
   }
   res <- list(tables = tables)
@@ -829,7 +814,7 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
   i <- 1
   for (i in 1:NCOL(contr.matrix)) {
     kk <- which(!is.na(contr.matrix[, i]) & contr.matrix[, i] != 0)
-  
+
 
     counts1 <- counts[, kk, drop = FALSE]
     X1 <- NULL
@@ -845,7 +830,7 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
     dge1 <- edgeR::calcNormFactors(dge1, method = "TMM")
 
     dge.disp <- edgeR::estimateDisp(dge1$counts, design = NULL, robust = robust)
-  
+
     dge1$common.dispersion <- dge.disp$common.dispersion
     dge1$trended.dispersion <- dge.disp$trended.dispersion
     dge1$tagwise.dispersion <- dge.disp$tagwise.dispersion
@@ -857,14 +842,12 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
     ct <- contr.matrix[kk, i]
     y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
     design1 <- model.matrix(~ 0 + y)
-  
-    if (method == "qlf") {
 
+    if (method == "qlf") {
       fit <- edgeR::glmQLFit(dge1, design1, robust = robust)
       ctx <- M[colnames(coef(fit)), ]
       res <- edgeR::glmQLFTest(fit, contrast = ctx)
     } else if (method == "lrt") {
-
       fit <- edgeR::glmFit(dge1, design1, robust = robust)
       ctx <- M[colnames(coef(fit)), ]
       res <- edgeR::glmLRT(fit, contrast = ctx)
@@ -901,7 +884,6 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
       k2 <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
       tables[[i]] <- tables[[i]][, k1]
       colnames(tables[[i]]) <- k2
-
     }
   }
   res <- list(tables = tables)
@@ -973,10 +955,8 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
   fitType <- "mean"
   if (test == "LRT") {
     dds <- try(DESeq2::DESeq(dds, fitType = fitType, test = "LRT", reduced = ~1))
-
   } else {
     dds <- try(DESeq2::DESeq(dds, fitType = fitType, test = "Wald"))
-
   }
 
   ## sometime DESEQ2 fails and we resort to gene-wise estimates
@@ -1044,8 +1024,6 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
       k2 <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
       tables[[i]] <- tables[[i]][, k1]
       colnames(tables[[i]]) <- k2
-
-
     }
   }
   res <- list(tables = tables)
@@ -1070,8 +1048,6 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
 .ngs.fitConstrastsWithDESEQ2.nodesign <- function(counts, contr.matrix, test = "Wald",
                                                   prune.samples = FALSE,
                                                   conform.output = FALSE, X = NULL) {
-
-
   counts <- round(counts)
 
   if (is.null(X)) {
@@ -1159,8 +1135,6 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
       k2 <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
       tables[[i]] <- tables[[i]][, k1]
       colnames(tables[[i]]) <- k2
-
-
     }
   }
 

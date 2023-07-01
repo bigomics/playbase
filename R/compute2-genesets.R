@@ -195,7 +195,6 @@ compute_testGenesets <- function(pgx,
 
   gset.meta <- playbase::gset.fitContrastsWithAllMethods(
     gmt = gmt, X = X, Y = Y, G = G,
-
     contr.matrix = contr.matrix, methods = test.methods,
     mc.threads = 1, mc.cores = NULL, batch.correct = TRUE
   )

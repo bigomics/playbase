@@ -842,7 +842,6 @@ run.GSEA.preranked <- function(rnk, gmt, output.dir = NULL, fdr = 0.25,
 #'
 #' @export
 gsea.LeadingEdgeAnalysis <- function(output.dir, ntop = 100, gsea.program = "/opt/GSEA/gsea-3.0.jar", xmx = 10) {
-
   cat(">>> performing LeadingEdge analysis <<<\n")
   ## clean old results
   fe <- dir(output.dir, "LeadingEdgeTool",

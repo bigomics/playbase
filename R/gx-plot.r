@@ -28,7 +28,6 @@ gx.barplot <- function(x, main = "", cex.main = 1.2, cex.names = 0.85,
                        cex.legend = 0.9, srt = 0, xlab = "", ylab = "",
                        group = NULL, group.names = NULL, bar.names = NULL,
                        voff = 2, legend = TRUE) {
-
   if (0) {
     main <- ""
     cex.main <- 1.2
@@ -57,10 +56,8 @@ gx.barplot <- function(x, main = "", cex.main = 1.2, cex.names = 0.85,
     beside = TRUE, col = col1,
     main = main, cex.main = cex.main,
     xlab = xlab, ylab = ylab, ylim = ylim,
-
     las = 1, space = space,
     names.arg = rep("", length(x)),
-
     mgp = c(2, 0.9, 0)
   )
 
@@ -231,12 +228,10 @@ gx.b3plot <- function(x, y, first = NULL,
 
 
     if (max.points > 0 && length(jj) > max.points) {
-
       jj <- unlist(tapply(jj, y, function(i) Matrix::head(sample(i), max.points)))
     }
     ## !!!!!!!!! NEED CHECK!! can be very slow if jj is large !!!!!!!!!!!
     beeswarm::beeswarm(x[jj] ~ y[jj], add = TRUE, at = 1:n - 0.33, pch = 19, cex = bee.cex, col = "grey20")
-
   }
   if (bar) stats.segments(y, x, xoffset = -0.333, lwd = 1.4)
 
