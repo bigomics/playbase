@@ -452,7 +452,6 @@ makeFullContrasts <- function(labels, by.sample = FALSE) {
 #' @examples
 makeClusterContrasts <- function(clusters, min.freq = 0.01, full = FALSE,
                                  by.sample = FALSE) {
-
   idx <- sort(unique(as.character(clusters)))
   m1 <- model.matrix(~ 0 + idx)
   colnames(m1) <- sub("^idx", "", colnames(m1))
