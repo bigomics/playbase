@@ -106,7 +106,6 @@ pgx.createPGX.10X.DEPRECATED <- function(outs, ncells = 2000, aggr.file = "aggre
   message("[createPGX.10X] creating PGX object...")
   pgx <- pgx.createPGX(
     counts = counts, samples = pheno, contrasts = ct$contr.matrix,
-
     is.logx = FALSE
   )
   Matrix::head(pgx$genes)
@@ -419,8 +418,6 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
       cluster <- kmeans(V, k, iter.max = 100)$cluster
     } else if (method == "hclust") {
       cluster <- cutree(fastcluster::hclust(dist(V)), k)
-
-
     } else {
       stop("ERROR:: unknown clustering method")
     }
@@ -499,7 +496,6 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
 #' @export
 pgx.scBatchIntegrate <- function(X, batch,
                                  method = c("ComBat", "limma", "CCA", "MNN", "Harmony", "liger")) {
-
   res <- list()
 
   if ("ComBat" %in% method) {
@@ -610,7 +606,6 @@ pgx.SeuratBatchIntegrate <- function(counts, batch, qc.filter = FALSE,
     obj <- Seurat::CreateSeuratObject(counts1)
     if (sct) {
       obj <- Seurat::SCTransform(obj, vars.to.regress = NULL, verbose = FALSE)
-
     } else {
       obj <- Seurat::NormalizeData(obj,
         normalization.method = "LogNormalize",
@@ -637,7 +632,6 @@ pgx.SeuratBatchIntegrate <- function(counts, batch, qc.filter = FALSE,
       verbose = FALSE
     )
   } else {
-
     anchor.features <- nrow(counts) ## really?
     if (nanchors > 0) anchor.features <- nanchors ## really?
   }
@@ -720,7 +714,6 @@ pgx.scFilterOutliers <- function(counts, a = 2.5, plot = FALSE) {
   ncounts <- Matrix::colSums(counts)
 
   if (plot) {
-
     log.nfeature <- log10(1 + nfeature)
     log.ncounts <- log10(1 + ncounts)
     log.mito <- log10(1 + percent.mito)
@@ -898,7 +891,6 @@ pgx.createSeurateFigures <- function(obj) {
 
   theme0 <- ggplot2::theme(
     plot.title = ggplot2::element_text(size = 12, face = "bold"),
-
     legend.title = ggplot2::element_text(size = 11),
     legend.text = ggplot2::element_text(size = 9),
     legend.key.size = grid::unit(0.55, "lines"),
@@ -925,7 +917,6 @@ pgx.createSeurateFigures <- function(obj) {
     patchwork::plot_annotation(
       title = "Seurat QC plots",
       subtitle = "These plots show the QC of your experiment.",
-
       caption = caption1,
       theme = ggplot2::theme(plot.title = ggplot2::element_text(size = 16, face = "bold")),
       tag_levels = "a"
@@ -965,7 +956,6 @@ pgx.createSeurateFigures <- function(obj) {
     patchwork::plot_annotation(
       title = "Seurat PCA plots",
       subtitle = "These plots show the PCA of your experiment.",
-
       caption = caption1,
       theme = ggplot2::theme(plot.title = ggplot2::element_text(size = 16, face = "bold")),
       tag_levels = "a"
@@ -1012,7 +1002,6 @@ pgx.createSeurateFigures <- function(obj) {
   fig4 <- fig4 + patchwork::plot_annotation(
     title = "Seurat cluster markers",
     subtitle = "These plots show the clusters of your experiment.",
-
     caption = caption1,
     theme = ggplot2::theme(plot.title = ggplot2::element_text(size = 16, face = "bold")),
     tag_levels = "a"
@@ -1033,7 +1022,6 @@ pgx.createSeurateFigures <- function(obj) {
     "Dendritic_cells" = c("Fcer1a", "Cst3", "Siglech", "Fscn1", "Ccl22"),
     "Macrophages" = c("C1qa", "C1qb", "C1qc", "Lyz2"),
     "Monocytes" = c("Cd14", "Lyz", "Ly6c2", "Fcgr3a", "Ms4a7"),
-
     "Platelet" = "Ppbp"
   )
 
@@ -1073,7 +1061,6 @@ pgx.createSeurateFigures <- function(obj) {
   fig5 <- fig5 + patchwork::plot_annotation(
     title = "Seurat cell type identification",
     subtitle = "Assignment of cell type identity to clusters.",
-
     caption = caption1,
     theme = ggplot2::theme(
       plot.title = ggplot2::element_text(size = 16, face = "bold")
@@ -1103,7 +1090,6 @@ pgx.createSeurateFigures <- function(obj) {
   fig2 <- fig2 + patchwork::plot_annotation(
     title = "Seurat Phenotype plots",
     subtitle = "Distribution of phenotypes on the t-SNE/UMAP.",
-
     caption = caption1,
     theme = ggplot2::theme(plot.title = ggplot2::element_text(size = 16, face = "bold")),
     tag_levels = "a"

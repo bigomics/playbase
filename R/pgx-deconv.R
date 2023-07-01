@@ -196,18 +196,13 @@ pgx.checkCellTypeMarkers <- function(counts, min.count = 3, markers = NULL) {
     "B16.melanoma" = c("Mlana", "Dct", "Tyrp1", "Mt1", "Mt2", "Pmel", "Pgk1")
   )
   CANONICAL.MARKERS2 <- list(
-
     "B_cells" = c("Ms4a1+", "Cd79a+", "Cd79b+"),
     "T_cells" = c("Cd3e+", "Cd3d+", "Cd3g+"),
-
-
     "NK_cells" = c("Gzma+", "Klrb1c+", "Klra4+"),
-
     "Dendritic_cells" = c("Cst3+", "H2-Ab1+", "Adgre1-"),
     "Macrophages" = c("C1qa+", "C1qb+", "C1qc+"),
     "Monocytes" = c("Ly6c2+", "Lyz2+", "Ccr2+"),
     "Immune_cell" = c("Ptprc+")
-
   )
   if (is.null(markers)) {
     markers <- CANONICAL.MARKERS2
@@ -332,7 +327,6 @@ pgx.purify <- function(X, ref, k = 3, method = 2) {
 
     x.contaminant <- pmax(X - x.purified, 0)
   } else if (method == 2) {
-
     jj <- setdiff(1:ncol(X), ref)
     tumorX <- cbind(const = 1, X[, jj, drop = FALSE])
     colnames(tumorX) <- paste0("T", 1:ncol(tumorX))
@@ -572,7 +566,6 @@ pgx.deconvolution <- function(X, ref,
     dbg("starting deconvolution using CIBERSORT...\n")
     ciber.out <- NULL
     stime <- system.time(
-
       try(ciber.out <- CIBERSORT(ref, mat, perm = 0, QN = FALSE))
     )
     if (!is.null(ciber.out)) {

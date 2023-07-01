@@ -188,7 +188,6 @@ ngs.cookForDESEQ2 <- function(counts, samples, genes, remove.batch = TRUE,
     }
     design.formula <- formula(paste(c("~ 0 + group", batch), collapse = " + ")) ## multiple batch
     ## } else if(is.null(design)) {
-
   } else {
     design.formula <- formula(" ~ 0 + group")
   }
@@ -207,7 +206,6 @@ ngs.cookForDESEQ2 <- function(counts, samples, genes, remove.batch = TRUE,
   ## to collapse TECHNICAL replicates???
   ## ------------------------------------------------------------------
   if (FALSE && "replicate" %in% colnames(samples)) {
-
     repl.id <- samples$replicate
     dds <- DESeq2::collapseReplicates(dds, repl.id, dds$sample)
   }

@@ -160,7 +160,6 @@ ngs.matchFeatures <- function(ngs, genes) {
 #'
 #' @examples
 ngs.collapseByGeneSLOW <- function(ngs) {
-
   x1 <- apply(ngs$counts, 2, function(x) tapply(x, ngs$genes$gene_name, sum))
   x1 <- x1[!(rownames(x1) %in% c(NA, "", "NA")), , drop = FALSE]
   ngs$genes <- ngs$genes[match(rownames(x1), ngs$genes$gene_name), ]
@@ -179,7 +178,6 @@ ngs.collapseByGeneSLOW <- function(ngs) {
 #'
 #' @examples
 ngs.collapseByGene <- function(ngs) {
-
   gene <- as.character(ngs$genes$gene_name)
   p1 <- names(which(table(gene) == 1))
   p2 <- names(which(table(gene) > 1))

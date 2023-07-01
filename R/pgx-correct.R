@@ -9,7 +9,6 @@
 
 #' @export
 pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
-
                                   lib.correct = TRUE,
                                   bio.correct = c("mito", "ribo", "cell_cycle", "gender"),
                                   sva.correct = TRUE, pca.correct = TRUE, hc.correct = TRUE,
@@ -80,8 +79,6 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     batch.par <- c(batch.par, b1)
   }
   if ("cell_cycle" %in% bio.correct) {
-
-
     b1 <- grep("cc[.].*score$", colnames(pheno), value = TRUE) ## only s.score and g2m.score
     batch.par <- c(batch.par, b1)
   }
@@ -227,8 +224,6 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
 
     ## out <- pgx.removeBiologicalEffect(cX, pheno, model.par=model.par,
     ##                                  correct=bio.correct, force=force)
-
-
   }
 
   ## --------------------------------------------------------------------
@@ -240,7 +235,6 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     dbg("[pgx.superBatchCorrect] Batch correction for factors:", batch.prm1, "\n")
     b <- batch.prm1[1]
     for (b in batch.prm1) {
-
       batch <- as.character(pheno[, b])
       nna <- sum(is.na(batch))
       if (nna > 0) {
@@ -263,7 +257,6 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     batch.cov1 <- setdiff(batch.cov, colnames(Y))
     dbg("[pgx.superBatchCorrect] Batch correction for covariates:", batch.cov1, "\n")
     for (b in batch.cov1) {
-
       batch <- as.numeric(pheno[, b])
 
       nna <- sum(is.na(batch))
@@ -589,7 +582,6 @@ pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
       mx <- mean(x, na.rm = TRUE)
       x <- t(t(x) / colMeans(x, na.rm = TRUE)) * mx
     } else if (m == "CPM") {
-
       x <- t(t(x) / Matrix::colSums(x, na.rm = TRUE)) * 1e6
     } else if (m == "TMM") {
       ## normalization on total counts (linear scale)
@@ -602,9 +594,7 @@ pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
       x <- normalizeRLE(x, log = FALSE, use = "edger") ## does RLE on counts (Deseq2)
       ##        } else if(m %in% c("upperquartile")) {
       ##            ## normalization on total counts (linear scale)
-
     } else if (m == "quantile") {
-
       new.x <- 0.01 * limma::normalizeQuantiles(as.matrix(100 * x)) ## shift to avoid clipping
       rownames(new.x) <- rownames(x)
       colnames(new.x) <- colnames(x)
@@ -652,7 +642,6 @@ pgx.performBatchCorrection.DEPRECATED <- function(ngs, zx, batchparams,
         sv3 <- svd$v[, 3]
         zx <- limma::removeBatchEffect(zx, covariates = sv3)
       } else if (1 && batchpar == "<XY>") {
-
         xgenes <- ngs$genes[rownames(X), ]
         gx <- which(xgenes$chr %in% c("X", 23))
         gy <- which(xgenes$chr %in% c("Y", 24))
@@ -681,8 +670,6 @@ pgx.performBatchCorrection.DEPRECATED <- function(ngs, zx, batchparams,
           zx <- pgx.removeBatchEffect(zx, batch0, method)
         } ## end of iter
       } else if (batchpar == "<SVA>") {
-
-
         mod1 <- model.matrix(~group)
 
         mod0 <- cbind(mod1[, 1])
@@ -691,7 +678,6 @@ pgx.performBatchCorrection.DEPRECATED <- function(ngs, zx, batchparams,
 
         zx <- limma::removeBatchEffect(zx, covariates = sv, design = mod1)
       } else if (batchpar == "<NNM>") {
-
         y <- group
 
         zx <- gx.nnmcorrect(zx, y, center.x = TRUE, center.m = TRUE)$X
@@ -797,7 +783,6 @@ pgx.removeBatchEffect <- function(X, batch, model.vars = NULL,
 
 #' @export
 pgx.removePC <- function(X, nv) {
-
   suppressWarnings(suppressMessages(
     pc <- irlba::irlba(X, nv = nv)$v
   ))
@@ -864,18 +849,13 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
   pheno <- data.frame(
     mito = mito,
     ribo = ribo,
-
-
-
     libsize = log2(libsize + 1),
-
     check.names = FALSE
   )
 
   cc.score <- try(pgx.scoreCellCycle(cx))
   Matrix::head(cc.score)
   if (!any(class(cc.score) == "try-error")) {
-
     cc.score <- cc.score[, c("s_score", "g2m_score")]
     colnames(cc.score) <- paste0("cc.", colnames(cc.score))
     pheno <- cbind(pheno, cc.score)

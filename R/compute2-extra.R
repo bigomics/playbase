@@ -273,7 +273,7 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
     message("estimating cell cycle (using Seurat)...")
     ngs$samples$cell.cycle <- NULL
     ngs$samples$.cell.cycle <- NULL
-  
+
     counts <- rna.counts
     rownames(counts) <- toupper(ngs$genes[rownames(counts), "gene_name"])
     res <- try(pgx.inferCellCyclePhase(counts)) ## can give bins error

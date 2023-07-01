@@ -274,9 +274,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
 
   gx.meta <- ngs.fitContrastsWithAllMethods(
     counts = counts,
-
     samples = samples,
-
     methods = methods,
     design = design,
     contr.matrix = contr.matrix,

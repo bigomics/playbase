@@ -96,7 +96,7 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
     gmt1 <- gmt[as.character(res$word)]
     res1 <- fgsea::fgseaSimple(gmt1, fc, nperm = 1000)
     res1$leadingEdge <- sapply(res1$leadingEdge, paste, collapse = "//")
-  
+
     colnames(res1)[1] <- "word"
     all.gsea[[colnames(S)[i]]] <- res1
   }

@@ -193,7 +193,6 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
 
   k <- 1
   fitThisContrastWithMethod <- function(method, k) {
-
     jj <- which(exp.matrix[, k] != 0)
     yy <- 1 * (exp.matrix[jj, k] > 0)
     xx <- X[, jj]
@@ -398,8 +397,6 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
 
     ## GSEA preranked
     if ("gseaPR" %in% method) {
-
-
       rnk <- rowMeans(xx[, which(yy == 1), drop = FALSE]) - rowMeans(xx[, which(yy == 0), drop = FALSE])
       tt <- system.time(
         output <- run.GSEA.preranked(rnk, gmt,
@@ -421,8 +418,6 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
 
     ## fast GSEA
     if ("fgsea" %in% method) {
-
-
       rnk <- rowMeans(xx[, which(yy == 1), drop = FALSE]) - rowMeans(xx[, which(yy == 0), drop = FALSE])
       rnk <- rnk + 1e-8 * rnorm(length(rnk))
 
@@ -513,7 +508,6 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
   fdr <- 0.05
   lfc <- 1e-3
   for (i in 1:nmethod) {
-
     q0 <- sapply(Q, function(x) x[, i])
     s0 <- sapply(S, function(x) x[, i])
     q0[is.na(q0)] <- 1
@@ -596,7 +590,6 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
   timings0 <- matrix(as.numeric(timings0), nrow = nrow(timings0))
   rownames(timings0) <- rownames(timings)
   if (nrow(timings0) > 1 && sum(duplicated(rownames(timings0)) > 0)) {
-
     timings0 <- do.call(rbind, tapply(1:nrow(timings0), rownames(timings0), function(i) colSums(timings0[i, , drop = FALSE])))
   }
 
@@ -638,7 +631,6 @@ gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
     i <- 1
     exp.matrix <- (design %*% contr.matrix)
     for (i in 1:ncol(contr.matrix)) {
-
       top <- limma::topTable(efit, coef = i, sort.by = "none", number = Inf, adjust.method = "BH")
       j1 <- which(exp.matrix[, i] > 0)
       j0 <- which(exp.matrix[, i] < 0)
@@ -678,14 +670,11 @@ gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
 
   if (conform.output == TRUE) {
     for (i in 1:length(tables)) {
-
-
       jj <- match(rownames(gsetX), rownames(tables[[i]]))
       k1 <- c("logFC", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
       k2 <- c("score", "p.value", "q.value", "AveExpr0", "AveExpr1")
       tables[[i]] <- tables[[i]][jj, k1]
       colnames(tables[[i]]) <- k2
-
     }
   }
 
@@ -773,8 +762,6 @@ getGeneSetTables <- function(path) {
 #'
 #' @examples
 gmt2mat.nocheck <- function(gmt, bg = NULL, use.multicore = TRUE) {
-
-
   if (is.null(bg)) {
     bg <- names(sort(table(unlist(gmt)), decreasing = TRUE))
   }
@@ -788,13 +775,11 @@ gmt2mat.nocheck <- function(gmt, bg = NULL, use.multicore = TRUE) {
     idx <- matrix(unlist(idx[]), byrow = TRUE, ncol = 2)
     idx <- idx[!is.na(idx[, 1]), ]
     idx <- idx[idx[, 1] > 0, ]
-
   } else {
     idx <- c()
     for (j in 1:length(gmt)) {
       ii0 <- which(bg %in% gmt[[j]])
       if (length(ii0) > 0) {
-
         idx <- rbind(idx, cbind(ii0, j))
       }
     }

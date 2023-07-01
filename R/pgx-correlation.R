@@ -97,9 +97,6 @@ pgx.plotPartialCorrelationGraph <- function(res, gene, rho.min = 0.1, nsize = -1
   if (plot == TRUE) {
     par(mar = c(1, 1, 1, 1) * 0)
     plot(G1,
-
-
-
       vertex.color = "lightskyblue1",
       vertex.frame.color = "skyblue"
     )
@@ -161,7 +158,6 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
 
   if ("pcor.shrink" %in% method) {
     timings[["pcor.shrink"]] <- system.time(
-
       suppressWarnings(rho[["pcor.shrink"]] <- corpcor::pcor.shrink(tX))
     )
   }
@@ -169,8 +165,6 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
 
   if ("huge" %in% method) {
     timings[["huge.glasso"]] <- system.time(
-
-
       out <- huge(tX, method = "glasso")
     )
 
@@ -193,10 +187,6 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
     timings[["SILGGM"]] <- system.time({
       ## these are quite fast
       rho[["SILGGM"]] <- SILGGM(tX)$partialCor ## default: "D-S_NW_SL"
-
-
-
-
     })
   }
 
@@ -252,7 +242,6 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
         lambda <- seq(from = 0.1, to = 1, by = 0.1) - 0.01
         res <- BigQuic(as.matrix(tX),
           lambda = lambda,
-
           use_ram = TRUE
         )
         res <- BigQuic.select(res)
@@ -268,7 +257,6 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
     rownames(rho[[i]]) <- colnames(rho[[i]]) <- colnames(tX)
     if (sum(diag(rho[[i]])) == 0) diag(rho[[i]]) <- 1
     rho[[i]] <- Matrix::cov2cor(as.matrix(rho[[i]]))
-
   }
 
   timings
@@ -484,7 +472,6 @@ pgx.testTraitRelationship <- function(me, df, plot = TRUE, cex = 1) {
     ## psych::cor.plot(
     corrplot::corrplot(
       sigP,
-
       mar = c(0, 0, 0, 2),
       ## p.mat = Q, sig.level = 0.05, ##insig = "blank",
       tl.cex = cex, tl.col = "black", tl.offset = 1,
@@ -600,19 +587,15 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1) {
     corrplot::corrplot(
       corr = logQ,
       type = "upper",
-
       is.corr = FALSE,
       mar = c(0, 0, 0, 2),
       p.mat = Q,
       sig.level = 0.05,
-
       tl.cex = cex,
-
       tl.offset = 1,
       cl.align.text = "l",
       cl.offset = 0.25,
       cl.cex = 0.7,
-
       order = "hclust",
       number.digits = 2
     )

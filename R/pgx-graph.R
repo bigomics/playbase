@@ -583,7 +583,6 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
         length = 0.05,
         lwd = 0.5, col = paste0(gplots::col2hex("green3"), "33")
       )
-
     }
     if (!is.null(main)) tt <- main
     mtext(tt, line = 0.5, at = 0, font = 2, cex = 1.1)
@@ -706,7 +705,6 @@ pgx.plotForwardProjection <- function(gr, gene, cex = 1, fx = NULL,
         length = 0.05,
         lwd = 0.5, col = paste0(gplots::col2hex("green3"), "33")
       )
-
     }
     if (!is.null(main)) tt <- main
     mtext(tt, line = 0.5, at = 0, font = 2, cex = 1.1)
@@ -789,7 +787,6 @@ pgx.computeCoreGOgraph <- function(ngs, fdr = 0.05) {
 
 #' @export
 getGOgraph <- function() {
-
   ##
 
   terms <- AnnotationDbi::toTable(GO.db::GOTERM)[, 2:5]

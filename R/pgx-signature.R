@@ -473,7 +473,6 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
   }
 
   rhdf5::h5closeAll()
-
 } ## end of pgx.createCreedsSigDB
 
 #' @export
@@ -604,7 +603,6 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
   dbg("[pgx.createSignatureDatabaseH5.fromMatrix] closing file...")
 
   rhdf5::h5closeAll()
-
 }
 
 #' @export
@@ -781,13 +779,11 @@ pgx.computeGeneSetExpression <- function(X, gmt, method = NULL,
     gg <- rownames(X)
     G <- gmt2mat(gmt, bg = gg)
     if ("spearman" %in% method) {
-
       rho <- t(G[gg, ]) %*% scale(apply(X[gg, ], 2, rank)) / sqrt(nrow(X) - 1)
       rho[is.na(rho)] <- 0
       S[["spearman"]] <- rho
     }
     if ("average" %in% method) {
-
       avg.X <- t(G[gg, ]) %*% X[gg, ] / Matrix::colSums(G[gg, ])
       avg.X[is.na(avg.X)] <- 0
       S[["average"]] <- avg.X
@@ -991,7 +987,6 @@ sigdb.removeDataset <- function(h5.file, pgxname) {
       rhdf5::h5createDataset(
         h5.file, slot,
         c(nrow(X), ncol(X)),
-
         chunk = c(nrow(X), 1),
         level = 7
       )

@@ -68,8 +68,6 @@ pmid.getGeneContext <- function(gene, keyword) {
 
 #' @export
 pmid.getPubMedContext <- function(gene, context) {
-
-
   res <- EUtilsSummary(
     paste0(gene, "[sym] AND ", context),
     type = "esearch", db = "pubmed", datetype = "pdat",
@@ -145,7 +143,6 @@ pmid.buildMatrix <- function() {
 
 #' @export
 pmid.buildGraph <- function(P) {
-
   dim(P)
   P <- P[which(Matrix::rowSums(P) <= 10), ]
   P <- P[which(Matrix::rowSums(P) >= 2), ]

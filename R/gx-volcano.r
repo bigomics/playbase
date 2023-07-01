@@ -148,7 +148,6 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
     if (lab.cex > 0) labjj <- lab[jj]
     plt <- scatterD3::scatterD3(
       x = x[jj], y = y[jj],
-
       point_size = cex * 10,
       point_opacity = 0.66,
       xlab = xlab, ylab = ylab, col_var = klr[jj], legend_width = 0,
@@ -188,7 +187,6 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
     }
     ## plt
   } else {
-
     if (!is.null(highlight)) cex.wt <- 0.5 * (1 + 1 * (gene %in% highlight))
 
     plot(
@@ -385,8 +383,6 @@ gx.volcanoPlot.LIMMA <- function(tab, render = "scatterD3", n = 1000, highlight 
         yaxis = list(title = ylab, range = ylim)
       )
   } else {
-
-
     if (!is.null(highlight)) cex.wt <- 0.5 * (1 + 1 * (gene %in% highlight))
     plot(
       x = x, y = y, pch = 19, cex = 0.4 * cex * cex.wt, xlim = xlim, ylim = ylim,

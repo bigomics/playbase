@@ -63,7 +63,6 @@ pgx.saveMatrixH5 <- function(X, h5.file, chunk = NULL) {
     rhdf5::h5createDataset(
       h5.file, "data/matrix",
       c(nrow(X), ncol(X)),
-
       chunk = chunk,
       level = 7
     )
@@ -284,7 +283,6 @@ pgx.initDatasetFolder.DEPRECATED <- function(pgx.dir,
   allFC <- NULL
   allfc.file1 <- file.path(pgx.dir, allfc.file)
   if (!force && file.exists(allfc.file1) && length(pgx.missing) > 0) {
-
     allFC <- fread.csv(allfc.file1, row.names = 1, check.names = FALSE)
   }
   dim(allFC)
@@ -497,7 +495,6 @@ pgx.updateInfoPGX <- function(pgxinfo, pgx, remove.old = TRUE) {
     dataset = dataset.name,
     ## author = "", ## add author? maintainer? owner??
     creator = creator,
-
     datatype = ifelse(is.null(pgx$datatype), "", pgx$datatype),
     description = ifelse(is.null(pgx$description), "", pgx$description),
     organism = organism,
@@ -608,9 +605,7 @@ pgxinfo.deletePgx <- function(pgx.dir, pgxname,
 
   ## delete dataset from H5 file
   if (delete.fc && file.exists(h5.file)) {
-
     sigdb.removeDataset(h5.file, pgxname)
-
   }
 }
 
@@ -975,7 +970,6 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   allFC <- NULL
 
   if (!force && file.exists(allfc.file) && length(pgx.missing) > 0) {
-
     allFC <- fread.csv(allfc.file, row.names = 1, check.names = FALSE)
     allFC <- as.matrix(allFC)
   }

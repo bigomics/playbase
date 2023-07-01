@@ -166,7 +166,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
                           only.known = TRUE, only.hugo = TRUE, convert.hugo = TRUE,
                           do.cluster = TRUE, cluster.contrasts = FALSE, do.clustergenes = TRUE,
                           only.proteincoding = TRUE) {
-
   if (0 && !"group" %in% colnames(samples)) {
     stop("samples information must have 'group' column\n")
     return(NULL)
@@ -191,7 +190,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ct.type <- c("labeled (new style)", "numbered (old style)")[1 + 1 * is.numbered]
   is.numbered
   if (is.numbered) {
-
     contrasts <- contrastAsLabels(contrasts)
   }
 
@@ -382,7 +380,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     remove(x1)
   }
   if (ndup > 0 && !is.null(ngs$X)) {
-
     x1 <- tapply(1:nrow(ngs$X), gene1, function(i) {
       log2(Matrix::colSums(2**ngs$X[i, , drop = FALSE]))
     })
@@ -511,7 +508,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     ngs <- playbase::pgx.clusterSamples2(
       ngs,
       dims = c(2, 3),
-
       perplexity = NULL,
       methods = c("pca", "tsne", "umap")
     )
@@ -568,7 +564,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   if (do.clustergenes) {
     message("[createPGX] clustering genes...")
     ngs <- playbase::pgx.clusterGenes(ngs, methods = "umap", dims = c(2, 3), level = "gene")
-
   }
 
   return(ngs)

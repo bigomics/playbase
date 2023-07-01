@@ -313,7 +313,6 @@ pgx.getGEOcounts.GEOquery <- function(id) {
       (qx[2] > 0 && qx[2] < 1 && qx[4] > 1 && qx[4] < 2) ## from GEO2R script
     is.count
     if (!is.count) {
-
       ex <- 2**ex
     }
 

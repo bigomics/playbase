@@ -202,7 +202,6 @@ pgx.clusterSamples <- function(pgx, X = NULL, skipifexists = FALSE, perplexity =
   clust.detect <- clust.detect[1]
   if (!is.null(X)) {
     message("using provided X matrix...")
-
   } else if (is.null(X) && !is.null(pgx$X)) {
     message("using pgx$X matrix...")
     X <- pgx$X
@@ -571,7 +570,6 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
                               find.clusters = TRUE, kclust = 1,
                               clust.detect = c("louvain", "hclust"),
                               method = c("tsne", "umap", "pca")) {
-
   method <- method[1]
   clust.detect <- clust.detect[1]
 
