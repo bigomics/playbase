@@ -13,7 +13,7 @@ labels2rainbow <- function(net) {
   col1 <- labels2colors(net$colors)
   col.rnk <- rank(tapply(1:n, col1[ii], mean))
   new.col <- rainbow(nc)[col.rnk]
-  ## new.col <- heat.colors(nc)[col.rnk]
+
   names(new.col) <- names(col.rnk)
   new.col["grey"] <- "#AAAAAA"
   new.col
@@ -56,7 +56,7 @@ pgx.wgcna <- function(
   datTraits <- datTraits[, !isdate, drop = FALSE]
 
   ## Expand multi-class discrete phenotypes into binary vectors
-  ## datTraits1 <- datTraits
+
   tr.class <- sapply(type.convert(datTraits), class)
   sel1 <- which(tr.class %in% c("factor", "character"))
   sel2 <- which(tr.class %in% c("integer", "numeric"))
@@ -76,32 +76,32 @@ pgx.wgcna <- function(
   me.colors <- color1[!duplicated(color1)]
   names(me.colors) <- paste0("ME", names(me.colors))
   me.colors <- me.colors[names(me.genes)]
-  # progress$inc(0.4, "")
 
-  # message("[wgcna.compute] >>> Calculating WGCNA clustering...")
-  # progress$inc(0.1, "Computing dim reductions...")
+
+
+
 
   X1 <- t(datExpr)
   X1 <- t(scale(datExpr))
-  ## pos <- Rtsne::Rtsne(X1)$Y
-  ## dissTOM <- 1 - abs(cor(datExpr))**6
+
+
   dissTOM <- 1 - WGCNA::TOMsimilarityFromExpr(datExpr, power = power)
   rownames(dissTOM) <- colnames(dissTOM) <- colnames(datExpr)
   clust <- playbase::pgx.clusterBigMatrix(dissTOM, methods = c("umap", "tsne", "pca"), dims = c(2))
-  ## pos <- playbase::pgx.clusterBigMatrix(t(X1), methods="tsne", dims=2)[[1]]
-  ## pos <- playbase::pgx.clusterBigMatrix(dissTOM, methods="pca", dims=2)[[1]]
+
+
   names(clust)
   if ("cluster.genes" %in% names(pgx)) {
     clust[["umap2d"]] <- pgx$cluster.genes$pos[["umap2d"]][colnames(datExpr), ]
   }
-  # progress$inc(0.2)
 
-  # message("[wgcna.compute] >>> Calculating WGCNA module enrichments...")
-  # progress$inc(0, "Calculating module enrichment...")
+
+
+
 
   gmt <- getGSETS_playbase(pattern = "HALLMARK|GOBP|^C[1-9]")
   gse <- NULL
-  ## bg <- unlist(me.genes)
+
   bg <- toupper(rownames(pgx$X))
   i <- 1
   for (i in 1:length(me.genes)) {
@@ -117,7 +117,7 @@ pgx.wgcna <- function(
   }
   rownames(gse) <- NULL
 
-  # progress$inc(0.3)
+
 
   ## construct results object
   return(

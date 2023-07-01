@@ -80,9 +80,9 @@ pgx.getGEOseries <- function(id, archs.h5 = "human_matrix.h5", convert.hugo = TR
     }
     ## if(!is.null(ct)) {
     ##     if("group" %in% colnames(sampleinfo)) {
-    ##         colnames(sampleinfo) <- sub("group","xgroup",colnames(sampleinfo)) ## backup..
+
     ##     }
-    ##     sampleinfo <- cbind(sampleinfo, group=as.character(ct$group))
+
     ## }
     if (!is.null(ct$exp.matrix)) {
       contrasts <- ct$exp.matrix
@@ -173,7 +173,7 @@ pgx.getGeoMetadata <- function(id) {
   Matrix::head(pheno)
 
   ##
-  ## experimentData(eset)
+
 
 
   pheno
@@ -183,7 +183,7 @@ pgx.getGeoMetadata <- function(id) {
 ## -------------------------------------------------------------------------------------
 ## Query GEO expression
 ## -------------------------------------------------------------------------------------
-## h5.file = "../libx/human_matrix.h5"
+
 #' @export
 pgx.getGEOcounts.archs4 <- function(id, h5.file) {
   rhdf5::h5ls(h5.file)
@@ -263,9 +263,9 @@ pgx.getGEOcounts.GEOquery <- function(id) {
 
   ## load series and platform data from GEO
   id
-  ## dat <- GEOquery::getGEO(id, GSEMatrix=FALSE, getGPL=FALSE)
+
   gse <- try(GEOquery::getGEO(id, GSEMatrix = TRUE, getGPL = TRUE))
-  ## gse <- try( GEOquery::getGEO(id, GSEMatrix=TRUE, getGPL=FALSE) )
+
   class(gse)
   if (class(gse) == "try-error") {
     cat("ERROR: GEOquery::getGEO() error\n")
@@ -313,7 +313,7 @@ pgx.getGEOcounts.GEOquery <- function(id) {
       (qx[2] > 0 && qx[2] < 1 && qx[4] > 1 && qx[4] < 2) ## from GEO2R script
     is.count
     if (!is.count) {
-      ## ex[which(ex <= 0 | is.na(ex))] <- 0
+
       ex <- 2**ex
     }
 
@@ -383,7 +383,7 @@ pgx.getGEOcounts.fromSuppl <- function(id) {
 
   ## load series and platform data from GEO
   id
-  ## dat <- GEOquery::getGEO(id, GSEMatrix=FALSE, getGPL=FALSE)
+
   gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE))
   class(gse)
   if (class(gse) == "try-error") {
@@ -493,7 +493,7 @@ pgx.getSymbolFromFeatureData <- function(fdata) {
 pgx.getGeoExperimentInfo <- function(id) {
   suppressMessages(gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE)))
   info <- gse@header
-  ## info <- info[c("geo_accession","title","summary","type")]
+
   info
 }
 
@@ -501,7 +501,7 @@ pgx.getGeoExperimentInfo <- function(id) {
 pgx.getGeoMetadata.fromEset <- function(id) {
   ## If not succesful, try with downloading the GSEMatrix
   suppressMessages(gse <- try(GEOquery::getGEO(id, GSEMatrix = TRUE, getGPL = FALSE)))
-  ## suppressMessages(gse <- try(GEOquery::getGEO(id, GSEMatrix=FALSE, getGPL=FALSE)))
+
   class(gse)
   if (class(gse) == "try-error") {
     res <- list(error = "ERROR: pgx.getGeoMetadata.fromEset() error")
@@ -572,9 +572,9 @@ pgx.getGeoMetadata.fromEset1 <- function(eset) {
   title_info <- NULL
   if (FALSE && is.underscored) {
     title2 <- trimws(gsm.title)
-    ## title2 <- trimsame(title2, split="_",ends=TRUE)
-    ## title2 <- gsub("[\\(\\),-]","",title2)
-    ## title2 <- gsub("[ ]","_",title2)
+
+
+
     title_info <- eset.parsePhenoFromTitle(title2, split = "_")
     Matrix::head(title_info)
   }
@@ -590,7 +590,7 @@ pgx.getGeoMetadata.fromEset1 <- function(eset) {
 
   sample_info <- data.frame(sample_info, stringsAsFactors = FALSE, check.names = FALSE)
   dim(sample_info)
-  ## rownames(sample_info) <- gsm.samples
+
   sample_info
 }
 
@@ -620,12 +620,12 @@ pgx.getGeoMetadata.fromGSM <- function(id) {
   ## Summary and sample names
   summary <- gse@header$summary
   gsm.samples <- gse@header$sample_id
-  ## gsm.samples <- names(dat@gsms)
+
   Matrix::head(gsm.samples)
 
   ## Get sample_info from characteristics (ch1) column
   ch1_info <- lapply(gse@gsms, function(g) g@header$characteristics_ch1)
-  ## ch1_info <- lapply(ch1_info, function(x) {colnames(x)=colnames(ch1_info[[1]]);x})
+
   is.null(ch1_info)
   if (!is.null(ch1_info)) {
     ch1_info <- lapply(ch1_info, function(x) sub("^Clinical info: ", "", x))
@@ -654,9 +654,9 @@ pgx.getGeoMetadata.fromGSM <- function(id) {
   ## NEED RETHINK!!!!!!!!!!!!!!!!!!
   if (FALSE && is.underscored) {
     title2 <- trimws(gsm.title)
-    ## title2 <- trimsame2(title2, split="_")
-    ## title2 <- gsub("[\\(\\),-]","",title2)
-    ## title2 <- gsub("[ ]","_",title2)
+
+
+
     title_info <- eset.parsePhenoFromTitle(title2, split = "_")
     dim(title_info)
     Matrix::head(title_info)
@@ -672,13 +672,13 @@ pgx.getGeoMetadata.fromGSM <- function(id) {
 
   sample_info <- data.frame(sample_info, stringsAsFactors = FALSE, check.names = FALSE)
   dim(sample_info)
-  ## colnames(sample_info) <- gsub("[ ]","_",colnames(sample_info))
-  ## rownames(sample_info) <- gsm.samples
+
+
   sample_info
 }
 
-## source(file.path(RDIR,"ngs-functions.R"))
-## source(file.path(RDIR,"pgx-functions.R"))
+
+
 
 ## -------------------------------------------------------------------------------------
 ## HELPER functions
@@ -714,7 +714,7 @@ eset.getCH1 <- function(eset) {
     )
   }
   colnames(pdata) <- sub(":ch1", "", colnames(pdata))
-  ## colnames(pdata) <- gsub("[ ]","_",colnames(pdata))
+
   pdata
 }
 
@@ -730,7 +730,7 @@ eset.parseCharacteristicsInfo <- function(ch, split = ",") {
   value
 }
 
-## title=title2
+
 #' @export
 title2pheno <- function(title, split = NULL, trim = TRUE, summarize = TRUE) {
   ##
@@ -771,7 +771,7 @@ title2pheno <- function(title, split = NULL, trim = TRUE, summarize = TRUE) {
   ff <- lapply(ff, trimws) ## trim whitespace
   ff <- lapply(ff, function(s) gsub("hours$|hour$|hrs$|hr$", "h", s)) ## hours
   ff <- lapply(ff, function(s) gsub("[ ][ ]*", " ", s)) ## double space
-  ## ff <- lapply(ff, function(s) gsub("([0-9]*)[ _]h","\\1h",s)) ## remove any space between hours??
+
 
   ## make dataframe
   F1 <- do.call(rbind, ff)
@@ -797,7 +797,7 @@ title2pheno <- function(title, split = NULL, trim = TRUE, summarize = TRUE) {
   F1
 }
 
-## title=title2
+
 #' @export
 eset.parsePhenoFromTitle <- function(title, split = NULL) {
   ##
@@ -805,7 +805,7 @@ eset.parsePhenoFromTitle <- function(title, split = NULL) {
   ##
 
 
-  ## title <- as.character(pData(phenoData(eset))$title)
+
 
   if (!all(grepl(split, title))) {
     return(NULL)
@@ -862,7 +862,7 @@ eset.parsePhenoFromTitle <- function(title, split = NULL) {
   G <- do.call(cbind, G)
   G <- G[, colMeans(is.na(G)) < 1, drop = FALSE]
   rownames(G) <- NULL
-  ## rownames(G) <- tt
+
   colnames(G) <- paste0("V", 1:ncol(G))
   G
 }
@@ -933,24 +933,24 @@ parse_geo_series_matrix <- function(SERIES_FILE,
   )
 
   ## Merge tables to map Gene genes ids
-  ## m <- data.table(merge(ref, D, all=FALSE)[,-1])
+
   dim(m)
   gene <- ref$gene[match(rownames(D), as.character(ref$ID_REF))]
 
   ## Aggregate duplicate genes by median
   sum(duplicated(gene))
-  ## m <- m[,lapply(.SD, median(na.rm=TRUE)), by=gene]
+
   ex <- do.call(rbind, tapply(1:nrow(D), gene, function(i) colMeans(D[i, , drop = FALSE])))
   head(ex)
 
   ## Transpose matrix, add sample column and set gene names as column names
-  ## m <- data.table(samples, transpose(m[,-1]))
+
 
   ## drop empty or duplicated columns
   sel1 <- (apply(anno, 2, function(x) mean(x %in% c(NA, "NA", "null", ""))) < 1)
   sel2 <- !duplicated(t(anno))
   sel <- which(sel1 & sel2)
-  ## anno1 <- anno[,..sel]
+
   anno1 <- anno[, sel, with = FALSE]
   dim(anno1)
 
@@ -960,7 +960,7 @@ parse_geo_series_matrix <- function(SERIES_FILE,
   if (write.file) {
     cat("writing", EXPRESSION_OUTPUT_FILE, "\n")
     fwrite(data.table(gene = rownames(ex), ex), file = EXPRESSION_OUTPUT_FILE, sep = ",")
-    ## write.csv(ex, file=EXPRESSION_OUTPUT_FILE)
+
     cat("writing", ANNOTATION_OUTPUT_FILE, "\n")
     fwrite(anno1, file = ANNOTATION_OUTPUT_FILE, sep = ",")
   }

@@ -132,7 +132,7 @@ val2col <- function(z, zlim, col = heat.colors(12), breaks) {
   return(colorlevels)
 }
 
-## HUGO.SYMBOLS <- unique(unlist(as.list(org.Hs.egSYMBOL)))
+
 
 
 #' Title
@@ -150,7 +150,7 @@ val2col <- function(z, zlim, col = heat.colors(12), breaks) {
 #' @examples
 symbol2hugo <- function(genes, remove.non.hugo = TRUE, silent = FALSE,
                         take.only.first = FALSE, split.char = ";", unknown = "unknown_gene") {
-  ## remove.non.hugo=TRUE;silent=FALSE;take.only.first=FALSE;split.char=";";unknown="unknown_gene"
+
 
   HUGO.SYMBOLS <- unique(unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL)))
   ss <- as.character(genes)

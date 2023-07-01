@@ -25,9 +25,9 @@ graph_from_knn <- function(pos, k = 10) {
   xval <- res$nn.dist
   xval <- as.vector(unlist(xval))
   sp.idx <- do.call(rbind, lapply(1:nrow(idx), function(i) cbind(i, idx[i, ])))
-  ## xval = exp(- xval / mean(xval) )
-  ## xval = 1 / (1 + xval / mean(xval) )
-  ## cat("note: edge weights are distances\n")
+
+
+
   sp <- Matrix::sparseMatrix(i = sp.idx[, 1], j = sp.idx[, 2], x = xval, dims = c(nrow(pos), nrow(pos)))
   sp <- (sp + t(sp)) / 2
   rownames(sp) <- colnames(sp) <- rownames(pos)
@@ -61,7 +61,7 @@ calc.edge.similarity <- function(ee, X, nk = 4000, mc.cores = 1) {
 
 #' @export
 calc.edge.similarityMC <- function(ee, X, nk = 5000, mc.cores = 4) {
-  ## nk = 50000
+
   kfold <- (nrow(ee) %/% nk) + 1
   kfold
   idx <- list()
@@ -91,7 +91,7 @@ calc.edge.similarityMC <- function(ee, X, nk = 5000, mc.cores = 4) {
     ## any NA means missing...
     ## nx = which( Matrix::rowMeans(is.na(x1)) > 0 |
     ##            Matrix::rowMeans(is.na(x2)) > 0 )
-    ## if(length(nx)>0) { cx0[nx] <- NA }
+
     cx0[which.x] <- cx1
     cx0
   }
@@ -107,8 +107,8 @@ calc.edge.similarityKFOLD <- function(ee, X, nk = 4000) {
     jj <- which(!is.na(X[ee[, 1], 1]) & !is.na(X[ee[, 2], 1])) ## check NA
     x1 <- X[ee[jj, 1], , drop = FALSE]
     x2 <- X[ee[jj, 2], , drop = FALSE]
-    ## x1 = as.matrix(x1)
-    ## x2 = as.matrix(x2)
+
+
     n1 <- Matrix::rowSums(x1**2 * (!is.na(x2)), na.rm = TRUE)**0.5
     n2 <- Matrix::rowSums(x2**2 * (!is.na(x1)), na.rm = TRUE)**0.5
     n1 <- (1e-20 + n1)
@@ -118,7 +118,7 @@ calc.edge.similarityKFOLD <- function(ee, X, nk = 4000) {
     cx1 <- Matrix::rowSums(xx, na.rm = TRUE) / n1 / n2
     ## nx = which( Matrix::rowMeans(is.na(x1))==1 |
     ##            Matrix::rowMeans(is.na(x2))==1 )
-    ## if(length(nx)>0) { cx0[nx] <- NA }
+
     cx0[jj] <- cx1
     return(cx0)
   }
@@ -152,7 +152,7 @@ kcomp <- function(g, k = 3, minsize = 0) {
   igraph::induced_subgraph(g, igraph::V(g)[vtx])
 }
 
-## g=G
+
 #' @export
 cutGraph0 <- function(g, k = 3, cut = FALSE) {
   ## Cluster graph and cut crossing edges if requested.
@@ -166,7 +166,7 @@ cutGraph0 <- function(g, k = 3, cut = FALSE) {
   igraph::induced_subgraph(g, which(cmp %in% cmp.top))
 }
 
-## g=G
+
 #' @export
 graph.cut_crossings <- function(g, idx, max.wt = 9999) {
   ## Cut graph given indices of membership
@@ -201,7 +201,7 @@ itercluster_louvain <- function(g, n = 3) {
   return(K)
 }
 
-## g=G;n=3;k=10
+;n=3;k=10
 #' @export
 cutGraph <- function(g, n = 2, k = 5, max.wt = 9999) {
   ## Cluster graph and cut crossing edges if requested.
@@ -216,8 +216,8 @@ cutGraph <- function(g, n = 2, k = 5, max.wt = 9999) {
 
 
 
-## k=2;g=G;mc.cores=16
-## k=NULL
+
+
 #' @export
 hclust_graph <- function(g, k = NULL, mc.cores = 2) {
   ## Hierarchical clustering of graph using iterative Louvain
@@ -266,13 +266,13 @@ hclust_graph <- function(g, k = NULL, mc.cores = 2) {
   rownames(K) <- igraph::V(g)$name
   if (!ok && is.null(k)) K <- K[, 1:(ncol(K) - 1)]
   dim(K)
-  ## K = K[,1:(ncol(K)-1)]
+
   colnames(K) <- NULL
   return(K)
 }
 
 
-## method="hclust";g=G;k=10;grouped=NULL;nlouvain=3
+
 #' @export
 decompose_graph <- function(g, grouped = NULL, method = "louvain", k = NULL,
                             cex1 = 2, cex2 = 10, nlouvain = 1) {
@@ -294,9 +294,9 @@ decompose_graph <- function(g, grouped = NULL, method = "louvain", k = NULL,
       } ## end of nlouvain iterations
     } else if (method == "hclust") {
       if (is.null(k)) stop("hclust needs k")
-      ## D = as.matrix( 1.0 / (1e-8 + g[,]) - 1)
+
       D <- as.matrix(1.0 - g[, ])
-      ## hc = fastcluster::hclust(as.dist(D), method="ward.D2")
+
       hc <- fastcluster::hclust(as.dist(D), method = "average")
       k1 <- max(min(k, nrow(D) / 2), 1)
       idx <- cutree(hc, k1)
@@ -304,8 +304,8 @@ decompose_graph <- function(g, grouped = NULL, method = "louvain", k = NULL,
     } else if (method == "nclust") {
       if (is.null(k)) stop("nclust needs k")
       D <- as.matrix(1.0 - g[, ])
-      ## hc = nclust(as.matrix(g[,]), link="ward")
-      ## hc = nclust( as.matrix(g[,]), link="average")
+
+
       hc <- nclust(as.dist(D), link = "average")
       k1 <- max(min(k, nrow(D) / 2), 1)
       idx <- cutree(hc, k1)
@@ -377,7 +377,7 @@ decompose_graph <- function(g, grouped = NULL, method = "louvain", k = NULL,
   subG$members <- tapply(idx, idx, names)
   names(subG$members) <- rownames(subM)
 
-  ## avg.pos = apply(g$layout,2,function(x) tapply(x,idx,median))
+
   avg.pos <- apply(g$layout[names(idx), ], 2, function(x) tapply(x, idx, mean))
   rownames(avg.pos) <- rownames(subM)
   subG$layout <- avg.pos
@@ -405,7 +405,7 @@ decompose_graph <- function(g, grouped = NULL, method = "louvain", k = NULL,
 }
 
 
-## method="hclust";g=G;k=10;grouped=NULL;nlouvain=3
+
 #' @export
 downsample_graph.DEPRECATED <- function(g, idx = NULL, grouped = NULL, merge.op = "max") {
   if (is.null(g$layout)) stop("graph must have layout")
@@ -480,10 +480,10 @@ downsample_graph.DEPRECATED <- function(g, idx = NULL, grouped = NULL, merge.op 
   members <- tapply(igraph::V(g)$name, idx, list)
   names(members) <- rownames(subM)
   igraph::V(subG)$members <- members
-  ## subG$members = members
-  ## igraph::V(subG)$size = sapply(members, length)
 
-  ## avg.pos = apply(g$layout,2,function(x) tapply(x,idx,median))
+
+
+
   avg.pos <- apply(g$layout[igraph::V(g)$name, ], 2, function(x) tapply(x, idx, mean))
   rownames(avg.pos) <- rownames(subM)
   subG$layout <- avg.pos

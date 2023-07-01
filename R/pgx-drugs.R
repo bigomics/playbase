@@ -3,9 +3,9 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-## X=comboX;x.drugs=combo.drugs
-## X=comboX;x.drugs=combo.drugs
-## nprune=250;res.mono=NULL;ntop=10;nsample=20
+
+
+
 
 #' @export
 pgx.createComboDrugAnnot <- function(combo, annot0) {
@@ -23,7 +23,7 @@ pgx.createComboDrugAnnot <- function(combo, annot0) {
   annot1
 }
 
-## obj=ngs;methods="GSEA";contrast=NULL;nprune=250;nmin=5
+
 #' @export
 pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor"),
                                       nmin = 15, nprune = 250, contrast = NULL) {
@@ -42,7 +42,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
       F <- F[jj, , drop = FALSE]
     }
     rownames(F) <- toupper(sub(".*:|.*\\]", "", rownames(F)))
-    ## colnames(F) <- names(obj$gx.meta$meta)
+
     F <- F[order(-rowMeans(F**2)), , drop = FALSE]
     F <- F[!duplicated(rownames(F)), , drop = FALSE]
     dim(F)
@@ -99,7 +99,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
   if ("cor" %in% methods) {
     message("Calculating drug enrichment using rank correlation ...")
 
-    ## D <- model.matrix( ~ 0 + xdrugs)
+
     D <- Matrix::sparse.model.matrix(~ 0 + xdrugs)
     dim(D)
     colnames(D) <- sub("^xdrugs", "", colnames(D))
@@ -151,7 +151,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
     for (k in 1:length(results)) {
       res <- results[[k]]
       ## reduce solution set with top-N of each comparison??
-      ## mtop <- apply(abs(res$X), 2, function(x) Matrix::head(order(-x),nprune)) ## absolute NES!!
+
       rx <- apply(abs(res$X), 2, rank)
       rownames(rx) <- rownames(res$X)
       mtop <- names(head(sort(rowMeans(rx), decreasing = TRUE), nprune))
@@ -217,7 +217,7 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
   }
 
   ## determine top-combinations
-  ## ntop=10
+
   top.mono.up <- apply(er.mono$X, 2, function(x) Matrix::head(order(-x), ntop))
   top.mono.dn <- apply(er.mono$X, 2, function(x) Matrix::head(order(x), ntop))
   top.combo.up <- apply(top.mono.up, 2, function(idx) list(combn(idx, 2)))
@@ -248,7 +248,7 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
   ## --------------- now create combination matrix X
   comboX <- apply(sample.pairs, 1, function(ii) rowMeans(X[, ii], na.rm = TRUE))
   dim(comboX)
-  ## colnames(comboX) <- apply(combo.idx, 1, function(ii) paste(colnames(X)[ii],collapse="+"))
+
   combo.drugs <- apply(sample.pairs, 1, function(ii) paste(sort(xdrugs[ii]), collapse = "+"))
 
   Matrix::tail(sort(table(combo.drugs)))

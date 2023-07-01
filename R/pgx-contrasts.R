@@ -55,7 +55,7 @@ pgx.detect_timevar <- function(Y) {
   has.time
   ttvar <- grep("time|hour|hr|day", colnames(Y), value = TRUE)
   ttvar
-  ## ttvar <- ttvar[sapply(ttvar, function(v) all(table(Y[,v])>1))]
+
   ttvar
 }
 
@@ -146,7 +146,7 @@ pgx.makeStratifiedContrastsDF <- function(data, vars, strata, ref) {
   i <- 1
   for (i in 1:ncol(C0)) {
     m1 <- (C1 == 1) * C0[, i]
-    ## colnames(m1) <- paste0(colnames(C1),"::",colnames(C0)[i])
+
     colnames(m1) <- paste0(colnames(C0)[i], "@", colnames(C1))
     contr.matrix <- cbind(contr.matrix, m1)
   }
@@ -201,7 +201,7 @@ pgx.makeStratifiedContrasts <- function(Y, strata, ref) {
   i <- 1
   for (i in 1:ncol(C0)) {
     m1 <- (C1 == 1) * C0[, i]
-    ## colnames(m1) <- paste0(colnames(C1),"::",colnames(C0)[i])
+
     colnames(m1) <- paste0(colnames(C0)[i], "@", colnames(C1))
     contr.matrix <- cbind(contr.matrix, m1)
   }
@@ -334,7 +334,7 @@ makeDirectContrasts <- function(Y, ref, na.rm = TRUE) {
 #'
 #' @examples
 makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
-  ## if(warn) warning("makeDirectContrasts is deprectated. please use makeDirectContrasts2()")
+
   if (NCOL(Y) == 1) Y <- data.frame(Y = Y)
 
   ## check
@@ -355,7 +355,7 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
   for (i in 1:ncol(Y)) {
     m1 <- NULL
     ref1 <- ref[i]
-    ## if(ref1 %in% c("*","full")) ref1 <- NA  ##???
+
     x <- as.character(Y[, i])
     x[is.na(x) | x == "NA"] <- "_"
     detect.ref <- any(grepl(ref.pattern, x, ignore.case = TRUE))
@@ -382,9 +382,9 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
       m1 <- m1[, !colnames(m1) %in% c("NA", "_"), drop = FALSE]
       colnames(m1) <- paste0(colnames(m1), "_vs_", ref1)
     } else if (!is.na(ref1) && (ref1 %in% all)) {
-      ## m1 <- m1 - m1[,cref]  ## +1/-1 encoding
+
       m1 <- t(t(m1 == 1) / Matrix::colSums(m1 == 1) - t(m1 == 0) / Matrix::colSums(m1 == 0))
-      ## m1 <- m1[,which(colnames(m1)!=cref),drop=FALSE]
+
       m1 <- m1[, !colnames(m1) %in% c("NA", "_"), drop = FALSE]
       colnames(m1) <- paste0(colnames(m1), "_vs_others")
     } else {
@@ -464,7 +464,7 @@ makeClusterContrasts <- function(clusters, min.freq = 0.01, full = FALSE,
   colnames(m1) <- sub("^idx", "", colnames(m1))
   rownames(m1) <- colnames(m1)
   colnames(m1) <- paste0(colnames(m1), "_vs_others")
-  ## m1 <- m1 - 1/(nrow(m1)-1)*(m1==0)
+
   m1 <- t(t(m1 == 1) / Matrix::colSums(m1 == 1) - t(m1 == 0) / Matrix::colSums(m1 == 0))
 
   diag(m1) <- 1
@@ -666,7 +666,7 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
     ## NA can make ct smaller than full
     ct <- ct[match(1:length(x), rownames(ct)), , drop = FALSE]
     rownames(ct) <- 1:length(x)
-    ## ct[is.na(ct)] <- 0 ## no!!
+
     ct
   }
 
@@ -674,7 +674,7 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
   if (!is.null(ref) && length(ref) < ncol(df)) ref <- Matrix::head(rep(ref, 99), ncol(df))
 
   ## filter out 'internal/hidden' and 'group' parameters
-  ## not.used <- grepl("^[.]|group",colnames(df))
+
   not.used <- grepl("^[.]", colnames(df))
   if (skip.hidden && sum(not.used) > 0 && sum(!not.used) > 0) {
     df <- df[, !not.used, drop = FALSE]
@@ -886,8 +886,8 @@ normalizeContrasts <- function(contr.matrix) {
 #' @examples
 makeContrastsFromPairs <- function(main.group, ref.group, groups = NULL, comparisons = NULL) {
   if (is.null(comparisons)) comparisons <- paste0(main.group, "_vs_", ref.group)
-  ## main.group <- sapply(strsplit(comparisons, split=split),"[",1)
-  ## ref.group  <- sapply(strsplit(comparisons, split=split),"[",2)
+
+
   main.group <- as.character(main.group)
   ref.group <- as.character(ref.group)
   groups1 <- unlist(strsplit(main.group, split = "[+]"))
@@ -942,7 +942,7 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
     k1 <- contrastAsLabels.col(contr, contr.name)
     K <- cbind(K, k1)
   }
-  ## colnames(K) <- sub("[:].*",colnames(contr.matrix))
+
   colnames(K) <- colnames(contr.matrix)
   rownames(K) <- rownames(contr.matrix)
   K

@@ -23,14 +23,14 @@ pgx.initialize <- function(pgx) {
     obj.missing <- setdiff(obj.needed, names(pgx))
     msg <- paste("invalid pgx object. missing parts in object: ", obj.missing)
     message("[pgx-init.R] *** WARNING ***", msg)
-    ## stop(msg)
+
     return(NULL)
   }
 
   ## for COMPATIBILITY: if no counts, estimate from X
   if (is.null(pgx$counts)) {
     cat("WARNING:: no counts table. estimating from X\n")
-    ## pgx$counts <- (2**pgx$X-1) ##
+
     pgx$counts <- pmax(2**pgx$X - 1, 0)
     k <- grep("lib.size|libsize", colnames(pgx$samples))[1]
     if (length(k) > 0) {
@@ -106,7 +106,7 @@ pgx.initialize <- function(pgx) {
   ## Tidy up phenotype matrix (important!!!): get numbers/integers
   ## into numeric, categorical into factors....
   ## ----------------------------------------------------------------
-  ## pgx$samples <- tidy.dataframe(pgx$samples)  ## warning!! this converts all to CHR!!
+
   pgx$samples <- type.convert(pgx$samples, as.is = TRUE) ## autoconvert to datatypes
   pgx$samples <- pgx$samples[, which(colMeans(is.na(pgx$samples)) < 1), drop = FALSE]
 
@@ -137,11 +137,11 @@ pgx.initialize <- function(pgx) {
   ny1 <- nrow(pgx$Y) - 1
   k1 <- pgx.getCategoricalPhenotypes(pgx$Y, min.ncat = 2, max.ncat = ny1) ## exclude
   k2 <- grep("OS.survival|cluster|condition|group", colnames(pgx$Y), value = TRUE) ## must include
-  ## kk = sort(unique(c("group",k1,k2)))
+
   kk <- sort(unique(c(k1, k2)))
   pgx$Y <- pgx$Y[, kk, drop = FALSE]
   colnames(pgx$Y)
-  ## pgx$samples <- pgx$Y    ## REALLY? !!!!!!!!!!!!!!!!!!!!
+
 
   ## ----------------------------------------------------------------
   ## Tidy up genes matrix
@@ -176,7 +176,7 @@ pgx.initialize <- function(pgx) {
 
   all.genes <- sort(rownames(pgx$genes))
   pgx$families[["<all>"]] <- all.genes
-  ## rownames(pgx$GMT) <- toupper(rownames(pgx$GMT)) ## everything to human...
+
 
   ## -----------------------------------------------------------------------------
   ## Recompute geneset meta.fx as average fold-change of genes

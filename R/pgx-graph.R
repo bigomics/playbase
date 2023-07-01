@@ -41,8 +41,8 @@ pgx.computePathscores <- function(graph, strict.pos = TRUE) {
     dist.source <- igraph::distances(graph, v = "SOURCE", weights = weights0)
     dist.sink <- igraph::distances(graph, v = "SINK", weights = weights0)
     w1 <- rep(1, length(igraph::E(graph)))
-    ## len.source <- igraph::distances(graph, v="SOURCE", weights = w1)
-    ## len.sink   <- igraph::distances(graph, v="SINK", weights = w1)
+
+
     path.score <- exp(-(dist.source + dist.sink))
     names(path.score) <- igraph::V(graph)$name
     P[, i] <- path.score
@@ -80,7 +80,7 @@ pgx.computeShortestPath <- function(graph, contrast, niter = 1, r = 0.01,
     for (i in 1:niter) {
       sd0 <- r * sd(weights0)
       weights1 <- 0.0 + pmax(weights0 + sd0 * rnorm(length(weights0)), 0)
-      ## weights1 <- weights0
+
       system.time(
         sp.out <- igraph::shortest_paths(graph,
           from = "SOURCE", to = "SINK", mode = "all",
@@ -93,10 +93,10 @@ pgx.computeShortestPath <- function(graph, contrast, niter = 1, r = 0.01,
       epath[[i]] <- sp.out$epath[[1]][2:(ne - 1)]
     }
   }
-  ## sapply(sp, function(x) x$vpath[[1]]$name)
+
   vfreq <- sort(table(unlist(vpath)), decreasing = TRUE)
 
-  ## efreq <- sort(table(unlist(epath)),decreasing=TRUE)
+
 
   res <- list(vpath = vpath, epath = epath, vfreq = vfreq)
   return(res)
@@ -146,19 +146,19 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   gr <- readRDS(file.path(FILES, "pgx-graph-geneXgset-XL-snn20.rds"))
   table(igraph::V(gr)$level)
 
-  ## G <- igraph::as_adjacency_matrix(gr)
-  ## dim(G)
+
+
 
   ## ----------------------------------------------------------------------
   ## Create large data matrix (includes all levels)
   ## ----------------------------------------------------------------------
   xx1 <- ngs$X
   ## REALLY???
-  ## if("hgnc_symbol" %in% colnames(ngs$genes)) rownames(xx1) <- ngs$genes$hgnc_symbol
-  ## rownames(xx1) <- paste0("{gene}",alias2hugo(rownames(ngs$X)))
+
+
   gene <- toupper(ngs$genes[rownames(xx1), "gene_name"])
   rownames(xx1) <- paste0("{gene}", gene)
-  ## rownames(xx1) <- paste0("{gene}",ngs$genes$gene_name)
+
   xx2 <- ngs$gsetX
   rownames(xx2) <- paste0("{geneset}", rownames(ngs$gsetX))
   xx <- rbind(xx1, xx2)
@@ -176,7 +176,7 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   S <- S / max(abs(S), na.rm = TRUE)
   dim(S)
   rownames(S) <- paste0("{geneset}", rownames(S))
-  ## rownames(F) <- paste0("{gene}",rownames(F))
+
   fgene <- toupper(ngs$genes[rownames(F), "gene_name"])
   rownames(F) <- paste0("{gene}", fgene)
 
@@ -187,7 +187,7 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   remove(F)
   remove(S)
 
-  ## table(igraph::V(gr)$name %in% rownames(xx))
+
   table(rownames(xx) %in% igraph::V(gr)$name)
   table(rownames(fc) %in% igraph::V(gr)$name)
   Matrix::head(setdiff(rownames(xx), igraph::V(gr)$name))
@@ -341,7 +341,7 @@ pgx.reduceOmicsGraph <- function(ngs) {
     weighted = TRUE, diag = FALSE
   )
 
-  ## rpos <- (R %*% gr$layout)
+
   ee <- igraph::get.edges(gr1, igraph::E(gr1))
   summary(igraph::E(gr1)$weight)
   table(abs(igraph::E(gr1)$weight) > 0.01)
@@ -349,7 +349,7 @@ pgx.reduceOmicsGraph <- function(ngs) {
   lev <- igraph::V(gr1)$level
   ee.type <- c("inter", "intra")[1 + 1 * (lev[ee[, 1]] == (lev[ee[, 2]]))]
   gr1 <- igraph::delete_edges(gr1, which(abs(igraph::E(gr1)$weight) < 0.01 & ee.type == "inter"))
-  ## gr1 <- igraph::subgraph.edges(gr1, which(abs(igraph::E(gr1)$weight) > 0.05), delete.vertices=FALSE)
+
 
   ## ------------------------------------------------------------
   ## compute new layout positions???
@@ -357,7 +357,7 @@ pgx.reduceOmicsGraph <- function(ngs) {
   rpos <- lapply(grp.members0, function(m) colMeans(gr$layout[m, , drop = FALSE]))
   rpos <- do.call(rbind, rpos)
   gr1$layout <- scale(rpos)
-  ## gr1 <- scran::buildSNNGraph(t(rpos), k=20)
+
 
   ## should we recreate the SNNgraph in the intralayers????
   ## this connect all points with at least 3 neighbours
@@ -385,7 +385,7 @@ pgx.reduceOmicsGraph <- function(ngs) {
   ## ------------------------------------------------------------
   ## add some graph data
   ## ------------------------------------------------------------
-  ## V(gr1)$members <- grp.idx
+
   igraph::V(gr1)$label <- grp.label
   igraph::V(gr1)$cluster <- tapply(idx0, idx, median) ## level 1 cluster index
   igraph::V(gr1)$level <- gsub("\\}.*|^\\{", "", igraph::V(gr1)$name)
@@ -395,8 +395,8 @@ pgx.reduceOmicsGraph <- function(ngs) {
   gr1$members <- grp.members
   gr1$scaled.data <- rX
 
-  ## klr <- rep(rainbow(24),99)[igraph::V(gr1)$cluster]
-  ## graphjs(gr1, vertex.size=0.3, vertex.color=klr)
+
+
 
   return(gr1)
 }
@@ -460,7 +460,7 @@ pgx.createVipGeneLayer <- function(gr, genes, z = 0, reconnect = 40) {
   cat("createVipGeneLayer:: reconnecting VIP nodes within VIP layer\n")
   pos1 <- gr1$layout[vip, 1:2]
   gr2 <- scran::buildSNNGraph(t(pos1), k = 5)
-  ## V(gr2)$name <- sub(".*\\}","",rownames(pos1))
+
   igraph::V(gr2)$name <- rownames(pos1)
   gr2$layout <- pos1
   vv <- igraph::get.edgelist(gr2)
@@ -474,7 +474,7 @@ pgx.createVipGeneLayer <- function(gr, genes, z = 0, reconnect = 40) {
 }
 
 
-## cex=4;gene="CDK4";fx=main=NULL;gr=ngs$omicsnet
+
 #' @export
 pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
                                    cex = 1, fx = NULL, main = NULL, plot = TRUE) {
@@ -496,8 +496,8 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
   pos1 <- t(t(pos1) + c(+0.6, 0))
   pos2 <- t(t(pos2) + c(-0.6, 0))
 
-  ## geneset="C2:KEGG_T_CELL_RECEPTOR_SIGNALING_PATHWAY";gene=NULL
-  ## gene="KCNN4";geneset=NULL
+
+
   tt <- ""
   to <- from <- NULL
   if (!is.null(geneset)) {
@@ -505,7 +505,7 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
     if (0 && "members" %in% igraph::graph_attr_names(gr)) {
       gs <- names(which(sapply(gr$members, function(x) any(x == geneset))))
     }
-    ## gg = colnames(G)[which(G[grep(gs,rownames(G)),]!=0)]
+
     if (gs %in% igraph::V(gr)$name) {
       nb <- igraph::V(gr)[neighbors(gr, gs)]$name
       gg <- intersect(nb, rownames(pos2))
@@ -516,7 +516,7 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
   }
   if (!is.null(gene)) {
     gg <- paste0("{gene}", gene)
-    ## gg = colnames(G)[which(G[grep(gs,rownames(G)),]!=0)]
+
     if (0 && "members" %in% igraph::graph_attr_names(gr)) {
       gg <- names(which(sapply(gr$members, function(x) any(x == gene))))
     }
@@ -540,8 +540,8 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
     if (!is.null(fx)) {
       fx1 <- fx[match(rownames(pos1), names(fx))]
       fx2 <- fx[match(rownames(pos2), names(fx))]
-      ## fx1[is.na(fx1)] <- 0
-      ## fx2[is.na(fx2)] <- 0
+
+
       fx1 <- fx1 / max(abs(fx1), na.rm = TRUE)
       fx2 <- fx2 / max(abs(fx2), na.rm = TRUE)
       klr1 <- gplots::bluered(32)[16 + round(15 * fx1)]
@@ -583,7 +583,7 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
         length = 0.05,
         lwd = 0.5, col = paste0(gplots::col2hex("green3"), "33")
       )
-      ## text( from[1], from[2], tt, col="blue", pos=3, font=2, cex=0.8, offset=0.2)
+
     }
     if (!is.null(main)) tt <- main
     mtext(tt, line = 0.5, at = 0, font = 2, cex = 1.1)
@@ -617,8 +617,8 @@ pgx.plotForwardProjection <- function(gr, gene, cex = 1, fx = NULL,
 
 
   ## ---------------- get all edges/paths ---------------
-  ## geneset="C2:KEGG_T_CELL_RECEPTOR_SIGNALING_PATHWAY";gene=NULL
-  ## gene="KCNN4";geneset=NULL
+
+
   tt <- ""
   to <- from <- NULL
   if (!is.null(geneset)) {
@@ -626,7 +626,7 @@ pgx.plotForwardProjection <- function(gr, gene, cex = 1, fx = NULL,
     if (0 && "members" %in% igraph::graph_attr_names(gr)) {
       gs <- names(which(sapply(gr$members, function(x) any(x == geneset))))
     }
-    ## gg = colnames(G)[which(G[grep(gs,rownames(G)),]!=0)]
+
     if (gs %in% igraph::V(gr)$name) {
       nb <- igraph::V(gr)[neighbors(gr, gs)]$name
       gg <- intersect(nb, rownames(pos2))
@@ -638,7 +638,7 @@ pgx.plotForwardProjection <- function(gr, gene, cex = 1, fx = NULL,
 
   if (!is.null(gene)) {
     gg <- paste0("{gene}", gene)
-    ## gg = colnames(G)[which(G[grep(gs,rownames(G)),]!=0)]
+
     if (0 && "members" %in% igraph::graph_attr_names(gr)) {
       gg <- names(which(sapply(gr$members, function(x) any(x == gene))))
     }
@@ -663,8 +663,8 @@ pgx.plotForwardProjection <- function(gr, gene, cex = 1, fx = NULL,
     if (!is.null(fx)) {
       fx1 <- fx[match(rownames(pos1), names(fx))]
       fx2 <- fx[match(rownames(pos2), names(fx))]
-      ## fx1[is.na(fx1)] <- 0
-      ## fx2[is.na(fx2)] <- 0
+
+
       fx1 <- fx1 / max(abs(fx1), na.rm = TRUE)
       fx2 <- fx2 / max(abs(fx2), na.rm = TRUE)
       klr1 <- gplots::bluered(32)[16 + round(15 * fx1)]
@@ -706,7 +706,7 @@ pgx.plotForwardProjection <- function(gr, gene, cex = 1, fx = NULL,
         length = 0.05,
         lwd = 0.5, col = paste0(gplots::col2hex("green3"), "33")
       )
-      ## text( from[1], from[2], tt, col="blue", pos=3, font=2, cex=0.8, offset=0.2)
+
     }
     if (!is.null(main)) tt <- main
     mtext(tt, line = 0.5, at = 0, font = 2, cex = 1.1)
@@ -717,7 +717,7 @@ pgx.plotForwardProjection <- function(gr, gene, cex = 1, fx = NULL,
 ## ===================================================================================
 ## ================================ GO graph functions ===============================
 ## ===================================================================================
-## fdr=0.25
+
 #' @export
 pgx.computeCoreGOgraph <- function(ngs, fdr = 0.05) {
   ## test if there are GO terms
@@ -730,11 +730,11 @@ pgx.computeCoreGOgraph <- function(ngs, fdr = 0.05) {
     return(NULL)
   }
 
-  ## comparison=comparisons[1];methods=c("fisher","gsva","camera");fdr=0.05
+
   comparisons <- names(ngs$gset.meta$meta)
   comparisons
   subgraphs <- list()
-  ## nterms=200;ntop=20;comparison=comparisons[1]
+
   i <- 1
   for (i in 1:length(comparisons)) {
     subgraphs[[i]] <- pgx.getSigGO(
@@ -789,14 +789,14 @@ pgx.computeCoreGOgraph <- function(ngs, fdr = 0.05) {
 
 #' @export
 getGOgraph <- function() {
-  ## install.packages(GOSim)
+
   ##
 
   terms <- AnnotationDbi::toTable(GO.db::GOTERM)[, 2:5]
   terms <- terms[!duplicated(terms[, 1]), ]
   rownames(terms) <- terms[, 1]
 
-  ## terms <- terms[ terms[,1] %in% vv, ]
+
   BP <- AnnotationDbi::toTable(GO.db::GOBPPARENTS)
   MF <- AnnotationDbi::toTable(GO.db::GOMFPARENTS)
   CC <- AnnotationDbi::toTable(GO.db::GOCCPARENTS)
@@ -807,7 +807,7 @@ getGOgraph <- function() {
 }
 
 
-## comparison=1;methods=c("fisher","gsva","camera");nterms=200;ntop=20;fdr=0.20
+
 #' @export
 pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 500, ntop = 100) {
   mx <- ngs$gset.meta$meta[[comparison]]
@@ -827,9 +827,9 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
   methods
 
   ## recalculate meta values
-  ## fx = as.matrix(mx[,paste0("fx.",methods),drop=FALSE])
-  ## pv = as.matrix(mx[,paste0("p.",methods),drop=FALSE])
-  ## qv = as.matrix(mx[,paste0("q.",methods),drop=FALSE])
+
+
+
   pv <- unclass(mx$p)[, methods, drop = FALSE]
   qv <- unclass(mx$q)[, methods, drop = FALSE]
   fc <- unclass(mx$fc)[, methods, drop = FALSE]
@@ -846,7 +846,7 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
     score <- rowMeans(apply(score, 2, ss.rank), na.rm = TRUE)
   }
 
-  ## sig = cbind( score=score, fx=fc, pv=pv, qv=qv)
+
   vinfo <- data.frame(geneset = rownames(mx), score = score, fc = fc, pv = pv, qv = qv)
   colnames(vinfo) <- c("geneset", "score", "fc", "pv", "qv") ## need
   rownames(vinfo) <- rownames(mx)
@@ -886,10 +886,10 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
   igraph::V(go_graph)[vinfo$go_id]$qvalue <- vinfo$qv
 
   ## !!!!!!!!!!!!!!!!!!! THIS DEFINES THE SCORE !!!!!!!!!!!!!!!!!
-  ## Value = "q-weighted fold-change"
+
   igraph::V(go_graph)[vinfo$go_id]$value <- vinfo$fc * (1 - vinfo$qv)**1
 
-  ## v1 <- sig.terms[1]
+
   get.vpath <- function(v1) {
     igraph::shortest_paths(go_graph, v1, "all")$vpath[[1]]
   }
@@ -899,7 +899,7 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
     sum((igraph::V(go_graph)[sp]$value))
   }
 
-  ## fdr=0.20;ntop=20;nterms=200
+
   sig.terms10 <- Matrix::head(rownames(vinfo)[order(vinfo$qv)], 10)
   sig.terms <- rownames(vinfo)[which(vinfo$qv <= fdr)]
   sig.terms <- unique(c(sig.terms, sig.terms10))
@@ -916,11 +916,11 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
   vv <- igraph::V(go_graph)$name[vv]
   sub1 <- igraph::induced_subgraph(go_graph, vv)
   score1 <- (pathscore / max(abs(pathscore), na.rm = TRUE))[igraph::V(sub1)$name]
-  ## score1[is.na(score1)] = 0
+
   igraph::V(sub1)$score <- pathscore[igraph::V(sub1)$name]
   igraph::V(sub1)$color <- gplots::bluered(32)[16 + round(15 * score1)]
   igraph::V(sub1)$label <- vinfo[igraph::V(sub1)$name, "Term"]
-  ## igraph::V(sub1)$size = scale(pathscore[igraph::V(sub1)$name],center=FALSE)
+
 
   return(sub1)
 }
@@ -929,7 +929,7 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
 ## ============================= other graph functions ===============================
 ## ===================================================================================
 
-## k=NULL;mc.cores=2
+
 #' @export
 hclustGraph <- function(g, k = NULL, mc.cores = 2) {
   ## Hierarchical clustering of graph using iterative Louvain
@@ -979,7 +979,7 @@ hclustGraph <- function(g, k = NULL, mc.cores = 2) {
   rownames(K) <- igraph::V(g)$name
   if (!ok && is.null(k)) K <- K[, 1:(ncol(K) - 1), drop = FALSE]
   dim(K)
-  ## K = K[,1:(ncol(K)-1)]
+
   colnames(K) <- NULL
   return(K)
 }

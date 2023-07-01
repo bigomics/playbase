@@ -16,9 +16,9 @@ pgx.purifyExpression <- function(tumorX, normalX,
     ## ----------------------------------------------------------------------
 
     pen <- rep(0, 3)
-    ## pen <- c(1,1,1)*0.01
+
     res <- NNLM::nnlm(normalX, tumorX, alpha = pen)
-    ## res <- NNLM::nnlm( cbind(rowMeans(tumorX), normalX), tumorX, alpha=pen)
+
     cf <- res$coefficients
     cf
     normal.frac <- (normalX %*% cf)
@@ -54,11 +54,11 @@ pgx.purifyExpression <- function(tumorX, normalX,
     ## https://cran.r-project.org/web/packages/ISOpureR/vignettes/ISOpureRGuide.pdf
     ## ----------------------------------------------------------------------
 
-    ## install.packages('ISOpureR', repos = "http://cran.stat.sfu.ca/");
 
-    ## path.to.data <- file.path(system.file(package = 'ISOpureR'), 'extdata/Beer');
-    ## load(file.path(path.to.data, 'beer.normaldata.250.transcripts.RData'));
-    ## load(file.path(path.to.data, 'beer.tumordata.250.transcripts.30.patients.RData'));
+
+
+
+
 
     ISOpureS1model <- ISOpureR::ISOpure.step1.CPE(tumorX, normalX)
     ISOpureS2model <- ISOpureR::ISOpure.step2.PPE(tumorX, normalX, ISOpureS1model)
@@ -77,11 +77,11 @@ pgx.purifyExpression <- function(tumorX, normalX,
     ## https://bioinformatics.mdanderson.org/main/DeMixT
     ## ----------------------------------------------------------------------
 
-    ## devtools::install_github("wwylab/DeMixT")
 
-    ## data(test.data1)
+
+
     ## ?DeMixT
-    ## head(test.data1$y)
+
 
     res <- DeMixT::DeMixT(data.Y = tumorX, data.comp1 = normalX, if.filter = FALSE)
     res$pi
@@ -103,13 +103,13 @@ pgx.purifyExpression <- function(tumorX, normalX,
     ## ----------------------------------------------------------------------
     ## UNDO
     ## ----------------------------------------------------------------------
-    ## source("http://bioconductor.org/biocLite.R")
-    ## BiocManager::install("UNDO", version = "3.8")
+
+
 
     ## load tumor stroma mixing tissue samples
-    ## data(PureMCF7HS27)
-    ## S <- exprs(PureMCF7HS27)
-    ## head(S)
+
+
+
     ## two_source_deconv(
     ##    X, lowper=0.4, highper=0.1, epsilon1=0.01,
     ##    epsilon2=0.01, A, S[,1], S[,2], return=0)

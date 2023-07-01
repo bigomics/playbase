@@ -21,7 +21,7 @@ compute_extra <- function(ngs, extra = c(
                           ), sigdb = NULL, libx.dir = NULL) {
   timings <- c()
 
-  # ngs = pgx
+
 
   if (length(extra) == 0) {
     return(ngs)
@@ -42,7 +42,7 @@ compute_extra <- function(ngs, extra = c(
       stop("FATAL. could not find gx/mrna values.")
     }
     rna.counts <- ngs$counts[jj, ]
-    ## rownames(rna.counts) <- gsub(".*:|.*\\]","",rownames(rna.counts))
+
     is.logged <- (min(rna.counts, na.rm = TRUE) < 0 ||
       max(rna.counts, na.rm = TRUE) < 50)
     if (is.logged) {
@@ -170,7 +170,7 @@ compute_extra <- function(ngs, extra = c(
   ## ------------------------------------------------------
   ## pretty collapse all timings
   ## ------------------------------------------------------
-  ## timings0 <- do.call(rbind, timings)
+
   timings <- as.matrix(timings)
   rownames(timings) <- timings[, 1]
   timings0 <- apply(as.matrix(timings[, -1, drop = FALSE]), 2, as.numeric)
@@ -236,7 +236,7 @@ compute_deconvolution <- function(ngs, rna.counts = ngs$counts, full = FALSE) {
     methods <- c("DCQ", "DeconRNAseq", "I-NNLS", "NNLM", "cor")
   }
 
-  ## counts <- ngs$counts
+
   counts <- rna.counts
   rownames(counts) <- toupper(ngs$genes[rownames(counts), "gene_name"])
   res <- pgx.multipleDeconvolution(counts, refmat = refmat, method = methods)
@@ -273,7 +273,7 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
     message("estimating cell cycle (using Seurat)...")
     ngs$samples$cell.cycle <- NULL
     ngs$samples$.cell.cycle <- NULL
-    ## counts <- ngs$counts
+  
     counts <- rna.counts
     rownames(counts) <- toupper(ngs$genes[rownames(counts), "gene_name"])
     res <- try(pgx.inferCellCyclePhase(counts)) ## can give bins error
@@ -312,8 +312,8 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
   ## -------------- drug enrichment
   # get drug activity databases
 
-  # ngs=pgx
-  # libx.dir = params$libx.dir
+
+
 
   if (is.null(libx.dir)) message("WARNING Need libx.dir if you call compute_full_drugActivityEnrichment")
 
@@ -382,8 +382,8 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
 
     ## --------------- attach results to object
     db <- names(ref.db)[i]
-    ## ngs$drugs[["activity/L1000"]]  <- res.mono[["GSEA"]]
-    ## ngs$drugs[["activity/L1000"]][["annot"]] <- annot0[,c("drug","moa","target")]
+
+
     ngs$drugs[[db]] <- out1[["GSEA"]]
     ngs$drugs[[db]][["annot"]] <- annot0[, c("drug", "moa", "target")]
     ngs$drugs[[db]][["clust"]] <- out1[["clust"]]

@@ -24,9 +24,9 @@ pgx.save <- function(pgx, file, update.date = TRUE, light = TRUE, system = FALSE
     pgx$gset.meta$outputs <- NULL
     pgx$model.parameters$efit <- NULL
     pgx$gmt.all <- NULL
-    ## pgx$families <- NULL
+
     pgx$collections <- NULL
-    ## pgx$counts <- NULL
+
     pgx$gset.meta$matrices <- NULL
   }
   if (system == FALSE) {
@@ -49,7 +49,7 @@ h5exists <- function(h5.file, obj) {
   obj %in% gsub("^/|^//", "", xobjs)
 }
 
-## h5.file="test.h5";chunk=100
+
 #' @export
 pgx.saveMatrixH5 <- function(X, h5.file, chunk = NULL) {
   if (file.exists(h5.file)) unlink(h5.file)
@@ -63,7 +63,7 @@ pgx.saveMatrixH5 <- function(X, h5.file, chunk = NULL) {
     rhdf5::h5createDataset(
       h5.file, "data/matrix",
       c(nrow(X), ncol(X)),
-      ## storage.mode = "integer",
+
       chunk = chunk,
       level = 7
     )
@@ -123,7 +123,7 @@ pgx.readDatasetProfiles <- function(pgx.dir, file = "datasets-allFC.csv", verbos
   fn
   if (!file.exists(fn)) {
     stop("FATAL : could not find profiles matrix. please create first with initDatasetFolder().\n")
-    ## pgx.updateDatasetProfiles(pgx.dir, file=file)
+
     return()
   } else {
     if (verbose) message("[readDatasetProfiles1] Found existing dataset profiles matrix")
@@ -284,7 +284,7 @@ pgx.initDatasetFolder.DEPRECATED <- function(pgx.dir,
   allFC <- NULL
   allfc.file1 <- file.path(pgx.dir, allfc.file)
   if (!force && file.exists(allfc.file1) && length(pgx.missing) > 0) {
-    ## allFC <- read.csv(allfc.file1,row.names=1,check.names=FALSE)
+
     allFC <- fread.csv(allfc.file1, row.names = 1, check.names = FALSE)
   }
   dim(allFC)
@@ -314,7 +314,7 @@ pgx.initDatasetFolder.DEPRECATED <- function(pgx.dir,
     cat(".")
     pgxfile1 <- file.path(pgx.dir, pgxfile)
     pgxfile1 <- paste0(sub("[.]pgx$", "", pgxfile1), ".pgx")
-    ## try.error <- try( load(file.path(pgx.dir,pgxfile),verbose=0) )
+
     pgx <- try(local(get(load(pgxfile1, verbose = 0)))) ## override any name
 
     if ("try-error" %in% class(pgx)) {
@@ -330,7 +330,7 @@ pgx.initDatasetFolder.DEPRECATED <- function(pgx.dir,
     ## ---------------------------------------------
     ## extract the meta FC matrix
     ## ---------------------------------------------
-    ## rownames(pgx$X) <- toupper(sub(".*:","",rownames(pgx$X)))
+
     if (pgxfile %in% pgx.missing0) {
       meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
       rownames(meta$fc) <- toupper(rownames(meta$fc))
@@ -443,7 +443,7 @@ pgx.initDatasetFolder.DEPRECATED <- function(pgx.dir,
     allFC <- allFC[, order(colnames(allFC)), drop = FALSE]
     allFC <- round(allFC, digits = 4)
     AA <- data.frame(rownames = rownames(allFC), allFC, check.names = FALSE)
-    ## write.csv(allFC, file=allfc.file1)
+
     data.table::fwrite(AA, file = allfc.file1)
     Sys.chmod(allfc.file1, "0666")
     remove(AA)
@@ -460,10 +460,10 @@ pgx.initDatasetFolder.DEPRECATED <- function(pgx.dir,
     pgx.addEnrichmentSignaturesH5(sigdb, X = allFC, methods = "rankcor")
   }
 
-  # pgxinfo.file <- file.path(pgx.dir, file)
-  # if(!file.exists(pgxinfo.file)) return(NULL)  ## no info??
+
+
   # ## do not use fread.csv or fread here!! see issue #441
-  # pgxinfo = read.csv(pgxinfo.file, stringsAsFactors=FALSE, row.names=1, sep=',')
+
   pgxinfo <- playbase::pgxinfo.read(pgx.dir)
   return(pgxinfo)
 }
@@ -490,14 +490,14 @@ pgx.updateInfoPGX <- function(pgxinfo, pgx, remove.old = TRUE) {
   this.date <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
   date <- ifelse(is.null(pgx$date), this.date, as.character(pgx$date))
   dataset.name <- pgx$name
-  ## dataset.name <- ifelse(is.null(pgx$name), pgxfile, pgx$name)
+
   creator <- ifelse("creator" %in% names(pgx), pgx$creator, "")
 
   this.info <- c(
     dataset = dataset.name,
     ## author = "", ## add author? maintainer? owner??
     creator = creator,
-    ## collection = pgx$collection,
+
     datatype = ifelse(is.null(pgx$datatype), "", pgx$datatype),
     description = ifelse(is.null(pgx$description), "", pgx$description),
     organism = organism,
@@ -608,9 +608,9 @@ pgxinfo.deletePgx <- function(pgx.dir, pgxname,
 
   ## delete dataset from H5 file
   if (delete.fc && file.exists(h5.file)) {
-    ## rhdf5::h5ls(h5.file)
+
     sigdb.removeDataset(h5.file, pgxname)
-    ## rhdf5::h5ls(h5.file)
+
   }
 }
 
@@ -973,9 +973,9 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   ## Reread allFC file. Before we only read the header.
   ## ----------------------------------------------------------------------
   allFC <- NULL
-  ## allfc.file <- file.path(pgx.dir, allfc.file)
+
   if (!force && file.exists(allfc.file) && length(pgx.missing) > 0) {
-    ## allFC <- read.csv(allfc.file,row.names=1,check.names=FALSE)
+
     allFC <- fread.csv(allfc.file, row.names = 1, check.names = FALSE)
     allFC <- as.matrix(allFC)
   }
@@ -1006,7 +1006,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     cat(".")
     pgxfile1 <- file.path(pgx.dir, pgxfile)
     pgxfile1 <- paste0(sub("[.]pgx$", "", pgxfile1), ".pgx")
-    ## try.error <- try( load(file.path(pgx.dir,pgxfile),verbose=0) )
+
     pgx <- try(local(get(load(pgxfile1, verbose = 0)))) ## override any name
 
     if ("try-error" %in% class(pgx)) {
@@ -1022,7 +1022,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     ## ---------------------------------------------
     ## extract the meta FC matrix
     ## ---------------------------------------------
-    ## rownames(pgx$X) <- toupper(sub(".*:","",rownames(pgx$X)))
+
     if (pgxfile %in% fc.missing) {
       meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
       rownames(meta$fc) <- toupper(rownames(meta$fc))
@@ -1135,7 +1135,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     allFC <- allFC[, order(colnames(allFC)), drop = FALSE]
     allFC <- round(allFC, digits = 4)
     AA <- data.frame(rownames = rownames(allFC), allFC, check.names = FALSE)
-    ## write.csv(allFC, file=allfc.file)
+
     data.table::fwrite(AA, file = allfc.file)
     Sys.chmod(allfc.file, "0666")
     remove(AA)
