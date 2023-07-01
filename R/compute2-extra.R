@@ -164,7 +164,7 @@ compute_extra <- function(ngs, extra = c(
 
   if ("wgcna" %in% extra) {
     message(">>> Computing wgcna...")
-    ngs$wgcna <- playbase::pgx.wgcna(pgx)
+    ngs$wgcna <- playbase::pgx.wgcna(ngs)
   }
 
   ## ------------------------------------------------------
@@ -335,7 +335,7 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
     )
   }
 
-  for (i in 1:length(ref.db)) {
+  for (i in seq_along(ref.db)) {
     f <- names(ref.db)[i]
     message("[compute_drugActivityEnrichment] reading L1000 reference: ", f)
     X <- ref.db[[i]]
@@ -345,7 +345,6 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
     message("number of drugs: ", ndrugs)
     is.drug <- grepl("activity|drug|ChemPert", f, ignore.case = TRUE)
 
-    fname <- names(ref.db)[i]
     out1 <- playbase::pgx.computeDrugEnrichment(
       obj = ngs,
       X = X,
@@ -419,7 +418,7 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
   names(ref.db) <- sub("-", "/", gsub("_.*", "", ref.db))
   ref.db
   ref <- ref.db[1]
-  for (i in 1:length(ref.db)) {
+  for (i in seq_along(ref.db)) {
     ref <- ref.db[i]
     X <- readRDS(file = file.path(cmap.dir, ref))
     xdrugs <- gsub("[@_].*$", "", colnames(X))

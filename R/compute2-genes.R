@@ -73,7 +73,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
                                          filter.low = TRUE, remove.outputs = TRUE,
                                          use.design = TRUE, prune.samples = FALSE,
                                          test.methods = c("trend.limma", "deseq2.wald", "edger.qlf")) {
-  contr.matrix0 <- contr.matrix ## SAVE
 
   ## -----------------------------------------------------------------------------
   ## Check parameters, decide group level
@@ -132,7 +131,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   ## -----------------------------------------------------------------------------
   ## normalize?? why??
   message("[compute_testGenesSingleOmics] normalizing contrasts")
-  for (i in 1:ncol(contr.matrix)) {
+  for (i in seq_len(ncol(contr.matrix))) {
     m <- contr.matrix[, i]
     m[is.na(m)] <- 0
     contr.matrix[, i] <- 1 * (m > 0) / sum(m > 0) - 1 * (m < 0) / sum(m < 0)
@@ -249,7 +248,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     logcpm <- logCPM(counts, total = NULL)
     sdx <- apply(logcpm, 1, sd)
     jj <- Matrix::head(order(-sdx), max.features) ## how many genes?
-    jj0 <- setdiff(1:nrow(counts), jj)
+    jj0 <- setdiff(seq_len(nrow(counts)), jj)
     pgx$filtered[["low.variance"]] <- paste(rownames(counts)[jj0], collapse = ";")
     counts <- counts[jj, ]
     genes <- genes[jj, ]
@@ -382,7 +381,7 @@ compute_testGenesMultiOmics <- function(pgx, contr.matrix, max.features = 1000,
     ## copy results
     pgx$model.parameters <- pgx1$model.parameters
     names(pgx1$gx.meta)
-    for (k in 1:ncol(contr.matrix)) {
+    for (k in seq_len(ncol(contr.matrix))) {
       pgx$gx.meta$meta[[k]] <- rbind(
         pgx$gx.meta$meta[[k]],
         pgx1$gx.meta$meta[[k]]
