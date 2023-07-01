@@ -38,13 +38,6 @@ pgx.plotPartialCorrelationGraph <- function(res, gene, rho.min = 0.1, nsize = -1
                                             radius = -1, plot = TRUE, layout = "fr") {
   ## GLASSO object
   nn <- rownames(res$cor)
-
-
-  qgraph::qgraph(res, layout = "spring", labels = nn)
-  qgraph::qgraph(res, layout = "spring", labels = nn, minimum = 0.1)
-
-
-
   R <- cov2cor(res$w)
   diag(R) <- 0
   tail(sort(abs(R)), 20)

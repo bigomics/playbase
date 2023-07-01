@@ -454,11 +454,7 @@ makeFullContrasts <- function(labels, by.sample = FALSE) {
 #' @examples
 makeClusterContrasts <- function(clusters, min.freq = 0.01, full = FALSE,
                                  by.sample = FALSE) {
-  ## make model matrix for cluster_i vs. rest
-  min.size <- pmax(3, 0.01 * length(clusters))
-  small.clusters <- names(which(table(clusters) < min.size))
-  clusters[which(clusters %in% small.clusters)] <- "cluster0"
-  sort(table(clusters))
+
   idx <- sort(unique(as.character(clusters)))
   m1 <- model.matrix(~ 0 + idx)
   colnames(m1) <- sub("^idx", "", colnames(m1))
@@ -726,27 +722,6 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
   }
 
   ## ----------- try to detect time series (detect factors by time)
-  has.time <- any(grepl("hr|hour|time|day", colnames(df), ignore.case = TRUE))
-  has.time
-  if (has.time && NCOL(df) > 1) {
-    time.col <- grep("hr|hour|time|day", colnames(df), ignore.case = TRUE)[1]
-    df1 <- df[, -time.col, drop = FALSE]
-    time <- df[, time.col]
-    vars.bytime <- names(which(apply(df1, 2, function(x) sum(table(x, time) == 0) == 0)))
-    vars.bytime
-    if (length(vars.bytime) > 0) {
-      cat("detected time-series variables:", vars.bytime, "\n")
-      dt <- c()
-      i <- 1
-      for (i in 1:length(vars.bytime)) {
-        dt <- cbind(dt, paste(df1[, vars.bytime[i]], time, sep = "_"))
-      }
-      colnames(dt) <- paste0(vars.bytime, "_", colnames(df)[time.col])
-      Matrix::head(dt)
-      df <- cbind(df, dt)
-    }
-  }
-  Matrix::head(df)
 
   ## emergency bail out...
   if (ncol(df) == 0) {

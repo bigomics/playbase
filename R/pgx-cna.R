@@ -123,46 +123,6 @@ pgx.inferCNV <- function(ngs, refgroup = NULL, progress = NULL) {
 
   res <- list(cna = logcnv, chr = chr, pos = pos, png = img)
 
-  par(mfrow = c(1, 1))
-  grid::grid.raster(img)
-
-  x11()
-  pgx.plotCNAHeatmap(ngs, res,
-    pca.filter = -1, clip = 0, annot = "group",
-    lwd = 2, lab.cex = 1
-  )
-
-  pgx.plotCNAHeatmap(ngs, res, pca.filter = 100, clip = 0.15)
-  pgx.plotCNAHeatmap(ngs, res, pca.filter = 40, clip = 0.15)
-
-  grp <- (ngs$samples$group)
-  annot <- ngs$samples[, 1:2]
-  jj <- seq(1, nrow(res$cna), 50)
-
-  gx.splitmap(
-    res$cna[jj, ],
-    split = res$chr[jj], splitx = grp,
-    scale = "row.center", col.annot = annot,
-    cluster_rows = FALSE
-  )
-
-  X <- res$cna[jj, ]
-  annot <- annot
-  idx <- as.character(res$chr)[jj]
-  splitx <- grp
-  xtips <- ytips <- NULL
-  scale <- "row.center"
-
-  source("../R/pgx-plotting.R")
-  pgx.splitHeatmapX(
-    X = res$cna[jj, ], lmar = 200,
-    annot = annot, row_clust = FALSE,
-    idx = res$chr[jj], splitx = grp,
-    xtips = NULL, ytips = NULL,
-    row_annot_width = 0.03, scale = "row.center",
-    colors = NULL, label_size = 11
-  )
-
   ## clean up folder??
   unlink(out_dir, recursive = TRUE)
 
