@@ -73,7 +73,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
                                          filter.low = TRUE, remove.outputs = TRUE,
                                          use.design = TRUE, prune.samples = FALSE,
                                          test.methods = c("trend.limma", "deseq2.wald", "edger.qlf")) {
-
   ## -----------------------------------------------------------------------------
   ## Check parameters, decide group level
   ## -----------------------------------------------------------------------------
