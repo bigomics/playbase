@@ -81,10 +81,10 @@ gx.nnmcorrect <- function(X, y, use.design = TRUE, dist.method = "cor",
   ## matching neighbours when pairs are missing.
 
   ## compute distance matrix for NNM-pairing
-  ## y <- factor(as.character(y))
+
   y1 <- paste0("y=", y)
   dX <- X
-  ## dX <- scale(X)
+
   if (center.x) {
     dX <- dX - rowMeans(dX, na.rm = TRUE)
   }
@@ -99,7 +99,7 @@ gx.nnmcorrect <- function(X, y, use.design = TRUE, dist.method = "cor",
     message("[gx.nnmcorrect] computing correlation matrix D...")
     sdx <- apply(dX, 1, sd)
     ii <- Matrix::head(order(-sdx), sdtop)
-    ## D <- 1 - stats::cor(dX[ii,])
+
     D <- 1 - crossprod(scale(dX[ii, ])) / (length(ii) - 1) ## faster
   } else {
     message("[gx.nnmcorrect] computing distance matrix D...\n")

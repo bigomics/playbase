@@ -70,7 +70,7 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 1000, contrasts = N
   return(scores)
 }
 
-## ntop=1000;nsig=100;nperm=10000
+
 #' @export
 pgx.correlateSignatureH5.inmemory <- function(F, h5.file, nsig = 100, ntop = 1000, nperm = 1000) {
   ##
@@ -110,12 +110,11 @@ pgx.correlateSignatureH5.inmemory <- function(F, h5.file, nsig = 100, ntop = 100
     gg <- intersect(rownames(F), rn)
     fc1 <- sort(F[gg, i])
     gg <- unique(names(c(Matrix::head(fc1, nsig), Matrix::tail(fc1, nsig))))
-    ## gg <- intersect(gg,rn)
+
     remove(fc1)
     row.idx <- match(gg, rn)
     length(row.idx)
 
-    ## G <- rhdf5::h5read(h5.file, "data/matrix", index=list(row.idx,1:length(cn)))  ### SLOW!!!
     rG <- matG[row.idx, , drop = FALSE]
     rG <- apply(rG, 2, rank, na.last = "keep")
     dim(rG)
@@ -123,10 +122,8 @@ pgx.correlateSignatureH5.inmemory <- function(F, h5.file, nsig = 100, ntop = 100
 
     ## this FC signature
     fc <- F[, i]
-    ## rG  <- apply( G[gg,], 2, rank, na.last="keep" )
     rfc <- rank(fc[gg], na.last = "keep") ## rank correlation??
-    ## rho <- stats::cor(rG, rfc, use="pairwise")[,1]
-    rG[is.na(rG)] <- 0 ## NEED RETHINK: are missing values to be treated as zero???
+    rG[is.na(rG)] <- 0
     rfc[is.na(rfc)] <- 0
     rho <- stats::cor(rG, rfc, use = "pairwise")[, 1]
 
@@ -144,7 +141,7 @@ pgx.correlateSignatureH5.inmemory <- function(F, h5.file, nsig = 100, ntop = 100
     sig100.dn <- rhdf5::h5read(h5.file, "signature/sig100.dn",
       index = list(NULL, sel.idx)
     )
-    ## head(sig100.up,2)
+
 
     ## combine up/down into one (unsigned GSEA test)
     gmt <- rbind(sig100.up, sig100.dn)
@@ -174,7 +171,7 @@ pgx.correlateSignatureH5.inmemory <- function(F, h5.file, nsig = 100, ntop = 100
   return(res)
 }
 
-## ntop=1000;nsig=100;nperm=10000
+
 #' @export
 pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm = 10000,
                                      h5.data = "data/matrix", h5.rn = "data/rownames",
@@ -200,23 +197,19 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   gg <- intersect(names(fc), rn)
   fc1 <- sort(fc[gg])
   gg <- unique(names(c(Matrix::head(fc1, nsig), Matrix::tail(fc1, nsig))))
-  ## gg <- intersect(gg,rn)
   length(gg)
   row.idx <- match(gg, rn)
   rhdf5::h5closeAll()
   G <- rhdf5::h5read(h5.file, "data/matrix", index = list(row.idx, 1:length(cn)))
   dim(G)
-  ## head(G[,1])
   G[which(G < -999999)] <- NA
-  ## G[is.na(G)] <- 0  ## NEED RETHINK: are missing values to be treated as zero???
   dim(G)
   dimnames(G) <- list(rn[row.idx], cn)
 
   ## rank correlation??
   rG <- apply(G[gg, ], 2, rank, na.last = "keep")
   rfc <- rank(fc[gg], na.last = "keep")
-  ## rho <- stats::cor(rG, rfc, use="pairwise")[,1]
-  rG[is.na(rG)] <- 0 ## NEED RETHINK: are missing values to be treated as zero???
+  rG[is.na(rG)] <- 0
   rfc[is.na(rfc)] <- 0
   suppressWarnings(rho <- stats::cor(rG, rfc, use = "pairwise")[, 1])
 
@@ -234,7 +227,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   sig100.dn <- rhdf5::h5read(h5.file, "signature/sig100.dn",
     index = list(1:100, sel.idx)
   )
-  ## head(sig100.up,2)
+
 
   ## combine up/down into one (unsigned GSEA test)
   gmt <- rbind(sig100.up, sig100.dn)
@@ -242,7 +235,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   names(gmt) <- cn[sel.idx]
   length(gmt)
 
-  ## system.time( res <- fgsea::fgsea(gmt, fc, nperm=10000))
+
   system.time(res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm)) ## really unsigned???
   dim(res)
 
@@ -255,17 +248,11 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   res$score <- res$R2 * res$NES
   res <- res[order(res$score, decreasing = TRUE), ]
 
-  if (0) {
-    res$rho.p <- cor.pvalue(res$rho, n = length(gg))
-    res$meta.p <- apply(res[, c("pval", "rho.p")], 1, function(p) metap::sumz(p)$p)
-    res <- res[order(res$meta.p), ]
-  }
-
   Matrix::head(res)
   return(res)
 }
 
-## ntop=1000;nsig=500;nperm=10000
+
 #' @export
 pgx.correlateSignature.matrix <- function(fc, refmat, nsig = 100, ntop = 1000, nperm = 10000) {
   ##
@@ -279,7 +266,7 @@ pgx.correlateSignature.matrix <- function(fc, refmat, nsig = 100, ntop = 1000, n
   names(fc) <- toupper(names(fc))
 
   ## or instead compute correlation on top100 fc genes (read from file)
-  ## refmat = PROFILES$FC
+
   rn <- rownames(refmat)
   cn <- colnames(refmat)
 
@@ -289,17 +276,17 @@ pgx.correlateSignature.matrix <- function(fc, refmat, nsig = 100, ntop = 1000, n
   gg <- intersect(rn, names(fc))
   fc1 <- sort(fc[gg])
   gg <- unique(names(c(Matrix::head(fc1, nsig), Matrix::tail(fc1, nsig))))
-  ## gg <- intersect(names(fc),rn)
-  ## gg <- intersect(gg,rn)
+
+
   G <- refmat[gg, , drop = FALSE]
   dim(G)
 
   ## rank correlation??
   rG <- apply(G[gg, ], 2, rank, na.last = "keep")
   rfc <- rank(fc[gg], na.last = "keep")
-  ## rho <- stats::cor(rG, rfc, use="pairwise")[,1]
 
-  rG[is.na(rG)] <- 0 ## NEED RETHINK: are missing values to be treated as zero???
+
+  rG[is.na(rG)] <- 0
   rfc[is.na(rfc)] <- 0
   rho <- stats::cor(rG, rfc, use = "pairwise")[, 1]
 
@@ -334,7 +321,7 @@ pgx.correlateSignature.matrix <- function(fc, refmat, nsig = 100, ntop = 1000, n
   names(gmt) <- colnames(X)
   length(gmt)
 
-  ## system.time( res <- fgsea::fgsea(gmt, fc, nperm=10000))
+
   suppressMessages(suppressWarnings(
     res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm)
   ))
@@ -348,12 +335,6 @@ pgx.correlateSignature.matrix <- function(fc, refmat, nsig = 100, ntop = 1000, n
   res$R2 <- rho[jj]**2
   res$score <- res$R2 * res$NES
   res <- res[order(res$score, decreasing = TRUE), ]
-
-  if (0) {
-    res$rho.p <- cor.pvalue(res$rho, n = length(gg))
-    res$meta.p <- apply(res[, c("pval", "rho.p")], 1, function(p) metap::sumz(p)$p)
-    res <- res[order(res$meta.p), ]
-  }
 
   Matrix::head(res)
   return(res)
@@ -388,7 +369,6 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
       cat(".")
       try.error <- try(gmt <- read.gmt(gmt.files[i], add.source = TRUE))
       if (class(try.error) == "try-error") next()
-      ## gmt <- Matrix::head(gmt,30)  ## ONLY FOR TESTING
 
       j1 <- grep("-up ", names(gmt))
       j2 <- grep("-dn ", names(gmt))
@@ -447,16 +427,14 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
     remove(sig100.up, sig100.dn, msig100.up, msig100.dn)
 
     ## check NA!!! sometimes it is set to large negative
-    if (1) {
-      rhdf5::h5ls(h5.file)
-      X <- rhdf5::h5read(h5.file, "data/matrix")
-      Matrix::head(X[, 1])
-      X[which(X < -999999)] <- NA
-      Matrix::head(X[, 1])
-      dim(X)
-      rhdf5::h5write(X, h5.file, "data/matrix") ## can write list??
-      rhdf5::h5closeAll()
-    }
+    rhdf5::h5ls(h5.file)
+    X <- rhdf5::h5read(h5.file, "data/matrix")
+    Matrix::head(X[, 1])
+    X[which(X < -999999)] <- NA
+    Matrix::head(X[, 1])
+    dim(X)
+    rhdf5::h5write(X, h5.file, "data/matrix") ## can write list??
+    rhdf5::h5closeAll()
   }
   dim(X)
 
@@ -487,7 +465,6 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
   }
 
   rhdf5::h5closeAll()
-  ## return(X)
 } ## end of pgx.createCreedsSigDB
 
 #' @export
@@ -513,7 +490,6 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALS
     for (i in 1:length(pgx.files)) {
       if (!file.exists(pgx.files[i])) next()
       cat(".")
-      ## try.error <- try( load(pgx.files[i], verbose=0) )
       pgx <- try(local(get(load(pgx.files[i], verbose = 0)))) ## override any name
       if ("try-error" %in% class(pgx)) next()
       meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
@@ -551,7 +527,6 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALS
 #' @export
 pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = FALSE) {
   if (file.exists(h5.file)) unlink(h5.file)
-  ## chunk=c(nrow(X),1)
   dbg("[pgx.createSignatureDatabaseH5.fromMatrix] saving data matrix...")
   X <- as.matrix(X)
   pgx.saveMatrixH5(X, h5.file, chunk = c(nrow(X), 1))
@@ -562,7 +537,6 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
 
   if (!update.only || !h5exists(h5.file, "signature")) {
     dbg("[pgx.createSignatureDatabaseH5.fromMatrix] Creating top-100 signatures...")
-    ## X  <- rhdf5::h5read(h5.file, "data/matrix")
     rn <- rhdf5::h5read(h5.file, "data/rownames")
     cn <- rhdf5::h5read(h5.file, "data/colnames")
     rhdf5::h5ls(h5.file)
@@ -618,7 +592,6 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
   dbg("[pgx.createSignatureDatabaseH5.fromMatrix] closing file...")
 
   rhdf5::h5closeAll()
-  ## return(X)
 }
 
 #' @export
@@ -639,8 +612,8 @@ pgx.addEnrichmentSignaturesH5 <- function(h5.file, X = NULL, mc.cores = 0,
   }
 
   ## ---------------------- ONLY HALLMARK FOR NOW -----------------------
-  ## sig100.dn <- rhdf5::h5read(h5.file, "signature/sig100.dn")
-  ## sig100.up <- rhdf5::h5read(h5.file, "signature/sig100.up")
+
+
   G <- playdata::GSET_SPARSEG_XL
   dim(G)
   sel <- grep("HALLMARK|C[1-9]|^GO", rownames(G))
@@ -740,11 +713,6 @@ pgx.ReclusterSignatureDatabase <- function(h5.file, reduce.sd = 1000, reduce.pca
 #' @export
 pgx.computeMultiOmicsGSE <- function(X, gmt, omx.type,
                                      method = NULL, center = TRUE) {
-  if (0) {
-    omx.type <- c("MRNA", "MIR")[1 + grepl("^MIR", rownames(X))]
-    table(omx.type)
-    omx.type <- sample(c("MRNA", "CNV"), nrow(X), replace = TRUE)
-  }
   if (is.null(omx.type)) {
     omx.type <- gsub("[:=].*", "", rownames(X))
   }
@@ -800,13 +768,11 @@ pgx.computeGeneSetExpression <- function(X, gmt, method = NULL,
     gg <- rownames(X)
     G <- gmt2mat(gmt, bg = gg)
     if ("spearman" %in% method) {
-      ## rho <- stats::cor(as.matrix(G[gg,]), apply(X[gg,],2,rank))
       rho <- t(G[gg, ]) %*% scale(apply(X[gg, ], 2, rank)) / sqrt(nrow(X) - 1)
       rho[is.na(rho)] <- 0
       S[["spearman"]] <- rho
     }
     if ("average" %in% method) {
-      ## rho <- stats::cor(as.matrix(G[gg,]), apply(G[gg,],2,rank))
       avg.X <- t(G[gg, ]) %*% X[gg, ] / Matrix::colSums(G[gg, ])
       avg.X[is.na(avg.X)] <- 0
       S[["average"]] <- avg.X
@@ -828,7 +794,7 @@ pgx.computeGeneSetExpression <- function(X, gmt, method = NULL,
 
 ## IK 2.6.23: going to rewrite following functions without global
 ## SIGDB.DIR. For the moment seems these functions are duplicated in
-## omicsplayground/components/board.connectivity
+
 
 getSIGDB.DIR <- function() {
   if (!exists("SIGDB.DIR") && exists("FILESX")) {
@@ -873,7 +839,7 @@ sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL, path
     return(NULL)
   }
 
-  ## db.exists <- sapply( getSIGDB.DIR(), function(d) file.exists(file.path(d,sigdb)))
+
   if (grepl("csv$", sigdb)) {
     X <- read.csv(sigdb, row.names = 1, check.names = FALSE)
     X <- as.matrix(X)
@@ -1010,7 +976,6 @@ sigdb.removeDataset <- function(h5.file, pgxname) {
       rhdf5::h5createDataset(
         h5.file, slot,
         c(nrow(X), ncol(X)),
-        ## storage.mode = "integer",
         chunk = c(nrow(X), 1),
         level = 7
       )
