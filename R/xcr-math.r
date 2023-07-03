@@ -346,7 +346,6 @@ length_encode <- function(x, r = 0.1, a = 0.25) {
   minlen <- min(logx, na.rm = TRUE)
   c(minlen, maxlen)
   dx <- log(1 + a * r)
-  ## dx = 0.05  
   brks <- seq(minlen - dx, maxlen + dx, dx)
   ix <- 2 + as.integer(cut(logx, breaks = brks))
   endx <- max(ix, na.rm = TRUE) + 2
