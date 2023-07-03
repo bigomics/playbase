@@ -942,11 +942,10 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
                        labrow = rownames(x), labcol = colnames(x),
                        ...) {
   ## non-linear transformation
-  #
-  #
+
 
   if (method == "pearson") {
-    d1 <- as.dist(stats::cor(t(x), use = "pairwise")) := drugs
+    d1 <- as.dist(stats::cor(t(x), use = "pairwise"))
     d2 <- as.dist(stats::cor(x, use = "pairwise"))
     d1[is.na(d1)] <- mean(d1, na.rm = TRUE)
     d2[is.na(d2)] <- mean(d2, na.rm = TRUE)
