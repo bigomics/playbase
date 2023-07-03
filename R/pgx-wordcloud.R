@@ -19,7 +19,7 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   ## get gset meta foldchange-matrix
   S <- sapply(ngs$gset.meta$meta, function(x) x$meta.fx)
   rownames(S) <- rownames(ngs$gset.meta$meta[[1]])
-
+  ## S <- S[order(-apply(S,1,sd)),]
   S <- S[order(-rowMeans(S**2)), , drop = FALSE]
 
   ## exclude down, GSE gene sets??????
@@ -78,11 +78,11 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   gmt <- apply(W, 2, function(x) names(which(x != 0)))
   suppressWarnings(res <- fgsea::fgseaSimple(gmt, rms.FC, nperm = 1000))
   res$leadingEdge <- sapply(res$leadingEdge, paste, collapse = "//")
-
+  ## res$leadingEdge <- NULL
   colnames(res)[1] <- "word"
 
   ## --------- only significant and positive
-
+  ## res <- res[(res$padj < 0.20 & res$NES>0),]
   res <- res[(res$padj < 1 & res$NES > 0), ]
   res <- res[order(-abs(res$NES)), ]
   dim(res)

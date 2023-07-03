@@ -255,9 +255,9 @@ gsea.fitAllContrasts <- function(X, gmt, design, contr.matrix, output_dir,
     cat(">>> running GSEA for comparison: ", comparisons[k], " <<<\n")
 
     ## set params
-
+    ## comp = comparisons[[k]]
     comp.name <- comparisons[k]
-
+    ## comp.name = gsub("[_-]","_",comp.name)
     comp.name
 
     ## check if already done
@@ -492,7 +492,7 @@ run.GSEA <- function(X, y, gmt, output.dir = NULL, fdr = 0.25, set.min = 15,
   gsea.par <- sub("%MAKESETS", tolower(make.sets), gsea.par)
   gsea.par <- sub("%TOPGS", topgs, gsea.par)
   gsea.par <- sub("%GMX", gmt.file, gsea.par)
-
+  ## gsea.par <- sub("%RNKFILE",rnk.file,gsea.par)
   gsea.par <- sub("%OUTDIR", output.dir, gsea.par)
   gsea.par <- sub("%RPTLABEL", rpt.label2, gsea.par)
   gsea.par <- sub("%GSMIN", set.min, gsea.par)
@@ -1194,7 +1194,7 @@ getGseaOutput <- function(path = "../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut
   output$report <- do.call(rbind, report)
   rownames(output$report) <- report$NAME
 
-
+  ## output$table   = getGseaTable(gsea_dir)
   ff <- dir(path, full.names = TRUE)
   report_name <- ff[grep("gsea_report.txt$", ff)]
   if (!is.null(report_name)) {
@@ -1779,7 +1779,7 @@ gsea.quick_report <- function(output.dir, pattern = NULL) {
 }
 
 
-
+## pos.title="positive";neg.title="negative"
 
 #' gsea.radarplot
 #'

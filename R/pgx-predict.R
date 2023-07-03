@@ -13,20 +13,20 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   cat("<mixHivePlot> called\n")
   if (is.null(showloops)) showloops <- FALSE
 
-
+  ## install.packages("HiveR")
 
   gr <- res$graph
-
-
-
+  ## edges <- data.frame(igraph::get.edgelist(gr), rho=abs(igraph::E(gr)$weight))
+  ## colnames(edges)[1:2] <- c("from","to")
+  ## edges$rho <- abs(edges$rho)
 
   ## -------------------------------------------------------------
   ## Prepare the HivePlot data
   ## -------------------------------------------------------------
   df <- data.frame(res$edges)
   Matrix::head(df)
-
-
+  ## cat("<mixHivePlot> 1: Matrix::head(df)=",head(df),"\n")
+  ## sum(df[,1]==df[,2])
   hpd <- edge2HPD(df, axis.cols = rep("grey", 3))
 
   hpd$edges$looping <- res$edges$looping
@@ -41,9 +41,9 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
 
   hpd <- mineHPD(hpd, option = "rad <- tot.edge.count")
   hpd$nodes$degree <- hpd$nodes$radius
-
-
-
+  ## hpd <- mineHPD(hpd, option = "axis <- source.man.sink")
+  ## hpd <- mineHPD(hpd, option = "remove zero edge")
+  ## axis <- sub(":.*","",igraph::V(res$graph)$name)
   hpd$edges$from <- hpd$nodes$lab[hpd$edges$id1]
   hpd$edges$to <- hpd$nodes$lab[hpd$edges$id2]
 
@@ -80,26 +80,26 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   hpd$nodes$radius <- 100 * hpd$nodes$radius / max(hpd$nodes$radius, na.rm = TRUE)
 
   maxgrp <- unlist(lapply(res$W, function(w) max.col(w)))
-
+  ## maxgrp <- colnames(res$W[[1]])[maxgrp]
   names(maxgrp) <- as.vector(sapply(res$W, rownames))
-
+  ## maxgrp <- maxgrp[igraph::V(gr)$name]
 
   ## use importance as node size
   importance <- igraph::V(gr)$importance
   names(importance) <- igraph::V(gr)$name
-
+  ## hpd$nodes$size  <- hpd$nodes$degree
   hpd$nodes$size <- abs(importance[hpd$nodes$lab])
   hpd$nodes$size <- 1.6 * (hpd$nodes$size / max(hpd$nodes$size))**0.5
   hpd$nodes$axis <- as.integer(sub(":.*", "", hpd$nodes$lab))
   hpd$nodes$color <- c("red3", "blue2")[1 + 1 * (fx[g] > 0)]
-
+  ## hpd$nodes$color <- RColorBrewer::brewer.pal(8,"Set2")[maxgrp[hpd$nodes$lab]]
 
   wt1 <- hpd$edges$weight ## edge.importance
   wt1 <- rank(abs(wt1), na.last = "keep") * sign(wt1)
   hpd$edges$weight <- 3 * abs(wt1 / max(abs(wt1)))**2
   hpd$edges$color <- psych::alpha("grey70", 0.3)
 
-
+  ## hpd$edges$color  <- c("grey80","grey40")[1 + 1*(hpd$edges$rho>0)]
   jj <- which(hpd$edges$looping)
   if (showloops && length(jj)) {
     hpd$edges[jj, ]
@@ -132,13 +132,15 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   plotHive(hpd,
     ch = 5, bkgnd = "white",
     axLabs = axis.names,
+    axLab.pos = c(1, 1.2, 1.2) * 0.15 * mr, ## rot = c(0,30,-30),
+    ## arrow = c("radius units", 0, 20, 60, 25, 40),
     axLab.gpar = grid::gpar(
       col = "black", fontsize = 18 * cex,
       lwd = 4, fontface = "bold"
     )
   )
 
-
+  ## title="HivePlot"
   tt <- paste("edge.width = edge.importance",
     "node.size = variable importance",
     "axis = fold-change or F-stat",
@@ -199,7 +201,7 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
 
   klrpal <- c("blue2", "orange2")
   klrpal <- rep(RColorBrewer::brewer.pal(n = 8, "Set2"), 10)[1:ny]
-
+  ## if(ny==2) klrpal <- RColorBrewer::brewer.pal(n=3, name = "RdBu")[c(3,1)]
   names(klrpal) <- levels
   klrpal
 
@@ -223,13 +225,14 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
     )
     legend("topright",
       legend = names(klrpal),
+      cex = 1.1 * cex, pch = 15, col = klrpal, ## fill=klrpal,
       y.intersp = 0.85, inset = c(0.15, 0.03)
     )
 
     if (k < 99) {
       ## add correlation lines
       par(mar = c(5, 0, 4, 0))
-
+      ## frame()
       plot(0,
         type = "n", xlim = c(0, 1), ylim = c(0, nrow(W)),
         xaxt = "n", yaxt = "n", bty = "n", xlab = ""
@@ -249,9 +252,9 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
       ee$from <- res$edges[sel, ][cbind(1:nrow(ee), ii)]
       ee$to <- res$edges[sel, ][cbind(1:nrow(ee), jj)]
 
-
+      ## lwd = exp(abs(ee$rho)/mean(abs(ee$rho)))
       lwd <- ee$importance
-
+      ## lwd = exp(abs(ewt)/mean(abs(ewt)))
       lwd <- rank(abs(lwd), na.last = "keep")**1.5
       lwd <- 3.0 * cex * (lwd / max(lwd))
       lty <- 1 + 1 * (sign(ee$rho) < 0)
@@ -265,7 +268,7 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
       table(klr)
       segments(0, xy[, 1] - 0.5, 1, xy[, 2], lwd = lwd, col = klr, lty = lty)
       rr <- paste(round(range(abs(ee$rho)), 2), collapse = ",")
-
+      ## title(sub=paste0("|rho| = [",rr,"]"),line=-1)
       title(sub = paste0("[", rr, "]"), line = -1.2, cex.sub = cex)
     }
   }
@@ -289,11 +292,11 @@ pgx.makeTriSystemGraph <- function(data, Y, nfeat = 25, numedge = 100, posonly =
     vm <- apply(V, 2, function(x) tapply(x, y, mean))
     R0 <- U %*% t(V)
     R <- U %*% t(vm)
-
+    ## R <- Matrix::head(R[order(-rowSums(R**2)),],80)
     R <- Matrix::head(R[order(-rowSums(R**2)), ], nfeat)
-
+    ## rownames(R) <- sub(".*:","",rownames(R))
     W <- exp(1.5 * R / sd(R))
-
+    ## W <-  pmax(R,0)
     W <- W / (1e-5 + rowSums(W))
     W <- W * rowSums(R * R, na.rm = TRUE)**0.5
     return(W)
@@ -344,7 +347,7 @@ pgx.makeTriSystemGraph <- function(data, Y, nfeat = 25, numedge = 100, posonly =
     return(res)
   }
 
-
+  ## nfeat=50;numedge=100;posonly=FALSE
   .makeTriGraph <- function(res.pls, data, nfeat, numedge, posonly) {
     cat("<makeTriSystemGraph:.makeTriGraph> called\n")
     W.list <- list()
@@ -361,7 +364,7 @@ pgx.makeTriSystemGraph <- function(data, Y, nfeat = 25, numedge = 100, posonly =
     cat("<makeTriSystemGraph:.makeTriGraph> 1\n")
     cat("<makeTriSystemGraph:.makeTriGraph> posonly=", posonly, "\n")
 
-
+    ## numedge=40
     edge.list <- c()
     k <- 1
     for (k in 1:3) {
@@ -370,7 +373,7 @@ pgx.makeTriSystemGraph <- function(data, Y, nfeat = 25, numedge = 100, posonly =
       m <- ifelse(k < 3, k + 1, 1)
       p2 <- rownames(W.list[[m]])
       rho <- stats::cor(res.pls$X[[k]][, p1], res.pls$X[[m]][, p2])
-
+      ## rho <- cov( res.pls$X[[k]][,p1], res.pls$X[[m]][,p2])  ## COV better?
       if (posonly) rho <- pmax(rho, 0)
       q0 <- -1
       if (numedge > 0) q0 <- Matrix::tail(sort(abs(rho)), numedge)[1]
@@ -400,7 +403,7 @@ pgx.makeTriSystemGraph <- function(data, Y, nfeat = 25, numedge = 100, posonly =
     igraph::E(gr)$rho <- ee$rho
     igraph::E(gr)$importance <- abs(ee$rho) * sqrt(ww[ee$from] * ww[ee$to])
 
-
+    ## gr <- igraph::simplify(gr)
     gr <- igraph::delete_edges(gr, igraph::E(gr)[which_loop(gr)])
     edges <- data.frame(igraph::get.edgelist(gr),
       rho = E(gr)$rho,
@@ -433,12 +436,12 @@ pgx.makeTriSystemGraph <- function(data, Y, nfeat = 25, numedge = 100, posonly =
 
   ## set number of components and features
   NCOMP <- 3
-
-
+  ## NCOMP = length(table(Y))+1  ## number of classes+1
+  ## nfeat = 25
   nfeat1 <- min(nfeat, nrow(data[[1]]))
   nfeat2 <- min(nfeat, nrow(data[[2]]))
   nfeat3 <- min(nfeat, nrow(data[[3]]))
-
+  ## list.keepX = list(rep(40, 3), rep(40,3), rep(40,3))
   list.keepX <- list(rep(nfeat1, NCOMP), rep(nfeat2, NCOMP), rep(nfeat3, NCOMP))
   names(list.keepX) <- names(data)
 
@@ -460,7 +463,7 @@ pgx.makeTriSystemGraph <- function(data, Y, nfeat = 25, numedge = 100, posonly =
   )
 
   cat("<makeTriSystemGraph> calling .makeTriGraph\n")
-
+  ## res.gr <- .makeTriGraph(res.pls, data, nfeat=25, numedge=50)
   res.gr <- .makeTriGraph(
     res.pls, data,
     nfeat = nfeat, numedge = numedge, posonly = posonly
@@ -501,19 +504,19 @@ pgx.survivalVariableImportance <- function(X, time, status,
     NFOLD <- 5
     out0 <- glmnet::cv.glmnet(t(X), y, alpha = 0, family = fam, standardize = TRUE, nfolds = NFOLD)
     cf0 <- glmnet::coef.glmnet(out0, s = "lambda.min")[, 1]
-
+    ## imp[["coxnet.s0"]] <- cf0 * sdx[names(cf0)]
 
     out1 <- glmnet::cv.glmnet(t(X), y, alpha = 1, family = fam, standardize = TRUE, nfolds = NFOLD)
     cf1 <- glmnet::coef.glmnet(out1, s = "lambda.min")[, 1]
-
+    ## imp[["coxnet.s1"]] <- cf1 * sdx[names(cf1)]
 
     out0a <- glmnet::cv.glmnet(t(X), y, alpha = 0, family = fam, standardize = FALSE, nfolds = NFOLD)
     cf0a <- glmnet::coef.glmnet(out0a, s = "lambda.min")[, 1]
-
+    ## imp[["coxnet.a0"]] <- cf0a * sdx[names(cf0a)]
 
     out1a <- glmnet::cv.glmnet(t(X), y, alpha = 1, family = fam, standardize = FALSE, nfolds = NFOLD)
     cf1a <- glmnet::coef.glmnet(out1a, s = "lambda.min")[, 1]
-
+    ## imp[["coxnet.a1"]] <- cf1a * sdx[names(cf1a)]
 
     imp[["coxnet.a0"]] <- (cf0 / max(abs(cf0)) + cf0a / max(abs(cf0a))) * sdx[names(cf0)]
     imp[["coxnet.a1"]] <- (cf1 / max(abs(cf1)) + cf1a / max(abs(cf1a))) * sdx[names(cf1)]
@@ -549,8 +552,8 @@ pgx.survivalVariableImportance <- function(X, time, status,
       max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
       verbose = 0, objective = "survival:cox"
     )
-
-
+    ## pred <- predict(bst, t(X))
+    ## table(round(pred),y)
     xgmat <- xgboost::xgb.importance(model = bst)
     imp5 <- xgmat$Gain**0.33
     imp5 <- imp5[match(rownames(X), xgmat$Feature)]
@@ -611,7 +614,7 @@ pgx.multiclassVariableImportance <- function(X, y,
 
   ## resample to minimum size to balance groups
   NFOLD <- 5
-
+  ## NSIZE = max(max(table(y)),20)
   NSIZE <- 20
   jj <- unlist(tapply(1:length(y), y, function(ii) {
     if (length(ii) < NSIZE) ii <- sample(ii, NSIZE, replace = TRUE)
@@ -627,8 +630,8 @@ pgx.multiclassVariableImportance <- function(X, y,
 
   if ("glmnet" %in% methods) {
     fam <- "multinomial"
-
-
+    ## fam <- "binomial"
+    ## if(length(unique(y))>2) fam="multinomial"
     out0 <- glmnet::cv.glmnet(t(X), y, alpha = 0, family = fam, standardize = TRUE, nfold = NFOLD)
     cf0 <- Matrix::rowMeans(do.call(cbind, coef(out0, s = "lambda.min"))[-1, ]**2)
 
@@ -677,8 +680,8 @@ pgx.multiclassVariableImportance <- function(X, y,
       num_class = ny,
       verbose = 0, objective = "multi:softmax"
     )
-
-
+    ## pred <- predict(bst, t(X))
+    ## table(round(pred),y)
     xgmat <- xgboost::xgb.importance(model = bst)
     imp5 <- xgmat$Gain**0.2
     imp5 <- imp5[match(rownames(X), xgmat$Feature)]
@@ -716,8 +719,8 @@ pgx.multiclassVariableImportance <- function(X, y,
 }
 
 
-
-
+## methods=c("glmnet","randomforest","boruta","xgboost")
+## methods=c("glmnet","randomforest","xgboost")
 #' @export
 pgx.variableImportance <- function(X, y,
                                    methods = c("glmnet", "randomforest", "boruta", "xgboost", "pls")) {
@@ -737,7 +740,7 @@ pgx.variableImportance <- function(X, y,
   ## resample to minimum size to balance groups
 
   NFOLD <- 5
-
+  ## NSIZE = max(max(table(y)),20)
   NSIZE <- 20
   jj <- unlist(tapply(1:length(y), y, function(ii) {
     if (length(ii) < NSIZE) ii <- sample(ii, NSIZE, replace = TRUE)
@@ -756,28 +759,28 @@ pgx.variableImportance <- function(X, y,
       standardize = TRUE
     )
     cf0 <- coef(out0, s = "lambda.min")[-1, 1]
-
+    ## imp[["glmnet.s0"]] <- abs(cf0) * sdx[names(cf0)]
 
     out1 <- glmnet::cv.glmnet(t(X), y,
       alpha = 1, family = "binomial",
       standardize = TRUE
     )
     cf1 <- coef(out1, s = "lambda.min")[-1, 1]
-
+    ## imp[["glmnet.s1"]] <- abs(cf1) * sdx[names(cf1)]
 
     out0a <- glmnet::cv.glmnet(t(X), y,
       alpha = 0, family = "binomial",
       standardize = FALSE
     )
     cf0a <- coef(out0a, s = "lambda.min")[-1, 1]
-
+    ## imp[["glmnet.a0"]] <- abs(cf0a) * sdx[names(cf0a)]
 
     out1a <- glmnet::cv.glmnet(t(X), y,
       alpha = 1, family = "binomial",
       standardize = FALSE
     )
     cf1a <- coef(out1a, s = "lambda.min")[-1, 1]
-
+    ## imp[["glmnet.a1"]] <- abs(cf1a) * sdx[names(cf1a)]
 
     imp[["glmnet.a0"]] <- (cf0 / max(abs(cf0)) + cf0a / max(abs(cf0a))) * sdx[names(cf0)]
     imp[["glmnet.a1"]] <- (cf1 / max(abs(cf1)) + cf1a / max(abs(cf1a))) * sdx[names(cf1)]
@@ -812,8 +815,8 @@ pgx.variableImportance <- function(X, y,
       max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
       verbose = 0, objective = "binary:logistic"
     )
-
-
+    ## pred <- predict(bst, t(X))
+    ## table(round(pred),y)
     xgmat <- xgboost::xgb.importance(model = bst)
     imp5 <- xgmat$Gain**0.2
     imp5 <- imp5[match(rownames(X), xgmat$Feature)]
@@ -838,7 +841,7 @@ pgx.variableImportance <- function(X, y,
     n <- min(25, nrow(X))
     colnames(X) <- names(y) <- paste0("sample", 1:length(y))
     res <- mixOmics::splsda(t(X), y, keepX = c(n, n))
-
+    ## impx <- res$loadings$X[rownames(X),1]
     impx <- rowMeans(res$loadings$X[rownames(X), ]**2)
     imp[["spls.da"]] <- impx
   }

@@ -145,7 +145,7 @@ pgx.getTopGeneSets <- function(pgx, n = 10, ng = 100, dir = 0, sym = FALSE, filt
   top.genes <- gs.genes
   for (i in 1:length(gs.genes)) {
     gg <- lapply(gs.genes[[i]], function(gs) intersect(F[[i]], gs))
-
+    ## gg <- lapply(gg, head, ng) ## restrict??
     top.genes[[i]] <- gg
   }
   list(gsets = topgs, genes = gs.genes, top.genes = top.genes)
@@ -169,7 +169,7 @@ pgx.getMarkerGenes <- function(pgx, n = 10, dir = 0, sym = FALSE, filt = NULL) {
   ##
   ##
   F <- sapply(pgx$gx.meta$meta, function(m) m$meta.fx)
-
+  ## colnames(F) <- sub("_vs_others","",colnames(F))
   rownames(F) <- rownames(pgx$gx.meta$meta[[1]])
   if (!is.null(filt)) {
     F <- F[grep(filt, rownames(F)), , drop = FALSE]
@@ -203,7 +203,7 @@ pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
   if (extended) {
     # fam <- grep("^[<].*|^FAMILY|^TISSUE|^COMPARTMENT|^CELLTYPE|^GOCC|^DISEASE|^CUSTOM",
     #             names(iGSETS),value=TRUE)
-
+    # fam <- grep("^[<].*|^FAMILY|^COMPARTMENT|^CUSTOM",names(iGSETS),value=TRUE)
     fam.pattern <- "^[<].*|^FAMILY|^COMPARTMENT|^CUSTOM"
   } else {
     fam.pattern <- "^[<].*|^FAMILY|^CUSTOM"

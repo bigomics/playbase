@@ -263,7 +263,7 @@ mouse2human <- function(x) {
   homologene::mouse2human(x)
 }
 
-
+## type=NULL;org="human";keep.na=FALSE
 #' @export
 probe2symbol <- function(probes, type = NULL, org = "human", keep.na = FALSE) {
   ## strip postfix for ensemble codes
@@ -377,7 +377,7 @@ probe2symbol <- function(probes, type = NULL, org = "human", keep.na = FALSE) {
 }
 
 
-
+## s=title
 
 #' @export
 trimsame <- function(s, split = " ", ends = TRUE, summarize = FALSE) {
@@ -432,7 +432,7 @@ trimsame0 <- function(s, split = " ", summarize = FALSE, rev = FALSE) {
   s1
 }
 
-
+## s=rep("abc",100)
 #' @export
 dbg.BAK <- function(...) {
   if (exists("DEBUG") && DEBUG) {
@@ -450,17 +450,17 @@ read.csv3.BAK <- function(file, ...) {
   read.csv(file, comment.char = "#", sep = sep, ...)
 }
 
-
+## check.names=FALSE;row.names=1;stringsAsFactors=FALSE;header=TRUE
 #' @export
 read.csv3 <- function(file, as_matrix = FALSE) {
   ## read delimited table automatically determine separator. Avoid
   ## duplicated rownames.
   line1 <- as.character(read.csv(file, comment.char = "#", sep = "\n", nrow = 1)[1, ])
   sep <- names(which.max(sapply(c("\t", ",", ";"), function(s) length(strsplit(line1, split = s)[[1]]))))
-
-
+  ## message("[read.csv3] sep = ",sep)
+  ## x <- read.csv(file, comment.char='#', sep=sep)
   sep
-
+  ## x <- read.csv(file, comment.char='#', sep=sep, check.names=FALSE, stringsAsFactors=FALSE)
   x <- data.table::fread(file, sep = sep, check.names = FALSE, stringsAsFactors = FALSE, header = TRUE)
   x <- as.data.frame(x)
   x <- x[grep("^#", x[[1]], invert = TRUE), , drop = FALSE] ## drop comments
@@ -472,7 +472,7 @@ read.csv3 <- function(file, as_matrix = FALSE) {
   if (length(sel)) {
     rownames(x) <- xnames[sel]
   }
-
+  ## x <- type.convert(x)
   x
 }
 
@@ -509,7 +509,7 @@ read.as_matrix <- function(file) {
   return(x)
 }
 
-
+## check.names=FALSE;row.names=1;stringsAsFactors=FALSE;header=TRUE
 #' @export
 fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = "auto",
                       stringsAsFactors = FALSE, header = TRUE, asMatrix = TRUE) {
@@ -536,7 +536,7 @@ tagDuplicates <- function(s) {
     ii <- which(s == t)
     spaces <- paste(rep(" ", length(ii)), collapse = "")
     blanks <- substring(spaces, 0, 0:(length(ii) - 1))
-
+    ## s[ii] <- paste(s[ii],1:length(ii),sep=".")
     s[ii] <- paste0(s[ii], blanks)
   }
   s <- gsub("[.]1$", "", s)
@@ -668,7 +668,7 @@ is.POSvsNEG <- function(pgx) {
 
   cntrmat <- pgx$model.parameters$contr.matrix
   design <- pgx$model.parameters$design
-
+  ## ct0 <- cntrmat[,comp]
 
   ## rely only on contrasts with '_vs_'
   cntrmat <- cntrmat[, grep("_vs_", colnames(cntrmat)), drop = FALSE]
@@ -693,6 +693,7 @@ is.POSvsNEG <- function(pgx) {
       grp2.sign
       if (!is.nan(grp1.sign) && !is.nan(grp2.sign)) {
         is.pn[i] <- (grp1.sign > grp2.sign)
+
       }
     }
     is.pn
@@ -755,7 +756,7 @@ is.categorical <- function(x, max.ncat = null, min.ncat = 2) {
   is.factor2
 }
 
-
+## remove.dup=TRUE;min.ncat=2;max.ncat=20
 #' @export
 pgx.discretizePhenotypeMatrix <- function(df, min.ncat = 2, max.ncat = 20, remove.dup = FALSE) {
   catpheno <- pgx.getCategoricalPhenotypes(
@@ -797,23 +798,23 @@ pgx.getNumericalPhenotypes <- function(df) {
   names(which(numpheno == TRUE))
 }
 
-
+## max.ncat=9999;min.ncat=2
 #' @export
 pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove.dup = FALSE) {
   ##
   ##
   ##
-
+  ## df <- type.convert(df)
 
   is.bad <- 0
 
   ## ... exclude sample IDs
-
+  ## is.bad1 <- grepl("^sample$|[_.]id$|replic|rep|patient|donor|individ",tolower(colnames(df)))
   is.bad1 <- grepl("^sample$|[_.]id$|patient|donor|individ", tolower(colnames(df)))
 
   ## ... exclude numerical dates/age/year
   is.bad2 <- grepl("ratio|year|month|day|^age$|^efs|^dfs|surv|follow", tolower(colnames(df)))
-
+  ## is.factor <- sapply(sapply(df, class), function(s) any(s %in% c("factor","character")))
   is.num <- sapply(df, class) == "numeric"
   is.bad2 <- (is.bad2 & is.num) ## no numeric
 
@@ -824,7 +825,7 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
       ignore.case = TRUE
     )) > 0.8
   })
-
+  ## is.bad <- (is.bad1 | is.bad2 | is.bad3)
   is.bad <- (is.bad2 | is.bad3)
   is.bad
   table(is.bad)
@@ -847,7 +848,7 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
   df1 <- df1[, order(nlevel, -nchars), drop = FALSE]
   dim(df1)
 
-
+  ## head(df1)
   if (remove.dup && ncol(df1) > 1) {
     i <- 1
     j <- 2
@@ -865,7 +866,7 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 }
 
 
-
+## comp=1;level="geneset";probe=rownames(ngs$gsetX)[1]
 #' @export
 getLevels <- function(Y) {
   yy <- Y[, grep("title|name|sample|patient", colnames(Y), invert = TRUE), drop = FALSE] ## NEED RETHINK!!!!
@@ -873,8 +874,8 @@ getLevels <- function(Y) {
   is.numeric <- apply(yy, 2, function(y) (length(table(y)) / length(y)) > 0.5)
   is.grpvar <- is.grpvar & !is.numeric
   yy <- yy[, is.grpvar, drop = FALSE]
-
-
+  ## yy = yy[,which(apply(yy,2,function(x) length(unique(x)))<20),drop=FALSE]
+  ## levels = setdiff(unique(as.vector(apply(yy,2,as.character))),c("",NA))
   levels <- lapply(1:ncol(yy), function(i) unique(paste0(colnames(yy)[i], "=", yy[, i])))
   levels <- sort(unlist(levels))
   return(levels)
@@ -897,7 +898,7 @@ selectSamplesFromSelectedLevels <- function(Y, levels) {
   rownames(Y)[which(sel == 1)]
 }
 
-
+## fields=c("symbol","name","alias","map_location","summary")
 #' @export
 #' @export
 getMyGeneInfo <- function(eg, fields = c("symbol", "name", "alias", "map_location", "summary")) {
@@ -989,17 +990,17 @@ getHSGeneInfo <- function(eg, as.link = TRUE) {
   return(info)
 }
 
-
+## levels="gene";contrast="Bmem_activation";layout=NULL;gene="IRF4";layout="layout_with_fr";hilight=NULL
 #' @export
 pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
   read.gmt <- function(gmt.file, dir = NULL, add.source = FALSE, nrows = -1) {
     f0 <- gmt.file
     if (strtrim(gmt.file, 1) == "/") dir <- NULL
     if (!is.null(dir)) f0 <- paste(sub("/$", "", dir), "/", gmt.file, sep = "")
-
+    ## cat("reading GMT from file",file,"\n")
     gmt <- read.csv(f0, sep = "!", header = FALSE, comment.char = "#", nrows = nrows)[, 1]
     gmt <- as.character(gmt)
-
+    ##    gmt <- gsub("[\t]+","\t",gmt)
     gmt <- sapply(gmt, strsplit, split = "\t")
     names(gmt) <- NULL
     gmt.name <- sapply(gmt, "[", 1)
@@ -1010,22 +1011,22 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
       }
       paste(x[3:length(x)], collapse = " ")
     })
-
+    ## gmt.genes <- gsub("[\t]+"," ",gmt.genes)
     gset <- strsplit(gmt.genes, split = "[ \t]")
     gset <- lapply(gset, function(x) setdiff(x, c("", "NA", NA)))
     names(gset) <- gmt.name
     if (add.source) {
       names(gset) <- paste0(names(gset), " (", gmt.source, ")")
     }
-
+    ## gset <- gset[which(lapply(gset,length)>0)]
     gset
   }
 
   ## -----------------------------------------------------------------------------
   ## Gene families
   ## -----------------------------------------------------------------------------
-
-
+  ## xgene = genes[,"gene_name"]
+  ## xtitle = genes[,"gene_title"]
   families <- list()
   families[["<all>"]] <- genes ## X is sorted
 
@@ -1044,35 +1045,35 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
 
   families <- c(families, gmt.hgnc)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  ## xgene = as.character(genes$gene_name)
+  ## gtype = as.character(genes$gene_type)
+  ## gtype = gsub("TR_.*gene","TR_gene",gtype)
+  ## gtype = gsub(".*pseudogene","pseudogene",gtype)
+  ## sort(table(gtype))
+  ## families[["<protein_coding>"]] = genes[which(gtype=="protein_coding")]
+  ## families[["Antisense genes"]] = genes[which(gtype=="antisense")]
+  ## families[["Pseudogenes"]] = genes[which(gtype=="pseudogene")]
+  ## families[["TR genes"]] = genes[which(gtype=="TR_gene")]
+  ## families[["lincRNA"]] = genes[which(gtype=="lincRNA")]
+  ## families[["snoRNA"]] = genes[which(gtype=="snoRNA")]
+  ## families[["Arginine related"]] = genes[grep("arginine",tolower(xtitle))]
+  ## families[["CD family"]] = genes[grep("^CD[1-9]",genes)]
   families[["Interleukins (IL)"]] <- genes[grep("^IL[1-9]", genes)]
   families[["Chemokines"]] <- genes[grep("CCL|CCR|CXCR|CXCL|XCL|CX3", genes)]
   families[["Ribosomal proteins"]] <- genes[grep("^RPS|^RPL", genes)]
   families[["Ribosomal (mitochondrial)"]] <- genes[grep("^MRPL|^MRPS", genes)]
-
+  ## families[["TR family"]] = genes[grep("^TR[ABDG][VJC]",genes)]
   families[["G-protein family"]] <- genes[grep("^GN[ABG]|^GPBAR|^GPER|^FZD", genes)]
   families[["Heatshock proteins"]] <- genes[grep("^HSP", genes)]
   families[["Integrin family"]] <- genes[grep("^ITG", genes)]
   families[["MAPK family"]] <- genes[grep("^MAP[1-9]|^MAPK", genes)]
-
+  ## families[["Olfactory receptors"]] = genes[grep("^OR[1-9]",genes)]
   families[["Myosins"]] <- genes[grep("^MYO[1-9]", genes)]
   families[["Protein phosphatase (PPP)"]] <- genes[grep("^PPP", genes)]
   families[["PTP family"]] <- genes[grep("^PTP", genes)]
   families[["Small nucleolar RNA"]] <- genes[grep("^SNOR", genes)]
   families[["Toll-like receptors"]] <- genes[grep("^TLR", genes)]
-
+  ## families[["Zinc-fingers C2H2-type"]] = genes[grep("^ZNF",genes)]
   families[["EIF factors"]] <- genes[grep("^EIF", genes)]
   families[["GPR proteins"]] <- genes[grep("^GPR", genes)]
   families[["CDCC proteins"]] <- genes[grep("^CDCC", genes)]
@@ -1091,10 +1092,10 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
   families[["Micro RNA"]] <- genes[grep("^MIR", genes)]
 
   ## add pathways?
-
-
-
-
+  ## kk = grep("^BIOCARTA_",names(ngs$gmt.all))
+  ## kk = Matrix::head(kk,5) ## just try
+  ## pathways = ngs$gmt.all[kk]
+  ## families = c(families, pathways)
 
   ## convert to mouse???
   is.mouse <- (mean(grepl("[a-z]", sub(".*:", "", genes))) > 0.8)
@@ -1126,7 +1127,7 @@ pgx.getGeneSetCollections <- function(gsets, min.size = 10, max.size = 500) {
   ## -----------------------------------------------------------------------------
   ## Gene set collections
   ## -----------------------------------------------------------------------------
-
+  ## gsets = rownames(ngs$gsetX)
 
   kegg0 <- sort(gsets[grep("KEGG|.*hsa[0-9]{5}$", gsets)])
   kegg0 <- kegg0[!duplicated(getKeggID(kegg0))]
@@ -1209,10 +1210,10 @@ computeFeatureScore <- function(X, Y, features) {
     i <- 1
     for (i in 1:length(features)) {
       pp <- features[[i]]
-
+      ## if(input$cl_level=="gene") pp = filterProbes(ngs$GENES, features[[i]])
       pp <- Matrix::head(pp[order(-sdx[pp])], 100)
       mx <- t(apply(X[pp, ], 1, function(x) tapply(x, grp, mean)))
-
+      ## D = as.matrix(dist(t(mx)))
       D <- 1 - stats::cor(mx, use = "pairwise")
       diag(D) <- NA
       score[i] <- mean(D, na.rm = TRUE)
@@ -1270,7 +1271,7 @@ is.Date <- function(x) {
   }
 }
 
-
+## mat=ngs$X;group=ngs$samples$group;FUN=mean
 #' @export
 averageByGroup <- function(mat, group, FUN = mean) {
   out <- do.call(cbind, tapply(
@@ -1321,7 +1322,7 @@ alias2hugo <- function(s, org = NULL, na.orig = TRUE) {
     org <- ifelse(is.human, "hs", "mm")
   }
   org
-
+  ## eg <- sapply(lapply(s, get, env=org.Hs.eg.db::org.Hs.egALIAS2EG),"[",1)
   nna <- which(!is.na(s) & s != "" & s != " ")
   s1 <- trimws(s[nna])
   hugo <- NULL
@@ -1354,7 +1355,7 @@ breakstringBROKEN <- function(s, n, force = FALSE) {
   sapply(s, breakstring1, n = n, force = force)
 }
 
-
+## s="breakstringBROKENbreakstringBROKENbreakstringBROKENbreakstringBROKEN";n=10
 #' @export
 breakstring <- function(s, n, nmax = 999, force = FALSE, brk = "\n") {
   if (is.na(s)) {
@@ -1375,8 +1376,8 @@ breakstring <- function(s, n, nmax = 999, force = FALSE, brk = "\n") {
   return(b)
 }
 
-
-
+## s="breakstringBROKENbreakstringBROKENbreakstringBROKENbreakstringBROKEN";n=10
+## n=20;brk="\n"
 #' @export
 breakstring2 <- function(s, n, brk = "\n", nmax = 999) {
   if (is.na(s)) {
@@ -1503,8 +1504,8 @@ expandAnnotationMatrixSAVE <- function(A) {
   ## get expanded annotation matrix
   nlevel <- apply(A, 2, function(x) length(unique(x)))
   y.isnum <- apply(A, 2, is.num)
-
-
+  ## kk <- (y.isnum | (!y.isnum & nlevel>1 & nlevel<=5))
+  ## A <- A[,which(kk),drop=FALSE]
   Matrix::head(A)
   i <- 1
   m1 <- list()
@@ -1524,7 +1525,7 @@ expandAnnotationMatrixSAVE <- function(A) {
     m1[[i]] <- m0
   }
   names(m1) <- colnames(A)
-
+  ## m1 <- lapply(m1, function(m) {colnames(m)=sub("^x","",colnames(m));m})
   M <- do.call(cbind, m1)
   rownames(M) <- rownames(A)
   return(M)
@@ -1533,14 +1534,14 @@ expandAnnotationMatrixSAVE <- function(A) {
 #' @export
 expandPhenoMatrix <- function(pheno, collapse = TRUE, drop.ref = TRUE) {
   ## get expanded annotation matrix
-
-
+  ## a1 <- pheno[,grep("group|sample",colnames(pheno),invert=TRUE),drop=FALSE]
+  ## m2 <- expandAnnotationMatrix(a1)
   a1 <- tidy.dataframe(pheno)
   nlevel <- apply(a1, 2, function(x) length(setdiff(unique(x), NA)))
   nterms <- colSums(!is.na(a1))
-
+  ## y.class <- sapply(a1,class)
   y.class <- sapply(type.convert(pheno, as.is = TRUE), class)
-
+  ## y.isnum <- apply(a1,2,is.num)
   y.isnum <- (y.class %in% c("numeric", "integer"))
   nlevel
   nratio <- nlevel / nterms

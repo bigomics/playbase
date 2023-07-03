@@ -20,8 +20,8 @@ pgx.inferCNV <- function(ngs, refgroup = NULL, progress = NULL) {
   ##
   ## https://github.com/broadinstitute/inferCNV/wiki
   ##
-
-
+  ## BiocManager::install("infercnv")
+  ## devtools::install_github("broadinstitute/infercnv", ref="RELEASE_3_9")
   symbol <- as.vector(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
   chrloc <- as.list(org.Hs.eg.db::org.Hs.egCHRLOC)
   chr <- as.vector(sapply(chrloc, function(x) names(x)[1]))
@@ -82,24 +82,24 @@ pgx.inferCNV <- function(ngs, refgroup = NULL, progress = NULL) {
 
   out_dir <- "/tmp/Rtmpn8rPtL/file19b68b27f09/"
   out_dir <- tempfile()
-
-
+  ## system(paste("mkdir -p",outdir))
+  ## unlink(out_dir,recursive=TRUE)
   cat("DBG pgx.inferCNV:: setting out_dir=", out_dir, "\n")
 
   infercnv_obj <- infercnv::run(infercnv_obj,
     cutoff = 1, ##
     out_dir = out_dir,
     cluster_by_groups = TRUE,
-
+    ## denoise = TRUE,
     ## HMM = TRUE,  ## slow...
     num_threads = 4,
     no_plot = FALSE
   )
 
 
-
+  ## dir(out_dir)
   img.file <- paste0(out_dir, "/infercnv.png")
-
+  ## cnv <- read.table(file.path(out_dir,"expr.infercnv.dat"),check.names=FALSE)
   suppressWarnings(cnv <- data.table::fread(file.path(out_dir, "expr.infercnv.dat"), check.names = FALSE))
   symbol <- cnv[[1]]
   cnv <- as.data.frame(cnv, check.names = FALSE)[2:ncol(cnv)]
@@ -122,6 +122,46 @@ pgx.inferCNV <- function(ngs, refgroup = NULL, progress = NULL) {
   img <- png::readPNG(img.file)
 
   res <- list(cna = logcnv, chr = chr, pos = pos, png = img)
+
+  par(mfrow = c(1, 1))
+  grid::grid.raster(img)
+
+  x11()
+  pgx.plotCNAHeatmap(ngs, res,
+    pca.filter = -1, clip = 0, annot = "group",
+    lwd = 2, lab.cex = 1
+  )
+  ## pgx.plotCNAHeatmap(ngs, res, pca.filter=10, clip=0)
+  pgx.plotCNAHeatmap(ngs, res, pca.filter = 100, clip = 0.15)
+  pgx.plotCNAHeatmap(ngs, res, pca.filter = 40, clip = 0.15)
+
+  grp <- (ngs$samples$group)
+  annot <- ngs$samples[, 1:2]
+  jj <- seq(1, nrow(res$cna), 50)
+
+  gx.splitmap(
+    res$cna[jj, ],
+    split = res$chr[jj], splitx = grp,
+    scale = "row.center", col.annot = annot,
+    cluster_rows = FALSE
+  )
+
+  X <- res$cna[jj, ]
+  annot <- annot
+  idx <- as.character(res$chr)[jj]
+  splitx <- grp
+  xtips <- ytips <- NULL
+  scale <- "row.center"
+
+  source("../R/pgx-plotting.R")
+  pgx.splitHeatmapX(
+    X = res$cna[jj, ], lmar = 200,
+    annot = annot, row_clust = FALSE,
+    idx = res$chr[jj], splitx = grp,
+    xtips = NULL, ytips = NULL,
+    row_annot_width = 0.03, scale = "row.center",
+    colors = NULL, label_size = 11
+  )
 
   ## clean up folder??
   unlink(out_dir, recursive = TRUE)
@@ -184,7 +224,7 @@ pgx.CNAfromExpression <- function(ngs, nsmooth = 40) {
   ## ---------------------------------------------------------------------
   ## apply 'crude' moving average filter (THIS SHOULD BE IMPROVED!)
   ## ---------------------------------------------------------------------
-
+  ## cna <- cna - rowMeans(cna,na.rm=TRUE)
   mavg <- function(x, n = nsmooth) {
     stats::filter(x, rep(1 / n, n), sides = 2, circular = TRUE)
   }
@@ -234,7 +274,7 @@ pgx.plotCNAHeatmap <- function(ngs, res, annot = NA, pca.filter = -1, lwd = 1,
     n <- downsample
     jj <- as.vector(sapply(1:((nrow(cna) + n) / n), rep, n))[1:nrow(cna)]
     cna <- apply(cna, 2, function(x) tapply(x, jj, mean))
-
+    ## g1 <- tapply(rownames(cna0),jj,function(x) x[1])
     gg <- tapply(rownames(res$cna), jj, paste, collapse = ",")
     rownames(cna) <- gg
     j1 <- which(!duplicated(jj))
@@ -258,7 +298,7 @@ pgx.plotCNAHeatmap <- function(ngs, res, annot = NA, pca.filter = -1, lwd = 1,
   chr <- chr[jj]
   pos <- pos[jj]
 
-
+  ## center/scale
   cna <- cna - rowMeans(cna, na.rm = TRUE)
   cna <- cna / max(abs(cna), na.rm = TRUE)
   cna <- tanh(1.3 * cna)
@@ -268,7 +308,7 @@ pgx.plotCNAHeatmap <- function(ngs, res, annot = NA, pca.filter = -1, lwd = 1,
   if (pca.filter > 0) {
     k <- 20
     k <- pca.filter
-
+    ## plot(sv$d)
     k <- ceiling(min(0.33 * ncol(cna), k))
     sv <- irlba::irlba(cna, nv = k)
     cna2 <- sv$u[, 1:k] %*% diag(sv$d[1:k]) %*% t(sv$v[, 1:k])
@@ -277,7 +317,7 @@ pgx.plotCNAHeatmap <- function(ngs, res, annot = NA, pca.filter = -1, lwd = 1,
     cna <- cna2
   }
 
-
+  ## sort/order
   hc <- NULL
   sv1 <- NULL
   if (order.by == "pc1") {

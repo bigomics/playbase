@@ -117,7 +117,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     names(stat.group) <- rownames(contr.matrix)
   }
 
-
+  ## table(stat.group)
   dim(contr.matrix)
 
   message("[compute_testGenesSingleOmics] pruning unused contrasts")
@@ -229,7 +229,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     AT.LEAST <- ceiling(pmax(2, 0.01 * ncol(counts)))
     cat("filtering for low-expressed genes: >", PRIOR.CPM, "CPM in >=", AT.LEAST, "samples\n")
     keep <- (rowSums(edgeR::cpm(counts) > PRIOR.CPM, na.rm = TRUE) >= AT.LEAST)
-
+    ## keep <- edgeR::filterByExpr(counts)  ## default edgeR filter
     pgx$filtered <- NULL
     pgx$filtered[["low.expressed"]] <-
       paste(rownames(counts)[which(!keep)], collapse = ";")
@@ -274,7 +274,9 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
 
   gx.meta <- ngs.fitContrastsWithAllMethods(
     counts = counts,
+    X = X, ## type = type,
     samples = samples,
+    genes = NULL, ## genes=genes,
     methods = methods,
     design = design,
     contr.matrix = contr.matrix,

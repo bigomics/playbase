@@ -72,7 +72,7 @@ omx.makeHivePlotData_ <- function(res, rho.min = 0.15, cxi = 0.11, use.alpha = T
   )
   nn <- rbind(n0, n1, n2)
   nn$size <- (0.10 + 0.60 * nn$size * 2) * 2
-
+  ##  nn$size <- 0.60
   nn$lab <- as.character(nn$lab)
   nn$axis <- as.integer(nn$axis)
   nn$color <- as.character(nn$color)
@@ -80,24 +80,24 @@ omx.makeHivePlotData_ <- function(res, rho.min = 0.15, cxi = 0.11, use.alpha = T
   ## define edge properties
   ee1 <- data.frame(n1 = names(dx), n2 = names(dc), cor = res[, "cn.tau"])
   ee2 <- data.frame(n1 = names(dx), n2 = names(dm), cor = res[, "me.tau"])
-
+  ## ee3 <- data.frame(n1=names(dm), n2=names(dc), cor=res[,"tau.cn.me"])
   ee <- rbind(ee1, ee2)
   ee <- ee[which(abs(ee$cor) > rho.min), ]
   ee$id1 <- nn$id[match(ee$n1, nn$lab)]
   ee$id2 <- nn$id[match(ee$n2, nn$lab)]
   ee$weight <- (abs(ee$cor) - rho.min) / (1 - rho.min)
-
+  ##  ee$weight <- 4
   if (use.alpha) {
     alpha <- abs(ee$weight * nn[ee$id1, "radius"] * nn[ee$id2, "radius"])
     alpha <- alpha - min(alpha)
-
+    ## alpha <- pmax( (alpha/max(alpha))**2.0, 0.10)
     alpha <- pmax((alpha / max(alpha))**1.0, 0.20)
   } else {
     alpha <- 1
   }
   ee$weight <- 0.0 + ew * (ee$weight)**1.5 ## add minimum and gamma
   ee$alpha <- alpha
-
+  ## ee$color  <- c("steelblue","greenyellow")[1+1*(ee$cor>0)]
   ee$color <- c("steelblue", "darkorange")[1 + 1 * (ee$cor > 0)]
   cc2 <- cbind(t(col2rgb(ee$color) / 255), alpha)
   ee$color <- apply(cc2[, ], 1, function(x) rgb(x[1], x[2], x[3], x[4]))
@@ -113,7 +113,7 @@ omx.makeHivePlotData_ <- function(res, rho.min = 0.15, cxi = 0.11, use.alpha = T
   rr1 <- rr1[order(+rr1[, "gx.rho"]), ]
   yy0 <- seq(1, 1 - nv * cxi, -cxi)[1:nrow(rr0)]
   yy1 <- seq(-1, -1 + nv * cxi, cxi)[1:nrow(rr1)] + 0.5
-
+  ## rx <- 2.2 ## distance from center
   rownames(rr0) <- paste("x", rownames(rr0), sep = "")
   rownames(rr1) <- paste("x", rownames(rr1), sep = "")
   yy0 <- yy0 - nn[rownames(rr0), ]$radius + 0.2
@@ -141,7 +141,7 @@ omx.makeHivePlotData_ <- function(res, rho.min = 0.15, cxi = 0.11, use.alpha = T
   hpd$edges <- ee
   hpd$type <- "2D"
   hpd$desc <- paste("3 axes --", nrow(nn), "nodes --", nrow(ee), "edges")
-
+  ##    hpd$axis.cols <- c("red","green","blue")
   hpd$axis.cols <- rep("grey40", 3)
   hpd$score <- res
   hpd$nodes.ann <- mm

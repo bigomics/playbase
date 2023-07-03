@@ -39,7 +39,7 @@ ngs.getGeneAnnotation <- function(genes) {
     names(CHRLOC) <- SYMBOL
     names(MAP) <- SYMBOL
 
-
+    ## BiocManager::install("TxDb.Hsapiens.UCSC.hg19.knownGene")
     txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene::TxDb.Hsapiens.UCSC.hg19.knownGene
     tx <- GenomicFeatures::transcriptLengths(txdb)
     TXLEN <- tapply(tx$tx_len, tx$gene_id, mean, na.rm = TRUE)
@@ -66,7 +66,7 @@ ngs.getGeneAnnotation <- function(genes) {
     names(CHRLOC) <- SYMBOL
     MAP <- NULL ## no map for mouse???
 
-
+    ## BiocManager::install("TxDb.Mmusculus.UCSC.mm10.knownGene")
 
     txdb <- TxDb.Mmusculus.UCSC.mm10.knownGene::TxDb.Mmusculus.UCSC.mm10.knownGene
     tx <- GenomicFeatures::transcriptLengths(txdb)
@@ -113,9 +113,9 @@ ngs.getGeneAnnotation <- function(genes) {
     tx_len = as.integer(txlen),
     map = map
   )
-
+  ## genes = apply(genes,2,as.character)
   Matrix::head(annot)
-
+  ## annot[is.na(annot)] <- ""  ## replace NA with empty string
 
   rownames(annot) <- genes
   annot

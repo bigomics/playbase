@@ -28,7 +28,7 @@ ngs.cookForEDGER <- function(counts, samples = NULL, genes = NULL, normalization
     genes <- counts$genes
     counts <- counts$counts
   }
-
+  ## txi.names = c("abundance","counts","length","countsFromAbundance")
   if (!all(colnames(counts) == rownames(samples))) stop("samples do not match")
   if (!all(rownames(counts) == rownames(genes))) stop("genes do not match")
   if (is.null(samples)) stop("need samples specified")
@@ -53,19 +53,19 @@ ngs.cookForEDGER <- function(counts, samples = NULL, genes = NULL, normalization
 
   ## normalized for RNA composition (TMM)
   cooked <- edgeR::calcNormFactors(cooked, method = "TMM")
-
+  ## cooked <- edgeR::calcNormFactors(cooked, method="TMM")
 
   ## ------------------------------------------------------------------
   ## prior count regularization
   ## ------------------------------------------------------------------
   ## based on the above, we add a prior count
-
+  ## PRIOR.CPM = 3  ## MAGIC NUMBER .... FIDDLE....
   if (prior.cpm > 0) {
     cat("adding prior counts at prior.cpm=", prior.cpm, "\n")
     CPM.FACTORS <- Matrix::colSums(counts) / 1e6
     prior.counts <- (prior.cpm * CPM.FACTORS)
     summary(prior.counts)
-
+    ## PRIOR.COUNT = 0.5
     cooked$counts <- t(t(cooked$counts) + prior.counts)
   }
 
@@ -75,7 +75,7 @@ ngs.cookForEDGER <- function(counts, samples = NULL, genes = NULL, normalization
     has.batch <- ("batch" %in% colnames(cooked$samples))
     if (has.batch && remove.batch == TRUE) {
       cat("Found 'batch' column in sample table. Correcting for batch effects...\n")
-
+      ## if(batch[1] %in% colnames(cooked$samples)) batch <- cooked$samples[,batch]
       design1 <- model.matrix(~group, data = cooked$samples)
       batch1 <- cooked$samples[, "batch"]
       xnorm <- limma::removeBatchEffect(xnorm, batch = batch1, design = design1)
@@ -95,7 +95,7 @@ ngs.cookForEDGER <- function(counts, samples = NULL, genes = NULL, normalization
   }
 
   ## stop here???
-
+  ## res = list( cooked=cooked, raw=raw )
   return(cooked)
 }
 
@@ -123,8 +123,8 @@ ngs.cookForDESEQ2 <- function(counts, samples, genes, remove.batch = TRUE,
     counts <- counts$counts
   }
 
-
-
+  ## txi.names = c("abundance","counts","length","countsFromAbundance")
+  ## if(!all(txi.names %in% names(txi))) stop("txi must be a tximport object!")
   if (!all(colnames(counts) == rownames(samples))) stop("samples do not match")
   if (!all(rownames(counts) == rownames(genes))) stop("genes do not match")
   if (is.null(samples)) stop("need samples specified")
@@ -145,8 +145,8 @@ ngs.cookForDESEQ2 <- function(counts, samples, genes, remove.batch = TRUE,
   ## ------------------------------------------------------------------
   ## prior count regularization
   ## ------------------------------------------------------------------
-
-
+  ## prior.cpm = 0
+  ## prior.cpm = 3  ## MAGIC NUMBER .... FIDDLE....
   prior.cpm
   if (!is.null(prior.cpm) && prior.cpm > 0) {
     cat("adding prior counts at prior.cpm=", prior.cpm, "\n")
@@ -154,7 +154,7 @@ ngs.cookForDESEQ2 <- function(counts, samples, genes, remove.batch = TRUE,
     prior.counts <- (prior.cpm * CPM.FACTORS)
     prior.counts <- pmax(prior.counts, 1)
     summary(prior.counts)
-
+    ## PRIOR.COUNT = 0.5
     counts <- t(t(counts) + prior.counts)
   }
 
@@ -214,7 +214,7 @@ ngs.cookForDESEQ2 <- function(counts, samples, genes, remove.batch = TRUE,
   ## differences in sequencing depth. So the value are typically
   ## centered around 1. If all the samples have exactly the same
   ## sequencing depth, you expect these numbers to be near 1.
-
+  ## sf <- DESeq2::estimateSizeFactorsForMatrix(DESeq2::counts(dds))  ## where is it used???
 
   ## Run DESeq : Modeling counts with generic 'group'
   fitType <- "parametric"
@@ -223,7 +223,7 @@ ngs.cookForDESEQ2 <- function(counts, samples, genes, remove.batch = TRUE,
   DESeq2::resultsNames(dds) # lists the coefficients
 
   ## we add the gene annotation here (not standard...)
-
+  ## colnames(SummarizedExperiment::rowData(dds))
   SummarizedExperiment::rowData(dds)$genes <- genes ## does this work??
 
   return(dds)

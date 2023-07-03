@@ -9,6 +9,7 @@
 
 #' @export
 pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
+                                  batch.par = "*", ## batch.cov="*",
                                   lib.correct = TRUE,
                                   bio.correct = c("mito", "ribo", "cell_cycle", "gender"),
                                   sva.correct = TRUE, pca.correct = TRUE, hc.correct = TRUE,
@@ -26,7 +27,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
   }
 
   ## tidy up pheno matrix?? get correct parameter types
-
+  ## pheno <- tidy.dataframe(pheno)
   pheno <- type.convert(pheno, as.is = TRUE)
 
   message("[pgx.superBatchCorrect] 1 : dim.pheno = ", paste(dim(pheno), collapse = "x"))
@@ -62,7 +63,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
   ## --------------------------------------------------------------------
   ## select parameters
   ## --------------------------------------------------------------------
-
+  ## batch.par <- NULL
 
   ## select all non-model variables
   if (!is.null(batch.par) && batch.par[1] == "*") {
@@ -258,7 +259,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     dbg("[pgx.superBatchCorrect] Batch correction for covariates:", batch.cov1, "\n")
     for (b in batch.cov1) {
       batch <- as.numeric(pheno[, b])
-
+      ## batch[is.na(batch)] <- "NA"
       nna <- sum(is.na(batch))
       if (nna > 0) {
         batch[is.na(batch)] <- sample(batch[!is.na(batch)], nna, replace = TRUE)
@@ -314,11 +315,11 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     ## because of speed.
     ##
 
-
-
-
-
-
+    ## cX=X
+    ## y <- pheno[,"dlbcl.type"]
+    ## df <- data.frame(var = y)
+    ## mod1x = model.matrix( ~var, df)
+    ## mod0x = model.matrix( ~1, df)
     mod1x <- cbind(1, mod1)
     mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
 
@@ -332,7 +333,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
 
     cX1 <- Matrix::head(cX[order(-apply(cX, 1, sd)), ], 1000) ## top 1000 genes only (faster)
     sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = n.sv)$sv)
-
+    ## sv <- SmartSVA::smartsva.cpp(cX, mod1x, mod0=mod0x, n.sv=n.sv)$sv
     if (any(class(sv) == "try-error")) {
       ## try again with little bit of noise...
       a <- 0.01 * mean(apply(cX, 1, sd))
@@ -342,15 +343,15 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     }
     if (!any(class(sv) == "try-error")) {
       message("[pgx.superBatchCorrect] Performing SVA correction...")
-
+      ## sv <- svaseq( 2**X, mod1, mod0, n.sv=NULL)$sv
       rownames(sv) <- colnames(cX)
       colnames(sv) <- paste0("SV.", 1:ncol(sv))
       cX <- limma::removeBatchEffect(cX, covariates = sv, design = mod1x)
-
+      ## cX <- limma::removeBatchEffect(X, covariates=sv)
       B <- cbind(B, sv)
     }
   }
-
+  ## gx.heatmap(cX, nmax=100, col.annot=phenox, keysize=0.9)
 
   ## --------------------------------------------------------------------
   ## PCA correction: remove remaining batch effect using PCA
@@ -436,7 +437,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
   dbg("[pgx.superBatchCorrect] almost done!\n")
 
   ## matrix B contains the active batch correction vectors
-
+  ## B <- type.convert(B)
   res <- list(X = cX, Y = pheno, B = B)
 
   dbg("[pgx.superBatchCorrect] done!\n")
@@ -444,7 +445,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
   return(res)
 }
 
-
+## nv=3;stat="F";plot=TRUE;main=NULL
 #' @export
 pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main = NULL) {
   getF <- function(x, y) {
@@ -466,7 +467,7 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
       return(NULL)
     }
     suppressMessages(top <- limma::topTableF(fit, number = nrow(x)))
-
+    ## top <- limma::topTable(fit, number=nrow(x), coef=NULL)
     return(top$F)
   }
   getCor <- function(x, y) {
@@ -474,16 +475,16 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
     y1 <- y[ii]
     if (class(y1) == "factor") y1 <- factor(as.character(y1))
     design <- model.matrix(~ 0 + y1)
-
+    ## r1 <- stats::cor(t(x[,ii]), design[,-1,drop=FALSE])
     r1 <- stats::cor(t(x[, ii]), design)
     rowMeans(abs(r1))
   }
 
-
+  ## nv=5
   X <- X - rowMeans(X) ## center features
   V <- irlba::irlba(X, nv = nv)$v
   rho <- list()
-
+  ## px <- tidy.dataframe(pheno)  ## get variable types correct
   px <- pheno
   p <- "Chemotherapy"
   for (p in c("<random>", colnames(px))) {
@@ -516,7 +517,7 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
     stat0 <- c("correlation", "F-statistic")[1 + 1 * (stat == "F")]
     tt0 <- c("PC correlation", "PC variation")[1 + 1 * (stat == "F")]
     if (is.null(main)) main <- tt0
-
+    ## R <- R[,ncol(R):1]
     plt <- plot_ggbarplot(t(R), ylab = stat0, srt = 45, group.name = "") +
       ggplot2::theme(
         plot.margin = ggplot2::margin(2, 2, 0, 2, "mm"),
@@ -531,7 +532,7 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
 
 
 NORMALIZATION.METHODS <- c("none", "mean", "scale", "NC", "CPM", "TMM", "RLE", "RLE2", "quantile")
-
+## nparam=NULL;niter=1;resample=1;normalization=NORMALIZATION.METHODS[1:3];show.progress=1
 
 
 #' @export
@@ -671,15 +672,15 @@ pgx.performBatchCorrection.DEPRECATED <- function(ngs, zx, batchparams,
         } ## end of iter
       } else if (batchpar == "<SVA>") {
         mod1 <- model.matrix(~group)
-
+        ## mod1 <- ngs$model.parameters$design
         mod0 <- cbind(mod1[, 1])
-
+        ## mod0 = model.matrix( ~ 1, data=ngs$samples)
         sv <- sva::sva(0.0001 + zx, mod1, mod0, n.sv = NULL)$sv
-
+        ## sv <- svaseq( 2**zx, mod1, mod0, n.sv=NULL)$sv
         zx <- limma::removeBatchEffect(zx, covariates = sv, design = mod1)
       } else if (batchpar == "<NNM>") {
         y <- group
-
+        ## zx <- gx.nnmcorrect( zx, y)
         zx <- gx.nnmcorrect(zx, y, center.x = TRUE, center.m = TRUE)$X
       } else {
         dbg("warning:: unknown batch parameter\n")
@@ -718,11 +719,11 @@ pgx.performBatchCorrection.DEPRECATED <- function(ngs, zx, batchparams,
       pp <- intersect(batchparams1, colnames(Y))
       Y <- Y[, pp, drop = FALSE]
       Y <- randomImputeMissing(Y) ## NEED RETHINK!!!
-
+      ## batch.formula <- formula(paste("~ 0 + ",paste(pp,collapse=" + ")))
       batch.formula <- formula(paste("~ ", paste(pp, collapse = " + ")))
       B <- model.matrix(batch.formula, data = Y)
       dim(B)
-
+      ## B1 <- expandAnnotationMatrix(Y[,pp])
       B <- B[match(colnames(zx), rownames(B)), , drop = FALSE]
       rownames(B) <- colnames(zx)
       group <- ngs$samples[colnames(zx), "group"]
@@ -747,7 +748,7 @@ pgx.removeBatchEffect <- function(X, batch, model.vars = NULL,
   batch0[is.na(batch0)] <- "NA" ## NA as separate group??
   if (method == "MNN") {
     matlist <- tapply(1:ncol(X), batch0, function(i) X[, i, drop = FALSE])
-
+    ## out <- mnnCorrect( matlist[[1]], matlist[[2]])
     suppressWarnings(out <- do.call(
       scran::mnnCorrect,
       c(matlist, pc.approx = TRUE)
@@ -799,14 +800,14 @@ pgx.plotMitoRibo <- function(counts, percentage = TRUE) {
   mito.counts <- Matrix::colSums(counts[sel.mt, , drop = FALSE], na.rm = TRUE)
   ribo.counts <- Matrix::colSums(counts[sel.rb, , drop = FALSE], na.rm = TRUE)
   other.counts <- tot.counts - mito.counts - ribo.counts
-
+  ## df <- cbind( ribo=ribo.counts, mito=mito.counts, other=other.counts )
   df <- cbind(ribo = ribo.counts, mito = mito.counts)
   if (percentage) df <- round((df / tot.counts) * 100, digits = 2)
   Matrix::head(df)
   barplot(t(df), beside = FALSE, las = 3)
 }
 
-
+## max.rho=0.3;force.remove=TRUE;correct.mito=TRUE;correct.ribo=TRUE;correct.cc=TRUE
 #' @export
 pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
   ## estimate biological variation
@@ -866,7 +867,7 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
   return(pheno)
 }
 
-
+## nmax=-1
 #' @export
 pgx.svaCorrect <- function(X, pheno, nmax = -1) {
   ##
@@ -877,7 +878,7 @@ pgx.svaCorrect <- function(X, pheno, nmax = -1) {
   X <- as.matrix(X)
 
   ## add some random... sometimes necessary
-
+  ## X <- X + 1e-6*matrix(length(X),nrow(X),ncol(X))
   X <- X + 1e-8 ## ??
 
   ## setup model matrix
@@ -891,17 +892,17 @@ pgx.svaCorrect <- function(X, pheno, nmax = -1) {
   }
   colnames(mod1) <- sub("_IS_", "=", colnames(mod1))
 
-
-
-
+  ## df <- data.frame(var=y)
+  ## mod1x = model.matrix( ~var, data=df)
+  ## mod0x = model.matrix( ~1, data=df)
   mod1x <- cbind(1, mod1)
   mod0x <- mod1x[, 1, drop = FALSE]
-
+  ## mod0 = NULL
 
   message("Estimating number of surrogate variables...")
 
   ## fast method using SmartSVA
-
+  ## X.r <- t(resid(lm(t(X) ~ var, data=df)))
   pp <- paste0(colnames(pheno), collapse = "+")
   pp
   lm.expr <- paste0("lm(t(X) ~ ", pp, ", data=pheno)")
@@ -918,12 +919,12 @@ pgx.svaCorrect <- function(X, pheno, nmax = -1) {
     vX <- Matrix::head(X[order(-apply(X, 1, sd)), ], nmax)
   }
   sv <- sva::sva(vX, mod1x, mod0x, n.sv = n.sv)$sv
-
+  ## sv <- SmartSVA::smartsva.cpp(X, mod1x, mod0=mod0x, n.sv=n.sv)$sv
 
   message("Perform batch correction...")
-
+  ## sv <- svaseq( 2**X, mod1, mod0, n.sv=NULL)$sv
   cX <- limma::removeBatchEffect(X, covariates = sv, design = mod1x)
-
+  ## cX <- limma::removeBatchEffect(X, covariates=sv)
 
   ## recenter on old feature means
   cX <- cX - Matrix::rowMeans(cX, na.rm = TRUE) + Matrix::rowMeans(X, na.rm = TRUE)
@@ -959,7 +960,7 @@ pgx.optimizeBatchCorrection.NOTREADY <- function(ngs, batch, contrast, nparam = 
     return(parcomb)
   }
 
-
+  ## params <- c("gender","age","LDH.ratio","Chemotherapy")
   if (is.null(nparam)) nparam <- length(batch)
   nparam <- min(nparam, length(batch))
   nparam
@@ -971,9 +972,9 @@ pgx.optimizeBatchCorrection.NOTREADY <- function(ngs, batch, contrast, nparam = 
 
   parcomb <- makeParameterCombinations(batch, n = nparam)
   dbg(">> optimizing for", length(parcomb), "parameter combinations\n")
+  ## parcomb <- sample(parcomb,10)
 
-
-
+  ## contrast=NULL;resample=0.9;niter=1
   if (niter == 1) resample <- -1
   if (niter != 1) show.progress <- 0
   niter
@@ -1012,14 +1013,14 @@ pgx.optimizeBatchCorrection.NOTREADY <- function(ngs, batch, contrast, nparam = 
   return(res)
 }
 
-
+## contr=NULL;resample=0.9
 #' @export
 pgx._runComputeNumSig <- function(ngs, parcomb, contrast, resample = -1,
                                   normalization = NORMALIZATION.METHODS,
                                   show.progress = 1) {
   k <- "cpm"
   numsig <- c()
-
+  ## NORMALIZATION.METHODS <- c("none","cpm","TMM","RLE","quantile","SVA")
   for (k in normalization) {
     aX <- NULL
     if (k == "nono") aX <- log(1 + ngs$counts)
@@ -1073,7 +1074,7 @@ pgx._runComputeNumSig <- function(ngs, parcomb, contrast, resample = -1,
 }
 
 
-
+## X=bX;fc=0;qv=0.05
 #' @export
 pgx._computeNumSig <- function(ngs, X, contrast = NULL, fc = 0, qv = 0.05) {
   samples <- colnames(X)
@@ -1091,7 +1092,7 @@ pgx._computeNumSig <- function(ngs, X, contrast = NULL, fc = 0, qv = 0.05) {
   fc0 <- sapply(res$tables, function(x) x$logFC)
   qv0 <- sapply(res$tables, function(x) x$adj.P.Val)
   numsig <- mean(Matrix::colSums(abs(fc0) >= fc & qv0 <= qv, na.rm = TRUE))
-
+  ## numsig <- mean(Matrix::colSums(qv0 < qv))
   numsig
   return(numsig)
 }

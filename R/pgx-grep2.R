@@ -52,7 +52,7 @@ pgx.fastq2counts <- function(fastq_dir, destdir, indexdir, nthread = 4, do.qc = 
   dir(fastq_dir, "[.]gz$", include.dirs = FALSE)
   if (length(dir(fastq_dir, "[.]gz$", include.dirs = FALSE))) {
     cat(">>> Unzipping FASTQ files... \n")
-
+    ## cmd <- paste0("gunzip ",fastq_dir,"/*gz")
     cmd <- paste0("(cd ", fastq_dir, " && gunzip *gz)")
     cmd
     system(cmd)
@@ -73,7 +73,7 @@ pgx.fastq2counts <- function(fastq_dir, destdir, indexdir, nthread = 4, do.qc = 
   file_id <- sub(".fastq$", "", dir(fastq_dir, pattern = ".fastq$"))
   file_id <- grep("trimmed$", file_id, value = TRUE, invert = TRUE)
   file_id
-
+  ## trimmethod="trimmomatic"
   if (trimming && trimmethod == "trimmomatic") {
     cat(">>> Running Trimmomatic... \n")
     i <- 1
@@ -104,13 +104,13 @@ pgx.fastq2counts <- function(fastq_dir, destdir, indexdir, nthread = 4, do.qc = 
       ## retainUnpaired = TRUE, retain1length = 35,
       ## retain2length = 35, clipR1 = NULL, clipR2  = NULL,
       ## clip3primeR1 = NULL, clip3primeR2 = NULL,
-
+      ## robust_check = FALSE,
       dest.dir = fastq_dir,
       threads = nthread,
       trimgalore = "trim_galore"
     )
 
-
+    ## system(paste("",))
     fq <- dir(fastq_dir, pattern = "_trimmed.fq$", full.names = TRUE)
     fq
     for (f in fq) file.rename(from = f, to = sub("fq$", "fastq", f))
@@ -130,7 +130,7 @@ pgx.fastq2counts <- function(fastq_dir, destdir, indexdir, nthread = 4, do.qc = 
     if (!dir.exists(index2)) {
       cat(">>> Building index for species", species, "... \n")
       system(paste("mkdir -p", indexdir))
-
+      ## build_index(species="human", kmer=31, ens_release=92, destdir=indexdir)
       build_index(species = species, kmer = 31, ens_release = 99, destdir = indexdir)
     } else {
       cat(">>> Found index folder at ", index2, "\n")
@@ -157,8 +157,8 @@ pgx.fastq2counts <- function(fastq_dir, destdir, indexdir, nthread = 4, do.qc = 
     if (!file.exists(kallisto_index)) {
       cat(">>> Building index for species", species, "... \n")
       system(paste("mkdir -p", indexdir))
-
-
+      ## build_index(species="human", kmer=31, ens_release=92, destdir=indexdir)
+      ## build_index(species=species, kmer=31, ens_release=99, destdir=indexdir)
       if (species == "human") ref.genome <- file.path(indexdir, "Homo_sapiens.GRCh38.cdna.all.fa.gz")
       if (species == "mouse") ref.genome <- file.path(indexdir, "Mus_musculus.GRCm38.cdna.all.fa.gz")
       kallisto_index
@@ -194,7 +194,7 @@ pgx.fastq2counts <- function(fastq_dir, destdir, indexdir, nthread = 4, do.qc = 
   ## ----------- Run MultiQC
   if (do.qc) {
     cat(">>> Running MultiQC... \n")
-
+    ## run_multiqc(fastqc_dir=fastq_dir, salmon_dir=destdir, destdir=destdir)
     run_multiqc(
       fastqc_dir = file.path(destdir, "fastqc"),
       salmon_dir = file.path(destdir, quant.method),
@@ -334,7 +334,7 @@ run_tximport_kallisto <- function(srr_id, species = c("human", "mouse", "rat"), 
       return(org.Mm.eg.db::org.Mm.eg.db)
     }
     #        else if (species == "rat") {
-
+    #            return(org.Rn.eg.db::org.Rn.eg.db)
     #        }
     else {
       return(NULL)
@@ -493,7 +493,7 @@ trimgalore_fastq <- function(fastq1, fastq2 = NULL, adapter1 = NULL, adapter2 = 
                              threads = NULL, do.fastqc = FALSE,
                              trimgalore = "trim_galore") {
   doParallel::registerDoParallel(cores = 2)
-
+  ## foreach(i=1:3) %dopar% sqrt(i)
 
   cmd <- trimgalore
 
@@ -551,7 +551,7 @@ trimgalore_fastq <- function(fastq1, fastq2 = NULL, adapter1 = NULL, adapter2 = 
     }
   }
 
-
+  ## give_note("\nRemoving adapters and performing quality trimming...\n\n")
   cat("\nRemoving adapters and performing quality trimming...\n\n")
 
   if (is.null(threads)) {
