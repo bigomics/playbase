@@ -43,7 +43,6 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
                               xlab = "effect size", ylab = "significance (-log10p)",
                               use.rpkm = FALSE, maxchar = 40, hi.col = "#1e60bb",
                               cex.main = 1.2, axes = TRUE, cex.axis = 1) {
-
   jj <- which(!is.na(x) & !is.na(pv) & !is.na(gene))
   x <- x[jj]
   pv <- pv[jj]

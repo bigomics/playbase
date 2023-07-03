@@ -101,7 +101,7 @@ pgx.createPGX.10X.DEPRECATED <- function(outs, ncells = 2000, aggr.file = "aggre
   ct <- makeDirectContrasts(pheno[, "cell.type", drop = FALSE], ref = "others")
   names(ct)
   pheno$group <- ct$group
-  
+
 
   message("[createPGX.10X] creating PGX object...")
   pgx <- pgx.createPGX(
@@ -403,7 +403,7 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
     X1 <- X1 - Matrix::rowMeans(X1) ## center features
     nv <- min(nv, ncol(X1) - 1)
     sv <- irlba::irlba(X1, nv = nv)
-    V <- sv$v %*% diag(sv$d**0.5) 
+    V <- sv$v %*% diag(sv$d**0.5)
     V <- t(scale(t(V))) ## rowscale
     cluster <- NULL
     if (method == "tsne") {

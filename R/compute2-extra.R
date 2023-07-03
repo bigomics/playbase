@@ -232,7 +232,7 @@ compute_deconvolution <- function(ngs, rna.counts = ngs$counts, full = FALSE) {
     refmat <- refmat[intersect(sel, names(refmat))]
     methods <- c("DCQ", "DeconRNAseq", "I-NNLS", "NNLM", "cor")
   }
-  
+
   counts <- rna.counts
   rownames(counts) <- toupper(ngs$genes[rownames(counts), "gene_name"])
   res <- pgx.multipleDeconvolution(counts, refmat = refmat, method = methods)

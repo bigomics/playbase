@@ -210,7 +210,7 @@ ngs.cookForDESEQ2 <- function(counts, samples, genes, remove.batch = TRUE,
   ## differences in sequencing depth. So the value are typically
   ## centered around 1. If all the samples have exactly the same
   ## sequencing depth, you expect these numbers to be near 1.
-  ## sf <- DESeq2::estimateSizeFactorsForMatrix(DESeq2::counts(dds))  
+  ## sf <- DESeq2::estimateSizeFactorsForMatrix(DESeq2::counts(dds))
 
   ## Run DESeq : Modeling counts with generic 'group'
   fitType <- "parametric"

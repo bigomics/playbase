@@ -25,7 +25,7 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
     k <- 1
     for (k in 1:ncol(M)) {
       mm <- markers[[k]]
-      
+
       m.neg <- sub("[-]$", "", grep("[-]$", mm, value = TRUE))
       m.pos <- setdiff(gsub("[+-]$", "", mm), m.neg)
       if (length(m.pos)) M[match(m.pos, rownames(M)), k] <- +1
@@ -49,7 +49,7 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
   if (scalex) X1 <- X1 / (1 + rowMeans(X1))
 
   ## run deconvolution algorithm
-  
+
   out <- pgx.deconvolution(X1,
     ref = M1, methods = method,
     add.unknown = add.unknown, normalize.mat = normalize.mat
@@ -206,7 +206,7 @@ pgx.checkCellTypeMarkers <- function(counts, min.count = 3, markers = NULL) {
     markers <- CANONICAL.MARKERS2
   }
 
-  
+
   marker.genes <- sort(unique(unlist(markers)))
   marker.genes <- gsub("[-+]$", "", marker.genes)
   marker.genes
@@ -218,16 +218,16 @@ pgx.checkCellTypeMarkers <- function(counts, min.count = 3, markers = NULL) {
   k <- 1
   for (k in 1:ncol(M)) {
     mm <- markers[[k]]
-    
+
     m.neg <- sub("[-]$", "", grep("[-]$", mm, value = TRUE))
     m.pos <- setdiff(gsub("[+-]$", "", mm), m.neg)
     if (length(m.pos)) M[match(m.pos, rownames(M)), k] <- +1
     if (length(m.neg)) M[match(m.neg, rownames(M)), k] <- -1
   }
-  
+
   M
   X <- counts
-  
+
   rownames(M) <- toupper(rownames(M))
   rownames(X) <- toupper(rownames(X))
   gg <- intersect(rownames(M), rownames(X))
@@ -296,8 +296,8 @@ pgx.simplifyCellTypes <- function(ct, low.th = 0.01) {
   low.ct <- names(which(table(ct) < low.th * length(ct)))
   ct[ct %in% low.ct] <- "other_cells"
 
-  
-  
+
+
   ct
 }
 
@@ -356,14 +356,14 @@ pgx.purify <- function(X, ref, k = 3, method = 2) {
 pgx.inferCellCyclePhase <- function(counts) {
   ## List of cell cycle markers, from Tirosh et al, 2015
   ##
-  
+
   cc.genes <- strsplit("MCM5 PCNA TYMS FEN1 MCM2 MCM4 RRM1 UNG GINS2 MCM6 CDCA7 DTL PRIM1 UHRF1 MLF1IP HELLS RFC2 RPA2 NASP RAD51AP1 GMNN WDR76 SLBP CCNE2 UBR7 POLD3 MSH2 ATAD2 RAD51 RRM2 CDC45 CDC6 EXO1 TIPIN DSCC1 BLM CASP8AP2 USP1 CLSPN POLA1 CHAF1B BRIP1 E2F8 HMGB2 CDK1 NUSAP1 UBE2C BIRC5 TPX2 TOP2A NDC80 CKS2 NUF2 CKS1B MKI67 TMPO CENPF TACC3 FAM64A SMC4 CCNB2 CKAP2L CKAP2 AURKB BUB1 KIF11 ANP32E TUBB4B GTSE1 KIF20B HJURP CDCA3 HN1 CDC20 TTK CDC25C KIF2C RANGAP1 NCAPD2 DLGAP5 CDCA2 CDCA8 ECT2 KIF23 HMMR AURKA PSRC1 ANLN LBR CKAP5 CENPE CTCF NEK2 G2E3 GAS2L3 CBX5 CENPA", split = " ")[[1]]
   s_genes <- cc.genes[1:43]
   g2m_genes <- cc.genes[44:97]
 
   ## Create our Seurat object and complete the initalization steps
   rownames(counts) <- toupper(rownames(counts)) ## mouse...
-  
+
   obj <- Seurat::CreateSeuratObject(counts)
   obj <- Seurat::NormalizeData(obj, verbose = 0)
   suppressWarnings(obj <- Seurat::CellCycleScoring(obj,
@@ -371,8 +371,8 @@ pgx.inferCellCyclePhase <- function(counts) {
     g2m.features = g2m_genes, set.ident = TRUE
   ))
   ## view cell cycle scores and phase assignments
-  
-  
+
+
   s.score <- obj@meta.data$S.Score
   g2m.score <- obj@meta.data$G2M.Score
   phase <- obj@meta.data$Phase
@@ -386,7 +386,7 @@ pgx.inferCellCyclePhase <- function(counts) {
 pgx.scoreCellCycle <- function(counts) {
   ## List of cell cycle markers, from Tirosh et al, 2015
   ##
-  
+
   cc.genes <- strsplit("MCM5 PCNA TYMS FEN1 MCM2 MCM4 RRM1 UNG GINS2 MCM6 CDCA7 DTL PRIM1 UHRF1 MLF1IP HELLS RFC2 RPA2 NASP RAD51AP1 GMNN WDR76 SLBP CCNE2 UBR7 POLD3 MSH2 ATAD2 RAD51 RRM2 CDC45 CDC6 EXO1 TIPIN DSCC1 BLM CASP8AP2 USP1 CLSPN POLA1 CHAF1B BRIP1 E2F8 HMGB2 CDK1 NUSAP1 UBE2C BIRC5 TPX2 TOP2A NDC80 CKS2 NUF2 CKS1B MKI67 TMPO CENPF TACC3 FAM64A SMC4 CCNB2 CKAP2L CKAP2 AURKB BUB1 KIF11 ANP32E TUBB4B GTSE1 KIF20B HJURP CDCA3 HN1 CDC20 TTK CDC25C KIF2C RANGAP1 NCAPD2 DLGAP5 CDCA2 CDCA8 ECT2 KIF23 HMMR AURKA PSRC1 ANLN LBR CKAP5 CENPE CTCF NEK2 G2E3 GAS2L3 CBX5 CENPA", split = " ")[[1]]
   s_genes <- cc.genes[1:43]
   g2m_genes <- cc.genes[44:97]
@@ -395,13 +395,13 @@ pgx.scoreCellCycle <- function(counts) {
 
   ## Create our Seurat object and complete the initalization steps
   rownames(counts) <- toupper(rownames(counts)) ## mouse...
-  
+
   obj <- Seurat::CreateSeuratObject(counts)
   obj <- Seurat::NormalizeData(obj, verbose = 0)
   suppressWarnings(obj <- Seurat::CellCycleScoring(obj, s_genes, g2m_genes, set.ident = TRUE))
   ## view cell cycle scores and phase assignments
-  
-  
+
+
   s.score <- obj@meta.data$S.Score
   g2m.score <- obj@meta.data$G2M.Score
   diff.score <- s.score - g2m.score
@@ -420,7 +420,7 @@ pgx.scoreCellCycle <- function(counts) {
 pgx.inferGender <- function(X, gene_name = NULL) {
   ## List of cell cycle markers, from Tirosh et al, 2015
   ##
-  
+
   if (is.null(gene_name)) gene_name <- toupper(sub(".*:", "", rownames(X)))
   y.genes <- intersect(c("DDX3Y", "RPS4Y1", "USP9Y", "KDM5D"), gene_name)
   y.genes
@@ -438,7 +438,7 @@ pgx.inferGender <- function(X, gene_name = NULL) {
     x.expr
     y.expr
     mean.expr <- colMeans(X)
-    
+
     sex <- rep(NA, ncol(X))
     sex <- ifelse(x.expr > mean.expr & y.expr < mean.expr, "F", sex)
     sex <- ifelse(y.expr > mean.expr & x.expr < mean.expr, "M", sex)
@@ -578,7 +578,7 @@ pgx.deconvolution <- function(X, ref,
 
   if ("EPIC" %in% methods) {
     ## EPIC
-    
+
     dbg("[pgx.deconvolution] calculating EPIC...")
 
     out <- NULL
@@ -615,7 +615,7 @@ pgx.deconvolution <- function(X, ref,
 
     ## DeconRNASeq need psych and pcaMethods, so we temporarily
     ## load the library...
-    
+
     drs <- NULL
     stime <- system.time(suppressMessages(suppressWarnings(
       drs <- try(DeconRNASeq::DeconRNASeq(
@@ -624,7 +624,7 @@ pgx.deconvolution <- function(X, ref,
       )$out.all)
     )))
     ## ... and quickly remove these
-    
+
 
     timings[["DeconRNAseq"]] <- stime
     class(drs)
@@ -640,7 +640,7 @@ pgx.deconvolution <- function(X, ref,
   ## --------- DCQ from ComICS ---------------------
   if ("DCQ" %in% methods) {
     ## DCQ seems to work in logX, so we use log-transform
-    
+
     dbg("[pgx.deconvolution] calculating DCQ...")
 
     res.dcq <- NULL
@@ -649,7 +649,7 @@ pgx.deconvolution <- function(X, ref,
         ComICS::dcq(
           reference_data = log2(1 + as.matrix(ref)),
           mix_data = log2(1 + as.matrix(mat)), ## log data OK??
-          
+
           marker_set = cbind(intersect(rownames(ref), rownames(mat))),
           alpha_used = 0.05, lambda_min = 0.2, number_of_repeats = 3,
           precent_of_data = 1.0
@@ -726,7 +726,7 @@ pgx.deconvolution <- function(X, ref,
   ## Own NNLM (non-negative linear modeling)...
   if ("NNLM" %in% methods) {
     ## NNLM
-    
+
     dbg("[pgx.deconvolution] calculating NNLM...")
 
     x1 <- log2(1 + ref[gg, , drop = FALSE])
@@ -752,7 +752,7 @@ pgx.deconvolution <- function(X, ref,
   ## Simple (rank) correlation
   if ("cor" %in% methods) {
     dbg("[pgx.deconvolution] calculating cor...")
-    
+
     r1 <- apply(mat[gg, , drop = FALSE], 2, rank, na.last = "keep")
     r2 <- apply(ref[gg, , drop = FALSE], 2, rank, na.last = "keep")
     stime <- system.time(

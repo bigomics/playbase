@@ -78,7 +78,7 @@ ngs.tximportSalmon <- function(sf.files, count.type = "lengthScaledTPM", organis
   ## then the transcript to gene file from Ensembl
   listColumns(edb)
   daf <- GenomicFeatures::transcripts(edb,
-      columns = c( 
+    columns = c(
       "tx_id", "gene_id", "entrezid",
       "gene_name", "gene_biotype", "name"
     ),

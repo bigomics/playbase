@@ -82,7 +82,7 @@ pgx.inferCNV <- function(ngs, refgroup = NULL, progress = NULL) {
   cat("DBG pgx.inferCNV:: setting out_dir=", out_dir, "\n")
 
   infercnv_obj <- infercnv::run(infercnv_obj,
-    cutoff = 1, 
+    cutoff = 1,
     out_dir = out_dir,
     cluster_by_groups = TRUE,
     num_threads = 4,

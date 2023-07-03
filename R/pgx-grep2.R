@@ -328,7 +328,7 @@ run_tximport_kallisto <- function(srr_id, species = c("human", "mouse", "rat"), 
       return(org.Mm.eg.db::org.Mm.eg.db)
     }
     #        else if (species == "rat") {
-    
+
     #        }
     else {
       return(NULL)

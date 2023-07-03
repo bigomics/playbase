@@ -202,7 +202,7 @@ pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
   if (extended) {
     # fam <- grep("^[<].*|^FAMILY|^TISSUE|^COMPARTMENT|^CELLTYPE|^GOCC|^DISEASE|^CUSTOM",
     #             names(iGSETS),value=TRUE)
-    
+
     fam.pattern <- "^[<].*|^FAMILY|^COMPARTMENT|^CUSTOM"
   } else {
     fam.pattern <- "^[<].*|^FAMILY|^CUSTOM"

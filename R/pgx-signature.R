@@ -123,7 +123,7 @@ pgx.correlateSignatureH5.inmemory <- function(F, h5.file, nsig = 100, ntop = 100
     ## this FC signature
     fc <- F[, i]
     rfc <- rank(fc[gg], na.last = "keep") ## rank correlation??
-    rG[is.na(rG)] <- 0 
+    rG[is.na(rG)] <- 0
     rfc[is.na(rfc)] <- 0
     rho <- stats::cor(rG, rfc, use = "pairwise")[, 1]
 
@@ -209,7 +209,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   ## rank correlation??
   rG <- apply(G[gg, ], 2, rank, na.last = "keep")
   rfc <- rank(fc[gg], na.last = "keep")
-  rG[is.na(rG)] <- 0 
+  rG[is.na(rG)] <- 0
   rfc[is.na(rfc)] <- 0
   suppressWarnings(rho <- stats::cor(rG, rfc, use = "pairwise")[, 1])
 
@@ -286,7 +286,7 @@ pgx.correlateSignature.matrix <- function(fc, refmat, nsig = 100, ntop = 1000, n
   rfc <- rank(fc[gg], na.last = "keep")
 
 
-  rG[is.na(rG)] <- 0 
+  rG[is.na(rG)] <- 0
   rfc[is.na(rfc)] <- 0
   rho <- stats::cor(rG, rfc, use = "pairwise")[, 1]
 

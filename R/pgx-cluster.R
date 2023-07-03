@@ -48,7 +48,7 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
   }
   if (rank.tf) {
     X <- scale(apply(X, 2, rank))
-  } 
+  }
 
   clust <- pgx.clusterBigMatrix(
     t(X),
@@ -72,7 +72,7 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
   ## remove empty space in tSNE/UMAP
   ii <- grep("tsne|umap", names(clust))
   if (length(ii) > 0) {
-    clust[ii] <- lapply(clust[ii], pos.compact) 
+    clust[ii] <- lapply(clust[ii], pos.compact)
   }
 
   ## put in slot 'gene cluster'
@@ -730,7 +730,7 @@ pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix 
 
 
   if (graph.method == "dist") {
-    dist <- as.dist(dist(scale(X))) 
+    dist <- as.dist(dist(scale(X)))
     gr <- igraph::graph_from_adjacency_matrix(1.0 / dist**gamma, diag = FALSE, mode = "undirected")
   } else if (graph.method == "snn") {
     suppressMessages(suppressWarnings(gr <- scran::buildSNNGraph(t(X), d = 50)))
@@ -739,7 +739,7 @@ pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix 
   }
 
   ## should we iteratively cluster (louvain)???
-  hc <- hclustGraph(gr, k = level) 
+  hc <- hclustGraph(gr, k = level)
   dim(hc)
   idx <- hc[, min(level, ncol(hc))]
   table(idx)

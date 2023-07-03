@@ -115,7 +115,7 @@ ngs.getGeneAnnotation <- function(genes) {
   )
   #
   Matrix::head(annot)
-  ## annot[is.na(annot)] <- ""  
+  ## annot[is.na(annot)] <- ""
 
   rownames(annot) <- genes
   annot

@@ -113,7 +113,7 @@ omx.makeHivePlotData_ <- function(res, rho.min = 0.15, cxi = 0.11, use.alpha = T
   rr1 <- rr1[order(+rr1[, "gx.rho"]), ]
   yy0 <- seq(1, 1 - nv * cxi, -cxi)[1:nrow(rr0)]
   yy1 <- seq(-1, -1 + nv * cxi, cxi)[1:nrow(rr1)] + 0.5
-  ## rx <- 2.2 
+  ## rx <- 2.2
   rownames(rr0) <- paste("x", rownames(rr0), sep = "")
   rownames(rr1) <- paste("x", rownames(rr1), sep = "")
   yy0 <- yy0 - nn[rownames(rr0), ]$radius + 0.2

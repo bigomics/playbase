@@ -455,9 +455,9 @@ pgx.initDatasetFolder.DEPRECATED <- function(pgx.dir,
     if (verbose) message("[initDatasetFolder] add enrichment signature to", sigdb, "...")
     pgx.addEnrichmentSignaturesH5(sigdb, X = allFC, methods = "rankcor")
   }
-  
+
   # ## do not use fread.csv or fread here!! see issue #441
-  
+
   pgxinfo <- playbase::pgxinfo.read(pgx.dir)
   return(pgxinfo)
 }
@@ -601,7 +601,6 @@ pgxinfo.deletePgx <- function(pgx.dir, pgxname,
 
   ## delete dataset from H5 file
   if (delete.fc && file.exists(h5.file)) {
-
     sigdb.removeDataset(h5.file, pgxname)
   }
 }

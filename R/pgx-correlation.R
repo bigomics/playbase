@@ -16,7 +16,7 @@ pgx.computeGlassoAroundGene <- function(X, gene, nmax = 100) {
   jj <- Matrix::head(order(-rowMeans(rho**2)), nmax)
   tX <- t(X[jj, ])
   dim(tX)
-  
+
   vX <- var(tX)
   res <- glasso::glasso(vX, 0.1)
   res$cor <- Matrix::cov2cor(vX)
@@ -45,7 +45,7 @@ pgx.plotPartialCorrelationGraph <- function(res, gene, rho.min = 0.1, nsize = -1
   rownames(R) <- colnames(R) <- nn
   rownames(P) <- colnames(P) <- nn
 
-  
+
   G <- igraph::graph_from_adjacency_matrix(
     abs(P),
     mode = "undirected", diag = FALSE, weighted = TRUE
@@ -85,7 +85,7 @@ pgx.plotPartialCorrelationGraph <- function(res, gene, rho.min = 0.1, nsize = -1
   }
   G1 <- igraph::induced_subgraph(G1, vv)
 
-  
+
   L1 <- igraph::layout_with_fr(G1)
 
   if (length(igraph::V(G1)) == 0) {
@@ -153,21 +153,21 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
     )
   }
 
-  
+
   if ("pcor.shrink" %in% method) {
     timings[["pcor.shrink"]] <- system.time(
       suppressWarnings(rho[["pcor.shrink"]] <- corpcor::pcor.shrink(tX))
     )
   }
-  
+
 
   if ("huge" %in% method) {
     timings[["huge.glasso"]] <- system.time(
       out <- huge(tX, method = "glasso")
     )
-    
-    
-    
+
+
+
     ## which.opt
     c2 <- -out$icov[[length(out$icov)]]
     diag(c2) <- -diag(c2)
@@ -240,7 +240,7 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
         lambda <- seq(from = 0.1, to = 1, by = 0.1) - 0.01
         res <- BigQuic(as.matrix(tX),
           lambda = lambda,
-          numthreads = 10, memory_size = 512 * 8, 
+          numthreads = 10, memory_size = 512 * 8,
           use_ram = TRUE
         )
         res <- BigQuic.select(res)
@@ -298,13 +298,13 @@ pgx.plotPartialCorrelationAroundGene <- function(res, gene, rho.min = 0.8, pcor.
   M <- t(as.matrix(do.call(rbind, rho2)))
   M[is.infinite(M) | is.nan(M)] <- NA
   M <- M[order(-rowMeans(M**2, na.rm = TRUE)), , drop = FALSE]
-  
+
   Matrix::head(M)
 
   ## ------------------------------------------------------------
   ## Correlation barplots
   ## ------------------------------------------------------------
-  
+
   if ("cor" %in% what) {
     par(mar = c(10, 4, 4, 2))
     r1 <- M[, "cor"] ## / ncol(M)
@@ -401,10 +401,10 @@ pgx.plotPartialCorrelationAroundGene <- function(res, gene, rho.min = 0.8, pcor.
         rgb(x[1], x[2], x[3], alpha = x[4], maxColorValue = 255)
       })
     }
-    
+
     p1 <- 0.8 * igraph::E(gr2)$rho
     klrpal <- colorRampPalette(c("red3", "grey90", "grey30"))(64)
-    
+
     klr <- klrpal[32 + 31 * p1]
     igraph::E(gr2)$color <- add.alpha(klr, 64 * abs(p1))
 
@@ -467,7 +467,7 @@ pgx.testTraitRelationship <- function(me, df, plot = TRUE, cex = 1) {
   if (plot == TRUE) {
     sigP <- -log10(P + 1e-8)
     sigP <- (1 - P)**1
-    
+
     corrplot::corrplot(
       sigP,
       is.corr = FALSE, #
@@ -583,18 +583,18 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1) {
     corrplot::corrplot(
       corr = logQ,
       type = "upper",
-      col = BLUERED(25), 
+      col = BLUERED(25),
       is.corr = FALSE,
       mar = c(0, 0, 0, 2),
       p.mat = Q,
       sig.level = 0.05,
       tl.cex = cex,
-      tl.col = "#3b4252", 
+      tl.col = "#3b4252",
       tl.offset = 1,
       cl.align.text = "l",
       cl.offset = 0.25,
       cl.cex = 0.7,
-      pch.col = "#3b4252", 
+      pch.col = "#3b4252",
       order = "hclust",
       number.digits = 2
     )
@@ -634,7 +634,7 @@ pgx.getGeneCorrelation <- function(gene, xref) {
     }
   }
 
-  
+
   dim(R)
   if (!is.null(R) && NCOL(R) > 0) {
     R[is.na(R)] <- 0

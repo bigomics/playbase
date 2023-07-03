@@ -213,7 +213,6 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   }
   if ("row.bmc" %in% scale && !is.null(splitx)) {
     if (class(splitx) == "numeric" && length(splitx) == 1) {
-
       ii <- Matrix::head(order(-apply(gx, 1, sd, na.rm = TRUE)), 1000) ## NEED RETHINK!
       system.time(hc <- fastcluster::hclust(as.dist(1 - stats::cor(gx[ii, ])), method = "ward.D2"))
       splitx <- paste0("cluster", cutree(hc, splitx))
@@ -262,7 +261,6 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   do.splitx
   idx2 <- NULL
   if (do.splitx && class(splitx) == "numeric" && length(splitx) == 1) {
-
     system.time(hc <- fastcluster::hclust(as.dist(1 - stats::cor(gx)), method = "ward.D2"))
     idx2 <- paste0("cluster", cutree(hc, splitx))
   }
@@ -634,7 +632,6 @@ gx.heatmap <- function(gx, values = NULL,
                        nmax = 1000, cmax = NULL, show_colnames = TRUE,
                        indent.names = FALSE,
                        ...) {
-
   ##
   par(xpd = FALSE)
 
@@ -837,7 +834,7 @@ gx.heatmap <- function(gx, values = NULL,
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none",
         side.height.fraction = side.height,
-        ColSideColors = cc0, 
+        ColSideColors = cc0,
         ...
       )
     } else {
@@ -846,7 +843,7 @@ gx.heatmap <- function(gx, values = NULL,
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none",
         side.height.fraction = side.height,
-        ColSideColors = cc0, 
+        ColSideColors = cc0,
         ...
       )
     }
@@ -949,8 +946,8 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
   #
 
   if (method == "pearson") {
-    d1 <- as.dist(stats::cor(t(x), use = "pairwise")) :=drugs
-    d2 <- as.dist(stats::cor(x, use = "pairwise")) 
+    d1 <- as.dist(stats::cor(t(x), use = "pairwise")) := drugs
+    d2 <- as.dist(stats::cor(x, use = "pairwise"))
     d1[is.na(d1)] <- mean(d1, na.rm = TRUE)
     d2[is.na(d2)] <- mean(d2, na.rm = TRUE)
     d1 <- (max(d1) - d1)**(p / 2)
@@ -1508,22 +1505,20 @@ heatmap.3 <- function(x,
     lmat <- rbind(4:3, 2:1)
 
     if (!missing(ColSideColors)) {
-      
       if (!is.character(ColSideColors) || nrow(ColSideColors) != nc) {
         stop("'ColSideColors' must be a matrix of nrow(x) rows")
       }
       lmat <- rbind(lmat[1, ] + 1, c(NA, 1), lmat[2, ] + 1)
-      
+
       lhei <- c(lhei[1], side.height.fraction * NumColSideColors, lhei[2])
     }
 
     if (!missing(RowSideColors)) {
-      
       if (!is.character(RowSideColors) || ncol(RowSideColors) != nr) {
         stop("'RowSideColors' must be a matrix of ncol(x) columns")
       }
       lmat <- cbind(lmat[, 1] + 1, c(rep(NA, nrow(lmat) - 1), 1), lmat[, 2] + 1)
-      
+
       lwid <- c(lwid[1], side.height.fraction * NumRowSideColors, lwid[2])
     }
     lmat[is.na(lmat)] <- 0

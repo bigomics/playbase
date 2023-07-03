@@ -187,7 +187,7 @@ itercluster_louvain <- function(g, n = 3) {
   return(K)
 }
 
-#;n=3;k=10
+# ;n=3;k=10
 #' @export
 cutGraph <- function(g, n = 2, k = 5, max.wt = 9999) {
   ## Cluster graph and cut crossing edges if requested.

@@ -256,7 +256,6 @@ pgx.ActivationMatrix <- function(pgx, features = NULL, contrasts = NULL,
       ggplot2::scale_x_discrete(guide = guide_axis(angle = srt)) +
       ggplot2::theme(
         plot.margin = ggplot2::margin(5, 0, 0, 10),
-
         legend.text = ggplot2::element_text(size = 9),
         legend.key.size = grid::unit(10, "pt"),
         legend.key.height = grid::unit(12, "pt")
@@ -390,8 +389,6 @@ plot_SPLOM <- function(F, F2 = NULL, hilight = NULL, cex = 0.5, cex.axis = 1, ce
         xaxt = ifelse(j == 1, "s", "n"),
         yaxt = ifelse(i == 1, "s", "n"),
         xlab = "", ylab = "",
-
-
         xlim = x0, ylim = x1
       )
       abline(v = 0, h = 0, lty = 3, lwd = 0.6)
@@ -536,7 +533,6 @@ pgx.SankeyFromMRF.PLOTLY <- function(M, R, F, fill = TRUE, labels = NULL) {
     count = igraph::E(gr)$count,
     label = ee.label,
     weight = igraph::E(gr)$weight,
-
     color = col2
   )
 
@@ -552,9 +548,6 @@ pgx.SankeyFromMRF.PLOTLY <- function(M, R, F, fill = TRUE, labels = NULL) {
     arrangement = "snap",
     node = list(
       label = nodes$label,
-
-
-
       x = nodes$x,
       y = 0.01 * (1:length(nodes$x)),
       color = nodes$color,
@@ -570,7 +563,6 @@ pgx.SankeyFromMRF.PLOTLY <- function(M, R, F, fill = TRUE, labels = NULL) {
       target = links$target,
       value =  links$count,
       label =  links$label,
-
       color =  links$color
     )
   )
@@ -662,7 +654,6 @@ pgx.SankeyFromPhenotypes.PLOTLY <- function(pgx, phenotypes, mat = NULL,
       target = links$target,
       value = links$value,
       label = links$label,
-
       color = "rgba(80,80,120,0.15)"
     )
   )
@@ -749,7 +740,6 @@ pgx.SankeyFromPhenotypes.GGPLOT <- function(pgx, phenotypes, mat = NULL, fill = 
     ggplot2::scale_color_brewer(type = "qual", palette = "Set1", direction = -1) +
     ggplot2::ggtitle(title) + ggplot2::theme_minimal() +
     ggplot2::theme(
-
       axis.text.x = ggplot2::element_text(size = 13, vjust = +7)
     )
   p
@@ -976,7 +966,6 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
     legend = FALSE, col = c("grey70", "red3"), opacity = 1,
     plotlib = plotlib
   )
-
 }
 
 #' @export
@@ -996,8 +985,6 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
       stop("FATAL:: invalid level=", level)
     }
     F <- res$fc[, contrast, drop = FALSE]
-
-
   }
   dim(F)
 
@@ -1044,7 +1031,6 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
     hilight1 <- hilight
     if (is.null(hilight)) {
       hilight1 <- names(sort(-abs(f1)))
-
     }
     hilight1 <- Matrix::head(hilight1, ntop) ## label
     opacity <- ifelse(length(hilight1) > 0, 0.66, 1)
@@ -1273,7 +1259,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
         x = "xgroup",
         y = "gx",
         grouped = TRUE,
-        fillcolor = grp.klr1, 
+        fillcolor = grp.klr1,
         title = main,
         yaxistitle = ylab,
         xaxistitle = xlab,
@@ -1365,7 +1351,6 @@ pgx.plotOmicsNetwork <- function(pgx, gene = NULL, reduced = NULL, levels = c("g
 
   ## ------------------ highlight selection with labels
   if (!is.null(hilight) && length(hilight)) {
-
     sel <- hilight
 
     mm <- igraph::V(gr)$name
@@ -1572,11 +1557,9 @@ pgx.plotPhenotypeMatrix <- function(annot) {
   col_annot_height <- 11
   plt <- plt %>%
     iheatmapr::add_col_annotation(
-
       annotation = annotF[, ],
       size = col_annot_height,
       buffer = 0.005, side = "bottom",
-
       colors = colors0
     )
   colcex <- 1
@@ -1622,7 +1605,7 @@ pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht = 5, cluster.samples = TRUE
   for (i in 1:length(npar)) {
     prm <- colnames(annot.df)[i]
     klrs <- rev(grey.colors(npar[i], start = 0.4, end = 0.85)) ## continous scale
-    if (npar[i] == 1) klrs <- "#d8d8d8" 
+    if (npar[i] == 1) klrs <- "#d8d8d8"
     if (npar[i] > 3 && !isnum[i]) klrs <- rep(RColorBrewer::brewer.pal(8, "Set2"), 99)[1:npar[i]]
 
 
@@ -1635,9 +1618,8 @@ pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht = 5, cluster.samples = TRUE
 
   ha <- ComplexHeatmap::HeatmapAnnotation(
     df = annot.df,
-
     col = ann.colors,
-    na_col = "#3b4252", 
+    na_col = "#3b4252",
     simple_anno_size = grid::unit(annot.ht, "mm"), ## BioC 3.8!!
     show_legend = show.legend
   )
@@ -1887,7 +1869,7 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
       ## -------- black points of (geneset genes)
       x = ~ df$x[jj],
       y = ~ df$y[jj],
-      type = "scatter", 
+      type = "scatter",
       mode = "markers",
       marker = list(
         color = "#444444",
@@ -2361,7 +2343,6 @@ pgx.violinPlot <- function(x, y, group = NULL, xlab = "", ylab = "",
       plotly::plot_ly(
         x = ~y,
         y = ~x,
-
         type = "violin",
         box = list(
           visible = TRUE
@@ -2476,8 +2457,8 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     nz <- length(levels(z1))
     if (is.null(col) && nz > 2) {
       col1 <- c(
-        RColorBrewer::brewer.pal(8, "Set1"), 
-        RColorBrewer::brewer.pal(8, "Set2"), 
+        RColorBrewer::brewer.pal(8, "Set1"),
+        RColorBrewer::brewer.pal(8, "Set2"),
         RColorBrewer::brewer.pal(12, "Set3")
       ) # omics_pal_d("dark")(8))
     } else if (is.null(col) && nz == 2) {
@@ -2539,14 +2520,11 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
 
   ## Plot continous variable
   if (type == "numeric") {
-
     z <- var
 
     if (is.null(zlim)) {
       ## global zlim
       zlim <- range(z, na.rm = TRUE)
-
-
     }
 
     if (zsym) {
@@ -2773,10 +2751,9 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     if (!is.null(col)) {
       col1 <- col
     } else if (nz == 2) {
-
       col1 <- c("#eeeeee", "#f23451")
     } else if (nz == 1) {
-      col1 <- "#3b4252" 
+      col1 <- "#3b4252"
     } else {
       col1 <- c(
         RColorBrewer::brewer.pal(8, "Set1"),
@@ -2786,7 +2763,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     }
     col1 <- Matrix::head(rep(col1, 99), nz)
     pt.col <- col1[z1]
-    pt.col[is.na(pt.col)] <- "#d8d8d8" 
+    pt.col[is.na(pt.col)] <- "#d8d8d8"
     if (opacity < 1) {
       pt.col <- add_opacity(pt.col, opacity**0.33)
       col1 <- add_opacity(col1, opacity**0.33)
@@ -2802,7 +2779,6 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
 
     df <- data.frame(
       x = pos[, 1], y = pos[, 2], name = rownames(pos),
-
       text = tooltip, label = label1
     )
     jj <- order(-table(pt.col)[pt.col]) ## plot less frequent points last...
@@ -2858,7 +2834,6 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
 
     nlev <- length(levels(z1))
     if (legend && nlev <= 10) {
-
       plt <- plt +
         ggplot2::theme(
           legend.title = ggplot2::element_blank(),
@@ -2958,7 +2933,6 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     if (is.null(hilight.col)) hilight.col <- "transparent"
     plt <- plt +
       ggplot2::geom_point(
-
         data = df[sel, ],
         mapping = ggplot2::aes(x, y),
         size = 2.0 * hilight.cex,
@@ -3153,7 +3127,6 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     cpal <- Matrix::head(rep(cpal, 99), nz)
 
     if (opacity < 1) {
-
       cpal <- add_opacity(cpal, opacity**0.33)
     }
 
@@ -3217,7 +3190,6 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   ## plt <- plotly::plot_ly(df,
   plt <- plotly::plot_ly(
     source = source,
-
     showlegend = FALSE
   )
 
@@ -3228,7 +3200,6 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
       plotly::add_markers(
         data = df[jj, , drop = FALSE],
         x = ~x, y = ~y,
-
         colors = cpal,
         text = ~text,
         hoverinfo = hoverinfo,
@@ -3282,7 +3253,6 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
         mode = "markers", type = "scattergl", #
         text = ~text,
         hoverinfo = hoverinfo,
-
         marker = list(
           color = col1,
           size = 5 * hilight.cex,
@@ -3304,7 +3274,6 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
         x = ~x,
         y = ~y,
         text = ~label,
-
         yanchor = "bottom",
         xanchor = "center", ## left,center,right
         showarrow = FALSE,
@@ -3385,7 +3354,6 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
         shapes = list(
           list(
             type = "rect",
-
             line = list(
               color = "#666",
               width = 0.1
@@ -3475,7 +3443,6 @@ pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, cex =
       col_var = z, #
       xlab = xlab, ylab = ylab,
       point_size = 32 * cex,
-
       legend_width = 70,
       col_lab = "value"
     )
@@ -3484,7 +3451,6 @@ pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, cex =
       data = df, x = x, y = y, #
       xlab = xlab, ylab = ylab,
       point_size = 32 * cex,
-
       col_lab = "value"
     )
   }
@@ -3573,7 +3539,6 @@ darkmode <- function(p, dim = 2) {
     paper_bgcolor = "rgb(10,20,40)",
     xaxis = axis.par,
     yaxis = axis.par,
-
     title = font.par
   )
   if (dim == 3) {
@@ -4057,7 +4022,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
     x = xtips[colnames(x1)],
     y = ytips[rownames(x1)],
     tooltip = tooltip,
-
     layout = list(margin = mar)
   )
 
@@ -4119,7 +4083,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
           x = xtips[colnames(x1)],
           y = ytips[rownames(x1)],
           tooltip = tooltip,
-
           size = sizes[i],
           buffer = 0.007 * ex
         )
@@ -4166,7 +4129,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
     gnames <- gsub("[&].*[;]", "", gnames) ## HTML special garbage...
     gnames <- gsub("^.*:", "", gnames) ## strip prefix
     gnames <- shortstring(gnames, 25) ## shorten
-    gnames <- sub("   ", "-", gnames) 
+    gnames <- sub("   ", "-", gnames)
 
 
     maxlen <- max(sapply(gnames, nchar))
@@ -4190,9 +4153,9 @@ pgx.boxplot.PLOTLY <- function(
     x = NULL,
     y = NULL,
     title = NULL,
-    color = "#3181de", 
-    fillcolor = "#2fb5e3", 
-    linecolor = "#3181de", 
+    color = "#3181de",
+    fillcolor = "#2fb5e3",
+    linecolor = "#3181de",
     hoverinfo = "y",
     hoverformat = ".2f",
     yaxistitle = FALSE,
@@ -4229,9 +4192,9 @@ pgx.barplot.PLOTLY <- function(
     x = NULL,
     y = NULL,
     title = NULL,
-    color = "#3181de", 
-    fillcolor = "#2fb5e3", 
-    linecolor = "#3181de", 
+    color = "#3181de",
+    fillcolor = "#2fb5e3",
+    linecolor = "#3181de",
     titlecolor = "#1f77b4",
     hoverinfo = "y",
     hoverformat = ".2f",
@@ -4240,7 +4203,6 @@ pgx.barplot.PLOTLY <- function(
     xlen = NULL,
     yrange = NULL,
     font_family = "Lato",
-    
     margin = list(l = 0, r = 0, b = 0, t = 0),
     grouped = TRUE, # true will calculate mean +/- (sd) across groups
     annotations = NULL) {

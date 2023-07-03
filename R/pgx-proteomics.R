@@ -34,7 +34,6 @@ prot.readProteinGroups <- function(file, meta = NULL, sep = "\t", collapse.gene 
   D$is.contaminant <- (rowSums(D[, contaminant.cols, drop = FALSE] == "+", na.rm = TRUE) >= 1)
   table(D$is.contaminant)
   if (filter.contaminants) {
-
     D <- D[which(!D$is.contaminant), ]
   }
   dim(D)
@@ -298,7 +297,6 @@ prot.normalizeCounts <- function(counts, scale = 1e6, scaling = "by.column",
   ## choose quantile or median normalization (on not-missing values)
   ## ------------------------------------------------------------
   if (qnormalize) {
-
     jj <- sample(ncol(X), 10)
     X <- limma::normalizeQuantiles(X)
 
@@ -316,8 +314,6 @@ prot.normalizeCounts <- function(counts, scale = 1e6, scaling = "by.column",
 #' @export
 prot.testTwoGroups <- function(X, group1, group2, method = "limma",
                                labels = NULL, gene = NULL) {
-
-
   out1 <- NULL ## important to avoid old results
   p1 <- p2 <- p3 <- NULL ## just for testing
 
@@ -548,11 +544,10 @@ prot.medianImpute <- function(X, groups) {
     exp(median(log(x)))
   }
   medianImputeZERO <- function(x, y) {
-
     b <- tapply(x, y, function(a) {
       a[a == 0] <- logmedian(a)
       a
-    }) 
+    })
     names(b) <- NULL
     unlist(b)[names(x)]
   }
@@ -786,8 +781,6 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
 
 #' @export
 silac.ttest <- function(X, group1, group2, method = "limma") {
-
-
   out1 <- NULL ## important to avoid old results
   p1 <- p2 <- p3 <- NULL ## just for testing
   if (method == "geiger") {
@@ -917,11 +910,9 @@ fit.weibull2 <- function(x, y) {
   list(x = xfit, y = yfit, t50 = t50)
 }
 
-#;samples=NULL;protein=p
+# ;samples=NULL;protein=p
 #' @export
 silac.fitWeibull <- function(obj, protein, samples = NULL, samples2 = NULL) {
-
-
   if (!is.null(samples) && class(samples[1]) == "character" &&
     samples[1] %in% names(obj$groups)) {
     samples <- obj$groups[[samples]]
@@ -997,7 +988,7 @@ silac.plotProteins <- function(obj, proteins, samples = NULL) {
   stripchart(list(PL[, 1], PL[, 2], PL[, 3], PL[, 4]), vertical = T, add = T, pch = 1, method = "jitter", cex = 1.5)
 }
 
-#;samples="NaiveRest_6h";main=NULL;minq=3
+# ;samples="NaiveRest_6h";main=NULL;minq=3
 #' @export
 silac.plotDistribution <- function(obj, samples, minq = 3, main = NULL) {
   if (!is.null(samples) && class(samples[1]) == "character" &&

@@ -913,5 +913,4 @@ seq_limma <- function(countdata, y, method = "edgeR") {
   colnames(xmean) <- paste0("mean.", unique(y))
   Matrix::head(xmean)
   xmean <- cbind(mean = rowMeans(xmean), xmean)
-
 }

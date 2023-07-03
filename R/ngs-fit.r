@@ -697,7 +697,7 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
   method <- method[1]
 
   if (is.null(X)) X <- edgeR::cpm(dge$counts, log = TRUE)
-  dge <- edgeR::estimateDisp(dge, design = NULL, robust = robust) 
+  dge <- edgeR::estimateDisp(dge, design = NULL, robust = robust)
   dge.disp <- edgeR::estimateDisp(dge$counts, design = NULL, robust = robust)
   dge$common.dispersion <- dge.disp$common.dispersion
   dge$trended.dispersion <- dge.disp$trended.dispersion

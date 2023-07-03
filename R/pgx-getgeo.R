@@ -805,7 +805,7 @@ eset.parsePhenoFromTitle <- function(title, split = NULL) {
 
   tt <- as.character(sapply(as.character(title), function(s) trimws(s)))
   tt <- sapply(tt, function(s) gsub("[ ]*hours|[ ]*hour|[ ]*hrs|[ ]*hr", "h", s)) ## hours
-  tt <- sapply(tt, function(s) gsub("([0-9]*)[ _]h", "\\1h", s)) 
+  tt <- sapply(tt, function(s) gsub("([0-9]*)[ _]h", "\\1h", s))
   tt <- trimsame(tt, split = split, ends = TRUE)
   tt <- gsub(paste0(split, split, split), split, tt)
   tt <- gsub(paste0(split, split), split, tt)

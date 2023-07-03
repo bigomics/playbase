@@ -690,7 +690,6 @@ is.POSvsNEG <- function(pgx) {
       grp2.sign
       if (!is.nan(grp1.sign) && !is.nan(grp2.sign)) {
         is.pn[i] <- (grp1.sign > grp2.sign)
-
       }
     }
     is.pn
