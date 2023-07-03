@@ -13,7 +13,6 @@ labels2rainbow <- function(net) {
   col1 <- labels2colors(net$colors)
   col.rnk <- rank(tapply(1:n, col1[ii], mean))
   new.col <- rainbow(nc)[col.rnk]
-  #
   names(new.col) <- names(col.rnk)
   new.col["grey"] <- "#AAAAAA"
   new.col
@@ -56,7 +55,6 @@ pgx.wgcna <- function(
   datTraits <- datTraits[, !isdate, drop = FALSE]
 
   ## Expand multi-class discrete phenotypes into binary vectors
-  #
   tr.class <- sapply(type.convert(datTraits), class)
   sel1 <- which(tr.class %in% c("factor", "character"))
   sel2 <- which(tr.class %in% c("integer", "numeric"))
@@ -76,32 +74,19 @@ pgx.wgcna <- function(
   me.colors <- color1[!duplicated(color1)]
   names(me.colors) <- paste0("ME", names(me.colors))
   me.colors <- me.colors[names(me.genes)]
-  
-
-  
-  
 
   X1 <- t(datExpr)
   X1 <- t(scale(datExpr))
-  #
-  #
   dissTOM <- 1 - WGCNA::TOMsimilarityFromExpr(datExpr, power = power)
   rownames(dissTOM) <- colnames(dissTOM) <- colnames(datExpr)
   clust <- playbase::pgx.clusterBigMatrix(dissTOM, methods = c("umap", "tsne", "pca"), dims = c(2))
-  #
-  #
   names(clust)
   if ("cluster.genes" %in% names(pgx)) {
     clust[["umap2d"]] <- pgx$cluster.genes$pos[["umap2d"]][colnames(datExpr), ]
   }
-  
-
-  
-  
 
   gmt <- getGSETS_playbase(pattern = "HALLMARK|GOBP|^C[1-9]")
   gse <- NULL
-  #
   bg <- toupper(rownames(pgx$X))
   i <- 1
   for (i in 1:length(me.genes)) {
@@ -116,8 +101,6 @@ pgx.wgcna <- function(
     if (i > 1) gse <- rbind(gse, rr)
   }
   rownames(gse) <- NULL
-
-  
 
   ## construct results object
   return(

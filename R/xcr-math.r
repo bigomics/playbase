@@ -3,7 +3,7 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-## matlist=list(S1,S2);weights=1
+
 #' @export
 matrix.mean.SAVE <- function(matlist, weights = 1) {
   matx <- lapply(matlist, function(x) as.vector(x))
@@ -60,7 +60,7 @@ matrix.prod <- function(..., na.value = 1) {
   return(xprod)
 }
 
-## na.fill = 1
+
 sparse <- NULL
 #' @export
 matrix.prodSPARSE <- function(..., na.fill = 1) {
@@ -196,7 +196,7 @@ cosine_similarity <- function(X, Y = NULL, method = NULL) {
   }
 }
 
-## th=0.01;block=100;k=100;ties.method="random"
+
 #' @export
 tcosine.sparse <- function(X, k = 100, th = 0.01, block = 100, ties.method = "random",
                            gpu = FALSE) {
@@ -210,7 +210,7 @@ tcosine.sparse <- function(X, k = 100, th = 0.01, block = 100, ties.method = "ra
     j0 <- (i - 1) * block + 1
     j1 <- min((i - 1) * block + block, nrow(X))
     jj <- j0:j1
-    ## rho = tcosine_similarity( X[jj,], X[,] )
+
     if (gpu == TRUE) {
       rho <- gpuTcrossprod(X[jj, ], X[, ])
     } else {
@@ -250,7 +250,7 @@ tcosine.sparse <- function(X, k = 100, th = 0.01, block = 100, ties.method = "ra
 }
 
 
-## X=G;blocksize=1000;th=0.05;k=500;mc.cores=10;blocksize=1000
+
 #' @export
 tcosine.sparse.paral <- function(X, th = 0.01, k = 100, mc.cores = 4, blocksize = 100,
                                  verbose = 1) {
@@ -279,7 +279,7 @@ tcosine.sparse.paral <- function(X, th = 0.01, k = 100, mc.cores = 4, blocksize 
     }, mc.cores = mc.cores)
     sim[down:up] <- s
   }
-  ## sim1 <- data.table::rbindlist(sim)
+
   sim1 <- do.call(rbind, sim)
   dim(sim1)
   S <- Matrix::sparseMatrix(i = sim1[, 1], j = sim1[, 2], x = sim1[, 3])
@@ -304,7 +304,7 @@ cosine_similarity.EXACT <- function(X) {
       M[i, j] <- M[j, i] <- vec.cos(X[, i], X[, j])
     }
   }
-  ## M[which(is.na(M))] <- NA
+
   M
 }
 
@@ -324,7 +324,7 @@ jaccard_similarity <- function(m) {
 length_similarityEXACT <- function(x, p = 1) {
   D <- 1.0 * abs(outer(x, x, FUN = "-"))
   L <- 1.0 * abs(outer(x, x, FUN = "pmax"))
-  ## R = (1 - D / L)**p
+
   R <- exp(-p * (D / L))
   return(R)
 }
@@ -346,7 +346,7 @@ length_encode <- function(x, r = 0.1, a = 0.25) {
   minlen <- min(logx, na.rm = TRUE)
   c(minlen, maxlen)
   dx <- log(1 + a * r)
-  ## dx = 0.05  ## 5% intervals
+  ## dx = 0.05  
   brks <- seq(minlen - dx, maxlen + dx, dx)
   ix <- 2 + as.integer(cut(logx, breaks = brks))
   endx <- max(ix, na.rm = TRUE) + 2
@@ -404,7 +404,7 @@ clustering.score <- function(xy, labels, kinter = NULL) {
   intra.dist
 
   diag(inter.dist) <- NA
-  ## kinter=1
+
   if (!is.null(kinter)) {
     d1 <- inter.dist * NA
     for (i in 1:nrow(inter.dist)) {
@@ -426,7 +426,7 @@ clustering.score <- function(xy, labels, kinter = NULL) {
 }
 
 
-## pred.var="antigen.epitope";K=5;ntest=1000;x.var=c("cdr3.alpha","cdr3.beta")
+
 #' @export
 knn.predict <- function(data, pred.var, x.var = NULL, K, samples = NULL, ntest = 0.33) {
   qvars <- names(data$Q)
@@ -457,7 +457,7 @@ knn.predict <- function(data, pred.var, x.var = NULL, K, samples = NULL, ntest =
 
   ## distance calculations for test-set (superfast!)
   pos <- dist.xy <- NULL
-  ## system.time( dist.xy <- 1 - qlcMatrix::corSparse( t(X[j1,]), t(X[j0,]) ) )
+
   if (sum(is.na(X)) > 0) {
     system.time(dist.xy <- 1 - cosine_similarity(t(X[j1, ]), t(X[j0, ])))
   } else {
@@ -493,7 +493,7 @@ knn.predict <- function(data, pred.var, x.var = NULL, K, samples = NULL, ntest =
   return(res)
 }
 
-## align=TRUE
+
 #' @export
 tagged.hamming <- function(aa, bb, align = TRUE) {
   aligned.dist <- function(seq1, seq2) {
@@ -507,7 +507,7 @@ tagged.hamming <- function(aa, bb, align = TRUE) {
     n <- max(length(s1), length(t1))
     s1 <- c(s1, rep(" ", n))[1:n]
     t1 <- c(t1, rep(" ", n))[1:n]
-    ## sum(s1!=t1) / n
+
     sum(s1 != t1)
   }
   tag.hamming0 <- function(a, b) {
@@ -616,8 +616,6 @@ sparse.corDEPRECATED <- function(a, b = NULL) {
   n <- nrow(a)
   aMeans <- Matrix::colMeans(a, na.rm = TRUE)
   bMeans <- Matrix::colMeans(b, na.rm = TRUE)
-  ## aSD <- apply(a,2,sd,na.rm=TRUE)
-  ## bSD <- apply(b,2,sd,na.rm=TRUE)
   aSD <- ((Matrix::colSums(a**2, na.rm = TRUE) - n * aMeans**2) / (n - 1))**0.5
   bSD <- ((Matrix::colSums(b**2, na.rm = TRUE) - n * bMeans**2) / (n - 1))**0.5
   mm <- tcrossprod(aMeans, bMeans)
@@ -656,7 +654,7 @@ mat.downsample <- function(mat, m, n = -1, FUN = c("mean", "max"),
     col.mx <- colMeans(x, na.rm = TRUE)
     col.sd <- apply(x, 2, sd, na.rm = TRUE)
     col.mx0 <- sapply(jj, function(i) mean(col.mx[i:min(nn, i + nd - 1)], na.rm = TRUE))
-    ## col.sd0 <- sapply(jj, function(i) max(col.sd[i:min(nn,i+nd-1)],na.rm=TRUE))
+    #
     dx <- scale(x, scale = FALSE) ## just mean center
     ii <- lapply(jj, function(i) {
       i:min(nn, i + nd - 1)
@@ -682,7 +680,7 @@ mat.downsample <- function(mat, m, n = -1, FUN = c("mean", "max"),
   if (NCOL(mat) == 0 && n > 0) {
     return(mat)
   }
-  ## fun="max"
+  #
   FUN <- FUN[1]
   if (NCOL(mat) == 1 && class(mat) != "matrix") {
     dx <- matrix(mat, ncol = 1)

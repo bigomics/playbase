@@ -1,20 +1,20 @@
-
- This file is part of the Omics Playground project.
- Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
-
+##
+## This file is part of the Omics Playground project.
+## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+##
 
 #' @export
 pgx.initialize <- function(pgx) {
-   ---------------------------------------------------------------------
-   This function must be called after creation of a PGX object
-   and include some cleaning up and updating some internal
-   structures to keep compatibility with new/old versions.
-   ---------------------------------------------------------------------
+  ## ---------------------------------------------------------------------
+  ## This function must be called after creation of a PGX object
+  ## and include some cleaning up and updating some internal
+  ## structures to keep compatibility with new/old versions.
+  ## ---------------------------------------------------------------------
   message("[pgx.initialize] initializing pgx object")
 
-   ----------------- check object
+  ## ----------------- check object
   obj.needed <- c(
-    "genes",  "deconv","collections", "families", "counts",
+    "genes", ## "deconv","collections", "families", "counts",
     "GMT", "gset.meta", "gsetX", "gx.meta", "model.parameters",
     "samples", "tsne2d", "X"
   )
@@ -23,14 +23,12 @@ pgx.initialize <- function(pgx) {
     obj.missing <- setdiff(obj.needed, names(pgx))
     msg <- paste("invalid pgx object. missing parts in object: ", obj.missing)
     message("[pgx-init.R] *** WARNING ***", msg)
-    #
     return(NULL)
   }
 
-   for COMPATIBILITY: if no counts, estimate from X
+  ## for COMPATIBILITY: if no counts, estimate from X
   if (is.null(pgx$counts)) {
     cat("WARNING:: no counts table. estimating from X\n")
-     pgx$counts <- (2**pgx$X-1) 
     pgx$counts <- pmax(2**pgx$X - 1, 0)
     k <- grep("lib.size|libsize", colnames(pgx$samples))[1]
     if (length(k) > 0) {
@@ -42,9 +40,9 @@ pgx.initialize <- function(pgx) {
   pgx$counts <- as.matrix(pgx$counts)
   if (!is.null(pgx$X)) pgx$X <- as.matrix(pgx$X)
 
-   ----------------------------------------------------------------
-   model parameters
-   ----------------------------------------------------------------
+  ## ----------------------------------------------------------------
+  ## model parameters
+  ## ----------------------------------------------------------------
   has.design <- !is.null(pgx$model.parameters$design)
   has.expmatrix <- !is.null(pgx$model.parameters$exp.matrix)
   if (!"group" %in% names(pgx$model.parameters) && has.design) {
@@ -63,11 +61,11 @@ pgx.initialize <- function(pgx) {
     stop("[pgx.initialize] FATAL: group is null!!!")
   }
 
-   ----------------------------------------------------------------
-   Convert to labeled contrast matrix (new style)
-   ----------------------------------------------------------------
+  ## ----------------------------------------------------------------
+  ## Convert to labeled contrast matrix (new style)
+  ## ----------------------------------------------------------------
 
-   don't add if not exists for now...
+  ## don't add if not exists for now...
   if (FALSE && !("contrasts" %in% names(pgx))) {
     design <- pgx$model.parameters$design
     expmat <- pgx$model.parameters$exp.matrix
@@ -87,7 +85,7 @@ pgx.initialize <- function(pgx) {
     contr.mat <- pgx$model.parameters$contr.matrix
     new.contr <- pgx$contrasts
     is.numlev <- all(unique(new.contr) %in% c(NA, "", -1, 0, 1))
-    is.numlev <- is.numlev && (-1 %in% new.contr)  must have -1 !!
+    is.numlev <- is.numlev && (-1 %in% new.contr) ## must have -1 !!
     if (is.numlev) {
       new.contr <- contrastAsLabels(new.contr)
     }
@@ -102,12 +100,11 @@ pgx.initialize <- function(pgx) {
   }
 
 
-   ----------------------------------------------------------------
-   Tidy up phenotype matrix (important!!!): get numbers/integers
-   into numeric, categorical into factors....
-   ----------------------------------------------------------------
-   pgx$samples <- tidy.dataframe(pgx$samples)   warning!! this converts all to CHR!!
-  pgx$samples <- type.convert(pgx$samples, as.is = TRUE)  autoconvert to datatypes
+  ## ----------------------------------------------------------------
+  ## Tidy up phenotype matrix (important!!!): get numbers/integers
+  ## into numeric, categorical into factors....
+  ## ----------------------------------------------------------------
+  pgx$samples <- type.convert(pgx$samples, as.is = TRUE) ## autoconvert to datatypes
   pgx$samples <- pgx$samples[, which(colMeans(is.na(pgx$samples)) < 1), drop = FALSE]
 
   is.num <- sapply(pgx$samples, class) %in% c("numeric", "integer")
@@ -118,7 +115,7 @@ pgx.initialize <- function(pgx) {
     for (i in which(is.numfac)) pgx$samples[, i] <- as.character(pgx$samples[, i])
   }
 
-   clean up: pgx$Y is a cleaned up pgx$samples
+  ## clean up: pgx$Y is a cleaned up pgx$samples
   kk <- grep("batch|lib.size|norm.factor|repl|donor|clone|sample|barcode",
     colnames(pgx$samples),
     invert = TRUE, value = TRUE
@@ -128,41 +125,39 @@ pgx.initialize <- function(pgx) {
     invert = TRUE, value = TRUE
   )
   pgx$Y <- pgx$samples[colnames(pgx$X), kk, drop = FALSE]
-  pgx$Y <- type.convert(pgx$Y, as.is = TRUE)  autoconvert to datatypes
+  pgx$Y <- type.convert(pgx$Y, as.is = TRUE) ## autoconvert to datatypes
 
-   *****************************************************************
-   ******************NEED RETHINK***********************************
-   *****************************************************************
-   ONLY categorical variables for the moment!!!
+  ## *****************************************************************
+  ## ******************NEED RETHINK***********************************
+  ## *****************************************************************
+  ## ONLY categorical variables for the moment!!!
   ny1 <- nrow(pgx$Y) - 1
-  k1 <- pgx.getCategoricalPhenotypes(pgx$Y, min.ncat = 2, max.ncat = ny1)  exclude
-  k2 <- grep("OS.survival|cluster|condition|group", colnames(pgx$Y), value = TRUE)  must include
-   kk = sort(unique(c("group",k1,k2)))
+  k1 <- pgx.getCategoricalPhenotypes(pgx$Y, min.ncat = 2, max.ncat = ny1) ## exclude
+  k2 <- grep("OS.survival|cluster|condition|group", colnames(pgx$Y), value = TRUE) ## must include
   kk <- sort(unique(c(k1, k2)))
   pgx$Y <- pgx$Y[, kk, drop = FALSE]
   colnames(pgx$Y)
-   pgx$samples <- pgx$Y     REALLY? !!!!!!!!!!!!!!!!!!!!
 
-   ----------------------------------------------------------------
-   Tidy up genes matrix
-   ----------------------------------------------------------------
+  ## ----------------------------------------------------------------
+  ## Tidy up genes matrix
+  ## ----------------------------------------------------------------
   pgx$genes <- pgx$genes[rownames(pgx$counts), , drop = FALSE]
   pgx$genes$gene_name <- as.character(pgx$genes$gene_name)
   pgx$genes$gene_title <- as.character(pgx$genes$gene_title)
 
-   Add chromosome annotation if not
+  ## Add chromosome annotation if not
   if (!("chr" %in% names(pgx$genes))) {
-    symbol <- sapply(as.list(org.Hs.eg.db::org.Hs.egSYMBOL), "[", 1)  some have multiple chroms..
-    CHR <- sapply(as.list(org.Hs.eg.db::org.Hs.egCHR), "[", 1)  some have multiple chroms..
-    MAP <- sapply(as.list(org.Hs.eg.db::org.Hs.egMAP), "[", 1)  some have multiple chroms..
+    symbol <- sapply(as.list(org.Hs.eg.db::org.Hs.egSYMBOL), "[", 1) ## some have multiple chroms..
+    CHR <- sapply(as.list(org.Hs.eg.db::org.Hs.egCHR), "[", 1) ## some have multiple chroms..
+    MAP <- sapply(as.list(org.Hs.eg.db::org.Hs.egMAP), "[", 1) ## some have multiple chroms..
     names(CHR) <- names(MAP) <- symbol
     pgx$genes$chr <- CHR[pgx$genes$gene_name]
     pgx$genes$map <- MAP[pgx$genes$gene_name]
   }
 
-   -----------------------------------------------------------------------------
-   intersect and filter gene families (convert species to human gene sets)
-   -----------------------------------------------------------------------------
+  ## -----------------------------------------------------------------------------
+  ## intersect and filter gene families (convert species to human gene sets)
+  ## -----------------------------------------------------------------------------
   if ("hgnc_symbol" %in% colnames(pgx$genes)) {
     hgenes <- toupper(pgx$genes$hgnc_symbol)
     genes <- pgx$genes$gene_name
@@ -176,11 +171,10 @@ pgx.initialize <- function(pgx) {
 
   all.genes <- sort(rownames(pgx$genes))
   pgx$families[["<all>"]] <- all.genes
-   rownames(pgx$GMT) <- toupper(rownames(pgx$GMT))  everything to human...
 
-   -----------------------------------------------------------------------------
-   Recompute geneset meta.fx as average fold-change of genes
-   -----------------------------------------------------------------------------
+  ## -----------------------------------------------------------------------------
+  ## Recompute geneset meta.fx as average fold-change of genes
+  ## -----------------------------------------------------------------------------
   message("[pgx.initialize] Recomputing geneset fold-changes")
   nc <- length(pgx$gset.meta$meta)
   i <- 1
@@ -194,27 +188,27 @@ pgx.initialize <- function(pgx) {
     pgx$gset.meta$meta[[i]]$meta.fx <- mx
   }
 
-   -----------------------------------------------------------------------------
-   Recode survival
-   -----------------------------------------------------------------------------
+  ## -----------------------------------------------------------------------------
+  ## Recode survival
+  ## -----------------------------------------------------------------------------
   pheno <- colnames(pgx$Y)
-   DLBCL coding
+  ## DLBCL coding
   if (("OS.years" %in% pheno && "OS.status" %in% pheno)) {
     message("found OS survival data")
     event <- (pgx$Y$OS.status %in% c("DECEASED", "DEAD", "1", "yes", "YES", "dead"))
     pgx$Y$OS.survival <- ifelse(event, pgx$Y$OS.years, -pgx$Y$OS.years)
   }
 
-   cBioportal coding
+  ## cBioportal coding
   if (("OS_MONTHS" %in% pheno && "OS_STATUS" %in% pheno)) {
     message("[pgx.initialize] found OS survival data\n")
     event <- (pgx$Y$OS_STATUS %in% c("DECEASED", "DEAD", "1", "yes", "YES", "dead"))
     pgx$Y$OS.survival <- ifelse(event, pgx$Y$OS_MONTHS, -pgx$Y$OS_MONTHS)
   }
 
-   -----------------------------------------------------------------------------
-   Check if clustering is done
-   -----------------------------------------------------------------------------
+  ## -----------------------------------------------------------------------------
+  ## Check if clustering is done
+  ## -----------------------------------------------------------------------------
   message("[pgx.initialize] Check if clustering is done...")
   if (!"cluster.genes" %in% names(pgx)) {
     message("[pgx.initialize] clustering genes...")
@@ -227,18 +221,18 @@ pgx.initialize <- function(pgx) {
     pgx$cluster.gsets$pos <- lapply(pgx$cluster.gsets$pos, pos.compact)
   }
 
-   -----------------------------------------------------------------------------
-   Remove redundant???
-   -----------------------------------------------------------------------------
+  ## -----------------------------------------------------------------------------
+  ## Remove redundant???
+  ## -----------------------------------------------------------------------------
   message("[pgx.initialize] Remove redundant phenotypes...")
   if (".gender" %in% colnames(pgx$Y) &&
     any(c("gender", "sex") %in% tolower(colnames(pgx$Y)))) {
     pgx$Y$.gender <- NULL
   }
 
-   -----------------------------------------------------------------------------
-   Keep compatible with OLD formats
-   -----------------------------------------------------------------------------
+  ## -----------------------------------------------------------------------------
+  ## Keep compatible with OLD formats
+  ## -----------------------------------------------------------------------------
   message("[pgx.initialize] Keep compatible OLD formats...")
   if (any(c("mono", "combo") %in% names(pgx$drugs))) {
     dd <- pgx$drugs[["mono"]]
@@ -262,9 +256,9 @@ pgx.initialize <- function(pgx) {
     pgx$drugs$combo <- NULL
   }
 
-   -----------------------------------------------------------------------------
-   remove large deprecated outputs from objects
-   -----------------------------------------------------------------------------
+  ## -----------------------------------------------------------------------------
+  ## remove large deprecated outputs from objects
+  ## -----------------------------------------------------------------------------
   message("[pgx.initialize] Removing deprecated objects...")
   pgx$gx.meta$outputs <- NULL
   pgx$gset.meta$outputs <- NULL

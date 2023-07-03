@@ -10,7 +10,6 @@ NCORE <- function() {
 #' @export
 pmid.getGeneContext <- function(gene, keyword) {
   gene1 <- c(gene, sub("([0-9])", "-\\1", gene))
-  ## gene1 <- paste0(paste0("^",gene1),"|[\\(, ]",gene1,"[\\)-,\\( ]|",gene1,"$")
   gene1 <- paste0("^", gene1, "$|^", gene1, "[-]")
   gene1 <- paste(gene1, collapse = "|")
   gene1
@@ -81,7 +80,6 @@ pmid.getPubMedContext <- function(gene, context) {
   gene1
   gene1 <- paste(gene1, collapse = "|")
   gene1
-  ## gname <- get(get("Hmox1", org.Mm.egALIAS2EG),org.Mm.egGENENAME)
   gname <- get(get(toupper(gene), org.Hs.eg.db::org.Hs.egALIAS2EG), org.Hs.eg.db::org.Hs.egGENENAME)
   gene2 <- paste0(gene1, "|", gsub("[ -]", ".", gname))
   extractRIF <- function(a) {
@@ -147,8 +145,6 @@ pmid.buildGraph <- function(P) {
   P <- P[which(Matrix::rowSums(P) <= 10), ]
   P <- P[which(Matrix::rowSums(P) >= 2), ]
   P <- P[, which(Matrix::colSums(P) > 0)]
-  ## P <- Matrix::head(P,4000)
-  ## P <- P[sample(nrow(P),5000),]
   P[1:10, 1:10]
   dim(P)
 
@@ -163,13 +159,10 @@ pmid.buildGraph <- function(P) {
   )
   igraph::V(gr)$name <- rownames(M)
   gr <- igraph::subgraph.edges(gr, which(igraph::E(gr)$weight > 0))
-  ## gr
-  ## saveRDS(gr, file="PMID2SYMBOL_xgraph_01.rds")
 
   P <- P[igraph::V(gr)$name, ]
   pmids <- parallel::mclapply(igraph::V(gr)$name, function(x) gsub("PMID:", "", strsplit(x, split = ",")[[1]]))
   nref <- sapply(pmids, length)
-  ## vgenes <- apply(P[igraph::V(gr)$name,],1,function(x) paste(names(which(x!=0)),collapse=","))
   vgenes <- parallel::mclapply(1:nrow(P), function(i) names(which(P[i, ] != 0)), mc.cores = NCORE())
   vgenes2 <- unlist(sapply(vgenes, paste, collapse = ","))
   igraph::V(gr)$size <- nref
@@ -197,7 +190,6 @@ pmid.extractGene <- function(gr, gene, nmin = 3) {
   jj <- c()
   for (g in gene) {
     j1 <- which(sapply(igraph::V(gr)$genes, function(s) (gene %in% s)))
-    ## jj <- c(jj, grep(g, igraph::V(gr)$genes))
     jj <- c(jj, j1)
   }
   jj <- unique(jj)
@@ -205,7 +197,6 @@ pmid.extractGene <- function(gr, gene, nmin = 3) {
   gr1 <- igraph::induced_subgraph(gr, jj)
   if (verbose > 0) cat("annotating edges...\n")
   gr1 <- pmid.annotateEdges(gr1)
-  ## nshared <- sapply(igraph::E(gr1)$genes,length)
   nshared <- unlist(parallel::mclapply(igraph::E(gr1)$genes, length, mc.cores = NCORE()))
   ee <- which(!(nshared == 1 & sapply(igraph::E(gr1)$genes, "[", 1) %in% gene))
   gr1 <- igraph::subgraph.edges(gr1, ee, delete.vertices = TRUE)

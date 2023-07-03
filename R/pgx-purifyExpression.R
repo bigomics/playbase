@@ -16,9 +16,7 @@ pgx.purifyExpression <- function(tumorX, normalX,
     ## ----------------------------------------------------------------------
 
     pen <- rep(0, 3)
-    #
     res <- NNLM::nnlm(normalX, tumorX, alpha = pen)
-    #
     cf <- res$coefficients
     cf
     normal.frac <- (normalX %*% cf)
@@ -54,12 +52,6 @@ pgx.purifyExpression <- function(tumorX, normalX,
     ## https://cran.r-project.org/web/packages/ISOpureR/vignettes/ISOpureRGuide.pdf
     ## ----------------------------------------------------------------------
 
-    #
-
-    #
-    #
-    #
-
     ISOpureS1model <- ISOpureR::ISOpure.step1.CPE(tumorX, normalX)
     ISOpureS2model <- ISOpureR::ISOpure.step2.PPE(tumorX, normalX, ISOpureS1model)
     isopurer.alpha <- ISOpureS2model$alphapurities
@@ -76,13 +68,7 @@ pgx.purifyExpression <- function(tumorX, normalX,
     ## DeMixT (crashes often...)
     ## https://bioinformatics.mdanderson.org/main/DeMixT
     ## ----------------------------------------------------------------------
-
-    #
-
-    #
     ## ?DeMixT
-    #
-
     res <- DeMixT::DeMixT(data.Y = tumorX, data.comp1 = normalX, if.filter = FALSE)
     res$pi
 
@@ -103,13 +89,8 @@ pgx.purifyExpression <- function(tumorX, normalX,
     ## ----------------------------------------------------------------------
     ## UNDO
     ## ----------------------------------------------------------------------
-    #
-    #
 
     ## load tumor stroma mixing tissue samples
-    #
-    #
-    #
     ## two_source_deconv(
     ##    X, lowper=0.4, highper=0.1, epsilon1=0.01,
     ##    epsilon2=0.01, A, S[,1], S[,2], return=0)

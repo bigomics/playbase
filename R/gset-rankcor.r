@@ -74,7 +74,6 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
   rownames(rho1) <- colnames(gset)
   colnames(rho1) <- colnames(rnk1)
   rho1[is.nan(rho1)] <- NA ## ??
-  ##    rho1[is.nan(rho1)] <- 0  ##??
 
   ## compute p-value by permutation
   pv <- qv <- NULL
@@ -96,7 +95,7 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
       }
       S <- do.call(cbind, slist)
     }
-    ## rho2 = qlcMatrix::corSparse(S, rnk1)
+    #
     rho2 <- gset.rankcor(rnk1, S, compute.p = FALSE, use.rank = use.rank)$rho ## warning:: do not recurse!!
     t.abs.rho2 <- t(abs(rho2))
     pv <- t(apply(rho1, 1, function(x) rowMeans(t.abs.rho2 > abs(x), na.rm = TRUE)))

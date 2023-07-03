@@ -83,7 +83,6 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
   ref.detected <- (sum(is.ref) > 0 && sum(!is.ref) > 0)
   ref.detected
 
-  ## if(!is.null(ref) && sum( toupper(pheno0) %in% ref)>0 ) {
   if (ref.detected) {
     pheno.ref <- unique(pheno0[which(toupper(pheno0) %in% toupper(ref))])
     if (verbose > 0) cat("setting reference to y=", pheno.ref, "\n")
@@ -204,7 +203,6 @@ gx.limma.SAVE <- function(X, pheno, fdr = 0.05, compute.means = TRUE, lfc = 0.20
   is.ref <- (toupper(pheno0) %in% toupper(ref))
   ref.detected <- (sum(is.ref) > 0 && sum(!is.ref) > 0)
 
-  ## if(!is.null(ref) && sum( toupper(pheno0) %in% ref)>0 ) {
   if (ref.detected) {
     pheno.ref <- unique(pheno0[which(toupper(pheno0) %in% toupper(ref))])
     if (verbose > 0) cat("setting reference to y=", pheno.ref, "\n")
@@ -330,7 +328,6 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
   ref.detected <- (sum(is.ref) > 0 && sum(!is.ref) > 0)
   ref.detected
 
-  ## if(!is.null(ref) && sum( toupper(pheno0) %in% ref)>0 ) {
   if (ref.detected) {
     pheno.ref <- unique(pheno0[which(toupper(pheno0) %in% toupper(ref))])
     if (verbose > 0) cat("setting reference to y=", pheno.ref, "\n")
@@ -917,9 +914,4 @@ seq_limma <- function(countdata, y, method = "edgeR") {
   Matrix::head(xmean)
   xmean <- cbind(mean = rowMeans(xmean), xmean)
 
-  if (0) {
-    PvsV <- limma::makeContrasts(statuspregnant - statusvirgin, levels = design)
-    lrt.pVsV <- edgeR::glmLRT(fit, contrast = PvsV)
-    edgeR::topTags(lrt.pVsV)
-  }
 }

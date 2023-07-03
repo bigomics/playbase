@@ -82,7 +82,6 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
   ## ------------------------------------------------------------------
   group <- NULL
   ## if(all(rownames(contr.matrix) %in% samples$group)) {
-  ##    group <- samples$group
   ## }
   if (!is.null(design)) {
     group <- colnames(design)[max.col(design)]
@@ -240,7 +239,7 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
     ## Some methods like edgeR and Deseq2 compute some weird
     ## normalized expression matrix. We need to "correct" for
     ## those.
-    ##
+
     exp.matrix <- contr.matrix
     if (!is.null(design)) exp.matrix <- (design %*% contr.matrix)
     samplesX <- lapply(apply(exp.matrix != 0, 2, which), function(i) rownames(exp.matrix)[i])
@@ -315,7 +314,6 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
   ## --------------------------------------------------------------
   message("[ngs.fitContrastsWithAllMethods] reshape matrices...")
 
-  ## fdr = 0.25
   tests <- colnames(outputs[[1]]$p.value)
   ntest <- length(tests)
   P <- lapply(1:ntest, function(i) sapply(outputs, function(x) x$p.value[, i]))
@@ -364,21 +362,14 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
 
 
     ## !!!!!!!!!!!!!!!!!!!!!!!! NEED RETHINK !!!!!!!!!!!!!!!!!!!!!!!!
-    ## meta.p = apply(pv, 1, max, na.rm=TRUE ) ## maximum statistic
-    ## meta.p = apply(pv, 1, function(p) metap::allmetap(p, method="sumlog")$p[[1]]) ## Fisher's method
-    ## meta.p = apply(pv, 1, function(p) metap::sumlog(p)$p)
     meta.p <- apply(pv, 1, function(p) exp(mean(log(p)))) ## geometric mean
     meta.q <- p.adjust(meta.p, method = "BH")
     meta.fx <- rowMeans(fc, na.rm = TRUE)
-    ## p.meta   = apply(pv, 1, function(p) metap::allmetap(p, method="sumlog")$p[[1]])
-    ## q.meta = p.adjust(p.meta, method="BH")
-
     meta.avg <- rowMeans(mx, na.rm = TRUE)
     meta.avg0 <- rowMeans(mx0, na.rm = TRUE)
     meta.avg1 <- rowMeans(mx1, na.rm = TRUE)
 
     meta <- data.frame(fx = meta.fx, p = meta.p, q = meta.q)
-    ## avg <- data.frame(avg=meta.avg, avg0=meta.avg0, avg1=meta.avg1)
     avg <- data.frame(avg.0 = meta.avg0, avg.1 = meta.avg1)
     rownames(meta) <- rownames(logFC[[i]])
     rownames(avg) <- rownames(logFC[[i]])
@@ -405,7 +396,6 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
 ## ----------------------------------- FIT ALL CONTRASTS --------------------------------------
 ## --------------------------------------------------------------------------------------------
 
-## dge=fish1$cooked;trend=TRUE
 
 #' Title
 #'
@@ -454,8 +444,6 @@ ngs.fitContrastsWithTTEST <- function(X, contr.matrix, design, method = "welch",
 }
 
 
-## trend=TRUE;robust=TRUE
-
 #' Title
 #'
 #' @param X value
@@ -481,7 +469,7 @@ ngs.fitContrastsWithLIMMA <- function(X, contr.matrix, design, method = c("voom"
   if (!is.null(design)) {
     ## With no design (grouping) we perform LIMMA not on the
     ## entire contrast matrix but per contrast one-by-one.
-    ##
+
     message("[ngs.fitContrastsWithLIMMA] fitting LIMMA contrasts using design matrix")
     exp0 <- design %*% contr.matrix
     kk <- rownames(exp0)
@@ -508,7 +496,6 @@ ngs.fitContrastsWithLIMMA <- function(X, contr.matrix, design, method = c("voom"
       top <- limma::topTable(efit, coef = i, sort.by = "none", number = Inf, adjust.method = "BH")
       j1 <- which(exp1[, i] > 0)
       j2 <- which(exp1[, i] < 0)
-      ## if(!( length(cf)==6 || length(cf)==7)) stop("wrong coef format")
       mean1 <- rowMeans(X1[, j1, drop = FALSE], na.rm = TRUE)
       mean0 <- rowMeans(X1[, j2, drop = FALSE], na.rm = TRUE)
       top <- top[rownames(X1), ]
@@ -570,7 +557,6 @@ ngs.fitContrastsWithLIMMA <- function(X, contr.matrix, design, method = c("voom"
   return(res)
 }
 
-## method="qlf";robust=TRUE;plot=FALSE;conform.output=TRUE
 
 #' Title
 #'
@@ -631,7 +617,6 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
   dge <- edgeR::estimateDisp(dge, design = design, robust = robust)
   if (is.null(X)) X <- edgeR::cpm(counts, log = TRUE)
 
-  ## method="qlf";robust=FALSE;plot=FALSE
   if (method == "qlf") {
     fit <- edgeR::glmQLFit(dge, design, robust = robust)
   } else if (method == "lrt") {
@@ -653,15 +638,12 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
     } else {
       stop("unknown method")
     }
-    ## summary(limma::decideTests(ct))
-    ## if(plot) limma::plotMD(ct)
     top <- edgeR::topTags(ct, n = Inf, sort.by = "none")$table
     top <- data.frame(top[rownames(X), ])
 
     ## calculate means
     j1 <- which(exp.matrix[, i] > 0)
     j2 <- which(exp.matrix[, i] < 0)
-    ## if(!( length(cf)==6 || length(cf)==7)) stop("wrong coef format")
     mean1 <- rowMeans(X[, j1, drop = FALSE], na.rm = TRUE)
     mean0 <- rowMeans(X[, j2, drop = FALSE], na.rm = TRUE)
     ## logFC of edgeR is not really reliable..
@@ -692,8 +674,6 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
 }
 
 
-## method="qlf";plot=TRUE;robust=FALSE;plot=TRUE;conform.output=TRUE
-
 #' Title
 #'
 #' @param dge value
@@ -712,16 +692,13 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
                                                 conform.output = FALSE, robust = TRUE, plot = TRUE) {
   ## With no design matrix, we must do EdgeR per contrast
   ## one-by-one. Warning this can become very slow.
-  ##
 
   if (class(dge) != "DGEList") stop("dge must be a DGEList object")
   method <- method[1]
 
-  ## X = log2(0.0001+dge$counts)  ## assuming pseudocount already added
   if (is.null(X)) X <- edgeR::cpm(dge$counts, log = TRUE)
-  dge <- edgeR::estimateDisp(dge, design = NULL, robust = robust) ## fails...
+  dge <- edgeR::estimateDisp(dge, design = NULL, robust = robust) 
   dge.disp <- edgeR::estimateDisp(dge$counts, design = NULL, robust = robust)
-  ## dge@.Data <- c(dge@.Data, dge.disp)
   dge$common.dispersion <- dge.disp$common.dispersion
   dge$trended.dispersion <- dge.disp$trended.dispersion
   dge$tagwise.dispersion <- dge.disp$tagwise.dispersion
@@ -748,12 +725,10 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
     } else {
       stop("unknown method: ", method)
     }
-    ## summary(limma::decideTests(ct))
     top <- edgeR::topTags(res, n = 1e9)$table
     top <- data.frame(top[rownames(X), ])
     j1 <- which(contr.matrix[, i] > 0)
     j0 <- which(contr.matrix[, i] < 0)
-    ## if(!( length(cf)==6 || length(cf)==7)) stop("wrong coef format")
     mean1 <- rowMeans(X[, j1, drop = FALSE], na.rm = TRUE)
     mean0 <- rowMeans(X[, j0, drop = FALSE], na.rm = TRUE)
     ## logFC of edgeR is not really reliable..
@@ -805,9 +780,7 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
                                                        conform.output = FALSE, robust = TRUE, plot = TRUE) {
   ## With no design matrix, we must do EdgeR per contrast
   ## one-by-one. Warning this can become very slow.
-  ##
 
-  ## if(class(dge)!="DGEList") stop("dge must be a DGEList object")
   method <- method[1]
 
   tables <- list()
@@ -828,7 +801,6 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
     dge1 <- edgeR::DGEList(round(counts1), group = NULL) ## we like integer counts...
     dge1$samples$group <- group1
     dge1 <- edgeR::calcNormFactors(dge1, method = "TMM")
-    ## dge1 <- edgeR::estimateDisp(dge1, design=NULL, robust=robust)  ## fails...
     dge.disp <- edgeR::estimateDisp(dge1$counts, design = NULL, robust = robust)
 
     dge1$common.dispersion <- dge.disp$common.dispersion
@@ -854,13 +826,11 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
     } else {
       stop("unknown method: ", method)
     }
-    ## summary(limma::decideTests(ct))
     top <- edgeR::topTags(res, n = 1e9)$table
     top <- data.frame(top[rownames(X1), ])
     contr1 <- contr.matrix[kk, i]
     j1 <- which(contr1 > 0)
     j0 <- which(contr1 < 0)
-    ## if(!( length(cf)==6 || length(cf)==7)) stop("wrong coef format")
     mean1 <- rowMeans(X1[, j1, drop = FALSE], na.rm = TRUE)
     mean0 <- rowMeans(X1[, j0, drop = FALSE], na.rm = TRUE)
     ## logFC of edgeR is not really reliable..
@@ -937,7 +907,6 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
   message("[ngs.fitContrastsWithDESEQ2] using model design: ", as.character(design.formula))
 
   rownames.counts <- rownames(counts)
-  ## rownames(counts) <- NULL
   counts <- round(counts) ## WARNING!!!
   if (all(rowSums(counts == 0) > 0)) {
     ## ERROR: 'every gene contains at least one zero, cannot compute log
@@ -951,7 +920,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
   rownames(counts) <- rownames.counts
   ## Run DESeq : Modeling counts with generic 'group'
   fitType <- "parametric" ## sometime errors
-  ## fitType = 'local'
+  #
   fitType <- "mean"
   if (test == "LRT") {
     dds <- try(DESeq2::DESeq(dds, fitType = fitType, test = "LRT", reduced = ~1))
@@ -978,11 +947,11 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
   }
 
   ## we add the gene annotation here (not standard...)
-  ## colnames(SummarizedExperiment::rowData(dds))
+  #
   if (!is.null(genes)) SummarizedExperiment::rowData(dds)$genes <- genes ## does this work??
 
   ## logCPM for calculating means
-  ## X <- edgeR::cpm(DESeq2::counts(dds),log=TRUE,prior.count=0.000001)
+  #
   if (is.null(X)) X <- edgeR::cpm(counts, log = TRUE)
   dim(X)
   exp.matrix <- contr.matrix
@@ -1003,10 +972,8 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
       names(contr) <- DESeq2::resultsNames(dds)
       contr[names(grp.contr)] <- grp.contr
     }
-    ## resx <- DESeq2::results(dds, contrast=contr )
     ## do no set p values to NA
     resx <- DESeq2::results(dds, contrast = contr, cooksCutoff = FALSE, independentFiltering = FALSE)
-    ## resx = dds.result[rownames(dds),]  ## seems not
     pos.samples <- which(exp.matrix[, i] > 0)
     neg.samples <- which(exp.matrix[, i] < 0)
     resx$AveExpr1 <- rowMeans(X[, pos.samples, drop = FALSE], na.rm = TRUE)
@@ -1030,7 +997,6 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
   return(res)
 }
 
-## dds=fish2$dds.object
 
 #' Title
 #'
@@ -1049,7 +1015,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
                                                   prune.samples = FALSE,
                                                   conform.output = FALSE, X = NULL) {
   counts <- round(counts)
-  ## X <- edgeR::cpm(counts,log=TRUE)
+  #
   if (is.null(X)) {
     X <- edgeR::cpm(counts, log = TRUE)
   }
@@ -1071,17 +1037,17 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
     }
     ct <- exp.matrix[kk, i]
     y <- factor(c("neg", "zero", "pos")[2 + sign(ct)], levels = c("neg", "zero", "pos"))
-    ## design1 <- model.matrix( ~ factor(y[jj]==1))
+    #
     ## sample-wise model matrix (does this work???)
-    ## design.formula = formula(" ~ 0 + group")
+    #
     design.formula <- formula("~ 0+y")
     counts1 <- counts[, kk, drop = FALSE]
-    ## rownames.counts <- rownames(counts)
+    #
     colnames(counts1) <- NULL
     dds <- DESeq2::DESeqDataSetFromMatrix(
       countData = counts1, design = design.formula, colData = data.frame(y)
     )
-    ## fitType = 'parametric'
+    #
     fitType <- "mean"
     suppressWarnings({
       if (test == "LRT") {
@@ -1116,7 +1082,6 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
     ## we add the gene annotation here (not standard...)
     rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
 
-    ## resx = dds.result[rownames(dds),]  ## seems not
     X1 <- X[, kk, drop = FALSE]
     pos.samples <- which(exp.matrix[kk, i] > 0)
     neg.samples <- which(exp.matrix[kk, i] < 0)

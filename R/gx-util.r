@@ -132,8 +132,6 @@ val2col <- function(z, zlim, col = heat.colors(12), breaks) {
   return(colorlevels)
 }
 
-## HUGO.SYMBOLS <- unique(unlist(as.list(org.Hs.egSYMBOL)))
-
 
 #' Title
 #'

@@ -181,7 +181,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   samples <- data.frame(samples)
   counts <- as.matrix(counts)
   if (is.null(contrasts)) contrasts <- samples[, 0]
-  ## contrasts[is.na(contrasts)] <- 0
+  #
 
   ## contrast matrix
   colnames(contrasts)
@@ -217,8 +217,8 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     stop("[createPGX] FATAL :: matrices do not match")
   }
 
-  ## prune.samples=FALSE
-  ## used.samples <- names(which(rowSums(contrasts!=0)>0))
+  #
+  #
   contrasts[contrasts == ""] <- NA
   used.samples <- names(which(rowSums(!is.na(contrasts)) > 0))
   if (prune.samples && length(used.samples) < ncol(counts)) {
@@ -295,7 +295,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     is.toobig
     if (is.toobig) {
       ## scale to about 10 million reads
-      ## progress$inc(0.01, detail = "scaling down counts")
+      #
       cat("[createPGX:autoscale] WARNING: too large total counts. Scaling down to 10e6 reads.\n")
       unit <- 10**(round(log10(mean.counts)) - 7)
       unit
@@ -337,11 +337,11 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## -------------------------------------------------------------------
   message("[createPGX] creating pgx object...")
 
-  ## load(file=rda.file, verbose=1)
+  #
   ngs <- list() ## empty object
   ngs$name <- "data set"
   this.date <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-  ## ngs$date = date()
+  #
   ngs$date <- this.date
   ngs$datatype <- "unknown"
   ngs$description <- "data set"
@@ -428,7 +428,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     SYMBOL <- unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
     is.hugo <- is.known <- is.protcoding <- TRUE
     if (only.hugo) is.hugo <- (ngs$genes$gene_name %in% SYMBOL)
-    ## imm.gene <- grepl("^TR_|^IG_",ngs$genes$gene_biotype)
+    #
     if (only.known) {
       is.known <- !grepl("Rik|^Orf|^Loc", ngs$genes$gene_name) ## ???
     }
@@ -503,8 +503,8 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## -------------------------------------------------------------------
   if (do.cluster) {
     message("[createPGX] clustering samples...")
-    ## if(!is.null(progress)) progress$inc(0.01, detail = "clustering")
-    ## ngs <- pgx.clusterSamples(ngs, skipifexists=FALSE, perplexity=NULL)
+    #
+    #
     ngs <- playbase::pgx.clusterSamples2(
       ngs,
       dims = c(2, 3),
@@ -513,9 +513,9 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     )
 
     ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
-    ## posx <- scale(do.call(cbind,ngs$cluster$pos))
+    #
     posx <- scale(cbind(ngs$cluster$pos[["umap2d"]], ngs$cluster$pos[["tsne2d"]]))
-    ## posx <- scale(cbind(ngs$cluster$pos[["umap3d"]],ngs$cluster$pos[["tsne3d"]]))
+    #
     idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
     table(idx)
     if (length(unique(idx)) == 1) {
@@ -549,9 +549,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## -------------------------------------------------------------------
   if (is.null(ngs$X)) {
     message("[createPGX] calculating log-expression matrix X...")
-    ## ngs$X <- logCPM(ngs$counts, total=NULL)
     ngs$X <- playbase::logCPM(ngs$counts, total = 1e6, prior = 1)
-    ## ngs$X <- limma::normalizeQuantiles(ngs$X)  ## Sure ???
     dim(ngs$X)
   } else {
     message("[createPGX] using passed log-expression X...")

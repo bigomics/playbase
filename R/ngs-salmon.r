@@ -63,12 +63,6 @@ ngs.tximportSalmon <- function(sf.files, count.type = "lengthScaledTPM", organis
   if (is.null(names(sf.files))) stop("sf.files must be named!")
   if (!all(file.exists(sf.files))) stop("missing SF files")
 
-
-
-
-
-
-
   if (organism == "Hsapiens") {
     edb <- EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86
     org <- org.Hs.eg.db::org.Hs.eg.db
@@ -84,12 +78,10 @@ ngs.tximportSalmon <- function(sf.files, count.type = "lengthScaledTPM", organis
   ## then the transcript to gene file from Ensembl
   listColumns(edb)
   daf <- GenomicFeatures::transcripts(edb,
-
+      columns = c( 
       "tx_id", "gene_id", "entrezid",
       "gene_name", "gene_biotype", "name"
     ),
-
-
     return.type = "DataFrame"
   )
   dim(daf)

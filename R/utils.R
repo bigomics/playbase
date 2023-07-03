@@ -6,7 +6,6 @@ mem.proc <- function(digits = 0) {
     ## In your logging routine
     vsz <- as.numeric(scan(file, what = what, quiet = TRUE)[23])
     vsz <- vsz / (1024**2) ## MB
-    #
     mem <- paste0(round(vsz, digits), "MB")
   }
   mem

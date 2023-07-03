@@ -10,23 +10,23 @@
 ##
 ########################################################################
 
-#
+
 #' @export
 prot.readProteinGroups <- function(file, meta = NULL, sep = "\t", collapse.gene = TRUE,
                                    is.log = FALSE, use.LFQ = FALSE,
                                    filter.contaminants = TRUE) {
   ## Split data file
   message("reading proteinGroups file ", file)
-  #
-  #
+
+
   D <- data.table::fread(file, check.names = FALSE)
   D <- data.frame(D, check.names = FALSE)
-  ## D = data.frame(D, check.names=TRUE) 
+
   dim(D)
   colnames(D)
   Matrix::head(D)[, 1:10]
 
-  #
+
   ## Filter contaminants
   contaminant.cols <- c("Reverse", "Only identified by site", "Potential contaminant")
   contaminant.cols <- intersect(contaminant.cols, colnames(D))
@@ -34,7 +34,7 @@ prot.readProteinGroups <- function(file, meta = NULL, sep = "\t", collapse.gene 
   D$is.contaminant <- (rowSums(D[, contaminant.cols, drop = FALSE] == "+", na.rm = TRUE) >= 1)
   table(D$is.contaminant)
   if (filter.contaminants) {
-    #
+
     D <- D[which(!D$is.contaminant), ]
   }
   dim(D)
@@ -111,8 +111,8 @@ prot.readProteinGroups <- function(file, meta = NULL, sep = "\t", collapse.gene 
 }
 
 
-#
-#
+
+
 #' @export
 proteus.readProteinGroups <- function(file = "proteinGroups.txt", meta = "meta.txt",
                                       unit = "intensity", use.LFQ = FALSE, is.log2 = FALSE,
@@ -158,7 +158,7 @@ proteus.readProteinGroups <- function(file = "proteinGroups.txt", meta = "meta.t
   pdat <- proteus::readProteinGroups(file, meta, measure.cols = measure.cols)
 
   summary(pdat)
-  #
+
 
   if (is.log2) {
     pdat$tab <- 2**pdat$tab
@@ -189,7 +189,7 @@ proteus.readProteinGroups <- function(file = "proteinGroups.txt", meta = "meta.t
     ## actually all the constant mulitiplications do not matter
     ## because the scaling/normalization will cancel it out....
     ##
-    #
+
     if (!("Mol. weight [kDa]" %in% colnames(pfile))) {
       stop("missing column 'Mol. weight [kDa]' in data file")
     }
@@ -237,7 +237,7 @@ proteus.readProteinGroups <- function(file = "proteinGroups.txt", meta = "meta.t
     pdat$gene.names <- genes2[match(rownames(pdat$tab), names(genes2))]
     pdat$gene <- rownames(pdat$tab)
     pdat$detect <- pdat$detect[rownames(pdat$tab), ] > 0
-    #
+
     pdat$stats <- S[S$id %in% rownames(pdat$tab), ]
   }
 
@@ -246,7 +246,7 @@ proteus.readProteinGroups <- function(file = "proteinGroups.txt", meta = "meta.t
   return(pdat)
 }
 
-#
+
 #' @export
 prot.normalizeCounts <- function(counts, scale = 1e6, scaling = "by.column",
                                  qnormalize = TRUE, zero.offset = 0.01,
@@ -266,7 +266,7 @@ prot.normalizeCounts <- function(counts, scale = 1e6, scaling = "by.column",
   ## ------------------------------------------------------------
   ## normalize to CPM (or otherwise)
   ## ------------------------------------------------------------
-  #
+
   if (is.null(scale)) {
     scale <- mean(Matrix::colSums(X, na.rm = TRUE))
     message("set scale parameter to = ", scale)
@@ -286,7 +286,7 @@ prot.normalizeCounts <- function(counts, scale = 1e6, scaling = "by.column",
   ## ------------------------------------------------------------
   ## set zero offset
   ## ------------------------------------------------------------
-  #
+
   if (zero.offset > 0 && zero.offset < 1) {
     q0 <- quantile(X, probs = zero.offset, na.rm = TRUE)
     log2(q0)
@@ -298,10 +298,10 @@ prot.normalizeCounts <- function(counts, scale = 1e6, scaling = "by.column",
   ## choose quantile or median normalization (on not-missing values)
   ## ------------------------------------------------------------
   if (qnormalize) {
-    #
+
     jj <- sample(ncol(X), 10)
     X <- limma::normalizeQuantiles(X)
-    #
+
     X <- pmax(X, 0)
   }
 
@@ -316,8 +316,8 @@ prot.normalizeCounts <- function(counts, scale = 1e6, scaling = "by.column",
 #' @export
 prot.testTwoGroups <- function(X, group1, group2, method = "limma",
                                labels = NULL, gene = NULL) {
-  #
-  #
+
+
   out1 <- NULL ## important to avoid old results
   p1 <- p2 <- p3 <- NULL ## just for testing
 
@@ -368,8 +368,8 @@ prot.testTwoGroups <- function(X, group1, group2, method = "limma",
 
     level1 <- unique(labels[match(group1, colnames(X))])
     level2 <- unique(labels[match(group2, colnames(X))])
-    #
-    #
+
+
     levels <- colnames(design)
     contr <- matrix(1 * (levels %in% level1) - 1 * (levels %in% level2), ncol = 1)
     rownames(contr) <- levels
@@ -414,7 +414,7 @@ prot.testTwoGroups <- function(X, group1, group2, method = "limma",
 
   ## good practice to add group means
   avg <- cbind(rowMeans(X[, group1], na.rm = TRUE), rowMeans(X[, group2], na.rm = TRUE))
-  #
+
   colnames(avg) <- paste0("avg.", c("group1", "group2"))
   out1 <- cbind(out1, avg)
   if (!is.null(gene)) {
@@ -424,7 +424,7 @@ prot.testTwoGroups <- function(X, group1, group2, method = "limma",
   return(out1)
 }
 
-#
+
 #' @export
 prot.plotVolcano <- function(res, use.q = TRUE, psig = 0.05, lfc = 1, pmin = 1e-12,
                              pcex = 0.7, cex = 0.7, plot.type = "default", ...) {
@@ -548,7 +548,7 @@ prot.medianImpute <- function(X, groups) {
     exp(median(log(x)))
   }
   medianImputeZERO <- function(x, y) {
-    ## b=tapply(x, y, function(a) {a[a==0]=median(a);a})  
+
     b <- tapply(x, y, function(a) {
       a[a == 0] <- logmedian(a)
       a
@@ -601,7 +601,7 @@ prot.calcCopyNumber <- function(data, mol, y) {
 ##
 ##
 
-#
+
 #' @export
 silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
   cat(">>> reading datafile from", datafile, "\n")
@@ -614,22 +614,22 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
   df1 <- df[keep, ]
 
   ## use LFQ values that are normalized across the samples
-  #
+
   LFQ.L <- as.matrix(df1[, grep("LFQ.intensity.L.", colnames(df1))])
   LFQ.H <- as.matrix(df1[, grep("LFQ.intensity.H.", colnames(df1))])
   table(colnames(LFQ.L) == sub(".H.", ".L.", colnames(LFQ.H))) ## check!
 
   ## --------- rename samples
-  #
-  #
-  #
-  #
-  #
+
+
+
+
+
   LFQ.names <- gsub(".*MB[0-9]*_|.*MB_RG_|\"", "", colnames(LFQ.L))
 
   ## Use new sample nomenclature
   names.new.df <- read.delim("samples_renamed.txt", stringsAsFactors = FALSE)
-  #
+
   sum(duplicated(names.new.df$Renamed))
 
   ## match names
@@ -644,13 +644,13 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
   clean.names <- gsub("_Rest", "-Rest", clean.names)
   clean.names <- gsub("_Tcell", "-Tcell", clean.names)
   clean.names <- gsub("3-Methyladenosine", "3Methyladenosine", clean.names)
-  #
+
   clean.names <- gsub("^DorE", "DoE", clean.names)
   clean.names <- gsub("_", "", clean.names)
 
   ## write.csv( cbind(LFQ.names=LFQ.names,
-  #
-  #
+
+
   ##                  clean.names=clean.names ), file="checknames.csv")
 
   ## check duplicated
@@ -683,12 +683,12 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
   LFQ.ratio <- LFQ.H / (LFQ.H + LFQ.L + 1e-8) ## only temporary, later we calculate again
   Ctrls <- LFQ.ratio[, grep("Treat=NO-SILAC=0h", colnames(LFQ.ratio))]
   dim(Ctrls)
-  #
-  #
-  #
-  #
+
+
+
+
   keep <- (rowSums(Ctrls) < 1.9)
-  #
+
   table(keep)
   LFQ.L <- LFQ.L[keep, ]
   LFQ.H <- LFQ.H[keep, ]
@@ -696,7 +696,7 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
 
   ## ------------ collapse by gene??
   gene1 <- as.character(proteins$Gene.names)
-  #
+
   sum(duplicated(gene1))
   LFQ.L <- apply(LFQ.L, 2, function(x) tapply(x, gene1, sum, na.rm = TRUE))
   LFQ.H <- apply(LFQ.H, 2, function(x) tapply(x, gene1, sum, na.rm = TRUE))
@@ -706,7 +706,7 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
   dim(LFQ.L)
 
   ## ------------ create sample annotation
-  #
+
   samples <- sapply(colnames(LFQ.H), strsplit, split = "-")
   samples <- data.frame(do.call(rbind, samples))
   colnames(samples) <- c("donor", "cell.type", "subtype", "state", "treatment", "SILAC")
@@ -786,8 +786,8 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
 
 #' @export
 silac.ttest <- function(X, group1, group2, method = "limma") {
-  #
-  #
+
+
   out1 <- NULL ## important to avoid old results
   p1 <- p2 <- p3 <- NULL ## just for testing
   if (method == "geiger") {
@@ -835,14 +835,14 @@ silac.ttest <- function(X, group1, group2, method = "limma") {
 
   ## good practice to add group means
   avg <- cbind(rowMeans(X[, group1], na.rm = TRUE), rowMeans(X[, group2], na.rm = TRUE))
-  #
+
   colnames(avg) <- paste0("avg.", c("group1", "group2"))
   out1 <- cbind(out1, avg)
 
   return(out1)
 }
 
-#
+
 #' @export
 silac.volcanoPlot <- function(obj, group1, group2, psig = 0.05, lfc = 0.2) {
   if (class(group1[1]) == "character" && group1[1] %in% names(obj$groups)) {
@@ -861,7 +861,7 @@ silac.volcanoPlot <- function(obj, group1, group2, psig = 0.05, lfc = 0.2) {
   jj <- which(!is.na(pdata$P) & !is.nan(pdata$P))
   sig <- which(pdata$P < psig & abs(pdata$EFFECTSIZE) > lfc)
   highlight <- pdata$Gene[sig]
-  #
+
   volcanoly(pdata[jj, ],
     snp = "Gene", highlight = highlight,
     effect_size_line = c(-1, 1) * lfc,
@@ -878,7 +878,7 @@ silac.calcCopyNumber <- function(data, mol.weight, y) {
   ## y is the mass of the cell in PICOGRAM (pg)
   total.intensity <- Matrix::colSums(data, na.rm = TRUE)
   mass <- t(t(data) * y / total.intensity) * 1e-12
-  #
+
   ## calculate moles
   cn <- mass / (mol.weight * 1000) * 6.022140857e23
   return(cn)
@@ -888,7 +888,7 @@ silac.calcCopyNumber <- function(data, mol.weight, y) {
 ###
 # FIT WIBULL
 ###
-#
+
 #' @export
 fit.weibull2 <- function(x, y) {
   y <- as.numeric(y)
@@ -920,8 +920,8 @@ fit.weibull2 <- function(x, y) {
 #;samples=NULL;protein=p
 #' @export
 silac.fitWeibull <- function(obj, protein, samples = NULL, samples2 = NULL) {
-  #
-  #
+
+
   if (!is.null(samples) && class(samples[1]) == "character" &&
     samples[1] %in% names(obj$groups)) {
     samples <- obj$groups[[samples]]
@@ -935,14 +935,14 @@ silac.fitWeibull <- function(obj, protein, samples = NULL, samples2 = NULL) {
   timeN <- as.integer(sub("h$", "", timeN))
   timeN
 
-  #
+
   ## Nice examples are TCF7, ENO1, GAPDH, FOXO1, B2M, CD5, SQSTM1, CD3E, CXCR4, FOXP1, RPS9 as examples
-  #
+
   tag <- rownames(obj$proteins)[which(obj$proteins$Gene.names == protein)]
   if (length(tag) > 1) cat("warning:: protein has multiple tags!\n")
   tag <- tag[1] ## really???
   q1 <- obj$LFQ.ratio[tag, samples]
-  #
+
   plot(timeN, q1,
     pch = 17, col = "blue",
     ylim = c(0, 1), ylab = "", xlab = "Time [h]", main = protein,
@@ -950,7 +950,7 @@ silac.fitWeibull <- function(obj, protein, samples = NULL, samples2 = NULL) {
   )
   axis(1, at = c(0, 6, 12, 24, 48), las = 0, cex.axis = 1.5)
   axis(2, at = c(0, 0.25, 0.5, 0.75, 1), las = 2, cex.axis = 1.5)
-  #
+
   abline(h = 0.5, lty = 3)
   abline(h = 0.25, lty = 3)
   abline(h = 0.75, lty = 3)
@@ -963,7 +963,7 @@ silac.fitWeibull <- function(obj, protein, samples = NULL, samples2 = NULL) {
     timeM <- obj$samples[samples2, "SILAC"]
     timeM <- as.integer(sub("h$", "", timeM))
     timeM
-    #
+
     q2 <- obj$LFQ.ratio[tag, samples2]
     points(timeM, q2, pch = 19, col = "#EF4136")
     fit2 <- fit.weibull2(timeM, obj$LFQ.ratio[tag, samples2])
@@ -977,14 +977,14 @@ silac.fitWeibull <- function(obj, protein, samples = NULL, samples2 = NULL) {
   return(res)
 }
 
-#
+
 #' @export
 silac.plotProteins <- function(obj, proteins, samples = NULL) {
   if (!is.null(samples) && class(samples[1]) == "character" &&
     samples[1] %in% names(obj$groups)) {
     samples <- obj$groups[[samples]]
   }
-  #
+
   ss <- match(proteins, obj$proteins$Gene.names)
   ss <- setdiff(ss, NA)
   pp <- rownames(obj$proteins)[ss]
