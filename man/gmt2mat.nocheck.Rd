@@ -2,17 +2,20 @@
 % Please edit documentation in R/gset-meta.r
 \name{gmt2mat.nocheck}
 \alias{gmt2mat.nocheck}
-\title{Title}
+\title{Convert GMT to Matrix}
 \usage{
 gmt2mat.nocheck(gmt, bg = NULL, use.multicore = TRUE)
 }
 \arguments{
-\item{gmt}{value}
+\item{gmt}{A list containing gene sets in GMT format.}
 
-\item{bg}{value}
+\item{bg}{A character vector specifying the background genes to consider. If NULL, the most frequently occurring genes in the GMT will be used as the background.}
 
-\item{use.multicore}{value}
+\item{use.multicore}{Logical indicating whether to use parallel processing for faster computation.}
+}
+\value{
+A sparse matrix representation of the GMT.
 }
 \description{
-Title
+This function converts a GMT (Gene Matrix Transposed) file into a sparse matrix representation.
 }

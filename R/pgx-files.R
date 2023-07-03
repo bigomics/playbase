@@ -789,6 +789,10 @@ pgxinfo.needUpdate <- function(
   }
 
   if (verbose) {
+    dbg("[pgxinfo.needUpdate] fc.complete = ", fc.complete)
+    dbg("[pgxinfo.needUpdate] info.complete =  ", info.complete)
+    if (check.sigdb) dbg("[pgxinfo.needUpdate] h5.complete =  ", h5.complete)
+
     dbg("[pgxinfo.needUpdate] nr missing files in allFC : ", length(fc.missing))
     dbg("[pgxinfo.needUpdate] nr missing files in info  : ", length(info.missing))
     if (check.sigdb) dbg("[pgxinfo.needUpdate] nr missing files in sigdb : ", length(h5.missing))
@@ -799,7 +803,7 @@ pgxinfo.needUpdate <- function(
   if (check.sigdb) has.files <- has.files && has.sigdb
   is.complete <- (fc.complete && info.complete)
   if (check.sigdb) is.complete <- is.complete && h5.complete
-  return(has.files && is.complete)
+  return(!has.files || !is.complete)
 }
 
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-meta.r
 \name{gset.fitContrastsWithAllMethods}
 \alias{gset.fitContrastsWithAllMethods}
-\title{Title}
+\title{Fit Contrasts with All Gene Set Enrichment Methods}
 \usage{
 gset.fitContrastsWithAllMethods(
   gmt,
@@ -18,26 +18,29 @@ gset.fitContrastsWithAllMethods(
 )
 }
 \arguments{
-\item{gmt}{value}
+\item{gmt}{The gene set matrix.}
 
-\item{X}{value}
+\item{X}{The gene expression matrix.}
 
-\item{Y}{value}
+\item{Y}{The phenotype data matrix.}
 
-\item{G}{value}
+\item{G}{The gene annotation matrix.}
 
-\item{design}{value}
+\item{design}{The experimental design matrix.}
 
-\item{contr.matrix}{value}
+\item{contr.matrix}{The contrast matrix.}
 
-\item{methods}{value}
+\item{methods}{A character vector specifying the gene set enrichment methods to use.}
 
-\item{mc.threads}{value}
+\item{mc.threads}{The number of threads to use for parallel computing.}
 
-\item{mc.cores}{value}
+\item{mc.cores}{The number of CPU cores to use for parallel computing.}
 
-\item{batch.correct}{value}
+\item{batch.correct}{Logical indicating whether to correct for batch effects.}
+}
+\value{
+A list containing the results of the gene set enrichment analyses for each method.
 }
 \description{
-Title
+This function fits contrasts using multiple gene set enrichment methods, such as fisher, ssgsea, gsva, spearman, camera, fry, gsea.permPH, gsea.permGS, gseaPR, and fgsea.
 }

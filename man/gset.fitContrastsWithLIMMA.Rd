@@ -2,7 +2,7 @@
 % Please edit documentation in R/gset-meta.r
 \name{gset.fitContrastsWithLIMMA}
 \alias{gset.fitContrastsWithLIMMA}
-\title{Title}
+\title{Fit Contrasts with LIMMA}
 \usage{
 gset.fitContrastsWithLIMMA(
   gsetX,
@@ -13,16 +13,19 @@ gset.fitContrastsWithLIMMA(
 )
 }
 \arguments{
-\item{gsetX}{value}
+\item{gsetX}{A gene expression dataset.}
 
-\item{contr.matrix}{value}
+\item{contr.matrix}{Contrast matrix specifying the contrasts of interest.}
 
-\item{design}{value}
+\item{design}{Design matrix specifying the experimental design. Default is \code{NULL}.}
 
-\item{trend}{value}
+\item{trend}{Logical indicating whether to use trend estimation in the empirical Bayes smoothing. Default is \code{TRUE}.}
 
-\item{conform.output}{value}
+\item{conform.output}{Logical indicating whether to conform the output table columns. Default is \code{FALSE}.}
+}
+\value{
+A list of tables containing the results of statistical analysis for each contrast.
 }
 \description{
-Title
+This function fits contrasts using the LIMMA package and performs statistical analysis on gene expression data.
 }

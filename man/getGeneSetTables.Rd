@@ -2,13 +2,16 @@
 % Please edit documentation in R/gset-meta.r
 \name{getGeneSetTables}
 \alias{getGeneSetTables}
-\title{Title}
+\title{Get Gene Set Tables}
 \usage{
 getGeneSetTables(path)
 }
 \arguments{
-\item{path}{value}
+\item{path}{The path to the directory containing the gene set tables.}
+}
+\value{
+A list containing the gene set tables and associated metadata.
 }
 \description{
-Title
+This function retrieves gene set tables from a specified directory path and organizes the data into a list.
 }

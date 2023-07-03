@@ -3,23 +3,24 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-#' Title
+#' Fit Contrasts with All Gene Set Enrichment Methods
 #'
-#' @param gmt value
-#' @param X value
-#' @param Y value
-#' @param G value
-#' @param design value
-#' @param contr.matrix value
-#' @param methods value
-#' @param mc.threads value
-#' @param mc.cores value
-#' @param batch.correct value
+#' This function fits contrasts using multiple gene set enrichment methods, such as fisher, ssgsea, gsva, spearman, camera, fry, gsea.permPH, gsea.permGS, gseaPR, and fgsea.
 #'
-#' @return
+#' @param gmt The gene set matrix.
+#' @param X The gene expression matrix.
+#' @param Y The phenotype data matrix.
+#' @param G The gene annotation matrix.
+#' @param design The experimental design matrix.
+#' @param contr.matrix The contrast matrix.
+#' @param methods A character vector specifying the gene set enrichment methods to use.
+#' @param mc.threads The number of threads to use for parallel computing.
+#' @param mc.cores The number of CPU cores to use for parallel computing.
+#' @param batch.correct Logical indicating whether to correct for batch effects.
+#'
+#' @return A list containing the results of the gene set enrichment analyses for each method.
+#'
 #' @export
-#'
-#' @examples
 gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, methods,
                                             mc.threads = 1, mc.cores = NULL, batch.correct = TRUE) {
   ALL.GENESET.METHODS <- c(
@@ -575,18 +576,20 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
   return(res)
 }
 
-#' Title
+
+#' Fit Contrasts with LIMMA
 #'
-#' @param gsetX value
-#' @param contr.matrix value
-#' @param design value
-#' @param trend value
-#' @param conform.output value
+#' This function fits contrasts using the LIMMA package and performs statistical analysis on gene expression data.
 #'
-#' @return
+#' @param gsetX A gene expression dataset.
+#' @param contr.matrix Contrast matrix specifying the contrasts of interest.
+#' @param design Design matrix specifying the experimental design. Default is \code{NULL}.
+#' @param trend Logical indicating whether to use trend estimation in the empirical Bayes smoothing. Default is \code{TRUE}.
+#' @param conform.output Logical indicating whether to conform the output table columns. Default is \code{FALSE}.
+#'
+#' @return A list of tables containing the results of statistical analysis for each contrast.
+#'
 #' @export
-#'
-#' @examples
 gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
                                        trend = TRUE, conform.output = FALSE) {
   if (!is.null(design)) {
@@ -655,14 +658,14 @@ gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
 ## ======================================================================
 
 
-#' Title
+#' Get Gene Set Tables
 #'
-#' @param path value
+#' This function retrieves gene set tables from a specified directory path and organizes the data into a list.
 #'
-#' @return
+#' @param path The path to the directory containing the gene set tables.
+#'
+#' @return A list containing the gene set tables and associated metadata.
 #' @export
-#'
-#' @examples
 getGeneSetTables <- function(path) {
   dd <- dir(path, full.names = TRUE)
   dd
@@ -717,16 +720,16 @@ getGeneSetTables <- function(path) {
 ## ======================================================================
 
 
-#' Title
+#' Convert GMT to Matrix
 #'
-#' @param gmt value
-#' @param bg value
-#' @param use.multicore value
+#' This function converts a GMT (Gene Matrix Transposed) file into a sparse matrix representation.
 #'
-#' @return
+#' @param gmt A list containing gene sets in GMT format.
+#' @param bg A character vector specifying the background genes to consider. If NULL, the most frequently occurring genes in the GMT will be used as the background.
+#' @param use.multicore Logical indicating whether to use parallel processing for faster computation.
+#'
+#' @return A sparse matrix representation of the GMT.
 #' @export
-#'
-#' @examples
 gmt2mat.nocheck <- function(gmt, bg = NULL, use.multicore = TRUE) {
   if (is.null(bg)) {
     bg <- names(sort(table(unlist(gmt)), decreasing = TRUE))
@@ -761,29 +764,14 @@ gmt2mat.nocheck <- function(gmt, bg = NULL, use.multicore = TRUE) {
 }
 
 
-#' Title
-#'
-#' @param s value
-#' @param n value
-#'
-#' @return
 #' @export
-#'
-#' @examples
 shortstring <- function(s, n) {
   s <- as.character(s)
   ifelse(nchar(s) <= n, s, paste0(substring(s, 1, n), "..."))
 }
 
 
-#' Title
-#'
-#' @param path value
-#'
-#' @return
 #' @export
-#'
-#' @examples
 getGseaOutputDir <- function(path) {
   ## untangle gsea subfolder
   gsea_dir <- dir(path)[grep("\\.Gsea\\.", dir(path))]
@@ -797,14 +785,7 @@ getGseaOutputDir <- function(path) {
 }
 
 
-#' Title
-#'
-#' @param path value
-#'
-#' @return
 #' @export
-#'
-#' @examples
 getGseaTable <- function(path) {
   ff <- dir(path, full.names = TRUE)
   report_name <- ff[grep("gsea_report.txt$", ff)]
@@ -821,15 +802,7 @@ getGseaTable <- function(path) {
 }
 
 
-#' Title
-#'
-#' @param gsets value
-#' @param gsea_dir value
-#'
-#' @return
 #' @export
-#'
-#' @examples
 gseaSnapshot <- function(gsets, gsea_dir) {
   enplots <- dir(gsea_dir, pattern = "enplot_")
   enplots0 <- dir(gsea_dir, pattern = "enplot_", full.names = TRUE)
