@@ -21,7 +21,7 @@ compute_extra <- function(ngs, extra = c(
                           ), sigdb = NULL, libx.dir = NULL) {
   timings <- c()
 
-  if ( length(extra) == 0) {
+  if (length(extra) == 0) {
     return(ngs)
   }
 
