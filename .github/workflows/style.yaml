@@ -23,7 +23,7 @@ jobs:
           use-public-rspm: true
 
       - name: Install Styler
-        run: install.packages(c('styler', 'roxygen2'))
+        run: install.packages(c('styler', 'roxygen2', 'lintr'))
         shell: Rscript {0}
 
       - name: Enable styler cache
@@ -54,6 +54,10 @@ jobs:
 
       - name: Style
         run: styler::style_pkg()
+        shell: Rscript {0}
+
+      - name: Lint
+        run: lintr::lint_package()
         shell: Rscript {0}
 
       - name: Commit and push changes

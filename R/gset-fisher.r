@@ -119,7 +119,7 @@ gset.fisher <- function(genes, genesets, background = NULL,
   #}
 
   ## select
-  if (!is.null(min.genes) && min.genes > 0) {
+  if ( !is.null(min.genes) && min.genes > 0) {
     genesets.len <- sapply(genesets, length)
     genesets <- genesets[order(-genesets.len)]
     if (sum(duplicated(names(genesets))) > 0) {
