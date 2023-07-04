@@ -78,12 +78,11 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
   pheno.ref <- c()
   ref.detected <- FALSE
   ref <- toupper(ref)
-  ## is.ref <- grepl(paste(ref,collapse="|"),pheno0)
+
   is.ref <- (toupper(pheno0) %in% toupper(ref))
   ref.detected <- (sum(is.ref) > 0 && sum(!is.ref) > 0)
   ref.detected
 
-  ## if(!is.null(ref) && sum( toupper(pheno0) %in% ref)>0 ) {
   if (ref.detected) {
     pheno.ref <- unique(pheno0[which(toupper(pheno0) %in% toupper(ref))])
     if (verbose > 0) cat("setting reference to y=", pheno.ref, "\n")
@@ -143,10 +142,10 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
 
   ## reorder on fold change
   top <- top[order(abs(top$logFC), decreasing = TRUE), ]
-  ## colnames(top) <-   sub("logFC","logR",colnames(top))
+
 
   ## unlist???
-  ## top = do.call(cbind, top)
+
   return(top)
 }
 
@@ -200,11 +199,10 @@ gx.limma.SAVE <- function(X, pheno, fdr = 0.05, compute.means = TRUE, lfc = 0.20
   pheno.ref <- c()
   ref.detected <- FALSE
   ref <- toupper(ref)
-  ## is.ref <- grepl(paste(ref,collapse="|"),pheno0)
+
   is.ref <- (toupper(pheno0) %in% toupper(ref))
   ref.detected <- (sum(is.ref) > 0 && sum(!is.ref) > 0)
 
-  ## if(!is.null(ref) && sum( toupper(pheno0) %in% ref)>0 ) {
   if (ref.detected) {
     pheno.ref <- unique(pheno0[which(toupper(pheno0) %in% toupper(ref))])
     if (verbose > 0) cat("setting reference to y=", pheno.ref, "\n")
@@ -255,10 +253,10 @@ gx.limma.SAVE <- function(X, pheno, fdr = 0.05, compute.means = TRUE, lfc = 0.20
 
   ## reorder on fold change
   top <- top[order(abs(top$logFC), decreasing = TRUE), ]
-  ## colnames(top) <-   sub("logFC","logR",colnames(top))
+
 
   ## unlist???
-  ## top = do.call(cbind, top)
+
   return(top)
 }
 
@@ -325,12 +323,11 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
   pheno.ref <- c()
   ref.detected <- FALSE
   ref <- toupper(ref)
-  ## is.ref <- grepl(paste(ref,collapse="|"),pheno0)
+
   is.ref <- (toupper(pheno0) %in% toupper(ref))
   ref.detected <- (sum(is.ref) > 0 && sum(!is.ref) > 0)
   ref.detected
 
-  ## if(!is.null(ref) && sum( toupper(pheno0) %in% ref)>0 ) {
   if (ref.detected) {
     pheno.ref <- unique(pheno0[which(toupper(pheno0) %in% toupper(ref))])
     if (verbose > 0) cat("setting reference to y=", pheno.ref, "\n")
@@ -347,7 +344,7 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
     return
   }
 
-  ## design <- cbind(1, pheno0==bb[2])
+
   design <- model.matrix(~pheno1)
   colnames(design)
   colnames(design)[2:ncol(design)] <- paste0(levels(pheno1)[-1], "_vs_", levels(pheno1)[1])
@@ -361,7 +358,7 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
 
   fit <- limma::lmFit(X0, design)
   fit <- limma::eBayes(fit, trend = trend)
-  ## top <- limma::topTable(fit, coef=NULL, number=nrow(X0))
+
   top <- limma::topTableF(fit, number = nrow(X0))
   Matrix::head(top)
   top$B <- NULL
@@ -376,7 +373,7 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
   avg <- do.call(cbind, tapply(1:ncol(X0), pheno1, function(i) {
     rowMeans(X0[, i, drop = FALSE])
   }))
-  ## top <- cbind( top, avg[rownames(top),])
+
   if (!"logFC" %in% colnames(top)) {
     maxFC <- apply(avg, 1, max, na.rm = TRUE) - apply(avg, 1, min, na.rm = TRUE)
     top$logFC <- NULL
@@ -404,10 +401,10 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
 
   ## reorder on fold change
   top <- top[order(abs(top$logFC), decreasing = TRUE), ]
-  ## colnames(top) <-  sub("logFC","logR",colnames(top))
+
 
   ## unlist
-  ## top = do.call(cbind, top)
+
   return(top)
 }
 
@@ -512,7 +509,7 @@ gx.limma.paired <- function(X, pheno, pair, fdr = 0.05, lfc = 0.20,
   }
 
   ## setup LIMMA (paired t-test)
-  ##  design <- model.matrix( ~ a * b)
+
   design <- model.matrix(~ a + b)
 
   ## perform fitting
@@ -566,7 +563,7 @@ gx.limma.paired <- function(X, pheno, pair, fdr = 0.05, lfc = 0.20,
 }
 
 ## two-factorial design
-## ref=c("CTRL","DMSO","NT")
+
 
 #' Title
 #'
@@ -623,7 +620,7 @@ gx.limma.two.factorial <- function(X, factors, fdr = 0.05, lfc = 0.20, trend = F
 
   ## setup LIMMA
   design <- model.matrix(~ a * b)
-  ##    design <- model.matrix( ~ a + b)
+
   colnames(design)[2] <- paste(rev(v1), collapse = "vs")
   colnames(design)[3] <- paste(rev(v2), collapse = "vs")
   colnames(design)[4] <- paste(colnames(factors)[1], colnames(factors)[2], sep = "*")
@@ -800,7 +797,7 @@ gx.test.groups <- function(sig, class.label, fdr = 0.20,
   ## order on absolute difference
   rr <- rr[which(rr$Q.Value < fdr), ]
   rr <- rr[order(-abs(rr$DiffSig)), ]
-  ##  rr <- rr[order(rr$pv),]
+
 
   return(rr)
 }
@@ -890,7 +887,7 @@ seq_limma <- function(countdata, y, method = "edgeR") {
   design <- model.matrix(~group)
 
   ## Estimating the dispersion
-  ## dgeObj <- edgeR::estimateCommonDisp(dgeObj)
+
   dgeObj <- edgeR::estimateGLMCommonDisp(dgeObj, design)
   dgeObj <- edgeR::estimateGLMTrendedDisp(dgeObj)
   dgeObj <- edgeR::estimateTagwiseDisp(dgeObj)
@@ -916,10 +913,4 @@ seq_limma <- function(countdata, y, method = "edgeR") {
   colnames(xmean) <- paste0("mean.", unique(y))
   Matrix::head(xmean)
   xmean <- cbind(mean = rowMeans(xmean), xmean)
-
-  if (0) {
-    PvsV <- limma::makeContrasts(statuspregnant - statusvirgin, levels = design)
-    lrt.pVsV <- edgeR::glmLRT(fit, contrast = PvsV)
-    edgeR::topTags(lrt.pVsV)
-  }
 }

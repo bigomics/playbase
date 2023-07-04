@@ -55,7 +55,6 @@ pgx.detect_timevar <- function(Y) {
   has.time
   ttvar <- grep("time|hour|hr|day", colnames(Y), value = TRUE)
   ttvar
-  ## ttvar <- ttvar[sapply(ttvar, function(v) all(table(Y[,v])>1))]
   ttvar
 }
 
@@ -70,9 +69,6 @@ pgx.detect_timevar <- function(Y) {
 #'
 #' @examples
 pgx.getConditions <- function(exp.matrix, nmax = 3) {
-  ##
-  ##
-  ##
   group <- apply(exp.matrix, 1, paste, collapse = "_")
   table(group)
   group <- factor(group)
@@ -146,7 +142,6 @@ pgx.makeStratifiedContrastsDF <- function(data, vars, strata, ref) {
   i <- 1
   for (i in 1:ncol(C0)) {
     m1 <- (C1 == 1) * C0[, i]
-    ## colnames(m1) <- paste0(colnames(C1),"::",colnames(C0)[i])
     colnames(m1) <- paste0(colnames(C0)[i], "@", colnames(C1))
     contr.matrix <- cbind(contr.matrix, m1)
   }
@@ -201,7 +196,6 @@ pgx.makeStratifiedContrasts <- function(Y, strata, ref) {
   i <- 1
   for (i in 1:ncol(C0)) {
     m1 <- (C1 == 1) * C0[, i]
-    ## colnames(m1) <- paste0(colnames(C1),"::",colnames(C0)[i])
     colnames(m1) <- paste0(colnames(C0)[i], "@", colnames(C1))
     contr.matrix <- cbind(contr.matrix, m1)
   }
@@ -334,7 +328,6 @@ makeDirectContrasts <- function(Y, ref, na.rm = TRUE) {
 #'
 #' @examples
 makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
-  ## if(warn) warning("makeDirectContrasts is deprectated. please use makeDirectContrasts2()")
   if (NCOL(Y) == 1) Y <- data.frame(Y = Y)
 
   ## check
@@ -355,7 +348,6 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
   for (i in 1:ncol(Y)) {
     m1 <- NULL
     ref1 <- ref[i]
-    ## if(ref1 %in% c("*","full")) ref1 <- NA  ##???
     x <- as.character(Y[, i])
     x[is.na(x) | x == "NA"] <- "_"
     detect.ref <- any(grepl(ref.pattern, x, ignore.case = TRUE))
@@ -382,9 +374,7 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
       m1 <- m1[, !colnames(m1) %in% c("NA", "_"), drop = FALSE]
       colnames(m1) <- paste0(colnames(m1), "_vs_", ref1)
     } else if (!is.na(ref1) && (ref1 %in% all)) {
-      ## m1 <- m1 - m1[,cref]  ## +1/-1 encoding
       m1 <- t(t(m1 == 1) / Matrix::colSums(m1 == 1) - t(m1 == 0) / Matrix::colSums(m1 == 0))
-      ## m1 <- m1[,which(colnames(m1)!=cref),drop=FALSE]
       m1 <- m1[, !colnames(m1) %in% c("NA", "_"), drop = FALSE]
       colnames(m1) <- paste0(colnames(m1), "_vs_others")
     } else {
@@ -454,19 +444,11 @@ makeFullContrasts <- function(labels, by.sample = FALSE) {
 #' @examples
 makeClusterContrasts <- function(clusters, min.freq = 0.01, full = FALSE,
                                  by.sample = FALSE) {
-  ## make model matrix for cluster_i vs. rest
-  if (0) {
-    min.size <- pmax(3, 0.01 * length(clusters))
-    small.clusters <- names(which(table(clusters) < min.size))
-    clusters[which(clusters %in% small.clusters)] <- "cluster0"
-    sort(table(clusters))
-  }
   idx <- sort(unique(as.character(clusters)))
   m1 <- model.matrix(~ 0 + idx)
   colnames(m1) <- sub("^idx", "", colnames(m1))
   rownames(m1) <- colnames(m1)
   colnames(m1) <- paste0(colnames(m1), "_vs_others")
-  ## m1 <- m1 - 1/(nrow(m1)-1)*(m1==0)
   m1 <- t(t(m1 == 1) / Matrix::colSums(m1 == 1) - t(m1 == 0) / Matrix::colSums(m1 == 0))
 
   diag(m1) <- 1
@@ -604,8 +586,6 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
                                   fix.degenerate = FALSE, skip.hidden = TRUE) {
   ## "Automagiccally" parse dataframe and create contrasts using
   ## default assumptions.
-  ##
-  ##
   shortestunique <- function(xx, slen = 3) {
     dup <- sapply(
       1:max(nchar(xx)),
@@ -621,7 +601,6 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
   autoContrast1 <- function(x, ref1, slen, mingrp) {
     ## Automatically create contrast. If 2 levels, create A-vs-B,
     ## otherwise create A-vs-others.
-    ##
     if (is.null(ref1)) ref1 <- NA
     x <- as.character(x)
     x <- iconv(x, "latin1", "ASCII", sub = "")
@@ -668,7 +647,6 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
     ## NA can make ct smaller than full
     ct <- ct[match(1:length(x), rownames(ct)), , drop = FALSE]
     rownames(ct) <- 1:length(x)
-    ## ct[is.na(ct)] <- 0 ## no!!
     ct
   }
 
@@ -676,7 +654,6 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
   if (!is.null(ref) && length(ref) < ncol(df)) ref <- Matrix::head(rep(ref, 99), ncol(df))
 
   ## filter out 'internal/hidden' and 'group' parameters
-  ## not.used <- grepl("^[.]|group",colnames(df))
   not.used <- grepl("^[.]", colnames(df))
   if (skip.hidden && sum(not.used) > 0 && sum(!not.used) > 0) {
     df <- df[, !not.used, drop = FALSE]
@@ -728,29 +705,6 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
   }
 
   ## ----------- try to detect time series (detect factors by time)
-  if (0) {
-    has.time <- any(grepl("hr|hour|time|day", colnames(df), ignore.case = TRUE))
-    has.time
-    if (has.time && NCOL(df) > 1) {
-      time.col <- grep("hr|hour|time|day", colnames(df), ignore.case = TRUE)[1]
-      df1 <- df[, -time.col, drop = FALSE]
-      time <- df[, time.col]
-      vars.bytime <- names(which(apply(df1, 2, function(x) sum(table(x, time) == 0) == 0)))
-      vars.bytime
-      if (length(vars.bytime) > 0) {
-        cat("detected time-series variables:", vars.bytime, "\n")
-        dt <- c()
-        i <- 1
-        for (i in 1:length(vars.bytime)) {
-          dt <- cbind(dt, paste(df1[, vars.bytime[i]], time, sep = "_"))
-        }
-        colnames(dt) <- paste0(vars.bytime, "_", colnames(df)[time.col])
-        Matrix::head(dt)
-        df <- cbind(df, dt)
-      }
-    }
-    Matrix::head(df)
-  }
 
   ## emergency bail out...
   if (ncol(df) == 0) {
@@ -890,8 +844,6 @@ normalizeContrasts <- function(contr.matrix) {
 #' @examples
 makeContrastsFromPairs <- function(main.group, ref.group, groups = NULL, comparisons = NULL) {
   if (is.null(comparisons)) comparisons <- paste0(main.group, "_vs_", ref.group)
-  ## main.group <- sapply(strsplit(comparisons, split=split),"[",1)
-  ## ref.group  <- sapply(strsplit(comparisons, split=split),"[",2)
   main.group <- as.character(main.group)
   ref.group <- as.character(ref.group)
   groups1 <- unlist(strsplit(main.group, split = "[+]"))
@@ -946,7 +898,6 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
     k1 <- contrastAsLabels.col(contr, contr.name)
     K <- cbind(K, k1)
   }
-  ## colnames(K) <- sub("[:].*",colnames(contr.matrix))
   colnames(K) <- colnames(contr.matrix)
   rownames(K) <- rownames(contr.matrix)
   K

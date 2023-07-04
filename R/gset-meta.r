@@ -77,7 +77,7 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
   ## model to avoid overfitting.
   if ("batch" %in% colnames(Y) && batch.correct) cat("correcting for batch effects\n")
   if ("nnm" %in% colnames(Y) && batch.correct) cat("correcting for NNM\n")
-  ## zx=zx.gsva
+
   my.normalize <- function(zx, Y) {
     if ("batch" %in% colnames(Y) && batch.correct) {
       nbatch <- length(unique(Y$batch))
@@ -121,7 +121,6 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
 
       ## row-wise (per feature) scaling is 'good practice', see
       ## tests comparing rankcor and ssGSEA/gsva
-      ## zx.rnkcorr <- t(scale(t(zx.rnkcorr))) ## ??? 2020.10.26 IK.. not sure
 
       ## additional batch correction and NNM???
       zx.rnkcorr <- my.normalize(zx.rnkcorr, Y)
@@ -194,14 +193,11 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
 
   k <- 1
   fitThisContrastWithMethod <- function(method, k) {
-    ## cat("fitting contrast",colnames(contr.matrix)[k],"\n")
     jj <- which(exp.matrix[, k] != 0)
     yy <- 1 * (exp.matrix[jj, k] > 0)
     xx <- X[, jj]
     dim(xx)
     table(yy)
-    ## ref = names(which(contr.matrix[,k] < 0))
-    ## ref = rownames(contr.matrix)[which(contr.matrix[,k] < 0)]
     ref <- 0
     ref
 
@@ -224,12 +220,8 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
       ))
       which.up <- which(limma0[, "adj.P.Val"] <= fdr & limma0[, "logFC"] > lfc05)
       which.dn <- which(limma0[, "adj.P.Val"] <= fdr & limma0[, "logFC"] < -lfc05)
-      ## which.up = which(limma0[,"P.Value"] < 0.05 & limma0[,"logFC"] > lfc05)
-      ## which.dn = which(limma0[,"P.Value"] < 0.05 & limma0[,"logFC"] < -lfc05)
       genes.up <- rownames(limma0)[which.up]
       genes.dn <- rownames(limma0)[which.dn]
-      ## cat("siggenes.down=",length(genes.dn),"\n")
-      ## cat("siggenes.up=",length(genes.up),"\n")
 
       ## Always take at least first 100.. (HACK??!!!)
       if (length(genes.dn) < 100) {
@@ -241,7 +233,6 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
         genes.up <- head(unique(c(genes.up, genes.up0)), 100)
       }
 
-      ## cat("fisher: testing...\n")
       tt <- system.time({
         output <- gset.fisher2(genes.up, genes.dn,
           genesets = gmt, fdr = 1.0,
@@ -319,8 +310,6 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
     ## ----------------------------------------------------
     if ("camera" %in% method) {
       cdesign <- cbind(Intercept = 1, Group = yy)
-      ## design <- model.matrix( ~ 0 + as.factor(yy))
-      ## colnames(design) <- levels(yy)
       tt <- system.time({
         suppressWarnings(suppressMessages(
           output <- limma::camera(xx, gmt, cdesign, contrast = 2)
@@ -339,8 +328,6 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
     }
     if ("fry" %in% method) {
       cdesign <- cbind(Intercept = 1, Group = yy)
-      ## design <- model.matrix( ~ 0 + as.factor(yy))
-      ## colnames(design) <- levels(yy)
       tt <- system.time(
         output <- limma::fry(xx, gmt, cdesign, contrast = 2)
       )
@@ -399,8 +386,6 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
 
     ## GSEA preranked
     if ("gseaPR" %in% method) {
-      ## rnk = limma0[,"t"]  ## or FC???
-      ## rnk = limma0[,"logFC"]  ## or FC???
       rnk <- rowMeans(xx[, which(yy == 1), drop = FALSE]) - rowMeans(xx[, which(yy == 0), drop = FALSE])
       tt <- system.time(
         output <- run.GSEA.preranked(rnk, gmt,
@@ -422,11 +407,9 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
 
     ## fast GSEA
     if ("fgsea" %in% method) {
-      ## rnk = limma0[,"t"]  ## or FC???
-      ## rnk = limma0[,"logFC"]  ## or FC???
       rnk <- rowMeans(xx[, which(yy == 1), drop = FALSE]) - rowMeans(xx[, which(yy == 0), drop = FALSE])
       rnk <- rnk + 1e-8 * rnorm(length(rnk))
-      ## output <- fgsea::fgsea(gmt[1:2], rnk, nperm=1001, nproc=1)
+      #
       tt <- system.time(
         output <- fgsea::fgseaSimple(gmt, rnk,
           nperm = 10000,
@@ -514,7 +497,6 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
   fdr <- 0.05
   lfc <- 1e-3
   for (i in 1:nmethod) {
-    ## p0 <- sapply( P, function(x) x[,1])
     q0 <- sapply(Q, function(x) x[, i])
     s0 <- sapply(S, function(x) x[, i])
     q0[is.na(q0)] <- 1
@@ -548,8 +530,8 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
     fc <- S[[i]]
     meta.p <- apply(pv, 1, max, na.rm = TRUE) ## maximum p-statistic (simple & fast)
     meta.q <- apply(qv, 1, max, na.rm = TRUE) ## maximum q-statistic (simple & fast)
-    ## meta.p = apply(pv, 1, function(p) metap::allmetap(p, method="sumlog")$p[[1]])
-    ## meta.q = p.adjust(meta.p, method="fdr")
+    #
+    #
     ss.rank <- function(x) scale(sign(x) * rank(abs(x), na.last = "keep"), center = FALSE)
     meta.fx <- rowMeans(apply(S[[i]], 2, ss.rank), na.rm = TRUE)
     meta <- data.frame(fx = meta.fx, p = meta.p, q = meta.q)
@@ -570,34 +552,19 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
   m <- m[which(!sapply(m, is.null))]
   names(m)
 
-  if (0) {
-    if (length(m) > 1) {
-      ## Average normalized single-sample values
-      ## m <- lapply(m, function(x) apply(x,2,rank,na.last="keep"))
-      m <- lapply(m, function(x) scale(x, center = FALSE))
-      avg.m <- Reduce("+", m) / length(m) ## matrix mean
-      meta.matrix <- scale(avg.m, center = FALSE)
-      meta.matrix <- limma::normalizeQuantiles(meta.matrix)
-    } else {
-      meta.matrix <- m[[1]]
-    }
-    m[["meta"]] <- meta.matrix
-  } else {
-    ## average expression of geneset members
-    ng <- Matrix::colSums(G != 0)
-    meta.matrix <- as.matrix(Matrix::t(G != 0) %*% X) / ng
-  }
-  ## meta.matrix <- meta.matrix - rowMeans(meta.matrix,na.rm=TRUE)  ## center??
+
+  ## average expression of geneset members
+  ng <- Matrix::colSums(G != 0)
+  meta.matrix <- as.matrix(Matrix::t(G != 0) %*% X) / ng
+
   m[["meta"]] <- meta.matrix
 
-  ## timings0 <- do.call(rbind, timings)
   timings <- as.matrix(timings)
   rownames(timings) <- timings[, 1]
   timings0 <- matrix(timings[, -1], nrow = nrow(timings))
   timings0 <- matrix(as.numeric(timings0), nrow = nrow(timings0))
   rownames(timings0) <- rownames(timings)
   if (nrow(timings0) > 1 && sum(duplicated(rownames(timings0)) > 0)) {
-    ## timings0 <- apply(timings0, 2, function(x) tapply(x,rownames(timings0),sum))
     timings0 <- do.call(rbind, tapply(1:nrow(timings0), rownames(timings0), function(i) colSums(timings0[i, , drop = FALSE])))
   }
 
@@ -628,21 +595,18 @@ gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
   if (!is.null(design)) {
     cat("fitting gset.LIMMA contrasts with design matrix....\n")
 
-    ## xfit = limma::normalizeQuantiles(xfit)
     vfit <- limma::lmFit(gsetX, design)
     vfit <- limma::contrasts.fit(vfit, contrasts = contr.matrix)
     efit <- limma::eBayes(vfit, trend = trend, robust = TRUE)
-    ## efit <- limma::eBayes(vfit, trend=trend, robust=FALSE)
 
     tables <- list()
     i <- 1
     exp.matrix <- (design %*% contr.matrix)
     for (i in 1:ncol(contr.matrix)) {
-      ## coef = colnames(contr.matrix)[i]
       top <- limma::topTable(efit, coef = i, sort.by = "none", number = Inf, adjust.method = "BH")
       j1 <- which(exp.matrix[, i] > 0)
       j0 <- which(exp.matrix[, i] < 0)
-      ## if(!( length(cf)==6 || length(cf)==7)) stop("wrong coef format")
+      #
       mean1 <- rowMeans(gsetX[, j1, drop = FALSE], na.rm = TRUE)
       mean0 <- rowMeans(gsetX[, j0, drop = FALSE], na.rm = TRUE)
       top <- top[rownames(gsetX), ]
@@ -654,7 +618,6 @@ gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
   } else {
     cat("fitting gset.LIMMA contrasts without design....\n")
 
-    ## trend=TRUE
     tables <- list()
     i <- 1
     for (i in 1:ncol(contr.matrix)) {
@@ -665,7 +628,6 @@ gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
       top <- limma::topTable(efit, coef = 2, sort.by = "none", number = Inf, adjust.method = "BH")
       j1 <- which(contr.matrix[, i] > 0)
       j0 <- which(contr.matrix[, i] < 0)
-      ## if(!( length(cf)==6 || length(cf)==7)) stop("wrong coef format")
       mean1 <- rowMeans(gsetX[, j1, drop = FALSE], na.rm = TRUE)
       mean0 <- rowMeans(gsetX[, j0, drop = FALSE], na.rm = TRUE)
       top <- top[rownames(gsetX), ]
@@ -678,14 +640,11 @@ gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
 
   if (conform.output == TRUE) {
     for (i in 1:length(tables)) {
-      ## k1 = c("logFC","AveExpr","t","P.Value","adj.P.Val","AveExpr1","AveExpr2")
-      ## k2 = c("logFC","AveExpr","statistic","P.Value","adj.P.Val","AveExpr1","AveExpr2")
       jj <- match(rownames(gsetX), rownames(tables[[i]]))
       k1 <- c("logFC", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
       k2 <- c("score", "p.value", "q.value", "AveExpr0", "AveExpr1")
       tables[[i]] <- tables[[i]][jj, k1]
       colnames(tables[[i]]) <- k2
-      ## tables[[i]] = cbind( rownames(gsetX), tables[[i]])
     }
   }
 
@@ -697,6 +656,7 @@ gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
 ## ======================================================================
 ## ======================= GSET METHODS =================================
 ## ======================================================================
+
 
 #' Get Gene Set Tables
 #'
@@ -771,8 +731,6 @@ getGeneSetTables <- function(path) {
 #' @return A sparse matrix representation of the GMT.
 #' @export
 gmt2mat.nocheck <- function(gmt, bg = NULL, use.multicore = TRUE) {
-  ## max.genes=-1;ntop=-1;sparse=TRUE;bg=NULL;normalize=FALSE;r=0.01;use.multicore=TRUE
-
   if (is.null(bg)) {
     bg <- names(sort(table(unlist(gmt)), decreasing = TRUE))
   }
@@ -786,13 +744,11 @@ gmt2mat.nocheck <- function(gmt, bg = NULL, use.multicore = TRUE) {
     idx <- matrix(unlist(idx[]), byrow = TRUE, ncol = 2)
     idx <- idx[!is.na(idx[, 1]), ]
     idx <- idx[idx[, 1] > 0, ]
-    ## D[idx] <- 1
   } else {
     idx <- c()
     for (j in 1:length(gmt)) {
       ii0 <- which(bg %in% gmt[[j]])
       if (length(ii0) > 0) {
-        ## D[ii0,j] <- +1
         idx <- rbind(idx, cbind(ii0, j))
       }
     }
@@ -804,7 +760,6 @@ gmt2mat.nocheck <- function(gmt, bg = NULL, use.multicore = TRUE) {
   dim(D)
   rownames(D) <- bg
   colnames(D) <- names(gmt)
-  ## D <- Matrix::Matrix(D, sparse=TRUE)
   D
 }
 
@@ -818,7 +773,7 @@ shortstring <- function(s, n) {
 
 #' @export
 getGseaOutputDir <- function(path) {
-  ## untangle Gsea subfolder
+  ## untangle gsea subfolder
   gsea_dir <- dir(path)[grep("\\.Gsea\\.", dir(path))]
   gsea_dir <- file.path(path, gsea_dir)
   gsea_dir
@@ -843,7 +798,6 @@ getGseaTable <- function(path) {
   R$NES <- round(R$NES, digits = 3)
   kk <- grep("NAME|SIZE|NES|NOM|FDR|LEADING", colnames(R), ignore.case = TRUE)
   R <- R[, kk]
-  ## colnames(R)[4:5] = c("p","q")
   return(R)
 }
 

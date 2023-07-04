@@ -43,31 +43,6 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
                               xlab = "effect size", ylab = "significance (-log10p)",
                               use.rpkm = FALSE, maxchar = 40, hi.col = "#1e60bb",
                               cex.main = 1.2, axes = TRUE, cex.axis = 1) {
-  if (0) {
-    x <- fx
-    pv <- pval
-    ma <- ma
-    gene <- fc.genes
-    n <- 1000
-    p.sig <- 0.05
-    nlab <- 10
-    cex <- 1
-    lab.cex <- 1
-    nlab <- 10
-    maxchar <- 40
-    gene <- substring(rownames(mx), 1, 35)
-    xlab <- "effect size (NES)"
-    lab.cex <- 1.5
-    nlab <- 5
-    render <- "scatterD3"
-    n <- 1000
-    highlight <- sel.genes
-    cex <- 3
-    cex.axis <- 1.3
-    cex.main <- 1.4
-    main <- ""
-  }
-
   jj <- which(!is.na(x) & !is.na(pv) & !is.na(gene))
   x <- x[jj]
   pv <- pv[jj]
@@ -88,7 +63,6 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
   nsig <- c("down" = sum(x <= -lfc & pv <= p.sig), "up" = sum(x >= lfc & pv <= p.sig))
 
   ## highlight significant
-  ## is.null(highlight)
   impt <- function(g) {
     j <- match(g, gene)
     x1 <- scale(x, center = FALSE)[j]
@@ -113,15 +87,12 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
 
 
   ## add labels for some
-  ## jj = which( pv <= p.sig)
-  ## if(!is.null(highlight)) jj = which( pv <= p.sig & gene %in% highlight)
   j0 <- Matrix::head(ii[order(impt(gene[ii]))], nlab)
   j1 <- Matrix::head(ii[order(-impt(gene[ii]))], nlab)
   jj <- unique(c(j0, j1))
   lab[jj] <- gene[jj]
 
   cex.wt <- 1
-  ## if(!is.null(highlight)) cex.wt = 1 * (1 + 1*(gene %in% highlight))
   if (is.null(xlim)) xlim <- c(-1.1, 1.1) * max(abs(x), na.rm = TRUE)
   dy <- 0.04 * (max(y, na.rm = TRUE) - min(y, na.rm = TRUE))
   if (is.null(ylim)) ylim <- c(min(y, na.rm = TRUE), max(y, na.rm = TRUE) + dy)
@@ -148,7 +119,6 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
     if (lab.cex > 0) labjj <- lab[jj]
     plt <- scatterD3::scatterD3(
       x = x[jj], y = y[jj],
-      ## point_size = cex*10*cex.wt,
       point_size = cex * 10,
       point_opacity = 0.66,
       xlab = xlab, ylab = ylab, col_var = klr[jj], legend_width = 0,
@@ -188,9 +158,7 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
     }
     ## plt
   } else {
-    ## ylim=NULL;cex=1;main="";p.sig=0.05;lab.cex=1
     if (!is.null(highlight)) cex.wt <- 0.5 * (1 + 1 * (gene %in% highlight))
-    ## par(mgp=c(2.1,0.8,0))
     plot(
       x = x, y = y, pch = 19, cex = 0.4 * cex * cex.wt, xlim = xlim, ylim = ylim,
       col = klr2, xlab = xlab, ylab = ylab, main = main, cex.main = cex.main,
@@ -218,7 +186,6 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
         cex = 1, text.col = "grey50"
       )
     }
-    ## points(x=x[jj], y= y[jj], pch=19, cex=0.4*cex, col="#1e60bb" )
     if (length(jj) > 0 && lab.cex > 0) {
       text(
         x = x[jj], y = y[jj], labels = gene.txt[jj],
@@ -229,7 +196,7 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
   plt
 }
 
-## n=1000;cex=1;highlight=rownames(X)[1:500];nlab=10;ma.plot=FALSE;use.fdr=TRUE
+#
 
 #' Title
 #'
@@ -260,13 +227,6 @@ gx.volcanoPlot.LIMMA <- function(tab, render = "scatterD3", n = 1000, highlight 
                                  use.rpkm = FALSE, ma.plot = FALSE, cex.main = 1.2,
                                  main = "", cex.axis = 1, axes = TRUE) {
   tab <- tab[order(tab$P.Value), ]
-  ## tab = data.frame(gene=tab$gene,
-  ##                 logFC=tab$logFC,
-  ##                 AveExpr=tab$AveExpr,
-  ##                 P.Value=tab$P.Value,
-  ##                 adj.P.Val=tab$adj.P.Val)
-  ## tab=fc
-  ## gene = sub(".*:","",rownames(tabe))
   gene <- as.character(tab[, grep("^gene$|^gene_name$", colnames(tab))])
   if (n > 0) {
     jj <- unique(c(1:100, head(sample(1:nrow(tab), replace = TRUE), n - 100)))
@@ -303,7 +263,6 @@ gx.volcanoPlot.LIMMA <- function(tab, render = "scatterD3", n = 1000, highlight 
   }
 
   ## highlight significant
-  ## is.null(highlight)
   impt <- function(g) {
     j <- match(g, gene)
     x1 <- tab$logFC[j]
@@ -385,8 +344,6 @@ gx.volcanoPlot.LIMMA <- function(tab, render = "scatterD3", n = 1000, highlight 
         yaxis = list(title = ylab, range = ylim)
       )
   } else {
-    ## ylim=NULL;cex=1;main="";p.sig=0.05;lab.cex=1
-    ## par(mgp=c(2.1,0.8,0))
     if (!is.null(highlight)) cex.wt <- 0.5 * (1 + 1 * (gene %in% highlight))
     plot(
       x = x, y = y, pch = 19, cex = 0.4 * cex * cex.wt, xlim = xlim, ylim = ylim,
@@ -400,7 +357,6 @@ gx.volcanoPlot.LIMMA <- function(tab, render = "scatterD3", n = 1000, highlight 
     if (ma.plot) {
       abline(h = c(-1, 1), v = 0, lty = 3, col = "grey50", lwd = 0.5)
     }
-    ## points(x=x[jj], y= y[jj], pch=19, cex=0.4*cex, col="#1e60bb" )
     if (length(jj) > 0) {
       text(
         x = x[jj], y = y[jj], labels = gene[jj],
