@@ -36,7 +36,6 @@ Imports:
     DESeq2,
     doParallel,
     dplyr,
-    DT,
     edgeR,
     EnsDb.Hsapiens.v86,
     EnsDb.Mmusculus.v79,
