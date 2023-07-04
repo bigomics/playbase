@@ -21,9 +21,9 @@ compute_extra <- function(ngs, extra = c(
                           ), sigdb = NULL, libx.dir = NULL) {
   timings <- c()
 
-  if (length(extra) == 0) {
-    return(ngs)
-  }
+  #if (length(extra) == 0) {
+  #  return(ngs)
+  #}
 
   ## detect if it is single or multi-omics
   single.omics <- !any(grepl("\\[", rownames(ngs$counts)))
