@@ -112,11 +112,11 @@ gset.fisher <- function(genes, genesets, background = NULL,
     }
   }
 
-  #if (check.background) {
+  # if (check.background) {
   #  ## restrict on background
   #  genes <- intersect(genes, background)
   #  genesets <- parallel::mclapply(genesets, function(s) intersect(s, background))
-  #}
+  # }
 
   ## select
   if (!is.null(min.genes) && min.genes > 0) {
