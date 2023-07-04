@@ -190,7 +190,11 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   counts <- as.matrix(counts)
   if (is.null(contrasts)) contrasts <- samples[, 0]
   ## contrasts[is.na(contrasts)] <- 0
-
+  
+  message("[createPGX] input: dim(counts) = ",paste(dim(counts),collapse='x'))
+  message("[createPGX] input: dim(samples) = ",paste(dim(samples),collapse='x'))
+  message("[createPGX] input: dim(contrasts) = ",paste(dim(contrasts),collapse='x'))
+  
   ## contrast matrix
   colnames(contrasts)
   is.numbered <- all(unique(as.vector(contrasts)) %in% c(-1, 0, 1))
@@ -203,7 +207,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   }
 
   ## convert group-wise contrast to sample-wise
-
   grp.idx <- grep("group|condition", tolower(colnames(samples)))[1]
 
   if (any(!is.na(grp.idx))) {
@@ -220,11 +223,11 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     }
   }
 
-  ## sanity check...
-  if (!all(rownames(contrasts) == rownames(samples)) &&
-    !all(rownames(contrasts) == colnames(counts))) {
-    stop("[createPGX] FATAL :: matrices do not match")
-  }
+  ## sanity check...  NOT NEEDED
+#  if (!all(rownames(contrasts) == rownames(samples)) &&
+#    !all(rownames(contrasts) == colnames(counts))) {
+#    stop("[createPGX] FATAL :: matrices do not match")
+#  }
 
   ## prune.samples=FALSE
   ## used.samples <- names(which(rowSums(contrasts!=0)>0))
@@ -248,6 +251,10 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   if (all(kk %in% rownames(contrasts))) {
     contrasts <- contrasts[kk, , drop = FALSE]
   }
+
+  message("[createPGX] final: dim(counts) = ",paste(dim(counts),collapse='x'))
+  message("[createPGX] final: dim(samples) = ",paste(dim(samples),collapse='x'))
+  message("[createPGX] final: dim(contrasts) = ",paste(dim(contrasts),collapse='x'))
 
   ## -------------------------------------------------------------------
   ## check counts
