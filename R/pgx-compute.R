@@ -214,8 +214,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   }
 
 
-  #
-  #
+  # prune unused samples
   contrasts[contrasts == ""] <- NA
   used.samples <- names(which(rowSums(!is.na(contrasts)) > 0))
   if (prune.samples && length(used.samples) < ncol(counts)) {
