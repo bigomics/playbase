@@ -181,11 +181,11 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   samples <- data.frame(samples)
   counts <- as.matrix(counts)
   if (is.null(contrasts)) contrasts <- samples[, 0]
-  
-  message("[createPGX] input: dim(counts) = ",paste(dim(counts),collapse='x'))
-  message("[createPGX] input: dim(samples) = ",paste(dim(samples),collapse='x'))
-  message("[createPGX] input: dim(contrasts) = ",paste(dim(contrasts),collapse='x'))
-  
+
+  message("[createPGX] input: dim(counts) = ", paste(dim(counts), collapse = "x"))
+  message("[createPGX] input: dim(samples) = ", paste(dim(samples), collapse = "x"))
+  message("[createPGX] input: dim(contrasts) = ", paste(dim(contrasts), collapse = "x"))
+
   ## contrast matrix
   colnames(contrasts)
   is.numbered <- all(unique(as.vector(contrasts)) %in% c(-1, 0, 1))
@@ -237,9 +237,9 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     contrasts <- contrasts[kk, , drop = FALSE]
   }
 
-  message("[createPGX] final: dim(counts) = ",paste(dim(counts),collapse='x'))
-  message("[createPGX] final: dim(samples) = ",paste(dim(samples),collapse='x'))
-  message("[createPGX] final: dim(contrasts) = ",paste(dim(contrasts),collapse='x'))
+  message("[createPGX] final: dim(counts) = ", paste(dim(counts), collapse = "x"))
+  message("[createPGX] final: dim(samples) = ", paste(dim(samples), collapse = "x"))
+  message("[createPGX] final: dim(contrasts) = ", paste(dim(contrasts), collapse = "x"))
 
   ## -------------------------------------------------------------------
   ## check counts
