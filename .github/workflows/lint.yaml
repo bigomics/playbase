@@ -16,9 +16,9 @@ jobs:
         with:
           use-public-rspm: true
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          extra-packages: lintr
+      - name: Setup lintr
+        run: install.packages('lintr')
+        shell: Rscript {0}
 
       - name: Get Diff Files
         run: git diff --name-only  --diff-filter=ACMRTUXB main | grep  -E '(.r$|.R$)' > files.txt
