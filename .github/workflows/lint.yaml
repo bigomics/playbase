@@ -40,9 +40,9 @@ jobs:
 
       - name: Lint
         run: |
-          files <- read.table('files.txt')
-          print(files)
+          files <- read.table('files.txt')$V1
           for (file in files) {
+            if (endsWith(file,'.r') || endsWith(file,'.R')) {
             lintr::lint(
              file,
              linters = lintr::linters_with_defaults(
@@ -53,7 +53,8 @@ jobs:
                object_length_linter=NULL,
                vector_logic_linter=NULL
              )
-          )
+             )
+            }
           }
         shell: Rscript {0}
         env:
