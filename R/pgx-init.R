@@ -18,6 +18,7 @@ pgx.initialize <- function(pgx) {
     "GMT", "gset.meta", "gsetX", "gx.meta", "model.parameters",
     "samples", "tsne2d", "X"
   )
+
   all(obj.needed %in% names(pgx))
   if (!all(obj.needed %in% names(pgx))) {
     obj.missing <- setdiff(obj.needed, names(pgx))

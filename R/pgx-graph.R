@@ -727,7 +727,6 @@ pgx.computeCoreGOgraph <- function(ngs, fdr = 0.05) {
     return(NULL)
   }
 
-
   comparisons <- names(ngs$gset.meta$meta)
   comparisons
   subgraphs <- list()
