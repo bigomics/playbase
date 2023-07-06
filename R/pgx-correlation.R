@@ -16,7 +16,6 @@ pgx.computeGlassoAroundGene <- function(X, gene, nmax = 100) {
   jj <- Matrix::head(order(-rowMeans(rho**2)), nmax)
   tX <- t(X[jj, ])
 
-
   vX <- var(tX)
   res <- glasso::glasso(vX, 0.1)
   res$cor <- Matrix::cov2cor(vX)

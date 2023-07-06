@@ -16,6 +16,7 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
 
   if (!is.null(progress)) progress$set(message = "WordCloud", value = 0)
 
+
   ## get gset meta foldchange-matrix
   S <- sapply(ngs$gset.meta$meta, function(x) x$meta.fx)
   rownames(S) <- rownames(ngs$gset.meta$meta[[1]])
