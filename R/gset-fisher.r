@@ -47,7 +47,7 @@ gset.fisher2 <- function(genes.up, genes.dn, genesets, background = NULL,
                          check.background = TRUE, common.genes = TRUE) {
   ft.up <- gset.fisher(
     genes = genes.up, genesets = genesets, background = background,
-    fdr = 1, mc = mc, sort.by = sort.by, nmin = nmin, verbose = verbose,
+    fdr =1, mc = mc, sort.by = sort.by, nmin = nmin, verbose = verbose,
     min.genes = min.genes, max.genes = max.genes, method = method,
     check.background = check.background, common.genes = common.genes
   )

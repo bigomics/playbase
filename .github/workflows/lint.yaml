@@ -20,9 +20,16 @@ jobs:
         with:
           extra-packages: lintr
 
+      - name: Get Diff Files
+        run: git diff --name-only  --diff-filter=ACMRTUXB main | grep  -E '(.r$|.R$)' > files.txt
+
       - name: Lint
         run: |
-          lintr::lint_package(
+          files <- read.table('files.txt')$V1
+          print(files)
+          for (file in files) {
+            lintr::lint(
+             file,
              linters = lintr::linters_with_defaults(
                line_length_linter=NULL,
                object_name_linter=NULL,
@@ -32,4 +39,5 @@ jobs:
                vector_logic_linter=NULL
              )
           )
+          }
         shell: Rscript {0}

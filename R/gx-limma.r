@@ -39,11 +39,11 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
     cat("WARNING:: matrix has duplicated rownames\n")
   }
 
-  if (!is.null(B) && NCOL(B) == 1) {
-    B <- matrix(B, ncol = 1)
-    rownames(B) <- rownames(pheno)
-    colnames(B) <- "batch"
-  }
+  #if (!is.null(B) && NCOL(B) == 1) {
+  #  B <- matrix(B, ncol = 1)
+  #  rownames(B) <- rownames(pheno)
+  #  colnames(B) <- "batch"
+  #}
 
   ## detect single sample case
   is.single <- (max(table(pheno)) == 1)
