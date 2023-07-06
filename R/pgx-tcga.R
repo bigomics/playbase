@@ -13,6 +13,7 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
   if (is.null(names(sig))) {
     stop("sig must have names")
   }
+
   ## !!!!!!!!!! upper case for mouse genes !!!!!
   names(sig) <- toupper(names(sig))
 
