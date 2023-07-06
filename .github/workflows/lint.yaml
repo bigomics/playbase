@@ -13,17 +13,8 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v3
-      - uses: technote-space/get-diff-action@v6
-        with:
-          PATTERNS: |
-            *.R
-            *.r
-
-      - name: Save to file
-        run: echo "$GIT_DIFF"
-
-      - name: Save to file2
-        run: echo ${GIT_DIFF}
+      - name: get diff
+        run: git diff --name-only origin/main origin/${GITHUB_HEAD_REF} > "test.csv"
 
       - uses: r-lib/actions/setup-r@v2
         with:
@@ -35,7 +26,7 @@ jobs:
 
       - name: Lint
         run: |
-          files <- Sys.getenv('GIT_DIFF')
+          files <- read.table('test.csv')
           print(files)
           for (file in files) {
             lintr::lint(

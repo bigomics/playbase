@@ -14,6 +14,7 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 1000, contrasts = N
   meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
   colnames(meta$fc)
 
+
   is.h5ref <- grepl("h5$", sigdb)
   if (!is.h5ref) {
     cat("[pgx.computeConnectivityScores] ERROR: must be H5 formatted file\n")
