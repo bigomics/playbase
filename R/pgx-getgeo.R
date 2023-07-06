@@ -22,6 +22,7 @@ pgx.getGEOseries <- function(id, archs.h5 = "human_matrix.h5", convert.hugo = TR
   ##
 
 
+
   ## get data/pheno matrices
   geo <- pgx.getGEOcounts(id, archs.h5 = archs.h5)
   counts <- geo$expr

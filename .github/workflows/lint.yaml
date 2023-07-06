@@ -20,7 +20,9 @@ jobs:
             *.r
 
       - name: Save to file
-        run: echo $GIT_DIFF
+        run: echo "$GITDIFF"
+        env:
+          GITDIFF: env.GIT_DIFF
 
       - uses: r-lib/actions/setup-r@v2
         with:
