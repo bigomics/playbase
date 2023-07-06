@@ -35,27 +35,25 @@ jobs:
           use-public-rspm: true
 
       - name: Setup lintr
-        run: install.packages('lintr')
+        run: install.packages(c('lintr', 'stringr'))
         shell: Rscript {0}
 
       - name: Lint
         run: |
           files <- read.table('files.txt')$V1
-          for (file in files) {
-            if (endsWith(file,'.r') || endsWith(file,'.R')) {
-            lintr::lint(
-             file,
-             linters = lintr::linters_with_defaults(
-               line_length_linter=NULL,
-               object_name_linter=NULL,
-               cyclocomp_linter=NULL,
-               seq_linter=NULL,
-               object_length_linter=NULL,
-               vector_logic_linter=NULL
-             )
-             )
-            }
-          }
+          files_regex <- paste0(stringr::str_replace_all(files, c('R/'='')),collapse='|')
+          lintr::lint_dir(
+              'R/',
+              linters = lintr::linters_with_defaults(
+                  line_length_linter=NULL,
+                  object_name_linter=NULL,
+                  cyclocomp_linter=NULL,
+                  seq_linter=NULL,
+                  object_length_linter=NULL,
+                  vector_logic_linter=NULL
+              ),
+              pattern = files_regex
+          )
         shell: Rscript {0}
         env:
           LINTR_ERROR_ON_LINT: true

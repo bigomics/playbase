@@ -261,7 +261,6 @@ pgx.ActivationMatrix <- function(pgx, features = NULL, contrasts = NULL,
         legend.key.height = grid::unit(12, "pt")
       )
 
-
     if (!qsize) {
       p <- p + ggplot2::guides(size = FALSE)
     }

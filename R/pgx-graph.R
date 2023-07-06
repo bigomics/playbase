@@ -15,6 +15,7 @@ pgx.computePathscores <- function(graph, strict.pos = TRUE) {
   rownames(P) <- igraph::V(graph)$name
   colnames(P) <- colnames(F)
   i <- 1
+
   for (i in 1:ncol(F)) {
     fc <- graph$foldchange[, i]
     ee <- igraph::get.edges(graph, igraph::E(graph))
