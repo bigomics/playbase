@@ -262,6 +262,7 @@ pgx.ActivationMatrix <- function(pgx, features = NULL, contrasts = NULL,
       )
 
 
+
     if (!qsize) {
       p <- p + ggplot2::guides(size = FALSE)
     }
