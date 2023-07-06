@@ -10,7 +10,6 @@ pgx.fastq2counts <- function(fastq_dir, destdir, indexdir, nthread = 4, do.qc = 
                              trimming = TRUE, trimmethod = "trimmomatic",
                              instrument = "HiSeq", library_layout = "SINGLE") {
   species <- species[1]
-
   run_fastqc1 <- function(destdir, fastq_dir, nthread) {
     cat(paste("Running FastQC... ", Sys.time(), "\n", sep = ""))
     dir.exists(paste0(destdir, "/fastqc"))
