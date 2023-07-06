@@ -135,7 +135,7 @@ gset.fisher <- function(genes, genesets, background = NULL,
       )
     }
 
-      length(genesets)
+    length(genesets)
     if (length(genesets) == 0) {
       cat("warning: no gene sets passed size filter\n")
       rr <- data.frame(
