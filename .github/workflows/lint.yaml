@@ -1,6 +1,8 @@
 on:
-  schedule:
-    - cron: "0 0 * * *"
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
 
 name: lint
 
@@ -41,3 +43,5 @@ jobs:
           )
           }
         shell: Rscript {0}
+        env:
+          LINTR_ERROR_ON_LINT: true
