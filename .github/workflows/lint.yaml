@@ -32,7 +32,7 @@ jobs:
 
       - name: Lint
         run: |
-          files <- read.table('files.txt')$V1
+          files <- Sys.getenv('GIT_DIFF')
           print(files)
           for (file in files) {
             lintr::lint(
