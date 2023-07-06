@@ -16,9 +16,7 @@ jobs:
       - name: get diff
         run: |
           git fetch origin main
-          git diff origin/main..HEAD > mydiff
-          echo "mydiff = "
-          cat mydiff
+          git diff --name-only  --diff-filter=ACMRTUXB main | grep  -E "(.r$|.R$)" > files.txt
 
       - uses: r-lib/actions/setup-r@v2
         with:
@@ -30,7 +28,7 @@ jobs:
 
       - name: Lint
         run: |
-          files <- read.table('test.csv')
+          files <- read.table('files.txt')
           print(files)
           for (file in files) {
             lintr::lint(

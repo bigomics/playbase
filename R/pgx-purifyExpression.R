@@ -11,6 +11,7 @@ pgx.purifyExpression <- function(tumorX, normalX,
 
   method <- tolower(method)
   if ("nnlm" %in% method) {
+
     ## ----------------------------------------------------------------------
     ## NNLM (BigOmics's own method...)
     ## ----------------------------------------------------------------------
