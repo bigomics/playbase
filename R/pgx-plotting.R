@@ -3818,135 +3818,139 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
 
 #' @export
 plotlyCytoplot <- function(pgx,
-                           gene1, 
-                           gene2, 
+                           gene1,
+                           gene2,
                            samples,
-                           nbinsx, 
+                           nbinsx,
                            nbinsy,
                            lab.unit = "(log2CPM)",
                            reversescale = TRUE,
                            marker.size = 5,
-                           contour.coloring = 'none',
-                           marker.color = 'black',
-                           showgrid = TRUE
-                           ){
+                           contour.coloring = "none",
+                           marker.color = "black",
+                           showgrid = TRUE) {
+  samples <- samples
+  if (is.null(samples)) {
+    samples <- colnames(pgx$X)
+  }
 
-    samples <- samples
-    if(is.null(samples))
-            samples <- colnames(pgx$X)
-    
-    samples <- intersect(samples, colnames(pgx$X))
+  samples <- intersect(samples, colnames(pgx$X))
 
-    x1 <- pgx$X[gene1,samples]
-    x2 <- pgx$X[gene2,samples]
-    
-    names(x1) <- samples
-    names(x2) <- samples
+  x1 <- pgx$X[gene1, samples]
+  x2 <- pgx$X[gene2, samples]
 
-    m1 <- mean(x1)
-    m2 <- mean(x2)
+  names(x1) <- samples
+  names(x2) <- samples
 
-    ## select samples in different quadrants
-    j1 <- length(samples[which(x1 < m1 & x2 > m2)])
-    j2 <- length(samples[which(x1 > m1 & x2 < m2)])
-    j3 <- length(samples[which(x1 > m1 & x2 > m2)])
-    j4 <- length(samples[which(x1 < m1 & x2 < m2)])
+  m1 <- mean(x1)
+  m2 <- mean(x2)
 
-    xlab1 <- paste(gene1, lab.unit, collapse="  ")
-    ylab1 <- paste(gene2, lab.unit, collapse="  ")
+  ## select samples in different quadrants
+  j1 <- length(samples[which(x1 < m1 & x2 > m2)])
+  j2 <- length(samples[which(x1 > m1 & x2 < m2)])
+  j3 <- length(samples[which(x1 > m1 & x2 > m2)])
+  j4 <- length(samples[which(x1 < m1 & x2 < m2)])
 
-    xaxis  = list(title = xlab1, range = range(x1), gridwidth=0.2, showgrid=TRUE, showline = TRUE, autorange = TRUE)
-    yaxis  = list(title = ylab1, range = range(x2), gridwidth=0.2, showgrid=TRUE, showline = TRUE, autorange = TRUE)
+  xlab1 <- paste(gene1, lab.unit, collapse = "  ")
+  ylab1 <- paste(gene2, lab.unit, collapse = "  ")
 
-
-    p <- plotly::plot_ly(x = x1, 
-                         y = x2,
-                         marker = list(size = marker.size),
-                         showlegend = TRUE
-                         ) %>%
-
-        plotly::add_trace(x = x1, 
-                          y = x2,
-                          type="histogram2dcontour",
-                          contours= list(coloring=contour.coloring),
-                          nbinsx = nbinsx, 
-                          nbinsy = nbinsy
-                         ) %>%
-
-        plotly::add_trace(x = x1, 
-                          y = x2,
-                          text =  names(x1),
-                          hoverinfo= 'text',
-                          marker = list(size = marker.size, color = 'black')
-                         ) %>%
-        
-        plotly::layout(shapes = list(list(
-              type = "line",
-              x0 = 0,
-              x1 = 1,
-              xref = "paper",
-              y0 = mean(x1),
-              y1 = mean(x1),
-              line = list(color = "#bebebe", dash="dot")
-            ), list(
-              type = "line",
-              y0 = 0,
-              y1 = 1,
-              yref = "paper",
-              x0 = mean(x2),
-              x1 = mean(x2),
-              line = list(color = "#bebebe", dash="dot") 
-            )),
-              xaxis = xaxis,
-              yaxis = yaxis)
+  xaxis <- list(title = xlab1, range = range(x1), gridwidth = 0.2, showgrid = TRUE, showline = TRUE, autorange = TRUE)
+  yaxis <- list(title = ylab1, range = range(x2), gridwidth = 0.2, showgrid = TRUE, showline = TRUE, autorange = TRUE)
 
 
-        N = length(x1)
+  p <- plotly::plot_ly(
+    x = x1,
+    y = x2,
+    marker = list(size = marker.size),
+    showlegend = TRUE
+  ) %>%
+    plotly::add_trace(
+      x = x1,
+      y = x2,
+      type = "histogram2dcontour",
+      contours = list(coloring = contour.coloring),
+      nbinsx = nbinsx,
+      nbinsy = nbinsy
+    ) %>%
+    plotly::add_trace(
+      x = x1,
+      y = x2,
+      text = names(x1),
+      hoverinfo = "text",
+      marker = list(size = marker.size, color = "black")
+    ) %>%
+    plotly::layout(
+      shapes = list(list(
+        type = "line",
+        x0 = 0,
+        x1 = 1,
+        xref = "paper",
+        y0 = mean(x1),
+        y1 = mean(x1),
+        line = list(color = "#bebebe", dash = "dot")
+      ), list(
+        type = "line",
+        y0 = 0,
+        y1 = 1,
+        yref = "paper",
+        x0 = mean(x2),
+        x1 = mean(x2),
+        line = list(color = "#bebebe", dash = "dot")
+      )),
+      xaxis = xaxis,
+      yaxis = yaxis
+    )
 
-        quadrants = c(j3, j1, j2, j4)
 
-        positions <- matrix(c(1, 1, 0, 1, 1, 0, 0, 0), ncol = 2, byrow = TRUE)
+  N <- length(x1)
 
-        for (i in 1:4) {
-            p <- p %>% plotly::add_annotations(
-                    x=positions[,1][i], y=positions[,2][i],
-                    text=paste(round(100*quadrants[i]/N,2),"%"),
-                    showarrow = FALSE,
-                    font = list(size=15),
-                    xref = "paper",
-                    yref = "paper",
-                    showlegend = FALSE
-                    )
-            }
-        
-        if(!is.null(pgx$deconv)) {
-        inferred.celltype <- pgx$deconv[[1]][["meta"]]
-        dim(inferred.celltype)
-        lab1 <- Matrix::head(names(sort(-Matrix::colSums(inferred.celltype[j1,,drop=FALSE]))),3)
-        pos1 <- apply(cbind(x1, x2)[j1,,drop=FALSE],2,median)
-        p <- p %>% plotly::add_annotations(x=pos1[1], y=pos1[2],
-                text= paste(lab1,collapse="\n"),
-                showarrow = FALSE,
-                font = list(size=15)
-                )
+  quadrants <- c(j3, j1, j2, j4)
 
-        lab2 <- Matrix::head(names(sort(-Matrix::colSums(inferred.celltype[j2,,drop=FALSE]))),3)
-        pos2 <- apply(cbind(x1, x2)[j2,,drop=FALSE],2,median)
-        p <- p %>% plotly::add_annotations(x=pos2[1], y=pos2[2],
-                text= paste(lab2,collapse="\n"),
-                showarrow = FALSE,
-                font = list(size=15)
-                )
+  positions <- matrix(c(1, 1, 0, 1, 1, 0, 0, 0), ncol = 2, byrow = TRUE)
 
-        lab3 <- Matrix::head(names(sort(-Matrix::colSums(inferred.celltype[j3,,drop=FALSE]))),3)
-        pos3 <- apply(cbind(x1, x2)[j3,,drop=FALSE],2,median)
-        p <- p %>% plotly::add_annotations(x=pos3[1], y=pos3[2],
-                text= paste(lab3,collapse="\n"),
-                showarrow = FALSE,
-                font = list(size=15)
-                )
-        }
-        p
+  for (i in 1:4) {
+    p <- p %>% plotly::add_annotations(
+      x = positions[, 1][i], y = positions[, 2][i],
+      text = paste(round(100 * quadrants[i] / N, 2), "%"),
+      showarrow = FALSE,
+      font = list(size = 15),
+      xref = "paper",
+      yref = "paper",
+      showlegend = FALSE
+    )
+  }
+
+  if (!is.null(pgx$deconv)) {
+    inferred.celltype <- pgx$deconv[[1]][["meta"]]
+    dim(inferred.celltype)
+    lab1 <- Matrix::head(names(sort(-Matrix::colSums(inferred.celltype[j1, , drop = FALSE]))), 3)
+    pos1 <- apply(cbind(x1, x2)[j1, , drop = FALSE], 2, median)
+    p <- p %>% plotly::add_annotations(
+      x = pos1[1], y = pos1[2],
+      text = paste(lab1, collapse = "\n"),
+      showarrow = FALSE,
+      font = list(size = 15)
+    )
+
+    lab2 <- Matrix::head(names(sort(-Matrix::colSums(inferred.celltype[j2, , drop = FALSE]))), 3)
+    pos2 <- apply(cbind(x1, x2)[j2, , drop = FALSE], 2, median)
+    p <- p %>% plotly::add_annotations(
+      x = pos2[1], y = pos2[2],
+      text = paste(lab2, collapse = "\n"),
+      showarrow = FALSE,
+      font = list(size = 15)
+    )
+
+    lab3 <- Matrix::head(names(sort(-Matrix::colSums(inferred.celltype[j3, , drop = FALSE]))), 3)
+    pos3 <- apply(cbind(x1, x2)[j3, , drop = FALSE], 2, median)
+    p <- p %>% plotly::add_annotations(
+      x = pos3[1], y = pos3[2],
+      text = paste(lab3, collapse = "\n"),
+      showarrow = FALSE,
+      font = list(size = 15)
+    )
+  }
+  p
 }
 
 #' @export
