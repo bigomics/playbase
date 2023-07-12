@@ -875,24 +875,24 @@ getLevels <- function(Y) {
 }
 
 #' @export
-#' @export
 selectSamplesFromSelectedLevels <- function(Y, levels) {
-  if (is.null(levels) || levels == "") {
+  if (is.null(levels) || all(levels == "")) {
     return(rownames(Y))
   }
-  pheno <- sapply(strsplit(levels, split = "="), "[[", 1)
-  ptype <- sapply(strsplit(levels, split = "="), "[[", 2)
-  sel <- rep(1, nrow(Y))
-  i <- 1
+  pheno <- data.table::tstrsplit(levels, "=", keep = 1) %>%
+    unlist
+  ptype <- data.table::tstrsplit(levels, "=", keep = 2) %>%
+    unlist
+  sel <- rep(FALSE, nrow(Y))
   for (ph in unique(pheno)) {
     k <- which(pheno == ph)
-    sel <- sel * (Y[, ph] %in% ptype[k])
+    sel <- sel | (Y[, ph] %in% ptype[k])
   }
-  rownames(Y)[which(sel == 1)]
+  
+  return(rownames(Y)[which(sel)])
 }
 
 
-#' @export
 #' @export
 getMyGeneInfo <- function(eg, fields = c("symbol", "name", "alias", "map_location", "summary")) {
   info <- lapply(fields, function(f) biomaRt::getGene(eg, fields = f)[[1]])
