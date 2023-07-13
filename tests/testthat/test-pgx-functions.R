@@ -1,5 +1,4 @@
 testthat::test_that("selectSamplesFromSelectedLevels returns correct samples", {
-
   # Test data
   Y <- data.frame(
     Pheno1 = c("A", "B", "C"),
@@ -19,5 +18,4 @@ testthat::test_that("selectSamplesFromSelectedLevels returns correct samples", {
   # Case 4: Multiple levels
   levels <- c("Pheno1=A", "Pheno2=3")
   testthat::expect_equal(selectSamplesFromSelectedLevels(Y, levels), c("sample_1", "sample_3"))
-
 })

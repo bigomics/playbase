@@ -880,15 +880,15 @@ selectSamplesFromSelectedLevels <- function(Y, levels) {
     return(rownames(Y))
   }
   pheno <- data.table::tstrsplit(levels, "=", keep = 1) %>%
-    unlist
+    unlist()
   ptype <- data.table::tstrsplit(levels, "=", keep = 2) %>%
-    unlist
+    unlist()
   sel <- rep(FALSE, nrow(Y))
   for (ph in unique(pheno)) {
     k <- which(pheno == ph)
     sel <- sel | (Y[, ph] %in% ptype[k])
   }
-  
+
   return(rownames(Y)[which(sel)])
 }
 
