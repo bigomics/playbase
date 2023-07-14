@@ -63,8 +63,6 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
   )
 
   clust.index <- NULL
-  names(clust)
-  #
   clust.index <- clust$membership
   clust$membership <- NULL
 
@@ -136,8 +134,7 @@ pgx.clusterSamples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = 
     find.clusters = FALSE,
     umap.pkg = umap.pkg
   )
-  names(clust.pos)
-  #
+  
   clust.index <- clust.pos$membership
   clust.pos$membership <- NULL
   table(clust.index)

@@ -275,7 +275,6 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
     res <- try(pgx.inferCellCyclePhase(counts)) ## can give bins error
     if (class(res) != "try-error") {
       ngs$samples$.cell_cycle <- res
-      table(ngs$samples$.cell_cycle)
     }
     if (!(".gender" %in% colnames(ngs$samples))) {
       message("estimating gender...")
@@ -283,11 +282,9 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
       X <- log2(1 + rna.counts)
       gene_name <- ngs$genes[rownames(X), "gene_name"]
       ngs$samples$.gender <- pgx.inferGender(X, gene_name)
-      table(ngs$samples$.gender)
     } else {
       message("gender already estimated. skipping...")
     }
-    Matrix::head(ngs$samples)
   }
   return(ngs)
 }
@@ -437,8 +434,6 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
       ngs$drugs[[s1]][["stats"]] <- out1[["stats"]]
     }
   } ## end of for rr
-
-  names(ngs$drugs)
 
   remove(X)
   remove(xdrugs)

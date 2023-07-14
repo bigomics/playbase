@@ -748,10 +748,8 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
   xc <- factor(kcode, levels = unique(kcode)) ## experimental condition
   if (ncol(K1) > 10) levels(xc) <- paste0("condition", 1:length(levels(xc))) ## too long...
   jj <- which(!duplicated(kcode))
-  length(jj)
   K2 <- K[jj, colnames(K1), drop = FALSE]
   rownames(K2) <- xc[jj]
-  Matrix::head(K2)
   is.degenerate <- (length(jj) > 0.9 * nrow(K1) || mean(table(xc) == 1) > 0.5)
   is.degenerate
 

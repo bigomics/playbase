@@ -45,8 +45,6 @@ pgx.wgcna <- function(
     ## saveTOMs = TRUE, saveTOMFileBase = "WCNA.tom",
     verbose = 3
   )
-  names(net)
-  table(net$colors)
 
   ## clean up traits matrix
   datTraits <- pgx$samples
@@ -80,7 +78,6 @@ pgx.wgcna <- function(
   dissTOM <- 1 - WGCNA::TOMsimilarityFromExpr(datExpr, power = power)
   rownames(dissTOM) <- colnames(dissTOM) <- colnames(datExpr)
   clust <- playbase::pgx.clusterBigMatrix(dissTOM, methods = c("umap", "tsne", "pca"), dims = c(2))
-  names(clust)
   if ("cluster.genes" %in% names(pgx)) {
     clust[["umap2d"]] <- pgx$cluster.genes$pos[["umap2d"]][colnames(datExpr), ]
   }

@@ -53,7 +53,7 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
     ref = M1, methods = method,
     add.unknown = add.unknown, normalize.mat = normalize.mat
   )
-  names(out$results)
+
   P <- out$results[[method]] ## choose specified method
   rownames(P) <- colnames(X1)
   P[is.na(P)] <- 0
@@ -461,8 +461,6 @@ pgx.multipleDeconvolution <- function(counts, refmat,
     res <- pgx.deconvolution(counts, ref = ref, methods = methods)
 
     if (!is.null(res)) {
-      names(res)
-      names(res$results)
       m <- names(refmat)[i]
       results[[m]] <- res$results
       timings <- rbind(timings, res$timings)
@@ -762,7 +760,6 @@ pgx.deconvolution <- function(X, ref,
     results[["SingleR"]] <- sr1$scores
   }
   ## clean up
-  names(results)
   results <- results[which(!sapply(results, is.null))]
   results <- lapply(results, function(x) {
     x[is.na(x)] <- 0

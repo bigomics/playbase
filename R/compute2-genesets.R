@@ -199,7 +199,6 @@ compute_testGenesets <- function(pgx,
   pgx$timings <- rbind(pgx$timings, gset.meta$timings)
   pgx$gset.meta <- gset.meta
 
-  names(pgx$gset.meta$matrices)
   pgx$gsetX <- pgx$gset.meta$matrices[["meta"]] ## META or average FC?
   pgx$GMT <- G[, rownames(pgx$gsetX)]
 

@@ -102,7 +102,6 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
   )
 
   ## save
-  names(pgx)
   pgx
 }
 

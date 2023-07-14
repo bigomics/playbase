@@ -530,7 +530,7 @@ pgx.survivalVariableImportance <- function(X, time, status,
       fd <- (as.integer(fd) - 1) / 2
       imp4 <- imp4 + fd / niter
     }
-    table(imp4)
+
     names(imp4) <- rownames(X)
     imp[["Boruta"]] <- imp4
   }
@@ -655,7 +655,7 @@ pgx.multiclassVariableImportance <- function(X, y,
       fd <- (as.integer(fd) - 1) / 2
       imp4 <- imp4 + fd / niter
     }
-    table(imp4)
+
     names(imp4) <- rownames(X)
     imp[["Boruta"]] <- imp4
   }

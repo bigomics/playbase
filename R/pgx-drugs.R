@@ -31,7 +31,6 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
   ## X       : drugs profiles (may have multiple for one drug)
   ## xdrugs : drug associated with profile
 
-  names(obj)
   if ("gx.meta" %in% names(obj)) {
     F <- playbase::pgx.getMetaMatrix(obj)$fc
     ## check if multi-omics
@@ -119,7 +118,6 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
       suppressWarnings(res0[[i]] <- fgsea::fgseaSimple(meta.gmt, stats = R1[, i], nperm = 10000))
     }
     names(res0) <- colnames(R1)
-    length(res0)
 
     mNES <- sapply(res0, function(x) x$NES)
     mQ <- sapply(res0, function(x) x$padj)
@@ -136,7 +134,6 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
     msize <- res0[[1]]$size
     results[["GSEA"]] <- list(X = mNES, Q = mQ, P = mP, size = msize)
   }
-  names(results)
 
   ## this takes only the top matching drugs for each comparison to
   ## reduce the size of the matrices
@@ -203,7 +200,6 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
       nprune = nprune, contrast = NULL
     )
     er.mono <- er.mono[["GSEA"]]
-    names(er.mono)
   } else {
     cat("Using passed single drug enrichment results...\n")
     if ("GSEA" %in% names(res.mono)) {
@@ -260,7 +256,6 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
     contrast = NULL
   )
   res.combo <- res.combo[["GSEA"]]
-  names(res.combo)
 
   return(res.combo)
 }

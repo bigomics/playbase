@@ -165,7 +165,7 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   ## ----------------------------------------------------------------------
   ## Prepare fold-change matrix
   ## ----------------------------------------------------------------------
-  names(ngs$gx.meta$meta)
+
   F <- sapply(ngs$gx.meta$meta, function(x) unclass(x$fc)[, "trend.limma"])
   F <- F / max(abs(F), na.rm = TRUE)
   S <- sapply(ngs$gset.meta$meta, function(x) unclass(x$fc)[, "gsva"])

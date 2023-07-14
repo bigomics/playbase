@@ -948,7 +948,6 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
   hilight <- Matrix::head(hilight, ntop)
 
   sig <- 1 * (q < psig & abs(fx) > fc)
-  table(sig)
   names(sig) <- gg
 
 

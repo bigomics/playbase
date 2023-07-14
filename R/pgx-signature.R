@@ -64,7 +64,6 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 1000, contrasts = N
     for (j in 1:length(scores)) scores[[j]]$leadingEdge <- NULL
   }
 
-  names(scores)
   return(scores)
 }
 
@@ -226,8 +225,6 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   gmt <- rbind(sig100.up, sig100.dn)
   gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
   names(gmt) <- cn[sel.idx]
-  length(gmt)
-
 
   system.time(res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm)) ## really unsigned???
 
@@ -434,7 +431,6 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
       reduce.sd = 2000,
       reduce.pca = 200
     )
-    names(pos)
 
     if (!h5exists(h5.file, "clustering")) rhdf5::h5createGroup(h5.file, "clustering")
     rhdf5::h5ls(h5.file)
@@ -559,7 +555,6 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
       reduce.sd = 2000,
       reduce.pca = 200
     )
-    names(pos)
 
     rhdf5::h5write(pos[["pca2d"]], h5.file, "clustering/pca2d") ## can write list??
     rhdf5::h5write(pos[["pca3d"]], h5.file, "clustering/pca3d") ## can write list??
@@ -671,7 +666,6 @@ pgx.ReclusterSignatureDatabase <- function(h5.file, reduce.sd = 1000, reduce.pca
     reduce.sd = reduce.sd,
     reduce.pca = reduce.pca
   )
-  names(pos)
 
   rhdf5::h5write(pos[["pca2d"]], h5.file, "clustering/pca2d") ## can write list??
   rhdf5::h5write(pos[["pca3d"]], h5.file, "clustering/pca3d") ## can write list??

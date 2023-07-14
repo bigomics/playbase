@@ -1026,19 +1026,6 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
 
   families <- c(families, gmt.hgnc)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
   families[["Interleukins (IL)"]] <- genes[grep("^IL[1-9]", genes)]
   families[["Chemokines"]] <- genes[grep("CCL|CCR|CXCR|CXCL|XCL|CX3", genes)]
   families[["Ribosomal proteins"]] <- genes[grep("^RPS|^RPL", genes)]

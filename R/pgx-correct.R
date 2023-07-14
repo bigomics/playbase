@@ -1081,8 +1081,7 @@ pgx._computeNumSig <- function(ngs, X, contrast = NULL, fc = 0, qv = 0.05) {
     method = "limma", trend = TRUE,
     conform.output = FALSE, plot = FALSE
   )
-  names(res)
-  names(res$tables)
+
   fc0 <- sapply(res$tables, function(x) x$logFC)
   qv0 <- sapply(res$tables, function(x) x$adj.P.Val)
   numsig <- mean(Matrix::colSums(abs(fc0) >= fc & qv0 <= qv, na.rm = TRUE))
