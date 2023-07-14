@@ -103,8 +103,6 @@ pgx.createPGX.10X.DEPRECATED <- function(outs, ncells = 2000, aggr.file = "aggre
     counts = counts, samples = pheno, contrasts = ct$contr.matrix,
     is.logx = FALSE
   )
-  Matrix::head(pgx$genes)
-  names(pgx)
 
   ## We perform single-cell integration/batch correction only to
   ## improve clustering!! Note that count/X matrix in PGX is not
@@ -126,8 +124,6 @@ pgx.createPGX.10X.DEPRECATED <- function(outs, ncells = 2000, aggr.file = "aggre
 
 
     idx <- pgx.FindClusters(xpos, method = "louvain")[[1]][, 1]
-    table(idx)
-
     pgx$samples$cluster <- paste0("C", idx)
   }
   message("[createPGX.10X] done!")
@@ -339,7 +335,6 @@ pgx.reduceCells <- function(counts, method, ncells, pheno = NULL, group.id = NUL
       }
     } else if (method == "subsample" && !is.null(group.id)) {
       message(">> Subsampling cells in groups...")
-      table(group.id)
       n1 <- round(ncells / length(unique(group.id)))
       sel <- tapply(1:ncol(counts), group.id, function(i) Matrix::head(sample(i), n1))
       sel <- unlist(sel)
@@ -366,7 +361,6 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
     groups <- rep("grp1", ncol(counts))
   }
   groups <- as.integer(factor(as.character(groups)))
-  table(groups)
 
   pool.counts <- c()
   cluster.id <- c()
@@ -443,7 +437,6 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
       cluster <- paste0("g", g, "-c", 1:ncol(X1))
     } else {
       cluster <- clusterX(X1, k = k, method = clust.method)
-      table(cluster)
       if (!is.null(groups)) cluster <- paste0("g", g, "-", cluster)
     }
     names(cluster) <- colnames(X1)
@@ -452,7 +445,6 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
 
   if (verbose) message("[pgx.poolCells] pooling cells...")
   cluster.id <- cluster.id[colnames(counts)]
-  table(cluster.id)
   if (stats == "mean") {
     pool.counts <- tapply(1:ncol(counts), cluster.id, function(ii) {
       Matrix::rowMeans(counts[, ii, drop = FALSE])
@@ -741,7 +733,6 @@ pgx.scFilterOutliers <- function(counts, a = 2.5, plot = FALSE) {
     selectInlier(ncounts, a) &
     selectInlier(percent.mito, a) &
     selectInlier(percent.ribo, a)
-  table(sel)
 
   counts <- counts[, sel]
   counts
@@ -776,11 +767,9 @@ pgx.createSeuratObject <- function(counts, aggr.csv = NULL,
 
   ## Equalizing libraries
   if ("library_id" %in% colnames(obj@meta.data)) {
-    table(obj$library_id)
     ncells <- median(table(obj$library_id))
     message("library_id parameter found. Equalizing cells to ", ncells)
     sel <- unlist(tapply(1:ncol(obj), obj$library_id, head, ncells))
-    table(obj$library_id[sel])
   }
 
   if ("batch" %in% colnames(obj@meta.data)) {
@@ -1005,14 +994,12 @@ pgx.createSeurateFigures <- function(obj) {
   )
 
   ct1 <- pgx.inferCellType(obj[["RNA"]]@counts, add.unknown = FALSE, low.th = 0.01)
-  table(ct1)
 
   tapply(ct1, obj$seurat_clusters, function(x) table(x))
   ct1x <- tapply(ct1, obj$seurat_clusters, function(x) names(which.max(table(x))))
   ct1x
 
   obj$cell.type <- ct1x[as.character(obj$seurat_clusters)]
-  table(obj$cell.type)
 
   d1 <- Seurat::DimPlot(obj, group.by = "seurat_clusters", label = TRUE) +
     ggplot2::ggtitle("Seurat clusters") + Seurat::NoLegend()

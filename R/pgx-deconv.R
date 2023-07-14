@@ -103,7 +103,6 @@ pgx.inferCellTypeLM22 <- function(counts, low.th = 0.01, add.unknown = FALSE,
     )
     celltype0 <- res$celltype
     P0 <- res$probs
-    table(celltype0)
   }
 
   ## Filter count matrix
@@ -118,7 +117,7 @@ pgx.inferCellTypeLM22 <- function(counts, low.th = 0.01, add.unknown = FALSE,
   M <- M[gg, ]
 
   ## 2nd stage
-  table(celltype0)
+
   celltype <- rep(NA, ncol(X))
   ct <- "Macrophages"
   ct <- "Monocytes"
@@ -229,8 +228,6 @@ pgx.checkCellTypeMarkers <- function(counts, min.count = 3, markers = NULL) {
   check.neg <- t(pmin(M1, 0)) %*% X1
   check.pos <- t(M1 == +1) %*% X1 / Matrix::colSums(M1 == 1)
   check.neg <- t(M1 == -1) %*% X1 / Matrix::colSums(M1 == -1)
-  table(check.pos)
-  table(check.neg)
   check <- 1 * t(check.pos & check.neg)
 
   list(check = check, marker.expr = counts0, markers = markers)

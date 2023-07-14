@@ -70,7 +70,6 @@ pgx.detect_timevar <- function(Y) {
 #' @examples
 pgx.getConditions <- function(exp.matrix, nmax = 3) {
   group <- apply(exp.matrix, 1, paste, collapse = "_")
-  table(group)
   group <- factor(group)
   if (ncol(exp.matrix) > nmax) {
     ngroup <- length(unique(group))
@@ -157,7 +156,6 @@ pgx.makeStratifiedContrastsDF <- function(data, vars, strata, ref) {
   ## check levels
   sel <- (Matrix::colSums(contr.matrix == -1) > 0 &
     Matrix::colSums(contr.matrix == +1) > 0)
-  table(sel)
   contr.matrix <- contr.matrix[, sel]
   exp.matrix <- exp.matrix[, sel]
 
@@ -210,7 +208,6 @@ pgx.makeStratifiedContrasts <- function(Y, strata, ref) {
   ## check levels
   sel <- (Matrix::colSums(contr.matrix == -1) > 0 &
     Matrix::colSums(contr.matrix == +1) > 0)
-  table(sel)
   contr.matrix <- contr.matrix[, sel]
   exp.matrix <- exp.matrix[, sel]
 
@@ -249,7 +246,6 @@ makeDirectContrasts2 <- function(Y, ref, na.rm = TRUE) {
 #' @examples
 expmat2contrast <- function(exp.matrix) {
   group <- apply(exp.matrix, 1, paste, collapse = "_")
-  table(group)
   n.group <- length(unique(group))
   group <- factor(group)
   if (ncol(exp.matrix) > 3) {
@@ -303,7 +299,6 @@ makeDirectContrasts <- function(Y, ref, na.rm = TRUE) {
     exp.matrix0 <- contrastAsLabels(exp.matrix0)
   }
   group <- pgx.getConditions(exp.matrix0)
-  table(group)
   if (length(levels(group)) > 0.5 * nrow(exp.matrix)) {
     cat("WARNING:: contrast matrix looks degenerate. consider removing a contrast.\n")
   }
@@ -494,7 +489,6 @@ pgx.makeSpecificContrasts <- function(df, contrasts, mingrp = 3) {
 
   K0 <- contrastAsLabels(K)
   group <- pgx.getConditions(K0)
-  table(group)
   if (length(levels(group)) > 0.5 * nrow(K)) {
     cat("WARNING:: contrast matrix looks degenerate. consider removing a contrast.\n")
   }

@@ -55,8 +55,6 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
     contrasts <- contrastAsLabels(ac$exp.matrix)
   }
 
-  head(contrasts)
-
   ## other params
   gx.methods <- strsplit(gxmethods, split = ",")[[1]]
   gset.methods <- strsplit(gsetmethods, split = ",")[[1]]
@@ -432,7 +430,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
       is.protcoding <- ngs$genes$gene_biotype %in% c("protein_coding")
     }
     keep <- (is.known & is.hugo & is.protcoding)
-    table(keep)
     ngs$counts <- ngs$counts[keep, ]
     ngs$genes <- ngs$genes[keep, ]
     if (!is.null(ngs$X)) ngs$X <- ngs$X[keep, ]
@@ -449,7 +446,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
       is.protcoding <- ngs$genes$gene_biotype %in% c("protein_coding")
     }
     keep <- (is.known & is.hugo & is.protcoding)
-    table(keep)
     ngs$counts <- ngs$counts[keep, ]
     ngs$genes <- ngs$genes[keep, ]
     if (!is.null(ngs$X)) ngs$X <- ngs$X[keep, ]
@@ -513,14 +509,11 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     posx <- scale(cbind(ngs$cluster$pos[["umap2d"]], ngs$cluster$pos[["tsne2d"]]))
     #
     idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
-    table(idx)
     if (length(unique(idx)) == 1) {
       ## try again with finer settings if single cluster...
       idx <- playbase::pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
     }
     ngs$samples$cluster <- idx
-    Matrix::head(ngs$samples)
-    table(ngs$samples$cluster)
   }
 
   if (cluster.contrasts) {

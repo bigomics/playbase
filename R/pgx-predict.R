@@ -260,7 +260,6 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
         klr <- rep(psych::alpha("grey70", 0.2), nrow(ee))
         klr[which(ee$looping)] <- psych::alpha("red3", 0.3)
       }
-      table(klr)
       segments(0, xy[, 1] - 0.5, 1, xy[, 2], lwd = lwd, col = klr, lty = lty)
       rr <- paste(round(range(abs(ee$rho)), 2), collapse = ",")
 
@@ -599,7 +598,6 @@ pgx.multiclassVariableImportance <- function(X, y,
 
   ## convert to factor
   y <- factor(y)
-  table(y)
 
   ## resample to minimum size to balance groups
   NFOLD <- 5
@@ -723,7 +721,6 @@ pgx.variableImportance <- function(X, y,
 
   ## convert to factor
   y <- factor(y)
-  table(y)
 
   ## resample to minimum size to balance groups
 
@@ -791,7 +788,6 @@ pgx.variableImportance <- function(X, y,
       fd <- (as.integer(fd) - 1) / 2
       imp4 <- imp4 + fd / niter
     }
-    table(imp4)
     names(imp4) <- rownames(X)
     imp[["Boruta"]] <- imp4
   }

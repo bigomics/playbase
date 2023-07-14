@@ -498,7 +498,6 @@ pgx.SankeyFromMRF.PLOTLY <- function(M, R, F, fill = TRUE, labels = NULL) {
 
   matnames <- c(list(rownames(M[[1]])), lapply(M, colnames))
   vlevel <- sapply(igraph::V(gr)$name, grep, matnames)
-  table(vlevel)
 
   ## create Sankey plot
   nv <- length(igraph::V(gr))
@@ -871,7 +870,6 @@ pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
   }
 
   sig <- (q <= psig & abs(f) >= fc)
-  table(sig)
   xy <- cbind(x = m, y = f)
   # <- gg
   cpal <- c("grey60", "red3")
@@ -1158,7 +1156,6 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
     if ("other" %in% xgroup) levels0 <- c(levels0, "other")
     xgroup <- factor(xgroup, levels = levels0)
   }
-  table(xgroup)
 
   ## ------------- set color of samples
   ngrp <- length(group.names)
@@ -1355,11 +1352,8 @@ pgx.plotOmicsNetwork <- function(pgx, gene = NULL, reduced = NULL, levels = c("g
     mm <- sapply(mm, function(s) sub(".*\\}", "", s))
     vlabel <- sapply(mm, function(x) intersect(x, sel))
     vlabel <- sapply(vlabel, paste, collapse = "\n")
-    Matrix::head(vlabel, 10)
-    table(vlabel != "")
 
     sel <- which(vlabel != "")
-    length(sel)
     if (length(sel) > 0) {
       vsel[sel] <- 1
       lab.cex[sel] <- 1 + 18 * (fc.cex[sel] / max(fc.cex[sel], na.rm = TRUE))
@@ -1674,7 +1668,6 @@ pgx.splitHeatmap <- function(ngs, splitx = NULL, top.mode = "specific",
     hc <- fastcluster::hclust(as.dist(1 - stats::cor(t(X1), use = "pairwise")), method = "ward.D2")
     idx <- paste0("S", cutree(hc, 5))
   }
-  table(idx)
 
   ## ----- Get valid phenotype variables
   if (is.null(annot.pheno)) {

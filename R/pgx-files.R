@@ -387,7 +387,6 @@ pgx.initDatasetFolder.DEPRECATED <- function(pgx.dir,
     ## find most common genes
     all.gg <- toupper(as.character(unlist(sapply(missing.FC, rownames))))
     gg.tbl <- table(all.gg)
-    table(gg.tbl)
 
     ## Conform the multiple metaFC matrices
     gg <- names(gg.tbl)
@@ -1075,7 +1074,6 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     ## find most common genes
     all.gg <- toupper(as.character(unlist(sapply(missing.FC, rownames))))
     gg.tbl <- table(all.gg)
-    table(gg.tbl)
 
     ## Conform the multiple metaFC matrices
     gg <- names(gg.tbl)

@@ -30,7 +30,6 @@ prot.readProteinGroups <- function(file, meta = NULL, sep = "\t", collapse.gene 
   contaminant.cols <- intersect(contaminant.cols, colnames(D))
   contaminant.cols
   D$is.contaminant <- (rowSums(D[, contaminant.cols, drop = FALSE] == "+", na.rm = TRUE) >= 1)
-  table(D$is.contaminant)
   if (filter.contaminants) {
     D <- D[which(!D$is.contaminant), ]
   }
@@ -461,20 +460,14 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
 
   ## ------------ Filter contaminants (important)
   keep <- (df$Reverse != "+" & df$Only.identified.by.site != "+" & df$Potential.contaminant != "+")
-  table(keep)
   df1 <- df[keep, ]
 
   ## use LFQ values that are normalized across the samples
 
   LFQ.L <- as.matrix(df1[, grep("LFQ.intensity.L.", colnames(df1))])
   LFQ.H <- as.matrix(df1[, grep("LFQ.intensity.H.", colnames(df1))])
-  table(colnames(LFQ.L) == sub(".H.", ".L.", colnames(LFQ.H))) ## check!
 
   ## --------- rename samples
-
-
-
-
 
   LFQ.names <- gsub(".*MB[0-9]*_|.*MB_RG_|\"", "", colnames(LFQ.L))
 

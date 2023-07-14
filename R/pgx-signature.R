@@ -387,7 +387,6 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
 
     ## Filter out genes (not on known chromosomes...)
     gannot <- ngs.getGeneAnnotation(genes)
-    table(!is.na(gannot$chr))
     sel <- which(!is.na(gannot$chr))
     genes <- sort(genes[sel])
 
@@ -480,7 +479,6 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALS
 
     genes <- as.vector(unlist(sapply(F, rownames)))
     genes <- sort(unique(toupper(genes)))
-    length(genes)
     F <- lapply(F, function(x) x[match(genes, rownames(x)), , drop = FALSE])
     X <- do.call(cbind, F)
     rownames(X) <- genes
@@ -488,7 +486,6 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALS
     ## Filter out genes (not on known chromosomes...)
     genes <- rownames(X)
     gannot <- ngs.getGeneAnnotation(genes)
-    table(is.na(gannot$chr))
     sel <- which(!is.na(gannot$chr))
     X <- X[sel, , drop = FALSE]
     remove(F)

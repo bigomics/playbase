@@ -37,7 +37,6 @@ pmid.getGeneContext <- function(gene, keyword) {
     }
   }
   sel <- ((match0 * match1) > 0)
-  table(sel)
   rif.hits <- rownames(GENERIF.MATRIX)[sel]
   rif.hits <- rif.hits[!duplicated(rif.hits)]
   ## rif.hits

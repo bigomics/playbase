@@ -775,7 +775,6 @@ pgx.getNumericalPhenotypes <- function(df) {
   is.bad2 <- grepl("year|month|day|^efs|^dfs|surv|follow", tolower(colnames(df)))
   is.bad3 <- apply(df, 2, function(x) any(grepl("^sample|patient|replicate|donor|individ", x, ignore.case = TRUE)))
   is.bad <- (is.bad1 | is.bad2 | is.bad3)
-  table(is.bad)
   is.bad
 
   numratio <- apply(df, 2, function(x) length(unique(x))) / nrow(df)
@@ -811,7 +810,6 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 
   is.bad <- (is.bad2 | is.bad3)
   is.bad
-  table(is.bad)
 
   ## auto-determine which are factors
   is.factor <- apply(df, 2, is.categorical)

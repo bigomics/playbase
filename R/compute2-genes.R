@@ -171,7 +171,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     ## remove otherwise
     keep <- rep(TRUE, ncol(contr.matrix))
     keep <- (Matrix::colSums(exp.matrix > 0) >= 1 & Matrix::colSums(exp.matrix < 0) >= 1)
-    table(keep)
     contr.matrix <- contr.matrix[, keep, drop = FALSE]
     exp.matrix <- exp.matrix[, keep, drop = FALSE]
   }
@@ -224,7 +223,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     pgx$filtered <- NULL
     pgx$filtered[["low.expressed"]] <-
       paste(rownames(counts)[which(!keep)], collapse = ";")
-    table(keep)
     counts <- counts[which(keep), , drop = FALSE]
     genes <- genes[which(keep), , drop = FALSE]
     cat("filtering out", sum(!keep), "low-expressed genes\n")

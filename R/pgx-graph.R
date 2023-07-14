@@ -141,10 +141,6 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   ## Read in gene/geneset graph structure
   ## ----------------------------------------------------------------------
   gr <- readRDS(file.path(FILES, "pgx-graph-geneXgset-XL-snn20.rds"))
-  table(igraph::V(gr)$level)
-
-
-
 
   ## ----------------------------------------------------------------------
   ## Create large data matrix (includes all levels)
@@ -180,14 +176,6 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   remove(F)
   remove(S)
 
-
-  table(rownames(xx) %in% igraph::V(gr)$name)
-  table(rownames(fc) %in% igraph::V(gr)$name)
-  Matrix::head(setdiff(rownames(xx), igraph::V(gr)$name))
-  Matrix::head(setdiff(rownames(fc), igraph::V(gr)$name))
-  Matrix::tail(igraph::V(gr)$name)
-  Matrix::tail(rownames(fc))
-
   sel <- intersect(rownames(xx), rownames(fc))
   sel <- sort(intersect(sel, igraph::V(gr)$name))
   gr1 <- igraph::induced_subgraph(gr, sel)
@@ -202,7 +190,6 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   ## ----------------------------------------------------------------------
   ## should we recreate the SNNgraph in the intralayers????
   ## ----------------------------------------------------------------------
-  table(igraph::V(gr1)$level)
   ## this connect all points with at least 3 neighbours
   sel1 <- which(igraph::V(gr1)$level == "gene")
   pos1 <- gr$layout[igraph::V(gr1)[sel1]$name, ]
@@ -334,9 +321,6 @@ pgx.reduceOmicsGraph <- function(ngs) {
 
 
   ee <- igraph::get.edges(gr1, igraph::E(gr1))
-  summary(igraph::E(gr1)$weight)
-  table(abs(igraph::E(gr1)$weight) > 0.01)
-  table(abs(igraph::E(gr1)$weight) > 0.05)
   lev <- igraph::V(gr1)$level
   ee.type <- c("inter", "intra")[1 + 1 * (lev[ee[, 1]] == (lev[ee[, 2]]))]
   gr1 <- igraph::delete_edges(gr1, which(abs(igraph::E(gr1)$weight) < 0.01 & ee.type == "inter"))
@@ -380,7 +364,6 @@ pgx.reduceOmicsGraph <- function(ngs) {
   igraph::V(gr1)$label <- grp.label
   igraph::V(gr1)$cluster <- tapply(idx0, idx, median) ## level 1 cluster index
   igraph::V(gr1)$level <- gsub("\\}.*|^\\{", "", igraph::V(gr1)$name)
-  table(igraph::V(gr1)$level)
 
   gr1$foldchange <- rF
   gr1$members <- grp.members
@@ -404,7 +387,6 @@ pgx.createVipGeneLayer <- function(gr, genes, z = 0, reconnect = 40) {
   igraph::V(gr)[vip]$level <- "VIP"
   gr$layout <- gr$layout[igraph::V(gr)$name, ]
   gr$layout[igraph::V(gr)[vip]$name, 3] <- z ## new layer position
-  table(gr$layout[, 3])
 
   ## ----------------------------------------------------------------------
   ## remove "shortcut" links
@@ -413,11 +395,8 @@ pgx.createVipGeneLayer <- function(gr, genes, z = 0, reconnect = 40) {
   lv1 <- igraph::V(gr)$level[ee[, 1]]
   lv2 <- igraph::V(gr)$level[ee[, 2]]
   ee.type <- c("intralayer", "interlayer")[1 + 1 * (lv1 != lv2)]
-  table(ee.type)
   link.dist <- abs(gr$layout[ee[, 1], 3] - gr$layout[ee[, 2], 3])
-  summary(link.dist)
   ee.delete <- (ee.type == "interlayer" & link.dist > 1.5)
-  table(ee.delete)
   gr1 <- igraph::delete_edges(gr, which(ee.delete))
 
   ## ----------------------------------------------------------------------

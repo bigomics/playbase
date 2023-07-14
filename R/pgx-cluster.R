@@ -137,7 +137,6 @@ pgx.clusterSamples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = 
   
   clust.index <- clust.pos$membership
   clust.pos$membership <- NULL
-  table(clust.index)
 
   if (replace.orig) {
     message("[pgx.clusterSamples2] update tsne2d/tsne3d and 'cluster' pheno...")
@@ -499,14 +498,11 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
     all.pos[["umap3d"]] <- pos
   }
 
-  length(all.pos)
-
   all.pos$membership <- NULL
   if (find.clusters) {
     message("*** DEPRECATED *** please call seperately")
     message("calculating Louvain memberships (from reduced X)...")
     idx <- pgx.findLouvainClusters(t(X), level = 1, prefix = "c", small.zero = 0.01)
-    table(idx)
     all.pos$membership <- idx[1:dimx[2]]
   }
 
@@ -670,7 +666,6 @@ pgx.findLouvainClusters.SNN <- function(X, prefix = "c", level = 1, gamma = 1, s
   }
 
   idx <- igraph::cluster_louvain(gr)$membership
-  table(idx)
   idx <- paste0(prefix, idx)
 
   if (!is.null(idx) && small.zero > 0) {
@@ -686,7 +681,6 @@ pgx.findLouvainClusters.SNN <- function(X, prefix = "c", level = 1, gamma = 1, s
   ## rename levels with largest cluster first
   idx <- factor(idx, levels = names(sort(-table(idx))))
   levels(idx) <- paste0(prefix, 1:length(levels(idx)))
-  table(idx)
   idx <- as.character(idx)
   message("Found ", length(unique(idx)), " clusters...")
   return(idx)
@@ -739,7 +733,6 @@ pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix 
   ## rename levels with largest cluster first
   idx <- factor(idx, levels = names(sort(-table(idx))))
   levels(idx) <- paste0(prefix, 1:length(levels(idx)))
-  table(idx)
   idx <- as.character(idx)
   message("Found ", length(unique(idx)), " clusters...")
   return(idx)

@@ -204,7 +204,6 @@ pgx.plotCNAHeatmap <- function(ngs, res, annot = NA, pca.filter = -1, lwd = 1,
   chr <- res$chr
   chr <- as.character(chr)
   pos <- res$pos
-  table(chr)
 
   ## ---------------------------------------------------------------------
   ## Downsample if needed
@@ -229,7 +228,6 @@ pgx.plotCNAHeatmap <- function(ngs, res, annot = NA, pca.filter = -1, lwd = 1,
   cna <- cna[ii, ]
   pos <- pos[ii]
   chr <- chr[ii]
-  table(chr)
 
   ## ensure order on chrpos
   ichr <- as.integer(sub("X", 23, sub("Y", 24, sub("chr", "", chr))))
@@ -282,7 +280,6 @@ pgx.plotCNAHeatmap <- function(ngs, res, annot = NA, pca.filter = -1, lwd = 1,
     }
     k
     y <- as.character(ngs$samples[colnames(cna), k])
-    table(y)
     ny <- length(setdiff(unique(y), NA))
     if (ny >= 2) {
       y[is.na(y)] <- "_"

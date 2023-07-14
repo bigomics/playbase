@@ -405,7 +405,6 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     while (length(ii) > 0 && niter < max.iter) {
       xx <- Matrix::head(cX[order(-apply(cX, 1, sd)), ], hc.top)
       hc <- cutree(fastcluster::hclust(dist(t(xx)), method = "ward.D2"), 2)
-      table(hc)
       hc.rho <- stats::cor(hc, mod1)
       hc.rho
       hc.rho <- apply(abs(hc.rho), 1, max)

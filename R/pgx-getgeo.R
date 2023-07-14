@@ -894,7 +894,6 @@ parse_geo_series_matrix <- function(SERIES_FILE,
   sum(duplicated(gene))
 
   ex <- do.call(rbind, tapply(1:nrow(D), gene, function(i) colMeans(D[i, , drop = FALSE])))
-  head(ex)
 
   ## Transpose matrix, add sample column and set gene names as column names
 
