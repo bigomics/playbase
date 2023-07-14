@@ -109,7 +109,7 @@ pgx.createPGX.10X.DEPRECATED <- function(outs, ncells = 2000, aggr.file = "aggre
   ## We perform single-cell integration/batch correction only to
   ## improve clustering!! Note that count/X matrix in PGX is not
   ## replaced with the integrated matrix (not reliable...).
-  colnames(pheno)
+
   if ("batch" %in% colnames(pheno)) {
     message("[createPGX.10X] performing batch integration using MNN...")
     bX <- logCPM(counts, total = 1e4)
@@ -783,8 +783,6 @@ pgx.createSeuratObject <- function(counts, aggr.csv = NULL,
     table(obj$library_id[sel])
   }
 
-
-  colnames(obj@meta.data)
   if ("batch" %in% colnames(obj@meta.data)) {
     message("batch parameter found. integrating batches using MNN.")
     split <- Seurat::SplitObject(obj, split.by = "batch")

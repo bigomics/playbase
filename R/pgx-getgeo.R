@@ -306,7 +306,6 @@ pgx.getGEOcounts.GEOquery <- function(id) {
     }
 
     ## get symbol from featuredata
-    colnames(fdata)
     fsymbol <- pgx.getSymbolFromFeatureData(fdata)
     Matrix::head(fsymbol[!is.na(fsymbol)])
 
@@ -321,7 +320,6 @@ pgx.getGEOcounts.GEOquery <- function(id) {
     ex2 <- do.call(rbind, ex2)
     expr.list[[names(gse)[k]]] <- ex2
   }
-  length(expr.list)
 
   if (length(expr.list) == 0) {
     return(NULL)
@@ -383,7 +381,6 @@ pgx.getSymbolFromFeatureData <- function(fdata) {
   ## consistent. Also the actual gene symbol may be part of an
   ## annotation string instead of single symbol column.
 
-  colnames(fdata)
   symbol <- NULL
 
   ## If there is a symbol column, than it is easy

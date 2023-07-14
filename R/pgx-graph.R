@@ -723,7 +723,6 @@ pgx.computeCoreGOgraph <- function(ngs, fdr = 0.05) {
   sub2 <- igraph::graph.union(subgraphs, byname = TRUE)
   A <- data.frame(igraph::vertex.attributes(sub2))
   rownames(A) <- A$name
-  colnames(A)
 
   go_graph <- getGOgraph()
   go_graph <- igraph::induced.subgraph(go_graph, igraph::V(sub2)$name)

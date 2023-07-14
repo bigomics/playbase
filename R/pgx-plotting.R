@@ -1688,7 +1688,6 @@ pgx.splitHeatmap <- function(ngs, splitx = NULL, top.mode = "specific",
   Y <- ngs$samples[, annot.pheno, drop = FALSE]
   Y <- data.frame(apply(Y, 2, as.character))
   rownames(Y) <- rownames(ngs$samples)
-  colnames(Y)
 
   sampletips <- colnames(X1)
   genetips <- rownames(X1)

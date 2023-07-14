@@ -136,7 +136,6 @@ pgx.initialize <- function(pgx) {
   k2 <- grep("OS.survival|cluster|condition|group", colnames(pgx$Y), value = TRUE) ## must include
   kk <- sort(unique(c(k1, k2)))
   pgx$Y <- pgx$Y[, kk, drop = FALSE]
-  colnames(pgx$Y)
 
   ## ----------------------------------------------------------------
   ## Tidy up genes matrix

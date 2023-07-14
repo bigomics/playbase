@@ -186,7 +186,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   message("[createPGX] input: dim(contrasts) = ", paste(dim(contrasts), collapse = "x"))
 
   ## contrast matrix
-  colnames(contrasts)
+
   is.numbered <- all(unique(as.vector(contrasts)) %in% c(-1, 0, 1))
   is.numbered <- all(sapply(type.convert(data.frame(contrasts), as.is = TRUE), class) %in% c("numeric", "integer"))
   ct.type <- c("labeled (new style)", "numbered (old style)")[1 + 1 * is.numbered]

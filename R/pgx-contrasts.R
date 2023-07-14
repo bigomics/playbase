@@ -136,7 +136,7 @@ pgx.makeStratifiedContrastsDF <- function(data, vars, strata, ref) {
   M <- md$contr.matrix
   C0 <- M[, grep("strata", colnames(M), invert = TRUE), drop = FALSE]
   C1 <- M[, grep("strata", colnames(M)), drop = FALSE]
-  colnames(C1)
+
   colnames(C1) <- paste0(gsub("strata:|_vs_others", "", colnames(C1)))
   contr.matrix <- c()
   i <- 1
@@ -190,7 +190,6 @@ pgx.makeStratifiedContrasts <- function(Y, strata, ref) {
   M <- md$contr.matrix
   C0 <- M[, grep("strata", colnames(M), invert = TRUE), drop = FALSE]
   C1 <- M[, grep("strata", colnames(M)), drop = FALSE]
-  colnames(C1)
   colnames(C1) <- paste0(gsub("strata:|_vs_others", "", colnames(C1)))
   contr.matrix <- c()
   i <- 1
