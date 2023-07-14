@@ -95,8 +95,7 @@ pgx.readMatrixH5 <- function(h5.file, select = NULL, rows = NULL) {
   as.matrix(X)
 }
 
-#' @export
-pgx.readOptions <- function(file = "./OPTIONS") {
+pgx.readOptions.BROKEN <- function(file = "./OPTIONS") {
   if (!file.exists(file)) {
     return(NULL)
   }
@@ -108,6 +107,24 @@ pgx.readOptions <- function(file = "./OPTIONS") {
   is.bool
   opt[is.bool] <- sapply(opt[is.bool], function(x) tolower(x) %in% c("true"))
   names(opt) <- trimws(names(opt))
+  opt
+}
+
+#' @export
+pgx.readOptions <- function(file = "./OPTIONS") {
+  if (!file.exists(file)) {
+    return(NULL)
+  }
+  P <- read.table(file, sep = "=", row.names = 1)
+  opt.names <- trimws(rownames(P))
+  opt <- list( P[,1] )
+  opt <- sapply(opt, trimws)
+  opt <- as.list(opt)
+  names(opt) <- opt.names
+  opt <- sapply(opt, strsplit, split = "[;]")
+  ## turn TRUE/FALSE into R logical
+  is.bool <- sapply(opt, function(x) all(tolower(x) %in% c("true", "false")))
+  opt[is.bool] <- sapply(opt[is.bool], as.logical)
   opt
 }
 
