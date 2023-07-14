@@ -511,7 +511,7 @@ read.as_matrix <- function(file) {
     x <- x[-zero.row,,drop=FALSE]
   }
   ## drop any 100% missing columns (sometimes added by not-so-Excel...)
-  zero.col <- which(colSums(is.na(x)==1)
+  zero.col <- which(colSums(is.na(x)==1))
   if (length(zero.col)) {
     x <- x[,-zero.col,drop=FALSE]
   }
