@@ -551,7 +551,6 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, slen = 2
     }
   }
 
-  dim(ct.all)
   if (is.null(ct.all)) {
     message("[pgx.makeAutoContrastsStratified] WARNING : no valid contrasts")
     return(NULL)
@@ -563,7 +562,6 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, slen = 2
   ct.all <- ct.all[match(rownames(df), rownames(ct.all)), ]
   rownames(ct.all) <- rownames(df)
   ct.all[is.na(ct.all)] <- 0
-  dim(ct.all)
   ct.all
 }
 
@@ -689,7 +687,6 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
   if (!is.null(ref)) ref <- ref[sel]
   df[df == ""] <- NA
   df[df == " "] <- NA
-  dim(df)
 
   ## ----------- use type.convert to infer parameters
   df <- type.convert(data.frame(df, check.names = FALSE), as.is = TRUE)
@@ -731,13 +728,11 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
       cat("reference auto-detected:", ref1, "\n")
     }
     ct <- autoContrast1(x, ref = ref1, slen = slen, mingrp = mingrp)
-    dim(ct)
     if (!is.null(ct)) {
       colnames(ct) <- paste0(colnames(df)[i], ":", colnames(ct))
       K <- cbind(K, ct)
     }
   }
-  dim(K)
 
   if (is.null(K)) {
     warning("[pgx.makeAutoContrasts] non valid contrasts")
@@ -746,7 +741,6 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
 
   rownames(K) <- df.rownames
   Matrix::head(K)
-  dim(K)
 
   ## Now try to infer the underlying "conditions"
   K1 <- contrastAsLabels(K - 0.5)
@@ -757,7 +751,6 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
   length(jj)
   K2 <- K[jj, colnames(K1), drop = FALSE]
   rownames(K2) <- xc[jj]
-  dim(K2)
   Matrix::head(K2)
   is.degenerate <- (length(jj) > 0.9 * nrow(K1) || mean(table(xc) == 1) > 0.5)
   is.degenerate

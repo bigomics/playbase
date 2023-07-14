@@ -25,11 +25,9 @@ pgx.getGEOseries <- function(id, archs.h5 = "human_matrix.h5", convert.hugo = TR
   ## get data/pheno matrices
   geo <- pgx.getGEOcounts(id, archs.h5 = archs.h5)
   counts <- geo$expr
-  dim(counts)
 
   ## get sample info
   meta <- pgx.getGeoMetadata(id)
-  names(meta)
 
   ## conform matrices
   samples <- intersect(rownames(meta), colnames(counts))
@@ -51,12 +49,9 @@ pgx.getGEOseries <- function(id, archs.h5 = "human_matrix.h5", convert.hugo = TR
   }
 
   ## get annotation
-  dim(counts)
-  sum(duplicated(rownames(counts)))
   genes <- ngs.getGeneAnnotation(rownames(counts))
 
   ## get categorical phenotypes
-  dim(meta)
   meta1 <- apply(meta, 2, trimsame)
   rownames(meta1) <- rownames(meta)
   sampleinfo <- pgx.discretizePhenotypeMatrix(
@@ -64,7 +59,6 @@ pgx.getGEOseries <- function(id, archs.h5 = "human_matrix.h5", convert.hugo = TR
     min.ncat = 2, max.ncat = 20, remove.dup = TRUE
   )
   sampleinfo <- data.frame(sampleinfo, stringsAsFactors = FALSE, check.names = FALSE)
-  dim(sampleinfo)
   Matrix::head(sampleinfo)
 
   ## automagically create contrast matrix
@@ -127,10 +121,6 @@ pgx.getGEOcounts <- function(id, archs.h5) {
     cat("WARNING:: could not get GEO expression. please download manually.\n")
     return(NULL)
   }
-  dim(expr)
-  max(expr)
-
-  dim(expr)
   list(expr = expr, source = src)
 }
 
@@ -163,12 +153,7 @@ pgx.getGeoMetadata <- function(id) {
   }
 
   colnames(pheno) <- gsub("[ ]", "_", colnames(pheno)) ## no spaces???
-  dim(pheno)
   Matrix::head(pheno)
-
-  ##
-
-
 
   pheno
 }
@@ -244,7 +229,7 @@ pgx.getGEOcounts.recount <- function(id) {
   rse <- recount::scale_counts(rse_gene)
 
   counts <- MultiAssayExperiment::assay(rse)
-  dim(counts)
+  
   return(counts)
 }
 
@@ -268,7 +253,6 @@ pgx.getGEOcounts.GEOquery <- function(id) {
   length(gse)
   attr(gse, "names")
 
-  dim(exprs(gse[[1]]))
   has.expr <- sapply(gse, function(x) nrow(exprs(x)) > 0)
   has.expr
 
@@ -293,7 +277,6 @@ pgx.getGEOcounts.GEOquery <- function(id) {
     ## get expression
     eset <- gse[[k]]
     ex <- exprs(eset)
-    dim(ex)
 
     if (ncol(ex) <= 3) {
       ## too small dataset
@@ -320,7 +303,6 @@ pgx.getGEOcounts.GEOquery <- function(id) {
       gpl.annot <- GEOquery::getGEO(eset@annotation)
       fdata <- GEOquery::Table(gpl.annot)
       fdata <- fdata[match(rownames(ex), fdata$ID), ]
-      dim(fdata)
     }
 
     ## get symbol from featuredata
@@ -362,7 +344,6 @@ pgx.getGEOcounts.GEOquery <- function(id) {
   } else {
     expr <- expr.list[[1]]
   }
-  dim(expr)
 
   return(expr) ## return always linear intensities
 }
@@ -383,16 +364,9 @@ pgx.getGEOcounts.fromSuppl <- function(id) {
     cat("ERROR: GEOquery::getGEO() error\n")
     return(NULL)
   }
-  length(gse)
-  attr(gse, "names")
 
   supp_file <- gse@header$supplementary_file
   supp_file
-
-  ## Fill me!!!!
-  ##
-  ##
-  dim(expr)
 
   return(expr)
 }
@@ -530,7 +504,6 @@ pgx.getGeoMetadata.fromEset <- function(id) {
   })
   lapply(pheno.list, dim)
   pheno <- do.call(rbind, pheno.list)
-  dim(pheno)
   pheno <- data.frame(pheno, stringsAsFactors = FALSE, check.names = FALSE)
 
   return(pheno)
@@ -555,7 +528,6 @@ pgx.getGeoMetadata.fromEset1 <- function(eset) {
 
   ## Base sample_info from characteristics (ch1) column
   ch1_info <- eset.getCH1(eset)
-  dim(ch1_info)
   Matrix::head(ch1_info)
 
   ## We can get extra information from title
@@ -582,7 +554,6 @@ pgx.getGeoMetadata.fromEset1 <- function(eset) {
   if (!is.null(title_info)) sample_info <- cbind(sample_info, title_info)
 
   sample_info <- data.frame(sample_info, stringsAsFactors = FALSE, check.names = FALSE)
-  dim(sample_info)
 
   sample_info
 }
@@ -631,7 +602,6 @@ pgx.getGeoMetadata.fromGSM <- function(id) {
       x
     })
     ch1_info <- do.call(rbind, ch1_info)
-    dim(ch1_info)
     colnames(ch1_info) <- ch1_vars
     Matrix::head(ch1_info)
   }
@@ -651,7 +621,6 @@ pgx.getGeoMetadata.fromGSM <- function(id) {
 
 
     title_info <- eset.parsePhenoFromTitle(title2, split = "_")
-    dim(title_info)
     Matrix::head(title_info)
   }
 
@@ -664,8 +633,6 @@ pgx.getGeoMetadata.fromGSM <- function(id) {
   if (!is.null(title_info)) sample_info <- cbind(sample_info, title_info)
 
   sample_info <- data.frame(sample_info, stringsAsFactors = FALSE, check.names = FALSE)
-  dim(sample_info)
-
 
   sample_info
 }
@@ -699,7 +666,6 @@ eset.getCH1 <- function(eset) {
     clin_info <- apply(clin_info, 2, function(s) sub(".*[:] ", "", s))
     clin_info <- data.frame(clin_info, stringsAsFactors = FALSE, check.names = FALSE)
     rownames(clin_info) <- NULL
-    dim(clin_info)
     colnames(clin_info) <- clin.terms
     pdata <- cbind(
       pdata[, -which(colnames(pdata) == "Clinical info:ch1"), drop = FALSE],
@@ -718,7 +684,6 @@ eset.parseCharacteristicsInfo <- function(ch, split = ",") {
   value <- apply(value, 2, function(s) trimws(sub(".*[:]", "", s)))
   value <- data.frame(value, stringsAsFactors = FALSE, check.names = FALSE)
   rownames(value) <- NULL
-  dim(value)
   colnames(value) <- terms
   value
 }
@@ -926,7 +891,6 @@ parse_geo_series_matrix <- function(SERIES_FILE,
 
   ## Merge tables to map Gene genes ids
 
-  dim(m)
   gene <- ref$gene[match(rownames(D), as.character(ref$ID_REF))]
 
   ## Aggregate duplicate genes by median
@@ -944,11 +908,8 @@ parse_geo_series_matrix <- function(SERIES_FILE,
   sel <- which(sel1 & sel2)
 
   anno1 <- anno[, sel, with = FALSE]
-  dim(anno1)
 
   ## Write results to separate expression and annotation files
-  dim(ex)
-  dim(anno1)
   if (write.file) {
     cat("writing", EXPRESSION_OUTPUT_FILE, "\n")
     fwrite(data.table(gene = rownames(ex), ex), file = EXPRESSION_OUTPUT_FILE, sep = ",")

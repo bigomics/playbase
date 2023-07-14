@@ -20,7 +20,6 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
     marker.genes <- sort(unique(marker.genes))
     M <- matrix(0, nrow = length(marker.genes), ncol = length(markers))
     dimnames(M) <- list(marker.genes, names(markers))
-    dim(M)
     k <- 7
     k <- 1
     for (k in 1:ncol(M)) {
@@ -58,7 +57,6 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
   P <- out$results[[method]] ## choose specified method
   rownames(P) <- colnames(X1)
   P[is.na(P)] <- 0
-  dim(P)
 
   ## Collapse to single cell.type
   if (collapse == "sum") {
@@ -69,7 +67,6 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
     P <- tapply(1:ncol(P), colnames(P), function(i) apply(P[, i, drop = FALSE], 1, max))
   }
   P <- do.call(cbind, P)
-  dim(P)
 
   ## Get maximum probability cell.type
   P <- P / (1e-6 + rowSums(P, na.rm = TRUE))
@@ -112,7 +109,6 @@ pgx.inferCellTypeLM22 <- function(counts, low.th = 0.01, add.unknown = FALSE,
   ## Filter count matrix
   X <- counts
   X <- X[(rowMeans(X >= min.count) > low.th), ] ## OK???
-  dim(X)
 
   ## Match matrices
   rownames(X) <- toupper(rownames(X))
@@ -120,7 +116,6 @@ pgx.inferCellTypeLM22 <- function(counts, low.th = 0.01, add.unknown = FALSE,
   gg <- intersect(rownames(X), rownames(M))
   X <- X[gg, ]
   M <- M[gg, ]
-  dim(X)
 
   ## 2nd stage
   table(celltype0)
@@ -136,7 +131,7 @@ pgx.inferCellTypeLM22 <- function(counts, low.th = 0.01, add.unknown = FALSE,
     jj <- which(celltype0 == ct)
     jj <- 1:length(celltype0)
     ct3 <- celltype0[jj]
-    dim(M1)
+    
     if (ncol(M1) > 0) {
       X1 <- X[, jj, drop = FALSE]
       X1 <- X1 / (1e-3 + rowMeans(X1)) ## center feature means??
@@ -163,10 +158,6 @@ pgx.inferCellTypeLM22 <- function(counts, low.th = 0.01, add.unknown = FALSE,
   }
 
   celltype <- colnames(P1)[max.col(P1)]
-  table(celltype0)
-  table(celltype)
-  table(celltype0, celltype)
-  dim(P1)
 
   ## collapse small groups to 'other_cells'
   low.ct <- names(which(table(celltype) < low.th * length(celltype)))
@@ -213,7 +204,6 @@ pgx.checkCellTypeMarkers <- function(counts, min.count = 3, markers = NULL) {
 
   M <- matrix(0, nrow = length(marker.genes), ncol = length(markers))
   dimnames(M) <- list(marker.genes, names(markers))
-  dim(M)
   k <- 7
   k <- 1
   for (k in 1:ncol(M)) {
@@ -468,7 +458,6 @@ pgx.multipleDeconvolution <- function(counts, refmat,
   for (i in 1:length(refmat)) {
     message("[pgx.multipleDeconvolution] computing for ", refnames[i])
     ref <- refmat[[i]]
-    dim(ref)
     res <- pgx.deconvolution(counts, ref = ref, methods = methods)
 
     if (!is.null(res)) {

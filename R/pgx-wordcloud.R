@@ -51,7 +51,6 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   idx <- do.call(rbind, idx)
 
   W <- Matrix::sparseMatrix(idx[, 1], idx[, 2], x = 1)
-  dim(W)
   rownames(W) <- names(words2)
   colnames(W) <- terms
 
@@ -59,7 +58,6 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   nn <- Matrix::colSums(W, na.rm = TRUE)
   nr <- nn / nrow(W)
   W <- W[, which(nn >= 3 & nr <= 0.5), drop = FALSE]
-  dim(W)
 
   if (ncol(W) < 1) {
     message("[pgx.calculateWordCloud] WARNING:: no valid words left")
@@ -85,7 +83,6 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   #
   res <- res[(res$padj < 1 & res$NES > 0), ]
   res <- res[order(-abs(res$NES)), ]
-  dim(res)
 
   ## now compute significant terms for all contrasts
   all.gsea <- list()

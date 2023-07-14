@@ -456,7 +456,6 @@ read.csv3 <- function(file, as_matrix = FALSE) {
   x <- data.table::fread(file, sep = sep, check.names = FALSE, stringsAsFactors = FALSE, header = TRUE)
   x <- as.data.frame(x)
   x <- x[grep("^#", x[[1]], invert = TRUE), , drop = FALSE] ## drop comments
-  dim(x)
   xnames <- as.character(x[, 1])
   sel <- which(xnames != "" & !duplicated(xnames))
   x <- x[sel, -1, drop = FALSE]
@@ -664,7 +663,6 @@ is.POSvsNEG <- function(pgx) {
 
   ## rely only on contrasts with '_vs_'
   cntrmat <- cntrmat[, grep("_vs_", colnames(cntrmat)), drop = FALSE]
-  dim(cntrmat)
   grp1 <- sapply(strsplit(colnames(cntrmat), split = "_vs_"), "[", 1)
   grp2 <- sapply(strsplit(colnames(cntrmat), split = "_vs_"), "[", 2)
   grp1 <- sub(".*[:]|@.*", "", grp1)
@@ -705,8 +703,6 @@ is.POSvsNEG <- function(pgx) {
       s1 <- s2 <- 0
       if (length(j1)) s1 <- rowMeans(expmat[j1, i, drop = FALSE] > 0, na.rm = TRUE)
       if (length(j2)) s2 <- rowMeans(expmat[j2, i, drop = FALSE] > 0, na.rm = TRUE)
-      mean(s1)
-      mean(s2)
       if (mean(s1) > mean(s2)) is.pn[i] <- TRUE
       if (mean(s2) > mean(s1)) is.pn[i] <- FALSE
     }
@@ -792,10 +788,6 @@ pgx.getNumericalPhenotypes <- function(df) {
 
 #' @export
 pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove.dup = FALSE) {
-  ##
-  ##
-  ##
-
 
   is.bad <- 0
 
@@ -833,11 +825,9 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 
   ## take reduced matrix
   df1 <- df[, which(is.factor2), drop = FALSE]
-  dim(df1)
   nlevel <- apply(df1, 2, function(x) length(unique(x)))
   nchars <- apply(df1, 2, function(x) max(nchar(iconv(x, "latin1", "ASCII", sub = ""))))
   df1 <- df1[, order(nlevel, -nchars), drop = FALSE]
-  dim(df1)
 
 
   if (remove.dup && ncol(df1) > 1) {
@@ -853,7 +843,7 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
     is.dup
     df1 <- df1[, which(!is.dup), drop = FALSE]
   }
-  colnames(df1)
+  return(colnames(df1))
 }
 
 

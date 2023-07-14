@@ -330,18 +330,15 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
       rownames(X) <- rownames(counts)
     }
   }
-  dim(counts)
 
   ## -------------------------------------------------------------------
   ## create ngs object
   ## -------------------------------------------------------------------
   message("[createPGX] creating pgx object...")
 
-  #
   ngs <- list() ## empty object
   ngs$name <- "data set"
   this.date <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-  #
   ngs$date <- this.date
   ngs$datatype <- "unknown"
   ngs$description <- "data set"
@@ -550,7 +547,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   if (is.null(ngs$X)) {
     message("[createPGX] calculating log-expression matrix X...")
     ngs$X <- playbase::logCPM(ngs$counts, total = 1e6, prior = 1)
-    dim(ngs$X)
   } else {
     message("[createPGX] using passed log-expression X...")
   }

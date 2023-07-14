@@ -24,7 +24,6 @@ pgx.purifyExpression <- function(tumorX, normalX,
     alpha0
 
     xhat[["nnlm"]] <- pmax(tumorX - normal.frac, 0)
-    dim(x.hat)
     alpha[["nnlm"]] <- alpha0
   }
 
@@ -58,7 +57,6 @@ pgx.purifyExpression <- function(tumorX, normalX,
     isopurer.alpha
 
     x.hat <- ISOpureS2model$cc_cancerprofiles
-    dim(x.hat)
     alpha[["isopurer"]] <- isopurer.alpha
     xhat[["isopurer"]] <- x.hat
   }

@@ -114,14 +114,12 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     stat.group <- rownames(contr.matrix)
     names(stat.group) <- rownames(contr.matrix)
   }
-  dim(contr.matrix)
 
   message("[compute_testGenesSingleOmics] pruning unused contrasts")
   ## take out any empty comparisons
   sel <- which(Matrix::colSums(contr.matrix > 0) & Matrix::colSums(contr.matrix < 0))
   contr.matrix <- contr.matrix[, sel, drop = FALSE]
   contr.matrix[is.na(contr.matrix)] <- 0
-  dim(contr.matrix)
 
   ## -----------------------------------------------------------------------------
   ## normalize contrast matrix to zero mean and signed sums to one
@@ -133,7 +131,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     m[is.na(m)] <- 0
     contr.matrix[, i] <- 1 * (m > 0) / sum(m > 0) - 1 * (m < 0) / sum(m < 0)
   }
-  dim(contr.matrix)
 
   ## -----------------------------------------------------------------------------
   ## create design matrix from defined contrasts (group or clusters)
@@ -212,7 +209,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     cat("[compute_testGenesSingleOmics] applying global mean scaling to 1e6...\n")
     counts <- counts * 1e6 / mean.counts
   }
-  mean(Matrix::colSums(counts, na.rm = TRUE))
 
   ## prefiltering for low-expressed genes (recommended for edgeR and
   ## DEseq2). Require at least in 2 or 1% of total. Specify the
@@ -251,7 +247,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   }
   Matrix::head(genes)
   genes <- genes[, c("gene_name", "gene_title")]
-  dim(counts)
 
   ## -----------------------------------------------------------------------------
   ## Do the fitting
@@ -263,7 +258,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   ## Run all test methods
   ##
   X <- pgx$X[rownames(counts), colnames(counts)]
-  dim(X)
 
   message("[compute_testGenesSingleOmics] 12 : start fitting... ")
 

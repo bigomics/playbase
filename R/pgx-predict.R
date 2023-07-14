@@ -280,7 +280,6 @@ pgx.makeTriSystemGraph <- function(data, Y, nfeat = 25, numedge = 100, posonly =
   .getLoadingImportance <- function(k, res.pls, nfeat) {
     U <- res.pls$loadings[[k]]
     V <- res.pls$variates[[k]]
-    dim(U)
     U <- U[which(rowSums(abs(U)) > 0), ]
     U <- U[order(-rowSums(U * U)), ]
     y <- res.pls$Y
@@ -580,7 +579,6 @@ pgx.survivalVariableImportance <- function(X, time, status,
   P <- do.call(cbind, imp)
   P <- abs(P) ## always positive??
   P[is.na(P)] <- 0
-  dim(P)
   P <- P[xnames, , drop = FALSE]
   return(P)
 }
@@ -704,7 +702,6 @@ pgx.multiclassVariableImportance <- function(X, y,
   P <- do.call(cbind, imp)
   P <- abs(P) ## always positive??
   P[is.na(P)] <- 0
-  dim(P)
   P <- P[xnames, , drop = FALSE]
   return(P)
 }
@@ -840,7 +837,6 @@ pgx.variableImportance <- function(X, y,
   P <- do.call(cbind, imp)
   P <- abs(P) ## always positive??
   P[is.na(P)] <- 0
-  dim(P)
   P <- P[xnames, , drop = FALSE]
   return(P)
 }

@@ -43,11 +43,9 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
   colnames(expression) <- h5.samples[sample_index]
   rownames(expression) <- h5.genes[gene_index]
   expression <- log2(1 + expression)
-  dim(expression)
 
   genes <- intersect(genes, rownames(expression))
   expression <- expression[genes, ]
-  dim(expression)
 
   ## Read the survival data
   if (verbose) message("[pgx.testTCGAsurvival] reading TCGA survival data...")
@@ -59,7 +57,6 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
 
   ## conform expression and surv matrices
   samples <- intersect(colnames(expression), rownames(surv))
-  length(samples)
   expression <- expression[, samples, drop = FALSE]
   surv <- surv[samples, ]
 
@@ -296,7 +293,6 @@ pgx.getTCGAdataset <- function(study, genes = NULL, matrix_file = NULL, from.h5 
       expression <- t(cgdsr::getProfileData(mycgds, genes, pr.datatype, caselist))
       samples <- gsub("[.]", "-", colnames(expression))
       colnames(expression) <- samples
-      dim(expression)
     } else {
       cat("extracting from locally stored H5 matrix...\n")
       ## For all genes, getProfileData cannot do and we use
@@ -342,14 +338,12 @@ pgx.getTCGAdataset <- function(study, genes = NULL, matrix_file = NULL, from.h5 
           index = list(gene_index, sample_index)
         )
         rhdf5::H5close()
-        dim(expression)
         colnames(expression) <- substring(id2[sample_index], 1, 15)
         rownames(expression) <- h5.genes
         expression <- expression[, order(-Matrix::colSums(expression))]
         expression <- expression[, samples]
       }
     }
-    dim(expression)
     this.clin <- cgdsr::getClinicalData(mycgds, caselist)
     rownames(this.clin) <- gsub("[.]", "-", rownames(this.clin))
     this.clin <- this.clin[samples, , drop = FALSE]
@@ -421,12 +415,10 @@ pgx.getTCGA.multiomics.TOBEFINISHED <- function(studies, genes = NULL, batch.cor
     xx <- list(gx, cna.gistic, me, mut)
     xx <- xx[sapply(xx, nrow) > 0]
     X <- do.call(cbind, xx)
-    dim(X)
 
     if (!is.null(X) && ncol(X) >= 4) {
       X <- X[, colMeans(is.na(X)) < 0.5, drop = FALSE]
       X <- X[rowMeans(is.na(X)) < 0.5, , drop = FALSE]
-      dim(X)
       all.X[[mystudy]] <- X
     }
   }

@@ -199,8 +199,6 @@ pgx.ActivationMatrix <- function(pgx, features = NULL, contrasts = NULL,
   F1 <- Matrix::head(F[order(-apply(F, 1, sd)), ], n = n)
   F1 <- Matrix::head(F[order(-rowMeans(F**2)), ], n = n)
 
-  dim(F1)
-
   ## cluster
   ii <- 1:nrow(F1)
   jj <- 1:ncol(F1)
@@ -360,7 +358,6 @@ pgx.scatterPlot <- function(pgx, pheno = NULL, gene = NULL,
 plot_SPLOM <- function(F, F2 = NULL, hilight = NULL, cex = 0.5, cex.axis = 1, cex.space = 0.2) {
   if (is.null(F2)) F2 <- F
   symm <- all(colnames(F) == colnames(F2))
-  dim(F)
   gg <- intersect(rownames(F), rownames(F2))
   F <- F[gg, , drop = FALSE]
   F2 <- F2[gg, , drop = FALSE]
@@ -986,7 +983,6 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
     }
     F <- res$fc[, contrast, drop = FALSE]
   }
-  dim(F)
 
   if (!is.null(value)) {
     F <- cbind(value)
@@ -1411,8 +1407,6 @@ pgx.plotOmicsNetwork <- function(pgx, gene = NULL, reduced = NULL, levels = c("g
   visdata <- visNetwork::toVisNetworkData(gr, idToLabel = FALSE)
   pos <- pos[igraph::V(gr)$name, ]
   pos[, 2] <- -pos[, 2]
-  dim(pos)
-
 
   ## ------------------ plot using visNetwork (zoomable) -----------------
   graph <- visNetwork::visNetwork(
@@ -1497,7 +1491,6 @@ pgx.cytoPlot <- function(pgx, gene1, gene2, cex = 1, col = "grey60",
 
   if (!is.null(pgx$deconv)) {
     inferred.celltype <- pgx$deconv[[1]][["meta"]]
-    dim(inferred.celltype)
 
     lab1 <- Matrix::head(names(sort(-Matrix::colSums(inferred.celltype[j1, , drop = FALSE]))), 3)
     pos1 <- apply(cbind(x1, x2)[j1, , drop = FALSE], 2, median)
@@ -1589,8 +1582,6 @@ pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht = 5, cluster.samples = TRUE
 
   if (cluster.samples) {
     annotx <- expandAnnotationMatrix(annot.df)
-    dim(annot.df)
-    dim(annotx)
     hc <- fastcluster::hclust(dist(annotx)) ## cluster samples
     annot.df <- annot.df[hc$order, ]
   }
@@ -1808,9 +1799,6 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
   ii <- unique(c(ii, seq(1, nrow(df), round(nrow(df) / 1000))))
   df <- df[ii, ]
   df <- df[order(-df$y), ]
-  dim(df)
-
-
 
   cpal <- colorspace::diverge_hcl(64, c = 60, l = c(30, 100), power = 1)
   cpal <- colorspace::diverge_hcl(64)
@@ -3922,7 +3910,6 @@ plotlyCytoplot <- function(pgx,
 
   if (!is.null(pgx$deconv)) {
     inferred.celltype <- pgx$deconv[[1]][["meta"]]
-    dim(inferred.celltype)
     lab1 <- Matrix::head(names(sort(-Matrix::colSums(inferred.celltype[j1, , drop = FALSE]))), 3)
     pos1 <- apply(cbind(x1, x2)[j1, , drop = FALSE], 2, median)
     p <- p %>% plotly::add_annotations(
@@ -4189,8 +4176,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
         colors = colors0
       )
   }
-  length(xx)
-  dim(X)
 
   if (ncol(X) < 100 && colcex > 0) {
     plt <- plt %>% iheatmapr::add_col_labels(

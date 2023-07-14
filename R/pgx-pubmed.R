@@ -127,7 +127,6 @@ pmid.buildMatrix <- function() {
     mc.cores = NCORE()
   )
   idx <- do.call(rbind, idx0)
-  dim(idx)
   P <- Matrix::sparseMatrix(
     i = idx[, 1], j = idx[, 2], x = rep(1, nrow(idx)),
     dims = c(length(idx0), length(eg))
@@ -135,22 +134,18 @@ pmid.buildMatrix <- function() {
   rownames(P) <- names(pmid)
   colnames(P) <- symbol
   P <- P[, which(Matrix::colSums(P) > 0)]
-  dim(P)
   return(P)
 }
 
 #' @export
 pmid.buildGraph <- function(P) {
-  dim(P)
   P <- P[which(Matrix::rowSums(P) <= 10), ]
   P <- P[which(Matrix::rowSums(P) >= 2), ]
   P <- P[, which(Matrix::colSums(P) > 0)]
   P[1:10, 1:10]
-  dim(P)
 
   ## create graph from overlap
   M <- P[, ] %*% t(P[, ])
-  dim(M)
   diag(M) <- 0
   object.size(M)
   gr <- igraph::graph_from_adjacency_matrix(M,
@@ -175,7 +170,6 @@ pmid.buildGraph <- function(P) {
 #' @export
 pmid.annotateEdges <- function(gr) {
   ee <- igraph::get.edges(gr, igraph::E(gr))
-  dim(ee)
   g1 <- igraph::V(gr)[ee[, 1]]$genes
   g2 <- igraph::V(gr)[ee[, 2]]$genes
   shared.genes <- mapply(intersect, g1, g2)

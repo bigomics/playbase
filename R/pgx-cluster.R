@@ -39,7 +39,6 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
     message("WARNING:: could not find matrix X")
     return(pgx)
   }
-  dim(X)
   if (center.rows) {
     X <- X - rowMeans(X)
   }
@@ -124,9 +123,7 @@ pgx.clusterSamples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = 
     message("using logCPM(pgx$counts)...")
     X <- logCPM(pgx$counts, total = NULL)
   }
-  dim(X)
 
-  dim(X)
   clust.pos <- pgx.clusterBigMatrix(
     X,
     methods = methods,
@@ -260,7 +257,6 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
   ## reduce dimensions
   X <- Matrix::head(X[order(apply(X, 1, sd)), ], top.sd)
   X <- t(scale(t(X))) ## scale features??
-  dim(X)
   if (nrow(X) > npca) {
     npca <- min(npca, dim(X) - 1)
     suppressMessages(suppressWarnings(
@@ -276,7 +272,6 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
     message("perform K-means...")
     km <- lapply(km.sizes, function(k) kmeans(t(X), k, iter.max = 10))
     km.idx <- do.call(cbind, lapply(km, function(r) r$cluster))
-    dim(km.idx)
     colnames(km.idx) <- paste0("kmeans.", km.sizes)
     index[["kmeans"]] <- km.idx
   }
@@ -299,7 +294,6 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
     rownames(gr.idx) <- colnames(X)
     nc <- apply(gr.idx, 2, function(x) length(unique(x)))
     colnames(gr.idx) <- paste0("louvain.", nc)
-    dim(gr.idx)
     index[["louvain"]] <- gr.idx
   }
 
@@ -307,7 +301,6 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
   if ("meta" %in% method && length(index) > 1) {
     message("perform meta clustering...")
     K <- do.call(cbind, index)
-    dim(K)
     k.rows <- split(K, row(K))
     d1 <- outer(k.rows, k.rows, Vectorize(function(x, y) sum(x != y)))
     rownames(d1) <- colnames(d1) <- rownames(K)
@@ -315,7 +308,6 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
     meta.idx <- do.call(cbind, lapply(km.sizes, function(k) cutree(hc, k)))
     colnames(meta.idx) <- paste0("meta.", km.sizes)
     rownames(meta.idx) <- rownames(K)
-    dim(meta.idx)
     index[["meta"]] <- meta.idx
   }
 
@@ -382,10 +374,8 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   }
 
   if (ncol(X) <= 6) X <- cbind(X, X, X, X, X, X)
-  dim(X)
 
   if (nrow(X) <= 3) X <- rbind(X, X, X, X)
-  dim(X)
 
   ## add small variation...
   X <- X + 1e-3 * matrix(rnorm(length(X)), nrow(X), ncol(X))
@@ -403,7 +393,6 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
     X <- t(res.svd$v) * res.svd$d**svd.gamma ## really weight with D??
     colnames(X) <- cnx
   }
-  dim(X)
 
   all.pos <- list()
 
@@ -507,7 +496,6 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
       custom.config$n_neighbors <- pmax(min(dimx[2] / 4, perplexity), 2)
       pos <- umap::umap(t(X[, ]), custom.config)$layout
     }
-    dim(pos)
     rownames(pos) <- colnames(X)
     pos <- pos[1:dimx[2], ] ## if augmented
     colnames(pos) <- paste0("UMAP-", c("x", "y", "z"))
@@ -560,7 +548,6 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
   if (row.center) X <- X - rowMeans(X, na.rm = TRUE)
   if (row.scale) X <- (X / apply(X, 1, sd, na.rm = TRUE))
 
-  dim(X)
   ## some randomization is sometimes necessary if the data is 'too
   ## clean' and clusters become lines..
 
@@ -740,9 +727,7 @@ pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix 
 
   ## should we iteratively cluster (louvain)???
   hc <- hclustGraph(gr, k = level)
-  dim(hc)
   idx <- hc[, min(level, ncol(hc))]
-  table(idx)
 
   if (!is.null(idx) && small.zero > 0) {
     ## ------------ zap small clusters to "0"

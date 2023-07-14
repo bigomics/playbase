@@ -22,8 +22,6 @@ prot.readProteinGroups <- function(file, meta = NULL, sep = "\t", collapse.gene 
   D <- data.table::fread(file, check.names = FALSE)
   D <- data.frame(D, check.names = FALSE)
 
-  dim(D)
-  colnames(D)
   Matrix::head(D)[, 1:10]
 
 
@@ -36,7 +34,6 @@ prot.readProteinGroups <- function(file, meta = NULL, sep = "\t", collapse.gene 
   if (filter.contaminants) {
     D <- D[which(!D$is.contaminant), ]
   }
-  dim(D)
 
   ## parse gene annotation
   genes <- D[, c("Majority protein IDs", "Gene names", "Protein names")]
@@ -51,12 +48,10 @@ prot.readProteinGroups <- function(file, meta = NULL, sep = "\t", collapse.gene 
   ## give unique rownames
   rownames(D) <- paste0("tag", 1:nrow(D), ":", genes$gene_name) ## add one gene to tags
   rownames(genes) <- rownames(D)
-  dim(D)
-  dim(genes)
 
   ## extract data blocks (use LFQ as intensity)
   counts <- D[, grep("^Intensity ", colnames(D), value = TRUE)]
-  dim(counts)
+
   if (use.LFQ) {
     sel <- grep("^LFQ Intensity", colnames(D))
     if (length(sel) == 0) {
@@ -71,7 +66,6 @@ prot.readProteinGroups <- function(file, meta = NULL, sep = "\t", collapse.gene 
   }
   colnames(counts) <- sub("Intensity ", "", colnames(counts))
   colnames(counts) <- sub("LFQ intensity ", "", colnames(counts))
-  sum(is.na(counts))
   summary(Matrix::colSums(counts, na.rm = TRUE))
 
   ## collapse by gene
@@ -190,7 +184,6 @@ prot.testTwoGroups <- function(X, group1, group2, method = "limma",
     out1 <- volcano(X[, group1], X[, group2], rownames(X))
     out1$Gene <- NULL
     colnames(out1) <- c("logFC", "P.Value")
-    dim(out1)
     Matrix::head(out1)
   } else if (method %in% c("t.welch", "t.equalvar")) {
     ## faster t-test
@@ -525,7 +518,6 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
   ## ------------ annotation table (keep separate) ---------
   ## Include proteinID, gene names and MW in dataframe A
   proteins <- df1[, c("Protein.IDs", "Gene.names", "Mol..weight..kDa.")]
-  dim(proteins)
 
   ## ------------ filter samples  ---------------------------------------
   ## Remove wrong sample and bad donors
@@ -540,14 +532,9 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
   ## Delete Factors from the list with severe miss identifications in the control group
   LFQ.ratio <- LFQ.H / (LFQ.H + LFQ.L + 1e-8) ## only temporary, later we calculate again
   Ctrls <- LFQ.ratio[, grep("Treat=NO-SILAC=0h", colnames(LFQ.ratio))]
-  dim(Ctrls)
-
-
-
 
   keep <- (rowSums(Ctrls) < 1.9)
 
-  table(keep)
   LFQ.L <- LFQ.L[keep, ]
   LFQ.H <- LFQ.H[keep, ]
   proteins <- proteins[keep, ]
@@ -561,7 +548,6 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
   jj <- match(rownames(LFQ.L), gene1)
   proteins <- proteins[jj, ]
   rownames(proteins) <- rownames(LFQ.L)
-  dim(LFQ.L)
 
   ## ------------ create sample annotation
 
@@ -578,7 +564,6 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
   samples$mass.pg <- 25
   samples$mass.pg[which(samples$state %in% c("Act23h", "Act48h"))] <- 75
 
-  dim(samples)
   Matrix::head(samples)
   apply(samples, 2, table)
 
@@ -627,11 +612,6 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
   molwt <- proteins$Mol..weight..kDa.
   copy.number <- silac.calcCopyNumber(data = LFQ.total, mol.weight = molwt, y = samples$mass.pg)
 
-  dim(copy.number)
-
-  sum(is.nan(LFQ.ratio))
-  dim(LFQ.ratio)
-
   ## prepare output object
   output <- list(
     samples = samples, groups = groups, proteins = proteins,
@@ -651,7 +631,6 @@ silac.ttest <- function(X, group1, group2, method = "limma") {
     out1 <- volcano(X[, group1], X[, group2], rownames(X))
     out1$Gene <- NULL
     colnames(out1) <- c("logFC", "P.Value")
-    dim(out1)
     Matrix::head(out1)
     p1 <- out1
   } else if (method == "genefilter") {
@@ -863,7 +842,6 @@ silac.plotDistribution <- function(obj, samples, minq = 3, main = NULL) {
   Q <- as.matrix(obj$LFQ.ratio[, samples])
   valid <- (rowSums(Q > 0) >= minq)
   Q <- Q[valid, ]
-  dim(Q)
   meanQ <- rowMeans(Q, na.rm = TRUE)
   plot(sort(meanQ, decreasing = TRUE), main = main)
   hist(meanQ, breaks = 20, col = "darkgrey", main = main)

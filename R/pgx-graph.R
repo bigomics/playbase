@@ -18,7 +18,6 @@ pgx.computePathscores <- function(graph, strict.pos = TRUE) {
   for (i in 1:ncol(F)) {
     fc <- graph$foldchange[, i]
     ee <- igraph::get.edges(graph, igraph::E(graph))
-    dim(ee)
     if (strict.pos) {
       f1 <- pmax(fc[ee[, 1]], 0) ## strictly positive
       f2 <- pmax(fc[ee[, 2]], 0)
@@ -47,7 +46,6 @@ pgx.computePathscores <- function(graph, strict.pos = TRUE) {
     names(path.score) <- igraph::V(graph)$name
     P[, i] <- path.score
   }
-  dim(P)
 
   return(P)
 }
@@ -61,7 +59,6 @@ pgx.computeShortestPath <- function(graph, contrast, niter = 1, r = 0.01,
   ## calculate weights
   fc <- graph$foldchange[, contrast]
   ee <- igraph::get.edges(graph, igraph::E(graph))
-  dim(ee)
   f1 <- pmax(fc[ee[, 1]], 0)
   f2 <- pmax(fc[ee[, 2]], 0)
   node.values <- sqrt(f1 * f2) ## strictly positive
@@ -163,7 +160,6 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   rownames(xx2) <- paste0("{geneset}", rownames(ngs$gsetX))
   xx <- rbind(xx1, xx2)
   xx <- t(scale(t(xx))) ## scale??, then use innerproduct/cosine distance
-  dim(xx)
   remove(xx1, xx2)
 
   ## ----------------------------------------------------------------------
@@ -174,7 +170,6 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   F <- F / max(abs(F), na.rm = TRUE)
   S <- sapply(ngs$gset.meta$meta, function(x) unclass(x$fc)[, "gsva"])
   S <- S / max(abs(S), na.rm = TRUE)
-  dim(S)
   rownames(S) <- paste0("{geneset}", rownames(S))
 
   fgene <- toupper(ngs$genes[rownames(F), "gene_name"])
@@ -182,8 +177,6 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
 
   kk <- intersect(colnames(F), colnames(S))
   fc <- rbind(F[, kk, drop = FALSE], S[, kk, drop = FALSE])
-  dim(F)
-  dim(S)
   remove(F)
   remove(S)
 
@@ -238,7 +231,6 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   ##  set correlation on edges
   ## ----------------------------------------------------------------------
   ee <- igraph::get.edges(gr1, igraph::E(gr1))
-  dim(ee)
   ee.rho <- rep(NA, nrow(ee))
   bs <- 100000
   nblock <- ceiling(nrow(ee) / bs)
@@ -310,14 +302,13 @@ pgx.reduceOmicsGraph <- function(ngs) {
   idx <- c(hc1, hc2)[igraph::V(gr)$name]
   R <- t(model.matrix(~ 0 + idx))
   R <- R / rowSums(R)
-  dim(R)
+
   colnames(R) <- igraph::V(gr)$name
   rownames(R) <- sub("^idx", "", rownames(R))
 
   ## reduce all variable: weights (correlation)
   rA <- (R %*% gr[, ]) %*% t(R) ## weights
   rA <- (rA + t(rA)) / 2
-  dim(rA)
 
   ## reduced data matrix
   rX <- R %*% gr$scaled.data
@@ -440,7 +431,6 @@ pgx.createVipGeneLayer <- function(gr, genes, z = 0, reconnect = 40) {
     next.level
     next.nodes <- igraph::V(gr1)$name[which(level == next.level)]
     rho1 <- stats::cor(t(gr1$scaled.data[vip, ]), t(gr1$scaled.data[next.nodes, ]))
-    dim(rho1)
     connections <- c()
     i <- 1
     for (i in 1:nrow(rho1)) {
@@ -482,12 +472,9 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
   }
 
 
-  dim(gr$layout)
   vtype <- gsub("\\}.*|^\\{", "", rownames(gr$layout))
   tsne_genes <- gr$layout[which(vtype == "gene"), ]
   tsne_gsets <- gr$layout[which(vtype == "geneset"), ]
-  dim(tsne_genes)
-  dim(tsne_gsets)
 
   uscale <- function(x) (x - min(x)) / (max(x) - min(x)) - 0.5
   pos1 <- apply(tsne_gsets[, 1:2], 2, uscale)
@@ -529,7 +516,6 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
     }
     tt <- gene
   }
-  dim(to)
 
   if (plot == TRUE) {
     cex1 <- 1 + 1 * (rownames(pos1) %in% igraph::V(gr)$name)
@@ -597,22 +583,15 @@ pgx.plotForwardProjection <- function(gr, gene, cex = 1, fx = NULL,
     gr <- pgx.createVipGeneLayer(gr, genes)
   }
 
-  dim(gr$layout)
   vtype <- gsub("\\}.*|^\\{", "", rownames(gr$layout))
   tsne_genes <- gr$layout[which(vtype == "gene"), ]
   tsne_gsets <- gr$layout[which(vtype == "geneset"), ]
-  dim(tsne_genes)
-  dim(tsne_gsets)
 
   uscale <- function(x) (x - min(x)) / (max(x) - min(x)) - 0.5
   pos1 <- apply(tsne_gsets[, 1:2], 2, uscale)
   pos2 <- apply(tsne_genes[, 1:2], 2, uscale)
   pos1 <- t(t(pos1) + c(+0.6, 0))
   pos2 <- t(t(pos2) + c(-0.6, 0))
-
-
-
-
 
   ## ---------------- get all edges/paths ---------------
 
@@ -650,8 +629,6 @@ pgx.plotForwardProjection <- function(gr, gene, cex = 1, fx = NULL,
     }
     tt <- gene
   }
-  dim(to)
-
 
   if (plot == TRUE) {
     cex1 <- 1 + 1 * (rownames(pos1) %in% igraph::V(gr)$name)
@@ -814,7 +791,6 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
     return(NULL)
   }
   mx <- mx[jj, , drop = FALSE]
-  dim(mx)
 
   ## All methods????
   if (is.null(methods)) {
@@ -833,7 +809,6 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
   qv[is.na(qv)] <- 0.999
   fc[is.na(fc)] <- 0
   score <- fc * (-log10(qv))
-  dim(pv)
   if (NCOL(pv) > 1) {
     ss.rank <- function(x) scale(sign(x) * rank(abs(x), na.last = "keep"), center = FALSE)
     fc <- rowMeans(scale(fc, center = FALSE), na.rm = TRUE)
@@ -846,8 +821,6 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
   vinfo <- data.frame(geneset = rownames(mx), score = score, fc = fc, pv = pv, qv = qv)
   colnames(vinfo) <- c("geneset", "score", "fc", "pv", "qv") ## need
   rownames(vinfo) <- rownames(mx)
-  dim(vinfo)
-  head(vinfo)
   remove(fc)
 
   terms <- AnnotationDbi::toTable(GO.db::GOTERM)[, 2:5]
@@ -872,7 +845,6 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
     vinfo <- cbind(vinfo[jj, , drop = FALSE], terms[idx[jj], , drop = FALSE])
     rownames(vinfo) <- vinfo$go_id
   }
-  dim(vinfo)
   vinfo <- vinfo[which(!is.na(vinfo$go_id)), , drop = FALSE]
 
   ## Get full GO graph and assign node prizes
@@ -974,7 +946,6 @@ hclustGraph <- function(g, k = NULL, mc.cores = 2) {
   if (NCOL(K) == 1) K <- matrix(K, ncol = 1)
   rownames(K) <- igraph::V(g)$name
   if (!ok && is.null(k)) K <- K[, 1:(ncol(K) - 1), drop = FALSE]
-  dim(K)
 
   colnames(K) <- NULL
   return(K)

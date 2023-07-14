@@ -45,7 +45,6 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
 
     F <- F[order(-rowMeans(F**2)), , drop = FALSE]
     F <- F[!duplicated(rownames(F)), , drop = FALSE]
-    dim(F)
   } else {
     ## it is a matrix
     F <- obj
@@ -92,7 +91,6 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
   R1 <- R1 + 1e-8 * matrix(rnorm(length(R1)), nrow(R1), ncol(R1))
   colnames(R1) <- colnames(F)
   rownames(R1) <- colnames(X)
-  dim(R1)
 
   ## experiment to drug
   results <- list()
@@ -101,7 +99,6 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
 
 
     D <- Matrix::sparse.model.matrix(~ 0 + xdrugs)
-    dim(D)
     colnames(D) <- sub("^xdrugs", "", colnames(D))
     rownames(D) <- colnames(X) ## not necessary..
     rho2 <- qlcMatrix::corSparse(D, R1)
@@ -137,7 +134,6 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
     rownames(mNES) <- rownames(mQ) <- rownames(mP) <- pw
     colnames(mNES) <- colnames(mQ) <- colnames(mP) <- colnames(F)
     msize <- res0[[1]]$size
-    dim(R1)
     results[["GSEA"]] <- list(X = mNES, Q = mQ, P = mP, size = msize)
   }
   names(results)
@@ -192,7 +188,6 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
     rownames(F) <- toupper(sub(".*:|.*\\]", "", rownames(F)))
     F <- F[order(-rowMeans(F**2)), , drop = FALSE]
     F <- F[!duplicated(rownames(F)), , drop = FALSE]
-    dim(F)
   }
 
   if (is.null(contrasts)) contrasts <- colnames(F)
@@ -243,11 +238,9 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
     sample.pairs[[k]] <- pp
   }
   sample.pairs <- do.call(rbind, sample.pairs)
-  dim(sample.pairs)
 
   ## --------------- now create combination matrix X
   comboX <- apply(sample.pairs, 1, function(ii) rowMeans(X[, ii], na.rm = TRUE))
-  dim(comboX)
 
   combo.drugs <- apply(sample.pairs, 1, function(ii) paste(sort(xdrugs[ii]), collapse = "+"))
 
@@ -261,7 +254,6 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
   colnames(comboX) <- paste0(combo.drugs, "_combo", 1:ncol(comboX))
 
   cat("Calculating drug-combo enrichment using GSEA ...\n")
-  dim(comboX)
   res.combo <- pgx.computeDrugEnrichment(
     obj,
     X = comboX, xdrugs = combo.drugs, methods = "GSEA", nprune = nprune,

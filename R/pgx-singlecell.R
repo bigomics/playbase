@@ -60,7 +60,6 @@ pgx.createPGX.10X.DEPRECATED <- function(outs, ncells = 2000, aggr.file = "aggre
   ##
   message("[createPGX.10X] reading 10X data file...")
   counts.10x <- Seurat::Read10X(file.path(outs, "filtered_feature_bc_matrix"))
-  dim(counts.10x)
 
   message("[createPGX.10X] reading aggregation meta file...")
   aggr <- read.csv(file.path(outs, aggr.file), comment.char = "#")
@@ -74,8 +73,6 @@ pgx.createPGX.10X.DEPRECATED <- function(outs, ncells = 2000, aggr.file = "aggre
   message("[createPGX.10X] filtering outliers...")
   counts <- pgx.scFilterOutliers(counts.10x, a = 2)
   pheno <- pheno[colnames(counts), ]
-  dim(counts)
-  dim(pheno)
 
   ## Reduce number of cells (approx. equalizing libraries)
   message("[createPGX.10X] reducing cells...")
@@ -85,13 +82,11 @@ pgx.createPGX.10X.DEPRECATED <- function(outs, ncells = 2000, aggr.file = "aggre
   )
   counts <- out$counts
   pheno <- pheno[colnames(counts), ]
-  table(pheno$library_id)
 
   ## pre-filter expressed genes
   message("[createPGX.10X] filtering features...")
   sel <- (rowMeans(counts >= 3) > 0.01)
   counts <- counts[sel, ]
-  dim(counts)
 
   ## Infer celltype
   message("[createPGX.10X] inferring cell types...")
@@ -319,7 +314,6 @@ pgx.scTestDifferentialExpression <- function(counts, y, is.count = TRUE, samples
 
 #' @export
 pgx.reduceCells <- function(counts, method, ncells, pheno = NULL, group.id = NULL) {
-  dim(counts)
 
   if (ncol(counts) > ncells) {
     if (method == "pool") {
@@ -441,7 +435,6 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
     ## do quick clustering
     sel <- which(groups == g)
     X1 <- X[, sel, drop = FALSE]
-    dim(X1)
     k <- ceiling(ncells / ngroup) ## equalize between groups
     k
     ngroup
@@ -524,14 +517,13 @@ pgx.scBatchIntegrate <- function(X, batch,
     nv <- min(floor(dim(X) * 0.8), 30)
     out <- irlba::irlba(X, nu = nv, nv = nv)
     V <- t(out$v)
-    dim(V)
     meta_data <- data.frame(batch = batch)
     try(hm <- harmony::HarmonyMatrix(
       V, meta_data, "batch",
       do_pca = FALSE, npcs = nv,
       return_object = TRUE
     ))
-    dim(hm$Z_corr) ## corrected PCA embeddings
+    ## corrected PCA embeddings
     hX <- (out$u %*% diag(out$d) %*% hm$Z_corr)
     dimnames(hX) <- dimnames(X)
     res[["Harmony"]] <- hX
@@ -565,7 +557,6 @@ pgx.scBatchIntegrate <- function(X, batch,
 
 
       cX <- t(liger@H.norm %*% liger@W)
-      dim(cX)
       cat("[pgx.scBatchIntegrate] WARNING:: LIGER returns smaller matrix")
       res[["liger"]] <- cX
     }
@@ -586,7 +577,6 @@ pgx.SeuratBatchIntegrate <- function(counts, batch, qc.filter = FALSE,
   ## content. You need to do that before.
   ##
 
-  dim(counts)
   nbatch <- length(unique(batch))
   message("[pgx.SeuratBatchIntegrate] Processing ", nbatch, " batches...")
   obj.list <- list()
@@ -668,13 +658,10 @@ pgx.SeuratBatchIntegrate <- function(counts, batch, qc.filter = FALSE,
     normalization.method = normalization.method,
     verbose = FALSE
   )
-  dim(integrated)
-  dim(counts)
 
   key <- ifelse(sct, "SCT", "integrated")
   mat.integrated <- as.matrix(integrated[[key]]@data)
   mat.integrated <- exp(mat.integrated) ## natural log!!
-  dim(mat.integrated)
   mat.integrated <- mat.integrated[, colnames(counts)]
 
   ## set previously zero counts to zero again
@@ -814,7 +801,6 @@ pgx.createSeuratObject <- function(counts, aggr.csv = NULL,
       anchorset = anchors, features.to.integrate = genes,
       dims = 1:30, verbose = FALSE
     )
-    dim(integrated)
     obj <- integrated
     Seurat::DefaultAssay(obj) <- "integrated"
   } else {

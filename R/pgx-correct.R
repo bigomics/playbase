@@ -721,7 +721,6 @@ pgx.performBatchCorrection.DEPRECATED <- function(ngs, zx, batchparams,
 
       batch.formula <- formula(paste("~ ", paste(pp, collapse = " + ")))
       B <- model.matrix(batch.formula, data = Y)
-      dim(B)
 
       B <- B[match(colnames(zx), rownames(B)), , drop = FALSE]
       rownames(B) <- colnames(zx)
@@ -1000,7 +999,6 @@ pgx.optimizeBatchCorrection.NOTREADY <- function(ngs, batch, contrast, nparam = 
   if (length(bc.params) == 1) B <- t(B)
   colnames(B) <- bc.params
   rownames(B) <- rownames(S)
-  dim(B)
   S <- cbind(S, B)
   S <- S[order(-S$num.sig), ]
 
@@ -1035,13 +1033,11 @@ pgx._runComputeNumSig <- function(ngs, parcomb, contrast, resample = -1,
         suppressWarnings(sv <- sva::sva(logcpm, mod1, mod0, n.sv = NULL)$sv)
         suppressWarnings(aX <- limma::removeBatchEffect(logcpm, covariates = sv, design = mod1))
       })
-      dim(aX)
     }
     if (resample > 0) {
       jj <- sample(colnames(aX), ncol(aX) * resample)
       aX <- aX[, jj]
     }
-    dim(aX)
 
     ## solve for all combinations
     pp <- parcomb[[1]]
@@ -1062,7 +1058,6 @@ pgx._runComputeNumSig <- function(ngs, parcomb, contrast, resample = -1,
       } else {
         bX <- aX
       }
-      dim(bX)
       pp1 <- paste0(k, ":", paste(pp, collapse = "+"))
       pp1
       numsig[pp1] <- pgx._computeNumSig(ngs, X = bX, contrast = contrast)
