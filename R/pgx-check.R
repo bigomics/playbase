@@ -126,19 +126,18 @@ pgx.crosscheckINPUT <- function(
     SAMPLES = NULL,
     COUNTS = NULL,
     CONTRASTS = NULL) {
-      
-    samples <- SAMPLES
-    counts <- COUNTS
-    contrasts <- CONTRASTS
-    PASS <- TRUE
+  samples <- SAMPLES
+  counts <- COUNTS
+  contrasts <- CONTRASTS
+  PASS <- TRUE
 
-    check_return <- list()
+  check_return <- list()
 
-    if (!is.null(samples) && !is.null(counts)) {
-      # Check that rownames(samples) match colnames(counts)
-      SAMPLE_NAMES_NOT_MATCHING_COUNTS <- intersect(
-        rownames(samples),
-        colnames(counts)
+  if (!is.null(samples) && !is.null(counts)) {
+    # Check that rownames(samples) match colnames(counts)
+    SAMPLE_NAMES_NOT_MATCHING_COUNTS <- intersect(
+      rownames(samples),
+      colnames(counts)
     )
     if (length(SAMPLE_NAMES_NOT_MATCHING_COUNTS) == 0 && PASS) {
       check_return$e16 <- "Please correct your samples names in the samples and contrast files."
@@ -169,7 +168,7 @@ pgx.crosscheckINPUT <- function(
     MATCH_SAMPLES_COUNTS_ORDER <- all(diff(match(rownames(samples), colnames(counts))) > 0)
 
     # in case no matches are found, we get an NA, which should be converted to FALSE
-    if (is.na(MATCH_SAMPLES_COUNTS_ORDER)){
+    if (is.na(MATCH_SAMPLES_COUNTS_ORDER)) {
       MATCH_SAMPLES_COUNTS_ORDER <- FALSE
     }
 
