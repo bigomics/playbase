@@ -255,8 +255,6 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
   }
 
   timings
-  names(rho)
-  lapply(rho, dim)
 
   ## compute average partical correlation (over all methods)
   nother <- length(setdiff(names(rho), c("cor", "rho")))
@@ -266,8 +264,6 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
     flat.prho <- sapply(rho[which(names(rho) != "cor")], as.vector)
     jj <- which(abs(flat.prho) > abs(flat.rho)) ## not reliable
     flat.prho[jj] <- NA
-    Matrix::head(flat.prho)
-    Matrix::head(flat.rho)
     nx <- ncol(tX)
     meta.pcor <- matrix(apply(flat.prho, 1, mean, na.rm = TRUE), nx, nx)
     rownames(meta.pcor) <- colnames(meta.pcor) <- colnames(tX)
@@ -295,7 +291,6 @@ pgx.plotPartialCorrelationAroundGene <- function(res, gene, rho.min = 0.8, pcor.
   M[is.infinite(M) | is.nan(M)] <- NA
   M <- M[order(-rowMeans(M**2, na.rm = TRUE)), , drop = FALSE]
 
-  Matrix::head(M)
 
   ## ------------------------------------------------------------
   ## Correlation barplots
@@ -389,7 +384,6 @@ pgx.plotPartialCorrelationAroundGene <- function(res, gene, rho.min = 0.8, pcor.
       igraph::layout_nicely(gr2)
     )
     rownames(ly) <- igraph::V(gr2)$name
-    Matrix::head(ly)
     ly <- ly[igraph::V(gr2)$name, , drop = FALSE]
 
     add.alpha <- function(col, alpha) {
@@ -633,7 +627,6 @@ pgx.getGeneCorrelation <- function(gene, xref) {
       k <- which(colnames(R) == "gene sets")
       R[, "gene sets"] <- R[, "gene sets"] * sign(rowMeans(R[, -k, drop = FALSE], na.rm = TRUE))
     }
-    Matrix::head(R)
   }
 
   return(R)

@@ -59,7 +59,6 @@ pmid.getGeneContext <- function(gene, keyword) {
   qq <- p.adjust(pp)
   qq <- sort(qq)
   context1 <- Matrix::head(qq[qq < 1], 100)
-  Matrix::head(context1, 20)
 
   list(rifs = rif.hits, table = A, p.value = pv, context = context1)
 }

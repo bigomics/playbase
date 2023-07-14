@@ -368,7 +368,6 @@ probe2symbol <- function(probes, type = NULL, org = "human", keep.na = FALSE) {
   }
   symbol <- unlist(symbol)
   names(symbol) <- NULL
-  Matrix::head(symbol)
 
   symbol
 }
@@ -1460,8 +1459,6 @@ expandAnnotationMatrixSAVE <- function(A) {
   nlevel <- apply(A, 2, function(x) length(unique(x)))
   y.isnum <- apply(A, 2, is.num)
 
-
-  Matrix::head(A)
   i <- 1
   m1 <- list()
   for (i in 1:ncol(A)) {
@@ -1507,7 +1504,6 @@ expandPhenoMatrix <- function(pheno, collapse = TRUE, drop.ref = TRUE) {
   }
   a1 <- a1[, kk, drop = FALSE]
   a1.isnum <- y.isnum[kk]
-  Matrix::head(a1)
   i <- 1
   m1 <- list()
   for (i in 1:ncol(a1)) {

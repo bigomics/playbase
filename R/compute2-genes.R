@@ -160,7 +160,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
       stop("[compute_testGenesSingleOmics] FATAL:: stat.group must have names")
     }
     rownames(design) <- names(stat.group)
-    Matrix::head(design)
 
     ## make sure matrix align and compute experiment matrix
     design <- design[, match(rownames(contr.matrix), colnames(design)), drop = FALSE]
@@ -243,7 +242,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     counts <- counts[jj, ]
     genes <- genes[jj, ]
   }
-  Matrix::head(genes)
   genes <- genes[, c("gene_name", "gene_title")]
 
   ## -----------------------------------------------------------------------------

@@ -22,9 +22,6 @@ prot.readProteinGroups <- function(file, meta = NULL, sep = "\t", collapse.gene 
   D <- data.table::fread(file, check.names = FALSE)
   D <- data.frame(D, check.names = FALSE)
 
-  Matrix::head(D)[, 1:10]
-
-
   ## Filter contaminants
   contaminant.cols <- c("Reverse", "Only identified by site", "Potential contaminant")
   contaminant.cols <- intersect(contaminant.cols, colnames(D))
@@ -36,7 +33,6 @@ prot.readProteinGroups <- function(file, meta = NULL, sep = "\t", collapse.gene 
 
   ## parse gene annotation
   genes <- D[, c("Majority protein IDs", "Gene names", "Protein names")]
-  Matrix::head(genes)
   colnames(genes) <- c("protein_id", "gene_name", "gene_title")
   gg <- as.character(genes$gene_name)
   gg <- sapply(gg, function(x) strsplit(x, split = ";")[[1]][1]) ## take just FIRST gene
@@ -183,7 +179,6 @@ prot.testTwoGroups <- function(X, group1, group2, method = "limma",
     out1 <- volcano(X[, group1], X[, group2], rownames(X))
     out1$Gene <- NULL
     colnames(out1) <- c("logFC", "P.Value")
-    Matrix::head(out1)
   } else if (method %in% c("t.welch", "t.equalvar")) {
     ## faster t-test
 
@@ -199,7 +194,6 @@ prot.testTwoGroups <- function(X, group1, group2, method = "limma",
     out0$qvalue <- p.adjust(out0$pvalue, method = "fdr")
     out1 <- out0[, c("mean.diff", "pvalue", "qvalue")]
     colnames(out1) <- c("logFC", "P.Value", "adj.P.Val")
-    Matrix::head(out1)
   } else if (method == "limma" && is.null(labels)) {
     ## See e.g. https://bioconductor.org/help/course-materials/2010/BioC2010/limma2.pdf
 
@@ -551,14 +545,10 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
 
   samples$treatment <- gsub("Treat=", "", samples$treatment)
   samples$SILAC <- gsub("SILAC=", "", samples$SILAC)
-  rownames(samples)
 
   ## add mass in picograms (PLEASE CHECK!!!)
   samples$mass.pg <- 25
   samples$mass.pg[which(samples$state %in% c("Act23h", "Act48h"))] <- 75
-
-  Matrix::head(samples)
-  apply(samples, 2, table)
 
   ## ------------ define groups
   groups <- list()
@@ -624,7 +614,6 @@ silac.ttest <- function(X, group1, group2, method = "limma") {
     out1 <- volcano(X[, group1], X[, group2], rownames(X))
     out1$Gene <- NULL
     colnames(out1) <- c("logFC", "P.Value")
-    Matrix::head(out1)
     p1 <- out1
   } else if (method == "genefilter") {
     ## faster t-test
@@ -634,7 +623,6 @@ silac.ttest <- function(X, group1, group2, method = "limma") {
     out1 <- genefilter::rowttests(X[, jj], factor(y))
     out1$statistic <- NULL
     colnames(out1) <- c("logFC", "P.Value")
-    Matrix::head(out1)
     p2 <- out1
   } else if (method == "limma") {
     ## See e.g. https://bioconductor.org/help/course-materials/2010/BioC2010/limma2.pdf
@@ -646,7 +634,6 @@ silac.ttest <- function(X, group1, group2, method = "limma") {
     fit <- limma::eBayes(limma::lmFit(X[, jj], design))
     out1 <- limma::topTable(fit, coef = 2, sort.by = "none", number = Inf)
     out1 <- out1[, c("logFC", "P.Value", "adj.P.Val")]
-    Matrix::head(out1)
     p3 <- out1
   } else {
     stop("ERROR:: unknown method")

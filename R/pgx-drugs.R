@@ -227,7 +227,6 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
     cmbn.idx <- as.integer(strsplit(top.combo[k], split = "-")[[1]])
     cmbn.idx
     cmbn <- sort(rownames(er.mono$X)[cmbn.idx])
-    Matrix::head(cmbn)
     p1 <- sample(which(xdrugs == cmbn[1]), nsample, replace = TRUE)
     p2 <- sample(which(xdrugs == cmbn[2]), nsample, replace = TRUE)
     pp <- cbind(p1, p2)

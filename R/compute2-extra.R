@@ -35,7 +35,6 @@ compute_extra <- function(ngs, extra = c(
     message(">>> computing extra for MULTI-OMICS")
     data.type <- gsub("\\[|\\].*", "", rownames(ngs$counts))
     jj <- which(data.type %in% c("gx", "mrna"))
-    length(jj)
     if (length(jj) == 0) {
       stop("FATAL. could not find gx/mrna values.")
     }
@@ -367,7 +366,6 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
 
     annot0 <- annot0[match(rownames(out1[["GSEA"]]$X), rownames(annot0)), ]
     rownames(annot0) <- rownames(out1[["GSEA"]]$X)
-    Matrix::head(annot0)
 
     ## --------------- attach results to object
     db <- names(ref.db)[i]
@@ -422,7 +420,6 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
       ## attach annotation
       db <- sub("-.*", "", ref)
       annot0 <- read.csv(file.path(cmap.dir, paste0(db, "-drugs.csv")))
-      Matrix::head(annot0)
       rownames(annot0) <- annot0$drug
       annot0 <- annot0[match(rownames(out1[["GSEA"]]$X), rownames(annot0)), ]
       rownames(annot0) <- rownames(out1[["GSEA"]]$X)

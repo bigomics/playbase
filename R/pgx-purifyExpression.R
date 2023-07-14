@@ -70,11 +70,6 @@ pgx.purifyExpression <- function(tumorX, normalX,
     res <- DeMixT::DeMixT(data.Y = tumorX, data.comp1 = normalX, if.filter = FALSE)
     res$pi
 
-    Matrix::head(res$decovExprT, 3) ## purified tumor data
-    Matrix::head(res$decovExprN1, 3) ## normal contiminant profile
-    Matrix::head(res$decovMu, 3)
-    Matrix::head(res$decovSigma, 3)
-
     x.hat <- res$decovExprT
 
     demixt.alpha <- (1 - res$pi[1, ])

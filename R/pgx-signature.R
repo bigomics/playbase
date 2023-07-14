@@ -237,7 +237,6 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   res$score <- res$R2 * res$NES
   res <- res[order(res$score, decreasing = TRUE), ]
 
-  Matrix::head(res)
   return(res)
 }
 
@@ -319,7 +318,6 @@ pgx.correlateSignature.matrix <- function(fc, refmat, nsig = 100, ntop = 1000, n
   res$score <- res$R2 * res$NES
   res <- res[order(res$score, decreasing = TRUE), ]
 
-  Matrix::head(res)
   return(res)
 }
 
@@ -410,9 +408,7 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
     ## check NA!!! sometimes it is set to large negative
     rhdf5::h5ls(h5.file)
     X <- rhdf5::h5read(h5.file, "data/matrix")
-    Matrix::head(X[, 1])
     X[which(X < -999999)] <- NA
-    Matrix::head(X[, 1])
     rhdf5::h5write(X, h5.file, "data/matrix") ## can write list??
     rhdf5::h5closeAll()
   }

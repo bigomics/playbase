@@ -733,7 +733,6 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
   }
 
   rownames(K) <- df.rownames
-  Matrix::head(K)
 
   ## Now try to infer the underlying "conditions"
   K1 <- contrastAsLabels(K - 0.5)
@@ -773,10 +772,8 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
       iter <- iter + 1
     }
     iter
-    length(jj)
     K2 <- K[jj, colnames(K1), drop = FALSE]
     rownames(K2) <- xc[jj]
-    Matrix::head(K2)
   } else if (!fix.degenerate && is.degenerate) {
     cat("WARNING:: contrast matrix looks degenerate. going for NULL design...\n")
     ## Go for zero design (no-replicates)

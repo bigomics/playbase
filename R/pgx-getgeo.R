@@ -59,7 +59,6 @@ pgx.getGEOseries <- function(id, archs.h5 = "human_matrix.h5", convert.hugo = TR
     min.ncat = 2, max.ncat = 20, remove.dup = TRUE
   )
   sampleinfo <- data.frame(sampleinfo, stringsAsFactors = FALSE, check.names = FALSE)
-  Matrix::head(sampleinfo)
 
   ## automagically create contrast matrix
   contrasts <- NULL
@@ -77,7 +76,6 @@ pgx.getGEOseries <- function(id, archs.h5 = "human_matrix.h5", convert.hugo = TR
     } else {
       contrasts <- ct$design %*% ct$contr.matrix
     }
-    Matrix::head(contrasts)
   }
 
   info <- pgx.getGeoExperimentInfo(id)
@@ -153,7 +151,6 @@ pgx.getGeoMetadata <- function(id) {
   }
 
   colnames(pheno) <- gsub("[ ]", "_", colnames(pheno)) ## no spaces???
-  Matrix::head(pheno)
 
   pheno
 }
@@ -183,10 +180,8 @@ pgx.getGEOcounts.archs4 <- function(id, h5.file) {
 
   sample.acc <- rhdf5::h5read(h5.file, "meta/Sample_geo_accession")
   gene_name <- rhdf5::h5read(h5.file, "meta/genes")
-  Matrix::head(gene_name)
   colnames(X) <- sample.acc[idx]
   rownames(X) <- gene_name
-  sum(duplicated(gene_name))
 
   ## collapse by symbol
   jj <- !is.na(gene_name) & gene_name != ""
@@ -307,7 +302,6 @@ pgx.getGEOcounts.GEOquery <- function(id) {
 
     ## get symbol from featuredata
     fsymbol <- pgx.getSymbolFromFeatureData(fdata)
-    Matrix::head(fsymbol[!is.na(fsymbol)])
 
     ## collapse by symbol
     jj <- which(!is.na(fsymbol) & fsymbol != "")
@@ -521,24 +515,17 @@ pgx.getGeoMetadata.fromEset1 <- function(eset) {
   gsm.title <- as.character(pdata$title)
   gsm.source <- as.character(pdata$source_name_ch1)
   gsm.samples <- as.character(pdata$geo_accession)
-  Matrix::head(gsm.samples)
 
   ## Base sample_info from characteristics (ch1) column
   ch1_info <- eset.getCH1(eset)
-  Matrix::head(ch1_info)
 
   ## We can get extra information from title
-  Matrix::head(gsm.title)
   is.underscored <- length(gsm.title) && all(grepl("_", gsm.title))
   is.underscored
   title_info <- NULL
   if (FALSE && is.underscored) {
     title2 <- trimws(gsm.title)
-
-
-
     title_info <- eset.parsePhenoFromTitle(title2, split = "_")
-    Matrix::head(title_info)
   }
 
   ## All sample_info: from characterisctis_ch1 and title
@@ -582,8 +569,6 @@ pgx.getGeoMetadata.fromGSM <- function(id) {
   summary <- gse@header$summary
   gsm.samples <- gse@header$sample_id
 
-  Matrix::head(gsm.samples)
-
   ## Get sample_info from characteristics (ch1) column
   ch1_info <- lapply(gse@gsms, function(g) g@header$characteristics_ch1)
 
@@ -600,25 +585,19 @@ pgx.getGeoMetadata.fromGSM <- function(id) {
     })
     ch1_info <- do.call(rbind, ch1_info)
     colnames(ch1_info) <- ch1_vars
-    Matrix::head(ch1_info)
   }
 
   ## We can get more information from title??
   gsm.title <- sapply(gse@gsms, function(g) g@header$title)
   gsm.source <- sapply(gse@gsms, function(g) g@header$source_name_ch1)
   gsm.gpl <- sapply(gse@gsms, function(g) g@header$platform_id)
-  Matrix::head(gsm.title)
   is.underscored <- length(gsm.title) && all(grepl("_", gsm.title))
   is.underscored
   title_info <- NULL
   ## NEED RETHINK!!!!!!!!!!!!!!!!!!
   if (FALSE && is.underscored) {
     title2 <- trimws(gsm.title)
-
-
-
     title_info <- eset.parsePhenoFromTitle(title2, split = "_")
-    Matrix::head(title_info)
   }
 
   ## All sample_info: from characterisctis_ch1 and title

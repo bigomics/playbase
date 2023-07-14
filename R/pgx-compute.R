@@ -455,7 +455,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
   ngs <- playbase::compute_cellcycle_gender(ngs)
-  Matrix::head(ngs$samples)
 
   ## -------------------------------------------------------------------
   ## Batch-correction (if requested. WARNING: changes counts )
@@ -660,7 +659,6 @@ pgx.computePGX <- function(pgx,
     use.design = use.design,
     prune.samples = prune.samples
   )
-  Matrix::head(pgx$gx.meta$meta[[1]])
 
   ## ------------------ gene set tests -----------------------
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
@@ -672,7 +670,6 @@ pgx.computePGX <- function(pgx,
     max.features = max.genesets,
     test.methods = gset.methods
   )
-  Matrix::head(pgx$gset.meta$meta[[1]])
 
 
   if (do.cluster) {

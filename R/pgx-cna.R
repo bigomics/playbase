@@ -35,7 +35,6 @@ pgx.inferCNV <- function(ngs, refgroup = NULL, progress = NULL) {
     stop = pos - 1000
   ) ## fake start/stop
   rownames(genes) <- ngs$genes$gene_name
-  Matrix::head(genes)
 
   ## filter known genes
   jj <- which(genes$chr %in% paste0("chr", c(1:22, "X", "Y")) &
@@ -142,7 +141,6 @@ pgx.CNAfromExpression <- function(ngs, nsmooth = 40) {
 
   sel <- which(!is.na(genes$chr) & !is.na(genes$pos))
   genes <- genes[sel, ]
-  Matrix::head(genes)
 
   if (!is.null(ngs$counts)) {
     cna <- log2(100 + edgeR::cpm(ngs$counts)) ## moderated log2

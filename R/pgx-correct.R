@@ -800,7 +800,6 @@ pgx.plotMitoRibo <- function(counts, percentage = TRUE) {
 
   df <- cbind(ribo = ribo.counts, mito = mito.counts)
   if (percentage) df <- round((df / tot.counts) * 100, digits = 2)
-  Matrix::head(df)
   barplot(t(df), beside = FALSE, las = 3)
 }
 
@@ -852,7 +851,6 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
   )
 
   cc.score <- try(pgx.scoreCellCycle(cx))
-  Matrix::head(cc.score)
   if (!any(class(cc.score) == "try-error")) {
     cc.score <- cc.score[, c("s_score", "g2m_score")]
     colnames(cc.score) <- paste0("cc.", colnames(cc.score))
@@ -860,7 +858,6 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
   }
   pheno$gender <- pgx.inferGender(cx)
 
-  Matrix::head(pheno)
   return(pheno)
 }
 

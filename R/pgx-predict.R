@@ -19,9 +19,6 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   ## Prepare the HivePlot data
   ## -------------------------------------------------------------
   df <- data.frame(res$edges)
-  Matrix::head(df)
-
-
   hpd <- edge2HPD(df, axis.cols = rep("grey", 3))
 
   hpd$edges$looping <- res$edges$looping
@@ -68,7 +65,7 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   } else {
     stop("FATAL:: mixHivePlot: unknown contrast/conditions=", ct, "\n")
   }
-  Matrix::head(fx)
+
   fx <- fx / max(abs(fx), na.rm = TRUE)
   g <- sub("[1-9]:", "", hpd$nodes$lab)
   hpd$nodes$radius <- rank(fx[g], na.last = "keep")
@@ -401,7 +398,6 @@ pgx.makeTriSystemGraph <- function(data, Y, nfeat = 25, numedge = 100, posonly =
       importance = E(gr)$importance
     )
     colnames(edges)[1:2] <- c("from", "to")
-    Matrix::head(edges)
 
     gr
     loops <- .detectSelfLoops(gr, posonly)

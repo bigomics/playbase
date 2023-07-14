@@ -19,7 +19,6 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
   ## get the top DE genes
   sig <- sort(sig)
   genes <- c(Matrix::head(names(sig), ntop), tail(names(sig), ntop))
-  Matrix::head(genes)
 
   ## Read the H5 matrix file
 
@@ -35,7 +34,6 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
 
 
   gene_index <- which(h5.genes %in% genes)
-  Matrix::head(gene_index)
   expression <- rhdf5::h5read(
     matrix_file, "data/expression",
     index = list(gene_index, sample_index)
@@ -51,7 +49,6 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
   if (verbose) message("[pgx.testTCGAsurvival] reading TCGA survival data...")
 
   surv <- playdata::RTCGA_SURVIVAL
-  Matrix::head(surv)
   surv$months <- round(surv$times / 365 * 12, 2)
   surv$status <- surv$patient.vital_status
 
@@ -67,8 +64,6 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
 
   ## print KM survival plot for each study/cancertype
   all.studies <- sort(unique(surv$cancer_type))
-  length(all.studies)
-  table(all.studies)
   study <- all.studies[1]
   study <- "BRCA"
 
@@ -209,9 +204,7 @@ pgx.selectTCGAstudies <- function(cancertype, variables) {
     caselist <- grep(paste0(mrna.type, "$"), all.cases, value = TRUE)
     caselist
     clin0 <- cgdsr::getClinicalData(mycgds, caselist)
-    Matrix::head(clin0)[, 1:4]
     rownames(clin0) <- gsub("[.]", "-", rownames(clin0)) ## correct names...
-    Matrix::head(clin0)[, 1:4]
     clin[[mystudy]] <- clin0
     samples[[mystudy]] <- rownames(clin0)
   }
@@ -285,7 +278,7 @@ pgx.getTCGAdataset <- function(study, genes = NULL, matrix_file = NULL, from.h5 
     caselist <- grep(paste0(datatype, "$"), all.cases, value = TRUE)
     caselist
     samples <- NULL
-    Matrix::head(genes)
+
     if (!is.null(genes) && !from.h5) {
       cat("downloading...\n")
       ## If only a few genes, getProfileData is a faster way
@@ -300,9 +293,6 @@ pgx.getTCGAdataset <- function(study, genes = NULL, matrix_file = NULL, from.h5 
       ##
       xx <- cgdsr::getProfileData(mycgds, "---", pr.datatype, caselist)
       samples <- gsub("[.]", "-", colnames(xx))[3:ncol(xx)]
-      Matrix::head(samples)
-
-
 
       rhdf5::h5closeAll()
 
@@ -432,8 +422,6 @@ pgx.getTCGAproteomics <- function() {
     type == "gene_expression" &
     analysis.workflow_type == "HTSeq - Counts")
   manifest_df <- qfiles %>% GenomicDataCommons::manifest()
-  nrow(manifest_df)
-  Matrix::head(manifest_df)
 
   fnames <- GenomicDataCommons::gdcdata(manifest_df$id[1:2], progress = FALSE)
 

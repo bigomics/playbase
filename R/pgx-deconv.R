@@ -307,8 +307,6 @@ pgx.purify <- function(X, ref, k = 3, method = 2) {
     ## estimate "pure" matrix
     x.total <- res.nmf$W[, ] %*% res.nmf$H[, ]
     x.purified <- res.nmf$W[, 1:k] %*% res.nmf$H[1:k, ]
-    Matrix::head(X)[, 1:4]
-    Matrix::head(x.purified)[, 1:4]
 
     x.contaminant <- pmax(X - x.purified, 0)
   } else if (method == 2) {
@@ -530,7 +528,6 @@ pgx.deconvolution <- function(X, ref,
   mat <- pmax(mat, 0)
 
   gg <- intersect(rownames(ref), rownames(mat))
-  Matrix::head(gg)
   if (length(gg) < 10) {
     warning("WARNING:: pgx.deconvolution: no enough marker genes")
     return(NULL)

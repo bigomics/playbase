@@ -682,7 +682,6 @@ pgx.SankeyFromPhenotypes.GGPLOT <- function(pgx, phenotypes, mat = NULL, fill = 
   }
   df <- data.frame(df)
   df$Frequency <- N
-  Matrix::head(df)
 
   if (sort) {
     relevelBig2small <- function(idx) factor(idx, levels = names(sort(table(idx))))
@@ -1334,7 +1333,6 @@ pgx.plotOmicsNetwork <- function(pgx, gene = NULL, reduced = NULL, levels = c("g
 
   ee <- igraph::get.edgelist(gr)
   ee <- igraph::get.edges(gr, igraph::E(gr))
-  Matrix::head(ee)
 
   ew <- 1 + 5 * sqrt(fc.cex[ee[, 1]] * fc.cex[ee[, 2]])
   ew <- 1 + 5 * abs(igraph::E(gr)$weight)
@@ -2066,7 +2064,6 @@ plot_ggscatterFILL <- function(x, y = NULL, col = NULL, shape = NULL,
   df <- data.frame(x = x, y = y)
   if (!is.null(col)) df$col <- col
   if (!is.null(shape)) df$shape <- shape
-  Matrix::head(df)
 
   p <- ggplot2::ggplot(df, ggplot2::aes(x, y, color = col, shape = shape)) +
     ggplot2::geom_point(shape = pch, alpha = opacity, size = 2.0 * cex) +
@@ -2137,7 +2134,7 @@ plot_ggscatter <- function(x, y = NULL, col = NULL, main = NULL,
   df <- data.frame(x = x, y = y)
   if (!is.null(col)) df$col <- col
   if (!is.null(shape)) df$shape <- shape
-  Matrix::head(df)
+
   is.factor <- class(type.convert(as.character(col), as.is = TRUE)) == "factor"
   if (is.factor) {
     p <- ggplot2::ggplot(df, ggplot2::aes(y = y, x = x, color = col, shape = shape)) +
@@ -3415,7 +3412,6 @@ pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, cex =
   }
 
   df <- data.frame(x = pos[, 1], y = pos[, 2], z = var, names = rownames(pos))
-  Matrix::head(df)
   if (!is.null(var)) {
     plt <- scatterD3::scatterD3(
       data = df, x = x, y = y, #

@@ -25,9 +25,6 @@ seurat2pgx <- function(obj, do.cluster = FALSE) {
   pgx$genes <- ngs.getGeneAnnotation(genes = rownames(pgx$counts))
   rownames(pgx$genes) <- rownames(pgx$counts)
 
-
-  Matrix::head(pgx$samples)
-  Matrix::head(pgx$genes)
   if (do.cluster) {
     message("[seurat2pgx] clustering samples")
     pgx <- pgx.clusterSamples2(
@@ -64,7 +61,6 @@ pgx.createPGX.10X.DEPRECATED <- function(outs, ncells = 2000, aggr.file = "aggre
   message("[createPGX.10X] reading aggregation meta file...")
   aggr <- read.csv(file.path(outs, aggr.file), comment.char = "#")
   aggr$molecule_h5 <- NULL
-  Matrix::head(aggr)
   idx <- as.integer(sub(".*-", "", colnames(counts.10x)))
   pheno <- aggr[idx, ]
   rownames(pheno) <- colnames(counts.10x)
@@ -224,7 +220,6 @@ pgx.scTestDifferentialExpression <- function(counts, y, is.count = TRUE, samples
 
   pv <- corpora::fisher.pval(m2$obs.x, m1$obs.x, m2$obs.y, m1$obs.y)
 
-  Matrix::head(pv)
   if (length(hack.err) > 0) m2$obs.x[hack.err] <- 0
   pct <- cbind(pct.x, pct.y, pct.diff, pct.tot, pct.pvalue = pv)
 
@@ -1013,7 +1008,6 @@ pgx.createSeurateFigures <- function(obj) {
   top <- markers %>%
     plotly::group_by(cell.type) %>%
     dplyr::top_n(ntop, score)
-  Matrix::head(top)
   h2 <- Seurat::DoHeatmap(obj[, sel],
     features = top$gene, group.by = "cell.type",
     hjust = 0.5, angle = 0, size = 4
@@ -1040,7 +1034,6 @@ pgx.createSeurateFigures <- function(obj) {
   ## Phenotype dimension plots
   ## ----------------------------------------------------------------------
 
-  Matrix::head(obj@meta.data)
   not.ph <- grep("ident|nCount|nFeat|mito|[.]mt|ribo|_snn|^percent", colnames(obj@meta.data), value = TRUE)
   ph <- setdiff(colnames(obj@meta.data), not.ph)
   ph

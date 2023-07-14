@@ -193,13 +193,11 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   ## this connect all points with at least 3 neighbours
   sel1 <- which(igraph::V(gr1)$level == "gene")
   pos1 <- gr$layout[igraph::V(gr1)[sel1]$name, ]
-  Matrix::head(pos1)
   r1 <- scran::buildSNNGraph(t(pos1), k = 3)
   igraph::V(r1)$name <- igraph::V(gr1)[sel1]$name
 
   sel2 <- which(igraph::V(gr1)$level == "geneset")
   pos2 <- gr$layout[igraph::V(gr1)[sel2]$name, ]
-  Matrix::head(pos2)
   r2 <- scran::buildSNNGraph(t(pos2), k = 3)
   igraph::V(r2)$name <- igraph::V(gr1)[sel2]$name
   new.gr <- igraph::graph.union(gr1, r1)
@@ -339,13 +337,11 @@ pgx.reduceOmicsGraph <- function(ngs) {
   vtype <- gsub("\\}.*|^\\{", "", igraph::V(gr1)$name)
   sel1 <- which(vtype == "gene")
   pos1 <- gr1$layout[igraph::V(gr1)[sel1]$name, ]
-  Matrix::head(pos1)
   r1 <- scran::buildSNNGraph(t(pos1), k = 3)
   igraph::V(r1)$name <- rownames(pos1)
 
   sel2 <- which(vtype == "geneset")
   pos2 <- gr1$layout[igraph::V(gr1)[sel2]$name, ]
-  Matrix::head(pos2)
   r2 <- scran::buildSNNGraph(t(pos2), k = 3)
   igraph::V(r2)$name <- rownames(pos2)
   new.gr <- igraph::graph.union(r1, r2)
@@ -850,12 +846,9 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
   sig.terms <- rownames(vinfo)[which(vinfo$qv <= fdr)]
   sig.terms <- unique(c(sig.terms, sig.terms10))
   sig.terms <- Matrix::head(sig.terms[order(vinfo[sig.terms, "qv"])], nterms) ## maximum number
-  length(sig.terms)
 
   pathscore <- sapply(sig.terms, get.pathscore) ## SLOW!!!
-  length(pathscore)
   top.terms <- Matrix::head(sig.terms[order(-abs(pathscore))], ntop)
-  Matrix::head(top.terms)
 
   ## total subgraph
   vv <- unique(unlist(sapply(top.terms, get.vpath)))

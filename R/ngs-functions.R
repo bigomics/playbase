@@ -45,7 +45,6 @@ ngs.getGeneAnnotation <- function(genes) {
     TXLEN <- tapply(tx$tx_len, tx$gene_id, mean, na.rm = TRUE)
     TXLEN <- TXLEN[match(names(SYMBOL), names(TXLEN))]
     names(TXLEN) <- SYMBOL
-    Matrix::head(TXLEN)
 
     ## get gene biotype
     daf <- GenomicFeatures::transcripts(
@@ -73,7 +72,6 @@ ngs.getGeneAnnotation <- function(genes) {
     TXLEN <- tapply(tx$tx_len, tx$gene_id, mean, na.rm = TRUE)
     TXLEN <- TXLEN[match(names(SYMBOL), names(TXLEN))]
     names(TXLEN) <- SYMBOL
-    Matrix::head(TXLEN)
 
     daf <- GenomicFeatures::transcripts(
       EnsDb.Mmusculus.v79::EnsDb.Mmusculus.v79,
@@ -113,9 +111,6 @@ ngs.getGeneAnnotation <- function(genes) {
     tx_len = as.integer(txlen),
     map = map
   )
-  #
-  Matrix::head(annot)
-  ## annot[is.na(annot)] <- ""
 
   rownames(annot) <- genes
   annot
