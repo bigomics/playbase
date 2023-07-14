@@ -76,12 +76,10 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
     return(NULL)
   }
   if (any(class(X) == "dgCMatrix")) {
-    dbg("[pgx.computeDrugEnrichment] X is 0/1 sparse matrix")
     ## gene set enrichment by rank correlation
     fx <- apply(F[gg, , drop = FALSE], 2, rank)
     R1 <- qlcMatrix::corSparse(X[gg, ], fx)
   } else {
-    dbg("[pgx.computeDrugEnrichment] X is full matrix")
     rnk1 <- apply(X[gg, , drop = FALSE], 2, rank, na.last = "keep")
     rnk2 <- apply(F[gg, , drop = FALSE], 2, rank, na.last = "keep")
     system.time(R1 <- stats::cor(rnk1, rnk2, use = "pairwise"))

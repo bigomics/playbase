@@ -308,34 +308,29 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
   ## -------------- drug enrichment
   # get drug activity databases
 
-  if (is.null(libx.dir)) message("WARNING Need libx.dir if you call compute_full_drugActivityEnrichment")
+  if (is.null(libx.dir)) message("WARNING Need libx.dir for full drugActivityEnrichment")
 
-  cmap.dir <- file.path(libx.dir, "cmap")
-  file.gene.db <- dir(cmap.dir, pattern = "n8m20g5812.*rds$")
-
-  if (length(file.gene.db) > 1) message("WARNING multiple gene.db files found. Using first one.")
-
-  if (file.exists(file.path(cmap.dir, file.gene.db[1]))) {
-    gene.db <- readRDS(file.path(cmap.dir, file.gene.db[1]))
-
-    ref.db <- list(
-      "L1000_ACTIVITYS_N20D1011" = playdata::L1000_ACTIVITYS_N20D1011,
-      "L1000_GENE_PERTURBATION" = gene.db
-    )
+  if(!is.null(libx.dir) && dir.exists(libx.dir)) {
+    ## scan for extra connectivity reference files in libx
+    cmap.dir <- file.path(libx.dir, "cmap")
+    db.files <- dir(cmap.dir, pattern = "L1000-activity.*rds$|L1000-gene.*rds$")
+    db.files
+    ref.db <- lapply(db.files, function(f) readRDS(file.path(cmap.dir, f)))
+    names(ref.db) <- sub("-", "/", gsub("_.*", "", db.files))
   } else {
+    ## get the default 'light' version of the drug CMAP
     ref.db <- list(
-      "L1000_ACTIVITYS_N20D1011" = playdata::L1000_ACTIVITYS_N20D1011
+      "L1000/activity" = playdata::L1000_ACTIVITYS_N20D1011
     )
   }
 
   for (i in seq_along(ref.db)) {
     f <- names(ref.db)[i]
-    message("[compute_drugActivityEnrichment] reading L1000 reference: ", f)
+    message("[compute_drugActivityEnrichment] computing activity CMAP for ",f)
+
     X <- ref.db[[i]]
     xdrugs <- gsub("[_@].*$", "", colnames(X))
     ndrugs <- length(table(xdrugs))
-    message("number of profiles: ", ncol(X))
-    message("number of drugs: ", ndrugs)
     is.drug <- grepl("activity|drug|ChemPert", f, ignore.case = TRUE)
 
     out1 <- playbase::pgx.computeDrugEnrichment(
@@ -380,8 +375,6 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
     ngs$drugs[[db]][["stats"]] <- out1[["stats"]]
   }
 
-  remove(X)
-  remove(xdrugs)
   return(ngs)
 }
 
@@ -397,8 +390,10 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
 #' @return An updated object with drug sensitivity enrichment results.
 #' @export
 compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
+  
+  if(is.null(libx.dir) || !dir.exists(libx.dir)) return(ngs)
+    
   cmap.dir <- file.path(libx.dir, "cmap")
-
   ref.db <- dir(cmap.dir, pattern = "sensitivity.*rds$")
   if (length(ref.db) == 0) {
     message("[compute_drugSensitivityEnrichment] Warning:: missing drug sensitivity database")
@@ -409,6 +404,7 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
   ref <- ref.db[1]
   for (i in seq_along(ref.db)) {
     ref <- ref.db[i]
+    message("[compute_drugSensitivityEnrichment] computing sensitivity CMAP for ",ref)
     X <- readRDS(file = file.path(cmap.dir, ref))
     xdrugs <- gsub("[@_].*$", "", colnames(X))
     length(table(xdrugs))
@@ -440,10 +436,6 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
     }
   } ## end of for rr
 
-  names(ngs$drugs)
-
-  remove(X)
-  remove(xdrugs)
   return(ngs)
 }
 

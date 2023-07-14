@@ -256,9 +256,6 @@ contrasts_conversion_check <- function(SAMPLES, CONTRASTS, PASS) {
     contrasts1 <- new.contrasts
   }
 
-  dbg("[UploadModule] 1 : dim.contrasts1 = ", dim(contrasts1))
-  dbg("[UploadModule] 1 : dim.samples1   = ", dim(samples1))
-
   ok.contrast <- length(intersect(rownames(samples1), rownames(contrasts1))) > 0
   if (ok.contrast && NCOL(contrasts1) > 0 && PASS) {
     ## always clean up
