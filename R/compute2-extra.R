@@ -310,7 +310,7 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
 
   if (is.null(libx.dir)) message("WARNING Need libx.dir for full drugActivityEnrichment")
 
-  if(!is.null(libx.dir) && dir.exists(libx.dir)) {
+  if (!is.null(libx.dir) && dir.exists(libx.dir)) {
     ## scan for extra connectivity reference files in libx
     cmap.dir <- file.path(libx.dir, "cmap")
     db.files <- dir(cmap.dir, pattern = "L1000-activity.*rds$|L1000-gene.*rds$")
@@ -326,7 +326,7 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
 
   for (i in seq_along(ref.db)) {
     f <- names(ref.db)[i]
-    message("[compute_drugActivityEnrichment] computing activity CMAP for ",f)
+    message("[compute_drugActivityEnrichment] computing activity CMAP for ", f)
 
     X <- ref.db[[i]]
     xdrugs <- gsub("[_@].*$", "", colnames(X))
@@ -390,9 +390,10 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
 #' @return An updated object with drug sensitivity enrichment results.
 #' @export
 compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
-  
-  if(is.null(libx.dir) || !dir.exists(libx.dir)) return(ngs)
-    
+  if (is.null(libx.dir) || !dir.exists(libx.dir)) {
+    return(ngs)
+  }
+
   cmap.dir <- file.path(libx.dir, "cmap")
   ref.db <- dir(cmap.dir, pattern = "sensitivity.*rds$")
   if (length(ref.db) == 0) {
@@ -404,7 +405,7 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
   ref <- ref.db[1]
   for (i in seq_along(ref.db)) {
     ref <- ref.db[i]
-    message("[compute_drugSensitivityEnrichment] computing sensitivity CMAP for ",ref)
+    message("[compute_drugSensitivityEnrichment] computing sensitivity CMAP for ", ref)
     X <- readRDS(file = file.path(cmap.dir, ref))
     xdrugs <- gsub("[@_].*$", "", colnames(X))
     length(table(xdrugs))
