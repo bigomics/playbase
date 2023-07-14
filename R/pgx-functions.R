@@ -374,8 +374,6 @@ probe2symbol <- function(probes, type = NULL, org = "human", keep.na = FALSE) {
 }
 
 
-
-
 #' @export
 trimsame <- function(s, split = " ", ends = TRUE, summarize = FALSE) {
   if (ends) {
@@ -1435,8 +1433,6 @@ psort <- function(x, p.col = NULL) {
   j <- grep("p.value|^p$|p-val|pval", tolower(colnames(x)))[1]
   x[order(x[, j]), ]
 }
-
-
 
 #' @export
 tidy.dataframe <- function(Y) {
