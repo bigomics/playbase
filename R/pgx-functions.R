@@ -490,15 +490,30 @@ read.as_matrix <- function(file) {
   ## read delimited table automatically determine separator. allow
   ## duplicated rownames. This implements with faster fread.
   x0 <- data.table::fread(
-    file = file, check.names = FALSE, header = TRUE,
-    blank.lines.skip = TRUE, stringsAsFactors = FALSE
+    file = file,
+    check.names = FALSE,
+    header = TRUE,
+    fill = TRUE,
+    blank.lines.skip = TRUE,
+    stringsAsFactors = FALSE
   )
   x <- NULL
+  ## drop rows without rownames
   sel <- which(!as.character(x0[[1]]) %in% c("", " ", "NA", "na", NA))
-  length(sel)
+  ## get values from second column forward and take first column as rownames
   if (length(sel)) {
     x <- as.matrix(x0[sel, -1, drop = FALSE]) ## always as matrix
     rownames(x) <- x0[[1]][sel]
+  }
+  ## drop any rows with 100% missing value (sometimes added by not-so-Excel...)
+  zero.row <- which(rowSums(is.na(x)==1)
+  if (length(zero.row)) {
+    x <- x[-zero.row,,drop=FALSE]
+  }
+  ## drop any 100% missing columns (sometimes added by not-so-Excel...)
+  zero.col <- which(colSums(is.na(x)==1)
+  if (length(zero.col)) {
+    x <- x[,-zero.col,drop=FALSE]
   }
   return(x)
 }
