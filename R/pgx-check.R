@@ -141,7 +141,7 @@ pgx.crosscheckINPUT <- function(
         colnames(counts)
     )
     if (length(SAMPLE_NAMES_NOT_MATCHING_COUNTS) == 0 && PASS) {
-      check_return$e16 <- "Your samples and counts files have no matching rownames and colnames, respectively."
+      check_return$e16 <- "Please correct your samples names in the samples and contrast files."
       pass <- FALSE
     }
 
@@ -174,7 +174,7 @@ pgx.crosscheckINPUT <- function(
     }
 
     if (!MATCH_SAMPLES_COUNTS_ORDER && PASS) {
-      check_return$e18 <- "samples and counts do not have the same order"
+      check_return$e18 <- "We will reorder your samples and counts."
       counts <- counts[, match(rownames(samples), colnames(counts))]
     }
   }
