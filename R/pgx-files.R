@@ -117,7 +117,7 @@ pgx.readOptions <- function(file = "./OPTIONS") {
   }
   P <- read.table(file, sep = "=", row.names = 1)
   opt.names <- trimws(rownames(P))
-  opt <- list( P[,1] )
+  opt <- list(P[, 1])
   opt <- sapply(opt, trimws)
   opt <- as.list(opt)
   names(opt) <- opt.names
