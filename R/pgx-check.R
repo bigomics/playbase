@@ -126,6 +126,7 @@ pgx.crosscheckINPUT <- function(
     SAMPLES = NULL,
     COUNTS = NULL,
     CONTRASTS = NULL) {
+      
   samples <- SAMPLES
   counts <- COUNTS
   contrasts <- CONTRASTS
@@ -168,6 +169,11 @@ pgx.crosscheckINPUT <- function(
     # Check that counts have the same order as samples.
 
     MATCH_SAMPLES_COUNTS_ORDER <- all(diff(match(rownames(samples), colnames(counts))) > 0)
+
+    # in case no matches are found, we get an NA, which should be converted to FALSE
+    if (is.na(MATCH_SAMPLES_COUNTS_ORDER)){
+      MATCH_SAMPLES_COUNTS_ORDER <- FALSE
+    }
 
     if (!MATCH_SAMPLES_COUNTS_ORDER && PASS) {
       check_return$e18 <- "samples and counts do not have the same order"
