@@ -506,7 +506,7 @@ read.as_matrix <- function(file) {
     rownames(x) <- x0[[1]][sel]
   }
   ## drop any rows with 100% missing value (sometimes added by not-so-Excel...)
-  zero.row <- which(rowSums(is.na(x)==1)
+  zero.row <- which(rowSums(is.na(x)==1))
   if (length(zero.row)) {
     x <- x[-zero.row,,drop=FALSE]
   }
