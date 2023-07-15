@@ -139,10 +139,8 @@ pgx.crosscheckINPUT <- function(
       rownames(samples),
       colnames(counts)
     )
-
-
     if (length(SAMPLE_NAMES_NOT_MATCHING_COUNTS) == 0 && PASS) {
-      check_return$e16 <- SAMPLE_NAMES_NOT_MATCHING_COUNTS
+      check_return$e16 <- "Please correct your samples names in the samples and contrast files."
       pass <- FALSE
     }
 
@@ -169,8 +167,13 @@ pgx.crosscheckINPUT <- function(
 
     MATCH_SAMPLES_COUNTS_ORDER <- all(diff(match(rownames(samples), colnames(counts))) > 0)
 
+    # in case no matches are found, we get an NA, which should be converted to FALSE
+    if (is.na(MATCH_SAMPLES_COUNTS_ORDER)) {
+      MATCH_SAMPLES_COUNTS_ORDER <- FALSE
+    }
+
     if (!MATCH_SAMPLES_COUNTS_ORDER && PASS) {
-      check_return$e18 <- "samples and counts do not have the same order"
+      check_return$e18 <- "We will reorder your samples and counts."
       counts <- counts[, match(rownames(samples), colnames(counts))]
     }
   }
@@ -255,9 +258,6 @@ contrasts_conversion_check <- function(SAMPLES, CONTRASTS, PASS) {
     }
     contrasts1 <- new.contrasts
   }
-
-  dbg("[UploadModule] 1 : dim.contrasts1 = ", dim(contrasts1))
-  dbg("[UploadModule] 1 : dim.samples1   = ", dim(samples1))
 
   ok.contrast <- length(intersect(rownames(samples1), rownames(contrasts1))) > 0
   if (ok.contrast && NCOL(contrasts1) > 0 && PASS) {
