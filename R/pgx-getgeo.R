@@ -170,7 +170,6 @@ pgx.getGEOcounts.archs4 <- function(id, h5.file) {
   id %in% gse.series
 
   idx <- which(sapply(sample.series, function(s) id %in% s))
-  length(idx)
 
   if (length(idx) == 0) {
     cat("WARNING: series", id, "not in ARCHS4 matrix file\n")
@@ -245,8 +244,7 @@ pgx.getGEOcounts.GEOquery <- function(id) {
     cat("ERROR: GEOquery::getGEO() error\n")
     return(NULL)
   }
-  length(gse)
-  attr(gse, "names")
+
 
   has.expr <- sapply(gse, function(x) nrow(exprs(x)) > 0)
   has.expr
@@ -263,7 +261,6 @@ pgx.getGEOcounts.GEOquery <- function(id) {
 
   ## select which has expression
   gse <- gse[which(has.expr)]
-  length(gse)
 
   ## select preferred platform is multiple exists
   expr.list <- list()
@@ -460,19 +457,15 @@ pgx.getGeoMetadata.fromEset <- function(id) {
   ## If not succesful, try with downloading the GSEMatrix
   suppressMessages(gse <- try(GEOquery::getGEO(id, GSEMatrix = TRUE, getGPL = FALSE)))
 
-  class(gse)
   if (class(gse) == "try-error") {
     res <- list(error = "ERROR: pgx.getGeoMetadata.fromEset() error")
     return(res)
   }
-  length(gse)
-  attr(gse, "names")
-  class(gse[[1]])
+
   nsamples <- sapply(gse, function(s) nrow(pData(phenoData(s))))
   nsamples
 
   gse <- gse[nsamples >= 3]
-  length(gse)
   eset <- gse[[1]]
   pheno.list <- lapply(gse, pgx.getGeoMetadata.fromEset1)
   pheno.list <- lapply(pheno.list, function(m) {
@@ -493,7 +486,7 @@ pgx.getGeoMetadata.fromEset <- function(id) {
   pheno.list <- lapply(1:length(pheno.list), function(i) {
     pheno.list[[i]] <- cbind(GPL = gpl[i], pheno.list[[i]])
   })
-  lapply(pheno.list, dim)
+
   pheno <- do.call(rbind, pheno.list)
   pheno <- data.frame(pheno, stringsAsFactors = FALSE, check.names = FALSE)
 
@@ -549,16 +542,12 @@ pgx.getGeoMetadata.fromGSM <- function(id) {
   ##
   id
   suppressMessages(gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE)))
-  class(gse)
+  
   if (class(gse) == "try-error") {
     res <- list(error = "ERROR: GEOquery::getGEO() error")
     return(res)
   }
-  length(gse)
-  attr(gse, "names")
-  slotNames(gse)
-  class(gse)
-  length(gse@gsms)
+
 
   if (length(gse@gsms) == 0) {
     cat("WARNING:: no GSM information in object\n")

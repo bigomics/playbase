@@ -390,7 +390,7 @@ pgx.initDatasetFolder.DEPRECATED <- function(pgx.dir,
 
     ## Conform the multiple metaFC matrices
     gg <- names(gg.tbl)
-    length(gg)
+
     missing.FC <- lapply(missing.FC, function(x) {
       x <- x[match(gg, toupper(rownames(x))), , drop = FALSE]
       rownames(x) <- gg
@@ -1077,7 +1077,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
 
     ## Conform the multiple metaFC matrices
     gg <- names(gg.tbl)
-    length(gg)
+
     missing.FC <- lapply(missing.FC, function(x) {
       x <- x[match(gg, toupper(rownames(x))), , drop = FALSE]
       rownames(x) <- gg

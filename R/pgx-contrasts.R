@@ -756,7 +756,7 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
       xc <- factor(kcode, levels = unique(kcode)) ## experimental condition
       if (ncol(K1) > 10) levels(xc) <- paste0("condition", 1:length(levels(xc))) ## too long...
       jj <- which(!duplicated(kcode))
-      length(jj)
+
       ## SPECIAL CASE!!! if comparisons are degenerate (no valid
       ## condition groups). LIMMA does not like that. Then delete
       ## phenotype with most levels one by one

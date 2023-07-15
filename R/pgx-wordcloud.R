@@ -41,7 +41,6 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   terms <- terms[which(!terms %in% stopwords)]
   terms <- terms[sapply(terms, nchar) > 2]
   terms <- grep("[0-9]|^\\(", terms, invert = TRUE, value = TRUE)
-  length(terms)
   terms <- Matrix::head(terms, 1000)
 
   ## Calculate incidence matrix
@@ -76,11 +75,9 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   gmt <- apply(W, 2, function(x) names(which(x != 0)))
   suppressWarnings(res <- fgsea::fgseaSimple(gmt, rms.FC, nperm = 1000))
   res$leadingEdge <- sapply(res$leadingEdge, paste, collapse = "//")
-  #
   colnames(res)[1] <- "word"
 
   ## --------- only significant and positive
-  #
   res <- res[(res$padj < 1 & res$NES > 0), ]
   res <- res[order(-abs(res$NES)), ]
 

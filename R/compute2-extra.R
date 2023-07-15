@@ -406,7 +406,6 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
     ref <- ref.db[i]
     X <- readRDS(file = file.path(cmap.dir, ref))
     xdrugs <- gsub("[@_].*$", "", colnames(X))
-    length(table(xdrugs))
 
     out1 <- playbase::pgx.computeDrugEnrichment(
       ngs, X, xdrugs,

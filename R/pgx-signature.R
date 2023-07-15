@@ -191,7 +191,6 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   gg <- intersect(names(fc), rn)
   fc1 <- sort(fc[gg])
   gg <- unique(names(c(Matrix::head(fc1, nsig), Matrix::tail(fc1, nsig))))
-  length(gg)
   row.idx <- match(gg, rn)
   rhdf5::h5closeAll()
   G <- rhdf5::h5read(h5.file, "data/matrix", index = list(row.idx, 1:length(cn)))
@@ -381,7 +380,6 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
 
     genes <- as.vector(unlist(sapply(F[], names)))
     genes <- sort(unique(toupper(genes)))
-    length(genes)
 
     ## Filter out genes (not on known chromosomes...)
     gannot <- ngs.getGeneAnnotation(genes)
@@ -584,7 +582,6 @@ pgx.addEnrichmentSignaturesH5 <- function(h5.file, X = NULL, mc.cores = 0,
   G <- playdata::GSET_SPARSEG_XL
   sel <- grep("HALLMARK|C[1-9]|^GO", rownames(G))
   sel <- grep("HALLMARK", rownames(G))
-  length(sel)
   genes <- intersect(colnames(G), rownames(X))
   G <- G[sel, genes, drop = FALSE]
   X <- X[genes, ]
@@ -718,7 +715,6 @@ pgx.computeGeneSetExpression <- function(X, gmt, method = NULL,
 
   gmt.size <- sapply(gmt, function(x) sum(x %in% rownames(X)))
   gmt <- gmt[gmt.size >= min.size]
-  length(gmt)
 
   S <- list()
   if ("gsva" %in% method) {

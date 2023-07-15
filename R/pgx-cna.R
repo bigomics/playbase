@@ -39,12 +39,10 @@ pgx.inferCNV <- function(ngs, refgroup = NULL, progress = NULL) {
   ## filter known genes
   jj <- which(genes$chr %in% paste0("chr", c(1:22, "X", "Y")) &
     !is.na(genes$start) & !is.na(genes$stop))
-  length(jj)
   genes <- genes[jj, ]
 
   ## prepare data objects
   gg <- intersect(rownames(genes), rownames(ngs$counts))
-  length(gg)
   data <- ngs$counts[gg, ]
   genes <- genes[gg, ]
   annots <- ngs$samples[, "group", drop = FALSE]

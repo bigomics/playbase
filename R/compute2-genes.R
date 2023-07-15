@@ -150,7 +150,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
 
     ## GROUP DESIGN
     notk <- which(!stat.group %in% rownames(contr.matrix))
-    length(notk)
     if (length(notk)) {
       stat.group[notk] <- "_"
     }

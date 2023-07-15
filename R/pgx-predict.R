@@ -232,8 +232,6 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
 
       g1 <- rownames(res$W[[k]])
       g2 <- rownames(res$W[[ifelse(k < 3, k + 1, 1)]])
-      length(g1)
-      length(g2)
 
       sel <- which(res$edges[, "from"] %in% c(g1, g2) &
         res$edges[, "to"] %in% c(g1, g2))

@@ -355,7 +355,7 @@ probe2symbol <- function(probes, type = NULL, org = "human", keep.na = FALSE) {
 
   ## Unrecognize probes
   nna <- which(is.na(names(symbol0)))
-  length(nna)
+
   if (length(nna)) names(symbol0)[nna] <- probes[nna]
 
   ## What to do with unmapped/missing symbols????
@@ -491,7 +491,7 @@ read.as_matrix <- function(file) {
   )
   x <- NULL
   sel <- which(!as.character(x0[[1]]) %in% c("", " ", "NA", "na", NA))
-  length(sel)
+
   if (length(sel)) {
     x <- as.matrix(x0[sel, -1, drop = FALSE]) ## always as matrix
     rownames(x) <- x0[[1]][sel]
@@ -1018,7 +1018,7 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
 
   gmt.hgnc.size <- sapply(gmt.hgnc, length)
   gmt.hgnc <- gmt.hgnc[which(gmt.hgnc.size >= 50 & gmt.hgnc.size <= 1000)]
-  length(gmt.hgnc)
+
   names(gmt.hgnc) <- paste0(names(gmt.hgnc), " (HGNC)")
 
   families <- c(families, gmt.hgnc)
@@ -1556,7 +1556,7 @@ correctMarchSeptemberGenes <- function(gg) {
   gg2 <- gg1
   if (length(jj) > 0) {
     cat("Found ", length(jj), "Sept/Mar genes!\n")
-    length(jj)
+
     from[jj]
     gg2 <- plyr::mapvalues(gg1, from[jj], to[jj])
   }

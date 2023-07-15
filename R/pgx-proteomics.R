@@ -107,13 +107,9 @@ prot.normalizeCounts <- function(counts, scale = 1e6, scaling = "by.column",
   ## start with original counts from MaxQuant
   ## ------------------------------------------------------------
   X <- counts
-  sum(is.na(X))
-  sum(X == 0)
-  sum(X == 0, na.rm = TRUE)
-  min(X, na.rm = TRUE)
+
   X[X <= zero.thr] <- NA ## treat zero as NA for the moment
   which.zeros <- Matrix::which(X == 0 | is.na(X), arr.ind = TRUE)
-  length(which.zeros)
 
   ## ------------------------------------------------------------
   ## normalize to CPM (or otherwise)

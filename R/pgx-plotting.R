@@ -4081,7 +4081,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
   } else {
     xx <- list("Samples" = X)
   }
-  length(xx)
 
   ## ------- set colors
   if (!is.null(annot)) {

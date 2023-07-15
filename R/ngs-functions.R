@@ -176,7 +176,6 @@ ngs.collapseByGene <- function(ngs) {
   gene <- as.character(ngs$genes$gene_name)
   p1 <- names(which(table(gene) == 1))
   p2 <- names(which(table(gene) > 1))
-  length(p2)
   if (length(p2) == 0) {
     gene <- as.character(ngs$genes$gene_name)
     rownames(ngs$genes) <- gene
@@ -188,7 +187,6 @@ ngs.collapseByGene <- function(ngs) {
   x1 <- ngs$counts[j1, , drop = FALSE]
   rownames(x1) <- ngs$genes$gene_name[j1]
   x2 <- apply(ngs$counts[j2, , drop = FALSE], 2, function(x) tapply(x, gene[j2], sum))
-  length(p2)
   if (length(p2) == 1) {
     x2 <- matrix(x2, nrow = 1)
     rownames(x2) <- p2

@@ -59,7 +59,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
   ## create drug meta sets
   meta.gmt <- tapply(colnames(X), xdrugs, list)
   meta.gmt <- meta.gmt[which(sapply(meta.gmt, length) >= nmin)]
-  length(meta.gmt)
+
   if (length(meta.gmt) == 0) {
     message("WARNING::: pgx.computeDrugEnrichment : no valid genesets!!")
     return(NULL)
@@ -68,7 +68,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
   ## first level (rank) correlation
   message("Calculating first level rank correlation ...")
   gg <- intersect(rownames(X), rownames(F))
-  length(gg)
+
   if (length(gg) < 20) {
     message("WARNING::: pgx.computeDrugEnrichment : not enough common genes!!")
     return(NULL)
@@ -149,7 +149,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
       rownames(rx) <- rownames(res$X)
       mtop <- names(head(sort(rowMeans(rx), decreasing = TRUE), nprune))
       top.idx <- unique(unlist(meta.gmt[mtop]))
-      length(top.idx)
+
       results[[k]]$X <- res$X[mtop, , drop = FALSE]
       results[[k]]$P <- res$P[mtop, , drop = FALSE]
       results[[k]]$Q <- res$Q[mtop, , drop = FALSE]
@@ -218,7 +218,6 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
   top.combo.up <- lapply(top.combo.up, function(d) apply(d, 2, function(j) paste(sort(j), collapse = "-")))
   top.combo.dn <- lapply(top.combo.dn, function(d) apply(d, 2, function(j) paste(sort(j), collapse = "-")))
   top.combo <- unique(c(unlist(top.combo.up), unlist(top.combo.dn)))
-  length(top.combo)
 
   ## -------------- sample pairs from original mono-matrix
   sample.pairs <- list()
@@ -243,7 +242,6 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
   sum(table(combo.drugs) >= 15)
   sel.combo <- names(which(table(combo.drugs) >= 15))
   jj <- which(combo.drugs %in% sel.combo)
-  length(jj)
   comboX <- comboX[, jj, drop = FALSE]
   combo.drugs <- combo.drugs[jj]
   colnames(comboX) <- paste0(combo.drugs, "_combo", 1:ncol(comboX))

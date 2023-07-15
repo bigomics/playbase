@@ -31,8 +31,7 @@ pgx.computePathscores <- function(graph, strict.pos = TRUE) {
     }
     score <- node.values * edge.rho ## always positive
     weights0 <- -log(pmax(score / max(score), 1e-8))
-    length(weights0)
-    summary(weights0)
+
 
     ## ----------------------------------------------------------
     ## Compute pathscore (solve all distances, 3-point SP)
@@ -65,8 +64,6 @@ pgx.computeShortestPath <- function(graph, contrast, niter = 1, r = 0.01,
   edge.rho <- pmax(igraph::E(graph)$weight, 0)
   score <- node.values * edge.rho
   weights0 <- -log(pmax(score / max(score), 1e-8))
-  length(weights0)
-  summary(weights0)
 
   ## ----------------------------------------------------------
   ## solve single SP (SOURCE to SINK)
@@ -693,7 +690,6 @@ pgx.computeCoreGOgraph <- function(ngs, fdr = 0.05) {
       fdr = fdr, nterms = 200, ntop = 20
     )
   }
-  length(subgraphs)
 
   sub2 <- igraph::graph.union(subgraphs, byname = TRUE)
   A <- data.frame(igraph::vertex.attributes(sub2))
@@ -759,7 +755,7 @@ getGOgraph <- function() {
 pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 500, ntop = 100) {
   mx <- ngs$gset.meta$meta[[comparison]]
   jj <- grep("^GO", rownames(mx))
-  length(jj)
+
   if (length(jj) == 0) {
     cat("WARNING:: no GO terms in gset.meta$meta!!")
     return(NULL)
@@ -815,7 +811,6 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
     vv <- sub("GO_|GOCC_|GOBP_|GOMF_", "", vinfo$geneset)
     idx <- match(vv, gsub("[ ]", "_", toupper(terms$Term)))
     jj <- which(!is.na(idx))
-    length(jj)
     vinfo <- cbind(vinfo[jj, , drop = FALSE], terms[idx[jj], , drop = FALSE])
     rownames(vinfo) <- vinfo$go_id
   }
