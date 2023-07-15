@@ -194,7 +194,6 @@ compute_testGenesets <- function(pgx,
   )
 
   rownames(gset.meta$timings) <- paste("[test.genesets]", rownames(gset.meta$timings))
-  print(gset.meta$timings)
 
   pgx$timings <- rbind(pgx$timings, gset.meta$timings)
   pgx$gset.meta <- gset.meta

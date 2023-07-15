@@ -276,10 +276,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
 
   message("[compute_testGenesSingleOmics] 13 : fitting done!")
 
-  names(gx.meta)
-  names(gx.meta$outputs)
-  print(gx.meta$timings)
-
   ## --------------------------------------------------------------------------------
   ## set default matrices
   ## --------------------------------------------------------------------------------

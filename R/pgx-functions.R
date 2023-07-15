@@ -249,8 +249,8 @@ human2mouse.SLLOWWW <- function(x) {
     uniqueRows = T
   )
   genesx <- unique(genesV2[, 2])
-  ## Print the first 6 genes found to the screen
-  print(Matrix::head(genesx))
+
+
   return(genesx)
 }
 
