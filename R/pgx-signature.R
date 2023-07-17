@@ -36,7 +36,7 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 1000, contrasts = N
     contrasts <- colnames(meta$fc)
   }
   contrasts <- intersect(contrasts, colnames(meta$fc))
-  F <- meta$fc[, contrasts, drop=FALSE]
+  F <- meta$fc[, contrasts, drop = FALSE]
 
   if (inmemory) {
     scores <- pgx.correlateSignatureH5.inmemory(
