@@ -132,8 +132,6 @@ compute_extra <- function(ngs, extra = c(
       db <- sigdb[1]
       for (db in sigdb) {
         if (file.exists(db)) {
-          ntop <- 10000
-          ntop <- 1000
           message("computing connectivity scores for ", db)
           ## in memory for many comparisons
           meta <- pgx.getMetaFoldChangeMatrix(ngs, what = "meta")
@@ -142,7 +140,7 @@ compute_extra <- function(ngs, extra = c(
           tt <- system.time({
             scores <- pgx.computeConnectivityScores(
               ngs, db,
-              ntop = ntop, contrasts = NULL,
+              ntop = 1000, contrasts = NULL,
               remove.le = TRUE, inmemory = inmemory
             )
           })

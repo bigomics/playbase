@@ -91,7 +91,7 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
   pgx <- pgx.computePGX(
     pgx,
     max.genes = 40000,
-    max.genesets = 20000,
+    max.genesets = 10000,
     gx.methods = gx.methods,
     gset.methods = gset.methods,
     extra.methods = extra.methods,
