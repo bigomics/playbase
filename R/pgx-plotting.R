@@ -2883,7 +2883,6 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
 
     ## determine range for colorbar
     zr <- range(z)
-    # if (!is.null(zlim)) zr <- zlim
     if (zsym && min(zr, na.rm = TRUE) < 0) zr <- c(-1, 1) * max(abs(zr), na.rm = TRUE)
     zz <- round(c(zr[1], zr[2]), digits = 2)
 
@@ -3184,8 +3183,6 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
       cmin <- -cmax
     }
   }
-
-  ## remove NA??
 
 
   ## ---------------- call PLOTLY -----------
