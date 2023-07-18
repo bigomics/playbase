@@ -2663,7 +2663,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
                                      cex.legend = 1, cex.axis = 1, gridcolor = NULL, bgcolor = NULL,
                                      zoom = 1, legend = TRUE, bty = "n", hilight = NULL,
                                      zlim = NULL, zlog = FALSE, softmax = FALSE, zsym = FALSE,
-                                     xlab = NULL, ylab = NULL, cmin = 0, cmax = 1 ,xlim = NULL, ylim = NULL,
+                                     xlab = NULL, ylab = NULL, cmin = 0, cmax = 1, xlim = NULL, ylim = NULL,
                                      hilight2 = hilight, hilight.col = "black",
                                      hilight.lwd = 0.8, hilight.cex = NULL,
                                      opacity = 1, label.clusters = FALSE, labels = NULL,
@@ -2896,7 +2896,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       ) +
       ggplot2::scale_fill_gradientn(
         colors = cpal,
-        limits = c(cmin,cmax),
+        limits = c(cmin, cmax),
         guide = guide,
         breaks = zz,
         labels = c(zz[1], zz[2]),
@@ -2904,7 +2904,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       ) +
       ggplot2::expand_limits(color = zr + c(-0.01, 0.01))
 
-   
+
     ## colorscale bar
     if (legend) {
       xmax <- round(max(z, na.rm = TRUE), 2)
