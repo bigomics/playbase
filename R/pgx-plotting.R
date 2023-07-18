@@ -3315,7 +3315,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   if (legend && type == "numeric") {
     plt <- plt %>%
       plotly::colorbar(
-        limits = c(0, 16),
+        limits = c(cmin, cmax),
         len = 0.15,
         thickness = 9,
         x = 0.01,
