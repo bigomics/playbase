@@ -2663,14 +2663,14 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
                                      cex.legend = 1, cex.axis = 1, gridcolor = NULL, bgcolor = NULL,
                                      zoom = 1, legend = TRUE, bty = "n", hilight = NULL,
                                      zlim = NULL, zlog = FALSE, softmax = FALSE, zsym = FALSE,
-                                     xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL,
+                                     xlab = NULL, ylab = NULL, cmin = 0, cmax = 1 ,xlim = NULL, ylim = NULL,
                                      hilight2 = hilight, hilight.col = "black",
                                      hilight.lwd = 0.8, hilight.cex = NULL,
                                      opacity = 1, label.clusters = FALSE, labels = NULL,
                                      legend.ysp = 0.85, legend.pos = "bottomleft",
                                      tooltip = NULL, theme = NULL, set.par = TRUE,
                                      label.type = c("text", "box"), base_size = 11,
-                                     title = NULL, barscale = 0.8, axis = TRUE, box = TRUE) {
+                                     title = NULL, barscale = 0.8, axis = TRUE, box = TRUE, guide = "legend") {
   if (!is.null(var) && !is.null(ncol(var))) {
     var <- var[, 1]
   }
@@ -2883,7 +2883,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
 
     ## determine range for colorbar
     zr <- range(z)
-    if (!is.null(zlim)) zr <- zlim
+    # if (!is.null(zlim)) zr <- zlim
     if (zsym && min(zr, na.rm = TRUE) < 0) zr <- c(-1, 1) * max(abs(zr), na.rm = TRUE)
     zz <- round(c(zr[1], zr[2]), digits = 2)
 
@@ -2897,12 +2897,15 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       ) +
       ggplot2::scale_fill_gradientn(
         colors = cpal,
+        limits = c(cmin,cmax),
+        guide = guide,
         breaks = zz,
         labels = c(zz[1], zz[2]),
         na.value = "#DDDDDD44"
       ) +
       ggplot2::expand_limits(color = zr + c(-0.01, 0.01))
 
+   
     ## colorscale bar
     if (legend) {
       xmax <- round(max(z, na.rm = TRUE), 2)
@@ -3312,7 +3315,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   if (legend && type == "numeric") {
     plt <- plt %>%
       plotly::colorbar(
-        limits = c(cmin, cmax),
+        limits = c(0, 16),
         len = 0.15,
         thickness = 9,
         x = 0.01,
