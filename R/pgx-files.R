@@ -108,7 +108,7 @@ pgx.readOptions <- function(file = "./OPTIONS") {
   names(opt) <- opt.names
   opt <- sapply(opt, strsplit, split = "[;]")
   ## convert character to R types
-  opt <- lapply(opt, type.convert, as.is=TRUE)
+  opt <- lapply(opt, type.convert, as.is = TRUE)
   opt
 }
 
