@@ -21,7 +21,7 @@ pgx.fastq2counts <- function(fastq_dir, destdir, indexdir, nthread = 4, do.qc = 
       system(paste0("mkdir -p ", destdir, "/fastqc"))
     }
     fastq_files <- list.files(fastq_dir, pattern = "[.]fastq$", full.names = TRUE)
-    length(fastq_files)
+
     cmd <- paste0(
       "fastqc -o ", destdir, "/fastqc/ --threads ",
       nthread, " ", paste(fastq_files, collapse = " ")
@@ -39,7 +39,6 @@ pgx.fastq2counts <- function(fastq_dir, destdir, indexdir, nthread = 4, do.qc = 
       system(paste0("mkdir -p ", destdir, "/fastqc_trimmed"))
     }
     fastq_files <- list.files(fastq_dir, pattern = "_trimmed.fastq$", full.names = TRUE)
-    length(fastq_files)
     cmd <- paste0(
       "fastqc -o ", destdir, "/fastqc_trimmed/ --threads ",
       nthread, " ", paste(fastq_files, collapse = " ")
@@ -217,7 +216,6 @@ pgx.fastq2counts <- function(fastq_dir, destdir, indexdir, nthread = 4, do.qc = 
   }
 
   ## ----------- Extract counts
-  names(txi)
   genes <- txi$gene_counts[, 2:3]
   counts <- as.matrix(txi$gene_counts[, 4:ncol(txi$gene_counts), drop = FALSE])
   rownames(genes) <- rownames(counts) <- txi$gene_counts$ENSEMBL

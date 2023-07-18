@@ -35,7 +35,6 @@ compute_extra <- function(ngs, extra = c(
     message(">>> computing extra for MULTI-OMICS")
     data.type <- gsub("\\[|\\].*", "", rownames(ngs$counts))
     jj <- which(data.type %in% c("gx", "mrna"))
-    length(jj)
     if (length(jj) == 0) {
       stop("FATAL. could not find gx/mrna values.")
     }
@@ -273,7 +272,6 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
     res <- try(pgx.inferCellCyclePhase(counts)) ## can give bins error
     if (class(res) != "try-error") {
       ngs$samples$.cell_cycle <- res
-      table(ngs$samples$.cell_cycle)
     }
     if (!(".gender" %in% colnames(ngs$samples))) {
       message("estimating gender...")
@@ -281,11 +279,9 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
       X <- log2(1 + rna.counts)
       gene_name <- ngs$genes[rownames(X), "gene_name"]
       ngs$samples$.gender <- pgx.inferGender(X, gene_name)
-      table(ngs$samples$.gender)
     } else {
       message("gender already estimated. skipping...")
     }
-    Matrix::head(ngs$samples)
   }
   return(ngs)
 }
@@ -363,7 +359,6 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
 
     annot0 <- annot0[match(rownames(out1[["GSEA"]]$X), rownames(annot0)), ]
     rownames(annot0) <- rownames(out1[["GSEA"]]$X)
-    Matrix::head(annot0)
 
     ## --------------- attach results to object
     db <- names(ref.db)[i]
@@ -406,8 +401,6 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
     message("[compute_drugSensitivityEnrichment] computing sensitivity CMAP for ", ref)
     X <- readRDS(file = file.path(cmap.dir, ref))
     xdrugs <- gsub("[@_].*$", "", colnames(X))
-    length(table(xdrugs))
-    dim(X)
 
     out1 <- playbase::pgx.computeDrugEnrichment(
       ngs, X, xdrugs,
@@ -421,11 +414,9 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
       ## attach annotation
       db <- sub("-.*", "", ref)
       annot0 <- read.csv(file.path(cmap.dir, paste0(db, "-drugs.csv")))
-      Matrix::head(annot0)
       rownames(annot0) <- annot0$drug
       annot0 <- annot0[match(rownames(out1[["GSEA"]]$X), rownames(annot0)), ]
       rownames(annot0) <- rownames(out1[["GSEA"]]$X)
-      dim(annot0)
 
       s1 <- names(ref.db)[i]
       ngs$drugs[[s1]] <- out1[["GSEA"]]

@@ -249,8 +249,8 @@ human2mouse.SLLOWWW <- function(x) {
     uniqueRows = T
   )
   genesx <- unique(genesV2[, 2])
-  ## Print the first 6 genes found to the screen
-  print(Matrix::head(genesx))
+
+
   return(genesx)
 }
 
@@ -355,7 +355,7 @@ probe2symbol <- function(probes, type = NULL, org = "human", keep.na = FALSE) {
 
   ## Unrecognize probes
   nna <- which(is.na(names(symbol0)))
-  length(nna)
+
   if (length(nna)) names(symbol0)[nna] <- probes[nna]
 
   ## What to do with unmapped/missing symbols????
@@ -368,12 +368,9 @@ probe2symbol <- function(probes, type = NULL, org = "human", keep.na = FALSE) {
   }
   symbol <- unlist(symbol)
   names(symbol) <- NULL
-  Matrix::head(symbol)
 
   symbol
 }
-
-
 
 
 #' @export
@@ -458,7 +455,6 @@ read.csv3 <- function(file, as_matrix = FALSE) {
   x <- data.table::fread(file, sep = sep, check.names = FALSE, stringsAsFactors = FALSE, header = TRUE)
   x <- as.data.frame(x)
   x <- x[grep("^#", x[[1]], invert = TRUE), , drop = FALSE] ## drop comments
-  dim(x)
   xnames <- as.character(x[, 1])
   sel <- which(xnames != "" & !duplicated(xnames))
   x <- x[sel, -1, drop = FALSE]
@@ -500,7 +496,9 @@ read.as_matrix <- function(file) {
   x <- NULL
   ## drop rows without rownames
   sel <- which(!as.character(x0[[1]]) %in% c("", " ", "NA", "na", NA))
+
   ## get values from second column forward and take first column as rownames
+
   if (length(sel)) {
     x <- as.matrix(x0[sel, -1, drop = FALSE]) ## always as matrix
     rownames(x) <- x0[[1]][sel]
@@ -684,7 +682,6 @@ is.POSvsNEG <- function(pgx) {
 
   ## rely only on contrasts with '_vs_'
   cntrmat <- cntrmat[, grep("_vs_", colnames(cntrmat)), drop = FALSE]
-  dim(cntrmat)
   grp1 <- sapply(strsplit(colnames(cntrmat), split = "_vs_"), "[", 1)
   grp2 <- sapply(strsplit(colnames(cntrmat), split = "_vs_"), "[", 2)
   grp1 <- sub(".*[:]|@.*", "", grp1)
@@ -725,8 +722,6 @@ is.POSvsNEG <- function(pgx) {
       s1 <- s2 <- 0
       if (length(j1)) s1 <- rowMeans(expmat[j1, i, drop = FALSE] > 0, na.rm = TRUE)
       if (length(j2)) s2 <- rowMeans(expmat[j2, i, drop = FALSE] > 0, na.rm = TRUE)
-      mean(s1)
-      mean(s2)
       if (mean(s1) > mean(s2)) is.pn[i] <- TRUE
       if (mean(s2) > mean(s1)) is.pn[i] <- FALSE
     }
@@ -799,7 +794,6 @@ pgx.getNumericalPhenotypes <- function(df) {
   is.bad2 <- grepl("year|month|day|^efs|^dfs|surv|follow", tolower(colnames(df)))
   is.bad3 <- apply(df, 2, function(x) any(grepl("^sample|patient|replicate|donor|individ", x, ignore.case = TRUE)))
   is.bad <- (is.bad1 | is.bad2 | is.bad3)
-  table(is.bad)
   is.bad
 
   numratio <- apply(df, 2, function(x) length(unique(x))) / nrow(df)
@@ -812,10 +806,6 @@ pgx.getNumericalPhenotypes <- function(df) {
 
 #' @export
 pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove.dup = FALSE) {
-  ##
-  ##
-  ##
-
 
   is.bad <- 0
 
@@ -839,7 +829,6 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 
   is.bad <- (is.bad2 | is.bad3)
   is.bad
-  table(is.bad)
 
   ## auto-determine which are factors
   is.factor <- apply(df, 2, is.categorical)
@@ -853,11 +842,9 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 
   ## take reduced matrix
   df1 <- df[, which(is.factor2), drop = FALSE]
-  dim(df1)
   nlevel <- apply(df1, 2, function(x) length(unique(x)))
   nchars <- apply(df1, 2, function(x) max(nchar(iconv(x, "latin1", "ASCII", sub = ""))))
   df1 <- df1[, order(nlevel, -nchars), drop = FALSE]
-  dim(df1)
 
 
   if (remove.dup && ncol(df1) > 1) {
@@ -873,7 +860,7 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
     is.dup
     df1 <- df1[, which(!is.dup), drop = FALSE]
   }
-  colnames(df1)
+  return(colnames(df1))
 }
 
 
@@ -1051,23 +1038,10 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
 
   gmt.hgnc.size <- sapply(gmt.hgnc, length)
   gmt.hgnc <- gmt.hgnc[which(gmt.hgnc.size >= 50 & gmt.hgnc.size <= 1000)]
-  length(gmt.hgnc)
+
   names(gmt.hgnc) <- paste0(names(gmt.hgnc), " (HGNC)")
 
   families <- c(families, gmt.hgnc)
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   families[["Interleukins (IL)"]] <- genes[grep("^IL[1-9]", genes)]
   families[["Chemokines"]] <- genes[grep("CCL|CCR|CXCR|CXCL|XCL|CX3", genes)]
@@ -1454,8 +1428,6 @@ psort <- function(x, p.col = NULL) {
   x[order(x[, j]), ]
 }
 
-
-
 #' @export
 tidy.dataframe <- function(Y) {
   Y <- Y[, which(colMeans(is.na(Y)) < 1), drop = FALSE]
@@ -1507,8 +1479,6 @@ expandAnnotationMatrixSAVE <- function(A) {
   nlevel <- apply(A, 2, function(x) length(unique(x)))
   y.isnum <- apply(A, 2, is.num)
 
-
-  Matrix::head(A)
   i <- 1
   m1 <- list()
   for (i in 1:ncol(A)) {
@@ -1554,7 +1524,6 @@ expandPhenoMatrix <- function(pheno, collapse = TRUE, drop.ref = TRUE) {
   }
   a1 <- a1[, kk, drop = FALSE]
   a1.isnum <- y.isnum[kk]
-  Matrix::head(a1)
   i <- 1
   m1 <- list()
   for (i in 1:ncol(a1)) {
@@ -1607,7 +1576,7 @@ correctMarchSeptemberGenes <- function(gg) {
   gg2 <- gg1
   if (length(jj) > 0) {
     cat("Found ", length(jj), "Sept/Mar genes!\n")
-    length(jj)
+
     from[jj]
     gg2 <- plyr::mapvalues(gg1, from[jj], to[jj])
   }

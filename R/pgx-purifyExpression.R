@@ -24,7 +24,6 @@ pgx.purifyExpression <- function(tumorX, normalX,
     alpha0
 
     xhat[["nnlm"]] <- pmax(tumorX - normal.frac, 0)
-    dim(x.hat)
     alpha[["nnlm"]] <- alpha0
   }
 
@@ -58,7 +57,6 @@ pgx.purifyExpression <- function(tumorX, normalX,
     isopurer.alpha
 
     x.hat <- ISOpureS2model$cc_cancerprofiles
-    dim(x.hat)
     alpha[["isopurer"]] <- isopurer.alpha
     xhat[["isopurer"]] <- x.hat
   }
@@ -71,11 +69,6 @@ pgx.purifyExpression <- function(tumorX, normalX,
     ## ?DeMixT
     res <- DeMixT::DeMixT(data.Y = tumorX, data.comp1 = normalX, if.filter = FALSE)
     res$pi
-
-    Matrix::head(res$decovExprT, 3) ## purified tumor data
-    Matrix::head(res$decovExprN1, 3) ## normal contiminant profile
-    Matrix::head(res$decovMu, 3)
-    Matrix::head(res$decovSigma, 3)
 
     x.hat <- res$decovExprT
 

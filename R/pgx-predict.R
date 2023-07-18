@@ -19,9 +19,6 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   ## Prepare the HivePlot data
   ## -------------------------------------------------------------
   df <- data.frame(res$edges)
-  Matrix::head(df)
-
-
   hpd <- edge2HPD(df, axis.cols = rep("grey", 3))
 
   hpd$edges$looping <- res$edges$looping
@@ -68,7 +65,7 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   } else {
     stop("FATAL:: mixHivePlot: unknown contrast/conditions=", ct, "\n")
   }
-  Matrix::head(fx)
+
   fx <- fx / max(abs(fx), na.rm = TRUE)
   g <- sub("[1-9]:", "", hpd$nodes$lab)
   hpd$nodes$radius <- rank(fx[g], na.last = "keep")
@@ -235,8 +232,6 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
 
       g1 <- rownames(res$W[[k]])
       g2 <- rownames(res$W[[ifelse(k < 3, k + 1, 1)]])
-      length(g1)
-      length(g2)
 
       sel <- which(res$edges[, "from"] %in% c(g1, g2) &
         res$edges[, "to"] %in% c(g1, g2))
@@ -260,7 +255,6 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
         klr <- rep(psych::alpha("grey70", 0.2), nrow(ee))
         klr[which(ee$looping)] <- psych::alpha("red3", 0.3)
       }
-      table(klr)
       segments(0, xy[, 1] - 0.5, 1, xy[, 2], lwd = lwd, col = klr, lty = lty)
       rr <- paste(round(range(abs(ee$rho)), 2), collapse = ",")
 
@@ -280,7 +274,6 @@ pgx.makeTriSystemGraph <- function(data, Y, nfeat = 25, numedge = 100, posonly =
   .getLoadingImportance <- function(k, res.pls, nfeat) {
     U <- res.pls$loadings[[k]]
     V <- res.pls$variates[[k]]
-    dim(U)
     U <- U[which(rowSums(abs(U)) > 0), ]
     U <- U[order(-rowSums(U * U)), ]
     y <- res.pls$Y
@@ -403,7 +396,6 @@ pgx.makeTriSystemGraph <- function(data, Y, nfeat = 25, numedge = 100, posonly =
       importance = E(gr)$importance
     )
     colnames(edges)[1:2] <- c("from", "to")
-    Matrix::head(edges)
 
     gr
     loops <- .detectSelfLoops(gr, posonly)
@@ -531,7 +523,7 @@ pgx.survivalVariableImportance <- function(X, time, status,
       fd <- (as.integer(fd) - 1) / 2
       imp4 <- imp4 + fd / niter
     }
-    table(imp4)
+
     names(imp4) <- rownames(X)
     imp[["Boruta"]] <- imp4
   }
@@ -580,7 +572,6 @@ pgx.survivalVariableImportance <- function(X, time, status,
   P <- do.call(cbind, imp)
   P <- abs(P) ## always positive??
   P[is.na(P)] <- 0
-  dim(P)
   P <- P[xnames, , drop = FALSE]
   return(P)
 }
@@ -601,7 +592,6 @@ pgx.multiclassVariableImportance <- function(X, y,
 
   ## convert to factor
   y <- factor(y)
-  table(y)
 
   ## resample to minimum size to balance groups
   NFOLD <- 5
@@ -657,7 +647,7 @@ pgx.multiclassVariableImportance <- function(X, y,
       fd <- (as.integer(fd) - 1) / 2
       imp4 <- imp4 + fd / niter
     }
-    table(imp4)
+
     names(imp4) <- rownames(X)
     imp[["Boruta"]] <- imp4
   }
@@ -704,7 +694,6 @@ pgx.multiclassVariableImportance <- function(X, y,
   P <- do.call(cbind, imp)
   P <- abs(P) ## always positive??
   P[is.na(P)] <- 0
-  dim(P)
   P <- P[xnames, , drop = FALSE]
   return(P)
 }
@@ -726,7 +715,6 @@ pgx.variableImportance <- function(X, y,
 
   ## convert to factor
   y <- factor(y)
-  table(y)
 
   ## resample to minimum size to balance groups
 
@@ -794,7 +782,6 @@ pgx.variableImportance <- function(X, y,
       fd <- (as.integer(fd) - 1) / 2
       imp4 <- imp4 + fd / niter
     }
-    table(imp4)
     names(imp4) <- rownames(X)
     imp[["Boruta"]] <- imp4
   }
@@ -840,7 +827,6 @@ pgx.variableImportance <- function(X, y,
   P <- do.call(cbind, imp)
   P <- abs(P) ## always positive??
   P[is.na(P)] <- 0
-  dim(P)
   P <- P[xnames, , drop = FALSE]
   return(P)
 }

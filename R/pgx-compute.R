@@ -55,8 +55,6 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
     contrasts <- contrastAsLabels(ac$exp.matrix)
   }
 
-  head(contrasts)
-
   ## other params
   gx.methods <- strsplit(gxmethods, split = ",")[[1]]
   gset.methods <- strsplit(gsetmethods, split = ",")[[1]]
@@ -102,7 +100,6 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
   )
 
   ## save
-  names(pgx)
   pgx
 }
 
@@ -158,7 +155,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   message("[createPGX] input: dim(contrasts) = ", paste(dim(contrasts), collapse = "x"))
 
   ## contrast matrix
-  colnames(contrasts)
+
   is.numbered <- all(unique(as.vector(contrasts)) %in% c(-1, 0, 1))
   is.numbered <- all(sapply(type.convert(data.frame(contrasts), as.is = TRUE), class) %in% c("numeric", "integer"))
   ct.type <- c("labeled (new style)", "numbered (old style)")[1 + 1 * is.numbered]
@@ -301,18 +298,15 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
       rownames(X) <- rownames(counts)
     }
   }
-  dim(counts)
 
   ## -------------------------------------------------------------------
   ## create ngs object
   ## -------------------------------------------------------------------
   message("[createPGX] creating pgx object...")
 
-  #
   ngs <- list() ## empty object
   ngs$name <- "data set"
   this.date <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-  #
   ngs$date <- this.date
   ngs$datatype <- "unknown"
   ngs$description <- "data set"
@@ -407,7 +401,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
       is.protcoding <- ngs$genes$gene_biotype %in% c("protein_coding")
     }
     keep <- (is.known & is.hugo & is.protcoding)
-    table(keep)
     ngs$counts <- ngs$counts[keep, ]
     ngs$genes <- ngs$genes[keep, ]
     if (!is.null(ngs$X)) ngs$X <- ngs$X[keep, ]
@@ -424,7 +417,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
       is.protcoding <- ngs$genes$gene_biotype %in% c("protein_coding")
     }
     keep <- (is.known & is.hugo & is.protcoding)
-    table(keep)
     ngs$counts <- ngs$counts[keep, ]
     ngs$genes <- ngs$genes[keep, ]
     if (!is.null(ngs$X)) ngs$X <- ngs$X[keep, ]
@@ -434,7 +426,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
   ngs <- playbase::compute_cellcycle_gender(ngs)
-  Matrix::head(ngs$samples)
 
   ## -------------------------------------------------------------------
   ## Batch-correction (if requested. WARNING: changes counts )
@@ -488,14 +479,11 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     posx <- scale(cbind(ngs$cluster$pos[["umap2d"]], ngs$cluster$pos[["tsne2d"]]))
     #
     idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
-    table(idx)
     if (length(unique(idx)) == 1) {
       ## try again with finer settings if single cluster...
       idx <- playbase::pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
     }
     ngs$samples$cluster <- idx
-    Matrix::head(ngs$samples)
-    table(ngs$samples$cluster)
   }
 
   if (cluster.contrasts) {
@@ -521,7 +509,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   if (is.null(ngs$X)) {
     message("[createPGX] calculating log-expression matrix X...")
     ngs$X <- playbase::logCPM(ngs$counts, total = 1e6, prior = 1)
-    dim(ngs$X)
   } else {
     message("[createPGX] using passed log-expression X...")
   }
@@ -614,7 +601,6 @@ pgx.computePGX <- function(pgx,
     use.design = use.design,
     prune.samples = prune.samples
   )
-  Matrix::head(pgx$gx.meta$meta[[1]])
 
   ## ------------------ gene set tests -----------------------
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
@@ -626,7 +612,6 @@ pgx.computePGX <- function(pgx,
     max.features = max.genesets,
     test.methods = gset.methods
   )
-  Matrix::head(pgx$gset.meta$meta[[1]])
 
 
   if (do.cluster) {

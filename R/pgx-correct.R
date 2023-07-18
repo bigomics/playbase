@@ -405,7 +405,6 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     while (length(ii) > 0 && niter < max.iter) {
       xx <- Matrix::head(cX[order(-apply(cX, 1, sd)), ], hc.top)
       hc <- cutree(fastcluster::hclust(dist(t(xx)), method = "ward.D2"), 2)
-      table(hc)
       hc.rho <- stats::cor(hc, mod1)
       hc.rho
       hc.rho <- apply(abs(hc.rho), 1, max)
@@ -721,7 +720,6 @@ pgx.performBatchCorrection.DEPRECATED <- function(ngs, zx, batchparams,
 
       batch.formula <- formula(paste("~ ", paste(pp, collapse = " + ")))
       B <- model.matrix(batch.formula, data = Y)
-      dim(B)
 
       B <- B[match(colnames(zx), rownames(B)), , drop = FALSE]
       rownames(B) <- colnames(zx)
@@ -802,7 +800,6 @@ pgx.plotMitoRibo <- function(counts, percentage = TRUE) {
 
   df <- cbind(ribo = ribo.counts, mito = mito.counts)
   if (percentage) df <- round((df / tot.counts) * 100, digits = 2)
-  Matrix::head(df)
   barplot(t(df), beside = FALSE, las = 3)
 }
 
@@ -854,7 +851,6 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
   )
 
   cc.score <- try(pgx.scoreCellCycle(cx))
-  Matrix::head(cc.score)
   if (!any(class(cc.score) == "try-error")) {
     cc.score <- cc.score[, c("s_score", "g2m_score")]
     colnames(cc.score) <- paste0("cc.", colnames(cc.score))
@@ -862,7 +858,6 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
   }
   pheno$gender <- pgx.inferGender(cx)
 
-  Matrix::head(pheno)
   return(pheno)
 }
 
@@ -1000,7 +995,6 @@ pgx.optimizeBatchCorrection.NOTREADY <- function(ngs, batch, contrast, nparam = 
   if (length(bc.params) == 1) B <- t(B)
   colnames(B) <- bc.params
   rownames(B) <- rownames(S)
-  dim(B)
   S <- cbind(S, B)
   S <- S[order(-S$num.sig), ]
 
@@ -1035,13 +1029,11 @@ pgx._runComputeNumSig <- function(ngs, parcomb, contrast, resample = -1,
         suppressWarnings(sv <- sva::sva(logcpm, mod1, mod0, n.sv = NULL)$sv)
         suppressWarnings(aX <- limma::removeBatchEffect(logcpm, covariates = sv, design = mod1))
       })
-      dim(aX)
     }
     if (resample > 0) {
       jj <- sample(colnames(aX), ncol(aX) * resample)
       aX <- aX[, jj]
     }
-    dim(aX)
 
     ## solve for all combinations
     pp <- parcomb[[1]]
@@ -1062,7 +1054,6 @@ pgx._runComputeNumSig <- function(ngs, parcomb, contrast, resample = -1,
       } else {
         bX <- aX
       }
-      dim(bX)
       pp1 <- paste0(k, ":", paste(pp, collapse = "+"))
       pp1
       numsig[pp1] <- pgx._computeNumSig(ngs, X = bX, contrast = contrast)
@@ -1086,8 +1077,7 @@ pgx._computeNumSig <- function(ngs, X, contrast = NULL, fc = 0, qv = 0.05) {
     method = "limma", trend = TRUE,
     conform.output = FALSE, plot = FALSE
   )
-  names(res)
-  names(res$tables)
+
   fc0 <- sapply(res$tables, function(x) x$logFC)
   qv0 <- sapply(res$tables, function(x) x$adj.P.Val)
   numsig <- mean(Matrix::colSums(abs(fc0) >= fc & qv0 <= qv, na.rm = TRUE))

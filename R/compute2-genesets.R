@@ -94,8 +94,6 @@ compute_testGenesets <- function(pgx,
   gmt.size <- Matrix::colSums(G != 0)
   size.ok <- (gmt.size >= 15 & gmt.size <= 400)
   G <- G[, which(size.ok)]
-  dim(G)
-  table(sub(":.*", "", colnames(G)))
 
   ## -----------------------------------------------------------
   ## create the full GENE matrix (always collapsed by gene)
@@ -118,7 +116,6 @@ compute_testGenesets <- function(pgx,
   ## if reduced samples
   ss <- rownames(pgx$model.parameters$exp.matrix)
   X <- X[, ss, drop = FALSE]
-  dim(X)
 
   ## -----------------------------------------------------------
   ## create the GENESETxGENE matrix
@@ -134,8 +131,6 @@ compute_testGenesets <- function(pgx,
   G <- rbind(G, matX)
   G <- G[match(gg, rownames(G)), , drop = FALSE]
   rownames(G) <- rownames(X) ## original name (e.g. mouse)
-  dim(G)
-  dim(X)
 
   ## -----------------------------------------------------------
   ## Prioritize gene sets by fast rank-correlation
@@ -151,7 +146,6 @@ compute_testGenesets <- function(pgx,
     ## very fast sparse rank-correlation for approximate single sample
     ## geneset activation.
     cX <- X - rowMeans(X, na.rm = TRUE) ## center!
-    dim(cX)
     gsetX <- qlcMatrix::corSparse(G[, ], apply(cX[, ], 2, rank))
     grp <- pgx$model.parameters$group
     gsetX.bygroup <- NULL
@@ -168,7 +162,6 @@ compute_testGenesets <- function(pgx,
     jj <- jj[order(colnames(G)[jj])]
     G <- G[, jj, drop = FALSE]
   }
-  dim(G)
 
   ## -----------------------------------------------------------
   ## get design and contrast matrix
@@ -201,12 +194,10 @@ compute_testGenesets <- function(pgx,
   )
 
   rownames(gset.meta$timings) <- paste("[test.genesets]", rownames(gset.meta$timings))
-  print(gset.meta$timings)
 
   pgx$timings <- rbind(pgx$timings, gset.meta$timings)
   pgx$gset.meta <- gset.meta
 
-  names(pgx$gset.meta$matrices)
   pgx$gsetX <- pgx$gset.meta$matrices[["meta"]] ## META or average FC?
   pgx$GMT <- G[, rownames(pgx$gsetX)]
 

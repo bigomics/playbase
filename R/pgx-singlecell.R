@@ -25,9 +25,6 @@ seurat2pgx <- function(obj, do.cluster = FALSE) {
   pgx$genes <- ngs.getGeneAnnotation(genes = rownames(pgx$counts))
   rownames(pgx$genes) <- rownames(pgx$counts)
 
-
-  Matrix::head(pgx$samples)
-  Matrix::head(pgx$genes)
   if (do.cluster) {
     message("[seurat2pgx] clustering samples")
     pgx <- pgx.clusterSamples2(
@@ -60,12 +57,10 @@ pgx.createPGX.10X.DEPRECATED <- function(outs, ncells = 2000, aggr.file = "aggre
   ##
   message("[createPGX.10X] reading 10X data file...")
   counts.10x <- Seurat::Read10X(file.path(outs, "filtered_feature_bc_matrix"))
-  dim(counts.10x)
 
   message("[createPGX.10X] reading aggregation meta file...")
   aggr <- read.csv(file.path(outs, aggr.file), comment.char = "#")
   aggr$molecule_h5 <- NULL
-  Matrix::head(aggr)
   idx <- as.integer(sub(".*-", "", colnames(counts.10x)))
   pheno <- aggr[idx, ]
   rownames(pheno) <- colnames(counts.10x)
@@ -74,8 +69,6 @@ pgx.createPGX.10X.DEPRECATED <- function(outs, ncells = 2000, aggr.file = "aggre
   message("[createPGX.10X] filtering outliers...")
   counts <- pgx.scFilterOutliers(counts.10x, a = 2)
   pheno <- pheno[colnames(counts), ]
-  dim(counts)
-  dim(pheno)
 
   ## Reduce number of cells (approx. equalizing libraries)
   message("[createPGX.10X] reducing cells...")
@@ -85,13 +78,11 @@ pgx.createPGX.10X.DEPRECATED <- function(outs, ncells = 2000, aggr.file = "aggre
   )
   counts <- out$counts
   pheno <- pheno[colnames(counts), ]
-  table(pheno$library_id)
 
   ## pre-filter expressed genes
   message("[createPGX.10X] filtering features...")
   sel <- (rowMeans(counts >= 3) > 0.01)
   counts <- counts[sel, ]
-  dim(counts)
 
   ## Infer celltype
   message("[createPGX.10X] inferring cell types...")
@@ -108,13 +99,11 @@ pgx.createPGX.10X.DEPRECATED <- function(outs, ncells = 2000, aggr.file = "aggre
     counts = counts, samples = pheno, contrasts = ct$contr.matrix,
     is.logx = FALSE
   )
-  Matrix::head(pgx$genes)
-  names(pgx)
 
   ## We perform single-cell integration/batch correction only to
   ## improve clustering!! Note that count/X matrix in PGX is not
   ## replaced with the integrated matrix (not reliable...).
-  colnames(pheno)
+
   if ("batch" %in% colnames(pheno)) {
     message("[createPGX.10X] performing batch integration using MNN...")
     bX <- logCPM(counts, total = 1e4)
@@ -131,8 +120,6 @@ pgx.createPGX.10X.DEPRECATED <- function(outs, ncells = 2000, aggr.file = "aggre
 
 
     idx <- pgx.FindClusters(xpos, method = "louvain")[[1]][, 1]
-    table(idx)
-
     pgx$samples$cluster <- paste0("C", idx)
   }
   message("[createPGX.10X] done!")
@@ -233,7 +220,6 @@ pgx.scTestDifferentialExpression <- function(counts, y, is.count = TRUE, samples
 
   pv <- corpora::fisher.pval(m2$obs.x, m1$obs.x, m2$obs.y, m1$obs.y)
 
-  Matrix::head(pv)
   if (length(hack.err) > 0) m2$obs.x[hack.err] <- 0
   pct <- cbind(pct.x, pct.y, pct.diff, pct.tot, pct.pvalue = pv)
 
@@ -319,7 +305,6 @@ pgx.scTestDifferentialExpression <- function(counts, y, is.count = TRUE, samples
 
 #' @export
 pgx.reduceCells <- function(counts, method, ncells, pheno = NULL, group.id = NULL) {
-  dim(counts)
 
   if (ncol(counts) > ncells) {
     if (method == "pool") {
@@ -345,7 +330,6 @@ pgx.reduceCells <- function(counts, method, ncells, pheno = NULL, group.id = NUL
       }
     } else if (method == "subsample" && !is.null(group.id)) {
       message(">> Subsampling cells in groups...")
-      table(group.id)
       n1 <- round(ncells / length(unique(group.id)))
       sel <- tapply(1:ncol(counts), group.id, function(i) Matrix::head(sample(i), n1))
       sel <- unlist(sel)
@@ -372,7 +356,6 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
     groups <- rep("grp1", ncol(counts))
   }
   groups <- as.integer(factor(as.character(groups)))
-  table(groups)
 
   pool.counts <- c()
   cluster.id <- c()
@@ -441,7 +424,6 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
     ## do quick clustering
     sel <- which(groups == g)
     X1 <- X[, sel, drop = FALSE]
-    dim(X1)
     k <- ceiling(ncells / ngroup) ## equalize between groups
     k
     ngroup
@@ -450,7 +432,6 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
       cluster <- paste0("g", g, "-c", 1:ncol(X1))
     } else {
       cluster <- clusterX(X1, k = k, method = clust.method)
-      table(cluster)
       if (!is.null(groups)) cluster <- paste0("g", g, "-", cluster)
     }
     names(cluster) <- colnames(X1)
@@ -459,7 +440,6 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
 
   if (verbose) message("[pgx.poolCells] pooling cells...")
   cluster.id <- cluster.id[colnames(counts)]
-  table(cluster.id)
   if (stats == "mean") {
     pool.counts <- tapply(1:ncol(counts), cluster.id, function(ii) {
       Matrix::rowMeans(counts[, ii, drop = FALSE])
@@ -524,14 +504,13 @@ pgx.scBatchIntegrate <- function(X, batch,
     nv <- min(floor(dim(X) * 0.8), 30)
     out <- irlba::irlba(X, nu = nv, nv = nv)
     V <- t(out$v)
-    dim(V)
     meta_data <- data.frame(batch = batch)
     try(hm <- harmony::HarmonyMatrix(
       V, meta_data, "batch",
       do_pca = FALSE, npcs = nv,
       return_object = TRUE
     ))
-    dim(hm$Z_corr) ## corrected PCA embeddings
+    ## corrected PCA embeddings
     hX <- (out$u %*% diag(out$d) %*% hm$Z_corr)
     dimnames(hX) <- dimnames(X)
     res[["Harmony"]] <- hX
@@ -565,7 +544,6 @@ pgx.scBatchIntegrate <- function(X, batch,
 
 
       cX <- t(liger@H.norm %*% liger@W)
-      dim(cX)
       cat("[pgx.scBatchIntegrate] WARNING:: LIGER returns smaller matrix")
       res[["liger"]] <- cX
     }
@@ -586,7 +564,6 @@ pgx.SeuratBatchIntegrate <- function(counts, batch, qc.filter = FALSE,
   ## content. You need to do that before.
   ##
 
-  dim(counts)
   nbatch <- length(unique(batch))
   message("[pgx.SeuratBatchIntegrate] Processing ", nbatch, " batches...")
   obj.list <- list()
@@ -668,13 +645,10 @@ pgx.SeuratBatchIntegrate <- function(counts, batch, qc.filter = FALSE,
     normalization.method = normalization.method,
     verbose = FALSE
   )
-  dim(integrated)
-  dim(counts)
 
   key <- ifelse(sct, "SCT", "integrated")
   mat.integrated <- as.matrix(integrated[[key]]@data)
   mat.integrated <- exp(mat.integrated) ## natural log!!
-  dim(mat.integrated)
   mat.integrated <- mat.integrated[, colnames(counts)]
 
   ## set previously zero counts to zero again
@@ -754,7 +728,6 @@ pgx.scFilterOutliers <- function(counts, a = 2.5, plot = FALSE) {
     selectInlier(ncounts, a) &
     selectInlier(percent.mito, a) &
     selectInlier(percent.ribo, a)
-  table(sel)
 
   counts <- counts[, sel]
   counts
@@ -789,15 +762,11 @@ pgx.createSeuratObject <- function(counts, aggr.csv = NULL,
 
   ## Equalizing libraries
   if ("library_id" %in% colnames(obj@meta.data)) {
-    table(obj$library_id)
     ncells <- median(table(obj$library_id))
     message("library_id parameter found. Equalizing cells to ", ncells)
     sel <- unlist(tapply(1:ncol(obj), obj$library_id, head, ncells))
-    table(obj$library_id[sel])
   }
 
-
-  colnames(obj@meta.data)
   if ("batch" %in% colnames(obj@meta.data)) {
     message("batch parameter found. integrating batches using MNN.")
     split <- Seurat::SplitObject(obj, split.by = "batch")
@@ -814,7 +783,6 @@ pgx.createSeuratObject <- function(counts, aggr.csv = NULL,
       anchorset = anchors, features.to.integrate = genes,
       dims = 1:30, verbose = FALSE
     )
-    dim(integrated)
     obj <- integrated
     Seurat::DefaultAssay(obj) <- "integrated"
   } else {
@@ -1021,14 +989,12 @@ pgx.createSeurateFigures <- function(obj) {
   )
 
   ct1 <- pgx.inferCellType(obj[["RNA"]]@counts, add.unknown = FALSE, low.th = 0.01)
-  table(ct1)
 
   tapply(ct1, obj$seurat_clusters, function(x) table(x))
   ct1x <- tapply(ct1, obj$seurat_clusters, function(x) names(which.max(table(x))))
   ct1x
 
   obj$cell.type <- ct1x[as.character(obj$seurat_clusters)]
-  table(obj$cell.type)
 
   d1 <- Seurat::DimPlot(obj, group.by = "seurat_clusters", label = TRUE) +
     ggplot2::ggtitle("Seurat clusters") + Seurat::NoLegend()
@@ -1042,7 +1008,6 @@ pgx.createSeurateFigures <- function(obj) {
   top <- markers %>%
     plotly::group_by(cell.type) %>%
     dplyr::top_n(ntop, score)
-  Matrix::head(top)
   h2 <- Seurat::DoHeatmap(obj[, sel],
     features = top$gene, group.by = "cell.type",
     hjust = 0.5, angle = 0, size = 4
@@ -1069,7 +1034,6 @@ pgx.createSeurateFigures <- function(obj) {
   ## Phenotype dimension plots
   ## ----------------------------------------------------------------------
 
-  Matrix::head(obj@meta.data)
   not.ph <- grep("ident|nCount|nFeat|mito|[.]mt|ribo|_snn|^percent", colnames(obj@meta.data), value = TRUE)
   ph <- setdiff(colnames(obj@meta.data), not.ph)
   ph

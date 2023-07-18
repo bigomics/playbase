@@ -20,7 +20,6 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
     marker.genes <- sort(unique(marker.genes))
     M <- matrix(0, nrow = length(marker.genes), ncol = length(markers))
     dimnames(M) <- list(marker.genes, names(markers))
-    dim(M)
     k <- 7
     k <- 1
     for (k in 1:ncol(M)) {
@@ -54,11 +53,10 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
     ref = M1, methods = method,
     add.unknown = add.unknown, normalize.mat = normalize.mat
   )
-  names(out$results)
+
   P <- out$results[[method]] ## choose specified method
   rownames(P) <- colnames(X1)
   P[is.na(P)] <- 0
-  dim(P)
 
   ## Collapse to single cell.type
   if (collapse == "sum") {
@@ -69,7 +67,6 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
     P <- tapply(1:ncol(P), colnames(P), function(i) apply(P[, i, drop = FALSE], 1, max))
   }
   P <- do.call(cbind, P)
-  dim(P)
 
   ## Get maximum probability cell.type
   P <- P / (1e-6 + rowSums(P, na.rm = TRUE))
@@ -106,13 +103,11 @@ pgx.inferCellTypeLM22 <- function(counts, low.th = 0.01, add.unknown = FALSE,
     )
     celltype0 <- res$celltype
     P0 <- res$probs
-    table(celltype0)
   }
 
   ## Filter count matrix
   X <- counts
   X <- X[(rowMeans(X >= min.count) > low.th), ] ## OK???
-  dim(X)
 
   ## Match matrices
   rownames(X) <- toupper(rownames(X))
@@ -120,10 +115,9 @@ pgx.inferCellTypeLM22 <- function(counts, low.th = 0.01, add.unknown = FALSE,
   gg <- intersect(rownames(X), rownames(M))
   X <- X[gg, ]
   M <- M[gg, ]
-  dim(X)
 
   ## 2nd stage
-  table(celltype0)
+
   celltype <- rep(NA, ncol(X))
   ct <- "Macrophages"
   ct <- "Monocytes"
@@ -136,7 +130,7 @@ pgx.inferCellTypeLM22 <- function(counts, low.th = 0.01, add.unknown = FALSE,
     jj <- which(celltype0 == ct)
     jj <- 1:length(celltype0)
     ct3 <- celltype0[jj]
-    dim(M1)
+    
     if (ncol(M1) > 0) {
       X1 <- X[, jj, drop = FALSE]
       X1 <- X1 / (1e-3 + rowMeans(X1)) ## center feature means??
@@ -163,10 +157,6 @@ pgx.inferCellTypeLM22 <- function(counts, low.th = 0.01, add.unknown = FALSE,
   }
 
   celltype <- colnames(P1)[max.col(P1)]
-  table(celltype0)
-  table(celltype)
-  table(celltype0, celltype)
-  dim(P1)
 
   ## collapse small groups to 'other_cells'
   low.ct <- names(which(table(celltype) < low.th * length(celltype)))
@@ -213,7 +203,6 @@ pgx.checkCellTypeMarkers <- function(counts, min.count = 3, markers = NULL) {
 
   M <- matrix(0, nrow = length(marker.genes), ncol = length(markers))
   dimnames(M) <- list(marker.genes, names(markers))
-  dim(M)
   k <- 7
   k <- 1
   for (k in 1:ncol(M)) {
@@ -239,8 +228,6 @@ pgx.checkCellTypeMarkers <- function(counts, min.count = 3, markers = NULL) {
   check.neg <- t(pmin(M1, 0)) %*% X1
   check.pos <- t(M1 == +1) %*% X1 / Matrix::colSums(M1 == 1)
   check.neg <- t(M1 == -1) %*% X1 / Matrix::colSums(M1 == -1)
-  table(check.pos)
-  table(check.neg)
   check <- 1 * t(check.pos & check.neg)
 
   list(check = check, marker.expr = counts0, markers = markers)
@@ -320,8 +307,6 @@ pgx.purify <- function(X, ref, k = 3, method = 2) {
     ## estimate "pure" matrix
     x.total <- res.nmf$W[, ] %*% res.nmf$H[, ]
     x.purified <- res.nmf$W[, 1:k] %*% res.nmf$H[1:k, ]
-    Matrix::head(X)[, 1:4]
-    Matrix::head(x.purified)[, 1:4]
 
     x.contaminant <- pmax(X - x.purified, 0)
   } else if (method == 2) {
@@ -390,8 +375,6 @@ pgx.scoreCellCycle <- function(counts) {
   cc.genes <- strsplit("MCM5 PCNA TYMS FEN1 MCM2 MCM4 RRM1 UNG GINS2 MCM6 CDCA7 DTL PRIM1 UHRF1 MLF1IP HELLS RFC2 RPA2 NASP RAD51AP1 GMNN WDR76 SLBP CCNE2 UBR7 POLD3 MSH2 ATAD2 RAD51 RRM2 CDC45 CDC6 EXO1 TIPIN DSCC1 BLM CASP8AP2 USP1 CLSPN POLA1 CHAF1B BRIP1 E2F8 HMGB2 CDK1 NUSAP1 UBE2C BIRC5 TPX2 TOP2A NDC80 CKS2 NUF2 CKS1B MKI67 TMPO CENPF TACC3 FAM64A SMC4 CCNB2 CKAP2L CKAP2 AURKB BUB1 KIF11 ANP32E TUBB4B GTSE1 KIF20B HJURP CDCA3 HN1 CDC20 TTK CDC25C KIF2C RANGAP1 NCAPD2 DLGAP5 CDCA2 CDCA8 ECT2 KIF23 HMMR AURKA PSRC1 ANLN LBR CKAP5 CENPE CTCF NEK2 G2E3 GAS2L3 CBX5 CENPA", split = " ")[[1]]
   s_genes <- cc.genes[1:43]
   g2m_genes <- cc.genes[44:97]
-  length(s_genes)
-  length(g2m_genes)
 
   ## Create our Seurat object and complete the initalization steps
   rownames(counts) <- toupper(rownames(counts)) ## mouse...
@@ -468,12 +451,9 @@ pgx.multipleDeconvolution <- function(counts, refmat,
   for (i in 1:length(refmat)) {
     message("[pgx.multipleDeconvolution] computing for ", refnames[i])
     ref <- refmat[[i]]
-    dim(ref)
     res <- pgx.deconvolution(counts, ref = ref, methods = methods)
 
     if (!is.null(res)) {
-      names(res)
-      names(res$results)
       m <- names(refmat)[i]
       results[[m]] <- res$results
       timings <- rbind(timings, res$timings)
@@ -546,7 +526,6 @@ pgx.deconvolution <- function(X, ref,
   mat <- pmax(mat, 0)
 
   gg <- intersect(rownames(ref), rownames(mat))
-  Matrix::head(gg)
   if (length(gg) < 10) {
     warning("WARNING:: pgx.deconvolution: no enough marker genes")
     return(NULL)
@@ -773,7 +752,6 @@ pgx.deconvolution <- function(X, ref,
     results[["SingleR"]] <- sr1$scores
   }
   ## clean up
-  names(results)
   results <- results[which(!sapply(results, is.null))]
   results <- lapply(results, function(x) {
     x[is.na(x)] <- 0

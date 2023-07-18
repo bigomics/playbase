@@ -35,17 +35,14 @@ pgx.inferCNV <- function(ngs, refgroup = NULL, progress = NULL) {
     stop = pos - 1000
   ) ## fake start/stop
   rownames(genes) <- ngs$genes$gene_name
-  Matrix::head(genes)
 
   ## filter known genes
   jj <- which(genes$chr %in% paste0("chr", c(1:22, "X", "Y")) &
     !is.na(genes$start) & !is.na(genes$stop))
-  length(jj)
   genes <- genes[jj, ]
 
   ## prepare data objects
   gg <- intersect(rownames(genes), rownames(ngs$counts))
-  length(gg)
   data <- ngs$counts[gg, ]
   genes <- genes[gg, ]
   annots <- ngs$samples[, "group", drop = FALSE]
@@ -54,7 +51,6 @@ pgx.inferCNV <- function(ngs, refgroup = NULL, progress = NULL) {
     ## if no reference group is given, we create a reference by
     ## random sampling of genes.
     ref <- t(apply(data, 1, function(x) sample(x, 50, replace = TRUE)))
-    dim(ref)
     colnames(ref) <- paste0("random.", 1:ncol(ref))
     data <- cbind(data, ref)
     annots <- matrix(c(annots[, 1], rep("random", ncol(ref))), ncol = 1)
@@ -96,9 +92,6 @@ pgx.inferCNV <- function(ngs, refgroup = NULL, progress = NULL) {
   cnv <- as.data.frame(cnv, check.names = FALSE)[2:ncol(cnv)]
   cnv <- as.matrix(cnv)
   rownames(cnv) <- symbol
-
-  dim(cnv)
-  dim(genes)
 
   genes <- genes[rownames(cnv), ]
   pos <- (genes$start + genes$stop) / 2
@@ -146,7 +139,6 @@ pgx.CNAfromExpression <- function(ngs, nsmooth = 40) {
 
   sel <- which(!is.na(genes$chr) & !is.na(genes$pos))
   genes <- genes[sel, ]
-  Matrix::head(genes)
 
   if (!is.null(ngs$counts)) {
     cna <- log2(100 + edgeR::cpm(ngs$counts)) ## moderated log2
@@ -156,7 +148,6 @@ pgx.CNAfromExpression <- function(ngs, nsmooth = 40) {
   gg <- intersect(rownames(genes), rownames(cna))
   cna <- cna[gg, ]
   genes <- genes[gg, ]
-  dim(cna)
 
   ## ---------------------------------------------------------------------
   ## order genes and matrix according genomic position
@@ -168,7 +159,6 @@ pgx.CNAfromExpression <- function(ngs, nsmooth = 40) {
   genes <- genes[jj, ]
   cna <- cna[rownames(genes), ]
   cna0 <- cna
-  dim(cna0)
 
   ## ---------------------------------------------------------------------
   ## apply 'crude' moving average filter (THIS SHOULD BE IMPROVED!)
@@ -180,7 +170,6 @@ pgx.CNAfromExpression <- function(ngs, nsmooth = 40) {
   cna <- apply(cna, 2, mavg)
   cna <- cna - apply(cna, 1, median, na.rm = TRUE)
   rownames(cna) <- rownames(cna0)
-  dim(cna)
 
   res <- list(cna = cna, chr = genes$chr, pos = genes$pos)
   return(res)
@@ -211,7 +200,6 @@ pgx.plotCNAHeatmap <- function(ngs, res, annot = NA, pca.filter = -1, lwd = 1,
   chr <- res$chr
   chr <- as.character(chr)
   pos <- res$pos
-  table(chr)
 
   ## ---------------------------------------------------------------------
   ## Downsample if needed
@@ -236,7 +224,6 @@ pgx.plotCNAHeatmap <- function(ngs, res, annot = NA, pca.filter = -1, lwd = 1,
   cna <- cna[ii, ]
   pos <- pos[ii]
   chr <- chr[ii]
-  table(chr)
 
   ## ensure order on chrpos
   ichr <- as.integer(sub("X", 23, sub("Y", 24, sub("chr", "", chr))))
@@ -249,7 +236,6 @@ pgx.plotCNAHeatmap <- function(ngs, res, annot = NA, pca.filter = -1, lwd = 1,
   cna <- cna / max(abs(cna), na.rm = TRUE)
   cna <- tanh(1.3 * cna)
   cna <- t(t(cna) - apply(cna, 2, median))
-  dim(cna)
 
   if (pca.filter > 0) {
     k <- 20
@@ -290,7 +276,6 @@ pgx.plotCNAHeatmap <- function(ngs, res, annot = NA, pca.filter = -1, lwd = 1,
     }
     k
     y <- as.character(ngs$samples[colnames(cna), k])
-    table(y)
     ny <- length(setdiff(unique(y), NA))
     if (ny >= 2) {
       y[is.na(y)] <- "_"
@@ -299,7 +284,6 @@ pgx.plotCNAHeatmap <- function(ngs, res, annot = NA, pca.filter = -1, lwd = 1,
       rownames(ann.mat) <- colnames(cna)
     }
   }
-  dim(ann.mat)
 
   BLUERED2 <- colorRampPalette(c("blue3", "white", "red3"))
 
@@ -350,7 +334,6 @@ pgx.plotCNAHeatmap <- function(ngs, res, annot = NA, pca.filter = -1, lwd = 1,
   mtext(unique(chr)[j1], side = 3, at = chrmid[j1], cex = lab.cex, line = 0.9)
 
   if (!is.null(ann.mat)) {
-    dim(ann.mat)
     par(mar = c(8, 0.5, 12, 2))
     Matrix::image(1:ncol(ann.mat), 1:nrow(ann.mat), t(ann.mat),
       col = rev(grey.colors(2)), xlab = "", ylab = "",

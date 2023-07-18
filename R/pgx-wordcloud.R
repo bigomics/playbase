@@ -41,7 +41,6 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   terms <- terms[which(!terms %in% stopwords)]
   terms <- terms[sapply(terms, nchar) > 2]
   terms <- grep("[0-9]|^\\(", terms, invert = TRUE, value = TRUE)
-  length(terms)
   terms <- Matrix::head(terms, 1000)
 
   ## Calculate incidence matrix
@@ -51,7 +50,6 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   idx <- do.call(rbind, idx)
 
   W <- Matrix::sparseMatrix(idx[, 1], idx[, 2], x = 1)
-  dim(W)
   rownames(W) <- names(words2)
   colnames(W) <- terms
 
@@ -59,7 +57,6 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   nn <- Matrix::colSums(W, na.rm = TRUE)
   nr <- nn / nrow(W)
   W <- W[, which(nn >= 3 & nr <= 0.5), drop = FALSE]
-  dim(W)
 
   if (ncol(W) < 1) {
     message("[pgx.calculateWordCloud] WARNING:: no valid words left")
@@ -78,14 +75,11 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   gmt <- apply(W, 2, function(x) names(which(x != 0)))
   suppressWarnings(res <- fgsea::fgseaSimple(gmt, rms.FC, nperm = 1000))
   res$leadingEdge <- sapply(res$leadingEdge, paste, collapse = "//")
-  #
   colnames(res)[1] <- "word"
 
   ## --------- only significant and positive
-  #
   res <- res[(res$padj < 1 & res$NES > 0), ]
   res <- res[order(-abs(res$NES)), ]
-  dim(res)
 
   ## now compute significant terms for all contrasts
   all.gsea <- list()

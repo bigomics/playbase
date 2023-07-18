@@ -12,10 +12,8 @@
 #' @export
 pgx.computeGlassoAroundGene <- function(X, gene, nmax = 100) {
   rho <- stats::cor(t(X), t(X[gene, , drop = FALSE]))
-  dim(rho)
   jj <- Matrix::head(order(-rowMeans(rho**2)), nmax)
   tX <- t(X[jj, ])
-  dim(tX)
 
   vX <- var(tX)
   res <- glasso::glasso(vX, 0.1)
@@ -115,10 +113,8 @@ PCOR.METHODS <- c(
 #' @export
 pgx.computePartialCorrelationAroundGene <- function(X, gene, method = PCOR.METHODS, nmax = 100, fast = FALSE) {
   rho <- stats::cor(t(X), t(X[gene, , drop = FALSE]))
-  dim(rho)
   jj <- Matrix::head(order(-rowMeans(rho**2)), nmax)
   tX <- t(X[jj, ])
-  dim(tX)
   res <- pgx.computePartialCorrelationMatrix(
     tX,
     method = method, fast = fast
@@ -259,8 +255,6 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
   }
 
   timings
-  names(rho)
-  lapply(rho, dim)
 
   ## compute average partical correlation (over all methods)
   nother <- length(setdiff(names(rho), c("cor", "rho")))
@@ -270,8 +264,6 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
     flat.prho <- sapply(rho[which(names(rho) != "cor")], as.vector)
     jj <- which(abs(flat.prho) > abs(flat.rho)) ## not reliable
     flat.prho[jj] <- NA
-    Matrix::head(flat.prho)
-    Matrix::head(flat.rho)
     nx <- ncol(tX)
     meta.pcor <- matrix(apply(flat.prho, 1, mean, na.rm = TRUE), nx, nx)
     rownames(meta.pcor) <- colnames(meta.pcor) <- colnames(tX)
@@ -299,7 +291,6 @@ pgx.plotPartialCorrelationAroundGene <- function(res, gene, rho.min = 0.8, pcor.
   M[is.infinite(M) | is.nan(M)] <- NA
   M <- M[order(-rowMeans(M**2, na.rm = TRUE)), , drop = FALSE]
 
-  Matrix::head(M)
 
   ## ------------------------------------------------------------
   ## Correlation barplots
@@ -393,7 +384,6 @@ pgx.plotPartialCorrelationAroundGene <- function(res, gene, rho.min = 0.8, pcor.
       igraph::layout_nicely(gr2)
     )
     rownames(ly) <- igraph::V(gr2)$name
-    Matrix::head(ly)
     ly <- ly[igraph::V(gr2)$name, , drop = FALSE]
 
     add.alpha <- function(col, alpha) {
@@ -433,9 +423,6 @@ pgx.testTraitRelationship <- function(me, df, plot = TRUE, cex = 1) {
   dc <- df[, cvar, drop = FALSE]
   dd <- df[, dvar, drop = FALSE]
 
-  dim(dc)
-  dim(dd)
-
   ## contious vs continous -> correlation
   rho.P <- NULL
   if (ncol(dc)) {
@@ -444,7 +431,6 @@ pgx.testTraitRelationship <- function(me, df, plot = TRUE, cex = 1) {
     j <- 2
     rho <- stats::cor(me, dc, use = "pairwise")
     rho.P <- cor.pvalue(P, nrow(me))
-    dim(rho.P)
   }
 
   ## continous vs discrete -> ANOVA
@@ -491,9 +477,6 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1) {
   dvar <- which(cl %in% c("factor", "character") & nlev >= 2)
   dc <- df[, cvar, drop = FALSE]
   dd <- df[, dvar, drop = FALSE]
-
-  dim(dc)
-  dim(dd)
 
   ## discrete vs discreate -> Fisher test
   fisher.P <- NULL
@@ -635,7 +618,6 @@ pgx.getGeneCorrelation <- function(gene, xref) {
   }
 
 
-  dim(R)
   if (!is.null(R) && NCOL(R) > 0) {
     R[is.na(R)] <- 0
     R[is.nan(R)] <- 0
@@ -645,7 +627,6 @@ pgx.getGeneCorrelation <- function(gene, xref) {
       k <- which(colnames(R) == "gene sets")
       R[, "gene sets"] <- R[, "gene sets"] * sign(rowMeans(R[, -k, drop = FALSE], na.rm = TRUE))
     }
-    Matrix::head(R)
   }
 
   return(R)

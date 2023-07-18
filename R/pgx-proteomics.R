@@ -22,25 +22,17 @@ prot.readProteinGroups <- function(file, meta = NULL, sep = "\t", collapse.gene 
   D <- data.table::fread(file, check.names = FALSE)
   D <- data.frame(D, check.names = FALSE)
 
-  dim(D)
-  colnames(D)
-  Matrix::head(D)[, 1:10]
-
-
   ## Filter contaminants
   contaminant.cols <- c("Reverse", "Only identified by site", "Potential contaminant")
   contaminant.cols <- intersect(contaminant.cols, colnames(D))
   contaminant.cols
   D$is.contaminant <- (rowSums(D[, contaminant.cols, drop = FALSE] == "+", na.rm = TRUE) >= 1)
-  table(D$is.contaminant)
   if (filter.contaminants) {
     D <- D[which(!D$is.contaminant), ]
   }
-  dim(D)
 
   ## parse gene annotation
   genes <- D[, c("Majority protein IDs", "Gene names", "Protein names")]
-  Matrix::head(genes)
   colnames(genes) <- c("protein_id", "gene_name", "gene_title")
   gg <- as.character(genes$gene_name)
   gg <- sapply(gg, function(x) strsplit(x, split = ";")[[1]][1]) ## take just FIRST gene
@@ -51,12 +43,10 @@ prot.readProteinGroups <- function(file, meta = NULL, sep = "\t", collapse.gene 
   ## give unique rownames
   rownames(D) <- paste0("tag", 1:nrow(D), ":", genes$gene_name) ## add one gene to tags
   rownames(genes) <- rownames(D)
-  dim(D)
-  dim(genes)
 
   ## extract data blocks (use LFQ as intensity)
   counts <- D[, grep("^Intensity ", colnames(D), value = TRUE)]
-  dim(counts)
+
   if (use.LFQ) {
     sel <- grep("^LFQ Intensity", colnames(D))
     if (length(sel) == 0) {
@@ -71,7 +61,6 @@ prot.readProteinGroups <- function(file, meta = NULL, sep = "\t", collapse.gene 
   }
   colnames(counts) <- sub("Intensity ", "", colnames(counts))
   colnames(counts) <- sub("LFQ intensity ", "", colnames(counts))
-  sum(is.na(counts))
   summary(Matrix::colSums(counts, na.rm = TRUE))
 
   ## collapse by gene
@@ -118,13 +107,9 @@ prot.normalizeCounts <- function(counts, scale = 1e6, scaling = "by.column",
   ## start with original counts from MaxQuant
   ## ------------------------------------------------------------
   X <- counts
-  sum(is.na(X))
-  sum(X == 0)
-  sum(X == 0, na.rm = TRUE)
-  min(X, na.rm = TRUE)
+
   X[X <= zero.thr] <- NA ## treat zero as NA for the moment
   which.zeros <- Matrix::which(X == 0 | is.na(X), arr.ind = TRUE)
-  length(which.zeros)
 
   ## ------------------------------------------------------------
   ## normalize to CPM (or otherwise)
@@ -190,8 +175,6 @@ prot.testTwoGroups <- function(X, group1, group2, method = "limma",
     out1 <- volcano(X[, group1], X[, group2], rownames(X))
     out1$Gene <- NULL
     colnames(out1) <- c("logFC", "P.Value")
-    dim(out1)
-    Matrix::head(out1)
   } else if (method %in% c("t.welch", "t.equalvar")) {
     ## faster t-test
 
@@ -207,7 +190,6 @@ prot.testTwoGroups <- function(X, group1, group2, method = "limma",
     out0$qvalue <- p.adjust(out0$pvalue, method = "fdr")
     out1 <- out0[, c("mean.diff", "pvalue", "qvalue")]
     colnames(out1) <- c("logFC", "P.Value", "adj.P.Val")
-    Matrix::head(out1)
   } else if (method == "limma" && is.null(labels)) {
     ## See e.g. https://bioconductor.org/help/course-materials/2010/BioC2010/limma2.pdf
 
@@ -468,20 +450,14 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
 
   ## ------------ Filter contaminants (important)
   keep <- (df$Reverse != "+" & df$Only.identified.by.site != "+" & df$Potential.contaminant != "+")
-  table(keep)
   df1 <- df[keep, ]
 
   ## use LFQ values that are normalized across the samples
 
   LFQ.L <- as.matrix(df1[, grep("LFQ.intensity.L.", colnames(df1))])
   LFQ.H <- as.matrix(df1[, grep("LFQ.intensity.H.", colnames(df1))])
-  table(colnames(LFQ.L) == sub(".H.", ".L.", colnames(LFQ.H))) ## check!
 
   ## --------- rename samples
-
-
-
-
 
   LFQ.names <- gsub(".*MB[0-9]*_|.*MB_RG_|\"", "", colnames(LFQ.L))
 
@@ -525,7 +501,6 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
   ## ------------ annotation table (keep separate) ---------
   ## Include proteinID, gene names and MW in dataframe A
   proteins <- df1[, c("Protein.IDs", "Gene.names", "Mol..weight..kDa.")]
-  dim(proteins)
 
   ## ------------ filter samples  ---------------------------------------
   ## Remove wrong sample and bad donors
@@ -540,14 +515,9 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
   ## Delete Factors from the list with severe miss identifications in the control group
   LFQ.ratio <- LFQ.H / (LFQ.H + LFQ.L + 1e-8) ## only temporary, later we calculate again
   Ctrls <- LFQ.ratio[, grep("Treat=NO-SILAC=0h", colnames(LFQ.ratio))]
-  dim(Ctrls)
-
-
-
 
   keep <- (rowSums(Ctrls) < 1.9)
 
-  table(keep)
   LFQ.L <- LFQ.L[keep, ]
   LFQ.H <- LFQ.H[keep, ]
   proteins <- proteins[keep, ]
@@ -561,7 +531,6 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
   jj <- match(rownames(LFQ.L), gene1)
   proteins <- proteins[jj, ]
   rownames(proteins) <- rownames(LFQ.L)
-  dim(LFQ.L)
 
   ## ------------ create sample annotation
 
@@ -572,15 +541,10 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
 
   samples$treatment <- gsub("Treat=", "", samples$treatment)
   samples$SILAC <- gsub("SILAC=", "", samples$SILAC)
-  rownames(samples)
 
   ## add mass in picograms (PLEASE CHECK!!!)
   samples$mass.pg <- 25
   samples$mass.pg[which(samples$state %in% c("Act23h", "Act48h"))] <- 75
-
-  dim(samples)
-  Matrix::head(samples)
-  apply(samples, 2, table)
 
   ## ------------ define groups
   groups <- list()
@@ -627,11 +591,6 @@ silac.readDataFile <- function(datafile, remove.outliers = TRUE) {
   molwt <- proteins$Mol..weight..kDa.
   copy.number <- silac.calcCopyNumber(data = LFQ.total, mol.weight = molwt, y = samples$mass.pg)
 
-  dim(copy.number)
-
-  sum(is.nan(LFQ.ratio))
-  dim(LFQ.ratio)
-
   ## prepare output object
   output <- list(
     samples = samples, groups = groups, proteins = proteins,
@@ -651,8 +610,6 @@ silac.ttest <- function(X, group1, group2, method = "limma") {
     out1 <- volcano(X[, group1], X[, group2], rownames(X))
     out1$Gene <- NULL
     colnames(out1) <- c("logFC", "P.Value")
-    dim(out1)
-    Matrix::head(out1)
     p1 <- out1
   } else if (method == "genefilter") {
     ## faster t-test
@@ -662,7 +619,6 @@ silac.ttest <- function(X, group1, group2, method = "limma") {
     out1 <- genefilter::rowttests(X[, jj], factor(y))
     out1$statistic <- NULL
     colnames(out1) <- c("logFC", "P.Value")
-    Matrix::head(out1)
     p2 <- out1
   } else if (method == "limma") {
     ## See e.g. https://bioconductor.org/help/course-materials/2010/BioC2010/limma2.pdf
@@ -674,7 +630,6 @@ silac.ttest <- function(X, group1, group2, method = "limma") {
     fit <- limma::eBayes(limma::lmFit(X[, jj], design))
     out1 <- limma::topTable(fit, coef = 2, sort.by = "none", number = Inf)
     out1 <- out1[, c("logFC", "P.Value", "adj.P.Val")]
-    Matrix::head(out1)
     p3 <- out1
   } else {
     stop("ERROR:: unknown method")
@@ -863,7 +818,6 @@ silac.plotDistribution <- function(obj, samples, minq = 3, main = NULL) {
   Q <- as.matrix(obj$LFQ.ratio[, samples])
   valid <- (rowSums(Q > 0) >= minq)
   Q <- Q[valid, ]
-  dim(Q)
   meanQ <- rowMeans(Q, na.rm = TRUE)
   plot(sort(meanQ, decreasing = TRUE), main = main)
   hist(meanQ, breaks = 20, col = "darkgrey", main = main)

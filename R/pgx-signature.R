@@ -12,7 +12,6 @@
 pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 1000, contrasts = NULL,
                                           remove.le = FALSE, inmemory = FALSE) {
   meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
-  colnames(meta$fc)
 
   is.h5ref <- grepl("h5$", sigdb)
   if (!is.h5ref) {
@@ -56,7 +55,6 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 1000, contrasts = N
         h5.file = h5.file,
         nsig = 100, ntop = ntop, nperm = 9999
       )
-      dim(res)
       scores[[ct]] <- res
     }
   }
@@ -67,7 +65,6 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 1000, contrasts = N
     for (j in 1:length(scores)) scores[[j]]$leadingEdge <- NULL
   }
 
-  names(scores)
   return(scores)
 }
 
@@ -114,11 +111,9 @@ pgx.correlateSignatureH5.inmemory <- function(F, h5.file, nsig = 100, ntop = 100
 
     remove(fc1)
     row.idx <- match(gg, rn)
-    length(row.idx)
 
     rG <- matG[row.idx, , drop = FALSE]
     rG <- apply(rG, 2, rank, na.last = "keep")
-    dim(rG)
     dimnames(rG) <- list(rn[row.idx], cn)
 
     ## this FC signature
@@ -151,7 +146,6 @@ pgx.correlateSignatureH5.inmemory <- function(F, h5.file, nsig = 100, ntop = 100
 
     ## use entire fc vector
     system.time(res1 <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm)) ## really unsigned???
-    dim(res1)
 
     ## ---------------------------------------------------------------
     ## Combine correlation+GSEA by combined score (NES*rho)
@@ -198,13 +192,10 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   gg <- intersect(names(fc), rn)
   fc1 <- sort(fc[gg])
   gg <- unique(names(c(Matrix::head(fc1, nsig), Matrix::tail(fc1, nsig))))
-  length(gg)
   row.idx <- match(gg, rn)
   rhdf5::h5closeAll()
   G <- rhdf5::h5read(h5.file, "data/matrix", index = list(row.idx, 1:length(cn)))
-  dim(G)
   G[which(G < -999999)] <- NA
-  dim(G)
   dimnames(G) <- list(rn[row.idx], cn)
 
   ## rank correlation??
@@ -234,11 +225,8 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   gmt <- rbind(sig100.up, sig100.dn)
   gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
   names(gmt) <- cn[sel.idx]
-  length(gmt)
-
 
   system.time(res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm)) ## really unsigned???
-  dim(res)
 
   ## ---------------------------------------------------------------
   ## Combine correlation+GSEA by combined score (NES*rho)
@@ -249,7 +237,6 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   res$score <- res$R2 * res$NES
   res <- res[order(res$score, decreasing = TRUE), ]
 
-  Matrix::head(res)
   return(res)
 }
 
@@ -280,7 +267,6 @@ pgx.correlateSignature.matrix <- function(fc, refmat, nsig = 100, ntop = 1000, n
 
 
   G <- refmat[gg, , drop = FALSE]
-  dim(G)
 
   ## rank correlation??
   rG <- apply(G[gg, ], 2, rank, na.last = "keep")
@@ -302,7 +288,6 @@ pgx.correlateSignature.matrix <- function(fc, refmat, nsig = 100, ntop = 1000, n
   notx <- setdiff(sel, colnames(refmat))
   sel <- intersect(sel, colnames(refmat))
   X <- refmat[, sel, drop = FALSE]
-  dim(X)
   X[is.na(X)] <- 0
   orderx <- apply(X, 2, function(x) {
     idx <- order(x)
@@ -312,7 +297,6 @@ pgx.correlateSignature.matrix <- function(fc, refmat, nsig = 100, ntop = 1000, n
   sig100.dn <- apply(sig100.dn, 2, function(i) rn[i])
   sig100.up <- sapply(orderx, "[[", "UP")
   sig100.up <- apply(sig100.up, 2, function(i) rn[i])
-  dim(sig100.dn)
 
   ## ---------------------------------------------------------------
   ## combine up/down into one (unsigned GSEA test)
@@ -320,13 +304,10 @@ pgx.correlateSignature.matrix <- function(fc, refmat, nsig = 100, ntop = 1000, n
   gmt <- rbind(sig100.up, sig100.dn)
   gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
   names(gmt) <- colnames(X)
-  length(gmt)
-
 
   suppressMessages(suppressWarnings(
     res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm)
   ))
-  dim(res)
 
   ## ---------------------------------------------------------------
   ## Combine correlation+GSEA by combined score (NES*rho)
@@ -337,7 +318,6 @@ pgx.correlateSignature.matrix <- function(fc, refmat, nsig = 100, ntop = 1000, n
   res$score <- res$R2 * res$NES
   res <- res[order(res$score, decreasing = TRUE), ]
 
-  Matrix::head(res)
   return(res)
 }
 
@@ -401,17 +381,14 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
 
     genes <- as.vector(unlist(sapply(F[], names)))
     genes <- sort(unique(toupper(genes)))
-    length(genes)
 
     ## Filter out genes (not on known chromosomes...)
     gannot <- ngs.getGeneAnnotation(genes)
-    table(!is.na(gannot$chr))
     sel <- which(!is.na(gannot$chr))
     genes <- sort(genes[sel])
 
     X <- lapply(F, function(x) x[match(genes, names(x))])
     X <- do.call(cbind, X)
-    dim(X)
     rownames(X) <- genes
     remove(F)
 
@@ -430,15 +407,10 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
     ## check NA!!! sometimes it is set to large negative
     rhdf5::h5ls(h5.file)
     X <- rhdf5::h5read(h5.file, "data/matrix")
-    Matrix::head(X[, 1])
     X[which(X < -999999)] <- NA
-    Matrix::head(X[, 1])
-    dim(X)
     rhdf5::h5write(X, h5.file, "data/matrix") ## can write list??
     rhdf5::h5closeAll()
   }
-  dim(X)
-
 
   ## --------------------------------------------------
   ## Precalculate t-SNE/UMAP
@@ -453,7 +425,6 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
       reduce.sd = 2000,
       reduce.pca = 200
     )
-    names(pos)
 
     if (!h5exists(h5.file, "clustering")) rhdf5::h5createGroup(h5.file, "clustering")
     rhdf5::h5ls(h5.file)
@@ -503,7 +474,6 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALS
 
     genes <- as.vector(unlist(sapply(F, rownames)))
     genes <- sort(unique(toupper(genes)))
-    length(genes)
     F <- lapply(F, function(x) x[match(genes, rownames(x)), , drop = FALSE])
     X <- do.call(cbind, F)
     rownames(X) <- genes
@@ -511,12 +481,10 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALS
     ## Filter out genes (not on known chromosomes...)
     genes <- rownames(X)
     gannot <- ngs.getGeneAnnotation(genes)
-    table(is.na(gannot$chr))
     sel <- which(!is.na(gannot$chr))
     X <- X[sel, , drop = FALSE]
     remove(F)
   }
-  dim(X)
 
   pgx.createSignatureDatabaseH5.fromMatrix(
     X = X,
@@ -541,7 +509,6 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
     rn <- rhdf5::h5read(h5.file, "data/rownames")
     cn <- rhdf5::h5read(h5.file, "data/colnames")
     rhdf5::h5ls(h5.file)
-    dim(X)
     X[is.na(X)] <- 0
     orderx <- apply(X, 2, function(x) {
       idx <- order(x)
@@ -580,7 +547,6 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
       reduce.sd = 2000,
       reduce.pca = 200
     )
-    names(pos)
 
     rhdf5::h5write(pos[["pca2d"]], h5.file, "clustering/pca2d") ## can write list??
     rhdf5::h5write(pos[["pca3d"]], h5.file, "clustering/pca3d") ## can write list??
@@ -614,12 +580,9 @@ pgx.addEnrichmentSignaturesH5 <- function(h5.file, X = NULL, mc.cores = 0,
 
   ## ---------------------- ONLY HALLMARK FOR NOW -----------------------
 
-
   G <- playdata::GSET_SPARSEG_XL
-  dim(G)
   sel <- grep("HALLMARK|C[1-9]|^GO", rownames(G))
   sel <- grep("HALLMARK", rownames(G))
-  length(sel)
   genes <- intersect(colnames(G), rownames(X))
   G <- G[sel, genes, drop = FALSE]
   X <- X[genes, ]
@@ -684,7 +647,6 @@ pgx.ReclusterSignatureDatabase <- function(h5.file, reduce.sd = 1000, reduce.pca
   ## --------------------------------------------------
   ## Precalculate t-SNE/UMAP
   ## --------------------------------------------------
-  dim(X)
 
   if (!h5exists(h5.file, "clustering")) rhdf5::h5createGroup(h5.file, "clustering")
 
@@ -695,7 +657,6 @@ pgx.ReclusterSignatureDatabase <- function(h5.file, reduce.sd = 1000, reduce.pca
     reduce.sd = reduce.sd,
     reduce.pca = reduce.pca
   )
-  names(pos)
 
   rhdf5::h5write(pos[["pca2d"]], h5.file, "clustering/pca2d") ## can write list??
   rhdf5::h5write(pos[["pca3d"]], h5.file, "clustering/pca3d") ## can write list??
@@ -752,11 +713,9 @@ pgx.computeGeneSetExpression <- function(X, gmt, method = NULL,
   if (center) {
     X <- X - rowMeans(X, na.rm = TRUE)
   }
-  dim(X)
 
   gmt.size <- sapply(gmt, function(x) sum(x %in% rownames(X)))
   gmt <- gmt[gmt.size >= min.size]
-  length(gmt)
 
   S <- list()
   if ("gsva" %in% method) {

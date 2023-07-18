@@ -31,7 +31,6 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
   ## X       : drugs profiles (may have multiple for one drug)
   ## xdrugs : drug associated with profile
 
-  names(obj)
   if ("gx.meta" %in% names(obj)) {
     F <- playbase::pgx.getMetaMatrix(obj)$fc
     ## check if multi-omics
@@ -45,7 +44,6 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
 
     F <- F[order(-rowMeans(F**2)), , drop = FALSE]
     F <- F[!duplicated(rownames(F)), , drop = FALSE]
-    dim(F)
   } else {
     ## it is a matrix
     F <- obj
@@ -61,7 +59,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
   ## create drug meta sets
   meta.gmt <- tapply(colnames(X), xdrugs, list)
   meta.gmt <- meta.gmt[which(sapply(meta.gmt, length) >= nmin)]
-  length(meta.gmt)
+
   if (length(meta.gmt) == 0) {
     message("WARNING::: pgx.computeDrugEnrichment : no valid genesets!!")
     return(NULL)
@@ -70,7 +68,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
   ## first level (rank) correlation
   message("Calculating first level rank correlation ...")
   gg <- intersect(rownames(X), rownames(F))
-  length(gg)
+
   if (length(gg) < 20) {
     message("WARNING::: pgx.computeDrugEnrichment : not enough common genes!!")
     return(NULL)
@@ -90,7 +88,6 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
   R1 <- R1 + 1e-8 * matrix(rnorm(length(R1)), nrow(R1), ncol(R1))
   colnames(R1) <- colnames(F)
   rownames(R1) <- colnames(X)
-  dim(R1)
 
   ## experiment to drug
   results <- list()
@@ -99,7 +96,6 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
 
 
     D <- Matrix::sparse.model.matrix(~ 0 + xdrugs)
-    dim(D)
     colnames(D) <- sub("^xdrugs", "", colnames(D))
     rownames(D) <- colnames(X) ## not necessary..
     rho2 <- qlcMatrix::corSparse(D, R1)
@@ -120,7 +116,6 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
       suppressWarnings(res0[[i]] <- fgsea::fgseaSimple(meta.gmt, stats = R1[, i], nperm = 10000))
     }
     names(res0) <- colnames(R1)
-    length(res0)
 
     mNES <- sapply(res0, function(x) x$NES)
     mQ <- sapply(res0, function(x) x$padj)
@@ -135,10 +130,8 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
     rownames(mNES) <- rownames(mQ) <- rownames(mP) <- pw
     colnames(mNES) <- colnames(mQ) <- colnames(mP) <- colnames(F)
     msize <- res0[[1]]$size
-    dim(R1)
     results[["GSEA"]] <- list(X = mNES, Q = mQ, P = mP, size = msize)
   }
-  names(results)
 
   ## this takes only the top matching drugs for each comparison to
   ## reduce the size of the matrices
@@ -154,7 +147,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
       rownames(rx) <- rownames(res$X)
       mtop <- names(head(sort(rowMeans(rx), decreasing = TRUE), nprune))
       top.idx <- unique(unlist(meta.gmt[mtop]))
-      length(top.idx)
+
       results[[k]]$X <- res$X[mtop, , drop = FALSE]
       results[[k]]$P <- res$P[mtop, , drop = FALSE]
       results[[k]]$Q <- res$Q[mtop, , drop = FALSE]
@@ -190,7 +183,6 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
     rownames(F) <- toupper(sub(".*:|.*\\]", "", rownames(F)))
     F <- F[order(-rowMeans(F**2)), , drop = FALSE]
     F <- F[!duplicated(rownames(F)), , drop = FALSE]
-    dim(F)
   }
 
   if (is.null(contrasts)) contrasts <- colnames(F)
@@ -206,7 +198,6 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
       nprune = nprune, contrast = NULL
     )
     er.mono <- er.mono[["GSEA"]]
-    names(er.mono)
   } else {
     cat("Using passed single drug enrichment results...\n")
     if ("GSEA" %in% names(res.mono)) {
@@ -225,7 +216,6 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
   top.combo.up <- lapply(top.combo.up, function(d) apply(d, 2, function(j) paste(sort(j), collapse = "-")))
   top.combo.dn <- lapply(top.combo.dn, function(d) apply(d, 2, function(j) paste(sort(j), collapse = "-")))
   top.combo <- unique(c(unlist(top.combo.up), unlist(top.combo.dn)))
-  length(top.combo)
 
   ## -------------- sample pairs from original mono-matrix
   sample.pairs <- list()
@@ -234,18 +224,15 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
     cmbn.idx <- as.integer(strsplit(top.combo[k], split = "-")[[1]])
     cmbn.idx
     cmbn <- sort(rownames(er.mono$X)[cmbn.idx])
-    Matrix::head(cmbn)
     p1 <- sample(which(xdrugs == cmbn[1]), nsample, replace = TRUE)
     p2 <- sample(which(xdrugs == cmbn[2]), nsample, replace = TRUE)
     pp <- cbind(p1, p2)
     sample.pairs[[k]] <- pp
   }
   sample.pairs <- do.call(rbind, sample.pairs)
-  dim(sample.pairs)
 
   ## --------------- now create combination matrix X
   comboX <- apply(sample.pairs, 1, function(ii) rowMeans(X[, ii], na.rm = TRUE))
-  dim(comboX)
 
   combo.drugs <- apply(sample.pairs, 1, function(ii) paste(sort(xdrugs[ii]), collapse = "+"))
 
@@ -253,20 +240,17 @@ pgx.computeComboEnrichment <- function(obj, X, xdrugs,
   sum(table(combo.drugs) >= 15)
   sel.combo <- names(which(table(combo.drugs) >= 15))
   jj <- which(combo.drugs %in% sel.combo)
-  length(jj)
   comboX <- comboX[, jj, drop = FALSE]
   combo.drugs <- combo.drugs[jj]
   colnames(comboX) <- paste0(combo.drugs, "_combo", 1:ncol(comboX))
 
   cat("Calculating drug-combo enrichment using GSEA ...\n")
-  dim(comboX)
   res.combo <- pgx.computeDrugEnrichment(
     obj,
     X = comboX, xdrugs = combo.drugs, methods = "GSEA", nprune = nprune,
     contrast = NULL
   )
   res.combo <- res.combo[["GSEA"]]
-  names(res.combo)
 
   return(res.combo)
 }

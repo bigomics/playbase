@@ -199,8 +199,6 @@ pgx.ActivationMatrix <- function(pgx, features = NULL, contrasts = NULL,
   F1 <- Matrix::head(F[order(-apply(F, 1, sd)), ], n = n)
   F1 <- Matrix::head(F[order(-rowMeans(F**2)), ], n = n)
 
-  dim(F1)
-
   ## cluster
   ii <- 1:nrow(F1)
   jj <- 1:ncol(F1)
@@ -360,7 +358,6 @@ pgx.scatterPlot <- function(pgx, pheno = NULL, gene = NULL,
 plot_SPLOM <- function(F, F2 = NULL, hilight = NULL, cex = 0.5, cex.axis = 1, cex.space = 0.2) {
   if (is.null(F2)) F2 <- F
   symm <- all(colnames(F) == colnames(F2))
-  dim(F)
   gg <- intersect(rownames(F), rownames(F2))
   F <- F[gg, , drop = FALSE]
   F2 <- F2[gg, , drop = FALSE]
@@ -501,7 +498,6 @@ pgx.SankeyFromMRF.PLOTLY <- function(M, R, F, fill = TRUE, labels = NULL) {
 
   matnames <- c(list(rownames(M[[1]])), lapply(M, colnames))
   vlevel <- sapply(igraph::V(gr)$name, grep, matnames)
-  table(vlevel)
 
   ## create Sankey plot
   nv <- length(igraph::V(gr))
@@ -686,7 +682,6 @@ pgx.SankeyFromPhenotypes.GGPLOT <- function(pgx, phenotypes, mat = NULL, fill = 
   }
   df <- data.frame(df)
   df$Frequency <- N
-  Matrix::head(df)
 
   if (sort) {
     relevelBig2small <- function(idx) factor(idx, levels = names(sort(table(idx))))
@@ -874,7 +869,6 @@ pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
   }
 
   sig <- (q <= psig & abs(f) >= fc)
-  table(sig)
   xy <- cbind(x = m, y = f)
   # <- gg
   cpal <- c("grey60", "red3")
@@ -951,7 +945,6 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
   hilight <- Matrix::head(hilight, ntop)
 
   sig <- 1 * (q < psig & abs(fx) > fc)
-  table(sig)
   names(sig) <- gg
 
 
@@ -986,7 +979,6 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
     }
     F <- res$fc[, contrast, drop = FALSE]
   }
-  dim(F)
 
   if (!is.null(value)) {
     F <- cbind(value)
@@ -1163,7 +1155,6 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
     if ("other" %in% xgroup) levels0 <- c(levels0, "other")
     xgroup <- factor(xgroup, levels = levels0)
   }
-  table(xgroup)
 
   ## ------------- set color of samples
   ngrp <- length(group.names)
@@ -1342,7 +1333,6 @@ pgx.plotOmicsNetwork <- function(pgx, gene = NULL, reduced = NULL, levels = c("g
 
   ee <- igraph::get.edgelist(gr)
   ee <- igraph::get.edges(gr, igraph::E(gr))
-  Matrix::head(ee)
 
   ew <- 1 + 5 * sqrt(fc.cex[ee[, 1]] * fc.cex[ee[, 2]])
   ew <- 1 + 5 * abs(igraph::E(gr)$weight)
@@ -1360,11 +1350,8 @@ pgx.plotOmicsNetwork <- function(pgx, gene = NULL, reduced = NULL, levels = c("g
     mm <- sapply(mm, function(s) sub(".*\\}", "", s))
     vlabel <- sapply(mm, function(x) intersect(x, sel))
     vlabel <- sapply(vlabel, paste, collapse = "\n")
-    Matrix::head(vlabel, 10)
-    table(vlabel != "")
 
     sel <- which(vlabel != "")
-    length(sel)
     if (length(sel) > 0) {
       vsel[sel] <- 1
       lab.cex[sel] <- 1 + 18 * (fc.cex[sel] / max(fc.cex[sel], na.rm = TRUE))
@@ -1411,8 +1398,6 @@ pgx.plotOmicsNetwork <- function(pgx, gene = NULL, reduced = NULL, levels = c("g
   visdata <- visNetwork::toVisNetworkData(gr, idToLabel = FALSE)
   pos <- pos[igraph::V(gr)$name, ]
   pos[, 2] <- -pos[, 2]
-  dim(pos)
-
 
   ## ------------------ plot using visNetwork (zoomable) -----------------
   graph <- visNetwork::visNetwork(
@@ -1497,7 +1482,6 @@ pgx.cytoPlot <- function(pgx, gene1, gene2, cex = 1, col = "grey60",
 
   if (!is.null(pgx$deconv)) {
     inferred.celltype <- pgx$deconv[[1]][["meta"]]
-    dim(inferred.celltype)
 
     lab1 <- Matrix::head(names(sort(-Matrix::colSums(inferred.celltype[j1, , drop = FALSE]))), 3)
     pos1 <- apply(cbind(x1, x2)[j1, , drop = FALSE], 2, median)
@@ -1589,8 +1573,6 @@ pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht = 5, cluster.samples = TRUE
 
   if (cluster.samples) {
     annotx <- expandAnnotationMatrix(annot.df)
-    dim(annot.df)
-    dim(annotx)
     hc <- fastcluster::hclust(dist(annotx)) ## cluster samples
     annot.df <- annot.df[hc$order, ]
   }
@@ -1684,7 +1666,6 @@ pgx.splitHeatmap <- function(ngs, splitx = NULL, top.mode = "specific",
     hc <- fastcluster::hclust(as.dist(1 - stats::cor(t(X1), use = "pairwise")), method = "ward.D2")
     idx <- paste0("S", cutree(hc, 5))
   }
-  table(idx)
 
   ## ----- Get valid phenotype variables
   if (is.null(annot.pheno)) {
@@ -1698,7 +1679,6 @@ pgx.splitHeatmap <- function(ngs, splitx = NULL, top.mode = "specific",
   Y <- ngs$samples[, annot.pheno, drop = FALSE]
   Y <- data.frame(apply(Y, 2, as.character))
   rownames(Y) <- rownames(ngs$samples)
-  colnames(Y)
 
   sampletips <- colnames(X1)
   genetips <- rownames(X1)
@@ -1808,9 +1788,6 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
   ii <- unique(c(ii, seq(1, nrow(df), round(nrow(df) / 1000))))
   df <- df[ii, ]
   df <- df[order(-df$y), ]
-  dim(df)
-
-
 
   cpal <- colorspace::diverge_hcl(64, c = 60, l = c(30, 100), power = 1)
   cpal <- colorspace::diverge_hcl(64)
@@ -2087,7 +2064,6 @@ plot_ggscatterFILL <- function(x, y = NULL, col = NULL, shape = NULL,
   df <- data.frame(x = x, y = y)
   if (!is.null(col)) df$col <- col
   if (!is.null(shape)) df$shape <- shape
-  Matrix::head(df)
 
   p <- ggplot2::ggplot(df, ggplot2::aes(x, y, color = col, shape = shape)) +
     ggplot2::geom_point(shape = pch, alpha = opacity, size = 2.0 * cex) +
@@ -2158,7 +2134,7 @@ plot_ggscatter <- function(x, y = NULL, col = NULL, main = NULL,
   df <- data.frame(x = x, y = y)
   if (!is.null(col)) df$col <- col
   if (!is.null(shape)) df$shape <- shape
-  Matrix::head(df)
+
   is.factor <- class(type.convert(as.character(col), as.is = TRUE)) == "factor"
   if (is.factor) {
     p <- ggplot2::ggplot(df, ggplot2::aes(y = y, x = x, color = col, shape = shape)) +
@@ -3436,7 +3412,6 @@ pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, cex =
   }
 
   df <- data.frame(x = pos[, 1], y = pos[, 2], z = var, names = rownames(pos))
-  Matrix::head(df)
   if (!is.null(var)) {
     plt <- scatterD3::scatterD3(
       data = df, x = x, y = y, #
@@ -3922,7 +3897,6 @@ plotlyCytoplot <- function(pgx,
 
   if (!is.null(pgx$deconv)) {
     inferred.celltype <- pgx$deconv[[1]][["meta"]]
-    dim(inferred.celltype)
     lab1 <- Matrix::head(names(sort(-Matrix::colSums(inferred.celltype[j1, , drop = FALSE]))), 3)
     pos1 <- apply(cbind(x1, x2)[j1, , drop = FALSE], 2, median)
     p <- p %>% plotly::add_annotations(
@@ -4107,7 +4081,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
   } else {
     xx <- list("Samples" = X)
   }
-  length(xx)
 
   ## ------- set colors
   if (!is.null(annot)) {
@@ -4189,8 +4162,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
         colors = colors0
       )
   }
-  length(xx)
-  dim(X)
 
   if (ncol(X) < 100 && colcex > 0) {
     plt <- plt %>% iheatmapr::add_col_labels(

@@ -130,7 +130,6 @@ pgx.readDatasetProfiles <- function(pgx.dir, file = "datasets-allFC.csv", verbos
   allFC <- fread.csv(file = file.path(pgx.dir, file), row.names = 1, check.names = FALSE)
   allFC <- as.matrix(allFC)
   if (verbose) message("[readDatasetProfiles1] dataset profiles matrix : dim=", dim(allFC))
-  dim(allFC)
   return(allFC)
 }
 
@@ -284,7 +283,6 @@ pgx.initDatasetFolder.DEPRECATED <- function(pgx.dir,
   if (!force && file.exists(allfc.file1) && length(pgx.missing) > 0) {
     allFC <- fread.csv(allfc.file1, row.names = 1, check.names = FALSE)
   }
-  dim(allFC)
 
   ## these pgx need forced update, so remove
   if (!is.null(allFC) && !is.null(new.pgx)) {
@@ -390,11 +388,10 @@ pgx.initDatasetFolder.DEPRECATED <- function(pgx.dir,
     ## find most common genes
     all.gg <- toupper(as.character(unlist(sapply(missing.FC, rownames))))
     gg.tbl <- table(all.gg)
-    table(gg.tbl)
 
     ## Conform the multiple metaFC matrices
     gg <- names(gg.tbl)
-    length(gg)
+
     missing.FC <- lapply(missing.FC, function(x) {
       x <- x[match(gg, toupper(rownames(x))), , drop = FALSE]
       rownames(x) <- gg
@@ -428,7 +425,6 @@ pgx.initDatasetFolder.DEPRECATED <- function(pgx.dir,
     allfc.nna <- rowMeans(!is.na(allFC))
     jj <- Matrix::head(order(-allfc.sd * allfc.nna), 20000)
     allFC <- allFC[jj, , drop = FALSE]
-    dim(allFC)
     pgxfc.changed <- TRUE
   }
 
@@ -974,7 +970,6 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     allFC <- fread.csv(allfc.file, row.names = 1, check.names = FALSE)
     allFC <- as.matrix(allFC)
   }
-  dim(allFC)
 
   ## these pgx need forced update, so remove
   if (!is.null(allFC) && !is.null(new.pgx)) {
@@ -1080,11 +1075,10 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     ## find most common genes
     all.gg <- toupper(as.character(unlist(sapply(missing.FC, rownames))))
     gg.tbl <- table(all.gg)
-    table(gg.tbl)
 
     ## Conform the multiple metaFC matrices
     gg <- names(gg.tbl)
-    length(gg)
+
     missing.FC <- lapply(missing.FC, function(x) {
       x <- x[match(gg, toupper(rownames(x))), , drop = FALSE]
       rownames(x) <- gg
@@ -1118,7 +1112,6 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     allfc.nna <- rowMeans(!is.na(allFC))
     jj <- Matrix::head(order(-allfc.sd * allfc.nna), 20000)
     allFC <- allFC[jj, , drop = FALSE]
-    dim(allFC)
     pgxfc.changed <- TRUE
   }
 
