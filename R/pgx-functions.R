@@ -806,7 +806,6 @@ pgx.getNumericalPhenotypes <- function(df) {
 
 #' @export
 pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove.dup = FALSE) {
-
   is.bad <- 0
 
   ## ... exclude sample IDs

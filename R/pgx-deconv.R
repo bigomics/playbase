@@ -130,7 +130,7 @@ pgx.inferCellTypeLM22 <- function(counts, low.th = 0.01, add.unknown = FALSE,
     jj <- which(celltype0 == ct)
     jj <- 1:length(celltype0)
     ct3 <- celltype0[jj]
-    
+
     if (ncol(M1) > 0) {
       X1 <- X[, jj, drop = FALSE]
       X1 <- X1 / (1e-3 + rowMeans(X1)) ## center feature means??

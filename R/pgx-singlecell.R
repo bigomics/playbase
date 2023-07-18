@@ -305,7 +305,6 @@ pgx.scTestDifferentialExpression <- function(counts, y, is.count = TRUE, samples
 
 #' @export
 pgx.reduceCells <- function(counts, method, ncells, pheno = NULL, group.id = NULL) {
-
   if (ncol(counts) > ncells) {
     if (method == "pool") {
       message(">> Pooling cells...")

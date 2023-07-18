@@ -223,7 +223,7 @@ pgx.getGEOcounts.recount <- function(id) {
   rse <- recount::scale_counts(rse_gene)
 
   counts <- MultiAssayExperiment::assay(rse)
-  
+
   return(counts)
 }
 
@@ -542,7 +542,7 @@ pgx.getGeoMetadata.fromGSM <- function(id) {
   ##
   id
   suppressMessages(gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE)))
-  
+
   if (class(gse) == "try-error") {
     res <- list(error = "ERROR: GEOquery::getGEO() error")
     return(res)

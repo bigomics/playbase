@@ -134,7 +134,7 @@ pgx.clusterSamples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = 
     find.clusters = FALSE,
     umap.pkg = umap.pkg
   )
-  
+
   clust.index <- clust.pos$membership
   clust.pos$membership <- NULL
 
