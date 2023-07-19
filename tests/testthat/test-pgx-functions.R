@@ -2,10 +2,6 @@
 #'
 #'
 
-#' Test for text_repel.NOTWORKING
-#'
-#'
-
 #' Test for pos.compact
 test_that("pos.compact works", {
   # Sample input
