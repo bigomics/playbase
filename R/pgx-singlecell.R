@@ -49,83 +49,6 @@ seurat2pgx <- function(obj, do.cluster = FALSE) {
   pgx
 }
 
-
-#' @export
-pgx.createPGX.10X.DEPRECATED <- function(outs, ncells = 2000, aggr.file = "aggregation.csv") {
-  ## Read 10X count matrix and aggregation file from outs folder and
-  ## create PGX file.
-  ##
-  message("[createPGX.10X] reading 10X data file...")
-  counts.10x <- Seurat::Read10X(file.path(outs, "filtered_feature_bc_matrix"))
-
-  message("[createPGX.10X] reading aggregation meta file...")
-  aggr <- read.csv(file.path(outs, aggr.file), comment.char = "#")
-  aggr$molecule_h5 <- NULL
-  idx <- as.integer(sub(".*-", "", colnames(counts.10x)))
-  pheno <- aggr[idx, ]
-  rownames(pheno) <- colnames(counts.10x)
-
-  ## QC filter cells
-  message("[createPGX.10X] filtering outliers...")
-  counts <- pgx.scFilterOutliers(counts.10x, a = 2)
-  pheno <- pheno[colnames(counts), ]
-
-  ## Reduce number of cells (approx. equalizing libraries)
-  message("[createPGX.10X] reducing cells...")
-  out <- pgx.reduceCells(counts,
-    method = "subsample",
-    ncells = ncells, group.id = pheno$library_id
-  )
-  counts <- out$counts
-  pheno <- pheno[colnames(counts), ]
-
-  ## pre-filter expressed genes
-  message("[createPGX.10X] filtering features...")
-  sel <- (rowMeans(counts >= 3) > 0.01)
-  counts <- counts[sel, ]
-
-  ## Infer celltype
-  message("[createPGX.10X] inferring cell types...")
-  pheno$cell.type <- pgx.inferCellType(counts, low.th = 0.03, add.unknown = TRUE)
-
-  ## for the moment just celltype comparison
-  ct <- makeDirectContrasts(pheno[, "cell.type", drop = FALSE], ref = "others")
-  names(ct)
-  pheno$group <- ct$group
-
-
-  message("[createPGX.10X] creating PGX object...")
-  pgx <- pgx.createPGX(
-    counts = counts, samples = pheno, contrasts = ct$contr.matrix,
-    is.logx = FALSE
-  )
-
-  ## We perform single-cell integration/batch correction only to
-  ## improve clustering!! Note that count/X matrix in PGX is not
-  ## replaced with the integrated matrix (not reliable...).
-
-  if ("batch" %in% colnames(pheno)) {
-    message("[createPGX.10X] performing batch integration using MNN...")
-    bX <- logCPM(counts, total = 1e4)
-    bb <- pgx$samples[, "batch"]
-    bX <- pgx.scBatchIntegrate(bX, batch = bb, method = "MNN")
-
-    pgx <- pgx.clusterSamples2(pgx, X = bX, methods = c("pca", "tsne", "umap"), dims = c(2, 3))
-    pgx$tsne2d <- pgx$cluster$pos[["tsne2d"]]
-    pgx$tsne3d <- pgx$cluster$pos[["tsne3d"]]
-
-    ## update default clusters from tSNE/UMAP
-    xpos <- pgx$cluster$pos[["umap3d"]]
-
-
-
-    idx <- pgx.FindClusters(xpos, method = "louvain")[[1]][, 1]
-    pgx$samples$cluster <- paste0("C", idx)
-  }
-  message("[createPGX.10X] done!")
-  pgx
-}
-
 #' @export
 pgx.scQualityControlPlots.NOTFINISHED <- function(counts) {
   mt.genes <- grep("^MT-", rownames(counts), ignore.case = TRUE, value = TRUE)
@@ -152,9 +75,6 @@ pgx.scQualityControlPlots.NOTFINISHED <- function(counts) {
   barplot(t(P2), ylab = "percentage (%)")
   legend("topright", legend = c("mito", "ribo"), fill = c("grey80", "grey30"), cex = 0.9)
 }
-
-
-
 
 #' @export
 pgx.scTestDifferentialExpression <- function(counts, y, is.count = TRUE, samples = NULL,

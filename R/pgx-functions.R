@@ -13,31 +13,6 @@ pgx.phenoMatrix <- function(pgx, phenotype) {
 }
 
 #' @export
-text_repel.NOTWORKING <- function(x, y, text, cex = 1, force = 1e-7, maxiter = 20000) {
-  ## x and y posiitons as a dataframe
-  df <- data.frame(x = x, y = y, text = text)
-  w <- diff(range(x))
-  h <- diff(range(y))
-  dx0 <- w * 0.08
-  dy0 <- h * 0.05
-  par(mfrow = c(1, 1))
-  plot(x, y, type = "n")
-  dx1 <- max(strwidth(text, cex = cex, units = "user") * w)
-  dy1 <- max(strheight(text, cex = cex, units = "user") * w)
-  out <- util.findboxes(
-    df, "x", "y",
-    box_padding_x = dx1,
-    box_padding_y = dy1,
-    point_padding_x = dx0,
-    point_padding_y = dy0,
-    xlim = range(x),
-    ylim = range(y),
-    force = 1e-7, maxiter = 20000
-  )
-  out[, 3:4]
-}
-
-#' @export
 pos.compact <- function(pos, d = 0.01) {
   ## make positions more dense removing white space
   for (i in 1:ncol(pos)) {
@@ -1323,18 +1298,6 @@ alias2hugo <- function(s, org = NULL, na.orig = TRUE) {
   hugo0[nna] <- hugo
   return(hugo0)
 }
-
-#' @export
-breakstringBROKEN <- function(s, n, force = FALSE) {
-  if (is.null(s) || length(s) == 0) {
-    return(NULL)
-  }
-  if (length(s) == 1) {
-    return(breakstring1(s, n = n, force = force))
-  }
-  sapply(s, breakstring1, n = n, force = force)
-}
-
 
 #' @export
 breakstring <- function(s, n, nmax = 999, force = FALSE, brk = "\n") {

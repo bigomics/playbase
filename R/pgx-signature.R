@@ -764,16 +764,6 @@ getSIGDB.DIR <- function() {
   }
 }
 
-
-#' @export
-sigdb.getConnectivityFullPath.DEPRECATED <- function(sigdb) {
-  db.exists <- sapply(getSIGDB.DIR(), function(d) file.exists(file.path(d, sigdb)))
-  db.exists
-  db.dir <- names(which(db.exists))[1]
-  db.dir
-  file.path(db.dir, sigdb)
-}
-
 #' @export
 sigdb.getConnectivityContrasts <- function(sigdb, path = NULL) {
   if (!is.null(path)) {
