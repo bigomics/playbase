@@ -14,16 +14,33 @@ pgx.createFromFiles(
 )
 }
 \arguments{
-\item{counts.file}{a playbase::COUNTS file}
+\item{counts.file}{Path to counts data file. Rows are genes, columns are samples.}
 
-\item{samples.file}{a playbase::SAMPLES file}
+\item{samples.file}{Path to samples data file. Rows are samples, columns are sample info.}
 
-\item{contrasts.file}{a playbase::CONTRASTS file}
+\item{contrasts.file}{(optional) Path to contrasts file. Rows and columns define contrasts.}
+
+\item{gxmethods}{a string with the gene-level methods to use. The default value is \code{"trend.limma,edger.qlf,deseq2.wald"}}
+
+\item{gsetmethods}{a string with the gene-set methods to use. The default value is \code{"fisher,gsva,fgsea"}}
+
+\item{extra}{a string with the extra modules to use. The default value is \code{"meta.go,deconv,infer,drugs,wordcloud"}}
 }
 \value{
-list. represents a pgx object
+list. represents a pgx object. It contains the data and analysis results.
 }
 \description{
 This function creates a pgx object from files, which is the core object in the
-OmicsPlayground.
+OmicsPlayground. It then runs the specified differential expression methods.
+}
+\examples{
+\dontrun{
+
+ library(playbase)
+ counts <- system.file("extdata", "counts.csv", package = "playbase")
+ contrasts <- system.file("extdata", "contrasts.csv", package = "playbase")
+ samples <- system.file("extdata", "samples.csv", package = "playbase")
+
+  mypgx <- pgx.createFromFiles(counts, samples, contrasts) 
+}
 }

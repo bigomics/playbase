@@ -20,25 +20,32 @@ pgx.computePGX(
 )
 }
 \arguments{
-\item{pgx}{value}
+\item{pgx}{A pgx object containing the input data}
 
-\item{max.genes}{value}
+\item{max.genes}{Maximum number of genes to test. Default is 19999.}
 
-\item{max.genesets}{value}
+\item{max.genesets}{Maximum number of gene sets to test. Default is 5000.}
 
-\item{gx.methods}{value}
+\item{gx.methods}{Methods for differential expression analysis at the gene level. Default is c("ttest.welch", "trend.limma", "edger.qlf").}
 
-\item{gset.methods}{value}
+\item{gset.methods}{Methods for differential analysis at the gene set level. Default is c("fisher", "gsva", "fgsea").}
 
-\item{do.cluster}{value}
+\item{custom.geneset}{Custom gene sets to test, as a named list with gmt and info elements.}
 
-\item{use.design}{value}
+\item{do.cluster}{Whether to run sample clustering. Default is TRUE.}
 
-\item{prune.samples}{value}
+\item{use.design}{Whether to use model design matrix for testing. Default is TRUE.}
 
-\item{extra.methods}{value}
+\item{prune.samples}{Whether to remove samples without valid contrasts. Default is FALSE.}
 
-\item{progress}{value}
+\item{extra.methods}{Additional analysis methods to run. Default is c("meta.go", "infer", "deconv", "drugs", "wordcloud", "wgcna")[c(1, 2)].}
+
+\item{libx.dir}{Directory containing custom analysis modules.}
+
+\item{progress}{A progress object for tracking status.}
+}
+\value{
+An updated pgx object containing analysis results.
 }
 \description{
 Main function to populate pgx with results
