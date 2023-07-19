@@ -203,15 +203,6 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
     )
   }
 
-  if (0 && "glassoFast" %in% method) {
-    timings[["glassoFast"]] <- system.time(
-      suppressWarnings(res <- glassoFast(cov(tX), 1e-2))
-    )
-    r <- -cov2cor(res$wi)
-    diag(r) <- -diag(r)
-    rho[["glassoFast"]] <- r
-  }
-
   if ("glasso" %in% method) {
     timings[["glasso"]] <- system.time(
       res <- glasso::glasso(cov(tX), 1e-2)

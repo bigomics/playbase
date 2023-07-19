@@ -109,11 +109,6 @@ pgx.fastq2counts <- function(fastq_dir, destdir, indexdir, nthread = 4, do.qc = 
     for (f in fq) file.rename(from = f, to = sub("fq$", "fastq", f))
   }
 
-  if (0 && do.qc && trimming) {
-    cat(">>> Running FastQC (trimmed) ... \n")
-    run_fastqc2(destdir = destdir, fastq_dir = fastq_dir, nthread = nthread)
-  }
-
   if (quant.method == "salmon") {
     ## ----------- Before running Salmon, you will have to build index first.
     dir.exists(indexdir)

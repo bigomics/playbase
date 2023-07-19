@@ -288,14 +288,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
   ## --------------------------------------------------------------------
   ## Nearest-neighbour matching (NNM)
   ## --------------------------------------------------------------------
-  if (0 && nnm.correct) {
-    dbg("[pgx.superBatchCorrect] Correcting with nearest-neighbour matching (NNM)")
-    dbg("[pgx.superBatchCorrect] NNM :: model.par = ", model.par)
-    for (i in 1:length(model.par)) {
-      y1 <- pheno[, model.par[i]]
-      cX <- gx.nnmcorrect(cX, y1, center.x = TRUE, center.m = TRUE)$X
-    }
-  }
+
   if (1 && nnm.correct) {
     dbg("[pgx.superBatchCorrect] Correcting with nearest-neighbour matching (NNM)")
     dbg("[pgx.superBatchCorrect] NNM :: model.par = ", model.par)

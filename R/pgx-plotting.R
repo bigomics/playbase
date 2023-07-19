@@ -2073,9 +2073,7 @@ plot_ggscatterFILL <- function(x, y = NULL, col = NULL, shape = NULL,
   p
   if (!is.null(col)) {
     cpal <- rev(RColorBrewer::brewer.pal(11, "RdYlBu"))
-    if (0 && opacity < 1) {
-      cpal <- add_opacity(cpal, opacity**0.33)
-    }
+
     zr <- range(col)
     zz <- round(c(zr[1], zr[2]), digits = 2)
     cgamma <- seq(0, 1, 1 / (length(cpal) - 1))**(1 / gamma)
