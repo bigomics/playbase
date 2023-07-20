@@ -431,7 +431,7 @@ gx.meanFstats <- function(X, pheno) {
     mean(top$F)
   }
   fstat <- c()
-  px <- tidy.dataframe(pheno) ## get variable types correct
+  px <- playbase::tidy.dataframe(pheno) ## get variable types correct
   for (p in c("random", colnames(px))) {
     if (p == "random") {
       y <- sample(c("a", "b"), ncol(X), replace = TRUE)

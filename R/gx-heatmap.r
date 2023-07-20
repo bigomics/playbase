@@ -176,7 +176,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   }
   ## give unique name if duplicated
   if (sum(duplicated(rownames(gx))) > 0) {
-    rownames(gx) <- tagDuplicates(rownames(gx))
+    rownames(gx) <- playbase::tagDuplicates(rownames(gx))
     if (!is.null(row.annot)) rownames(row.annot) <- rownames(gx)
   }
   if (!is.null(split) && length(split) == 1 && split == 1) split <- NULL
@@ -543,7 +543,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
         link_width = grid::unit(0.8, "cm"),
         labels_gp = grid::gpar(fontsize = 10 * cexRow)
       ),
-      width = grid::unit(0.8, "cm") + 0.8 * max_text_width(lab)
+      width = grid::unit(0.8, "cm") + 0.8 * ComplexHeatmap::max_text_width(lab)
     )
   }
 

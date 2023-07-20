@@ -63,7 +63,7 @@ gmean <- function(x) {
 #' @examples
 mat2hugo <- function(x) {
   x <- x[order(-apply(x, 1, sd, na.rm = TRUE)), ]
-  hx <- alias2hugo(rownames(x))
+  hx <- playbase::alias2hugo(rownames(x))
   jj <- which(!duplicated(hx))
   x <- x[jj, ]
   rownames(x) <- hx[jj]

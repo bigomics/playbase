@@ -308,12 +308,14 @@ gx.nnmcorrect.SAVE <- function(x, y, k = 3) {
 #' @export
 #'
 #' @examples
+#' The following function is not used anywhere in the package or omicsplayground
 gx.qnormalize <- function(X) {
   ## -----------------------------------------------------
   ## quantile normalization
   ## -----------------------------------------------------
 
   if (max(X, na.rm = TRUE) < 40 && min(X, na.rm = TRUE) > 0) {
+    # The function normalize.qspline likely comes as product of affy package but better confirm
     tmp <- normalize.qspline(2**X, na.rm = TRUE, verbose = FALSE)
     tmp <- log2(tmp)
   } else {

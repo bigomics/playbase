@@ -63,8 +63,8 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
     pheno <- intersect(pheno, colnames(samples))
     Y <- samples[, pheno, drop = FALSE]
     ## automatically guess contrasts
-    ac <- pgx.makeAutoContrasts(Y, mingrp = 3, slen = 20, ref = NA)
-    contrasts <- contrastAsLabels(ac$exp.matrix)
+    ac <- playbase::pgx.makeAutoContrasts(Y, mingrp = 3, slen = 20, ref = NA)
+    contrasts <- playbase::contrastAsLabels(ac$exp.matrix)
   }
 
   ## other params
@@ -72,16 +72,12 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
   gset.methods <- strsplit(gsetmethods, split = ",")[[1]]
   extra.methods <- strsplit(extra, split = ",")[[1]]
 
-  gx.methods
-  gset.methods
-  extra.methods
-
   ## create initial PGX object
   pgx <- pgx.createPGX(
     counts,
     samples = samples,
     contrasts = contrasts,
-    X = NULL, ## genes,
+    X = NULL, 
     is.logx = NULL,
     batch.correct = TRUE,
     auto.scale = TRUE,

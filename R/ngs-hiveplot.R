@@ -20,7 +20,7 @@ ngs.hiveplot <- function(ngs, pheno, level = 1, ntop = 400, main = "", axis.lab 
   write.csv(hpd$nodes.ann, file = "/tmp/annode.csv", row.names = FALSE)
   grid::grid.newpage()
   axlab.col <- ifelse(bkgnd == "black", "grey90", "grey15")
-  plotHive(hpd,
+  HiveR::plotHive(hpd,
     np = FALSE, ch = 1.4, bkgnd = bkgnd,
     axLabs = c(paste0(main, "\n", axis.lab[1]), axis.lab[2], axis.lab[3]),
     axLab.pos = c(0.4, 0.33, 0.33),

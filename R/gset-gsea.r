@@ -1268,7 +1268,7 @@ gseaPlotEnplots <- function(gsea, gsets = NULL, ncol = 5) {
       interpolate = TRUE
     )
   })
-  grid.arrange(grobs = imgs, ncol = ncol)
+  gridExtra::grid.arrange(grobs = imgs, ncol = ncol)
 }
 
 
@@ -1312,11 +1312,11 @@ gseaLeadingEdgeHeatmap <- function(gsea, maxrow = 60, maxcol = 60, gsets = NULL,
   }
 
   if (render == "d3heatmap") {
-    d3heatmap(LEmat, yaxis_width = 600)
+    d3heatmap::d3heatmap(LEmat, yaxis_width = 600)
   } else if (render == "heatmaply") {
-    heatmaply(LEmat)
+    heatmaply::heatmaply(LEmat)
   } else {
-    gx.heatmap(LEmat - 1e-8,
+    playbase::gx.heatmap(LEmat - 1e-8,
       scale = "none",
       mar = c(8, 20), cexCol = 0.9, cexRow = 0.9,
       keysize = 0.4, key = FALSE
@@ -1452,7 +1452,7 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
   if (is.null(main)) main <- "Enrichment plot"
   tt.main <- as.character(main)
   if (nchar(tt.main) > len.main) {
-    tt.main < breakstring(tt.main, len.main) ## pgx-funtions.R
+    tt.main < playbase::breakstring(tt.main, len.main) ## pgx-funtions.R
   }
   title(main = tt.main, cex.main = cex.main, line = main.line)
 }

@@ -116,16 +116,7 @@ ngs.tximportSalmon <- function(sf.files, count.type = "lengthScaledTPM", organis
   ## ------------------------------------------------------------
   ## Import Salmon files using tximport
   ## ------------------------------------------------------------
-  if (1) {
-    tx2gene <- daf[, c("tx_id", "gene_id")] ## map to Ensemble gene ID
-
-    Matrix::head(tx2gene)
-    dim(tx2gene)
-  } else {
-    txdf <- GenomicFeatures::transcripts(edb, return.type = "DataFrame")
-    tx2gene <- as.data.frame(txdf[, c("tx_id", "gene_id")])
-    dim(tx2gene)
-  }
+  tx2gene <- daf[, c("tx_id", "gene_id")] ## map to Ensemble gene ID
 
   ## now import all files and collapse to gene. The 'lengthScaleTPM'
   ## is essential for LIMMA/VOOM and Deseq2 handles this fine (see
@@ -134,7 +125,7 @@ ngs.tximportSalmon <- function(sf.files, count.type = "lengthScaledTPM", organis
 
   if (txOut == FALSE) {
     ## collapse gene level
-    txi <- tximport(sf.files,
+    txi <- tximport::tximport(sf.files,
       type = "salmon",
       countsFromAbundance = count.type, txOut = FALSE,
       tx2gene = tx2gene, ignoreTxVersion = TRUE
@@ -152,7 +143,7 @@ ngs.tximportSalmon <- function(sf.files, count.type = "lengthScaledTPM", organis
     remove(daf0)
   } else {
     ## transcript level
-    txi <- tximport(sf.files,
+    txi <- tximport::tximport(sf.files,
       type = "salmon",
       countsFromAbundance = count.type, txOut = TRUE,
       tx2gene = NULL, ignoreTxVersion = TRUE
@@ -160,14 +151,6 @@ ngs.tximportSalmon <- function(sf.files, count.type = "lengthScaledTPM", organis
     tx.id <- sub("[.][0-9]*$", "", rownames(txi$counts))
     daf <- daf[match(tx.id, daf$tx_id), ]
   }
-  names(txi)
-  Matrix::head(txi$counts)[, 1:6]
-  dim(txi$counts)
-
-  ## add gene name suffix??
-
-
-  dim(daf)
 
   txi$genes <- daf[, c("tx_id", "gene_id", "refseq", "gene_name", "gene_biotype", "gene_title")]
   rownames(txi$genes) <- rownames(txi$counts)
