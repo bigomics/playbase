@@ -522,23 +522,8 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 }
 
 
-#' Main function to populate pgx with results
-#'
-#' @param pgx value
-#' @param max.genes value
-#' @param max.genesets value
-#' @param gx.methods value
-#' @param gset.methods value
-#' @param do.cluster value
-#' @param use.design value
-#' @param prune.samples value
-#' @param extra.methods value
-#' @param progress value
-#'
-#' @return
-#' @export
-#' 
-#' Compute analysis on a pgx object
+#' @title Compute PGX 
+#' @description Main function to populate pgx with results. The function computes the analysis on a pgx object
 #'
 #' @param pgx A pgx object containing the input data
 #' @param max.genes Maximum number of genes to test. Default is 19999.  

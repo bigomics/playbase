@@ -185,8 +185,23 @@ test_that("add_opacity adds opacity correctly", {
 #'
 
 #' Test for probe2symbol
-#'
-#'
+test_that("probe2symbol returns expected output", {
+
+  # Create test data
+  counts <- playbase::COUNTS
+  subset_genes <- round(seq(1, nrow(counts), length.out = 10))
+  probes <- rownames(playbase::COUNTS)[subset_genes]
+  symbols <- playbase::probe2symbol(probes)
+  symbols_type <- playbase::probe2symbol(probes, type = "symbol")
+  
+  # Expected
+  # Default parameters
+  expect_equal(length(symbols), length(probes))
+  
+  # Specific type
+  expect_equal(length(symbols_type), length(probes))
+    
+})
 
 #' Test for trimsame
 #'
@@ -451,8 +466,31 @@ test_that("relevelFactorFirst relevels factor with first level", {
 #'
 
 #' Test for alias2hugo
-#'
-#'
+test_that("alias2hugo converts gene symbols", {
+
+  # Generate test data
+  gene0 <- c("A1BG", "ACOT9", "FOO1", NA, "BAR2", "IRAK1", "CNEP1R1", "EIF2B4", "RRAS2", "AGAP3")
+  expected <- c("A1BG", "ACOT9", "FOO1", NA, "BAR2", "IRAK1", "CNEP1R1", "EIF2B4", "RRAS2", "AGAP3")
+  expected_na_false <- c("A1BG", "ACOT9", NA, NA, NA, "IRAK1", "CNEP1R1", "EIF2B4", "RRAS2", "AGAP3")
+  # Test on human
+  result <- alias2hugo(gene0, org = "hs")
+  expect_equal(result, expected)
+  
+  # Test on mouse  
+  result <- alias2hugo(gene0, org = "mm")
+  expect_equal(result, expected)
+
+  # Test preserving NA
+  result <- alias2hugo(gene0, org = "hs", na.orig = TRUE)
+  expect_equal(result, expected)
+  
+  result <- alias2hugo(gene0, org = "hs", na.orig = FALSE)
+  expect_equal(result, expected_na_false)
+  
+  # Test error on wrong organism
+  expect_error(alias2hugo(gene0, org = "zz"))
+  
+})
 
 #' Test for breakstringBROKEN
 #'
