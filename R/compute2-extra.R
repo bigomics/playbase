@@ -259,8 +259,7 @@ compute_deconvolution <- function(ngs, rna.counts = ngs$counts, full = FALSE) {
 #' @return An updated object with cell cycle and gender inference results.
 #' @export
 compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
-  pp <- rownames(rna.counts)
-  is.mouse <- (mean(grepl("[a-z]", gsub(".*:|.*\\]", "", pp))) > 0.8)
+  is.mouse <- pgx.getGenetype(rna.counts)
   is.mouse
   if (!is.mouse) {
     message("estimating cell cycle (using Seurat)...")

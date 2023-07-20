@@ -474,7 +474,7 @@ pgx.updateInfoPGX <- function(pgxinfo, pgx, remove.old = TRUE) {
   )
   cond
 
-  is.mouse <- (mean(grepl("[a-z]", pgx$genes$gene_name)) > 0.8)
+  is.mouse <- pgx.getGenetype(pgx$genes)
   organism <- c("human", "mouse")[1 + is.mouse]
   if ("organism" %in% names(pgx)) organism <- pgx$organism
 

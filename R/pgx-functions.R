@@ -862,6 +862,15 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
   return(colnames(df1))
 }
 
+## Determine if the gene type is mouse 
+#' @export
+pgx.getGenetype <- function(pgx.counts) {
+    rownames.counts <- grep("^rik|^loc|^orf",rownames(pgx.counts),value=TRUE,ignore.case=TRUE,invert=TRUE)
+    cap.fraction <- mean(grepl("^[A-Z][a-z]+", rownames.counts), na.rm = TRUE)
+    is.mouse <- (cap.fraction > 0.8)
+    
+    return(list(is.mouse, cap.fraction, rownames.counts))
+}
 
 
 #' @export
