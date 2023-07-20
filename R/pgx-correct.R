@@ -294,7 +294,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     dbg("[pgx.superBatchCorrect] NNM :: model.par = ", model.par)
     y1 <- pheno[, model.par, drop = FALSE]
     y1 <- apply(y1, 1, paste, collapse = ":")
-    cX <- gx.nnmcorrect(cX, y1, center.x = TRUE, center.m = TRUE)$X
+    cX <- playbase::gx.nnmcorrect(cX, y1, center.x = TRUE, center.m = TRUE)$X
   }
 
   ## --------------------------------------------------------------------
@@ -509,7 +509,7 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
     tt0 <- c("PC correlation", "PC variation")[1 + 1 * (stat == "F")]
     if (is.null(main)) main <- tt0
 
-    plt <- plot_ggbarplot(t(R), ylab = stat0, srt = 45, group.name = "") +
+    plt <- playbase::plot_ggbarplot(t(R), ylab = stat0, srt = 45, group.name = "") +
       ggplot2::theme(
         plot.margin = ggplot2::margin(2, 2, 0, 2, "mm"),
         plot.title = ggplot2::element_text(size = 12)
@@ -717,13 +717,13 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
     check.names = FALSE
   )
 
-  cc.score <- try(pgx.scoreCellCycle(cx))
+  cc.score <- try(playbase::pgx.scoreCellCycle(cx))
   if (!any(class(cc.score) == "try-error")) {
     cc.score <- cc.score[, c("s_score", "g2m_score")]
     colnames(cc.score) <- paste0("cc.", colnames(cc.score))
     pheno <- cbind(pheno, cc.score)
   }
-  pheno$gender <- pgx.inferGender(cx)
+  pheno$gender <- playbase::pgx.inferGender(cx)
 
   return(pheno)
 }
@@ -939,7 +939,7 @@ pgx._computeNumSig <- function(ngs, X, contrast = NULL, fc = 0, qv = 0.05) {
   contr.matrix <- ngs$model.parameters$contr.matrix
   if (is.null(contrast)) contrast <- colnames(contr.matrix)
   contr.matrix <- contr.matrix[, contrast, drop = FALSE]
-  res <- ngs.fitContrastsWithLIMMA(
+  res <- playbase::ngs.fitContrastsWithLIMMA(
     X, contr.matrix, design,
     method = "limma", trend = TRUE,
     conform.output = FALSE, plot = FALSE
@@ -949,7 +949,6 @@ pgx._computeNumSig <- function(ngs, X, contrast = NULL, fc = 0, qv = 0.05) {
   qv0 <- sapply(res$tables, function(x) x$adj.P.Val)
   numsig <- mean(Matrix::colSums(abs(fc0) >= fc & qv0 <= qv, na.rm = TRUE))
 
-  numsig
   return(numsig)
 }
 

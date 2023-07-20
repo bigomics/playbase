@@ -36,7 +36,7 @@ pgx.getGEOseries <- function(id, archs.h5 = "human_matrix.h5", convert.hugo = TR
 
   ## convert to latest official HUGO???
   if (convert.hugo) {
-    symbol <- alias2hugo(rownames(counts)) ## auto-detect mouse/human
+    symbol <- playbase::alias2hugo(rownames(counts)) ## auto-detect mouse/human
     rownames(counts) <- symbol
   }
 
@@ -49,12 +49,12 @@ pgx.getGEOseries <- function(id, archs.h5 = "human_matrix.h5", convert.hugo = TR
   }
 
   ## get annotation
-  genes <- ngs.getGeneAnnotation(rownames(counts))
+  genes <- playbase::ngs.getGeneAnnotation(rownames(counts))
 
   ## get categorical phenotypes
   meta1 <- apply(meta, 2, trimsame)
   rownames(meta1) <- rownames(meta)
-  sampleinfo <- pgx.discretizePhenotypeMatrix(
+  sampleinfo <- playbase::pgx.discretizePhenotypeMatrix(
     meta1,
     min.ncat = 2, max.ncat = 20, remove.dup = TRUE
   )
@@ -66,10 +66,10 @@ pgx.getGEOseries <- function(id, archs.h5 = "human_matrix.h5", convert.hugo = TR
     mingrp <- 3
     slen <- 15
     ref <- NA
-    ct <- pgx.makeAutoContrasts(sampleinfo, mingrp = 3, slen = 20, ref = NA)
+    ct <- playbase::pgx.makeAutoContrasts(sampleinfo, mingrp = 3, slen = 20, ref = NA)
     is.null(ct)
     if (is.null(ct)) {
-      ct <- pgx.makeAutoContrasts(sampleinfo, mingrp = 2, slen = 20, ref = NA)
+      ct <- playbase::pgx.makeAutoContrasts(sampleinfo, mingrp = 2, slen = 20, ref = NA)
     }
     if (!is.null(ct$exp.matrix)) {
       contrasts <- ct$exp.matrix
@@ -245,7 +245,7 @@ pgx.getGEOcounts.GEOquery <- function(id) {
     return(NULL)
   }
 
-
+  # The f exprs comes from unknown source, but it is used
   has.expr <- sapply(gse, function(x) nrow(exprs(x)) > 0)
   has.expr
 
@@ -436,7 +436,7 @@ pgx.getSymbolFromFeatureData <- function(fdata) {
     ens.probes <- sapply(ens.ann, function(s) Matrix::head(grep("^ENS", s, value = TRUE), 1))
     ens.probes[sapply(ens.probes, length) == 0] <- NA
     ens.probes <- unlist(ens.probes)
-    symbol <- probe2symbol(ens.probes)
+    symbol <- playbase::probe2symbol(ens.probes)
     return(symbol)
   }
 

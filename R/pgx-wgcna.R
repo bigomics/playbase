@@ -82,7 +82,7 @@ pgx.wgcna <- function(
     clust[["umap2d"]] <- pgx$cluster.genes$pos[["umap2d"]][colnames(datExpr), ]
   }
 
-  gmt <- getGSETS_playbase(pattern = "HALLMARK|GOBP|^C[1-9]")
+  gmt <- playbase::getGSETS_playbase(pattern = "HALLMARK|GOBP|^C[1-9]")
   gse <- NULL
   bg <- toupper(rownames(pgx$X))
   i <- 1

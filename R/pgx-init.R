@@ -52,7 +52,7 @@ pgx.initialize <- function(pgx) {
     pgx$model.parameters$group <- group
   }
   if (!"group" %in% names(pgx$model.parameters) && has.expmatrix) {
-    group <- pgx.getConditions(pgx$model.parameters$exp.matrix, nmax = 0)
+    group <- playbase::pgx.getConditions(pgx$model.parameters$exp.matrix, nmax = 0)
     names(group) <- rownames(pgx$model.parameters$exp.matrix)
     pgx$model.parameters$group <- group
   }
@@ -73,7 +73,7 @@ pgx.initialize <- function(pgx) {
     if (is.null(expmat)) {
       expmat <- design %*% contr.mat
     }
-    pgx$contrasts <- contrastAsLabels(expmat)
+    pgx$contrasts <- playbase::contrastAsLabels(expmat)
   }
 
   is.numlev <- all(unique(pgx$contrasts) %in% c(NA, "", -1, 0, 1))
@@ -87,7 +87,7 @@ pgx.initialize <- function(pgx) {
     is.numlev <- all(unique(new.contr) %in% c(NA, "", -1, 0, 1))
     is.numlev <- is.numlev && (-1 %in% new.contr) ## must have -1 !!
     if (is.numlev) {
-      new.contr <- contrastAsLabels(new.contr)
+      new.contr <- playbase::contrastAsLabels(new.contr)
     }
     is.groupwise <- all(rownames(new.contr) %in% pgx$samples$group)
     is.groupwise
@@ -132,7 +132,7 @@ pgx.initialize <- function(pgx) {
   ## *****************************************************************
   ## ONLY categorical variables for the moment!!!
   ny1 <- nrow(pgx$Y) - 1
-  k1 <- pgx.getCategoricalPhenotypes(pgx$Y, min.ncat = 2, max.ncat = ny1) ## exclude
+  k1 <- playbase::pgx.getCategoricalPhenotypes(pgx$Y, min.ncat = 2, max.ncat = ny1) ## exclude
   k2 <- grep("OS.survival|cluster|condition|group", colnames(pgx$Y), value = TRUE) ## must include
   kk <- sort(unique(c(k1, k2)))
   pgx$Y <- pgx$Y[, kk, drop = FALSE]
@@ -211,12 +211,12 @@ pgx.initialize <- function(pgx) {
   message("[pgx.initialize] Check if clustering is done...")
   if (!"cluster.genes" %in% names(pgx)) {
     message("[pgx.initialize] clustering genes...")
-    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2), level = "gene")
+    pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2), level = "gene")
     pgx$cluster.genes$pos <- lapply(pgx$cluster.genes$pos, pos.compact)
   }
   if (!"cluster.gsets" %in% names(pgx)) {
     message("[pgx.initialize] clustering genesets...")
-    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2), level = "geneset")
+    pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2), level = "geneset")
     pgx$cluster.gsets$pos <- lapply(pgx$cluster.gsets$pos, pos.compact)
   }
 
@@ -246,7 +246,7 @@ pgx.initialize <- function(pgx) {
     if ("combo" %in% names(pgx$drugs)) {
       dd2 <- pgx$drugs[["combo"]]
       combo <- rownames(dd2$X)
-      aa2 <- pgx.createComboDrugAnnot(combo, aa1)
+      aa2 <- playbase::pgx.createComboDrugAnnot(combo, aa1)
       dd2[["annot"]] <- aa2
       pgx$drugs[["activity-combo/L1000"]] <- dd2
     }

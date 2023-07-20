@@ -118,7 +118,7 @@ pgx.fastq2counts <- function(fastq_dir, destdir, indexdir, nthread = 4, do.qc = 
     if (!dir.exists(index2)) {
       cat(">>> Building index for species", species, "... \n")
       system(paste("mkdir -p", indexdir))
-
+      # The f build_index likely comes from package GREP2, but better confirm
       build_index(species = species, kmer = 31, ens_release = 99, destdir = indexdir)
     } else {
       cat(">>> Found index folder at ", index2, "\n")
@@ -182,7 +182,7 @@ pgx.fastq2counts <- function(fastq_dir, destdir, indexdir, nthread = 4, do.qc = 
   ## ----------- Run MultiQC
   if (do.qc) {
     cat(">>> Running MultiQC... \n")
-
+    # The f run_multiqc likely comes from package GREP2, but better confrim
     run_multiqc(
       fastqc_dir = file.path(destdir, "fastqc"),
       salmon_dir = file.path(destdir, quant.method),
@@ -193,6 +193,7 @@ pgx.fastq2counts <- function(fastq_dir, destdir, indexdir, nthread = 4, do.qc = 
   ## ----------- Run tximport
   if (quant.method == "salmon") {
     cat(">>> Running TxImport on Salmon files... \n")
+    # The f run_tximport likely comes from package GREP2, but better confrim
     txi <- run_tximport(
       srr_id = file_id,
       species = species,
@@ -550,7 +551,7 @@ trimgalore_fastq <- function(fastq1, fastq2 = NULL, adapter1 = NULL, adapter2 = 
     doParallel::registerDoParallel(cl)
 
     if (paired) {
-      foreach(i = seq_along(fastq1)) %dopar% {
+      foreach::foreach(i = seq_along(fastq1)) %dopar% {
         tgcmd <- sprintf("%s %s %s", cmd, fastq1[[i]], fastq2[[i]])
         run_cmd <- function(cmd, intern = FALSE) {
           if (.Platform$OS.type != "windows") {
@@ -562,7 +563,7 @@ trimgalore_fastq <- function(fastq1, fastq2 = NULL, adapter1 = NULL, adapter2 = 
         run_cmd(tgcmd)
       }
     } else {
-      foreach(i = seq_along(fastq1)) %dopar% {
+      foreach::foreach(i = seq_along(fastq1)) %dopar% {
         tgcmd <- sprintf("%s %s", cmd, fastq1[[i]])
         run_cmd <- function(cmd, intern = FALSE) {
           if (.Platform$OS.type != "windows") {

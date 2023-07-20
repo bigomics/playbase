@@ -367,7 +367,7 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
 
     if ("gsea.permGS" %in% method) {
       tt <- system.time(
-        output <- run.GSEA(xx, yy, gmt,
+        output <- playbase::run.GSEA(xx, yy, gmt,
           fdr = 1.0, do.leading.edge = FALSE,
           set.min = 0, set.max = 99999, ref.type = ref, permute = "gene_set"
         )

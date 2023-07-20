@@ -164,7 +164,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ct.type <- c("labeled (new style)", "numbered (old style)")[1 + 1 * is.numbered]
   is.numbered
   if (is.numbered) {
-    contrasts <- contrastAsLabels(contrasts)
+    contrasts <- playbase::contrastAsLabels(contrasts)
   }
 
   ## convert group-wise contrast to sample-wise
@@ -602,7 +602,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
   message("[pgx.computePGX] testing genesets...")
-  pgx <- compute_testGenesets(
+  pgx <- playbase::compute_testGenesets(
     pgx,
     custom.geneset = custom.geneset,
     max.features = max.genesets,
@@ -612,7 +612,7 @@ pgx.computePGX <- function(pgx,
 
   if (do.cluster) {
     message("[pgx.computePGX] clustering genes...")
-    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset") ## gsetX not ready!!
+    pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset") ## gsetX not ready!!
   }
 
 
@@ -620,9 +620,9 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
   message("[pgx.computePGX] computing extra modules...")
 
-  pgx <- compute_extra(pgx, extra = extra.methods, libx.dir = libx.dir)
+  pgx <- playbase::compute_extra(pgx, extra = extra.methods, libx.dir = libx.dir)
 
   message("[pgx.computePGX] done!")
-  pgx$timings
+
   return(pgx)
 }

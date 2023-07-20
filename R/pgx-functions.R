@@ -1605,7 +1605,7 @@ getGSETS_playbase.SAVE <- function(pattern, lib.dir, custom_families_file = "cus
   FAMILIES <- pgx.getGeneFamilies(GENE.SYMBOL, min.size = 10, max.size = 9999)
   fam.file <- file.path(lib.dir, custom_families_file)
   if (file.exists(fam.file)) {
-    custom.gmt <- read.gmt(file.path(lib.dir, custom_families_file), add.source = TRUE)
+    custom.gmt <- playbase::read.gmt(file.path(lib.dir, custom_families_file), add.source = TRUE)
     names(custom.gmt)
     FAMILIES <- c(FAMILIES, custom.gmt)
   }

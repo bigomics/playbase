@@ -22,12 +22,12 @@ seurat2pgx <- function(obj, do.cluster = FALSE) {
   pgx$X <- obj[["RNA"]]@data
   pgx$samples <- obj@meta.data
 
-  pgx$genes <- ngs.getGeneAnnotation(genes = rownames(pgx$counts))
+  pgx$genes <- playbase::ngs.getGeneAnnotation(genes = rownames(pgx$counts))
   rownames(pgx$genes) <- rownames(pgx$counts)
 
   if (do.cluster) {
     message("[seurat2pgx] clustering samples")
-    pgx <- pgx.clusterSamples2(
+    pgx <- playbase::pgx.clusterSamples2(
       pgx,
       dims = c(2, 3), methods = c("pca", "tsne", "umap")
     )
@@ -413,7 +413,7 @@ pgx.scBatchIntegrate <- function(X, batch,
   if ("MNN" %in% method) {
     message("[pgx.scBatchIntegrate] single-cell batch correction using MNN...")
     ## MNN correction
-    try(mnn <- mnnCorrect(X, batch = batch, cos.norm.in = TRUE, cos.norm.out = FALSE))
+    try(mnn <- batchelor::mnnCorrect(X, batch = batch, cos.norm.in = TRUE, cos.norm.out = FALSE))
     res[["MNN"]] <- MultiAssayExperiment::assays(mnn)[["corrected"]]
   }
   if ("Harmony" %in% method) {
@@ -867,7 +867,7 @@ pgx.createSeurateFigures <- function(obj) {
   vplot2 <- vplot2 & ggplot2::xlab(NULL)
   vplot2 <- vplot2 & ggplot2::ylab("expression")
   vplot2 <- vplot2 & ggplot2::theme(plot.margin = ggplot2::margin(1, 3, 1, 3, "mm"))
-  vplot2 <- vplot2 & ggplot2::theme(axis.text.x = element_text(angle = 0))
+  vplot2 <- vplot2 & ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 0))
 
   ntop <- floor(65 / length(unique(obj$seurat_clusters)))
 
@@ -907,7 +907,7 @@ pgx.createSeurateFigures <- function(obj) {
     "Platelet" = "Ppbp"
   )
 
-  ct1 <- pgx.inferCellType(obj[["RNA"]]@counts, add.unknown = FALSE, low.th = 0.01)
+  ct1 <- playbase::pgx.inferCellType(obj[["RNA"]]@counts, add.unknown = FALSE, low.th = 0.01)
 
   tapply(ct1, obj$seurat_clusters, function(x) table(x))
   ct1x <- tapply(ct1, obj$seurat_clusters, function(x) names(which.max(table(x))))
