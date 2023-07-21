@@ -4,17 +4,33 @@
 ##
 
 
-#' Title
+#' Create heatmap of top marker genes
 #'
-#' @param X value
-#' @param splitx value
-#' @param n value
-#' @param ... value
+#' Identify top marker genes for groups and visualize in a heatmap.
 #'
-#' @return
-#' @export
+#' @param X Numeric matrix of gene expression values (genes in rows, samples in columns).
+#' @param splitx Factor indicating groups for each sample.  
+#' @param n Number of top markers to identify per group.
+#' @param ... Additional arguments passed to gx.splitmap().
+#'
+#' @return Heatmap created by gx.splitmap() using top markers.
+#' 
+#' @details This function identifies the top differentially expressed genes (markers) 
+#' between groups defined by splitx. It calculates the mean expression of each gene in 
+#' each group, subtracts the overall mean, and finds the n genes with highest/lowest 
+#' mean expression per group. These top marker genes are extracted from X and visualized 
+#' in a heatmap using gx.splitmap().
+#'
+#' @seealso
+#' \code{\link{gx.splitmap}} to see the heatmap creation function.
 #'
 #' @examples
+#' \code{
+#' x <- matrix(rnorm(500*50), 500, 50) 
+#' groups <- rep(letters[1:5], each=10)
+#' gx.markermap(x, groups, n=10)
+#' }
+#' @export
 gx.markermap <- function(X, splitx, n = 5, ...) {
   F <- tapply(1:ncol(X), splitx, function(i) rowMeans(X[, i, drop = FALSE]))
   F <- do.call(cbind, F)
@@ -27,17 +43,27 @@ gx.markermap <- function(X, splitx, n = 5, ...) {
 }
 
 
-#' Title
+#' Create a heatmap of top genes for PCA components
 #'
-#' @param X value
-#' @param nv value
-#' @param ngenes value
-#' @param ... value
+#' @param X Numeric matrix of gene expression values (genes in rows, samples in columns)
+#' @param nv Number of principal components to use
+#' @param ngenes Number of top genes to show for each component  
+#' @param ... Additional arguments passed to gx.splitmap()
 #'
-#' @return
-#' @export
+#' @return Heatmap created by gx.splitmap()
+#'
+#' @details This function calculates the top \code{ngenes} genes (by loading) for the first 
+#' \code{nv} principal components of \code{X}. It creates sample labels denoting the 
+#' component membership. The top genes are extracted and shown in a heatmap using 
+#' \code{gx.splitmap()}.
 #'
 #' @examples
+#' \dontrun{  
+#' x <- matrix(rnorm(500*50), 500, 50)
+#' gx.PCAheatmap(x, nv = 3, ngenes = 5)
+#' }
+#'
+#' @export
 gx.PCAheatmap <- function(X, nv = 5, ngenes = 10, ...) {
   if (class(X) == "list" && "X" %in% names(X)) {
     X <- X$X - rowMeans(X$X)
@@ -50,16 +76,24 @@ gx.PCAheatmap <- function(X, nv = 5, ngenes = 10, ...) {
 }
 
 
-#' Title
+#' Visualize top genes for PCA components
 #'
-#' @param X value
-#' @param nv value
-#' @param ngenes value
+#' @param X Numeric matrix of gene expression data (genes in rows, samples in columns)
+#' @param nv Number of principal components to extract 
+#' @param ngenes Number of top genes to visualize per component
 #'
-#' @return
-#' @export
+#' @details This function calculates the top \code{ngenes} genes (by loading) for the first
+#' \code{nv} principal components of \code{X}. For each component, it extracts the top genes, 
+#' centers and scales their expression profiles, and visualizes them as a heatmap using 
+#' \code{gx.imagemap()}.
 #'
 #' @examples
+#' \dontrun{
+#' x <- matrix(rnorm(500*50), 500, 50) 
+#' gx.PCAcomponents(x, nv = 5, ngenes = 10)
+#' }
+#'
+#' @export
 gx.PCAcomponents <- function(X, nv = 20, ngenes) {
   if (class(X) == "list" && "X" %in% names(X)) X <- X$X
   res <- irlba::irlba(X - rowMeans(X), nv = nv)
@@ -72,18 +106,26 @@ gx.PCAcomponents <- function(X, nv = 20, ngenes) {
   }
 }
 
-
-#' Title
+#' Create an image heatmap of a data matrix
 #'
-#' @param X value
-#' @param main value
-#' @param cex value
-#' @param clust value
+#' @param X Numeric data matrix with genes/features as rows and samples/conditions as columns.
+#' @param main Title for the heatmap. 
+#' @param cex Scaling factor for text size.
+#' @param clust Logical for whether to cluster rows and columns. 
 #'
-#' @return
-#' @export
+#' @details This function creates an image heatmap visualization of the input data matrix \code{X}.
+#' If \code{clust=TRUE}, it will cluster rows and columns independently using hierarchical 
+#' clustering before plotting.
+#'
+#' It uses \code{\link[Matrix]{image}} to generate the heatmap, and adds axis labels, titles, etc.
 #'
 #' @examples
+#' \dontrun{
+#' data <- matrix(rnorm(200), 20, 10) 
+#' gx.imagemap(data, main="My Heatmap")
+#' }
+#'
+#' @export
 gx.imagemap <- function(X, main = "", cex = 1, clust = TRUE) {
   if (clust) {
     ii <- fastcluster::hclust(dist(X))$order
@@ -106,28 +148,30 @@ gx.imagemap <- function(X, main = "", cex = 1, clust = TRUE) {
 }
 
 
-#' Title
+#' Create a split heatmap of gene expression data
 #'
-#' @param gx value
-#' @param split value
-#' @param splitx value
-#' @param clust.method value
-#' @param dist.method value
-#' @param col.dist.method value
-#' @param plot.method value
-#' @param scale value
+#' Visualize a gene expression matrix as a heatmap, with samples split into groups.
+#'
+#' @param gx Gene expression matrix with genes in rows and samples in columns.
+#' @param split Vector defining sample groups, or number of groups for clustering.
+#' @param splitx External group assignments for samples. 
+#' @param clust.method Hierarchical clustering method for genes. 
+#' @param dist.method Distance metric for gene clustering.
+#' @param col.dist.method Distance for sample clustering.
+#' @param plot.method Heatmap plotting method (heatmap.2 or ComplexHeatmap).  
+#' @param scale Scaling method for the data matrix.
 #' @param softmax value
 #' @param order.groups value
 #' @param symm.scale value
 #' @param cluster_rows value
 #' @param cluster_columns value
 #' @param sort_columns value
-#' @param col.annot value
-#' @param row.annot value
+#' @param row.annot Annotations for genes. 
+#' @param col.annot Annotations for samples.
 #' @param annot.ht value
-#' @param nmax value
+#' @param nmax Maximum number of genes to include.
 #' @param cmax value
-#' @param main value
+#' @param main Title for the heatmap.
 #' @param verbose value
 #' @param denoise value
 #' @param cexRow value
@@ -147,10 +191,17 @@ gx.imagemap <- function(X, main = "", cex = 1, clust = TRUE) {
 #' @param show_colnames value
 #' @param use.nclust value
 #'
-#' @return
-#' @export
+#' @return A heatmap grob object
+#' 
+#' @details This function subsets the input gene expression matrix to the top variable
+#'  genes, clusters genes and samples, and visualizes the result as a heatmap with 
+#' samples split into groups defined by \code{split} or \code{splitx}.
+#'
+#' Many options are provided for clustering, scaling, annotations, and heatmap display
+#'  parameters. By default it uses Euclidean distance and Ward clustering.
 #'
 #' @examples
+#' @export
 gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         clust.method = "ward.D2",
                         dist.method = "euclidean",
@@ -593,29 +644,36 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
 
 #
 
-#' Title
+#' Create a heatmap of a gene expression matrix
 #'
-#' @param gx value
+#' @param gx Gene expression matrix with genes in rows and samples in columns
 #' @param values value
-#' @param clust.method value
-#' @param dist.method value
-#' @param col.dist.method value
-#' @param plot.method value
-#' @param col value
+#' @param clust.method Hierarchical clustering method for rows and columns
+#' @param dist.method Distance metric for clustering genes 
+#' @param col.dist.method Distance metric for clustering samples
+#' @param plot.method Heatmap plotting method (heatmap.2 or ComplexHeatmap)
+#' @param col Colors to use for heatmap
 #' @param softmax value
-#' @param scale value
+#' @param scale Scaling method for the data matrix
 #' @param verbose value
 #' @param symm value
-#' @param col.annot value
-#' @param row.annot value
+#' @param col.annot Annotations for samples
+#' @param row.annot Annotations for genes
 #' @param annot.ht value
-#' @param nmax value
+#' @param nmax Maximum number of genes to include
 #' @param cmax value
 #' @param show_colnames value
 #' @param indent.names value
-#' @param ... value
+#' @param ... Additional arguments passed to heatmap plotting function
 #'
-#' @return
+#' @return A heatmap grob object
+#'
+#' @details This function subsets the input matrix to the top variable genes, 
+#' clusters genes and samples using the specified methods, and visualizes the 
+#' result as a heatmap using heatmap.2 or ComplexHeatmap.
+#'
+#' Gene and sample clustering is optional. The data can be scaled by rows or 
+#' columns before clustering. A color palette is used to map values to colors.
 #' @export
 #'
 #' @examples
@@ -911,18 +969,18 @@ gx.heatmap <- function(gx, values = NULL,
 }
 
 
-#' Title
+#' Create an annotated clustered heatmap 
 #'
-#' @param x value
-#' @param nc value
-#' @param nr value
+#' @param x Numeric data matrix to visualize
+#' @param nc Number of sample clusters  
+#' @param nr Number of gene clusters
 #' @param na value
 #' @param q value
 #' @param p value
-#' @param method value
+#' @param method Distance metric for clustering (pearson, euclidean, etc)
 #' @param nca value
-#' @param col.annot value
-#' @param row.annot value
+#' @param col.annot Annotations for samples
+#' @param row.annot Annotations for genes
 #' @param plot value
 #' @param na.fill value
 #' @param nrlab value
@@ -931,10 +989,25 @@ gx.heatmap <- function(gx, values = NULL,
 #' @param labcol value
 #' @param ... value
 #'
-#' @return
-#' @export
+#' @return A heatmap grob object if plot = FALSE; otherwise NULL
+#' 
+#' @details This function clusters the rows and columns of a data matrix, 
+#' calculates cluster means, and visualizes the result as an annotated heatmap.
+#'
+#' It performs soft clustering, where each value is a mixture of the cluster mean 
+#' and original value. Side color bars are added from sample and gene annotations.
+#'
+#' @seealso
+#' \code{\link[gplots]{heatmap.2}} for the underlying heatmap functions used
 #'
 #' @examples
+#' \dontrun{
+#' mat <- matrix(rnorm(200), 20, 10)
+#' amat <- matrix(sample(letters, 200, replace=TRUE), 20, 10) 
+#' clustermap(mat, col.annot = amat)
+#' }
+#'
+#' @export
 clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
                        method = "multidist",
                        nca = 24, col.annot = NULL, row.annot = NULL, plot = TRUE,
@@ -1084,17 +1157,32 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
 }
 
 
-#' Title
+#' Create a heatmap from downsampled data
 #'
-#' @param x value
-#' @param m value
-#' @param n value
-#' @param ... value
+#' @param x Numeric data matrix 
+#' @param m Number of rows to downsample to
+#' @param n Number of columns to downsample to
+#' @param ... Additional arguments passed to gx.heatmap()
 #'
-#' @return
-#' @export
+#' @return A heatmap grob object
+#'
+#' @details This function downsamples the rows and columns of a large data matrix
+#' to reduce its size, then visualizes the downsampled matrix as a heatmap.
+#'
+#' It downsamples by clustering rows and columns hierarchically, taking the 
+#' cluster means, and selecting representative rows/columns. The downsampled
+#' matrix is plotted with gx.heatmap().
+#'
+#' @return 
+#' A heatmap grob object from gx.heatmap()
 #'
 #' @examples
+#' \dontrun{
+#' mat <- matrix(rnorm(10000), 1000, 10)
+#' frozenmap(mat, m=100, n=5)
+#' }
+#'
+#' @export
 frozenmap <- function(x, m = 8, n = 8, ...) {
   x.downsample <- function(x, n = 100, k = 1, dist.method = "pearson") {
     if (n >= nrow(x)) {
@@ -1134,16 +1222,32 @@ frozenmap <- function(x, m = 8, n = 8, ...) {
 }
 
 
-#' Title
+#' Calculate multiple distance metrics between rows
 #'
-#' @param x value
-#' @param p value
-#' @param method value
+#' @param x Numeric matrix with samples in rows
+#' @param p Power parameter for Minkowski distance
+#' @param method Vector of distance metrics to use (pearson, euclidean, manhattan)
+#'
+#' @return Distance matrix
+#'
+#' @description This function calculates multiple distance metrics between the rows of a matrix. 
+#' It returns a combined distance matrix by taking the element-wise minimum of the individual distances.
+#'
+#' @details For each distance metric specified in \code{method}, it calculates the pairwise distance between rows of \code{x}. 
+#' It also calculates distances on a scaled version of \code{x} and on the ranked values. 
+#' The resulting distance matrices are scaled to [0,1] and combined by taking the minimum of each element across matrices.
+#'
 #'
 #' @return
-#' @export
+#' A combined distance matrix
 #'
 #' @examples
+#' \dontrun{
+#' data <- matrix(rnorm(100), 10, 10)
+#' D <- multi.dist(data)
+#' }
+#'
+#' @export
 multi.dist <- function(x, p = 4, method = c("pearson", "euclidean", "manhattan")) {
   mm <- matrix(Inf, nrow(x), nrow(x))
   sx <- t(scale(t(x)))
@@ -1176,20 +1280,20 @@ multi.dist <- function(x, p = 4, method = c("pearson", "euclidean", "manhattan")
 # CODE (see https://gist.github.com/nachocab/3853004)
 
 
-#' Title
+#' Draw a heatmap with dendrograms and annotations
 #'
-#' @param x value
-#' @param Rowv value
-#' @param Colv value
-#' @param distfun value
-#' @param hclustfun value
-#' @param dendrogram value
+#' @param x Numeric matrix of values to visualize
+#' @param Rowv Draw row dendrogram? 
+#' @param Colv Draw column dendrogram?
+#' @param distfun Distance function for dendrogram
+#' @param hclustfun Hierarchical clustering function
+#' @param dendrogram Draw dendrograms on rows, columns, both or neither
 #' @param symm value
-#' @param scale value
+#' @param scale Scale rows, columns or neither before clustering
 #' @param na.rm value
 #' @param revC value
 #' @param add.expr value
-#' @param breaks value
+#' @param breaks Breakpoints for color scale
 #' @param symbreaks value
 #' @param col value
 #' @param colsep value
@@ -1200,7 +1304,7 @@ multi.dist <- function(x, p = 4, method = c("pearson", "euclidean", "manhattan")
 #' @param notecex value
 #' @param notecol value
 #' @param na.color value
-#' @param trace value
+#' @param trace Draw trace lines?
 #' @param tracecol value
 #' @param hline value
 #' @param vline value
@@ -1211,15 +1315,15 @@ multi.dist <- function(x, p = 4, method = c("pearson", "euclidean", "manhattan")
 #' @param side.height.fraction value
 #' @param cexRow value
 #' @param cexCol value
-#' @param labRow value
-#' @param labCol value
+#' @param labRow Labels for rows 
+#' @param labCol Labels for columns
 #' @param key value
 #' @param keysize value
 #' @param density.info value
 #' @param denscol value
 #' @param symkey value
 #' @param densadj value
-#' @param main value
+#' @param main Title for plot 
 #' @param xlab value
 #' @param ylab value
 #' @param lmat value
@@ -1228,12 +1332,24 @@ multi.dist <- function(x, p = 4, method = c("pearson", "euclidean", "manhattan")
 #' @param NumColSideColors value
 #' @param NumRowSideColors value
 #' @param KeyValueName value
-#' @param ... value
+#' @param ... Additional arguments passed to image() and densCols()
 #'
-#' @return
-#' @export
+#' @return None. Produces a heatmap plot.
+#' 
+#' @details This function creates an annotated heatmap with optional
+#' row and column dendrograms. Scaling and clustering can be applied
+#' to rows or columns before plotting. Many options are provided for
+#' customizing the color scale, labels, titles, etc.
 #'
+#' @seealso \code{\link[stats]{hclust}} for clustering methods.
+#' 
 #' @examples
+#' \dontrun{
+#' mat <- matrix(rnorm(200), 20, 10)  
+#' heatmap.3(mat, Colv=FALSE, scale="column", dendrogram="row")
+#' }
+#' 
+#' @export
 heatmap.3 <- function(x,
                       Rowv = TRUE, Colv = if (symm) "Rowv" else TRUE,
                       distfun = dist,
