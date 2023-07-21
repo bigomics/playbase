@@ -39,7 +39,7 @@ gx.markermap <- function(X, splitx, n = 5, ...) {
   topg <- apply(topg, 2, function(i) rownames(F)[i])
   gg <- as.vector(topg)
   gg.idx <- as.vector(sapply(colnames(topg), rep, n))
-  gx.splitmap(X[gg, ], splitx = splitx, split = gg.idx, ...)
+  playbase::gx.splitmap(X[gg, ], splitx = splitx, split = gg.idx, ...)
 }
 
 
@@ -72,7 +72,7 @@ gx.PCAheatmap <- function(X, nv = 5, ngenes = 10, ...) {
   res <- irlba::irlba(X, nv = nv)
   gg <- apply(res$u, 2, function(x) Matrix::head(rownames(X)[order(-abs(x))], ngenes))
   sx <- paste0("PC.", as.vector(sapply(1:nv, rep, 10)))
-  gx.splitmap(X[gg, ], split = sx, ...)
+  playbase::gx.splitmap(X[gg, ], split = sx, ...)
 }
 
 
@@ -102,7 +102,7 @@ gx.PCAcomponents <- function(X, nv = 20, ngenes) {
     X1 <- X[gg, ]
     X1 <- (X1 - rowMeans(X1)) / (1e-4 + apply(X1, 1, sd)) ## scale??
     colnames(X1) <- NULL
-    gx.imagemap(X1, main = paste0("PC", i), cex = 0.8)
+    playbase::gx.imagemap(X1, main = paste0("PC", i), cex = 0.8)
   }
 }
 
@@ -863,7 +863,7 @@ gx.heatmap <- function(gx, values = NULL,
   if (plot.method == "heatmap.3" && !is.na(cc0) && !is.na(cc1)) {
     if (verbose > 1) cat("plotting with heatmap.3 + both ColSideColors\n")
     if (is.null(h1) && is.null(h2)) {
-      heatmap.3(gx,
+      playbase::heatmap.3(gx,
         Colv = NULL, Rowv = NULL,
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none",
@@ -873,7 +873,7 @@ gx.heatmap <- function(gx, values = NULL,
         ...
       )
     } else {
-      heatmap.3(gx,
+      playbase::heatmap.3(gx,
         Colv = as.dendrogram(h1), Rowv = as.dendrogram(h2),
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none",
@@ -887,7 +887,7 @@ gx.heatmap <- function(gx, values = NULL,
   } else if (plot.method == "heatmap.3" && !is.na(cc0) && is.na(cc1)) {
     if (verbose > 1) cat("plotting with heatmap.3 + ColSideColors\n")
     if (is.null(h1) && is.null(h2)) {
-      heatmap.3(gx,
+      playbase::heatmap.3(gx,
         Colv = NULL, Rowv = NULL,
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none",
@@ -896,7 +896,7 @@ gx.heatmap <- function(gx, values = NULL,
         ...
       )
     } else {
-      heatmap.3(gx,
+      playbase::heatmap.3(gx,
         Colv = as.dendrogram(h1), Rowv = as.dendrogram(h2),
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none",
@@ -917,7 +917,7 @@ gx.heatmap <- function(gx, values = NULL,
         ...
       )
     } else {
-      heatmap.3(gx,
+      playbase::heatmap.3(gx,
         Colv = as.dendrogram(h1), Rowv = as.dendrogram(h2),
         dendrogram = dd, col = col, scale = scale,
         symkey = sym0, symbreaks = sym0, trace = "none",
@@ -929,7 +929,7 @@ gx.heatmap <- function(gx, values = NULL,
   } else if (plot.method == "heatmap.3" && is.na(cc0) && is.na(cc1)) {
     if (verbose > 1) cat("plotting with heatmap.3 no ColSideColors\n")
     if (is.null(h1) && is.null(h2)) {
-      heatmap.3(gx,
+      playbase::heatmap.3(gx,
         Colv = NULL, Rowv = NULL,
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none",
@@ -937,7 +937,7 @@ gx.heatmap <- function(gx, values = NULL,
         ...
       )
     } else {
-      heatmap.3(gx,
+      playbase::heatmap.3(gx,
         Colv = as.dendrogram(h1), Rowv = as.dendrogram(h2),
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none",
@@ -1071,7 +1071,6 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
     return(kx)
   }
   kx <- kxmap(x, c1, c2, q = q)
-  dim(kx)
 
   ## order annotation
   order.annot <- function(A, kx, c1, n) {
@@ -1119,7 +1118,6 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
     ry <- t(t(ry) - apply(ry, 2, min, na.rm = TRUE))
     ry <- t(t(ry) / (apply(ry, 2, max, na.rm = TRUE) + 1e-8)) * 15
     cc1 <- matrix(rev(grey.colors(16))[ry + 1], nrow = nrow(ry), ncol = ncol(ry))
-    dim(cc1)
     colnames(cc1) <- NULL
     rownames(cc1) <- NULL
     colnames(cc1) <- colnames(row.annot)
@@ -1130,10 +1128,6 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
     j1 <- nrow(x) - which(diff(c1[h1$order]) != 0)
     j2 <- which(diff(c2[h2$order]) != 0)
     nh <- max(ncol(cc0), nrow(cc1))**0.5
-    nh
-    dim(kx)
-    dim(cc0)
-    dim(cc1)
     k1 <- ((1:nrow(x) %% max(1, floor(nrow(x) / nrlab))) == 0)
     k2 <- ((1:ncol(x) %% max(1, floor(ncol(x) / nclab))) == 0)
     if (sum(!k1) > 0) {
@@ -1144,7 +1138,7 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
       labcol[h2$order[!k2]] <- ""
       labcol[h2$order[k2]] <- paste(". . . +", labcol[h2$order[k2]])
     }
-    heatmap.3(kx,
+    playbase::heatmap.3(kx,
       Colv = as.dendrogram(h2), Rowv = as.dendrogram(h1),
       col = my.col, labRow = labrow, labCol = labcol,
       ColSideColors = cc0, ...
@@ -1216,7 +1210,7 @@ frozenmap <- function(x, m = 8, n = 8, ...) {
 
   cx <- x.downsample(x, n = m)
   cx <- t(x.downsample(t(cx), n = n))
-  res <- gx.heatmap(cx, ...)
+  res <- playbase::gx.heatmap(cx, ...)
   cx <- cx[res$row.clust$order, res$col.clust$order]
   invisible(cx)
 }
@@ -1243,7 +1237,9 @@ frozenmap <- function(x, m = 8, n = 8, ...) {
 #'
 #' @examples
 #' \dontrun{
+#' 
 #' data <- matrix(rnorm(100), 10, 10)
+#' rownames(mat) <- replicate(10, paste(sample(LETTERS, 4, replace = TRUE), collapse = ""))
 #' D <- multi.dist(data)
 #' }
 #'
