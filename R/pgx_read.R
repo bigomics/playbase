@@ -2,8 +2,12 @@
 #'
 #' @param file string. path to file
 #' @param convert_names boolean.
+#' @details This function reads a count matrix using \code{playbase::read.as_matrix()}, 
+#' validates it with \code{validate_counts()}, and optionally converts row names from IDs to
+#' gene symbols using \code{playbase::probe2symbol()}. 
 #'
-#' @return matrix. the file with the data
+#' It removes rows with NA, blank or invalid symbols, and collapses any duplicate symbols by 
+#' summing counts across rows.
 #'
 #' @examples
 #' counts <- read_counts(playbase::example_file("counts.csv"))
@@ -27,16 +31,23 @@ read_counts <- function(file, convert_names = FALSE) {
     df <- do.call(rbind, xx)
   }
 
-  df
+  return(df)
 }
 
 #' Read expression data from file
 #'
-#' @param file string. path to file
-#' @param convert_names boolean.
+#' Reads an expression data matrix from file and performs validation and preprocessing.
+#' 
+#' @param file Path to input expression data file. Should be matrix with genes as rows and samples as columns.
+#' @param convert_names Logical indicating whether to convert row names from IDs to gene symbols. Default is TRUE.  
+##' 
+#' @details This function reads an expression matrix using playbase::read.as_matrix(),  
+#' squares the values, validates with validate_counts(), and optionally converts row names 
+#' from IDs to gene symbols using playbase::probe2symbol().
 #'
+#' It removes rows with NA, blank or invalid symbols, and collapses duplicate symbols by  
+#' summing expression across rows.
 #' @return matrix. the file with the data
-
 #'
 #' @examples
 #' counts <- read_expression(playbase::example_file("counts.csv"))
@@ -61,15 +72,16 @@ read_expression <- function(file, convert_names = TRUE) {
     df <- do.call(rbind, xx)
   }
 
-  df
+  return(df)
 }
 
 #' Read samples data from file
 #'
-#' @param file string. path to file
+#' @param file Path to input sample data file. Should be a matrix with samples as rows and metadata as columns.
 #'
 #' @return dataframe the file with the data
-
+#' @details This function reads the sample matrix with the meta-data information
+#' of the counts and converts it to a dataframe.
 #'
 #' @examples
 #' samples <- read_samples(playbase::example_file("samples.csv"))
@@ -80,7 +92,8 @@ read_samples <- function(file) {
   is_valid <- playbase::validate_samples(df)
   if (!is_valid) stop("Samples file is not valid.")
 
-  as.data.frame(df)
+  df <- as.data.frame(df)
+  return(df)
 }
 
 #' Read contrasts data from file
@@ -88,7 +101,6 @@ read_samples <- function(file) {
 #' @param file string. path to file
 #'
 #' @return matrix. the file with the data
-
 #'
 #' @examples
 #' contrasts <- read_contrasts(playbase::example_file("contrasts.csv"))
