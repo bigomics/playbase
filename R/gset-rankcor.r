@@ -8,32 +8,71 @@
 ## ========================================================================
 
 
-#' Title
+#' Calculate gene set correlation
 #'
-#' @param rnk value
-#' @param gset value
-#' @param compute.p value
+#' Computes correlation between a gene rank vector and gene sets.
 #'
-#' @return
-#' @export
+#' @param rnk Numeric vector of gene ranks.
+#' @param gset List of gene sets. Each element is a character vector of gene names.
+#' @param compute.p Logical indicating whether to compute p-values.
+#' 
+#' @return Matrix of correlation values between rnk and each gene set.
+#' 
+#' @details This function calls gset.rankcor() with use.rank=FALSE to calculate 
+#' Pearson correlation between the gene rank vector and membership in each gene set.
+#'
+#' P-values can be optionally computed to assess correlation significance.
 #'
 #' @examples
+#' \dontrun{
+#' librart(playbase)
+#' ranks <- sample(1:10000, 1000, replace = TRUE) 
+#' names(ranks) <- replicate(1000, paste(sample(LETTERS, 4, replace = TRUE), collapse = ""))
+#' genesets <- list(GS1=sample(names(ranks), 100),
+#'                  GS2=sample(names(ranks), 50))
+#' 
+#' gset.cor(ranks, genesets)
+#'}
+#' @export
+# Write a sample function call to simulate 1000 gene names
+
 gset.cor <- function(rnk, gset, compute.p = FALSE) {
   gset.rankcor(rnk = rnk, gset = gset, compute.p = compute.p, use.rank = FALSE)
 }
 
-
-#' Title
+#' Calculate gene set rank correlation
 #'
-#' @param rnk value
-#' @param gset value
-#' @param compute.p value
-#' @param use.rank value
+#' Compute rank correlation between a gene rank vector/matrix and gene sets
+#' 
+#' @param rnk Numeric vector or matrix of gene ranks, with genes as row names
+#' @param gset Numeric matrix of gene sets, with genes as row/column names
+#' @param compute.p Logical indicating whether to compute p-values 
+#' @param use.rank Logical indicating whether to rank transform rnk before correlation
 #'
-#' @return
-#' @export
+#' @return Named list with components:
+#' \itemize{
+#'  \item rho - Matrix of correlation coefficients between rnk and gset 
+#'  \item p.value - Matrix of p-values for correlation (if compute.p = TRUE)
+#'  \item q.value - Matrix of FDR adjusted p-values (if compute.p = TRUE)
+#' }
 #'
+#' @details This function calculates sparse rank correlation between rnk and each 
+#' column of gset using \code{qlcMatrix::corSparse()}. It handles missing values in
+#' rnk by computing column-wise correlations.
+#' 
+#' P-values are computed by permuting gset and finding empirical null distribution.
+#' 
 #' @examples
+#' \dontrun{
+#' librart(playbase)
+#' ranks <- sample(1:10000, 1000, replace = TRUE) 
+#' names(ranks) <- replicate(1000, paste(sample(LETTERS, 4, replace = TRUE), collapse = ""))
+#' genesets <- matrix(rnorm(1000*20), ncol=20) 
+#' rownames(genesets) <- names(ranks)
+#' 
+#' gset.rankcor(ranks, genesets, compute.p=TRUE)
+#' }
+#' @export
 gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
   if (!any(class(gset) %in% c("Matrix", "dgCMatrix", "matrix", "array"))) {
     stop("gset must be a matrix")
