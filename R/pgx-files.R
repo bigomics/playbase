@@ -474,9 +474,12 @@ pgx.updateInfoPGX <- function(pgxinfo, pgx, remove.old = TRUE) {
   )
   cond
 
-  is.mouse <- pgx.getGenetype(pgx$genes)
-  organism <- c("human", "mouse")[1 + is.mouse]
-  if ("organism" %in% names(pgx)) organism <- pgx$organism
+  organism <- NULL
+  if ("organism" %in% names(pgx)) {
+    organism <- pgx$organism
+  } else {
+    organism <- pgx.getOrganism(pgx$counts)
+  }
 
   this.date <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
   date <- ifelse(is.null(pgx$date), this.date, as.character(pgx$date))
@@ -814,12 +817,23 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
                                         new.pgx = NULL,
                                         update.sigdb = TRUE,
                                         verbose = TRUE) {
+
+  ## force=FALSE;delete.old=FALSE;new.pgx=NULL;update.sigdb=TRUE;verbose=TRUE
+
   ## only run pgx.initDatasetFolder if pgx are changed
   if (!dir.exists(pgx.dir)) {
     stop(paste("[pgxinfo.updateDatasetFolder] FATAL ERROR : folder", pgx.dir, "does not exist"))
   }
 
+  pgx.dir <- pgx.dir[1] ## only one folder!!!
   pgx.files <- dir(pgx.dir, pattern = "[.]pgx$")
+  pgx.files <- sub("[.]pgx$", "", pgx.files) ## strip pgx
+
+  allfc.file <- file.path(pgx.dir, "datasets-allFC.csv")
+  info.file <- file.path(pgx.dir, "datasets-info.csv")
+  sigdb.file <- file.path(pgx.dir, "datasets-sigdb.h5")
+  tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")
+  
   if (length(pgx.files) == 0) {
     allfc.file1 <- file.path(pgx.dir, allfc.file)
     info.file1 <- file.path(pgx.dir, info.file)
@@ -829,25 +843,13 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     return(NULL)
   }
 
-  ## all public datasets
-  pgx.dir <- pgx.dir[1] ## only one folder!!!
-  pgx.files <- dir(pgx.dir, pattern = "[.]pgx$")
-  pgx.files <- sub("[.]pgx$", "", pgx.files) ## strip pgx
-
   ## ----------------------------------------------------------------------
   ## If an allFC file exists
   ## ----------------------------------------------------------------------
 
-  allfc.file <- file.path(pgx.dir, "datasets-allFC.csv")
   has.fc <- file.exists(allfc.file)
-
-  info.file <- file.path(pgx.dir, "datasets-info.csv")
   has.info <- file.exists(info.file)
-
-  sigdb.file <- file.path(pgx.dir, "datasets-sigdb.h5")
   has.sigdb <- file.exists(sigdb.file)
-
-  tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")
   has.tsne <- file.exists(tsne.file)
 
   if (force) {

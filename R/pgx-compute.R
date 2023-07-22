@@ -379,16 +379,11 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## -------------------------------------------------------------------
   ## Filter genes?
   ## -------------------------------------------------------------------
-  filtergenes <- pgx.getGenetype(ngs$counts)
-  message("[createPGX: filter genes] rownames.ngs.counts = ", head(filtergenes[[2]]))
-  message("[createPGX: filter genes] cap.frac = ", filtergenes[[3]])
-
-  is.mouse <- filtergenes[[1]]
-  org <- ifelse(is.mouse, "mouse", "human")
-  message("[createPGX] detected organism: ", org, "")
+  organism <- pgx.getOrganism(ngs$counts)
+  message("[createPGX] detected organism: ", organism, "")
 
   do.filter <- (only.hugo | only.known | only.proteincoding)
-  if (do.filter && org == "mouse") {
+  if (do.filter && organism %in% c("mouse","rat")) {
     message("[createPGX] filtering genes...")
     SYMBOL <- unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
     is.hugo <- is.known <- is.protcoding <- TRUE
@@ -405,7 +400,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     ngs$genes <- ngs$genes[keep, ]
     if (!is.null(ngs$X)) ngs$X <- ngs$X[keep, ]
   }
-  if (do.filter && org == "human") {
+  if (do.filter && organism == "human") {
     message("[createPGX] filtering genes...")
     SYMBOL <- unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
     is.hugo <- is.protcoding <- is.known <- TRUE
