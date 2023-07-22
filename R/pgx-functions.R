@@ -253,7 +253,7 @@ mouse2human <- function(x) {
 #' counts <- playbase::COUNTS
 #' subset_genes <- round(seq(1, nrow(counts), length.out = 10))
 #' probes <- rownames(playbase::COUNTS)[subset_genes]
-#' symbols <- playbase::probe2symbol(myprobes)
+#' symbols <- playbase::probe2symbol(probes)
 #' }
 #' 
 #' @export
