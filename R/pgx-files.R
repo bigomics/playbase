@@ -817,7 +817,6 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
                                         new.pgx = NULL,
                                         update.sigdb = TRUE,
                                         verbose = TRUE) {
-
   ## force=FALSE;delete.old=FALSE;new.pgx=NULL;update.sigdb=TRUE;verbose=TRUE
 
   ## only run pgx.initDatasetFolder if pgx are changed
@@ -833,7 +832,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   info.file <- file.path(pgx.dir, "datasets-info.csv")
   sigdb.file <- file.path(pgx.dir, "datasets-sigdb.h5")
   tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")
-  
+
   if (length(pgx.files) == 0) {
     allfc.file1 <- file.path(pgx.dir, allfc.file)
     info.file1 <- file.path(pgx.dir, info.file)

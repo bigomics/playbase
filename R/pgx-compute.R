@@ -383,7 +383,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   message("[createPGX] detected organism: ", organism, "")
 
   do.filter <- (only.hugo | only.known | only.proteincoding)
-  if (do.filter && organism %in% c("mouse","rat")) {
+  if (do.filter && organism %in% c("mouse", "rat")) {
     message("[createPGX] filtering genes...")
     SYMBOL <- unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
     is.hugo <- is.known <- is.protcoding <- TRUE

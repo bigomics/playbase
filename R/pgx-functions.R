@@ -866,11 +866,13 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 #' @export
 pgx.getOrganism <- function(pgx.counts) {
   ## NEED RETHINK FOR MULTI-ORGANISM
-  rownames.counts <- grep("^rik|^loc|^orf", rownames(pgx.counts), value = TRUE,
-                          ignore.case = TRUE, invert = TRUE)
+  rownames.counts <- grep("^rik|^loc|^orf", rownames(pgx.counts),
+    value = TRUE,
+    ignore.case = TRUE, invert = TRUE
+  )
   cap.fraction <- mean(grepl("^[A-Z][a-z]+", rownames.counts), na.rm = TRUE)
   is.mouse <- (cap.fraction > 0.8)
-  org <- ifelse(is.mouse,"mouse","human")
+  org <- ifelse(is.mouse, "mouse", "human")
   return(org)
 }
 
