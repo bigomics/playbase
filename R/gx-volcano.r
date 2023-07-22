@@ -234,10 +234,18 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
 #' genes can be labeled. Both raw and FDR corrected p-values can be used.
 #'
 #' @return A volcano plot is generated, no value is returned.
-#'
+#' @examples
+#' \dontrun{
+#' n <- 100
+#' tab <- data.frame(logFC=rnorm(n), 
+#'                  P.Value=runif(n), 
+#'                  adj.P.Val = p.adjust(runif(n)), 
+#'                  AveExpr = runif(n))
+#' z<- gx.volcanoPlot.LIMMA(tab)
+#' z
+#' }
 #' @export
 #'
-#' @examples
 gx.volcanoPlot.LIMMA <- function(tab, render = "scatterD3", n = 1000, highlight = NULL, p.sig = 0.05,
                                  cex = 1, lab.cex = 1, nlab = 15, xlim = NULL, ylim = NULL, use.fdr = FALSE,
                                  use.rpkm = FALSE, ma.plot = FALSE, cex.main = 1.2,
