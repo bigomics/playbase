@@ -3,6 +3,35 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
+#' @title Create a hive plot visualization for an NGS object
+#'
+#' @description 
+#' Creates a hive plot to visualize associations between omics datasets 
+#' in an NGS object.
+#'
+#' @param ngs An NGS object containing multiple omics datasets.
+#' @param pheno The phenotype data column name. 
+#' @param level The omics data level (1, 2, 3). 
+#' @param ntop Number of top features to include.
+#' @param main Plot title.
+#' @param axis.lab Axis labels c("GX", "CN", "ME").
+#' @param bkgnd Background color.
+#' @param rx Hive plot x-radius.  
+#' @param cex Text size factor.
+#' @param slen Feature name substring length.
+#'
+#' @details
+#' This function takes an NGS object containing gene expression (GX), copy number (CN), 
+#' and methylation (ME) data. It calculates correlation statistics between features in 
+#' each dataset vs. the phenotype. It selects the top \code{ntop} features and creates  
+#' a hive plot visualization, with hubs representing GX/CN/ME and edges representing 
+#' correlations between features across datasets related to the phenotype.
+#'
+#' The plot is customizable via parameters like \code{main}, \code{bkgnd}, \code{cex}, etc.
+#' 
+#' @return 
+#' A hive plot grob object is returned, no value.
+#' 
 #' @export
 ngs.hiveplot <- function(ngs, pheno, level = 1, ntop = 400, main = "", axis.lab = c("GX", "CN", "ME"),
                          bkgnd = "white", rx = 2.2, cex = 1, slen = -1) {
@@ -30,6 +59,35 @@ ngs.hiveplot <- function(ngs, pheno, level = 1, ntop = 400, main = "", axis.lab 
   )
 }
 
+#' @title Create data for hive plot visualization
+#'
+#' @description 
+#' Generates data frames required to visualize associations between omics datasets
+#' using a hive plot.
+#'
+#' @param res Data frame of correlation statistics between features and phenotype. 
+#' @param rho.min Minimum correlation threshold.
+#' @param cxi Node circle size parameter.  
+#' @param use.alpha Use transparency based on correlation strength. 
+#' @param ntop Number of top features to include.
+#' @param ew Edge width parameter.
+#' @param nv Number of vertices for node polygons. 
+#' @param dx.dir X axis direction.
+#' @param rx Hive plot x-radius.
+#'
+#' @details
+#' This function takes a data frame of correlation statistics between features in 
+#' gene expression, copy number, methylation datasets vs a phenotype. It filters, 
+#' orders, and processes the data into formats needed for generating a hive plot using the 
+#' \code{\link{hiveplot}} function.
+#'
+#' The main outputs are two nested data frames defining the nodes and edges for the plot. 
+#' Visual parameters like node size, color, transparency, etc. are set based on the input
+#' correlation data.
+#' 
+#' @return 
+#' A list with two data frames 'nodes' and 'edges' containing node and edge properties
+#' for generating a hive plot.
 #' @export
 omx.makeHivePlotData_ <- function(res, rho.min = 0.15, cxi = 0.11, use.alpha = TRUE,
                                   ntop = 1000, ew = 4, nv = 10, dx.dir = c(-1, 1), rx = 2.2) {

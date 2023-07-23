@@ -33,6 +33,7 @@
 #' annotation <- ngs.getGeneAnnotation(genes)
 #' print(annotation)
 #' }
+#' @export
 ngs.getGeneAnnotation <- function(genes) {
   hs.genes <- unique(unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL)))
   mm.genes <- unique(unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL)))
@@ -160,6 +161,7 @@ ngs.getGeneAnnotation <- function(genes) {
 #' \dontrun{  
 #' # TODO
 #' }
+#' @export
 ngs.detectOrganism <- function(ngs) {
   lowcase.ratio <- mean(grepl("[a-z]", substring(rownames(ngs$counts), 2, 100)))
   c("human", "mouse")[1 + 1 * (lowcase.ratio > 0.5)]

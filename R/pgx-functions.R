@@ -249,7 +249,7 @@ mouse2human <- function(x) {
 #' @return Character vector of mapped gene symbols.
 #'
 #' @examples
-#' #' \dontrun{
+#' \dontrun{
 #' counts <- playbase::COUNTS
 #' subset_genes <- round(seq(1, nrow(counts), length.out = 10))
 #' probes <- rownames(playbase::COUNTS)[subset_genes]
@@ -258,7 +258,7 @@ mouse2human <- function(x) {
 #' 
 #' @export
 
-probe2symbol <- function(probes, type = NULLx, keep.na = FALSE) {
+probe2symbol <- function(probes, type = NULL, keep.na = FALSE) {
   ## strip postfix for ensemble codes
   if (mean(grepl("^ENS", probes)) > 0.5) {
     probes <- gsub("[.].*", "", probes)

@@ -43,9 +43,7 @@
 #' \code{\link[limma]{removeBatchEffect}} for the batch correction method used.
 #'
 #' @examples
-#' x <- matrix(rnorm(100*30), 100, 30) # random expression matrix
-#' y <- gl(3, 10) # 3 batches of 10 samples each
-#' gx.nnmcorrect(x, y) 
+#' # TODO
 #'  
 #' @export
 gx.nnmcorrect <- function(X, y, use.design = TRUE, dist.method = "cor",

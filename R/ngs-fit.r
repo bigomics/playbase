@@ -51,9 +51,9 @@
 #'
 #' @examples 
 #' \dontrun{
-#'   TODO
+#'  # TODO
 #' }
-#'
+#' @export
 ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, contr.matrix, genes = NULL,
                                            prior.cpm = 1, prune.samples = FALSE,
                                            conform.output = TRUE, do.filter = TRUE, cpm.scale = 1e6,
