@@ -41,10 +41,10 @@ test_that("frozenmap returns matrix with selected dim", {
     z <- frozenmap(mat, m=2, n=2)
     
     # Test class
-    expect_type(z, c("matrix", "array"))
+    expect_equal(class(z), c("matrix", "array"))
 
     # Test dim
-      expect_equal(dim(z), c(2, 2))
+    expect_equal(dim(z), c(2, 2))
 
 })
 
