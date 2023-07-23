@@ -124,6 +124,7 @@ pgx._addSourceSink <- function(gr) {
   return(gr)
 }
 
+#' @export
 pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   ## ======================================================================
   ## Create a graph object by merging nodes into

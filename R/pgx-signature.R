@@ -896,6 +896,7 @@ sigdb.getSignatureMatrix <- function(sigdb, path = NULL) {
   list(up = up, dn = dn)
 }
 
+#' @export
 sigdb.removeDataset <- function(h5.file, pgxname) {
   ## delete columns from H5 file
   dd <- rhdf5::h5ls(h5.file)

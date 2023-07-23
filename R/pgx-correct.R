@@ -281,7 +281,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
   if (!is.null(mnn.correct)) {
     dbg("[pgx.superBatchCorrect] Mutual Nearest Neighbour (MNN) correction on", mnn.correct, "\n")
     b <- pheno[, mnn.correct]
-    out <- batchelor::mnnCorrect(cX, batch = b, cos.norm.out = FALSE)
+    out <- mnnCorrect(cX, batch = b, cos.norm.out = FALSE)
     cX <- out@assays@data[["corrected"]]
   }
 

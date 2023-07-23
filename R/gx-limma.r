@@ -305,6 +305,7 @@ gx.limma.SAVE <- function(X, pheno, fdr = 0.05, compute.means = TRUE, lfc = 0.20
 #' \dontrun{
 #'  TODO
 #' }
+#' @export 
 gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc = 0.20,
                       max.na = 0.20, ref = c(
                         "ctrl", "ctr", "control", "dmso", "nt", "0", "0h", "0hr",

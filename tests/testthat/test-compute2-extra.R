@@ -13,7 +13,7 @@ test_that("compute_cellcycle_gender adds cell cycle and gender data", {
     counts = as.matrix(playbase::COUNTS),
     contrasts = playbase::CONTRASTS,
     X = NULL,
-    total_counts = Matrix::colSums(d$counts, na.rm = TRUE),
+    total_counts = Matrix::colSums(playbase::COUNTS, na.rm = TRUE),
     counts_multiplier = 1
   )
   ngs$genes <- playbase::ngs.getGeneAnnotation(genes = rownames(ngs$counts))
