@@ -1244,7 +1244,29 @@ is.Date <- function(x) {
   }
 }
 
-
+#' @title Calculate group means
+#'
+#' @description 
+#' Calculates the column means within groups defined by a grouping variable.
+#'
+#' @param mat Numeric matrix with columns as samples.
+#' @param group Grouping vector or factor.
+#' @param FUN Function for aggregation. Default is mean.
+#'
+#' @return Matrix with group means.
+#'
+#' @details This function calculates the column means of \code{X} within groups
+#'  defined by \code{y}. It calculates the mean for each column within each 
+#' group. The output is a matrix with rows corresponding to groups and columns 
+#' corresponding to samples.
+#' 
+#' @examples
+#' \dontrun{
+#' mat <- matrix(rnorm(100), ncol=10)
+#' groups <- gl(2,5)
+#' means <- averageByGroup(mat, groups)
+#' }
+#'
 #' @export
 averageByGroup <- function(mat, group, FUN = mean) {
   out <- do.call(cbind, tapply(
