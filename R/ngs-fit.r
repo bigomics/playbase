@@ -614,12 +614,13 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
   }
   message("[ngs.fitContrastsWithEDGER] fitting EDGER contrasts using design matrix")
 
-  t <- try(dge <- edgeR::estimateDisp(dge, design = design, robust = robust),  silent = TRUE)
+  dge_locfit <- try(dge <- edgeR::estimateDisp(dge, design = design, robust = robust),  silent = TRUE)
 
-  if("try-error" %in% class(t)) {
+  if("try-error" %in% class(dge_locfit)) {
     message("[ngs.fitContrastsWithEDGER] retrying with trend.method 'loess'...")
     dge <- edgeR::estimateDisp(dge, design = design, robust = robust, trend.method = 'loess')
   }
+
   if (is.null(X)) X <- edgeR::cpm(counts, log = TRUE)
 
   if (method == "qlf") {
