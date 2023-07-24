@@ -13,7 +13,7 @@
 #' counts <- read_counts(playbase::example_file("counts.csv"))
 #' @export
 read_counts <- function(file, convert_names = FALSE) {
-  df <- playbase::read.as_matrix(file)
+  df <- read.as_matrix(file)
 
   is_valid <- validate_counts(df)
   if (!is_valid) stop("Counts file is not valid.")
@@ -21,7 +21,7 @@ read_counts <- function(file, convert_names = FALSE) {
   # convert to gene names (needed for biological effects)
   if (convert_names) {
     pp <- rownames(df)
-    rownames(df) <- playbase::probe2symbol(pp)
+    rownames(df) <- probe2symbol(pp)
     sel <- !(rownames(df) %in% c(NA, "", "NA"))
     df <- df[sel, ]
     xx <- tapply(
@@ -53,7 +53,7 @@ read_counts <- function(file, convert_names = FALSE) {
 #' counts <- read_expression(playbase::example_file("counts.csv"))
 #' @export
 read_expression <- function(file, convert_names = TRUE) {
-  df <- playbase::read.as_matrix(file)
+  df <- read.as_matrix(file)
   df <- df**2
 
   is_valid <- validate_counts(df)
@@ -62,7 +62,7 @@ read_expression <- function(file, convert_names = TRUE) {
   # convert to gene names (needed for biological effects)
   if (convert_names) {
     pp <- rownames(df)
-    rownames(df) <- playbase::probe2symbol(pp)
+    rownames(df) <- probe2symbol(pp)
     sel <- !(rownames(df) %in% c(NA, "", "NA"))
     df <- df[sel, ]
     xx <- tapply(
@@ -87,9 +87,9 @@ read_expression <- function(file, convert_names = TRUE) {
 #' samples <- read_samples(playbase::example_file("samples.csv"))
 #' @export
 read_samples <- function(file) {
-  df <- playbase::read.as_matrix(file)
+  df <- read.as_matrix(file)
 
-  is_valid <- playbase::validate_samples(df)
+  is_valid <- validate_samples(df)
   if (!is_valid) stop("Samples file is not valid.")
 
   df <- as.data.frame(df)
@@ -106,7 +106,7 @@ read_samples <- function(file) {
 #' contrasts <- read_contrasts(playbase::example_file("contrasts.csv"))
 #' @export
 read_contrasts <- function(file) {
-  df <- playbase::read.as_matrix(file)
+  df <- read.as_matrix(file)
 
   is_valid <- validate_contrasts(df)
   if (!is_valid) stop("Contrasts file is not valid.")
@@ -127,9 +127,9 @@ read_contrasts <- function(file) {
 #' @return boolean. true if data is valid
 #' @export
 validate_counts <- function(data) {
-  t1 <- playbase::check_duplicate_rows(data)
-  t2 <- playbase::check_empty_rows(data)
-  t3 <- playbase::check_duplicate_cols(data)
+  t1 <- check_duplicate_rows(data)
+  t2 <- check_empty_rows(data)
+  t3 <- check_duplicate_cols(data)
   return(t2 && t3)
 }
 
@@ -146,10 +146,10 @@ validate_counts <- function(data) {
 #' @return boolean. true if data is valid
 #' @export
 validate_samples <- function(data) {
-  t1 <- playbase::check_duplicate_rows(data)
-  t2 <- playbase::check_empty_rows(data)
-  t3 <- playbase::check_duplicate_cols(data)
-  t4 <- playbase::check_max_samples(data)
+  t1 <- check_duplicate_rows(data)
+  t2 <- check_empty_rows(data)
+  t3 <- check_duplicate_cols(data)
+  t4 <- check_max_samples(data)
   return(t1 & t2 & t3 & t4)
 }
 
@@ -166,9 +166,9 @@ validate_samples <- function(data) {
 #' @return boolean. true if data is valid
 #' @export
 validate_contrasts <- function(data) {
-  t1 <- playbase::check_duplicate_rows(data)
-  t2 <- playbase::check_empty_rows(data)
-  t3 <- playbase::check_duplicate_cols(data)
+  t1 <- check_duplicate_rows(data)
+  t2 <- check_empty_rows(data)
+  t3 <- check_duplicate_cols(data)
   vs_names <- colnames(data)[-1]
   t4 <- all(grepl("_vs_", vs_names))
   return(t1 & t2 & t3 & t4)

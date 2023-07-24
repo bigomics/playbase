@@ -63,8 +63,8 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
     pheno <- intersect(pheno, colnames(samples))
     Y <- samples[, pheno, drop = FALSE]
     ## automatically guess contrasts
-    ac <- playbase::pgx.makeAutoContrasts(Y, mingrp = 3, slen = 20, ref = NA)
-    contrasts <- playbase::contrastAsLabels(ac$exp.matrix)
+    ac <- pgx.makeAutoContrasts(Y, mingrp = 3, slen = 20, ref = NA)
+    contrasts <- contrastAsLabels(ac$exp.matrix)
   }
 
   ## other params
@@ -164,7 +164,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ct.type <- c("labeled (new style)", "numbered (old style)")[1 + 1 * is.numbered]
   is.numbered
   if (is.numbered) {
-    contrasts <- playbase::contrastAsLabels(contrasts)
+    contrasts <- contrastAsLabels(contrasts)
   }
 
   ## convert group-wise contrast to sample-wise
@@ -281,7 +281,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## convert probe-IDs to gene symbol (do not translate yet to HUGO)
   ## -------------------------------------------------------------------
   message("[createPGX] converting probes to symbol...")
-  symbol <- playbase::probe2symbol(rownames(counts), type = NULL) ## auto-convert function
+  symbol <- probe2symbol(rownames(counts), type = NULL) ## auto-convert function
   if (mean(rownames(counts) == symbol, na.rm = TRUE) < 0.5) { ## why??
     jj <- which(!is.na(symbol))
     counts <- as.matrix(counts[jj, ])
@@ -321,7 +321,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 
   if (convert.hugo) {
     message("[createPGX] converting to HUGO symbols...")
-    gene1 <- playbase::alias2hugo(gene1) ## convert to latest HUGO
+    gene1 <- alias2hugo(gene1) ## convert to latest HUGO
   } else {
     message("[createPGX] skip conversion to HUGO symbols")
   }
@@ -349,7 +349,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## create gene annotation if not given (no HUGO conversion)
   ## -------------------------------------------------------------------
   message("[createPGX] annotating genes...")
-  ngs$genes <- playbase::ngs.getGeneAnnotation(genes = rownames(ngs$counts))
+  ngs$genes <- ngs.getGeneAnnotation(genes = rownames(ngs$counts))
   rownames(ngs$genes) <- rownames(ngs$counts)
   ngs$genes[is.na(ngs$genes)] <- ""
 
@@ -417,7 +417,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
-  ngs <- playbase::compute_cellcycle_gender(ngs)
+  ngs <- compute_cellcycle_gender(ngs)
 
   ## -------------------------------------------------------------------
   ## Batch-correction (if requested. WARNING: changes counts )
@@ -459,7 +459,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     message("[createPGX] clustering samples...")
     #
     #
-    ngs <- playbase::pgx.clusterSamples2(
+    ngs <- pgx.clusterSamples2(
       ngs,
       dims = c(2, 3),
       perplexity = NULL,
@@ -470,10 +470,10 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     #
     posx <- scale(cbind(ngs$cluster$pos[["umap2d"]], ngs$cluster$pos[["tsne2d"]]))
     #
-    idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
+    idx <- pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
     if (length(unique(idx)) == 1) {
       ## try again with finer settings if single cluster...
-      idx <- playbase::pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
+      idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
     }
     ngs$samples$cluster <- idx
   }
@@ -485,8 +485,8 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     if (length(unique(Y)) < 2) {
       message("[createPGX] warning: only one cluster.")
     } else {
-      ct <- playbase::makeDirectContrasts(Y, ref = "others")
-      ctx <- playbase::contrastAsLabels(ct$exp.matrix)
+      ct <- makeDirectContrasts(Y, ref = "others")
+      ctx <- contrastAsLabels(ct$exp.matrix)
       if (ncol(ngs$contrasts) == 0) {
         ngs$contrasts <- ctx
       } else {
@@ -500,7 +500,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## -------------------------------------------------------------------
   if (is.null(ngs$X)) {
     message("[createPGX] calculating log-expression matrix X...")
-    ngs$X <- playbase::logCPM(ngs$counts, total = 1e6, prior = 1)
+    ngs$X <- logCPM(ngs$counts, total = 1e6, prior = 1)
   } else {
     message("[createPGX] using passed log-expression X...")
   }
@@ -511,7 +511,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 
   if (do.clustergenes) {
     message("[createPGX] clustering genes...")
-    ngs <- playbase::pgx.clusterGenes(ngs, methods = "umap", dims = c(2, 3), level = "gene")
+    ngs <- pgx.clusterGenes(ngs, methods = "umap", dims = c(2, 3), level = "gene")
   }
 
   return(ngs)
@@ -563,7 +563,7 @@ pgx.computePGX <- function(pgx,
   is.numcontrast <- all(contr.values %in% c(NA, -1, 0, 1))
   is.numcontrast <- is.numcontrast && (-1 %in% contr.values) && (1 %in% contr.values)
   if (!is.numcontrast) {
-    contr.matrix <- playbase::makeContrastsFromLabelMatrix(contr.matrix)
+    contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
     contr.matrix <- sign(contr.matrix) ## sign is fine
   }
 
@@ -590,7 +590,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
   message("[pgx.computePGX] testing genes...")
 
-  pgx <- playbase::compute_testGenes(
+  pgx <- compute_testGenes(
     pgx, contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
@@ -602,7 +602,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
   message("[pgx.computePGX] testing genesets...")
-  pgx <- playbase::compute_testGenesets(
+  pgx <- compute_testGenesets(
     pgx,
     custom.geneset = custom.geneset,
     max.features = max.genesets,
@@ -612,7 +612,7 @@ pgx.computePGX <- function(pgx,
 
   if (do.cluster) {
     message("[pgx.computePGX] clustering genes...")
-    pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset") ## gsetX not ready!!
+    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset") ## gsetX not ready!!
   }
 
 
@@ -620,7 +620,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
   message("[pgx.computePGX] computing extra modules...")
 
-  pgx <- playbase::compute_extra(pgx, extra = extra.methods, libx.dir = libx.dir)
+  pgx <- compute_extra(pgx, extra = extra.methods, libx.dir = libx.dir)
 
   message("[pgx.computePGX] done!")
 

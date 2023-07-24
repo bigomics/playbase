@@ -427,7 +427,7 @@ pgx.testTraitRelationship <- function(me, df, plot = TRUE, cex = 1) {
     i <- 1
     j <- 2
     rho <- stats::cor(me, dc, use = "pairwise")
-    rho.P <- playbase::cor.pvalue(P, nrow(me))
+    rho.P <- cor.pvalue(P, nrow(me))
   }
 
   ## continous vs discrete -> ANOVA
@@ -438,7 +438,7 @@ pgx.testTraitRelationship <- function(me, df, plot = TRUE, cex = 1) {
     rownames(anova.P) <- colnames(me)
     for (i in 1:ncol(dd)) {
       y <- dd[, i]
-      res <- playbase::gx.limmaF(t(me), y, fdr = 1, lfc = 0)
+      res <- gx.limmaF(t(me), y, fdr = 1, lfc = 0)
       anova.P[, i] <- res[colnames(me), "P.Value"]
     }
     anova.P

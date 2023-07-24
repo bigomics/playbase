@@ -119,7 +119,7 @@ pgx.clusterSamples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = 
     X <- pgx$X
   } else {
     message("using logCPM(pgx$counts)...")
-    X <- playbase::logCPM(pgx$counts, total = NULL)
+    X <- logCPM(pgx$counts, total = NULL)
   }
 
   clust.pos <- pgx.clusterBigMatrix(
@@ -193,7 +193,7 @@ pgx.clusterSamples <- function(pgx, X = NULL, skipifexists = FALSE, perplexity =
     X <- pgx$X
   } else if (is.null(X) && is.null(pgx$X)) {
     message("using pgx$counts matrix...")
-    X <- playbase::logCPM(pgx$counts, total = NULL, prior = 1)
+    X <- logCPM(pgx$counts, total = NULL, prior = 1)
   } else {
     stop("[pgx.clusterSamples] FATAL ERROR")
   }
@@ -286,7 +286,7 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
   if ("louvain" %in% method) {
     message("perform Louvain clustering...")
     gr <- scran::buildSNNGraph(X)
-    gr.idx <- playbase::hclustGraph(gr, k = 4) ## iterative cluster until level3
+    gr.idx <- hclustGraph(gr, k = 4) ## iterative cluster until level3
     rownames(gr.idx) <- colnames(X)
     nc <- apply(gr.idx, 2, function(x) length(unique(x)))
     colnames(gr.idx) <- paste0("louvain.", nc)
@@ -366,7 +366,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
 
   ## impute on row median
   if (any(is.na(X))) {
-    X <- playbase::imputeMedian(X)
+    X <- imputeMedian(X)
   }
 
   if (ncol(X) <= 6) X <- cbind(X, X, X, X, X, X)
@@ -726,7 +726,7 @@ pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix 
   }
 
   ## should we iteratively cluster (louvain)???
-  hc <- playbase::hclustGraph(gr, k = level)
+  hc <- hclustGraph(gr, k = level)
   idx <- hc[, min(level, ncol(hc))]
 
   if (!is.null(idx) && small.zero > 0) {

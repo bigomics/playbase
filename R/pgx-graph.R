@@ -269,8 +269,8 @@ pgx.reduceOmicsGraph <- function(ngs) {
   g2 <- igraph::induced_subgraph(gr, v2)
   g1 <- igraph::delete_edge_attr(g1, "weight")
   g2 <- igraph::delete_edge_attr(g2, "weight")
-  h1 <- playbase::hclust_graph(g1)
-  h2 <- playbase::hclust_graph(g2)
+  h1 <- hclust_graph(g1)
+  h2 <- hclust_graph(g2)
   apply(h1, 2, function(x) length(table(x)))
   apply(h2, 2, function(x) length(table(x)))
   hc1 <- paste0("{gene}cluster", h1[, ncol(h1)])
@@ -547,7 +547,7 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
 pgx.plotForwardProjection <- function(gr, gene, cex = 1, fx = NULL,
                                       features = NULL, main = NULL, plot = TRUE) {
   if (!is.null(features)) {
-    gr <- playbase::pgx.createVipGeneLayer(gr, genes)
+    gr <- pgx.createVipGeneLayer(gr, genes)
   }
 
   vtype <- gsub("\\}.*|^\\{", "", rownames(gr$layout))

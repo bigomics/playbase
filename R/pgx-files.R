@@ -127,7 +127,7 @@ pgx.readDatasetProfiles <- function(pgx.dir, file = "datasets-allFC.csv", verbos
     if (verbose) message("[readDatasetProfiles1] Found existing dataset profiles matrix")
   }
 
-  allFC <- playbase::fread.csv(file = file.path(pgx.dir, file), row.names = 1, check.names = FALSE)
+  allFC <- fread.csv(file = file.path(pgx.dir, file), row.names = 1, check.names = FALSE)
   allFC <- as.matrix(allFC)
   if (verbose) message("[readDatasetProfiles1] dataset profiles matrix : dim=", dim(allFC))
   return(allFC)
@@ -271,7 +271,7 @@ pgxinfo.deletePgx <- function(pgx.dir, pgxname,
 
   ## delete dataset from H5 file
   if (delete.fc && file.exists(h5.file)) {
-    playbase::sigdb.removeDataset(h5.file, pgxname)
+    sigdb.removeDataset(h5.file, pgxname)
   }
 }
 
@@ -295,7 +295,7 @@ pgxinfo.addPgx <- function(pgx.dir, pgx, file = "datasets-info.csv",
   ## add FC columns to allFC file
   if (update.fc && !file.exists(allfc.file)) {
     ## complete update of all files
-    playbase::pgx.initDatasetFolder(pgx.dir)
+    pgx.initDatasetFolder(pgx.dir)
     return()
   }
 
@@ -308,7 +308,7 @@ pgxinfo.addPgx <- function(pgx.dir, pgx, file = "datasets-info.csv",
     if (length(del) > 0) {
       allFC <- allFC[, -del, drop = FALSE]
     }
-    F1 <- playbase::pgx.getMetaMatrix(pgx)$fc
+    F1 <- pgx.getMetaMatrix(pgx)$fc
     F1 <- F1[match(rownames(allFC), rownames(F1)), ]
     colnames(F1) <- paste0("[", pgxname, "] ", colnames(F1))
     allFC <- cbind(allFC, F1)
@@ -318,7 +318,7 @@ pgxinfo.addPgx <- function(pgx.dir, pgx, file = "datasets-info.csv",
 
     ## NEED RETHINK!!!! This could be done perhaps more efficient
     ## when updating with one extra dataset.
-    playbase::pgx.createSignatureDatabaseH5.fromMatrix(h5.file,
+    pgx.createSignatureDatabaseH5.fromMatrix(h5.file,
       X = allFC,
       update.only = FALSE
     )
@@ -619,13 +619,13 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   ## pgxinfo and allFC OK, but sigdb not upto date
   if (update.sigdb && length(pgx.missing) == 0 && length(h5.missing) > 0) {
     ## Update SIGDB file using allFC
-    allFC <- playbase::fread.csv(allfc.file, row.names = 1, check.names = FALSE)
+    allFC <- fread.csv(allfc.file, row.names = 1, check.names = FALSE)
     allFC <- as.matrix(allFC)
     ## update user sigdb or create if not exists
     if (file.exists(sigdb.file)) unlink(sigdb.file)
     if (verbose) message("[updateDatasetFolder] creating sig DB: ", sigdb.file, "...")
-    playbase::pgx.createSignatureDatabaseH5.fromMatrix(sigdb.file, X = allFC)
-    playbase::pgx.addEnrichmentSignaturesH5(sigdb.file, X = allFC, methods = "rankcor")
+    pgx.createSignatureDatabaseH5.fromMatrix(sigdb.file, X = allFC)
+    pgx.addEnrichmentSignaturesH5(sigdb.file, X = allFC, methods = "rankcor")
     h5.missing <- NULL
   }
 
@@ -677,7 +677,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
       next()
     }
 
-    if (!playbase::pgx.checkObject(pgx)) {
+    if (!pgx.checkObject(pgx)) {
       message(paste("[updateDatasetFolder] INVALID PGX object", pgxfile, ". Skipping"))
       next()
     }
@@ -687,7 +687,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     ## ---------------------------------------------
 
     if (pgxfile %in% fc.missing) {
-      meta <- playbase::pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
+      meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
       rownames(meta$fc) <- toupper(rownames(meta$fc))
       missing.FC[[pgxfile]] <- meta$fc
       pgxfc.changed <- TRUE
@@ -809,9 +809,9 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
       ## NEED RETHINK!!!! HERE???
       if (file.exists(sigdb)) unlink(sigdb)
       if (verbose) message("[pgxinfo.updateDatasetFolder] creating signature DB to", sigdb, "...")
-      playbase::pgx.createSignatureDatabaseH5.fromMatrix(sigdb, X = allFC)
+      pgx.createSignatureDatabaseH5.fromMatrix(sigdb, X = allFC)
       if (verbose) message("[pgxinfo.updateDatasetFolder] add enrichment signature to", sigdb, "...")
-      playbase::pgx.addEnrichmentSignaturesH5(sigdb, X = allFC, methods = "rankcor")
+      pgx.addEnrichmentSignaturesH5(sigdb, X = allFC, methods = "rankcor")
     }
 
     tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")

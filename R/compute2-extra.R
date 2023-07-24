@@ -50,7 +50,7 @@ compute_extra <- function(ngs, extra = c(
   if ("meta.go" %in% extra) {
     message(">>> Computing GO core graph...")
     tt <- system.time({
-      ngs$meta.go <- playbase::pgx.computeCoreGOgraph(ngs, fdr = 0.20)
+      ngs$meta.go <- pgx.computeCoreGOgraph(ngs, fdr = 0.20)
     })
     timings <- rbind(timings, c("meta.go", tt))
     message("<<< done!")
@@ -111,7 +111,7 @@ compute_extra <- function(ngs, extra = c(
   if ("wordcloud" %in% extra) {
     message(">>> computing WordCloud statistics...")
     tt <- system.time({
-      res <- playbase::pgx.calculateWordCloud(ngs, progress = NULL, pg.unit = 1)
+      res <- pgx.calculateWordCloud(ngs, progress = NULL, pg.unit = 1)
     })
     timings <- rbind(timings, c("wordcloud", tt))
     ngs$wordcloud <- res
@@ -133,11 +133,11 @@ compute_extra <- function(ngs, extra = c(
         if (file.exists(db)) {
           message("computing connectivity scores for ", db)
           ## in memory for many comparisons
-          meta <- playbase::pgx.getMetaFoldChangeMatrix(ngs, what = "meta")
+          meta <- pgx.getMetaFoldChangeMatrix(ngs, what = "meta")
           inmemory <- ifelse(ncol(meta$fc) > 50, TRUE, FALSE) ## NEED RETHINK!! reverse?
           inmemory
           tt <- system.time({
-            scores <- playbase::pgx.computeConnectivityScores(
+            scores <- pgx.computeConnectivityScores(
               ngs, db,
               ntop = 1000, contrasts = NULL,
               remove.le = TRUE, inmemory = inmemory
@@ -158,7 +158,7 @@ compute_extra <- function(ngs, extra = c(
 
   if ("wgcna" %in% extra) {
     message(">>> Computing wgcna...")
-    ngs$wgcna <- playbase::pgx.wgcna(ngs)
+    ngs$wgcna <- pgx.wgcna(ngs)
   }
 
   ## ------------------------------------------------------
@@ -232,7 +232,7 @@ compute_deconvolution <- function(ngs, rna.counts = ngs$counts, full = FALSE) {
 
   counts <- rna.counts
   rownames(counts) <- toupper(ngs$genes[rownames(counts), "gene_name"])
-  res <- playbase::pgx.multipleDeconvolution(counts, refmat = refmat, method = methods)
+  res <- pgx.multipleDeconvolution(counts, refmat = refmat, method = methods)
 
   ngs$deconv <- res$results
   if (!is.null(res$timings)) {
@@ -269,7 +269,7 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
 
     counts <- rna.counts
     rownames(counts) <- toupper(ngs$genes[rownames(counts), "gene_name"])
-    res <- try(playbase::pgx.inferCellCyclePhase(counts)) ## can give bins error
+    res <- try(pgx.inferCellCyclePhase(counts)) ## can give bins error
     if (class(res) != "try-error") {
       ngs$samples$.cell_cycle <- res
     }
@@ -278,7 +278,7 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
       ngs$samples$.gender <- NULL
       X <- log2(1 + rna.counts)
       gene_name <- ngs$genes[rownames(X), "gene_name"]
-      ngs$samples$.gender <- playbase::pgx.inferGender(X, gene_name)
+      ngs$samples$.gender <- pgx.inferGender(X, gene_name)
     } else {
       message("gender already estimated. skipping...")
     }
@@ -327,7 +327,7 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
     ndrugs <- length(table(xdrugs))
     is.drug <- grepl("activity|drug|ChemPert", f, ignore.case = TRUE)
 
-    out1 <- playbase::pgx.computeDrugEnrichment(
+    out1 <- pgx.computeDrugEnrichment(
       obj = ngs,
       X = X,
       xdrugs = xdrugs,
@@ -402,7 +402,7 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
     X <- readRDS(file = file.path(cmap.dir, ref))
     xdrugs <- gsub("[@_].*$", "", colnames(X))
 
-    out1 <- playbase::pgx.computeDrugEnrichment(
+    out1 <- pgx.computeDrugEnrichment(
       ngs, X, xdrugs,
       methods = c("GSEA", "cor"),
       nmin = 10,
@@ -441,11 +441,11 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
 #' @return An updated object with omics graphs and path scores.
 #' @export
 compute_omicsGraphs <- function(ngs) {
-  ngs$omicsnet <- playbase::pgx.createOmicsGraph(ngs)
-  ngs$pathscores <- playbase::pgx.computePathscores(ngs$omicsnet, strict.pos = FALSE)
+  ngs$omicsnet <- pgx.createOmicsGraph(ngs)
+  ngs$pathscores <- pgx.computePathscores(ngs$omicsnet, strict.pos = FALSE)
 
   ## compute reduced graph
-  ngs$omicsnet.reduced <- playbase::pgx.reduceOmicsGraph(ngs)
-  ngs$pathscores.reduced <- playbase::pgx.computePathscores(ngs$omicsnet.reduced, strict.pos = FALSE)
+  ngs$omicsnet.reduced <- pgx.reduceOmicsGraph(ngs)
+  ngs$pathscores.reduced <- pgx.computePathscores(ngs$omicsnet.reduced, strict.pos = FALSE)
   return(ngs)
 }

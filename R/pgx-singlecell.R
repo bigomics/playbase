@@ -22,12 +22,12 @@ seurat2pgx <- function(obj, do.cluster = FALSE) {
   pgx$X <- obj[["RNA"]]@data
   pgx$samples <- obj@meta.data
 
-  pgx$genes <- playbase::ngs.getGeneAnnotation(genes = rownames(pgx$counts))
+  pgx$genes <- ngs.getGeneAnnotation(genes = rownames(pgx$counts))
   rownames(pgx$genes) <- rownames(pgx$counts)
 
   if (do.cluster) {
     message("[seurat2pgx] clustering samples")
-    pgx <- playbase::pgx.clusterSamples2(
+    pgx <- pgx.clusterSamples2(
       pgx,
       dims = c(2, 3), methods = c("pca", "tsne", "umap")
     )
@@ -907,7 +907,7 @@ pgx.createSeurateFigures <- function(obj) {
     "Platelet" = "Ppbp"
   )
 
-  ct1 <- playbase::pgx.inferCellType(obj[["RNA"]]@counts, add.unknown = FALSE, low.th = 0.01)
+  ct1 <- pgx.inferCellType(obj[["RNA"]]@counts, add.unknown = FALSE, low.th = 0.01)
 
   tapply(ct1, obj$seurat_clusters, function(x) table(x))
   ct1x <- tapply(ct1, obj$seurat_clusters, function(x) names(which.max(table(x))))

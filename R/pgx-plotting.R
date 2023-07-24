@@ -179,9 +179,9 @@ pgx.ActivationMatrix <- function(pgx, features = NULL, contrasts = NULL,
                                  flip = FALSE, level = "geneset",
                                  clust.x = TRUE, clust.y = TRUE, plotlib = "base") {
   if (level == "geneset") {
-    out <- playbase::pgx.getMetaFoldChangeMatrix(pgx, what = "meta", level = "geneset")
+    out <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta", level = "geneset")
   } else {
-    out <- playbase::pgx.getMetaFoldChangeMatrix(pgx, what = "meta", level = "gene")
+    out <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta", level = "gene")
   }
   F <- out$fc
   Q <- out$qv
@@ -802,9 +802,9 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   if (is.integer(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
   res <- NULL
   if (level == "gene") {
-    res <- playbase::pgx.getMetaMatrix(pgx, methods, level = "gene")
+    res <- pgx.getMetaMatrix(pgx, methods, level = "gene")
   } else if (level == "geneset") {
-    res <- playbase::pgx.getMetaMatrix(pgx, methods, level = "geneset")
+    res <- pgx.getMetaMatrix(pgx, methods, level = "geneset")
   } else {
     stop("FATAL:: invalid level=", level)
   }
@@ -972,9 +972,9 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
     if (is.numeric(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
     res <- NULL
     if (level == "gene") {
-      res <- playbase::pgx.getMetaMatrix(pgx, level = "gene")
+      res <- pgx.getMetaMatrix(pgx, level = "gene")
     } else if (level == "geneset") {
-      res <- playbase::pgx.getMetaMatrix(pgx, level = "geneset")
+      res <- pgx.getMetaMatrix(pgx, level = "geneset")
     } else {
       stop("FATAL:: invalid level=", level)
     }
@@ -1111,7 +1111,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
     ## class???  determine if notation is A_vs_B or B_vs_A (some
     ## people do different) and in sample-based contrasts we don't
     ## know group names.
-    if (!playbase::is.POSvsNEG(pgx)) {
+    if (!is.POSvsNEG(pgx)) {
       ## A_vs_B or B_vs_A notation !!!
       message("[pgx.plotExpression] WARNING! A_vs_B reversed?")
       group.names <- rev(group.names) ## reversed!!
@@ -1261,7 +1261,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
       return(fig)
     } else {
       ## plot using base graphics
-      playbase::gx.b3plot(gx, xgroup, #
+      gx.b3plot(gx, xgroup, #
         first = xlevels[1],
         col = grp.klr1, ylab = ylab, bee.cex = bee.cex,
         max.points = max.points, xlab = xlab, names = names,
@@ -1562,18 +1562,18 @@ pgx.plotPhenotypeMatrix <- function(annot) {
 
 #' @export
 pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht = 5, cluster.samples = TRUE) {
-  cvar <- playbase::pgx.getCategoricalPhenotypes(
+  cvar <- pgx.getCategoricalPhenotypes(
     annot,
     min.ncat = 2, max.ncat = 10, remove.dup = FALSE
   )
-  fvar <- playbase::pgx.getNumericalPhenotypes(annot)
+  fvar <- pgx.getNumericalPhenotypes(annot)
   annot.cvar <- annot[, cvar, drop = FALSE]
   annot.fvar <- annot[, fvar, drop = FALSE]
   annot.df <- cbind(annot.fvar, annot.cvar)
   colnames(annot.df) <- paste(colnames(annot.df), "        ")
 
   if (cluster.samples) {
-    annotx <- playbase::expandAnnotationMatrix(annot.df)
+    annotx <- expandAnnotationMatrix(annot.df)
     hc <- fastcluster::hclust(dist(annotx)) ## cluster samples
     annot.df <- annot.df[hc$order, ]
   }
@@ -1674,7 +1674,7 @@ pgx.splitHeatmap <- function(ngs, splitx = NULL, top.mode = "specific",
       tolower(colnames(ngs$samples)),
       invert = TRUE
     )
-    annot.pheno <- playbase::pgx.getCategoricalPhenotypes(ngs$samples, max.ncat = 12, min.ncat = 2)
+    annot.pheno <- pgx.getCategoricalPhenotypes(ngs$samples, max.ncat = 12, min.ncat = 2)
   }
   annot.pheno <- intersect(annot.pheno, colnames(ngs$samples))
   Y <- ngs$samples[, annot.pheno, drop = FALSE]

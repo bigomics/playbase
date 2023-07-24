@@ -11,7 +11,7 @@
 #' @export
 pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 1000, contrasts = NULL,
                                           remove.le = FALSE, inmemory = FALSE) {
-  meta <- playbase::pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
+  meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
 
   is.h5ref <- grepl("h5$", sigdb)
   if (!is.h5ref) {
@@ -348,7 +348,7 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
     for (i in 1:length(gmt.files)) {
       if (!file.exists(gmt.files[i])) next()
       cat(".")
-      try.error <- try(gmt <- playbase::read.gmt(gmt.files[i], add.source = TRUE))
+      try.error <- try(gmt <- read.gmt(gmt.files[i], add.source = TRUE))
       if (class(try.error) == "try-error") next()
 
       j1 <- grep("-up ", names(gmt))
@@ -383,7 +383,7 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
     genes <- sort(unique(toupper(genes)))
 
     ## Filter out genes (not on known chromosomes...)
-    gannot <- playbase::ngs.getGeneAnnotation(genes)
+    gannot <- ngs.getGeneAnnotation(genes)
     sel <- which(!is.na(gannot$chr))
     genes <- sort(genes[sel])
 
@@ -393,7 +393,7 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
     remove(F)
 
     h5.file
-    playbase::pgx.saveMatrixH5(X, h5.file, chunk = c(nrow(X), 1))
+    pgx.saveMatrixH5(X, h5.file, chunk = c(nrow(X), 1))
 
     na100 <- rep(NA, 100)
     msig100.up <- sapply(sig100.up, function(g) Matrix::head(c(intersect(g, genes), na100), 100))
@@ -418,7 +418,7 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
 
   if (!update.only || !h5exists(h5.file, "clustering")) {
     X[is.na(X)] <- 0
-    pos <- playbase::pgx.clusterBigMatrix(
+    pos <- pgx.clusterBigMatrix(
       abs(X), ## on absolute foldchange!!
       methods = c("pca", "tsne", "umap"),
       dims = c(2, 3),
@@ -464,7 +464,7 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALS
       cat(".")
       pgx <- try(local(get(load(pgx.files[i], verbose = 0)))) ## override any name
       if ("try-error" %in% class(pgx)) next()
-      meta <- playbase::pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
+      meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
       rownames(meta$fc) <- toupper(rownames(meta$fc)) ## mouse-friendly
       pgxfile <- gsub(".*[/]|[.]pgx$", "", pgx.files[i])
       colnames(meta$fc) <- paste0("[", pgxfile, "] ", colnames(meta$fc))
@@ -480,7 +480,7 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALS
 
     ## Filter out genes (not on known chromosomes...)
     genes <- rownames(X)
-    gannot <- playbase::ngs.getGeneAnnotation(genes)
+    gannot <- ngs.getGeneAnnotation(genes)
     sel <- which(!is.na(gannot$chr))
     X <- X[sel, , drop = FALSE]
     remove(F)
@@ -498,7 +498,7 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
   if (file.exists(h5.file)) unlink(h5.file)
   dbg("[pgx.createSignatureDatabaseH5.fromMatrix] saving data matrix...")
   X <- as.matrix(X)
-  playbase::pgx.saveMatrixH5(X, h5.file, chunk = c(nrow(X), 1))
+  pgx.saveMatrixH5(X, h5.file, chunk = c(nrow(X), 1))
 
   ## --------------------------------------------------
   ## Calculate top100 gene signatures
@@ -540,7 +540,7 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
     rhdf5::h5ls(h5.file)
     dbg("[pgx.createSignatureDatabaseH5.fromMatrix] compute clustering...")
 
-    pos <- playbase::pgx.clusterBigMatrix(
+    pos <- pgx.clusterBigMatrix(
       abs(X), ## on absolute foldchange!!
       methods = c("pca", "tsne", "umap"),
       dims = c(2, 3),
@@ -617,7 +617,7 @@ pgx.addEnrichmentSignaturesH5 <- function(h5.file, X = NULL, mc.cores = 0,
   }
 
   if ("rankcor" %in% methods) {
-    F3 <- playbase::gset.rankcor(X, Matrix::t(G))$rho
+    F3 <- gset.rankcor(X, Matrix::t(G))$rho
     F3 <- F3[match(names(gmt), rownames(F3)), , drop = FALSE]
     F3[is.na(F3)] <- 0
     if (h5exists(h5.file, "enrichment/rankcor")) rhdf5::h5delete(h5.file, "enrichment/rankcor")
@@ -650,7 +650,7 @@ pgx.ReclusterSignatureDatabase <- function(h5.file, reduce.sd = 1000, reduce.pca
 
   if (!h5exists(h5.file, "clustering")) rhdf5::h5createGroup(h5.file, "clustering")
 
-  pos <- playbase::pgx.clusterBigMatrix(
+  pos <- pgx.clusterBigMatrix(
     abs(X), ## on absolute foldchange!!
     methods = c("pca", "tsne", "umap"),
     dims = c(2, 3),
@@ -726,7 +726,7 @@ pgx.computeGeneSetExpression <- function(X, gmt, method = NULL,
   }
   if (any(method %in% c("spearman", "average"))) {
     gg <- rownames(X)
-    G <- playbase::gmt2mat(gmt, bg = gg)
+    G <- gmt2mat(gmt, bg = gg)
     if ("spearman" %in% method) {
       rho <- t(G[gg, ]) %*% scale(apply(X[gg, ], 2, rank)) / sqrt(nrow(X) - 1)
       rho[is.na(rho)] <- 0

@@ -207,7 +207,7 @@ pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
   }
   xgenes <- toupper(rownames(pgx$X))
   xgenes <- toupper(pgx$genes$gene_name)
-  gsets <- playbase::getGSETS_playbase(pattern = fam.pattern)
+  gsets <- getGSETS_playbase(pattern = fam.pattern)
   jj <- which(sapply(gsets, function(x) sum(x %in% xgenes)) >= nmin)
   sort(names(gsets)[jj]) ## sort alphabetically
 }
