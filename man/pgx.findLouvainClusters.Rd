@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-cluster.R
 \name{pgx.findLouvainClusters}
 \alias{pgx.findLouvainClusters}
-\title{Title}
+\title{Find Louvain clusters}
 \usage{
 pgx.findLouvainClusters(
   X,
@@ -14,18 +14,28 @@ pgx.findLouvainClusters(
 )
 }
 \arguments{
-\item{X}{value}
+\item{X}{A data matrix, data frame, or object that can be coerced to a matrix.}
 
-\item{graph.method}{value}
+\item{graph.method}{Method for building graph from data. Either "dist" or "snn".}
 
-\item{level}{value}
+\item{level}{Number of levels to build hierarchy.}
 
-\item{prefix}{value}
+\item{prefix}{Prefix for cluster labels.}
 
-\item{gamma}{value}
+\item{gamma}{Exponent for distance matrix.}
 
-\item{small.zero}{value}
+\item{small.zero}{Proportion of smallest clusters to reassign to 0.}
+}
+\value{
+Vector of cluster assignments
 }
 \description{
-Title
+Find clusters in a dataset using the Louvain algorithm.
+}
+\details{
+Find Louvain clusters
+
+Builds a graph from the input data and runs the Louvain algorithm to find clusters.
+The number of levels in the hierarchy can be specified. Small clusters can optionally be 
+reassigned to cluster 0.
 }

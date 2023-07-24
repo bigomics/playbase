@@ -2,7 +2,7 @@
 % Please edit documentation in R/gx-heatmap.r
 \name{clustermap}
 \alias{clustermap}
-\title{Title}
+\title{Create an annotated clustered heatmap}
 \usage{
 clustermap(
   x,
@@ -25,11 +25,11 @@ clustermap(
 )
 }
 \arguments{
-\item{x}{value}
+\item{x}{Numeric data matrix to visualize}
 
-\item{nc}{value}
+\item{nc}{Number of sample clusters}
 
-\item{nr}{value}
+\item{nr}{Number of gene clusters}
 
 \item{na}{value}
 
@@ -37,13 +37,13 @@ clustermap(
 
 \item{p}{value}
 
-\item{method}{value}
+\item{method}{Distance metric for clustering (pearson, euclidean, etc)}
 
 \item{nca}{value}
 
-\item{col.annot}{value}
+\item{col.annot}{Annotations for samples}
 
-\item{row.annot}{value}
+\item{row.annot}{Annotations for genes}
 
 \item{plot}{value}
 
@@ -59,6 +59,27 @@ clustermap(
 
 \item{...}{value}
 }
+\value{
+A heatmap grob object if plot = FALSE; otherwise NULL
+}
 \description{
-Title
+Create an annotated clustered heatmap
+}
+\details{
+This function clusters the rows and columns of a data matrix,
+calculates cluster means, and visualizes the result as an annotated heatmap.
+
+It performs soft clustering, where each value is a mixture of the cluster mean
+and original value. Side color bars are added from sample and gene annotations.
+}
+\examples{
+\dontrun{
+mat <- matrix(rnorm(200), 20, 10)
+amat <- matrix(sample(letters, 200, replace=TRUE), 20, 10)
+clustermap(mat, col.annot = amat)
+}
+
+}
+\seealso{
+\code{\link[gplots]{heatmap.2}} for the underlying heatmap functions used
 }

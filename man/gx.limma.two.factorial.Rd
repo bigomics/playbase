@@ -2,7 +2,7 @@
 % Please edit documentation in R/gx-limma.r
 \name{gx.limma.two.factorial}
 \alias{gx.limma.two.factorial}
-\title{Title}
+\title{Differential expression analysis using limma for two factorial designs}
 \usage{
 gx.limma.two.factorial(
   X,
@@ -17,20 +17,32 @@ gx.limma.two.factorial(
 )
 }
 \arguments{
-\item{X}{value}
+\item{X}{Numeric matrix of gene expression values (genes in rows, samples in columns).}
 
-\item{factors}{value}
+\item{factors}{Data frame with factor columns defining the experimental design.}
 
-\item{fdr}{value}
+\item{fdr}{FDR threshold for identifying differentially expressed genes.}
 
-\item{lfc}{value}
+\item{lfc}{Log2 fold change cutoff for differential expression.}
 
-\item{trend}{value}
+\item{trend}{Logical indicating whether to fit a mean-variance trend.}
 
-\item{ref}{value}
+\item{ref}{Character vector of reference levels to use as baseline in contrasts.}
 
-\item{compute.means}{value}
+\item{compute.means}{Logical indicating whether to append mean expression values.}
+}
+\value{
+Data frame containing limma analysis results for each contrast.
 }
 \description{
-Title
+Performs differential expression analysis using limma for data with two factorial designs.
+Designed for experiments with two factors, each with two or more levels.
+}
+\details{
+Differential expression analysis for two factorial designs
+
+This function handles the limma model matrix and contrasts for two factorial designs.
+The \code{factors} data frame specifies the experimental design.  
+Multiple contrasts are performed between factor level combinations.
+Results are filtered by FDR and fold change thresholds.
 }

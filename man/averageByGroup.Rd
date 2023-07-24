@@ -2,15 +2,34 @@
 % Please edit documentation in R/gx-util.r
 \name{averageByGroup}
 \alias{averageByGroup}
-\title{Title}
+\title{Calculate group means}
 \usage{
 averageByGroup(mat, group, FUN = mean)
 }
 \arguments{
-\item{X}{value}
+\item{FUN}{Function for aggregation. Default is mean.}
 
-\item{y}{value}
+\item{X}{Numeric matrix with columns as samples.}
+
+\item{y}{Grouping vector or factor.}
+}
+\value{
+Matrix with group means.
 }
 \description{
-Title
+Calculates the column means within groups defined by a grouping variable.
+}
+\details{
+This function calculates the column means of \code{X} within groups
+ defined by \code{y}. It calculates the mean for each column within each 
+group. The output is a matrix with rows corresponding to groups and columns 
+corresponding to samples.
+}
+\examples{
+\dontrun{
+mat <- matrix(rnorm(100), ncol=10)
+groups <- gl(2,5)
+means <- averageByGroup(mat, groups)
+}
+
 }

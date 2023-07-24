@@ -2,19 +2,30 @@
 % Please edit documentation in R/gx-limma.r
 \name{gx.snrtest}
 \alias{gx.snrtest}
-\title{Title}
+\title{Signal to noise ratio test}
 \usage{
 gx.snrtest(X, y, ref.class, nperm = 200)
 }
 \arguments{
-\item{X}{value}
+\item{X}{Numeric gene expression matrix with genes in rows and samples in columns.}
 
-\item{y}{value}
+\item{y}{Factor of sample groups or classes. Must have exactly two levels.}
 
-\item{ref.class}{value}
+\item{ref.class}{Reference group name to use as baseline.}
 
-\item{nperm}{value}
+\item{nperm}{Number of permutations to compute p-values.}
+}
+\value{
+Named vector of p-values for each gene.
 }
 \description{
-Title
+Performs a gene-wise signal to noise ratio test to detect differential expression. 
+Permutation test is used to compute p-values.
+}
+\details{
+Signal to noise ratio test
+
+This function calculates the signal to noise ratio for each gene.
+It then performs a permutation test by permuting the sample labels to generate a null distribution.
+P-values are computed as the fraction of permuted statistics that are more extreme than the observed statistic.
 }

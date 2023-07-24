@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-compute.R
 \name{pgx.computePGX}
 \alias{pgx.computePGX}
-\title{Main function to populate pgx with results}
+\title{Compute PGX}
 \usage{
 pgx.computePGX(
   pgx,
@@ -48,5 +48,5 @@ pgx.computePGX(
 An updated pgx object containing analysis results.
 }
 \description{
-Main function to populate pgx with results
+Main function to populate pgx with results. The function computes the analysis on a pgx object
 }

@@ -2,13 +2,35 @@
 % Please edit documentation in R/gx-combat.r
 \name{gx.qnormalize}
 \alias{gx.qnormalize}
-\title{Title}
+\title{Quantile normalize gene expression matrix}
 \usage{
 gx.qnormalize(X)
 }
 \arguments{
-\item{X}{value}
+\item{X}{Gene expression matrix with genes in rows and samples in columns.}
+}
+\value{
+The quantile normalized gene expression matrix.
 }
 \description{
-Title
+This function performs quantile normalization on a gene expression matrix.
+}
+\details{
+Quantile normalization is a method to make the distribution of gene expression values the same across all samples.
+It transforms the values so that the quantiles of each column match the quantiles of a reference distribution.
+
+This function first checks if the input matrix contains log2-transformed values by looking at the range of values.
+If max < 40 and min > 0, it assumes log2 transformed input and applies quantile normalization on the 2^X matrix.
+Otherwise, it directly applies quantile normalization on X.
+
+The normalize.qspline function from the affy package is used internally to perform quantile normalization.
+}
+\examples{
+\dontrun{
+X <- matrix(rnorm(100*10), 100, 10) 
+X_norm <- gx.qnormalize(X) 
+}
+}
+\seealso{
+\code{\link[affy]{normalize.qspline}} for the quantile normalization method used.
 }

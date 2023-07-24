@@ -2,7 +2,7 @@
 % Please edit documentation in R/gx-heatmap.r
 \name{heatmap.3}
 \alias{heatmap.3}
-\title{Title}
+\title{Draw a heatmap with dendrograms and annotations}
 \usage{
 heatmap.3(
   x,
@@ -59,21 +59,21 @@ heatmap.3(
 )
 }
 \arguments{
-\item{x}{value}
+\item{x}{Numeric matrix of values to visualize}
 
-\item{Rowv}{value}
+\item{Rowv}{Draw row dendrogram?}
 
-\item{Colv}{value}
+\item{Colv}{Draw column dendrogram?}
 
-\item{distfun}{value}
+\item{distfun}{Distance function for dendrogram}
 
-\item{hclustfun}{value}
+\item{hclustfun}{Hierarchical clustering function}
 
-\item{dendrogram}{value}
+\item{dendrogram}{Draw dendrograms on rows, columns, both or neither}
 
 \item{symm}{value}
 
-\item{scale}{value}
+\item{scale}{Scale rows, columns or neither before clustering}
 
 \item{na.rm}{value}
 
@@ -81,7 +81,7 @@ heatmap.3(
 
 \item{add.expr}{value}
 
-\item{breaks}{value}
+\item{breaks}{Breakpoints for color scale}
 
 \item{symbreaks}{value}
 
@@ -103,7 +103,7 @@ heatmap.3(
 
 \item{na.color}{value}
 
-\item{trace}{value}
+\item{trace}{Draw trace lines?}
 
 \item{tracecol}{value}
 
@@ -125,9 +125,9 @@ heatmap.3(
 
 \item{cexCol}{value}
 
-\item{labRow}{value}
+\item{labRow}{Labels for rows}
 
-\item{labCol}{value}
+\item{labCol}{Labels for columns}
 
 \item{key}{value}
 
@@ -141,7 +141,7 @@ heatmap.3(
 
 \item{densadj}{value}
 
-\item{main}{value}
+\item{main}{Title for plot}
 
 \item{xlab}{value}
 
@@ -159,8 +159,27 @@ heatmap.3(
 
 \item{KeyValueName}{value}
 
-\item{...}{value}
+\item{...}{Additional arguments passed to image() and densCols()}
+}
+\value{
+None. Produces a heatmap plot.
 }
 \description{
-Title
+Draw a heatmap with dendrograms and annotations
+}
+\details{
+This function creates an annotated heatmap with optional
+row and column dendrograms. Scaling and clustering can be applied
+to rows or columns before plotting. Many options are provided for
+customizing the color scale, labels, titles, etc.
+}
+\examples{
+\dontrun{
+mat <- matrix(rnorm(200), 20, 10)
+heatmap.3(mat, Colv=FALSE, scale="column", dendrogram="row")
+}
+
+}
+\seealso{
+\code{\link[stats]{hclust}} for clustering methods.
 }

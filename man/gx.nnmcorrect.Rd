@@ -2,7 +2,7 @@
 % Please edit documentation in R/gx-combat.r
 \name{gx.nnmcorrect}
 \alias{gx.nnmcorrect}
-\title{Title}
+\title{Nearest neighbor matching batch correction}
 \usage{
 gx.nnmcorrect(
   X,
@@ -16,22 +16,48 @@ gx.nnmcorrect(
 )
 }
 \arguments{
-\item{X}{value}
+\item{X}{Numeric matrix of gene expression values (genes in rows, samples in columns).}
 
-\item{y}{value}
+\item{y}{Factor vector indicating batch for each sample.}
 
-\item{use.design}{value}
+\item{use.design}{Logical for whether to include batch design matrix in limma correction.}
 
-\item{dist.method}{value}
+\item{dist.method}{Distance metric to use for matching ('cor' or 'euclidean').}
 
-\item{center.x}{value}
+\item{center.x}{Logical for whether to center gene expression by row means.}
 
-\item{center.m}{value}
+\item{center.m}{Logical for whether to center expression by batch means.}
 
-\item{sdtop}{value}
+\item{sdtop}{Number of top variable genes to use for correlation.}
 
-\item{replace}{value}
+\item{replace}{Logical for whether to replace missing pairs.}
+}
+\value{
+List containing:
+\itemize{
+  \item X - Batch corrected gene expression matrix
+  \item pairings - Matrix of sample pairings used for correction  
+}
 }
 \description{
-Title
+Correct for batch effects in a gene expression matrix using nearest neighbor matching.
+}
+\details{
+This function performs batch correction using the following steps:
+\enumerate{
+  \item Compute distance matrix between all samples 
+  \item Find nearest neighbor matches between batches
+  \item Construct full paired dataset with matches
+  \item Apply limma batch correction to paired data
+  \item Average paired samples back to original samples
+}
+
+It allows replacing missing pairs and using batch design matrices.
+}
+\examples{
+# TODO
+ 
+}
+\seealso{
+\code{\link[limma]{removeBatchEffect}} for the batch correction method used.
 }

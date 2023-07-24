@@ -2,7 +2,7 @@
 % Please edit documentation in R/gx-util.r
 \name{symbol2hugo}
 \alias{symbol2hugo}
-\title{Title}
+\title{Convert gene symbols to official HUGO gene symbols}
 \usage{
 symbol2hugo(
   genes,
@@ -14,18 +14,39 @@ symbol2hugo(
 )
 }
 \arguments{
-\item{genes}{value}
+\item{genes}{Character vector of gene symbols to convert}
 
-\item{remove.non.hugo}{value}
+\item{remove.non.hugo}{Logical indicating whether to remove non-HUGO symbols. Default is TRUE.}
 
-\item{silent}{value}
+\item{silent}{Logical indicating whether to suppress messages about conversions. Default is FALSE.}
 
-\item{take.only.first}{value}
+\item{take.only.first}{Logical indicating whether to take only first HUGO symbol for aliases. Default is FALSE.}
 
-\item{split.char}{value}
+\item{split.char}{Character used to split multiple aliases. Default ";".}
 
-\item{unknown}{value}
+\item{unknown}{Character string to use for unknown symbols. Default "unknown_gene".}
+}
+\value{
+Character vector of official HUGO gene symbols.
 }
 \description{
-Title
+Convert gene symbols to official HUGO gene symbols
+}
+\details{
+This function converts a character vector of gene symbols to official HUGO gene symbols.
+It first removes any aliases by mapping to the primary HUGO symbol list.
+For any remaining non-HUGO symbols, it attempts to find the official symbol by alias mapping.
+
+If take.only.first is TRUE, only the first HUGO symbol is taken when a gene maps to multiple aliases. 
+Multiple aliases are concatenated by split.char when take.only.first=FALSE.
+
+Non-HUGO symbols that cannot be converted are replaced with unknown by default.
+Messages about conversions are printed unless silent=TRUE.
+}
+\examples{
+\dontrun{
+genes <- c("EGFR", "CDKN2A", "FOO", "BAR")
+hugo_symbols <- symbol2hugo(genes) 
+}
+
 }
