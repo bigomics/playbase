@@ -25,7 +25,7 @@
 #' \code{\link{gx.splitmap}} to see the heatmap creation function.
 #'
 #' @examples
-#' \code{
+#' \dontrun{
 #' # TODO
 #' }
 #' @export

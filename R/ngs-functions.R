@@ -27,6 +27,7 @@
 #' @return A data.frame containing gene annotation data mapped to gene symbols. The columns
 #' are: "gene_name", "gene_title", "gene_biotype", "chr", "pos", "tx_len", "map".
 #' 
+#' @example 
 #' \dontrun{
 #' d <- get_mini_example_data()
 #' genes <- sample(rownames(d$counts), 10)
