@@ -2,7 +2,7 @@
 % Please edit documentation in R/gx-plot.r
 \name{gx.b3plot}
 \alias{gx.b3plot}
-\title{Title}
+\title{Bar and bee swarm plot with significance stars}
 \usage{
 gx.b3plot(
   x,
@@ -25,40 +25,48 @@ gx.b3plot(
 )
 }
 \arguments{
-\item{x}{value}
+\item{x}{Factor for x-axis groups.}
 
-\item{y}{value}
+\item{y}{Numeric vector of values to plot.}
 
-\item{first}{value}
+\item{first}{Subset of groups to plot first.}
 
-\item{width}{value}
+\item{width}{Width of bars.}
 
-\item{bar}{value}
+\item{bar}{Logical to draw bar plot.}
 
-\item{bee}{value}
+\item{bee}{Logical to draw bee swarm plot.}
 
-\item{sig.stars}{value}
+\item{sig.stars}{Logical to draw significance stars.}
 
-\item{ymax}{value}
+\item{ymax}{Maximum y-axis value.}
 
-\item{bee.cex}{value}
+\item{bee.cex}{Size of points in bee swarm plot.}
 
-\item{max.stars}{value}
+\item{max.stars}{Maximum number of stars to draw.}
 
-\item{srt}{value}
+\item{srt}{Rotation angle of x-axis labels.}
 
-\item{xoff}{value}
+\item{xoff}{X-axis offset.}
 
-\item{names.cex}{value}
+\item{names.cex}{Size of x-axis labels.}
 
-\item{names}{value}
+\item{names}{Logical to draw x-axis labels.}
 
-\item{max.points}{value}
+\item{max.points}{Maximum number of points to draw.}
 
-\item{col}{value}
+\item{col}{Color of points.}
 
-\item{...}{value}
+\item{...}{Additional graphics parameters.}
+}
+\value{
+None. Produces a bar/bee swarm plot.
 }
 \description{
-Title
+Creates a bar plot with overlaid bee swarm plot and significance stars.
+}
+\details{
+This function creates a bar plot of \code{y} values grouped by \code{x}, with optional
+bee swarm plot overlayed on top representing the distribution of values.
+Significance stars highlighting differences between groups can also be added.
 }

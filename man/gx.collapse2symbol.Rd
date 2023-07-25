@@ -2,15 +2,27 @@
 % Please edit documentation in R/gx-util.r
 \name{gx.collapse2symbol}
 \alias{gx.collapse2symbol}
-\title{Title}
+\title{Collapse rows by common symbol}
 \usage{
 gx.collapse2symbol(X, symbol)
 }
 \arguments{
-\item{X}{value}
+\item{X}{Numeric matrix with rows to collapse.}
 
-\item{symbol}{value}
+\item{symbol}{Character vector of symbols corresponding to rows of X.}
+}
+\value{
+A matrix with rows collapsed based on the provided symbols.
 }
 \description{
-Title
+Collapses rows of a matrix based on a common symbol, removing duplicates.
+}
+\details{
+Collapse rows by common symbol
+
+
+This function takes a matrix X and a corresponding symbol vector.
+It orders the rows by standard deviation.
+It then keeps the first unique occurrence of each symbol, removing duplicates.
+The result is a matrix with rows collapsed based on the provided symbols.
 }

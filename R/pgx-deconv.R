@@ -543,6 +543,7 @@ pgx.deconvolution <- function(X, ref,
     dbg("starting deconvolution using CIBERSORT...\n")
     ciber.out <- NULL
     stime <- system.time(
+      # The f CIBERSORT is likely from CIBERSORT package but better confirm
       try(ciber.out <- CIBERSORT(ref, mat, perm = 0, QN = FALSE))
     )
     if (!is.null(ciber.out)) {

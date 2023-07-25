@@ -158,7 +158,7 @@ compute_extra <- function(ngs, extra = c(
 
   if ("wgcna" %in% extra) {
     message(">>> Computing wgcna...")
-    ngs$wgcna <- playbase::pgx.wgcna(ngs)
+    ngs$wgcna <- pgx.wgcna(ngs)
   }
 
   ## ------------------------------------------------------
@@ -325,7 +325,7 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
     ndrugs <- length(table(xdrugs))
     is.drug <- grepl("activity|drug|ChemPert", f, ignore.case = TRUE)
 
-    out1 <- playbase::pgx.computeDrugEnrichment(
+    out1 <- pgx.computeDrugEnrichment(
       obj = ngs,
       X = X,
       xdrugs = xdrugs,
@@ -400,7 +400,7 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
     X <- readRDS(file = file.path(cmap.dir, ref))
     xdrugs <- gsub("[@_].*$", "", colnames(X))
 
-    out1 <- playbase::pgx.computeDrugEnrichment(
+    out1 <- pgx.computeDrugEnrichment(
       ngs, X, xdrugs,
       methods = c("GSEA", "cor"),
       nmin = 10,

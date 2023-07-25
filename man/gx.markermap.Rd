@@ -2,19 +2,37 @@
 % Please edit documentation in R/gx-heatmap.r
 \name{gx.markermap}
 \alias{gx.markermap}
-\title{Title}
+\title{Create heatmap of top marker genes}
 \usage{
 gx.markermap(X, splitx, n = 5, ...)
 }
 \arguments{
-\item{X}{value}
+\item{X}{Numeric matrix of gene expression values (genes in rows, samples in columns).}
 
-\item{splitx}{value}
+\item{splitx}{Factor indicating groups for each sample.}
 
-\item{n}{value}
+\item{n}{Number of top markers to identify per group.}
 
-\item{...}{value}
+\item{...}{Additional arguments passed to gx.splitmap().}
+}
+\value{
+Heatmap created by gx.splitmap() using top markers.
 }
 \description{
-Title
+Identify top marker genes for groups and visualize in a heatmap.
+}
+\details{
+This function identifies the top differentially expressed genes (markers)
+between groups defined by splitx. It calculates the mean expression of each gene in
+each group, subtracts the overall mean, and finds the n genes with highest/lowest
+mean expression per group. These top marker genes are extracted from X and visualized
+in a heatmap using gx.splitmap().
+}
+\examples{
+\dontrun{
+# TODO
+}
+}
+\seealso{
+\code{\link{gx.splitmap}} to see the heatmap creation function.
 }

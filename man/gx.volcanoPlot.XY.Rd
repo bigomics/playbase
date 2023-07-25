@@ -2,7 +2,7 @@
 % Please edit documentation in R/gx-volcano.r
 \name{gx.volcanoPlot.XY}
 \alias{gx.volcanoPlot.XY}
-\title{Title}
+\title{Volcano Plot}
 \usage{
 gx.volcanoPlot.XY(
   x,
@@ -33,56 +33,65 @@ gx.volcanoPlot.XY(
 )
 }
 \arguments{
-\item{x}{value}
+\item{x}{Numeric vector of effect sizes (fold changes, differences, etc).}
 
-\item{pv}{value}
+\item{pv}{Numeric vector of p-values.}
 
-\item{gene}{value}
+\item{gene}{Character vector of gene IDs corresponding to x and pv.}
 
-\item{ma_plot}{value}
+\item{ma_plot}{Logical, if TRUE creates an MA-plot instead.}
 
-\item{ma}{value}
+\item{ma}{Matrix of log-fold changes and mean average values for MA-plot.}
 
-\item{p.sig}{value}
+\item{p.sig}{Significance threshold p-value.}
 
-\item{lfc}{value}
+\item{lfc}{Log2 fold change threshold.}
 
-\item{render}{value}
+\item{render}{Plot rendering method (base, ggplot, scatterD3).}
 
-\item{n}{value}
+\item{n}{Maximum number of points to plot.}
 
-\item{highlight}{value}
+\item{highlight}{Vector of genes to highlight.}
 
-\item{main}{value}
+\item{main}{Title for the plot.}
 
-\item{cex}{value}
+\item{cex}{Point size.}
 
-\item{lab.cex}{value}
+\item{lab.cex}{Label size for highlighted genes.}
 
-\item{nlab}{value}
+\item{nlab}{Number of top genes to label.}
 
-\item{xlim}{value}
+\item{xlim}{Limits of the x-axis.}
 
-\item{ylim}{value}
+\item{ylim}{Limits of the y-axis.}
 
-\item{use.fdr}{value}
+\item{use.fdr}{Use FDR instead of p-values.}
 
-\item{xlab}{value}
+\item{xlab}{Label for x-axis.}
 
-\item{ylab}{value}
+\item{ylab}{Label for y-axis.}
 
-\item{use.rpkm}{value}
+\item{use.rpkm}{Use RPKM/FPKM values instead of raw counts.}
 
-\item{maxchar}{value}
+\item{maxchar}{Maximum characters for gene labels.}
 
-\item{hi.col}{value}
+\item{hi.col}{Color for highlighted points.}
 
-\item{cex.main}{value}
+\item{cex.main}{Size of main title.}
 
-\item{axes}{value}
+\item{axes}{Display axes?}
 
-\item{cex.axis}{value}
+\item{cex.axis}{Size of axis labels.}
+}
+\value{
+A volcano plot is generated, no value is returned.
 }
 \description{
-Title
+Generate a volcano plot to visualize significance versus magnitude of change.
+}
+\details{
+This function takes a vector of p-values and effect sizes (fold changes, differences, etc)
+and generates a volcano plot to visualize significance versus magnitude of change. Points exceeding
+both p-value and effect size thresholds are highlighted. The top most significant genes can be 
+labeled. Both raw and FDR corrected p-values can be used.
 }

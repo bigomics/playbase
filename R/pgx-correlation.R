@@ -172,6 +172,7 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
 
   if ("FastGGM" %in% method) {
     timings[["FastGGM"]] <- system.time(
+      # The f FastGGM_Parallel likely comes from wt2015-github/FastGGM but better confirm
       suppressWarnings(res <- FastGGM_Parallel(tX))
     )
     rho[["FastGGM"]] <- res$partialCor
@@ -180,14 +181,16 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
   if ("SILGGM" %in% method) {
     timings[["SILGGM"]] <- system.time({
       ## these are quite fast
-      rho[["SILGGM"]] <- SILGGM(tX)$partialCor ## default: "D-S_NW_SL"
+      rho[["SILGGM"]] <- SILGGM::SILGGM(tX)$partialCor ## default: "D-S_NW_SL"
     })
   }
 
   if ("fastclime" %in% method) {
     timings[["fastclime"]] <- system.time(
+    # The f fastclime.selector likely comes from fastclime but better confirm
       out1 <- fastclime(tX)
     )
+    # The f fastclime.selector likely comes from fastclime but better confirm
     out2 <- fastclime.selector(out1$lambdamtx, out1$icovlist, 0.1)
     out2$adaj
     rho[["fastclime"]] <- out2$adaj
@@ -196,20 +199,12 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
   if ("QUIC" %in% method) {
     timings[["QUIC"]] <- system.time(
       rho[["QUIC"]] <- {
+       # The f QUIC likely comes from QUIC but better confirm
         r <- -QUIC(cov(tX), 1e-1)$X
         diag(r) <- -diag(r)
         r
       }
     )
-  }
-
-  if (0 && "glassoFast" %in% method) {
-    timings[["glassoFast"]] <- system.time(
-      suppressWarnings(res <- glassoFast(cov(tX), 1e-2))
-    )
-    r <- -cov2cor(res$wi)
-    diag(r) <- -diag(r)
-    rho[["glassoFast"]] <- r
   }
 
   if ("glasso" %in% method) {
@@ -224,6 +219,7 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
   if ("clime" %in% method) {
     timings[["clime"]] <- system.time(
       rho[["clime"]] <- {
+        # The f cv.clime and clime likely comes from fastclime but better confirm
         re.cv <- cv.clime(clime(tX))
         clime(tX, standardize = FALSE, re.cv$lambdaopt)
       }
@@ -234,11 +230,13 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
     timings[["BigQuic"]] <- system.time(
       rho[["BigQuic"]] <- {
         lambda <- seq(from = 0.1, to = 1, by = 0.1) - 0.01
+        # The f BigQuic and clime likely comes from BigQuic but better confirm
         res <- BigQuic(as.matrix(tX),
           lambda = lambda,
           numthreads = 10, memory_size = 512 * 8,
           use_ram = TRUE
         )
+        # The f BigQuic.select and clime likely comes from BigQuic but better confirm
         res <- BigQuic.select(res)
         which.opt <- max(which(res$lambda <= res$opt.lambda))
         which.opt
@@ -247,7 +245,6 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
     )
   }
 
-  lapply(rho, dim)
   for (i in 1:length(rho)) {
     rownames(rho[[i]]) <- colnames(rho[[i]]) <- colnames(tX)
     if (sum(diag(rho[[i]])) == 0) diag(rho[[i]]) <- 1
@@ -378,7 +375,7 @@ pgx.plotPartialCorrelationAroundGene <- function(res, gene, rho.min = 0.8, pcor.
     ## calculate layout
     ly <- switch(layout,
       "fr" = igraph::layout_with_fr(gr2),
-      "kk" = igraph::layout_with_kk(gr2, weights = 1 / E(gr2)$weight),
+      "kk" = igraph::layout_with_kk(gr2, weights = 1 / igraph::E(gr2)$weight),
       "graphopt" = igraph::layout_with_graphopt(gr2),
       "tree" = igraph::layout_as_tree(gr2),
       igraph::layout_nicely(gr2)

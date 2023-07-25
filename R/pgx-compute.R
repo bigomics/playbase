@@ -6,15 +6,27 @@
 #' Create a pgx object
 #'
 #' This function creates a pgx object from files, which is the core object in the
-#' OmicsPlayground.
+#' OmicsPlayground. It then runs the specified differential expression methods.
 #'
-#' @param counts.file a playbase::COUNTS file
-#' @param samples.file a playbase::SAMPLES file
-#' @param contrasts.file a playbase::CONTRASTS file
-#'
-#' @return list. represents a pgx object
-#' @export
+#' @param counts.file Path to counts data file. Rows are genes, columns are samples.
+#' @param samples.file Path to samples data file. Rows are samples, columns are sample info. 
+#' @param contrasts.file (optional) Path to contrasts file. Rows and columns define contrasts.
+#' @param gxmethods a string with the gene-level methods to use. The default value is \code{"trend.limma,edger.qlf,deseq2.wald"}
+#' @param gsetmethods a string with the gene-set methods to use. The default value is \code{"fisher,gsva,fgsea"}
+#' @param extra a string with the extra modules to use. The default value is \code{"meta.go,deconv,infer,drugs,wordcloud"}
+#' 
+#' @return list. represents a pgx object. It contains the data and analysis results.
 #' @examples
+#' \dontrun{
+#' 
+#'  library(playbase)
+#'  counts <- system.file("extdata", "counts.csv", package = "playbase")
+#'  contrasts <- system.file("extdata", "contrasts.csv", package = "playbase")
+#'  samples <- system.file("extdata", "samples.csv", package = "playbase")
+#' 
+#'   mypgx <- pgx.createFromFiles(counts, samples, contrasts) 
+#' }
+#' @export
 pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL,
                                 gxmethods = "trend.limma,edger.qlf,deseq2.wald",
                                 gsetmethods = "fisher,gsva,fgsea",
@@ -60,16 +72,12 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
   gset.methods <- strsplit(gsetmethods, split = ",")[[1]]
   extra.methods <- strsplit(extra, split = ",")[[1]]
 
-  gx.methods
-  gset.methods
-  extra.methods
-
   ## create initial PGX object
   pgx <- pgx.createPGX(
     counts,
     samples = samples,
     contrasts = contrasts,
-    X = NULL, ## genes,
+    X = NULL, 
     is.logx = NULL,
     batch.correct = TRUE,
     auto.scale = TRUE,
@@ -104,29 +112,28 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 }
 
 
-#' Create a pgx object
-#'
+#' Create a PGX object
 #' This function creates a pgx object, which is the core object in the
 #' OmicsPlayground.
+#' @param counts Matrix of count data with genes as rows and samples as columns.
+#' @param samples Data frame containing sample information. 
+#' @param contrasts Data frame defining sample contrasts.
+#' @param X (Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.
+#' @param is.logx Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.  
+#' @param batch.correct Logical indicating whether to perform batch correction. Default is TRUE.
+#' @param auto.scale Logical indicating whether to automatically scale/center genes. Default is TRUE. 
+#' @param filter.genes Logical indicating whether to filter lowly expressed genes. Default is TRUE.
+#' @param prune.samples Logical indicating whether to remove samples without contrasts. Default is FALSE.
+#' @param only.known Logical indicating whether to keep only known genes. Default is TRUE.
+#' @param only.hugo Logical indicating whether to convert symbols to HUGO names. Default is TRUE.  
+#' @param convert.hugo Logical indicating whether to convert symbols to HUGO names. Default is TRUE.
+#' @param do.cluster Logical indicating whether to run sample clustering. Default is TRUE.
+#' @param cluster.contrasts Logical indicating whether to cluster contrasts. Default is FALSE.
+#' @param do.clustergenes Logical indicating whether to cluster genes. Default is TRUE.
+#' @param only.proteincoding Logical indicating whether to keep only protein-coding genes. Default is TRUE.
 #'
-#' @param counts.file a playbase::COUNTS file
-#' @param samples.file a playbase::SAMPLES file
-#' @param contrasts.file a playbase::CONTRASTS file
-#' @param X dataframe. value
-#' @param is.logx boolean. value
-#' @param batch.correct boolean. value
-#' @param auto.scale boolean. value
-#' @param filter.genes boolean. value
-#' @param prune.samples boolean. value
-#' @param only.known boolean. value
-#' @param only.hugo boolean. value
-#' @param convert.hugo boolean. value
-#' @param do.cluster boolean. value
-#' @param cluster.contrasts boolean. value
-#' @param do.clustergenes boolean. value
-#' @param only.proteincoding boolean. value
+#' @return List. PGX object containing input data and parameters.
 #'
-#' @return list. represents a pgx object
 #' @export
 pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
                           is.logx = NULL, batch.correct = TRUE,
@@ -134,10 +141,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
                           only.known = TRUE, only.hugo = TRUE, convert.hugo = TRUE,
                           do.cluster = TRUE, cluster.contrasts = FALSE, do.clustergenes = TRUE,
                           only.proteincoding = TRUE) {
-  if (0 && !"group" %in% colnames(samples)) {
-    stop("samples information must have 'group' column\n")
-    return(NULL)
-  }
 
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("dimension of counts and X do not match\n")
@@ -274,22 +277,11 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     cat("[createPGX:autoscale] count_multiplier= ", counts_multiplier, "\n")
   }
 
-  if (0 && auto.scale) {
-    ## auto-scale down billions of counts like sometimes for proteomics
-    q10 <- quantile(counts[counts > 0.25], probs = 0.10)
-    q10
-    if (q10 > 100) {
-      counts <- counts / q10
-      counts_multiplier <- q10
-    }
-    cat("[createPGX:autoscale] count_multiplier= ", counts_multiplier, "\n")
-  }
-
   ## -------------------------------------------------------------------
   ## convert probe-IDs to gene symbol (do not translate yet to HUGO)
   ## -------------------------------------------------------------------
   message("[createPGX] converting probes to symbol...")
-  symbol <- playbase::probe2symbol(rownames(counts), type = NULL) ## auto-convert function
+  symbol <- probe2symbol(rownames(counts), type = NULL) ## auto-convert function
   if (mean(rownames(counts) == symbol, na.rm = TRUE) < 0.5) { ## why??
     jj <- which(!is.na(symbol))
     counts <- as.matrix(counts[jj, ])
@@ -329,7 +321,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 
   if (convert.hugo) {
     message("[createPGX] converting to HUGO symbols...")
-    gene1 <- playbase::alias2hugo(gene1) ## convert to latest HUGO
+    gene1 <- alias2hugo(gene1) ## convert to latest HUGO
   } else {
     message("[createPGX] skip conversion to HUGO symbols")
   }
@@ -357,7 +349,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## create gene annotation if not given (no HUGO conversion)
   ## -------------------------------------------------------------------
   message("[createPGX] annotating genes...")
-  ngs$genes <- playbase::ngs.getGeneAnnotation(genes = rownames(ngs$counts))
+  ngs$genes <- ngs.getGeneAnnotation(genes = rownames(ngs$counts))
   rownames(ngs$genes) <- rownames(ngs$counts)
   ngs$genes[is.na(ngs$genes)] <- ""
 
@@ -420,7 +412,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
-  ngs <- playbase::compute_cellcycle_gender(ngs)
+  ngs <- compute_cellcycle_gender(ngs)
 
   ## -------------------------------------------------------------------
   ## Batch-correction (if requested. WARNING: changes counts )
@@ -462,7 +454,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     message("[createPGX] clustering samples...")
     #
     #
-    ngs <- playbase::pgx.clusterSamples2(
+    ngs <- pgx.clusterSamples2(
       ngs,
       dims = c(2, 3),
       perplexity = NULL,
@@ -473,10 +465,10 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     #
     posx <- scale(cbind(ngs$cluster$pos[["umap2d"]], ngs$cluster$pos[["tsne2d"]]))
     #
-    idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
+    idx <- pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
     if (length(unique(idx)) == 1) {
       ## try again with finer settings if single cluster...
-      idx <- playbase::pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
+      idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
     }
     ngs$samples$cluster <- idx
   }
@@ -488,8 +480,8 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     if (length(unique(Y)) < 2) {
       message("[createPGX] warning: only one cluster.")
     } else {
-      ct <- playbase::makeDirectContrasts(Y, ref = "others")
-      ctx <- playbase::contrastAsLabels(ct$exp.matrix)
+      ct <- makeDirectContrasts(Y, ref = "others")
+      ctx <- contrastAsLabels(ct$exp.matrix)
       if (ncol(ngs$contrasts) == 0) {
         ngs$contrasts <- ctx
       } else {
@@ -503,7 +495,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## -------------------------------------------------------------------
   if (is.null(ngs$X)) {
     message("[createPGX] calculating log-expression matrix X...")
-    ngs$X <- playbase::logCPM(ngs$counts, total = 1e6, prior = 1)
+    ngs$X <- logCPM(ngs$counts, total = 1e6, prior = 1)
   } else {
     message("[createPGX] using passed log-expression X...")
   }
@@ -514,27 +506,31 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 
   if (do.clustergenes) {
     message("[createPGX] clustering genes...")
-    ngs <- playbase::pgx.clusterGenes(ngs, methods = "umap", dims = c(2, 3), level = "gene")
+    ngs <- pgx.clusterGenes(ngs, methods = "umap", dims = c(2, 3), level = "gene")
   }
 
   return(ngs)
 }
 
 
-#' Main function to populate pgx with results
+#' @title Compute PGX 
+#' @description Main function to populate pgx with results. The function computes the analysis on a pgx object
 #'
-#' @param pgx value
-#' @param max.genes value
-#' @param max.genesets value
-#' @param gx.methods value
-#' @param gset.methods value
-#' @param do.cluster value
-#' @param use.design value
-#' @param prune.samples value
-#' @param extra.methods value
-#' @param progress value
+#' @param pgx A pgx object containing the input data
+#' @param max.genes Maximum number of genes to test. Default is 19999.  
+#' @param max.genesets Maximum number of gene sets to test. Default is 5000.
+#' @param gx.methods Methods for differential expression analysis at the gene level. Default is c("ttest.welch", "trend.limma", "edger.qlf").
+#' @param gset.methods Methods for differential analysis at the gene set level. Default is c("fisher", "gsva", "fgsea").
+#' @param custom.geneset Custom gene sets to test, as a named list with gmt and info elements.
+#' @param do.cluster Whether to run sample clustering. Default is TRUE.
+#' @param use.design Whether to use model design matrix for testing. Default is TRUE. 
+#' @param prune.samples Whether to remove samples without valid contrasts. Default is FALSE.
+#' @param extra.methods Additional analysis methods to run. Default is c("meta.go", "infer", "deconv", "drugs", "wordcloud", "wgcna")[c(1, 2)].
+#' @param libx.dir Directory containing custom analysis modules.
+#' @param progress A progress object for tracking status.
 #'
-#' @return
+#' @return An updated pgx object containing analysis results.
+#'
 #' @export
 pgx.computePGX <- function(pgx,
                            max.genes = 19999,
@@ -562,7 +558,7 @@ pgx.computePGX <- function(pgx,
   is.numcontrast <- all(contr.values %in% c(NA, -1, 0, 1))
   is.numcontrast <- is.numcontrast && (-1 %in% contr.values) && (1 %in% contr.values)
   if (!is.numcontrast) {
-    contr.matrix <- playbase::makeContrastsFromLabelMatrix(contr.matrix)
+    contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
     contr.matrix <- sign(contr.matrix) ## sign is fine
   }
 
@@ -589,7 +585,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
   message("[pgx.computePGX] testing genes...")
 
-  pgx <- playbase::compute_testGenes(
+  pgx <- compute_testGenes(
     pgx, contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
@@ -622,6 +618,6 @@ pgx.computePGX <- function(pgx,
   pgx <- compute_extra(pgx, extra = extra.methods, libx.dir = libx.dir)
 
   message("[pgx.computePGX] done!")
-  pgx$timings
+
   return(pgx)
 }

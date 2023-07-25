@@ -2,17 +2,31 @@
 % Please edit documentation in R/pgx-contrasts.R
 \name{pgx.getContrastGroups}
 \alias{pgx.getContrastGroups}
-\title{Title}
+\title{Get contrast groups}
 \usage{
 pgx.getContrastGroups(pgx, contrast, as.factor = TRUE)
 }
 \arguments{
-\item{pgx}{value}
+\item{pgx}{A PGX object.}
 
-\item{contrast}{value}
+\item{contrast}{The index or name of the contrast.}
 
-\item{as.factor}{value}
+\item{as.factor}{Whether to return as a factor.}
+}
+\value{
+A vector or factor of group labels for the given contrast.
 }
 \description{
-Title
+Retrieves the group labels for a given contrast from a PGX object.
+}
+\details{
+Get contrast groups from PGX object
+
+This function extracts the experimental design matrix from the PGX object, 
+selects the specified contrast column, and returns the corresponding group labels.
+}
+\examples{
+\dontrun{
+# TODO
+}
 }

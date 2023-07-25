@@ -90,7 +90,7 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
     if ("nnm" %in% colnames(Y) && batch.correct) {
       yy <- Y$nnm
       ny <- length(unique(yy))
-      if (ny > 1) zx <- gx.nnmcorrect(zx, yy)
+      if (ny > 1) zx <- playbase::gx.nnmcorrect(zx, yy)
     }
     zx <- scale(limma::normalizeQuantiles(zx))
     return(zx)
@@ -127,7 +127,7 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
       zx.rnkcorr <- zx.rnkcorr[names(gmt), colnames(X)] ## make sure..
 
       ## compute LIMMA
-      all.results[["spearman"]] <- gset.fitContrastsWithLIMMA(
+      all.results[["spearman"]] <- playbase::gset.fitContrastsWithLIMMA(
         zx.rnkcorr, contr.matrix,
         design = design, trend = TRUE, conform.output = TRUE
       )
@@ -162,7 +162,7 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
       jj <- match(names(gmt), rownames(zx.gsva))
       zx.gsva <- zx.gsva[jj, colnames(X)] ## make sure..
       zx.gsva[is.na(zx.gsva)] <- 0
-      all.results[["gsva"]] <- gset.fitContrastsWithLIMMA(
+      all.results[["gsva"]] <- playbase::gset.fitContrastsWithLIMMA(
         zx.gsva, contr.matrix,
         design = design, trend = TRUE, conform.output = TRUE
       )
@@ -183,7 +183,7 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
       jj <- match(names(gmt), rownames(zx.ssgsea))
       zx.ssgsea <- zx.ssgsea[jj, colnames(X)] ## make sure..
       zx.ssgsea[is.na(zx.ssgsea)] <- 0
-      all.results[["ssgsea"]] <- gset.fitContrastsWithLIMMA(
+      all.results[["ssgsea"]] <- playbase::gset.fitContrastsWithLIMMA(
         zx.ssgsea, contr.matrix, design,
         trend = TRUE, conform.output = TRUE
       )
@@ -213,7 +213,7 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
       lfc05 <- 0.0
       fdr <- 0.05 ## NEW thresholds (since oct2021)
       suppressWarnings(suppressMessages(
-        limma0 <- gx.limma(xx, yy,
+        limma0 <- playbase::gx.limma(xx, yy,
           fdr = 1.0, lfc = 0,
           ref = ref, trend = TRUE, verbose = 0
         ) ## trend true for NGS
@@ -234,7 +234,7 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
       }
 
       tt <- system.time({
-        output <- gset.fisher2(genes.up, genes.dn,
+        output <- playbase::gset.fisher2(genes.up, genes.dn,
           genesets = gmt, fdr = 1.0,
           background = rownames(X), check.background = FALSE,
           min.genes = 0, max.genes = 99999,
@@ -261,10 +261,10 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
       zx <- zx.ssgsea[, colnames(xx)]
       gs <- intersect(names(gmt), rownames(zx))
       tt <- system.time(
-        output <- gx.limma(zx[gs, ], yy, fdr = 1, lfc = 0, ref = ref, trend = LIMMA.TREND, verbose = 0) ## ssgsea
+        output <- playbase::gx.limma(zx[gs, ], yy, fdr = 1, lfc = 0, ref = ref, trend = LIMMA.TREND, verbose = 0) ## ssgsea
       )
       timings <- rbind(timings, c("ssgsea", tt))
-      dim(output)
+
       output <- output[match(names(gmt), rownames(output)), ]
       rownames(output) <- names(gmt)
       output <- output[, c("logFC", "P.Value", "adj.P.Val", "0", "1")]
@@ -276,7 +276,7 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
       zx <- zx.gsva[, colnames(xx)]
       gs <- intersect(names(gmt), rownames(zx))
       tt <- system.time({
-        output <- gx.limma(zx[gs, ], yy,
+        output <- playbase::gx.limma(zx[gs, ], yy,
           fdr = 1, lfc = 0, ref = ref,
           trend = LIMMA.TREND, verbose = 0
         ) ## ssgsea
@@ -293,11 +293,11 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
 
     if ("spearman" %in% method && !is.null(zx.rnkcorr)) {
       tt <- system.time(
-        output <- gx.limma(zx.rnkcorr[, ], yy, fdr = 1, lfc = 0, ref = ref, trend = LIMMA.TREND, verbose = 0) ## ssgsea
+        output <- playbase::gx.limma(zx.rnkcorr[, ], yy, fdr = 1, lfc = 0, ref = ref, trend = LIMMA.TREND, verbose = 0) ## ssgsea
       )
       timings <- rbind(timings, c("spearman", tt))
-      Matrix::head(output)
-      dim(output)
+
+
       output <- output[match(names(gmt), rownames(output)), ]
       rownames(output) <- names(gmt)
       output <- output[, c("logFC", "P.Value", "adj.P.Val", "0", "1")]
@@ -348,16 +348,16 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
     ## ----------------------------------------------------
     if ("gsea.permPH" %in% method) {
       tt <- system.time(
-        output <- run.GSEA(xx, yy, gmt,
+        output <- playbase::run.GSEA(xx, yy, gmt,
           fdr = 1.0, do.leading.edge = FALSE,
           set.min = 0, set.max = 99999, ref.type = ref, permute = "phenotype"
         )
       )
       timings <- rbind(timings, c("gsea.permPH", tt))
-      dim(output)
+
       rownames(output) <- output$GS
-      Matrix::head(output)
-      dim(output)
+
+
       output <- output[match(names(gmt), rownames(output)), ]
       rownames(output) <- names(gmt)
       output <- output[, c("NES", "NOM p-val", "FDR q-val", "NES", "SIZE", "LEADING EDGE", "LEADING GENES")]
@@ -367,16 +367,16 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
 
     if ("gsea.permGS" %in% method) {
       tt <- system.time(
-        output <- run.GSEA(xx, yy, gmt,
+        output <- playbase::run.GSEA(xx, yy, gmt,
           fdr = 1.0, do.leading.edge = FALSE,
           set.min = 0, set.max = 99999, ref.type = ref, permute = "gene_set"
         )
       )
       timings <- rbind(timings, c("gsea.permGS", tt))
-      dim(output)
+
       rownames(output) <- output$GS
-      Matrix::head(output)
-      dim(output)
+
+
       output <- output[match(names(gmt), rownames(output)), ]
       rownames(output) <- names(gmt)
       output <- output[, c("NES", "NOM p-val", "FDR q-val", "NES", "SIZE", "LEADING EDGE", "LEADING GENES")]
@@ -388,7 +388,7 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
     if ("gseaPR" %in% method) {
       rnk <- rowMeans(xx[, which(yy == 1), drop = FALSE]) - rowMeans(xx[, which(yy == 0), drop = FALSE])
       tt <- system.time(
-        output <- run.GSEA.preranked(rnk, gmt,
+        output <- playbase::run.GSEA.preranked(rnk, gmt,
           fdr = 1.0, do.leading.edge = FALSE,
           set.min = 0, set.max = 99999, output.dir = NULL
         )
@@ -812,7 +812,7 @@ gseaSnapshot <- function(gsets, gsea_dir) {
       interpolate = TRUE
     )
   })
-  grid.arrange(grobs = imgs, ncol = 5)
+  gridExtra::grid.arrange(grobs = imgs, ncol = 5)
 }
 
 

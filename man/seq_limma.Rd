@@ -2,17 +2,31 @@
 % Please edit documentation in R/gx-limma.r
 \name{seq_limma}
 \alias{seq_limma}
-\title{Title}
+\title{Differential expression analysis with limma for RNA-seq data}
 \usage{
 seq_limma(countdata, y, method = "edgeR")
 }
 \arguments{
-\item{countdata}{value}
+\item{countdata}{Numeric matrix of RNA-seq counts with genes in rows and 
+samples in columns.}
 
-\item{y}{value}
+\item{y}{Factor or vector indicating the phenotype for each sample.}
 
-\item{method}{value}
+\item{method}{Method for normalization and dispersion estimation. Either 
+"edgeR" or "DESeq2".}
+}
+\value{
+Data frame containing limma analysis results.
 }
 \description{
-Title
+Performs differential expression analysis on RNA-seq count data
+ using limma-voom. Designed for gene-level count data from RNA-seq 
+experiments.
+}
+\details{
+Differential expression analysis using limma for RNA-seq data
+
+This function takes RNA-seq count data and a phenotype factor as input.
+ It uses limma-voom to fit a linear model and identify differentially expressed 
+genes. The count data is normalized and dispersion is estimated using either edgeR or DESeq2 methods.
 }

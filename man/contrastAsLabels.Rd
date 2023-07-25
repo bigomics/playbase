@@ -2,15 +2,32 @@
 % Please edit documentation in R/pgx-contrasts.R
 \name{contrastAsLabels}
 \alias{contrastAsLabels}
-\title{Title}
+\title{Convert contrast matrix to group labels}
 \usage{
 contrastAsLabels(contr.matrix, as.factor = FALSE)
 }
 \arguments{
-\item{contr.matrix}{value}
+\item{contr.matrix}{The contrast matrix.}
 
-\item{as.factor}{value}
+\item{as.factor}{Whether to return as factor. Default is FALSE.}
+}
+\value{
+Data frame of group labels.
 }
 \description{
-Title
+Converts a contrast matrix to a data frame of group labels.
+}
+\details{
+Convert contrast matrix to group labels
+
+This function takes a contrast matrix and returns a data frame 
+with a column of group labels for each contrast. The labels are generated  
+from the contrast names.
+}
+\examples{
+\dontrun{
+contrast <- playbase::CONTRASTS
+z <- playbase::contrastAsLabels(contrast)
+z
+}
 }

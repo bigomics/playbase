@@ -2,7 +2,7 @@
 % Please edit documentation in R/ngs-cook.r
 \name{ngs.cookForEDGER}
 \alias{ngs.cookForEDGER}
-\title{Title}
+\title{Prepare count data for edgeR differential analysis}
 \usage{
 ngs.cookForEDGER(
   counts,
@@ -15,20 +15,32 @@ ngs.cookForEDGER(
 )
 }
 \arguments{
-\item{counts}{value}
+\item{counts}{Data frame with raw counts, or named list with counts, samples, and genes components.}
 
-\item{samples}{value}
+\item{samples}{Data frame with sample metadata, required if counts is just a matrix.}
 
-\item{genes}{value}
+\item{genes}{Data frame with gene metadata, required if counts is just a matrix.}
 
-\item{normalization}{value}
+\item{normalization}{Normalization method to use, default is "none".}
 
-\item{filter}{value}
+\item{filter}{Logical indicating whether to filter low counts.}
 
-\item{prior.cpm}{value}
+\item{prior.cpm}{Filtering threshold for counts per million. Default is 0.}
 
-\item{remove.batch}{value}
+\item{remove.batch}{Logical indicating whether to estimate and remove batch effects.}
+}
+\value{
+A DGEList object ready for analysis with edgeR.
 }
 \description{
-Title
+This function takes raw count data and prepares it for differential 
+expression analysis with edgeR. It handles filtering, normalization, and batch correction.
+}
+\details{
+This function handles conversion of raw count data into a properly formatted 
+DGEList object for differential analysis with edgeR. It checks that the sample and gene
+metadata matches the counts. Filtering, normalization, and batch correction can be applied.
+
+The returned DGEList contains the normalized, filtered count matrix, along with sample and 
+gene data frames, ready for analysis with edgeR functions like glmQLFit() and glmQLFTest().
 }

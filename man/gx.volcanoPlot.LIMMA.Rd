@@ -2,7 +2,7 @@
 % Please edit documentation in R/gx-volcano.r
 \name{gx.volcanoPlot.LIMMA}
 \alias{gx.volcanoPlot.LIMMA}
-\title{Title}
+\title{Volcano plot from LIMMA results}
 \usage{
 gx.volcanoPlot.LIMMA(
   tab,
@@ -25,40 +25,62 @@ gx.volcanoPlot.LIMMA(
 )
 }
 \arguments{
-\item{tab}{value}
+\item{tab}{Data frame containing statistics from LIMMA analysis, with 
+columns for log2 fold change, p-values, and adjusted p-values.}
 
-\item{render}{value}
+\item{render}{Plotting method (either base R graphics or scatterD3).}
 
-\item{n}{value}
+\item{n}{Maximum number of points to plot.}
 
-\item{highlight}{value}
+\item{highlight}{Vector of genes to highlight.}
 
-\item{p.sig}{value}
+\item{p.sig}{P-value cutoff for significance.}
 
-\item{cex}{value}
+\item{cex}{Point size.}
 
-\item{lab.cex}{value}
+\item{lab.cex}{Label size for highlighted genes.}
 
-\item{nlab}{value}
+\item{nlab}{Number of top genes to label.}
 
-\item{xlim}{value}
+\item{xlim}{Limits of the x-axis.}
 
-\item{ylim}{value}
+\item{ylim}{Limits of the y-axis.}
 
-\item{use.fdr}{value}
+\item{use.fdr}{Use FDR adjusted p-values.}
 
-\item{use.rpkm}{value}
+\item{use.rpkm}{Use RPKM/TPM values for x-axis.}
 
-\item{ma.plot}{value}
+\item{ma.plot}{Overlay MA plot lines?}
 
-\item{cex.main}{value}
+\item{cex.main}{Title size.}
 
-\item{main}{value}
+\item{main}{Plot title.}
 
-\item{cex.axis}{value}
+\item{cex.axis}{Axis label size.}
 
-\item{axes}{value}
+\item{axes}{Display axes?}
+}
+\value{
+A volcano plot is generated, no value is returned.
 }
 \description{
-Title
+Generate a volcano plot from a LIMMA differential 
+expression analysis result table.
+}
+\details{
+This function takes a LIMMA result table and generates a volcano plot 
+to visualize significance versus log2 fold change. Points exceeding the specified 
+p-value and fold change thresholds are highlighted. The top most significant 
+genes can be labeled. Both raw and FDR corrected p-values can be used.
+}
+\examples{
+\dontrun{
+n <- 100
+tab <- data.frame(logFC=rnorm(n), 
+                 P.Value=runif(n), 
+                 adj.P.Val = p.adjust(runif(n)), 
+                 AveExpr = runif(n))
+z<- gx.volcanoPlot.LIMMA(tab)
+z
+}
 }

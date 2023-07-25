@@ -2,7 +2,7 @@
 % Please edit documentation in R/gx-limma.r
 \name{gx.limmaF}
 \alias{gx.limmaF}
-\title{Title}
+\title{Differential expression analysis with limma}
 \usage{
 gx.limmaF(
   X,
@@ -20,26 +20,44 @@ gx.limmaF(
 )
 }
 \arguments{
-\item{X}{value}
+\item{X}{Numeric gene expression matrix with genes in rows and samples in columns.}
 
-\item{pheno}{value}
+\item{pheno}{Data frame with phenotype data for samples. Must have column named 'group'.}
 
-\item{B}{value}
+\item{B}{Data frame with batch data for samples. Default is NULL.}
 
-\item{fdr}{value}
+\item{fdr}{FDR threshold for significance. Default is 0.05.}
 
-\item{compute.means}{value}
+\item{compute.means}{Logical indicating whether to compute group means. Default is TRUE.}
 
-\item{lfc}{value}
+\item{lfc}{Log fold change threshold. Default is 0.2.}
 
-\item{max.na}{value}
+\item{max.na}{Maximum missing value fraction for gene filtering. Default is 0.2.}
 
-\item{ref}{value}
+\item{ref}{Character vector of reference group names to use as baseline. Default is common control names.}
 
-\item{trend}{value}
+\item{trend}{Logical indicating whether to fit a trend model. Default is FALSE.}
 
-\item{verbose}{value}
+\item{verbose}{Verbosity level. Default is 1.}
+}
+\value{
+List with differential expression results, including:
+\itemize{
+  \item tab - Data frame with stats for all genes
+  \item top - Data frame with stats for top significant genes
+  \item fstats - Data frame with F statistics for all genes
+  \item means - Data frame with mean expression by group  
+}
 }
 \description{
-Title
+Differential expression analysis with limma
+}
+\details{
+This function performs differential expression analysis on \code{X} using limma.
+It handles filtering, model design matrices, and output formatting.
+}
+\examples{
+\dontrun{
+ TODO
+}
 }

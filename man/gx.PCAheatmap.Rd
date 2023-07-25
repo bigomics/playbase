@@ -2,19 +2,35 @@
 % Please edit documentation in R/gx-heatmap.r
 \name{gx.PCAheatmap}
 \alias{gx.PCAheatmap}
-\title{Title}
+\title{Create a heatmap of top genes for PCA components}
 \usage{
 gx.PCAheatmap(X, nv = 5, ngenes = 10, ...)
 }
 \arguments{
-\item{X}{value}
+\item{X}{Numeric matrix of gene expression values (genes in rows, samples in columns)}
 
-\item{nv}{value}
+\item{nv}{Number of principal components to use}
 
-\item{ngenes}{value}
+\item{ngenes}{Number of top genes to show for each component}
 
-\item{...}{value}
+\item{...}{Additional arguments passed to gx.splitmap()}
+}
+\value{
+Heatmap created by gx.splitmap()
 }
 \description{
-Title
+Create a heatmap of top genes for PCA components
+}
+\details{
+This function calculates the top \code{ngenes} genes (by loading) for the first
+\code{nv} principal components of \code{X}. It creates sample labels denoting the
+component membership. The top genes are extracted and shown in a heatmap using
+\code{gx.splitmap()}.
+}
+\examples{
+\dontrun{
+x <- matrix(rnorm(500*50), 500, 50)
+gx.PCAheatmap(x, nv = 3, ngenes = 5)
+}
+
 }

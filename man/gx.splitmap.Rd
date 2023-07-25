@@ -2,7 +2,7 @@
 % Please edit documentation in R/gx-heatmap.r
 \name{gx.splitmap}
 \alias{gx.splitmap}
-\title{Title}
+\title{Create a split heatmap of gene expression data}
 \usage{
 gx.splitmap(
   gx,
@@ -46,21 +46,21 @@ gx.splitmap(
 )
 }
 \arguments{
-\item{gx}{value}
+\item{gx}{Gene expression matrix with genes in rows and samples in columns.}
 
-\item{split}{value}
+\item{split}{Vector defining sample groups, or number of groups for clustering.}
 
-\item{splitx}{value}
+\item{splitx}{External group assignments for samples.}
 
-\item{clust.method}{value}
+\item{clust.method}{Hierarchical clustering method for genes.}
 
-\item{dist.method}{value}
+\item{dist.method}{Distance metric for gene clustering.}
 
-\item{col.dist.method}{value}
+\item{col.dist.method}{Distance for sample clustering.}
 
-\item{plot.method}{value}
+\item{plot.method}{Heatmap plotting method (heatmap.2 or ComplexHeatmap).}
 
-\item{scale}{value}
+\item{scale}{Scaling method for the data matrix.}
 
 \item{softmax}{value}
 
@@ -74,17 +74,17 @@ gx.splitmap(
 
 \item{sort_columns}{value}
 
-\item{col.annot}{value}
+\item{col.annot}{Annotations for samples.}
 
-\item{row.annot}{value}
+\item{row.annot}{Annotations for genes.}
 
 \item{annot.ht}{value}
 
-\item{nmax}{value}
+\item{nmax}{Maximum number of genes to include.}
 
 \item{cmax}{value}
 
-\item{main}{value}
+\item{main}{Title for the heatmap.}
 
 \item{verbose}{value}
 
@@ -122,6 +122,17 @@ gx.splitmap(
 
 \item{use.nclust}{value}
 }
+\value{
+A heatmap grob object
+}
 \description{
-Title
+Visualize a gene expression matrix as a heatmap, with samples split into groups.
+}
+\details{
+This function subsets the input gene expression matrix to the top variable
+ genes, clusters genes and samples, and visualizes the result as a heatmap with
+samples split into groups defined by \code{split} or \code{splitx}.
+
+Many options are provided for clustering, scaling, annotations, and heatmap display
+ parameters. By default it uses Euclidean distance and Ward clustering.
 }

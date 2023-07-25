@@ -2,21 +2,45 @@
 % Please edit documentation in R/gx-plot.r, R/gx-util.r
 \name{gx.hist}
 \alias{gx.hist}
-\title{Title}
+\title{Histogram of gene expression values}
 \usage{
 gx.hist(gx, main = "", ylim = NULL)
 
 gx.hist(gx, main = "", ylim = NULL)
 }
 \arguments{
-\item{gx}{value}
+\item{gx}{Gene expression matrix with genes in rows and samples in columns.}
 
-\item{main}{value}
+\item{main}{Title for the plot.}
 
-\item{ylim}{value}
+\item{ylim}{Limits for the y-axis.}
+}
+\value{
+A histogram plot is generated, no value is returned.
+
+A histogram plot is generated, no value is returned.
 }
 \description{
-Title
+Generate a histogram of gene expression values.
 
-Title
+Generate a histogram of gene expression values.
+}
+\details{
+This function generates a histogram of the gene expression values in \code{gx}.
+It first creates a histogram of all values using \code{\link[graphics]{hist}}.
+It then overlays density histograms for each sample, with colors corresponding to column numbers.
+
+This function generates a histogram of the gene expression values in \code{gx}.
+It first creates a histogram of all values using \code{\link[graphics]{hist}}.  
+It then overlays density histograms for each sample, with colors corresponding to column numbers.
+}
+\examples{
+\dontrun{
+gx <- matrix(rnorm(100*10), 100, 10)
+gx.hist(gx)
+}
+\dontrun{
+gx <- matrix(rnorm(100*10), 100, 10)
+gx.hist(gx)
+}
 }

@@ -51,7 +51,7 @@ compute_testGenesets <- function(pgx,
 
   if (!is.null(custom.geneset$gmt)) {
     # convert gmt standard to SPARSE matrix
-    custom_gmt <- playbase::createSparseGenesetMatrix(custom.geneset$gmt, min_gene_frequency = 1)
+    custom_gmt <- createSparseGenesetMatrix(custom.geneset$gmt, min_gene_frequency = 1)
   }
 
   ## -----------------------------------------------------------
@@ -71,14 +71,14 @@ compute_testGenesets <- function(pgx,
 
   # Normalize G after removal of genes
 
-  G <- playbase::normalize_matrix_by_row(G)
+  G <- normalize_matrix_by_row(G)
 
   if (!is.null(custom.geneset$gmt)) {
     custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes]
-    custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
+    custom_gmt <- normalize_matrix_by_row(custom_gmt)
 
     # combine standard genesets with custom genesets
-    G <- playbase::merge_sparse_matrix(G, custom_gmt)
+    G <- merge_sparse_matrix(G, custom_gmt)
   }
 
   # Transpose G
@@ -186,7 +186,7 @@ compute_testGenesets <- function(pgx,
   Y <- pgx$samples
   gc()
 
-  gset.meta <- playbase::gset.fitContrastsWithAllMethods(
+  gset.meta <- gset.fitContrastsWithAllMethods(
     gmt = gmt, X = X, Y = Y, G = G,
     design = design,
     contr.matrix = contr.matrix, methods = test.methods,
@@ -314,7 +314,7 @@ createSparseGenesetMatrix <- function(
   genes <- names(which(genes.table >= min_gene_frequency))
   genes <- genes[grep("^LOC|RIK$", genes, invert = TRUE)]
   genes <- intersect(genes, known.symbols)
-  annot <- playbase::ngs.getGeneAnnotation(genes)
+  annot <- ngs.getGeneAnnotation(genes)
   genes <- genes[!is.na(annot$chr)]
 
   ## Filter genesets with permitted genes (official and min.sharing)

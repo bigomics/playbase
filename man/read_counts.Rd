@@ -11,11 +11,16 @@ read_counts(file, convert_names = FALSE)
 
 \item{convert_names}{boolean.}
 }
-\value{
-matrix. the file with the data
-}
 \description{
 Read counts data from file
+}
+\details{
+This function reads a count matrix using \code{playbase::read.as_matrix()}, 
+validates it with \code{validate_counts()}, and optionally converts row names from IDs to
+gene symbols using \code{playbase::probe2symbol()}. 
+
+It removes rows with NA, blank or invalid symbols, and collapses any duplicate symbols by 
+summing counts across rows.
 }
 \examples{
 counts <- read_counts(playbase::example_file("counts.csv"))

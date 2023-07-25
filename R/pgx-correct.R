@@ -281,21 +281,14 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
   if (!is.null(mnn.correct)) {
     dbg("[pgx.superBatchCorrect] Mutual Nearest Neighbour (MNN) correction on", mnn.correct, "\n")
     b <- pheno[, mnn.correct]
-    out <- batchelor::mnnCorrect(cX, batch = b, cos.norm.out = FALSE)
+    out <- mnnCorrect(cX, batch = b, cos.norm.out = FALSE)
     cX <- out@assays@data[["corrected"]]
   }
 
   ## --------------------------------------------------------------------
   ## Nearest-neighbour matching (NNM)
   ## --------------------------------------------------------------------
-  if (0 && nnm.correct) {
-    dbg("[pgx.superBatchCorrect] Correcting with nearest-neighbour matching (NNM)")
-    dbg("[pgx.superBatchCorrect] NNM :: model.par = ", model.par)
-    for (i in 1:length(model.par)) {
-      y1 <- pheno[, model.par[i]]
-      cX <- gx.nnmcorrect(cX, y1, center.x = TRUE, center.m = TRUE)$X
-    }
-  }
+
   if (1 && nnm.correct) {
     dbg("[pgx.superBatchCorrect] Correcting with nearest-neighbour matching (NNM)")
     dbg("[pgx.superBatchCorrect] NNM :: model.par = ", model.par)
@@ -608,132 +601,6 @@ pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
   }
 
   return(x)
-}
-
-#' @export
-pgx.performBatchCorrection.DEPRECATED <- function(ngs, zx, batchparams,
-                                                  method = c("ComBat", "BMC", "limma", "MNN", "fastMNN")) {
-  ## precompute PCA
-  suppressWarnings(suppressMessages(
-    svd <- irlba::irlba(zx - Matrix::rowMeans(zx), nv = 3)
-  ))
-  Y <- ngs$samples[colnames(zx), ]
-
-  batchparams0 <- setdiff(batchparams, colnames(Y))
-  batchparams1 <- intersect(batchparams, colnames(Y))
-
-  ## get group from design matrix
-  dd <- ngs$model.parameters$design
-  group <- colnames(dd)[max.col(dd)]
-
-  ## ---------------------------------------------------------------------
-  ## Correct for conceptual parameters
-  ## ---------------------------------------------------------------------
-  if (length(batchparams0) > 0) {
-    for (batchpar in batchparams0) {
-      if (batchpar == "<PC1>") {
-        sv1 <- svd$v[, 1]
-        zx <- limma::removeBatchEffect(zx, covariates = sv1)
-      } else if (batchpar == "<PC2>") {
-        sv2 <- svd$v[, 2]
-        zx <- limma::removeBatchEffect(zx, covariates = sv2)
-      } else if (batchpar == "<PC3>") {
-        sv3 <- svd$v[, 3]
-        zx <- limma::removeBatchEffect(zx, covariates = sv3)
-      } else if (1 && batchpar == "<XY>") {
-        xgenes <- ngs$genes[rownames(X), ]
-        gx <- which(xgenes$chr %in% c("X", 23))
-        gy <- which(xgenes$chr %in% c("Y", 24))
-        xy <- NULL
-        if (length(gx)) {
-          xy <- cbind(xy, Matrix::colMeans(ngs$X[gx, , drop = FALSE], na.rm = TRUE))
-        }
-        if (length(gy)) {
-          xy <- cbind(xy, Matrix::colMeans(ngs$X[gy, , drop = FALSE], na.rm = TRUE))
-        }
-        if (!is.null(xy)) {
-          zx <- limma::removeBatchEffect(zx, covariates = xy)
-        }
-      } else if (batchpar %in% colnames(Y)) {
-        batch <- Y[, batchpar]
-        class(batch)
-        if (class(batch) == "numeric") {
-          ## treat as numeric
-          batch0 <- scale(as.numeric(batch))
-          batch0[is.na(batch0)] <- mean(batch0, na.rm = TRUE) ## impute NA at mean
-          zx <- limma::removeBatchEffect(zx, covariates = batch0)
-        } else {
-          ## treat as factor variable
-          batch0 <- as.character(batch)
-          batch0[is.na(batch0)] <- "NA" ## NA as separate group??
-          zx <- pgx.removeBatchEffect(zx, batch0, method)
-        } ## end of iter
-      } else if (batchpar == "<SVA>") {
-        mod1 <- model.matrix(~group)
-
-        mod0 <- cbind(mod1[, 1])
-
-        sv <- sva::sva(0.0001 + zx, mod1, mod0, n.sv = NULL)$sv
-
-        zx <- limma::removeBatchEffect(zx, covariates = sv, design = mod1)
-      } else if (batchpar == "<NNM>") {
-        y <- group
-
-        zx <- gx.nnmcorrect(zx, y, center.x = TRUE, center.m = TRUE)$X
-      } else {
-        dbg("warning:: unknown batch parameter\n")
-      }
-    }
-  }
-
-  ## ---------------------------------------------------------------------
-  ## Correct for parameters in phenotype: iterative or at once using
-  ## model matrix.
-  ## ---------------------------------------------------------------------
-  ITERATIVE.CORRECT <- TRUE
-  ITERATIVE.CORRECT <- FALSE
-  if (length(batchparams1) > 0) {
-    if (ITERATIVE.CORRECT) {
-      batchpar <- batchparams1[1]
-      for (batchpar in batchparams1) {
-        batch <- Y[, batchpar]
-        class(batch)
-        if (class(batch) == "numeric") {
-          ## treat as numeric
-          batch0 <- scale(as.numeric(batch))
-          batch0[is.na(batch0)] <- mean(batch0, na.rm = TRUE) ## impute NA at mean
-          zx <- limma::removeBatchEffect(zx, covariates = batch0)
-        } else {
-          ## treat as factor variable
-          batch0 <- as.character(batch)
-          batch0[is.na(batch0)] <- "NA" ## NA as separate group??
-          zx <- pgx.removeBatchEffect(zx, batch0, method)
-        }
-      } ## end of iter
-    } else {
-      Y <- tidy.dataframe(ngs$samples[colnames(zx), ])
-      ny <- apply(Y, 2, function(x) length(setdiff(unique(x), NA)))
-      Y <- Y[, which(ny > 1), drop = FALSE]
-      pp <- intersect(batchparams1, colnames(Y))
-      Y <- Y[, pp, drop = FALSE]
-      Y <- randomImputeMissing(Y) ## NEED RETHINK!!!
-
-      batch.formula <- formula(paste("~ ", paste(pp, collapse = " + ")))
-      B <- model.matrix(batch.formula, data = Y)
-
-      B <- B[match(colnames(zx), rownames(B)), , drop = FALSE]
-      rownames(B) <- colnames(zx)
-      group <- ngs$samples[colnames(zx), "group"]
-      design <- model.matrix(~group)
-      log <- capture.output({
-        suppressWarnings(
-          bx <- limma::removeBatchEffect(zx, covariates = B, design = design)
-        )
-      })
-      zx <- bx
-    }
-  }
-  return(zx)
 }
 
 #' @export
@@ -1082,7 +949,6 @@ pgx._computeNumSig <- function(ngs, X, contrast = NULL, fc = 0, qv = 0.05) {
   qv0 <- sapply(res$tables, function(x) x$adj.P.Val)
   numsig <- mean(Matrix::colSums(abs(fc0) >= fc & qv0 <= qv, na.rm = TRUE))
 
-  numsig
   return(numsig)
 }
 

@@ -2,7 +2,9 @@
 % Please edit documentation in R/pgx-compute.R
 \name{pgx.createPGX}
 \alias{pgx.createPGX}
-\title{Create a pgx object}
+\title{Create a PGX object
+This function creates a pgx object, which is the core object in the
+OmicsPlayground.}
 \usage{
 pgx.createPGX(
   counts,
@@ -24,42 +26,43 @@ pgx.createPGX(
 )
 }
 \arguments{
-\item{X}{dataframe. value}
+\item{counts}{Matrix of count data with genes as rows and samples as columns.}
 
-\item{is.logx}{boolean. value}
+\item{samples}{Data frame containing sample information.}
 
-\item{batch.correct}{boolean. value}
+\item{contrasts}{Data frame defining sample contrasts.}
 
-\item{auto.scale}{boolean. value}
+\item{X}{(Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.}
 
-\item{filter.genes}{boolean. value}
+\item{is.logx}{Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.}
 
-\item{prune.samples}{boolean. value}
+\item{batch.correct}{Logical indicating whether to perform batch correction. Default is TRUE.}
 
-\item{only.known}{boolean. value}
+\item{auto.scale}{Logical indicating whether to automatically scale/center genes. Default is TRUE.}
 
-\item{only.hugo}{boolean. value}
+\item{filter.genes}{Logical indicating whether to filter lowly expressed genes. Default is TRUE.}
 
-\item{convert.hugo}{boolean. value}
+\item{prune.samples}{Logical indicating whether to remove samples without contrasts. Default is FALSE.}
 
-\item{do.cluster}{boolean. value}
+\item{only.known}{Logical indicating whether to keep only known genes. Default is TRUE.}
 
-\item{cluster.contrasts}{boolean. value}
+\item{only.hugo}{Logical indicating whether to convert symbols to HUGO names. Default is TRUE.}
 
-\item{do.clustergenes}{boolean. value}
+\item{convert.hugo}{Logical indicating whether to convert symbols to HUGO names. Default is TRUE.}
 
-\item{only.proteincoding}{boolean. value}
+\item{do.cluster}{Logical indicating whether to run sample clustering. Default is TRUE.}
 
-\item{counts.file}{a playbase::COUNTS file}
+\item{cluster.contrasts}{Logical indicating whether to cluster contrasts. Default is FALSE.}
 
-\item{samples.file}{a playbase::SAMPLES file}
+\item{do.clustergenes}{Logical indicating whether to cluster genes. Default is TRUE.}
 
-\item{contrasts.file}{a playbase::CONTRASTS file}
+\item{only.proteincoding}{Logical indicating whether to keep only protein-coding genes. Default is TRUE.}
 }
 \value{
-list. represents a pgx object
+List. PGX object containing input data and parameters.
 }
 \description{
+Create a PGX object
 This function creates a pgx object, which is the core object in the
 OmicsPlayground.
 }

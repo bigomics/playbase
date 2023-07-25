@@ -8,16 +8,26 @@
 ## ----------------------------------------------------------------------
 
 
-#' Title
+##' Get contrast groups from PGX object
 #'
-#' @param pgx value
-#' @param contrast value
-#' @param as.factor value
+#' @title Get contrast groups
 #'
-#' @return
-#' @export
+#' @description Retrieves the group labels for a given contrast from a PGX object.
+#'
+#' @param pgx A PGX object.
+#' @param contrast The index or name of the contrast. 
+#' @param as.factor Whether to return as a factor.
+#' 
+#' @details This function extracts the experimental design matrix from the PGX object, 
+#' selects the specified contrast column, and returns the corresponding group labels.
+#'
+#' @return A vector or factor of group labels for the given contrast.
 #'
 #' @examples
+#' \dontrun{
+#' # TODO
+#' }
+#' @export
 pgx.getContrastGroups <- function(pgx, contrast, as.factor = TRUE) {
   exp.matrix <- pgx$model.parameters$exp.matrix
   grp <- contrastAsLabels(exp.matrix[, contrast, drop = FALSE], as.factor = as.factor)
@@ -852,15 +862,28 @@ makeContrastsFromPairs <- function(main.group, ref.group, groups = NULL, compari
 }
 
 
-#' Title
+#' Convert contrast matrix to group labels
 #'
-#' @param contr.matrix value
-#' @param as.factor value
+#' @title Convert contrast matrix to group labels
+#' 
+#' @description Converts a contrast matrix to a data frame of group labels.
 #'
-#' @return
-#' @export
+#' @param contr.matrix The contrast matrix.
+#' @param as.factor Whether to return as factor. Default is FALSE.
+#'
+#' @details This function takes a contrast matrix and returns a data frame 
+#' with a column of group labels for each contrast. The labels are generated  
+#' from the contrast names.
+#' 
+#' @return Data frame of group labels.
 #'
 #' @examples
+#' \dontrun{
+#' contrast <- playbase::CONTRASTS
+#' z <- playbase::contrastAsLabels(contrast)
+#' z
+#' }
+#' @export
 contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
   contrastAsLabels.col <- function(contr, contr.name) {
     grp1 <- gsub(".*[:]|_vs_.*", "", contr.name)

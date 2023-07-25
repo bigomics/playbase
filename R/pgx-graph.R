@@ -124,6 +124,7 @@ pgx._addSourceSink <- function(gr) {
   return(gr)
 }
 
+#' @export
 pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   ## ======================================================================
   ## Create a graph object by merging nodes into
@@ -460,12 +461,9 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
   to <- from <- NULL
   if (!is.null(geneset)) {
     gs <- paste0("{geneset}", geneset)
-    if (0 && "members" %in% igraph::graph_attr_names(gr)) {
-      gs <- names(which(sapply(gr$members, function(x) any(x == geneset))))
-    }
 
     if (gs %in% igraph::V(gr)$name) {
-      nb <- igraph::V(gr)[neighbors(gr, gs)]$name
+      nb <- igraph::V(gr)[igraph::neighbors(gr, gs)]$name
       gg <- intersect(nb, rownames(pos2))
       from <- pos1[gs, ]
       to <- pos2[gg, , drop = FALSE]
@@ -475,11 +473,8 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
   if (!is.null(gene)) {
     gg <- paste0("{gene}", gene)
 
-    if (0 && "members" %in% igraph::graph_attr_names(gr)) {
-      gg <- names(which(sapply(gr$members, function(x) any(x == gene))))
-    }
     if (gg %in% igraph::V(gr)$name) {
-      nb <- igraph::V(gr)[neighbors(gr, gg)]$name
+      nb <- igraph::V(gr)[igraph::neighbors(gr, gg)]$name
       gs <- intersect(nb, rownames(pos1))
       from <- pos2[gg, ]
       to <- pos1[gs, , drop = FALSE]
@@ -572,12 +567,9 @@ pgx.plotForwardProjection <- function(gr, gene, cex = 1, fx = NULL,
   to <- from <- NULL
   if (!is.null(geneset)) {
     gs <- paste0("{geneset}", geneset)
-    if (0 && "members" %in% igraph::graph_attr_names(gr)) {
-      gs <- names(which(sapply(gr$members, function(x) any(x == geneset))))
-    }
 
     if (gs %in% igraph::V(gr)$name) {
-      nb <- igraph::V(gr)[neighbors(gr, gs)]$name
+      nb <- igraph::V(gr)[igraph::neighbors(gr, gs)]$name
       gg <- intersect(nb, rownames(pos2))
       from <- pos1[gs, ]
       to <- pos2[gg, , drop = FALSE]
@@ -588,11 +580,8 @@ pgx.plotForwardProjection <- function(gr, gene, cex = 1, fx = NULL,
   if (!is.null(gene)) {
     gg <- paste0("{gene}", gene)
 
-    if (0 && "members" %in% igraph::graph_attr_names(gr)) {
-      gg <- names(which(sapply(gr$members, function(x) any(x == gene))))
-    }
     if (gg %in% igraph::V(gr)$name) {
-      nb <- igraph::V(gr)[neighbors(gr, gg)]$name
+      nb <- igraph::V(gr)[igraph::neighbors(gr, gg)]$name
       gs <- intersect(nb, rownames(pos1))
       from <- pos2[gg, ]
       to <- pos1[gs, , drop = FALSE]

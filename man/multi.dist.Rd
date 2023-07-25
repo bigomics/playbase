@@ -2,17 +2,37 @@
 % Please edit documentation in R/gx-heatmap.r
 \name{multi.dist}
 \alias{multi.dist}
-\title{Title}
+\title{Calculate multiple distance metrics between rows}
 \usage{
 multi.dist(x, p = 4, method = c("pearson", "euclidean", "manhattan"))
 }
 \arguments{
-\item{x}{value}
+\item{x}{Numeric matrix with samples in rows}
 
-\item{p}{value}
+\item{p}{Power parameter for Minkowski distance}
 
-\item{method}{value}
+\item{method}{Vector of distance metrics to use (pearson, euclidean, manhattan)}
+}
+\value{
+Distance matrix
+
+A combined distance matrix
 }
 \description{
-Title
+This function calculates multiple distance metrics between the rows of a matrix.
+It returns a combined distance matrix by taking the element-wise minimum of the individual distances.
+}
+\details{
+For each distance metric specified in \code{method}, it calculates the pairwise distance between rows of \code{x}.
+It also calculates distances on a scaled version of \code{x} and on the ranked values.
+The resulting distance matrices are scaled to [0,1] and combined by taking the minimum of each element across matrices.
+}
+\examples{
+\dontrun{
+
+data <- matrix(rnorm(100), 10, 10)
+rownames(mat) <- replicate(10, paste(sample(LETTERS, 4, replace = TRUE), collapse = ""))
+D <- multi.dist(data)
+}
+
 }

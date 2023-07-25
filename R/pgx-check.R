@@ -180,7 +180,7 @@ pgx.crosscheckINPUT <- function(
 
   if (!is.null(samples) && !is.null(contrasts)) {
     # Conver contrasts and Check that rows names of contrasts match rownames of samples.
-    contrasts_check_results <- playbase::contrasts_conversion_check(samples, contrasts, PASS)
+    contrasts_check_results <- contrasts_conversion_check(samples, contrasts, PASS)
 
     if (contrasts_check_results$PASS == FALSE && PASS) {
       PASS <- FALSE
@@ -242,7 +242,7 @@ contrasts_conversion_check <- function(SAMPLES, CONTRASTS, PASS) {
     message("[UploadModule] WARNING: converting old1 style contrast to new format")
     new.contrasts <- samples1[, 0]
     if (NCOL(contrasts1) > 0) {
-      new.contrasts <- playbase::contrastAsLabels(contrasts1)
+      new.contrasts <- contrastAsLabels(contrasts1)
       grp <- as.character(samples1[, group.col])
       new.contrasts <- new.contrasts[grp, , drop = FALSE]
       rownames(new.contrasts) <- rownames(samples1)
@@ -253,7 +253,7 @@ contrasts_conversion_check <- function(SAMPLES, CONTRASTS, PASS) {
     message("[UploadModule] WARNING: converting old2 style contrast to new format")
     new.contrasts <- samples1[, 0]
     if (NCOL(contrasts1) > 0) {
-      new.contrasts <- playbase::contrastAsLabels(contrasts1)
+      new.contrasts <- contrastAsLabels(contrasts1)
       rownames(new.contrasts) <- rownames(samples1)
     }
     contrasts1 <- new.contrasts

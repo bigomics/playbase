@@ -2,7 +2,7 @@
 % Please edit documentation in R/gx-limma.r
 \name{gx.limma.SAVE}
 \alias{gx.limma.SAVE}
-\title{Title}
+\title{Perform differential expression analysis using limma}
 \usage{
 gx.limma.SAVE(
   X,
@@ -19,24 +19,28 @@ gx.limma.SAVE(
 )
 }
 \arguments{
-\item{X}{value}
+\item{X}{A gene expression matrix with genes in rows and samples in columns}
 
-\item{pheno}{value}
+\item{pheno}{A vector or factor of phenotype labels for the samples}
 
-\item{fdr}{value}
+\item{fdr}{False discovery rate threshold for identifying differentially expressed genes}
 
-\item{compute.means}{value}
+\item{compute.means}{Logical indicating whether to compute group means}
 
-\item{lfc}{value}
+\item{lfc}{Log fold change cutoff for differential expression}
 
-\item{max.na}{value}
+\item{max.na}{Maximum proportion of missing values allowed in a gene}
 
-\item{ref}{value}
+\item{ref}{Character vector of reference phenotype labels}
 
-\item{trend}{value}
+\item{trend}{Logical indicating whether to fit a trend line}
 
-\item{verbose}{value}
+\item{verbose}{Verbosity level for status messages}
+}
+\value{
+A list containing the limma results, top table, and plot objects
 }
 \description{
-Title
+Performs differential expression analysis on a gene expression matrix using limma.
+Handles single sample case by duplicating sample. Auto-detects reference level.
 }
