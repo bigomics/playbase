@@ -14,37 +14,37 @@
 #' Correct for batch effects in a gene expression matrix using nearest neighbor matching.
 #'
 #' @param X Numeric matrix of gene expression values (genes in rows, samples in columns).
-#' @param y Factor vector indicating batch for each sample.  
+#' @param y Factor vector indicating batch for each sample.
 #' @param use.design Logical for whether to include batch design matrix in limma correction.
 #' @param dist.method Distance metric to use for matching ('cor' or 'euclidean').
-#' @param center.x Logical for whether to center gene expression by row means. 
+#' @param center.x Logical for whether to center gene expression by row means.
 #' @param center.m Logical for whether to center expression by batch means.
-#' @param sdtop Number of top variable genes to use for correlation. 
+#' @param sdtop Number of top variable genes to use for correlation.
 #' @param replace Logical for whether to replace missing pairs.
 #'
 #' @return List containing:
 #' \itemize{
 #'   \item X - Batch corrected gene expression matrix
-#'   \item pairings - Matrix of sample pairings used for correction  
+#'   \item pairings - Matrix of sample pairings used for correction
 #' }
 #'
 #' @details This function performs batch correction using the following steps:
 #' \enumerate{
-#'   \item Compute distance matrix between all samples 
+#'   \item Compute distance matrix between all samples
 #'   \item Find nearest neighbor matches between batches
 #'   \item Construct full paired dataset with matches
 #'   \item Apply limma batch correction to paired data
 #'   \item Average paired samples back to original samples
 #' }
-#' 
+#'
 #' It allows replacing missing pairs and using batch design matrices.
 #'
-#' @seealso 
+#' @seealso
 #' \code{\link[limma]{removeBatchEffect}} for the batch correction method used.
 #'
 #' @examples
 #' # TODO
-#'  
+#'
 #' @export
 gx.nnmcorrect <- function(X, y, use.design = TRUE, dist.method = "cor",
                           center.x = TRUE, center.m = TRUE, sdtop = 1000,
@@ -125,21 +125,21 @@ gx.nnmcorrect <- function(X, y, use.design = TRUE, dist.method = "cor",
 #'
 #' @param x Numeric matrix of gene expression values (genes in rows, samples in columns).
 #' @param y Factor vector indicating batch for each sample.
-#' @param k Number of nearest neighbors to use (default 3). 
+#' @param k Number of nearest neighbors to use (default 3).
 #'
 #' @return Batch corrected gene expression matrix.
 #'
-#' @details This function performs batch correction by matching each sample to its 
-#' k-nearest neighbors from other batches based on expression profile correlation.  
-#' The batch effect for a sample is estimated as the mean difference between it and its 
+#' @details This function performs batch correction by matching each sample to its
+#' k-nearest neighbors from other batches based on expression profile correlation.
+#' The batch effect for a sample is estimated as the mean difference between it and its
 #' matched neighbors. This difference is subtracted from the sample's expression profile.
 #'
-#' @seealso 
+#' @seealso
 #' \code{\link[limma]{removeBatchEffect}} for an alternative batch correction method
 #'
 #' @examples
 #' \dontrun{
-#' x <- matrix(rnorm(100*30), 100, 30) # random expression matrix 
+#' x <- matrix(rnorm(100 * 30), 100, 30) # random expression matrix
 #' y <- gl(3, 10) # 3 batches of 10 samples each
 #' xcorr <- gx.nnmcorrect.SAVE(x, y)
 #' }
@@ -171,7 +171,7 @@ gx.nnmcorrect.SAVE <- function(x, y, k = 3) {
 #'
 #' @return The quantile normalized gene expression matrix.
 #'
-#' @details 
+#' @details
 #' Quantile normalization is a method to make the distribution of gene expression values the same across all samples.
 #' It transforms the values so that the quantiles of each column match the quantiles of a reference distribution.
 #'
@@ -181,13 +181,13 @@ gx.nnmcorrect.SAVE <- function(x, y, k = 3) {
 #'
 #' The normalize.qspline function from the affy package is used internally to perform quantile normalization.
 #'
-#' @seealso 
+#' @seealso
 #' \code{\link[affy]{normalize.qspline}} for the quantile normalization method used.
 #'
 #' @examples
 #' \dontrun{
-#' X <- matrix(rnorm(100*10), 100, 10) 
-#' X_norm <- gx.qnormalize(X) 
+#' X <- matrix(rnorm(100 * 10), 100, 10)
+#' X_norm <- gx.qnormalize(X)
 #' }
 #' @export
 

@@ -11,27 +11,27 @@
 
 #' Differential expression analysis using limma
 #'
-#' @title Differential expression analysis using limma 
+#' @title Differential expression analysis using limma
 #'
 #' @description Performs differential expression analysis on a gene expression matrix using limma.
 #' Handles single sample case by duplicating sample. Auto-detects reference level.
 #'
 #' @param X Gene expression matrix with genes in rows and samples in columns.
-#' @param pheno Phenotype vector or factor for samples.  
+#' @param pheno Phenotype vector or factor for samples.
 #' @param B Optional batch covariate matrix.
 #' @param remove.na Logical for removing samples with missing phenotype.
-#' @param fdr FDR threshold for identifying differentially expressed genes.  
+#' @param fdr FDR threshold for identifying differentially expressed genes.
 #' @param compute.means Logical for computing group means.
-#' @param lfc Log fold change cutoff.  
+#' @param lfc Log fold change cutoff.
 #' @param max.na Max proportion of missing values allowed for a gene.
-#' @param ref Character vector of possible reference levels. 
+#' @param ref Character vector of possible reference levels.
 #' @param trend Logical for fitting a trend model.
 #' @param verbose Verbosity level.
 #'
 #' @details This function performs differential expression analysis on the gene expression matrix \code{X} using limma.
 #' It handles filtering, model design matrices, and output formatting.
 #' The phenotype vector \code{pheno} is used to define the linear model.
-#' Batch effects can be accounted for by providing a \code{B} matrix.  
+#' Batch effects can be accounted for by providing a \code{B} matrix.
 #' The function auto-detects the reference level or the user can provide possible values in \code{ref}.
 #' It returns a data frame containing the limma analysis results.
 #'
@@ -166,21 +166,20 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
 #'
 #' Performs differential expression analysis on a gene expression matrix using limma.
 #' Handles single sample case by duplicating sample. Auto-detects reference level.
-#' 
+#'
 #' @param X A gene expression matrix with genes in rows and samples in columns
 #' @param pheno A vector or factor of phenotype labels for the samples
 #' @param fdr False discovery rate threshold for identifying differentially expressed genes
 #' @param compute.means Logical indicating whether to compute group means
 #' @param lfc Log fold change cutoff for differential expression
 #' @param max.na Maximum proportion of missing values allowed in a gene
-#' @param ref Character vector of reference phenotype labels  
-#' @param trend Logical indicating whether to fit a trend line 
+#' @param ref Character vector of reference phenotype labels
+#' @param trend Logical indicating whether to fit a trend line
 #' @param verbose Verbosity level for status messages
 #'
 #' @return A list containing the limma results, top table, and plot objects
 #'
 #' @examples
-#'
 #' @export
 gx.limma.SAVE <- function(X, pheno, fdr = 0.05, compute.means = TRUE, lfc = 0.20,
                           max.na = 0.20, ref = c(
@@ -280,11 +279,11 @@ gx.limma.SAVE <- function(X, pheno, fdr = 0.05, compute.means = TRUE, lfc = 0.20
 #' Differential expression analysis with limma
 #'
 #' @param X Numeric gene expression matrix with genes in rows and samples in columns.
-#' @param pheno Data frame with phenotype data for samples. Must have column named 'group'.  
+#' @param pheno Data frame with phenotype data for samples. Must have column named 'group'.
 #' @param B Data frame with batch data for samples. Default is NULL.
-#' @param fdr FDR threshold for significance. Default is 0.05.  
+#' @param fdr FDR threshold for significance. Default is 0.05.
 #' @param compute.means Logical indicating whether to compute group means. Default is TRUE.
-#' @param lfc Log fold change threshold. Default is 0.2. 
+#' @param lfc Log fold change threshold. Default is 0.2.
 #' @param max.na Maximum missing value fraction for gene filtering. Default is 0.2.
 #' @param ref Character vector of reference group names to use as baseline. Default is common control names.
 #' @param trend Logical indicating whether to fit a trend model. Default is FALSE.
@@ -295,17 +294,17 @@ gx.limma.SAVE <- function(X, pheno, fdr = 0.05, compute.means = TRUE, lfc = 0.20
 #'   \item tab - Data frame with stats for all genes
 #'   \item top - Data frame with stats for top significant genes
 #'   \item fstats - Data frame with F statistics for all genes
-#'   \item means - Data frame with mean expression by group  
+#'   \item means - Data frame with mean expression by group
 #' }
 #'
 #' @details This function performs differential expression analysis on \code{X} using limma.
 #' It handles filtering, model design matrices, and output formatting.
 #'
-#' @examples 
+#' @examples
 #' \dontrun{
-#'  TODO
+#' TODO
 #' }
-#' @export 
+#' @export
 gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc = 0.20,
                       max.na = 0.20, ref = c(
                         "ctrl", "ctr", "control", "dmso", "nt", "0", "0h", "0hr",
@@ -484,18 +483,18 @@ gx.meanFstats <- function(X, pheno) {
 #' @param pheno Phenotype factor vector indicating the sample classes.
 #' @param pair Factor vector indicating which samples are paired.
 #' @param fdr FDR threshold for identifying differentially expressed genes.
-#' @param lfc Log2 fold change cutoff for differential expression.  
+#' @param lfc Log2 fold change cutoff for differential expression.
 #' @param ref Character vector of reference levels to use as baseline in contrasts.
-#' @param compute.means Logical indicating whether to append mean expression values. 
+#' @param compute.means Logical indicating whether to append mean expression values.
 #' @param trend Logical indicating whether to fit a mean-variance trend.
 #'
 #' @details This function handles the limma model matrix and contrasts for paired designs.
 #' The \code{pair} vector indicates which samples are paired measurements.
 #' A differential expression analysis is performed between the phenotype classes.
 #' Results are filtered by FDR and fold change thresholds.
-#' 
+#'
 #' @return Data frame containing limma analysis results.
-#' 
+#'
 #' @export
 #'
 #' @examples
@@ -607,17 +606,17 @@ gx.limma.paired <- function(X, pheno, pair, fdr = 0.05, lfc = 0.20,
 #'
 #' @description Performs differential expression analysis using limma for data with two factorial designs.
 #' Designed for experiments with two factors, each with two or more levels.
-#' 
+#'
 #' @param X Numeric matrix of gene expression values (genes in rows, samples in columns).
 #' @param factors Data frame with factor columns defining the experimental design.
 #' @param fdr FDR threshold for identifying differentially expressed genes.
 #' @param lfc Log2 fold change cutoff for differential expression.
-#' @param trend Logical indicating whether to fit a mean-variance trend.  
+#' @param trend Logical indicating whether to fit a mean-variance trend.
 #' @param ref Character vector of reference levels to use as baseline in contrasts.
 #' @param compute.means Logical indicating whether to append mean expression values.
 #'
 #' @details This function handles the limma model matrix and contrasts for two factorial designs.
-#' The \code{factors} data frame specifies the experimental design.  
+#' The \code{factors} data frame specifies the experimental design.
 #' Multiple contrasts are performed between factor level combinations.
 #' Results are filtered by FDR and fold change thresholds.
 #'
@@ -762,7 +761,7 @@ gx.limma.two.factorial <- function(X, factors, fdr = 0.05, lfc = 0.20, trend = F
 #' Differential expression testing between groups
 #'
 #' @title Differential expression testing between groups
-#' 
+#'
 #' @description Performs differential expression testing between two groups.
 #' Supports wilcoxon, t-test, limma, and fisher's exact test.
 #'
@@ -772,13 +771,13 @@ gx.limma.two.factorial <- function(X, factors, fdr = 0.05, lfc = 0.20, trend = F
 #' @param test.method Test method to use. Options are "wilcox", "limma", "ttest", or "fisher".
 #' @param running.name Optional name prefix for output files.
 #' @param output.to.file Logical for writing results to file.
-#'  
+#'
 #' @details This function performs differential expression testing between two groups defined by \code{class.label}.
 #' It handles filtering out NA values and outputs p-values and FDR for each gene.
 #' The test method can be specified, with "limma" as the default.
 #'
 #' @return Data frame with gene p-values and FDR.
-#' 
+#'
 #' @export
 #'
 #' @examples
@@ -863,14 +862,14 @@ gx.test.groups <- function(sig, class.label, fdr = 0.20,
 #'
 #' @title Signal to noise ratio test
 #'
-#' @description Performs a gene-wise signal to noise ratio test to detect differential expression. 
+#' @description Performs a gene-wise signal to noise ratio test to detect differential expression.
 #' Permutation test is used to compute p-values.
 #'
 #' @param X Numeric gene expression matrix with genes in rows and samples in columns.
 #' @param y Factor of sample groups or classes. Must have exactly two levels.
-#' @param ref.class Reference group name to use as baseline.  
+#' @param ref.class Reference group name to use as baseline.
 #' @param nperm Number of permutations to compute p-values.
-#' 
+#'
 #' @details This function calculates the signal to noise ratio for each gene.
 #' It then performs a permutation test by permuting the sample labels to generate a null distribution.
 #' P-values are computed as the fraction of permuted statistics that are more extreme than the observed statistic.
@@ -923,17 +922,17 @@ gx.snrtest <- function(X, y, ref.class, nperm = 200) {
 #' @title Differential expression analysis with limma for RNA-seq data
 #'
 #' @description Performs differential expression analysis on RNA-seq count data
-#'  using limma-voom. Designed for gene-level count data from RNA-seq 
+#'  using limma-voom. Designed for gene-level count data from RNA-seq
 #' experiments.
 #'
-#' @param countdata Numeric matrix of RNA-seq counts with genes in rows and 
-#' samples in columns. 
+#' @param countdata Numeric matrix of RNA-seq counts with genes in rows and
+#' samples in columns.
 #' @param y Factor or vector indicating the phenotype for each sample.
-#' @param method Method for normalization and dispersion estimation. Either 
+#' @param method Method for normalization and dispersion estimation. Either
 #' "edgeR" or "DESeq2".
 #'
 #' @details This function takes RNA-seq count data and a phenotype factor as input.
-#'  It uses limma-voom to fit a linear model and identify differentially expressed 
+#'  It uses limma-voom to fit a linear model and identify differentially expressed
 #' genes. The count data is normalized and dispersion is estimated using either edgeR or DESeq2 methods.
 #'
 #' @return Data frame containing limma analysis results.

@@ -2,11 +2,11 @@
 #'
 #' @param file string. path to file
 #' @param convert_names boolean.
-#' @details This function reads a count matrix using \code{playbase::read.as_matrix()}, 
+#' @details This function reads a count matrix using \code{playbase::read.as_matrix()},
 #' validates it with \code{validate_counts()}, and optionally converts row names from IDs to
-#' gene symbols using \code{playbase::probe2symbol()}. 
+#' gene symbols using \code{playbase::probe2symbol()}.
 #'
-#' It removes rows with NA, blank or invalid symbols, and collapses any duplicate symbols by 
+#' It removes rows with NA, blank or invalid symbols, and collapses any duplicate symbols by
 #' summing counts across rows.
 #'
 #' @examples
@@ -37,15 +37,15 @@ read_counts <- function(file, convert_names = FALSE) {
 #' Read expression data from file
 #'
 #' Reads an expression data matrix from file and performs validation and preprocessing.
-#' 
+#'
 #' @param file Path to input expression data file. Should be matrix with genes as rows and samples as columns.
-#' @param convert_names Logical indicating whether to convert row names from IDs to gene symbols. Default is TRUE.  
-##' 
-#' @details This function reads an expression matrix using playbase::read.as_matrix(),  
-#' squares the values, validates with validate_counts(), and optionally converts row names 
+#' @param convert_names Logical indicating whether to convert row names from IDs to gene symbols. Default is TRUE.
+##'
+#' @details This function reads an expression matrix using playbase::read.as_matrix(),
+#' squares the values, validates with validate_counts(), and optionally converts row names
 #' from IDs to gene symbols using playbase::probe2symbol().
 #'
-#' It removes rows with NA, blank or invalid symbols, and collapses duplicate symbols by  
+#' It removes rows with NA, blank or invalid symbols, and collapses duplicate symbols by
 #' summing expression across rows.
 #' @return matrix. the file with the data
 #'

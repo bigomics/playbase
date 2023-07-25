@@ -9,22 +9,22 @@
 #' OmicsPlayground. It then runs the specified differential expression methods.
 #'
 #' @param counts.file Path to counts data file. Rows are genes, columns are samples.
-#' @param samples.file Path to samples data file. Rows are samples, columns are sample info. 
+#' @param samples.file Path to samples data file. Rows are samples, columns are sample info.
 #' @param contrasts.file (optional) Path to contrasts file. Rows and columns define contrasts.
 #' @param gxmethods a string with the gene-level methods to use. The default value is \code{"trend.limma,edger.qlf,deseq2.wald"}
 #' @param gsetmethods a string with the gene-set methods to use. The default value is \code{"fisher,gsva,fgsea"}
 #' @param extra a string with the extra modules to use. The default value is \code{"meta.go,deconv,infer,drugs,wordcloud"}
-#' 
+#'
 #' @return list. represents a pgx object. It contains the data and analysis results.
 #' @examples
 #' \dontrun{
-#' 
-#'  library(playbase)
-#'  counts <- system.file("extdata", "counts.csv", package = "playbase")
-#'  contrasts <- system.file("extdata", "contrasts.csv", package = "playbase")
-#'  samples <- system.file("extdata", "samples.csv", package = "playbase")
-#' 
-#'   mypgx <- pgx.createFromFiles(counts, samples, contrasts) 
+#'
+#' library(playbase)
+#' counts <- system.file("extdata", "counts.csv", package = "playbase")
+#' contrasts <- system.file("extdata", "contrasts.csv", package = "playbase")
+#' samples <- system.file("extdata", "samples.csv", package = "playbase")
+#'
+#' mypgx <- pgx.createFromFiles(counts, samples, contrasts)
 #' }
 #' @export
 pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL,
@@ -77,7 +77,7 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
     counts,
     samples = samples,
     contrasts = contrasts,
-    X = NULL, 
+    X = NULL,
     is.logx = NULL,
     batch.correct = TRUE,
     auto.scale = TRUE,
@@ -116,16 +116,16 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 #' This function creates a pgx object, which is the core object in the
 #' OmicsPlayground.
 #' @param counts Matrix of count data with genes as rows and samples as columns.
-#' @param samples Data frame containing sample information. 
+#' @param samples Data frame containing sample information.
 #' @param contrasts Data frame defining sample contrasts.
 #' @param X (Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.
-#' @param is.logx Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.  
+#' @param is.logx Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.
 #' @param batch.correct Logical indicating whether to perform batch correction. Default is TRUE.
-#' @param auto.scale Logical indicating whether to automatically scale/center genes. Default is TRUE. 
+#' @param auto.scale Logical indicating whether to automatically scale/center genes. Default is TRUE.
 #' @param filter.genes Logical indicating whether to filter lowly expressed genes. Default is TRUE.
 #' @param prune.samples Logical indicating whether to remove samples without contrasts. Default is FALSE.
 #' @param only.known Logical indicating whether to keep only known genes. Default is TRUE.
-#' @param only.hugo Logical indicating whether to convert symbols to HUGO names. Default is TRUE.  
+#' @param only.hugo Logical indicating whether to convert symbols to HUGO names. Default is TRUE.
 #' @param convert.hugo Logical indicating whether to convert symbols to HUGO names. Default is TRUE.
 #' @param do.cluster Logical indicating whether to run sample clustering. Default is TRUE.
 #' @param cluster.contrasts Logical indicating whether to cluster contrasts. Default is FALSE.
@@ -141,7 +141,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
                           only.known = TRUE, only.hugo = TRUE, convert.hugo = TRUE,
                           do.cluster = TRUE, cluster.contrasts = FALSE, do.clustergenes = TRUE,
                           only.proteincoding = TRUE) {
-
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("dimension of counts and X do not match\n")
   }
@@ -513,17 +512,17 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
 }
 
 
-#' @title Compute PGX 
+#' @title Compute PGX
 #' @description Main function to populate pgx with results. The function computes the analysis on a pgx object
 #'
 #' @param pgx A pgx object containing the input data
-#' @param max.genes Maximum number of genes to test. Default is 19999.  
+#' @param max.genes Maximum number of genes to test. Default is 19999.
 #' @param max.genesets Maximum number of gene sets to test. Default is 5000.
 #' @param gx.methods Methods for differential expression analysis at the gene level. Default is c("ttest.welch", "trend.limma", "edger.qlf").
 #' @param gset.methods Methods for differential analysis at the gene set level. Default is c("fisher", "gsva", "fgsea").
 #' @param custom.geneset Custom gene sets to test, as a named list with gmt and info elements.
 #' @param do.cluster Whether to run sample clustering. Default is TRUE.
-#' @param use.design Whether to use model design matrix for testing. Default is TRUE. 
+#' @param use.design Whether to use model design matrix for testing. Default is TRUE.
 #' @param prune.samples Whether to remove samples without valid contrasts. Default is FALSE.
 #' @param extra.methods Additional analysis methods to run. Default is c("meta.go", "infer", "deconv", "drugs", "wordcloud", "wgcna")[c(1, 2)].
 #' @param libx.dir Directory containing custom analysis modules.

@@ -6,19 +6,19 @@
 
 #' @title Volcano Plot
 #'
-#' @description 
+#' @description
 #' Generate a volcano plot to visualize significance versus magnitude of change.
 #'
 #' @param x Numeric vector of effect sizes (fold changes, differences, etc).
 #' @param pv Numeric vector of p-values.
-#' @param gene Character vector of gene IDs corresponding to x and pv.  
+#' @param gene Character vector of gene IDs corresponding to x and pv.
 #' @param ma_plot Logical, if TRUE creates an MA-plot instead.
 #' @param ma Matrix of log-fold changes and mean average values for MA-plot.
 #' @param p.sig Significance threshold p-value.
-#' @param lfc Log2 fold change threshold.  
+#' @param lfc Log2 fold change threshold.
 #' @param render Plot rendering method (base, ggplot, scatterD3).
 #' @param n Maximum number of points to plot.
-#' @param highlight Vector of genes to highlight.  
+#' @param highlight Vector of genes to highlight.
 #' @param main Title for the plot.
 #' @param cex Point size.
 #' @param lab.cex Label size for highlighted genes.
@@ -37,7 +37,7 @@
 #'
 #' @details This function takes a vector of p-values and effect sizes (fold changes, differences, etc)
 #' and generates a volcano plot to visualize significance versus magnitude of change. Points exceeding
-#' both p-value and effect size thresholds are highlighted. The top most significant genes can be 
+#' both p-value and effect size thresholds are highlighted. The top most significant genes can be
 #' labeled. Both raw and FDR corrected p-values can be used.
 #'
 #' @return A volcano plot is generated, no value is returned.
@@ -204,22 +204,22 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
   plt
 }
 
-#' @title Volcano plot from LIMMA results  
+#' @title Volcano plot from LIMMA results
 #'
-#' @description Generate a volcano plot from a LIMMA differential 
+#' @description Generate a volcano plot from a LIMMA differential
 #' expression analysis result table.
-#' 
-#' @param tab Data frame containing statistics from LIMMA analysis, with 
+#'
+#' @param tab Data frame containing statistics from LIMMA analysis, with
 #' columns for log2 fold change, p-values, and adjusted p-values.
 #' @param render Plotting method (either base R graphics or scatterD3).
 #' @param n Maximum number of points to plot.
-#' @param highlight Vector of genes to highlight.  
+#' @param highlight Vector of genes to highlight.
 #' @param p.sig P-value cutoff for significance.
 #' @param cex Point size.
 #' @param lab.cex Label size for highlighted genes.
-#' @param nlab Number of top genes to label.  
+#' @param nlab Number of top genes to label.
 #' @param xlim Limits of the x-axis.
-#' @param ylim Limits of the y-axis. 
+#' @param ylim Limits of the y-axis.
 #' @param use.fdr Use FDR adjusted p-values.
 #' @param use.rpkm Use RPKM/TPM values for x-axis.
 #' @param ma.plot Overlay MA plot lines?
@@ -228,20 +228,22 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
 #' @param cex.axis Axis label size.
 #' @param axes Display axes?
 #'
-#' @details This function takes a LIMMA result table and generates a volcano plot 
-#' to visualize significance versus log2 fold change. Points exceeding the specified 
-#' p-value and fold change thresholds are highlighted. The top most significant 
+#' @details This function takes a LIMMA result table and generates a volcano plot
+#' to visualize significance versus log2 fold change. Points exceeding the specified
+#' p-value and fold change thresholds are highlighted. The top most significant
 #' genes can be labeled. Both raw and FDR corrected p-values can be used.
 #'
 #' @return A volcano plot is generated, no value is returned.
 #' @examples
 #' \dontrun{
 #' n <- 100
-#' tab <- data.frame(logFC=rnorm(n), 
-#'                  P.Value=runif(n), 
-#'                  adj.P.Val = p.adjust(runif(n)), 
-#'                  AveExpr = runif(n))
-#' z<- gx.volcanoPlot.LIMMA(tab)
+#' tab <- data.frame(
+#'   logFC = rnorm(n),
+#'   P.Value = runif(n),
+#'   adj.P.Val = p.adjust(runif(n)),
+#'   AveExpr = runif(n)
+#' )
+#' z <- gx.volcanoPlot.LIMMA(tab)
 #' z
 #' }
 #' @export

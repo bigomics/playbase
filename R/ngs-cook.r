@@ -9,28 +9,27 @@
 
 #' @title Prepare count data for edgeR differential analysis
 #'
-#' @description This function takes raw count data and prepares it for differential 
+#' @description This function takes raw count data and prepares it for differential
 #' expression analysis with edgeR. It handles filtering, normalization, and batch correction.
 #'
 #' @param counts Data frame with raw counts, or named list with counts, samples, and genes components.
-#' @param samples Data frame with sample metadata, required if counts is just a matrix.  
+#' @param samples Data frame with sample metadata, required if counts is just a matrix.
 #' @param genes Data frame with gene metadata, required if counts is just a matrix.
 #' @param normalization Normalization method to use, default is "none".
-#' @param filter Logical indicating whether to filter low counts.  
+#' @param filter Logical indicating whether to filter low counts.
 #' @param prior.cpm Filtering threshold for counts per million. Default is 0.
 #' @param remove.batch Logical indicating whether to estimate and remove batch effects.
 #'
 #' @return A DGEList object ready for analysis with edgeR.
 #'
-#' @details This function handles conversion of raw count data into a properly formatted 
+#' @details This function handles conversion of raw count data into a properly formatted
 #' DGEList object for differential analysis with edgeR. It checks that the sample and gene
 #' metadata matches the counts. Filtering, normalization, and batch correction can be applied.
 #'
-#' The returned DGEList contains the normalized, filtered count matrix, along with sample and 
+#' The returned DGEList contains the normalized, filtered count matrix, along with sample and
 #' gene data frames, ready for analysis with edgeR functions like glmQLFit() and glmQLFTest().
 #'
-#' @examples 
-#'
+#' @examples
 #' @export
 ngs.cookForEDGER <- function(counts, samples = NULL, genes = NULL, normalization = "none",
                              filter = TRUE, prior.cpm = 0, remove.batch = TRUE) {
@@ -107,15 +106,15 @@ ngs.cookForEDGER <- function(counts, samples = NULL, genes = NULL, normalization
   return(cooked)
 }
 
-#' @title Prepare count data for DESeq2 differential analysis 
+#' @title Prepare count data for DESeq2 differential analysis
 #'
 #' @description This function takes raw count data and prepares it for differential
 #' expression analysis with DESeq2. It handles filtering, normalization, and batch correction.
 #'
-#' @param counts Data frame with raw counts, or named list with counts, samples, and genes components.  
+#' @param counts Data frame with raw counts, or named list with counts, samples, and genes components.
 #' @param samples Data frame with sample metadata, required if counts is just a matrix.
 #' @param genes Data frame with gene metadata, required if counts is just a matrix.
-#' @param remove.batch Logical indicating whether to estimate and remove batch effects.  
+#' @param remove.batch Logical indicating whether to estimate and remove batch effects.
 #' @param test Statistical test to use, either "Wald" or "LRT".
 #' @param prior.cpm Filtering threshold for counts per million. Default is 0.
 #' @param filter Logical indicating whether to filter low counts.
@@ -125,13 +124,12 @@ ngs.cookForEDGER <- function(counts, samples = NULL, genes = NULL, normalization
 #' @details This function handles conversion of raw count data into a properly formatted
 #' DESeqDataSet object for differential analysis with DESeq2. It checks that the sample and gene
 #' metadata matches the counts. Filtering, normalization, and batch correction can be applied.
-#' 
+#'
 #' The returned DESeqDataSet contains the normalized, filtered count matrix, along with sample and
 #' gene data frames, ready for analysis with DESeq2 functions like DESeq() and results().
 #'
 #' @examples
-#'
-#' @seealso 
+#' @seealso
 #' \code{\link[DESeq2]{DESeqDataSet}}, \code{\link[DESeq2]{DESeq}}, \code{\link[DESeq2]{results}}
 #'
 #' @export

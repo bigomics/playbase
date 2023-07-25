@@ -7,25 +7,25 @@
 #' Barplot for grouped data
 #'
 #' @param x Numeric matrix with samples in columns
-#' @param main Title for the plot 
-#' @param cex.main Size of main title  
+#' @param main Title for the plot
+#' @param cex.main Size of main title
 #' @param cex.names Size of sample names
 #' @param cex.legend Size of legend text
-#' @param srt Rotation angle of sample names  
+#' @param srt Rotation angle of sample names
 #' @param xlab X-axis label
 #' @param ylab Y-axis label
 #' @param group Vector or factor of group assignments
 #' @param group.names Optional names for the groups
-#' @param bar.names Optional names for each bar  
+#' @param bar.names Optional names for each bar
 #' @param voff Vertical offset between bars
 #' @param legend Show legend for groups?
-#' 
+#'
 #' @details
 #' This function creates a barplot from a numeric matrix, with samples in columns.
 #' Bars are grouped if a group vector is provided. Error bars show the standard error.
-#' Many graphical parameters can be adjusted, including title, axis labels, 
+#' Many graphical parameters can be adjusted, including title, axis labels,
 #' legend, and text sizes.
-#' 
+#'
 #' @return None. Produces a barplot.
 #'
 #' @return
@@ -104,18 +104,18 @@ gx.barplot <- function(x, main = "", cex.main = 1.2, cex.names = 0.85,
 
 #' @title Bar and bee swarm plot with significance stars
 #'
-#' @description 
+#' @description
 #' Creates a bar plot with overlaid bee swarm plot and significance stars.
 #'
 #' @param x Factor for x-axis groups.
 #' @param y Numeric vector of values to plot.
-#' @param first Subset of groups to plot first. 
+#' @param first Subset of groups to plot first.
 #' @param width Width of bars.
 #' @param bar Logical to draw bar plot.
-#' @param bee Logical to draw bee swarm plot.  
+#' @param bee Logical to draw bee swarm plot.
 #' @param sig.stars Logical to draw significance stars.
 #' @param ymax Maximum y-axis value.
-#' @param bee.cex Size of points in bee swarm plot. 
+#' @param bee.cex Size of points in bee swarm plot.
 #' @param max.stars Maximum number of stars to draw.
 #' @param srt Rotation angle of x-axis labels.
 #' @param xoff X-axis offset.
@@ -124,14 +124,14 @@ gx.barplot <- function(x, main = "", cex.main = 1.2, cex.names = 0.85,
 #' @param max.points Maximum number of points to draw.
 #' @param col Color of points.
 #' @param ... Additional graphics parameters.
-#' 
+#'
 #' @details
 #' This function creates a bar plot of \code{y} values grouped by \code{x}, with optional
 #' bee swarm plot overlayed on top representing the distribution of values.
 #' Significance stars highlighting differences between groups can also be added.
 #'
 #' @return None. Produces a bar/bee swarm plot.
-#' 
+#'
 #' @export
 #'
 #' @examples
@@ -248,7 +248,7 @@ gx.b3plot <- function(x, y, first = NULL,
 
 #' @title Histogram of gene expression values
 #'
-#' @description 
+#' @description
 #' Generate a histogram of gene expression values.
 #'
 #' @param gx Gene expression matrix with genes in rows and samples in columns.
@@ -260,12 +260,12 @@ gx.b3plot <- function(x, y, first = NULL,
 #' It first creates a histogram of all values using \code{\link[graphics]{hist}}.
 #' It then overlays density histograms for each sample, with colors corresponding to column numbers.
 #'
-#' @return 
+#' @return
 #' A histogram plot is generated, no value is returned.
 #'
 #' @examples
 #' \dontrun{
-#' gx <- matrix(rnorm(100*10), 100, 10)
+#' gx <- matrix(rnorm(100 * 10), 100, 10)
 #' gx.hist(gx)
 #' }
 gx.hist <- function(gx, main = "", ylim = NULL) {

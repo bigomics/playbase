@@ -200,7 +200,6 @@ pgx.getMarkerGenes <- function(pgx, n = 10, dir = 0, sym = FALSE, filt = NULL) {
 #' @examples
 pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
   if (extended) {
-
     fam.pattern <- "^[<].*|^FAMILY|^COMPARTMENT|^CUSTOM"
   } else {
     fam.pattern <- "^[<].*|^FAMILY|^CUSTOM"

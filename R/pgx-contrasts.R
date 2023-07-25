@@ -15,10 +15,10 @@
 #' @description Retrieves the group labels for a given contrast from a PGX object.
 #'
 #' @param pgx A PGX object.
-#' @param contrast The index or name of the contrast. 
+#' @param contrast The index or name of the contrast.
 #' @param as.factor Whether to return as a factor.
-#' 
-#' @details This function extracts the experimental design matrix from the PGX object, 
+#'
+#' @details This function extracts the experimental design matrix from the PGX object,
 #' selects the specified contrast column, and returns the corresponding group labels.
 #'
 #' @return A vector or factor of group labels for the given contrast.
@@ -865,16 +865,16 @@ makeContrastsFromPairs <- function(main.group, ref.group, groups = NULL, compari
 #' Convert contrast matrix to group labels
 #'
 #' @title Convert contrast matrix to group labels
-#' 
+#'
 #' @description Converts a contrast matrix to a data frame of group labels.
 #'
 #' @param contr.matrix The contrast matrix.
 #' @param as.factor Whether to return as factor. Default is FALSE.
 #'
-#' @details This function takes a contrast matrix and returns a data frame 
-#' with a column of group labels for each contrast. The labels are generated  
+#' @details This function takes a contrast matrix and returns a data frame
+#' with a column of group labels for each contrast. The labels are generated
 #' from the contrast names.
-#' 
+#'
 #' @return Data frame of group labels.
 #'
 #' @examples

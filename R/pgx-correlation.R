@@ -187,7 +187,7 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
 
   if ("fastclime" %in% method) {
     timings[["fastclime"]] <- system.time(
-    # The f fastclime.selector likely comes from fastclime but better confirm
+      # The f fastclime.selector likely comes from fastclime but better confirm
       out1 <- fastclime(tX)
     )
     # The f fastclime.selector likely comes from fastclime but better confirm
@@ -199,7 +199,7 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
   if ("QUIC" %in% method) {
     timings[["QUIC"]] <- system.time(
       rho[["QUIC"]] <- {
-       # The f QUIC likely comes from QUIC but better confirm
+        # The f QUIC likely comes from QUIC but better confirm
         r <- -QUIC(cov(tX), 1e-1)$X
         diag(r) <- -diag(r)
         r

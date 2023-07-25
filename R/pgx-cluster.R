@@ -690,20 +690,20 @@ pgx.findLouvainClusters.SNN <- function(X, prefix = "c", level = 1, gamma = 1, s
 #' Find Louvain clusters
 #'
 #' @title Find Louvain clusters
-#' 
+#'
 #' @description Find clusters in a dataset using the Louvain algorithm.
 #'
-#' @param X A data matrix, data frame, or object that can be coerced to a matrix. 
+#' @param X A data matrix, data frame, or object that can be coerced to a matrix.
 #' @param graph.method Method for building graph from data. Either "dist" or "snn".
-#' @param level Number of levels to build hierarchy.  
+#' @param level Number of levels to build hierarchy.
 #' @param prefix Prefix for cluster labels.
-#' @param gamma Exponent for distance matrix.  
+#' @param gamma Exponent for distance matrix.
 #' @param small.zero Proportion of smallest clusters to reassign to 0.
 #'
 #' @details Builds a graph from the input data and runs the Louvain algorithm to find clusters.
-#' The number of levels in the hierarchy can be specified. Small clusters can optionally be 
+#' The number of levels in the hierarchy can be specified. Small clusters can optionally be
 #' reassigned to cluster 0.
-#' 
+#'
 #' @return Vector of cluster assignments
 #'
 #' @export

@@ -1,9 +1,8 @@
 #' Test for ngs.getGeneAnnotation
 test_that("ngs.getGeneAnnotation returns annotation for genes", {
-
   d <- get_mini_example_data()
   genes <- sample(rownames(d$counts), 10)
-  
+
   result <- playbase::ngs.getGeneAnnotation(genes)
 
   # Check class
@@ -18,5 +17,4 @@ test_that("ngs.getGeneAnnotation returns annotation for genes", {
 
   # Check gene names match
   expect_equal(result$gene_name, genes)
-
 })

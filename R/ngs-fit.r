@@ -14,27 +14,27 @@
 #' It applies the methods specified in the \code{methods} argument to the count data in \code{counts}, design matrix \code{design}, and contrast matrix \code{contr.matrix}.
 #'
 #' @param counts A matrix of counts, with genes in rows and samples in columns.
-#' @param X Covariates to include in the design matrix. Default is NULL.  
+#' @param X Covariates to include in the design matrix. Default is NULL.
 #' @param samples A vector of sample names that match the columns in \code{counts}.
-#' @param design The design matrix, with samples in columns.  
+#' @param design The design matrix, with samples in columns.
 #' @param contr.matrix The contrasts matrix, with contrasts in rows.
 #' @param genes A vector of gene names that match the rows in \code{counts}. Default is NULL.
-#' @param prior.cpm Prior counts per million. Default is 1. 
+#' @param prior.cpm Prior counts per million. Default is 1.
 #' @param prune.samples Whether to filter low count samples. Default is FALSE.
 #' @param conform.output Whether to conform the output. Default is TRUE.
-#' @param do.filter Whether to filter genes. Default is TRUE.  
+#' @param do.filter Whether to filter genes. Default is TRUE.
 #' @param cpm.scale Counts per million scaling factor. Default is 1e6.
 #' @param remove.batch Whether to remove batch effects. Default is TRUE.
 #' @param methods Methods to apply. Can be one or more of:
 #'   \itemize{
-#'     \item{\code{ttest}}{t-test}  
+#'     \item{\code{ttest}}{t-test}
 #'     \item{\code{ttest.welch}}{Welch's t-test}
 #'     \item{\code{voom.limma}}{voom + limma}
-#'     \item{\code{trend.limma}}{limma with trend} 
+#'     \item{\code{trend.limma}}{limma with trend}
 #'     \item{\code{notrend.limma}}{limma without trend}
 #'     \item{\code{deseq2.wald}}{DESeq2 Wald test}
 #'     \item{\code{deseq2.lrt}}{DESeq2 LRT}
-#'     \item{\code{edger.qlf}}{edgeR QLF} 
+#'     \item{\code{edger.qlf}}{edgeR QLF}
 #'     \item{\code{edger.lrt}}{edgeR LRT}
 #'   }
 #' @param correct.AveExpr Whether to correct for average expression. Default is TRUE.
@@ -49,9 +49,9 @@
 #'
 #' @return A list with results from each differential expression method.
 #'
-#' @examples 
+#' @examples
 #' \dontrun{
-#'  # TODO
+#' # TODO
 #' }
 #' @export
 ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, contr.matrix, genes = NULL,

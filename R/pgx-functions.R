@@ -241,11 +241,11 @@ mouse2human <- function(x) {
 #' Map probe identifiers to gene symbols
 #'
 #' @param probes Character vector of probe identifiers
-#' @param type Character specifying the type of identifier in probes. If NULL, 
+#' @param type Character specifying the type of identifier in probes. If NULL,
 #'   the function will try to detect the identifier type automatically.
-#' @param keep.na Logical indicating whether to keep NA symbols (TRUE) or replace 
-#'   them with the original probe identifiers (FALSE). 
-#'   
+#' @param keep.na Logical indicating whether to keep NA symbols (TRUE) or replace
+#'   them with the original probe identifiers (FALSE).
+#'
 #' @return Character vector of mapped gene symbols.
 #'
 #' @examples
@@ -255,7 +255,7 @@ mouse2human <- function(x) {
 #' probes <- rownames(playbase::COUNTS)[subset_genes]
 #' symbols <- playbase::probe2symbol(probes)
 #' }
-#' 
+#'
 #' @export
 
 probe2symbol <- function(probes, type = NULL, keep.na = FALSE) {
@@ -1259,7 +1259,7 @@ is.Date <- function(x) {
 
 #' @title Calculate group means
 #'
-#' @description 
+#' @description
 #' Calculates the column means within groups defined by a grouping variable.
 #'
 #' @param mat Numeric matrix with columns as samples.
@@ -1269,14 +1269,14 @@ is.Date <- function(x) {
 #' @return Matrix with group means.
 #'
 #' @details This function calculates the column means of \code{X} within groups
-#'  defined by \code{y}. It calculates the mean for each column within each 
-#' group. The output is a matrix with rows corresponding to groups and columns 
+#'  defined by \code{y}. It calculates the mean for each column within each
+#' group. The output is a matrix with rows corresponding to groups and columns
 #' corresponding to samples.
-#' 
+#'
 #' @examples
 #' \dontrun{
-#' mat <- matrix(rnorm(100), ncol=10)
-#' groups <- gl(2,5)
+#' mat <- matrix(rnorm(100), ncol = 10)
+#' groups <- gl(2, 5)
 #' means <- averageByGroup(mat, groups)
 #' }
 #'
@@ -1324,7 +1324,7 @@ extremeCorrelation <- function(query_sig, ref_set, n = 200) {
 #' The organism can be specified as either human or mouse, or the function can attempt to determine
 #' the organism based on the input gene aliases. Unmapped gene aliases can be kept as their original values
 #' or replaced with NA.
-#' 
+#'
 #' @param s A character vector of gene aliases to be converted to HUGO gene symbols.
 #' @param org A character string specifying the organism, either "hs" for human or "mm" for mouse.
 #' If not specified, the function will attempt to determine the organism based on the input gene aliases.
@@ -1333,7 +1333,7 @@ extremeCorrelation <- function(query_sig, ref_set, n = 200) {
 #' otherwise they will be replaced with NA.
 #'
 #' @return A character vector of HUGO gene symbols corresponding to the input gene aliases.
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' symbols <- c("TP53", "P53", "Cd19", NA)
