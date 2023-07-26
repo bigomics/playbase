@@ -428,7 +428,7 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
       methods = c("pca", "tsne", "umap"),
       dims = c(2, 3),
       reduce.sd = 2000,
-      reduce.pca = min(200, round(ncol(X)/3))
+      reduce.pca = min(200, round(ncol(X) / 3))
     )
 
     if (!h5exists(h5.file, "clustering")) rhdf5::h5createGroup(h5.file, "clustering")
@@ -550,7 +550,7 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
       methods = c("pca", "tsne", "umap"),
       dims = c(2, 3),
       reduce.sd = 2000,
-      reduce.pca = min(200, round(ncol(X)/3))
+      reduce.pca = min(200, round(ncol(X) / 3))
     )
 
     rhdf5::h5write(pos[["pca2d"]], h5.file, "clustering/pca2d") ## can write list??
@@ -660,7 +660,7 @@ pgx.ReclusterSignatureDatabase <- function(h5.file, reduce.sd = 1000, reduce.pca
     methods = c("pca", "tsne", "umap"),
     dims = c(2, 3),
     reduce.sd = reduce.sd,
-    reduce.pca = min(reduce.pca, round(ncol(X)/3))
+    reduce.pca = min(reduce.pca, round(ncol(X) / 3))
   )
 
   rhdf5::h5write(pos[["pca2d"]], h5.file, "clustering/pca2d") ## can write list??
