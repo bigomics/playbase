@@ -24,11 +24,11 @@ ngs.tximportSalmon(
 A DGEList object containing the abundance estimates, ready for use with edgeR.
 }
 \description{
-This function imports Salmon transcript abundance estimates from Salmon SF files 
+This function imports Salmon transcript abundance estimates from Salmon SF files
 and converts them to a DGEList object for use with edgeR.
 }
 \details{
-This function takes a named character vector of Salmon SF files, extracts the abundance 
+This function takes a named character vector of Salmon SF files, extracts the abundance
 estimates, converts them to a DGEList object with integer counts scaled to library size.
 It requires the EnsDb and org packages for the corresponding organism.
 }

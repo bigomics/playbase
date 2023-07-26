@@ -8,8 +8,6 @@
 #' @return a list with two elements: `checks` which contains the status of the checks, and
 #'  `PASS` which contains the overall status of the check.
 #' @export
-#'
-#' @examples
 pgx.checkINPUT <- function(
     df,
     type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")) {
@@ -120,8 +118,6 @@ pgx.checkINPUT <- function(
 #'  input data frames, `checks` which contains the status of the checks, and
 #'  `PASS` which contains the overall status of the check.
 #' @export
-#'
-#' @examples
 pgx.crosscheckINPUT <- function(
     SAMPLES = NULL,
     COUNTS = NULL,
@@ -219,11 +215,9 @@ pgx.crosscheckINPUT <- function(
 #'
 #' @param SAMPLE data.frame. The data frame corresponding to the input file as in playbase::SAMPLES
 #' @param CONTRASTS data.frame. The data frame corresponding to the input file as in playbase::CONTRASTS
-#'
+#' @param PASS boolean. The status of the checks.
 #' @return converted contrast df
 #' @export
-#'
-#' @examples
 contrasts_conversion_check <- function(SAMPLES, CONTRASTS, PASS) {
   samples1 <- SAMPLES
   contrasts1 <- CONTRASTS

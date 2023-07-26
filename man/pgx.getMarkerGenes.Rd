@@ -2,21 +2,33 @@
 % Please edit documentation in R/pgx-api.R
 \name{pgx.getMarkerGenes}
 \alias{pgx.getMarkerGenes}
-\title{Title}
+\title{Get Marker Genes}
 \usage{
 pgx.getMarkerGenes(pgx, n = 10, dir = 0, sym = FALSE, filt = NULL)
 }
 \arguments{
-\item{pgx}{value}
+\item{pgx}{A PGX object containing results}
 
-\item{n}{value}
+\item{n}{The number of top marker genes to return for each comparison. Default 10.}
 
-\item{dir}{value}
+\item{dir}{The direction to sort by. 0 for absolute value, -1 for negative, 1 for positive. Default 0.}
 
-\item{sym}{value}
+\item{sym}{Whether to return equal numbers of up and down genes. Default FALSE.}
 
-\item{filt}{value}
+\item{filt}{Filter to apply to gene names before selecting markers. Default NULL.}
+}
+\value{
+A named list with top marker genes for each comparison
 }
 \description{
-Title
+Get Marker Genes
+}
+\details{
+This function extracts the top n marker genes (based on absolute t-statistic or fold change) 
+for each comparison stored in the PGX object. It returns a list with one element per comparison, 
+containing the top marker genes.
+
+The number and direction of sorting can be controlled with n and dir arguments.
+Setting sym=TRUE returns an equal number of up and down genes.
+A filter can be applied to gene names before selecting markers.
 }

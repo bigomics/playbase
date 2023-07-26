@@ -7,6 +7,33 @@
 ##
 ##
 
+
+#' @title Supervised batch correction
+#'
+#' @description
+#' Performs supervised batch correction on a gene expression matrix, using known technical factors and biological covariates.
+#' 
+#' @param X Gene expression matrix, genes in rows, samples in columns.
+#' @param batch Factor or matrix indicating batch/technical groups for each sample. 
+#' @param model.par Vector of column names of biological covariates in \code{pheno}.  
+#' @param pheno Dataframe containing sample metadata/covariates. Must match colnames of \code{X}.
+#' @param method Batch correction method to apply ("combat", "limma", "sva", etc).
+#'
+#' @details This function performs supervised batch correction, using known batch groups and biological covariates.
+#' It constructs a design matrix containing batch groups and covariates. 
+#' The \code{method} batch correction is then applied to the expression matrix \code{X}, using this design matrix.
+#'
+#' Technical effects are estimated from the data as follows:
+#' \enumerate{
+#' \item Compute average expression within each batch 
+#' \item Perform PCA on the batch means
+#' \item Extract PCs explaining at least 80\% variance  
+#' }
+#'
+#' Biological effects are included using the specified \code{model.par} covariates.
+#'
+#' @return The batch corrected gene expression matrix.
+#'
 #' @export
 pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
                                   batch.par = "*",
@@ -53,10 +80,8 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
   pheno <- cbind(pheno, Y)
   not.na <- colMeans(is.na(pheno)) < 1
   nlev <- apply(pheno, 2, function(x) length(unique(x[!is.na(x)])))
-  nlev
   pheno <- pheno[, which(nlev > 1 & not.na), drop = FALSE]
   partype <- sapply(pheno, class)
-  partype
 
   message("[pgx.superBatchCorrect] 3 : dim.pheno = ", paste(dim(pheno), collapse = "x"))
 
@@ -70,7 +95,6 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     batch.par <- setdiff(colnames(pheno), model.par)
   }
 
-  bio.correct
   if ("mito" %in% bio.correct) {
     b1 <- grep("mito", colnames(pheno), value = TRUE)
     batch.par <- c(batch.par, b1)
@@ -88,11 +112,9 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     batch.par <- c(batch.par, b1)
   }
 
-  model.par
   batch.par <- intersect(batch.par, colnames(pheno))
   batch.par <- setdiff(batch.par, model.par)
   batch.par <- setdiff(batch.par, c("group", "cluster", "condition")) ## never???
-  batch.par
 
   ## --------------------------------------------------------------------
   ## guess parameter type
@@ -104,8 +126,6 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
   sel2 <- which(partype %in% c("integer", "numeric"))
   batch.cov <- intersect(batch.par, names(partype[sel2]))
 
-  batch.prm
-  batch.cov
 
   model.par <- intersect(model.par, colnames(pheno))
   batch.prm <- intersect(batch.prm, colnames(pheno))
@@ -120,7 +140,6 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
   if (!is.null(batch.prm) && !is.null(mod1)) {
     mod0 <- do.call(cbind, lapply(batch.prm, getModelMatrix))
     rho <- stats::cor(mod0, mod1)
-    rho
     rho[is.na(rho)] <- 0
     if (max(abs(rho), na.rm = TRUE) > max.rho) {
       idx <- which(abs(rho) > max.rho, arr.ind = TRUE)
@@ -147,7 +166,6 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     rho1[is.na(rho1)] <- 0
     if (max(abs(rho1), na.rm = TRUE) > max.rho) {
       idx <- which(abs(rho1) > max.rho, arr.ind = TRUE)
-      idx
       for (i in 1:nrow(idx)) {
         v0 <- colnames(cvar)[idx[i, 1]]
         v1 <- colnames(mod1)[idx[i, 2]]
@@ -158,10 +176,8 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
       }
       confounding.cov <- colnames(cvar)[idx[, 1]]
       confounding.cov <- unique(gsub("=.*", "", confounding.cov))
-      confounding.cov
       dbg("WARNING:: removing confounding batch covariates:", confounding.cov, "\n")
       batch.cov <- setdiff(batch.cov, confounding.cov)
-      batch.cov
     }
   }
 
@@ -180,7 +196,6 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
   ## --------------------------------------------------------------------
   if (lib.correct) {
     sel <- grep("libsize|nfeature", colnames(pheno), value = TRUE)
-    sel
     if (length(sel)) {
       dbg("[pgx.superBatchCorrect] Correcting for unwanted library effects:", sel, "\n")
       exp.pheno <- as.matrix(pheno[, sel, drop = FALSE])
@@ -231,7 +246,6 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
   ## batch correct other parameters with limma
   ## --------------------------------------------------------------------
   if (!is.null(batch.prm) && length(batch.prm) > 0) {
-    batch.prm
     batch.prm1 <- setdiff(batch.prm, colnames(Y))
     dbg("[pgx.superBatchCorrect] Batch correction for factors:", batch.prm1, "\n")
     b <- batch.prm1[1]
@@ -252,7 +266,6 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     }
   }
 
-  batch.cov
   if (!is.null(batch.cov) && length(batch.cov) > 0) {
     batch.cov
     batch.cov1 <- setdiff(batch.cov, colnames(Y))
@@ -308,21 +321,14 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     ## because of speed.
     ##
 
-
-
-
-
-
     mod1x <- cbind(1, mod1)
     mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
 
     ## fast method using SmartSVA
     pp <- paste0(model.par, collapse = "+")
-    pp
     lm.expr <- paste0("lm(t(cX) ~ ", pp, ", data=pheno)")
     X.r <- t(resid(eval(parse(text = lm.expr))))
     n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
-    n.sv
 
     cX1 <- Matrix::head(cX[order(-apply(cX, 1, sd)), ], 1000) ## top 1000 genes only (faster)
     sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = n.sv)$sv)
@@ -361,11 +367,9 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
         pc <- irlba::irlba(cX, nv = nv)$v
       ))
       pc.rho <- stats::cor(pc, mod1)
-      pc.rho
       pc.rho <- apply(abs(pc.rho), 1, max)
       ii <- which(pc.rho < max.rho)
       ii <- ii[ii < which.max(pc.rho)]
-      ii
       if (length(ii) > 0) {
         mod1x <- cbind(1, mod1)
         cX <- limma::removeBatchEffect(cX, covariates = pc[, ii], design = mod1x)
@@ -399,10 +403,8 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
       xx <- Matrix::head(cX[order(-apply(cX, 1, sd)), ], hc.top)
       hc <- cutree(fastcluster::hclust(dist(t(xx)), method = "ward.D2"), 2)
       hc.rho <- stats::cor(hc, mod1)
-      hc.rho
       hc.rho <- apply(abs(hc.rho), 1, max)
       ii <- which(hc.rho < max.rho)
-      ii
       if (length(ii) > 0) {
         mod1x <- cbind(1, mod1)
         hc <- scale(hc)
@@ -412,7 +414,6 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
       }
       niter <- niter + 1
     }
-    niter
     if (niter == max.iter) {
       dbg("WARNING:: HC correction did not converge after", nremove, "iterations\n")
     } else {
@@ -438,14 +439,38 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
 }
 
 
+#' Correlate principal components with phenotypes
+#'
+#' @param X Expression matrix 
+#' @param pheno Data frame of sample phenotypes
+#' @param nv Number of principal components to use
+#' @param stat Statistic for categorical phenotypes ("F" or "t").
+#' @param plot Logical, whether to generate a PCA plot.  
+#' @param main Title for PCA plot.
+#' 
+#' @return Named vector of correlation coefficients
+#' 
+#' @description
+#' Calculates the correlation between principal components of the expression matrix X
+#' and sample phenotypes in pheno.
+#'
+#' @details
+#' This function calculates the top nv principal components of the expression matrix X 
+#' using irlba::irlba. It then correlates each PC with each phenotype in the pheno data frame.
+#' 
+#' For categorical phenotypes, it converts to a factor and calculates the correlation with 
+#' the model matrix. For numeric phenotypes it calculates the standard correlation coefficient.
+#'
+#' It returns a named vector of correlation coefficients, with names corresponding to 
+#' the phenotypes.
+#'
 #' @export
 pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main = NULL) {
   getF <- function(x, y) {
     x <- t(scale(t(x))) ## rowscale
     ii <- which(!is.na(y))
     y1 <- y[ii]
-    class(y1)
-    if (class(y1) %in% c("factor", "character", "logical")) {
+    if (inherits(y1, c("factor", "character", "logical"))) {
       y1 <- factor(as.character(y1))
     } else {
       y1 <- y1 + 1e-8 * rnorm(length(y1))
@@ -454,8 +479,8 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
     design <- model.matrix(~ 1 + y1)
     fit <- limma::lmFit(x[, ii], design)
     suppressWarnings(fit <- try(limma::eBayes(fit, trend = FALSE)))
-    class(fit)
-    if (class(fit)[1] == "try-error") {
+
+    if (inherits(fit, "try-error")) {
       return(NULL)
     }
     suppressMessages(top <- limma::topTableF(fit, number = nrow(x)))
@@ -465,7 +490,7 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
   getCor <- function(x, y) {
     ii <- which(!is.na(y))
     y1 <- y[ii]
-    if (class(y1) == "factor") y1 <- factor(as.character(y1))
+    if (inherits(y1, "factor")) y1 <- factor(as.character(y1))
     design <- model.matrix(~ 0 + y1)
 
     r1 <- stats::cor(t(x[, ii]), design)
@@ -479,16 +504,13 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
   px <- pheno
   p <- "Chemotherapy"
   for (p in c("<random>", colnames(px))) {
-    p
     if (p == "<random>") {
       y <- sample(c("a", "b"), ncol(X), replace = TRUE)
     } else {
       y <- px[, p]
     }
     nlevels <- length(unique(y[!is.na(y)]))
-    nlevels
     nrep <- max(table(y))
-    nrep
     if (nlevels > 1 && nrep >= 2) {
       if (stat == "cor") {
         rho[[p]] <- getCor(x = t(V), y)
@@ -502,7 +524,6 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
   R <- do.call(rbind, rho)
   colnames(R) <- paste0("PC", 1:ncol(R))
   if (stat == "F") R <- t(t(R) / colMeans(R))
-  R
 
   if (plot) {
     stat0 <- c("correlation", "F-statistic")[1 + 1 * (stat == "F")]
@@ -524,8 +545,31 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
 
 NORMALIZATION.METHODS <- c("none", "mean", "scale", "NC", "CPM", "TMM", "RLE", "RLE2", "quantile")
 
-
-
+#' @title Normalize counts with TMM method
+#'
+#' @param counts Count matrix with genes in rows and samples in columns
+#' @param log Logical, whether to log transform normalized counts
+#' @param method Normalization method, default "TMM"
+#'
+#' @return Matrix of normalized counts
+#'
+#' @description
+#' Normalizes a count matrix using the TMM (Trimmed Mean of M-values) method.
+#' 
+#' @details
+#' This function takes a count matrix and normalizes the counts using the TMM method 
+#' implemented in the edgeR package.
+#'
+#' It converts the count matrix to a DGEList object. Then it calculates normalization
+#' factors using the calcNormFactors function with default TMM method. 
+#' 
+#' The normalized counts are returned as CPM values, optionally log-transformed.
+#'
+#' @examples
+#' \dontrun{
+#' counts <- matrix(rnbinom(100, mu=10, size=1), ncol=10) 
+#' norm_counts <- normalizeTMM(counts)
+#' }
 #' @export
 normalizeTMM <- function(counts, log = FALSE, method = "TMM") {
   dge <- edgeR::DGEList(as.matrix(counts), group = NULL)
@@ -533,6 +577,23 @@ normalizeTMM <- function(counts, log = FALSE, method = "TMM") {
   edgeR::cpm(dge, log = log)
 }
 
+
+#' Normalize count data using RLE method
+#'
+#' @description This function normalizes count data using the Relative Log Expression (RLE) method.
+#' It supports normalization using either the edgeR or DESeq2 package.
+#'
+#' @param counts A numeric matrix of count data, where rows represent features and columns represent samples.
+#' @param log Logical, whether to return log-transformed normalized counts.
+#' @param use Character, the package to use for normalization, either "edger" or "deseq2".
+#'
+#' @return A numeric matrix of normalized count data.
+#'
+#' @examples
+#' \dontrun{
+#' counts <- matrix(rnbinom(100, mu=10, size=1), ncol=10) 
+#' norm_counts <- normalizeRLE(counts)
+#' }
 #' @export
 normalizeRLE <- function(counts, log = FALSE, use = "deseq2") {
   outx <- NULL
@@ -552,8 +613,10 @@ normalizeRLE <- function(counts, log = FALSE, use = "deseq2") {
   } else {
     stop("unknown method")
   }
-  outx
+  return(outx)
 }
+
+
 
 #' @export
 pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
@@ -603,6 +666,35 @@ pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
   return(x)
 }
 
+
+#' @title Normalize count data
+#' 
+#' @description 
+#' Normalizes a matrix of RNA-seq count data using different methods.
+#'
+#' @param counts Matrix of count data, with genes in rows and samples in columns.
+#' @param method Normalization method to use. Options are "TMM", "RLE", "upperquartile", or "none".
+#' @param log Logical, if TRUE apply log2 transformation after normalization.
+#' @param prior Count offset to add prior to normalization. Default 1.
+#'
+#' @details
+#' This function normalizes a matrix of RNA-seq count data using different normalization methods:
+#'
+#' - "TMM": Trimmed Mean of M-values method from edgeR
+#' - "RLE": Relative Log Expression method
+#' - "upperquartile": Upper quartile normalization
+#' - "none": No normalization
+#'
+#' Counts are offset by prior value before normalization. A log2 transformation can also be applied after normalization.
+#' 
+#' @return 
+#' The normalized count matrix.
+#'
+#' @examples
+#' \dontrun{
+#' counts <- matrix(rnbinom(10000, mu = 10, size = 1), 100, 100) 
+#' normalized <- pgx.countNormalization(counts, method="TMM", log=TRUE)
+#' }
 #' @export
 pgx.removeBatchEffect <- function(X, batch, model.vars = NULL,
                                   method = c("ComBat", "BMC", "limma", "MNN", "fastMNN")) {
@@ -646,16 +738,43 @@ pgx.removeBatchEffect <- function(X, batch, model.vars = NULL,
 }
 
 
+#' Remove principal components from gene expression data
+#'
+#' @title Remove principal components from gene expression data
+#'
+#' @description 
+#' Removes the top principal components from a gene expression matrix.
+#'
+#' @param X Gene expression matrix, genes in rows, samples in columns.
+#' @param nv Number of principal components to remove.
+#' 
+#' @details
+#' This function calculates the top \code{nv} principal components of the gene expression matrix \code{X} using \code{irlba::irlba}. 
+#' It then removes these principal components from \code{X} using \code{limma::removeBatchEffect}.
+#' 
+#' The goal is to remove technical noise or batch effects captured by the top principal components.
+#'
+#' @return The gene expression matrix \code{X} with the top \code{nv} principal components removed.
+#'
 #' @export
 pgx.removePC <- function(X, nv) {
   suppressWarnings(suppressMessages(
     pc <- irlba::irlba(X, nv = nv)$v
   ))
   cX <- limma::removeBatchEffect(X, covariates = pc)
-  cX
+  return(cX)
 }
 
 
+#' Plot mitochondrial and ribosomal counts
+#'
+#' @description This function plots the mitochondrial and ribosomal counts in a given count matrix.
+#'
+#' @param counts A numeric matrix of count data, where rows represent features and columns represent samples.
+#' @param percentage Logical, whether to plot the counts as percentages of total counts.
+#'
+#' @return A bar plot of mitochondrial and ribosomal counts.
+#'
 #' @export
 pgx.plotMitoRibo <- function(counts, percentage = TRUE) {
   tot.counts <- Matrix::colSums(counts, na.rm = TRUE)
@@ -671,6 +790,34 @@ pgx.plotMitoRibo <- function(counts, percentage = TRUE) {
 }
 
 
+#' @title Estimate biological variation
+#' 
+#' @param X Gene expression matrix, with genes in rows and samples in columns
+#' @param is.count Logical indicating if X contains counts (TRUE) or log-expression values (FALSE)
+#'
+#' @return List containing:
+#' \itemize{
+#'  \item{pct.mito}{Percent mitochondrial genes} 
+#'  \item{pct.ribo}{Percent ribosomal genes}
+#'  \item{biological}{Biological coefficient of variation}
+#' }
+#'
+#' @description 
+#' Estimates the biological variation and fraction of mitochondrial and ribosomal genes from a gene expression matrix.
+#' 
+#' @details
+#' This function calculates the biological variation (BCV) for each gene as the coefficient of variation of expression across samples.
+#'
+#' It also calculates the percentage of mitochondrial and ribosomal genes based on gene symbols.
+#' 
+#' If the input matrix X contains counts, it will be transformed to log2-CPM.
+#' If X contains log-expression values, it will be shifted to start at the 1% quantile.
+#' @examples
+#' \dontrun{
+#' data(sample.ExpressionSet)
+#' results <- pgx.computeBiologicalEffects(sample.ExpressionSet)
+#' head(results$biological) 
+#' }
 #' @export
 pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
   ## estimate biological variation
@@ -683,7 +830,7 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
   ## shift zero to 1% percentile
   if (!is.count) {
     q0 <- quantile(X[X > 0], probs = 0.01, na.rm = TRUE)
-    q0
+
     tx <- pmax(X - q0, 0) ## log expression
     cx <- pmax(2**tx - 1, 0) ## counts
   } else {
@@ -697,8 +844,7 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
   rb.genes <- grep("^RP[SL]", rownames(X), ignore.case = TRUE, value = TRUE)
   mito <- ribo <- NA
   pct.mito <- pct.ribo <- NA
-  mt.genes
-  rb.genes
+
   if (length(mt.genes) >= 10) {
     mito <- Matrix::colMeans(tx[mt.genes, , drop = FALSE])
     pct.mito <- Matrix::colSums(cx[mt.genes, , drop = FALSE], na.rm = TRUE) / libsize
@@ -729,6 +875,29 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
 }
 
 
+#' @title Surrogate variable analysis batch correction
+#'
+#' @description
+#' Performs batch correction using surrogate variable analysis (SVA).
+#' Estimates surrogate variables and removes them from the expression data.
+#'
+#' @param X Gene expression matrix, genes in rows and samples in columns.
+#' @param batch Factor or matrix indicating batch groups for each sample.
+#' @param model.par Vector of column names in \code{pheno} to use as model covariates. 
+#' @param pheno Dataframe containing sample metadata/covariates. Must match colnames of \code{X}.
+#' @param n.sv Number of surrogate variables to estimate. If NULL uses a data-driven approach.
+#'
+#' @return Batch corrected gene expression matrix.
+#' 
+#' @details
+#' This function performs batch correction using the sva R package.
+#'
+#' It constructs a design matrix containing the specified batch groups and covariates.
+#' Surrogate variables are estimated to capture remaining batch effects.
+#' 
+#' The top surrogate variables are included in the design matrix and removed from the expression data.
+#' This accounts for batch effects in a completely unsupervised way.
+#'
 #' @export
 pgx.svaCorrect <- function(X, pheno, nmax = -1) {
   ##
@@ -753,9 +922,6 @@ pgx.svaCorrect <- function(X, pheno, nmax = -1) {
   }
   colnames(mod1) <- sub("_IS_", "=", colnames(mod1))
 
-
-
-
   mod1x <- cbind(1, mod1)
   mod0x <- mod1x[, 1, drop = FALSE]
 
@@ -765,14 +931,11 @@ pgx.svaCorrect <- function(X, pheno, nmax = -1) {
   ## fast method using SmartSVA
 
   pp <- paste0(colnames(pheno), collapse = "+")
-  pp
   lm.expr <- paste0("lm(t(X) ~ ", pp, ", data=pheno)")
   X.r <- t(stats::resid(eval(parse(text = lm.expr))))
   n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
-  n.sv
   suppressWarnings(min1 <- min(sapply(apply(pheno, 2, table), min)))
   n.sv <- min(n.sv, min1)
-  n.sv
 
   message("Calculating SVA...")
   vX <- X
@@ -790,7 +953,7 @@ pgx.svaCorrect <- function(X, pheno, nmax = -1) {
   ## recenter on old feature means
   cX <- cX - Matrix::rowMeans(cX, na.rm = TRUE) + Matrix::rowMeans(X, na.rm = TRUE)
 
-  cX
+  return(cX)
 }
 
 
@@ -816,7 +979,7 @@ pgx.optimizeBatchCorrection.NOTREADY <- function(ngs, batch, contrast, nparam = 
       parcomb <- c(parcomb, pp)
     }
     parcomb <- c("no_correction", parcomb)
-    parcomb
+
     names(parcomb) <- sapply(parcomb, paste, collapse = "+")
     return(parcomb)
   }
@@ -867,7 +1030,6 @@ pgx.optimizeBatchCorrection.NOTREADY <- function(ngs, batch, contrast, nparam = 
 
   ## compute best normalized/corrected combination
   best.bcm <- names(numsig)[which.max(numsig)]
-  best.bcm
 
   res <- list(results = S, corrected = NULL)
   return(res)
@@ -931,7 +1093,28 @@ pgx._runComputeNumSig <- function(ngs, parcomb, contrast, resample = -1,
 }
 
 
-
+#' @title Compute number of significant genes
+#'
+#' @param ngs Object containing NGS analysis data 
+#' @param X Expression matrix
+#' @param contrast Contrast to test
+#' @param fc Fold change cutoff
+#' @param qv FDR cutoff 
+#'
+#' @return Named vector containing number of significant genes for each parameter combination
+#'
+#' @description Counts number of significant genes for given parameters.
+#'
+#' @details This function fits the specified contrast and counts the number of genes 
+#' significant at the given FDR and fold change cutoffs.
+#'
+#' It requires an NGS analysis object, expression matrix, and contrast. Batch 
+#' correction is performed using parameters defined in the NGS object. The contrast is 
+#' then fit using limma-voom and number of significant genes counted.  
+#'
+#' Fold change and FDR cutoffs can also be specified. The number of significant genes 
+#' passing these thresholds is returned for each parameter combination.
+#'
 #' @export
 pgx._computeNumSig <- function(ngs, X, contrast = NULL, fc = 0, qv = 0.05) {
   samples <- colnames(X)

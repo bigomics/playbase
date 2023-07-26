@@ -599,7 +599,7 @@ pgx.getGeneCorrelation <- function(gene, xref) {
       xx <- log2(1 + xref[[k]])
       jj <- match(toupper(gene), toupper(rownames(xx)))
       tx <- xx[jj, ]
-      if ("dgCMatrix" %in% class(xx)) {
+      if (inherits(xx, "dgCMatrix")) {
         suppressWarnings(rho1 <- qlcMatrix::corSparse(xx, cbind(tx))[, 1])
       } else {
         suppressWarnings(rho1 <- stats::cor(t(xx), tx)[, 1])

@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-cluster.R
 \name{pgx.findLouvainClusters.SNN}
 \alias{pgx.findLouvainClusters.SNN}
-\title{Title}
+\title{Find Louvain clusters using shared nearest neighbor graph}
 \usage{
 pgx.findLouvainClusters.SNN(
   X,
@@ -13,16 +13,27 @@ pgx.findLouvainClusters.SNN(
 )
 }
 \arguments{
-\item{X}{value}
+\item{expr}{Expression matrix with genes in rows and samples in columns}
 
-\item{prefix}{value}
+\item{k}{Number of nearest neighbors for graph construction}
 
-\item{level}{value}
-
-\item{gamma}{value}
-
-\item{small.zero}{value}
+\item{resolution}{Resolution parameter for Louvain clustering}
+}
+\value{
+A vector of Louvain cluster assignments
 }
 \description{
-Title
+Clusters samples using a shared nearest neighbor graph and Louvain clustering.
+}
+\details{
+Find Louvain clusters using shared nearest neighbor graph
+
+
+This function constructs a shared nearest neighbor graph from the expression matrix, 
+where samples are connected if they appear in each other's k-nearest neighbor lists.
+
+Louvain clustering is then applied to detect communities in the graph. The resolution 
+parameter controls the number and size of clusters.
+
+The output is a vector of cluster assignments for each sample.
 }

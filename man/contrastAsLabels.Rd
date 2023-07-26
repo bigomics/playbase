@@ -20,8 +20,8 @@ Converts a contrast matrix to a data frame of group labels.
 \details{
 Convert contrast matrix to group labels
 
-This function takes a contrast matrix and returns a data frame 
-with a column of group labels for each contrast. The labels are generated  
+This function takes a contrast matrix and returns a data frame
+with a column of group labels for each contrast. The labels are generated
 from the contrast names.
 }
 \examples{

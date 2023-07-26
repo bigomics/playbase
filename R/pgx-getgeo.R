@@ -240,7 +240,7 @@ pgx.getGEOcounts.GEOquery <- function(id) {
   gse <- try(GEOquery::getGEO(id, GSEMatrix = TRUE, getGPL = TRUE))
 
   class(gse)
-  if (class(gse) == "try-error") {
+  if (inherits(gse, "try-error")) {
     cat("ERROR: GEOquery::getGEO() error\n")
     return(NULL)
   }
@@ -348,8 +348,8 @@ pgx.getGEOcounts.fromSuppl <- function(id) {
   id
 
   gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE))
-  class(gse)
-  if (class(gse) == "try-error") {
+
+  if (inherits(gse, "try-error")) {
     cat("ERROR: GEOquery::getGEO() error\n")
     return(NULL)
   }
@@ -392,7 +392,7 @@ pgx.getSymbolFromFeatureData <- function(fdata) {
   ## If there is an ENTREZ column, than it is easy
   ENTREZ <- biomaRt::keys(org.Hs.eg.db::org.Hs.egSYMBOL)
   entrez.col <- grep("entrez", colnames(fdata), ignore.case = TRUE)
-  entrez.col
+
   entrez.match <- apply(
     fdata[, entrez.col, drop = FALSE], 2,
     function(g) mean(g[!is.na(g)] %in% ENTREZ)
@@ -415,7 +415,7 @@ pgx.getSymbolFromFeatureData <- function(fdata) {
     fdata[, refseq.col, drop = FALSE], 2,
     function(g) mean(sub("[.].*", "", g[!is.na(g)]) %in% REFSEQ)
   )
-  refseq.match
+
   refseq.ok <- length(refseq.col) && refseq.match > 0.5
   refseq.ok
   if (refseq.ok) {
@@ -427,7 +427,7 @@ pgx.getSymbolFromFeatureData <- function(fdata) {
 
   ## Otherwise try Ensemble ID
   gene.column <- grep("gene|mrna|transcript", colnames(fdata), ignore.case = TRUE)
-  gene.column
+
   has.ens <- apply(fdata[, gene.column, drop = FALSE], 2, function(s) mean(grepl("ENS", s)))
   has.ens
   if (any(has.ens > 0.3)) {
@@ -457,13 +457,12 @@ pgx.getGeoMetadata.fromEset <- function(id) {
   ## If not succesful, try with downloading the GSEMatrix
   suppressMessages(gse <- try(GEOquery::getGEO(id, GSEMatrix = TRUE, getGPL = FALSE)))
 
-  if (class(gse) == "try-error") {
+  if (inherits(gse, "try-error")) {
     res <- list(error = "ERROR: pgx.getGeoMetadata.fromEset() error")
     return(res)
   }
 
   nsamples <- sapply(gse, function(s) nrow(pData(phenoData(s))))
-  nsamples
 
   gse <- gse[nsamples >= 3]
   eset <- gse[[1]]
@@ -514,7 +513,7 @@ pgx.getGeoMetadata.fromEset1 <- function(eset) {
 
   ## We can get extra information from title
   is.underscored <- length(gsm.title) && all(grepl("_", gsm.title))
-  is.underscored
+
   title_info <- NULL
   if (FALSE && is.underscored) {
     title2 <- trimws(gsm.title)
@@ -543,7 +542,7 @@ pgx.getGeoMetadata.fromGSM <- function(id) {
   id
   suppressMessages(gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE)))
 
-  if (class(gse) == "try-error") {
+  if (inherits(gse, "try-error")) {
     res <- list(error = "ERROR: GEOquery::getGEO() error")
     return(res)
   }
@@ -581,7 +580,6 @@ pgx.getGeoMetadata.fromGSM <- function(id) {
   gsm.source <- sapply(gse@gsms, function(g) g@header$source_name_ch1)
   gsm.gpl <- sapply(gse@gsms, function(g) g@header$platform_id)
   is.underscored <- length(gsm.title) && all(grepl("_", gsm.title))
-  is.underscored
   title_info <- NULL
   ## NEED RETHINK!!!!!!!!!!!!!!!!!!
   if (FALSE && is.underscored) {

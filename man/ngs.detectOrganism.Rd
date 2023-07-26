@@ -13,24 +13,24 @@ ngs.detectOrganism(ngs)
 A character string indicating the detected organism ('human' or 'mouse').
 }
 \description{
-Detects the organism for an NGS object by 
+Detects the organism for an NGS object by
 looking at the case of gene identifiers.
 }
 \details{
 Detect organism from NGS object
 
-This function detects the organism for an NGS object 
-by calculating the ratio of lowercase characters in the 
-rownames of the counts matrix. It assumes human data will have a 
-high proportion of uppercase ENSEMBL identifiers, while mouse 
+This function detects the organism for an NGS object
+by calculating the ratio of lowercase characters in the
+rownames of the counts matrix. It assumes human data will have a
+high proportion of uppercase ENSEMBL identifiers, while mouse
 data will have more lowercase.
 
-It calculates the ratio of lowercase characters in the first 100 
+It calculates the ratio of lowercase characters in the first 100
 characters of the rownames of ngs$counts.
 If the ratio is greater than 0.5 it assigns 'mouse', otherwise 'human'.
 }
 \examples{
-\dontrun{  
+\dontrun{
 # TODO
 }
 }

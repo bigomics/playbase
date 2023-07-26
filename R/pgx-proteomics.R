@@ -656,10 +656,10 @@ silac.ttest <- function(X, group1, group2, method = "limma") {
 
 #' @export
 silac.volcanoPlot <- function(obj, group1, group2, psig = 0.05, lfc = 0.2) {
-  if (class(group1[1]) == "character" && group1[1] %in% names(obj$groups)) {
+  if (inherits(group1[1], "character") && group1[1] %in% names(obj$groups)) {
     group1 <- obj$groups[[group1]]
   }
-  if (class(group2[1]) == "character" && group2[1] %in% names(obj$groups)) {
+  if (inherits(group2[1], "character") && group2[1] %in% names(obj$groups)) {
     group2 <- obj$groups[[group2]]
   }
 
@@ -717,25 +717,22 @@ fit.weibull2 <- function(x, y) {
     lower = list(lambda = 0.01, k = 0.001),
     algorithm = "port"
   )
-  summary(fit)
-  coef(fit)
   xfit <- seq(0, 48, 1)
   lambda0 <- coef(fit)["lambda"]
   k0 <- coef(fit)["k"]
   yfit <- cdf.weibull(xfit, lambda0, k0)
   t50 <- lambda0 * log(2)**(1 / k0) ## time at 50%
-  t50
   list(x = xfit, y = yfit, t50 = t50)
 }
 
 # ;samples=NULL;protein=p
 #' @export
 silac.fitWeibull <- function(obj, protein, samples = NULL, samples2 = NULL) {
-  if (!is.null(samples) && class(samples[1]) == "character" &&
+  if (!is.null(samples) && inherits(samples[1], "character") &&
     samples[1] %in% names(obj$groups)) {
     samples <- obj$groups[[samples]]
   }
-  if (!is.null(samples2) && class(samples2[1]) == "character" &&
+  if (!is.null(samples2) && inherits(samples2[1], "character") &&
     samples2[1] %in% names(obj$groups)) {
     samples2 <- obj$groups[[samples2]]
   }
@@ -789,7 +786,7 @@ silac.fitWeibull <- function(obj, protein, samples = NULL, samples2 = NULL) {
 
 #' @export
 silac.plotProteins <- function(obj, proteins, samples = NULL) {
-  if (!is.null(samples) && class(samples[1]) == "character" &&
+  if (!is.null(samples) && inherits(samples[1], "character") &&
     samples[1] %in% names(obj$groups)) {
     samples <- obj$groups[[samples]]
   }
@@ -809,7 +806,7 @@ silac.plotProteins <- function(obj, proteins, samples = NULL) {
 # ;samples="NaiveRest_6h";main=NULL;minq=3
 #' @export
 silac.plotDistribution <- function(obj, samples, minq = 3, main = NULL) {
-  if (!is.null(samples) && class(samples[1]) == "character" &&
+  if (!is.null(samples) && inherits(samples[1], "character") &&
     samples[1] %in% names(obj$groups)) {
     if (is.null(main)) main <- samples
     samples <- obj$groups[[samples]]

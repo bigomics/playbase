@@ -2,19 +2,32 @@
 % Please edit documentation in R/pgx-contrasts.R
 \name{makeDirectContrasts000}
 \alias{makeDirectContrasts000}
-\title{Title}
+\title{Make direct contrasts from a factor}
 \usage{
 makeDirectContrasts000(Y, ref, na.rm = TRUE, warn = FALSE)
 }
 \arguments{
-\item{Y}{value}
+\item{Y}{A factor vector}
 
-\item{ref}{value}
+\item{ref}{The reference level to contrast against}
 
-\item{na.rm}{value}
+\item{na.rm}{Remove missing values? Default is TRUE}
 
-\item{warn}{value}
+\item{warn}{Show warnings about missing levels? Default is FALSE.}
+}
+\value{
+A contrast matrix
 }
 \description{
-Title
+Creates a contrast matrix directly from a factor by contrasting each level against the reference.
+}
+\details{
+This function takes a factor Y and generates a contrast matrix with columns encoding comparisons of each factor level versus the reference level specified by ref.
+
+It first expands Y into dummy variables using model.matrix. 
+Then it subtracts the reference level column to create +1/-1 contrasts.
+Columns with all 0s are dropped.
+
+Levels missing in Y will create columns of all 0s. Set na.rm=TRUE to remove these.
+Warnings about missing levels can be shown with warn=TRUE.
 }

@@ -36,6 +36,6 @@ Find clusters in a dataset using the Louvain algorithm.
 Find Louvain clusters
 
 Builds a graph from the input data and runs the Louvain algorithm to find clusters.
-The number of levels in the hierarchy can be specified. Small clusters can optionally be 
+The number of levels in the hierarchy can be specified. Small clusters can optionally be
 reassigned to cluster 0.
 }

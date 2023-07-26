@@ -31,16 +31,16 @@ It first creates a histogram of all values using \code{\link[graphics]{hist}}.
 It then overlays density histograms for each sample, with colors corresponding to column numbers.
 
 This function generates a histogram of the gene expression values in \code{gx}.
-It first creates a histogram of all values using \code{\link[graphics]{hist}}.  
+It first creates a histogram of all values using \code{\link[graphics]{hist}}.
 It then overlays density histograms for each sample, with colors corresponding to column numbers.
 }
 \examples{
 \dontrun{
-gx <- matrix(rnorm(100*10), 100, 10)
+gx <- matrix(rnorm(100 * 10), 100, 10)
 gx.hist(gx)
 }
 \dontrun{
-gx <- matrix(rnorm(100*10), 100, 10)
+gx <- matrix(rnorm(100 * 10), 100, 10)
 gx.hist(gx)
 }
 }

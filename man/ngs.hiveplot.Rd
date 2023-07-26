@@ -42,14 +42,14 @@ ngs.hiveplot(
 A hive plot grob object is returned, no value.
 }
 \description{
-Creates a hive plot to visualize associations between omics datasets 
+Creates a hive plot to visualize associations between omics datasets
 in an NGS object.
 }
 \details{
-This function takes an NGS object containing gene expression (GX), copy number (CN), 
-and methylation (ME) data. It calculates correlation statistics between features in 
-each dataset vs. the phenotype. It selects the top \code{ntop} features and creates  
-a hive plot visualization, with hubs representing GX/CN/ME and edges representing 
+This function takes an NGS object containing gene expression (GX), copy number (CN),
+and methylation (ME) data. It calculates correlation statistics between features in
+each dataset vs. the phenotype. It selects the top \code{ntop} features and creates
+a hive plot visualization, with hubs representing GX/CN/ME and edges representing
 correlations between features across datasets related to the phenotype.
 
 The plot is customizable via parameters like \code{main}, \code{bkgnd}, \code{cex}, etc.

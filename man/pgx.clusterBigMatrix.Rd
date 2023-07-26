@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-cluster.R
 \name{pgx.clusterBigMatrix}
 \alias{pgx.clusterBigMatrix}
-\title{Title}
+\title{Cluster large matrices}
 \usage{
 pgx.clusterBigMatrix(
   X,
@@ -19,28 +19,48 @@ pgx.clusterBigMatrix(
 )
 }
 \arguments{
-\item{X}{value}
+\item{X}{Numeric matrix of data to cluster}
 
-\item{methods}{value}
+\item{methods}{Character vector of methods to use (pca, tsne, umap)}
 
-\item{dims}{value}
+\item{dims}{Output dimensions for dimensionality reduction}
 
-\item{perplexity}{value}
+\item{perplexity}{Perplexity parameter for tSNE and UMAP}
 
-\item{reduce.sd}{value}
+\item{reduce.sd}{Perform PCA if original dimensions > reduce.sd}
 
-\item{reduce.pca}{value}
+\item{reduce.pca}{Number of PCA components for initial reduction}
 
-\item{center.features}{value}
+\item{center.features}{Center the rows before clustering?}
 
-\item{scale.features}{value}
+\item{scale.features}{Scale the rows before clustering?}
 
-\item{find.clusters}{value}
+\item{find.clusters}{Detect optimal number of clusters?}
 
-\item{svd.gamma}{value}
+\item{svd.gamma}{Gamma parameter for randomized SVD}
 
-\item{umap.pkg}{value}
+\item{umap.pkg}{UMAP package to use (umap or uwot)}
+}
+\value{
+List of cluster assignments
 }
 \description{
-Title
+Performs dimensionality reduction and clustering on large data matrices
+}
+\details{
+Cluster large matrices
+
+
+This function takes a large data matrix and reduces the dimensions using
+PCA and tSNE/UMAP before clustering the rows. It is designed to handle
+matrices that are too large to embed directly with tSNE or UMAP.
+
+PCA is first used to reduce the dimensions if the original size is over
+reduce.sd rows. tSNE or UMAP is then applied to further reduce the
+dimensions for clustering. k-means clustering is performed on the
+reduced data.
+
+Multiple parameters allow customization of the methods, perplexity,
+dimensions, etc. By default it tries to detect the optimal number of
+clusters using the elbow method.
 }

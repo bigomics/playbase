@@ -2,15 +2,26 @@
 % Please edit documentation in R/gx-limma.r
 \name{gx.meanFstats}
 \alias{gx.meanFstats}
-\title{Title}
+\title{Calculate mean F statistics}
 \usage{
 gx.meanFstats(X, pheno)
 }
 \arguments{
-\item{X}{value}
+\item{X}{A gene expression matrix with genes in rows and samples in columns.}
 
-\item{pheno}{value}
+\item{pheno}{A phenotype factor or vector indicating the phenotype of each sample.}
+}
+\value{
+The mean F statistic across all genes.
 }
 \description{
-Title
+Calculates the mean F statistic across all genes from running limma differential expression analysis.
+Useful for comparing overall separation between groups.
+}
+\details{
+Calculate mean F statistics from limma differential expression analysis
+
+Runs limma differential expression between the phenotype groups for each gene. 
+Extracts the F statistics from the limma results and calculates the mean F statistic across all genes.
+Higher mean F indicates better separation between phenotype groups.
 }

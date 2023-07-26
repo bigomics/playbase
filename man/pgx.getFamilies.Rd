@@ -7,12 +7,20 @@
 pgx.getFamilies(pgx, nmin = 10, extended = FALSE)
 }
 \arguments{
-\item{pgx}{value}
+\item{pgx}{A PGX object containing gene expression data}
 
-\item{nmin}{value}
+\item{nmin}{The minimum number of genes for a family to be returned}
 
-\item{extended}{value}
+\item{extended}{Whether to return extended families (TRUE) or only core families (FALSE)}
+}
+\value{
+A character vector of gene family names
 }
 \description{
-Title
+Retrieves the gene families represented in a PGX object that have at least nmin members.
+}
+\details{
+Searches for gene families in the PGX gene sets that match either the core family names (FAMILY*) or 
+extended family regex (e.g. <FAMILY.ABC.*). Returns the names of families with at least nmin members 
+present in the PGX gene expression matrix. Useful for checking which gene families are represented in the data.
 }

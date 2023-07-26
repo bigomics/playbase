@@ -37,7 +37,7 @@ This function converts a character vector of gene symbols to official HUGO gene 
 It first removes any aliases by mapping to the primary HUGO symbol list.
 For any remaining non-HUGO symbols, it attempts to find the official symbol by alias mapping.
 
-If take.only.first is TRUE, only the first HUGO symbol is taken when a gene maps to multiple aliases. 
+If take.only.first is TRUE, only the first HUGO symbol is taken when a gene maps to multiple aliases.
 Multiple aliases are concatenated by split.char when take.only.first=FALSE.
 
 Non-HUGO symbols that cannot be converted are replaced with unknown by default.
@@ -46,7 +46,7 @@ Messages about conversions are printed unless silent=TRUE.
 \examples{
 \dontrun{
 genes <- c("EGFR", "CDKN2A", "FOO", "BAR")
-hugo_symbols <- symbol2hugo(genes) 
+hugo_symbols <- symbol2hugo(genes)
 }
 
 }

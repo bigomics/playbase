@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-contrasts.R
 \name{pgx.makeAutoContrasts}
 \alias{pgx.makeAutoContrasts}
-\title{Title}
+\title{Automatically generate contrasts from sample metadata}
 \usage{
 pgx.makeAutoContrasts(
   df,
@@ -14,18 +14,35 @@ pgx.makeAutoContrasts(
 )
 }
 \arguments{
-\item{df}{value}
+\item{df}{Data frame with sample metadata}
 
-\item{mingrp}{value}
+\item{mingrp}{Minimum group size to include}
 
-\item{slen}{value}
+\item{slen}{Maximum contrast name length}
 
-\item{ref}{value}
+\item{ref}{Reference level for factors}
 
-\item{fix.degenerate}{value}
+\item{fix.degenerate}{Fix degenerate designs?}
 
-\item{skip.hidden}{value}
+\item{skip.hidden}{Skip hidden metadata columns?}
+}
+\value{
+A data frame with automatically generated contrasts
 }
 \description{
-Title
+This function automatically generates contrasts for differential analysis from a 
+data frame of sample metadata. It extracts factor columns, generates comparisons between
+groups, handles dummy variable creation, and outputs a clean contrast matrix.
+}
+\details{
+The sample metadata is scanned to find categorical variables with at least mingrp
+groups. These are expanded into dummy variables and all pairwise comparisons between
+groups are generated. Contrast names are cleaned and truncated to slen characters.
+
+Degenerate designs are checked for and resolved if fix.degenerate=TRUE.
+Metadata columns starting with "." are skipped if skip.hidden=TRUE.
+
+The final output is a data frame with samples in rows, contrast columns, and values
+of 0/1/-1 indicating the sample groups being compared. This defines the contrasts
+for differential analysis.
 }

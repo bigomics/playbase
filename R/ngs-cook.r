@@ -29,7 +29,6 @@
 #' The returned DGEList contains the normalized, filtered count matrix, along with sample and
 #' gene data frames, ready for analysis with edgeR functions like glmQLFit() and glmQLFTest().
 #'
-#' @examples
 #' @export
 ngs.cookForEDGER <- function(counts, samples = NULL, genes = NULL, normalization = "none",
                              filter = TRUE, prior.cpm = 0, remove.batch = TRUE) {
@@ -101,8 +100,6 @@ ngs.cookForEDGER <- function(counts, samples = NULL, genes = NULL, normalization
     cooked$samples$lib.size <- round(Matrix::colSums(cooked$counts)) ## update lib.size
   }
 
-  ## stop here???
-  #
   return(cooked)
 }
 
@@ -128,7 +125,6 @@ ngs.cookForEDGER <- function(counts, samples = NULL, genes = NULL, normalization
 #' The returned DESeqDataSet contains the normalized, filtered count matrix, along with sample and
 #' gene data frames, ready for analysis with DESeq2 functions like DESeq() and results().
 #'
-#' @examples
 #' @seealso
 #' \code{\link[DESeq2]{DESeqDataSet}}, \code{\link[DESeq2]{DESeq}}, \code{\link[DESeq2]{results}}
 #'

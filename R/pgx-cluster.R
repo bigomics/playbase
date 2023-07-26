@@ -5,24 +5,35 @@
 ##
 
 
-#' Title
+#' @title Cluster genes
 #'
-#' @param pgx value
-#' @param methods value
-#' @param dims value
-#' @param reduce.pca value
-#' @param perplexity value
-#' @param level value
-#' @param rank.tf value
-#' @param center.rows value
-#' @param scale.rows value
-#' @param X value
-#' @param umap.pkg value
+#' @param pgx A PGX object containing gene expression data
+#' @param method Character vector of clustering methods to apply (choose between "pca", "tsne", and "umap")
+#' @param dims Dimensions for dimensionality reduction (by default 2,and 3)
+#' @param reduce.pca Number of PCs to reduce to for PCA
+#' @param perplexity Perplexity parameter for tSNE
+#' @param level Data level to cluster ("gene", "exon", "junction")
+#' @param rank.tf Rank transform expression first? Logical
+#' @param center.rows Center expression rows? Logical
+#' @param scale.rows Scale expression rows? Logical
+#' @param X Expression matrix to use instead of pgx$X
+#' @param umap.pkg UMAP package to use ("uwot" or "umap")
 #'
-#' @return
+#' @return The updated PGX object with gene clusters added
+#'
+#' @description
+#' Clusters the genes in a PGX object using dimensionality reduction methods like PCA, tSNE and UMAP.
+#'
+#' @details
+#' This function takes a PGX object and performs dimensionality reduction on the gene expression data,
+#' followed by clustering in the reduced space. Methods like PCA, tSNE and UMAP are used to reduce the dimensions.
+#'
+#' The gene expression matrix is extracted from the PGX object, optionally transformed, then embedded.
+#' The resulting coordinates are clustered using k-means to assign genes to clusters.
+#'
+#' The gene clusters are added to the PGX object for downstream use.
+#'
 #' @export
-#'
-#' @examples
 pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2, 3),
                              reduce.pca = 50, perplexity = 30, level = "gene",
                              rank.tf = FALSE, center.rows = TRUE, scale.rows = FALSE,
@@ -89,25 +100,41 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
 }
 
 
-
-#' Title
+#' Cluster samples in a PGX object
 #'
-#' @param pgx value
-#' @param methods value
-#' @param dims value
-#' @param reduce.sd value
-#' @param reduce.pca value
-#' @param perplexity value
-#' @param center.rows value
-#' @param scale.rows value
-#' @param X value
-#' @param umap.pkg value
-#' @param replace.orig value
+#' @param pgx A PGX object
+#' @param method Character vector of clustering methods to apply (choose between "pca", "tsne", and "umap")
+#' @param dims Dimensions for dimensionality reduction (by default 2,and 3)
+#' @param reduce.sd Perform dimensionality reduction if original dims > reduce.sd
+#' @param reduce.pca For PCA, take first reduce.pca components
+#' @param perplexity Perplexity parameter for tSNE and UMAP
+#' @param center.rows Center rows before clustering?
+#' @param scale.rows Scale rows to unit variance before clustering?
+#' @param X Use this matrix instead of pgx$X
+#' @param umap.pkg UMAP package to use (umap or uwot)
+#' @param replace.orig Replace original pgx$X with reduced data?
 #'
-#' @return
+#' @return The updated PGX object with cluster assignments in pgx$cluster$sample
+#'
+#' @description
+#' Performs dimensionality reduction and clustering on the samples in a PGX object.
+#'
+#' @details
+#' This function takes a PGX object and performs PCA, tSNE, and/or UMAP on the
+#' samples. It clusters the samples in the reduced space and stores the cluster
+#' assignments in the pgx$cluster$sample slot.
+#'
+#' Dimensionality reduction is performed on pgx$X or a provided matrix X. If the
+#' original number of dimensions is large, PCA is used to reduce to reduce.pca dimensions
+#' first. tSNE and UMAP are then applied to further reduce to 2 or 3 dimensions.
+#'
+#' Multiple parameter options are available to control the clustering, including
+#' choice of methods, perplexity, centering/scaling samples first, etc.
+#'
+#' By default the original pgx$X matrix is replaced with the reduced data. Set
+#' replace.orig=FALSE to retain the original.
+#'
 #' @export
-#'
-#' @examples
 pgx.clusterSamples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2, 3),
                                 reduce.sd = 1000, reduce.pca = 50, perplexity = 30,
                                 center.rows = TRUE, scale.rows = FALSE,
@@ -158,27 +185,34 @@ pgx.clusterSamples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = 
 
 
 
-#' Title
+#' Cluster samples in a PGX object
 #'
-#' @param pgx value
-#' @param X value
-#' @param skipifexists value
-#' @param perplexity value
-#' @param ntop value
-#' @param npca value
-#' @param prefix value
-#' @param kclust value
-#' @param dims value
-#' @param find.clusters value
-#' @param clust.detect value
-#' @param row.center value
-#' @param row.scale value
-#' @param method value
+#' @param pgx A PGX object
+#' @param method Character vector of clustering methods to apply (choose between "pca", "tsne", and "umap")
+#' @param dims Dimensions for dimensionality reduction (by default 2,3)
+#' @param perplexity Perplexity parameter for tSNE and UMAP
+#' @param ntop Number of top features to use for PCA
+#' @param npca Number of PCA components to reduce to
+#' @param kclust Number of clusters for k-means
+#' @param prefix Prefix for cluster variable names
+#' @param find.clusters Logical to find optimal number of clusters
 #'
-#' @return
+#' @return The updated PGX object with cluster assignments in pgx$cluster$sample
+#'
+#' @description
+#' Performs dimensionality reduction and clustering on the samples in a PGX object.
+#'
+#' @details
+#' This function takes a PGX object and performs PCA, tSNE, and/or UMAP on the samples.
+#' It clusters the samples in the reduced space and stores the cluster assignments in pgx$cluster$sample.
+#'
+#' PCA is performed first to reduce dimensions. tSNE and UMAP are then applied for further reduction.
+#' k-means clustering is performed on the reduced data to group samples into clusters.
+#'
+#' Multiple parameters control the methods, perplexity, number of clusters, etc.
+#' By default it tries to detect the optimal number of clusters using the elbow method.
+#'
 #' @export
-#'
-#' @examples
 pgx.clusterSamples <- function(pgx, X = NULL, skipifexists = FALSE, perplexity = 30,
                                ntop = 1000, npca = 50, prefix = "C", kclust = 1,
                                dims = c(2, 3), find.clusters = TRUE,
@@ -212,7 +246,7 @@ pgx.clusterSamples <- function(pgx, X = NULL, skipifexists = FALSE, perplexity =
   if (!is.null(res$pos2d)) pgx$tsne2d <- res$pos2d
   if (!is.null(res$pos3d)) pgx$tsne3d <- res$pos3d
   if (!is.null(res$idx)) {
-    if (class(pgx$samples) == "data.frame") {
+    if (inherits(pgx$samples, "data.frame")) {
       pgx$samples$cluster <- as.character(res$idx)
     } else {
       ## matrix??
@@ -228,17 +262,27 @@ pgx.clusterSamples <- function(pgx, X = NULL, skipifexists = FALSE, perplexity =
 }
 
 
-#' Title
+#' Find optimal number of sample clusters
 #'
-#' @param X value
-#' @param method value
-#' @param top.sd value
-#' @param npca value
+#' @title Find optimal sample clusters
 #'
-#' @return
+#' @param X Numeric matrix of expression data
+#' @param method Clustering methods to evaluate (kmeans, hclust, louvain, meta)
+#' @param top.sd Number of top variable features to use
+#' @param npca Number of PCA components for dimensionality reduction
+#'
+#' @return Optimal number of clusters
+#'
+#' @description Finds the optimal number of clusters in the samples using multiple methods.
+#'
+#' @details This function takes a gene expression matrix and evaluates multiple clustering algorithms
+#' (kmeans, hierarchical, Louvain) across a range of cluster numbers to determine the optimal number
+#' of clusters.
+#'
+#' The data is first reduced to the top variable features and PCA dimensions. Clustering is then
+#' performed for a range of k clusters. The optimal k is determined by the minimum average silhouette
+#' width across methods.
 #' @export
-#'
-#' @examples
 pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"),
                              top.sd = 1000, npca = 50) {
   message("[FindClusters] called...")
@@ -317,24 +361,42 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
 }
 
 
-#' Title
+#' Cluster large matrices
 #'
-#' @param X value
-#' @param methods value
-#' @param dims value
-#' @param perplexity value
-#' @param reduce.sd value
-#' @param reduce.pca value
-#' @param center.features value
-#' @param scale.features value
-#' @param find.clusters value
-#' @param svd.gamma value
-#' @param umap.pkg value
+#' @title Cluster large matrices
 #'
-#' @return
+#' @param X Numeric matrix of data to cluster
+#' @param methods Character vector of methods to use (pca, tsne, umap)
+#' @param dims Output dimensions for dimensionality reduction
+#' @param perplexity Perplexity parameter for tSNE and UMAP
+#' @param reduce.sd Perform PCA if original dimensions > reduce.sd
+#' @param reduce.pca Number of PCA components for initial reduction
+#' @param center.features Center the rows before clustering?
+#' @param scale.features Scale the rows before clustering?
+#' @param find.clusters Detect optimal number of clusters?
+#' @param svd.gamma Gamma parameter for randomized SVD
+#' @param umap.pkg UMAP package to use (umap or uwot)
+#'
+#' @return List of cluster assignments
+#'
+#' @description
+#' Performs dimensionality reduction and clustering on large data matrices
+#'
+#' @details
+#' This function takes a large data matrix and reduces the dimensions using
+#' PCA and tSNE/UMAP before clustering the rows. It is designed to handle
+#' matrices that are too large to embed directly with tSNE or UMAP.
+#'
+#' PCA is first used to reduce the dimensions if the original size is over
+#' reduce.sd rows. tSNE or UMAP is then applied to further reduce the
+#' dimensions for clustering. k-means clustering is performed on the
+#' reduced data.
+#'
+#' Multiple parameters allow customization of the methods, perplexity,
+#' dimensions, etc. By default it tries to detect the optimal number of
+#' clusters using the elbow method.
+#'
 #' @export
-#'
-#' @examples
 pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c(2, 3),
                                  perplexity = 30, reduce.sd = 1000, reduce.pca = 50,
                                  center.features = TRUE, scale.features = FALSE,
@@ -444,7 +506,6 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
     perplexity
     pos <- Rtsne::Rtsne(t(X[, ]),
       dims = 3,
-      ## pca = TRUE, partial_pca = TRUE,
       is_distance = FALSE, check_duplicates = FALSE,
       perplexity = perplexity, num_threads = 0
     )$Y
@@ -510,25 +571,40 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
 }
 
 
-#' Title
+#' @title Cluster rows of a matrix
 #'
-#' @param X value
-#' @param perplexity value
-#' @param dims value
-#' @param ntop value
-#' @param npca value
-#' @param prefix value
-#' @param row.center value
-#' @param row.scale value
-#' @param find.clusters value
-#' @param kclust value
-#' @param clust.detect value
-#' @param method value
+#' @param X Numeric matrix with rows as features to cluster
+#' @param perplexity Perplexity parameter for tSNE and UMAP
+#' @param dims Output dimensions for tSNE/UMAP (2 or 3)
+#' @param ntop Number of top variable rows to use
+#' @param npca Number of PCA components for initial reduction
+#' @param prefix Prefix for cluster variable names
+#' @param row.center Center rows before clustering?
+#' @param row.scale Scale rows before clustering?
+#' @param find.clusters Detect optimal number of clusters?
+#' @param kclust Number of clusters for k-means
+#' @param clust.detect Clustering method for optimal clusters (louvain, hclust)
+#' @param method Embedding method (tsne, umap, pca)
 #'
-#' @return
+#' @return Updated matrix with cluster assignments
+#'
+#' @description
+#' Clusters the rows of a matrix using dimensionality reduction and clustering.
+#' Designed for large matrices where tSNE/UMAP cannot be run directly.
+#'
+#' @details
+#' This function takes a matrix and clusters the rows using a combination of
+#' PCA, tSNE/UMAP, and k-means clustering.
+#'
+#' PCA is first used to reduce the dimensions if the matrix is large. The top
+#' variable rows are selected before reduction. tSNE or UMAP is then applied
+#' to further reduce the dimensions to 2 or 3. k-means clustering finally
+#' groups the rows into clusters.
+#'
+#' Multiple parameters control perplexity, centering/scaling, number of clusters, etc.
+#' By default it tries to detect the optimal number of clusters.
+#'
 #' @export
-#'
-#' @examples
 pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
                               ntop = 1000, npca = 50, prefix = "c",
                               row.center = TRUE, row.scale = FALSE,
@@ -637,18 +713,29 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
 }
 
 
-#' Title
+#' Find Louvain clusters using shared nearest neighbor graph
 #'
-#' @param X value
-#' @param prefix value
-#' @param level value
-#' @param gamma value
-#' @param small.zero value
+#' @title Find Louvain clusters using shared nearest neighbor graph 
 #'
-#' @return
+#' @param expr Expression matrix with genes in rows and samples in columns
+#' @param k Number of nearest neighbors for graph construction
+#' @param resolution Resolution parameter for Louvain clustering
+#'
+#' @return A vector of Louvain cluster assignments
+#' 
+#' @description
+#' Clusters samples using a shared nearest neighbor graph and Louvain clustering.
+#'
+#' @details
+#' This function constructs a shared nearest neighbor graph from the expression matrix, 
+#' where samples are connected if they appear in each other's k-nearest neighbor lists.
+#' 
+#' Louvain clustering is then applied to detect communities in the graph. The resolution 
+#' parameter controls the number and size of clusters.
+#' 
+#' The output is a vector of cluster assignments for each sample.
+#'
 #' @export
-#'
-#' @examples
 pgx.findLouvainClusters.SNN <- function(X, prefix = "c", level = 1, gamma = 1, small.zero = 0.01) {
   ## find clusters using graph clustering method
   message("perform Louvain clustering...")
@@ -670,12 +757,9 @@ pgx.findLouvainClusters.SNN <- function(X, prefix = "c", level = 1, gamma = 1, s
 
   if (!is.null(idx) && small.zero > 0) {
     ## ------------ zap small clusters to "0"
-    sort(table(idx))
     min.size <- pmax(3, small.zero * length(idx))
-    min.size
     small.clusters <- names(which(table(idx) < min.size))
     idx[which(idx %in% small.clusters)] <- "0"
-    sort(table(idx))
   }
 
   ## rename levels with largest cluster first
@@ -707,8 +791,6 @@ pgx.findLouvainClusters.SNN <- function(X, prefix = "c", level = 1, gamma = 1, s
 #' @return Vector of cluster assignments
 #'
 #' @export
-#'
-#' @examples
 pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix = "c",
                                     gamma = 1, small.zero = 0.01) {
   ## find clusters from t-SNE positions

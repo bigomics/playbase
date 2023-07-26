@@ -475,7 +475,7 @@ pgx.survivalVariableImportance <- function(X, time, status,
   sdx <- apply(X, 1, sd)
   if (nrow(X) == 1) X <- rbind(X, X)
 
-  if (class(status) != "logical" && all(status %in% c(0, 1, NA))) {
+  if (!inherits(status, "logical") && all(status %in% c(0, 1, NA))) {
     stop("status must be logical or 0/1")
   }
 
@@ -561,7 +561,6 @@ pgx.survivalVariableImportance <- function(X, time, status,
 
   if ("pls" %in% methods) {
     res <- plsRcox::plsRcox(t(X), time = time, event = status, nt = 5)
-    summary(res)
     cf <- res$Coeffs[, 1]
     cf[is.na(cf)] <- 0
     cf <- cf * sdx[names(cf)] ## really?

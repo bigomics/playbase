@@ -57,13 +57,13 @@ gx.markermap <- function(X, splitx, n = 5, ...) {
 #'
 #' @examples
 #' \dontrun{
-#' x <- matrix(rnorm(500 * 50), 500, 50)
+#' x <- matrix(rnorm(500*50), 500, 50)
 #' gx.PCAheatmap(x, nv = 3, ngenes = 5)
 #' }
 #'
 #' @export
 gx.PCAheatmap <- function(X, nv = 5, ngenes = 10, ...) {
-  if (class(X) == "list" && "X" %in% names(X)) {
+  if (inherits(X, "list") && "X" %in% names(X)) {
     X <- X$X - rowMeans(X$X)
   }
   X <- X - rowMeans(X, na.rm = TRUE)
@@ -87,13 +87,13 @@ gx.PCAheatmap <- function(X, nv = 5, ngenes = 10, ...) {
 #'
 #' @examples
 #' \dontrun{
-#' x <- matrix(rnorm(500 * 50), 500, 50)
+#' x <- matrix(rnorm(500*50), 500, 50)
 #' gx.PCAcomponents(x, nv = 5, ngenes = 10)
 #' }
 #'
 #' @export
 gx.PCAcomponents <- function(X, nv = 20, ngenes) {
-  if (class(X) == "list" && "X" %in% names(X)) X <- X$X
+  if (inherits(X, "list") && "X" %in% names(X)) X <- X$X
   res <- irlba::irlba(X - rowMeans(X), nv = nv)
   for (i in 1:nv) {
     gg <- Matrix::head(rownames(X)[order(-abs(res$u[, i]))], ngenes)
@@ -120,7 +120,7 @@ gx.PCAcomponents <- function(X, nv = 20, ngenes) {
 #' @examples
 #' \dontrun{
 #' data <- matrix(rnorm(200), 20, 10)
-#' gx.imagemap(data, main = "My Heatmap")
+#' gx.imagemap(data, main="My Heatmap")
 #' }
 #'
 #' @export
@@ -199,6 +199,22 @@ gx.imagemap <- function(X, main = "", cex = 1, clust = TRUE) {
 #'  parameters. By default it uses Euclidean distance and Ward clustering.
 #'
 #' @examples
+#' \dontrun{
+#' set.seed(123)
+#' gx <- matrix(rnorm(250)^2, nrow=25, ncol=10) 
+#' rownames(gx) <- sample(LETTERS, 25)
+#' colnames(gx) <- sample(letters, 10)
+#' # Create a grouping variable
+#' 
+#' p <- playbase::gx.splitmap(
+#'   gx, 
+#'   scale = "row",
+#'   cluster_rows = FALSE,
+#'   show_key = FALSE,
+#'   cluster_columns = FALSE
+#' )
+#' 
+#' }
 #' @export
 gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         clust.method = "ward.D2",
@@ -206,7 +222,6 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         col.dist.method = "euclidean",
                         plot.method = "heatmap.2",
                         scale = "row", softmax = 0, order.groups = "clust", symm.scale = FALSE,
-                        ## Rowv = NA, Colv = NA,
                         cluster_rows = TRUE, cluster_columns = TRUE, sort_columns = NULL,
                         col.annot = NULL, row.annot = NULL, annot.ht = 3,
                         nmax = 1000, cmax = NULL, main = " ", verbose = 1, denoise = 0,
@@ -261,13 +276,13 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     gx <- gx - rowMeans(gx, na.rm = TRUE)
   }
   if ("row.bmc" %in% scale && !is.null(splitx)) {
-    if (class(splitx) == "numeric" && length(splitx) == 1) {
+    if (inherits(splitx, "numeric") && length(splitx) == 1) {
       ii <- Matrix::head(order(-apply(gx, 1, sd, na.rm = TRUE)), 1000) ## NEED RETHINK!
       system.time(hc <- fastcluster::hclust(as.dist(1 - stats::cor(gx[ii, ])), method = "ward.D2"))
       splitx <- paste0("cluster", cutree(hc, splitx))
       names(splitx) <- colnames(gx)
     }
-    if (class(splitx) == "character" && length(splitx) == 1 &&
+    if (inherits(splitx, "character") && length(splitx) == 1 &&
       !is.null(col.annot) && splitx %in% colnames(col.annot)) {
       splitx <- as.character(col.annot[, splitx])
       names(splitx) <- colnames(gx)
@@ -307,13 +322,12 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   ## split columns
   ## --------------------------------------------
   do.splitx <- !is.null(splitx)
-  do.splitx
   idx2 <- NULL
-  if (do.splitx && class(splitx) == "numeric" && length(splitx) == 1) {
+  if (do.splitx && inherits(splitx, "numeric") && length(splitx) == 1) {
     system.time(hc <- fastcluster::hclust(as.dist(1 - stats::cor(gx)), method = "ward.D2"))
     idx2 <- paste0("cluster", cutree(hc, splitx))
   }
-  if (do.splitx && class(splitx) == "character" && length(splitx) == 1 &&
+  if (do.splitx && inherits(splitx, "character") && length(splitx) == 1 &&
     !is.null(col.annot) && splitx %in% colnames(col.annot)) {
     idx2 <- as.character(col.annot[, splitx])
   }
@@ -335,15 +349,14 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   ## split rows
   ## --------------------------------------------
   do.split <- !is.null(split)
-  do.split
   split.idx <- NULL
-  if (do.split && class(split) == "numeric" && length(split) == 1) {
+  if (do.split && inherits(split, "numeric") && length(split) == 1) {
     cor.gx <- stats::cor(t(gx), use = "pairwise")
     cor.gx[is.na(cor.gx)] <- 0
     hc <- fastcluster::hclust(as.dist(1 - cor.gx), method = "ward.D2")
     split.idx <- paste0("group", cutree(hc, split))
   }
-  if (do.split && class(split) == "character" && length(split) == 1 &&
+  if (do.split && inherits(split, "character") && length(split) == 1 &&
     !is.null(row.annot) && split %in% colnames(row.annot)) {
     split.idx <- row.annot[, split]
   }
@@ -626,7 +639,6 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     annotation_legend_side = "right",
     padding = grid::unit(mar, "mm"), gap = grid::unit(1.0, "mm")
   )
-  ## hmap
 
   if (show_key && !is.null(col_scale)) {
     brk <- attr(col_scale, "breaks")
@@ -638,6 +650,9 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     )
     ComplexHeatmap::draw(lgd, x = grid::unit(key.offset[1], "npc"), y = grid::unit(key.offset[2], "npc"), just = c("left", "top"))
   }
+
+  # Return TRUE so that unit test is possible
+  return(TRUE)
 }
 
 #
@@ -672,9 +687,17 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
 #'
 #' Gene and sample clustering is optional. The data can be scaled by rows or
 #' columns before clustering. A color palette is used to map values to colors.
-#' @export
 #'
 #' @examples
+#' \dontrun{
+#' set.seed(123)
+#' gx <- matrix(rnorm(250)^2, nrow=25, ncol=10) 
+#' rownames(gx) <- sample(LETTERS, 25)
+#' colnames(gx) <- sample(letters, 10)
+#' p <- playbase::gx.heatmap(gx)
+#' 
+#' }
+#' @export
 gx.heatmap <- function(gx, values = NULL,
                        clust.method = "ward.D2",
                        dist.method = "pearson",
@@ -683,12 +706,10 @@ gx.heatmap <- function(gx, values = NULL,
                        col = colorRampPalette(c("royalblue3", "grey90", "indianred3"))(64),
                        softmax = FALSE,
                        scale = "row", verbose = 1, symm = FALSE,
-                       ## Rowv = NA, Colv = NA,
                        col.annot = NULL, row.annot = NULL, annot.ht = 1,
                        nmax = 1000, cmax = NULL, show_colnames = TRUE,
                        indent.names = FALSE,
                        ...) {
-  ##
   par(xpd = FALSE)
 
   if (verbose > 1) cat("input.dim.gx=", dim(gx), "\n")
@@ -850,7 +871,6 @@ gx.heatmap <- function(gx, values = NULL,
     colnames(gx) <- rep("", ncol(gx))
   }
 
-  symm
   if (0 && symm && !is.null(cc0)) {
     cc1 <- t(cc0)
   }
@@ -964,6 +984,10 @@ gx.heatmap <- function(gx, values = NULL,
   res$col.clust <- h1
   res$row.clust <- h2
   invisible(res)
+
+  # Return res so that unit test is possible
+  return(res)
+
 }
 
 
@@ -1001,7 +1025,7 @@ gx.heatmap <- function(gx, values = NULL,
 #' @examples
 #' \dontrun{
 #' mat <- matrix(rnorm(200), 20, 10)
-#' amat <- matrix(sample(letters, 200, replace = TRUE), 20, 10)
+#' amat <- matrix(sample(letters, 200, replace=TRUE), 20, 10)
 #' clustermap(mat, col.annot = amat)
 #' }
 #'
@@ -1171,7 +1195,7 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
 #' @examples
 #' \dontrun{
 #' mat <- matrix(rnorm(10000), 1000, 10)
-#' frozenmap(mat, m = 100, n = 5)
+#' frozenmap(mat, m=100, n=5)
 #' }
 #'
 #' @export
@@ -1340,7 +1364,7 @@ multi.dist <- function(x, p = 4, method = c("pearson", "euclidean", "manhattan")
 #' @examples
 #' \dontrun{
 #' mat <- matrix(rnorm(200), 20, 10)
-#' heatmap.3(mat, Colv = FALSE, scale = "column", dendrogram = "row")
+#' heatmap.3(mat, Colv=FALSE, scale="column", dendrogram="row")
 #' }
 #'
 #' @export
@@ -1597,7 +1621,7 @@ heatmap.3 <- function(x,
   }
   nbr <- length(breaks)
   ncol <- length(breaks) - 1
-  if (class(col) == "function") {
+  if (inherits(col, "function")) {
     col <- col(ncol)
   }
   min.breaks <- min(breaks)

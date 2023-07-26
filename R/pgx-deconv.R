@@ -441,7 +441,7 @@ pgx.multipleDeconvolution <- function(counts, refmat,
   timings <- c()
   results <- list()
 
-  if (class(refmat) != "list") {
+  if (!inherits(refmat, "list")) {
     refmat <- list("reference" = refmat)
   }
 
@@ -607,8 +607,7 @@ pgx.deconvolution <- function(X, ref,
 
 
     timings[["DeconRNAseq"]] <- stime
-    class(drs)
-    if (!is.null(drs) && class(drs) != "try-error") {
+    if (!is.null(drs) && !inherits(drs, "try-error")) {
       dbg("deconvolution using DeconRNAseq took", stime[3], "s\n")
       rownames(drs) <- colnames(mat)
       results[["DeconRNAseq"]] <- drs
@@ -636,7 +635,7 @@ pgx.deconvolution <- function(X, ref,
         )
       )
     )
-    if (!is.null(res.dcq) && class(res.dcq) != "try-error") {
+    if (!is.null(res.dcq) && !inherits(res.dcq, "try-error")) {
       timings[["DCQ"]] <- stime
       dbg("deconvolution using DCQ took", stime[3], "s\n")
       results[["DCQ"]] <- res.dcq$average
@@ -697,7 +696,7 @@ pgx.deconvolution <- function(X, ref,
     )
     timings[["I-NNLS"]] <- stime
     dbg("deconvolution using I-NNLS took", stime[3], "s\n")
-    if (!is.null(res.abbas) && class(res.abbas)[1] != "try-error") {
+    if (!is.null(res.abbas) && !inherits(res.abbas, "try-error")) {
       rownames(res.abbas) <- colnames(ref)
       results[["I-NNLS"]] <- t(res.abbas)
     }

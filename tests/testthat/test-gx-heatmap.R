@@ -16,13 +16,42 @@
 
 
 #' Test for gx.splitmap
-#'
-#'
+test_that("gx.heatmap runs correctly with defaults", {
+  set.seed(123)
+  gx <- matrix(rnorm(250)^2, nrow=25, ncol=10) 
+  rownames(gx) <- sample(LETTERS, 25)
+  colnames(gx) <- sample(letters, 10)
+  # Create a grouping variable
+
+  playbase::gx.splitmap(
+    gx, 
+    scale = "row",
+    cluster_rows = FALSE,
+    show_key = FALSE,
+    cluster_columns = FALSE
+  )
+
+  # Test that an object has been created
+  p <- dev.capture()
+  expect_true(is.null(p))
+
+})
+
 
 #' Test for gx.heatmap
-#'
-#'
+test_that("gx.heatmap runs correctly with defaults", {
+  set.seed(123)
+  gx <- matrix(rnorm(250)^2, nrow=25, ncol=10) 
+  rownames(gx) <- sample(LETTERS, 25)
+  colnames(gx) <- sample(letters, 10)
+  # Create a grouping variable
 
+  clust <- playbase::gx.heatmap(gx)
+
+  # Check the clusters as outputs
+  expect_type(clust, "list")
+
+})
 
 #' Test for clustermap
 #'

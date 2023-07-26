@@ -18,7 +18,7 @@ gset.rankcor(rnk, gset, compute.p = FALSE, use.rank = TRUE)
 \value{
 Named list with components:
 \itemize{
- \item rho - Matrix of correlation coefficients between rnk and gset 
+ \item rho - Matrix of correlation coefficients between rnk and gset
  \item p.value - Matrix of p-values for correlation (if compute.p = TRUE)
  \item q.value - Matrix of FDR adjusted p-values (if compute.p = TRUE)
 }
@@ -27,7 +27,7 @@ Named list with components:
 Compute rank correlation between a gene rank vector/matrix and gene sets
 }
 \details{
-This function calculates sparse rank correlation between rnk and each 
+This function calculates sparse rank correlation between rnk and each
 column of gset using \code{qlcMatrix::corSparse()}. It handles missing values in
 rnk by computing column-wise correlations.
 
@@ -36,11 +36,11 @@ P-values are computed by permuting gset and finding empirical null distribution.
 \examples{
 \dontrun{
 librart(playbase)
-ranks <- sample(1:10000, 1000, replace = TRUE) 
+ranks <- sample(1:10000, 1000, replace = TRUE)
 names(ranks) <- replicate(1000, paste(sample(LETTERS, 4, replace = TRUE), collapse = ""))
-genesets <- matrix(rnorm(1000*20), ncol=20) 
+genesets <- matrix(rnorm(1000 * 20), ncol = 20)
 rownames(genesets) <- names(ranks)
 
-gset.rankcor(ranks, genesets, compute.p=TRUE)
+gset.rankcor(ranks, genesets, compute.p = TRUE)
 }
 }

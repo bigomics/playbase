@@ -43,8 +43,6 @@
 #' @return A volcano plot is generated, no value is returned.
 #'
 #' @export
-#'
-#' @examples
 gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0.05, lfc = 1,
                               render = "scatterD3", n = 1000, highlight = NULL, main = "",
                               cex = 1, lab.cex = 1, nlab = 10, xlim = NULL, ylim = NULL, use.fdr = FALSE,

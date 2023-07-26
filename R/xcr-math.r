@@ -28,7 +28,7 @@ matrix.prod.SAVE <- function(matlist) {
 #' @export
 matrix.mean <- function(...) {
   matlist <- list(...)
-  if (class(matlist[[1]]) == "list") matlist <- matlist[[1]]
+  if (inherits(matlist[[1]], "list")) matlist <- matlist[[1]]
   matnna <- lapply(matlist, function(x) 1 * !is.na(x))
   p <- Reduce("+", matnna)
   matlist <- lapply(matlist, function(x) {
@@ -42,7 +42,7 @@ matrix.mean <- function(...) {
 #' @export
 matrix.prod <- function(..., na.value = 1) {
   matlist <- list(...)
-  if (class(matlist[[1]]) == "list") matlist <- matlist[[1]]
+  if (inherits(matlist[[1]], "list")) matlist <- matlist[[1]]
   p <- Reduce("+", lapply(matlist, function(x) 1 * !is.na(x)))
   i <- 1
   for (i in 1:length(matlist)) {
@@ -65,7 +65,7 @@ sparse <- NULL
 #' @export
 matrix.prodSPARSE <- function(..., na.fill = 1) {
   matlist <- list(...)
-  if (class(matlist[[1]]) == "list") matlist <- matlist[[1]]
+  if (inherits(matlist[[1]], "list")) matlist <- matlist[[1]]
   if (is.null(sparse)) sparse <- is(matlist[[1]], "sparseMatrix")
   p <- Reduce("+", lapply(matlist, function(x) 1 * !is.na(x)))
   i <- 1
@@ -438,9 +438,8 @@ knn.predict <- function(data, pred.var, x.var = NULL, K, samples = NULL, ntest =
   X <- do.call(cbind, data$Q[x.var])[samples, ]
   Y <- as.character(data$tcr[samples, pred.var])
   names(Y) <- rownames(data$tcr)[samples]
-  dim(X)
 
-  if (class(X) == "matrix") {
+  if (inherits(X, "matrix")) {
     X <- Matrix::Matrix(X, sparse = TRUE)
   }
 
@@ -451,8 +450,6 @@ knn.predict <- function(data, pred.var, x.var = NULL, K, samples = NULL, ntest =
   cat("nrowX=", nrow(X), "\n")
   j1 <- sample(nrow(X), ntest) ## prediction
   j0 <- setdiff(1:nrow(X), j1)
-  length(j1)
-  length(j0)
 
   ## distance calculations for test-set (superfast!)
   pos <- dist.xy <- NULL
@@ -667,9 +664,9 @@ mat.downsample <- function(mat, m, n = -1, FUN = c("mean", "max"),
     } else {
       stop("error. unknown function")
     }
-    if (class(sx) == "numeric") sx <- matrix(sx, nrow = 1)
+    if (inherits(sx, "numeric")) sx <- matrix(sx, nrow = 1)
     sx <- t(t(sx) + col.mx0) ## add back pooled col.mean
-    dim(sx)
+
     ## set rownames
     aa <- sapply(ii, function(i) paste(colnames(x)[i], collapse = " "))
     colnames(sx) <- aa
@@ -681,7 +678,7 @@ mat.downsample <- function(mat, m, n = -1, FUN = c("mean", "max"),
   }
   #
   FUN <- FUN[1]
-  if (NCOL(mat) == 1 && class(mat) != "matrix") {
+  if (NCOL(mat) == 1 && !inherits(mat, "matrix")) {
     dx <- matrix(mat, ncol = 1)
     rownames(dx) <- names(mat)
     n <- -1
@@ -693,7 +690,6 @@ mat.downsample <- function(mat, m, n = -1, FUN = c("mean", "max"),
   }
   if (n < ncol(dx) && n > 0) dx <- downsample.rows(dx, n, FUN = FUN, clust = clust)
   if (m < nrow(dx) && m > 0) dx <- t(downsample.rows(t(dx), m, FUN = FUN, clust = clust))
-  dim(dx)
   if (NCOL(mat) == 1) dx <- dx[, 1]
   return(dx)
 }

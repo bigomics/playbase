@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-contrasts.R
 \name{makeContrastsFromPairs}
 \alias{makeContrastsFromPairs}
-\title{Title}
+\title{Make contrasts from group pairs}
 \usage{
 makeContrastsFromPairs(
   main.group,
@@ -12,14 +12,22 @@ makeContrastsFromPairs(
 )
 }
 \arguments{
-\item{main.group}{value}
+\item{main.group}{Character vector of the main groups in the comparisons.}
 
-\item{ref.group}{value}
+\item{ref.group}{Character vector of the reference groups in the comparisons.}
 
-\item{groups}{value}
+\item{groups}{Character vector of all groups. If NULL, groups are taken from main.group and ref.group.}
 
-\item{comparisons}{value}
+\item{comparisons}{Character vector of comparison names. If NULL, comparisons are generated from main.group and ref.group.}
+}
+\value{
+A contrasts matrix with rows for groups and columns for comparisons.
 }
 \description{
-Title
+This function creates a contrasts matrix from pairs of groups.
+}
+\details{
+The function first splits the main.group and ref.group into individual groups.
+It then creates a contrasts matrix with rows for each group and columns for each comparison.
+The matrix entries are 1 for groups in main.group, -1 for groups in ref.group, and 0 otherwise.
 }

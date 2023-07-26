@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-cna.R
 \name{pgx.plotCNAHeatmap}
 \alias{pgx.plotCNAHeatmap}
-\title{Title}
+\title{Plot CNA heatmap}
 \usage{
 pgx.plotCNAHeatmap(
   ngs,
@@ -17,24 +17,36 @@ pgx.plotCNAHeatmap(
 )
 }
 \arguments{
-\item{ngs}{value}
+\item{ngs}{An NGS object containing copy number data}
 
-\item{res}{value}
+\item{res}{CNA segmentation results from pgx.segmentCN()}
 
-\item{annot}{value}
+\item{annot}{Data frame with sample annotations}
 
-\item{pca.filter}{value}
+\item{pca.filter}{Filter samples by PCA clustering (-1 to disable)}
 
-\item{lwd}{value}
+\item{lwd}{Line width for chromosome lines}
 
-\item{downsample}{value}
+\item{downsample}{Downsample CNA matrix for plotting (integer factor)}
 
-\item{order.by}{value}
+\item{order.by}{Order samples by "clust" or "annot"}
 
-\item{clip}{value}
+\item{clip}{Clip copy number ratio values (0 to disable)}
 
-\item{lab.cex}{value}
+\item{lab.cex}{Label cex size}
+}
+\value{
+None. Plot is produced as a side-effect.
 }
 \description{
-Title
+Generates a heatmap to visualize copy number alterations across samples.
+}
+\details{
+Plot copy number alteration heatmap
+
+
+This function takes CNA segmentation results from pgx.segmentCN() and 
+plots a heatmap of the copy number ratios. Samples can be ordered by 
+annotations or clustering. The full CNA matrix can be downsampled for 
+easier visualization. Chromosome lines and sample annotations are added.
 }

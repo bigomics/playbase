@@ -86,7 +86,7 @@ pgx.scTestDifferentialExpression <- function(counts, y, is.count = TRUE, samples
     message("setting column sums to total = ", round(cpm.total, 2))
   }
 
-  if (is.count && class(counts) == "dgCMatrix") {
+  if (is.count && inherits(counts, "dgCMatrix")) {
     message("input matrix is counts (sparseMatrix)")
     ## normalize to CPM
     X1 <- counts
@@ -455,7 +455,7 @@ pgx.scBatchIntegrate <- function(X, batch,
     liger <- try(rliger::optimizeALS(liger, k = k))
 
 
-    if (class(liger) == "try-error") {
+    if (inherits(liger, "try-error")) {
 
     } else {
       liger <- rliger::quantile_norm(liger)

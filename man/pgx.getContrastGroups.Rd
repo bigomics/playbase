@@ -22,7 +22,7 @@ Retrieves the group labels for a given contrast from a PGX object.
 \details{
 Get contrast groups from PGX object
 
-This function extracts the experimental design matrix from the PGX object, 
+This function extracts the experimental design matrix from the PGX object,
 selects the specified contrast column, and returns the corresponding group labels.
 }
 \examples{

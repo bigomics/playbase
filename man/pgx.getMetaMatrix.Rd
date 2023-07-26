@@ -2,17 +2,59 @@
 % Please edit documentation in R/pgx-api.R
 \name{pgx.getMetaMatrix}
 \alias{pgx.getMetaMatrix}
-\title{Title}
+\alias{pgx.getMetaFoldChangeMatrix}
+\alias{pgx.getContrasts}
+\alias{pgx.getTopGeneSets}
+\title{Get meta-analysis results matrix}
 \usage{
 pgx.getMetaMatrix(pgx, methods = "meta", level = "gene")
+
+pgx.getMetaFoldChangeMatrix(pgx, what = "meta", level = "gene")
+
+pgx.getContrasts(pgx)
+
+pgx.getTopGeneSets(pgx, n = 10, ng = 100, dir = 0, sym = FALSE, filt = NULL)
 }
 \arguments{
-\item{pgx}{value}
+\item{pgx}{A PGX object}
 
-\item{methods}{value}
+\item{methods}{Character vector of meta-analysis methods to include. 
+Default is meta.}
 
-\item{level}{value}
+\item{level}{Data level to extract results for ("gene", "geneset").}
+}
+\value{
+A matrix with rows corresponding to features at the specified level, 
+and columns for fold-changes and adjusted p-values from each meta-analysis 
+method.
 }
 \description{
-Title
+Returns a matrix of meta-analysis results for a PGX object.
+}
+\details{
+This function extracts a matrix of meta-analysis results from a PGX object.
+It returns fold-changes and adjusted p-values from the specified 
+meta-analysis methods.
+
+The results can be extracted at the gene, exon or junction level, depending 
+on the \code{level} argument. By default it returns results for all 
+meta-analysis methods found in the PGX object.
+
+A subset of methods can be specified with the \code{methods} argument.
+}
+\section{Functions}{
+\itemize{
+\item \code{pgx.getMetaFoldChangeMatrix()}: Get the Meta-Fold ChangeMatrix from PGX
+
+\item \code{pgx.getContrasts()}: Get the contrast from PGX
+
+\item \code{pgx.getTopGeneSets()}: get the top genesets from PGX
+
+}}
+\examples{
+\dontrun{
+mypgx <- pgx.create(counts, samples)
+meta.res <- pgx.getMetaMatrix(mypgx)
+head(meta.res)
+}
 }

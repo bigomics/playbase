@@ -268,7 +268,7 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
     counts <- rna.counts
     rownames(counts) <- toupper(ngs$genes[rownames(counts), "gene_name"])
     res <- try(pgx.inferCellCyclePhase(counts)) ## can give bins error
-    if (class(res) != "try-error") {
+    if (!inherits(res, "try-error")) {
       ngs$samples$.cell_cycle <- res
     }
     if (!(".gender" %in% colnames(ngs$samples))) {

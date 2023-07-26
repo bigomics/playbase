@@ -7,7 +7,7 @@
 ngs.getGeneAnnotation(genes)
 }
 \arguments{
-\item{is.human}{Logical indicating if organism is human or mouse. Default 
+\item{is.human}{Logical indicating if organism is human or mouse. Default
 is TRUE.}
 
 \item{SYMBOL}{Vector of gene symbols.}
@@ -20,7 +20,7 @@ is TRUE.}
 
 \item{MAP}{Data frame with chromosome map (for human only).}
 
-\item{GENE.BIOTYPE}{Named vector mapping gene symbols to gene biotypes 
+\item{GENE.BIOTYPE}{Named vector mapping gene symbols to gene biotypes
 (for human only).}
 }
 \value{
@@ -28,13 +28,21 @@ A data.frame containing gene annotation data mapped to gene symbols. The columns
 are: "gene_name", "gene_title", "gene_biotype", "chr", "pos", "tx_len", "map".
 }
 \description{
-This function retrieves gene annotation data including gene 
+This function retrieves gene annotation data including gene
 symbols, titles, chromosome locations, lengths, and biotypes.
 }
 \details{
-This function first checks if the organism is human or mouse based on 
-the is.human parameter. For human, it retrieves gene symbols, titles, chromosome 
-locations, transcript lengths and biotypes using various Bioconductor annotation packages. 
+This function first checks if the organism is human or mouse based on
+the is.human parameter. For human, it retrieves gene symbols, titles, chromosome
+locations, transcript lengths and biotypes using various Bioconductor annotation packages.
 For mouse, it retrieves symbols, titles, chromosome locations, and transcript lengths.
 The data is stored in a series of named vectors mapped to the gene symbols.
+}
+\examples{
+\dontrun{
+d <- get_mini_example_data()
+genes <- sample(rownames(d$counts), 10)
+annotation <- ngs.getGeneAnnotation(genes)
+print(annotation)
+}
 }

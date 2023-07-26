@@ -27,8 +27,8 @@ The normalize.qspline function from the affy package is used internally to perfo
 }
 \examples{
 \dontrun{
-X <- matrix(rnorm(100*10), 100, 10) 
-X_norm <- gx.qnormalize(X) 
+X <- matrix(rnorm(100 * 10), 100, 10)
+X_norm <- gx.qnormalize(X)
 }
 }
 \seealso{

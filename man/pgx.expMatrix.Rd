@@ -2,15 +2,26 @@
 % Please edit documentation in R/pgx-contrasts.R
 \name{pgx.expMatrix}
 \alias{pgx.expMatrix}
-\title{Title}
+\title{Generate design matrix for expression data}
 \usage{
 pgx.expMatrix(pheno, contr.matrix)
 }
 \arguments{
-\item{pheno}{value}
+\item{pheno}{Data frame containing sample metadata}
 
-\item{contr.matrix}{value}
+\item{contr.matrix}{Contrast matrix defining comparisons of interest}
+}
+\value{
+Design matrix for expression data analysis
 }
 \description{
-Title
+Generates a design matrix for expression data based on sample metadata and contrasts.
+}
+\details{
+This function takes a data frame of sample metadata and a contrast matrix as input.
+It constructs a model matrix with columns for the metadata variables, followed by 
+columns encoding the contrasts of interest.
+
+The result is a design matrix that can be used directly in differential expression
+analysis with the expression data.
 }

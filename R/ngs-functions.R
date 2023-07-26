@@ -27,7 +27,7 @@
 #' @return A data.frame containing gene annotation data mapped to gene symbols. The columns
 #' are: "gene_name", "gene_title", "gene_biotype", "chr", "pos", "tx_len", "map".
 #'
-#' @example
+#' @examples
 #' \dontrun{
 #' d <- get_mini_example_data()
 #' genes <- sample(rownames(d$counts), 10)
@@ -215,7 +215,6 @@ ngs.matchFeatures <- function(ngs, genes) {
 #'
 #' The gene and count matrices in the NGS dataset object are then updated accordingly.
 #'
-#' @examples
 #' @export
 ngs.collapseByGene <- function(ngs) {
   gene <- as.character(ngs$genes$gene_name)

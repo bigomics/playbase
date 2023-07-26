@@ -2,15 +2,33 @@
 % Please edit documentation in R/pgx-contrasts.R
 \name{makeFullContrasts}
 \alias{makeFullContrasts}
-\title{Title}
+\title{Generate contrasts between clusters}
 \usage{
 makeFullContrasts(labels, by.sample = FALSE)
 }
 \arguments{
-\item{labels}{value}
+\item{by.sample}{Logical for sample-wise contrasts instead of cluster-wise}
 
-\item{by.sample}{value}
+\item{clusters}{Vector of cluster assignments}
+
+\item{min.freq}{Minimum cluster frequency to include in contrasts}
+
+\item{full}{Logical for whether to generate all pairwise contrasts}
+}
+\value{
+Contrast matrix
 }
 \description{
-Title
+Generates a contrast matrix for comparing clusters.
+}
+\details{
+This function takes a vector of cluster assignments and generates a contrast matrix
+encoding comparisons between each pair of clusters above the min.freq threshold.
+
+The contrast matrix has clusters as rows and comparison columns with names like 
+"cluster1_vs_cluster2". The matrix values are 1/-1 for the clusters being compared,  
+and 0 otherwise.
+
+If full=TRUE, all pairwise comparisons are generated instead of only adjacent clusters.
+If by.sample=TRUE, the contrasts are encoded at the sample level instead of cluster level.
 }

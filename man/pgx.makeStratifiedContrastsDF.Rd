@@ -2,19 +2,32 @@
 % Please edit documentation in R/pgx-contrasts.R
 \name{pgx.makeStratifiedContrastsDF}
 \alias{pgx.makeStratifiedContrastsDF}
-\title{Title}
+\title{Create stratified contrasts design matrix}
 \usage{
 pgx.makeStratifiedContrastsDF(data, vars, strata, ref)
 }
 \arguments{
-\item{data}{value}
+\item{data}{Data frame containing variables and strata column}
 
-\item{vars}{value}
+\item{vars}{Character vector of variable names}
 
-\item{strata}{value}
+\item{strata}{Name of stratification variable column}
 
-\item{ref}{value}
+\item{ref}{Reference level for strata}
+}
+\value{
+A design matrix for stratified contrasts
 }
 \description{
-Title
+Generates a design matrix for stratified contrasts from a data frame.
+}
+\details{
+This function takes a data frame containing variables of interest and a stratification
+variable. It constructs a model matrix encoding contrasts between a reference level
+and other levels of the stratification variable. The contrasts are computed separately
+within each stratum.
+
+The result is a design matrix with columns for the variables of interest, followed by
+columns encoding the stratified contrasts. This matrix can be used as a design matrix in
+differential expression analysis.
 }

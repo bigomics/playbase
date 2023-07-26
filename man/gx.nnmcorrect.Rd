@@ -36,7 +36,7 @@ gx.nnmcorrect(
 List containing:
 \itemize{
   \item X - Batch corrected gene expression matrix
-  \item pairings - Matrix of sample pairings used for correction  
+  \item pairings - Matrix of sample pairings used for correction
 }
 }
 \description{
@@ -45,7 +45,7 @@ Correct for batch effects in a gene expression matrix using nearest neighbor mat
 \details{
 This function performs batch correction using the following steps:
 \enumerate{
-  \item Compute distance matrix between all samples 
+  \item Compute distance matrix between all samples
   \item Find nearest neighbor matches between batches
   \item Construct full paired dataset with matches
   \item Apply limma batch correction to paired data
@@ -56,7 +56,7 @@ It allows replacing missing pairs and using batch design matrices.
 }
 \examples{
 # TODO
- 
+
 }
 \seealso{
 \code{\link[limma]{removeBatchEffect}} for the batch correction method used.

@@ -76,7 +76,7 @@ pgx.correlateSignatureH5.inmemory <- function(F, h5.file, nsig = 100, ntop = 100
   ##
   ##
 
-  if (NCOL(F) == 1 && class(F) == "numeric") {
+  if (NCOL(F) == 1 && inherits(F, "numeric")) {
     rn <- names(F)
     F <- matrix(F, ncol = 1)
     rownames(F) <- rn
@@ -349,7 +349,7 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
       if (!file.exists(gmt.files[i])) next()
       cat(".")
       try.error <- try(gmt <- read.gmt(gmt.files[i], add.source = TRUE))
-      if (class(try.error) == "try-error") next()
+      if (inherits(try.error, "try-error")) next()
 
       j1 <- grep("-up ", names(gmt))
       j2 <- grep("-dn ", names(gmt))
@@ -463,7 +463,7 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALS
       if (!file.exists(pgx.files[i])) next()
       cat(".")
       pgx <- try(local(get(load(pgx.files[i], verbose = 0)))) ## override any name
-      if ("try-error" %in% class(pgx)) next()
+      if (inherits(pgx, "try-error")) next()
       meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
       rownames(meta$fc) <- toupper(rownames(meta$fc)) ## mouse-friendly
       pgxfile <- gsub(".*[/]|[.]pgx$", "", pgx.files[i])

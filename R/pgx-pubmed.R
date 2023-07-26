@@ -12,7 +12,6 @@ pmid.getGeneContext <- function(gene, keyword) {
   gene1 <- c(gene, sub("([0-9])", "-\\1", gene))
   gene1 <- paste0("^", gene1, "$|^", gene1, "[-]")
   gene1 <- paste(gene1, collapse = "|")
-  gene1
 
   if (gene %in% biomaRt::keys(org.Hs.eg.db::org.Hs.egALIAS2EG)) {
     gname <- get(get(gene, org.Hs.eg.db::org.Hs.egALIAS2EG), org.Hs.eg.db::org.Hs.egGENENAME)
@@ -23,7 +22,6 @@ pmid.getGeneContext <- function(gene, keyword) {
     gname <- gsub("[, -]", ".", gname)
     gene1 <- paste0(gene1, "|", gname)
   }
-  gene1
 
   rif.words <- colnames(GENERIF.MATRIX)
   ii <- grepl(gene1, rif.words, ignore.case = TRUE)
@@ -39,16 +37,13 @@ pmid.getGeneContext <- function(gene, keyword) {
   sel <- ((match0 * match1) > 0)
   rif.hits <- rownames(GENERIF.MATRIX)[sel]
   rif.hits <- rif.hits[!duplicated(rif.hits)]
-  ## rif.hits
 
   ## calculate P-value for this keyword
   A <- table(gene = match0, keyword = match1)
-  A
   pv <- NA
   if (nrow(A) == 2 && ncol(A) == 2) {
     pv <- fisher.test(A, alternative = "greater")$p.value
   }
-  pv
 
   context1 <- NULL
   match2 <- ((match0 * match1) > 0)
@@ -60,7 +55,8 @@ pmid.getGeneContext <- function(gene, keyword) {
   qq <- sort(qq)
   context1 <- Matrix::head(qq[qq < 1], 100)
 
-  list(rifs = rif.hits, table = A, p.value = pv, context = context1)
+  out <- list(rifs = rif.hits, table = A, p.value = pv, context = context1)
+  return(out)
 }
 
 #' @export
@@ -75,9 +71,7 @@ pmid.getPubMedContext <- function(gene, context) {
     return(NULL)
   }
   gene1 <- c(gene, sub("([0-9])", "-\\1", gene), sub("([0-9])", "[ ]\\1", gene))
-  gene1
   gene1 <- paste(gene1, collapse = "|")
-  gene1
   gname <- get(get(toupper(gene), org.Hs.eg.db::org.Hs.egALIAS2EG), org.Hs.eg.db::org.Hs.egGENENAME)
   gene2 <- paste0(gene1, "|", gsub("[ -]", ".", gname))
   extractRIF <- function(a) {
@@ -98,7 +92,8 @@ pmid.getPubMedContext <- function(gene, context) {
   rif[sapply(rif, is.null)] <- NA
   rif <- unlist(rif)
   rif[!is.na(rif)] <- paste0(rif, " (PMID:", pp, ")")[!is.na(rif)]
-  list(pmid = pp, title = tt, rif = rif)
+  out <- list(pmid = pp, title = tt, rif = rif)
+  return(out)
 }
 
 
@@ -174,7 +169,7 @@ pmid.annotateEdges <- function(gr) {
   nshared <- sapply(shared.genes, length)
   igraph::E(gr)$genes <- shared.genes
   igraph::E(gr)$weight <- nshared
-  gr
+  return(gr)
 }
 
 #' @export
@@ -195,7 +190,7 @@ pmid.extractGene <- function(gr, gene, nmin = 3) {
   cmp <- igraph::components(gr1)
   jj <- which(cmp$membership %in% which(cmp$csize >= nmin))
   gr1 <- igraph::induced_subgraph(gr1, jj)
-  gr1
+  retunr(gr1)
 }
 
 #' @export

@@ -30,11 +30,11 @@ also be defined. when breaks and zlim are defined, breaks overrides zlim.
 \examples{
 \dontrun{
 z <- rnorm(100)
-cols <- val2col(z, zlim=c(-3,3))
-barplot(height=z, col=cols)
+cols <- val2col(z, zlim = c(-3, 3))
+barplot(height = z, col = cols)
 }
 }
 \seealso{
-Original post: 
+Original post:
   \url{http://menugget.blogspot.ch/2011/09/converting-values-to-color-levels.html}
 }

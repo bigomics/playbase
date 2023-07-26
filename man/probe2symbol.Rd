@@ -9,10 +9,10 @@ probe2symbol(probes, type = NULL, keep.na = FALSE)
 \arguments{
 \item{probes}{Character vector of probe identifiers}
 
-\item{type}{Character specifying the type of identifier in probes. If NULL, 
+\item{type}{Character specifying the type of identifier in probes. If NULL,
 the function will try to detect the identifier type automatically.}
 
-\item{keep.na}{Logical indicating whether to keep NA symbols (TRUE) or replace 
+\item{keep.na}{Logical indicating whether to keep NA symbols (TRUE) or replace
 them with the original probe identifiers (FALSE).}
 }
 \value{

@@ -1081,7 +1081,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   cntrmat <- pgx$model.parameters$contr.matrix
   expmat <- expmat[rownames(pgx$samples), , drop = FALSE]
 
-  if (class(comp) == "numeric") comp <- colnames(expmat)[comp]
+  if (inherits(comp, "numeric")) comp <- colnames(expmat)[comp]
   if (!is.null(group.names) && length(group.names) != 2) stop("group.names must be length=2")
   if (is.null(main)) main <- probe
   comp
@@ -1142,14 +1142,14 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   xgroup <- c("other", grp0.name, grp1.name)[1 + 1 * (ct < 0) + 2 * (ct > 0)]
   names(xgroup) <- rownames(pgx$samples)
   jj <- which(!(xgroup %in% xgroup[samples]))
-  jj
+  
   if (length(jj) > 0 && collapse.others) {
     xgroup <- as.character(xgroup)
     xgroup[jj] <- "other"
   }
   names(xgroup) <- rownames(expmat)
 
-  if (class(xgroup) == "character") {
+  if (inherits(xgroup, "character")) {
     xgroup <- as.character(xgroup)
 
     levels0 <- group.names
@@ -1165,7 +1165,6 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   if (any(grepl("other", xgroup))) {
     grp.klr <- c("other" = "#d9d9d9", grp.klr)
   }
-  grp.klr
 
   ## -------------- get expression value
   if (level == "geneset") {
@@ -1296,14 +1295,11 @@ pgx.plotOmicsNetwork <- function(pgx, gene = NULL, reduced = NULL, levels = c("g
 
   if (!is.null(gene)) {
     gene0 <- paste0("{gene}", gene)
-    gene0
     k <- which(igraph::V(gr)$name %in% c(gene, gene0))
-    k
     nb <- names(igraph::neighbors(gr, igraph::V(gr)[k]))
     vv <- unique(c(gene0, nb))
     gr <- igraph::induced_subgraph(gr, vv)
   }
-  gr
   gr <- igraph::induced_subgraph(gr, which(igraph::V(gr)$level %in% levels))
   if (is.null(gr)) {
     return(NULL)
@@ -1382,9 +1378,6 @@ pgx.plotOmicsNetwork <- function(pgx, gene = NULL, reduced = NULL, levels = c("g
 
   igraph::E(gr)$color <- paste0(vklr[ee[, 1]], ifelse(esel == 1, "99", "55"))
   igraph::E(gr)$width <- 1 * (2 + 5 * (ew / max(ew)))
-
-  gr
-
 
   if (!is.null(layout)) {
     layout.fun <- match.fun(layout)
@@ -1532,7 +1525,6 @@ pgx.plotPhenotypeMatrix <- function(annot) {
   annotF <- data.frame(as.list(annot), stringsAsFactors = TRUE)
   rownames(annotF) <- rownames(annot)
   cvar <- which(sapply(annotF, is.factor))
-  cvar
   annotX <- annotF
   annotX[, cvar] <- data.frame(lapply(annotF[, cvar], as.integer))
   annotX[, ] <- data.frame(lapply(annotX[, ], as.numeric))
@@ -2149,7 +2141,7 @@ plot_ggscatter <- function(x, y = NULL, col = NULL, main = NULL,
       ggplot2::xlab(xlab) +
       ggplot2::ylab(ylab)
     if (!is.null(col.scale)) {
-      if (class(col) %in% c("numeric", "integer")) {
+      if (inherits(col, c("numeric", "integer"))) {
         p <- p + ggplot2::scale_color_gradient(low = col.scale[1], high = col.scale[2])
       } else {
         p <- p + ggplot2::scale_fill_gradient(low = col.scale[1], high = col.scale[2])
@@ -2611,10 +2603,6 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
 
   ## parameter name
   if (!is.null(title) && title != "") {
-    ## legend("topleft", legend=title, cex=cex.title, bty=bty,
-    ##       inset=c(0,0), x.intersp=0, y.intersp=0, xpd=NA)
-    ## legend("topleft", legend=title, cex=cex.title, bty='n', ## inset=c(-0.07,-0.07),
-    ##       y.intersp=0.10, x.intersp=0.0, xpd=TRUE)
     mtext(title, 3, adj = 0, padj = -0.35, cex = 0.9 * cex.title)
   }
 
@@ -2714,7 +2702,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   ## Plot the discrete variables
   if (type == "factor") {
     z1 <- var
-    if (class(z1) != "factor") z1 <- factor(as.character(z1))
+    if (!inherits(z1, "factor")) z1 <- factor(as.character(z1))
     nz <- length(levels(z1))
     col1 <- NULL
     if (!is.null(col)) {
