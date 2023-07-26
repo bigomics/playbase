@@ -2,17 +2,36 @@
 % Please edit documentation in R/ngs-salmon.r
 \name{ngs.getGeneAnnot}
 \alias{ngs.getGeneAnnot}
-\title{Title}
+\title{Get gene annotation data}
 \usage{
 ngs.getGeneAnnot(keys, keytype, gencode)
 }
 \arguments{
-\item{keys}{value}
+\item{keys}{Character vector of row names in the Salmon quant matrix.}
 
-\item{keytype}{value}
+\item{keytype}{The type of identifiers in `keys` (e.g. 'ENSEMBL').}
 
-\item{gencode}{value}
+\item{gencode}{Data frame with GENCODE gene annotation data.}
+}
+\value{
+The Salmon quantification object with additional gene annotation data added.
 }
 \description{
-Title
+Retrieves additional gene annotation data for a Salmon quantification object.
+}
+\details{
+This function takes a Salmon quantification object and retrieves additional 
+gene annotation data for the quantified genes. It extracts the row names from the 
+Salmon counts matrix as the `keys`. It then uses these keys to retrieve corresponding
+annotation from the provided `gencode` data frame, matching on the gene identifiers.
+
+Additional annotation columns added are:
+- gene_id: GENCODE gene identifier
+- gene_type: GENCODE gene type 
+- gene_name: Gene name
+- chr: Chromosome
+- start: Gene start position
+- stop: Gene end position
+
+The additional annotation is added to the `genes` slot of the Salmon object.
 }

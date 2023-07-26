@@ -2,7 +2,7 @@
 % Please edit documentation in R/gx-limma.r
 \name{gx.limma}
 \alias{gx.limma}
-\title{Title}
+\title{Differential expression analysis using limma}
 \usage{
 gx.limma(
   X,
@@ -21,28 +21,42 @@ gx.limma(
 )
 }
 \arguments{
-\item{X}{value}
+\item{X}{Gene expression matrix with genes in rows and samples in columns.}
 
-\item{pheno}{value}
+\item{pheno}{Phenotype vector or factor for samples.}
 
-\item{B}{value}
+\item{B}{Optional batch covariate matrix.}
 
-\item{remove.na}{value}
+\item{remove.na}{Logical for removing samples with missing phenotype.}
 
-\item{fdr}{value}
+\item{fdr}{FDR threshold for identifying differentially expressed genes.}
 
-\item{compute.means}{value}
+\item{compute.means}{Logical for computing group means.}
 
-\item{lfc}{value}
+\item{lfc}{Log fold change cutoff.}
 
-\item{max.na}{value}
+\item{max.na}{Max proportion of missing values allowed for a gene.}
 
-\item{ref}{value}
+\item{ref}{Character vector of possible reference levels.}
 
-\item{trend}{value}
+\item{trend}{Logical for fitting a trend model.}
 
-\item{verbose}{value}
+\item{verbose}{Verbosity level.}
+}
+\value{
+Data frame with limma results.
 }
 \description{
-Title
+Performs differential expression analysis on a gene expression matrix using limma.
+Handles single sample case by duplicating sample. Auto-detects reference level.
+}
+\details{
+Differential expression analysis using limma
+
+This function performs differential expression analysis on the gene expression matrix \code{X} using limma.
+It handles filtering, model design matrices, and output formatting.
+The phenotype vector \code{pheno} is used to define the linear model.
+Batch effects can be accounted for by providing a \code{B} matrix.  
+The function auto-detects the reference level or the user can provide possible values in \code{ref}.
+It returns a data frame containing the limma analysis results.
 }

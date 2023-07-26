@@ -2,7 +2,7 @@
 % Please edit documentation in R/ngs-cook.r
 \name{ngs.cookForDESEQ2}
 \alias{ngs.cookForDESEQ2}
-\title{Title}
+\title{Prepare count data for DESeq2 differential analysis}
 \usage{
 ngs.cookForDESEQ2(
   counts,
@@ -15,20 +15,35 @@ ngs.cookForDESEQ2(
 )
 }
 \arguments{
-\item{counts}{value}
+\item{counts}{Data frame with raw counts, or named list with counts, samples, and genes components.}
 
-\item{samples}{value}
+\item{samples}{Data frame with sample metadata, required if counts is just a matrix.}
 
-\item{genes}{value}
+\item{genes}{Data frame with gene metadata, required if counts is just a matrix.}
 
-\item{remove.batch}{value}
+\item{remove.batch}{Logical indicating whether to estimate and remove batch effects.}
 
-\item{test}{value}
+\item{test}{Statistical test to use, either "Wald" or "LRT".}
 
-\item{prior.cpm}{value}
+\item{prior.cpm}{Filtering threshold for counts per million. Default is 0.}
 
-\item{filter}{value}
+\item{filter}{Logical indicating whether to filter low counts.}
+}
+\value{
+A DESeqDataSet object ready for analysis with DESeq2.
 }
 \description{
-Title
+This function takes raw count data and prepares it for differential
+expression analysis with DESeq2. It handles filtering, normalization, and batch correction.
+}
+\details{
+This function handles conversion of raw count data into a properly formatted
+DESeqDataSet object for differential analysis with DESeq2. It checks that the sample and gene
+metadata matches the counts. Filtering, normalization, and batch correction can be applied.
+
+The returned DESeqDataSet contains the normalized, filtered count matrix, along with sample and
+gene data frames, ready for analysis with DESeq2 functions like DESeq() and results().
+}
+\seealso{
+\code{\link[DESeq2]{DESeqDataSet}}, \code{\link[DESeq2]{DESeq}}, \code{\link[DESeq2]{results}}
 }

@@ -7,20 +7,30 @@
 ## ----------------------------- COOKING (i.e. preparing data) --------------------------------
 ## --------------------------------------------------------------------------------------------
 
-#' Title
+#' @title Prepare count data for edgeR differential analysis
 #'
-#' @param counts value
-#' @param samples value
-#' @param genes value
-#' @param normalization value
-#' @param filter value
-#' @param prior.cpm value
-#' @param remove.batch value
+#' @description This function takes raw count data and prepares it for differential
+#' expression analysis with edgeR. It handles filtering, normalization, and batch correction.
 #'
-#' @return
-#' @export
+#' @param counts Data frame with raw counts, or named list with counts, samples, and genes components.
+#' @param samples Data frame with sample metadata, required if counts is just a matrix.
+#' @param genes Data frame with gene metadata, required if counts is just a matrix.
+#' @param normalization Normalization method to use, default is "none".
+#' @param filter Logical indicating whether to filter low counts.
+#' @param prior.cpm Filtering threshold for counts per million. Default is 0.
+#' @param remove.batch Logical indicating whether to estimate and remove batch effects.
+#'
+#' @return A DGEList object ready for analysis with edgeR.
+#'
+#' @details This function handles conversion of raw count data into a properly formatted
+#' DGEList object for differential analysis with edgeR. It checks that the sample and gene
+#' metadata matches the counts. Filtering, normalization, and batch correction can be applied.
+#'
+#' The returned DGEList contains the normalized, filtered count matrix, along with sample and
+#' gene data frames, ready for analysis with edgeR functions like glmQLFit() and glmQLFTest().
 #'
 #' @examples
+#' @export
 ngs.cookForEDGER <- function(counts, samples = NULL, genes = NULL, normalization = "none",
                              filter = TRUE, prior.cpm = 0, remove.batch = TRUE) {
   if (all(c("counts", "samples", "genes") %in% names(counts))) {
@@ -96,22 +106,33 @@ ngs.cookForEDGER <- function(counts, samples = NULL, genes = NULL, normalization
   return(cooked)
 }
 
-
-
-#' Title
+#' @title Prepare count data for DESeq2 differential analysis
 #'
-#' @param counts value
-#' @param samples value
-#' @param genes value
-#' @param remove.batch value
-#' @param test value
-#' @param prior.cpm value
-#' @param filter value
+#' @description This function takes raw count data and prepares it for differential
+#' expression analysis with DESeq2. It handles filtering, normalization, and batch correction.
 #'
-#' @return
-#' @export
+#' @param counts Data frame with raw counts, or named list with counts, samples, and genes components.
+#' @param samples Data frame with sample metadata, required if counts is just a matrix.
+#' @param genes Data frame with gene metadata, required if counts is just a matrix.
+#' @param remove.batch Logical indicating whether to estimate and remove batch effects.
+#' @param test Statistical test to use, either "Wald" or "LRT".
+#' @param prior.cpm Filtering threshold for counts per million. Default is 0.
+#' @param filter Logical indicating whether to filter low counts.
+#'
+#' @return A DESeqDataSet object ready for analysis with DESeq2.
+#'
+#' @details This function handles conversion of raw count data into a properly formatted
+#' DESeqDataSet object for differential analysis with DESeq2. It checks that the sample and gene
+#' metadata matches the counts. Filtering, normalization, and batch correction can be applied.
+#'
+#' The returned DESeqDataSet contains the normalized, filtered count matrix, along with sample and
+#' gene data frames, ready for analysis with DESeq2 functions like DESeq() and results().
 #'
 #' @examples
+#' @seealso
+#' \code{\link[DESeq2]{DESeqDataSet}}, \code{\link[DESeq2]{DESeq}}, \code{\link[DESeq2]{results}}
+#'
+#' @export
 ngs.cookForDESEQ2 <- function(counts, samples, genes, remove.batch = TRUE,
                               test = "Wald", prior.cpm = 0, filter = TRUE) {
   if (all(c("counts", "samples", "genes") %in% names(counts))) {

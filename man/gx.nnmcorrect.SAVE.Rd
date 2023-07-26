@@ -2,17 +2,36 @@
 % Please edit documentation in R/gx-combat.r
 \name{gx.nnmcorrect.SAVE}
 \alias{gx.nnmcorrect.SAVE}
-\title{Title}
+\title{Nearest neighbor matching batch correction}
 \usage{
 gx.nnmcorrect.SAVE(x, y, k = 3)
 }
 \arguments{
-\item{x}{value}
+\item{x}{Numeric matrix of gene expression values (genes in rows, samples in columns).}
 
-\item{y}{value}
+\item{y}{Factor vector indicating batch for each sample.}
 
-\item{k}{value}
+\item{k}{Number of nearest neighbors to use (default 3).}
+}
+\value{
+Batch corrected gene expression matrix.
 }
 \description{
-Title
+Correct for batch effects in a gene expression matrix using nearest neighbor matching.
+}
+\details{
+This function performs batch correction by matching each sample to its 
+k-nearest neighbors from other batches based on expression profile correlation.  
+The batch effect for a sample is estimated as the mean difference between it and its 
+matched neighbors. This difference is subtracted from the sample's expression profile.
+}
+\examples{
+\dontrun{
+x <- matrix(rnorm(100*30), 100, 30) # random expression matrix 
+y <- gl(3, 10) # 3 batches of 10 samples each
+xcorr <- gx.nnmcorrect.SAVE(x, y)
+}
+}
+\seealso{
+\code{\link[limma]{removeBatchEffect}} for an alternative batch correction method
 }

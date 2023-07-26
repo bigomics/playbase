@@ -2,7 +2,7 @@
 % Please edit documentation in R/gx-plot.r
 \name{gx.barplot}
 \alias{gx.barplot}
-\title{Title}
+\title{Barplot for grouped data}
 \usage{
 gx.barplot(
   x,
@@ -21,32 +21,41 @@ gx.barplot(
 )
 }
 \arguments{
-\item{x}{value}
+\item{x}{Numeric matrix with samples in columns}
 
-\item{main}{value}
+\item{main}{Title for the plot}
 
-\item{cex.main}{value}
+\item{cex.main}{Size of main title}
 
-\item{cex.names}{value}
+\item{cex.names}{Size of sample names}
 
-\item{cex.legend}{value}
+\item{cex.legend}{Size of legend text}
 
-\item{srt}{value}
+\item{srt}{Rotation angle of sample names}
 
-\item{xlab}{value}
+\item{xlab}{X-axis label}
 
-\item{ylab}{value}
+\item{ylab}{Y-axis label}
 
-\item{group}{value}
+\item{group}{Vector or factor of group assignments}
 
-\item{group.names}{value}
+\item{group.names}{Optional names for the groups}
 
-\item{bar.names}{value}
+\item{bar.names}{Optional names for each bar}
 
-\item{voff}{value}
+\item{voff}{Vertical offset between bars}
 
-\item{legend}{value}
+\item{legend}{Show legend for groups?}
+}
+\value{
+None. Produces a barplot.
 }
 \description{
-Title
+Barplot for grouped data
+}
+\details{
+This function creates a barplot from a numeric matrix, with samples in columns.
+Bars are grouped if a group vector is provided. Error bars show the standard error.
+Many graphical parameters can be adjusted, including title, axis labels, 
+legend, and text sizes.
 }

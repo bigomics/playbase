@@ -31,7 +31,7 @@ heatmapWithAnnot <- function(F, anno.type = c("boxplot", "barplot"),
       up = ComplexHeatmap::anno_boxplot(
         t(F),
         gp = gpar(fill = "grey80"),
-        outline = TRUE, size = unit(1, "mm"),
+        outline = TRUE, size = grid::unit(1, "mm"),
         box_width = 0.75
       ),
       annotation_height = bar.height,
@@ -247,11 +247,10 @@ pgx.ActivationMatrix <- function(pgx, features = NULL, contrasts = NULL,
       ggplot2::geom_point() +
       ggplot2::scale_size(range = c(0.1, 5 * cex)) +
       ggplot2::scale_color_gradientn(colors = cpal) +
-      ## scale_color_gradientn( colors=cpal, breaks=zz, labels=c(zz[1],zz[2])) +
       ggplot2::xlab(NULL) +
       ggplot2::ylab(NULL) +
       ggplot2::labs(size = tt.size, color = "value") +
-      ggplot2::scale_x_discrete(guide = guide_axis(angle = srt)) +
+      ggplot2::scale_x_discrete(guide = ggplot2::guide_axis(angle = srt)) +
       ggplot2::theme(
         plot.margin = ggplot2::margin(5, 0, 0, 10),
         legend.text = ggplot2::element_text(size = 9),
@@ -265,8 +264,8 @@ pgx.ActivationMatrix <- function(pgx, features = NULL, contrasts = NULL,
     }
     if (flip) {
       p <- p + ggplot2::coord_flip() +
-        ggplot2::scale_x_discrete(guide = guide_axis(angle = 0)) +
-        ggplot2::scale_y_discrete(guide = guide_axis(angle = srt))
+        ggplot2::scale_x_discrete(guide = ggplot2::guide_axis(angle = 0)) +
+        ggplot2::scale_y_discrete(guide = ggplot2::guide_axis(angle = srt))
     }
   }
   if (plotlib == "plotly") {
@@ -484,9 +483,9 @@ pgx.SankeyFromMRF.PLOTLY <- function(M, R, F, fill = TRUE, labels = NULL) {
     i <- 2
     for (i in 2:length(gr.list)) {
       gr <- igraph::union(gr, gr.list[[i]])
-      igraph::E(gr)$count <- rowSums(cbind(igraph::E(gr)$count_1, E(gr)$count_2), na.rm = TRUE)
-      igraph::E(gr)$weight <- rowSums(cbind(igraph::E(gr)$weight_1, E(gr)$weight_2), na.rm = TRUE)
-      igraph::E(gr)$rho <- rowSums(cbind(igraph::E(gr)$rho_1, E(gr)$rho_2), na.rm = TRUE)
+      igraph::E(gr)$count <- rowSums(cbind(igraph::E(gr)$count_1, igraph::E(gr)$count_2), na.rm = TRUE)
+      igraph::E(gr)$weight <- rowSums(cbind(igraph::E(gr)$weight_1, igraph::E(gr)$weight_2), na.rm = TRUE)
+      igraph::E(gr)$rho <- rowSums(cbind(igraph::E(gr)$rho_1, igraph::E(gr)$rho_2), na.rm = TRUE)
     }
     gr <- igraph::delete_edge_attr(gr, "weight_1")
     gr <- igraph::delete_edge_attr(gr, "weight_2")
@@ -502,7 +501,7 @@ pgx.SankeyFromMRF.PLOTLY <- function(M, R, F, fill = TRUE, labels = NULL) {
   ## create Sankey plot
   nv <- length(igraph::V(gr))
   col1 <- rep(RColorBrewer::brewer.pal(12, "Set3"), 100)[1:nv]
-  ee <- igraph::get.edges(gr, E(gr)) - 1
+  ee <- igraph::get.edges(gr, igraph::E(gr)) - 1
 
   ee.label <- paste(
     "rho=", round(igraph::E(gr)$rho, 2),
@@ -605,7 +604,7 @@ pgx.SankeyFromPhenotypes.PLOTLY <- function(pgx, phenotypes, mat = NULL,
     i <- 2
     for (i in 2:length(gr.list)) {
       gr <- igraph::union(gr, gr.list[[i]])
-      igraph::E(gr)$weight <- rowSums(cbind(igraph::E(gr)$weight_1, E(gr)$weight_2), na.rm = TRUE)
+      igraph::E(gr)$weight <- rowSums(cbind(igraph::E(gr)$weight_1, igraph::E(gr)$weight_2), na.rm = TRUE)
     }
     gr <- igraph::delete_edge_attr(gr, "weight_1")
     gr <- igraph::delete_edge_attr(gr, "weight_2")
@@ -689,7 +688,9 @@ pgx.SankeyFromPhenotypes.GGPLOT <- function(pgx, phenotypes, mat = NULL, fill = 
   }
 
   v <- sapply(phenotypes, function(s) {
+    # The f sym likely comes from x package, but better confirm
     a <- sym(s)
+    # The f enquo likely comes from rlang, but better confirm
     enquo(a)
   })
   if (length(phenotypes) == 2) {
@@ -2073,9 +2074,7 @@ plot_ggscatterFILL <- function(x, y = NULL, col = NULL, shape = NULL,
   p
   if (!is.null(col)) {
     cpal <- rev(RColorBrewer::brewer.pal(11, "RdYlBu"))
-    if (0 && opacity < 1) {
-      cpal <- add_opacity(cpal, opacity**0.33)
-    }
+
     zr <- range(col)
     zz <- round(c(zr[1], zr[2]), digits = 2)
     cgamma <- seq(0, 1, 1 / (length(cpal) - 1))**(1 / gamma)
@@ -2194,15 +2193,14 @@ plot_ggviolin <- function(x, y, group = NULL, main = "", ylim = NULL, add.dots =
   }
   if (is.null(ylim)) ylim <- range(y)
 
-  p <- ggplot2::ggplot(df, aes(y = y, x = x, fill = group)) +
+  p <- ggplot2::ggplot(df, ggplot2::aes(y = y, x = x, fill = group)) +
     ggplot2::ggtitle(main) +
     ggplot2::xlab(xlab) +
     ggplot2::ylab(ylab) +
     ggplot2::ylim(ylim[1], ylim[2]) +
     ggplot2::scale_fill_manual(values = col) +
     ggplot2::scale_x_discrete(guide = guide_axis(angle = srt)) +
-    ## ggplot2::scale_x_discrete(guide=guide_axis(n.dodge=n.dodge)) +
-    ggplot2::geom_violin(trim = TRUE, position = position_dodge(pdodge)) +
+    ggplot2::geom_violin(trim = TRUE, position = ggplot2::position_dodge(pdodge)) +
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = srt, vjust = 0)) +
     ggplot2::theme_minimal(base_size = base_size)
   if (is.null(group)) {
@@ -2210,8 +2208,7 @@ plot_ggviolin <- function(x, y, group = NULL, main = "", ylim = NULL, add.dots =
   }
   if (add.dots && is.null(group)) {
     p <- p +
-      ggplot2::geom_jitter(shape = 20, size = 1.2 * cex, position = position_jitter(0.07))
-    ## geom_beeswarm(priority='density',cex=0.9*cex) +
+      ggplot2::geom_jitter(shape = 20, size = 1.2 * cex, position = ggplot2::position_jitter(0.07))
   }
   p
 }
@@ -2238,38 +2235,35 @@ plot_ggbarplot <- function(mat, xlab = "x", ylab = "y", srt = 0, main = NULL,
   if (!is.null(col)) cpal <- rep(col, 99)
   posmode <- ifelse(beside, "dodge", "stack")
 
-  p <- ggplot(df, aes(x = x, y = value, fill = y)) +
-    ## geom_bar(stat="identity", aes(fill="transparent"), size=1) +
-    geom_bar(
+  p <- ggplot2::ggplot(df, aes(x = x, y = value, fill = y)) +
+    ggplot2::geom_bar(
       stat = "identity", color = "black", size = 0.3,
       width = bar_width, position = posmode
     ) +
-    xlab(xlab) +
-    ylab(ylab) +
-    labs(fill = group.name) +
-    ggtitle(main) +
-    ## scale_fill_grey(start=0.8,end=0.2) +
-    scale_fill_manual(values = cpal) +
-    theme_classic(base_size = base_size) +
-    scale_x_discrete(guide = guide_axis(angle = srt)) +
-    ## scale_x_discrete(guide=guide_axis(n.dodge=n.dodge)) +
-    theme(
-      axis.text.x = element_text(angle = srt, vjust = 0),
-      axis.title.x = element_text(size = 10),
-      axis.title.y = element_text(size = 10)
+    ggplot2::xlab(xlab) +
+    ggplot2::ylab(ylab) +
+    ggplot2::labs(fill = group.name) +
+    ggplot2::ggtitle(main) +
+    ggplot2::scale_fill_manual(values = cpal) +
+    ggplot2::theme_classic(base_size = base_size) +
+    ggplot2::scale_x_discrete(guide = guide_axis(angle = srt)) +
+    ggplot2::theme(
+      axis.text.x = ggplot2::element_text(angle = srt, vjust = 0),
+      axis.title.x = ggplot2::element_text(size = 10),
+      axis.title.y = ggplot2::element_text(size = 10)
     )
 
-  p <- p + theme(
-    legend.title = element_blank(),
+  p <- p + ggplot2::theme(
+    legend.title = ggplot2::element_blank(),
     legend.justification = legend.pos,
-    legend.text = element_text(size = 9 * legend.cex),
+    legend.text = ggplot2::element_text(size = 9 * legend.cex),
     legend.position = legend.pos,
     legend.key.size = grid::unit(9 * legend.cex, "pt"),
     legend.key.height = grid::unit(7 * legend.cex, "pt")
   )
 
   if (nrow(mat) == 1) {
-    p <- p + theme(legend.position = "none")
+    p <- p + ggplot2::theme(legend.position = "none")
   }
   p
 }
@@ -2462,7 +2456,6 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
       col = pt.col[jj], pch = 20, cex = cex,
       xlim = xlim0, ylim = ylim0,
       xlab = xlab, ylab = ylab,
-      ## xaxt = axt, yaxt = axt,
       axes = FALSE,
       bty = "n"
     )

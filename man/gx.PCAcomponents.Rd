@@ -2,17 +2,30 @@
 % Please edit documentation in R/gx-heatmap.r
 \name{gx.PCAcomponents}
 \alias{gx.PCAcomponents}
-\title{Title}
+\title{Visualize top genes for PCA components}
 \usage{
 gx.PCAcomponents(X, nv = 20, ngenes)
 }
 \arguments{
-\item{X}{value}
+\item{X}{Numeric matrix of gene expression data (genes in rows, samples in columns)}
 
-\item{nv}{value}
+\item{nv}{Number of principal components to extract}
 
-\item{ngenes}{value}
+\item{ngenes}{Number of top genes to visualize per component}
 }
 \description{
-Title
+Visualize top genes for PCA components
+}
+\details{
+This function calculates the top \code{ngenes} genes (by loading) for the first
+\code{nv} principal components of \code{X}. For each component, it extracts the top genes,
+centers and scales their expression profiles, and visualizes them as a heatmap using
+\code{gx.imagemap()}.
+}
+\examples{
+\dontrun{
+x <- matrix(rnorm(500*50), 500, 50)
+gx.PCAcomponents(x, nv = 5, ngenes = 10)
+}
+
 }

@@ -245,7 +245,7 @@ pgx.getGEOcounts.GEOquery <- function(id) {
     return(NULL)
   }
 
-
+  # The f exprs comes from unknown source, but it is used
   has.expr <- sapply(gse, function(x) nrow(exprs(x)) > 0)
   has.expr
 

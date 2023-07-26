@@ -4,36 +4,44 @@
 ##
 
 
-
-#' Title
+#' @title Volcano Plot
 #'
-#' @param x value
-#' @param pv value
-#' @param gene value
-#' @param ma_plot value
-#' @param ma value
-#' @param p.sig value
-#' @param lfc value
-#' @param render value
-#' @param n value
-#' @param highlight value
-#' @param main value
-#' @param cex value
-#' @param lab.cex value
-#' @param nlab value
-#' @param xlim value
-#' @param ylim value
-#' @param use.fdr value
-#' @param xlab value
-#' @param ylab value
-#' @param use.rpkm value
-#' @param maxchar value
-#' @param hi.col value
-#' @param cex.main value
-#' @param axes value
-#' @param cex.axis value
+#' @description
+#' Generate a volcano plot to visualize significance versus magnitude of change.
 #'
-#' @return
+#' @param x Numeric vector of effect sizes (fold changes, differences, etc).
+#' @param pv Numeric vector of p-values.
+#' @param gene Character vector of gene IDs corresponding to x and pv.
+#' @param ma_plot Logical, if TRUE creates an MA-plot instead.
+#' @param ma Matrix of log-fold changes and mean average values for MA-plot.
+#' @param p.sig Significance threshold p-value.
+#' @param lfc Log2 fold change threshold.
+#' @param render Plot rendering method (base, ggplot, scatterD3).
+#' @param n Maximum number of points to plot.
+#' @param highlight Vector of genes to highlight.
+#' @param main Title for the plot.
+#' @param cex Point size.
+#' @param lab.cex Label size for highlighted genes.
+#' @param nlab Number of top genes to label.
+#' @param xlim Limits of the x-axis.
+#' @param ylim Limits of the y-axis.
+#' @param use.fdr Use FDR instead of p-values.
+#' @param xlab Label for x-axis.
+#' @param ylab Label for y-axis.
+#' @param use.rpkm Use RPKM/FPKM values instead of raw counts.
+#' @param maxchar Maximum characters for gene labels.
+#' @param hi.col Color for highlighted points.
+#' @param cex.main Size of main title.
+#' @param axes Display axes?
+#' @param cex.axis Size of axis labels.
+#'
+#' @details This function takes a vector of p-values and effect sizes (fold changes, differences, etc)
+#' and generates a volcano plot to visualize significance versus magnitude of change. Points exceeding
+#' both p-value and effect size thresholds are highlighted. The top most significant genes can be
+#' labeled. Both raw and FDR corrected p-values can be used.
+#'
+#' @return A volcano plot is generated, no value is returned.
+#'
 #' @export
 #'
 #' @examples
@@ -196,32 +204,50 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
   plt
 }
 
-#
-
-#' Title
+#' @title Volcano plot from LIMMA results
 #'
-#' @param tab value
-#' @param render value
-#' @param n value
-#' @param highlight value
-#' @param p.sig value
-#' @param cex value
-#' @param lab.cex value
-#' @param nlab value
-#' @param xlim value
-#' @param ylim value
-#' @param use.fdr value
-#' @param use.rpkm value
-#' @param ma.plot value
-#' @param cex.main value
-#' @param main value
-#' @param cex.axis value
-#' @param axes value
+#' @description Generate a volcano plot from a LIMMA differential
+#' expression analysis result table.
 #'
-#' @return
+#' @param tab Data frame containing statistics from LIMMA analysis, with
+#' columns for log2 fold change, p-values, and adjusted p-values.
+#' @param render Plotting method (either base R graphics or scatterD3).
+#' @param n Maximum number of points to plot.
+#' @param highlight Vector of genes to highlight.
+#' @param p.sig P-value cutoff for significance.
+#' @param cex Point size.
+#' @param lab.cex Label size for highlighted genes.
+#' @param nlab Number of top genes to label.
+#' @param xlim Limits of the x-axis.
+#' @param ylim Limits of the y-axis.
+#' @param use.fdr Use FDR adjusted p-values.
+#' @param use.rpkm Use RPKM/TPM values for x-axis.
+#' @param ma.plot Overlay MA plot lines?
+#' @param cex.main Title size.
+#' @param main Plot title.
+#' @param cex.axis Axis label size.
+#' @param axes Display axes?
+#'
+#' @details This function takes a LIMMA result table and generates a volcano plot
+#' to visualize significance versus log2 fold change. Points exceeding the specified
+#' p-value and fold change thresholds are highlighted. The top most significant
+#' genes can be labeled. Both raw and FDR corrected p-values can be used.
+#'
+#' @return A volcano plot is generated, no value is returned.
+#' @examples
+#' \dontrun{
+#' n <- 100
+#' tab <- data.frame(
+#'   logFC = rnorm(n),
+#'   P.Value = runif(n),
+#'   adj.P.Val = p.adjust(runif(n)),
+#'   AveExpr = runif(n)
+#' )
+#' z <- gx.volcanoPlot.LIMMA(tab)
+#' z
+#' }
 #' @export
 #'
-#' @examples
 gx.volcanoPlot.LIMMA <- function(tab, render = "scatterD3", n = 1000, highlight = NULL, p.sig = 0.05,
                                  cex = 1, lab.cex = 1, nlab = 15, xlim = NULL, ylim = NULL, use.fdr = FALSE,
                                  use.rpkm = FALSE, ma.plot = FALSE, cex.main = 1.2,

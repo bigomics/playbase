@@ -2,19 +2,33 @@
 % Please edit documentation in R/gx-heatmap.r
 \name{gx.imagemap}
 \alias{gx.imagemap}
-\title{Title}
+\title{Create an image heatmap of a data matrix}
 \usage{
 gx.imagemap(X, main = "", cex = 1, clust = TRUE)
 }
 \arguments{
-\item{X}{value}
+\item{X}{Numeric data matrix with genes/features as rows and samples/conditions as columns.}
 
-\item{main}{value}
+\item{main}{Title for the heatmap.}
 
-\item{cex}{value}
+\item{cex}{Scaling factor for text size.}
 
-\item{clust}{value}
+\item{clust}{Logical for whether to cluster rows and columns.}
 }
 \description{
-Title
+Create an image heatmap of a data matrix
+}
+\details{
+This function creates an image heatmap visualization of the input data matrix \code{X}.
+If \code{clust=TRUE}, it will cluster rows and columns independently using hierarchical
+clustering before plotting.
+
+It uses \code{\link[Matrix]{image}} to generate the heatmap, and adds axis labels, titles, etc.
+}
+\examples{
+\dontrun{
+data <- matrix(rnorm(200), 20, 10)
+gx.imagemap(data, main="My Heatmap")
+}
+
 }

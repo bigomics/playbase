@@ -92,7 +92,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   stat.group <- NULL
   if (use.design) {
     message("[compute_testGenesSingleOmics] detecting stat groups...")
-    stat.group <- pgx.getConditions(contr.matrix, nmax = 0) ## !!!
+    stat.group <- playbase::pgx.getConditions(contr.matrix, nmax = 0) ## !!!
     names(stat.group) <- rownames(contr.matrix)
     nlev <- length(unique(stat.group))
     nlev
@@ -233,7 +233,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   if (is.null(max.features)) max.features <- -1
   if (max.features > 0 && nrow(counts) > max.features) {
     cat("shrinking data matrices: n=", max.features, "\n")
-    logcpm <- logCPM(counts, total = NULL)
+    logcpm <- playbase::logCPM(counts, total = NULL)
     sdx <- apply(logcpm, 1, sd)
     jj <- Matrix::head(order(-sdx), max.features) ## how many genes?
     jj0 <- setdiff(seq_len(nrow(counts)), jj)
@@ -256,7 +256,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
 
   message("[compute_testGenesSingleOmics] 12 : start fitting... ")
 
-  gx.meta <- ngs.fitContrastsWithAllMethods(
+  gx.meta <- playbase::ngs.fitContrastsWithAllMethods(
     counts = counts,
     X = X,
     samples = samples,

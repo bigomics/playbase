@@ -8,29 +8,52 @@
 ## -----------------------------------------------------------------------------
 
 
-#' Title
+#' @title ngs.fitContrastsWithAllMethods
 #'
-#' @param counts value
-#' @param X value
-#' @param samples value
-#' @param design value
-#' @param contr.matrix value
-#' @param genes value
-#' @param prior.cpm value
-#' @param prune.samples value
-#' @param conform.output value
-#' @param do.filter value
-#' @param cpm.scale value
-#' @param remove.batch value
-#' @param methods value
-#' @param correct.AveExpr value
-#' @param custom value
-#' @param custom.name value
+#' @description This function fits contrasts using multiple differential expression analysis methods on count data.
+#' It applies the methods specified in the \code{methods} argument to the count data in \code{counts}, design matrix \code{design}, and contrast matrix \code{contr.matrix}.
 #'
-#' @return
-#' @export
+#' @param counts A matrix of counts, with genes in rows and samples in columns.
+#' @param X Covariates to include in the design matrix. Default is NULL.
+#' @param samples A vector of sample names that match the columns in \code{counts}.
+#' @param design The design matrix, with samples in columns.
+#' @param contr.matrix The contrasts matrix, with contrasts in rows.
+#' @param genes A vector of gene names that match the rows in \code{counts}. Default is NULL.
+#' @param prior.cpm Prior counts per million. Default is 1.
+#' @param prune.samples Whether to filter low count samples. Default is FALSE.
+#' @param conform.output Whether to conform the output. Default is TRUE.
+#' @param do.filter Whether to filter genes. Default is TRUE.
+#' @param cpm.scale Counts per million scaling factor. Default is 1e6.
+#' @param remove.batch Whether to remove batch effects. Default is TRUE.
+#' @param methods Methods to apply. Can be one or more of:
+#'   \itemize{
+#'     \item{\code{ttest}}{t-test}
+#'     \item{\code{ttest.welch}}{Welch's t-test}
+#'     \item{\code{voom.limma}}{voom + limma}
+#'     \item{\code{trend.limma}}{limma with trend}
+#'     \item{\code{notrend.limma}}{limma without trend}
+#'     \item{\code{deseq2.wald}}{DESeq2 Wald test}
+#'     \item{\code{deseq2.lrt}}{DESeq2 LRT}
+#'     \item{\code{edger.qlf}}{edgeR QLF}
+#'     \item{\code{edger.lrt}}{edgeR LRT}
+#'   }
+#' @param correct.AveExpr Whether to correct for average expression. Default is TRUE.
+#' @param custom Custom differential expression method. Default is NULL.
+#' @param custom.name Name for custom method. Default is NULL.
+#'
+#' @details This function provides a convenient wrapper to run multiple differential expression methods on the same data.
+#' It runs the methods specified in \code{methods} on the provided count data and design.
+#' The results are returned in a list, with each element containing the results from one method.
+#' Filtering, batch effect removal, and output conforming can be controlled with arguments.
+#' Custom methods can also be added.
+#'
+#' @return A list with results from each differential expression method.
 #'
 #' @examples
+#' \dontrun{
+#' # TODO
+#' }
+#' @export
 ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, contr.matrix, genes = NULL,
                                            prior.cpm = 1, prune.samples = FALSE,
                                            conform.output = TRUE, do.filter = TRUE, cpm.scale = 1e6,
@@ -397,18 +420,8 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
 ## --------------------------------------------------------------------------------------------
 
 
-#' Title
-#'
-#' @param X value
-#' @param contr.matrix value
-#' @param design value
-#' @param method value
-#' @param conform.output value
-#'
-#' @return
+#' @describeIn ngs.fitContrastsWithAllMethods
 #' @export
-#'
-#' @examples
 ngs.fitContrastsWithTTEST <- function(X, contr.matrix, design, method = "welch",
                                       conform.output = 0) {
   tables <- list()
@@ -444,22 +457,8 @@ ngs.fitContrastsWithTTEST <- function(X, contr.matrix, design, method = "welch",
 }
 
 
-#' Title
-#'
-#' @param X value
-#' @param contr.matrix value
-#' @param design value
-#' @param method value
-#' @param trend value
-#' @param robust value
-#' @param prune.samples value
-#' @param conform.output value
-#' @param plot value
-#'
-#' @return
+#' @describeIn ngs.fitContrastsWithAllMethods
 #' @export
-#'
-#' @examples
 ngs.fitContrastsWithLIMMA <- function(X, contr.matrix, design, method = c("voom", "limma"),
                                       trend = TRUE, robust = TRUE, prune.samples = FALSE,
                                       conform.output = FALSE, plot = FALSE) {
@@ -558,23 +557,8 @@ ngs.fitContrastsWithLIMMA <- function(X, contr.matrix, design, method = c("voom"
 }
 
 
-#' Title
-#'
-#' @param counts value
-#' @param group value
-#' @param contr.matrix value
-#' @param design value
-#' @param method value
-#' @param prune.samples value
-#' @param X value
-#' @param conform.output value
-#' @param robust value
-#' @param plot value
-#'
-#' @return
+#' @describeIn ngs.fitContrastsWithAllMethods
 #' @export
-#'
-#' @examples
 ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
                                       method = c("qlf", "lrt"), prune.samples = FALSE, X = NULL,
                                       conform.output = FALSE, robust = TRUE, plot = TRUE) {
@@ -612,9 +596,15 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
     )
     return(res)
   }
-
   message("[ngs.fitContrastsWithEDGER] fitting EDGER contrasts using design matrix")
-  dge <- edgeR::estimateDisp(dge, design = design, robust = robust)
+
+  dge_locfit <- try(dge <- edgeR::estimateDisp(dge, design = design, robust = robust), silent = TRUE)
+
+  if ("try-error" %in% class(dge_locfit)) {
+    message("[ngs.fitContrastsWithEDGER] retrying with trend.method 'loess'...")
+    dge <- edgeR::estimateDisp(dge, design = design, robust = robust, trend.method = "loess")
+  }
+
   if (is.null(X)) X <- edgeR::cpm(counts, log = TRUE)
 
   if (method == "qlf") {
@@ -674,20 +664,8 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
 }
 
 
-#' Title
-#'
-#' @param dge value
-#' @param contr.matrix value
-#' @param method value
-#' @param X value
-#' @param conform.output value
-#' @param robust value
-#' @param plot value
-#'
-#' @return
+#' @describeIn ngs.fitContrastsWithAllMethods
 #' @export
-#'
-#' @examples
 .ngs.fitContrastsWithEDGER.nodesign <- function(dge, contr.matrix, method = c("qlf", "lrt"), X = NULL,
                                                 conform.output = FALSE, robust = TRUE, plot = TRUE) {
   ## With no design matrix, we must do EdgeR per contrast
@@ -760,21 +738,8 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
 }
 
 
-#' Title
-#'
-#' @param counts value
-#' @param contr.matrix value
-#' @param group value
-#' @param method value
-#' @param X value
-#' @param conform.output value
-#' @param robust value
-#' @param plot value
-#'
-#' @return
+#' @describeIn ngs.fitContrastsWithAllMethods
 #' @export
-#'
-#' @examples
 .ngs.fitContrastsWithEDGER.nodesign.pruned <- function(counts, contr.matrix, group = NULL,
                                                        method = c("qlf", "lrt"), X = NULL,
                                                        conform.output = FALSE, robust = TRUE, plot = TRUE) {
@@ -862,22 +827,8 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
 
 
 
-#' Title
-#'
-#' @param counts value
-#' @param group value
-#' @param contr.matrix value
-#' @param design value
-#' @param X value
-#' @param genes value
-#' @param test value
-#' @param prune.samples value
-#' @param conform.output value
-#'
-#' @return
+#' @describeIn ngs.fitContrastsWithAllMethods
 #' @export
-#'
-#' @examples
 ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
                                         X = NULL, genes = NULL, test = "Wald", prune.samples = FALSE,
                                         conform.output = FALSE) {
@@ -998,19 +949,8 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
 }
 
 
-#' Title
-#'
-#' @param counts value
-#' @param contr.matrix value
-#' @param test value
-#' @param prune.samples value
-#' @param conform.output value
-#' @param X value
-#'
-#' @return
+#' @describeIn ngs.fitContrastsWithAllMethods
 #' @export
-#'
-#' @examples
 .ngs.fitConstrastsWithDESEQ2.nodesign <- function(counts, contr.matrix, test = "Wald",
                                                   prune.samples = FALSE,
                                                   conform.output = FALSE, X = NULL) {

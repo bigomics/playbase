@@ -2,15 +2,36 @@
 % Please edit documentation in R/ngs-functions.R
 \name{ngs.matchFeatures}
 \alias{ngs.matchFeatures}
-\title{Title}
+\title{Match gene names to feature identifiers}
 \usage{
 ngs.matchFeatures(ngs, genes)
 }
 \arguments{
-\item{ngs}{value}
+\item{ngs}{An NGS object containing feature annotation data.}
 
-\item{genes}{value}
+\item{genes}{Character vector of gene names to match.}
+}
+\value{
+Character vector of matching feature identifiers 
+(typically Ensembl IDs).
 }
 \description{
-Title
+Matches gene names in a character vector to the 
+corresponding feature identifiers in an NGS object.
+}
+\details{
+This function takes a character vector of gene names and 
+finds the matching feature identifiers in the feature annotation data 
+contained in the \code{ngs$genes} data frame of an NGS object. It 
+matches the \code{gene_name} column in \code{ngs$genes}.
+
+Matching is case-insensitive. The function returns the feature 
+identifiers from the rownames of \code{ngs$genes} that match the 
+provided gene names.
+}
+\examples{
+\dontrun{
+# TODO
+}
+
 }

@@ -4,14 +4,28 @@
 ##
 
 
-#' Title
+#' Impute missing values with row medians
 #'
-#' @param X value
+#' @param X Numeric matrix
 #'
-#' @return
-#' @export
+#' @return Matrix with missing values imputed
+#'
+#' @details
+#' This function imputes missing values in a numeric matrix
+#' by replacing them with the median value for each row.
+#'
+#' It first calculates the median of each row, ignoring NA values.
+#' For rows where the median is NA, it takes the median of the row medians.
+#' It then creates a copy of the input matrix and replaces all NA elements
+#' with the corresponding row median value.
 #'
 #' @examples
+#' \dontrun{
+#' mat <- matrix(c(1:10, NA), nrow = 5)
+#' imputed <- imputeMedian(mat)
+#' }
+#'
+#' @export
 imputeMedian <- function(X) {
   if (NCOL(X) == 1) {
     mx <- median(X, na.rm = TRUE)
@@ -25,45 +39,84 @@ imputeMedian <- function(X) {
   return(impX)
 }
 
-#' Title
+#' @title Calculate group means
 #'
-#' @param X value
-#' @param y value
+#' @description
+#' Calculates the column means within groups defined by a grouping variable.
 #'
-#' @return
-#' @export
+#' @param X Numeric matrix with columns as samples.
+#' @param y Grouping vector or factor.
+#' @param FUN Function for aggregation. Default is mean.
+#'
+#' @return Matrix with group means.
+#'
+#' @details This function calculates the column means of \code{X} within groups
+#'  defined by \code{y}. It calculates the mean for each column within each
+#' group. The output is a matrix with rows corresponding to groups and columns
+#' corresponding to samples.
 #'
 #' @examples
+#' \dontrun{
+#' mat <- matrix(rnorm(100), ncol = 10)
+#' groups <- gl(2, 5)
+#' means <- averageByGroup(mat, groups)
+#' }
+#'
+#' @export
 averageByGroup <- function(X, y) {
   t(apply(X, 1, function(x) tapply(x, y, mean)))
 }
 
 
-#' Title
+#' @title Calculate geometric mean
 #'
-#' @param x value
+#' @description Calculates the geometric mean of a numeric vector.
 #'
-#' @return
-#' @export
+#' @param x A numeric vector.
+#'
+#' @return The geometric mean as a numeric value.
+#'
+#' @details The geometric mean is calculated by taking the nth root of the
+#' product of n numbers, where n is the length of the input vector. It is
+#' more appropriate than the arithmetic mean for positively skewed
+#' distributions.
 #'
 #' @examples
+#' \dontrun{
+#' x <- c(1, 10, 100)
+#' gmean(x)
+#' }
+#'
+#' @export
 gmean <- function(x) {
   ## geometric mean
   exp(mean(log(x + 1e-40)))
 }
 
 
-#' Title
+#' @title Matrix rownames to HUGO gene symbols
 #'
-#' @param x value
+#' @description
+#' Converts the rownames of a matrix to official HUGO gene symbols.
 #'
-#' @return
-#' @export
+#' @param x A numeric matrix with rownames to convert.
+#'
+#' @return The input matrix with rownames converted to HUGO symbols.
+#'
+#' @details This function orders the rows by standard deviation, maps the
+#' rownames to HUGO symbols using the playbase::alias2hugo function,
+#' removes duplicates, and returns the resulting matrix with HUGO symbols
+#' as rownames.
 #'
 #' @examples
+#' \dontrun{
+#' TODO
+#' }
+#'
+#' @export
 mat2hugo <- function(x) {
   x <- x[order(-apply(x, 1, sd, na.rm = TRUE)), ]
-  hx <- alias2hugo(rownames(x))
+  hx <- playbase::alias2hugo(rownames(x))
   jj <- which(!duplicated(hx))
   x <- x[jj, ]
   rownames(x) <- hx[jj]
@@ -71,16 +124,25 @@ mat2hugo <- function(x) {
 }
 
 
-#' Title
+#' @title Histogram of gene expression values
 #'
-#' @param gx value
-#' @param main value
-#' @param ylim value
+#' @description Generate a histogram of gene expression values.
 #'
-#' @return
-#' @export
+#' @param gx Gene expression matrix with genes in rows and samples in columns.
+#' @param main Title for the plot.
+#' @param ylim Limits for the y-axis.
+#'
+#' @details This function generates a histogram of the gene expression values in \code{gx}.
+#' It first creates a histogram of all values using \code{\link[graphics]{hist}}.
+#' It then overlays density histograms for each sample, with colors corresponding to column numbers.
+#'
+#' @return A histogram plot is generated, no value is returned.
 #'
 #' @examples
+#' \dontrun{
+#' gx <- matrix(rnorm(100 * 10), 100, 10)
+#' gx.hist(gx)
+#' }
 gx.hist <- function(gx, main = "", ylim = NULL) {
   h0 <- hist(as.vector(gx),
     breaks = 120, main = main,
@@ -93,23 +155,36 @@ gx.hist <- function(gx, main = "", ylim = NULL) {
   }
 }
 
-## from http://menugget.blogspot.ch/2011/09/converting-values-to-color-levels.html
-# this function converts a vector of values("z") to a vector of color
-# levels. One must define the number of colors. The limits of the color
-# scale("zlim") or the break points for the color dplyr::changes("breaks") can
-# also be defined. when breaks and zlim are defined, breaks overrides zlim.
 
-#' Title
+
+#' @title Convert values to colors
 #'
-#' @param z value
-#' @param zlim value
-#' @param col value
-#' @param breaks value
+#' @description
+#' Converts a numeric vector into a vector of colors based on the value.
 #'
-#' @return
-#' @export
+#' @param z A numeric vector of values to convert to colors.
+#' @param zlim Limit values for the color scale. If missing, will use range of z.
+#' @param col Colors to use. Passed to \code{\link[grDevices]{heat.colors}}.
+#' @param breaks Break points for coloring. If missing, breaks are calculated automatically.
+#'
+#' @return A character vector of colors corresponding to the input values.
+#'
+#' @details
+#' this function converts a vector of values("z") to a vector of color
+#' levels. One must define the number of colors. The limits of the color
+#' scale("zlim") or the break points for the color dplyr::changes("breaks") can
+#' also be defined. when breaks and zlim are defined, breaks overrides zlim.
+#' @seealso
+#' Original post:
+#'   \url{http://menugget.blogspot.ch/2011/09/converting-values-to-color-levels.html}
 #'
 #' @examples
+#' \dontrun{
+#' z <- rnorm(100)
+#' cols <- val2col(z, zlim = c(-3, 3))
+#' barplot(height = z, col = cols)
+#' }
+#' @export
 val2col <- function(z, zlim, col = heat.colors(12), breaks) {
   if (!missing(breaks)) {
     if (length(breaks) != (length(col) + 1)) {
@@ -133,19 +208,34 @@ val2col <- function(z, zlim, col = heat.colors(12), breaks) {
 }
 
 
-#' Title
+#' Convert gene symbols to official HUGO gene symbols
 #'
-#' @param genes value
-#' @param remove.non.hugo value
-#' @param silent value
-#' @param take.only.first value
-#' @param split.char value
-#' @param unknown value
+#' @param genes Character vector of gene symbols to convert
+#' @param remove.non.hugo Logical indicating whether to remove non-HUGO symbols. Default is TRUE.
+#' @param silent Logical indicating whether to suppress messages about conversions. Default is FALSE.
+#' @param take.only.first Logical indicating whether to take only first HUGO symbol for aliases. Default is FALSE.
+#' @param split.char Character used to split multiple aliases. Default ";".
+#' @param unknown Character string to use for unknown symbols. Default "unknown_gene".
 #'
-#' @return
-#' @export
+#' @return Character vector of official HUGO gene symbols.
+#'
+#' @details This function converts a character vector of gene symbols to official HUGO gene symbols.
+#' It first removes any aliases by mapping to the primary HUGO symbol list.
+#' For any remaining non-HUGO symbols, it attempts to find the official symbol by alias mapping.
+#'
+#' If take.only.first is TRUE, only the first HUGO symbol is taken when a gene maps to multiple aliases.
+#' Multiple aliases are concatenated by split.char when take.only.first=FALSE.
+#'
+#' Non-HUGO symbols that cannot be converted are replaced with unknown by default.
+#' Messages about conversions are printed unless silent=TRUE.
 #'
 #' @examples
+#' \dontrun{
+#' genes <- c("EGFR", "CDKN2A", "FOO", "BAR")
+#' hugo_symbols <- symbol2hugo(genes)
+#' }
+#'
+#' @export
 symbol2hugo <- function(genes, remove.non.hugo = TRUE, silent = FALSE,
                         take.only.first = FALSE, split.char = ";", unknown = "unknown_gene") {
   HUGO.SYMBOLS <- unique(unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL)))
@@ -186,13 +276,25 @@ symbol2hugo <- function(genes, remove.non.hugo = TRUE, silent = FALSE,
   ss
 }
 
-
-#' Title
+#' Collapse rows by common symbol
 #'
-#' @param X value
-#' @param symbol value
+#' @title Collapse rows by common symbol
+#'
+#' @description
+#' Collapses rows of a matrix based on a common symbol, removing duplicates.
+#'
+#' @param X Numeric matrix with rows to collapse.
+#' @param symbol Character vector of symbols corresponding to rows of X.
+#'
+#' @details
+#' This function takes a matrix X and a corresponding symbol vector.
+#' It orders the rows by standard deviation.
+#' It then keeps the first unique occurrence of each symbol, removing duplicates.
+#' The result is a matrix with rows collapsed based on the provided symbols.
 #'
 #' @return
+#' A matrix with rows collapsed based on the provided symbols.
+#'
 #' @export
 #'
 #' @examples

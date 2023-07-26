@@ -2,7 +2,7 @@
 % Please edit documentation in R/gx-limma.r
 \name{gx.test.groups}
 \alias{gx.test.groups}
-\title{Title}
+\title{Differential expression testing between groups}
 \usage{
 gx.test.groups(
   sig,
@@ -14,18 +14,29 @@ gx.test.groups(
 )
 }
 \arguments{
-\item{sig}{value}
+\item{sig}{Gene expression matrix with genes in rows and samples in columns.}
 
-\item{class.label}{value}
+\item{class.label}{Vector of group labels for each sample. Must have two unique values.}
 
-\item{fdr}{value}
+\item{fdr}{FDR threshold for identifying differentially expressed genes.}
 
-\item{test.method}{value}
+\item{test.method}{Test method to use. Options are "wilcox", "limma", "ttest", or "fisher".}
 
-\item{running.name}{value}
+\item{running.name}{Optional name prefix for output files.}
 
-\item{output.to.file}{value}
+\item{output.to.file}{Logical for writing results to file.}
+}
+\value{
+Data frame with gene p-values and FDR.
 }
 \description{
-Title
+Performs differential expression testing between two groups.
+Supports wilcoxon, t-test, limma, and fisher's exact test.
+}
+\details{
+Differential expression testing between groups
+
+This function performs differential expression testing between two groups defined by \code{class.label}.
+It handles filtering out NA values and outputs p-values and FDR for each gene.
+The test method can be specified, with "limma" as the default.
 }

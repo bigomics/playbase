@@ -2,7 +2,7 @@
 % Please edit documentation in R/ngs-salmon.r
 \name{ngs.tximportSalmon}
 \alias{ngs.tximportSalmon}
-\title{Title}
+\title{Import Salmon Abundance Estimates}
 \usage{
 ngs.tximportSalmon(
   sf.files,
@@ -12,14 +12,23 @@ ngs.tximportSalmon(
 )
 }
 \arguments{
-\item{sf.files}{value}
+\item{sf.files}{A named character vector of Salmon SF files.}
 
-\item{count.type}{value}
+\item{count.type}{The type of counts to extract, either "TPM", "NumReads" or "lengthScaledTPM".}
 
-\item{organism}{value}
+\item{organism}{The organism name, either "Hsapiens" or "Mmusculus".}
 
-\item{txOut}{value}
+\item{txOut}{Whether to output transcript-level estimates in addition to gene-level.}
+}
+\value{
+A DGEList object containing the abundance estimates, ready for use with edgeR.
 }
 \description{
-Title
+This function imports Salmon transcript abundance estimates from Salmon SF files 
+and converts them to a DGEList object for use with edgeR.
+}
+\details{
+This function takes a named character vector of Salmon SF files, extracts the abundance 
+estimates, converts them to a DGEList object with integer counts scaled to library size.
+It requires the EnsDb and org packages for the corresponding organism.
 }

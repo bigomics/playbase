@@ -2,13 +2,29 @@
 % Please edit documentation in R/gx-util.r
 \name{gmean}
 \alias{gmean}
-\title{Title}
+\title{Calculate geometric mean}
 \usage{
 gmean(x)
 }
 \arguments{
-\item{x}{value}
+\item{x}{A numeric vector.}
+}
+\value{
+The geometric mean as a numeric value.
 }
 \description{
-Title
+Calculates the geometric mean of a numeric vector.
+}
+\details{
+The geometric mean is calculated by taking the nth root of the 
+product of n numbers, where n is the length of the input vector. It is 
+more appropriate than the arithmetic mean for positively skewed 
+distributions.
+}
+\examples{
+\dontrun{
+x <- c(1, 10, 100)
+gmean(x) 
+}
+
 }

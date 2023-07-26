@@ -392,8 +392,8 @@ pgx.makeTriSystemGraph <- function(data, Y, nfeat = 25, numedge = 100, posonly =
 
     gr <- igraph::delete_edges(gr, igraph::E(gr)[which_loop(gr)])
     edges <- data.frame(igraph::get.edgelist(gr),
-      rho = E(gr)$rho,
-      importance = E(gr)$importance
+      rho = igraph::E(gr)$rho,
+      importance = igraph::E(gr)$importance
     )
     colnames(edges)[1:2] <- c("from", "to")
 

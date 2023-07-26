@@ -2,19 +2,39 @@
 % Please edit documentation in R/gx-util.r
 \name{val2col}
 \alias{val2col}
-\title{Title}
+\title{Convert values to colors}
 \usage{
 val2col(z, zlim, col = heat.colors(12), breaks)
 }
 \arguments{
-\item{z}{value}
+\item{z}{A numeric vector of values to convert to colors.}
 
-\item{zlim}{value}
+\item{zlim}{Limit values for the color scale. If missing, will use range of z.}
 
-\item{col}{value}
+\item{col}{Colors to use. Passed to \code{\link[grDevices]{heat.colors}}.}
 
-\item{breaks}{value}
+\item{breaks}{Break points for coloring. If missing, breaks are calculated automatically.}
+}
+\value{
+A character vector of colors corresponding to the input values.
 }
 \description{
-Title
+Converts a numeric vector into a vector of colors based on the value.
+}
+\details{
+this function converts a vector of values("z") to a vector of color
+levels. One must define the number of colors. The limits of the color
+scale("zlim") or the break points for the color dplyr::changes("breaks") can
+also be defined. when breaks and zlim are defined, breaks overrides zlim.
+}
+\examples{
+\dontrun{
+z <- rnorm(100)
+cols <- val2col(z, zlim=c(-3,3))
+barplot(height=z, col=cols)
+}
+}
+\seealso{
+Original post: 
+  \url{http://menugget.blogspot.ch/2011/09/converting-values-to-color-levels.html}
 }

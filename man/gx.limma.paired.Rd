@@ -2,7 +2,7 @@
 % Please edit documentation in R/gx-limma.r
 \name{gx.limma.paired}
 \alias{gx.limma.paired}
-\title{Title}
+\title{Differential expression analysis using limma for paired samples}
 \usage{
 gx.limma.paired(
   X,
@@ -18,22 +18,34 @@ gx.limma.paired(
 )
 }
 \arguments{
-\item{X}{value}
+\item{X}{Numeric matrix of gene expression values (genes in rows, samples in columns).}
 
-\item{pheno}{value}
+\item{pheno}{Phenotype factor vector indicating the sample classes.}
 
-\item{pair}{value}
+\item{pair}{Factor vector indicating which samples are paired.}
 
-\item{fdr}{value}
+\item{fdr}{FDR threshold for identifying differentially expressed genes.}
 
-\item{lfc}{value}
+\item{lfc}{Log2 fold change cutoff for differential expression.}
 
-\item{ref}{value}
+\item{ref}{Character vector of reference levels to use as baseline in contrasts.}
 
-\item{compute.means}{value}
+\item{compute.means}{Logical indicating whether to append mean expression values.}
 
-\item{trend}{value}
+\item{trend}{Logical indicating whether to fit a mean-variance trend.}
+}
+\value{
+Data frame containing limma analysis results.
 }
 \description{
-Title
+Performs differential expression analysis using limma on paired or repeated measurement data.
+Designed for pre-post, treated-untreated, or matched designs with two measurements per sample.
+}
+\details{
+Differential expression analysis for paired data
+
+This function handles the limma model matrix and contrasts for paired designs.
+The \code{pair} vector indicates which samples are paired measurements.
+A differential expression analysis is performed between the phenotype classes.
+Results are filtered by FDR and fold change thresholds.
 }

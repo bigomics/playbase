@@ -32,7 +32,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
   ## xdrugs : drug associated with profile
 
   if ("gx.meta" %in% names(obj)) {
-    F <- playbase::pgx.getMetaMatrix(obj)$fc
+    F <- pgx.getMetaMatrix(obj)$fc
     ## check if multi-omics
     is.multiomics <- any(grepl("\\[gx\\]|\\[mrna\\]", rownames(F)))
     is.multiomics

@@ -6,6 +6,29 @@
 \usage{
 alias2hugo(s, org = NULL, na.orig = TRUE)
 }
+\arguments{
+\item{s}{A character vector of gene aliases to be converted to HUGO gene symbols.}
+
+\item{org}{A character string specifying the organism, either "hs" for human or "mm" for mouse.
+If not specified, the function will attempt to determine the organism based on the input gene aliases.}
+
+\item{na.orig}{A logical value indicating whether to keep the original values of
+gene aliases that could not be mapped to HUGO gene symbols. If TRUE, the original values will be kept,
+otherwise they will be replaced with NA.}
+}
+\value{
+A character vector of HUGO gene symbols corresponding to the input gene aliases.
+}
 \description{
-Convert any gene alias to official gene symbol
+This function takes a character vector of gene aliases and converts them to HUGO gene symbols.
+The organism can be specified as either human or mouse, or the function can attempt to determine
+the organism based on the input gene aliases. Unmapped gene aliases can be kept as their original values
+or replaced with NA.
+}
+\examples{
+\dontrun{
+symbols <- c("TP53", "P53", "Cd19", NA)
+alias2hugo(symbols)
+alias2hugo(symbols, org = "mm")
+}
 }

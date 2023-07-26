@@ -49,7 +49,7 @@ pgx.wgcna <- function(
   ## clean up traits matrix
   datTraits <- pgx$samples
   ## no dates please...
-  isdate <- apply(datTraits, 2, playbase::is.Date)
+  isdate <- apply(datTraits, 2, is.Date)
   datTraits <- datTraits[, !isdate, drop = FALSE]
 
   ## Expand multi-class discrete phenotypes into binary vectors
@@ -59,7 +59,7 @@ pgx.wgcna <- function(
 
   tr1 <- datTraits[, 0]
   if (length(sel1)) {
-    tr1 <- playbase::expandPhenoMatrix(datTraits[, sel1, drop = FALSE], drop.ref = FALSE)
+    tr1 <- expandPhenoMatrix(datTraits[, sel1, drop = FALSE], drop.ref = FALSE)
   }
   ## keeping numeric phenotypes
   tr2 <- datTraits[, sel2, drop = FALSE]
@@ -68,7 +68,7 @@ pgx.wgcna <- function(
   ## get colors of eigengene modules
   me.genes <- tapply(names(net$colors), net$colors, list)
   names(me.genes) <- paste0("ME", names(me.genes))
-  color1 <- playbase::labels2rainbow(net)
+  color1 <- labels2rainbow(net)
   me.colors <- color1[!duplicated(color1)]
   names(me.colors) <- paste0("ME", names(me.colors))
   me.colors <- me.colors[names(me.genes)]
@@ -77,7 +77,7 @@ pgx.wgcna <- function(
   X1 <- t(scale(datExpr))
   dissTOM <- 1 - WGCNA::TOMsimilarityFromExpr(datExpr, power = power)
   rownames(dissTOM) <- colnames(dissTOM) <- colnames(datExpr)
-  clust <- playbase::pgx.clusterBigMatrix(dissTOM, methods = c("umap", "tsne", "pca"), dims = c(2))
+  clust <- pgx.clusterBigMatrix(dissTOM, methods = c("umap", "tsne", "pca"), dims = c(2))
   if ("cluster.genes" %in% names(pgx)) {
     clust[["umap2d"]] <- pgx$cluster.genes$pos[["umap2d"]][colnames(datExpr), ]
   }
@@ -88,7 +88,7 @@ pgx.wgcna <- function(
   i <- 1
   for (i in 1:length(me.genes)) {
     gg <- toupper(me.genes[[i]])
-    rr <- playbase::gset.fisher(gg, gmt, background = bg, fdr = 1)
+    rr <- gset.fisher(gg, gmt, background = bg, fdr = 1)
     rr <- cbind(
       module = names(me.genes)[i],
       geneset = rownames(rr), rr

@@ -2,19 +2,39 @@
 % Please edit documentation in R/gx-heatmap.r
 \name{frozenmap}
 \alias{frozenmap}
-\title{Title}
+\title{Create a heatmap from downsampled data}
 \usage{
 frozenmap(x, m = 8, n = 8, ...)
 }
 \arguments{
-\item{x}{value}
+\item{x}{Numeric data matrix}
 
-\item{m}{value}
+\item{m}{Number of rows to downsample to}
 
-\item{n}{value}
+\item{n}{Number of columns to downsample to}
 
-\item{...}{value}
+\item{...}{Additional arguments passed to gx.heatmap()}
+}
+\value{
+A heatmap grob object
+
+A heatmap grob object from gx.heatmap()
 }
 \description{
-Title
+Create a heatmap from downsampled data
+}
+\details{
+This function downsamples the rows and columns of a large data matrix
+to reduce its size, then visualizes the downsampled matrix as a heatmap.
+
+It downsamples by clustering rows and columns hierarchically, taking the
+cluster means, and selecting representative rows/columns. The downsampled
+matrix is plotted with gx.heatmap().
+}
+\examples{
+\dontrun{
+mat <- matrix(rnorm(10000), 1000, 10)
+frozenmap(mat, m=100, n=5)
+}
+
 }

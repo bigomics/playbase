@@ -2,10 +2,6 @@
 #'
 #'
 
-#' Test for text_repel.NOTWORKING
-#'
-#'
-
 #' Test for pos.compact
 test_that("pos.compact works", {
   # Sample input
@@ -83,6 +79,13 @@ test_that("search_path finds file in paths", {
   expect_equal(path, file.path(dir1, file))
   expect_true(file.exists(path))
 
+  # Test with NA input
+  expect_null(search_path(NA, "file.txt"))
+
+  # Test with NULL input
+  expect_null(search_path(NULL, "file.txt"))
+
+
   # Clean up
   unlink(file.path(dir1, file))
 })
@@ -149,7 +152,24 @@ test_that("add_opacity adds opacity correctly", {
 })
 
 #' Test for logCPM
-#'
+test_that("logCPM transforms counts to logCPM", {
+  # Generate test data
+  set.seed(123)
+  counts <- matrix(rpois(100, lambda = 10), ncol = 10)
+
+  # Expected output
+  expected <- log2(counts / colSums(counts) * 1e6 + 1)
+
+  # Run function
+  result <- playbase::logCPM(counts)
+
+  # Check class
+  expect_equal(class(result), c("matrix", "array"))
+
+  # Check values
+  expect_equal(round(result, 4), round(expected, 4), tolerance = 0.5)
+})
+
 
 #' Test for pgx.checkObject
 #'
@@ -172,8 +192,23 @@ test_that("add_opacity adds opacity correctly", {
 #'
 
 #' Test for randomImputeMissing
-#'
-#'
+test_that("randomImputeMissing imputes NA values", {
+  set.seed(123)
+
+  # Create test matrix with NA values
+  mat <- matrix(1:20, nrow = 5)
+  mat[c(3, 7, 9)] <- NA
+
+  # Impute missing values
+  mat_imputed <- playbase::randomImputeMissing(mat)
+
+  # Check that there are no more NA values
+  expect_true(!anyNA(mat_imputed))
+
+  # Check that imputed values are sampled from column
+  imputed_vals <- mat_imputed[c(3, 7, 9)]
+  expect_true(all(imputed_vals %in% mat))
+})
 
 #' Test for human2mouse.SLLOWWW
 #'
@@ -189,8 +224,39 @@ test_that("add_opacity adds opacity correctly", {
 #'
 
 #' Test for probe2symbol
-#'
-#'
+test_that("probe2symbol returns expected output", {
+  # Create test data
+  set.seed(124)
+  counts <- playbase::COUNTS
+  subset_genes <- sample(seq_len(nrow(counts)), 10)
+  probes <- rownames(playbase::COUNTS)[subset_genes]
+  symbols <- probe2symbol(probes)
+  ensembl_input <- c(
+    "ENSG00000139618", "ENSG00000141510",
+    "ENSG00000157764", "ENSG00000121879",
+    "ENSG00000136997"
+  )
+  ensembl_test <- probe2symbol(ensembl_input)
+  ensembl_na <- c(
+    NA_character_, "ENSG00000141510",
+    "ENSG00000157764", NA_character_,
+    "ENSG00000136997"
+  )
+  symbol_na <- probe2symbol(ensembl_na)
+
+  # Expected
+  # Default parameters
+  expect_equal(length(symbols), length(probes))
+  expect_type(symbols, "character")
+
+  # Test for ensembl input
+  expect_equal(length(ensembl_test), length(ensembl_input))
+  expect_type(ensembl_test, "character")
+
+  # Test handling NAs
+  expect_type(symbol_na, "character")
+  expect_true(sum(is.na(symbol_na)) == sum(is.na(ensembl_na)))
+})
 
 #' Test for trimsame
 #'
@@ -455,8 +521,29 @@ test_that("relevelFactorFirst relevels factor with first level", {
 #'
 
 #' Test for alias2hugo
-#'
-#'
+test_that("alias2hugo converts gene symbols", {
+  # Generate test data
+  gene0 <- c("A1BG", "ACOT9", "FOO1", NA, "BAR2", "IRAK1", "CNEP1R1", "EIF2B4", "RRAS2", "AGAP3")
+  expected <- c("A1BG", "ACOT9", "FOO1", NA, "BAR2", "IRAK1", "CNEP1R1", "EIF2B4", "RRAS2", "AGAP3")
+  expected_na_false <- c("A1BG", "ACOT9", NA, NA, NA, "IRAK1", "CNEP1R1", "EIF2B4", "RRAS2", "AGAP3")
+  # Test on human
+  result <- alias2hugo(gene0, org = "hs")
+  expect_equal(result, expected)
+
+  # Test on mouse
+  result <- alias2hugo(gene0, org = "mm")
+  expect_equal(result, expected)
+
+  # Test preserving NA
+  result <- alias2hugo(gene0, org = "hs", na.orig = TRUE)
+  expect_equal(result, expected)
+
+  result <- alias2hugo(gene0, org = "hs", na.orig = FALSE)
+  expect_equal(result, expected_na_false)
+
+  # Test error on wrong organism
+  expect_error(alias2hugo(gene0, org = "zz"))
+})
 
 #' Test for breakstringBROKEN
 #'

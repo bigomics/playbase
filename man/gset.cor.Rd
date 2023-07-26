@@ -2,17 +2,37 @@
 % Please edit documentation in R/gset-rankcor.r
 \name{gset.cor}
 \alias{gset.cor}
-\title{Title}
+\title{Calculate gene set correlation}
 \usage{
 gset.cor(rnk, gset, compute.p = FALSE)
 }
 \arguments{
-\item{rnk}{value}
+\item{rnk}{Numeric vector of gene ranks.}
 
-\item{gset}{value}
+\item{gset}{List of gene sets. Each element is a character vector of gene names.}
 
-\item{compute.p}{value}
+\item{compute.p}{Logical indicating whether to compute p-values.}
+}
+\value{
+Matrix of correlation values between rnk and each gene set.
 }
 \description{
-Title
+Computes correlation between a gene rank vector and gene sets.
+}
+\details{
+This function calls gset.rankcor() with use.rank=FALSE to calculate 
+Pearson correlation between the gene rank vector and membership in each gene set.
+
+P-values can be optionally computed to assess correlation significance.
+}
+\examples{
+\dontrun{
+librart(playbase)
+ranks <- sample(1:10000, 1000, replace = TRUE) 
+names(ranks) <- replicate(1000, paste(sample(LETTERS, 4, replace = TRUE), collapse = ""))
+genesets <- list(GS1=sample(names(ranks), 100),
+                 GS2=sample(names(ranks), 50))
+
+gset.cor(ranks, genesets)
+}
 }

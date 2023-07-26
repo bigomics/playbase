@@ -13,31 +13,6 @@ pgx.phenoMatrix <- function(pgx, phenotype) {
 }
 
 #' @export
-text_repel.NOTWORKING <- function(x, y, text, cex = 1, force = 1e-7, maxiter = 20000) {
-  ## x and y posiitons as a dataframe
-  df <- data.frame(x = x, y = y, text = text)
-  w <- diff(range(x))
-  h <- diff(range(y))
-  dx0 <- w * 0.08
-  dy0 <- h * 0.05
-  par(mfrow = c(1, 1))
-  plot(x, y, type = "n")
-  dx1 <- max(strwidth(text, cex = cex, units = "user") * w)
-  dy1 <- max(strheight(text, cex = cex, units = "user") * w)
-  out <- util.findboxes(
-    df, "x", "y",
-    box_padding_x = dx1,
-    box_padding_y = dy1,
-    point_padding_x = dx0,
-    point_padding_y = dy0,
-    xlim = range(x),
-    ylim = range(y),
-    force = 1e-7, maxiter = 20000
-  )
-  out[, 3:4]
-}
-
-#' @export
 pos.compact <- function(pos, d = 0.01) {
   ## make positions more dense removing white space
   for (i in 1:ncol(pos)) {
@@ -263,9 +238,27 @@ mouse2human <- function(x) {
   homologene::mouse2human(x)
 }
 
-
+#' Map probe identifiers to gene symbols
+#'
+#' @param probes Character vector of probe identifiers
+#' @param type Character specifying the type of identifier in probes. If NULL,
+#'   the function will try to detect the identifier type automatically.
+#' @param keep.na Logical indicating whether to keep NA symbols (TRUE) or replace
+#'   them with the original probe identifiers (FALSE).
+#'
+#' @return Character vector of mapped gene symbols.
+#'
+#' @examples
+#' \dontrun{
+#' counts <- playbase::COUNTS
+#' subset_genes <- round(seq(1, nrow(counts), length.out = 10))
+#' probes <- rownames(playbase::COUNTS)[subset_genes]
+#' symbols <- playbase::probe2symbol(probes)
+#' }
+#'
 #' @export
-probe2symbol <- function(probes, type = NULL, org = "human", keep.na = FALSE) {
+
+probe2symbol <- function(probes, type = NULL, keep.na = FALSE) {
   ## strip postfix for ensemble codes
   if (mean(grepl("^ENS", probes)) > 0.5) {
     probes <- gsub("[.].*", "", probes)
@@ -866,11 +859,13 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 #' @export
 pgx.getOrganism <- function(pgx.counts) {
   ## NEED RETHINK FOR MULTI-ORGANISM
-  rownames.counts <- grep("^rik|^loc|^orf", rownames(pgx.counts), value = TRUE,
-                          ignore.case = TRUE, invert = TRUE)
+  rownames.counts <- grep("^rik|^loc|^orf", rownames(pgx.counts),
+    value = TRUE,
+    ignore.case = TRUE, invert = TRUE
+  )
   cap.fraction <- mean(grepl("^[A-Z][a-z]+", rownames.counts), na.rm = TRUE)
   is.mouse <- (cap.fraction > 0.8)
-  org <- ifelse(is.mouse,"mouse","human")
+  org <- ifelse(is.mouse, "mouse", "human")
   return(org)
 }
 
@@ -1262,7 +1257,29 @@ is.Date <- function(x) {
   }
 }
 
-
+#' @title Calculate group means
+#'
+#' @description
+#' Calculates the column means within groups defined by a grouping variable.
+#'
+#' @param mat Numeric matrix with columns as samples.
+#' @param group Grouping vector or factor.
+#' @param FUN Function for aggregation. Default is mean.
+#'
+#' @return Matrix with group means.
+#'
+#' @details This function calculates the column means of \code{X} within groups
+#'  defined by \code{y}. It calculates the mean for each column within each
+#' group. The output is a matrix with rows corresponding to groups and columns
+#' corresponding to samples.
+#'
+#' @examples
+#' \dontrun{
+#' mat <- matrix(rnorm(100), ncol = 10)
+#' groups <- gl(2, 5)
+#' means <- averageByGroup(mat, groups)
+#' }
+#'
 #' @export
 averageByGroup <- function(mat, group, FUN = mean) {
   out <- do.call(cbind, tapply(
@@ -1302,7 +1319,27 @@ extremeCorrelation <- function(query_sig, ref_set, n = 200) {
 }
 
 #' Convert any gene alias to official gene symbol
+#' @description
+#' This function takes a character vector of gene aliases and converts them to HUGO gene symbols.
+#' The organism can be specified as either human or mouse, or the function can attempt to determine
+#' the organism based on the input gene aliases. Unmapped gene aliases can be kept as their original values
+#' or replaced with NA.
 #'
+#' @param s A character vector of gene aliases to be converted to HUGO gene symbols.
+#' @param org A character string specifying the organism, either "hs" for human or "mm" for mouse.
+#' If not specified, the function will attempt to determine the organism based on the input gene aliases.
+#' @param na.orig A logical value indicating whether to keep the original values of
+#' gene aliases that could not be mapped to HUGO gene symbols. If TRUE, the original values will be kept,
+#' otherwise they will be replaced with NA.
+#'
+#' @return A character vector of HUGO gene symbols corresponding to the input gene aliases.
+#'
+#' @examples
+#' \dontrun{
+#' symbols <- c("TP53", "P53", "Cd19", NA)
+#' alias2hugo(symbols)
+#' alias2hugo(symbols, org = "mm")
+#' }
 #' @export
 alias2hugo <- function(s, org = NULL, na.orig = TRUE) {
   ## determine if we deal with human or mouse
@@ -1334,18 +1371,6 @@ alias2hugo <- function(s, org = NULL, na.orig = TRUE) {
   hugo0[nna] <- hugo
   return(hugo0)
 }
-
-#' @export
-breakstringBROKEN <- function(s, n, force = FALSE) {
-  if (is.null(s) || length(s) == 0) {
-    return(NULL)
-  }
-  if (length(s) == 1) {
-    return(breakstring1(s, n = n, force = force))
-  }
-  sapply(s, breakstring1, n = n, force = force)
-}
-
 
 #' @export
 breakstring <- function(s, n, nmax = 999, force = FALSE, brk = "\n") {

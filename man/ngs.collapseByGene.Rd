@@ -2,13 +2,25 @@
 % Please edit documentation in R/ngs-functions.R
 \name{ngs.collapseByGene}
 \alias{ngs.collapseByGene}
-\title{Title}
+\title{Collapse duplicate genes in NGS dataset}
 \usage{
 ngs.collapseByGene(ngs)
 }
 \arguments{
-\item{ngs}{value}
+\item{ngs}{An NGS dataset object}
+}
+\value{
+The NGS dataset object with collapsed genes
 }
 \description{
-Title
+Collapse duplicate genes in NGS dataset
+}
+\details{
+This function collapses duplicate gene names in an NGS dataset by summing their counts.
+
+It first identifies genes that occur only once or more than once in the dataset.
+For uniquely occurring genes, it keeps them as is.
+For duplicate genes, it sums their counts by gene name.
+
+The gene and count matrices in the NGS dataset object are then updated accordingly.
 }
