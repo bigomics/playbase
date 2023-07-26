@@ -428,7 +428,7 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
       methods = c("pca", "tsne", "umap"),
       dims = c(2, 3),
       reduce.sd = 2000,
-      reduce.pca = min(200,ncol(X)/3)
+      reduce.pca = min(200, ncol(X) / 3)
     )
 
     if (!h5exists(h5.file, "clustering")) rhdf5::h5createGroup(h5.file, "clustering")
