@@ -516,7 +516,7 @@ fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
   df <- data.table::fread(
     file = file, check.names = check.names, header = header,
     sep = sep, fill = TRUE
-  )  
+  )
   x <- data.frame(df[, 2:ncol(df)],
     stringsAsFactors = stringsAsFactors,
     check.names = check.names
