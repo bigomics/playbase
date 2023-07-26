@@ -7,7 +7,7 @@
 ## ========================= CONNECTIVITY FUNCTIONS ===============================
 ## ================================================================================
 
-##ntop = 1000; contrasts = NULL;remove.le = FALSE;inmemory = FALSE
+## ntop = 1000; contrasts = NULL;remove.le = FALSE;inmemory = FALSE
 
 #' @export
 pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 1000, contrasts = NULL,
@@ -176,8 +176,8 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   ##
   ##
   ##
-##nsig=100;ntop=1000;nperm=10000;h5.data="data/matrix";h5.rn="data/rownames";h5.cn="data/colnames"
-  
+  ## nsig=100;ntop=1000;nperm=10000;h5.data="data/matrix";h5.rn="data/rownames";h5.cn="data/colnames"
+
 
   if (is.null(names(fc))) stop("fc must have names")
   ## mouse... mouse...
@@ -217,7 +217,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   sel.idx <- match(sel, cn)
 
   ## if we have less than 500 genes, we should make smaller GMT sets
-  nsig <- min(100, round(length(fc)/5))
+  nsig <- min(100, round(length(fc) / 5))
 
   sig100.up <- rhdf5::h5read(h5.file, "signature/sig100.up",
     index = list(1:nsig, sel.idx)
@@ -231,7 +231,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
   names(gmt) <- cn[sel.idx]
 
-  system.time(res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm, scoreType="pos")) ## really unsigned???
+  system.time(res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm, scoreType = "pos")) ## really unsigned???
 
   ## ---------------------------------------------------------------
   ## Combine correlation+GSEA by combined score (NES*rho)
