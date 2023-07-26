@@ -3,6 +3,23 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
+
+#' @title Purify tumor expression profiles
+#'
+#' @param expr Numeric gene expression matrix, rows are genes, columns are samples.
+#' @param normal Numeric gene expression matrix from normal samples. 
+#' @param method Character vector of deconvolution methods to apply.
+#'
+#' @return List containing purified expression profiles and estimated tumor purity.
+#'
+#' @description Estimates and removes normal cell contamination from tumor expression profiles.
+#' 
+#' @details This function takes a tumor expression matrix and an expression matrix from normal samples.
+#' It applies computational deconvolution methods like ISOpure, DeMixT, etc. to estimate normal contamination.
+#' 
+#' The normal profile is removed from each tumor sample to generate a purified tumor expression profile.
+#' Results from all methods are returned as a list, along with numeric vectors of estimated tumor purity.
+#' 
 #' @export
 pgx.purifyExpression <- function(tumorX, normalX,
                                  method = c("nnlm", "nnmf", "isopurer", "demixt", "undo")) {
@@ -18,7 +35,6 @@ pgx.purifyExpression <- function(tumorX, normalX,
     pen <- rep(0, 3)
     res <- NNLM::nnlm(normalX, tumorX, alpha = pen)
     cf <- res$coefficients
-    cf
     normal.frac <- (normalX %*% cf)
     alpha0 <- (1 - Matrix::colSums(normal.frac) / Matrix::colSums(tumorX))
     alpha0
@@ -54,7 +70,6 @@ pgx.purifyExpression <- function(tumorX, normalX,
     ISOpureS1model <- ISOpureR::ISOpure.step1.CPE(tumorX, normalX)
     ISOpureS2model <- ISOpureR::ISOpure.step2.PPE(tumorX, normalX, ISOpureS1model)
     isopurer.alpha <- ISOpureS2model$alphapurities
-    isopurer.alpha
 
     x.hat <- ISOpureS2model$cc_cancerprofiles
     alpha[["isopurer"]] <- isopurer.alpha

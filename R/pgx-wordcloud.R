@@ -7,6 +7,25 @@
 ## ------------- Functions for WordCloud ------------------------
 ## ---------------------------------------------------------------
 
+
+#' @title Calculate word frequencies for word cloud
+#'
+#' @param ngs A NGStest object containing gene set results. 
+#' @param progress A progress object to track progress.
+#' @param pg.unit Increment value for progress tracking.  
+#'
+#' @return A matrix with word frequencies for word cloud visualization.
+#' 
+#' @description Calculates word frequencies from gene set names for generating a word cloud.
+#'
+#' @details This function takes a NGStest object containing gene set analysis results. 
+#' It extracts the gene set names, filters out common words, and calculates word frequencies.
+#'
+#' Gene set names are split into words and filtered to remove common stopwords. The top 1000 most frequent
+#' words are kept. Word frequencies are calculated based on occurrence in the gene set names.
+#'  
+#' The output is a matrix of word frequencies suitable for generating a word cloud visualization.
+#'
 #' @export
 pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   if (is.null(ngs$gset.meta)) {
@@ -98,9 +117,6 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
 
   if (!is.null(progress)) progress$inc(0.25 * pg.unit, detail = "clustering")
 
-
-
-
   if (NCOL(W) <= 3) {
     ## t-SNE doesn't like 1-2 columns...
     W <- cbind(W, W, W, W, W)
@@ -111,7 +127,6 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   message("[pgx.calculateWordCloud] setting perplexity = ", nb)
   pos1 <- Rtsne::Rtsne(t(as.matrix(W)),
     perplexity = nb,
-    ## pca =TRUE, partial_pca =TRUE,
     check_duplicates = FALSE
   )$Y
   pos2 <- uwot::umap(t(as.matrix(W)), n_neighbors = nb)
@@ -119,7 +134,6 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   colnames(pos1) <- colnames(pos2) <- c("x", "y")
   pos1 <- pos1[match(res$word, rownames(pos1)), ]
   pos2 <- pos2[match(res$word, rownames(pos2)), ]
-
 
   # sometimes we have words that NA is tsne, make sure we remove them (likely special characters) in windows or wsl
   pos1 <- pos1[!is.na(rownames(pos1)), ]
@@ -130,5 +144,5 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   res$umap <- res$umap[ordered_words, ]
 
   all.res <- list(gsea = all.gsea, S = S, W = W, tsne = pos1, umap = pos2)
-  all.res
+  return(all.res)
 }

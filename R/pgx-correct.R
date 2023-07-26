@@ -617,7 +617,34 @@ normalizeRLE <- function(counts, log = FALSE, use = "deseq2") {
 }
 
 
-
+#' @title Normalize count data  
+#'
+#' @description
+#' Normalizes a matrix of RNA-seq count data using different methods.
+#'
+#' @param x Matrix of count data, with genes in rows and samples in columns.
+#' @param methods Normalization method(s) to use. Options are "none", "scale", "CPM", "TMM", "RLE".
+#' @param keep.zero Logical indicating whether to retain zero counts. Default is TRUE.
+#'
+#' @details
+#' This function normalizes a matrix of RNA-seq count data using different normalization methods:
+#' 
+#' - "none": No normalization 
+#' - "scale": Scale normalization by column means
+#' - "CPM": Counts per million
+#' - "TMM": Trimmed mean of M-values (edgeR)
+#' - "RLE": Relative log expression (DESeq2)
+#'
+#' Zero counts can be retained or set to NA after normalization based on the keep.zero parameter.
+#'  
+#' @return
+#' The normalized count matrix.
+#'
+#' @examples
+#' \dontrun{
+#' counts <- matrix(rnbinom(10000, mu = 10, size = 1), 100, 100)
+#' normalized <- pgx.countNormalization(counts, c("TMM", "RLE")) 
+#' }
 #' @export
 pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
   ## Column-wise normalization (along samples).
@@ -1036,6 +1063,30 @@ pgx.optimizeBatchCorrection.NOTREADY <- function(ngs, batch, contrast, nparam = 
 }
 
 
+#' @title Compute Number of Significant Genes
+#'
+#' @param obj A pgx object 
+#' @param batch A character vector of batch parameters 
+#' @param contrast Character vector of contrasts to test 
+#' @param normalization Character vector of normalization methods to try 
+#' @param niter Number of iterations for resampling 
+#' @param resample Resampling fraction 
+#' @param show.progress Show progress 
+#'
+#' @description Counts number of significant genes for each combination of batch correction 
+#'   parameters and normalization methods. Used to optimize batch correction.
+#'   
+#' @details This function systematically goes through different combinations of batch correction
+#'   parameters and normalization methods to correct the data in obj. For each combination, it performs 
+#'   differential expression analysis for the specified contrasts, and counts the number of significant
+#'   genes. This can be used to optimize batch correction by finding the combination that maximizes 
+#'   the number of significant genes.
+#'   
+#'   The batch parameters, normalization methods, number of iterations and resampling fraction can be
+#'   specified. Progress is shown if show.progress is TRUE.
+#'   
+#' @return Returns a data frame with the number of significant genes for each parameter/method combination.
+#'
 #' @export
 pgx._runComputeNumSig <- function(ngs, parcomb, contrast, resample = -1,
                                   normalization = NORMALIZATION.METHODS,

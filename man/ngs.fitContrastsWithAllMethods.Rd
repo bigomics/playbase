@@ -7,6 +7,8 @@
 \alias{ngs.fitContrastsWithEDGER}
 \alias{.ngs.fitContrastsWithEDGER.nodesign}
 \alias{.ngs.fitContrastsWithEDGER.nodesign.pruned}
+\alias{ngs.fitConstrastsWithDESEQ2}
+\alias{.ngs.fitConstrastsWithDESEQ2.nodesign}
 \title{ngs.fitContrastsWithAllMethods}
 \usage{
 ngs.fitContrastsWithAllMethods(
@@ -82,6 +84,27 @@ ngs.fitContrastsWithEDGER(
   robust = TRUE,
   plot = TRUE
 )
+
+ngs.fitConstrastsWithDESEQ2(
+  counts,
+  group,
+  contr.matrix,
+  design,
+  X = NULL,
+  genes = NULL,
+  test = "Wald",
+  prune.samples = FALSE,
+  conform.output = FALSE
+)
+
+.ngs.fitConstrastsWithDESEQ2.nodesign(
+  counts,
+  contr.matrix,
+  test = "Wald",
+  prune.samples = FALSE,
+  conform.output = FALSE,
+  X = NULL
+)
 }
 \arguments{
 \item{counts}{A matrix of counts, with genes in rows and samples in columns.}
@@ -152,6 +175,11 @@ Custom methods can also be added.
 \item \code{.ngs.fitContrastsWithEDGER.nodesign()}: contrasts with EdgeR without a design
 
 \item \code{.ngs.fitContrastsWithEDGER.nodesign.pruned()}: Fit contrasts with EdgeR without a design matrix
+
+\item \code{ngs.fitConstrastsWithDESEQ2()}: Fits contrasts using DESeq2 differential expression 
+analysis on count data
+
+\item \code{.ngs.fitConstrastsWithDESEQ2.nodesign()}: Fits contrasts using DESeq2 differential expression
 
 }}
 \examples{
