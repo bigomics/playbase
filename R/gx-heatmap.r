@@ -30,11 +30,11 @@
 #' }
 #' @export
 gx.markermap <- function(X, splitx, n = 5, ...) {
-  F <- tapply(1:ncol(X), splitx, function(i) rowMeans(X[, i, drop = FALSE]))
-  F <- do.call(cbind, F)
-  F <- F - rowMeans(F)
-  topg <- apply(F, 2, function(x) Matrix::head(order(-x), n))
-  topg <- apply(topg, 2, function(i) rownames(F)[i])
+  F1 <- tapply(1:ncol(X), splitx, function(i) rowMeans(X[, i, drop = FALSE]))
+  F1 <- do.call(cbind, F1)
+  F1 <- F1 - rowMeans(F1)
+  topg <- apply(F1, 2, function(x) Matrix::head(order(-x), n))
+  topg <- apply(topg, 2, function(i) rownames(F1)[i])
   gg <- as.vector(topg)
   gg.idx <- as.vector(sapply(colnames(topg), rep, n))
   playbase::gx.splitmap(X[gg, ], splitx = splitx, split = gg.idx, ...)
