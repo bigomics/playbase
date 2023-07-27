@@ -1,6 +1,4 @@
 #' Test for gx.markermap
-#'
-#'
 
 #' Test for gx.PCAheatmap
 #'
@@ -16,14 +14,14 @@
 
 
 #' Test for gx.splitmap
-test_that("gx.heatmap runs correctly with defaults", {
+test_that("gx.splitmap runs correctly with defaults", {
   set.seed(123)
   gx <- matrix(rnorm(250)^2, nrow=25, ncol=10) 
   rownames(gx) <- sample(LETTERS, 25)
   colnames(gx) <- sample(letters, 10)
   # Create a grouping variable
 
-  playbase::gx.splitmap(
+  plot_check <- gx.splitmap(
     gx, 
     scale = "row",
     cluster_rows = FALSE,
@@ -31,9 +29,16 @@ test_that("gx.heatmap runs correctly with defaults", {
     cluster_columns = FALSE
   )
 
+  # Test that the function ran in full
+  expect_true(plot_check)
+
   # Test that an object has been created
-  p <- dev.capture()
-  expect_true(is.null(p))
+  if (capabilities("X11")) {
+    p <- dev.capture()
+    expect_true(!is.null(p))
+  } else {
+    skip("Graphics device not available")
+  }
 
 })
 

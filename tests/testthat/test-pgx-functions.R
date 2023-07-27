@@ -230,19 +230,19 @@ test_that("probe2symbol returns expected output", {
   counts <- playbase::COUNTS
   subset_genes <- sample(seq_len(nrow(counts)), 10)
   probes <- rownames(playbase::COUNTS)[subset_genes]
-  symbols <- probe2symbol(probes)
+  symbols <- playbase::probe2symbol(probes)
   ensembl_input <- c(
     "ENSG00000139618", "ENSG00000141510",
     "ENSG00000157764", "ENSG00000121879",
     "ENSG00000136997"
   )
-  ensembl_test <- probe2symbol(ensembl_input)
+  ensembl_test <- playbase::probe2symbol(ensembl_input)
   ensembl_na <- c(
     NA_character_, "ENSG00000141510",
     "ENSG00000157764", NA_character_,
     "ENSG00000136997"
   )
-  symbol_na <- probe2symbol(ensembl_na)
+  symbol_na <- playbase::probe2symbol(ensembl_na)
 
   # Expected
   # Default parameters

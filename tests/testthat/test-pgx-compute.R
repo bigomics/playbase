@@ -6,7 +6,7 @@
 #' Test for pgx.createPGX
 test_that("pgx.createPGX runs without errors", {
   # Create mock input data
-  pgx_data <- get_mini_example_data()
+  pgx_data <- playbase:::get_mini_example_data()
 
   # Run function
   pgx <- playbase::pgx.createPGX(
@@ -76,7 +76,7 @@ test_that("pgx.computePGX runs without errors", {
   )
 
   # Run function
-  pgx_comp <- pgx.computePGX(pgx)
+  pgx_comp <- playbase::pgx.computePGX(pgx)
 
   # Create expected outputs
   expected_tests <- c(
