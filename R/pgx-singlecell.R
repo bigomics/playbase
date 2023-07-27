@@ -9,10 +9,6 @@ seurat2pgx <- function(obj, do.cluster = FALSE) {
   ##
   ##
   message("[createPGX.10X] creating PGX object...")
-  ## pgx <- pgx.createPGX(
-  ##     counts = counts,  samples = pheno, contrasts = ct$contr.matrix,
-  ##     do.cluster = FALSE, batch.correct = TRUE,
-  ##     is.logx = FALSE)
   pgx <- list()
   pgx$name <- "SeuratProject"
   pgx$description <- "Seurat object converted using seurat2pgx"

@@ -23,6 +23,23 @@ info <- function(..., type = "INFO") {
 
 dbg <- function(...) info(..., type = "DBUG")
 
+
+#' Get mini example dataset
+#'
+#' @description 
+#' Returns a mini example dataset with sample information, 
+#' gene expression counts, and contrasts.
+#'
+#' @return List containing:
+#' \itemize{
+#'   \item samples - data.frame with sample info 
+#'   \item counts - matrix of gene counts
+#'   \item contrast - data.frame with contrasts
+#' }
+#'
+#' @examples
+#' d <- get_mini_example_data()
+#' @export
 get_mini_example_data <- function() {
   counts <- playbase::COUNTS
   samples <- playbase::SAMPLES

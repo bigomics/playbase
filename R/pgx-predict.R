@@ -52,10 +52,7 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
     fx <- c(fc, gs)
   } else if (ct %in% colnames(ngs$samples)) {
     group <- ngs$samples[, ct]
-    ## use groupwise-SD as radial layout
-    ## matx <- do.call(cbind, tapply(1:ncol(X), group,
-    ##           function(i) rowMeans(X[,i,drop=FALSE])))
-    ## use F-statistics as radial layout
+
     design <- model.matrix(~ 0 + group)
     colnames(design) <- sub("group", "", colnames(design))
     fit <- limma::eBayes(limma::lmFit(ngs$X, design))
@@ -110,7 +107,6 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
     })
   }
   axis.names <- sapply(names(res$X), makeAcronym) ## see pgx-functions
-  axis.names
 
   ## -------------------------------------------------------------
   ## Finally do the plotting

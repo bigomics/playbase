@@ -152,7 +152,7 @@ pgx.getGeoMetadata <- function(id) {
 
   colnames(pheno) <- gsub("[ ]", "_", colnames(pheno)) ## no spaces???
 
-  pheno
+  return(pheno)
 }
 
 
@@ -449,7 +449,7 @@ pgx.getGeoExperimentInfo <- function(id) {
   suppressMessages(gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE)))
   info <- gse@header
 
-  info
+  return(info)
 }
 
 #' @export
@@ -597,7 +597,7 @@ pgx.getGeoMetadata.fromGSM <- function(id) {
 
   sample_info <- data.frame(sample_info, stringsAsFactors = FALSE, check.names = FALSE)
 
-  sample_info
+  return(sample_info)
 }
 
 
@@ -637,7 +637,7 @@ eset.getCH1 <- function(eset) {
   }
   colnames(pdata) <- sub(":ch1", "", colnames(pdata))
 
-  pdata
+  return(pdata)
 }
 
 #' @export
@@ -648,7 +648,7 @@ eset.parseCharacteristicsInfo <- function(ch, split = ",") {
   value <- data.frame(value, stringsAsFactors = FALSE, check.names = FALSE)
   rownames(value) <- NULL
   colnames(value) <- terms
-  value
+  return(value)
 }
 
 
@@ -720,12 +720,6 @@ title2pheno <- function(title, split = NULL, trim = TRUE, summarize = TRUE) {
 
 #' @export
 eset.parsePhenoFromTitle <- function(title, split = NULL) {
-  ##
-  ##
-  ##
-
-
-
 
   if (!all(grepl(split, title))) {
     return(NULL)
@@ -784,7 +778,7 @@ eset.parsePhenoFromTitle <- function(title, split = NULL) {
   rownames(G) <- NULL
 
   colnames(G) <- paste0("V", 1:ncol(G))
-  G
+  return(G)
 }
 
 

@@ -19,7 +19,7 @@
 #'
 #' @examples 
 #' \dontrun{
-#' mypgx <- pgx.create(counts, samples)
+#' mypgx <- pgx.create(counts, samples, contrast)
 #' groups <- pgx.getModelGroups(mypgx)
 #' }
 #'
