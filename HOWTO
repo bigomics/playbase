@@ -19,10 +19,3 @@ for f in *.r *.R; do sed -i -E "/^[a-z|A-Z|._|0-9]+ <- function/i #' @export" $f
 2. Make documentation and install
 
 make doc && make install
-
-# Add namespace for playbase function in original code
-
-library(addns)
-setwd("~/Playground/omicsplayground-test/")  ## some test copy of OP
-addns::add_ns(path = "components/", packages = c("playbase"))
-
