@@ -23,7 +23,7 @@ model terms. If not, it simply uses the group labels defined in pgx$model.parame
 }
 \examples{
 \dontrun{
-mypgx <- pgx.create(counts, samples)
+mypgx <- pgx.create(counts, samples, contrast)
 groups <- pgx.getModelGroups(mypgx)
 }
 
