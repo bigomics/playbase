@@ -184,11 +184,13 @@ gset.fisher <- function(genes, genesets, background = NULL,
   pv <- rep(NA, length(genesets))
   names(pv) <- names(genesets)
   if (method == "fast.fisher") {
-    ## this is really fast...
+    ## this is really-really-really fast...
     pv <- rep(NA, length(a))
     ii <- 1:length(a)
     ii <- which((a + c) > 0)
-    pv1 <- corpora::fisher.pval(a[ii], (a + b)[ii], c[ii], (c + d)[ii], alternative = "greater")
+    d1 <- d + 1*(d==0)  ## hack to avoid crash...
+    b1 <- b + 1*(b==0)  ## hack to avoid crash...
+    pv1 <- corpora::fisher.pval(a[ii], (a + b1)[ii], c[ii], (c + d1)[ii], alternative = "greater")
     pv[ii] <- pv1
   } else if (method == "fisher") {
     if (mc) {
