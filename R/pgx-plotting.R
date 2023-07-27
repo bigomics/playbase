@@ -7,6 +7,29 @@
 ## Plotting functions
 ########################################################################
 
+
+#' @title heatmapWithAnnot
+#'
+#' @param F Numeric data matrix to visualize as a heatmap
+#' @param anno.type Type of annotation to show - "boxplot" or "barplot"
+#' @param bar.height Height of the annotation barplot in cm
+#' @param map.height Height of the heatmap in cm  
+#' @param row_fontsize Fontsize for row labels 
+#' @param column_fontsize Fontsize for column labels
+#' @param inset Inset margins for annotation
+#' @param mar Heatmap margins 
+#' @param legend Show legend for annotation colors
+#' @param ... Other arguments passed to heatmap functions
+#'
+#' @return A heatmap grob object
+#' 
+#' @description Creates a heatmap visualization with side annotation bars.
+#'
+#' @details This function generates a heatmap from the input data matrix F.
+#' Side annotation bars can be added, either as boxplots or barplots.
+#' The annotation height, heatmap height, font sizes, margins, and other 
+#' heatmap parameters can be customized.
+#'
 #' @export
 heatmapWithAnnot <- function(F, anno.type = c("boxplot", "barplot"),
                              bar.height = NULL, map.height = NULL,
@@ -86,6 +109,34 @@ heatmapWithAnnot <- function(F, anno.type = c("boxplot", "barplot"),
   }
 }
 
+
+#' @title Repel overlapping text labels
+#'
+#' @param x Numeric vector of x coordinates for text labels
+#' @param y Numeric vector of y coordinates for text labels  
+#' @param words Character vector of words/labels to plot
+#' @param cex Size multiplier for text labels
+#' @param rotate90 Rotate labels by 90 degrees
+#' @param xlim x-axis limits
+#' @param ylim y-axis limits
+#' @param tstep Translation step size 
+#' @param rstep Rotation step size
+#' @param maxiter Maximum number of iterations
+#' @param ... Additional graphics parameters to text()
+#'
+#' @return The adjusted coordinates, rotated labels, and plotting parameters
+#' 
+#' @description Repels overlapping text labels by iteratively adjusting positions.
+#'
+#' @details This function takes a set of text labels defined by x,y coordinates and words.
+#' It iteratively adjusts the positions to repel overlapping labels. Rotation by 90 degrees
+#' and size scaling can also be applied.
+#' 
+#' The algorithm translates or rotates labels in small steps to minimize overlap.
+#' The step sizes and maximum number of iterations can be controlled.
+#' 
+#' Useful for scatterplots, word clouds, and other graphics where label overlap is a problem.
+#'
 #' @export
 repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
                        xlim = c(-Inf, Inf), ylim = c(-Inf, Inf),
@@ -171,7 +222,37 @@ repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
 ## =================================================================================
 
 
-
+#' Activation matrix heatmap for PGX results
+#'
+#' @param pgx PGX object containing results 
+#' @param features Features to include (default NULL for all)
+#' @param contrasts Contrasts to include (default NULL for all)
+#' @param n Number of top features to display
+#' @param qsize Color by adjusted p-value? (default TRUE)  
+#' @param cex Overall text size 
+#' @param cex.row Row text size
+#' @param cex.col Column text size
+#' @param srt Rotation angle for text labels
+#' @param flip Logical to flip sign of fold changes
+#' @param level Data level to use ("gene", "geneset") 
+#' @param clust.x Cluster columns? (default TRUE)
+#' @param clust.y Cluster rows? (default TRUE)
+#' @param plotlib Plotting library to use (default "base")
+#'
+#' @return A heatmap grob object
+#'
+#' @description 
+#' Generates an activation matrix heatmap from PGX results
+#' 
+#' @details
+#' This function takes a PGX object and generates a clustered heatmap 
+#' visualization of the top results. Fold changes are shown with color scale.
+#' The top n features can be displayed, optionally clustering rows and columns.
+#' Sign of changes can be flipped and results can be extracted at the gene or
+#' gene set level. Colors can be based on adjusted p-values instead.
+#'
+#' Useful for visualizing patterns of activation across comparisons.
+#'
 #' @export
 pgx.ActivationMatrix <- function(pgx, features = NULL, contrasts = NULL,
                                  n = 50, qsize = TRUE,
@@ -276,6 +357,29 @@ pgx.ActivationMatrix <- function(pgx, features = NULL, contrasts = NULL,
   p
 }
 
+
+#' @title Scatter plot for PGX object
+#'
+#' @param pgx PGX object with results
+#' @param pheno Phenotype data.frame or vector 
+#' @param gene Gene name to color by expression
+#' @param contrast Contrast name to color by correlation  
+#' @param level Data level to use ("gene", "geneset")
+#' @param plotlib Plotting library ("base", "plotly") 
+#' @param pos Positions for points (if level="geneset")
+#' @param ... Other arguments passed to plotting functions
+#'
+#' @return A scatter plot grob or plotly object
+#'
+#' @description Generates a scatter plot from a PGX object.
+#'
+#' @details Samples or genes can be plotted, colored by phenotype, 
+#' gene expression, or correlation with a contrast. For gene sets,
+#' positions need to be provided. Interactive plotly plots or
+#' static ggplot2 plots can be generated.
+#'
+#' Useful for exploring sample relationships and associations.
+#'
 #' @export
 pgx.scatterPlot <- function(pgx, pheno = NULL, gene = NULL,
                             contrast = NULL, level = "gene",
@@ -353,6 +457,31 @@ pgx.scatterPlot <- function(pgx, pheno = NULL, gene = NULL,
   plt
 }
 
+
+#' @title Plot a Scatterplot Matrix
+#'
+#' @description 
+#' Creates a scatterplot matrix visualization comparing multiple datasets.
+#'
+#' @param F Numeric matrix with samples in columns.
+#' @param F2 Optional second numeric matrix to compare against F.
+#' @param hilight Vector of sample names to highlight. 
+#' @param cex Point size in scatterplots.
+#' @param cex.axis Axis text size.
+#' @param cex.space Spacing between scatterplots.
+#'
+#' @details
+#' This function generates a scatterplot matrix comparing all columns of 
+#' the input matrix \code{F} against each other. If a second matrix \code{F2} is
+#' provided, columns of \code{F} are compared against matching columns in \code{F2}.
+#' 
+#' Samples specified in \code{hilight} are colored differently to stand out.
+#' The \code{cex}, \code{cex.axis}, and \code{cex.space} parameters control graphical
+#' element sizes.
+#'
+#' @return 
+#' A scatterplot matrix is generated comparing datasets. No value is returned.
+#'
 #' @export
 plot_SPLOM <- function(F, F2 = NULL, hilight = NULL, cex = 0.5, cex.axis = 1, cex.space = 0.2) {
   if (is.null(F2)) F2 <- F
@@ -407,6 +536,25 @@ plot_SPLOM <- function(F, F2 = NULL, hilight = NULL, cex = 0.5, cex.axis = 1, ce
 }
 
 
+#' @title Create a sankey diagram from a list of matrices
+#'
+#' @param matlist A list of matrices to compare
+#' @param contrast Optional contrast name 
+#'
+#' @return A plotly sankey diagram object
+#'
+#' @description 
+#' Generates a sankey diagram comparing matrices in a list
+#'
+#' @details
+#' This function takes a list of matrices as input matlist. 
+#' It standardizes each matrix, calculates cross-tables between matrices, 
+#' and generates a sankey diagram showing the relationships.
+#'
+#' The contrast parameter can optionally be used to weight the edges.
+#' 
+#' Useful for visualizing relationships and flows between data matrices.
+#'
 #' @export
 pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast = NULL) {
   ## ------------------------------------------------------------------------
@@ -456,6 +604,31 @@ pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast = NULL) {
   pgx.SankeyFromMRF.PLOTLY(M = M, R = R, F = F, fill = fill0, labels = NULL)
 }
 
+
+#' @title Create a sankey diagram from multiple matrices
+#'
+#' @param M A list of matrices 
+#' @param R A list of correlation matrices
+#' @param F A list of flow matrices
+#' @param fill Logical, whether to color edges by flow 
+#' @param labels Optional edge labels
+#'
+#' @return A plotly sankey diagram object
+#'
+#' @description
+#' Generates a sankey diagram by combining multiple matrices.
+#'
+#' @details
+#' This function takes a list of matrices \code{M}, correlation matrices \code{R},
+#' and flow matrices \code{F}. It converts each matrix pair \code{M[[i]]} and 
+#' \code{R[[i]]} into a graph, merges the graphs, and creates a sankey diagram 
+#' to show relationships and flows between matrices.
+#'
+#' If \code{fill=TRUE}, edge colors are determined by the flow values \code{F[[i]]}.
+#' Optional \code{labels} can be provided to label the edges.
+#'
+#' Useful for visualizing relationships and flows between multiple data matrices.
+#'
 #' @export
 pgx.SankeyFromMRF.PLOTLY <- function(M, R, F, fill = TRUE, labels = NULL) {
   rho2graph <- function(A, min.rho = 0) {
@@ -564,6 +737,28 @@ pgx.SankeyFromMRF.PLOTLY <- function(M, R, F, fill = TRUE, labels = NULL) {
   fig
 }
 
+
+#' @title Create a sankey diagram from phenotypes
+#' 
+#' @param pgx PGX object with results
+#' @param phenotypes Data frame of sample phenotypes
+#' @param mat The results matrix to use, default is pgx$MAT 
+#' @param fill Whether to color edges by matrix values
+#' @param nmin Minimum sample size for phenotype levels
+#' @param title Plot title
+#'
+#' @return A plotly sankey diagram object
+#'
+#' @description 
+#' Generates a sankey diagram from sample phenotypes
+#'
+#' @details This function takes a PGX object and sample phenotype data frame.
+#' It aggregates the results matrix mat by phenotypes, filters low count levels, 
+#' calculates a cross-table, and visualizes the relationships between phenotypes
+#' as a sankey diagram.
+#'
+#' Useful for exploring sample relationships and phenotype flows.
+#' 
 #' @export
 pgx.SankeyFromPhenotypes.PLOTLY <- function(pgx, phenotypes, mat = NULL,
                                             fill = NULL, nmin = 1, title = "") {
@@ -655,6 +850,8 @@ pgx.SankeyFromPhenotypes.PLOTLY <- function(pgx, phenotypes, mat = NULL,
   fig
 }
 
+
+#' @describeIn pgx.SankeyFromPhenotypes.PLOTLY pgx.SankeyFromPhenotypes.GGPLOT (ggplot2 version)
 #' @export
 pgx.SankeyFromPhenotypes.GGPLOT <- function(pgx, phenotypes, mat = NULL, fill = NULL,
                                             sort = FALSE, nmin = 1, title = "") {
@@ -741,6 +938,25 @@ pgx.SankeyFromPhenotypes.GGPLOT <- function(pgx, phenotypes, mat = NULL, fill = 
   p
 }
 
+
+#' Share axis labels in plot grid
+#'
+#' @param plotList A list of ggplot objects to arrange in a grid
+#' @param nrow Number of rows in the plot grid
+#'
+#' @return A combined ggplot object with shared axis labels  
+#'
+#' @description Arranges multiple plots in a grid sharing common axis labels.
+#'
+#' @details This function takes a list of ggplot objects and arranges them in a grid 
+#' layout with a specified number of rows. It shares common x and y axis labels among
+#' the plots to avoid repetition.
+#'
+#' Axis labels are removed from all plots except the bottom row and leftmost column.
+#' The plots are then combined using cowplot::plot_grid() with shared axes.
+#'
+#' Useful for creating multi-panel figure grids with clean axis labels.
+#'
 #' @export
 plot_grid.sharedAxisLabels <- function(plotList, nrow) {
   np <- length(plotList)
@@ -758,6 +974,35 @@ plot_grid.sharedAxisLabels <- function(plotList, nrow) {
   cowplot::plot_grid(plotlist = plotList, nrow = nrow, labels = NA)
 }
 
+
+#' @title Plot contrasts from a PGX analysis
+#'
+#' @description Generate plots for contrasts from a pharmacogenomic (PGX) analysis.
+#' 
+#' @param pgx A PGX object containing the analysis results.
+#' @param contrast Character vector of contrast names to plot. Default plots all. 
+#' @param type Type of plot. Options are "scatter", "volcano", "MA", "UMAP".
+#' @param set.par Logical to set graphical parameters before plotting. Default is TRUE.
+#' @param par.sq Logical to set square plotting layout. Default is FALSE.
+#' @param ... Additional parameters passed to plotting functions.
+#'
+#' @details This function generates plots to visualize contrasts from a PGX analysis.
+#' The \code{pgx} object should contain results for the specified contrasts.
+#' 
+#' The \code{type} parameter determines the type of plot. Options are:
+#' - "scatter": Default scatter plot of log2 fold-changes vs. p-values.
+#' - "volcano": Volcano plot of log2 fold-changes vs. -log10 p-values.
+#' - "MA": Meta-analysis plots showing the contribution of each study.  
+#' - "UMAP": UMAP projection plot colored by log2 fold-change.
+#'
+#' If \code{set.par=TRUE}, graphical parameters are set before plotting.
+#' If \code{par.sq=TRUE}, a square layout is used.
+#' Additional parameters can be passed to the plotting functions via \code{...}.
+#'
+#' @return 
+#' A grid of plots visualizing the specified contrasts is generated.
+#' The return value is a list of plot grob objects.
+#'
 #' @export
 pgx.plotContrast <- function(pgx, contrast = NULL, type = "scatter",
                              set.par = TRUE, par.sq = FALSE, ...) {
@@ -793,6 +1038,25 @@ pgx.plotContrast <- function(pgx, contrast = NULL, type = "scatter",
   plist
 }
 
+
+#' @describeIn pgx.plotContrast Create a volcano plot from a PGX object
+#' 
+#' @param pgx A PGX object containing differential expression results.
+#' @param contrast The contrast name to extract results for. 
+#' @param level The data level to extract ("gene", "exon", etc). Default "gene".
+#' @param methods The meta-analysis methods to include. Default "meta".
+#' @param psig P-value cutoff for significance. Default 0.05. 
+#' @param fc Fold change cutoff. Default 1.
+#' @param cex Point size. Default 1. 
+#' @param cex.lab Label size. Default 1.
+#' @param ntop Number of top genes to highlight. Default 20. 
+#' @param p.min Minimum p-value for y-axis. Default NULL.
+#' @param fc.max Maximum fold change for x-axis. Default NULL.
+#' @param hilight Vector of genes to highlight. Default NULL.
+#' @param cpal Color palette. Default c("grey60", "red3"). 
+#' @param title Plot title. Default NULL.
+#' @param plotlib Plotting library to use. Default "base".
+#' 
 #' @export
 pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
                         psig = 0.05, fc = 1, cex = 1, cex.lab = 1, ntop = 20,
@@ -847,6 +1111,18 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   p
 }
 
+
+#' @describeIn pgx.plotContrast Meta-analysis plots for PGX results
+#' @param pgx PGX object containing results
+#' @param contrast Contrast name to plot 
+#' @param level Data level to extract ("gene", "exon", etc)
+#' @param psig P-value cutoff for significance
+#' @param fc Fold change cutoff  
+#' @param cex Point size
+#' @param cex.lab Label size
+#' @param hilight Vector of genes to highlight
+#' @param ntop Number of top genes to label
+#' @param plotlib Plotting library to use
 #' @export
 pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
                        cex = 1, cex.lab = 0.8, hilight = NULL, ntop = 20,
@@ -894,6 +1170,20 @@ pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
   p
 }
 
+
+#' @describeIn pgx.plotContrast Scatter plot of contrast results
+#' @param pgx PGX object with analysis results 
+#' @param contrast Contrast name to plot
+#' @param hilight Vector of genes to highlight
+#' @param cex Point size
+#' @param cex.lab Label size  
+#' @param psig P-value cutoff for significance
+#' @param fc Fold change cutoff
+#' @param level Data level to extract ("gene", "exon", etc)
+#' @param ntop Number of top genes to label
+#' @param dir Direction to sort results (0 for p-value, 1 for logFC)
+#' @param plotlib Plotting library ("base", "plotly")
+#' 
 #' @export
 pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
                                 cex = 1, cex.lab = 0.8,
@@ -962,6 +1252,24 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
   )
 }
 
+
+#' @describeIn pgx.plotContrast Plot gene expression on UMAP projection 
+#'
+#' @param pgx PGX object with results
+#' @param contrast Contrast name to extract expression  
+#' @param value Gene name or ID to plot
+#' @param pos Dataframe of UMAP coordinates 
+#' @param ntop Number of top genes to label 
+#' @param cex Point size
+#' @param cex.lab Label size
+#' @param hilight Vector of genes to highlight
+#' @param title Plot title
+#' @param zfix Fix color scale between genes
+#' @param set.par Set graphical parameters before plotting
+#' @param par.sq Use square plotting layout
+#' @param level Data level to extract ("gene", "exon", etc)
+#' @param plotlib Plotting library ("base", "ggplot")
+#'
 #' @export
 pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
                              pos = NULL, ntop = 20, cex = 1, cex.lab = 0.8,
