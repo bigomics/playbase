@@ -56,7 +56,7 @@ test_that("pgx.createPGX runs without errors", {
   )
 
   ## Check X - this doesnt work on github actions
-  #expect_equal(sum(pgx$X), 5983.5244)
+  # expect_equal(sum(pgx$X), 5983.5244)
 
   ## Check cluster.genes
   expect_equal(dim(pgx$cluster$pos$pca2d), c(ncol(pgx_data$counts), 2))
