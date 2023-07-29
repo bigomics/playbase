@@ -8,6 +8,23 @@
 ## Query GEO
 ## -------------------------------------------------------------------------------------
 
+
+#' @title pgx.getGEOseries
+#' @description Download and process GEO dataset
+#'
+#' @param id GEO series ID to download
+#' @param archs.h5 Path to ARCHS4 HDF5 file containing GEO data 
+#' @param convert.hugo Logical, convert symbols to HUGO if TRUE
+#'
+#' @return List containing processed counts, samples, and genes
+#' 
+#' @details This function downloads and processes a GEO dataset specified by the ID.
+#' It first checks if the data is in the ARCHS4 file. If not, it retrieves it from GEO using geoquery.
+#' The data matrices are subset to intersecting samples, converted to HUGO symbols if specified, 
+#' and duplicate symbols are summed.
+#' 
+#' The result is a list containing the expression matrix, sample metadata, and gene symbols.
+#'
 #' @export
 pgx.getGEOseries <- function(id, archs.h5 = "human_matrix.h5", convert.hugo = TRUE) {
   ##
@@ -93,6 +110,10 @@ pgx.getGEOseries <- function(id, archs.h5 = "human_matrix.h5", convert.hugo = TR
   return(out)
 }
 
+
+#' @describeIn pgx.getGEOseries Download and process count data from GEO into a PGX object. 
+#' It takes a GEO accession as input, downloads the count matrix and sample metadata, processes 
+#' it into a PGX object with gene annotation, sample info, and contrasts.
 #' @export
 pgx.getGEOcounts <- function(id, archs.h5) {
   expr <- NULL
@@ -122,6 +143,8 @@ pgx.getGEOcounts <- function(id, archs.h5) {
   list(expr = expr, source = src)
 }
 
+
+#' @describeIn pgx.getGEOseries Download and extract the metadata from a GEO series.
 #' @export
 pgx.getGeoMetadata <- function(id) {
   ##
@@ -160,6 +183,11 @@ pgx.getGeoMetadata <- function(id) {
 ## Query GEO expression
 ## -------------------------------------------------------------------------------------
 
+
+#' @describeIn pgx.getGEOseries Downloads and extracts gene expression count 
+#' data from a GEO series stored in an HDF5 file. It searches the HDF5 file 
+#' metadata to find samples matching the input GEO series ID, and returns the 
+#' count matrix for those samples.
 #' @export
 pgx.getGEOcounts.archs4 <- function(id, h5.file) {
   rhdf5::h5ls(h5.file)
@@ -196,7 +224,9 @@ pgx.getGEOcounts.archs4 <- function(id, h5.file) {
 }
 
 
-id <- "GSE10846"
+#' @describeIn pgx.getGEOseries Downloads and processes gene-level count data for a GEO 
+#' series from the recount database. It takes a GEO accession ID, searches 
+#' recount, downloads the RangedSummarizedExperiment object, and returns the count matrix.
 #' @export
 pgx.getGEOcounts.recount <- function(id) {
   ## Vignette recount-quickstart.html
@@ -227,6 +257,11 @@ pgx.getGEOcounts.recount <- function(id) {
   return(counts)
 }
 
+
+#' @describeIn  pgx.getGEOseries Retrieves gene expression count data for a 
+#' specified GEO accession ID using the GEOquery package. It downloads the 
+#' series matrix data, platform metadata, and probe annotations from GEO into 
+#' R objects.
 #' @export
 pgx.getGEOcounts.GEOquery <- function(id) {
   ## Retrieve expression matrix, phenotype and probe annotation
@@ -337,6 +372,11 @@ pgx.getGEOcounts.GEOquery <- function(id) {
   return(expr) ## return always linear intensities
 }
 
+
+#' @describeIn  pgx.getGEOseries Retrieve and process gene expression count 
+#' data from the supplementary files of a GEO dataset. It takes a GEO 
+#' accession ID, downloads the series matrix and annotation data from the 
+#' supplementary files, processes it into a count matrix, and returns the result.
 #' @export
 pgx.getGEOcounts.fromSuppl <- function(id) {
   ## Retrieve expression matrix, phenotype and probe annotation
@@ -365,6 +405,20 @@ pgx.getGEOcounts.fromSuppl <- function(id) {
 ## Query GEO metadata
 ## -------------------------------------------------------------------------------------
 
+
+#' @title Extract gene symbols from GEO feature data
+#'
+#' @description Extracts official gene symbols from the feature data table of a GEO dataset.
+#' 
+#' @param fdata The featureData table from a GEOquery GEO dataset object.
+#'
+#' @details This function tries to extract official gene symbols from the featureData table of a GEO dataset downloaded with GEOquery.
+#' It first looks for a column containing gene symbols by matching against the org.Hs.egSYMBOL database. 
+#' If no direct symbol column is found, it looks for an ENTREZ identifier column and maps that to symbols using org.Hs.egSYMBOL.
+#' If neither approach works, it tries to extract symbols from the gene title or description columns by regex matching.
+#'
+#' @return A character vector of gene symbols, or NULL if symbols could not be extracted.
+#' 
 #' @export
 pgx.getSymbolFromFeatureData <- function(fdata) {
   ## extract GENE symbol from featureData. The problem is that we don't
@@ -377,7 +431,7 @@ pgx.getSymbolFromFeatureData <- function(fdata) {
   ## If there is a symbol column, than it is easy
   SYMBOL <- as.character(unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL)))
   symbol.col <- grep("symbol|gene|hugo", colnames(fdata), ignore.case = TRUE)
-  symbol.col
+
   ok.symbol <- apply(
     fdata[, symbol.col, drop = FALSE], 2,
     function(g) mean(toupper(g[!is.na(g)]) %in% SYMBOL)
@@ -399,7 +453,7 @@ pgx.getSymbolFromFeatureData <- function(fdata) {
   )
   entrez.match
   entrez.ok <- length(entrez.col) && entrez.match > 0.5
-  entrez.ok
+
   if (entrez.ok) {
     k <- entrez.col[which.max(entrez.match)]
     probes <- as.character(fdata[, k])
@@ -444,6 +498,8 @@ pgx.getSymbolFromFeatureData <- function(fdata) {
   return(NULL)
 }
 
+
+#' @describeIn pgx.getGEOseries Retrieves basic experiment metadata for a GEO accession ID using GEOquery.
 #' @export
 pgx.getGeoExperimentInfo <- function(id) {
   suppressMessages(gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE)))
@@ -452,6 +508,9 @@ pgx.getGeoExperimentInfo <- function(id) {
   return(info)
 }
 
+
+#' @describeIn pgx.getGEOseries retrieves sample metadata from a GEO dataset by first downloading the 
+#' GSEMatrix and then extracting the phenotype data.
 #' @export
 pgx.getGeoMetadata.fromEset <- function(id) {
   ## If not succesful, try with downloading the GSEMatrix
@@ -492,6 +551,10 @@ pgx.getGeoMetadata.fromEset <- function(id) {
   return(pheno)
 }
 
+
+#' @describeIn pgx.getGEOseries helper function that extracts the phenotype data 
+#' from a GEOquery GSEMatrix object.
+#' @param eset Eset object
 #' @export
 pgx.getGeoMetadata.fromEset1 <- function(eset) {
   ##
@@ -534,6 +597,9 @@ pgx.getGeoMetadata.fromEset1 <- function(eset) {
   sample_info
 }
 
+
+#' @describeIn pgx.getGEOseries retrieves sample metadata for a GEO sample accession 
+#' ID by downloading the full GEO series and extracting the metadata for that sample.
 #' @export
 pgx.getGeoMetadata.fromGSM <- function(id) {
   ##
@@ -607,14 +673,36 @@ pgx.getGeoMetadata.fromGSM <- function(id) {
 ## HELPER functions
 ## -------------------------------------------------------------------------------------
 
+
+#' Extract phenotype data field from ExpressionSet
+#'
+#' @param eset ExpressionSet object
+#' @param field Character string specifying phenotype data field name 
+#'
+#' @return Vector of values for the specified field
+#'
+#' @details This function extracts a specific phenotype data field from an ExpressionSet object.
+#' The \code{field} parameter specifies the phenotype data column name to extract.
+#' 
+#' The phenotype data pData slot is extracted from the ExpressionSet, and the specified 
+#' field is returned as a vector.
+#'
 #' @export
 eset.getPhenoData <- function(eset, field) {
   pData(phenoData(eset))[, field]
 }
+
+
+#' @describeIn eset.getPhenoData Extracts the title from the phenotype data of an ExpressionSet object.
 #' @export
 eset.getTitle <- function(eset) as.character(pData(phenoData(eset))$title)
+
+
+#' @describeIn eset.getPhenoData Extracts the organism from the phenotype data of an ExpressionSet object
 #' @export
 eset.getOrganism <- function(eset) unique(as.character(eset.getPhenoData(eset, "organism_ch1")))
+
+#' @describeIn eset.getPhenoData 
 #' @export
 eset.getCH1 <- function(eset) {
   pdata <- pData(phenoData(eset))
@@ -640,6 +728,12 @@ eset.getCH1 <- function(eset) {
   return(pdata)
 }
 
+
+#' @describeIn eset.getPhenoData parses the "Characteristics" metadata field from 
+#' an ExpressionSet into a data frame by splitting the text on a delimiter 
+#' like "," or ";".
+#' @param ch "Characteristics" text string
+#' @param split delimiter character to split on `c(",", ";", "\\|", "_", " ")`.
 #' @export
 eset.parseCharacteristicsInfo <- function(ch, split = ",") {
   terms <- sub(":.*$", "", trimws(strsplit(ch, split = ",")[[1]]))
@@ -652,11 +746,13 @@ eset.parseCharacteristicsInfo <- function(ch, split = ",") {
 }
 
 
-#' @export
+#' @describeIn eset.getPhenoData Extracts sample phenotype terms from GEO dataset titles by splitting on a delimiter.
+#' @param title character vector with the titles
+#' @param split delimiter character to split on `c(",", ";", "\\|", "_", " ")`.
+#' @param trim trim leading and trailing whitespace from each term
+#' @param summarize summarize the terms by counting the number of occurrences of each term
+#' @export 
 title2pheno <- function(title, split = NULL, trim = TRUE, summarize = TRUE) {
-  ##
-  ##
-  ##
 
   ## determine the split character
   if (is.null(split)) {
@@ -718,6 +814,8 @@ title2pheno <- function(title, split = NULL, trim = TRUE, summarize = TRUE) {
 }
 
 
+#' @describeIn eset.getPhenoData Phenotype data from the title of an 
+#' ExpressionSet object by splitting the title on a specified delimiter and guessing column names.
 #' @export
 eset.parsePhenoFromTitle <- function(title, split = NULL) {
 
@@ -782,6 +880,21 @@ eset.parsePhenoFromTitle <- function(title, split = NULL) {
 }
 
 
+#' Parse GEO series matrix file
+#'
+#' @param SERIES_FILE Character string. Path to GEO series matrix file. 
+#' @param PLATFORM_FILE Character string. Path to GEO platform file.
+#' @param GENE_COLUMN Character string. Name of column containing gene symbols. Default "GENE_SYMBOL".
+#' @param EXPRESSION_OUTPUT_FILE Character string. Name of expression matrix output file. Default "expression.csv".
+#' @param ANNOTATION_OUTPUT_FILE Character string. Name of annotation output file. Default "annotation.csv".
+#' @param write.file Logical. Whether to write output files. Default TRUE.
+#'
+#' @return List containing expression matrix and annotation data frame if write.file is FALSE.
+#' 
+#' @details Parses a GEO series matrix file and corresponding platform file to extract expression data and annotations.
+#' The gene symbols, expression values, and annotations are extracted into R objects.
+#' The expression matrix and annotation data frame can be optionally written to CSV files.
+#'
 #' @export
 parse_geo_series_matrix <- function(SERIES_FILE,
                                     PLATFORM_FILE,
