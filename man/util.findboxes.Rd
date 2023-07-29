@@ -2,8 +2,7 @@
 % Please edit documentation in R/pgx-functions.R
 \name{util.findboxes}
 \alias{util.findboxes}
-\title{Given a Set of Points and Box sizes,
-https://github.com/slowkow/ggrepel/issues/24}
+\title{Find non-overlapping boxes for points}
 \usage{
 util.findboxes(
   df,
@@ -19,7 +18,45 @@ util.findboxes(
   maxiter = 20000
 )
 }
+\arguments{
+\item{df}{Data frame containing point positions}
+
+\item{xcol}{Name of column in \code{df} containing x coordinates}
+
+\item{ycol}{Name of column in \code{df} containing y coordinates}
+
+\item{box_padding_x}{Padding to add to box width}
+
+\item{box_padding_y}{Padding to add to box height}
+
+\item{point_padding_x}{Minimum spacing between points in x direction}
+
+\item{point_padding_y}{Minimum spacing between points in y direction}
+
+\item{xlim}{Limits for x axis}
+
+\item{ylim}{Limits for y axis}
+
+\item{force}{Repulsion force between boxes}
+
+\item{maxiter}{Maximum number of iterations}
+}
+\value{
+Data frame with updated non-overlapping box coordinates
+}
 \description{
-Given a Set of Points and Box sizes,
-https://github.com/slowkow/ggrepel/issues/24
+Find non-overlapping boxes for points
+}
+\details{
+This function takes a data frame of point positions and calculates non-overlapping 
+box positions around each point using a physical simulation.  
+
+It returns a data frame containing the updated box corner positions after repulsion.
+The x1,y1,x2,y2 columns correspond to the box corners.
+}
+\examples{
+\dontrun{
+points <- data.frame(x = runif(10), y = runif(10))
+boxes <- util.findboxes(points, "x", "y", 0.2, 0.2, 0.1, 0.1) 
+}
 }

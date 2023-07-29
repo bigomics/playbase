@@ -157,8 +157,6 @@ pmid.getPubMedContext <- function(gene, context) {
 #' @description 
 #' Builds an annotation matrix mapping PubMed IDs to gene symbols 
 #' based on mappings in org.Hs.eg.db.
-#'
-#' @param None
 #' 
 #' @details
 #' This function retrieves PubMed ID to Entrez Gene ID mappings from 

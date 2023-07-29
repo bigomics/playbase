@@ -4948,13 +4948,13 @@
       "RemoteRepo": "playdata",
       "RemoteUsername": "bigomics",
       "RemoteRef": "HEAD",
-      "RemoteSha": "c678544206ec4678a392761e46050f15b3951ebf",
+      "RemoteSha": "86b696ebf08f12053b4fbd8ec54d34187944e269",
       "Requirements": [
         "R",
         "glue",
         "rlang"
       ],
-      "Hash": "d9e15023ccfe41935fe492b17e01051a"
+      "Hash": "01906e258254236826540791b3baec1d"
     },
     "plogr": {
       "Package": "plogr",
