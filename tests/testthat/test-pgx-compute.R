@@ -12,7 +12,7 @@ test_that("pgx.createPGX runs without errors", {
   pgx <- playbase::pgx.createPGX(
     samples = pgx_data$samples,
     counts = pgx_data$counts,
-    contrasts = pgx_data$counts
+    contrasts = pgx_data$contrast
   )
 
   # Create expected outputs
@@ -47,6 +47,10 @@ test_that("pgx.createPGX runs without errors", {
 
   ## Check multiplier
   expect_equal(pgx$counts_multiplier, 1)
+
+  ## Check contrast
+  expect_equal(dim(pgx$contrasts), c(7, 3))
+
 
   ## Check that the gene info is generated correctly
   expect_equal(head(pgx$genes, 6), genes)
