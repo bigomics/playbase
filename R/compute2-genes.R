@@ -266,7 +266,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     contr.matrix = contr.matrix,
     prune.samples = prune.samples,
     prior.cpm = PRIOR.CPM, ## prior count regularization
-    ## quantile.normalize = TRUE,  ## only for logCPM???
     remove.batch = FALSE, ## we do explicit batch correction instead
     conform.output = TRUE,
     do.filter = FALSE,
