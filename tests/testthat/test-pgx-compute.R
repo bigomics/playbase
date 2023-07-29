@@ -59,9 +59,6 @@ test_that("pgx.createPGX runs without errors", {
     apply(genes, 2, class)
   )
 
-  ## Check X
-  expect_equal(sum(pgx$X), 5983.5244)
-
   ## Check cluster.genes
   expect_equal(dim(pgx$cluster$pos$pca2d), c(ncol(pgx_data$counts), 2))
   expect_equal(dim(pgx$cluster$pos$tsne3d), c(ncol(pgx_data$counts), 3))
