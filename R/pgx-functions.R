@@ -135,7 +135,7 @@ util.findboxes <- function(df, xcol, ycol,
 #'
 #' @param n A numeric value specifying the number of star symbols to generate.
 #' @param pch An optional character string specifying the symbol to use for the stars.
-#' The default value is "\u2605" (a black star).
+#' The default value is a black star.
 #'
 #' @details This function takes a numeric value `n` and an optional character string `pch` as 
 #' input and generates a string of `n` star symbols using the specified `pch` symbol. 
@@ -148,7 +148,7 @@ util.findboxes <- function(df, xcol, ycol,
 #' \dontrun{
 #' # example code
 #' star.symbols(3)
-#' star.symbols(5, pch = "\u2606")
+#' star.symbols(5, pch = "*")
 #' }
 #' @export
 star.symbols <- function(n, pch = "\u2605") {
@@ -215,7 +215,7 @@ rowscale <- function(x) {
 #' @param n A numeric value specifying the maximum width of each line in characters.
 #'
 #' @details This function takes a character vector of strings `str` and a numeric value `n` as input and wraps each string in `str` to a maximum width of `n` characters. 
-#' The resulting wrapped strings are returned as a character vector, where each element contains one or more lines separated by newline characters ("\n").
+#' The resulting wrapped strings are returned as a character vector, where each element contains one or more lines separated by newline characters.
 #'
 #' @return A character vector of the same length as `str`, containing the wrapped strings.
 #'
@@ -1494,12 +1494,12 @@ getMyGeneInfo <- function(eg, fields = c("symbol", "name", "alias", "map_locatio
 #' If as.link is TRUE, the gene symbols are returned as hyperlinks to GeneCards and OMIM IDs are returned as hyperlinks.
 #' 
 #' @examples
+#' \dontrun{
 #' genes <- c("TP53", "BRCA1", "ABCD1")
 #' info <- getHSGeneInfo(genes)
 #' 
-#' \dontrun{
-#' info <- getHSGeneInfo(genes, as.link = FALSE)
-#' }#' @export
+#' }
+#' #' @export
 getHSGeneInfo <- function(eg, as.link = TRUE) {
   env.list <- c(
     "symbol" = org.Hs.eg.db::org.Hs.egSYMBOL,
@@ -2148,6 +2148,7 @@ alias2hugo <- function(s, org = NULL, na.orig = TRUE) {
 
 #' @describeIn breakstring2 Breaks a character string into substrings of a 
 #' specified length, separated by a specified line break character.
+#' @param force logical not used
 #' @export
 breakstring <- function(s, n, nmax = 999, force = FALSE, brk = "\n") {
   if (is.na(s)) {
@@ -2221,7 +2222,7 @@ breakstring2 <- function(s, n, brk = "\n", nmax = 999) {
 }
 
 
-#' @describedIn shortstring0 The shortstring function truncates a string to a specified length.
+#' @describeIn shortstring0 The shortstring function truncates a string to a specified length.
 #' @export
 shortstring <- function(s, n, dots = 1) {
   sapply(s, shortstring0, n = n, dots = dots)
@@ -2378,7 +2379,7 @@ tidy.dataframe <- function(Y) {
 param.class <- function(A) sapply(tidy.dataframe(A), class)
 
 
-#' @describedIn isanumber The function tests if the input \code{x} is of numeric type.
+#' @describeIn isanumber The function tests if the input \code{x} is of numeric type.
 #' @export
 is.num <- function(y) {
   suppressWarnings(numy <- as.numeric(as.character(y)))
@@ -2657,8 +2658,9 @@ getGSETS_playbase <- function(gsets = NULL, pattern = NULL) {
 #' Custom additional gene sets can be included from the lib.dir if provided.
 #'   
 #' @export
-#' Note: this function needs to be refactored since lib.dir will not exist
 getGSETS_playbase.SAVE <- function(pattern, lib.dir, custom_families_file = "custom-families.gmt") {
+  
+  # Note: this function needs to be refactored since lib.dir will not exist
   # get gene symbols
   GENE.SYMBOL <- unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
   # get f1 and families
