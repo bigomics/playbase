@@ -1499,7 +1499,7 @@ getMyGeneInfo <- function(eg, fields = c("symbol", "name", "alias", "map_locatio
 #' info <- getHSGeneInfo(genes)
 #' 
 #' }
-#' #' @export
+#' @export
 getHSGeneInfo <- function(eg, as.link = TRUE) {
   env.list <- c(
     "symbol" = org.Hs.eg.db::org.Hs.egSYMBOL,
