@@ -29,5 +29,4 @@ genes <- c("TP53", "BRCA1", "ABCD1")
 info <- getHSGeneInfo(genes)
 
 }
-#' @export
 }
