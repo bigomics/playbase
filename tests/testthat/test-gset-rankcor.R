@@ -27,10 +27,11 @@ test_that("gset.rankcor constant rho", {
 })
 
 #' Test for gx.nnmcorrect.SAVE
+x <- matrix(rnorm(100 * 30), 100, 30)
+y <- gl(3, 10)
 test_that("gx.nnmcorrect.SAVE returns a matrix of proper dim", {
   xcorr <- gx.nnmcorrect.SAVE(x, y)
 
   expect_type(xcorr, "double")
   expect_equal(dim(xcorr), dim(x))
 })
-
