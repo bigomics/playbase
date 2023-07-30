@@ -10,7 +10,7 @@ star.symbols(n, pch = "★")
 \item{n}{A numeric value specifying the number of star symbols to generate.}
 
 \item{pch}{An optional character string specifying the symbol to use for the stars.
-The default value is "\u2605" (a black star).}
+The default value is a black star.}
 }
 \value{
 A character vector of length 1, containing the generated string of star symbols.
@@ -28,6 +28,6 @@ The resulting string of star symbols is returned as a character vector of length
 \dontrun{
 # example code
 star.symbols(3)
-star.symbols(5, pch = "\u2606")
+star.symbols(5, pch = "*")
 }
 }

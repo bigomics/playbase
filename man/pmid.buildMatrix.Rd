@@ -6,9 +6,6 @@
 \usage{
 pmid.buildMatrix()
 }
-\arguments{
-\item{None}{}
-}
 \value{
 A sparse matrix with rows as PMIDs, columns as gene symbols, and 
 entries indicating a mapping between a PMID and symbol.
