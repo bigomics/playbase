@@ -81,16 +81,32 @@ pgx.wgcna <- function(
 
   datExpr <- t(head(X, ngenes))
   require(WGCNA) # fun fact: if we dont source WGCNA, blockwiseModules does not work
-  net <- WGCNA::blockwiseModules(
-    datExpr,
-    power = power,
-    TOMType = "unsigned", minModuleSize = minmodsize,
-    reassignThreshold = 0, mergeCutHeight = cutheight,
-    numericLabels = TRUE, pamRespectsDendro = FALSE,
-    deepSplit = deepsplit,
-    ## saveTOMs = TRUE, saveTOMFileBase = "WCNA.tom",
-    verbose = 3
-  )
+
+  ## adapt for small datasets
+  minmodsize <- 30
+  minmodsize <- min(minmodsize, nrow(X) / 10)
+  minmodsize
+
+  ## we iterate over smaller power, until we get some clusters
+  ncolors <- 1
+  i <- 1
+  while (ncolors == 1 && i < 100) {
+    p <- 1 + (power - 1) / i
+    net <- WGCNA::blockwiseModules(
+      datExpr,
+      power = p,
+      TOMType = "unsigned", minModuleSize = minmodsize,
+      reassignThreshold = 0, mergeCutHeight = cutheight,
+      numericLabels = TRUE, pamRespectsDendro = FALSE,
+      deepSplit = deepsplit,
+      ## saveTOMs = TRUE, saveTOMFileBase = "WCNA.tom",
+      verbose = 3
+    )
+    ncolors <- length(table(net$colors))
+    i <- i + 1
+  }
+  table(net$colors)
+
 
   ## clean up traits matrix
   datTraits <- pgx$samples
@@ -119,6 +135,7 @@ pgx.wgcna <- function(
   names(me.colors) <- paste0("ME", names(me.colors))
   me.colors <- me.colors[names(me.genes)]
 
+  ## compute clustering based on TOM matrix
   X1 <- t(datExpr)
   X1 <- t(scale(datExpr))
   dissTOM <- 1 - WGCNA::TOMsimilarityFromExpr(datExpr, power = power)
@@ -128,20 +145,32 @@ pgx.wgcna <- function(
     clust[["umap2d"]] <- pgx$cluster.genes$pos[["umap2d"]][colnames(datExpr), ]
   }
 
+  ## Do quick geneset analysis using fisher-test (fastest method)
   gmt <- getGSETS_playbase(pattern = "HALLMARK|GOBP|^C[1-9]")
   gse <- NULL
   bg <- toupper(rownames(pgx$X))
+
+  gmt1 <- lapply(gmt, function(m) intersect(m, bg))
+  gmt1.size <- sapply(gmt1, length)
+  gmt1 <- gmt1[gmt1.size >= 10]
+
   i <- 1
   for (i in 1:length(me.genes)) {
     gg <- toupper(me.genes[[i]])
-    rr <- gset.fisher(gg, gmt, background = bg, fdr = 1)
-    rr <- cbind(
-      module = names(me.genes)[i],
-      geneset = rownames(rr), rr
-    )
-    rr <- rr[order(rr$p.value), , drop = FALSE]
-    if (i == 1) gse <- rr
-    if (i > 1) gse <- rbind(gse, rr)
+    rr <- try(gset.fisher(gg, gmt1, background = bg, fdr = 1, min.genes = 10))
+    if (!"try-error" %in% class(rr)) {
+      rr <- cbind(
+        module = names(me.genes)[i],
+        geneset = rownames(rr),
+        rr
+      )
+      rr <- rr[order(rr$p.value), , drop = FALSE]
+      if (is.null(gse)) {
+        gse <- rr
+      } else {
+        gse <- rbind(gse, rr)
+      }
+    }
   }
   rownames(gse) <- NULL
 

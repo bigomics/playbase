@@ -7,6 +7,7 @@
 ## ========================= CONNECTIVITY FUNCTIONS ===============================
 ## ================================================================================
 
+## ntop = 1000; contrasts = NULL;remove.le = FALSE;inmemory = FALSE
 
 #' @export
 pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 1000, contrasts = NULL,
@@ -175,6 +176,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   ##
   ##
   ##
+  ## nsig=100;ntop=1000;nperm=10000;h5.data="data/matrix";h5.rn="data/rownames";h5.cn="data/colnames"
 
 
   if (is.null(names(fc))) stop("fc must have names")
@@ -213,20 +215,23 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
 
   sel <- Matrix::head(names(sort(-abs(rho))), ntop)
   sel.idx <- match(sel, cn)
+
+  ## if we have less than 500 genes, we should make smaller GMT sets
+  nsig <- min(100, round(length(fc) / 5))
+
   sig100.up <- rhdf5::h5read(h5.file, "signature/sig100.up",
-    index = list(1:100, sel.idx)
+    index = list(1:nsig, sel.idx)
   )
   sig100.dn <- rhdf5::h5read(h5.file, "signature/sig100.dn",
-    index = list(1:100, sel.idx)
+    index = list(1:nsig, sel.idx)
   )
-
 
   ## combine up/down into one (unsigned GSEA test)
   gmt <- rbind(sig100.up, sig100.dn)
   gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
   names(gmt) <- cn[sel.idx]
 
-  system.time(res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm)) ## really unsigned???
+  system.time(res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm, scoreType = "pos")) ## really unsigned???
 
   ## ---------------------------------------------------------------
   ## Combine correlation+GSEA by combined score (NES*rho)
@@ -423,7 +428,7 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
       methods = c("pca", "tsne", "umap"),
       dims = c(2, 3),
       reduce.sd = 2000,
-      reduce.pca = 200
+      reduce.pca = min(200, round(ncol(X) / 3))
     )
 
     if (!h5exists(h5.file, "clustering")) rhdf5::h5createGroup(h5.file, "clustering")
@@ -545,7 +550,7 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
       methods = c("pca", "tsne", "umap"),
       dims = c(2, 3),
       reduce.sd = 2000,
-      reduce.pca = 200
+      reduce.pca = min(200, round(ncol(X) / 3))
     )
 
     rhdf5::h5write(pos[["pca2d"]], h5.file, "clustering/pca2d") ## can write list??
@@ -655,7 +660,7 @@ pgx.ReclusterSignatureDatabase <- function(h5.file, reduce.sd = 1000, reduce.pca
     methods = c("pca", "tsne", "umap"),
     dims = c(2, 3),
     reduce.sd = reduce.sd,
-    reduce.pca = reduce.pca
+    reduce.pca = min(reduce.pca, round(ncol(X) / 3))
   )
 
   rhdf5::h5write(pos[["pca2d"]], h5.file, "clustering/pca2d") ## can write list??
