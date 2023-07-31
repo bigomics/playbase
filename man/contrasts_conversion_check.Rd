@@ -9,6 +9,8 @@ contrasts_conversion_check(SAMPLES, CONTRASTS, PASS)
 \arguments{
 \item{CONTRASTS}{data.frame. The data frame corresponding to the input file as in playbase::CONTRASTS}
 
+\item{PASS}{boolean. The status of the checks.}
+
 \item{SAMPLE}{data.frame. The data frame corresponding to the input file as in playbase::SAMPLES}
 }
 \value{

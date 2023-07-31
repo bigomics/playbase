@@ -20,14 +20,14 @@ The Salmon quantification object with additional gene annotation data added.
 Retrieves additional gene annotation data for a Salmon quantification object.
 }
 \details{
-This function takes a Salmon quantification object and retrieves additional 
-gene annotation data for the quantified genes. It extracts the row names from the 
+This function takes a Salmon quantification object and retrieves additional
+gene annotation data for the quantified genes. It extracts the row names from the
 Salmon counts matrix as the `keys`. It then uses these keys to retrieve corresponding
 annotation from the provided `gencode` data frame, matching on the gene identifiers.
 
 Additional annotation columns added are:
 - gene_id: GENCODE gene identifier
-- gene_type: GENCODE gene type 
+- gene_type: GENCODE gene type
 - gene_name: Gene name
 - chr: Chromosome
 - start: Gene start position

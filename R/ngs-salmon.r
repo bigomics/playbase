@@ -26,8 +26,6 @@
 #' A DGEList containing imported counts, sample data, and gene annotations.
 #'
 #' @export
-#'
-#' @examples
 ngs.rawSalmon <- function(sampleTable, gencode, txi = NULL) {
   if (is.null(txi)) {
     if (!("sf.file" %in% colnames(sampleTable))) stop("need sf.files in table")
@@ -77,8 +75,6 @@ ngs.rawSalmon <- function(sampleTable, gencode, txi = NULL) {
 #' @return A DGEList object containing the abundance estimates, ready for use with edgeR.
 #'
 #' @export
-#'
-#' @examples
 ngs.tximportSalmon <- function(sf.files, count.type = "lengthScaledTPM", organism = "Hsapiens",
                                txOut = FALSE) {
   if (is.null(names(sf.files))) stop("sf.files must be named!")
@@ -204,8 +200,6 @@ ngs.tximportSalmon <- function(sf.files, count.type = "lengthScaledTPM", organis
 #' @return The Salmon quantification object with additional gene annotation data added.
 #'
 #' @export
-#'
-#' @examples
 ngs.getGeneAnnot <- function(keys, keytype, gencode) {
   ## add more gene annotation
   ## build gene annotation (expects pure ENSEMBL.ID in rows)

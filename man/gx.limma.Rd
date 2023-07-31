@@ -56,7 +56,7 @@ Differential expression analysis using limma
 This function performs differential expression analysis on the gene expression matrix \code{X} using limma.
 It handles filtering, model design matrices, and output formatting.
 The phenotype vector \code{pheno} is used to define the linear model.
-Batch effects can be accounted for by providing a \code{B} matrix.  
+Batch effects can be accounted for by providing a \code{B} matrix.
 The function auto-detects the reference level or the user can provide possible values in \code{ref}.
 It returns a data frame containing the limma analysis results.
 }

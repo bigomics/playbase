@@ -16,9 +16,9 @@ The input matrix with rownames converted to HUGO symbols.
 Converts the rownames of a matrix to official HUGO gene symbols.
 }
 \details{
-This function orders the rows by standard deviation, maps the 
-rownames to HUGO symbols using the playbase::alias2hugo function, 
-removes duplicates, and returns the resulting matrix with HUGO symbols 
+This function orders the rows by standard deviation, maps the
+rownames to HUGO symbols using the playbase::alias2hugo function,
+removes duplicates, and returns the resulting matrix with HUGO symbols
 as rownames.
 }
 \examples{

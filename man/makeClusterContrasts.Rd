@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-contrasts.R
 \name{makeClusterContrasts}
 \alias{makeClusterContrasts}
-\title{Title}
+\title{Make contrasts between clusters}
 \usage{
 makeClusterContrasts(
   clusters,
@@ -12,14 +12,29 @@ makeClusterContrasts(
 )
 }
 \arguments{
-\item{clusters}{value}
+\item{clusters}{A vector of cluster assignments}
 
-\item{min.freq}{value}
+\item{min.freq}{The minimum cluster frequency required to include in contrasts}
 
-\item{full}{value}
+\item{full}{Logical indicating whether to include all pairwise contrasts between clusters}
 
-\item{by.sample}{value}
+\item{by.sample}{Logical indicating whether to cross clusters with samples to get sample x cluster contrasts}
+}
+\value{
+A contrast matrix
 }
 \description{
-Title
+Creates a contrast matrix to compare clusters against each other.
+}
+\details{
+This function takes a vector of cluster assignments and generates contrasts between the clusters.
+
+It first creates indicator columns for each cluster. 
+Then it subtracts the diagonal to generate comparisons of each cluster versus the others.
+Clusters below min.freq are excluded.
+
+If full=TRUE, all pairwise contrasts between clusters are also included.
+
+If by.sample=TRUE, the cluster indicators are crossed with the samples 
+to generate sample x cluster interaction contrasts.
 }

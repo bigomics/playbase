@@ -46,7 +46,7 @@ List with differential expression results, including:
   \item tab - Data frame with stats for all genes
   \item top - Data frame with stats for top significant genes
   \item fstats - Data frame with F statistics for all genes
-  \item means - Data frame with mean expression by group  
+  \item means - Data frame with mean expression by group
 }
 }
 \description{
@@ -58,6 +58,6 @@ It handles filtering, model design matrices, and output formatting.
 }
 \examples{
 \dontrun{
- TODO
+# TODO
 }
 }

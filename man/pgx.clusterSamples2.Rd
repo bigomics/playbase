@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-cluster.R
 \name{pgx.clusterSamples2}
 \alias{pgx.clusterSamples2}
-\title{Title}
+\title{Cluster samples in a PGX object}
 \usage{
 pgx.clusterSamples2(
   pgx,
@@ -19,28 +19,46 @@ pgx.clusterSamples2(
 )
 }
 \arguments{
-\item{pgx}{value}
+\item{pgx}{A PGX object}
 
-\item{methods}{value}
+\item{dims}{Dimensions for dimensionality reduction (by default 2,and 3)}
 
-\item{dims}{value}
+\item{reduce.sd}{Perform dimensionality reduction if original dims > reduce.sd}
 
-\item{reduce.sd}{value}
+\item{reduce.pca}{For PCA, take first reduce.pca components}
 
-\item{reduce.pca}{value}
+\item{perplexity}{Perplexity parameter for tSNE and UMAP}
 
-\item{perplexity}{value}
+\item{center.rows}{Center rows before clustering?}
 
-\item{center.rows}{value}
+\item{scale.rows}{Scale rows to unit variance before clustering?}
 
-\item{scale.rows}{value}
+\item{X}{Use this matrix instead of pgx$X}
 
-\item{X}{value}
+\item{umap.pkg}{UMAP package to use (umap or uwot)}
 
-\item{umap.pkg}{value}
+\item{replace.orig}{Replace original pgx$X with reduced data?}
 
-\item{replace.orig}{value}
+\item{method}{Character vector of clustering methods to apply (choose between "pca", "tsne", and "umap")}
+}
+\value{
+The updated PGX object with cluster assignments in pgx$cluster$sample
 }
 \description{
-Title
+Performs dimensionality reduction and clustering on the samples in a PGX object.
+}
+\details{
+This function takes a PGX object and performs PCA, tSNE, and/or UMAP on the
+samples. It clusters the samples in the reduced space and stores the cluster
+assignments in the pgx$cluster$sample slot.
+
+Dimensionality reduction is performed on pgx$X or a provided matrix X. If the
+original number of dimensions is large, PCA is used to reduce to reduce.pca dimensions
+first. tSNE and UMAP are then applied to further reduce to 2 or 3 dimensions.
+
+Multiple parameter options are available to control the clustering, including
+choice of methods, perplexity, centering/scaling samples first, etc.
+
+By default the original pgx$X matrix is replaced with the reduced data. Set
+replace.orig=FALSE to retain the original.
 }

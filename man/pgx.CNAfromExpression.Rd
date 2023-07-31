@@ -2,15 +2,27 @@
 % Please edit documentation in R/pgx-cna.R
 \name{pgx.CNAfromExpression}
 \alias{pgx.CNAfromExpression}
-\title{Title}
+\title{Estimate copy number from gene expression}
 \usage{
 pgx.CNAfromExpression(ngs, nsmooth = 40)
 }
 \arguments{
-\item{ngs}{value}
+\item{ngs}{An NGS object containing gene expression data}
 
-\item{nsmooth}{value}
+\item{nsmooth}{Smoothing window size for copy number estimation. Default 40.}
+}
+\value{
+A list with estimated copy number values, chromosome, position, 
+and ideogram image for each gene.
 }
 \description{
-Title
+Estimates copy number variation from gene expression data by smoothing 
+relative expression values within genomic windows.
+}
+\details{
+This function takes an NGS object containing normalized gene expression data.
+It calculates the relative expression level of each gene compared to the mean expression.
+These relative levels are then smoothed within sliding genomic windows of size \code{nsmooth} 
+genes to estimate regional copy number variation. The smoothed values are returned along
+with the chromosome, genomic position, and an ideogram image for data visualization.
 }

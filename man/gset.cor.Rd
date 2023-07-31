@@ -20,7 +20,7 @@ Matrix of correlation values between rnk and each gene set.
 Computes correlation between a gene rank vector and gene sets.
 }
 \details{
-This function calls gset.rankcor() with use.rank=FALSE to calculate 
+This function calls gset.rankcor() with use.rank=FALSE to calculate
 Pearson correlation between the gene rank vector and membership in each gene set.
 
 P-values can be optionally computed to assess correlation significance.
@@ -28,10 +28,12 @@ P-values can be optionally computed to assess correlation significance.
 \examples{
 \dontrun{
 librart(playbase)
-ranks <- sample(1:10000, 1000, replace = TRUE) 
+ranks <- sample(1:10000, 1000, replace = TRUE)
 names(ranks) <- replicate(1000, paste(sample(LETTERS, 4, replace = TRUE), collapse = ""))
-genesets <- list(GS1=sample(names(ranks), 100),
-                 GS2=sample(names(ranks), 50))
+genesets <- list(
+  GS1 = sample(names(ranks), 100),
+  GS2 = sample(names(ranks), 50)
+)
 
 gset.cor(ranks, genesets)
 }

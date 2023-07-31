@@ -138,7 +138,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
 
   no.design <- all(stat.group %in% rownames(pgx$samples)) ## sample-wise design
   design <- NULL
-  no.design
 
   if (no.design || !use.design) {
     message("[compute_testGenesSingleOmics] 6 : no design matrix ")
@@ -200,7 +199,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   ## are too low. Happens often with single-cell (10x?). We rescale
   ## to a minimum of 1 million counts (CPM)
   mean.counts <- mean(Matrix::colSums(counts, na.rm = TRUE))
-  mean.counts
+
   if (mean.counts < 1e6) {
     cat("[compute_testGenesSingleOmics] WARNING:: low total counts = ", mean.counts, "\n")
     cat("[compute_testGenesSingleOmics] applying global mean scaling to 1e6...\n")
@@ -214,7 +213,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   if (filter.low) {
     PRIOR.CPM <- 0.25
     PRIOR.CPM <- 1
-    PRIOR.CPM
     AT.LEAST <- ceiling(pmax(2, 0.01 * ncol(counts)))
     cat("filtering for low-expressed genes: >", PRIOR.CPM, "CPM in >=", AT.LEAST, "samples\n")
     keep <- (rowSums(edgeR::cpm(counts) > PRIOR.CPM, na.rm = TRUE) >= AT.LEAST)
@@ -247,7 +245,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   ## Do the fitting
   ## -----------------------------------------------------------------------------
   methods <- test.methods
-  methods
   cat(">>> Testing differential expressed genes (DEG) with methods:", methods, "\n")
 
   ## Run all test methods
@@ -266,7 +263,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     contr.matrix = contr.matrix,
     prune.samples = prune.samples,
     prior.cpm = PRIOR.CPM, ## prior count regularization
-    ## quantile.normalize = TRUE,  ## only for logCPM???
     remove.batch = FALSE, ## we do explicit batch correction instead
     conform.output = TRUE,
     do.filter = FALSE,
@@ -334,7 +330,6 @@ compute_testGenesMultiOmics <- function(pgx, contr.matrix, max.features = 1000,
   dt <- "cn"
   dt <- "gx"
   dt <- data.types[1]
-  dt
   for (dt in data.types) {
     ## get data block
     pgx1 <- pgx

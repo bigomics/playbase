@@ -25,7 +25,7 @@ gx.volcanoPlot.LIMMA(
 )
 }
 \arguments{
-\item{tab}{Data frame containing statistics from LIMMA analysis, with 
+\item{tab}{Data frame containing statistics from LIMMA analysis, with
 columns for log2 fold change, p-values, and adjusted p-values.}
 
 \item{render}{Plotting method (either base R graphics or scatterD3).}
@@ -64,23 +64,25 @@ columns for log2 fold change, p-values, and adjusted p-values.}
 A volcano plot is generated, no value is returned.
 }
 \description{
-Generate a volcano plot from a LIMMA differential 
+Generate a volcano plot from a LIMMA differential
 expression analysis result table.
 }
 \details{
-This function takes a LIMMA result table and generates a volcano plot 
-to visualize significance versus log2 fold change. Points exceeding the specified 
-p-value and fold change thresholds are highlighted. The top most significant 
+This function takes a LIMMA result table and generates a volcano plot
+to visualize significance versus log2 fold change. Points exceeding the specified
+p-value and fold change thresholds are highlighted. The top most significant
 genes can be labeled. Both raw and FDR corrected p-values can be used.
 }
 \examples{
 \dontrun{
 n <- 100
-tab <- data.frame(logFC=rnorm(n), 
-                 P.Value=runif(n), 
-                 adj.P.Val = p.adjust(runif(n)), 
-                 AveExpr = runif(n))
-z<- gx.volcanoPlot.LIMMA(tab)
+tab <- data.frame(
+  logFC = rnorm(n),
+  P.Value = runif(n),
+  adj.P.Val = p.adjust(runif(n)),
+  AveExpr = runif(n)
+)
+z <- gx.volcanoPlot.LIMMA(tab)
 z
 }
 }

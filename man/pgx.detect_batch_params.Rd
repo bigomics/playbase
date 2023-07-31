@@ -2,13 +2,24 @@
 % Please edit documentation in R/pgx-contrasts.R
 \name{pgx.detect_batch_params}
 \alias{pgx.detect_batch_params}
-\title{Title}
+\title{Detect batch parameters in expression matrix}
 \usage{
 pgx.detect_batch_params(Y)
 }
 \arguments{
-\item{Y}{value}
+\item{Y}{Expression matrix with samples in columns.}
+}
+\value{
+A character vector of detected batch parameter names.
 }
 \description{
-Title
+Detects potential batch effect parameters in the column names of 
+an expression matrix.
+}
+\details{
+Detect batch parameters in expression matrix
+
+This function checks the column names of the expression matrix Y for 
+common batch effect terms like 'batch', 'cell.line', 'patient', etc. It returns 
+the column names that match these terms, which typically indicate a batch effect parameter.
 }

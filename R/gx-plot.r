@@ -28,10 +28,7 @@
 #'
 #' @return None. Produces a barplot.
 #'
-#' @return
 #' @export
-#'
-#' @examples
 gx.barplot <- function(x, main = "", cex.main = 1.2, cex.names = 0.85,
                        cex.legend = 0.9, srt = 0, xlab = "", ylab = "",
                        group = NULL, group.names = NULL, bar.names = NULL,
@@ -133,8 +130,6 @@ gx.barplot <- function(x, main = "", cex.main = 1.2, cex.names = 0.85,
 #' @return None. Produces a bar/bee swarm plot.
 #'
 #' @export
-#'
-#' @examples
 gx.b3plot <- function(x, y, first = NULL,
                       width = 1, bar = TRUE, bee = TRUE, sig.stars = FALSE,
                       ymax = NULL, bee.cex = 0.3, max.stars = 5, srt = NULL, xoff = 0,

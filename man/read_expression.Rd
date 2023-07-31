@@ -18,11 +18,11 @@ matrix. the file with the data
 Reads an expression data matrix from file and performs validation and preprocessing.
 }
 \details{
-This function reads an expression matrix using playbase::read.as_matrix(),  
-squares the values, validates with validate_counts(), and optionally converts row names 
+This function reads an expression matrix using playbase::read.as_matrix(),
+squares the values, validates with validate_counts(), and optionally converts row names
 from IDs to gene symbols using playbase::probe2symbol().
 
-It removes rows with NA, blank or invalid symbols, and collapses duplicate symbols by  
+It removes rows with NA, blank or invalid symbols, and collapses duplicate symbols by
 summing expression across rows.
 }
 \examples{

@@ -33,14 +33,14 @@ ngs.cookForEDGER(
 A DGEList object ready for analysis with edgeR.
 }
 \description{
-This function takes raw count data and prepares it for differential 
+This function takes raw count data and prepares it for differential
 expression analysis with edgeR. It handles filtering, normalization, and batch correction.
 }
 \details{
-This function handles conversion of raw count data into a properly formatted 
+This function handles conversion of raw count data into a properly formatted
 DGEList object for differential analysis with edgeR. It checks that the sample and gene
 metadata matches the counts. Filtering, normalization, and batch correction can be applied.
 
-The returned DGEList contains the normalized, filtered count matrix, along with sample and 
+The returned DGEList contains the normalized, filtered count matrix, along with sample and
 gene data frames, ready for analysis with edgeR functions like glmQLFit() and glmQLFTest().
 }

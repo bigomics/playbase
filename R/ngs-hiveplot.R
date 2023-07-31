@@ -79,7 +79,7 @@ ngs.hiveplot <- function(ngs, pheno, level = 1, ntop = 400, main = "", axis.lab 
 #' This function takes a data frame of correlation statistics between features in
 #' gene expression, copy number, methylation datasets vs a phenotype. It filters,
 #' orders, and processes the data into formats needed for generating a hive plot using the
-#' \code{\link{hiveplot}} function.
+#' function.
 #'
 #' The main outputs are two nested data frames defining the nodes and edges for the plot.
 #' Visual parameters like node size, color, transparency, etc. are set based on the input

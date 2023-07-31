@@ -44,12 +44,12 @@ Generates data frames required to visualize associations between omics datasets
 using a hive plot.
 }
 \details{
-This function takes a data frame of correlation statistics between features in 
-gene expression, copy number, methylation datasets vs a phenotype. It filters, 
-orders, and processes the data into formats needed for generating a hive plot using the 
-\code{\link{hiveplot}} function.
+This function takes a data frame of correlation statistics between features in
+gene expression, copy number, methylation datasets vs a phenotype. It filters,
+orders, and processes the data into formats needed for generating a hive plot using the
+function.
 
-The main outputs are two nested data frames defining the nodes and edges for the plot. 
+The main outputs are two nested data frames defining the nodes and edges for the plot.
 Visual parameters like node size, color, transparency, etc. are set based on the input
 correlation data.
 }

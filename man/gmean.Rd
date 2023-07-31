@@ -16,15 +16,15 @@ The geometric mean as a numeric value.
 Calculates the geometric mean of a numeric vector.
 }
 \details{
-The geometric mean is calculated by taking the nth root of the 
-product of n numbers, where n is the length of the input vector. It is 
-more appropriate than the arithmetic mean for positively skewed 
+The geometric mean is calculated by taking the nth root of the
+product of n numbers, where n is the length of the input vector. It is
+more appropriate than the arithmetic mean for positively skewed
 distributions.
 }
 \examples{
 \dontrun{
 x <- c(1, 10, 100)
-gmean(x) 
+gmean(x)
 }
 
 }

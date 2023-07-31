@@ -54,15 +54,6 @@ pgx <- playbase::pgx.computePGX(
 )
 ```
 
-## Adding namespace
-
-
-```{r namespace}
-library(addns)
-# addns::add_ns(path = "R/", packages = c("playbase"))
-# adds::rm_imports(path = "R/")
-```
-
 ## The pgx object
 
 The core object in playbase is the `pgx` object. This object holds the raw data and any analysis results returned from playbase modules / boards. The pgx object is simply an R list. It contains minimally the following list items:

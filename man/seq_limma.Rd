@@ -7,12 +7,12 @@
 seq_limma(countdata, y, method = "edgeR")
 }
 \arguments{
-\item{countdata}{Numeric matrix of RNA-seq counts with genes in rows and 
+\item{countdata}{Numeric matrix of RNA-seq counts with genes in rows and
 samples in columns.}
 
 \item{y}{Factor or vector indicating the phenotype for each sample.}
 
-\item{method}{Method for normalization and dispersion estimation. Either 
+\item{method}{Method for normalization and dispersion estimation. Either
 "edgeR" or "DESeq2".}
 }
 \value{
@@ -20,13 +20,23 @@ Data frame containing limma analysis results.
 }
 \description{
 Performs differential expression analysis on RNA-seq count data
- using limma-voom. Designed for gene-level count data from RNA-seq 
+ using limma-voom. Designed for gene-level count data from RNA-seq
 experiments.
 }
 \details{
 Differential expression analysis using limma for RNA-seq data
 
 This function takes RNA-seq count data and a phenotype factor as input.
- It uses limma-voom to fit a linear model and identify differentially expressed 
+ It uses limma-voom to fit a linear model and identify differentially expressed
 genes. The count data is normalized and dispersion is estimated using either edgeR or DESeq2 methods.
+}
+\examples{
+\dontrun{
+set.seed(151)
+gx <- matrix(sample(1:100, 100*20, replace = TRUE), 100, 20)
+rownames(gx) <- replicate(100, sample(paste0(LETTERS, 1:50), 1))
+colnames(gx) <- sample(letters, 20)
+y <- sample(letters[1:4], 20, replace = TRUE)
+out <- playbase::seq_limma(gx, y)
+#' }
 }

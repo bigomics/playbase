@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-cluster.R
 \name{pgx.FindClusters}
 \alias{pgx.FindClusters}
-\title{Title}
+\title{Find optimal sample clusters}
 \usage{
 pgx.FindClusters(
   X,
@@ -12,14 +12,28 @@ pgx.FindClusters(
 )
 }
 \arguments{
-\item{X}{value}
+\item{X}{Numeric matrix of expression data}
 
-\item{method}{value}
+\item{method}{Clustering methods to evaluate (kmeans, hclust, louvain, meta)}
 
-\item{top.sd}{value}
+\item{top.sd}{Number of top variable features to use}
 
-\item{npca}{value}
+\item{npca}{Number of PCA components for dimensionality reduction}
+}
+\value{
+Optimal number of clusters
 }
 \description{
-Title
+Finds the optimal number of clusters in the samples using multiple methods.
+}
+\details{
+Find optimal number of sample clusters
+
+This function takes a gene expression matrix and evaluates multiple clustering algorithms
+(kmeans, hierarchical, Louvain) across a range of cluster numbers to determine the optimal number
+of clusters.
+
+The data is first reduced to the top variable features and PCA dimensions. Clustering is then
+performed for a range of k clusters. The optimal k is determined by the minimum average silhouette
+width across methods.
 }

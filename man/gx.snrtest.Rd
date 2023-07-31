@@ -19,7 +19,7 @@ gx.snrtest(X, y, ref.class, nperm = 200)
 Named vector of p-values for each gene.
 }
 \description{
-Performs a gene-wise signal to noise ratio test to detect differential expression. 
+Performs a gene-wise signal to noise ratio test to detect differential expression.
 Permutation test is used to compute p-values.
 }
 \details{

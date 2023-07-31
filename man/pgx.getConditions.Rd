@@ -2,15 +2,24 @@
 % Please edit documentation in R/pgx-contrasts.R
 \name{pgx.getConditions}
 \alias{pgx.getConditions}
-\title{Title}
+\title{Get sample conditions from expression matrix}
 \usage{
 pgx.getConditions(exp.matrix, nmax = 3)
 }
 \arguments{
-\item{exp.matrix}{value}
+\item{exp.matrix}{Expression matrix with samples in columns}
 
-\item{nmax}{value}
+\item{nmax}{Maximum number of groups to return}
+}
+\value{
+Character vector of sample conditions
 }
 \description{
-Title
+Extracts sample conditions from an expression matrix by pasting column names.
+}
+\details{
+This function takes an expression matrix and generates a sample condition vector 
+by pasting the column names with an underscore.
+
+If there are more than nmax unique conditions, they are renamed to "group1", "group2", etc.
 }

@@ -2,17 +2,31 @@
 % Please edit documentation in R/pgx-contrasts.R
 \name{pgx.makeStratifiedContrasts}
 \alias{pgx.makeStratifiedContrasts}
-\title{Title}
+\title{Generate contrasts within strata}
 \usage{
 pgx.makeStratifiedContrasts(Y, strata, ref)
 }
 \arguments{
-\item{Y}{value}
+\item{Y}{Factor vector indicating groups}
 
-\item{strata}{value}
+\item{strata}{Factor vector indicating strata}
 
-\item{ref}{value}
+\item{ref}{Reference group to contrast against}
+}
+\value{
+Contrast matrix
 }
 \description{
-Title
+Generates contrasts between groups within strata.
+}
+\details{
+This function takes a group factor Y and strata factor, and generates contrasts between
+the groups within each stratum.
+
+First, dummy variables are created for Y and the reference group is subtracted to create
+contrasts. Then these are crossed with the strata dummy variables to encode comparisons  
+within each stratum.
+
+The result is a contrast matrix with columns encoding the group comparisons within
+each stratum.
 }

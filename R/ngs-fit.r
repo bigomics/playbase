@@ -243,7 +243,7 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
       stop("custom must have 'tables' and 'expr'")
     }
     need.tests <- names(outputs[[1]]$tables)
-    need.tests
+
     if (!all(need.tests %in% names(custom$tables))) {
       stop("custom must include tables: ", paste(need.tests, collapse = " "))
     }
@@ -419,8 +419,7 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
 ## ----------------------------------- FIT ALL CONTRASTS --------------------------------------
 ## --------------------------------------------------------------------------------------------
 
-
-#' @describeIn ngs.fitContrastsWithAllMethods
+#' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using t-test
 #' @export
 ngs.fitContrastsWithTTEST <- function(X, contr.matrix, design, method = "welch",
                                       conform.output = 0) {
@@ -457,7 +456,7 @@ ngs.fitContrastsWithTTEST <- function(X, contr.matrix, design, method = "welch",
 }
 
 
-#' @describeIn ngs.fitContrastsWithAllMethods
+#' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using LIMMA differential expression analysis on count data.
 #' @export
 ngs.fitContrastsWithLIMMA <- function(X, contr.matrix, design, method = c("voom", "limma"),
                                       trend = TRUE, robust = TRUE, prune.samples = FALSE,
@@ -557,7 +556,7 @@ ngs.fitContrastsWithLIMMA <- function(X, contr.matrix, design, method = c("voom"
 }
 
 
-#' @describeIn ngs.fitContrastsWithAllMethods
+#' @describeIn ngs.fitContrastsWithAllMethods Fit contrasts with EdgeR
 #' @export
 ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
                                       method = c("qlf", "lrt"), prune.samples = FALSE, X = NULL,
@@ -664,7 +663,7 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
 }
 
 
-#' @describeIn ngs.fitContrastsWithAllMethods
+#' @describeIn ngs.fitContrastsWithAllMethods contrasts with EdgeR without a design
 #' @export
 .ngs.fitContrastsWithEDGER.nodesign <- function(dge, contr.matrix, method = c("qlf", "lrt"), X = NULL,
                                                 conform.output = FALSE, robust = TRUE, plot = TRUE) {
@@ -738,7 +737,7 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
 }
 
 
-#' @describeIn ngs.fitContrastsWithAllMethods
+#' @describeIn ngs.fitContrastsWithAllMethods Fit contrasts with EdgeR without a design matrix
 #' @export
 .ngs.fitContrastsWithEDGER.nodesign.pruned <- function(counts, contr.matrix, group = NULL,
                                                        method = c("qlf", "lrt"), X = NULL,
@@ -826,8 +825,8 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
 }
 
 
-
-#' @describeIn ngs.fitContrastsWithAllMethods
+#' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using DESeq2 differential expression 
+#' analysis on count data
 #' @export
 ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
                                         X = NULL, genes = NULL, test = "Wald", prune.samples = FALSE,
@@ -949,7 +948,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
 }
 
 
-#' @describeIn ngs.fitContrastsWithAllMethods
+#' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using DESeq2 differential expression
 #' @export
 .ngs.fitConstrastsWithDESEQ2.nodesign <- function(counts, contr.matrix, test = "Wald",
                                                   prune.samples = FALSE,
@@ -963,7 +962,6 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
     stop("ngs.fitConstrastsWithDESEQ2.nodesign:: contrast matrix must be by sample")
   }
 
-  dim(X)
   exp.matrix <- contr.matrix
 
   tables <- list()

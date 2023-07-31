@@ -42,7 +42,7 @@ Designed for experiments with two factors, each with two or more levels.
 Differential expression analysis for two factorial designs
 
 This function handles the limma model matrix and contrasts for two factorial designs.
-The \code{factors} data frame specifies the experimental design.  
+The \code{factors} data frame specifies the experimental design.
 Multiple contrasts are performed between factor level combinations.
 Results are filtered by FDR and fold change thresholds.
 }

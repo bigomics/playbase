@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-cluster.R
 \name{pgx.clusterMatrix}
 \alias{pgx.clusterMatrix}
-\title{Title}
+\title{Cluster rows of a matrix}
 \usage{
 pgx.clusterMatrix(
   X,
@@ -20,30 +20,46 @@ pgx.clusterMatrix(
 )
 }
 \arguments{
-\item{X}{value}
+\item{X}{Numeric matrix with rows as features to cluster}
 
-\item{perplexity}{value}
+\item{perplexity}{Perplexity parameter for tSNE and UMAP}
 
-\item{dims}{value}
+\item{dims}{Output dimensions for tSNE/UMAP (2 or 3)}
 
-\item{ntop}{value}
+\item{ntop}{Number of top variable rows to use}
 
-\item{npca}{value}
+\item{npca}{Number of PCA components for initial reduction}
 
-\item{prefix}{value}
+\item{prefix}{Prefix for cluster variable names}
 
-\item{row.center}{value}
+\item{row.center}{Center rows before clustering?}
 
-\item{row.scale}{value}
+\item{row.scale}{Scale rows before clustering?}
 
-\item{find.clusters}{value}
+\item{find.clusters}{Detect optimal number of clusters?}
 
-\item{kclust}{value}
+\item{kclust}{Number of clusters for k-means}
 
-\item{clust.detect}{value}
+\item{clust.detect}{Clustering method for optimal clusters (louvain, hclust)}
 
-\item{method}{value}
+\item{method}{Embedding method (tsne, umap, pca)}
+}
+\value{
+Updated matrix with cluster assignments
 }
 \description{
-Title
+Clusters the rows of a matrix using dimensionality reduction and clustering.
+Designed for large matrices where tSNE/UMAP cannot be run directly.
+}
+\details{
+This function takes a matrix and clusters the rows using a combination of
+PCA, tSNE/UMAP, and k-means clustering.
+
+PCA is first used to reduce the dimensions if the matrix is large. The top
+variable rows are selected before reduction. tSNE or UMAP is then applied
+to further reduce the dimensions to 2 or 3. k-means clustering finally
+groups the rows into clusters.
+
+Multiple parameters control perplexity, centering/scaling, number of clusters, etc.
+By default it tries to detect the optimal number of clusters.
 }

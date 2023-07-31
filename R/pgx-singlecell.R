@@ -9,10 +9,6 @@ seurat2pgx <- function(obj, do.cluster = FALSE) {
   ##
   ##
   message("[createPGX.10X] creating PGX object...")
-  ## pgx <- pgx.createPGX(
-  ##     counts = counts,  samples = pheno, contrasts = ct$contr.matrix,
-  ##     do.cluster = FALSE, batch.correct = TRUE,
-  ##     is.logx = FALSE)
   pgx <- list()
   pgx$name <- "SeuratProject"
   pgx$description <- "Seurat object converted using seurat2pgx"
@@ -86,7 +82,7 @@ pgx.scTestDifferentialExpression <- function(counts, y, is.count = TRUE, samples
     message("setting column sums to total = ", round(cpm.total, 2))
   }
 
-  if (is.count && class(counts) == "dgCMatrix") {
+  if (is.count && inherits(counts, "dgCMatrix")) {
     message("input matrix is counts (sparseMatrix)")
     ## normalize to CPM
     X1 <- counts
@@ -455,7 +451,7 @@ pgx.scBatchIntegrate <- function(X, batch,
     liger <- try(rliger::optimizeALS(liger, k = k))
 
 
-    if (class(liger) == "try-error") {
+    if (inherits(liger, "try-error")) {
 
     } else {
       liger <- rliger::quantile_norm(liger)

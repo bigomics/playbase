@@ -2,17 +2,99 @@
 % Please edit documentation in R/pgx-api.R
 \name{pgx.getMetaMatrix}
 \alias{pgx.getMetaMatrix}
-\title{Title}
+\alias{pgx.getMetaFoldChangeMatrix}
+\alias{pgx.getContrasts}
+\alias{pgx.getTopGeneSets}
+\alias{pgx.getMarkerGenes}
+\alias{pgx.getFamilies}
+\title{Get meta-analysis results matrix}
 \usage{
 pgx.getMetaMatrix(pgx, methods = "meta", level = "gene")
+
+pgx.getMetaFoldChangeMatrix(pgx, what = "meta", level = "gene")
+
+pgx.getContrasts(pgx)
+
+pgx.getTopGeneSets(pgx, n = 10, ng = 100, dir = 0, sym = FALSE, filt = NULL)
+
+pgx.getMarkerGenes(pgx, n = 10, dir = 0, sym = FALSE, filt = NULL)
+
+pgx.getFamilies(pgx, nmin = 10, extended = FALSE)
 }
 \arguments{
-\item{pgx}{value}
+\item{pgx}{A PGX object containing gene expression data}
 
-\item{methods}{value}
+\item{methods}{Character vector of meta-analysis methods to include. 
+Default is meta.}
 
-\item{level}{value}
+\item{level}{Data level to extract results for ("gene", "geneset").}
+
+\item{n}{The number of top marker genes to return for each comparison. Default 10.}
+
+\item{dir}{The direction to sort by. 0 for absolute value, -1 for negative, 1 for positive. Default 0.}
+
+\item{sym}{Whether to return equal numbers of up and down genes. Default FALSE.}
+
+\item{filt}{Filter to apply to gene names before selecting markers. Default NULL.}
+
+\item{nmin}{The minimum number of genes for a family to be returned}
+
+\item{extended}{Whether to return extended families (TRUE) or only core families (FALSE)}
+}
+\value{
+A matrix with rows corresponding to features at the specified level, 
+and columns for fold-changes and adjusted p-values from each meta-analysis 
+method.
+
+A named list with top marker genes for each comparison
+
+A character vector of gene family names
 }
 \description{
-Title
+Returns a matrix of meta-analysis results for a PGX object.
+
+Retrieves the gene families represented in a PGX object that have at least nmin members.
+}
+\details{
+This function extracts a matrix of meta-analysis results from a PGX object.
+It returns fold-changes and adjusted p-values from the specified 
+meta-analysis methods.
+
+The results can be extracted at the gene, exon or junction level, depending 
+on the \code{level} argument. By default it returns results for all 
+meta-analysis methods found in the PGX object.
+
+A subset of methods can be specified with the \code{methods} argument.
+
+This function extracts the top n marker genes (based on absolute t-statistic or fold change) 
+for each comparison stored in the PGX object. It returns a list with one element per comparison, 
+containing the top marker genes.
+
+The number and direction of sorting can be controlled with n and dir arguments.
+Setting sym=TRUE returns an equal number of up and down genes.
+A filter can be applied to gene names before selecting markers.
+
+Searches for gene families in the PGX gene sets that match either the core family names (FAMILY*) or 
+extended family regex (e.g. <FAMILY.ABC.*). Returns the names of families with at least nmin members 
+present in the PGX gene expression matrix. Useful for checking which gene families are represented in the data.
+}
+\section{Functions}{
+\itemize{
+\item \code{pgx.getMetaFoldChangeMatrix()}: Get the Meta-Fold ChangeMatrix from PGX
+
+\item \code{pgx.getContrasts()}: Get the contrast from PGX
+
+\item \code{pgx.getTopGeneSets()}: get the top genesets from PGX
+
+\item \code{pgx.getMarkerGenes()}: Get Marker Genes
+
+\item \code{pgx.getFamilies()}: Get Families from PGX
+
+}}
+\examples{
+\dontrun{
+mypgx <- pgx.create(counts, samples)
+meta.res <- pgx.getMetaMatrix(mypgx)
+head(meta.res)
+}
 }

@@ -3,6 +3,21 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
+
+#' @title Create a Phenotype Matrix
+#'
+#' @description This function creates a phenotype matrix from a PGX object.
+#'
+#' @param pgx A list representing a PGX object containing the data to be analyzed.
+#' @param phenotype A character string specifying the name of the phenotype to use for creating the matrix.
+#'
+#' @details This function takes a PGX object `pgx` and a character string `phenotype` as input and 
+#' creates a phenotype matrix using the specified phenotype. The phenotype matrix is created by extracting 
+#' the specified phenotype from the `samples` data frame in the `pgx` object and converting it into a model matrix. 
+#' The resulting phenotype matrix is returned as a numeric matrix.
+#'
+#' @return A numeric matrix representing the phenotype matrix created from the specified phenotype.
+#'
 #' @export
 pgx.phenoMatrix <- function(pgx, phenotype) {
   y <- pgx$samples[, phenotype]
@@ -12,6 +27,21 @@ pgx.phenoMatrix <- function(pgx, phenotype) {
   as.matrix(mm)
 }
 
+
+#' @title Compact Positions
+#'
+#' @description This function compacts a matrix of positions by removing white space.
+#'
+#' @param pos A numeric matrix of positions to be compacted.
+#' @param d An optional numeric value specifying the maximum distance between adjacent positions after compaction.
+#' The default value is 0.01.
+#'
+#' @details This function takes a numeric matrix of positions `pos` and an optional numeric value `d` as input and compacts the positions by removing white space. 
+#' For each column in `pos`, the function calculates the distances between adjacent positions and replaces any distance greater than `d` with `d`. 
+#' The resulting compacted positions are returned as a numeric matrix of the same size as `pos`.
+#'
+#' @return A numeric matrix of the same size as `pos`, containing the compacted positions.
+#'
 #' @export
 pos.compact <- function(pos, d = 0.01) {
   ## make positions more dense removing white space
@@ -26,14 +56,43 @@ pos.compact <- function(pos, d = 0.01) {
   pos
 }
 
-#' Given a Set of Points and Box sizes,
-#' https://github.com/slowkow/ggrepel/issues/24
+
+#' Find non-overlapping boxes for points
+#'
+#' @param df Data frame containing point positions 
+#' @param xcol Name of column in \code{df} containing x coordinates
+#' @param ycol Name of column in \code{df} containing y coordinates
+#' @param box_padding_x Padding to add to box width  
+#' @param box_padding_y Padding to add to box height
+#' @param point_padding_x Minimum spacing between points in x direction
+#' @param point_padding_y Minimum spacing between points in y direction
+#' @param xlim Limits for x axis 
+#' @param ylim Limits for y axis
+#' @param force Repulsion force between boxes
+#' @param maxiter Maximum number of iterations
+#'
+#' @return Data frame with updated non-overlapping box coordinates 
+#'
+#' @details This function takes a data frame of point positions and calculates non-overlapping 
+#' box positions around each point using a physical simulation.  
+#'
+#' It returns a data frame containing the updated box corner positions after repulsion.
+#' The x1,y1,x2,y2 columns correspond to the box corners.
+#'
+#' @examples
+#' \dontrun{
+#' points <- data.frame(x = runif(10), y = runif(10))
+#' boxes <- util.findboxes(points, "x", "y", 0.2, 0.2, 0.1, 0.1) 
+#' }
+
 #' @export
 util.findboxes <- function(df, xcol, ycol,
                            box_padding_x, box_padding_y,
                            point_padding_x, point_padding_y,
                            xlim, ylim,
                            force = 1e-7, maxiter = 20000) {
+  # https://github.com/slowkow/ggrepel/issues/24
+
   # x and y posiitons as a dataframe
   posdf <- df[c(xcol, ycol)]
 
@@ -69,6 +128,28 @@ util.findboxes <- function(df, xcol, ycol,
   return(finaldf)
 }
 
+
+#' @title Generate Star Symbols
+#'
+#' @description This function generates a string of star symbols.
+#'
+#' @param n A numeric value specifying the number of star symbols to generate.
+#' @param pch An optional character string specifying the symbol to use for the stars.
+#' The default value is a black star.
+#'
+#' @details This function takes a numeric value `n` and an optional character string `pch` as 
+#' input and generates a string of `n` star symbols using the specified `pch` symbol. 
+#' If `n` is 0, an empty string is returned. 
+#' The resulting string of star symbols is returned as a character vector of length 1.
+#'
+#' @return A character vector of length 1, containing the generated string of star symbols.
+#'
+#' @examples
+#' \dontrun{
+#' # example code
+#' star.symbols(3)
+#' star.symbols(5, pch = "*")
+#' }
 #' @export
 star.symbols <- function(n, pch = "\u2605") {
   if (n == 0) {
@@ -77,6 +158,18 @@ star.symbols <- function(n, pch = "\u2605") {
   paste(rep(pch, n), collapse = "")
 }
 
+
+#' Search for file in system path
+#'
+#' @param path Character vector of directories to search 
+#' @param file Character string of filename to search for
+#'
+#' @return Full path of file if found, otherwise NULL
+#' 
+#' @details Searches the directories in \code{path} to find the file specified by \code{file}.
+#' Returns the full path if the file is found in one of the directories. 
+#' Returns NULL if the file is not found.
+#'
 #' @export
 search_path <- function(paths, file) {
   dir <- paths[which(file.exists(file.path(paths, file)))]
@@ -86,17 +179,80 @@ search_path <- function(paths, file) {
   file.path(dir[1], file)
 }
 
+
+#' @title Row Scale a Matrix
+#'
+#' @description This function scales the rows of a matrix by subtracting the row 
+#' means and dividing by the row standard deviations.
+#'
+#' @param x A numeric matrix to be scaled.
+#'
+#' @details This function takes a numeric matrix `x` as input and scales its rows by 
+#' subtracting the row means and dividing by the row standard deviations. 
+#' The resulting scaled matrix is returned.
+#'
+#' @return A numeric matrix of the same size as `x`, containing the scaled values.
+#'
+#' @examples
+#' \dontrun{
+#' # example code
+#' x <- matrix(c(1, 2, 3, 4), nrow = 2)
+#' rowscale(x)
+#' }
+#'
 #' @export
 rowscale <- function(x) {
   x <- x - Matrix::rowMeans(x, na.rm = TRUE)
   x / (1e-4 + sqrt(rowMeans(x**2, na.rm = TRUE)))
 }
 
+
+#' @title Wrap Strings to a Specified Width
+#'
+#' @description This function wraps a character vector of strings to a specified width.
+#'
+#' @param str A character vector of strings to be wrapped.
+#' @param n A numeric value specifying the maximum width of each line in characters.
+#'
+#' @details This function takes a character vector of strings `str` and a numeric value `n` as input and wraps each string in `str` to a maximum width of `n` characters. 
+#' The resulting wrapped strings are returned as a character vector, where each element contains one or more lines separated by newline characters.
+#'
+#' @return A character vector of the same length as `str`, containing the wrapped strings.
+#'
+#' @examples
+#' \dontrun{
+#' # example code
+#' str <- c("The quick brown fox jumps over the lazy dog")
+#' strwrap2(str, 10)
+#' }
+#'
 #' @export
 strwrap2 <- function(str, n) {
   sapply(str, function(s) paste(base::strwrap(s, n), collapse = "\n"))
 }
 
+
+#' @title Add Opacity to Hexadecimal Colors
+#'
+#' @description This function adds opacity to a vector of hexadecimal color values.
+#'
+#' @param hexcol A character vector of hexadecimal color values.
+#' @param opacity A numeric value specifying the opacity to be added, ranging from 0 (transparent) to 1 (opaque).
+#'
+#' @details This function takes a character vector of hexadecimal color values `hexcol` and 
+#' a numeric value `opacity` as input and adds the specified opacity to each color value. 
+#' The function uses the `toRGB` function from the `plotly` package to convert the hexadecimal 
+#' color values to RGBA format, then modifies the alpha channel according to the specified `opacity` value. 
+#' The resulting RGBA color values are returned as a character vector.
+#'
+#' @return A character vector of the same length as `hexcol`, containing the RGBA color values with added opacity.
+#'
+#' @examples
+#' \dontrun{
+#' # example code
+#' hexcol <- c("#FF0000", "#00FF00", "#0000FF")
+#' add_opacity(hexcol, 0.5)
+#' }
 #' @export
 add_opacity <- function(hexcol, opacity) {
   col1 <- rep(NA, length(hexcol))
@@ -108,6 +264,26 @@ add_opacity <- function(hexcol, opacity) {
   col1
 }
 
+
+#' Log-counts-per-million transformation
+#'
+#' @param counts Numeric matrix of read counts, with genes in rows and samples in columns.
+#' @param total Total count to scale to. Default is 1e6. 
+#' @param prior Pseudocount to add prior to log transform. Default is 1.
+#'
+#' @return Matrix of log-transformed values.
+#'
+#' @details Transforms a matrix of read counts to log-counts-per-million (logCPM).
+#' Adds a pseudocount \code{prior} (default 1) before taking the log transform.
+#' Values are scaled to \code{total} counts (default 1e6).
+#' 
+#' This stabilizes variance and normalizes for sequencing depth.
+#'
+#' @examples
+#' \dontrun{
+#' counts <- matrix(rnbinom(100*10, mu=100, size=1), 100, 10) 
+#' logcpm <- logCPM(counts)
+#' }
 #' @export
 logCPM <- function(counts, total = 1e6, prior = 1) {
   ## Transform to logCPM (log count-per-million) if total counts is
@@ -133,6 +309,20 @@ logCPM <- function(counts, total = 1e6, prior = 1) {
   }
 }
 
+
+#' @title Check for Required Fields in a PGX Object
+#'
+#' @description This function checks if a PGX object contains all required fields.
+#'
+#' @param pgx A list representing a PGX object to be checked.
+#'
+#' @details This function takes a list `pgx` representing a PGX object as input and checks if it contains all required fields. 
+#' The required fields are "counts", "samples", "genes", "model.parameters", "X", "gx.meta", "gset.meta", "gsetX", and "GMT". 
+#' If any of the required fields are not present in the `pgx` object, a warning message is printed. 
+#' The function returns a logical value indicating whether all required fields are present in the `pgx` object.
+#'
+#' @return A logical value indicating whether all required fields are present in the `pgx` object.
+#'
 #' @export
 pgx.checkObject <- function(pgx) {
   must.have <- c(
@@ -147,6 +337,31 @@ pgx.checkObject <- function(pgx) {
   all(must.have %in% names(pgx))
 }
 
+
+#' Calculate group-wise summary statistics from a matrix
+#'
+#' @param X Numeric matrix with samples in columns.
+#' @param group Factor indicating group membership for each column of X.  
+#' @param FUN Function to calculate row-wise statistics. Default is rowMeans.
+#' @param dir Direction to apply FUN. 1=row-wise, 2=column-wise.
+#' 
+#' @return Matrix of summary statistics, with rows corresponding to groups.
+#'
+#' @details This function calculates a row-wise or column-wise summary statistic 
+#'   for each group defined in the \code{group} vector.
+#'   
+#'   It applies the function specified by \code{FUN} (default is rowMeans) to summarize
+#'   either rows or columns of \code{X}, depending on the \code{dir} argument.
+#'   
+#'   The result is a matrix with rows corresponding to the unique groups, and columns
+#'   equal to the number of rows/columns summarized.
+#'
+#' @examples
+#' \dontrun{
+#' X <- matrix(rnorm(100*20), 100, 20) 
+#' groups <- sample(letters[1:5], 20, replace=TRUE)
+#' means <- matGroupMeans(X, groups)
+#' }
 #' @export
 matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1) {
   if (dir == 2) X <- t(X)
@@ -155,6 +370,23 @@ matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1) {
   mX
 }
 
+
+#' @title Apply k-Nearest Neighbors Median Filter
+#'
+#' @description This function applies a k-nearest neighbors median filter to a vector of values.
+#'
+#' @param x A numeric vector of values to be filtered.
+#' @param pos A matrix of positions for each element in `x`.
+#' @param k An optional numeric value specifying the number of nearest neighbors to use for filtering.
+#' The default value is 10.
+#'
+#' @details This function takes a numeric vector `x` and a matrix of positions `pos` as input and applies a k-nearest neighbors median filter to `x`. 
+#' The number of nearest neighbors used for filtering is specified by the `k` parameter. 
+#' For each element in `x`, the function finds its `k` nearest neighbors in `pos` and calculates the median of their values in `x`. 
+#' The resulting filtered values are returned as a numeric vector of the same length as `x`.
+#'
+#' @return A numeric vector of the same length as `x`, containing the filtered values.
+#'
 #' @export
 knnMedianFilter <- function(x, pos, k = 10) {
   nb <- FNN::get.knn(pos[, ], k = k)$nn.index
@@ -164,6 +396,7 @@ knnMedianFilter <- function(x, pos, k = 10) {
   x1
 }
 
+#' @describeIn knnImputeMissing Impute missing values with non-negative matrix factorization
 #' @export
 nmfImpute <- function(x, k = 5) {
   ## Impute missing values with NMF
@@ -181,6 +414,25 @@ nmfImpute <- function(x, k = 5) {
   x
 }
 
+
+#' @title Impute Missing Values with k-Nearest Neighbors
+#' 
+#' @description This function imputes missing values in a vector using k-nearest neighbors.
+#' @param x A numeric vector containing missing values to be imputed.
+#' @param pos A matrix of positions for each element in `x`.
+#' @param missing An optional value specifying the value used to represent missing values in `x`.
+#' The default value is `NA`.
+#' @param k An optional numeric value specifying the number of nearest neighbors to use for imputation.
+#' The default value is 10.
+#' 
+#' @details This function takes a numeric vector `x` containing missing values, a matrix of positions `pos` 
+#' for each element in `x`, and an optional value `missing` representing the missing values in `x` as input. 
+#' The function uses the k-nearest neighbors algorithm to impute the missing values in `x` based on their positions in `pos`. 
+#' The number of nearest neighbors used for imputation is specified by the `k` parameter. 
+#' The imputed values are returned as a numeric vector of the same length as `x`.
+#'
+#' @return A numeric vector of the same length as `x`, containing the imputed values.
+#' 
 #' @export
 knnImputeMissing <- function(x, pos, missing = NA, k = 10) {
   k0 <- which(x == missing)
@@ -198,6 +450,7 @@ knnImputeMissing <- function(x, pos, missing = NA, k = 10) {
   x
 }
 
+#' @describeIn knnImputeMissing Randomly impute missing values
 #' @export
 randomImputeMissing <- function(x) {
   i <- 1
@@ -229,14 +482,26 @@ human2mouse.SLLOWWW <- function(x) {
   return(genesx)
 }
 
+
+#' Convert human gene symbols to mouse
+#' 
+#' @param x Character vector of human gene symbols
+#'
+#' @return Character vector of converted mouse gene symbols
+#'
+#' 
 #' @export
 human2mouse <- function(x) {
   homologene::human2mouse(x)
 }
+
+
+#' @describeIn human2mouse Convert human to mouse gene symbols using HomoloGene database
 #' @export
 mouse2human <- function(x) {
   homologene::mouse2human(x)
 }
+
 
 #' Map probe identifiers to gene symbols
 #'
@@ -294,7 +559,6 @@ probe2symbol <- function(probes, type = NULL, keep.na = FALSE) {
 
     id.list <- c(hs.list, mm.list, rn.list)
     mx <- sapply(id.list, function(id) mean(probes %in% id))
-    mx
     org <- type <- NULL
     max.mx <- max(mx, na.rm = TRUE)
     mx0 <- names(mx)[which.max(mx)]
@@ -365,7 +629,8 @@ probe2symbol <- function(probes, type = NULL, keep.na = FALSE) {
   symbol
 }
 
-
+#' @describeIn trimsame0 trimsame is a function that trims common prefixes and/or 
+#' suffixes from a character vector by applying trimsame0 forwards and/or backwards.
 #' @export
 trimsame <- function(s, split = " ", ends = TRUE, summarize = FALSE) {
   if (ends) {
@@ -374,6 +639,9 @@ trimsame <- function(s, split = " ", ends = TRUE, summarize = FALSE) {
   return(trimsame0(s, split = split, summarize = summarize))
 }
 
+
+#' @describeIn trimsame0 trimsame.ends is a function that trims common prefixes and 
+#' suffixes from a character vector by applying trimsame0 forwards and backwards.
 #' @export
 trimsame.ends <- function(s, split = " ", summarize = FALSE) {
   s1 <- trimsame0(s, split = split, summarize = summarize)
@@ -383,6 +651,27 @@ trimsame.ends <- function(s, split = " ", summarize = FALSE) {
   s4
 }
 
+
+#' @title Trim Common Prefix from Strings
+#'
+#' @description This function trims the common prefix from a character vector of strings.
+#'
+#' @param s A character vector of strings to be trimmed.
+#' @param split An optional character string specifying the delimiter used to split the strings into words.
+#' The default value is a space (" ").
+#' @param summarize An optional logical value indicating whether to summarize the common prefix using the first letter of each word.
+#' The default value is `FALSE`.
+#' @param rev An optional logical value indicating whether to reverse the order of the words in the summarized prefix.
+#' The default value is `FALSE`.
+#'
+#' @details The function takes a character vector of strings `s` as input and searches for a common prefix among the strings. 
+#' The common prefix is defined as the longest sequence of characters that is shared by all strings and ends with the specified delimiter. 
+#' If a common prefix is found, it is trimmed from all strings. 
+#' If the `summarize` parameter is `TRUE`, the common prefix is summarized using the first letter of each word and appended to the beginning of each string. 
+#' If the `rev` parameter is `TRUE`, the order of the words in the summarized prefix is reversed.
+#'
+#' @return A character vector of the same length as `s`, containing the trimmed strings.
+#'
 #' @export
 trimsame0 <- function(s, split = " ", summarize = FALSE, rev = FALSE) {
   for (i in 1:4) s <- gsub(paste0(split, split), split, s)
@@ -401,13 +690,10 @@ trimsame0 <- function(s, split = " ", summarize = FALSE, rev = FALSE) {
     if (is.same) j <- i
     i <- i + 1
   }
-  i
-  j
-  is.same
+    
   s1 <- s
   if (j > 0) {
     samepart <- substring(s[1], 1, sp[j])
-    samepart
     subst <- ""
     if (summarize) {
       subst <- substring(strsplit(trimws(samepart), split = split)[[1]], 1, 1)
@@ -420,6 +706,7 @@ trimsame0 <- function(s, split = " ", summarize = FALSE, rev = FALSE) {
 }
 
 
+#' @describeIn read.csv3 debug BAK
 #' @export
 dbg.BAK <- function(...) {
   if (exists("DEBUG") && DEBUG) {
@@ -428,6 +715,8 @@ dbg.BAK <- function(...) {
   }
 }
 
+
+#' @describeIn read.csv3 Read delimited table automatically determine separator
 #' @export
 read.csv3.BAK <- function(file, ...) {
   ## read delimited table automatically determine separator
@@ -438,6 +727,24 @@ read.csv3.BAK <- function(file, ...) {
 }
 
 
+#' Read CSV file with automatic separator detection
+#'
+#' @param file Path to input CSV file 
+#' @param as_matrix Logical indicating whether to return a matrix instead of a data frame. Default is FALSE.
+#'
+#' @return Data frame or matrix containing data from the CSV file.
+#'
+#' @details This function reads a CSV file and automatically detects the separator character (tab, comma, or semicolon). 
+#' It returns the contents as a data frame or matrix. Duplicate row names are avoided by removing blank and duplicate ID rows.
+#'  
+#' The file can contain comments starting with # character. Columns are read as character vectors by default.
+#' Setting as_matrix=TRUE will return a matrix instead of a data frame if possible.
+#'
+#' @examples
+#' \dontrun{
+#' dat <- read.csv3("data.csv")
+#' mat <- read.csv3("matrix.csv", as_matrix=TRUE) 
+#' }
 #' @export
 read.csv3 <- function(file, as_matrix = FALSE) {
   ## read delimited table automatically determine separator. Avoid
@@ -456,9 +763,11 @@ read.csv3 <- function(file, as_matrix = FALSE) {
     rownames(x) <- xnames[sel]
   }
 
-  x
+  return(x)
 }
 
+
+#' @describeIn read.as_matrix Save as matrix in a file.
 #' @export
 read.as_matrix.SAVE <- function(file) {
   ## read delimited table automatically determine separator. allow duplicated rownames.
@@ -474,6 +783,25 @@ read.as_matrix.SAVE <- function(file) {
   return(x)
 }
 
+
+#' Read data file as matrix
+#'
+#' @param file Path to input data file
+#' 
+#' @return Matrix object containing data from file
+#'
+#' @description Reads a tabular data file and returns a matrix object.
+#' Automatically detects separator and allows duplicate row names.
+#'
+#' @details This function reads a tabular text file, automatically detecting the 
+#' separator (tab, comma, semicolon). It returns a matrix containing the data values, 
+#' using the first column as rownames (allowing duplicates). Blank rows and rows with
+#' NA as rowname are skipped.
+#'  
+#' @examples 
+#' \dontrun{
+#' mymatrix <- read.as_matrix(mydata.csv)
+#' }
 #' @export
 read.as_matrix <- function(file) {
   ## read delimited table automatically determine separator. allow
@@ -510,6 +838,29 @@ read.as_matrix <- function(file) {
 }
 
 
+#' Read CSV file into R efficiently
+#'
+#' @param file Path to CSV file
+#' @param check.names Logical, should column names be checked for syntactic validity. Default is FALSE.
+#' @param row.names Column to use for row names, default is 1 (first column).
+#' @param sep Separator character, default is "auto" for automatic detection.
+#' @param stringsAsFactors Logical, should character columns be converted to factors? Default is FALSE.  
+#' @param header Logical, does the file have a header row? Default is TRUE.
+#' @param asMatrix Logical, should the result be returned as a matrix instead of a data frame? Default is TRUE.
+#'
+#' @return A data frame or matrix containing the parsed CSV data.
+#'
+#' @details This function efficiently reads a CSV file into R using \code{data.table::fread()}, then converts it into a regular data frame or matrix.
+#' It is faster than \code{read.csv()} especially for large files.
+#' 
+#' By default it converts the result to a matrix if all columns are numeric, character or integer. The row names are taken from the first column.
+#' Factor conversion, column type checking, and header parsing can be controlled with parameters.
+#'
+#' @examples
+#' \dontrun{
+#' dat <- fread.csv("data.csv") 
+#' }
+
 #' @export
 fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
                       stringsAsFactors = FALSE, header = TRUE, asMatrix = TRUE) {
@@ -529,6 +880,21 @@ fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
   return(x)
 }
 
+
+#' @title Tag Duplicate Strings
+#'
+#' @description This function tags duplicate strings by appending spaces to them.
+#'
+#' @param s A character vector of strings to be tagged.
+#'
+#' @details The function takes a character vector of strings `s` as 
+#' input and searches for duplicate strings. For each set of duplicate strings, 
+#' the function appends a number of spaces to each string, such that the first 
+#' occurrence of the string has no spaces appended, the second occurrence has one space appended, and so on. 
+#' The resulting tagged strings are returned as a character vector.
+#'
+#' @return A character vector of the same length as `s`, containing the tagged strings.
+#'
 #' @export
 tagDuplicates <- function(s) {
   ## Tag duplicate with blanks
@@ -546,6 +912,35 @@ tagDuplicates <- function(s) {
   s
 }
 
+
+#' @title Wrap gene symbols in hyperlinks  
+#'
+#' @description This function wraps gene symbols in a character vector 
+#' with HTML hyperlinks to external databases.
+#'
+#' @param s Character vector of gene symbols.
+#' @param gs Character vector of gene symbols with database prefixes.
+#'
+#' @details This function takes a character vector of gene symbols \code{s} and a corresponding 
+#' character vector \code{gs} containing gene symbols prefixed with database identifiers (e.g. ENSEMBL:).
+#' It searches for matches in \code{gs} and replaces the plain symbols in \code{s} with HTML hyperlinks.
+#'
+#' The following database prefixes are recognized:
+#' - ENSEMBL: - Links to Ensembl database
+#' - UNIPROT: - Links to Uniprot database  
+#' - LNCRNADB: - Links to LncRNADB database
+#' - BIOPLEX: - Links to BIOPLEX database
+#'
+#' @return Character vector \code{s} with gene symbols replaced by hyperlinks.
+#'
+#' @examples 
+#' \dontrun{
+#' s <- c("TP53", "MYC")
+#' gs <- c("ENSEMBL:ENSG00000171791", "UNIPROT:P01106")
+#' s1 <- wrapHyperLink(s, gs)
+#' print(s1)
+#' }
+#'
 #' @export
 wrapHyperLink <- function(s, gs) {
   gs <- as.character(gs)
@@ -645,6 +1040,26 @@ wrapHyperLink <- function(s, gs) {
   return(s1)
 }
 
+
+#' @title Reverse Comparison Strings
+#'
+#' @description This function reverses the order of comparison strings in the format "A_vs_B".
+#'
+#' @param comp A character vector of comparison strings to be reversed.
+#'
+#' @details The function takes a character vector of comparison strings `comp` as 
+#' input and reverses the order of the strings in the format "A_vs_B" or "A_VS_B". 
+#' The function also preserves any prefix before a colon (":") or postfix after an at 
+#' symbol ("@") in the input strings.
+#'
+#' @return A character vector of the same length as `comp`, containing the reversed comparison strings.
+#'
+#' @examples
+#' \dontrun{
+#' # example code
+#' comp <- c("A_vs_B", "C_VS_D:prefix@postfix")
+#' reverse.AvsB(comp)
+#' }
 #' @export
 reverse.AvsB <- function(comp) {
   reverse.AvsB.1 <- function(comp) {
@@ -658,6 +1073,18 @@ reverse.AvsB <- function(comp) {
   as.character(sapply(comp, reverse.AvsB.1))
 }
 
+
+#' Check if two groups represent a positive vs negative comparison
+#'
+#' @param pgx pgx object containing the data
+#'
+#' @return Logical indicating if the two groups represent a positive vs negative comparison
+#' 
+#' @details This function examines two groups from the pgx object to determine if they represent a positive vs negative comparison.
+#' It checks the mean expression of signature genes in each group to see if one group has overall higher expression.  
+#' It also looks for keywords like "neg", "untr", "wt" etc in the group names.
+#' Based on these checks it returns a logical indicating if the groups represent a positive vs negative comparison.
+#'
 #' @export
 is.POSvsNEG <- function(pgx) {
   ## Determines automagically from contrast matrix if notation is
@@ -718,21 +1145,18 @@ is.POSvsNEG <- function(pgx) {
       if (mean(s1) > mean(s2)) is.pn[i] <- TRUE
       if (mean(s2) > mean(s1)) is.pn[i] <- FALSE
     }
-    is.pn
+
     is.PosvsNeg1 <- mean(is.pn, na.rm = TRUE) > 0
   }
-  is.PosvsNeg1
 
   ## look for keywords
   grp1.neg2 <- mean(grepl("neg|untr|ref|wt|ctr|control", tolower(grp1)))
   grp2.neg2 <- mean(grepl("neg|untr|ref|wt|ctr|control", tolower(grp2)))
-  grp1.neg2
-  grp2.neg2
+
   is.PosvsNeg2 <- NA
   if (grp1.neg2 > 0 || grp2.neg2 > 0) {
     is.PosvsNeg2 <- (grp2.neg2 > grp1.neg2)
   }
-  is.PosvsNeg2
 
   ok <- setdiff(c(is.PosvsNeg1, is.PosvsNeg2), NA)[1] ## priority to first test??
   if (is.na(ok) || length(ok) == 0) ok <- TRUE ## DEFAULT if not known !!!!!
@@ -740,6 +1164,27 @@ is.POSvsNEG <- function(pgx) {
 }
 
 
+#' @title Check if a Variable is Categorical
+#'
+#' @description This function checks if a variable is categorical based on its class, 
+#' number of unique values, and proportion of non-missing values.
+#'
+#' @param x A vector representing the variable to be checked.
+#' @param max.ncat An optional numeric value specifying the maximum number of unique 
+#' values for a variable to be considered categorical.
+#' If not provided, the default value is one less than the length of `x`.
+#' @param min.ncat An optional numeric value specifying the minimum number of unique 
+#' values for a variable to be considered categorical. The default value is 2.
+#'
+#' @details The function takes a vector `x` as input and checks if it is a factor or character vector. 
+#' If `x` is not a factor or character vector, the function returns `FALSE`. 
+#' Otherwise, the function calculates the number of unique values in `x` (excluding missing values) and the proportion of non-missing values in `x`. 
+#' If the number of unique values is greater than 80% of the proportion of non-missing values, the function returns `FALSE`. 
+#' Otherwise, if the number of unique values is within the range specified by the `min.ncat` and `max.ncat` parameters, the function returns `TRUE`. 
+#' Otherwise, the function returns `FALSE`.
+#'
+#' @return A logical value indicating whether the input variable is categorical.
+#'
 #' @export
 is.categorical <- function(x, max.ncat = null, min.ncat = 2) {
   max.ncat <- length(x) - 1
@@ -756,6 +1201,22 @@ is.categorical <- function(x, max.ncat = null, min.ncat = 2) {
 }
 
 
+#' Discretize phenotype matrix
+#'
+#' @param df Data frame containing phenotype data 
+#' @param min.ncat Minimum number of categories for discretization. Default is 2.
+#' @param max.ncat Maximum number of categories for discretization. Default is 20.  
+#' @param remove.dup Logical indicating whether to remove duplicate factor levels. Default is FALSE.
+#'
+#' @return Discretized phenotype data frame 
+#' 
+#' @details This function discretizes the phenotype data frame \code{df} into categorical variables.  
+#' Numerical variables are converted into "high" and "low" values based on the median.  
+#' Categorical variables are kept as factors.
+#'  
+#' The number of categories is controlled by \code{min.ncat} and \code{max.ncat} parameters.
+#' Duplicate factor levels can be removed by setting \code{remove.dup = TRUE}.
+#'
 #' @export
 pgx.discretizePhenotypeMatrix <- function(df, min.ncat = 2, max.ncat = 20, remove.dup = FALSE) {
   catpheno <- pgx.getCategoricalPhenotypes(
@@ -763,8 +1224,7 @@ pgx.discretizePhenotypeMatrix <- function(df, min.ncat = 2, max.ncat = 20, remov
     max.ncat = max.ncat, min.ncat = min.ncat, remove.dup = remove.dup
   )
   numpheno <- pgx.getNumericalPhenotypes(df)
-  catpheno
-  numpheno
+
   numpheno <- setdiff(numpheno, catpheno) ## already in categories?
   df.num <- c()
   if (length(numpheno)) {
@@ -780,6 +1240,23 @@ pgx.discretizePhenotypeMatrix <- function(df, min.ncat = 2, max.ncat = 20, remov
   df1
 }
 
+
+#' @title Get Numerical Phenotypes
+#'
+#' @description This function retrieves the column names of numerical 
+#' phenotypes from a data frame.
+#'
+#' @param df A data frame containing the data to be analyzed.
+#'
+#' @details The function takes a data frame `df` as input and searches for columns that 
+#' represent numerical phenotypes. 
+#' Numerical phenotypes are identified as columns that are numeric, have a majority of 
+#' unique values, and do not contain certain keywords in their names or values (e.g., "sample", 
+#' "id", "replicate", "patient", "donor", "individual", "year", "month", "day", "survival"). 
+#' The names of the identified columns are returned as a character vector.
+#'
+#' @return A character vector representing the column names of the numerical phenotypes in the input data frame.
+#'
 #' @export
 pgx.getNumericalPhenotypes <- function(df) {
   is.bad <- 0
@@ -787,16 +1264,40 @@ pgx.getNumericalPhenotypes <- function(df) {
   is.bad2 <- grepl("year|month|day|^efs|^dfs|surv|follow", tolower(colnames(df)))
   is.bad3 <- apply(df, 2, function(x) any(grepl("^sample|patient|replicate|donor|individ", x, ignore.case = TRUE)))
   is.bad <- (is.bad1 | is.bad2 | is.bad3)
-  is.bad
+
 
   numratio <- apply(df, 2, function(x) length(unique(x))) / nrow(df)
-  numratio
+
   numpheno <- (apply(df, 2, is.num) & !is.bad & numratio > 0.5)
-  numpheno
+
   names(which(numpheno == TRUE))
 }
 
 
+#' @title Get Categorical Phenotypes
+#'
+#' @description 
+#' Identifies categorical phenotype columns in a data frame.
+#'
+#' @param df Data frame containing phenotype data.
+#' @param min.ncat Minimum number of categories required. Default 2.  
+#' @param max.ncat Maximum number of categories allowed. Default 20.
+#' @param remove.dup Logical indicating whether to remove duplicate factor 
+#' levels. Default FALSE.
+#'
+#' @details
+#' This function examines a phenotype data frame \code{df} and identifies 
+#' columns that represent categorical variables. 
+#' It first excludes any columns that appear to contain sample IDs. 
+#' It then selects columns that are factors, or character/numeric with 
+#' between \code{min.ncat} and \code{max.ncat} unique values.
+#'
+#' The function returns a character vector of column names representing putative categorical phenotypes.
+#' Setting \code{remove.dup = TRUE} will remove any duplicate factor levels prior to counting number of categories.
+#'
+#' @return 
+#' A character vector of categorical phenotype column names
+#'
 #' @export
 pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove.dup = FALSE) {
   is.bad <- 0
@@ -820,15 +1321,15 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
   })
 
   is.bad <- (is.bad2 | is.bad3)
-  is.bad
+
 
   ## auto-determine which are factors
   is.factor <- apply(df, 2, is.categorical)
-  is.factor
+
   n.unique <- apply(df, 2, function(x) length(unique(setdiff(x, c(NA, "NA", "")))))
   n.notna <- apply(df, 2, function(x) length(x[!is.na(x)]))
   is.id <- (n.unique > 0.9 * n.notna)
-  is.id
+
   is.factor2 <- (!is.bad & is.factor & !is.id & n.unique >= min.ncat & n.unique <= max.ncat)
   is.factor2
 
@@ -849,13 +1350,30 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
         is.dup[i] <- is.dup[i] || all(rowSums(table(df1[, i], df1[, j]) != 0) == 1)
       }
     }
-    is.dup
     df1 <- df1[, which(!is.dup), drop = FALSE]
   }
   return(colnames(df1))
 }
 
+
 ## Determine if the gene type is mouse
+#' @title Determine organism from count matrix  
+#'
+#' @description Determines if count data is from human or mouse based on gene identifiers.
+#'
+#' @param pgx.counts Matrix of count data, with genes as rows. 
+#'
+#' @details This function examines the gene identifiers in the row names of a count matrix 
+#' to determine if the data is from human or mouse. It checks if the identifiers match common
+#' patterns found in mouse genes, like "rik", "loc", "orf". If more than 20% match these mouse
+#' patterns, it assigns the organism as "mouse". Otherwise it assigns "human".
+#'  
+#' The function calculates the fraction of row names that do NOT match the mouse gene patterns.
+#' If this fraction is >0.8, it assigns "human". This relies on the assumption that human data 
+#' will tend to have more uppercase ENSEMBL identifiers.
+#'
+#' @return Character string indicating "mouse" or "human" organism.
+#'
 #' @export
 pgx.getOrganism <- function(pgx.counts) {
   ## NEED RETHINK FOR MULTI-ORGANISM
@@ -870,6 +1388,21 @@ pgx.getOrganism <- function(pgx.counts) {
 }
 
 
+#' @title Get Levels of Group Variables
+#'
+#' @description This function retrieves the levels of group variables in a data frame.
+#'
+#' @param Y A data frame containing the data to be analyzed.
+#'
+#' @details The function takes a data frame `Y` as input and searches for 
+#' columns that represent group variables. Group variables are identified as 
+#' columns that have a name that does not contain "title", "name", "sample", or 
+#' "patient" and have a majority of non-unique values. 
+#' Numeric columns are excluded from the search. 
+#' The levels of the identified group variables are then extracted and returned as a character vector.
+#'
+#' @return A character vector representing the levels of the group variables in the input data frame.
+#'
 #' @export
 getLevels <- function(Y) {
   yy <- Y[, grep("title|name|sample|patient", colnames(Y), invert = TRUE), drop = FALSE] ## NEED RETHINK!!!!
@@ -884,6 +1417,23 @@ getLevels <- function(Y) {
   return(levels)
 }
 
+
+#' @title Select samples from selected levels
+#'
+#' @description Selects rows from a data frame corresponding to selected factor levels.
+#' 
+#' @param Y Data frame containing sample data.
+#' @param levels Character vector of selected factor level descriptions in format 'factor=level'.
+#'
+#' @details This function takes a data frame Y containing sample data, and a character vector 
+#' levels defining a subset of factor levels to select. It parses the level descriptions, 
+#' identifies matching samples in Y, and returns the rownames of selected samples.
+#'  
+#' The levels should be strings in format 'factor=level' defining the factor name and level value.
+#' Samples in Y matching any of the provided levels will be selected.
+#'
+#' @return A character vector of selected sample names.
+#'
 #' @export
 selectSamplesFromSelectedLevels <- function(Y, levels) {
   if (is.null(levels) || all(levels == "")) {
@@ -903,6 +1453,23 @@ selectSamplesFromSelectedLevels <- function(Y, levels) {
 }
 
 
+#' @title Get Gene Information
+#'
+#' @description This function retrieves gene information from the biomaRt package.
+#'
+#' @param eg A character vector of Entrez Gene IDs for which to retrieve information.
+#' @param fields A character vector of fields to retrieve, with default values of 
+#' "symbol", "name", "alias", "map_location", and "summary".
+#'
+#' @details The function takes a character vector of Entrez Gene IDs `eg` and a 
+#' character vector of fields `fields` as input. 
+#' The function uses the `getGene` function from the `biomaRt` package to retrieve 
+#' the specified fields for each Entrez Gene ID. 
+#' The resulting information is returned as a named list, where each element 
+#' corresponds to one of the specified fields and contains a character vector of the retrieved values.
+#'
+#' @return A named list containing the retrieved gene information for each of the specified fields.
+#'
 #' @export
 getMyGeneInfo <- function(eg, fields = c("symbol", "name", "alias", "map_location", "summary")) {
   info <- lapply(fields, function(f) biomaRt::getGene(eg, fields = f)[[1]])
@@ -913,7 +1480,25 @@ getMyGeneInfo <- function(eg, fields = c("symbol", "name", "alias", "map_locatio
   return(info)
 }
 
-## much faster and off-line
+
+#' Get human gene information from annotation packages
+#'
+#' @param eg Character vector of gene symbols
+#' @param as.link Logical indicating whether to return symbols as hyperlinks. Default is TRUE.
+#'
+#' @return Named character vector with gene information.
+#' 
+#' @details This function retrieves basic gene information for human genes from Bioconductor annotation packages.
+#' It gets the symbol, name, map location, OMIM IDs, KEGG IDs and GO terms for each input gene symbol.
+#'
+#' If as.link is TRUE, the gene symbols are returned as hyperlinks to GeneCards and OMIM IDs are returned as hyperlinks.
+#' 
+#' @examples
+#' \dontrun{
+#' genes <- c("TP53", "BRCA1", "ABCD1")
+#' info <- getHSGeneInfo(genes)
+#' 
+#' }
 #' @export
 getHSGeneInfo <- function(eg, as.link = TRUE) {
   env.list <- c(
@@ -994,6 +1579,7 @@ getHSGeneInfo <- function(eg, as.link = TRUE) {
 }
 
 
+#' @describeIn pgx.getGeneSetCollections Get the gene families.
 #' @export
 pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
   read.gmt <- function(gmt.file, dir = NULL, add.source = FALSE, nrows = -1) {
@@ -1085,7 +1671,7 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
 
   ## convert to mouse???
   is.mouse <- (mean(grepl("[a-z]", sub(".*:", "", genes))) > 0.8)
-  is.mouse
+
   if (is.mouse) {
     mouse.genes <- as.character(unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL)))
     names(mouse.genes) <- toupper(mouse.genes)
@@ -1108,6 +1694,24 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
   return(families)
 }
 
+
+#' @title Get Gene Set Collections
+#'
+#' @description
+#' Extracts gene set collections from a list of gene sets based on size filters.
+#'
+#' @param gsets A list of gene sets
+#' @param min.size The minimum gene set size to include. Default 10.  
+#' @param max.size The maximum gene set size to include. Default 500.
+#'
+#' @details This function takes a list of gene sets and extracts collections 
+#' of gene sets that fall within a specified size range, defined by min.size 
+#' and max.size parameters. It removes any gene sets that are smaller than 
+#' `min.size` or larger than `max.size`. This allows filtering gene sets into size-based
+#' collections for different types of analyses.
+#'
+#' @return A list containing the extracted gene set collections.
+#'
 #' @export
 pgx.getGeneSetCollections <- function(gsets, min.size = 10, max.size = 500) {
   ## -----------------------------------------------------------------------------
@@ -1156,6 +1760,25 @@ pgx.getGeneSetCollections <- function(gsets, min.size = 10, max.size = 500) {
 ## Generic module functions
 ## -----------------------------------------------------------------------------
 
+
+#' @title Filter Genes by Family
+#'
+#' @description This function filters a data frame of genes by a specified gene family.
+#'
+#' @param genes A data frame of genes to be filtered, with row names representing probe names.
+#' @param family A character string specifying the name of the gene family to filter by.
+#' @param ngs A list containing gene families, where `ngs$families` is a 
+#' named list of character vectors representing gene families.
+#'
+#' @details The function takes a data frame of genes `genes`, a gene family 
+#' name `family`, and a list of gene families `ngs` as input. 
+#' The function searches for rows in the `genes` data frame where the probe 
+#' name, short probe name, or gene name matches a gene in the specified gene family. 
+#' The row names of the matching rows are returned.
+#'
+#' @return A character vector representing the row names of the rows in the 
+#' `genes` data frame that match the specified gene family.
+#'
 #' @export
 filterFamily <- function(genes, family, ngs) {
   gg <- ngs$families[[10]]
@@ -1168,6 +1791,23 @@ filterFamily <- function(genes, family, ngs) {
   rownames(genes)[jj]
 }
 
+
+#' Filter probes from gene expression data
+#'
+#' @param genes Gene expression data.frame with probes as row names.
+#' @param gg Character vector of probes to filter for.
+#'
+#' @return Character vector of matching probe names.
+#'
+#' @details This function filters a gene expression data.frame to return only probes matching the input vector.
+#' It checks the probe name, short probe name, and gene name for matches.
+#' 
+#' @examples
+#' \dontrun{
+#' data <- read.csv("expression.csv", row.names=1)
+#' probes <- c("FOO", "BAR")
+#' matches <- filterProbes(data, probes)  
+#' }
 #' @export
 filterProbes <- function(genes, gg) {
   ## check probe name, short probe name or gene name for match
@@ -1181,6 +1821,35 @@ filterProbes <- function(genes, gg) {
   return(rownames(genes)[jj])
 }
 
+
+#' Compute feature scores
+#'
+#' @param X Numeric matrix of expression data, with genes in rows and samples in columns. 
+#' @param Y Data frame containing sample metadata. 
+#' @param features Named list of gene sets (character vectors of gene names) to compute scores for.
+#'
+#' @return A numeric matrix of feature scores, with gene sets in rows and samples in columns.
+#' 
+#' @details This function computes a score for each specified gene set that 
+#' represents its average internal correlation within each sample group.
+#'
+#' For each sample group, it takes the top 100 most variable genes in the gene set. 
+#' It then calculates the correlation distance matrix between these genes within that sample group.
+#' The score is the mean of the upper triangle of the distance matrix.
+#'  
+#' Higher scores indicate the gene set has high internal correlation and is 
+#' coherently activated within that sample group.
+#'
+#' @examples
+#' \dontrun{
+#' # Generate random data
+#' X <- matrix(rnorm(100*50), 100, 50) 
+#' Y <- data.frame(group = sample(letters[1:5], 50, replace = TRUE))
+#' features <- list(feat1 = sample(rownames(X), 50), 
+#'                  feat2 = sample(rownames(X), 50))
+#'                   
+#' scores <- computeFeatureScore(X, Y, features)
+#' }
 #' @export
 computeFeatureScore <- function(X, Y, features) {
   sdx <- apply(X, 1, sd)
@@ -1217,6 +1886,23 @@ computeFeatureScore <- function(X, Y, features) {
 ## KEGG
 ## -----------------------------------------------------------------------------
 
+
+#' @title Get KEGG ID from Gene Set Name
+#'
+#' @description This function guesses the KEGG ID from a gene set name.
+#'
+#' @param gsets A character vector of gene set names.
+#'
+#' @details The function takes a character vector of gene set names 
+#' `gsets` as input and tries to guess the corresponding KEGG IDs. 
+#' The function uses the `KEGG.db` package to retrieve a list of 
+#' KEGG pathway names and IDs. 
+#' It then searches for gene set names that contain a KEGG ID or a 
+#' KEGG pathway name and returns the corresponding KEGG IDs.
+#'
+#' @return A character vector of the same length as `gsets`, containing 
+#' the guessed KEGG IDs for each gene set name.
+#'
 #' @export
 getKeggID <- function(gsets) {
   ## Guess KEGG id from gene set name
@@ -1235,7 +1921,6 @@ getKeggID <- function(gsets) {
 
   kegg.gsets <- c(k1, k2)
   kegg.ids <- names(kegg.gsets)[match(gsets, kegg.gsets)]
-  kegg.ids
 
   return(kegg.ids)
 }
@@ -1244,6 +1929,23 @@ getKeggID <- function(gsets) {
 ## Generic helper functions
 ## -----------------------------------------------------------------------------
 
+
+#' Check if a vector contains date values
+#'
+#' @param x A vector to check if it contains date values
+#' 
+#' @return Logical. TRUE if the vector contains valid date values, FALSE otherwise.
+#'
+#' @details This function checks if a vector contains valid date values that can be converted to Date class.
+#' It first replaces any "NA" values with actual NA values.
+#' It then tries converting the vector to Date class using various date formats.
+#' If none of the dates throw an error, it returns TRUE indicating the vector contains valid dates.
+#'
+#' @examples
+#' \dontrun{
+#' x <- c("2020-01-01", "01/15/2021", "foo")
+#' is.Date(x) # TRUE
+#' }
 #' @export
 is.Date <- function(x) {
   ## From https://stackoverflow.com/questions/18178451/is-there-a-way-to-check-if-a-column-is-a-date-in-r
@@ -1289,6 +1991,25 @@ averageByGroup <- function(mat, group, FUN = mean) {
   return(out)
 }
 
+
+#' @title Make Acronym from String
+#'
+#' @description This function creates an acronym from a character string.
+#'
+#' @param x A character string from which to create an acronym.
+#'
+#' @details The function takes a character string `x` as input and splits it into words using `_`, `-`, and space as delimiters. 
+#' If the resulting list of words contains only one word, the first two characters of the word are returned. 
+#' Otherwise, the first character of each word is extracted, capitalized, and concatenated to form the acronym.
+#'
+#' @return A character string representing the acronym created from the input string.
+#'
+#' @examples
+#' \dontrun{
+#' # example code
+#' makeAcronym("United Nations")
+#' makeAcronym("World Health Organization")
+#' }
 #' @export
 makeAcronym <- function(x) {
   xp <- strsplit(x, split = "[_ -]")
@@ -1301,11 +2022,64 @@ makeAcronym <- function(x) {
 }
 
 
+#' @title Relevel Factor by First Occurrence
+#'
+#' @description This function relevels a factor by the order of first 
+#' occurrence of its levels.
+#'
+#' @param f A factor to be releveled.
+#'
+#' @details The function takes a factor `f` as input and relevels it by 
+#' the order of first occurrence of its levels in the data. 
+#' The new factor is created with the same levels as the original factor, 
+#' but with the levels reordered according to their first appearance in the data.
+#'
+#' @return A factor with the same levels as the input factor, but with the 
+#' levels reordered according to their first appearance in the data.
+#'
+#' @examples
+#' \dontrun{
+#' # example code
+#' f <- factor(c("b", "a", "c", "b", "a"))
+#' relevelFactorFirst(f)
+#' }
 #' @export
 relevelFactorFirst <- function(f) {
   factor(f, levels = f[!duplicated(f)])
 }
 
+
+#' @title Extreme correlation 
+#'
+#' @description Compute extreme (high and low) correlation between a 
+#' query signature and reference dataset
+#'
+#' @param query_sig Numeric vector containing the query signature values 
+#' for each gene
+#' @param ref_set Numeric matrix containing the reference dataset 
+#' (samples in columns, genes in rows)
+#' @param n Integer specifying number of top extreme correlations to return on each side. Default is 200. 
+#'
+#' @details This function takes a query signature vector and a reference dataset matrix as input. 
+#' It calculates Pearson correlation between the query signature and each column of the reference dataset.  
+#' The function returns the most extreme (high and low) correlations, taking the top \code{n} correlations on each side.
+#' This allows extracting the samples in the reference data that have the strongest positive and negative correlation to the query signature.
+#'
+#' @return A numeric vector containing the top \code{n} most extreme correlation coefficients (positive and negative).
+#' 
+#' @examples
+#' \dontrun{
+#' # Generate random query signature
+#' query_sig <- rnorm(1000) 
+#' names(query_sig) <- paste0("GENE", 1:1000)
+#'  
+#' # Generate random reference dataset 
+#' ref_set <- matrix(rnorm(1000*50), ncol=50)
+#' rownames(ref_set) <- names(query_sig)
+#'
+#' # Get top 200 extreme correlations
+#' extreme_cor <- extremeCorrelation(query_sig, ref_set, n=200)
+#' }
 #' @export
 extremeCorrelation <- function(query_sig, ref_set, n = 200) {
   gg <- intersect(rownames(ref_set), names(query_sig))
@@ -1372,6 +2146,9 @@ alias2hugo <- function(s, org = NULL, na.orig = TRUE) {
   return(hugo0)
 }
 
+#' @describeIn breakstring2 Breaks a character string into substrings of a 
+#' specified length, separated by a specified line break character.
+#' @param force logical not used
 #' @export
 breakstring <- function(s, n, nmax = 999, force = FALSE, brk = "\n") {
   if (is.na(s)) {
@@ -1393,7 +2170,20 @@ breakstring <- function(s, n, nmax = 999, force = FALSE, brk = "\n") {
 }
 
 
-
+#' Break up a long string into multiple lines
+#' 
+#' @param s The input string
+#' @param n The maximum line length  
+#' @param brk The string to insert for line breaks. Default is "\\n".
+#' @param nmax The maximum length to process. Longer strings are truncated. Default is 999.
+#'
+#' @return A string with line breaks inserted.
+#'
+#' @details This function takes a long string \code{s} and inserts line breaks \code{brk} every \code{n} characters.  
+#' It first truncates the input string to a maximum length \code{nmax} if longer.
+#' The string is then split into words, and words are added to each line until it reaches length \code{n}. 
+#' A line break \code{brk} is inserted, and the process continues until all words have been processed.
+#'
 #' @export
 breakstring2 <- function(s, n, brk = "\n", nmax = 999) {
   if (is.na(s)) {
@@ -1431,11 +2221,44 @@ breakstring2 <- function(s, n, brk = "\n", nmax = 999) {
   return(a)
 }
 
+
+#' @describeIn shortstring0 The shortstring function truncates a string to a specified length.
 #' @export
 shortstring <- function(s, n, dots = 1) {
   sapply(s, shortstring0, n = n, dots = dots)
 }
 
+
+#' @title Truncate a string to a maximum length
+#'
+#' @description 
+#' Truncates a string to a maximum length by replacing the middle part with ellipses.
+#'
+#' @param s The string to truncate.
+#' @param n The maximum length of the truncated string.  
+#' @param dots The number of characters to devote to the ellipses.
+#'
+#' @details
+#' This function truncates long strings to a specified maximum length 
+#' by replacing the middle part with ellipses.
+#' 
+#' It first converts the input string to UTF-8 encoding and removes any HTML entities. 
+#' If the string is already shorter than the maximum length, it is returned unchanged.  
+#' Otherwise, it truncates the beginning and end of the string to fit within the max length when concatenated with the ellipses.
+#'
+#' The number of characters to use for the ellipses is set by the \code{dots} 
+#' parameter. By default, it uses one dot per 10 characters of max length.
+#'
+#' @return The truncated string.
+#'
+#' @examples 
+#' \dontrun{
+#' shortstring0("This is a very long string", 20)
+#' # Returns "This is a ...string"
+#'   
+#' shortstring0("Short string", 20) 
+#' # Returns "Short string"
+#' }
 #' @export
 shortstring0 <- function(s, n, dots = 1) {
   s0 <- iconv(as.character(s), to = "UTF-8")
@@ -1457,12 +2280,60 @@ shortstring0 <- function(s, n, dots = 1) {
   s0
 }
 
+
+#' @title Sort Data Frame by P-value Column
+#'
+#' @description This function sorts a data frame by a column containing p-values.
+#'
+#' @param x A data frame representing the input data.
+#' @param p.col An optional character string specifying the name of the column 
+#' containing p-values.
+#'
+#' @details The function takes a data frame `x` as input and searches 
+#' for a column containing p-values. If the `p.col` parameter is not provided, 
+#' the function searches for a column with a name containing "p.value", "p", 
+#' "p-val", or "pval" (case-insensitive). If multiple columns match, the first one is used.
+#'
+#' The data frame is then sorted in ascending order by the p-value column and returned.
+#'
+#' @return A data frame representing the input data sorted by the p-value column.
+#'
+#' @examples
+#' \dontrun{
+#' # example code
+#' x <- data.frame(a = c(1, 2, 3), p.value = c(0.05, 0.01, 0.1))
+#' psort(x)
+#' }
 #' @export
 psort <- function(x, p.col = NULL) {
   j <- grep("p.value|^p$|p-val|pval", tolower(colnames(x)))[1]
   x[order(x[, j]), ]
 }
 
+
+#' @title Tidy Data Frame
+#'
+#' @description This function tidies a data frame by removing columns with all 
+#' missing values, converting character columns to numeric or factor columns, 
+#' and trimming white spaces.
+#'
+#' @param Y A data frame representing the input data.
+#'
+#' @details The function takes a data frame `Y` as input and performs the 
+#' following steps:
+#' 1. Remove columns with all missing values.
+#' 2. Replace character columns with only "NA" values with actual missing values (NA).
+#' 3. Remove columns with all missing values again.
+#' 4. Trim white spaces from the beginning and end of character columns.
+#' 5. Convert character columns to numeric columns if possible.
+#' 6. Convert character columns to factor columns if they have less than or equal to
+#'  3 unique values or if their names contain certain keywords (e.g., "batch", 
+#' "replicate", "type", "cluster", "group").
+#'
+#' The resulting tidied data frame is returned.
+#'
+#' @return A data frame representing the tidied input data.
+#'
 #' @export
 tidy.dataframe <- function(Y) {
   Y <- Y[, which(colMeans(is.na(Y)) < 1), drop = FALSE]
@@ -1484,9 +2355,31 @@ tidy.dataframe <- function(Y) {
   return(new.Y)
 }
 
+
+#' @title Get Classes of Parameters
+#'
+#' @description This function returns the classes of the parameters in a data frame.
+#'
+#' @param A A data frame representing the input data.
+#'
+#' @details The function takes a data frame `A` as input and applies the `class` 
+#' function to each column of the data frame using the `sapply` function. 
+#' The resulting vector of classes is returned.
+#'
+#' @return A character vector representing the classes of the parameters in 
+#' the input data frame.
+#'
+#' @examples
+#' \dontrun{
+#' # example code
+#' A <- data.frame(x = c(1, 2, 3), y = c("a", "b", "a"))
+#' param.class(A)
+#' }
 #' @export
 param.class <- function(A) sapply(tidy.dataframe(A), class)
 
+
+#' @describeIn isanumber The function tests if the input \code{x} is of numeric type.
 #' @export
 is.num <- function(y) {
   suppressWarnings(numy <- as.numeric(as.character(y)))
@@ -1495,6 +2388,27 @@ is.num <- function(y) {
   (t1 && t2)
 }
 
+
+#' Check if a vector contains numeric data
+#'
+#' @param x A vector to check if it contains numeric data
+#' @param y A vector to check if it contains numeric data
+#' 
+#' @return Logical. TRUE if the vector contains mostly numeric data, FALSE otherwise.
+#'
+#' @details This function checks if a vector contains mostly numeric data. 
+#' It first replaces any "NA" values with actual NA values. 
+#' It then removes any empty values and converts the vector to numeric.
+#' If more than 50% of the resulting numeric vector is not NA, it returns TRUE.
+#'
+#' @examples
+#' \dontrun{
+#' x <- c("1", "2", "foo", "3")
+#' isanumber(x) # FALSE
+#' 
+#' x <- c("1", "2", NA, "3")
+#' isanumber(x) # TRUE
+#' }
 #' @export
 isanumber <- function(x) {
   x <- sub("NA", NA, x)
@@ -1508,6 +2422,28 @@ expandAnnotationMatrix <- function(A) {
   expandPhenoMatrix(A)
 }
 
+
+#' @title Expand Annotation Matrix
+#'
+#' @description This function expands an annotation matrix by 
+#' converting categorical variables into dummy variables and ranking numerical variables.
+#'
+#' @param A A data frame representing the annotation matrix to be expanded.
+#'
+#' @details The function takes an annotation matrix `A` as input, 
+#' where each column represents a variable and each row represents an 
+#' observation. For each column, if the variable is numerical, the function 
+#' ranks the values and stores them in a new column. If the variable is 
+#' categorical, the function creates dummy variables for each level of the c
+#' ategorical variable and stores them in new columns.
+#'
+#' The resulting expanded annotation matrix is returned as a data frame, 
+#' where each row represents an observation and each column represents a 
+#' variable or a level of a categorical variable.
+#'
+#' @return A data frame representing the expanded annotation matrix.
+#'
+#' @export
 #' @export
 expandAnnotationMatrixSAVE <- function(A) {
   ## get expanded annotation matrix
@@ -1538,7 +2474,28 @@ expandAnnotationMatrixSAVE <- function(A) {
   return(M)
 }
 
-#' @export
+
+#' @title Expand phenotype matrix
+#'
+#' @description Expands a phenotype data matrix into dummy variables while optionally 
+#' dropping the reference level.
+#'
+#' @param pheno Data frame containing the phenotype variables.
+#' @param collapse Logical indicating whether to collapse factor levels below a frequency threshold.
+#' @param drop.ref Logical indicating whether to drop the reference level for each factor.
+#'
+#' @details This function takes a phenotype data matrix and expands any categorical variables into 
+#' dummy variables, while optionally collapsing rare factor levels and dropping the reference level.
+#'
+#' For each column, it determines if the variable is numeric or categorical. Numeric variables are 
+#' ranked. Categorical variables are expanded into dummy variables using \code{model.matrix}. 
+#'
+#' If \code{collapse = TRUE}, it will collapse together factor levels that occur below a frequency 
+#' threshold. If \code{drop.ref = TRUE}, it will drop the reference level for each factor when 
+#' creating the dummy variables.
+#'
+#' @return An expanded phenotype matrix with dummy variables suitable for regression modeling.
+#' @export 
 expandPhenoMatrix <- function(pheno, collapse = TRUE, drop.ref = TRUE) {
   ## get expanded annotation matrix
 
@@ -1595,6 +2552,26 @@ expandPhenoMatrix <- function(pheno, collapse = TRUE, drop.ref = TRUE) {
   return(m1)
 }
 
+
+#' @title Correct gene symbols with September/March suffix  
+#'
+#' @description
+#' Corrects gene symbols that use "Sep" or "Mar" suffix by converting them to full month names.
+#'
+#' @param gg A character vector of gene symbols.
+#' 
+#' @details
+#' This function checks if any gene symbols in \code{gg} end with "-Sep", "-SEP", "-Mar", or "-MAR", 
+#' which represent September or March. If found, it converts these to full month names by replacing
+#' "-Sep" with "-September" and "-Mar" with "-March".
+#'
+#' It first replaces any "-SEP" or "-MAR" with "-Sep" and "-Mar" respectively. 
+#' Then it uses \code{\link[plyr]{mapvalues}} to match any "-Sep" or "-Mar" suffixes to the 
+#' corresponding "-September" or "-March" and replaces them.
+#'
+#' @return 
+#' The character vector \code{gg} with any September/March suffixes converted to full month names.
+#'
 #' @export
 correctMarchSeptemberGenes <- function(gg) {
   sep.from <- c(paste0("0", 1:9, "-Sep"), paste0(1:19, "-Sep"))
@@ -1618,9 +2595,45 @@ correctMarchSeptemberGenes <- function(gg) {
   return(gg2)
 }
 
+
+#' @title P-value for Pearson's Correlation Coefficient
+#'
+#' @description This function calculates the p-value for Pearson's correlation coefficient.
+#'
+#' @param x A numeric value representing Pearson's correlation coefficient.
+#' @param n A numeric value representing the sample size.
+#'
+#' @details The p-value is calculated using the standard normal distribution, 
+#' where the test statistic is calculated as `z = x / sqrt((1 - x^2) / (n - 2))`. 
+#' The p-value represents the probability of observing a correlation coefficient as 
+#' extreme or more extreme than `x` given that the null hypothesis (no correlation) is true.
+#'
+#' @return A numeric value representing the p-value for Pearson's correlation coefficient.
+#'
+#' @examples
+#' \dontrun{
+#' # example code
+#' cor.pvalue(0.8, 100)
+#' }
 #' @export
 cor.pvalue <- function(x, n) pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
 
+
+#' @title Get gene sets from playbase data
+#'
+#' @description Retrieves gene sets from the playbase data package matching a pattern. 
+#' Allows optionally including additional custom gene sets.
+#'
+#' @param sets Character vector of gene set names to retrieve. Default NULL retrieves all sets.
+#' @param pattern Pattern to match gene set names. Default NULL matches all sets.
+#'
+#' @details This function extracts gene sets from the playbase data package.
+#' It returns gene sets matching the provided pattern.
+#' If a sets parameter is provided, only those specific sets are returned.
+#' By default it returns all gene sets in playbase.
+#'
+#' @return A named list containing the gene sets matching the criteria.
+#' 
 #' @export
 getGSETS_playbase <- function(gsets = NULL, pattern = NULL) {
   if (is.null(gsets)) gsets <- names(playdata::iGSETS)
@@ -1631,9 +2644,23 @@ getGSETS_playbase <- function(gsets = NULL, pattern = NULL) {
   lapply(playdata::iGSETS[gsets], function(idx) playdata::GSET_GENES[idx])
 }
 
-#' Note: this function needs to be refactored since lib.dir will not exist
+
+#' Get gene sets from playbase data
+#'
+#' @param pattern Pattern to match gene set names 
+#' @param lib.dir Directory containing custom gene set files
+#' @param custom_families_file Custom gene families file name. Default "custom-families.gmt".
+#'
+#' @return A list of gene sets matching the pattern 
+#'
+#' @details This function extracts gene sets from the playbase data package.
+#' It returns gene sets matching the provided pattern.
+#' Custom additional gene sets can be included from the lib.dir if provided.
+#'   
 #' @export
 getGSETS_playbase.SAVE <- function(pattern, lib.dir, custom_families_file = "custom-families.gmt") {
+  
+  # Note: this function needs to be refactored since lib.dir will not exist
   # get gene symbols
   GENE.SYMBOL <- unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
   # get f1 and families

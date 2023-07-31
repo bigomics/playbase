@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-cluster.R
 \name{pgx.clusterSamples}
 \alias{pgx.clusterSamples}
-\title{Title}
+\title{Cluster samples in a PGX object}
 \usage{
 pgx.clusterSamples(
   pgx,
@@ -22,34 +22,37 @@ pgx.clusterSamples(
 )
 }
 \arguments{
-\item{pgx}{value}
+\item{pgx}{A PGX object}
 
-\item{X}{value}
+\item{perplexity}{Perplexity parameter for tSNE and UMAP}
 
-\item{skipifexists}{value}
+\item{ntop}{Number of top features to use for PCA}
 
-\item{perplexity}{value}
+\item{npca}{Number of PCA components to reduce to}
 
-\item{ntop}{value}
+\item{prefix}{Prefix for cluster variable names}
 
-\item{npca}{value}
+\item{kclust}{Number of clusters for k-means}
 
-\item{prefix}{value}
+\item{dims}{Dimensions for dimensionality reduction (by default 2,3)}
 
-\item{kclust}{value}
+\item{find.clusters}{Logical to find optimal number of clusters}
 
-\item{dims}{value}
-
-\item{find.clusters}{value}
-
-\item{clust.detect}{value}
-
-\item{row.center}{value}
-
-\item{row.scale}{value}
-
-\item{method}{value}
+\item{method}{Character vector of clustering methods to apply (choose between "pca", "tsne", and "umap")}
+}
+\value{
+The updated PGX object with cluster assignments in pgx$cluster$sample
 }
 \description{
-Title
+Performs dimensionality reduction and clustering on the samples in a PGX object.
+}
+\details{
+This function takes a PGX object and performs PCA, tSNE, and/or UMAP on the samples.
+It clusters the samples in the reduced space and stores the cluster assignments in pgx$cluster$sample.
+
+PCA is performed first to reduce dimensions. tSNE and UMAP are then applied for further reduction.
+k-means clustering is performed on the reduced data to group samples into clusters.
+
+Multiple parameters control the methods, perplexity, number of clusters, etc.
+By default it tries to detect the optimal number of clusters using the elbow method.
 }

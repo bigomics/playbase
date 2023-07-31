@@ -93,6 +93,13 @@ compute_testGenesets <- function(pgx,
   cat("Filtering gene sets on size...\n")
   gmt.size <- Matrix::colSums(G != 0)
   size.ok <- (gmt.size >= 15 & gmt.size <= 400)
+
+  # If dataset is too small that size.ok == 0, then select top 100
+  if (sum(size.ok) == 0) {
+    top_100gs <- head(sort(gmt.size,decreasing = TRUE), 100)
+    size.ok <- names(gmt.size) %in% names(top_100gs)
+  }
+
   G <- G[, which(size.ok)]
 
   ## -----------------------------------------------------------
@@ -137,7 +144,6 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
   if (is.null(max.features)) max.features <- 20000
   if (max.features < 0) max.features <- 20000
-  max.features
 
   if (max.features > 0) {
     cat("Reducing gene set matrix...\n")
@@ -173,13 +179,11 @@ compute_testGenesets <- function(pgx,
     "fisher", "ssgsea", "gsva", "spearman", "camera", "fry",
     "fgsea", "gsea.permPH", "gsea.permGS", "gseaPR"
   )
-  test.methods
 
   ## -----------------------------------------------------------
   ## Run methods
   ## -----------------------------------------------------------
   cat(">>> Testing gene sets with methods:", test.methods, "\n")
-  test.methods
 
   ## convert to gene list
   gmt <- lapply(apply(G != 0, 2, which), names)

@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-functions.R
 \name{getGSETS_playbase.SAVE}
 \alias{getGSETS_playbase.SAVE}
-\title{Note: this function needs to be refactored since lib.dir will not exist}
+\title{Get gene sets from playbase data}
 \usage{
 getGSETS_playbase.SAVE(
   pattern,
@@ -10,6 +10,21 @@ getGSETS_playbase.SAVE(
   custom_families_file = "custom-families.gmt"
 )
 }
+\arguments{
+\item{pattern}{Pattern to match gene set names}
+
+\item{lib.dir}{Directory containing custom gene set files}
+
+\item{custom_families_file}{Custom gene families file name. Default "custom-families.gmt".}
+}
+\value{
+A list of gene sets matching the pattern
+}
 \description{
-Note: this function needs to be refactored since lib.dir will not exist
+Get gene sets from playbase data
+}
+\details{
+This function extracts gene sets from the playbase data package.
+It returns gene sets matching the provided pattern.
+Custom additional gene sets can be included from the lib.dir if provided.
 }

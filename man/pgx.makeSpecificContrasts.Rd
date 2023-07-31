@@ -2,17 +2,30 @@
 % Please edit documentation in R/pgx-contrasts.R
 \name{pgx.makeSpecificContrasts}
 \alias{pgx.makeSpecificContrasts}
-\title{Title}
+\title{Make specific contrasts}
 \usage{
 pgx.makeSpecificContrasts(df, contrasts, mingrp = 3)
 }
 \arguments{
-\item{df}{value}
+\item{df}{Data frame with sample metadata}
 
-\item{contrasts}{value}
+\item{contrasts}{Character vector of contrast names to extract}
 
-\item{mingrp}{value}
+\item{mingrp}{Minimum group size for inclusion in contrasts}
+}
+\value{
+Data frame with specified contrast columns
 }
 \description{
-Title
+This function extracts specific named contrasts from a sample metadata data frame.
+It searches for contrast names matching the input patterns and returns those contrast columns.
+}
+\details{
+Contrast names are searched for patterns like "Group1:Group2_vs_Group3:Group4". 
+The groups before and after the "_vs_" are extracted. 
+Dummy variable columns are generated based on these groups.
+Groups smaller than mingrp are excluded.
+ 
+The final output is a data frame containing only the specified contrast columns, 
+with dummy variable encodings of 0/1/-1 for the sample groups.
 }

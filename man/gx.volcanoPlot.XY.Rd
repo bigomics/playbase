@@ -92,6 +92,6 @@ Generate a volcano plot to visualize significance versus magnitude of change.
 \details{
 This function takes a vector of p-values and effect sizes (fold changes, differences, etc)
 and generates a volcano plot to visualize significance versus magnitude of change. Points exceeding
-both p-value and effect size thresholds are highlighted. The top most significant genes can be 
+both p-value and effect size thresholds are highlighted. The top most significant genes can be
 labeled. Both raw and FDR corrected p-values can be used.
 }

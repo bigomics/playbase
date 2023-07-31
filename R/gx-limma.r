@@ -38,8 +38,6 @@
 #' @return Data frame with limma results.
 #'
 #' @export
-#'
-#' @examples
 gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
                      fdr = 0.05, compute.means = TRUE, lfc = 0.20,
                      max.na = 0.20, ref = c(
@@ -179,7 +177,6 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
 #'
 #' @return A list containing the limma results, top table, and plot objects
 #'
-#' @examples
 #' @export
 gx.limma.SAVE <- function(X, pheno, fdr = 0.05, compute.means = TRUE, lfc = 0.20,
                           max.na = 0.20, ref = c(
@@ -302,7 +299,7 @@ gx.limma.SAVE <- function(X, pheno, fdr = 0.05, compute.means = TRUE, lfc = 0.20
 #'
 #' @examples
 #' \dontrun{
-#' TODO
+#' # TODO
 #' }
 #' @export
 gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc = 0.20,
@@ -436,20 +433,28 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
 
 
 
-#' Title
+#' Calculate mean F statistics from limma differential expression analysis
 #'
-#' @param X value
-#' @param pheno value
+#' @title Calculate mean F statistics
+#' 
+#' @description Calculates the mean F statistic across all genes from running limma differential expression analysis.
+#' Useful for comparing overall separation between groups.
 #'
-#' @return
+#' @param X A gene expression matrix with genes in rows and samples in columns.
+#' @param pheno A phenotype factor or vector indicating the phenotype of each sample. 
+#'
+#' @details Runs limma differential expression between the phenotype groups for each gene. 
+#' Extracts the F statistics from the limma results and calculates the mean F statistic across all genes.
+#' Higher mean F indicates better separation between phenotype groups.
+#' 
+#' @return The mean F statistic across all genes.
+#'
 #' @export
-#'
-#' @examples
 gx.meanFstats <- function(X, pheno) {
   getF <- function(x, y) {
     ii <- which(!is.na(y))
     y1 <- y[ii]
-    if (class(y1) == "factor") y1 <- factor(as.character(y1))
+    if (inherits(y1, "factor")) y1 <- factor(as.character(y1))
     design <- model.matrix(~y1)
     fit <- limma::lmFit(x[, ii], design)
     fit <- limma::eBayes(fit, trend = TRUE)
@@ -496,8 +501,6 @@ gx.meanFstats <- function(X, pheno) {
 #' @return Data frame containing limma analysis results.
 #'
 #' @export
-#'
-#' @examples
 gx.limma.paired <- function(X, pheno, pair, fdr = 0.05, lfc = 0.20,
                             ref = c(
                               "ctrl", "ctr", "control", "dmso", "nt", "0", "0h", "0hr",
@@ -623,8 +626,6 @@ gx.limma.paired <- function(X, pheno, pair, fdr = 0.05, lfc = 0.20,
 #' @return Data frame containing limma analysis results for each contrast.
 #'
 #' @export
-#'
-#' @examples
 gx.limma.two.factorial <- function(X, factors, fdr = 0.05, lfc = 0.20, trend = FALSE,
                                    ref = c(
                                      "ctrl", "ctr", "control", "dmso", "nt", "0", "0h", "0hr",
@@ -779,8 +780,6 @@ gx.limma.two.factorial <- function(X, factors, fdr = 0.05, lfc = 0.20, trend = F
 #' @return Data frame with gene p-values and FDR.
 #'
 #' @export
-#'
-#' @examples
 gx.test.groups <- function(sig, class.label, fdr = 0.20,
                            test.method = c("wilcox", "limma", "ttest", "fisher"),
                            running.name = NULL,
@@ -877,8 +876,6 @@ gx.test.groups <- function(sig, class.label, fdr = 0.20,
 #' @return Named vector of p-values for each gene.
 #'
 #' @export
-#'
-#' @examples
 gx.snrtest <- function(X, y, ref.class, nperm = 200) {
   ## http://software.broadinstitute.org/gsea/doc/GSEAUserGuideFrame.html
   this.X <- X
@@ -936,10 +933,17 @@ gx.snrtest <- function(X, y, ref.class, nperm = 200) {
 #' genes. The count data is normalized and dispersion is estimated using either edgeR or DESeq2 methods.
 #'
 #' @return Data frame containing limma analysis results.
-#'
-#' @export
-#'
+#' 
 #' @examples
+#' \dontrun{
+#' set.seed(151)
+#' gx <- matrix(sample(1:100, 100*20, replace = TRUE), 100, 20)
+#' rownames(gx) <- replicate(100, sample(paste0(LETTERS, 1:50), 1))
+#' colnames(gx) <- sample(letters, 20)
+#' y <- sample(letters[1:4], 20, replace = TRUE)
+#' out <- playbase::seq_limma(gx, y)
+#' #' }
+#' @export
 seq_limma <- function(countdata, y, method = "edgeR") {
   ## https://bioinformatics-core-shared-training.github.io/RNAseq-R/rna-seq-de.nb.html
   if (min(countdata) < 0 || !all(countdata %% 1 == 0)) {

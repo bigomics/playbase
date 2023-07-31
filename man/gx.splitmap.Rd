@@ -136,3 +136,21 @@ samples split into groups defined by \code{split} or \code{splitx}.
 Many options are provided for clustering, scaling, annotations, and heatmap display
  parameters. By default it uses Euclidean distance and Ward clustering.
 }
+\examples{
+\dontrun{
+set.seed(123)
+gx <- matrix(rnorm(250)^2, nrow=25, ncol=10) 
+rownames(gx) <- sample(LETTERS, 25)
+colnames(gx) <- sample(letters, 10)
+# Create a grouping variable
+
+p <- playbase::gx.splitmap(
+  gx, 
+  scale = "row",
+  cluster_rows = FALSE,
+  show_key = FALSE,
+  cluster_columns = FALSE
+)
+
+}
+}

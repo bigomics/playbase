@@ -2,17 +2,32 @@
 % Please edit documentation in R/pgx-cna.R
 \name{pgx.inferCNV}
 \alias{pgx.inferCNV}
-\title{Title}
+\title{Infer copy number variations from single cell RNA-seq data}
 \usage{
 pgx.inferCNV(ngs, refgroup = NULL, progress = NULL)
 }
 \arguments{
-\item{ngs}{value}
+\item{ngs}{An NGS object containing single cell RNA-seq data}
 
-\item{refgroup}{value}
+\item{refgroup}{Name of the reference sample group for normalization}
 
-\item{progress}{value}
+\item{progress}{Show progress bar?}
+}
+\value{
+Updated NGS object with inferred CNV segments
 }
 \description{
-Title
+Infers copy number variations from single cell RNA-seq data using 
+InferCNV.
+}
+\details{
+This function takes an NGS object containing single cell RNA-seq 
+data and runs the InferCNV algorithm to infer copy number variations.
+
+It extracts the expression matrix and gene annotations from the NGS object. 
+The expression of each gene is normalized to the reference group to estimate 
+relative copy number levels. 
+
+InferCNV is then applied to segment the genome and identify focal/broad CNV regions. 
+The output CNV segments are added to the NGS object for downstream analysis and plotting.
 }

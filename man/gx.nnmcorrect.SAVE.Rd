@@ -20,14 +20,14 @@ Batch corrected gene expression matrix.
 Correct for batch effects in a gene expression matrix using nearest neighbor matching.
 }
 \details{
-This function performs batch correction by matching each sample to its 
-k-nearest neighbors from other batches based on expression profile correlation.  
-The batch effect for a sample is estimated as the mean difference between it and its 
+This function performs batch correction by matching each sample to its
+k-nearest neighbors from other batches based on expression profile correlation.
+The batch effect for a sample is estimated as the mean difference between it and its
 matched neighbors. This difference is subtracted from the sample's expression profile.
 }
 \examples{
 \dontrun{
-x <- matrix(rnorm(100*30), 100, 30) # random expression matrix 
+x <- matrix(rnorm(100 * 30), 100, 30) # random expression matrix
 y <- gl(3, 10) # 3 batches of 10 samples each
 xcorr <- gx.nnmcorrect.SAVE(x, y)
 }

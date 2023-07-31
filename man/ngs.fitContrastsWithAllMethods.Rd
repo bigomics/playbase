@@ -2,6 +2,13 @@
 % Please edit documentation in R/ngs-fit.r
 \name{ngs.fitContrastsWithAllMethods}
 \alias{ngs.fitContrastsWithAllMethods}
+\alias{ngs.fitContrastsWithTTEST}
+\alias{ngs.fitContrastsWithLIMMA}
+\alias{ngs.fitContrastsWithEDGER}
+\alias{.ngs.fitContrastsWithEDGER.nodesign}
+\alias{.ngs.fitContrastsWithEDGER.nodesign.pruned}
+\alias{ngs.fitConstrastsWithDESEQ2}
+\alias{.ngs.fitConstrastsWithDESEQ2.nodesign}
 \title{ngs.fitContrastsWithAllMethods}
 \usage{
 ngs.fitContrastsWithAllMethods(
@@ -22,6 +29,81 @@ ngs.fitContrastsWithAllMethods(
   correct.AveExpr = TRUE,
   custom = NULL,
   custom.name = NULL
+)
+
+ngs.fitContrastsWithTTEST(
+  X,
+  contr.matrix,
+  design,
+  method = "welch",
+  conform.output = 0
+)
+
+ngs.fitContrastsWithLIMMA(
+  X,
+  contr.matrix,
+  design,
+  method = c("voom", "limma"),
+  trend = TRUE,
+  robust = TRUE,
+  prune.samples = FALSE,
+  conform.output = FALSE,
+  plot = FALSE
+)
+
+ngs.fitContrastsWithEDGER(
+  counts,
+  group,
+  contr.matrix,
+  design,
+  method = c("qlf", "lrt"),
+  prune.samples = FALSE,
+  X = NULL,
+  conform.output = FALSE,
+  robust = TRUE,
+  plot = TRUE
+)
+
+.ngs.fitContrastsWithEDGER.nodesign(
+  dge,
+  contr.matrix,
+  method = c("qlf", "lrt"),
+  X = NULL,
+  conform.output = FALSE,
+  robust = TRUE,
+  plot = TRUE
+)
+
+.ngs.fitContrastsWithEDGER.nodesign.pruned(
+  counts,
+  contr.matrix,
+  group = NULL,
+  method = c("qlf", "lrt"),
+  X = NULL,
+  conform.output = FALSE,
+  robust = TRUE,
+  plot = TRUE
+)
+
+ngs.fitConstrastsWithDESEQ2(
+  counts,
+  group,
+  contr.matrix,
+  design,
+  X = NULL,
+  genes = NULL,
+  test = "Wald",
+  prune.samples = FALSE,
+  conform.output = FALSE
+)
+
+.ngs.fitConstrastsWithDESEQ2.nodesign(
+  counts,
+  contr.matrix,
+  test = "Wald",
+  prune.samples = FALSE,
+  conform.output = FALSE,
+  X = NULL
 )
 }
 \arguments{
@@ -51,14 +133,14 @@ ngs.fitContrastsWithAllMethods(
 
 \item{methods}{Methods to apply. Can be one or more of:
 \itemize{
-  \item{\code{ttest}}{t-test}  
+  \item{\code{ttest}}{t-test}
   \item{\code{ttest.welch}}{Welch's t-test}
   \item{\code{voom.limma}}{voom + limma}
-  \item{\code{trend.limma}}{limma with trend} 
+  \item{\code{trend.limma}}{limma with trend}
   \item{\code{notrend.limma}}{limma without trend}
   \item{\code{deseq2.wald}}{DESeq2 Wald test}
   \item{\code{deseq2.lrt}}{DESeq2 LRT}
-  \item{\code{edger.qlf}}{edgeR QLF} 
+  \item{\code{edger.qlf}}{edgeR QLF}
   \item{\code{edger.lrt}}{edgeR LRT}
 }}
 
@@ -82,8 +164,26 @@ The results are returned in a list, with each element containing the results fro
 Filtering, batch effect removal, and output conforming can be controlled with arguments.
 Custom methods can also be added.
 }
+\section{Functions}{
+\itemize{
+\item \code{ngs.fitContrastsWithTTEST()}: Fits contrasts using t-test
+
+\item \code{ngs.fitContrastsWithLIMMA()}: Fits contrasts using LIMMA differential expression analysis on count data.
+
+\item \code{ngs.fitContrastsWithEDGER()}: Fit contrasts with EdgeR
+
+\item \code{.ngs.fitContrastsWithEDGER.nodesign()}: contrasts with EdgeR without a design
+
+\item \code{.ngs.fitContrastsWithEDGER.nodesign.pruned()}: Fit contrasts with EdgeR without a design matrix
+
+\item \code{ngs.fitConstrastsWithDESEQ2()}: Fits contrasts using DESeq2 differential expression 
+analysis on count data
+
+\item \code{.ngs.fitConstrastsWithDESEQ2.nodesign()}: Fits contrasts using DESeq2 differential expression
+
+}}
 \examples{
 \dontrun{
- # TODO
+# TODO
 }
 }

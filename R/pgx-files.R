@@ -673,7 +673,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
 
     pgx <- try(local(get(load(pgxfile1, verbose = 0)))) ## override any name
 
-    if ("try-error" %in% class(pgx)) {
+    if (inherits(pgx, "try-error")) {
       message(paste("[updateDatasetFolder] ERROR in loading PGX file:", pgxfile1, ". skipping\n"))
       next()
     }

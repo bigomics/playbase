@@ -52,10 +52,7 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
     fx <- c(fc, gs)
   } else if (ct %in% colnames(ngs$samples)) {
     group <- ngs$samples[, ct]
-    ## use groupwise-SD as radial layout
-    ## matx <- do.call(cbind, tapply(1:ncol(X), group,
-    ##           function(i) rowMeans(X[,i,drop=FALSE])))
-    ## use F-statistics as radial layout
+
     design <- model.matrix(~ 0 + group)
     colnames(design) <- sub("group", "", colnames(design))
     fit <- limma::eBayes(limma::lmFit(ngs$X, design))
@@ -110,7 +107,6 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
     })
   }
   axis.names <- sapply(names(res$X), makeAcronym) ## see pgx-functions
-  axis.names
 
   ## -------------------------------------------------------------
   ## Finally do the plotting
@@ -475,7 +471,7 @@ pgx.survivalVariableImportance <- function(X, time, status,
   sdx <- apply(X, 1, sd)
   if (nrow(X) == 1) X <- rbind(X, X)
 
-  if (class(status) != "logical" && all(status %in% c(0, 1, NA))) {
+  if (!inherits(status, "logical") && all(status %in% c(0, 1, NA))) {
     stop("status must be logical or 0/1")
   }
 
@@ -561,7 +557,6 @@ pgx.survivalVariableImportance <- function(X, time, status,
 
   if ("pls" %in% methods) {
     res <- plsRcox::plsRcox(t(X), time = time, event = status, nt = 5)
-    summary(res)
     cf <- res$Coeffs[, 1]
     cf[is.na(cf)] <- 0
     cf <- cf * sdx[names(cf)] ## really?

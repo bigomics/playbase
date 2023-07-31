@@ -2,13 +2,25 @@
 % Please edit documentation in R/pgx-contrasts.R
 \name{normalizeContrasts}
 \alias{normalizeContrasts}
-\title{Title}
+\title{Normalize a contrasts matrix}
 \usage{
 normalizeContrasts(contr.matrix)
 }
 \arguments{
-\item{contr.matrix}{value}
+\item{contr.matrix}{A contrasts matrix with groups as rows and comparisons as columns}
+}
+\value{
+The normalized contrasts matrix
 }
 \description{
-Title
+Normalizes a contrasts matrix to have zero row means and symmetric column sums.
+}
+\details{
+This function normalizes a contrasts matrix in the following way:
+
+- Subtracts the row means, centering each contrast around 0
+- Divides each column by the absolute column sum, making columns symmetric sum-to-1
+- Replaces any NA values with 0 
+
+The result is a normalized contrasts matrix suitable for statistical testing.
 }

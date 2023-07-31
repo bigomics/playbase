@@ -4,15 +4,26 @@
 ##
 
 
-
-#' Title
+#' Get model groups from PGX object
 #'
-#' @param pgx value
+#' @param pgx A PGX object
 #'
-#' @return
+#' @return A character vector of model group labels
+#' 
+#' @description Retrieves the model group labels defined in a PGX object.
+#'
+#' @details This function extracts the model group labels from the design matrix 
+#' or group labels in a PGX object. It first checks if a model formula is defined in 
+#' pgx$model.parameters$design. If so, it takes the column names corresponding to the
+#' model terms. If not, it simply uses the group labels defined in pgx$model.parameters$exp.matrix.
+#'
+#' @examples 
+#' \dontrun{
+#' mypgx <- pgx.create(counts, samples, contrast)
+#' groups <- pgx.getModelGroups(mypgx)
+#' }
+#'
 #' @export
-#'
-#' @examples
 pgx.getModelGroups <- function(pgx) {
   model <- pgx$model.parameters$design
   if (is.null(model)) {
@@ -23,16 +34,39 @@ pgx.getModelGroups <- function(pgx) {
   group
 }
 
-#' Title
+#' @title Get meta-analysis results matrix
 #'
-#' @param pgx value
-#' @param methods value
-#' @param level value
+#' @description 
+#' Returns a matrix of meta-analysis results for a PGX object.
 #'
-#' @return
-#' @export
+#' @param pgx A PGX object
+#' @param methods Character vector of meta-analysis methods to include. 
+#' Default is meta.
+#' @param level Data level to extract results for ("gene", "geneset").
 #'
+#' @details
+#' This function extracts a matrix of meta-analysis results from a PGX object.
+#' It returns fold-changes and adjusted p-values from the specified 
+#' meta-analysis methods.
+#' 
+#' The results can be extracted at the gene, exon or junction level, depending 
+#' on the \code{level} argument. By default it returns results for all 
+#' meta-analysis methods found in the PGX object.
+#' 
+#' A subset of methods can be specified with the \code{methods} argument.
+#'
+#' @return 
+#' A matrix with rows corresponding to features at the specified level, 
+#' and columns for fold-changes and adjusted p-values from each meta-analysis 
+#' method.
+#' 
 #' @examples
+#' \dontrun{
+#' mypgx <- pgx.create(counts, samples)
+#' meta.res <- pgx.getMetaMatrix(mypgx)
+#' head(meta.res)
+#' }
+#' @export
 pgx.getMetaMatrix <- function(pgx, methods = "meta", level = "gene") {
   fc0 <- NULL
   qv0 <- NULL
@@ -47,7 +81,7 @@ pgx.getMetaMatrix <- function(pgx, methods = "meta", level = "gene") {
       })
       qv0 <- sapply(pgx$gx.meta$meta, function(x) {
         apply(unclass(x$q)[, methods, drop = FALSE], 1, max)
-      }) ## maxQ
+      }) 
       rownames(fc0) <- rownames(qv0) <- rownames(pgx$gx.meta$meta[[1]])
     } else if (methods[1] == "meta") {
       fc0 <- sapply(pgx$gx.meta$meta, function(x) x$meta.fx)
@@ -83,48 +117,23 @@ pgx.getMetaMatrix <- function(pgx, methods = "meta", level = "gene") {
 }
 
 
-#' Title
-#'
-#' @param pgx value
-#' @param what value
-#' @param level value
-#'
-#' @return
+#' @describeIn pgx.getMetaMatrix Get the Meta-Fold ChangeMatrix from PGX
 #' @export
-#'
-#' @examples
 pgx.getMetaFoldChangeMatrix <- function(pgx, what = "meta", level = "gene") {
   pgx.getMetaMatrix(pgx, methods = what, level = level)
 }
 
 
-#' Title
-#'
-#' @param pgx value
-#'
-#' @return
+#' @describeIn pgx.getMetaMatrix Get the contrast from PGX
 #' @export
-#'
-#' @examples
 pgx.getContrasts <- function(pgx) {
   names(pgx$gx.meta$meta)
 }
 
 
 
-#' Title
-#'
-#' @param pgx value
-#' @param n value
-#' @param ng value
-#' @param dir value
-#' @param sym value
-#' @param filt value
-#'
-#' @return
+#' @describeIn pgx.getMetaMatrix get the top genesets from PGX
 #' @export
-#'
-#' @examples
 pgx.getTopGeneSets <- function(pgx, n = 10, ng = 100, dir = 0, sym = FALSE, filt = NULL) {
   ## Gets top marker genes for all comparisons
   ##
@@ -147,22 +156,33 @@ pgx.getTopGeneSets <- function(pgx, n = 10, ng = 100, dir = 0, sym = FALSE, filt
     gg <- lapply(gs.genes[[i]], function(gs) intersect(F[[i]], gs))
     top.genes[[i]] <- gg
   }
-  list(gsets = topgs, genes = gs.genes, top.genes = top.genes)
+  out <- list(gsets = topgs, genes = gs.genes, top.genes = top.genes)
+
+  return(out)
 }
 
 
-#' Title
+#' @title Get Marker Genes
+#' 
+#' @param pgx A PGX object containing results
+#' @param n The number of top marker genes to return for each comparison. Default 10. 
+#' @param dir The direction to sort by. 0 for absolute value, -1 for negative, 1 for positive. Default 0.
+#' @param sym Whether to return equal numbers of up and down genes. Default FALSE.
+#' @param filt Filter to apply to gene names before selecting markers. Default NULL.
 #'
-#' @param pgx value
-#' @param n value
-#' @param dir value
-#' @param sym value
-#' @param filt value
+#' @details
+#' This function extracts the top n marker genes (based on absolute t-statistic or fold change) 
+#' for each comparison stored in the PGX object. It returns a list with one element per comparison, 
+#' containing the top marker genes.
+#' 
+#' The number and direction of sorting can be controlled with n and dir arguments.
+#' Setting sym=TRUE returns an equal number of up and down genes.
+#' A filter can be applied to gene names before selecting markers.
 #'
-#' @return
+#' @return A named list with top marker genes for each comparison
+#' 
+#' @describeIn pgx.getMetaMatrix Get Marker Genes
 #' @export
-#'
-#' @examples
 pgx.getMarkerGenes <- function(pgx, n = 10, dir = 0, sym = FALSE, filt = NULL) {
   ## Gets top marker genes for all comparisons
   ##
@@ -184,20 +204,26 @@ pgx.getMarkerGenes <- function(pgx, n = 10, dir = 0, sym = FALSE, filt = NULL) {
     markers <- apply(F, 2, function(x) list(names(Matrix::head(sort(-x), n))))
   }
   markers <- unlist(markers, recursive = FALSE)
-  markers
+  return(markers)
 }
 
 
-#' Title
+#' @title Get Families
 #'
-#' @param pgx value
-#' @param nmin value
-#' @param extended value
+#' @param pgx A PGX object containing gene expression data
+#' @param nmin The minimum number of genes for a family to be returned
+#' @param extended Whether to return extended families (TRUE) or only core families (FALSE)
+#' 
+#' @return A character vector of gene family names
 #'
-#' @return
+#' @description Retrieves the gene families represented in a PGX object that have at least nmin members.
+#' 
+#' @details Searches for gene families in the PGX gene sets that match either the core family names (FAMILY*) or 
+#' extended family regex (e.g. <FAMILY.ABC.*). Returns the names of families with at least nmin members 
+#' present in the PGX gene expression matrix. Useful for checking which gene families are represented in the data.
+#' 
+#' @describeIn pgx.getMetaMatrix Get Families from PGX
 #' @export
-#'
-#' @examples
 pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
   if (extended) {
     fam.pattern <- "^[<].*|^FAMILY|^COMPARTMENT|^CUSTOM"
@@ -208,5 +234,5 @@ pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
   xgenes <- toupper(pgx$genes$gene_name)
   gsets <- getGSETS_playbase(pattern = fam.pattern)
   jj <- which(sapply(gsets, function(x) sum(x %in% xgenes)) >= nmin)
-  sort(names(gsets)[jj]) ## sort alphabetically
+  return(sort(names(gsets)[jj])) ## sort alphabetically
 }

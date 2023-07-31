@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-cluster.R
 \name{pgx.clusterGenes}
 \alias{pgx.clusterGenes}
-\title{Title}
+\title{Cluster genes}
 \usage{
 pgx.clusterGenes(
   pgx,
@@ -19,28 +19,40 @@ pgx.clusterGenes(
 )
 }
 \arguments{
-\item{pgx}{value}
+\item{pgx}{A PGX object containing gene expression data}
 
-\item{methods}{value}
+\item{dims}{Dimensions for dimensionality reduction (by default 2,and 3)}
 
-\item{dims}{value}
+\item{reduce.pca}{Number of PCs to reduce to for PCA}
 
-\item{reduce.pca}{value}
+\item{perplexity}{Perplexity parameter for tSNE}
 
-\item{perplexity}{value}
+\item{level}{Data level to cluster ("gene", "exon", "junction")}
 
-\item{level}{value}
+\item{rank.tf}{Rank transform expression first? Logical}
 
-\item{rank.tf}{value}
+\item{center.rows}{Center expression rows? Logical}
 
-\item{center.rows}{value}
+\item{scale.rows}{Scale expression rows? Logical}
 
-\item{scale.rows}{value}
+\item{X}{Expression matrix to use instead of pgx$X}
 
-\item{X}{value}
+\item{umap.pkg}{UMAP package to use ("uwot" or "umap")}
 
-\item{umap.pkg}{value}
+\item{method}{Character vector of clustering methods to apply (choose between "pca", "tsne", and "umap")}
+}
+\value{
+The updated PGX object with gene clusters added
 }
 \description{
-Title
+Clusters the genes in a PGX object using dimensionality reduction methods like PCA, tSNE and UMAP.
+}
+\details{
+This function takes a PGX object and performs dimensionality reduction on the gene expression data,
+followed by clustering in the reduced space. Methods like PCA, tSNE and UMAP are used to reduce the dimensions.
+
+The gene expression matrix is extracted from the PGX object, optionally transformed, then embedded.
+The resulting coordinates are clustered using k-means to assign genes to clusters.
+
+The gene clusters are added to the PGX object for downstream use.
 }

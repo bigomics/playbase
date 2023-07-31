@@ -56,6 +56,6 @@ Barplot for grouped data
 \details{
 This function creates a barplot from a numeric matrix, with samples in columns.
 Bars are grouped if a group vector is provided. Error bars show the standard error.
-Many graphical parameters can be adjusted, including title, axis labels, 
+Many graphical parameters can be adjusted, including title, axis labels,
 legend, and text sizes.
 }

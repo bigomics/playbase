@@ -76,15 +76,6 @@ pgx <- playbase::pgx.computePGX(
 )
 
 ```
-
-## Adding namespace
-
-``` r
-library(addns)
-#addns::add_ns(path = "R/", packages = c("playbase"))
-#adds::rm_imports(path = "R/")
-```
-
 ## The pgx object
 
 The core object in playbase is the `pgx` object. This object holds the

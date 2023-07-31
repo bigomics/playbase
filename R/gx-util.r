@@ -46,7 +46,6 @@ imputeMedian <- function(X) {
 #'
 #' @param X Numeric matrix with columns as samples.
 #' @param y Grouping vector or factor.
-#' @param FUN Function for aggregation. Default is mean.
 #'
 #' @return Matrix with group means.
 #'
@@ -296,8 +295,6 @@ symbol2hugo <- function(genes, remove.non.hugo = TRUE, silent = FALSE,
 #' A matrix with rows collapsed based on the provided symbols.
 #'
 #' @export
-#'
-#' @examples
 gx.collapse2symbol <- function(X, symbol) {
   j1 <- order(-apply(X, 1, sd))
   X <- X[j1, ]

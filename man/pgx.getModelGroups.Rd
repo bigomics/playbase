@@ -2,13 +2,29 @@
 % Please edit documentation in R/pgx-api.R
 \name{pgx.getModelGroups}
 \alias{pgx.getModelGroups}
-\title{Title}
+\title{Get model groups from PGX object}
 \usage{
 pgx.getModelGroups(pgx)
 }
 \arguments{
-\item{pgx}{value}
+\item{pgx}{A PGX object}
+}
+\value{
+A character vector of model group labels
 }
 \description{
-Title
+Retrieves the model group labels defined in a PGX object.
+}
+\details{
+This function extracts the model group labels from the design matrix 
+or group labels in a PGX object. It first checks if a model formula is defined in 
+pgx$model.parameters$design. If so, it takes the column names corresponding to the
+model terms. If not, it simply uses the group labels defined in pgx$model.parameters$exp.matrix.
+}
+\examples{
+\dontrun{
+mypgx <- pgx.create(counts, samples, contrast)
+groups <- pgx.getModelGroups(mypgx)
+}
+
 }

@@ -7,12 +7,41 @@ NCORE <- function() {
   parallel::detectCores(all.tests = FALSE, logical = TRUE) / 2
 }
 
+
+#' @title Get gene context from PubMed
+#'
+#' @description 
+#' Retrieves PubMed article information related to a gene and keyword context.
+#'
+#' @param gene Gene name or symbol. 
+#' @param keyword Optional keyword or phrases to search for context.
+#'
+#' @details
+#' This function searches PubMed for articles related to the input \code{gene}, 
+#' optionally filtered by \code{keyword} context phrases.
+#' 
+#' It first searches PubMed for the gene name and synonyms. It then filters these 
+#' articles based on matches to the \code{keyword} terms.  The PubMed ids (PMIDs) 
+#' of matching articles are returned.
+#'
+#' Statistics are calculated to assess enrichment of the \code{keyword} within articles 
+#' matching the \code{gene}. These include a Fisher's exact test p-value, and word 
+#' co-occurrence statistics.
+#'
+#' @return 
+#' A list containing:
+#' \itemize{
+#' \item rifs: Character vector of PMIDs for articles matching the gene and keyword filter.
+#' \item table: Contingency table used for calculating p-value.  
+#' \item p.value: Fisher's exact test p-value.
+#' \item context: Word context scores.
+#' }
+#'
 #' @export
 pmid.getGeneContext <- function(gene, keyword) {
   gene1 <- c(gene, sub("([0-9])", "-\\1", gene))
   gene1 <- paste0("^", gene1, "$|^", gene1, "[-]")
   gene1 <- paste(gene1, collapse = "|")
-  gene1
 
   if (gene %in% biomaRt::keys(org.Hs.eg.db::org.Hs.egALIAS2EG)) {
     gname <- get(get(gene, org.Hs.eg.db::org.Hs.egALIAS2EG), org.Hs.eg.db::org.Hs.egGENENAME)
@@ -23,7 +52,6 @@ pmid.getGeneContext <- function(gene, keyword) {
     gname <- gsub("[, -]", ".", gname)
     gene1 <- paste0(gene1, "|", gname)
   }
-  gene1
 
   rif.words <- colnames(GENERIF.MATRIX)
   ii <- grepl(gene1, rif.words, ignore.case = TRUE)
@@ -39,16 +67,13 @@ pmid.getGeneContext <- function(gene, keyword) {
   sel <- ((match0 * match1) > 0)
   rif.hits <- rownames(GENERIF.MATRIX)[sel]
   rif.hits <- rif.hits[!duplicated(rif.hits)]
-  ## rif.hits
 
   ## calculate P-value for this keyword
   A <- table(gene = match0, keyword = match1)
-  A
   pv <- NA
   if (nrow(A) == 2 && ncol(A) == 2) {
     pv <- fisher.test(A, alternative = "greater")$p.value
   }
-  pv
 
   context1 <- NULL
   match2 <- ((match0 * match1) > 0)
@@ -60,9 +85,35 @@ pmid.getGeneContext <- function(gene, keyword) {
   qq <- sort(qq)
   context1 <- Matrix::head(qq[qq < 1], 100)
 
-  list(rifs = rif.hits, table = A, p.value = pv, context = context1)
+  out <- list(rifs = rif.hits, table = A, p.value = pv, context = context1)
+  return(out)
 }
 
+
+#' @title Get PubMed context for a gene
+#'
+#' @description 
+#' Retrieves PubMed abstract text containing a gene name and context words.
+#'
+#' @param gene Gene name or symbol to search for.
+#' @param context Context words or phrases to search for along with gene.
+#'
+#' @details
+#' This function searches PubMed for articles containing the specified gene name 
+#' and context words. It uses the EUtils API to search titles and abstracts in 
+#' PubMed for the gene name and context terms.
+#'
+#' It returns a list containing the PubMed IDs, article titles, and abstract 
+#' excerpts (RIF strings) containing both the gene and context.
+#'
+#' @return
+#' A list with the PubMed IDs, article titles, and abstract excerpts containing
+#' the gene name and context words.
+#'
+#' @examples
+#' \dontrun{
+#' res <- pmid.getPubMedContext("TP53", "DNA damage")
+#' }
 #' @export
 pmid.getPubMedContext <- function(gene, context) {
   res <- EUtilsSummary(
@@ -75,9 +126,7 @@ pmid.getPubMedContext <- function(gene, context) {
     return(NULL)
   }
   gene1 <- c(gene, sub("([0-9])", "-\\1", gene), sub("([0-9])", "[ ]\\1", gene))
-  gene1
   gene1 <- paste(gene1, collapse = "|")
-  gene1
   gname <- get(get(toupper(gene), org.Hs.eg.db::org.Hs.egALIAS2EG), org.Hs.eg.db::org.Hs.egGENENAME)
   gene2 <- paste0(gene1, "|", gsub("[ -]", ".", gname))
   extractRIF <- function(a) {
@@ -98,10 +147,30 @@ pmid.getPubMedContext <- function(gene, context) {
   rif[sapply(rif, is.null)] <- NA
   rif <- unlist(rif)
   rif[!is.na(rif)] <- paste0(rif, " (PMID:", pp, ")")[!is.na(rif)]
-  list(pmid = pp, title = tt, rif = rif)
+  out <- list(pmid = pp, title = tt, rif = rif)
+  return(out)
 }
 
 
+#' @title Build PMID annotation matrix
+#'
+#' @description 
+#' Builds an annotation matrix mapping PubMed IDs to gene symbols 
+#' based on mappings in org.Hs.eg.db.
+#' 
+#' @details
+#' This function retrieves PubMed ID to Entrez Gene ID mappings from 
+#' org.Hs.eg.db and converts them to a sparse matrix mapping PMIDs to 
+#' gene symbols. It filters to PMIDs associated with <=10 genes.
+#'
+#' It collapses duplicate PMID mappings and builds a sparse matrix 
+#' with rows as PMIDs, columns as gene symbols, and entries indicating 
+#' an association between a PMID and symbol.
+#'
+#' @return 
+#' A sparse matrix with rows as PMIDs, columns as gene symbols, and 
+#' entries indicating a mapping between a PMID and symbol.
+#'
 #' @export
 pmid.buildMatrix <- function() {
   pmid <- as.list(org.Hs.eg.db::org.Hs.egPMID2EG)
@@ -135,6 +204,27 @@ pmid.buildMatrix <- function() {
   return(P)
 }
 
+
+#' @title Build gene association graph from PubMed identifiers
+#'
+#' @description Builds an undirected gene association graph from PubMed 
+#' identifiers (PMIDs) mapped to gene symbols.
+#' 
+#' @param P Sparse matrix mapping PMIDs to gene symbols 
+#'
+#' @details This function takes as input a sparse matrix \code{P} that maps 
+#' PubMed identifiers (PMIDs) to gene symbols. 
+#' It filters \code{P} to only include PMIDs mapped to 2-10 genes.
+#' 
+#' It then calculates a co-occurrence matrix \code{M} between genes by multiplying 
+#' \code{P} and its transpose. \code{M[i,j]} indicates the number of PMIDs shared 
+#' between gene i and gene j.
+#'
+#' An undirected graph is constructed from \code{M} using the igraph package, 
+#' with genes as nodes and edge weights proportional to their PMID co-occurrences.
+#'
+#' @return An igraph undirected graph object representing the gene association network.
+#'
 #' @export
 pmid.buildGraph <- function(P) {
   P <- P[which(Matrix::rowSums(P) <= 10), ]
@@ -164,7 +254,20 @@ pmid.buildGraph <- function(P) {
   return(gr)
 }
 
-
+#' @title Annotate edges with shared genes in a Pubmed network graph 
+#'
+#' @description Annotates edges in a Pubmed citation network graph with the genes shared between connected articles.
+#' 
+#' @param gr An igraph network graph object generated from Pubmed data
+#'
+#' @details This function takes a network graph generated from Pubmed citation data, with articles as nodes.
+#' It extracts the genes associated with each article node using the V(gr)$genes attribute.
+#' For each edge, it finds the intersecting genes between the connected nodes. 
+#' The number of shared genes is assigned as the edge weight.
+#' The shared gene symbols are assigned to a new edge attribute E(gr)$genes.
+#'
+#' @return The input graph object gr with edge weights and gene annotations added.
+#'
 #' @export
 pmid.annotateEdges <- function(gr) {
   ee <- igraph::get.edges(gr, igraph::E(gr))
@@ -174,9 +277,26 @@ pmid.annotateEdges <- function(gr) {
   nshared <- sapply(shared.genes, length)
   igraph::E(gr)$genes <- shared.genes
   igraph::E(gr)$weight <- nshared
-  gr
+  return(gr)
 }
 
+
+#' @title Extract gene-specific subgraph from PubMed network  
+#'
+#' @param gr An igraph network object generated from PubMed data 
+#' @param gene Character vector of gene symbols to extract network for
+#' @param nmin Minimum number of genes in connected components to keep
+#'
+#' @return An igraph object containing the gene-specific subgraph
+#'
+#' @description Extracts a subgraph related to the specified genes from a PubMed network graph.
+#'
+#' @details This function takes a PubMed network graph \code{gr} and a vector of \code{gene} symbols. 
+#' It extracts the nodes containing those genes and the edges between them.  
+#' Connected components with fewer than \code{nmin} genes are removed.
+#'
+#' Edge weights and gene annotations are added to the subgraph.
+#' 
 #' @export
 pmid.extractGene <- function(gr, gene, nmin = 3) {
   jj <- c()
@@ -195,9 +315,31 @@ pmid.extractGene <- function(gr, gene, nmin = 3) {
   cmp <- igraph::components(gr1)
   jj <- which(cmp$membership %in% which(cmp$csize >= nmin))
   gr1 <- igraph::induced_subgraph(gr1, jj)
-  gr1
+  return(gr1)
 }
 
+
+#' Link to PubMed article
+#'
+#' @title Create HTML link to PubMed article
+#'
+#' @param s PubMed ID (PMID) to link to. 
+#' 
+#' @return HTML link to the PubMed article page.
+#'
+#' @description Generates an HTML hyperlink for a given PubMed ID (PMID).
+#'
+#' @details This function takes a PubMed ID as input and returns 
+#' an HTML hyperlink that will open the article page on PubMed website.
+#' 
+#' The PMID is embedded in the link URL along with link text containing 
+#' the PMID. This allows easy creation of hyperlinks to PubMed articles.
+#'
+#' @examples
+#' \dontrun{
+#' link <- pubmedlink("12345678")
+#' cat(link)
+#' }
 #' @export
 pubmedlink <- function(s) {
   paste0(

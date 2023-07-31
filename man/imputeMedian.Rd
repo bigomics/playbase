@@ -16,17 +16,17 @@ Matrix with missing values imputed
 Impute missing values with row medians
 }
 \details{
-This function imputes missing values in a numeric matrix 
+This function imputes missing values in a numeric matrix
 by replacing them with the median value for each row.
 
-It first calculates the median of each row, ignoring NA values. 
+It first calculates the median of each row, ignoring NA values.
 For rows where the median is NA, it takes the median of the row medians.
-It then creates a copy of the input matrix and replaces all NA elements 
+It then creates a copy of the input matrix and replaces all NA elements
 with the corresponding row median value.
 }
 \examples{
 \dontrun{
-mat <- matrix(c(1:10, NA), nrow=5)
+mat <- matrix(c(1:10, NA), nrow = 5)
 imputed <- imputeMedian(mat)
 }
 
