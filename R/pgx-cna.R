@@ -7,22 +7,22 @@
 #' Infer copy number variations from single cell RNA-seq data
 #'
 #' @param ngs An NGS object containing single cell RNA-seq data
-#' @param refgroup Name of the reference sample group for normalization  
+#' @param refgroup Name of the reference sample group for normalization
 #' @param progress Show progress bar?
 #'
 #' @return Updated NGS object with inferred CNV segments
 #'
-#' @description Infers copy number variations from single cell RNA-seq data using 
+#' @description Infers copy number variations from single cell RNA-seq data using
 #' InferCNV.
-#' 
-#' @details This function takes an NGS object containing single cell RNA-seq 
+#'
+#' @details This function takes an NGS object containing single cell RNA-seq
 #' data and runs the InferCNV algorithm to infer copy number variations.
 #'
-#' It extracts the expression matrix and gene annotations from the NGS object. 
-#' The expression of each gene is normalized to the reference group to estimate 
-#' relative copy number levels. 
+#' It extracts the expression matrix and gene annotations from the NGS object.
+#' The expression of each gene is normalized to the reference group to estimate
+#' relative copy number levels.
 #'
-#' InferCNV is then applied to segment the genome and identify focal/broad CNV regions. 
+#' InferCNV is then applied to segment the genome and identify focal/broad CNV regions.
 #' The output CNV segments are added to the NGS object for downstream analysis and plotting.
 #'
 #' @export
@@ -128,21 +128,21 @@ pgx.inferCNV <- function(ngs, refgroup = NULL, progress = NULL) {
 
 #' Estimate copy number from gene expression
 #'
-#' @param ngs An NGS object containing gene expression data 
+#' @param ngs An NGS object containing gene expression data
 #' @param nsmooth Smoothing window size for copy number estimation. Default 40.
 #'
-#' @return A list with estimated copy number values, chromosome, position, 
+#' @return A list with estimated copy number values, chromosome, position,
 #' and ideogram image for each gene.
 #'
-#' @description Estimates copy number variation from gene expression data by smoothing 
+#' @description Estimates copy number variation from gene expression data by smoothing
 #' relative expression values within genomic windows.
 #'
 #' @details This function takes an NGS object containing normalized gene expression data.
 #' It calculates the relative expression level of each gene compared to the mean expression.
-#' These relative levels are then smoothed within sliding genomic windows of size \code{nsmooth} 
+#' These relative levels are then smoothed within sliding genomic windows of size \code{nsmooth}
 #' genes to estimate regional copy number variation. The smoothed values are returned along
 #' with the chromosome, genomic position, and an ideogram image for data visualization.
-#'  
+#'
 #' @export
 pgx.CNAfromExpression <- function(ngs, nsmooth = 40) {
   ## This estimates CNV by local smoothing of relative expression
@@ -202,12 +202,12 @@ pgx.CNAfromExpression <- function(ngs, nsmooth = 40) {
 #' @title Plot CNA heatmap
 #'
 #' @param ngs An NGS object containing copy number data
-#' @param res CNA segmentation results from pgx.segmentCN()  
-#' @param annot Data frame with sample annotations  
+#' @param res CNA segmentation results from pgx.segmentCN()
+#' @param annot Data frame with sample annotations
 #' @param pca.filter Filter samples by PCA clustering (-1 to disable)
 #' @param lwd Line width for chromosome lines
 #' @param downsample Downsample CNA matrix for plotting (integer factor)
-#' @param order.by Order samples by "clust" or "annot"  
+#' @param order.by Order samples by "clust" or "annot"
 #' @param clip Clip copy number ratio values (0 to disable)
 #' @param lab.cex Label cex size
 #'
@@ -217,9 +217,9 @@ pgx.CNAfromExpression <- function(ngs, nsmooth = 40) {
 #' Generates a heatmap to visualize copy number alterations across samples.
 #'
 #' @details
-#' This function takes CNA segmentation results from pgx.segmentCN() and 
-#' plots a heatmap of the copy number ratios. Samples can be ordered by 
-#' annotations or clustering. The full CNA matrix can be downsampled for 
+#' This function takes CNA segmentation results from pgx.segmentCN() and
+#' plots a heatmap of the copy number ratios. Samples can be ordered by
+#' annotations or clustering. The full CNA matrix can be downsampled for
 #' easier visualization. Chromosome lines and sample annotations are added.
 #'
 #' @export

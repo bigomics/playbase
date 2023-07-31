@@ -436,17 +436,17 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
 #' Calculate mean F statistics from limma differential expression analysis
 #'
 #' @title Calculate mean F statistics
-#' 
+#'
 #' @description Calculates the mean F statistic across all genes from running limma differential expression analysis.
 #' Useful for comparing overall separation between groups.
 #'
 #' @param X A gene expression matrix with genes in rows and samples in columns.
-#' @param pheno A phenotype factor or vector indicating the phenotype of each sample. 
+#' @param pheno A phenotype factor or vector indicating the phenotype of each sample.
 #'
-#' @details Runs limma differential expression between the phenotype groups for each gene. 
+#' @details Runs limma differential expression between the phenotype groups for each gene.
 #' Extracts the F statistics from the limma results and calculates the mean F statistic across all genes.
 #' Higher mean F indicates better separation between phenotype groups.
-#' 
+#'
 #' @return The mean F statistic across all genes.
 #'
 #' @export
@@ -933,16 +933,17 @@ gx.snrtest <- function(X, y, ref.class, nperm = 200) {
 #' genes. The count data is normalized and dispersion is estimated using either edgeR or DESeq2 methods.
 #'
 #' @return Data frame containing limma analysis results.
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' set.seed(151)
-#' gx <- matrix(sample(1:100, 100*20, replace = TRUE), 100, 20)
+#' gx <- matrix(sample(1:100, 100 * 20, replace = TRUE), 100, 20)
 #' rownames(gx) <- replicate(100, sample(paste0(LETTERS, 1:50), 1))
 #' colnames(gx) <- sample(letters, 20)
 #' y <- sample(letters[1:4], 20, replace = TRUE)
 #' out <- playbase::seq_limma(gx, y)
-#' #' }
+#' #'
+#' }
 #' @export
 seq_limma <- function(countdata, y, method = "edgeR") {
   ## https://bioinformatics-core-shared-training.github.io/RNAseq-R/rna-seq-de.nb.html

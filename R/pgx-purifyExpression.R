@@ -7,19 +7,19 @@
 #' @title Purify tumor expression profiles
 #'
 #' @param expr Numeric gene expression matrix, rows are genes, columns are samples.
-#' @param normal Numeric gene expression matrix from normal samples. 
+#' @param normal Numeric gene expression matrix from normal samples.
 #' @param method Character vector of deconvolution methods to apply.
 #'
 #' @return List containing purified expression profiles and estimated tumor purity.
 #'
 #' @description Estimates and removes normal cell contamination from tumor expression profiles.
-#' 
+#'
 #' @details This function takes a tumor expression matrix and an expression matrix from normal samples.
 #' It applies computational deconvolution methods like ISOpure, DeMixT, etc. to estimate normal contamination.
-#' 
+#'
 #' The normal profile is removed from each tumor sample to generate a purified tumor expression profile.
 #' Results from all methods are returned as a list, along with numeric vectors of estimated tumor purity.
-#' 
+#'
 #' @export
 pgx.purifyExpression <- function(tumorX, normalX,
                                  method = c("nnlm", "nnmf", "isopurer", "demixt", "undo")) {

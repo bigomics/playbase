@@ -825,7 +825,7 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
 }
 
 
-#' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using DESeq2 differential expression 
+#' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using DESeq2 differential expression
 #' analysis on count data
 #' @export
 ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,

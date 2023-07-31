@@ -43,13 +43,13 @@ pgx.getContrastGroups <- function(pgx, contrast, as.factor = TRUE) {
 #'
 #' @title Detect batch parameters in expression matrix
 #'
-#' @description Detects potential batch effect parameters in the column names of 
+#' @description Detects potential batch effect parameters in the column names of
 #' an expression matrix.
-#' 
+#'
 #' @param Y Expression matrix with samples in columns.
 #'
-#' @details This function checks the column names of the expression matrix Y for 
-#' common batch effect terms like 'batch', 'cell.line', 'patient', etc. It returns 
+#' @details This function checks the column names of the expression matrix Y for
+#' common batch effect terms like 'batch', 'cell.line', 'patient', etc. It returns
 #' the column names that match these terms, which typically indicate a batch effect parameter.
 #'
 #' @return A character vector of detected batch parameter names.
@@ -63,7 +63,7 @@ pgx.detect_batch_params <- function(Y) {
 #' Detect time variables in expression matrix
 #'
 #' @param Y Expression matrix with samples in columns
-#' 
+#'
 #' @return A character vector of detected time variables
 #'
 #' @description
@@ -72,7 +72,7 @@ pgx.detect_batch_params <- function(Y) {
 #' @details
 #' This function checks the column names of the expression matrix \code{Y} for common time variable names like
 #' "time", "hour", "hr", or "day". It returns a character vector of any matched column names that represent time points.
-#' 
+#'
 #' This is useful for identifying potential time variables that could be used for time course analyses.
 #'
 #' @export
@@ -88,18 +88,18 @@ pgx.detect_timevar <- function(Y) {
 #'
 #' @param exp.matrix Expression matrix with samples in columns
 #' @param nmax Maximum number of groups to return
-#' 
+#'
 #' @return Character vector of sample conditions
 #'
-#' @description 
+#' @description
 #' Extracts sample conditions from an expression matrix by pasting column names.
-#' 
+#'
 #' @details
-#' This function takes an expression matrix and generates a sample condition vector 
+#' This function takes an expression matrix and generates a sample condition vector
 #' by pasting the column names with an underscore.
 #'
 #' If there are more than nmax unique conditions, they are renamed to "group1", "group2", etc.
-#' 
+#'
 #' @export
 pgx.getConditions <- function(exp.matrix, nmax = 3) {
   group <- apply(exp.matrix, 1, paste, collapse = "_")
@@ -113,17 +113,17 @@ pgx.getConditions <- function(exp.matrix, nmax = 3) {
 
 #' Generate design matrix for expression data
 #'
-#' @param pheno Data frame containing sample metadata  
+#' @param pheno Data frame containing sample metadata
 #' @param contr.matrix Contrast matrix defining comparisons of interest
 #'
 #' @return Design matrix for expression data analysis
 #'
 #' @description
 #' Generates a design matrix for expression data based on sample metadata and contrasts.
-#' 
+#'
 #' @details
 #' This function takes a data frame of sample metadata and a contrast matrix as input.
-#' It constructs a model matrix with columns for the metadata variables, followed by 
+#' It constructs a model matrix with columns for the metadata variables, followed by
 #' columns encoding the contrasts of interest.
 #'
 #' The result is a design matrix that can be used directly in differential expression
@@ -147,7 +147,7 @@ pgx.expMatrix <- function(pheno, contr.matrix) {
   exp.matrix <- contr.matrix[match(grp, ctx), , drop = FALSE]
 
   rownames(exp.matrix) <- rownames(pheno)
-  
+
   return(exp.matrix)
 }
 
@@ -158,13 +158,13 @@ pgx.expMatrix <- function(pheno, contr.matrix) {
 
 #' Create stratified contrasts design matrix
 #'
-#' @param data Data frame containing variables and strata column 
+#' @param data Data frame containing variables and strata column
 #' @param vars Character vector of variable names
 #' @param strata Name of stratification variable column
 #' @param ref Reference level for strata
 #'
 #' @return A design matrix for stratified contrasts
-#' 
+#'
 #' @description
 #' Generates a design matrix for stratified contrasts from a data frame.
 #'
@@ -225,13 +225,13 @@ pgx.makeStratifiedContrastsDF <- function(data, vars, strata, ref) {
 
 #' Generate contrasts within strata
 #'
-#' @param Y Factor vector indicating groups 
+#' @param Y Factor vector indicating groups
 #' @param strata Factor vector indicating strata
 #' @param ref Reference group to contrast against
 #'
 #' @return Contrast matrix
 #'
-#' @description 
+#' @description
 #' Generates contrasts between groups within strata.
 #'
 #' @details
@@ -239,12 +239,12 @@ pgx.makeStratifiedContrastsDF <- function(data, vars, strata, ref) {
 #' the groups within each stratum.
 #'
 #' First, dummy variables are created for Y and the reference group is subtracted to create
-#' contrasts. Then these are crossed with the strata dummy variables to encode comparisons  
+#' contrasts. Then these are crossed with the strata dummy variables to encode comparisons
 #' within each stratum.
-#' 
+#'
 #' The result is a contrast matrix with columns encoding the group comparisons within
 #' each stratum.
-#' 
+#'
 #' @export
 pgx.makeStratifiedContrasts <- function(Y, strata, ref) {
   S <- model.matrix(~ 0 + strata)
@@ -299,26 +299,26 @@ makeDirectContrasts2 <- function(Y, ref, na.rm = TRUE) {
 #' Convert expression matrix to contrast matrix
 #'
 #' @param exp.matrix Expression matrix with samples in columns
-#' 
+#'
 #' @return A list containing:
 #' \itemize{
-#' \item{contr.matrix}{Contrast matrix}  
+#' \item{contr.matrix}{Contrast matrix}
 #' \item{group}{Factor of sample groups}
 #' \item{exp.matrix}{Original expression matrix}
 #' }
 #'
-#' @description 
+#' @description
 #' Converts an expression matrix into a contrast matrix encoding comparisons between sample groups.
 #'
 #' @details
 #' This function takes an expression matrix and generates a contrast matrix from it.
-#' 
+#'
 #' It creates a group factor by pasting column names. The number of unique groups is used to name contrast columns as "groupN".
-#' 
+#'
 #' The contrast matrix contains a row for each unique group, with 0/1/-1 values encoding the sample membership.
-#' 
+#'
 #' The original group factor and expression matrix are also returned.
-#' 
+#'
 #' @export
 expmat2contrast <- function(exp.matrix) {
   group <- apply(exp.matrix, 1, paste, collapse = "_")
@@ -336,23 +336,23 @@ expmat2contrast <- function(exp.matrix) {
 
 #' Make direct contrasts from a factor
 #'
-#' @param Y A factor vector 
+#' @param Y A factor vector
 #' @param ref The reference level to contrast against
 #' @param na.rm Remove missing values? Default is TRUE
 #' @param warn Show warnings about missing levels? Default is FALSE.
 #'
-#' @return A contrast matrix 
+#' @return A contrast matrix
 #'
 #' @description
 #' Creates a contrast matrix directly from a factor by contrasting each level against the reference.
 #'
 #' @details
 #' This function takes a factor Y and generates a contrast matrix with columns encoding comparisons of each factor level versus the reference level specified by ref.
-#' 
-#' It first expands Y into dummy variables using model.matrix. 
+#'
+#' It first expands Y into dummy variables using model.matrix.
 #' Then it subtracts the reference level column to create +1/-1 contrasts.
 #' Columns with all 0s are dropped.
-#' 
+#'
 #' Levels missing in Y will create columns of all 0s. Set na.rm=TRUE to remove these.
 #' Warnings about missing levels can be shown with warn=TRUE.
 #'
@@ -402,23 +402,23 @@ makeDirectContrasts <- function(Y, ref, na.rm = TRUE) {
 
 #' Make direct contrasts from a factor
 #'
-#' @param Y A factor vector 
+#' @param Y A factor vector
 #' @param ref The reference level to contrast against
 #' @param na.rm Remove missing values? Default is TRUE
 #' @param warn Show warnings about missing levels? Default is FALSE.
 #'
-#' @return A contrast matrix 
+#' @return A contrast matrix
 #'
 #' @description
 #' Creates a contrast matrix directly from a factor by contrasting each level against the reference.
 #'
 #' @details
 #' This function takes a factor Y and generates a contrast matrix with columns encoding comparisons of each factor level versus the reference level specified by ref.
-#' 
-#' It first expands Y into dummy variables using model.matrix. 
+#'
+#' It first expands Y into dummy variables using model.matrix.
 #' Then it subtracts the reference level column to create +1/-1 contrasts.
 #' Columns with all 0s are dropped.
-#' 
+#'
 #' Levels missing in Y will create columns of all 0s. Set na.rm=TRUE to remove these.
 #' Warnings about missing levels can be shown with warn=TRUE.
 #'
@@ -499,13 +499,13 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
 
 #' Generate contrasts between clusters
 #'
-#' @param clusters Vector of cluster assignments 
+#' @param clusters Vector of cluster assignments
 #' @param min.freq Minimum cluster frequency to include in contrasts
 #' @param full Logical for whether to generate all pairwise contrasts
-#' @param by.sample Logical for sample-wise contrasts instead of cluster-wise  
+#' @param by.sample Logical for sample-wise contrasts instead of cluster-wise
 #'
-#' @return Contrast matrix 
-#' 
+#' @return Contrast matrix
+#'
 #' @description
 #' Generates a contrast matrix for comparing clusters.
 #'
@@ -513,8 +513,8 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
 #' This function takes a vector of cluster assignments and generates a contrast matrix
 #' encoding comparisons between each pair of clusters above the min.freq threshold.
 #'
-#' The contrast matrix has clusters as rows and comparison columns with names like 
-#' "cluster1_vs_cluster2". The matrix values are 1/-1 for the clusters being compared,  
+#' The contrast matrix has clusters as rows and comparison columns with names like
+#' "cluster1_vs_cluster2". The matrix values are 1/-1 for the clusters being compared,
 #' and 0 otherwise.
 #'
 #' If full=TRUE, all pairwise comparisons are generated instead of only adjacent clusters.
@@ -546,24 +546,24 @@ makeFullContrasts <- function(labels, by.sample = FALSE) {
 #'
 #' @param clusters A vector of cluster assignments
 #' @param min.freq The minimum cluster frequency required to include in contrasts
-#' @param full Logical indicating whether to include all pairwise contrasts between clusters 
+#' @param full Logical indicating whether to include all pairwise contrasts between clusters
 #' @param by.sample Logical indicating whether to cross clusters with samples to get sample x cluster contrasts
 #'
-#' @return A contrast matrix 
-#' 
+#' @return A contrast matrix
+#'
 #' @description
 #' Creates a contrast matrix to compare clusters against each other.
 #'
 #' @details
 #' This function takes a vector of cluster assignments and generates contrasts between the clusters.
 #'
-#' It first creates indicator columns for each cluster. 
+#' It first creates indicator columns for each cluster.
 #' Then it subtracts the diagonal to generate comparisons of each cluster versus the others.
 #' Clusters below min.freq are excluded.
 #'
 #' If full=TRUE, all pairwise contrasts between clusters are also included.
-#' 
-#' If by.sample=TRUE, the cluster indicators are crossed with the samples 
+#'
+#' If by.sample=TRUE, the cluster indicators are crossed with the samples
 #' to generate sample x cluster interaction contrasts.
 #'
 #' @export
@@ -592,23 +592,23 @@ makeClusterContrasts <- function(clusters, min.freq = 0.01, full = FALSE,
   return(m1)
 }
 
-#' @title Make specific contrasts 
+#' @title Make specific contrasts
 #'
 #' @param df Data frame with sample metadata
 #' @param contrasts Character vector of contrast names to extract
-#' @param mingrp Minimum group size for inclusion in contrasts  
+#' @param mingrp Minimum group size for inclusion in contrasts
 #'
 #' @return Data frame with specified contrast columns
-#' 
+#'
 #' @description This function extracts specific named contrasts from a sample metadata data frame.
-#' It searches for contrast names matching the input patterns and returns those contrast columns.  
-#' 
-#' @details Contrast names are searched for patterns like "Group1:Group2_vs_Group3:Group4". 
-#' The groups before and after the "_vs_" are extracted. 
+#' It searches for contrast names matching the input patterns and returns those contrast columns.
+#'
+#' @details Contrast names are searched for patterns like "Group1:Group2_vs_Group3:Group4".
+#' The groups before and after the "_vs_" are extracted.
 #' Dummy variable columns are generated based on these groups.
 #' Groups smaller than mingrp are excluded.
-#'  
-#' The final output is a data frame containing only the specified contrast columns, 
+#'
+#' The final output is a data frame containing only the specified contrast columns,
 #' with dummy variable encodings of 0/1/-1 for the sample groups.
 #'
 #' @export
@@ -646,7 +646,7 @@ pgx.makeSpecificContrasts <- function(df, contrasts, mingrp = 3) {
 #'
 #' @param df Data frame with sample metadata
 #' @param strata.var Column name for the stratification variable
-#' @param mingrp Minimum group size to include  
+#' @param mingrp Minimum group size to include
 #' @param slen Maximum contrast name length
 #' @param ref Reference level for factors
 #' @param fix.degenerate Fix degenerate designs?
@@ -655,21 +655,21 @@ pgx.makeSpecificContrasts <- function(df, contrasts, mingrp = 3) {
 #' @return Data frame with automatically generated contrasts
 #'
 #' @description
-#' This function automatically generates contrasts for differential analysis from a  
-#' data frame of sample metadata, stratified by a grouping variable. It extracts factor 
-#' columns within each stratum, generates all pairwise comparisons between groups, and 
+#' This function automatically generates contrasts for differential analysis from a
+#' data frame of sample metadata, stratified by a grouping variable. It extracts factor
+#' columns within each stratum, generates all pairwise comparisons between groups, and
 #' outputs a clean contrast matrix.
 #'
 #' @details
-#' The sample metadata is split by the stratification variable into separate strata.  
-#' Categorical variables with at least mingrp groups are expanded into dummy variables  
-#' within each stratum. All pairwise comparisons between groups are generated, with  
+#' The sample metadata is split by the stratification variable into separate strata.
+#' Categorical variables with at least mingrp groups are expanded into dummy variables
+#' within each stratum. All pairwise comparisons between groups are generated, with
 #' contrast names cleaned and truncated to slen characters.
-#'  
-#' Degenerate designs are checked for and resolved if fix.degenerate=TRUE.  
+#'
+#' Degenerate designs are checked for and resolved if fix.degenerate=TRUE.
 #' Metadata columns starting with "." are skipped if skip.hidden=TRUE.
 #'
-#' The final output is a data frame with samples in rows, contrast columns, and values  
+#' The final output is a data frame with samples in rows, contrast columns, and values
 #' of 0/1/-1 indicating the sample groups being compared within each stratum.
 #'
 #' @export
@@ -720,8 +720,8 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, slen = 2
 
 #' Automatically generate contrasts from sample metadata
 #'
-#' @param df Data frame with sample metadata 
-#' @param mingrp Minimum group size to include  
+#' @param df Data frame with sample metadata
+#' @param mingrp Minimum group size to include
 #' @param slen Maximum contrast name length
 #' @param ref Reference level for factors
 #' @param fix.degenerate Fix degenerate designs?
@@ -730,7 +730,7 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, slen = 2
 #' @return A data frame with automatically generated contrasts
 #'
 #' @description
-#' This function automatically generates contrasts for differential analysis from a 
+#' This function automatically generates contrasts for differential analysis from a
 #' data frame of sample metadata. It extracts factor columns, generates comparisons between
 #' groups, handles dummy variable creation, and outputs a clean contrast matrix.
 #'
@@ -738,10 +738,10 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, slen = 2
 #' The sample metadata is scanned to find categorical variables with at least mingrp
 #' groups. These are expanded into dummy variables and all pairwise comparisons between
 #' groups are generated. Contrast names are cleaned and truncated to slen characters.
-#' 
+#'
 #' Degenerate designs are checked for and resolved if fix.degenerate=TRUE.
 #' Metadata columns starting with "." are skipped if skip.hidden=TRUE.
-#' 
+#'
 #' The final output is a data frame with samples in rows, contrast columns, and values
 #' of 0/1/-1 indicating the sample groups being compared. This defines the contrasts
 #' for differential analysis.
@@ -975,15 +975,15 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
 #'
 #' @return The normalized contrasts matrix
 #'
-#' @description 
+#' @description
 #' Normalizes a contrasts matrix to have zero row means and symmetric column sums.
-#' 
+#'
 #' @details
 #' This function normalizes a contrasts matrix in the following way:
 #'
 #' - Subtracts the row means, centering each contrast around 0
 #' - Divides each column by the absolute column sum, making columns symmetric sum-to-1
-#' - Replaces any NA values with 0 
+#' - Replaces any NA values with 0
 #'
 #' The result is a normalized contrasts matrix suitable for statistical testing.
 #'
@@ -1003,17 +1003,17 @@ normalizeContrasts <- function(contr.matrix) {
 #'
 #' This function creates a contrasts matrix from pairs of groups.
 #'
-#' @param main.group Character vector of the main groups in the comparisons. 
+#' @param main.group Character vector of the main groups in the comparisons.
 #' @param ref.group Character vector of the reference groups in the comparisons.
 #' @param groups Character vector of all groups. If NULL, groups are taken from main.group and ref.group.
 #' @param comparisons Character vector of comparison names. If NULL, comparisons are generated from main.group and ref.group.
-#' 
+#'
 #' @details The function first splits the main.group and ref.group into individual groups.
 #' It then creates a contrasts matrix with rows for each group and columns for each comparison.
 #' The matrix entries are 1 for groups in main.group, -1 for groups in ref.group, and 0 otherwise.
-#' 
+#'
 #' @return A contrasts matrix with rows for groups and columns for comparisons.
-#' 
+#'
 #' @export
 makeContrastsFromPairs <- function(main.group, ref.group, groups = NULL, comparisons = NULL) {
   if (is.null(comparisons)) comparisons <- paste0(main.group, "_vs_", ref.group)
@@ -1087,27 +1087,27 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
   }
   colnames(K) <- colnames(contr.matrix)
   rownames(K) <- rownames(contr.matrix)
-  
+
   return(K)
 }
 
 
 #' Make contrast matrix from label matrix
 #'
-#' @title Make contrast matrix from label matrix  
+#' @title Make contrast matrix from label matrix
 #'
-#' @param lab.matrix Matrix of sample labels 
+#' @param lab.matrix Matrix of sample labels
 #'
 #' @return Contrast matrix
 #'
 #' @description Creates a contrast matrix from a matrix of sample labels.
-#' 
-#' @details This function takes a matrix of sample labels as input, where the column 
-#' names indicate the sample groups being compared (e.g. "Group1_vs_Group2"). It parses 
-#' the column names to extract the two groups, then constructs a contrast matrix by 
+#'
+#' @details This function takes a matrix of sample labels as input, where the column
+#' names indicate the sample groups being compared (e.g. "Group1_vs_Group2"). It parses
+#' the column names to extract the two groups, then constructs a contrast matrix by
 #' assigning +1/-1 weights to samples belonging to each group.
 #'
-#' The resulting contrast matrix has rows corresponding to samples, and columns 
+#' The resulting contrast matrix has rows corresponding to samples, and columns
 #' corresponding to the label matrix column names. This encodes the contrasts between
 #' each pair of groups.
 #'

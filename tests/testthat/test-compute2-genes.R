@@ -31,12 +31,10 @@ test_that("compute_testGenes returns correct number of genes", {
   expected_vals <- c(1929.020, 2137.772)
   names(expected_vals) <- names(test_genes$gx.meta$meta)
   expect_equal(sum_vals, expected_vals, tolerance = 0.1)
-
 })
 
 #' Test for compute_testGenesSingleOmics
 test_that("compute_testGenesSingleOmics runs without errors", {
-
   result <- compute_testGenesSingleOmics(pgx, contr.matrix)
   expected_slots <- c("meta", "sig.counts")
 
@@ -52,5 +50,4 @@ test_that("compute_testGenesSingleOmics runs without errors", {
   expected_vals <- c(1929.020, 2137.772)
   names(expected_vals) <- names(result$gx.meta$meta)
   expect_equal(sum_vals, expected_vals, tolerance = 0.1)
-
 })

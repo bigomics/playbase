@@ -8,22 +8,17 @@ rownames(genesets) <- names(ranks)
 result <- gset.rankcor(ranks, genesets)
 
 test_that("gset.rankcor returns a list", {
-
   expect_type(result, "list")
 })
 
 test_that("gset.rankcor matrix has correct dimensions", {
-
   expect_equal(dim(result$rho), c(20, 1))
   expect_equal(dim(result$rho), c(20, 1))
-
 })
 
 test_that("gset.rankcor constant rho", {
-
   # Mean correlation between random val should be 0
   expect_equal(mean(result$rho), 0, tolerance = 1)
-
 })
 
 #' Test for gx.nnmcorrect.SAVE

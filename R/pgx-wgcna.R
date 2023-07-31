@@ -7,23 +7,23 @@
 
 #' @title Map module colors to rainbow palette
 #'
-#' @description 
+#' @description
 #' Maps the module colors from a WGCNA network to a rainbow palette.
 #'
 #' @param net A WGCNA network object.
-#' 
+#'
 #' @details
-#' This function takes a WGCNA network object and maps the module colors 
+#' This function takes a WGCNA network object and maps the module colors
 #' to a rainbow palette based on the modules' hierarchical clustering order.
 #'
 #' It extracts the hierarchical clustering dendrogram order, gets the number
-#' of unique module colors, ranks the module color means based on the 
+#' of unique module colors, ranks the module color means based on the
 #' dendrogram order, and assigns rainbow colors accordingly.
 #'
 #' This allows easier visualization and interpretation of modules in the
 #' standard rainbow palette order.
 #'
-#' @return 
+#' @return
 #' A named character vector mapping the original module colors to rainbow colors.
 #'
 #' @export
@@ -45,26 +45,26 @@ labels2rainbow <- function(net) {
 
 #' @title WGCNA network construction and module detection
 #'
-#' @param pgx PGX object containing gene expression data 
-#' @param minmodsize Minimum module size cutoff  
+#' @param pgx PGX object containing gene expression data
+#' @param minmodsize Minimum module size cutoff
 #' @param power Soft thresholding power for network construction
-#' @param cutheight Cut height for module dendrogram  
+#' @param cutheight Cut height for module dendrogram
 #' @param deepsplit Number of splits for module dendrogram
 #' @param ngenes Number of genes to use (most variable)
 #'
 #' @return List containing WGCNA network and module results
 #'
-#' @description Constructs a weighted gene coexpression network and detects 
+#' @description Constructs a weighted gene coexpression network and detects
 #' modules using WGCNA on a PGX object.
 #'
-#' @details This function takes a PGX object containing gene expression data. 
-#' It constructs a weighted gene coexpression network using the WGCNA package. 
-#' Soft thresholding power is set by \code{power}. 
-#' 
-#' Modules are detected by cutting the module dendrogram at \code{cutheight} and 
-#' with \code{deepsplit} splits. Only the \code{ngenes} most variable genes are used.  
+#' @details This function takes a PGX object containing gene expression data.
+#' It constructs a weighted gene coexpression network using the WGCNA package.
+#' Soft thresholding power is set by \code{power}.
 #'
-#' The output is a list containing the WGCNA network object and module results, 
+#' Modules are detected by cutting the module dendrogram at \code{cutheight} and
+#' with \code{deepsplit} splits. Only the \code{ngenes} most variable genes are used.
+#'
+#' The output is a list containing the WGCNA network object and module results,
 #' including module assignments, colors, and summary statistics.
 #'
 #' @export

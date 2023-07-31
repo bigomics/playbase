@@ -12,22 +12,22 @@
 #'
 #' @description
 #' Performs supervised batch correction on a gene expression matrix, using known technical factors and biological covariates.
-#' 
+#'
 #' @param X Gene expression matrix, genes in rows, samples in columns.
-#' @param batch Factor or matrix indicating batch/technical groups for each sample. 
-#' @param model.par Vector of column names of biological covariates in \code{pheno}.  
+#' @param batch Factor or matrix indicating batch/technical groups for each sample.
+#' @param model.par Vector of column names of biological covariates in \code{pheno}.
 #' @param pheno Dataframe containing sample metadata/covariates. Must match colnames of \code{X}.
 #' @param method Batch correction method to apply ("combat", "limma", "sva", etc).
 #'
 #' @details This function performs supervised batch correction, using known batch groups and biological covariates.
-#' It constructs a design matrix containing batch groups and covariates. 
+#' It constructs a design matrix containing batch groups and covariates.
 #' The \code{method} batch correction is then applied to the expression matrix \code{X}, using this design matrix.
 #'
 #' Technical effects are estimated from the data as follows:
 #' \enumerate{
-#' \item Compute average expression within each batch 
+#' \item Compute average expression within each batch
 #' \item Perform PCA on the batch means
-#' \item Extract PCs explaining at least 80\% variance  
+#' \item Extract PCs explaining at least 80\% variance
 #' }
 #'
 #' Biological effects are included using the specified \code{model.par} covariates.
@@ -441,27 +441,27 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
 
 #' Correlate principal components with phenotypes
 #'
-#' @param X Expression matrix 
+#' @param X Expression matrix
 #' @param pheno Data frame of sample phenotypes
 #' @param nv Number of principal components to use
 #' @param stat Statistic for categorical phenotypes ("F" or "t").
-#' @param plot Logical, whether to generate a PCA plot.  
+#' @param plot Logical, whether to generate a PCA plot.
 #' @param main Title for PCA plot.
-#' 
+#'
 #' @return Named vector of correlation coefficients
-#' 
+#'
 #' @description
 #' Calculates the correlation between principal components of the expression matrix X
 #' and sample phenotypes in pheno.
 #'
 #' @details
-#' This function calculates the top nv principal components of the expression matrix X 
+#' This function calculates the top nv principal components of the expression matrix X
 #' using irlba::irlba. It then correlates each PC with each phenotype in the pheno data frame.
-#' 
-#' For categorical phenotypes, it converts to a factor and calculates the correlation with 
+#'
+#' For categorical phenotypes, it converts to a factor and calculates the correlation with
 #' the model matrix. For numeric phenotypes it calculates the standard correlation coefficient.
 #'
-#' It returns a named vector of correlation coefficients, with names corresponding to 
+#' It returns a named vector of correlation coefficients, with names corresponding to
 #' the phenotypes.
 #'
 #' @export
@@ -555,19 +555,19 @@ NORMALIZATION.METHODS <- c("none", "mean", "scale", "NC", "CPM", "TMM", "RLE", "
 #'
 #' @description
 #' Normalizes a count matrix using the TMM (Trimmed Mean of M-values) method.
-#' 
+#'
 #' @details
-#' This function takes a count matrix and normalizes the counts using the TMM method 
+#' This function takes a count matrix and normalizes the counts using the TMM method
 #' implemented in the edgeR package.
 #'
 #' It converts the count matrix to a DGEList object. Then it calculates normalization
-#' factors using the calcNormFactors function with default TMM method. 
-#' 
+#' factors using the calcNormFactors function with default TMM method.
+#'
 #' The normalized counts are returned as CPM values, optionally log-transformed.
 #'
 #' @examples
 #' \dontrun{
-#' counts <- matrix(rnbinom(100, mu=10, size=1), ncol=10) 
+#' counts <- matrix(rnbinom(100, mu = 10, size = 1), ncol = 10)
 #' norm_counts <- normalizeTMM(counts)
 #' }
 #' @export
@@ -591,7 +591,7 @@ normalizeTMM <- function(counts, log = FALSE, method = "TMM") {
 #'
 #' @examples
 #' \dontrun{
-#' counts <- matrix(rnbinom(100, mu=10, size=1), ncol=10) 
+#' counts <- matrix(rnbinom(100, mu = 10, size = 1), ncol = 10)
 #' norm_counts <- normalizeRLE(counts)
 #' }
 #' @export
@@ -617,7 +617,7 @@ normalizeRLE <- function(counts, log = FALSE, use = "deseq2") {
 }
 
 
-#' @title Normalize count data  
+#' @title Normalize count data
 #'
 #' @description
 #' Normalizes a matrix of RNA-seq count data using different methods.
@@ -628,22 +628,22 @@ normalizeRLE <- function(counts, log = FALSE, use = "deseq2") {
 #'
 #' @details
 #' This function normalizes a matrix of RNA-seq count data using different normalization methods:
-#' 
-#' - "none": No normalization 
+#'
+#' - "none": No normalization
 #' - "scale": Scale normalization by column means
 #' - "CPM": Counts per million
 #' - "TMM": Trimmed mean of M-values (edgeR)
 #' - "RLE": Relative log expression (DESeq2)
 #'
 #' Zero counts can be retained or set to NA after normalization based on the keep.zero parameter.
-#'  
+#'
 #' @return
 #' The normalized count matrix.
 #'
 #' @examples
 #' \dontrun{
 #' counts <- matrix(rnbinom(10000, mu = 10, size = 1), 100, 100)
-#' normalized <- pgx.countNormalization(counts, c("TMM", "RLE")) 
+#' normalized <- pgx.countNormalization(counts, c("TMM", "RLE"))
 #' }
 #' @export
 pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
@@ -695,8 +695,8 @@ pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
 
 
 #' @title Normalize count data
-#' 
-#' @description 
+#'
+#' @description
 #' Normalizes a matrix of RNA-seq count data using different methods.
 #'
 #' @param counts Matrix of count data, with genes in rows and samples in columns.
@@ -713,14 +713,14 @@ pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
 #' - "none": No normalization
 #'
 #' Counts are offset by prior value before normalization. A log2 transformation can also be applied after normalization.
-#' 
-#' @return 
+#'
+#' @return
 #' The normalized count matrix.
 #'
 #' @examples
 #' \dontrun{
-#' counts <- matrix(rnbinom(10000, mu = 10, size = 1), 100, 100) 
-#' normalized <- pgx.countNormalization(counts, method="TMM", log=TRUE)
+#' counts <- matrix(rnbinom(10000, mu = 10, size = 1), 100, 100)
+#' normalized <- pgx.countNormalization(counts, method = "TMM", log = TRUE)
 #' }
 #' @export
 pgx.removeBatchEffect <- function(X, batch, model.vars = NULL,
@@ -769,16 +769,16 @@ pgx.removeBatchEffect <- function(X, batch, model.vars = NULL,
 #'
 #' @title Remove principal components from gene expression data
 #'
-#' @description 
+#' @description
 #' Removes the top principal components from a gene expression matrix.
 #'
 #' @param X Gene expression matrix, genes in rows, samples in columns.
 #' @param nv Number of principal components to remove.
-#' 
+#'
 #' @details
-#' This function calculates the top \code{nv} principal components of the gene expression matrix \code{X} using \code{irlba::irlba}. 
+#' This function calculates the top \code{nv} principal components of the gene expression matrix \code{X} using \code{irlba::irlba}.
 #' It then removes these principal components from \code{X} using \code{limma::removeBatchEffect}.
-#' 
+#'
 #' The goal is to remove technical noise or batch effects captured by the top principal components.
 #'
 #' @return The gene expression matrix \code{X} with the top \code{nv} principal components removed.
@@ -818,32 +818,32 @@ pgx.plotMitoRibo <- function(counts, percentage = TRUE) {
 
 
 #' @title Estimate biological variation
-#' 
+#'
 #' @param X Gene expression matrix, with genes in rows and samples in columns
 #' @param is.count Logical indicating if X contains counts (TRUE) or log-expression values (FALSE)
 #'
 #' @return List containing:
 #' \itemize{
-#'  \item{pct.mito}{Percent mitochondrial genes} 
+#'  \item{pct.mito}{Percent mitochondrial genes}
 #'  \item{pct.ribo}{Percent ribosomal genes}
 #'  \item{biological}{Biological coefficient of variation}
 #' }
 #'
-#' @description 
+#' @description
 #' Estimates the biological variation and fraction of mitochondrial and ribosomal genes from a gene expression matrix.
-#' 
+#'
 #' @details
 #' This function calculates the biological variation (BCV) for each gene as the coefficient of variation of expression across samples.
 #'
 #' It also calculates the percentage of mitochondrial and ribosomal genes based on gene symbols.
-#' 
+#'
 #' If the input matrix X contains counts, it will be transformed to log2-CPM.
 #' If X contains log-expression values, it will be shifted to start at the 1% quantile.
 #' @examples
 #' \dontrun{
 #' data(sample.ExpressionSet)
 #' results <- pgx.computeBiologicalEffects(sample.ExpressionSet)
-#' head(results$biological) 
+#' head(results$biological)
 #' }
 #' @export
 pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
@@ -910,18 +910,18 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
 #'
 #' @param X Gene expression matrix, genes in rows and samples in columns.
 #' @param batch Factor or matrix indicating batch groups for each sample.
-#' @param model.par Vector of column names in \code{pheno} to use as model covariates. 
+#' @param model.par Vector of column names in \code{pheno} to use as model covariates.
 #' @param pheno Dataframe containing sample metadata/covariates. Must match colnames of \code{X}.
 #' @param n.sv Number of surrogate variables to estimate. If NULL uses a data-driven approach.
 #'
 #' @return Batch corrected gene expression matrix.
-#' 
+#'
 #' @details
 #' This function performs batch correction using the sva R package.
 #'
 #' It constructs a design matrix containing the specified batch groups and covariates.
 #' Surrogate variables are estimated to capture remaining batch effects.
-#' 
+#'
 #' The top surrogate variables are included in the design matrix and removed from the expression data.
 #' This accounts for batch effects in a completely unsupervised way.
 #'
@@ -992,26 +992,26 @@ pgx.svaCorrect <- function(X, pheno, nmax = -1) {
 
 #' @title Compute Number of Significant Genes
 #'
-#' @param obj A pgx object 
-#' @param batch A character vector of batch parameters 
-#' @param contrast Character vector of contrasts to test 
-#' @param normalization Character vector of normalization methods to try 
-#' @param niter Number of iterations for resampling 
-#' @param resample Resampling fraction 
-#' @param show.progress Show progress 
+#' @param obj A pgx object
+#' @param batch A character vector of batch parameters
+#' @param contrast Character vector of contrasts to test
+#' @param normalization Character vector of normalization methods to try
+#' @param niter Number of iterations for resampling
+#' @param resample Resampling fraction
+#' @param show.progress Show progress
 #'
-#' @description Counts number of significant genes for each combination of batch correction 
+#' @description Counts number of significant genes for each combination of batch correction
 #'   parameters and normalization methods. Used to optimize batch correction.
-#'   
+#'
 #' @details This function systematically goes through different combinations of batch correction
-#'   parameters and normalization methods to correct the data in obj. For each combination, it performs 
+#'   parameters and normalization methods to correct the data in obj. For each combination, it performs
 #'   differential expression analysis for the specified contrasts, and counts the number of significant
-#'   genes. This can be used to optimize batch correction by finding the combination that maximizes 
+#'   genes. This can be used to optimize batch correction by finding the combination that maximizes
 #'   the number of significant genes.
-#'   
+#'
 #'   The batch parameters, normalization methods, number of iterations and resampling fraction can be
 #'   specified. Progress is shown if show.progress is TRUE.
-#'   
+#'
 #' @return Returns a data frame with the number of significant genes for each parameter/method combination.
 #'
 #' @export
@@ -1073,24 +1073,24 @@ pgx._runComputeNumSig <- function(ngs, parcomb, contrast, resample = -1,
 
 #' @title Compute number of significant genes
 #'
-#' @param ngs Object containing NGS analysis data 
+#' @param ngs Object containing NGS analysis data
 #' @param X Expression matrix
 #' @param contrast Contrast to test
 #' @param fc Fold change cutoff
-#' @param qv FDR cutoff 
+#' @param qv FDR cutoff
 #'
 #' @return Named vector containing number of significant genes for each parameter combination
 #'
 #' @description Counts number of significant genes for given parameters.
 #'
-#' @details This function fits the specified contrast and counts the number of genes 
+#' @details This function fits the specified contrast and counts the number of genes
 #' significant at the given FDR and fold change cutoffs.
 #'
-#' It requires an NGS analysis object, expression matrix, and contrast. Batch 
-#' correction is performed using parameters defined in the NGS object. The contrast is 
-#' then fit using limma-voom and number of significant genes counted.  
+#' It requires an NGS analysis object, expression matrix, and contrast. Batch
+#' correction is performed using parameters defined in the NGS object. The contrast is
+#' then fit using limma-voom and number of significant genes counted.
 #'
-#' Fold change and FDR cutoffs can also be specified. The number of significant genes 
+#' Fold change and FDR cutoffs can also be specified. The number of significant genes
 #' passing these thresholds is returned for each parameter combination.
 #'
 #' @export

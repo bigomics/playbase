@@ -24,8 +24,10 @@ test_that("averageByGroup returns a numeric matrix", {
 
 test_that("averageByGroup calculates correct group means", {
   means <- averageByGroup(mat, groups)
-  expected_means <- matrix(c(rep(3, 10),
-                             rep(8, 10)), ncol = 2)
+  expected_means <- matrix(c(
+    rep(3, 10),
+    rep(8, 10)
+  ), ncol = 2)
   colnames(expected_means) <- c(1, 2)
   expect_equal(means, expected_means)
 })

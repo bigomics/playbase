@@ -10,20 +10,20 @@
 #'
 #' @param combo Character vector of drug combinations (separated by '+')
 #' @param annot0 Data frame with annotation for individual drugs
-#' 
+#'
 #' @return Data frame with annotation for the drug combinations
 #'
-#' @description Creates annotation for drug combinations by combining annotation 
+#' @description Creates annotation for drug combinations by combining annotation
 #'   from individual drugs.
 #'
-#' @details This function takes a vector of drug combinations and an annotation 
-#'   data frame for individual drugs. It splits the combinations into individual 
+#' @details This function takes a vector of drug combinations and an annotation
+#'   data frame for individual drugs. It splits the combinations into individual
 #'   drugs, looks up their annotation, and combines it into annotation for the combos.
 #'
 #'   For example, if combo is 'DrugA + DrugB', it will look up mode of action (moa)
-#'   and targets for DrugA and DrugB, and combine them into moa and targets for 
+#'   and targets for DrugA and DrugB, and combine them into moa and targets for
 #'   the combination. NA values are removed.
-#'   
+#'
 #' @export
 pgx.createComboDrugAnnot <- function(combo, annot0) {
   drugs <- strsplit(combo, split = "[+]")
@@ -43,17 +43,17 @@ pgx.createComboDrugAnnot <- function(combo, annot0) {
 
 #' @title Compute drug enrichment from expression data
 #'
-#' @param X Numeric gene expression matrix 
+#' @param X Numeric gene expression matrix
 #' @param drugs Character vector of drug names
 #' @param nmin Minimum number of genes per drug set
 #' @param methods Methods for enrichment (rank, gsea)
 #'
 #' @return List with enrichment results for each drug
-#' 
-#' @description Computes enrichment of drug gene sets in expression data using 
+#'
+#' @description Computes enrichment of drug gene sets in expression data using
 #' rank correlation or GSEA.
 #'
-#' @details This function takes a gene expression matrix and a set of drugs. It extracts 
+#' @details This function takes a gene expression matrix and a set of drugs. It extracts
 #' gene sets for each drug from MSigDB. Enrichment is computed by:
 #'
 #' 1) Rank correlation of drug set ranks with experiment ranks.
@@ -206,21 +206,21 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
 
 #' @title Compute enrichment for drug combinations
 #'
-#' @param obj PGX object containing gene expression data 
+#' @param obj PGX object containing gene expression data
 #' @param X Gene expression matrix
 #' @param xdrugs Character vector of drug names
 #' @param ntop Number of top drugs to combine per sample
 #' @param nsample Number of samples to sample combinations
-#' @param nprune Number of genes to use for GSEA  
+#' @param nprune Number of genes to use for GSEA
 #' @param contrasts Contrasts to compute enrichment
-#' @param res.mono Single drug enrichment results to use 
+#' @param res.mono Single drug enrichment results to use
 #'
 #' @return List with enrichment results for each drug combination
 #'
 #' @description Computes enrichment of drug combinations using single drug enrichment results.
 #'
-#' @details This function takes single drug enrichment results and computes enrichment for 
-#' combinations by combining the individual drug profiles. It samples combinations from the 
+#' @details This function takes single drug enrichment results and computes enrichment for
+#' combinations by combining the individual drug profiles. It samples combinations from the
 #' top drugs per sample then runs GSEA to test for enrichment.
 #'
 #' The output is a list containing the enrichment results for each sampled drug combination.

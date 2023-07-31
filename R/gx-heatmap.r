@@ -57,7 +57,7 @@ gx.markermap <- function(X, splitx, n = 5, ...) {
 #'
 #' @examples
 #' \dontrun{
-#' x <- matrix(rnorm(500*50), 500, 50)
+#' x <- matrix(rnorm(500 * 50), 500, 50)
 #' gx.PCAheatmap(x, nv = 3, ngenes = 5)
 #' }
 #'
@@ -87,7 +87,7 @@ gx.PCAheatmap <- function(X, nv = 5, ngenes = 10, ...) {
 #'
 #' @examples
 #' \dontrun{
-#' x <- matrix(rnorm(500*50), 500, 50)
+#' x <- matrix(rnorm(500 * 50), 500, 50)
 #' gx.PCAcomponents(x, nv = 5, ngenes = 10)
 #' }
 #'
@@ -120,7 +120,7 @@ gx.PCAcomponents <- function(X, nv = 20, ngenes) {
 #' @examples
 #' \dontrun{
 #' data <- matrix(rnorm(200), 20, 10)
-#' gx.imagemap(data, main="My Heatmap")
+#' gx.imagemap(data, main = "My Heatmap")
 #' }
 #'
 #' @export
@@ -201,19 +201,18 @@ gx.imagemap <- function(X, main = "", cex = 1, clust = TRUE) {
 #' @examples
 #' \dontrun{
 #' set.seed(123)
-#' gx <- matrix(rnorm(250)^2, nrow=25, ncol=10) 
+#' gx <- matrix(rnorm(250)^2, nrow = 25, ncol = 10)
 #' rownames(gx) <- sample(LETTERS, 25)
 #' colnames(gx) <- sample(letters, 10)
 #' # Create a grouping variable
-#' 
+#'
 #' p <- playbase::gx.splitmap(
-#'   gx, 
+#'   gx,
 #'   scale = "row",
 #'   cluster_rows = FALSE,
 #'   show_key = FALSE,
 #'   cluster_columns = FALSE
 #' )
-#' 
 #' }
 #' @export
 gx.splitmap <- function(gx, split = 5, splitx = NULL,
@@ -691,11 +690,10 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
 #' @examples
 #' \dontrun{
 #' set.seed(123)
-#' gx <- matrix(rnorm(250)^2, nrow=25, ncol=10) 
+#' gx <- matrix(rnorm(250)^2, nrow = 25, ncol = 10)
 #' rownames(gx) <- sample(LETTERS, 25)
 #' colnames(gx) <- sample(letters, 10)
 #' p <- playbase::gx.heatmap(gx)
-#' 
 #' }
 #' @export
 gx.heatmap <- function(gx, values = NULL,
@@ -987,7 +985,6 @@ gx.heatmap <- function(gx, values = NULL,
 
   # Return res so that unit test is possible
   return(res)
-
 }
 
 
@@ -1025,7 +1022,7 @@ gx.heatmap <- function(gx, values = NULL,
 #' @examples
 #' \dontrun{
 #' mat <- matrix(rnorm(200), 20, 10)
-#' amat <- matrix(sample(letters, 200, replace=TRUE), 20, 10)
+#' amat <- matrix(sample(letters, 200, replace = TRUE), 20, 10)
 #' clustermap(mat, col.annot = amat)
 #' }
 #'
@@ -1195,7 +1192,7 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
 #' @examples
 #' \dontrun{
 #' mat <- matrix(rnorm(10000), 1000, 10)
-#' frozenmap(mat, m=100, n=5)
+#' frozenmap(mat, m = 100, n = 5)
 #' }
 #'
 #' @export
@@ -1364,7 +1361,7 @@ multi.dist <- function(x, p = 4, method = c("pearson", "euclidean", "manhattan")
 #' @examples
 #' \dontrun{
 #' mat <- matrix(rnorm(200), 20, 10)
-#' heatmap.3(mat, Colv=FALSE, scale="column", dendrogram="row")
+#' heatmap.3(mat, Colv = FALSE, scale = "column", dendrogram = "row")
 #' }
 #'
 #' @export

@@ -5,27 +5,27 @@
 
 
 #' @title Infer cell types from gene expression
-#' 
-#' @param counts Numeric gene expression matrix with genes in rows. 
+#'
+#' @param counts Numeric gene expression matrix with genes in rows.
 #' @param low.th Filtering threshold to remove lowly expressed genes.
-#' @param add.unknown Add "unknown" cell type if no match. 
+#' @param add.unknown Add "unknown" cell type if no match.
 #' @param min.prob Minimum probability threshold for calling a cell type.
 #' @param min.count Minimum count threshold for including a gene.
-#' @param scalex Scale the expression values before inference. 
+#' @param scalex Scale the expression values before inference.
 #' @param normalize.mat Normalize the expression matrix before inference.
 #' @param method Inference method to use (NNLM, LDA, ...).
-#' @param collapse Method for collapsing predictions from multiple markers. 
+#' @param collapse Method for collapsing predictions from multiple markers.
 #' @param markers Cell type marker genes, if provided.
 #'
 #' @return Matrix of predicted cell type probabilities for each sample.
-#' 
+#'
 #' @description Infer cell types based on known marker genes and their expression levels.
-#' 
+#'
 #' @details This function identifies cell types based on the expression of known marker genes.
 #' It filters the expression matrix, matches to the marker genes, and runs inference using NNLM or LDA.
 #' The output is a matrix of predicted probabilities for each sample and cell type.
 #' Parameters allow customizing the marker genes, expression filters, and inference method.
-#' 
+#'
 #' @export
 pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
                               min.prob = 0.2, min.count = 3, scalex = FALSE,
@@ -107,9 +107,9 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
 }
 
 
-#' @title Infer cell types using LM22 signature 
+#' @title Infer cell types using LM22 signature
 #'
-#' @description This function infers the proportion of cell types in a bulk 
+#' @description This function infers the proportion of cell types in a bulk
 #' RNA-seq sample using the LM22 signature.
 #'
 #' @param counts A counts matrix with genes as rows and samples as columns.
@@ -117,12 +117,12 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
 #' @param markers A data frame with positive and negative cell type markers.
 #'
 #' @details This function checks if the canonical cell type markers from the
-#' LM22 signature are expressed above a minimum threshold in the input counts 
+#' LM22 signature are expressed above a minimum threshold in the input counts
 #' matrix. It returns a list with logical vectors indicating which cell types
 #' are detected based on their marker expression.
 #'
 #' @return A list with logical vectors for each cell type indicating marker presence.
-#' 
+#'
 #' @export
 pgx.inferCellTypeLM22 <- function(counts, low.th = 0.01, add.unknown = FALSE,
                                   normalize.mat = TRUE, method = "NNLM",
@@ -209,29 +209,29 @@ pgx.inferCellTypeLM22 <- function(counts, low.th = 0.01, add.unknown = FALSE,
 
 #' Check Cell Type Markers
 #'
-#' @description 
-#' Checks if known cell type marker genes are detected (positive markers) 
+#' @description
+#' Checks if known cell type marker genes are detected (positive markers)
 #' or not detected (negative markers) in a gene expression matrix.
-#' 
-#' @param counts Gene expression matrix with genes in rows and samples in 
+#'
+#' @param counts Gene expression matrix with genes in rows and samples in
 #' columns.
-#' @param min.count Minimum expression count threshold. Default 3. 
+#' @param min.count Minimum expression count threshold. Default 3.
 #' @param markers Named list of cell type marker genes.
 #'
 #' @details
-#' This function takes a gene expression matrix and checks if known cell type 
-#' marker genes are detected above a minimum expression threshold (positive markers) 
-#' or not detected (negative markers). 
+#' This function takes a gene expression matrix and checks if known cell type
+#' marker genes are detected above a minimum expression threshold (positive markers)
+#' or not detected (negative markers).
 #'
-#' It compares the matrix rownames against lists of known canonical markers for major 
-#' immune and cancer cell types. Markers can be specified, otherwise built-in 
-#' canonical markers are used.  
-#' 
-#' For each cell type, it identifies the positive and negative markers based on 
-#' expression above or below min.count. This provides an overview of which cell types 
+#' It compares the matrix rownames against lists of known canonical markers for major
+#' immune and cancer cell types. Markers can be specified, otherwise built-in
+#' canonical markers are used.
+#'
+#' For each cell type, it identifies the positive and negative markers based on
+#' expression above or below min.count. This provides an overview of which cell types
 #' are potentially present or absent based on their expression markers in the data.
 #'
-#' @return Named list with logical vectors indicating detected (TRUE) vs undetected 
+#' @return Named list with logical vectors indicating detected (TRUE) vs undetected
 #' (FALSE) markers for each cell type.
 #'
 #' @export
@@ -297,7 +297,7 @@ pgx.checkCellTypeMarkers <- function(counts, min.count = 3, markers = NULL) {
 }
 
 
-#' @title Simplify cell types names 
+#' @title Simplify cell types names
 #'
 #' @description Simplifies cell types names from LM22, DICE, ImmProt and
 #' ImmunoStates to standardized classification names.
@@ -305,9 +305,9 @@ pgx.checkCellTypeMarkers <- function(counts, min.count = 3, markers = NULL) {
 #' @param ct Character vector of cell type names.
 #' @param low.th Threshold to filter low abundance cell types.
 #'
-#' @details This function takes a character vector of cell type names 
-#' from deconvolution methods like LM22, DICE, ImmProt, ImmunoStates etc. 
-#' It simplifies the names using pattern matching to map to standardized 
+#' @details This function takes a character vector of cell type names
+#' from deconvolution methods like LM22, DICE, ImmProt, ImmunoStates etc.
+#' It simplifies the names using pattern matching to map to standardized
 #' cell type categories like "T_cells", "B_cells", "Macrophages" etc.
 #'
 #' Cell types below the abundance threshold `low.th` are removed.
@@ -376,42 +376,42 @@ pgx.simplifyCellTypes <- function(ct, low.th = 0.01) {
 
 #' @title Purify bulk gene expression profiles
 #'
-#' @param expr Gene expression matrix with genes in rows and samples 
+#' @param expr Gene expression matrix with genes in rows and samples
 #' in columns.
 #' @param ref Index of reference samples for estimating contamination.
 #' @param k Number of components for NMF.
-#' @param method NMF method, either 1 for normal cell contamination or 
+#' @param method NMF method, either 1 for normal cell contamination or
 #' 2 for tumor cell purification.
 #'
 #' @return A list containing:
 #' \itemize{
-#'   \item{\code{purified}}{Purified gene expression matrix.}  
+#'   \item{\code{purified}}{Purified gene expression matrix.}
 #'   \item{\code{contaminant}}{Estimated contaminating profile.}
 #'   \item{\code{alpha}}{Estimated sample purity.}
 #' }
 #'
-#' @description 
-#' Estimates and removes contaminating gene expression signals from bulk 
+#' @description
+#' Estimates and removes contaminating gene expression signals from bulk
 #' RNA-seq data using non-negative matrix factorization (NMF).
 #'
-#' @details This function takes a gene expression matrix and reference samples. 
-#' It uses NMF to estimate the contaminating expression profile 
-#' and sample purity. Method 1 assumes the contaminant is normal cells, method 2 
-#' assumes it is tumor cells. The estimated contaminating profile is subtracted 
+#' @details This function takes a gene expression matrix and reference samples.
+#' It uses NMF to estimate the contaminating expression profile
+#' and sample purity. Method 1 assumes the contaminant is normal cells, method 2
+#' assumes it is tumor cells. The estimated contaminating profile is subtracted
 #' to obtain a purified expression profile.
 #'
-#' The reference samples should represent the contaminating component (normal or tumor). 
-#' The number of components k determines the complexity of the estimated contaminating 
-#' profile. A purity vector and the contaminating profile matrix are returned along with 
+#' The reference samples should represent the contaminating component (normal or tumor).
+#' The number of components k determines the complexity of the estimated contaminating
+#' profile. A purity vector and the contaminating profile matrix are returned along with
 #' the purified data.
 #'
 #' @examples
 #' \dontrun{
-#' # Purify normal cell contamination 
-#' purified <- pgx.purify(expr, ref=1:5, method=1)
-#' 
+#' # Purify normal cell contamination
+#' purified <- pgx.purify(expr, ref = 1:5, method = 1)
+#'
 #' # Purify tumor cell contamination
-#' purified <- pgx.purify(expr, ref=6:10, method=2) 
+#' purified <- pgx.purify(expr, ref = 6:10, method = 2)
 #' }
 #' @export
 pgx.purify <- function(X, ref, k = 3, method = 2) {
@@ -467,9 +467,9 @@ pgx.purify <- function(X, ref, k = 3, method = 2) {
 #'
 #' @description Infers cell cycle phase based on expression of known marker genes.
 #'
-#' @details This function takes a gene expression matrix and calculates cell cycle 
-#' scores and assigns cell cycle phases using the Seurat package. It uses curated lists 
-#' of S phase and G2/M phase marker genes from Tirosh et al. 2015. The gene expression 
+#' @details This function takes a gene expression matrix and calculates cell cycle
+#' scores and assigns cell cycle phases using the Seurat package. It uses curated lists
+#' of S phase and G2/M phase marker genes from Tirosh et al. 2015. The gene expression
 #' matrix is normalized then scored based on the phase marker genes. The output Seurat
 #' object contains the scores and assigned phases for each cell.
 #'
@@ -504,21 +504,21 @@ pgx.inferCellCyclePhase <- function(counts) {
 }
 
 
-#' @title Score cell cycle phase from gene expression  
+#' @title Score cell cycle phase from gene expression
 #'
-#' @param expr Gene expression matrix with genes in rows and cells in columns. 
+#' @param expr Gene expression matrix with genes in rows and cells in columns.
 #'
 #' @return DataFrame with cell cycle phase scores and assignments for each cell.
-#' 
-#' @description 
+#'
+#' @description
 #' Scores cell cycle phase for single cells based on expression of known marker genes.
 #'
-#' @details This function takes a gene expression matrix and calculates cell cycle phase 
-#' scores and assignments for each cell using curated gene lists. It calculates S and G2M 
-#' scores based on phase-specific marker genes from Tirosh et al. 2015. The difference between 
+#' @details This function takes a gene expression matrix and calculates cell cycle phase
+#' scores and assignments for each cell using curated gene lists. It calculates S and G2M
+#' scores based on phase-specific marker genes from Tirosh et al. 2015. The difference between
 #' S and G2M scores is used to assign cell cycle phases (G1, S or G2M).
-#'  
-#' The output data frame contains the scores and assigned phases for each cell. This provides 
+#'
+#' The output data frame contains the scores and assigned phases for each cell. This provides
 #' an overview of cell cycle state in the data based on expression of canonical markers.
 #'
 #' @export
@@ -536,7 +536,7 @@ pgx.scoreCellCycle <- function(counts) {
   obj <- Seurat::CreateSeuratObject(counts)
   obj <- Seurat::NormalizeData(obj, verbose = 0)
   suppressWarnings(obj <- Seurat::CellCycleScoring(obj, s_genes, g2m_genes, set.ident = TRUE))
-  
+
   ## view cell cycle scores and phase assignments
   s.score <- obj@meta.data$S.Score
   g2m.score <- obj@meta.data$G2M.Score
@@ -554,7 +554,7 @@ pgx.scoreCellCycle <- function(counts) {
 
 
 #' @title Infer sample gender from gene expression
-#' 
+#'
 #' @param expr Numeric gene expression matrix with genes in rows.
 #' @param method Method for gender inference ("pca" or "ttest").
 #' @param pc Number of principal components to use if method="pca".
@@ -563,9 +563,9 @@ pgx.scoreCellCycle <- function(counts) {
 #'
 #' @description Infers sample gender based on gene expression of Y chromosome genes.
 #'
-#' @details This function takes a gene expression matrix and infers the gender of each 
-#' sample using either a t-test (default) or PCA approach. The t-test compares expression 
-#' of Y chromosome genes between groups of known male and female samples. The PCA approach  
+#' @details This function takes a gene expression matrix and infers the gender of each
+#' sample using either a t-test (default) or PCA approach. The t-test compares expression
+#' of Y chromosome genes between groups of known male and female samples. The PCA approach
 #' uses the first few principal components of Y gene expression as a gender signature.
 #'
 #' The output is a vector of predicted gender labels "F" or "M" for each sample.
@@ -601,18 +601,18 @@ pgx.inferGender <- function(X, gene_name = NULL) {
 #' @title Run multiple deconvolution methods
 #'
 #' @param counts Numeric gene expression matrix with genes in rows and samples in columns.
-#' @param refmat List of reference expression matrices or a single matrix. 
+#' @param refmat List of reference expression matrices or a single matrix.
 #' @param methods Character vector of deconvolution methods to run.
 #'
 #' @return List containing results from each deconvolution method.
-#' 
+#'
 #' @description Runs multiple deconvolution methods using different reference profiles.
 #'
 #' @details This function runs deconvolution across multiple methods like CIBERSORT, DeconRNASeq, EPIC, etc.
 #' It takes a gene expression matrix and one or more reference matrices as input. The reference matrix/matrices
-#' represent cell type-specific expression profiles. 
-#' 
-#' Deconvolution is performed for each reference separately using the specified methods. The results 
+#' represent cell type-specific expression profiles.
+#'
+#' Deconvolution is performed for each reference separately using the specified methods. The results
 #' from each method are returned as nested lists, with the outer list split by reference profile name.
 #'
 #' @export
@@ -653,17 +653,17 @@ pgx.multipleDeconvolution <- function(counts, refmat,
 
 #' @title Deconvolve cell type proportions from bulk RNA-seq data
 #'
-#' @description Deconvolves bulk RNA-seq data into cell type proportions 
+#' @description Deconvolves bulk RNA-seq data into cell type proportions
 #' using reference gene expression signatures.
 #'
 #' @param pgx A PGX object containing bulk RNA-seq data.
 #' @param ref A reference gene expression matrix with cell types in columns.
 #' @param method Deconvolution method to use. Options are NNLM, CIBERSORT, etc.
-#' @param add.unknown Logical for whether to add an 'unknown' cell type.  
+#' @param add.unknown Logical for whether to add an 'unknown' cell type.
 #' @param normalize.mat Logical for whether to normalize input matrices.
 #'
 #' @details This function takes a PGX object containing bulk RNA-seq data, plus a
-#' reference gene expression matrix with cell types in columns. It runs 
+#' reference gene expression matrix with cell types in columns. It runs
 #' deconvolution to estimate the proportions of each cell type in the bulk
 #' samples.
 #'
@@ -671,7 +671,7 @@ pgx.multipleDeconvolution <- function(counts, refmat,
 #' An additional 'unknown' cell type can be added to soak up residuals.
 #' Input matrices can be normalized before deconvolution with \code{normalize.mat}.
 #'
-#' @return The function returns a matrix of estimated cell type proportions, 
+#' @return The function returns a matrix of estimated cell type proportions,
 #' with bulk RNA-seq samples in rows and cell types in columns.
 #'
 #' @export

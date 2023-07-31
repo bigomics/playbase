@@ -13,21 +13,21 @@
 #' @param F Numeric data matrix to visualize as a heatmap
 #' @param anno.type Type of annotation to show - "boxplot" or "barplot"
 #' @param bar.height Height of the annotation barplot in cm
-#' @param map.height Height of the heatmap in cm  
-#' @param row_fontsize Fontsize for row labels 
+#' @param map.height Height of the heatmap in cm
+#' @param row_fontsize Fontsize for row labels
 #' @param column_fontsize Fontsize for column labels
 #' @param inset Inset margins for annotation
-#' @param mar Heatmap margins 
+#' @param mar Heatmap margins
 #' @param legend Show legend for annotation colors
 #' @param ... Other arguments passed to heatmap functions
 #'
 #' @return A heatmap grob object
-#' 
+#'
 #' @description Creates a heatmap visualization with side annotation bars.
 #'
 #' @details This function generates a heatmap from the input data matrix F.
 #' Side annotation bars can be added, either as boxplots or barplots.
-#' The annotation height, heatmap height, font sizes, margins, and other 
+#' The annotation height, heatmap height, font sizes, margins, and other
 #' heatmap parameters can be customized.
 #'
 #' @export
@@ -113,28 +113,28 @@ heatmapWithAnnot <- function(F, anno.type = c("boxplot", "barplot"),
 #' @title Repel overlapping text labels
 #'
 #' @param x Numeric vector of x coordinates for text labels
-#' @param y Numeric vector of y coordinates for text labels  
+#' @param y Numeric vector of y coordinates for text labels
 #' @param words Character vector of words/labels to plot
 #' @param cex Size multiplier for text labels
 #' @param rotate90 Rotate labels by 90 degrees
 #' @param xlim x-axis limits
 #' @param ylim y-axis limits
-#' @param tstep Translation step size 
+#' @param tstep Translation step size
 #' @param rstep Rotation step size
 #' @param maxiter Maximum number of iterations
 #' @param ... Additional graphics parameters to text()
 #'
 #' @return The adjusted coordinates, rotated labels, and plotting parameters
-#' 
+#'
 #' @description Repels overlapping text labels by iteratively adjusting positions.
 #'
 #' @details This function takes a set of text labels defined by x,y coordinates and words.
 #' It iteratively adjusts the positions to repel overlapping labels. Rotation by 90 degrees
 #' and size scaling can also be applied.
-#' 
+#'
 #' The algorithm translates or rotates labels in small steps to minimize overlap.
 #' The step sizes and maximum number of iterations can be controlled.
-#' 
+#'
 #' Useful for scatterplots, word clouds, and other graphics where label overlap is a problem.
 #'
 #' @export
@@ -224,28 +224,28 @@ repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
 
 #' Activation matrix heatmap for PGX results
 #'
-#' @param pgx PGX object containing results 
+#' @param pgx PGX object containing results
 #' @param features Features to include (default NULL for all)
 #' @param contrasts Contrasts to include (default NULL for all)
 #' @param n Number of top features to display
-#' @param qsize Color by adjusted p-value? (default TRUE)  
-#' @param cex Overall text size 
+#' @param qsize Color by adjusted p-value? (default TRUE)
+#' @param cex Overall text size
 #' @param cex.row Row text size
 #' @param cex.col Column text size
 #' @param srt Rotation angle for text labels
 #' @param flip Logical to flip sign of fold changes
-#' @param level Data level to use ("gene", "geneset") 
+#' @param level Data level to use ("gene", "geneset")
 #' @param clust.x Cluster columns? (default TRUE)
 #' @param clust.y Cluster rows? (default TRUE)
 #' @param plotlib Plotting library to use (default "base")
 #'
 #' @return A heatmap grob object
 #'
-#' @description 
+#' @description
 #' Generates an activation matrix heatmap from PGX results
-#' 
+#'
 #' @details
-#' This function takes a PGX object and generates a clustered heatmap 
+#' This function takes a PGX object and generates a clustered heatmap
 #' visualization of the top results. Fold changes are shown with color scale.
 #' The top n features can be displayed, optionally clustering rows and columns.
 #' Sign of changes can be flipped and results can be extracted at the gene or
@@ -361,11 +361,11 @@ pgx.ActivationMatrix <- function(pgx, features = NULL, contrasts = NULL,
 #' @title Scatter plot for PGX object
 #'
 #' @param pgx PGX object with results
-#' @param pheno Phenotype data.frame or vector 
+#' @param pheno Phenotype data.frame or vector
 #' @param gene Gene name to color by expression
-#' @param contrast Contrast name to color by correlation  
+#' @param contrast Contrast name to color by correlation
 #' @param level Data level to use ("gene", "geneset")
-#' @param plotlib Plotting library ("base", "plotly") 
+#' @param plotlib Plotting library ("base", "plotly")
 #' @param pos Positions for points (if level="geneset")
 #' @param ... Other arguments passed to plotting functions
 #'
@@ -373,7 +373,7 @@ pgx.ActivationMatrix <- function(pgx, features = NULL, contrasts = NULL,
 #'
 #' @description Generates a scatter plot from a PGX object.
 #'
-#' @details Samples or genes can be plotted, colored by phenotype, 
+#' @details Samples or genes can be plotted, colored by phenotype,
 #' gene expression, or correlation with a contrast. For gene sets,
 #' positions need to be provided. Interactive plotly plots or
 #' static ggplot2 plots can be generated.
@@ -460,26 +460,26 @@ pgx.scatterPlot <- function(pgx, pheno = NULL, gene = NULL,
 
 #' @title Plot a Scatterplot Matrix
 #'
-#' @description 
+#' @description
 #' Creates a scatterplot matrix visualization comparing multiple datasets.
 #'
 #' @param F Numeric matrix with samples in columns.
 #' @param F2 Optional second numeric matrix to compare against F.
-#' @param hilight Vector of sample names to highlight. 
+#' @param hilight Vector of sample names to highlight.
 #' @param cex Point size in scatterplots.
 #' @param cex.axis Axis text size.
 #' @param cex.space Spacing between scatterplots.
 #'
 #' @details
-#' This function generates a scatterplot matrix comparing all columns of 
+#' This function generates a scatterplot matrix comparing all columns of
 #' the input matrix \code{F} against each other. If a second matrix \code{F2} is
 #' provided, columns of \code{F} are compared against matching columns in \code{F2}.
-#' 
+#'
 #' Samples specified in \code{hilight} are colored differently to stand out.
 #' The \code{cex}, \code{cex.axis}, and \code{cex.space} parameters control graphical
 #' element sizes.
 #'
-#' @return 
+#' @return
 #' A scatterplot matrix is generated comparing datasets. No value is returned.
 #'
 #' @export
@@ -539,20 +539,20 @@ plot_SPLOM <- function(F, F2 = NULL, hilight = NULL, cex = 0.5, cex.axis = 1, ce
 #' @title Create a sankey diagram from a list of matrices
 #'
 #' @param matlist A list of matrices to compare
-#' @param contrast Optional contrast name 
+#' @param contrast Optional contrast name
 #'
 #' @return A plotly sankey diagram object
 #'
-#' @description 
+#' @description
 #' Generates a sankey diagram comparing matrices in a list
 #'
 #' @details
-#' This function takes a list of matrices as input matlist. 
-#' It standardizes each matrix, calculates cross-tables between matrices, 
+#' This function takes a list of matrices as input matlist.
+#' It standardizes each matrix, calculates cross-tables between matrices,
 #' and generates a sankey diagram showing the relationships.
 #'
 #' The contrast parameter can optionally be used to weight the edges.
-#' 
+#'
 #' Useful for visualizing relationships and flows between data matrices.
 #'
 #' @export
@@ -607,10 +607,10 @@ pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast = NULL) {
 
 #' @title Create a sankey diagram from multiple matrices
 #'
-#' @param M A list of matrices 
+#' @param M A list of matrices
 #' @param R A list of correlation matrices
 #' @param F A list of flow matrices
-#' @param fill Logical, whether to color edges by flow 
+#' @param fill Logical, whether to color edges by flow
 #' @param labels Optional edge labels
 #'
 #' @return A plotly sankey diagram object
@@ -620,8 +620,8 @@ pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast = NULL) {
 #'
 #' @details
 #' This function takes a list of matrices \code{M}, correlation matrices \code{R},
-#' and flow matrices \code{F}. It converts each matrix pair \code{M[[i]]} and 
-#' \code{R[[i]]} into a graph, merges the graphs, and creates a sankey diagram 
+#' and flow matrices \code{F}. It converts each matrix pair \code{M[[i]]} and
+#' \code{R[[i]]} into a graph, merges the graphs, and creates a sankey diagram
 #' to show relationships and flows between matrices.
 #'
 #' If \code{fill=TRUE}, edge colors are determined by the flow values \code{F[[i]]}.
@@ -739,26 +739,26 @@ pgx.SankeyFromMRF.PLOTLY <- function(M, R, F, fill = TRUE, labels = NULL) {
 
 
 #' @title Create a sankey diagram from phenotypes
-#' 
+#'
 #' @param pgx PGX object with results
 #' @param phenotypes Data frame of sample phenotypes
-#' @param mat The results matrix to use, default is pgx$MAT 
+#' @param mat The results matrix to use, default is pgx$MAT
 #' @param fill Whether to color edges by matrix values
 #' @param nmin Minimum sample size for phenotype levels
 #' @param title Plot title
 #'
 #' @return A plotly sankey diagram object
 #'
-#' @description 
+#' @description
 #' Generates a sankey diagram from sample phenotypes
 #'
 #' @details This function takes a PGX object and sample phenotype data frame.
-#' It aggregates the results matrix mat by phenotypes, filters low count levels, 
+#' It aggregates the results matrix mat by phenotypes, filters low count levels,
 #' calculates a cross-table, and visualizes the relationships between phenotypes
 #' as a sankey diagram.
 #'
 #' Useful for exploring sample relationships and phenotype flows.
-#' 
+#'
 #' @export
 pgx.SankeyFromPhenotypes.PLOTLY <- function(pgx, phenotypes, mat = NULL,
                                             fill = NULL, nmin = 1, title = "") {
@@ -944,11 +944,11 @@ pgx.SankeyFromPhenotypes.GGPLOT <- function(pgx, phenotypes, mat = NULL, fill = 
 #' @param plotList A list of ggplot objects to arrange in a grid
 #' @param nrow Number of rows in the plot grid
 #'
-#' @return A combined ggplot object with shared axis labels  
+#' @return A combined ggplot object with shared axis labels
 #'
 #' @description Arranges multiple plots in a grid sharing common axis labels.
 #'
-#' @details This function takes a list of ggplot objects and arranges them in a grid 
+#' @details This function takes a list of ggplot objects and arranges them in a grid
 #' layout with a specified number of rows. It shares common x and y axis labels among
 #' the plots to avoid repetition.
 #'
@@ -978,9 +978,9 @@ plot_grid.sharedAxisLabels <- function(plotList, nrow) {
 #' @title Plot contrasts from a PGX analysis
 #'
 #' @description Generate plots for contrasts from a pharmacogenomic (PGX) analysis.
-#' 
+#'
 #' @param pgx A PGX object containing the analysis results.
-#' @param contrast Character vector of contrast names to plot. Default plots all. 
+#' @param contrast Character vector of contrast names to plot. Default plots all.
 #' @param type Type of plot. Options are "scatter", "volcano", "MA", "UMAP".
 #' @param set.par Logical to set graphical parameters before plotting. Default is TRUE.
 #' @param par.sq Logical to set square plotting layout. Default is FALSE.
@@ -988,18 +988,18 @@ plot_grid.sharedAxisLabels <- function(plotList, nrow) {
 #'
 #' @details This function generates plots to visualize contrasts from a PGX analysis.
 #' The \code{pgx} object should contain results for the specified contrasts.
-#' 
+#'
 #' The \code{type} parameter determines the type of plot. Options are:
 #' - "scatter": Default scatter plot of log2 fold-changes vs. p-values.
 #' - "volcano": Volcano plot of log2 fold-changes vs. -log10 p-values.
-#' - "MA": Meta-analysis plots showing the contribution of each study.  
+#' - "MA": Meta-analysis plots showing the contribution of each study.
 #' - "UMAP": UMAP projection plot colored by log2 fold-change.
 #'
 #' If \code{set.par=TRUE}, graphical parameters are set before plotting.
 #' If \code{par.sq=TRUE}, a square layout is used.
 #' Additional parameters can be passed to the plotting functions via \code{...}.
 #'
-#' @return 
+#' @return
 #' A grid of plots visualizing the specified contrasts is generated.
 #' The return value is a list of plot grob objects.
 #'
@@ -1040,23 +1040,23 @@ pgx.plotContrast <- function(pgx, contrast = NULL, type = "scatter",
 
 
 #' @describeIn pgx.plotContrast Create a volcano plot from a PGX object
-#' 
+#'
 #' @param pgx A PGX object containing differential expression results.
-#' @param contrast The contrast name to extract results for. 
+#' @param contrast The contrast name to extract results for.
 #' @param level The data level to extract ("gene", "exon", etc). Default "gene".
 #' @param methods The meta-analysis methods to include. Default "meta".
-#' @param psig P-value cutoff for significance. Default 0.05. 
+#' @param psig P-value cutoff for significance. Default 0.05.
 #' @param fc Fold change cutoff. Default 1.
-#' @param cex Point size. Default 1. 
+#' @param cex Point size. Default 1.
 #' @param cex.lab Label size. Default 1.
-#' @param ntop Number of top genes to highlight. Default 20. 
+#' @param ntop Number of top genes to highlight. Default 20.
 #' @param p.min Minimum p-value for y-axis. Default NULL.
 #' @param fc.max Maximum fold change for x-axis. Default NULL.
 #' @param hilight Vector of genes to highlight. Default NULL.
-#' @param cpal Color palette. Default c("grey60", "red3"). 
+#' @param cpal Color palette. Default c("grey60", "red3").
 #' @param title Plot title. Default NULL.
 #' @param plotlib Plotting library to use. Default "base".
-#' 
+#'
 #' @export
 pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
                         psig = 0.05, fc = 1, cex = 1, cex.lab = 1, ntop = 20,
@@ -1114,10 +1114,10 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
 
 #' @describeIn pgx.plotContrast Meta-analysis plots for PGX results
 #' @param pgx PGX object containing results
-#' @param contrast Contrast name to plot 
+#' @param contrast Contrast name to plot
 #' @param level Data level to extract ("gene", "exon", etc)
 #' @param psig P-value cutoff for significance
-#' @param fc Fold change cutoff  
+#' @param fc Fold change cutoff
 #' @param cex Point size
 #' @param cex.lab Label size
 #' @param hilight Vector of genes to highlight
@@ -1172,18 +1172,18 @@ pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
 
 
 #' @describeIn pgx.plotContrast Scatter plot of contrast results
-#' @param pgx PGX object with analysis results 
+#' @param pgx PGX object with analysis results
 #' @param contrast Contrast name to plot
 #' @param hilight Vector of genes to highlight
 #' @param cex Point size
-#' @param cex.lab Label size  
+#' @param cex.lab Label size
 #' @param psig P-value cutoff for significance
 #' @param fc Fold change cutoff
 #' @param level Data level to extract ("gene", "exon", etc)
 #' @param ntop Number of top genes to label
 #' @param dir Direction to sort results (0 for p-value, 1 for logFC)
 #' @param plotlib Plotting library ("base", "plotly")
-#' 
+#'
 #' @export
 pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
                                 cex = 1, cex.lab = 0.8,
@@ -1253,13 +1253,13 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
 }
 
 
-#' @describeIn pgx.plotContrast Plot gene expression on UMAP projection 
+#' @describeIn pgx.plotContrast Plot gene expression on UMAP projection
 #'
 #' @param pgx PGX object with results
-#' @param contrast Contrast name to extract expression  
+#' @param contrast Contrast name to extract expression
 #' @param value Gene name or ID to plot
-#' @param pos Dataframe of UMAP coordinates 
-#' @param ntop Number of top genes to label 
+#' @param pos Dataframe of UMAP coordinates
+#' @param ntop Number of top genes to label
 #' @param cex Point size
 #' @param cex.lab Label size
 #' @param hilight Vector of genes to highlight
@@ -1362,12 +1362,12 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
 
 #' @title Plot expression for a gene
 #'
-#' @param pgx PGX object with expression data 
+#' @param pgx PGX object with expression data
 #' @param probe Gene name or ID to plot
 #' @param comp Sample grouping variable
 #' @param logscale Log2 transform expression values
 #' @param level Data level to extract ("gene", "exon", etc)
-#' @param grouped Group samples 
+#' @param grouped Group samples
 #' @param srt Label rotation angle
 #' @param cex Point size
 #' @param collapse.others Collapse non-highlighted samples
@@ -1376,19 +1376,19 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
 #' @param group.names Group names for legend
 #' @param main Plot title
 #' @param xlab X axis label
-#' @param ylab Y axis label  
+#' @param ylab Y axis label
 #' @param names Show sample names
 #' @param plotly.annotations Plotly annotations
 #' @param plotly.margin Plotly margins
 #' @param plotlib Plotting library
 #'
 #' @return A gene expression plot
-#' 
+#'
 #' @description
 #' Generate a gene expression plot from a PGX object.
 #'
 #' @details
-#' This function extracts the expression for a given \code{probe} 
+#' This function extracts the expression for a given \code{probe}
 #' from the \code{pgx} object at the specified \code{level}.
 #' It generates a dot plot with samples grouped on the x-axis.
 #' Use \code{comp} to specify grouping.
@@ -1487,7 +1487,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   xgroup <- c("other", grp0.name, grp1.name)[1 + 1 * (ct < 0) + 2 * (ct > 0)]
   names(xgroup) <- rownames(pgx$samples)
   jj <- which(!(xgroup %in% xgroup[samples]))
-  
+
   if (length(jj) > 0 && collapse.others) {
     xgroup <- as.character(xgroup)
     xgroup[jj] <- "other"
@@ -1622,28 +1622,28 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
 #' @title Plot omics network from PGX object
 #'
 #' @param pgx PGX object containing network
-#' @param gene Gene name to highlight 
-#' @param reduced Use reduced network 
+#' @param gene Gene name to highlight
+#' @param reduced Use reduced network
 #' @param levels Data levels to include
-#' @param contrast Contrast to color by 
+#' @param contrast Contrast to color by
 #' @param layout Network layout algorithm
-#' @param colorcluster Color by module 
+#' @param colorcluster Color by module
 #' @param hilight Additional genes to highlight
 #'
 #' @return A network plot object
-#' 
-#' @description 
+#'
+#' @description
 #' Visualize the omics network from a PGX analysis
 #'
 #' @details
 #' This function extracts the omics network stored in a PGX object.
-#' It generates a network graph, coloring and sizing nodes by the 
-#' specified \code{contrast}. 
-#' 
+#' It generates a network graph, coloring and sizing nodes by the
+#' specified \code{contrast}.
+#'
 #' The \code{reduced} network can be plotted for a simplified view.
 #' \code{levels} determines which data levels are included.
 #'
-#' \code{gene} and \code{hilight} highlight specific genes. 
+#' \code{gene} and \code{hilight} highlight specific genes.
 #' \code{colorcluster} colors nodes by module.
 #' \code{layout} specifies the network layout algorithm.
 #'
@@ -1784,26 +1784,26 @@ pgx.plotOmicsNetwork <- function(pgx, gene = NULL, reduced = NULL, levels = c("g
 
 #' Plot expression of two genes across cell types
 #'
-#' @description 
+#' @description
 #' Generates a scatter plot showing the expression levels of two genes across inferred cell types.
-#' 
+#'
 #' @param pgx A PGX object containing single-cell expression data and inferred cell types.
-#' @param gene1 First gene name or ID to plot.  
+#' @param gene1 First gene name or ID to plot.
 #' @param gene2 Second gene name or ID to plot.
-#' @param cex Point size scaling factor. Default is 1.  
+#' @param cex Point size scaling factor. Default is 1.
 #' @param col Point color. Default is "grey60".
 #' @param lab.unit Units for axis labels, eg 'log2(TPM)'. Default is NULL.
 #' @param cex.names Text size for sample labels. Default is 1.
-#' @param samples Vector of sample names to highlight. Default is NULL.  
+#' @param samples Vector of sample names to highlight. Default is NULL.
 #' @param k Number of contour levels if drawing density contours. Default is 11.
 #'
 #' @details
 #' This function takes a PGX object containing single-cell expression data and inferred cell types.
-#' It extracts the expression values for the two specified genes, and generates a scatter plot 
+#' It extracts the expression values for the two specified genes, and generates a scatter plot
 #' with each cell as a point colored by its annotated cell type. Contour lines indicate the density distribution.
 #' Sample names can be highlighted, and axis labels customized.
-#' 
-#' @return 
+#'
+#' @return
 #' A scatter plot is generated showing the expression distribution of the two genes across cell types.
 #'
 #' @export
@@ -1893,17 +1893,17 @@ pgx.cytoPlot <- function(pgx, gene1, gene2, cex = 1, col = "grey60",
 #' @title Visualize phenotype matrix as a heatmap
 #'
 #' @param annot Phenotype matrix with samples as rows and variables as columns.
-#' 
+#'
 #' @return A heatmap visualization of the phenotype matrix.
 #'
-#' @description 
+#' @description
 #' Generates a heatmap to visualize a phenotype matrix.
 #'
 #' @details
 #' This function takes a phenotype matrix \code{annot} with samples as rows and phenotype
 #' variables as columns. It converts the columns to factors and visualizes the matrix
 #' as a heatmap, with samples in rows and variables in columns.
-#' 
+#'
 #' Useful for exploring sample metadata.
 #'
 #' @export
@@ -1968,24 +1968,24 @@ pgx.plotPhenotypeMatrix <- function(annot) {
 
 
 #' @title Visualize phenotype matrix as a heatmap
-#' 
+#'
 #' @param annot Phenotype matrix with samples as rows and variables as columns.
 #' @param annot.ht Height of annotation labels in mm. Default is 5.
 #' @param cluster.samples Logical, cluster samples before plotting. Default is TRUE.
 #'
 #' @return A heatmap visualization of the phenotype matrix.
 #'
-#' @description  
+#' @description
 #' Generates a heatmap to visualize a phenotype matrix.
 #'
 #' @details
-#' This function takes a phenotype matrix \code{annot} with samples as rows and phenotype  
+#' This function takes a phenotype matrix \code{annot} with samples as rows and phenotype
 #' variables as columns. It converts the columns to factors and visualizes the matrix
 #' as a heatmap, with samples in rows and variables in columns.
 #'
-#' Samples are clustered before plotting if \code{cluster.samples=TRUE}. 
+#' Samples are clustered before plotting if \code{cluster.samples=TRUE}.
 #' The annotation label height is set by \code{annot.ht}.
-#' 
+#'
 #' Usef
 #' @export
 pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht = 5, cluster.samples = TRUE) {
@@ -2129,14 +2129,14 @@ pgx.splitHeatmap <- function(ngs, splitx = NULL, top.mode = "specific",
 
 
 #' @param x A numeric vector of values to plot.
-#' 
+#'
 #' @title Plot Histogram with ggplot2
 #'
 #' @description Generate a histogram using ggplot2.
 #'
-#' @details This function takes a numeric vector \code{x} and generates a histogram 
+#' @details This function takes a numeric vector \code{x} and generates a histogram
 #' plot using ggplot2. The data is passed to \code{ggplot(data=x)} to generate a histogram
-#' geom automatically. Titles, axis labels and other customizations can be added via 
+#' geom automatically. Titles, axis labels and other customizations can be added via
 #' additional ggplot commands.
 #'
 #' @return A ggplot histogram plot object.
@@ -2158,16 +2158,16 @@ plot_gghist <- function(x) {
 #' Convert a plotly plot to a ggplot object
 #'
 #' @param plot The plotly plot object to convert
-#' @param width The width of the resulting ggplot, in pixels. Default NULL.  
+#' @param width The width of the resulting ggplot, in pixels. Default NULL.
 #' @param height The height of the resulting ggplot, in pixels. Default NULL.
 #' @param scale The scaling factor to apply. Default 1.
-#' @param hjust The horizontal adjustment to apply. Default 0. 
+#' @param hjust The horizontal adjustment to apply. Default 0.
 #' @param vjust The vertical adjustment to apply. Default 0.
 #'
 #' @return A ggplot object representing the converted plotly plot.
-#' 
+#'
 #' @details This function takes a plotly plot object and converts it to a ggplot object.
-#' The plotly plot is rendered to a temporary PNG file using the orca() function. This PNG 
+#' The plotly plot is rendered to a temporary PNG file using the orca() function. This PNG
 #' is then read in and added as an annotation to a blank ggplot. Optional parameters allow
 #' adjusting the width, height, scaling, and justification of the resulting ggplot.
 #'
@@ -2202,7 +2202,7 @@ plotly2ggplot <- function(plot, width = NULL, height = NULL, scale = 1, hjust = 
 }
 
 
-#' @title GSEA Enrichment Plot 
+#' @title GSEA Enrichment Plot
 #'
 #' @description Creates an enrichment plot visualization for gene set enrichment analysis.
 #'
@@ -2212,18 +2212,18 @@ plotly2ggplot <- function(plot, width = NULL, height = NULL, scale = 1, hjust = 
 #' @param main The plot title.
 #' @param xlab The x-axis label.
 #' @param ticklen Length of the tick marks as a fraction of the height of a line of text.
-#' @param ylab The y-axis label. 
+#' @param ylab The y-axis label.
 #' @param yth The length of the y-axis tick marks.
-#' @param tooltips An optional vector of tooltips to display for each point. 
+#' @param tooltips An optional vector of tooltips to display for each point.
 #' @param cex.text The magnification to be used for point labels.
-#' @param cex.title The magnification to be used for the title.  
+#' @param cex.title The magnification to be used for the title.
 #' @param cbar.width The width of the color bar.
 #'
 #' @details This function takes a ranked list of gene-level stats and a gene set, and produces an enrichment plot visualization using ggplot2.
 #' It computes a running enrichment score and plots it against the ranked list. The goal is to visualize if the gene set is enriched at either end of the ranked list.
 #'
 #' @return A ggplot object containing the enrichment plot.
-#' 
+#'
 #' @export
 gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen = 0.25,
                           ylab = NULL, yth = 1, tooltips = NULL, cex.text = 1, cex.title = 1.4,
@@ -2399,7 +2399,7 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
 
 #' GSEA enrichment plot
 #'
-#' @param fc A numeric vector of gene-level stats (e.g. log2 fold changes) ordered by decreasing statistic.  
+#' @param fc A numeric vector of gene-level stats (e.g. log2 fold changes) ordered by decreasing statistic.
 #' @param gset A character vector of gene ids in the gene set.
 #' @param cex Point expansion factor, passed to ggplot2.
 #' @param main Plot title text.
@@ -2488,9 +2488,9 @@ ggenplot <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ylab = NULL) {
 
 #' Scatterplot matrix using ggplot2
 #'
-#' @param F A data frame or matrix. 
+#' @param F A data frame or matrix.
 #' @param F2 Optional second data frame or matrix to plot on y-axis. Default is NULL.
-#' @param title_cex Title text size. Default is 2.  
+#' @param title_cex Title text size. Default is 2.
 #' @param no.axes Hide axis labels and tick marks. Default is FALSE.
 #' @param ... Other arguments passed to ggplot2 functions.
 #'
@@ -2501,10 +2501,10 @@ ggenplot <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ylab = NULL) {
 #' @description Generate a scatterplot matrix from a data frame or matrix using ggplot2.
 #'
 #' @details This function takes a data frame or matrix \code{F} and generates a scatterplot matrix.
-#' Each variable in \code{F} is plotted against each other variable. An optional second data frame 
+#' Each variable in \code{F} is plotted against each other variable. An optional second data frame
 #' or matrix \code{F2} can be provided for the y-axis variables. Titles and axis labels are added
 #' automatically. \code{title_cex} controls the title size. \code{no.axes} hides axes.
-#' 
+#'
 #' @export
 plot_ggsplom <- function(F, F2 = NULL, title_cex = 2, no.axes = FALSE, ...) {
   if (is.null(F2)) {
@@ -2570,29 +2570,29 @@ plot_ggsplom <- function(F, F2 = NULL, title_cex = 2, no.axes = FALSE, ...) {
 
 #' @title Scatter Plot with Filled Colors
 #'
-#' @description 
+#' @description
 #' Creates a scatter plot with points colored and sized based on input vectors.
 #'
 #' @param x Numeric vector for x-axis values.
 #' @param y Numeric vector for y-axis values. Default is NULL.
 #' @param col Vector of values used to determine point colors. Default is NULL.
-#' @param shape Vector of values used to determine point shapes. Default is NULL.  
+#' @param shape Vector of values used to determine point shapes. Default is NULL.
 #' @param main Title for the plot. Default is NULL.
-#' @param cex Point expansion factor. Default is 1. 
+#' @param cex Point expansion factor. Default is 1.
 #' @param pch Point shape. Default is 20.
 #' @param legend Show legend for colors? Default is TRUE.
 #' @param xlab Label for x-axis. Default is NULL.
 #' @param ylab Label for y-axis. Default is NULL.
 #' @param legend.ysp Vertical space for legend. Default is 0.8.
 #' @param cex.legend Legend text size. Default is 1.
-#' @param barscale Color bar size scaling factor. Default is 0.3.  
+#' @param barscale Color bar size scaling factor. Default is 0.3.
 #' @param opacity Opacity of points. Default is 1.
 #' @param gamma Gamma correction factor for colors. Default is 1.
 #'
 #' @details This function generates a scatter plot from x and y vectors. Points can be colored
 #' and sized based on input col and shape vectors. A color bar legend is shown when col is provided.
 #' Various graphical parameters like main title, axis labels, legend, and text sizes can be adjusted.
-#' 
+#'
 #' @return A ggplot2 scatter plot object is returned.
 #'
 #' @export
@@ -2730,19 +2730,19 @@ plot_ggscatter <- function(x, y = NULL, col = NULL, main = NULL,
 
 #' Violin plot using ggplot2
 #'
-#' @param x Factor variable for x-axis groups. 
+#' @param x Factor variable for x-axis groups.
 #' @param y Numeric vector of values to plot.
-#' @param group Optional grouping variable.  
+#' @param group Optional grouping variable.
 #' @param main Plot title.
 #' @param ylim Limits for y-axis. Calculated automatically if NULL.
 #' @param add.dots Logical to add jittered data points. Default TRUE.
 #' @param col Violin fill color. Default "#AAAAAA".
-#' @param cex Point expansion factor. Default 1. 
+#' @param cex Point expansion factor. Default 1.
 #' @param xlab Label for x-axis. Default "".
 #' @param ylab Label for y-axis. Default "y".
 #' @param srt Rotation angle for x-axis labels. Default 0.
 #' @param pdodge Amount to dodge violins when group is used. Default 1.5.
-#' @param n.dodge Number of levels to dodge. Default 1. 
+#' @param n.dodge Number of levels to dodge. Default 1.
 #' @param base_size Base font size. Default 13.
 #'
 #' @return A ggplot2 violin plot object.
@@ -2780,31 +2780,31 @@ plot_ggviolin <- function(x, y, group = NULL, main = "", ylim = NULL, add.dots =
 
 #' @title Bar plot using ggplot2
 #'
-#' @description 
+#' @description
 #' Creates a bar plot visualization using ggplot2.
 #'
 #' @param mat Numeric data matrix with samples in rows and groups in columns.
 #' @param xlab Character label for x-axis. Default is "x".
-#' @param ylab Character label for y-axis. Default is "y".  
+#' @param ylab Character label for y-axis. Default is "y".
 #' @param srt Rotation angle for x-axis labels. Default is 0.
 #' @param main Character title for the plot. Default is NULL.
 #' @param las Style for axis labels. Default is NULL.
 #' @param col Vector of colors to use for bars. Default is NULL.
 #' @param beside Logical to draw bars beside each other. Default is FALSE.
-#' @param legend.pos Numeric vector of legend position. Default is c(0.016, 1). 
+#' @param legend.pos Numeric vector of legend position. Default is c(0.016, 1).
 #' @param legend.cex Legend text size. Default is 1.
 #' @param bar_width Width of bars. Default is 0.7.
 #' @param base_size Base font size for plot. Default is 12.
 #' @param group.name Label for legend groups. Default is "group".
 #'
 #' @details
-#' This function takes a numeric matrix and generates a bar plot 
+#' This function takes a numeric matrix and generates a bar plot
 #' visualization using ggplot2. Bars represent the groups, colored by row names.
 #' Many graphical parameters like labels, colors, text sizes, etc. can be adjusted.
 #'
 #' @return
 #' A ggplot bar plot object is returned.
-#' 
+#'
 #' @export
 plot_ggbarplot <- function(mat, xlab = "x", ylab = "y", srt = 0, main = NULL,
                            las = NULL, col = NULL, beside = FALSE,
@@ -2863,30 +2863,30 @@ plot_ggbarplot <- function(mat, xlab = "x", ylab = "y", srt = 0, main = NULL,
 #' @title Violin plot with scatter dots
 #'
 #' @description Generate a violin plot visualization with embedded scatter dots
-#' 
+#'
 #' @param x Factor for x-axis groups
 #' @param y Numeric vector of values to plot
-#' @param group Optional grouping variable 
+#' @param group Optional grouping variable
 #' @param xlab Label for x-axis
 #' @param ylab Label for y-axis
-#' @param srt Rotation angle for x-axis labels 
+#' @param srt Rotation angle for x-axis labels
 #' @param cex.lab Expansion factor for axis labels
 #' @param cex.main Expansion factor for main title
 #' @param jitter Jittering factor for scatter dots
 #' @param vcol Violin fill color
-#' @param plotlib Plotting library to use (base, ggplot, plotly) 
+#' @param plotlib Plotting library to use (base, ggplot, plotly)
 #' @param maxbee Maximum number of dots to show in violins
 #' @param ... Other arguments passed to plotting functions
 #'
 #' @return A violin plot
-#' 
+#'
 #'
 #' @details This function takes a factor \code{x} and numeric vector \code{y} and generates a violin plot.
 #' An optional \code{group} variable can be used to produce grouped/facetted violins.
 #' Scatter dots are added to each violin with jittering controlled by \code{jitter}.
 #' The \code{maxbee} parameter limits the number of dots.
 #' The plot can be rendered using base, ggplot2 or plotly graphics depending on \code{plotlib}.
-#' 
+#'
 #' @export
 pgx.violinPlot <- function(x, y, group = NULL, xlab = "", ylab = "",
                            srt = 0, cex.lab = 1, cex.main = 1.1,
@@ -2957,15 +2957,15 @@ pgx.violinPlot <- function(x, y, group = NULL, xlab = "", ylab = "",
 
 #' @title Scatter Plot XY
 #'
-#' @description This function creates a scatter plot of two variables 
+#' @description This function creates a scatter plot of two variables
 #' using one of several available plotting libraries.
 #'
 #' @param ... Additional arguments passed to the selected plotting function.
 #' @param plotlib A character string specifying the plotting library to use.
 #'   Possible values are "base", "plotly", "ggplot", and "scatterD3".
 #'
-#' @details Depending on the value of the `plotlib` parameter, this function 
-#' calls one of several internal functions to create the scatter plot using the 
+#' @details Depending on the value of the `plotlib` parameter, this function
+#' calls one of several internal functions to create the scatter plot using the
 #' specified plotting library. The available plotting libraries are:
 #' - "base": The base R graphics system.
 #' - "plotly": The plotly library for interactive plots.
@@ -2990,13 +2990,13 @@ pgx.scatterPlotXY <- function(..., plotlib = "base") {
 
 #' Scatter plot with base graphics
 #'
-#' @param var Numeric vector of values to plot on x/y axes.  
+#' @param var Numeric vector of values to plot on x/y axes.
 #' @param type Variable type, either "continuous" or "factor".
 #' @param col Colors for points.
-#' @param title Plot title. 
+#' @param title Plot title.
 #' @param zlim Value limits for coloring points by zvar.
 #' @param zlog Log scale zvar colors?
-#' @param zsym Symmetrize zvar colors?  
+#' @param zsym Symmetrize zvar colors?
 #' @param softmax Softmax transform zvar colors?
 #' @param pch Point shapes.
 #' @param cex Point expansion factor.
@@ -3009,15 +3009,15 @@ pgx.scatterPlotXY <- function(..., plotlib = "base") {
 #' @param legend.ysp Legend y-spacing.
 #' @param legend.pos Legend position.
 #' @param lab.pos Label positions, matrix with x, y.
-#' @param repel Repel overlapping labels? 
+#' @param repel Repel overlapping labels?
 #' @param xlab,ylab Axis labels.
 #' @param xlim,ylim Axis limits.
-#' @param dlim Axis limit expansion fraction.  
-#' @param hilight2 Secondary highlight indices. 
+#' @param dlim Axis limit expansion fraction.
+#' @param hilight2 Secondary highlight indices.
 #' @param hilight.cex Size for highlight points.
 #' @param lab.xpd Allow labels outside plot area?
 #' @param hilight Indices to highlight.
-#' @param hilight.col Color for highlighted points. 
+#' @param hilight.col Color for highlighted points.
 #' @param hilight.lwd Line width for highlighted points.
 #' @param label.clusters Label clusters?
 #' @param cex.clust Cluster label size.
@@ -3026,7 +3026,7 @@ pgx.scatterPlotXY <- function(..., plotlib = "base") {
 #' @param theme Theme parameters.
 #' @param set.par Reset par?
 #' @param axt,xaxs,yaxs Axis type, style, limits.
-#' @param labels Point labels. 
+#' @param labels Point labels.
 #' @param label.type Label type.
 #' @param opacity Opacity for all elements.
 #'
@@ -3219,7 +3219,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
       pch = 20, cex = cex,
       xlim = xlim0, ylim = ylim0,
       xlab = xlab, ylab = ylab,
-      axes = FALSE, 
+      axes = FALSE,
       bty = "n"
     )
     if (bty != "n") graphics::box(lwd = 0.8, bty = bty, col = "black")
@@ -3307,17 +3307,17 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
 
 #' Scatter plot with ggplot2
 #'
-#' @param pos Data frame containing x and y coordinates. 
+#' @param pos Data frame containing x and y coordinates.
 #' @param var Grouping variable.
 #' @param type Variable type, either "continuous" or "factor".
 #' @param col Colors.
 #' @param cex Point expansion factor.
-#' @param cex.lab Label size factor.  
+#' @param cex.lab Label size factor.
 #' @param cex.title Title size factor.
 #' @param cex.clust Cluster label size factor.
 #' @param cex.legend Legend text size factor.
 #' @param cex.axis Axis text size factor.
-#' @param gridcolor Grid line color. 
+#' @param gridcolor Grid line color.
 #' @param bgcolor Background color.
 #' @param zoom Zoom factor.
 #' @param legend Show legend? Logical.
@@ -3325,14 +3325,14 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
 #' @param hilight Indices of points to highlight.
 #' @param zlim Color scale limits.
 #' @param zlog Log scale z axis? Logical.
-#' @param softmax Apply softmax to z axis? Logical.  
+#' @param softmax Apply softmax to z axis? Logical.
 #' @param zsym Symmetrize z axis? Logical.
-#' @param xlab,ylab Axis labels. 
+#' @param xlab,ylab Axis labels.
 #' @param cmin,cmax Min and max color values.
 #' @param xlim,ylim Axis limits.
 #' @param hilight2 Secondary highlight indices.
 #' @param hilight.col Color for highlighted points.
-#' @param hilight.lwd Line width for highlighted points. 
+#' @param hilight.lwd Line width for highlighted points.
 #' @param hilight.cex Size for highlighted points.
 #' @param opacity Opacity factor, between 0 and 1.
 #' @param label.clusters Logical, label clusters?
@@ -3344,7 +3344,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
 #' @param label.type Label type, "text" or "box".
 #' @param base_size Base point size.
 #' @param title Plot title.
-#' @param barscale Bar width scaling for box labels. 
+#' @param barscale Bar width scaling for box labels.
 #' @param axis,box,guide Axis, box, and legend controls.
 #'
 #' @return A ggplot2 scatterplot object.
@@ -3354,7 +3354,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
 #' x <- rnorm(100)
 #' y <- rnorm(100)
 #' df <- data.frame(x = x, y = y)
-#' p <- pgx.scatterPlotXY.GGPLOT(df) 
+#' p <- pgx.scatterPlotXY.GGPLOT(df)
 #' }
 #' @export
 pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, cex = NULL,
@@ -3725,13 +3725,13 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
 
 #' Interactive scatter plot using plotly
 #'
-#' @param pos Data frame containing x and y coordinates  
-#' @param var Grouping variable 
+#' @param pos Data frame containing x and y coordinates
+#' @param var Grouping variable
 #' @param type Variable type, either "continuous" or "factor"
 #' @param col Colors
 #' @param cex Point expansion factor
 #' @param cex.lab Label size factor
-#' @param cex.title Title size factor  
+#' @param cex.title Title size factor
 #' @param cex.clust Cluster label size factor
 #' @param cex.legend Legend text size factor
 #' @param cex.axis Axis text size factor
@@ -3753,14 +3753,14 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
 #' @param opacity Opacity factor, between 0 and 1
 #' @param bgcolor Background color
 #' @param box Draw box around plot? Logical
-#' @param label.clusters Logical, label clusters? 
+#' @param label.clusters Logical, label clusters?
 #' @param labels Point labels
-#' @param label.type Label type, "text" or "box" 
-#' @param tooltip Tooltip text 
+#' @param label.type Label type, "text" or "box"
+#' @param tooltip Tooltip text
 #' @param theme Theme parameters
 #' @param set.par Reset par? Logical
 #' @param title Plot title
-#' @param title.y Title position 
+#' @param title.y Title position
 #' @param gridcolor Grid line color
 #' @param source Character label for plot source
 #' @param key Color key specification
@@ -4162,7 +4162,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
 
 #' @title Scatter Plot XY using scatterD3
 #'
-#' @description This function creates a scatter plot of two variables 
+#' @description This function creates a scatter plot of two variables
 #' using the scatterD3 library for interactive scatter plots.
 #'
 #' @param pos A data frame or matrix containing the x and y coordinates of the points to be plotted.
@@ -4194,7 +4194,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
 #' @param set.par Not used.
 #' @param title Not used.
 #' @param barscale Not used.
-#' 
+#'
 #' @export
 pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, cex = 1,
                                  cex.lab = 0.8, cex.title = 1.2, cex.clust = 1.5, cex.legend = 1,
@@ -4239,7 +4239,7 @@ pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, cex =
 
 #' @title Plot Sample Clustering
 #'
-#' @description This function creates a plot of the sample clustering of a 
+#' @description This function creates a plot of the sample clustering of a
 #' data matrix using one of several available dimensionality reduction methods.
 #'
 #' @param x A numeric matrix or data frame containing the data to be clustered.
@@ -4249,9 +4249,9 @@ pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, cex =
 #' @param ntop The number of top features to use for the dimensionality reduction.
 #' @param ... Additional arguments passed to the `plot` function.
 #'
-#' @details This function first calls the `pgx.clusterMatrix` function to perform 
-#' dimensionality reduction on the input data using the specified method. The 
-#' resulting low-dimensional representation of the data is then plotted using the 
+#' @details This function first calls the `pgx.clusterMatrix` function to perform
+#' dimensionality reduction on the input data using the specified method. The
+#' resulting low-dimensional representation of the data is then plotted using the
 #' `plot` function from the base R graphics system.
 #'
 #' @return The function returns invisibly.
@@ -4279,20 +4279,20 @@ pgx.plotSampleClustering <- function(x, dim = 2,
 #' Stacked barplot
 #'
 #' @param x Numeric data matrix. Rows are stacked, columns are groups.
-#' @param showlegend Logical indicating if legend should be displayed.  
+#' @param showlegend Logical indicating if legend should be displayed.
 #' @param ylab Character string for y-axis label. Default NULL.
 #' @param xlab Character string for x-axis label. Default NULL.
 #' @param horiz Logical indicating if bars should be horizontal. Default FALSE.
 #'
 #' @return A plotly stacked barplot object.
-#' 
-#' @details This function takes a numeric data matrix and generates an interactive 
-#' stacked barplot using plotly. Rows of the input matrix are stacked, and columns 
+#'
+#' @details This function takes a numeric data matrix and generates an interactive
+#' stacked barplot using plotly. Rows of the input matrix are stacked, and columns
 #' represent groups. Set horiz=TRUE to generate horizontal stacked bars.
 #'
 #' @examples
 #' \dontrun{
-#' x <- matrix(rnorm(100), ncol=5)
+#' x <- matrix(rnorm(100), ncol = 5)
 #' pgx.stackedBarplot(x)
 #' }
 #' @export
@@ -4366,9 +4366,9 @@ darkmode <- function(p, dim = 2) {
 #' @param p A plotly plot object.
 #' @param dim The number of dimensions of the plot (2 or 3).
 #'
-#' @details This function modifies the layout of the input plotly 
-#' plot object to apply a dark mode theme. It changes the background 
-#' color of the plot and paper to a dark color, and sets the font and 
+#' @details This function modifies the layout of the input plotly
+#' plot object to apply a dark mode theme. It changes the background
+#' color of the plot and paper to a dark color, and sets the font and
 #' axis colors to a light gray color.
 #'
 #' @return A modified plotly plot object with the dark mode theme applied.
@@ -4406,15 +4406,15 @@ myplot_ly <- function(..., theme = "default") {
 #' @param x Numeric vector of average expression values (log2 CPM)
 #' @param y Numeric vector of effect sizes (log2 fold change)
 #' @param names Vector of gene or feature names
-#' @param source Character label for plot source. Default "plot1".  
-#' @param group.names Character vector of group names for legend.  
+#' @param source Character label for plot source. Default "plot1".
+#' @param group.names Character vector of group names for legend.
 #' @param xlab Label for x-axis. Default "average expression (log2.CPM)".
 #' @param ylab Label for y-axis. Default "effect size (log2.FC)".
-#' @param lfc Cutoff for absolute log fold change. Default 1.   
+#' @param lfc Cutoff for absolute log fold change. Default 1.
 #' @param psig Cutoff for adjusted p-value. Default 0.05.
 #' @param showlegend Show legend? Logical. Default TRUE.
-#' @param highlight Vector of genes to highlight. Default NULL.   
-#' @param marker.size Marker size. Default 5. 
+#' @param highlight Vector of genes to highlight. Default NULL.
+#' @param marker.size Marker size. Default 5.
 #' @param label Vector of labels for highlighted genes. Default NULL.
 #' @param label.cex Text size for labels. Default 1.
 #' @param marker.type Marker type (scatter, line, etc). Default "scatter".
@@ -4542,16 +4542,16 @@ plotlyMA <- function(x, y, names, source = "plot1",
 #' Interactive volcano plot using plotly
 #'
 #' @param x Numeric vector of effect sizes (log fold changes)
-#' @param y Numeric vector of p-values (-log10 transformed)  
+#' @param y Numeric vector of p-values (-log10 transformed)
 #' @param names Vector of gene or feature names
 #' @param source Character label for plot source. Default "plot1".
-#' @param group.names Character vector of group names for legend. 
+#' @param group.names Character vector of group names for legend.
 #' @param xlab Label for x-axis. Default "effect size (logFC)".
 #' @param ylab Label for y-axis. Default "significance (-log10p)".
-#' @param lfc Cutoff for absolute log fold change. Default 1.  
+#' @param lfc Cutoff for absolute log fold change. Default 1.
 #' @param psig Cutoff for adjusted p-value. Default 0.05.
 #' @param showlegend Show legend? Logical. Default TRUE.
-#' @param highlight Vector of genes to highlight. Default NULL.  
+#' @param highlight Vector of genes to highlight. Default NULL.
 #' @param marker.size Marker size. Default 5.
 #' @param label Vector of labels for highlighted genes. Default NULL.
 #' @param label.cex Text size for labels. Default 1.
@@ -4686,18 +4686,18 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
 
 #' Interactive cytoPlot using plotly
 #'
-#' @param pgx Expression data matrix 
+#' @param pgx Expression data matrix
 #' @param gene1 First gene for x-axis
 #' @param gene2 Second gene for y-axis
-#' @param samples Samples to include 
+#' @param samples Samples to include
 #' @param nbinsx Number of bins for x-axis
 #' @param nbinsy Number of bins for y-axis
 #' @param lab.unit Units for axis labels. Default "(log2CPM)".
-#' @param reversescale Reverse color scale? Default TRUE.  
+#' @param reversescale Reverse color scale? Default TRUE.
 #' @param marker.size Size of scatter markers. Default 5.
-#' @param contour.coloring Add density shading? "none", "color", or 
+#' @param contour.coloring Add density shading? "none", "color", or
 #' "black". Default "none".
-#' @param marker.color Color of markers. Default "black". 
+#' @param marker.color Color of markers. Default "black".
 #' @param showgrid Show grid lines? Logical. Default TRUE.
 #'
 #' @return A plotly interactive cytoPlot object
@@ -4705,7 +4705,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
 #' @details This function generates an interactive cytoPlot using the plotly package.
 #' Expression values for two genes are binned and plotted with one gene on each axis.
 #' Samples to include and graphical parameters like color scale, marker size, etc. can be adjusted.
-#' 
+#'
 #' @export
 plotlyCytoplot <- function(pgx,
                            gene1,
@@ -4847,19 +4847,19 @@ plotlyCytoplot <- function(pgx,
 #'
 #' @title Correlation-based Clustering
 #'
-#' @description This function performs hierarchical clustering on a 
+#' @description This function performs hierarchical clustering on a
 #' dataset using a correlation-based distance metric.
 #'
 #' @param x A numeric matrix or data frame containing the data to be clustered.
 #'
-#' @details The function first calculates the pairwise correlation between 
-#' the columns of the input data using the `cor` function from the `stats` 
-#' package. The correlation matrix is then transformed into a distance matrix by 
-#' subtracting it from 1. The resulting distance matrix is used as input to the 
-#' `hclust` function from the `fastcluster` package, which performs hierarchical 
+#' @details The function first calculates the pairwise correlation between
+#' the columns of the input data using the `cor` function from the `stats`
+#' package. The correlation matrix is then transformed into a distance matrix by
+#' subtracting it from 1. The resulting distance matrix is used as input to the
+#' `hclust` function from the `fastcluster` package, which performs hierarchical
 #' clustering using Ward's method.
 #'
-#' @return An object of class `hclust` representing the hierarchical clustering 
+#' @return An object of class `hclust` representing the hierarchical clustering
 #' of the input data.
 #'
 #' @examples
@@ -4958,13 +4958,13 @@ iheatmapr.add_col_annotation <- function(p,
 
 #' Split heatmap from matrix
 #'
-#' @param X Numeric data matrix 
+#' @param X Numeric data matrix
 #' @param annot Data frame with row and column annotations
-#' @param idx Rows to highlight 
+#' @param idx Rows to highlight
 #' @param splitx Columns to split heatmap
 #' @param xtips Custom column tooltips
 #' @param ytips Custom row tooltips
-#' @param row_clust Cluster rows? Default is TRUE.  
+#' @param row_clust Cluster rows? Default is TRUE.
 #' @param row_annot_width Width for row annotations. Default is 0.03.
 #' @param scale Scaling for data. Default is "row.center".
 #' @param colors Vector of colors to use. Default is RColorBrewer Set1.
@@ -4979,7 +4979,7 @@ iheatmapr.add_col_annotation <- function(p,
 #' Rows and/or columns can be split according to the input annotations.
 #' Data is scaled and clustered using hierarchical clustering by default.
 #' Various graphical parameters like colors, labels, text sizes can be adjusted.
-#' 
+#'
 #' @export
 pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
                                        xtips = NULL, ytips = NULL, row_clust = TRUE,
@@ -5223,12 +5223,12 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
 
 #' Box plot using plotly
 #'
-#' @param data Data frame to plot. 
+#' @param data Data frame to plot.
 #' @param x Column in data to use for x-axis grouping. Default NULL.
 #' @param y Column in data to use for y-axis values. Default NULL.
 #' @param title Plot title text. Default NULL.
 #' @param color Box fill color. Default "#3181de".
-#' @param fillcolor Box inside fill color. Default "#2fb5e3". 
+#' @param fillcolor Box inside fill color. Default "#2fb5e3".
 #' @param linecolor Box border color. Default "#3181de".
 #' @param hoverinfo Determines hover label info. Default "y".
 #' @param hoverformat Format for hover labels. Default ".2f".
@@ -5283,20 +5283,20 @@ pgx.boxplot.PLOTLY <- function(
 #'
 #' @param data Data frame to plot
 #' @param x Column in data to use for x-axis. Default NULL.
-#' @param y Column in data to use for y-axis. Default NULL. 
+#' @param y Column in data to use for y-axis. Default NULL.
 #' @param title Plot title. Default NULL.
 #' @param color Bar color. Default "#3181de".
 #' @param fillcolor Bar fill color. Default "#2fb5e3".
 #' @param linecolor Bar border color. Default "#3181de".
 #' @param titlecolor Title text color. Default "#1f77b4".
-#' @param hoverinfo Determines hover label info. Default "y". 
+#' @param hoverinfo Determines hover label info. Default "y".
 #' @param hoverformat Format for hover labels. Default ".2f".
 #' @param yaxistitle Show y-axis title? Default FALSE.
 #' @param xaxistitle Show x-axis title? Default FALSE.
 #' @param xlen Length of x-axis. Default NULL for automatic.
 #' @param yrange Limits for y-axis. Default NULL for automatic.
-#' @param font_family Font family for text. Default "Lato". 
-#' @param margin Plot margins. Default c(0,0,0,0). 
+#' @param font_family Font family for text. Default "Lato".
+#' @param margin Plot margins. Default c(0,0,0,0).
 #' @param grouped Calculate mean and SD across groups? Default TRUE.
 #' @param annotations Additional plot annotations. Default NULL.
 #'

@@ -9,32 +9,32 @@
 ## ----------------------------------------------------------------------
 
 
-#' @title Compute partial correlations around a gene 
+#' @title Compute partial correlations around a gene
 #'
 #' @description
-#' Estimates partial correlations between a target gene and other 
+#' Estimates partial correlations between a target gene and other
 #' genes using glasso.
 #'
 #' @param X Expression matrix, genes in rows and samples in columns.
-#' @param gene Gene name or index for target gene.  
+#' @param gene Gene name or index for target gene.
 #' @param nmax Maximum number of genes to use.
 #'
 #' @return List containing:
 #' \itemize{
-#'   \item cor: Correlation matrix 
+#'   \item cor: Correlation matrix
 #'   \item pcor: Partial correlation matrix
 #'   \item wi: Inverse covariance matrix
 #'   \item sampleSize: Number of samples used
 #' }
 #'
 #' @details
-#' This function calculates the correlation between a target gene and 
+#' This function calculates the correlation between a target gene and
 #' the top nmax correlated genes.
-#' 
-#' It uses the glasso algorithm to estimate a sparse inverse covariance 
+#'
+#' It uses the glasso algorithm to estimate a sparse inverse covariance
 #' matrix and derive partial correlations.
-#' 
-#' The correlation matrix, partial correlation matrix, inverse covariance 
+#'
+#' The correlation matrix, partial correlation matrix, inverse covariance
 #' matrix (precision matrix), and number of samples used are returned.
 #'
 #' @export
@@ -62,26 +62,26 @@ pgx.computeGlassoAroundGene <- function(X, gene, nmax = 100) {
 #' @title Compute partial correlation around a gene
 #'
 #' @description Computes partial correlation between a given gene and all other genes.
-#' 
+#'
 #' @param pgx pgx object
-#' @param gene Character string specifying the gene name to compute partial correlation around.  
+#' @param gene Character string specifying the gene name to compute partial correlation around.
 #' @param rho.min Numeric threshold for including genes in partial correlation graph.
-#' @param pcor.min Numeric threshold for including genes in partial correlation graph.  
+#' @param pcor.min Numeric threshold for including genes in partial correlation graph.
 #' @param nsize Integer specifying number of top correlated genes to include.
 #' @param main Character string for plot main title.
-#' @param what Character vector specifying which plots to generate. Options are 
+#' @param what Character vector specifying which plots to generate. Options are
 #' "cor", "pcor", "graph".
-#' @param edge.width Numeric line width for graph edges. 
+#' @param edge.width Numeric line width for graph edges.
 #' @param layout Layout algorithm for graph. Options are "fr", "kk", "lgl", etc.
 #'
-#' @details This function computes the partial correlation between a given 
-#' gene and all other genes in the dataset. 
-#' It returns plots of the top correlated genes, a correlation graph, and 
+#' @details This function computes the partial correlation between a given
+#' gene and all other genes in the dataset.
+#' It returns plots of the top correlated genes, a correlation graph, and
 #' optionally a matrix of all gene-gene correlations.
-#'  
+#'
 #' @return List with components:
 #' \itemize{
-#'  \item rho: List of partial correlation matrices 
+#'  \item rho: List of partial correlation matrices
 #'  \item meta.pcor: Matrix of mean partial correlations
 #'  \item timings: Matrix of timings
 #' }
@@ -169,25 +169,25 @@ PCOR.METHODS <- c(
 
 
 #' Computes partial correlation between a given gene and all other genes in a data matrix X.
-#' 
+#'
 #' @param X Numeric gene expression matrix with genes as rows.
-#' @param gene Gene name to compute partial correlation around.  
+#' @param gene Gene name to compute partial correlation around.
 #' @param method Partial correlation method(s) to use. Default is PCOR.METHODS.
 #' @param nmax Maximum number of genes to return correlations for. Default 100.
 #' @param fast Use fast approximation methods if TRUE. Default FALSE.
 #'
 #' @details
-#' This function calculates the partial correlation between a specified gene and 
+#' This function calculates the partial correlation between a specified gene and
 #' all other genes in the expression matrix X.
 #' It returns a list containing the partial correlation matrix and p-values.
-#' 
-#' The \code{method} argument specifies which partial correlation algorithm to use. 
+#'
+#' The \code{method} argument specifies which partial correlation algorithm to use.
 #' The default \code{PCOR.METHODS} uses both Pearson and Spearman correlation.
-#' 
-#' The number of top genes to return correlations for can be controlled with \code{nmax}. 
+#'
+#' The number of top genes to return correlations for can be controlled with \code{nmax}.
 #' Setting \code{fast=TRUE} will use faster approximations for large matrices.
 #'
-#' @return 
+#' @return
 #' A named list with components:
 #' \itemize{
 #'   \item rho - matrix of partial correlations
@@ -211,7 +211,7 @@ pgx.computePartialCorrelationAroundGene <- function(X, gene, method = PCOR.METHO
 
 #' @title Compute partial correlation matrix
 #'
-#' @description 
+#' @description
 #' Computes a partial correlation matrix between genes adjusting for covariates.
 #'
 #' @param pgx A PGX object containing gene expression data.
@@ -221,17 +221,17 @@ pgx.computePartialCorrelationAroundGene <- function(X, gene, method = PCOR.METHO
 #' @param gene Character vector of one or more genes to highlight. Default NULL.
 #'
 #' @details
-#' This function calculates the partial correlation between all genes in the PGX expression matrix, 
-#' adjusting for the specified covariates. It removes the linear effect of the covariates before 
+#' This function calculates the partial correlation between all genes in the PGX expression matrix,
+#' adjusting for the specified covariates. It removes the linear effect of the covariates before
 #' computing the gene-gene partial correlations.
 #'
-#' The main output is a partial correlation matrix. Optionally a graph can be extracted, showing the 
+#' The main output is a partial correlation matrix. Optionally a graph can be extracted, showing the
 #' top connected genes. Specific genes can be highlighted in the graph.
 #'
-#' @return 
+#' @return
 #' A list with components:
 #' \itemize{
-#'   \item rho - Matrix of partial correlations 
+#'   \item rho - Matrix of partial correlations
 #'   \item graph - igraph object of top connected genes
 #' }
 #'
@@ -377,11 +377,11 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
 
 #' @title Plot Partial Correlation Network Around a Gene
 #'
-#' @description 
+#' @description
 #' Visualize a partial correlation network for a given gene using the correlation results from pgx.pcor().
 #'
 #' @param res The correlation analysis result list returned by \code{\link{pgx.pcor}}.
-#' @param gene The gene name to extract partial correlations around.  
+#' @param gene The gene name to extract partial correlations around.
 #' @param rho.min Minimum absolute partial correlation threshold.
 #' @param pcor.min Minimum absolute meta-partial correlation threshold.
 #' @param nsize Node size parameter.
@@ -391,16 +391,16 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
 #' @param layout Layout algorithm for graph plot.
 #'
 #' @details
-#' This function extracts the partial correlation matrix around the specified 
+#' This function extracts the partial correlation matrix around the specified
 #' \code{gene} from the \code{res} object.
-#' It then optionally thresholds the correlations, and visualizes them as a 
+#' It then optionally thresholds the correlations, and visualizes them as a
 #' correlogram or network graph, with the central gene in the middle.
 #'
-#' For the graph, the \code{rho.min} and \code{pcor.min} arguments filter edges to 
-#' plot. Node size is proportional to the number of connections. The graph can be 
+#' For the graph, the \code{rho.min} and \code{pcor.min} arguments filter edges to
+#' plot. Node size is proportional to the number of connections. The graph can be
 #' drawn using different layout algorithms like \code{"fr"} or \code{"circle"}.
 #'
-#' @return 
+#' @return
 #' Either a correlogram or graph plot centered on the given gene is produced.
 #'
 #' @export
@@ -538,27 +538,27 @@ pgx.plotPartialCorrelationAroundGene <- function(res, gene, rho.min = 0.8, pcor.
 
 #' Test relationships between gene expression and traits
 #'
-#' @param me A gene expression matrix 
+#' @param me A gene expression matrix
 #' @param df A data frame containing trait data
 #' @param plot Logical indicating whether to plot results. Default is TRUE.
 #' @param cex Size of text in plots. Default is 1.
 #'
 #' @return A list with correlation and ANOVA results
-#' 
+#'
 #' @description
 #' Tests for relationships between gene expression (me) and trait data (df),
 #' using correlation for continuous variables and ANOVA for discrete variables.
 #'
 #' @details
-#' This function takes a gene expression matrix (me) and a data frame (df) containing 
+#' This function takes a gene expression matrix (me) and a data frame (df) containing
 #' trait data. It separates df into continuous (numeric) and discrete (factor) variables.
-#' 
+#'
 #' For continuous variables, it calculates the correlation between each trait and each gene.
 #' For discrete variables, it performs an ANOVA between each trait and each gene.
-#' 
+#'
 #' The results are returned as matrices of p-values for the correlations and ANOVAs.
 #' If plot = TRUE, scatterplots and boxplots are generated to visualize the results.
-#' 
+#'
 #' @export
 pgx.testTraitRelationship <- function(me, df, plot = TRUE, cex = 1) {
   df <- type.convert(df, as.is = TRUE)
@@ -614,20 +614,20 @@ pgx.testTraitRelationship <- function(me, df, plot = TRUE, cex = 1) {
 
 #' Test correlation of phenotype with expression data
 #'
-#' @param df Data frame containing phenotype data 
+#' @param df Data frame containing phenotype data
 #' @param plot Logical, whether to generate a correlation heatmap plot
 #' @param cex Text size factor for plot labels
 #'
 #' @return A matrix of correlation p-values
 #'
-#' @description Test correlation between phenotype variables and gene expression, using 
+#' @description Test correlation between phenotype variables and gene expression, using
 #' appropriate methods based on data types.
 #'
 #' @details This function takes a data frame \code{df} containing phenotype data, including both
 #' continuous and discrete variables. It calculates correlation p-values between the phenotype
 #' variables and gene expression data in a PGX object, using either Pearson or ANOVA. Discrete
 #' variables are compared between groups using Fisher's exact test. The results are returned as
-#' a matrix of p-values, with rows corresponding to expression profiles. If \code{plot=TRUE}, 
+#' a matrix of p-values, with rows corresponding to expression profiles. If \code{plot=TRUE},
 #' a correlation plot of the significance (-log10 p-values) is also generated.
 #'
 #' @export
@@ -754,18 +754,18 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1) {
 #' @param xref List of gene expression matrices to compute correlation against.
 #'
 #' @return Matrix of correlation values between the target gene and other genes.
-#' 
-#' @description Computes correlation between a given gene and all other genes using 
+#'
+#' @description Computes correlation between a given gene and all other genes using
 #' external gene expression data.
 #'
-#' @details This function takes a gene name and a list of gene expression matrices. 
-#' It calculates the correlation between the target gene and all other genes in 
+#' @details This function takes a gene name and a list of gene expression matrices.
+#' It calculates the correlation between the target gene and all other genes in
 #' each expression data matrix.
 #'
-#' The function returns a matrix with genes in rows and datasets in columns. 
-#' Each column contains the correlation values between the target gene and 
+#' The function returns a matrix with genes in rows and datasets in columns.
+#' Each column contains the correlation values between the target gene and
 #' other genes in that dataset.
-#'  
+#'
 #' @export
 pgx.getGeneCorrelation <- function(gene, xref) {
   rho.genes <- unlist(lapply(xref, rownames))

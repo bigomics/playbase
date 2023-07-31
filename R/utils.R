@@ -26,13 +26,13 @@ dbg <- function(...) info(..., type = "DBUG")
 
 #' Get mini example dataset
 #'
-#' @description 
-#' Returns a mini example dataset with sample information, 
+#' @description
+#' Returns a mini example dataset with sample information,
 #' gene expression counts, and contrasts.
 #'
 #' @return List containing:
 #' \itemize{
-#'   \item samples - data.frame with sample info 
+#'   \item samples - data.frame with sample info
 #'   \item counts - matrix of gene counts
 #'   \item contrast - data.frame with contrasts
 #' }

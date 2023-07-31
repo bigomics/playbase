@@ -715,24 +715,24 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
 
 #' Find Louvain clusters using shared nearest neighbor graph
 #'
-#' @title Find Louvain clusters using shared nearest neighbor graph 
+#' @title Find Louvain clusters using shared nearest neighbor graph
 #'
 #' @param expr Expression matrix with genes in rows and samples in columns
 #' @param k Number of nearest neighbors for graph construction
 #' @param resolution Resolution parameter for Louvain clustering
 #'
 #' @return A vector of Louvain cluster assignments
-#' 
+#'
 #' @description
 #' Clusters samples using a shared nearest neighbor graph and Louvain clustering.
 #'
 #' @details
-#' This function constructs a shared nearest neighbor graph from the expression matrix, 
+#' This function constructs a shared nearest neighbor graph from the expression matrix,
 #' where samples are connected if they appear in each other's k-nearest neighbor lists.
-#' 
-#' Louvain clustering is then applied to detect communities in the graph. The resolution 
+#'
+#' Louvain clustering is then applied to detect communities in the graph. The resolution
 #' parameter controls the number and size of clusters.
-#' 
+#'
 #' The output is a vector of cluster assignments for each sample.
 #'
 #' @export

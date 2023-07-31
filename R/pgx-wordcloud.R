@@ -10,20 +10,20 @@
 
 #' @title Calculate word frequencies for word cloud
 #'
-#' @param ngs A NGStest object containing gene set results. 
+#' @param ngs A NGStest object containing gene set results.
 #' @param progress A progress object to track progress.
-#' @param pg.unit Increment value for progress tracking.  
+#' @param pg.unit Increment value for progress tracking.
 #'
 #' @return A matrix with word frequencies for word cloud visualization.
-#' 
+#'
 #' @description Calculates word frequencies from gene set names for generating a word cloud.
 #'
-#' @details This function takes a NGStest object containing gene set analysis results. 
+#' @details This function takes a NGStest object containing gene set analysis results.
 #' It extracts the gene set names, filters out common words, and calculates word frequencies.
 #'
 #' Gene set names are split into words and filtered to remove common stopwords. The top 1000 most frequent
 #' words are kept. Word frequencies are calculated based on occurrence in the gene set names.
-#'  
+#'
 #' The output is a matrix of word frequencies suitable for generating a word cloud visualization.
 #'
 #' @export
