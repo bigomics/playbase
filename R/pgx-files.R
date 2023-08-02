@@ -77,23 +77,6 @@ pgx.saveMatrixH5 <- function(X, h5.file, chunk = NULL) {
   rhdf5::h5closeAll()
 }
 
-#' @export
-pgx.readMatrixH5 <- function(h5.file, select = NULL, rows = NULL) {
-  if (is.null(select) && is.null(rows)) {
-    X <- rhdf5::h5read(h5.file, "data/matrix")
-    rn <- rhdf5::h5read(h5.file, "data/rownames")
-    cn <- rhdf5::h5read(h5.file, "data/colnames")
-  }
-  if (!is.null(select) || !is.null(rows)) {
-    X <- rhdf5::h5read(h5.file, "data/matrix", index = list(rows, select))
-    rn <- rhdf5::h5read(h5.file, "data/rownames", index = list(rows))
-    cn <- rhdf5::h5read(h5.file, "data/colnames", index = list(select))
-  }
-  rownames(X) <- rn
-  colnames(X) <- cn
-  X[which(X < -999999)] <- NA
-  as.matrix(X)
-}
 
 #' @export
 pgx.readOptions <- function(file = "./OPTIONS") {
@@ -112,26 +95,6 @@ pgx.readOptions <- function(file = "./OPTIONS") {
   opt
 }
 
-#' @export
-pgx.readDatasetProfiles <- function(pgx.dir, file = "datasets-allFC.csv", verbose = TRUE) {
-  if (!dir.exists(pgx.dir)) {
-    stop(paste("[readDatasetProfiles1] FATAL ERROR : folder", pgx.dir, "does not exist"))
-  }
-  fn <- file.path(pgx.dir, file)
-  fn
-  if (!file.exists(fn)) {
-    stop("FATAL : could not find profiles matrix. please create first with initDatasetFolder().\n")
-
-    return()
-  } else {
-    if (verbose) message("[readDatasetProfiles1] Found existing dataset profiles matrix")
-  }
-
-  allFC <- fread.csv(file = file.path(pgx.dir, file), row.names = 1, check.names = FALSE)
-  allFC <- as.matrix(allFC)
-  if (verbose) message("[readDatasetProfiles1] dataset profiles matrix : dim=", dim(allFC))
-  return(allFC)
-}
 
 #' Update PGX-table with new pgx object.
 #'
@@ -223,118 +186,8 @@ pgx.updateInfoPGX <- function(pgxinfo, pgx, remove.old = TRUE) {
 ## PGXINFO methods (preferred API)
 ## ================================================================================
 
-#' Delete pgx entry in datasets-info table in files (WIP)
-#'
-#' @export
-pgxinfo.deletePgx <- function(pgx.dir, pgxname,
-                              delete.fc = FALSE) {
-  info.file <- file.path(pgx.dir, "datasets-info.csv")
-  pgxname <- sub("[.]pgx$", "", pgxname)
-  pgxinfo <- read.csv(info.file, row.names = 1)
-  pgxinfo
-
-  info_datasets <- sub("[.]pgx$", "", pgxinfo$dataset)
-  sel <- which(info_datasets == pgxname)
-  sel
-  if (!is.null(sel) && length(sel) > 0) {
-    pgxinfo <- pgxinfo[-sel, , drop = FALSE]
-    write.csv(pgxinfo, file = info.file)
-  }
-
-  ## Should we also delete the entry in allFC and sigdb? This will
-  ## take some overhead, so if not needed better skip.
-  allfc.file <- file.path(pgx.dir, "datasets-allFC.csv")
-  tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")
-  h5.file <- file.path(pgx.dir, "datasets-sigdb.h5")
-
-  ## delete columns from allFC file
-  if (delete.fc && file.exists(allfc.file)) {
-    allFC <- data.table::fread(allfc.file, check.names = FALSE) ## HEADER!!!
-    allFC <- as.matrix(allFC, rownames = 1)
-    del <- grep(paste0("\\[", pgxname, "\\]"), colnames(allFC))
-    del
-    if (length(del) > 0) {
-      allFC <- allFC[, -del, drop = FALSE]
-      allFC <- round(allFC, digits = 4)
-      allFC1 <- data.frame(gene = rownames(allFC), allFC, check.names = FALSE)
-      data.table::fwrite(allFC1, allfc.file) ## HEADER!!!
-    }
-  }
-
-  ## delete rows from t-SNE file
-  if (delete.fc && file.exists(tsne.file)) {
-    tsne <- data.table::fread(tsne.file, check.names = FALSE) ## HEADER!!!
-    tsne <- as.matrix(tsne, rownames = 1)
-    del <- grep(paste0("\\[", pgxname, "\\]"), rownames(tsne))
-    if (length(del)) {
-      tsne <- tsne[-del, , drop = FALSE]
-      write.csv(tsne, file = tsne.file)
-    }
-  }
-
-  ## delete dataset from H5 file
-  if (delete.fc && file.exists(h5.file)) {
-    sigdb.removeDataset(h5.file, pgxname)
-  }
-}
 
 
-#' Update PGX-info file with new pgx object (WIP)
-#'
-#' @export
-pgxinfo.addPgx <- function(pgx.dir, pgx, file = "datasets-info.csv",
-                           update.fc = TRUE) {
-  info.file <- file.path(pgx.dir, file)
-  pgxinfo <- read.csv(info.file, row.names = 1)
-  pgxinfo <- pgx.updateInfoPGX(pgxinfo, pgx, remove.old = TRUE)
-  write.csv(pgxinfo, file = info.file)
-
-  allfc.file <- file.path(pgx.dir, "datasets-allFC.csv")
-  tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")
-  h5.file <- file.path(pgx.dir, "datasets-sigdb.h5")
-  pgxname <- sub("[.]pgx$", "", pgx$name)
-  pgxname
-
-  ## add FC columns to allFC file
-  if (update.fc && !file.exists(allfc.file)) {
-    ## complete update of all files
-    pgx.initDatasetFolder(pgx.dir)
-    return()
-  }
-
-  ## add FC columns to allFC file
-  allfC <- NULL
-  if (update.fc && file.exists(allfc.file)) {
-    allFC <- data.table::fread(allfc.file, check.names = FALSE) ## HEADER!!!
-    allFC <- as.matrix(allFC, rownames = 1)
-    del <- grep(paste0("\\[", pgxname, "\\]"), colnames(allFC))
-    if (length(del) > 0) {
-      allFC <- allFC[, -del, drop = FALSE]
-    }
-    F1 <- pgx.getMetaMatrix(pgx)$fc
-    F1 <- F1[match(rownames(allFC), rownames(F1)), ]
-    colnames(F1) <- paste0("[", pgxname, "] ", colnames(F1))
-    allFC <- cbind(allFC, F1)
-    allFC <- round(allFC, digits = 4)
-    allFC1 <- data.frame(gene = rownames(allFC), allFC, check.names = FALSE)
-    data.table::fwrite(allFC1, allfc.file) ## HEADER!!!
-
-    ## NEED RETHINK!!!! This could be done perhaps more efficient
-    ## when updating with one extra dataset.
-    pgx.createSignatureDatabaseH5.fromMatrix(h5.file,
-      X = allFC,
-      update.only = FALSE
-    )
-
-    ## update t-SNE file (in the future we do not need this file)
-    ## Just get the tSNE from sigdb
-    cn <- rhdf5::h5read(h5.file, "data/colnames")
-    tsne <- rhdf5::h5read(h5.file, "clustering/tsne2d")
-    rownames(tsne) <- cn
-    colnames(tsne) <- paste0("tsne.", 1:ncol(tsne))
-    write.csv(tsne, file = tsne.file)
-  }
-}
 
 #' Read dataset information file (aka PGX info)
 #'

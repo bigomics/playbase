@@ -72,57 +72,8 @@ gmt2mat <- function(gmt, max.genes = -1, ntop = -1, sparse = TRUE,
 }
 
 
-#' Write data to a GCT file
-#'
-#' This function writes data to a GCT (Gene Cluster Text) file format.
-#' The GCT format is commonly used to store gene expression data in a tabular format.
-#'
-#' @param X The data matrix or data frame to be written to the GCT file.
-#'          Rows represent genes and columns represent samples.
-#' @param file The file path to save the GCT file.
-#'
-#' @export
-#'
-#' @return None
-#'
-write.gct <- function(X, file) {
-  gX <- data.frame(NAME = rownames(X), DESCRIPTION = NA, X)
-  write("#1.2", file = file)
-  suppressWarnings(write(paste(nrow(X), ncol(X), sep = "\t"), file = file, append = TRUE))
-  suppressWarnings(write.table(format(gX[, ], digits = 3),
-    file = file, append = TRUE,
-    row.names = FALSE, quote = FALSE, sep = "\t"
-  ))
-}
 
 
-#' Write data to a CLS file
-#'
-#' This function writes data to a CLS (CLustering Solutions) file format.
-#' The CLS format is commonly used to store class labels or clustering assignments.
-#'
-#' @param y The vector of class labels or clustering assignments.
-#' @param file The file path to save the CLS file.
-#' @param name (Optional) The name of the CLS file.
-#'
-#' @export
-#'
-#' @return None
-#'
-write.cls <- function(y, file, name = "") {
-  ## prepare class file
-  is.numeric <- (length(setdiff(unique(y), NA)) > 3)
-  if (is.numeric) {
-    write("#numeric", file = file, append = FALSE)
-    suppressWarnings(write(paste0("#", name), file = file, append = TRUE))
-    suppressWarnings(write(paste(y, collapse = " "), file = file, append = TRUE))
-  } else {
-    write(paste(length(y), "2 1", sep = " "), file = file, append = FALSE)
-    cls.types <- paste("#", paste(unique(y), collapse = " "), sep = "")
-    suppressWarnings(write(cls.types, file = file, append = TRUE))
-    suppressWarnings(write(paste(y, collapse = " "), file = file, append = TRUE))
-  }
-}
 
 
 #' Read data from a GMT file
@@ -209,94 +160,8 @@ write.gmt <- function(gmt, file, source = NA) {
 
 
 
-#' Clean names for GSEA analysis
-#'
-#' This function cleans the names of a vector or list for use in GSEA (Gene Set Enrichment Analysis) analysis.
-#' It replaces special characters and consecutive underscores in the names with a single underscore.
-#'
-#' @param s A vector or list with names to be cleaned.
-#'
-#' @export
-#'
-#' @return A character vector or list with cleaned names.
-#'
-gsea.clean_names <- function(s) {
-  gsub("__|___", "_", gsub("[-+: *?!$,'|\\.]", "_", names(s)))
-}
 
 
-#' Perform GSEA analysis for all contrasts
-#'
-#' This function performs GSEA (Gene Set Enrichment Analysis) analysis for all the contrasts specified in the design matrix.
-#' It iterates over the contrasts, runs GSEA for each contrast, and saves the results in the specified output directory.
-#'
-#' @param X The expression matrix.
-#' @param gmt The gene set collection in GMT format.
-#' @param design The design matrix.
-#' @param contr.matrix The contrast matrix.
-#' @param output_dir The directory to save the GSEA results.
-#' @param set.min The minimum size of gene sets to consider in the analysis.
-#' @param set.max The maximum size of gene sets to consider in the analysis.
-#' @param fdr The false discovery rate (FDR) threshold.
-#' @param skip.done Logical value indicating whether to skip the contrasts that have already been analyzed and have existing results in the output directory.
-#'
-#' @export
-#'
-#' @return A list of GSEA analysis results for each contrast.
-#'
-gsea.fitAllContrasts <- function(X, gmt, design, contr.matrix, output_dir,
-                                 set.min = 15, set.max = 500, fdr = 0.25, skip.done = TRUE) {
-  exp.matrix <- (design %*% contr.matrix)
-  length(gmt)
-  comparisons <- colnames(contr.matrix)
-  outputs <- list()
-  k <- 1
-  for (k in 1:length(comparisons)) {
-    cat(">>> running GSEA for comparison: ", comparisons[k], " <<<\n")
-
-    ## set params
-    #
-    comp.name <- comparisons[k]
-    #
-    comp.name
-
-    ## check if already done
-    sub_dir <- file.path(output_dir, comp.name)
-    sub_dir
-    if (dir.exists(sub_dir) && skip.done) {
-      cat("comparison ", comp.name, "already done. skipping.\n")
-      ## should we read the output file??
-      next
-    }
-
-    sel <- which(exp.matrix[, comp.name] != 0)
-    xx <- X[, sel]
-    yy <- 1 * (exp.matrix[sel, comp.name] > 0)
-
-    j1 <- which(contr.matrix[, comp.name] > 0)
-    j0 <- which(contr.matrix[, comp.name] < 0)
-    cls1 <- paste(rownames(contr.matrix)[j1], sep = "and")
-    cls0 <- paste(rownames(contr.matrix)[j0], sep = "and")
-    c(cls0, cls1)
-    yy <- c(cls0, cls1)[1 + yy]
-    yy
-    ref <- cls0
-    dim(xx)
-    yy
-    ref
-
-    ## run GSEA
-    outputs[[k]] <- run.GSEA(xx, yy, gmt,
-      fdr = fdr,
-      do.leading.edge = TRUE, clean.files = FALSE,
-      output.dir = sub_dir,
-      set.min = set.min, set.max = set.max, topgs = 100,
-      ref.type = ref, permute = "gene_set"
-    )
-  } ## for-loop comparisons
-
-  return(outputs)
-}
 
 
 
@@ -928,43 +793,6 @@ run.GSEA.LeadingEdge <- function(rpt.path, gmt, xmx = 10, rpt.label = "gsea_lead
 }
 
 
-#' Calculate Signal-to-Noise ratio for GSEA
-#'
-#' This function calculates the Signal-to-Noise ratio (SNR) for Gene Set Enrichment Analysis (GSEA).
-#' It measures the difference in the means of two classes (0 and 1) relative to the standard deviation.
-#' The SNR is used to rank genes and assess their relevance in the context of gene set enrichment.
-#'
-#' @param X The gene expression matrix.
-#' @param Y The class labels or binary matrix indicating the two classes (0 and 1).
-#'
-#' @return A matrix of Signal-to-Noise ratios for each gene in the expression matrix.
-#'
-#' @export
-gsea.snr <- function(X, Y) {
-  if (NCOL(Y) == 1) Y <- matrix(Y, ncol = 1)
-  if (ncol(X) != nrow(Y)) {
-    stop("dimension mismatch")
-  }
-  S <- matrix(NA, nrow(X), ncol(Y))
-  j <- 1
-  for (j in 1:ncol(Y)) {
-    yj <- Y[, j]
-    mx <- cbind(
-      rowMeans(X[, yj == 0, drop = FALSE], na.rm = TRUE),
-      rowMeans(X[, yj == 1, drop = FALSE], na.rm = TRUE)
-    )
-    sx <- cbind(
-      apply(X[, yj == 0, drop = FALSE], 1, sd, na.rm = TRUE),
-      apply(X[, yj == 1, drop = FALSE], 1, sd, na.rm = TRUE)
-    )
-    sx <- pmax(pmax(sx, 0.2 * abs(mx)), 0.2)
-    sx <- rowMeans(sx, na.rm = TRUE) * ncol(sx) ## robust "sum"
-    S[, j] <- (mx[, 1] - mx[, 2]) / sx
-  }
-  colnames(S) <- colnames(Y)
-  rownames(S) <- rownames(X)
-  return(S)
-}
 
 
 #' Run GSEA analysis using pre-ranked or phenotype comparison mode
@@ -1096,57 +924,6 @@ justGSEA <- function(X, gmt, Y = NULL, fdr = 1, set.min = 15, set.max = 500, top
 }
 
 
-#' Run GCEA (Gene Concept Enrichment Analysis) using GSEA
-#'
-#' This function performs Gene Concept Enrichment Analysis (GCEA) using Gene Set Enrichment Analysis (GSEA).
-#' It combines gene set analysis and concept analysis to identify enriched gene sets and concepts.
-#'
-#' @param X The gene expression matrix or pre-ranked gene list.
-#' @param sets The gene set collection for gene set analysis.
-#' @param concepts The gene concept collection for concept analysis.
-#' @param Y The class labels or binary matrix indicating the phenotypes for phenotype comparison mode.
-#' @param fdr The false discovery rate (FDR) threshold for selecting significant gene sets. Default is 1.
-#' @param set.min The minimum gene set size. Default is 15.
-#' @param set.max The maximum gene set size. Default is 500.
-#' @param topgs The number of top gene sets to report. Default is 100.
-#' @param nperm The number of permutations for estimating the statistical significance. Default is 1000.
-#' @param rpt.label The label for the analysis report. Default is "analysis".
-#' @param output.dir The output directory for saving the results. Default is NULL (results are not saved).
-#' @param xmx The maximum memory allocation for the GSEA program in gigabytes (GB). Default is 10.
-#' @param scoring The scoring scheme for ranking genes. Default is "weighted".
-#' @param clean.files Logical value indicating whether to clean intermediate files. Default is TRUE.
-#'
-#' @return A list containing the results of the GCEA analysis, including gene set analysis results (gsea) and concept analysis results (gcea).
-#'
-#' @export
-justGCEA <- function(X, sets, concepts, Y = NULL, fdr = 1, set.min = 15, set.max = 500,
-                     topgs = 100, nperm = 1000, rpt.label = "analysis", output.dir = NULL,
-                     xmx = 10, scoring = "weighted", clean.files = TRUE) {
-  output.dir1 <- output.dir2 <- NULL
-  if (!is.null(output.dir)) {
-    output.dir1 <- paste(output.dir, "/gsea_out", sep = "")
-    output.dir2 <- paste(output.dir, "/gcea_out", sep = "")
-  }
-  cat(">>> GCEA gene concept enrichment analysis <<<\n")
-  cat("running gene set analysis\n")
-  res1 <- justGSEA(X,
-    gmt = sets, Y = Y, output.dir = output.dir1,
-    topgs = topgs, nperm = nperm, rpt.label = rpt.label,
-    xmx = xmx, scoring = scoring, fdr = fdr,
-    set.min = set.min, set.max = set.max
-  )
-  cat("running concept analysis\n")
-  res2 <- justGSEA(res1$NES,
-    gmt = concepts, output.dir = output.dir2,
-    topgs = topgs, nperm = nperm, rpt.label = rpt.label,
-    xmx = xmx, scoring = scoring, fdr = fdr,
-    set.min = set.min, set.max = set.max
-  )
-  res <- c()
-  res$gsea <- res1
-  res$gcea <- res2
-  res
-}
 
 ## ========================================================================
 ## ======================== ACCESS FUNCTIONS ==============================
@@ -1246,83 +1023,8 @@ getGseaOutput <- function(path = "../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut
 }
 
 
-#' Plot GSEA Enrichment Plots
-#'
-#' Plot the GSEA enrichment plots from the GSEA analysis results.
-#'
-#' @param gsea The GSEA analysis results obtained from \code{\link{getGseaOutput}}.
-#' @param gsets Optional character vector specifying the gene sets to plot.
-#'              If NULL (default), all available gene sets will be plotted.
-#' @param ncol The number of columns in the grid arrangement of plots.
-#'             Defaults to 5.
-#'
-#' @export
-#'
-#' @return None
-gseaPlotEnplots <- function(gsea, gsets = NULL, ncol = 5) {
-  enplots <- gsea$enplots
-  kk <- 1:length(enplots)
-  if (!is.null(gsets)) kk <- match(gsets, names(enplots))
-  imgs <- lapply(enplots[kk], function(p) {
-    grid::rasterGrob(as.raster(png::readPNG(p)),
-      interpolate = TRUE
-    )
-  })
-  gridExtra::grid.arrange(grobs = imgs, ncol = ncol)
-}
 
 
-#' Leading Edge Heatmap
-#'
-#' Generates a heatmap visualization of the leading edge analysis results.
-#'
-#' @param gsea An object containing GSEA results.
-#' @param maxrow Maximum number of rows to display in the heatmap.
-#' @param maxcol Maximum number of columns to display in the heatmap.
-#' @param gsets A character vector specifying the gene sets to include in the analysis.
-#' @param render The rendering method for the heatmap. Options are "gx.heatmap", "d3heatmap", or "heatmaply".
-#' @param info.text Logical indicating whether to display additional information text.
-#' @export
-#' @return NULL if the leading edge matrix is too small (less than or equal to 1 row or 1 column),
-#' otherwise, it returns the generated heatmap visualization.
-gseaLeadingEdgeHeatmap <- function(gsea, maxrow = 60, maxcol = 60, gsets = NULL,
-                                   render = "gx.heatmap", info.text = TRUE) {
-  if (info.text) {
-    cat("<br><h4>Leading Edge heatmap</h4>")
-    cat("<br>Click here for the <a href='", gsea$LE_heatmap_clustered, "'>full Leading Edge heatmap</a>. ")
-    cat("Complete Leading Edge analysis results are <a href='", gsea$LE_index, "'>here</a>")
-  }
-  LEmat <- gsea$LE_matrix
-  if (!is.null(gsets)) {
-    kk <- intersect(gsets, rownames(gsea$LE_matrix))
-    LEmat <- LEmat <- gsea[kk, ]
-  }
-  rnk <- as.matrix(read.table(gsea$rnk_file, row.names = 1))[, 1]
-  nes <- gsea$report[, "NES"]
-  names(nes) <- gsea$report$NAME
-  LEmat[which(is.na(LEmat))] <- 0
-  LEmat <- LEmat[head(order(-rowMeans(LEmat != 0)), maxrow), , drop = FALSE]
-  LEmat <- LEmat[, head(order(-colMeans(LEmat != 0)), maxcol), drop = FALSE]
-  LEmat <- LEmat * abs(nes[rownames(LEmat)])
-  LEmat <- t(t(LEmat) * (rnk[colnames(LEmat)]))
-  LEmat <- abs(LEmat)**0.5 * sign(LEmat)
-  LEmat[which(is.na(LEmat))] <- 0
-  if (nrow(LEmat) <= 1 || ncol(LEmat) <= 1) {
-    return(NULL)
-  }
-
-  if (render == "d3heatmap") {
-    d3heatmap::d3heatmap(LEmat, yaxis_width = 600)
-  } else if (render == "heatmaply") {
-    heatmaply::heatmaply(LEmat)
-  } else {
-    playbase::gx.heatmap(LEmat - 1e-8,
-      scale = "none",
-      mar = c(8, 20), cexCol = 0.9, cexRow = 0.9,
-      keysize = 0.4, key = FALSE
-    )
-  }
-}
 
 ## ========================================================================
 ## =========================== PLOTTING ===================================
@@ -1336,40 +1038,6 @@ gseaLeadingEdgeHeatmap <- function(gsea, maxrow = 60, maxcol = 60, gsets = NULL,
 
 
 
-#' GSEA Barplot
-#'
-#' Generates a barplot visualization of GSEA scores.
-#'
-#' @param scores A numeric vector of GSEA scores.
-#' @param names A character vector of names for the scores.
-#' @param xlab The label for the x-axis.
-#' @param xlim The limits for the x-axis.
-#' @param cex.text The size of the text labels.
-#' @param main The main title of the plot.
-#' @param n The number of scores to display in the barplot.
-#' @export
-#' @return barplot
-gsea.barplot <- function(scores, names = NULL, xlab = "score", xlim = NULL,
-                         cex.text = 1, main = "enrichment", n = 16) {
-  if (!is.null(names)) names(scores) <- names
-  scores <- rev(Matrix::head(scores[order(-abs(scores))], n))
-  col1 <- c("lightskyblue1", "rosybrown1")[1 + 1 * (scores > 0)]
-  if (min(scores, na.rm = TRUE) == 0 && max(scores, na.rm = TRUE) == 0) {
-    xlim <- c(0, 1)
-  }
-  barplot(abs(scores),
-    horiz = TRUE, las = 1, width = 5 / 6, col = col1,
-    border = NA, xlab = xlab, names.arg = rep("", length(scores)),
-    xlim = xlim, cex.axis = 0.9
-  )
-  title(main)
-  gs <- names(scores)
-  mx <- max(abs(scores))
-  text(0.02 * mx, 1:length(scores) - 0.45, gs,
-    adj = 0, offset = 0,
-    cex = cex.text
-  )
-}
 
 
 #' GSEA Enrichment Plot
@@ -1458,106 +1126,6 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
 }
 
 
-#' GSEA Enrichment Plot (Up/Down Genes)
-#'
-#' Generates an enrichment plot for GSEA analysis with separate traces for up-regulated and down-regulated genes.
-#'
-#' @param rnk A numeric vector representing the ranked list.
-#' @param gset.up A character vector specifying the gene set for up-regulated genes.
-#' @param gset.dn A character vector specifying the gene set for down-regulated genes.
-#' @param names A character vector of names for the ranked list.
-#' @param main The main title of the plot.
-#' @param decreasing Logical indicating whether the ranked list should be sorted in decreasing order.
-#' @param cex.main The size of the main title text.
-#' @param len.main The maximum number of characters for the main title before line breaks are applied.
-#' @param sum.trace Logical indicating whether to plot the sum of the traces for up-regulated and down-regulated genes.
-#' @param res The resolution of the plot.
-#' @param xlab The label for the x-axis.
-#' @param ylab The label for the y-axis.
-#' @export
-#' @return a plot
-gsea.enplot.UPDN <- function(rnk, gset.up, gset.dn, names = NULL, main = NULL,
-                             decreasing = TRUE, cex.main = 0.9, len.main = 40,
-                             sum.trace = TRUE, res = 1200,
-                             xlab = "Rank in ordered dataset",
-                             ylab = "Ranked list metric") {
-  if (!is.null(names)) names(rnk) <- names
-  rnk <- rnk[!is.na(rnk)]
-  rnk <- rnk[order(rnk + 1e-8 * rnorm(length(rnk)), decreasing = decreasing)]
-
-  ## ranked list metric
-  ii <- (1:length(rnk))
-  if (length(ii) > res) ii <- ii[seq(1, length(ii), length(ii) / res)]
-  qq <- quantile(rnk[ii], probs = c(0.01, 0.99), na.rm = TRUE)
-  y1 <- qq[2]
-  y0 <- qq[1]
-  dy <- 0.25 * (y1 - y0)
-  plot(ii, rnk[ii],
-    type = "h", col = "grey", ylim = c(y0 - 1.25 * dy, y1),
-    xlab = NA, ylab = ylab, xaxt = "n"
-  )
-  mtext(xlab, 1, line = 1.2, cex = 0.7)
-  abline(h = 0, lty = 2, lwd = 0.5)
-
-  ## gene set barcode
-  jj <- match(gset.dn, names(rnk))
-  arrows(jj, (y0 - dy), jj, y0 - 0.5 * dy, col = "grey30", lwd = 1, length = 0)
-  jj <- match(gset.up, names(rnk))
-  arrows(jj, (y0 - 0.5 * dy), jj, y0, col = "grey30", lwd = 1, length = 0)
-
-  ## color legend
-  kk <- c(seq(1, length(rnk) * 0.95, floor(length(rnk) / 10)), length(rnk))
-  i <- 1
-  for (i in 1:(length(kk) - 1)) {
-    r <- mean(rnk[kk[c(i, i + 1)]])
-    r1 <- (r / max(abs(rnk), na.rm = TRUE))
-    r1 <- abs(r1)**0.66 * sign(r1)
-    irnk <- round(10 + 10 * r1)
-    cc <- gplots::bluered(20)[irnk]
-    rect(kk[i], y0 - 1.30 * dy, kk[i + 1], y0 - 1.05 * dy, col = cc, border = NA)
-  }
-
-  ## weighted cumulative random walk (down genes)
-  x0 <- 1 * (names(rnk) %in% gset.dn)
-  x0 <- x0 * abs(rnk)
-  n0 <- sum(!(names(rnk) %in% gset.dn))
-  n1 <- sum(names(rnk) %in% gset.dn)
-  r0 <- cumsum(x0 == 0) / sum(x0 == 0)
-  r1 <- cumsum(x0) / (1e-4 + sum(x0))
-  trace.dn <- (r1 - r0)
-  trace.dn <- trace.dn / max(abs(trace.dn)) * 0.8
-  if (max(trace.dn) >= abs(min(trace.dn))) trace.dn <- trace.dn * abs(y1)
-  if (max(trace.dn) < abs(min(trace.dn))) trace.dn <- trace.dn * abs(y0)
-  if (!decreasing) trace.dn <- -1 * trace.dn
-  lines(ii, trace.dn[ii], col = "orange", type = "l", lwd = 2.4)
-
-  ## weighted cumulative random walk
-  x0 <- 1 * (names(rnk) %in% gset.up)
-  x0 <- x0 * abs(rnk)
-  n0 <- sum(!(names(rnk) %in% gset.up))
-  n1 <- sum(names(rnk) %in% gset.up)
-  r0 <- cumsum(x0 == 0) / sum(x0 == 0)
-  r1 <- cumsum(x0) / (1e-4 + sum(x0))
-  trace.up <- (r1 - r0)
-  trace.up <- trace.up / max(abs(trace.up)) * 0.8
-  if (max(trace.up) >= abs(min(trace.up))) trace.up <- trace.up * abs(y1)
-  if (max(trace.up) < abs(min(trace.up))) trace.up <- trace.up * abs(y0)
-  if (!decreasing) trace.up <- -1 * trace.up
-  lines(ii, trace.up[ii], col = "green", type = "l", lwd = 2.4)
-
-  if (sum.trace) lines(ii, trace.up[ii] + trace.dn[ii], col = "blue", type = "l", lwd = 2.4)
-
-  if (is.null(main)) main <- "Enrichment plot"
-  tt.main <- as.character(main)
-  if (nchar(tt.main) > len.main) {
-    tt.main <- paste(substr(tt.main, 1, len.main),
-      substr(tt.main, len.main + 1, 2 * len.main),
-      substr(tt.main, 2 * len.main + 1, 3 * len.main),
-      sep = "\n"
-    )
-  }
-  title(main = tt.main, cex.main = cex.main, line = 0.6)
-}
 
 
 #' gsea.ftplot

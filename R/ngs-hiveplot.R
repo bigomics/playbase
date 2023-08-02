@@ -3,61 +3,6 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-#' @title Create a hive plot visualization for an NGS object
-#'
-#' @description
-#' Creates a hive plot to visualize associations between omics datasets
-#' in an NGS object.
-#'
-#' @param ngs An NGS object containing multiple omics datasets.
-#' @param pheno The phenotype data column name.
-#' @param level The omics data level (1, 2, 3).
-#' @param ntop Number of top features to include.
-#' @param main Plot title.
-#' @param axis.lab Axis labels c("GX", "CN", "ME").
-#' @param bkgnd Background color.
-#' @param rx Hive plot x-radius.
-#' @param cex Text size factor.
-#' @param slen Feature name substring length.
-#'
-#' @details
-#' This function takes an NGS object containing gene expression (GX), copy number (CN),
-#' and methylation (ME) data. It calculates correlation statistics between features in
-#' each dataset vs. the phenotype. It selects the top \code{ntop} features and creates
-#' a hive plot visualization, with hubs representing GX/CN/ME and edges representing
-#' correlations between features across datasets related to the phenotype.
-#'
-#' The plot is customizable via parameters like \code{main}, \code{bkgnd}, \code{cex}, etc.
-#'
-#' @return
-#' A hive plot grob object is returned, no value.
-#'
-#' @export
-ngs.hiveplot <- function(ngs, pheno, level = 1, ntop = 400, main = "", axis.lab = c("GX", "CN", "ME"),
-                         bkgnd = "white", rx = 2.2, cex = 1, slen = -1) {
-  res <- omx$zstats[[level]]
-  res <- cbind(res, omx$stats[[pheno]][[level]])
-  res <- res[!grepl("^PHENO", rownames(res)), ]
-  rownames(res) <- gsub("^.*:", "", rownames(res)) ## strip prefix
-  if (slen > 0) rownames(res) <- substr(rownames(res), 1, slen)
-  ann.cex <- cex * 0.7
-
-  hpd <- omx.makeHivePlotData_(res,
-    rho.min = 0.15, ntop = ntop, rx = rx,
-    cxi = (0.05 + ann.cex / 7)
-  )
-  write.csv(hpd$nodes.ann, file = "/tmp/annode.csv", row.names = FALSE)
-  grid::grid.newpage()
-  axlab.col <- ifelse(bkgnd == "black", "grey90", "grey15")
-  HiveR::plotHive(hpd,
-    np = FALSE, ch = 1.4, bkgnd = bkgnd,
-    axLabs = c(paste0(main, "\n", axis.lab[1]), axis.lab[2], axis.lab[3]),
-    axLab.pos = c(0.4, 0.33, 0.33),
-    axLab.gpar = grid::gpar(col = axlab.col, cex = cex * 1.3),
-    anNodes = "/tmp/annode.csv",
-    anNode.gpar = grid::gpar(cex = 0.7 * cex, col = axlab.col, lwd = 0.50)
-  )
-}
 
 #' @title Create data for hive plot visualization
 #'

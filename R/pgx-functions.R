@@ -371,30 +371,6 @@ matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1) {
 }
 
 
-#' @title Apply k-Nearest Neighbors Median Filter
-#'
-#' @description This function applies a k-nearest neighbors median filter to a vector of values.
-#'
-#' @param x A numeric vector of values to be filtered.
-#' @param pos A matrix of positions for each element in `x`.
-#' @param k An optional numeric value specifying the number of nearest neighbors to use for filtering.
-#' The default value is 10.
-#'
-#' @details This function takes a numeric vector `x` and a matrix of positions `pos` as input and applies a k-nearest neighbors median filter to `x`.
-#' The number of nearest neighbors used for filtering is specified by the `k` parameter.
-#' For each element in `x`, the function finds its `k` nearest neighbors in `pos` and calculates the median of their values in `x`.
-#' The resulting filtered values are returned as a numeric vector of the same length as `x`.
-#'
-#' @return A numeric vector of the same length as `x`, containing the filtered values.
-#'
-#' @export
-knnMedianFilter <- function(x, pos, k = 10) {
-  nb <- FNN::get.knn(pos[, ], k = k)$nn.index
-  fx <- factor(x)
-  mx <- matrix(fx[as.vector(nb)], nrow = nrow(nb), ncol = ncol(nb))
-  x1 <- apply(mx, 1, function(x) names(which.max(table(x))))
-  x1
-}
 
 #' @describeIn knnImputeMissing Impute missing values with non-negative matrix factorization
 #' @export
@@ -450,37 +426,7 @@ knnImputeMissing <- function(x, pos, missing = NA, k = 10) {
   x
 }
 
-#' @describeIn knnImputeMissing Randomly impute missing values
-#' @export
-randomImputeMissing <- function(x) {
-  i <- 1
-  for (i in 1:ncol(x)) {
-    jj <- which(is.na(x[, i]) | x[, i] == "NA")
-    if (length(jj)) {
-      rr <- sample(x[-jj, i], length(jj), replace = TRUE)
-      x[jj, i] <- rr
-    }
-  }
-  return(x)
-}
 
-#' @export
-human2mouse.SLLOWWW <- function(x) {
-  human <- biomaRt::useMart("ensembl", dataset = "hsapiens_gene_ensembl")
-  mouse <- biomaRt::useMart("ensembl", dataset = "mmusculus_gene_ensembl")
-  genesV2 <- biomaRt::getLDS(
-    attributes = c("hgnc_symbol"),
-    filters = "hgnc_symbol",
-    values = x, mart = human,
-    attributesL = c("mgi_symbol"),
-    martL = mouse,
-    uniqueRows = T
-  )
-  genesx <- unique(genesV2[, 2])
-
-
-  return(genesx)
-}
 
 
 #' Convert human gene symbols to mouse
@@ -706,25 +652,8 @@ trimsame0 <- function(s, split = " ", summarize = FALSE, rev = FALSE) {
 }
 
 
-#' @describeIn read.csv3 debug BAK
-#' @export
-dbg.BAK <- function(...) {
-  if (exists("DEBUG") && DEBUG) {
-    msg <- sapply(list(...), paste, collapse = " ")
-    message(cat(paste0("[DBG] ", sub("\n$", "", paste(msg, collapse = " ")), "\n")))
-  }
-}
 
 
-#' @describeIn read.csv3 Read delimited table automatically determine separator
-#' @export
-read.csv3.BAK <- function(file, ...) {
-  ## read delimited table automatically determine separator
-  line1 <- as.character(read.csv(file, comment.char = "#", sep = "\n", nrow = 1)[1, ])
-  sep <- names(which.max(sapply(c("\t", ",", ";"), function(s) length(strsplit(line1, split = s)[[1]]))))
-  message("[read.csv3] sep = ", sep)
-  read.csv(file, comment.char = "#", sep = sep, ...)
-}
 
 
 #' Read CSV file with automatic separator detection
@@ -1760,35 +1689,6 @@ pgx.getGeneSetCollections <- function(gsets, min.size = 10, max.size = 500) {
 ## -----------------------------------------------------------------------------
 
 
-#' @title Filter Genes by Family
-#'
-#' @description This function filters a data frame of genes by a specified gene family.
-#'
-#' @param genes A data frame of genes to be filtered, with row names representing probe names.
-#' @param family A character string specifying the name of the gene family to filter by.
-#' @param ngs A list containing gene families, where `ngs$families` is a
-#' named list of character vectors representing gene families.
-#'
-#' @details The function takes a data frame of genes `genes`, a gene family
-#' name `family`, and a list of gene families `ngs` as input.
-#' The function searches for rows in the `genes` data frame where the probe
-#' name, short probe name, or gene name matches a gene in the specified gene family.
-#' The row names of the matching rows are returned.
-#'
-#' @return A character vector representing the row names of the rows in the
-#' `genes` data frame that match the specified gene family.
-#'
-#' @export
-filterFamily <- function(genes, family, ngs) {
-  gg <- ngs$families[[10]]
-  gg <- ngs$families[[family]]
-  ## check probe name, short probe name or gene name for match
-  p0 <- (toupper(sub(".*:", "", rownames(genes))) %in% toupper(gg))
-  p1 <- (toupper(rownames(genes)) %in% toupper(gg))
-  p2 <- (toupper(as.character(genes$gene_name)) %in% toupper(gg))
-  jj <- which(p0 | p1 | p2)
-  rownames(genes)[jj]
-}
 
 
 #' Filter probes from gene expression data
@@ -2424,56 +2324,6 @@ expandAnnotationMatrix <- function(A) {
 }
 
 
-#' @title Expand Annotation Matrix
-#'
-#' @description This function expands an annotation matrix by
-#' converting categorical variables into dummy variables and ranking numerical variables.
-#'
-#' @param A A data frame representing the annotation matrix to be expanded.
-#'
-#' @details The function takes an annotation matrix `A` as input,
-#' where each column represents a variable and each row represents an
-#' observation. For each column, if the variable is numerical, the function
-#' ranks the values and stores them in a new column. If the variable is
-#' categorical, the function creates dummy variables for each level of the c
-#' ategorical variable and stores them in new columns.
-#'
-#' The resulting expanded annotation matrix is returned as a data frame,
-#' where each row represents an observation and each column represents a
-#' variable or a level of a categorical variable.
-#'
-#' @return A data frame representing the expanded annotation matrix.
-#'
-#' @export
-#' @export
-expandAnnotationMatrixSAVE <- function(A) {
-  ## get expanded annotation matrix
-  nlevel <- apply(A, 2, function(x) length(unique(x)))
-  y.isnum <- apply(A, 2, is.num)
-
-  i <- 1
-  m1 <- list()
-  for (i in 1:ncol(A)) {
-    if (is.num(A[, i])) {
-      m0 <- matrix(rank(A[, i], na.last = "keep"), ncol = 1)
-      colnames(m0) <- colnames(A)[i]
-    } else {
-      x <- as.character(A[, i])
-      x[is.na(x)] <- "_"
-      m0 <- model.matrix(~ 0 + x)
-      colnames(m0) <- sub("^x", "", colnames(m0))
-    }
-    if (NCOL(m0) > 1) {
-      colnames(m0) <- paste0(colnames(A)[i], "=", colnames(m0))
-    }
-    m1[[i]] <- m0
-  }
-  names(m1) <- colnames(A)
-
-  M <- do.call(cbind, m1)
-  rownames(M) <- rownames(A)
-  return(M)
-}
 
 
 #' @title Expand phenotype matrix
@@ -2554,47 +2404,6 @@ expandPhenoMatrix <- function(pheno, collapse = TRUE, drop.ref = TRUE) {
 }
 
 
-#' @title Correct gene symbols with September/March suffix
-#'
-#' @description
-#' Corrects gene symbols that use "Sep" or "Mar" suffix by converting them to full month names.
-#'
-#' @param gg A character vector of gene symbols.
-#'
-#' @details
-#' This function checks if any gene symbols in \code{gg} end with "-Sep", "-SEP", "-Mar", or "-MAR",
-#' which represent September or March. If found, it converts these to full month names by replacing
-#' "-Sep" with "-September" and "-Mar" with "-March".
-#'
-#' It first replaces any "-SEP" or "-MAR" with "-Sep" and "-Mar" respectively.
-#' Then it uses \code{\link[plyr]{mapvalues}} to match any "-Sep" or "-Mar" suffixes to the
-#' corresponding "-September" or "-March" and replaces them.
-#'
-#' @return
-#' The character vector \code{gg} with any September/March suffixes converted to full month names.
-#'
-#' @export
-correctMarchSeptemberGenes <- function(gg) {
-  sep.from <- c(paste0("0", 1:9, "-Sep"), paste0(1:19, "-Sep"))
-  sep.to <- c(paste0("SEPT", 1:9), paste0("SEPT", 1:19))
-  mar.from <- c(paste0("0", 1:9, "-Mar"), paste0(1:19, "-Mar"))
-  mar.to <- c(paste0("MARCH", 1:9), paste0("MARCH", 1:19))
-
-
-  from <- c(sep.from, mar.from)
-  to <- c(sep.to, mar.to)
-  gg1 <- sub("[.-]Sep$|[.-]SEP$", "-Sep", gg)
-  gg1 <- sub("[.-]Mar$|[.-]MAR$", "-Mar", gg1)
-  jj <- which(from %in% gg1)
-  gg2 <- gg1
-  if (length(jj) > 0) {
-    cat("Found ", length(jj), "Sept/Mar genes!\n")
-
-    from[jj]
-    gg2 <- plyr::mapvalues(gg1, from[jj], to[jj])
-  }
-  return(gg2)
-}
 
 
 #' @title P-value for Pearson's Correlation Coefficient
@@ -2646,47 +2455,6 @@ getGSETS_playbase <- function(gsets = NULL, pattern = NULL) {
 }
 
 
-#' Get gene sets from playbase data
-#'
-#' @param pattern Pattern to match gene set names
-#' @param lib.dir Directory containing custom gene set files
-#' @param custom_families_file Custom gene families file name. Default "custom-families.gmt".
-#'
-#' @return A list of gene sets matching the pattern
-#'
-#' @details This function extracts gene sets from the playbase data package.
-#' It returns gene sets matching the provided pattern.
-#' Custom additional gene sets can be included from the lib.dir if provided.
-#'
-#' @export
-getGSETS_playbase.SAVE <- function(pattern, lib.dir, custom_families_file = "custom-families.gmt") {
-  # Note: this function needs to be refactored since lib.dir will not exist
-  # get gene symbols
-  GENE.SYMBOL <- unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
-  # get f1 and families
-  FAMILIES <- pgx.getGeneFamilies(GENE.SYMBOL, min.size = 10, max.size = 9999)
-  fam.file <- file.path(lib.dir, custom_families_file)
-  if (file.exists(fam.file)) {
-    custom.gmt <- read.gmt(file.path(lib.dir, custom_families_file), add.source = TRUE)
-    names(custom.gmt)
-    FAMILIES <- c(FAMILIES, custom.gmt)
-  }
-  FAMILIES[["<all>"]] <- GENE.SYMBOL
-  f1 <- FAMILIES
-  names(f1) <- paste0("FAMILY:", names(f1))
-  names(f1) <- sub("FAMILY:<all>", "<all>", names(f1))
-
-  # get GSETS
-  GSETS <- c(playdata::GSETS, f1)
-
-  # to get iGSETS
-  GSET.GENES <- sort(unique(unlist(GSETS))) ## slow...
-  iGSETS <- parallel::mclapply(GSETS, function(a) match(a, GSET.GENES)) ## slow...
-  gs <- grep(pattern, names(iGSETS), value = TRUE)
-  names(iGSETS) <- names(GSETS)
-
-  lapply(iGSETS[gs], function(i) GSET.GENES[i])
-}
 
 ## =====================================================================================
 ## =========================== END OF FILE =============================================

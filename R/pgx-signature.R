@@ -246,85 +246,6 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
 }
 
 
-#' @export
-pgx.correlateSignature.matrix <- function(fc, refmat, nsig = 100, ntop = 1000, nperm = 10000) {
-  ##
-  ##
-  ##
-  ##
-
-  if (is.null(names(fc))) stop("fc must have names")
-
-  ## mouse... mouse...
-  names(fc) <- toupper(names(fc))
-
-  ## or instead compute correlation on top100 fc genes (read from file)
-
-  rn <- rownames(refmat)
-  cn <- colnames(refmat)
-
-  ## ---------------------------------------------------------------
-  ## Compute simple correlation between query profile and signatures
-  ## ---------------------------------------------------------------
-  gg <- intersect(rn, names(fc))
-  fc1 <- sort(fc[gg])
-  gg <- unique(names(c(Matrix::head(fc1, nsig), Matrix::tail(fc1, nsig))))
-
-
-  G <- refmat[gg, , drop = FALSE]
-
-  ## rank correlation??
-  rG <- apply(G[gg, ], 2, rank, na.last = "keep")
-  rfc <- rank(fc[gg], na.last = "keep")
-
-
-  rG[is.na(rG)] <- 0
-  rfc[is.na(rfc)] <- 0
-  rho <- stats::cor(rG, rfc, use = "pairwise")[, 1]
-
-  remove(G, rG, rfc)
-
-  ## --------------------------------------------------
-  ## test all signature on query profile using fGSEA
-  ## --------------------------------------------------
-
-
-  sel <- Matrix::head(names(sort(-abs(rho))), ntop)
-  notx <- setdiff(sel, colnames(refmat))
-  sel <- intersect(sel, colnames(refmat))
-  X <- refmat[, sel, drop = FALSE]
-  X[is.na(X)] <- 0
-  orderx <- apply(X, 2, function(x) {
-    idx <- order(x)
-    list(DN = head(idx, 100), UP = rev(Matrix::tail(idx, 100)))
-  })
-  sig100.dn <- sapply(orderx, "[[", "DN")
-  sig100.dn <- apply(sig100.dn, 2, function(i) rn[i])
-  sig100.up <- sapply(orderx, "[[", "UP")
-  sig100.up <- apply(sig100.up, 2, function(i) rn[i])
-
-  ## ---------------------------------------------------------------
-  ## combine up/down into one (unsigned GSEA test)
-  ## ---------------------------------------------------------------
-  gmt <- rbind(sig100.up, sig100.dn)
-  gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
-  names(gmt) <- colnames(X)
-
-  suppressMessages(suppressWarnings(
-    res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm)
-  ))
-
-  ## ---------------------------------------------------------------
-  ## Combine correlation+GSEA by combined score (NES*rho)
-  ## ---------------------------------------------------------------
-  jj <- match(res$pathway, names(rho))
-  res$rho <- rho[jj]
-  res$R2 <- rho[jj]**2
-  res$score <- res$R2 * res$NES
-  res <- res[order(res$score, decreasing = TRUE), ]
-
-  return(res)
-}
 
 
 chunk <- 100
@@ -635,76 +556,12 @@ pgx.addEnrichmentSignaturesH5 <- function(h5.file, X = NULL, mc.cores = 0,
   cat("[pgx.addEnrichmentSignaturesH5] done!\n")
 }
 
-#' @export
-pgx.ReclusterSignatureDatabase <- function(h5.file, reduce.sd = 1000, reduce.pca = 100) {
-  h5exists <- function(h5.file, obj) {
-    xobjs <- apply(rhdf5::h5ls(h5.file)[, 1:2], 1, paste, collapse = "/")
-    obj %in% gsub("^/|^//", "", xobjs)
-  }
-
-  X <- rhdf5::h5read(h5.file, "data/matrix")
-  rn <- rhdf5::h5read(h5.file, "data/rownames")
-  cn <- rhdf5::h5read(h5.file, "data/colnames")
-  rownames(X) <- rn
-  colnames(X) <- cn
-  X[which(X < -999999)] <- NA
-
-  ## --------------------------------------------------
-  ## Precalculate t-SNE/UMAP
-  ## --------------------------------------------------
-
-  if (!h5exists(h5.file, "clustering")) rhdf5::h5createGroup(h5.file, "clustering")
-
-  pos <- pgx.clusterBigMatrix(
-    abs(X), ## on absolute foldchange!!
-    methods = c("pca", "tsne", "umap"),
-    dims = c(2, 3),
-    reduce.sd = reduce.sd,
-    reduce.pca = min(reduce.pca, round(ncol(X) / 3))
-  )
-
-  rhdf5::h5write(pos[["pca2d"]], h5.file, "clustering/pca2d") ## can write list??
-  rhdf5::h5write(pos[["pca3d"]], h5.file, "clustering/pca3d") ## can write list??
-  rhdf5::h5write(pos[["tsne2d"]], h5.file, "clustering/tsne2d") ## can write list??
-  rhdf5::h5write(pos[["tsne3d"]], h5.file, "clustering/tsne3d") ## can write list??
-  rhdf5::h5write(pos[["umap2d"]], h5.file, "clustering/umap2d") ## can write list??
-  rhdf5::h5write(pos[["umap3d"]], h5.file, "clustering/umap3d") ## can write list??
-  rhdf5::h5closeAll()
-}
 
 
 ## -------------------------------------------------------------------
 ## Pre-calculate geneset expression with different methods
 ## -------------------------------------------------------------------
 
-#' @export
-pgx.computeMultiOmicsGSE <- function(X, gmt, omx.type,
-                                     method = NULL, center = TRUE) {
-  if (is.null(omx.type)) {
-    omx.type <- gsub("[:=].*", "", rownames(X))
-  }
-  omx.types <- setdiff(unique(omx.type), c("MIR", ""))
-  omx.types
-
-  sx <- list()
-  for (tp in omx.types) {
-    x1 <- X[which(omx.type == tp), ]
-    rownames(x1) <- sub(":.*", "", rownames(x1))
-    sx[[tp]] <- pgx.computeGeneSetExpression(x1, gmt, method = method, center = center)
-    sx[[tp]] <- lapply(sx[[tp]], function(x) {
-      rownames(x) <- paste0(tp, "=", rownames(x))
-      x
-    })
-  }
-
-  ## concatenate all omx-types
-  cx <- sx[[1]]
-  for (j in 1:length(sx[[1]])) {
-    cx[[j]] <- do.call(rbind, lapply(sx, "[[", j))
-  }
-
-  return(cx)
-}
 
 #' @export
 pgx.computeGeneSetExpression <- function(X, gmt, method = NULL,
