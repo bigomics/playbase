@@ -689,9 +689,9 @@ pgx.deconvolution <- function(X, ref,
           }
         }
         if (is.na(w[1])) {
-          tmp <- lsfit(tmp.XX, y, intercept = FALSE)
+          tmp <- stats::lsfit(tmp.XX, y, intercept = FALSE)
         } else {
-          tmp <- lsfit(tmp.XX, y, w, intercept = FALSE)
+          tmp <- stats::lsfit(tmp.XX, y, w, intercept = FALSE)
         }
         if (ncol(tmp.XX) == 1) {
           tmp.beta <- tmp$coefficients[1]

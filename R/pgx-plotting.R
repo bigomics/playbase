@@ -101,7 +101,7 @@ heatmapWithAnnot <- function(F, anno.type = c("boxplot", "barplot"),
     })
   }
   if (anno.type == "barplot" && legend) {
-    legend("topright", colnames(F),
+    graphics::legend("topright", colnames(F),
       fill = col1,
       cex = 0.63, y.intersp = 0.8,
       inset = inset, xpd = TRUE
@@ -122,7 +122,7 @@ heatmapWithAnnot <- function(F, anno.type = c("boxplot", "barplot"),
 #' @param tstep Translation step size
 #' @param rstep Rotation step size
 #' @param maxiter Maximum number of iterations
-#' @param ... Additional graphics parameters to text()
+#' @param ... Additional graphics parameters to graphics::text()
 #'
 #' @return The adjusted coordinates, rotated labels, and plotting parameters
 #'
@@ -144,8 +144,8 @@ repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
   ## From wordcloud::wordlayout
   tails <- "g|j|p|q|y"
   n <- length(words)
-  sdx <- sd(x, na.rm = TRUE)
-  sdy <- sd(y, na.rm = TRUE)
+  sdx <- stats::sd(x, na.rm = TRUE)
+  sdy <- stats::sd(y, na.rm = TRUE)
   if (sdx == 0) {
     sdx <- 1
   }
@@ -168,8 +168,8 @@ repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
     y1 <- yo <- y[i]
 
 
-    wid <- strwidth(words[i], cex = cex[i])
-    ht <- strheight(words[i], cex = cex[i])
+    wid <- graphics::strwidth(words[i], cex = cex[i])
+    ht <- graphics::strheight(words[i], cex = cex[i])
     if (grepl(tails, words[i])) {
       ht <- ht + ht * 0.2
     }
@@ -367,7 +367,7 @@ plot_SPLOM <- function(F, F2 = NULL, hilight = NULL, cex = 0.5, cex.axis = 1, ce
   nc <- 4
   nr <- ncol(F2)
   nc <- ncol(F)
-  par(
+  graphics::par(
     mfrow = c(nr, nc), mar = c(1, 1, 1, 1) * cex.space, oma = c(4, 4, 0, 0),
     bty = "o", xpd = FALSE
   )
@@ -382,21 +382,21 @@ plot_SPLOM <- function(F, F2 = NULL, hilight = NULL, cex = 0.5, cex.axis = 1, ce
         xlab = "", ylab = "",
         xlim = x0, ylim = x1
       )
-      abline(v = 0, h = 0, lty = 3, lwd = 0.6)
-      if (j == 1) mtext(colnames(F)[i], 1, line = 2.7, cex = 0.9 * cex.axis)
-      if (i == 1) mtext(colnames(F2)[j], 2, line = 2.7, cex = 0.9 * cex.axis)
+      graphics::abline(v = 0, h = 0, lty = 3, lwd = 0.6)
+      if (j == 1) graphics::mtext(colnames(F)[i], 1, line = 2.7, cex = 0.9 * cex.axis)
+      if (i == 1) graphics::mtext(colnames(F2)[j], 2, line = 2.7, cex = 0.9 * cex.axis)
 
       if (!is.null(hilight) && length(hilight) > 0) {
         hilight <- intersect(hilight, rownames(F))
         ii <- match(hilight, rownames(F))
-        points(F[ii, i], F2[ii, j], pch = 20, col = "red3")
-        text(F[ii, i], F2[ii, j], labels = hilight, cex = 0.85, pos = 3, col = "black")
+        graphics::points(F[ii, i], F2[ii, j], pch = 20, col = "red3")
+        graphics::text(F[ii, i], F2[ii, j], labels = hilight, cex = 0.85, pos = 3, col = "black")
       }
 
       ## write correlation value
       rho <- stats::cor(F[, i], F2[, j], use = "pairwise")
       rr <- paste("r =", round(rho, digits = 3))
-      legend("topleft", legend = rr, bty = "n", cex = 1)
+      graphics::legend("topleft", legend = rr, bty = "n", cex = 1)
     }
   }
 }
@@ -846,7 +846,7 @@ pgx.plotContrast <- function(pgx, contrast = NULL, type = "scatter",
     nc <- ceiling(sqrt(length(contrast)))
     nr <- ceiling(length(contrast) / nc)
     if (par.sq) nr <- nc
-    par(mfrow = c(nr, nc))
+    graphics::par(mfrow = c(nr, nc))
   }
 
   plist <- list()
@@ -1142,14 +1142,14 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
     nc <- ceiling(sqrt(ncol(F)))
     nr <- ceiling(ncol(F) / nc)
     if (par.sq) nr <- nc
-    par(mfrow = c(nr, nc))
+    graphics::par(mfrow = c(nr, nc))
   }
 
   ## z-scale
   zlim <- NULL
   if (zfix) {
-    zlim <- quantile(F, probs = c(0.01, 0.99), na.rm = TRUE)
-    zlim <- quantile(F, probs = c(0.002, 0.998), na.rm = TRUE)
+    zlim <- stats::quantile(F, probs = c(0.01, 0.99), na.rm = TRUE)
+    zlim <- stats::quantile(F, probs = c(0.002, 0.998), na.rm = TRUE)
     zlim
   }
 
@@ -1245,11 +1245,11 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   }
 
   if (level == "gene" && !probe %in% rownames(pgx$X)) {
-    frame() ## emtpy image
+    graphics::frame() ## emtpy image
     return(NULL)
   }
   if (level == "geneset" && !probe %in% rownames(pgx$gsetX)) {
-    frame() ## emtpy image
+    graphics::frame() ## emtpy image
     return(NULL)
   }
 
@@ -1397,7 +1397,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
       gx.min <- 0
       if (min(gx) < 0) gx.min <- min(gx)
       ylim <- c(gx.min, 1.3 * max(gx))
-      bx <- barplot(gx[],
+      bx <- graphics::barplot(gx[],
         col = klr[], ylim = ylim,
         ## offset = 0, ylim=c(gx.min,max(gx)),
         las = 3, ylab = ylab, names.arg = NA, border = NA
@@ -1444,7 +1444,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
         ## sig.stars=TRUE, max.stars=5,
         las = 3, names.cex = cex, srt = srt
       )
-      title(main, cex.main = 1.0, line = 0)
+      graphics::title(main, cex.main = 1.0, line = 0)
       return()
     }
   }
@@ -1656,7 +1656,7 @@ pgx.splitHeatmap <- function(ngs, splitx = NULL, top.mode = "specific",
   } else {
     X1 <- Matrix::head(X0[order(-apply(X0, 1, sd)), ], ntop)
     hc <- fastcluster::hclust(as.dist(1 - stats::cor(t(X1), use = "pairwise")), method = "ward.D2")
-    idx <- paste0("S", cutree(hc, 5))
+    idx <- paste0("S", stats::cutree(hc, 5))
   }
 
   ## ----- Get valid phenotype variables
@@ -2354,7 +2354,7 @@ pgx.violinPlot <- function(x, y, group = NULL, xlab = "", ylab = "",
   fig <- NULL
   if (plotlib == "base") {
     if (is.null(maxbee)) maxbee <- 100 * length(setdiff(unique(y), NA))
-    if (jitter > 0) x <- x + jitter * diff(range(x)) * rnorm(length(x))
+    if (jitter > 0) x <- x + jitter * diff(range(x)) * stats::rnorm(length(x))
 
 
     vioplot::vioplot(x ~ y,
@@ -2367,9 +2367,9 @@ pgx.violinPlot <- function(x, y, group = NULL, xlab = "", ylab = "",
       beeswarm::beeswarm(x[ii] ~ y[ii], add = TRUE, pch = 20, cex = 0.6, col = "grey10")
     }
     yy <- sort(unique(y))
-    text(
+    graphics::text(
       x = 1:length(yy),
-      y = par("usr")[3] - 0.03 * diff(range(x)),
+      y = graphics::par("usr")[3] - 0.03 * diff(range(x)),
       labels = yy,
       xpd = NA,
       srt = srt,
@@ -2552,8 +2552,8 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
   if (is.null(ylab)) ylab <- colnames(pos)[2]
 
   if (set.par) {
-    par.save <- par()
-    par(
+    par.save <- graphics::par()
+    graphics::par(
       mar = c(2.6, 2.8, 1.9, 0.5), mgp = c(1.5, 0.4, 0),
       cex.axis = 1, cex.lab = 1, tcl = -0.3, las = 1
     )
@@ -2611,7 +2611,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
       mpos <- apply(pos, 2, function(x) tapply(x, z1, median))
       mlab <- rownames(mpos)
 
-      text(mpos, labels = mlab, cex = cex.clust, lheight = 0.8)
+      graphics::text(mpos, labels = mlab, cex = cex.clust, lheight = 0.8)
     }
 
     ## discrete parameter legend
@@ -2619,7 +2619,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     if (legend.pos != "none" && legend && nlev < 30) {
       cex1 <- ifelse(length(levels(z1)) >= 8, 0.85, 1)
       cex1 <- ifelse(length(levels(z1)) >= 15, 0.75, cex1)
-      legend(legend.pos, levels(z1),
+      graphics::legend(legend.pos, levels(z1),
         bty = bty, fill = col1,
         ## cex=cex1, y.intersp=0.75, x.intersp=0.7
         cex = 0.85 * cex1 * cex.legend,
@@ -2652,11 +2652,11 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     ## -------------- set colors
 
     cpal <- colorspace::diverge_hcl(64, c = 60, l = c(30, 100), power = 1)
-    cpal <- colorRampPalette(c("#313695", "#FFFFDF", "#A50026"))(64)
+    cpal <- grDevices::colorRampPalette(c("#313695", "#FFFFDF", "#A50026"))(64)
     if (!is.null(col)) {
-      cpal <- colorRampPalette(col)(64)
+      cpal <- grDevices::colorRampPalette(col)(64)
     } else {
-      cpal <- colorRampPalette(c("#3136B5", "#FFFFDF", "#B50026"))(64)
+      cpal <- grDevices::colorRampPalette(c("#3136B5", "#FFFFDF", "#B50026"))(64)
     }
     cpal <- sapply(1:length(cpal), function(i) add_opacity(cpal[i], 0.2 + 0.8 * abs(i - 32.5) / 32))
 
@@ -2693,7 +2693,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
       if (zsym) zr <- c(-1, 1) * max(abs(zr), na.rm = TRUE)
       if (zlog) zr <- round(10**zr - 1) ## ???
       zr <- 0.01 * c(ceiling(100 * zr[1]), floor(100 * zr[2])) ## round
-      legend(legend.pos,
+      graphics::legend(legend.pos,
         cex = 0.8 * cex.legend, #
         y.intersp = 0.18, x.intersp = 0.5, border = NA, bty = bty,
         inset = c(0.01, 0.02),
@@ -2710,8 +2710,8 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
       if (is.null(hcol1)) hcol1 <- pt.col0[jj]
       hcex <- hilight.cex
       if (length(hcex) > 1) hcex <- hcex[jj]
-      points(pos[jj, , drop = FALSE], pch = 20, col = hcol1, cex = 1.05 * hcex)
-      points(pos[jj, , drop = FALSE], pch = 1, lwd = hilight.lwd, cex = 0.85 * hcex)
+      graphics::points(pos[jj, , drop = FALSE], pch = 20, col = hcol1, cex = 1.05 * hcex)
+      graphics::points(pos[jj, , drop = FALSE], pch = 1, lwd = hilight.lwd, cex = 0.85 * hcex)
     }
   }
 
@@ -2745,14 +2745,14 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
       } else {
         lab.pos <- lab.pos[match(rownames(df), rownames(lab.pos)), ]
       }
-      segments(df$x, df$y, lab.pos$x, lab.pos$y, col = "#222222AA", lwd = 0.85)
-      text(lab.pos$x, lab.pos$y, labels = df$z, cex = 0.7 * df$cex)
+      graphics::segments(df$x, df$y, lab.pos$x, lab.pos$y, col = "#222222AA", lwd = 0.85)
+      graphics::text(lab.pos$x, lab.pos$y, labels = df$z, cex = 0.7 * df$cex)
     }
   }
 
   ## parameter name
   if (!is.null(title) && title != "") {
-    mtext(title, 3, adj = 0, padj = -0.35, cex = 0.9 * cex.title)
+    graphics::mtext(title, 3, adj = 0, padj = -0.35, cex = 0.9 * cex.title)
   }
 
   if (set.par) {
@@ -2810,8 +2810,8 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
 #'
 #' @examples
 #' \dontrun{
-#' x <- rnorm(100)
-#' y <- rnorm(100)
+#' x <- stats::rnorm(100)
+#' y <- stats::rnorm(100)
 #' df <- data.frame(x = x, y = y)
 #' p <- pgx.scatterPlotXY.GGPLOT(df)
 #' }
@@ -3244,7 +3244,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                                      source = NULL, key = NULL,
                                      displayModeBar = FALSE) {
   if (!is.null(var) && NCOL(var) > 1) {
-    var <- setNames(var[, 1], rownames(var))
+    var <- stats::setNames(var[, 1], rownames(var))
   }
   if (!is.null(var) && length(var) == nrow(pos) && is.null(names(var))) {
     names(var) <- rownames(pos)
@@ -4259,7 +4259,7 @@ plotlyCytoplot <- function(pgx,
 #'
 #' @export
 corclust <- function(x) {
-  dd <- as.dist(1 - stats::cor(t(x), use = "pairwise"))
+  dd <- stats::as.dist(1 - stats::cor(t(x), use = "pairwise"))
   hc <- fastcluster::hclust(dd, method = "ward.D2")
   hc
 }
@@ -4402,7 +4402,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
 
   ## ------ split Y-axis (genes) by factor
   hc.order <- function(x) {
-    suppressWarnings(dd <- as.dist(1 - stats::cor(t(x), use = "pairwise")))
+    suppressWarnings(dd <- stats::as.dist(1 - stats::cor(t(x), use = "pairwise")))
     if (sum(is.na(dd))) dd[is.na(dd)] <- 1
     hc <- fastcluster::hclust(dd, method = "ward.D2")
     rownames(x)[hc$order]
@@ -4716,7 +4716,7 @@ pgx.barplot.PLOTLY <- function(
         data[[y]],
         list(data[[x]]),
         function(val) {
-          c(mean = mean(val), sd = sd(val))
+          c(mean = mean(val), sd = stats::sd(val))
         }
       )
     )

@@ -98,7 +98,7 @@ pgx.correlateSignatureH5.inmemory <- function(F, h5.file, nsig = 100, ntop = 100
   colnames(matG) <- cn
 
   mem1 <- round(object.size(matG) / 1e9, 2)
-  cat("[pgx.correlateSignatureH5] object.size(matG)=", mem1, "Gb\n") ## gigabytes....
+  cat("[pgx.correlateSignatureH5] utils::object.size(matG)=", mem1, "Gb\n") ## gigabytes....
 
   ## ---------------------------------------------------------------
   ## Compute simple correlation between query profile and signatures
@@ -439,7 +439,7 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
     orderx <- apply(X, 2, function(x) {
       idx <- order(x)
       list(
-        DN = head(idx, 100),
+        DN = utils::head(idx, 100),
         UP = rev(tail(idx, 100))
       )
     })
@@ -528,7 +528,7 @@ pgx.addEnrichmentSignaturesH5 <- function(h5.file, X = NULL, mc.cores = 0,
     F1 <- parallel::mclapply(colnames(X), function(i) {
       xi <- X[, i]
       xi <- xi[!is.na(xi)]
-      xi <- xi + 1e-3 * rnorm(length(xi))
+      xi <- xi + 1e-3 * stats::rnorm(length(xi))
       res1 <- fgsea::fgseaSimple(gmt, xi, nperm = 10000, nproc = mc.cores)
       r <- res1$NES
       names(r) <- res1$pathway
@@ -653,7 +653,7 @@ sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL, path
 
 
   if (grepl("csv$", sigdb)) {
-    X <- read.csv(sigdb, row.names = 1, check.names = FALSE)
+    X <- utils::read.csv(sigdb, row.names = 1, check.names = FALSE)
     X <- as.matrix(X)
     X <- X[, colMeans(is.na(X)) < 0.99, drop = FALSE] ## omit empty columns
     if (!is.null(genes)) X <- X[intersect(genes, rownames(X)), , drop = FALSE]

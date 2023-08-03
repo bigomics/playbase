@@ -83,7 +83,7 @@ pgx.readOptions <- function(file = "./OPTIONS") {
   if (!file.exists(file)) {
     return(NULL)
   }
-  P <- read.table(file, sep = "=", row.names = 1)
+  P <- utils::read.table(file, sep = "=", row.names = 1)
   opt.names <- trimws(rownames(P))
   opt <- list(P[, 1])
   opt <- sapply(opt, trimws)
@@ -202,7 +202,7 @@ pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE) {
   pgxinfo.file <- file.path(pgx.dir, file)
   if (file.exists(pgxinfo.file)) {
     ## do not use fread.csv or fread here!! see issue #441
-    pgxinfo <- read.csv(pgxinfo.file, stringsAsFactors = FALSE, row.names = 1, sep = ",")
+    pgxinfo <- utils::read.csv(pgxinfo.file, stringsAsFactors = FALSE, row.names = 1, sep = ",")
     if (match) {
       pgx.files1 <- sub("[.]pgx$", "", pgx.files)
       pgxinfo.datasets <- sub("[.]pgx$", "", pgxinfo$dataset)
@@ -292,7 +292,7 @@ pgxinfo.needUpdate <- function(
   if (has.info) {
     if (verbose) message("[pgxinfo.needUpdate] checking which pgx already in PGX info...")
     ## do not use fread! quoting bug
-    pgxinfo <- read.csv(info.file1, stringsAsFactors = FALSE, row.names = 1, sep = ",")
+    pgxinfo <- utils::read.csv(info.file1, stringsAsFactors = FALSE, row.names = 1, sep = ",")
     info.files <- unique(sub(".pgx$", "", pgxinfo$dataset))
     info.complete <- all(pgx.files %in% info.files)
     info.missing <- setdiff(pgx.files, info.files)
@@ -409,7 +409,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   if (has.info) {
     if (verbose) message("[pgxinfo.updateDatasetFolder] checking which pgx files already in PGX info...")
     ## do not use fread! quoting bug
-    pgxinfo <- read.csv(info.file, stringsAsFactors = FALSE, row.names = 1, sep = ",")
+    pgxinfo <- utils::read.csv(info.file, stringsAsFactors = FALSE, row.names = 1, sep = ",")
     pgxinfo.files <- unique(sub(".pgx$", "", pgxinfo$dataset))
     info.missing <- setdiff(pgx.files, pgxinfo.files)
     info.delete <- setdiff(pgxinfo.files, pgx.files)
@@ -574,7 +574,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
 
   if (pgxinfo.changed) {
     if (verbose) message("[pgxinfo.updateDatasetFolder] writing updated PGX.INFO file to ", info.file, "...")
-    write.csv(pgxinfo, file = info.file)
+    utils::write.csv(pgxinfo, file = info.file)
     Sys.chmod(info.file, "0666")
   }
 
@@ -675,7 +675,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
       tsne <- rhdf5::h5read(sigdb, "clustering/tsne2d")
       rownames(tsne) <- cn
       colnames(tsne) <- paste0("tsne.", 1:2)
-      write.csv(tsne, file = tsne.file)
+      utils::write.csv(tsne, file = tsne.file)
     }
   }
 

@@ -478,20 +478,20 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
     if (length(klr2) > 5000) {
       j2 <- c(sample(grep("grey", klr2), 5000), which(klr2 != "grey"))
     }
-    points(pos2[j2, ], pch = pch, cex = cex * cex2[j2], col = klr2[j2], main = "genes")
+    graphics::points(pos2[j2, ], pch = pch, cex = cex * cex2[j2], col = klr2[j2], main = "genes")
 
-    legend("bottomleft", "GENES", bty = "n", col = "grey60")
-    legend("bottomright", "GENE SETS", bty = "n", col = "grey60")
+    graphics::legend("bottomleft", "GENES", bty = "n", col = "grey60")
+    graphics::legend("bottomright", "GENE SETS", bty = "n", col = "grey60")
     if (!is.null(from)) {
-      points(from[1], from[2], pch = 20, cex = 1, col = "green3")
-      points(to[, 1], to[, 2], pch = 20, cex = 0.4, col = "green3")
-      arrows(from[1], from[2], to[, 1], to[, 2],
+      graphics::points(from[1], from[2], pch = 20, cex = 1, col = "green3")
+      graphics::points(to[, 1], to[, 2], pch = 20, cex = 0.4, col = "green3")
+      graphics::arrows(from[1], from[2], to[, 1], to[, 2],
         length = 0.05,
         lwd = 0.5, col = paste0(gplots::col2hex("green3"), "33")
       )
     }
     if (!is.null(main)) tt <- main
-    mtext(tt, line = 0.5, at = 0, font = 2, cex = 1.1)
+    graphics::mtext(tt, line = 0.5, at = 0, font = 2, cex = 1.1)
   }
   invisible(rownames(to))
 }

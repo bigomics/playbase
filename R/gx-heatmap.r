@@ -134,15 +134,15 @@ gx.imagemap <- function(X, main = "", cex = 1, clust = TRUE) {
     xaxt = "n", yaxt = "n",
     xlab = "", ylab = ""
   )
-  mtext(colnames(X),
+  graphics::mtext(colnames(X),
     side = 1, at = 1:ncol(X), las = 3,
     cex = 0.75 * cex, line = 0.5
   )
-  mtext(rownames(X),
+  graphics::mtext(rownames(X),
     side = 4, at = 1:nrow(X), las = 1,
     cex = 0.85 * cex, line = 0.5
   )
-  title(main = main, cex = cex, line = 0.5)
+  graphics::title(main = main, cex = cex, line = 0.5)
 }
 
 
@@ -231,7 +231,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         show_rownames = nmax, lab.len = 80, key.offset = c(0.05, 1.01),
                         show_colnames = NULL, use.nclust = FALSE) {
   ComplexHeatmap::ht_global_opt(fast_hclust = TRUE)
-  par(xpd = FALSE)
+  graphics::par(xpd = FALSE)
 
   if (verbose > 1) cat("input.dim.gx=", dim(gx), "\n")
   if (is.null(show_colnames)) {
@@ -278,7 +278,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     if (inherits(splitx, "numeric") && length(splitx) == 1) {
       ii <- Matrix::head(order(-apply(gx, 1, sd, na.rm = TRUE)), 1000) ## NEED RETHINK!
       system.time(hc <- fastcluster::hclust(as.dist(1 - stats::cor(gx[ii, ])), method = "ward.D2"))
-      splitx <- paste0("cluster", cutree(hc, splitx))
+      splitx <- paste0("cluster", stats::cutree(hc, splitx))
       names(splitx) <- colnames(gx)
     }
     if (inherits(splitx, "character") && length(splitx) == 1 &&
@@ -324,7 +324,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   idx2 <- NULL
   if (do.splitx && inherits(splitx, "numeric") && length(splitx) == 1) {
     system.time(hc <- fastcluster::hclust(as.dist(1 - stats::cor(gx)), method = "ward.D2"))
-    idx2 <- paste0("cluster", cutree(hc, splitx))
+    idx2 <- paste0("cluster", stats::cutree(hc, splitx))
   }
   if (do.splitx && inherits(splitx, "character") && length(splitx) == 1 &&
     !is.null(col.annot) && splitx %in% colnames(col.annot)) {
@@ -353,7 +353,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     cor.gx <- stats::cor(t(gx), use = "pairwise")
     cor.gx[is.na(cor.gx)] <- 0
     hc <- fastcluster::hclust(as.dist(1 - cor.gx), method = "ward.D2")
-    split.idx <- paste0("group", cutree(hc, split))
+    split.idx <- paste0("group", stats::cutree(hc, split))
   }
   if (do.split && inherits(split, "character") && length(split) == 1 &&
     !is.null(row.annot) && split %in% colnames(row.annot)) {
@@ -489,7 +489,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   ## -------------------------------------------------------------
 
   if (softmax) {
-    gx <- tanh(0.5 * gx / sd(gx))
+    gx <- tanh(0.5 * gx / stats::sd(gx))
   }
 
   ## ------------- colorscale options
@@ -538,7 +538,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   for (i in grp.order) {
     jj <- grp[[i]]
 
-    coldistfun1 <- function(x) dist(x)
+    coldistfun1 <- function(x) stats::dist(x)
     rowdistfun1 <- function(x, y) 1 - stats::cor(x, y)
     gx0 <- gx[, jj, drop = FALSE]
     grp.title <- names(grp)[i]
@@ -701,14 +701,14 @@ gx.heatmap <- function(gx, values = NULL,
                        dist.method = "pearson",
                        col.dist.method = "euclidean",
                        plot.method = "heatmap.2",
-                       col = colorRampPalette(c("royalblue3", "grey90", "indianred3"))(64),
+                       col = grDevices::colorRampPalette(c("royalblue3", "grey90", "indianred3"))(64),
                        softmax = FALSE,
                        scale = "row", verbose = 1, symm = FALSE,
                        col.annot = NULL, row.annot = NULL, annot.ht = 1,
                        nmax = 1000, cmax = NULL, show_colnames = TRUE,
                        indent.names = FALSE,
                        ...) {
-  par(xpd = FALSE)
+  graphics::par(xpd = FALSE)
 
   if (verbose > 1) cat("input.dim.gx=", dim(gx), "\n")
 
@@ -769,7 +769,7 @@ gx.heatmap <- function(gx, values = NULL,
     if (col.dist.method == "pearson") {
       suppressWarnings(cx <- stats::cor(gx, use = "pairwise.complete.obs"))
       cx[is.na(cx)] <- 0 ## really???
-      d1 <- as.dist(1 - cx)
+      d1 <- stats::as.dist(1 - cx)
     } else if (col.dist.method %in% c("multi.dist", "multidist")) {
       gx0 <- t(gx)
       if (any(is.na(gx0))) gx0 <- fillNA(gx0)
@@ -778,7 +778,7 @@ gx.heatmap <- function(gx, values = NULL,
       ## euclidean
       gx0 <- t(gx)
       if (any(is.na(gx0))) gx0 <- fillNA(gx0)
-      d1 <- dist(gx0, method = col.dist.method)
+      d1 <- stats::dist(gx0, method = col.dist.method)
     }
     h1 <- fastcluster::hclust(d1, method = clust.method)
   }
@@ -791,7 +791,7 @@ gx.heatmap <- function(gx, values = NULL,
     if (dist.method == "pearson") {
       suppressWarnings(cx <- stats::cor(t(gx), use = "pairwise.complete.obs"))
       cx[is.na(cx)] <- 0
-      d2 <- as.dist(1 - cx)
+      d2 <- stats::as.dist(1 - cx)
     } else if (dist.method %in% c("multi.dist", "multidist")) {
       gx0 <- gx
       if (any(is.na(gx0))) gx0 <- fillNA(gx0)
@@ -799,7 +799,7 @@ gx.heatmap <- function(gx, values = NULL,
     } else {
       gx0 <- gx
       if (any(is.na(gx0))) gx0 <- fillNA(gx0)
-      d2 <- dist(gx0, method = dist.method)
+      d2 <- stats::dist(gx0, method = dist.method)
     }
     h2 <- fastcluster::hclust(d2, method = clust.method)
   }
@@ -862,7 +862,7 @@ gx.heatmap <- function(gx, values = NULL,
   ## Plotting methods
   ## -------------------------------------------------------------
   if (!is.null(values)) gx <- values[rownames(gx), colnames(gx)]
-  if (softmax) gx <- tanh(0.5 * gx / sd(gx)) ## just for plotting...
+  if (softmax) gx <- tanh(0.5 * gx / stats::sd(gx)) ## just for plotting...
   side.height <- 0.1 * annot.ht * NCOL(cc0)
 
   if (!show_colnames) {
@@ -890,7 +890,7 @@ gx.heatmap <- function(gx, values = NULL,
       )
     } else {
       playbase::heatmap.3(gx,
-        Colv = as.dendrogram(h1), Rowv = as.dendrogram(h2),
+        Colv = stats::as.dendrogram(h1), Rowv = stats::as.dendrogram(h2),
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none",
         side.height.fraction = side.height,
@@ -913,7 +913,7 @@ gx.heatmap <- function(gx, values = NULL,
       )
     } else {
       playbase::heatmap.3(gx,
-        Colv = as.dendrogram(h1), Rowv = as.dendrogram(h2),
+        Colv = stats::as.dendrogram(h1), Rowv = stats::as.dendrogram(h2),
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none",
         side.height.fraction = side.height,
@@ -934,7 +934,7 @@ gx.heatmap <- function(gx, values = NULL,
       )
     } else {
       playbase::heatmap.3(gx,
-        Colv = as.dendrogram(h1), Rowv = as.dendrogram(h2),
+        Colv = stats::as.dendrogram(h1), Rowv = stats::as.dendrogram(h2),
         dendrogram = dd, col = col, scale = scale,
         symkey = sym0, symbreaks = sym0, trace = "none",
         side.height.fraction = side.height,
@@ -954,7 +954,7 @@ gx.heatmap <- function(gx, values = NULL,
       )
     } else {
       playbase::heatmap.3(gx,
-        Colv = as.dendrogram(h1), Rowv = as.dendrogram(h2),
+        Colv = stats::as.dendrogram(h1), Rowv = stats::as.dendrogram(h2),
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none",
         side.height.fraction = side.height,
@@ -971,7 +971,7 @@ gx.heatmap <- function(gx, values = NULL,
       )
     } else {
       gplots::heatmap.2(gx,
-        Colv = as.dendrogram(h1), Rowv = as.dendrogram(h2),
+        Colv = stats::as.dendrogram(h1), Rowv = stats::as.dendrogram(h2),
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none", ...
       )
@@ -1037,8 +1037,8 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
 
 
   if (method == "pearson") {
-    d1 <- as.dist(stats::cor(t(x), use = "pairwise"))
-    d2 <- as.dist(stats::cor(x, use = "pairwise"))
+    d1 <- stats::as.dist(stats::cor(t(x), use = "pairwise"))
+    d2 <- stats::as.dist(stats::cor(x, use = "pairwise"))
     d1[is.na(d1)] <- mean(d1, na.rm = TRUE)
     d2[is.na(d2)] <- mean(d2, na.rm = TRUE)
     d1 <- (max(d1) - d1)**(p / 2)
@@ -1046,8 +1046,8 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
     h1 <- fastcluster::hclust(d1, method = "ward.D2")
     h2 <- fastcluster::hclust(d2, method = "ward.D2")
   } else if (method == "minkowski") {
-    d1 <- dist(x, method = "minkowski", p = p)
-    d2 <- dist(t(x), method = "minkowski", p = p)
+    d1 <- stats::dist(x, method = "minkowski", p = p)
+    d2 <- stats::dist(t(x), method = "minkowski", p = p)
     d1[is.na(d1)] <- mean(d1, na.rm = TRUE)
     d2[is.na(d2)] <- mean(d2, na.rm = TRUE)
     h1 <- fastcluster::hclust(d1, method = "ward.D2")
@@ -1063,9 +1063,9 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
     stop("unknown distance method: ", method)
   }
 
-  my.col <- colorRampPalette(c("royalblue3", "grey90", "indianred3"))(64)
-  c1 <- cutree(h1, nr)
-  c2 <- cutree(h2, nc)
+  my.col <- grDevices::colorRampPalette(c("royalblue3", "grey90", "indianred3"))(64)
+  c1 <- stats::cutree(h1, nr)
+  c2 <- stats::cutree(h2, nc)
   kxmap <- function(x, c1, c2, q) {
     nr <- length(unique(c1))
     nc <- length(unique(c2))
@@ -1115,12 +1115,12 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
     ax <- kxmap(col.annot, 1:nrow(col.annot), c2, q = q)
     col.annot <- (col.annot - rowMeans(col.annot, na.rm = TRUE)) /
       (1e-8 + apply(col.annot, 1, sd, na.rm = TRUE))
-    d3 <- dist(col.annot)
-    d3 <- as.dist(1 - stats::cor(t(col.annot), use = "pairwise"))
+    d3 <- stats::dist(col.annot)
+    d3 <- stats::as.dist(1 - stats::cor(t(col.annot), use = "pairwise"))
     d3[is.na(d3)] <- mean(d3, na.rm = TRUE) ## impute missing...
     h3 <- fastcluster::hclust(d3, method = "ward.D2")
     na0 <- min(na, dim(col.annot))
-    col.annot <- kxmap(col.annot, cutree(h3, na0), c2, q = q)
+    col.annot <- kxmap(col.annot, stats::cutree(h3, na0), c2, q = q)
     col.annot <- col.annot[h3$order, , drop = FALSE]
     ry <- t(apply(col.annot, 1, rank, na.last = "keep"))
     ry <- ry - apply(ry, 1, min, na.rm = TRUE)
@@ -1158,7 +1158,7 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
       labcol[h2$order[k2]] <- paste(". . . +", labcol[h2$order[k2]])
     }
     playbase::heatmap.3(kx,
-      Colv = as.dendrogram(h2), Rowv = as.dendrogram(h1),
+      Colv = stats::as.dendrogram(h2), Rowv = stats::as.dendrogram(h1),
       col = my.col, labRow = labrow, labCol = labcol,
       ColSideColors = cc0, ...
     )
@@ -1204,13 +1204,13 @@ frozenmap <- function(x, m = 8, n = 8, ...) {
     if (dist.method == "multi.dist") {
       d <- multi.dist(x)
     } else if (dist.method == "pearson") {
-      d <- as.dist(1 - stats::cor(t(x), use = "pairwise"))
+      d <- stats::as.dist(1 - stats::cor(t(x), use = "pairwise"))
       d[is.na(d)] <- mean(d, na.rm = TRUE)
     } else {
-      d <- dist(x)
+      d <- stats::dist(x)
     }
     h <- fastcluster::hclust(d)
-    idx <- cutree(h, k = n)
+    idx <- stats::cutree(h, k = n)
     ordx <- -apply(h$merge, 1, min)
     ordx <- ordx[ordx > 0]
     sdx <- apply(x, 1, sd, na.rm = TRUE)
@@ -1271,9 +1271,9 @@ multi.dist <- function(x, p = 4, method = c("pearson", "euclidean", "manhattan")
   for (this.x in xx) {
     for (m in method) {
       if (m == "pearson") {
-        d1 <- as.dist(1 - stats::cor(t(this.x), use = "pairwise"))
+        d1 <- stats::as.dist(1 - stats::cor(t(this.x), use = "pairwise"))
       } else {
-        d1 <- dist(this.x, method = m, p = p)
+        d1 <- stats::dist(this.x, method = m, p = p)
       }
       m1 <- matrix(rank(as.vector(as.matrix(d1)), na.last = "keep"), nrow = nrow(x))
       m1 <- m1 / max(m1, na.rm = TRUE)
@@ -1283,7 +1283,7 @@ multi.dist <- function(x, p = 4, method = c("pearson", "euclidean", "manhattan")
   }
   colnames(mm) <- rownames(x)
   rownames(mm) <- rownames(x)
-  as.dist(mm)
+  stats::as.dist(mm)
 }
 
 
@@ -1385,11 +1385,11 @@ heatmap.3 <- function(x,
                       cellnote,
                       notecex = 1,
                       notecol = "cyan",
-                      na.color = par("bg"),
+                      na.color = graphics::par("bg"),
                       trace = c("none", "column", "row", "both"),
                       tracecol = "cyan",
-                      hline = median(breaks),
-                      vline = median(breaks),
+                      hline = stats::median(breaks),
+                      vline = stats::median(breaks),
                       linecol = tracecol,
                       margins = c(5, 5),
                       ColSideColors,
@@ -1502,21 +1502,21 @@ heatmap.3 <- function(x,
   }
   if (inherits(Rowv, "dendrogram")) {
     ddr <- Rowv
-    rowInd <- order.dendrogram(ddr)
+    rowInd <- stats::order.dendrogram(ddr)
   } else if (is.integer(Rowv)) {
     hcr <- hclustfun(distfun(x))
-    ddr <- as.dendrogram(hcr)
-    ddr <- reorder(ddr, Rowv)
-    rowInd <- order.dendrogram(ddr)
+    ddr <- stats::as.dendrogram(hcr)
+    ddr <- stats::reorder(ddr, Rowv)
+    rowInd <- stats::order.dendrogram(ddr)
     if (nr != length(rowInd)) {
       stop("row dendrogram ordering gave index of wrong length")
     }
   } else if (isTRUE(Rowv)) {
     Rowv <- rowMeans(x, na.rm = na.rm)
     hcr <- hclustfun(distfun(x))
-    ddr <- as.dendrogram(hcr)
-    ddr <- reorder(ddr, Rowv)
-    rowInd <- order.dendrogram(ddr)
+    ddr <- stats::as.dendrogram(hcr)
+    ddr <- stats::reorder(ddr, Rowv)
+    rowInd <- stats::order.dendrogram(ddr)
     if (nr != length(rowInd)) {
       stop("row dendrogram ordering gave index of wrong length")
     }
@@ -1525,14 +1525,14 @@ heatmap.3 <- function(x,
   }
   if (inherits(Colv, "dendrogram")) {
     ddc <- Colv
-    colInd <- order.dendrogram(ddc)
+    colInd <- stats::order.dendrogram(ddc)
   } else if (identical(Colv, "Rowv")) {
     if (nr != nc) {
       stop("Colv = \"Rowv\" but nrow(x) != ncol(x)")
     }
     if (exists("ddr")) {
       ddc <- ddr
-      colInd <- order.dendrogram(ddc)
+      colInd <- stats::order.dendrogram(ddc)
     } else {
       colInd <- rowInd
     }
@@ -1542,9 +1542,9 @@ heatmap.3 <- function(x,
     } else {
       t(x)
     }))
-    ddc <- as.dendrogram(hcc)
-    ddc <- reorder(ddc, Colv)
-    colInd <- order.dendrogram(ddc)
+    ddc <- stats::as.dendrogram(hcc)
+    ddc <- stats::reorder(ddc, Colv)
+    colInd <- stats::order.dendrogram(ddc)
     if (nc != length(colInd)) {
       stop("column dendrogram ordering gave index of wrong length")
     }
@@ -1555,9 +1555,9 @@ heatmap.3 <- function(x,
     } else {
       t(x)
     }))
-    ddc <- as.dendrogram(hcc)
-    ddc <- reorder(ddc, Colv)
-    colInd <- order.dendrogram(ddc)
+    ddc <- stats::as.dendrogram(hcc)
+    ddc <- stats::reorder(ddc, Colv)
+    colInd <- stats::order.dendrogram(ddc)
     if (nc != length(colInd)) {
       stop("column dendrogram ordering gave index of wrong length")
     }
@@ -1660,17 +1660,17 @@ heatmap.3 <- function(x,
   if (length(lwid) != ncol(lmat)) {
     stop("lwid must have length = ncol(lmat) =", ncol(lmat))
   }
-  op <- par(no.readonly = TRUE)
+  op <- graphics::par(no.readonly = TRUE)
   on.exit(par(op))
 
   plotly::layout(lmat, widths = lwid, heights = lhei, respect = FALSE)
 
   if (!missing(RowSideColors)) {
     if (!is.matrix(RowSideColors)) {
-      par(mar = c(margins[1], 0, 0, 0.5))
+      graphics::par(mar = c(margins[1], 0, 0, 0.5))
       Matrix::image(rbind(1:nr), col = RowSideColors[rowInd], axes = FALSE)
     } else {
-      par(mar = c(margins[1], 0, 0, 0.5))
+      graphics::par(mar = c(margins[1], 0, 0, 0.5))
       rsc <- t(RowSideColors[, rowInd, drop = F])
       rsc.colors <- matrix()
       rsc.names <- names(table(rsc))
@@ -1683,17 +1683,17 @@ heatmap.3 <- function(x,
       rsc <- matrix(as.numeric(rsc), nrow = dim(rsc)[1])
       Matrix::image(t(rsc), col = as.vector(rsc.colors), axes = FALSE)
       if (length(colnames(RowSideColors)) > 0) {
-        axis(1, 0:(dim(rsc)[2] - 1) / (dim(rsc)[2] - 1), colnames(RowSideColors), las = 2, tick = FALSE)
+        graphics::axis(1, 0:(dim(rsc)[2] - 1) / (dim(rsc)[2] - 1), colnames(RowSideColors), las = 2, tick = FALSE)
       }
     }
   }
 
   if (!missing(ColSideColors)) {
     if (!is.matrix(ColSideColors)) {
-      par(mar = c(0.5, 0, 0, margins[2]))
+      graphics::par(mar = c(0.5, 0, 0, margins[2]))
       Matrix::image(cbind(1:nc), col = ColSideColors[colInd], axes = FALSE)
     } else {
-      par(mar = c(0.5, 0, 0, margins[2]))
+      graphics::par(mar = c(0.5, 0, 0, margins[2]))
       csc <- ColSideColors[colInd, , drop = F]
       csc.colors <- matrix()
       csc.names <- names(table(csc))
@@ -1706,12 +1706,12 @@ heatmap.3 <- function(x,
       csc <- matrix(as.numeric(csc), nrow = dim(csc)[1])
       Matrix::image(csc, col = as.vector(csc.colors), axes = FALSE)
       if (length(colnames(ColSideColors)) > 0) {
-        axis(2, 0:(dim(csc)[2] - 1) / max(1, (dim(csc)[2] - 1)), colnames(ColSideColors), las = 2, tick = FALSE)
+        graphics::axis(2, 0:(dim(csc)[2] - 1) / max(1, (dim(csc)[2] - 1)), colnames(ColSideColors), las = 2, tick = FALSE)
       }
     }
   }
 
-  par(mar = c(margins[1], 0, 0, margins[2]))
+  graphics::par(mar = c(margins[1], 0, 0, margins[2]))
   x <- t(x)
   cellnote <- t(cellnote)
   if (revC) {
@@ -1741,28 +1741,28 @@ heatmap.3 <- function(x,
       col = na.color, add = TRUE
     )
   }
-  axis(1, 1:nc,
+  graphics::axis(1, 1:nc,
     labels = labCol, las = 2, line = -0.5, tick = 0,
     cex.axis = cexCol
   )
   if (!is.null(xlab)) {
-    mtext(xlab, side = 1, line = margins[1] - 1.25)
+    graphics::mtext(xlab, side = 1, line = margins[1] - 1.25)
   }
-  axis(4, iy,
+  graphics::axis(4, iy,
     labels = labRow, las = 2, line = -0.5, tick = 0,
     cex.axis = cexRow
   )
   if (!is.null(ylab)) {
-    mtext(ylab, side = 4, line = margins[2] - 1.25)
+    graphics::mtext(ylab, side = 4, line = margins[2] - 1.25)
   }
   if (!missing(add.expr)) {
     eval(substitute(add.expr))
   }
   if (!missing(colsep)) {
-    for (csep in colsep) rect(xleft = csep + 0.5, ybottom = rep(0, length(csep)), xright = csep + 0.5 + sepwidth[1], ytop = rep(ncol(x) + 1, csep), lty = 1, lwd = 1, col = sepcolor, border = sepcolor)
+    for (csep in colsep) graphics::rect(xleft = csep + 0.5, ybottom = rep(0, length(csep)), xright = csep + 0.5 + sepwidth[1], ytop = rep(ncol(x) + 1, csep), lty = 1, lwd = 1, col = sepcolor, border = sepcolor)
   }
   if (!missing(rowsep)) {
-    for (rsep in rowsep) rect(xleft = 0, ybottom = (ncol(x) + 1 - rsep) - 0.5, xright = nrow(x) + 1, ytop = (ncol(x) + 1 - rsep) - 0.5 - sepwidth[2], lty = 1, lwd = 1, col = sepcolor, border = sepcolor)
+    for (rsep in rowsep) graphics::rect(xleft = 0, ybottom = (ncol(x) + 1 - rsep) - 0.5, xright = nrow(x) + 1, ytop = (ncol(x) + 1 - rsep) - 0.5 - sepwidth[2], lty = 1, lwd = 1, col = sepcolor, border = sepcolor)
   }
   min.scale <- min(breaks)
   max.scale <- max(breaks)
@@ -1772,7 +1772,7 @@ heatmap.3 <- function(x,
     vline.vals <- scale01(vline, min.scale, max.scale)
     for (i in colInd) {
       if (!is.null(vline)) {
-        abline(
+        graphics::abline(
           v = i - 0.5 + vline.vals, col = linecol,
           lty = 2
         )
@@ -1780,7 +1780,7 @@ heatmap.3 <- function(x,
       xv <- rep(i, nrow(x.scaled)) + x.scaled[, i] - 0.5
       xv <- c(xv[1], xv)
       yv <- 1:length(xv) - 0.5
-      lines(x = xv, y = yv, lwd = 1, col = tracecol, type = "s")
+      graphics::lines(x = xv, y = yv, lwd = 1, col = tracecol, type = "s")
     }
   }
   if (trace %in% c("both", "row")) {
@@ -1788,37 +1788,37 @@ heatmap.3 <- function(x,
     hline.vals <- scale01(hline, min.scale, max.scale)
     for (i in rowInd) {
       if (!is.null(hline)) {
-        abline(h = i + hline, col = linecol, lty = 2)
+        graphics::abline(h = i + hline, col = linecol, lty = 2)
       }
       yv <- rep(i, ncol(x.scaled)) + x.scaled[i, ] - 0.5
       yv <- rev(c(yv[1], yv))
       xv <- length(yv):1 - 0.5
-      lines(x = xv, y = yv, lwd = 1, col = tracecol, type = "s")
+      graphics::lines(x = xv, y = yv, lwd = 1, col = tracecol, type = "s")
     }
   }
   if (!missing(cellnote)) {
-    text(
+    graphics::text(
       x = c(row(cellnote)), y = c(col(cellnote)), labels = c(cellnote),
       col = notecol, cex = notecex
     )
   }
-  par(mar = c(margins[1], 0, 0, 0))
+  graphics::par(mar = c(margins[1], 0, 0, 0))
   if (dendrogram %in% c("both", "row")) {
     plot(ddr, horiz = TRUE, axes = FALSE, yaxs = "i", leaflab = "none")
   } else {
-    plot.new()
+    graphics::plot.new()
   }
-  par(mar = c(0, 0, if (!is.null(main)) 5 else 0, margins[2]))
+  graphics::par(mar = c(0, 0, if (!is.null(main)) 5 else 0, margins[2]))
   if (dendrogram %in% c("both", "column")) {
     plot(ddc, axes = FALSE, xaxs = "i", leaflab = "none")
   } else {
-    plot.new()
+    graphics::plot.new()
   }
   if (!is.null(main)) {
-    title(main, cex.main = 1.5 * op[["cex.main"]])
+    graphics::title(main, cex.main = 1.5 * op[["cex.main"]])
   }
   if (key) {
-    par(mar = c(5, 4, 2, 1), cex = 0.75)
+    graphics::par(mar = c(5, 4, 2, 1), cex = 0.75)
     tmpbreaks <- breaks
     if (symkey) {
       max.raw <- max(abs(c(x, breaks)), na.rm = TRUE)
@@ -1835,48 +1835,48 @@ heatmap.3 <- function(x,
       z = matrix(z, ncol = 1), col = col, breaks = tmpbreaks,
       xaxt = "n", yaxt = "n"
     )
-    par(usr = c(0, 1, 0, 1))
+    graphics::par(usr = c(0, 1, 0, 1))
     lv <- pretty(breaks)
     xv <- scale01(as.numeric(lv), min.raw, max.raw)
-    axis(1, at = xv, labels = lv)
+    graphics::axis(1, at = xv, labels = lv)
     if (scale == "row") {
-      mtext(side = 1, "Row Z-Score", line = 2)
+      graphics::mtext(side = 1, "Row Z-Score", line = 2)
     } else if (scale == "column") {
-      mtext(side = 1, "Column Z-Score", line = 2)
+      graphics::mtext(side = 1, "Column Z-Score", line = 2)
     } else {
-      mtext(side = 1, KeyValueName, line = 2)
+      graphics::mtext(side = 1, KeyValueName, line = 2)
     }
     if (density.info == "density") {
-      dens <- density(x, adjust = densadj, na.rm = TRUE)
+      dens <- stats::density(x, adjust = densadj, na.rm = TRUE)
       omit <- dens$x < min(breaks) | dens$x > max(breaks)
       dens$x <- dens$x[-omit]
       dens$y <- dens$y[-omit]
       dens$x <- scale01(dens$x, min.raw, max.raw)
-      lines(dens$x, dens$y / max(dens$y) * 0.95,
+      graphics::lines(dens$x, dens$y / max(dens$y) * 0.95,
         col = denscol,
         lwd = 1
       )
-      axis(2, at = pretty(dens$y) / max(dens$y) * 0.95, pretty(dens$y))
-      title("Color Key\nand Density Plot")
-      par(cex = 0.5)
-      mtext(side = 2, "Density", line = 2)
+      graphics::axis(2, at = pretty(dens$y) / max(dens$y) * 0.95, pretty(dens$y))
+      graphics::title("Color Key\nand Density Plot")
+      graphics::par(cex = 0.5)
+      graphics::mtext(side = 2, "Density", line = 2)
     } else if (density.info == "histogram") {
-      h <- hist(x, plot = FALSE, breaks = breaks)
+      h <- graphics::hist(x, plot = FALSE, breaks = breaks)
       hx <- scale01(breaks, min.raw, max.raw)
       hy <- c(h$counts, h$counts[length(h$counts)])
-      lines(hx, hy / max(hy) * 0.95,
+      graphics::lines(hx, hy / max(hy) * 0.95,
         lwd = 1, type = "s",
         col = denscol
       )
-      axis(2, at = pretty(hy) / max(hy) * 0.95, pretty(hy))
-      title("Color Key\nand Histogram")
-      par(cex = 0.5)
-      mtext(side = 2, "Count", line = 2)
+      graphics::axis(2, at = pretty(hy) / max(hy) * 0.95, pretty(hy))
+      graphics::title("Color Key\nand Histogram")
+      graphics::par(cex = 0.5)
+      graphics::mtext(side = 2, "Count", line = 2)
     } else {
-      title("Color Key")
+      graphics::title("Color Key")
     }
   } else {
-    plot.new()
+    graphics::plot.new()
   }
   retval$colorTable <- data.frame(
     low = retval$breaks[-length(retval$breaks)],

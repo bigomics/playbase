@@ -140,7 +140,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
     rownames(rho2) <- colnames(D)
     colnames(rho2) <- colnames(R1)
     rho2 <- rho2[order(-rowMeans(rho2**2)), , drop = FALSE]
-    cor.pvalue <- function(x, n) pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
+    cor.pvalue <- function(x, n) stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
     P <- apply(rho2, 2, cor.pvalue, n = nrow(D))
     Q <- apply(P, 2, p.adjust, method = "fdr")
     results[["cor"]] <- list(X = rho2, Q = Q, P = P)

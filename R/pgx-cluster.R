@@ -310,7 +310,7 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
   ## perform K-means
   if ("kmeans" %in% method) {
     message("perform K-means...")
-    km <- lapply(km.sizes, function(k) kmeans(t(X), k, iter.max = 10))
+    km <- lapply(km.sizes, function(k) stats::kmeans(t(X), k, iter.max = 10))
     km.idx <- do.call(cbind, lapply(km, function(r) r$cluster))
     colnames(km.idx) <- paste0("kmeans.", km.sizes)
     index[["kmeans"]] <- km.idx
@@ -320,7 +320,7 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
   if ("hclust" %in% method) {
     message("perform hclust...")
     hc <- fastcluster::hclust(dist(t(X)), method = "ward.D")
-    hc.idx <- lapply(km.sizes, function(k) cutree(hc, k))
+    hc.idx <- lapply(km.sizes, function(k) stats::cutree(hc, k))
     hc.idx <- do.call(cbind, hc.idx)
     colnames(hc.idx) <- paste0("hclust.", km.sizes)
     index[["hclust"]] <- hc.idx
@@ -345,7 +345,7 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
     d1 <- outer(k.rows, k.rows, Vectorize(function(x, y) sum(x != y)))
     rownames(d1) <- colnames(d1) <- rownames(K)
     hc <- fastcluster::hclust(as.dist(d1))
-    meta.idx <- do.call(cbind, lapply(km.sizes, function(k) cutree(hc, k)))
+    meta.idx <- do.call(cbind, lapply(km.sizes, function(k) stats::cutree(hc, k)))
     colnames(meta.idx) <- paste0("meta.", km.sizes)
     rownames(meta.idx) <- rownames(K)
     index[["meta"]] <- meta.idx
@@ -743,7 +743,7 @@ pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix 
 
 
   if (graph.method == "dist") {
-    dist <- as.dist(dist(scale(X)))
+    dist <- stats::as.dist(dist(scale(X)))
     gr <- igraph::graph_from_adjacency_matrix(1.0 / dist**gamma, diag = FALSE, mode = "undirected")
   } else if (graph.method == "snn") {
     suppressMessages(suppressWarnings(gr <- scran::buildSNNGraph(t(X), d = 50)))

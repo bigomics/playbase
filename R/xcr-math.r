@@ -25,7 +25,7 @@ tcosine_similarity <- function(X, Y = NULL, method = NULL) {
 cosine_similarity <- function(X, Y = NULL, method = NULL) {
   ## sparse cosine: A.B / (|A||B|)
   ## handles sparse matrix and missing values
-  X <- as(X, "dgCMatrix")
+  X <- methods::as(X, "dgCMatrix")
   if (is.null(Y)) {
     ii <- which(Matrix::colMeans(is.na(X)) != 1)
     zX <- X[, ii]
@@ -37,7 +37,7 @@ cosine_similarity <- function(X, Y = NULL, method = NULL) {
     S[ii, ii] <- as.matrix(M)
     return(S)
   } else {
-    Y <- as(Y, "dgCMatrix")
+    Y <- methods::as(Y, "dgCMatrix")
     ii <- which(Matrix::colMeans(is.na(X)) != 1)
     jj <- which(Matrix::colMeans(is.na(Y)) != 1)
     zX <- X[, ii]
@@ -75,7 +75,7 @@ tcosine.sparse <- function(X, k = 100, th = 0.01, block = 100, ties.method = "ra
       rho <- tcrossprod(X[jj, ], X[, ])
     }
     if (ties.method == "random") {
-      idx.j <- apply(rho, 1, function(x) Matrix::head(order(x, rnorm(length(x)), decreasing = TRUE), k))
+      idx.j <- apply(rho, 1, function(x) Matrix::head(order(x, stats::rnorm(length(x)), decreasing = TRUE), k))
     } else {
       idx.j <- apply(rho, 1, function(x) Matrix::head(order(x, decreasing = TRUE), k))
     }
@@ -126,7 +126,7 @@ length_encode <- function(x, r = 0.1, a = 0.25) {
   brks <- seq(minlen - dx, maxlen + dx, dx)
   ix <- 2 + as.integer(cut(logx, breaks = brks))
   endx <- max(ix, na.rm = TRUE) + 2
-  M0 <- model.matrix(~ 0 + factor(ix, levels = 1:endx))
+  M0 <- stats::model.matrix(~ 0 + factor(ix, levels = 1:endx))
   M <- matrix(NA, nrow = length(x0), ncol = ncol(M0))
   M[which(!is.na(x0)), ] <- M0
   M <- Matrix::Matrix(M, sparse = TRUE)

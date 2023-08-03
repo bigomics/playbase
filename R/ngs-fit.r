@@ -386,7 +386,7 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
 
     ## !!!!!!!!!!!!!!!!!!!!!!!! NEED RETHINK !!!!!!!!!!!!!!!!!!!!!!!!
     meta.p <- apply(pv, 1, function(p) exp(mean(log(p)))) ## geometric mean
-    meta.q <- p.adjust(meta.p, method = "BH")
+    meta.q <- stats::p.adjust(meta.p, method = "BH")
     meta.fx <- rowMeans(fc, na.rm = TRUE)
     meta.avg <- rowMeans(mx, na.rm = TRUE)
     meta.avg0 <- rowMeans(mx0, na.rm = TRUE)
@@ -437,7 +437,7 @@ ngs.fitContrastsWithTTEST <- function(X, contr.matrix, design, method = "welch",
     }
     kk <- c("mean.x", "mean.y", "mean.diff", "stderr", "df", "statistic", "pvalue")
     rt <- rt[, kk]
-    rt$qvalue <- p.adjust(rt[, "pvalue"], method = "BH")
+    rt$qvalue <- stats::p.adjust(rt[, "pvalue"], method = "BH")
     rt$mean.value <- (rt[, "mean.x"] + rt[, "mean.y"]) / 2
     tables[[i]] <- rt
   }
@@ -514,7 +514,7 @@ ngs.fitContrastsWithLIMMA <- function(X, contr.matrix, design, method = c("voom"
       }
       ct <- exp0[kk, i]
       y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
-      design1 <- model.matrix(~ 0 + y)
+      design1 <- stats::model.matrix(~ 0 + y)
       X1 <- X[, kk, drop = FALSE]
       if (method == "voom") {
         v <- limma::voom(2**X1, design1, plot = FALSE)
@@ -689,7 +689,7 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
   for (i in 1:ncol(contr.matrix)) {
     ct <- contr.matrix[, i]
     y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
-    design1 <- model.matrix(~ 0 + y)
+    design1 <- stats::model.matrix(~ 0 + y)
 
     if (method == "qlf") {
       fit <- edgeR::glmQLFit(dge, design1, robust = robust)
@@ -777,7 +777,7 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
 
     ct <- contr.matrix[kk, i]
     y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
-    design1 <- model.matrix(~ 0 + y)
+    design1 <- stats::model.matrix(~ 0 + y)
 
     if (method == "qlf") {
       fit <- edgeR::glmQLFit(dge1, design1, robust = robust)
@@ -853,7 +853,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
   }
   message("[ngs.fitContrastsWithDESEQ2] fitting DESEQ2 using design matrix")
 
-  design.formula <- formula(" ~ 0 + group")
+  design.formula <- stats::formula(" ~ 0 + group")
   message("[ngs.fitContrastsWithDESEQ2] using model design: ", as.character(design.formula))
 
   rownames.counts <- rownames(counts)
@@ -978,7 +978,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
     #
     ## sample-wise model matrix (does this work???)
     #
-    design.formula <- formula("~ 0+y")
+    design.formula <- stats::formula("~ 0+y")
     counts1 <- counts[, kk, drop = FALSE]
     #
     colnames(counts1) <- NULL

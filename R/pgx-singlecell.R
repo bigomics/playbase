@@ -95,18 +95,18 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
     if (method == "tsne") {
       px <- min(nrow(V) / 4, 30)
       pos <- Rtsne::Rtsne(V, perplexity = px)$Y
-      cluster <- kmeans(pos, k, iter.max = 100)$cluster
+      cluster <- stats::kmeans(pos, k, iter.max = 100)$cluster
     } else if (method == "umap") {
       pos <- uwot::umap(V) ## umap is tighter and faster than t-SNE
-      cluster <- kmeans(pos, k, iter.max = 100)$cluster
+      cluster <- stats::kmeans(pos, k, iter.max = 100)$cluster
     } else if (method == "kmeans") {
-      cluster <- kmeans(V, k, iter.max = 100)$cluster
+      cluster <- stats::kmeans(V, k, iter.max = 100)$cluster
     } else if (method == "hclust") {
-      cluster <- cutree(fastcluster::hclust(dist(V)), k)
+      cluster <- stats::cutree(fastcluster::hclust(dist(V)), k)
     } else {
       stop("ERROR:: unknown clustering method")
     }
-    ## cluster <- kmeans(po s,k)$cluster
+    ## cluster <- stats::kmeans(po s,k)$cluster
     cluster <- paste0("c", cluster)
     names(cluster) <- colnames(X1)
     cluster
@@ -233,7 +233,7 @@ pgx.scBatchIntegrate <- function(X, batch,
     xdim <- sapply(xlist, ncol)
     xdim
     k <- 15
-    k <- round(min(30, length(vg) / 3, median(xdim / 2)))
+    k <- round(min(30, length(vg) / 3, stats::median(xdim / 2)))
     k
     ## OFTEN GIVES ERROR!!!!!
     liger <- try(rliger::optimizeALS(liger, k = k))

@@ -18,7 +18,7 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
 
   ## get the top DE genes
   sig <- sort(sig)
-  genes <- c(Matrix::head(names(sig), ntop), tail(names(sig), ntop))
+  genes <- c(Matrix::head(names(sig), ntop), utils::tail(names(sig), ntop))
 
   ## Read the H5 matrix file
 
@@ -88,12 +88,12 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
     sel.data <- surv[sel, ]
 
     ## fit survival curve on two groups
-    poscor <- (rho > median(rho, na.rm = TRUE))
+    poscor <- (rho > stats::median(rho, na.rm = TRUE))
     table(poscor)
 
 
     sdf <- survival::survdiff(survival::Surv(months, status) ~ poscor, data = sel.data)
-    p.val <- 1 - pchisq(sdf$chisq, length(sdf$n) - 1)
+    p.val <- 1 - stats::pchisq(sdf$chisq, length(sdf$n) - 1)
     p.val
 
     surv.p[study] <- p.val
@@ -110,13 +110,13 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
       surv.p <- surv.p[ii]
       rho.list <- rho.list[ii]
     }
-    surv.q <- p.adjust(surv.p)
+    surv.q <- stats::p.adjust(surv.p)
     names(surv.q) <- names(surv.p)
 
     i <- 1
     nplots <- length(surv.p)
     nc <- 7
-    par(mfrow = c(5, nc), mar = c(3.0, 3, 1.6, 0) * 0.9, oma = c(3, 3, 0, 0), mgp = c(1.7, 0.7, 0))
+    graphics::par(mfrow = c(5, nc), mar = c(3.0, 3, 1.6, 0) * 0.9, oma = c(3, 3, 0, 0), mgp = c(1.7, 0.7, 0))
     i <- 1
     for (i in 1:nplots) {
       study <- names(surv.p)[i]
@@ -129,7 +129,7 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
       rho <- rho[rownames(sel.data)]
 
       ## fit survival curve on two groups
-      poscor <- (rho > median(rho, na.rm = TRUE))
+      poscor <- (rho > stats::median(rho, na.rm = TRUE))
       table(poscor)
 
       fit <- survival::survfit(survival::Surv(months, status) ~ poscor, data = sel.data)
@@ -150,7 +150,7 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
         col = 2:3, lwd = 2, main = study,
         xlab = xlab, ylab = ylab, cex.main = 1.1
       )
-      legend("bottomleft", legend.labs,
+      graphics::legend("bottomleft", legend.labs,
         pch = "-", lwd = 2, col = 2:3,
         cex = 0.9, y.intersp = 0.85
       )
@@ -158,7 +158,7 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
       p.val <- round(surv.p[study], 3)
       q.val <- round(surv.q[study], 3)
       pq <- c(paste("p=", p.val), paste("q=", q.val))
-      legend("topright", pq, bty = "n", cex = 0.9, y.intersp = 0.85)
+      graphics::legend("topright", pq, bty = "n", cex = 0.9, y.intersp = 0.85)
     } ## end of for
   }
   return(surv.p)

@@ -53,7 +53,7 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   } else if (ct %in% colnames(ngs$samples)) {
     group <- ngs$samples[, ct]
 
-    design <- model.matrix(~ 0 + group)
+    design <- stats::model.matrix(~ 0 + group)
     colnames(design) <- sub("group", "", colnames(design))
     fit <- limma::eBayes(limma::lmFit(ngs$X, design))
     stat <- limma::topTable(fit, number = Inf)
@@ -198,8 +198,8 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
   k <- 1
   for (k in 1:3) {
     W <- res$W[[k]]
-    par(mar = c(5, 8 * cex, 4, 0), mgp = c(2.2, 0.8, 0))
-    barplot(t(W),
+    graphics::par(mar = c(5, 8 * cex, 4, 0), mgp = c(2.2, 0.8, 0))
+    graphics::barplot(t(W),
       horiz = TRUE, las = 1,
       border = NA, col = klrpal,
       names.arg = sub(".*:", "", rownames(W)),
@@ -207,11 +207,11 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
       cex.axis = 1 * cex, cex.names = 1.1 * cex,
       cex.lab = 1 * cex, xlab = "importance"
     )
-    title(names(res$loadings)[k],
+    graphics::title(names(res$loadings)[k],
       cex.main = 1.3 * cex,
       adj = 0.33, xpd = NA
     )
-    legend("topright",
+    graphics::legend("topright",
       legend = names(klrpal),
       cex = 1.1 * cex, pch = 15, col = klrpal, #
       y.intersp = 0.85, inset = c(0.15, 0.03)
@@ -219,7 +219,7 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
 
     if (k < 99) {
       ## add correlation lines
-      par(mar = c(5, 0, 4, 0))
+      graphics::par(mar = c(5, 0, 4, 0))
 
       plot(0,
         type = "n", xlim = c(0, 1), ylim = c(0, nrow(W)),
@@ -251,10 +251,10 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
         klr <- rep(psych::alpha("grey70", 0.2), nrow(ee))
         klr[which(ee$looping)] <- psych::alpha("red3", 0.3)
       }
-      segments(0, xy[, 1] - 0.5, 1, xy[, 2], lwd = lwd, col = klr, lty = lty)
+      graphics::segments(0, xy[, 1] - 0.5, 1, xy[, 2], lwd = lwd, col = klr, lty = lty)
       rr <- paste(round(range(abs(ee$rho)), 2), collapse = ",")
 
-      title(sub = paste0("[", rr, "]"), line = -1.2, cex.sub = cex)
+      graphics::title(sub = paste0("[", rr, "]"), line = -1.2, cex.sub = cex)
     }
   }
 }
@@ -416,16 +416,16 @@ pgx.multiclassVariableImportance <- function(X, y,
 
 
     out0 <- glmnet::cv.glmnet(t(X), y, alpha = 0, family = fam, standardize = TRUE, nfold = NFOLD)
-    cf0 <- Matrix::rowMeans(do.call(cbind, coef(out0, s = "lambda.min"))[-1, ]**2)
+    cf0 <- Matrix::rowMeans(do.call(cbind, stats::coef(out0, s = "lambda.min"))[-1, ]**2)
 
     out1 <- glmnet::cv.glmnet(t(X), y, alpha = 1, family = fam, standardize = TRUE, nfold = NFOLD)
-    cf1 <- Matrix::rowMeans(do.call(cbind, coef(out1, s = "lambda.min"))[-1, ]**2)
+    cf1 <- Matrix::rowMeans(do.call(cbind, stats::coef(out1, s = "lambda.min"))[-1, ]**2)
 
     out0a <- glmnet::cv.glmnet(t(X), y, alpha = 0, family = fam, standardize = FALSE, nfold = NFOLD)
-    cf0a <- Matrix::rowMeans(do.call(cbind, coef(out0a, s = "lambda.min"))[-1, ]**2)
+    cf0a <- Matrix::rowMeans(do.call(cbind, stats::coef(out0a, s = "lambda.min"))[-1, ]**2)
 
     out1a <- glmnet::cv.glmnet(t(X), y, alpha = 1, family = fam, standardize = FALSE, nfold = NFOLD)
-    cf1a <- Matrix::rowMeans(do.call(cbind, coef(out1a, s = "lambda.min"))[-1, ]**2)
+    cf1a <- Matrix::rowMeans(do.call(cbind, stats::coef(out1a, s = "lambda.min"))[-1, ]**2)
 
     imp[["glmnet.a0"]] <- (cf0 / max(abs(cf0)) + cf0a / max(abs(cf0a))) * sdx[names(cf0)]
     imp[["glmnet.a1"]] <- (cf1 / max(abs(cf1)) + cf1a / max(abs(cf1a))) * sdx[names(cf1)]
@@ -539,28 +539,28 @@ pgx.variableImportance <- function(X, y,
       alpha = 0, family = "binomial",
       standardize = TRUE
     )
-    cf0 <- coef(out0, s = "lambda.min")[-1, 1]
+    cf0 <- stats::coef(out0, s = "lambda.min")[-1, 1]
 
 
     out1 <- glmnet::cv.glmnet(t(X), y,
       alpha = 1, family = "binomial",
       standardize = TRUE
     )
-    cf1 <- coef(out1, s = "lambda.min")[-1, 1]
+    cf1 <- stats::coef(out1, s = "lambda.min")[-1, 1]
 
 
     out0a <- glmnet::cv.glmnet(t(X), y,
       alpha = 0, family = "binomial",
       standardize = FALSE
     )
-    cf0a <- coef(out0a, s = "lambda.min")[-1, 1]
+    cf0a <- stats::coef(out0a, s = "lambda.min")[-1, 1]
 
 
     out1a <- glmnet::cv.glmnet(t(X), y,
       alpha = 1, family = "binomial",
       standardize = FALSE
     )
-    cf1a <- coef(out1a, s = "lambda.min")[-1, 1]
+    cf1a <- stats::coef(out1a, s = "lambda.min")[-1, 1]
 
 
     imp[["glmnet.a0"]] <- (cf0 / max(abs(cf0)) + cf0a / max(abs(cf0a))) * sdx[names(cf0)]

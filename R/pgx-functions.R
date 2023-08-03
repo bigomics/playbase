@@ -260,7 +260,7 @@ add_opacity <- function(hexcol, opacity) {
   rgba <- strsplit(gsub("rgba\\(|\\)", "", plotly::toRGB(hexcol[ii], opacity)), split = ",")
   rgba <- apply(do.call(rbind, rgba), 2, as.numeric)
   if (length(hexcol) == 1) rgba <- matrix(rgba, nrow = 1)
-  col1[ii] <- rgb(rgba[, 1] / 255, rgba[, 2] / 255, rgba[, 3] / 255, rgba[, 4])
+  col1[ii] <- grDevices::rgb(rgba[, 1] / 255, rgba[, 2] / 255, rgba[, 3] / 255, rgba[, 4])
   col1
 }
 
@@ -702,7 +702,7 @@ read.as_matrix.SAVE <- function(file) {
   ## read delimited table automatically determine separator. allow duplicated rownames.
   line1 <- as.character(read.csv(file, comment.char = "#", sep = "\n", nrow = 1)[1, ])
   sep <- names(which.max(sapply(c("\t", ",", ";"), function(s) length(strsplit(line1, split = s)[[1]]))))
-  x0 <- read.csv(file, comment.char = "#", sep = sep, check.names = FALSE, stringsAsFactors = FALSE)
+  x0 <- utils::read.csv(file, comment.char = "#", sep = sep, check.names = FALSE, stringsAsFactors = FALSE)
   x <- NULL
   sel <- which(!as.character(x0[, 1]) %in% c("", " ", "NA", "na", NA))
   if (length(sel)) {
@@ -1515,7 +1515,7 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
     if (strtrim(gmt.file, 1) == "/") dir <- NULL
     if (!is.null(dir)) f0 <- paste(sub("/$", "", dir), "/", gmt.file, sep = "")
 
-    gmt <- read.csv(f0, sep = "!", header = FALSE, comment.char = "#", nrows = nrows)[, 1]
+    gmt <- utils::read.csv(f0, sep = "!", header = FALSE, comment.char = "#", nrows = nrows)[, 1]
     gmt <- as.character(gmt)
 
     gmt <- sapply(gmt, strsplit, split = "\t")
@@ -1703,7 +1703,7 @@ pgx.getGeneSetCollections <- function(gsets, min.size = 10, max.size = 500) {
 #'
 #' @examples
 #' \dontrun{
-#' data <- read.csv("expression.csv", row.names = 1)
+#' data <- utils::read.csv("expression.csv", row.names = 1)
 #' probes <- c("FOO", "BAR")
 #' matches <- filterProbes(data, probes)
 #' }
@@ -1985,7 +1985,7 @@ relevelFactorFirst <- function(f) {
 extremeCorrelation <- function(query_sig, ref_set, n = 200) {
   gg <- intersect(rownames(ref_set), names(query_sig))
   if (n > 0) {
-    gg <- gg[unique(c(Matrix::head(order(query_sig), n), head(order(-query_sig), n)))]
+    gg <- gg[unique(c(Matrix::head(order(query_sig), n), utils::head(order(-query_sig), n)))]
   }
   rho <- stats::cor(ref_set[gg, ], query_sig[gg], use = "pairwise")
   rho <- rho[order(-rowMeans(rho**2, na.rm = TRUE)), , drop = FALSE]
@@ -2372,7 +2372,7 @@ expandPhenoMatrix <- function(pheno, collapse = TRUE, drop.ref = TRUE) {
   for (i in 1:ncol(a1)) {
     if (a1.isnum[i]) {
       suppressWarnings(x <- as.numeric(a1[, i]))
-      m0 <- matrix((x > median(x, na.rm = TRUE)), ncol = 1)
+      m0 <- matrix((x > stats::median(x, na.rm = TRUE)), ncol = 1)
       colnames(m0) <- "high"
     } else if (drop.ref && nlevel[i] == 2) {
       x <- as.character(a1[, i])
@@ -2382,7 +2382,7 @@ expandPhenoMatrix <- function(pheno, collapse = TRUE, drop.ref = TRUE) {
     } else {
       x <- as.character(a1[, i])
       x[is.na(x) | x == "NA" | x == " "] <- "_"
-      m0 <- model.matrix(~ 0 + x)
+      m0 <- stats::model.matrix(~ 0 + x)
       colnames(m0) <- sub("^x", "", colnames(m0))
     }
     rownames(m0) <- rownames(a1)

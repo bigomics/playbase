@@ -43,7 +43,7 @@ pgx.computeGlassoAroundGene <- function(X, gene, nmax = 100) {
   jj <- Matrix::head(order(-rowMeans(rho**2)), nmax)
   tX <- t(X[jj, ])
 
-  vX <- var(tX)
+  vX <- stats::var(tX)
   res <- glasso::glasso(vX, 0.1)
   res$cor <- Matrix::cov2cor(vX)
   res$sampleSize <- nrow(tX)
@@ -92,12 +92,12 @@ pgx.plotPartialCorrelationGraph <- function(res, gene, rho.min = 0.1, nsize = -1
                                             radius = -1, plot = TRUE, layout = "fr") {
   ## GLASSO object
   nn <- rownames(res$cor)
-  R <- cov2cor(res$w)
+  R <- stats::cov2cor(res$w)
   diag(R) <- 0
-  tail(sort(abs(R)), 20)
-  P <- cov2cor(res$wi)
+  utils::tail(sort(abs(R)), 20)
+  P <- stats::cov2cor(res$wi)
   diag(P) <- 0
-  tail(sort(abs(P)), 20)
+  utils::tail(sort(abs(P)), 20)
   rownames(R) <- colnames(R) <- nn
   rownames(P) <- colnames(P) <- nn
 
@@ -149,7 +149,7 @@ pgx.plotPartialCorrelationGraph <- function(res, gene, rho.min = 0.1, nsize = -1
   }
 
   if (plot == TRUE) {
-    par(mar = c(1, 1, 1, 1) * 0)
+    graphics::par(mar = c(1, 1, 1, 1) * 0)
     plot(G1,
       vertex.color = "lightskyblue1",
       vertex.frame.color = "skyblue"
@@ -417,7 +417,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1) {
       if (length(unique(dd[kk, i])) < 2 || length(unique(dd[kk, j])) < 2) next
       for (j in (i + 1):ncol(dd)) {
         tb <- table(dd[, i], dd[, j])
-        fisher.P[i, j] <- fisher.test(tb, simulate.p.value = TRUE)$p.value
+        fisher.P[i, j] <- stats::fisher.test(tb, simulate.p.value = TRUE)$p.value
       }
     }
     rownames(fisher.P) <- colnames(dd)
@@ -432,7 +432,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1) {
       for (j in 1:ncol(dc)) {
         kk <- which(!is.na(dc[, j]) & !is.na(dd[, i]))
         if (length(unique(dd[kk, i])) < 2) next
-        kruskal.P[i, j] <- kruskal.test(dc[kk, j], dd[kk, i])$p.value
+        kruskal.P[i, j] <- stats::kruskal.test(dc[kk, j], dd[kk, i])$p.value
       }
     }
     rownames(kruskal.P) <- colnames(dd)
@@ -447,7 +447,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1) {
     j <- 2
     for (i in 1:(ncol(dc) - 1)) {
       for (j in (i + 1):ncol(dc)) {
-        cor.P[i, j] <- cor.test(dc[, i], dc[, j])$p.value
+        cor.P[i, j] <- stats::cor.test(dc[, i], dc[, j])$p.value
       }
     }
     rownames(cor.P) <- colnames(dc)
@@ -476,7 +476,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1) {
   }
 
   ij <- which(!is.na(P), arr.ind = TRUE)
-  qv <- p.adjust(P[ij], method = "BH")
+  qv <- stats::p.adjust(P[ij], method = "BH")
   Q <- P
   Q[ij] <- qv
 
@@ -485,7 +485,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1) {
   Q[is.na(Q)] <- 0
   Q <- (Q + t(Q)) / 2
 
-  BLUERED <- colorRampPalette(c("blue3", "white", "red3"))
+  BLUERED <- grDevices::colorRampPalette(c("blue3", "white", "red3"))
 
   if (plot == TRUE) {
     logP <- -log10(P + 1e-8)

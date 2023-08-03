@@ -243,12 +243,12 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
     pheno.ref <- unique(pheno0[which(toupper(pheno0) %in% toupper(ref))])
     if (verbose > 0) cat("setting reference to y=", pheno.ref, "\n")
     bb <- c(pheno.ref, sort(setdiff(unique(pheno0), pheno.ref)))
-    pheno1 <- relevel(factor(pheno0), ref = bb[1])
+    pheno1 <- stats::relevel(factor(pheno0), ref = bb[1])
   } else {
     if (verbose > 0) cat("WARNING: could not auto-detect reference\n")
     bb <- as.character(sort(unique(pheno0)))
     if (verbose > 0) cat("setting reference to first class", bb[1], "\n")
-    pheno1 <- relevel(factor(pheno0), ref = bb[1])
+    pheno1 <- stats::relevel(factor(pheno0), ref = bb[1])
   }
   if (0 && length(bb) != 2) {
     stop("gx.limma::fatal error:only two class comparisons")
@@ -256,7 +256,7 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
   }
 
 
-  design <- model.matrix(~pheno1)
+  design <- stats::model.matrix(~pheno1)
   colnames(design)
   colnames(design)[2:ncol(design)] <- paste0(levels(pheno1)[-1], "_vs_", levels(pheno1)[1])
   colnames(design) <- gsub("\\(|\\)", "", colnames(design))
@@ -395,7 +395,7 @@ gx.limma.paired <- function(X, pheno, pair, fdr = 0.05, lfc = 0.20,
 
   ## setup LIMMA (paired t-test)
 
-  design <- model.matrix(~ a + b)
+  design <- stats::model.matrix(~ a + b)
 
   ## perform fitting
   fit0 <- limma::lmFit(X, design)
@@ -507,7 +507,7 @@ seq_limma <- function(countdata, y, method = "edgeR") {
   dgeObj <- edgeR::calcNormFactors(dgeObj, method = "TMM")
 
   ## Define design matrix
-  design <- model.matrix(~group)
+  design <- stats::model.matrix(~group)
 
   ## Estimating the dispersion
 

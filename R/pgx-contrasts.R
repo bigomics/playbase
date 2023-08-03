@@ -242,7 +242,7 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
       cat("reference auto-detected:", ref1, "\n")
     }
     cref <- as.character(ref1)
-    m1 <- model.matrix(~ 0 + x)
+    m1 <- stats::model.matrix(~ 0 + x)
     colnames(m1) <- sub("^x", "", colnames(m1))
     if (ref1 %in% full) {
       levels <- names(table(x))
@@ -320,7 +320,7 @@ makeFullContrasts <- function(labels, by.sample = FALSE) {
   }
   rownames(contr.matrix) <- levels
   if (by.sample) {
-    design <- model.matrix(~ 0 + labels)
+    design <- stats::model.matrix(~ 0 + labels)
     colnames(design) <- sub("^labels", "", colnames(design))
     rownames(design) <- names(labels)
     design <- design[, rownames(contr.matrix)]
@@ -468,7 +468,7 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
       return(NULL)
     }
     x <- factor(x)
-    if (!is.na(ref1)) x <- relevel(x, ref = ref1)
+    if (!is.na(ref1)) x <- stats::relevel(x, ref = ref1)
 
     xlevels <- gsub("[^[:alnum:]+-]", "", levels(x))
     levels(x) <- shortestunique(xlevels, slen = slen)
@@ -482,14 +482,14 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
     } else if (nn < 2) {
       return(NULL)
     } else if (nn == 2) {
-      ct <- model.matrix(~x)[, 2, drop = FALSE]
+      ct <- stats::model.matrix(~x)[, 2, drop = FALSE]
       colnames(ct) <- paste0(levels(x)[2], "_vs_", levels(x)[1])
     } else if (nn >= 3) {
       if (is.na(ref1)) {
-        ct <- model.matrix(~ 0 + x)
+        ct <- stats::model.matrix(~ 0 + x)
         colnames(ct) <- paste0(levels(x), "_vs_other")
       } else {
-        ct <- model.matrix(~ 0 + x)
+        ct <- stats::model.matrix(~ 0 + x)
         colnames(ct) <- paste0(levels(x), "_vs_", xref)
         i <- 1
         for (i in 1:ncol(ct)) {
@@ -547,14 +547,14 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
   df[df == " "] <- NA
 
   ## ----------- use type.convert to infer parameters
-  df <- type.convert(data.frame(df, check.names = FALSE), as.is = TRUE)
+  df <- utils::type.convert(data.frame(df, check.names = FALSE), as.is = TRUE)
 
   ## ----------- convert numeric variables into bins
   ii <- which(sapply(df, class) %in% c("integer", "numeric"))
   if (length(ii)) {
     for (i in ii) {
       x <- as.numeric(as.character(df[, i]))
-      x <- c("low", "high")[1 + 1 * (x > median(x, na.rm = TRUE))]
+      x <- c("low", "high")[1 + 1 * (x > stats::median(x, na.rm = TRUE))]
       df[, i] <- factor(x, levels = c("low", "high"))
     }
   }

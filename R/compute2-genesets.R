@@ -96,7 +96,7 @@ compute_testGenesets <- function(pgx,
 
   # If dataset is too small that size.ok == 0, then select top 100
   if (sum(size.ok) == 0) {
-    top_100gs <- head(sort(gmt.size, decreasing = TRUE), 100)
+    top_100gs <- utils::head(sort(gmt.size, decreasing = TRUE), 100)
     size.ok <- names(gmt.size) %in% names(top_100gs)
   }
 

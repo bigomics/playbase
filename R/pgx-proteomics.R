@@ -69,10 +69,10 @@ prot.medianImpute <- function(X, groups) {
 .RGimputation <- function(x, width = 0.3, downshift = 1.8, bycolumn = T) {
   if (bycolumn == T) {
     for (i in 1:ncol(x)) {
-      x[, i][is.na(x[, i])] <- rnorm(sum(is.na(x[, i])), mean(as.numeric(x[, i]), na.rm = T) - downshift * sd(as.numeric(x[, i]), na.rm = T), width * sd(as.numeric(x[, i]), na.rm = T))
+      x[, i][is.na(x[, i])] <- stats::rnorm(sum(is.na(x[, i])), mean(as.numeric(x[, i]), na.rm = T) - downshift * stats::sd(as.numeric(x[, i]), na.rm = T), width * stats::sd(as.numeric(x[, i]), na.rm = T))
     }
   } else {
-    x[is.na(x)] <- rnorm(sum(is.na(x)), mean(as.numeric(x), na.rm = T) - downshift * sd(as.numeric(x), na.rm = T), width * sd(as.numeric(x), na.rm = T))
+    x[is.na(x)] <- stats::rnorm(sum(is.na(x)), mean(as.numeric(x), na.rm = T) - downshift * stats::sd(as.numeric(x), na.rm = T), width * stats::sd(as.numeric(x), na.rm = T))
   }
   return(x)
 }
@@ -121,14 +121,14 @@ fit.weibull2 <- function(x, y) {
   x <- x[jj]
   y <- y[jj]
   cdf.weibull <- function(x, lambda, k) (1 - exp(-(x / lambda)^k))
-  fit <- nls(y ~ cdf.weibull(x, lambda, k),
+  fit <- stats::nls(y ~ cdf.weibull(x, lambda, k),
     start = list(lambda = 50, k = 1),
     lower = list(lambda = 0.01, k = 0.001),
     algorithm = "port"
   )
   xfit <- seq(0, 48, 1)
-  lambda0 <- coef(fit)["lambda"]
-  k0 <- coef(fit)["k"]
+  lambda0 <- stats::coef(fit)["lambda"]
+  k0 <- stats::coef(fit)["k"]
   yfit <- cdf.weibull(xfit, lambda0, k0)
   t50 <- lambda0 * log(2)**(1 / k0) ## time at 50%
   list(x = xfit, y = yfit, t50 = t50)

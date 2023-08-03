@@ -152,7 +152,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     if (length(notk)) {
       stat.group[notk] <- "_"
     }
-    design <- model.matrix(~ 0 + stat.group) ## clean design no batch effects...
+    design <- stats::model.matrix(~ 0 + stat.group) ## clean design no batch effects...
     colnames(design) <- sub("^stat.group", "", colnames(design))
     if (is.null(names(stat.group))) {
       stop("[compute_testGenesSingleOmics] FATAL:: stat.group must have names")

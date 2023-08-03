@@ -226,11 +226,11 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
       ## Always take at least first 100.. (HACK??!!!)
       if (length(genes.dn) < 100) {
         genes.dn0 <- rownames(limma0)[order(limma0[, "logFC"])]
-        genes.dn <- head(unique(c(genes.dn, genes.dn0)), 100)
+        genes.dn <- utils::head(unique(c(genes.dn, genes.dn0)), 100)
       }
       if (length(genes.up) < 100) {
         genes.up0 <- rownames(limma0)[order(-limma0[, "logFC"])]
-        genes.up <- head(unique(c(genes.up, genes.up0)), 100)
+        genes.up <- utils::head(unique(c(genes.up, genes.up0)), 100)
       }
 
       tt <- system.time({
@@ -408,7 +408,7 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
     ## fast GSEA
     if ("fgsea" %in% method) {
       rnk <- rowMeans(xx[, which(yy == 1), drop = FALSE]) - rowMeans(xx[, which(yy == 0), drop = FALSE])
-      rnk <- rnk + 1e-8 * rnorm(length(rnk))
+      rnk <- rnk + 1e-8 * stats::rnorm(length(rnk))
       #
       tt <- system.time(
         output <- fgsea::fgseaSimple(gmt, rnk,

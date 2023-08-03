@@ -45,7 +45,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
   getModelMatrix <- function(v) {
     y <- as.character(pheno[, v])
     y[is.na(y)] <- "NA" ## or impute???
-    m1 <- model.matrix(~y)[, -1, drop = FALSE]
+    m1 <- stats::model.matrix(~y)[, -1, drop = FALSE]
     colnames(m1) <- sub("^y", paste0(v, "="), colnames(m1))
     m1
   }
@@ -55,7 +55,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
 
   ## tidy up pheno matrix?? get correct parameter types
 
-  pheno <- type.convert(pheno, as.is = TRUE)
+  pheno <- utils::type.convert(pheno, as.is = TRUE)
 
   message("[pgx.superBatchCorrect] 1 : dim.pheno = ", paste(dim(pheno), collapse = "x"))
   message("[pgx.superBatchCorrect] 1 : model.par = ", paste(model.par, collapse = "x"))
@@ -200,7 +200,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
       dbg("[pgx.superBatchCorrect] Correcting for unwanted library effects:", sel, "\n")
       exp.pheno <- as.matrix(pheno[, sel, drop = FALSE])
       exp.pheno <- apply(exp.pheno, 2, function(x) {
-        x[is.na(x)] <- median(x, na.rm = TRUE)
+        x[is.na(x)] <- stats::median(x, na.rm = TRUE)
         x
       })
       cX <- limma::removeBatchEffect(cX, covariates = exp.pheno, design = mod1x)
@@ -220,7 +220,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
         b1 <- as.character(pheno[, p1[i]])
         b1[is.na(b1)] <- "NA" ## NA is third group?? better to impute??
         cX <- limma::removeBatchEffect(cX, batch = b1, design = mod1x)
-        b1x <- model.matrix(~b1)[, -1, drop = FALSE]
+        b1x <- stats::model.matrix(~b1)[, -1, drop = FALSE]
         colnames(b1x) <- sub("^b1", paste0(p1[i], "."), colnames(b1x))
         B <- cbind(B, b1x)
       }
@@ -231,7 +231,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
       dbg("[pgx.superBatchCorrect] Correcting for unwanted biological covariates:", p2, "\n")
       b2 <- as.matrix(pheno[, p2, drop = FALSE])
       b2 <- apply(b2, 2, function(x) {
-        x[is.na(x)] <- median(x, na.rm = TRUE)
+        x[is.na(x)] <- stats::median(x, na.rm = TRUE)
         x
       })
       cX <- limma::removeBatchEffect(cX, covariates = b2, design = mod1x)
@@ -260,7 +260,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
       if (!is.null(mod1)) mod1x <- cbind(1, mod1)
       cX <- limma::removeBatchEffect(cX, batch = batch, design = mod1x)
 
-      b1x <- model.matrix(~batch)[, -1, drop = FALSE]
+      b1x <- stats::model.matrix(~batch)[, -1, drop = FALSE]
       colnames(b1x) <- sub("^batch", paste0(b, "."), colnames(b1x))
       B <- cbind(B, b1x)
     }
@@ -401,7 +401,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     pX <- NULL
     while (length(ii) > 0 && niter < max.iter) {
       xx <- Matrix::head(cX[order(-apply(cX, 1, sd)), ], hc.top)
-      hc <- cutree(fastcluster::hclust(dist(t(xx)), method = "ward.D2"), 2)
+      hc <- stats::cutree(fastcluster::hclust(dist(t(xx)), method = "ward.D2"), 2)
       hc.rho <- stats::cor(hc, mod1)
       hc.rho <- apply(abs(hc.rho), 1, max)
       ii <- which(hc.rho < max.rho)
@@ -473,10 +473,10 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
     if (inherits(y1, c("factor", "character", "logical"))) {
       y1 <- factor(as.character(y1))
     } else {
-      y1 <- y1 + 1e-8 * rnorm(length(y1))
-      y1 <- (y1 > median(y1))
+      y1 <- y1 + 1e-8 * stats::rnorm(length(y1))
+      y1 <- (y1 > stats::median(y1))
     }
-    design <- model.matrix(~ 1 + y1)
+    design <- stats::model.matrix(~ 1 + y1)
     fit <- limma::lmFit(x[, ii], design)
     suppressWarnings(fit <- try(limma::eBayes(fit, trend = FALSE)))
 
@@ -491,7 +491,7 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
     ii <- which(!is.na(y))
     y1 <- y[ii]
     if (inherits(y1, "factor")) y1 <- factor(as.character(y1))
-    design <- model.matrix(~ 0 + y1)
+    design <- stats::model.matrix(~ 0 + y1)
 
     r1 <- stats::cor(t(x[, ii]), design)
     rowMeans(abs(r1))
@@ -739,7 +739,7 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
 
   ## shift zero to 1% percentile
   if (!is.count) {
-    q0 <- quantile(X[X > 0], probs = 0.01, na.rm = TRUE)
+    q0 <- stats::quantile(X[X > 0], probs = 0.01, na.rm = TRUE)
 
     tx <- pmax(X - q0, 0) ## log expression
     cx <- pmax(2**tx - 1, 0) ## counts

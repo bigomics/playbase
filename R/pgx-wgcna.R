@@ -34,7 +34,7 @@ labels2rainbow <- function(net) {
   ii <- hc$order
   col1 <- labels2colors(net$colors)
   col.rnk <- rank(tapply(1:n, col1[ii], mean))
-  new.col <- rainbow(nc)[col.rnk]
+  new.col <- grDevices::rainbow(nc)[col.rnk]
   names(new.col) <- names(col.rnk)
   new.col["grey"] <- "#AAAAAA"
   new.col <- new.col[col1]

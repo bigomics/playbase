@@ -97,7 +97,7 @@ gx.nnmcorrect <- function(X, y, use.design = TRUE, dist.method = "cor",
   ## remove pairing effect
   message("[gx.nnmcorrect] remove pairing effect...")
   if (use.design) {
-    design <- model.matrix(~full.y)
+    design <- stats::model.matrix(~full.y)
     full.X <- limma::removeBatchEffect(full.X,
       batch = full.pairs,
       design = design

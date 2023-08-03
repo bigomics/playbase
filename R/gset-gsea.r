@@ -94,7 +94,7 @@ read.gmt <- function(gmt.file, dir = NULL, add.source = FALSE, nrows = -1) {
   f0 <- gmt.file
   if (strtrim(gmt.file, 1) == "/") dir <- NULL
   if (!is.null(dir)) f0 <- paste(sub("/$", "", dir), "/", gmt.file, sep = "")
-  gmt <- read.csv(f0, sep = "!", header = FALSE, comment.char = "#", nrows = nrows)[, 1]
+  gmt <- utils::read.csv(f0, sep = "!", header = FALSE, comment.char = "#", nrows = nrows)[, 1]
   gmt <- as.character(gmt)
   gmt <- sapply(gmt, strsplit, split = "\t")
   names(gmt) <- NULL
@@ -387,11 +387,11 @@ run.GSEA <- function(X, y, gmt, output.dir = NULL, fdr = 0.25, set.min = 15,
     cat("Error: could not find report files in", d1, "\n")
     stop("exiting\n")
   }
-  r1 <- read.csv(paste(d1, rr[1], sep = "/"),
+  r1 <- utils::read.csv(paste(d1, rr[1], sep = "/"),
     sep = "\t",
     header = TRUE, row.names = 1, check.names = FALSE
   )
-  r2 <- read.csv(paste(d1, rr[2], sep = "/"),
+  r2 <- utils::read.csv(paste(d1, rr[2], sep = "/"),
     sep = "\t",
     header = TRUE, row.names = 1, check.names = FALSE
   )
@@ -440,7 +440,7 @@ run.GSEA <- function(X, y, gmt, output.dir = NULL, fdr = 0.25, set.min = 15,
         if (nes > 0) topgenes <- Matrix::head(rev(names(sorted.rnk)), ri)
         k <- names(gmt.origname)[match(rownames(res)[i], gmt.origname)]
         gg <- intersect(topgenes, gmt[[k]])
-        rnk0 <- rnk - median(rnk)
+        rnk0 <- rnk - stats::median(rnk)
         edge.genes[i] <- paste(gg[order(-abs(rnk0[gg]))], collapse = "|")
       }
     }
@@ -448,7 +448,7 @@ run.GSEA <- function(X, y, gmt, output.dir = NULL, fdr = 0.25, set.min = 15,
   }
 
   ## write
-  write.table(res, file = rpt.file, quote = FALSE, sep = "\t", col.names = NA)
+  utils::write.table(res, file = rpt.file, quote = FALSE, sep = "\t", col.names = NA)
 
   ## LeadingEdge analysis
   if (do.leading.edge == TRUE) {
@@ -530,7 +530,7 @@ run.GSEA.preranked <- function(rnk, gmt, output.dir = NULL, fdr = 0.25,
 
   ## prepare rank file
   rnk <- sort(rnk) ## sorted!!
-  write.table(cbind(names(rnk), rnk),
+  utils::write.table(cbind(names(rnk), rnk),
     file = rnk.file, quote = FALSE,
     row.names = FALSE, col.names = FALSE, sep = "\t"
   )
@@ -600,11 +600,11 @@ run.GSEA.preranked <- function(rnk, gmt, output.dir = NULL, fdr = 0.25,
     cat("Error: could not find report files. exiting.\n")
     return(1)
   }
-  r1 <- read.csv(paste(d1, rr[1], sep = "/"),
+  r1 <- utils::read.csv(paste(d1, rr[1], sep = "/"),
     sep = "\t",
     header = TRUE, row.names = 1, check.names = FALSE
   )
-  r2 <- read.csv(paste(d1, rr[2], sep = "/"),
+  r2 <- utils::read.csv(paste(d1, rr[2], sep = "/"),
     sep = "\t",
     header = TRUE, row.names = 1, check.names = FALSE
   )
@@ -673,7 +673,7 @@ run.GSEA.preranked <- function(rnk, gmt, output.dir = NULL, fdr = 0.25,
   }
 
   ## write
-  write.table(res, file = rpt.file, quote = FALSE, sep = "\t", col.names = NA)
+  utils::write.table(res, file = rpt.file, quote = FALSE, sep = "\t", col.names = NA)
 
   ## LeadingEdge analysis
   if (do.leading.edge == TRUE) {
@@ -724,7 +724,7 @@ gsea.LeadingEdgeAnalysis <- function(output.dir, ntop = 100, gsea.program = "/op
 
   res.file <- dir(output.dir, "gsea_report.txt", full.names = TRUE)
   res.file
-  res <- read.csv(res.file, sep = "\t", row.names = 1)
+  res <- utils::read.csv(res.file, sep = "\t", row.names = 1)
   Matrix::head(res)[, 1:4]
   rpt.prefix <- gsub(".gsea_report.txt", "", res.file)
   rpt.prefix <- gsub(output.dir, "", rpt.prefix)
@@ -914,8 +914,8 @@ justGSEA <- function(X, gmt, Y = NULL, fdr = 1, set.min = 15, set.max = 500, top
   qval <- qval[jj, , drop = FALSE]
   if (!is.null(output.dir)) {
     system(paste("mkdir -p", output.dir))
-    write.csv(nes, file = paste(output.dir, "/justGSEA_", rpt.label, "-NES.csv", sep = ""))
-    write.csv(qval, file = paste(output.dir, "/justGSEA_", rpt.label, "-qvalue.csv", sep = ""))
+    utils::write.csv(nes, file = paste(output.dir, "/justGSEA_", rpt.label, "-NES.csv", sep = ""))
+    utils::write.csv(qval, file = paste(output.dir, "/justGSEA_", rpt.label, "-qvalue.csv", sep = ""))
   }
   res <- c()
   res$qvalue <- qval
@@ -956,7 +956,7 @@ getGseaOutput <- function(path = "../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut
   topgs <- sub(".xls", "", dir(gsea_dir, pattern = "[A-Z].*xls", full.names = FALSE))
   topgs
 
-  M <- read.csv(file.path(LE_dir, "leading_edge_matrix_for_results.1.gct"),
+  M <- utils::read.csv(file.path(LE_dir, "leading_edge_matrix_for_results.1.gct"),
     sep = "\t", header = TRUE, skip = 2, row.names = 1
   )
   M <- as.matrix(M[, -1])
@@ -966,7 +966,7 @@ getGseaOutput <- function(path = "../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut
   output$dir <- gsea_dir
   output$index <- file.path(gsea_dir, "index.html")
   reports_xls <- dir(gsea_dir, pattern = "^gsea_report.*xls", full.names = TRUE)
-  report <- lapply(reports_xls, function(x) read.csv(x, sep = "\t", check.names = FALSE))
+  report <- lapply(reports_xls, function(x) utils::read.csv(x, sep = "\t", check.names = FALSE))
   output$report <- do.call(rbind, report)
   rownames(output$report) <- report$NAME
 
@@ -974,7 +974,7 @@ getGseaOutput <- function(path = "../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut
   ff <- dir(path, full.names = TRUE)
   report_name <- ff[grep("gsea_report.txt$", ff)]
   if (!is.null(report_name)) {
-    output$reportx <- read.csv(report_name, sep = "\t", check.names = FALSE)
+    output$reportx <- utils::read.csv(report_name, sep = "\t", check.names = FALSE)
   }
 
   output$enplots <- sapply(topgs, function(g) {
@@ -988,7 +988,7 @@ getGseaOutput <- function(path = "../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut
     dir(gsea_dir, pattern = paste0("^", g, "_[0-9]{1,4}.png"), full.names = TRUE)
   })
   details_xls <- file.path(gsea_dir, paste0(topgs, ".xls"))
-  output$details <- lapply(details_xls, function(f) read.csv(f, sep = "\t", check.names = FALSE))
+  output$details <- lapply(details_xls, function(f) utils::read.csv(f, sep = "\t", check.names = FALSE))
   output$topgs <- topgs
   names(output$enplots) <- topgs
   names(output$heatmaps) <- topgs
@@ -999,8 +999,8 @@ getGseaOutput <- function(path = "../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut
   output$cls_file <- dir(output$edb_dir, pattern = "*.cls", full.names = TRUE)
   output$rnk_file <- dir(output$edb_dir, pattern = "*.rnk", full.names = TRUE)
 
-  output$rnk <- read.csv(output$rnk_file, sep = "\t", row.names = 1, header = FALSE)
-  output$cls <- read.table(output$cls_file, skip = 2)[1, ]
+  output$rnk <- utils::read.csv(output$rnk_file, sep = "\t", row.names = 1, header = FALSE)
+  output$cls <- utils::read.table(output$cls_file, skip = 2)[1, ]
 
   dir(LE_dir)
   output$LE_index <- file.path(LE_dir, "index.html")
@@ -1067,12 +1067,12 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
                         ylab = "Rank metric") {
   if (!is.null(names)) names(rnk) <- names
   rnk <- rnk[!is.na(rnk)]
-  rnk <- rnk[order(rnk + 1e-8 * rnorm(length(rnk)), decreasing = decreasing)]
+  rnk <- rnk[order(rnk + 1e-8 * stats::rnorm(length(rnk)), decreasing = decreasing)]
 
   ## ranked list metric
   ii <- (1:length(rnk))
   if (length(ii) > res) ii <- ii[seq(1, length(ii), length(ii) / res)]
-  qq <- quantile(rnk[ii], probs = c(0.01, 0.99), na.rm = TRUE)
+  qq <- stats::quantile(rnk[ii], probs = c(0.01, 0.99), na.rm = TRUE)
   y1 <- qq[2]
   y0 <- qq[1]
   dy <- 0.25 * (y1 - y0)
@@ -1080,15 +1080,15 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
     type = "h", col = "grey", ylim = c(y0 - dy, y1),
     xlab = NA, ylab = NA, xaxt = "n"
   )
-  mtext(xlab, 1, line = lab.line[1], cex = cex.lab)
-  mtext(ylab, 2, line = lab.line[2], cex = cex.lab)
-  abline(h = 0, lty = 2, lwd = 0.5)
+  graphics::mtext(xlab, 1, line = lab.line[1], cex = cex.lab)
+  graphics::mtext(ylab, 2, line = lab.line[2], cex = cex.lab)
+  graphics::abline(h = 0, lty = 2, lwd = 0.5)
 
   ## gene set barcode
   jj <- match(gset, names(rnk))
   w1 <- ifelse(length(jj) < 100, 0.6, 0.3)
   w1 <- ifelse(length(jj) < 50, 1, w1)
-  arrows(jj, (y0 - dy), jj, y0, col = "grey10", lwd = w1 * cex, length = 0)
+  graphics::arrows(jj, (y0 - dy), jj, y0, col = "grey10", lwd = w1 * cex, length = 0)
 
   ## red/blue bar at bottom
   kk <- c(seq(1, length(rnk) * 0.99, floor(length(rnk) / 20)), length(rnk))
@@ -1100,7 +1100,7 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
     r1 <- abs(r1)**0.5 * sign(r1)
     irnk <- floor(31 * (1 + r1) / 2)
     cc <- gplots::bluered(32)[1 + irnk]
-    rect(kk[i], y0 - 1.05 * dy, kk[i + 1], y0 - 0.65 * dy, col = cc, border = NA)
+    graphics::rect(kk[i], y0 - 1.05 * dy, kk[i + 1], y0 - 0.65 * dy, col = cc, border = NA)
   }
 
   ## weighted cumulative random walk
@@ -1115,14 +1115,14 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
   if (max(rnk.trace) >= abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y1)
   if (max(rnk.trace) < abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y0)
   if (!decreasing) rnk.trace <- -1 * rnk.trace
-  lines(ii, rnk.trace[ii], col = "green", type = "l", lwd = 2.4)
+  graphics::lines(ii, rnk.trace[ii], col = "green", type = "l", lwd = 2.4)
 
   if (is.null(main)) main <- "Enrichment plot"
   tt.main <- as.character(main)
   if (nchar(tt.main) > len.main) {
     tt.main < playbase::breakstring(tt.main, len.main) ## pgx-funtions.R
   }
-  title(main = tt.main, cex.main = cex.main, line = main.line)
+  graphics::title(main = tt.main, cex.main = cex.main, line = main.line)
 }
 
 
@@ -1225,28 +1225,28 @@ gsea.ftplot <- function(x, rft = "var", cft = "var",
   )
   ## upper dendrogram (or skip)
   if (csort == "hclust") {
-    par(mar = c(0.5, 0, mar[3], mar[4] + 0))
+    graphics::par(mar = c(0.5, 0, mar[3], mar[4] + 0))
     plot(as.dendrogram(cc), leaflab = "none", yaxt = "n")
   } else {
-    par(mar = c(0.5, 0, mar[3], 0))
-    frame()
+    graphics::par(mar = c(0.5, 0, mar[3], 0))
+    graphics::frame()
   }
-  title(main, cex.main = cex.main * 1.5, line = 0)
+  graphics::title(main, cex.main = cex.main * 1.5, line = 0)
 
   ## column-feature barplot
-  par(mar = c(1, 1.4, 0, mar[4] + 1.4))
+  graphics::par(mar = c(1, 1.4, 0, mar[4] + 1.4))
   k0 <- "grey"
-  barplot(cft[cc.order],
+  graphics::barplot(cft[cc.order],
     width = 5 / 6, las = 3,
     xaxs = "i", add = FALSE, offset = 0, col = k0, cex.names = 1,
     names.arg = "", cex.axis = 1.0, border = FALSE,
     yaxt = "n", ylim = range(cft)
   )
-  axis(4, las = 1)
-  mtext(cft.lab, 4, padj = 4, cex = 0.8)
+  graphics::axis(4, las = 1)
+  graphics::mtext(cft.lab, 4, padj = 4, cex = 0.8)
 
   ## heatmap
-  par(mar = c(mar[1], 1.4, 1, mar[4] + 1.4))
+  graphics::par(mar = c(mar[1], 1.4, 1, mar[4] + 1.4))
   xx <- x[rc.order, cc.order]
   if (scale == "row") xx <- t(scale(t(xx), center = TRUE))
   if (scale == "col") xx <- scale(xx, center = TRUE)
@@ -1255,50 +1255,50 @@ gsea.ftplot <- function(x, rft = "var", cft = "var",
     col = col, zlim = zlim1, xaxt = "n", xlab = "", ylab = "", yaxt = "n"
   )
   if (!is.null(xnames)) {
-    mtext(xnames[rc.order], 4,
+    graphics::mtext(xnames[rc.order], 4,
       at = (1:length(xnames)), adj = 0,
       padj = 0.5, las = 1, cex = cexRow, line = 0.5
     )
   }
   if (!is.null(ynames)) {
-    mtext(ynames[cc.order], 1,
+    graphics::mtext(ynames[cc.order], 1,
       at = (1:length(ynames)) - 0.5, adj = 1,
       padj = 1, las = 3, cex = cexCol, line = 0.5
     )
   }
 
   ## sample metrix barplot (vertical)
-  par(mar = c(mar[1], 0, 1, 0))
-  barplot(rft[rc.order],
+  graphics::par(mar = c(mar[1], 0, 1, 0))
+  graphics::barplot(rft[rc.order],
     horiz = TRUE, las = 1, yaxs = "i", names.arg = "",
     border = FALSE, xlab = "", xlim = rev(range(rft))
   )
-  mtext(rft.lab, 1, padj = 4, cex = 0.8)
+  graphics::mtext(rft.lab, 1, padj = 4, cex = 0.8)
 
   ## left dendrogram
   if (rsort == "hclust") {
-    par(mar = c(mar[1], 2, 0, 0.5))
+    graphics::par(mar = c(mar[1], 2, 0, 0.5))
     plot(as.dendrogram(rc),
       horiz = TRUE, leaflab = "none",
       yaxt = "n", yaxs = "i"
     )
   } else {
-    par(mar = c(0, 0, 0, 0))
-    frame()
+    graphics::par(mar = c(0, 0, 0, 0))
+    graphics::frame()
   }
 
   ## legend
   if (!is.null(legend)) {
-    par(mar = c(0, mar[2], mar[3], 0) + 0.5)
-    frame()
+    graphics::par(mar = c(0, mar[2], mar[3], 0) + 0.5)
+    graphics::frame()
     legend("topleft", legend = legend, cex = cex.legend)
   }
 
   ## reset
-  par(mar = c(4, 4, 2, 2))
+  graphics::par(mar = c(4, 4, 2, 2))
   if (layout.reset) {
-    par(mfrow = c(1, 1))
-    par(mar = c(4, 4, 2, 2))
+    graphics::par(mfrow = c(1, 1))
+    graphics::par(mar = c(4, 4, 2, 2))
   }
 }
 
@@ -1378,7 +1378,7 @@ gsea.radarplot <- function(values, names = NULL, mar = c(2, 5, 3, 5) * 2,
   ii <- 1:3
   if (sum(mx < 0) == 0) ii <- c(2, 3)
   c0 <- c(col, NA)
-  stars(M[ii, , drop = FALSE],
+  graphics::stars(M[ii, , drop = FALSE],
     radius = TRUE, cex = cex,
     locations = c(0, 0), key.loc = c(0, 0), lty = 1,
     col.stars = c0[ii], mar = mar, scale = FALSE,

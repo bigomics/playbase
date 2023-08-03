@@ -28,11 +28,11 @@
 #' @export
 imputeMedian <- function(X) {
   if (NCOL(X) == 1) {
-    mx <- median(X, na.rm = TRUE)
+    mx <- stats::median(X, na.rm = TRUE)
   } else {
     mx <- apply(X, 1, median, na.rm = TRUE)
   }
-  mx[is.na(mx)] <- median(mx, na.rm = TRUE)
+  mx[is.na(mx)] <- stats::median(mx, na.rm = TRUE)
   impX <- X
   impX[is.na(impX)] <- 0
   impX <- impX + is.na(X) * mx

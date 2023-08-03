@@ -59,7 +59,7 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
     contrasts <- data.frame(contrasts, check.names = FALSE, row.names = 1)
   } else {
     ## take first (not-dotted) column as phenotype vector
-    pheno <- head(grep("^[.]", colnames(samples), value = TRUE, invert = TRUE), 1)
+    pheno <- utils::head(grep("^[.]", colnames(samples), value = TRUE, invert = TRUE), 1)
     pheno <- intersect(pheno, colnames(samples))
     Y <- samples[, pheno, drop = FALSE]
     ## automatically guess contrasts
@@ -200,7 +200,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   kk <- intersect(colnames(counts), rownames(samples))
   counts <- counts[, kk, drop = FALSE]
   samples <- samples[kk, , drop = FALSE]
-  samples <- type.convert(samples, as.is = TRUE) ## automatic type conversion
+  samples <- utils::type.convert(samples, as.is = TRUE) ## automatic type conversion
   if (!is.null(X)) X <- X[, kk, drop = FALSE]
   if (all(kk %in% rownames(contrasts))) {
     contrasts <- contrasts[kk, , drop = FALSE]
