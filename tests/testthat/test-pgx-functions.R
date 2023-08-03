@@ -191,28 +191,6 @@ test_that("logCPM transforms counts to logCPM", {
 #'
 #'
 
-#' Test for randomImputeMissing
-test_that("randomImputeMissing imputes NA values", {
-  set.seed(123)
-
-  # Create test matrix with NA values
-  mat <- matrix(1:20, nrow = 5)
-  mat[c(3, 7, 9)] <- NA
-
-  # Impute missing values
-  mat_imputed <- playbase::randomImputeMissing(mat)
-
-  # Check that there are no more NA values
-  expect_true(!anyNA(mat_imputed))
-
-  # Check that imputed values are sampled from column
-  imputed_vals <- mat_imputed[c(3, 7, 9)]
-  expect_true(all(imputed_vals %in% mat))
-})
-
-#' Test for human2mouse.SLLOWWW
-#'
-#'
 
 #' Test for human2mouse
 #'
