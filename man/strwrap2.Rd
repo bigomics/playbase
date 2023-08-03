@@ -18,7 +18,7 @@ A character vector of the same length as `str`, containing the wrapped strings.
 This function wraps a character vector of strings to a specified width.
 }
 \details{
-This function takes a character vector of strings `str` and a numeric value `n` as input and wraps each string in `str` to a maximum width of `n` characters. 
+This function takes a character vector of strings `str` and a numeric value `n` as input and wraps each string in `str` to a maximum width of `n` characters.
 The resulting wrapped strings are returned as a character vector, where each element contains one or more lines separated by newline characters.
 }
 \examples{

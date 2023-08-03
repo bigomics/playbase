@@ -17,17 +17,17 @@ pgx.inferCNV(ngs, refgroup = NULL, progress = NULL)
 Updated NGS object with inferred CNV segments
 }
 \description{
-Infers copy number variations from single cell RNA-seq data using 
+Infers copy number variations from single cell RNA-seq data using
 InferCNV.
 }
 \details{
-This function takes an NGS object containing single cell RNA-seq 
+This function takes an NGS object containing single cell RNA-seq
 data and runs the InferCNV algorithm to infer copy number variations.
 
-It extracts the expression matrix and gene annotations from the NGS object. 
-The expression of each gene is normalized to the reference group to estimate 
-relative copy number levels. 
+It extracts the expression matrix and gene annotations from the NGS object.
+The expression of each gene is normalized to the reference group to estimate
+relative copy number levels.
 
-InferCNV is then applied to segment the genome and identify focal/broad CNV regions. 
+InferCNV is then applied to segment the genome and identify focal/broad CNV regions.
 The output CNV segments are added to the NGS object for downstream analysis and plotting.
 }

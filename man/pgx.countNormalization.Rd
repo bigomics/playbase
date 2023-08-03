@@ -22,7 +22,7 @@ Normalizes a matrix of RNA-seq count data using different methods.
 \details{
 This function normalizes a matrix of RNA-seq count data using different normalization methods:
 
-- "none": No normalization 
+- "none": No normalization
 - "scale": Scale normalization by column means
 - "CPM": Counts per million
 - "TMM": Trimmed mean of M-values (edgeR)
@@ -33,6 +33,6 @@ Zero counts can be retained or set to NA after normalization based on the keep.z
 \examples{
 \dontrun{
 counts <- matrix(rnbinom(10000, mu = 10, size = 1), 100, 100)
-normalized <- pgx.countNormalization(counts, c("TMM", "RLE")) 
+normalized <- pgx.countNormalization(counts, c("TMM", "RLE"))
 }
 }

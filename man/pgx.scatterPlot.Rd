@@ -39,7 +39,7 @@ A scatter plot grob or plotly object
 Generates a scatter plot from a PGX object.
 }
 \details{
-Samples or genes can be plotted, colored by phenotype, 
+Samples or genes can be plotted, colored by phenotype,
 gene expression, or correlation with a contrast. For gene sets,
 positions need to be provided. Interactive plotly plots or
 static ggplot2 plots can be generated.

@@ -16,23 +16,23 @@ pgx.computeGlassoAroundGene(X, gene, nmax = 100)
 \value{
 List containing:
 \itemize{
-  \item cor: Correlation matrix 
+  \item cor: Correlation matrix
   \item pcor: Partial correlation matrix
   \item wi: Inverse covariance matrix
   \item sampleSize: Number of samples used
 }
 }
 \description{
-Estimates partial correlations between a target gene and other 
+Estimates partial correlations between a target gene and other
 genes using glasso.
 }
 \details{
-This function calculates the correlation between a target gene and 
+This function calculates the correlation between a target gene and
 the top nmax correlated genes.
 
-It uses the glasso algorithm to estimate a sparse inverse covariance 
+It uses the glasso algorithm to estimate a sparse inverse covariance
 matrix and derive partial correlations.
 
-The correlation matrix, partial correlation matrix, inverse covariance 
+The correlation matrix, partial correlation matrix, inverse covariance
 matrix (precision matrix), and number of samples used are returned.
 }

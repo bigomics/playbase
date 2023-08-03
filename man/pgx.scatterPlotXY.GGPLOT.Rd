@@ -142,6 +142,6 @@ Scatter plot with ggplot2
 x <- rnorm(100)
 y <- rnorm(100)
 df <- data.frame(x = x, y = y)
-p <- pgx.scatterPlotXY.GGPLOT(df) 
+p <- pgx.scatterPlotXY.GGPLOT(df)
 }
 }

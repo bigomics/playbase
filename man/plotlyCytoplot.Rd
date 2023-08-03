@@ -38,7 +38,7 @@ plotlyCytoplot(
 
 \item{marker.size}{Size of scatter markers. Default 5.}
 
-\item{contour.coloring}{Add density shading? "none", "color", or 
+\item{contour.coloring}{Add density shading? "none", "color", or
 "black". Default "none".}
 
 \item{marker.color}{Color of markers. Default "black".}

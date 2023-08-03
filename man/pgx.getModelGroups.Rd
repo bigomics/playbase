@@ -16,8 +16,8 @@ A character vector of model group labels
 Retrieves the model group labels defined in a PGX object.
 }
 \details{
-This function extracts the model group labels from the design matrix 
-or group labels in a PGX object. It first checks if a model formula is defined in 
+This function extracts the model group labels from the design matrix
+or group labels in a PGX object. It first checks if a model formula is defined in
 pgx$model.parameters$design. If so, it takes the column names corresponding to the
 model terms. If not, it simply uses the group labels defined in pgx$model.parameters$exp.matrix.
 }

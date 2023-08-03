@@ -22,7 +22,7 @@ It supports normalization using either the edgeR or DESeq2 package.
 }
 \examples{
 \dontrun{
-counts <- matrix(rnbinom(100, mu=10, size=1), ncol=10) 
+counts <- matrix(rnbinom(100, mu = 10, size = 1), ncol = 10)
 norm_counts <- normalizeRLE(counts)
 }
 }

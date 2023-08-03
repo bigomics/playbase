@@ -17,7 +17,7 @@ Check if two groups represent a positive vs negative comparison
 }
 \details{
 This function examines two groups from the pgx object to determine if they represent a positive vs negative comparison.
-It checks the mean expression of signature genes in each group to see if one group has overall higher expression.  
+It checks the mean expression of signature genes in each group to see if one group has overall higher expression.
 It also looks for keywords like "neg", "untr", "wt" etc in the group names.
 Based on these checks it returns a logical indicating if the groups represent a positive vs negative comparison.
 }

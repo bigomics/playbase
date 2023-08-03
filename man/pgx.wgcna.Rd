@@ -30,17 +30,17 @@ pgx.wgcna(
 List containing WGCNA network and module results
 }
 \description{
-Constructs a weighted gene coexpression network and detects 
+Constructs a weighted gene coexpression network and detects
 modules using WGCNA on a PGX object.
 }
 \details{
-This function takes a PGX object containing gene expression data. 
-It constructs a weighted gene coexpression network using the WGCNA package. 
-Soft thresholding power is set by \code{power}. 
+This function takes a PGX object containing gene expression data.
+It constructs a weighted gene coexpression network using the WGCNA package.
+Soft thresholding power is set by \code{power}.
 
-Modules are detected by cutting the module dendrogram at \code{cutheight} and 
-with \code{deepsplit} splits. Only the \code{ngenes} most variable genes are used.  
+Modules are detected by cutting the module dendrogram at \code{cutheight} and
+with \code{deepsplit} splits. Only the \code{ngenes} most variable genes are used.
 
-The output is a list containing the WGCNA network object and module results, 
+The output is a list containing the WGCNA network object and module results,
 including module assignments, colors, and summary statistics.
 }

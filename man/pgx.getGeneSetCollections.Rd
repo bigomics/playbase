@@ -23,9 +23,9 @@ A list containing the extracted gene set collections.
 Extracts gene set collections from a list of gene sets based on size filters.
 }
 \details{
-This function takes a list of gene sets and extracts collections 
-of gene sets that fall within a specified size range, defined by min.size 
-and max.size parameters. It removes any gene sets that are smaller than 
+This function takes a list of gene sets and extracts collections
+of gene sets that fall within a specified size range, defined by min.size
+and max.size parameters. It removes any gene sets that are smaller than
 `min.size` or larger than `max.size`. This allows filtering gene sets into size-based
 collections for different types of analyses.
 }

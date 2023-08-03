@@ -75,7 +75,7 @@ and original value. Side color bars are added from sample and gene annotations.
 \examples{
 \dontrun{
 mat <- matrix(rnorm(200), 20, 10)
-amat <- matrix(sample(letters, 200, replace=TRUE), 20, 10)
+amat <- matrix(sample(letters, 200, replace = TRUE), 20, 10)
 clustermap(mat, col.annot = amat)
 }
 

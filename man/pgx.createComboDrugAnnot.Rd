@@ -15,17 +15,17 @@ pgx.createComboDrugAnnot(combo, annot0)
 Data frame with annotation for the drug combinations
 }
 \description{
-Creates annotation for drug combinations by combining annotation 
+Creates annotation for drug combinations by combining annotation
   from individual drugs.
 }
 \details{
 Create annotation for drug combinations
 
-This function takes a vector of drug combinations and an annotation 
-  data frame for individual drugs. It splits the combinations into individual 
+This function takes a vector of drug combinations and an annotation
+  data frame for individual drugs. It splits the combinations into individual
   drugs, looks up their annotation, and combines it into annotation for the combos.
 
   For example, if combo is 'DrugA + DrugB', it will look up mode of action (moa)
-  and targets for DrugA and DrugB, and combine them into moa and targets for 
+  and targets for DrugA and DrugB, and combine them into moa and targets for
   the combination. NA values are removed.
 }

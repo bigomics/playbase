@@ -30,7 +30,7 @@ pgx.makeAutoContrasts(
 A data frame with automatically generated contrasts
 }
 \description{
-This function automatically generates contrasts for differential analysis from a 
+This function automatically generates contrasts for differential analysis from a
 data frame of sample metadata. It extracts factor columns, generates comparisons between
 groups, handles dummy variable creation, and outputs a clean contrast matrix.
 }

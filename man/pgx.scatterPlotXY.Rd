@@ -16,12 +16,12 @@ Possible values are "base", "plotly", "ggplot", and "scatterD3".}
 A plot object created by the selected plotting library.
 }
 \description{
-This function creates a scatter plot of two variables 
+This function creates a scatter plot of two variables
 using one of several available plotting libraries.
 }
 \details{
-Depending on the value of the `plotlib` parameter, this function 
-calls one of several internal functions to create the scatter plot using the 
+Depending on the value of the `plotlib` parameter, this function
+calls one of several internal functions to create the scatter plot using the
 specified plotting library. The available plotting libraries are:
 - "base": The base R graphics system.
 - "plotly": The plotly library for interactive plots.

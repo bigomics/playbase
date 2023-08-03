@@ -17,7 +17,7 @@ pgx.testPhenoCorrelation(df, plot = TRUE, cex = 1)
 A matrix of correlation p-values
 }
 \description{
-Test correlation between phenotype variables and gene expression, using 
+Test correlation between phenotype variables and gene expression, using
 appropriate methods based on data types.
 }
 \details{
@@ -25,6 +25,6 @@ This function takes a data frame \code{df} containing phenotype data, including 
 continuous and discrete variables. It calculates correlation p-values between the phenotype
 variables and gene expression data in a PGX object, using either Pearson or ANOVA. Discrete
 variables are compared between groups using Fisher's exact test. The results are returned as
-a matrix of p-values, with rows corresponding to expression profiles. If \code{plot=TRUE}, 
+a matrix of p-values, with rows corresponding to expression profiles. If \code{plot=TRUE},
 a correlation plot of the significance (-log10 p-values) is also generated.
 }

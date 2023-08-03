@@ -12,7 +12,7 @@ getMyGeneInfo(
 \arguments{
 \item{eg}{A character vector of Entrez Gene IDs for which to retrieve information.}
 
-\item{fields}{A character vector of fields to retrieve, with default values of 
+\item{fields}{A character vector of fields to retrieve, with default values of
 "symbol", "name", "alias", "map_location", and "summary".}
 }
 \value{
@@ -22,10 +22,10 @@ A named list containing the retrieved gene information for each of the specified
 This function retrieves gene information from the biomaRt package.
 }
 \details{
-The function takes a character vector of Entrez Gene IDs `eg` and a 
-character vector of fields `fields` as input. 
-The function uses the `getGene` function from the `biomaRt` package to retrieve 
-the specified fields for each Entrez Gene ID. 
-The resulting information is returned as a named list, where each element 
+The function takes a character vector of Entrez Gene IDs `eg` and a
+character vector of fields `fields` as input.
+The function uses the `getGene` function from the `biomaRt` package to retrieve
+the specified fields for each Entrez Gene ID.
+The resulting information is returned as a named list, where each element
 corresponds to one of the specified fields and contains a character vector of the retrieved values.
 }

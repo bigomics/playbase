@@ -24,13 +24,13 @@ Named vector containing number of significant genes for each parameter combinati
 Counts number of significant genes for given parameters.
 }
 \details{
-This function fits the specified contrast and counts the number of genes 
+This function fits the specified contrast and counts the number of genes
 significant at the given FDR and fold change cutoffs.
 
-It requires an NGS analysis object, expression matrix, and contrast. Batch 
-correction is performed using parameters defined in the NGS object. The contrast is 
-then fit using limma-voom and number of significant genes counted.  
+It requires an NGS analysis object, expression matrix, and contrast. Batch
+correction is performed using parameters defined in the NGS object. The contrast is
+then fit using limma-voom and number of significant genes counted.
 
-Fold change and FDR cutoffs can also be specified. The number of significant genes 
+Fold change and FDR cutoffs can also be specified. The number of significant genes
 passing these thresholds is returned for each parameter combination.
 }

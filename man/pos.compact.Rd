@@ -19,7 +19,7 @@ A numeric matrix of the same size as `pos`, containing the compacted positions.
 This function compacts a matrix of positions by removing white space.
 }
 \details{
-This function takes a numeric matrix of positions `pos` and an optional numeric value `d` as input and compacts the positions by removing white space. 
-For each column in `pos`, the function calculates the distances between adjacent positions and replaces any distance greater than `d` with `d`. 
+This function takes a numeric matrix of positions `pos` and an optional numeric value `d` as input and compacts the positions by removing white space.
+For each column in `pos`, the function calculates the distances between adjacent positions and replaces any distance greater than `d` with `d`.
 The resulting compacted positions are returned as a numeric matrix of the same size as `pos`.
 }

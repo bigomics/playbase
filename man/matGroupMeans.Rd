@@ -22,19 +22,19 @@ Matrix of summary statistics, with rows corresponding to groups.
 Calculate group-wise summary statistics from a matrix
 }
 \details{
-This function calculates a row-wise or column-wise summary statistic 
+This function calculates a row-wise or column-wise summary statistic
   for each group defined in the \code{group} vector.
-  
+
   It applies the function specified by \code{FUN} (default is rowMeans) to summarize
   either rows or columns of \code{X}, depending on the \code{dir} argument.
-  
+
   The result is a matrix with rows corresponding to the unique groups, and columns
   equal to the number of rows/columns summarized.
 }
 \examples{
 \dontrun{
-X <- matrix(rnorm(100*20), 100, 20) 
-groups <- sample(letters[1:5], 20, replace=TRUE)
+X <- matrix(rnorm(100 * 20), 100, 20)
+groups <- sample(letters[1:5], 20, replace = TRUE)
 means <- matGroupMeans(X, groups)
 }
 }

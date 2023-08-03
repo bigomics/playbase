@@ -18,7 +18,7 @@ pgx.getCategoricalPhenotypes(
 
 \item{max.ncat}{Maximum number of categories allowed. Default 20.}
 
-\item{remove.dup}{Logical indicating whether to remove duplicate factor 
+\item{remove.dup}{Logical indicating whether to remove duplicate factor
 levels. Default FALSE.}
 }
 \value{
@@ -28,10 +28,10 @@ A character vector of categorical phenotype column names
 Identifies categorical phenotype columns in a data frame.
 }
 \details{
-This function examines a phenotype data frame \code{df} and identifies 
-columns that represent categorical variables. 
-It first excludes any columns that appear to contain sample IDs. 
-It then selects columns that are factors, or character/numeric with 
+This function examines a phenotype data frame \code{df} and identifies
+columns that represent categorical variables.
+It first excludes any columns that appear to contain sample IDs.
+It then selects columns that are factors, or character/numeric with
 between \code{min.ncat} and \code{max.ncat} unique values.
 
 The function returns a character vector of column names representing putative categorical phenotypes.

@@ -3,14 +3,11 @@
 \name{nmfImpute}
 \alias{nmfImpute}
 \alias{knnImputeMissing}
-\alias{randomImputeMissing}
 \title{Impute Missing Values with k-Nearest Neighbors}
 \usage{
 nmfImpute(x, k = 5)
 
 knnImputeMissing(x, pos, missing = NA, k = 10)
-
-randomImputeMissing(x)
 }
 \arguments{
 \item{x}{A numeric vector containing missing values to be imputed.}
@@ -30,16 +27,14 @@ A numeric vector of the same length as `x`, containing the imputed values.
 This function imputes missing values in a vector using k-nearest neighbors.
 }
 \details{
-This function takes a numeric vector `x` containing missing values, a matrix of positions `pos` 
-for each element in `x`, and an optional value `missing` representing the missing values in `x` as input. 
-The function uses the k-nearest neighbors algorithm to impute the missing values in `x` based on their positions in `pos`. 
-The number of nearest neighbors used for imputation is specified by the `k` parameter. 
+This function takes a numeric vector `x` containing missing values, a matrix of positions `pos`
+for each element in `x`, and an optional value `missing` representing the missing values in `x` as input.
+The function uses the k-nearest neighbors algorithm to impute the missing values in `x` based on their positions in `pos`.
+The number of nearest neighbors used for imputation is specified by the `k` parameter.
 The imputed values are returned as a numeric vector of the same length as `x`.
 }
 \section{Functions}{
 \itemize{
 \item \code{nmfImpute()}: Impute missing values with non-negative matrix factorization
-
-\item \code{randomImputeMissing()}: Randomly impute missing values
 
 }}

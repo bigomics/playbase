@@ -41,14 +41,14 @@ Performs supervised batch correction on a gene expression matrix, using known te
 }
 \details{
 This function performs supervised batch correction, using known batch groups and biological covariates.
-It constructs a design matrix containing batch groups and covariates. 
+It constructs a design matrix containing batch groups and covariates.
 The \code{method} batch correction is then applied to the expression matrix \code{X}, using this design matrix.
 
 Technical effects are estimated from the data as follows:
 \enumerate{
-\item Compute average expression within each batch 
+\item Compute average expression within each batch
 \item Perform PCA on the batch means
-\item Extract PCs explaining at least 80\% variance  
+\item Extract PCs explaining at least 80\% variance
 }
 
 Biological effects are included using the specified \code{model.par} covariates.

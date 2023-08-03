@@ -19,6 +19,6 @@ Search for file in system path
 }
 \details{
 Searches the directories in \code{path} to find the file specified by \code{file}.
-Returns the full path if the file is found in one of the directories. 
+Returns the full path if the file is found in one of the directories.
 Returns NULL if the file is not found.
 }

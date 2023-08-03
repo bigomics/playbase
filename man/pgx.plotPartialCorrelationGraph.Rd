@@ -35,13 +35,13 @@ pgx.plotPartialCorrelationGraph(
 
 \item{pcor.min}{Numeric threshold for including genes in partial correlation graph.}
 
-\item{what}{Character vector specifying which plots to generate. Options are 
+\item{what}{Character vector specifying which plots to generate. Options are
 "cor", "pcor", "graph".}
 }
 \value{
 List with components:
 \itemize{
- \item rho: List of partial correlation matrices 
+ \item rho: List of partial correlation matrices
  \item meta.pcor: Matrix of mean partial correlations
  \item timings: Matrix of timings
 }
@@ -52,8 +52,8 @@ Computes partial correlation between a given gene and all other genes.
 \details{
 Compute partial correlation around a gene
 
-This function computes the partial correlation between a given 
-gene and all other genes in the dataset. 
-It returns plots of the top correlated genes, a correlation graph, and 
+This function computes the partial correlation between a given
+gene and all other genes in the dataset.
+It returns plots of the top correlated genes, a correlation graph, and
 optionally a matrix of all gene-gene correlations.
 }

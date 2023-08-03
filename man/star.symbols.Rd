@@ -19,9 +19,9 @@ A character vector of length 1, containing the generated string of star symbols.
 This function generates a string of star symbols.
 }
 \details{
-This function takes a numeric value `n` and an optional character string `pch` as 
-input and generates a string of `n` star symbols using the specified `pch` symbol. 
-If `n` is 0, an empty string is returned. 
+This function takes a numeric value `n` and an optional character string `pch` as
+input and generates a string of `n` star symbols using the specified `pch` symbol.
+If `n` is 0, an empty string is returned.
 The resulting string of star symbols is returned as a character vector of length 1.
 }
 \examples{

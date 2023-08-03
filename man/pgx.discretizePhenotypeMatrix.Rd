@@ -27,10 +27,10 @@ Discretized phenotype data frame
 Discretize phenotype matrix
 }
 \details{
-This function discretizes the phenotype data frame \code{df} into categorical variables.  
-Numerical variables are converted into "high" and "low" values based on the median.  
+This function discretizes the phenotype data frame \code{df} into categorical variables.
+Numerical variables are converted into "high" and "low" values based on the median.
 Categorical variables are kept as factors.
- 
+
 The number of categories is controlled by \code{min.ncat} and \code{max.ncat} parameters.
 Duplicate factor levels can be removed by setting \code{remove.dup = TRUE}.
 }

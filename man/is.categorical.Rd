@@ -9,25 +9,25 @@ is.categorical(x, max.ncat = null, min.ncat = 2)
 \arguments{
 \item{x}{A vector representing the variable to be checked.}
 
-\item{max.ncat}{An optional numeric value specifying the maximum number of unique 
+\item{max.ncat}{An optional numeric value specifying the maximum number of unique
 values for a variable to be considered categorical.
 If not provided, the default value is one less than the length of `x`.}
 
-\item{min.ncat}{An optional numeric value specifying the minimum number of unique 
+\item{min.ncat}{An optional numeric value specifying the minimum number of unique
 values for a variable to be considered categorical. The default value is 2.}
 }
 \value{
 A logical value indicating whether the input variable is categorical.
 }
 \description{
-This function checks if a variable is categorical based on its class, 
+This function checks if a variable is categorical based on its class,
 number of unique values, and proportion of non-missing values.
 }
 \details{
-The function takes a vector `x` as input and checks if it is a factor or character vector. 
-If `x` is not a factor or character vector, the function returns `FALSE`. 
-Otherwise, the function calculates the number of unique values in `x` (excluding missing values) and the proportion of non-missing values in `x`. 
-If the number of unique values is greater than 80% of the proportion of non-missing values, the function returns `FALSE`. 
-Otherwise, if the number of unique values is within the range specified by the `min.ncat` and `max.ncat` parameters, the function returns `TRUE`. 
+The function takes a vector `x` as input and checks if it is a factor or character vector.
+If `x` is not a factor or character vector, the function returns `FALSE`.
+Otherwise, the function calculates the number of unique values in `x` (excluding missing values) and the proportion of non-missing values in `x`.
+If the number of unique values is greater than 80% of the proportion of non-missing values, the function returns `FALSE`.
+Otherwise, if the number of unique values is within the range specified by the `min.ncat` and `max.ncat` parameters, the function returns `TRUE`.
 Otherwise, the function returns `FALSE`.
 }

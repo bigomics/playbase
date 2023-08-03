@@ -9,13 +9,13 @@ get_mini_example_data()
 \value{
 List containing:
 \itemize{
-  \item samples - data.frame with sample info 
+  \item samples - data.frame with sample info
   \item counts - matrix of gene counts
   \item contrast - data.frame with contrasts
 }
 }
 \description{
-Returns a mini example dataset with sample information, 
+Returns a mini example dataset with sample information,
 gene expression counts, and contrasts.
 }
 \examples{

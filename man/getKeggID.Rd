@@ -10,17 +10,17 @@ getKeggID(gsets)
 \item{gsets}{A character vector of gene set names.}
 }
 \value{
-A character vector of the same length as `gsets`, containing 
+A character vector of the same length as `gsets`, containing
 the guessed KEGG IDs for each gene set name.
 }
 \description{
 This function guesses the KEGG ID from a gene set name.
 }
 \details{
-The function takes a character vector of gene set names 
-`gsets` as input and tries to guess the corresponding KEGG IDs. 
-The function uses the `KEGG.db` package to retrieve a list of 
-KEGG pathway names and IDs. 
-It then searches for gene set names that contain a KEGG ID or a 
+The function takes a character vector of gene set names
+`gsets` as input and tries to guess the corresponding KEGG IDs.
+The function uses the `KEGG.db` package to retrieve a list of
+KEGG pathway names and IDs.
+It then searches for gene set names that contain a KEGG ID or a
 KEGG pathway name and returns the corresponding KEGG IDs.
 }

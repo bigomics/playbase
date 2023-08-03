@@ -25,16 +25,16 @@ pgx.deconvolution(
 \item{method}{Deconvolution method to use. Options are NNLM, CIBERSORT, etc.}
 }
 \value{
-The function returns a matrix of estimated cell type proportions, 
+The function returns a matrix of estimated cell type proportions,
 with bulk RNA-seq samples in rows and cell types in columns.
 }
 \description{
-Deconvolves bulk RNA-seq data into cell type proportions 
+Deconvolves bulk RNA-seq data into cell type proportions
 using reference gene expression signatures.
 }
 \details{
 This function takes a PGX object containing bulk RNA-seq data, plus a
-reference gene expression matrix with cell types in columns. It runs 
+reference gene expression matrix with cell types in columns. It runs
 deconvolution to estimate the proportions of each cell type in the bulk
 samples.
 

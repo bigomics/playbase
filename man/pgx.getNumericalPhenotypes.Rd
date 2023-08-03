@@ -13,14 +13,14 @@ pgx.getNumericalPhenotypes(df)
 A character vector representing the column names of the numerical phenotypes in the input data frame.
 }
 \description{
-This function retrieves the column names of numerical 
+This function retrieves the column names of numerical
 phenotypes from a data frame.
 }
 \details{
-The function takes a data frame `df` as input and searches for columns that 
-represent numerical phenotypes. 
-Numerical phenotypes are identified as columns that are numeric, have a majority of 
-unique values, and do not contain certain keywords in their names or values (e.g., "sample", 
-"id", "replicate", "patient", "donor", "individual", "year", "month", "day", "survival"). 
+The function takes a data frame `df` as input and searches for columns that
+represent numerical phenotypes.
+Numerical phenotypes are identified as columns that are numeric, have a majority of
+unique values, and do not contain certain keywords in their names or values (e.g., "sample",
+"id", "replicate", "patient", "donor", "individual", "year", "month", "day", "survival").
 The names of the identified columns are returned as a character vector.
 }

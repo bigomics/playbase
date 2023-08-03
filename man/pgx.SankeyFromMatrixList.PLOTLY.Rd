@@ -18,8 +18,8 @@ A plotly sankey diagram object
 Generates a sankey diagram comparing matrices in a list
 }
 \details{
-This function takes a list of matrices as input matlist. 
-It standardizes each matrix, calculates cross-tables between matrices, 
+This function takes a list of matrices as input matlist.
+It standardizes each matrix, calculates cross-tables between matrices,
 and generates a sankey diagram showing the relationships.
 
 The contrast parameter can optionally be used to weight the edges.

@@ -10,17 +10,17 @@ relevelFactorFirst(f)
 \item{f}{A factor to be releveled.}
 }
 \value{
-A factor with the same levels as the input factor, but with the 
+A factor with the same levels as the input factor, but with the
 levels reordered according to their first appearance in the data.
 }
 \description{
-This function relevels a factor by the order of first 
+This function relevels a factor by the order of first
 occurrence of its levels.
 }
 \details{
-The function takes a factor `f` as input and relevels it by 
-the order of first occurrence of its levels in the data. 
-The new factor is created with the same levels as the original factor, 
+The function takes a factor `f` as input and relevels it by
+the order of first occurrence of its levels in the data.
+The new factor is created with the same levels as the original factor,
 but with the levels reordered according to their first appearance in the data.
 }
 \examples{

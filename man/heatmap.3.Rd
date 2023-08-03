@@ -176,7 +176,7 @@ customizing the color scale, labels, titles, etc.
 \examples{
 \dontrun{
 mat <- matrix(rnorm(200), 20, 10)
-heatmap.3(mat, Colv=FALSE, scale="column", dendrogram="row")
+heatmap.3(mat, Colv = FALSE, scale = "column", dendrogram = "row")
 }
 
 }

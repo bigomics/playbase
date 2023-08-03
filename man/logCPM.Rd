@@ -28,7 +28,7 @@ This stabilizes variance and normalizes for sequencing depth.
 }
 \examples{
 \dontrun{
-counts <- matrix(rnbinom(100*10, mu=100, size=1), 100, 10) 
+counts <- matrix(rnbinom(100 * 10, mu = 100, size = 1), 100, 10)
 logcpm <- logCPM(counts)
 }
 }

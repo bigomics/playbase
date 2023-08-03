@@ -176,7 +176,7 @@ Custom methods can also be added.
 
 \item \code{.ngs.fitContrastsWithEDGER.nodesign.pruned()}: Fit contrasts with EdgeR without a design matrix
 
-\item \code{ngs.fitConstrastsWithDESEQ2()}: Fits contrasts using DESeq2 differential expression 
+\item \code{ngs.fitConstrastsWithDESEQ2()}: Fits contrasts using DESeq2 differential expression
 analysis on count data
 
 \item \code{.ngs.fitConstrastsWithDESEQ2.nodesign()}: Fits contrasts using DESeq2 differential expression

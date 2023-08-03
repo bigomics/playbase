@@ -20,9 +20,9 @@ Vector of predicted gender labels ("F" or "M") for each sample.
 Infers sample gender based on gene expression of Y chromosome genes.
 }
 \details{
-This function takes a gene expression matrix and infers the gender of each 
-sample using either a t-test (default) or PCA approach. The t-test compares expression 
-of Y chromosome genes between groups of known male and female samples. The PCA approach  
+This function takes a gene expression matrix and infers the gender of each
+sample using either a t-test (default) or PCA approach. The t-test compares expression
+of Y chromosome genes between groups of known male and female samples. The PCA approach
 uses the first few principal components of Y gene expression as a gender signature.
 
 The output is a vector of predicted gender labels "F" or "M" for each sample.

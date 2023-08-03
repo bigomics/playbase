@@ -18,12 +18,12 @@ Creates a contrast matrix from a matrix of sample labels.
 \details{
 Make contrast matrix from label matrix
 
-This function takes a matrix of sample labels as input, where the column 
-names indicate the sample groups being compared (e.g. "Group1_vs_Group2"). It parses 
-the column names to extract the two groups, then constructs a contrast matrix by 
+This function takes a matrix of sample labels as input, where the column
+names indicate the sample groups being compared (e.g. "Group1_vs_Group2"). It parses
+the column names to extract the two groups, then constructs a contrast matrix by
 assigning +1/-1 weights to samples belonging to each group.
 
-The resulting contrast matrix has rows corresponding to samples, and columns 
+The resulting contrast matrix has rows corresponding to samples, and columns
 corresponding to the label matrix column names. This encodes the contrasts between
 each pair of groups.
 }

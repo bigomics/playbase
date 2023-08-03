@@ -27,8 +27,8 @@ Runs multiple deconvolution methods using different reference profiles.
 \details{
 This function runs deconvolution across multiple methods like CIBERSORT, DeconRNASeq, EPIC, etc.
 It takes a gene expression matrix and one or more reference matrices as input. The reference matrix/matrices
-represent cell type-specific expression profiles. 
+represent cell type-specific expression profiles.
 
-Deconvolution is performed for each reference separately using the specified methods. The results 
+Deconvolution is performed for each reference separately using the specified methods. The results
 from each method are returned as nested lists, with the outer list split by reference profile name.
 }

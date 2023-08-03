@@ -48,8 +48,8 @@ Data frame with updated non-overlapping box coordinates
 Find non-overlapping boxes for points
 }
 \details{
-This function takes a data frame of point positions and calculates non-overlapping 
-box positions around each point using a physical simulation.  
+This function takes a data frame of point positions and calculates non-overlapping
+box positions around each point using a physical simulation.
 
 It returns a data frame containing the updated box corner positions after repulsion.
 The x1,y1,x2,y2 columns correspond to the box corners.
@@ -57,6 +57,6 @@ The x1,y1,x2,y2 columns correspond to the box corners.
 \examples{
 \dontrun{
 points <- data.frame(x = runif(10), y = runif(10))
-boxes <- util.findboxes(points, "x", "y", 0.2, 0.2, 0.1, 0.1) 
+boxes <- util.findboxes(points, "x", "y", 0.2, 0.2, 0.1, 0.1)
 }
 }

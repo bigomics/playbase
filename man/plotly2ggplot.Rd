@@ -34,7 +34,7 @@ Convert a plotly plot to a ggplot object
 }
 \details{
 This function takes a plotly plot object and converts it to a ggplot object.
-The plotly plot is rendered to a temporary PNG file using the orca() function. This PNG 
+The plotly plot is rendered to a temporary PNG file using the orca() function. This PNG
 is then read in and added as an annotation to a blank ggplot. Optional parameters allow
 adjusting the width, height, scaling, and justification of the resulting ggplot.
 }

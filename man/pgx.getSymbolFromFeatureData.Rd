@@ -17,7 +17,7 @@ Extracts official gene symbols from the feature data table of a GEO dataset.
 }
 \details{
 This function tries to extract official gene symbols from the featureData table of a GEO dataset downloaded with GEOquery.
-It first looks for a column containing gene symbols by matching against the org.Hs.egSYMBOL database. 
+It first looks for a column containing gene symbols by matching against the org.Hs.egSYMBOL database.
 If no direct symbol column is found, it looks for an ENTREZ identifier column and maps that to symbols using org.Hs.egSYMBOL.
 If neither approach works, it tries to extract symbols from the gene title or description columns by regex matching.
 }

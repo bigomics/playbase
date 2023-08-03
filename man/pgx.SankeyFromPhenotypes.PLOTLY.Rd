@@ -45,7 +45,7 @@ Generates a sankey diagram from sample phenotypes
 }
 \details{
 This function takes a PGX object and sample phenotype data frame.
-It aggregates the results matrix mat by phenotypes, filters low count levels, 
+It aggregates the results matrix mat by phenotypes, filters low count levels,
 calculates a cross-table, and visualizes the relationships between phenotypes
 as a sankey diagram.
 

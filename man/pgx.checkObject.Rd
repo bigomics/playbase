@@ -16,8 +16,8 @@ A logical value indicating whether all required fields are present in the `pgx` 
 This function checks if a PGX object contains all required fields.
 }
 \details{
-This function takes a list `pgx` representing a PGX object as input and checks if it contains all required fields. 
-The required fields are "counts", "samples", "genes", "model.parameters", "X", "gx.meta", "gset.meta", "gsetX", and "GMT". 
-If any of the required fields are not present in the `pgx` object, a warning message is printed. 
+This function takes a list `pgx` representing a PGX object as input and checks if it contains all required fields.
+The required fields are "counts", "samples", "genes", "model.parameters", "X", "gx.meta", "gset.meta", "gsetX", and "GMT".
+If any of the required fields are not present in the `pgx` object, a warning message is printed.
 The function returns a logical value indicating whether all required fields are present in the `pgx` object.
 }

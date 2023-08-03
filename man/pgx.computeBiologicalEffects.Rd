@@ -14,7 +14,7 @@ pgx.computeBiologicalEffects(X, is.count = FALSE)
 \value{
 List containing:
 \itemize{
- \item{pct.mito}{Percent mitochondrial genes} 
+ \item{pct.mito}{Percent mitochondrial genes}
  \item{pct.ribo}{Percent ribosomal genes}
  \item{biological}{Biological coefficient of variation}
 }
@@ -34,6 +34,6 @@ If X contains log-expression values, it will be shifted to start at the 1% quant
 \dontrun{
 data(sample.ExpressionSet)
 results <- pgx.computeBiologicalEffects(sample.ExpressionSet)
-head(results$biological) 
+head(results$biological)
 }
 }

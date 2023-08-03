@@ -23,8 +23,8 @@ It checks the probe name, short probe name, and gene name for matches.
 }
 \examples{
 \dontrun{
-data <- read.csv("expression.csv", row.names=1)
+data <- read.csv("expression.csv", row.names = 1)
 probes <- c("FOO", "BAR")
-matches <- filterProbes(data, probes)  
+matches <- filterProbes(data, probes)
 }
 }

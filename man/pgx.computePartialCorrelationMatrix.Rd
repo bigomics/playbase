@@ -20,7 +20,7 @@ pgx.computePartialCorrelationMatrix(tX, method = PCOR.METHODS, fast = FALSE)
 \value{
 A list with components:
 \itemize{
-  \item rho - Matrix of partial correlations 
+  \item rho - Matrix of partial correlations
   \item graph - igraph object of top connected genes
 }
 }
@@ -28,10 +28,10 @@ A list with components:
 Computes a partial correlation matrix between genes adjusting for covariates.
 }
 \details{
-This function calculates the partial correlation between all genes in the PGX expression matrix, 
-adjusting for the specified covariates. It removes the linear effect of the covariates before 
+This function calculates the partial correlation between all genes in the PGX expression matrix,
+adjusting for the specified covariates. It removes the linear effect of the covariates before
 computing the gene-gene partial correlations.
 
-The main output is a partial correlation matrix. Optionally a graph can be extracted, showing the 
+The main output is a partial correlation matrix. Optionally a graph can be extracted, showing the
 top connected genes. Specific genes can be highlighted in the graph.
 }

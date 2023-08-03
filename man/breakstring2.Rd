@@ -27,14 +27,14 @@ A string with line breaks inserted.
 Break up a long string into multiple lines
 }
 \details{
-This function takes a long string \code{s} and inserts line breaks \code{brk} every \code{n} characters.  
+This function takes a long string \code{s} and inserts line breaks \code{brk} every \code{n} characters.
 It first truncates the input string to a maximum length \code{nmax} if longer.
-The string is then split into words, and words are added to each line until it reaches length \code{n}. 
+The string is then split into words, and words are added to each line until it reaches length \code{n}.
 A line break \code{brk} is inserted, and the process continues until all words have been processed.
 }
 \section{Functions}{
 \itemize{
-\item \code{breakstring()}: Breaks a character string into substrings of a 
+\item \code{breakstring()}: Breaks a character string into substrings of a
 specified length, separated by a specified line break character.
 
 }}

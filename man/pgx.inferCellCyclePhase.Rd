@@ -16,9 +16,9 @@ Seurat object containing cell cycle scores and phase assignments.
 Infers cell cycle phase based on expression of known marker genes.
 }
 \details{
-This function takes a gene expression matrix and calculates cell cycle 
-scores and assigns cell cycle phases using the Seurat package. It uses curated lists 
-of S phase and G2/M phase marker genes from Tirosh et al. 2015. The gene expression 
+This function takes a gene expression matrix and calculates cell cycle
+scores and assigns cell cycle phases using the Seurat package. It uses curated lists
+of S phase and G2/M phase marker genes from Tirosh et al. 2015. The gene expression
 matrix is normalized then scored based on the phase marker genes. The output Seurat
 object contains the scores and assigned phases for each cell.
 }

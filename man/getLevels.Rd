@@ -16,10 +16,10 @@ A character vector representing the levels of the group variables in the input d
 This function retrieves the levels of group variables in a data frame.
 }
 \details{
-The function takes a data frame `Y` as input and searches for 
-columns that represent group variables. Group variables are identified as 
-columns that have a name that does not contain "title", "name", "sample", or 
-"patient" and have a majority of non-unique values. 
-Numeric columns are excluded from the search. 
+The function takes a data frame `Y` as input and searches for
+columns that represent group variables. Group variables are identified as
+columns that have a name that does not contain "title", "name", "sample", or
+"patient" and have a majority of non-unique values.
+Numeric columns are excluded from the search.
 The levels of the identified group variables are then extracted and returned as a character vector.
 }

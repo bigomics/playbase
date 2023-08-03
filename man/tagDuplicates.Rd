@@ -16,9 +16,9 @@ A character vector of the same length as `s`, containing the tagged strings.
 This function tags duplicate strings by appending spaces to them.
 }
 \details{
-The function takes a character vector of strings `s` as 
-input and searches for duplicate strings. For each set of duplicate strings, 
-the function appends a number of spaces to each string, such that the first 
-occurrence of the string has no spaces appended, the second occurrence has one space appended, and so on. 
+The function takes a character vector of strings `s` as
+input and searches for duplicate strings. For each set of duplicate strings,
+the function appends a number of spaces to each string, such that the first
+occurrence of the string has no spaces appended, the second occurrence has one space appended, and so on.
 The resulting tagged strings are returned as a character vector.
 }

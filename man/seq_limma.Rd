@@ -33,10 +33,11 @@ genes. The count data is normalized and dispersion is estimated using either edg
 \examples{
 \dontrun{
 set.seed(151)
-gx <- matrix(sample(1:100, 100*20, replace = TRUE), 100, 20)
+gx <- matrix(sample(1:100, 100 * 20, replace = TRUE), 100, 20)
 rownames(gx) <- replicate(100, sample(paste0(LETTERS, 1:50), 1))
 colnames(gx) <- sample(letters, 20)
 y <- sample(letters[1:4], 20, replace = TRUE)
 out <- playbase::seq_limma(gx, y)
-#' }
+#'
+}
 }
