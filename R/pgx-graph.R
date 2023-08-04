@@ -4,6 +4,25 @@
 ##
 
 
+#' Compute path scores for a graph
+#'
+#' @title Compute path scores
+#'
+#' @param graph An igraph object representing the pathway graph 
+#' @param strict.pos Logical indicating whether to enforce strictly positive fold changes. Default is TRUE.
+#'
+#' @return A matrix of path scores for each node and sample
+#'
+#' @description Computes path scores for a graph based on node fold changes.
+#'
+#' @details This function takes an igraph pathway graph object and calculates path scores for each node.
+#'
+#' It first adds source and sink nodes if they do not exist. 
+#' It then calculates edge weights based on the fold changes, enforcing strictly positive values if strict.pos=TRUE.
+#'
+#' Path scores are computed as the path integral from source to sink going through each node. 
+#' The path score indicates how well connected a node is to the observed fold changes.
+#'
 #' @export
 pgx.computePathscores <- function(graph, strict.pos = TRUE) {
   ## add source/sink
@@ -32,14 +51,12 @@ pgx.computePathscores <- function(graph, strict.pos = TRUE) {
     score <- node.values * edge.rho ## always positive
     weights0 <- -log(pmax(score / max(score), 1e-8))
 
-
     ## ----------------------------------------------------------
     ## Compute pathscore (solve all distances, 3-point SP)
     ## ----------------------------------------------------------
     dist.source <- igraph::distances(graph, v = "SOURCE", weights = weights0)
     dist.sink <- igraph::distances(graph, v = "SINK", weights = weights0)
     w1 <- rep(1, length(igraph::E(graph)))
-
 
     path.score <- exp(-(dist.source + dist.sink))
     names(path.score) <- igraph::V(graph)$name
@@ -50,12 +67,32 @@ pgx.computePathscores <- function(graph, strict.pos = TRUE) {
 }
 
 
+#' Add source and sink nodes to pathway graph
+#'
+#' @title Add source and sink nodes
+#'
+#' @param gr An igraph pathway graph object
+#'
+#' @return An igraph object with source and sink nodes added
+#'
+#' @description 
+#' Adds source and sink nodes to a pathway graph to enable path scoring.
+#'
+#' @details
+#' This function takes an igraph pathway graph object \code{gr} and adds 
+#' source and sink nodes to it.
+#'
+#' The source and sink nodes are named "SOURCE" and "SINK" respectively.
+#' They are assigned layout positions above and below the existing nodes.
+#' The fold changes and scaled data for the source and sink are set to 1s.
+#' 
+#' Edges are added from the source to the top layer nodes, and from the bottom layer nodes to the sink.
+#' All edge weights are set to 1.
+#'
 #' @export
 pgx._addSourceSink <- function(gr) {
   min.level <- min(gr$layout[igraph::V(gr)$name, 3])
   max.level <- max(gr$layout[igraph::V(gr)$name, 3])
-  min.level
-  max.level
 
   gr <- igraph::add_vertices(gr, 2, name = c("SOURCE", "SINK"))
   ss.layout <- rbind("SOURCE" = c(0, 0, -999), "SINK" = c(0, 0, 999))
@@ -78,6 +115,29 @@ pgx._addSourceSink <- function(gr) {
   return(gr)
 }
 
+
+#' Create an omics graph from an NGS analysis
+#'
+#' @title Create an omics graph 
+#'
+#' @param ngs An NGS analysis object containing gene expression data
+#' @param do.intersect Logical indicating whether to intersect genesets. Default is TRUE.
+#'
+#' @return An igraph object representing the omics graph.
+#' 
+#' @description Constructs an omics graph by connecting genes to gene sets and merging nodes.
+#'
+#' @details This function takes an NGS analysis object and constructs a graph where genes are connected to the gene sets they belong to. 
+#' It first creates a bipartite graph connecting genes and gene sets. The graph is then simplified by merging genes into clusters.
+#'
+#' If do.intersect is TRUE, gene sets are intersected when more than one gene set contains the same genes. This reduces redundancy.
+#' 
+#' The graph layout positions nodes along the z-axis based on the type, with genes lowest and gene sets highest. Edges are added from
+#' a source node to genes and from gene sets to a sink node.
+#'
+#' The graph contains node data on expression, log2 fold changes between conditions, and metadata. It can be used for pathway analysis
+#' and visualizations.
+#'
 #' @export
 pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   ## ======================================================================
@@ -98,8 +158,6 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   ## Create large data matrix (includes all levels)
   ## ----------------------------------------------------------------------
   xx1 <- ngs$X
-  ## REALLY???
-
 
   gene <- toupper(ngs$genes[rownames(xx1), "gene_name"])
   rownames(xx1) <- paste0("{gene}", gene)
@@ -193,6 +251,7 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
 }
 
 
+#' @describeIn pgx.createOmicsGraph  reduces a full omics graph into a simplified graph by clustering nodes into groups.
 #' @export
 pgx.reduceOmicsGraph <- function(ngs) {
   ## ======================================================================
@@ -203,16 +262,11 @@ pgx.reduceOmicsGraph <- function(ngs) {
   ## make bipartite igraph object
   ## ======================================================================
 
-
-  ##
-
   ## get full omics graph
   gr <- ngs$omicsnet
   if (is.null(gr)) {
     stop("FATAL ERROR:: no omicsnet in ngs object. first run pgx.createOmicsGraph().")
   }
-
-  summary(igraph::E(gr)$weight)
 
   ## ------------------------------------------------------------
   ## conform features
@@ -323,12 +377,18 @@ pgx.reduceOmicsGraph <- function(ngs) {
   return(gr1)
 }
 
+
+#' @describeIn pgx.createOmicsGraph Creates a separate layer in a graph for VIP genes by assigning them a new z position and removing shortcut links.
+#' @param gr: igraph object
+#' @param genes: character vector of VIP genes
+#' @param z: z position for new VIP layer
+#' @param reconnect: minimum edges to keep when removing shortcuts
 #' @export
 pgx.createVipGeneLayer <- function(gr, genes, z = 0, reconnect = 40) {
-  ##
+  ## ----------------------------------------------------------------------
   ## Create seperate VIP layer from given genes and remove peeping
   ## links.
-  ##
+  ## ----------------------------------------------------------------------
 
   vname <- sub(".*\\}", "", igraph::V(gr)$name)
   vip <- igraph::V(gr)[which(vname %in% genes)]
@@ -390,14 +450,39 @@ pgx.createVipGeneLayer <- function(gr, genes, z = 0, reconnect = 40) {
 }
 
 
-
+#' Create an omics graph from PGX results
+#'
+#' @title Create Omics Graph 
+#'
+#' @description 
+#' Generates an igraph object representing associations between genes, gene sets and clinical outcomes from PGX results.
+#'
+#' @param gr An igraph object containing the gene-geneset network 
+#' @param gene Character name of gene to highlight 
+#' @param geneset Character name of gene set to highlight
+#' @param cex Size of node labels 
+#' @param fx PGX results matrix to color nodes by 
+#' @param main Plot title
+#' @param plot Logical indicating whether to plot the graph
+#'
+#' @details
+#' This function takes a gene-geneset igraph object and PGX results and generates an omics graph.
+#' Nodes represent genes and gene sets. Edge widths indicate the association strength between them.
+#'
+#' Nodes can be colored by PGX results to highlight genes/sets associated with outcomes.
+#' Specific genes and sets can also be highlighted by specifying their names.
+#' 
+#' The graph can be plotted directly using various layouts, or the igraph object can be returned.
+#'
+#' @return 
+#' An igraph object containing the omics graph.
+#'
 #' @export
 pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
                                    cex = 1, fx = NULL, main = NULL, plot = TRUE) {
   if (!is.null(gene) && !is.null(geneset)) {
     stop("either gene or geneset must be non-null!")
   }
-
 
   vtype <- gsub("\\}.*|^\\{", "", rownames(gr$layout))
   tsne_genes <- gr$layout[which(vtype == "gene"), ]
@@ -408,8 +493,6 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
   pos2 <- apply(tsne_genes[, 1:2], 2, uscale)
   pos1 <- t(t(pos1) + c(+0.6, 0))
   pos2 <- t(t(pos2) + c(-0.6, 0))
-
-
 
   tt <- ""
   to <- from <- NULL
@@ -446,8 +529,6 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
     if (!is.null(fx)) {
       fx1 <- fx[match(rownames(pos1), names(fx))]
       fx2 <- fx[match(rownames(pos2), names(fx))]
-
-
       fx1 <- fx1 / max(abs(fx1), na.rm = TRUE)
       fx2 <- fx2 / max(abs(fx2), na.rm = TRUE)
       klr1 <- gplots::bluered(32)[16 + round(15 * fx1)]
@@ -497,11 +578,29 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
 }
 
 
-
 ## ===================================================================================
 ## ================================ GO graph functions ===============================
 ## ===================================================================================
 
+
+#' Compute Core GO Graph
+#'
+#' @title Compute Core GO Graph 
+#'
+#' @param ngs pgx object containing GO enrichment results 
+#' @param fdr FDR threshold for selecting significant GO terms
+#'
+#' @return An igraph object representing the core GO graph
+#'
+#' @description Computes a core GO graph from significant GO terms
+#'
+#' @details This function takes a pgx object containing GO enrichment results 
+#' and extracts significant GO terms below the specified FDR threshold. It constructs 
+#' a graph where nodes are GO terms, connected based on their semantic relationships 
+#' from the GO ontology. Terms are colored by their enrichment scores and sized by the 
+#' number of input genes they contain. The resulting graph highlights the key GO 
+#' terms and biological processes enriched in the analysis.
+#'
 #' @export
 pgx.computeCoreGOgraph <- function(ngs, fdr = 0.05) {
   ## test if there are GO terms
@@ -513,7 +612,6 @@ pgx.computeCoreGOgraph <- function(ngs, fdr = 0.05) {
     cat("[pgx.computeCoreGOgraph] WARNING:: not enough GO terms in enrichment.\n")
     return(NULL)
   }
-
 
   comparisons <- names(ngs$gset.meta$meta)
   comparisons
@@ -569,9 +667,22 @@ pgx.computeCoreGOgraph <- function(ngs, fdr = 0.05) {
 }
 
 
+#' @title Create a Gene Ontology Graph
+#'
+#' @description This function creates a graph representation of the Gene Ontology (GO) hierarchy, using data from the GO.db package.
+#'
+#' @details The function first extracts the GO terms and their associated information from the GOTERM table in the GO.db package.
+#' Then, it removes any duplicate terms and sets the row names of the resulting data frame to the GO IDs.
+#'
+#' Next, the function extracts the parent-child relationships for each of the three GO 
+#' domains (Biological Process, Molecular Function, and Cellular Component) from the 
+#' corresponding tables in the GO.db package. It combines these relationships into a single data.frame 
+#' and creates a graph object using the igraph package.
+#'
+#' @return An igraph graph object representing the Gene Ontology hierarchy.
+#'
 #' @export
 getGOgraph <- function() {
-  ##
 
   terms <- AnnotationDbi::toTable(GO.db::GOTERM)[, 2:5]
   terms <- terms[!duplicated(terms[, 1]), ]
@@ -588,7 +699,28 @@ getGOgraph <- function() {
 }
 
 
-
+#' @title Get Significant GO Terms
+#'
+#' @description Retrieve significant GO terms from a PGX analysis 
+#' 
+#' @param ngs PGX object containing gene set analysis results
+#' @param comparison Name of the contrast to extract results for
+#' @param methods Character vector of methods to include. Default NULL uses all.
+#' @param fdr FDR cutoff for significance. Default 0.20. 
+#' @param nterms Maximum number of GO terms to return. Default 500.
+#' @param ntop Number of top significant GO terms to highlight. Default 100.
+#'
+#' @details This function takes a PGX object and extracts significant GO terms for
+#' a given contrast, based on the gene set analysis results. It filters the GO terms
+#' by FDR cutoff and returns up to \code{nterms} terms, highlighting the top \code{ntop} terms.
+#'
+#' The \code{methods} parameter allows subsetting the methods to include from the PGX object.
+#' By default it uses all methods found.
+#'
+#' @return A list containing the GO graph \code{graph}, various GO term statistics
+#' matrices (\code{pathscore}, \code{foldchange}, \code{qvalue}), and \code{match} mapping 
+#' GO terms to gene sets.
+#'
 #' @export
 pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 500, ntop = 100) {
   mx <- ngs$gset.meta$meta[[comparison]]
@@ -607,8 +739,6 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
   methods
 
   ## recalculate meta values
-
-
 
   pv <- unclass(mx$p)[, methods, drop = FALSE]
   qv <- unclass(mx$q)[, methods, drop = FALSE]
@@ -702,12 +832,35 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
 ## ===================================================================================
 
 
+#' Hierarchical Clustering of Graph
+#'
+#' @title Hierarchical clustering of graph nodes
+#'
+#' @param g An igraph object representing the graph 
+#' @param k Number of clusters. If NULL, optimal number is found.
+#' @param mc.cores Number of cores for parallel processing.
+#' 
+#' @return Matrix with hierarchical clustering membership at each level.
+#'
+#' @description 
+#' Performs hierarchical clustering of nodes in a graph using the Louvain algorithm.
+#'
+#' @details
+#' This function takes an igraph graph object \code{g} and performs hierarchical clustering 
+#' of the nodes using the Louvain community detection algorithm.
+#'
+#' It iteratively clusters the nodes, splitting communities into sub-communities to find
+#' the optimal number of clusters. The number of clusters \code{k} can be specified, 
+#' otherwise the optimal number is found automatically.
+#'
+#' The clustering is done in parallel using \code{mc.cores} cores if available. 
+#' The output is a matrix with the hierarchical clustering membership at each level.
+#'
 #' @export
 hclustGraph <- function(g, k = NULL, mc.cores = 2) {
   ## Hierarchical clustering of graph using iterative Louvain
   ## clustering on different levels. If k=NULL iterates until
   ## convergences.
-  ##
 
   idx <- rep(1, length(igraph::V(g)))
   K <- c()
@@ -754,3 +907,7 @@ hclustGraph <- function(g, k = NULL, mc.cores = 2) {
   colnames(K) <- NULL
   return(K)
 }
+
+## --------------------------------------------------------------------------------------------
+## ------------------------------------ END OF FILE -------------------------------------------
+## --------------------------------------------------------------------------------------------

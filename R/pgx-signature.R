@@ -7,8 +7,33 @@
 ## ========================= CONNECTIVITY FUNCTIONS ===============================
 ## ================================================================================
 
-## ntop = 1000; contrasts = NULL;remove.le = FALSE;inmemory = FALSE
 
+#' @title Compute connectivity scores
+#'
+#' @param pgx PGX object containing gene expression data 
+#' @param sigdb Signature database HDF5 file
+#' @param ntop Number of top correlated genes to use for scoring. Default 1000.
+#' @param contrasts Contrasts to compute signature for. Default is all contrasts. 
+#' @param remove.le Remove leading edge genes before scoring. Default FALSE.
+#' @param inmemory Compute correlations in memory instead of on disk. Default FALSE.
+#'
+#' @return List of data frames with connectivity scores for each contrast.
+#'
+#' @description Compute connectivity scores between a signature and datasets.
+#'
+#' @details This function takes a signature from the PGX object (fold changes for a given contrast)
+#' and computes connectivity scores against the signature database. The signature is correlated
+#' against all datasets in the database to produce a ranked list of connectivity scores.
+#' 
+#' The top \code{ntop} correlated genes are used for computing the connectivity score.
+#' Scores are computed for each contrast unless a subset is specified with \code{contrasts}.
+#' 
+#' Setting \code{remove.le = TRUE} removes the leading edge genes from the signature before 
+#' computing connectivity. This reduces bias from highly weighted genes.
+#'
+#' By default, correlations are computed on disk using chunks. Set \code{inmemory = TRUE}
+#' to compute in memory, which may be faster for small datasets.
+#'
 #' @export
 pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 1000, contrasts = NULL,
                                           remove.le = FALSE, inmemory = FALSE) {
@@ -70,12 +95,35 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 1000, contrasts = N
 }
 
 
+#' @title Correlate signature with datasets in HDF5 file
+#'
+#' @param F Numeric vector of signature fold changes
+#' @param h5.file Path to HDF5 file containing dataset expression matrices 
+#' @param nsig Number of signature genes to use for correlation. Default 100.
+#' @param ntop Number of top correlated genes to use for GSEA. Default 1000.  
+#' @param nperm Number of permutations for GSEA. Default 1000.
+#'
+#' @return Data frame with correlation results and GSEA enrichment scores.
+#'
+#' @description Correlates a signature (fold change vector) with datasets in an HDF5 file using in-memory computations instead of on-disk.
+#' It is also possible to run the operation on-disk via \code{pgx.correlateSignatureH5}.
+#'
+#' @details This function computes the correlation and gene set enrichment between a 
+#' signature fold change vector \code{F} and dataset expression matrices stored in an 
+#' HDF5 file at \code{h5.file}.
+#'
+#' It first reads the top \code{nsig} signature genes into memory. 
+#' Then it computes pairwise Pearson correlation between the signature and each dataset.
+#' It also runs pre-ranked GSEA using the \code{fgsea} package to compute enrichment scores.
+#'
+#' The main difference from \code{\link{pgx.correlateSignatureH5}} is that correlations 
+#' and GSEA are computed in memory instead of using on-disk chunks. This is faster for 
+#' small datasets but requires loading the full expression matrix into memory.
+#'
+#' @return Data frame with the correlation coefficient, p-value, and normalized enrichment score (NES) for each dataset.
+#' 
 #' @export
 pgx.correlateSignatureH5.inmemory <- function(F, h5.file, nsig = 100, ntop = 1000, nperm = 1000) {
-  ##
-  ##
-  ##
-  ##
 
   if (NCOL(F) == 1 && inherits(F, "numeric")) {
     rn <- names(F)
@@ -168,16 +216,16 @@ pgx.correlateSignatureH5.inmemory <- function(F, h5.file, nsig = 100, ntop = 100
 }
 
 
+#' @describeIn  pgx.correlateSignatureH5.inmemory computes correlation and gene set enrichment between a 
+#' signature and datasets in an HDF5 file using on-disk chunked computations
+#' @param h5.data: HDF5 location of dataset expression matrices
+#' @param h5.rn: HDF5 location of dataset rownames
+#' @param h5.cn: HDF5 location of dataset colnames
+#' 
 #' @export
 pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm = 10000,
                                      h5.data = "data/matrix", h5.rn = "data/rownames",
                                      h5.cn = "data/colnames") {
-  ##
-  ##
-  ##
-  ##
-  ## nsig=100;ntop=1000;nperm=10000;h5.data="data/matrix";h5.rn="data/rownames";h5.cn="data/colnames"
-
 
   if (is.null(names(fc))) stop("fc must have names")
   ## mouse... mouse...
@@ -246,9 +294,26 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
 }
 
 
-
-
-chunk <- 100
+#' @title Create CREEDS signature database
+#'
+#' @param gmt.files Character vector of paths to CREEDS GMT files containing gene signatures.
+#' @param h5.file Path to HDF5 file to write signature database to. 
+#' @param update.only Logical indicating whether to only update existing signatures. Default is FALSE.
+#'
+#' @return NULL. The CREEDS signature database is written to the specified HDF5 file.
+#'
+#' @description Reads gene signatures from CREEDS GMT files and writes to an HDF5 database.
+#'
+#' @details This function takes a set of CREEDS GMT files containing up/down regulated gene signatures.
+#' It extracts the signatures and writes them to an HDF5 file in a standard format that can be used for 
+#' gene set enrichment analysis.
+#'
+#' Each GMT file contains multiple up and down regulated signatures for a perturbation experiment.
+#' The signatures are named using the perturbation and direction, e.g. "DrugX-up".
+#' 
+#' If update.only=FALSE, any existing signatures in the HDF5 file will be overwritten. 
+#' If TRUE, only signatures not already present will be added.
+#'
 #' @export
 pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
   h5exists <- function(h5.file, obj) {
@@ -365,6 +430,22 @@ pgx.createCreedsSigDB <- function(gmt.files, h5.file, update.only = FALSE) {
   rhdf5::h5closeAll()
 } ## end of pgx.createCreedsSigDB
 
+
+#' Create a signature database from PGX files
+#'
+#' @title Create signature database
+#' @description Reads fold change matrices from multiple PGX files and combines them into a single signature database stored in an H5 file.
+#'
+#' @param h5.file Path to the H5 file to store the signature database.
+#' @param pgx.files Character vector of paths to PGX files to read fold change matrices from.
+#' @param update.only Logical indicating if only new PGX files should be added. Default is FALSE.
+#' 
+#' @details This function reads fold change matrices from multiple PGX experiment result files (.pgx). 
+#' It extracts the fold change values, normalizes the gene names, and combines the matrices into a single signature database.
+#' This combined matrix is then stored in an H5 file for later use.
+#'
+#' @return The combined signature database matrix is saved to the specified H5 file.
+#' 
 #' @export
 pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALSE) {
   h5exists <- function(h5.file, obj) {
@@ -419,6 +500,25 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALS
   )
 }
 
+
+#' Create signature database from matrix
+#'
+#' @title Create signature database from matrix
+#'
+#' @param h5.file Path to HDF5 file to write signature database to
+#' @param X Numeric matrix of gene expression data 
+#' @param update.only Logical indicating whether to update existing signatures only. Default is FALSE.
+#' 
+#' @return NULL. The signature database is written to the HDF5 file.
+#'
+#' @description Reads a gene expression matrix and saves it to an HDF5 database file. Also extracts per-dataset top up/down regulated signatures.
+#'
+#' @details This function takes a gene expression matrix \code{X} and writes it to an HDF5 file at \code{h5.file} in a standard format.
+#'
+#' It also calculates the top 100 up and down regulated genes (signatures) for each dataset in \code{X}. These signatures are saved in the HDF5 file.
+#' 
+#' If \code{update.only=TRUE}, existing signatures in the HDF5 file will not be overwritten. Only new signatures from \code{X} will be added.
+#'
 #' @export
 pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = FALSE) {
   if (file.exists(h5.file)) unlink(h5.file)
@@ -487,6 +587,29 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
   rhdf5::h5closeAll()
 }
 
+
+#' @title Add Enrichment Signatures to HDF5 File
+#' 
+#' @description 
+#' Adds gene set enrichment results as signatures to an HDF5 file.
+#'
+#' @param h5.file The HDF5 file path to write enrichment results to.
+#' @param X The gene expression matrix. If NULL, matrix is read from HDF5 file.
+#' @param mc.cores Number of cores for parallel processing. Default 0. 
+#' @param methods Enrichment methods to run. Default c("gsea", "rankcor")[2].
+#'
+#' @details
+#' This function runs gene set enrichment analysis on a gene expression matrix X, 
+#' using the specified methods. It writes the enrichment results as signatures to 
+#' the specified HDF5 file under the "enrichment" group.
+#' 
+#' Parallel processing can be enabled by setting mc.cores to use multiple CPU cores.
+#' By default, it runs only the "rankcor" method. Alternative methods like "gsea" can
+#' be specified in the methods parameter.
+#'
+#' @return 
+#' No value is returned. Enrichment signatures are written to the HDF5 file.
+#'
 #' @export
 pgx.addEnrichmentSignaturesH5 <- function(h5.file, X = NULL, mc.cores = 0,
                                           methods = c("gsea", "rankcor")[2]) {
@@ -557,12 +680,29 @@ pgx.addEnrichmentSignaturesH5 <- function(h5.file, X = NULL, mc.cores = 0,
 }
 
 
-
 ## -------------------------------------------------------------------
 ## Pre-calculate geneset expression with different methods
 ## -------------------------------------------------------------------
 
 
+#' @title Compute gene set expression
+#'
+#' @description This function calculates gene set expression scores from an input gene expression matrix using different methods like GSVA, ssGSEA, etc.
+#'
+#' @param X Numeric gene expression matrix with genes in rows and samples in columns.
+#' @param gmt List of gene sets, each containing gene names. 
+#' @param method Character vector of methods to use for computing gene set expression. Options are "gsva", "ssgsea", "spearman", "average". Default uses all.
+#' @param min.size Minimum gene set size required. Sets with fewer genes are removed. Default 10.  
+#' @param center Logical indicating whether gene expression should be centered first. Default is TRUE.
+#'
+#' @details This function takes a gene expression matrix X and gene sets defined in gmt. It calculates gene set expression scores using the specified methods.
+#'
+#' By default it computes GSVA, ssGSEA, spearman correlation and mean expression scores. X is centered by gene means if center=TRUE. Small gene sets are filtered out.
+#' 
+#' The output is a list containing the gene set expression matrices from each method.
+#'
+#' @return A list with gene set expression matrices, named by method.
+#'
 #' @export
 pgx.computeGeneSetExpression <- function(X, gmt, method = NULL,
                                          min.size = 10, center = TRUE) {
@@ -618,6 +758,18 @@ pgx.computeGeneSetExpression <- function(X, gmt, method = NULL,
 ## SIGDB.DIR. For the moment seems these functions are duplicated in
 
 
+#' @title Get the SIGDB Directory
+#'
+#' @description This function returns the path to the SIGDB directory, which is used to store data related to the SIGDB database.
+#'
+#' @details The function first checks if the `SIGDB.DIR` variable exists in the global environment.
+#' If it does not exist, the function checks if the `FILESX` variable exists in the global environment.
+#' If `FILESX` exists, the function constructs the path to the SIGDB directory by concatenating `FILESX` and a subdirectory named "sigdb".
+#' The resulting path is returned as a character vector of length 2, containing both `FILESX` and the full path to the SIGDB directory.
+#' If `SIGDB.DIR` already exists in the global environment, its value is returned directly.
+#'
+#' @return A character vector containing the path to the SIGDB directory.
+#'
 getSIGDB.DIR <- function() {
   if (!exists("SIGDB.DIR") && exists("FILESX")) {
     SIGDB.DIR <- c(FILESX, file.path(FILESX, "sigdb"))
@@ -626,6 +778,21 @@ getSIGDB.DIR <- function() {
   }
 }
 
+
+#' @title Get Connectivity Contrasts from a SIGDB File
+#'
+#' @description This function reads the connectivity contrasts from a specified SIGDB file and returns them as a character vector.
+#'
+#' @param sigdb A character string specifying the name of the SIGDB file.
+#' @param path An optional character string specifying the path to the directory containing the SIGDB file (default is NULL).
+#'
+#' @details The function first checks if a path to the SIGDB file is provided.
+#' If a path is provided, it constructs the full path to the SIGDB file by concatenating the path and the file name.
+#' The function then checks if the specified SIGDB file exists.
+#' If the file exists, it uses the `h5read` function from the rhdf5 package to read the connectivity contrasts from the "data/colnames" dataset in the SIGDB file.
+#'
+#' @return A character vector containing the connectivity contrasts from the specified SIGDB file, or NULL if the file does not exist.
+#'
 #' @export
 sigdb.getConnectivityContrasts <- function(sigdb, path = NULL) {
   if (!is.null(path)) {
@@ -637,6 +804,27 @@ sigdb.getConnectivityContrasts <- function(sigdb, path = NULL) {
   rhdf5::h5read(sigdb, "data/colnames")
 }
 
+
+#' @title Get elements from a sigDB
+#'
+#' @param sigdb Path to signature database HDF5 file
+#' @param select Character vector of contrasts to return 
+#' @param genes Character vector of genes to return
+#' @param path Optional path prefix for sigdb file  
+#'
+#' @return Matrix of connectivity scores
+#' 
+#' @description Get the connectivity matrix from a signature database HDF5 file.
+#'
+#' @details This function extracts the connectivity matrix from a signature database 
+#' stored in HDF5 format. The HDF5 file should contain the matrix under /data/matrix.
+#'
+#' You can filter the returned matrix by specifying a subset of contrasts to return 
+#' with the \code{select} parameter. Use the \code{genes} parameter to return only a 
+#' subset of genes.
+#'
+#' If the sigdb file is not in the working directory, set the \code{path} parameter.
+#' 
 #' @export
 sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL, path = NULL) {
   if (sigdb == "" || is.null(sigdb)) {
@@ -677,6 +865,12 @@ sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL, path
   return(X)
 }
 
+
+#' @describeIn sigdb.getConnectivityMatrix This function reads the enrichment data stored in a signature database in HDF5 format.
+#' It extracts either the gene set enrichment analysis (GSEA) results or the rank 
+#' correlation analysis results.
+#' @param which Method to use for enrichment, either "gsea" or "rankcor"
+#' 
 #' @export
 sigdb.getEnrichmentMatrix <- function(sigdb, select = NULL, path = NULL,
                                       which = c("gsea", "rankcor")[1]) {
@@ -731,6 +925,7 @@ sigdb.getEnrichmentMatrix <- function(sigdb, select = NULL, path = NULL,
   return(Y)
 }
 
+#' @describeIn sigdb.getConnectivityMatrix reads the up/down regulated gene signatures from a signature database HDF5 file.
 #' @export
 sigdb.getSignatureMatrix <- function(sigdb, path = NULL) {
   if (sigdb == "" || is.null(sigdb)) {
@@ -758,11 +953,11 @@ sigdb.getSignatureMatrix <- function(sigdb, path = NULL) {
   list(up = up, dn = dn)
 }
 
+#' @describeIn sigdb.getConnectivityMatrix removes a dataset and its associated data from a signature database HDF5 file.
 #' @export
 sigdb.removeDataset <- function(h5.file, pgxname) {
   ## delete columns from H5 file
   dd <- rhdf5::h5ls(h5.file)
-  dd
   cn <- rhdf5::h5read(h5.file, "data/colnames")
   del <- grep(paste0("\\[", pgxname, "\\]"), cn)
   slots <- sub("^/*", "", paste0(dd$group, "/", dd$name))

@@ -2318,12 +2318,25 @@ isanumber <- function(x) {
   (length(nx) > 0 && mean(!is.na(nx)) > 0.5)
 }
 
+
+#' @title Expand annotation matrix
+#' 
+#' @description Expands a phenotype annotation matrix into dummy variables.
+#'
+#' @param A Data frame containing the annotation variables.
+#' 
+#' @details This function takes an annotation data frame and expands any categorical variables into
+#' dummy variables using model.matrix.
+#'
+#' For each column, it determines if the variable is numeric or categorical. 
+#' Numeric variables are ranked. Categorical variables are expanded into dummy variables.
+#'
+#' @return An expanded annotation matrix with dummy variables.
+#'
 #' @export
 expandAnnotationMatrix <- function(A) {
   expandPhenoMatrix(A)
 }
-
-
 
 
 #' @title Expand phenotype matrix
@@ -2453,7 +2466,6 @@ getGSETS_playbase <- function(gsets = NULL, pattern = NULL) {
   gsets <- intersect(gsets, names(playdata::iGSETS))
   lapply(playdata::iGSETS[gsets], function(idx) playdata::GSET_GENES[idx])
 }
-
 
 
 ## =====================================================================================

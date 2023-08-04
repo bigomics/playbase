@@ -2,12 +2,33 @@
 % Please edit documentation in R/pgx-files.R
 \name{pgxinfo.needUpdate}
 \alias{pgxinfo.needUpdate}
-\title{Checks if any of metadata files (info, allFC, sigdb) need
-update. All pgx files in the datafolder should be included.}
+\title{Check if PGX metadata needs update}
 \usage{
 pgxinfo.needUpdate(pgx.dir, check.sigdb = TRUE, verbose = TRUE)
 }
+\arguments{
+\item{pgx.dir}{Path to the PGX directory containing .pgx files}
+
+\item{check.sigdb}{Logical indicating whether to check the sigdb file. Default is TRUE.}
+
+\item{verbose}{Logical indicating whether to print verbose messages. Default is TRUE.}
+}
+\value{
+Logical indicating if any metadata files need update.
+}
 \description{
-Checks if any of metadata files (info, allFC, sigdb) need
-update. All pgx files in the datafolder should be included.
+Checks if the main PGX metadata files need to be updated against the .pgx files.
+All pgx files in the datafolder should be included.
+}
+\details{
+This function checks if the main metadata files in a PGX directory need to be updated:
+
+- datasets-info.csv 
+- datasets-allFC.csv
+- datasets-sigdb.h5
+
+It compares the .pgx files in the directory against the metadata files.
+If any .pgx files are missing from the metadata, it will return TRUE indicating the metadata needs to be updated.
+
+Set verbose=TRUE to print debug messages. Set check.sigdb=FALSE to skip checking the sigdb file.
 }

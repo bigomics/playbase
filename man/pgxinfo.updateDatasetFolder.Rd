@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-files.R
 \name{pgxinfo.updateDatasetFolder}
 \alias{pgxinfo.updateDatasetFolder}
-\title{Update}
+\title{Update PGX dataset folder metadata}
 \usage{
 pgxinfo.updateDatasetFolder(
   pgx.dir,
@@ -13,6 +13,34 @@ pgxinfo.updateDatasetFolder(
   verbose = TRUE
 )
 }
+\arguments{
+\item{pgx.dir}{Path to the PGX dataset folder containing .pgx files}
+
+\item{force}{Logical indicating whether to force update even if not needed. Default is FALSE.}
+
+\item{delete.old}{Logical indicating whether to delete old metadata files. Default is FALSE.}
+
+\item{new.pgx}{Character vector of new .pgx files added to the folder. Default is NULL.}
+
+\item{update.sigdb}{Logical indicating whether to update sigdb file. Default is TRUE.}
+
+\item{verbose}{Logical indicating whether to print status messages. Default is TRUE.}
+}
+\value{
+NULL. Metadata files in pgx.dir are updated if needed.
+}
 \description{
-Update
+Updates the main metadata files in a PGX dataset folder if needed.
+}
+\details{
+This function checks if the main metadata files in a PGX folder need to be updated
+based on new or changed .pgx files. It compares the .pgx files to the existing metadata.
+
+The metadata files updated are:
+- datasets-info.csv
+- datasets-allFC.csv 
+- datasets-sigdb.h5
+
+If force=TRUE, it will update regardless of whether changes are detected.
+If delete.old=TRUE, existing metadata files will be deleted before writing new files.
 }

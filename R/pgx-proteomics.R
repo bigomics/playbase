@@ -11,12 +11,6 @@
 ########################################################################
 
 
-
-
-
-
-
-
 ## ======================================================================
 ## =================== ROGER FUNCTIONS ==================================
 ## ======================================================================
@@ -24,8 +18,26 @@
 ##
 
 
-
-k <- 10
+#' @title Impute missing values with NMF
+#'
+#' @param X Numeric matrix of proteomics data 
+#' @param groups Factor indicating groups for samples
+#' @param k Number of NMF factors. Default 10.
+#' @param r Cutoff proportion of missing values to impute within group. Default 0.5.
+#'
+#' @return Matrix with imputed values
+#' 
+#' @description Imputes missing values in a proteomics matrix using non-negative matrix factorization (NMF).
+#'
+#' @details This function takes a numeric matrix \code{X} containing proteomics data, with samples in columns.
+#' It uses \code{groups} to define sample groups. 
+#' 
+#' It first replaces missing values (0s) with NAs.
+#' For each sample group, any rows with more than \code{r} proportion of NAs are set to 0.
+#' 
+#' NMF with \code{k} factors is then applied to impute the remaining NAs.
+#' The imputed matrix is returned.
+#' 
 #' @export
 prot.nmfImpute <- function(X, groups, k = 10, r = 0.5) {
   setZERO <- function(x, y) {
@@ -46,6 +58,20 @@ prot.nmfImpute <- function(X, groups, k = 10, r = 0.5) {
   return(impX)
 }
 
+
+#' @title Median Imputation of Proteomics Data
+#'
+#' @description This function performs median imputation on proteomics data, replacing missing or zero values with the median of the non-missing values in the same group.
+#'
+#' @param X A numeric matrix of proteomics data, where rows represent proteins and columns represent samples.
+#' @param groups A factor or character vector indicating the group membership of each sample (column) in X.
+#'
+#' @details The function first replaces any missing values in X with zeros.
+#' Then, for each protein (row), the function calculates the median of the non-missing values in each group, using a log-transformation to handle skewed data.
+#' The function then replaces any zero values in X with the calculated median for their respective group.
+#'
+#' @return A numeric matrix of the same dimensions as X, with missing and zero values replaced by the median of their respective group.
+#'
 #' @export
 prot.medianImpute <- function(X, groups) {
   logmedian <- function(x) {
@@ -64,9 +90,32 @@ prot.medianImpute <- function(X, groups) {
   return(impX)
 }
 
-### IMPUTATION by downshifted Gaussian
+
+#' @title Impute Missing Values by Downshifted Gaussian
+#'
+#' @description Imputes missing values in a numeric matrix by drawing random values from a downshifted Gaussian distribution.  
+#' 
+#' @param x Numeric matrix or vector containing missing values to impute.
+#' @param width Width of Gaussian distribution as fraction of standard deviation. Default is 0.3. 
+#' @param downshift Number of standard deviations to downshift the mean. Default is 1.8.
+#' @param bycolumn Logical indicating whether to impute by column (default) or across entire matrix.
+#'
+#' @details This function imputes missing values by drawing from a Gaussian distribution with mean shifted down by \code{downshift} standard deviations, and width equal to \code{width} times the standard deviation.
+#'
+#' If \code{bycolumn} is TRUE, this is done separately for each column. The mean and standard deviation are calculated from the non-missing values in each column.
+#'
+#' If \code{bycolumn} is FALSE, the parameters are calculated across the entire matrix and missing values are imputed randomly.
+#'  
+#' @return The numeric matrix \code{x} with missing values imputed.
+#'
+#' @examples 
+#' \dontrun{
+#' mat <- matrix(rnorm(100), ncol = 10)  
+#' mat[sample(100, 20)] <- NA
+#' imputed <- .RGimputation(mat)
+#' }
 #' @export
-.RGimputation <- function(x, width = 0.3, downshift = 1.8, bycolumn = T) {
+.RGimputation <- function(x, width = 0.3, downshift = 1.8, bycolumn = TRUE) {
   if (bycolumn == T) {
     for (i in 1:ncol(x)) {
       x[, i][is.na(x[, i])] <- stats::rnorm(sum(is.na(x[, i])), mean(as.numeric(x[, i]), na.rm = T) - downshift * stats::sd(as.numeric(x[, i]), na.rm = T), width * stats::sd(as.numeric(x[, i]), na.rm = T))
@@ -78,19 +127,25 @@ prot.medianImpute <- function(X, groups) {
 }
 
 
-
 ## ======================================================================
 ## =================== SPECIAL SILAC FUNCTIONS ==========================
 ## ======================================================================
-##
-##
 
 
-
-
-
-
-
+#' @title Calculate Copy Number from SILAC Data
+#'
+#' @description This function calculates the copy number of proteins from SILAC data, using the molecular weight and mass of the cell.
+#'
+#' @param data A numeric matrix of SILAC data, where rows represent proteins and columns represent samples.
+#' @param mol.weight A numeric vector of molecular weights for each protein.
+#' @param y The mass of the cell in picograms (pg).
+#'
+#' @details The function first calculates the total intensity for each sample by summing the intensities across all proteins, ignoring missing values.
+#' Then, for each protein and sample, the function calculates the mass by multiplying the intensity by the mass of the cell and dividing by the total intensity.
+#' The function then converts the mass to moles by dividing by the molecular weight and Avogadro's number.
+#'
+#' @return A numeric matrix of the same dimensions as data, containing the calculated copy number for each protein and sample.
+#'
 #' @export
 silac.calcCopyNumber <- function(data, mol.weight, y) {
   ## data should be a numeric matrix
@@ -105,10 +160,23 @@ silac.calcCopyNumber <- function(data, mol.weight, y) {
 }
 
 
-###
-# FIT WIBULL
-###
-
+#' Fit a Weibull distribution to bivariate data
+#'
+#' @title Fit a bivariate Weibull distribution 
+#'
+#' @param x A numeric vector for the x variable
+#' @param y A numeric vector for the y variable
+#'
+#' @return A list with the estimated Weibull parameters
+#'
+#' @description Fits a bivariate Weibull distribution to two input variables.
+#'
+#' @details This function takes two numeric vectors \code{x} and \code{y} and fits a bivariate Weibull distribution.
+#' The Weibull distribution has shape and scale parameters for each variable.
+#'  
+#' Maximum likelihood estimation is used to estimate the 4 Weibull parameters from the input data.
+#' The estimated parameters are returned as a named list.
+#'
 #' @export
 fit.weibull2 <- function(x, y) {
   y <- as.numeric(y)
@@ -134,8 +202,6 @@ fit.weibull2 <- function(x, y) {
   list(x = xfit, y = yfit, t50 = t50)
 }
 
-# ;samples=NULL;protein=p
-
-
-
-# ;samples="NaiveRest_6h";main=NULL;minq=3
+## ================================================================================
+## =============================== END OF FILE ====================================
+## ================================================================================

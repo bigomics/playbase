@@ -8,6 +8,26 @@
 ## ----------------------------------------------------------------------
 
 
+#' @title Create Hive Plot for mixed network
+#'
+#' @param res Input data
+#' @param ngs NGS object containing expression data
+#' @param ct Contrast name or column in \code{ngs$samples} to use for node coloring
+#' @param showloops Whether to show looping edges
+#' @param numlab Number of node labels to show
+#' @param cex Label size scaling factor
+#'
+#' @return Hive plot object
+#'
+#' @description Creates a Hive Plot to visualize a mixed gene-gene set network.
+#'
+#' @details  It extracts the network graph and formats it into a Hive Plot layout.
+#' 
+#' Node importance scores are extracted from the NGS object based on the specified \code{ct} contrast.
+#' These scores are used to determine node sizes in the plot.
+#'
+#' The number of node labels can be reduced by setting \code{numlab} to avoid overplotting.
+#' 
 #' @export
 mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   cat("<mixHivePlot> called\n")
@@ -30,12 +50,8 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
     )
   )
   hpd$nodes$looping <- hpd$nodes$lab %in% loop.nodes
-
   hpd <- mineHPD(hpd, option = "rad <- tot.edge.count")
   hpd$nodes$degree <- hpd$nodes$radius
-
-
-
   hpd$edges$from <- hpd$nodes$lab[hpd$edges$id1]
   hpd$edges$to <- hpd$nodes$lab[hpd$edges$id2]
 
@@ -72,7 +88,6 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
 
   names(maxgrp) <- as.vector(sapply(res$W, rownames))
 
-
   ## use importance as node size
   importance <- igraph::V(gr)$importance
   names(importance) <- igraph::V(gr)$name
@@ -81,13 +96,10 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   hpd$nodes$size <- 1.6 * (hpd$nodes$size / max(hpd$nodes$size))**0.5
   hpd$nodes$axis <- as.integer(sub(":.*", "", hpd$nodes$lab))
   hpd$nodes$color <- c("red3", "blue2")[1 + 1 * (fx[g] > 0)]
-
-
   wt1 <- hpd$edges$weight ## edge.importance
   wt1 <- rank(abs(wt1), na.last = "keep") * sign(wt1)
   hpd$edges$weight <- 3 * abs(wt1 / max(abs(wt1)))**2
   hpd$edges$color <- psych::alpha("grey70", 0.3)
-
 
   jj <- which(hpd$edges$looping)
   if (showloops && length(jj)) {
@@ -113,9 +125,6 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   ## -------------------------------------------------------------
   hpd$nodes$size <- cex * hpd$nodes$size
   hpd$edges$weight <- cex * hpd$edges$weight
-
-
-
   mr <- max(hpd$nodes$radius)
   plotHive(hpd,
     ch = 5, bkgnd = "white",
@@ -127,7 +136,6 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
       lwd = 4, fontface = "bold"
     )
   )
-
 
   tt <- paste("edge.width = edge.importance",
     "node.size = variable importance",
@@ -178,21 +186,17 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   }
 }
 
+#' @describeIn mixHivePlot function generates a hive plot visualization of variable loadings 
+#' from a lmer model result object.
 #' @export
 mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
   cat("<mixPlotLoadings> called\n")
   levels <- levels(res$Y)
-  levels
   ny <- length(levels)
-  ny
-
-
   klrpal <- c("blue2", "orange2")
   klrpal <- rep(RColorBrewer::brewer.pal(n = 8, "Set2"), 10)[1:ny]
 
   names(klrpal) <- levels
-  klrpal
-
 
   plotly::layout(matrix(1:6, 1, 6), widths = c(1, 0.5, 1, 0.5, 1, 0.5))
   k <- 1
@@ -260,18 +264,43 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
 }
 
 
-
 ## ----------------------------------------------------------------------
 ## Variable importance functions
 ## ----------------------------------------------------------------------
 
+
+#' @title Variable importance for survival models
+#'
+#' @param X Numeric matrix of predictor variables, rows are variables
+#' @param time Vector of event/censoring times 
+#' @param status Vector indicating event (1) or censoring (0)
+#' @param methods Methods for computing variable importance. Options are "glmnet", "randomforest", "boruta", "xgboost", "pls".
+#'
+#' @return Named list with variable importance scores by method.
+#'
+#' @description Compute variable importance scores for predictors in a survival analysis model using different methods.
+#'
+#' @details This function calculates variable importance scores using a variety of methods suitable for survival analysis.
+#' The input data consists of a predictor matrix \code{X}, a vector of event/censoring times \code{time} and a status indicator vector \code{status}.
+#' 
+#' The following methods can be selected via the \code{methods} parameter:
+#' \itemize{
+#' \item glmnet: Absolute value of coefficients from elastic net Cox model
+#' \item randomForest: Variable importance from random survival forest
+#' \item boruta: Boruta variable selection algorithm
+#' \item xgboost: Importance scores from XGBoost survival model
+#' \item pls: Absolute coefficients from partial least squares Cox model
+#' }
+#' 
+#' Variable importance scores are returned for each method in a named list. 
+#' These scores can be used to select important predictors for survival modeling.
+#'
 #' @export
 pgx.survivalVariableImportance <- function(X, time, status,
                                            methods = c("glmnet", "randomforest", "boruta", "xgboost", "pls")) {
-  ##
+  ## ----------------------------------------------------------------------
   ## multi-class version
-  ##
-  ##
+  ## ----------------------------------------------------------------------
 
   imp <- list()
   xnames <- rownames(X)
@@ -290,26 +319,18 @@ pgx.survivalVariableImportance <- function(X, time, status,
     NFOLD <- 5
     out0 <- glmnet::cv.glmnet(t(X), y, alpha = 0, family = fam, standardize = TRUE, nfolds = NFOLD)
     cf0 <- glmnet::coef.glmnet(out0, s = "lambda.min")[, 1]
-
-
     out1 <- glmnet::cv.glmnet(t(X), y, alpha = 1, family = fam, standardize = TRUE, nfolds = NFOLD)
     cf1 <- glmnet::coef.glmnet(out1, s = "lambda.min")[, 1]
-
-
     out0a <- glmnet::cv.glmnet(t(X), y, alpha = 0, family = fam, standardize = FALSE, nfolds = NFOLD)
     cf0a <- glmnet::coef.glmnet(out0a, s = "lambda.min")[, 1]
-
-
     out1a <- glmnet::cv.glmnet(t(X), y, alpha = 1, family = fam, standardize = FALSE, nfolds = NFOLD)
     cf1a <- glmnet::coef.glmnet(out1a, s = "lambda.min")[, 1]
-
-
     imp[["coxnet.a0"]] <- (cf0 / max(abs(cf0)) + cf0a / max(abs(cf0a))) * sdx[names(cf0)]
     imp[["coxnet.a1"]] <- (cf1 / max(abs(cf1)) + cf1a / max(abs(cf1a))) * sdx[names(cf1)]
   }
 
   if ("randomforest" %in% methods) {
-    ##
+
     df <- data.frame(time = time, status = status, t(X))
     fit_rf <- randomForestSRC::rfsrc(survival::Surv(time, status) ~ ., data = df)
     vimp <- randomForestSRC::vimp(fit_rf)$importance
@@ -338,7 +359,6 @@ pgx.survivalVariableImportance <- function(X, time, status,
       max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
       verbose = 0, objective = "survival:cox"
     )
-
 
     xgmat <- xgboost::xgb.importance(model = bst)
     imp5 <- xgmat$Gain**0.33
@@ -370,7 +390,6 @@ pgx.survivalVariableImportance <- function(X, time, status,
     imp[["pls.cox"]] <- abs(cf) / max(abs(cf), na.rm = TRUE)
   }
 
-
   P <- do.call(cbind, imp)
   P <- abs(P) ## always positive??
   P[is.na(P)] <- 0
@@ -378,13 +397,15 @@ pgx.survivalVariableImportance <- function(X, time, status,
   return(P)
 }
 
+
+#' @describeIn pgx.survivalVariableImportance Calculates variable importance scores for predictors of a multiclass response using various methods.
+#' @param y Multiclass factor response variable. Contains the class labels for each sample
 #' @export
 pgx.multiclassVariableImportance <- function(X, y,
                                              methods = c("glmnet", "randomforest", "boruta", "xgboost", "pls")) {
-  ##
+  ## ----------------------------------------------------------------------
   ## multi-class version
-  ##
-  ##
+  ## ----------------------------------------------------------------------
 
   imp <- list()
   xnames <- rownames(X)
@@ -432,7 +453,6 @@ pgx.multiclassVariableImportance <- function(X, y,
   }
 
   if ("randomforest" %in% methods) {
-    ##
     fit_rf <- randomForest::randomForest(t(X), factor(y))
     imp[["randomForest"]] <- fit_rf$importance[, 1]
   }
@@ -463,7 +483,6 @@ pgx.multiclassVariableImportance <- function(X, y,
       num_class = ny,
       verbose = 0, objective = "multi:softmax"
     )
-
 
     xgmat <- xgboost::xgb.importance(model = bst)
     imp5 <- xgmat$Gain**0.2
@@ -501,8 +520,7 @@ pgx.multiclassVariableImportance <- function(X, y,
 }
 
 
-
-
+#' @describeIn pgx.survivalVariableImportance Calculates variable importance scores for predictors.
 #' @export
 pgx.variableImportance <- function(X, y,
                                    methods = c("glmnet", "randomforest", "boruta", "xgboost", "pls")) {
@@ -568,7 +586,6 @@ pgx.variableImportance <- function(X, y,
   }
 
   if ("randomforest" %in% methods) {
-    ##
 
     fit_rf <- randomForest::randomForest(t(X), factor(y))
     imp[["randomForest"]] <- fit_rf$importance[, 1]
@@ -596,7 +613,6 @@ pgx.variableImportance <- function(X, y,
       verbose = 0, objective = "binary:logistic"
     )
 
-
     xgmat <- xgboost::xgb.importance(model = bst)
     imp5 <- xgmat$Gain**0.2
     imp5 <- imp5[match(rownames(X), xgmat$Feature)]
@@ -616,7 +632,6 @@ pgx.variableImportance <- function(X, y,
   }
 
   if ("pls" %in% methods) {
-    ##
 
     n <- min(25, nrow(X))
     colnames(X) <- names(y) <- paste0("sample", 1:length(y))
@@ -632,3 +647,7 @@ pgx.variableImportance <- function(X, y,
   P <- P[xnames, , drop = FALSE]
   return(P)
 }
+
+## =====================================================================================
+## =========================== END OF FILE =============================================
+## =====================================================================================

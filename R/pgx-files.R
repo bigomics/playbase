@@ -3,17 +3,52 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
+
+#' @title Load an R Object from a File
+#'
+#' @description This function loads an R object from a file and makes it available in the local environment.
+#'
+#' @param file A character string specifying the path to the file containing the R object to be loaded.
+#' @param verbose An integer specifying the level of verbosity for printing messages during the loading process (default is 0).
+#'
+#' @details The function uses the `load` function from base R to load the R object from the specified file.
+#' The loaded object is then made available in the local environment using the `local` function.
+#'
+#' @return The function does not return a value, but makes the loaded R object available in the local environment.
+#'
 #' @export
 pgx.load <- function(file, verbose = 0) {
   local(get(load(file, verbose = verbose)))
 }
 
+
+#' @describeIn pgx.save deprecated version to save pgx/ngs file.
 #' @export
 ngs.save <- function(ngs, file, update.date = TRUE, light = TRUE, system = FALSE) {
   message("warning: ngs.save() is deprecated. please use pgx.save()")
   pgx.save(ngs, file = file, update.date = update.date, light = light, system = system)
 }
 
+
+#' Save PGX object to file
+#'
+#' @title Save PGX Object
+#'
+#' @param pgx PGX object to save 
+#' @param file File path to save PGX object to
+#' @param update.date Logical indicating whether to update date field. Default TRUE.
+#' @param light Logical indicating whether to save a light version without some large fields. Default TRUE.  
+#' @param system Logical indicating whether to keep system-level objects like omicsnet. Default FALSE.
+#'
+#' @return NULL. The PGX object is saved to the specified file path.
+#'
+#' @description Saves a PGX object to an R binary file.
+#'
+#' @details This function saves a PGX object to a .rda or .RData file.
+#' By default it saves a light version without some large objects like gene set matrices.
+#' It also optionally updates the date field and removes system-level objects like the omicsnet.
+#' The PGX object can later be loaded back into R using \code{pgx.load()}.
+#'
 #' @export
 pgx.save <- function(pgx, file, update.date = TRUE, light = TRUE, system = FALSE) {
   if (update.date || is.null(pgx$date)) pgx$date <- Sys.Date()
@@ -41,6 +76,19 @@ pgx.save <- function(pgx, file, update.date = TRUE, light = TRUE, system = FALSE
 }
 
 
+#' @title Check if an Object Exists in an HDF5 File
+#'
+#' @description This function checks if a specified object exists in an HDF5 file.
+#'
+#' @param h5.file A character string specifying the path to the HDF5 file.
+#' @param obj A character string specifying the name of the object to check for existence in the HDF5 file.
+#'
+#' @details The function uses the `h5ls` function from the rhdf5 package to list all objects in the specified HDF5 file.
+#' It then constructs the full path for each object by concatenating the group and name columns of the resulting data frame, separated by a forward slash.
+#' The function checks if the specified object name is present in this list of full paths, ignoring any leading forward slashes.
+#'
+#' @return A logical value indicating whether the specified object exists in the HDF5 file (TRUE) or not (FALSE).
+#'
 #' @export
 h5exists <- function(h5.file, obj) {
   xobjs <- apply(rhdf5::h5ls(h5.file)[, 1:2], 1, paste, collapse = "/")
@@ -48,6 +96,26 @@ h5exists <- function(h5.file, obj) {
 }
 
 
+#' @title Save matrix to HDF5 
+#'
+#' @param X The matrix to save
+#' @param h5.file Path to the HDF5 file 
+#' @param chunk Chunk size for chunked storage. Default NULL for no chunking.
+#'
+#' @return NULL. The matrix is saved to the HDF5 file.
+#'
+#' @description Saves a matrix to an HDF5 file for efficient storage and retrieval.
+#' 
+#' @details This function saves a matrix \code{X} to an HDF5 file at \code{h5.file}. 
+#' It first deletes any existing file at that path, then creates a new HDF5 file.
+#'
+#' The matrix is saved under the "data/matrix" group. Chunked storage can be used
+#' by specifying a \code{chunk} size. This allows efficient access of subsets of
+#' the matrix.
+#'
+#' The matrix is saved using lossless compression level 7. The HDF5 file remains
+#' open after writing, and should be closed using \code{rhdf5::h5close()} after use.
+#' 
 #' @export
 pgx.saveMatrixH5 <- function(X, h5.file, chunk = NULL) {
   if (file.exists(h5.file)) unlink(h5.file)
@@ -78,6 +146,27 @@ pgx.saveMatrixH5 <- function(X, h5.file, chunk = NULL) {
 }
 
 
+#' @title Read PGX Options
+#'
+#' @param file The path to the PGX options file. Default is "./OPTIONS".
+#'
+#' @return A named list containing the PGX options.
+#' 
+#' @description Reads PGX analysis options from a file.
+#'
+#' @details This function reads a simple text file containing PGX analysis options, 
+#' one option per line in the format:
+#'
+#' \code{option=value}
+#'
+#' Options include parameters like:
+#' 
+#' \code{fdr=0.05} - FDR threshold 
+#' \code{logfc=1} - Log fold-change threshold
+#'
+#' The options file allows saving a set of parameters for easily re-running 
+#' an analysis with the same settings.
+#'
 #' @export
 pgx.readOptions <- function(file = "./OPTIONS") {
   if (!file.exists(file)) {
@@ -96,7 +185,25 @@ pgx.readOptions <- function(file = "./OPTIONS") {
 }
 
 
-#' Update PGX-table with new pgx object.
+#' Update PGX-table with new pgx object
+#'
+#' @param pgxinfo The existing pgxinfo data frame containing dataset metadata 
+#' @param pgx The pgx object containing updated metadata to add
+#' @param remove.old Logical indicating whether to remove existing entries for the same dataset. Default is TRUE.
+#'
+#' @return Updated pgxinfo data frame with additional rows from pgx
+#' 
+#' @description 
+#' Updates the pgxinfo dataset metadata table with information from a new pgx object.
+#'
+#' @details
+#' This function takes an existing pgxinfo data frame and a pgx object as input.
+#' It extracts the metadata stored in pgx$info and appends it as a new row to the pgxinfo table.
+#'
+#' If remove.old is TRUE, it will first remove any existing rows for the same dataset 
+#' before appending the new row. This avoids duplicating information for the same dataset.
+#' 
+#' The updated pgxinfo data frame containing all dataset metadata is returned.
 #'
 #' @export
 pgx.updateInfoPGX <- function(pgxinfo, pgx, remove.old = TRUE) {
@@ -108,7 +215,6 @@ pgx.updateInfoPGX <- function(pgxinfo, pgx, remove.old = TRUE) {
     colnames(pgx$samples),
     invert = TRUE, value = TRUE
   )
-  cond
 
   organism <- NULL
   if ("organism" %in% names(pgx)) {
@@ -179,7 +285,7 @@ pgx.updateInfoPGX <- function(pgxinfo, pgx, remove.old = TRUE) {
     pgxinfo <- data.frame(rbind(this.info))
   }
 
-  pgxinfo
+  return(pgxinfo)
 }
 
 ## ================================================================================
@@ -187,10 +293,24 @@ pgx.updateInfoPGX <- function(pgxinfo, pgx, remove.old = TRUE) {
 ## ================================================================================
 
 
-
-
-#' Read dataset information file (aka PGX info)
+#' @title Read dataset information file (aka PGX info)
 #'
+#' @param pgx.dir Character string specifying the path to the PGX directory containing .pgx files.
+#' @param file Character string specifying the filename for the dataset info file. Default is "datasets-info.csv". 
+#' @param match Logical indicating whether to match .pgx filenames. Default is TRUE.
+#'
+#' @return Data frame containing dataset information for PGX files.
+#' 
+#' @description Reads the dataset information CSV file for a directory of PGX files.
+#'
+#' @details This function reads the dataset info CSV located in a PGX directory. It contains metadata like datatype, organism, sample sizes, etc.
+#' 
+#' The \code{pgx.dir} argument specifies the path to the PGX directory containing .pgx files. 
+#' 
+#' The \code{file} argument specifies the filename for the dataset info file. By default this is "datasets-info.csv".
+#'
+#' If \code{match=TRUE}, the function filters the info to only datasets matching .pgx files in the directory.
+#'  
 #' @export
 pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE) {
   pgx.files <- dir(pgx.dir, pattern = "[.]pgx$")
@@ -229,8 +349,27 @@ pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE) {
 }
 
 
-#' Checks if any of metadata files (info, allFC, sigdb) need
-#' update. All pgx files in the datafolder should be included.
+#' @title Check if PGX metadata needs update  
+#'
+#' @param pgx.dir Path to the PGX directory containing .pgx files
+#' @param check.sigdb Logical indicating whether to check the sigdb file. Default is TRUE.
+#' @param verbose Logical indicating whether to print verbose messages. Default is TRUE.
+#'
+#' @return Logical indicating if any metadata files need update.
+#'
+#' @description Checks if the main PGX metadata files need to be updated against the .pgx files.
+#' All pgx files in the datafolder should be included.
+#'
+#' @details This function checks if the main metadata files in a PGX directory need to be updated:
+#'
+#' - datasets-info.csv 
+#' - datasets-allFC.csv
+#' - datasets-sigdb.h5
+#'
+#' It compares the .pgx files in the directory against the metadata files.
+#' If any .pgx files are missing from the metadata, it will return TRUE indicating the metadata needs to be updated.
+#'
+#' Set verbose=TRUE to print debug messages. Set check.sigdb=FALSE to skip checking the sigdb file.
 #'
 #' @export
 pgxinfo.needUpdate <- function(
@@ -333,8 +472,29 @@ pgxinfo.needUpdate <- function(
 }
 
 
-
-#' Update
+#' @title Update PGX dataset folder metadata 
+#'
+#' @param pgx.dir Path to the PGX dataset folder containing .pgx files
+#' @param force Logical indicating whether to force update even if not needed. Default is FALSE.  
+#' @param delete.old Logical indicating whether to delete old metadata files. Default is FALSE.
+#' @param new.pgx Character vector of new .pgx files added to the folder. Default is NULL.
+#' @param update.sigdb Logical indicating whether to update sigdb file. Default is TRUE.
+#' @param verbose Logical indicating whether to print status messages. Default is TRUE.
+#'
+#' @return NULL. Metadata files in pgx.dir are updated if needed.
+#' 
+#' @description Updates the main metadata files in a PGX dataset folder if needed.
+#'
+#' @details This function checks if the main metadata files in a PGX folder need to be updated
+#' based on new or changed .pgx files. It compares the .pgx files to the existing metadata.
+#'
+#' The metadata files updated are:
+#' - datasets-info.csv
+#' - datasets-allFC.csv 
+#' - datasets-sigdb.h5
+#'
+#' If force=TRUE, it will update regardless of whether changes are detected.
+#' If delete.old=TRUE, existing metadata files will be deleted before writing new files.
 #'
 #' @export
 pgxinfo.updateDatasetFolder <- function(pgx.dir,
@@ -343,7 +503,6 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
                                         new.pgx = NULL,
                                         update.sigdb = TRUE,
                                         verbose = TRUE) {
-  ## force=FALSE;delete.old=FALSE;new.pgx=NULL;update.sigdb=TRUE;verbose=TRUE
 
   ## only run pgx.initDatasetFolder if pgx are changed
   if (!dir.exists(pgx.dir)) {

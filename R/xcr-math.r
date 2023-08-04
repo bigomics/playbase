@@ -4,15 +4,28 @@
 ##
 
 
-
-
-
-
-
-sparse <- NULL
-
-
-
+#' @title Calculate cosine similarity 
+#'
+#' @param X Numeric matrix 
+#' @param Y Optional second numeric matrix to compare against X 
+#' @param method Optional specification for method to calculate cosine similarity
+#'
+#' @return Matrix of cosine similarity values
+#'
+#' @description Calculates the cosine similarity between two matrices.
+#'
+#' @details This function takes two numeric matrices \code{X} and \code{Y} and calculates the cosine similarity between them.
+#' It can handle sparse matrices and missing values.
+#'
+#' Cosine similarity is defined as the cosine of the angle between two vectors. 
+#' It is calculated as the dot product of the vectors divided by the L2 norms of the vectors.
+#'
+#' If only \code{X} is provided, the cosine similarity between columns of \code{X} is calculated.
+#' If both \code{X} and \code{Y} are provided, the cosine similarity between columns of \code{X} and \code{Y} is calculated.
+#'
+#' The \code{method} parameter allows specifying alternate methods to calculate the cosine similarity.
+#' By default the cosine similarity formula is used directly.
+#'  
 #' @export
 tcosine_similarity <- function(X, Y = NULL, method = NULL) {
   if (!is.null(Y)) {
@@ -21,6 +34,8 @@ tcosine_similarity <- function(X, Y = NULL, method = NULL) {
   return(cosine_similarity(t(X), Y = NULL, method = method))
 }
 
+
+#' @describeIn tcosine_similarity calculates the cosine similarity between two matrices X and Y.
 #' @export
 cosine_similarity <- function(X, Y = NULL, method = NULL) {
   ## sparse cosine: A.B / (|A||B|)
@@ -55,6 +70,12 @@ cosine_similarity <- function(X, Y = NULL, method = NULL) {
 }
 
 
+#' @describeIn tcosine_similarity calculates a sparse cosine similarity matrix for the data matrix X
+#' @param k: number of nearest neighbors (default 100)
+#' @param th: similarity threshold (default 0.01)
+#' @param block: block size for processing (default 100)
+#' @param ties.method: method for breaking ties (default "random")
+#' @param gpu: use GPU acceleration (default FALSE)
 #' @export
 tcosine.sparse <- function(X, k = 100, th = 0.01, block = 100, ties.method = "random",
                            gpu = FALSE) {
@@ -108,12 +129,32 @@ tcosine.sparse <- function(X, k = 100, th = 0.01, block = 100, ties.method = "ra
 }
 
 
-
-
-
-
-
-
+#' @title Encode values to length scales
+#'
+#' @description 
+#' Encodes a numeric vector to a length scale based on the logarithm of the values.
+#'
+#' @param x A numeric vector to encode.
+#' @param r The resolution of the length scale. Default is 0.1. 
+#' @param a The scale parameter for length scale. Default is 0.25.
+#'
+#' @details
+#' This function takes a numeric vector \code{x} and encodes the values to a length scale.
+#' It first takes the log of the values in \code{x}, excluding any NA values.
+#' It then constructs a set of length bins based on the min and max log values, with bin width determined by the \code{r} parameter.
+#' Values in \code{x} are assigned to bins based on their log values.
+#' The \code{a} parameter controls the scale of the length encoding.
+#'
+#' The output is a sparse matrix with rows corresponding to the input \code{x} and columns for the length bins.
+#'
+#' @return 
+#' A sparse matrix encoding the input values to lengths.
+#' 
+#' @examples
+#' \dontrun{
+#' x <- rpois(100)
+#' len <- length_encode(x)  
+#' }
 #' @export
 length_encode <- function(x, r = 0.1, a = 0.25) {
   x0 <- x
@@ -121,7 +162,7 @@ length_encode <- function(x, r = 0.1, a = 0.25) {
   logx <- log(x)
   maxlen <- max(logx, na.rm = TRUE)
   minlen <- min(logx, na.rm = TRUE)
-  c(minlen, maxlen)
+
   dx <- log(1 + a * r)
   brks <- seq(minlen - dx, maxlen + dx, dx)
   ix <- 2 + as.integer(cut(logx, breaks = brks))
@@ -164,10 +205,22 @@ if (0) {
 ## ===================================================================================
 
 
-
-
-
-
+#' @title Calculate tagged Hamming distance 
+#'
+#' @description Calculate the Hamming distance between two sequences, taking into account tags.
+#'
+#' @param aa Character vector. The first sequence.
+#' @param bb Character vector. The second sequence.  
+#' @param align Logical. Whether to align the sequences before calculating Hamming distance. Default is TRUE.
+#'
+#' @details This function calculates the Hamming distance between two character vector 
+#' sequences \code{aa} and \code{bb}. It first parses any tags in the sequences using \code{parse.tags}. 
+#' It then calculates the Hamming distance between the sequences indicated by any matching tags (e.g. 
+#' \code{cdr1}, \code{cdr2}). For tagged sequences, it will align the sequences before calculating Hamming 
+#' distance if \code{align=TRUE}. For non-tagged sequences, it calculates simple Hamming distance.
+#'
+#' @return Named numeric vector of Hamming distances for each matched tag.
+#'
 #' @export
 tagged.hamming <- function(aa, bb, align = TRUE) {
   aligned.dist <- function(seq1, seq2) {
@@ -212,7 +265,7 @@ tagged.hamming <- function(aa, bb, align = TRUE) {
   aa.tags <- unique(unlist(lapply(aa, function(a) names(parse.tags(a)))))
   bb.tags <- unique(unlist(lapply(bb, function(b) names(parse.tags(b)))))
   all.tags <- sort(intersect(aa.tags, bb.tags))
-  all.tags
+
   if (length(all.tags) == 0 || is.null(all.tags)) {
     return(NA)
   }
@@ -220,7 +273,7 @@ tagged.hamming <- function(aa, bb, align = TRUE) {
   if (length(bb) == 1 && length(aa) > 1) bb <- rep(bb, length(aa))
   D <- lapply(1:length(aa), function(i) tag.hamming0(aa[i], bb[i]))
   D <- t(sapply(D, function(e) e[match(all.tags, names(e))]))
-  D
+
   if (length(all.tags) == 1) {
     D <- t(D)
     rownames(D) <- NULL
@@ -229,7 +282,31 @@ tagged.hamming <- function(aa, bb, align = TRUE) {
   D
 }
 
-
+#' Rescale values to 0-1 range
+#'
+#' @title Rescale values to 0-1 range
+#'
+#' @param x A numeric vector to rescale.
+#' @param symm Logical indicating if rescaled values should be symmetrized around 0. Default is FALSE.
+#' 
+#' @return A numeric vector with rescaled values.
+#'
+#' @description Rescales a numeric vector to a 0-1 range.
+#' 
+#' @details This function takes a numeric vector \code{x} and rescales the values to lie between 0 and 1.
+#' It subtracts the minimum value and divides by the range.
+#' This transforms the values to a 0-1 range while maintaining relative differences.
+#'
+#' If \code{symm=TRUE}, the rescaled values are further transformed to be symmetrized around 0 
+#' by subtracting 0.5 and multiplying by 2.
+#'
+#' The rescaled vector is returned.
+#'
+#' @examples
+#' \dontrun{
+#' x <- rnorm(100)
+#' x_scaled <- uscale(x)
+#' }
 #' @export
 uscale <- function(x, symm = FALSE) {
   uscale.func <- function(x) (x - min(x)) / (max(x) - min(x))
@@ -243,16 +320,6 @@ uscale <- function(x, symm = FALSE) {
   return(y)
 }
 
-
-
-
-
-
-
-
-## NEED RETHINK!! for non centereds, non-scaled values!!!
-## fun="mean";m=1000,n=1000
-
 ## ===================================================================================
-## ===================================================================================
+## ============================== END OF FILE ========================================
 ## ===================================================================================

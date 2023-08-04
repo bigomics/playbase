@@ -3,11 +3,27 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
+
+#' @title Convert Seurat to PGX
+#'
+#' @param obj Seurat object to convert
+#' @param do.cluster Logical indicating whether to cluster samples. Default is FALSE.
+#' 
+#' @return PGX object 
+#'
+#' @description Converts a Seurat single-cell RNA-seq object into a PGX object
+#'
+#' @details This function takes a Seurat object containing single-cell RNA-seq data and converts it into a PGX object.
+#' The count matrix, normalized expression matrix, and sample metadata are extracted from the Seurat object.
+#' Gene annotations are added using the gene symbols.
+#' 
+#' If do.cluster=TRUE, dimensionality reduction and clustering of samples is performed. 
+#' Any existing tsne/umap embeddings and cluster assignments are copied over from the Seurat object.
+#'
 #' @export
 seurat2pgx <- function(obj, do.cluster = FALSE) {
+  
   ## Convert a Seurat object to a minimal PGX object.
-  ##
-  ##
   message("[createPGX.10X] creating PGX object...")
   pgx <- list()
   pgx$name <- "SeuratProject"
@@ -42,15 +58,34 @@ seurat2pgx <- function(obj, do.cluster = FALSE) {
   }
   pgx$samples$cluster <- obj@meta.data[, "seurat_clusters"]
   names(pgx)
-  pgx
+  return(pgx)
 }
 
 
-
-
-
-
-
+#' @title Pool single cell counts into pseudo-bulk groups  
+#'
+#' @description This function pools single cell RNA-seq count matrices into 
+#' pseudo-bulk groups. Cells are assigned to groups based on metadata or 
+#' clustering. Counts within each group are aggregated using summation or other statistics.
+#'
+#' @param counts Single cell count matrix with cells as columns.
+#' @param ncells Number of cells to sample per group. If NULL, takes all cells in each group.
+#' @param groups Group assignments for each cell. If NULL, a single group is used. 
+#' @param stats Aggregation method for pooling counts within each group (sum, mean, median, etc)
+#' @param clust.method Clustering method used to assign groups if groups=NULL (umap, pca, etc)
+#' @param prior Per-group prior used for pooling. Default is 1 (no prior).
+#' @param X Optional log-expression matrix for clustering if groups=NULL.
+#' @param meta Optional cell metadata for clustering if groups=NULL. 
+#' @param verbose Print progress messages?
+#'
+#' @details This function takes a single cell count matrix and pools the counts into pseudo-bulk groups.
+#' If groups are provided, cells are assigned to these groups. Otherwise clustering is performed using umap/pca 
+#' on the log-expression matrix X to infer groups. Within each group, cell counts are aggregated into a pseudo-bulk profile
+#' using summation or other statistics. A per-group prior can be used to normalize pooling.
+#' The output is a pooled count matrix with groups as columns.
+#'
+#' @return Matrix of pooled counts for each group
+#'
 #' @export
 pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
                           clust.method = "umap", prior = 1, X = NULL,
@@ -70,9 +105,6 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
     nz <- Matrix::which(X != 0, arr.ind = TRUE)
     X[nz] <- log2(1 + X[nz])
   }
-
-
-
 
   clusterX <- function(X1, k, method, topsd = 1000, nv = 50) {
     if (ncol(X1) <= k) {
@@ -171,6 +203,32 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
   return(res)
 }
 
+
+#' @title Integrate single-cell data across batches
+#'
+#' @param X Numeric matrix of expression values, cells as columns
+#' @param batch Factor specifying batch for each cell 
+#' @param method Methods to use for batch integration. Options are "ComBat", "limma", "CCA", "MNN", "Harmony", "liger"
+#'
+#' @return List containing batch-integrated expression matrices by method
+#'
+#' @description Integrate single-cell RNA-seq data from multiple batches using various batch correction methods.
+#'
+#' @details This function takes a single-cell expression matrix \code{X} and a batch vector \code{batch} as input.
+#' It applies different batch correction methods to integrate the data across batches.
+#'
+#' The following methods can be selected via the \code{method} parameter:
+#' \itemize{
+#' \item ComBat: Apply ComBat batch correction from sva package
+#' \item limma: Apply removeBatchEffect from limma package
+#' \item CCA: Apply canonical correlation analysis using Seurat package
+#' \item MNN: Apply mutual nearest neighbors correction
+#' \item Harmony: Apply Harmony integration using Harmony package
+#' \item liger: Apply integration via liger package
+#' }
+#'
+#' The batch-integrated expression matrices are returned as a list by method name.
+#'
 #' @export
 pgx.scBatchIntegrate <- function(X, batch,
                                  method = c("ComBat", "limma", "CCA", "MNN", "Harmony", "liger")) {
@@ -229,12 +287,9 @@ pgx.scBatchIntegrate <- function(X, batch,
     liger@var.genes <- Matrix::head(rownames(X)[order(-apply(X, 1, stats::sd))], 100)
     liger <- rliger::scaleNotCenter(liger)
     vg <- liger@var.genes
-    vg
     xdim <- sapply(xlist, ncol)
-    xdim
     k <- 15
     k <- round(min(30, length(vg) / 3, stats::median(xdim / 2)))
-    k
     ## OFTEN GIVES ERROR!!!!!
     liger <- try(rliger::optimizeALS(liger, k = k))
 
@@ -243,9 +298,6 @@ pgx.scBatchIntegrate <- function(X, batch,
 
     } else {
       liger <- rliger::quantile_norm(liger)
-
-
-
       cX <- t(liger@H.norm %*% liger@W)
       cat("[pgx.scBatchIntegrate] WARNING:: LIGER returns smaller matrix")
       res[["liger"]] <- cX
@@ -254,18 +306,37 @@ pgx.scBatchIntegrate <- function(X, batch,
   if (length(res) == 1) {
     res <- res[[1]]
   }
-  res
+  return(res)
 }
 
 
+#' @title Integrate single-cell data with Seurat 
+#'
+#' @param counts Single-cell count matrix 
+#' @param batch Batch vector assigning batches to cells
+#' @param qc.filter Logical indicating whether to filter cells by QC metrics. Default is FALSE.  
+#' @param nanchors Number of anchor points to use for integration. Default is -1 to auto-determine.
+#' @param sct Logical indicating whether to use SCTransform normalization. Default is FALSE.
+#'
+#' @return Seurat object containing integrated data 
+#'
+#' @description Integrate single-cell RNA-seq data from multiple batches using canonical correlation analysis via the Seurat package.
+#'
+#' @details This function takes a single-cell count matrix \code{counts} and a \code{batch} vector as input. 
+#' It sets up a Seurat object for each batch and integrates them using FindIntegrationAnchors/IntegrateData functions.
+#'
+#' Cells can be filtered by QC metrics like mitochondrial content if \code{qc.filter=TRUE}. 
+#' The \code{nanchors} parameter controls the number of anchor points used for integration.
+#' Normalization and scaling can be done using SCTransform if \code{sct=TRUE}.
+#'
+#' The integrated Seurat object is returned containing the corrected expression matrix.
+#'
 #' @export
 pgx.SeuratBatchIntegrate <- function(counts, batch, qc.filter = FALSE,
                                      nanchors = -1, sct = FALSE) {
-  ##
   ## From Seurat vignette: Integration/batch correction using
   ## CCA. Note there is no QC filtering for samples on ribo/mito
   ## content. You need to do that before.
-  ##
 
   nbatch <- length(unique(batch))
   message("[pgx.SeuratBatchIntegrate] Processing ", nbatch, " batches...")
@@ -273,7 +344,6 @@ pgx.SeuratBatchIntegrate <- function(counts, batch, qc.filter = FALSE,
   i <- 1
   b <- batch[1]
   batches <- unique(batch)
-  batches
   for (i in 1:length(batches)) {
     sel <- which(batch == batches[i])
 
@@ -293,7 +363,6 @@ pgx.SeuratBatchIntegrate <- function(counts, batch, qc.filter = FALSE,
   }
 
   anchor.features <- NULL
-  sct
   if (sct) {
     ## See: https://satijalab.org/seurat/v3.0/integration.html
     nfeatures <- nrows(counts)
@@ -315,14 +384,11 @@ pgx.SeuratBatchIntegrate <- function(counts, batch, qc.filter = FALSE,
   options(future.globals.maxSize = 8 * 1024^3) ## set to 8GB
 
   NUM.CC <- max(min(20, min(table(batch)) - 1), 1)
-  NUM.CC
   bdims <- sapply(obj.list, ncol)
   kmax <- max(min(bdims) - 1, 1)
-  kmax
   normalization.method <- ifelse(sct, "SCT", "LogNormalize")
   message("[pgx.SeuratBatchIntegrate] NUM.CC = ", NUM.CC)
   message("[pgx.SeuratBatchIntegrate] normalization.method = ", normalization.method)
-
 
   anchors <- Seurat::FindIntegrationAnchors(
     obj.list,
@@ -340,7 +406,6 @@ pgx.SeuratBatchIntegrate <- function(counts, batch, qc.filter = FALSE,
   message("[pgx.SeuratBatchIntegrate] number of anchors = ", len.anchors)
 
   integrated <- Seurat::IntegrateData(anchorset = anchors)
-
   integrated <- Seurat::IntegrateData(
     anchorset = anchors,
     k.weight = min(100, kmax), ##  troublesome...
@@ -369,8 +434,6 @@ pgx.SeuratBatchIntegrate <- function(counts, batch, qc.filter = FALSE,
   return(mat.integrated)
 }
 
-
-
-
-
-
+## =====================================================================================
+## =========================== END OF FILE =============================================
+## =====================================================================================

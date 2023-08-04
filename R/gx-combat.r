@@ -181,9 +181,6 @@ gx.nnmcorrect.SAVE <- function(x, y, k = 3) {
 #'
 #' The normalize.qspline function from the affy package is used internally to perform quantile normalization.
 #'
-#' @seealso
-#' \code{\link[affy]{normalize.qspline}} for the quantile normalization method used.
-#'
 #' @examples
 #' \dontrun{
 #' X <- matrix(rnorm(100 * 10), 100, 10)

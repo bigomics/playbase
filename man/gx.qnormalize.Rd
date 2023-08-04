@@ -31,6 +31,3 @@ X <- matrix(rnorm(100 * 10), 100, 10)
 X_norm <- gx.qnormalize(X)
 }
 }
-\seealso{
-\code{\link[affy]{normalize.qspline}} for the quantile normalization method used.
-}
