@@ -429,7 +429,7 @@ pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast = NULL) {
   X <- list()
   for (i in 1:length(matlist)) {
     X[[i]] <- matlist[[i]] - rowMeans(matlist[[i]])
-    X[[i]] <- X[[i]] / apply(X[[i]], 1, sd)
+    X[[i]] <- X[[i]] / apply(X[[i]], 1, stats::sd)
   }
 
   ## Counts cross-table between matrices
@@ -1654,7 +1654,7 @@ pgx.splitHeatmap <- function(ngs, splitx = NULL, top.mode = "specific",
     X1 <- X0[jj, ]
     idx <- paste0("M", as.vector(mapply(rep, 1:ncol(grpX), ntop1)))
   } else {
-    X1 <- Matrix::head(X0[order(-apply(X0, 1, sd)), ], ntop)
+    X1 <- Matrix::head(X0[order(-apply(X0, 1, stats::sd)), ], ntop)
     hc <- fastcluster::hclust(as.dist(1 - stats::cor(t(X1), use = "pairwise")), method = "ward.D2")
     idx <- paste0("S", stats::cutree(hc, 5))
   }
@@ -2608,7 +2608,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
 
     ## label cluster
     if (label.clusters) {
-      mpos <- apply(pos, 2, function(x) tapply(x, z1, median))
+      mpos <- apply(pos, 2, function(x) tapply(x, z1, stats::median))
       mlab <- rownames(mpos)
 
       graphics::text(mpos, labels = mlab, cex = cex.clust, lheight = 0.8)
@@ -2969,7 +2969,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     ## label cluster
     if (label.clusters) {
       ## Put a cluster label at the median position of the group
-      mpos <- apply(pos, 2, function(x) tapply(x, z1, median))
+      mpos <- apply(pos, 2, function(x) tapply(x, z1, stats::median))
       mlab <- rownames(mpos)
       df1 <- data.frame(x = mpos[, 1], y = mpos[, 2], name = rownames(mpos))
       if (label.type == "text") labelFUN <- ggrepel::geom_text_repel
@@ -3487,7 +3487,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   }
   ## label cluster
   if (label.clusters) {
-    mpos <- apply(pos, 2, function(x) tapply(x, z1, median))
+    mpos <- apply(pos, 2, function(x) tapply(x, z1, stats::median))
     # If there is only one cluster
     if (length(unique(z1)) == 1) {
       mpos <- data.frame(mpos[1], mpos[2])
@@ -4195,7 +4195,7 @@ plotlyCytoplot <- function(pgx,
   if (!is.null(pgx$deconv)) {
     inferred.celltype <- pgx$deconv[[1]][["meta"]]
     lab1 <- Matrix::head(names(sort(-Matrix::colSums(inferred.celltype[j1, , drop = FALSE]))), 3)
-    pos1 <- apply(cbind(x1, x2)[j1, , drop = FALSE], 2, median)
+    pos1 <- apply(cbind(x1, x2)[j1, , drop = FALSE], 2, stats::median)
     p <- p %>% plotly::add_annotations(
       x = pos1[1], y = pos1[2],
       text = paste(lab1, collapse = "\n"),
@@ -4204,7 +4204,7 @@ plotlyCytoplot <- function(pgx,
     )
 
     lab2 <- Matrix::head(names(sort(-Matrix::colSums(inferred.celltype[j2, , drop = FALSE]))), 3)
-    pos2 <- apply(cbind(x1, x2)[j2, , drop = FALSE], 2, median)
+    pos2 <- apply(cbind(x1, x2)[j2, , drop = FALSE], 2, stats::median)
     p <- p %>% plotly::add_annotations(
       x = pos2[1], y = pos2[2],
       text = paste(lab2, collapse = "\n"),
@@ -4213,7 +4213,7 @@ plotlyCytoplot <- function(pgx,
     )
 
     lab3 <- Matrix::head(names(sort(-Matrix::colSums(inferred.celltype[j3, , drop = FALSE]))), 3)
-    pos3 <- apply(cbind(x1, x2)[j3, , drop = FALSE], 2, median)
+    pos3 <- apply(cbind(x1, x2)[j3, , drop = FALSE], 2, stats::median)
     p <- p %>% plotly::add_annotations(
       x = pos3[1], y = pos3[2],
       text = paste(lab3, collapse = "\n"),

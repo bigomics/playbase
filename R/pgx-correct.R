@@ -330,14 +330,14 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     X.r <- t(resid(eval(parse(text = lm.expr))))
     n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
 
-    cX1 <- Matrix::head(cX[order(-apply(cX, 1, sd)), ], 1000) ## top 1000 genes only (faster)
+    cX1 <- Matrix::head(cX[order(-apply(cX, 1, stats::sd)), ], 1000) ## top 1000 genes only (faster)
     sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = n.sv)$sv)
 
     if (any(class(sv) == "try-error")) {
       ## try again with little bit of noise...
-      a <- 0.01 * mean(apply(cX, 1, sd))
+      a <- 0.01 * mean(apply(cX, 1, stats::sd))
       cX1 <- cX + a * matrix(rnorm(length(cX)), nrow(cX), ncol(cX))
-      cX1 <- Matrix::head(cX1[order(-apply(cX1, 1, sd)), ], 1000) ## top 1000 genes only (faster)
+      cX1 <- Matrix::head(cX1[order(-apply(cX1, 1, stats::sd)), ], 1000) ## top 1000 genes only (faster)
       sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1))$sv)
     }
     if (!any(class(sv) == "try-error")) {
@@ -400,7 +400,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     nremove <- 0
     pX <- NULL
     while (length(ii) > 0 && niter < max.iter) {
-      xx <- Matrix::head(cX[order(-apply(cX, 1, sd)), ], hc.top)
+      xx <- Matrix::head(cX[order(-apply(cX, 1, stats::sd)), ], hc.top)
       hc <- stats::cutree(fastcluster::hclust(dist(t(xx)), method = "ward.D2"), 2)
       hc.rho <- stats::cor(hc, mod1)
       hc.rho <- apply(abs(hc.rho), 1, max)

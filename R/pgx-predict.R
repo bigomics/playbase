@@ -275,7 +275,7 @@ pgx.survivalVariableImportance <- function(X, time, status,
 
   imp <- list()
   xnames <- rownames(X)
-  sdx <- apply(X, 1, sd)
+  sdx <- apply(X, 1, stats::sd)
   if (nrow(X) == 1) X <- rbind(X, X)
 
   if (!inherits(status, "logical") && all(status %in% c(0, 1, NA))) {
@@ -390,7 +390,7 @@ pgx.multiclassVariableImportance <- function(X, y,
   xnames <- rownames(X)
 
   if (nrow(X) == 1) X <- rbind(X, X)
-  sdx <- apply(X, 1, sd)
+  sdx <- apply(X, 1, stats::sd)
 
   ## convert to factor
   y <- factor(y)
@@ -513,7 +513,7 @@ pgx.variableImportance <- function(X, y,
   imp <- list()
   xnames <- rownames(X)
   if (nrow(X) == 1) X <- rbind(X, X)
-  sdx <- apply(X, 1, sd)
+  sdx <- apply(X, 1, stats::sd)
 
   ## convert to factor
   y <- factor(y)

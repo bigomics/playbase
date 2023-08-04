@@ -54,7 +54,7 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
     X <- X - rowMeans(X)
   }
   if (scale.rows) {
-    X <- X / (1e-6 + apply(X, 1, sd))
+    X <- X / (1e-6 + apply(X, 1, stats::sd))
   }
   if (rank.tf) {
     X <- scale(apply(X, 2, rank))
@@ -295,7 +295,7 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
   }
 
   ## reduce dimensions
-  X <- Matrix::head(X[order(apply(X, 1, sd)), ], top.sd)
+  X <- Matrix::head(X[order(apply(X, 1, stats::sd)), ], top.sd)
   X <- t(scale(t(X))) ## scale features??
   if (nrow(X) > npca) {
     npca <- min(npca, dim(X) - 1)
@@ -613,7 +613,7 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
                               method = c("tsne", "umap", "pca")) {
   method <- method[1]
   clust.detect <- clust.detect[1]
-  X <- Matrix::head(X[order(-apply(X, 1, sd)), ], ntop)
+  X <- Matrix::head(X[order(-apply(X, 1, stats::sd)), ], ntop)
   if (row.center) X <- X - rowMeans(X, na.rm = TRUE)
   if (row.scale) X <- (X / apply(X, 1, sd, na.rm = TRUE))
 

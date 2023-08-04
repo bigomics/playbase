@@ -139,8 +139,8 @@ Scatter plot with ggplot2
 }
 \examples{
 \dontrun{
-x <- rnorm(100)
-y <- rnorm(100)
+x <- stats::rnorm(100)
+y <- stats::rnorm(100)
 df <- data.frame(x = x, y = y)
 p <- pgx.scatterPlotXY.GGPLOT(df)
 }

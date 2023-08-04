@@ -98,7 +98,7 @@ gx.PCAcomponents <- function(X, nv = 20, ngenes) {
   for (i in 1:nv) {
     gg <- Matrix::head(rownames(X)[order(-abs(res$u[, i]))], ngenes)
     X1 <- X[gg, ]
-    X1 <- (X1 - rowMeans(X1)) / (1e-4 + apply(X1, 1, sd)) ## scale??
+    X1 <- (X1 - rowMeans(X1)) / (1e-4 + apply(X1, 1, stats::sd)) ## scale??
     colnames(X1) <- NULL
     playbase::gx.imagemap(X1, main = paste0("PC", i), cex = 0.8)
   }
@@ -126,8 +126,8 @@ gx.PCAcomponents <- function(X, nv = 20, ngenes) {
 #' @export
 gx.imagemap <- function(X, main = "", cex = 1, clust = TRUE) {
   if (clust) {
-    ii <- fastcluster::hclust(dist(X))$order
-    jj <- fastcluster::hclust(dist(t(X)))$order
+    ii <- fastcluster::hclust(stats::dist(X))$order
+    jj <- fastcluster::hclust(stats::dist(t(X)))$order
     X <- X[ii, jj]
   }
   Matrix::image(1:ncol(X), 1:nrow(X), t(X),
@@ -258,12 +258,12 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
 
   if ("col" %in% scale || "both" %in% scale) {
     tgx <- t(gx) - colMeans(gx, na.rm = TRUE)
-    gx <- t(tgx / (1e-4 + apply(gx, 2, sd, na.rm = TRUE))) ## small EPS maintains SD order!
+    gx <- t(tgx / (1e-4 + apply(gx, 2, stats::sd, na.rm = TRUE))) ## small EPS maintains SD order!
     remove(tgx)
   }
   if ("row" %in% scale || "both" %in% scale) {
     gx <- gx - rowMeans(gx, na.rm = TRUE)
-    gx <- gx / (1e-4 + apply(gx, 1, sd, na.rm = TRUE)) ## small EPS maintains SD order!
+    gx <- gx / (1e-4 + apply(gx, 1, stats::sd, na.rm = TRUE)) ## small EPS maintains SD order!
   }
   if ("col.center" %in% scale) {
     gx <- t(t(gx) - colMeans(gx, na.rm = TRUE))
@@ -277,7 +277,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   if ("row.bmc" %in% scale && !is.null(splitx)) {
     if (inherits(splitx, "numeric") && length(splitx) == 1) {
       ii <- Matrix::head(order(-apply(gx, 1, sd, na.rm = TRUE)), 1000) ## NEED RETHINK!
-      system.time(hc <- fastcluster::hclust(as.dist(1 - stats::cor(gx[ii, ])), method = "ward.D2"))
+      system.time(hc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(gx[ii, ])), method = "ward.D2"))
       splitx <- paste0("cluster", stats::cutree(hc, splitx))
       names(splitx) <- colnames(gx)
     }
@@ -303,10 +303,10 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   jj1 <- 1:nrow(gx)
   jj2 <- 1:ncol(gx)
   if (!is.null(nmax) && nmax < nrow(gx) && nmax > 0) {
-    jj1 <- Matrix::head(order(-apply(gx, 1, sd, na.rm = TRUE)), nmax)
+    jj1 <- Matrix::head(order(-apply(gx, 1, stats::sd, na.rm = TRUE)), nmax)
   }
   if (!is.null(cmax) && cmax < ncol(gx) && cmax > 0) {
-    jj2 <- Matrix::head(order(-apply(gx, 2, sd, na.rm = TRUE)), cmax)
+    jj2 <- Matrix::head(order(-apply(gx, 2, stats::sd, na.rm = TRUE)), cmax)
   }
   gx <- gx[jj1, jj2]
   if (!is.null(row.annot)) {
@@ -323,7 +323,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   do.splitx <- !is.null(splitx)
   idx2 <- NULL
   if (do.splitx && inherits(splitx, "numeric") && length(splitx) == 1) {
-    system.time(hc <- fastcluster::hclust(as.dist(1 - stats::cor(gx)), method = "ward.D2"))
+    system.time(hc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(gx)), method = "ward.D2"))
     idx2 <- paste0("cluster", stats::cutree(hc, splitx))
   }
   if (do.splitx && inherits(splitx, "character") && length(splitx) == 1 &&
@@ -352,7 +352,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   if (do.split && inherits(split, "numeric") && length(split) == 1) {
     cor.gx <- stats::cor(t(gx), use = "pairwise")
     cor.gx[is.na(cor.gx)] <- 0
-    hc <- fastcluster::hclust(as.dist(1 - cor.gx), method = "ward.D2")
+    hc <- fastcluster::hclust(stats::as.dist(1 - cor.gx), method = "ward.D2")
     split.idx <- paste0("group", stats::cutree(hc, split))
   }
   if (do.split && inherits(split, "character") && length(split) == 1 &&
@@ -393,7 +393,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   if (!cluster_columns && !is.null(sort_columns)) {
     y <- col.annot[, sort_columns, drop = FALSE]
     y1 <- as.integer(factor(y))
-    jj <- fastcluster::hclust(dist(t(gx)), method = "ward.D2")$order
+    jj <- fastcluster::hclust(stats::dist(t(gx)), method = "ward.D2")$order
     jj <- jj[order(1e6 * y1[jj] + 1:length(jj))]
     gx <- gx[, jj]
     col.annot <- col.annot[jj, ]
@@ -527,7 +527,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     mx <- do.call(cbind, lapply(grp, function(i) rowMeans(gx[, i, drop = FALSE])))
     #
     mx <- t(scale(t(mx)))
-    grp.order <- fastcluster::hclust(dist(t(mx)))$order
+    grp.order <- fastcluster::hclust(stats::dist(t(mx)))$order
   }
   if (!is.null(order.groups) && ngrp > 1 && length(order.groups) == ngrp) {
     grp.order <- match(order.groups, names(grp))
@@ -590,11 +590,11 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       nshow <- show_rownames / length(unique(split.idx))
       nshow <- max(nshow, 10)
       subidx <- tapply(1:length(split.idx), split.idx, function(ii) {
-        ii[head(order(-apply(gx[ii, , drop = FALSE], 1, sd, na.rm = TRUE)), nshow)]
+        ii[head(order(-apply(gx[ii, , drop = FALSE], 1, stats::sd, na.rm = TRUE)), nshow)]
       })
       subset <- unlist(subidx)
     } else {
-      subset <- Matrix::head(order(-apply(gx, 1, sd, na.rm = TRUE)), show_rownames)
+      subset <- Matrix::head(order(-apply(gx, 1, stats::sd, na.rm = TRUE)), show_rownames)
     }
     lab <- rownames(gx)[subset]
     lab <- substring(lab, 1, lab.len)
@@ -721,12 +721,12 @@ gx.heatmap <- function(gx, values = NULL,
   ## scaling options
   if ("col" %in% scale || "both" %in% scale) {
     tgx <- t(gx) - colMeans(gx, na.rm = TRUE)
-    gx <- t(tgx / (1e-4 + apply(gx, 2, sd))) ## small eps maintains SD order!
+    gx <- t(tgx / (1e-4 + apply(gx, 2, stats::sd))) ## small eps maintains SD order!
     remove(tgx)
   }
   if ("row" %in% scale || "both" %in% scale) {
     gx <- gx - rowMeans(gx, na.rm = TRUE)
-    gx <- gx / (1e-4 + apply(gx, 1, sd)) ## small eps maintains SD order!
+    gx <- gx / (1e-4 + apply(gx, 1, stats::sd)) ## small eps maintains SD order!
   }
   if ("col.center" %in% scale) {
     gx <- t(t(gx) - colMeans(gx, na.rm = TRUE))
@@ -741,10 +741,10 @@ gx.heatmap <- function(gx, values = NULL,
   jj1 <- 1:nrow(gx)
   jj2 <- 1:ncol(gx)
   if (!is.null(nmax) && nmax < nrow(gx) && nmax > 0) {
-    jj1 <- Matrix::head(order(-apply(gx, 1, sd, na.rm = TRUE)), nmax)
+    jj1 <- Matrix::head(order(-apply(gx, 1, stats::sd, na.rm = TRUE)), nmax)
   }
   if (!is.null(cmax) && cmax < ncol(gx) && cmax > 0) {
-    jj2 <- Matrix::head(order(-apply(gx, 2, sd, na.rm = TRUE)), cmax)
+    jj2 <- Matrix::head(order(-apply(gx, 2, stats::sd, na.rm = TRUE)), cmax)
   }
   if (symm && ncol(gx) == nrow(gx)) {
     jj2 <- jj1
@@ -1114,7 +1114,7 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
     col.annot <- order.annot(col.annot, kx, c1, n = nca)
     ax <- kxmap(col.annot, 1:nrow(col.annot), c2, q = q)
     col.annot <- (col.annot - rowMeans(col.annot, na.rm = TRUE)) /
-      (1e-8 + apply(col.annot, 1, sd, na.rm = TRUE))
+      (1e-8 + apply(col.annot, 1, stats::sd, na.rm = TRUE))
     d3 <- stats::dist(col.annot)
     d3 <- stats::as.dist(1 - stats::cor(t(col.annot), use = "pairwise"))
     d3[is.na(d3)] <- mean(d3, na.rm = TRUE) ## impute missing...
@@ -1213,7 +1213,7 @@ frozenmap <- function(x, m = 8, n = 8, ...) {
     idx <- stats::cutree(h, k = n)
     ordx <- -apply(h$merge, 1, min)
     ordx <- ordx[ordx > 0]
-    sdx <- apply(x, 1, sd, na.rm = TRUE)
+    sdx <- apply(x, 1, stats::sd, na.rm = TRUE)
     midx <- function(j) j[which.min(match(j, ordx))]
     maxsd <- function(j) j[which.max(sdx[j])]
     maxsd2 <- function(j, k) Matrix::head(j[order(-sdx[j])], k)
@@ -1591,12 +1591,12 @@ heatmap.3 <- function(x,
   if (scale == "row") {
     retval$rowMeans <- rm <- rowMeans(x, na.rm = na.rm)
     x <- sweep(x, 1, rm)
-    retval$rowSDs <- sx <- apply(x, 1, sd, na.rm = na.rm)
+    retval$rowSDs <- sx <- apply(x, 1, stats::sd, na.rm = na.rm)
     x <- sweep(x, 1, sx, "/")
   } else if (scale == "column") {
     retval$colMeans <- rm <- colMeans(x, na.rm = na.rm)
     x <- sweep(x, 2, rm)
-    retval$colSDs <- sx <- apply(x, 2, sd, na.rm = na.rm)
+    retval$colSDs <- sx <- apply(x, 2, stats::sd, na.rm = na.rm)
     x <- sweep(x, 2, sx, "/")
   }
   if (missing(breaks) || is.null(breaks) || length(breaks) < 1) {

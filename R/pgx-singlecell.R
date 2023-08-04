@@ -226,7 +226,7 @@ pgx.scBatchIntegrate <- function(X, batch,
     liger <- rliger::normalize(liger)
 
 
-    liger@var.genes <- Matrix::head(rownames(X)[order(-apply(X, 1, sd))], 100)
+    liger@var.genes <- Matrix::head(rownames(X)[order(-apply(X, 1, stats::sd))], 100)
     liger <- rliger::scaleNotCenter(liger)
     vg <- liger@var.genes
     vg

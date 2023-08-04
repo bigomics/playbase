@@ -39,7 +39,7 @@ repelwords(
 
 \item{maxiter}{Maximum number of iterations}
 
-\item{...}{Additional graphics parameters to text()}
+\item{...}{Additional graphics parameters to graphics::text()}
 }
 \value{
 The adjusted coordinates, rotated labels, and plotting parameters

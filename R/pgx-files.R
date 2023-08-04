@@ -32,8 +32,8 @@ pgx.save <- function(pgx, file, update.date = TRUE, light = TRUE, system = FALSE
     pgx$omicsnet <- NULL
     pgx$omicsnet.reduced <- NULL
   }
-  sort(sapply(pgx, object.size)) / 1e9
-  sum(sapply(pgx, object.size)) / 1e9
+  sort(sapply(pgx, utils::object.size)) / 1e9
+  sum(sapply(pgx, utils::object.size)) / 1e9
 
   cat(">>> saving PGX file to", file, "\n")
   file <- iconv(file, from = "", to = "ASCII//TRANSLIT")

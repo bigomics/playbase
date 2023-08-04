@@ -310,7 +310,7 @@ pgx.reduceOmicsGraph <- function(ngs) {
   ## ------------------------------------------------------------
 
   igraph::V(gr1)$label <- grp.label
-  igraph::V(gr1)$cluster <- tapply(idx0, idx, median) ## level 1 cluster index
+  igraph::V(gr1)$cluster <- tapply(idx0, idx, stats::median) ## level 1 cluster index
   igraph::V(gr1)$level <- gsub("\\}.*|^\\{", "", igraph::V(gr1)$name)
 
   gr1$foldchange <- rF

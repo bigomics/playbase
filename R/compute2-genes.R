@@ -232,7 +232,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   if (max.features > 0 && nrow(counts) > max.features) {
     cat("shrinking data matrices: n=", max.features, "\n")
     logcpm <- playbase::logCPM(counts, total = NULL)
-    sdx <- apply(logcpm, 1, sd)
+    sdx <- apply(logcpm, 1, stats::sd)
     jj <- Matrix::head(order(-sdx), max.features) ## how many genes?
     jj0 <- setdiff(seq_len(nrow(counts)), jj)
     pgx$filtered[["low.variance"]] <- paste(rownames(counts)[jj0], collapse = ";")

@@ -693,11 +693,11 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
 
     if (method == "qlf") {
       fit <- edgeR::glmQLFit(dge, design1, robust = robust)
-      ctx <- contr0[colnames(coef(fit)), ]
+      ctx <- contr0[colnames(stats::coef(fit)), ]
       res <- edgeR::glmQLFTest(fit, contrast = ctx)
     } else if (method == "lrt") {
       fit <- edgeR::glmFit(dge, design1, robust = robust)
-      ctx <- contr0[colnames(coef(fit)), ]
+      ctx <- contr0[colnames(stats::coef(fit)), ]
       res <- edgeR::glmLRT(fit, contrast = ctx)
     } else {
       stop("unknown method: ", method)
@@ -781,11 +781,11 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
 
     if (method == "qlf") {
       fit <- edgeR::glmQLFit(dge1, design1, robust = robust)
-      ctx <- M[colnames(coef(fit)), ]
+      ctx <- M[colnames(stats::coef(fit)), ]
       res <- edgeR::glmQLFTest(fit, contrast = ctx)
     } else if (method == "lrt") {
       fit <- edgeR::glmFit(dge1, design1, robust = robust)
-      ctx <- M[colnames(coef(fit)), ]
+      ctx <- M[colnames(stats::coef(fit)), ]
       res <- edgeR::glmLRT(fit, contrast = ctx)
     } else {
       stop("unknown method: ", method)

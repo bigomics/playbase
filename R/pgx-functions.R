@@ -1753,7 +1753,7 @@ filterProbes <- function(genes, gg) {
 #' }
 #' @export
 computeFeatureScore <- function(X, Y, features) {
-  sdx <- apply(X, 1, sd)
+  sdx <- apply(X, 1, stats::sd)
   names(sdx) <- rownames(X)
   S <- matrix(NA, nrow = length(features), ncol = ncol(Y))
   rownames(S) <- names(features)
@@ -2426,7 +2426,7 @@ expandPhenoMatrix <- function(pheno, collapse = TRUE, drop.ref = TRUE) {
 #' cor.pvalue(0.8, 100)
 #' }
 #' @export
-cor.pvalue <- function(x, n) pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
+cor.pvalue <- function(x, n) stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
 
 
 #' @title Get gene sets from playbase data

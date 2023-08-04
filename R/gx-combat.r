@@ -70,7 +70,7 @@ gx.nnmcorrect <- function(X, y, use.design = TRUE, dist.method = "cor",
 
   if (dist.method == "cor") {
     message("[gx.nnmcorrect] computing correlation matrix D...")
-    sdx <- apply(dX, 1, sd)
+    sdx <- apply(dX, 1, stats::sd)
     ii <- Matrix::head(order(-sdx), sdtop)
 
     D <- 1 - crossprod(scale(dX[ii, ])) / (length(ii) - 1) ## faster

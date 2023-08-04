@@ -157,9 +157,9 @@ compute_testGenesets <- function(pgx,
     gsetX.bygroup <- NULL
     if (!is.null(grp)) {
       gsetX.bygroup <- Matrix::t(apply(gsetX, 1, function(x) tapply(x, grp, mean)))
-      sdx <- apply(gsetX.bygroup, 1, sd)
+      sdx <- apply(gsetX.bygroup, 1, stats::sd)
     } else {
-      sdx <- apply(gsetX, 1, sd)
+      sdx <- apply(gsetX, 1, stats::sd)
     }
     names(sdx) <- colnames(G)
     jj <- Matrix::head(order(-sdx), max.features)
