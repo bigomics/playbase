@@ -102,7 +102,7 @@ omx.makeHivePlotData_ <- function(res, rho.min = 0.15, cxi = 0.11, use.alpha = T
   ee$alpha <- alpha
   #
   ee$color <- c("steelblue", "darkorange")[1 + 1 * (ee$cor > 0)]
-  cc2 <- cbind(t(col2rgb(ee$color) / 255), alpha)
+  cc2 <- cbind(t(grDevices::col2rgb(ee$color) / 255), alpha)
   ee$color <- apply(cc2[, ], 1, function(x) grDevices::rgb(x[1], x[2], x[3], x[4]))
   ee <- ee[!duplicated(ee), ]
   ee <- ee[which(as.character(ee$n1) != as.character(ee$n2)), ]

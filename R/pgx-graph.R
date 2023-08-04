@@ -237,7 +237,7 @@ pgx.reduceOmicsGraph <- function(ngs) {
   ## ------------------------------------------------------------
   idx0 <- c(h1[, 1], h2[, 1])[igraph::V(gr)$name]
   idx <- c(hc1, hc2)[igraph::V(gr)$name]
-  R <- t(model.matrix(~ 0 + idx))
+  R <- t(stats::model.matrix(~ 0 + idx))
   R <- R / rowSums(R)
 
   colnames(R) <- igraph::V(gr)$name

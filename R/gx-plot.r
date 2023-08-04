@@ -152,7 +152,7 @@ gx.b3plot <- function(x, y, first = NULL,
   }
   y <- factor(y, levels = ylevel, exclude = NULL)
   if (!is.null(first)) y <- stats::relevel(y, ref = first)
-  mx <- tapply(x, y, median, na.rm = TRUE)
+  mx <- tapply(x, y, stats::median, na.rm = TRUE)
 
   sig <- yc <- NULL
   if (sig.stars) {

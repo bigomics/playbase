@@ -319,7 +319,7 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
   ## perform hclust (on positions)
   if ("hclust" %in% method) {
     message("perform hclust...")
-    hc <- fastcluster::hclust(dist(t(X)), method = "ward.D")
+    hc <- fastcluster::hclust(stats::dist(t(X)), method = "ward.D")
     hc.idx <- lapply(km.sizes, function(k) stats::cutree(hc, k))
     hc.idx <- do.call(cbind, hc.idx)
     colnames(hc.idx) <- paste0("hclust.", km.sizes)
@@ -344,7 +344,7 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
     k.rows <- split(K, row(K))
     d1 <- outer(k.rows, k.rows, Vectorize(function(x, y) sum(x != y)))
     rownames(d1) <- colnames(d1) <- rownames(K)
-    hc <- fastcluster::hclust(as.dist(d1))
+    hc <- fastcluster::hclust(stats::as.dist(d1))
     meta.idx <- do.call(cbind, lapply(km.sizes, function(k) stats::cutree(hc, k)))
     colnames(meta.idx) <- paste0("meta.", km.sizes)
     rownames(meta.idx) <- rownames(K)
@@ -408,13 +408,13 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   dimx <- dim(X) ## original dimensions
   namesx <- colnames(X)
   if (reduce.sd > 0 && nrow(X) > reduce.sd) {
-    sdx <- apply(X, 1, sd, na.rm = TRUE)
+    sdx <- apply(X, 1, stats::sd, na.rm = TRUE)
     is.constant <- all(abs(sdx - mean(sdx, na.rm = TRUE)) < 1e-8)
     if (is.constant) {
       message("WARNING:: SD is constant. Skipping SD reduction...\n")
     } else {
       message("Reducing to ", reduce.sd, " max SD features...\n")
-      X <- X[head(order(-sdx), reduce.sd), ]
+      X <- X[utils::head(order(-sdx), reduce.sd), ]
     }
   }
 
@@ -423,7 +423,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
     X <- X - rowMeans(X, na.rm = TRUE) ## do??
   }
   if (scale.features) {
-    X <- X / apply(X, 1, sd, na.rm = TRUE)
+    X <- X / apply(X, 1, stats::sd, na.rm = TRUE)
   }
 
   ## impute on row median
@@ -436,7 +436,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   if (nrow(X) <= 3) X <- rbind(X, X, X, X)
 
   ## add small variation...
-  X <- X + 1e-3 * matrix(rnorm(length(X)), nrow(X), ncol(X))
+  X <- X + 1e-3 * matrix(stats::rnorm(length(X)), nrow(X), ncol(X))
 
   ## Further pre-reduce dimensions using SVD
   res.svd <- NULL
@@ -615,7 +615,7 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
   clust.detect <- clust.detect[1]
   X <- Matrix::head(X[order(-apply(X, 1, stats::sd)), ], ntop)
   if (row.center) X <- X - rowMeans(X, na.rm = TRUE)
-  if (row.scale) X <- (X / apply(X, 1, sd, na.rm = TRUE))
+  if (row.scale) X <- (X / apply(X, 1, stats::sd, na.rm = TRUE))
 
   ## some randomization is sometimes necessary if the data is 'too
   ## clean' and clusters become lines..
@@ -743,7 +743,7 @@ pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix 
 
 
   if (graph.method == "dist") {
-    dist <- stats::as.dist(dist(scale(X)))
+    dist <- stats::as.dist(stats::dist(scale(X)))
     gr <- igraph::graph_from_adjacency_matrix(1.0 / dist**gamma, diag = FALSE, mode = "undirected")
   } else if (graph.method == "snn") {
     suppressMessages(suppressWarnings(gr <- scran::buildSNNGraph(t(X), d = 50)))

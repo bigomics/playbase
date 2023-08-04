@@ -4,7 +4,7 @@
 \alias{is.categorical}
 \title{Check if a Variable is Categorical}
 \usage{
-is.categorical(x, max.ncat = null, min.ncat = 2)
+is.categorical(x, max.ncat = NULL, min.ncat = 2)
 }
 \arguments{
 \item{x}{A vector representing the variable to be checked.}

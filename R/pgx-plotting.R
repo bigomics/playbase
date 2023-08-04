@@ -356,8 +356,8 @@ plot_SPLOM <- function(F, F2 = NULL, hilight = NULL, cex = 0.5, cex.axis = 1, ce
   F <- F[gg, , drop = FALSE]
   F2 <- F2[gg, , drop = FALSE]
 
-  x0 <- range(as.vector(apply(F, 2, quantile, probs = c(0.001, 0.999))))
-  x1 <- range(as.vector(apply(F2, 2, quantile, probs = c(0.001, 0.999))))
+  x0 <- range(as.vector(apply(F, 2, stats::quantile, probs = c(0.001, 0.999))))
+  x1 <- range(as.vector(apply(F2, 2, stats::quantile, probs = c(0.001, 0.999))))
   x0 <- range(as.vector(F))
   x1 <- range(as.vector(F2))
   x0 <- x0 + c(-1, 1) * diff(x0) * 0.05
@@ -1507,7 +1507,7 @@ pgx.plotPhenotypeMatrix <- function(annot) {
   annotX <- annotF
   annotX[, cvar] <- data.frame(lapply(annotF[, cvar], as.integer))
   annotX[, ] <- data.frame(lapply(annotX[, ], as.numeric))
-  hc <- fastcluster::hclust(dist(annotX))
+  hc <- fastcluster::hclust(stats::dist(annotX))
   plt <- plt %>% iheatmapr::add_col_dendro(hc, size = 20 * ncol(annot) / 6)
 
   col_annot_height <- 11
@@ -1565,7 +1565,7 @@ pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht = 5, cluster.samples = TRUE
 
   if (cluster.samples) {
     annotx <- expandAnnotationMatrix(annot.df)
-    hc <- fastcluster::hclust(dist(annotx)) ## cluster samples
+    hc <- fastcluster::hclust(stats::dist(annotx)) ## cluster samples
     annot.df <- annot.df[hc$order, ]
   }
 
@@ -1578,7 +1578,7 @@ pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht = 5, cluster.samples = TRUE
   ann.colors <- list()
   for (i in 1:length(npar)) {
     prm <- colnames(annot.df)[i]
-    klrs <- rev(grey.colors(npar[i], start = 0.4, end = 0.85)) ## continous scale
+    klrs <- rev(grDevices::grey.colors(npar[i], start = 0.4, end = 0.85)) ## continous scale
     if (npar[i] == 1) klrs <- "#d8d8d8"
     if (npar[i] > 3 && !isnum[i]) klrs <- rep(RColorBrewer::brewer.pal(8, "Set2"), 99)[1:npar[i]]
 
@@ -1655,7 +1655,7 @@ pgx.splitHeatmap <- function(ngs, splitx = NULL, top.mode = "specific",
     idx <- paste0("M", as.vector(mapply(rep, 1:ncol(grpX), ntop1)))
   } else {
     X1 <- Matrix::head(X0[order(-apply(X0, 1, stats::sd)), ], ntop)
-    hc <- fastcluster::hclust(as.dist(1 - stats::cor(t(X1), use = "pairwise")), method = "ward.D2")
+    hc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(t(X1), use = "pairwise")), method = "ward.D2")
     idx <- paste0("S", stats::cutree(hc, 5))
   }
 
@@ -2138,7 +2138,7 @@ plot_ggscatter <- function(x, y = NULL, col = NULL, main = NULL,
   if (!is.null(col)) df$col <- col
   if (!is.null(shape)) df$shape <- shape
 
-  is.factor <- class(type.convert(as.character(col), as.is = TRUE)) == "factor"
+  is.factor <- class(utils::type.convert(as.character(col), as.is = TRUE)) == "factor"
   if (is.factor) {
     p <- ggplot2::ggplot(df, ggplot2::aes(y = y, x = x, color = col, shape = shape)) +
       ggplot2::geom_point(size = 2.0 * cex) +
@@ -2279,13 +2279,13 @@ plot_ggbarplot <- function(mat, xlab = "x", ylab = "y", srt = 0, main = NULL,
   df$x <- factor(df$x, levels = colnames(mat))
   if (!is.null(las) && las == 3) srt <- 90
 
-  cpal <- rev(grey.colors(nrow(mat)))
+  cpal <- rev(grDevices::grey.colors(nrow(mat)))
 
   if (nrow(mat) == 1) cpal <- "grey70"
   if (!is.null(col)) cpal <- rep(col, 99)
   posmode <- ifelse(beside, "dodge", "stack")
-
-  p <- ggplot2::ggplot(df, aes(x = x, y = value, fill = y)) +
+  x <- y <- value <- NULL
+  p <- ggplot2::ggplot(df, ggplot2::aes(x = x, y = value, fill = y)) +
     ggplot2::geom_bar(
       stat = "identity", color = "black", size = 0.3,
       width = bar_width, position = posmode
@@ -2296,7 +2296,7 @@ plot_ggbarplot <- function(mat, xlab = "x", ylab = "y", srt = 0, main = NULL,
     ggplot2::ggtitle(main) +
     ggplot2::scale_fill_manual(values = cpal) +
     ggplot2::theme_classic(base_size = base_size) +
-    ggplot2::scale_x_discrete(guide = guide_axis(angle = srt)) +
+    ggplot2::scale_x_discrete(guide = ggplot2::guide_axis(angle = srt)) +
     ggplot2::theme(
       axis.text.x = ggplot2::element_text(angle = srt, vjust = 0),
       axis.title.x = ggplot2::element_text(size = 10),
@@ -2349,7 +2349,7 @@ plot_ggbarplot <- function(mat, xlab = "x", ylab = "y", srt = 0, main = NULL,
 #' @export
 pgx.violinPlot <- function(x, y, group = NULL, xlab = "", ylab = "",
                            srt = 0, cex.lab = 1, cex.main = 1.1,
-                           jitter = 0.015, vcol = "grey85",
+                           jitter = 0.015, vcol = "grey85", main = NULL,
                            plotlib = "base", maxbee = NULL, ...) {
   fig <- NULL
   if (plotlib == "base") {
@@ -2574,7 +2574,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
         RColorBrewer::brewer.pal(12, "Set3")
       ) # omics_pal_d("dark")(8))
     } else if (is.null(col) && nz == 2) {
-      col1 <- rev(grey.colors(2, end = 0.8))
+      col1 <- rev(grDevices::grey.colors(2, end = 0.8))
       col1 <- c("#AAAAAA55", "#555555FF")
       col1 <- c("#00008855", "#AA0000FF")
       col1 <- c("#CCCCCC55", "#AA0000FF")
@@ -2943,6 +2943,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     df <- df[jj, ]
     pt.col <- pt.col[jj]
     cex1 <- ifelse(length(cex) > 1, cex[jj], cex)
+    x <- y <- NULL
     plt <- ggplot2::ggplot(df, ggplot2::aes(x, y), legend = legend) +
       ggplot2::geom_point(
         shape = 21,
@@ -2968,6 +2969,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
 
     ## label cluster
     if (label.clusters) {
+      name <- NULL
       ## Put a cluster label at the median position of the group
       mpos <- apply(pos, 2, function(x) tapply(x, z1, stats::median))
       mlab <- rownames(mpos)
@@ -3043,7 +3045,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     zr <- range(z)
     if (zsym && min(zr, na.rm = TRUE) < 0) zr <- c(-1, 1) * max(abs(zr), na.rm = TRUE)
     zz <- round(c(zr[1], zr[2]), digits = 2)
-
+    variable <- NULL
     plt <- ggplot2::ggplot(df, ggplot2::aes(x, y, fill = variable)) +
       ggplot2::geom_point(
         shape = 21,
@@ -3316,7 +3318,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     if (!is.null(col)) {
       cpal <- col
     } else if (nz == 2) {
-      cpal <- rev(grey.colors(2, end = 0.8))
+      cpal <- rev(grDevices::grey.colors(2, end = 0.8))
       cpal <- c("#AAAAAA55", "#555555FF")
       cpal <- c("#00008855", "#AA0000FF")
       cpal <- c("#CCCCCC55", "#AA0000FF")
@@ -3673,12 +3675,12 @@ pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, cex =
   if (is.null(ylab)) {
     ylab <- colnames(pos)[2]
   }
-
+  x <- y <- z <- NULL # Init vars to prevent warning
   df <- data.frame(x = pos[, 1], y = pos[, 2], z = var, names = rownames(pos))
   if (!is.null(var)) {
     plt <- scatterD3::scatterD3(
-      data = df, x = x, y = y, #
-      col_var = z, #
+      data = df, x = x, y = y, 
+      col_var = z, 
       xlab = xlab, ylab = ylab,
       point_size = 32 * cex,
       legend_width = 70,
@@ -4468,7 +4470,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
   ex <- ncol(X) / ncol(xx[[1]]) ## expansion factor
   hc <- NULL
   if (NCOL(xx[[1]]) > 1) {
-    hc <- fastcluster::hclust(as.dist(1 - stats::cor(xx[[1]], use = "pairwise")))
+    hc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(xx[[1]], use = "pairwise")))
   }
   dd <- 0.08 * ex ## left dendrogram width
 
@@ -4529,7 +4531,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
 
       hc <- NULL
       if (NCOL(x1) > 1) {
-        hc <- fastcluster::hclust(as.dist(1 - stats::cor(x1, use = "pairwise")))
+        hc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(x1, use = "pairwise")))
       }
 
       plt <- plt %>%

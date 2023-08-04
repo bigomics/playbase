@@ -76,7 +76,7 @@ gx.nnmcorrect <- function(X, y, use.design = TRUE, dist.method = "cor",
     D <- 1 - crossprod(scale(dX[ii, ])) / (length(ii) - 1) ## faster
   } else {
     message("[gx.nnmcorrect] computing distance matrix D...\n")
-    D <- as.matrix(dist(t(dX)))
+    D <- as.matrix(stats::dist(t(dX)))
   }
   remove(dX)
   D[is.na(D)] <- 0 ## might have NA

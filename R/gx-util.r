@@ -30,7 +30,7 @@ imputeMedian <- function(X) {
   if (NCOL(X) == 1) {
     mx <- stats::median(X, na.rm = TRUE)
   } else {
-    mx <- apply(X, 1, median, na.rm = TRUE)
+    mx <- apply(X, 1, stats::median, na.rm = TRUE)
   }
   mx[is.na(mx)] <- stats::median(mx, na.rm = TRUE)
   impX <- X
@@ -115,14 +115,14 @@ gmean <- function(x) {
 #' gx.hist(gx)
 #' }
 gx.hist <- function(gx, main = "", ylim = NULL) {
-  h0 <- hist(as.vector(gx),
+  h0 <- graphics::hist(as.vector(gx),
     breaks = 120, main = main,
     col = "grey", freq = FALSE, ylim = ylim, xlab = "signal"
   )
   i <- 1
   for (i in 1:ncol(gx)) {
-    h1 <- hist(gx[, i], breaks = h0$breaks, plot = FALSE)
-    lines(h0$mids, h1$density, col = i + 1)
+    h1 <- graphics::hist(gx[, i], breaks = h0$breaks, plot = FALSE)
+    graphics::lines(h0$mids, h1$density, col = i + 1)
   }
 }
 

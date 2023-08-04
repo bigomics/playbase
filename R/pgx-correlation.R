@@ -48,7 +48,7 @@ pgx.computeGlassoAroundGene <- function(X, gene, nmax = 100) {
   res$cor <- Matrix::cov2cor(vX)
   res$sampleSize <- nrow(tX)
 
-  res$pcor <- -cov2cor(res$wi)
+  res$pcor <- -stats::cov2cor(res$wi)
   diag(res$pcor) <- 1
   rownames(res$pcor) <- rownames(res$cor)
   colnames(res$pcor) <- colnames(res$cor)
@@ -304,7 +304,7 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
     timings[["QUIC"]] <- system.time(
       rho[["QUIC"]] <- {
         # The f QUIC likely comes from QUIC but better confirm
-        r <- -QUIC(cov(tX), 1e-1)$X
+        r <- -QUIC(stats::cov(tX), 1e-1)$X
         diag(r) <- -diag(r)
         r
       }
@@ -313,9 +313,9 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
 
   if ("glasso" %in% method) {
     timings[["glasso"]] <- system.time(
-      res <- glasso::glasso(cov(tX), 1e-2)
+      res <- glasso::glasso(stats::cov(tX), 1e-2)
     )
-    r <- -cov2cor(res$wi)
+    r <- -stats::cov2cor(res$wi)
     diag(r) <- -diag(r)
     rho[["glasso"]] <- r
   }

@@ -311,7 +311,7 @@ pgx.getGEOcounts.GEOquery <- function(id) {
     }
 
     ## perform linear transformation (unlog) if required
-    qx <- as.numeric(quantile(ex, c(0., 0.25, 0.5, 0.75, 0.99, 1.0), na.rm = T))
+    qx <- as.numeric(stats::quantile(ex, c(0., 0.25, 0.5, 0.75, 0.99, 1.0), na.rm = T))
     qx
     is.count <- (qx[5] > 100) || (qx[6] - qx[1] > 50 && qx[2] > 0) ||
       (qx[2] > 0 && qx[2] < 1 && qx[4] > 1 && qx[4] < 2) ## from GEO2R script
@@ -431,7 +431,7 @@ pgx.getSymbolFromFeatureData <- function(fdata) {
   if (entrez.ok) {
     k <- entrez.col[which.max(entrez.match)]
     probes <- as.character(fdata[, k])
-    symbol <- AnnotationDbi::mapIds(org.Hs.eg.db, probes, "SYMBOL", "ENTREZID")
+    symbol <- AnnotationDbi::mapIds(org.Hs.eg.db::org.Hs.eg.db, probes, "SYMBOL", "ENTREZID")
     return(symbol)
   }
 
@@ -449,7 +449,7 @@ pgx.getSymbolFromFeatureData <- function(fdata) {
   if (refseq.ok) {
     k <- refseq.col[which.max(refseq.match)]
     probes <- sub("[.].*", "", as.character(fdata[, k]))
-    symbol <- AnnotationDbi::mapIds(org.Hs.eg.db, probes, "SYMBOL", "REFSEQ")
+    symbol <- AnnotationDbi::mapIds(org.Hs.eg.db::org.Hs.eg.db, probes, "SYMBOL", "REFSEQ")
     return(symbol)
   }
 

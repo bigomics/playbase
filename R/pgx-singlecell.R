@@ -84,7 +84,7 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
 
     sdx <- (Matrix::rowMeans(X1**2) - avgx**2)**0.5
     wt <- sdx * avgx
-    X1 <- X1[head(order(-wt), topsd), , drop = FALSE]
+    X1 <- X1[utils::head(order(-wt), topsd), , drop = FALSE]
 
     X1 <- X1 - Matrix::rowMeans(X1) ## center features
     nv <- min(nv, ncol(X1) - 1)
@@ -102,7 +102,7 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
     } else if (method == "kmeans") {
       cluster <- stats::kmeans(V, k, iter.max = 100)$cluster
     } else if (method == "hclust") {
-      cluster <- stats::cutree(fastcluster::hclust(dist(V)), k)
+      cluster <- stats::cutree(fastcluster::hclust(stats::dist(V)), k)
     } else {
       stop("ERROR:: unknown clustering method")
     }

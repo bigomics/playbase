@@ -21,7 +21,7 @@
 #' @export
 pgx.phenoMatrix <- function(pgx, phenotype) {
   y <- pgx$samples[, phenotype]
-  mm <- t(model.matrix(~ 0 + y))
+  mm <- t(stats::model.matrix(~ 0 + y))
   rownames(mm) <- sub("^y", "", rownames(mm))
   colnames(mm) <- rownames(pgx$samples)
   as.matrix(mm)
@@ -678,7 +678,7 @@ trimsame0 <- function(s, split = " ", summarize = FALSE, rev = FALSE) {
 read.csv3 <- function(file, as_matrix = FALSE) {
   ## read delimited table automatically determine separator. Avoid
   ## duplicated rownames.
-  line1 <- as.character(read.csv(file, comment.char = "#", sep = "\n", nrow = 1)[1, ])
+  line1 <- as.character(utils::read.csv(file, comment.char = "#", sep = "\n", nrow = 1)[1, ])
   sep <- names(which.max(sapply(c("\t", ",", ";"), function(s) length(strsplit(line1, split = s)[[1]]))))
   sep
   x <- data.table::fread(file, sep = sep, check.names = FALSE, stringsAsFactors = FALSE, header = TRUE)
@@ -700,7 +700,7 @@ read.csv3 <- function(file, as_matrix = FALSE) {
 #' @export
 read.as_matrix.SAVE <- function(file) {
   ## read delimited table automatically determine separator. allow duplicated rownames.
-  line1 <- as.character(read.csv(file, comment.char = "#", sep = "\n", nrow = 1)[1, ])
+  line1 <- as.character(utils::read.csv(file, comment.char = "#", sep = "\n", nrow = 1)[1, ])
   sep <- names(which.max(sapply(c("\t", ",", ";"), function(s) length(strsplit(line1, split = s)[[1]]))))
   x0 <- utils::read.csv(file, comment.char = "#", sep = sep, check.names = FALSE, stringsAsFactors = FALSE)
   x <- NULL
@@ -1115,7 +1115,7 @@ is.POSvsNEG <- function(pgx) {
 #' @return A logical value indicating whether the input variable is categorical.
 #'
 #' @export
-is.categorical <- function(x, max.ncat = null, min.ncat = 2) {
+is.categorical <- function(x, max.ncat = NULL, min.ncat = 2) {
   max.ncat <- length(x) - 1
   is.factor <- any(class(x) %in% c("factor", "character"))
   is.factor
@@ -1158,7 +1158,7 @@ pgx.discretizePhenotypeMatrix <- function(df, min.ncat = 2, max.ncat = 20, remov
   df.num <- c()
   if (length(numpheno)) {
     df.num <- as.matrix(df[, numpheno, drop = FALSE])
-    is.high <- t(t(df.num) > apply(df.num, 2, median, na.rm = TRUE))
+    is.high <- t(t(df.num) > apply(df.num, 2, stats::median, na.rm = TRUE))
     df.num[is.high] <- "high"
     df.num[!is.high] <- "low"
   }
@@ -2355,7 +2355,7 @@ expandPhenoMatrix <- function(pheno, collapse = TRUE, drop.ref = TRUE) {
   nlevel <- apply(a1, 2, function(x) length(setdiff(unique(x), NA)))
   nterms <- colSums(!is.na(a1))
 
-  y.class <- sapply(type.convert(pheno, as.is = TRUE), class)
+  y.class <- sapply(utils::type.convert(pheno, as.is = TRUE), class)
 
   y.isnum <- (y.class %in% c("numeric", "integer"))
   nlevel

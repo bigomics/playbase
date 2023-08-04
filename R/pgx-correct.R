@@ -327,7 +327,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     ## fast method using SmartSVA
     pp <- paste0(model.par, collapse = "+")
     lm.expr <- paste0("lm(t(cX) ~ ", pp, ", data=pheno)")
-    X.r <- t(resid(eval(parse(text = lm.expr))))
+    X.r <- t(stats::resid(eval(parse(text = lm.expr))))
     n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
 
     cX1 <- Matrix::head(cX[order(-apply(cX, 1, stats::sd)), ], 1000) ## top 1000 genes only (faster)
@@ -336,7 +336,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     if (any(class(sv) == "try-error")) {
       ## try again with little bit of noise...
       a <- 0.01 * mean(apply(cX, 1, stats::sd))
-      cX1 <- cX + a * matrix(rnorm(length(cX)), nrow(cX), ncol(cX))
+      cX1 <- cX + a * matrix(stats::rnorm(length(cX)), nrow(cX), ncol(cX))
       cX1 <- Matrix::head(cX1[order(-apply(cX1, 1, stats::sd)), ], 1000) ## top 1000 genes only (faster)
       sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1))$sv)
     }
@@ -401,7 +401,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     pX <- NULL
     while (length(ii) > 0 && niter < max.iter) {
       xx <- Matrix::head(cX[order(-apply(cX, 1, stats::sd)), ], hc.top)
-      hc <- stats::cutree(fastcluster::hclust(dist(t(xx)), method = "ward.D2"), 2)
+      hc <- stats::cutree(fastcluster::hclust(stats::dist(t(xx)), method = "ward.D2"), 2)
       hc.rho <- stats::cor(hc, mod1)
       hc.rho <- apply(abs(hc.rho), 1, max)
       ii <- which(hc.rho < max.rho)
@@ -760,7 +760,7 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
     pct.mito <- Matrix::colSums(cx[mt.genes, , drop = FALSE], na.rm = TRUE) / libsize
   }
   if (length(rb.genes) >= 10) {
-    ii <- rb.genes[order(-apply(tx[rb.genes, , drop = FALSE], 1, sd, na.rm = TRUE))]
+    ii <- rb.genes[order(-apply(tx[rb.genes, , drop = FALSE], 1, stats::sd, na.rm = TRUE))]
     sel20 <- Matrix::head(ii, 20)
     ribo <- Matrix::colMeans(tx[rb.genes, , drop = FALSE])
     ribo20 <- Matrix::colMeans(tx[sel20, , drop = FALSE])

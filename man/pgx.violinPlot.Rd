@@ -15,6 +15,7 @@ pgx.violinPlot(
   cex.main = 1.1,
   jitter = 0.015,
   vcol = "grey85",
+  main = NULL,
   plotlib = "base",
   maxbee = NULL,
   ...

@@ -97,7 +97,7 @@ pgx.correlateSignatureH5.inmemory <- function(F, h5.file, nsig = 100, ntop = 100
   rownames(matG) <- rn
   colnames(matG) <- cn
 
-  mem1 <- round(object.size(matG) / 1e9, 2)
+  mem1 <- round(utils::object.size(matG) / 1e9, 2)
   cat("[pgx.correlateSignatureH5] utils::object.size(matG)=", mem1, "Gb\n") ## gigabytes....
 
   ## ---------------------------------------------------------------
@@ -440,7 +440,7 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
       idx <- order(x)
       list(
         DN = utils::head(idx, 100),
-        UP = rev(tail(idx, 100))
+        UP = rev(utils::tail(idx, 100))
       )
     })
     sig100.dn <- sapply(orderx, "[[", "DN")

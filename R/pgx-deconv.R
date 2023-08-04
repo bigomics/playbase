@@ -540,8 +540,8 @@ pgx.deconvolution <- function(X, ref,
   }
 
   ## add small noise, some methods need it...
-  ref <- ref + 1e-2 * matrix(rnorm(length(ref)), nrow(ref), ncol(ref))
-  mat <- mat + 1e-2 * matrix(rnorm(length(mat)), nrow(mat), ncol(mat))
+  ref <- ref + 1e-2 * matrix(stats::rnorm(length(ref)), nrow(ref), ncol(ref))
+  mat <- mat + 1e-2 * matrix(stats::rnorm(length(mat)), nrow(mat), ncol(mat))
   ref <- pmax(ref, 0)
   mat <- pmax(mat, 0)
 

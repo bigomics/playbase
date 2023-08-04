@@ -123,7 +123,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
   R1 <- as.matrix(R1)
   R1[is.nan(R1)] <- 0
   R1[is.infinite(R1)] <- 0
-  R1 <- R1 + 1e-8 * matrix(rnorm(length(R1)), nrow(R1), ncol(R1))
+  R1 <- R1 + 1e-8 * matrix(stats::rnorm(length(R1)), nrow(R1), ncol(R1))
   colnames(R1) <- colnames(F)
   rownames(R1) <- colnames(X)
 
@@ -142,7 +142,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
     rho2 <- rho2[order(-rowMeans(rho2**2)), , drop = FALSE]
     cor.pvalue <- function(x, n) stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
     P <- apply(rho2, 2, cor.pvalue, n = nrow(D))
-    Q <- apply(P, 2, p.adjust, method = "fdr")
+    Q <- apply(P, 2, stats::p.adjust, method = "fdr")
     results[["cor"]] <- list(X = rho2, Q = Q, P = P)
   }
 
@@ -183,7 +183,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
 
       rx <- apply(abs(res$X), 2, rank)
       rownames(rx) <- rownames(res$X)
-      mtop <- names(head(sort(rowMeans(rx), decreasing = TRUE), nprune))
+      mtop <- names(utils::head(sort(rowMeans(rx), decreasing = TRUE), nprune))
       top.idx <- unique(unlist(meta.gmt[mtop]))
 
       results[[k]]$X <- res$X[mtop, , drop = FALSE]

@@ -120,7 +120,7 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   if (NCOL(W) <= 3) {
     ## t-SNE doesn't like 1-2 columns...
     W <- cbind(W, W, W, W, W)
-    W <- W + 1e-2 * matrix(rnorm(length(W)), nrow(W), ncol(W))
+    W <- W + 1e-2 * matrix(stats::rnorm(length(W)), nrow(W), ncol(W))
   }
   nb <- floor(pmin(pmax(ncol(W) / 4, 2), 10))
   message("[pgx.calculateWordCloud] dim(W) = ", paste(dim(W), collapse = "x"))

@@ -91,7 +91,7 @@ pgx.readOptions <- function(file = "./OPTIONS") {
   names(opt) <- opt.names
   opt <- sapply(opt, strsplit, split = "[;]")
   ## convert character to R types
-  opt <- lapply(opt, type.convert, as.is = TRUE)
+  opt <- lapply(opt, utils::type.convert, as.is = TRUE)
   opt
 }
 
@@ -635,7 +635,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     }
 
     ## restrict to 20000 genes
-    allfc.sd <- apply(allFC, 1, sd, na.rm = TRUE)
+    allfc.sd <- apply(allFC, 1, stats::sd, na.rm = TRUE)
     allfc.nna <- rowMeans(!is.na(allFC))
     jj <- Matrix::head(order(-allfc.sd * allfc.nna), 20000)
     allFC <- allFC[jj, , drop = FALSE]

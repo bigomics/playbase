@@ -141,7 +141,7 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
     t.abs.rho2 <- t(abs(rho2))
     pv <- t(apply(rho1, 1, function(x) rowMeans(t.abs.rho2 > abs(x), na.rm = TRUE)))
     pv[is.nan(pv)] <- NA ## ??
-    qv <- apply(pv, 2, p.adjust, method = "fdr")
+    qv <- apply(pv, 2, stats::p.adjust, method = "fdr")
     df <- list(rho = rho1, p.value = pv, q.value = qv)
   } else {
     df <- list(rho = rho1, p.value = NA, q.value = NA)

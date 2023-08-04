@@ -32,7 +32,7 @@ gmt2mat <- function(gmt, max.genes = -1, ntop = -1, sparse = TRUE,
   gmt <- gmt[order(-sapply(gmt, length))]
   gmt <- gmt[!duplicated(names(gmt))]
   if (ntop > 0) {
-    gmt <- lapply(gmt, head, n = ntop)
+    gmt <- lapply(gmt, utils::head, n = ntop)
   }
   if (is.null(names(gmt))) names(gmt) <- paste("gmt.", 1:length(gmt), sep = "")
   if (is.null(bg)) {
@@ -48,7 +48,7 @@ gmt2mat <- function(gmt, max.genes = -1, ntop = -1, sparse = TRUE,
   } else {
     D <- matrix(0, nrow = length(gg), ncol = length(kk))
   }
-  dim(D)
+
   rownames(D) <- gg
   colnames(D) <- kk
   j <- 1
@@ -265,8 +265,8 @@ run.GSEA <- function(X, y, gmt, output.dir = NULL, fdr = 0.25, set.min = 15,
     j1 <- which(y == y.classes[1])
     mu0 <- rowMeans(X[, j0, drop = FALSE], na.rm = TRUE)
     mu1 <- rowMeans(X[, j1, drop = FALSE], na.rm = TRUE)
-    sd0 <- apply(X[, j0, drop = FALSE], 1, sd, na.rm = TRUE)
-    sd1 <- apply(X[, j1, drop = FALSE], 1, sd, na.rm = TRUE)
+    sd0 <- apply(X[, j0, drop = FALSE], 1, stats::sd, na.rm = TRUE)
+    sd1 <- apply(X[, j1, drop = FALSE], 1, stats::sd, na.rm = TRUE)
     sd0 <- pmax(sd0, 0.2 * pmax(mu0, 1))
     sd1 <- pmax(sd1, 0.2 * pmax(mu1, 1))
     rnk <- (mu1 - mu0) / (sd0 + sd1)
@@ -299,7 +299,7 @@ run.GSEA <- function(X, y, gmt, output.dir = NULL, fdr = 0.25, set.min = 15,
   gX <- data.frame(NAME = rownames(X), DESCRIPTION = NA, X)
   write("#1.2", file = gct.file)
   suppressWarnings(write(paste(nrow(X), ncol(X), sep = "\t"), file = gct.file, append = TRUE))
-  suppressWarnings(write.table(format(gX[, ], digits = 3),
+  suppressWarnings(utils::write.table(format(gX[, ], digits = 3),
     file = gct.file, append = TRUE,
     row.names = FALSE, quote = FALSE, sep = "\t"
   ))
@@ -623,7 +623,7 @@ run.GSEA.preranked <- function(rnk, gmt, output.dir = NULL, fdr = 0.25,
     jj <- which(is.na(res$NES))
     jj0 <- which(!is.na(res$NES))
     for (j in jj) {
-      j1 <- jj0[head(order(abs(res$ES[jj0] - res$ES[j])), 3)]
+      j1 <- jj0[utils::head(order(abs(res$ES[jj0] - res$ES[j])), 3)]
       res[j, "NES"] <- mean(res[j1, "NES"])
       res[j, "NOM p-val"] <- mean(res[j1, "NOM p-val"])
       res[j, "FDR q-val"] <- mean(res[j1, "FDR q-val"])
@@ -1012,7 +1012,7 @@ getGseaOutput <- function(path = "../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut
     cat("rastering PNG images...\n")
 
 
-    rasterPNG <- function(p) grid::rasterGrob(as.raster(png::readPNG(p)), interpolate = FALSE)
+    rasterPNG <- function(p) grid::rasterGrob(grDevices::as.raster(png::readPNG(p)), interpolate = FALSE)
     output$heatmaps <- lapply(output$heatmaps, rasterPNG)
     output$enplots <- lapply(output$enplots, rasterPNG)
     output$LE_heatmap <- rasterPNG(output$LE_heatmap)
@@ -1201,7 +1201,7 @@ gsea.ftplot <- function(x, rft = "var", cft = "var",
   ynames <- ynames[jj]
   order.sign <- c(1, -1)[1 + (sort.decreasing == TRUE)]
   if (rsort == "hclust") {
-    rc <- fastcluster::hclust(as.dist(1 - stats::cor(t(x), use = "pairwise")))
+    rc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(t(x), use = "pairwise")))
     rc.order <- rc$order
   } else if (rsort == "metric") {
     rc.order <- order(-rft * order.sign)
@@ -1209,7 +1209,7 @@ gsea.ftplot <- function(x, rft = "var", cft = "var",
     rc.order <- 1:length(rft)
   }
   if (csort == "hclust") {
-    cc <- fastcluster::hclust(as.dist(1 - stats::cor(x, use = "pairwise")))
+    cc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(x, use = "pairwise")))
     cc.order <- cc$order
   } else if (csort == "metric") {
     cc.order <- order(cft * order.sign)
@@ -1226,7 +1226,7 @@ gsea.ftplot <- function(x, rft = "var", cft = "var",
   ## upper dendrogram (or skip)
   if (csort == "hclust") {
     graphics::par(mar = c(0.5, 0, mar[3], mar[4] + 0))
-    plot(as.dendrogram(cc), leaflab = "none", yaxt = "n")
+    plot(stats::as.dendrogram(cc), leaflab = "none", yaxt = "n")
   } else {
     graphics::par(mar = c(0.5, 0, mar[3], 0))
     graphics::frame()
@@ -1278,7 +1278,7 @@ gsea.ftplot <- function(x, rft = "var", cft = "var",
   ## left dendrogram
   if (rsort == "hclust") {
     graphics::par(mar = c(mar[1], 2, 0, 0.5))
-    plot(as.dendrogram(rc),
+    plot(stats::as.dendrogram(rc),
       horiz = TRUE, leaflab = "none",
       yaxt = "n", yaxs = "i"
     )
@@ -1327,7 +1327,7 @@ gsea.quick_report <- function(output.dir, pattern = NULL) {
   tt <- gsub(output.dir, "", tt)
   tt <- gsub("^metagsva_|^metagsea_|^gsea_", "", tt)
   tt
-  rr <- lapply(gg, read.csv, sep = "\t", header = TRUE, row.names = 1, nrow = -2000)
+  rr <- lapply(gg, utils::read.csv, sep = "\t", header = TRUE, row.names = 1, nrow = -2000)
   Matrix::head(rr[[1]])[, 1:7]
   n.set <- sapply(rr, function(x) nrow(x))
   np.pos <- sapply(rr, function(x) sum(x$NOM.p.val < 0.05 & x$NES > 0))
@@ -1373,7 +1373,7 @@ gsea.radarplot <- function(values, names = NULL, mar = c(2, 5, 3, 5) * 2,
   colnames(M) <- names(values)
   rownames(M) <- c("neg", "pos", "unit")
   jj <- 1:ncol(M)
-  if (clust) jj <- fastcluster::hclust(dist(t(M)))$order
+  if (clust) jj <- fastcluster::hclust(stats::dist(t(M)))$order
   M <- M[, jj]
   ii <- 1:3
   if (sum(mx < 0) == 0) ii <- c(2, 3)

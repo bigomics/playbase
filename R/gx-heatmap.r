@@ -276,7 +276,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   }
   if ("row.bmc" %in% scale && !is.null(splitx)) {
     if (inherits(splitx, "numeric") && length(splitx) == 1) {
-      ii <- Matrix::head(order(-apply(gx, 1, sd, na.rm = TRUE)), 1000) ## NEED RETHINK!
+      ii <- Matrix::head(order(-apply(gx, 1, stats::sd, na.rm = TRUE)), 1000) ## NEED RETHINK!
       system.time(hc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(gx[ii, ])), method = "ward.D2"))
       splitx <- paste0("cluster", stats::cutree(hc, splitx))
       names(splitx) <- colnames(gx)
@@ -413,7 +413,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     i <- 1
     for (i in 1:length(npar)) {
       prm <- colnames(col.annot)[i]
-      klrs <- rev(grey.colors(npar[i], start = 0.4, end = 0.85))
+      klrs <- rev(grDevices::grey.colors(npar[i], start = 0.4, end = 0.85))
       if (npar[i] == 1) klrs <- "#E6E6E6"
       names(klrs) <- col.pars[[i]]
       x <- col.annot[, i]
@@ -465,7 +465,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     for (i in 1:length(npar)) {
       prm <- colnames(row.annot)[i]
       x <- row.annot[, i]
-      klrs <- rev(grey.colors(npar[i], start = 0.3, end = 0.8))
+      klrs <- rev(grDevices::grey.colors(npar[i], start = 0.3, end = 0.8))
       if (npar[i] == 1) klrs <- "#E6E6E6"
       if (npar[i] > 0) klrs <- rep(RColorBrewer::brewer.pal(8, "Set2"), 99)[1:npar[i]]
       names(klrs) <- sort(setdiff(unique(x), NA))
@@ -590,7 +590,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       nshow <- show_rownames / length(unique(split.idx))
       nshow <- max(nshow, 10)
       subidx <- tapply(1:length(split.idx), split.idx, function(ii) {
-        ii[head(order(-apply(gx[ii, , drop = FALSE], 1, stats::sd, na.rm = TRUE)), nshow)]
+        ii[utils::head(order(-apply(gx[ii, , drop = FALSE], 1, stats::sd, na.rm = TRUE)), nshow)]
       })
       subset <- unlist(subidx)
     } else {
@@ -830,7 +830,7 @@ gx.heatmap <- function(gx, values = NULL,
     ry <- ry - apply(ry, 1, min, na.rm = TRUE)
     ry <- round((ry / (1e-8 + apply(ry, 1, max, na.rm = TRUE))) * 7)
     ry <- t(apply(ry, 1, function(x) as.integer(as.factor(x))))
-    cc0 <- t(apply(ry, 1, function(x) rev(grey.colors(max(x, na.rm = TRUE)))[x]))
+    cc0 <- t(apply(ry, 1, function(x) rev(grDevices::grey.colors(max(x, na.rm = TRUE)))[x]))
     jj <- which(apply(cc0, 1, function(x) length(unique(x))) > 3 & !is.num)
     if (length(jj)) {
       klrs <- rep(RColorBrewer::brewer.pal(8, "Set2"), 99)
@@ -848,7 +848,7 @@ gx.heatmap <- function(gx, values = NULL,
     ry <- ry - apply(ry, 1, min, na.rm = TRUE)
     ry <- round((ry / (1e-8 + apply(ry, 1, max, na.rm = TRUE))) * 7)
     ry <- t(apply(ry, 1, function(x) as.integer(as.factor(x))))
-    cc1 <- t(apply(ry, 1, function(x) rev(grey.colors(max(x, na.rm = TRUE)))[x]))
+    cc1 <- t(apply(ry, 1, function(x) rev(grDevices::grey.colors(max(x, na.rm = TRUE)))[x]))
     jj <- which(apply(cc1, 1, function(x) length(unique(x))) > 3)
     if (length(jj)) {
       klrs <- rep(RColorBrewer::brewer.pal(8, "Set2"), 99)
@@ -1125,18 +1125,18 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
     ry <- t(apply(col.annot, 1, rank, na.last = "keep"))
     ry <- ry - apply(ry, 1, min, na.rm = TRUE)
     ry <- (ry / (apply(ry, 1, max, na.rm = TRUE) + 1e-8)) * 31
-    cc0 <- matrix(rev(grey.colors(32))[ry + 1], nrow = nrow(ry), ncol = ncol(ry))
+    cc0 <- matrix(rev(grDevices::grey.colors(32))[ry + 1], nrow = nrow(ry), ncol = ncol(ry))
     colnames(cc0) <- colnames(col.annot)
     rownames(cc0) <- rownames(col.annot)
     cc0 <- t(cc0)
   }
   if (FALSE && !is.null(row.annot)) {
-    jj <- fastcluster::hclust(dist(t(row.annot)))$order
+    jj <- fastcluster::hclust(stats::dist(t(row.annot)))$order
     row.annot <- row.annot[, jj]
     ry <- apply(row.annot, 2, rank, na.last = "keep")
     ry <- t(t(ry) - apply(ry, 2, min, na.rm = TRUE))
     ry <- t(t(ry) / (apply(ry, 2, max, na.rm = TRUE) + 1e-8)) * 15
-    cc1 <- matrix(rev(grey.colors(16))[ry + 1], nrow = nrow(ry), ncol = ncol(ry))
+    cc1 <- matrix(rev(grDevices::grey.colors(16))[ry + 1], nrow = nrow(ry), ncol = ncol(ry))
     colnames(cc1) <- NULL
     rownames(cc1) <- NULL
     colnames(cc1) <- colnames(row.annot)
@@ -1367,8 +1367,8 @@ multi.dist <- function(x, p = 4, method = c("pearson", "euclidean", "manhattan")
 #' @export
 heatmap.3 <- function(x,
                       Rowv = TRUE, Colv = if (symm) "Rowv" else TRUE,
-                      distfun = dist,
-                      hclustfun = hclust,
+                      distfun = stats::dist,
+                      hclustfun = stats::hclust,
                       dendrogram = c("both", "row", "column", "none"),
                       symm = FALSE,
                       scale = c("none", "row", "column"),
@@ -1661,7 +1661,7 @@ heatmap.3 <- function(x,
     stop("lwid must have length = ncol(lmat) =", ncol(lmat))
   }
   op <- graphics::par(no.readonly = TRUE)
-  on.exit(par(op))
+  on.exit(graphics::par(op))
 
   plotly::layout(lmat, widths = lwid, heights = lhei, respect = FALSE)
 

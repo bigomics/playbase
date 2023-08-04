@@ -232,7 +232,7 @@ compute_deconvolution <- function(ngs, rna.counts = ngs$counts, full = FALSE) {
 
   counts <- rna.counts
   rownames(counts) <- toupper(ngs$genes[rownames(counts), "gene_name"])
-  res <- pgx.multipleDeconvolution(counts, refmat = refmat, method = methods)
+  res <- pgx.multipleDeconvolution(counts, refmat = refmat, methods = methods)
 
   ngs$deconv <- res$results
   if (!is.null(res$timings)) {

@@ -311,7 +311,7 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
 #' @export
 makeFullContrasts <- function(labels, by.sample = FALSE) {
   levels <- sort(unique(as.character(labels)))
-  cc <- t(combn(levels, 2))
+  cc <- t(utils::combn(levels, 2))
   contr.matrix <- c()
   for (i in nrow(cc):1) {
     ctr <- 1 * (levels == cc[i, 1]) - 1 * (levels == cc[i, 2])

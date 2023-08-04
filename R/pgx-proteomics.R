@@ -49,7 +49,7 @@ prot.nmfImpute <- function(X, groups, k = 10, r = 0.5) {
 #' @export
 prot.medianImpute <- function(X, groups) {
   logmedian <- function(x) {
-    exp(median(log(x)))
+    exp(stats::median(log(x)))
   }
   medianImputeZERO <- function(x, y) {
     b <- tapply(x, y, function(a) {
