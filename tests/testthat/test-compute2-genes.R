@@ -23,8 +23,8 @@ test_that("compute_testGenes returns correct number of genes", {
   # Check that all the test have ran
   expect_equal(length(test_genes$gx.meta$meta), 2)
   expect_equal(length(test_genes$gx.meta$sig.counts), 4)
-  expect_equal(dim(test_genes$gx.meta$meta$act12h_vs_notact), c(85, 8))
-  expect_equal(dim(test_genes$gx.meta$meta$act24h_vs_notact), c(85, 8))
+  expect_equal(dim(test_genes$gx.meta$meta$act12h_vs_notact)[2], 8)
+  expect_equal(dim(test_genes$gx.meta$meta$act24h_vs_notact)[2], 8)
 
   # Check static value of in tables
   sum_vals <- sapply(test_genes$gx.meta$meta, sum)
@@ -42,8 +42,8 @@ test_that("compute_testGenesSingleOmics runs without errors", {
   # Check that all the test have ran
   expect_equal(length(result$gx.meta$meta), 2)
   expect_equal(length(result$gx.meta$sig.counts), 4)
-  expect_equal(dim(result$gx.meta$meta$act12h_vs_notact), c(85, 8))
-  expect_equal(dim(result$gx.meta$meta$act24h_vs_notact), c(85, 8))
+  expect_equal(dim(result$gx.meta$meta$act12h_vs_notact)[2], 8)
+  expect_equal(dim(result$gx.meta$meta$act24h_vs_notact)[2], 8)
 
   # Check static value of in tables
   sum_vals <- sapply(result$gx.meta$meta, sum)

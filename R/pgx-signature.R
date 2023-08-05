@@ -194,7 +194,9 @@ pgx.correlateSignatureH5.inmemory <- function(F, h5.file, nsig = 100, ntop = 100
     names(gmt) <- cn[sel.idx]
 
     ## use entire fc vector
-    system.time(res1 <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm)) ## really unsigned???
+    suppressMessages(suppressWarnings(
+      res1 <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm) ## really unsigned???
+    ))
 
     ## ---------------------------------------------------------------
     ## Combine correlation+GSEA by combined score (NES*rho)
@@ -279,7 +281,9 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
   names(gmt) <- cn[sel.idx]
 
-  system.time(res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm, scoreType = "pos")) ## really unsigned???
+  suppressMessages(suppressWarnings(
+    res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm, scoreType = "pos")
+  )) ## really unsigned???
 
   ## ---------------------------------------------------------------
   ## Combine correlation+GSEA by combined score (NES*rho)
@@ -651,8 +655,11 @@ pgx.addEnrichmentSignaturesH5 <- function(h5.file, X = NULL, mc.cores = 0,
     F1 <- parallel::mclapply(colnames(X), function(i) {
       xi <- X[, i]
       xi <- xi[!is.na(xi)]
+
       xi <- xi + 1e-3 * stats::rnorm(length(xi))
-      res1 <- fgsea::fgseaSimple(gmt, xi, nperm = 10000, nproc = mc.cores)
+      suppressMessages(suppressWarnings(
+        res1 <- fgsea::fgseaSimple(gmt, xi, nperm = 10000, nproc = mc.cores)
+      ))
       r <- res1$NES
       names(r) <- res1$pathway
       r
