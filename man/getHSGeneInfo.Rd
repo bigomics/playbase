@@ -27,6 +27,5 @@ If as.link is TRUE, the gene symbols are returned as hyperlinks to GeneCards and
 \dontrun{
 genes <- c("TP53", "BRCA1", "ABCD1")
 info <- getHSGeneInfo(genes)
-
 }
 }

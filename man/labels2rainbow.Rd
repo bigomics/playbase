@@ -16,11 +16,11 @@ A named character vector mapping the original module colors to rainbow colors.
 Maps the module colors from a WGCNA network to a rainbow palette.
 }
 \details{
-This function takes a WGCNA network object and maps the module colors 
+This function takes a WGCNA network object and maps the module colors
 to a rainbow palette based on the modules' hierarchical clustering order.
 
 It extracts the hierarchical clustering dendrogram order, gets the number
-of unique module colors, ranks the module color means based on the 
+of unique module colors, ranks the module color means based on the
 dendrogram order, and assigns rainbow colors accordingly.
 
 This allows easier visualization and interpretation of modules in the

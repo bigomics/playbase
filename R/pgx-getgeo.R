@@ -311,7 +311,7 @@ pgx.getGEOcounts.GEOquery <- function(id) {
     }
 
     ## perform linear transformation (unlog) if required
-    qx <- as.numeric(quantile(ex, c(0., 0.25, 0.5, 0.75, 0.99, 1.0), na.rm = T))
+    qx <- as.numeric(stats::quantile(ex, c(0., 0.25, 0.5, 0.75, 0.99, 1.0), na.rm = T))
     qx
     is.count <- (qx[5] > 100) || (qx[6] - qx[1] > 50 && qx[2] > 0) ||
       (qx[2] > 0 && qx[2] < 1 && qx[4] > 1 && qx[4] < 2) ## from GEO2R script
@@ -373,32 +373,6 @@ pgx.getGEOcounts.GEOquery <- function(id) {
 }
 
 
-#' @describeIn  pgx.getGEOseries Retrieve and process gene expression count
-#' data from the supplementary files of a GEO dataset. It takes a GEO
-#' accession ID, downloads the series matrix and annotation data from the
-#' supplementary files, processes it into a count matrix, and returns the result.
-#' @export
-pgx.getGEOcounts.fromSuppl <- function(id) {
-  ## Retrieve expression matrix, phenotype and probe annotation
-  ## matrices for a certain GEO id.
-  ##
-
-
-  ## load series and platform data from GEO
-  id
-
-  gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE))
-
-  if (inherits(gse, "try-error")) {
-    cat("ERROR: GEOquery::getGEO() error\n")
-    return(NULL)
-  }
-
-  supp_file <- gse@header$supplementary_file
-  supp_file
-
-  return(expr)
-}
 
 
 ## -------------------------------------------------------------------------------------
@@ -457,7 +431,7 @@ pgx.getSymbolFromFeatureData <- function(fdata) {
   if (entrez.ok) {
     k <- entrez.col[which.max(entrez.match)]
     probes <- as.character(fdata[, k])
-    symbol <- AnnotationDbi::mapIds(org.Hs.eg.db, probes, "SYMBOL", "ENTREZID")
+    symbol <- AnnotationDbi::mapIds(org.Hs.eg.db::org.Hs.eg.db, probes, "SYMBOL", "ENTREZID")
     return(symbol)
   }
 
@@ -475,7 +449,7 @@ pgx.getSymbolFromFeatureData <- function(fdata) {
   if (refseq.ok) {
     k <- refseq.col[which.max(refseq.match)]
     probes <- sub("[.].*", "", as.character(fdata[, k]))
-    symbol <- AnnotationDbi::mapIds(org.Hs.eg.db, probes, "SYMBOL", "REFSEQ")
+    symbol <- AnnotationDbi::mapIds(org.Hs.eg.db::org.Hs.eg.db, probes, "SYMBOL", "REFSEQ")
     return(symbol)
   }
 
@@ -693,57 +667,6 @@ eset.getPhenoData <- function(eset, field) {
 }
 
 
-#' @describeIn eset.getPhenoData Extracts the title from the phenotype data of an ExpressionSet object.
-#' @export
-eset.getTitle <- function(eset) as.character(pData(phenoData(eset))$title)
-
-
-#' @describeIn eset.getPhenoData Extracts the organism from the phenotype data of an ExpressionSet object
-#' @export
-eset.getOrganism <- function(eset) unique(as.character(eset.getPhenoData(eset, "organism_ch1")))
-
-#' @describeIn eset.getPhenoData
-#' @export
-eset.getCH1 <- function(eset) {
-  pdata <- pData(phenoData(eset))
-  pdata <- pdata[, grep(":ch1$", colnames(pdata)), drop = FALSE]
-  clin_info <- NULL
-  has.clin <- "Clinical info:ch1" %in% colnames(pdata)
-  has.clin
-  if (has.clin) {
-    clin_ch1 <- as.character(pdata[, "Clinical info:ch1"])
-    clin.terms <- sub(":.*$", "", strsplit(clin_ch1[1], split = ";")[[1]])
-    clin_info <- t(sapply(clin_ch1, function(s) (strsplit(s, split = ";")[[1]])))
-    clin_info <- apply(clin_info, 2, function(s) sub(".*[:] ", "", s))
-    clin_info <- data.frame(clin_info, stringsAsFactors = FALSE, check.names = FALSE)
-    rownames(clin_info) <- NULL
-    colnames(clin_info) <- clin.terms
-    pdata <- cbind(
-      pdata[, -which(colnames(pdata) == "Clinical info:ch1"), drop = FALSE],
-      clin_info
-    )
-  }
-  colnames(pdata) <- sub(":ch1", "", colnames(pdata))
-
-  return(pdata)
-}
-
-
-#' @describeIn eset.getPhenoData parses the "Characteristics" metadata field from
-#' an ExpressionSet into a data frame by splitting the text on a delimiter
-#' like "," or ";".
-#' @param ch "Characteristics" text string
-#' @param split delimiter character to split on `c(",", ";", "\\|", "_", " ")`.
-#' @export
-eset.parseCharacteristicsInfo <- function(ch, split = ",") {
-  terms <- sub(":.*$", "", trimws(strsplit(ch, split = ",")[[1]]))
-  value <- t(sapply(ch, function(s) (strsplit(s, split = ",")[[1]])))
-  value <- apply(value, 2, function(s) trimws(sub(".*[:]", "", s)))
-  value <- data.frame(value, stringsAsFactors = FALSE, check.names = FALSE)
-  rownames(value) <- NULL
-  colnames(value) <- terms
-  return(value)
-}
 
 
 #' @describeIn eset.getPhenoData Extracts sample phenotype terms from GEO dataset titles by splitting on a delimiter.
@@ -878,115 +801,3 @@ eset.parsePhenoFromTitle <- function(title, split = NULL) {
 }
 
 
-#' Parse GEO series matrix file
-#'
-#' @param SERIES_FILE Character string. Path to GEO series matrix file.
-#' @param PLATFORM_FILE Character string. Path to GEO platform file.
-#' @param GENE_COLUMN Character string. Name of column containing gene symbols. Default "GENE_SYMBOL".
-#' @param EXPRESSION_OUTPUT_FILE Character string. Name of expression matrix output file. Default "expression.csv".
-#' @param ANNOTATION_OUTPUT_FILE Character string. Name of annotation output file. Default "annotation.csv".
-#' @param write.file Logical. Whether to write output files. Default TRUE.
-#'
-#' @return List containing expression matrix and annotation data frame if write.file is FALSE.
-#'
-#' @details Parses a GEO series matrix file and corresponding platform file to extract expression data and annotations.
-#' The gene symbols, expression values, and annotations are extracted into R objects.
-#' The expression matrix and annotation data frame can be optionally written to CSV files.
-#'
-#' @export
-parse_geo_series_matrix <- function(SERIES_FILE,
-                                    PLATFORM_FILE,
-                                    GENE_COLUMN = "GENE_SYMBOL",
-                                    EXPRESSION_OUTPUT_FILE = "expression.csv",
-                                    ANNOTATION_OUTPUT_FILE = "annotation.csv",
-                                    write.file = TRUE) {
-  ##
-  ## https://gist.github.com/SimonLarsen
-  ## https://gist.github.com/SimonLarsen/66f27c188039129f3510669b992b2c99
-
-  ## Read characteristics
-  con <- file(SERIES_FILE, "r")
-  characteristics <- c()
-  while (TRUE) {
-    line <- readLines(con, n = 1)
-    if (length(line) == 0) {
-      break
-    } else if (startsWith(line, "!Sample_title")) {
-      titles <- unlist(strsplit(line, "\t"))[-1]
-      titles <- gsub("\\\"", "", titles)
-    } else if (startsWith(line, "!Sample_characteristics")) {
-      characteristics <- c(characteristics, line)
-    } else if (startsWith(line, "!Sample_geo_accession")) {
-      accession <- unlist(strsplit(line, "\t"))[-1]
-      accession <- gsub("\\\"", "", accession)
-    }
-  }
-  close(con)
-
-  ## Parse characteristics
-  anno <- data.frame(lapply(characteristics, function(x) {
-    values <- unlist(strsplit(x, "\t"))[-1]
-    values <- gsub("\\\"", "", values)
-    parts <- strsplit(values, ": ")
-
-    name <- parts[[1]][[1]]
-    values <- sapply(parts, function(x) x[2])
-
-    out <- list()
-    out[[name]] <- values
-    return(out)
-  }))
-
-  anno <- data.table(sample = accession, title = titles, anno)
-
-  ## Read probe-level expression data
-  D <- fread(SERIES_FILE, header = TRUE, skip = "\"ID_REF\"", fill = TRUE, na.strings = c("", "NA", "null"))
-  D <- D[1:(nrow(D) - 1), ] # remove table end marker
-  D <- as.matrix(D[, -1], rownames = D$ID_REF)
-
-
-  ## Read platform data table
-  ref <- read.table(PLATFORM_FILE, header = TRUE, sep = "\t", quote = "", comment.char = "#", fill = TRUE)[, c("ID", GENE_COLUMN)]
-  colnames(ref) <- c("ID_REF", "gene")
-  ref$gene <- as.character(ref$gene)
-  ref <- subset(ref, !is.na(gene) & gene != "")
-
-  gene_split <- strsplit(ref$gene, " /// ")
-  ref <- data.frame(
-    ID_REF = rep(ref$ID_REF, sapply(gene_split, length)),
-    gene = unlist(gene_split)
-  )
-
-  ## Merge tables to map Gene genes ids
-
-  gene <- ref$gene[match(rownames(D), as.character(ref$ID_REF))]
-
-  ## Aggregate duplicate genes by median
-  sum(duplicated(gene))
-
-  ex <- do.call(rbind, tapply(1:nrow(D), gene, function(i) colMeans(D[i, , drop = FALSE])))
-
-  ## Transpose matrix, add sample column and set gene names as column names
-
-
-  ## drop empty or duplicated columns
-  sel1 <- (apply(anno, 2, function(x) mean(x %in% c(NA, "NA", "null", ""))) < 1)
-  sel2 <- !duplicated(t(anno))
-  sel <- which(sel1 & sel2)
-
-  anno1 <- anno[, sel, with = FALSE]
-
-  ## Write results to separate expression and annotation files
-  if (write.file) {
-    cat("writing", EXPRESSION_OUTPUT_FILE, "\n")
-    fwrite(data.table(gene = rownames(ex), ex), file = EXPRESSION_OUTPUT_FILE, sep = ",")
-
-    cat("writing", ANNOTATION_OUTPUT_FILE, "\n")
-    fwrite(anno1, file = ANNOTATION_OUTPUT_FILE, sep = ",")
-  }
-
-  res <- list()
-  res$values <- ex
-  res$anno <- anno1
-  res
-}

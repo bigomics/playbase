@@ -90,7 +90,7 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   ## compute for average contrast
 
   rms.FC <- Matrix::rowMeans(S**2)**0.5
-  rms.FC <- rms.FC + 0.01 * rnorm(length(rms.FC))
+  rms.FC <- rms.FC + 0.01 * stats::rnorm(length(rms.FC))
   gmt <- apply(W, 2, function(x) names(which(x != 0)))
   suppressWarnings(res <- fgsea::fgseaSimple(gmt, rms.FC, nperm = 1000))
   res$leadingEdge <- sapply(res$leadingEdge, paste, collapse = "//")
@@ -105,7 +105,7 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   for (i in 1:ncol(S)) {
     fc <- as.vector(S[, i])
     names(fc) <- rownames(W)
-    fc <- fc + 0.01 * rnorm(length(fc))
+    fc <- fc + 0.01 * stats::rnorm(length(fc))
     gmt1 <- gmt[as.character(res$word)]
     res1 <- fgsea::fgseaSimple(gmt1, fc, nperm = 1000)
     res1$leadingEdge <- sapply(res1$leadingEdge, paste, collapse = "//")
@@ -120,7 +120,7 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   if (NCOL(W) <= 3) {
     ## t-SNE doesn't like 1-2 columns...
     W <- cbind(W, W, W, W, W)
-    W <- W + 1e-2 * matrix(rnorm(length(W)), nrow(W), ncol(W))
+    W <- W + 1e-2 * matrix(stats::rnorm(length(W)), nrow(W), ncol(W))
   }
   nb <- floor(pmin(pmax(ncol(W) / 4, 2), 10))
   message("[pgx.calculateWordCloud] dim(W) = ", paste(dim(W), collapse = "x"))

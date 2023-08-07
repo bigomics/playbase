@@ -174,6 +174,8 @@ validate_contrasts <- function(data) {
   return(t1 & t2 & t3 & t4)
 }
 
+
+#' @describeIn check_duplicate_cols check if there is any duplicate row in the input data
 #' @export
 check_duplicate_rows <- function(data) {
   rn <- setdiff(data[[1]], c("", "NA", NA))
@@ -181,18 +183,49 @@ check_duplicate_rows <- function(data) {
   return(t1)
 }
 
+
+#' @describeIn check_duplicate_cols checks if there is any empty row in the data
 #' @export
 check_empty_rows <- function(data) {
   t1 <- nrow(data) > 0
   return(t1)
 }
 
+
+#' @title Input Checks 
+#' 
+#' @param data A data frame or matrix.
+#'
+#' @return Logical indicating output of the checks.
+#'
+#' @description Checks if a data frame or matrix contains duplicate column names.
+#'
+#' @details This function takes a data frame or matrix \code{data} as input and checks if it contains any duplicate column names. 
+#' It compares the column names against each other to look for duplicates.
+#'
+#' The output is a logical value indicating whether any duplicate names were found.
+#' \code{TRUE} means duplicate names were detected, \code{FALSE} means no duplicates.
+#'
+#' This can be used to validate data before further analysis, to ensure no columns are duplicated.
+#'
+#' @examples
+#' \dontrun{
+#' data <- data.frame(A = 1:3, B = 4:6, A = 7:9) 
+#' check_duplicate_cols(data)
+#' # Returns TRUE
+#' 
+#' data <- data.frame(A = 1:3, B = 4:6, C = 7:9)
+#' check_duplicate_cols(data) 
+#' # Returns FALSE
+#' }
 #' @export
 check_duplicate_cols <- function(data) {
   t1 <- sum(duplicated(colnames(data))) == 0
   return(t1)
 }
 
+
+#' @describeIn check_duplicate_cols Checks if the number of sample is below the allowed maximum
 #' @export
 check_max_samples <- function(data, max_samples = 2000) {
   MAXSAMPLES <- as.integer(max_samples)

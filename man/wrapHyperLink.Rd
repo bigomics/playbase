@@ -15,17 +15,17 @@ wrapHyperLink(s, gs)
 Character vector \code{s} with gene symbols replaced by hyperlinks.
 }
 \description{
-This function wraps gene symbols in a character vector 
+This function wraps gene symbols in a character vector
 with HTML hyperlinks to external databases.
 }
 \details{
-This function takes a character vector of gene symbols \code{s} and a corresponding 
+This function takes a character vector of gene symbols \code{s} and a corresponding
 character vector \code{gs} containing gene symbols prefixed with database identifiers (e.g. ENSEMBL:).
 It searches for matches in \code{gs} and replaces the plain symbols in \code{s} with HTML hyperlinks.
 
 The following database prefixes are recognized:
 - ENSEMBL: - Links to Ensembl database
-- UNIPROT: - Links to Uniprot database  
+- UNIPROT: - Links to Uniprot database
 - LNCRNADB: - Links to LncRNADB database
 - BIOPLEX: - Links to BIOPLEX database
 }

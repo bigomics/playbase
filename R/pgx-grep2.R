@@ -3,238 +3,31 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-#' @export
-pgx.fastq2counts <- function(fastq_dir, destdir, indexdir, nthread = 4, do.qc = FALSE,
-                             species = c("human", "mouse", "rat"),
-                             quant.method = "salmon",
-                             trimming = TRUE, trimmethod = "trimmomatic",
-                             instrument = "HiSeq", library_layout = "SINGLE") {
-  species <- species[1]
 
-  run_fastqc1 <- function(destdir, fastq_dir, nthread) {
-    cat(paste("Running FastQC... ", Sys.time(), "\n", sep = ""))
-    dir.exists(paste0(destdir, "/fastqc"))
-    if (!dir.exists(paste0(destdir, "/fastqc"))) {
-      system(paste0("mkdir -p ", destdir, "/fastqc"))
-    } else {
-      system(paste0("rm -fr ", destdir, "/fastqc"))
-      system(paste0("mkdir -p ", destdir, "/fastqc"))
-    }
-    fastq_files <- list.files(fastq_dir, pattern = "[.]fastq$", full.names = TRUE)
-
-    cmd <- paste0(
-      "fastqc -o ", destdir, "/fastqc/ --threads ",
-      nthread, " ", paste(fastq_files, collapse = " ")
-    )
-    system(cmd)
-  }
-
-  run_fastqc2 <- function(destdir, fastq_dir, nthread) {
-    cat(paste("Running FastQC... ", Sys.time(), "\n", sep = ""))
-    dir.exists(paste0(destdir, "/fastqc_trimmed"))
-    if (!dir.exists(paste0(destdir, "/fastqc_trimmed"))) {
-      system(paste0("mkdir -p ", destdir, "/fastqc_trimmed"))
-    } else {
-      system(paste0("rm -fr ", destdir, "/fastqc_trimmed"))
-      system(paste0("mkdir -p ", destdir, "/fastqc_trimmed"))
-    }
-    fastq_files <- list.files(fastq_dir, pattern = "_trimmed.fastq$", full.names = TRUE)
-    cmd <- paste0(
-      "fastqc -o ", destdir, "/fastqc_trimmed/ --threads ",
-      nthread, " ", paste(fastq_files, collapse = " ")
-    )
-    system(cmd)
-  }
-
-  ## ----------- Unzip FASTQ files (if necessary)
-  dir(fastq_dir)
-  dir(fastq_dir, "[.]gz$", include.dirs = FALSE)
-  if (length(dir(fastq_dir, "[.]gz$", include.dirs = FALSE))) {
-    cat(">>> Unzipping FASTQ files... \n")
-
-    cmd <- paste0("(cd ", fastq_dir, " && gunzip *gz)")
-    cmd
-    system(cmd)
-  }
-
-  ## remove any previously trimmed sequences
-  system(paste0("rm -f ", fastq_dir, "/*_trimmed.fastq"))
-  system(paste0("rm -f ", fastq_dir, "/*trimmed*"))
-  system(paste0("rm -f ", fastq_dir, "/*trimming*"))
-
-  ## ----------- Run FastQC on each fastq file to generate quality control (QC) reports.
-  if (do.qc) {
-    cat(">>> Running FastQC ... \n")
-    run_fastqc1(destdir = destdir, fastq_dir = fastq_dir, nthread = nthread)
-  }
-
-  ## ----------- Run Trimmomatic (some say it is not necessary for salmon...)
-  file_id <- sub(".fastq$", "", dir(fastq_dir, pattern = ".fastq$"))
-  file_id <- grep("trimmed$", file_id, value = TRUE, invert = TRUE)
-  file_id
-
-  if (trimming && trimmethod == "trimmomatic") {
-    cat(">>> Running Trimmomatic... \n")
-    i <- 1
-    for (i in 1:length(file_id)) {
-      GREP2::trim_fastq(
-        srr_id = file_id[i], fastq_dir = fastq_dir,
-        instrument = instrument, library_layout = library_layout,
-        destdir = fastq_dir, n_thread = nthread
-      )
-    }
-  }
-  if (trimming && trimmethod == "trimgalore") {
-    cat(">>> Running TrimGalore... \n")
-    fastq1 <- fastq2 <- NULL
-    if (library_layout == "SINGLE") {
-      fastq1 <- file.path(fastq_dir, paste0(file_id, ".fastq"))
-      fastq2 <- NULL
-    } else {
-      fastq1 <- file.path(fastq_dir, paste0(file_id, "_1.fastq"))
-      fastq2 <- file.path(fastq_dir, paste0(file_id, "_2.fastq"))
-    }
-
-    trimgalore_fastq(fastq1,
-      fastq2 = fastq2,
-      adapter1 = NULL, adapter2 = NULL,
-      dest.dir = fastq_dir,
-      threads = nthread,
-      trimgalore = "trim_galore"
-    )
-
-
-    fq <- dir(fastq_dir, pattern = "_trimmed.fq$", full.names = TRUE)
-    fq
-    for (f in fq) file.rename(from = f, to = sub("fq$", "fastq", f))
-  }
-
-  if (quant.method == "salmon") {
-    ## ----------- Before running Salmon, you will have to build index first.
-    dir.exists(indexdir)
-    index2 <- file.path(indexdir, paste0(species, "_transcripts_release99_index"))
-    index2
-    dir.exists(index2)
-    if (!dir.exists(index2)) {
-      cat(">>> Building index for species", species, "... \n")
-      system(paste("mkdir -p", indexdir))
-      # The f build_index likely comes from package GREP2, but better confirm
-      build_index(species = species, kmer = 31, ens_release = 99, destdir = indexdir)
-    } else {
-      cat(">>> Found index folder at ", index2, "\n")
-    }
-    dir(indexdir)
-
-    ## ----------- Run Salmon
-    cat(">>> Running Salmon... \n")
-    i <- 1
-    for (i in 1:length(file_id)) {
-      pgx.run_salmon(
-        srr_id = file_id[i], library_layout = library_layout,
-        index_dir = index2, destdir = destdir,
-        fastq_dir = fastq_dir, use_trimmed_fastq = trimming,
-        other_opts = "--validateMappings", nthread = nthread
-      )
-    }
-  }
-  if (quant.method == "kallisto") {
-    ## ----------- Before running Kallisto, you will have to build index first.
-    indexdir
-    dir.exists(indexdir)
-    kallisto_index <- file.path(indexdir, paste0(species, "_transcripts.idx"))
-    if (!file.exists(kallisto_index)) {
-      cat(">>> Building index for species", species, "... \n")
-      system(paste("mkdir -p", indexdir))
-
-
-      if (species == "human") ref.genome <- file.path(indexdir, "Homo_sapiens.GRCh38.cdna.all.fa.gz")
-      if (species == "mouse") ref.genome <- file.path(indexdir, "Mus_musculus.GRCm38.cdna.all.fa.gz")
-      kallisto_index
-      ref.genome
-      system(paste("kallisto index -i", kallisto_index, ref.genome))
-    } else {
-      cat(">>> Found index at ", kallisto_index, "\n")
-    }
-
-    ## ----------- Run Kallisto
-    cat(">>> Running Kallisto... \n")
-    i <- 1
-    fq <- dir(fastq_dir, pattern = ".fastq$", full.names = TRUE)
-    fq <- grep("trimmed", fq, invert = TRUE, value = TRUE)
-    if (trimming) fq <- dir(fastq_dir, pattern = "_trimmed.fastq$", full.names = TRUE)
-    kallisto_outdir <- file.path(destdir, "kallisto")
-    system(paste("mkdir -p", kallisto_outdir))
-
-    cmd <- "kallisto quant"
-    if (library_layout == "SINGLE") cmd <- "kallisto quant --single -l 250 -s 50" ## NEED RETHINK!!!
-    cmd <- paste(cmd, "-i", kallisto_index, "-b 100 -t 32")
-    cmd
-    i <- 1
-    for (i in 1:length(fq)) {
-      f1 <- gsub(".*/|.fastq$|_trimmed.fastq$", "", fq[i])
-      out1 <- file.path(kallisto_outdir, f1)
-      cmd1 <- paste(cmd, "-o", out1, fq[i])
-      cmd1
-      system(cmd1)
-    }
-  }
-
-  ## ----------- Run MultiQC
-  if (do.qc) {
-    cat(">>> Running MultiQC... \n")
-    # The f run_multiqc likely comes from package GREP2, but better confrim
-    run_multiqc(
-      fastqc_dir = file.path(destdir, "fastqc"),
-      salmon_dir = file.path(destdir, quant.method),
-      destdir = destdir
-    )
-  }
-
-  ## ----------- Run tximport
-  if (quant.method == "salmon") {
-    cat(">>> Running TxImport on Salmon files... \n")
-    # The f run_tximport likely comes from package GREP2, but better confrim
-    txi <- run_tximport(
-      srr_id = file_id,
-      species = species,
-      salmon_dir = paste0(destdir, "/salmon"),
-      countsFromAbundance = "lengthScaledTPM"
-    )
-  }
-
-  if (quant.method == "kallisto") {
-    cat(">>> Running TxImport on Kallisto files... \n")
-    txi <- run_tximport_kallisto(
-      srr_id = file_id,
-      species = species,
-      kallisto_dir = paste0(destdir, "/kallisto")
-    )
-  }
-
-  ## ----------- Extract counts
-  genes <- txi$gene_counts[, 2:3]
-  counts <- as.matrix(txi$gene_counts[, 4:ncol(txi$gene_counts), drop = FALSE])
-  rownames(genes) <- rownames(counts) <- txi$gene_counts$ENSEMBL
-
-  ## ----------- Collapse multiple probes to single gene by summing up counts
-  counts <- apply(counts, 2, function(x) tapply(x, genes$SYMBOL, sum))
-  genes <- genes[match(rownames(counts), genes$SYMBOL), ]
-  rownames(genes) <- genes$SYMBOL
-  counts <- round(counts, digits = 3)
-
-  ## ----------- Save counts as text files for Omics Playground
-  colnames(genes) <- c("gene_name", "gene_title")
-  system(paste0("mkdir -p ", destdir, "/files_csv"))
-  cat(">>> Writing CSV files to", paste0(destdir, "/files_csv/ \n"))
-  write.csv(counts, file = paste0(destdir, "/files_csv/counts.csv"))
-  write.csv(genes, file = paste0(destdir, "/files_csv/genes.csv"))
-  samples <- data.frame(sample = colnames(counts), group = NA, phenotype1 = NA) ## empty template
-  write.csv(samples, file = paste0(destdir, "/files_csv/samples.csv"), row.names = FALSE)
-
-  cat(">>> done!\n")
-}
-
-
+#' @title Run Salmon 
+#'
+#' @param srr_id Character vector of SRR IDs for samples
+#' @param library_layout Library layout - "SINGLE" or "PAIRED" 
+#' @param index_dir Salmon index directory 
+#' @param destdir Output directory 
+#' @param fastq_dir Directory containing FASTQ files
+#' @param use_trimmed_fastq Use trimmed FASTQ files if available. Default is FALSE.
+#' @param other_opts Other Salmon options to include
+#' @param nthread Number of threads for parallel processing
+#'
+#' @return Salmon quantification results written to output directory
+#' 
+#' @description Run Salmon for RNA-seq quantification on sample FASTQ files.
+#'
+#' @details This function runs the Salmon tool to quantify transcript abundance from RNA-seq reads.
+#' It takes a vector of SRR IDs, the Salmon index directory, and FASTQ file locations as input.
+#' 
+#' Salmon is run in single-end or paired-end mode based on the library_layout parameter.
+#' If use_trimmed_fastq=TRUE, trimmed FASTQ files will be used if available.
+#' 
+#' Quantification results are written to the specified output directory.
+#' Parallel processing across multiple threads can be enabled via the nthread parameter.
+#'
 #' @export
 pgx.run_salmon <- function(
     srr_id, library_layout = c("SINGLE", "PAIRED"), index_dir,
@@ -255,7 +48,6 @@ pgx.run_salmon <- function(
       system(paste0(
         "salmon quant -i ", index_dir, " -p ",
         nthread, " ", other_opts, " -l A -r ", fastq_dir,
-        ## "/", srr_id, "_pass.fastq -o ", destdir, "/salmon/",
         "/", srr_id, ".fastq -o ", destdir, "/salmon/",
         srr_id, "_transcripts_quant"
       ))
@@ -273,8 +65,6 @@ pgx.run_salmon <- function(
       system(paste0(
         "salmon quant -i ", index_dir, " -p ",
         nthread, " ", other_opts, " -l A -1 ", fastq_dir,
-        ## "/", srr_id, "_pass_1.fastq ", "-2 ", fastq_dir,
-        ## "/", srr_id, "_pass_2.fastq -o ", destdir, "/salmon/",
         "/", srr_id, "_1.fastq ", "-2 ", fastq_dir,
         "/", srr_id, "_2.fastq -o ", destdir, "/salmon/",
         srr_id, "_transcripts_quant"
@@ -292,6 +82,22 @@ pgx.run_salmon <- function(
   }
 }
 
+
+#' @title Run tximport on Kallisto quantification
+#'
+#' @param srr_id Character vector of SRR IDs for samples
+#' @param species Species name, used to get gene annotation data. Default is c("human", "mouse", "rat").
+#' @param kallisto_dir Directory containing Kallisto output folders for each sample.
+#'
+#' @return List containing gene and transcript count matrices and tximport result objects.
+#' 
+#' @description Imports Kallisto transcript-level abundance estimates into R matrices at gene and transcript level using tximport.
+#'
+#' @details This function takes a vector of SRR IDs and the path to the Kallisto output directory containing abundance estimates (abundance.tsv files) for each sample.
+#' It imports the transcript counts into R using tximport, summarizing into gene-level counts based on gene annotation data for the specified species.
+#' 
+#' The output is a list containing the gene counts matrix, transcript counts matrix, and the tximport result objects.
+#'
 #' @export
 run_tximport_kallisto <- function(srr_id, species = c("human", "mouse", "rat"), kallisto_dir) {
   species <- match.arg(species, c("human", "mouse", "rat"))
@@ -321,9 +127,6 @@ run_tximport_kallisto <- function(srr_id, species = c("human", "mouse", "rat"), 
     } else if (species == "mousee") {
       return(org.Mm.eg.db::org.Mm.eg.db)
     }
-    #        else if (species == "rat") {
-
-    #        }
     else {
       return(NULL)
     }
@@ -367,7 +170,6 @@ run_tximport_kallisto <- function(srr_id, species = c("human", "mouse", "rat"), 
   )
   return(counts)
 }
-
 
 
 ## -------------------------------------------------------------------------
@@ -464,7 +266,6 @@ run_tximport_kallisto <- function(srr_id, species = c("human", "mouse", "rat"), 
 #' @param threads an integer value indicating the number of parallel threads to
 #' be used by FastQC. [DEFAULT = maximum number of available threads - 1].
 #'
-
 #'
 #' @importFrom parallel makeCluster stopCluster
 #' @importFrom foreach foreach %dopar%

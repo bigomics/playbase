@@ -47,6 +47,6 @@ Creates a heatmap visualization with side annotation bars.
 \details{
 This function generates a heatmap from the input data matrix F.
 Side annotation bars can be added, either as boxplots or barplots.
-The annotation height, heatmap height, font sizes, margins, and other 
+The annotation height, heatmap height, font sizes, margins, and other
 heatmap parameters can be customized.
 }

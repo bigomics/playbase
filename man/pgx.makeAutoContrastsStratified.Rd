@@ -33,20 +33,20 @@ pgx.makeAutoContrastsStratified(
 Data frame with automatically generated contrasts
 }
 \description{
-This function automatically generates contrasts for differential analysis from a  
-data frame of sample metadata, stratified by a grouping variable. It extracts factor 
-columns within each stratum, generates all pairwise comparisons between groups, and 
+This function automatically generates contrasts for differential analysis from a
+data frame of sample metadata, stratified by a grouping variable. It extracts factor
+columns within each stratum, generates all pairwise comparisons between groups, and
 outputs a clean contrast matrix.
 }
 \details{
-The sample metadata is split by the stratification variable into separate strata.  
-Categorical variables with at least mingrp groups are expanded into dummy variables  
-within each stratum. All pairwise comparisons between groups are generated, with  
+The sample metadata is split by the stratification variable into separate strata.
+Categorical variables with at least mingrp groups are expanded into dummy variables
+within each stratum. All pairwise comparisons between groups are generated, with
 contrast names cleaned and truncated to slen characters.
- 
-Degenerate designs are checked for and resolved if fix.degenerate=TRUE.  
+
+Degenerate designs are checked for and resolved if fix.degenerate=TRUE.
 Metadata columns starting with "." are skipped if skip.hidden=TRUE.
 
-The final output is a data frame with samples in rows, contrast columns, and values  
+The final output is a data frame with samples in rows, contrast columns, and values
 of 0/1/-1 indicating the sample groups being compared within each stratum.
 }

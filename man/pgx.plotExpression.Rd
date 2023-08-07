@@ -72,7 +72,7 @@ A gene expression plot
 Generate a gene expression plot from a PGX object.
 }
 \details{
-This function extracts the expression for a given \code{probe} 
+This function extracts the expression for a given \code{probe}
 from the \code{pgx} object at the specified \code{level}.
 It generates a dot plot with samples grouped on the x-axis.
 Use \code{comp} to specify grouping.

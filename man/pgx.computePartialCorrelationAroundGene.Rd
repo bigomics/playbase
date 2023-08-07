@@ -34,13 +34,13 @@ A named list with components:
 Computes partial correlation between a given gene and all other genes in a data matrix X.
 }
 \details{
-This function calculates the partial correlation between a specified gene and 
+This function calculates the partial correlation between a specified gene and
 all other genes in the expression matrix X.
 It returns a list containing the partial correlation matrix and p-values.
 
-The \code{method} argument specifies which partial correlation algorithm to use. 
+The \code{method} argument specifies which partial correlation algorithm to use.
 The default \code{PCOR.METHODS} uses both Pearson and Spearman correlation.
 
-The number of top genes to return correlations for can be controlled with \code{nmax}. 
+The number of top genes to return correlations for can be controlled with \code{nmax}.
 Setting \code{fast=TRUE} will use faster approximations for large matrices.
 }

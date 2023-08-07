@@ -54,7 +54,7 @@ A ggplot bar plot object is returned.
 Creates a bar plot visualization using ggplot2.
 }
 \details{
-This function takes a numeric matrix and generates a bar plot 
+This function takes a numeric matrix and generates a bar plot
 visualization using ggplot2. Bars represent the groups, colored by row names.
 Many graphical parameters like labels, colors, text sizes, etc. can be adjusted.
 }

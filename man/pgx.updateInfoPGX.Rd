@@ -2,10 +2,29 @@
 % Please edit documentation in R/pgx-files.R
 \name{pgx.updateInfoPGX}
 \alias{pgx.updateInfoPGX}
-\title{Update PGX-table with new pgx object.}
+\title{Update PGX-table with new pgx object}
 \usage{
 pgx.updateInfoPGX(pgxinfo, pgx, remove.old = TRUE)
 }
+\arguments{
+\item{pgxinfo}{The existing pgxinfo data frame containing dataset metadata}
+
+\item{pgx}{The pgx object containing updated metadata to add}
+
+\item{remove.old}{Logical indicating whether to remove existing entries for the same dataset. Default is TRUE.}
+}
+\value{
+Updated pgxinfo data frame with additional rows from pgx
+}
 \description{
-Update PGX-table with new pgx object.
+Updates the pgxinfo dataset metadata table with information from a new pgx object.
+}
+\details{
+This function takes an existing pgxinfo data frame and a pgx object as input.
+It extracts the metadata stored in pgx$info and appends it as a new row to the pgxinfo table.
+
+If remove.old is TRUE, it will first remove any existing rows for the same dataset 
+before appending the new row. This avoids duplicating information for the same dataset.
+
+The updated pgxinfo data frame containing all dataset metadata is returned.
 }

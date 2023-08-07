@@ -232,7 +232,7 @@ compute_deconvolution <- function(ngs, rna.counts = ngs$counts, full = FALSE) {
 
   counts <- rna.counts
   rownames(counts) <- toupper(ngs$genes[rownames(counts), "gene_name"])
-  res <- pgx.multipleDeconvolution(counts, refmat = refmat, method = methods)
+  res <- pgx.multipleDeconvolution(counts, refmat = refmat, methods = methods)
 
   ngs$deconv <- res$results
   if (!is.null(res$timings)) {
@@ -411,7 +411,7 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
     if (!is.null(out1)) {
       ## attach annotation
       db <- sub("-.*", "", ref)
-      annot0 <- read.csv(file.path(cmap.dir, paste0(db, "-drugs.csv")))
+      annot0 <- utils::read.csv(file.path(cmap.dir, paste0(db, "-drugs.csv")))
       rownames(annot0) <- annot0$drug
       annot0 <- annot0[match(rownames(out1[["GSEA"]]$X), rownames(annot0)), ]
       rownames(annot0) <- rownames(out1[["GSEA"]]$X)

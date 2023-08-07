@@ -28,11 +28,11 @@
 #' @export
 imputeMedian <- function(X) {
   if (NCOL(X) == 1) {
-    mx <- median(X, na.rm = TRUE)
+    mx <- stats::median(X, na.rm = TRUE)
   } else {
-    mx <- apply(X, 1, median, na.rm = TRUE)
+    mx <- apply(X, 1, stats::median, na.rm = TRUE)
   }
-  mx[is.na(mx)] <- median(mx, na.rm = TRUE)
+  mx[is.na(mx)] <- stats::median(mx, na.rm = TRUE)
   impX <- X
   impX[is.na(impX)] <- 0
   impX <- impX + is.na(X) * mx
@@ -93,34 +93,6 @@ gmean <- function(x) {
 }
 
 
-#' @title Matrix rownames to HUGO gene symbols
-#'
-#' @description
-#' Converts the rownames of a matrix to official HUGO gene symbols.
-#'
-#' @param x A numeric matrix with rownames to convert.
-#'
-#' @return The input matrix with rownames converted to HUGO symbols.
-#'
-#' @details This function orders the rows by standard deviation, maps the
-#' rownames to HUGO symbols using the playbase::alias2hugo function,
-#' removes duplicates, and returns the resulting matrix with HUGO symbols
-#' as rownames.
-#'
-#' @examples
-#' \dontrun{
-#' TODO
-#' }
-#'
-#' @export
-mat2hugo <- function(x) {
-  x <- x[order(-apply(x, 1, sd, na.rm = TRUE)), ]
-  hx <- playbase::alias2hugo(rownames(x))
-  jj <- which(!duplicated(hx))
-  x <- x[jj, ]
-  rownames(x) <- hx[jj]
-  return(x)
-}
 
 
 #' @title Histogram of gene expression values
@@ -143,14 +115,14 @@ mat2hugo <- function(x) {
 #' gx.hist(gx)
 #' }
 gx.hist <- function(gx, main = "", ylim = NULL) {
-  h0 <- hist(as.vector(gx),
+  h0 <- graphics::hist(as.vector(gx),
     breaks = 120, main = main,
     col = "grey", freq = FALSE, ylim = ylim, xlab = "signal"
   )
   i <- 1
   for (i in 1:ncol(gx)) {
-    h1 <- hist(gx[, i], breaks = h0$breaks, plot = FALSE)
-    lines(h0$mids, h1$density, col = i + 1)
+    h1 <- graphics::hist(gx[, i], breaks = h0$breaks, plot = FALSE)
+    graphics::lines(h0$mids, h1$density, col = i + 1)
   }
 }
 
@@ -275,32 +247,3 @@ symbol2hugo <- function(genes, remove.non.hugo = TRUE, silent = FALSE,
   ss
 }
 
-#' Collapse rows by common symbol
-#'
-#' @title Collapse rows by common symbol
-#'
-#' @description
-#' Collapses rows of a matrix based on a common symbol, removing duplicates.
-#'
-#' @param X Numeric matrix with rows to collapse.
-#' @param symbol Character vector of symbols corresponding to rows of X.
-#'
-#' @details
-#' This function takes a matrix X and a corresponding symbol vector.
-#' It orders the rows by standard deviation.
-#' It then keeps the first unique occurrence of each symbol, removing duplicates.
-#' The result is a matrix with rows collapsed based on the provided symbols.
-#'
-#' @return
-#' A matrix with rows collapsed based on the provided symbols.
-#'
-#' @export
-gx.collapse2symbol <- function(X, symbol) {
-  j1 <- order(-apply(X, 1, sd))
-  X <- X[j1, ]
-  symbol <- symbol[j1]
-  j2 <- which(!duplicated(symbol) & !(symbol %in% c("", " ", "NA", NA)))
-  X <- X[j2, ]
-  rownames(X) <- symbol[j2]
-  return(X)
-}

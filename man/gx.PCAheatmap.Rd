@@ -29,7 +29,7 @@ component membership. The top genes are extracted and shown in a heatmap using
 }
 \examples{
 \dontrun{
-x <- matrix(rnorm(500*50), 500, 50)
+x <- matrix(rnorm(500 * 50), 500, 50)
 gx.PCAheatmap(x, nv = 3, ngenes = 5)
 }
 

@@ -140,7 +140,7 @@ The \code{pgx} object should contain results for the specified contrasts.
 The \code{type} parameter determines the type of plot. Options are:
 - "scatter": Default scatter plot of log2 fold-changes vs. p-values.
 - "volcano": Volcano plot of log2 fold-changes vs. -log10 p-values.
-- "MA": Meta-analysis plots showing the contribution of each study.  
+- "MA": Meta-analysis plots showing the contribution of each study.
 - "UMAP": UMAP projection plot colored by log2 fold-change.
 
 If \code{set.par=TRUE}, graphical parameters are set before plotting.

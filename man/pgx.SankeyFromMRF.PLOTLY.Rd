@@ -25,8 +25,8 @@ Generates a sankey diagram by combining multiple matrices.
 }
 \details{
 This function takes a list of matrices \code{M}, correlation matrices \code{R},
-and flow matrices \code{F}. It converts each matrix pair \code{M[[i]]} and 
-\code{R[[i]]} into a graph, merges the graphs, and creates a sankey diagram 
+and flow matrices \code{F}. It converts each matrix pair \code{M[[i]]} and
+\code{R[[i]]} into a graph, merges the graphs, and creates a sankey diagram
 to show relationships and flows between matrices.
 
 If \code{fill=TRUE}, edge colors are determined by the flow values \code{F[[i]]}.

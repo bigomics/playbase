@@ -27,11 +27,11 @@ pgx.computeDrugEnrichment(
 List with enrichment results for each drug
 }
 \description{
-Computes enrichment of drug gene sets in expression data using 
+Computes enrichment of drug gene sets in expression data using
 rank correlation or GSEA.
 }
 \details{
-This function takes a gene expression matrix and a set of drugs. It extracts 
+This function takes a gene expression matrix and a set of drugs. It extracts
 gene sets for each drug from MSigDB. Enrichment is computed by:
 
 1) Rank correlation of drug set ranks with experiment ranks.

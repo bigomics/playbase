@@ -23,14 +23,14 @@ The truncated string.
 Truncates a string to a maximum length by replacing the middle part with ellipses.
 }
 \details{
-This function truncates long strings to a specified maximum length 
+This function truncates long strings to a specified maximum length
 by replacing the middle part with ellipses.
 
-It first converts the input string to UTF-8 encoding and removes any HTML entities. 
-If the string is already shorter than the maximum length, it is returned unchanged.  
+It first converts the input string to UTF-8 encoding and removes any HTML entities.
+If the string is already shorter than the maximum length, it is returned unchanged.
 Otherwise, it truncates the beginning and end of the string to fit within the max length when concatenated with the ellipses.
 
-The number of characters to use for the ellipses is set by the \code{dots} 
+The number of characters to use for the ellipses is set by the \code{dots}
 parameter. By default, it uses one dot per 10 characters of max length.
 }
 \section{Functions}{
@@ -42,8 +42,8 @@ parameter. By default, it uses one dot per 10 characters of max length.
 \dontrun{
 shortstring0("This is a very long string", 20)
 # Returns "This is a ...string"
-  
-shortstring0("Short string", 20) 
+
+shortstring0("Short string", 20)
 # Returns "Short string"
 }
 }

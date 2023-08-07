@@ -18,9 +18,9 @@ A numeric value representing the p-value for Pearson's correlation coefficient.
 This function calculates the p-value for Pearson's correlation coefficient.
 }
 \details{
-The p-value is calculated using the standard normal distribution, 
-where the test statistic is calculated as `z = x / sqrt((1 - x^2) / (n - 2))`. 
-The p-value represents the probability of observing a correlation coefficient as 
+The p-value is calculated using the standard normal distribution,
+where the test statistic is calculated as `z = x / sqrt((1 - x^2) / (n - 2))`.
+The p-value represents the probability of observing a correlation coefficient as
 extreme or more extreme than `x` given that the null hypothesis (no correlation) is true.
 }
 \examples{

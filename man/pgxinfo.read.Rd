@@ -6,6 +6,25 @@
 \usage{
 pgxinfo.read(pgx.dir, file = "datasets-info.csv", match = TRUE)
 }
+\arguments{
+\item{pgx.dir}{Character string specifying the path to the PGX directory containing .pgx files.}
+
+\item{file}{Character string specifying the filename for the dataset info file. Default is "datasets-info.csv".}
+
+\item{match}{Logical indicating whether to match .pgx filenames. Default is TRUE.}
+}
+\value{
+Data frame containing dataset information for PGX files.
+}
 \description{
-Read dataset information file (aka PGX info)
+Reads the dataset information CSV file for a directory of PGX files.
+}
+\details{
+This function reads the dataset info CSV located in a PGX directory. It contains metadata like datatype, organism, sample sizes, etc.
+
+The \code{pgx.dir} argument specifies the path to the PGX directory containing .pgx files. 
+
+The \code{file} argument specifies the filename for the dataset info file. By default this is "datasets-info.csv".
+
+If \code{match=TRUE}, the function filters the info to only datasets matching .pgx files in the directory.
 }

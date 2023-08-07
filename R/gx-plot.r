@@ -39,14 +39,14 @@ gx.barplot <- function(x, main = "", cex.main = 1.2, cex.names = 0.85,
   col1 <- cpal[(group2 - 1) * 2 + rep(1:2, NCOL(x))]
   if (NCOL(x) == 1) col1 <- col1[2]
   ylim <- c(0, 1.15 * max(x, na.rm = TRUE))
-  str.ht <- strheight("XXX", cex = cex.names)
+  str.ht <- graphics::strheight("XXX", cex = cex.names)
   str.ht <- 0.04 * ylim[2]
   space <- c(0, 0.4)
   is.multi <- (NCOL(x) > 1)
   is.multi
   if (!is.multi) space <- c(0.2, 0)
 
-  barplot(x,
+  graphics::barplot(x,
     beside = TRUE, col = col1,
     main = main, cex.main = cex.main,
     xlab = xlab, ylab = ylab, ylim = ylim,
@@ -65,23 +65,23 @@ gx.barplot <- function(x, main = "", cex.main = 1.2, cex.names = 0.85,
       bar.names <- rep(rownames(x), NCOL(x))
       bar.names <- toupper(substring(bar.names, 1, 3))
     }
-    mtext(bar.names, side = 1, line = 0, at = tx, adj = 0.5, cex = 0.5, srt = 0, xpd = TRUE)
+    graphics::mtext(bar.names, side = 1, line = 0, at = tx, adj = 0.5, cex = 0.5, srt = 0, xpd = TRUE)
     if (is.null(group.names)) {
       group.names <- colnames(x)
     }
     if (srt == 0) {
-      mtext(group.names,
+      graphics::mtext(group.names,
         side = 1, line = 1.5, at = tx2,
         adj = 0.5, cex = cex.names, srt = 0, xpd = TRUE
       )
     } else {
-      text(tx2, -voff * str.ht, group.names,
+      graphics::text(tx2, -voff * str.ht, group.names,
         cex = cex.names,
         srt = srt, xpd = TRUE, pos = 2, offset = 0
       )
     }
   } else {
-    text(1.2 * (1:length(x)) - 0.5, -voff * str.ht, names(x),
+    graphics::text(1.2 * (1:length(x)) - 0.5, -voff * str.ht, names(x),
       cex = cex.names,
       srt = srt, xpd = TRUE, pos = 2, offset = 0 * str.ht
     )
@@ -136,13 +136,13 @@ gx.b3plot <- function(x, y, first = NULL,
                       names.cex = 1, names = TRUE, max.points = 100, col = "grey80",
                       ...) {
   stats.segments <- function(x, y, xoffset = 0, lwd = 2) {
-    bx <- boxplot(y ~ x, plot = FALSE)
+    bx <- graphics::boxplot(y ~ x, plot = FALSE)
     nx <- length(bx$n)
     x0 <- xoffset + (1:nx)
     #
-    segments(x0 - 0.1, bx$conf[1, ], x0 + 0.1, bx$conf[1, ], lwd = lwd)
-    segments(x0 - 0.1, bx$conf[2, ], x0 + 0.1, bx$conf[2, ], lwd = lwd)
-    segments(x0, bx$conf[1, ], x0, bx$conf[2, ], lwd = lwd * 0.5)
+    graphics::segments(x0 - 0.1, bx$conf[1, ], x0 + 0.1, bx$conf[1, ], lwd = lwd)
+    graphics::segments(x0 - 0.1, bx$conf[2, ], x0 + 0.1, bx$conf[2, ], lwd = lwd)
+    graphics::segments(x0, bx$conf[1, ], x0, bx$conf[2, ], lwd = lwd * 0.5)
   }
   ylevel <- levels(y)
   y <- as.character(y)
@@ -151,18 +151,18 @@ gx.b3plot <- function(x, y, first = NULL,
     ylevel <- c(ylevel, "NA")
   }
   y <- factor(y, levels = ylevel, exclude = NULL)
-  if (!is.null(first)) y <- relevel(y, ref = first)
-  mx <- tapply(x, y, median, na.rm = TRUE)
+  if (!is.null(first)) y <- stats::relevel(y, ref = first)
+  mx <- tapply(x, y, stats::median, na.rm = TRUE)
 
   sig <- yc <- NULL
   if (sig.stars) {
     y.levels <- unique(y)
-    yc <- combn(y.levels, 2)
+    yc <- utils::combn(y.levels, 2)
     pv <- rep(NA, ncol(yc))
     i <- 1
     for (i in 1:ncol(yc)) {
       grp <- yc[, i]
-      pv[i] <- t.test(x[which(y == grp[1])], x[which(y == grp[2])])$p.value
+      pv[i] <- stats::t.test(x[which(y == grp[1])], x[which(y == grp[2])])$p.value
     }
     pv
     sig <- c("", "*", "**", "***")[1 + 1 * (pv < 0.05) + 1 * (pv < 0.01) + 1 * (pv < 0.001)]
@@ -197,7 +197,7 @@ gx.b3plot <- function(x, y, first = NULL,
     col[is.na(col)] <- "grey90"
   }
 
-  bx <- barplot(mx,
+  bx <- graphics::barplot(mx,
     width = 0.6666, space = 0.5, ylim = ylim, offset = xoff,
     names.arg = NA, col = col, ...
   )
@@ -210,7 +210,7 @@ gx.b3plot <- function(x, y, first = NULL,
   n <- length(unique(y))
   if (names == TRUE) {
     y0 <- min(ylim) - diff(ylim) * 0.05
-    text(bx[, 1], y0, names(mx),
+    graphics::text(bx[, 1], y0, names(mx),
       cex = names.cex,
       srt = srt, adj = ifelse(srt == 0, 0.5, 0.965), xpd = TRUE,
       pos = pos, offset = 0
@@ -233,9 +233,9 @@ gx.b3plot <- function(x, y, first = NULL,
       xmax <- max(x, na.rm = TRUE) * 1.05 + dx * i
       j1 <- grp[1] - 0.4
       j2 <- grp[2] - 0.4
-      segments(j1, xmax, j2, xmax, lwd = 0.5)
+      graphics::segments(j1, xmax, j2, xmax, lwd = 0.5)
       if (ncol(yc) <= 8) {
-        text((j1 + j2) / 2, xmax, labels = sig[i], pos = 1, offset = -0.33, adj = 0, cex = 1.4)
+        graphics::text((j1 + j2) / 2, xmax, labels = sig[i], pos = 1, offset = -0.33, adj = 0, cex = 1.4)
       }
     }
   }
@@ -264,13 +264,13 @@ gx.b3plot <- function(x, y, first = NULL,
 #' gx.hist(gx)
 #' }
 gx.hist <- function(gx, main = "", ylim = NULL) {
-  h0 <- hist(as.vector(gx),
+  h0 <- graphics::hist(as.vector(gx),
     breaks = 120, main = main,
     col = "grey", freq = FALSE, ylim = ylim, xlab = "signal"
   )
   i <- 1
   for (i in 1:ncol(gx)) {
-    h1 <- hist(gx[, i], breaks = h0$breaks, plot = FALSE)
-    lines(h0$mids, h1$density, col = i + 1)
+    h1 <- graphics::hist(gx[, i], breaks = h0$breaks, plot = FALSE)
+    graphics::lines(h0$mids, h1$density, col = i + 1)
   }
 }

@@ -20,8 +20,8 @@ Reads a tabular data file and returns a matrix object.
 Automatically detects separator and allows duplicate row names.
 }
 \details{
-This function reads a tabular text file, automatically detecting the 
-separator (tab, comma, semicolon). It returns a matrix containing the data values, 
+This function reads a tabular text file, automatically detecting the
+separator (tab, comma, semicolon). It returns a matrix containing the data values,
 using the first column as rownames (allowing duplicates). Blank rows and rows with
 NA as rowname are skipped.
 }

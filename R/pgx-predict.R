@@ -8,6 +8,26 @@
 ## ----------------------------------------------------------------------
 
 
+#' @title Create Hive Plot for mixed network
+#'
+#' @param res Input data
+#' @param ngs NGS object containing expression data
+#' @param ct Contrast name or column in \code{ngs$samples} to use for node coloring
+#' @param showloops Whether to show looping edges
+#' @param numlab Number of node labels to show
+#' @param cex Label size scaling factor
+#'
+#' @return Hive plot object
+#'
+#' @description Creates a Hive Plot to visualize a mixed gene-gene set network.
+#'
+#' @details  It extracts the network graph and formats it into a Hive Plot layout.
+#' 
+#' Node importance scores are extracted from the NGS object based on the specified \code{ct} contrast.
+#' These scores are used to determine node sizes in the plot.
+#'
+#' The number of node labels can be reduced by setting \code{numlab} to avoid overplotting.
+#' 
 #' @export
 mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   cat("<mixHivePlot> called\n")
@@ -30,12 +50,8 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
     )
   )
   hpd$nodes$looping <- hpd$nodes$lab %in% loop.nodes
-
   hpd <- mineHPD(hpd, option = "rad <- tot.edge.count")
   hpd$nodes$degree <- hpd$nodes$radius
-
-
-
   hpd$edges$from <- hpd$nodes$lab[hpd$edges$id1]
   hpd$edges$to <- hpd$nodes$lab[hpd$edges$id2]
 
@@ -53,7 +69,7 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   } else if (ct %in% colnames(ngs$samples)) {
     group <- ngs$samples[, ct]
 
-    design <- model.matrix(~ 0 + group)
+    design <- stats::model.matrix(~ 0 + group)
     colnames(design) <- sub("group", "", colnames(design))
     fit <- limma::eBayes(limma::lmFit(ngs$X, design))
     stat <- limma::topTable(fit, number = Inf)
@@ -72,7 +88,6 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
 
   names(maxgrp) <- as.vector(sapply(res$W, rownames))
 
-
   ## use importance as node size
   importance <- igraph::V(gr)$importance
   names(importance) <- igraph::V(gr)$name
@@ -81,13 +96,10 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   hpd$nodes$size <- 1.6 * (hpd$nodes$size / max(hpd$nodes$size))**0.5
   hpd$nodes$axis <- as.integer(sub(":.*", "", hpd$nodes$lab))
   hpd$nodes$color <- c("red3", "blue2")[1 + 1 * (fx[g] > 0)]
-
-
   wt1 <- hpd$edges$weight ## edge.importance
   wt1 <- rank(abs(wt1), na.last = "keep") * sign(wt1)
   hpd$edges$weight <- 3 * abs(wt1 / max(abs(wt1)))**2
   hpd$edges$color <- psych::alpha("grey70", 0.3)
-
 
   jj <- which(hpd$edges$looping)
   if (showloops && length(jj)) {
@@ -113,9 +125,6 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   ## -------------------------------------------------------------
   hpd$nodes$size <- cex * hpd$nodes$size
   hpd$edges$weight <- cex * hpd$edges$weight
-
-
-
   mr <- max(hpd$nodes$radius)
   plotHive(hpd,
     ch = 5, bkgnd = "white",
@@ -127,7 +136,6 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
       lwd = 4, fontface = "bold"
     )
   )
-
 
   tt <- paste("edge.width = edge.importance",
     "node.size = variable importance",
@@ -178,28 +186,24 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   }
 }
 
+#' @describeIn mixHivePlot function generates a hive plot visualization of variable loadings 
+#' from a lmer model result object.
 #' @export
 mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
   cat("<mixPlotLoadings> called\n")
   levels <- levels(res$Y)
-  levels
   ny <- length(levels)
-  ny
-
-
   klrpal <- c("blue2", "orange2")
   klrpal <- rep(RColorBrewer::brewer.pal(n = 8, "Set2"), 10)[1:ny]
 
   names(klrpal) <- levels
-  klrpal
-
 
   plotly::layout(matrix(1:6, 1, 6), widths = c(1, 0.5, 1, 0.5, 1, 0.5))
   k <- 1
   for (k in 1:3) {
     W <- res$W[[k]]
-    par(mar = c(5, 8 * cex, 4, 0), mgp = c(2.2, 0.8, 0))
-    barplot(t(W),
+    graphics::par(mar = c(5, 8 * cex, 4, 0), mgp = c(2.2, 0.8, 0))
+    graphics::barplot(t(W),
       horiz = TRUE, las = 1,
       border = NA, col = klrpal,
       names.arg = sub(".*:", "", rownames(W)),
@@ -207,11 +211,11 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
       cex.axis = 1 * cex, cex.names = 1.1 * cex,
       cex.lab = 1 * cex, xlab = "importance"
     )
-    title(names(res$loadings)[k],
+    graphics::title(names(res$loadings)[k],
       cex.main = 1.3 * cex,
       adj = 0.33, xpd = NA
     )
-    legend("topright",
+    graphics::legend("topright",
       legend = names(klrpal),
       cex = 1.1 * cex, pch = 15, col = klrpal, #
       y.intersp = 0.85, inset = c(0.15, 0.03)
@@ -219,7 +223,7 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
 
     if (k < 99) {
       ## add correlation lines
-      par(mar = c(5, 0, 4, 0))
+      graphics::par(mar = c(5, 0, 4, 0))
 
       plot(0,
         type = "n", xlim = c(0, 1), ylim = c(0, nrow(W)),
@@ -251,206 +255,12 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
         klr <- rep(psych::alpha("grey70", 0.2), nrow(ee))
         klr[which(ee$looping)] <- psych::alpha("red3", 0.3)
       }
-      segments(0, xy[, 1] - 0.5, 1, xy[, 2], lwd = lwd, col = klr, lty = lty)
+      graphics::segments(0, xy[, 1] - 0.5, 1, xy[, 2], lwd = lwd, col = klr, lty = lty)
       rr <- paste(round(range(abs(ee$rho)), 2), collapse = ",")
 
-      title(sub = paste0("[", rr, "]"), line = -1.2, cex.sub = cex)
+      graphics::title(sub = paste0("[", rr, "]"), line = -1.2, cex.sub = cex)
     }
   }
-}
-
-#' @export
-pgx.makeTriSystemGraph <- function(data, Y, nfeat = 25, numedge = 100, posonly = FALSE) {
-  if (is.null(names(data))) stop("X.list must be named")
-  if (!all(sapply(data, ncol) == length(Y))) {
-    stop("data columns must match Y")
-  }
-  if (is.null(posonly)) posonly <- FALSE
-
-  .getLoadingImportance <- function(k, res.pls, nfeat) {
-    U <- res.pls$loadings[[k]]
-    V <- res.pls$variates[[k]]
-    U <- U[which(rowSums(abs(U)) > 0), ]
-    U <- U[order(-rowSums(U * U)), ]
-    y <- res.pls$Y
-    vm <- apply(V, 2, function(x) tapply(x, y, mean))
-    R0 <- U %*% t(V)
-    R <- U %*% t(vm)
-
-    R <- Matrix::head(R[order(-rowSums(R**2)), ], nfeat)
-
-    W <- exp(1.5 * R / sd(R))
-
-    W <- W / (1e-5 + rowSums(W))
-    W <- W * rowSums(R * R, na.rm = TRUE)**0.5
-    return(W)
-  }
-
-  .detectSelfLoops <- function(gr, posonly) {
-    v1 <- grep("1:", igraph::V(gr)$name, value = TRUE)
-    v3 <- grep("3:", igraph::V(gr)$name, value = TRUE)
-
-    wt <- (igraph::E(gr)$rho * igraph::E(gr)$importance)
-    wt <- wt / max(abs(wt))
-    if (posonly) wt <- pmax(wt, 0)
-    wt <- -log(pmin(1e-8 + abs(wt), 1))
-
-    self.epath <- vector("list", length(v1))
-    self.vpath <- vector("list", length(v1))
-    self.dist <- rep(NA, length(v1))
-    names(self.vpath) <- names(self.epath) <- names(self.dist) <- v1
-    i <- 1
-    for (i in 1:length(v1)) {
-      d1 <- igraph::distances(gr, v1[i], to = v3, mode = "out", weights = wt)
-      d3 <- igraph::distances(gr, v1[i], to = v3, mode = "in", weights = wt)
-      suppressWarnings(sp1 <- igraph::shortest_paths(
-        gr, v1[i],
-        to = v3, weights = wt,
-        mode = "out", output = "both"
-      ))
-      suppressWarnings(sp3 <- igraph::shortest_paths(
-        gr, v1[i],
-        to = v3, weights = wt,
-        mode = "in", output = "both"
-      ))
-      dd <- d1 + d3
-      j <- which.min(dd)
-      self.dist[i] <- dd[j]
-      self.vpath[[i]] <- NA
-      self.epath[[i]] <- NA
-      if (!is.infinite(dd[j])) {
-        self.vpath[[i]] <- c(sp1$vpath[[j]]$name, v1[i])
-        self.epath[[i]] <- c(sp1$epath[[j]], sp3$epath[[j]])
-      }
-    }
-    jj <- order(self.dist)
-    res <- list(
-      dist = self.dist[jj], vpath = self.vpath[jj],
-      epath = self.epath[jj]
-    )
-    return(res)
-  }
-
-
-  .makeTriGraph <- function(res.pls, data, nfeat, numedge, posonly) {
-    cat("<makeTriSystemGraph:.makeTriGraph> called\n")
-    W.list <- list()
-    X.list <- list()
-    k <- 1
-    for (k in 1:3) {
-      W.list[[k]] <- .getLoadingImportance(k, res = res.pls, nfeat = nfeat)
-      gg <- rownames(W.list[[k]])
-      X.list[[k]] <- data[[k]][gg, ]
-      rownames(X.list[[k]]) <- rownames(W.list[[k]])
-    }
-    names(W.list) <- names(X.list) <- names(res.pls$X)
-
-    cat("<makeTriSystemGraph:.makeTriGraph> 1\n")
-    cat("<makeTriSystemGraph:.makeTriGraph> posonly=", posonly, "\n")
-
-
-    edge.list <- c()
-    k <- 1
-    for (k in 1:3) {
-      ## add correlation lines
-      p1 <- rownames(W.list[[k]])
-      m <- ifelse(k < 3, k + 1, 1)
-      p2 <- rownames(W.list[[m]])
-      rho <- stats::cor(res.pls$X[[k]][, p1], res.pls$X[[m]][, p2])
-      if (posonly) rho <- pmax(rho, 0)
-      q0 <- -1
-      if (numedge > 0) q0 <- Matrix::tail(sort(abs(rho)), numedge)[1]
-      idx <- which(abs(rho) > q0, arr.ind = TRUE)
-      pp <- NULL
-      pp <- data.frame(from = p1[idx[, 1]], to = p2[idx[, 2]], rho = rho[idx])
-
-      jj <- which(sub("[0-9]:", "", pp$from) == sub("[0-9]:", "", pp$to))
-      if (length(jj)) {
-        pp$rho[jj] <- 0.01 ## no self loops across levels
-      }
-      self.edges <- data.frame(from = p1, to = p1, rho = 0)
-      edge.list[[k]] <- rbind(pp, self.edges)
-    }
-
-    cat("<makeTriSystemGraph:makeGraph> making graph object\n")
-
-    ee <- do.call(rbind, edge.list)
-    gr <- igraph::graph_from_edgelist(as.matrix(ee[, 1:2]), directed = TRUE)
-    ww <- lapply(W.list, function(w) rowMeans(w * w)**0.5)
-    names(ww) <- NULL
-    ww <- unlist(ww)
-    igraph::V(gr)$importance <- ww[igraph::V(gr)$name] ## node importance
-
-    ## set importance as edge weights
-    igraph::E(gr)$rho <- ee$rho
-    igraph::E(gr)$importance <- abs(ee$rho) * sqrt(ww[ee$from] * ww[ee$to])
-
-
-    gr <- igraph::delete_edges(gr, igraph::E(gr)[which_loop(gr)])
-    edges <- data.frame(igraph::get.edgelist(gr),
-      rho = igraph::E(gr)$rho,
-      importance = igraph::E(gr)$importance
-    )
-    colnames(edges)[1:2] <- c("from", "to")
-
-    gr
-    loops <- .detectSelfLoops(gr, posonly)
-    top.loops <- Matrix::head(loops$epath, 10)
-    top.loops
-    edges$looping <- (igraph::E(gr) %in% unlist(top.loops))
-    igraph::E(gr)$looping <- (igraph::E(gr) %in% unlist(top.loops))
-    cat("<makeTriSystemGraph:makeGraph> done!\n")
-
-    names(W.list) <- names(res.pls$X)
-    out <- list(graph = gr, edges = edges, W = W.list)
-    return(out)
-  }
-
-  ## ----------------------------------------------------------------------
-  ## ----------------------------------------------------------------------
-  ## ----------------------------------------------------------------------
-
-  ## prepend index
-  for (i in 1:length(data)) {
-    rownames(data[[i]]) <- paste0(i, ":", rownames(data[[i]]))
-  }
-
-  ## set number of components and features
-  NCOMP <- 3
-  nfeat1 <- min(nfeat, nrow(data[[1]]))
-  nfeat2 <- min(nfeat, nrow(data[[2]]))
-  nfeat3 <- min(nfeat, nrow(data[[3]]))
-
-  list.keepX <- list(rep(nfeat1, NCOMP), rep(nfeat2, NCOMP), rep(nfeat3, NCOMP))
-  names(list.keepX) <- names(data)
-
-  ## set up a full design where every block is connected
-  design <- matrix(1,
-    ncol = length(data), nrow = length(data),
-    dimnames = list(names(data), names(data))
-  )
-  diag(design) <- 0
-  design[1, 3] <- 0.5
-  design[3, 1] <- 0.5
-  design
-
-
-  cat("<makeTriSystemGraph> calling block.splsda!\n")
-  res.pls <- mixOmics::block.splsda(
-    X = lapply(data, t), Y = Y, ncomp = NCOMP,
-    keepX = list.keepX, design = design
-  )
-
-  cat("<makeTriSystemGraph> calling .makeTriGraph\n")
-
-  res.gr <- .makeTriGraph(
-    res.pls, data,
-    nfeat = nfeat, numedge = numedge, posonly = posonly
-  )
-
-  res <- c(res.pls, res.gr)
-  attr(res, "class") <- attr(res.pls, "class")
-  return(res)
 }
 
 
@@ -458,17 +268,43 @@ pgx.makeTriSystemGraph <- function(data, Y, nfeat = 25, numedge = 100, posonly =
 ## Variable importance functions
 ## ----------------------------------------------------------------------
 
+
+#' @title Variable importance for survival models
+#'
+#' @param X Numeric matrix of predictor variables, rows are variables
+#' @param time Vector of event/censoring times 
+#' @param status Vector indicating event (1) or censoring (0)
+#' @param methods Methods for computing variable importance. Options are "glmnet", "randomforest", "boruta", "xgboost", "pls".
+#'
+#' @return Named list with variable importance scores by method.
+#'
+#' @description Compute variable importance scores for predictors in a survival analysis model using different methods.
+#'
+#' @details This function calculates variable importance scores using a variety of methods suitable for survival analysis.
+#' The input data consists of a predictor matrix \code{X}, a vector of event/censoring times \code{time} and a status indicator vector \code{status}.
+#' 
+#' The following methods can be selected via the \code{methods} parameter:
+#' \itemize{
+#' \item glmnet: Absolute value of coefficients from elastic net Cox model
+#' \item randomForest: Variable importance from random survival forest
+#' \item boruta: Boruta variable selection algorithm
+#' \item xgboost: Importance scores from XGBoost survival model
+#' \item pls: Absolute coefficients from partial least squares Cox model
+#' }
+#' 
+#' Variable importance scores are returned for each method in a named list. 
+#' These scores can be used to select important predictors for survival modeling.
+#'
 #' @export
 pgx.survivalVariableImportance <- function(X, time, status,
                                            methods = c("glmnet", "randomforest", "boruta", "xgboost", "pls")) {
-  ##
+  ## ----------------------------------------------------------------------
   ## multi-class version
-  ##
-  ##
+  ## ----------------------------------------------------------------------
 
   imp <- list()
   xnames <- rownames(X)
-  sdx <- apply(X, 1, sd)
+  sdx <- apply(X, 1, stats::sd)
   if (nrow(X) == 1) X <- rbind(X, X)
 
   if (!inherits(status, "logical") && all(status %in% c(0, 1, NA))) {
@@ -483,26 +319,18 @@ pgx.survivalVariableImportance <- function(X, time, status,
     NFOLD <- 5
     out0 <- glmnet::cv.glmnet(t(X), y, alpha = 0, family = fam, standardize = TRUE, nfolds = NFOLD)
     cf0 <- glmnet::coef.glmnet(out0, s = "lambda.min")[, 1]
-
-
     out1 <- glmnet::cv.glmnet(t(X), y, alpha = 1, family = fam, standardize = TRUE, nfolds = NFOLD)
     cf1 <- glmnet::coef.glmnet(out1, s = "lambda.min")[, 1]
-
-
     out0a <- glmnet::cv.glmnet(t(X), y, alpha = 0, family = fam, standardize = FALSE, nfolds = NFOLD)
     cf0a <- glmnet::coef.glmnet(out0a, s = "lambda.min")[, 1]
-
-
     out1a <- glmnet::cv.glmnet(t(X), y, alpha = 1, family = fam, standardize = FALSE, nfolds = NFOLD)
     cf1a <- glmnet::coef.glmnet(out1a, s = "lambda.min")[, 1]
-
-
     imp[["coxnet.a0"]] <- (cf0 / max(abs(cf0)) + cf0a / max(abs(cf0a))) * sdx[names(cf0)]
     imp[["coxnet.a1"]] <- (cf1 / max(abs(cf1)) + cf1a / max(abs(cf1a))) * sdx[names(cf1)]
   }
 
   if ("randomforest" %in% methods) {
-    ##
+
     df <- data.frame(time = time, status = status, t(X))
     fit_rf <- randomForestSRC::rfsrc(survival::Surv(time, status) ~ ., data = df)
     vimp <- randomForestSRC::vimp(fit_rf)$importance
@@ -531,7 +359,6 @@ pgx.survivalVariableImportance <- function(X, time, status,
       max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
       verbose = 0, objective = "survival:cox"
     )
-
 
     xgmat <- xgboost::xgb.importance(model = bst)
     imp5 <- xgmat$Gain**0.33
@@ -563,7 +390,6 @@ pgx.survivalVariableImportance <- function(X, time, status,
     imp[["pls.cox"]] <- abs(cf) / max(abs(cf), na.rm = TRUE)
   }
 
-
   P <- do.call(cbind, imp)
   P <- abs(P) ## always positive??
   P[is.na(P)] <- 0
@@ -571,19 +397,21 @@ pgx.survivalVariableImportance <- function(X, time, status,
   return(P)
 }
 
+
+#' @describeIn pgx.survivalVariableImportance Calculates variable importance scores for predictors of a multiclass response using various methods.
+#' @param y Multiclass factor response variable. Contains the class labels for each sample
 #' @export
 pgx.multiclassVariableImportance <- function(X, y,
                                              methods = c("glmnet", "randomforest", "boruta", "xgboost", "pls")) {
-  ##
+  ## ----------------------------------------------------------------------
   ## multi-class version
-  ##
-  ##
+  ## ----------------------------------------------------------------------
 
   imp <- list()
   xnames <- rownames(X)
 
   if (nrow(X) == 1) X <- rbind(X, X)
-  sdx <- apply(X, 1, sd)
+  sdx <- apply(X, 1, stats::sd)
 
   ## convert to factor
   y <- factor(y)
@@ -609,23 +437,22 @@ pgx.multiclassVariableImportance <- function(X, y,
 
 
     out0 <- glmnet::cv.glmnet(t(X), y, alpha = 0, family = fam, standardize = TRUE, nfold = NFOLD)
-    cf0 <- Matrix::rowMeans(do.call(cbind, coef(out0, s = "lambda.min"))[-1, ]**2)
+    cf0 <- Matrix::rowMeans(do.call(cbind, stats::coef(out0, s = "lambda.min"))[-1, ]**2)
 
     out1 <- glmnet::cv.glmnet(t(X), y, alpha = 1, family = fam, standardize = TRUE, nfold = NFOLD)
-    cf1 <- Matrix::rowMeans(do.call(cbind, coef(out1, s = "lambda.min"))[-1, ]**2)
+    cf1 <- Matrix::rowMeans(do.call(cbind, stats::coef(out1, s = "lambda.min"))[-1, ]**2)
 
     out0a <- glmnet::cv.glmnet(t(X), y, alpha = 0, family = fam, standardize = FALSE, nfold = NFOLD)
-    cf0a <- Matrix::rowMeans(do.call(cbind, coef(out0a, s = "lambda.min"))[-1, ]**2)
+    cf0a <- Matrix::rowMeans(do.call(cbind, stats::coef(out0a, s = "lambda.min"))[-1, ]**2)
 
     out1a <- glmnet::cv.glmnet(t(X), y, alpha = 1, family = fam, standardize = FALSE, nfold = NFOLD)
-    cf1a <- Matrix::rowMeans(do.call(cbind, coef(out1a, s = "lambda.min"))[-1, ]**2)
+    cf1a <- Matrix::rowMeans(do.call(cbind, stats::coef(out1a, s = "lambda.min"))[-1, ]**2)
 
     imp[["glmnet.a0"]] <- (cf0 / max(abs(cf0)) + cf0a / max(abs(cf0a))) * sdx[names(cf0)]
     imp[["glmnet.a1"]] <- (cf1 / max(abs(cf1)) + cf1a / max(abs(cf1a))) * sdx[names(cf1)]
   }
 
   if ("randomforest" %in% methods) {
-    ##
     fit_rf <- randomForest::randomForest(t(X), factor(y))
     imp[["randomForest"]] <- fit_rf$importance[, 1]
   }
@@ -656,7 +483,6 @@ pgx.multiclassVariableImportance <- function(X, y,
       num_class = ny,
       verbose = 0, objective = "multi:softmax"
     )
-
 
     xgmat <- xgboost::xgb.importance(model = bst)
     imp5 <- xgmat$Gain**0.2
@@ -694,8 +520,7 @@ pgx.multiclassVariableImportance <- function(X, y,
 }
 
 
-
-
+#' @describeIn pgx.survivalVariableImportance Calculates variable importance scores for predictors.
 #' @export
 pgx.variableImportance <- function(X, y,
                                    methods = c("glmnet", "randomforest", "boruta", "xgboost", "pls")) {
@@ -706,7 +531,7 @@ pgx.variableImportance <- function(X, y,
   imp <- list()
   xnames <- rownames(X)
   if (nrow(X) == 1) X <- rbind(X, X)
-  sdx <- apply(X, 1, sd)
+  sdx <- apply(X, 1, stats::sd)
 
   ## convert to factor
   y <- factor(y)
@@ -732,28 +557,28 @@ pgx.variableImportance <- function(X, y,
       alpha = 0, family = "binomial",
       standardize = TRUE
     )
-    cf0 <- coef(out0, s = "lambda.min")[-1, 1]
+    cf0 <- stats::coef(out0, s = "lambda.min")[-1, 1]
 
 
     out1 <- glmnet::cv.glmnet(t(X), y,
       alpha = 1, family = "binomial",
       standardize = TRUE
     )
-    cf1 <- coef(out1, s = "lambda.min")[-1, 1]
+    cf1 <- stats::coef(out1, s = "lambda.min")[-1, 1]
 
 
     out0a <- glmnet::cv.glmnet(t(X), y,
       alpha = 0, family = "binomial",
       standardize = FALSE
     )
-    cf0a <- coef(out0a, s = "lambda.min")[-1, 1]
+    cf0a <- stats::coef(out0a, s = "lambda.min")[-1, 1]
 
 
     out1a <- glmnet::cv.glmnet(t(X), y,
       alpha = 1, family = "binomial",
       standardize = FALSE
     )
-    cf1a <- coef(out1a, s = "lambda.min")[-1, 1]
+    cf1a <- stats::coef(out1a, s = "lambda.min")[-1, 1]
 
 
     imp[["glmnet.a0"]] <- (cf0 / max(abs(cf0)) + cf0a / max(abs(cf0a))) * sdx[names(cf0)]
@@ -761,7 +586,6 @@ pgx.variableImportance <- function(X, y,
   }
 
   if ("randomforest" %in% methods) {
-    ##
 
     fit_rf <- randomForest::randomForest(t(X), factor(y))
     imp[["randomForest"]] <- fit_rf$importance[, 1]
@@ -789,7 +613,6 @@ pgx.variableImportance <- function(X, y,
       verbose = 0, objective = "binary:logistic"
     )
 
-
     xgmat <- xgboost::xgb.importance(model = bst)
     imp5 <- xgmat$Gain**0.2
     imp5 <- imp5[match(rownames(X), xgmat$Feature)]
@@ -809,7 +632,6 @@ pgx.variableImportance <- function(X, y,
   }
 
   if ("pls" %in% methods) {
-    ##
 
     n <- min(25, nrow(X))
     colnames(X) <- names(y) <- paste0("sample", 1:length(y))
@@ -825,3 +647,7 @@ pgx.variableImportance <- function(X, y,
   P <- P[xnames, , drop = FALSE]
   return(P)
 }
+
+## =====================================================================================
+## =========================== END OF FILE =============================================
+## =====================================================================================

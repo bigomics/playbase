@@ -43,12 +43,12 @@ pgx.computeGlassoAroundGene <- function(X, gene, nmax = 100) {
   jj <- Matrix::head(order(-rowMeans(rho**2)), nmax)
   tX <- t(X[jj, ])
 
-  vX <- var(tX)
+  vX <- stats::var(tX)
   res <- glasso::glasso(vX, 0.1)
   res$cor <- Matrix::cov2cor(vX)
   res$sampleSize <- nrow(tX)
 
-  res$pcor <- -cov2cor(res$wi)
+  res$pcor <- -stats::cov2cor(res$wi)
   diag(res$pcor) <- 1
   rownames(res$pcor) <- rownames(res$cor)
   colnames(res$pcor) <- colnames(res$cor)
@@ -92,12 +92,12 @@ pgx.plotPartialCorrelationGraph <- function(res, gene, rho.min = 0.1, nsize = -1
                                             radius = -1, plot = TRUE, layout = "fr") {
   ## GLASSO object
   nn <- rownames(res$cor)
-  R <- cov2cor(res$w)
+  R <- stats::cov2cor(res$w)
   diag(R) <- 0
-  tail(sort(abs(R)), 20)
-  P <- cov2cor(res$wi)
+  utils::tail(sort(abs(R)), 20)
+  P <- stats::cov2cor(res$wi)
   diag(P) <- 0
-  tail(sort(abs(P)), 20)
+  utils::tail(sort(abs(P)), 20)
   rownames(R) <- colnames(R) <- nn
   rownames(P) <- colnames(P) <- nn
 
@@ -149,7 +149,7 @@ pgx.plotPartialCorrelationGraph <- function(res, gene, rho.min = 0.1, nsize = -1
   }
 
   if (plot == TRUE) {
-    par(mar = c(1, 1, 1, 1) * 0)
+    graphics::par(mar = c(1, 1, 1, 1) * 0)
     plot(G1,
       vertex.color = "lightskyblue1",
       vertex.frame.color = "skyblue"
@@ -304,7 +304,7 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
     timings[["QUIC"]] <- system.time(
       rho[["QUIC"]] <- {
         # The f QUIC likely comes from QUIC but better confirm
-        r <- -QUIC(cov(tX), 1e-1)$X
+        r <- -QUIC(stats::cov(tX), 1e-1)$X
         diag(r) <- -diag(r)
         r
       }
@@ -313,9 +313,9 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
 
   if ("glasso" %in% method) {
     timings[["glasso"]] <- system.time(
-      res <- glasso::glasso(cov(tX), 1e-2)
+      res <- glasso::glasso(stats::cov(tX), 1e-2)
     )
-    r <- -cov2cor(res$wi)
+    r <- -stats::cov2cor(res$wi)
     diag(r) <- -diag(r)
     rho[["glasso"]] <- r
   }
@@ -375,241 +375,8 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
 }
 
 
-#' @title Plot Partial Correlation Network Around a Gene
-#'
-#' @description
-#' Visualize a partial correlation network for a given gene using the correlation results from pgx.pcor().
-#'
-#' @param res The correlation analysis result list returned by \code{\link{pgx.pcor}}.
-#' @param gene The gene name to extract partial correlations around.
-#' @param rho.min Minimum absolute partial correlation threshold.
-#' @param pcor.min Minimum absolute meta-partial correlation threshold.
-#' @param nsize Node size parameter.
-#' @param main Plot title.
-#' @param what Type of plot, "cor", "pcor" or "graph".
-#' @param edge.width Edge width for graph.
-#' @param layout Layout algorithm for graph plot.
-#'
-#' @details
-#' This function extracts the partial correlation matrix around the specified
-#' \code{gene} from the \code{res} object.
-#' It then optionally thresholds the correlations, and visualizes them as a
-#' correlogram or network graph, with the central gene in the middle.
-#'
-#' For the graph, the \code{rho.min} and \code{pcor.min} arguments filter edges to
-#' plot. Node size is proportional to the number of connections. The graph can be
-#' drawn using different layout algorithms like \code{"fr"} or \code{"circle"}.
-#'
-#' @return
-#' Either a correlogram or graph plot centered on the given gene is produced.
-#'
-#' @export
-pgx.plotPartialCorrelationAroundGene <- function(res, gene, rho.min = 0.8, pcor.min = 0,
-                                                 nsize = -1, main = "",
-                                                 what = c("cor", "pcor", "graph"),
-                                                 edge.width = 10, layout = "fr") {
-  rho <- res$rho
-  j <- which(colnames(res$rho[[1]]) %in% gene)
-  rho2 <- lapply(res$rho, function(x) x[j, ])
-  M <- t(as.matrix(do.call(rbind, rho2)))
-  M[is.infinite(M) | is.nan(M)] <- NA
-  M <- M[order(-rowMeans(M**2, na.rm = TRUE)), , drop = FALSE]
 
 
-  ## ------------------------------------------------------------
-  ## Correlation barplots
-  ## ------------------------------------------------------------
-
-  if ("cor" %in% what) {
-    par(mar = c(10, 4, 4, 2))
-    r1 <- M[, "cor"] ## / ncol(M)
-    if (nsize > 0) r1 <- Matrix::head(r1[order(-abs(r1))], nsize)
-    barplot(sort(r1, decreasing = TRUE),
-      beside = FALSE, las = 3,
-      ylab = "marginal correlation"
-    )
-    title(main, cex.main = 1.2)
-  }
-
-  if ("pcor" %in% what) {
-    r2 <- M[, which(colnames(M) != "cor")] ## / ncol(M)
-    if (nsize > 0) r2 <- Matrix::head(r2[order(-rowMeans(r2**2)), ], nsize)
-    r2 <- r2[order(-rowMeans(r2)), ]
-    r2 <- r2 / ncol(r2)
-    par(mar = c(10, 4, 4, 2))
-    barplot(t(r2),
-      beside = FALSE, las = 3,
-      ylim = c(-1, 1) * 0.3,
-      ylab = "partial correlation (average)"
-    )
-    title(main, cex.main = 1.2)
-    if (length(gene) == 1) {
-      legend("topright", rev(colnames(r2)),
-        fill = rev(grey.colors(ncol(r2))),
-        cex = 0.85, y.intersp = 0.85
-      )
-    }
-  }
-
-  if ("graph" %in% what) {
-    ## ------------------------------------------------------------
-    ## extract core graph
-    ## ------------------------------------------------------------
-    R <- res$rho[["cor"]]
-    if (nsize > 0) {
-      top20 <- Matrix::head(unique(c(gene, rownames(M))), nsize)
-      R <- res$rho[["cor"]][top20, top20] ## marginal correlation
-    }
-    gr1 <- igraph::graph_from_adjacency_matrix(
-      abs(R),
-      mode = "undirected", diag = FALSE, weighted = TRUE
-    )
-    ee <- igraph::get.edges(gr1, igraph::E(gr1))
-    igraph::E(gr1)$rho <- R[ee]
-    igraph::V(gr1)$name
-
-    has.pcor <- !is.null(res$meta.pcor)
-    P <- NULL
-    if (has.pcor) {
-      ii <- rownames(R)
-      P <- res$meta.pcor[ii, ii]
-      P[is.na(P)] <- 0
-      P[is.nan(P)] <- 0
-      igraph::E(gr1)$pcor <- P[ee]
-    }
-    if (is.null(rho.min)) rho.min <- 0
-
-    ## threshold edges
-    sel.ee <- (abs(igraph::E(gr1)$rho) >= rho.min)
-    if (has.pcor) sel.ee <- sel.ee & (abs(igraph::E(gr1)$pcor) >= pcor.min)
-    gr2 <- igraph::subgraph.edges(
-      gr1, which(sel.ee),
-      delete.vertices = FALSE
-    )
-    subgraphs <- igraph::decompose.graph(gr2)
-    k <- which(sapply(sapply(subgraphs, function(g) igraph::V(g)$name), function(vv) gene %in% vv))
-    gr2 <- subgraphs[[k]]
-
-    ## set edge width
-    igraph::V(gr2)$name
-    igraph::E(gr2)$width <- edge.width * 1.0
-    if (has.pcor) {
-      pw <- abs(igraph::E(gr2)$pcor) / mean(abs(igraph::E(gr2)$pcor), na.rm = TRUE)
-      igraph::E(gr2)$width <- edge.width * pw
-    }
-
-    ## calculate layout
-    ly <- switch(layout,
-      "fr" = igraph::layout_with_fr(gr2),
-      "kk" = igraph::layout_with_kk(gr2, weights = 1 / igraph::E(gr2)$weight),
-      "graphopt" = igraph::layout_with_graphopt(gr2),
-      "tree" = igraph::layout_as_tree(gr2),
-      igraph::layout_nicely(gr2)
-    )
-    rownames(ly) <- igraph::V(gr2)$name
-    ly <- ly[igraph::V(gr2)$name, , drop = FALSE]
-
-    add.alpha <- function(col, alpha) {
-      apply(cbind(t(col2rgb(klr)), alpha), 1, function(x) {
-        rgb(x[1], x[2], x[3], alpha = x[4], maxColorValue = 255)
-      })
-    }
-
-    p1 <- 0.8 * igraph::E(gr2)$rho
-    klrpal <- colorRampPalette(c("red3", "grey90", "grey30"))(64)
-
-    klr <- klrpal[32 + 31 * p1]
-    igraph::E(gr2)$color <- add.alpha(klr, 64 * abs(p1))
-
-    j <- which(igraph::V(gr2)$name == gene)
-    igraph::V(gr2)$label.cex <- 0.8
-    igraph::V(gr2)$size <- 10
-    igraph::V(gr2)$size[j] <- 16
-    igraph::V(gr2)$label.cex[j] <- 1.1
-    igraph::V(gr2)$color <- "skyblue"
-    igraph::V(gr2)$frame.color <- "grey50"
-    igraph::V(gr2)$frame.color[j] <- "black"
-
-    par(mar = c(0, 0, 0, 0))
-    plot(gr2, layout = ly)
-  }
-}
-
-
-#' Test relationships between gene expression and traits
-#'
-#' @param me A gene expression matrix
-#' @param df A data frame containing trait data
-#' @param plot Logical indicating whether to plot results. Default is TRUE.
-#' @param cex Size of text in plots. Default is 1.
-#'
-#' @return A list with correlation and ANOVA results
-#'
-#' @description
-#' Tests for relationships between gene expression (me) and trait data (df),
-#' using correlation for continuous variables and ANOVA for discrete variables.
-#'
-#' @details
-#' This function takes a gene expression matrix (me) and a data frame (df) containing
-#' trait data. It separates df into continuous (numeric) and discrete (factor) variables.
-#'
-#' For continuous variables, it calculates the correlation between each trait and each gene.
-#' For discrete variables, it performs an ANOVA between each trait and each gene.
-#'
-#' The results are returned as matrices of p-values for the correlations and ANOVAs.
-#' If plot = TRUE, scatterplots and boxplots are generated to visualize the results.
-#'
-#' @export
-pgx.testTraitRelationship <- function(me, df, plot = TRUE, cex = 1) {
-  df <- type.convert(df, as.is = TRUE)
-  cl <- sapply(df, class)
-  cvar <- which(cl %in% c("numeric", "integer"))
-  dvar <- which(cl %in% c("factor", "character"))
-  dc <- df[, cvar, drop = FALSE]
-  dd <- df[, dvar, drop = FALSE]
-
-  ## contious vs continous -> correlation
-  rho.P <- NULL
-  if (ncol(dc)) {
-    rho.P <- matrix(NA, ncol(me), ncol(dc))
-    i <- 1
-    j <- 2
-    rho <- stats::cor(me, dc, use = "pairwise")
-    rho.P <- cor.pvalue(P, nrow(me))
-  }
-
-  ## continous vs discrete -> ANOVA
-  anova.P <- NULL
-  if (ncol(dd)) {
-    anova.P <- matrix(NA, ncol(me), ncol(dd))
-    colnames(anova.P) <- colnames(dd)
-    rownames(anova.P) <- colnames(me)
-    for (i in 1:ncol(dd)) {
-      y <- dd[, i]
-      res <- gx.limmaF(t(me), y, fdr = 1, lfc = 0)
-      anova.P[, i] <- res[colnames(me), "P.Value"]
-    }
-    anova.P
-  }
-
-  P <- cbind(rho.P, anova.P)
-  P <- P[, colnames(df)]
-
-  if (plot == TRUE) {
-    sigP <- -log10(P + 1e-8)
-    sigP <- (1 - P)**1
-
-    corrplot::corrplot(
-      sigP,
-      is.corr = FALSE, #
-      mar = c(0, 0, 0, 2),
-      tl.cex = cex, tl.col = "black", tl.offset = 1,
-      cl.align.text = "l", cl.offset = 0.25, cl.cex = 0.7,
-      pch.col = "grey50"
-    )
-  }
-  return(P)
-}
 
 
 #' Test correlation of phenotype with expression data
@@ -650,7 +417,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1) {
       if (length(unique(dd[kk, i])) < 2 || length(unique(dd[kk, j])) < 2) next
       for (j in (i + 1):ncol(dd)) {
         tb <- table(dd[, i], dd[, j])
-        fisher.P[i, j] <- fisher.test(tb, simulate.p.value = TRUE)$p.value
+        fisher.P[i, j] <- stats::fisher.test(tb, simulate.p.value = TRUE)$p.value
       }
     }
     rownames(fisher.P) <- colnames(dd)
@@ -665,7 +432,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1) {
       for (j in 1:ncol(dc)) {
         kk <- which(!is.na(dc[, j]) & !is.na(dd[, i]))
         if (length(unique(dd[kk, i])) < 2) next
-        kruskal.P[i, j] <- kruskal.test(dc[kk, j], dd[kk, i])$p.value
+        kruskal.P[i, j] <- stats::kruskal.test(dc[kk, j], dd[kk, i])$p.value
       }
     }
     rownames(kruskal.P) <- colnames(dd)
@@ -680,7 +447,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1) {
     j <- 2
     for (i in 1:(ncol(dc) - 1)) {
       for (j in (i + 1):ncol(dc)) {
-        cor.P[i, j] <- cor.test(dc[, i], dc[, j])$p.value
+        cor.P[i, j] <- stats::cor.test(dc[, i], dc[, j])$p.value
       }
     }
     rownames(cor.P) <- colnames(dc)
@@ -709,7 +476,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1) {
   }
 
   ij <- which(!is.na(P), arr.ind = TRUE)
-  qv <- p.adjust(P[ij], method = "BH")
+  qv <- stats::p.adjust(P[ij], method = "BH")
   Q <- P
   Q[ij] <- qv
 
@@ -718,7 +485,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1) {
   Q[is.na(Q)] <- 0
   Q <- (Q + t(Q)) / 2
 
-  BLUERED <- colorRampPalette(c("blue3", "white", "red3"))
+  BLUERED <- grDevices::colorRampPalette(c("blue3", "white", "red3"))
 
   if (plot == TRUE) {
     logP <- -log10(P + 1e-8)

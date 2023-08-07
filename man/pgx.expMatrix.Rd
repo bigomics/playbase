@@ -19,7 +19,7 @@ Generates a design matrix for expression data based on sample metadata and contr
 }
 \details{
 This function takes a data frame of sample metadata and a contrast matrix as input.
-It constructs a model matrix with columns for the metadata variables, followed by 
+It constructs a model matrix with columns for the metadata variables, followed by
 columns encoding the contrasts of interest.
 
 The result is a design matrix that can be used directly in differential expression

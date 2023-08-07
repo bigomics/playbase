@@ -96,6 +96,6 @@ pgx.scatterPlotXY.D3(
 \item{barscale}{Not used.}
 }
 \description{
-This function creates a scatter plot of two variables 
+This function creates a scatter plot of two variables
 using the scatterD3 library for interactive scatter plots.
 }

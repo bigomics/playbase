@@ -2,23 +2,11 @@
 % Please edit documentation in R/pgx-getgeo.R
 \name{eset.getPhenoData}
 \alias{eset.getPhenoData}
-\alias{eset.getTitle}
-\alias{eset.getOrganism}
-\alias{eset.getCH1}
-\alias{eset.parseCharacteristicsInfo}
 \alias{title2pheno}
 \alias{eset.parsePhenoFromTitle}
 \title{Extract phenotype data field from ExpressionSet}
 \usage{
 eset.getPhenoData(eset, field)
-
-eset.getTitle(eset)
-
-eset.getOrganism(eset)
-
-eset.getCH1(eset)
-
-eset.parseCharacteristicsInfo(ch, split = ",")
 
 title2pheno(title, split = NULL, trim = TRUE, summarize = TRUE)
 
@@ -29,11 +17,9 @@ eset.parsePhenoFromTitle(title, split = NULL)
 
 \item{field}{Character string specifying phenotype data field name}
 
-\item{ch}{"Characteristics" text string}
+\item{title}{character vector with the titles}
 
 \item{split}{delimiter character to split on `c(",", ";", "\\|", "_", " ")`.}
-
-\item{title}{character vector with the titles}
 
 \item{trim}{trim leading and trailing whitespace from each term}
 
@@ -49,24 +35,14 @@ Extract phenotype data field from ExpressionSet
 This function extracts a specific phenotype data field from an ExpressionSet object.
 The \code{field} parameter specifies the phenotype data column name to extract.
 
-The phenotype data pData slot is extracted from the ExpressionSet, and the specified 
+The phenotype data pData slot is extracted from the ExpressionSet, and the specified
 field is returned as a vector.
 }
 \section{Functions}{
 \itemize{
-\item \code{eset.getTitle()}: Extracts the title from the phenotype data of an ExpressionSet object.
-
-\item \code{eset.getOrganism()}: Extracts the organism from the phenotype data of an ExpressionSet object
-
-\item \code{eset.getCH1()}: 
-
-\item \code{eset.parseCharacteristicsInfo()}: parses the "Characteristics" metadata field from 
-an ExpressionSet into a data frame by splitting the text on a delimiter 
-like "," or ";".
-
 \item \code{title2pheno()}: Extracts sample phenotype terms from GEO dataset titles by splitting on a delimiter.
 
-\item \code{eset.parsePhenoFromTitle()}: Phenotype data from the title of an 
+\item \code{eset.parsePhenoFromTitle()}: Phenotype data from the title of an
 ExpressionSet object by splitting the title on a specified delimiter and guessing column names.
 
 }}

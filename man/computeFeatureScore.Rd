@@ -20,24 +20,26 @@ A numeric matrix of feature scores, with gene sets in rows and samples in column
 Compute feature scores
 }
 \details{
-This function computes a score for each specified gene set that 
+This function computes a score for each specified gene set that
 represents its average internal correlation within each sample group.
 
-For each sample group, it takes the top 100 most variable genes in the gene set. 
+For each sample group, it takes the top 100 most variable genes in the gene set.
 It then calculates the correlation distance matrix between these genes within that sample group.
 The score is the mean of the upper triangle of the distance matrix.
- 
-Higher scores indicate the gene set has high internal correlation and is 
+
+Higher scores indicate the gene set has high internal correlation and is
 coherently activated within that sample group.
 }
 \examples{
 \dontrun{
 # Generate random data
-X <- matrix(rnorm(100*50), 100, 50) 
+X <- matrix(rnorm(100 * 50), 100, 50)
 Y <- data.frame(group = sample(letters[1:5], 50, replace = TRUE))
-features <- list(feat1 = sample(rownames(X), 50), 
-                 feat2 = sample(rownames(X), 50))
-                  
+features <- list(
+  feat1 = sample(rownames(X), 50),
+  feat2 = sample(rownames(X), 50)
+)
+
 scores <- computeFeatureScore(X, Y, features)
 }
 }

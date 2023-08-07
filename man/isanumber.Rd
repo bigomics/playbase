@@ -21,8 +21,8 @@ Logical. TRUE if the vector contains mostly numeric data, FALSE otherwise.
 Check if a vector contains numeric data
 }
 \details{
-This function checks if a vector contains mostly numeric data. 
-It first replaces any "NA" values with actual NA values. 
+This function checks if a vector contains mostly numeric data.
+It first replaces any "NA" values with actual NA values.
 It then removes any empty values and converts the vector to numeric.
 If more than 50% of the resulting numeric vector is not NA, it returns TRUE.
 }

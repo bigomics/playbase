@@ -45,7 +45,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
   getModelMatrix <- function(v) {
     y <- as.character(pheno[, v])
     y[is.na(y)] <- "NA" ## or impute???
-    m1 <- model.matrix(~y)[, -1, drop = FALSE]
+    m1 <- stats::model.matrix(~y)[, -1, drop = FALSE]
     colnames(m1) <- sub("^y", paste0(v, "="), colnames(m1))
     m1
   }
@@ -55,7 +55,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
 
   ## tidy up pheno matrix?? get correct parameter types
 
-  pheno <- type.convert(pheno, as.is = TRUE)
+  pheno <- utils::type.convert(pheno, as.is = TRUE)
 
   message("[pgx.superBatchCorrect] 1 : dim.pheno = ", paste(dim(pheno), collapse = "x"))
   message("[pgx.superBatchCorrect] 1 : model.par = ", paste(model.par, collapse = "x"))
@@ -200,7 +200,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
       dbg("[pgx.superBatchCorrect] Correcting for unwanted library effects:", sel, "\n")
       exp.pheno <- as.matrix(pheno[, sel, drop = FALSE])
       exp.pheno <- apply(exp.pheno, 2, function(x) {
-        x[is.na(x)] <- median(x, na.rm = TRUE)
+        x[is.na(x)] <- stats::median(x, na.rm = TRUE)
         x
       })
       cX <- limma::removeBatchEffect(cX, covariates = exp.pheno, design = mod1x)
@@ -220,7 +220,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
         b1 <- as.character(pheno[, p1[i]])
         b1[is.na(b1)] <- "NA" ## NA is third group?? better to impute??
         cX <- limma::removeBatchEffect(cX, batch = b1, design = mod1x)
-        b1x <- model.matrix(~b1)[, -1, drop = FALSE]
+        b1x <- stats::model.matrix(~b1)[, -1, drop = FALSE]
         colnames(b1x) <- sub("^b1", paste0(p1[i], "."), colnames(b1x))
         B <- cbind(B, b1x)
       }
@@ -231,7 +231,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
       dbg("[pgx.superBatchCorrect] Correcting for unwanted biological covariates:", p2, "\n")
       b2 <- as.matrix(pheno[, p2, drop = FALSE])
       b2 <- apply(b2, 2, function(x) {
-        x[is.na(x)] <- median(x, na.rm = TRUE)
+        x[is.na(x)] <- stats::median(x, na.rm = TRUE)
         x
       })
       cX <- limma::removeBatchEffect(cX, covariates = b2, design = mod1x)
@@ -260,7 +260,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
       if (!is.null(mod1)) mod1x <- cbind(1, mod1)
       cX <- limma::removeBatchEffect(cX, batch = batch, design = mod1x)
 
-      b1x <- model.matrix(~batch)[, -1, drop = FALSE]
+      b1x <- stats::model.matrix(~batch)[, -1, drop = FALSE]
       colnames(b1x) <- sub("^batch", paste0(b, "."), colnames(b1x))
       B <- cbind(B, b1x)
     }
@@ -327,17 +327,17 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     ## fast method using SmartSVA
     pp <- paste0(model.par, collapse = "+")
     lm.expr <- paste0("lm(t(cX) ~ ", pp, ", data=pheno)")
-    X.r <- t(resid(eval(parse(text = lm.expr))))
+    X.r <- t(stats::resid(eval(parse(text = lm.expr))))
     n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
 
-    cX1 <- Matrix::head(cX[order(-apply(cX, 1, sd)), ], 1000) ## top 1000 genes only (faster)
+    cX1 <- Matrix::head(cX[order(-apply(cX, 1, stats::sd)), ], 1000) ## top 1000 genes only (faster)
     sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = n.sv)$sv)
 
     if (any(class(sv) == "try-error")) {
       ## try again with little bit of noise...
-      a <- 0.01 * mean(apply(cX, 1, sd))
-      cX1 <- cX + a * matrix(rnorm(length(cX)), nrow(cX), ncol(cX))
-      cX1 <- Matrix::head(cX1[order(-apply(cX1, 1, sd)), ], 1000) ## top 1000 genes only (faster)
+      a <- 0.01 * mean(apply(cX, 1, stats::sd))
+      cX1 <- cX + a * matrix(stats::rnorm(length(cX)), nrow(cX), ncol(cX))
+      cX1 <- Matrix::head(cX1[order(-apply(cX1, 1, stats::sd)), ], 1000) ## top 1000 genes only (faster)
       sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1))$sv)
     }
     if (!any(class(sv) == "try-error")) {
@@ -400,8 +400,8 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     nremove <- 0
     pX <- NULL
     while (length(ii) > 0 && niter < max.iter) {
-      xx <- Matrix::head(cX[order(-apply(cX, 1, sd)), ], hc.top)
-      hc <- cutree(fastcluster::hclust(dist(t(xx)), method = "ward.D2"), 2)
+      xx <- Matrix::head(cX[order(-apply(cX, 1, stats::sd)), ], hc.top)
+      hc <- stats::cutree(fastcluster::hclust(stats::dist(t(xx)), method = "ward.D2"), 2)
       hc.rho <- stats::cor(hc, mod1)
       hc.rho <- apply(abs(hc.rho), 1, max)
       ii <- which(hc.rho < max.rho)
@@ -473,10 +473,10 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
     if (inherits(y1, c("factor", "character", "logical"))) {
       y1 <- factor(as.character(y1))
     } else {
-      y1 <- y1 + 1e-8 * rnorm(length(y1))
-      y1 <- (y1 > median(y1))
+      y1 <- y1 + 1e-8 * stats::rnorm(length(y1))
+      y1 <- (y1 > stats::median(y1))
     }
-    design <- model.matrix(~ 1 + y1)
+    design <- stats::model.matrix(~ 1 + y1)
     fit <- limma::lmFit(x[, ii], design)
     suppressWarnings(fit <- try(limma::eBayes(fit, trend = FALSE)))
 
@@ -491,7 +491,7 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
     ii <- which(!is.na(y))
     y1 <- y[ii]
     if (inherits(y1, "factor")) y1 <- factor(as.character(y1))
-    design <- model.matrix(~ 0 + y1)
+    design <- stats::model.matrix(~ 0 + y1)
 
     r1 <- stats::cor(t(x[, ii]), design)
     rowMeans(abs(r1))
@@ -694,127 +694,10 @@ pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
 }
 
 
-#' @title Normalize count data
-#'
-#' @description
-#' Normalizes a matrix of RNA-seq count data using different methods.
-#'
-#' @param counts Matrix of count data, with genes in rows and samples in columns.
-#' @param method Normalization method to use. Options are "TMM", "RLE", "upperquartile", or "none".
-#' @param log Logical, if TRUE apply log2 transformation after normalization.
-#' @param prior Count offset to add prior to normalization. Default 1.
-#'
-#' @details
-#' This function normalizes a matrix of RNA-seq count data using different normalization methods:
-#'
-#' - "TMM": Trimmed Mean of M-values method from edgeR
-#' - "RLE": Relative Log Expression method
-#' - "upperquartile": Upper quartile normalization
-#' - "none": No normalization
-#'
-#' Counts are offset by prior value before normalization. A log2 transformation can also be applied after normalization.
-#'
-#' @return
-#' The normalized count matrix.
-#'
-#' @examples
-#' \dontrun{
-#' counts <- matrix(rnbinom(10000, mu = 10, size = 1), 100, 100)
-#' normalized <- pgx.countNormalization(counts, method = "TMM", log = TRUE)
-#' }
-#' @export
-pgx.removeBatchEffect <- function(X, batch, model.vars = NULL,
-                                  method = c("ComBat", "BMC", "limma", "MNN", "fastMNN")) {
-  ## treat as factor variable
-  method <- method[1]
-  batch0 <- as.character(batch)
-  batch0[is.na(batch0)] <- "NA" ## NA as separate group??
-  if (method == "MNN") {
-    matlist <- tapply(1:ncol(X), batch0, function(i) X[, i, drop = FALSE])
-
-    suppressWarnings(out <- do.call(
-      scran::mnnCorrect,
-      c(matlist, pc.approx = TRUE)
-    ))
-    new.X <- do.call(cbind, out$corrected)
-    colnames(new.X) <- unlist(lapply(matlist, colnames))
-    X <- new.X[, colnames(X)]
-  } else if (method == "fastMNN") {
-    d <- min(50, ncol(X) / 2)
-    matlist <- tapply(1:ncol(X), batch0, function(i) X[, i, drop = FALSE])
-    out <- do.call(fastMNN, c(matlist, d = d))
-    cor.exp <- tcrossprod(out$rotation[, ], out$corrected)
-    rownames(cor.exp) <- rownames(X)
-    colnames(cor.exp) <- unlist(lapply(matlist, colnames))
-    X <- cor.exp[, colnames(X)]
-  } else if (method == "limma") {
-    X <- limma::removeBatchEffect(X, batch = batch0)
-  } else if (method == "ComBat") {
-    X <- sva::ComBat(X, batch = batch0)
-  } else if (method == "BMC") {
-    ## batch mean center
-    matlist <- tapply(1:ncol(X), batch0, function(i) X[, i, drop = FALSE])
-    matlist <- lapply(matlist, function(x) (x - Matrix::rowMeans(x, na.rm = TRUE)))
-    new.X <- do.call(cbind, matlist)
-    new.X <- new.X + Matrix::rowMeans(X, na.rm = TRUE)
-    X <- new.X[, colnames(X)]
-  } else {
-    dbg("ERROR! uknown method\n")
-  }
-  return(X)
-}
 
 
-#' Remove principal components from gene expression data
-#'
-#' @title Remove principal components from gene expression data
-#'
-#' @description
-#' Removes the top principal components from a gene expression matrix.
-#'
-#' @param X Gene expression matrix, genes in rows, samples in columns.
-#' @param nv Number of principal components to remove.
-#'
-#' @details
-#' This function calculates the top \code{nv} principal components of the gene expression matrix \code{X} using \code{irlba::irlba}.
-#' It then removes these principal components from \code{X} using \code{limma::removeBatchEffect}.
-#'
-#' The goal is to remove technical noise or batch effects captured by the top principal components.
-#'
-#' @return The gene expression matrix \code{X} with the top \code{nv} principal components removed.
-#'
-#' @export
-pgx.removePC <- function(X, nv) {
-  suppressWarnings(suppressMessages(
-    pc <- irlba::irlba(X, nv = nv)$v
-  ))
-  cX <- limma::removeBatchEffect(X, covariates = pc)
-  return(cX)
-}
 
 
-#' Plot mitochondrial and ribosomal counts
-#'
-#' @description This function plots the mitochondrial and ribosomal counts in a given count matrix.
-#'
-#' @param counts A numeric matrix of count data, where rows represent features and columns represent samples.
-#' @param percentage Logical, whether to plot the counts as percentages of total counts.
-#'
-#' @return A bar plot of mitochondrial and ribosomal counts.
-#'
-#' @export
-pgx.plotMitoRibo <- function(counts, percentage = TRUE) {
-  tot.counts <- Matrix::colSums(counts, na.rm = TRUE)
-  sel.mt <- grep("^mt-", rownames(counts), ignore.case = TRUE)
-  sel.rb <- grep("^rp[ls]", rownames(counts), ignore.case = TRUE)
-  mito.counts <- Matrix::colSums(counts[sel.mt, , drop = FALSE], na.rm = TRUE)
-  ribo.counts <- Matrix::colSums(counts[sel.rb, , drop = FALSE], na.rm = TRUE)
-  other.counts <- tot.counts - mito.counts - ribo.counts
-
-  df <- cbind(ribo = ribo.counts, mito = mito.counts)
-  if (percentage) df <- round((df / tot.counts) * 100, digits = 2)
-  barplot(t(df), beside = FALSE, las = 3)
-}
 
 
 #' @title Estimate biological variation
@@ -856,7 +739,7 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
 
   ## shift zero to 1% percentile
   if (!is.count) {
-    q0 <- quantile(X[X > 0], probs = 0.01, na.rm = TRUE)
+    q0 <- stats::quantile(X[X > 0], probs = 0.01, na.rm = TRUE)
 
     tx <- pmax(X - q0, 0) ## log expression
     cx <- pmax(2**tx - 1, 0) ## counts
@@ -877,7 +760,7 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
     pct.mito <- Matrix::colSums(cx[mt.genes, , drop = FALSE], na.rm = TRUE) / libsize
   }
   if (length(rb.genes) >= 10) {
-    ii <- rb.genes[order(-apply(tx[rb.genes, , drop = FALSE], 1, sd, na.rm = TRUE))]
+    ii <- rb.genes[order(-apply(tx[rb.genes, , drop = FALSE], 1, stats::sd, na.rm = TRUE))]
     sel20 <- Matrix::head(ii, 20)
     ribo <- Matrix::colMeans(tx[rb.genes, , drop = FALSE])
     ribo20 <- Matrix::colMeans(tx[sel20, , drop = FALSE])
@@ -902,86 +785,6 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
 }
 
 
-#' @title Surrogate variable analysis batch correction
-#'
-#' @description
-#' Performs batch correction using surrogate variable analysis (SVA).
-#' Estimates surrogate variables and removes them from the expression data.
-#'
-#' @param X Gene expression matrix, genes in rows and samples in columns.
-#' @param batch Factor or matrix indicating batch groups for each sample.
-#' @param model.par Vector of column names in \code{pheno} to use as model covariates.
-#' @param pheno Dataframe containing sample metadata/covariates. Must match colnames of \code{X}.
-#' @param n.sv Number of surrogate variables to estimate. If NULL uses a data-driven approach.
-#'
-#' @return Batch corrected gene expression matrix.
-#'
-#' @details
-#' This function performs batch correction using the sva R package.
-#'
-#' It constructs a design matrix containing the specified batch groups and covariates.
-#' Surrogate variables are estimated to capture remaining batch effects.
-#'
-#' The top surrogate variables are included in the design matrix and removed from the expression data.
-#' This accounts for batch effects in a completely unsupervised way.
-#'
-#' @export
-pgx.svaCorrect <- function(X, pheno, nmax = -1) {
-  ##
-  ## IK: not sure about this SVA correction stuff...
-  if (NCOL(pheno) == 1) {
-    pheno <- data.frame(pheno = pheno)
-  }
-  X <- as.matrix(X)
-
-  ## add some random... sometimes necessary
-
-  X <- X + 1e-8 ## ??
-
-  ## setup model matrix
-  mod1 <- c()
-  pheno1 <- pheno
-  colnames(pheno1) <- paste0(colnames(pheno1), "_IS_")
-  for (v in colnames(pheno1)) {
-    expr <- paste0("model.matrix(~", v, ",data=pheno1)")
-    m1 <- eval(parse(text = expr))[, -1, drop = FALSE]
-    mod1 <- cbind(mod1, m1)
-  }
-  colnames(mod1) <- sub("_IS_", "=", colnames(mod1))
-
-  mod1x <- cbind(1, mod1)
-  mod0x <- mod1x[, 1, drop = FALSE]
-
-
-  message("Estimating number of surrogate variables...")
-
-  ## fast method using SmartSVA
-
-  pp <- paste0(colnames(pheno), collapse = "+")
-  lm.expr <- paste0("lm(t(X) ~ ", pp, ", data=pheno)")
-  X.r <- t(stats::resid(eval(parse(text = lm.expr))))
-  n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
-  suppressWarnings(min1 <- min(sapply(apply(pheno, 2, table), min)))
-  n.sv <- min(n.sv, min1)
-
-  message("Calculating SVA...")
-  vX <- X
-  if (nmax > 0) {
-    vX <- Matrix::head(X[order(-apply(X, 1, sd)), ], nmax)
-  }
-  sv <- sva::sva(vX, mod1x, mod0x, n.sv = n.sv)$sv
-
-
-  message("Perform batch correction...")
-
-  cX <- limma::removeBatchEffect(X, covariates = sv, design = mod1x)
-
-
-  ## recenter on old feature means
-  cX <- cX - Matrix::rowMeans(cX, na.rm = TRUE) + Matrix::rowMeans(X, na.rm = TRUE)
-
-  return(cX)
-}
 
 
 ## ================================================================================
@@ -990,85 +793,6 @@ pgx.svaCorrect <- function(X, pheno, nmax = -1) {
 ## ================================================================================
 
 
-#' @title Compute Number of Significant Genes
-#'
-#' @param obj A pgx object
-#' @param batch A character vector of batch parameters
-#' @param contrast Character vector of contrasts to test
-#' @param normalization Character vector of normalization methods to try
-#' @param niter Number of iterations for resampling
-#' @param resample Resampling fraction
-#' @param show.progress Show progress
-#'
-#' @description Counts number of significant genes for each combination of batch correction
-#'   parameters and normalization methods. Used to optimize batch correction.
-#'
-#' @details This function systematically goes through different combinations of batch correction
-#'   parameters and normalization methods to correct the data in obj. For each combination, it performs
-#'   differential expression analysis for the specified contrasts, and counts the number of significant
-#'   genes. This can be used to optimize batch correction by finding the combination that maximizes
-#'   the number of significant genes.
-#'
-#'   The batch parameters, normalization methods, number of iterations and resampling fraction can be
-#'   specified. Progress is shown if show.progress is TRUE.
-#'
-#' @return Returns a data frame with the number of significant genes for each parameter/method combination.
-#'
-#' @export
-pgx._runComputeNumSig <- function(ngs, parcomb, contrast, resample = -1,
-                                  normalization = NORMALIZATION.METHODS,
-                                  show.progress = 1) {
-  k <- "cpm"
-  numsig <- c()
-
-  for (k in normalization) {
-    aX <- NULL
-    if (k == "nono") aX <- log(1 + ngs$counts)
-    if (k == "cpm") aX <- edgeR::cpm(ngs$counts, log = TRUE)
-    if (k == "TMM") aX <- log2(1 + normalizeTMM(ngs$counts))
-    if (k == "RLE") aX <- log2(1 + normalizeRLE(ngs$counts))
-    if (k == "quantile") aX <- limma::normalizeQuantiles(log2(1 + ngs$counts))
-    if (k == "SVA") {
-      mod1 <- model.matrix(~group, data = ngs$samples)
-      mod0 <- cbind(mod1[, 1])
-      logcpm <- edgeR::cpm(ngs$counts, log = TRUE) ## perform SVA on logCPM
-      log <- capture.output({
-        suppressWarnings(sv <- sva::sva(logcpm, mod1, mod0, n.sv = NULL)$sv)
-        suppressWarnings(aX <- limma::removeBatchEffect(logcpm, covariates = sv, design = mod1))
-      })
-    }
-    if (resample > 0) {
-      jj <- sample(colnames(aX), ncol(aX) * resample)
-      aX <- aX[, jj]
-    }
-
-    ## solve for all combinations
-    pp <- parcomb[[1]]
-    if (show.progress) dbg(paste0("[", k, "]")) ## show progress
-    for (pp in parcomb) {
-      if (show.progress) dbg(".") ## show progress
-      Y <- ngs$samples[colnames(aX), ]
-      bX <- NULL
-      pp
-      if (pp[1] != "no_correction") {
-        model.formula <- formula(paste("~ 0 + ", paste(pp, collapse = " + ")))
-        bvar <- model.matrix(model.formula, data = Y)
-        group <- ngs$samples[colnames(aX), "group"]
-        design <- model.matrix(~group)
-        log <- capture.output({
-          suppressWarnings(bX <- limma::removeBatchEffect(aX, covariates = bvar, design = design))
-        })
-      } else {
-        bX <- aX
-      }
-      pp1 <- paste0(k, ":", paste(pp, collapse = "+"))
-      pp1
-      numsig[pp1] <- pgx._computeNumSig(ngs, X = bX, contrast = contrast)
-    }
-  }
-  if (show.progress) dbg("\n") ## show progress
-  return(numsig)
-}
 
 
 #' @title Compute number of significant genes

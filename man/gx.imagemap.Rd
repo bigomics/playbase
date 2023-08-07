@@ -28,7 +28,7 @@ It uses \code{\link[Matrix]{image}} to generate the heatmap, and adds axis label
 \examples{
 \dontrun{
 data <- matrix(rnorm(200), 20, 10)
-gx.imagemap(data, main="My Heatmap")
+gx.imagemap(data, main = "My Heatmap")
 }
 
 }

@@ -20,17 +20,17 @@ Matrix of normalized counts
 Normalizes a count matrix using the TMM (Trimmed Mean of M-values) method.
 }
 \details{
-This function takes a count matrix and normalizes the counts using the TMM method 
+This function takes a count matrix and normalizes the counts using the TMM method
 implemented in the edgeR package.
 
 It converts the count matrix to a DGEList object. Then it calculates normalization
-factors using the calcNormFactors function with default TMM method. 
+factors using the calcNormFactors function with default TMM method.
 
 The normalized counts are returned as CPM values, optionally log-transformed.
 }
 \examples{
 \dontrun{
-counts <- matrix(rnbinom(100, mu=10, size=1), ncol=10) 
+counts <- matrix(rnbinom(100, mu = 10, size = 1), ncol = 10)
 norm_counts <- normalizeTMM(counts)
 }
 }

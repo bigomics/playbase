@@ -18,8 +18,8 @@ A numeric matrix representing the phenotype matrix created from the specified ph
 This function creates a phenotype matrix from a PGX object.
 }
 \details{
-This function takes a PGX object `pgx` and a character string `phenotype` as input and 
-creates a phenotype matrix using the specified phenotype. The phenotype matrix is created by extracting 
-the specified phenotype from the `samples` data frame in the `pgx` object and converting it into a model matrix. 
+This function takes a PGX object `pgx` and a character string `phenotype` as input and
+creates a phenotype matrix using the specified phenotype. The phenotype matrix is created by extracting
+the specified phenotype from the `samples` data frame in the `pgx` object and converting it into a model matrix.
 The resulting phenotype matrix is returned as a numeric matrix.
 }

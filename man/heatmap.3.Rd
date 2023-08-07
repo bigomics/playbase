@@ -8,8 +8,8 @@ heatmap.3(
   x,
   Rowv = TRUE,
   Colv = if (symm) "Rowv" else TRUE,
-  distfun = dist,
-  hclustfun = hclust,
+  distfun = stats::dist,
+  hclustfun = stats::hclust,
   dendrogram = c("both", "row", "column", "none"),
   symm = FALSE,
   scale = c("none", "row", "column"),
@@ -26,11 +26,11 @@ heatmap.3(
   cellnote,
   notecex = 1,
   notecol = "cyan",
-  na.color = par("bg"),
+  na.color = graphics::par("bg"),
   trace = c("none", "column", "row", "both"),
   tracecol = "cyan",
-  hline = median(breaks),
-  vline = median(breaks),
+  hline = stats::median(breaks),
+  vline = stats::median(breaks),
   linecol = tracecol,
   margins = c(5, 5),
   ColSideColors,
@@ -176,7 +176,7 @@ customizing the color scale, labels, titles, etc.
 \examples{
 \dontrun{
 mat <- matrix(rnorm(200), 20, 10)
-heatmap.3(mat, Colv=FALSE, scale="column", dendrogram="row")
+heatmap.3(mat, Colv = FALSE, scale = "column", dendrogram = "row")
 }
 
 }

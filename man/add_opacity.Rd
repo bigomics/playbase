@@ -18,10 +18,10 @@ A character vector of the same length as `hexcol`, containing the RGBA color val
 This function adds opacity to a vector of hexadecimal color values.
 }
 \details{
-This function takes a character vector of hexadecimal color values `hexcol` and 
-a numeric value `opacity` as input and adds the specified opacity to each color value. 
-The function uses the `toRGB` function from the `plotly` package to convert the hexadecimal 
-color values to RGBA format, then modifies the alpha channel according to the specified `opacity` value. 
+This function takes a character vector of hexadecimal color values `hexcol` and
+a numeric value `opacity` as input and adds the specified opacity to each color value.
+The function uses the `toRGB` function from the `plotly` package to convert the hexadecimal
+color values to RGBA format, then modifies the alpha channel according to the specified `opacity` value.
 The resulting RGBA color values are returned as a character vector.
 }
 \examples{

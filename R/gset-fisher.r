@@ -172,14 +172,14 @@ gset.fisher <- function(genes, genesets, background = NULL,
     if (NCOL(a0) == 1 || colSums(a0)[2] == 0) {
       return(NA)
     }
-    fisher.test(a0, alternative = "greater")$p.value
+    stats::fisher.test(a0, alternative = "greater")$p.value
   }
   test.chisq <- function(gs) {
     a0 <- table(background %in% gs, background %in% genes)
     if (NCOL(a0) == 1 || colSums(a0)[2] == 0) {
       return(NA)
     }
-    chisq.test(a0)$p.value
+    stats::chisq.test(a0)$p.value
   }
   pv <- rep(NA, length(genesets))
   names(pv) <- names(genesets)
@@ -215,7 +215,7 @@ gset.fisher <- function(genes, genesets, background = NULL,
 
   ## compute q-value
   qv <- rep(NA, length(pv))
-  qv <- p.adjust(pv, method = "fdr")
+  qv <- stats::p.adjust(pv, method = "fdr")
 
   ## results
   v1 <- as.character(paste0(a, "/", n.size))

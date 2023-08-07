@@ -19,9 +19,9 @@ Simplifies cell types names from LM22, DICE, ImmProt and
 ImmunoStates to standardized classification names.
 }
 \details{
-This function takes a character vector of cell type names 
-from deconvolution methods like LM22, DICE, ImmProt, ImmunoStates etc. 
-It simplifies the names using pattern matching to map to standardized 
+This function takes a character vector of cell type names
+from deconvolution methods like LM22, DICE, ImmProt, ImmunoStates etc.
+It simplifies the names using pattern matching to map to standardized
 cell type categories like "T_cells", "B_cells", "Macrophages" etc.
 
 Cell types below the abundance threshold `low.th` are removed.

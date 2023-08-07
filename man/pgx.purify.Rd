@@ -11,42 +11,42 @@ pgx.purify(X, ref, k = 3, method = 2)
 
 \item{k}{Number of components for NMF.}
 
-\item{method}{NMF method, either 1 for normal cell contamination or 
+\item{method}{NMF method, either 1 for normal cell contamination or
 2 for tumor cell purification.}
 
-\item{expr}{Gene expression matrix with genes in rows and samples 
+\item{expr}{Gene expression matrix with genes in rows and samples
 in columns.}
 }
 \value{
 A list containing:
 \itemize{
-  \item{\code{purified}}{Purified gene expression matrix.}  
+  \item{\code{purified}}{Purified gene expression matrix.}
   \item{\code{contaminant}}{Estimated contaminating profile.}
   \item{\code{alpha}}{Estimated sample purity.}
 }
 }
 \description{
-Estimates and removes contaminating gene expression signals from bulk 
+Estimates and removes contaminating gene expression signals from bulk
 RNA-seq data using non-negative matrix factorization (NMF).
 }
 \details{
-This function takes a gene expression matrix and reference samples. 
-It uses NMF to estimate the contaminating expression profile 
-and sample purity. Method 1 assumes the contaminant is normal cells, method 2 
-assumes it is tumor cells. The estimated contaminating profile is subtracted 
+This function takes a gene expression matrix and reference samples.
+It uses NMF to estimate the contaminating expression profile
+and sample purity. Method 1 assumes the contaminant is normal cells, method 2
+assumes it is tumor cells. The estimated contaminating profile is subtracted
 to obtain a purified expression profile.
 
-The reference samples should represent the contaminating component (normal or tumor). 
-The number of components k determines the complexity of the estimated contaminating 
-profile. A purity vector and the contaminating profile matrix are returned along with 
+The reference samples should represent the contaminating component (normal or tumor).
+The number of components k determines the complexity of the estimated contaminating
+profile. A purity vector and the contaminating profile matrix are returned along with
 the purified data.
 }
 \examples{
 \dontrun{
-# Purify normal cell contamination 
-purified <- pgx.purify(expr, ref=1:5, method=1)
+# Purify normal cell contamination
+purified <- pgx.purify(expr, ref = 1:5, method = 1)
 
 # Purify tumor cell contamination
-purified <- pgx.purify(expr, ref=6:10, method=2) 
+purified <- pgx.purify(expr, ref = 6:10, method = 2)
 }
 }

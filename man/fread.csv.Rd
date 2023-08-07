@@ -8,7 +8,7 @@ fread.csv(
   file,
   check.names = FALSE,
   row.names = 1,
-  sep = "auto",
+  sep = ",",
   stringsAsFactors = FALSE,
   header = TRUE,
   asMatrix = TRUE
@@ -44,6 +44,6 @@ Factor conversion, column type checking, and header parsing can be controlled wi
 }
 \examples{
 \dontrun{
-dat <- fread.csv("data.csv") 
+dat <- fread.csv("data.csv")
 }
 }

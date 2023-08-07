@@ -25,8 +25,8 @@ Generates a contrast matrix for comparing clusters.
 This function takes a vector of cluster assignments and generates a contrast matrix
 encoding comparisons between each pair of clusters above the min.freq threshold.
 
-The contrast matrix has clusters as rows and comparison columns with names like 
-"cluster1_vs_cluster2". The matrix values are 1/-1 for the clusters being compared,  
+The contrast matrix has clusters as rows and comparison columns with names like
+"cluster1_vs_cluster2". The matrix values are 1/-1 for the clusters being compared,
 and 0 otherwise.
 
 If full=TRUE, all pairwise comparisons are generated instead of only adjacent clusters.

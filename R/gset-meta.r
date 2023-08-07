@@ -226,11 +226,11 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
       ## Always take at least first 100.. (HACK??!!!)
       if (length(genes.dn) < 100) {
         genes.dn0 <- rownames(limma0)[order(limma0[, "logFC"])]
-        genes.dn <- head(unique(c(genes.dn, genes.dn0)), 100)
+        genes.dn <- utils::head(unique(c(genes.dn, genes.dn0)), 100)
       }
       if (length(genes.up) < 100) {
         genes.up0 <- rownames(limma0)[order(-limma0[, "logFC"])]
-        genes.up <- head(unique(c(genes.up, genes.up0)), 100)
+        genes.up <- utils::head(unique(c(genes.up, genes.up0)), 100)
       }
 
       tt <- system.time({
@@ -408,7 +408,7 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
     ## fast GSEA
     if ("fgsea" %in% method) {
       rnk <- rowMeans(xx[, which(yy == 1), drop = FALSE]) - rowMeans(xx[, which(yy == 0), drop = FALSE])
-      rnk <- rnk + 1e-8 * rnorm(length(rnk))
+      rnk <- rnk + 1e-8 * stats::rnorm(length(rnk))
       #
       tt <- system.time(
         output <- fgsea::fgseaSimple(gmt, rnk,
@@ -658,61 +658,6 @@ gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
 ## ======================================================================
 
 
-#' Get Gene Set Tables
-#'
-#' This function retrieves gene set tables from a specified directory path and organizes the data into a list.
-#'
-#' @param path The path to the directory containing the gene set tables.
-#'
-#' @return A list containing the gene set tables and associated metadata.
-#' @export
-getGeneSetTables <- function(path) {
-  dd <- dir(path, full.names = TRUE)
-  dd
-  tables <- vector("list", length(dd))
-  d <- dd[1]
-  i <- 1
-  for (i in 1:length(dd)) {
-    d <- dd[i]
-    table_dir <- file.path(d, "tables")
-    if (!file.exists(table_dir)) next
-    ff <- dir(table_dir, full.names = TRUE)
-    ff.short <- dir(table_dir, full.names = FALSE)
-    ff.name <- gsub("output-|-results.csv|-test.csv", "", ff.short)
-    tables[[i]] <- lapply(ff, read.csv, row.names = 1, check.names = FALSE)
-    names(tables[[i]]) <- ff.name
-    names(tables)[i] <- gsub(".*/", "", d)
-  }
-
-  gsets <- sort(unique(unlist(lapply(tables[[1]], rownames))))
-  length(gsets)
-
-  meta <- list()
-  i <- 1
-  for (i in 1:length(dd)) {
-    pv <- c()
-    fx <- c()
-    j <- 1
-    for (j in 1:length(tables[[i]])) {
-      x <- tables[[i]][[j]]
-      pv.col <- grep("p.value|^p$|p-val|pval|nom.p.val|nom p-val|p.val", tolower(colnames(x)))[1]
-      pv <- cbind(pv, x[match(gsets, rownames(x)), pv.col])
-      fx.col <- grep("sign|nes|logfc|fc", tolower(colnames(x)))[1]
-      fx <- cbind(fx, (x[match(gsets, rownames(x)), fx.col]))
-      colnames(pv)[ncol(pv)] <- names(tables[[i]])[j]
-      colnames(fx)[ncol(fx)] <- names(tables[[i]])[j]
-    }
-    Matrix::head(pv)
-    rownames(pv) <- gsets
-    rownames(fx) <- gsets
-    meta[[i]] <- data.frame(geneset = gsets, fx = fx, p = pv)
-  }
-  names(meta) <- names(tables)
-  p
-
-  res <- list(tables = tables, meta = meta)
-  return(res)
-}
 
 
 ## ======================================================================
@@ -720,48 +665,6 @@ getGeneSetTables <- function(path) {
 ## ======================================================================
 
 
-#' Convert GMT to Matrix
-#'
-#' This function converts a GMT (Gene Matrix Transposed) file into a sparse matrix representation.
-#'
-#' @param gmt A list containing gene sets in GMT format.
-#' @param bg A character vector specifying the background genes to consider. If NULL, the most frequently occurring genes in the GMT will be used as the background.
-#' @param use.multicore Logical indicating whether to use parallel processing for faster computation.
-#'
-#' @return A sparse matrix representation of the GMT.
-#' @export
-gmt2mat.nocheck <- function(gmt, bg = NULL, use.multicore = TRUE) {
-  if (is.null(bg)) {
-    bg <- names(sort(table(unlist(gmt)), decreasing = TRUE))
-  }
-  gmt <- lapply(gmt, function(s) intersect(bg, s))
-  j <- 1
-  idx <- c()
-  if (use.multicore) {
-    idx <- parallel::mclapply(gmt, function(s) match(s, bg))
-    idx[sapply(idx, length) == 0] <- 0
-    idx <- sapply(1:length(idx), function(i) rbind(idx[[i]], i))
-    idx <- matrix(unlist(idx[]), byrow = TRUE, ncol = 2)
-    idx <- idx[!is.na(idx[, 1]), ]
-    idx <- idx[idx[, 1] > 0, ]
-  } else {
-    idx <- c()
-    for (j in 1:length(gmt)) {
-      ii0 <- which(bg %in% gmt[[j]])
-      if (length(ii0) > 0) {
-        idx <- rbind(idx, cbind(ii0, j))
-      }
-    }
-  }
-  D <- Matrix::sparseMatrix(idx[, 1], idx[, 2],
-    x = rep(1, nrow(idx)),
-    dims = c(length(bg), ncol = length(gmt))
-  )
-  dim(D)
-  rownames(D) <- bg
-  colnames(D) <- names(gmt)
-  D
-}
 
 
 #' @export
@@ -771,49 +674,10 @@ shortstring <- function(s, n) {
 }
 
 
-#' @export
-getGseaOutputDir <- function(path) {
-  ## untangle gsea subfolder
-  gsea_dir <- dir(path)[grep("\\.Gsea\\.", dir(path))]
-  gsea_dir <- file.path(path, gsea_dir)
-  gsea_dir
-  if (length(gsea_dir) == 0) {
-    cat("Missing results")
-    return(NULL)
-  }
-  return(gsea_dir)
-}
 
 
-#' @export
-getGseaTable <- function(path) {
-  ff <- dir(path, full.names = TRUE)
-  report_name <- ff[grep("gsea_report.txt$", ff)]
-  if (is.null(report_name) || length(report_name) == 0) {
-    return(NULL)
-  }
-  R <- read.csv(report_name, sep = "\t", check.names = FALSE)
-  R <- R[order(-abs(R$NES)), ]
-  colnames(R)[1] <- "NAME"
-  R$NES <- round(R$NES, digits = 3)
-  kk <- grep("NAME|SIZE|NES|NOM|FDR|LEADING", colnames(R), ignore.case = TRUE)
-  R <- R[, kk]
-  return(R)
-}
 
 
-#' @export
-gseaSnapshot <- function(gsets, gsea_dir) {
-  enplots <- dir(gsea_dir, pattern = "enplot_")
-  enplots0 <- dir(gsea_dir, pattern = "enplot_", full.names = TRUE)
-  kk <- match(gsets, gsub("enplot_|_[0-9]*.png$", "", enplots))
-  imgs <- lapply(enplots0[kk], function(p) {
-    grid::rasterGrob(as.raster(png::readPNG(p)),
-      interpolate = TRUE
-    )
-  })
-  gridExtra::grid.arrange(grobs = imgs, ncol = 5)
-}
 
 
 ## ======================================================================

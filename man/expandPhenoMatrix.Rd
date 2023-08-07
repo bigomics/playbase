@@ -17,17 +17,17 @@ expandPhenoMatrix(pheno, collapse = TRUE, drop.ref = TRUE)
 An expanded phenotype matrix with dummy variables suitable for regression modeling.
 }
 \description{
-Expands a phenotype data matrix into dummy variables while optionally 
+Expands a phenotype data matrix into dummy variables while optionally
 dropping the reference level.
 }
 \details{
-This function takes a phenotype data matrix and expands any categorical variables into 
+This function takes a phenotype data matrix and expands any categorical variables into
 dummy variables, while optionally collapsing rare factor levels and dropping the reference level.
 
-For each column, it determines if the variable is numeric or categorical. Numeric variables are 
-ranked. Categorical variables are expanded into dummy variables using \code{model.matrix}. 
+For each column, it determines if the variable is numeric or categorical. Numeric variables are
+ranked. Categorical variables are expanded into dummy variables using \code{model.matrix}.
 
-If \code{collapse = TRUE}, it will collapse together factor levels that occur below a frequency 
-threshold. If \code{drop.ref = TRUE}, it will drop the reference level for each factor when 
+If \code{collapse = TRUE}, it will collapse together factor levels that occur below a frequency
+threshold. If \code{drop.ref = TRUE}, it will drop the reference level for each factor when
 creating the dummy variables.
 }

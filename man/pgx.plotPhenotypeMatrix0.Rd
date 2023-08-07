@@ -20,11 +20,11 @@ A heatmap visualization of the phenotype matrix.
 Generates a heatmap to visualize a phenotype matrix.
 }
 \details{
-This function takes a phenotype matrix \code{annot} with samples as rows and phenotype  
+This function takes a phenotype matrix \code{annot} with samples as rows and phenotype
 variables as columns. It converts the columns to factors and visualizes the matrix
 as a heatmap, with samples in rows and variables in columns.
 
-Samples are clustered before plotting if \code{cluster.samples=TRUE}. 
+Samples are clustered before plotting if \code{cluster.samples=TRUE}.
 The annotation label height is set by \code{annot.ht}.
 
 Usef

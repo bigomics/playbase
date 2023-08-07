@@ -16,9 +16,9 @@ A character vector of the same length as `comp`, containing the reversed compari
 This function reverses the order of comparison strings in the format "A_vs_B".
 }
 \details{
-The function takes a character vector of comparison strings `comp` as 
-input and reverses the order of the strings in the format "A_vs_B" or "A_VS_B". 
-The function also preserves any prefix before a colon (":") or postfix after an at 
+The function takes a character vector of comparison strings `comp` as
+input and reverses the order of the strings in the format "A_vs_B" or "A_VS_B".
+The function also preserves any prefix before a colon (":") or postfix after an at
 symbol ("@") in the input strings.
 }
 \examples{

@@ -27,12 +27,12 @@ Calculates the correlation between principal components of the expression matrix
 and sample phenotypes in pheno.
 }
 \details{
-This function calculates the top nv principal components of the expression matrix X 
+This function calculates the top nv principal components of the expression matrix X
 using irlba::irlba. It then correlates each PC with each phenotype in the pheno data frame.
 
-For categorical phenotypes, it converts to a factor and calculates the correlation with 
+For categorical phenotypes, it converts to a factor and calculates the correlation with
 the model matrix. For numeric phenotypes it calculates the standard correlation coefficient.
 
-It returns a named vector of correlation coefficients, with names corresponding to 
+It returns a named vector of correlation coefficients, with names corresponding to
 the phenotypes.
 }

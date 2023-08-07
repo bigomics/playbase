@@ -24,7 +24,7 @@ pgx.getFamilies(pgx, nmin = 10, extended = FALSE)
 \arguments{
 \item{pgx}{A PGX object containing gene expression data}
 
-\item{methods}{Character vector of meta-analysis methods to include. 
+\item{methods}{Character vector of meta-analysis methods to include.
 Default is meta.}
 
 \item{level}{Data level to extract results for ("gene", "geneset").}
@@ -42,8 +42,8 @@ Default is meta.}
 \item{extended}{Whether to return extended families (TRUE) or only core families (FALSE)}
 }
 \value{
-A matrix with rows corresponding to features at the specified level, 
-and columns for fold-changes and adjusted p-values from each meta-analysis 
+A matrix with rows corresponding to features at the specified level,
+and columns for fold-changes and adjusted p-values from each meta-analysis
 method.
 
 A named list with top marker genes for each comparison
@@ -57,25 +57,25 @@ Retrieves the gene families represented in a PGX object that have at least nmin 
 }
 \details{
 This function extracts a matrix of meta-analysis results from a PGX object.
-It returns fold-changes and adjusted p-values from the specified 
+It returns fold-changes and adjusted p-values from the specified
 meta-analysis methods.
 
-The results can be extracted at the gene, exon or junction level, depending 
-on the \code{level} argument. By default it returns results for all 
+The results can be extracted at the gene, exon or junction level, depending
+on the \code{level} argument. By default it returns results for all
 meta-analysis methods found in the PGX object.
 
 A subset of methods can be specified with the \code{methods} argument.
 
-This function extracts the top n marker genes (based on absolute t-statistic or fold change) 
-for each comparison stored in the PGX object. It returns a list with one element per comparison, 
+This function extracts the top n marker genes (based on absolute t-statistic or fold change)
+for each comparison stored in the PGX object. It returns a list with one element per comparison,
 containing the top marker genes.
 
 The number and direction of sorting can be controlled with n and dir arguments.
 Setting sym=TRUE returns an equal number of up and down genes.
 A filter can be applied to gene names before selecting markers.
 
-Searches for gene families in the PGX gene sets that match either the core family names (FAMILY*) or 
-extended family regex (e.g. <FAMILY.ABC.*). Returns the names of families with at least nmin members 
+Searches for gene families in the PGX gene sets that match either the core family names (FAMILY*) or
+extended family regex (e.g. <FAMILY.ABC.*). Returns the names of families with at least nmin members
 present in the PGX gene expression matrix. Useful for checking which gene families are represented in the data.
 }
 \section{Functions}{

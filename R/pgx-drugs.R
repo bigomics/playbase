@@ -123,7 +123,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
   R1 <- as.matrix(R1)
   R1[is.nan(R1)] <- 0
   R1[is.infinite(R1)] <- 0
-  R1 <- R1 + 1e-8 * matrix(rnorm(length(R1)), nrow(R1), ncol(R1))
+  R1 <- R1 + 1e-8 * matrix(stats::rnorm(length(R1)), nrow(R1), ncol(R1))
   colnames(R1) <- colnames(F)
   rownames(R1) <- colnames(X)
 
@@ -140,9 +140,9 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
     rownames(rho2) <- colnames(D)
     colnames(rho2) <- colnames(R1)
     rho2 <- rho2[order(-rowMeans(rho2**2)), , drop = FALSE]
-    cor.pvalue <- function(x, n) pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
+    cor.pvalue <- function(x, n) stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
     P <- apply(rho2, 2, cor.pvalue, n = nrow(D))
-    Q <- apply(P, 2, p.adjust, method = "fdr")
+    Q <- apply(P, 2, stats::p.adjust, method = "fdr")
     results[["cor"]] <- list(X = rho2, Q = Q, P = P)
   }
 
@@ -183,7 +183,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
 
       rx <- apply(abs(res$X), 2, rank)
       rownames(rx) <- rownames(res$X)
-      mtop <- names(head(sort(rowMeans(rx), decreasing = TRUE), nprune))
+      mtop <- names(utils::head(sort(rowMeans(rx), decreasing = TRUE), nprune))
       top.idx <- unique(unlist(meta.gmt[mtop]))
 
       results[[k]]$X <- res$X[mtop, , drop = FALSE]
@@ -204,112 +204,3 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
 }
 
 
-#' @title Compute enrichment for drug combinations
-#'
-#' @param obj PGX object containing gene expression data
-#' @param X Gene expression matrix
-#' @param xdrugs Character vector of drug names
-#' @param ntop Number of top drugs to combine per sample
-#' @param nsample Number of samples to sample combinations
-#' @param nprune Number of genes to use for GSEA
-#' @param contrasts Contrasts to compute enrichment
-#' @param res.mono Single drug enrichment results to use
-#'
-#' @return List with enrichment results for each drug combination
-#'
-#' @description Computes enrichment of drug combinations using single drug enrichment results.
-#'
-#' @details This function takes single drug enrichment results and computes enrichment for
-#' combinations by combining the individual drug profiles. It samples combinations from the
-#' top drugs per sample then runs GSEA to test for enrichment.
-#'
-#' The output is a list containing the enrichment results for each sampled drug combination.
-#' This allows searching for synergistic combinations with higher enrichment than individual drugs.
-#'
-#' @export
-pgx.computeComboEnrichment <- function(obj, X, xdrugs,
-                                       ntop = 10, nsample = 20, nprune = 250,
-                                       contrasts = NULL, res.mono = NULL) {
-  if ("gx.meta" %in% names(obj)) {
-    F <- sapply(obj$gx.meta$meta, function(x) x$meta.fx)
-    rownames(F) <- rownames(obj$gx.meta$meta[[1]])
-    ## check if multi-omics
-    is.multiomics <- any(grepl("\\[gx\\]|\\[mrna\\]", rownames(F)))
-    is.multiomics
-    if (is.multiomics) {
-      jj <- grep("\\[gx\\]|\\[mrna\\]", rownames(F))
-      F <- F[jj, , drop = FALSE]
-    }
-    rownames(F) <- toupper(sub(".*:|.*\\]", "", rownames(F)))
-    F <- F[order(-rowMeans(F**2)), , drop = FALSE]
-    F <- F[!duplicated(rownames(F)), , drop = FALSE]
-  }
-
-  if (is.null(contrasts)) contrasts <- colnames(F)
-  contrasts <- intersect(contrasts, colnames(F))
-
-  ## calculate average drug profile
-  if (is.null(res.mono)) {
-    cat("Calculating single drug enrichment using GSEA ...\n")
-    er.mono <- pgx.computeDrugEnrichment(
-      obj, X, xdrugs,
-      methods = "GSEA",
-      nprune = nprune, contrast = NULL
-    )
-    er.mono <- er.mono[["GSEA"]]
-  } else {
-    cat("Using passed single drug enrichment results...\n")
-    if ("GSEA" %in% names(res.mono)) {
-      er.mono <- res.mono[["GSEA"]]
-    }
-  }
-
-  ## determine top-combinations
-
-  top.mono.up <- apply(er.mono$X, 2, function(x) Matrix::head(order(-x), ntop))
-  top.mono.dn <- apply(er.mono$X, 2, function(x) Matrix::head(order(x), ntop))
-  top.combo.up <- apply(top.mono.up, 2, function(idx) list(combn(idx, 2)))
-  top.combo.dn <- apply(top.mono.dn, 2, function(idx) list(combn(idx, 2)))
-  top.combo.up <- unlist(top.combo.up, recursive = FALSE)
-  top.combo.dn <- unlist(top.combo.dn, recursive = FALSE)
-  top.combo.up <- lapply(top.combo.up, function(d) apply(d, 2, function(j) paste(sort(j), collapse = "-")))
-  top.combo.dn <- lapply(top.combo.dn, function(d) apply(d, 2, function(j) paste(sort(j), collapse = "-")))
-  top.combo <- unique(c(unlist(top.combo.up), unlist(top.combo.dn)))
-
-  ## -------------- sample pairs from original mono-matrix
-  sample.pairs <- list()
-  k <- 1
-  for (k in 1:length(top.combo)) {
-    cmbn.idx <- as.integer(strsplit(top.combo[k], split = "-")[[1]])
-    cmbn.idx
-    cmbn <- sort(rownames(er.mono$X)[cmbn.idx])
-    p1 <- sample(which(xdrugs == cmbn[1]), nsample, replace = TRUE)
-    p2 <- sample(which(xdrugs == cmbn[2]), nsample, replace = TRUE)
-    pp <- cbind(p1, p2)
-    sample.pairs[[k]] <- pp
-  }
-  sample.pairs <- do.call(rbind, sample.pairs)
-
-  ## --------------- now create combination matrix X
-  comboX <- apply(sample.pairs, 1, function(ii) rowMeans(X[, ii], na.rm = TRUE))
-
-  combo.drugs <- apply(sample.pairs, 1, function(ii) paste(sort(xdrugs[ii]), collapse = "+"))
-
-  Matrix::tail(sort(table(combo.drugs)))
-  sum(table(combo.drugs) >= 15)
-  sel.combo <- names(which(table(combo.drugs) >= 15))
-  jj <- which(combo.drugs %in% sel.combo)
-  comboX <- comboX[, jj, drop = FALSE]
-  combo.drugs <- combo.drugs[jj]
-  colnames(comboX) <- paste0(combo.drugs, "_combo", 1:ncol(comboX))
-
-  cat("Calculating drug-combo enrichment using GSEA ...\n")
-  res.combo <- pgx.computeDrugEnrichment(
-    obj,
-    X = comboX, xdrugs = combo.drugs, methods = "GSEA", nprune = nprune,
-    contrast = NULL
-  )
-  res.combo <- res.combo[["GSEA"]]
-
-  return(res.combo)
-}

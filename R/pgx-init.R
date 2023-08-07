@@ -132,7 +132,7 @@ pgx.initialize <- function(pgx) {
   ## Tidy up phenotype matrix (important!!!): get numbers/integers
   ## into numeric, categorical into factors....
   ## ----------------------------------------------------------------
-  pgx$samples <- type.convert(pgx$samples, as.is = TRUE) ## autoconvert to datatypes
+  pgx$samples <- utils::type.convert(pgx$samples, as.is = TRUE) ## autoconvert to datatypes
   pgx$samples <- pgx$samples[, which(colMeans(is.na(pgx$samples)) < 1), drop = FALSE]
 
   is.num <- sapply(pgx$samples, class) %in% c("numeric", "integer")
@@ -153,7 +153,7 @@ pgx.initialize <- function(pgx) {
     invert = TRUE, value = TRUE
   )
   pgx$Y <- pgx$samples[colnames(pgx$X), kk, drop = FALSE]
-  pgx$Y <- type.convert(pgx$Y, as.is = TRUE) ## autoconvert to datatypes
+  pgx$Y <- utils::type.convert(pgx$Y, as.is = TRUE) ## autoconvert to datatypes
 
   ## *****************************************************************
   ## ******************NEED RETHINK***********************************

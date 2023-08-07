@@ -13,12 +13,12 @@ rowscale(x)
 A numeric matrix of the same size as `x`, containing the scaled values.
 }
 \description{
-This function scales the rows of a matrix by subtracting the row 
+This function scales the rows of a matrix by subtracting the row
 means and dividing by the row standard deviations.
 }
 \details{
-This function takes a numeric matrix `x` as input and scales its rows by 
-subtracting the row means and dividing by the row standard deviations. 
+This function takes a numeric matrix `x` as input and scales its rows by
+subtracting the row means and dividing by the row standard deviations.
 The resulting scaled matrix is returned.
 }
 \examples{

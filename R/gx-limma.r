@@ -160,118 +160,6 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
   return(top)
 }
 
-#' Perform differential expression analysis using limma
-#'
-#' Performs differential expression analysis on a gene expression matrix using limma.
-#' Handles single sample case by duplicating sample. Auto-detects reference level.
-#'
-#' @param X A gene expression matrix with genes in rows and samples in columns
-#' @param pheno A vector or factor of phenotype labels for the samples
-#' @param fdr False discovery rate threshold for identifying differentially expressed genes
-#' @param compute.means Logical indicating whether to compute group means
-#' @param lfc Log fold change cutoff for differential expression
-#' @param max.na Maximum proportion of missing values allowed in a gene
-#' @param ref Character vector of reference phenotype labels
-#' @param trend Logical indicating whether to fit a trend line
-#' @param verbose Verbosity level for status messages
-#'
-#' @return A list containing the limma results, top table, and plot objects
-#'
-#' @export
-gx.limma.SAVE <- function(X, pheno, fdr = 0.05, compute.means = TRUE, lfc = 0.20,
-                          max.na = 0.20, ref = c(
-                            "ctrl", "ctr", "control", "dmso", "nt", "0", "0h", "0hr",
-                            "non", "no", "not", "neg", "negative", "ref", "veh", "vehicle",
-                            "wt", "wildtype", "untreated", "normal", "false", "healthy"
-                          ),
-                          trend = FALSE, verbose = 1) {
-  if (sum(duplicated(rownames(X))) > 0) {
-    cat("WARNING:: matrix has duplicated rownames\n")
-  }
-  ## detect single sample case
-  is.single <- (max(table(pheno)) == 1)
-  if (is.single) {
-    cat("WARNING:: no replicates, no stats...\n")
-    X <- cbind(X, X)
-    pheno <- c(pheno, pheno)
-  }
-
-  ## filter probes and samples
-  ii <- which(rowMeans(is.na(X)) <= max.na)
-  jj <- which(!is.na(pheno))
-  if (verbose > 0) cat(sum(is.na(pheno) > 0), "with missing phenotype\n")
-  X0 <- X[ii, jj]
-  pheno0 <- as.character(pheno[jj])
-  X0 <- X0[!(rownames(X0) %in% c(NA, "", "NA")), ]
-  if (verbose > 0) {
-    cat("analyzing", ncol(X0), "samples\n")
-    cat("testing", nrow(X0), "features\n")
-  }
-
-  ## auto-detect reference
-  pheno.ref <- c()
-  ref.detected <- FALSE
-  ref <- toupper(ref)
-
-  is.ref <- (toupper(pheno0) %in% toupper(ref))
-  ref.detected <- (sum(is.ref) > 0 && sum(!is.ref) > 0)
-
-  if (ref.detected) {
-    pheno.ref <- unique(pheno0[which(toupper(pheno0) %in% toupper(ref))])
-    if (verbose > 0) cat("setting reference to y=", pheno.ref, "\n")
-    bb <- c(pheno.ref, sort(setdiff(unique(pheno0), pheno.ref)))
-  } else {
-    if (verbose > 0) cat("WARNING: could not auto-detect reference\n")
-    bb <- as.character(sort(unique(pheno0)))
-    if (verbose > 0) cat("setting reference to first class", bb[1], "\n")
-  }
-  if (length(bb) != 2) {
-    stop("gx.limma::fatal error:only two class comparisons")
-    return
-  }
-  design <- cbind(1, pheno0 == bb[2])
-  colnames(design) <- c("WT", "2vs1")
-  d1 <- colnames(design)[1]
-  d2 <- colnames(design)[2]
-  fit <- limma::lmFit(X0, design)
-  fit <- limma::eBayes(fit, trend = trend)
-  top <- limma::topTable(fit, coef = d2, number = nrow(X0))
-  if ("ID" %in% colnames(top)) {
-    rownames(top) <- top$ID
-    top$ID <- NULL
-  }
-  top <- top[rownames(X0), ]
-  Matrix::head(top)
-
-  ## only significant
-  top <- top[which(top$adj.P.Val <= fdr & abs(top$logFC) >= lfc), ]
-  if (verbose > 0) cat("found", nrow(top), "significant at fdr=", fdr, "and minimal FC=", lfc, "\n")
-
-  if (compute.means && nrow(top) > 0) {
-    avg <- t(apply(
-      X0[rownames(top), ], 1,
-      function(x) tapply(x, pheno0, mean, na.rm = TRUE)
-    ))
-    avg <- avg[, as.character(bb), drop = FALSE]
-    colnames(avg) <- paste0("AveExpr.", colnames(avg))
-    top <- cbind(top, avg)
-  }
-  top$B <- NULL
-
-  if (is.single) {
-    top$P.Value <- NA
-    top$adj.P.Val <- NA
-    top$t <- NA
-  }
-
-  ## reorder on fold change
-  top <- top[order(abs(top$logFC), decreasing = TRUE), ]
-
-
-  ## unlist???
-
-  return(top)
-}
 
 #' Differential expression analysis with limma
 #'
@@ -355,12 +243,12 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
     pheno.ref <- unique(pheno0[which(toupper(pheno0) %in% toupper(ref))])
     if (verbose > 0) cat("setting reference to y=", pheno.ref, "\n")
     bb <- c(pheno.ref, sort(setdiff(unique(pheno0), pheno.ref)))
-    pheno1 <- relevel(factor(pheno0), ref = bb[1])
+    pheno1 <- stats::relevel(factor(pheno0), ref = bb[1])
   } else {
     if (verbose > 0) cat("WARNING: could not auto-detect reference\n")
     bb <- as.character(sort(unique(pheno0)))
     if (verbose > 0) cat("setting reference to first class", bb[1], "\n")
-    pheno1 <- relevel(factor(pheno0), ref = bb[1])
+    pheno1 <- stats::relevel(factor(pheno0), ref = bb[1])
   }
   if (0 && length(bb) != 2) {
     stop("gx.limma::fatal error:only two class comparisons")
@@ -368,7 +256,7 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
   }
 
 
-  design <- model.matrix(~pheno1)
+  design <- stats::model.matrix(~pheno1)
   colnames(design)
   colnames(design)[2:ncol(design)] <- paste0(levels(pheno1)[-1], "_vs_", levels(pheno1)[1])
   colnames(design) <- gsub("\\(|\\)", "", colnames(design))
@@ -433,47 +321,6 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
 
 
 
-#' Calculate mean F statistics from limma differential expression analysis
-#'
-#' @title Calculate mean F statistics
-#'
-#' @description Calculates the mean F statistic across all genes from running limma differential expression analysis.
-#' Useful for comparing overall separation between groups.
-#'
-#' @param X A gene expression matrix with genes in rows and samples in columns.
-#' @param pheno A phenotype factor or vector indicating the phenotype of each sample.
-#'
-#' @details Runs limma differential expression between the phenotype groups for each gene.
-#' Extracts the F statistics from the limma results and calculates the mean F statistic across all genes.
-#' Higher mean F indicates better separation between phenotype groups.
-#'
-#' @return The mean F statistic across all genes.
-#'
-#' @export
-gx.meanFstats <- function(X, pheno) {
-  getF <- function(x, y) {
-    ii <- which(!is.na(y))
-    y1 <- y[ii]
-    if (inherits(y1, "factor")) y1 <- factor(as.character(y1))
-    design <- model.matrix(~y1)
-    fit <- limma::lmFit(x[, ii], design)
-    fit <- limma::eBayes(fit, trend = TRUE)
-    top <- limma::topTableF(fit, number = nrow(x))
-    mean(top$F)
-  }
-  fstat <- c()
-  px <- playbase::tidy.dataframe(pheno) ## get variable types correct
-  for (p in c("random", colnames(px))) {
-    if (p == "random") {
-      y <- sample(c("a", "b"), ncol(X), replace = TRUE)
-    } else {
-      y <- px[, p]
-      p
-    }
-    fstat[p] <- getF(X, y)
-  }
-  fstat
-}
 
 
 
@@ -548,7 +395,7 @@ gx.limma.paired <- function(X, pheno, pair, fdr = 0.05, lfc = 0.20,
 
   ## setup LIMMA (paired t-test)
 
-  design <- model.matrix(~ a + b)
+  design <- stats::model.matrix(~ a + b)
 
   ## perform fitting
   fit0 <- limma::lmFit(X, design)
@@ -603,315 +450,9 @@ gx.limma.paired <- function(X, pheno, pair, fdr = 0.05, lfc = 0.20,
 ## two-factorial design
 
 
-#' Differential expression analysis for two factorial designs
-#'
-#' @title Differential expression analysis using limma for two factorial designs
-#'
-#' @description Performs differential expression analysis using limma for data with two factorial designs.
-#' Designed for experiments with two factors, each with two or more levels.
-#'
-#' @param X Numeric matrix of gene expression values (genes in rows, samples in columns).
-#' @param factors Data frame with factor columns defining the experimental design.
-#' @param fdr FDR threshold for identifying differentially expressed genes.
-#' @param lfc Log2 fold change cutoff for differential expression.
-#' @param trend Logical indicating whether to fit a mean-variance trend.
-#' @param ref Character vector of reference levels to use as baseline in contrasts.
-#' @param compute.means Logical indicating whether to append mean expression values.
-#'
-#' @details This function handles the limma model matrix and contrasts for two factorial designs.
-#' The \code{factors} data frame specifies the experimental design.
-#' Multiple contrasts are performed between factor level combinations.
-#' Results are filtered by FDR and fold change thresholds.
-#'
-#' @return Data frame containing limma analysis results for each contrast.
-#'
-#' @export
-gx.limma.two.factorial <- function(X, factors, fdr = 0.05, lfc = 0.20, trend = FALSE,
-                                   ref = c(
-                                     "ctrl", "ctr", "control", "dmso", "nt", "0", "0h", "0hr",
-                                     "non", "no", "not", "neg", "negative", "ref", "veh", "vehicle",
-                                     "wt", "wildtype", "untreated", "normal", "false", "healthy"
-                                   ),
-                                   compute.means = TRUE) {
-  ## LIMMA
-
-  cat("Two-factorial LIMMA\n")
-  cat("analyzing", ncol(X), "samples\n")
-  X <- X[!(rownames(X) %in% c(NA, "", "NA")), ]
-
-  ## create factors
-  fct <- vector("list", ncol(factors))
-  names(fct) <- colnames(factors)
-  j <- 1
-  for (j in 1:ncol(factors)) {
-    vv <- sort(unique(as.character(factors[, j])))
-    vv
-    if (sum(vv %in% ref) > 0) {
-      vv0 <- vv[which(vv %in% ref)]
-      vv <- c(sort(vv0), setdiff(vv, vv0))
-    }
-    fct[[j]] <- factor(factors[, j], levels = vv)
-  }
-
-  ## check
-  a <- fct[[1]]
-  b <- fct[[2]]
-  v1 <- levels(a)
-  v2 <- levels(b)
-  cat("factors 1:", paste(v1), "\n")
-  cat("factors 2:", paste(v2), "\n")
-  if (!(length(fct) == 2 && length(v1) == 2 && length(v2) == 2)) {
-    cat("gx.limma2:: fatal error: only 2-factorial with 2 levels implemented\n")
-    return(NULL)
-  }
-
-  ## setup LIMMA
-  design <- model.matrix(~ a * b)
-
-  colnames(design)[2] <- paste(rev(v1), collapse = "vs")
-  colnames(design)[3] <- paste(rev(v2), collapse = "vs")
-  colnames(design)[4] <- paste(colnames(factors)[1], colnames(factors)[2], sep = "*")
-
-  ## perform fitting
-  fit0 <- limma::lmFit(X, design)
-  cc0 <- paste(v1[1], ".", paste(rev(levels(fct[[2]])), collapse = "vs"), sep = "")
-  cc1 <- paste(v1[2], ".", paste(rev(levels(fct[[2]])), collapse = "vs"), sep = "")
-  cont.matrix <- cbind(c(0, 0, 1, 0), c(0, 0, 1, 1), diff = c(0, 0, 0, 1))
-  colnames(cont.matrix) <- c(cc0, cc1, "Diff")
-  rownames(cont.matrix) <- colnames(fit0$coefficients)
-  fit1 <- limma::contrasts.fit(fit0, cont.matrix)
-  fit2 <- limma::eBayes(fit1, trend = trend)
-
-  ## extract toptable
-  top1 <- limma::topTable(fit2, coef = colnames(cont.matrix)[1], number = nrow(X))
-  top2 <- limma::topTable(fit2, coef = colnames(cont.matrix)[2], number = nrow(X))
-  top3 <- limma::topTable(fit2, coef = colnames(cont.matrix)[3], number = nrow(X))
-  top1 <- top1[rownames(X), ]
-  top2 <- top2[rownames(X), ]
-  top3 <- top3[rownames(X), ]
-
-  ## only significant
-  kk <- rownames(X)
-  sig <- limma::decideTests(fit2, p.value = fdr, lfc = lfc)
-  limma::vennDiagram(sig, cex = 0.8)
-  title(sub = paste("fdr=", fdr, sep = ""))
-  if (fdr < 1) {
-    sig.up <- which(sig[, 1] > 0 & sig[, 2] > 0 & sig[, 3] == 0)
-    sig.down <- which(sig[, 1] < 0 & sig[, 2] < 0 & sig[, 3] == 0)
-    length(sig.up)
-    length(sig.down)
-    kk <- rownames(sig)[c(sig.up, sig.down)]
-    top1 <- top1[kk, ]
-    top2 <- top2[kk, ]
-    top3 <- top3[kk, ]
-    sig <- sig[kk, ]
-  }
-  cat("found", nrow(sig), "significant at fdr=", fdr, "and minimal FC=", lfc, "\n")
-
-  ## compute means if requested
-  X.m <- NULL
-  if (compute.means && nrow(sig) > 0) {
-    ff <- paste(factors[, 1], factors[, 2], sep = ".")
-    X.m <- t(apply(X[rownames(sig), ], 1, function(x) tapply(x, ff, mean)))
-  }
-
-  ## fold-change
-  logfc <- cbind(top1$logFC, top2$logFC, top3$logFC)
-  colnames(logfc) <- colnames(cont.matrix)
-  rownames(logfc) <- rownames(top1)
-  jj <- order(-abs(rowMeans(logfc[, 1:2])))
-  top1 <- top1[jj, ]
-  top2 <- top2[jj, ]
-  top3 <- top3[jj, ]
-  sig <- sig[jj, ]
-  logfc <- logfc[jj, ]
-  if (!is.null(X.m)) X.m <- X.m[jj, ]
-
-  ## pq-values
-  pv <- cbind(top1$P.Value, top2$P.Value, top3$P.Value)
-  qv <- cbind(top1$adj.P.Val, top2$adj.P.Val, top3$adj.P.Val)
-  tt <- cbind(top1$t, top2$t, top3$t)
-  rownames(pv) <- rownames(qv) <- rownames(top1)
-  colnames(pv) <- colnames(qv) <- colnames(sig)
-
-  ## simple summary
-  ss0 <- data.frame(
-    logFC = rowMeans(logfc[, 1:2]),
-    t = rowMeans(tt[, 1:2]),
-    P.Value = rowMeans(pv[, 1:2]),
-    adj.P.Val = rowMeans(qv[, 1:2]),
-    AveExpr = X.m
-  )
-
-  ## results
-  res <- c()
-  res$fdr <- fdr
-  res$means <- X.m
-  res$limma <- list(top1, top2, top3)
-  names(res$limma) <- colnames(cont.matrix)
-  res$sig <- sig
-  res$logFC <- logfc
-  res$p.value <- pv
-  res$q.value <- qv
-  res$summary <- ss0
-
-  return(res)
-}
 
 
-#' Differential expression testing between groups
-#'
-#' @title Differential expression testing between groups
-#'
-#' @description Performs differential expression testing between two groups.
-#' Supports wilcoxon, t-test, limma, and fisher's exact test.
-#'
-#' @param sig Gene expression matrix with genes in rows and samples in columns.
-#' @param class.label Vector of group labels for each sample. Must have two unique values.
-#' @param fdr FDR threshold for identifying differentially expressed genes.
-#' @param test.method Test method to use. Options are "wilcox", "limma", "ttest", or "fisher".
-#' @param running.name Optional name prefix for output files.
-#' @param output.to.file Logical for writing results to file.
-#'
-#' @details This function performs differential expression testing between two groups defined by \code{class.label}.
-#' It handles filtering out NA values and outputs p-values and FDR for each gene.
-#' The test method can be specified, with "limma" as the default.
-#'
-#' @return Data frame with gene p-values and FDR.
-#'
-#' @export
-gx.test.groups <- function(sig, class.label, fdr = 0.20,
-                           test.method = c("wilcox", "limma", "ttest", "fisher"),
-                           running.name = NULL,
-                           output.to.file = TRUE) {
-  bb <- sort(unique(as.character(class.label)))
-  if (length(bb) != 2) {
-    stop("meti.limma:: currently only 2 classes")
-  }
-  if (length(test.method) > 1) test.method <- test.method[1]
 
-  ## cleanup NA
-  kk <- which(!is.na(class.label))
-  sig <- sig[, kk]
-  class.label <- class.label[kk]
-
-  ## do LIMMA
-  pv <- rep(NA, nrow(sig))
-  names(pv) <- rownames(sig)
-  if (test.method == "limma") {
-    cat("performing Limma test\n")
-
-    design <- cbind(1, class.label == bb[2])
-    if (is.null(running.name)) running.name <- paste(bb[2], bb[1], sep = "vs")
-    colnames(design) <- c("WT", running.name)
-    d1 <- colnames(design)[1]
-    d2 <- colnames(design)[2]
-    fit <- limma::lmFit(sig, design)
-    fit <- limma::eBayes(fit)
-    tt <- limma::topTable(fit, coef = d2, number = nrow(sig))
-    pv <- tt$P.Value[match(names(pv), tt$ID)]
-  } else if (test.method == "wilcox") {
-    cat("performing Wilcox rank test\n")
-    for (i in 1:nrow(sig)) {
-      pv[i] <- wilcox.test(sig[i, ] ~ class.label)$p.value
-    }
-  } else if (test.method == "ttest") {
-    cat("performing T-test\n")
-    for (i in 1:nrow(sig)) {
-      pv[i] <- t.test(sig[i, ] ~ class.label)$p.value
-    }
-  } else if (test.method == "fisher") {
-    cat("performing Fisher test\n")
-    cbeta <- matrix(cut(sig, breaks = c(-1, median(sig), 99), label = c(0, 1)),
-      nrow = nrow(sig)
-    )
-    ii <- which(apply(cbeta, 1, function(x) length(setdiff(unique(x), c("NA", NA))) > 1))
-    for (i in ii) {
-      pv[i] <- fisher.test(cbeta[i, ], class.label)$p.value
-    }
-  } else {
-    stop("unknown test method")
-  }
-
-  ## qvalue
-
-  qv <- rep(NA, nrow(sig))
-  kk <- which(!is.na(pv))
-  qv[kk] <- qvalue::qvalue(pv[kk])$qvalue
-
-  ## return object
-  rr <- data.frame(ID = rownames(sig))
-  rr$Sig0 <- rowMeans(sig[, which(class.label == bb[1])], na.rm = TRUE)
-  rr$Sig1 <- rowMeans(sig[, which(class.label == bb[2])], na.rm = TRUE)
-  rr$DiffSig <- (rr$Sig1 - rr$Sig0)
-  rr$P.Value <- pv
-  rr$Q.Value <- qv
-  colnames(rr) <- sub("Sig0", paste("AveSig.", bb[1], sep = ""), colnames(rr))
-  colnames(rr) <- sub("Sig1", paste("AveSig.", bb[2], sep = ""), colnames(rr))
-
-  ## order on absolute difference
-  rr <- rr[which(rr$Q.Value < fdr), ]
-  rr <- rr[order(-abs(rr$DiffSig)), ]
-
-
-  return(rr)
-}
-
-#' Signal to noise ratio test
-#'
-#' @title Signal to noise ratio test
-#'
-#' @description Performs a gene-wise signal to noise ratio test to detect differential expression.
-#' Permutation test is used to compute p-values.
-#'
-#' @param X Numeric gene expression matrix with genes in rows and samples in columns.
-#' @param y Factor of sample groups or classes. Must have exactly two levels.
-#' @param ref.class Reference group name to use as baseline.
-#' @param nperm Number of permutations to compute p-values.
-#'
-#' @details This function calculates the signal to noise ratio for each gene.
-#' It then performs a permutation test by permuting the sample labels to generate a null distribution.
-#' P-values are computed as the fraction of permuted statistics that are more extreme than the observed statistic.
-#'
-#' @return Named vector of p-values for each gene.
-#'
-#' @export
-gx.snrtest <- function(X, y, ref.class, nperm = 200) {
-  ## http://software.broadinstitute.org/gsea/doc/GSEAUserGuideFrame.html
-  this.X <- X
-  this.y <- y
-  calc.snr <- function(this.X, this.y) {
-    j1 <- which(this.y != ref.class)
-    j0 <- which(this.y == ref.class)
-    ma <- rowMeans(this.X[, j1], na.rm = TRUE)
-    mb <- rowMeans(this.X[, j0], na.rm = TRUE)
-    sa <- rowSums((this.X[, j1] - ma)**2 / (length(j1) - 1))**0.5
-    sb <- rowSums((this.X[, j0] - mb)**2 / (length(j0) - 1))**0.5
-    sa <- max(0.2 * abs(ma), sa, 0.2)
-    sb <- max(0.2 * abs(mb), sb, 0.2)
-    (ma - mb) / (sa + sb)
-  }
-  x0 <- calc.snr(X, y)
-  pv <- x0 * 0
-  i <- 1
-  for (i in 1:nperm) {
-    x1 <- calc.snr(X, sample(y))
-    pv <- pv + 1 / nperm * (x1 > x0 * sign(x0))
-  }
-  pv <- pmax(pv, 1.0 / nperm)
-  cat("\n")
-  Matrix::head(sort(pv))
-  pos.class <- setdiff(y, ref.class)[1]
-  logFC <- ma - mb
-  qv <- p.adjust(pv, method = "fdr")
-  res <- data.frame(logFC, snr, pv, qv, ma, mb)
-  colnames(res) <- c(
-    "logFC", "SNR", "P.Value", "adj.P.Val",
-    paste0("AveExpr.", pos.class),
-    paste0("AveExpr.", ref.class)
-  )
-  res
-}
 
 
 #' Differential expression analysis using limma for RNA-seq data
@@ -966,7 +507,7 @@ seq_limma <- function(countdata, y, method = "edgeR") {
   dgeObj <- edgeR::calcNormFactors(dgeObj, method = "TMM")
 
   ## Define design matrix
-  design <- model.matrix(~group)
+  design <- stats::model.matrix(~group)
 
   ## Estimating the dispersion
 

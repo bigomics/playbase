@@ -33,7 +33,7 @@ A scatterplot matrix is generated comparing datasets. No value is returned.
 Creates a scatterplot matrix visualization comparing multiple datasets.
 }
 \details{
-This function generates a scatterplot matrix comparing all columns of 
+This function generates a scatterplot matrix comparing all columns of
 the input matrix \code{F} against each other. If a second matrix \code{F2} is
 provided, columns of \code{F} are compared against matching columns in \code{F2}.
 

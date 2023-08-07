@@ -16,11 +16,11 @@ DataFrame with cell cycle phase scores and assignments for each cell.
 Scores cell cycle phase for single cells based on expression of known marker genes.
 }
 \details{
-This function takes a gene expression matrix and calculates cell cycle phase 
-scores and assignments for each cell using curated gene lists. It calculates S and G2M 
-scores based on phase-specific marker genes from Tirosh et al. 2015. The difference between 
+This function takes a gene expression matrix and calculates cell cycle phase
+scores and assignments for each cell using curated gene lists. It calculates S and G2M
+scores based on phase-specific marker genes from Tirosh et al. 2015. The difference between
 S and G2M scores is used to assign cell cycle phases (G1, S or G2M).
- 
-The output data frame contains the scores and assigned phases for each cell. This provides 
+
+The output data frame contains the scores and assigned phases for each cell. This provides
 an overview of cell cycle state in the data based on expression of canonical markers.
 }

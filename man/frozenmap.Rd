@@ -34,7 +34,7 @@ matrix is plotted with gx.heatmap().
 \examples{
 \dontrun{
 mat <- matrix(rnorm(10000), 1000, 10)
-frozenmap(mat, m=100, n=5)
+frozenmap(mat, m = 100, n = 5)
 }
 
 }

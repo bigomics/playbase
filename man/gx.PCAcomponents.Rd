@@ -24,7 +24,7 @@ centers and scales their expression profiles, and visualizes them as a heatmap u
 }
 \examples{
 \dontrun{
-x <- matrix(rnorm(500*50), 500, 50)
+x <- matrix(rnorm(500 * 50), 500, 50)
 gx.PCAcomponents(x, nv = 5, ngenes = 10)
 }
 

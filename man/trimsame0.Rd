@@ -31,18 +31,18 @@ A character vector of the same length as `s`, containing the trimmed strings.
 This function trims the common prefix from a character vector of strings.
 }
 \details{
-The function takes a character vector of strings `s` as input and searches for a common prefix among the strings. 
-The common prefix is defined as the longest sequence of characters that is shared by all strings and ends with the specified delimiter. 
-If a common prefix is found, it is trimmed from all strings. 
-If the `summarize` parameter is `TRUE`, the common prefix is summarized using the first letter of each word and appended to the beginning of each string. 
+The function takes a character vector of strings `s` as input and searches for a common prefix among the strings.
+The common prefix is defined as the longest sequence of characters that is shared by all strings and ends with the specified delimiter.
+If a common prefix is found, it is trimmed from all strings.
+If the `summarize` parameter is `TRUE`, the common prefix is summarized using the first letter of each word and appended to the beginning of each string.
 If the `rev` parameter is `TRUE`, the order of the words in the summarized prefix is reversed.
 }
 \section{Functions}{
 \itemize{
-\item \code{trimsame()}: trimsame is a function that trims common prefixes and/or 
+\item \code{trimsame()}: trimsame is a function that trims common prefixes and/or
 suffixes from a character vector by applying trimsame0 forwards and/or backwards.
 
-\item \code{trimsame.ends()}: trimsame.ends is a function that trims common prefixes and 
+\item \code{trimsame.ends()}: trimsame.ends is a function that trims common prefixes and
 suffixes from a character vector by applying trimsame0 forwards and backwards.
 
 }}

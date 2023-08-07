@@ -18,7 +18,7 @@ Annotates edges in a Pubmed citation network graph with the genes shared between
 \details{
 This function takes a network graph generated from Pubmed citation data, with articles as nodes.
 It extracts the genes associated with each article node using the V(gr)$genes attribute.
-For each edge, it finds the intersecting genes between the connected nodes. 
+For each edge, it finds the intersecting genes between the connected nodes.
 The number of shared genes is assigned as the edge weight.
 The shared gene symbols are assigned to a new edge attribute E(gr)$genes.
 }

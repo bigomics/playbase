@@ -16,8 +16,8 @@ A character string representing the acronym created from the input string.
 This function creates an acronym from a character string.
 }
 \details{
-The function takes a character string `x` as input and splits it into words using `_`, `-`, and space as delimiters. 
-If the resulting list of words contains only one word, the first two characters of the word are returned. 
+The function takes a character string `x` as input and splits it into words using `_`, `-`, and space as delimiters.
+If the resulting list of words contains only one word, the first two characters of the word are returned.
 Otherwise, the first character of each word is extracted, capitalized, and concatenated to form the acronym.
 }
 \examples{

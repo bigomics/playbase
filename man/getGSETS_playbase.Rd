@@ -15,7 +15,7 @@ getGSETS_playbase(gsets = NULL, pattern = NULL)
 A named list containing the gene sets matching the criteria.
 }
 \description{
-Retrieves gene sets from the playbase data package matching a pattern. 
+Retrieves gene sets from the playbase data package matching a pattern.
 Allows optionally including additional custom gene sets.
 }
 \details{

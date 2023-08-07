@@ -9,7 +9,7 @@ psort(x, p.col = NULL)
 \arguments{
 \item{x}{A data frame representing the input data.}
 
-\item{p.col}{An optional character string specifying the name of the column 
+\item{p.col}{An optional character string specifying the name of the column
 containing p-values.}
 }
 \value{
@@ -19,9 +19,9 @@ A data frame representing the input data sorted by the p-value column.
 This function sorts a data frame by a column containing p-values.
 }
 \details{
-The function takes a data frame `x` as input and searches 
-for a column containing p-values. If the `p.col` parameter is not provided, 
-the function searches for a column with a name containing "p.value", "p", 
+The function takes a data frame `x` as input and searches
+for a column containing p-values. If the `p.col` parameter is not provided,
+the function searches for a column with a name containing "p.value", "p",
 "p-val", or "pval" (case-insensitive). If multiple columns match, the first one is used.
 
 The data frame is then sorted in ascending order by the p-value column and returned.

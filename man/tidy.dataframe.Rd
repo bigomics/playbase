@@ -13,12 +13,12 @@ tidy.dataframe(Y)
 A data frame representing the tidied input data.
 }
 \description{
-This function tidies a data frame by removing columns with all 
-missing values, converting character columns to numeric or factor columns, 
+This function tidies a data frame by removing columns with all
+missing values, converting character columns to numeric or factor columns,
 and trimming white spaces.
 }
 \details{
-The function takes a data frame `Y` as input and performs the 
+The function takes a data frame `Y` as input and performs the
 following steps:
 1. Remove columns with all missing values.
 2. Replace character columns with only "NA" values with actual missing values (NA).
@@ -26,7 +26,7 @@ following steps:
 4. Trim white spaces from the beginning and end of character columns.
 5. Convert character columns to numeric columns if possible.
 6. Convert character columns to factor columns if they have less than or equal to
- 3 unique values or if their names contain certain keywords (e.g., "batch", 
+ 3 unique values or if their names contain certain keywords (e.g., "batch",
 "replicate", "type", "cluster", "group").
 
 The resulting tidied data frame is returned.

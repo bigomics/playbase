@@ -15,15 +15,15 @@ pgx.getGeneCorrelation(gene, xref)
 Matrix of correlation values between the target gene and other genes.
 }
 \description{
-Computes correlation between a given gene and all other genes using 
+Computes correlation between a given gene and all other genes using
 external gene expression data.
 }
 \details{
-This function takes a gene name and a list of gene expression matrices. 
-It calculates the correlation between the target gene and all other genes in 
+This function takes a gene name and a list of gene expression matrices.
+It calculates the correlation between the target gene and all other genes in
 each expression data matrix.
 
-The function returns a matrix with genes in rows and datasets in columns. 
-Each column contains the correlation values between the target gene and 
+The function returns a matrix with genes in rows and datasets in columns.
+Each column contains the correlation values between the target gene and
 other genes in that dataset.
 }

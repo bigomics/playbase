@@ -10,21 +10,21 @@ corclust(x)
 \item{x}{A numeric matrix or data frame containing the data to be clustered.}
 }
 \value{
-An object of class `hclust` representing the hierarchical clustering 
+An object of class `hclust` representing the hierarchical clustering
 of the input data.
 }
 \description{
-This function performs hierarchical clustering on a 
+This function performs hierarchical clustering on a
 dataset using a correlation-based distance metric.
 }
 \details{
 Correlation-based Clustering
 
-The function first calculates the pairwise correlation between 
-the columns of the input data using the `cor` function from the `stats` 
-package. The correlation matrix is then transformed into a distance matrix by 
-subtracting it from 1. The resulting distance matrix is used as input to the 
-`hclust` function from the `fastcluster` package, which performs hierarchical 
+The function first calculates the pairwise correlation between
+the columns of the input data using the `cor` function from the `stats`
+package. The correlation matrix is then transformed into a distance matrix by
+subtracting it from 1. The resulting distance matrix is used as input to the
+`hclust` function from the `fastcluster` package, which performs hierarchical
 clustering using Ward's method.
 }
 \examples{

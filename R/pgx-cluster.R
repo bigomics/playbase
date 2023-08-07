@@ -54,7 +54,7 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
     X <- X - rowMeans(X)
   }
   if (scale.rows) {
-    X <- X / (1e-6 + apply(X, 1, sd))
+    X <- X / (1e-6 + apply(X, 1, stats::sd))
   }
   if (rank.tf) {
     X <- scale(apply(X, 2, rank))
@@ -295,7 +295,7 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
   }
 
   ## reduce dimensions
-  X <- Matrix::head(X[order(apply(X, 1, sd)), ], top.sd)
+  X <- Matrix::head(X[order(apply(X, 1, stats::sd)), ], top.sd)
   X <- t(scale(t(X))) ## scale features??
   if (nrow(X) > npca) {
     npca <- min(npca, dim(X) - 1)
@@ -310,7 +310,7 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
   ## perform K-means
   if ("kmeans" %in% method) {
     message("perform K-means...")
-    km <- lapply(km.sizes, function(k) kmeans(t(X), k, iter.max = 10))
+    km <- lapply(km.sizes, function(k) stats::kmeans(t(X), k, iter.max = 10))
     km.idx <- do.call(cbind, lapply(km, function(r) r$cluster))
     colnames(km.idx) <- paste0("kmeans.", km.sizes)
     index[["kmeans"]] <- km.idx
@@ -319,8 +319,8 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
   ## perform hclust (on positions)
   if ("hclust" %in% method) {
     message("perform hclust...")
-    hc <- fastcluster::hclust(dist(t(X)), method = "ward.D")
-    hc.idx <- lapply(km.sizes, function(k) cutree(hc, k))
+    hc <- fastcluster::hclust(stats::dist(t(X)), method = "ward.D")
+    hc.idx <- lapply(km.sizes, function(k) stats::cutree(hc, k))
     hc.idx <- do.call(cbind, hc.idx)
     colnames(hc.idx) <- paste0("hclust.", km.sizes)
     index[["hclust"]] <- hc.idx
@@ -344,8 +344,8 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
     k.rows <- split(K, row(K))
     d1 <- outer(k.rows, k.rows, Vectorize(function(x, y) sum(x != y)))
     rownames(d1) <- colnames(d1) <- rownames(K)
-    hc <- fastcluster::hclust(as.dist(d1))
-    meta.idx <- do.call(cbind, lapply(km.sizes, function(k) cutree(hc, k)))
+    hc <- fastcluster::hclust(stats::as.dist(d1))
+    meta.idx <- do.call(cbind, lapply(km.sizes, function(k) stats::cutree(hc, k)))
     colnames(meta.idx) <- paste0("meta.", km.sizes)
     rownames(meta.idx) <- rownames(K)
     index[["meta"]] <- meta.idx
@@ -408,13 +408,13 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   dimx <- dim(X) ## original dimensions
   namesx <- colnames(X)
   if (reduce.sd > 0 && nrow(X) > reduce.sd) {
-    sdx <- apply(X, 1, sd, na.rm = TRUE)
+    sdx <- apply(X, 1, stats::sd, na.rm = TRUE)
     is.constant <- all(abs(sdx - mean(sdx, na.rm = TRUE)) < 1e-8)
     if (is.constant) {
       message("WARNING:: SD is constant. Skipping SD reduction...\n")
     } else {
       message("Reducing to ", reduce.sd, " max SD features...\n")
-      X <- X[head(order(-sdx), reduce.sd), ]
+      X <- X[utils::head(order(-sdx), reduce.sd), ]
     }
   }
 
@@ -423,7 +423,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
     X <- X - rowMeans(X, na.rm = TRUE) ## do??
   }
   if (scale.features) {
-    X <- X / apply(X, 1, sd, na.rm = TRUE)
+    X <- X / apply(X, 1, stats::sd, na.rm = TRUE)
   }
 
   ## impute on row median
@@ -436,7 +436,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   if (nrow(X) <= 3) X <- rbind(X, X, X, X)
 
   ## add small variation...
-  X <- X + 1e-3 * matrix(rnorm(length(X)), nrow(X), ncol(X))
+  X <- X + 1e-3 * matrix(stats::rnorm(length(X)), nrow(X), ncol(X))
 
   ## Further pre-reduce dimensions using SVD
   res.svd <- NULL
@@ -613,9 +613,9 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
                               method = c("tsne", "umap", "pca")) {
   method <- method[1]
   clust.detect <- clust.detect[1]
-  X <- Matrix::head(X[order(-apply(X, 1, sd)), ], ntop)
+  X <- Matrix::head(X[order(-apply(X, 1, stats::sd)), ], ntop)
   if (row.center) X <- X - rowMeans(X, na.rm = TRUE)
-  if (row.scale) X <- (X / apply(X, 1, sd, na.rm = TRUE))
+  if (row.scale) X <- (X / apply(X, 1, stats::sd, na.rm = TRUE))
 
   ## some randomization is sometimes necessary if the data is 'too
   ## clean' and clusters become lines..
@@ -713,62 +713,6 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
 }
 
 
-#' Find Louvain clusters using shared nearest neighbor graph
-#'
-#' @title Find Louvain clusters using shared nearest neighbor graph
-#'
-#' @param expr Expression matrix with genes in rows and samples in columns
-#' @param k Number of nearest neighbors for graph construction
-#' @param resolution Resolution parameter for Louvain clustering
-#'
-#' @return A vector of Louvain cluster assignments
-#'
-#' @description
-#' Clusters samples using a shared nearest neighbor graph and Louvain clustering.
-#'
-#' @details
-#' This function constructs a shared nearest neighbor graph from the expression matrix,
-#' where samples are connected if they appear in each other's k-nearest neighbor lists.
-#'
-#' Louvain clustering is then applied to detect communities in the graph. The resolution
-#' parameter controls the number and size of clusters.
-#'
-#' The output is a vector of cluster assignments for each sample.
-#'
-#' @export
-pgx.findLouvainClusters.SNN <- function(X, prefix = "c", level = 1, gamma = 1, small.zero = 0.01) {
-  ## find clusters using graph clustering method
-  message("perform Louvain clustering...")
-
-
-  if (level == 1) {
-    suppressMessages(suppressWarnings(
-      gr <- scran::buildSNNGraph(t(X), d = 50)
-    ))
-  } else {
-    ## finer clusters
-    suppressMessages(suppressWarnings(
-      gr <- scran::buildSNNGraph(t(X), d = 50, k = 2)
-    ))
-  }
-
-  idx <- igraph::cluster_louvain(gr)$membership
-  idx <- paste0(prefix, idx)
-
-  if (!is.null(idx) && small.zero > 0) {
-    ## ------------ zap small clusters to "0"
-    min.size <- pmax(3, small.zero * length(idx))
-    small.clusters <- names(which(table(idx) < min.size))
-    idx[which(idx %in% small.clusters)] <- "0"
-  }
-
-  ## rename levels with largest cluster first
-  idx <- factor(idx, levels = names(sort(-table(idx))))
-  levels(idx) <- paste0(prefix, 1:length(levels(idx)))
-  idx <- as.character(idx)
-  message("Found ", length(unique(idx)), " clusters...")
-  return(idx)
-}
 
 
 #' Find Louvain clusters
@@ -799,7 +743,7 @@ pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix 
 
 
   if (graph.method == "dist") {
-    dist <- as.dist(dist(scale(X)))
+    dist <- stats::as.dist(stats::dist(scale(X)))
     gr <- igraph::graph_from_adjacency_matrix(1.0 / dist**gamma, diag = FALSE, mode = "undirected")
   } else if (graph.method == "snn") {
     suppressMessages(suppressWarnings(gr <- scran::buildSNNGraph(t(X), d = 50)))

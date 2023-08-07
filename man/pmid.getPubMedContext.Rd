@@ -19,11 +19,11 @@ the gene name and context words.
 Retrieves PubMed abstract text containing a gene name and context words.
 }
 \details{
-This function searches PubMed for articles containing the specified gene name 
-and context words. It uses the EUtils API to search titles and abstracts in 
+This function searches PubMed for articles containing the specified gene name
+and context words. It uses the EUtils API to search titles and abstracts in
 PubMed for the gene name and context terms.
 
-It returns a list containing the PubMed IDs, article titles, and abstract 
+It returns a list containing the PubMed IDs, article titles, and abstract
 excerpts (RIF strings) containing both the gene and context.
 }
 \examples{

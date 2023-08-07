@@ -24,13 +24,13 @@ A plotly stacked barplot object.
 Stacked barplot
 }
 \details{
-This function takes a numeric data matrix and generates an interactive 
-stacked barplot using plotly. Rows of the input matrix are stacked, and columns 
+This function takes a numeric data matrix and generates an interactive
+stacked barplot using plotly. Rows of the input matrix are stacked, and columns
 represent groups. Set horiz=TRUE to generate horizontal stacked bars.
 }
 \examples{
 \dontrun{
-x <- matrix(rnorm(100), ncol=5)
+x <- matrix(rnorm(100), ncol = 5)
 pgx.stackedBarplot(x)
 }
 }

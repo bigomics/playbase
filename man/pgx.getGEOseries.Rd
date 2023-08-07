@@ -7,7 +7,6 @@
 \alias{pgx.getGEOcounts.archs4}
 \alias{pgx.getGEOcounts.recount}
 \alias{pgx.getGEOcounts.GEOquery}
-\alias{pgx.getGEOcounts.fromSuppl}
 \alias{pgx.getGeoExperimentInfo}
 \alias{pgx.getGeoMetadata.fromEset}
 \alias{pgx.getGeoMetadata.fromEset1}
@@ -25,8 +24,6 @@ pgx.getGEOcounts.archs4(id, h5.file)
 pgx.getGEOcounts.recount(id)
 
 pgx.getGEOcounts.GEOquery(id)
-
-pgx.getGEOcounts.fromSuppl(id)
 
 pgx.getGeoExperimentInfo(id)
 
@@ -54,47 +51,42 @@ Download and process GEO dataset
 \details{
 This function downloads and processes a GEO dataset specified by the ID.
 It first checks if the data is in the ARCHS4 file. If not, it retrieves it from GEO using geoquery.
-The data matrices are subset to intersecting samples, converted to HUGO symbols if specified, 
+The data matrices are subset to intersecting samples, converted to HUGO symbols if specified,
 and duplicate symbols are summed.
 
 The result is a list containing the expression matrix, sample metadata, and gene symbols.
 }
 \section{Functions}{
 \itemize{
-\item \code{pgx.getGEOcounts()}: Download and process count data from GEO into a PGX object. 
-It takes a GEO accession as input, downloads the count matrix and sample metadata, processes 
+\item \code{pgx.getGEOcounts()}: Download and process count data from GEO into a PGX object.
+It takes a GEO accession as input, downloads the count matrix and sample metadata, processes
 it into a PGX object with gene annotation, sample info, and contrasts.
 
 \item \code{pgx.getGeoMetadata()}: Download and extract the metadata from a GEO series.
 
-\item \code{pgx.getGEOcounts.archs4()}: Downloads and extracts gene expression count 
-data from a GEO series stored in an HDF5 file. It searches the HDF5 file 
-metadata to find samples matching the input GEO series ID, and returns the 
+\item \code{pgx.getGEOcounts.archs4()}: Downloads and extracts gene expression count
+data from a GEO series stored in an HDF5 file. It searches the HDF5 file
+metadata to find samples matching the input GEO series ID, and returns the
 count matrix for those samples.
 
-\item \code{pgx.getGEOcounts.recount()}: Downloads and processes gene-level count data for a GEO 
-series from the recount database. It takes a GEO accession ID, searches 
+\item \code{pgx.getGEOcounts.recount()}: Downloads and processes gene-level count data for a GEO
+series from the recount database. It takes a GEO accession ID, searches
 recount, downloads the RangedSummarizedExperiment object, and returns the count matrix.
 
-\item \code{pgx.getGEOcounts.GEOquery()}: Retrieves gene expression count data for a 
-specified GEO accession ID using the GEOquery package. It downloads the 
-series matrix data, platform metadata, and probe annotations from GEO into 
+\item \code{pgx.getGEOcounts.GEOquery()}: Retrieves gene expression count data for a
+specified GEO accession ID using the GEOquery package. It downloads the
+series matrix data, platform metadata, and probe annotations from GEO into
 R objects.
-
-\item \code{pgx.getGEOcounts.fromSuppl()}: Retrieve and process gene expression count 
-data from the supplementary files of a GEO dataset. It takes a GEO 
-accession ID, downloads the series matrix and annotation data from the 
-supplementary files, processes it into a count matrix, and returns the result.
 
 \item \code{pgx.getGeoExperimentInfo()}: Retrieves basic experiment metadata for a GEO accession ID using GEOquery.
 
-\item \code{pgx.getGeoMetadata.fromEset()}: retrieves sample metadata from a GEO dataset by first downloading the 
+\item \code{pgx.getGeoMetadata.fromEset()}: retrieves sample metadata from a GEO dataset by first downloading the
 GSEMatrix and then extracting the phenotype data.
 
-\item \code{pgx.getGeoMetadata.fromEset1()}: helper function that extracts the phenotype data 
+\item \code{pgx.getGeoMetadata.fromEset1()}: helper function that extracts the phenotype data
 from a GEOquery GSEMatrix object.
 
-\item \code{pgx.getGeoMetadata.fromGSM()}: retrieves sample metadata for a GEO sample accession 
+\item \code{pgx.getGeoMetadata.fromGSM()}: retrieves sample metadata for a GEO sample accession
 ID by downloading the full GEO series and extracting the metadata for that sample.
 
 }}

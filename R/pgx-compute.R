@@ -59,7 +59,7 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
     contrasts <- data.frame(contrasts, check.names = FALSE, row.names = 1)
   } else {
     ## take first (not-dotted) column as phenotype vector
-    pheno <- head(grep("^[.]", colnames(samples), value = TRUE, invert = TRUE), 1)
+    pheno <- utils::head(grep("^[.]", colnames(samples), value = TRUE, invert = TRUE), 1)
     pheno <- intersect(pheno, colnames(samples))
     Y <- samples[, pheno, drop = FALSE]
     ## automatically guess contrasts
@@ -159,7 +159,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## contrast matrix
 
   is.numbered <- all(unique(as.vector(contrasts)) %in% c(-1, 0, 1))
-  is.numbered <- all(sapply(type.convert(data.frame(contrasts), as.is = TRUE), class) %in% c("numeric", "integer"))
+  is.numbered <- all(sapply(utils::type.convert(data.frame(contrasts), as.is = TRUE), class) %in% c("numeric", "integer"))
   ct.type <- c("labeled (new style)", "numbered (old style)")[1 + 1 * is.numbered]
   is.numbered
   if (is.numbered) {
@@ -200,7 +200,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   kk <- intersect(colnames(counts), rownames(samples))
   counts <- counts[, kk, drop = FALSE]
   samples <- samples[kk, , drop = FALSE]
-  samples <- type.convert(samples, as.is = TRUE) ## automatic type conversion
+  samples <- utils::type.convert(samples, as.is = TRUE) ## automatic type conversion
   if (!is.null(X)) X <- X[, kk, drop = FALSE]
   if (all(kk %in% rownames(contrasts))) {
     contrasts <- contrasts[kk, , drop = FALSE]

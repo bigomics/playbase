@@ -18,10 +18,10 @@ Generates an HTML hyperlink for a given PubMed ID (PMID).
 \details{
 Link to PubMed article
 
-This function takes a PubMed ID as input and returns 
+This function takes a PubMed ID as input and returns
 an HTML hyperlink that will open the article page on PubMed website.
 
-The PMID is embedded in the link URL along with link text containing 
+The PMID is embedded in the link URL along with link text containing
 the PMID. This allows easy creation of hyperlinks to PubMed articles.
 }
 \examples{

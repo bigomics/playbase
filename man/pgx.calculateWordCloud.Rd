@@ -20,11 +20,11 @@ A matrix with word frequencies for word cloud visualization.
 Calculates word frequencies from gene set names for generating a word cloud.
 }
 \details{
-This function takes a NGStest object containing gene set analysis results. 
+This function takes a NGStest object containing gene set analysis results.
 It extracts the gene set names, filters out common words, and calculates word frequencies.
 
 Gene set names are split into words and filtered to remove common stopwords. The top 1000 most frequent
 words are kept. Word frequencies are calculated based on occurrence in the gene set names.
- 
+
 The output is a matrix of word frequencies suitable for generating a word cloud visualization.
 }

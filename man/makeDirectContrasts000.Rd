@@ -24,7 +24,7 @@ Creates a contrast matrix directly from a factor by contrasting each level again
 \details{
 This function takes a factor Y and generates a contrast matrix with columns encoding comparisons of each factor level versus the reference level specified by ref.
 
-It first expands Y into dummy variables using model.matrix. 
+It first expands Y into dummy variables using model.matrix.
 Then it subtracts the reference level column to create +1/-1 contrasts.
 Columns with all 0s are dropped.
 

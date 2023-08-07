@@ -10,15 +10,15 @@ param.class(A)
 \item{A}{A data frame representing the input data.}
 }
 \value{
-A character vector representing the classes of the parameters in 
+A character vector representing the classes of the parameters in
 the input data frame.
 }
 \description{
 This function returns the classes of the parameters in a data frame.
 }
 \details{
-The function takes a data frame `A` as input and applies the `class` 
-function to each column of the data frame using the `sapply` function. 
+The function takes a data frame `A` as input and applies the `class`
+function to each column of the data frame using the `sapply` function.
 The resulting vector of classes is returned.
 }
 \examples{

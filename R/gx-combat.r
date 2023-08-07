@@ -70,13 +70,13 @@ gx.nnmcorrect <- function(X, y, use.design = TRUE, dist.method = "cor",
 
   if (dist.method == "cor") {
     message("[gx.nnmcorrect] computing correlation matrix D...")
-    sdx <- apply(dX, 1, sd)
+    sdx <- apply(dX, 1, stats::sd)
     ii <- Matrix::head(order(-sdx), sdtop)
 
     D <- 1 - crossprod(scale(dX[ii, ])) / (length(ii) - 1) ## faster
   } else {
     message("[gx.nnmcorrect] computing distance matrix D...\n")
-    D <- as.matrix(dist(t(dX)))
+    D <- as.matrix(stats::dist(t(dX)))
   }
   remove(dX)
   D[is.na(D)] <- 0 ## might have NA
@@ -97,7 +97,7 @@ gx.nnmcorrect <- function(X, y, use.design = TRUE, dist.method = "cor",
   ## remove pairing effect
   message("[gx.nnmcorrect] remove pairing effect...")
   if (use.design) {
-    design <- model.matrix(~full.y)
+    design <- stats::model.matrix(~full.y)
     full.X <- limma::removeBatchEffect(full.X,
       batch = full.pairs,
       design = design
@@ -180,9 +180,6 @@ gx.nnmcorrect.SAVE <- function(x, y, k = 3) {
 #' Otherwise, it directly applies quantile normalization on X.
 #'
 #' The normalize.qspline function from the affy package is used internally to perform quantile normalization.
-#'
-#' @seealso
-#' \code{\link[affy]{normalize.qspline}} for the quantile normalization method used.
 #'
 #' @examples
 #' \dontrun{

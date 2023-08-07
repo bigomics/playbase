@@ -34,7 +34,7 @@ labels2rainbow <- function(net) {
   ii <- hc$order
   col1 <- labels2colors(net$colors)
   col.rnk <- rank(tapply(1:n, col1[ii], mean))
-  new.col <- rainbow(nc)[col.rnk]
+  new.col <- grDevices::rainbow(nc)[col.rnk]
   names(new.col) <- names(col.rnk)
   new.col["grey"] <- "#AAAAAA"
   new.col <- new.col[col1]
@@ -76,10 +76,10 @@ pgx.wgcna <- function(
     deepsplit = 2,
     ngenes = 1000) {
   X <- as.matrix(pgx$X)
-  X <- X[order(-apply(X, 1, sd, na.rm = TRUE)), ]
+  X <- X[order(-apply(X, 1, stats::sd, na.rm = TRUE)), ]
   X <- X[!duplicated(rownames(X)), ]
 
-  datExpr <- t(head(X, ngenes))
+  datExpr <- t(utils::head(X, ngenes))
   require(WGCNA) # fun fact: if we dont source WGCNA, blockwiseModules does not work
 
   ## adapt for small datasets
@@ -115,7 +115,7 @@ pgx.wgcna <- function(
   datTraits <- datTraits[, !isdate, drop = FALSE]
 
   ## Expand multi-class discrete phenotypes into binary vectors
-  tr.class <- sapply(type.convert(datTraits), class)
+  tr.class <- sapply(utils::type.convert(datTraits), class)
   sel1 <- which(tr.class %in% c("factor", "character"))
   sel2 <- which(tr.class %in% c("integer", "numeric"))
 

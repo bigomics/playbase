@@ -55,7 +55,7 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
   gene <- gene[jj]
 
   if (n > 0) {
-    jj <- unique(c(1:100, head(sample(1:length(x), replace = TRUE), n - 100)))
+    jj <- unique(c(1:100, utils::head(sample(1:length(x), replace = TRUE), n - 100)))
     if (!is.null(highlight)) {
       hgene <- intersect(highlight, gene)
       jj <- unique(c(match(hgene, gene), jj))
@@ -172,28 +172,28 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
     )
     psig <- -log10(p.sig)
     if (ma_plot) {
-      abline(h = c(-1, 1) * lfc, v = 0, lty = 3, col = "grey50", lwd = 0.5)
-      legend("topright",
+      graphics::abline(h = c(-1, 1) * lfc, v = 0, lty = 3, col = "grey50", lwd = 0.5)
+      graphics::legend("topright",
         legend = paste(nsig["up"], "UP"), bty = "n",
         cex = 1, text.col = "grey50"
       )
-      legend("bottomright",
+      graphics::legend("bottomright",
         legend = paste(nsig["down"], "DOWN"), bty = "n",
         cex = 1, text.col = "grey50"
       )
     } else {
-      abline(v = c(-1, 1) * lfc, h = c(-1, 1) * psig, lty = 3, col = "grey50", lwd = 0.5)
-      legend("bottomright",
+      graphics::abline(v = c(-1, 1) * lfc, h = c(-1, 1) * psig, lty = 3, col = "grey50", lwd = 0.5)
+      graphics::legend("bottomright",
         legend = paste(nsig["up"], "UP"), bty = "n",
         cex = 1, text.col = "grey50"
       )
-      legend("bottomleft",
+      graphics::legend("bottomleft",
         legend = paste(nsig["down"], "DOWN"), bty = "n",
         cex = 1, text.col = "grey50"
       )
     }
     if (length(jj) > 0 && lab.cex > 0) {
-      text(
+      graphics::text(
         x = x[jj], y = y[jj], labels = gene.txt[jj],
         pos = 3, cex = 0.65 * lab.cex, offset = 0.3, col = hi.col
       )
@@ -253,7 +253,7 @@ gx.volcanoPlot.LIMMA <- function(tab, render = "scatterD3", n = 1000, highlight 
   tab <- tab[order(tab$P.Value), ]
   gene <- as.character(tab[, grep("^gene$|^gene_name$", colnames(tab))])
   if (n > 0) {
-    jj <- unique(c(1:100, head(sample(1:nrow(tab), replace = TRUE), n - 100)))
+    jj <- unique(c(1:100, utils::head(sample(1:nrow(tab), replace = TRUE), n - 100)))
     if (!is.null(highlight)) {
       hgene <- intersect(highlight, gene)
       jj <- unique(c(match(hgene, gene), jj))
@@ -376,13 +376,13 @@ gx.volcanoPlot.LIMMA <- function(tab, render = "scatterD3", n = 1000, highlight 
     )
     psig <- -log10(p.sig)
     if (!ma.plot) {
-      abline(v = c(-1, 1), h = c(-1, 1) * psig, lty = 3, col = "grey50", lwd = 0.5)
+      graphics::abline(v = c(-1, 1), h = c(-1, 1) * psig, lty = 3, col = "grey50", lwd = 0.5)
     }
     if (ma.plot) {
-      abline(h = c(-1, 1), v = 0, lty = 3, col = "grey50", lwd = 0.5)
+      graphics::abline(h = c(-1, 1), v = 0, lty = 3, col = "grey50", lwd = 0.5)
     }
     if (length(jj) > 0) {
-      text(
+      graphics::text(
         x = x[jj], y = y[jj], labels = gene[jj],
         pos = 3, cex = 0.65 * lab.cex, offset = 0.3, col = "#1e60bb"
       )
