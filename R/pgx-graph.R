@@ -8,7 +8,7 @@
 #'
 #' @title Compute path scores
 #'
-#' @param graph An igraph object representing the pathway graph 
+#' @param graph An igraph object representing the pathway graph
 #' @param strict.pos Logical indicating whether to enforce strictly positive fold changes. Default is TRUE.
 #'
 #' @return A matrix of path scores for each node and sample
@@ -17,10 +17,10 @@
 #'
 #' @details This function takes an igraph pathway graph object and calculates path scores for each node.
 #'
-#' It first adds source and sink nodes if they do not exist. 
+#' It first adds source and sink nodes if they do not exist.
 #' It then calculates edge weights based on the fold changes, enforcing strictly positive values if strict.pos=TRUE.
 #'
-#' Path scores are computed as the path integral from source to sink going through each node. 
+#' Path scores are computed as the path integral from source to sink going through each node.
 #' The path score indicates how well connected a node is to the observed fold changes.
 #'
 #' @export
@@ -75,17 +75,17 @@ pgx.computePathscores <- function(graph, strict.pos = TRUE) {
 #'
 #' @return An igraph object with source and sink nodes added
 #'
-#' @description 
+#' @description
 #' Adds source and sink nodes to a pathway graph to enable path scoring.
 #'
 #' @details
-#' This function takes an igraph pathway graph object \code{gr} and adds 
+#' This function takes an igraph pathway graph object \code{gr} and adds
 #' source and sink nodes to it.
 #'
 #' The source and sink nodes are named "SOURCE" and "SINK" respectively.
 #' They are assigned layout positions above and below the existing nodes.
 #' The fold changes and scaled data for the source and sink are set to 1s.
-#' 
+#'
 #' Edges are added from the source to the top layer nodes, and from the bottom layer nodes to the sink.
 #' All edge weights are set to 1.
 #'
@@ -118,20 +118,20 @@ pgx._addSourceSink <- function(gr) {
 
 #' Create an omics graph from an NGS analysis
 #'
-#' @title Create an omics graph 
+#' @title Create an omics graph
 #'
 #' @param ngs An NGS analysis object containing gene expression data
 #' @param do.intersect Logical indicating whether to intersect genesets. Default is TRUE.
 #'
 #' @return An igraph object representing the omics graph.
-#' 
+#'
 #' @description Constructs an omics graph by connecting genes to gene sets and merging nodes.
 #'
-#' @details This function takes an NGS analysis object and constructs a graph where genes are connected to the gene sets they belong to. 
+#' @details This function takes an NGS analysis object and constructs a graph where genes are connected to the gene sets they belong to.
 #' It first creates a bipartite graph connecting genes and gene sets. The graph is then simplified by merging genes into clusters.
 #'
 #' If do.intersect is TRUE, gene sets are intersected when more than one gene set contains the same genes. This reduces redundancy.
-#' 
+#'
 #' The graph layout positions nodes along the z-axis based on the type, with genes lowest and gene sets highest. Edges are added from
 #' a source node to genes and from gene sets to a sink node.
 #'
@@ -452,16 +452,16 @@ pgx.createVipGeneLayer <- function(gr, genes, z = 0, reconnect = 40) {
 
 #' Create an omics graph from PGX results
 #'
-#' @title Create Omics Graph 
+#' @title Create Omics Graph
 #'
-#' @description 
+#' @description
 #' Generates an igraph object representing associations between genes, gene sets and clinical outcomes from PGX results.
 #'
-#' @param gr An igraph object containing the gene-geneset network 
-#' @param gene Character name of gene to highlight 
+#' @param gr An igraph object containing the gene-geneset network
+#' @param gene Character name of gene to highlight
 #' @param geneset Character name of gene set to highlight
-#' @param cex Size of node labels 
-#' @param fx PGX results matrix to color nodes by 
+#' @param cex Size of node labels
+#' @param fx PGX results matrix to color nodes by
 #' @param main Plot title
 #' @param plot Logical indicating whether to plot the graph
 #'
@@ -471,10 +471,10 @@ pgx.createVipGeneLayer <- function(gr, genes, z = 0, reconnect = 40) {
 #'
 #' Nodes can be colored by PGX results to highlight genes/sets associated with outcomes.
 #' Specific genes and sets can also be highlighted by specifying their names.
-#' 
+#'
 #' The graph can be plotted directly using various layouts, or the igraph object can be returned.
 #'
-#' @return 
+#' @return
 #' An igraph object containing the omics graph.
 #'
 #' @export
@@ -585,20 +585,20 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
 
 #' Compute Core GO Graph
 #'
-#' @title Compute Core GO Graph 
+#' @title Compute Core GO Graph
 #'
-#' @param ngs pgx object containing GO enrichment results 
+#' @param ngs pgx object containing GO enrichment results
 #' @param fdr FDR threshold for selecting significant GO terms
 #'
 #' @return An igraph object representing the core GO graph
 #'
 #' @description Computes a core GO graph from significant GO terms
 #'
-#' @details This function takes a pgx object containing GO enrichment results 
-#' and extracts significant GO terms below the specified FDR threshold. It constructs 
-#' a graph where nodes are GO terms, connected based on their semantic relationships 
-#' from the GO ontology. Terms are colored by their enrichment scores and sized by the 
-#' number of input genes they contain. The resulting graph highlights the key GO 
+#' @details This function takes a pgx object containing GO enrichment results
+#' and extracts significant GO terms below the specified FDR threshold. It constructs
+#' a graph where nodes are GO terms, connected based on their semantic relationships
+#' from the GO ontology. Terms are colored by their enrichment scores and sized by the
+#' number of input genes they contain. The resulting graph highlights the key GO
 #' terms and biological processes enriched in the analysis.
 #'
 #' @export
@@ -674,16 +674,15 @@ pgx.computeCoreGOgraph <- function(ngs, fdr = 0.05) {
 #' @details The function first extracts the GO terms and their associated information from the GOTERM table in the GO.db package.
 #' Then, it removes any duplicate terms and sets the row names of the resulting data frame to the GO IDs.
 #'
-#' Next, the function extracts the parent-child relationships for each of the three GO 
-#' domains (Biological Process, Molecular Function, and Cellular Component) from the 
-#' corresponding tables in the GO.db package. It combines these relationships into a single data.frame 
+#' Next, the function extracts the parent-child relationships for each of the three GO
+#' domains (Biological Process, Molecular Function, and Cellular Component) from the
+#' corresponding tables in the GO.db package. It combines these relationships into a single data.frame
 #' and creates a graph object using the igraph package.
 #'
 #' @return An igraph graph object representing the Gene Ontology hierarchy.
 #'
 #' @export
 getGOgraph <- function() {
-
   terms <- AnnotationDbi::toTable(GO.db::GOTERM)[, 2:5]
   terms <- terms[!duplicated(terms[, 1]), ]
   rownames(terms) <- terms[, 1]
@@ -701,12 +700,12 @@ getGOgraph <- function() {
 
 #' @title Get Significant GO Terms
 #'
-#' @description Retrieve significant GO terms from a PGX analysis 
-#' 
+#' @description Retrieve significant GO terms from a PGX analysis
+#'
 #' @param ngs PGX object containing gene set analysis results
 #' @param comparison Name of the contrast to extract results for
 #' @param methods Character vector of methods to include. Default NULL uses all.
-#' @param fdr FDR cutoff for significance. Default 0.20. 
+#' @param fdr FDR cutoff for significance. Default 0.20.
 #' @param nterms Maximum number of GO terms to return. Default 500.
 #' @param ntop Number of top significant GO terms to highlight. Default 100.
 #'
@@ -718,7 +717,7 @@ getGOgraph <- function() {
 #' By default it uses all methods found.
 #'
 #' @return A list containing the GO graph \code{graph}, various GO term statistics
-#' matrices (\code{pathscore}, \code{foldchange}, \code{qvalue}), and \code{match} mapping 
+#' matrices (\code{pathscore}, \code{foldchange}, \code{qvalue}), and \code{match} mapping
 #' GO terms to gene sets.
 #'
 #' @export
@@ -836,24 +835,24 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
 #'
 #' @title Hierarchical clustering of graph nodes
 #'
-#' @param g An igraph object representing the graph 
+#' @param g An igraph object representing the graph
 #' @param k Number of clusters. If NULL, optimal number is found.
 #' @param mc.cores Number of cores for parallel processing.
-#' 
+#'
 #' @return Matrix with hierarchical clustering membership at each level.
 #'
-#' @description 
+#' @description
 #' Performs hierarchical clustering of nodes in a graph using the Louvain algorithm.
 #'
 #' @details
-#' This function takes an igraph graph object \code{g} and performs hierarchical clustering 
+#' This function takes an igraph graph object \code{g} and performs hierarchical clustering
 #' of the nodes using the Louvain community detection algorithm.
 #'
 #' It iteratively clusters the nodes, splitting communities into sub-communities to find
-#' the optimal number of clusters. The number of clusters \code{k} can be specified, 
+#' the optimal number of clusters. The number of clusters \code{k} can be specified,
 #' otherwise the optimal number is found automatically.
 #'
-#' The clustering is done in parallel using \code{mc.cores} cores if available. 
+#' The clustering is done in parallel using \code{mc.cores} cores if available.
 #' The output is a matrix with the hierarchical clustering membership at each level.
 #'
 #' @export

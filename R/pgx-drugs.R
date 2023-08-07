@@ -202,5 +202,3 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
 
   return(results)
 }
-
-

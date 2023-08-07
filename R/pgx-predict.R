@@ -22,12 +22,12 @@
 #' @description Creates a Hive Plot to visualize a mixed gene-gene set network.
 #'
 #' @details  It extracts the network graph and formats it into a Hive Plot layout.
-#' 
+#'
 #' Node importance scores are extracted from the NGS object based on the specified \code{ct} contrast.
 #' These scores are used to determine node sizes in the plot.
 #'
 #' The number of node labels can be reduced by setting \code{numlab} to avoid overplotting.
-#' 
+#'
 #' @export
 mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   cat("<mixHivePlot> called\n")
@@ -186,7 +186,7 @@ mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
   }
 }
 
-#' @describeIn mixHivePlot function generates a hive plot visualization of variable loadings 
+#' @describeIn mixHivePlot function generates a hive plot visualization of variable loadings
 #' from a lmer model result object.
 #' @export
 mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
@@ -272,7 +272,7 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
 #' @title Variable importance for survival models
 #'
 #' @param X Numeric matrix of predictor variables, rows are variables
-#' @param time Vector of event/censoring times 
+#' @param time Vector of event/censoring times
 #' @param status Vector indicating event (1) or censoring (0)
 #' @param methods Methods for computing variable importance. Options are "glmnet", "randomforest", "boruta", "xgboost", "pls".
 #'
@@ -282,7 +282,7 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
 #'
 #' @details This function calculates variable importance scores using a variety of methods suitable for survival analysis.
 #' The input data consists of a predictor matrix \code{X}, a vector of event/censoring times \code{time} and a status indicator vector \code{status}.
-#' 
+#'
 #' The following methods can be selected via the \code{methods} parameter:
 #' \itemize{
 #' \item glmnet: Absolute value of coefficients from elastic net Cox model
@@ -291,8 +291,8 @@ mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
 #' \item xgboost: Importance scores from XGBoost survival model
 #' \item pls: Absolute coefficients from partial least squares Cox model
 #' }
-#' 
-#' Variable importance scores are returned for each method in a named list. 
+#'
+#' Variable importance scores are returned for each method in a named list.
 #' These scores can be used to select important predictors for survival modeling.
 #'
 #' @export
@@ -330,7 +330,6 @@ pgx.survivalVariableImportance <- function(X, time, status,
   }
 
   if ("randomforest" %in% methods) {
-
     df <- data.frame(time = time, status = status, t(X))
     fit_rf <- randomForestSRC::rfsrc(survival::Surv(time, status) ~ ., data = df)
     vimp <- randomForestSRC::vimp(fit_rf)$importance
@@ -586,7 +585,6 @@ pgx.variableImportance <- function(X, y,
   }
 
   if ("randomforest" %in% methods) {
-
     fit_rf <- randomForest::randomForest(t(X), factor(y))
     imp[["randomForest"]] <- fit_rf$importance[, 1]
   }
@@ -632,7 +630,6 @@ pgx.variableImportance <- function(X, y,
   }
 
   if ("pls" %in% methods) {
-
     n <- min(25, nrow(X))
     colnames(X) <- names(y) <- paste0("sample", 1:length(y))
     res <- mixOmics::splsda(t(X), y, keepX = c(n, n))

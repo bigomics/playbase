@@ -799,5 +799,3 @@ eset.parsePhenoFromTitle <- function(title, split = NULL) {
   colnames(G) <- paste0("V", 1:ncol(G))
   return(G)
 }
-
-

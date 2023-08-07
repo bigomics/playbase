@@ -192,15 +192,15 @@ check_empty_rows <- function(data) {
 }
 
 
-#' @title Input Checks 
-#' 
+#' @title Input Checks
+#'
 #' @param data A data frame or matrix.
 #'
 #' @return Logical indicating output of the checks.
 #'
 #' @description Checks if a data frame or matrix contains duplicate column names.
 #'
-#' @details This function takes a data frame or matrix \code{data} as input and checks if it contains any duplicate column names. 
+#' @details This function takes a data frame or matrix \code{data} as input and checks if it contains any duplicate column names.
 #' It compares the column names against each other to look for duplicates.
 #'
 #' The output is a logical value indicating whether any duplicate names were found.
@@ -210,12 +210,12 @@ check_empty_rows <- function(data) {
 #'
 #' @examples
 #' \dontrun{
-#' data <- data.frame(A = 1:3, B = 4:6, A = 7:9) 
+#' data <- data.frame(A = 1:3, B = 4:6, A = 7:9)
 #' check_duplicate_cols(data)
 #' # Returns TRUE
-#' 
+#'
 #' data <- data.frame(A = 1:3, B = 4:6, C = 7:9)
-#' check_duplicate_cols(data) 
+#' check_duplicate_cols(data)
 #' # Returns FALSE
 #' }
 #' @export

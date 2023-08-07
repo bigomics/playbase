@@ -20,24 +20,24 @@
 
 #' @title Impute missing values with NMF
 #'
-#' @param X Numeric matrix of proteomics data 
+#' @param X Numeric matrix of proteomics data
 #' @param groups Factor indicating groups for samples
 #' @param k Number of NMF factors. Default 10.
 #' @param r Cutoff proportion of missing values to impute within group. Default 0.5.
 #'
 #' @return Matrix with imputed values
-#' 
+#'
 #' @description Imputes missing values in a proteomics matrix using non-negative matrix factorization (NMF).
 #'
 #' @details This function takes a numeric matrix \code{X} containing proteomics data, with samples in columns.
-#' It uses \code{groups} to define sample groups. 
-#' 
+#' It uses \code{groups} to define sample groups.
+#'
 #' It first replaces missing values (0s) with NAs.
 #' For each sample group, any rows with more than \code{r} proportion of NAs are set to 0.
-#' 
+#'
 #' NMF with \code{k} factors is then applied to impute the remaining NAs.
 #' The imputed matrix is returned.
-#' 
+#'
 #' @export
 prot.nmfImpute <- function(X, groups, k = 10, r = 0.5) {
   setZERO <- function(x, y) {
@@ -93,10 +93,10 @@ prot.medianImpute <- function(X, groups) {
 
 #' @title Impute Missing Values by Downshifted Gaussian
 #'
-#' @description Imputes missing values in a numeric matrix by drawing random values from a downshifted Gaussian distribution.  
-#' 
+#' @description Imputes missing values in a numeric matrix by drawing random values from a downshifted Gaussian distribution.
+#'
 #' @param x Numeric matrix or vector containing missing values to impute.
-#' @param width Width of Gaussian distribution as fraction of standard deviation. Default is 0.3. 
+#' @param width Width of Gaussian distribution as fraction of standard deviation. Default is 0.3.
 #' @param downshift Number of standard deviations to downshift the mean. Default is 1.8.
 #' @param bycolumn Logical indicating whether to impute by column (default) or across entire matrix.
 #'
@@ -105,12 +105,12 @@ prot.medianImpute <- function(X, groups) {
 #' If \code{bycolumn} is TRUE, this is done separately for each column. The mean and standard deviation are calculated from the non-missing values in each column.
 #'
 #' If \code{bycolumn} is FALSE, the parameters are calculated across the entire matrix and missing values are imputed randomly.
-#'  
+#'
 #' @return The numeric matrix \code{x} with missing values imputed.
 #'
-#' @examples 
+#' @examples
 #' \dontrun{
-#' mat <- matrix(rnorm(100), ncol = 10)  
+#' mat <- matrix(rnorm(100), ncol = 10)
 #' mat[sample(100, 20)] <- NA
 #' imputed <- .RGimputation(mat)
 #' }
@@ -162,7 +162,7 @@ silac.calcCopyNumber <- function(data, mol.weight, y) {
 
 #' Fit a Weibull distribution to bivariate data
 #'
-#' @title Fit a bivariate Weibull distribution 
+#' @title Fit a bivariate Weibull distribution
 #'
 #' @param x A numeric vector for the x variable
 #' @param y A numeric vector for the y variable
@@ -173,7 +173,7 @@ silac.calcCopyNumber <- function(data, mol.weight, y) {
 #'
 #' @details This function takes two numeric vectors \code{x} and \code{y} and fits a bivariate Weibull distribution.
 #' The Weibull distribution has shape and scale parameters for each variable.
-#'  
+#'
 #' Maximum likelihood estimation is used to estimate the 4 Weibull parameters from the input data.
 #' The estimated parameters are returned as a named list.
 #'

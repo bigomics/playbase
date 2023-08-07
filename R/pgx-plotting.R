@@ -1621,29 +1621,29 @@ pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht = 5, cluster.samples = TRUE
 
 #' @title Split heatmap from PGX object
 #'
-#' @param ngs PGX object containing expression data 
+#' @param ngs PGX object containing expression data
 #' @param splitx Sample groups to split heatmap columns
 #' @param top.mode Method for selecting top rows ("specific", "sd", "pca")
-#' @param annot.pheno Dataframe of sample annotations 
-#' @param row_annot_width Width of row annotation labels  
+#' @param annot.pheno Dataframe of sample annotations
+#' @param row_annot_width Width of row annotation labels
 #' @param scale Scaling method for expression data ("row.center", "row.zscore", etc)
 #' @param ntop Number of top rows to include
 #' @param colors Vector of colors to use for heatmap
-#' @param rowcex Row text size scaling factor 
+#' @param rowcex Row text size scaling factor
 #' @param colcex Column text size scaling factor
 #'
 #' @return A split heatmap grob object
-#' 
-#' @description 
+#'
+#' @description
 #' Generates an interactive split heatmap visualization from a PGX object.
 #'
 #' @details
 #' This function takes a PGX object and generates a split heatmap using the ComplexHeatmap package.
 #' The heatmap can be split into groups by a sample metadata variable in \code{splitx}.
-#' 
+#'
 #' The top \code{ntop} most variable rows are selected based on \code{top.mode}, which can be "specific", "sd", or "pca".
 #' Additional sample annotations can be provided in \code{annot.pheno}.
-#' 
+#'
 #' Various graphical parameters like colors, scaling, text sizes can be customized.
 #' The output is a ComplexHeatmap grob object containing the split heatmap plot.
 #'
@@ -2138,10 +2138,10 @@ plot_ggscatterFILL <- function(x, y = NULL, col = NULL, shape = NULL,
 #' @title Scatterplot with ggplot2
 #'
 #' @param x Numeric vector or matrix. If matrix, first column is x values and second column is y values.
-#' @param y Optional numeric vector of y values. Ignored if x is a matrix. 
+#' @param y Optional numeric vector of y values. Ignored if x is a matrix.
 #' @param col Vector of colors for points.
-#' @param main Title for the plot.  
-#' @param cex Point expansion factor. 
+#' @param main Title for the plot.
+#' @param cex Point expansion factor.
 #' @param col.scale Vector mapping colors to a sequential palette.
 #' @param shape Vector of shapes for points.
 #' @param pch Point shape to use if shape not provided.
@@ -2150,7 +2150,7 @@ plot_ggscatterFILL <- function(x, y = NULL, col = NULL, shape = NULL,
 #' @param cex.legend Legend text size scaling.
 #' @param legend.pos Legend position ("right", "left", "top", "bottom").
 #' @param xlab x-axis label.
-#' @param ylab y-axis label.  
+#' @param ylab y-axis label.
 #' @param base_size Base font size for plot text.
 #'
 #' @return A ggplot scatterplot object
@@ -2164,16 +2164,18 @@ plot_ggscatterFILL <- function(x, y = NULL, col = NULL, shape = NULL,
 #' Point shapes can be customized via the shape parameter.
 #' The plot can be customized via parameters like legend position/text size, axis labels, and base font size.
 #' The plot is rendered using ggplot2 and returned as a ggplot object.
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' x <- rnorm(100)
 #' y <- rnorm(100)
 #' plot_ggscatter(x, y)
-#' 
-#' mat <- cbind(x, y) 
-#' plot_ggscatter(mat, legend.pos="bottom", 
-#'                shape=c(1,2), col.scale=1:100)
+#'
+#' mat <- cbind(x, y)
+#' plot_ggscatter(mat,
+#'   legend.pos = "bottom",
+#'   shape = c(1, 2), col.scale = 1:100
+#' )
 #' }
 
 #' @export
@@ -3748,8 +3750,8 @@ pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, cex =
   df <- data.frame(x = pos[, 1], y = pos[, 2], z = var, names = rownames(pos))
   if (!is.null(var)) {
     plt <- scatterD3::scatterD3(
-      data = df, x = x, y = y, 
-      col_var = z, 
+      data = df, x = x, y = y,
+      col_var = z,
       xlab = xlab, ylab = ylab,
       point_size = 32 * cex,
       legend_width = 70,
@@ -3827,7 +3829,7 @@ pgx.stackedBarplot <- function(x,
 
 #' @title Dark Mode Theme
 #'
-#' @description 
+#' @description
 #' Changes the theme of a plotly plot to a dark mode style.
 #'
 #' @param p A plotly plot object
@@ -3843,10 +3845,10 @@ pgx.stackedBarplot <- function(x,
 #' It sets the plot and paper background colors to dark greys.
 #' The font and axis colors are changed to light greys.
 #' For 3D plots the z-axis is also styled.
-#' 
+#'
 #' @return
 #' The modified plotly plot object with a dark theme.
-#' 
+#'
 #' @export
 darkmode <- function(p, dim = 2) {
   font.par <- list(

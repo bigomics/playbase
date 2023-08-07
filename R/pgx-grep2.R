@@ -4,27 +4,27 @@
 ##
 
 
-#' @title Run Salmon 
+#' @title Run Salmon
 #'
 #' @param srr_id Character vector of SRR IDs for samples
-#' @param library_layout Library layout - "SINGLE" or "PAIRED" 
-#' @param index_dir Salmon index directory 
-#' @param destdir Output directory 
+#' @param library_layout Library layout - "SINGLE" or "PAIRED"
+#' @param index_dir Salmon index directory
+#' @param destdir Output directory
 #' @param fastq_dir Directory containing FASTQ files
 #' @param use_trimmed_fastq Use trimmed FASTQ files if available. Default is FALSE.
 #' @param other_opts Other Salmon options to include
 #' @param nthread Number of threads for parallel processing
 #'
 #' @return Salmon quantification results written to output directory
-#' 
+#'
 #' @description Run Salmon for RNA-seq quantification on sample FASTQ files.
 #'
 #' @details This function runs the Salmon tool to quantify transcript abundance from RNA-seq reads.
 #' It takes a vector of SRR IDs, the Salmon index directory, and FASTQ file locations as input.
-#' 
+#'
 #' Salmon is run in single-end or paired-end mode based on the library_layout parameter.
 #' If use_trimmed_fastq=TRUE, trimmed FASTQ files will be used if available.
-#' 
+#'
 #' Quantification results are written to the specified output directory.
 #' Parallel processing across multiple threads can be enabled via the nthread parameter.
 #'
@@ -90,12 +90,12 @@ pgx.run_salmon <- function(
 #' @param kallisto_dir Directory containing Kallisto output folders for each sample.
 #'
 #' @return List containing gene and transcript count matrices and tximport result objects.
-#' 
+#'
 #' @description Imports Kallisto transcript-level abundance estimates into R matrices at gene and transcript level using tximport.
 #'
 #' @details This function takes a vector of SRR IDs and the path to the Kallisto output directory containing abundance estimates (abundance.tsv files) for each sample.
 #' It imports the transcript counts into R using tximport, summarizing into gene-level counts based on gene annotation data for the specified species.
-#' 
+#'
 #' The output is a list containing the gene counts matrix, transcript counts matrix, and the tximport result objects.
 #'
 #' @export
@@ -126,8 +126,7 @@ run_tximport_kallisto <- function(srr_id, species = c("human", "mouse", "rat"), 
       return(org.Hs.eg.db::org.Hs.eg.db)
     } else if (species == "mousee") {
       return(org.Mm.eg.db::org.Mm.eg.db)
-    }
-    else {
+    } else {
       return(NULL)
     }
   }

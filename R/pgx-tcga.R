@@ -4,12 +4,12 @@
 ##
 
 
-#' @title Test survival association with TCGA expression data  
+#' @title Test survival association with TCGA expression data
 #'
 #' @description Test the association between a gene signature and survival using TCGA expression data.
-#' 
+#'
 #' @param sig A named numeric vector of signature scores for each gene.
-#' @param matrix_file Path to TCGA expression matrix HDF5 file. 
+#' @param matrix_file Path to TCGA expression matrix HDF5 file.
 #' @param ntop Number of top differentially expressed genes to test. Default 100.
 #' @param deceased.only Only use samples from deceased patients if TRUE. Default TRUE.
 #' @param min.cases Minimum number of cases (deaths) required. Default 10.
@@ -18,13 +18,13 @@
 #' @param verbose Print progress messages if TRUE. Default 1.
 #'
 #' @details This function tests the association between a gene signature (sig) and survival using TCGA expression data.
-#' It extracts the top differentially expressed genes from the signature, then reads their expression from a TCGA HDF5 matrix file. 
-#' Survival data is obtained from the RTCGA_SURVIVAL dataset. The signature scores are tested for association with overall survival 
-#' using a Cox proportional hazards model. Results include the hazard ratio, p-value, and number of cases for each gene. A survival 
+#' It extracts the top differentially expressed genes from the signature, then reads their expression from a TCGA HDF5 matrix file.
+#' Survival data is obtained from the RTCGA_SURVIVAL dataset. The signature scores are tested for association with overall survival
+#' using a Cox proportional hazards model. Results include the hazard ratio, p-value, and number of cases for each gene. A survival
 #' plot can also be generated.
-#' 
+#'
 #' @return A data frame with gene symbol, hazard ratio, p-value, and number of cases for the ntop signature genes tested.
-#' 
+#'
 #' @export
 pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = TRUE,
                                  min.cases = 10, sortby.p = FALSE, plot = TRUE, verbose = 1) {

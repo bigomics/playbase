@@ -4,10 +4,10 @@
 ##
 
 
-#' @title Calculate cosine similarity 
+#' @title Calculate cosine similarity
 #'
-#' @param X Numeric matrix 
-#' @param Y Optional second numeric matrix to compare against X 
+#' @param X Numeric matrix
+#' @param Y Optional second numeric matrix to compare against X
 #' @param method Optional specification for method to calculate cosine similarity
 #'
 #' @return Matrix of cosine similarity values
@@ -17,7 +17,7 @@
 #' @details This function takes two numeric matrices \code{X} and \code{Y} and calculates the cosine similarity between them.
 #' It can handle sparse matrices and missing values.
 #'
-#' Cosine similarity is defined as the cosine of the angle between two vectors. 
+#' Cosine similarity is defined as the cosine of the angle between two vectors.
 #' It is calculated as the dot product of the vectors divided by the L2 norms of the vectors.
 #'
 #' If only \code{X} is provided, the cosine similarity between columns of \code{X} is calculated.
@@ -25,7 +25,7 @@
 #'
 #' The \code{method} parameter allows specifying alternate methods to calculate the cosine similarity.
 #' By default the cosine similarity formula is used directly.
-#'  
+#'
 #' @export
 tcosine_similarity <- function(X, Y = NULL, method = NULL) {
   if (!is.null(Y)) {
@@ -131,11 +131,11 @@ tcosine.sparse <- function(X, k = 100, th = 0.01, block = 100, ties.method = "ra
 
 #' @title Encode values to length scales
 #'
-#' @description 
+#' @description
 #' Encodes a numeric vector to a length scale based on the logarithm of the values.
 #'
 #' @param x A numeric vector to encode.
-#' @param r The resolution of the length scale. Default is 0.1. 
+#' @param r The resolution of the length scale. Default is 0.1.
 #' @param a The scale parameter for length scale. Default is 0.25.
 #'
 #' @details
@@ -147,13 +147,13 @@ tcosine.sparse <- function(X, k = 100, th = 0.01, block = 100, ties.method = "ra
 #'
 #' The output is a sparse matrix with rows corresponding to the input \code{x} and columns for the length bins.
 #'
-#' @return 
+#' @return
 #' A sparse matrix encoding the input values to lengths.
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' x <- rpois(100)
-#' len <- length_encode(x)  
+#' len <- length_encode(x)
 #' }
 #' @export
 length_encode <- function(x, r = 0.1, a = 0.25) {
@@ -205,18 +205,18 @@ if (0) {
 ## ===================================================================================
 
 
-#' @title Calculate tagged Hamming distance 
+#' @title Calculate tagged Hamming distance
 #'
 #' @description Calculate the Hamming distance between two sequences, taking into account tags.
 #'
 #' @param aa Character vector. The first sequence.
-#' @param bb Character vector. The second sequence.  
+#' @param bb Character vector. The second sequence.
 #' @param align Logical. Whether to align the sequences before calculating Hamming distance. Default is TRUE.
 #'
-#' @details This function calculates the Hamming distance between two character vector 
-#' sequences \code{aa} and \code{bb}. It first parses any tags in the sequences using \code{parse.tags}. 
-#' It then calculates the Hamming distance between the sequences indicated by any matching tags (e.g. 
-#' \code{cdr1}, \code{cdr2}). For tagged sequences, it will align the sequences before calculating Hamming 
+#' @details This function calculates the Hamming distance between two character vector
+#' sequences \code{aa} and \code{bb}. It first parses any tags in the sequences using \code{parse.tags}.
+#' It then calculates the Hamming distance between the sequences indicated by any matching tags (e.g.
+#' \code{cdr1}, \code{cdr2}). For tagged sequences, it will align the sequences before calculating Hamming
 #' distance if \code{align=TRUE}. For non-tagged sequences, it calculates simple Hamming distance.
 #'
 #' @return Named numeric vector of Hamming distances for each matched tag.
@@ -288,16 +288,16 @@ tagged.hamming <- function(aa, bb, align = TRUE) {
 #'
 #' @param x A numeric vector to rescale.
 #' @param symm Logical indicating if rescaled values should be symmetrized around 0. Default is FALSE.
-#' 
+#'
 #' @return A numeric vector with rescaled values.
 #'
 #' @description Rescales a numeric vector to a 0-1 range.
-#' 
+#'
 #' @details This function takes a numeric vector \code{x} and rescales the values to lie between 0 and 1.
 #' It subtracts the minimum value and divides by the range.
 #' This transforms the values to a 0-1 range while maintaining relative differences.
 #'
-#' If \code{symm=TRUE}, the rescaled values are further transformed to be symmetrized around 0 
+#' If \code{symm=TRUE}, the rescaled values are further transformed to be symmetrized around 0
 #' by subtracting 0.5 and multiplying by 2.
 #'
 #' The rescaled vector is returned.

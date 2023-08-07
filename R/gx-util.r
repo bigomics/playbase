@@ -246,4 +246,3 @@ symbol2hugo <- function(genes, remove.non.hugo = TRUE, silent = FALSE,
   ss[ii] <- gg
   ss
 }
-

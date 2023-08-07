@@ -124,7 +124,3 @@ pgx.inferCNV <- function(ngs, refgroup = NULL, progress = NULL) {
 
   return(res)
 }
-
-
-
-

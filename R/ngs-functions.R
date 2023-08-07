@@ -136,7 +136,3 @@ ngs.getGeneAnnotation <- function(genes) {
   rownames(annot) <- genes
   annot
 }
-
-
-
-
