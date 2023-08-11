@@ -4533,7 +4533,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
   if (!is.null(annot)) {
     colors0 <- rep("Set2", ncol(annot))
     names(colors0) <- colnames(annot)
-
     if (!is.null(colors) && any(names(colors) %in% names(colors0))) {
       for (v in intersect(names(colors), names(colors0))) colors0[[v]] <- colors[[v]]
     }
@@ -4640,6 +4639,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
           iheatmapr::add_col_dendro(hc, size = 0.06)
         ## add_col_clustering() %>%
       }
+
       plt <- plt %>%
         iheatmapr::add_col_title(names(xx)[i], side = "top") %>%
         iheatmapr.add_col_annotation(
@@ -4664,9 +4664,9 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
   ## ----------- row annotation (i.e. gene groups)
   if (!is.null(idx) && !is.null(row_annot_width) && row_annot_width > 0) {
     plt <- iheatmapr::add_row_annotation(
-      plt, data.frame("gene.module" = idx),
+      plt, data.frame("gene.module" = as.factor(idx)), 
       size = row_annot_width * ex,
-      colors = paste0(PLOTLY_COLORS, "88"),
+      colors = list("gene.module" = c(omics_pal_d("muted_light")(nlevels(as.factor(idx))))),
       show_colorbar = show_legend
     )
   }
@@ -4679,7 +4679,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
     gnames <- shortstring(gnames, 25) ## shorten
     gnames <- sub("   ", "-", gnames)
 
-
     maxlen <- max(sapply(gnames, nchar))
     w <- ifelse(maxlen >= 20, 0.45, 0.20)
     s1 <- ifelse(maxlen >= 20, 9, 11) * rowcex
@@ -4689,7 +4688,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
       size = w * ex, font = list(size = s1)
     )
   }
-
 
   return(plt)
 }
