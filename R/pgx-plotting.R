@@ -4126,9 +4126,9 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
   if (min(x) >= 0) xrange <- c(0, 1) * max.absx * 1.05
   yrange <- c(0, 1) * max.absy * 1.05
 
-
-  xaxis <- list(title = xlab, range = xrange, gridwidth = 0.2, showgrid = FALSE)
-  yaxis <- list(title = ylab, range = yrange, gridwidth = 0.2, showgrid = FALSE)
+  xaxis <- list(title = xlab, range = xrange, showgrid = FALSE, titlefont = list(size = 12))
+  yaxis <- list(title = ylab, range = yrange, showgrid = FALSE, titlefont = list(size = 12))
+  
   p <- p %>%
     plotly::layout(
       shapes = list(abline1, abline2, abline3),
