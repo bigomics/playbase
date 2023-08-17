@@ -4039,10 +4039,15 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
                           xlab = "effect size (logFC)", ylab = "significance (-log10p)",
                           lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
                           marker.size = 5, label = NULL, label.cex = 1,
-                          marker.type = "scatter", displayModeBar = TRUE) {
+                          marker.type = "scatter", displayModeBar = TRUE,...) {
   if (is.null(highlight)) highlight <- names
   i0 <- which(!names %in% highlight)
   i1 <- which(names %in% highlight)
+
+  # assign elipsis args as colors
+    colors <- list(...)
+
+
 
   p <- plotly::plot_ly(
     type = marker.type, mode = "markers"
@@ -4133,26 +4138,6 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
       dragmode = "select"
     ) %>%
     plotly::config(displayModeBar = displayModeBar)
-
-  xann <- c(0.01, 0.99)
-  yann <- c(1, 1) * 1.02
-  ann.text <- paste("UP in", group.names[c(2, 1)])
-
-  p <- p %>%
-    plotly::add_annotations(
-      x = xann,
-      y = yann,
-      text = ann.text,
-      font = list(size = 10),
-      xanchor = c("left", "right"),
-      align = c("left", "right"),
-      showarrow = FALSE,
-      xref = "paper",
-      yref = "paper",
-      borderpad = 3,
-      bordercolor = "black",
-      borderwidth = 0.6
-    )
 
   p
 }
