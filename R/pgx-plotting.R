@@ -4137,8 +4137,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
       hovermode = "closest",
       dragmode = "select"
     ) %>%
-    plotly::config(displayModeBar = displayModeBar)
-
+    plotly_modal_default()
   p
 }
 
