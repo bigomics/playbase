@@ -4039,15 +4039,10 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
                           xlab = "effect size (logFC)", ylab = "significance (-log10p)",
                           lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
                           marker.size = 5, label = NULL, label.cex = 1,
-                          marker.type = "scatter", displayModeBar = TRUE,...) {
+                          marker.type = "scatter", displayModeBar = TRUE) {
   if (is.null(highlight)) highlight <- names
   i0 <- which(!names %in% highlight)
   i1 <- which(names %in% highlight)
-
-  # assign elipsis args as colors
-    colors <- list(...)
-
-
 
   p <- plotly::plot_ly(
     type = marker.type, mode = "markers"
@@ -4126,8 +4121,8 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
   if (min(x) >= 0) xrange <- c(0, 1) * max.absx * 1.05
   yrange <- c(0, 1) * max.absy * 1.05
 
-  xaxis <- list(title = xlab, range = xrange, showgrid = FALSE, titlefont = list(size = 12))
-  yaxis <- list(title = ylab, range = yrange, showgrid = FALSE, titlefont = list(size = 12))
+  xaxis <- list(title = xlab, range = xrange, showgrid = FALSE) # titlefont = list(size = 12))
+  yaxis <- list(title = ylab, range = yrange, showgrid = FALSE) # titlefont = list(size = 12))
   
   p <- p %>%
     plotly::layout(
@@ -4137,7 +4132,10 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
       hovermode = "closest",
       dragmode = "select"
     ) %>%
-    plotly_modal_default()
+    plotly_modal_default() %>%
+    plotly::layout(
+      margin = list(l = "auto", b = "auto")
+      )
   p
 }
 
