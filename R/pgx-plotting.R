@@ -4043,16 +4043,13 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
   if (is.null(highlight)) highlight <- names
   i0 <- which(!names %in% highlight)
   i1 <- which(names %in% highlight)
-
   p <- plotly::plot_ly(
     type = marker.type, mode = "markers"
     ## source=source, key=1:length(x)
   )
-
   p <- p %>%
     plotly::event_register("plotly_hover") %>%
     plotly::event_register("plotly_selected")
-
   if (length(i0)) {
     p <- p %>%
       plotly::add_trace(
@@ -4066,7 +4063,6 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         showlegend = showlegend
       )
   }
-
   if (length(i1)) {
     p <- p %>%
       plotly::add_trace(
@@ -4080,7 +4076,6 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         showlegend = showlegend
       )
   }
-
   if (!is.null(label) && length(label) > 0) {
     i2 <- which(names %in% label)
     p <- p %>%
@@ -4098,7 +4093,6 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         textposition = "top"
       )
   }
-
   y0 <- -log10(psig)
   y1 <- 1.05 * max(y)
   xx <- 1.05 * max(abs(x))
@@ -4114,16 +4108,14 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
     type = "line", x0 = -xx, x1 = +xx, y0 = y0, y1 = y0,
     line = list(dash = "dot", width = 1, color = "grey")
   )
-
   max.absx <- max(max(abs(x), na.rm = TRUE), lfc * 1.2)
   max.absy <- max(max(abs(y), na.rm = TRUE), y0 * 1.2)
   xrange <- c(-1, 1) * max.absx * 1.05
   if (min(x) >= 0) xrange <- c(0, 1) * max.absx * 1.05
   yrange <- c(0, 1) * max.absy * 1.05
-
-
-  xaxis <- list(title = xlab, range = xrange, gridwidth = 0.2, showgrid = FALSE)
-  yaxis <- list(title = ylab, range = yrange, gridwidth = 0.2, showgrid = FALSE)
+  xaxis <- list(title = xlab, range = xrange, showgrid = FALSE) # titlefont = list(size = 12))
+  yaxis <- list(title = list(text = ylab, standoff = 20L), range = yrange, showgrid = FALSE) # titlefont = list(size = 12))
+  
   p <- p %>%
     plotly::layout(
       shapes = list(abline1, abline2, abline3),
@@ -4132,28 +4124,14 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
       hovermode = "closest",
       dragmode = "select"
     ) %>%
-    plotly::config(displayModeBar = displayModeBar)
-
-  xann <- c(0.01, 0.99)
-  yann <- c(1, 1) * 1.02
-  ann.text <- paste("UP in", group.names[c(2, 1)])
-
-  p <- p %>%
-    plotly::add_annotations(
-      x = xann,
-      y = yann,
-      text = ann.text,
-      font = list(size = 10),
-      xanchor = c("left", "right"),
-      align = c("left", "right"),
-      showarrow = FALSE,
-      xref = "paper",
-      yref = "paper",
-      borderpad = 3,
-      bordercolor = "black",
-      borderwidth = 0.6
-    )
-
+    plotly_modal_default() %>%
+    plotly::layout(
+      margin = list(l = 0, b = 1, t = 10, r = 10),
+      font = list(size = 12),
+          legend = list(
+            font = list(size = 12)
+        )
+      )
   p
 }
 
