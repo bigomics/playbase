@@ -4115,7 +4115,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
   yrange <- c(0, 1) * max.absy * 1.05
   xaxis <- list(title = xlab, range = xrange, showgrid = FALSE) # titlefont = list(size = 12))
   yaxis <- list(title = list(text = ylab, standoff = 20L), range = yrange, showgrid = FALSE) # titlefont = list(size = 12))
-  
+
   p <- p %>%
     plotly::layout(
       shapes = list(abline1, abline2, abline3),
@@ -4128,10 +4128,10 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
     plotly::layout(
       margin = list(l = 0, b = 1, t = 10, r = 10),
       font = list(size = 12),
-          legend = list(
-            font = list(size = 12)
-        )
+      legend = list(
+        font = list(size = 12)
       )
+    )
   p
 }
 
