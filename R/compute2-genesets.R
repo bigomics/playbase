@@ -51,7 +51,11 @@ compute_testGenesets <- function(pgx,
 
   if (!is.null(custom.geneset$gmt)) {
     # convert gmt standard to SPARSE matrix
-    custom_gmt <- createSparseGenesetMatrix(custom.geneset$gmt, min_gene_frequency = 1)
+    custom_gmt <- playbase::createSparseGenesetMatrix(
+      gmt.all = custom.geneset$gmt,
+      min.geneset.size = 3,
+      max.geneset.size = 9999,
+      min_gene_frequency = 1)
   }
 
   ## -----------------------------------------------------------
@@ -71,30 +75,11 @@ compute_testGenesets <- function(pgx,
 
   # Normalize G after removal of genes
 
-  G <- normalize_matrix_by_row(G)
-
-  if (!is.null(custom.geneset$gmt)) {
-    
-    # upper case in custom gmt genes (to accomodate for mouse genes)
-    colnames(custom_gmt) <- toupper(colnames(custom_gmt))
-    custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes, drop = FALSE]
-    custom_gmt <- normalize_matrix_by_row(custom_gmt)
-
-    # combine standard genesets with custom genesets
-    G <- merge_sparse_matrix(G, custom_gmt)
-  }
-
-  # Transpose G
-
-  G <- Matrix::t(G)
-
-  ## -----------------------------------------------------------
-  ## Filter gene sets
-  ## -----------------------------------------------------------
+  G <- playbase::normalize_matrix_by_row(G)
 
   ## filter gene sets on size
   cat("Filtering gene sets on size...\n")
-  gmt.size <- Matrix::colSums(G != 0)
+  gmt.size <- Matrix::rowSums(G != 0)
   size.ok <- (gmt.size >= 15 & gmt.size <= 400)
 
   # If dataset is too small that size.ok == 0, then select top 100
@@ -103,7 +88,22 @@ compute_testGenesets <- function(pgx,
     size.ok <- names(gmt.size) %in% names(top_100gs)
   }
 
-  G <- G[, which(size.ok)]
+  G <- G[which(size.ok),]
+
+  if (!is.null(custom.geneset$gmt)) {
+    
+    # upper case in custom gmt genes (to accomodate for mouse genes)
+    colnames(custom_gmt) <- toupper(colnames(custom_gmt))
+    custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes, drop = FALSE]
+    custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
+
+    # combine standard genesets with custom genesets
+    G <- playbase::merge_sparse_matrix(G, custom_gmt)
+  }
+
+  # Transpose G
+
+  G <- Matrix::t(G)
 
   ## -----------------------------------------------------------
   ## create the full GENE matrix (always collapsed by gene)
@@ -314,14 +314,14 @@ createSparseGenesetMatrix <- function(
   ## ------------- filter by size
   gmt.size <- sapply(gmt.all, length)
 
-  gmt.all <- gmt.all[which(gmt.size >= 15 & gmt.size <= 1000)]
+  gmt.all <- gmt.all[which(gmt.size >= min.geneset.size & gmt.size <= max.geneset.size)]
 
   ## ------------- filter genes by minimum frequency and chrom
   genes.table <- table(unlist(gmt.all))
   genes <- names(which(genes.table >= min_gene_frequency))
   genes <- genes[grep("^LOC|RIK$", genes, invert = TRUE)]
   genes <- intersect(genes, known.symbols)
-  annot <- ngs.getGeneAnnotation(genes)
+  annot <- playbase::ngs.getGeneAnnotation(genes)
   genes <- genes[!is.na(annot$chr)]
 
   ## Filter genesets with permitted genes (official and min.sharing)
