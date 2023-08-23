@@ -74,7 +74,10 @@ compute_testGenesets <- function(pgx,
   G <- normalize_matrix_by_row(G)
 
   if (!is.null(custom.geneset$gmt)) {
-    custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes]
+    
+    # upper case in custom gmt genes (to accomodate for mouse genes)
+    colnames(custom_gmt) <- toupper(colnames(custom_gmt))
+    custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes, drop = FALSE]
     custom_gmt <- normalize_matrix_by_row(custom_gmt)
 
     # combine standard genesets with custom genesets
