@@ -103,10 +103,8 @@ compute_testGenesets <- function(pgx,
 
     # combine standard genesets with custom genesets
   
-      G <- playbase::merge_sparse_matrix(G, Matrix::t(custom_gmt))
+    G <- playbase::merge_sparse_matrix(m1 = G, m2 = Matrix::t(custom_gmt))
   }
-
-  
 
   ## -----------------------------------------------------------
   ## create the full GENE matrix (always collapsed by gene)
@@ -386,5 +384,23 @@ merge_sparse_matrix <- function(m1, m2) {
 
   combined_gmt <- Matrix::rbind2(m1, m2)
 
+  # if rows have duplicated names, then sum them and keep only one row
+  if (any(duplicated(rownames(combined_gmt)))) {
+    dup_rows <- unique(rownames(combined_gmt)[duplicated(rownames(combined_gmt))])
+    summed_rows <- lapply(dup_rows, function(x) Matrix::colSums(combined_gmt[rownames(combined_gmt) == x,]))
+
+    # convert summed rows to a matrix
+    summed_rows <- do.call(rbind, summed_rows)
+
+    # add names to summed rows
+    rownames(summed_rows) <- dup_rows
+
+    # remove duplicated rows
+    combined_gmt <- combined_gmt[!rownames(combined_gmt) %in% dup_rows,]
+
+    # add summed rows
+
+    combined_gmt <- Matrix::rbind2(combined_gmt, summed_rows)
+  }
   return(combined_gmt)
 }
