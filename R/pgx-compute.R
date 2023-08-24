@@ -156,19 +156,17 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   message("[createPGX] input: dim(samples) = ", paste(dim(samples), collapse = "x"))
   message("[createPGX] input: dim(contrasts) = ", paste(dim(contrasts), collapse = "x"))
 
-  ## contrast matrix
-
+  ## contrast matrix  
   is.numbered <- all(unique(as.vector(contrasts)) %in% c(-1, 0, 1))
   is.numbered <- all(sapply(utils::type.convert(data.frame(contrasts), as.is = TRUE), class) %in% c("numeric", "integer"))
   ct.type <- c("labeled (new style)", "numbered (old style)")[1 + 1 * is.numbered]
   is.numbered
-  if (is.numbered) {
+  if (is.numbered && ncol(contrasts)>0 ) {
     contrasts <- contrastAsLabels(contrasts)
   }
 
   ## convert group-wise contrast to sample-wise
   grp.idx <- grep("group|condition", tolower(colnames(samples)))[1]
-
   if (any(!is.na(grp.idx))) {
     # only run the code below if we identify at least one group
 
@@ -182,7 +180,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
       contrasts <- contrasts.new
     }
   }
-
 
   # prune unused samples
   contrasts[contrasts == ""] <- NA
@@ -291,30 +288,30 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   }
 
   ## -------------------------------------------------------------------
-  ## create ngs object
+  ## create pgx object
   ## -------------------------------------------------------------------
   message("[createPGX] creating pgx object...")
 
-  ngs <- list() ## empty object
-  ngs$name <- "data set"
+  pgx <- list() ## empty object
+  pgx$name <- "data set"
   this.date <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-  ngs$date <- this.date
-  ngs$datatype <- "unknown"
-  ngs$description <- "data set"
+  pgx$date <- this.date
+  pgx$datatype <- "unknown"
+  pgx$description <- "data set"
 
-  ngs$samples <- data.frame(samples, check.names = FALSE)
-  ngs$counts <- as.matrix(counts)
-  ngs$contrasts <- contrasts
-  ngs$X <- X ## input normalized log-expression (can be NULL)
+  pgx$samples <- data.frame(samples, check.names = FALSE)
+  pgx$counts <- as.matrix(counts)
+  pgx$contrasts <- contrasts
+  pgx$X <- X ## input normalized log-expression (can be NULL)
 
-  ngs$total_counts <- totcounts
-  ngs$counts_multiplier <- counts_multiplier
+  pgx$total_counts <- totcounts
+  pgx$counts_multiplier <- counts_multiplier
 
   ## -------------------------------------------------------------------
   ## collapse multiple row for genes by summing up counts
   ## -------------------------------------------------------------------
   ## take only first gene as rowname, retain others as alias
-  gene0 <- rownames(ngs$counts)
+  gene0 <- rownames(pgx$counts)
   gene1 <- gene0
   gene1 <- sapply(gene0, function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
 
@@ -328,19 +325,23 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ndup
   if (ndup > 0) {
     message("[createPGX:autoscale] duplicated rownames detected: summing up rows (counts).")
-    x1 <- tapply(1:nrow(ngs$counts), gene1, function(i) {
-      Matrix::colSums(ngs$counts[i, , drop = FALSE])
+    x1 <- tapply(1:nrow(pgx$counts), gene1, function(i) {
+      Matrix::colSums(pgx$counts[i, , drop = FALSE])
     })
-    x1 <- do.call(rbind, x1)
-    ngs$counts <- x1
+    if(ncol(pgx$counts)==1) {
+      x1 <- matrix(x1, ncol=1, dimnames=list(names(x1),colnames(pgx$counts)[1]))
+    } else {
+      x1 <- do.call(rbind, x1)
+    }
+    pgx$counts <- x1
     remove(x1)
   }
-  if (ndup > 0 && !is.null(ngs$X)) {
-    x1 <- tapply(1:nrow(ngs$X), gene1, function(i) {
-      log2(Matrix::colSums(2**ngs$X[i, , drop = FALSE]))
+  if (ndup > 0 && !is.null(pgx$X)) {
+    x1 <- tapply(1:nrow(pgx$X), gene1, function(i) {
+      log2(Matrix::colSums(2**pgx$X[i, , drop = FALSE]))
     })
     x1 <- do.call(rbind, x1)
-    ngs$X <- x1
+    pgx$X <- x1
     remove(x1)
   }
 
@@ -348,9 +349,9 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## create gene annotation if not given (no HUGO conversion)
   ## -------------------------------------------------------------------
   message("[createPGX] annotating genes...")
-  ngs$genes <- ngs.getGeneAnnotation(genes = rownames(ngs$counts))
-  rownames(ngs$genes) <- rownames(ngs$counts)
-  ngs$genes[is.na(ngs$genes)] <- ""
+  pgx$genes <- ngs.getGeneAnnotation(genes = rownames(pgx$counts))
+  rownames(pgx$genes) <- rownames(pgx$counts)
+  pgx$genes[is.na(pgx$genes)] <- ""
 
   ## -------------------------------------------------------------------
   ## Filter out not-expressed
@@ -359,18 +360,18 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     ## There is second filter in the statistics computation. This
     ## first filter is primarily to reduce the counts table.
     message("[createPGX] filtering out not-expressed genes...")
-    keep <- (Matrix::rowMeans(ngs$counts > 0) > 0) ## at least in one...
-    ngs$counts <- ngs$counts[keep, ]
-    ngs$genes <- ngs$genes[keep, , drop = FALSE]
-    if (!is.null(ngs$X)) {
-      ngs$X <- ngs$X[keep, ]
+    keep <- (Matrix::rowMeans(pgx$counts > 0) > 0) ## at least in one...
+    pgx$counts <- pgx$counts[keep,, drop = FALSE]
+    pgx$genes <- pgx$genes[keep,, drop = FALSE]
+    if (!is.null(pgx$X)) {
+      pgx$X <- pgx$X[keep,, drop=FALSE]
     }
   }
 
   ## -------------------------------------------------------------------
   ## Filter genes?
   ## -------------------------------------------------------------------
-  organism <- pgx.getOrganism(ngs$counts)
+  organism <- pgx.getOrganism(pgx$counts)
   message("[createPGX] detected organism: ", organism, "")
 
   do.filter <- (only.hugo | only.known | only.proteincoding)
@@ -378,67 +379,66 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     message("[createPGX] filtering genes...")
     SYMBOL <- unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
     is.hugo <- is.known <- is.protcoding <- TRUE
-    if (only.hugo) is.hugo <- (ngs$genes$gene_name %in% SYMBOL)
+    if (only.hugo) is.hugo <- (pgx$genes$gene_name %in% SYMBOL)
     #
     if (only.known) {
-      is.known <- !grepl("Rik|^Orf|^Loc", ngs$genes$gene_name) ## ???
+      is.known <- !grepl("Rik|^Orf|^Loc", pgx$genes$gene_name) ## ???
     }
     if (only.proteincoding) {
-      is.protcoding <- ngs$genes$gene_biotype %in% c("protein_coding")
+      is.protcoding <- pgx$genes$gene_biotype %in% c("protein_coding")
     }
     keep <- (is.known & is.hugo & is.protcoding)
-    ngs$counts <- ngs$counts[keep, ]
-    ngs$genes <- ngs$genes[keep, ]
-    if (!is.null(ngs$X)) ngs$X <- ngs$X[keep, ]
+    pgx$counts <- pgx$counts[keep,, drop=FALSE]
+    pgx$genes <- pgx$genes[keep,, drop=FALSE]
+    if (!is.null(pgx$X)) pgx$X <- pgx$X[keep,, drop=FALSE]
   }
   if (do.filter && organism == "human") {
     message("[createPGX] filtering genes...")
     SYMBOL <- unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
     is.hugo <- is.protcoding <- is.known <- TRUE
-    if (only.hugo) is.hugo <- (ngs$genes$gene_name %in% SYMBOL)
+    if (only.hugo) is.hugo <- (pgx$genes$gene_name %in% SYMBOL)
     if (only.known) {
-      is.known <- !grepl("^ORF|^LOC", ngs$genes$gene_name) ## ???
+      is.known <- !grepl("^ORF|^LOC", pgx$genes$gene_name) ## ???
     }
     if (only.proteincoding) {
-      is.protcoding <- ngs$genes$gene_biotype %in% c("protein_coding")
+      is.protcoding <- pgx$genes$gene_biotype %in% c("protein_coding")
     }
     keep <- (is.known & is.hugo & is.protcoding)
-    ngs$counts <- ngs$counts[keep, ]
-    ngs$genes <- ngs$genes[keep, ]
-    if (!is.null(ngs$X)) ngs$X <- ngs$X[keep, ]
+    pgx$counts <- pgx$counts[keep,, drop=FALSE]
+    pgx$genes <- pgx$genes[keep,, drop=FALSE ]
+    if (!is.null(pgx$X)) pgx$X <- pgx$X[keep,, drop=FALSE ]
   }
 
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
-  ngs <- compute_cellcycle_gender(ngs)
+  pgx <- compute_cellcycle_gender(pgx)
 
   ## -------------------------------------------------------------------
   ## Batch-correction (if requested. WARNING: changes counts )
   ## -------------------------------------------------------------------
   batch.par <- c("batch", "batch2")
-  has.batchpar <- any(batch.par %in% colnames(ngs$samples))
+  has.batchpar <- any(batch.par %in% colnames(pgx$samples))
   if (batch.correct && has.batchpar) {
     b <- "batch"
-    bb <- intersect(colnames(ngs$samples), batch.par)
-    bb
+    bb <- intersect(colnames(pgx$samples), batch.par)
     for (b in bb) {
       message("[createPGX] batch correcting for parameter '", b, "'\n")
-      batch <- ngs$samples$batch
-      zz <- which(ngs$counts == 0, arr.ind = TRUE)
-      cX <- log2(1 + ngs$counts)
-      bx <- ngs$sample[, b]
+      batch <- pgx$samples$batch
+      zz <- which(pgx$counts == 0, arr.ind = TRUE)
+      cX <- log2(1 + pgx$counts)
+      bx <- pgx$sample[, b]
 
       message("[createPGX] batch correcting for counts using LIMMA\n")
       cX <- limma::removeBatchEffect(cX, batch = bx) ## in log-space
       cX <- pmax(2**cX - 1, 0)
       cX[zz] <- 0
-      ngs$counts <- pmax(cX, 0) ## batch corrected counts...
+      pgx$counts <- pmax(cX, 0) ## batch corrected counts...
 
-      if (!is.null(ngs$X)) {
+      if (!is.null(pgx$X)) {
         message("[createPGX] batch correcting for logX using LIMMA\n")
-        ngs$X <- limma::removeBatchEffect(ngs$X, batch = bx) ## in log-space
-        ngs$X[zz] <- 0
+        pgx$X <- limma::removeBatchEffect(pgx$X, batch = bx) ## in log-space
+        pgx$X[zz] <- 0
       }
     }
     remove(cX)
@@ -449,42 +449,38 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## Pre-calculate t-SNE for and get clusters early so we can use it
   ## for doing differential analysis.
   ## -------------------------------------------------------------------
-  if (do.cluster) {
+  if (do.cluster || cluster.contrasts) {
     message("[createPGX] clustering samples...")
-    #
-    #
-    ngs <- pgx.clusterSamples2(
-      ngs,
+    pgx <- pgx.clusterSamples2(
+      pgx,
       dims = c(2, 3),
       perplexity = NULL,
       methods = c("pca", "tsne", "umap")
     )
 
     ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
-    #
-    posx <- scale(cbind(ngs$cluster$pos[["umap2d"]], ngs$cluster$pos[["tsne2d"]]))
-    #
+    posx <- scale(cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]]))
     idx <- pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
     if (length(unique(idx)) == 1) {
       ## try again with finer settings if single cluster...
       idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
     }
-    ngs$samples$cluster <- idx
+    pgx$samples$cluster <- idx
   }
 
   if (cluster.contrasts) {
     ## Add cluster contrasts
     message("[createPGX] adding cluster contrasts...")
-    Y <- ngs$samples[, "cluster", drop = FALSE]
-    if (length(unique(Y)) < 2) {
+    Y <- pgx$samples[, "cluster", drop = FALSE]
+    if (length(unique(Y[,1])) < 2) {
       message("[createPGX] warning: only one cluster.")
     } else {
       ct <- makeDirectContrasts(Y, ref = "others")
       ctx <- contrastAsLabels(ct$exp.matrix)
-      if (ncol(ngs$contrasts) == 0) {
-        ngs$contrasts <- ctx
+      if (ncol(pgx$contrasts) == 0) {
+        pgx$contrasts <- ctx
       } else {
-        ngs$contrasts <- cbind(ngs$contrasts, ctx)
+        pgx$contrasts <- cbind(pgx$contrasts, ctx)
       }
     }
   }
@@ -492,23 +488,23 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## -------------------------------------------------------------------
   ## Add normalized log-expression
   ## -------------------------------------------------------------------
-  if (is.null(ngs$X)) {
+  if (is.null(pgx$X)) {
     message("[createPGX] calculating log-expression matrix X...")
-    ngs$X <- logCPM(ngs$counts, total = 1e6, prior = 1)
+    pgx$X <- logCPM(pgx$counts, total = 1e6, prior = 1)
   } else {
     message("[createPGX] using passed log-expression X...")
   }
 
-  if (!all(dim(ngs$X) == dim(ngs$counts))) {
+  if (!all(dim(pgx$X) == dim(pgx$counts))) {
     stop("[createPGX] dimensions of X and counts do not match\n")
   }
 
   if (do.clustergenes) {
     message("[createPGX] clustering genes...")
-    ngs <- pgx.clusterGenes(ngs, methods = "umap", dims = c(2, 3), level = "gene")
+    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "gene")
   }
 
-  return(ngs)
+  return(pgx)
 }
 
 
