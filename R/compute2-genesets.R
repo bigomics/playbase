@@ -90,6 +90,10 @@ compute_testGenesets <- function(pgx,
 
   G <- G[which(size.ok),]
 
+  # Transpose G
+
+  G <- Matrix::t(G)
+
   if (!is.null(custom.geneset$gmt)) {
     
     # upper case in custom gmt genes (to accomodate for mouse genes)
@@ -98,12 +102,11 @@ compute_testGenesets <- function(pgx,
     custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
 
     # combine standard genesets with custom genesets
-    G <- playbase::merge_sparse_matrix(G, custom_gmt)
+  
+      G <- playbase::merge_sparse_matrix(G, Matrix::t(custom_gmt))
   }
 
-  # Transpose G
-
-  G <- Matrix::t(G)
+  
 
   ## -----------------------------------------------------------
   ## create the full GENE matrix (always collapsed by gene)
@@ -193,7 +196,7 @@ compute_testGenesets <- function(pgx,
   Y <- pgx$samples
   gc()
 
-  gset.meta <- gset.fitContrastsWithAllMethods(
+  gset.meta <- playbase::gset.fitContrastsWithAllMethods(
     gmt = gmt, X = X, Y = Y, G = G,
     design = design,
     contr.matrix = contr.matrix, methods = test.methods,
