@@ -74,8 +74,7 @@ pgx.wgcna <- function(
     power = 6,
     cutheight = 0.25,
     deepsplit = 2,
-    ngenes = 1000)
-{
+    ngenes = 1000) {
   require(WGCNA) # fun fact: if we dont source WGCNA, blockwiseModules does not work
 
   ## get topSD matrix
