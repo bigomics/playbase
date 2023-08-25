@@ -443,7 +443,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   if (reduce.pca > 0) {
     reduce.pca <- max(3, min(c(reduce.pca, dim(X) - 1)))
     reduce.pca
-    message("Reducing to ", reduce.pca, " PCA dimenstions...\n")
+    message("Reducing to ", reduce.pca, " PCA dimenstions...")
     cnx <- colnames(X)
     suppressMessages(suppressWarnings(
       res.svd <- irlba::irlba(X, nv = reduce.pca)
@@ -455,7 +455,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   all.pos <- list()
 
   if ("pca" %in% methods && 2 %in% dims) {
-    message("calculating PCA 2D/3D...\n")
+    message("calculating PCA 2D/3D...")
 
     if (is.null(res.svd)) {
       suppressMessages(suppressWarnings(
@@ -483,7 +483,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   }
 
   if ("tsne" %in% methods && 2 %in% dims) {
-    message("calculating t-SNE 2D...\n")
+    message("calculating t-SNE 2D...")
 
     perplexity <- pmax(min(ncol(X) / 4, perplexity), 2)
     perplexity
@@ -500,7 +500,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   }
 
   if ("tsne" %in% methods && 3 %in% dims) {
-    message("calculating t-SNE 3D...\n")
+    message("calculating t-SNE 3D...")
 
     perplexity <- pmax(min(dimx[2] / 4, perplexity), 2)
     perplexity
@@ -516,7 +516,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   }
 
   if ("umap" %in% methods && 2 %in% dims) {
-    message("calculating UMAP 2D...\n")
+    message("calculating UMAP 2D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
       pos <- uwot::umap(t(X[, ]),
@@ -538,7 +538,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   }
 
   if ("umap" %in% methods && 3 %in% dims) {
-    message("calculating UMAP 3D...\n")
+    message("calculating UMAP 3D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
       pos <- uwot::umap(t(X[, ]),

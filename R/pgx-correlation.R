@@ -398,103 +398,124 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
 #' a correlation plot of the significance (-log10 p-values) is also generated.
 #'
 #' @export
-pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1) {
+pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE) {
   cl <- sapply(df, class)
   nlev <- apply(df, 2, function(x) length(unique(x[!is.na(x)])))
   cvar <- which(cl %in% c("numeric", "integer") & nlev >= 2)
   dvar <- which(cl %in% c("factor", "character") & nlev >= 2)
   dc <- df[, cvar, drop = FALSE]
   dd <- df[, dvar, drop = FALSE]
-
-  ## discrete vs discreate -> Fisher test
-  fisher.P <- NULL
-  if (ncol(dd)) {
-    fisher.P <- matrix(NA, ncol(dd), ncol(dd))
-    i <- 1
-    j <- 2
-    for (i in 1:(ncol(dd) - 1)) {
-      kk <- which(!is.na(dd[, i]) & !is.na(dd[, j]))
-      if (length(unique(dd[kk, i])) < 2 || length(unique(dd[kk, j])) < 2) next
-      for (j in (i + 1):ncol(dd)) {
-        tb <- table(dd[, i], dd[, j])
-        fisher.P[i, j] <- stats::fisher.test(tb, simulate.p.value = TRUE)$p.value
+  
+  ## generalized correlation matrix
+  ddx <- expandPhenoMatrix(dd, drop.ref=FALSE)  
+  Rx <- cor(cbind(dc, ddx), use='pairwise')
+  rvar <- sub("=.*","",colnames(Rx))
+  Rx[is.nan(Rx)] <- 0
+  Rx[is.na(Rx)] <- 0  
+  R <- tapply(1:nrow(Rx), rvar, function(i) apply(Rx[c(i,i),],2,max,na.rm=TRUE))
+  R <- do.call(rbind, R)
+  R <- tapply(1:ncol(R), rvar, function(i) apply(R[,c(i,i)],1,max,na.rm=TRUE))
+  R <- do.call(cbind, R)
+  R <- t( R / sqrt(diag(R))) / sqrt(diag(R))
+  R[is.nan(R)] <- NA
+  
+  P = Q = NULL
+  if(compute.pv) {
+    ## discrete vs discrete -> Fisher test
+    fisher.P <- NULL
+    if (ncol(dd)) {
+      fisher.P <- matrix(NA, ncol(dd), ncol(dd))
+      i <- 1
+      j <- 2
+      for (i in 1:(ncol(dd) - 1)) {
+        kk <- which(!is.na(dd[, i]) & !is.na(dd[, j]))
+        if (length(unique(dd[kk, i])) < 2 || length(unique(dd[kk, j])) < 2) next
+        for (j in (i + 1):ncol(dd)) {
+          tb <- table(dd[, i], dd[, j])
+          fisher.P[i, j] <- stats::fisher.test(tb, simulate.p.value = TRUE)$p.value
+        }
       }
+      rownames(fisher.P) <- colnames(dd)
+      colnames(fisher.P) <- colnames(dd)
     }
-    rownames(fisher.P) <- colnames(dd)
-    colnames(fisher.P) <- colnames(dd)
-  }
 
-  ## discrete vs continuous -> ANOVA or Kruskal-Wallace
-  kruskal.P <- NULL
-  if (ncol(dc) > 0) {
-    kruskal.P <- matrix(NA, ncol(dd), ncol(dc))
-    for (i in 1:ncol(dd)) {
-      for (j in 1:ncol(dc)) {
-        kk <- which(!is.na(dc[, j]) & !is.na(dd[, i]))
-        if (length(unique(dd[kk, i])) < 2) next
-        kruskal.P[i, j] <- stats::kruskal.test(dc[kk, j], dd[kk, i])$p.value
+    ## discrete vs continuous -> ANOVA or Kruskal-Wallace
+    kruskal.P <- NULL
+    if (ncol(dc) > 0) {
+      kruskal.P <- matrix(NA, ncol(dd), ncol(dc))
+      for (i in 1:ncol(dd)) {
+        for (j in 1:ncol(dc)) {
+          kk <- which(!is.na(dc[, j]) & !is.na(dd[, i]))
+          if (length(unique(dd[kk, i])) < 2) next
+          kruskal.P[i, j] <- stats::kruskal.test(dc[kk, j], dd[kk, i])$p.value
+        }
       }
+      rownames(kruskal.P) <- colnames(dd)
+      colnames(kruskal.P) <- colnames(dc)
     }
-    rownames(kruskal.P) <- colnames(dd)
-    colnames(kruskal.P) <- colnames(dc)
-  }
-
-  ## continuous vs continuous -> correlation test
-  cor.P <- NULL
-  if (ncol(dc) > 1) {
-    cor.P <- matrix(NA, ncol(dc), ncol(dc))
-    i <- 1
-    j <- 2
-    for (i in 1:(ncol(dc) - 1)) {
-      for (j in (i + 1):ncol(dc)) {
-        cor.P[i, j] <- stats::cor.test(dc[, i], dc[, j])$p.value
+    
+    ## continuous vs continuous -> correlation test
+    cor.P <- NULL
+    if (ncol(dc) > 1) {
+      cor.P <- matrix(NA, ncol(dc), ncol(dc))
+      i <- 1
+      j <- 2
+      for (i in 1:(ncol(dc) - 1)) {
+        for (j in (i + 1):ncol(dc)) {
+          cor.P[i, j] <- stats::cor.test(dc[, i], dc[, j])$p.value
+        }
       }
+      rownames(cor.P) <- colnames(dc)
+      colnames(cor.P) <- colnames(dc)
     }
-    rownames(cor.P) <- colnames(dc)
-    colnames(cor.P) <- colnames(dc)
+    
+    P <- matrix(NA, ncol(df), ncol(df))
+    rownames(P) <- colnames(P) <- colnames(df)
+    
+    if (!is.null(fisher.P)) {
+      ii <- match(rownames(fisher.P), rownames(P))
+      jj <- match(colnames(fisher.P), colnames(P))
+      P[ii, jj] <- fisher.P
+    }
+    
+    if (!is.null(kruskal.P)) {
+      ii <- match(rownames(kruskal.P), rownames(P))
+      jj <- match(colnames(kruskal.P), colnames(P))
+      P[ii, jj] <- kruskal.P
+    }
+    
+    if (!is.null(cor.P)) {
+      ii <- match(rownames(cor.P), rownames(P))
+      jj <- match(colnames(cor.P), colnames(P))
+      P[ii, jj] <- cor.P
+    }
+
+    ij <- which(!is.na(P), arr.ind = TRUE)
+    qv <- stats::p.adjust(P[ij], method = "BH")
+    Q <- P
+    Q[ij] <- qv
+    
+    P[is.na(P)] <- 0
+    P <- (P + t(P)) / 2
+    Q[is.na(Q)] <- 0
+    Q <- (Q + t(Q)) / 2
   }
-
-  P <- matrix(NA, ncol(df), ncol(df))
-  rownames(P) <- colnames(P) <- colnames(df)
-
-  if (!is.null(fisher.P)) {
-    ii <- match(rownames(fisher.P), rownames(P))
-    jj <- match(colnames(fisher.P), colnames(P))
-    P[ii, jj] <- fisher.P
-  }
-
-  if (!is.null(kruskal.P)) {
-    ii <- match(rownames(kruskal.P), rownames(P))
-    jj <- match(colnames(kruskal.P), colnames(P))
-    P[ii, jj] <- kruskal.P
-  }
-
-  if (!is.null(cor.P)) {
-    ii <- match(rownames(cor.P), rownames(P))
-    jj <- match(colnames(cor.P), colnames(P))
-    P[ii, jj] <- cor.P
-  }
-
-  ij <- which(!is.na(P), arr.ind = TRUE)
-  qv <- stats::p.adjust(P[ij], method = "BH")
-  Q <- P
-  Q[ij] <- qv
-
-  P[is.na(P)] <- 0
-  P <- (P + t(P)) / 2
-  Q[is.na(Q)] <- 0
-  Q <- (Q + t(Q)) / 2
 
   BLUERED <- grDevices::colorRampPalette(c("blue3", "white", "red3"))
 
   if (plot == TRUE) {
-    logP <- -log10(P + 1e-8)
-    logQ <- -log10(Q + 1e-8)
-    diag(logQ) <- 0
+    if(compute.pv) {
+      X <- -log10(Q + 1e-8)
+    } else {
+      X <- R
+    }
+    diag(X) <- 0
+    X[is.na(X)] <- 0
     corrplot::corrplot(
-      corr = logQ,
+      corr = X,
       type = "upper",
       col = BLUERED(25),
+      ##is.corr = (!compute.pv),
       is.corr = FALSE,
       mar = c(0, 0, 0, 2),
       p.mat = Q,
@@ -511,7 +532,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1) {
     )
   }
 
-  return(list(P = P, Q = Q))
+  return(list(R = R, Rx = Rx, P = P, Q = Q))
 }
 
 

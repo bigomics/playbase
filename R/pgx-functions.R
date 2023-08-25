@@ -2345,35 +2345,37 @@ expandAnnotationMatrix <- function(A) {
 #' dropping the reference level.
 #'
 #' @param pheno Data frame containing the phenotype variables.
-#' @param collapse Logical indicating whether to collapse factor levels below a frequency threshold.
 #' @param drop.ref Logical indicating whether to drop the reference level for each factor.
 #'
 #' @details This function takes a phenotype data matrix and expands any categorical variables into
-#' dummy variables, while optionally collapsing rare factor levels and dropping the reference level.
+#' dummy variables
 #'
 #' For each column, it determines if the variable is numeric or categorical. Numeric variables are
-#' ranked. Categorical variables are expanded into dummy variables using \code{model.matrix}.
-#'
-#' If \code{collapse = TRUE}, it will collapse together factor levels that occur below a frequency
-#' threshold. If \code{drop.ref = TRUE}, it will drop the reference level for each factor when
-#' creating the dummy variables.
+#' dichotomized. Categorical variables are expanded into dummy variables using \code{model.matrix}.
 #'
 #' @return An expanded phenotype matrix with dummy variables suitable for regression modeling.
 #' @export
-expandPhenoMatrix <- function(pheno, collapse = TRUE, drop.ref = TRUE) {
+expandPhenoMatrix <- function(pheno, drop.ref = TRUE) {
   ## get expanded annotation matrix
-
-
   a1 <- tidy.dataframe(pheno)
   nlevel <- apply(a1, 2, function(x) length(setdiff(unique(x), NA)))
   nterms <- colSums(!is.na(a1))
+  nratio <- nlevel / nterms    
+  y.class <- sapply(utils::type.convert(a1, as.is = TRUE), class)
 
-  y.class <- sapply(utils::type.convert(pheno, as.is = TRUE), class)
+  ## these integers are probably factors... (mostly...)
+  is.fac <- rep(FALSE, ncol(a1))
+  is.int <- y.class=="integer"    
+  ii <- which(is.int)
+  is.fac[ii]  <- apply(a1[,ii,drop=FALSE], 2, function(x) {
+    nlev <- length(unique(x[!is.na(x)]))
+    max(x, na.rm=TRUE) %in% c(nlev,nlev-1)
+  })
+  is.fac2 <- (y.class=="integer" & nlevel<=3 & nratio < 0.66)
+  y.class[is.fac | is.fac2]  <- "character"  
 
-  y.isnum <- (y.class %in% c("numeric", "integer"))
-  nlevel
-  nratio <- nlevel / nterms
-  nratio
+  ## select allowed columns: numeric or with "sensible" levels
+  y.isnum <- (y.class %in% c("numeric", "integer"))    
   kk <- which(y.isnum | (!y.isnum & nlevel > 1 & nratio < 0.66))
   if (length(kk) == 0) {
     return(NULL)
@@ -2385,8 +2387,14 @@ expandPhenoMatrix <- function(pheno, collapse = TRUE, drop.ref = TRUE) {
   for (i in 1:ncol(a1)) {
     if (a1.isnum[i]) {
       suppressWarnings(x <- as.numeric(a1[, i]))
-      m0 <- matrix((x > stats::median(x, na.rm = TRUE)), ncol = 1)
-      colnames(m0) <- "high"
+      if(drop.ref) {
+          m0 <- matrix((x > stats::median(x, na.rm = TRUE)), ncol = 1)
+          colnames(m0) <- "high"
+      } else {
+          mx <- stats::median(x, na.rm = TRUE)
+          m0 <- matrix( cbind(x <= mx, x > mx), ncol = 2)
+          colnames(m0) <- c("low","high")
+      }
     } else if (drop.ref && nlevel[i] == 2) {
       x <- as.character(a1[, i])
       x1 <- Matrix::tail(sort(x), 1)
@@ -2403,20 +2411,18 @@ expandPhenoMatrix <- function(pheno, collapse = TRUE, drop.ref = TRUE) {
     if ("_" %in% colnames(m0)) {
       m0 <- m0[, -which(colnames(m0) == "_")]
     }
-
     m1[[i]] <- m0
   }
+
+  ## create level names    
   names(m1) <- colnames(a1)
-  if (collapse) {
-    for (i in 1:length(m1)) {
-      colnames(m1[[i]]) <- paste0(names(m1)[i], "=", colnames(m1[[i]]))
-    }
-    m1 <- do.call(cbind, m1)
+  for (i in 1:length(m1)) {
+    colnames(m1[[i]]) <- paste0(names(m1)[i], "=", colnames(m1[[i]]))
   }
+  m1 <- do.call(cbind, m1)
+
   return(m1)
 }
-
-
 
 
 #' @title P-value for Pearson's Correlation Coefficient
