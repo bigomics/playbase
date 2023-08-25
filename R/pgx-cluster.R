@@ -619,8 +619,8 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
 
   ## adding some randomization is sometimes necessary if the data is 'too
   ## clean' and some methods get stuck... (IK)
-  small.sd <- 0.1*mean(apply(X,1,sd,na.rm=TRUE))
-  X <- X + small.sd * matrix(rnorm(length(X)),nrow(X),ncol(X))
+  small.sd <- 0.1 * mean(apply(X, 1, sd, na.rm = TRUE))
+  X <- X + small.sd * matrix(rnorm(length(X)), nrow(X), ncol(X))
 
   ## ------------ find t-SNE clusters
   max.perplexity <- max(1, round((ncol(X) - 1) / 4))
@@ -635,7 +635,7 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
 
   if (npca > 0) {
     npca <- min(npca, dim(X) - 1)
-    message("reducing X uaing PCA k=", npca)      
+    message("reducing X uaing PCA k=", npca)
     suppressMessages(suppressWarnings(
       svd <- irlba::irlba(X, nv = npca)
     ))
@@ -652,7 +652,7 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
         t(X),
         n_components = 2,
         metric = "euclidean",
-        n_neighbors = max(2,perplexity),
+        n_neighbors = max(2, perplexity),
         local_connectivity = ceiling(perplexity / 15),
         min_dist = 0.1
       )
@@ -670,7 +670,7 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
       colnames(pos3) <- c("umap_1", "umap_2", "umap_3")
     }
   } else if (method == "tsne") {
-    message("performing tSNE...")      
+    message("performing tSNE...")
     if (2 %in% dims) {
       pos2 <- Rtsne::Rtsne(t(X),
         dim = 2, perplexity = perplexity,
