@@ -115,7 +115,7 @@ pgx.wgcna <- function(
   datTraits <- datTraits[, !isdate, drop = FALSE]
 
   ## Expand multi-class discrete phenotypes into binary vectors
-  tr.class <- sapply(utils::type.convert(datTraits), class)
+  tr.class <- sapply(utils::type.convert(datTraits), class, as.is = TRUE)
   sel1 <- which(tr.class %in% c("factor", "character"))
   sel2 <- which(tr.class %in% c("integer", "numeric"))
 
