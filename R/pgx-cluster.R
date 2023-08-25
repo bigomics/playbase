@@ -617,9 +617,10 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
   if (row.center) X <- X - rowMeans(X, na.rm = TRUE)
   if (row.scale) X <- (X / apply(X, 1, stats::sd, na.rm = TRUE))
 
-  ## some randomization is sometimes necessary if the data is 'too
-  ## clean' and clusters become lines..
-
+  ## adding some randomization is sometimes necessary if the data is 'too
+  ## clean' and some methods get stuck... (IK)
+  small.sd <- 0.1*mean(apply(X,1,sd,na.rm=TRUE))
+  X <- X + small.sd * matrix(rnorm(length(X)),nrow(X),ncol(X))
 
   ## ------------ find t-SNE clusters
   max.perplexity <- max(1, round((ncol(X) - 1) / 4))
@@ -634,7 +635,7 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
 
   if (npca > 0) {
     npca <- min(npca, dim(X) - 1)
-    message("performing tSNE on reduced PCA k=", npca)
+    message("reducing X uaing PCA k=", npca)      
     suppressMessages(suppressWarnings(
       svd <- irlba::irlba(X, nv = npca)
     ))
@@ -645,12 +646,13 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
 
   pos2 <- pos3 <- NULL
   if (method == "umap") {
+    message("performing UMAP...")
     if (2 %in% dims) {
       pos2 <- uwot::umap(
         t(X),
         n_components = 2,
         metric = "euclidean",
-        n_neighbors = perplexity,
+        n_neighbors = max(2,perplexity),
         local_connectivity = ceiling(perplexity / 15),
         min_dist = 0.1
       )
@@ -668,6 +670,7 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
       colnames(pos3) <- c("umap_1", "umap_2", "umap_3")
     }
   } else if (method == "tsne") {
+    message("performing tSNE...")      
     if (2 %in% dims) {
       pos2 <- Rtsne::Rtsne(t(X),
         dim = 2, perplexity = perplexity,
@@ -685,6 +688,7 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
       colnames(pos3) <- c("tsne_1", "tsne_2", "tsne_3")
     }
   } else if (method == "pca") {
+    message("performing UMAP...")
     suppressMessages(suppressWarnings(
       svd <- irlba::irlba(X, nv = 3)
     ))
@@ -697,6 +701,8 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
       colnames(pos3) <- c("pca_1", "pca_2", "pca_3")
     }
   }
+
+  ## add rownames
   if (!is.null(pos2)) {
     rownames(pos2) <- colnames(X)
   }
@@ -704,6 +710,7 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
     rownames(pos3) <- colnames(X)
   }
 
+  ## Find clusters
   if (!is.null(pos2)) pos <- pos2
   if (!is.null(pos3)) pos <- pos3
   idx <- pgx.findLouvainClusters(pos, level = 1, prefix = "c", small.zero = 0.01)
@@ -711,8 +718,6 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
   res <- list(pos2d = pos2, pos3d = pos3, idx = idx)
   return(res)
 }
-
-
 
 
 #' Find Louvain clusters
