@@ -156,12 +156,12 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   message("[createPGX] input: dim(samples) = ", paste(dim(samples), collapse = "x"))
   message("[createPGX] input: dim(contrasts) = ", paste(dim(contrasts), collapse = "x"))
 
-  ## contrast matrix  
+  ## contrast matrix
   is.numbered <- all(unique(as.vector(contrasts)) %in% c(-1, 0, 1))
   is.numbered <- all(sapply(utils::type.convert(data.frame(contrasts), as.is = TRUE), class) %in% c("numeric", "integer"))
   ct.type <- c("labeled (new style)", "numbered (old style)")[1 + 1 * is.numbered]
   is.numbered
-  if (is.numbered && ncol(contrasts)>0 ) {
+  if (is.numbered && ncol(contrasts) > 0) {
     contrasts <- contrastAsLabels(contrasts)
   }
 
@@ -328,8 +328,8 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     x1 <- tapply(1:nrow(pgx$counts), gene1, function(i) {
       Matrix::colSums(pgx$counts[i, , drop = FALSE])
     })
-    if(ncol(pgx$counts)==1) {
-      x1 <- matrix(x1, ncol=1, dimnames=list(names(x1),colnames(pgx$counts)[1]))
+    if (ncol(pgx$counts) == 1) {
+      x1 <- matrix(x1, ncol = 1, dimnames = list(names(x1), colnames(pgx$counts)[1]))
     } else {
       x1 <- do.call(rbind, x1)
     }
@@ -361,10 +361,10 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     ## first filter is primarily to reduce the counts table.
     message("[createPGX] filtering out not-expressed genes...")
     keep <- (Matrix::rowMeans(pgx$counts > 0) > 0) ## at least in one...
-    pgx$counts <- pgx$counts[keep,, drop = FALSE]
-    pgx$genes <- pgx$genes[keep,, drop = FALSE]
+    pgx$counts <- pgx$counts[keep, , drop = FALSE]
+    pgx$genes <- pgx$genes[keep, , drop = FALSE]
     if (!is.null(pgx$X)) {
-      pgx$X <- pgx$X[keep,, drop=FALSE]
+      pgx$X <- pgx$X[keep, , drop = FALSE]
     }
   }
 
@@ -388,9 +388,9 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
       is.protcoding <- pgx$genes$gene_biotype %in% c("protein_coding")
     }
     keep <- (is.known & is.hugo & is.protcoding)
-    pgx$counts <- pgx$counts[keep,, drop=FALSE]
-    pgx$genes <- pgx$genes[keep,, drop=FALSE]
-    if (!is.null(pgx$X)) pgx$X <- pgx$X[keep,, drop=FALSE]
+    pgx$counts <- pgx$counts[keep, , drop = FALSE]
+    pgx$genes <- pgx$genes[keep, , drop = FALSE]
+    if (!is.null(pgx$X)) pgx$X <- pgx$X[keep, , drop = FALSE]
   }
   if (do.filter && organism == "human") {
     message("[createPGX] filtering genes...")
@@ -404,9 +404,9 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
       is.protcoding <- pgx$genes$gene_biotype %in% c("protein_coding")
     }
     keep <- (is.known & is.hugo & is.protcoding)
-    pgx$counts <- pgx$counts[keep,, drop=FALSE]
-    pgx$genes <- pgx$genes[keep,, drop=FALSE ]
-    if (!is.null(pgx$X)) pgx$X <- pgx$X[keep,, drop=FALSE ]
+    pgx$counts <- pgx$counts[keep, , drop = FALSE]
+    pgx$genes <- pgx$genes[keep, , drop = FALSE]
+    if (!is.null(pgx$X)) pgx$X <- pgx$X[keep, , drop = FALSE]
   }
 
   ## -------------------------------------------------------------------
@@ -472,7 +472,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     ## Add cluster contrasts
     message("[createPGX] adding cluster contrasts...")
     Y <- pgx$samples[, "cluster", drop = FALSE]
-    if (length(unique(Y[,1])) < 2) {
+    if (length(unique(Y[, 1])) < 2) {
       message("[createPGX] warning: only one cluster.")
     } else {
       ct <- makeDirectContrasts(Y, ref = "others")
