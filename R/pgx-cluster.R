@@ -619,7 +619,7 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
 
   ## adding some randomization is sometimes necessary if the data is 'too
   ## clean' and some methods get stuck... (IK)
-  small.sd <- 0.1*mean(apply(X,1,sd,na.rm=TRUE))
+  small.sd <- 0.05*mean(apply(X,1,sd,na.rm=TRUE))
   X <- X + small.sd * matrix(rnorm(length(X)),nrow(X),ncol(X))
 
   ## ------------ find t-SNE clusters
