@@ -405,22 +405,22 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE
   dvar <- which(cl %in% c("factor", "character") & nlev >= 2)
   dc <- df[, cvar, drop = FALSE]
   dd <- df[, dvar, drop = FALSE]
-  
+
   ## generalized correlation matrix
-  ddx <- expandPhenoMatrix(dd, drop.ref=FALSE)  
-  Rx <- cor(cbind(dc, ddx), use='pairwise')
-  rvar <- sub("=.*","",colnames(Rx))
+  ddx <- expandPhenoMatrix(dd, drop.ref = FALSE)
+  Rx <- cor(cbind(dc, ddx), use = "pairwise")
+  rvar <- sub("=.*", "", colnames(Rx))
   Rx[is.nan(Rx)] <- 0
-  Rx[is.na(Rx)] <- 0  
-  R <- tapply(1:nrow(Rx), rvar, function(i) apply(Rx[c(i,i),],2,max,na.rm=TRUE))
+  Rx[is.na(Rx)] <- 0
+  R <- tapply(1:nrow(Rx), rvar, function(i) apply(Rx[c(i, i), ], 2, max, na.rm = TRUE))
   R <- do.call(rbind, R)
-  R <- tapply(1:ncol(R), rvar, function(i) apply(R[,c(i,i)],1,max,na.rm=TRUE))
+  R <- tapply(1:ncol(R), rvar, function(i) apply(R[, c(i, i)], 1, max, na.rm = TRUE))
   R <- do.call(cbind, R)
-  R <- t( R / sqrt(diag(R))) / sqrt(diag(R))
+  R <- t(R / sqrt(diag(R))) / sqrt(diag(R))
   R[is.nan(R)] <- NA
-  
-  P = Q = NULL
-  if(compute.pv) {
+
+  P <- Q <- NULL
+  if (compute.pv) {
     ## discrete vs discrete -> Fisher test
     fisher.P <- NULL
     if (ncol(dd)) {
@@ -453,7 +453,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE
       rownames(kruskal.P) <- colnames(dd)
       colnames(kruskal.P) <- colnames(dc)
     }
-    
+
     ## continuous vs continuous -> correlation test
     cor.P <- NULL
     if (ncol(dc) > 1) {
@@ -468,22 +468,22 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE
       rownames(cor.P) <- colnames(dc)
       colnames(cor.P) <- colnames(dc)
     }
-    
+
     P <- matrix(NA, ncol(df), ncol(df))
     rownames(P) <- colnames(P) <- colnames(df)
-    
+
     if (!is.null(fisher.P)) {
       ii <- match(rownames(fisher.P), rownames(P))
       jj <- match(colnames(fisher.P), colnames(P))
       P[ii, jj] <- fisher.P
     }
-    
+
     if (!is.null(kruskal.P)) {
       ii <- match(rownames(kruskal.P), rownames(P))
       jj <- match(colnames(kruskal.P), colnames(P))
       P[ii, jj] <- kruskal.P
     }
-    
+
     if (!is.null(cor.P)) {
       ii <- match(rownames(cor.P), rownames(P))
       jj <- match(colnames(cor.P), colnames(P))
@@ -494,7 +494,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE
     qv <- stats::p.adjust(P[ij], method = "BH")
     Q <- P
     Q[ij] <- qv
-    
+
     P[is.na(P)] <- 0
     P <- (P + t(P)) / 2
     Q[is.na(Q)] <- 0
@@ -504,7 +504,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE
   BLUERED <- grDevices::colorRampPalette(c("blue3", "white", "red3"))
 
   if (plot == TRUE) {
-    if(compute.pv) {
+    if (compute.pv) {
       X <- -log10(Q + 1e-8)
     } else {
       X <- R
@@ -515,7 +515,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE
       corr = X,
       type = "upper",
       col = BLUERED(25),
-      ##is.corr = (!compute.pv),
+      ## is.corr = (!compute.pv),
       is.corr = FALSE,
       mar = c(0, 0, 0, 2),
       p.mat = Q,
