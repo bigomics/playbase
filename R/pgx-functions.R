@@ -2420,7 +2420,8 @@ expandPhenoMatrix <- function(pheno, drop.ref = TRUE) {
     colnames(m1[[i]]) <- paste0(names(m1)[i], "=", colnames(m1[[i]]))
   }
   m1 <- do.call(cbind, m1)
-
+  rownames(m1) <- rownames(pheno)
+  
   return(m1)
 }
 

@@ -48,7 +48,6 @@ compute_testGenesets <- function(pgx,
   }
 
   # Load custom genesets (if user provided)
-
   if (!is.null(custom.geneset$gmt)) {
     # convert gmt standard to SPARSE matrix
     custom_gmt <- createSparseGenesetMatrix(custom.geneset$gmt, min_gene_frequency = 1)
@@ -70,19 +69,16 @@ compute_testGenesets <- function(pgx,
   G <- G[, colnames(G) %in% genes]
 
   # Normalize G after removal of genes
-
   G <- normalize_matrix_by_row(G)
 
   if (!is.null(custom.geneset$gmt)) {
     custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes]
     custom_gmt <- normalize_matrix_by_row(custom_gmt)
-
     # combine standard genesets with custom genesets
     G <- merge_sparse_matrix(G, custom_gmt)
   }
 
-  # Transpose G
-
+  # Transpose G ???
   G <- Matrix::t(G)
 
   ## -----------------------------------------------------------
@@ -147,7 +143,6 @@ compute_testGenesets <- function(pgx,
 
   if (max.features > 0) {
     cat("Reducing gene set matrix...\n")
-
     ## Reduce gene sets by selecting top varying genesets. We use the
     ## very fast sparse rank-correlation for approximate single sample
     ## geneset activation.
@@ -155,17 +150,19 @@ compute_testGenesets <- function(pgx,
     gsetX <- qlcMatrix::corSparse(G[, ], apply(cX[, ], 2, rank))
     grp <- pgx$model.parameters$group
     gsetX.bygroup <- NULL
+    ## If groups/conditions are present we calculate the SD by group
     if (!is.null(grp)) {
-      gsetX.bygroup <- Matrix::t(apply(gsetX, 1, function(x) tapply(x, grp, mean)))
+      gsetX.bygroup <- tapply(1:ncol(gsetX), grp, function(i) rowMeans(gsetX[,i,drop=FALSE]))
+      gsetX.bygroup <- do.call(cbind, gsetX.bygroup)
       sdx <- apply(gsetX.bygroup, 1, stats::sd)
     } else {
-      sdx <- apply(gsetX, 1, stats::sd)
+      sdx <- matrixStats::rowSds(gsetX)
     }
     names(sdx) <- colnames(G)
     jj <- Matrix::head(order(-sdx), max.features)
     must.include <- "hallmark|kegg|^go|^celltype|^pathway|^custom"
     jj <- unique(c(jj, grep(must.include, colnames(G), ignore.case = TRUE)))
-    jj <- jj[order(colnames(G)[jj])]
+    jj <- jj[order(colnames(G)[jj])]  ## sort alphabetically
     G <- G[, jj, drop = FALSE]
   }
 
@@ -186,7 +183,7 @@ compute_testGenesets <- function(pgx,
   cat(">>> Testing gene sets with methods:", test.methods, "\n")
 
   ## convert to gene list
-  gmt <- lapply(apply(G != 0, 2, which), names)
+  gmt <- mat2gmt(G)
   Y <- pgx$samples
   gc()
 
@@ -198,7 +195,6 @@ compute_testGenesets <- function(pgx,
   )
 
   rownames(gset.meta$timings) <- paste("[test.genesets]", rownames(gset.meta$timings))
-
   pgx$timings <- rbind(pgx$timings, gset.meta$timings)
   pgx$gset.meta <- gset.meta
 
@@ -206,23 +202,21 @@ compute_testGenesets <- function(pgx,
   pgx$GMT <- G[, rownames(pgx$gsetX)]
 
   # calculate gset info and store as pgx$gset.meta
-
   gset.size <- Matrix::colSums(pgx$GMT != 0)
-
   gset.size.raw <- playdata::GSET_SIZE
 
   # combine standard genesets with custom genesets size vector
-
   if (!is.null(custom.geneset$gmt)) {
     gset.size.raw <- c(gset.size.raw, custom.geneset$info$GSET_SIZE)
   }
 
   gset.idx <- match(names(gset.size), names(gset.size.raw))
-
-  gset.fraction <- gset.size / gset.size.raw[gset.idx]
+  gset.size.raw <- gset.size.raw[gset.idx]
+  names(gset.size.raw) <- names(gset.size)
+  gset.fraction <- gset.size / gset.size.raw
 
   pgx$gset.meta$info <- data.frame(
-    gset.size.raw = gset.size.raw[gset.idx],
+    gset.size.raw = gset.size.raw,
     gset.size = gset.size,
     gset.fraction = gset.fraction
   )

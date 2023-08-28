@@ -599,7 +599,6 @@ pgx.computePGX <- function(pgx,
     test.methods = gset.methods
   )
 
-
   if (do.cluster) {
     message("[pgx.computePGX] clustering genes...")
     pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset") ## gsetX not ready!!
@@ -609,7 +608,6 @@ pgx.computePGX <- function(pgx,
   ## ------------------ extra analyses ---------------------
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
   message("[pgx.computePGX] computing extra modules...")
-
   pgx <- compute_extra(pgx, extra = extra.methods, libx.dir = libx.dir)
 
   message("[pgx.computePGX] done!")

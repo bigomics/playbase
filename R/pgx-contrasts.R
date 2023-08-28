@@ -578,7 +578,7 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
     x[too.small] <- NA
     x <- iconv(x, "latin1", "ASCII", sub = "") ## ???
     if (!(ref1 %in% x)) ref1 <- NA
-    ref.pattern <- "wt|contr|ctr|untreat|normal|^neg|ref|^no$|^0$|^0h$|scrambl|none|dmso|vehicle|low|null|zero|^not"
+    ref.pattern <- "wt|contr|ctr|untreat|normal|^neg|ref|^no$|^0$|^0h$|scrambl|none|dmso|vehicle|low|^lo$|null|zero|^not"
     detect.ref <- any(grepl(ref.pattern, x, ignore.case = TRUE))
     if (is.na(ref1) & detect.ref) {
       ref1 <- grep(ref.pattern, x, ignore.case = TRUE, value = TRUE)
