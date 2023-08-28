@@ -2421,7 +2421,7 @@ expandPhenoMatrix <- function(pheno, drop.ref = TRUE) {
   }
   m1 <- do.call(cbind, m1)
   rownames(m1) <- rownames(pheno)
-  
+
   return(m1)
 }
 

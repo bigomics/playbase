@@ -152,7 +152,7 @@ compute_testGenesets <- function(pgx,
     gsetX.bygroup <- NULL
     ## If groups/conditions are present we calculate the SD by group
     if (!is.null(grp)) {
-      gsetX.bygroup <- tapply(1:ncol(gsetX), grp, function(i) rowMeans(gsetX[,i,drop=FALSE]))
+      gsetX.bygroup <- tapply(1:ncol(gsetX), grp, function(i) rowMeans(gsetX[, i, drop = FALSE]))
       gsetX.bygroup <- do.call(cbind, gsetX.bygroup)
       sdx <- apply(gsetX.bygroup, 1, stats::sd)
     } else {
@@ -162,7 +162,7 @@ compute_testGenesets <- function(pgx,
     jj <- Matrix::head(order(-sdx), max.features)
     must.include <- "hallmark|kegg|^go|^celltype|^pathway|^custom"
     jj <- unique(c(jj, grep(must.include, colnames(G), ignore.case = TRUE)))
-    jj <- jj[order(colnames(G)[jj])]  ## sort alphabetically
+    jj <- jj[order(colnames(G)[jj])] ## sort alphabetically
     G <- G[, jj, drop = FALSE]
   }
 

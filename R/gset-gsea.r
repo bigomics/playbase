@@ -88,8 +88,8 @@ gmt2mat <- function(gmt, max.genes = -1, ntop = -1, sparse = TRUE,
 #'   element correspond to a gene set and is a vector of genes
 #'
 mat2gmt <- function(mat) {
-  idx <- Matrix::which(mat != 0, arr.ind=TRUE)
-  gmt <- tapply(rownames(idx), idx[,2], list)
+  idx <- Matrix::which(mat != 0, arr.ind = TRUE)
+  gmt <- tapply(rownames(idx), idx[, 2], list)
   names(gmt) <- colnames(mat)
   gmt
 }
