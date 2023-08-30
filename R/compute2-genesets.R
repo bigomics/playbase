@@ -118,7 +118,9 @@ compute_testGenesets <- function(pgx,
 
   ## if reduced samples
   ss <- rownames(pgx$model.parameters$exp.matrix)
-  X <- X[, ss, drop = FALSE]
+  if(!is.null(ss)) {
+    X <- X[, ss, drop = FALSE]
+  }
 
   ## -----------------------------------------------------------
   ## create the GENESETxGENE matrix
@@ -147,7 +149,8 @@ compute_testGenesets <- function(pgx,
     ## very fast sparse rank-correlation for approximate single sample
     ## geneset activation.
     cX <- X - rowMeans(X, na.rm = TRUE) ## center!
-    gsetX <- qlcMatrix::corSparse(G[, ], apply(cX[, ], 2, rank))
+    cX <- apply(cX, 2, rank)
+    gsetX <- qlcMatrix::corSparse(G, cX)  ## slow!
     grp <- pgx$model.parameters$group
     gsetX.bygroup <- NULL
     ## If groups/conditions are present we calculate the SD by group
@@ -158,6 +161,8 @@ compute_testGenesets <- function(pgx,
     } else {
       sdx <- matrixStats::rowSds(gsetX)
     }
+    rm(gsetX)
+    rm(gsetX.bygroup)
     names(sdx) <- colnames(G)
     jj <- Matrix::head(order(-sdx), max.features)
     must.include <- "hallmark|kegg|^go|^celltype|^pathway|^custom"
@@ -234,7 +239,7 @@ compute_testGenesets <- function(pgx,
   remove(Y)
   remove(G)
   remove(gmt)
-
+  gc()  
   return(pgx)
 }
 

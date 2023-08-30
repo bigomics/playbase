@@ -90,10 +90,9 @@ gmt2mat <- function(gmt, max.genes = -1, ntop = -1, sparse = TRUE,
 mat2gmt <- function(mat) {
   idx <- Matrix::which(mat != 0, arr.ind = TRUE)
   gmt <- tapply(rownames(idx), idx[, 2], list)
-  names(gmt) <- colnames(mat)
+  names(gmt) <- colnames(mat)[as.integer(names(gmt))]
   gmt
 }
-
 
 #' Read data from a GMT file
 #'
