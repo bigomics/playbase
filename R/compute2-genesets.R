@@ -118,7 +118,7 @@ compute_testGenesets <- function(pgx,
 
   ## if reduced samples
   ss <- rownames(pgx$model.parameters$exp.matrix)
-  if(!is.null(ss)) {
+  if (!is.null(ss)) {
     X <- X[, ss, drop = FALSE]
   }
 
@@ -150,7 +150,7 @@ compute_testGenesets <- function(pgx,
     ## geneset activation.
     cX <- X - rowMeans(X, na.rm = TRUE) ## center!
     cX <- apply(cX, 2, rank)
-    gsetX <- qlcMatrix::corSparse(G, cX)  ## slow!
+    gsetX <- qlcMatrix::corSparse(G, cX) ## slow!
     grp <- pgx$model.parameters$group
     gsetX.bygroup <- NULL
     ## If groups/conditions are present we calculate the SD by group
@@ -239,7 +239,7 @@ compute_testGenesets <- function(pgx,
   remove(Y)
   remove(G)
   remove(gmt)
-  gc()  
+  gc()
   return(pgx)
 }
 
