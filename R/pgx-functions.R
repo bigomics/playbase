@@ -579,6 +579,7 @@ probe2symbol <- function(probes, type = NULL, keep.na = FALSE) {
 #' suffixes from a character vector by applying trimsame0 forwards and/or backwards.
 #' @export
 trimsame <- function(s, split = " ", ends = TRUE, summarize = FALSE) {
+  if(all(is.na(s)) || all(s=="")) return(s)
   if (ends) {
     return(trimsame.ends(s, split = split, summarize = summarize))
   }
@@ -620,40 +621,53 @@ trimsame.ends <- function(s, split = " ", summarize = FALSE) {
 #'
 #' @export
 trimsame0 <- function(s, split = " ", summarize = FALSE, rev = FALSE) {
-  for (i in 1:4) s <- gsub(paste0(split, split), split, s)
-  whereSpaces <- function(s) as.vector(gregexpr(split, s)[[1]])
-  sp <- whereSpaces(s[1])
-  sp
-  if (length(sp) == 0) {
-    return(s)
-  }
 
-  is.same <- TRUE
-  i <- 1
-  j <- 0
-  while (is.same && i <= length(sp)) {
-    is.same <- all(duplicated(substring(s, 1, sp[i]))[-1])
-    if (is.same) j <- i
-    i <- i + 1
-  }
-
-  s1 <- s
-  if (j > 0) {
-    samepart <- substring(s[1], 1, sp[j])
-    subst <- ""
-    if (summarize) {
-      subst <- substring(strsplit(trimws(samepart), split = split)[[1]], 1, 1)
-      if (rev) subst <- rev(subst)
-      subst <- paste(c(toupper(subst), " "), collapse = "")
+    if(all(is.na(s)) || all(s=="")) return(s)
+    s <- strsplit(s,split)
+    s.orig <- s
+    
+    ##
+    i=1
+    is.same <- FALSE
+    while(i < 1000 && !is.same) {
+        s1 <- sapply(s,"[",1)
+        slen <- sapply(s,length)
+        ss <- setdiff(s1,NA)
+        if(all(ss == ss[1])) {
+            s <- lapply(s, "[", -1)
+        } else {
+            is.same <- FALSE
+        }
+        i <- i + 1
     }
-    s1 <- sub(samepart, subst, s)
-  }
-  s1
+    sapply(s,length)
+
+    if(sapply(s,length)==0 || all(s=="")) {
+        sx <- sapply(s.orig,"[",1)
+        sx
+        return(sx)
+    }
+    
+    i=1
+    is.same <- FALSE
+    while(i < 1000 && !is.same) {
+        slen <- sapply(s,length)
+        s2 <- sapply(s,tail,1)
+        ss <- setdiff(s2,NA)
+        if(all(ss == ss[1])) {
+            s <- mapply(head,s, slen-1)
+        } else {
+            is.same <- FALSE
+        }
+        i <- i + 1
+    }
+
+    if(sapply(s,length)==0 || all(s=="")) {
+        s <- sapply(s.orig,"[",1)
+    }
+    s <- sapply(s, paste, collapse=split)
+    s
 }
-
-
-
-
 
 
 #' Read CSV file with automatic separator detection
