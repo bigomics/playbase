@@ -115,7 +115,7 @@ gset.fisher <- function(genes, genesets, background = NULL,
   if (check.background) {
     ## restrict on background
     genes <- intersect(genes, background)
-    genesets <- parallel::mclapply(genesets, function(s) intersect(s, background))
+    genesets <- lapply(genesets, function(s) intersect(s, background))
   }
 
   ## select
@@ -154,9 +154,9 @@ gset.fisher <- function(genes, genesets, background = NULL,
   nbackground1 <- length(bg0)
 
   ## this can become slow
-  a <- unlist(parallel::mclapply(genesets, function(x) sum(x %in% genes)))
+  a <- unlist(lapply(genesets, function(x) sum(x %in% genes)))
   b <- (n.size - a)
-  c <- unlist(parallel::mclapply(genesets, function(x) sum(!(genes %in% x))))
+  c <- unlist(lapply(genesets, function(x) sum(!(genes %in% x))))
   d <- (nbackground1 - b)
   odd.ratio <- (a / c) / (b / d) ## note: not exactly same as from fishertest
 
@@ -194,7 +194,7 @@ gset.fisher <- function(genes, genesets, background = NULL,
     pv[ii] <- pv1
   } else if (method == "fisher") {
     if (mc) {
-      pv <- unlist(parallel::mclapply(genesets, test.fisher))
+      pv <- unlist(lapply(genesets, test.fisher))
     } else {
       i <- 1
       for (i in 1:length(genesets)) {
@@ -203,7 +203,7 @@ gset.fisher <- function(genes, genesets, background = NULL,
     }
   } else if (method == "chisq") {
     if (mc) {
-      pv <- unlist(parallel::mclapply(genesets, test.chisq))
+      pv <- unlist(lapply(genesets, test.chisq))
     } else {
       for (i in 1:length(genesets)) {
         pv[i] <- test.chisq(genesets[[i]])
