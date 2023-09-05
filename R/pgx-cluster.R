@@ -54,7 +54,7 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
     X <- X - rowMeans(X)
   }
   if (scale.rows) {
-    X <- X / (1e-6 + apply(X, 1, stats::sd))
+    X <- X / (1e-6 + matrixStats::rowSds(X, na.rm = TRUE))
   }
   if (rank.tf) {
     X <- scale(apply(X, 2, rank))
@@ -408,7 +408,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   dimx <- dim(X) ## original dimensions
   namesx <- colnames(X)
   if (reduce.sd > 0 && nrow(X) > reduce.sd) {
-    sdx <- apply(X, 1, stats::sd, na.rm = TRUE)
+    sdx <- matrixStats::rowSds(X, na.rm = TRUE)
     is.constant <- all(abs(sdx - mean(sdx, na.rm = TRUE)) < 1e-8)
     if (is.constant) {
       message("WARNING:: SD is constant. Skipping SD reduction...\n")
@@ -423,7 +423,8 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
     X <- X - rowMeans(X, na.rm = TRUE) ## do??
   }
   if (scale.features) {
-    X <- X / apply(X, 1, stats::sd, na.rm = TRUE)
+    sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+    X <- X / sdx
   }
 
   ## impute on row median
@@ -522,8 +523,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
       pos <- uwot::tumap(t(X[, ]),
         n_components = 2,
         n_neighbors = nb,
-        local_connectivity = ceiling(nb / 15),
-        min_dist = 0.1
+        local_connectivity = ceiling(nb / 15)
       )
     } else {
       custom.config <- umap.defaults
@@ -544,8 +544,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
       pos <- uwot::tumap(t(X[, ]),
         n_components = 3,
         n_neighbors = nb,
-        local_connectivity = ceiling(nb / 15),
-        min_dist = 0.1
+        local_connectivity = ceiling(nb / 15)
       )
     } else {
       custom.config <- umap.defaults
@@ -613,13 +612,15 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
                               method = c("tsne", "umap", "pca")) {
   method <- method[1]
   clust.detect <- clust.detect[1]
-  X <- Matrix::head(X[order(-apply(X, 1, stats::sd)), ], ntop)
+  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+  X <- Matrix::head(X[order(-sdx), ], ntop)
   if (row.center) X <- X - rowMeans(X, na.rm = TRUE)
-  if (row.scale) X <- (X / apply(X, 1, stats::sd, na.rm = TRUE))
+  if (row.scale) X <- (X / matrixStats::rowSds(X, na.rm = TRUE))
 
   ## adding some randomization is sometimes necessary if the data is 'too
   ## clean' and some methods get stuck... (IK)
-  small.sd <- 0.05 * mean(apply(X, 1, sd, na.rm = TRUE))
+  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+  small.sd <- 0.05 * mean(sdx)
   X <- X + small.sd * matrix(rnorm(length(X)), nrow(X), ncol(X))
 
   ## ------------ find t-SNE clusters
@@ -653,8 +654,7 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
         n_components = 2,
         metric = "euclidean",
         n_neighbors = max(2, perplexity),
-        local_connectivity = ceiling(perplexity / 15),
-        min_dist = 0.1
+        local_connectivity = ceiling(perplexity / 15)
       )
       colnames(pos2) <- c("umap_1", "umap_2")
     }
@@ -664,8 +664,7 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
         n_components = 3,
         metric = "euclidean",
         n_neighbors = perplexity,
-        local_connectivity = ceiling(perplexity / 15),
-        min_dist = 0.1
+        local_connectivity = ceiling(perplexity / 15)
       )
       colnames(pos3) <- c("umap_1", "umap_2", "umap_3")
     }
