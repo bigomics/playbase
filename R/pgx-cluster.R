@@ -519,7 +519,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
     message("calculating UMAP 2D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
-      pos <- uwot::umap(t(X[, ]),
+      pos <- uwot::tumap(t(X[, ]),
         n_components = 2,
         n_neighbors = nb,
         local_connectivity = ceiling(nb / 15),
@@ -541,7 +541,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
     message("calculating UMAP 3D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
-      pos <- uwot::umap(t(X[, ]),
+      pos <- uwot::tumap(t(X[, ]),
         n_components = 3,
         n_neighbors = nb,
         local_connectivity = ceiling(nb / 15),
@@ -648,7 +648,7 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
   if (method == "umap") {
     message("performing UMAP...")
     if (2 %in% dims) {
-      pos2 <- uwot::umap(
+      pos2 <- uwot::tumap(
         t(X),
         n_components = 2,
         metric = "euclidean",
@@ -659,7 +659,7 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
       colnames(pos2) <- c("umap_1", "umap_2")
     }
     if (3 %in% dims) {
-      pos3 <- uwot::umap(
+      pos3 <- uwot::tumap(
         t(X),
         n_components = 3,
         metric = "euclidean",
