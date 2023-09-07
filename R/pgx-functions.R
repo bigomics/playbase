@@ -1620,11 +1620,9 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
   if (is.mouse) {
     mouse.genes <- as.character(unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL)))
     names(mouse.genes) <- toupper(mouse.genes)
-    families <- parallel::mclapply(families, function(s) {
+    families <- lapply(families, function(s) {
       setdiff(as.character(mouse.genes[toupper(s)]), NA)
-    },
-    mc.cores = 16
-    )
+    })
   }
 
   ## sort all

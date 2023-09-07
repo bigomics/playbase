@@ -109,7 +109,7 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
       y <- rank(y, na.last = "keep")
       qlcMatrix::corSparse(X[gg, ], cbind(y[gg]))
     }
-    rho1 <- parallel::mclapply(1:ncol(rnk1), function(i) rankcorSparse.vec(gset, rnk1[, i]))
+    rho1 <- lapply(1:ncol(rnk1), function(i) rankcorSparse.vec(gset, rnk1[, i]))
     rho1 <- do.call(cbind, rho1)
   }
   rownames(rho1) <- colnames(gset)

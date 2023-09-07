@@ -275,7 +275,9 @@ clean_gmt <- function(gmt.all, gmt.db) {
   gmt.all <- unlist(gmt.all, recursive = FALSE, use.names = TRUE)
 
   ## get rid of trailing numeric values
-  gmt.all <- parallel::mclapply(gmt.all, function(x) gsub("[,].*", "", x), mc.cores = 1)
+  gmt.all <- lapply(gmt.all, function(x) gsub("[,].*", "", x))
+
+
 
   ## order by length and take out duplicated sets (only by name)
   gmt.all <- gmt.all[order(-sapply(gmt.all, length))]
@@ -321,13 +323,14 @@ createSparseGenesetMatrix <- function(
   genes <- genes[!is.na(annot$chr)]
 
   ## Filter genesets with permitted genes (official and min.sharing)
-  gmt.all <- parallel::mclapply(gmt.all, function(s) intersect(s, genes))
-  gmt.size <- sapply(gmt.all, length)
+  gmt.all <- lapply(gmt.all, function(s) intersect(s, genes))
+
   gmt.all <- gmt.all[which(gmt.size >= min.geneset.size & gmt.size <= max.geneset.size)] # legacy
   ## build huge sparsematrix gene x genesets
   genes <- sort(genes)
-  idx.j <- parallel::mclapply(gmt.all[], function(s) match(s, genes))
+  idx.j <- lapply(gmt.all, function(s) match(s, genes))
   idx.i <- lapply(1:length(gmt.all), function(i) rep(i, length(idx.j[[i]])))
+
   ii <- unlist(idx.i)
   jj <- unlist(idx.j)
 
