@@ -579,6 +579,9 @@ probe2symbol <- function(probes, type = NULL, keep.na = FALSE) {
 #' suffixes from a character vector by applying trimsame0 forwards and/or backwards.
 #' @export
 trimsame <- function(s, split = " ", ends = TRUE, summarize = FALSE) {
+  if (all(is.na(s)) || all(s == "")) {
+    return(s)
+  }
   if (ends) {
     return(trimsame.ends(s, split = split, summarize = summarize))
   }
@@ -620,40 +623,54 @@ trimsame.ends <- function(s, split = " ", summarize = FALSE) {
 #'
 #' @export
 trimsame0 <- function(s, split = " ", summarize = FALSE, rev = FALSE) {
-  for (i in 1:4) s <- gsub(paste0(split, split), split, s)
-  whereSpaces <- function(s) as.vector(gregexpr(split, s)[[1]])
-  sp <- whereSpaces(s[1])
-  sp
-  if (length(sp) == 0) {
+  if (all(is.na(s)) || all(s == "")) {
     return(s)
   }
+  s <- strsplit(s, split)
+  s.orig <- s
 
-  is.same <- TRUE
+  ##
   i <- 1
-  j <- 0
-  while (is.same && i <= length(sp)) {
-    is.same <- all(duplicated(substring(s, 1, sp[i]))[-1])
-    if (is.same) j <- i
+  is.same <- FALSE
+  while (i < 1000 && !is.same) {
+    s1 <- sapply(s, "[", 1)
+    slen <- sapply(s, length)
+    ss <- setdiff(s1, NA)
+    if (all(ss == ss[1])) {
+      s <- lapply(s, "[", -1)
+    } else {
+      is.same <- FALSE
+    }
+    i <- i + 1
+  }
+  sapply(s, length)
+
+  if (sapply(s, length) == 0 || all(s == "")) {
+    sx <- sapply(s.orig, "[", 1)
+    sx
+    return(sx)
+  }
+
+  i <- 1
+  is.same <- FALSE
+  while (i < 1000 && !is.same) {
+    slen <- sapply(s, length)
+    s2 <- sapply(s, tail, 1)
+    ss <- setdiff(s2, NA)
+    if (all(ss == ss[1])) {
+      s <- mapply(head, s, slen - 1)
+    } else {
+      is.same <- FALSE
+    }
     i <- i + 1
   }
 
-  s1 <- s
-  if (j > 0) {
-    samepart <- substring(s[1], 1, sp[j])
-    subst <- ""
-    if (summarize) {
-      subst <- substring(strsplit(trimws(samepart), split = split)[[1]], 1, 1)
-      if (rev) subst <- rev(subst)
-      subst <- paste(c(toupper(subst), " "), collapse = "")
-    }
-    s1 <- sub(samepart, subst, s)
+  if (sapply(s, length) == 0 || all(s == "")) {
+    s <- sapply(s.orig, "[", 1)
   }
-  s1
+  s <- sapply(s, paste, collapse = split)
+  s
 }
-
-
-
-
 
 
 #' Read CSV file with automatic separator detection
@@ -1603,11 +1620,9 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
   if (is.mouse) {
     mouse.genes <- as.character(unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL)))
     names(mouse.genes) <- toupper(mouse.genes)
-    families <- parallel::mclapply(families, function(s) {
+    families <- lapply(families, function(s) {
       setdiff(as.character(mouse.genes[toupper(s)]), NA)
-    },
-    mc.cores = 16
-    )
+    })
   }
 
   ## sort all
@@ -2345,35 +2360,37 @@ expandAnnotationMatrix <- function(A) {
 #' dropping the reference level.
 #'
 #' @param pheno Data frame containing the phenotype variables.
-#' @param collapse Logical indicating whether to collapse factor levels below a frequency threshold.
 #' @param drop.ref Logical indicating whether to drop the reference level for each factor.
 #'
 #' @details This function takes a phenotype data matrix and expands any categorical variables into
-#' dummy variables, while optionally collapsing rare factor levels and dropping the reference level.
+#' dummy variables
 #'
 #' For each column, it determines if the variable is numeric or categorical. Numeric variables are
-#' ranked. Categorical variables are expanded into dummy variables using \code{model.matrix}.
-#'
-#' If \code{collapse = TRUE}, it will collapse together factor levels that occur below a frequency
-#' threshold. If \code{drop.ref = TRUE}, it will drop the reference level for each factor when
-#' creating the dummy variables.
+#' dichotomized. Categorical variables are expanded into dummy variables using \code{model.matrix}.
 #'
 #' @return An expanded phenotype matrix with dummy variables suitable for regression modeling.
 #' @export
-expandPhenoMatrix <- function(pheno, collapse = TRUE, drop.ref = TRUE) {
+expandPhenoMatrix <- function(pheno, drop.ref = TRUE) {
   ## get expanded annotation matrix
-
-
   a1 <- tidy.dataframe(pheno)
   nlevel <- apply(a1, 2, function(x) length(setdiff(unique(x), NA)))
   nterms <- colSums(!is.na(a1))
-
-  y.class <- sapply(utils::type.convert(pheno, as.is = TRUE), class)
-
-  y.isnum <- (y.class %in% c("numeric", "integer"))
-  nlevel
   nratio <- nlevel / nterms
-  nratio
+  y.class <- sapply(utils::type.convert(a1, as.is = TRUE), class)
+
+  ## these integers are probably factors... (mostly...)
+  is.fac <- rep(FALSE, ncol(a1))
+  is.int <- y.class == "integer"
+  ii <- which(is.int)
+  is.fac[ii] <- apply(a1[, ii, drop = FALSE], 2, function(x) {
+    nlev <- length(unique(x[!is.na(x)]))
+    max(x, na.rm = TRUE) %in% c(nlev, nlev - 1)
+  })
+  is.fac2 <- (y.class == "integer" & nlevel <= 3 & nratio < 0.66)
+  y.class[is.fac | is.fac2] <- "character"
+
+  ## select allowed columns: numeric or with "sensible" levels
+  y.isnum <- (y.class %in% c("numeric", "integer"))
   kk <- which(y.isnum | (!y.isnum & nlevel > 1 & nratio < 0.66))
   if (length(kk) == 0) {
     return(NULL)
@@ -2385,8 +2402,14 @@ expandPhenoMatrix <- function(pheno, collapse = TRUE, drop.ref = TRUE) {
   for (i in 1:ncol(a1)) {
     if (a1.isnum[i]) {
       suppressWarnings(x <- as.numeric(a1[, i]))
-      m0 <- matrix((x > stats::median(x, na.rm = TRUE)), ncol = 1)
-      colnames(m0) <- "high"
+      if (drop.ref) {
+        m0 <- matrix((x > stats::median(x, na.rm = TRUE)), ncol = 1)
+        colnames(m0) <- "high"
+      } else {
+        mx <- stats::median(x, na.rm = TRUE)
+        m0 <- matrix(cbind(x <= mx, x > mx), ncol = 2)
+        colnames(m0) <- c("low", "high")
+      }
     } else if (drop.ref && nlevel[i] == 2) {
       x <- as.character(a1[, i])
       x1 <- Matrix::tail(sort(x), 1)
@@ -2403,20 +2426,19 @@ expandPhenoMatrix <- function(pheno, collapse = TRUE, drop.ref = TRUE) {
     if ("_" %in% colnames(m0)) {
       m0 <- m0[, -which(colnames(m0) == "_")]
     }
-
     m1[[i]] <- m0
   }
+
+  ## create level names
   names(m1) <- colnames(a1)
-  if (collapse) {
-    for (i in 1:length(m1)) {
-      colnames(m1[[i]]) <- paste0(names(m1)[i], "=", colnames(m1[[i]]))
-    }
-    m1 <- do.call(cbind, m1)
+  for (i in 1:length(m1)) {
+    colnames(m1[[i]]) <- paste0(names(m1)[i], "=", colnames(m1[[i]]))
   }
+  m1 <- do.call(cbind, m1)
+  rownames(m1) <- rownames(pheno)
+
   return(m1)
 }
-
-
 
 
 #' @title P-value for Pearson's Correlation Coefficient

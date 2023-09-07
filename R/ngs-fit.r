@@ -886,7 +886,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
     )
     dds <- DESeq2::estimateSizeFactors(dds)
     dds <- DESeq2::estimateDispersionsGeneEst(dds)
-    DESeq2::dispersions(dds) <- mcols(dds)$dispGeneEst
+    DESeq2::dispersions(dds) <- GenomicRanges::mcols(dds)$dispGeneEst
     suppressWarnings({
       if (test == "LRT") {
         dds <- try(DESeq2::nbinomLRT(dds))
@@ -1003,7 +1003,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
       )
       dds <- DESeq2::estimateSizeFactors(dds)
       dds <- DESeq2::estimateDispersionsGeneEst(dds)
-      DESeq2::dispersions(dds) <- mcols(dds)$dispGeneEst
+      DESeq2::dispersions(dds) <- GenomicRanges::mcols(dds)$dispGeneEst
       suppressWarnings({
         if (test == "LRT") {
           dds <- try(DESeq2::nbinomLRT(dds))

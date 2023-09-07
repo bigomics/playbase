@@ -54,7 +54,7 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
     X <- X - rowMeans(X)
   }
   if (scale.rows) {
-    X <- X / (1e-6 + apply(X, 1, stats::sd))
+    X <- X / (1e-6 + matrixStats::rowSds(X, na.rm = TRUE))
   }
   if (rank.tf) {
     X <- scale(apply(X, 2, rank))
@@ -408,7 +408,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   dimx <- dim(X) ## original dimensions
   namesx <- colnames(X)
   if (reduce.sd > 0 && nrow(X) > reduce.sd) {
-    sdx <- apply(X, 1, stats::sd, na.rm = TRUE)
+    sdx <- matrixStats::rowSds(X, na.rm = TRUE)
     is.constant <- all(abs(sdx - mean(sdx, na.rm = TRUE)) < 1e-8)
     if (is.constant) {
       message("WARNING:: SD is constant. Skipping SD reduction...\n")
@@ -423,7 +423,8 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
     X <- X - rowMeans(X, na.rm = TRUE) ## do??
   }
   if (scale.features) {
-    X <- X / apply(X, 1, stats::sd, na.rm = TRUE)
+    sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+    X <- X / sdx
   }
 
   ## impute on row median
@@ -443,7 +444,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   if (reduce.pca > 0) {
     reduce.pca <- max(3, min(c(reduce.pca, dim(X) - 1)))
     reduce.pca
-    message("Reducing to ", reduce.pca, " PCA dimenstions...\n")
+    message("Reducing to ", reduce.pca, " PCA dimenstions...")
     cnx <- colnames(X)
     suppressMessages(suppressWarnings(
       res.svd <- irlba::irlba(X, nv = reduce.pca)
@@ -455,7 +456,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   all.pos <- list()
 
   if ("pca" %in% methods && 2 %in% dims) {
-    message("calculating PCA 2D/3D...\n")
+    message("calculating PCA 2D/3D...")
 
     if (is.null(res.svd)) {
       suppressMessages(suppressWarnings(
@@ -483,7 +484,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   }
 
   if ("tsne" %in% methods && 2 %in% dims) {
-    message("calculating t-SNE 2D...\n")
+    message("calculating t-SNE 2D...")
 
     perplexity <- pmax(min(ncol(X) / 4, perplexity), 2)
     perplexity
@@ -500,7 +501,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   }
 
   if ("tsne" %in% methods && 3 %in% dims) {
-    message("calculating t-SNE 3D...\n")
+    message("calculating t-SNE 3D...")
 
     perplexity <- pmax(min(dimx[2] / 4, perplexity), 2)
     perplexity
@@ -516,14 +517,13 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   }
 
   if ("umap" %in% methods && 2 %in% dims) {
-    message("calculating UMAP 2D...\n")
+    message("calculating UMAP 2D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
-      pos <- uwot::umap(t(X[, ]),
+      pos <- uwot::tumap(t(X[, ]),
         n_components = 2,
         n_neighbors = nb,
-        local_connectivity = ceiling(nb / 15),
-        min_dist = 0.1
+        local_connectivity = ceiling(nb / 15)
       )
     } else {
       custom.config <- umap.defaults
@@ -538,14 +538,13 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   }
 
   if ("umap" %in% methods && 3 %in% dims) {
-    message("calculating UMAP 3D...\n")
+    message("calculating UMAP 3D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
-      pos <- uwot::umap(t(X[, ]),
+      pos <- uwot::tumap(t(X[, ]),
         n_components = 3,
         n_neighbors = nb,
-        local_connectivity = ceiling(nb / 15),
-        min_dist = 0.1
+        local_connectivity = ceiling(nb / 15)
       )
     } else {
       custom.config <- umap.defaults
@@ -613,13 +612,16 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
                               method = c("tsne", "umap", "pca")) {
   method <- method[1]
   clust.detect <- clust.detect[1]
-  X <- Matrix::head(X[order(-apply(X, 1, stats::sd)), ], ntop)
+  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+  X <- Matrix::head(X[order(-sdx), ], ntop)
   if (row.center) X <- X - rowMeans(X, na.rm = TRUE)
-  if (row.scale) X <- (X / apply(X, 1, stats::sd, na.rm = TRUE))
+  if (row.scale) X <- (X / matrixStats::rowSds(X, na.rm = TRUE))
 
-  ## some randomization is sometimes necessary if the data is 'too
-  ## clean' and clusters become lines..
-
+  ## adding some randomization is sometimes necessary if the data is 'too
+  ## clean' and some methods get stuck... (IK)
+  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+  small.sd <- 0.05 * mean(sdx)
+  X <- X + small.sd * matrix(rnorm(length(X)), nrow(X), ncol(X))
 
   ## ------------ find t-SNE clusters
   max.perplexity <- max(1, round((ncol(X) - 1) / 4))
@@ -634,7 +636,7 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
 
   if (npca > 0) {
     npca <- min(npca, dim(X) - 1)
-    message("performing tSNE on reduced PCA k=", npca)
+    message("reducing X uaing PCA k=", npca)
     suppressMessages(suppressWarnings(
       svd <- irlba::irlba(X, nv = npca)
     ))
@@ -645,29 +647,29 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
 
   pos2 <- pos3 <- NULL
   if (method == "umap") {
+    message("performing UMAP...")
     if (2 %in% dims) {
-      pos2 <- uwot::umap(
+      pos2 <- uwot::tumap(
         t(X),
         n_components = 2,
         metric = "euclidean",
-        n_neighbors = perplexity,
-        local_connectivity = ceiling(perplexity / 15),
-        min_dist = 0.1
+        n_neighbors = max(2, perplexity),
+        local_connectivity = ceiling(perplexity / 15)
       )
       colnames(pos2) <- c("umap_1", "umap_2")
     }
     if (3 %in% dims) {
-      pos3 <- uwot::umap(
+      pos3 <- uwot::tumap(
         t(X),
         n_components = 3,
         metric = "euclidean",
         n_neighbors = perplexity,
-        local_connectivity = ceiling(perplexity / 15),
-        min_dist = 0.1
+        local_connectivity = ceiling(perplexity / 15)
       )
       colnames(pos3) <- c("umap_1", "umap_2", "umap_3")
     }
   } else if (method == "tsne") {
+    message("performing tSNE...")
     if (2 %in% dims) {
       pos2 <- Rtsne::Rtsne(t(X),
         dim = 2, perplexity = perplexity,
@@ -685,6 +687,7 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
       colnames(pos3) <- c("tsne_1", "tsne_2", "tsne_3")
     }
   } else if (method == "pca") {
+    message("performing UMAP...")
     suppressMessages(suppressWarnings(
       svd <- irlba::irlba(X, nv = 3)
     ))
@@ -697,6 +700,8 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
       colnames(pos3) <- c("pca_1", "pca_2", "pca_3")
     }
   }
+
+  ## add rownames
   if (!is.null(pos2)) {
     rownames(pos2) <- colnames(X)
   }
@@ -704,6 +709,7 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
     rownames(pos3) <- colnames(X)
   }
 
+  ## Find clusters
   if (!is.null(pos2)) pos <- pos2
   if (!is.null(pos3)) pos <- pos3
   idx <- pgx.findLouvainClusters(pos, level = 1, prefix = "c", small.zero = 0.01)
@@ -711,8 +717,6 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
   res <- list(pos2d = pos2, pos3d = pos3, idx = idx)
   return(res)
 }
-
-
 
 
 #' Find Louvain clusters

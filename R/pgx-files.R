@@ -828,7 +828,6 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
 
     tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")
     if (!file.exists(tsne.file) || pgxfc.changed) {
-      rhdf5::h5ls(sigdb)
       cn <- rhdf5::h5read(sigdb, "data/colnames")
       tsne <- rhdf5::h5read(sigdb, "clustering/tsne2d")
       rownames(tsne) <- cn

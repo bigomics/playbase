@@ -48,7 +48,6 @@ compute_testGenesets <- function(pgx,
   }
 
   # Load custom genesets (if user provided)
-
   if (!is.null(custom.geneset$gmt)) {
     # convert gmt standard to SPARSE matrix
     custom_gmt <- playbase::createSparseGenesetMatrix(
@@ -75,7 +74,12 @@ compute_testGenesets <- function(pgx,
 
   # Normalize G after removal of genes
 
+
   G <- playbase::normalize_matrix_by_row(G)
+
+  ## -----------------------------------------------------------
+  ## Filter gene sets
+  ## -----------------------------------------------------------
 
   ## filter gene sets on size
   cat("Filtering gene sets on size...\n")
@@ -126,7 +130,9 @@ compute_testGenesets <- function(pgx,
 
   ## if reduced samples
   ss <- rownames(pgx$model.parameters$exp.matrix)
-  X <- X[, ss, drop = FALSE]
+  if (!is.null(ss)) {
+    X <- X[, ss, drop = FALSE]
+  }
 
   ## -----------------------------------------------------------
   ## create the GENESETxGENE matrix
@@ -151,25 +157,29 @@ compute_testGenesets <- function(pgx,
 
   if (max.features > 0) {
     cat("Reducing gene set matrix...\n")
-
     ## Reduce gene sets by selecting top varying genesets. We use the
     ## very fast sparse rank-correlation for approximate single sample
     ## geneset activation.
     cX <- X - rowMeans(X, na.rm = TRUE) ## center!
-    gsetX <- qlcMatrix::corSparse(G[, ], apply(cX[, ], 2, rank))
+    cX <- apply(cX, 2, rank)
+    gsetX <- qlcMatrix::corSparse(G, cX) ## slow!
     grp <- pgx$model.parameters$group
     gsetX.bygroup <- NULL
+    ## If groups/conditions are present we calculate the SD by group
     if (!is.null(grp)) {
-      gsetX.bygroup <- Matrix::t(apply(gsetX, 1, function(x) tapply(x, grp, mean)))
+      gsetX.bygroup <- tapply(1:ncol(gsetX), grp, function(i) rowMeans(gsetX[, i, drop = FALSE]))
+      gsetX.bygroup <- do.call(cbind, gsetX.bygroup)
       sdx <- apply(gsetX.bygroup, 1, stats::sd)
     } else {
-      sdx <- apply(gsetX, 1, stats::sd)
+      sdx <- matrixStats::rowSds(gsetX)
     }
+    rm(gsetX)
+    rm(gsetX.bygroup)
     names(sdx) <- colnames(G)
     jj <- Matrix::head(order(-sdx), max.features)
     must.include <- "hallmark|kegg|^go|^celltype|^pathway|^custom"
     jj <- unique(c(jj, grep(must.include, colnames(G), ignore.case = TRUE)))
-    jj <- jj[order(colnames(G)[jj])]
+    jj <- jj[order(colnames(G)[jj])] ## sort alphabetically
     G <- G[, jj, drop = FALSE]
   }
 
@@ -190,7 +200,7 @@ compute_testGenesets <- function(pgx,
   cat(">>> Testing gene sets with methods:", test.methods, "\n")
 
   ## convert to gene list
-  gmt <- lapply(apply(G != 0, 2, which), names)
+  gmt <- mat2gmt(G)
   Y <- pgx$samples
   gc()
 
@@ -202,7 +212,6 @@ compute_testGenesets <- function(pgx,
   )
 
   rownames(gset.meta$timings) <- paste("[test.genesets]", rownames(gset.meta$timings))
-
   pgx$timings <- rbind(pgx$timings, gset.meta$timings)
   pgx$gset.meta <- gset.meta
 
@@ -210,23 +219,21 @@ compute_testGenesets <- function(pgx,
   pgx$GMT <- G[, rownames(pgx$gsetX)]
 
   # calculate gset info and store as pgx$gset.meta
-
   gset.size <- Matrix::colSums(pgx$GMT != 0)
-
   gset.size.raw <- playdata::GSET_SIZE
 
   # combine standard genesets with custom genesets size vector
-
   if (!is.null(custom.geneset$gmt)) {
     gset.size.raw <- c(gset.size.raw, custom.geneset$info$GSET_SIZE)
   }
 
   gset.idx <- match(names(gset.size), names(gset.size.raw))
-
-  gset.fraction <- gset.size / gset.size.raw[gset.idx]
+  gset.size.raw <- gset.size.raw[gset.idx]
+  names(gset.size.raw) <- names(gset.size)
+  gset.fraction <- gset.size / gset.size.raw
 
   pgx$gset.meta$info <- data.frame(
-    gset.size.raw = gset.size.raw[gset.idx],
+    gset.size.raw = gset.size.raw,
     gset.size = gset.size,
     gset.fraction = gset.fraction
   )
@@ -244,7 +251,7 @@ compute_testGenesets <- function(pgx,
   remove(Y)
   remove(G)
   remove(gmt)
-
+  gc()
   return(pgx)
 }
 
@@ -280,7 +287,9 @@ clean_gmt <- function(gmt.all, gmt.db) {
   gmt.all <- unlist(gmt.all, recursive = FALSE, use.names = TRUE)
 
   ## get rid of trailing numeric values
-  gmt.all <- parallel::mclapply(gmt.all, function(x) gsub("[,].*", "", x), mc.cores = 1)
+  gmt.all <- lapply(gmt.all, function(x) gsub("[,].*", "", x))
+
+
 
   ## order by length and take out duplicated sets (only by name)
   gmt.all <- gmt.all[order(-sapply(gmt.all, length))]
@@ -326,13 +335,14 @@ createSparseGenesetMatrix <- function(
   genes <- genes[!is.na(annot$chr)]
 
   ## Filter genesets with permitted genes (official and min.sharing)
-  gmt.all <- parallel::mclapply(gmt.all, function(s) intersect(s, genes))
-  gmt.size <- sapply(gmt.all, length)
+  gmt.all <- lapply(gmt.all, function(s) intersect(s, genes))
+
   gmt.all <- gmt.all[which(gmt.size >= min.geneset.size & gmt.size <= max.geneset.size)] # legacy
   ## build huge sparsematrix gene x genesets
   genes <- sort(genes)
-  idx.j <- parallel::mclapply(gmt.all[], function(s) match(s, genes))
+  idx.j <- lapply(gmt.all, function(s) match(s, genes))
   idx.i <- lapply(1:length(gmt.all), function(i) rep(i, length(idx.j[[i]])))
+
   ii <- unlist(idx.i)
   jj <- unlist(idx.j)
 

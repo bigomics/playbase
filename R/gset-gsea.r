@@ -53,7 +53,7 @@ gmt2mat <- function(gmt, max.genes = -1, ntop = -1, sparse = TRUE,
   colnames(D) <- kk
   j <- 1
   if (use.multicore) {
-    idx <- parallel::mclapply(gmt, function(s) match(s, gg))
+    idx <- lapply(gmt, function(s) match(s, gg))
     idx[sapply(idx, length) == 0] <- 0
     idx <- sapply(1:length(idx), function(i) rbind(idx[[i]], i))
     idx <- matrix(unlist(idx[]), byrow = TRUE, ncol = 2)
@@ -71,10 +71,28 @@ gmt2mat <- function(gmt, max.genes = -1, ntop = -1, sparse = TRUE,
   D
 }
 
-
-
-
-
+#' Convert binary matrix to GMT list
+#'
+#' This function converts binary matrix to a GMT (Gene Matrix
+#' Transposed) list, The binary matrix indicates the presence or
+#' absence of genes in each gene set, where rows represent genes and
+#' columns represent gene sets.
+#'
+#' @param mat A matrix with non-zero entries representing genes in
+#'   each gene set where rows represent genes and columns represent
+#'   gene sets.
+#'
+#' @export
+#'
+#' @return A list of vector representing each gene set. Each list
+#'   element correspond to a gene set and is a vector of genes
+#'
+mat2gmt <- function(mat) {
+  idx <- Matrix::which(mat != 0, arr.ind = TRUE)
+  gmt <- tapply(rownames(idx), idx[, 2], list)
+  names(gmt) <- colnames(mat)[as.integer(names(gmt))]
+  gmt
+}
 
 #' Read data from a GMT file
 #'

@@ -440,8 +440,6 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, slen = 2
 #' @export
 pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
                                   fix.degenerate = FALSE, skip.hidden = TRUE) {
-  ## "Automagiccally" parse dataframe and create contrasts using
-  ## default assumptions.
   shortestunique <- function(xx, slen = 3) {
     dup <- sapply(
       1:max(nchar(xx)),
@@ -521,7 +519,7 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
   df <- apply(df, 2, as.character)
 
   ## trim leading/end parts that are equal
-  df <- apply(df, 2, trimsame)
+  ##  df <- apply(df, 2, trimsame)  ## need rethink!
 
   ## try detect (fluffy) comment fields (and remove)
   countSpaces <- function(s) {
@@ -578,7 +576,7 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
     x[too.small] <- NA
     x <- iconv(x, "latin1", "ASCII", sub = "") ## ???
     if (!(ref1 %in% x)) ref1 <- NA
-    ref.pattern <- "wt|contr|ctr|untreat|normal|^neg|ref|^no$|^0$|^0h$|scrambl|none|dmso|vehicle|low|null|zero|^not"
+    ref.pattern <- "wt|contr|ctr|untreat|normal|^neg|ref|^no$|^0$|^0h$|scrambl|none|dmso|vehicle|low|^lo$|null|zero|^not"
     detect.ref <- any(grepl(ref.pattern, x, ignore.case = TRUE))
     if (is.na(ref1) & detect.ref) {
       ref1 <- grep(ref.pattern, x, ignore.case = TRUE, value = TRUE)
