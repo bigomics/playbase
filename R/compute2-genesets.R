@@ -277,7 +277,7 @@ clean_gmt <- function(gmt.all, gmt.db) {
   ## get rid of trailing numeric values
   gmt.all <- lapply(gmt.all, function(x) gsub("[,].*", "", x))
 
-  
+
 
   ## order by length and take out duplicated sets (only by name)
   gmt.all <- gmt.all[order(-sapply(gmt.all, length))]
