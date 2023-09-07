@@ -545,9 +545,9 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
   df[df == " "] <- NA
 
   ## ----------- careful cleanup
-  df <- apply(df, 2, function(s) gsub("[`'\"]","",s))
-  df <- apply(df, 2, function(s) trimws(gsub("[ ]+"," ",s)))
-  
+  df <- apply(df, 2, function(s) gsub("[`'\"]", "", s))
+  df <- apply(df, 2, function(s) trimws(gsub("[ ]+", " ", s)))
+
   ## ----------- use type.convert to infer parameter type
   df <- utils::type.convert(data.frame(df, check.names = FALSE), as.is = TRUE)
 
@@ -559,19 +559,19 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
       x <- c("low", "high")[1 + 1 * (x > stats::median(x, na.rm = TRUE))]
       df[, i] <- factor(x, levels = c("low", "high"))
     }
-  }  
-  
+  }
+
   ## ----------- remove phenotype with too many levels
-  level.num   <- apply(df,2,function(x) length(unique(x[!is.na(x)])))  
-  level.ratio <- level.num / apply(df,2,function(x) length(x[!is.na(x)]))
-  sel <- ( level.num <= 10 | level.ratio < 0.20 )
-  df <- df[, sel, drop=FALSE]
-  
+  level.num <- apply(df, 2, function(x) length(unique(x[!is.na(x)])))
+  level.ratio <- level.num / apply(df, 2, function(x) length(x[!is.na(x)]))
+  sel <- (level.num <= 10 | level.ratio < 0.20)
+  df <- df[, sel, drop = FALSE]
+
   ## emergency bail out...
   if (ncol(df) == 0) {
     return(NULL)
   }
-  
+
   ## For each phenotype parameter we 'automagically' try to create a
   ## contrast
   K <- NULL
