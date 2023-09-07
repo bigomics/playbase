@@ -438,7 +438,7 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, slen = 2
 #' for differential analysis.
 #'
 #' @export
-pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
+pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL, max.level=10,
                                   fix.degenerate = FALSE, skip.hidden = TRUE) {
   shortestunique <- function(xx, slen = 3) {
     dup <- sapply(
@@ -564,7 +564,7 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
   ## ----------- remove phenotype with too many levels
   level.num   <- apply(df,2,function(x) length(unique(x[!is.na(x)])))  
   level.ratio <- level.num / apply(df,2,function(x) length(x[!is.na(x)]))
-  sel <- ( level.num <= 10 | level.ratio < 0.20 )
+  sel <- ( level.num <= max.level | level.ratio < 0.20 )
   df <- df[, sel, drop=FALSE]
   
   ## emergency bail out...
