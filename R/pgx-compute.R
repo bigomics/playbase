@@ -536,8 +536,10 @@ pgx.computePGX <- function(pgx,
                            do.cluster = TRUE,
                            use.design = TRUE,
                            prune.samples = FALSE,
-                           extra.methods = c("meta.go", "infer", "deconv", "drugs",
-                             "connectivity", "wordcloud", "wgcna")[c(1, 2)],
+                           extra.methods = c(
+                             "meta.go", "infer", "deconv", "drugs",
+                             "connectivity", "wordcloud", "wgcna"
+                           )[c(1, 2)],
                            libx.dir = NULL,
                            progress = NULL) {
   ## ======================================================================
