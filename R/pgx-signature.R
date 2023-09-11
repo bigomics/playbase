@@ -586,9 +586,9 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
 
   ## --------------------------------------------------
   ## Add enrichment signatures
-  ## --------------------------------------------------  
-  pgx.addEnrichmentSignaturesH5(h5.file, X = X, mc.cores = 0, methods = "rankcor") 
-  
+  ## --------------------------------------------------
+  pgx.addEnrichmentSignaturesH5(h5.file, X = X, mc.cores = 0, methods = "rankcor")
+
   ## done!
   rhdf5::h5closeAll()
 }
