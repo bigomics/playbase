@@ -155,10 +155,12 @@ compute_extra <- function(ngs, extra = c(
     }
   }
 
-
   if ("wgcna" %in% extra) {
     message(">>> Computing wgcna...")
-    ngs$wgcna <- pgx.wgcna(ngs)
+    tt <- system.time({
+        ngs$wgcna <- pgx.wgcna(ngs)
+    })
+    timings <- rbind(timings, c("wgcna", tt))
   }
 
   ## ------------------------------------------------------
