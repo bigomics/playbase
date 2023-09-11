@@ -410,6 +410,18 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   }
 
   ## -------------------------------------------------------------------
+  ## Check bad samples...
+  ## -------------------------------------------------------------------
+  min.counts <- 1e-3 * mean(colSums(pgx$counts,na.rm=TRUE))
+  sel <- which( colSums(pgx$counts,na.rm=TRUE) < pmax(min.counts,1) )
+  if(length(sel)) {
+      message("[createPGX] *WARNING* bad samples. Removing samples: ",paste(sel,collapse=" "))
+      pgx$counts  <- pgx$counts[,-sel,drop=FALSE]
+      pgx$samples <- pgx$samples[-sel,,drop=FALSE]
+      pgx$contrasts <- pgx$contrasts[-sel,,drop=FALSE]
+  }
+  
+  ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
   pgx <- compute_cellcycle_gender(pgx)
@@ -443,7 +455,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     }
     remove(cX)
   }
-
 
   ## -------------------------------------------------------------------
   ## Pre-calculate t-SNE for and get clusters early so we can use it
