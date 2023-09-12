@@ -54,7 +54,8 @@ compute_testGenesets <- function(pgx,
       gmt.all = custom.geneset$gmt,
       min.geneset.size = 3,
       max.geneset.size = 9999,
-      min_gene_frequency = 1)
+      min_gene_frequency = 1
+    )
   }
 
   ## -----------------------------------------------------------
@@ -92,21 +93,20 @@ compute_testGenesets <- function(pgx,
     size.ok <- names(gmt.size) %in% names(top_100gs)
   }
 
-  G <- G[which(size.ok),]
+  G <- G[which(size.ok), ]
 
   # Transpose G
 
   G <- Matrix::t(G)
 
   if (!is.null(custom.geneset$gmt)) {
-    
     # upper case in custom gmt genes (to accomodate for mouse genes)
     colnames(custom_gmt) <- toupper(colnames(custom_gmt))
     custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes, drop = FALSE]
     custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
 
     # combine standard genesets with custom genesets
-  
+
     G <- playbase::merge_sparse_matrix(m1 = G, m2 = Matrix::t(custom_gmt))
   }
 
@@ -397,7 +397,7 @@ merge_sparse_matrix <- function(m1, m2) {
   # if rows have duplicated names, then sum them and keep only one row
   if (any(duplicated(rownames(combined_gmt)))) {
     dup_rows <- unique(rownames(combined_gmt)[duplicated(rownames(combined_gmt))])
-    summed_rows <- lapply(dup_rows, function(x) Matrix::colSums(combined_gmt[rownames(combined_gmt) == x,]))
+    summed_rows <- lapply(dup_rows, function(x) Matrix::colSums(combined_gmt[rownames(combined_gmt) == x, ]))
 
     # convert summed rows to a matrix
     summed_rows <- do.call(rbind, summed_rows)
@@ -406,7 +406,7 @@ merge_sparse_matrix <- function(m1, m2) {
     rownames(summed_rows) <- dup_rows
 
     # remove duplicated rows
-    combined_gmt <- combined_gmt[!rownames(combined_gmt) %in% dup_rows,]
+    combined_gmt <- combined_gmt[!rownames(combined_gmt) %in% dup_rows, ]
 
     # add summed rows
 
