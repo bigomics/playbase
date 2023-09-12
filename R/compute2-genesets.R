@@ -50,7 +50,11 @@ compute_testGenesets <- function(pgx,
   # Load custom genesets (if user provided)
   if (!is.null(custom.geneset$gmt)) {
     # convert gmt standard to SPARSE matrix
-    custom_gmt <- createSparseGenesetMatrix(custom.geneset$gmt, min_gene_frequency = 1)
+    custom_gmt <- playbase::createSparseGenesetMatrix(
+      gmt.all = custom.geneset$gmt,
+      min.geneset.size = 3,
+      max.geneset.size = 9999,
+      min_gene_frequency = 1)
   }
 
   ## -----------------------------------------------------------
@@ -69,17 +73,9 @@ compute_testGenesets <- function(pgx,
   G <- G[, colnames(G) %in% genes]
 
   # Normalize G after removal of genes
-  G <- normalize_matrix_by_row(G)
 
-  if (!is.null(custom.geneset$gmt)) {
-    custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes]
-    custom_gmt <- normalize_matrix_by_row(custom_gmt)
-    # combine standard genesets with custom genesets
-    G <- merge_sparse_matrix(G, custom_gmt)
-  }
 
-  # Transpose G ???
-  G <- Matrix::t(G)
+  G <- playbase::normalize_matrix_by_row(G)
 
   ## -----------------------------------------------------------
   ## Filter gene sets
@@ -87,7 +83,7 @@ compute_testGenesets <- function(pgx,
 
   ## filter gene sets on size
   cat("Filtering gene sets on size...\n")
-  gmt.size <- Matrix::colSums(G != 0)
+  gmt.size <- Matrix::rowSums(G != 0)
   size.ok <- (gmt.size >= 15 & gmt.size <= 400)
 
   # If dataset is too small that size.ok == 0, then select top 100
@@ -96,7 +92,23 @@ compute_testGenesets <- function(pgx,
     size.ok <- names(gmt.size) %in% names(top_100gs)
   }
 
-  G <- G[, which(size.ok)]
+  G <- G[which(size.ok),]
+
+  # Transpose G
+
+  G <- Matrix::t(G)
+
+  if (!is.null(custom.geneset$gmt)) {
+    
+    # upper case in custom gmt genes (to accomodate for mouse genes)
+    colnames(custom_gmt) <- toupper(colnames(custom_gmt))
+    custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes, drop = FALSE]
+    custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
+
+    # combine standard genesets with custom genesets
+  
+    G <- playbase::merge_sparse_matrix(m1 = G, m2 = Matrix::t(custom_gmt))
+  }
 
   ## -----------------------------------------------------------
   ## create the full GENE matrix (always collapsed by gene)
@@ -192,7 +204,7 @@ compute_testGenesets <- function(pgx,
   Y <- pgx$samples
   gc()
 
-  gset.meta <- gset.fitContrastsWithAllMethods(
+  gset.meta <- playbase::gset.fitContrastsWithAllMethods(
     gmt = gmt, X = X, Y = Y, G = G,
     design = design,
     contr.matrix = contr.matrix, methods = test.methods,
@@ -312,14 +324,14 @@ createSparseGenesetMatrix <- function(
   ## ------------- filter by size
   gmt.size <- sapply(gmt.all, length)
 
-  gmt.all <- gmt.all[which(gmt.size >= 15 & gmt.size <= 1000)]
+  gmt.all <- gmt.all[which(gmt.size >= min.geneset.size & gmt.size <= max.geneset.size)]
 
   ## ------------- filter genes by minimum frequency and chrom
   genes.table <- table(unlist(gmt.all))
   genes <- names(which(genes.table >= min_gene_frequency))
   genes <- genes[grep("^LOC|RIK$", genes, invert = TRUE)]
   genes <- intersect(genes, known.symbols)
-  annot <- ngs.getGeneAnnotation(genes)
+  annot <- playbase::ngs.getGeneAnnotation(genes)
   genes <- genes[!is.na(annot$chr)]
 
   ## Filter genesets with permitted genes (official and min.sharing)
@@ -382,5 +394,23 @@ merge_sparse_matrix <- function(m1, m2) {
 
   combined_gmt <- Matrix::rbind2(m1, m2)
 
+  # if rows have duplicated names, then sum them and keep only one row
+  if (any(duplicated(rownames(combined_gmt)))) {
+    dup_rows <- unique(rownames(combined_gmt)[duplicated(rownames(combined_gmt))])
+    summed_rows <- lapply(dup_rows, function(x) Matrix::colSums(combined_gmt[rownames(combined_gmt) == x,]))
+
+    # convert summed rows to a matrix
+    summed_rows <- do.call(rbind, summed_rows)
+
+    # add names to summed rows
+    rownames(summed_rows) <- dup_rows
+
+    # remove duplicated rows
+    combined_gmt <- combined_gmt[!rownames(combined_gmt) %in% dup_rows,]
+
+    # add summed rows
+
+    combined_gmt <- Matrix::rbind2(combined_gmt, summed_rows)
+  }
   return(combined_gmt)
 }
