@@ -1661,14 +1661,8 @@ pgx.getGeneSetCollections <- function(gsets, min.size = 10, max.size = 500) {
   ## Gene set collections
   ## -----------------------------------------------------------------------------
 
-
-  kegg0 <- sort(gsets[grep("KEGG|.*hsa[0-9]{5}$", gsets)])
-  kegg0 <- kegg0[!duplicated(getKeggID(kegg0))]
-
   collections <- list(
     "Hallmark collection" = gsets[grep("HALLMARK", gsets)],
-    "KEGG pathways" = kegg0,
-    "KEGG metabolic pathways" = kegg0[grep("^00|^01", getKeggID(kegg0))],
     "Pathway related" = gsets[grep("pathway", gsets, ignore.case = TRUE)],
     "Metabolism related" = gsets[grep("metaboli", gsets, ignore.case = TRUE)],
     "Signalling related" = gsets[grep("signal", gsets, ignore.case = TRUE)],
@@ -1679,7 +1673,10 @@ pgx.getGeneSetCollections <- function(gsets, min.size = 10, max.size = 500) {
     "Immune related" = gsets[grep("immune", gsets, ignore.case = TRUE)],
     "Cell differentiation" = gsets[grep("differentiation", gsets, ignore.case = TRUE)],
     "Checkpoint related" = gsets[grep("checkpoint", gsets, ignore.case = TRUE)],
-    "IL gene sets" = gsets[grep("IL[1-9]{1,2}", gsets, ignore.case = TRUE)]
+    "IL gene sets" = gsets[grep("IL[1-9]{1,2}", gsets, ignore.case = TRUE)],
+    "Aging" = gsets[grep("aging", gsets, ignore.case = TRUE)],
+    "Disease" = gsets[grep("jensen|disease|covid|diabetes", gsets, ignore.case = TRUE)],
+
   )
 
   collections[["<all>"]] <- gsets ## X is sorted
