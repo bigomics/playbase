@@ -191,11 +191,11 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   }
 
   ## Check bad samples
-  min.counts <- 1e-4 * mean(colSums(counts,na.rm=TRUE))
-  sel <- which( colSums(counts,na.rm=TRUE) < pmax(min.counts,1) )
-  if(length(sel)) {
-      message("[createPGX] *WARNING* bad samples. Removing samples: ",paste(sel,collapse=" "))
-      counts  <- counts[,-sel,drop=FALSE]
+  min.counts <- 1e-4 * mean(colSums(counts, na.rm = TRUE))
+  sel <- which(colSums(counts, na.rm = TRUE) < pmax(min.counts, 1))
+  if (length(sel)) {
+    message("[createPGX] *WARNING* bad samples. Removing samples: ", paste(sel, collapse = " "))
+    counts <- counts[, -sel, drop = FALSE]
   }
 
   ## -------------------------------------------------------------------
@@ -254,11 +254,11 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     ## euqalize them because the thresholds can become
     ## strange. Here we decide if normalizing is necessary (WARNING
     ## changes total counts!!!)
-    totratio <- log10(max(1+totcounts, na.rm = TRUE) / min(1+totcounts, na.rm = TRUE))
+    totratio <- log10(max(1 + totcounts, na.rm = TRUE) / min(1 + totcounts, na.rm = TRUE))
     totratio
     if (totratio > 6) {
       cat("[createPGX:autoscale] WARNING: too large differences in total counts. forcing normalization.")
-      meancounts <- exp(mean(log(1+totcounts)))
+      meancounts <- exp(mean(log(1 + totcounts)))
       meancounts
       counts <- t(t(counts) / totcounts) * meancounts
     }
@@ -438,29 +438,29 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## Batch-correction (if requested. WARNING: changes counts )
   ## -------------------------------------------------------------------
   batch.par <- c("batch", "batch2")
-  has.batchpar <- any(grepl("^batch|^batch2",colnames(pgx$samples),ignore.case=TRUE))
+  has.batchpar <- any(grepl("^batch|^batch2", colnames(pgx$samples), ignore.case = TRUE))
   if (batch.correct && has.batchpar) {
     b <- "batch"
-    bb <- grep("^batch|^batch2",colnames(pgx$samples),ignore.case=TRUE,value=TRUE)
+    bb <- grep("^batch|^batch2", colnames(pgx$samples), ignore.case = TRUE, value = TRUE)
     for (b in bb) {
       message("[createPGX] batch correcting for parameter '", b, "'\n")
       zz <- which(pgx$counts == 0, arr.ind = TRUE)
       cX <- log2(1 + pgx$counts)
       bx <- pgx$sample[, b]
-      if(length(unique(bx[!is.na(bx)])) > 1) {
+      if (length(unique(bx[!is.na(bx)])) > 1) {
         message("[createPGX] batch correcting for counts using LIMMA\n")
         cX <- limma::removeBatchEffect(cX, batch = bx) ## in log-space
         cX <- pmax(2**cX - 1, 0)
         cX[zz] <- 0
         pgx$counts <- pmax(cX, 0) ## batch corrected counts...
-          
+
         if (!is.null(pgx$X)) {
           message("[createPGX] batch correcting for logX using LIMMA\n")
           pgx$X <- limma::removeBatchEffect(pgx$X, batch = bx) ## in log-space
           pgx$X[zz] <- 0
         }
       } else {
-          message("createPGX] invalid batch paramater")
+        message("createPGX] invalid batch paramater")
       }
     }
     remove(cX)
