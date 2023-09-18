@@ -39,10 +39,6 @@ compute_testGenesets <- function(pgx,
                                  custom.geneset = NULL,
                                  test.methods = c("gsva", "camera", "fgsea"),
                                  remove.outputs = TRUE) {
-  ## Rewritten 24.12.2019. Now much faster but needs gset-sparseG-XL
-  ## precomputed.
-  ##
-  ##
   if (!"X" %in% names(pgx)) {
     stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
   }
@@ -193,10 +189,16 @@ compute_testGenesets <- function(pgx,
   gc()
 
   gset.meta <- gset.fitContrastsWithAllMethods(
-    gmt = gmt, X = X, Y = Y, G = G,
+    gmt = gmt,
+    X = X,
+    Y = Y,
+    G = G,
     design = design,
-    contr.matrix = contr.matrix, methods = test.methods,
-    mc.threads = 1, mc.cores = NULL, batch.correct = TRUE
+    contr.matrix = contr.matrix,
+    methods = test.methods,
+    mc.threads = 1,
+    mc.cores = NULL,
+    batch.correct = TRUE
   )
 
   rownames(gset.meta$timings) <- paste("[test.genesets]", rownames(gset.meta$timings))
