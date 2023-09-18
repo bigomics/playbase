@@ -420,15 +420,15 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## -------------------------------------------------------------------
   ## Check bad samples...
   ## -------------------------------------------------------------------
-  min.counts <- 1e-3 * mean(colSums(pgx$counts,na.rm=TRUE))
-  sel <- which( colSums(pgx$counts,na.rm=TRUE) < pmax(min.counts,1) )
-  if(length(sel)) {
-      message("[createPGX] *WARNING* bad samples. Removing samples: ",paste(sel,collapse=" "))
-      pgx$counts  <- pgx$counts[,-sel,drop=FALSE]
-      pgx$samples <- pgx$samples[-sel,,drop=FALSE]
-      pgx$contrasts <- pgx$contrasts[-sel,,drop=FALSE]
+  min.counts <- 1e-3 * mean(colSums(pgx$counts, na.rm = TRUE))
+  sel <- which(colSums(pgx$counts, na.rm = TRUE) < pmax(min.counts, 1))
+  if (length(sel)) {
+    message("[createPGX] *WARNING* bad samples. Removing samples: ", paste(sel, collapse = " "))
+    pgx$counts <- pgx$counts[, -sel, drop = FALSE]
+    pgx$samples <- pgx$samples[-sel, , drop = FALSE]
+    pgx$contrasts <- pgx$contrasts[-sel, , drop = FALSE]
   }
-  
+
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
@@ -577,7 +577,7 @@ pgx.computePGX <- function(pgx,
   is.numcontrast <- all(contr.values %in% c(NA, -1, 0, 1))
   is.numcontrast <- is.numcontrast && (-1 %in% contr.values) && (1 %in% contr.values)
   if (!is.numcontrast) {
-    contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
+    contr.matrix <- playbase::makeContrastsFromLabelMatrix(contr.matrix)
     contr.matrix <- sign(contr.matrix) ## sign is fine
   }
 
@@ -604,7 +604,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
   message("[pgx.computePGX] testing genes...")
 
-  pgx <- compute_testGenes(
+  pgx <- playbase::compute_testGenes(
     pgx, contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
@@ -616,7 +616,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
   message("[pgx.computePGX] testing genesets...")
-  pgx <- compute_testGenesets(
+  pgx <- playbase::compute_testGenesets(
     pgx,
     custom.geneset = custom.geneset,
     max.features = max.genesets,
