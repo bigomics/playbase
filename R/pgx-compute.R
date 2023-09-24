@@ -117,6 +117,8 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 #' OmicsPlayground.
 #' @param counts Matrix of count data with genes as rows and samples as columns.
 #' @param samples Data frame containing sample information.
+#' @param species Default "hsapiens_gene_ensembl", it indicates the species used
+#' for the gene annotation table and the probe to symbol conversion.
 #' @param contrasts Data frame defining sample contrasts.
 #' @param X (Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.
 #' @param is.logx Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.
@@ -135,11 +137,20 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 #' @return List. PGX object containing input data and parameters.
 #'
 #' @export
-pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
-                          is.logx = NULL, batch.correct = TRUE,
-                          auto.scale = TRUE, filter.genes = TRUE, prune.samples = FALSE,
-                          only.known = TRUE, only.hugo = TRUE, convert.hugo = TRUE,
-                          do.cluster = TRUE, cluster.contrasts = FALSE, do.clustergenes = TRUE,
+pgx.createPGX <- function(counts, samples,
+                          contrasts, X = NULL, ## genes,
+                          is.logx = NULL,
+                          batch.correct = TRUE,
+                          species = "hsapiens_gene_ensembl",
+                          auto.scale = TRUE,
+                          filter.genes = TRUE,
+                          prune.samples = FALSE,
+                          only.known = TRUE,
+                          only.hugo = TRUE,
+                          convert.hugo = TRUE,
+                          do.cluster = TRUE,
+                          cluster.contrasts = FALSE,
+                          do.clustergenes = TRUE,
                           only.proteincoding = TRUE) {
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("dimension of counts and X do not match\n")
@@ -160,7 +171,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   is.numbered <- all(unique(as.vector(contrasts)) %in% c(-1, 0, 1))
   is.numbered <- all(sapply(utils::type.convert(data.frame(contrasts), as.is = TRUE), class) %in% c("numeric", "integer"))
   ct.type <- c("labeled (new style)", "numbered (old style)")[1 + 1 * is.numbered]
-  is.numbered
+
   if (is.numbered && ncol(contrasts) > 0) {
     contrasts <- contrastAsLabels(contrasts)
   }
@@ -171,7 +182,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     # only run the code below if we identify at least one group
 
     is.group.contrast <- all(rownames(contrasts) %in% samples[, grp.idx])
-    is.group.contrast
+
     if (is.group.contrast && nrow(contrasts) < nrow(samples)) {
       ## group
       grp <- as.character(samples[, grp.idx])
@@ -213,11 +224,11 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   message("[createPGX] check logarithm/linear...")
   guess.log <- (min(counts, na.rm = TRUE) < 0 || max(counts, na.rm = TRUE) < 100)
   guess.log <- guess.log && is.null(X) && (is.null(is.logx) || is.logx == TRUE)
-  guess.log
+
   if (is.null(is.logx)) {
     is.logx <- guess.log
   }
-  is.logx
+
   if (is.logx) {
     cat("[createPGX] input assumed log-expression (logarithm)\n")
     cat("[createPGX] ...undo-ing logarithm\n")
@@ -240,51 +251,31 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   message("[createPGX] scaling counts...")
   counts_multiplier <- 1
   totcounts <- Matrix::colSums(counts, na.rm = TRUE)
-  totcounts
+
   if (auto.scale) {
     ## If the difference in total counts is too large, we need to
     ## euqalize them because the thresholds can become
     ## strange. Here we decide if normalizing is necessary (WARNING
     ## changes total counts!!!)
     totratio <- log10(max(totcounts, na.rm = TRUE) / min(totcounts, na.rm = TRUE))
-    totratio
     if (totratio > 6) {
       cat("[createPGX:autoscale] WARNING: too large differences in total counts. forcing normalization.")
       meancounts <- exp(mean(log(totcounts)))
-      meancounts
       counts <- t(t(counts) / totcounts) * meancounts
     }
 
     ## check if too big (more than billion reads)
     mean.counts <- mean(Matrix::colSums(counts, na.rm = TRUE))
-    mean.counts
     is.toobig <- log10(mean.counts) > 9
-    is.toobig
     if (is.toobig) {
       ## scale to about 10 million reads
       #
       cat("[createPGX:autoscale] WARNING: too large total counts. Scaling down to 10e6 reads.\n")
       unit <- 10**(round(log10(mean.counts)) - 7)
-      unit
       counts <- counts / unit
       counts_multiplier <- unit
     }
-    counts_multiplier
     cat("[createPGX:autoscale] count_multiplier= ", counts_multiplier, "\n")
-  }
-
-  ## -------------------------------------------------------------------
-  ## convert probe-IDs to gene symbol (do not translate yet to HUGO)
-  ## -------------------------------------------------------------------
-  message("[createPGX] converting probes to symbol...")
-  symbol <- probe2symbol(rownames(counts), type = NULL) ## auto-convert function
-  if (mean(rownames(counts) == symbol, na.rm = TRUE) < 0.5) { ## why??
-    jj <- which(!is.na(symbol))
-    counts <- as.matrix(counts[jj, ])
-    rownames(counts) <- symbol[jj]
-    if (!is.null(X)) {
-      rownames(X) <- rownames(counts)
-    }
   }
 
   ## -------------------------------------------------------------------
@@ -292,20 +283,39 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## -------------------------------------------------------------------
   message("[createPGX] creating pgx object...")
 
-  pgx <- list() ## empty object
-  pgx$name <- "data set"
-  this.date <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-  pgx$date <- this.date
-  pgx$datatype <- "unknown"
-  pgx$description <- "data set"
+  pgx <- list(
+    name = "data set",
+    date = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+    datatype = "unknown",
+    description <- "data set",
+    samples = data.frame(samples, check.names = FALSE),
+    counts = as.matrix(counts),
+    contrasts = contrasts,
+    X = X,
+    total_counts = totcounts, # input normalized log-expression (can be NULL)
+    counts_multiplier = counts_multiplier
+  ) ## empty object
 
-  pgx$samples <- data.frame(samples, check.names = FALSE)
-  pgx$counts <- as.matrix(counts)
-  pgx$contrasts <- contrasts
-  pgx$X <- X ## input normalized log-expression (can be NULL)
+  ## -------------------------------------------------------------------
+  ## create gene annotation if not given (no HUGO conversion)
+  ## -------------------------------------------------------------------
+  message("[createPGX] annotating genes...")
 
-  pgx$total_counts <- totcounts
-  pgx$counts_multiplier <- counts_multiplier
+  mart <- biomaRt::useMart(biomart = "ensembl", dataset = species)
+  pgx$genes <- ngs.getGeneAnnotation(rownames(counts),
+                                     probe_type = NULL,
+                                     mart = mart,
+                                     species = species)
+
+  all_genes <- biomaRt::getBM(attributes = "hgnc_symbol", mart = mart)
+  pgx$all_genes <- all_genes[, 1]
+
+  ## -------------------------------------------------------------------
+  ## convert probe-IDs to gene symbol (do not translate yet to HUGO)
+  ## -------------------------------------------------------------------
+  message("[createPGX] converting probes to symbol...")
+  pgx$symbol <- probe2symbol(rownames(counts), annot_table = pgx$genes) ## auto-convert function
+
 
   ## -------------------------------------------------------------------
   ## collapse multiple row for genes by summing up counts
@@ -322,7 +332,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     message("[createPGX] skip conversion to HUGO symbols")
   }
   ndup <- sum(duplicated(gene1))
-  ndup
+
   if (ndup > 0) {
     message("[createPGX:autoscale] duplicated rownames detected: summing up rows (counts).")
     x1 <- tapply(1:nrow(pgx$counts), gene1, function(i) {
@@ -346,21 +356,14 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   }
 
   ## -------------------------------------------------------------------
-  ## create gene annotation if not given (no HUGO conversion)
-  ## -------------------------------------------------------------------
-  message("[createPGX] annotating genes...")
-  pgx$genes <- ngs.getGeneAnnotation(genes = rownames(pgx$counts))
-  rownames(pgx$genes) <- rownames(pgx$counts)
-  pgx$genes[is.na(pgx$genes)] <- ""
-
-  ## -------------------------------------------------------------------
   ## Filter out not-expressed
   ## -------------------------------------------------------------------
   if (filter.genes) {
     ## There is second filter in the statistics computation. This
     ## first filter is primarily to reduce the counts table.
     message("[createPGX] filtering out not-expressed genes...")
-    keep <- (Matrix::rowMeans(pgx$counts > 0) > 0) ## at least in one...
+    keep <- (Matrix::rowSums(pgx$counts) > 0) ## at least in one...
+    keep <- names(keep == TRUE)
     pgx$counts <- pgx$counts[keep, , drop = FALSE]
     pgx$genes <- pgx$genes[keep, , drop = FALSE]
     if (!is.null(pgx$X)) {
@@ -371,42 +374,17 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   ## -------------------------------------------------------------------
   ## Filter genes?
   ## -------------------------------------------------------------------
-  organism <- pgx.getOrganism(pgx$counts)
-  message("[createPGX] detected organism: ", organism, "")
 
   do.filter <- (only.hugo | only.known | only.proteincoding)
-  if (do.filter && organism %in% c("mouse", "rat")) {
-    message("[createPGX] filtering genes...")
-    SYMBOL <- unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
-    is.hugo <- is.known <- is.protcoding <- TRUE
-    if (only.hugo) is.hugo <- (pgx$genes$gene_name %in% SYMBOL)
-    #
-    if (only.known) {
-      is.known <- !grepl("Rik|^Orf|^Loc", pgx$genes$gene_name) ## ???
-    }
+  if (do.filter) {
+    pgx$genes <- pgx$genes[!is.na(hgnc_symbol)|hgnc_symbol == "",]
     if (only.proteincoding) {
-      is.protcoding <- pgx$genes$gene_biotype %in% c("protein_coding")
+      pgx$genes <- pgx$genes[gene_biotype %in% c("protein_coding")]
     }
-    keep <- (is.known & is.hugo & is.protcoding)
-    pgx$counts <- pgx$counts[keep, , drop = FALSE]
-    pgx$genes <- pgx$genes[keep, , drop = FALSE]
-    if (!is.null(pgx$X)) pgx$X <- pgx$X[keep, , drop = FALSE]
-  }
-  if (do.filter && organism == "human") {
-    message("[createPGX] filtering genes...")
-    SYMBOL <- unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
-    is.hugo <- is.protcoding <- is.known <- TRUE
-    if (only.hugo) is.hugo <- (pgx$genes$gene_name %in% SYMBOL)
-    if (only.known) {
-      is.known <- !grepl("^ORF|^LOC", pgx$genes$gene_name) ## ???
+    pgx$counts <- pgx$counts[unique(pgx$genes$hgnc_symbol), , drop = FALSE]
+    if (!is.null(pgx$X)) {
+      pgx$X <- pgx$X[unique(pgx$genes$hgnc_symbol), , drop = FALSE]
     }
-    if (only.proteincoding) {
-      is.protcoding <- pgx$genes$gene_biotype %in% c("protein_coding")
-    }
-    keep <- (is.known & is.hugo & is.protcoding)
-    pgx$counts <- pgx$counts[keep, , drop = FALSE]
-    pgx$genes <- pgx$genes[keep, , drop = FALSE]
-    if (!is.null(pgx$X)) pgx$X <- pgx$X[keep, , drop = FALSE]
   }
 
   ## -------------------------------------------------------------------
