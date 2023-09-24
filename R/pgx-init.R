@@ -169,34 +169,22 @@ pgx.initialize <- function(pgx) {
   ## Tidy up genes matrix
   ## ----------------------------------------------------------------
   pgx$genes <- pgx$genes[rownames(pgx$counts), , drop = FALSE]
-  pgx$genes$gene_name <- as.character(pgx$genes$gene_name)
-  pgx$genes$gene_title <- as.character(pgx$genes$gene_title)
-
-  ## Add chromosome annotation if not
-  if (!("chr" %in% names(pgx$genes))) {
-    symbol <- sapply(as.list(org.Hs.eg.db::org.Hs.egSYMBOL), "[", 1) ## some have multiple chroms..
-    CHR <- sapply(as.list(org.Hs.eg.db::org.Hs.egCHR), "[", 1) ## some have multiple chroms..
-    MAP <- sapply(as.list(org.Hs.eg.db::org.Hs.egMAP), "[", 1) ## some have multiple chroms..
-    names(CHR) <- names(MAP) <- symbol
-    pgx$genes$chr <- CHR[pgx$genes$gene_name]
-    pgx$genes$map <- MAP[pgx$genes$gene_name]
-  }
 
   ## -----------------------------------------------------------------------------
   ## intersect and filter gene families (convert species to human gene sets)
   ## -----------------------------------------------------------------------------
   if ("hgnc_symbol" %in% colnames(pgx$genes)) {
     hgenes <- toupper(pgx$genes$hgnc_symbol)
-    genes <- pgx$genes$gene_name
+    genes <- pgx$genes$external_gene_name
     pgx$families <- lapply(playdata::FAMILIES, function(x) setdiff(genes[match(x, hgenes)], NA))
   } else {
-    genes <- toupper(pgx$genes$gene_name)
+    genes <- toupper(pgx$genes$external_gene_name)
     pgx$families <- lapply(playdata::FAMILIES, function(x) intersect(x, genes))
   }
   famsize <- sapply(pgx$families, length)
   pgx$families <- pgx$families[which(famsize >= 10)]
 
-  all.genes <- sort(rownames(pgx$genes))
+  all.genes <- sort(unique(pgx$genes$external_gene_name))
   pgx$families[["<all>"]] <- all.genes
 
   ## -----------------------------------------------------------------------------
