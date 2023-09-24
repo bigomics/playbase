@@ -7698,3 +7698,92 @@
 #'   Matrix::head(genes)
 #'   return(genes)
 #' }
+
+
+#' #' @title Run tximport on Kallisto quantification
+#' #'
+#' #' @param srr_id Character vector of SRR IDs for samples
+#' #' @param species Species name, used to get gene annotation data. Default is c("human", "mouse", "rat").
+#' #' @param kallisto_dir Directory containing Kallisto output folders for each sample.
+#' #'
+#' #' @return List containing gene and transcript count matrices and tximport result objects.
+#' #'
+#' #' @description Imports Kallisto transcript-level abundance estimates into R matrices at gene and transcript level using tximport.
+#' #'
+#' #' @details This function takes a vector of SRR IDs and the path to the Kallisto output directory containing abundance estimates (abundance.tsv files) for each sample.
+#' #' It imports the transcript counts into R using tximport, summarizing into gene-level counts based on gene annotation data for the specified species.
+#' #'
+#' #' The output is a list containing the gene counts matrix, transcript counts matrix, and the tximport result objects.
+#' #'
+#' #' @export
+#' run_tximport_kallisto <- function(srr_id, species = c("human", "mouse", "rat"), kallisto_dir) {
+#'   species <- match.arg(species, c("human", "mouse", "rat"))
+#'   edb <- function(species) {
+#'     if (species == "human") {
+#'       GenomicFeatures::transcripts(EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86,
+#'         columns = c("tx_id", "gene_id", "gene_name"),
+#'         return.type = "DataFrame"
+#'       )
+#'     } else if (species == "mouse") {
+#'       GenomicFeatures::transcripts(EnsDb.Mmusculus.v79::EnsDb.Mmusculus.v79,
+#'         columns = c("tx_id", "gene_id", "gene_name"),
+#'         return.type = "DataFrame"
+#'       )
+#'     } else if (species == "rat") {
+#'       GenomicFeatures::transcripts(EnsDb.Rnorvegicus.v79::EnsDb.Rnorvegicus.v79,
+#'         columns = c("tx_id", "gene_id", "gene_name"),
+#'         return.type = "DataFrame"
+#'       )
+#'     } else {
+#'       return(NULL)
+#'     }
+#'   }
+#'   gene_ensembl <- function(species) {
+#'     if (species == "human") {
+#'       return(org.Hs.eg.db::org.Hs.eg.db)
+#'     } else if (species == "mousee") {
+#'       return(org.Mm.eg.db::org.Mm.eg.db)
+#'     } else {
+#'       return(NULL)
+#'     }
+#'   }
+#'   assign("Tx.ensemble", edb(species))
+#'   Tx.ensemble <- get("Tx.ensemble")
+#'   tx2gene <- Tx.ensemble[, c(1, 2)]
+#'   files <- file.path(paste0(kallisto_dir, "/", srr_id, "/abundance.tsv"))
+#'   names(files) <- srr_id
+#'   file.exists(files)
+#'
+#'   cat("generating counts table\n")
+#'   txi.t <- tximport::tximport(files,
+#'     type = "kallisto", tx2gene = tx2gene,
+#'     txOut = TRUE,
+#'     dropInfReps = TRUE
+#'   )
+#'   txi.g <- tximport::summarizeToGene(txi.t, tx2gene,
+#'     ignoreTxVersion = TRUE, ignoreAfterBar = TRUE
+#'   )
+#'   gene_counts <- txi.g$counts
+#'   gene_counts[is.na(gene_counts)] <- 0
+#'   colnames(gene_counts) <- srr_id
+#'   transcript_counts <- txi.t$counts
+#'   transcript_counts[is.na(transcript_counts)] <- 0
+#'   colnames(transcript_counts) <- srr_id
+#'   annot_genes <- AnnotationDbi::select(gene_ensembl(species),
+#'     keys = rownames(gene_counts), columns = c(
+#'       "SYMBOL", "SYMBOL",
+#'       "GENENAME"
+#'     ), keytype = "ENSEMBL"
+#'   )
+#'   annot_genes2 <- annot_genes[match(
+#'     rownames(gene_counts),
+#'     annot_genes[, 1]
+#'   ), , drop = FALSE]
+#'   gene_counts <- cbind(annot_genes2, gene_counts)
+#'   counts <- list(
+#'     gene_counts = gene_counts, transcript_counts = transcript_counts,
+#'     tximport_gene_data = txi.g, tximport_transcript_data = txi.t
+#'   )
+#'   return(counts)
+#' }
+
