@@ -7527,3 +7527,120 @@
 #'   counts <- counts[, sel]
 #'   counts
 #' }
+
+
+#' #' @title Import Salmon Abundance Estimates
+#' #'
+#' #' @description This function imports Salmon transcript abundance estimates from Salmon SF files
+#' #' and converts them to a DGEList object for use with edgeR.
+#' #'
+#' #' @param sf.files A named character vector of Salmon SF files.
+#' #' @param count.type The type of counts to extract, either "TPM", "NumReads" or "lengthScaledTPM".
+#' #' @param organism The organism name, either "Hsapiens" or "Mmusculus".
+#' #' @param txOut Whether to output transcript-level estimates in addition to gene-level.
+#' #'
+#' #' @details This function takes a named character vector of Salmon SF files, extracts the abundance
+#' #' estimates, converts them to a DGEList object with integer counts scaled to library size.
+#' #' It requires the EnsDb and org packages for the corresponding organism.
+#' #'
+#' #' @return A DGEList object containing the abundance estimates, ready for use with edgeR.
+#' #'
+#' #' @export
+# ngs.tximportSalmon <- function(sf.files, count.type = "lengthScaledTPM", organism = "Hsapiens",
+#                                txOut = FALSE) {
+#   if (is.null(names(sf.files))) stop("sf.files must be named!")
+#   if (!all(file.exists(sf.files))) stop("missing SF files")
+#
+#   if (organism == "Hsapiens") {
+#     edb <- EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86
+#     org <- org.Hs.eg.db::org.Hs.eg.db
+#   }
+#   if (organism == "mouse") {
+#     edb <- EnsDb.Mmusculus.v79::EnsDb.Mmusculus.v79
+#     org <- org.Mm.eg.db::org.Mm.eg.db
+#   }
+#
+#   ## ------------------------------------------------------------
+#   ## get transcript annotation
+#   ## ------------------------------------------------------------
+#   ## then the transcript to gene file from Ensembl
+#   listColumns(edb)
+#   daf <- GenomicFeatures::transcripts(edb,
+#                                       columns = c(
+#                                         "tx_id", "gene_id", "entrezid",
+#                                         "gene_name", "gene_biotype", "name"
+#                                       ),
+#                                       return.type = "DataFrame"
+#   )
+#   dim(daf)
+#   Matrix::head(daf)
+#   annot_genes <- AnnotationDbi::select(org,
+#                                        keytype = "ENSEMBL", keys = daf$gene_id,
+#                                        columns = c("SYMBOL", "REFSEQ", "ENTREZID", "GENENAME")
+#   )
+#   if (1) {
+#     ## Add REFSEQ????
+#     cat("quering biomaRt...\n")
+#
+#     ensembl <- biomaRt::useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
+#     bm.res <- biomaRt::getBM(
+#       attributes = c("refseq_mrna", "ensembl_gene_id", "ensembl_transcript_id", "external_gene_name"),
+#       filters = "ensembl_transcript_id",
+#       values = daf$tx_id,
+#       mart = ensembl
+#     )
+#     Matrix::head(bm.res)
+#     dim(bm.res)
+#     daf$refseq2 <- NULL
+#     daf$refseq <- bm.res[match(daf$tx_id, bm.res[, "ensembl_transcript_id"]), "refseq_mrna"]
+#     Matrix::head(daf)
+#   }
+#
+#   dim(annot_genes)
+#   Matrix::head(annot_genes)
+#   daf$gene_title <- annot_genes$GENENAME[match(daf$gene_id, annot_genes$ENSEMBL)]
+#   Matrix::head(daf, 200)
+#
+#   ## ------------------------------------------------------------
+#   ## Import Salmon files using tximport
+#   ## ------------------------------------------------------------
+#   tx2gene <- daf[, c("tx_id", "gene_id")] ## map to Ensemble gene ID
+#
+#   ## now import all files and collapse to gene. The 'lengthScaleTPM'
+#   ## is essential for LIMMA/VOOM and Deseq2 handles this fine (see
+#   ## code for DESeqDataSetFromTximport)
+#
+#
+#   if (txOut == FALSE) {
+#     ## collapse gene level
+#     txi <- tximport::tximport(sf.files,
+#                               type = "salmon",
+#                               countsFromAbundance = count.type, txOut = FALSE,
+#                               tx2gene = tx2gene, ignoreTxVersion = TRUE
+#     )
+#     daf0 <- daf
+#     daf <- daf[match(rownames(txi$counts), daf$gene_id), ]
+#
+#     ## collapse also transcript-level annotation
+#     tx.ids <- tapply(tx2gene$tx_id, tx2gene$gene_id, paste, collapse = ",")
+#     daf$tx_id <- tx.ids[match(daf$gene_id, names(tx.ids))] ## replace with TX list
+#     if (!is.null(daf$refseq)) {
+#       rfq.ids <- tapply(daf0$refseq, daf0$gene_id, function(x) paste(setdiff(x, ""), collapse = ","))
+#       daf$refseq <- rfq.ids[match(daf$gene_id, names(rfq.ids))] ## replace with TX list
+#     }
+#     remove(daf0)
+#   } else {
+#     ## transcript level
+#     txi <- tximport::tximport(sf.files,
+#                               type = "salmon",
+#                               countsFromAbundance = count.type, txOut = TRUE,
+#                               tx2gene = NULL, ignoreTxVersion = TRUE
+#     )
+#     tx.id <- sub("[.][0-9]*$", "", rownames(txi$counts))
+#     daf <- daf[match(tx.id, daf$tx_id), ]
+#   }
+#
+#   txi$genes <- daf[, c("tx_id", "gene_id", "refseq", "gene_name", "gene_biotype", "gene_title")]
+#   rownames(txi$genes) <- rownames(txi$counts)
+#   return(txi)
+# }
