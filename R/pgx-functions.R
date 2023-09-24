@@ -448,131 +448,221 @@ mouse2human <- function(x) {
   homologene::mouse2human(x)
 }
 
-
-#' Map probe identifiers to gene symbols
+#' Detect probe type
 #'
-#' @param probes Character vector of probe identifiers
-#' @param type Character specifying the type of identifier in probes. If NULL,
-#'   the function will try to detect the identifier type automatically.
-#' @param keep.na Logical indicating whether to keep NA symbols (TRUE) or replace
-#'   them with the original probe identifiers (FALSE).
+#' This function tries to automatically detect the probe type of a set of
+#' input probes by testing mapping success against different identifier
+#' types in a BioMart database.
 #'
-#' @return Character vector of mapped gene symbols.
+#' @param probes Character vector of probes to detect type for.
+#' @param mart BioMart object specifying the database to use for mapping.
+#' @param verbose Logical indicating whether to print progress messages.
+#'
+#' @return The probe type with the best mapping performance. One of:
+#' \itemize{
+#'  \item ensembl_transcript_id
+#'  \item ensembl_transcript_id_version
+#'  \item ensembl_gene_id
+#'  \item ensembl_gene_id_version
+#'  \item uniprot_gn_id
+#'  \item refseq_peptide
+#'  \item refseq_mrna
+#'  \item hgnc_symbol
+#' }
+#'
+#' @details
+#' This function subsamples a subset of the input probes and tries mapping
+#' them to each identifier type in the specified BioMart database. It returns
+#' the type with the maximum number of mapped probes.
 #'
 #' @examples
 #' \dontrun{
-#' counts <- playbase::COUNTS
-#' subset_genes <- round(seq(1, nrow(counts), length.out = 10))
-#' probes <- rownames(playbase::COUNTS)[subset_genes]
-#' symbols <- playbase::probe2symbol(probes)
+#'   mart <- biomaRt::useMart("ensembl")
+#'   probes <- c("ENSG00000230915.1", "ENSG00000275728.1", "ENSG00000277599.1",
+#'       "ENSG00000186163.9", "ENSG00000164823.11", "ENSG00000274234.1",
+#'       "ENSG00000282461.1", "ENSG00000283056.1", "ENSG00000239021.1",
+#'       "ENSG00000214268.2", "ENSG00000206687.1", "ENSG00000171148.14",
+#'       "ENSG00000250027.1", "ENSG00000244217.1", "ENSG00000103502.14",
+#'       "ENSG00000213178.3", "ENSG00000235059.5", "ENSG00000204555.3",
+#'       "ENSG00000221044.2", "ENSG00000267162.1")
+#'   type <- detect_probe(probes, mart)
 #' }
 #'
 #' @export
+detect_probe <- function(probes, mart, verbose = TRUE){
 
-probe2symbol <- function(probes, type = NULL, keep.na = FALSE) {
-  ## strip postfix for ensemble codes
-  if (mean(grepl("^ENS", probes)) > 0.5) {
-    probes <- gsub("[.].*", "", probes)
+  # Prepare inputs
+  if (verbose) {
+    message("[createPGX] Guessing probe type...")
   }
+  clean_probes <- probes[!is.na(probes)]
+  n <- length(clean_probes)
+  if (n > 100L) n <- 100L
+  subsample_size <- round(0.1 * n)
+  subsample <- round(seq(1L, n, length.out = subsample_size))
 
-  if (is.null(type)) {
-    hs.list <- list(
-      "human.ensembl" = unlist(as.list(org.Hs.eg.db::org.Hs.egENSEMBL)),
-      "human.ensemblTRANS" = unlist(as.list(org.Hs.eg.db::org.Hs.egENSEMBLTRANS)),
-      "human.refseq" = unlist(as.list(org.Hs.eg.db::org.Hs.egREFSEQ)),
-      "human.accnum" = unlist(as.list(org.Hs.eg.db::org.Hs.egACCNUM)),
-      "human.uniprot" = unlist(as.list(org.Hs.eg.db::org.Hs.egUNIPROT)),
-      "human.symbol" = unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
+  # Vector with input types to check
+  probe_types_to_check <- c("ensembl_transcript_id",
+                            "ensembl_transcript_id_version",
+                            "ensembl_gene_id",
+                            "ensembl_gene_id_version",
+                            "uniprot_gn_id",
+                            "refseq_peptide",
+                            "refseq_mrna",
+                            "hgnc_symbol")
+  subset_probes <- clean_probes[subsample]
+
+  # Check probes
+  probe_check <- sapply(probe_types_to_check, FUN = function(x) {
+    tryCatch({
+      tmp <- biomaRt::getBM(attributes = x,
+                            filters = x,
+                            values = subset_probes,
+                            mart = mart)
+      Sys.sleep(1)
+      out <- nrow(tmp)
+      return(out)
+    }, error = function(e) {
+      return(0)
+    }
     )
+  })
+  probe_type <- names(which.max(probe_check))
+  return(probe_type)
+}
 
-    mm.list <- list(
-      "mouse.ensembl" = unlist(as.list(org.Mm.eg.db::org.Mm.egENSEMBL)),
-      "mouse.ensemblTRANS" = unlist(as.list(org.Mm.eg.db::org.Mm.egENSEMBLTRANS)),
-      "mouse.refseq" = unlist(as.list(org.Mm.eg.db::org.Mm.egREFSEQ)),
-      "mouse.accnum" = unlist(as.list(org.Mm.eg.db::org.Mm.egACCNUM)),
-      "mouse.uniprot" = unlist(as.list(org.Mm.eg.db::org.Mm.egUNIPROT)),
-      "mouse.symbol" = unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
-    )
 
-    rn.list <- list(
-      "rat.ensembl" = unlist(as.list(org.Rn.eg.db::org.Rn.egENSEMBL)),
-      "rat.ensemblTRANS" = unlist(as.list(org.Rn.eg.db::org.Rn.egENSEMBLTRANS)),
-      "rat.refseq" = unlist(as.list(org.Rn.eg.db::org.Rn.egREFSEQ)),
-      "rat.accnum" = unlist(as.list(org.Rn.eg.db::org.Rn.egACCNUM)),
-      "rat.uniprot" = unlist(as.list(org.Rn.eg.db::org.Rn.egUNIPROT)),
-      "rat.symbol" = unlist(as.list(org.Rn.eg.db::org.Rn.egSYMBOL))
-    )
+#' Get gene annotation data
+#'
+#' Retrieves gene annotation information from BioMart for a set of input
+#' gene/transcript identifiers.
+#'
+#' @param probes Character vector of gene/transcript identifiers to retrieve annotation for.
+#' @param probe_type Character specifying the type of input identifiers. If NULL,
+#' it will be automatically detected. Options are "ensembl_gene_id", "ensembl_transcript_id", etc.
+#' @param mart BioMart object specifying the database to query.
+#' @param verbose Logical indicating whether to print status messages.
+#'
+#' @return Data frame with gene annotation data for the input identifiers. Columns are:
+#' \itemize{
+#'   \item \code{gene_name}: Gene name
+#'   \item \code{hgnc_symbol}: Gene symbol
+#'   \item \code{gene_title}: Gene description
+#'   \item \code{gene_biotype}: Gene biotype
+#'   \item \code{chr}: Chromosome
+#'   \item \code{pos}: Transcript start position
+#'   \item \code{tx_len}: Transcript length
+#'   \item \code{map}: Chromosome band
+#' }
+#'
+#' @details This function queries BioMart to retrieve key gene annotation data for
+#' a set of input gene/transcript identifiers. It can detect the identifier
+#' type automatically if not provided.
+#'
+#'
+#' @examples
+#' \dontrun{
+#' probes <- c("ENSG00000142192", "ENST00000288602")
+#' mart <- biomaRt::useMart("ensembl")
+#' result <- ngs.getGeneAnnotation(probes, mart)
+#' head(result)
+#' }
+#' @export
+ngs.getGeneAnnotation <- function(probes,
+                                  probe_type = NULL,
+                                  mart,
+                                  verbose = TRUE) {
 
-    id.list <- c(hs.list, mm.list, rn.list)
-    mx <- sapply(id.list, function(id) mean(probes %in% id))
-    org <- type <- NULL
-    max.mx <- max(mx, na.rm = TRUE)
-    mx0 <- names(mx)[which.max(mx)]
-    org <- sub("[.].*", "", mx0)
-    type <- sub(".*[.]", "", mx0)
-    message("[probe2symbol] mapped ", format(100 * max.mx, digits = 2), "% of probes")
-    if (max.mx < 0.5 && max.mx > 0) {
-      message("[probe2symbol] WARNING! low mapping ratio: r= ", max.mx)
-    }
-    if (max.mx == 0) {
-      message("[probe2symbol] WARNING! zero mapping ratio: r= ")
-      type <- NULL
-    }
-    org
-    type
-  }
-  if (is.null(type)) {
-    cat("probe2symbol: invalid type: ", type, "\n")
-    return(NULL)
-  }
-  if (!type %in% c("ensembl", "ensemblTRANS", "unigene", "refseq", "accnum", "uniprot", "symbol")) {
-    cat("probe2symbol: invalid type: ", type, "\n")
-    return(NULL)
-  }
-
-  cat("[probe2symbol] organism = ", org, "\n")
-  cat("[probe2symbol] probe.type = ", type, "\n")
-  type
-
-  if (type == "symbol") {
-    cat("probe2symbol: probe is already symbol\n")
-    if (any(grep(" /// ", probes))) {
-      symbol0 <- strsplit(probes, split = " /// ")
-    } else if (any(grep("[;,]", probes))) {
-      symbol0 <- strsplit(probes, split = "[;,\\|]")
-    } else {
-      symbol0 <- probes
-    }
-  } else {
-    org
-    if (org == "human") {
-      symbol0 <- AnnotationDbi::mapIds(org.Hs.eg.db::org.Hs.eg.db, probes, "SYMBOL", toupper(type))
-    }
-    if (org == "mouse") {
-      symbol0 <- AnnotationDbi::mapIds(org.Mm.eg.db::org.Mm.eg.db, probes, "SYMBOL", toupper(type))
-    }
-    if (org == "rat") {
-      symbol0 <- AnnotationDbi::mapIds(org.Rn.eg.db::org.Rn.eg.db, probes, "SYMBOL", toupper(type))
-    }
+  # Prepare inputs
+  if (verbose) {
+    message("[createPGX] Filling genes information...")
   }
 
-  ## Unrecognize probes
-  nna <- which(is.na(names(symbol0)))
+  clean_probes <- probes[!duplicated(probes)]
 
-  if (length(nna)) names(symbol0)[nna] <- probes[nna]
-
-  ## What to do with unmapped/missing symbols????
-  symbol <- sapply(symbol0, "[", 1) ## takes first symbol only!!!
-  isnull <- which(sapply(symbol, is.null))
-  symbol[isnull] <- NA
-  if (keep.na) {
-    sel.na <- which(is.na(symbol))
-    symbol[sel.na] <- probes[sel.na]
+  if (is.null(probe_type)) {
+    probe_type <- detect_probe(probes, mart)
   }
-  symbol <- unlist(symbol)
-  names(symbol) <- NULL
 
-  symbol
+  # Select attributes
+  attr_call <- c(
+    probe_type,
+    "external_gene_name",  # gene_name
+    "hgnc_symbol",         # Hugo name
+    "description",         # gene_title
+    "gene_biotype",        # gene_biotype
+    "chromosome_name",     # chr
+    "transcript_start",    # pos
+    "transcript_length",   # tx_len
+    "band"                 # map
+  )
+  attr_call <- attr_call[!duplicated(attr_call)]
+
+  # Get the gene annotations
+  annot <- biomaRt::getBM(
+    attributes = attr_call,
+    filters = probe_type,
+    values = probes,
+    mart = mart
+  )
+  annot <- data.table::data.table(annot)
+  data.table::setkeyv(annot, probe_type)
+  return(annot)
+}
+
+
+#' Map probe identifiers to gene symbols
+#'
+#' This function converts a vector of probe identifiers to
+#' standard HGNC gene symbols using an annotation lookup table.
+#'
+#' @param probes Character vector of probe IDs to convert.
+#' @param annot_table Data frame with columns "probe_type" and "hgnc_symbol".
+#'   The probe_type matches the type of IDs in probes.
+#'
+#' @return Character vector of mapped HGNC gene symbols.
+#'
+#' @details The annot_table should contain a column with the probe IDs
+#'   (matching type of probes input) and a column with the corresponding HGNC
+#'   gene symbols. This function matches the input probes to the table
+#'   to retrieve the gene symbols. Unmatched probes are returned as is.
+#'
+#' \dontrun{
+#' probes <- c("ENSG00000142192", "ENST00000288602")
+#' annot_table <- data.frame(
+#'   ensembl_gene_id = c("ENSG00000142192", "ENSG00000099977"),
+#'   hgnc_symbol = c("EGFR", "CDKN2A")
+#' )
+#' symbols <- probe2symbol(probes, annot_table)
+#' }
+#'
+#' @export
+probe2symbol <- function(probes, annot_table) {
+
+  # Prepare inputs
+  probe_type <- colnames(annot_table[, 1])
+  probes_dt <- data.table::data.table(ID = probes)
+  setnames(probes_dt, "ID", probe_type)
+  ref_table <- annot_table[, .(symbol = unique(hgnc_symbol)),
+                           by = probe_type]
+
+  # Match all probes
+  matched_names <- data.table::merge.data.table(x = probes_dt,
+                                                y = ref_table,
+                                                by = probe_type,
+                                                all.x = TRUE)
+
+  # Remove duplicated
+  matched_names <- matched_names[!duplicated(matched_names[, 1])]
+
+  # Deal with NA
+  matched_names[is.na(symbol)|symbol ==  "",
+                symbol := .SD,
+                .SDcols = probe_type]
+
+  probes_hgnc_symbol <- matched_names[, symbol]
+
+  return(probes_hgnc_symbol)
 }
 
 #' @describeIn trimsame0 trimsame is a function that trims common prefixes and/or
@@ -1135,15 +1225,11 @@ is.POSvsNEG <- function(pgx) {
 is.categorical <- function(x, max.ncat = NULL, min.ncat = 2) {
   max.ncat <- length(x) - 1
   is.factor <- any(class(x) %in% c("factor", "character"))
-  is.factor
   n.unique <- length(unique(setdiff(x, NA)))
   n.notna <- length(x[!is.na(x)])
-  n.unique
-  n.notna
   is.id <- (n.unique > 0.8 * n.notna)
-  is.id
   is.factor2 <- (is.factor & !is.id & n.unique >= min.ncat & n.unique <= max.ncat)
-  is.factor2
+  return(is.factor2)
 }
 
 
