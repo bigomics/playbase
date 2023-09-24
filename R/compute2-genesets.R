@@ -302,14 +302,14 @@ createSparseGenesetMatrix <- function(
     gmt.all,
     min.geneset.size = 15,
     max.geneset.size = 500,
-    min_gene_frequency = 10) {
+    min_gene_frequency = 10,
+    all_genes = pgx$all_genes,
+    annot_tabe = pgx$genes) {
   ## ----------- Get all official gene symbols
-  symbol <- as.list(org.Hs.eg.db::org.Hs.egSYMBOL)
-  known.symbols <- sort(unique(unlist(symbol)))
+  known.symbols <- sort(all_genes)
 
   ## ------------- filter by size
   gmt.size <- sapply(gmt.all, length)
-
   gmt.all <- gmt.all[which(gmt.size >= 15 & gmt.size <= 1000)]
 
   ## ------------- filter genes by minimum frequency and chrom
@@ -317,7 +317,7 @@ createSparseGenesetMatrix <- function(
   genes <- names(which(genes.table >= min_gene_frequency))
   genes <- genes[grep("^LOC|RIK$", genes, invert = TRUE)]
   genes <- intersect(genes, known.symbols)
-  annot <- ngs.getGeneAnnotation(genes)
+  annot <- annot_tabe
   genes <- genes[!is.na(annot$chr)]
 
   ## Filter genesets with permitted genes (official and min.sharing)
@@ -340,6 +340,7 @@ createSparseGenesetMatrix <- function(
 
   return(G)
 }
+
 
 #' Merge Sparse Matrix
 #'
