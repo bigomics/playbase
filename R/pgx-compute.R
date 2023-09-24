@@ -137,8 +137,10 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 #' @return List. PGX object containing input data and parameters.
 #'
 #' @export
-pgx.createPGX <- function(counts, samples,
-                          contrasts, X = NULL, ## genes,
+pgx.createPGX <- function(counts,
+                          samples,
+                          contrasts,
+                          X = NULL, ## genes,
                           is.logx = NULL,
                           batch.correct = TRUE,
                           species = "hsapiens_gene_ensembl",
@@ -152,6 +154,7 @@ pgx.createPGX <- function(counts, samples,
                           cluster.contrasts = FALSE,
                           do.clustergenes = TRUE,
                           only.proteincoding = TRUE) {
+
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("dimension of counts and X do not match\n")
   }
@@ -484,7 +487,6 @@ pgx.createPGX <- function(counts, samples,
 
   return(pgx)
 }
-
 
 #' @title Compute PGX
 #' @description Main function to populate pgx with results. The function computes the analysis on a pgx object
