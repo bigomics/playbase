@@ -299,7 +299,7 @@ pgx.scatterPlot <- function(pgx, pheno = NULL, gene = NULL,
       var <- pgx$gx.meta$meta[[contrast]]$meta.fx
       names(var) <- rownames(pgx$gx.meta$meta[[contrast]])
       var <- var[rownames(pos)]
-      tooltip <- pgx$genes[rownames(pos), "gene_title"]
+      tooltip <- pgx$genes[rownames(pos), "external_gene_name"]
     }
     if (level == "geneset") {
       var <- pgx$gset.meta$meta[[contrast]]$meta.fx
