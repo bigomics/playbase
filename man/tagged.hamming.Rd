@@ -20,9 +20,9 @@ Named numeric vector of Hamming distances for each matched tag.
 Calculate the Hamming distance between two sequences, taking into account tags.
 }
 \details{
-This function calculates the Hamming distance between two character vector 
-sequences \code{aa} and \code{bb}. It first parses any tags in the sequences using \code{parse.tags}. 
-It then calculates the Hamming distance between the sequences indicated by any matching tags (e.g. 
-\code{cdr1}, \code{cdr2}). For tagged sequences, it will align the sequences before calculating Hamming 
+This function calculates the Hamming distance between two character vector
+sequences \code{aa} and \code{bb}. It first parses any tags in the sequences using \code{parse.tags}.
+It then calculates the Hamming distance between the sequences indicated by any matching tags (e.g.
+\code{cdr1}, \code{cdr2}). For tagged sequences, it will align the sequences before calculating Hamming
 distance if \code{align=TRUE}. For non-tagged sequences, it calculates simple Hamming distance.
 }

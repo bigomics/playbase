@@ -13,6 +13,7 @@ pgx.createPGX(
   X = NULL,
   is.logx = NULL,
   batch.correct = TRUE,
+  species = "hsapiens_gene_ensembl",
   auto.scale = TRUE,
   filter.genes = TRUE,
   prune.samples = FALSE,
@@ -37,6 +38,9 @@ pgx.createPGX(
 \item{is.logx}{Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.}
 
 \item{batch.correct}{Logical indicating whether to perform batch correction. Default is TRUE.}
+
+\item{species}{Default "hsapiens_gene_ensembl", it indicates the species used
+for the gene annotation table and the probe to symbol conversion.}
 
 \item{auto.scale}{Logical indicating whether to automatically scale/center genes. Default is TRUE.}
 

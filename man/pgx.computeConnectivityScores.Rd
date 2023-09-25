@@ -40,7 +40,7 @@ against all datasets in the database to produce a ranked list of connectivity sc
 The top \code{ntop} correlated genes are used for computing the connectivity score.
 Scores are computed for each contrast unless a subset is specified with \code{contrasts}.
 
-Setting \code{remove.le = TRUE} removes the leading edge genes from the signature before 
+Setting \code{remove.le = TRUE} removes the leading edge genes from the signature before
 computing connectivity. This reduces bias from highly weighted genes.
 
 By default, correlations are computed on disk using chunks. Set \code{inmemory = TRUE}

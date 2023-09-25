@@ -24,7 +24,7 @@ This function takes a numeric vector \code{x} and rescales the values to lie bet
 It subtracts the minimum value and divides by the range.
 This transforms the values to a 0-1 range while maintaining relative differences.
 
-If \code{symm=TRUE}, the rescaled values are further transformed to be symmetrized around 0 
+If \code{symm=TRUE}, the rescaled values are further transformed to be symmetrized around 0
 by subtracting 0.5 and multiplying by 2.
 
 The rescaled vector is returned.

@@ -20,7 +20,7 @@ NULL. The matrix is saved to the HDF5 file.
 Saves a matrix to an HDF5 file for efficient storage and retrieval.
 }
 \details{
-This function saves a matrix \code{X} to an HDF5 file at \code{h5.file}. 
+This function saves a matrix \code{X} to an HDF5 file at \code{h5.file}.
 It first deletes any existing file at that path, then creates a new HDF5 file.
 
 The matrix is saved under the "data/matrix" group. Chunked storage can be used

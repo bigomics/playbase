@@ -21,12 +21,12 @@ Reads gene signatures from CREEDS GMT files and writes to an HDF5 database.
 }
 \details{
 This function takes a set of CREEDS GMT files containing up/down regulated gene signatures.
-It extracts the signatures and writes them to an HDF5 file in a standard format that can be used for 
+It extracts the signatures and writes them to an HDF5 file in a standard format that can be used for
 gene set enrichment analysis.
 
 Each GMT file contains multiple up and down regulated signatures for a perturbation experiment.
 The signatures are named using the perturbation and direction, e.g. "DrugX-up".
 
-If update.only=FALSE, any existing signatures in the HDF5 file will be overwritten. 
+If update.only=FALSE, any existing signatures in the HDF5 file will be overwritten.
 If TRUE, only signatures not already present will be added.
 }

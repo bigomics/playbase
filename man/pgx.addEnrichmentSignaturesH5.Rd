@@ -27,8 +27,8 @@ No value is returned. Enrichment signatures are written to the HDF5 file.
 Adds gene set enrichment results as signatures to an HDF5 file.
 }
 \details{
-This function runs gene set enrichment analysis on a gene expression matrix X, 
-using the specified methods. It writes the enrichment results as signatures to 
+This function runs gene set enrichment analysis on a gene expression matrix X,
+using the specified methods. It writes the enrichment results as signatures to
 the specified HDF5 file under the "enrichment" group.
 
 Parallel processing can be enabled by setting mc.cores to use multiple CPU cores.

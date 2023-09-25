@@ -38,7 +38,7 @@ The number of node labels can be reduced by setting \code{numlab} to avoid overp
 }
 \section{Functions}{
 \itemize{
-\item \code{mixPlotLoadings()}: function generates a hive plot visualization of variable loadings 
+\item \code{mixPlotLoadings()}: function generates a hive plot visualization of variable loadings
 from a lmer model result object.
 
 }}

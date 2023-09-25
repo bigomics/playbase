@@ -23,7 +23,7 @@ Updates the pgxinfo dataset metadata table with information from a new pgx objec
 This function takes an existing pgxinfo data frame and a pgx object as input.
 It extracts the metadata stored in pgx$info and appends it as a new row to the pgxinfo table.
 
-If remove.old is TRUE, it will first remove any existing rows for the same dataset 
+If remove.old is TRUE, it will first remove any existing rows for the same dataset
 before appending the new row. This avoids duplicating information for the same dataset.
 
 The updated pgxinfo data frame containing all dataset metadata is returned.

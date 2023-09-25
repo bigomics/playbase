@@ -4,29 +4,33 @@
 \alias{probe2symbol}
 \title{Map probe identifiers to gene symbols}
 \usage{
-probe2symbol(probes, type = NULL, keep.na = FALSE)
+probe2symbol(probes, annot_table)
 }
 \arguments{
-\item{probes}{Character vector of probe identifiers}
+\item{probes}{Character vector of probe IDs to convert.}
 
-\item{type}{Character specifying the type of identifier in probes. If NULL,
-the function will try to detect the identifier type automatically.}
-
-\item{keep.na}{Logical indicating whether to keep NA symbols (TRUE) or replace
-them with the original probe identifiers (FALSE).}
+\item{annot_table}{Data frame with columns "probe_type" and "hgnc_symbol".
+The probe_type matches the type of IDs in probes.}
 }
 \value{
-Character vector of mapped gene symbols.
+Character vector of mapped HGNC gene symbols.
 }
 \description{
-Map probe identifiers to gene symbols
+This function converts a vector of probe identifiers to
+standard HGNC gene symbols using an annotation lookup table.
 }
-\examples{
-\dontrun{
-counts <- playbase::COUNTS
-subset_genes <- round(seq(1, nrow(counts), length.out = 10))
-probes <- rownames(playbase::COUNTS)[subset_genes]
-symbols <- playbase::probe2symbol(probes)
-}
+\details{
+The annot_table should contain a column with the probe IDs
+  (matching type of probes input) and a column with the corresponding HGNC
+  gene symbols. This function matches the input probes to the table
+  to retrieve the gene symbols. Unmatched probes are returned as is.
 
+\dontrun{
+probes <- c("ENSG00000142192", "ENST00000288602")
+annot_table <- data.frame(
+  ensembl_gene_id = c("ENSG00000142192", "ENSG00000099977"),
+  hgnc_symbol = c("EGFR", "CDKN2A")
+)
+symbols <- probe2symbol(probes, annot_table)
+}
 }

@@ -46,8 +46,8 @@ Parallel processing improves performance for large graphs.
 }}
 \examples{
 \dontrun{
-ee <- matrix(c(1,2, 2,3), ncol=2) # example edge matrix
-X <- matrix(rnorm(100*50), 100, 50) # expression matrix 
+ee <- matrix(c(1, 2, 2, 3), ncol = 2) # example edge matrix
+X <- matrix(rnorm(100 * 50), 100, 50) # expression matrix
 w <- calc.edge.similarity(ee, X)
 }
 }

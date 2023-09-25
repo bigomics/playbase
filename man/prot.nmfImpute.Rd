@@ -23,7 +23,7 @@ Imputes missing values in a proteomics matrix using non-negative matrix factoriz
 }
 \details{
 This function takes a numeric matrix \code{X} containing proteomics data, with samples in columns.
-It uses \code{groups} to define sample groups. 
+It uses \code{groups} to define sample groups.
 
 It first replaces missing values (0s) with NAs.
 For each sample group, any rows with more than \code{r} proportion of NAs are set to 0.

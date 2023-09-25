@@ -51,21 +51,21 @@ Correlates a signature (fold change vector) with datasets in an HDF5 file using 
 It is also possible to run the operation on-disk via \code{pgx.correlateSignatureH5}.
 }
 \details{
-This function computes the correlation and gene set enrichment between a 
-signature fold change vector \code{F} and dataset expression matrices stored in an 
+This function computes the correlation and gene set enrichment between a
+signature fold change vector \code{F} and dataset expression matrices stored in an
 HDF5 file at \code{h5.file}.
 
-It first reads the top \code{nsig} signature genes into memory. 
+It first reads the top \code{nsig} signature genes into memory.
 Then it computes pairwise Pearson correlation between the signature and each dataset.
 It also runs pre-ranked GSEA using the \code{fgsea} package to compute enrichment scores.
 
-The main difference from \code{\link{pgx.correlateSignatureH5}} is that correlations 
-and GSEA are computed in memory instead of using on-disk chunks. This is faster for 
+The main difference from \code{\link{pgx.correlateSignatureH5}} is that correlations
+and GSEA are computed in memory instead of using on-disk chunks. This is faster for
 small datasets but requires loading the full expression matrix into memory.
 }
 \section{Functions}{
 \itemize{
-\item \code{pgx.correlateSignatureH5()}: computes correlation and gene set enrichment between a 
+\item \code{pgx.correlateSignatureH5()}: computes correlation and gene set enrichment between a
 signature and datasets in an HDF5 file using on-disk chunked computations
 
 }}

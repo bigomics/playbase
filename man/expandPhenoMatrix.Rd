@@ -4,12 +4,10 @@
 \alias{expandPhenoMatrix}
 \title{Expand phenotype matrix}
 \usage{
-expandPhenoMatrix(pheno, collapse = TRUE, drop.ref = TRUE)
+expandPhenoMatrix(pheno, drop.ref = TRUE)
 }
 \arguments{
 \item{pheno}{Data frame containing the phenotype variables.}
-
-\item{collapse}{Logical indicating whether to collapse factor levels below a frequency threshold.}
 
 \item{drop.ref}{Logical indicating whether to drop the reference level for each factor.}
 }
@@ -22,12 +20,8 @@ dropping the reference level.
 }
 \details{
 This function takes a phenotype data matrix and expands any categorical variables into
-dummy variables, while optionally collapsing rare factor levels and dropping the reference level.
+dummy variables
 
 For each column, it determines if the variable is numeric or categorical. Numeric variables are
-ranked. Categorical variables are expanded into dummy variables using \code{model.matrix}.
-
-If \code{collapse = TRUE}, it will collapse together factor levels that occur below a frequency
-threshold. If \code{drop.ref = TRUE}, it will drop the reference level for each factor when
-creating the dummy variables.
+dichotomized. Categorical variables are expanded into dummy variables using \code{model.matrix}.
 }

@@ -40,8 +40,8 @@ Test the association between a gene signature and survival using TCGA expression
 }
 \details{
 This function tests the association between a gene signature (sig) and survival using TCGA expression data.
-It extracts the top differentially expressed genes from the signature, then reads their expression from a TCGA HDF5 matrix file. 
-Survival data is obtained from the RTCGA_SURVIVAL dataset. The signature scores are tested for association with overall survival 
-using a Cox proportional hazards model. Results include the hazard ratio, p-value, and number of cases for each gene. A survival 
+It extracts the top differentially expressed genes from the signature, then reads their expression from a TCGA HDF5 matrix file.
+Survival data is obtained from the RTCGA_SURVIVAL dataset. The signature scores are tested for association with overall survival
+using a Cox proportional hazards model. Results include the hazard ratio, p-value, and number of cases for each gene. A survival
 plot can also be generated.
 }
