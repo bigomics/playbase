@@ -16,27 +16,38 @@ test_that("pgx.createPGX runs without errors", {
   )
 
   # Create expected outputs
-  expected_tests <- c(
-    "name", "date", "datatype", "description", "samples", "counts", "contrasts",
-    "total_counts", "counts_multiplier", "genes", "tsne2d", "tsne3d", "cluster",
-    "X", "cluster.genes"
-  )
+  expected_tests <- c("name", "date", "datatype", "description", "samples", "counts", "contrasts",
+                      "X", "total_counts", "counts_multiplier", "genes", "all_genes", "symbol",
+                      "tsne2d", "tsne3d", "cluster", "cluster.genes")
   total_counts <- apply(pgx_data$counts, 2, sum)
-  genes <- data.frame(
-    gene_name = c("A1BG", "ACOT9", "ALG12", "ANXA7", "ARF5", "ARPC4"),
-    gene_title = c(
-      "alpha-1-B glycoprotein", "acyl-CoA thioesterase 9",
-      "ALG12 alpha-1,6-mannosyltransferase", "annexin A7",
-      "ADP ribosylation factor 5", "actin related protein 2/3 complex subunit 4"
-    ),
+  new_genes <- data.table::data.table(
+    hgnc_symbol = c("A1BG", "ACOT9", "AGAP3", "AGAP3", "ALG12", "ARF5"),
+    external_gene_name = c("A1BG", "ACOT9", "AGAP3", "AGAP3", "ALG12", "ARF5"),
+    description = c("alpha-1-B glycoprotein [Source:HGNC Symbol;Acc:HGNC:5]",
+                    "acyl-CoA thioesterase 9 [Source:HGNC Symbol;Acc:HGNC:17152]",
+                    "ArfGAP with GTPase domain, ankyrin repeat and PH domain 3 [Source:HGNC Symbol;Acc:HGNC:16923]",
+                    "ArfGAP with GTPase domain, ankyrin repeat and PH domain 3 [Source:HGNC Symbol;Acc:HGNC:16923]",
+                    "ALG12 alpha-1,6-mannosyltransferase [Source:HGNC Symbol;Acc:HGNC:19358]",
+                    "ADP ribosylation factor 5 [Source:HGNC Symbol;Acc:HGNC:658]"),
     gene_biotype = rep("protein_coding", 6),
-    chr = c(19, "X", 22, 10, 7, 3),
-    pos = c("58345182", "23701055", "49900228", "73375100", "127588410", "9793081"),
-    tx_len = c("2592", "1427", "2373", "1734", "1022", "1624"),
-    map = c("19q13.43", "Xp22.11", "22q13.33", "10q22.2", "7q32.1", "3p25.3")
+    chromosome_name = c(19, "X", 7, 7, 22, 7),
+    transcript_start = c(58345178, 23703705, 151089712, 151120016, 49903650, 127588411),
+    transcript_length = c(2134, 1682, 1019, 413, 674, 1032),
+    band = c("q13.43", "p22.11", "q36.1", "q36.1", "q13.33", "q32.1")
   )
-  rownames(genes) <- genes$gene_name
-
+  # genes <- data.frame(
+  #   gene_name = c("A1BG", "ACOT9", "ALG12", "ANXA7", "ARF5", "ARPC4"),
+  #   gene_title = c(
+  #     "alpha-1-B glycoprotein", "acyl-CoA thioesterase 9",
+  #     "ALG12 alpha-1,6-mannosyltransferase", "annexin A7",
+  #     "ADP ribosylation factor 5", "actin related protein 2/3 complex subunit 4"
+  #   ),
+  #   gene_biotype = rep("protein_coding", 6),
+  #   chr = c(19, "X", 22, 10, 7, 3),
+  #   pos = c("58345182", "23701055", "49900228", "73375100", "127588410", "9793081"),
+  #   tx_len = c("2592", "1427", "2373", "1734", "1022", "1624"),
+  #   map = c("19q13.43", "Xp22.11", "22q13.33", "10q22.2", "7q32.1", "3p25.3")
+  # )
 
   # Check output
   ## Check all te test present
@@ -53,10 +64,10 @@ test_that("pgx.createPGX runs without errors", {
 
 
   ## Check that the gene info is generated correctly
-  expect_equal(head(pgx$genes, 6), genes)
+  expect_equal(pgx$genes[c(1, 10, 20, 30, 40, 50)], new_genes)
   expect_equal(
     apply(pgx$genes, 2, class),
-    apply(genes, 2, class)
+    apply(new_genes, 2, class)
   )
 
   ## Check cluster.genes
