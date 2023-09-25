@@ -84,7 +84,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   }
 
   is.expmatrix <- all(rownames(contr.matrix) %in% rownames(pgx$samples))
-  is.expmatrix
   if (!is.expmatrix) {
     stop("[compute_testGenesSingleOmics] FATAL: contrast must be sample-wise")
   }
@@ -95,7 +94,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     stat.group <- playbase::pgx.getConditions(contr.matrix, nmax = 0) ## !!!
     names(stat.group) <- rownames(contr.matrix)
     nlev <- length(unique(stat.group))
-    nlev
+
     if (nlev >= nrow(contr.matrix)) {
       message("[compute_testGenesSingleOmics] cannot use groups, switching to no design")
       use.design <- FALSE
@@ -192,7 +191,8 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   gg <- rownames(pgx$counts)
   if (!is.null(pgx$X)) gg <- intersect(gg, rownames(pgx$X))
   counts <- pgx$counts[gg, ss, drop = FALSE]
-  genes <- pgx$genes[gg, ]
+  ref_col <- colnames(pgx$genes)[1]
+  genes <- pgx$genes[gg, on = ref_col, mult = "first"]
   samples <- pgx$samples[ss, ]
 
   ## Rescale if too low. Often EdgeR/DeSeq can give errors of total counts

@@ -21,8 +21,16 @@
 #' @return A list containing the results of the gene set enrichment analyses for each method.
 #'
 #' @export
-gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, methods,
-                                            mc.threads = 1, mc.cores = NULL, batch.correct = TRUE) {
+gset.fitContrastsWithAllMethods <- function(gmt,
+                                            X,
+                                            Y,
+                                            G,
+                                            design,
+                                            contr.matrix,
+                                            methods,
+                                            mc.threads = 1,
+                                            mc.cores = NULL,
+                                            batch.correct = TRUE) {
   ALL.GENESET.METHODS <- c(
     "fisher", "ssgsea", "gsva", "spearman", "camera", "fry",
     "gsea.permPH", "gsea.permGS", "gseaPR", "fgsea"
@@ -102,9 +110,6 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
   res.gsva <- res.ssgsea <- res.rnkcorr <- NULL
   methods
 
-  dim(G)
-  table(rownames(X) %in% rownames(G))
-  table(colnames(G) %in% names(gmt))
   G <- G[rownames(X), names(gmt)]
 
   if ("spearman" %in% methods) {
@@ -136,7 +141,6 @@ gset.fitContrastsWithAllMethods <- function(gmt, X, Y, G, design, contr.matrix, 
     sum(is.na(zx.rnkcorr))
   }
 
-  methods
   if ("gsva" %in% methods) {
     cat("fitting contrasts using GSVA/limma... \n")
     tt <- system.time({

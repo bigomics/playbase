@@ -664,6 +664,24 @@ probe2symbol <- function(probes, annot_table) {
   probes_hgnc_symbol <- matched_names[, symbol]
 
   return(probes_hgnc_symbol)
+
+  ### ALTERNATIVE FORMULATION TO TRY LATER
+  # # Prepare inputs
+  # ref_col <- colnames(annot_table)[1]
+  # matched_names <- annot_table[probes,
+  #                              on = ref_col,
+  #                              mult = "first",
+  #                              nomatch = NA_character_]
+  #
+  # # Match all probes
+  # matched_names <- matched_names[!duplicated(matched_names[, 1])]
+  #
+  # # Deal with NA
+  # matched_names[is.na(hgnc_symbol)|hgnc_symbol ==  "",
+  #               symbol := .SD,
+  #               .SDcols = probe_type]
+  #
+  # probes_hgnc_symbol <- matched_names[, hgnc_symbol]
 }
 
 #' @describeIn trimsame0 trimsame is a function that trims common prefixes and/or
