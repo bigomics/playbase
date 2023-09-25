@@ -247,7 +247,7 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
     if (!all(need.tests %in% names(custom$tables))) {
       stop("custom must include tables: ", paste(need.tests, collapse = " "))
     }
-    need.cols <- c("gene_name", "AveExpr", "adj.P.Val", "P.Value", "logFC")
+    need.cols <- c("external_gene_name", "AveExpr", "adj.P.Val", "P.Value", "logFC")
     if (!all(need.cols %in% names(custom$tables[[1]]))) {
       stop("custom tables must include columns: ", paste(need.cols, collapse = " "))
     }

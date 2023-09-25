@@ -290,7 +290,7 @@ pgx.createPGX <- function(counts,
     name = "data set",
     date = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
     datatype = "unknown",
-    description <- "data set",
+    description = "data set",
     samples = data.frame(samples, check.names = FALSE),
     counts = as.matrix(counts),
     contrasts = contrasts,
@@ -307,8 +307,7 @@ pgx.createPGX <- function(counts,
   mart <- biomaRt::useMart(biomart = "ensembl", dataset = species)
   pgx$genes <- ngs.getGeneAnnotation(rownames(counts),
                                      probe_type = NULL,
-                                     mart = mart,
-                                     species = species)
+                                     mart = mart)
 
   all_genes <- biomaRt::getBM(attributes = "hgnc_symbol", mart = mart)
   pgx$all_genes <- all_genes[, 1]
@@ -317,7 +316,7 @@ pgx.createPGX <- function(counts,
   ## convert probe-IDs to gene symbol (do not translate yet to HUGO)
   ## -------------------------------------------------------------------
   message("[createPGX] converting probes to symbol...")
-  pgx$symbol <- probe2symbol(rownames(counts), annot_table = pgx$genes) ## auto-convert function
+  pgx$symbol <- probe2symbol(probes = rownames(counts), annot_table = pgx$genes) ## auto-convert function
 
 
   ## -------------------------------------------------------------------

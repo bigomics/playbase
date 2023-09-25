@@ -635,16 +635,17 @@ ngs.getGeneAnnotation <- function(probes,
 #' )
 #' symbols <- probe2symbol(probes, annot_table)
 #' }
-#'
+#' @import data.table
 #' @export
 probe2symbol <- function(probes, annot_table) {
 
   # Prepare inputs
-  probe_type <- colnames(annot_table[, 1])
+  probe_type <- colnames(annot_table)[1]
   probes_dt <- data.table::data.table(ID = probes)
-  setnames(probes_dt, "ID", probe_type)
-  ref_table <- annot_table[, .(symbol = unique(hgnc_symbol)),
+  data.table::setnames(probes_dt, "ID", probe_type)
+  ref_table <- annot_table[, unique(hgnc_symbol),
                            by = probe_type]
+ data.table::setnames(ref_table, "V1", "symbol")
 
   # Match all probes
   matched_names <- data.table::merge.data.table(x = probes_dt,
@@ -1815,7 +1816,7 @@ filterProbes <- function(genes, gg) {
   ## check probe name, short probe name or gene name for match
   p0 <- (toupper(sub(".*:", "", rownames(genes))) %in% toupper(gg))
   p1 <- (toupper(rownames(genes)) %in% toupper(gg))
-  p2 <- (toupper(as.character(genes$gene_name)) %in% toupper(gg))
+  p2 <- (toupper(as.character(genes$external_gene_name)) %in% toupper(gg))
   jj <- which(p0 | p1 | p2)
   if (length(jj) == 0) {
     return(NULL)

@@ -159,7 +159,7 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   ## ----------------------------------------------------------------------
   xx1 <- ngs$X
 
-  gene <- toupper(ngs$genes[rownames(xx1), "gene_name"])
+  gene <- probe2symbol(rownames(xx1), ngs$genes)
   rownames(xx1) <- paste0("{gene}", gene)
 
   xx2 <- ngs$gsetX
@@ -178,7 +178,7 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
   S <- S / max(abs(S), na.rm = TRUE)
   rownames(S) <- paste0("{geneset}", rownames(S))
 
-  fgene <- toupper(ngs$genes[rownames(F), "gene_name"])
+  fgene <- probe2symbol(rownames(F), ngs$genes)
   rownames(F) <- paste0("{gene}", fgene)
 
   kk <- intersect(colnames(F), colnames(S))

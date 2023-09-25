@@ -27,7 +27,7 @@ compute_extra <- function(ngs, extra = c(
 
   ## detect if it is single or multi-omics
   single.omics <- !any(grepl("\\[", rownames(ngs$counts)))
-  single.omics
+
   if (single.omics) {
     message(">>> computing extra for SINGLE-OMICS")
     rna.counts <- ngs$counts
@@ -202,6 +202,14 @@ compute_extra <- function(ngs, extra = c(
 #' @param full A logical value indicating whether to use the full set of reference matrices and methods (TRUE),
 #'   or a subset of faster methods and references (FALSE).
 #' @return An updated object with deconvolution results.
+#' \dontrun{
+#' probes <- rownames(playbase::COUNTS)
+#' mart <- biomaRt::useMart(biomart = "ensembl", dataset = species)
+#' annot_table <- ngs.getGeneAnnotation(rownames(counts),
+#'                                    probe_type = NULL,
+#'                                    mart = mart)
+#' deconv <- compute_deconvolution(probes, annot_table)
+#' }
 #' @export
 compute_deconvolution <- function(ngs, rna.counts = ngs$counts, full = FALSE) {
   ## list of reference matrices
@@ -231,7 +239,7 @@ compute_deconvolution <- function(ngs, rna.counts = ngs$counts, full = FALSE) {
   }
 
   counts <- rna.counts
-  rownames(counts) <- toupper(ngs$genes[rownames(counts), "gene_name"])
+  rownames(counts) <- probe2symbol(rownames(counts), ngs$genes)
   res <- pgx.multipleDeconvolution(counts, refmat = refmat, methods = methods)
 
   ngs$deconv <- res$results
@@ -257,6 +265,15 @@ compute_deconvolution <- function(ngs, rna.counts = ngs$counts, full = FALSE) {
 #' @param rna.counts A matrix or data frame of RNA expression counts.
 #'   Defaults to the counts in the input object.
 #' @return An updated object with cell cycle and gender inference results.
+#' \dontrun{
+#' counts <- playbase::COUNTS
+#' mart <- biomaRt::useMart(biomart = "ensembl", dataset = species)
+#' ngs <- list(annot_table = ngs.getGeneAnnotation(rownames(counts),
+#'                                    probe_type = NULL,
+#'                                    mart = mart)
+#')
+#' deconv <- compute_deconvolution(ngs, counts)
+#' }
 #' @export
 compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
   is.human <- (pgx.getOrganism(rna.counts) == "human")
@@ -266,7 +283,7 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
     ngs$samples$.cell.cycle <- NULL
 
     counts <- rna.counts
-    rownames(counts) <- toupper(ngs$genes[rownames(counts), "gene_name"])
+    rownames(counts) <- probe2symbol(rownames(counts), ngs$genes)
     res <- try(pgx.inferCellCyclePhase(counts)) ## can give bins error
     if (!inherits(res, "try-error")) {
       ngs$samples$.cell_cycle <- res
@@ -275,7 +292,7 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
       message("estimating gender...")
       ngs$samples$.gender <- NULL
       X <- log2(1 + rna.counts)
-      gene_name <- ngs$genes[rownames(X), "gene_name"]
+      gene_name <- probe2symbol(rownames(counts), ngs$genes)
       ngs$samples$.gender <- pgx.inferGender(X, gene_name)
     } else {
       message("gender already estimated. skipping...")
