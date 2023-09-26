@@ -46,11 +46,12 @@ compute_testGenesets <- function(pgx,
   # Load custom genesets (if user provided)
   if (!is.null(custom.geneset$gmt)) {
     # convert gmt standard to SPARSE matrix
-    custom_gmt <- playbase::createSparseGenesetMatrix(
+    custom_gmt <- createSparseGenesetMatrix(
       gmt.all = custom.geneset$gmt,
       min.geneset.size = 3,
       max.geneset.size = 9999,
-      min_gene_frequency = 1
+      min_gene_frequency = 1,
+      filter_genes = FALSE
     )
   }
 
@@ -366,6 +367,9 @@ createSparseGenesetMatrix <- function(
   )
   colnames(G) <- genes
   rownames(G) <- names(gmt.all)
+
+  # remove NA rows
+  G <- G[!is.na(rownames(G)), ]
 
   return(G)
 }
