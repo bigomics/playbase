@@ -321,6 +321,9 @@ createSparseGenesetMatrix <- function(
     max.geneset.size = 500,
     min_gene_frequency = 10,
     filter_genes = TRUE) {
+
+      # WARNING #
+      # This function is usd in playbase and playdata to generate curated GMT. Do not change it without testing it in both packages to ensure reproducibility.
   
   if(filter_genes == TRUE){
     ## ----------- Get all official gene symbols 
