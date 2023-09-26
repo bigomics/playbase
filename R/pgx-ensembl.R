@@ -53,7 +53,7 @@ detect_probe <- function(probes, mart, verbose = TRUE){
   clean_probes <- probes[!is.na(probes)]
   n <- length(clean_probes)
   # if number of probes above 10, keep only 10 random probes
-  if (n > 10L) n <- 10L
+  if (n > 100L) n <- 100L
   subsample <- sample(1:n, n)
 
   # Vector with input types to check
