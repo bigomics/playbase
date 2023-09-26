@@ -67,6 +67,12 @@ detect_probe <- function(probes, mart, verbose = TRUE){
                             "hgnc_symbol")
   subset_probes <- clean_probes[subsample]
 
+  # often we see multiples probes at once
+  # initially we can try to detect as many probes as possible from each probe type
+  # the type that guess better, is the one that will be used
+  # this approach still has many issues, as sometimes we have mixed probe types in on study.
+  # should we keep the unidentified probes? we have some options in pgx calculation that ask for that
+
   # Check probes
   probe_check <- sapply(probe_types_to_check, FUN = function(x) {
     tryCatch({
@@ -74,7 +80,7 @@ detect_probe <- function(probes, mart, verbose = TRUE){
                             filters = x,
                             values = subset_probes,
                             mart = mart)
-      Sys.sleep(1)
+      Sys.sleep(1)  #FIXME why?
       out <- nrow(tmp)
       return(out)
     }, error = function(e) {
