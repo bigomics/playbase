@@ -91,6 +91,7 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
 
 
   probe_check <- sapply(probe_types_to_check, FUN = function(x) {
+    #TODO write a while loop that stops when we first get 20 IDs mapped, o continue until the end if not
     tryCatch({
       tmp <- biomaRt::getBM(attributes = x,
                             filters = x,
