@@ -108,6 +108,7 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
 
   # Check matches and return if winner
   if (all(probe_check == 0)) {
+    #TODO the probe2symbol and detect_probe code should be used in data-preview, and we should warn the user in case no matches are found
     stop("Probe type not found, please, check your probes")
   } else {
     probe_type <- names(which.max(probe_check))
