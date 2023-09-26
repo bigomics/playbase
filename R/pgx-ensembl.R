@@ -53,7 +53,8 @@ detect_probe <- function(probes, mart, verbose = TRUE){
   clean_probes <- probes[!is.na(probes)]
   n <- length(clean_probes)
   # if number of probes above 10, keep only 10 random probes
-  if (n > 100L) n2 <- 100L
+  
+  if (n > 100L) n2 <- 100L else n2 <- n
   subsample <- sample(1:n, n2)
 
   
@@ -81,7 +82,7 @@ detect_probe <- function(probes, mart, verbose = TRUE){
                             filters = x,
                             values = subset_probes,
                             mart = mart)
-      Sys.sleep(1)  #FIXME why?
+      Sys.sleep(1)  #TODO why?
       out <- nrow(tmp)
       return(out)
     }, error = function(e) {
