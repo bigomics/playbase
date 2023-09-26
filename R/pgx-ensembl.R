@@ -67,11 +67,11 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
   clean_probes <- probes[!is.na(probes)]
   n <- length(clean_probes)
   # if number of probes above 10, keep only 10 random probes
-  
+
   if (n > 100L) n2 <- 100L else n2 <- n
   subsample <- sample(1:n, n2)
 
-  
+
   # Vector with input types to check
   probe_types_to_check <- c("ensembl_gene_id",
                             "ensembl_transcript_id",
@@ -104,7 +104,13 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
     }
     )
   })
-  probe_type <- names(which.max(probe_check))
+
+  # Check matches and return if winner
+  if (all(probe_check == 0)) {
+    stop("Probe type not found, please, check your probes")
+  } else {
+    probe_type <- names(which.max(probe_check))
+  }
   return(probe_type)
 }
 
