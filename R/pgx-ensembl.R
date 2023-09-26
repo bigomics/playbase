@@ -52,9 +52,9 @@ detect_probe <- function(probes, mart, verbose = TRUE){
   }
   clean_probes <- probes[!is.na(probes)]
   n <- length(clean_probes)
-  if (n > 100L) n <- 100L
-  subsample_size <- round(0.1 * n)
-  subsample <- round(seq(1L, n, length.out = subsample_size))
+  # if number of probes above 10, keep only 10 random probes
+  if (n > 10L) n <- 10L
+  subsample <- sample(1:n, n)
 
   # Vector with input types to check
   probe_types_to_check <- c("ensembl_transcript_id",
