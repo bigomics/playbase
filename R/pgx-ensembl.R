@@ -56,24 +56,25 @@ detect_probe <- function(probes, mart, verbose = TRUE){
   if (n > 100L) n2 <- 100L
   subsample <- sample(1:n, n2)
 
+  
   # Vector with input types to check
-  probe_types_to_check <- c("ensembl_transcript_id",
+  probe_types_to_check <- c("ensembl_gene_id",
+                            "ensembl_transcript_id",
                             "ensembl_transcript_id_version",
-                            "ensembl_gene_id",
+                            "hgnc_symbol",
                             "ensembl_gene_id_version",
                             "uniprot_gn_id",
                             "refseq_peptide",
-                            "refseq_mrna",
-                            "hgnc_symbol")
+                            "refseq_mrna"
+                            )
   subset_probes <- clean_probes[subsample]
 
   # often we see multiples probes at once
   # initially we can try to detect as many probes as possible from each probe type
   # the type that guess better, is the one that will be used
-  # this approach still has many issues, as sometimes we have mixed probe types in on study.
-  # should we keep the unidentified probes? we have some options in pgx calculation that ask for that
+  # this approach still has issues, as sometimes we have mixed probe types in on study.
 
-  # Check probes
+
   probe_check <- sapply(probe_types_to_check, FUN = function(x) {
     tryCatch({
       tmp <- biomaRt::getBM(attributes = x,
