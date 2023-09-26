@@ -44,8 +44,12 @@
 #' }
 #'
 #' @export
-detect_probe <- function(probes, mart, verbose = TRUE){
+detect_probe <- function(probes, mart = NULL, verbose = TRUE){
 
+  # Check mart
+  if (is.null(mart)) {
+    stop("Mart not found. Please specify a BioMart database to use.")
+  }
   # Prepare inputs
   if (verbose) {
     message("[createPGX] Guessing probe type...")
