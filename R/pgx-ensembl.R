@@ -35,9 +35,9 @@
 #' library(playbase)
 #' library(biomaRt)
 #' # list databases
-#' listEnsembl()
+#' listEnsembl(version = 110)
 #'  # use genes database
-#' ensembl <- useEnsembl(biomart="genes")
+#' ensembl <- useEnsembl(biomart="genes", version = 110)
 #' # here we see a list of 214 species available in ensembl
 #' datasets <- listDatasets(ensembl)
 #' # here we can select between 214 species
