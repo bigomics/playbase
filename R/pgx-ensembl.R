@@ -157,8 +157,12 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
 #' @export
 ngs.getGeneAnnotation <- function(probes,
                                   probe_type = NULL,
-                                  mart,
+                                  mart = NULL,
                                   verbose = TRUE) {
+  # Check mart
+  if (is.null(mart)) {
+    stop("Mart not found. Please specify a BioMart database to use.")
+  }
 
   # Prepare inputs
   if (verbose) {
@@ -193,10 +197,23 @@ ngs.getGeneAnnotation <- function(probes,
     mart = mart
   )
   annot <- data.table::data.table(annot)
+
+  # Get homologs if working with non-human dataset
+  # These should come as separate call because attr belong to diff. page
+  if (!mart@dataset == "hsapiens_gene_ensembl") {
+    annot_homologs <- biomaRt::getBM(
+      attributes = c(probe_type, "hsapiens_homolog_associated_gene_name"),
+      filters = probe_type,
+      values = probes,
+      mart = mart
+    )
+    annot_homologs <- data.table::data.table(annot_homologs)
+    annot <- annot[annot_homologs, on = probe_type]
+  }
+
   data.table::setkeyv(annot, probe_type)
   return(annot)
 }
-
 
 #' Map probe identifiers to gene symbols
 #'
@@ -243,4 +260,39 @@ probe2symbol <- function(probes, annot_table, query = "external_gene_name") {
 
   # Return queryed col
   return(annot[[query]])
+}
+
+
+
+
+detect_species <- function(x) {
+
+  x <- c("human", "rat", "mice")
+  #' ensembl_species <- useDataset(dataset = dataset_hsa$dataset, mart = ensembl)
+  probe_check <- sapply(probe_types_to_check, FUN = function(x) {
+    # TODO write a while loop that stops when we first get 20 IDs mapped, o
+    # continue until the end if not
+    tryCatch({
+      mart <- mart()
+      tmp <- biomaRt::getBM(attributes = x,
+                            filters = x,
+                            values = subset_probes,
+                            mart = mart)
+      Sys.sleep(2)  # Sleep time to prevent bounce from ensembl for consecutive calls
+      out <- nrow(tmp)
+      return(out)
+    }, error = function(e) {
+      return(0)
+    }
+    )
+  })
+
+  # Check matches and return if winner
+  if (all(probe_check == 0)) {
+    #TODO the probe2symbol and detect_probe code should be used in data-preview,
+    # and we should warn the user in case no matches are found
+    stop("Probe type not found, please, check your probes")
+  } else {
+    probe_type <- names(which.max(probe_check))
+  }
 }
