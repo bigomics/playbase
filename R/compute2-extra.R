@@ -211,7 +211,9 @@ compute_extra <- function(ngs, extra = c(
 #' deconv <- compute_deconvolution(probes, annot_table)
 #' }
 #' @export
-compute_deconvolution <- function(ngs, rna.counts = ngs$counts, full = FALSE) {
+compute_deconvolution <- function(ngs,
+                                  rna.counts = ngs$counts,
+                                  full = FALSE) {
   ## list of reference matrices
   refmat <- list()
   refmat[["Immune cell (LM22)"]] <- playdata::LM22
@@ -239,7 +241,6 @@ compute_deconvolution <- function(ngs, rna.counts = ngs$counts, full = FALSE) {
   }
 
   counts <- rna.counts
-  rownames(counts) <- probe2symbol(rownames(counts), ngs$genes)
   res <- pgx.multipleDeconvolution(counts, refmat = refmat, methods = methods)
 
   ngs$deconv <- res$results
