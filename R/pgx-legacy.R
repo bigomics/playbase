@@ -7787,3 +7787,184 @@
 #'   return(counts)
 #' }
 
+#' #' @title Extract gene symbols from GEO feature data
+#' #'
+#' #' @description Extracts official gene symbols from the feature data table of a GEO dataset.
+#' #'
+#' #' @param fdata The featureData table from a GEOquery GEO dataset object.
+#' #'
+#' #' @details This function tries to extract official gene symbols from the featureData table of a GEO dataset downloaded with GEOquery.
+#' #' It first looks for a column containing gene symbols by matching against the org.Hs.egSYMBOL database.
+#' #' If no direct symbol column is found, it looks for an ENTREZ identifier column and maps that to symbols using org.Hs.egSYMBOL.
+#' #' If neither approach works, it tries to extract symbols from the gene title or description columns by regex matching.
+#' #'
+#' #' @return A character vector of gene symbols, or NULL if symbols could not be extracted.
+#' #'
+#' #' @export
+#' pgx.getSymbolFromFeatureData <- function(fdata) {
+#'   ## extract GENE symbol from featureData. The problem is that we don't
+#'   ## know the gene column because the column names are not always
+#'   ## consistent. Also the actual gene symbol may be part of an
+#'   ## annotation string instead of single symbol column.
+#'
+#'   symbol <- NULL
+#'
+#'   ## If there is a symbol column, than it is easy
+#'   SYMBOL <- as.character(unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL)))
+#'   symbol.col <- grep("symbol|gene|hugo", colnames(fdata), ignore.case = TRUE)
+#'
+#'   ok.symbol <- apply(
+#'     fdata[, symbol.col, drop = FALSE], 2,
+#'     function(g) mean(toupper(g[!is.na(g)]) %in% SYMBOL)
+#'   )
+#'   ok.symbol
+#'   if (any(ok.symbol > 0.5)) {
+#'     k <- symbol.col[which.max(ok.symbol)]
+#'     symbol <- fdata[, k]
+#'     return(symbol)
+#'   }
+#'
+#'   ## If there is an ENTREZ column, than it is easy
+#'   ENTREZ <- biomaRt::keys(org.Hs.eg.db::org.Hs.egSYMBOL)
+#'   entrez.col <- grep("entrez", colnames(fdata), ignore.case = TRUE)
+#'
+#'   entrez.match <- apply(
+#'     fdata[, entrez.col, drop = FALSE], 2,
+#'     function(g) mean(g[!is.na(g)] %in% ENTREZ)
+#'   )
+#'   entrez.match
+#'   entrez.ok <- length(entrez.col) && entrez.match > 0.5
+#'
+#'   if (entrez.ok) {
+#'     k <- entrez.col[which.max(entrez.match)]
+#'     probes <- as.character(fdata[, k])
+#'     symbol <- AnnotationDbi::mapIds(org.Hs.eg.db::org.Hs.eg.db, probes, "SYMBOL", "ENTREZID")
+#'     return(symbol)
+#'   }
+#'
+#'   ## If there is an REFSEQ column
+#'   REFSEQ <- unlist(as.list(org.Hs.eg.db::org.Hs.egREFSEQ))
+#'   refseq.col <- grep("refseq", colnames(fdata), ignore.case = TRUE)
+#'   refseq.col
+#'   refseq.match <- apply(
+#'     fdata[, refseq.col, drop = FALSE], 2,
+#'     function(g) mean(sub("[.].*", "", g[!is.na(g)]) %in% REFSEQ)
+#'   )
+#'
+#'   refseq.ok <- length(refseq.col) && refseq.match > 0.5
+#'   refseq.ok
+#'   if (refseq.ok) {
+#'     k <- refseq.col[which.max(refseq.match)]
+#'     probes <- sub("[.].*", "", as.character(fdata[, k]))
+#'     symbol <- AnnotationDbi::mapIds(org.Hs.eg.db::org.Hs.eg.db, probes, "SYMBOL", "REFSEQ")
+#'     return(symbol)
+#'   }
+#'
+#'   ## Otherwise try Ensemble ID
+#'   gene.column <- grep("gene|mrna|transcript", colnames(fdata), ignore.case = TRUE)
+#'
+#'   has.ens <- apply(fdata[, gene.column, drop = FALSE], 2, function(s) mean(grepl("ENS", s)))
+#'   has.ens
+#'   if (any(has.ens > 0.3)) {
+#'     ens.col <- ifelse(max(has.ens) > 0, names(which.max(has.ens)), NA)
+#'     ens.ann <- lapply(fdata[, ens.col], function(a) trimws(strsplit(a, split = "//|///")[[1]]))
+#'     ens.probes <- sapply(ens.ann, function(s) Matrix::head(grep("^ENS", s, value = TRUE), 1))
+#'     ens.probes[sapply(ens.probes, length) == 0] <- NA
+#'     ens.probes <- unlist(ens.probes)
+#'     symbol <- probe2symbol(ens.probes)
+#'     return(symbol)
+#'   }
+#'
+#'   message("WARNING:: could not parse symbol information from featureData!")
+#'   return(NULL)
+#' }
+
+
+#' #' Convert gene symbols to official HUGO gene symbols
+#' #'
+#' #' @param genes Character vector of gene symbols to convert
+#' #' @param remove.non.hugo Logical indicating whether to remove non-HUGO symbols. Default is TRUE.
+#' #' @param silent Logical indicating whether to suppress messages about conversions. Default is FALSE.
+#' #' @param take.only.first Logical indicating whether to take only first HUGO symbol for aliases. Default is FALSE.
+#' #' @param split.char Character used to split multiple aliases. Default ";".
+#' #' @param unknown Character string to use for unknown symbols. Default "unknown_gene".
+#' #'
+#' #' @return Character vector of official HUGO gene symbols.
+#' #'
+#' #' @details This function converts a character vector of gene symbols to official HUGO gene symbols.
+#' #' It first removes any aliases by mapping to the primary HUGO symbol list.
+#' #' For any remaining non-HUGO symbols, it attempts to find the official symbol by alias mapping.
+#' #'
+#' #' If take.only.first is TRUE, only the first HUGO symbol is taken when a gene maps to multiple aliases.
+#' #' Multiple aliases are concatenated by split.char when take.only.first=FALSE.
+#' #'
+#' #' Non-HUGO symbols that cannot be converted are replaced with unknown by default.
+#' #' Messages about conversions are printed unless silent=TRUE.
+#' #'
+#' #' @examples
+#' #' \dontrun{
+#' #' genes <- c("EGFR", "CDKN2A", "FOO", "BAR")
+#' #' hugo_symbols <- symbol2hugo(genes)
+#' #' }
+#' #'
+#' #' @export
+#' symbol2hugo <- function(genes, remove.non.hugo = TRUE, silent = FALSE,
+#'                         take.only.first = FALSE, split.char = ";", unknown = "unknown_gene") {
+#'   HUGO.SYMBOLS <- unique(unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL)))
+#'   ss <- as.character(genes)
+#'   ss <- gsub("Sep 0", "SEPT", ss) # typical XLS error
+#'   ss[is.na(ss) | ss == ""] <- unknown
+#'   ii <- which(!(ss %in% HUGO.SYMBOLS) & ss != unknown)
+#'   length(ii)
+#'   if (length(ii) == 0) {
+#'     return(genes)
+#'   }
+#'   if (!silent) cat("trying to convert", length(ii), "aliases to HUGO\n")
+#'   ss0 <- sapply(ss[ii], strsplit, split = split.char)
+#'   ee0 <- lapply(ss0, function(s) unlist(mget(s, envir = org.Hs.eg.db::org.Hs.egALIAS2EG, ifnotfound = NA)))
+#'   ee0 <- lapply(ee0, function(e) {
+#'     e[is.na(e) | e == "" | is.nan(e)] <- unknown
+#'     e
+#'   })
+#'   gg <- lapply(ee0, function(e) unlist(mget(e, envir = org.Hs.eg.db::org.Hs.egSYMBOL, ifnotfound = NA)))
+#'   if (remove.non.hugo) {
+#'     gg <- lapply(gg, intersect, HUGO.SYMBOLS)
+#'   }
+#'   gg.len <- lapply(gg, length)
+#'   sum(gg.len > 1)
+#'   if (sum(gg.len > 1) && !silent) {
+#'     cat("warning:", sum(gg.len > 1), "entrezID have multiple symbols\n")
+#'   }
+#'   if (sum(gg.len > 1) && take.only.first) {
+#'     gg <- sapply(gg, "[", 1)
+#'   } else {
+#'     gg <- sapply(gg, paste, collapse = split.char)
+#'   }
+#'   if (!silent) {
+#'     cat("updating", length(gg), "deprecated symbols\n")
+#'   }
+#'   gg[is.na(gg) | gg == ""] <- unknown
+#'   ss[ii] <- gg
+#'   ss
+#' }
+#'
+
+
+#' #' Convert human gene symbols to mouse
+#' #'
+#' #' @param x Character vector of human gene symbols
+#' #'
+#' #' @return Character vector of converted mouse gene symbols
+#' #'
+#' #'
+#' #' @export
+#' human2mouse <- function(x) {
+#'   homologene::human2mouse(x)
+#' }
+#'
+#'
+#' #' @describeIn human2mouse Convert human to mouse gene symbols using HomoloGene database
+#' #' @export
+#' mouse2human <- function(x) {
+#'   homologene::mouse2human(x)
+#' }
