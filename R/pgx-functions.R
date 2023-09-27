@@ -427,29 +427,6 @@ knnImputeMissing <- function(x, pos, missing = NA, k = 10) {
 }
 
 
-
-
-#' Convert human gene symbols to mouse
-#'
-#' @param x Character vector of human gene symbols
-#'
-#' @return Character vector of converted mouse gene symbols
-#'
-#'
-#' @export
-human2mouse <- function(x) {
-  homologene::human2mouse(x)
-}
-
-
-#' @describeIn human2mouse Convert human to mouse gene symbols using HomoloGene database
-#' @export
-mouse2human <- function(x) {
-  homologene::mouse2human(x)
-}
-
-
-
 #' @describeIn trimsame0 trimsame is a function that trims common prefixes and/or
 #' suffixes from a character vector by applying trimsame0 forwards and/or backwards.
 #' @export
@@ -1326,10 +1303,10 @@ getHSGeneInfo <- function(eg, as.link = TRUE) {
     "GO" = org.Hs.eg.db::org.Hs.egGO
   )
 
-  info <- lapply(env.list, function(env) AnnotationDbi::mget(eg, envir = env, ifnotfound = NA)[[1]])
+  info <- lapply(env.list, function(env) AnnotationDbi::mget(eg[1], envir = env, ifnotfound = NA)[[1]])
   names(info) <- names(env.list)
   gene.symbol <- toupper(AnnotationDbi::mget(as.character(eg),
-    envir = org.Hs.eg.db::org.Hs.egSYMBOL
+    envir = org.Hs.egSYMBOL2EG
   ))[1]
   info[["symbol"]] <- gene.symbol
 
