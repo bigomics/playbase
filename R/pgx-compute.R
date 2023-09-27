@@ -303,7 +303,7 @@ pgx.createPGX <- function(counts,
   ) ## empty object
 
   ## -------------------------------------------------------------------
-  ## create gene annotation if not given (no HUGO conversion)
+  ## create gene annotation table
   ## -------------------------------------------------------------------
   message("[createPGX] annotating genes...")
 
