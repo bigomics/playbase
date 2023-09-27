@@ -91,13 +91,11 @@ test_that("pgx.computePGX runs without errors", {
   pgx_comp <- playbase::pgx.computePGX(pgx)
 
   # Create expected outputs
-  expected_tests <- c(
-    "name", "date", "datatype", "description", "samples", "counts", "contrasts",
-    "total_counts", "counts_multiplier", "genes", "tsne2d", "tsne3d", "cluster",
-    "X", "cluster.genes", "model.parameters", "filtered", "timings", "gx.meta",
-    "gset.meta", "gsetX", "GMT", "cluster.gsets", "meta.go"
-  )
-
+  expected_tests <- c("name", "date", "datatype", "description", "samples", "counts", "contrasts",
+                      "X", "total_counts", "counts_multiplier", "genes", "all_genes", "symbol",
+                      "tsne2d", "tsne3d", "cluster", "cluster.genes", "model.parameters",
+                      "filtered", "timings", "gx.meta", "gset.meta", "gsetX", "GMT",
+                      "cluster.gsets", "meta.go")
   # Check output
   expect_true(all(names(pgx_comp) == expected_tests))
 })
