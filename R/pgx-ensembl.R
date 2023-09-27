@@ -91,13 +91,14 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
 
 
   probe_check <- sapply(probe_types_to_check, FUN = function(x) {
-    #TODO write a while loop that stops when we first get 20 IDs mapped, o continue until the end if not
+    # TODO write a while loop that stops when we first get 20 IDs mapped, o
+    # continue until the end if not
     tryCatch({
       tmp <- biomaRt::getBM(attributes = x,
                             filters = x,
                             values = subset_probes,
                             mart = mart)
-      Sys.sleep(1)  #TODO why?
+      Sys.sleep(2)  # Sleep time to prevent bounce from ensembl for consecutive calls
       out <- nrow(tmp)
       return(out)
     }, error = function(e) {
@@ -108,7 +109,8 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
 
   # Check matches and return if winner
   if (all(probe_check == 0)) {
-    #TODO the probe2symbol and detect_probe code should be used in data-preview, and we should warn the user in case no matches are found
+    #TODO the probe2symbol and detect_probe code should be used in data-preview,
+    # and we should warn the user in case no matches are found
     stop("Probe type not found, please, check your probes")
   } else {
     probe_type <- names(which.max(probe_check))
@@ -222,30 +224,23 @@ ngs.getGeneAnnotation <- function(probes,
 #' }
 #'
 #' @export
-probe2symbol <- function(probes, annot_table) {
+probe2symbol <- function(probes, annot_table, query = "external_gene_name") {
 
   # Prepare inputs
   probe_type <- colnames(annot_table[, 1])
-  probes_dt <- data.table::data.table(ID = probes)
-  setnames(probes_dt, "ID", probe_type)
-  ref_table <- annot_table[, .(symbol = unique(hgnc_symbol)),
-                           by = probe_type]
+  probe_cols <- c(probe_type, query)
 
-  # Match all probes
-  matched_names <- data.table::merge.data.table(x = probes_dt,
-                                                y = ref_table,
-                                                by = probe_type,
-                                                all.x = TRUE)
-
-  # Remove duplicated
-  matched_names <- matched_names[!duplicated(matched_names[, 1])]
+  # Match annot_table
+  annot <- annot_table[, .SD,
+                       .SDcols = probe_cols][probes,
+                                             on = probe_type,
+                                             mult = "first"]
 
   # Deal with NA
-  matched_names[is.na(symbol)|symbol ==  "",
-                symbol := .SD,
-                .SDcols = probe_type]
+  annot[is.na(annot[[query]])|annot[[query]] ==  "",
+        (query) := .SD,
+        .SDcols = probe_type]
 
-  probes_hgnc_symbol <- matched_names[, symbol]
-
-  return(probes_hgnc_symbol)
+  # Return queryed col
+  return(annot[[query]])
 }
