@@ -143,7 +143,7 @@ pgx.createPGX <- function(counts,
                           X = NULL, ## genes,
                           is.logx = NULL,
                           batch.correct = TRUE,
-                          species = "hsapiens_gene_ensembl",
+                          species = "Human",
                           auto.scale = TRUE,
                           filter.genes = TRUE,
                           prune.samples = FALSE,
@@ -158,6 +158,9 @@ pgx.createPGX <- function(counts,
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("dimension of counts and X do not match\n")
   }
+
+  # convert species to ensembl ID
+  species <- playbase::SPECIES_TABLE[which(playbase::SPECIES_TABLE$species_name==species),]$dataset
 
   ## -------------------------------------------------------------------
   ## clean up input files
