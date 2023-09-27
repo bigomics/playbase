@@ -7,14 +7,23 @@
 \format{
 ## `GMT`
 list of genes (targeted by a microRNA), and the list name is the microRNA
+
+## `SPECIES_TABLE`
+data.frame with columns "dataset"	"description"	"version"	"species_name"
 }
 \source{
 C3: regulatory target gene sets, MIR: microRNA targets from https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp
+
+BiomaRt
 }
 \usage{
+EXAMPLE_GMT
+
 EXAMPLE_GMT
 }
 \description{
 Example GMT (geneset matrix transpose) of genes targeted by microRNA
+
+Table for species ID conversin conversion from scientific name to Ensembl db ID
 }
 \keyword{datasets}

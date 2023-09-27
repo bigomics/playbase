@@ -13,7 +13,7 @@ pgx.createPGX(
   X = NULL,
   is.logx = NULL,
   batch.correct = TRUE,
-  species = "hsapiens_gene_ensembl",
+  species = "Human",
   auto.scale = TRUE,
   filter.genes = TRUE,
   prune.samples = FALSE,

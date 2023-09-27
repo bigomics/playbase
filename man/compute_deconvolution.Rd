@@ -16,6 +16,14 @@ or a subset of faster methods and references (FALSE).}
 }
 \value{
 An updated object with deconvolution results.
+\dontrun{
+probes <- rownames(playbase::COUNTS)
+mart <- biomaRt::useMart(biomart = "ensembl", dataset = species)
+annot_table <- ngs.getGeneAnnotation(rownames(counts),
+                                   probe_type = NULL,
+                                   mart = mart)
+deconv <- compute_deconvolution(probes, annot_table)
+}
 }
 \description{
 This function performs deconvolution analysis on the input RNA expression data using various reference matrices
