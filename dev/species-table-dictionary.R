@@ -11,14 +11,10 @@ species[, species_name := sub("\\s*\\(.*\\)", "", description)]
 species[, species_name := sub(" genes", "", species_name)]
 
 # order table by Human, Mouse and Rat to appear first in species_name
-species_or <- species[order(species_name %in% c("Human", "Mouse", "Rat"), -as.character(species_name))]
-
+species <- species[order(species_name %in% c("Human", "Mouse", "Rat"), -as.character(species_name))]
+    
 # reverse order of table, where lst row becomes first and so on
-species_or <- species_or[rev(seq_len(nrow(species_or)))]
-
-
-
-View(species_or)
+species <- species[rev(seq_len(nrow(species)))]
 
 write.csv(species, "dev/SPECIES_DICTIONARY.csv", row.names = FALSE, quote = FALSE)
 
