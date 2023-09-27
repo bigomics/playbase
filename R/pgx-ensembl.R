@@ -224,6 +224,7 @@ ngs.getGeneAnnotation <- function(probes,
 #' @param annot_table Data frame with columns "probe_type" and "hgnc_symbol".
 #'   The probe_type matches the type of IDs in probes.
 #'
+#' @import data.table
 #' @return Character vector of mapped HGNC gene symbols.
 #'
 #' @details The annot_table should contain a column with the probe IDs
