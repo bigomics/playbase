@@ -1,215 +1,682 @@
-dataset,description,version,species_name
-hsapiens_gene_ensembl,Human genes (GRCh38.p14),GRCh38.p14,Human
-mmusculus_gene_ensembl,Mouse genes (GRCm39),GRCm39,Mouse
-rnorvegicus_gene_ensembl,Rat genes (mRatBN7.2),mRatBN7.2,Rat
-cabingdonii_gene_ensembl,Abingdon island giant tortoise genes (ASM359739v1),ASM359739v1,Abingdon island giant tortoise
-scaustralis_gene_ensembl,African ostrich genes (ASM69896v1),ASM69896v1,African ostrich
-mspretus_gene_ensembl,Algerian mouse genes (SPRET_EiJ_v1),SPRET_EiJ_v1,Algerian mouse
-vpacos_gene_ensembl,Alpaca genes (vicPac1),vicPac1,Alpaca
-mmmarmota_gene_ensembl,Alpine marmot genes (marMar2.1),marMar2.1,Alpine marmot
-pformosa_gene_ensembl,Amazon molly genes (Poecilia_formosa-5.1.2),Poecilia_formosa-5.1.2,Amazon molly
-bbbison_gene_ensembl,American bison genes (Bison_UMD1.0),Bison_UMD1.0,American bison
-uamericanus_gene_ensembl,American black bear genes (ASM334442v1),ASM334442v1,American black bear
-nvison_gene_ensembl,American mink genes (NNQGG.v01),NNQGG.v01,American mink
-cdromedarius_gene_ensembl,Arabian camel genes (CamDro2),CamDro2,Arabian camel
-uparryii_gene_ensembl,Arctic ground squirrel genes (ASM342692v1),ASM342692v1,Arctic ground squirrel
-smerianae_gene_ensembl,Argentine black and white tegu genes (HLtupMer3),HLtupMer3,Argentine black and white tegu
-dnovemcinctus_gene_ensembl,Armadillo genes (Dasnov3.0),Dasnov3.0,Armadillo
-sformosus_gene_ensembl,Asian bonytongue genes (fSclFor1.1),fSclFor1.1,Asian bonytongue
-gmorhua_gene_ensembl,Atlantic cod genes (gadMor3.0),gadMor3.0,Atlantic cod
-charengus_gene_ensembl,Atlantic herring genes (Ch_v2.0.2),Ch_v2.0.2,Atlantic herring
-ssalar_gene_ensembl,Atlantic salmon genes (Ssal_v3.1),Ssal_v3.1,Atlantic salmon
-cporosus_gene_ensembl,Australian saltwater crocodile genes (CroPor_comp1),CroPor_comp1,Australian saltwater crocodile
-lbergylta_gene_ensembl,Ballan wrasse genes (BallGen_V1),BallGen_V1,Ballan wrasse
-lcalcarifer_gene_ensembl,Barramundi perch genes (ASB_HGAPassembly_v1),ASB_HGAPassembly_v1,Barramundi perch
-dleucas_gene_ensembl,Beluga whale genes (ASM228892v3),ASM228892v3,Beluga whale
-spartitus_gene_ensembl,Bicolor damselfish genes (Stegastes_partitus-1.0.2),Stegastes_partitus-1.0.2,Bicolor damselfish
-rbieti_gene_ensembl,Black snub-nosed monkey genes (ASM169854v1),ASM169854v1,Black snub-nosed monkey
-bmusculus_gene_ensembl,Blue whale genes (mBalMus1.v2),mBalMus1.v2,Blue whale
-llaticaudata_gene_ensembl,Blue-ringed sea krait genes (latLat_1.0),latLat_1.0,Blue-ringed sea krait
-sbboliviensis_gene_ensembl,Bolivian squirrel monkey genes (SaiBol1.0),SaiBol1.0,Bolivian squirrel monkey
-ppaniscus_gene_ensembl,Bonobo genes (panpan1.1),panpan1.1,Bonobo
-strutta_gene_ensembl,Brown trout genes (fSalTru1.1),fSalTru1.1,Brown trout
-hburtoni_gene_ensembl,Burton's mouthbrooder genes (AstBur1.0),AstBur1.0,Burton's mouthbrooder
-ogarnettii_gene_ensembl,Bushbaby genes (OtoGar3),OtoGar3,Bushbaby
-cintestinalis_gene_ensembl,C.intestinalis genes (KH),KH,C.intestinalis
-csavignyi_gene_ensembl,C.savignyi genes (CSAV 2.0),CSAV 2.0,C.savignyi
-celegans_gene_ensembl,Caenorhabditis elegans (PRJNA13758) genes (WBcel235),WBcel235,Caenorhabditis elegans
-fcatus_gene_ensembl,Cat genes (Felis_catus_9.0),Felis_catus_9.0,Cat
-cwagneri_gene_ensembl,Chacoan peccary genes (CatWag_v2_BIUU_UCD),CatWag_v2_BIUU_UCD,Chacoan peccary
-cgobio_gene_ensembl,Channel bull blenny genes (fCotGob3.1),fCotGob3.1,Channel bull blenny
-ipunctatus_gene_ensembl,Channel catfish genes (IpCoco_1.2),IpCoco_1.2,Channel catfish
-ggallus_gene_ensembl,Chicken genes (bGalGal1.mat.broiler.GRCg7b),bGalGal1.mat.broiler.GRCg7b,Chicken
-ptroglodytes_gene_ensembl,Chimpanzee genes (Pan_tro_3.0),Pan_tro_3.0,Chimpanzee
-cgchok1gshd_gene_ensembl,Chinese hamster CHOK1GS genes (CHOK1GS_HDv1),CHOK1GS_HDv1,Chinese hamster CHOK1GS
-osinensis_gene_ensembl,Chinese medaka genes (ASM858656v1),ASM858656v1,Chinese medaka
-psinensis_gene_ensembl,Chinese softshell turtle genes (PelSin_1.0),PelSin_1.0,Chinese softshell turtle
-otshawytscha_gene_ensembl,Chinook salmon genes (Otsh_v1.0),Otsh_v1.0,Chinook salmon
-atestudineus_gene_ensembl,Climbing perch genes (fAnaTes1.2),fAnaTes1.2,Climbing perch
-aocellaris_gene_ensembl,Clown anemonefish genes (AmpOce1.0),AmpOce1.0,Clown anemonefish
-lchalumnae_gene_ensembl,Coelacanth genes (LatCha1),LatCha1,Coelacanth
-okisutch_gene_ensembl,Coho salmon genes (Okis_V2),Okis_V2,Coho salmon
-falbicollis_gene_ensembl,Collared flycatcher genes (FicAlb1.5),FicAlb1.5,Collared flycatcher
-scanaria_gene_ensembl,Common canary genes (SCA1),SCA1,Common canary
-cccarpio_gene_ensembl,Common carp genes (Cypcar_WagV4.0),Cypcar_WagV4.0,Common carp
-pmuralis_gene_ensembl,Common wall lizard genes (PodMur_1.0),PodMur_1.0,Common wall lizard
-vursinus_gene_ensembl,Common wombat genes (bare-nosed_wombat_genome_assembly),bare-nosed_wombat_genome_assembly,Common wombat
-pcoquereli_gene_ensembl,Coquerel's sifaka genes (Pcoq_1.0),Pcoq_1.0,Coquerel's sifaka
-btaurus_gene_ensembl,Cow genes (ARS-UCD1.2),ARS-UCD1.2,Cow
-mfascicularis_gene_ensembl,Crab-eating macaque genes (Macaca_fascicularis_6.0),Macaca_fascicularis_6.0,Crab-eating macaque
-odegus_gene_ensembl,Degu genes (OctDeg1.0),OctDeg1.0,Degu
-dclupeoides_gene_ensembl,Denticle herring genes (fDenClu1.1),fDenClu1.1,Denticle herring
-cldingo_gene_ensembl,Dingo genes (ASM325472v1),ASM325472v1,Dingo
-clfamiliaris_gene_ensembl,Dog genes (ROS_Cfam_1.0),ROS_Cfam_1.0,Dog
-ttruncatus_gene_ensembl,Dolphin genes (turTru1),turTru1,Dolphin
-bgrunniens_gene_ensembl,Domestic yak genes (LU_Bosgru_v3.0),LU_Bosgru_v3.0,Domestic yak
-easinus_gene_ensembl,Donkey genes (ASM1607732v2),ASM1607732v2,Donkey
-mleucophaeus_gene_ensembl,Drill genes (Mleu.le_1.0),Mleu.le_1.0,Drill
-dmelanogaster_gene_ensembl,Drosophila melanogaster (Fruit fly) genes (BDGP6.46),BDGP6.46,Drosophila melanogaster
-applatyrhynchos_gene_ensembl,Duck genes (CAU_duck1.0),CAU_duck1.0,Duck
-ptextilis_gene_ensembl,Eastern brown snake genes (EBS10Xv2-PRI),EBS10Xv2-PRI,Eastern brown snake
-acalliptera_gene_ensembl,Eastern happy genes (fAstCal1.2),fAstCal1.2,Eastern happy
-eelectricus_gene_ensembl,Electric eel genes (Ee_SOAP_WITH_SSPACE),Ee_SOAP_WITH_SSPACE,Electric eel
-lafricana_gene_ensembl,Elephant genes (Loxafr3.0),Loxafr3.0,Elephant
-cmilii_gene_ensembl,Elephant shark genes (Callorhinchus_milii-6.1.3),Callorhinchus_milii-6.1.3,Elephant shark
-svulgaris_gene_ensembl,Eurasian red squirrel genes (mSciVul1.1),mSciVul1.1,Eurasian red squirrel
-dlabrax_gene_ensembl,European seabass genes (dlabrax2021),dlabrax2021,European seabass
-mpfuro_gene_ensembl,Ferret genes (MusPutFur1.0),MusPutFur1.0,Ferret
-trubripes_gene_ensembl,Fugu genes (fTakRub1.2),fTakRub1.2,Fugu
-amelanoleuca_gene_ensembl,Giant panda genes (ASM200744v2),ASM200744v2,Giant panda
-nleucogenys_gene_ensembl,Gibbon genes (Nleu_3.0),Nleu_3.0,Gibbon
-saurata_gene_ensembl,Gilthead seabream genes (fSpaAur1.1),fSpaAur1.1,Gilthead seabream
-chircus_gene_ensembl,Goat genes (ARS1),ARS1,Goat
-mauratus_gene_ensembl,Golden Hamster genes (MesAur1.0),MesAur1.0,Golden Hamster
-acchrysaetos_gene_ensembl,Golden eagle genes (bAquChr1.2),bAquChr1.2,Golden eagle
-rroxellana_gene_ensembl,Golden snub-nosed monkey genes (Rrox_v1),Rrox_v1,Golden snub-nosed monkey
-sgrahami_gene_ensembl,Golden-line barbel genes (SAMN03320097.WGS_v1.1),SAMN03320097.WGS_v1.1,Golden-line barbel
-cauratus_gene_ensembl,Goldfish genes (ASM336829v1),ASM336829v1,Goldfish
-gevgoodei_gene_ensembl,Goodes thornscrub tortoise genes (rGopEvg1_v1.p),rGopEvg1_v1.p,Goodes thornscrub tortoise
-ggorilla_gene_ensembl,Gorilla genes (gorGor4),gorGor4,Gorilla
-pmajor_gene_ensembl,Great Tit genes (Parus_major1.1),Parus_major1.1,Great Tit
-sdumerili_gene_ensembl,Greater amberjack genes (Sdu_1.0),Sdu_1.0,Greater amberjack
-psimus_gene_ensembl,Greater bamboo lemur genes (Prosim_1.0),Prosim_1.0,Greater bamboo lemur
-rferrumequinum_gene_ensembl,Greater horseshoe bat genes (mRhiFer1_v1.p),mRhiFer1_v1.p,Greater horseshoe bat
-acarolinensis_gene_ensembl,Green anole genes (AnoCar2.0v2),AnoCar2.0v2,Green anole
-cporcellus_gene_ensembl,Guinea Pig genes (Cavpor3.0),Cavpor3.0,Guinea Pig
-preticulata_gene_ensembl,Guppy genes (Guppy_female_1.0_MT),Guppy_female_1.0_MT,Guppy
-eburgeri_gene_ensembl,Hagfish genes (Eburgeri_3.2),Eburgeri_3.2,Hagfish
-eeuropaeus_gene_ensembl,Hedgehog genes (eriEur1),eriEur1,Hedgehog
-ecaballus_gene_ensembl,Horse genes (EquCab3.0),EquCab3.0,Horse
-hhucho_gene_ensembl,Huchen genes (ASM331708v1),ASM331708v1,Huchen
-bihybrid_gene_ensembl,Hybrid - Bos Indicus genes (UOA_Brahman_1),UOA_Brahman_1,Hybrid - Bos Indicus
-pcapensis_gene_ensembl,Hyrax genes (proCap1),proCap1,Hyrax
-nnaja_gene_ensembl,Indian cobra genes (Nana_v5),Nana_v5,Indian cobra
-omelastigma_gene_ensembl,Indian medaka genes (Om_v0.7.RACA),Om_v0.7.RACA,Indian medaka
-olatipes_gene_ensembl,Japanese medaka HdrR genes (ASM223467v1),ASM223467v1,Japanese medaka HdrR
-cjaponica_gene_ensembl,Japanese quail genes (Coturnix_japonica_2.0),Coturnix_japonica_2.0,Japanese quail
-ojavanicus_gene_ensembl,Javanese ricefish genes (OJAV_1.1),OJAV_1.1,Javanese ricefish
-shabroptila_gene_ensembl,Kakapo genes (bStrHab1_v1.p),bStrHab1_v1.p,Kakapo
-dordii_gene_ensembl,Kangaroo rat genes (Dord_2.0),Dord_2.0,Kangaroo rat
-pcinereus_gene_ensembl,Koala genes (phaCin_unsw_v4.1),phaCin_unsw_v4.1,Koala
-pmarinus_gene_ensembl,Lamprey genes (Pmarinus_7.0),Pmarinus_7.0,Lamprey
-lcrocea_gene_ensembl,Large yellow croaker genes (L_crocea_2.0),L_crocea_2.0,Large yellow croaker
-lleishanense_gene_ensembl,Leishan spiny toad genes (ASM966780v1),ASM966780v1,Leishan spiny toad
-ppardus_gene_ensembl,Leopard genes (PanPar1.0),PanPar1.0,Leopard
-jjaculus_gene_ensembl,Lesser Egyptian jerboa genes (JacJac1.0),JacJac1.0,Lesser Egyptian jerboa
-etelfairi_gene_ensembl,Lesser hedgehog tenrec genes (TENREC),TENREC,Lesser hedgehog tenrec
-pleo_gene_ensembl,Lion genes (PanLeo1.0),PanLeo1.0,Lion
-clanigera_gene_ensembl,Long-tailed chinchilla genes (ChiLan1.0),ChiLan1.0,Long-tailed chinchilla
-clumpus_gene_ensembl,Lumpfish genes (fCycLum1.pri),fCycLum1.pri,Lumpfish
-nbrichardi_gene_ensembl,Lyretail cichlid genes (NeoBri1.0),NeoBri1.0,Lyretail cichlid
-anancymaae_gene_ensembl,Ma's night monkey genes (Anan_2.0),Anan_2.0,Ma's night monkey
-mmulatta_gene_ensembl,Macaque genes (Mmul_10),Mmul_10,Macaque
-nscutatus_gene_ensembl,Mainland tiger snake genes (TS10Xv2-PRI),TS10Xv2-PRI,Mainland tiger snake
-pnyererei_gene_ensembl,Makobe Island cichlid genes (PunNye1.0),PunNye1.0,Makobe Island cichlid
-aplatyrhynchos_gene_ensembl,Mallard genes (ASM874695v1),ASM874695v1,Mallard
-kmarmoratus_gene_ensembl,Mangrove rivulus genes (ASM164957v1),ASM164957v1,Mangrove rivulus
-gfortis_gene_ensembl,Medium ground-finch genes (GeoFor_1.0),GeoFor_1.0,Medium ground-finch
-pvampyrus_gene_ensembl,Megabat genes (pteVam1),pteVam1,Megabat
-amexicanus_gene_ensembl,Mexican tetra genes (Astyanax_mexicanus-2.0),Astyanax_mexicanus-2.0,Mexican tetra
-mlucifugus_gene_ensembl,Microbat genes (Myoluc2.0),Myoluc2.0,Microbat
-acitrinellus_gene_ensembl,Midas cichlid genes (Midas_v5),Midas_v5,Midas cichlid
-mmurinus_gene_ensembl,Mouse Lemur genes (Mmur_3.0),Mmur_3.0,Mouse Lemur
-fheteroclitus_gene_ensembl,Mummichog genes (Fundulus_heteroclitus-3.0.2),Fundulus_heteroclitus-3.0.2,Mummichog
-hgfemale_gene_ensembl,Naked mole-rat female genes (Naked_mole-rat_maternal),Naked_mole-rat_maternal,Naked mole-rat female
-mmonoceros_gene_ensembl,Narwhal genes (NGI_Narwhal_1),NGI_Narwhal_1,Narwhal
-oniloticus_gene_ensembl,Nile tilapia genes (O_niloticus_UMD_NMBU),O_niloticus_UMD_NMBU,Nile tilapia
-pmbairdii_gene_ensembl,Northern American deer mouse genes (HU_Pman_2.1),HU_Pman_2.1,Northern American deer mouse
-elucius_gene_ensembl,Northern pike genes (Eluc_v4),Eluc_v4,Northern pike
-panubis_gene_ensembl,Olive baboon genes (Panubis1.0),Panubis1.0,Olive baboon
-mdomestica_gene_ensembl,Opossum genes (ASM229v1),ASM229v1,Opossum
-apercula_gene_ensembl,Orange clownfish genes (Nemo_v1),Nemo_v1,Orange clownfish
-cpbellii_gene_ensembl,Painted turtle genes (Chrysemys_picta_bellii-3.0.3),Chrysemys_picta_bellii-3.0.3,Painted turtle
-cimitator_gene_ensembl,Panamanian white-faced capuchin genes (Cebus_imitator-1.0),Cebus_imitator-1.0,Panamanian white-faced capuchin
-pkingsleyae_gene_ensembl,Paramormyrops kingsleyae genes (PKINGS_0.1),PKINGS_0.1,Paramormyrops kingsleyae
-sscrofa_gene_ensembl,Pig genes (Sscrofa11.1),Sscrofa11.1,Pig
-ssbamei_gene_ensembl,Pig - Bamei genes (Bamei_pig_v1),Bamei_pig_v1,Pig - Bamei
-ssberkshire_gene_ensembl,Pig - Berkshire genes (Berkshire_pig_v1),Berkshire_pig_v1,Pig - Berkshire
-sshampshire_gene_ensembl,Pig - Hampshire genes (Hampshire_pig_v1),Hampshire_pig_v1,Pig - Hampshire
-ssjinhua_gene_ensembl,Pig - Jinhua genes (Jinhua_pig_v1),Jinhua_pig_v1,Pig - Jinhua
-sslandrace_gene_ensembl,Pig - Landrace genes (Landrace_pig_v1),Landrace_pig_v1,Pig - Landrace
-sslargewhite_gene_ensembl,Pig - Largewhite genes (Large_White_v1),Large_White_v1,Pig - Largewhite
-ssmeishan_gene_ensembl,Pig - Meishan genes (Meishan_pig_v1),Meishan_pig_v1,Pig - Meishan
-sspietrain_gene_ensembl,Pig - Pietrain genes (Pietrain_pig_v1),Pietrain_pig_v1,Pig - Pietrain
-ssrongchang_gene_ensembl,Pig - Rongchang genes (Rongchang_pig_v1),Rongchang_pig_v1,Pig - Rongchang
-sstibetan_gene_ensembl,Pig - Tibetan genes (Tibetan_Pig_v2),Tibetan_Pig_v2,Pig - Tibetan
-sswuzhishan_gene_ensembl,Pig - Wuzhishan genes (minipig_v1.0),minipig_v1.0,Pig - Wuzhishan
-ssusmarc_gene_ensembl,Pig USMARC genes (USMARCv1.0),USMARCv1.0,Pig USMARC
-mnemestrina_gene_ensembl,Pig-tailed macaque genes (Mnem_1.0),Mnem_1.0,Pig-tailed macaque
-oprinceps_gene_ensembl,Pika genes (OchPri2.0-Ens),OchPri2.0-Ens,Pika
-slucioperca_gene_ensembl,Pike-perch genes (SLUC_FBN_1),SLUC_FBN_1,Pike-perch
-mmurdjan_gene_ensembl,Pinecone soldierfish genes (fMyrMur1.1),fMyrMur1.1,Pinecone soldierfish
-abrachyrhynchus_gene_ensembl,Pink-footed goose genes (ASM259213v1),ASM259213v1,Pink-footed goose
-xmaculatus_gene_ensembl,Platyfish genes (X_maculatus-5.0-male),X_maculatus-5.0-male,Platyfish
-oanatinus_gene_ensembl,Platypus genes (mOrnAna1.p.v1),mOrnAna1.p.v1,Platypus
-umaritimus_gene_ensembl,Polar bear genes (UrsMar_1.0),UrsMar_1.0,Polar bear
-mochrogaster_gene_ensembl,Prairie vole genes (MicOch1.0),MicOch1.0,Prairie vole
-ocuniculus_gene_ensembl,Rabbit genes (OryCun2.0),OryCun2.0,Rabbit
-omykiss_gene_ensembl,Rainbow trout genes (USDA_OmykA_1.1),USDA_OmykA_1.1,Rainbow trout
-vvulpes_gene_ensembl,Red fox genes (VulVul2.2),VulVul2.2,Red fox
-pnattereri_gene_ensembl,Red-bellied piranha genes (Pygocentrus_nattereri-1.0.2),Pygocentrus_nattereri-1.0.2,Red-bellied piranha
-ecalabaricus_gene_ensembl,Reedfish genes (fErpCal1.1),fErpCal1.1,Reedfish
-mcaroli_gene_ensembl,Ryukyu mouse genes (CAROLI_EIJ_v1.1),CAROLI_EIJ_v1.1,Ryukyu mouse
-scerevisiae_gene_ensembl,Saccharomyces cerevisiae genes (R64-1-1),R64-1-1,Saccharomyces cerevisiae
-platipinna_gene_ensembl,Sailfin molly genes (P_latipinna-1.0),P_latipinna-1.0,Sailfin molly
-oaries_gene_ensembl,Sheep (texel) genes (Oar_v3.1),Oar_v3.1,Sheep
-oarambouillet_gene_ensembl,Sheep genes (Oar_rambouillet_v1.0),Oar_rambouillet_v1.0,Sheep
-cvariegatus_gene_ensembl,Sheepshead minnow genes (C_variegatus-1.0),C_variegatus-1.0,Sheepshead minnow
-saraneus_gene_ensembl,Shrew genes (sorAra1),sorAra1,Shrew
-mpahari_gene_ensembl,Shrew mouse genes (PAHARI_EIJ_v1.1),PAHARI_EIJ_v1.1,Shrew mouse
-bsplendens_gene_ensembl,Siamese fighting fish genes (fBetSpl5.2),fBetSpl5.2,Siamese fighting fish
-mmoschiferus_gene_ensembl,Siberian musk deer genes (MosMos_v2_BIUU_UCD),MosMos_v2_BIUU_UCD,Siberian musk deer
-choffmanni_gene_ensembl,Sloth genes (choHof1),choHof1,Sloth
-catys_gene_ensembl,Sooty mangabey genes (Caty_1.0),Caty_1.0,Sooty mangabey
-pcatodon_gene_ensembl,Sperm whale genes (ASM283717v2),ASM283717v2,Sperm whale
-apolyacanthus_gene_ensembl,Spiny chromis genes (ASM210954v1),ASM210954v1,Spiny chromis
-loculatus_gene_ensembl,Spotted gar genes (LepOcu1),LepOcu1,Spotted gar
-itridecemlineatus_gene_ensembl,Squirrel genes (SpeTri2.0),SpeTri2.0,Squirrel
-mspicilegus_gene_ensembl,Steppe mouse genes (MUSP714),MUSP714,Steppe mouse
-gaculeatus_gene_ensembl,Stickleback genes (BROAD S1),BROAD S1,Stickleback
-pabelii_gene_ensembl,Sumatran orangutan genes (Susie_PABv2),Susie_PABv2,Sumatran orangutan
-csyrichta_gene_ensembl,Tarsier genes (Tarsius_syrichta-2.0.1),Tarsius_syrichta-2.0.1,Tarsier
-sharrisii_gene_ensembl,Tasmanian devil genes (mSarHar1.11),mSarHar1.11,Tasmanian devil
-tnigroviridis_gene_ensembl,Tetraodon genes (TETRAODON 8.0),TETRAODON 8.0,Tetraodon
-tctriunguis_gene_ensembl,Three-toed box turtle genes (T_m_triunguis-2.0),T_m_triunguis-2.0,Three-toed box turtle
-ptaltaica_gene_ensembl,Tiger genes (PanTig1.0),PanTig1.0,Tiger
-hcomes_gene_ensembl,Tiger tail seahorse genes (H_comes_QL1_v1),H_comes_QL1_v1,Tiger tail seahorse
-csemilaevis_gene_ensembl,Tongue sole genes (Cse_v1.0),Cse_v1.0,Tongue sole
-tbelangeri_gene_ensembl,Tree Shrew genes (tupBel1),tupBel1,Tree Shrew
-xtropicalis_gene_ensembl,Tropical clawed frog genes (UCB_Xtro_10.0),UCB_Xtro_10.0,Tropical clawed frog
-spunctatus_gene_ensembl,Tuatara genes (ASM311381v1),ASM311381v1,Tuatara
-smaximus_gene_ensembl,Turbot genes (ASM1334776v1),ASM1334776v1,Turbot
-mgallopavo_gene_ensembl,Turkey genes (Turkey_5.1),Turkey_5.1,Turkey
-nfurzeri_gene_ensembl,Turquoise killifish genes (Nfu_20140520),Nfu_20140520,Turquoise killifish
-ngalili_gene_ensembl,Upper Galilee mountains blind mole rat genes (S.galili_v1.0),S.galili_v1.0,Upper Galilee mountains blind mole rat
-psinus_gene_ensembl,Vaquita genes (mPhoSin1.pri),mPhoSin1.pri,Vaquita
-csabaeus_gene_ensembl,Vervet-AGM genes (ChlSab1.1),ChlSab1.1,Vervet-AGM
-neugenii_gene_ensembl,Wallaby genes (Meug_1.0),Meug_1.0,Wallaby
-cjacchus_gene_ensembl,White-tufted-ear marmoset genes (mCalJac1.pat.X),mCalJac1.pat.X,White-tufted-ear marmoset
-bmutus_gene_ensembl,Wild yak genes (BosGru_v2.0),BosGru_v2.0,Wild yak
-chyarkandensis_gene_ensembl,Yarkand deer genes (CEY_v1),CEY_v1,Yarkand deer
-sldorsalis_gene_ensembl,Yellowtail amberjack genes (Sedor1),Sedor1,Yellowtail amberjack
-tguttata_gene_ensembl,Zebra finch genes (bTaeGut1_v1.p),bTaeGut1_v1.p,Zebra finch
-mzebra_gene_ensembl,Zebra mbuna genes (M_zebra_UMD2a),M_zebra_UMD2a,Zebra mbuna
-drerio_gene_ensembl,Zebrafish genes (GRCz11),GRCz11,Zebrafish
-marmatus_gene_ensembl,Zig-zag eel genes (fMasArm1.2),fMasArm1.2,Zig-zag eel
+dataset,description,version,species_name,ds
+hsapiens_gene_ensembl,Human genes (GRCh38.p14),GRCh38.p14,Human,ensembl
+mmusculus_gene_ensembl,Mouse genes (GRCm39),GRCm39,Mouse,ensembl
+rnorvegicus_gene_ensembl,Rat genes (mRatBN7.2),mRatBN7.2,Rat,ensembl
+cabingdonii_gene_ensembl,Abingdon island giant tortoise genes (ASM359739v1),ASM359739v1,Abingdon island giant tortoise,ensembl
+apgca001949145v1_eg_gene,Acanthaster planci (Crown-of-thorns starfish) genes (OKI_Apl_1.0),OKI_Apl_1.0,Acanthaster planci,metazoa_mart
+aegca000204515v1rs_eg_gene,Acromyrmex echinatior (Panamanian leaf-cutter ant) genes (Aech_3.9),Aech_3.9,Acromyrmex echinatior,metazoa_mart
+amgca013753865v1_eg_gene,Acropora millepora (Stony coral, JS-1) genes (Amil_v2.1),Amil_v2.1,Acropora millepora,metazoa_mart
+aegca011057435_eg_gene,Actinia equina (Beadlet anemone, AE1) genes (equina_smartden.arrow4.noredun),equina_smartden.arrow4.noredun,Actinia equina,metazoa_mart
+atgca009602425v1_eg_gene,Actinia tenebrosa (Australian red waratah sea anemone) genes (ASM960242v1),ASM960242v1,Actinia tenebrosa,metazoa_mart
+achinensis_eg_gene,Actinidia chinensis genes (Red5_PS1_1.69.0),Red5_PS1_1.69.0,Actinidia chinensis,plants_mart
+apgca005508785v2rs_eg_gene,Acyrthosiphon pisum (Pea aphid, AL4f) genes (pea_aphid_22Mar2018_4r6ur_v2),pea_aphid_22Mar2018_4r6ur_v2,Acyrthosiphon pisum,metazoa_mart
+avaga_eg_gene,Adineta vaga (Rotifer) genes (AMS_PRJEB1171_v1),AMS_PRJEB1171_v1,Adineta vaga,metazoa_mart
+aalvpagwg_eg_gene,Aedes aegypti (Yellow fever mosquito, LVP_AGWG) genes (AaegL5),AaegL5,Aedes aegypti,metazoa_mart
+aalbopictus_eg_gene,Aedes albopictus (Asian tiger mosquito, Foshan) genes (AaloF1),AaloF1,Aedes albopictus,metazoa_mart
+atauschii_eg_gene,Aegilops tauschii genes (Aet v4.0),Aet v4.0,Aegilops tauschii,plants_mart
+scaustralis_gene_ensembl,African ostrich genes (ASM69896v1),ASM69896v1,African ostrich,ensembl
+apgca000699045v2_eg_gene,Agrilus planipennis (Emerald ash borer, EAB-ADULT) genes (Apla_2.0),Apla_2.0,Agrilus planipennis,metazoa_mart
+alaibachii_eg_gene,Albugo laibachii genes (ENA 1),ENA 1,Albugo laibachii,protists_mart
+mspretus_gene_ensembl,Algerian mouse genes (SPRET_EiJ_v1),SPRET_EiJ_v1,Algerian mouse,ensembl
+vpacos_gene_ensembl,Alpaca genes (vicPac1),vicPac1,Alpaca,ensembl
+mmmarmota_gene_ensembl,Alpine marmot genes (marMar2.1),marMar2.1,Alpine marmot,ensembl
+pformosa_gene_ensembl,Amazon molly genes (Poecilia_formosa-5.1.2),Poecilia_formosa-5.1.2,Amazon molly,ensembl
+atrichopoda_eg_gene,Amborella trichopoda genes (AMTR1.0),AMTR1.0,Amborella trichopoda,plants_mart
+bbbison_gene_ensembl,American bison genes (Bison_UMD1.0),Bison_UMD1.0,American bison,ensembl
+uamericanus_gene_ensembl,American black bear genes (ASM334442v1),ASM334442v1,American black bear,ensembl
+nvison_gene_ensembl,American mink genes (NNQGG.v01),NNQGG.v01,American mink,ensembl
+aagca019059575v1_eg_gene,Amphibalanus amphitrite (Acorn barnacle, SeventyFive) genes (NRLGWU_Aamphi_draft),NRLGWU_Aamphi_draft,Amphibalanus amphitrite,metazoa_mart
+aqgca000090795v2rs_eg_gene,Amphimedon queenslandica (Demosponge) genes (v1.1),v1.1,Amphimedon queenslandica,metazoa_mart
+atgca001186105v1rs_eg_gene,Amyelois transitella (Naval orange worm, UIUC subculture of SPIRL-1966) genes (ASM118610v1),ASM118610v1,Amyelois transitella,metazoa_mart
+acomosus_eg_gene,Ananas comosus genes (F153),F153,Ananas comosus,plants_mart
+ajgca011630105v1_eg_gene,Anneissia japonica (Sea lily, Jap-2015-1) genes (ASM1163010v1),ASM1163010v1,Anneissia japonica,metazoa_mart
+aalbimanus_eg_gene,Anopheles albimanus (Mosquito, STECLA) genes (AalbS2),AalbS2,Anopheles albimanus,metazoa_mart
+aarabiensis_eg_gene,Anopheles arabiensis (Mosquito, Dongola) genes (AaraD1),AaraD1,Anopheles arabiensis,metazoa_mart
+aagca914969975_eg_gene,Anopheles atroparvus (Mosquito, Infravec2 EBRE) genes (atroparvus_hifiasm_n225_277Mb),atroparvus_hifiasm_n225_277Mb,Anopheles atroparvus,metazoa_mart
+achristyi_eg_gene,Anopheles christyi (Mosquito, ACHKN1017) genes (AchrA1),AchrA1,Anopheles christyi,metazoa_mart
+acngousso_eg_gene,Anopheles coluzzii (Mosquito, Ngousso) genes (AcolN1),AcolN1,Anopheles coluzzii,metazoa_mart
+aculicifacies_eg_gene,Anopheles culicifacies (Mosquito, A-37) genes (AculA1),AculA1,Anopheles culicifacies,metazoa_mart
+adarlingi_eg_gene,Anopheles darlingi (American malaria mosquito, Coari) genes (AdarC3),AdarC3,Anopheles darlingi,metazoa_mart
+adirus_eg_gene,Anopheles dirus (Mosquito, WRAIR2) genes (AdirW1),AdirW1,Anopheles dirus,metazoa_mart
+aepiroticus_eg_gene,Anopheles epiroticus (Mosquito, Epiroticus2) genes (AepiE1),AepiE1,Anopheles epiroticus,metazoa_mart
+afarauti_eg_gene,Anopheles farauti (Mosquito, FAR1) genes (AfarF2),AfarF2,Anopheles farauti,metazoa_mart
+afunestus_eg_gene,Anopheles funestus (African malaria mosquito, FUMOZ) genes (AfunF3),AfunF3,Anopheles funestus,metazoa_mart
+agambiae_eg_gene,Anopheles gambiae (African malaria mosquito, PEST) genes (AgamP4),AgamP4,Anopheles gambiae,metazoa_mart
+amaculatus_eg_gene,Anopheles maculatus (Mosquito, maculatus3) genes (AmacM1),AmacM1,Anopheles maculatus,metazoa_mart
+amelas_eg_gene,Anopheles melas (Mosquito, CM1001059_A) genes (AmelC2),AmelC2,Anopheles melas,metazoa_mart
+amerus_eg_gene,Anopheles merus (Mosquito, MAF) genes (AmerM2),AmerM2,Anopheles merus,metazoa_mart
+aminimus_eg_gene,Anopheles minimus (Mosquito, MINIMUS1) genes (AminM1),AminM1,Anopheles minimus,metazoa_mart
+aquadriannulatus_eg_gene,Anopheles quadriannulatus (Mosquito, SANGWE) genes (AquaS1),AquaS1,Anopheles quadriannulatus,metazoa_mart
+aschina_eg_gene,Anopheles sinensis (Mosquito, China) genes (AsinC2),AsinC2,Anopheles sinensis,metazoa_mart
+asindian_eg_gene,Anopheles stephensi (Asian malaria mosquito, Indian) genes (AsteI2),AsteI2,Anopheles stephensi,metazoa_mart
+aglabripennis_eg_gene,Anoplophora glabripennis (Asian long-horned beetle, ALB-LARVAE) genes (Agla_2.0),Agla_2.0,Anoplophora glabripennis,metazoa_mart
+aggca022605725v3rs_eg_gene,Anthonomus grandis grandis (Boll weevil) genes (icAntGran1.3),icAntGran1.3,Anthonomus grandis grandis,metazoa_mart
+aastaci_eg_gene,Aphanomyces astaci genes (GCA000520075v1),GCA000520075v1,Aphanomyces astaci,fungi_mart
+ainvadans_eg_gene,Aphanomyces invadans genes (GCA000520115v1),GCA000520115v1,Aphanomyces invadans,fungi_mart
+aggca014905175v1_eg_gene,Aphidius gifuensis (Parasitoid wasp, YNYX2018) genes (ASM1490517v1),ASM1490517v1,Aphidius gifuensis,metazoa_mart
+adgca000469605v1rs_eg_gene,Apis dorsata (Giant honeybee) genes (Apis_dorsata_1.3),Apis_dorsata_1.3,Apis dorsata,metazoa_mart
+afgca000184785v2rs_eg_gene,Apis florea (Dwarf honeybee) genes (Aflo_1.0),Aflo_1.0,Apis florea,metazoa_mart
+amellifera_eg_gene,Apis mellifera (Honey bee, DH4) genes (Amel_HAv3.1),Amel_HAv3.1,Apis mellifera,metazoa_mart
+acgca000002075v2_eg_gene,Aplysia californica (California sea hare, F4 #8) genes (AplCal3.0),AplCal3.0,Aplysia californica,metazoa_mart
+cdromedarius_gene_ensembl,Arabian camel genes (CamDro2),CamDro2,Arabian camel,ensembl
+ahalleri_eg_gene,Arabidopsis halleri genes (Ahal2.2),Ahal2.2,Arabidopsis halleri,plants_mart
+alyrata_eg_gene,Arabidopsis lyrata genes (v.1.0),v.1.0,Arabidopsis lyrata,plants_mart
+athaliana_eg_gene,Arabidopsis thaliana genes (TAIR10),TAIR10,Arabidopsis thaliana,plants_mart
+aalpina_eg_gene,Arabis alpina genes (A_alpina_V4),A_alpina_V4,Arabis alpina,plants_mart
+uparryii_gene_ensembl,Arctic ground squirrel genes (ASM342692v1),ASM342692v1,Arctic ground squirrel,ensembl
+smerianae_gene_ensembl,Argentine black and white tegu genes (HLtupMer3),HLtupMer3,Argentine black and white tegu,ensembl
+dnovemcinctus_gene_ensembl,Armadillo genes (Dasnov3.0),Dasnov3.0,Armadillo,ensembl
+asuum_eg_gene,Ascaris suum (Pig roundworm, AG01) genes (ASM18702v3),ASM18702v3,Ascaris suum,metazoa_mart
+agossypii_eg_gene,Ashbya gossypii genes (ASM9102v1),ASM9102v1,Ashbya gossypii,fungi_mart
+sformosus_gene_ensembl,Asian bonytongue genes (fSclFor1.1),fSclFor1.1,Asian bonytongue,ensembl
+aofficinalis_eg_gene,Asparagus officinalis genes (Aspof.V1),Aspof.V1,Asparagus officinalis,plants_mart
+aclavatus_eg_gene,Aspergillus clavatus NRRL 1 genes (ASM271v1),ASM271v1,Aspergillus clavatus NRRL 1,fungi_mart
+nfischeri_eg_gene,Aspergillus fischeri NRRL 181 genes (ASM14964v1),ASM14964v1,Aspergillus fischeri NRRL 181,fungi_mart
+aflavus_eg_gene,Aspergillus flavus NRRL3357 genes (JCVI-afl1-v2.0),JCVI-afl1-v2.0,Aspergillus flavus NRRL3357,fungi_mart
+afumigatusa1163_eg_gene,Aspergillus fumigatus A1163 genes (ASM15014v1),ASM15014v1,Aspergillus fumigatus A1163,fungi_mart
+afumigatus_eg_gene,Aspergillus fumigatus Af293 genes (ASM265v1),ASM265v1,Aspergillus fumigatus Af293,fungi_mart
+anidulans_eg_gene,Aspergillus nidulans genes (ASM1142v1),ASM1142v1,Aspergillus nidulans,fungi_mart
+aniger_eg_gene,Aspergillus niger genes (ASM285v2),ASM285v2,Aspergillus niger,fungi_mart
+aoryzae_eg_gene,Aspergillus oryzae RIB40 genes (ASM18445v3),ASM18445v3,Aspergillus oryzae RIB40,fungi_mart
+aterreus_eg_gene,Aspergillus terreus NIH2624 genes (ASM14961v1),ASM14961v1,Aspergillus terreus NIH2624,fungi_mart
+argca902459465v3_eg_gene,Asterias rubens (European starfish) genes (eAstRub1.3),eAstRub1.3,Asterias rubens,metazoa_mart
+argca000344095v2_eg_gene,Athalia rosae (Coleseed sawfly, CS-ADULT) genes (Aros_2.0),Aros_2.0,Athalia rosae,metazoa_mart
+gmorhua_gene_ensembl,Atlantic cod genes (gadMor3.0),gadMor3.0,Atlantic cod,ensembl
+charengus_gene_ensembl,Atlantic herring genes (Ch_v2.0.2),Ch_v2.0.2,Atlantic herring,ensembl
+ssalar_gene_ensembl,Atlantic salmon genes (Ssal_v3.1),Ssal_v3.1,Atlantic salmon,ensembl
+acephalotes_eg_gene,Atta cephalotes (Leaf-cutter ant) genes (Attacep1.0),Attacep1.0,Atta cephalotes,metazoa_mart
+cporosus_gene_ensembl,Australian saltwater crocodile genes (CroPor_comp1),CroPor_comp1,Australian saltwater crocodile,ensembl
+asot3098_eg_gene,Avena sativa OT3098 genes (Oat_OT3098_v2),Oat_OT3098_v2,Avena sativa OT3098,plants_mart
+assang_eg_gene,Avena sativa Sang genes (Asativa_sang.v1.1),Asativa_sang.v1.1,Avena sativa Sang,plants_mart
+bdgca000789215v2_eg_gene,Bactrocera dorsalis (Oriental fruit fly, Punador) genes (ASM78921v2),ASM78921v2,Bactrocera dorsalis,metazoa_mart
+blgca001853355v1_eg_gene,Bactrocera latifrons (Solanum fruit fly, USDA-ARS-PBARC rearing strain) genes (ASM185335v1),ASM185335v1,Bactrocera latifrons,metazoa_mart
+btgca016617805v2_eg_gene,Bactrocera tryoni (Queensland fruitfly, S06) genes (CSIRO_BtryS06_freeze1),CSIRO_BtryS06_freeze1,Bactrocera tryoni,metazoa_mart
+lbergylta_gene_ensembl,Ballan wrasse genes (BallGen_V1),BallGen_V1,Ballan wrasse,ensembl
+lcalcarifer_gene_ensembl,Barramundi perch genes (ASB_HGAPassembly_v1),ASB_HGAPassembly_v1,Barramundi perch,ensembl
+bbassiana_eg_gene,Beauveria bassiana genes (ASM168263v1),ASM168263v1,Beauveria bassiana,fungi_mart
+bantarctica_eg_gene,Belgica antarctica (Antarctic midge) genes (ASM77530v1),ASM77530v1,Belgica antarctica,metazoa_mart
+dleucas_gene_ensembl,Beluga whale genes (ASM228892v3),ASM228892v3,Beluga whale,ensembl
+btasiaii5_eg_gene,Bemisia tabaci (Silverleaf whitefly, Asia II-5) genes (ASIAII5_n227_616Mb),ASIAII5_n227_616Mb,Bemisia tabaci,metazoa_mart
+bvulgaris_eg_gene,Beta vulgaris genes (RefBeet-1.2.2),RefBeet-1.2.2,Beta vulgaris,plants_mart
+spartitus_gene_ensembl,Bicolor damselfish genes (Stegastes_partitus-1.0.2),Stegastes_partitus-1.0.2,Bicolor damselfish,ensembl
+bagca900239965v1rs_eg_gene,Bicyclus anynana (Squinting bush brown) genes (Bicyclus_anynana_v1.2),Bicyclus_anynana_v1.2,Bicyclus anynana,metazoa_mart
+bnatans_eg_gene,Bigelowiella natans genes (Bigna1),Bigna1,Bigelowiella natans,protists_mart
+bglabrata_eg_gene,Biomphalaria glabrata (Bloodfluke planorb, BB02) genes (BglaB1),BglaB1,Biomphalaria glabrata,metazoa_mart
+rbieti_gene_ensembl,Black snub-nosed monkey genes (ASM169854v1),ASM169854v1,Black snub-nosed monkey,ensembl
+bmusculus_gene_ensembl,Blue whale genes (mBalMus1.v2),mBalMus1.v2,Blue whale,ensembl
+llaticaudata_gene_ensembl,Blue-ringed sea krait genes (latLat_1.0),latLat_1.0,Blue-ringed sea krait,ensembl
+bgraminis_eg_gene,Blumeria graminis genes (EF2),EF2,Blumeria graminis,fungi_mart
+sbboliviensis_gene_ensembl,Bolivian squirrel monkey genes (SaiBol1.0),SaiBol1.0,Bolivian squirrel monkey,ensembl
+bimpatiens_eg_gene,Bombus impatiens (Common eastern bumblebee) genes (BIMP_2.2),BIMP_2.2,Bombus impatiens,metazoa_mart
+bterrestris_eg_gene,Bombus terrestris (Buff-tailed bumblebee) genes (Bter_1.0),Bter_1.0,Bombus terrestris,metazoa_mart
+bmgca003987935v1rs_eg_gene,Bombyx mandarina (Wild silkworm, Bman2017) genes (ASM398793v1),ASM398793v1,Bombyx mandarina,metazoa_mart
+bmori_eg_gene,Bombyx mori (Domestic silkworm, p50T) genes (Bmori_2016v1.0),Bmori_2016v1.0,Bombyx mori,metazoa_mart
+ppaniscus_gene_ensembl,Bonobo genes (panpan1.1),panpan1.1,Bonobo,ensembl
+bcinerea_eg_gene,Botrytis cinerea B05.10 genes (ASM83294v1),ASM83294v1,Botrytis cinerea B05.10,fungi_mart
+bdistachyon_eg_gene,Brachypodium distachyon genes (Brachypodium_distachyon_v3.0),Brachypodium_distachyon_v3.0,Brachypodium distachyon,plants_mart
+blanceolatum_eg_gene,Branchiostoma lanceolatum (Amphioxus) genes (BraLan2),BraLan2,Branchiostoma lanceolatum,metazoa_mart
+bjuncea_eg_gene,Brassica juncea genes (ASM1870372v1),ASM1870372v1,Brassica juncea,plants_mart
+bnapus_eg_gene,Brassica napus genes (AST_PRJEB5043_v1),AST_PRJEB5043_v1,Brassica napus,plants_mart
+boleracea_eg_gene,Brassica oleracea genes (BOL),BOL,Brassica oleracea,plants_mart
+brapa_eg_gene,Brassica rapa genes (Brapa_1.0),Brapa_1.0,Brassica rapa,plants_mart
+brro18_eg_gene,Brassica rapa R-o-18 genes (SCU_BraROA_2.3),SCU_BraROA_2.3,Brassica rapa R-o-18,plants_mart
+strutta_gene_ensembl,Brown trout genes (fSalTru1.1),fSalTru1.1,Brown trout,ensembl
+bmalayi_eg_gene,Brugia malayi (Nematode, FR3) genes (Bmal-4.0),Bmal-4.0,Brugia malayi,metazoa_mart
+hburtoni_gene_ensembl,Burton's mouthbrooder genes (AstBur1.0),AstBur1.0,Burton's mouthbrooder,ensembl
+ogarnettii_gene_ensembl,Bushbaby genes (OtoGar3),OtoGar3,Bushbaby,ensembl
+cintestinalis_gene_ensembl,C.intestinalis genes (KH),KH,C.intestinalis,ensembl
+csavignyi_gene_ensembl,C.savignyi genes (CSAV 2.0),CSAV 2.0,C.savignyi,ensembl
+cbrenneri_eg_gene,Caenorhabditis brenneri (Nematode) genes (C_brenneri-6.0.1b),C_brenneri-6.0.1b,Caenorhabditis brenneri,metazoa_mart
+cbriggsae_eg_gene,Caenorhabditis briggsae (Nematode) genes (CB4),CB4,Caenorhabditis briggsae,metazoa_mart
+celegans_eg_gene,Caenorhabditis elegans (Nematode, N2) genes (WBcel235),WBcel235,Caenorhabditis elegans,metazoa_mart
+celegans_gene_ensembl,Caenorhabditis elegans (PRJNA13758) genes (WBcel235),WBcel235,Caenorhabditis elegans,ensembl
+cjaponica_eg_gene,Caenorhabditis japonica (Nematode) genes (C_japonica-7.0.1),C_japonica-7.0.1,Caenorhabditis japonica,metazoa_mart
+cremanei_eg_gene,Caenorhabditis remanei (Nematode) genes (C_remanei-15.0.1),C_remanei-15.0.1,Caenorhabditis remanei,metazoa_mart
+ccajan_eg_gene,Cajanus cajan (pigeon pea) - GCA_000340665.1 genes (C.cajan_V1.0),C.cajan_V1.0,Cajanus cajan,plants_mart
+csativa_eg_gene,Camelina sativa genes (Cs),Cs,Camelina sativa,plants_mart
+cfgca003227725v1rs_eg_gene,Camponotus floridanus (Florida carpenter ant, SB8) genes (Cflo_v7.5),Cflo_v7.5,Camponotus floridanus,metazoa_mart
+calbicans_eg_gene,Candida albicans genes (GCA000182965v3),GCA000182965v3,Candida albicans,fungi_mart
+cauris_eg_gene,Candida auris genes (GCA002759435v2),GCA002759435v2,Candida auris,fungi_mart
+cduobushaemulonis_eg_gene,Candida duobushaemulonis genes (GCA002926085v1),GCA002926085v1,Candida duobushaemulonis,fungi_mart
+cglabrata_eg_gene,Candida glabrata genes (GCA000002545v2),GCA000002545v2,Candida glabrata,fungi_mart
+cparapsilosis_eg_gene,Candida parapsilosis genes (GCA000182765v2),GCA000182765v2,Candida parapsilosis,fungi_mart
+ctropicalis_eg_gene,Candida tropicalis genes (GCA000006335v3),GCA000006335v3,Candida tropicalis,fungi_mart
+csfemale_eg_gene,Cannabis sativa female genes (cs10),cs10,Cannabis sativa female,plants_mart
+cteleta_eg_gene,Capitella teleta (Bristle worm) genes (Capitella teleta v1.0),Capitella teleta v1.0,Capitella teleta,metazoa_mart
+cannuum_eg_gene,Capsicum annuum genes (ASM51225v2),ASM51225v2,Capsicum annuum,plants_mart
+fcatus_gene_ensembl,Cat genes (Felis_catus_9.0),Felis_catus_9.0,Cat,ensembl
+csgca000671375v2_eg_gene,Centruroides sculpturatus (Bark scorpion, CEXI.00-Female) genes (Cexi_2.0),Cexi_2.0,Centruroides sculpturatus,metazoa_mart
+ccgca000347755v4_eg_gene,Ceratitis capitata (Mediterranean fruit fly) genes (Ccap_2.0),Ccap_2.0,Ceratitis capitata,metazoa_mart
+cwagneri_gene_ensembl,Chacoan peccary genes (CatWag_v2_BIUU_UCD),CatWag_v2_BIUU_UCD,Chacoan peccary,ensembl
+cgobio_gene_ensembl,Channel bull blenny genes (fCotGob3.1),fCotGob3.1,Channel bull blenny,ensembl
+ipunctatus_gene_ensembl,Channel catfish genes (IpCoco_1.2),IpCoco_1.2,Channel catfish,ensembl
+cbraunii_eg_gene,Chara braunii genes (Cbr_1.0),Cbr_1.0,Chara braunii,plants_mart
+cigca013357705v1rs_eg_gene,Chelonus insularis (Parasitoid wasp, UGA/USDA-ARS -01) genes (ASM1335770v1),ASM1335770v1,Chelonus insularis,metazoa_mart
+cquinoa_eg_gene,Chenopodium quinoa genes (ASM168347v1),ASM168347v1,Chenopodium quinoa,plants_mart
+ggallus_gene_ensembl,Chicken genes (bGalGal1.mat.broiler.GRCg7b),bGalGal1.mat.broiler.GRCg7b,Chicken,ensembl
+ptroglodytes_gene_ensembl,Chimpanzee genes (Pan_tro_3.0),Pan_tro_3.0,Chimpanzee,ensembl
+cgchok1gshd_gene_ensembl,Chinese hamster CHOK1GS genes (CHOK1GS_HDv1),CHOK1GS_HDv1,Chinese hamster CHOK1GS,ensembl
+osinensis_gene_ensembl,Chinese medaka genes (ASM858656v1),ASM858656v1,Chinese medaka,ensembl
+psinensis_gene_ensembl,Chinese softshell turtle genes (PelSin_1.0),PelSin_1.0,Chinese softshell turtle,ensembl
+otshawytscha_gene_ensembl,Chinook salmon genes (Otsh_v1.0),Otsh_v1.0,Chinook salmon,ensembl
+creinhardtii_eg_gene,Chlamydomonas reinhardtii genes (Chlamydomonas_reinhardtii_v5.5),Chlamydomonas_reinhardtii_v5.5,Chlamydomonas reinhardtii,plants_mart
+ccrispus_eg_gene,Chondrus crispus genes (ASM35022v2),ASM35022v2,Chondrus crispus,plants_mart
+clectularius_eg_gene,Cimex lectularius (Bed bug, Harlan) genes (Clec_2.0),Clec_2.0,Cimex lectularius,metazoa_mart
+clanatus_eg_gene,Citrullus lanatus genes (Cla97_v1),Cla97_v1,Citrullus lanatus,plants_mart
+cclementina_eg_gene,Citrus clementina genes (Citrus_clementina_v1.0),Citrus_clementina_v1.0,Citrus clementina,plants_mart
+atestudineus_gene_ensembl,Climbing perch genes (fAnaTes1.2),fAnaTes1.2,Climbing perch,ensembl
+aocellaris_gene_ensembl,Clown anemonefish genes (AmpOce1.0),AmpOce1.0,Clown anemonefish,ensembl
+chgca902728285_eg_gene,Clytia hemisphaerica (Jellyfish, Z4C2) genes (Clytia_hemisphaerica_genome_assembly),Clytia_hemisphaerica_genome_assembly,Clytia hemisphaerica,metazoa_mart
+lchalumnae_gene_ensembl,Coelacanth genes (LatCha1),LatCha1,Coelacanth,ensembl
+ccanephora_eg_gene,Coffea canephora genes (AUK_PRJEB4211_v1),AUK_PRJEB4211_v1,Coffea canephora,plants_mart
+okisutch_gene_ensembl,Coho salmon genes (Okis_V2),Okis_V2,Coho salmon,ensembl
+falbicollis_gene_ensembl,Collared flycatcher genes (FicAlb1.5),FicAlb1.5,Collared flycatcher,ensembl
+cgloeosporioides_eg_gene,Colletotrichum gloeosporioides genes (Colletotrichum gloeosporioides Nara gc-5),Colletotrichum gloeosporioides Nara gc-5,Colletotrichum gloeosporioides,fungi_mart
+cgraminicola_eg_gene,Colletotrichum graminicola genes (C_graminicola_M1_001_V1),C_graminicola_M1_001_V1,Colletotrichum graminicola,fungi_mart
+chigginsianum_eg_gene,Colletotrichum higginsianum genes (ASM31379v2),ASM31379v2,Colletotrichum higginsianum,fungi_mart
+corbiculare_eg_gene,Colletotrichum orbiculare genes (Corbiculare240422v01),Corbiculare240422v01,Colletotrichum orbiculare,fungi_mart
+scanaria_gene_ensembl,Common canary genes (SCA1),SCA1,Common canary,ensembl
+cccarpio_gene_ensembl,Common carp genes (Cypcar_WagV4.0),Cypcar_WagV4.0,Common carp,ensembl
+pmuralis_gene_ensembl,Common wall lizard genes (PodMur_1.0),PodMur_1.0,Common wall lizard,ensembl
+vursinus_gene_ensembl,Common wombat genes (bare-nosed_wombat_genome_assembly),bare-nosed_wombat_genome_assembly,Common wombat,ensembl
+cfgca000648655v2_eg_gene,Copidosoma floridanum (Parasitoid wasp, CFLO.00-Male) genes (Cflo_2.0),Cflo_2.0,Copidosoma floridanum,metazoa_mart
+pcoquereli_gene_ensembl,Coquerel's sifaka genes (Pcoq_1.0),Pcoq_1.0,Coquerel's sifaka,ensembl
+ccapsularis_eg_gene,Corchorus capsularis genes (CCACVL1_1.0),CCACVL1_1.0,Corchorus capsularis,plants_mart
+cavellana_eg_gene,Corylus avellana genes (CavTom2PMs-1.0),CavTom2PMs-1.0,Corylus avellana,plants_mart
+ccitriodora_eg_gene,Corymbia citriodora genes (Ccitriodora_v2_1),Ccitriodora_v2_1,Corymbia citriodora,plants_mart
+cggca020080835v1_eg_gene,Cotesia glomerata (White butterfly parasite wasp, CgM1) genes (MPM_Cglom_v2.3),MPM_Cglom_v2.3,Cotesia glomerata,metazoa_mart
+btaurus_gene_ensembl,Cow genes (ARS-UCD1.2),ARS-UCD1.2,Cow,ensembl
+mfascicularis_gene_ensembl,Crab-eating macaque genes (Macaca_fascicularis_6.0),Macaca_fascicularis_6.0,Crab-eating macaque,ensembl
+cgigas_eg_gene,Crassostrea gigas (Pacific oyster) genes (cgigas_uk_roslin_v1),cgigas_uk_roslin_v1,Crassostrea gigas,metazoa_mart
+cvgca002022765v4_eg_gene,Crassostrea virginica (Eastern oyster, RU13XGHG1-28) genes (C_virginica_3.0),C_virginica_3.0,Crassostrea virginica,metazoa_mart
+cneoformans_eg_gene,Cryptococcus neoformans var. neoformans JEC21 genes (ASM9104v1),ASM9104v1,Cryptococcus neoformans var. neoformans JEC21,fungi_mart
+cmelo_eg_gene,Cucumis melo genes (Melonv4),Melonv4,Cucumis melo,plants_mart
+csativus_eg_gene,Cucumis sativus genes (ASM407v2),ASM407v2,Cucumis sativus,plants_mart
+cqgca015732765v1_eg_gene,Culex quinquefasciatus (Southern house mosquito, JHB) genes (VPISU_Cqui_1.0_pri_paternal),VPISU_Cqui_1.0_pri_paternal,Culex quinquefasciatus,metazoa_mart
+csonorensis_eg_gene,Culicoides sonorensis (Biting Midge) genes (Cson1),Cson1,Culicoides sonorensis,metazoa_mart
+cmerolae_eg_gene,Cyanidioschyzon merolae genes (ASM9120v1),ASM9120v1,Cyanidioschyzon merolae,plants_mart
+ccardunculus_eg_gene,Cynara cardunculus genes (CcrdV1),CcrdV1,Cynara cardunculus,plants_mart
+dplexippus_eg_gene,Danaus plexippus plexippus (Monarch butterfly, F-2) genes (Dplex_v4),Dplex_v4,Danaus plexippus plexippus,metazoa_mart
+dmgca020631705v2_eg_gene,Daphnia magna (Fresh water planktonic, NIES) genes (ASM2063170v1.1),ASM2063170v1.1,Daphnia magna,metazoa_mart
+dpgca021134715v1rs_eg_gene,Daphnia pulex (Common water flea, KAP4) genes (ASM2113471v1),ASM2113471v1,Daphnia pulex,metazoa_mart
+dpgca021234035v2rs_eg_gene,Daphnia pulicaria (Water flea, SC F1-1A) genes (SC_F0_13B),SC_F0_13B,Daphnia pulicaria,metazoa_mart
+dcarota_eg_gene,Daucus carota genes (ASM162521v1),ASM162521v1,Daucus carota,plants_mart
+odegus_gene_ensembl,Degu genes (OctDeg1.0),OctDeg1.0,Degu,ensembl
+dpgca000355655v1_eg_gene,Dendroctonus ponderosae (Mountain pine beetle) genes (DendPond_male_1.0),DendPond_male_1.0,Dendroctonus ponderosae,metazoa_mart
+dggca004324835v1_eg_gene,Dendronephthya gigantea (Carnation coral, DGI-Jeju-01) genes (DenGig_1.0),DenGig_1.0,Dendronephthya gigantea,metazoa_mart
+dclupeoides_gene_ensembl,Denticle herring genes (fDenClu1.1),fDenClu1.1,Denticle herring,ensembl
+dagca023375885v2rs_eg_gene,Dermacentor andersoni (Rocky Mountain wood tick, qqDerAnde1) genes (qqDerAnde1.2),qqDerAnde1.2,Dermacentor andersoni,metazoa_mart
+dsgca013339745v1_eg_gene,Dermacentor silvarum (Tick, Dsil-2018) genes (ASM1333974v1),ASM1333974v1,Dermacentor silvarum,metazoa_mart
+dpgca001901225v2_eg_gene,Dermatophagoides pteronyssinus (European house dust mite, airmid) genes (ASM190122v2),ASM190122v2,Dermatophagoides pteronyssinus,metazoa_mart
+dvgca003013835v2_eg_gene,Diabrotica virgifera virgifera (Western corn rootworm, Ped12-6-A-3) genes (Dvir_v2.0),Dvir_v2.0,Diabrotica virgifera virgifera,metazoa_mart
+ddiscoideum_eg_gene,Dictyostelium discoideum genes (dicty_2.7),dicty_2.7,Dictyostelium discoideum,protists_mart
+dexilis_eg_gene,Digitaria exilis genes (Fonio_CM05836),Fonio_CM05836,Digitaria exilis,plants_mart
+dggca904063045v1_eg_gene,Dimorphilus gyrociliatus (Segmented worms) genes (Dgyrociliatus_assembly),Dgyrociliatus_assembly,Dimorphilus gyrociliatus,metazoa_mart
+cldingo_gene_ensembl,Dingo genes (ASM325472v1),ASM325472v1,Dingo,ensembl
+dtinctorium_eg_gene,Dinothrombium tinctorium (Red velvet mite, UoL-WK) genes (DtinU1),DtinU1,Dinothrombium tinctorium,metazoa_mart
+drotundata_eg_gene,Dioscorea rotundata genes (TDr96_F1_v2_PseudoChromosome),TDr96_F1_v2_PseudoChromosome,Dioscorea rotundata,plants_mart
+dngca001186385v1_eg_gene,Diuraphis noxia (Russian wheat aphid, RWA2) genes (Dnoxia_1.0),Dnoxia_1.0,Diuraphis noxia,metazoa_mart
+clfamiliaris_gene_ensembl,Dog genes (ROS_Cfam_1.0),ROS_Cfam_1.0,Dog,ensembl
+ttruncatus_gene_ensembl,Dolphin genes (turTru1),turTru1,Dolphin,ensembl
+bgrunniens_gene_ensembl,Domestic yak genes (LU_Bosgru_v3.0),LU_Bosgru_v3.0,Domestic yak,ensembl
+easinus_gene_ensembl,Donkey genes (ASM1607732v2),ASM1607732v2,Donkey,ensembl
+dseptosporum_eg_gene,Dothistroma septosporum genes (Dothistroma septosporum NZE10 v1.0),Dothistroma septosporum NZE10 v1.0,Dothistroma septosporum,fungi_mart
+mleucophaeus_gene_ensembl,Drill genes (Mleu.le_1.0),Mleu.le_1.0,Drill,ensembl
+dananassae_eg_gene,Drosophila ananassae (Fruit fly, TSC#14024-0371.13) genes (dana_caf1),dana_caf1,Drosophila ananassae,metazoa_mart
+derecta_eg_gene,Drosophila erecta (Fruit fly, TSC#14021-0224.01) genes (dere_caf1),dere_caf1,Drosophila erecta,metazoa_mart
+dgrimshawi_eg_gene,Drosophila grimshawi (Fruit fly, TSC#15287-2541.00) genes (dgri_caf1),dgri_caf1,Drosophila grimshawi,metazoa_mart
+dmelanogaster_eg_gene,Drosophila melanogaster (Fruit fly) genes (BDGP6.46),BDGP6.46,Drosophila melanogaster,metazoa_mart
+dmelanogaster_gene_ensembl,Drosophila melanogaster (Fruit fly) genes (BDGP6.46),BDGP6.46,Drosophila melanogaster,ensembl
+dmojavensis_eg_gene,Drosophila mojavensis (Fruit fly, TSC#15081-1352.22) genes (dmoj_caf1),dmoj_caf1,Drosophila mojavensis,metazoa_mart
+dpersimilis_eg_gene,Drosophila persimilis (Fruit fly, MSH-3) genes (dper_caf1),dper_caf1,Drosophila persimilis,metazoa_mart
+dpseudoobscura_eg_gene,Drosophila pseudoobscura pseudoobscura (Fruit fly, MV2-25) genes (Dpse_3.0),Dpse_3.0,Drosophila pseudoobscura pseudoobscura,metazoa_mart
+dsechellia_eg_gene,Drosophila sechellia (Fruit fly, Rob3c) genes (dsec_caf1),dsec_caf1,Drosophila sechellia,metazoa_mart
+dsimulans_eg_gene,Drosophila simulans (Fruit fly, w501) genes (ASM75419v3),ASM75419v3,Drosophila simulans,metazoa_mart
+dvirilis_eg_gene,Drosophila virilis (Fruit fly, TSC#15010-1051.87) genes (dvir_caf1),dvir_caf1,Drosophila virilis,metazoa_mart
+dwillistoni_eg_gene,Drosophila willistoni (Fruit fly, TSC#14030-0811.24) genes (dwil_caf1),dwil_caf1,Drosophila willistoni,metazoa_mart
+dyakuba_eg_gene,Drosophila yakuba (Fruit fly, Tai18E2) genes (dyak_caf1),dyak_caf1,Drosophila yakuba,metazoa_mart
+applatyrhynchos_gene_ensembl,Duck genes (CAU_duck1.0),CAU_duck1.0,Duck,ensembl
+dngca001272555v1rs_eg_gene,Dufourea novaeangliae (Bee, 0120121106) genes (ASM127255v1),ASM127255v1,Dufourea novaeangliae,metazoa_mart
+ptextilis_gene_ensembl,Eastern brown snake genes (EBS10Xv2-PRI),EBS10Xv2-PRI,Eastern brown snake,ensembl
+acalliptera_gene_ensembl,Eastern happy genes (fAstCal1.2),fAstCal1.2,Eastern happy,ensembl
+ecrusgalli_eg_gene,Echinochloa crus-galli genes (ec_v3),ec_v3,Echinochloa crus-galli,plants_mart
+eggca000524195v1rs_eg_gene,Echinococcus granulosus (Dog tapeworm) genes (ASM52419v1),ASM52419v1,Echinococcus granulosus,metazoa_mart
+eelectricus_gene_ensembl,Electric eel genes (Ee_SOAP_WITH_SSPACE),Ee_SOAP_WITH_SSPACE,Electric eel,ensembl
+lafricana_gene_ensembl,Elephant genes (Loxafr3.0),Loxafr3.0,Elephant,ensembl
+cmilii_gene_ensembl,Elephant shark genes (Callorhinchus_milii-6.1.3),Callorhinchus_milii-6.1.3,Elephant shark,ensembl
+ehuxleyi_eg_gene,Emiliania huxleyi genes (Emiliana huxleyi CCMP1516 main genome assembly v1.0),Emiliana huxleyi CCMP1516 main genome assembly v1.0,Emiliania huxleyi,protists_mart
+ehistolytica_eg_gene,Entamoeba histolytica genes (JCVI-ESG2-1.0),JCVI-ESG2-1.0,Entamoeba histolytica,protists_mart
+ecurvula_eg_gene,Eragrostis curvula genes (CERZOS_E.curvula1.0),CERZOS_E.curvula1.0,Eragrostis curvula,plants_mart
+etef_eg_gene,Eragrostis tef genes (Salk_teff_dabbi_3.0),Salk_teff_dabbi_3.0,Eragrostis tef,plants_mart
+egrandis_eg_gene,Eucalyptus grandis genes (Egrandis1_0),Egrandis1_0,Eucalyptus grandis,plants_mart
+emgca001483705v1rs_eg_gene,Eufriesea mexicana (Bee, 0111107269) genes (ASM148370v1),ASM148370v1,Eufriesea mexicana,metazoa_mart
+svulgaris_gene_ensembl,Eurasian red squirrel genes (mSciVul1.1),mSciVul1.1,Eurasian red squirrel,ensembl
+dlabrax_gene_ensembl,European seabass genes (dlabrax2021),dlabrax2021,European seabass,ensembl
+eagca000591075v2_eg_gene,Eurytemora affinis (Calanoid copepod, Atlantic clade) genes (Eaff_2.0),Eaff_2.0,Eurytemora affinis,metazoa_mart
+esalsugineum_eg_gene,Eutrema salsugineum genes (Eutsalg1_0),Eutsalg1_0,Eutrema salsugineum,plants_mart
+edgca001417965v1_eg_gene,Exaiptasia diaphana (Sea anemone, CC7) genes (Aiptasia_genome_1.1),Aiptasia_genome_1.1,Exaiptasia diaphana,metazoa_mart
+mpfuro_gene_ensembl,Ferret genes (MusPutFur1.0),MusPutFur1.0,Ferret,ensembl
+fcarica_eg_gene,Ficus carica genes (UNIPI_FiCari_1.0),UNIPI_FiCari_1.0,Ficus carica,plants_mart
+fcandida_eg_gene,Folsomia candida (Springtail, str. VU population) genes (ASM221717v1),ASM221717v1,Folsomia candida,metazoa_mart
+fexcelsior_eg_gene,Fraxinus excelsior genes (BATG-0.5),BATG-0.5,Fraxinus excelsior,plants_mart
+trubripes_gene_ensembl,Fugu genes (fTakRub1.2),fTakRub1.2,Fugu,ensembl
+fculmorum_eg_gene,Fusarium culmorum UK99 genes (EF 1),EF 1,Fusarium culmorum UK99,fungi_mart
+ffujikuroi_eg_gene,Fusarium fujikuroi genes (EF 1),EF 1,Fusarium fujikuroi,fungi_mart
+fgraminearum_eg_gene,Fusarium graminearum str. PH-1 genes (RR1),RR1,Fusarium graminearum str. PH-1,fungi_mart
+foxysporum_eg_gene,Fusarium oxysporum genes (FO2),FO2,Fusarium oxysporum,fungi_mart
+fpseudograminearum_eg_gene,Fusarium pseudograminearum genes (FP7),FP7,Fusarium pseudograminearum,fungi_mart
+fsolani_eg_gene,Fusarium solani genes (v2.0),v2.0,Fusarium solani,fungi_mart
+fverticillioides_eg_gene,Fusarium verticillioides genes (ASM14955v1),ASM14955v1,Fusarium verticillioides,fungi_mart
+ggraminis_eg_gene,Gaeumannomyces tritici R3-111a-1 genes (Gae_graminis_V2),Gae_graminis_V2,Gaeumannomyces tritici R3-111a-1,fungi_mart
+gsulphuraria_eg_gene,Galdieria sulphuraria genes (ASM34128v1),ASM34128v1,Galdieria sulphuraria,plants_mart
+gogca000255335v2rs_eg_gene,Galendromus occidentalis (Western predatory mite) genes (Mocc_1.0),Mocc_1.0,Galendromus occidentalis,metazoa_mart
+gmgca003640425v2rs_eg_gene,Galleria mellonella (Greater wax moth, Carbio01_MB) genes (ASM364042v2),ASM364042v2,Galleria mellonella,metazoa_mart
+amelanoleuca_gene_ensembl,Giant panda genes (ASM200744v2),ASM200744v2,Giant panda,ensembl
+glamblia_eg_gene,Giardia lamblia genes (GL2),GL2,Giardia lamblia,protists_mart
+nleucogenys_gene_ensembl,Gibbon genes (Nleu_3.0),Nleu_3.0,Gibbon,ensembl
+gagca016097555v1_eg_gene,Gigantopelta aegis (Deep sea snail, Gae_Host) genes (Gae_host_genome),Gae_host_genome,Gigantopelta aegis,metazoa_mart
+saurata_gene_ensembl,Gilthead seabream genes (fSpaAur1.1),fSpaAur1.1,Gilthead seabream,ensembl
+gultimum_eg_gene,Globisporangium ultimum genes (GCA000143045v1),GCA000143045v1,Globisporangium ultimum,fungi_mart
+gausteni_eg_gene,Glossina austeni (Tsetse fly, TTRI) genes (GausT1),GausT1,Glossina austeni,metazoa_mart
+gbrevipalpis_eg_gene,Glossina brevipalpis (Tsetse fly, IAEA) genes (GbreI1),GbreI1,Glossina brevipalpis,metazoa_mart
+gfuscipes_eg_gene,Glossina fuscipes (Tsetse fly, IAEA_lab_2018) genes (Yale_Gfus_2),Yale_Gfus_2,Glossina fuscipes,metazoa_mart
+gmorsitans_eg_gene,Glossina morsitans morsitans (Tsetse fly, Yale) genes (GmorY1),GmorY1,Glossina morsitans morsitans,metazoa_mart
+gpallidipes_eg_gene,Glossina pallidipes (Tsetse fly, IAEA) genes (GpalI1),GpalI1,Glossina pallidipes,metazoa_mart
+gpalpalis_eg_gene,Glossina palpalis gambiensis (Tsetse fly, IAEA) genes (GpapI1),GpapI1,Glossina palpalis gambiensis,metazoa_mart
+gmax_eg_gene,Glycine max genes (Glycine_max_v2.1),Glycine_max_v2.1,Glycine max,plants_mart
+chircus_gene_ensembl,Goat genes (ARS1),ARS1,Goat,ensembl
+mauratus_gene_ensembl,Golden Hamster genes (MesAur1.0),MesAur1.0,Golden Hamster,ensembl
+acchrysaetos_gene_ensembl,Golden eagle genes (bAquChr1.2),bAquChr1.2,Golden eagle,ensembl
+rroxellana_gene_ensembl,Golden snub-nosed monkey genes (Rrox_v1),Rrox_v1,Golden snub-nosed monkey,ensembl
+sgrahami_gene_ensembl,Golden-line barbel genes (SAMN03320097.WGS_v1.1),SAMN03320097.WGS_v1.1,Golden-line barbel,ensembl
+cauratus_gene_ensembl,Goldfish genes (ASM336829v1),ASM336829v1,Goldfish,ensembl
+gevgoodei_gene_ensembl,Goodes thornscrub tortoise genes (rGopEvg1_v1.p),rGopEvg1_v1.p,Goodes thornscrub tortoise,ensembl
+ggorilla_gene_ensembl,Gorilla genes (gorGor4),gorGor4,Gorilla,ensembl
+graimondii_eg_gene,Gossypium raimondii genes (Graimondii2_0_v6),Graimondii2_0_v6,Gossypium raimondii,plants_mart
+pmajor_gene_ensembl,Great Tit genes (Parus_major1.1),Parus_major1.1,Great Tit,ensembl
+sdumerili_gene_ensembl,Greater amberjack genes (Sdu_1.0),Sdu_1.0,Greater amberjack,ensembl
+psimus_gene_ensembl,Greater bamboo lemur genes (Prosim_1.0),Prosim_1.0,Greater bamboo lemur,ensembl
+rferrumequinum_gene_ensembl,Greater horseshoe bat genes (mRhiFer1_v1.p),mRhiFer1_v1.p,Greater horseshoe bat,ensembl
+acarolinensis_gene_ensembl,Green anole genes (AnoCar2.0v2),AnoCar2.0v2,Green anole,ensembl
+gtheta_eg_gene,Guillardia theta CCMP2712 genes (Guith1),Guith1,Guillardia theta CCMP2712,protists_mart
+cporcellus_gene_ensembl,Guinea Pig genes (Cavpor3.0),Cavpor3.0,Guinea Pig,ensembl
+preticulata_gene_ensembl,Guppy genes (Guppy_female_1.0_MT),Guppy_female_1.0_MT,Guppy,ensembl
+hlgca001263275v1rs_eg_gene,Habropoda laboriosa (Southeastern blueberry bee, 0110345459) genes (ASM126327v1),ASM126327v1,Habropoda laboriosa,metazoa_mart
+hlgca013339765v1_eg_gene,Haemaphysalis longicornis (Longhorned tick, HaeL-2018) genes (ASM1333976v1),ASM1333976v1,Haemaphysalis longicornis,metazoa_mart
+eburgeri_gene_ensembl,Hagfish genes (Eburgeri_3.2),Eburgeri_3.2,Hagfish,ensembl
+hrgca003918875v1rs_eg_gene,Haliotis rubra (Blacklip abalone, DU_JTF1) genes (ASM391887v1),ASM391887v1,Haliotis rubra,metazoa_mart
+hrgca023055435v1rs_eg_gene,Haliotis rufescens (Red abalone, VD_foot) genes (xgHalRufe1.0.p),xgHalRufe1.0.p,Haliotis rufescens,metazoa_mart
+hsgca003227715v2rs_eg_gene,Harpegnathos saltator (Indian jumping ant, DR-91) genes (Hsal_v8.5),Hsal_v8.5,Harpegnathos saltator,metazoa_mart
+eeuropaeus_gene_ensembl,Hedgehog genes (eriEur1),eriEur1,Hedgehog,ensembl
+hannuus_eg_gene,Helianthus annuus genes (HanXRQr2.0-SUNRISE),HanXRQr2.0-SUNRISE,Helianthus annuus,plants_mart
+hmelpomene_eg_gene,Heliconius melpomene (Postman butterfly) genes (Hmel1),Hmel1,Heliconius melpomene,metazoa_mart
+hagca023701775v1rs_eg_gene,Helicoverpa armigera (Cotton bollworm, SCD) genes (HaSCD2),HaSCD2,Helicoverpa armigera,metazoa_mart
+hzgca022581195v1rs_eg_gene,Helicoverpa zea (Corn earworm, HzStark_Cry1AcR) genes (ilHelZeax1.1),ilHelZeax1.1,Helicoverpa zea,metazoa_mart
+hrobusta_eg_gene,Helobdella robusta (Freshwater leech) genes (Helro1),Helro1,Helobdella robusta,metazoa_mart
+higca905115235v1_eg_gene,Hermetia illucens (Black soldier fly) genes (iHerIll2.2.curated.20191125),iHerIll2.2.curated.20191125,Hermetia illucens,metazoa_mart
+hcapsulatum_eg_gene,Histoplasma capsulatum genes (GCA000170615v1),GCA000170615v1,Histoplasma capsulatum,fungi_mart
+hmiamia_eg_gene,Hofstenia miamia (Panther worm, MS-H3) genes (HmiaM1),HmiaM1,Hofstenia miamia,metazoa_mart
+hvgca021130785v2rs_eg_gene,Homalodisca vitripennis (Glassy winged sharpshooter, AUS2020) genes (UT_GWSS_2.1),UT_GWSS_2.1,Homalodisca vitripennis,metazoa_mart
+hagca018991925v1_eg_gene,Homarus americanus (American lobster, GMGI-L3) genes (GMGI_Hamer_2.0),GMGI_Hamer_2.0,Homarus americanus,metazoa_mart
+hvulgare_eg_gene,Hordeum vulgare genes (MorexV3_pseudomolecules_assembly),MorexV3_pseudomolecules_assembly,Hordeum vulgare,plants_mart
+hvgoldenpromise_eg_gene,Hordeum vulgare GoldenPromise genes (GPv1),GPv1,Hordeum vulgare GoldenPromise,plants_mart
+hvtritex_eg_gene,Hordeum vulgare TRITEX genes (Morex_V2_scaf),Morex_V2_scaf,Hordeum vulgare TRITEX,plants_mart
+ecaballus_gene_ensembl,Horse genes (EquCab3.0),EquCab3.0,Horse,ensembl
+hhucho_gene_ensembl,Huchen genes (ASM331708v1),ASM331708v1,Huchen,ensembl
+hagca000764305v2_eg_gene,Hyalella azteca (Amphipod, HAZT.00-mixed) genes (Hazt_2.0),Hazt_2.0,Hyalella azteca,metazoa_mart
+hagca013339685v1_eg_gene,Hyalomma asiaticum (Tick, Hyas-2018) genes (ASM1333968v1),ASM1333968v1,Hyalomma asiaticum,metazoa_mart
+harabidopsidis_eg_gene,Hyaloperonospora arabidopsidis genes (HyaAraEmoy2_2.0),HyaAraEmoy2_2.0,Hyaloperonospora arabidopsidis,protists_mart
+bihybrid_gene_ensembl,Hybrid - Bos Indicus genes (UOA_Brahman_1),UOA_Brahman_1,Hybrid - Bos Indicus,ensembl
+hvgca000004095v1_eg_gene,Hydra vulgaris (Swiftwater hydra, 105) genes (Hydra_RP_1.0),Hydra_RP_1.0,Hydra vulgaris,metazoa_mart
+hmicrostoma_eg_gene,Hymenolepis microstoma (Rodent tapeworm) genes (HMN_v3),HMN_v3,Hymenolepis microstoma,metazoa_mart
+hegca002082055v1_eg_gene,Hypsibius exemplaris (Water bear tardigrade, Z151) genes (nHd_3.1),nHd_3.1,Hypsibius exemplaris,metazoa_mart
+pcapensis_gene_ensembl,Hyrax genes (proCap1),proCap1,Hyrax,ensembl
+nnaja_gene_ensembl,Indian cobra genes (Nana_v5),Nana_v5,Indian cobra,ensembl
+omelastigma_gene_ensembl,Indian medaka genes (Om_v0.7.RACA),Om_v0.7.RACA,Indian medaka,ensembl
+itriloba_eg_gene,Ipomoea triloba genes (ASM357664v1),ASM357664v1,Ipomoea triloba,plants_mart
+ipgca013358835v1_eg_gene,Ixodes persulcatus (Taiga tick, Iper-2018) genes (BIME_Iper_1.3),BIME_Iper_1.3,Ixodes persulcatus,metazoa_mart
+iscapularis_eg_gene,Ixodes scapularis (Black-legged tick, Wikel) genes (IscaW1),IscaW1,Ixodes scapularis,metazoa_mart
+olatipes_gene_ensembl,Japanese medaka HdrR genes (ASM223467v1),ASM223467v1,Japanese medaka HdrR,ensembl
+cjaponica_gene_ensembl,Japanese quail genes (Coturnix_japonica_2.0),Coturnix_japonica_2.0,Japanese quail,ensembl
+ojavanicus_gene_ensembl,Javanese ricefish genes (OJAV_1.1),OJAV_1.1,Javanese ricefish,ensembl
+jregia_eg_gene,Juglans regia genes (Walnut_2.0),Walnut_2.0,Juglans regia,plants_mart
+shabroptila_gene_ensembl,Kakapo genes (bStrHab1_v1.p),bStrHab1_v1.p,Kakapo,ensembl
+kfedtschenkoi_eg_gene,Kalanchoe fedtschenkoi genes (K_fedtschenkoi_M2_v1),K_fedtschenkoi_M2_v1,Kalanchoe fedtschenkoi,plants_mart
+dordii_gene_ensembl,Kangaroo rat genes (Dord_2.0),Dord_2.0,Kangaroo rat,ensembl
+pcinereus_gene_ensembl,Koala genes (phaCin_unsw_v4.1),phaCin_unsw_v4.1,Koala,ensembl
+kpastoris_eg_gene,Komagataella pastoris genes (ASM2700v1),ASM2700v1,Komagataella pastoris,fungi_mart
+lsativa_eg_gene,Lactuca sativa genes (Lsat_Salinas_v7),Lsat_Salinas_v7,Lactuca sativa,plants_mart
+pmarinus_gene_ensembl,Lamprey genes (Pmarinus_7.0),Pmarinus_7.0,Lamprey,ensembl
+lcrocea_gene_ensembl,Large yellow croaker genes (L_crocea_2.0),L_crocea_2.0,Large yellow croaker,ensembl
+lperrieri_eg_gene,Leersia perrieri genes (Lperr_V1.4),Lperr_V1.4,Leersia perrieri,plants_mart
+lggca023078275v1rs_eg_gene,Leguminivora glycinivorella (Soybean pod borer, SPB_JAAS2020) genes (LegGlyc_1.1),LegGlyc_1.1,Leguminivora glycinivorella,metazoa_mart
+lleishanense_gene_ensembl,Leishan spiny toad genes (ASM966780v1),ASM966780v1,Leishan spiny toad,ensembl
+lmajor_eg_gene,Leishmania major genes (ASM272v2),ASM272v2,Leishmania major,protists_mart
+ppardus_gene_ensembl,Leopard genes (PanPar1.0),PanPar1.0,Leopard,ensembl
+lsalmonis_eg_gene,Lepeophtheirus salmonis (Salmon louse) genes (LSalAtl2s),LSalAtl2s,Lepeophtheirus salmonis,metazoa_mart
+ldgca000500325v2_eg_gene,Leptinotarsa decemlineata (Colorado potato beetle, Imidocloprid resistant) genes (Ldec_2.0),Ldec_2.0,Leptinotarsa decemlineata,metazoa_mart
+lmaculans_eg_gene,Leptosphaeria maculans genes (ASM23037v1),ASM23037v1,Leptosphaeria maculans,fungi_mart
+ldeliense_eg_gene,Leptotrombidium deliense (Harvest mite, UoL-UT) genes (LdelU1),LdelU1,Leptotrombidium deliense,metazoa_mart
+jjaculus_gene_ensembl,Lesser Egyptian jerboa genes (JacJac1.0),JacJac1.0,Lesser Egyptian jerboa,ensembl
+etelfairi_gene_ensembl,Lesser hedgehog tenrec genes (TENREC),TENREC,Lesser hedgehog tenrec,ensembl
+lpgca000517525v1_eg_gene,Limulus polyphemus (Atlantic horseshoe crab) genes (Limulus_polyphemus_2.1.2),Limulus_polyphemus_2.1.2,Limulus polyphemus,metazoa_mart
+lhgca000217595v1rs_eg_gene,Linepithema humile (Argentine ant) genes (Lhum_UMD_V04),Lhum_UMD_V04,Linepithema humile,metazoa_mart
+lagca001039355v2_eg_gene,Lingula anatina (Lamp shell, Amm_Jpn) genes (LinAna2.0),LinAna2.0,Lingula anatina,metazoa_mart
+pleo_gene_ensembl,Lion genes (PanLeo1.0),PanLeo1.0,Lion,ensembl
+lloa_eg_gene,Loa loa (Eye worm, Cameroon SouthWest Province isolate) genes (Loa_loa_V3),Loa_loa_V3,Loa loa,metazoa_mart
+lperenne_eg_gene,Lolium perenne genes (MPB_Lper_Kyuss_1697),MPB_Lper_Kyuss_1697,Lolium perenne,plants_mart
+clanigera_gene_ensembl,Long-tailed chinchilla genes (ChiLan1.0),ChiLan1.0,Long-tailed chinchilla,ensembl
+lgigantea_eg_gene,Lottia gigantea (Owl limpet) genes (Lotgi1),Lotgi1,Lottia gigantea,metazoa_mart
+lcgca022045245v1rs_eg_gene,Lucilia cuprina (Australian sheep blowfly, Lc7/37) genes (ASM2204524v1),ASM2204524v1,Lucilia cuprina,metazoa_mart
+clumpus_gene_ensembl,Lumpfish genes (fCycLum1.pri),fCycLum1.pri,Lumpfish,ensembl
+langustifolius_eg_gene,Lupinus angustifolius genes (LupAngTanjil_v1.0),LupAngTanjil_v1.0,Lupinus angustifolius,plants_mart
+llongipalpis_eg_gene,Lutzomyia longipalpis (Sand fly, Jacobina) genes (LlonJ1),LlonJ1,Lutzomyia longipalpis,metazoa_mart
+nbrichardi_gene_ensembl,Lyretail cichlid genes (NeoBri1.0),NeoBri1.0,Lyretail cichlid,ensembl
+lvgca018143015v1_eg_gene,Lytechinus variegatus (Green sea urchin, NC3) genes (Lvar_3.0),Lvar_3.0,Lytechinus variegatus,metazoa_mart
+anancymaae_gene_ensembl,Ma's night monkey genes (Anan_2.0),Anan_2.0,Ma's night monkey,ensembl
+mmulatta_gene_ensembl,Macaque genes (Mmul_10),Mmul_10,Macaque,ensembl
+moryzae_eg_gene,Magnaporthe oryzae genes (MG8),MG8,Magnaporthe oryzae,fungi_mart
+mpoae_eg_gene,Magnaporthe poae genes (Mag_poae_ATCC_64411_V1),Mag_poae_ATCC_64411_V1,Magnaporthe poae,fungi_mart
+nscutatus_gene_ensembl,Mainland tiger snake genes (TS10Xv2-PRI),TS10Xv2-PRI,Mainland tiger snake,ensembl
+pnyererei_gene_ensembl,Makobe Island cichlid genes (PunNye1.0),PunNye1.0,Makobe Island cichlid,ensembl
+aplatyrhynchos_gene_ensembl,Mallard genes (ASM874695v1),ASM874695v1,Mallard,ensembl
+mdgolden_eg_gene,Malus domestica Golden genes (ASM211411v1),ASM211411v1,Malus domestica Golden,plants_mart
+msgca014839805v1rs_eg_gene,Manduca sexta (Tobacco hornworm, Smith_Timp_Sample1) genes (JHU_Msex_v1.0),JHU_Msex_v1.0,Manduca sexta,metazoa_mart
+kmarmoratus_gene_ensembl,Mangrove rivulus genes (ASM164957v1),ASM164957v1,Mangrove rivulus,ensembl
+mesculenta_eg_gene,Manihot esculenta genes (Manihot esculenta v6),Manihot esculenta v6,Manihot esculenta,plants_mart
+mpolymorpha_eg_gene,Marchantia polymorpha genes (Marchanta_polymorpha_v1),Marchanta_polymorpha_v1,Marchantia polymorpha,plants_mart
+mdestructor_eg_gene,Mayetiola destructor (Hessian fly, Kansas Great Plain) genes (Mdes_1.0),Mdes_1.0,Mayetiola destructor,metazoa_mart
+mtruncatula_eg_gene,Medicago truncatula genes (MedtrA17_4.0),MedtrA17_4.0,Medicago truncatula,plants_mart
+gfortis_gene_ensembl,Medium ground-finch genes (GeoFor_1.0),GeoFor_1.0,Medium ground-finch,ensembl
+pvampyrus_gene_ensembl,Megabat genes (pteVam1),pteVam1,Megabat,ensembl
+mrgca000220905v1rs_eg_gene,Megachile rotundata (Alfalfa leafcutting bee) genes (MROT_1.0),MROT_1.0,Megachile rotundata,metazoa_mart
+mscalaris_eg_gene,Megaselia scalaris (Coffin fly) genes (Msca1),Msca1,Megaselia scalaris,metazoa_mart
+mlaricipopulina_eg_gene,Melampsora larici-populina genes (v1.0),v1.0,Melampsora larici-populina,fungi_mart
+mcgca905220565v1_eg_gene,Melitaea cinxia (Glanville fritillary, reference) genes (ilMelCinx1.1),ilMelCinx1.1,Melitaea cinxia,metazoa_mart
+mmgca014805675v2_eg_gene,Mercenaria mercenaria (Hard clam (quahog), YKG-2019) genes (ASM1480567v1.1),ASM1480567v1.1,Mercenaria mercenaria,metazoa_mart
+amexicanus_gene_ensembl,Mexican tetra genes (Astyanax_mexicanus-2.0),Astyanax_mexicanus-2.0,Mexican tetra,ensembl
+mlucifugus_gene_ensembl,Microbat genes (Myoluc2.0),Myoluc2.0,Microbat,ensembl
+mviolaceum_eg_gene,Microbotryum violaceum genes (M_violaceum_V1),M_violaceum_V1,Microbotryum violaceum,fungi_mart
+acitrinellus_gene_ensembl,Midas cichlid genes (Midas_v5),Midas_v5,Midas cichlid,ensembl
+mygca002113885v2_eg_gene,Mizuhopecten yessoensis (Yesso scallop, PY_sf001) genes (ASM211388v2),ASM211388v2,Mizuhopecten yessoensis,metazoa_mart
+mleidyi_eg_gene,Mnemiopsis leidyi (Warty comb jelly) genes (MneLei_Aug2011),MneLei_Aug2011,Mnemiopsis leidyi,metazoa_mart
+mpgca013373865v2_eg_gene,Monomorium pharaonis (Pharaoh ant, MP-MQ-018) genes (ASM1337386v2),ASM1337386v2,Monomorium pharaonis,metazoa_mart
+mmurinus_gene_ensembl,Mouse Lemur genes (Mmur_3.0),Mmur_3.0,Mouse Lemur,ensembl
+fheteroclitus_gene_ensembl,Mummichog genes (Fundulus_heteroclitus-3.0.2),Fundulus_heteroclitus-3.0.2,Mummichog,ensembl
+macuminata_eg_gene,Musa acuminata genes (Musa_acuminata_v2),Musa_acuminata_v2,Musa acuminata,plants_mart
+mdomestica_eg_gene,Musca domestica (House fly, aabys) genes (MdomA1),MdomA1,Musca domestica,metazoa_mart
+hgfemale_gene_ensembl,Naked mole-rat female genes (Naked_mole-rat_maternal),Naked_mole-rat_maternal,Naked mole-rat female,ensembl
+mmonoceros_gene_ensembl,Narwhal genes (NGI_Narwhal_1),NGI_Narwhal_1,Narwhal,ensembl
+nvitripennis_eg_gene,Nasonia vitripennis (Jewel wasp, AsymCx) genes (Nvit_psr_1.1),Nvit_psr_1.1,Nasonia vitripennis,metazoa_mart
+namericanus_eg_gene,Necator americanus (New World hookworm, N. amaericanus Hunan isolate) genes (N_americanus_v1),N_americanus_v1,Necator americanus,metazoa_mart
+nvectensis_eg_gene,Nematostella vectensis (Starlet sea anemone, CH2 x CH6) genes (ASM20922v1),ASM20922v1,Nematostella vectensis,metazoa_mart
+nlgca021901455v1rs_eg_gene,Neodiprion lecontei (Redheaded pine sawfly, iyNeoLeco1) genes (iyNeoLeco1.1),iyNeoLeco1.1,Neodiprion lecontei,metazoa_mart
+npgca021155775v1rs_eg_gene,Neodiprion pinetum (White pine sawfly, iyNeoPine1) genes (iyNeoPine1.1),iyNeoPine1.1,Neodiprion pinetum,metazoa_mart
+ncrassa_eg_gene,Neurospora crassa genes (NC12),NC12,Neurospora crassa,fungi_mart
+nattenuata_eg_gene,Nicotiana attenuata genes (NIATTr2),NIATTr2,Nicotiana attenuata,plants_mart
+nlgca014356525v1rs_eg_gene,Nilaparvata lugens (Brown planthopper, BPH) genes (ASM1435652v1),ASM1435652v1,Nilaparvata lugens,metazoa_mart
+oniloticus_gene_ensembl,Nile tilapia genes (O_niloticus_UMD_NMBU),O_niloticus_UMD_NMBU,Nile tilapia,ensembl
+pmbairdii_gene_ensembl,Northern American deer mouse genes (HU_Pman_2.1),HU_Pman_2.1,Northern American deer mouse,ensembl
+elucius_gene_ensembl,Northern pike genes (Eluc_v4),Eluc_v4,Northern pike,ensembl
+ncolorata_eg_gene,Nymphaea colorata genes (ASM883128v1),ASM883128v1,Nymphaea colorata,plants_mart
+obgca001194135v1_eg_gene,Octopus bimaculoides (Octopus, UCB-OBI-ISO-001) genes (Octopus_bimaculoides_v2_0),Octopus_bimaculoides_v2_0,Octopus bimaculoides,metazoa_mart
+osgca006345805v1_eg_gene,Octopus sinensis (East Asian common octopus) genes (ASM634580v1),ASM634580v1,Octopus sinensis,metazoa_mart
+oeuropaea_eg_gene,Olea europaea genes (OLEA9),OLEA9,Olea europaea,plants_mart
+oesylvestris_eg_gene,Olea europaea var. sylvestris genes (O_europaea_v1),O_europaea_v1,Olea europaea var. sylvestris,plants_mart
+panubis_gene_ensembl,Olive baboon genes (Panubis1.0),Panubis1.0,Olive baboon,ensembl
+ovolvulus_eg_gene,Onchocerca volvulus (Nematode, O. volvulus Cameroon isolate) genes (ASM49940v2),ASM49940v2,Onchocerca volvulus,metazoa_mart
+otgca000648695v2_eg_gene,Onthophagus taurus (Dung beetle) genes (Otau_2.0),Otau_2.0,Onthophagus taurus,metazoa_mart
+obgca003672135v1_eg_gene,Ooceraea biroi (Clonal raider ant, clonal line C1) genes (Obir_v5.4),Obir_v5.4,Ooceraea biroi,metazoa_mart
+mdomestica_gene_ensembl,Opossum genes (ASM229v1),ASM229v1,Opossum,ensembl
+apercula_gene_ensembl,Orange clownfish genes (Nemo_v1),Nemo_v1,Orange clownfish,ensembl
+ofgca002042975v1_eg_gene,Orbicella faveolata (Mountainous star coral, FL) genes (ofav_dov_v1),ofav_dov_v1,Orbicella faveolata,metazoa_mart
+ocincta_eg_gene,Orchesella cincta (Springtail) genes (ASM171814v1),ASM171814v1,Orchesella cincta,metazoa_mart
+oagca000612105v2_eg_gene,Orussus abietinus (Parasitic wood wasp, OABI.00-Male) genes (Oabi_2.0),Oabi_2.0,Orussus abietinus,metazoa_mart
+obarthii_eg_gene,Oryza barthii genes (O.barthii_v1),O.barthii_v1,Oryza barthii,plants_mart
+obrachyantha_eg_gene,Oryza brachyantha genes (Oryza_brachyantha.v1.4b),Oryza_brachyantha.v1.4b,Oryza brachyantha,plants_mart
+oglaberrima_eg_gene,Oryza glaberrima genes (Oryza_glaberrima_V1),Oryza_glaberrima_V1,Oryza glaberrima,plants_mart
+oglumipatula_eg_gene,Oryza glumipatula genes (Oryza_glumaepatula_v1.5),Oryza_glumaepatula_v1.5,Oryza glumipatula,plants_mart
+olongistaminata_eg_gene,Oryza longistaminata genes (O_longistaminata_v1.0),O_longistaminata_v1.0,Oryza longistaminata,plants_mart
+omeridionalis_eg_gene,Oryza meridionalis genes (Oryza_meridionalis_v1.3),Oryza_meridionalis_v1.3,Oryza meridionalis,plants_mart
+onivara_eg_gene,Oryza nivara genes (Oryza_nivara_v1.0),Oryza_nivara_v1.0,Oryza nivara,plants_mart
+opunctata_eg_gene,Oryza punctata genes (Oryza_punctata_v1.2),Oryza_punctata_v1.2,Oryza punctata,plants_mart
+orufipogon_eg_gene,Oryza rufipogon genes (OR_W1943),OR_W1943,Oryza rufipogon,plants_mart
+osarc_eg_gene,Oryza sativa (circum-Basmati var. ARC 10497) genes (Os117425RS1),Os117425RS1,Oryza sativa,plants_mart
+oindica_eg_gene,Oryza sativa Indica Group genes (ASM465v1),ASM465v1,Oryza sativa Indica Group,plants_mart
+osativa_eg_gene,Oryza sativa Japonica Group genes (IRGSP-1.0),IRGSP-1.0,Oryza sativa Japonica Group,plants_mart
+olucimarinus_eg_gene,Ostreococcus lucimarinus genes (ASM9206v1),ASM9206v1,Ostreococcus lucimarinus,plants_mart
+ofgca903813345v1_eg_gene,Owenia fusiformis (Segmented worms) genes (Owenia_assembly_annotated),Owenia_assembly_annotated,Owenia fusiformis,metazoa_mart
+cpbellii_gene_ensembl,Painted turtle genes (Chrysemys_picta_bellii-3.0.3),Chrysemys_picta_bellii-3.0.3,Painted turtle,ensembl
+cimitator_gene_ensembl,Panamanian white-faced capuchin genes (Cebus_imitator-1.0),Cebus_imitator-1.0,Panamanian white-faced capuchin,ensembl
+phfil2_eg_gene,Panicum hallii FIL2 genes (PHallii_v3.1),PHallii_v3.1,Panicum hallii FIL2,plants_mart
+phallii_eg_gene,Panicum hallii HAL2 genes (PhalliiHAL_v2.1),PhalliiHAL_v2.1,Panicum hallii HAL2,plants_mart
+psomniferum_eg_gene,Papaver somniferum genes (ASM357369v1),ASM357369v1,Papaver somniferum,plants_mart
+ptetraurelia_eg_gene,Paramecium tetraurelia genes (ASM16542v1),ASM16542v1,Paramecium tetraurelia,protists_mart
+pkingsleyae_gene_ensembl,Paramormyrops kingsleyae genes (PKINGS_0.1),PKINGS_0.1,Paramormyrops kingsleyae,ensembl
+ptgca000365465v3_eg_gene,Parasteatoda tepidariorum (Common house spider, Goettingen) genes (Ptep_3.0),Ptep_3.0,Parasteatoda tepidariorum,metazoa_mart
+pmgca015706575v1_eg_gene,Patiria miniata (Bat star starfish, m_02_andy) genes (Pmin_3.0),Pmin_3.0,Patiria miniata,metazoa_mart
+pggca024362695v1rs_eg_gene,Pectinophora gossypiella (Pink bollworm) genes (ilPecGoss1.1),ilPecGoss1.1,Pectinophora gossypiella,metazoa_mart
+phumanus_eg_gene,Pediculus humanus corporis (Human body louse, USDA) genes (PhumU2),PhumU2,Pediculus humanus corporis,metazoa_mart
+pcgca019202785v2rs_eg_gene,Penaeus chinensis (Fleshy prawn) genes (ASM1920278v2),ASM1920278v2,Penaeus chinensis,metazoa_mart
+pjgca017312705v1_eg_gene,Penaeus japonicus (Kuruma shrimp, Ginoza2017) genes (Mj_TUMSAT_v1.0),Mj_TUMSAT_v1.0,Penaeus japonicus,metazoa_mart
+pmgca015228065v1_eg_gene,Penaeus monodon (Black tiger shrimp, SGIC_2016) genes (NSTDA_Pmon_1),NSTDA_Pmon_1,Penaeus monodon,metazoa_mart
+pvgca003789085v1_eg_gene,Penaeus vannamei (Pacific white shrimp) genes (ASM378908v1),ASM378908v1,Penaeus vannamei,metazoa_mart
+ptricornutum_eg_gene,Phaeodactylum tricornutum genes (ASM15095v2),ASM15095v2,Phaeodactylum tricornutum,protists_mart
+pnodorum_eg_gene,Phaeosphaeria nodorum genes (ASM14691v1),ASM14691v1,Phaeosphaeria nodorum,fungi_mart
+pchrysosporium_eg_gene,Phanerochaete chrysosporium genes (GCA000167175v1),GCA000167175v1,Phanerochaete chrysosporium,fungi_mart
+pvulgaris_eg_gene,Phaseolus vulgaris genes (PhaVulg1_0),PhaVulg1_0,Phaseolus vulgaris,plants_mart
+ppapatasi_eg_gene,Phlebotomus papatasi (Sand fly, Israel) genes (PpapI1),PpapI1,Phlebotomus papatasi,metazoa_mart
+ppgca918844115_eg_gene,Phlebotomus perniciosus (Sand fly, Murcia) genes (pperniciosus_illum_n82538_165Mb),pperniciosus_illum_n82538_165Mb,Phlebotomus perniciosus,metazoa_mart
+ppatens_eg_gene,Physcomitrium patens genes (Phypa V3),Phypa V3,Physcomitrium patens,plants_mart
+pinfestans_eg_gene,Phytophthora infestans genes (ASM14294v1),ASM14294v1,Phytophthora infestans,protists_mart
+pkernoviae_eg_gene,Phytophthora kernoviae genes (PhyKer238/432v1),PhyKer238/432v1,Phytophthora kernoviae,protists_mart
+plateralis_eg_gene,Phytophthora lateralis genes (MPF4_v1.0),MPF4_v1.0,Phytophthora lateralis,protists_mart
+pparasitica_eg_gene,Phytophthora parasitica genes (Phyt_para_P1569_V1),Phyt_para_P1569_V1,Phytophthora parasitica,protists_mart
+pramorum_eg_gene,Phytophthora ramorum genes (ASM14973v1),ASM14973v1,Phytophthora ramorum,protists_mart
+psojae_eg_gene,Phytophthora sojae genes (P.sojae V3.0),P.sojae V3.0,Phytophthora sojae,protists_mart
+sscrofa_gene_ensembl,Pig genes (Sscrofa11.1),Sscrofa11.1,Pig,ensembl
+ssbamei_gene_ensembl,Pig - Bamei genes (Bamei_pig_v1),Bamei_pig_v1,Pig - Bamei,ensembl
+ssberkshire_gene_ensembl,Pig - Berkshire genes (Berkshire_pig_v1),Berkshire_pig_v1,Pig - Berkshire,ensembl
+sshampshire_gene_ensembl,Pig - Hampshire genes (Hampshire_pig_v1),Hampshire_pig_v1,Pig - Hampshire,ensembl
+ssjinhua_gene_ensembl,Pig - Jinhua genes (Jinhua_pig_v1),Jinhua_pig_v1,Pig - Jinhua,ensembl
+sslandrace_gene_ensembl,Pig - Landrace genes (Landrace_pig_v1),Landrace_pig_v1,Pig - Landrace,ensembl
+sslargewhite_gene_ensembl,Pig - Largewhite genes (Large_White_v1),Large_White_v1,Pig - Largewhite,ensembl
+ssmeishan_gene_ensembl,Pig - Meishan genes (Meishan_pig_v1),Meishan_pig_v1,Pig - Meishan,ensembl
+sspietrain_gene_ensembl,Pig - Pietrain genes (Pietrain_pig_v1),Pietrain_pig_v1,Pig - Pietrain,ensembl
+ssrongchang_gene_ensembl,Pig - Rongchang genes (Rongchang_pig_v1),Rongchang_pig_v1,Pig - Rongchang,ensembl
+sstibetan_gene_ensembl,Pig - Tibetan genes (Tibetan_Pig_v2),Tibetan_Pig_v2,Pig - Tibetan,ensembl
+sswuzhishan_gene_ensembl,Pig - Wuzhishan genes (minipig_v1.0),minipig_v1.0,Pig - Wuzhishan,ensembl
+ssusmarc_gene_ensembl,Pig USMARC genes (USMARCv1.0),USMARCv1.0,Pig USMARC,ensembl
+mnemestrina_gene_ensembl,Pig-tailed macaque genes (Mnem_1.0),Mnem_1.0,Pig-tailed macaque,ensembl
+oprinceps_gene_ensembl,Pika genes (OchPri2.0-Ens),OchPri2.0-Ens,Pika,ensembl
+slucioperca_gene_ensembl,Pike-perch genes (SLUC_FBN_1),SLUC_FBN_1,Pike-perch,ensembl
+mmurdjan_gene_ensembl,Pinecone soldierfish genes (fMyrMur1.1),fMyrMur1.1,Pinecone soldierfish,ensembl
+abrachyrhynchus_gene_ensembl,Pink-footed goose genes (ASM259213v1),ASM259213v1,Pink-footed goose,ensembl
+pvera_eg_gene,Pistacia vera genes (PisVer_v2),PisVer_v2,Pistacia vera,plants_mart
+psativum_eg_gene,Pisum sativum genes (Pisum_sativum_v1a),Pisum_sativum_v1a,Pisum sativum,plants_mart
+pberghei_eg_gene,Plasmodium berghei genes (PBANKA01),PBANKA01,Plasmodium berghei,protists_mart
+pchabaudi_eg_gene,Plasmodium chabaudi genes (PCHAS01),PCHAS01,Plasmodium chabaudi,protists_mart
+pfalciparum_eg_gene,Plasmodium falciparum 3D7 genes (ASM276v2),ASM276v2,Plasmodium falciparum 3D7,protists_mart
+pknowlesi_eg_gene,Plasmodium knowlesi genes (ASM635v1),ASM635v1,Plasmodium knowlesi,protists_mart
+pvivax_eg_gene,Plasmodium vivax genes (ASM241v2),ASM241v2,Plasmodium vivax,protists_mart
+xmaculatus_gene_ensembl,Platyfish genes (X_maculatus-5.0-male),X_maculatus-5.0-male,Platyfish,ensembl
+oanatinus_gene_ensembl,Platypus genes (mOrnAna1.p.v1),mOrnAna1.p.v1,Platypus,ensembl
+pdgca003704095v1_eg_gene,Pocillopora damicornis (Cauliflower coral, RSMAS) genes (ASM370409v1),ASM370409v1,Pocillopora damicornis,metazoa_mart
+pbgca000187915v1rs_eg_gene,Pogonomyrmex barbatus (Red harvester ant) genes (Pbar_UMD_V03),Pbar_UMD_V03,Pogonomyrmex barbatus,metazoa_mart
+umaritimus_gene_ensembl,Polar bear genes (UrsMar_1.0),UrsMar_1.0,Polar bear,ensembl
+pcgca001313835v1rs_eg_gene,Polistes canadensis (Red paper wasp, GaletaPanama2010) genes (ASM131383v1),ASM131383v1,Polistes canadensis,metazoa_mart
+pdgca001465965v1rs_eg_gene,Polistes dominula (European paper wasp, PdomPennStateAug2009) genes (Pdom_r1.2),Pdom_r1.2,Polistes dominula,metazoa_mart
+pfgca010416935v1rs_eg_gene,Polistes fuscatus (Common paper wasp, 324) genes (CU_Pfus_HIC),CU_Pfus_HIC,Polistes fuscatus,metazoa_mart
+ppgca011947565v2_eg_gene,Pollicipes pollicipes (Goose neck barnacle, AB1234) genes (Ppol_2),Ppol_2,Pollicipes pollicipes,metazoa_mart
+pcgca003073045v1_eg_gene,Pomacea canaliculata (Apple snail, SZHN2017) genes (ASM307304v1),ASM307304v1,Pomacea canaliculata,metazoa_mart
+plgca012934845v2gb_eg_gene,Pomphorhynchus laevis (Thorny-headed worm, GPI110) genes (ASM1293484v2),ASM1293484v2,Pomphorhynchus laevis,metazoa_mart
+ptrichocarpa_eg_gene,Populus trichocarpa genes (Pop_tri_v4),Pop_tri_v4,Populus trichocarpa,plants_mart
+ptgca017591435v1_eg_gene,Portunus trituberculatus (Swimming crab, SZX2019) genes (ASM1759143v1),ASM1759143v1,Portunus trituberculatus,metazoa_mart
+mochrogaster_gene_ensembl,Prairie vole genes (MicOch1.0),MicOch1.0,Prairie vole,ensembl
+pcgca000485595v2_eg_gene,Priapulus caudatus (Penis worm) genes (Priapulus_caudatus-5.0.1),Priapulus_caudatus-5.0.1,Priapulus caudatus,metazoa_mart
+ppacificus_eg_gene,Pristionchus pacificus (Nematode, PS312) genes (El_Paco),El_Paco,Pristionchus pacificus,metazoa_mart
+pcgca020424385v2_eg_gene,Procambarus clarkii (Red swamp crayfish, Jiangsu) genes (ASM2042438v2),ASM2042438v2,Procambarus clarkii,metazoa_mart
+pavium_eg_gene,Prunus avium genes (PAV_r1.0),PAV_r1.0,Prunus avium,plants_mart
+pdulcis_eg_gene,Prunus dulcis genes (ALMONDv2),ALMONDv2,Prunus dulcis,plants_mart
+ppersica_eg_gene,Prunus persica genes (Prunus_persica_NCBIv2),Prunus_persica_NCBIv2,Prunus persica,plants_mart
+pmultistriata_eg_gene,Pseudo-nitzschia multistriata genes (ASM90066040v1),ASM90066040v1,Pseudo-nitzschia multistriata,protists_mart
+pgraminis_eg_gene,Puccinia graminis genes (ASM14992v1),ASM14992v1,Puccinia graminis,fungi_mart
+pgraminisug99_eg_gene,Puccinia graminis Ug99 genes (v1),v1,Puccinia graminis Ug99,fungi_mart
+pstriiformis_eg_gene,Puccinia striiformis f. sp. tritici PST-130 str. Race 130 genes (PST-130_1.0),PST-130_1.0,Puccinia striiformis f. sp. tritici PST-130 str. Race 130,fungi_mart
+ptriticina_eg_gene,Puccinia triticina genes (ASM15152v1),ASM15152v1,Puccinia triticina,fungi_mart
+pteres_eg_gene,Pyrenophora teres genes (PyrTer_1.0),PyrTer_1.0,Pyrenophora teres,fungi_mart
+ptriticirepentis_eg_gene,Pyrenophora tritici-repentis Pt-1C-BFP genes (ASM14998v1),ASM14998v1,Pyrenophora tritici-repentis Pt-1C-BFP,fungi_mart
+paphanidermatum_eg_gene,Pythium aphanidermatum genes (pag1_scaffolds_v1),pag1_scaffolds_v1,Pythium aphanidermatum,protists_mart
+parrhenomanes_eg_gene,Pythium arrhenomanes genes (par_scaffolds_v1),par_scaffolds_v1,Pythium arrhenomanes,protists_mart
+pirregulare_eg_gene,Pythium irregulare genes (pir_scaffolds_v1),pir_scaffolds_v1,Pythium irregulare,protists_mart
+piwayamai_eg_gene,Pythium iwayamai genes (piw_scaffolds_v1),piw_scaffolds_v1,Pythium iwayamai,protists_mart
+pultimum_eg_gene,Pythium ultimum genes (pug),pug,Pythium ultimum,protists_mart
+pvexans_eg_gene,Pythium vexans genes (pve_scaffolds_v1),pve_scaffolds_v1,Pythium vexans,protists_mart
+qlobata_eg_gene,Quercus lobata genes (ValleyOak3.0),ValleyOak3.0,Quercus lobata,plants_mart
+qsuber_eg_gene,Quercus suber genes (CorkOak1.0),CorkOak1.0,Quercus suber,plants_mart
+ocuniculus_gene_ensembl,Rabbit genes (OryCun2.0),OryCun2.0,Rabbit,ensembl
+omykiss_gene_ensembl,Rainbow trout genes (USDA_OmykA_1.1),USDA_OmykA_1.1,Rainbow trout,ensembl
+vvulpes_gene_ensembl,Red fox genes (VulVul2.2),VulVul2.2,Red fox,ensembl
+pnattereri_gene_ensembl,Red-bellied piranha genes (Pygocentrus_nattereri-1.0.2),Pygocentrus_nattereri-1.0.2,Red-bellied piranha,ensembl
+ecalabaricus_gene_ensembl,Reedfish genes (fErpCal1.1),fErpCal1.1,Reedfish,ensembl
+rpgca013731165v1_eg_gene,Rhagoletis pomonella (Apple magot fly, Grant_MI) genes (Rhpom_1.0),Rhpom_1.0,Rhagoletis pomonella,metazoa_mart
+rmgca013339725v1_eg_gene,Rhipicephalus microplus (Southern cattle tick, Rmic-2018) genes (ASM1333972v1),ASM1333972v1,Rhipicephalus microplus,metazoa_mart
+rsgca013339695v1_eg_gene,Rhipicephalus sanguineus (Brown dog tick, Rsan-2018) genes (ASM1333969v1),ASM1333969v1,Rhipicephalus sanguineus,metazoa_mart
+rprolixus_eg_gene,Rhodnius prolixus (Kissing bug, CDC) genes (RproC3),RproC3,Rhodnius prolixus,metazoa_mart
+rmgca003676215v3_eg_gene,Rhopalosiphum maidis (Corn leaf aphid, BTI-1) genes (ASM367621v3),ASM367621v3,Rhopalosiphum maidis,metazoa_mart
+rchinensis_eg_gene,Rosa chinensis genes (RchiOBHm-V2),RchiOBHm-V2,Rosa chinensis,plants_mart
+mcaroli_gene_ensembl,Ryukyu mouse genes (CAROLI_EIJ_v1.1),CAROLI_EIJ_v1.1,Ryukyu mouse,ensembl
+scerevisiae_eg_gene,Saccharomyces cerevisiae genes (R64-1-1),R64-1-1,Saccharomyces cerevisiae,fungi_mart
+scerevisiae_gene_ensembl,Saccharomyces cerevisiae genes (R64-1-1),R64-1-1,Saccharomyces cerevisiae,ensembl
+sspontaneum_eg_gene,Saccharum spontaneum genes (Sspon.HiC_chr_asm),Sspon.HiC_chr_asm,Saccharum spontaneum,plants_mart
+skgca000003605v1_eg_gene,Saccoglossus kowalevskii (Acorn worm) genes (Skow_1.1),Skow_1.1,Saccoglossus kowalevskii,metazoa_mart
+platipinna_gene_ensembl,Sailfin molly genes (P_latipinna-1.0),P_latipinna-1.0,Sailfin molly,ensembl
+sscabiei_eg_gene,Sarcoptes scabiei (Itch mite, SSS_KF_BRIS2020) genes (ASM1459567v1),ASM1459567v1,Sarcoptes scabiei,metazoa_mart
+sagca021461395v2rs_eg_gene,Schistocerca americana (American grasshopper, TAMUIC-IGC-003095) genes (iqSchAmer2.1),iqSchAmer2.1,Schistocerca americana,metazoa_mart
+shgca000699445v2rs_eg_gene,Schistosoma haematobium (Urinary blood fluke) genes (SchHae_2.0),SchHae_2.0,Schistosoma haematobium,metazoa_mart
+smansoni_eg_gene,Schistosoma mansoni (Flatworm) genes (Smansoni_v7),Smansoni_v7,Schistosoma mansoni,metazoa_mart
+scryophilus_eg_gene,Schizosaccharomyces cryophilus genes (SCY4),SCY4,Schizosaccharomyces cryophilus,fungi_mart
+sjaponicus_eg_gene,Schizosaccharomyces japonicus genes (SJ5),SJ5,Schizosaccharomyces japonicus,fungi_mart
+soctosporus_eg_gene,Schizosaccharomyces octosporus genes (SO6),SO6,Schizosaccharomyces octosporus,fungi_mart
+spombe_eg_gene,Schizosaccharomyces pombe genes (ASM294v2),ASM294v2,Schizosaccharomyces pombe,fungi_mart
+ssclerotiorum_eg_gene,Sclerotinia sclerotiorum genes (ASM14694v1),ASM14694v1,Sclerotinia sclerotiorum,fungi_mart
+scereale_eg_gene,Secale cereale genes (Rye_Lo7_2018_v1p1p1),Rye_Lo7_2018_v1p1p1,Secale cereale,plants_mart
+smoellendorffii_eg_gene,Selaginella moellendorffii genes (v1.0),v1.0,Selaginella moellendorffii,plants_mart
+sindicum_eg_gene,Sesamum indicum genes (S_indicum_v1.0),S_indicum_v1.0,Sesamum indicum,plants_mart
+sitalica_eg_gene,Setaria italica genes (Setaria_italica_v2.0),Setaria_italica_v2.0,Setaria italica,plants_mart
+sviridis_eg_gene,Setaria viridis genes (Setaria_viridis_v2.0),Setaria_viridis_v2.0,Setaria viridis,plants_mart
+oaries_gene_ensembl,Sheep (texel) genes (Oar_v3.1),Oar_v3.1,Sheep,ensembl
+oarambouillet_gene_ensembl,Sheep genes (Oar_rambouillet_v1.0),Oar_rambouillet_v1.0,Sheep,ensembl
+cvariegatus_gene_ensembl,Sheepshead minnow genes (C_variegatus-1.0),C_variegatus-1.0,Sheepshead minnow,ensembl
+saraneus_gene_ensembl,Shrew genes (sorAra1),sorAra1,Shrew,ensembl
+mpahari_gene_ensembl,Shrew mouse genes (PAHARI_EIJ_v1.1),PAHARI_EIJ_v1.1,Shrew mouse,ensembl
+bsplendens_gene_ensembl,Siamese fighting fish genes (fBetSpl5.2),fBetSpl5.2,Siamese fighting fish,ensembl
+mmoschiferus_gene_ensembl,Siberian musk deer genes (MosMos_v2_BIUU_UCD),MosMos_v2_BIUU_UCD,Siberian musk deer,ensembl
+sfgca003268045v1_eg_gene,Sipha flava (Yellow sugarcane aphid, LNK) genes (YSA_version1),YSA_version1,Sipha flava,metazoa_mart
+sogca002938485v2rs_eg_gene,Sitophilus oryzae (Rice weevil) genes (Soryzae_2.0),Soryzae_2.0,Sitophilus oryzae,metazoa_mart
+choffmanni_gene_ensembl,Sloth genes (choHof1),choHof1,Sloth,ensembl
+slycopersicum_eg_gene,Solanum lycopersicum genes (SL3.0),SL3.0,Solanum lycopersicum,plants_mart
+stuberosum_eg_gene,Solanum tuberosum genes (SolTub_3.0),SolTub_3.0,Solanum tuberosum,plants_mart
+strh8903916_eg_gene,Solanum tuberosum RH89-039-16 genes (ASM1418947v1),ASM1418947v1,Solanum tuberosum RH89-039-16,plants_mart
+sinvicta_eg_gene,Solenopsis invicta (Red fire ant, M01_SB) genes (UNIL_Sinv_3.0),UNIL_Sinv_3.0,Solenopsis invicta,metazoa_mart
+catys_gene_ensembl,Sooty mangabey genes (Caty_1.0),Caty_1.0,Sooty mangabey,ensembl
+sbicolor_eg_gene,Sorghum bicolor genes (Sorghum_bicolor_NCBIv3),Sorghum_bicolor_NCBIv3,Sorghum bicolor,plants_mart
+pcatodon_gene_ensembl,Sperm whale genes (ASM283717v2),ASM283717v2,Sperm whale,ensembl
+apolyacanthus_gene_ensembl,Spiny chromis genes (ASM210954v1),ASM210954v1,Spiny chromis,ensembl
+sreilianum_eg_gene,Sporisorium reilianum genes (ASM23024v1),ASM23024v1,Sporisorium reilianum,fungi_mart
+loculatus_gene_ensembl,Spotted gar genes (LepOcu1),LepOcu1,Spotted gar,ensembl
+itridecemlineatus_gene_ensembl,Squirrel genes (SpeTri2.0),SpeTri2.0,Squirrel,ensembl
+sdgca010614865v2rs_eg_gene,Stegodyphus dumicola (Social spider, AA2019) genes (ASM1061486v2),ASM1061486v2,Stegodyphus dumicola,metazoa_mart
+smimosarum_eg_gene,Stegodyphus mimosarum (African social velvet spider) genes (Stegodyphus_mimosarum_v1),Stegodyphus_mimosarum_v1,Stegodyphus mimosarum,metazoa_mart
+mspicilegus_gene_ensembl,Steppe mouse genes (MUSP714),MUSP714,Steppe mouse,ensembl
+gaculeatus_gene_ensembl,Stickleback genes (BROAD S1),BROAD S1,Stickleback,ensembl
+scalcitrans_eg_gene,Stomoxys calcitrans (Stable fly, USDA) genes (ScalU1),ScalU1,Stomoxys calcitrans,metazoa_mart
+smaritima_eg_gene,Strigamia maritima (Soil centipede) genes (Smar1),Smar1,Strigamia maritima,metazoa_mart
+spurpuratus_eg_gene,Strongylocentrotus purpuratus (Purple sea urchin, Spur 01) genes (Spur_5.0),Spur_5.0,Strongylocentrotus purpuratus,metazoa_mart
+sratti_eg_gene,Strongyloides ratti (Threadworm) genes (S_ratti_ED321_v5_0_4),S_ratti_ED321_v5_0_4,Strongyloides ratti,metazoa_mart
+spgca002571385v1_eg_gene,Stylophora pistillata (Hood coral, CSM Monaco) genes (Stylophora_pistillata_v1),Stylophora_pistillata_v1,Stylophora pistillata,metazoa_mart
+pabelii_gene_ensembl,Sumatran orangutan genes (Susie_PABv2),Susie_PABv2,Sumatran orangutan,ensembl
+csyrichta_gene_ensembl,Tarsier genes (Tarsius_syrichta-2.0.1),Tarsius_syrichta-2.0.1,Tarsier,ensembl
+sharrisii_gene_ensembl,Tasmanian devil genes (mSarHar1.11),mSarHar1.11,Tasmanian devil,ensembl
+tdalmanni_eg_gene,Teleopsis dalmanni (Malaysian stalk-eyed fly, 2A) genes (ASM223713v2),ASM223713v2,Teleopsis dalmanni,metazoa_mart
+tthermophila_eg_gene,Tetrahymena thermophila genes (JCVI-TTA1-2.2),JCVI-TTA1-2.2,Tetrahymena thermophila,protists_mart
+turticae_eg_gene,Tetranychus urticae (Two-spotted spider mite) genes (ASM23943v1),ASM23943v1,Tetranychus urticae,metazoa_mart
+tnigroviridis_gene_ensembl,Tetraodon genes (TETRAODON 8.0),TETRAODON 8.0,Tetraodon,ensembl
+tpseudonana_eg_gene,Thalassiosira pseudonana genes (ASM14940v2),ASM14940v2,Thalassiosira pseudonana,protists_mart
+tkitauei_eg_gene,Thelohanellus kitauei (Myxozoan endoparasite) genes (ASM82789v1),ASM82789v1,Thelohanellus kitauei,metazoa_mart
+tccriollo_eg_gene,Theobroma cacao Belizian Criollo B97-61/B2 genes (Criollo_cocoa_genome_V2),Criollo_cocoa_genome_V2,Theobroma cacao Belizian Criollo B97-61/B2,plants_mart
+tcacao_eg_gene,Theobroma cacao Matina 1-6 genes (Theobroma_cacao_20110822),Theobroma_cacao_20110822,Theobroma cacao Matina 1-6,plants_mart
+tctriunguis_gene_ensembl,Three-toed box turtle genes (T_m_triunguis-2.0),T_m_triunguis-2.0,Three-toed box turtle,ensembl
+tpgca012932325v1rs_eg_gene,Thrips palmi (Melon Thrips, BJ-2018) genes (TpBJ_2018v1),TpBJ_2018v1,Thrips palmi,metazoa_mart
+ptaltaica_gene_ensembl,Tiger genes (PanTig1.0),PanTig1.0,Tiger,ensembl
+hcomes_gene_ensembl,Tiger tail seahorse genes (H_comes_QL1_v1),H_comes_QL1_v1,Tiger tail seahorse,ensembl
+tcgca007210705_eg_gene,Tigriopus californicus (Copepod, San Diego) genes (Tcal_SD_v2.1),Tcal_SD_v2.1,Tigriopus californicus,metazoa_mart
+csemilaevis_gene_ensembl,Tongue sole genes (Cse_v1.0),Cse_v1.0,Tongue sole,ensembl
+tgondii_eg_gene,Toxoplasma gondii ME49 genes (TGA4),TGA4,Toxoplasma gondii ME49,protists_mart
+tbelangeri_gene_ensembl,Tree Shrew genes (tupBel1),tupBel1,Tree Shrew,ensembl
+tvgca011764245_eg_gene,Trialeurodes vaporariorum (Greenhouse whitefly, IVF) genes (ASM1176424v1),ASM1176424v1,Trialeurodes vaporariorum,metazoa_mart
+tcastaneum_eg_gene,Tribolium castaneum (Red flour beetle, Georgia GA2) genes (Tcas5.2),Tcas5.2,Tribolium castaneum,metazoa_mart
+tspiralis_eg_gene,Trichinella spiralis (Pork worm, ISS_195) genes (Tspiralis1),Tspiralis1,Trichinella spiralis,metazoa_mart
+treesei_eg_gene,Trichoderma reesei genes (v2.0),v2.0,Trichoderma reesei,fungi_mart
+tvirens_eg_gene,Trichoderma virens genes (ASM17099v1),ASM17099v1,Trichoderma virens,fungi_mart
+tpgca000599845v3_eg_gene,Trichogramma pretiosum (Parasitoid wasp, Unisexual culture from Peru) genes (Tpre_2.0),Tpre_2.0,Trichogramma pretiosum,metazoa_mart
+tadhaerens_eg_gene,Trichoplax adhaerens (Placozoa, Grell-BS-1999) genes (ASM15027v1),ASM15027v1,Trichoplax adhaerens,metazoa_mart
+tmuris_eg_gene,Trichuris muris (Nematode) genes (TMUE3.0),TMUE3.0,Trichuris muris,metazoa_mart
+tpratense_eg_gene,Trifolium pratense genes (Trpr),Trpr,Trifolium pratense,plants_mart
+taestivum_eg_gene,Triticum aestivum genes (IWGSC),IWGSC,Triticum aestivum,plants_mart
+taarinalrfor_eg_gene,Triticum aestivum Arinalrfor genes (PGSBv2.0_Arinalrfor),PGSBv2.0_Arinalrfor,Triticum aestivum Arinalrfor,plants_mart
+tacadenza_eg_gene,Triticum aestivum Cadenza genes (TGAC_cadenza),TGAC_cadenza,Triticum aestivum Cadenza,plants_mart
+taclaire_eg_gene,Triticum aestivum Claire genes (TGAC_paragon),TGAC_paragon,Triticum aestivum Claire,plants_mart
+tajagger_eg_gene,Triticum aestivum Jagger genes (PGSBv2.0_Jagger),PGSBv2.0_Jagger,Triticum aestivum Jagger,plants_mart
+tajulius_eg_gene,Triticum aestivum Julius genes (PGSBv2.0_Julius),PGSBv2.0_Julius,Triticum aestivum Julius,plants_mart
+takariega_eg_gene,Triticum aestivum Kariega genes (Tae_Kariega_v1),Tae_Kariega_v1,Triticum aestivum Kariega,plants_mart
+talancer_eg_gene,Triticum aestivum Lancer genes (PGSBv2.0_Lancer),PGSBv2.0_Lancer,Triticum aestivum Lancer,plants_mart
+talandmark_eg_gene,Triticum aestivum Landmark genes (PGSBv2.0_Landmark),PGSBv2.0_Landmark,Triticum aestivum Landmark,plants_mart
+tamace_eg_gene,Triticum aestivum Mace genes (PGSBv2.0_Mace),PGSBv2.0_Mace,Triticum aestivum Mace,plants_mart
+tanorin61_eg_gene,Triticum aestivum Norin61 genes (PGSBv2.0_Norin61),PGSBv2.0_Norin61,Triticum aestivum Norin61,plants_mart
+taparagon_eg_gene,Triticum aestivum Paragon genes (EI_paragon),EI_paragon,Triticum aestivum Paragon,plants_mart
+tarefseqv2_eg_gene,Triticum aestivum Refseqv2 genes (IWGSC_RefSeq_v2.1),IWGSC_RefSeq_v2.1,Triticum aestivum Refseqv2,plants_mart
+tarenan_eg_gene,Triticum aestivum Renan genes (Triticum_aestivum_Renan_v2.1),Triticum_aestivum_Renan_v2.1,Triticum aestivum Renan,plants_mart
+tarobigus_eg_gene,Triticum aestivum Robigus genes (TGAC_robigus),TGAC_robigus,Triticum aestivum Robigus,plants_mart
+tastanley_eg_gene,Triticum aestivum Stanley genes (PGSBv2.2_Stanley),PGSBv2.2_Stanley,Triticum aestivum Stanley,plants_mart
+tamattis_eg_gene,Triticum aestivum Sy Mattis genes (PGSBv2.0_Mattis),PGSBv2.0_Mattis,Triticum aestivum Sy Mattis,plants_mart
+taweebil_eg_gene,Triticum aestivum Weebill genes (EI_WeebilV1),EI_WeebilV1,Triticum aestivum Weebill,plants_mart
+tdicoccoides_eg_gene,Triticum dicoccoides genes (WEWSeq v.1.0),WEWSeq v.1.0,Triticum dicoccoides,plants_mart
+tspelta_eg_gene,Triticum spelta genes (PGSBv2.0_Spelta),PGSBv2.0_Spelta,Triticum spelta,plants_mart
+tturgidum_eg_gene,Triticum turgidum genes (svevo),svevo,Triticum turgidum,plants_mart
+turartu_eg_gene,Triticum urartu genes (Tu2.0),Tu2.0,Triticum urartu,plants_mart
+xtropicalis_gene_ensembl,Tropical clawed frog genes (UCB_Xtro_10.0),UCB_Xtro_10.0,Tropical clawed frog,ensembl
+tbrucei_eg_gene,Trypanosoma brucei genes (TryBru_Apr2005_chr11),TryBru_Apr2005_chr11,Trypanosoma brucei,protists_mart
+spunctatus_gene_ensembl,Tuatara genes (ASM311381v1),ASM311381v1,Tuatara,ensembl
+tmelanosporum_eg_gene,Tuber melanosporum genes (ASM15164v1),ASM15164v1,Tuber melanosporum,fungi_mart
+smaximus_gene_ensembl,Turbot genes (ASM1334776v1),ASM1334776v1,Turbot,ensembl
+mgallopavo_gene_ensembl,Turkey genes (Turkey_5.1),Turkey_5.1,Turkey,ensembl
+nfurzeri_gene_ensembl,Turquoise killifish genes (Nfu_20140520),Nfu_20140520,Turquoise killifish,ensembl
+ngalili_gene_ensembl,Upper Galilee mountains blind mole rat genes (S.galili_v1.0),S.galili_v1.0,Upper Galilee mountains blind mole rat,ensembl
+umaydis_eg_gene,Ustilago maydis genes (Umaydis521_2.0),Umaydis521_2.0,Ustilago maydis,fungi_mart
+psinus_gene_ensembl,Vaquita genes (mPhoSin1.pri),mPhoSin1.pri,Vaquita,ensembl
+vdgca002443255_eg_gene,Varroa destructor (Honeybee mite) genes (Vdes_3.0),Vdes_3.0,Varroa destructor,metazoa_mart
+vcgca019457755v1rs_eg_gene,Venturia canescens (Endoparasitoid wasp, UGA) genes (ASM1945775v1),ASM1945775v1,Venturia canescens,metazoa_mart
+vdahliae_eg_gene,Verticillium dahliae genes (ASM15067v2),ASM15067v2,Verticillium dahliae,fungi_mart
+vdahliaejr2_eg_gene,Verticillium dahliae JR2 genes (VDAG_JR2v.4.0),VDAG_JR2v.4.0,Verticillium dahliae JR2,fungi_mart
+csabaeus_gene_ensembl,Vervet-AGM genes (ChlSab1.1),ChlSab1.1,Vervet-AGM,ensembl
+vangularis_eg_gene,Vigna angularis genes (Vigan1.1),Vigan1.1,Vigna angularis,plants_mart
+vradiata_eg_gene,Vigna radiata genes (Vradiata_ver6),Vradiata_ver6,Vigna radiata,plants_mart
+vunguiculata_eg_gene,Vigna unguiculata genes (ASM411807v1),ASM411807v1,Vigna unguiculata,plants_mart
+vvinifera_eg_gene,Vitis vinifera genes (PN40024.v4),PN40024.v4,Vitis vinifera,plants_mart
+neugenii_gene_ensembl,Wallaby genes (Meug_1.0),Meug_1.0,Wallaby,ensembl
+cjacchus_gene_ensembl,White-tufted-ear marmoset genes (mCalJac1.pat.X),mCalJac1.pat.X,White-tufted-ear marmoset,ensembl
+bmutus_gene_ensembl,Wild yak genes (BosGru_v2.0),BosGru_v2.0,Wild yak,ensembl
+chyarkandensis_gene_ensembl,Yarkand deer genes (CEY_v1),CEY_v1,Yarkand deer,ensembl
+ylipolytica_eg_gene,Yarrowia lipolytica genes (ASM252v1),ASM252v1,Yarrowia lipolytica,fungi_mart
+sldorsalis_gene_ensembl,Yellowtail amberjack genes (Sedor1),Sedor1,Yellowtail amberjack,ensembl
+zmays_eg_gene,Zea mays genes (Zm-B73-REFERENCE-NAM-5.0),Zm-B73-REFERENCE-NAM-5.0,Zea mays,plants_mart
+tguttata_gene_ensembl,Zebra finch genes (bTaeGut1_v1.p),bTaeGut1_v1.p,Zebra finch,ensembl
+mzebra_gene_ensembl,Zebra mbuna genes (M_zebra_UMD2a),M_zebra_UMD2a,Zebra mbuna,ensembl
+drerio_gene_ensembl,Zebrafish genes (GRCz11),GRCz11,Zebrafish,ensembl
+zcgca012273895v2rs_eg_gene,Zerene cesonia (Southern Dogface) genes (Zerene_cesonia_1.1),Zerene_cesonia_1.1,Zerene cesonia,metazoa_mart
+marmatus_gene_ensembl,Zig-zag eel genes (fMasArm1.2),fMasArm1.2,Zig-zag eel,ensembl
+znevadensis_eg_gene,Zootermopsis nevadensis (Nevada dampwood termite) genes (ZooNev1.0),ZooNev1.0,Zootermopsis nevadensis,metazoa_mart
+ztritici_eg_gene,Zymoseptoria tritici genes (MG2),MG2,Zymoseptoria tritici,fungi_mart
+chaemuloni_eg_gene,[Candida] haemuloni genes (GCA002926055v1),GCA002926055v1,[Candida] haemuloni,fungi_mart
+cpseudohaemulonis_eg_gene,[Candida] pseudohaemulonii genes (GCA003013735v1),GCA003013735v1,[Candida] pseudohaemulonii,fungi_mart
