@@ -308,10 +308,10 @@ pgx.createPGX <- function(counts,
   message("[createPGX] annotating genes...")
 
   # lock ensembl to version 110 (latest) and genes dataset
-  ensembl <- useEnsembl(biomart="genes", version = 110)
+  ensembl <- biomaRt::useEnsembl(biomart="genes", version = 110)
   
   # lock ensembl to species
-  ensembl <- useDataset(dataset = species, mart = ensembl)
+  ensembl <- biomaRt::useDataset(dataset = species, mart = ensembl)
   
   pgx$genes <- ngs.getGeneAnnotation(rownames(counts),
                                      probe_type = NULL,
