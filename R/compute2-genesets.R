@@ -321,12 +321,11 @@ createSparseGenesetMatrix <- function(
     max.geneset.size = 500,
     min_gene_frequency = 10,
     filter_genes = TRUE) {
+  # WARNING #
+  # This function is usd in playbase and playdata to generate curated GMT. Do not change it without testing it in both packages to ensure reproducibility.
 
-      # WARNING #
-      # This function is usd in playbase and playdata to generate curated GMT. Do not change it without testing it in both packages to ensure reproducibility.
-  
-  if(filter_genes == TRUE){
-    ## ----------- Get all official gene symbols 
+  if (filter_genes == TRUE) {
+    ## ----------- Get all official gene symbols
     symbol <- as.list(org.Hs.eg.db::org.Hs.egSYMBOL)
     known.symbols <- sort(unique(unlist(symbol)))
   }
@@ -339,15 +338,15 @@ createSparseGenesetMatrix <- function(
   ## ------------- filter genes by minimum frequency and chrom
   genes.table <- table(unlist(gmt.all))
   genes <- names(which(genes.table >= min_gene_frequency))
-  
-  if(filter_genes == TRUE){
+
+  if (filter_genes == TRUE) {
     genes <- genes[grep("^LOC|RIK$", genes, invert = TRUE)]
     genes <- intersect(genes, known.symbols)
   }
 
   annot <- playbase::ngs.getGeneAnnotation(genes)
-  
-  if(filter_genes == TRUE){
+
+  if (filter_genes == TRUE) {
     annot <- annot[annot$chr %in% c(1:22, "X", "Y"), ]
   }
   genes <- genes[!is.na(annot$chr)]
