@@ -4,7 +4,11 @@
 \alias{get_mini_example_data}
 \title{Get mini example dataset}
 \usage{
-get_mini_example_data()
+get_mini_example_data(item = "all")
+}
+\arguments{
+\item{item}{Select which elements to return c("counts", "samples", "contrats", "all")
+by default it returns a list with all the data elements to build a pgx object.}
 }
 \value{
 List containing:
