@@ -317,7 +317,7 @@ pgx.createPGX <- function(counts,
                                      probe_type = NULL,
                                      mart = ensembl)
 
-  all_genes <- biomaRt::getBM(attributes = "hgnc_symbol", mart = mart)
+  all_genes <- biomaRt::getBM(attributes = "hgnc_symbol", mart = ensembl)
   pgx$all_genes <- all_genes[, 1]
 
   ## -------------------------------------------------------------------
