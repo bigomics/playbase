@@ -307,10 +307,15 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   message("[createPGX] annotating genes...")
 
-  mart <- biomaRt::useMart(biomart = "ensembl", dataset = species)
+  # lock ensembl to version 110 (latest) and genes dataset
+  ensembl <- useEnsembl(biomart="genes", version = 110)
+  
+  # lock ensembl to species
+  ensembl <- useDataset(dataset = species, mart = ensembl)
+  
   pgx$genes <- ngs.getGeneAnnotation(rownames(counts),
                                      probe_type = NULL,
-                                     mart = mart)
+                                     mart = ensembl)
 
   all_genes <- biomaRt::getBM(attributes = "hgnc_symbol", mart = mart)
   pgx$all_genes <- all_genes[, 1]
