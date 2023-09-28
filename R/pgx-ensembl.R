@@ -240,7 +240,7 @@ ngs.getGeneAnnotation <- function(probes,
 #' )
 #' symbols <- probe2symbol(probes, annot_table)
 #' }
-#'
+#' @import data.table
 #' @export
 probe2symbol <- function(probes, annot_table, query = "external_gene_name") {
 
