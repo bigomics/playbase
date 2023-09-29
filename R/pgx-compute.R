@@ -134,6 +134,7 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 #' @param do.clustergenes Logical indicating whether to cluster genes. Default is TRUE.
 #' @param only.proteincoding Logical indicating whether to keep only protein-coding genes. Default is TRUE.
 #'
+#' @import data.table
 #' @return List. PGX object containing input data and parameters.
 #'
 #' @export
@@ -160,7 +161,11 @@ pgx.createPGX <- function(counts,
   }
 
   # convert species to ensembl ID
-  species <- playbase::SPECIES_TABLE[which(playbase::SPECIES_TABLE$species_name==species),]$dataset
+  species <- playbase::SPECIES_TABLE[which(playbase::SPECIES_TABLE$species_name==species),]
+
+  ensembl_db <- species$ds
+  ensembl_species <- species$dataset
+
 
   ## -------------------------------------------------------------------
   ## clean up input files
@@ -307,12 +312,22 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   message("[createPGX] annotating genes...")
 
-  # lock ensembl to version 110 (latest) and genes dataset
-  ensembl <- biomaRt::useEnsembl(biomart="genes", version = 110)
-  
-  # lock ensembl to species
-  ensembl <- biomaRt::useDataset(dataset = species, mart = ensembl)
-  
+  if(ensembl_db == "ensembl"){
+    # lock ensembl to version 110 (latest) and genes dataset
+    ensembl <- biomaRt::useEnsembl(biomart="genes", version = 110)
+      
+    # lock ensembl to species
+    ensembl <- biomaRt::useDataset(dataset = species, mart = ensembl) 
+  } else {
+     species_table[, host :=  data.table::fcase(ds ==  "ensembl", "https://www.ensembl.org",
+                                             ds == "plants_mart", "https://plants.ensembl.org",
+                                             ds == "protists_mart", "https://protists.ensembl.org",
+                                             ds == "metazoa_mart", "https://metazoa.ensembl.org",
+                                             ds == "fungi_mart", "https://fungi.ensembl.org")]
+    
+    }
+
+    
   pgx$genes <- ngs.getGeneAnnotation(rownames(counts),
                                      probe_type = NULL,
                                      mart = ensembl)
