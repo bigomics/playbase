@@ -54,14 +54,6 @@ species <- species[order(species_name %in% c("Human", "Mouse", "Rat"), -as.chara
 # reverse order of table, where lst row becomes first and so on
 species <- species[rev(seq_len(nrow(species)))]
 
-
-# add servers
- species[, host :=  data.table::fcase(ds ==  "ensembl", "https://www.ensembl.org",
-    ds == "plants_mart", "https://plants.ensembl.org",
-    ds == "protists_mart", "https://protists.ensembl.org",
-    ds == "metazoa_mart", "https://metazoa.ensembl.org",
-    ds == "fungi_mart", "https://fungi.ensembl.org")]
-
 # save Rdata
 
 SPECIES_TABLE = species
