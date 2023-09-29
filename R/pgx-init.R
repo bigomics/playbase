@@ -106,7 +106,7 @@ pgx.initialize <- function(pgx) {
 
   is.numlev <- all(unique(pgx$contrasts) %in% c(NA, "", -1, 0, 1))
   is.samplewise <- all(rownames(pgx$contrasts) == rownames(pgx$samples))
-  is.samplewise
+
   if ("contrasts" %in% names(pgx) && (!is.samplewise || is.numlev)) {
     design <- pgx$model.parameters$design
     expmat <- pgx$model.parameters$exp.matrix
@@ -138,7 +138,7 @@ pgx.initialize <- function(pgx) {
   is.num <- sapply(pgx$samples, class) %in% c("numeric", "integer")
   numlev <- apply(pgx$samples, 2, function(x) length(unique(x[!is.na(x)])))
   is.numfac <- (is.num & numlev <= 3)
-  is.numfac
+
   if (any(is.numfac)) {
     for (i in which(is.numfac)) pgx$samples[, i] <- as.character(pgx$samples[, i])
   }
@@ -168,12 +168,19 @@ pgx.initialize <- function(pgx) {
   ## ----------------------------------------------------------------
   ## Tidy up genes matrix
   ## ----------------------------------------------------------------
-  pgx$genes <- pgx$genes[rownames(pgx$counts), , drop = FALSE]
+
+  # Convert to DT for back-compatibility
+  if (!data.table::is.data.table(pgx$genes)) {
+    pgx$genes <- data.table::as.data.table(pgx$genes)
+  }
+  ref_col <- colnames(pgx$genes)[1]
+  pgx$genes <- pgx$genes[rownames(pgx$counts), on=ref_col]
 
   ## -----------------------------------------------------------------------------
   ## intersect and filter gene families (convert species to human gene sets)
   ## -----------------------------------------------------------------------------
   if ("hgnc_symbol" %in% colnames(pgx$genes)) {
+
     hgenes <- toupper(pgx$genes$hgnc_symbol)
     genes <- pgx$genes$external_gene_name
     pgx$families <- lapply(playdata::FAMILIES, function(x) setdiff(genes[match(x, hgenes)], NA))
