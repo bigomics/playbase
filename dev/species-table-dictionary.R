@@ -41,6 +41,9 @@ ds_genomes$species_name <- sub(" Structural Variants", "", ds_genomes$species_na
 # if duplicate, keep only first entry
 ds_genomes <- ds_genomes[!duplicated(ds_genomes$species_name), ]
 
+# reorder rows of ds_genomes to match species
+ds_genomes <- ds_genomes[,colnames(species) ]
+
 # merge two tables
 
 species <- rbind(species, ds_genomes)
@@ -51,10 +54,11 @@ species <- species[order(species_name %in% c("Human", "Mouse", "Rat"), -as.chara
 # reverse order of table, where lst row becomes first and so on
 species <- species[rev(seq_len(nrow(species)))]
 
-write.csv(species, "dev/SPECIES_DICTIONARY.csv", row.names = FALSE, quote = FALSE)
+# save Rdata
 
 SPECIES_TABLE = species
 
 usethis::use_data(SPECIES_TABLE, overwrite = TRUE)
 
-
+# save SPECIES_DICTIONARY as tsv
+write.table(species, file = "dev/SPECIES_TABLE.tsv", sep = "\t", quote = FALSE, row.names = FALSE)
