@@ -160,13 +160,6 @@ pgx.createPGX <- function(counts,
     stop("dimension of counts and X do not match\n")
   }
 
-  # convert species to ensembl ID
-  species <- playbase::SPECIES_TABLE[which(playbase::SPECIES_TABLE$species_name==species),]
-
-  ensembl_db <- species$ds
-  ensembl_species <- species$dataset
-
-
   ## -------------------------------------------------------------------
   ## clean up input files
   ## -------------------------------------------------------------------
@@ -311,6 +304,11 @@ pgx.createPGX <- function(counts,
   ## create gene annotation table
   ## -------------------------------------------------------------------
   message("[createPGX] annotating genes...")
+
+  # convert species to ensembl ID
+  species <- playbase::SPECIES_TABLE[which(playbase::SPECIES_TABLE$species_name==species),]
+
+
 
   if(ensembl_db == "ensembl"){
     # lock ensembl to version 110 (latest) and genes dataset
