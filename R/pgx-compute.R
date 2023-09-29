@@ -308,30 +308,20 @@ pgx.createPGX <- function(counts,
   # convert species to ensembl ID
   species <- playbase::SPECIES_TABLE[which(playbase::SPECIES_TABLE$species_name==species),]
 
-
-
-  if(ensembl_db == "ensembl"){
-    # lock ensembl to version 110 (latest) and genes dataset
-    ensembl <- biomaRt::useEnsembl(biomart="genes", version = 110)
-      
-    # lock ensembl to species
-    ensembl <- biomaRt::useDataset(dataset = species, mart = ensembl) 
-  } else {
-     species_table[, host :=  data.table::fcase(ds ==  "ensembl", "https://www.ensembl.org",
-                                             ds == "plants_mart", "https://plants.ensembl.org",
-                                             ds == "protists_mart", "https://protists.ensembl.org",
-                                             ds == "metazoa_mart", "https://metazoa.ensembl.org",
-                                             ds == "fungi_mart", "https://fungi.ensembl.org")]
+  # lock ensembl to version 110 (latest) and genes dataset
+  ensembl <- biomaRt::useEnsembl(biomart="genes", version = species$version, host = species$host)
     
-    }
-
+  # lock ensembl to species
+  ensembl <- biomaRt::useDataset(dataset = species$dataset, mart = ensembl) 
     
-  pgx$genes <- ngs.getGeneAnnotation(rownames(counts),
+  pgx$genes <- playbase::ngs.getGeneAnnotation(rownames(counts),
                                      probe_type = NULL,
                                      mart = ensembl)
 
   all_genes <- biomaRt::getBM(attributes = "hgnc_symbol", mart = ensembl)
   pgx$all_genes <- all_genes[, 1]
+
+  
 
   ## -------------------------------------------------------------------
   ## convert probe-IDs to gene symbol (do not translate yet to HUGO)
