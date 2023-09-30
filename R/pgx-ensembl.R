@@ -193,7 +193,7 @@ ngs.getGeneAnnotation <- function(probes,
   annot <- biomaRt::getBM(
     attributes = attr_call,
     filters = probe_type,
-    values = probes,
+    values = clean_probes,
     mart = mart
   )
   annot <- data.table::data.table(annot)
@@ -204,15 +204,21 @@ ngs.getGeneAnnotation <- function(probes,
     annot_homologs <- biomaRt::getBM(
       attributes = c(probe_type, "hsapiens_homolog_associated_gene_name"),
       filters = probe_type,
-      values = probes,
+      values = clean_probes,
       mart = mart
     )
     annot_homologs <- data.table::data.table(annot_homologs)
     annot <- annot[annot_homologs, on = probe_type]
   }
+  data.table::setnames(annot,
+                       old = c("external_gene_name", "description", "gene_biotype", "chromosome_name", "transcript_start", "transcript_length", "band"),
+                       new = c("gene_name", "gene_title", "gene_biotype", "chr", "pos", "tx_len", "map"))
 
-  data.table::setkeyv(annot, probe_type)
-  return(annot)
+  data.table::setkeyv(annot, colnames(annot))
+  out <- annot[clean_probes, on = probe_type, mult = "first"]
+  out <- as.data.frame(out)
+  rownames(out) <- clean_probes
+  return()
 }
 
 #' Map probe identifiers to gene symbols
@@ -242,7 +248,7 @@ ngs.getGeneAnnotation <- function(probes,
 #' }
 #' @import data.table
 #' @export
-probe2symbol <- function(probes, annot_table, query = "external_gene_name") {
+probe2symbol <- function(probes, annot_table, query = "gene_name") {
 
   # Prepare inputs
   probe_type <- colnames(annot_table[, 1])
