@@ -34,18 +34,16 @@ pgx.inferCNV <- function(pgx, refgroup = NULL, progress = NULL) {
   ##
 
   # Prepare input data
-  ref_col <- colnames(pgx$genes)[1]
-  data <- ngs$counts
   annots <- pgx$samples[, "group", drop = FALSE]
 
   #Get gene symbol and chromosome location info
-  genes_info <- pgx$genes[rownames(data), on = ref_col, mult = "first"]
+  genes_info <- data.table::data.table(pgx$genes[rownames(data), , drop = FALSE])
 
   # Get approx start and stop
   genes_info[, c("chr", "start", "stop") :=
-               .(paste0("chr", chromosome_name),
-                 transcript_start,
-                 transcript_start + transcript_length)]
+               .(paste0("chr", chr),
+                 pos,
+                 pos  + tx_len)]
 
   ## filter known genes
   jj <- which(genes_info[["chr"]] %in% paste0("chr", c(1:22, "X", "Y")) &
