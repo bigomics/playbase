@@ -231,7 +231,7 @@ pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
     fam.pattern <- "^[<].*|^FAMILY|^CUSTOM"
   }
 
-  xgenes <- toupper(pgx$genes$external_gene_name)
+  xgenes <- toupper(pgx$genes[, "gene_name"])
   xgenes <- unique(xgenes)
   gsets <- getGSETS_playbase(pattern = fam.pattern)
   jj <- which(sapply(gsets, function(x) sum(x %in% xgenes)) >= nmin)
