@@ -191,8 +191,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   gg <- rownames(pgx$counts)
   if (!is.null(pgx$X)) gg <- intersect(gg, rownames(pgx$X))
   counts <- pgx$counts[gg, ss, drop = FALSE]
-  ref_col <- colnames(pgx$genes)[1]
-  genes <- pgx$genes[gg, on = ref_col, mult = "first"]
+  genes <- pgx$genes[gg, ]
   samples <- pgx$samples[ss, ]
 
   ## Rescale if too low. Often EdgeR/DeSeq can give errors of total counts
