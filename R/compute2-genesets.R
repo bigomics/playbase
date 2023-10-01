@@ -63,7 +63,7 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
 
   ## filter genes only in dataset
-  genes <- unique(as.character(pgx$genes$external_gene_name))
+  genes <- unique(as.character(pgx$genes$gene_name))
   genes <- toupper(genes) ## handle mouse genes...
   G <- G[, colnames(G) %in% genes]
 
