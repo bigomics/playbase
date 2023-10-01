@@ -238,7 +238,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     counts <- counts[jj, ]
     genes <- genes[jj, ]
   }
-  genes <- unique(genes[, c("external_gene_name", "description")])
+  genes <- unique(genes[, c("gene_name", "gene_title")])
 
   ## -----------------------------------------------------------------------------
   ## Do the fitting
