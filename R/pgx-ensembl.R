@@ -218,7 +218,7 @@ ngs.getGeneAnnotation <- function(probes,
   out <- annot[clean_probes, on = probe_type, mult = "first"]
   out <- as.data.frame(out)
   rownames(out) <- clean_probes
-  return()
+  return(out)
 }
 
 #' Map probe identifiers to gene symbols
@@ -251,6 +251,10 @@ ngs.getGeneAnnotation <- function(probes,
 probe2symbol <- function(probes, annot_table, query = "gene_name") {
 
   # Prepare inputs
+  if (!data.table::is.data.table(annot_table)) {
+    annot_table <- data.table::data.table(annot_table)
+    data.table::setkeyv(annot_table, colnames(annot_table)[1])
+  }
   probe_type <- colnames(annot_table[, 1])
   probe_cols <- c(probe_type, query)
 
@@ -267,39 +271,4 @@ probe2symbol <- function(probes, annot_table, query = "gene_name") {
 
   # Return queryed col
   return(annot[[query]])
-}
-
-
-
-
-detect_species <- function(x) {
-
-  x <- c("human", "rat", "mice")
-  #' ensembl_species <- useDataset(dataset = dataset_hsa$dataset, mart = ensembl)
-  probe_check <- sapply(probe_types_to_check, FUN = function(x) {
-    # TODO write a while loop that stops when we first get 20 IDs mapped, o
-    # continue until the end if not
-    tryCatch({
-      mart <- mart()
-      tmp <- biomaRt::getBM(attributes = x,
-                            filters = x,
-                            values = subset_probes,
-                            mart = mart)
-      Sys.sleep(2)  # Sleep time to prevent bounce from ensembl for consecutive calls
-      out <- nrow(tmp)
-      return(out)
-    }, error = function(e) {
-      return(0)
-    }
-    )
-  })
-
-  # Check matches and return if winner
-  if (all(probe_check == 0)) {
-    #TODO the probe2symbol and detect_probe code should be used in data-preview,
-    # and we should warn the user in case no matches are found
-    stop("Probe type not found, please, check your probes")
-  } else {
-    probe_type <- names(which.max(probe_check))
-  }
 }

@@ -306,22 +306,22 @@ pgx.createPGX <- function(counts,
   message("[createPGX] annotating genes...")
 
   # convert species to ensembl ID
-  species <- playbase::SPECIES_TABLE[which(playbase::SPECIES_TABLE$species_name==species),]
+  species_info <- playbase::SPECIES_TABLE[which(playbase::SPECIES_TABLE$species_name==species),]
 
   # lock ensembl to version 110 (latest) and genes dataset
-  ensembl <- biomaRt::useEnsembl(biomart="genes", version = species$version, host = species$host)
-    
+  ensembl <- biomaRt::useEnsembl(biomart="genes", host = species_info$host)
+
   # lock ensembl to species
-  ensembl <- biomaRt::useDataset(dataset = species$dataset, mart = ensembl) 
-    
-  pgx$genes <- playbase::ngs.getGeneAnnotation(rownames(counts),
+  ensembl <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
+
+  pgx$genes <- ngs.getGeneAnnotation(rownames(counts),
                                      probe_type = NULL,
                                      mart = ensembl)
 
-  all_genes <- biomaRt::getBM(attributes = "hgnc_symbol", mart = ensembl)
+  all_genes <- biomaRt::getBM(attributes = "external_gene_name", mart = ensembl)
   pgx$all_genes <- all_genes[, 1]
 
-  
+
 
   ## -------------------------------------------------------------------
   ## convert probe-IDs to gene symbol (do not translate yet to HUGO)
@@ -390,20 +390,20 @@ pgx.createPGX <- function(counts,
 
   do.filter <- (only.hugo | only.known | only.proteincoding)
   if (do.filter) {
-    pgx$genes <- pgx$genes[!is.na(hgnc_symbol)|hgnc_symbol == "",]
+    pgx$genes <- pgx$genes[!is.na(pgx$genes$gene_name)|pgx$genes$gene_name == "",]
     if (only.proteincoding) {
-      pgx$genes <- pgx$genes[gene_biotype %in% c("protein_coding")]
+      pgx$genes <- pgx$genes[pgx$genes$gene_biotype %in% c("protein_coding"), ]
     }
-    pgx$counts <- pgx$counts[unique(pgx$genes$hgnc_symbol), , drop = FALSE]
+    pgx$counts <- pgx$counts[unique(pgx$genes$gene_name), , drop = FALSE]
     if (!is.null(pgx$X)) {
-      pgx$X <- pgx$X[unique(pgx$genes$hgnc_symbol), , drop = FALSE]
+      pgx$X <- pgx$X[unique(pgx$genes$gene_name), , drop = FALSE]
     }
   }
 
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
-  pgx <- compute_cellcycle_gender(pgx)
+  pgx <- compute_cellcycle_gender(pgx, pgx$counts)
 
   ## -------------------------------------------------------------------
   ## Batch-correction (if requested. WARNING: changes counts )
