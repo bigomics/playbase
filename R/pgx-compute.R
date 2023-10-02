@@ -319,14 +319,14 @@ pgx.createPGX <- function(counts,
   species_info <- playbase::SPECIES_TABLE[which(playbase::SPECIES_TABLE$species_name==species),]
 
   # lock ensembl to version 110 (latest) and genes dataset
-  ensembl <- biomaRt::useEnsembl(biomart="genes", host = species_info$host)
+  ensembl <- biomaRt::useEnsemblGenomes(
+    biomart = species_info$mart,
+    dataset = species_info$dataset)
 
-  # lock ensembl to species
-  ensembl <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
-
-  pgx$genes <- ngs.getGeneAnnotation(rownames(counts),
-                                     probe_type = NULL,
-                                     mart = ensembl)
+  pgx$genes <- playbase::ngs.getGeneAnnotation(
+    probes = rownames(counts),
+    probe_type = NULL,
+    mart = ensembl)
 
   all_genes <- biomaRt::getBM(attributes = "external_gene_name", mart = ensembl)
   pgx$all_genes <- all_genes[, 1]
