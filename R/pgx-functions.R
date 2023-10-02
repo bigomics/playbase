@@ -1303,10 +1303,10 @@ getHSGeneInfo <- function(eg, as.link = TRUE) {
     "GO" = org.Hs.eg.db::org.Hs.egGO
   )
 
-  info <- lapply(env.list, function(env) AnnotationDbi::mget(eg[1], envir = env, ifnotfound = NA)[[1]])
+  info <- lapply(env.list, function(env) AnnotationDbi::mget(eg, envir = env, ifnotfound = NA)[[1]])
   names(info) <- names(env.list)
   gene.symbol <- toupper(AnnotationDbi::mget(as.character(eg),
-    envir = org.Hs.egSYMBOL2EG
+    envir = org.Hs.eg.db::org.Hs.egSYMBOL
   ))[1]
   info[["symbol"]] <- gene.symbol
 
