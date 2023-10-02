@@ -321,7 +321,7 @@ pgx.createPGX <- function(counts,
   
   
   # lock ensembl to version 110 (latest) and genes dataset
-  if(species$info == "ensembl"){
+  if(species_info$mart == "ensembl"){
     ensembl <- biomaRt::useEnsembl(biomart="genes", host = species_info$host, version = species_info$version)
     # lock ensembl to species
     ensembl <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
