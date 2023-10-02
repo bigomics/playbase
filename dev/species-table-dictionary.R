@@ -14,7 +14,7 @@ species[, species_name := sub("\\s*\\(.*\\)", "", description)]
 species[, species_name := sub(" genes", "", species_name)]
 
 # add col ds to species table
-species$ds <- "ensembl"
+species$mart <- "ensembl"
 
 
 # get other taxonomies from ensenbl genome
@@ -25,7 +25,7 @@ ds_genomes <- lapply(genomes$biomart, function(x) {
     #x = genomes$biomart[1]
     ensembl <- useEnsemblGenomes(biomart = x)
     ds <- listDatasets(ensembl)
-    ds$ds <- x
+    ds$mart <- x
     return(ds)
 })
 
@@ -56,11 +56,11 @@ species <- species[rev(seq_len(nrow(species)))]
 
 
 # add servers
- species[, host :=  data.table::fcase(ds ==  "ensembl", "https://www.ensembl.org",
-    ds == "plants_mart", "https://plants.ensembl.org",
-    ds == "protists_mart", "https://protists.ensembl.org",
-    ds == "metazoa_mart", "https://metazoa.ensembl.org",
-    ds == "fungi_mart", "https://fungi.ensembl.org")]
+ species[, host :=  data.table::fcase(mart ==  "ensembl", "https://www.ensembl.org",
+    mart == "plants_mart", "https://plants.ensembl.org",
+    mart == "protists_mart", "https://protists.ensembl.org",
+    mart == "metazoa_mart", "https://metazoa.ensembl.org",
+    mart == "fungi_mart", "https://fungi.ensembl.org")]
 
 # save Rdata
 
