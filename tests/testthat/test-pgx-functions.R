@@ -371,9 +371,6 @@ test_that("reverse.AvsB reverses A vs B contrasts", {
 #'
 #'
 
-#' Test for getKeggID
-#'
-#'
 
 #' Test for is.Date
 test_that("is.Date correctly identifies date columns", {

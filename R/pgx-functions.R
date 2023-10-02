@@ -1643,49 +1643,6 @@ computeFeatureScore <- function(X, Y, features) {
 
 
 ## -----------------------------------------------------------------------------
-## KEGG
-## -----------------------------------------------------------------------------
-
-
-#' @title Get KEGG ID from Gene Set Name
-#'
-#' @description This function guesses the KEGG ID from a gene set name.
-#'
-#' @param gsets A character vector of gene set names.
-#'
-#' @details The function takes a character vector of gene set names
-#' `gsets` as input and tries to guess the corresponding KEGG IDs.
-#' The function uses the `KEGG.db` package to retrieve a list of
-#' KEGG pathway names and IDs.
-#' It then searches for gene set names that contain a KEGG ID or a
-#' KEGG pathway name and returns the corresponding KEGG IDs.
-#'
-#' @return A character vector of the same length as `gsets`, containing
-#' the guessed KEGG IDs for each gene set name.
-#'
-#' @export
-getKeggID <- function(gsets) {
-  ## Guess KEGG id from gene set name
-  ##
-
-  kegg.names <- unlist(as.list(KEGG.db::KEGGPATHID2NAME))
-  kegg.ids <- names(kegg.names)
-  kegg.namesUPPERCASE <- toupper(gsub("[- ]", "_", gsub("[)(/,.']", "", kegg.names)))
-  kegg.namesUPPERCASE <- gsub("__|___", "_", kegg.namesUPPERCASE)
-
-  k1 <- grep("hsa[0-9]{5}$", gsets, value = TRUE, ignore.case = TRUE)
-  names(k1) <- sub(".*_hsa0", "0", k1)
-  k2 <- grep("kegg", gsets, value = TRUE, ignore.case = TRUE)
-  k2x <- sub(".*KEGG_", "", k2)
-  names(k2) <- kegg.ids[match(k2x, kegg.namesUPPERCASE)]
-
-  kegg.gsets <- c(k1, k2)
-  kegg.ids <- names(kegg.gsets)[match(gsets, kegg.gsets)]
-
-  return(kegg.ids)
-}
-
-## -----------------------------------------------------------------------------
 ## Generic helper functions
 ## -----------------------------------------------------------------------------
 

@@ -6,7 +6,7 @@
 \usage{
 compute_extra(
   ngs,
-  extra = c("meta.go", "deconv", "infer", "drugs", "connectivity", "wordcloud", "wgcna"),
+  extra = c("meta.go", "infer", "deconv", "drugs", "connectivity", "wordcloud", "wgcna"),
   sigdb = NULL,
   libx.dir = NULL
 )

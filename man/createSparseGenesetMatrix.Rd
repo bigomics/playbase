@@ -10,7 +10,8 @@ createSparseGenesetMatrix(
   max.geneset.size = 500,
   min_gene_frequency = 10,
   all_genes = pgx$all_genes,
-  annot_tabe = pgx$genes
+  annot_tabe = pgx$genes,
+  filter_genes = TRUE
 )
 }
 \arguments{
