@@ -874,12 +874,11 @@ hclustGraph <- function(g, k = NULL, mc.cores = 2) {
     i <- idx[1]
     if (mc.cores > 1 && length(unique(idx)) > 1) {
       idx.list <- tapply(1:length(idx), idx, list)
-      mc.cores
-      system.time(newidx0 <- parallel::mclapply(idx.list, function(ii) {
+      system.time(newidx0 <- lapply(idx.list, function(ii) {
         subg <- igraph::induced_subgraph(g, ii)
         subi <- igraph::cluster_louvain(subg)$membership
         return(subi)
-      }, mc.cores = mc.cores))
+      }))
       newidx0 <- lapply(1:length(newidx0), function(i) paste0(i, "-", newidx0[[i]]))
       newidx0 <- as.vector(unlist(newidx0))
       newidx <- rep(NA, length(idx))

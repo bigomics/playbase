@@ -205,6 +205,14 @@ pgx.createPGX <- function(counts,
     contrasts <- contrasts[used.samples, , drop = FALSE] ## sample-based!!!
   }
 
+  ## Check bad samples
+  min.counts <- 1e-4 * mean(colSums(counts, na.rm = TRUE))
+  sel <- which(colSums(counts, na.rm = TRUE) < pmax(min.counts, 1))
+  if (length(sel)) {
+    message("[createPGX] *WARNING* bad samples. Removing samples: ", paste(sel, collapse = " "))
+    counts <- counts[, -sel, drop = FALSE]
+  }
+
   ## -------------------------------------------------------------------
   ## conform
   ## -------------------------------------------------------------------
@@ -261,10 +269,12 @@ pgx.createPGX <- function(counts,
     ## euqalize them because the thresholds can become
     ## strange. Here we decide if normalizing is necessary (WARNING
     ## changes total counts!!!)
-    totratio <- log10(max(totcounts, na.rm = TRUE) / min(totcounts, na.rm = TRUE))
-    if (totratio > 6) {
+    totratio <- log10(max(1 + totcounts, na.rm = TRUE) / min(1 + totcounts, na.rm = TRUE))
+    totratio
+      if (totratio > 6) {
       cat("[createPGX:autoscale] WARNING: too large differences in total counts. forcing normalization.")
-      meancounts <- exp(mean(log(totcounts)))
+      meancounts <- exp(mean(log(1 + totcounts)))
+      meancounts
       counts <- t(t(counts) / totcounts) * meancounts
     }
 
@@ -401,6 +411,18 @@ pgx.createPGX <- function(counts,
   }
 
   ## -------------------------------------------------------------------
+  ## Check bad samples...
+  ## -------------------------------------------------------------------
+  min.counts <- 1e-3 * mean(colSums(pgx$counts, na.rm = TRUE))
+  sel <- which(colSums(pgx$counts, na.rm = TRUE) < pmax(min.counts, 1))
+  if (length(sel)) {
+    message("[createPGX] *WARNING* bad samples. Removing samples: ", paste(sel, collapse = " "))
+    pgx$counts <- pgx$counts[, -sel, drop = FALSE]
+    pgx$samples <- pgx$samples[-sel, , drop = FALSE]
+    pgx$contrasts <- pgx$contrasts[-sel, , drop = FALSE]
+  }
+
+  ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
   pgx <- compute_cellcycle_gender(pgx, pgx$counts)
@@ -409,32 +431,33 @@ pgx.createPGX <- function(counts,
   ## Batch-correction (if requested. WARNING: changes counts )
   ## -------------------------------------------------------------------
   batch.par <- c("batch", "batch2")
-  has.batchpar <- any(batch.par %in% colnames(pgx$samples))
+  has.batchpar <- any(grepl("^batch|^batch2", colnames(pgx$samples), ignore.case = TRUE))
   if (batch.correct && has.batchpar) {
     b <- "batch"
-    bb <- intersect(colnames(pgx$samples), batch.par)
+    bb <- grep("^batch|^batch2", colnames(pgx$samples), ignore.case = TRUE, value = TRUE)
     for (b in bb) {
       message("[createPGX] batch correcting for parameter '", b, "'\n")
-      batch <- pgx$samples$batch
       zz <- which(pgx$counts == 0, arr.ind = TRUE)
       cX <- log2(1 + pgx$counts)
       bx <- pgx$sample[, b]
+      if (length(unique(bx[!is.na(bx)])) > 1) {
+        message("[createPGX] batch correcting for counts using LIMMA\n")
+        cX <- limma::removeBatchEffect(cX, batch = bx) ## in log-space
+        cX <- pmax(2**cX - 1, 0)
+        cX[zz] <- 0
+        pgx$counts <- pmax(cX, 0) ## batch corrected counts...
 
-      message("[createPGX] batch correcting for counts using LIMMA\n")
-      cX <- limma::removeBatchEffect(cX, batch = bx) ## in log-space
-      cX <- pmax(2**cX - 1, 0)
-      cX[zz] <- 0
-      pgx$counts <- pmax(cX, 0) ## batch corrected counts...
-
-      if (!is.null(pgx$X)) {
-        message("[createPGX] batch correcting for logX using LIMMA\n")
-        pgx$X <- limma::removeBatchEffect(pgx$X, batch = bx) ## in log-space
-        pgx$X[zz] <- 0
+        if (!is.null(pgx$X)) {
+          message("[createPGX] batch correcting for logX using LIMMA\n")
+          pgx$X <- limma::removeBatchEffect(pgx$X, batch = bx) ## in log-space
+          pgx$X[zz] <- 0
+        }
+      } else {
+        message("createPGX] invalid batch paramater")
       }
     }
     remove(cX)
   }
-
 
   ## -------------------------------------------------------------------
   ## Pre-calculate t-SNE for and get clusters early so we can use it
@@ -526,7 +549,10 @@ pgx.computePGX <- function(pgx,
                            do.cluster = TRUE,
                            use.design = TRUE,
                            prune.samples = FALSE,
-                           extra.methods = c("meta.go", "infer", "deconv", "drugs", "wordcloud", "wgcna")[c(1, 2)],
+                           extra.methods = c(
+                             "meta.go", "infer", "deconv", "drugs",
+                             "connectivity", "wordcloud", "wgcna"
+                           )[c(1, 2)],
                            libx.dir = NULL,
                            progress = NULL) {
   ## ======================================================================
@@ -543,7 +569,7 @@ pgx.computePGX <- function(pgx,
   is.numcontrast <- all(contr.values %in% c(NA, -1, 0, 1))
   is.numcontrast <- is.numcontrast && (-1 %in% contr.values) && (1 %in% contr.values)
   if (!is.numcontrast) {
-    contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
+    contr.matrix <- playbase::makeContrastsFromLabelMatrix(contr.matrix)
     contr.matrix <- sign(contr.matrix) ## sign is fine
   }
 
@@ -570,7 +596,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
   message("[pgx.computePGX] testing genes...")
 
-  pgx <- compute_testGenes(
+  pgx <- playbase::compute_testGenes(
     pgx, contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
@@ -582,7 +608,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
   message("[pgx.computePGX] testing genesets...")
-  pgx <- compute_testGenesets(
+  pgx <- playbase::compute_testGenesets(
     pgx,
     custom.geneset = custom.geneset,
     max.features = max.genesets,

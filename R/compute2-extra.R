@@ -16,7 +16,7 @@
 #' @return An updated object with additional analysis results.
 #' @export
 compute_extra <- function(ngs, extra = c(
-                            "meta.go", "deconv", "infer", "drugs", ## "graph",
+                            "meta.go", "infer", "deconv", "drugs", ## "graph",
                             "connectivity", "wordcloud", "wgcna"
                           ), sigdb = NULL, libx.dir = NULL) {
   timings <- c()
@@ -125,7 +125,7 @@ compute_extra <- function(ngs, extra = c(
     if (!is.null(libx.dir) || !is.null(sigdb)) {
       message(">>> Computing connectivity scores...")
       if (is.null(sigdb)) {
-        sigdb <- dir(file.path(libx.dir, "sigdb"), pattern = "^sigdb-.*h5$", full.names = TRUE)
+        sigdb <- dir(file.path(libx.dir, "sigdb"), pattern = "h5$", full.names = TRUE)
       }
 
       db <- sigdb[1]
@@ -155,10 +155,12 @@ compute_extra <- function(ngs, extra = c(
     }
   }
 
-
   if ("wgcna" %in% extra) {
     message(">>> Computing wgcna...")
-    ngs$wgcna <- pgx.wgcna(ngs)
+    tt <- system.time({
+      ngs$wgcna <- pgx.wgcna(ngs)
+    })
+    timings <- rbind(timings, c("wgcna", tt))
   }
 
   ## ------------------------------------------------------

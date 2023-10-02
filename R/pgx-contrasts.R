@@ -438,7 +438,7 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, slen = 2
 #' for differential analysis.
 #'
 #' @export
-pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
+pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL, max.level = 10,
                                   fix.degenerate = FALSE, skip.hidden = TRUE) {
   shortestunique <- function(xx, slen = 3) {
     dup <- sapply(
@@ -544,7 +544,11 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
   df[df == ""] <- NA
   df[df == " "] <- NA
 
-  ## ----------- use type.convert to infer parameters
+  ## ----------- careful cleanup
+  df <- apply(df, 2, function(s) gsub("[`'\"]", "", s))
+  df <- apply(df, 2, function(s) trimws(gsub("[ ]+", " ", s)))
+
+  ## ----------- use type.convert to infer parameter type
   df <- utils::type.convert(data.frame(df, check.names = FALSE), as.is = TRUE)
 
   ## ----------- convert numeric variables into bins
@@ -557,7 +561,11 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
     }
   }
 
-  ## ----------- try to detect time series (detect factors by time)
+  ## ----------- remove phenotype with too many levels
+  level.num <- apply(df, 2, function(x) length(unique(x[!is.na(x)])))
+  level.ratio <- level.num / apply(df, 2, function(x) length(x[!is.na(x)]))
+  sel <- (level.num <= max.level | level.ratio < 0.20)
+  df <- df[, sel, drop = FALSE]
 
   ## emergency bail out...
   if (ncol(df) == 0) {
@@ -656,10 +664,6 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL,
 
   return(out)
 }
-
-
-
-
 
 
 #' Convert contrast matrix to group labels

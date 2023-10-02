@@ -637,7 +637,6 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     if (file.exists(sigdb.file)) unlink(sigdb.file)
     if (verbose) message("[updateDatasetFolder] creating sig DB: ", sigdb.file, "...")
     pgx.createSignatureDatabaseH5.fromMatrix(sigdb.file, X = allFC)
-    pgx.addEnrichmentSignaturesH5(sigdb.file, X = allFC, methods = "rankcor")
     h5.missing <- NULL
   }
 
@@ -822,8 +821,6 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
       if (file.exists(sigdb)) unlink(sigdb)
       if (verbose) message("[pgxinfo.updateDatasetFolder] creating signature DB to", sigdb, "...")
       pgx.createSignatureDatabaseH5.fromMatrix(sigdb, X = allFC)
-      if (verbose) message("[pgxinfo.updateDatasetFolder] add enrichment signature to", sigdb, "...")
-      pgx.addEnrichmentSignaturesH5(sigdb, X = allFC, methods = "rankcor")
     }
 
     tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")

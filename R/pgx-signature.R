@@ -584,8 +584,12 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
     rhdf5::h5write(pos[["umap3d"]], h5.file, "clustering/umap3d") ## can write list??
   }
 
-  dbg("[pgx.createSignatureDatabaseH5.fromMatrix] closing file...")
+  ## --------------------------------------------------
+  ## Add enrichment signatures
+  ## --------------------------------------------------
+  pgx.addEnrichmentSignaturesH5(h5.file, X = X, mc.cores = 0, methods = "rankcor")
 
+  ## done!
   rhdf5::h5closeAll()
 }
 
@@ -650,7 +654,7 @@ pgx.addEnrichmentSignaturesH5 <- function(h5.file, X = NULL, mc.cores = 0,
   if ("gsea" %in% methods) {
     cat("[pgx.addEnrichmentSignaturesH5] starting fGSEA for", length(gmt), "gene sets...")
     i <- 1
-    F1 <- parallel::mclapply(colnames(X), function(i) {
+    F1 <- lapply(colnames(X), function(i) {
       xi <- X[, i]
       xi <- xi[!is.na(xi)]
 

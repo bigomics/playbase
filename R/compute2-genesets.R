@@ -39,8 +39,6 @@ compute_testGenesets <- function(pgx,
                                  custom.geneset = NULL,
                                  test.methods = c("gsva", "camera", "fgsea"),
                                  remove.outputs = TRUE) {
-  ## Rewritten 24.12.2019. Now much faster but needs gset-sparseG-XL
-  ## precomputed.
 
   if (!"X" %in% names(pgx)) {
     stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
@@ -49,7 +47,13 @@ compute_testGenesets <- function(pgx,
   # Load custom genesets (if user provided)
   if (!is.null(custom.geneset$gmt)) {
     # convert gmt standard to SPARSE matrix
-    custom_gmt <- createSparseGenesetMatrix(custom.geneset$gmt, min_gene_frequency = 1)
+    custom_gmt <- createSparseGenesetMatrix(
+      gmt.all = custom.geneset$gmt,
+      min.geneset.size = 3,
+      max.geneset.size = 9999,
+      min_gene_frequency = 1,
+      filter_genes = FALSE
+    )
   }
 
   ## -----------------------------------------------------------
@@ -68,17 +72,9 @@ compute_testGenesets <- function(pgx,
   G <- G[, colnames(G) %in% genes]
 
   # Normalize G after removal of genes
-  G <- normalize_matrix_by_row(G)
 
-  if (!is.null(custom.geneset$gmt)) {
-    custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes]
-    custom_gmt <- normalize_matrix_by_row(custom_gmt)
-    # combine standard genesets with custom genesets
-    G <- merge_sparse_matrix(G, custom_gmt)
-  }
 
-  # Transpose G ???
-  G <- Matrix::t(G)
+  G <- playbase::normalize_matrix_by_row(G)
 
   ## -----------------------------------------------------------
   ## Filter gene sets
@@ -86,7 +82,7 @@ compute_testGenesets <- function(pgx,
 
   ## filter gene sets on size
   cat("Filtering gene sets on size...\n")
-  gmt.size <- Matrix::colSums(G != 0)
+  gmt.size <- Matrix::rowSums(G != 0)
   size.ok <- (gmt.size >= 15 & gmt.size <= 400)
 
   # If dataset is too small that size.ok == 0, then select top 100
@@ -95,7 +91,22 @@ compute_testGenesets <- function(pgx,
     size.ok <- names(gmt.size) %in% names(top_100gs)
   }
 
-  G <- G[, which(size.ok)]
+  G <- G[which(size.ok), ]
+
+  # Transpose G
+
+  G <- Matrix::t(G)
+
+  if (!is.null(custom.geneset$gmt)) {
+    # upper case in custom gmt genes (to accomodate for mouse genes)
+    colnames(custom_gmt) <- toupper(colnames(custom_gmt))
+    custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes, drop = FALSE]
+    custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
+
+    # combine standard genesets with custom genesets
+
+    G <- playbase::merge_sparse_matrix(m1 = G, m2 = Matrix::t(custom_gmt))
+  }
 
   ## -----------------------------------------------------------
   ## create the full GENE matrix (always collapsed by gene)
@@ -192,10 +203,16 @@ compute_testGenesets <- function(pgx,
   gc()
 
   gset.meta <- gset.fitContrastsWithAllMethods(
-    gmt = gmt, X = X, Y = Y, G = G,
+    gmt = gmt,
+    X = X,
+    Y = Y,
+    G = G,
     design = design,
-    contr.matrix = contr.matrix, methods = test.methods,
-    mc.threads = 1, mc.cores = NULL, batch.correct = TRUE
+    contr.matrix = contr.matrix,
+    methods = test.methods,
+    mc.threads = 1,
+    mc.cores = NULL,
+    batch.correct = TRUE
   )
 
   rownames(gset.meta$timings) <- paste("[test.genesets]", rownames(gset.meta$timings))
@@ -274,7 +291,9 @@ clean_gmt <- function(gmt.all, gmt.db) {
   gmt.all <- unlist(gmt.all, recursive = FALSE, use.names = TRUE)
 
   ## get rid of trailing numeric values
-  gmt.all <- parallel::mclapply(gmt.all, function(x) gsub("[,].*", "", x), mc.cores = 1)
+  gmt.all <- lapply(gmt.all, function(x) gsub("[,].*", "", x))
+
+
 
   ## order by length and take out duplicated sets (only by name)
   gmt.all <- gmt.all[order(-sapply(gmt.all, length))]
@@ -303,30 +322,50 @@ createSparseGenesetMatrix <- function(
     max.geneset.size = 500,
     min_gene_frequency = 10,
     all_genes = pgx$all_genes,
-    annot_tabe = pgx$genes) {
+    annot_tabe = pgx$genes,
+    filter_genes = TRUE) {
   ## ----------- Get all official gene symbols
   known.symbols <- sort(all_genes)
+    
+  # WARNING #
+  # This function is usd in playbase and playdata to generate curated GMT. Do not change it without testing it in both packages to ensure reproducibility.
+
+  if (filter_genes == TRUE) {
+    ## ----------- Get all official gene symbols
+    symbol <- as.list(org.Hs.eg.db::org.Hs.egSYMBOL)
+    known.symbols <- sort(unique(unlist(symbol)))
+  }
 
   ## ------------- filter by size
   gmt.size <- sapply(gmt.all, length)
-  gmt.all <- gmt.all[which(gmt.size >= 15 & gmt.size <= 1000)]
+
+  gmt.all <- gmt.all[which(gmt.size >= min.geneset.size & gmt.size <= max.geneset.size)]
 
   ## ------------- filter genes by minimum frequency and chrom
   genes.table <- table(unlist(gmt.all))
   genes <- names(which(genes.table >= min_gene_frequency))
-  genes <- genes[grep("^LOC|RIK$", genes, invert = TRUE)]
-  genes <- intersect(genes, known.symbols)
+  
   annot <- annot_tabe
-  genes <- genes[!is.na(annot$chr)]
 
+  if (filter_genes == TRUE) {
+    genes <- genes[grep("^LOC|RIK$", genes, invert = TRUE)]
+    genes <- intersect(genes, known.symbols)
+  }
+
+  if (filter_genes == TRUE) {
+    annot <- annot[annot$chr %in% c(1:22, "X", "Y"), ]
+    genes <- genes[!is.na(annot$chr)]
+  }
+  
   ## Filter genesets with permitted genes (official and min.sharing)
-  gmt.all <- parallel::mclapply(gmt.all, function(s) intersect(s, genes))
-  gmt.size <- sapply(gmt.all, length)
+  gmt.all <- lapply(gmt.all, function(s) intersect(s, genes))
+
   gmt.all <- gmt.all[which(gmt.size >= min.geneset.size & gmt.size <= max.geneset.size)] # legacy
   ## build huge sparsematrix gene x genesets
   genes <- sort(genes)
-  idx.j <- parallel::mclapply(gmt.all[], function(s) match(s, genes))
+  idx.j <- lapply(gmt.all, function(s) match(s, genes))
   idx.i <- lapply(1:length(gmt.all), function(i) rep(i, length(idx.j[[i]])))
+
   ii <- unlist(idx.i)
   jj <- unlist(idx.j)
 
@@ -336,6 +375,9 @@ createSparseGenesetMatrix <- function(
   )
   colnames(G) <- genes
   rownames(G) <- names(gmt.all)
+
+  # remove NA rows
+  G <- G[!is.na(rownames(G)), ]
 
   return(G)
 }
@@ -379,5 +421,23 @@ merge_sparse_matrix <- function(m1, m2) {
 
   combined_gmt <- Matrix::rbind2(m1, m2)
 
+  # if rows have duplicated names, then sum them and keep only one row
+  if (any(duplicated(rownames(combined_gmt)))) {
+    dup_rows <- unique(rownames(combined_gmt)[duplicated(rownames(combined_gmt))])
+    summed_rows <- lapply(dup_rows, function(x) Matrix::colSums(combined_gmt[rownames(combined_gmt) == x, ]))
+
+    # convert summed rows to a matrix
+    summed_rows <- do.call(rbind, summed_rows)
+
+    # add names to summed rows
+    rownames(summed_rows) <- dup_rows
+
+    # remove duplicated rows
+    combined_gmt <- combined_gmt[!rownames(combined_gmt) %in% dup_rows, ]
+
+    # add summed rows
+
+    combined_gmt <- Matrix::rbind2(combined_gmt, summed_rows)
+  }
   return(combined_gmt)
 }
