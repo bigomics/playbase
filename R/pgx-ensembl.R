@@ -76,7 +76,7 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
   probe_types_to_check <- c("ensembl_gene_id",
                             "ensembl_transcript_id",
                             "ensembl_transcript_id_version",
-                            "hgnc_symbol",
+                            "external_gene_name",
                             "ensembl_gene_id_version",
                             "uniprot_gn_id",
                             "refseq_peptide",
