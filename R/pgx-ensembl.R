@@ -179,7 +179,6 @@ ngs.getGeneAnnotation <- function(probes,
   attr_call <- c(
     probe_type,
     "external_gene_name",  # gene_name
-    "hgnc_symbol",         # Hugo name
     "description",         # gene_title
     "gene_biotype",        # gene_biotype
     "chromosome_name",     # chr
