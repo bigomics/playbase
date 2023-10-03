@@ -46,11 +46,12 @@ compute_testGenesets <- function(pgx,
   # Load custom genesets (if user provided)
   if (!is.null(custom.geneset$gmt)) {
     # convert gmt standard to SPARSE matrix
-    custom_gmt <- playbase::createSparseGenesetMatrix(
+    custom_gmt <- createSparseGenesetMatrix(
       gmt.all = custom.geneset$gmt,
       min.geneset.size = 3,
       max.geneset.size = 9999,
-      min_gene_frequency = 1
+      min_gene_frequency = 1,
+      filter_genes = FALSE
     )
   }
 
@@ -318,10 +319,16 @@ createSparseGenesetMatrix <- function(
     gmt.all,
     min.geneset.size = 15,
     max.geneset.size = 500,
-    min_gene_frequency = 10) {
-  ## ----------- Get all official gene symbols
-  symbol <- as.list(org.Hs.eg.db::org.Hs.egSYMBOL)
-  known.symbols <- sort(unique(unlist(symbol)))
+    min_gene_frequency = 10,
+    filter_genes = TRUE) {
+  # WARNING #
+  # This function is usd in playbase and playdata to generate curated GMT. Do not change it without testing it in both packages to ensure reproducibility.
+
+  if (filter_genes == TRUE) {
+    ## ----------- Get all official gene symbols
+    symbol <- as.list(org.Hs.eg.db::org.Hs.egSYMBOL)
+    known.symbols <- sort(unique(unlist(symbol)))
+  }
 
   ## ------------- filter by size
   gmt.size <- sapply(gmt.all, length)
@@ -331,9 +338,17 @@ createSparseGenesetMatrix <- function(
   ## ------------- filter genes by minimum frequency and chrom
   genes.table <- table(unlist(gmt.all))
   genes <- names(which(genes.table >= min_gene_frequency))
-  genes <- genes[grep("^LOC|RIK$", genes, invert = TRUE)]
-  genes <- intersect(genes, known.symbols)
+
+  if (filter_genes == TRUE) {
+    genes <- genes[grep("^LOC|RIK$", genes, invert = TRUE)]
+    genes <- intersect(genes, known.symbols)
+  }
+
   annot <- playbase::ngs.getGeneAnnotation(genes)
+
+  if (filter_genes == TRUE) {
+    annot <- annot[annot$chr %in% c(1:22, "X", "Y"), ]
+  }
   genes <- genes[!is.na(annot$chr)]
 
   ## Filter genesets with permitted genes (official and min.sharing)
@@ -354,6 +369,9 @@ createSparseGenesetMatrix <- function(
   )
   colnames(G) <- genes
   rownames(G) <- names(gmt.all)
+
+  # remove NA rows
+  G <- G[!is.na(rownames(G)), ]
 
   return(G)
 }
