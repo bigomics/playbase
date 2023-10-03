@@ -252,14 +252,14 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   dimnames(G) <- list(rn[row.idx], cn)
 
   ## rank correlation??
-  rG  <- apply(G[gg, ], 2, rank, na.last = "keep")
+  rG <- apply(G[gg, ], 2, rank, na.last = "keep")
   rfc <- rank(fc[gg], na.last = "keep")
   rG[is.na(rG)] <- 0
   rfc[is.na(rfc)] <- 0
   suppressWarnings(rho <- stats::cor(rG, rfc, use = "pairwise")[, 1])
 
   remove(G, rG, rfc)
-  
+
   ## --------------------------------------------------
   ## test tops signatures using fGSEA
   ## --------------------------------------------------
@@ -274,7 +274,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   sig100.dn <- rhdf5::h5read(h5.file, "signature/sig100.dn", index = idx)
   colnames(sig100.up) <- cn[sel.idx]
   colnames(sig100.dn) <- cn[sel.idx]
-  
+
   ## combine up/down into one (unsigned GSEA test)
   gmt <- rbind(sig100.up, sig100.dn)
   gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
@@ -287,34 +287,34 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   ## --------------------------------------------------
   ## Fisher test
   ## --------------------------------------------------
-  fc.up <- fc[fc>0]
-  fc.dn <- fc[fc<0]
-  top.up <- head(names(sort(-fc.up)), 3*nsig)  ## RETHINK!
-  top.dn <- head(names(sort(+fc.dn)), 3*nsig)  
+  fc.up <- fc[fc > 0]
+  fc.dn <- fc[fc < 0]
+  top.up <- head(names(sort(-fc.up)), 3 * nsig) ## RETHINK!
+  top.dn <- head(names(sort(+fc.dn)), 3 * nsig)
   top.fc <- c(top.up, top.dn)
-  bg <- intersect(names(fc), rn)  
-  stats <- playbase::gset.fisher(top.fc, gmt, background=bg, fdr=1, min.genes=0, nmin=0)
+  bg <- intersect(names(fc), rn)
+  stats <- playbase::gset.fisher(top.fc, gmt, background = bg, fdr = 1, min.genes = 0, nmin = 0)
   or.max <- max(stats$odd.ratio[!is.infinite(stats$odd.ratio)])
-  stats$odd.ratio[is.infinite(stats$odd.ratio)] <- max(99, 2*or.max)
+  stats$odd.ratio[is.infinite(stats$odd.ratio)] <- max(99, 2 * or.max)
 
   ## --------------------------------------------------
   ## Sparse GSET matrix
   ## --------------------------------------------------
   bg <- intersect(names(fc), rn)
   gmt100.up <- unlist(apply(sig100.up, 2, list), recursive = FALSE)
-  gmt100.dn <- unlist(apply(sig100.dn, 2, list), recursive = FALSE)    
-  G1 <- playbase::gmt2mat(gmt100.up, bg=bg)
-  G2 <- playbase::gmt2mat(gmt100.dn, bg=bg)
-  G1 <- G1[match(bg,rownames(G1)),]
-  G2 <- G2[match(bg,rownames(G2)),colnames(G1)] 
+  gmt100.dn <- unlist(apply(sig100.dn, 2, list), recursive = FALSE)
+  G1 <- playbase::gmt2mat(gmt100.up, bg = bg)
+  G2 <- playbase::gmt2mat(gmt100.dn, bg = bg)
+  G1 <- G1[match(bg, rownames(G1)), ]
+  G2 <- G2[match(bg, rownames(G2)), colnames(G1)]
   G <- G1 - G2
   dim(G)
-  remove(G1,G2)
-##  tau <- qlcMatrix::corSparse( G[bg,], cbind(fc[bg]) )[,1]
-  tau <- qlcMatrix::cosSparse( G[bg,], cbind(fc[bg]) )[,1]
+  remove(G1, G2)
+  ##  tau <- qlcMatrix::corSparse( G[bg,], cbind(fc[bg]) )[,1]
+  tau <- qlcMatrix::cosSparse(G[bg, ], cbind(fc[bg]))[, 1]
   jj <- match(res$pathway, colnames(G))
   res$tau <- tau[jj]
-  
+
   ## ---------------------------------------------------------------
   ## Combine correlation+GSEA by combined score (NES*rho)
   ## ---------------------------------------------------------------
@@ -324,8 +324,8 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
 
   ii <- match(res$pathway, rownames(stats))
   res$odd.ratio <- stats$odd.ratio[ii]
-  res$overlap   <- stats$overlap[ii]
-  
+  res$overlap <- stats$overlap[ii]
+
   res$score <- res$R2 * res$NES * res$odd.ratio * abs(res$tau)
   res <- res[order(abs(res$score), decreasing = TRUE), ]
 
