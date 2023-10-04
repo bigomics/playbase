@@ -47,13 +47,14 @@ compute_testGenesets <- function(pgx,
   # Load custom genesets (if user provided)
   if (!is.null(custom.geneset$gmt)) {
     # convert gmt standard to SPARSE matrix
-    custom_gmt <- createSparseGenesetMatrix(
+    custom_gmt <- playbase::createSparseGenesetMatrix(
       gmt.all = custom.geneset$gmt,
       min.geneset.size = 3,
       max.geneset.size = 9999,
       min_gene_frequency = 1,
       filter_genes = FALSE
     )
+
   }
 
   ## -----------------------------------------------------------
@@ -66,11 +67,10 @@ compute_testGenesets <- function(pgx,
   ## Filter genes
   ## -----------------------------------------------------------
 
-  ## filter genes only in dataset
-  genes <- unique(c(
-    as.character(pgx$genes$gene_name),
-    as.character(pgx$genes$hsapiens_homolog_associated_gene_name))
-    )
+  ## filter genes by gene or homologous, if it exists
+  genes <- ifelse(!is.na(pgx$genes$hsapiens_homolog_associated_gene_name), pgx$genes$hsapiens_homolog_associated_gene_name, pgx$genes$gene_name)
+  # replace "" to NA in pgx$genes$hsapiens_homolog_associated_gene_name
+
   #genes <- toupper(genes) ## handle mouse genes...
   G <- G[, colnames(G) %in% genes]
 
@@ -100,13 +100,15 @@ compute_testGenesets <- function(pgx,
   G <- Matrix::t(G)
 
   if (!is.null(custom.geneset$gmt)) {
-    # upper case in custom gmt genes (to accomodate for mouse genes)
-    colnames(custom_gmt) <- toupper(colnames(custom_gmt))
+    # convert genes in custom_gmt to homologous genes, when available
+    matched_custom_genes_in_gene_name <- match(colnames(custom_gmt), pgx$genes$gene_name)
+    matched_custom_genes_in_homologs <- pgx$genes$gene_name[matched_custom_genes_in_gene_name]
+    matched_custom_genes_in_gene_name <- ifelse(is.na(matched_custom_genes_in_homologs), NA, matched_custom_genes_in_gene_name)
+    homologous <- pgx$genes$hsapiens_homolog_associated_gene_name[matched_custom_genes_in_gene_name]
+    colnames(custom_gmt) <- ifelse(is.na(matched_custom_genes_in_gene_name),colnames(custom_gmt),homologous)
     custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes, drop = FALSE]
     custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
-
     # combine standard genesets with custom genesets
-
     G <- playbase::merge_sparse_matrix(m1 = G, m2 = Matrix::t(custom_gmt))
   }
 
@@ -138,7 +140,18 @@ compute_testGenesets <- function(pgx,
   ## create the GENESETxGENE matrix
   ## -----------------------------------------------------------
   cat("Matching gene set matrix...\n")
-  gg <- toupper(rownames(X)) ## accomodate for mouse...
+  # if homologous is available, use homologous gene in geneset
+  if(!is.null(pgx$genes$hsapiens_homolog_associated_gene_name)){
+    # check which rownames(X) in pgx$gene$gene_name
+    matched_genes_in_gene_name <- match(rownames(X), pgx$genes$gene_name)
+    # check which matched have homologues
+    matched_genes_in_homologs <- pgx$genes$hsapiens_homolog_associated_gene_name[matched_genes_in_gene_name]
+    matched_genes_in_gene_name <- ifelse(is.na(matched_genes_in_homologs), NA, matched_genes_in_gene_name)
+    homologous <- pgx$genes$hsapiens_homolog_associated_gene_name[matched_genes_in_gene_name]
+    rownames(X) <- ifelse(is.na(matched_genes_in_gene_name),rownames(X), homologous)
+
+  }
+  gg <- rownames(X) #toupper(rownames(X)) ## accomodate for mouse...
   ii <- intersect(gg, rownames(G))
   G <- G[ii, , drop = FALSE]
   xx <- setdiff(gg, rownames(G))
@@ -200,16 +213,11 @@ compute_testGenesets <- function(pgx,
   cat(">>> Testing gene sets with methods:", test.methods, "\n")
 
   ## convert to gene list
-  gmt <- mat2gmt(G)
+  gmt <- playbase::mat2gmt(G)
   Y <- pgx$samples
   gc()
 
-  # if homologous is available, use homologous gene in geneset
-  if(!is.null(pgx$genes$hsapiens_homolog_associated_gene_name)){
-    rownames(X) <- ifelse(!is.na(df$hsapiens_homolog_associated_gene_name), df$hsapiens_homolog_associated_gene_name, df$gene_name)
-  }
-
-  gset.meta <- gset.fitContrastsWithAllMethods(
+  gset.meta <- playbase::gset.fitContrastsWithAllMethods(
     gmt = gmt,
     X = X,
     Y = Y,
