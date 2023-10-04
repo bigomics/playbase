@@ -209,12 +209,16 @@ ngs.getGeneAnnotation <- function(probes,
     annot_homologs <- data.table::data.table(annot_homologs)
     annot <- annot[annot_homologs, on = probe_type]
   }
-  data.table::setnames(annot,
-                       old = c("external_gene_name", "description", "gene_biotype", "chromosome_name", "transcript_start", "transcript_length", "band"),
-                       new = c("gene_name", "gene_title", "gene_biotype", "chr", "pos", "tx_len", "map"))
 
+  # Join with clean_probes vector
   data.table::setkeyv(annot, colnames(annot))
   out <- annot[clean_probes, on = probe_type, mult = "first"]
+
+  # Renaming for backwards compatibility
+  data.table::setnames(out,
+                      old = c("external_gene_name", "description", "gene_biotype", "chromosome_name", "transcript_start", "transcript_length", "band"),
+                      new = c("gene_name", "gene_title", "gene_biotype", "chr", "pos", "tx_len", "map"))
+
   out <- as.data.frame(out)
   rownames(out) <- clean_probes
   return(out)
