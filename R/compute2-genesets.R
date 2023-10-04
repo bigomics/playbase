@@ -67,12 +67,14 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
 
   ## filter genes only in dataset
-  genes <- unique(as.character(pgx$genes$gene_name))
-  genes <- toupper(genes) ## handle mouse genes...
+  genes <- unique(c(
+    as.character(pgx$genes$gene_name),
+    as.character(pgx$genes$hsapiens_homolog_associated_gene_name))
+    )
+  #genes <- toupper(genes) ## handle mouse genes...
   G <- G[, colnames(G) %in% genes]
 
   # Normalize G after removal of genes
-
 
   G <- playbase::normalize_matrix_by_row(G)
 
@@ -201,6 +203,11 @@ compute_testGenesets <- function(pgx,
   gmt <- mat2gmt(G)
   Y <- pgx$samples
   gc()
+
+  # if homologous is available, use homologous gene in geneset
+  if(!is.null(pgx$genes$hsapiens_homolog_associated_gene_name)){
+    rownames(X) <- ifelse(!is.na(df$hsapiens_homolog_associated_gene_name), df$hsapiens_homolog_associated_gene_name, df$gene_name)
+  }
 
   gset.meta <- gset.fitContrastsWithAllMethods(
     gmt = gmt,
