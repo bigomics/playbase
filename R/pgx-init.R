@@ -192,7 +192,10 @@ if ("hgnc_symbol" %in% colnames(pgx$genes)) {
   pgx$families <- lapply(playdata::FAMILIES, function(x) setdiff(genes[match(x, hgenes)], NA))
 } else {
   # Here we use the homologs when available, instead of gene_name
-  genes <- ifelse(!is.na(pgx$genes$hsapiens_homolog_associated_gene_name), pgx$genes$hsapiens_homolog_associated_gene_name, pgx$genes$gene_name)
+  genes <- ifelse(!is.na(pgx$genes$hsapiens_homolog_associated_gene_name), 
+                  pgx$genes$hsapiens_homolog_associated_gene_name, 
+                  pgx$genes$gene_name)
+                  
   pgx$families <- lapply(playdata::FAMILIES, function(x) intersect(x, genes))
 }
 famsize <- sapply(pgx$families, length)
