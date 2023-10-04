@@ -208,6 +208,7 @@ ngs.getGeneAnnotation <- function(probes,
     )
     annot_homologs <- data.table::data.table(annot_homologs)
     annot <- annot[annot_homologs, on = probe_type]
+    annot[hsapiens_homolog_associated_gene_name == "", hsapiens_homolog_associated_gene_name := NA]
   }
 
   # Join with clean_probes vector
