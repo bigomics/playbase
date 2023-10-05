@@ -1401,13 +1401,12 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
       names(gset) <- paste0(names(gset), " (", gmt.source, ")")
     }
 
-    gset
+    return(gset)
   }
 
   ## -----------------------------------------------------------------------------
   ## Gene families
   ## -----------------------------------------------------------------------------
-
 
   families <- list()
   families[["<all>"]] <- genes ## X is sorted
@@ -1459,19 +1458,6 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
   families[["Nuclear receptors"]] <- genes[grep("^NR[0-9]|^RXR|^ESR|^PGR$|^AR$|^HNF4|^ROR|^PPAR|^THR|^VDR", genes)]
   families[["Cytochrome family"]] <- genes[grep("^CYP|^CYB|^CYC|^COX|^COA", genes)]
   families[["Micro RNA"]] <- genes[grep("^MIR", genes)]
-
-  ## add pathways?
-
-  ## convert to mouse???
-  is.mouse <- (mean(grepl("[a-z]", sub(".*:", "", genes))) > 0.8)
-
-  if (is.mouse) {
-    mouse.genes <- as.character(unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL)))
-    names(mouse.genes) <- toupper(mouse.genes)
-    families <- lapply(families, function(s) {
-      setdiff(as.character(mouse.genes[toupper(s)]), NA)
-    })
-  }
 
   ## sort all
   families <- lapply(families, function(f) intersect(f, genes))
