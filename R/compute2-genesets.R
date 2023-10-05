@@ -44,6 +44,10 @@ compute_testGenesets <- function(pgx,
     stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
   }
 
+  if(is.null(pgx$genes$hsapiens_homolog_associated_gene_name)){
+    pgx$genes$hsapiens_homolog_associated_gene_name <- NA
+  }
+
   # Load custom genesets (if user provided)
   if (!is.null(custom.geneset$gmt)) {
     # convert gmt standard to SPARSE matrix
