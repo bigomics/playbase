@@ -90,10 +90,7 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
   # the type that guess better, is the one that will be used
   # this approach still has issues, as sometimes we have mixed probe types in on study.
 
-
   probe_check <- sapply(probe_types_to_check, FUN = function(x) {
-    # TODO write a while loop that stops when we first get 20 IDs mapped, o
-    # continue until the end if not
     tryCatch({
       tmp <- biomaRt::getBM(attributes = x,
                             filters = x,
@@ -218,7 +215,7 @@ ngs.getGeneAnnotation <- function(probes,
 
   # Renaming for backwards compatibility
   data.table::setnames(out,
-                      old = c("external_gene_name", "description", "gene_biotype", "chromosome_name", "transcript_start", "transcript_length", "band"),
+                      old = c(probe_type, "description", "gene_biotype", "chromosome_name", "transcript_start", "transcript_length", "band"),
                       new = c("gene_name", "gene_title", "gene_biotype", "chr", "pos", "tx_len", "map"))
 
   out <- as.data.frame(out)
