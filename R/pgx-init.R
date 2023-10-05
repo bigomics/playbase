@@ -170,70 +170,72 @@ pgx.initialize <- function(pgx) {
   ## ----------------------------------------------------------------
 
   # Convert to DT for back-compatibility
-  pgx$genes <- pgx$genes[rownames(pgx$counts), , drop = FALSE]
-  pgx$genes$gene_name <- as.character(pgx$genes$gene_name)
-  pgx$genes$gene_title <- as.character(pgx$genes$gene_title)
+pgx$genes <- pgx$genes[rownames(pgx$counts), , drop = FALSE]
+pgx$genes$gene_name <- as.character(pgx$genes$gene_name)
+pgx$genes$gene_title <- as.character(pgx$genes$gene_title)
 
-  ## -----------------------------------------------------------------------------
-  ## intersect and filter gene families (convert species to human gene sets)
-  ## -----------------------------------------------------------------------------
-  if ("hgnc_symbol" %in% colnames(pgx$genes)) {
+## -----------------------------------------------------------------------------
+## intersect and filter gene families (convert species to human gene sets)
+## -----------------------------------------------------------------------------
+if ("hgnc_symbol" %in% colnames(pgx$genes)) {
+  #FIXME previously had had hgnc_symbol as column in pgx$genes?
+  #FIXME why is this necessary
+  hgenes <- toupper(pgx$genes$hgnc_symbol)
+  genes <- pgx$genes$external_gene_name
+  pgx$families <- lapply(playdata::FAMILIES, function(x) setdiff(genes[match(x, hgenes)], NA))
+} else {
+  #TODO I think we should use the homologs here as well, so I am converted the genes to homologs when available
+  genes <- ifelse(!is.na(pgx$genes$hsapiens_homolog_associated_gene_name), pgx$genes$hsapiens_homolog_associated_gene_name, pgx$genes$gene_name)
+  pgx$families <- lapply(playdata::FAMILIES, function(x) intersect(x, genes))
+}
+famsize <- sapply(pgx$families, length)
+pgx$families <- pgx$families[which(famsize >= 10)]
 
-    hgenes <- toupper(pgx$genes$hgnc_symbol)
-    genes <- pgx$genes$external_gene_name
-    pgx$families <- lapply(playdata::FAMILIES, function(x) setdiff(genes[match(x, hgenes)], NA))
-  } else {
-    genes <- toupper(pgx$genes$gene_name)
-    pgx$families <- lapply(playdata::FAMILIES, function(x) intersect(x, genes))
-  }
-  famsize <- sapply(pgx$families, length)
-  pgx$families <- pgx$families[which(famsize >= 10)]
+all.genes <- sort(unique(pgx$genes$gene_name))
+pgx$families[["<all>"]] <- all.genes
 
-  all.genes <- sort(unique(pgx$genes$gene_name))
-  pgx$families[["<all>"]] <- all.genes
+## -----------------------------------------------------------------------------
+## Recompute geneset meta.fx as average fold-change of genes
+## -----------------------------------------------------------------------------
+message("[pgx.initialize] Recomputing geneset fold-changes")
+nc <- length(pgx$gset.meta$meta)
+i <- 1
+for (i in 1:nc) {
+  gs <- pgx$gset.meta$meta[[i]]
+  fc <- pgx$gx.meta$meta[[i]]$meta.fx
+  names(fc) <- rownames(pgx$gx.meta$meta[[i]])
+  fc <- fc[which(toupper(names(fc)) %in% colnames(playdata::GSETxGENE))]
+  G1 <- Matrix::t(pgx$GMT[names(fc), rownames(gs)])
+  mx <- (G1 %*% fc)[, 1]
+  pgx$gset.meta$meta[[i]]$meta.fx <- mx
+}
 
-  ## -----------------------------------------------------------------------------
-  ## Recompute geneset meta.fx as average fold-change of genes
-  ## -----------------------------------------------------------------------------
-  message("[pgx.initialize] Recomputing geneset fold-changes")
-  nc <- length(pgx$gset.meta$meta)
-  i <- 1
-  for (i in 1:nc) {
-    gs <- pgx$gset.meta$meta[[i]]
-    fc <- pgx$gx.meta$meta[[i]]$meta.fx
-    names(fc) <- rownames(pgx$gx.meta$meta[[i]])
-    fc <- fc[which(toupper(names(fc)) %in% colnames(playdata::GSETxGENE))]
-    G1 <- Matrix::t(pgx$GMT[names(fc), rownames(gs)])
-    mx <- (G1 %*% fc)[, 1]
-    pgx$gset.meta$meta[[i]]$meta.fx <- mx
-  }
+## -----------------------------------------------------------------------------
+## Recode survival
+## -----------------------------------------------------------------------------
+pheno <- colnames(pgx$Y)
+## DLBCL coding
+if (("OS.years" %in% pheno && "OS.status" %in% pheno)) {
+  message("found OS survival data")
+  event <- (pgx$Y$OS.status %in% c("DECEASED", "DEAD", "1", "yes", "YES", "dead"))
+  pgx$Y$OS.survival <- ifelse(event, pgx$Y$OS.years, -pgx$Y$OS.years)
+}
 
-  ## -----------------------------------------------------------------------------
-  ## Recode survival
-  ## -----------------------------------------------------------------------------
-  pheno <- colnames(pgx$Y)
-  ## DLBCL coding
-  if (("OS.years" %in% pheno && "OS.status" %in% pheno)) {
-    message("found OS survival data")
-    event <- (pgx$Y$OS.status %in% c("DECEASED", "DEAD", "1", "yes", "YES", "dead"))
-    pgx$Y$OS.survival <- ifelse(event, pgx$Y$OS.years, -pgx$Y$OS.years)
-  }
+## cBioportal coding
+if (("OS_MONTHS" %in% pheno && "OS_STATUS" %in% pheno)) {
+  message("[pgx.initialize] found OS survival data\n")
+  event <- (pgx$Y$OS_STATUS %in% c("DECEASED", "DEAD", "1", "yes", "YES", "dead"))
+  pgx$Y$OS.survival <- ifelse(event, pgx$Y$OS_MONTHS, -pgx$Y$OS_MONTHS)
+}
 
-  ## cBioportal coding
-  if (("OS_MONTHS" %in% pheno && "OS_STATUS" %in% pheno)) {
-    message("[pgx.initialize] found OS survival data\n")
-    event <- (pgx$Y$OS_STATUS %in% c("DECEASED", "DEAD", "1", "yes", "YES", "dead"))
-    pgx$Y$OS.survival <- ifelse(event, pgx$Y$OS_MONTHS, -pgx$Y$OS_MONTHS)
-  }
-
-  ## -----------------------------------------------------------------------------
-  ## Check if clustering is done
-  ## -----------------------------------------------------------------------------
-  message("[pgx.initialize] Check if clustering is done...")
-  if (!"cluster.genes" %in% names(pgx)) {
-    message("[pgx.initialize] clustering genes...")
-    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2), level = "gene")
-    pgx$cluster.genes$pos <- lapply(pgx$cluster.genes$pos, pos.compact)
+## -----------------------------------------------------------------------------
+## Check if clustering is done
+## -----------------------------------------------------------------------------
+message("[pgx.initialize] Check if clustering is done...")
+if (!"cluster.genes" %in% names(pgx)) {
+  message("[pgx.initialize] clustering genes...")
+  pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2), level = "gene")
+  pgx$cluster.genes$pos <- lapply(pgx$cluster.genes$pos, pos.compact)
   }
   if (!"cluster.gsets" %in% names(pgx)) {
     message("[pgx.initialize] clustering genesets...")
