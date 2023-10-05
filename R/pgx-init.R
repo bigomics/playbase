@@ -54,6 +54,13 @@ pgx.initialize <- function(pgx) {
     return(NULL)
   }
 
+  if(is.null(pgx$genes$hsapiens_homolog_associated_gene_name)){
+    # this is needed in case the species is human, and we dont have the homolog column or if we have an old pgx
+    # which will ensure consistency between old and new pgx
+    pgx$genes$hsapiens_homolog_associated_gene_name <- NA
+  }
+
+
   ## for COMPATIBILITY: if no counts, estimate from X
   if (is.null(pgx$counts)) {
     cat("WARNING:: no counts table. estimating from X\n")

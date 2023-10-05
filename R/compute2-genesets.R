@@ -45,6 +45,8 @@ compute_testGenesets <- function(pgx,
   }
 
   if(is.null(pgx$genes$hsapiens_homolog_associated_gene_name)){
+    # this is needed in case the species is human, and we dont have the homolog column or if we have an old pgx
+    # which will ensure consistency between old and new pgx
     pgx$genes$hsapiens_homolog_associated_gene_name <- NA
   }
 
