@@ -1534,8 +1534,6 @@ pgx.getGeneSetCollections <- function(gsets, min.size = 10, max.size = 500) {
 ## -----------------------------------------------------------------------------
 
 
-
-
 #' Filter probes from gene expression data
 #'
 #' @param genes Gene expression data.frame with probes as row names.
@@ -1558,7 +1556,11 @@ filterProbes <- function(genes, gg) {
   p0 <- (toupper(sub(".*:", "", rownames(genes))) %in% toupper(gg))
   p1 <- (toupper(rownames(genes)) %in% toupper(gg))
   p2 <- (toupper(as.character(genes$external_gene_name)) %in% toupper(gg))
-  jj <- which(p0 | p1 | p2)
+  if ("hsapiens_homolog_associated_gene_name" %in% colnames(genes)) {
+    p3 <- (toupper(as.character(genes$hsapiens_homolog_associated_gene_name)) %in% toupper(gg))
+  }
+
+  jj <- which(p0 | p1 | p2 | p3)
   if (length(jj) == 0) {
     return(NULL)
   }
