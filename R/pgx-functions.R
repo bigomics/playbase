@@ -1555,12 +1555,19 @@ filterProbes <- function(genes, gg) {
   ## check probe name, short probe name or gene name for match
   p0 <- (toupper(sub(".*:", "", rownames(genes))) %in% toupper(gg))
   p1 <- (toupper(rownames(genes)) %in% toupper(gg))
-  p2 <- (toupper(as.character(genes$external_gene_name)) %in% toupper(gg))
+  p2 <- (toupper(as.character(genes$gene_name)) %in% toupper(gg))
   if ("hsapiens_homolog_associated_gene_name" %in% colnames(genes)) {
     p3 <- (toupper(as.character(genes$hsapiens_homolog_associated_gene_name)) %in% toupper(gg))
+  } else {
+    p3 <- rep(FALSE, nrow(genes))
   }
+  
+  # Ensure all p* are valids
+  p_list <- list(p0, p1, p2, p3)
+  p_list <- p_list[sapply(p_list, length) > 0]
 
-  jj <- which(p0 | p1 | p2 | p3)
+  # Combine list using OR operator
+  jj <- which(Reduce("|", p_list))
   if (length(jj) == 0) {
     return(NULL)
   }
