@@ -111,7 +111,7 @@ compute_testGenesets <- function(pgx,
     matched_custom_genes_in_homologs <- pgx$genes$gene_name[matched_custom_genes_in_gene_name]
     matched_custom_genes_in_gene_name <- ifelse(is.na(matched_custom_genes_in_homologs), NA, matched_custom_genes_in_gene_name)
     homologous <- pgx$genes$hsapiens_homolog_associated_gene_name[matched_custom_genes_in_gene_name]
-    colnames(custom_gmt) <- ifelse(is.na(matched_custom_genes_in_gene_name),colnames(custom_gmt),homologous)
+    colnames(custom_gmt) <- ifelse(is.na(homologous),colnames(custom_gmt),homologous)
     custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes, drop = FALSE]
     custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
     # combine standard genesets with custom genesets
