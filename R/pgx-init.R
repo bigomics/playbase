@@ -215,10 +215,8 @@ for (i in 1:nc) {
   fc <- pgx$gx.meta$meta[[i]]$meta.fx
   match_fc_names_with_gene_names <- match(rownames(pgx$gx.meta$meta[[i]]), pgx$genes$gene_name)
   homologs_match <- pgx$genes$hsapiens_homolog_associated_gene_name[match_fc_names_with_gene_names]
-  match_fc_names_with_gene_names <- ifelse(is.na(homologs_match), NA, match_fc_names_with_gene_names)
-  names(fc) <- ifelse(is.na(match_fc_names_with_gene_names), rownames(pgx$gx.meta$meta[[i]]) , homologs_match)
-  
-  fc <- fc[names(fc) %in% colnames(playdata::GSETxGENE)]
+  match_fc_names_with_gene_names <- ifelse(is.na(homologs_match), rownames(pgx$gx.meta$meta[[i]]), homologs_match)
+  names(fc) <- match_fc_names_with_gene_names
   G1 <- Matrix::t(pgx$GMT[names(fc), rownames(gs)])
   mx <- (G1 %*% fc)[, 1]
   pgx$gset.meta$meta[[i]]$meta.fx <- mx
