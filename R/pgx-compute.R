@@ -117,7 +117,7 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 #' OmicsPlayground.
 #' @param counts Matrix of count data with genes as rows and samples as columns.
 #' @param samples Data frame containing sample information.
-#' @param species Default "hsapiens_gene_ensembl", it indicates the species used
+#' @param organism Default "Human", it indicates the species used
 #' for the gene annotation table and the probe to symbol conversion.
 #' @param contrasts Data frame defining sample contrasts.
 #' @param X (Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.
@@ -141,7 +141,7 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 pgx.createPGX <- function(counts,
                           samples,
                           contrasts,
-                          species = "Human",
+                          organism = "Human",
                           name = "Data set",
                           datatype = "unknown",
                           creator = "unknown",
@@ -303,7 +303,7 @@ pgx.createPGX <- function(counts,
 
   pgx <- list(
     name = name,
-    species = species,
+    organism = organism,
     date = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
     datatype = datatype,
     description = description,
@@ -321,7 +321,7 @@ pgx.createPGX <- function(counts,
   message("[createPGX] annotating genes...")
 
   # convert species to ensembl ID
-  species_info <- playbase::SPECIES_TABLE[species_name==species]
+  species_info <- playbase::SPECIES_TABLE[species_name==organism]
 
   # Some species appear in more than one mart, select ensembl only to avoid confusion
   if (nrow(species_info) > 1) {
