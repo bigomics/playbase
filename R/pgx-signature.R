@@ -291,7 +291,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   fc.dn <- fc[fc<0]
   top.up <- head(names(sort(-fc.up)), 3*nsig)  ## RETHINK!
   top.dn <- head(names(sort(+fc.dn)), 3*nsig)  
-  top.fc <- c(top.up, top.dn)
+  top.fc <- unique(c(top.up, top.dn))
   bg <- intersect(names(fc), rn)  
   stats <- playbase::gset.fisher(top.fc, gmt, background=bg, fdr=1, min.genes=0, nmin=0)
   or.max <- max(stats$odd.ratio[!is.infinite(stats$odd.ratio)])
@@ -326,7 +326,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   res$odd.ratio <- stats$odd.ratio[ii]
   res$overlap   <- stats$overlap[ii]
   
-  res$score <- res$R2 * res$NES * res$odd.ratio * abs(res$tau)
+  res$score <- abs(res$rho) * res$NES * res$odd.ratio * abs(res$tau)
   res <- res[order(abs(res$score), decreasing = TRUE), ]
 
   return(res)
