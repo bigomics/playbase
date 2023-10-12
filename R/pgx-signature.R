@@ -324,15 +324,8 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
 
   ii <- match(res$pathway, rownames(stats))
   res$odd.ratio <- stats$odd.ratio[ii]
-<<<<<<< HEAD
   res$overlap   <- stats$overlap[ii]
-  
   res$score <- abs(res$rho) * res$NES * res$odd.ratio * abs(res$tau)
-=======
-  res$overlap <- stats$overlap[ii]
-
-  res$score <- res$R2 * res$NES * res$odd.ratio * abs(res$tau)
->>>>>>> 1e975e97da7f257083eafd976c22f574aa9b4088
   res <- res[order(abs(res$score), decreasing = TRUE), ]
 
   return(res)
