@@ -287,12 +287,12 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   ## --------------------------------------------------
   ## Fisher test
   ## --------------------------------------------------
-  fc.up <- fc[fc>0]
-  fc.dn <- fc[fc<0]
-  top.up <- head(names(sort(-fc.up)), 3*nsig)  ## RETHINK!
-  top.dn <- head(names(sort(+fc.dn)), 3*nsig)  
+  fc.up <- fc[fc > 0]
+  fc.dn <- fc[fc < 0]
+  top.up <- head(names(sort(-fc.up)), 3 * nsig) ## RETHINK!
+  top.dn <- head(names(sort(+fc.dn)), 3 * nsig)
   top.fc <- unique(c(top.up, top.dn))
-  bg <- intersect(names(fc), rn)  
+  bg <- intersect(names(fc), rn)
   stats <- playbase::gset.fisher(top.fc, gmt, background = bg, fdr = 1, min.genes = 0, nmin = 0)
   or.max <- max(stats$odd.ratio[!is.infinite(stats$odd.ratio)])
   stats$odd.ratio[is.infinite(stats$odd.ratio)] <- max(99, 2 * or.max)
@@ -324,7 +324,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
 
   ii <- match(res$pathway, rownames(stats))
   res$odd.ratio <- stats$odd.ratio[ii]
-  res$overlap   <- stats$overlap[ii]
+  res$overlap <- stats$overlap[ii]
   res$score <- abs(res$rho) * res$NES * res$odd.ratio * abs(res$tau)
   res <- res[order(abs(res$score), decreasing = TRUE), ]
 
