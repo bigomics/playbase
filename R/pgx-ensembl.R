@@ -130,8 +130,9 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
 #'
 #' @return Data frame with gene annotation data for the input identifiers. Columns are:
 #' \itemize{
-#'   \item \code{gene_name}: Gene name
-#'   \item \code{hgnc_symbol}: Gene symbol
+#'    \item \code{feat_id}: The probe identifier.
+#'   \item \code{gene_name}: HUman readable gene name.
+#'   \item \code{human_homolog}: Gene symbol for human. Only present if working with non-human dataset.
 #'   \item \code{gene_title}: Gene description
 #'   \item \code{gene_biotype}: Gene biotype
 #'   \item \code{chr}: Chromosome
@@ -196,7 +197,7 @@ ngs.getGeneAnnotation <- function(probes,
   annot <- data.table::data.table(annot)
 
   # Get homologs if working with non-human dataset
-  # These should come as separate call because attr belong to diff. page
+  # This should come as separate call because attr belong to diff. page
   if (!mart@dataset == "hsapiens_gene_ensembl") {
     annot_homologs <- biomaRt::getBM(
       attributes = c(probe_type, "hsapiens_homolog_associated_gene_name"),
@@ -205,20 +206,53 @@ ngs.getGeneAnnotation <- function(probes,
       mart = mart
     )
     annot_homologs <- data.table::data.table(annot_homologs)
+    annot_homologs[, human_homolog := hsapiens_homolog_associated_gene_name]
     annot <- annot[annot_homologs, on = probe_type]
     annot[hsapiens_homolog_associated_gene_name == "", hsapiens_homolog_associated_gene_name := NA]
+
   }
 
   # Join with clean_probes vector
-  data.table::setkeyv(annot, colnames(annot))
   out <- annot[clean_probes, on = probe_type, mult = "first"]
 
   # Renaming for backwards compatibility
-  data.table::setnames(out,
-                      old = c(probe_type, "description", "gene_biotype", "chromosome_name", "transcript_start", "transcript_length", "band"),
-                      new = c("gene_name", "gene_title", "gene_biotype", "chr", "pos", "tx_len", "map"))
+  if (probe_type != "external_gene_name") {
+    new_names <- c("feat_id", 
+                  "gene_name",
+                  "gene_title",
+                  "gene_biotype",
+                  "chr", 
+                  "pos",
+                  "tx_len", 
+                  "map")
+  } else {
+    new_names <- c("feat_id", 
+                  "gene_title",
+                  "gene_biotype",
+                  "chr", 
+                  "pos",
+                  "tx_len", 
+                  "map")
+    out[, gene_name := external_gene_name]
+  }
+  data.table::setnames(out, old = attr_call, new = new_names)
+  
+  # Reorder columns and rows
+  if ("human_homolog" %chin% colnames(out)) {
+    col_order <- c("feat_id", 
+                   "gene_name", 
+                   "human_homolog",
+                   "gene_title",
+                   "gene_biotype")
+  } else {
+    col_order <- c("feat_id", 
+                   "gene_name", 
+                   "gene_title",
+                   "gene_biotype")
+  }
+  data.table::setcolorder(out, col_order)
+  data.table::setkeyv(out, "feat_id")
 
-  out <- as.data.frame(out)
   rownames(out) <- clean_probes
   return(out)
 }
@@ -273,4 +307,91 @@ probe2symbol <- function(probes, annot_table, query = "gene_name") {
 
   # Return queryed col
   return(annot[[query]])
+}
+
+
+#' Retrieve gene annotation table
+#'
+#' @description Retrieves a gene annotation table for the given organism 
+#' from Ensembl using biomaRt. Adds the table to the PGX object.
+#' 
+#' @param pgx PGX object with a counts table.
+#' @param organism Char. Organism name. For more info see \code{\link{playbase::SPECIES_TABLE}}. 
+#'
+#' @return Updated PGX object with gene annotation table
+#' 
+#'
+#' @details Queries the Ensembl database to get a gene annotation table 
+#' containing external gene IDs mapped to Ensembl IDs. Handles retries in case
+#' of temporary Ensembl API errors.
+#'
+#'
+#' @examples
+#' \dontrun{
+#' pgx <- list()
+#' pgx <- pgx.gene_table(pgx, "Homo sapiens")
+#' }
+#' @export
+pgx.gene_table <- function(pgx, organism) {
+
+  # Safety checks
+  stopifnot(is.list(pgx))
+  stopifnot(is.character(organism))
+  
+  # Init vals
+  genes <- NULL
+  counter <- 0
+  counts <- pgx$counts
+  probes <- rownames(counts)
+  probe_type <- NA_character_
+  species_info <- playbase::SPECIES_TABLE[species_name == organism]
+
+  # Some species appear in more than one mart, select ensembl only to avoid confusion
+  if (nrow(species_info) > 1) {
+    species_info <- species_info[mart == "ensembl"]
+    species_info <- species_info[1, ]
+  }
+
+  # Use while loop for retries
+  while (is.null(genes) && counter <= 5) {
+    
+    # Set waiter so that we can make multiple calls with waiting time
+    Sys.sleep(counter * 60)
+    
+    # lock ensembl to version 110 (latest) and genes dataset
+    if (species_info$mart == "ensembl") {
+      ensembl <- biomaRt::useEnsembl(biomart = "genes", host = species_info$host, version = species_info$version)
+      # lock ensembl to species
+      ensembl <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
+      
+    } else {
+      ensembl <- biomaRt::useEnsemblGenomes(
+        biomart = species_info$mart,
+        dataset = species_info$dataset)
+
+      ensembl <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
+    }
+    
+    # Get probe type
+    if (is.na(probe_type)) {
+      probe_type <- detect_probe(probes, ensembl)
+    }
+
+    # Get gene table
+    genes <- ngs.getGeneAnnotation(
+      probes = probes,
+      probe_type = probe_type,
+      mart = ensembl)
+
+    all_genes <- biomaRt::getBM(attributes = "external_gene_name", mart = ensembl)
+    all_genes <- all_genes[, 1]
+
+  }
+
+  # Return data
+  pgx$genes <- genes
+  pgx$all_genes <- all_genes
+  pgx$probe_type <- probe_type
+
+  return(pgx)
 }

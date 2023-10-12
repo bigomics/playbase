@@ -313,44 +313,14 @@ pgx.createPGX <- function(counts,
     X = X,
     total_counts = totcounts, # input normalized log-expression (can be NULL)
     counts_multiplier = counts_multiplier
-  ) ## empty object
+  )
 
   ## -------------------------------------------------------------------
   ## create gene annotation table
   ## -------------------------------------------------------------------
   message("[createPGX] annotating genes...")
 
-  # convert species to ensembl ID
-  species_info <- playbase::SPECIES_TABLE[species_name==organism]
-
-  # Some species appear in more than one mart, select ensembl only to avoid confusion
-  if (nrow(species_info) > 1) {
-    species_info <- species_info[mart == "ensembl"]
-    species_info <- species_info[1, ]
-  }
-  # lock ensembl to version 110 (latest) and genes dataset
-  if (species_info$mart == "ensembl") {
-    ensembl <- biomaRt::useEnsembl(biomart = "genes", host = species_info$host, version = species_info$version)
-    # lock ensembl to species
-    ensembl <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
-    
-  } else {
-    ensembl <- biomaRt::useEnsemblGenomes(
-      biomart = species_info$mart,
-      dataset = species_info$dataset)
-
-    ensembl <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
-  }
-
-  pgx$genes <- ngs.getGeneAnnotation(
-    probes = rownames(counts),
-    probe_type = NULL,
-    mart = ensembl)
-
-  all_genes <- biomaRt::getBM(attributes = "external_gene_name", mart = ensembl)
-  pgx$all_genes <- all_genes[, 1]
-
-
+  pgx <- pgx.gene_table(pgx, organism = organism)
 
   ## -------------------------------------------------------------------
   ## convert probe-IDs to gene symbol (do not translate yet to HUGO)

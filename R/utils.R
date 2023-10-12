@@ -74,3 +74,34 @@ get_mini_example_data <- function(item = "all") {
     return(mini_data[[item]])
   }
 }
+
+
+#' Get row names for a data.table
+#'
+#' @description This function aims to extract the rownames of a data.table object as
+#' if it would be a data.frame. The implementation is slow but it helps to maintain back
+#' compatibility with data.frame objects.
+#' 
+#' @param dt A data.table object.
+#'
+#' @return Character vector of row names
+#'
+#' @examples
+#' \dontrun{
+#' dt <- data.table(rn = letters[1:5], x = 1:5)
+#' rownames(dt)
+#' }
+#' @export
+rownames.data.table <- function(dt) {
+  
+  if(is.character(dt[[1]])) {
+    return(dt[[1]])
+    
+  } else if("rn" %in% names(dt)) {
+    return(dt$rn)
+    
+  } else {
+    warning("No column contains row names")
+    return(NULL)
+  }
+}
