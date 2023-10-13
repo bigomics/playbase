@@ -76,10 +76,11 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
 
   ## filter genes by gene or homologous, if it exists
-  genes <- ifelse(!is.na(pgx$genes$hsapiens_homolog_associated_gene_name), pgx$genes$hsapiens_homolog_associated_gene_name, pgx$genes$gene_name)
+  genes <- ifelse(!is.na(pgx$genes$hsapiens_homolog_associated_gene_name), 
+                  pgx$genes$hsapiens_homolog_associated_gene_name, 
+                  pgx$genes$gene_name)
   # replace "" to NA in pgx$genes$hsapiens_homolog_associated_gene_name
 
-  #genes <- toupper(genes) ## handle mouse genes...
   G <- G[, colnames(G) %in% genes]
 
   # Normalize G after removal of genes
