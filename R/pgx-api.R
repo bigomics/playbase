@@ -231,7 +231,12 @@ pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
     fam.pattern <- "^[<].*|^FAMILY|^CUSTOM"
   }
 
-  xgenes <- toupper(pgx$genes[, "gene_name"])
+  if ("hsapiens_homolog_associated_gene_name" %in% colnames(pgx$genes)) {
+    request_col <- "hsapiens_homolog_associated_gene_name"
+  } else {
+    request_col <- "gene_name"
+  }
+  xgenes <- toupper(pgx$genes[, request_col])
   xgenes <- unique(xgenes)
   gsets <- getGSETS_playbase(pattern = fam.pattern)
   jj <- which(sapply(gsets, function(x) sum(x %in% xgenes)) >= nmin)
