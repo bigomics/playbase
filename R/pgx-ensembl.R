@@ -253,7 +253,8 @@ ngs.getGeneAnnotation <- function(probes,
   data.table::setcolorder(out, col_order)
   data.table::setkeyv(out, "feat_id")
 
-  rownames(out) <- clean_probes
+  out <- as.data.frame(out)
+  rownames(out) <- out$feat_id
   return(out)
 }
 
