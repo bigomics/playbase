@@ -42,10 +42,10 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
   rownames(counts) <- counts.rownames
 
   ## undo logarithm if necessary
-#  if (max(counts,na.rm=TRUE) < 100) {
-#    cat("assuming counts were log2 values. undoing logarithm...\n")
-#    counts <- 2**counts
-#  }
+  #  if (max(counts,na.rm=TRUE) < 100) {
+  #    cat("assuming counts were log2 values. undoing logarithm...\n")
+  #    counts <- 2**counts
+  #  }
 
   ## match sample table and counts
   kk <- sort(intersect(colnames(counts), rownames(samples)))
@@ -206,18 +206,18 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   } else {
     cat("[createPGX] input assumed counts (not logarithm)\n")
   }
-  
-  ## -------------------------------------------------------------------  
+
+  ## -------------------------------------------------------------------
   ## Check bad samples (in counts)
-  ## -------------------------------------------------------------------  
-  ##min.counts <- 1e-4 * median(colSums(counts, na.rm = TRUE))
-  ##sel <- which(colSums(counts, na.rm = TRUE) < pmax(min.counts, 1))
+  ## -------------------------------------------------------------------
+  ## min.counts <- 1e-4 * median(colSums(counts, na.rm = TRUE))
+  ## sel <- which(colSums(counts, na.rm = TRUE) < pmax(min.counts, 1))
 
   ## remove samples with 1000x more or 1000x less total counts (than median)
   totcounts <- colSums(counts, na.rm = TRUE)
   mx <- median(log10(totcounts))
-  ex <- (log10(totcounts) - mx) 
-  sel <- which( abs(ex) > 3 | totcounts < 1)
+  ex <- (log10(totcounts) - mx)
+  sel <- which(abs(ex) > 3 | totcounts < 1)
   sel
   if (length(sel)) {
     message("[createPGX] *WARNING* bad samples. Removing samples: ", paste(sel, collapse = " "))
@@ -250,8 +250,8 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   }
   if (any(is.infinite(counts))) {
     message("[createPGX] WARNING: clipping infinite values")
-    counts[is.infinite(counts) & sign(counts)<0] <- 0
-    counts[is.infinite(counts) & sign(counts)>0] <- max(counts, na.rm=TRUE)    
+    counts[is.infinite(counts) & sign(counts) < 0] <- 0
+    counts[is.infinite(counts) & sign(counts) > 0] <- max(counts, na.rm = TRUE)
   }
 
   ## -------------------------------------------------------------------
