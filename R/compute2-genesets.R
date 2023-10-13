@@ -368,7 +368,7 @@ createSparseGenesetMatrix <- function(
 
   if (filter_genes == TRUE) {
     genes <- genes[grep("^LOC|RIK$", genes, invert = TRUE)]
-    genes <- intersect(genes, all.genes)
+    genes <- intersect(genes, all_genes)
   }
 
   if (filter_genes == TRUE) {
