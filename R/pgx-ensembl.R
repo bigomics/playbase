@@ -218,7 +218,7 @@ ngs.getGeneAnnotation <- function(probes,
   # Renaming for backwards compatibility
   if (probe_type != "external_gene_name") {
     new_names <- c("feat_id", 
-                  "gene_name",
+                  "genes_name",
                   "gene_title",
                   "gene_biotype",
                   "chr", 
@@ -233,25 +233,28 @@ ngs.getGeneAnnotation <- function(probes,
                   "pos",
                   "tx_len", 
                   "map")
-    out[, gene_name := external_gene_name]
+    out[, genes_name := external_gene_name]
   }
   data.table::setnames(out, old = attr_call, new = new_names)
   
   # Reorder columns and rows
   if ("human_homolog" %chin% colnames(out)) {
     col_order <- c("feat_id", 
-                   "gene_name", 
+                   "genes_name", 
                    "human_homolog",
                    "gene_title",
                    "gene_biotype")
   } else {
     col_order <- c("feat_id", 
-                   "gene_name", 
+                   "genes_name", 
                    "gene_title",
                    "gene_biotype")
   }
   data.table::setcolorder(out, col_order)
   data.table::setkeyv(out, "feat_id")
+  
+  # Keep it for back compatibility
+  out[, gene_name := probes]
 
   out <- as.data.frame(out)
   rownames(out) <- out$feat_id
