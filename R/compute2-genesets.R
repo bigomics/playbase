@@ -58,6 +58,8 @@ compute_testGenesets <- function(pgx,
       min.geneset.size = 3,
       max.geneset.size = 9999,
       min_gene_frequency = 1,
+      all_genes = pgx$all_genes,
+      annot = pgx$genes,
       filter_genes = FALSE
     )
 
@@ -345,20 +347,13 @@ createSparseGenesetMatrix <- function(
     min.geneset.size = 15,
     max.geneset.size = 500,
     min_gene_frequency = 10,
-    all_genes = pgx$all_genes,
-    annot_tabe = pgx$genes,
+    all_genes = NULL,
+    annot = NULL,
     filter_genes = TRUE) {
-  ## ----------- Get all official gene symbols
-  known.symbols <- sort(all_genes)
-    
   # WARNING #
-  # This function is usd in playbase and playdata to generate curated GMT. Do not change it without testing it in both packages to ensure reproducibility.
+  # This function is used in playbase and playdata to generate curated GMT. Do not change it without testing it in both packages to ensure reproducibility.
 
-  if (filter_genes == TRUE) {
-    ## ----------- Get all official gene symbols
-    symbol <- as.list(org.Hs.eg.db::org.Hs.egSYMBOL)
-    known.symbols <- sort(unique(unlist(symbol)))
-  }
+  all_genes <- sort(all_genes)
 
   ## ------------- filter by size
   gmt.size <- sapply(gmt.all, length)
@@ -369,11 +364,11 @@ createSparseGenesetMatrix <- function(
   genes.table <- table(unlist(gmt.all))
   genes <- names(which(genes.table >= min_gene_frequency))
   
-  annot <- annot_tabe
+  annot <- annot
 
   if (filter_genes == TRUE) {
     genes <- genes[grep("^LOC|RIK$", genes, invert = TRUE)]
-    genes <- intersect(genes, known.symbols)
+    genes <- intersect(genes, all.genes)
   }
 
   if (filter_genes == TRUE) {
