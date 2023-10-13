@@ -10,10 +10,14 @@ pgx.createPGX(
   counts,
   samples,
   contrasts,
+  organism = "Human",
+  name = "Data set",
+  datatype = "unknown",
+  creator = "unknown",
+  description = "No description provided.",
   X = NULL,
   is.logx = NULL,
   batch.correct = TRUE,
-  species = "Human",
   auto.scale = TRUE,
   filter.genes = TRUE,
   prune.samples = FALSE,
@@ -33,14 +37,14 @@ pgx.createPGX(
 
 \item{contrasts}{Data frame defining sample contrasts.}
 
+\item{organism}{Default "Human", it indicates the species used
+for the gene annotation table and the probe to symbol conversion.}
+
 \item{X}{(Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.}
 
 \item{is.logx}{Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.}
 
 \item{batch.correct}{Logical indicating whether to perform batch correction. Default is TRUE.}
-
-\item{species}{Default "hsapiens_gene_ensembl", it indicates the species used
-for the gene annotation table and the probe to symbol conversion.}
 
 \item{auto.scale}{Logical indicating whether to automatically scale/center genes. Default is TRUE.}
 

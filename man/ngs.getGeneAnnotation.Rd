@@ -19,8 +19,9 @@ it will be automatically detected. Options are "ensembl_gene_id", "ensembl_trans
 \value{
 Data frame with gene annotation data for the input identifiers. Columns are:
 \itemize{
-  \item \code{gene_name}: Gene name
-  \item \code{hgnc_symbol}: Gene symbol
+   \item \code{feat_id}: The probe identifier.
+  \item \code{gene_name}: HUman readable gene name.
+  \item \code{human_homolog}: Gene symbol for human. Only present if working with non-human dataset.
   \item \code{gene_title}: Gene description
   \item \code{gene_biotype}: Gene biotype
   \item \code{chr}: Chromosome
