@@ -389,13 +389,14 @@ pgx.createPGX <- function(counts,
 
   do.filter <- (only.hugo | only.known | only.proteincoding)
   if (do.filter) {
-    pgx$genes <- pgx$genes[!is.na(pgx$genes$gene_name)|pgx$genes$gene_name == "",]
+
+    pgx$genes <- pgx$genes[!is.na(pgx$genes$genes_name)|pgx$genes$genes_name == "",]
     if (only.proteincoding) {
       pgx$genes <- pgx$genes[pgx$genes$gene_biotype %in% c("protein_coding"), ]
     }
-    pgx$counts <- pgx$counts[unique(pgx$genes$gene_name), , drop = FALSE]
+    pgx$counts <- pgx$counts[unique(pgx$genes$feat_id), , drop = FALSE]
     if (!is.null(pgx$X)) {
-      pgx$X <- pgx$X[unique(pgx$genes$gene_name), , drop = FALSE]
+      pgx$X <- pgx$X[unique(pgx$genes$feat_id), , drop = FALSE]
     }
   }
 
