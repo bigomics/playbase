@@ -46,6 +46,10 @@ compute_extra <- function(ngs, extra = c(
       rna.counts <- 2**rna.counts
     }
   }
+  # If working on non-human species, use homologs
+  if ("hsapiens_homolog_associated_gene_name" %in% colnames(ngs$genes)) {
+    rownames(rna.counts) <- probe2symbol(rownames(rna.counts), ngs$genes, query = "hsapiens_homolog_associated_gene_name")
+  }
 
   if ("meta.go" %in% extra) {
     message(">>> Computing GO core graph...")
@@ -279,7 +283,12 @@ compute_deconvolution <- function(ngs,
 #' }
 #' @export
 compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
-  is.human <- (pgx.getOrganism(rna.counts) == "human")
+
+  if (!is.null(ngs$organism)) {
+    is.human <- (ngs$organism == "Human")  
+  } else {
+    is.human <- (pgx.getOrganism(rna.counts) == "human")
+  }
   if (is.human) {
     message("estimating cell cycle (using Seurat)...")
     ngs$samples$cell.cycle <- NULL
@@ -326,7 +335,6 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
     ## scan for extra connectivity reference files in libx
     cmap.dir <- file.path(libx.dir, "cmap")
     db.files <- dir(cmap.dir, pattern = "L1000-activity.*rds$|L1000-gene.*rds$")
-    db.files
     ref.db <- lapply(db.files, function(f) readRDS(file.path(cmap.dir, f)))
     names(ref.db) <- sub("-", "/", gsub("_.*", "", db.files))
   } else {
