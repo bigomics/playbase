@@ -1509,7 +1509,7 @@ pgx.getGeneSetCollections <- function(gsets, min.size = 10, max.size = 500) {
     "Checkpoint related" = gsets[grep("checkpoint", gsets, ignore.case = TRUE)],
     "IL gene sets" = gsets[grep("IL[1-9]{1,2}", gsets, ignore.case = TRUE)],
     "Aging" = gsets[grep("aging", gsets, ignore.case = TRUE)],
-    "Disease" = gsets[grep("jensen|disease|covid|diabetes", gsets, ignore.case = TRUE)],
+    "Disease" = gsets[grep("jensen|disease|covid|diabetes", gsets, ignore.case = TRUE)]
   )
 
   collections[["<all>"]] <- gsets ## X is sorted
