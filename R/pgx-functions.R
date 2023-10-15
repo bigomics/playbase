@@ -1169,8 +1169,11 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 #' @return Character string indicating "mouse" or "human" organism.
 #'
 #' @export
-pgx.getOrganism <- function(pgx.counts) {
+pgx.getOrganism <- function(pgx) {
   ## NEED RETHINK FOR MULTI-ORGANISM
+  if (!is.null(pgx$organism)) {
+    org <- pgx$organism
+  } else {
   rownames.counts <- grep("^rik|^loc|^orf", rownames(pgx.counts),
     value = TRUE,
     ignore.case = TRUE, invert = TRUE
@@ -1178,6 +1181,7 @@ pgx.getOrganism <- function(pgx.counts) {
   cap.fraction <- mean(grepl("^[A-Z][a-z]+", rownames.counts), na.rm = TRUE)
   is.mouse <- (cap.fraction > 0.8)
   org <- ifelse(is.mouse, "mouse", "human")
+  }
   return(org)
 }
 
