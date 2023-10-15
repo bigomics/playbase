@@ -254,7 +254,7 @@ ngs.getGeneAnnotation <- function(probes,
   data.table::setkeyv(out, "feat_id")
   
   # Keep it for back compatibility
-  out[, gene_name := probes]
+  out[, gene_name := feat_id]
 
   out <- as.data.frame(out)
   rownames(out) <- out$feat_id
