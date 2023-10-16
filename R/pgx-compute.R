@@ -304,6 +304,7 @@ pgx.createPGX <- function(counts,
   pgx <- list(
     name = name,
     organism = organism,
+    version = packageVersion("playbase"),
     date = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
     datatype = datatype,
     description = description,
@@ -323,49 +324,37 @@ pgx.createPGX <- function(counts,
   pgx <- pgx.gene_table(pgx, organism = organism)
 
   ## -------------------------------------------------------------------
-  ## convert probe-IDs to gene symbol (do not translate yet to HUGO)
+  ## convert probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------
-  message("[createPGX] converting probes to symbol...")
-  pgx$symbol <- probe2symbol(probes = rownames(counts), annot_table = pgx$genes) ## auto-convert function
+   if (convert.hugo) {
+    message("[createPGX] converting probes to symbol...")
+    symbol <- probe2symbol(probes = rownames(counts), annot_table = pgx$genes, query = "symbol", fill_na = FALSE) ## auto-convert function
+    mapped_symbols <- !is.na(symbol) & symbol != ""
+    probes_with_symbol <- pgx$genes[mapped_symbols, "feature"]
+    
+    ## Update counts and genes
+    pgx$counts <- pgx$counts[probes_with_symbol, , drop = FALSE]
+    pgx$genes <- pgx$genes[probes_with_symbol, , drop = FALSE]
+    pgx$genes$gene_name <- symbol[mapped_symbols]
 
-
-  ## -------------------------------------------------------------------
-  ## collapse multiple row for genes by summing up counts
-  ## -------------------------------------------------------------------
-  ## take only first gene as rowname, retain others as alias
-  gene0 <- rownames(pgx$counts)
-  gene1 <- gene0
-  gene1 <- sapply(gene0, function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
-
-  if (convert.hugo) {
-    message("[createPGX] converting to HUGO symbols...")
-    gene1 <- alias2hugo(gene1) ## convert to latest HUGO
-  } else {
-    message("[createPGX] skip conversion to HUGO symbols")
-  }
-  ndup <- sum(duplicated(gene1))
-
-  if (ndup > 0) {
-    message("[createPGX:autoscale] duplicated rownames detected: summing up rows (counts).")
-    x1 <- tapply(1:nrow(pgx$counts), gene1, function(i) {
-      Matrix::colSums(pgx$counts[i, , drop = FALSE])
-    })
-    if (ncol(pgx$counts) == 1) {
-      x1 <- matrix(x1, ncol = 1, dimnames = list(names(x1), colnames(pgx$counts)[1]))
-    } else {
-      x1 <- do.call(rbind, x1)
+    # Sum columns of rows with the same gene symbol
+    selected_symbols <- symbol[mapped_symbols]
+    rownames(pgx$counts) <- selected_symbols
+    if (sum(duplicated(selected_symbols)) > 0) {
+        message("[createPGX:autoscale] duplicated rownames detected: summing up rows (counts).")
+        pgx$counts <- rowsum(pgx$counts, selected_symbols)
     }
-    pgx$counts <- x1
-    remove(x1)
+    if (!is.null(pgx$X)) {
+        # For X, sum the 2^X values of rows with the same gene symbol
+        # And then take log2 again.
+        pgx$counts <- log2(rowsum(2**pgx$X, selected_symbols))
+    }
+    collapsed_feat <- tapply(pgx$genes$feature, pgx$genes$symbol, FUN =  paste, collapse = ", ")
+    pgx$genes <- pgx$genes[!duplicated(selected_symbols), , drop = FALSE]
+    pgx$genes$feature <- collapsed_feat
+    rownames(pgx$genes) <- selected_symbols[!duplicated(selected_symbols)]  
   }
-  if (ndup > 0 && !is.null(pgx$X)) {
-    x1 <- tapply(1:nrow(pgx$X), gene1, function(i) {
-      log2(Matrix::colSums(2**pgx$X[i, , drop = FALSE]))
-    })
-    x1 <- do.call(rbind, x1)
-    pgx$X <- x1
-    remove(x1)
-  }
+
 
   ## -------------------------------------------------------------------
   ## Filter out not-expressed
@@ -390,13 +379,13 @@ pgx.createPGX <- function(counts,
   do.filter <- (only.hugo | only.known | only.proteincoding)
   if (do.filter) {
 
-    pgx$genes <- pgx$genes[!is.na(pgx$genes$genes_name)|pgx$genes$genes_name == "",]
+    pgx$genes <- pgx$genes[!is.na(pgx$genes$symbol)|pgx$genes$symbol == "",]
     if (only.proteincoding) {
       pgx$genes <- pgx$genes[pgx$genes$gene_biotype %in% c("protein_coding"), ]
     }
-    pgx$counts <- pgx$counts[unique(pgx$genes$feat_id), , drop = FALSE]
+    pgx$counts <- pgx$counts[unique(pgx$genes$gene_name), , drop = FALSE]
     if (!is.null(pgx$X)) {
-      pgx$X <- pgx$X[unique(pgx$genes$feat_id), , drop = FALSE]
+      pgx$X <- pgx$X[unique(pgx$genes$gene_name), , drop = FALSE]
     }
   }
 
