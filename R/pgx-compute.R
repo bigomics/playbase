@@ -42,10 +42,10 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
   rownames(counts) <- counts.rownames
 
   ## undo logarithm if necessary
-#  if (max(counts,na.rm=TRUE) < 100) {
-#    cat("assuming counts were log2 values. undoing logarithm...\n")
-#    counts <- 2**counts
-#  }
+  #  if (max(counts,na.rm=TRUE) < 100) {
+  #    cat("assuming counts were log2 values. undoing logarithm...\n")
+  #    counts <- 2**counts
+  #  }
 
   ## match sample table and counts
   kk <- sort(intersect(colnames(counts), rownames(samples)))
@@ -258,7 +258,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   message("[createPGX] final: dim(samples) = ", paste(dim(samples), collapse = "x"))
   message("[createPGX] final: dim(contrasts) = ", paste(dim(contrasts), collapse = "x"))
 
-
   ## -------------------------------------------------------------------
   ## global scaling (no need for CPM yet)
   ## -------------------------------------------------------------------
@@ -268,9 +267,9 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   totcounts
   if (auto.scale) {
     ## If the difference in total counts is too large, we need to
-    ## euqalize them because the thresholds can become
-    ## strange. Here we decide if normalizing is necessary (WARNING
-    ## changes total counts!!!)
+    ## euqalize them because the thresholds can become strange. Here
+    ## we decide if normalizing is necessary (WARNING changes total
+    ## counts!!!)
     totratio <- log10(max(1 + totcounts, na.rm = TRUE) / min(1 + totcounts, na.rm = TRUE))
     totratio
     if (totratio > 6) {
@@ -280,7 +279,9 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
       counts <- t(t(counts) / totcounts) * meancounts
     }
 
-    ## check if too big (more than billion reads)
+    ## Check if too big (more than billion reads). This is important
+    ## for some proteomics intensity signals that are in billions of
+    ## units.
     mean.counts <- mean(Matrix::colSums(counts, na.rm = TRUE))
     mean.counts
     is.toobig <- log10(mean.counts) > 9
