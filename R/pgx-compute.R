@@ -206,18 +206,35 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   } else {
     cat("[createPGX] input assumed counts (not logarithm)\n")
   }
+
+  ## -------------------------------------------------------------------
+  ## How to deal with missing or infinite values??
+  ## -------------------------------------------------------------------
+  if (any(is.na(counts))) {
+    message("[createPGX] WARNING: setting missing values to zero")
+    counts[is.na(counts)] <- 0
+  }
+
+  ## check for infinite or very-very large values
+  mean.median <- mean(apply(counts,2,median,na.rm=TRUE))
+  is.inf.count <- (counts > 1e6*mean.median) | is.infinite(counts)
+  if(any(is.inf.count)) {
+    sel.inf <- which(is.inf.count)
+    message(paste("[createPGX] WARNING: clipping",length(sel.inf),"infinite values"))
+    counts[sel.inf] <- Inf   ## set to Inf Next step will clip
+    counts[is.infinite(counts) & sign(counts)<0] <- 0
+    max.counts <- max(counts[!is.infinite(counts) & !is.na(counts)], na.rm=TRUE)    
+    counts[is.infinite(counts) & sign(counts)>0] <- max.counts
+  }
   
   ## -------------------------------------------------------------------  
-  ## Check bad samples (in counts)
+  ## Check bad samples (in total counts)
   ## -------------------------------------------------------------------  
-  ##min.counts <- 1e-4 * median(colSums(counts, na.rm = TRUE))
-  ##sel <- which(colSums(counts, na.rm = TRUE) < pmax(min.counts, 1))
-
   ## remove samples with 1000x more or 1000x less total counts (than median)
   totcounts <- colSums(counts, na.rm = TRUE)
   mx <- median(log10(totcounts))
   ex <- (log10(totcounts) - mx) 
-  sel <- which( abs(ex) > 3 | totcounts < 1)
+  sel <- which( abs(ex) > 3 | totcounts < 1)  ## allowed: 0.001x - 1000x
   sel
   if (length(sel)) {
     message("[createPGX] *WARNING* bad samples. Removing samples: ", paste(sel, collapse = " "))
@@ -241,18 +258,6 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   message("[createPGX] final: dim(samples) = ", paste(dim(samples), collapse = "x"))
   message("[createPGX] final: dim(contrasts) = ", paste(dim(contrasts), collapse = "x"))
 
-  ## -------------------------------------------------------------------
-  ## How to deal with missing or infinite values??
-  ## -------------------------------------------------------------------
-  if (any(is.na(counts))) {
-    message("[createPGX] WARNING: setting missing values to zero")
-    counts[is.na(counts)] <- 0
-  }
-  if (any(is.infinite(counts))) {
-    message("[createPGX] WARNING: clipping infinite values")
-    counts[is.infinite(counts) & sign(counts)<0] <- 0
-    counts[is.infinite(counts) & sign(counts)>0] <- max(counts, na.rm=TRUE)    
-  }
 
   ## -------------------------------------------------------------------
   ## global scaling (no need for CPM yet)
