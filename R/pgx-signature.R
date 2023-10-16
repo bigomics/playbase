@@ -77,7 +77,7 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 1000, contrasts = N
   ## remove leadingEdge (takes too much memory!!!)
   if (remove.le) {
     for (j in 1:length(scores)) {
-      if("leadingEdge" %in% colnames(scores[[j]])) {
+      if ("leadingEdge" %in% colnames(scores[[j]])) {
         scores[[j]]$leadingEdge <- NULL
       }
     }
@@ -120,9 +120,9 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
 
   ## ------------------------------------------------------------
   ## Test signatures using fGSEA (this is pretty fast. amazing.)
-  ## ------------------------------------------------------------  
+  ## ------------------------------------------------------------
   ## combine up/down into one (unsigned GSEA test)
-  system.time({  
+  system.time({
     gmt <- rbind(sig100.up, sig100.dn)
     gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
     names(gmt) <- cn[sel.idx]
@@ -130,23 +130,23 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
       res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm, scoreType = "pos")
     )) ## really unsigned???
   })
-  
+
   res$nMoreExtreme <- NULL
   res$ES <- NULL
   res$leadingEdge <- NULL
-  res$pval <- NULL    
+  res$pval <- NULL
 
-  ## --------------------------------------------------  
+  ## --------------------------------------------------
   ## select ntop best
-  ## --------------------------------------------------  
+  ## --------------------------------------------------
   sel <- res$pathway
-  if(!is.null(ntop) && ntop>0) {
-    sel <- head(res$pathway[order(-res$NES)],ntop)
-    res <- res[match(sel,res$pathway),]
+  if (!is.null(ntop) && ntop > 0) {
+    sel <- head(res$pathway[order(-res$NES)], ntop)
+    res <- res[match(sel, res$pathway), ]
   }
   gmt <- gmt[sel]
   length(gmt)
-  
+
   ## --------------------------------------------------
   ## Fisher test
   ## --------------------------------------------------
@@ -157,17 +157,18 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   top.fc <- unique(c(top.up, top.dn))
   bg <- intersect(names(fc), rn)
   system.time({
-    stats <- playbase::gset.fisher(top.fc, gmt, background = bg, fdr = 1,
-                                   min.genes = 0, nmin = 0)
+    stats <- playbase::gset.fisher(top.fc, gmt,
+      background = bg, fdr = 1,
+      min.genes = 0, nmin = 0
+    )
   })
   or.max <- max(stats$odd.ratio[!is.infinite(stats$odd.ratio)])
   stats$odd.ratio[is.infinite(stats$odd.ratio)] <- max(99, 2 * or.max)
 
   ## ---------------------------------------------------------------
-  ## Compute truncated rank correlation 
+  ## Compute truncated rank correlation
   ## ---------------------------------------------------------------
-  system.time({  
-
+  system.time({
     ## get signature subset
     fc1 <- sort(fc)
     gg1 <- unique(names(c(Matrix::head(fc1, nsig), Matrix::tail(fc1, nsig))))
@@ -177,7 +178,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
     G[which(G < -999999)] <- NA
     dimnames(G) <- list(gg1, sel)
     dim(G)
-    
+
     ## rank correlation??
     rG <- apply(G[gg1, ], 2, rank, na.last = "keep")
     rfc <- rank(fc[gg1], na.last = "keep")
@@ -186,16 +187,16 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
     suppressWarnings({
       rho <- stats::cor(rG, rfc, use = "pairwise")[, 1]
     })
-  })  
+  })
   remove(G, rG, rfc)
-  
+
   ## --------------------------------------------------
   ## Cosine distance with sparse GSET matrix
   ## --------------------------------------------------
   system.time({
     bg <- intersect(names(fc), rn)
-    gmt100.up <- unlist(apply(sig100.up[,sel], 2, list), recursive = FALSE)
-    gmt100.dn <- unlist(apply(sig100.dn[,sel], 2, list), recursive = FALSE)
+    gmt100.up <- unlist(apply(sig100.up[, sel], 2, list), recursive = FALSE)
+    gmt100.dn <- unlist(apply(sig100.dn[, sel], 2, list), recursive = FALSE)
     G1 <- playbase::gmt2mat(gmt100.up, bg = bg)
     G2 <- playbase::gmt2mat(gmt100.dn, bg = bg)
     G1 <- G1[match(bg, rownames(G1)), ]
@@ -208,7 +209,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
     jj <- match(res$pathway, colnames(G))
     res$tau <- tau[jj]
   })
-  
+
   ## ---------------------------------------------------------------
   ## Combine correlation+GSEA by combined score (NES*rho)
   ## ---------------------------------------------------------------
