@@ -256,8 +256,10 @@ ngs.getGeneAnnotation <- function(probes,
   # Keep it for back compatibility
   out[, gene_name := feature]
 
+  # Return as data.frame and in the same order as input probes
   out <- as.data.frame(out)
   rownames(out) <- out$feature
+  out <- out[probes, , drop = FALSE]
   return(out)
 }
 
@@ -291,28 +293,17 @@ ngs.getGeneAnnotation <- function(probes,
 probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE) {
 
   # Prepare inputs
-  if (!data.table::is.data.table(annot_table)) {
-    annot_table <- data.table::data.table(annot_table)
-    data.table::setkeyv(annot_table, colnames(annot_table)[1])
-  }
-  probe_type <- colnames(annot_table[, 1])
-  probe_cols <- c(probe_type, query)
-
-  # Match annot_table
-  annot <- annot_table[, .SD,
-                       .SDcols = probe_cols][probes,
-                                             on = probe_type,
-                                             mult = "first"]
+  query_col <- annot_table[probes, query]
 
   # Deal with NA
   if (fill_na) {
-    annot[is.na(annot[[query]])|annot[[query]] ==  "",
-          (query) := .SD,
-          .SDcols = probe_type]
+    query_col <- ifelse(is.na(query_col)|query_col ==  "",
+          query_col,
+          probes)
   }
 
   # Return queryed col
-  return(annot[[query]])
+  return(query_col)
 }
 
 
