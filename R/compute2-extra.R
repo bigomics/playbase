@@ -134,8 +134,8 @@ compute_extra <- function(pgx, extra = c(
           message("computing connectivity scores for ", db)
           ## in memory for many comparisons
           meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
-##        inmemory <- ifelse(ncol(meta$fc) > 50, TRUE, FALSE) ## NEED RETHINK!! reverse?
-          inmemory = FALSE
+          ##        inmemory <- ifelse(ncol(meta$fc) > 50, TRUE, FALSE) ## NEED RETHINK!! reverse?
+          inmemory <- FALSE
           tt <- system.time({
             scores <- pgx.computeConnectivityScores(
               pgx, db,
