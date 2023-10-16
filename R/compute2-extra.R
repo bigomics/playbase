@@ -119,7 +119,7 @@ compute_extra <- function(pgx, extra = c(
     message("<<< done!")
   }
 
-  # I THINK THIS REQUIRES libx.dir TO BE SET TO FIND sigdb-.h5 FILES (-Nick)
+  # THIS REQUIRES libx.dir TO BE SET TO FIND sigdb-.h5 FILES
   if ("connectivity" %in% extra) {
     # try to find sigdb in libx dir if not specified
     if (!is.null(libx.dir) || !is.null(sigdb)) {
@@ -134,15 +134,12 @@ compute_extra <- function(pgx, extra = c(
           message("computing connectivity scores for ", db)
           ## in memory for many comparisons
           meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
-##        inmemory <- ifelse(ncol(meta$fc) > 50, TRUE, FALSE) ## NEED RETHINK!! reverse?
-          inmemory = FALSE
           tt <- system.time({
             scores <- pgx.computeConnectivityScores(
               pgx, db,
               ntop = 1000,
               contrasts = NULL,
-              remove.le = TRUE,
-              inmemory = inmemory
+              remove.le = TRUE
             )
           })
           timings <- rbind(timings, c("connectivity", tt))

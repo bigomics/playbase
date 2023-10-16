@@ -15,7 +15,6 @@
 #' @param ntop Number of top correlated genes to use for scoring. Default 1000.
 #' @param contrasts Contrasts to compute signature for. Default is all contrasts.
 #' @param remove.le Remove leading edge genes before scoring. Default FALSE.
-#' @param inmemory Compute correlations in memory instead of on disk. Default FALSE.
 #'
 #' @return List of data frames with connectivity scores for each contrast.
 #'
@@ -31,21 +30,16 @@
 #' Setting \code{remove.le = TRUE} removes the leading edge genes from the signature before
 #' computing connectivity. This reduces bias from highly weighted genes.
 #'
-#' By default, correlations are computed on disk using chunks. Set \code{inmemory = TRUE}
-#' to compute in memory, which may be faster for small datasets.
 #'
 #' @export
 pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 1000, contrasts = NULL,
-                                          remove.le = FALSE, inmemory = FALSE) {
+                                          remove.le = FALSE) {
   meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
 
   is.h5ref <- grepl("h5$", sigdb)
   if (!is.h5ref) {
     cat("[pgx.computeConnectivityScores] ERROR: must be H5 formatted file\n")
     return(NULL)
-  }
-  if (inmemory) {
-    cat("[pgx.computeConnectivityScores] *** using in-memory ***\n")
   }
 
   h5.file <- NULL
@@ -63,161 +57,33 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 1000, contrasts = N
   contrasts <- intersect(contrasts, colnames(meta$fc))
   F1 <- meta$fc[, contrasts, drop = FALSE]
 
-  if (inmemory) {
-    scores <- pgx.correlateSignatureH5.inmemory(
-      F1,
+  scores <- list()
+  ct <- colnames(F1)[1]
+  for (ct in colnames(F1)) {
+    fc <- F1[, ct]
+    names(fc) <- rownames(meta$fc)
+    names(fc) <- toupper(names(fc)) ## for MOUSE!!
+    res <- pgx.correlateSignatureH5(
+      fc,
       h5.file = h5.file,
       nsig = 100,
       ntop = ntop,
       nperm = 9999
     )
-  } else {
-    scores <- list()
-    ct <- colnames(F1)[1]
-    for (ct in colnames(F1)) {
-      fc <- F1[, ct]
-      names(fc) <- rownames(meta$fc)
-      names(fc) <- toupper(names(fc)) ## for MOUSE!!
-      res <- pgx.correlateSignatureH5(
-        fc,
-        h5.file = h5.file,
-        nsig = 100,
-        ntop = ntop,
-        nperm = 9999
-      )
-      scores[[ct]] <- res
-    }
+    scores[[ct]] <- res
   }
   if (is.null(names(scores))) names(scores) <- contrasts
 
-  ## remove leadingEdge (take too much memory!!!)
+  ## remove leadingEdge (takes too much memory!!!)
   if (remove.le) {
-    for (j in 1:length(scores)) scores[[j]]$leadingEdge <- NULL
+    for (j in 1:length(scores)) {
+      if("leadingEdge" %in% colnames(scores[[j]])) {
+        scores[[j]]$leadingEdge <- NULL
+      }
+    }
   }
 
   return(scores)
-}
-
-
-#' @title Correlate signature with datasets in HDF5 file
-#'
-#' @param F Numeric vector of signature fold changes
-#' @param h5.file Path to HDF5 file containing dataset expression matrices
-#' @param nsig Number of signature genes to use for correlation. Default 100.
-#' @param ntop Number of top correlated genes to use for GSEA. Default 1000.
-#' @param nperm Number of permutations for GSEA. Default 1000.
-#'
-#' @return Data frame with correlation results and GSEA enrichment scores.
-#'
-#' @description Correlates a signature (fold change vector) with datasets in an HDF5 file using in-memory computations instead of on-disk.
-#' It is also possible to run the operation on-disk via \code{pgx.correlateSignatureH5}.
-#'
-#' @details This function computes the correlation and gene set enrichment between a
-#' signature fold change vector \code{F} and dataset expression matrices stored in an
-#' HDF5 file at \code{h5.file}.
-#'
-#' It first reads the top \code{nsig} signature genes into memory.
-#' Then it computes pairwise Pearson correlation between the signature and each dataset.
-#' It also runs pre-ranked GSEA using the \code{fgsea} package to compute enrichment scores.
-#'
-#' The main difference from \code{\link{pgx.correlateSignatureH5}} is that correlations
-#' and GSEA are computed in memory instead of using on-disk chunks. This is faster for
-#' small datasets but requires loading the full expression matrix into memory.
-#'
-#' @return Data frame with the correlation coefficient, p-value, and normalized enrichment score (NES) for each dataset.
-#'
-#' @export
-pgx.correlateSignatureH5.inmemory <- function(F, h5.file, nsig = 100, ntop = 1000, nperm = 1000) {
-  if (NCOL(F) == 1 && inherits(F, "numeric")) {
-    rn <- names(F)
-    F <- matrix(F, ncol = 1)
-    rownames(F) <- rn
-  }
-
-  if (is.null(rownames(F))) stop("F must have rownames")
-  ## mouse... mouse...
-  rownames(F) <- toupper(rownames(F))
-
-  ## or instead compute correlation on top100 fc genes (read from file)
-  rn <- rhdf5::h5read(h5.file, "data/rownames")
-  cn <- rhdf5::h5read(h5.file, "data/colnames")
-
-  ## Entire matrix in memory????
-  matG <- rhdf5::h5read(h5.file, "data/matrix") ### whole matrix!!!!
-  matG[which(matG < -999999)] <- NA
-  rownames(matG) <- rn
-  colnames(matG) <- cn
-
-  mem1 <- round(utils::object.size(matG) / 1e9, 2)
-  cat("[pgx.correlateSignatureH5] utils::object.size(matG)=", mem1, "Gb\n") ## gigabytes....
-
-  ## ---------------------------------------------------------------
-  ## Compute simple correlation between query profile and signatures
-  ## ---------------------------------------------------------------
-  res <- list()
-  i <- 1
-  for (i in 1:ncol(F)) {
-    gg <- intersect(rownames(F), rn)
-    fc1 <- sort(F[gg, i])
-    gg <- unique(names(c(Matrix::head(fc1, nsig), Matrix::tail(fc1, nsig))))
-
-    remove(fc1)
-    row.idx <- match(gg, rn)
-
-    rG <- matG[row.idx, , drop = FALSE]
-    rG <- apply(rG, 2, rank, na.last = "keep")
-    dimnames(rG) <- list(rn[row.idx], cn)
-
-    ## this FC signature
-    fc <- F[, i]
-    rfc <- rank(fc[gg], na.last = "keep") ## rank correlation??
-    rG[is.na(rG)] <- 0
-    rfc[is.na(rfc)] <- 0
-    rho <- stats::cor(rG, rfc, use = "pairwise")[, 1]
-
-    remove(rG, rfc)
-
-    ## --------------------------------------------------
-    ## test tops signatures using fGSEA
-    ## --------------------------------------------------
-
-    sel <- Matrix::head(names(sort(-abs(rho))), ntop)
-    sel.idx <- match(sel, cn)
-    sig100.up <- rhdf5::h5read(h5.file, "signature/sig100.up",
-      index = list(NULL, sel.idx)
-    )
-    sig100.dn <- rhdf5::h5read(h5.file, "signature/sig100.dn",
-      index = list(NULL, sel.idx)
-    )
-
-
-    ## combine up/down into one (unsigned GSEA test)
-    gmt <- rbind(sig100.up, sig100.dn)
-    gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
-    names(gmt) <- cn[sel.idx]
-
-    ## use entire fc vector
-    suppressMessages(suppressWarnings(
-      res1 <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm) ## really unsigned???
-    ))
-
-    ## ---------------------------------------------------------------
-    ## Combine correlation+GSEA by combined score (NES*rho)
-    ## ---------------------------------------------------------------
-    jj <- match(res1$pathway, names(rho))
-    res1$rho <- rho[jj]
-    res1$R2 <- rho[jj]**2
-    res1$score <- (res1$R2 * res1$NES)
-
-    fn <- colnames(F)[i]
-    res[[fn]] <- res1[order(res1$score, decreasing = TRUE), , drop = FALSE]
-
-    gc()
-  }
-  remove(matG)
-  gc()
-
-  return(res)
 }
 
 
@@ -237,53 +103,50 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   rhdf5::h5closeAll()
   rn <- rhdf5::h5read(h5.file, "data/rownames")
   cn <- rhdf5::h5read(h5.file, "data/colnames")
-
-  ## ---------------------------------------------------------------
-  ## Compute simple correlation between query profile and signatures
-  ## ---------------------------------------------------------------
   gg <- intersect(names(fc), rn)
   fc <- fc[gg]
-  fc1 <- sort(fc[gg])
-  gg <- unique(names(c(Matrix::head(fc1, nsig), Matrix::tail(fc1, nsig))))
-  row.idx <- match(gg, rn)
-  rhdf5::h5closeAll()
-  G <- rhdf5::h5read(h5.file, "data/matrix", index = list(row.idx, 1:length(cn)))
-  G[which(G < -999999)] <- NA
-  dimnames(G) <- list(rn[row.idx], cn)
-
-  ## rank correlation??
-  rG <- apply(G[gg, ], 2, rank, na.last = "keep")
-  rfc <- rank(fc[gg], na.last = "keep")
-  rG[is.na(rG)] <- 0
-  rfc[is.na(rfc)] <- 0
-  suppressWarnings(rho <- stats::cor(rG, rfc, use = "pairwise")[, 1])
-
-  remove(G, rG, rfc)
 
   ## --------------------------------------------------
-  ## test tops signatures using fGSEA
+  ## get top100 signatures
   ## --------------------------------------------------
-
-  sel <- Matrix::head(names(sort(-abs(rho))), ntop)
-  sel.idx <- match(sel, cn)
-
   ## if we have less than 100 genes, we should make smaller GMT sets!
   nsig <- min(100, round(length(fc) / 5))
+  sel.idx <- 1:length(cn) ## all
   idx <- list(1:nsig, sel.idx)
   sig100.up <- rhdf5::h5read(h5.file, "signature/sig100.up", index = idx)
   sig100.dn <- rhdf5::h5read(h5.file, "signature/sig100.dn", index = idx)
   colnames(sig100.up) <- cn[sel.idx]
   colnames(sig100.dn) <- cn[sel.idx]
 
+  ## ------------------------------------------------------------
+  ## Test signatures using fGSEA (this is pretty fast. amazing.)
+  ## ------------------------------------------------------------  
   ## combine up/down into one (unsigned GSEA test)
-  gmt <- rbind(sig100.up, sig100.dn)
-  gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
-  names(gmt) <- cn[sel.idx]
+  system.time({  
+    gmt <- rbind(sig100.up, sig100.dn)
+    gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
+    names(gmt) <- cn[sel.idx]
+    suppressMessages(suppressWarnings(
+      res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm, scoreType = "pos")
+    )) ## really unsigned???
+  })
+  
+  res$nMoreExtreme <- NULL
+  res$ES <- NULL
+  res$leadingEdge <- NULL
+  res$pval <- NULL    
 
-  suppressMessages(suppressWarnings(
-    res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm, scoreType = "pos")
-  )) ## really unsigned???
-
+  ## --------------------------------------------------  
+  ## select ntop best
+  ## --------------------------------------------------  
+  sel <- res$pathway
+  if(!is.null(ntop) && ntop>0) {
+    sel <- head(res$pathway[order(-res$NES)],ntop)
+    res <- res[match(sel,res$pathway),]
+  }
+  gmt <- gmt[sel]
+  length(gmt)
+  
   ## --------------------------------------------------
   ## Fisher test
   ## --------------------------------------------------
@@ -293,28 +156,59 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   top.dn <- head(names(sort(+fc.dn)), 3 * nsig)
   top.fc <- unique(c(top.up, top.dn))
   bg <- intersect(names(fc), rn)
-  stats <- playbase::gset.fisher(top.fc, gmt, background = bg, fdr = 1, min.genes = 0, nmin = 0)
+  system.time({
+    stats <- playbase::gset.fisher(top.fc, gmt, background = bg, fdr = 1,
+                                   min.genes = 0, nmin = 0)
+  })
   or.max <- max(stats$odd.ratio[!is.infinite(stats$odd.ratio)])
   stats$odd.ratio[is.infinite(stats$odd.ratio)] <- max(99, 2 * or.max)
 
-  ## --------------------------------------------------
-  ## Sparse GSET matrix
-  ## --------------------------------------------------
-  bg <- intersect(names(fc), rn)
-  gmt100.up <- unlist(apply(sig100.up, 2, list), recursive = FALSE)
-  gmt100.dn <- unlist(apply(sig100.dn, 2, list), recursive = FALSE)
-  G1 <- playbase::gmt2mat(gmt100.up, bg = bg)
-  G2 <- playbase::gmt2mat(gmt100.dn, bg = bg)
-  G1 <- G1[match(bg, rownames(G1)), ]
-  G2 <- G2[match(bg, rownames(G2)), colnames(G1)]
-  G <- G1 - G2
-  dim(G)
-  remove(G1, G2)
-  ##  tau <- qlcMatrix::corSparse( G[bg,], cbind(fc[bg]) )[,1]
-  tau <- qlcMatrix::cosSparse(G[bg, ], cbind(fc[bg]))[, 1]
-  jj <- match(res$pathway, colnames(G))
-  res$tau <- tau[jj]
+  ## ---------------------------------------------------------------
+  ## Compute truncated rank correlation 
+  ## ---------------------------------------------------------------
+  system.time({  
 
+    ## get signature subset
+    fc1 <- sort(fc)
+    gg1 <- unique(names(c(Matrix::head(fc1, nsig), Matrix::tail(fc1, nsig))))
+    row.idx <- match(gg1, rn)
+    col.idx <- match(sel, cn)
+    G <- rhdf5::h5read(h5.file, "data/matrix", index = list(row.idx, col.idx))
+    G[which(G < -999999)] <- NA
+    dimnames(G) <- list(gg1, sel)
+    dim(G)
+    
+    ## rank correlation??
+    rG <- apply(G[gg1, ], 2, rank, na.last = "keep")
+    rfc <- rank(fc[gg1], na.last = "keep")
+    rG[is.na(rG)] <- 0
+    rfc[is.na(rfc)] <- 0
+    suppressWarnings({
+      rho <- stats::cor(rG, rfc, use = "pairwise")[, 1]
+    })
+  })  
+  remove(G, rG, rfc)
+  
+  ## --------------------------------------------------
+  ## Cosine distance with sparse GSET matrix
+  ## --------------------------------------------------
+  system.time({
+    bg <- intersect(names(fc), rn)
+    gmt100.up <- unlist(apply(sig100.up[,sel], 2, list), recursive = FALSE)
+    gmt100.dn <- unlist(apply(sig100.dn[,sel], 2, list), recursive = FALSE)
+    G1 <- playbase::gmt2mat(gmt100.up, bg = bg)
+    G2 <- playbase::gmt2mat(gmt100.dn, bg = bg)
+    G1 <- G1[match(bg, rownames(G1)), ]
+    G2 <- G2[match(bg, rownames(G2)), colnames(G1)]
+    G <- G1 - G2
+    dim(G)
+    remove(G1, G2)
+    ##  tau <- qlcMatrix::corSparse( G[bg,], cbind(fc[bg]) )[,1]
+    tau <- qlcMatrix::cosSparse(G[bg, ], cbind(fc[bg]))[, 1]
+    jj <- match(res$pathway, colnames(G))
+    res$tau <- tau[jj]
+  })
+  
   ## ---------------------------------------------------------------
   ## Combine correlation+GSEA by combined score (NES*rho)
   ## ---------------------------------------------------------------
@@ -328,6 +222,9 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 1000, nperm
   res$score <- abs(res$rho) * res$NES * res$odd.ratio * abs(res$tau)
   res <- res[order(abs(res$score), decreasing = TRUE), ]
 
+  ## force garbage collection...
+  remove(gmt, stats)
+  gc()
   return(res)
 }
 
