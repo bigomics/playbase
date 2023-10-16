@@ -47,8 +47,8 @@ compute_extra <- function(ngs, extra = c(
     }
   }
   # If working on non-human species, use homologs
-  if ("hsapiens_homolog_associated_gene_name" %in% colnames(ngs$genes)) {
-    rownames(rna.counts) <- probe2symbol(rownames(rna.counts), ngs$genes, query = "hsapiens_homolog_associated_gene_name")
+  if ("human_ortholog" %in% colnames(ngs$genes)) {
+    rownames(rna.counts) <- probe2symbol(rownames(rna.counts), ngs$genes, query = "human_ortholog")
   }
 
   if ("meta.go" %in% extra) {

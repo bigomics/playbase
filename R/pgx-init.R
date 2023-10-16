@@ -54,12 +54,17 @@ pgx.initialize <- function(pgx) {
     return(NULL)
   }
 
-  if(is.null(pgx$genes$hsapiens_homolog_associated_gene_name)){
+  if(is.null(pgx$version)){
     # this is needed in case the species is human, and we dont have the homolog column or if we have an old pgx
     # which will ensure consistency between old and new pgx
-    pgx$genes$hsapiens_homolog_associated_gene_name <- NA
+    pgx$genes$human_ortholog <- NA
+    pgx$genes$feature <- rownames(pgx$genes)
+    pgx$genes$gene_name2 <- pgx$genes$gene_name
+    col_order <- c("feature", "symbol", "human_ortholog",
+                  "gene_title", "gene_name", colnames(pgx$genes))
+    col_order <- col_order[!duplicated(col_order)]
+    pgx$genes <- pgx$genes[, col_order, drop = FALSE]
   }
-
 
   ## for COMPATIBILITY: if no counts, estimate from X
   if (is.null(pgx$counts)) {
@@ -192,8 +197,8 @@ if ("hgnc_symbol" %in% colnames(pgx$genes)) {
   pgx$families <- lapply(playdata::FAMILIES, function(x) setdiff(genes[match(x, hgenes)], NA))
 } else {
   # Here we use the homologs when available, instead of gene_name
-  genes <- ifelse(!is.na(pgx$genes$hsapiens_homolog_associated_gene_name), 
-                  pgx$genes$hsapiens_homolog_associated_gene_name, 
+  genes <- ifelse(!is.na(pgx$genes$human_ortholog), 
+                  pgx$genes$human_ortholog, 
                   pgx$genes$gene_name)
                   
   pgx$families <- lapply(playdata::FAMILIES, function(x) intersect(x, genes))
@@ -214,7 +219,7 @@ for (i in 1:nc) {
   gs <- pgx$gset.meta$meta[[i]]
   fc <- pgx$gx.meta$meta[[i]]$meta.fx
   match_fc_names_with_gene_names <- match(rownames(pgx$gx.meta$meta[[i]]), pgx$genes$gene_name)
-  homologs_match <- pgx$genes$hsapiens_homolog_associated_gene_name[match_fc_names_with_gene_names]
+  homologs_match <- pgx$genes$human_ortholog[match_fc_names_with_gene_names]
   match_fc_names_with_gene_names <- ifelse(is.na(homologs_match), rownames(pgx$gx.meta$meta[[i]]), homologs_match)
   names(fc) <- match_fc_names_with_gene_names
   G1 <- Matrix::t(pgx$GMT[names(fc), rownames(gs)])

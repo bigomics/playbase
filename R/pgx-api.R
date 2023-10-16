@@ -231,8 +231,8 @@ pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
     fam.pattern <- "^[<].*|^FAMILY|^CUSTOM"
   }
 
-  if ("hsapiens_homolog_associated_gene_name" %in% colnames(pgx$genes)) {
-    request_col <- "hsapiens_homolog_associated_gene_name"
+  if ("human_ortholog" %in% colnames(pgx$genes)) {
+    request_col <- "human_ortholog"
   } else {
     request_col <- "gene_name"
   }

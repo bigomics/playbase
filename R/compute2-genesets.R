@@ -44,10 +44,10 @@ compute_testGenesets <- function(pgx,
     stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
   }
 
-  if(is.null(pgx$genes$hsapiens_homolog_associated_gene_name)){
+  if(is.null(pgx$genes$human_ortholog)){
     # this is needed in case the species is human, and we dont have the homolog column or if we have an old pgx
     # which will ensure consistency between old and new pgx
-    pgx$genes$hsapiens_homolog_associated_gene_name <- NA
+    pgx$genes$human_ortholog <- NA
   }
 
   # Load custom genesets (if user provided)
@@ -76,10 +76,10 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
 
   ## filter genes by gene or homologous, if it exists
-  genes <- ifelse(!is.na(pgx$genes$hsapiens_homolog_associated_gene_name), 
-                  pgx$genes$hsapiens_homolog_associated_gene_name, 
+  genes <- ifelse(!is.na(pgx$genes$human_ortholog), 
+                  pgx$genes$human_ortholog, 
                   pgx$genes$gene_name)
-  # replace "" to NA in pgx$genes$hsapiens_homolog_associated_gene_name
+  # replace "" to NA in pgx$genes$human_ortholog
 
   G <- G[, colnames(G) %in% genes]
 
@@ -113,7 +113,7 @@ compute_testGenesets <- function(pgx,
     matched_custom_genes_in_gene_name <- match(colnames(custom_gmt), pgx$genes$gene_name)
     matched_custom_genes_in_homologs <- pgx$genes$gene_name[matched_custom_genes_in_gene_name]
     matched_custom_genes_in_gene_name <- ifelse(is.na(matched_custom_genes_in_homologs), NA, matched_custom_genes_in_gene_name)
-    homologous <- pgx$genes$hsapiens_homolog_associated_gene_name[matched_custom_genes_in_gene_name]
+    homologous <- pgx$genes$human_ortholog[matched_custom_genes_in_gene_name]
     colnames(custom_gmt) <- ifelse(is.na(homologous),colnames(custom_gmt),homologous)
     custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes, drop = FALSE]
     custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
@@ -150,13 +150,13 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
   cat("Matching gene set matrix...\n")
   # if homologous is available, use homologous gene in geneset
-  if(!is.null(pgx$genes$hsapiens_homolog_associated_gene_name)){
+  if(!is.null(pgx$genes$human_ortholog)){
     # check which rownames(X) in pgx$gene$gene_name
     matched_genes_in_gene_name <- match(rownames(X), pgx$genes$gene_name)
     # check which matched have homologues
-    matched_genes_in_homologs <- pgx$genes$hsapiens_homolog_associated_gene_name[matched_genes_in_gene_name]
+    matched_genes_in_homologs <- pgx$genes$human_ortholog[matched_genes_in_gene_name]
     matched_genes_in_gene_name <- ifelse(is.na(matched_genes_in_homologs), NA, matched_genes_in_gene_name)
-    homologous <- pgx$genes$hsapiens_homolog_associated_gene_name[matched_genes_in_gene_name]
+    homologous <- pgx$genes$human_ortholog[matched_genes_in_gene_name]
     rownames(X) <- ifelse(is.na(matched_genes_in_gene_name),rownames(X), homologous)
 
   }

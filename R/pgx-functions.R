@@ -1560,8 +1560,8 @@ filterProbes <- function(genes, gg) {
   p0 <- (toupper(sub(".*:", "", rownames(genes))) %in% toupper(gg))
   p1 <- (toupper(rownames(genes)) %in% toupper(gg))
   p2 <- (toupper(as.character(genes$gene_name)) %in% toupper(gg))
-  if ("hsapiens_homolog_associated_gene_name" %in% colnames(genes)) {
-    p3 <- (toupper(as.character(genes$hsapiens_homolog_associated_gene_name)) %in% toupper(gg))
+  if ("human_ortholog" %in% colnames(genes)) {
+    p3 <- (toupper(as.character(genes$human_ortholog)) %in% toupper(gg))
   } else {
     p3 <- rep(FALSE, nrow(genes))
   }

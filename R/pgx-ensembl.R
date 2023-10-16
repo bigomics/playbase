@@ -130,7 +130,7 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
 #'
 #' @return Data frame with gene annotation data for the input identifiers. Columns are:
 #' \itemize{
-#'    \item \code{feat_id}: The probe identifier.
+#'    \item \code{feature}: The probe identifier.
 #'   \item \code{gene_name}: HUman readable gene name.
 #'   \item \code{human_homolog}: Gene symbol for human. Only present if working with non-human dataset.
 #'   \item \code{gene_title}: Gene description
@@ -206,10 +206,10 @@ ngs.getGeneAnnotation <- function(probes,
       mart = mart
     )
     annot_homologs <- data.table::data.table(annot_homologs)
-    annot_homologs[, human_homolog := hsapiens_homolog_associated_gene_name]
+    data.table::setnames(annot_homologs, 
+                        old = "hsapiens_homolog_associated_gene_name", 
+                        new = "human_ortholog")
     annot <- annot[annot_homologs, on = probe_type]
-    annot[hsapiens_homolog_associated_gene_name == "", hsapiens_homolog_associated_gene_name := NA]
-
   }
 
   # Join with clean_probes vector
@@ -217,8 +217,8 @@ ngs.getGeneAnnotation <- function(probes,
 
   # Renaming for backwards compatibility
   if (probe_type != "external_gene_name") {
-    new_names <- c("feat_id", 
-                  "genes_name",
+    new_names <- c("feature", 
+                  "symbol",
                   "gene_title",
                   "gene_biotype",
                   "chr", 
@@ -226,38 +226,38 @@ ngs.getGeneAnnotation <- function(probes,
                   "tx_len", 
                   "map")
   } else {
-    new_names <- c("feat_id", 
+    new_names <- c("feature", 
                   "gene_title",
                   "gene_biotype",
                   "chr", 
                   "pos",
                   "tx_len", 
                   "map")
-    out[, genes_name := external_gene_name]
+    out[, symbol := external_gene_name]
   }
   data.table::setnames(out, old = attr_call, new = new_names)
   
   # Reorder columns and rows
-  if ("human_homolog" %chin% colnames(out)) {
-    col_order <- c("feat_id", 
-                   "genes_name", 
-                   "human_homolog",
+  if ("human_ortholog" %chin% colnames(out)) {
+    col_order <- c("feature", 
+                   "symbol", 
+                   "human_ortholog",
                    "gene_title",
                    "gene_biotype")
   } else {
-    col_order <- c("feat_id", 
-                   "genes_name", 
+    col_order <- c("feature", 
+                   "symbol", 
                    "gene_title",
                    "gene_biotype")
   }
   data.table::setcolorder(out, col_order)
-  data.table::setkeyv(out, "feat_id")
+  data.table::setkeyv(out, "feature")
   
   # Keep it for back compatibility
-  out[, gene_name := feat_id]
+  out[, gene_name := feature]
 
   out <- as.data.frame(out)
-  rownames(out) <- out$feat_id
+  rownames(out) <- out$feature
   return(out)
 }
 
@@ -288,7 +288,7 @@ ngs.getGeneAnnotation <- function(probes,
 #' }
 #' @import data.table
 #' @export
-probe2symbol <- function(probes, annot_table, query = "gene_name") {
+probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE) {
 
   # Prepare inputs
   if (!data.table::is.data.table(annot_table)) {
@@ -305,9 +305,11 @@ probe2symbol <- function(probes, annot_table, query = "gene_name") {
                                              mult = "first"]
 
   # Deal with NA
-  annot[is.na(annot[[query]])|annot[[query]] ==  "",
-        (query) := .SD,
-        .SDcols = probe_type]
+  if (fill_na) {
+    annot[is.na(annot[[query]])|annot[[query]] ==  "",
+          (query) := .SD,
+          .SDcols = probe_type]
+  }
 
   # Return queryed col
   return(annot[[query]])
@@ -333,7 +335,9 @@ probe2symbol <- function(probes, annot_table, query = "gene_name") {
 #' @examples
 #' \dontrun{
 #' pgx <- list()
-#' pgx <- pgx.gene_table(pgx, "Homo sapiens")
+#' pgx$counts <- matrix(rnorm(4), nrow = 2)
+#' rownames(pgx$counts) <- c("ENSG00000142192", "ENSG00000288602")
+#' pgx <- pgx.gene_table(pgx, "Human")
 #' }
 #' @export
 pgx.gene_table <- function(pgx, organism) {
