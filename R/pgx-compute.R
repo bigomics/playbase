@@ -329,7 +329,7 @@ pgx.createPGX <- function(counts,
    if (convert.hugo) {
     message("[createPGX] converting probes to symbol...")
     symbol <- pgx$genes[rownames(pgx$counts), "symbol"] 
-    mapped_symbols <- !is.na(symbol) && symbol != ""
+    mapped_symbols <- !is.na(symbol) & symbol != ""
     probes_with_symbol <- pgx$genes[mapped_symbols, "feature"]
     
     ## Update counts and genes
