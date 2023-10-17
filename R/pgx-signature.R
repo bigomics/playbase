@@ -569,7 +569,7 @@ pgx.addEnrichmentSignaturesH5 <- function(h5.file, X = NULL, mc.cores = 0,
 
   ## ---------------------- ONLY HALLMARK FOR NOW -----------------------
 
-  G <- playdata::GSET_SPARSEG_XL
+  G <- playdata::GSETxGENE
   sel <- grep("HALLMARK|C[1-9]|^GO", rownames(G))
   sel <- grep("HALLMARK", rownames(G))
   genes <- intersect(colnames(G), rownames(X))
