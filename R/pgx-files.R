@@ -189,7 +189,7 @@ pgx.readOptions <- function(file = "./OPTIONS") {
 ## PGXINFO methods (preferred API)
 ## ================================================================================
 
-#' Add new pgx object to PGX-table 
+#' Add new pgx object to PGX-table
 #'
 #' @param pgxinfo The existing pgxinfo data frame containing dataset metadata
 #' @param pgx The pgx object containing updated metadata to add
@@ -210,7 +210,7 @@ pgx.readOptions <- function(file = "./OPTIONS") {
 #' The updated pgxinfo data frame containing all dataset metadata is returned.
 #'
 #' @export
-pgxinfo.add <- function(pgxinfo, pgx, remove.old = TRUE) {    
+pgxinfo.add <- function(pgxinfo, pgx, remove.old = TRUE) {
   cond <- grep("title|source|group|batch|sample|patient|donor|repl|clone|cluster|lib.size|^[.]",
     colnames(pgx$samples),
     invert = TRUE, value = TRUE
@@ -314,9 +314,8 @@ pgxinfo.add <- function(pgxinfo, pgx, remove.old = TRUE) {
 #'
 #' @export
 pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE) {
-
-    ##  pgx.dir="~/Playground/pgx";file = "datasets-info.csv"
-  ##  pgx.dir="~/Downloads";file = "datasets-info.csv"    
+  ##  pgx.dir="~/Playground/pgx";file = "datasets-info.csv"
+  ##  pgx.dir="~/Downloads";file = "datasets-info.csv"
   pgx.files <- dir(pgx.dir, pattern = "[.]pgx$")
   if (length(pgx.files) == 0) {
     return(NULL)
@@ -327,8 +326,8 @@ pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE) {
   if (file.exists(pgxinfo.file)) {
     ## do not use fread.csv or fread here!! see issue #441
     pgxinfo <- utils::read.csv(pgxinfo.file, stringsAsFactors = FALSE, row.names = NULL, sep = ",")
-    pgxinfo$X <- NULL  ## delete first column  
-    pgxinfo <- pgxinfo[which(!is.na(pgxinfo$dataset)),]  ## remove NA
+    pgxinfo$X <- NULL ## delete first column
+    pgxinfo <- pgxinfo[which(!is.na(pgxinfo$dataset)), ] ## remove NA
     if (match && nrow(pgxinfo)) {
       pgx.files1 <- sub("[.]pgx$", "", pgx.files)
       pgxinfo.datasets <- sub("[.]pgx$", "", pgxinfo$dataset)
@@ -438,8 +437,8 @@ pgxinfo.needUpdate <- function(
     if (verbose) message("[pgxinfo.needUpdate] checking which pgx already in PGX info...")
     ## do not use fread! quoting bug
     pgxinfo <- utils::read.csv(info.file1, stringsAsFactors = FALSE, row.names = NULL, sep = ",")
-    pgxinfo$X <- NULL  ## delete first column  
-    pgxinfo <- pgxinfo[which(!is.na(pgxinfo$dataset)),]  ## remove NA
+    pgxinfo$X <- NULL ## delete first column
+    pgxinfo <- pgxinfo[which(!is.na(pgxinfo$dataset)), ] ## remove NA
     info.files <- unique(sub(".pgx$", "", pgxinfo$dataset))
     info.complete <- all(pgx.files %in% info.files)
     info.missing <- setdiff(pgx.files, info.files)
@@ -476,8 +475,8 @@ pgxinfo.needUpdate <- function(
   has.files <- (has.fc && has.info)
   is.complete <- (fc.complete && info.complete)
   if (check.sigdb) {
-      has.files <- has.files && has.sigdb
-      is.complete <- is.complete && h5.complete
+    has.files <- has.files && has.sigdb
+    is.complete <- is.complete && h5.complete
   }
   return(!has.files || !is.complete)
 }
@@ -579,8 +578,8 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     if (verbose) message("[pgxinfo.updateDatasetFolder] checking which pgx files already in PGX info...")
     ## do not use fread! quoting bug
     pgxinfo <- utils::read.csv(info.file, stringsAsFactors = FALSE, row.names = NULL, sep = ",")
-    pgxinfo$X <- NULL  ## delete first column  
-    pgxinfo <- pgxinfo[which(!is.na(pgxinfo$dataset)),]  ## remove NA
+    pgxinfo$X <- NULL ## delete first column
+    pgxinfo <- pgxinfo[which(!is.na(pgxinfo$dataset)), ] ## remove NA
     pgxinfo.files <- unique(sub(".pgx$", "", pgxinfo$dataset))
     info.missing <- setdiff(pgx.files, pgxinfo.files)
     info.delete <- setdiff(pgxinfo.files, pgx.files)
