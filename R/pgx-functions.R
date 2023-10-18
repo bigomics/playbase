@@ -1681,12 +1681,12 @@ pgx.getGeneSetCollections <- function(gsets = rownames(playdata::GSETxGENE)) {
   #   "Disease" = gsets[grep("jensen|disease|covid|diabetes", gsets, ignore.case = TRUE)],
   # )
 
-  collections[["<all>"]] <- gsets ## X is sorted
-
+  
   ## ----------- add main collections from gene set prefixes
   gsets.db <- sub(":.*", "", gsets)
   gsets.groups <- tapply(gsets, gsets.db, list)
   collections <- c(collections, gsets.groups)
+  collections[["<all>"]] <- gsets
   return(collections)
 }
 
