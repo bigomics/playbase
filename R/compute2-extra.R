@@ -18,7 +18,7 @@
 compute_extra <- function(pgx, extra = c(
                             "meta.go", "infer", "deconv", "drugs", ## "graph",
                             "connectivity", "wordcloud", "wgcna"
-                          ), sigdb = NULL, libx.dir = NULL) {
+                          ), sigdb = NULL, libx.dir = NULL, pgx.dir = NULL) {
   timings <- c()
 
   if (length(extra) == 0) {
@@ -119,25 +119,34 @@ compute_extra <- function(pgx, extra = c(
     message("<<< done!")
   }
 
-  # THIS REQUIRES libx.dir TO BE SET TO FIND sigdb-.h5 FILES
+  # This requires libx.dir to be set (or sigdb passed) to find sigdb-.h5 files
   if ("connectivity" %in% extra) {
     # try to find sigdb in libx dir if not specified
-    if (!is.null(libx.dir) || !is.null(sigdb)) {
+    if (!is.null(libx.dir) || !is.null(pgx.dir) || !is.null(sigdb)) {
       message(">>> Computing connectivity scores...")
       if (is.null(sigdb)) {
-        sigdb <- dir(file.path(libx.dir, "sigdb"), pattern = "h5$", full.names = TRUE)
+        sigdb <- NULL
+        if (!is.null(pgx.dir) ) {
+          ## make sure h5 file is up-to-date
+          pgxinfo.updateDatasetFolder(pgx.dir, force=FALSE, update.sigdb=TRUE)
+          user.sigdb <- file.path(pgx.dir, "datasets-sigdb.h5")
+          sigdb <- c(sigdb, user.sigdb)
+        }
+        if (!is.null(libx.dir) ) {
+          libx.sigdb <- dir(file.path(libx.dir, "sigdb"), pattern = "h5$", full.names = TRUE)
+          sigdb <- c(sigdb, libx.sigdb)
+        }
       }
-
+      
       db <- sigdb[1]
       for (db in sigdb) {
         if (file.exists(db)) {
           message("computing connectivity scores for ", db)
-          ## in memory for many comparisons
-          meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
           tt <- system.time({
             scores <- pgx.computeConnectivityScores(
-              pgx, db,
-              ntop = 1000,
+              pgx,
+              db,
+              ntop = 200,
               contrasts = NULL,
               remove.le = TRUE
             )
