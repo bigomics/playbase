@@ -1662,28 +1662,9 @@ pgx.getGeneSetCollections <- function(gsets = rownames(playdata::GSETxGENE)) {
   ## -----------------------------------------------------------------------------
 
   collections <- list()
-
-  # collections <- append(
-  #   collections,
-  #   "Hallmark collection" = gsets[grep("HALLMARK", gsets)],
-  #   "Pathway related" = gsets[grep("pathway", gsets, ignore.case = TRUE)],
-  #   "Metabolism related" = gsets[grep("metaboli", gsets, ignore.case = TRUE)],
-  #   "Signalling related" = gsets[grep("signal", gsets, ignore.case = TRUE)],
-  #   "T-cell related" = gsets[grep("tcell|t-cell|t[ ]cell", gsets, ignore.case = TRUE)],
-  #   "B-cell related" = gsets[grep("bcell]b-cell|b[ ]cell", gsets, ignore.case = TRUE)],
-  #   "Response related" = gsets[grep("response", gsets, ignore.case = TRUE)],
-  #   "Cancer related" = gsets[grep("cancer", gsets, ignore.case = TRUE)],
-  #   "Immune related" = gsets[grep("immune", gsets, ignore.case = TRUE)],
-  #   "Cell differentiation" = gsets[grep("differentiation", gsets, ignore.case = TRUE)],
-  #   "Checkpoint related" = gsets[grep("checkpoint", gsets, ignore.case = TRUE)],
-  #   "IL gene sets" = gsets[grep("IL[1-9]{1,2}", gsets, ignore.case = TRUE)],
-  #   "Aging" = gsets[grep("aging", gsets, ignore.case = TRUE)],
-  #   "Disease" = gsets[grep("jensen|disease|covid|diabetes", gsets, ignore.case = TRUE)],
-  # )
-
   
   ## ----------- add main collections from gene set prefixes
-  gsets.db <- sub(":.*", "", gsets)
+  gsets.db <- sub("_.*", "", gsets)
   gsets.groups <- tapply(gsets, gsets.db, list)
   collections <- c(collections, gsets.groups)
   collections[["<all>"]] <- gsets
