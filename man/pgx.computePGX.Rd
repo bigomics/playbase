@@ -8,7 +8,7 @@ pgx.computePGX(
   pgx,
   max.genes = 19999,
   max.genesets = 5000,
-  gx.methods = c("ttest.welch", "trend.limma", "edger.qlf"),
+  gx.methods = c("trend.limma", "edger.qlf", "deseq2.wald"),
   gset.methods = c("fisher", "gsva", "fgsea"),
   custom.geneset = c(gmt = NULL, info = NULL),
   do.cluster = TRUE,
@@ -16,6 +16,7 @@ pgx.computePGX(
   prune.samples = FALSE,
   extra.methods = c("meta.go", "infer", "deconv", "drugs", "connectivity", "wordcloud",
     "wgcna")[c(1, 2)],
+  pgx.dir = NULL,
   libx.dir = NULL,
   progress = NULL
 )

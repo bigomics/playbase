@@ -7,10 +7,10 @@
 compute_cellcycle_gender(ngs, rna.counts = ngs$counts)
 }
 \arguments{
-\item{ngs}{An object containing the input data for analysis.}
-
 \item{rna.counts}{A matrix or data frame of RNA expression counts.
 Defaults to the counts in the input object.}
+
+\item{pgx}{An object containing the input data for analysis.}
 }
 \value{
 An updated object with cell cycle and gender inference results.

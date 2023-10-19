@@ -4,10 +4,10 @@
 \alias{compute_deconvolution}
 \title{Compute Deconvolution}
 \usage{
-compute_deconvolution(ngs, rna.counts = ngs$counts, full = FALSE)
+compute_deconvolution(pgx, rna.counts = pgx$counts, full = FALSE)
 }
 \arguments{
-\item{ngs}{An object containing the input data for analysis.}
+\item{pgx}{An object containing the input data for analysis.}
 
 \item{rna.counts}{A matrix or data frame of RNA expression counts. Defaults to the counts in the input object.}
 

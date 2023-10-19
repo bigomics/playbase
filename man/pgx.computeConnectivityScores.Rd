@@ -7,10 +7,9 @@
 pgx.computeConnectivityScores(
   pgx,
   sigdb,
-  ntop = 1000,
+  ntop = 200,
   contrasts = NULL,
-  remove.le = FALSE,
-  inmemory = FALSE
+  remove.le = FALSE
 )
 }
 \arguments{
@@ -23,8 +22,6 @@ pgx.computeConnectivityScores(
 \item{contrasts}{Contrasts to compute signature for. Default is all contrasts.}
 
 \item{remove.le}{Remove leading edge genes before scoring. Default FALSE.}
-
-\item{inmemory}{Compute correlations in memory instead of on disk. Default FALSE.}
 }
 \value{
 List of data frames with connectivity scores for each contrast.
@@ -42,7 +39,4 @@ Scores are computed for each contrast unless a subset is specified with \code{co
 
 Setting \code{remove.le = TRUE} removes the leading edge genes from the signature before
 computing connectivity. This reduces bias from highly weighted genes.
-
-By default, correlations are computed on disk using chunks. Set \code{inmemory = TRUE}
-to compute in memory, which may be faster for small datasets.
 }

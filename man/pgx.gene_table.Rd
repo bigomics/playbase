@@ -26,6 +26,8 @@ of temporary Ensembl API errors.
 \examples{
 \dontrun{
 pgx <- list()
-pgx <- pgx.gene_table(pgx, "Homo sapiens")
+pgx$counts <- matrix(rnorm(4), nrow = 2)
+rownames(pgx$counts) <- c("ENSG00000142192", "ENSG00000288602")
+pgx <- pgx.gene_table(pgx, "Human")
 }
 }

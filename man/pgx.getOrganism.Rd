@@ -4,7 +4,7 @@
 \alias{pgx.getOrganism}
 \title{Determine organism from count matrix}
 \usage{
-pgx.getOrganism(pgx.counts)
+pgx.getOrganism(pgx)
 }
 \arguments{
 \item{pgx.counts}{Matrix of count data, with genes as rows.}
