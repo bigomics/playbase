@@ -1494,41 +1494,18 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
 #' @return A list containing the extracted gene set collections.
 #'
 #' @export
-pgx.getGeneSetCollections <- function(gsets, min.size = 10, max.size = 500) {
+pgx.getGeneSetCollections <- function(gsets = rownames(playdata::GSETxGENE)) {
   ## -----------------------------------------------------------------------------
   ## Gene set collections
   ## -----------------------------------------------------------------------------
 
-  collections <- list(
-    "Hallmark collection" = gsets[grep("HALLMARK", gsets)],
-    "Pathway related" = gsets[grep("pathway", gsets, ignore.case = TRUE)],
-    "Metabolism related" = gsets[grep("metaboli", gsets, ignore.case = TRUE)],
-    "Signalling related" = gsets[grep("signal", gsets, ignore.case = TRUE)],
-    "T-cell related" = gsets[grep("tcell|t-cell|t[ ]cell", gsets, ignore.case = TRUE)],
-    "B-cell related" = gsets[grep("bcell]b-cell|b[ ]cell", gsets, ignore.case = TRUE)],
-    "Response related" = gsets[grep("response", gsets, ignore.case = TRUE)],
-    "Cancer related" = gsets[grep("cancer", gsets, ignore.case = TRUE)],
-    "Immune related" = gsets[grep("immune", gsets, ignore.case = TRUE)],
-    "Cell differentiation" = gsets[grep("differentiation", gsets, ignore.case = TRUE)],
-    "Checkpoint related" = gsets[grep("checkpoint", gsets, ignore.case = TRUE)],
-    "IL gene sets" = gsets[grep("IL[1-9]{1,2}", gsets, ignore.case = TRUE)],
-    "Aging" = gsets[grep("aging", gsets, ignore.case = TRUE)],
-    "Disease" = gsets[grep("jensen|disease|covid|diabetes", gsets, ignore.case = TRUE)]
-  )
-
-  collections[["<all>"]] <- gsets ## X is sorted
-  collections <- collections[which(sapply(collections, length) >= 10)]
-  collections <- collections[order(names(collections))]
-
+  collections <- list()
+  
   ## ----------- add main collections from gene set prefixes
-  gsets.db <- sub(":.*", "", gsets)
+  gsets.db <- sub("_.*", "", gsets)
   gsets.groups <- tapply(gsets, gsets.db, list)
   collections <- c(collections, gsets.groups)
-
-  ## ----------- filter on size
-  nsize <- sapply(collections, length)
-  sel <- which(nsize >= min.size & nsize < max.size)
-  collections <- collections[sel]
+  collections[["<all>"]] <- gsets
   return(collections)
 }
 
