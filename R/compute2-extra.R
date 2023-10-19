@@ -9,36 +9,36 @@
 #' deconvolution, phenotype inference, drug activity enrichment, OmicsGraphs, WordCloud statistics,
 #' connectivity scores, and wgcna.
 #'
-#' @param ngs An object containing the input data for analysis.
+#' @param pgx An object containing the input data for analysis.
 #' @param extra A character vector specifying which additional analyses to perform.
 #' @param sigdb A character vector specifying the path to the sigdb-.h5 files for connectivity scores.
 #' @param libx.dir The directory where the sigdb-.h5 files are located.
 #' @return An updated object with additional analysis results.
 #' @export
-compute_extra <- function(ngs, extra = c(
+compute_extra <- function(pgx, extra = c(
                             "meta.go", "infer", "deconv", "drugs", ## "graph",
                             "connectivity", "wordcloud", "wgcna"
-                          ), sigdb = NULL, libx.dir = NULL) {
+                          ), sigdb = NULL, libx.dir = NULL, pgx.dir = NULL) {
   timings <- c()
 
   if (length(extra) == 0) {
-    return(ngs)
+    return(pgx)
   }
 
   ## detect if it is single or multi-omics
-  single.omics <- !any(grepl("\\[", rownames(ngs$counts)))
-
+  single.omics <- !any(grepl("\\[", rownames(pgx$counts)))
+  single.omics
   if (single.omics) {
     message(">>> computing extra for SINGLE-OMICS")
-    rna.counts <- ngs$counts
+    rna.counts <- pgx$counts
   } else {
     message(">>> computing extra for MULTI-OMICS")
-    data.type <- gsub("\\[|\\].*", "", rownames(ngs$counts))
+    data.type <- gsub("\\[|\\].*", "", rownames(pgx$counts))
     jj <- which(data.type %in% c("gx", "mrna"))
     if (length(jj) == 0) {
       stop("FATAL. could not find gx/mrna values.")
     }
-    rna.counts <- ngs$counts[jj, ]
+    rna.counts <- pgx$counts[jj, ]
     is.logged <- (min(rna.counts, na.rm = TRUE) < 0 ||
       max(rna.counts, na.rm = TRUE) < 50)
     if (is.logged) {
@@ -54,7 +54,7 @@ compute_extra <- function(ngs, extra = c(
   if ("meta.go" %in% extra) {
     message(">>> Computing GO core graph...")
     tt <- system.time({
-      ngs$meta.go <- pgx.computeCoreGOgraph(ngs, fdr = 0.20)
+      pgx$meta.go <- pgx.computeCoreGOgraph(pgx, fdr = 0.20)
     })
     timings <- rbind(timings, c("meta.go", tt))
     message("<<< done!")
@@ -63,8 +63,8 @@ compute_extra <- function(ngs, extra = c(
   if ("deconv" %in% extra) {
     message(">>> computing deconvolution")
     tt <- system.time({
-      ngs <- compute_deconvolution(
-        ngs,
+      pgx <- compute_deconvolution(
+        pgx,
         rna.counts = rna.counts,
         full = FALSE
       )
@@ -76,25 +76,25 @@ compute_extra <- function(ngs, extra = c(
   if ("infer" %in% extra) {
     message(">>> inferring extra phenotypes...")
     tt <- system.time({
-      ngs <- compute_cellcycle_gender(ngs, rna.counts = rna.counts)
+      pgx <- compute_cellcycle_gender(pgx, rna.counts = rna.counts)
     })
     timings <- rbind(timings, c("infer", tt))
     message("<<< done!")
   }
 
   if ("drugs" %in% extra) {
-    ngs$drugs <- NULL ## reset??
+    pgx$drugs <- NULL ## reset??
 
     message(">>> Computing drug activity enrichment...")
     tt <- system.time({
-      ngs <- compute_drugActivityEnrichment(ngs, libx.dir = libx.dir)
+      pgx <- compute_drugActivityEnrichment(pgx, libx.dir = libx.dir)
     })
     timings <- rbind(timings, c("drugs", tt))
 
     if (!is.null(libx.dir)) {
       message(">>> Computing drug sensitivity enrichment...")
       tt <- system.time({
-        ngs <- compute_drugSensitivityEnrichment(ngs, libx.dir)
+        pgx <- compute_drugSensitivityEnrichment(pgx, libx.dir)
       })
       timings <- rbind(timings, c("drugs-sx", tt))
     } else {
@@ -106,7 +106,7 @@ compute_extra <- function(ngs, extra = c(
   if ("graph" %in% extra) {
     message(">>> computing OmicsGraphs...")
     tt <- system.time({
-      ngs <- compute_omicsGraphs(ngs)
+      pgx <- compute_omicsGraphs(pgx)
     })
     timings <- rbind(timings, c("graph", tt))
     message("<<< done!")
@@ -115,42 +115,50 @@ compute_extra <- function(ngs, extra = c(
   if ("wordcloud" %in% extra) {
     message(">>> computing WordCloud statistics...")
     tt <- system.time({
-      res <- pgx.calculateWordCloud(ngs, progress = NULL, pg.unit = 1)
+      res <- pgx.calculateWordCloud(pgx, progress = NULL, pg.unit = 1)
     })
     timings <- rbind(timings, c("wordcloud", tt))
-    ngs$wordcloud <- res
+    pgx$wordcloud <- res
     remove(res)
     message("<<< done!")
   }
 
-  # I THINK THIS REQUIRES libx.dir TO BE SET TO FIND sigdb-.h5 FILES (-Nick)
+  # This requires libx.dir to be set (or sigdb passed) to find sigdb-.h5 files
   if ("connectivity" %in% extra) {
     # try to find sigdb in libx dir if not specified
-    if (!is.null(libx.dir) || !is.null(sigdb)) {
+    if (!is.null(libx.dir) || !is.null(pgx.dir) || !is.null(sigdb)) {
       message(">>> Computing connectivity scores...")
       if (is.null(sigdb)) {
-        sigdb <- dir(file.path(libx.dir, "sigdb"), pattern = "h5$", full.names = TRUE)
+        sigdb <- NULL
+        if (!is.null(pgx.dir)) {
+          ## make sure h5 file is up-to-date
+          pgxinfo.updateDatasetFolder(pgx.dir, force = FALSE, update.sigdb = TRUE)
+          user.sigdb <- file.path(pgx.dir, "datasets-sigdb.h5")
+          sigdb <- c(sigdb, user.sigdb)
+        }
+        if (!is.null(libx.dir)) {
+          libx.sigdb <- dir(file.path(libx.dir, "sigdb"), pattern = "h5$", full.names = TRUE)
+          sigdb <- c(sigdb, libx.sigdb)
+        }
       }
 
       db <- sigdb[1]
       for (db in sigdb) {
         if (file.exists(db)) {
           message("computing connectivity scores for ", db)
-          ## in memory for many comparisons
-          meta <- pgx.getMetaFoldChangeMatrix(ngs, what = "meta")
-          inmemory <- ifelse(ncol(meta$fc) > 50, TRUE, FALSE) ## NEED RETHINK!! reverse?
-          inmemory
           tt <- system.time({
             scores <- pgx.computeConnectivityScores(
-              ngs, db,
-              ntop = 1000, contrasts = NULL,
-              remove.le = TRUE, inmemory = inmemory
+              pgx,
+              db,
+              ntop = 200,
+              contrasts = NULL,
+              remove.le = TRUE
             )
           })
           timings <- rbind(timings, c("connectivity", tt))
 
           db0 <- sub(".*/", "", db)
-          ngs$connectivity[[db0]] <- scores
+          pgx$connectivity[[db0]] <- scores
           remove(scores)
         }
       }
@@ -162,7 +170,7 @@ compute_extra <- function(ngs, extra = c(
   if ("wgcna" %in% extra) {
     message(">>> Computing wgcna...")
     tt <- system.time({
-      ngs$wgcna <- pgx.wgcna(ngs)
+      pgx$wgcna <- pgx.wgcna(pgx)
     })
     timings <- rbind(timings, c("wgcna", tt))
   }
@@ -190,10 +198,10 @@ compute_extra <- function(ngs, extra = c(
   }
   rownames(timings0) <- paste("[extra]", rownames(timings0))
 
-  ngs$timings <- rbind(ngs$timings, timings0)
+  pgx$timings <- rbind(pgx$timings, timings0)
   message("<<< done!")
 
-  return(ngs)
+  return(pgx)
 }
 
 ## -------------- deconvolution analysis --------------------------------
@@ -203,7 +211,7 @@ compute_extra <- function(ngs, extra = c(
 #' This function performs deconvolution analysis on the input RNA expression data using various reference matrices
 #' and methods. It estimates the abundance of different cell types or tissue components present in the data.
 #'
-#' @param ngs An object containing the input data for analysis.
+#' @param pgx An object containing the input data for analysis.
 #' @param rna.counts A matrix or data frame of RNA expression counts. Defaults to the counts in the input object.
 #' @param full A logical value indicating whether to use the full set of reference matrices and methods (TRUE),
 #'   or a subset of faster methods and references (FALSE).
@@ -217,9 +225,7 @@ compute_extra <- function(ngs, extra = c(
 #' deconv <- compute_deconvolution(probes, annot_table)
 #' }
 #' @export
-compute_deconvolution <- function(ngs,
-                                  rna.counts = ngs$counts,
-                                  full = FALSE) {
+compute_deconvolution <- function(pgx, rna.counts = pgx$counts, full = FALSE) {
   ## list of reference matrices
   refmat <- list()
   refmat[["Immune cell (LM22)"]] <- playdata::LM22
@@ -247,18 +253,19 @@ compute_deconvolution <- function(ngs,
   }
 
   counts <- rna.counts
+  rownames(counts) <- toupper(pgx$genes[rownames(counts), "gene_name"])
   res <- pgx.multipleDeconvolution(counts, refmat = refmat, methods = methods)
 
-  ngs$deconv <- res$results
+  pgx$deconv <- res$results
   if (!is.null(res$timings)) {
     rownames(res$timings) <- paste0("[deconvolution]", rownames(res$timings))
     res$timings
-    ngs$timings <- rbind(ngs$timings, res$timings)
+    pgx$timings <- rbind(pgx$timings, res$timings)
   }
   remove(refmat)
   remove(res)
 
-  return(ngs)
+  return(pgx)
 }
 
 ## -------------- infer sample characteristics --------------------------------
@@ -268,7 +275,7 @@ compute_deconvolution <- function(ngs,
 #' This function performs cell cycle phase inference and gender estimation based on the input RNA expression data.
 #' The cell cycle phase inference is performed using the Seurat package.
 #'
-#' @param ngs An object containing the input data for analysis.
+#' @param pgx An object containing the input data for analysis.
 #' @param rna.counts A matrix or data frame of RNA expression counts.
 #'   Defaults to the counts in the input object.
 #' @return An updated object with cell cycle and gender inference results.
@@ -291,26 +298,26 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
   }
   if (is.human) {
     message("estimating cell cycle (using Seurat)...")
-    ngs$samples$cell.cycle <- NULL
-    ngs$samples$.cell.cycle <- NULL
+    pgx$samples$cell.cycle <- NULL
+    pgx$samples$.cell.cycle <- NULL
 
     counts <- rna.counts
-    rownames(counts) <- probe2symbol(rownames(counts), ngs$genes)
+    rownames(counts) <- toupper(pgx$genes[rownames(counts), "gene_name"])
     res <- try(pgx.inferCellCyclePhase(counts)) ## can give bins error
     if (!inherits(res, "try-error")) {
-      ngs$samples$.cell_cycle <- res
+      pgx$samples$.cell_cycle <- res
     }
-    if (!(".gender" %in% colnames(ngs$samples))) {
+    if (!(".gender" %in% colnames(pgx$samples))) {
       message("estimating gender...")
-      ngs$samples$.gender <- NULL
+      pgx$samples$.gender <- NULL
       X <- log2(1 + rna.counts)
-      gene_name <- probe2symbol(rownames(counts), ngs$genes)
-      ngs$samples$.gender <- pgx.inferGender(X, gene_name)
+      gene_name <- pgx$genes[rownames(X), "gene_name"]
+      pgx$samples$.gender <- pgx.inferGender(X, gene_name)
     } else {
       message("gender already estimated. skipping...")
     }
   }
-  return(ngs)
+  return(pgx)
 }
 
 
@@ -320,12 +327,12 @@ compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
 #' It uses drug activity databases to compute enrichment scores and attach the results to the input object.
 #' The drug activity databases include L1000_ACTIVITYS_N20D1011 and L1000_GENE_PERTURBATION.
 #'
-#' @param ngs An object containing the input data for analysis.
+#' @param pgx An object containing the input data for analysis.
 #' @param libx.dir The directory path where the drug activity databases are located.
 #'   This is required if calling the function compute_full_drugActivityEnrichment.
 #' @return An updated object with drug activity enrichment results.
 #' @export
-compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
+compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
   ## -------------- drug enrichment
   # get drug activity databases
 
@@ -354,7 +361,7 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
     is.drug <- grepl("activity|drug|ChemPert", f, ignore.case = TRUE)
 
     out1 <- pgx.computeDrugEnrichment(
-      obj = ngs,
+      obj = pgx,
       X = X,
       xdrugs = xdrugs,
       methods = c("GSEA", "cor"),
@@ -388,13 +395,13 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
 
     ## --------------- attach results to object
     db <- names(ref.db)[i]
-    ngs$drugs[[db]] <- out1[["GSEA"]]
-    ngs$drugs[[db]][["annot"]] <- annot0[, c("drug", "moa", "target")]
-    ngs$drugs[[db]][["clust"]] <- out1[["clust"]]
-    ngs$drugs[[db]][["stats"]] <- out1[["stats"]]
+    pgx$drugs[[db]] <- out1[["GSEA"]]
+    pgx$drugs[[db]][["annot"]] <- annot0[, c("drug", "moa", "target")]
+    pgx$drugs[[db]][["clust"]] <- out1[["clust"]]
+    pgx$drugs[[db]][["stats"]] <- out1[["stats"]]
   }
 
-  return(ngs)
+  return(pgx)
 }
 
 
@@ -404,20 +411,20 @@ compute_drugActivityEnrichment <- function(ngs, libx.dir = NULL) {
 #' It uses drug sensitivity databases to compute enrichment scores and attach the results to the input object.
 #' The drug sensitivity databases are located in the specified directory (libx.dir).
 #'
-#' @param ngs An object containing the input data for analysis.
+#' @param pgx An object containing the input data for analysis.
 #' @param libx.dir The directory path where the drug sensitivity databases are located.
 #' @return An updated object with drug sensitivity enrichment results.
 #' @export
-compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
+compute_drugSensitivityEnrichment <- function(pgx, libx.dir = NULL) {
   if (is.null(libx.dir) || !dir.exists(libx.dir)) {
-    return(ngs)
+    return(pgx)
   }
 
   cmap.dir <- file.path(libx.dir, "cmap")
   ref.db <- dir(cmap.dir, pattern = "sensitivity.*rds$")
   if (length(ref.db) == 0) {
     message("[compute_drugSensitivityEnrichment] Warning:: missing drug sensitivity database")
-    return(ngs)
+    return(pgx)
   }
   names(ref.db) <- sub("-", "/", gsub("_.*", "", ref.db))
   ref.db
@@ -429,7 +436,7 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
     xdrugs <- gsub("[@_].*$", "", colnames(X))
 
     out1 <- pgx.computeDrugEnrichment(
-      ngs, X, xdrugs,
+      pgx, X, xdrugs,
       methods = c("GSEA", "cor"),
       nmin = 10,
       nprune = 1000,
@@ -445,14 +452,14 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
       rownames(annot0) <- rownames(out1[["GSEA"]]$X)
 
       s1 <- names(ref.db)[i]
-      ngs$drugs[[s1]] <- out1[["GSEA"]]
-      ngs$drugs[[s1]][["annot"]] <- annot0[, c("moa", "target")]
-      ngs$drugs[[s1]][["clust"]] <- out1[["clust"]]
-      ngs$drugs[[s1]][["stats"]] <- out1[["stats"]]
+      pgx$drugs[[s1]] <- out1[["GSEA"]]
+      pgx$drugs[[s1]][["annot"]] <- annot0[, c("moa", "target")]
+      pgx$drugs[[s1]][["clust"]] <- out1[["clust"]]
+      pgx$drugs[[s1]][["stats"]] <- out1[["stats"]]
     }
   } ## end of for rr
 
-  return(ngs)
+  return(pgx)
 }
 
 ## ------------------ Omics graphs --------------------------------
@@ -463,15 +470,15 @@ compute_drugSensitivityEnrichment <- function(ngs, libx.dir = NULL) {
 #' It creates the omics graph using the input object and calculates path scores using the omics graph.
 #' It also computes a reduced graph and path scores based on the reduced graph.
 #'
-#' @param ngs An object containing the input data for analysis.
+#' @param pgx An object containing the input data for analysis.
 #' @return An updated object with omics graphs and path scores.
 #' @export
-compute_omicsGraphs <- function(ngs) {
-  ngs$omicsnet <- pgx.createOmicsGraph(ngs)
-  ngs$pathscores <- pgx.computePathscores(ngs$omicsnet, strict.pos = FALSE)
+compute_omicsGraphs <- function(pgx) {
+  pgx$omicsnet <- pgx.createOmicsGraph(pgx)
+  pgx$pathscores <- pgx.computePathscores(pgx$omicsnet, strict.pos = FALSE)
 
   ## compute reduced graph
-  ngs$omicsnet.reduced <- pgx.reduceOmicsGraph(ngs)
-  ngs$pathscores.reduced <- pgx.computePathscores(ngs$omicsnet.reduced, strict.pos = FALSE)
-  return(ngs)
+  pgx$omicsnet.reduced <- pgx.reduceOmicsGraph(pgx)
+  pgx$pathscores.reduced <- pgx.computePathscores(pgx$omicsnet.reduced, strict.pos = FALSE)
+  return(pgx)
 }
