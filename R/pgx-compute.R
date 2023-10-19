@@ -42,10 +42,10 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
   rownames(counts) <- counts.rownames
 
   ## undo logarithm if necessary
-  if (max(counts) < 100) {
-    cat("assuming counts were log2 values. undoing logarithm...")
-    counts <- 2**counts
-  }
+  #  if (max(counts,na.rm=TRUE) < 100) {
+  #    cat("assuming counts were log2 values. undoing logarithm...\n")
+  #    counts <- 2**counts
+  #  }
 
   ## match sample table and counts
   kk <- sort(intersect(colnames(counts), rownames(samples)))
@@ -188,7 +188,6 @@ pgx.createPGX <- function(counts,
   grp.idx <- grep("group|condition", tolower(colnames(samples)))[1]
   if (any(!is.na(grp.idx))) {
     # only run the code below if we identify at least one group
-
     is.group.contrast <- all(rownames(contrasts) %in% samples[, grp.idx])
 
     if (is.group.contrast && nrow(contrasts) < nrow(samples)) {
@@ -209,16 +208,60 @@ pgx.createPGX <- function(counts,
     contrasts <- contrasts[used.samples, , drop = FALSE] ## sample-based!!!
   }
 
-  ## Check bad samples
-  min.counts <- 1e-4 * mean(colSums(counts, na.rm = TRUE))
-  sel <- which(colSums(counts, na.rm = TRUE) < pmax(min.counts, 1))
+  ## -------------------------------------------------------------------
+  ## check counts: linear or logarithm?
+  ## -------------------------------------------------------------------
+  message("[createPGX] check logarithm/linear...")
+  guess.log <- (min(counts, na.rm = TRUE) < 0 || max(counts, na.rm = TRUE) < 100)
+  guess.log <- guess.log && (is.null(is.logx) || is.logx == TRUE)
+  guess.log
+  if (is.null(is.logx)) {
+    is.logx <- guess.log
+  }
+  is.logx
+  if (is.logx) {
+    cat("[createPGX] input assumed logarithm: undo-ing logarithm\n")
+    counts <- pmax(2**counts - 1, 0) ## undo logarithm
+  } else {
+    cat("[createPGX] input assumed counts (not logarithm)\n")
+  }
+
+  ## -------------------------------------------------------------------
+  ## How to deal with missing or infinite values??
+  ## -------------------------------------------------------------------
+  if (any(is.na(counts))) {
+    message("[createPGX] WARNING: setting missing values to zero")
+    counts[is.na(counts)] <- 0
+  }
+
+  ## check for infinite or very-very large values
+  mean.median <- mean(apply(counts, 2, median, na.rm = TRUE))
+  is.inf.count <- (counts > 1e6 * mean.median) | is.infinite(counts)
+  if (any(is.inf.count)) {
+    sel.inf <- which(is.inf.count)
+    message(paste("[createPGX] WARNING: clipping", length(sel.inf), "infinite values"))
+    counts[sel.inf] <- Inf ## set to Inf Next step will clip
+    counts[is.infinite(counts) & sign(counts) < 0] <- 0
+    max.counts <- max(counts[!is.infinite(counts) & !is.na(counts)], na.rm = TRUE)
+    counts[is.infinite(counts) & sign(counts) > 0] <- max.counts
+  }
+
+  ## -------------------------------------------------------------------
+  ## Check bad samples (in total counts)
+  ## -------------------------------------------------------------------
+  ## remove samples with 1000x more or 1000x less total counts (than median)
+  totcounts <- colSums(counts, na.rm = TRUE)
+  mx <- median(log10(totcounts))
+  ex <- (log10(totcounts) - mx)
+  sel <- which(abs(ex) > 3 | totcounts < 1) ## allowed: 0.001x - 1000x
+  sel
   if (length(sel)) {
     message("[createPGX] *WARNING* bad samples. Removing samples: ", paste(sel, collapse = " "))
     counts <- counts[, -sel, drop = FALSE]
   }
 
   ## -------------------------------------------------------------------
-  ## conform
+  ## conform all matrices
   ## -------------------------------------------------------------------
   message("[createPGX] conforming matrices...")
   kk <- intersect(colnames(counts), rownames(samples))
@@ -235,33 +278,6 @@ pgx.createPGX <- function(counts,
   message("[createPGX] final: dim(contrasts) = ", paste(dim(contrasts), collapse = "x"))
 
   ## -------------------------------------------------------------------
-  ## check counts
-  ## -------------------------------------------------------------------
-  message("[createPGX] check logarithm/linear...")
-  guess.log <- (min(counts, na.rm = TRUE) < 0 || max(counts, na.rm = TRUE) < 100)
-  guess.log <- guess.log && is.null(X) && (is.null(is.logx) || is.logx == TRUE)
-
-  if (is.null(is.logx)) {
-    is.logx <- guess.log
-  }
-
-  if (is.logx) {
-    cat("[createPGX] input assumed log-expression (logarithm)\n")
-    cat("[createPGX] ...undo-ing logarithm\n")
-    counts <- pmax(2**counts - 1, 0) ## undo logarithm
-  } else {
-    cat("[createPGX] input assumed counts (not logarithm)\n")
-  }
-
-  ## -------------------------------------------------------------------
-  ## How to deal with missing values??
-  ## -------------------------------------------------------------------
-  if (any(is.na(counts)) || any(is.infinite(counts))) {
-    message("[createPGX] setting missing values to zero")
-    counts[is.na(counts) | is.infinite(counts)] <- 0
-  }
-
-  ## -------------------------------------------------------------------
   ## global scaling (no need for CPM yet)
   ## -------------------------------------------------------------------
   message("[createPGX] scaling counts...")
@@ -270,9 +286,9 @@ pgx.createPGX <- function(counts,
 
   if (auto.scale) {
     ## If the difference in total counts is too large, we need to
-    ## euqalize them because the thresholds can become
-    ## strange. Here we decide if normalizing is necessary (WARNING
-    ## changes total counts!!!)
+    ## euqalize them because the thresholds can become strange. Here
+    ## we decide if normalizing is necessary (WARNING changes total
+    ## counts!!!)
     totratio <- log10(max(1 + totcounts, na.rm = TRUE) / min(1 + totcounts, na.rm = TRUE))
     totratio
       if (totratio > 6) {
@@ -282,7 +298,9 @@ pgx.createPGX <- function(counts,
       counts <- t(t(counts) / totcounts) * meancounts
     }
 
-    ## check if too big (more than billion reads)
+    ## Check if too big (more than billion reads). This is important
+    ## for some proteomics intensity signals that are in billions of
+    ## units.
     mean.counts <- mean(Matrix::colSums(counts, na.rm = TRUE))
     is.toobig <- log10(mean.counts) > 9
     if (is.toobig) {
@@ -524,7 +542,7 @@ pgx.createPGX <- function(counts,
 pgx.computePGX <- function(pgx,
                            max.genes = 19999,
                            max.genesets = 5000,
-                           gx.methods = c("ttest.welch", "trend.limma", "edger.qlf"),
+                           gx.methods = c("trend.limma", "edger.qlf", "deseq2.wald"),
                            gset.methods = c("fisher", "gsva", "fgsea"),
                            custom.geneset = c(gmt = NULL, info = NULL),
                            do.cluster = TRUE,
@@ -534,6 +552,7 @@ pgx.computePGX <- function(pgx,
                              "meta.go", "infer", "deconv", "drugs",
                              "connectivity", "wordcloud", "wgcna"
                            )[c(1, 2)],
+                           pgx.dir = NULL,
                            libx.dir = NULL,
                            progress = NULL) {
   ## ======================================================================
@@ -598,14 +617,19 @@ pgx.computePGX <- function(pgx,
 
   if (do.cluster) {
     message("[pgx.computePGX] clustering genes...")
-    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset") ## gsetX not ready!!
+    ## gsetX was not ready before!!
+    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset")
   }
 
 
   ## ------------------ extra analyses ---------------------
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
   message("[pgx.computePGX] computing extra modules...")
-  pgx <- compute_extra(pgx, extra = extra.methods, libx.dir = libx.dir)
+  pgx <- compute_extra(pgx,
+    extra = extra.methods,
+    pgx.dir = pgx.dir,
+    libx.dir = libx.dir
+  )
 
   message("[pgx.computePGX] done!")
 
