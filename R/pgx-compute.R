@@ -349,9 +349,11 @@ pgx.createPGX <- function(counts,
         # And then take log2 again.
         pgx$counts <- log2(rowsum(2**pgx$X, selected_symbols))
     }
+    
+    # Collapse feature as a comma-separated elements
     collapsed_feat <- tapply(pgx$genes$feature, pgx$genes$symbol, FUN =  paste, collapse = ", ")
     pgx$genes <- pgx$genes[!duplicated(selected_symbols), , drop = FALSE]
-    pgx$genes$feature <- collapsed_feat
+    pgx$genes$feature <- as.vector(collapsed_feat)
     rownames(pgx$genes) <- selected_symbols[!duplicated(selected_symbols)]  
   }
 
