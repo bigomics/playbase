@@ -62,8 +62,21 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
   ct <- colnames(F1)[1]
   for (ct in colnames(F1)) {
     fc <- F1[, ct]
-    names(fc) <- rownames(meta$fc)
-    names(fc) <- toupper(names(fc)) ## for MOUSE!!
+
+    if (!is.null(pgx$organism)) {
+      if (pgx$organism != "Human") {
+        names(fc) <- pgx$genes[names(fc), "human_ortholog"]
+        fc <- fc[names(fc) != ""]
+      } else {
+        # For human datasets
+        names(fc) <- rownames(meta$fc)
+        names(fc) <- toupper(names(fc)) ## for MOUSE!!
+      }
+    } else {
+        # For old datasets
+        names(fc) <- rownames(meta$fc)
+        names(fc) <- toupper(names(fc)) ## for MOUSE!!
+    }
     res <- pgx.correlateSignatureH5(
       fc,
       h5.file = h5.file,
