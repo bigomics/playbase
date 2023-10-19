@@ -654,7 +654,8 @@ pgx.computePGX <- function(pgx,
   message("[pgx.computePGX] computing extra modules...")
   pgx <- compute_extra(pgx,
     extra = extra.methods,
-    pgx.dir = pgx.dir, libx.dir = libx.dir
+    pgx.dir = pgx.dir,
+    libx.dir = libx.dir
   )
 
   message("[pgx.computePGX] done!")

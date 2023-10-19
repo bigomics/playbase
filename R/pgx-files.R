@@ -853,7 +853,22 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   return()
 }
 
-
+#' Delete pgx entries in pgx info objects
+#'
+#' @param pgx.dir The folder containing pgxinfo metadata
+#' @param pgxname The name of the pgx object for which metadata to delete
+#' @param purge.h5 Logical indicating whether to remove entry in big H5 file
+#'
+#' @return NULL
+#'
+#' @description
+#' Removes entries the pgxinfo metadata files from a pgxname
+#'
+#' @details
+#' This function takes a pgxname as input and removes all entries in the pgx metadata files.
+#'
+#'
+#' @export
 pgxinfo.delete <- function(pgx.dir, pgxname, purge.h5 = FALSE) {
   allfc.file <- file.path(pgx.dir, "datasets-allFC.csv")
   info.file <- file.path(pgx.dir, "datasets-info.csv")
