@@ -47,8 +47,8 @@ compute_extra <- function(pgx, extra = c(
     }
   }
   # If working on non-human species, use homologs
-  if ("human_ortholog" %in% colnames(ngs$genes)) {
-    rownames(rna.counts) <- probe2symbol(rownames(rna.counts), ngs$genes, query = "human_ortholog")
+  if ("human_ortholog" %in% colnames(pgx$genes)) {
+    rownames(rna.counts) <- probe2symbol(rownames(rna.counts), pgx$genes, query = "human_ortholog")
   }
 
   if ("meta.go" %in% extra) {
@@ -289,10 +289,10 @@ compute_deconvolution <- function(pgx, rna.counts = pgx$counts, full = FALSE) {
 #' deconv <- compute_deconvolution(ngs, counts)
 #' }
 #' @export
-compute_cellcycle_gender <- function(ngs, rna.counts = ngs$counts) {
+compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
 
-  if (!is.null(ngs$organism)) {
-    is.human <- (ngs$organism == "Human")  
+  if (!is.null(pgx$organism)) {
+    is.human <- (pgx$organism == "Human")  
   } else {
     is.human <- (pgx.getOrganism(rna.counts) == "human")
   }
