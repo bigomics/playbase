@@ -73,7 +73,7 @@ pgx.initialize <- function(pgx) {
     k <- grep("lib.size|libsize", colnames(pgx$samples))[1]
     if (length(k) > 0) {
       libsize <- pgx$samples[colnames(pgx$counts), k]
-      libsize <- libsize / colSums(pgx$counts, na.rm = TRUE)
+      libsize
       pgx$counts <- Matrix::t(Matrix::t(pgx$counts) * libsize)
     }
   }
@@ -104,6 +104,17 @@ pgx.initialize <- function(pgx) {
   ## ----------------------------------------------------------------
   ## Convert to labeled contrast matrix (new style)
   ## ----------------------------------------------------------------
+
+  ## don't add if not exists for now...
+  if (FALSE && !("contrasts" %in% names(pgx))) {
+    design <- pgx$model.parameters$design
+    expmat <- pgx$model.parameters$exp.matrix
+    contr.mat <- pgx$model.parameters$contr.mat
+    if (is.null(expmat)) {
+      expmat <- design %*% contr.mat
+    }
+    pgx$contrasts <- contrastAsLabels(expmat)
+  }
 
   is.numlev <- all(unique(pgx$contrasts) %in% c(NA, "", -1, 0, 1))
   is.samplewise <- all(rownames(pgx$contrasts) == rownames(pgx$samples))
