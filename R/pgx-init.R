@@ -61,7 +61,7 @@ pgx.initialize <- function(pgx) {
     k <- grep("lib.size|libsize", colnames(pgx$samples))[1]
     if (length(k) > 0) {
       libsize <- pgx$samples[colnames(pgx$counts), k]
-      libsize <- libsize / colSums(pgx$counts,na.rm=TRUE)
+      libsize <- libsize / colSums(pgx$counts, na.rm = TRUE)
       pgx$counts <- Matrix::t(Matrix::t(pgx$counts) * libsize)
     }
   }

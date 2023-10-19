@@ -580,7 +580,7 @@ pgx.computePGX <- function(pgx,
                              "connectivity", "wordcloud", "wgcna"
                            )[c(1, 2)],
                            pgx.dir = NULL,
-                           libx.dir = NULL,                           
+                           libx.dir = NULL,
                            progress = NULL) {
   ## ======================================================================
   ## ======================================================================
@@ -645,15 +645,17 @@ pgx.computePGX <- function(pgx,
   if (do.cluster) {
     message("[pgx.computePGX] clustering genes...")
     ## gsetX was not ready before!!
-    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset") 
+    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset")
   }
 
 
   ## ------------------ extra analyses ---------------------
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
   message("[pgx.computePGX] computing extra modules...")
-  pgx <- compute_extra(pgx, extra = extra.methods,
-    pgx.dir = pgx.dir, libx.dir = libx.dir)
+  pgx <- compute_extra(pgx,
+    extra = extra.methods,
+    pgx.dir = pgx.dir, libx.dir = libx.dir
+  )
 
   message("[pgx.computePGX] done!")
 

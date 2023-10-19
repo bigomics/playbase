@@ -126,18 +126,18 @@ compute_extra <- function(pgx, extra = c(
       message(">>> Computing connectivity scores...")
       if (is.null(sigdb)) {
         sigdb <- NULL
-        if (!is.null(pgx.dir) ) {
+        if (!is.null(pgx.dir)) {
           ## make sure h5 file is up-to-date
-          pgxinfo.updateDatasetFolder(pgx.dir, force=FALSE, update.sigdb=TRUE)
+          pgxinfo.updateDatasetFolder(pgx.dir, force = FALSE, update.sigdb = TRUE)
           user.sigdb <- file.path(pgx.dir, "datasets-sigdb.h5")
           sigdb <- c(sigdb, user.sigdb)
         }
-        if (!is.null(libx.dir) ) {
+        if (!is.null(libx.dir)) {
           libx.sigdb <- dir(file.path(libx.dir, "sigdb"), pattern = "h5$", full.names = TRUE)
           sigdb <- c(sigdb, libx.sigdb)
         }
       }
-      
+
       db <- sigdb[1]
       for (db in sigdb) {
         if (file.exists(db)) {
