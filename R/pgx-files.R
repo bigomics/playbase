@@ -671,7 +671,8 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     h5.files <- sub("[.]pgx$", "", h5.files) ## strip pgx
     del <- which(h5.files %in% h5.delete)
     if (length(del)) {
-      cn[del] <- paste("[DELETED]", sub(".*\\] ", "", cn[del]))
+      ##      cn[del] <- paste("[DELETED]", sub(".*\\] ", "", cn[del]))
+      cn[del] <- paste("[DELETED]", cn[del])        
       rhdf5::h5delete(sigdb.file, "data/colnames")
       rhdf5::h5write(cn, sigdb.file, "data/colnames")
       if (delete.old) {
@@ -825,7 +826,8 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
       }
       if (fc.del) {
         del <- which(!cn %in% colnames(allFC))
-        cn[del] <- paste("[DELETED]", sub(".*\\] ", "", cn[del]))
+##        cn[del] <- paste("[DELETED]", sub(".*\\] ", "", cn[del]))
+        cn[del] <- paste("[DELETED]", cn[del])                
         rhdf5::h5delete(sigdb.file, "data/colnames")
         rhdf5::h5write(cn, sigdb.file, "data/colnames")
         if (delete.old) {
@@ -915,7 +917,8 @@ pgxinfo.delete <- function(pgx.dir, pgxname, purge.h5 = FALSE) {
     h5.files <- sub("[.]pgx$", "", h5.files) ## strip pgx
     del <- which(h5.files == pgxname)
     if (length(del)) {
-      cn[del] <- paste("[DELETED]", sub(".*\\] ", "", cn[del]))
+##      cn[del] <- paste("[DELETED]", sub(".*\\] ", "", cn[del]))
+      cn[del] <- paste("[DELETED]", cn[del])        
       rhdf5::h5delete(sigdb.file, "data/colnames")
       rhdf5::h5write(cn, sigdb.file, "data/colnames")
     }

@@ -34,7 +34,6 @@
 #' @export
 pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NULL,
                                           remove.le = FALSE) {
-  meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
 
   is.h5ref <- grepl("h5$", sigdb)
   if (!is.h5ref) {
@@ -50,6 +49,9 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
     cat("[pgx.computeConnectivityScores] ERROR: could not open H5 file\n")
     return(NULL)
   }
+
+  dbg("[pgx.computeConnectivityScores] computing connectivity scores for sigdb = ",sigdb)    
+  meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
 
   if (is.null(contrasts)) {
     contrasts <- colnames(meta$fc)
@@ -112,6 +114,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   ## if we have less than 100 genes, we should make smaller GMT sets!
   nsig <- min(100, round(length(fc) / 5))
   sel.idx <- 1:length(cn) ## all
+  sel.idx <- grep("DELETED", cn, invert=TRUE)
   idx <- list(1:nsig, sel.idx)
   sig100.up <- rhdf5::h5read(h5.file, "signature/sig100.up", index = idx)
   sig100.dn <- rhdf5::h5read(h5.file, "signature/sig100.dn", index = idx)
@@ -122,11 +125,10 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   ## Test signatures using fGSEA (this is pretty fast. amazing.)
   ## ------------------------------------------------------------
   ## combine up/down into one (unsigned GSEA test)
-  dbg("[pgx.correlateSignatureH5] computing fGSEA...")
   system.time({
     gmt <- rbind(sig100.up, sig100.dn)
     gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
-    names(gmt) <- cn[sel.idx]
+    names(gmt) <- colnames(sig100.up)
     suppressMessages(suppressWarnings(
       res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm, scoreType = "pos")
     )) ## really unsigned???
@@ -151,7 +153,6 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   ## --------------------------------------------------
   ## Fisher test
   ## --------------------------------------------------
-  dbg("[pgx.correlateSignatureH5] computing Fisher test...")
   fc.up <- fc[fc > 0]
   fc.dn <- fc[fc < 0]
   top.up <- head(names(sort(-fc.up)), 3 * nsig) ## RETHINK!
@@ -170,7 +171,6 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   ## ---------------------------------------------------------------
   ## Compute truncated rank correlation
   ## ---------------------------------------------------------------
-  dbg("[pgx.correlateSignatureH5] computing rank correlation...")
   system.time({
     ## get signature subset
     fc1 <- sort(fc)
@@ -196,7 +196,6 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   ## --------------------------------------------------
   ## Cosine distance with sparse GSET matrix
   ## --------------------------------------------------
-  dbg("[pgx.correlateSignatureH5] computing cosine distance...")
   system.time({
     bg <- intersect(names(fc), rn)
     gmt100.up <- unlist(apply(sig100.up[, sel], 2, list), recursive = FALSE)
