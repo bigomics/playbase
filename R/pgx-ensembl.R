@@ -253,6 +253,16 @@ ngs.getGeneAnnotation <- function(probes,
   data.table::setcolorder(out, col_order)
   data.table::setkeyv(out, "feature")
   
+  # Take out the source info from gene_title
+  out[,c("gene_title", "source") :=  
+        data.table::tstrsplit(gene_title, "\\[", keep = 1:2)]
+  out[, source := gsub("\\]", "", source)]
+
+  if (organism == "Saccharomyces cerevisiae") {
+    out[,c("gene_title") :=  
+          data.table::tstrsplit(gene_title, ";", keep = 1)]
+      
+  }
   # Keep it for back compatibility
   out[, gene_name := feature]
 
