@@ -1244,10 +1244,6 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
     return(NULL)
   }
 
-  if (level == "gene" && !probe %in% rownames(pgx$X)) {
-    graphics::frame() ## emtpy image
-    return(NULL)
-  }
   if (level == "geneset" && !probe %in% rownames(pgx$gsetX)) {
     graphics::frame() ## emtpy image
     return(NULL)
@@ -1347,8 +1343,13 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   if (level == "geneset") {
     gx <- pgx$gsetX[probe, rownames(pgx$samples)]
   } else {
-    gx <- pgx$X[probe, rownames(pgx$samples)]
-  }
+    if(pgx$organism %in% c("Human", "human")){
+        gx <- pgx$X[sum(pgx$genes$human_ortholog == probe), rownames(pgx$samples)]
+    }else{
+        gx <- pgx$X[sum(pgx$genes$symbol == probe), rownames(pgx$samples)]
+    }
+
+      }
   if (!logscale) {
     gx <- 2**(gx)
   }
@@ -1374,7 +1375,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
     klr[is.na(klr)] <- "#e5e5e5"
 
     if (plotlib == "plotly") {
-      fig <- pgx.barplot.PLOTLY(
+      fig <- playbase::pgx.barplot.PLOTLY(
         data = data.frame(
           gx = gx,
           xgroup = factor(names(gx), levels = names(gx))
@@ -1419,7 +1420,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
 
     if (plotlib == "plotly") {
       ## plot using plotly
-      fig <- pgx.barplot.PLOTLY(
+      fig <- playbase::pgx.barplot.PLOTLY(
         data = data.frame(
           gx = gx,
           xgroup = xgroup
