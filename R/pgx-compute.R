@@ -214,11 +214,9 @@ pgx.createPGX <- function(counts,
   message("[createPGX] check logarithm/linear...")
   guess.log <- (min(counts, na.rm = TRUE) < 0 || max(counts, na.rm = TRUE) < 100)
   guess.log <- guess.log && (is.null(is.logx) || is.logx == TRUE)
-  guess.log
   if (is.null(is.logx)) {
     is.logx <- guess.log
   }
-  is.logx
   if (is.logx) {
     cat("[createPGX] input assumed logarithm: undo-ing logarithm\n")
     counts <- pmax(2**counts - 1, 0) ## undo logarithm
@@ -236,6 +234,11 @@ pgx.createPGX <- function(counts,
 
   ## check for infinite or very-very large values
   mean.median <- mean(apply(counts, 2, median, na.rm = TRUE))
+  ## Dealing with datasets with too many 0
+  if (mean.median == 0) {
+    mean.median <- 1
+  }
+
   is.inf.count <- (counts > 1e6 * mean.median) | is.infinite(counts)
   if (any(is.inf.count)) {
     sel.inf <- which(is.inf.count)
@@ -254,7 +257,6 @@ pgx.createPGX <- function(counts,
   mx <- median(log10(totcounts))
   ex <- (log10(totcounts) - mx)
   sel <- which(abs(ex) > 3 | totcounts < 1) ## allowed: 0.001x - 1000x
-  sel
   if (length(sel)) {
     message("[createPGX] *WARNING* bad samples. Removing samples: ", paste(sel, collapse = " "))
     counts <- counts[, -sel, drop = FALSE]
