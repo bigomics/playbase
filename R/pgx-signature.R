@@ -34,7 +34,6 @@
 #' @export
 pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NULL,
                                           remove.le = FALSE) {
-
   is.h5ref <- grepl("h5$", sigdb)
   if (!is.h5ref) {
     cat("[pgx.computeConnectivityScores] ERROR: must be H5 formatted file\n")
@@ -50,7 +49,7 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
     return(NULL)
   }
 
-  dbg("[pgx.computeConnectivityScores] computing connectivity scores for sigdb = ",sigdb)    
+  dbg("[pgx.computeConnectivityScores] computing connectivity scores for sigdb = ", sigdb)
   meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
 
   if (is.null(contrasts)) {
@@ -114,7 +113,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   ## if we have less than 100 genes, we should make smaller GMT sets!
   nsig <- min(100, round(length(fc) / 5))
   sel.idx <- 1:length(cn) ## all
-  sel.idx <- grep("DELETED", cn, invert=TRUE)
+  sel.idx <- grep("DELETED", cn, invert = TRUE)
   idx <- list(1:nsig, sel.idx)
   sig100.up <- rhdf5::h5read(h5.file, "signature/sig100.up", index = idx)
   sig100.dn <- rhdf5::h5read(h5.file, "signature/sig100.dn", index = idx)
