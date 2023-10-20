@@ -55,9 +55,10 @@ pgx.initialize <- function(pgx) {
   }
 
   if(is.null(pgx$version)){
-    # this is needed in case the species is human, and we dont have the homolog column or if we have an old pgx
-    # which will ensure consistency between old and new pgx
-    pgx$genes$human_ortholog <- NA
+    # this is needed in case the species is human, and we dont have the 
+    # homolog column or if we have an old pgx which will ensure consistency
+    # between old and new pgx
+    pgx$genes$human_ortholog <- rownames(pgx$genes)
     pgx$genes$feature <- rownames(pgx$genes)
     pgx$genes$symbol <- pgx$genes$gene_name
     col_order <- c("feature", "symbol", "human_ortholog",
