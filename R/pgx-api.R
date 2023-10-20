@@ -231,14 +231,10 @@ pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
     fam.pattern <- "^[<].*|^FAMILY|^CUSTOM"
   }
 
-  if ("human_ortholog" %in% colnames(pgx$genes)) {
-    request_col <- "human_ortholog"
-  } else {
-    request_col <- "gene_name"
-  }
-  xgenes <- toupper(pgx$genes[, request_col])
+  
+  xgenes <- pgx$genes[, "symbol"]
   xgenes <- unique(xgenes)
-  gsets <- getGSETS_playbase(pattern = fam.pattern)
+  gsets <- playbase::getGSETS_playbase(pattern = fam.pattern)
   jj <- which(sapply(gsets, function(x) sum(x %in% xgenes)) >= nmin)
   return(sort(names(gsets)[jj])) ## sort alphabetically
 }
