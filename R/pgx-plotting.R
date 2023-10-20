@@ -1343,13 +1343,12 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   if (level == "geneset") {
     gx <- pgx$gsetX[probe, rownames(pgx$samples)]
   } else {
-    if(pgx$organism %in% c("Human", "human")){
+    if(!pgx$organism %in% c("Human", "human")){
         gx <- pgx$X[sum(pgx$genes$human_ortholog == probe), rownames(pgx$samples)]
     }else{
         gx <- pgx$X[sum(pgx$genes$symbol == probe), rownames(pgx$samples)]
     }
-
-      }
+  }
   if (!logscale) {
     gx <- 2**(gx)
   }
