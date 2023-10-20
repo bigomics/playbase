@@ -101,12 +101,16 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
 }
 
 
-#' @describeIn  pgx.correlateSignatureH5.inmemory computes correlation and gene set enrichment between a
+#' @title  Correlate SignatureH5 
+#' 
+#' @description pgx.correlateSignatureH5 computes correlation and gene set enrichment between a
 #' signature and datasets in an HDF5 file using on-disk chunked computations
+#' @param fc:      fold change matrix
 #' @param h5.file: HDF5 file of reference expression signatures
+#' @param nsig:    number of significant genes
 #' @param ntop:    number of top signatures (in abs(rho)) to report
 #' @param nperm:   number of permuations for fGSEA
-#'
+#' 
 #' @export
 pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm = 10000) {
   if (is.null(names(fc))) stop("fc must have names")
@@ -243,7 +247,6 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   gc()
   return(res)
 }
-
 
 
 #' Create a signature database from PGX files

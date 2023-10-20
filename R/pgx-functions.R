@@ -1156,7 +1156,8 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 #' @description Determines if count data is from human or mouse based on gene identifiers.
 #'
 #' @param pgx.counts Matrix of count data, with genes as rows.
-#'
+#' @param capitalise logical: by default FALSE. Parameter to capitalise the first letter of the 
+#' specie if mouse or human.
 #' @details This function examines the gene identifiers in the row names of a count matrix
 #' to determine if the data is from human or mouse. It checks if the identifiers match common
 #' patterns found in mouse genes, like "rik", "loc", "orf". If more than 20% match these mouse
@@ -1169,7 +1170,7 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 #' @return Character string indicating "mouse" or "human" organism.
 #'
 #' @export
-pgx.getOrganism <- function(pgx) {
+pgx.getOrganism <- function(pgx, capitalise = FALSE) {
   ## NEED RETHINK FOR MULTI-ORGANISM
   if (!is.null(pgx$organism)) {
     org <- pgx$organism
@@ -1181,6 +1182,11 @@ pgx.getOrganism <- function(pgx) {
   cap.fraction <- mean(grepl("^[A-Z][a-z]+", rownames.counts), na.rm = TRUE)
   is.mouse <- (cap.fraction > 0.8)
   org <- ifelse(is.mouse, "mouse", "human")
+  }
+
+  if (capitalise && org %in% c("mouse", "human")) {
+    if (org == "mouse") org <- "Mouse"
+    if (org == "human") org <- "Human"
   }
   return(org)
 }
@@ -1553,6 +1559,40 @@ filterProbes <- function(genes, gg) {
     return(NULL)
   }
   return(rownames(genes)[jj])
+}
+
+
+#' Rename rownames of counts matrix by annotation table
+#'
+#' @param counts Numeric matrix of counts, with genes/probes as rownames. 
+#' @param annot_table Data frame with rownames matching counts and annotation columns.
+#' @param new_id_col Column name in annot_table containing new identifiers. Default 'symbol'.
+#' 
+#' @return Matrix with rownames changed to values from annot_table.
+#' Duplicate new rownames are summed.
+#'
+#' @details Renames rownames of counts matrix using an annotation data frame.
+#' Looks up the `new_id_col` in the annot_table and replaces counts rownames.
+#' Handles special cases like missing values.
+#' Sums duplicate rows after renaming.
+#' 
+#' @export 
+rename_by <- function(counts, annot_table, new_id_col = "symbol") {
+  symbol <- annot_table[rownames(counts), new_id_col] 
+
+  # Guard agaisn human_hommolog == NA
+  if (all(is.na(symbol))) { 
+    symbol <- annot_table[rownames(counts), "symbol"] 
+
+  }
+
+  # Sum columns of rows with the same gene symbol
+  if (is.matrix(counts) | is.data.frame(counts)) {
+    rownames(counts) <- symbol
+    return(counts[!rownames(counts) %in% c("", "NA"),, drop = FALSE])
+  } else {
+    return(symbol)
+  }
 }
 
 

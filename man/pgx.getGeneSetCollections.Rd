@@ -7,7 +7,7 @@
 \usage{
 pgx.getGeneFamilies(genes, min.size = 10, max.size = 500)
 
-pgx.getGeneSetCollections(gsets, min.size = 10, max.size = 500)
+pgx.getGeneSetCollections(gsets = rownames(playdata::GSETxGENE))
 }
 \arguments{
 \item{min.size}{The minimum gene set size to include. Default 10.}
