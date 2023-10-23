@@ -154,10 +154,12 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
 #' head(result)
 #' }
 #' @export
-ngs.getGeneAnnotation <- function(probes,
-                                  probe_type = NULL,
-                                  mart = NULL,
-                                  verbose = TRUE) {
+ngs.getGeneAnnotation <- function(
+  probes,
+  organism,
+  probe_type = NULL,
+  mart = NULL,
+  verbose = TRUE) {
   # Check mart
   if (is.null(mart)) {
     stop("Mart not found. Please specify a BioMart database to use.")
@@ -389,6 +391,7 @@ pgx.gene_table <- function(pgx, organism) {
     # Get gene table
     genes <- ngs.getGeneAnnotation(
       probes = probes,
+      organism = organism,
       probe_type = probe_type,
       mart = ensembl)
 

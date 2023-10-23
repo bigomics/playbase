@@ -34,7 +34,7 @@ seurat2pgx <- function(obj, species, do.cluster = FALSE) {
   pgx$samples <- obj@meta.data
 
   mart <- biomaRt::useMart(biomart = "ensembl", dataset = species)
-  pgx$genes <- ngs.getGeneAnnotation(rownames(pgx$counts), mart = mart)
+  pgx$genes <- ngs.getGeneAnnotation(rownames(pgx$counts), mart = mart, organism = pgx$organism)
 
   if (do.cluster) {
     message("[seurat2pgx] clustering samples")

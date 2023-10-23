@@ -305,7 +305,7 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALS
 
     ## Filter out genes (not on known chromosomes...)
     genes <- rownames(X)
-    gannot <- ngs.getGeneAnnotation(genes)
+    gannot <- ngs.getGeneAnnotation(genes, organism = pgx$organism)
     sel <- which(!is.na(gannot$chr))
     X <- X[sel, , drop = FALSE]
     remove(F)
