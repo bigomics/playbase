@@ -47,7 +47,7 @@ compute_extra <- function(pgx, extra = c(
     }
   }
   # If working on non-human species, use homologs
-  if ("human_ortholog" %in% colnames(pgx$genes)) {
+  if (!all(is.na(pgx$genes$human_ortholog))) {
     rownames(rna.counts) <- probe2symbol(rownames(rna.counts), pgx$genes, query = "human_ortholog")
   }
 
