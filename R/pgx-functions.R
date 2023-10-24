@@ -773,7 +773,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
     rownames(x) <- x0[[1]][sel]
   }
   ## drop any rows with 100% missing value (sometimes added by not-so-Excel...)
-  if(!skip_row_check) { # Flag to bypass (used on contrast.csv ingest), as it can contain full NA rows
+  if (!skip_row_check) { # Flag to bypass (used on contrast.csv ingest), as it can contain full NA rows
     zero.row <- which(rowSums(is.na(x)) == ncol(x))
     if (length(zero.row)) {
       x <- x[-zero.row, , drop = FALSE]
