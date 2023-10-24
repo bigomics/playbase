@@ -183,8 +183,17 @@ pgx$genes$gene_title <- as.character(pgx$genes$gene_title)
 genes <- ifelse(!is.na(pgx$genes$human_ortholog), 
                 pgx$genes$human_ortholog, 
                 pgx$genes$gene_name)
-                  
-pgx$families <- lapply(playdata::FAMILIES, function(x) intersect(x, genes))
+
+if (pgx$organism %in% c("Human", "human") | !is.null(pgx$version)) {
+  pgx$families <- lapply(playdata::FAMILIES, function(x) {intersect(x, genes)})
+
+} else {
+  pgx$families <- lapply(playdata::FAMILIES, function(x, genes, annot_table) {
+    x <- intersect(x, genes)
+    x <- annot_table$symbol[match(x, annot_table$human_ortholog)]
+    return(x)
+    }, genes = genes, annot_table = pgx$genes)
+}
 famsize <- sapply(pgx$families, length)
 pgx$families <- pgx$families[which(famsize >= 10)]
 
