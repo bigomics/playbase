@@ -59,7 +59,7 @@ compute_testGenesets <- function(pgx,
   ## Load huge geneset matrix
   ## -----------------------------------------------------------
 
-  G <- playdata::GSET_SPARSEG_XL
+  G <- playdata::GSETxGENE
 
   ## -----------------------------------------------------------
   ## Filter genes
