@@ -144,9 +144,11 @@ compute_testGenesets <- function(pgx,
 
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
   
-    X <- rename_by(X, pgx$genes, pgx$genes$symbol)
+    X <- rename_by(X, pgx$genes, "symbol")
     X <- X[!rownames(X) == "", , drop = FALSE]
-    X <- log2(rowsum(2**pgx$X, rownames(X)))
+    if (any(duplicated(rownames(X)))) {
+      X <- log2(rowsum(2**pgx$X, rownames(X)))
+    }
   }
 
 
