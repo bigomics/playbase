@@ -643,14 +643,14 @@ sigdb.getConnectivityContrasts <- function(sigdb, path = NULL) {
 #' @export
 sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL, path = NULL) {
   if (sigdb == "" || is.null(sigdb)) {
-    warning("[getConnectivityMatrix] ***WARNING*** sigdb=", sigdb)
+    warning("[getConnectivityMatrix] WARNING missing H5 file: sigdb=", sigdb)
     return(NULL)
   }
   if (!is.null(path)) {
     sigdb <- file.path(path, sigdb)
   }
   if (!file.exists(sigdb)) {
-    warning("[getConnectivityMatrix] ***WARNING*** file ", sigdb, "not found")
+    warning("[getConnectivityMatrix] WARNING file ", sigdb, "not found")
     return(NULL)
   }
 
@@ -669,7 +669,7 @@ sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL, path
     if (!is.null(select)) colidx <- match(intersect(select, cn), cn)
     nr <- length(rowidx)
     nc <- length(colidx)
-    dbg("[sigdb.getConnectivityMatrix] *WARNING* reading large H5 file:", nr, "x", nc, "")
+    dbg("[sigdb.getConnectivityMatrix] reading large H5 file:", nr, "x", nc, "")
     X <- rhdf5::h5read(sigdb, "data/matrix", index = list(rowidx, colidx))
     rownames(X) <- rn[rowidx]
     colnames(X) <- cn[colidx]
@@ -689,7 +689,7 @@ sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL, path
 sigdb.getEnrichmentMatrix <- function(sigdb, select = NULL, path = NULL,
                                       which = c("gsea", "rankcor")[1]) {
   if (sigdb == "" || is.null(sigdb)) {
-    dbg("[getEnrichmentMatrix] *WARNING* could not find sigdb=", sigdb)
+    dbg("[getEnrichmentMatrix] WARNING empty sigdb =", sigdb)
     return(NULL)
   }
   if (!grepl("h5$", sigdb)) {
@@ -700,7 +700,7 @@ sigdb.getEnrichmentMatrix <- function(sigdb, select = NULL, path = NULL,
     sigdb <- file.path(path, sigdb)
   }
   if (!file.exists(sigdb)) {
-    warning("[sigdb.getEnrichmentMatrix] *WARNING* file ", sigdb, "not found")
+    warning("[sigdb.getEnrichmentMatrix] WARNING H5 file", sigdb, "not found")
     return(NULL)
   }
 
