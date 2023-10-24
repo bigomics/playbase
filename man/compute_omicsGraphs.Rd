@@ -4,10 +4,10 @@
 \alias{compute_omicsGraphs}
 \title{Compute Omics Graphs}
 \usage{
-compute_omicsGraphs(ngs)
+compute_omicsGraphs(pgx)
 }
 \arguments{
-\item{ngs}{An object containing the input data for analysis.}
+\item{pgx}{An object containing the input data for analysis.}
 }
 \value{
 An updated object with omics graphs and path scores.

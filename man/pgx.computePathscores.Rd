@@ -22,9 +22,9 @@ Compute path scores for a graph
 
 This function takes an igraph pathway graph object and calculates path scores for each node.
 
-It first adds source and sink nodes if they do not exist. 
+It first adds source and sink nodes if they do not exist.
 It then calculates edge weights based on the fold changes, enforcing strictly positive values if strict.pos=TRUE.
 
-Path scores are computed as the path integral from source to sink going through each node. 
+Path scores are computed as the path integral from source to sink going through each node.
 The path score indicates how well connected a node is to the observed fold changes.
 }

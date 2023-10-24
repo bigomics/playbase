@@ -16,8 +16,8 @@ This function creates a graph representation of the Gene Ontology (GO) hierarchy
 The function first extracts the GO terms and their associated information from the GOTERM table in the GO.db package.
 Then, it removes any duplicate terms and sets the row names of the resulting data frame to the GO IDs.
 
-Next, the function extracts the parent-child relationships for each of the three GO 
-domains (Biological Process, Molecular Function, and Cellular Component) from the 
-corresponding tables in the GO.db package. It combines these relationships into a single data.frame 
+Next, the function extracts the parent-child relationships for each of the three GO
+domains (Biological Process, Molecular Function, and Cellular Component) from the
+corresponding tables in the GO.db package. It combines these relationships into a single data.frame
 and creates a graph object using the igraph package.
 }

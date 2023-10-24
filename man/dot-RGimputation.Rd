@@ -30,7 +30,7 @@ If \code{bycolumn} is FALSE, the parameters are calculated across the entire mat
 }
 \examples{
 \dontrun{
-mat <- matrix(rnorm(100), ncol = 10)  
+mat <- matrix(rnorm(100), ncol = 10)
 mat[sample(100, 20)] <- NA
 imputed <- .RGimputation(mat)
 }

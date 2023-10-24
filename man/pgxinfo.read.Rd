@@ -22,7 +22,7 @@ Reads the dataset information CSV file for a directory of PGX files.
 \details{
 This function reads the dataset info CSV located in a PGX directory. It contains metadata like datatype, organism, sample sizes, etc.
 
-The \code{pgx.dir} argument specifies the path to the PGX directory containing .pgx files. 
+The \code{pgx.dir} argument specifies the path to the PGX directory containing .pgx files.
 
 The \code{file} argument specifies the filename for the dataset info file. By default this is "datasets-info.csv".
 

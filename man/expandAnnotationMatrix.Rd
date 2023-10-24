@@ -19,6 +19,6 @@ Expands a phenotype annotation matrix into dummy variables.
 This function takes an annotation data frame and expands any categorical variables into
 dummy variables using model.matrix.
 
-For each column, it determines if the variable is numeric or categorical. 
+For each column, it determines if the variable is numeric or categorical.
 Numeric variables are ranked. Categorical variables are expanded into dummy variables.
 }

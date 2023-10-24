@@ -9,6 +9,7 @@ pgx.makeAutoContrasts(
   mingrp = 3,
   slen = 20,
   ref = NULL,
+  max.level = 10,
   fix.degenerate = FALSE,
   skip.hidden = TRUE
 )

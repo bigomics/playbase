@@ -22,6 +22,6 @@ This function takes a Seurat object containing single-cell RNA-seq data and conv
 The count matrix, normalized expression matrix, and sample metadata are extracted from the Seurat object.
 Gene annotations are added using the gene symbols.
 
-If do.cluster=TRUE, dimensionality reduction and clustering of samples is performed. 
+If do.cluster=TRUE, dimensionality reduction and clustering of samples is performed.
 Any existing tsne/umap embeddings and cluster assignments are copied over from the Seurat object.
 }

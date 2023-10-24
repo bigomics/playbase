@@ -5,14 +5,15 @@
 \title{Compute Extra Analysis}
 \usage{
 compute_extra(
-  ngs,
-  extra = c("meta.go", "deconv", "infer", "drugs", "connectivity", "wordcloud", "wgcna"),
+  pgx,
+  extra = c("meta.go", "infer", "deconv", "drugs", "connectivity", "wordcloud", "wgcna"),
   sigdb = NULL,
-  libx.dir = NULL
+  libx.dir = NULL,
+  pgx.dir = NULL
 )
 }
 \arguments{
-\item{ngs}{An object containing the input data for analysis.}
+\item{pgx}{An object containing the input data for analysis.}
 
 \item{extra}{A character vector specifying which additional analyses to perform.}
 

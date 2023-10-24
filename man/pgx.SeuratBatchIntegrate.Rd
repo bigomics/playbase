@@ -30,10 +30,10 @@ Seurat object containing integrated data
 Integrate single-cell RNA-seq data from multiple batches using canonical correlation analysis via the Seurat package.
 }
 \details{
-This function takes a single-cell count matrix \code{counts} and a \code{batch} vector as input. 
+This function takes a single-cell count matrix \code{counts} and a \code{batch} vector as input.
 It sets up a Seurat object for each batch and integrates them using FindIntegrationAnchors/IntegrateData functions.
 
-Cells can be filtered by QC metrics like mitochondrial content if \code{qc.filter=TRUE}. 
+Cells can be filtered by QC metrics like mitochondrial content if \code{qc.filter=TRUE}.
 The \code{nanchors} parameter controls the number of anchor points used for integration.
 Normalization and scaling can be done using SCTransform if \code{sct=TRUE}.
 

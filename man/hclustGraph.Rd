@@ -23,13 +23,13 @@ Performs hierarchical clustering of nodes in a graph using the Louvain algorithm
 Hierarchical Clustering of Graph
 
 
-This function takes an igraph graph object \code{g} and performs hierarchical clustering 
+This function takes an igraph graph object \code{g} and performs hierarchical clustering
 of the nodes using the Louvain community detection algorithm.
 
 It iteratively clusters the nodes, splitting communities into sub-communities to find
-the optimal number of clusters. The number of clusters \code{k} can be specified, 
+the optimal number of clusters. The number of clusters \code{k} can be specified,
 otherwise the optimal number is found automatically.
 
-The clustering is done in parallel using \code{mc.cores} cores if available. 
+The clustering is done in parallel using \code{mc.cores} cores if available.
 The output is a matrix with the hierarchical clustering membership at each level.
 }

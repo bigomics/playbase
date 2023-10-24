@@ -4,10 +4,10 @@
 \alias{compute_drugSensitivityEnrichment}
 \title{Compute Drug Sensitivity Enrichment}
 \usage{
-compute_drugSensitivityEnrichment(ngs, libx.dir = NULL)
+compute_drugSensitivityEnrichment(pgx, libx.dir = NULL)
 }
 \arguments{
-\item{ngs}{An object containing the input data for analysis.}
+\item{pgx}{An object containing the input data for analysis.}
 
 \item{libx.dir}{The directory path where the drug sensitivity databases are located.}
 }

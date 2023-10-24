@@ -19,7 +19,7 @@ Adds source and sink nodes to a pathway graph to enable path scoring.
 Add source and sink nodes to pathway graph
 
 
-This function takes an igraph pathway graph object \code{gr} and adds 
+This function takes an igraph pathway graph object \code{gr} and adds
 source and sink nodes to it.
 
 The source and sink nodes are named "SOURCE" and "SINK" respectively.

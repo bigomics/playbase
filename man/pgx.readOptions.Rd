@@ -16,16 +16,16 @@ A named list containing the PGX options.
 Reads PGX analysis options from a file.
 }
 \details{
-This function reads a simple text file containing PGX analysis options, 
+This function reads a simple text file containing PGX analysis options,
 one option per line in the format:
 
 \code{option=value}
 
 Options include parameters like:
 
-\code{fdr=0.05} - FDR threshold 
+\code{fdr=0.05} - FDR threshold
 \code{logfc=1} - Log fold-change threshold
 
-The options file allows saving a set of parameters for easily re-running 
+The options file allows saving a set of parameters for easily re-running
 an analysis with the same settings.
 }

@@ -31,6 +31,6 @@ The output is a sparse matrix with rows corresponding to the input \code{x} and 
 \examples{
 \dontrun{
 x <- rpois(100)
-len <- length_encode(x)  
+len <- length_encode(x)
 }
 }

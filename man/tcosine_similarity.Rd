@@ -46,7 +46,7 @@ Calculates the cosine similarity between two matrices.
 This function takes two numeric matrices \code{X} and \code{Y} and calculates the cosine similarity between them.
 It can handle sparse matrices and missing values.
 
-Cosine similarity is defined as the cosine of the angle between two vectors. 
+Cosine similarity is defined as the cosine of the angle between two vectors.
 It is calculated as the dot product of the vectors divided by the L2 norms of the vectors.
 
 If only \code{X} is provided, the cosine similarity between columns of \code{X} is calculated.

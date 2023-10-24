@@ -22,7 +22,7 @@ Fit a Weibull distribution to bivariate data
 
 This function takes two numeric vectors \code{x} and \code{y} and fits a bivariate Weibull distribution.
 The Weibull distribution has shape and scale parameters for each variable.
- 
+
 Maximum likelihood estimation is used to estimate the 4 Weibull parameters from the input data.
 The estimated parameters are returned as a named list.
 }

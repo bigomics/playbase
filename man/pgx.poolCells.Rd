@@ -39,13 +39,13 @@ pgx.poolCells(
 Matrix of pooled counts for each group
 }
 \description{
-This function pools single cell RNA-seq count matrices into 
-pseudo-bulk groups. Cells are assigned to groups based on metadata or 
+This function pools single cell RNA-seq count matrices into
+pseudo-bulk groups. Cells are assigned to groups based on metadata or
 clustering. Counts within each group are aggregated using summation or other statistics.
 }
 \details{
 This function takes a single cell count matrix and pools the counts into pseudo-bulk groups.
-If groups are provided, cells are assigned to these groups. Otherwise clustering is performed using umap/pca 
+If groups are provided, cells are assigned to these groups. Otherwise clustering is performed using umap/pca
 on the log-expression matrix X to infer groups. Within each group, cell counts are aggregated into a pseudo-bulk profile
 using summation or other statistics. A per-group prior can be used to normalize pooling.
 The output is a pooled count matrix with groups as columns.

@@ -22,7 +22,7 @@ Reads fold change matrices from multiple PGX files and combines them into a sing
 \details{
 Create a signature database from PGX files
 
-This function reads fold change matrices from multiple PGX experiment result files (.pgx). 
+This function reads fold change matrices from multiple PGX experiment result files (.pgx).
 It extracts the fold change values, normalizes the gene names, and combines the matrices into a single signature database.
 This combined matrix is then stored in an H5 file for later use.
 }
