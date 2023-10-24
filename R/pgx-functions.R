@@ -1662,7 +1662,7 @@ pgx.getGeneSetCollections <- function(gsets = rownames(playdata::GSETxGENE)) {
   ## -----------------------------------------------------------------------------
 
   collections <- list()
-  
+
   ## ----------- add main collections from gene set prefixes
   gsets.db <- sub("_.*", "", gsets)
   gsets.groups <- tapply(gsets, gsets.db, list)
