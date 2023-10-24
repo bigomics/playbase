@@ -367,7 +367,7 @@ pgx.createPGX <- function(counts,
     if (!is.null(pgx$X)) {
         # For X, sum the 2^X values of rows with the same gene symbol
         # And then take log2 again.
-        pgx$counts <- log2(rowsum(2**pgx$X, selected_symbols))
+        pgx$X <- log2(rowsum(2**pgx$X, selected_symbols))
     }
     
     # Collapse feature as a comma-separated elements
