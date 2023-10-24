@@ -733,6 +733,8 @@ read.as_matrix.SAVE <- function(file) {
 #' Read data file as matrix
 #'
 #' @param file Path to input data file
+#' @param skip_row_check (default `FALSE`) Flag to skip the removal
+#' of empty rows
 #'
 #' @return Matrix object containing data from file
 #'
@@ -749,7 +751,7 @@ read.as_matrix.SAVE <- function(file) {
 #' mymatrix <- read.as_matrix(mydata.csv)
 #' }
 #' @export
-read.as_matrix <- function(file) {
+read.as_matrix <- function(file, skip_row_check = FALSE) {
   ## read delimited table automatically determine separator. allow
   ## duplicated rownames. This implements with faster fread.
   x0 <- data.table::fread(
@@ -771,9 +773,11 @@ read.as_matrix <- function(file) {
     rownames(x) <- x0[[1]][sel]
   }
   ## drop any rows with 100% missing value (sometimes added by not-so-Excel...)
-  zero.row <- which(rowSums(is.na(x)) == ncol(x))
-  if (length(zero.row)) {
-    x <- x[-zero.row, , drop = FALSE]
+  if(!skip_row_check) { # Flag to bypass (used on contrast.csv ingest), as it can contain full NA rows
+    zero.row <- which(rowSums(is.na(x)) == ncol(x))
+    if (length(zero.row)) {
+      x <- x[-zero.row, , drop = FALSE]
+    }
   }
   ## drop any 100% missing columns (sometimes added by not-so-Excel...)
   zero.col <- which(colSums(is.na(x)) == nrow(x))
