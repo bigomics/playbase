@@ -76,12 +76,20 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
 
   ## filter genes by gene or homologous, if it exists
-  genes <- ifelse(!is.na(pgx$genes$human_ortholog), 
-                  pgx$genes$human_ortholog, 
-                  pgx$genes$gene_name)
   # replace "" to NA in pgx$genes$human_ortholog
+  if (pgx$organism != "Human") {
+    human_genes <- ifelse(!is.na(pgx$genes$human_ortholog), 
+                    pgx$genes$human_ortholog, 
+                    pgx$genes$symbol)
+  } else {
+    human_genes <- pgx$genes$symbol
+  }
+  genes <- pgx$genes$symbol
 
-  G <- G[, colnames(G) %in% genes]
+  # Change HUMAN gene names to species symbols
+  G <- G[, colnames(G) %in% human_genes]
+  colnames(G2) <- pgx$genes$symbol[match(colnames(G2), 
+                                        pgx$genes$human_ortholog)]
 
   # Normalize G after removal of genes
 
@@ -109,15 +117,10 @@ compute_testGenesets <- function(pgx,
   G <- Matrix::t(G)
 
   if (!is.null(custom.geneset$gmt)) {
-    # convert genes in custom_gmt to homologous genes, when available
-    matched_custom_genes_in_gene_name <- match(colnames(custom_gmt), pgx$genes$gene_name)
-    matched_custom_genes_in_homologs <- pgx$genes$gene_name[matched_custom_genes_in_gene_name]
-    matched_custom_genes_in_gene_name <- ifelse(is.na(matched_custom_genes_in_homologs), NA, matched_custom_genes_in_gene_name)
-    homologous <- pgx$genes$human_ortholog[matched_custom_genes_in_gene_name]
-    colnames(custom_gmt) <- ifelse(is.na(homologous),colnames(custom_gmt),homologous)
+
     custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes, drop = FALSE]
     custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
-    # combine standard genesets with custom genesets
+
     G <- playbase::merge_sparse_matrix(m1 = G, m2 = Matrix::t(custom_gmt))
   }
 
@@ -125,7 +128,6 @@ compute_testGenesets <- function(pgx,
   ## create the full GENE matrix (always collapsed by gene)
   ## -----------------------------------------------------------
 
-  single.omics <- !any(grepl("\\[", rownames(pgx$counts)))
   single.omics <- TRUE ## !!! for now...
   if (single.omics) {
     ## normalized matrix
@@ -139,6 +141,15 @@ compute_testGenesets <- function(pgx,
     X <- pgx$X[jj, ]
   }
 
+
+  if (rownames(X) != pgx$genes$symbol) {
+  
+    X <- rename_by(X, pgx$genes, pgx$genes$symbol)
+    X <- X[!rownames(X) == "", , drop = FALSE]
+    X <- log2(rowsum(2**pgx$X, rownames(X)))
+  }
+
+
   ## if reduced samples
   ss <- rownames(pgx$model.parameters$exp.matrix)
   if (!is.null(ss)) {
@@ -149,18 +160,8 @@ compute_testGenesets <- function(pgx,
   ## create the GENESETxGENE matrix
   ## -----------------------------------------------------------
   cat("Matching gene set matrix...\n")
-  # if homologous is available, use homologous gene in geneset
-  if(!is.null(pgx$genes$human_ortholog)){
-    # check which rownames(X) in pgx$gene$gene_name
-    matched_genes_in_gene_name <- match(rownames(X), pgx$genes$gene_name)
-    # check which matched have homologues
-    matched_genes_in_homologs <- pgx$genes$human_ortholog[matched_genes_in_gene_name]
-    matched_genes_in_gene_name <- ifelse(is.na(matched_genes_in_homologs), NA, matched_genes_in_gene_name)
-    homologous <- pgx$genes$human_ortholog[matched_genes_in_gene_name]
-    rownames(X) <- ifelse(is.na(matched_genes_in_gene_name),rownames(X), homologous)
 
-  }
-  gg <- rownames(X) #toupper(rownames(X)) ## accomodate for mouse...
+  gg <- rownames(X) 
   ii <- intersect(gg, rownames(G))
   G <- G[ii, , drop = FALSE]
   xx <- setdiff(gg, rownames(G))
