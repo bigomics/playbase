@@ -172,95 +172,95 @@ pgx.initialize <- function(pgx) {
   ## ----------------------------------------------------------------
 
   # Convert to DT for back-compatibility
-pgx$genes <- pgx$genes[rownames(pgx$counts), , drop = FALSE]
-pgx$genes$gene_name <- as.character(pgx$genes$gene_name)
-pgx$genes$gene_title <- as.character(pgx$genes$gene_title)
+  pgx$genes <- pgx$genes[rownames(pgx$counts), , drop = FALSE]
+  pgx$genes$gene_name <- as.character(pgx$genes$gene_name)
+  pgx$genes$gene_title <- as.character(pgx$genes$gene_title)
 
-## -----------------------------------------------------------------------------
-## intersect and filter gene families (convert species to human gene sets)
-## -----------------------------------------------------------------------------
-# Here we use the homologs when available, instead of gene_name
-genes <- ifelse(!is.na(pgx$genes$human_ortholog), 
-                pgx$genes$human_ortholog, 
-                pgx$genes$gene_name)
+  ## -----------------------------------------------------------------------------
+  ## intersect and filter gene families (convert species to human gene sets)
+  ## -----------------------------------------------------------------------------
+  # Here we use the homologs when available, instead of gene_name
+  genes <- ifelse(!is.na(pgx$genes$human_ortholog), 
+                  pgx$genes$human_ortholog, 
+                  pgx$genes$gene_name)
 
-if (pgx$organism %in% c("Human", "human") | !is.null(pgx$version)) {
-  pgx$families <- lapply(playdata::FAMILIES, function(x) {intersect(x, genes)})
+  if (pgx$organism %in% c("Human", "human") | !is.null(pgx$version)) {
+    pgx$families <- lapply(playdata::FAMILIES, function(x) {intersect(x, genes)})
 
-} else {
-  pgx$families <- lapply(playdata::FAMILIES, function(x, genes, annot_table) {
-    x <- intersect(x, genes)
-    x <- annot_table$symbol[match(x, annot_table$human_ortholog)]
-    return(x)
-    }, genes = genes, annot_table = pgx$genes)
-}
-famsize <- sapply(pgx$families, length)
-pgx$families <- pgx$families[which(famsize >= 10)]
-
-all.genes <- sort(unique(pgx$genes$gene_name))
-pgx$families[["<all>"]] <- all.genes
-
-## -----------------------------------------------------------------------------
-## Recompute geneset meta.fx as average fold-change of genes
-## -----------------------------------------------------------------------------
-message("[pgx.initialize] Recomputing geneset fold-changes")
-nc <- length(pgx$gset.meta$meta)
-for (i in 1:nc) {
-  gs <- pgx$gset.meta$meta[[i]]
-  fc <- pgx$gx.meta$meta[[i]]$meta.fx
-  names(fc) <- rownames(pgx$gx.meta$meta[[i]])
-  G1 <- Matrix::t(pgx$GMT[names(fc), rownames(gs)])
-  mx <- (G1 %*% fc)[, 1]
-  pgx$gset.meta$meta[[i]]$meta.fx <- mx
-}
-
-## -----------------------------------------------------------------------------
-## Recode survival
-## -----------------------------------------------------------------------------
-pheno <- colnames(pgx$Y)
-## DLBCL coding
-if (("OS.years" %in% pheno && "OS.status" %in% pheno)) {
-  message("found OS survival data")
-  event <- (pgx$Y$OS.status %in% c("DECEASED", "DEAD", "1", "yes", "YES", "dead"))
-  pgx$Y$OS.survival <- ifelse(event, pgx$Y$OS.years, -pgx$Y$OS.years)
-}
-
-## cBioportal coding
-if (("OS_MONTHS" %in% pheno && "OS_STATUS" %in% pheno)) {
-  message("[pgx.initialize] found OS survival data\n")
-  event <- (pgx$Y$OS_STATUS %in% c("DECEASED", "DEAD", "1", "yes", "YES", "dead"))
-  pgx$Y$OS.survival <- ifelse(event, pgx$Y$OS_MONTHS, -pgx$Y$OS_MONTHS)
-}
-
-## -----------------------------------------------------------------------------
-## Check if clustering is done
-## -----------------------------------------------------------------------------
-message("[pgx.initialize] Check if clustering is done...")
-if (!"cluster.genes" %in% names(pgx)) {
-  message("[pgx.initialize] clustering genes...")
-  pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2), level = "gene")
-  pgx$cluster.genes$pos <- lapply(pgx$cluster.genes$pos, pos.compact)
+  } else {
+    pgx$families <- lapply(playdata::FAMILIES, function(x, genes, annot_table) {
+      x <- intersect(x, genes)
+      x <- annot_table$symbol[match(x, annot_table$human_ortholog)]
+      return(x)
+      }, genes = genes, annot_table = pgx$genes)
   }
-  if (!"cluster.gsets" %in% names(pgx)) {
-    message("[pgx.initialize] clustering genesets...")
-    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2), level = "geneset")
-    pgx$cluster.gsets$pos <- lapply(pgx$cluster.gsets$pos, pos.compact)
+  famsize <- sapply(pgx$families, length)
+  pgx$families <- pgx$families[which(famsize >= 10)]
+
+  all.genes <- sort(unique(pgx$genes$gene_name))
+  pgx$families[["<all>"]] <- all.genes
+
+  ## -----------------------------------------------------------------------------
+  ## Recompute geneset meta.fx as average fold-change of genes
+  ## -----------------------------------------------------------------------------
+  message("[pgx.initialize] Recomputing geneset fold-changes")
+  nc <- length(pgx$gset.meta$meta)
+  for (i in 1:nc) {
+    gs <- pgx$gset.meta$meta[[i]]
+    fc <- pgx$gx.meta$meta[[i]]$meta.fx
+    names(fc) <- rownames(pgx$gx.meta$meta[[i]])
+    G1 <- Matrix::t(pgx$GMT[names(fc), rownames(gs)])
+    mx <- (G1 %*% fc)[, 1]
+    pgx$gset.meta$meta[[i]]$meta.fx <- mx
   }
 
   ## -----------------------------------------------------------------------------
-  ## Remove redundant???
+  ## Recode survival
   ## -----------------------------------------------------------------------------
-  message("[pgx.initialize] Remove redundant phenotypes...")
-  if (".gender" %in% colnames(pgx$Y) &&
-    any(c("gender", "sex") %in% tolower(colnames(pgx$Y)))) {
-    pgx$Y$.gender <- NULL
+  pheno <- colnames(pgx$Y)
+  ## DLBCL coding
+  if (("OS.years" %in% pheno && "OS.status" %in% pheno)) {
+    message("found OS survival data")
+    event <- (pgx$Y$OS.status %in% c("DECEASED", "DEAD", "1", "yes", "YES", "dead"))
+    pgx$Y$OS.survival <- ifelse(event, pgx$Y$OS.years, -pgx$Y$OS.years)
+  }
+
+  ## cBioportal coding
+  if (("OS_MONTHS" %in% pheno && "OS_STATUS" %in% pheno)) {
+    message("[pgx.initialize] found OS survival data\n")
+    event <- (pgx$Y$OS_STATUS %in% c("DECEASED", "DEAD", "1", "yes", "YES", "dead"))
+    pgx$Y$OS.survival <- ifelse(event, pgx$Y$OS_MONTHS, -pgx$Y$OS_MONTHS)
   }
 
   ## -----------------------------------------------------------------------------
-  ## Keep compatible with OLD formats
+  ## Check if clustering is done
   ## -----------------------------------------------------------------------------
-  message("[pgx.initialize] Keep compatible OLD formats...")
-  if (any(c("mono", "combo") %in% names(pgx$drugs))) {
+  message("[pgx.initialize] Check if clustering is done...")
+  if (!"cluster.genes" %in% names(pgx)) {
+    message("[pgx.initialize] clustering genes...")
+    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2), level = "gene")
+    pgx$cluster.genes$pos <- lapply(pgx$cluster.genes$pos, pos.compact)
+    }
+    if (!"cluster.gsets" %in% names(pgx)) {
+      message("[pgx.initialize] clustering genesets...")
+      pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2), level = "geneset")
+      pgx$cluster.gsets$pos <- lapply(pgx$cluster.gsets$pos, pos.compact)
+    }
+
+    ## -----------------------------------------------------------------------------
+    ## Remove redundant???
+    ## -----------------------------------------------------------------------------
+    message("[pgx.initialize] Remove redundant phenotypes...")
+    if (".gender" %in% colnames(pgx$Y) &&
+      any(c("gender", "sex") %in% tolower(colnames(pgx$Y)))) {
+      pgx$Y$.gender <- NULL
+    }
+
+    ## -----------------------------------------------------------------------------
+    ## Keep compatible with OLD formats
+    ## -----------------------------------------------------------------------------
+    message("[pgx.initialize] Keep compatible OLD formats...")
+    if (any(c("mono", "combo") %in% names(pgx$drugs))) {
     dd <- pgx$drugs[["mono"]]
     aa1 <- pgx$drugs[["annot"]]
     if (is.null(aa1)) {
