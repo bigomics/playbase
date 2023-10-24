@@ -88,7 +88,7 @@ compute_testGenesets <- function(pgx,
 
   # Change HUMAN gene names to species symbols
   G <- G[, colnames(G) %in% human_genes]
-  colnames(G2) <- pgx$genes$symbol[match(colnames(G2), 
+  colnames(G) <- pgx$genes$symbol[match(colnames(G), 
                                         pgx$genes$human_ortholog)]
 
   # Normalize G after removal of genes
@@ -142,7 +142,7 @@ compute_testGenesets <- function(pgx,
   }
 
 
-  if (rownames(X) != pgx$genes$symbol) {
+  if (!all(rownames(X) %in% pgx$genes$symbol)) {
   
     X <- rename_by(X, pgx$genes, pgx$genes$symbol)
     X <- X[!rownames(X) == "", , drop = FALSE]

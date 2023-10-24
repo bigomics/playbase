@@ -179,20 +179,12 @@ pgx$genes$gene_title <- as.character(pgx$genes$gene_title)
 ## -----------------------------------------------------------------------------
 ## intersect and filter gene families (convert species to human gene sets)
 ## -----------------------------------------------------------------------------
-if ("hgnc_symbol" %in% colnames(pgx$genes)) {
-  #FIXME previously had had hgnc_symbol as column in pgx$genes?
-  #FIXME why is this necessary
-  hgenes <- toupper(pgx$genes$hgnc_symbol)
-  genes <- pgx$genes$external_gene_name
-  pgx$families <- lapply(playdata::FAMILIES, function(x) setdiff(genes[match(x, hgenes)], NA))
-} else {
-  # Here we use the homologs when available, instead of gene_name
-  genes <- ifelse(!is.na(pgx$genes$human_ortholog), 
-                  pgx$genes$human_ortholog, 
-                  pgx$genes$gene_name)
+# Here we use the homologs when available, instead of gene_name
+genes <- ifelse(!is.na(pgx$genes$human_ortholog), 
+                pgx$genes$human_ortholog, 
+                pgx$genes$gene_name)
                   
-  pgx$families <- lapply(playdata::FAMILIES, function(x) intersect(x, genes))
-}
+pgx$families <- lapply(playdata::FAMILIES, function(x) intersect(x, genes))
 famsize <- sapply(pgx$families, length)
 pgx$families <- pgx$families[which(famsize >= 10)]
 
@@ -204,14 +196,10 @@ pgx$families[["<all>"]] <- all.genes
 ## -----------------------------------------------------------------------------
 message("[pgx.initialize] Recomputing geneset fold-changes")
 nc <- length(pgx$gset.meta$meta)
-i <- 1
 for (i in 1:nc) {
   gs <- pgx$gset.meta$meta[[i]]
   fc <- pgx$gx.meta$meta[[i]]$meta.fx
-  match_fc_names_with_gene_names <- match(rownames(pgx$gx.meta$meta[[i]]), pgx$genes$gene_name)
-  homologs_match <- pgx$genes$human_ortholog[match_fc_names_with_gene_names]
-  match_fc_names_with_gene_names <- ifelse(is.na(homologs_match), rownames(pgx$gx.meta$meta[[i]]), homologs_match)
-  names(fc) <- match_fc_names_with_gene_names
+  names(fc) <- rownames(pgx$gx.meta$meta[[i]])
   G1 <- Matrix::t(pgx$GMT[names(fc), rownames(gs)])
   mx <- (G1 %*% fc)[, 1]
   pgx$gset.meta$meta[[i]]$meta.fx <- mx
