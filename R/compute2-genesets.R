@@ -130,17 +130,18 @@ compute_testGenesets <- function(pgx,
   ## create the full GENE matrix (always collapsed by gene)
   ## -----------------------------------------------------------
 
+  X <- pgx$X
   single.omics <- TRUE ## !!! for now...
   if (single.omics) {
     ## normalized matrix
-    X <- pgx$X
+    X <- X
   } else {
     data.type <- gsub("\\[|\\].*", "", rownames(pgx$counts))
     jj <- which(data.type %in% c("gx", "mrna"))
     if (length(jj) == 0) {
       stop("FATAL. could not find gx/mrna values.")
     }
-    X <- pgx$X[jj, ]
+    X <- X[jj, ]
   }
 
 
@@ -149,7 +150,7 @@ compute_testGenesets <- function(pgx,
     X <- rename_by(X, pgx$genes, "symbol")
     X <- X[!rownames(X) == "", , drop = FALSE]
     if (any(duplicated(rownames(X)))) {
-      X <- log2(rowsum(2**pgx$X, rownames(X)))
+      X <- log2(rowsum(2**X, rownames(X)))
     }
   }
 
