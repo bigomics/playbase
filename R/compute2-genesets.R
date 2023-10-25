@@ -86,10 +86,12 @@ compute_testGenesets <- function(pgx,
   }
   genes <- pgx$genes$symbol
 
-  # Change HUMAN gene names to species symbols
+  # Change HUMAN gene names to species symbols if NOT human and human_ortholog column is NOT all NA
   G <- G[, colnames(G) %in% human_genes]
-  colnames(G) <- pgx$genes$symbol[match(colnames(G), 
-                                        pgx$genes$human_ortholog)]
+
+  if(pgx$organism != "Human" && !all(is.na(pgx$genes$human_ortholog))){
+    colnames(G) <- pgx$genes$symbol[match(colnames(G), pgx$genes$human_ortholog)]
+  }
 
   # Normalize G after removal of genes
 
