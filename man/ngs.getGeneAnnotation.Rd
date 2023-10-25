@@ -4,7 +4,13 @@
 \alias{ngs.getGeneAnnotation}
 \title{Get gene annotation data}
 \usage{
-ngs.getGeneAnnotation(probes, probe_type = NULL, mart = NULL, verbose = TRUE)
+ngs.getGeneAnnotation(
+  probes,
+  organism,
+  probe_type = NULL,
+  mart = NULL,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{probes}{Character vector of gene/transcript identifiers to retrieve annotation for.}

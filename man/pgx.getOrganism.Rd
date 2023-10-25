@@ -4,9 +4,12 @@
 \alias{pgx.getOrganism}
 \title{Determine organism from count matrix}
 \usage{
-pgx.getOrganism(pgx)
+pgx.getOrganism(pgx, capitalise = FALSE)
 }
 \arguments{
+\item{capitalise}{logical: by default FALSE. Parameter to capitalise the first letter of the 
+specie if mouse or human.}
+
 \item{pgx.counts}{Matrix of count data, with genes as rows.}
 }
 \value{
