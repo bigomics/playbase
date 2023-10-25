@@ -1159,23 +1159,25 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 #'
 #' @description Determines if count data is from human or mouse based on gene identifiers.
 #'
-#' @param pgx.counts Matrix of count data, with genes as rows.
+#' @param pgx A pgx object with the pgx$organism information and the pgx$counts slot for the
+#' guessing approach.
 #' @param capitalise logical: by default FALSE. Parameter to capitalise the first letter of the 
 #' specie if mouse or human.
-#' @details This function examines the gene identifiers in the row names of a count matrix
-#' to determine if the data is from human or mouse. It checks if the identifiers match common
-#' patterns found in mouse genes, like "rik", "loc", "orf". If more than 20% match these mouse
-#' patterns, it assigns the organism as "mouse". Otherwise it assigns "human".
+#' @details This function retreives the pgx$organism slot. If it is not found, then it examines 
+#' the gene identifiers in the row names of a count matrix to determine if the data is from human 
+#' or mouse (main organism supported in the old playbase version). It checks if the identifiers 
+#' match common patterns found in mouse genes, like "rik", "loc", "orf". If more than 20% match
+#'  these mouse patterns, it assigns the organism as "mouse". Otherwise it assigns "human".
 #'
 #' The function calculates the fraction of row names that do NOT match the mouse gene patterns.
 #' If this fraction is >0.8, it assigns "human". This relies on the assumption that human data
 #' will tend to have more uppercase ENSEMBL identifiers.
 #'
-#' @return Character string indicating "mouse" or "human" organism.
-#'
+#' @return Character string the organism. 
 #' @export
 pgx.getOrganism <- function(pgx, capitalise = FALSE) {
-  ## NEED RETHINK FOR MULTI-ORGANISM
+
+  pgx.counts <- pgx$counts
   if (!is.null(pgx$organism)) {
     org <- pgx$organism
   } else {

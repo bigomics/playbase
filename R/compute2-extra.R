@@ -294,7 +294,7 @@ compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
   if (!is.null(pgx$organism)) {
     is.human <- (pgx$organism == "Human")  
   } else {
-    is.human <- (pgx.getOrganism(rna.counts) == "human")
+    is.human <- (pgx.getOrganism(pgx) == "human")
   }
   if (is.human) {
     message("estimating cell cycle (using Seurat)...")
