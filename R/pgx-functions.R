@@ -1179,7 +1179,7 @@ pgx.getOrganism <- function(pgx, capitalise = FALSE) {
   if (!is.null(pgx$organism)) {
     org <- pgx$organism
   } else {
-  rownames.counts <- grep("^rik|^loc|^orf", rownames(pgx.counts),
+  rownames.counts <- grep("^rik|^loc|^orf", rownames(pgx$counts),
     value = TRUE,
     ignore.case = TRUE, invert = TRUE
   )
