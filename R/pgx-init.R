@@ -167,14 +167,6 @@ pgx.initialize <- function(pgx) {
   kk <- sort(unique(c(k1, k2)))
   pgx$Y <- pgx$Y[, kk, drop = FALSE]
 
-  ## ----------------------------------------------------------------
-  ## Tidy up genes matrix
-  ## ----------------------------------------------------------------
-
-  # Convert to DT for back-compatibility
-  pgx$genes <- pgx$genes[rownames(pgx$counts), , drop = FALSE]
-  pgx$genes$gene_name <- as.character(pgx$genes$gene_name)
-  pgx$genes$gene_title <- as.character(pgx$genes$gene_title)
 
   ## -----------------------------------------------------------------------------
   ## intersect and filter gene families (convert species to human gene sets)
