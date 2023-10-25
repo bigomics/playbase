@@ -201,6 +201,11 @@ pgx.initialize <- function(pgx) {
     gs <- pgx$gset.meta$meta[[i]]
     fc <- pgx$gx.meta$meta[[i]]$meta.fx
     names(fc) <- rownames(pgx$gx.meta$meta[[i]])
+    # If use does not collapse by gene
+    if (!all(names(fc) %in% pgx$genes$symbol)) {
+      names(fc) <- pgx$genes$symbol[match(names(fc), rownames(pgx$genes), nomatch = 0)]
+      fc <- fc[names(fc) != ""]
+    }
     G1 <- Matrix::t(pgx$GMT[names(fc), rownames(gs)])
     mx <- (G1 %*% fc)[, 1]
     pgx$gset.meta$meta[[i]]$meta.fx <- mx
