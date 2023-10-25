@@ -224,7 +224,7 @@ pgxinfo.add <- function(pgxinfo, pgx, remove.old = TRUE) {
   if ("organism" %in% names(pgx)) {
     organism <- pgx$organism
   } else {
-    organism <- pgx.getOrganism(pgx$counts)
+    organism <- pgx.getOrganism(pgx)
   }
 
   this.date <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
