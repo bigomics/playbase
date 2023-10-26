@@ -176,7 +176,7 @@ pgx.initialize <- function(pgx) {
                   pgx$genes$human_ortholog,
                   pgx$genes$gene_name)
 
-  if(is.null(pgx$organism)){
+  if(is.nulll(pgx$organism)){
     pgx$organism <- playbase::pgx.getOrganism(pgx)
   }
   if (pgx$organism %in% c("Human", "human") | !is.null(pgx$version)) {
