@@ -172,10 +172,13 @@ pgx.initialize <- function(pgx) {
   ## intersect and filter gene families (convert species to human gene sets)
   ## -----------------------------------------------------------------------------
   # Here we use the homologs when available, instead of gene_name
-  genes <- ifelse(!is.na(pgx$genes$human_ortholog), 
-                  pgx$genes$human_ortholog, 
+  genes <- ifelse(!is.na(pgx$genes$human_ortholog),
+                  pgx$genes$human_ortholog,
                   pgx$genes$gene_name)
 
+  if(is.null(pgx$organism)){
+    pgx$organism <- playbase::pgx.getOrganism(pgx)
+  }
   if (pgx$organism %in% c("Human", "human") | !is.null(pgx$version)) {
     pgx$families <- lapply(playdata::FAMILIES, function(x) {intersect(x, genes)})
 
