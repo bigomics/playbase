@@ -55,7 +55,7 @@ The following methods can be selected via the \code{methods} parameter:
 \item pls: Absolute coefficients from partial least squares Cox model
 }
 
-Variable importance scores are returned for each method in a named list. 
+Variable importance scores are returned for each method in a named list.
 These scores can be used to select important predictors for survival modeling.
 }
 \section{Functions}{

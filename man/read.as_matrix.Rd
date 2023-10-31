@@ -7,10 +7,13 @@
 \usage{
 read.as_matrix.SAVE(file)
 
-read.as_matrix(file)
+read.as_matrix(file, skip_row_check = FALSE)
 }
 \arguments{
 \item{file}{Path to input data file}
+
+\item{skip_row_check}{(default `FALSE`) Flag to skip the removal
+of empty rows}
 }
 \value{
 Matrix object containing data from file

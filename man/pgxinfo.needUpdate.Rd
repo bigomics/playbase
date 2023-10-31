@@ -23,7 +23,7 @@ All pgx files in the datafolder should be included.
 \details{
 This function checks if the main metadata files in a PGX directory need to be updated:
 
-- datasets-info.csv 
+- datasets-info.csv
 - datasets-allFC.csv
 - datasets-sigdb.h5
 

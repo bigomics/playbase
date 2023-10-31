@@ -38,7 +38,7 @@ based on new or changed .pgx files. It compares the .pgx files to the existing m
 
 The metadata files updated are:
 - datasets-info.csv
-- datasets-allFC.csv 
+- datasets-allFC.csv
 - datasets-sigdb.h5
 
 If force=TRUE, it will update regardless of whether changes are detected.

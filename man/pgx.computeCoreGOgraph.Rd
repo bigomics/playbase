@@ -20,10 +20,10 @@ Computes a core GO graph from significant GO terms
 \details{
 Compute Core GO Graph
 
-This function takes a pgx object containing GO enrichment results 
-and extracts significant GO terms below the specified FDR threshold. It constructs 
-a graph where nodes are GO terms, connected based on their semantic relationships 
-from the GO ontology. Terms are colored by their enrichment scores and sized by the 
-number of input genes they contain. The resulting graph highlights the key GO 
+This function takes a pgx object containing GO enrichment results
+and extracts significant GO terms below the specified FDR threshold. It constructs
+a graph where nodes are GO terms, connected based on their semantic relationships
+from the GO ontology. Terms are colored by their enrichment scores and sized by the
+number of input genes they contain. The resulting graph highlights the key GO
 terms and biological processes enriched in the analysis.
 }

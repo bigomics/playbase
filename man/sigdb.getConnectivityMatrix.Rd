@@ -38,11 +38,11 @@ Matrix of connectivity scores
 Get the connectivity matrix from a signature database HDF5 file.
 }
 \details{
-This function extracts the connectivity matrix from a signature database 
+This function extracts the connectivity matrix from a signature database
 stored in HDF5 format. The HDF5 file should contain the matrix under /data/matrix.
 
-You can filter the returned matrix by specifying a subset of contrasts to return 
-with the \code{select} parameter. Use the \code{genes} parameter to return only a 
+You can filter the returned matrix by specifying a subset of contrasts to return
+with the \code{select} parameter. Use the \code{genes} parameter to return only a
 subset of genes.
 
 If the sigdb file is not in the working directory, set the \code{path} parameter.
@@ -50,7 +50,7 @@ If the sigdb file is not in the working directory, set the \code{path} parameter
 \section{Functions}{
 \itemize{
 \item \code{sigdb.getEnrichmentMatrix()}: This function reads the enrichment data stored in a signature database in HDF5 format.
-It extracts either the gene set enrichment analysis (GSEA) results or the rank 
+It extracts either the gene set enrichment analysis (GSEA) results or the rank
 correlation analysis results.
 
 \item \code{sigdb.getSignatureMatrix()}: reads the up/down regulated gene signatures from a signature database HDF5 file.

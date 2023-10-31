@@ -34,7 +34,7 @@ Constructs an omics graph by connecting genes to gene sets and merging nodes.
 \details{
 Create an omics graph from an NGS analysis
 
-This function takes an NGS analysis object and constructs a graph where genes are connected to the gene sets they belong to. 
+This function takes an NGS analysis object and constructs a graph where genes are connected to the gene sets they belong to.
 It first creates a bipartite graph connecting genes and gene sets. The graph is then simplified by merging genes into clusters.
 
 If do.intersect is TRUE, gene sets are intersected when more than one gene set contains the same genes. This reduces redundancy.

@@ -72,8 +72,10 @@ x <- rnorm(100)
 y <- rnorm(100)
 plot_ggscatter(x, y)
 
-mat <- cbind(x, y) 
-plot_ggscatter(mat, legend.pos="bottom", 
-               shape=c(1,2), col.scale=1:100)
+mat <- cbind(x, y)
+plot_ggscatter(mat,
+  legend.pos = "bottom",
+  shape = c(1, 2), col.scale = 1:100
+)
 }
 }

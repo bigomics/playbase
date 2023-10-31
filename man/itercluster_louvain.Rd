@@ -24,7 +24,7 @@ This function implements the Louvain algorithm for community detection on a grap
 It takes an igraph graph object \code{g} and performs \code{n} iterations of Louvain clustering.
 In each iteration it groups nodes into communities that maximize modularity.
 
-The algorithm optimizes modularity in a greedy fashion by first assigning each node to its own community. 
+The algorithm optimizes modularity in a greedy fashion by first assigning each node to its own community.
 It then goes through nodes repeatedly to evaluate moving them to neighboring communities. If a move increases modularity it is accepted.
 This local optimization is applied iteratively to hierarchically build communities.
 

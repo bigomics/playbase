@@ -4,7 +4,7 @@
 \alias{pgx.testPhenoCorrelation}
 \title{Test correlation of phenotype with expression data}
 \usage{
-pgx.testPhenoCorrelation(df, plot = TRUE, cex = 1)
+pgx.testPhenoCorrelation(df, plot = TRUE, cex = 1, compute.pv = TRUE)
 }
 \arguments{
 \item{df}{Data frame containing phenotype data}

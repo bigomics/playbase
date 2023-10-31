@@ -4,10 +4,10 @@
 \alias{compute_drugActivityEnrichment}
 \title{Compute Drug Activity Enrichment}
 \usage{
-compute_drugActivityEnrichment(ngs, libx.dir = NULL)
+compute_drugActivityEnrichment(pgx, libx.dir = NULL)
 }
 \arguments{
-\item{ngs}{An object containing the input data for analysis.}
+\item{pgx}{An object containing the input data for analysis.}
 
 \item{libx.dir}{The directory path where the drug activity databases are located.
 This is required if calling the function compute_full_drugActivityEnrichment.}

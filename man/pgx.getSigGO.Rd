@@ -28,7 +28,7 @@ pgx.getSigGO(
 }
 \value{
 A list containing the GO graph \code{graph}, various GO term statistics
-matrices (\code{pathscore}, \code{foldchange}, \code{qvalue}), and \code{match} mapping 
+matrices (\code{pathscore}, \code{foldchange}, \code{qvalue}), and \code{match} mapping
 GO terms to gene sets.
 }
 \description{

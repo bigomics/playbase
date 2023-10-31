@@ -733,6 +733,8 @@ read.as_matrix.SAVE <- function(file) {
 #' Read data file as matrix
 #'
 #' @param file Path to input data file
+#' @param skip_row_check (default `FALSE`) Flag to skip the removal
+#' of empty rows
 #'
 #' @return Matrix object containing data from file
 #'
@@ -749,7 +751,7 @@ read.as_matrix.SAVE <- function(file) {
 #' mymatrix <- read.as_matrix(mydata.csv)
 #' }
 #' @export
-read.as_matrix <- function(file) {
+read.as_matrix <- function(file, skip_row_check = FALSE) {
   ## read delimited table automatically determine separator. allow
   ## duplicated rownames. This implements with faster fread.
   x0 <- data.table::fread(
@@ -771,9 +773,11 @@ read.as_matrix <- function(file) {
     rownames(x) <- x0[[1]][sel]
   }
   ## drop any rows with 100% missing value (sometimes added by not-so-Excel...)
-  zero.row <- which(rowSums(is.na(x)) == ncol(x))
-  if (length(zero.row)) {
-    x <- x[-zero.row, , drop = FALSE]
+  if (!skip_row_check) { # Flag to bypass (used on contrast.csv ingest), as it can contain full NA rows
+    zero.row <- which(rowSums(is.na(x)) == ncol(x))
+    if (length(zero.row)) {
+      x <- x[-zero.row, , drop = FALSE]
+    }
   }
   ## drop any 100% missing columns (sometimes added by not-so-Excel...)
   zero.col <- which(colSums(is.na(x)) == nrow(x))
@@ -1656,41 +1660,19 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
 #' @return A list containing the extracted gene set collections.
 #'
 #' @export
-pgx.getGeneSetCollections <- function(gsets, min.size = 10, max.size = 500) {
+pgx.getGeneSetCollections <- function(gsets = rownames(playdata::GSETxGENE)) {
   ## -----------------------------------------------------------------------------
   ## Gene set collections
   ## -----------------------------------------------------------------------------
 
-  collections <- list(
-    "Hallmark collection" = gsets[grep("HALLMARK", gsets)],
-    "Pathway related" = gsets[grep("pathway", gsets, ignore.case = TRUE)],
-    "Metabolism related" = gsets[grep("metaboli", gsets, ignore.case = TRUE)],
-    "Signalling related" = gsets[grep("signal", gsets, ignore.case = TRUE)],
-    "T-cell related" = gsets[grep("tcell|t-cell|t[ ]cell", gsets, ignore.case = TRUE)],
-    "B-cell related" = gsets[grep("bcell]b-cell|b[ ]cell", gsets, ignore.case = TRUE)],
-    "Response related" = gsets[grep("response", gsets, ignore.case = TRUE)],
-    "Cancer related" = gsets[grep("cancer", gsets, ignore.case = TRUE)],
-    "Immune related" = gsets[grep("immune", gsets, ignore.case = TRUE)],
-    "Cell differentiation" = gsets[grep("differentiation", gsets, ignore.case = TRUE)],
-    "Checkpoint related" = gsets[grep("checkpoint", gsets, ignore.case = TRUE)],
-    "IL gene sets" = gsets[grep("IL[1-9]{1,2}", gsets, ignore.case = TRUE)],
-    "Aging" = gsets[grep("aging", gsets, ignore.case = TRUE)],
-    "Disease" = gsets[grep("jensen|disease|covid|diabetes", gsets, ignore.case = TRUE)],
-  )
-
-  collections[["<all>"]] <- gsets ## X is sorted
-  collections <- collections[which(sapply(collections, length) >= 10)]
-  collections <- collections[order(names(collections))]
+  collections <- list()
 
   ## ----------- add main collections from gene set prefixes
-  gsets.db <- sub(":.*", "", gsets)
+  gsets.db <- sub("_.*", "", gsets)
+  gsets.db <- sub(":.*", "", gsets.db)
   gsets.groups <- tapply(gsets, gsets.db, list)
   collections <- c(collections, gsets.groups)
-
-  ## ----------- filter on size
-  nsize <- sapply(collections, length)
-  sel <- which(nsize >= min.size & nsize < max.size)
-  collections <- collections[sel]
+  collections[["<all>"]] <- gsets
   return(collections)
 }
 

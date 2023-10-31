@@ -22,7 +22,7 @@ Cuts inter-cluster edges in a graph based on node membership
 \details{
 Cut graph crossings
 
-This function takes an igraph graph object \code{g} and a vector of node membership indices \code{idx}. 
+This function takes an igraph graph object \code{g} and a vector of node membership indices \code{idx}.
 It identifies edges that connect nodes of different clusters based on \code{idx}.
 Any edges with weight less than \code{max.wt} that link across clusters are removed from the graph.
 The resulting pruned graph is returned.
