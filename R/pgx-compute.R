@@ -341,7 +341,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   message("[createPGX] annotating genes...")
 
-  pgx <- pgx.gene_table(pgx, organism = organism)
+  pgx <- playbase::pgx.gene_table(pgx, organism = organism)
 
   ## -------------------------------------------------------------------
   ## convert probe-IDs to gene symbol and aggregate duplicates
@@ -369,14 +369,27 @@ pgx.createPGX <- function(counts,
         # And then take log2 again.
         pgx$X <- log2(rowsum(2**pgx$X, selected_symbols))
     }
-    
-    # Collapse feature as a comma-separated elements
-    collapsed_feat <- tapply(pgx$genes$feature, pgx$genes$symbol, FUN =  paste, collapse = ", ")
-    pgx$genes <- pgx$genes[!duplicated(selected_symbols), , drop = FALSE]
-    pgx$genes$feature <- as.vector(collapsed_feat)
-    rownames(pgx$genes) <- selected_symbols[!duplicated(selected_symbols)]  
-  }
 
+    # Collapse feature as a comma-separated elements
+    # if multiple rows match to the same gene, then collapse them
+
+    features_collapsed_by_symbol <- aggregate(feature ~ symbol, data = pgx$genes, function(x) paste(unique(x), collapse = "; "))
+
+    # collapse pgx$counts by symbol
+    pgx$counts <- rowsum(pgx$counts, pgx$genes$symbol[match(rownames(pgx$counts), pgx$genes$feature)])
+  
+    # keep only one symbol per row
+    pgx$genes <- pgx$genes[!duplicated(pgx$genes$symbol), , drop = FALSE]
+
+    # merge by symbol (we need to remove feature, as the new feature is collapsed)
+    pgx$genes$feature <- NULL
+
+    # merge features_collapsde_by_symbol with pgx$genes by the column symbol
+    pgx$genes <- merge(pgx$genes, features_collapsed_by_symbol, by = "symbol")
+    rownames(pgx$genes) = pgx$genes$symbol
+    pgx$counts <- pgx$counts[pgx$genes$symbol, , drop = FALSE]
+    
+  }
 
   ## -------------------------------------------------------------------
   ## Filter out not-expressed
