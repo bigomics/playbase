@@ -470,7 +470,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   } else {
     message("[createPGX] using passed log-expression X...")
   }
-  
+
   ## -------------------------------------------------------------------
   ## Pre-calculate t-SNE for and get clusters early so we can use it
   ## for doing differential analysis.

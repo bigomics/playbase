@@ -56,7 +56,7 @@
 #' @export
 ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, contr.matrix, genes = NULL,
                                            prior.cpm = 1, cpm.scale = 1e6, prune.samples = FALSE,
-                                           conform.output = TRUE, do.filter = TRUE, 
+                                           conform.output = TRUE, do.filter = TRUE,
                                            remove.batch = TRUE,
                                            methods = c(
                                              "ttest", "ttest.welch", "voom.limma", "trend.limma", "notrend.limma",
