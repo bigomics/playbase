@@ -55,8 +55,8 @@
 #' }
 #' @export
 ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, contr.matrix, genes = NULL,
-                                           prior.cpm = 1, prune.samples = FALSE,
-                                           conform.output = TRUE, do.filter = TRUE, cpm.scale = 1e6,
+                                           prior.cpm = 1, cpm.scale = 1e6, prune.samples = FALSE,
+                                           conform.output = TRUE, do.filter = TRUE, 
                                            remove.batch = TRUE,
                                            methods = c(
                                              "ttest", "ttest.welch", "voom.limma", "trend.limma", "notrend.limma",
@@ -94,10 +94,10 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
   if (is.null(X)) {
     message("[ngs.fitContrastsWithAllMethods] prior CPM counts =", prior.cpm)
     message("[ngs.fitContrastsWithAllMethods] CPM scale =", cpm.scale)
-    X <- log2(t(t(counts) / Matrix::colSums(counts)) * cpm.scale + prior.cpm) ## CPM
+    X <- log2(t(t(counts) / Matrix::colSums(counts)) * cpm.scale + prior.cpm) ## log2CPM
     X <- limma::normalizeQuantiles(X) ## in linear space
   } else {
-    message("[ngs.fitContrastsWithAllMethods] using input log-expression matrix X...")
+    message("[ngs.fitContrastsWithAllMethods] using input log-expression matrix X as is")
   }
 
   ## ------------------------------------------------------------------

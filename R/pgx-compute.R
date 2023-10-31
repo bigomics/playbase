@@ -112,29 +112,6 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 }
 
 
-#' Create a PGX object
-#' This function creates a pgx object, which is the core object in the
-#' OmicsPlayground.
-#' @param counts Matrix of count data with genes as rows and samples as columns.
-#' @param samples Data frame containing sample information.
-#' @param contrasts Data frame defining sample contrasts.
-#' @param X (Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.
-#' @param is.logx Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.
-#' @param batch.correct Logical indicating whether to perform batch correction. Default is TRUE.
-#' @param auto.scale Logical indicating whether to automatically scale/center genes. Default is TRUE.
-#' @param filter.genes Logical indicating whether to filter lowly expressed genes. Default is TRUE.
-#' @param prune.samples Logical indicating whether to remove samples without contrasts. Default is FALSE.
-#' @param only.known Logical indicating whether to keep only known genes. Default is TRUE.
-#' @param only.hugo Logical indicating whether to convert symbols to HUGO names. Default is TRUE.
-#' @param convert.hugo Logical indicating whether to convert symbols to HUGO names. Default is TRUE.
-#' @param do.cluster Logical indicating whether to run sample clustering. Default is TRUE.
-#' @param cluster.contrasts Logical indicating whether to cluster contrasts. Default is FALSE.
-#' @param do.clustergenes Logical indicating whether to cluster genes. Default is TRUE.
-#' @param only.proteincoding Logical indicating whether to keep only protein-coding genes. Default is TRUE.
-#'
-#' @return List. PGX object containing input data and parameters.
-#'
-#' @export
 pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
                           is.logx = NULL, batch.correct = TRUE,
                           auto.scale = TRUE, filter.genes = TRUE, prune.samples = FALSE,
@@ -242,7 +219,7 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   }
 
   ## -------------------------------------------------------------------
-  ## conform all matrices
+  ## conform all matrices (after filtering)
   ## -------------------------------------------------------------------
   message("[createPGX] conforming matrices...")
   kk <- intersect(colnames(counts), rownames(samples))
@@ -485,6 +462,16 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
   }
 
   ## -------------------------------------------------------------------
+  ## Add normalized log-expression
+  ## -------------------------------------------------------------------
+  if (is.null(pgx$X)) {
+    message("[createPGX] calculating log-expression matrix X...")
+    pgx$X <- logCPM(pgx$counts, total = 1e6, prior = 1)
+  } else {
+    message("[createPGX] using passed log-expression X...")
+  }
+  
+  ## -------------------------------------------------------------------
   ## Pre-calculate t-SNE for and get clusters early so we can use it
   ## for doing differential analysis.
   ## -------------------------------------------------------------------
@@ -524,25 +511,12 @@ pgx.createPGX <- function(counts, samples, contrasts, X = NULL, ## genes,
     }
   }
 
-  ## -------------------------------------------------------------------
-  ## Add normalized log-expression
-  ## -------------------------------------------------------------------
-  if (is.null(pgx$X)) {
-    message("[createPGX] calculating log-expression matrix X...")
-    pgx$X <- logCPM(pgx$counts, total = 1e6, prior = 1)
-  } else {
-    message("[createPGX] using passed log-expression X...")
-  }
-
-  if (!all(dim(pgx$X) == dim(pgx$counts))) {
-    stop("[createPGX] dimensions of X and counts do not match\n")
-  }
-
   if (do.clustergenes) {
     message("[createPGX] clustering genes...")
     pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "gene")
   }
 
+  ### done
   return(pgx)
 }
 
@@ -662,3 +636,10 @@ pgx.computePGX <- function(pgx,
 
   return(pgx)
 }
+
+
+
+
+## ----------------------------------------------------------------------
+## -------------------------- end of file -------------------------------
+## ----------------------------------------------------------------------

@@ -105,11 +105,10 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   if (use.design) {
     message("[compute_testGenesSingleOmics] contrasts on groups (use design)")
     ## convert sample-wise contrasts to group-wise contrasts
-    message("replacing contrast matrix...")
     stat0 <- sort(unique(stat.group))
     contr.matrix <- contr.matrix[match(stat0, stat.group), , drop = FALSE]
     rownames(contr.matrix) <- stat0
-  } else if (!use.design) {
+  } else {
     message("[compute_testGenesSingleOmics] contrasts on samples (no design)")
     stat.group <- rownames(contr.matrix)
     names(stat.group) <- rownames(contr.matrix)
@@ -181,7 +180,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   pgx$model.parameters <- model.parameters
 
   ## -----------------------------------------------------------------------------
-  ## Filter genes
+  ## Conform data matrices
   ## -----------------------------------------------------------------------------
   if (is.null(names(stat.group))) {
     stop("[compute_testGenesSingleOmics] FATAL2:: stat.group must have names")
@@ -192,20 +191,23 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   gg <- rownames(pgx$counts)
   if (!is.null(pgx$X)) gg <- intersect(gg, rownames(pgx$X))
   counts <- pgx$counts[gg, ss, drop = FALSE]
-  genes <- pgx$genes[gg, ]
   samples <- pgx$samples[ss, ]
 
+  ## -----------------------------------------------------------------------------
   ## Rescale if too low. Often EdgeR/DeSeq can give errors of total counts
   ## are too low. Happens often with single-cell (10x?). We rescale
   ## to a minimum of 1 million counts (CPM)
-  mean.counts <- mean(Matrix::colSums(counts, na.rm = TRUE))
+  ## -----------------------------------------------------------------------------    
+  ## mean.counts <- mean(Matrix::colSums(counts, na.rm = TRUE))
+  ## if (mean.counts < 1e6) {
+  ##   cat("[compute_testGenesSingleOmics] WARNING:: low total counts = ", mean.counts, "\n")
+  ##   cat("[compute_testGenesSingleOmics] applying global mean scaling to 1e6...\n")
+  ##   counts <- counts * 1e6 / mean.counts
+  ## }
 
-  if (mean.counts < 1e6) {
-    cat("[compute_testGenesSingleOmics] WARNING:: low total counts = ", mean.counts, "\n")
-    cat("[compute_testGenesSingleOmics] applying global mean scaling to 1e6...\n")
-    counts <- counts * 1e6 / mean.counts
-  }
-
+  ## -----------------------------------------------------------------------------
+  ## Filter genes
+  ## -----------------------------------------------------------------------------
   ## prefiltering for low-expressed genes (recommended for edgeR and
   ## DEseq2). Require at least in 2 or 1% of total. Specify the
   ## PRIOR CPM amount to regularize the counts and filter genes
@@ -220,14 +222,11 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     pgx$filtered[["low.expressed"]] <-
       paste(rownames(counts)[which(!keep)], collapse = ";")
     counts <- counts[which(keep), , drop = FALSE]
-    genes <- genes[which(keep), , drop = FALSE]
     cat("filtering out", sum(!keep), "low-expressed genes\n")
     cat("keeping", sum(keep), "expressed genes\n")
   }
 
-  ## -----------------------------------------------------------------------------
-  ## Shrink number of genes before testing (highest SD/var)
-  ## -----------------------------------------------------------------------------
+  ## Shrink number of genes (highest SD/var)
   if (is.null(max.features)) max.features <- -1
   if (max.features > 0 && nrow(counts) > max.features) {
     cat("shrinking data matrices: n=", max.features, "\n")
@@ -237,9 +236,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     jj0 <- setdiff(seq_len(nrow(counts)), jj)
     pgx$filtered[["low.variance"]] <- paste(rownames(counts)[jj0], collapse = ";")
     counts <- counts[jj, ]
-    genes <- genes[jj, ]
   }
-  genes <- genes[, c("gene_name", "gene_title")]
 
   ## -----------------------------------------------------------------------------
   ## Do the fitting
@@ -247,15 +244,15 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   methods <- test.methods
   cat(">>> Testing differential expressed genes (DEG) with methods:", methods, "\n")
 
-  ## Run all test methods
-  ##
-  X <- pgx$X[rownames(counts), colnames(counts)]
+  ## Conform normalized matrix X according to filters. Original
+  ## pgx$counts we keep the same for backup.
+  pgx$X <- pgx$X[rownames(counts), colnames(counts)]
 
+  ## Run all test methods    
   message("[compute_testGenesSingleOmics] 12 : start fitting... ")
-
   gx.meta <- playbase::ngs.fitContrastsWithAllMethods(
     counts = counts,
-    X = X,
+    X = pgx$X,
     samples = samples,
     genes = NULL,
     methods = methods,
@@ -282,8 +279,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   gx.meta$X <- NULL
   pgx$model.parameters <- model.parameters
   pgx$gx.meta <- gx.meta
-  pgx$X <- X ## replace with filtered
-
+        
   ## remove large outputs.
   if (remove.outputs) {
     pgx$gx.meta$outputs <- NULL
