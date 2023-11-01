@@ -341,7 +341,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   message("[createPGX] annotating genes...")
 
-  pgx <- playbase::pgx.gene_table(pgx, organism = organism)
+  pgx <- pgx.gene_table(pgx, organism = organism)
 
   ## -------------------------------------------------------------------
   ## convert probe-IDs to gene symbol and aggregate duplicates
@@ -374,11 +374,6 @@ pgx.createPGX <- function(counts,
     # if multiple rows match to the same gene, then collapse them
 
     features_collapsed_by_symbol <- aggregate(feature ~ symbol, data = pgx$genes, function(x) paste(unique(x), collapse = "; "))
-
-    # collapse pgx$counts by symbol
-    pgx$counts <- rowsum(pgx$counts, pgx$genes$symbol[match(rownames(pgx$counts), pgx$genes$feature)])
-  
-    # keep only one symbol per row
     pgx$genes <- pgx$genes[!duplicated(pgx$genes$symbol), , drop = FALSE]
 
     # merge by symbol (we need to remove feature, as the new feature is collapsed)
