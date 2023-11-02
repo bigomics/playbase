@@ -19,7 +19,7 @@
 #' @export
 imputeMissing <- function(X,
                           method = c(
-                            "LLS", "bpca", "msImpute", "SVD", "RF",
+                            "LLS", "bpca", "msImpute", "SVD", "SVD2", "RF",
                             "knn", "QRILC", "MLE", "MinDet", "MinProb",
                             "min", "zero", "nbavg")[1:3],
                           rf.ntree = 100,
@@ -69,7 +69,7 @@ imputeMissing <- function(X,
     }
   }
   if('SVD2' %in% method) {
-    impX[['SVD2']] <- svdImpute2(X, nPcs=3)
+    impX[['SVD2']] <- svdImpute2(X, nv=3)
   }
   if('RF' %in% method) {
     ## missForest
@@ -148,35 +148,35 @@ imputeMissing <- function(X,
 }
 
 #' @export
-svdImpute2 <- function (Matrix, nPcs = 3, threshold = 0.001,
+svdImpute2 <- function (M, nv = 3, threshold = 0.001,
                         maxSteps = 100, verbose=FALSE) {
-  missing <- which(is.na(Matrix), arr.ind=TRUE)
+  missing <- which(is.na(M), arr.ind=TRUE)
 
   ## initialize missing values with col/row medians
-  row.mx <- apply(Matrix, 1, median, na.rm=TRUE)
-  col.mx <- apply(Matrix, 2, median, na.rm=TRUE)  
+  row.mx <- apply(M, 1, median, na.rm=TRUE)
+  col.mx <- apply(M, 2, median, na.rm=TRUE)  
   mx <- rowMeans(cbind(row.mx[missing[,1]], col.mx[missing[,2]]),na.rm=TRUE)
-  Matrix[missing] <- mx
+  M[missing] <- mx
 
   ## do SVD iterations
   count <- 0
   error <- Inf
-  MatrixOld <- Matrix
-  nPcs <- min(nPcs,dim(Matrix))
+  MOld <- M
+  nv <- min(nv,dim(M))
   while ((error > threshold) && (count < maxSteps)) {
-    res <- irlba::irlba( Matrix, nv = nPcs )
+    res <- irlba::irlba( M, nv = nv )
     imx <- res$u %*% (diag(res$d) %*% t(res$v))
-    Matrix[missing] <- imx[missing]
+    M[missing] <- imx[missing]
     count <- count + 1
     if (count > 0) {
-      error <- sqrt(sum((MatrixOld - Matrix)^2)/sum(MatrixOld^2))
+      error <- sqrt(sum((MOld - M)^2)/sum(MOld^2))
       if (verbose) {
         cat("change in estimate: ", error, "\n")
       }
     }
-    MatrixOld <- Matrix
+    MOld <- M
   }
-  return(Matrix)
+  return(M)
 }
 
 
