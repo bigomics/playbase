@@ -192,7 +192,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   counts <- pgx$counts[gg, ss, drop = FALSE]
   samples <- pgx$samples[ss, ]
   X <- pgx$X[gg, ss, drop = FALSE]
-  
+
   ## -----------------------------------------------------------------------------
   ## Rescale if too low. Often EdgeR/DeSeq can give errors of total counts
   ## are too low. Happens often with single-cell (10x?). We rescale
@@ -242,9 +242,9 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   gx.meta$timings <- NULL
   gx.meta$X <- NULL
   pgx$model.parameters <- model.parameters
-  pgx$X <- X  ## adopt
+  pgx$X <- X ## adopt
   pgx$gx.meta <- gx.meta
-  
+
   ## remove large outputs.
   if (remove.outputs) {
     pgx$gx.meta$outputs <- NULL

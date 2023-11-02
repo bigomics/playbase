@@ -70,10 +70,10 @@ imputeMissing <- function(X,
     }
   }
 
-  if('SVD2' %in% method) {
-    impX[['SVD2']] <- svdImpute2(X, nv=3)
+  if ("SVD2" %in% method) {
+    impX[["SVD2"]] <- svdImpute2(X, nv = 3)
   }
-  
+
   if ("RF" %in% method) {
     ## missForest
     res <- missForest::missForest(as.data.frame(t(X)),
@@ -160,28 +160,28 @@ imputeMissing <- function(X,
 }
 
 #' @export
-svdImpute2 <- function (M, nv = 3, threshold = 0.001,
-                        maxSteps = 100, verbose=FALSE) {
-  missing <- which(is.na(M), arr.ind=TRUE)
+svdImpute2 <- function(M, nv = 3, threshold = 0.001,
+                       maxSteps = 100, verbose = FALSE) {
+  missing <- which(is.na(M), arr.ind = TRUE)
 
   ## initialize missing values with col/row medians
-  row.mx <- apply(M, 1, median, na.rm=TRUE)
-  col.mx <- apply(M, 2, median, na.rm=TRUE)  
-  mx <- rowMeans(cbind(row.mx[missing[,1]], col.mx[missing[,2]]),na.rm=TRUE)
+  row.mx <- apply(M, 1, median, na.rm = TRUE)
+  col.mx <- apply(M, 2, median, na.rm = TRUE)
+  mx <- rowMeans(cbind(row.mx[missing[, 1]], col.mx[missing[, 2]]), na.rm = TRUE)
   M[missing] <- mx
 
   ## do SVD iterations
   count <- 0
   error <- Inf
   MOld <- M
-  nv <- min(nv,dim(M))
+  nv <- min(nv, dim(M))
   while ((error > threshold) && (count < maxSteps)) {
-    res <- irlba::irlba( M, nv = nv )
+    res <- irlba::irlba(M, nv = nv)
     imx <- res$u %*% (diag(res$d) %*% t(res$v))
     M[missing] <- imx[missing]
     count <- count + 1
     if (count > 0) {
-      error <- sqrt(sum((MOld - M)^2)/sum(MOld^2))
+      error <- sqrt(sum((MOld - M)^2) / sum(MOld^2))
       if (verbose) {
         cat("change in estimate: ", error, "\n")
       }

@@ -126,8 +126,7 @@ pgx.createPGX <- function(counts, samples, contrasts,
                           cluster.contrasts = FALSE,
                           do.clustergenes = TRUE,
                           only.proteincoding = TRUE,
-                          normalize = TRUE                          
-                          ) {
+                          normalize = TRUE) {
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("dimension of counts and X do not match\n")
   }
@@ -199,24 +198,24 @@ pgx.createPGX <- function(counts, samples, contrasts,
   ## -------------------------------------------------------------------
 
   ## remove XXL/Infinite values and set to NA
-  counts <- counts.removeXXLvalues(counts, xxl.val=NA) 
+  counts <- counts.removeXXLvalues(counts, xxl.val = NA)
 
   ## impute missing values
   if (any(is.na(counts))) {
-    impute.method = "SVD2"
-    message("[createPGX] WARNING: Imputing missing values using ",impute.method)
-    counts <- counts.imputeMissing(counts, method=impute.method) 
+    impute.method <- "SVD2"
+    message("[createPGX] WARNING: Imputing missing values using ", impute.method)
+    counts <- counts.imputeMissing(counts, method = impute.method)
   }
-  table(is.na(counts))  
-  
+  table(is.na(counts))
+
   ## -------------------------------------------------------------------
   ## Check bad samples (in total counts, after imputation)
   ## -------------------------------------------------------------------
 
   ## remove samples from counts matrix with extreme (1000x more or
-  ## 1000x less) total counts (than median). 
+  ## 1000x less) total counts (than median).
   counts <- counts.removeOutliers(counts)
-  
+
   ## -------------------------------------------------------------------
   ## Auto-scaling (scale down huge values, often in proteomics)
   ## -------------------------------------------------------------------
@@ -230,7 +229,7 @@ pgx.createPGX <- function(counts, samples, contrasts,
   ## -------------------------------------------------------------------
   message("[createPGX] conforming matrices...")
   kk <- intersect(colnames(counts), rownames(samples))
-  counts  <- counts[, kk, drop = FALSE]
+  counts <- counts[, kk, drop = FALSE]
   samples <- samples[kk, , drop = FALSE]
   samples <- utils::type.convert(samples, as.is = TRUE) ## automatic type conversion
   if (!is.null(X)) X <- X[, kk, drop = FALSE]
@@ -241,7 +240,7 @@ pgx.createPGX <- function(counts, samples, contrasts,
   message("[createPGX] final: dim(counts) = ", paste(dim(counts), collapse = "x"))
   message("[createPGX] final: dim(samples) = ", paste(dim(samples), collapse = "x"))
   message("[createPGX] final: dim(contrasts) = ", paste(dim(contrasts), collapse = "x"))
-  
+
   ## -------------------------------------------------------------------
   ## Cleanup rownames
   ## -------------------------------------------------------------------
@@ -253,11 +252,11 @@ pgx.createPGX <- function(counts, samples, contrasts,
   if (mean(rownames(counts) == symbol, na.rm = TRUE) > 0.5) { ## why??
     symbol <- rownames(counts) ## probably already symbol. revert to original
   }
-  jj <- which(!is.na(symbol) & symbol!="")
+  jj <- which(!is.na(symbol) & symbol != "")
   counts <- as.matrix(counts[jj, ])
   rownames(counts) <- symbol[jj]
   if (!is.null(X)) {
-    X <- X[jj,]
+    X <- X[jj, ]
     rownames(X) <- rownames(counts)
   }
 
@@ -271,27 +270,27 @@ pgx.createPGX <- function(counts, samples, contrasts,
     message("[createPGX] skip conversion to HUGO symbols")
   }
 
-  ## collapse multiple row for genes by summing up counts  
+  ## collapse multiple row for genes by summing up counts
   counts <- counts.mergeDuplicateFeatures(counts)
 
   ## -------------------------------------------------------------------
   ## COMPUTE LOG NORMALIZE EXPRESSION (if not given)
   ## -------------------------------------------------------------------
-  if(is.null(X)) {
+  if (is.null(X)) {
     message("[createPGX] creating log-expression matrix X...")
     X <- log2(1 + counts)
   } else {
-    message("[createPGX] using passed log-expression matrix X...")    
+    message("[createPGX] using passed log-expression matrix X...")
   }
 
-  if(normalize) {
-    message("[createPGX] NORMALIZING log-expression matrix X...")    
-    X <- playbase::logCPM( pmax(2**X-1,0), total=1e6, prior=1 )    
+  if (normalize) {
+    message("[createPGX] NORMALIZING log-expression matrix X...")
+    X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
     X <- limma::normalizeQuantiles(X) ## in linear space
   } else {
-    message("[createPGX] SKIPPING NORMALIZATION!")    
+    message("[createPGX] SKIPPING NORMALIZATION!")
   }
-  
+
   ## -------------------------------------------------------------------
   ## create pgx object
   ## -------------------------------------------------------------------
@@ -320,7 +319,7 @@ pgx.createPGX <- function(counts, samples, contrasts,
     ## There is second filter in the statistics computation. This
     ## first filter is primarily to reduce the counts table.
     message("[createPGX] filtering out not-expressed genes (zero counts)...")
-    pgx <- pgx.filterZeroCounts(pgx) 
+    pgx <- pgx.filterZeroCounts(pgx)
   }
 
   ## -------------------------------------------------------------------
@@ -330,7 +329,7 @@ pgx.createPGX <- function(counts, samples, contrasts,
   pgx$genes <- ngs.getGeneAnnotation(genes = rownames(pgx$counts))
   rownames(pgx$genes) <- rownames(pgx$counts)
   pgx$genes[is.na(pgx$genes)] <- ""
-  
+
   ## -------------------------------------------------------------------
   ## Filter genes?
   ## -------------------------------------------------------------------
@@ -408,7 +407,7 @@ pgx.createPGX <- function(counts, samples, contrasts,
     }
     remove(cX)
   }
-  
+
   ## -------------------------------------------------------------------
   ## Pre-calculate t-SNE for and get clusters early so we can use it
   ## for doing differential analysis.
@@ -525,9 +524,9 @@ pgx.computePGX <- function(pgx,
   ## DEseq2). Require at least in 2 or 1% of total. Specify the
   ## PRIOR CPM amount to regularize the counts and filter genes
   PRIOR.CPM <- 1
-  filter.low = TRUE
+  filter.low <- TRUE
   if (filter.low) {
-    pgx <- pgx.filterLowExpressed(pgx, prior.cpm = PRIOR.CPM) 
+    pgx <- pgx.filterLowExpressed(pgx, prior.cpm = PRIOR.CPM)
   }
 
   ## Shrink number of genes (highest SD/var)
@@ -543,9 +542,9 @@ pgx.computePGX <- function(pgx,
 
   if (!is.null(pgx$X)) {
     gg <- intersect(rownames(pgx$counts), rownames(pgx$X))
-    pgx$X <- pgx$X[gg,]
+    pgx$X <- pgx$X[gg, ]
   }
-  
+
   ## ======================================================================
   ## ================= run tests ==========================================
   ## ======================================================================
@@ -607,13 +606,12 @@ pgx.computePGX <- function(pgx,
 
 
 
-##===================================================================
-##=================== UTILITY FUNCTIONS =============================
-##===================================================================
+## ===================================================================
+## =================== UTILITY FUNCTIONS =============================
+## ===================================================================
 
 
 counts.removeOutliers <- function(counts) {
-  
   ## remove samples with 1000x more or 1000x less total counts (than median)
   totcounts <- colSums(counts, na.rm = TRUE)
   mx <- median(log10(totcounts))
@@ -627,25 +625,24 @@ counts.removeOutliers <- function(counts) {
   counts
 }
 
-counts.removeXXLvalues <- function(counts, xxl.val=NA) {
-
+counts.removeXXLvalues <- function(counts, xxl.val = NA) {
   ## remove extra-large and infinite values
   X <- log2(1 + counts)
-  tenSD <- colMeans(X,na.rm=TRUE) + apply(X,2,sd,na.rm=TRUE) * 10
-  which.xxl <- which(t(t(X) > tenSD),arr.ind=TRUE)
+  tenSD <- colMeans(X, na.rm = TRUE) + apply(X, 2, sd, na.rm = TRUE) * 10
+  which.xxl <- which(t(t(X) > tenSD), arr.ind = TRUE)
   nxxl <- length(which.xxl)
-  if(nxxl > 0) {
-    message("[createPGX] WARNING: setting ",nxxl," XXL values to NA")
+  if (nxxl > 0) {
+    message("[createPGX] WARNING: setting ", nxxl, " XXL values to NA")
     counts[which.xxl] <- xxl.val
   }
   counts
 }
 
-counts.imputeMissing <- function(counts, method="SVD2") {
+counts.imputeMissing <- function(counts, method = "SVD2") {
   X <- log2(1 + counts)
   table(is.na(X))
-  impX <- imputeMissing(X, method=method)
-  pmax(2**impX - 1,0)
+  impX <- imputeMissing(X, method = method)
+  pmax(2**impX - 1, 0)
 }
 
 counts.autoScaling <- function(counts) {
@@ -665,7 +662,7 @@ counts.autoScaling <- function(counts) {
     meancounts
     counts <- t(t(counts) / totcounts) * meancounts
   }
-  
+
   ## Check if too big (more than billion reads). This is important
   ## for some proteomics intensity signals that are in billions of
   ## units.
@@ -675,7 +672,7 @@ counts.autoScaling <- function(counts) {
   is.toobig
   if (is.toobig) {
     ## scale to about 10 million reads
-                                        #
+    #
     cat("[createPGX:autoscale] WARNING: too large total counts. Scaling down to 10e6 reads.\n")
     unit <- 10**(round(log10(mean.counts)) - 7)
     unit
@@ -684,15 +681,15 @@ counts.autoScaling <- function(counts) {
   }
   counts_multiplier
   cat("[createPGX:autoscale] count_multiplier= ", counts_multiplier, "\n")
-  
-  list(counts = counts, counts_multiplier = counts_multiplier) 
+
+  list(counts = counts, counts_multiplier = counts_multiplier)
 }
 
-normalizeCounts <- function(M, method=c("TMM","TMMwsp","RLE","upperquartile","none")) {
+normalizeCounts <- function(M, method = c("TMM", "TMMwsp", "RLE", "upperquartile", "none")) {
   method <- method[1]
   dge <- edgeR::DGEList(M)
-  dge <- edgeR::calcNormFactors(dge, method=method)
-  logCPM <- edgeR::cpm(dge, log=TRUE)
+  dge <- edgeR::calcNormFactors(dge, method = method)
+  logCPM <- edgeR::cpm(dge, log = TRUE)
   logCPM
 }
 
@@ -700,37 +697,37 @@ normalizeCounts <- function(M, method=c("TMM","TMMwsp","RLE","upperquartile","no
 ## collapse multiple row for genes by summing up counts
 ## -------------------------------------------------------------------
 counts.mergeDuplicateFeatures <- function(counts) {
-    ## take only first gene as rowname, retain others as alias
-    gene0 <- rownames(counts)
-    gene1 <- sapply(gene0, function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
-    ndup  <- sum(duplicated(gene1))
-    ndup
-    if (ndup > 0) {
-        message("[mergeDuplicateFeatures] ",ndup," duplicated rownames: summing rows (in counts).")
-        counts <- base::rowsum(counts, gene1, na.rm=TRUE)
-    }
-    counts
+  ## take only first gene as rowname, retain others as alias
+  gene0 <- rownames(counts)
+  gene1 <- sapply(gene0, function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
+  ndup <- sum(duplicated(gene1))
+  ndup
+  if (ndup > 0) {
+    message("[mergeDuplicateFeatures] ", ndup, " duplicated rownames: summing rows (in counts).")
+    counts <- base::rowsum(counts, gene1, na.rm = TRUE)
+  }
+  counts
 }
 
 
 pgx.filterZeroCounts <- function(pgx) {
-    ## There is second filter in the statistics computation. This
-    ## first filter is primarily to reduce the counts table.
-    message("[createPGX] filtering out not-expressed genes...")
-    keep <- (Matrix::rowMeans(pgx$counts > 0) > 0) ## at least in one...
-    pgx$counts <- pgx$counts[keep, , drop = FALSE]
-    if (!is.null(pgx$X)) {
-      pgx$X <- pgx$X[keep, , drop = FALSE]
-    }
-    pgx
+  ## There is second filter in the statistics computation. This
+  ## first filter is primarily to reduce the counts table.
+  message("[createPGX] filtering out not-expressed genes...")
+  keep <- (Matrix::rowMeans(pgx$counts > 0) > 0) ## at least in one...
+  pgx$counts <- pgx$counts[keep, , drop = FALSE]
+  if (!is.null(pgx$X)) {
+    pgx$X <- pgx$X[keep, , drop = FALSE]
+  }
+  pgx
 }
 
-pgx.filterLowExpressed <- function(pgx, prior.cpm=1) {
+pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   AT.LEAST <- ceiling(pmax(2, 0.01 * ncol(pgx$counts)))
   cat("filtering for low-expressed genes: >", prior.cpm, "CPM in >=", AT.LEAST, "samples\n")
   keep <- (rowSums(edgeR::cpm(pgx$counts) > prior.cpm, na.rm = TRUE) >= AT.LEAST)
   pgx$filtered <- NULL
-  pgx$filtered[["low.expressed"]] <- paste(rownames(pgx$counts)[which(!keep)], collapse=";")
+  pgx$filtered[["low.expressed"]] <- paste(rownames(pgx$counts)[which(!keep)], collapse = ";")
   pgx$counts <- pgx$counts[which(keep), , drop = FALSE]
   cat("filtering out", sum(!keep), "low-expressed genes\n")
   cat("keeping", sum(keep), "expressed genes\n")
