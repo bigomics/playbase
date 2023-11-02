@@ -19,10 +19,10 @@ ngs.fitContrastsWithAllMethods(
   contr.matrix,
   genes = NULL,
   prior.cpm = 1,
+  cpm.scale = 1e+06,
   prune.samples = FALSE,
   conform.output = TRUE,
   do.filter = TRUE,
-  cpm.scale = 1e+06,
   remove.batch = TRUE,
   methods = c("ttest", "ttest.welch", "voom.limma", "trend.limma", "notrend.limma",
     "deseq2.wald", "deseq2.lrt", "edger.qlf", "edger.lrt"),
@@ -121,13 +121,13 @@ ngs.fitConstrastsWithDESEQ2(
 
 \item{prior.cpm}{Prior counts per million. Default is 1.}
 
+\item{cpm.scale}{Counts per million scaling factor. Default is 1e6.}
+
 \item{prune.samples}{Whether to filter low count samples. Default is FALSE.}
 
 \item{conform.output}{Whether to conform the output. Default is TRUE.}
 
 \item{do.filter}{Whether to filter genes. Default is TRUE.}
-
-\item{cpm.scale}{Counts per million scaling factor. Default is 1e6.}
 
 \item{remove.batch}{Whether to remove batch effects. Default is TRUE.}
 
