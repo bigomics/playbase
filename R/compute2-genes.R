@@ -197,7 +197,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   ## Rescale if too low. Often EdgeR/DeSeq can give errors of total counts
   ## are too low. Happens often with single-cell (10x?). We rescale
   ## to a minimum of 1 million counts (CPM)
-  ## -----------------------------------------------------------------------------    
+  ## -----------------------------------------------------------------------------
   ## mean.counts <- mean(Matrix::colSums(counts, na.rm = TRUE))
   ## if (mean.counts < 1e6) {
   ##   cat("[compute_testGenesSingleOmics] WARNING:: low total counts = ", mean.counts, "\n")
@@ -212,7 +212,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   cat(">>> Testing differential expressed genes (DEG) with methods:", methods, "\n")
   PRIOR.CPM <- 1
 
-  ## Run all test methods    
+  ## Run all test methods
   message("[compute_testGenesSingleOmics] 12 : start fitting... ")
   gx.meta <- playbase::ngs.fitContrastsWithAllMethods(
     counts = counts,
