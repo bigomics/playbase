@@ -49,7 +49,6 @@ compute_testGenesets <- function(pgx,
     # which will ensure consistency between old and new pgx
     pgx$genes$human_ortholog <- NA
   }
-
   # Load custom genesets (if user provided)
   if (!is.null(custom.geneset$gmt)) {
     # convert gmt standard to SPARSE matrix
@@ -403,7 +402,7 @@ createSparseGenesetMatrix <- function(
   rownames(G) <- names(gmt.all)
 
   # remove NA rows
-  G <- G[!is.na(rownames(G)), ]
+  G <- G[!is.na(rownames(G)), ,drop = FALSE]
 
   return(G)
 }
