@@ -15,6 +15,8 @@ ngs.getGeneAnnotation(
 \arguments{
 \item{probes}{Character vector of gene/transcript identifiers to retrieve annotation for.}
 
+\item{organism}{Organism name, e.g. "hsapiens_gene_ensembl".}
+
 \item{probe_type}{Character specifying the type of input identifiers. If NULL,
 it will be automatically detected. Options are "ensembl_gene_id", "ensembl_transcript_id", etc.}
 
@@ -26,7 +28,7 @@ it will be automatically detected. Options are "ensembl_gene_id", "ensembl_trans
 Data frame with gene annotation data for the input identifiers. Columns are:
 \itemize{
    \item \code{feature}: The probe identifier.
-  \item \code{gene_name}: HUman readable gene name.
+  \item \code{sybmol}: Human readable gene name.
   \item \code{human_homolog}: Gene symbol for human. Only present if working with non-human dataset.
   \item \code{gene_title}: Gene description
   \item \code{gene_biotype}: Gene biotype
@@ -34,6 +36,7 @@ Data frame with gene annotation data for the input identifiers. Columns are:
   \item \code{pos}: Transcript start position
   \item \code{tx_len}: Transcript length
   \item \code{map}: Chromosome band
+  \item \code{gene_name}: equivalent to the rownames. Kept for back compatibility
 }
 }
 \description{

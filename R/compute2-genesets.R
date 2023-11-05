@@ -231,9 +231,6 @@ compute_testGenesets <- function(pgx,
   Y <- pgx$samples
   gc()
 
-  # sum rows with duplicated rownames in X (due to homolog conversion)
-  X <-  rowsum(X, row.names(X))
-
   gset.meta <- playbase::gset.fitContrastsWithAllMethods(
     gmt = gmt,
     X = X,

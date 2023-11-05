@@ -24,7 +24,8 @@ The annot_table should contain a column with the probe IDs
   (matching type of probes input) and a column with the corresponding HGNC
   gene symbols. This function matches the input probes to the table
   to retrieve the gene symbols. Unmatched probes are returned as is.
-
+}
+\examples{
 \dontrun{
 probes <- c("ENSG00000142192", "ENST00000288602")
 annot_table <- data.frame(

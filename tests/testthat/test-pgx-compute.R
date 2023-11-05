@@ -2,52 +2,45 @@
 #'
 #'
 
-
 #' Test for pgx.createPGX
-test_that("pgx.createPGX runs without errors", {
-  # Create mock input data
+test_that("pgx.createPGX produce all pgx slots", {
+
+  # Call example data
   pgx_data <- playbase:::get_mini_example_data()
 
   # Run function
-  pgx <- playbase::pgx.createPGX(
+  # Use while to prevent crash on ensembl calls
+  suppressWarnings(pgx <- playbase::pgx.createPGX(
     samples = pgx_data$samples,
     counts = pgx_data$counts,
-    contrasts = pgx_data$contrast
+    contrasts = pgx_data$contrast,
+    organism = "Human"
+    )
   )
-
+  # For every function that uses biomaRt, we need to wait 60 seconds
+  Sys.sleep(60) 
   # Create expected outputs
-  expected_tests <- c("name", "date", "datatype", "description", "samples", "counts", "contrasts",
-                      "X", "total_counts", "counts_multiplier", "genes", "all_genes", "symbol",
-                      "tsne2d", "tsne3d", "cluster", "cluster.genes")
+  expected_tests <- c("name", "organism", "version", "date", "datatype", "description", "samples", 
+              "counts", "contrasts", "X", "total_counts", "counts_multiplier", "genes", 
+              "all_genes", "probe_type", "tsne2d", "tsne3d", "cluster", "cluster.genes")
   total_counts <- apply(pgx_data$counts, 2, sum)
-  new_genes <- data.table::data.table(
-    hgnc_symbol = c("A1BG", "ACOT9", "AGAP3", "AGAP3", "ALG12", "ARF5"),
-    external_gene_name = c("A1BG", "ACOT9", "AGAP3", "AGAP3", "ALG12", "ARF5"),
-    description = c("alpha-1-B glycoprotein [Source:HGNC Symbol;Acc:HGNC:5]",
-                    "acyl-CoA thioesterase 9 [Source:HGNC Symbol;Acc:HGNC:17152]",
-                    "ArfGAP with GTPase domain, ankyrin repeat and PH domain 3 [Source:HGNC Symbol;Acc:HGNC:16923]",
-                    "ArfGAP with GTPase domain, ankyrin repeat and PH domain 3 [Source:HGNC Symbol;Acc:HGNC:16923]",
-                    "ALG12 alpha-1,6-mannosyltransferase [Source:HGNC Symbol;Acc:HGNC:19358]",
-                    "ADP ribosylation factor 5 [Source:HGNC Symbol;Acc:HGNC:658]"),
+
+  gene_table <- data.frame(
+    symbol = c("A1BG", "AGAP2", "ANXA4", "ARPC1A", "BATF", "C19orf53"),
+    gene_title = c("alpha-1-B glycoprotein", "ArfGAP with GTPase domain, ankyrin repeat and PH domain 2", 
+                   "annexin A4", "actin related protein 2/3 complex subunit 1A", "basic leucine zipper ATF-like transcription factor", 
+                   "chromosome 19 open reading frame 53"),
     gene_biotype = rep("protein_coding", 6),
-    chromosome_name = c(19, "X", 7, 7, 22, 7),
-    transcript_start = c(58345178, 23703705, 151089712, 151120016, 49903650, 127588411),
-    transcript_length = c(2134, 1682, 1019, 413, 674, 1032),
-    band = c("q13.43", "p22.11", "q36.1", "q36.1", "q13.33", "q32.1")
-  )
-  # genes <- data.frame(
-  #   gene_name = c("A1BG", "ACOT9", "ALG12", "ANXA7", "ARF5", "ARPC4"),
-  #   gene_title = c(
-  #     "alpha-1-B glycoprotein", "acyl-CoA thioesterase 9",
-  #     "ALG12 alpha-1,6-mannosyltransferase", "annexin A7",
-  #     "ADP ribosylation factor 5", "actin related protein 2/3 complex subunit 4"
-  #   ),
-  #   gene_biotype = rep("protein_coding", 6),
-  #   chr = c(19, "X", 22, 10, 7, 3),
-  #   pos = c("58345182", "23701055", "49900228", "73375100", "127588410", "9793081"),
-  #   tx_len = c("2592", "1427", "2373", "1734", "1022", "1624"),
-  #   map = c("19q13.43", "Xp22.11", "22q13.33", "10q22.2", "7q32.1", "3p25.3")
-  # )
+    chr = c("19", "12", "2", "7", "14", "19"),
+    pos = c(58345178, 57723761, 69644425, 99325898, 75522455, 13774456),
+    tx_len = c(2134, 5388, 905, 1582, 617, 897),
+    map = c("q13.43", "q14.1", "p13.3", "q22.1", "q24.3", "p13.13"),
+    source = c("Source:HGNC Symbol;Acc:HGNC:5", "Source:HGNC Symbol;Acc:HGNC:16921", "Source:HGNC Symbol;Acc:HGNC:542", 
+              "Source:HGNC Symbol;Acc:HGNC:703", "Source:HGNC Symbol;Acc:HGNC:958", "Source:HGNC Symbol;Acc:HGNC:24991"),
+    gene_name = c("A1BG", "AGAP2", "ANXA4", "ARPC1A", "BATF", "C19orf53"),
+    feature = c("A1BG", "AGAP2", "ANXA4", "ARPC1A", "BATF", "C19orf53")
+)
+  rownames(gene_table) <- gene_table$symbol
 
   # Check output
   ## Check all te test present
@@ -64,10 +57,10 @@ test_that("pgx.createPGX runs without errors", {
 
 
   ## Check that the gene info is generated correctly
-  expect_equal(pgx$genes[c(1, 10, 20, 30, 40, 50)], new_genes)
+  expect_equal(pgx$genes[c(1, 10, 20, 30, 40, 50), , drop  = FALSE], gene_table)
   expect_equal(
     apply(pgx$genes, 2, class),
-    apply(new_genes, 2, class)
+    apply(gene_table, 2, class)
   )
 
   ## Check cluster.genes
@@ -80,22 +73,16 @@ test_that("pgx.createPGX runs without errors", {
 
 #' Test for pgx.computePGX
 test_that("pgx.computePGX runs without errors", {
-  # Create mock input data
-  pgx <- playbase::pgx.createPGX(
-    samples = playbase::SAMPLES,
-    counts = playbase::COUNTS,
-    contrasts = playbase::CONTRASTS
-  )
 
   # Run function
-  pgx_comp <- playbase::pgx.computePGX(pgx)
+  suppressWarnings(pgx_comp <- playbase::pgx.computePGX(playbase::PGX_CREATE))
 
-  # Create expected outputs
-  expected_tests <- c("name", "date", "datatype", "description", "samples", "counts", "contrasts",
-                      "X", "total_counts", "counts_multiplier", "genes", "all_genes", "symbol",
-                      "tsne2d", "tsne3d", "cluster", "cluster.genes", "model.parameters",
-                      "filtered", "timings", "gx.meta", "gset.meta", "gsetX", "GMT",
-                      "cluster.gsets", "meta.go")
+  # Expected outputs
+  expected_slots <- c("name", "organism", "version", "date", "datatype", "description", "samples", 
+           "counts", "contrasts", "X", "total_counts", "counts_multiplier", "genes", 
+           "all_genes", "probe_type", "tsne2d", "tsne3d", "cluster", "cluster.genes", 
+           "model.parameters", "filtered", "timings", "gx.meta", "gset.meta", "gsetX", 
+           "GMT", "cluster.gsets", "meta.go")
   # Check output
-  expect_true(all(names(pgx_comp) == expected_tests))
+  expect_equal(names(pgx_comp), expected_slots)
 })

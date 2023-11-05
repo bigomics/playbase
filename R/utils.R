@@ -56,7 +56,7 @@ get_mini_example_data <- function(item = "all") {
   samples <- playbase::SAMPLES
   contrast <- playbase::CONTRASTS
 
-  n_genes <- round(seq(1, nrow(counts), length.out = 100))
+  n_genes <- round(seq(1, nrow(counts), length.out = 500))
 
   # Subset each data frame to facilitate testing
   mini_counts <- counts[n_genes, c(1:3, 8:9, 11:12)]

@@ -216,6 +216,8 @@ compute_extra <- function(pgx, extra = c(
 #' @param full A logical value indicating whether to use the full set of reference matrices and methods (TRUE),
 #'   or a subset of faster methods and references (FALSE).
 #' @return An updated object with deconvolution results.
+#' 
+#' @examples
 #' \dontrun{
 #' probes <- rownames(playbase::COUNTS)
 #' mart <- biomaRt::useMart(biomart = "ensembl", dataset = species)
@@ -279,6 +281,8 @@ compute_deconvolution <- function(pgx, rna.counts = pgx$counts, full = FALSE) {
 #' @param rna.counts A matrix or data frame of RNA expression counts.
 #'   Defaults to the counts in the input object.
 #' @return An updated object with cell cycle and gender inference results.
+#' 
+#' @examples
 #' \dontrun{
 #' counts <- playbase::COUNTS
 #' mart <- biomaRt::useMart(biomart = "ensembl", dataset = species)
@@ -302,7 +306,13 @@ compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
     pgx$samples$.cell.cycle <- NULL
 
     counts <- rna.counts
-    rownames(counts) <- toupper(pgx$genes[rownames(counts), "gene_name"])
+    # In multi-species now use symbol, and deduplicate in case
+    # use retains feature as "gene_name/rowname"
+    rownames(counts) <- toupper(pgx$genes[rownames(counts), "symbol"]) 
+    if (any(duplicated(rownames(counts)))) {
+      message("Deduplicate counts for cell cycle and gender inference")
+      counts <- rowsum(counts, rownames(counts))
+    }
     res <- try(pgx.inferCellCyclePhase(counts)) ## can give bins error
     if (!inherits(res, "try-error")) {
       pgx$samples$.cell_cycle <- res
@@ -311,8 +321,8 @@ compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
       message("estimating gender...")
       pgx$samples$.gender <- NULL
       X <- log2(1 + rna.counts)
-      gene_name <- pgx$genes[rownames(X), "gene_name"]
-      pgx$samples$.gender <- pgx.inferGender(X, gene_name)
+      gene_symbol <- pgx$genes[rownames(X), "symbol"] # Use gene-symbol also for gender
+      pgx$samples$.gender <- pgx.inferGender(X, gene_symbol)
     } else {
       message("gender already estimated. skipping...")
     }

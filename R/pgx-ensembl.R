@@ -123,6 +123,7 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
 #' gene/transcript identifiers.
 #'
 #' @param probes Character vector of gene/transcript identifiers to retrieve annotation for.
+#' @param organism Organism name, e.g. "hsapiens_gene_ensembl".  
 #' @param probe_type Character specifying the type of input identifiers. If NULL,
 #' it will be automatically detected. Options are "ensembl_gene_id", "ensembl_transcript_id", etc.
 #' @param mart BioMart object specifying the database to query.
@@ -131,7 +132,7 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
 #' @return Data frame with gene annotation data for the input identifiers. Columns are:
 #' \itemize{
 #'    \item \code{feature}: The probe identifier.
-#'   \item \code{gene_name}: HUman readable gene name.
+#'   \item \code{sybmol}: Human readable gene name.
 #'   \item \code{human_homolog}: Gene symbol for human. Only present if working with non-human dataset.
 #'   \item \code{gene_title}: Gene description
 #'   \item \code{gene_biotype}: Gene biotype
@@ -139,6 +140,7 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
 #'   \item \code{pos}: Transcript start position
 #'   \item \code{tx_len}: Transcript length
 #'   \item \code{map}: Chromosome band
+#'   \item \code{gene_name}: equivalent to the rownames. Kept for back compatibility
 #' }
 #'
 #' @details This function queries BioMart to retrieve key gene annotation data for
@@ -256,15 +258,14 @@ ngs.getGeneAnnotation <- function(
   data.table::setkeyv(out, "feature")
   
   # Take out the source info from gene_title
-  out[,c("gene_title", "source") :=  
+  out[, c("gene_title", "source") :=  
         data.table::tstrsplit(gene_title, "\\[", keep = 1:2)]
   out[, source := gsub("\\]", "", source)]
 
   if (organism == "Saccharomyces cerevisiae") {
-    out[,c("gene_title") :=  
-          data.table::tstrsplit(gene_title, ";", keep = 1)]
-      
+    out[, gene_title :=  data.table::tstrsplit(gene_title, ";", keep = 1)]
   }
+  out[, gene_title := trimws(gene_title, which = "right")]
   # Keep it for back compatibility
   out[, gene_name := feature]
 
@@ -274,6 +275,7 @@ ngs.getGeneAnnotation <- function(
   out <- out[probes, , drop = FALSE]
   return(out)
 }
+
 
 #' Map probe identifiers to gene symbols
 #'
@@ -291,7 +293,7 @@ ngs.getGeneAnnotation <- function(
 #'   (matching type of probes input) and a column with the corresponding HGNC
 #'   gene symbols. This function matches the input probes to the table
 #'   to retrieve the gene symbols. Unmatched probes are returned as is.
-#'
+#' @examples 
 #' \dontrun{
 #' probes <- c("ENSG00000142192", "ENST00000288602")
 #' annot_table <- data.frame(
@@ -309,9 +311,10 @@ probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE)
 
   # Deal with NA
   if (fill_na) {
-    query_col <- ifelse(is.na(query_col)|query_col ==  "",
-          query_col,
-          probes)
+    query_col <- data.table::fifelse(query_col ==  "" | is.na(query_col),
+          yes = probes,
+          no = query_col
+          )
   }
 
   # Return queryed col

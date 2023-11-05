@@ -12,7 +12,7 @@ test_that("gx.volcanoPlot.LIMMA returns plot", {
     adj.P.Val = p.adjust(runif(n)),
     AveExpr = runif(n)
   )
-  z <- gx.volcanoPlot.LIMMA(tab)
+  z <- playbase::gx.volcanoPlot.LIMMA(tab)
   z
 
   expect_equal(class(z), c("scatterD3", "htmlwidget"))

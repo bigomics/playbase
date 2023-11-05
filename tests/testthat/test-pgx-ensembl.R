@@ -24,7 +24,6 @@ test_that("detect_probe can detect ensembl IDs", {
   while (!exists("type")) {  
       type <- playbase::detect_probe(probes, mart = ensembl_human)
       counter <- counter + 1
-
   }
 
   # Check output
