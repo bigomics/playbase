@@ -61,7 +61,6 @@ Imports:
     KEGG.db,
     limma,
     magrittr,
-    maptools,
     MASS,
     Matrix,
     matrixTests,

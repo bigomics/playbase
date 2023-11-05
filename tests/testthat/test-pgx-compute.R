@@ -20,9 +20,10 @@ test_that("pgx.createPGX produce all pgx slots", {
   # For every function that uses biomaRt, we need to wait 60 seconds
   Sys.sleep(60) 
   # Create expected outputs
-  expected_tests <- c("name", "organism", "version", "date", "datatype", "description", "samples", 
-              "counts", "contrasts", "X", "total_counts", "counts_multiplier", "genes", 
-              "all_genes", "probe_type", "tsne2d", "tsne3d", "cluster", "cluster.genes")
+  expected_tests <- c("name", "organism", "version", "date", "creator", "datatype", 
+                    "description", "samples", "counts", "contrasts", "X", 
+                    "total_counts", "counts_multiplier", "genes", "all_genes", 
+                    "probe_type", "tsne2d", "tsne3d", "cluster", "cluster.genes")
   total_counts <- apply(pgx_data$counts, 2, sum)
 
   gene_table <- data.frame(

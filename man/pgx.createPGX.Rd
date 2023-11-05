@@ -27,7 +27,8 @@ pgx.createPGX(
   do.cluster = TRUE,
   cluster.contrasts = FALSE,
   do.clustergenes = TRUE,
-  only.proteincoding = TRUE
+  only.proteincoding = TRUE,
+  normalize = TRUE
 )
 }
 \arguments{
