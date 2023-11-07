@@ -114,13 +114,13 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
   colnames(rho1) <- colnames(rnk1)
   rho1[is.nan(rho1)] <- NA ## ??
 
-  ## compute p-value 
-  .cor.pvalue <- function(x, n) 2*stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
-  if(compute.p) {
-    pv <- apply(rho1, 2, function(x) .cor.pvalue(x, n=nrow(rnk1))) 
-    pv[is.nan(pv)] <- NA ## ??    
-    qv <- apply(pv, 2, stats::p.adjust, method="fdr")
-    df <- list(rho = rho1, p.value = pv, q.value = qv)    
+  ## compute p-value
+  .cor.pvalue <- function(x, n) 2 * stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
+  if (compute.p) {
+    pv <- apply(rho1, 2, function(x) .cor.pvalue(x, n = nrow(rnk1)))
+    pv[is.nan(pv)] <- NA ## ??
+    qv <- apply(pv, 2, stats::p.adjust, method = "fdr")
+    df <- list(rho = rho1, p.value = pv, q.value = qv)
   } else {
     df <- list(rho = rho1, p.value = NA, q.value = NA)
   }
