@@ -209,10 +209,10 @@ pgx.createPGX <- function(counts, samples, contrasts,
   }
   is.logx
   if (is.logx) {
-    cat("[createPGX] input assumed logarithm: undo-ing logarithm\n")
+    message("[createPGX] input assumed logarithm: undo-ing logarithm")
     counts <- pmax(2**counts - 1, 0) ## undo logarithm
   } else {
-    cat("[createPGX] input assumed counts (not logarithm)\n")
+    message("[createPGX] input assumed counts (not logarithm)")
   }
 
   ## -------------------------------------------------------------------
@@ -224,8 +224,10 @@ pgx.createPGX <- function(counts, samples, contrasts,
 
   ## impute missing values
   if (any(is.na(counts))) {
+    nmissing <- sum(is.na(counts))
+    message("[createPGX] WARNING: data has ",nmissing," missing values.")
     impute.method <- "SVD2"
-    message("[createPGX] WARNING: Imputing missing values using ", impute.method)
+    message("[createPGX] Imputing missing values using ", impute.method)
     counts <- counts.imputeMissing(counts, method = impute.method)
   }
   table(is.na(counts))
@@ -342,8 +344,14 @@ pgx.createPGX <- function(counts, samples, contrasts,
     ## first filter is primarily to reduce the counts table.
     message("[createPGX] filtering out not-expressed genes (zero counts)...")
     pgx <- pgx.filterZeroCounts(pgx)
+
+    ## prefiltering for low-expressed genes (recommended for edgeR and
+    ## DEseq2). Require at least in 2 or 1% of total. Specify the
+    ## PRIOR CPM amount to regularize the counts and filter genes
+    pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
   }
 
+  
   ## -------------------------------------------------------------------
   ## create gene annotation if not given (no HUGO conversion)
   ## -------------------------------------------------------------------
@@ -542,14 +550,6 @@ pgx.computePGX <- function(pgx,
   ## RETHINK?? MOVE TO PGXCREATE??
   ## -----------------------------------------------------------------------------
 
-  ## prefiltering for low-expressed genes (recommended for edgeR and
-  ## DEseq2). Require at least in 2 or 1% of total. Specify the
-  ## PRIOR CPM amount to regularize the counts and filter genes
-  PRIOR.CPM <- 1
-  filter.low <- TRUE
-  if (filter.low) {
-    pgx <- pgx.filterLowExpressed(pgx, prior.cpm = PRIOR.CPM)
-  }
 
   ## Shrink number of genes (highest SD/var)
   if (max.genes > 0 && nrow(pgx$counts) > max.genes) {
@@ -707,6 +707,7 @@ counts.autoScaling <- function(counts) {
   list(counts = counts, counts_multiplier = counts_multiplier)
 }
 
+#' @export
 normalizeCounts <- function(M, method = c("TMM", "TMMwsp", "RLE", "upperquartile", "none")) {
   method <- method[1]
   dge <- edgeR::DGEList(M)
@@ -731,7 +732,6 @@ counts.mergeDuplicateFeatures <- function(counts) {
   counts
 }
 
-
 pgx.filterZeroCounts <- function(pgx) {
   ## There is second filter in the statistics computation. This
   ## first filter is primarily to reduce the counts table.
@@ -750,9 +750,12 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   keep <- (rowSums(edgeR::cpm(pgx$counts) > prior.cpm, na.rm = TRUE) >= AT.LEAST)
   pgx$filtered <- NULL
   pgx$filtered[["low.expressed"]] <- paste(rownames(pgx$counts)[which(!keep)], collapse = ";")
-  pgx$counts <- pgx$counts[which(keep), , drop = FALSE]
+  pgx$counts <- pgx$counts[keep, , drop = FALSE]
   cat("filtering out", sum(!keep), "low-expressed genes\n")
   cat("keeping", sum(keep), "expressed genes\n")
+  if (!is.null(pgx$X)) {
+    pgx$X <- pgx$X[keep, , drop = FALSE]
+  }
   pgx
 }
 
