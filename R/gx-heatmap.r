@@ -279,7 +279,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   if ("row.bmc" %in% scale && !is.null(splitx)) {
     if (inherits(splitx, "numeric") && length(splitx) == 1) {
       ii <- Matrix::head(order(-apply(gx, 1, stats::sd, na.rm = TRUE)), 1000) ## NEED RETHINK!
-      hc <- cor.hclust( gx[ii, ] )
+      hc <- cor.hclust(gx[ii, ])
       splitx <- paste0("cluster", stats::cutree(hc, splitx))
       names(splitx) <- colnames(gx)
     }
@@ -298,11 +298,11 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   ## Take top SD features
   ## -------------------------------------------------------------
   ##
-  
+
   if (!is.null(splitx) && length(splitx) == ncol(gx)) {
     names(splitx) <- colnames(gx)
   }
-  
+
   jj1 <- 1:nrow(gx)
   jj2 <- 1:ncol(gx)
   if (!is.null(nmax) && nmax < nrow(gx) && nmax > 0) {
@@ -326,7 +326,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   do.splitx <- !is.null(splitx)
   idx2 <- NULL
   if (do.splitx && inherits(splitx, "numeric") && length(splitx) == 1) {
-    hc <- cor.hclust( gx )
+    hc <- cor.hclust(gx)
     idx2 <- paste0("cluster", stats::cutree(hc, splitx))
   }
   if (do.splitx && inherits(splitx, "character") && length(splitx) == 1 &&
@@ -350,11 +350,11 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   ## --------------------------------------------
   ## split rows
   ## --------------------------------------------
-  
+
   do.split <- !is.null(split)
   split.idx <- NULL
   if (do.split && inherits(split, "numeric") && length(split) == 1) {
-    hc <- cor.hclust( t(gx) )
+    hc <- cor.hclust(t(gx))
     split.idx <- paste0("group", stats::cutree(hc, split))
   }
   if (do.split && inherits(split, "character") && length(split) == 1 &&
@@ -489,9 +489,9 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   ## -------------------------------------------------------------
   ## Plotting methods
   ## -------------------------------------------------------------
-  
+
   if (softmax) {
-    gx <- tanh(0.5 * gx / stats::sd(gx, na.rm=TRUE))
+    gx <- tanh(0.5 * gx / stats::sd(gx, na.rm = TRUE))
   }
 
   ## ------------- colorscale options
@@ -535,7 +535,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   }
 
   ## ------------- draw heatmap
-  
+
   hmap <- NULL
   for (i in grp.order) {
     jj <- grp[[i]]
@@ -560,8 +560,8 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     }
 
     ## Here NA goes wrong... distance calc should be done manually
-    gx0[is.na(gx0)] <- mean(gx0,na.rm=TRUE)  ## TEMPORARY HACK!!
-    
+    gx0[is.na(gx0)] <- mean(gx0, na.rm = TRUE) ## TEMPORARY HACK!!
+
     hmap <- hmap + ComplexHeatmap::Heatmap(gx0,
       col = col_scale, ## from input
       cluster_rows = cluster_rows,
@@ -868,7 +868,7 @@ gx.heatmap <- function(gx, values = NULL,
   ## Plotting methods
   ## -------------------------------------------------------------
   if (!is.null(values)) gx <- values[rownames(gx), colnames(gx)]
-  if (softmax) gx <- tanh(0.5 * gx / stats::sd(gx, na.rm=TRUE)) ## just for plotting...
+  if (softmax) gx <- tanh(0.5 * gx / stats::sd(gx, na.rm = TRUE)) ## just for plotting...
   side.height <- 0.1 * annot.ht * NCOL(cc0)
 
   if (!show_colnames) {

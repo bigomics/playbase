@@ -225,7 +225,7 @@ pgx.createPGX <- function(counts, samples, contrasts,
   ## impute missing values
   if (any(is.na(counts))) {
     nmissing <- sum(is.na(counts))
-    message("[createPGX] WARNING: data has ",nmissing," missing values.")
+    message("[createPGX] WARNING: data has ", nmissing, " missing values.")
     impute.method <- "SVD2"
     message("[createPGX] Imputing missing values using ", impute.method)
     counts <- counts.imputeMissing(counts, method = impute.method)
@@ -351,7 +351,7 @@ pgx.createPGX <- function(counts, samples, contrasts,
     pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
   }
 
-  
+
   ## -------------------------------------------------------------------
   ## create gene annotation if not given (no HUGO conversion)
   ## -------------------------------------------------------------------
