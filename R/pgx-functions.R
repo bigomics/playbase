@@ -303,7 +303,9 @@ logCPM <- function(counts, total = 1e6, prior = 1) {
     cpm@x <- log2(prior + cpm@x)
     return(cpm)
   } else {
-    cpm <- t(t(counts) / Matrix::colSums(counts, na.rm = TRUE)) * total
+    totcounts <- Matrix::colSums(counts, na.rm = TRUE)
+    ##cpm <- t(t(counts) / totcounts * total)
+    cpm <- sweep(counts, 2, totcounts, FUN='/') * total
     x <- log2(prior + cpm)
     return(x)
   }
@@ -369,63 +371,6 @@ matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1) {
   if (dir == 2) mX <- t(mX)
   mX
 }
-
-
-
-#' @describeIn knnImputeMissing Impute missing values with non-negative matrix factorization
-#' @export
-nmfImpute <- function(x, k = 5) {
-  ## Impute missing values with NMF
-  ##
-
-  k <- min(k, dim(x))
-  nmf <- NNLM::nnmf(x, k = k, check.k = FALSE, rel.tol = 1e-2, verbose = 0)
-  xhat <- with(nmf, W %*% H)
-  x[is.na(x)] <- xhat[is.na(x)]
-  if (sum(is.na(x)) > 0) {
-    nmf1 <- NNLM::nnmf(x, k = 1, check.k = FALSE, rel.tol = 1e-2, verbose = 0)
-    xhat1 <- with(nmf1, W %*% H)
-    x[is.na(x)] <- xhat1[is.na(x)]
-  }
-  x
-}
-
-
-#' @title Impute Missing Values with k-Nearest Neighbors
-#'
-#' @description This function imputes missing values in a vector using k-nearest neighbors.
-#' @param x A numeric vector containing missing values to be imputed.
-#' @param pos A matrix of positions for each element in `x`.
-#' @param missing An optional value specifying the value used to represent missing values in `x`.
-#' The default value is `NA`.
-#' @param k An optional numeric value specifying the number of nearest neighbors to use for imputation.
-#' The default value is 10.
-#'
-#' @details This function takes a numeric vector `x` containing missing values, a matrix of positions `pos`
-#' for each element in `x`, and an optional value `missing` representing the missing values in `x` as input.
-#' The function uses the k-nearest neighbors algorithm to impute the missing values in `x` based on their positions in `pos`.
-#' The number of nearest neighbors used for imputation is specified by the `k` parameter.
-#' The imputed values are returned as a numeric vector of the same length as `x`.
-#'
-#' @return A numeric vector of the same length as `x`, containing the imputed values.
-#'
-#' @export
-knnImputeMissing <- function(x, pos, missing = NA, k = 10) {
-  k0 <- which(x == missing)
-  k1 <- which(x != missing)
-  if (length(k0) == 0) {
-    return(x)
-  }
-  pos0 <- pos[k0, ]
-  pos1 <- pos[k1, ]
-  nb <- FNN::get.knnx(pos1, pos0, k = k)$nn.index
-  fx <- factor(x[k1])
-  mx <- matrix(fx[as.vector(nb)], nrow = nrow(nb), ncol = ncol(nb))
-  x.imp <- apply(mx, 1, function(x) names(which.max(table(x))))
-  x[which(x == missing)] <- x.imp
-  x
-}
-
 
 
 
@@ -2439,7 +2384,7 @@ expandPhenoMatrix <- function(pheno, drop.ref = TRUE) {
 #' cor.pvalue(0.8, 100)
 #' }
 #' @export
-cor.pvalue <- function(x, n) stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
+cor.pvalue <- function(x, n) 2*stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
 
 
 #' @title Get gene sets from playbase data
