@@ -822,20 +822,20 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
       fc.del <- any(!cn %in% colnames(allFC))
       if (fc.add) {
         pgx.createSignatureDatabaseH5.fromMatrix(sigdb.file, X = allFC)
-        cn <- rhdf5::h5read(sigdb.file, "data/colnames")  ## new size
-      }      
-      
+        cn <- rhdf5::h5read(sigdb.file, "data/colnames") ## new size
+      }
+
       if (fc.del) {
         del <- which(!cn %in% colnames(allFC))
         ##        cn[del] <- paste("[DELETED]", sub(".*\\] ", "", cn[del]))
         cn[del] <- paste("[DELETED]", cn[del])
         rhdf5::h5delete(sigdb.file, "data/colnames")
         rhdf5::h5write(cn, sigdb.file, "data/colnames")
-        Sys.sleep(0.1)  ## time to write...
+        Sys.sleep(0.1) ## time to write...
         if (delete.old) {
           dbg("[pgxinfo.updateDatasetFolder] deleting sigDB entry")
           sigdb.removeDataset(sigdb.file, "DELETED")
-          Sys.sleep(0.1)  ## allow write time
+          Sys.sleep(0.1) ## allow write time
         } else {
           dbg("[pgxinfo.updateDatasetFolder] deletions tagged but not removed")
         }
@@ -851,7 +851,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
       tsne <- rhdf5::h5read(sigdb.file, "clustering/tsne2d")
       length(cn)
       dim(tsne)
-      if(length(cn) != nrow(tsne)) {
+      if (length(cn) != nrow(tsne)) {
         dbg("[pgxinfo.updateDatasetFolder] ***ERROR**** length mismatch!")
       }
       rownames(tsne) <- cn
