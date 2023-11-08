@@ -545,27 +545,28 @@ pgx.testPhenoCorrelation2 <- function(df, plot = TRUE, cex = 1, compute.pv = TRU
   dd <- df[, dvar, drop = FALSE]
 
   ## generalized correlation matrix
-  dY <- expandPhenoMatrix(dd, drop.ref=FALSE)
-  R <- cor(dY, use="pairwise")
+  dY <- expandPhenoMatrix(dd, drop.ref = FALSE)
+  R <- cor(dY, use = "pairwise")
   R[is.na(R)] <- 0
 
   P <- NULL
-  if(compute.pv) {
-    testRes = corrplot::cor.mtest(dY, conf.level = 0.95)
+  if (compute.pv) {
+    testRes <- corrplot::cor.mtest(dY, conf.level = 0.95)
     P <- testRes$p
   }
 
-  if(plot) {
+  if (plot) {
     BLUERED <- grDevices::colorRampPalette(c("blue3", "white", "red3"))
     corrplot::corrplot(
-                corr = R, order="hclust", type="lower",
-                p.mat = P, insig="blank", ##sig.level = 0.05, 
-                tl.col = "black", tl.srt = 90, tl.cex = cex,
-                col = rev(corrplot::COL2('RdBu'))) -> corrRes
-    if(0) {
+      corr = R, order = "hclust", type = "lower",
+      p.mat = P, insig = "blank", ## sig.level = 0.05,
+      tl.col = "black", tl.srt = 90, tl.cex = cex,
+      col = rev(corrplot::COL2("RdBu"))
+    ) -> corrRes
+    if (0) {
       p1 <- corrRes$corrPos
       jj <- which(p1$p.value < 0.05)
-      text(p1$x[jj], p1$y[jj], round(p1$corr[jj],2))
+      text(p1$x[jj], p1$y[jj], round(p1$corr[jj], 2))
     }
   }
 

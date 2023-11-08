@@ -92,10 +92,10 @@ imputeMissing <- function(X,
     if (method[1] == "bpca") sel <- which(rowMeans(is.na(X)) < 1)
     rd <- data.frame(name = rownames(X), ID = rownames(X))[sel, ]
     cd <- data.frame(sample = colnames(X))
-    selX <- X[sel,]
+    selX <- X[sel, ]
     rownames(selX) <- rownames(rd)
     colnames(selX) <- rownames(cd)
-    mset <- MSnbase::MSnSet( selX, pData = cd, fData = rd)
+    mset <- MSnbase::MSnSet(selX, pData = cd, fData = rd)
     res <- try(MSnbase::impute(mset, method = method[1]))
     if (!"try-error" %in% class(res)) {
       cx[sel, ] <- MSnbase::exprs(res)
@@ -164,16 +164,15 @@ imputeMissing <- function(X,
 svdImpute2 <- function(M, nv = 3, threshold = 0.001, init = NULL,
                        maxSteps = 100, fill.empty = "median",
                        verbose = FALSE) {
+  ## nv=3;threshold=0.001;init=NULL;maxSteps=100;fill.empty="median";verbose=FALSE
 
-  ##nv=3;threshold=0.001;init=NULL;maxSteps=100;fill.empty="median";verbose=FALSE
-  
   ind.missing <- which(is.na(M), arr.ind = TRUE)
-  empty.rows <- which(rowMeans(is.na(M))==1)
-  empty.cols <- which(colMeans(is.na(M))==1)  
+  empty.rows <- which(rowMeans(is.na(M)) == 1)
+  empty.cols <- which(colMeans(is.na(M)) == 1)
 
-  if(!is.null(init)) {
+  if (!is.null(init)) {
     ## initialize missing values with fixed value
-    M[ind.missing] <- init    
+    M[ind.missing] <- init
   } else {
     ## initialize missing values with col/row medians
     row.mx <- apply(M, 1, median, na.rm = TRUE)
@@ -195,35 +194,36 @@ svdImpute2 <- function(M, nv = 3, threshold = 0.001, init = NULL,
     if (count > 0) {
       error <- sqrt(sum((Mold - M)^2) / sum(Mold^2))
       if (verbose) {
-        cat(count,": change in estimate: ", error, "\n")
+        cat(count, ": change in estimate: ", error, "\n")
       }
     }
     Mold <- M
   }
 
-  ## extra corrections (refill empty columns or rows) 
-  has.empty <- (length(empty.rows)>0 || length(empty.cols)>0) 
-  if(has.empty && fill.empty=="NA") {
-    if(length(empty.rows)) M[empty.rows,] <- NA
-    if(length(empty.cols)) M[,empty.cols] <- NA    
+  ## extra corrections (refill empty columns or rows)
+  has.empty <- (length(empty.rows) > 0 || length(empty.cols) > 0)
+  if (has.empty && fill.empty == "NA") {
+    if (length(empty.rows)) M[empty.rows, ] <- NA
+    if (length(empty.cols)) M[, empty.cols] <- NA
   }
-  if(has.empty && fill.empty=="sample") {
+  if (has.empty && fill.empty == "sample") {
     ii <- which(
-      (!ind.missing[,1] %in% empty.rows) &
-      (!ind.missing[,2] %in% empty.cols) )  
-    mm <-  M[ind.missing[ii,]]
-    if(length(empty.rows) && length(mm)) {
-      n1 <- length(M[empty.rows,])
-      message("[svdImpute2] warning: empty rows : n1 = ",n1)
-      M[empty.rows,] <- sample(mm, n1, replace=TRUE)
+      (!ind.missing[, 1] %in% empty.rows) &
+        (!ind.missing[, 2] %in% empty.cols)
+    )
+    mm <- M[ind.missing[ii, ]]
+    if (length(empty.rows) && length(mm)) {
+      n1 <- length(M[empty.rows, ])
+      message("[svdImpute2] warning: empty rows : n1 = ", n1)
+      M[empty.rows, ] <- sample(mm, n1, replace = TRUE)
     }
-    if(length(empty.cols) && length(mm)) {
-      n2 <- length(M[,empty.cols])
-      message("[svdImpute2] warning: empty cols : n2 = ",n2)
-      M[,empty.cols] <- sample(mm, n2, replace=TRUE)
+    if (length(empty.cols) && length(mm)) {
+      n2 <- length(M[, empty.cols])
+      message("[svdImpute2] warning: empty cols : n2 = ", n2)
+      M[, empty.cols] <- sample(mm, n2, replace = TRUE)
     }
   }
-  
+
   return(M)
 }
 
