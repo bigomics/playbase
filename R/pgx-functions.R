@@ -304,8 +304,8 @@ logCPM <- function(counts, total = 1e6, prior = 1) {
     return(cpm)
   } else {
     totcounts <- Matrix::colSums(counts, na.rm = TRUE)
-    ##cpm <- t(t(counts) / totcounts * total)
-    cpm <- sweep(counts, 2, totcounts, FUN='/') * total
+    ## cpm <- t(t(counts) / totcounts * total)
+    cpm <- sweep(counts, 2, totcounts, FUN = "/") * total
     x <- log2(prior + cpm)
     return(x)
   }
@@ -2384,7 +2384,7 @@ expandPhenoMatrix <- function(pheno, drop.ref = TRUE) {
 #' cor.pvalue(0.8, 100)
 #' }
 #' @export
-cor.pvalue <- function(x, n) 2*stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
+cor.pvalue <- function(x, n) 2 * stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
 
 
 #' @title Get gene sets from playbase data

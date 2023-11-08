@@ -58,24 +58,24 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
   }
 
   ## override old-style
-  if(!is.null(bc.methods)) {
+  if (!is.null(bc.methods)) {
     bc.methods <- tolower(bc.methods)
   } else {
     bc <- c()
-    if(!is.null(mnn.correct)) bc <- c(bc, "mnn")
-    if(nnm.correct) bc <- c(bc, "nnm")    
-    if(sva.correct) bc <- c(bc, "sva")
-    if(pca.correct) bc <- c(bc, "pca")
-    if(hc.correct)  bc <- c(bc, "hc")
+    if (!is.null(mnn.correct)) bc <- c(bc, "mnn")
+    if (nnm.correct) bc <- c(bc, "nnm")
+    if (sva.correct) bc <- c(bc, "sva")
+    if (pca.correct) bc <- c(bc, "pca")
+    if (hc.correct) bc <- c(bc, "hc")
     bc.methods <- bc
   }
-  
+
   ## tidy up pheno matrix?? get correct parameter types
   pheno <- utils::type.convert(pheno, as.is = TRUE)
 
-  message("[pgx.superBatchCorrect] 1 : dim.pheno = ", paste(dim(pheno), collapse = "x"),"\n")
-  message("[pgx.superBatchCorrect] 1 : model.par = ", paste(model.par, collapse = "x"),"\n")
-  message("[pgx.superBatchCorrect] 1 : colnames.pheno = ", paste(colnames(pheno), collapse = "x"),"\n")
+  message("[pgx.superBatchCorrect] 1 : dim.pheno = ", paste(dim(pheno), collapse = "x"), "\n")
+  message("[pgx.superBatchCorrect] 1 : model.par = ", paste(model.par, collapse = "x"), "\n")
+  message("[pgx.superBatchCorrect] 1 : colnames.pheno = ", paste(colnames(pheno), collapse = "x"), "\n")
 
   ## setup model matrix
   mod1 <- NULL
@@ -297,9 +297,8 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
   }
 
   ## iterate over bc.methods in this order
-  for(bc in bc.methods) {
-
-    if(bc == "mnn") {
+  for (bc in bc.methods) {
+    if (bc == "mnn") {
       ## --------------------------------------------------------------------
       ## MNN correction (e.g. for single-cell)
       ## --------------------------------------------------------------------
@@ -315,7 +314,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
       }
     }
 
-    if(bc == "nnm") {
+    if (bc == "nnm") {
       ## --------------------------------------------------------------------
       ## Nearest-neighbour matching (NNM)
       ## --------------------------------------------------------------------
@@ -326,7 +325,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
       cX <- gx.nnmcorrect(cX, y1, center.x = TRUE, center.m = TRUE)$X
     }
 
-    if(bc == "sva") {    
+    if (bc == "sva") {
       ## --------------------------------------------------------------------
       ## SVA correction (removing unwanted variation)
       ## --------------------------------------------------------------------
@@ -337,37 +336,37 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
         ## because of speed.
         mod1x <- cbind(1, mod1)
         mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
-        
+
         ## fast method using SmartSVA
         pp <- paste0(model.par, collapse = "+")
         lm.expr <- paste0("lm(t(cX) ~ ", pp, ", data=pheno)")
         X.r <- t(stats::resid(eval(parse(text = lm.expr))))
         n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
-        
+
         cX1 <- Matrix::head(cX[order(-apply(cX, 1, stats::sd)), ], 1000) ## top 1000 genes only (faster)
         sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = n.sv)$sv)
-        
+
         if (any(class(sv) == "try-error")) {
           ## try again with little bit of noise...
-          a <- 0.01 * mean(apply(cX, 1, stats::sd, na.rm=TRUE), na.rm=TRUE)
+          a <- 0.01 * mean(apply(cX, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
           cX1 <- cX + a * matrix(stats::rnorm(length(cX)), nrow(cX), ncol(cX))
           cX1 <- Matrix::head(cX1[order(-apply(cX1, 1, stats::sd)), ], 1000) ## top 1000 genes only (faster)
           sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1))$sv)
         }
         if (!any(class(sv) == "try-error")) {
           message("[pgx.superBatchCorrect] Performing SVA correction...")
-          
+
           rownames(sv) <- colnames(cX)
           colnames(sv) <- paste0("SV.", 1:ncol(sv))
           cX <- limma::removeBatchEffect(cX, covariates = sv, design = mod1x)
-          
+
           B <- cbind(B, sv)
         }
       }
     }
 
 
-    if(bc == "pca") {
+    if (bc == "pca") {
       ## --------------------------------------------------------------------
       ## PCA correction: remove remaining batch effect using PCA
       ## (iteratively, only SV larger than max correlated SV)
@@ -407,7 +406,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
       }
     }
 
-    if(bc == "hc") {
+    if (bc == "hc") {
       ## --------------------------------------------------------------------
       ## HC correction: remove remaining batch effect iteratively using
       ## hclust
@@ -440,13 +439,12 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
         if (!is.null(pX)) B <- cbind(B, pX) ## update batch correction matrix
       }
     }
+  } ## end of for bc.methods
 
-  }  ## end of for bc.methods
-  
   ## --------------------------------------------------------------------
   ## important: means seems to be affected!!! regressed out??
   ## --------------------------------------------------------------------
-  cX <- cX - rowMeans(cX, na.rm=TRUE) + rowMeans(X, na.rm=TRUE)
+  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
 
   ## matrix B contains the active batch correction vectors
   res <- list(X = cX, Y = pheno, B = B)
@@ -461,7 +459,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
 #' @description
 #' Performs a correlation analysis on a phenotype matrix to detect possible confounding factors.
 #'
-#' @param pheno Dataframe containing sample metadata/covariates. 
+#' @param pheno Dataframe containing sample metadata/covariates.
 #' @param model.par Vector of column names of covariates of interest \code{pheno}.
 #' @param max.rho Maximum allowed correlation.
 #'
@@ -473,8 +471,7 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
 #' @return List of confounding and not-confounding factors. Correlation matrix rho.
 #'
 #' @export
-checkConfounders <- function(pheno, model.par, max.rho=0.3) {
-
+checkConfounders <- function(pheno, model.par, max.rho = 0.3) {
   getModelMatrix <- function(v) {
     y <- as.character(pheno[, v])
     y[is.na(y)] <- "NA" ## or impute???
@@ -482,16 +479,16 @@ checkConfounders <- function(pheno, model.par, max.rho=0.3) {
     colnames(m1) <- sub("^y", paste0(v, "="), colnames(m1))
     m1
   }
-  
+
   mod1 <- do.call(cbind, lapply(model.par, getModelMatrix))
   rownames(mod1) <- rownames(pheno)
   mod1
-  
+
   ## --------------------------------------------------------------------
   ## Check confounding
   ## --------------------------------------------------------------------
   batch.pars <- setdiff(colnames(pheno), model.par)
-  if(is.null(batch.pars) || length(batch.pars)==0) {
+  if (is.null(batch.pars) || length(batch.pars) == 0) {
     return(c())
   }
 
@@ -499,13 +496,13 @@ checkConfounders <- function(pheno, model.par, max.rho=0.3) {
   rho <- stats::cor(mod0, mod1)
   rho[is.na(rho)] <- 0
   confounding.pars <- c()
-  
+
   if (max(abs(rho), na.rm = TRUE) > max.rho) {
     idx <- which(abs(rho) > max.rho, arr.ind = TRUE)
     idx
     for (i in 1:nrow(idx)) {
       v0 <- colnames(mod0)[idx[i, 1]]
-        v1 <- colnames(mod1)[idx[i, 2]]
+      v1 <- colnames(mod1)[idx[i, 2]]
       dbg(paste0(
         "WARNING:: '", v0, "' is confounded with '", v1, "' ",
         ": rho= ", round(rho[idx[i, 1], idx[i, 2]], 3), "\n"
@@ -517,7 +514,7 @@ checkConfounders <- function(pheno, model.par, max.rho=0.3) {
     confounding.pars <- c(confounding.pars, confounding)
     batch.pars <- setdiff(batch.pars, confounding.pars)
   }
-  
+
   list(
     confounding = confounding.pars,
     not.confounding = batch.pars,
@@ -561,7 +558,7 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
       y1 <- factor(as.character(y1))
     } else {
       y1 <- y1 + 1e-8 * stats::rnorm(length(y1))
-      y1 <- (y1 > stats::median(y1, na.rm=TRUE))
+      y1 <- (y1 > stats::median(y1, na.rm = TRUE))
     }
     design <- stats::model.matrix(~ 1 + y1)
     fit <- limma::lmFit(x[, ii], design)
@@ -580,13 +577,13 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
     if (inherits(y1, "factor")) y1 <- factor(as.character(y1))
     design <- stats::model.matrix(~ 0 + y1)
 
-    r1 <- stats::cor(t(x[, ii]), design, use="pairwise")
+    r1 <- stats::cor(t(x[, ii]), design, use = "pairwise")
     rowMeans(abs(r1))
   }
 
 
-  X <- X - rowMeans(X, na.rm=TRUE) ## center features
-  X[is.na(X)] <- mean(X,na.rm=TRUE)  ## no missing allowed
+  X <- X - rowMeans(X, na.rm = TRUE) ## center features
+  X[is.na(X)] <- mean(X, na.rm = TRUE) ## no missing allowed
   V <- irlba::irlba(X, nv = nv)$v
   rho <- list()
   px <- pheno
@@ -611,7 +608,7 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
 
   R <- do.call(rbind, rho)
   colnames(R) <- paste0("PC", 1:ncol(R))
-  if (stat == "F") R <- t(t(R) / colMeans(R, na.rm=TRUE))
+  if (stat == "F") R <- t(t(R) / colMeans(R, na.rm = TRUE))
 
   if (plot) {
     stat0 <- c("correlation", "F-statistic")[1 + 1 * (stat == "F")]
@@ -671,14 +668,14 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
   ## shift zero to 1% percentile
   if (!is.count) {
     q0 <- stats::quantile(X[X > 0], probs = 0.01, na.rm = TRUE)
-    tx <- pmax(X - q0, 0, na.rm=TRUE) ## log expression
-    cx <- pmax(2**tx - 1, 0, na.rm=TRUE) ## counts
+    tx <- pmax(X - q0, 0, na.rm = TRUE) ## log expression
+    cx <- pmax(2**tx - 1, 0, na.rm = TRUE) ## counts
   } else {
     cx <- X
     tx <- log2(cx + 1)
   }
-  nfeature <- Matrix::colSums(cx > 0, na.rm=TRUE) + 1
-  libsize <- Matrix::colSums(cx, na.rm=TRUE)
+  nfeature <- Matrix::colSums(cx > 0, na.rm = TRUE) + 1
+  libsize <- Matrix::colSums(cx, na.rm = TRUE)
 
   mt.genes <- grep("^MT-", rownames(X), ignore.case = TRUE, value = TRUE)
   rb.genes <- grep("^RP[SL]", rownames(X), ignore.case = TRUE, value = TRUE)
@@ -686,14 +683,14 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
   pct.mito <- pct.ribo <- NA
 
   if (length(mt.genes) >= 10) {
-    mito <- Matrix::colMeans(tx[mt.genes, , drop = FALSE], na.rm=TRUE)
+    mito <- Matrix::colMeans(tx[mt.genes, , drop = FALSE], na.rm = TRUE)
     pct.mito <- Matrix::colSums(cx[mt.genes, , drop = FALSE], na.rm = TRUE) / libsize
   }
   if (length(rb.genes) >= 10) {
     ii <- rb.genes[order(-apply(tx[rb.genes, , drop = FALSE], 1, stats::sd, na.rm = TRUE))]
     sel20 <- Matrix::head(ii, 20)
-    ribo <- Matrix::colMeans(tx[rb.genes, , drop = FALSE], na.rm=TRUE)
-    ribo20 <- Matrix::colMeans(tx[sel20, , drop = FALSE], na.rm=TRUE)
+    ribo <- Matrix::colMeans(tx[rb.genes, , drop = FALSE], na.rm = TRUE)
+    ribo20 <- Matrix::colMeans(tx[sel20, , drop = FALSE], na.rm = TRUE)
     pct.ribo <- Matrix::colSums(cx[rb.genes, , drop = FALSE], na.rm = TRUE) / libsize
   }
   pheno <- data.frame(
