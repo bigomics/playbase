@@ -312,8 +312,16 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## create gene annotation table
   ## -------------------------------------------------------------------
-  message("[createPGX] annotating genes...")
-  pgx <- pgx.gene_table(pgx, organism = organism)
+
+  counter <- 0
+  while (!"genes" %in% names(pgx) & counter < 10) {
+    
+    message(paste0("[createPGX] attempting to annotate genes, call number", counter + 1))
+    Sys.sleep(60 * counter)
+    try(pgx <- pgx.gene_table(pgx, organism = organism))
+    counter <- counter + 1
+
+  }
 
   ## -------------------------------------------------------------------
   ## convert probe-IDs to gene symbol and aggregate duplicates
