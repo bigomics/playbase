@@ -4259,7 +4259,7 @@ plotlyCytoplot <- function(pgx,
     )
   }
 
-  if (!is.null(pgx$deconv)) {
+  if (!is.null(pgx$deconv) && length(pgx$deconv) > 0) {
     inferred.celltype <- pgx$deconv[[1]][["meta"]]
     lab1 <- Matrix::head(names(sort(-Matrix::colSums(inferred.celltype[j1, , drop = FALSE]))), 3)
     pos1 <- apply(cbind(x1, x2)[j1, , drop = FALSE], 2, stats::median)
@@ -4288,7 +4288,7 @@ plotlyCytoplot <- function(pgx,
       font = list(size = 15)
     )
   }
-  p
+  return(p)
 }
 
 
