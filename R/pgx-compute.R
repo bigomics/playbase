@@ -158,6 +158,8 @@ pgx.createPGX <- function(counts,
                           cluster.contrasts = FALSE, 
                           do.clustergenes = TRUE,
                           only.proteincoding = TRUE,
+                          remove.xxl = TRUE,
+                          remove.outliers = TRUE,
                           normalize = TRUE) {
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("dimension of counts and X do not match\n")
@@ -228,8 +230,10 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
 
   ## remove XXL/Infinite values and set to NA
-  counts <- counts.removeXXLvalues(counts, xxl.val = NA)
-
+  if(remove.xxl) {
+    counts <- counts.removeXXLvalues(counts, xxl.val = NA)
+  }
+  
   ## impute missing values
   if (any(is.na(counts))) {
     impute.method <- "SVD2"
@@ -243,8 +247,11 @@ pgx.createPGX <- function(counts,
 
   ## remove samples from counts matrix with extreme (1000x more or
   ## 1000x less) total counts (than median).
-  counts <- counts.removeOutliers(counts)
-
+  if(remove.outliers) {
+    message("[createPGX] removing outliers samples ")    
+    counts <- counts.removeOutliers(counts)
+  }
+  
   ## -------------------------------------------------------------------
   ## Auto-scaling (scale down huge values, often in proteomics)
   ## -------------------------------------------------------------------
@@ -354,7 +361,7 @@ pgx.createPGX <- function(counts,
     # merge features_collapsde_by_symbol with pgx$genes by the column symbol
     pgx$genes <- merge(pgx$genes, features_collapsed_by_symbol, by = "symbol")
     rownames(pgx$genes) = pgx$genes$symbol
-    pgx$counts <- pgx$counts[pgx$genes$symbol, , drop = FALSE]
+    pgx$counts <- pgx$counts[rownames(pgx$genes), , drop = FALSE]
     
   }
 
@@ -364,31 +371,32 @@ pgx.createPGX <- function(counts,
   if (filter.genes) {
     ## There is second filter in the statistics computation. This
     ## first filter is primarily to reduce the counts table.
-    message("[createPGX] filtering out not-expressed genes...")
-    keep <- (Matrix::rowSums(pgx$counts) > 0) ## at least in one...
-    keep <- names(keep == TRUE)
-    pgx$counts <- pgx$counts[keep, , drop = FALSE]
-    pgx$genes <- pgx$genes[keep, , drop = FALSE]
-    if (!is.null(pgx$X)) {
-      pgx$X <- pgx$X[keep, , drop = FALSE]
-    }
-  }
+    pgx <- pgx.filterZeroCounts(pgx)
 
-  ## -------------------------------------------------------------------
-  ## Filter genes?
-  ## -------------------------------------------------------------------
+    ## prefiltering for low-expressed genes (recommended for edgeR and
+    ## DEseq2). Require at least in 2 or 1% of total. Specify the
+    ## PRIOR CPM amount to regularize the counts and filter genes
+    pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
 
-  do.filter <- (only.hugo | only.known | only.proteincoding)
-  if (do.filter) {
+    ## match tables
+    pgx$genes <- pgx$genes[rownames(pgx$counts),]
+    pgx$X     <- pgx$X[rownames(pgx$counts),]
+    
+    do.filter <- (only.hugo | only.known | only.proteincoding)
+    if (do.filter) {
+      pgx$genes <- pgx$genes[!is.na(pgx$genes$symbol)|pgx$genes$symbol == "",]
+      keep <- !is.na(pgx$genes$symbol) & pgx$genes$symbol != ""
+      if (only.proteincoding) {
+        keep <- keep & (pgx$genes$gene_biotype %in% c("protein_coding"))
+      }
+      table(keep)
+      pgx$genes  <- pgx$genes[keep, , drop = FALSE]
+      pgx$counts <- pgx$counts[keep, , drop = FALSE]
+      if (!is.null(pgx$X)) {
+        pgx$X <- pgx$X[keep, , drop = FALSE]
+      }
+    }
 
-    pgx$genes <- pgx$genes[!is.na(pgx$genes$symbol)|pgx$genes$symbol == "",]
-    if (only.proteincoding) {
-      pgx$genes <- pgx$genes[pgx$genes$gene_biotype %in% c("protein_coding"), ]
-    }
-    pgx$counts <- pgx$counts[unique(pgx$genes$gene_name), , drop = FALSE]
-    if (!is.null(pgx$X)) {
-      pgx$X <- pgx$X[unique(pgx$genes$gene_name), , drop = FALSE]
-    }
   }
 
   ## -------------------------------------------------------------------
@@ -538,16 +546,6 @@ pgx.computePGX <- function(pgx,
   ## Filter genes (previously in compute_testGenesSingleOmics). NEED
   ## RETHINK?? MOVE TO PGXCREATE??
   ## -----------------------------------------------------------------------------
-
-  ## prefiltering for low-expressed genes (recommended for edgeR and
-  ## DEseq2). Require at least in 2 or 1% of total. Specify the
-  ## PRIOR CPM amount to regularize the counts and filter genes
-  PRIOR.CPM <- 1
-  filter.low <- TRUE
-  if (filter.low) {
-    pgx <- pgx.filterLowExpressed(pgx, prior.cpm = PRIOR.CPM)
-  }
-
   ## Shrink number of genes (highest SD/var)
   if (max.genes > 0 && nrow(pgx$counts) > max.genes) {
     cat("shrinking data matrices: n=", max.genes, "\n")
@@ -704,6 +702,7 @@ counts.autoScaling <- function(counts) {
   list(counts = counts, counts_multiplier = counts_multiplier)
 }
 
+#' @export
 normalizeCounts <- function(M, method = c("TMM", "TMMwsp", "RLE", "upperquartile", "none")) {
   method <- method[1]
   dge <- edgeR::DGEList(M)
@@ -732,7 +731,7 @@ counts.mergeDuplicateFeatures <- function(counts) {
 pgx.filterZeroCounts <- function(pgx) {
   ## There is second filter in the statistics computation. This
   ## first filter is primarily to reduce the counts table.
-  message("[createPGX] filtering out not-expressed genes...")
+  message("[createPGX] filtering out not-expressed genes (zero counts)...")
   keep <- (Matrix::rowMeans(pgx$counts > 0) > 0) ## at least in one...
   pgx$counts <- pgx$counts[keep, , drop = FALSE]
   if (!is.null(pgx$X)) {
@@ -750,6 +749,10 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   pgx$counts <- pgx$counts[which(keep), , drop = FALSE]
   cat("filtering out", sum(!keep), "low-expressed genes\n")
   cat("keeping", sum(keep), "expressed genes\n")
+  if (!is.null(pgx$X)) {
+    ## WARNING: counts and X should match dimensions.
+    pgx$X <- pgx$X[keep, , drop = FALSE]
+  }  
   pgx
 }
 
