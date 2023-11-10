@@ -131,13 +131,18 @@ pgx.crosscheckINPUT <- function(
 
   if (!is.null(samples) && !is.null(counts)) {
     # Check that rownames(samples) match colnames(counts)
-    SAMPLE_NAMES_NOT_MATCHING_COUNTS <- intersect(
-      rownames(samples),
-      colnames(counts)
-    )
-    if (length(SAMPLE_NAMES_NOT_MATCHING_COUNTS) == 0 && PASS) {
-      check_return$e16 <- "Please correct your samples names in the samples and contrast files."
-      pass <- FALSE
+
+    COUNTS_NAMES_NOT_MATCHING_SAMPLES <- colnames(counts)[!colnames(counts) %in% rownames(samples)]
+      
+    if (length(COUNTS_NAMES_NOT_MATCHING_SAMPLES) > 0 && PASS) {
+      check_return$e21 <- COUNTS_NAMES_NOT_MATCHING_SAMPLES
+      PASS <- FALSE
+    }
+    SAMPLE_NAMES_NOT_MATCHING_COUNTS <- rownames(samples)[!rownames(samples) %in% colnames(counts)]
+      
+    if (length(SAMPLE_NAMES_NOT_MATCHING_COUNTS) > 0 && PASS) {
+      check_return$e16 <- SAMPLE_NAMES_NOT_MATCHING_COUNTS
+      PASS <- FALSE
     }
 
     # Check that rownames(samples) match colnames(counts)
