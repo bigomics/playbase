@@ -136,13 +136,18 @@ pgx.crosscheckINPUT <- function(
       
     if (length(COUNTS_NAMES_NOT_MATCHING_SAMPLES) > 0 && PASS) {
       check_return$e21 <- COUNTS_NAMES_NOT_MATCHING_SAMPLES
-      PASS <- FALSE
+      PASS <- TRUE
+      # align counts columns with samples rownames
+      counts <- counts[, rownames(samples), drop = FALSE]
+      
     }
     SAMPLE_NAMES_NOT_MATCHING_COUNTS <- rownames(samples)[!rownames(samples) %in% colnames(counts)]
       
     if (length(SAMPLE_NAMES_NOT_MATCHING_COUNTS) > 0 && PASS) {
       check_return$e16 <- SAMPLE_NAMES_NOT_MATCHING_COUNTS
-      PASS <- FALSE
+      PASS <- TRUE
+      # align samples rows with counts colnames
+      samples <- samples[colnames(counts), , drop = FALSE]
     }
 
     # Check that rownames(samples) match colnames(counts)
