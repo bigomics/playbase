@@ -5,6 +5,12 @@
 
 # backup
 *~
+*#
+*.save
+*.SAVE
+*.BAK
+*.bak
+
 
 # History files
 .Rhistory
