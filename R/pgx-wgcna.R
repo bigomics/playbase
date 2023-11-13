@@ -31,7 +31,7 @@ labels2rainbow <- function(net) {
   hc <- net$dendrograms[[1]]
   nc <- length(unique(net$colors))
   n <- length(net$colors)
-  ii <- rep(NA,n)
+  ii <- rep(NA, n)
   ii[net$goodGenes] <- hc$order
   col1 <- WGCNA::labels2colors(net$colors)
   col.rnk <- rank(tapply(1:n, col1[ii], mean))
