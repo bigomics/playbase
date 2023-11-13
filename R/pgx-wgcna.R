@@ -31,8 +31,9 @@ labels2rainbow <- function(net) {
   hc <- net$dendrograms[[1]]
   nc <- length(unique(net$colors))
   n <- length(net$colors)
-  ii <- hc$order
-  col1 <- labels2colors(net$colors)
+  ii <- rep(NA,n)
+  ii[net$goodGenes] <- hc$order
+  col1 <- WGCNA::labels2colors(net$colors)
   col.rnk <- rank(tapply(1:n, col1[ii], mean))
   new.col <- grDevices::rainbow(nc)[col.rnk]
   names(new.col) <- names(col.rnk)
@@ -107,7 +108,6 @@ pgx.wgcna <- function(
     i <- i + 1
   }
   table(net$colors)
-
 
   ## clean up traits matrix
   datTraits <- pgx$samples
