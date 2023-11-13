@@ -67,6 +67,9 @@ pgx.initialize <- function(pgx) {
                   "gene_title", "gene_name", colnames(pgx$genes))
     col_order <- col_order[!duplicated(col_order)]
     pgx$genes <- pgx$genes[, col_order, drop = FALSE]
+    if (!"chr" %in% colnames(pgx$genes)) {
+      pgx$genes$chr <- 0
+    }
   }
 
   ## for COMPATIBILITY: if no counts, estimate from X
