@@ -204,16 +204,16 @@ ngs.getGeneAnnotation <- function(
   # This should come as separate call because attr belong to diff. page
   if (!mart@dataset == "hsapiens_gene_ensembl") {
     annot_homologs <- biomaRt::getBM(
-      attributes = c(probe_type, "hsapiens_homolog_associated_gene_name"),
-      filters = probe_type,
-      values = clean_probes,
+      attributes = c("external_gene_name", "hsapiens_homolog_associated_gene_name"),
+      filters = "external_gene_name",
+      values = annot[!is.na(external_gene_name), external_gene_name],
       mart = mart
     )
     annot_homologs <- data.table::data.table(annot_homologs)
     data.table::setnames(annot_homologs, 
                         old = "hsapiens_homolog_associated_gene_name", 
                         new = "human_ortholog")
-    annot <- annot[annot_homologs, on = probe_type]
+    annot <- annot[annot_homologs, on = "external_gene_name", mult = "first"]
   }
 
   # Join with clean_probes vector
@@ -409,4 +409,149 @@ pgx.gene_table <- function(pgx, organism) {
   pgx$probe_type <- probe_type
 
   return(pgx)
+}
+
+
+#' @title Detect probe type from probe set
+#' @description Detects the most likely probe type (ENSEMBL, SYMBOL, etc) 
+#' for a set of gene/transcript identifiers. This function has been deprecated
+#' and is mantained for fallback purposes.
+#'
+#' @param probes Character vector of gene/transcript identifiers.
+#' @param organism Organism name (e.g. "Human", "Mouse", "Rat").
+#'
+#' @return The probe type with the most matches to the input identifiers.
+#'
+#' @details Checks the input identifiers against known gene/transcript 
+#' identifiers from an organism-specific annotation package to determine the
+#' most likely probe type. Useful for identifying the type of identifiers
+#' in a gene expression matrix when not explicitly provided.
+#'
+#' @examples
+#' probes <- probes <- c("NM_001081979", "NM_001081980", "NM_001081981", "NM_001081982", "NM_001081983")
+#' organism <- "Mouse"
+#' type <- detect_probe_DEPRECATED(probes, organism)
+#' 
+#' @export
+detect_probe_DEPRECATED <- function(probes, organism) {
+
+  # Get org database
+  if (organism == "Human") {
+    org_db <- org.Hs.eg.db::org.Hs.eg.db
+  } else if (organism == "Mouse") {
+    org_db <- org.Mm.eg.db::org.Mm.eg.db
+  } else if (organism == "Rat") {
+    org_db <- org.Rn.eg.db::org.Rn.eg.db
+  } 
+  
+  # Probe types
+  keytypes <- c("ENSEMBL", "ENSEMBLTRANS", "SYMBOL", 
+                "REFSEQ", "UNIPROT", "ACCNUM")
+  key_matches <- vector("character", length(keytypes))
+  names(key_matches) <- keytypes
+
+  # Subset probes if too many
+  if (length(probes) > 100) {
+    probes <- probes[as.integer(seq(1, length(probes), 100))]
+  }
+
+  # Iterate over probe types
+  for (key in keytypes) {
+    n <- 0
+    probe_matches <- data.frame(NULL)
+    try(probe_matches <- AnnotationDbi::select(org_db, 
+                                    keys = probes, 
+                                    keytype = key, 
+                                    columns = key), 
+                                    silent = TRUE)
+    n <- nrow(probe_matches)         
+    key_matches[key] <- n
+  }
+
+  # Return top match
+  if (all(key_matches == 0)) {
+    stop("Probe type not found, please, check your probes")
+  } else {
+    top_match <- names(which.max(key_matches))
+  }
+  
+  return(top_match)
+}
+
+
+#' @title Get gene annotation data 
+#' @description Retrieves gene annotation data from an organism-specific
+#' annotation package. This function has been deprecated
+#' and is mantained for fallback purposes.
+#'
+#' @param probes Character vector of gene/transcript identifiers. 
+#' @param probe_type Type of identifiers provided in probes (e.g. "ENSEMBL").
+#' @param organism Organism name (e.g. "Human", "Mouse", "Rat").
+#'
+#' @return Data frame containing annotation data for the provided identifiers.
+#' 
+#' @details Queries an annotation package for the specified organism 
+#' using the provided identifiers and probe type. Returns a cleaned and 
+#' reformatted data frame with feature identifiers as row names.
+#' 
+#' @examples
+#' probes <- head(rownames(counts), 100)
+#' probe_type <- "ENSEMBL"
+#' organism <- "Human"
+#' annotation <- ngs.getGeneAnnotation_DEPRECATED(probes, probe_type, organism)
+#'
+#' @export
+ngs.getGeneAnnotation_DEPRECATED <- function(probes, probe_type, organism) {
+  
+  # Get org database and columns request
+  if (organism == "Human") {
+    org_db <- org.Hs.eg.db::org.Hs.eg.db
+    cols_req <- c("SYMBOL", "GENENAME", "CHR", "CHRLOC", "MAP", "GENETYPE") 
+  } else if (organism == "Mouse") {
+    org_db <- org.Mm.eg.db::org.Mm.eg.db
+    cols_req <- c("SYMBOL", "GENENAME", "CHR", "CHRLOC", "GENETYPE") 
+  } else if (organism == "Rat") {
+    org_db <- org.Rn.eg.db::org.Rn.eg.db
+    cols_req <- c("SYMBOL", "GENENAME", "CHR", "CHRLOC", "GENETYPE") 
+
+  } 
+
+  # Call for annotation table
+  suppressWarnings(d <- AnnotationDbi::select(org_db, 
+                            keys = probes, 
+                            keytype = probe_type, 
+                            columns = cols_req))
+
+  d <- data.table::as.data.table(d)
+  
+  # Add human ortholog and map for non-human organisms
+  # Here, we use the old strategy of capitalise the symbol
+  if (organism %in% c("Mouse", "Rat")) {
+    d$human_ortholog <- toupper(d$SYMBOL)
+    d$MAP <- d$CHR
+  } 
+
+  # Rename cols, add extra cols, reorder cols and rows
+  data.table::setnames(d,
+                       old = c(probe_type, "SYMBOL", "GENENAME", "CHR", "CHRLOC", "MAP", "GENETYPE"), 
+                       new = c("feature", "symbol", "gene_title", "chr", "pos", "map", "gene_biotype"))
+
+  d$tx_len <- 1000
+  d$source <- "local db"
+  d$CHRLOCCHR <- NULL
+  d$gene_name <- d$feature
+
+  col_order <- c("feature",  "symbol",  "human_ortholog", "gene_title", "gene_biotype")
+  col_order <- col_order[col_order %in% colnames(d)]
+  data.table::setcolorder(d, col_order)
+  data.table::setkeyv(d, "feature")
+
+  # Return data.frame with rownames
+  d <- as.data.frame(d)
+  
+  # Current DF do not admit multiple rownames, since CHRLOC can have more than one
+  # match per gene/probe, we remove duplicates
+  d <- d[!duplicated(d$feature),]
+  rownames(d) <- d$feature
+  return(d)
 }

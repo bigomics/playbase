@@ -112,3 +112,63 @@ test_that("probe2symbol returns expected output", {
   expect_type(symbol_na, "character")
   expect_true(sum(symbol_na == "") == 0)
 })
+
+
+#' Test for detect_probe_DEPRECATED
+test_that("detects ENSEMBL for human probes", {
+  probes <- c("ENSG00000136997", "ENSG00000241860")
+  expect_equal(detect_probe_DEPRECATED(probes, "Human"), "ENSEMBL")
+
+  # UNIPROT genes
+  uniprot_genes <- c("P31749", "P04637", "Q9Y6K9", "O15111", "Q9UM73")  
+  expect_equal(detect_probe_DEPRECATED(uniprot_genes, "Human"), "UNIPROT")
+
+  # Fake genes
+  probes <- c("ENSG00088136997", "ENSG00099241860")
+  expect_error(detect_probe_DEPRECATED(probes, "Human"))
+
+})
+
+# Test with valid mouse probes  
+test_that("detects Ensembl for mouse probes", {
+  probes <- c("ENSMUSG00000051951", "ENSMUSG00000033845")
+  expect_equal(detect_probe_DEPRECATED(probes, "Mouse"), "ENSEMBL")
+
+  probes <- c("NM_001081979", "NM_001081980", "NM_001081981", "NM_001081982",
+     "NM_001081983")
+  expect_equal(detect_probe_DEPRECATED(probes, "Mouse"), "REFSEQ")
+
+})
+
+
+#' Test for detect_probe_DEPRECATED
+test_that("ngs.getGeneAnnotation_DEPRECATED function works correctly", {
+  
+  # Test 1: Check that the function returns the correct annotation for a known human gene
+  expect_equal(rownames(ngs.getGeneAnnotation_DEPRECATED("ENSG00000141510", "ENSEMBL", "Human"))[1], "ENSG00000141510")
+  
+  # Test 2: Check that the function returns the correct annotation for a known mouse gene
+  expect_equal(rownames(ngs.getGeneAnnotation_DEPRECATED("ENSMUSG00000051951", "ENSEMBL", "Mouse"))[1], "ENSMUSG00000051951")
+    
+  # Test 3: Check that the function handles multiple probes correctly
+  probes <- c("ENSG00000141510", "ENSG00000139618")
+  expect_equal(nrow(ngs.getGeneAnnotation_DEPRECATED(probes, "ENSEMBL", "Human")), length(probes))
+  
+  # Test 4: Check that the function handles an unknown organism correctly
+  expect_error(ngs.getGeneAnnotation_DEPRECATED("ENSG00000141510", "ENSEMBL", "Unknown"))
+  
+  # Test 5: Check that the function handles an unknown probe correctly
+  expect_error(ngs.getGeneAnnotation_DEPRECATED("Unknown", "ENSEMBL", "Human"))
+  
+  # Test 6: Check that the function handles a NULL probe correctly
+  expect_error(ngs.getGeneAnnotation_DEPRECATED(NULL, "ENSEMBL", "Human"))
+  
+  # Test 7: Check that the function handles a NULL organism correctly
+  expect_error(ngs.getGeneAnnotation_DEPRECATED("ENSG00000141510", "ENSEMBL", NULL))
+  
+  # Test 8: Check that the function handles an empty string probe correctly
+  expect_error(ngs.getGeneAnnotation_DEPRECATED("", "ENSEMBL", "Human"))
+  
+  # Test 9: Check that the function handles an empty string organism correctly
+  expect_error(ngs.getGeneAnnotation_DEPRECATED("ENSG00000141510", "ENSEMBL", ""))
+})

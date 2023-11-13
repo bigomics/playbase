@@ -314,13 +314,18 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
 
   counter <- 0
-  while (!"genes" %in% names(pgx) & counter < 10) {
+  while (!"genes" %in% names(pgx) & counter < 5) {
     
     message(paste0("[createPGX] attempting to annotate genes, call number", counter + 1))
     Sys.sleep(60 * counter)
     try(pgx <- pgx.gene_table(pgx, organism = organism))
     counter <- counter + 1
 
+  } 
+  # For fallback purposes we can use the old method to add gene annotation if biomaRt fails
+  if (!"genes" %in% names(pgx) & organism %in% c("Mouse" , "Human")) {
+    probe_type <- detect_probe_DEPRECATED(probes = rownames(pgx$counts), organism = organism)
+    pgx <- ngs.getGeneAnnotation_DEPRECATED(probes = rownames(pgx$counts), probe_type = probe_type, organism = organism)
   }
 
   ## -------------------------------------------------------------------
