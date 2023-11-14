@@ -309,8 +309,9 @@ pgx.createPGX <- function(counts, samples, contrasts,
 
   if (normalize) {
     message("[createPGX] NORMALIZING log-expression matrix X...")
-    X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
-    X <- limma::normalizeQuantiles(X) ## in linear space
+    X <- logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
+    X <- limma::normalizeQuantiles(X) ## in log space
+    ## X <- 0.1*X + 0.9*limma::normalizeQuantiles(X)   ## 'weighted' to keep randomness...
   } else {
     message("[createPGX] SKIPPING NORMALIZATION!")
   }
@@ -530,6 +531,9 @@ pgx.computePGX <- function(pgx,
   if (!"contrasts" %in% names(pgx)) {
     stop("[pgx.computePGX] FATAL:: no contrasts in object")
   }
+  if (!all(grepl("_vs_",colnames(pgx$contrasts)))) {
+    stop("[pgx.computePGX] FATAL:: all contrast names must include _vs_")
+  }
 
   ## make proper contrast matrix
   contr.matrix <- pgx$contrasts
@@ -537,7 +541,7 @@ pgx.computePGX <- function(pgx,
   is.numcontrast <- all(contr.values %in% c(NA, -1, 0, 1))
   is.numcontrast <- is.numcontrast && (-1 %in% contr.values) && (1 %in% contr.values)
   if (!is.numcontrast) {
-    contr.matrix <- playbase::makeContrastsFromLabelMatrix(contr.matrix)
+    contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
     contr.matrix <- sign(contr.matrix) ## sign is fine
   }
 
@@ -550,11 +554,10 @@ pgx.computePGX <- function(pgx,
   ## RETHINK?? MOVE TO PGXCREATE??
   ## -----------------------------------------------------------------------------
 
-
   ## Shrink number of genes (highest SD/var)
   if (max.genes > 0 && nrow(pgx$counts) > max.genes) {
     cat("shrinking data matrices: n=", max.genes, "\n")
-    logcpm <- playbase::logCPM(pgx$counts, total = NULL)
+    logcpm <- logCPM(pgx$counts, total = NULL)
     sdx <- apply(logcpm, 1, stats::sd)
     jj <- Matrix::head(order(-sdx), max.genes) ## how many genes?
     jj0 <- setdiff(seq_len(nrow(pgx$counts)), jj)
@@ -586,7 +589,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
   message("[pgx.computePGX] testing genes...")
 
-  pgx <- playbase::compute_testGenes(
+  pgx <- compute_testGenes(
     pgx, contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
@@ -598,7 +601,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
   message("[pgx.computePGX] testing genesets...")
-  pgx <- playbase::compute_testGenesets(
+  pgx <- compute_testGenesets(
     pgx,
     custom.geneset = custom.geneset,
     max.features = max.genesets,
@@ -611,11 +614,11 @@ pgx.computePGX <- function(pgx,
     pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset")
   }
 
-
   ## ------------------ extra analyses ---------------------
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
   message("[pgx.computePGX] computing extra modules...")
-  pgx <- compute_extra(pgx,
+  pgx <- compute_extra(
+    pgx,
     extra = extra.methods,
     pgx.dir = pgx.dir,
     libx.dir = libx.dir
