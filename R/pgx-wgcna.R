@@ -80,9 +80,12 @@ pgx.wgcna <- function(
 
   ## get topSD matrix
   X <- as.matrix(pgx$X)
-  X <- X[order(-apply(X, 1, stats::sd, na.rm = TRUE)), ]
+  sdx <- matrixStats::rowSds(X, na.rm=TRUE)
+  X <- X[ sdx > 0.1*mean(sdx, na.rm=TRUE), ]  ## filter low SD
+  X <- X[order(-matrixStats::rowSds(X, na.rm=TRUE)), ]
   X <- X[!duplicated(rownames(X)), ]
-  datExpr <- t(utils::head(X, ngenes))
+  X <- utils::head(X, ngenes)
+  datExpr <- t(X)
 
   ## adapt for small datasets
   minmodsize <- 30
