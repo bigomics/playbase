@@ -428,10 +428,11 @@ pgx.gene_table <- function(pgx, organism) {
 #' in a gene expression matrix when not explicitly provided.
 #'
 #' @examples
+#' \dontrun{
 #' probes <- probes <- c("NM_001081979", "NM_001081980", "NM_001081981", "NM_001081982", "NM_001081983")
 #' organism <- "Mouse"
 #' type <- detect_probe_DEPRECATED(probes, organism)
-#' 
+#' }
 #' @export
 detect_probe_DEPRECATED <- function(probes, organism) {
 
@@ -495,11 +496,10 @@ detect_probe_DEPRECATED <- function(probes, organism) {
 #' reformatted data frame with feature identifiers as row names.
 #' 
 #' @examples
-#' probes <- head(rownames(counts), 100)
-#' probe_type <- "ENSEMBL"
-#' organism <- "Human"
-#' annotation <- ngs.getGeneAnnotation_DEPRECATED(probes, probe_type, organism)
-#'
+#' \dontrun{
+#' probes <- c("ENSMUSG00000051951", "ENSMUSG00000033845")
+#' annot <- ngs.getGeneAnnotation_DEPRECATED(probes, "ENSEMBL", organism = "Mouse")
+#'}
 #' @export
 ngs.getGeneAnnotation_DEPRECATED <- function(probes, probe_type, organism) {
   
