@@ -734,7 +734,8 @@ fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
     check.names = check.names
   )
   ## check&correct for truncated header
-  hdr <- colnames(read.csv(file, nrow = 1, sep = sep, header = TRUE))
+  hdr <- colnames(read.csv(file, nrow = 1, sep = sep, header = TRUE,
+    row.names = 1, check.names = check.names))
   if (!all(colnames(x) == hdr)) {
     colnames(x) <- hdr
   }
