@@ -531,7 +531,7 @@ pgx.computePGX <- function(pgx,
   if (!"contrasts" %in% names(pgx)) {
     stop("[pgx.computePGX] FATAL:: no contrasts in object")
   }
-  if (!all(grepl("_vs_",colnames(pgx$contrasts)))) {
+  if (!all(grepl("_vs_", colnames(pgx$contrasts)))) {
     stop("[pgx.computePGX] FATAL:: all contrast names must include _vs_")
   }
 
