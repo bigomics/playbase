@@ -707,27 +707,49 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
     blank.lines.skip = TRUE,
     stringsAsFactors = FALSE
   )
+
   x <- NULL
   ## drop rows without rownames
   sel <- which(!as.character(x0[[1]]) %in% c("", " ", "NA", "na", NA))
 
-  ## get values from second column forward and take first column as rownames
-
+  ## get values from second column forward and take first column as
+  ## rownames. as.matrix means we do not have mixed types (such as in
+  ## dataframes).
   if (length(sel)) {
     x <- as.matrix(x0[sel, -1, drop = FALSE]) ## always as matrix
     rownames(x) <- x0[[1]][sel]
   }
-  ## drop any rows with 100% missing value (sometimes added by not-so-Excel...)
-  if (!skip_row_check) { # Flag to bypass (used on contrast.csv ingest), as it can contain full NA rows
-    zero.row <- which(rowSums(is.na(x)) == ncol(x))
-    if (length(zero.row)) {
-      x <- x[-zero.row, , drop = FALSE]
-    }
+
+  ## for character matrix, we strip whitespace
+  if(is.character(x)) {
+    x <- trimws(x)
   }
-  ## drop any 100% missing columns (sometimes added by not-so-Excel...)
-  zero.col <- which(colSums(is.na(x)) == nrow(x))
-  if (length(zero.col)) {
-    x <- x[, -zero.col, drop = FALSE]
+
+  ## For csv with missing rownames field at (1,1) in the header,
+  ## fill=TRUE will fail. Check header with slow read.csv() and
+  ## correct if needed. fread is fast but is not so robust...
+  hdr <- utils::read.csv(file = file, check.names = FALSE, 
+    header = TRUE, nrows=2, row.names=1)
+  if(!all(colnames(x) == colnames(hdr))) {
+    message("read.as_matrix: warning correcting missing rownames field in header")
+    colnames(x) <- colnames(hdr)
+  }
+  
+  ## some csv have trailing empty rows at end of table
+  if (!skip_row_check) { # Flag to bypass (used on contrast.csv ingest), as it can contain full NA rows
+    empty.row <- (rowSums(is.na(x)) == ncol(x))
+    if(tail(empty.row,1)) {
+      n <- which(!rev(empty.row))[1] - 1          
+      ii <- (nrow(x)-n+1):nrow(x)
+      x <- x[-empty.row, , drop = FALSE]
+    }
+    ## some csv have trailing empty columns at end of table
+    empty.col <- (colSums(is.na(x)) == nrow(x))
+    if (tail(empty.col,1)) {
+      n <- which(!rev(empty.col))[1] - 1          
+      ii <- (ncol(x)-n+1):ncol(x)
+      x <- x[, -empty.col, drop = FALSE]
+    }
   }
   return(x)
 }
