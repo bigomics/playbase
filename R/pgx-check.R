@@ -74,15 +74,6 @@ pgx.checkINPUT <- function(
   }
 
   if (datatype == "CONTRASTS") {
-    ## convert contrast matrix from numeric to descriptive
-    is.numbered <- all(unique(as.vector(df_clean)) %in% c(-1, 0, 1))
-    is.numbered <- all(sapply(utils::type.convert(data.frame(df_clean), as.is = TRUE), class) %in% c("numeric", "integer"))
-    ct.type <- c("labeled (new style)", "numbered (old style)")[1 + 1 * is.numbered]
-    is.numbered
-    if (is.numbered && ncol(df_clean) > 0) {
-      df_clean <- contrastAsLabels(df_clean)
-    }
-    
     feature_names <- rownames(df_clean)
 
     # check for duplicated rownames (but pass)
