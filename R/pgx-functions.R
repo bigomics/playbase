@@ -618,63 +618,6 @@ trimsame0 <- function(s, split = " ", summarize = FALSE, rev = FALSE) {
 }
 
 
-#' Read CSV file with automatic separator detection
-#'
-#' @param file Path to input CSV file
-#' @param as_matrix Logical indicating whether to return a matrix instead of a data frame. Default is FALSE.
-#'
-#' @return Data frame or matrix containing data from the CSV file.
-#'
-#' @details This function reads a CSV file and automatically detects the separator character (tab, comma, or semicolon).
-#' It returns the contents as a data frame or matrix. Duplicate row names are avoided by removing blank and duplicate ID rows.
-#'
-#' The file can contain comments starting with # character. Columns are read as character vectors by default.
-#' Setting as_matrix=TRUE will return a matrix instead of a data frame if possible.
-#'
-#' @examples
-#' \dontrun{
-#' dat <- read.csv3("data.csv")
-#' mat <- read.csv3("matrix.csv", as_matrix = TRUE)
-#' }
-#' @export
-read.csv3 <- function(file, as_matrix = FALSE) {
-  ## read delimited table automatically determine separator. Avoid
-  ## duplicated rownames.
-  line1 <- as.character(utils::read.csv(file, comment.char = "#", sep = "\n", nrow = 1)[1, ])
-  sep <- names(which.max(sapply(c("\t", ",", ";"), function(s) length(strsplit(line1, split = s)[[1]]))))
-  sep
-  x <- data.table::fread(file, sep = sep, check.names = FALSE, stringsAsFactors = FALSE, header = TRUE)
-  x <- as.data.frame(x)
-  x <- x[grep("^#", x[[1]], invert = TRUE), , drop = FALSE] ## drop comments
-  xnames <- as.character(x[, 1])
-  sel <- which(xnames != "" & !duplicated(xnames))
-  x <- x[sel, -1, drop = FALSE]
-  if (as_matrix) x <- as.matrix(x)
-  if (length(sel)) {
-    rownames(x) <- xnames[sel]
-  }
-
-  return(x)
-}
-
-
-#' @describeIn read.as_matrix Save as matrix in a file.
-#' @export
-read.as_matrix.SAVE <- function(file) {
-  ## read delimited table automatically determine separator. allow duplicated rownames.
-  line1 <- as.character(utils::read.csv(file, comment.char = "#", sep = "\n", nrow = 1)[1, ])
-  sep <- names(which.max(sapply(c("\t", ",", ";"), function(s) length(strsplit(line1, split = s)[[1]]))))
-  x0 <- utils::read.csv(file, comment.char = "#", sep = sep, check.names = FALSE, stringsAsFactors = FALSE)
-  x <- NULL
-  sel <- which(!as.character(x0[, 1]) %in% c("", " ", "NA", "na", NA))
-  if (length(sel)) {
-    x <- as.matrix(x0[sel, -1, drop = FALSE]) ## always as matrix
-    rownames(x) <- x0[sel, 1]
-  }
-  return(x)
-}
-
-
 #' Read data file as matrix
 #'
 #' @param file Path to input data file
@@ -777,7 +720,6 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
 #' \dontrun{
 #' dat <- fread.csv("data.csv")
 #' }
-
 #' @export
 fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
                       stringsAsFactors = FALSE, header = TRUE, asMatrix = TRUE) {
@@ -789,6 +731,11 @@ fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
     stringsAsFactors = stringsAsFactors,
     check.names = check.names
   )
+  ## check&correct for truncated header
+  hdr <- colnames(read.csv(file,nrow=1,sep=sep,header=TRUE))
+  if(!all(colnames(x)==hdr)) {
+    colnames(x) <-  hdr
+  }
   is.num <- all(sapply(x, class) == "numeric")
   is.char <- all(sapply(x, class) == "character")
   is.int <- all(sapply(x, class) == "integer")
