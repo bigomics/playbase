@@ -734,6 +734,11 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
 #'
 #' @export
 makeContrastsFromLabelMatrix <- function(lab.matrix) {
+
+  if (!all(grepl("_vs_",colnames(lab.matrix)))) {
+    stop("[makeContrastsFromLabelMatrix] FATAL:: all contrast names must include _vs_")
+  }
+
   ct.names <- colnames(lab.matrix)
   main.grp <- sapply(strsplit(ct.names, split = "_vs_"), "[", 1)
   ctrl.grp <- sapply(strsplit(ct.names, split = "_vs_"), "[", 2)
