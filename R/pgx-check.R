@@ -110,9 +110,7 @@ pgx.checkINPUT <- function(
       if(any(!CONTRASTS_GROUPS_MISSING) && PASS){
         check_return$e22 <- colnames(df_clean)[!CONTRASTS_GROUPS_MISSING]
         df_clean <- df_clean[, CONTRASTS_GROUPS_MISSING, drop = FALSE]
-        PASS <- TRUE
       }
-      
     }
   }
 
@@ -127,7 +125,7 @@ pgx.checkINPUT <- function(
 
   if (IS_DF_EMPTY && PASS) {
     check_return$e15 <- "empty dataframe"
-    pass <- FALSE
+    PASS <- FALSE
   }
 
   return(
@@ -152,12 +150,13 @@ pgx.checkINPUT <- function(
 pgx.crosscheckINPUT <- function(
     SAMPLES = NULL,
     COUNTS = NULL,
-    CONTRASTS = NULL) {
+    CONTRASTS = NULL,
+    PASS = TRUE) {
 
   samples <- SAMPLES
   counts <- COUNTS
   contrasts <- CONTRASTS
-  PASS <- TRUE
+  PASS <- PASS
   check_return <- list()
 
   if (!is.null(samples) && !is.null(counts)) {
