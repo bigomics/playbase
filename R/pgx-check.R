@@ -83,6 +83,35 @@ pgx.checkINPUT <- function(
       check_return$e11 <- ANY_DUPLICATED
       PASS <- FALSE
     }
+    browser()
+
+    # check that numerator_vs_denominator is in the contrasts
+
+    # Split the column names at "_vs_"
+    split_names <- strsplit(colnames(df_clean), "_vs_")
+
+    # Get the numerators and denominators
+    numerators <- sapply(split_names, "[[", 1)
+    denominators <- sapply(split_names, "[[", 2)
+    # Check if all elements in the matrix are character
+    all_numeric <- any(apply(df_clean, c(1, 2), is.numeric))
+
+    if (!all_numeric && PASS) {
+      # only run if we have characters in matrix
+      NUMERATORS_IN_COLUMN <- sapply(1:length(numerators), function(i){numerators[i] %in% df_clean[,i]})
+      DENOMINATORS_IN_COLUMN <- sapply(1:length(denominators), function(i){denominators[i] %in% df_clean[,i]})
+
+      CONTRASTS_GROUPS_MISSING <- NUMERATORS_IN_COLUMN & DENOMINATORS_IN_COLUMN
+
+      if(any(!CONTRASTS_GROUPS_MISSING)){
+        check_return$e22 <- colnames(df_clean)[!CONTRASTS_GROUPS_MISSING]
+        PASS <- TRUE
+      }
+      if(all(!CONTRASTS_GROUPS_MISSING)){
+        check_return$e23 <- "All comparisons were invalid."
+        PASS <- FALSE
+      }
+    }
   }
 
   # general checks for all data datatypes
@@ -188,7 +217,7 @@ pgx.crosscheckINPUT <- function(
 
   if (!is.null(samples) && !is.null(contrasts)) {
     # Conver contrasts and Check that rows names of contrasts match rownames of samples.
-    contrasts_check_results <- contrasts_conversion_check(samples, contrasts, PASS)
+    contrasts_check_results <- playbase::contrasts_conversion_check(samples, contrasts, PASS)
 
     if (contrasts_check_results$PASS == FALSE && PASS) {
       PASS <- FALSE
@@ -207,11 +236,11 @@ pgx.crosscheckINPUT <- function(
         setdiff(rownames(contrasts), rownames(samples))
       )
     }
-
     if (length(SAMPLE_NAMES_NOT_MATCHING_CONTRASTS) > 0 && PASS) {
       check_return$e17 <- SAMPLE_NAMES_NOT_MATCHING_CONTRASTS
     }
   }
+
   return(
     list(
       SAMPLES = samples,
