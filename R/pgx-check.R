@@ -117,7 +117,7 @@ pgx.checkINPUT <- function(
   # general checks for all data datatypes
 
   # check for empty df
-  IS_DF_EMPTY <- dim(df_clean)[1] == 0 || dim(df_clean)[2] == 0
+  IS_DF_EMPTY <- any(dim(df_clean) == 0)
 
   if (!IS_DF_EMPTY) {
     df_clean <- as.matrix(df_clean)
@@ -218,7 +218,7 @@ pgx.crosscheckINPUT <- function(
 
   if (!is.null(samples) && !is.null(contrasts)) {
     # Conver contrasts and Check that rows names of contrasts match rownames of samples.
-    contrasts_check_results <- playbase::contrasts_conversion_check(samples, contrasts, PASS)
+    contrasts_check_results <- contrasts_conversion_check(samples, contrasts, PASS)
 
     if (contrasts_check_results$PASS == FALSE && PASS) {
       PASS <- FALSE
