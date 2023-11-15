@@ -105,6 +105,7 @@ pgx.checkINPUT <- function(
 
       if(any(!CONTRASTS_GROUPS_MISSING)){
         check_return$e22 <- colnames(df_clean)[!CONTRASTS_GROUPS_MISSING]
+        df_clean <- df_clean[, CONTRASTS_GROUPS_MISSING, drop = FALSE]
         PASS <- TRUE
       }
       if(all(!CONTRASTS_GROUPS_MISSING)){
