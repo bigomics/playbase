@@ -76,9 +76,8 @@ pgx.wgcna <- function(
     cutheight = 0.25,
     deepsplit = 2,
     ngenes = 1000) {
-
   ## if we dont source WGCNA, blockwiseModules does not work..
-  require(WGCNA) 
+  require(WGCNA)
 
   ## get topSD matrix
   X <- as.matrix(pgx$X)
@@ -128,7 +127,7 @@ pgx.wgcna <- function(
   tr1 <- datTraits[, 0]
   if (length(sel1)) {
     tr1 <- expandPhenoMatrix(datTraits[, sel1, drop = FALSE], drop.ref = FALSE)
-    if(is.null(tr1)) tr1 <- datTraits[, 0]
+    if (is.null(tr1)) tr1 <- datTraits[, 0]
   }
   ## keeping numeric phenotypes
   tr2 <- datTraits[, sel2, drop = FALSE]
