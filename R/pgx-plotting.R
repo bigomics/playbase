@@ -3469,6 +3469,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     showlegend = FALSE
   )
 
+  ## plot NA values as light grey
   any(is.na(df$value))
   if (any(is.na(df$value))) {
     jj <- which(is.na(df$value))
@@ -3491,6 +3492,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
       )
   }
 
+  ## plot not missing values
   jj <- which(!is.na(df$value))
   plt <- plt %>%
     plotly::add_markers(
@@ -3514,6 +3516,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
       type = "scattergl"
     )
 
+  ## plot hilighted points
   if (!is.null(hilight)) {
     jj <- which(rownames(df) %in% hilight)
     col1 <- "transparent"
@@ -3542,6 +3545,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
       )
   }
 
+  ## plot hilighted points with label  
   if (!is.null(hilight2)) {
     jj <- which(rownames(df) %in% hilight2)
     plt <- plt %>%
@@ -3558,7 +3562,8 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
         xref = "x", yref = "y"
       )
   }
-  ## label cluster
+  
+  ## cluster labels
   if (label.clusters) {
     mpos <- apply(pos, 2, function(x) tapply(x, z1, stats::median))
     # If there is only one cluster
@@ -3571,9 +3576,11 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
 
     plt <- plt %>%
       plotly::add_annotations(
-        x = mpos[, 1], y = mpos[, 2],
-        showarrow = FALSE, text = mlab,
-        font = list(size = 15 * cex.clust),
+        x = mpos[, 1],
+        y = mpos[, 2],
+        showarrow = FALSE,
+        text = paste0("<b>",mlab,"</b>"),
+        font = list(size = 16 * cex.clust),
         xref = "x", yref = "y"
       )
   }
