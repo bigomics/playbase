@@ -83,7 +83,6 @@ pgx.checkINPUT <- function(
       check_return$e11 <- ANY_DUPLICATED
       PASS <- FALSE
     }
-    browser()
 
     # check that numerator_vs_denominator is in the contrasts
 
