@@ -229,7 +229,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         title_cex = 1.2, column_title_rot = 0, column_names_rot = 90,
                         show_legend = TRUE, show_key = TRUE, zlim = NULL,
                         show_rownames = nmax, lab.len = 80, key.offset = c(0.05, 1.01),
-                        show_colnames = NULL, use.nclust = FALSE) {
+                        show_colnames = NULL, use.nclust = FALSE, data = FALSE) {
   ComplexHeatmap::ht_global_opt(fast_hclust = TRUE)
   graphics::par(xpd = FALSE)
 
@@ -561,6 +561,11 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
 
     ## Here NA goes wrong... distance calc should be done manually
     gx0[is.na(gx0)] <- mean(gx0, na.rm = TRUE) ## TEMPORARY HACK!!
+
+    # Get plot data (for csv downloads)
+    if(data) {
+      return(gx0)
+    }
 
     hmap <- hmap + ComplexHeatmap::Heatmap(gx0,
       col = col_scale, ## from input

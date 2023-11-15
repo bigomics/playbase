@@ -894,7 +894,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
                         psig = 0.05, fc = 1, cex = 1, cex.lab = 1, ntop = 20,
                         p.min = NULL, fc.max = NULL, hilight = NULL, #
                         cpal = c("grey60", "red3"), title = NULL,
-                        plotlib = "base") {
+                        plotlib = "base", data = FALSE) {
   if (is.integer(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
   res <- NULL
   if (level == "gene") {
@@ -925,6 +925,10 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   }
   if (!is.null(p.min)) {
     ylim <- c(0, -log10(p.min))
+  }
+
+  if (data) {
+    return(xy)
   }
 
   if (is.null(title)) title <- contrast
@@ -958,7 +962,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
 #' @export
 pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
                        cex = 1, cex.lab = 0.8, hilight = NULL, ntop = 20,
-                       plotlib = "base") {
+                       plotlib = "base", data = FALSE) {
   if (is.integer(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
 
   if (level == "gene") {
@@ -987,6 +991,10 @@ pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
     hilight <- intersect(hilight, names(sig[sig == TRUE]))
   }
   hilight <- Matrix::head(hilight, ntop)
+
+  if (data) {
+    return(xy)
+  }
 
   p <- pgx.scatterPlotXY(
     xy,
@@ -1020,7 +1028,8 @@ pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
 pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
                                 cex = 1, cex.lab = 0.8,
                                 psig = 0.05, fc = 1, level = "gene",
-                                ntop = 20, dir = 0, plotlib = "base") {
+                                ntop = 20, dir = 0, plotlib = "base",
+                                data = FALSE) {
   if (is.numeric(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
   exp.matrix <- pgx$model.parameters$exp.matrix
   ct <- exp.matrix[, contrast]
@@ -1073,6 +1082,10 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
 
   tt <- contrast
 
+  if (data) {
+    return(xy)
+  }
+
   pgx.scatterPlotXY(
     xy,
     var = sig, type = "factor", title = tt,
@@ -1107,7 +1120,8 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
                              pos = NULL, ntop = 20, cex = 1, cex.lab = 0.8,
                              hilight = NULL, title = NULL, zfix = FALSE,
                              set.par = TRUE, par.sq = FALSE,
-                             level = "gene", plotlib = "ggplot") {
+                             level = "gene", plotlib = "ggplot",
+                             data = FALSE) {
   if (!is.null(contrast)) {
     if (is.numeric(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
     res <- NULL
@@ -1168,6 +1182,12 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
     hilight1 <- Matrix::head(hilight1, ntop) ## label
     opacity <- ifelse(length(hilight1) > 0, 0.66, 1)
 
+    if(data){
+      return(
+        cbind(xy ,f1)
+      )
+    }
+
     p1 <- pgx.scatterPlotXY(
       xy,
       var = f1, type = "numeric",
@@ -1187,6 +1207,11 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
   if (plotlib == "base") {
     return()
   }
+  
+  # if (plotlib == "data") {
+  #   browser()
+  #   return()
+  # }
   if (length(plist) == 1) plist <- plist[[1]]
   return(plist)
 }
