@@ -102,15 +102,17 @@ pgx.checkINPUT <- function(
 
       CONTRASTS_GROUPS_MISSING <- NUMERATORS_IN_COLUMN & DENOMINATORS_IN_COLUMN
 
-      if(any(!CONTRASTS_GROUPS_MISSING)){
+      if(all(!CONTRASTS_GROUPS_MISSING) && PASS){
+        check_return$e23 <- "All comparisons were invalid."
+        PASS <- FALSE
+      }
+
+      if(any(!CONTRASTS_GROUPS_MISSING) && PASS){
         check_return$e22 <- colnames(df_clean)[!CONTRASTS_GROUPS_MISSING]
         df_clean <- df_clean[, CONTRASTS_GROUPS_MISSING, drop = FALSE]
         PASS <- TRUE
       }
-      if(all(!CONTRASTS_GROUPS_MISSING)){
-        check_return$e23 <- "All comparisons were invalid."
-        PASS <- FALSE
-      }
+      
     }
   }
 
