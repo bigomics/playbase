@@ -219,22 +219,20 @@ pgx.crosscheckINPUT <- function(
 #' @return converted contrast df
 #' @export
 contrasts_conversion_check <- function(SAMPLES, CONTRASTS, PASS) {
-
   samples1 <- SAMPLES
-  contrasts1 <- contrasts.convertToLabelMatrix(CONTRASTS, SAMPLES) 
+  contrasts1 <- contrasts.convertToLabelMatrix(CONTRASTS, SAMPLES)
 
   ok.contrast <- length(intersect(rownames(samples1), rownames(contrasts1))) > 0
   if (ok.contrast && NCOL(contrasts1) > 0 && PASS) {
-    
     # check that dimentions of contrasts match samples
     if (dim(contrasts1)[1] != dim(samples1)[1] && PASS) {
-      message("[contrasts_conversion_check] WARNING: numrows of contrast1 do not match samples!")      
+      message("[contrasts_conversion_check] WARNING: numrows of contrast1 do not match samples!")
       PASS <- FALSE
       return(list(CONTRASTS = contrasts1, PASS = PASS))
     }
-    dbg("[contrasts_conversion_check] dim.CONTRASTS =",dim(CONTRASTS))
-    dbg("[contrasts_conversion_check] dim.contrasts1 =",dim(contrasts1))
-    dbg("[contrasts_conversion_check] dim.samples1 =",dim(samples1))          
+    dbg("[contrasts_conversion_check] dim.CONTRASTS =", dim(CONTRASTS))
+    dbg("[contrasts_conversion_check] dim.contrasts1 =", dim(contrasts1))
+    dbg("[contrasts_conversion_check] dim.samples1 =", dim(samples1))
     rownames(contrasts1) <- rownames(samples1)
     for (i in 1:ncol(contrasts1)) {
       isz <- (contrasts1[, i] %in% c(NA, "NA", "NA ", "", " ", "  ", "   ", " NA"))
@@ -247,30 +245,30 @@ contrasts_conversion_check <- function(SAMPLES, CONTRASTS, PASS) {
 contrasts_conversion_check.SAVE <- function(SAMPLES, CONTRASTS, PASS) {
   samples1 <- SAMPLES
   contrasts1 <- CONTRASTS
-  PASS <- PASS  ##???
+  PASS <- PASS ## ???
 
   group.col <- grep("group", tolower(colnames(samples1)))
   is.numeric.contrast <- all(as.vector(unlist(contrasts1)) %in% c(-1, 0, 1, NA))
   is.numeric.contrast
   ## old1: group-wise -1/0/1 matrix
   old1 <- (length(group.col) > 0 &&
-             nrow(contrasts1) < nrow(samples1) &&
-             all(rownames(contrasts1) %in% samples1[, group.col[1]]) &&
-             is.numeric.contrast)
-  ## old2: sample-wise -1/0/1 matrix  
+    nrow(contrasts1) < nrow(samples1) &&
+    all(rownames(contrasts1) %in% samples1[, group.col[1]]) &&
+    is.numeric.contrast)
+  ## old2: sample-wise -1/0/1 matrix
   old2 <- (nrow(contrasts1) == nrow(samples1) &&
-             all(rownames(contrasts1) == rownames(samples1)) &&
-             is.numeric.contrast )
+    all(rownames(contrasts1) == rownames(samples1)) &&
+    is.numeric.contrast)
   ## old3: group-wise label matrix
   old3 <- (length(group.col) > 0 &&
-             nrow(contrasts1) < nrow(samples1) &&
-             all(rownames(contrasts1) %in% samples1[, group.col[1]]) &&
-             !is.numeric.contrast)  
-  
+    nrow(contrasts1) < nrow(samples1) &&
+    all(rownames(contrasts1) %in% samples1[, group.col[1]]) &&
+    !is.numeric.contrast)
+
   old1
   old2
   old3
-  
+
   old.style <- (old1 || old2 || old3)
   if (old.style && old1) {
     message("[contrasts_conversion_check] WARNING: converting old1 style contrast to new format")
@@ -310,13 +308,13 @@ contrasts_conversion_check.SAVE <- function(SAMPLES, CONTRASTS, PASS) {
 
     # check that dimentions of contrasts match samples
     if (dim(contrasts1)[1] != dim(samples1)[1] && PASS) {
-      message("[contrasts_conversion_check] WARNING: numrows of contrast1 do not match samples!")      
+      message("[contrasts_conversion_check] WARNING: numrows of contrast1 do not match samples!")
       PASS <- FALSE
       return(list(CONTRASTS = contrasts1, PASS = PASS))
     }
-    dbg("[contrasts_conversion_check] dim.CONTRASTS =",dim(CONTRASTS))
-    dbg("[contrasts_conversion_check] dim.contrasts1 =",dim(contrasts1))
-    dbg("[contrasts_conversion_check] dim.samples1 =",dim(samples1))          
+    dbg("[contrasts_conversion_check] dim.CONTRASTS =", dim(CONTRASTS))
+    dbg("[contrasts_conversion_check] dim.contrasts1 =", dim(contrasts1))
+    dbg("[contrasts_conversion_check] dim.samples1 =", dim(samples1))
     rownames(contrasts1) <- rownames(samples1)
     for (i in 1:ncol(contrasts1)) {
       isz <- (contrasts1[, i] %in% c(NA, "NA", "NA ", "", " ", "  ", "   ", " NA"))

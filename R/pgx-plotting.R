@@ -3545,7 +3545,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
       )
   }
 
-  ## plot hilighted points with label  
+  ## plot hilighted points with label
   if (!is.null(hilight2)) {
     jj <- which(rownames(df) %in% hilight2)
     plt <- plt %>%
@@ -3562,7 +3562,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
         xref = "x", yref = "y"
       )
   }
-  
+
   ## cluster labels
   if (label.clusters) {
     mpos <- apply(pos, 2, function(x) tapply(x, z1, stats::median))
@@ -3579,7 +3579,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
         x = mpos[, 1],
         y = mpos[, 2],
         showarrow = FALSE,
-        text = paste0("<b>",mlab,"</b>"),
+        text = paste0("<b>", mlab, "</b>"),
         font = list(size = 16 * cex.clust),
         xref = "x", yref = "y"
       )
