@@ -186,31 +186,35 @@ pgx.readOptions <- function(file = "./OPTIONS") {
 
 
 #' @export
-cached.csv <- function(file, FUN=read.csv, ...) {
-  file2 <- paste0("cache-",gsub("[-._/]","",file),".rds")
+cached.csv <- function(file, FUN = read.csv, ...) {
+  file2 <- paste0("cache-", gsub("[-._/]", "", file), ".rds")
   file2
-  cache.file <- file.path("/tmp",file2)
-  if(!file.exists(cache.file)) {
+  cache.file <- file.path("/tmp", file2)
+  if (!file.exists(cache.file)) {
     csv <- FUN(file, ...)
-    saveRDS(csv, file=cache.file)
+    saveRDS(csv, file = cache.file)
   } else {
     csv <- readRDS(cache.file)
   }
   csv
-}  
+}
 
 #' @export
-cached.csv.s3 <- function(file, bucket, FUN=read.csv, ...) {
-  file2 <- paste0("s3cache-",gsub("[-._/]","",file),".rds")
+cached.csv.s3 <- function(file, bucket, FUN = read.csv, ...) {
+  file2 <- paste0("s3cache-", gsub("[-._/]", "", file), ".rds")
   file2
-  cache.file <- file.path("/tmp",file2)
-  if(!file.exists(cache.file)) {
+  cache.file <- file.path("/tmp", file2)
+  if (!file.exists(cache.file)) {
     obj <- aws.s3::get_object(object = file, bucket = bucket)
+<<<<<<< HEAD
     csv <- data.table::fread(rawToChar(obj))
     saveRDS(csv, file=cache.file)
+=======
+    csv <- FUN(rawToChar(obj), ...)
+    saveRDS(csv, file = cache.file)
+>>>>>>> b2d08374da8a757d204bf5352fa3b3407ef601ac
   } else {
     csv <- readRDS(cache.file)
   }
   csv
-}  
-
+}
