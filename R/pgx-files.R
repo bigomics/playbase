@@ -186,12 +186,12 @@ pgx.readOptions <- function(file = "./OPTIONS") {
 
 
 #' @export
-cached.csv <- function(file, ...) {
+cached.csv <- function(file, FUN=read.csv, ...) {
   file2 <- paste0("cache-",gsub("[-._/]","",file),".rds")
   file2
   cache.file <- file.path("/tmp",file2)
   if(!file.exists(cache.file)) {
-    csv <- data.table::fread(file, ...)
+    csv <- FUN(file, ...)
     saveRDS(csv, file=cache.file)
   } else {
     csv <- readRDS(cache.file)
@@ -200,13 +200,13 @@ cached.csv <- function(file, ...) {
 }  
 
 #' @export
-cached.csv.s3 <- function(file, bucket, ...) {
+cached.csv.s3 <- function(file, bucket, FUN=read.csv, ...) {
   file2 <- paste0("s3cache-",gsub("[-._/]","",file),".rds")
   file2
   cache.file <- file.path("/tmp",file2)
   if(!file.exists(cache.file)) {
     obj <- aws.s3::get_object(object = file, bucket = bucket)
-    csv <- data.table::fread(rawToChar(obj)
+    csv <- FUN(rawToChar(obj), ...)
     saveRDS(csv, file=cache.file)
   } else {
     csv <- readRDS(cache.file)
