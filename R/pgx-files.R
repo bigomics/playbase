@@ -207,7 +207,7 @@ cached.csv.s3 <- function(file, bucket, FUN = read.csv, ...) {
   if (!file.exists(cache.file)) {
     obj <- aws.s3::get_object(object = file, bucket = bucket)
     csv <- data.table::fread(rawToChar(obj))
-    saveRDS(csv, file=cache.file)
+    saveRDS(csv, file = cache.file)
   } else {
     csv <- readRDS(cache.file)
   }
