@@ -686,14 +686,14 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
     if (tail(empty.row, 1)) {
       n <- which(!rev(empty.row))[1] - 1
       ii <- (nrow(x) - n + 1):nrow(x)
-      x <- x[-empty.row, , drop = FALSE]
+      x <- x[-ii, , drop = FALSE]
     }
     ## some csv have trailing empty columns at end of table
     empty.col <- (colSums(is.na(x)) == nrow(x))
     if (tail(empty.col, 1)) {
       n <- which(!rev(empty.col))[1] - 1
       ii <- (ncol(x) - n + 1):ncol(x)
-      x <- x[, -empty.col, drop = FALSE]
+      x <- x[, -ii, drop = FALSE]
     }
   }
   return(x)
