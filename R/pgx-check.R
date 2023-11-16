@@ -97,17 +97,21 @@ pgx.checkINPUT <- function(
 
     if (!all_numeric && PASS) {
       # only run if we have characters in matrix
-      NUMERATORS_IN_COLUMN <- sapply(1:length(numerators), function(i){numerators[i] %in% df_clean[,i]})
-      DENOMINATORS_IN_COLUMN <- sapply(1:length(denominators), function(i){denominators[i] %in% df_clean[,i]})
+      NUMERATORS_IN_COLUMN <- sapply(1:length(numerators), function(i) {
+        numerators[i] %in% df_clean[, i]
+      })
+      DENOMINATORS_IN_COLUMN <- sapply(1:length(denominators), function(i) {
+        denominators[i] %in% df_clean[, i]
+      })
 
       CONTRASTS_GROUPS_MISSING <- NUMERATORS_IN_COLUMN & DENOMINATORS_IN_COLUMN
 
-      if(all(!CONTRASTS_GROUPS_MISSING) && PASS){
+      if (all(!CONTRASTS_GROUPS_MISSING) && PASS) {
         check_return$e23 <- "All comparisons were invalid."
         PASS <- FALSE
       }
 
-      if(any(!CONTRASTS_GROUPS_MISSING) && PASS){
+      if (any(!CONTRASTS_GROUPS_MISSING) && PASS) {
         check_return$e22 <- colnames(df_clean)[!CONTRASTS_GROUPS_MISSING]
         df_clean <- df_clean[, CONTRASTS_GROUPS_MISSING, drop = FALSE]
       }
@@ -152,7 +156,6 @@ pgx.crosscheckINPUT <- function(
     COUNTS = NULL,
     CONTRASTS = NULL,
     PASS = TRUE) {
-
   samples <- SAMPLES
   counts <- COUNTS
   contrasts <- CONTRASTS
@@ -163,17 +166,16 @@ pgx.crosscheckINPUT <- function(
     # Check that rownames(samples) match colnames(counts)
 
     COUNTS_NAMES_NOT_MATCHING_SAMPLES <- colnames(counts)[!colnames(counts) %in% rownames(samples)]
-      
+
     if (length(COUNTS_NAMES_NOT_MATCHING_SAMPLES) > 0 && PASS) {
       check_return$e21 <- COUNTS_NAMES_NOT_MATCHING_SAMPLES
       PASS <- TRUE
       # align counts columns with samples rownames
       samples_in_counts <- rownames(samples)[rownames(samples) %in% colnames(counts)]
       counts <- counts[, samples_in_counts, drop = FALSE]
-      
     }
     SAMPLE_NAMES_NOT_MATCHING_COUNTS <- rownames(samples)[!rownames(samples) %in% colnames(counts)]
-      
+
     if (length(SAMPLE_NAMES_NOT_MATCHING_COUNTS) > 0 && PASS) {
       check_return$e16 <- SAMPLE_NAMES_NOT_MATCHING_COUNTS
       PASS <- TRUE
