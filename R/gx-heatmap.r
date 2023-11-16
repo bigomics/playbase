@@ -563,7 +563,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     gx0[is.na(gx0)] <- mean(gx0, na.rm = TRUE) ## TEMPORARY HACK!!
 
     # Get plot data (for csv downloads)
-    if(data) {
+    if (data) {
       return(gx0)
     }
 

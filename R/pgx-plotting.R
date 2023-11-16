@@ -1182,9 +1182,9 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
     hilight1 <- Matrix::head(hilight1, ntop) ## label
     opacity <- ifelse(length(hilight1) > 0, 0.66, 1)
 
-    if(data){
+    if (data) {
       return(
-        cbind(xy ,f1)
+        cbind(xy, f1)
       )
     }
 
@@ -1207,7 +1207,7 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
   if (plotlib == "base") {
     return()
   }
-  
+
   # if (plotlib == "data") {
   #   browser()
   #   return()
