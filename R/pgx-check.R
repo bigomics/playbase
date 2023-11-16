@@ -91,6 +91,17 @@ pgx.checkINPUT <- function(
 
     # Get the numerators and denominators
     numerators <- sapply(split_names, "[[", 1)
+    split_numerators <- strsplit(numerators, ":")
+
+    # if colon is present in numerators, keep the elements after colon
+    numerators <- sapply(split_numerators, function(x) {
+      if (length(x) > 1) {
+        x[2]
+      } else {
+        x[1]
+      }
+    })
+
     denominators <- sapply(split_names, "[[", 2)
     # Check if all elements in the matrix are character
     all_numeric <- any(apply(df_clean, c(1, 2), is.numeric))
