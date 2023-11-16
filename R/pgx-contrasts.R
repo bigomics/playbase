@@ -791,7 +791,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   is.numeric.contrast
 
   ## first match of group (or condition) in colum names, regard as group column
-  group.col <- head(grep("group|condition", tolower(colnames(samples))),1)
+  group.col <- head(grep("group|condition", tolower(colnames(samples))), 1)
   if (length(group.col) == 0) {
     ## try to detect automatically
     group.col <- head(which(apply(samples, 2, function(x) all(rownames(contrasts) %in% x))), 1)
@@ -800,9 +800,9 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   has.group.col <- length(group.col) > 0
   is.group.contrast <- (nrow(contrasts) < nrow(samples)) && has.group.col
   notvalid.group.contrast <- (nrow(contrasts) < nrow(samples)) && !has.group.col
-  is.sample.contrast <- ( nrow(contrasts) == nrow(samples) &&
-                          all(rownames(contrasts) == rownames(samples)) )
-  if(notvalid.group.contrast) {
+  is.sample.contrast <- (nrow(contrasts) == nrow(samples) &&
+    all(rownames(contrasts) == rownames(samples)))
+  if (notvalid.group.contrast) {
     stop("Invalid group-wise contrast. could not find 'group' column.")
     return(NULL)
   }
