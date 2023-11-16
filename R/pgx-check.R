@@ -83,12 +83,41 @@ pgx.checkINPUT <- function(
       check_return$e11 <- ANY_DUPLICATED
       PASS <- FALSE
     }
+
+    # check that numerator_vs_denominator is in the contrasts
+
+    # Split the column names at "_vs_"
+    split_names <- strsplit(colnames(df_clean), "_vs_")
+
+    # Get the numerators and denominators
+    numerators <- sapply(split_names, "[[", 1)
+    denominators <- sapply(split_names, "[[", 2)
+    # Check if all elements in the matrix are character
+    all_numeric <- any(apply(df_clean, c(1, 2), is.numeric))
+
+    if (!all_numeric && PASS) {
+      # only run if we have characters in matrix
+      NUMERATORS_IN_COLUMN <- sapply(1:length(numerators), function(i){numerators[i] %in% df_clean[,i]})
+      DENOMINATORS_IN_COLUMN <- sapply(1:length(denominators), function(i){denominators[i] %in% df_clean[,i]})
+
+      CONTRASTS_GROUPS_MISSING <- NUMERATORS_IN_COLUMN & DENOMINATORS_IN_COLUMN
+
+      if(all(!CONTRASTS_GROUPS_MISSING) && PASS){
+        check_return$e23 <- "All comparisons were invalid."
+        PASS <- FALSE
+      }
+
+      if(any(!CONTRASTS_GROUPS_MISSING) && PASS){
+        check_return$e22 <- colnames(df_clean)[!CONTRASTS_GROUPS_MISSING]
+        df_clean <- df_clean[, CONTRASTS_GROUPS_MISSING, drop = FALSE]
+      }
+    }
   }
 
   # general checks for all data datatypes
 
   # check for empty df
-  IS_DF_EMPTY <- dim(df_clean)[1] == 0 || dim(df_clean)[2] == 0
+  IS_DF_EMPTY <- any(dim(df_clean) == 0)
 
   if (!IS_DF_EMPTY) {
     df_clean <- as.matrix(df_clean)
@@ -96,7 +125,7 @@ pgx.checkINPUT <- function(
 
   if (IS_DF_EMPTY && PASS) {
     check_return$e15 <- "empty dataframe"
-    pass <- FALSE
+    PASS <- FALSE
   }
 
   return(
@@ -121,23 +150,36 @@ pgx.checkINPUT <- function(
 pgx.crosscheckINPUT <- function(
     SAMPLES = NULL,
     COUNTS = NULL,
-    CONTRASTS = NULL) {
+    CONTRASTS = NULL,
+    PASS = TRUE) {
+
   samples <- SAMPLES
   counts <- COUNTS
   contrasts <- CONTRASTS
-  PASS <- TRUE
-
+  PASS <- PASS
   check_return <- list()
 
   if (!is.null(samples) && !is.null(counts)) {
     # Check that rownames(samples) match colnames(counts)
-    SAMPLE_NAMES_NOT_MATCHING_COUNTS <- intersect(
-      rownames(samples),
-      colnames(counts)
-    )
-    if (length(SAMPLE_NAMES_NOT_MATCHING_COUNTS) == 0 && PASS) {
-      check_return$e16 <- "Please correct your samples names in the samples and contrast files."
-      pass <- FALSE
+
+    COUNTS_NAMES_NOT_MATCHING_SAMPLES <- colnames(counts)[!colnames(counts) %in% rownames(samples)]
+      
+    if (length(COUNTS_NAMES_NOT_MATCHING_SAMPLES) > 0 && PASS) {
+      check_return$e21 <- COUNTS_NAMES_NOT_MATCHING_SAMPLES
+      PASS <- TRUE
+      # align counts columns with samples rownames
+      samples_in_counts <- rownames(samples)[rownames(samples) %in% colnames(counts)]
+      counts <- counts[, samples_in_counts, drop = FALSE]
+      
+    }
+    SAMPLE_NAMES_NOT_MATCHING_COUNTS <- rownames(samples)[!rownames(samples) %in% colnames(counts)]
+      
+    if (length(SAMPLE_NAMES_NOT_MATCHING_COUNTS) > 0 && PASS) {
+      check_return$e16 <- SAMPLE_NAMES_NOT_MATCHING_COUNTS
+      PASS <- TRUE
+      # align samples rows with counts colnames
+      counts_in_samples <- colnames(counts)[colnames(counts) %in% rownames(samples)]
+      samples <- samples[counts_in_samples, , drop = FALSE]
     }
 
     # Check that rownames(samples) match colnames(counts)
@@ -195,11 +237,11 @@ pgx.crosscheckINPUT <- function(
         setdiff(rownames(contrasts), rownames(samples))
       )
     }
-
     if (length(SAMPLE_NAMES_NOT_MATCHING_CONTRASTS) > 0 && PASS) {
       check_return$e17 <- SAMPLE_NAMES_NOT_MATCHING_CONTRASTS
     }
   }
+
   return(
     list(
       SAMPLES = samples,
