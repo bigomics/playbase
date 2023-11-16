@@ -790,8 +790,10 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   is.numeric.contrast <- all(as.vector(unlist(contrasts)) %in% num.values)
   is.numeric.contrast
 
-  group.col <- grep("group|condition", tolower(colnames(samples)))
+  ## first match of group (or condition) in colum names, regard as group column
+  group.col <- head(grep("group|condition", tolower(colnames(samples))),1)
   if (length(group.col) == 0) {
+    ## try to detect automatically
     group.col <- head(which(apply(samples, 2, function(x) all(rownames(contrasts) %in% x))), 1)
     group.col
   }
