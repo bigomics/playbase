@@ -698,7 +698,8 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
     if (as.factor) x <- factor(x, levels = c(grp0, grp1))
     x
   }
-  is.num <- all(apply(contr.matrix, 2, function(x) all(x %in% c(-1, 0, 1, NA))))
+  num.values <- c(-1, 0, 1, NA, "NA", "na", "", " ")
+  is.num <- all(apply(contr.matrix, 2, function(x) all(x %in% num.values)))
   is.num
   if (!is.num) {
     message("[contrastAsLabels] already as label!")
@@ -707,7 +708,7 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
   K <- data.frame(contr.matrix[, 0])
   i <- 1
   for (i in 1:ncol(contr.matrix)) {
-    contr <- contr.matrix[, i]
+    contr <- as.numeric(contr.matrix[, i])
     contr.name <- colnames(contr.matrix)[i]
     k1 <- contrastAsLabels.col(contr, contr.name)
     K <- cbind(K, k1)
@@ -785,31 +786,41 @@ makeContrastsFromLabelMatrix <- function(lab.matrix) {
 #' each pair of groups.
 #' @export
 contrasts.convertToLabelMatrix <- function(contrasts, samples) {
-  group.col <- grep("group|condition", tolower(colnames(samples)))
-  is.numeric.contrast <- all(as.vector(unlist(contrasts)) %in% c(-1, 0, 1, NA))
-  is.numeric.contrast
-  ## old1: group-wise -1/0/1 matrix
-  old1 <- (length(group.col) > 0 &&
-    nrow(contrasts) < nrow(samples) &&
-    all(rownames(contrasts) %in% samples[, group.col[1]]) &&
-    is.numeric.contrast)
-  ## old2: sample-wise -1/0/1 matrix
-  old2 <- (nrow(contrasts) == nrow(samples) &&
-    all(rownames(contrasts) == rownames(samples)) &&
-    is.numeric.contrast)
-  ## old3: group-wise label matrix
-  old3 <- (length(group.col) > 0 &&
-    nrow(contrasts) < nrow(samples) &&
-    all(rownames(contrasts) %in% samples[, group.col[1]]) &&
-    !is.numeric.contrast)
 
+  num.values <- c(-1, 0, 1, NA, "NA", "na", "", " ")
+  is.numeric.contrast <- all(as.vector(unlist(contrasts)) %in% num.values)
+  is.numeric.contrast
+
+  group.col <- grep("group|condition", tolower(colnames(samples)))
+  if(length(group.col)==0) {
+    group.col <- head(which(apply(samples,2,function(x) all(rownames(contrasts) %in% x))),1)
+    group.col
+  }
+  has.group.col <- length(group.col)>0
+  is.group.contrast <- (nrow(contrasts) < nrow(samples)) && has.group.col
+  is.sample.contrast <- ( nrow(contrasts) == nrow(samples) &&
+                          all(rownames(contrasts) == rownames(samples)) )
+
+  ## old1: group-wise -1/0/1 matrix
+  old1 <- (is.group.contrast && is.numeric.contrast)           
+  ## old2: sample-wise -1/0/1 matrix
+  old2 <- ( is.sample.contrast && is.numeric.contrast)
+  ## old3: group-wise label matrix
+  old3 <- (is.group.contrast && !is.numeric.contrast)
+  
+  old1
+  old2
+  old3
+    
   old.style <- (old1 || old2 || old3)
   new.contrasts <- contrasts
   if (old.style && old1) {
     message("[contrasts_conversion_check] WARNING: converting old1 style contrast to new format")
     new.contrasts <- samples[, 0]
     if (NCOL(contrasts) > 0) {
-      contrasts2 <- contrastAsLabels(contrasts)
+      contrasts2 <- apply(contrasts,2,as.numeric)
+      contrasts2 <- contrastAsLabels(contrasts2)
+      rownames(contrasts2) <- rownames(contrasts)
       grp <- as.character(samples[, group.col])
       new.contrasts <- contrasts2[grp, , drop = FALSE]
       rownames(new.contrasts) <- rownames(samples)
@@ -819,7 +830,9 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
     message("[contrasts_conversion_check] WARNING: converting old2 style contrast to new format")
     new.contrasts <- samples[, 0]
     if (NCOL(contrasts) > 0) {
-      new.contrasts <- contrastAsLabels(contrasts)
+      contrasts2 <- apply(contrasts,2,as.numeric)
+      rownames(contrasts2) <- rownames(contrasts)
+      new.contrasts <- contrastAsLabels(contrasts2)
       rownames(new.contrasts) <- rownames(samples)
     }
   }

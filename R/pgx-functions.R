@@ -672,8 +672,8 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
   ## fill=TRUE will fail. Check header with slow read.csv() and
   ## correct if needed. fread is fast but is not so robust...
   hdr <- utils::read.csv(
-    file = file, check.names = FALSE,
-    header = TRUE, nrows = 2, row.names = 1
+    file = file, check.names = FALSE, na.strings = NULL,
+    header = TRUE, nrows = 1, row.names = 1
   )
   if (!all(colnames(x) == colnames(hdr))) {
     message("read.as_matrix: warning correcting missing rownames field in header")
