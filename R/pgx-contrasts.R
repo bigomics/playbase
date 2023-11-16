@@ -698,9 +698,9 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
     if (as.factor) x <- factor(x, levels = c(grp0, grp1))
     x
   }
-  is.num <- all(apply(contr.matrix,2,function(x) all(x %in% c(-1,0,1,NA))))
+  is.num <- all(apply(contr.matrix, 2, function(x) all(x %in% c(-1, 0, 1, NA))))
   is.num
-  if(!is.num) {
+  if (!is.num) {
     message("[contrastAsLabels] already as label!")
     return(contr.matrix)
   }
@@ -785,25 +785,24 @@ makeContrastsFromLabelMatrix <- function(lab.matrix) {
 #' each pair of groups.
 #' @export
 contrasts.convertToLabelMatrix <- function(contrasts, samples) {
-
   group.col <- grep("group|condition", tolower(colnames(samples)))
   is.numeric.contrast <- all(as.vector(unlist(contrasts)) %in% c(-1, 0, 1, NA))
   is.numeric.contrast
   ## old1: group-wise -1/0/1 matrix
   old1 <- (length(group.col) > 0 &&
-             nrow(contrasts) < nrow(samples) &&
-             all(rownames(contrasts) %in% samples[, group.col[1]]) &&
-             is.numeric.contrast)
-  ## old2: sample-wise -1/0/1 matrix  
+    nrow(contrasts) < nrow(samples) &&
+    all(rownames(contrasts) %in% samples[, group.col[1]]) &&
+    is.numeric.contrast)
+  ## old2: sample-wise -1/0/1 matrix
   old2 <- (nrow(contrasts) == nrow(samples) &&
-             all(rownames(contrasts) == rownames(samples)) &&
-             is.numeric.contrast )
+    all(rownames(contrasts) == rownames(samples)) &&
+    is.numeric.contrast)
   ## old3: group-wise label matrix
   old3 <- (length(group.col) > 0 &&
-             nrow(contrasts) < nrow(samples) &&
-             all(rownames(contrasts) %in% samples[, group.col[1]]) &&
-             !is.numeric.contrast)  
-    
+    nrow(contrasts) < nrow(samples) &&
+    all(rownames(contrasts) %in% samples[, group.col[1]]) &&
+    !is.numeric.contrast)
+
   old.style <- (old1 || old2 || old3)
   new.contrasts <- contrasts
   if (old.style && old1) {
@@ -837,7 +836,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   ## always clean up
   new.contrasts <- as.matrix(new.contrasts)
   new.contrasts <- apply(new.contrasts, 2, as.character)
-  new.contrasts[ trimws(new.contrasts) %in% c("","NA","na"," ")] <- NA
-  rownames(new.contrasts) <- rownames(samples)  
+  new.contrasts[trimws(new.contrasts) %in% c("", "NA", "na", " ")] <- NA
+  rownames(new.contrasts) <- rownames(samples)
   new.contrasts
 }
