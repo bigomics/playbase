@@ -164,32 +164,11 @@ pgx.createPGX <- function(counts, samples, contrasts,
   message("[createPGX] input: dim(samples) = ", paste(dim(samples), collapse = "x"))
   message("[createPGX] input: dim(contrasts) = ", paste(dim(contrasts), collapse = "x"))
 
-  ## contrast matrix
-  is.numbered <- all(unique(as.vector(contrasts)) %in% c(-1, 0, 1))
-  is.numbered <- all(sapply(utils::type.convert(data.frame(contrasts), as.is = TRUE), class) %in% c("numeric", "integer"))
-  ct.type <- c("labeled (new style)", "numbered (old style)")[1 + 1 * is.numbered]
-  is.numbered
-  if (is.numbered && ncol(contrasts) > 0) {
-    contrasts <- contrastAsLabels(contrasts)
-  }
-
-  ## convert group-wise contrast to sample-wise
-  grp.idx <- grep("group|condition", tolower(colnames(samples)))[1]
-  if (any(!is.na(grp.idx))) {
-    # only run the code below if we identify at least one group
-    is.group.contrast <- all(rownames(contrasts) %in% samples[, grp.idx])
-    is.group.contrast
-    if (is.group.contrast && nrow(contrasts) < nrow(samples)) {
-      ## group
-      grp <- as.character(samples[, grp.idx])
-      contrasts.new <- contrasts[grp, , drop = FALSE]
-      rownames(contrasts.new) <- rownames(samples)
-      contrasts <- contrasts.new
-    }
-  }
-
+  ## convert old-style contrast matrix to sample-wise labeled contrasts
+  contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
+  
   # prune unused samples
-  contrasts[contrasts == ""] <- NA
+  contrasts[contrasts %in% c(""," ","NA")] <- NA
   used.samples <- names(which(rowSums(!is.na(contrasts)) > 0))
   if (prune.samples && length(used.samples) < ncol(counts)) {
     counts <- counts[, used.samples, drop = FALSE]
@@ -535,16 +514,19 @@ pgx.computePGX <- function(pgx,
     stop("[pgx.computePGX] FATAL:: all contrast names must include _vs_")
   }
 
-  ## make proper contrast matrix
-  contr.matrix <- pgx$contrasts
-  contr.values <- unique(as.vector(contr.matrix))
-  is.numcontrast <- all(contr.values %in% c(NA, -1, 0, 1))
-  is.numcontrast <- is.numcontrast && (-1 %in% contr.values) && (1 %in% contr.values)
-  if (!is.numcontrast) {
-    contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
-    contr.matrix <- sign(contr.matrix) ## sign is fine
-  }
-
+  ## make proper -1/1 contrast matrix
+  ## contr.matrix <- pgx$contrasts
+  ## contr.values <- unique(as.vector(contr.matrix))
+  ## is.numcontrast <- all(contr.values %in% c(NA, -1, 0, 1, "", "NA", "na", " "))
+  ## is.numcontrast <- is.numcontrast && (-1 %in% contr.values) && (1 %in% contr.values)
+  ## if (!is.numcontrast) {
+  ##   contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
+  ##   contr.matrix <- sign(contr.matrix) ## sign is fine
+  ## }
+  contr.matrix <- contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
+  contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
+  contr.matrix <- sign(contr.matrix) ## sign is fine
+  
   ## select valid contrasts
   sel <- Matrix::colSums(contr.matrix == -1) > 0 & Matrix::colSums(contr.matrix == 1) > 0
   contr.matrix <- contr.matrix[, sel, drop = FALSE]
