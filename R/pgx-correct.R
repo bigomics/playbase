@@ -39,8 +39,12 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
                                   batch.par = "*",
                                   lib.correct = TRUE,
                                   bio.correct = c("mito", "ribo", "cell_cycle", "gender"),
-                                  sva.correct = TRUE, pca.correct = TRUE, hc.correct = TRUE,
-                                  mnn.correct = NULL, nnm.correct = TRUE,
+                                  sva.correct = TRUE,
+                                  pca.correct = TRUE,
+                                  hc.correct = TRUE,
+                                  mnn.correct = NULL,
+                                  nnm.correct = TRUE,
+                                  bc.methods = NULL,
                                   max.rho = 0.3, max.iter = 10, hc.top = 50) {
   getModelMatrix <- function(v) {
     y <- as.character(pheno[, v])
@@ -53,13 +57,25 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     stop("ERROR:: model and batch cannot be both NULL")
   }
 
-  ## tidy up pheno matrix?? get correct parameter types
+  ## override old-style
+  if (!is.null(bc.methods)) {
+    bc.methods <- tolower(bc.methods)
+  } else {
+    bc <- c()
+    if (!is.null(mnn.correct)) bc <- c(bc, "mnn")
+    if (nnm.correct) bc <- c(bc, "nnm")
+    if (sva.correct) bc <- c(bc, "sva")
+    if (pca.correct) bc <- c(bc, "pca")
+    if (hc.correct) bc <- c(bc, "hc")
+    bc.methods <- bc
+  }
 
+  ## tidy up pheno matrix?? get correct parameter types
   pheno <- utils::type.convert(pheno, as.is = TRUE)
 
-  message("[pgx.superBatchCorrect] 1 : dim.pheno = ", paste(dim(pheno), collapse = "x"))
-  message("[pgx.superBatchCorrect] 1 : model.par = ", paste(model.par, collapse = "x"))
-  message("[pgx.superBatchCorrect] 1 : colnames.pheno = ", paste(colnames(pheno), collapse = "x"))
+  message("[pgx.superBatchCorrect] 1 : dim.pheno = ", paste(dim(pheno), collapse = "x"), "\n")
+  message("[pgx.superBatchCorrect] 1 : model.par = ", paste(model.par, collapse = "x"), "\n")
+  message("[pgx.superBatchCorrect] 1 : colnames.pheno = ", paste(colnames(pheno), collapse = "x"), "\n")
 
   ## setup model matrix
   mod1 <- NULL
@@ -181,10 +197,6 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     }
   }
 
-  dbg("[pgx.superBatchCorrect] model.par=", model.par, "\n")
-  dbg("[pgx.superBatchCorrect] batch.prm=", batch.prm, "\n")
-  dbg("[pgx.superBatchCorrect] batch.cov=", batch.cov, "\n")
-
   cX <- X
   mod1x <- matrix(1, ncol(cX), 1)
   if (!is.null(mod1)) mod1x <- cbind(1, mod1)
@@ -284,158 +296,230 @@ pgx.superBatchCorrect <- function(X, pheno, model.par, partype = NULL,
     }
   }
 
-  ## --------------------------------------------------------------------
-  ## MNN correction (e.g. for single-cell)
-  ## --------------------------------------------------------------------
-  if (!is.null(mnn.correct)) {
-    mnn.correct <- intersect(mnn.correct, colnames(pheno))
-    if (length(mnn.correct) == 0) mnn.correct <- NULL
-  }
-  if (!is.null(mnn.correct)) {
-    dbg("[pgx.superBatchCorrect] Mutual Nearest Neighbour (MNN) correction on", mnn.correct, "\n")
-    b <- pheno[, mnn.correct]
-    out <- mnnCorrect(cX, batch = b, cos.norm.out = FALSE)
-    cX <- out@assays@data[["corrected"]]
-  }
-
-  ## --------------------------------------------------------------------
-  ## Nearest-neighbour matching (NNM)
-  ## --------------------------------------------------------------------
-
-  if (1 && nnm.correct) {
-    dbg("[pgx.superBatchCorrect] Correcting with nearest-neighbour matching (NNM)")
-    dbg("[pgx.superBatchCorrect] NNM :: model.par = ", model.par)
-    y1 <- pheno[, model.par, drop = FALSE]
-    y1 <- apply(y1, 1, paste, collapse = ":")
-    cX <- gx.nnmcorrect(cX, y1, center.x = TRUE, center.m = TRUE)$X
-  }
-
-  ## --------------------------------------------------------------------
-  ## SVA correction (removing unwanted variation)
-  ## --------------------------------------------------------------------
-  if (sva.correct && !is.null(mod1)) {
-    message("[pgx.superBatchCorrect] Calculating SVA...")
-
-    ##
-    ## This is a combination of methods from SVA and SmartSVA
-    ## because of speed.
-    ##
-
-    mod1x <- cbind(1, mod1)
-    mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
-
-    ## fast method using SmartSVA
-    pp <- paste0(model.par, collapse = "+")
-    lm.expr <- paste0("lm(t(cX) ~ ", pp, ", data=pheno)")
-    X.r <- t(stats::resid(eval(parse(text = lm.expr))))
-    n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
-
-    cX1 <- Matrix::head(cX[order(-apply(cX, 1, stats::sd)), ], 1000) ## top 1000 genes only (faster)
-    sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = n.sv)$sv)
-
-    if (any(class(sv) == "try-error")) {
-      ## try again with little bit of noise...
-      a <- 0.01 * mean(apply(cX, 1, stats::sd))
-      cX1 <- cX + a * matrix(stats::rnorm(length(cX)), nrow(cX), ncol(cX))
-      cX1 <- Matrix::head(cX1[order(-apply(cX1, 1, stats::sd)), ], 1000) ## top 1000 genes only (faster)
-      sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1))$sv)
-    }
-    if (!any(class(sv) == "try-error")) {
-      message("[pgx.superBatchCorrect] Performing SVA correction...")
-
-      rownames(sv) <- colnames(cX)
-      colnames(sv) <- paste0("SV.", 1:ncol(sv))
-      cX <- limma::removeBatchEffect(cX, covariates = sv, design = mod1x)
-
-      B <- cbind(B, sv)
-    }
-  }
-
-
-  ## --------------------------------------------------------------------
-  ## PCA correction: remove remaining batch effect using PCA
-  ## (iteratively, only SV larger than max correlated SV)
-  ## --------------------------------------------------------------------
-  if (pca.correct && !is.null(mod1)) {
-    ii <- 1:99
-    niter <- 0
-    nremove <- 0
-    pX <- NULL
-    while (length(ii) > 0 && niter < max.iter) {
-      nv <- min(10, ncol(cX) - 1)
-      suppressWarnings(suppressMessages(
-        pc <- irlba::irlba(cX, nv = nv)$v
-      ))
-      pc.rho <- stats::cor(pc, mod1)
-      pc.rho <- apply(abs(pc.rho), 1, max)
-      ii <- which(pc.rho < max.rho)
-      ii <- ii[ii < which.max(pc.rho)]
-      if (length(ii) > 0) {
-        mod1x <- cbind(1, mod1)
-        cX <- limma::removeBatchEffect(cX, covariates = pc[, ii], design = mod1x)
-        pX <- cbind(pX, pc[, ii, drop = FALSE])
-        nremove <- nremove + 1
+  ## iterate over bc.methods in this order
+  for (bc in bc.methods) {
+    if (bc == "mnn") {
+      ## --------------------------------------------------------------------
+      ## MNN correction (e.g. for single-cell)
+      ## --------------------------------------------------------------------
+      if (!is.null(mnn.correct)) {
+        mnn.correct <- intersect(mnn.correct, colnames(pheno))
+        if (length(mnn.correct) == 0) mnn.correct <- NULL
       }
-      niter <- niter + 1
-    }
-    niter
-    if (niter == max.iter) {
-      dbg("WARNING:: PCA correction did not converge after", nremove, "iterations\n")
-    } else {
-      dbg("Performed", nremove, "iterations of PCA batch correction\n")
-    }
-    if (!is.null(pX)) {
-      colnames(pX) <- paste0("PC.", 1:ncol(pX))
-      B <- cbind(B, pX) ## update batch correction matrix
-    }
-  }
-
-  ## --------------------------------------------------------------------
-  ## HC correction: remove remaining batch effect iteratively using
-  ## hclust
-  ## --------------------------------------------------------------------
-  if (hc.correct && !is.null(mod1)) {
-    ii <- 1:99
-    niter <- 0
-    nremove <- 0
-    pX <- NULL
-    while (length(ii) > 0 && niter < max.iter) {
-      xx <- Matrix::head(cX[order(-apply(cX, 1, stats::sd)), ], hc.top)
-      hc <- stats::cutree(fastcluster::hclust(stats::dist(t(xx)), method = "ward.D2"), 2)
-      hc.rho <- stats::cor(hc, mod1)
-      hc.rho <- apply(abs(hc.rho), 1, max)
-      ii <- which(hc.rho < max.rho)
-      if (length(ii) > 0) {
-        mod1x <- cbind(1, mod1)
-        hc <- scale(hc)
-        cX <- limma::removeBatchEffect(cX, covariates = hc, design = mod1x)
-        pX <- cbind(pX, hc)
-        nremove <- nremove + 1
+      if (!is.null(mnn.correct)) {
+        dbg("[pgx.superBatchCorrect] Mutual Nearest Neighbour (MNN) correction on", mnn.correct, "\n")
+        b <- pheno[, mnn.correct]
+        out <- mnnCorrect(cX, batch = b, cos.norm.out = FALSE)
+        cX <- out@assays@data[["corrected"]]
       }
-      niter <- niter + 1
     }
-    if (niter == max.iter) {
-      dbg("WARNING:: HC correction did not converge after", nremove, "iterations\n")
-    } else {
-      dbg("Performed", nremove, "iterations of HC batch correction\n")
+
+    if (bc == "nnm") {
+      ## --------------------------------------------------------------------
+      ## Nearest-neighbour matching (NNM)
+      ## --------------------------------------------------------------------
+      dbg("[pgx.superBatchCorrect] Correcting with nearest-neighbour matching (NNM)")
+      dbg("[pgx.superBatchCorrect] model.par = ", model.par)
+      y1 <- pheno[, model.par, drop = FALSE]
+      y1 <- apply(y1, 1, paste, collapse = ":")
+      cX <- gx.nnmcorrect(cX, y1, center.x = TRUE, center.m = TRUE)$X
     }
-    if (!is.null(pX)) B <- cbind(B, pX) ## update batch correction matrix
-  }
+
+    if (bc == "sva") {
+      ## --------------------------------------------------------------------
+      ## SVA correction (removing unwanted variation)
+      ## --------------------------------------------------------------------
+      if (!is.null(mod1)) {
+        message("[pgx.superBatchCorrect] Calculating SVA...")
+        ##
+        ## This is a combination of methods from SVA and SmartSVA
+        ## because of speed.
+        mod1x <- cbind(1, mod1)
+        mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
+
+        ## fast method using SmartSVA
+        pp <- paste0(model.par, collapse = "+")
+        lm.expr <- paste0("lm(t(cX) ~ ", pp, ", data=pheno)")
+        X.r <- t(stats::resid(eval(parse(text = lm.expr))))
+        n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
+
+        cX1 <- Matrix::head(cX[order(-apply(cX, 1, stats::sd)), ], 1000) ## top 1000 genes only (faster)
+        sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = n.sv)$sv)
+
+        if (any(class(sv) == "try-error")) {
+          ## try again with little bit of noise...
+          a <- 0.01 * mean(apply(cX, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
+          cX1 <- cX + a * matrix(stats::rnorm(length(cX)), nrow(cX), ncol(cX))
+          cX1 <- Matrix::head(cX1[order(-apply(cX1, 1, stats::sd)), ], 1000) ## top 1000 genes only (faster)
+          sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1))$sv)
+        }
+        if (!any(class(sv) == "try-error")) {
+          message("[pgx.superBatchCorrect] Performing SVA correction...")
+
+          rownames(sv) <- colnames(cX)
+          colnames(sv) <- paste0("SV.", 1:ncol(sv))
+          cX <- limma::removeBatchEffect(cX, covariates = sv, design = mod1x)
+
+          B <- cbind(B, sv)
+        }
+      }
+    }
+
+
+    if (bc == "pca") {
+      ## --------------------------------------------------------------------
+      ## PCA correction: remove remaining batch effect using PCA
+      ## (iteratively, only SV larger than max correlated SV)
+      ## --------------------------------------------------------------------
+      if (!is.null(mod1)) {
+        ii <- 1:99
+        niter <- 0
+        nremoved <- 0
+        pX <- NULL
+        while (length(ii) > 0 && niter < max.iter) {
+          nv <- min(10, ncol(cX) - 1)
+          suppressWarnings(suppressMessages(
+            pc <- irlba::irlba(cX, nv = nv)$v
+          ))
+          pc.rho <- stats::cor(pc, mod1)
+          pc.rho <- apply(abs(pc.rho), 1, max)
+          ii <- which(pc.rho < max.rho)
+          ii <- ii[ii < which.max(pc.rho)]
+          if (length(ii) > 0) {
+            mod1x <- cbind(1, mod1)
+            cX <- limma::removeBatchEffect(cX, covariates = pc[, ii], design = mod1x)
+            pX <- cbind(pX, pc[, ii, drop = FALSE])
+            nremoved <- nremoved + 1
+          }
+          niter <- niter + 1
+        }
+        niter
+        if (niter == max.iter) {
+          dbg("WARNING:: PCA correction did not converge after", nremoved, "iterations\n")
+        } else {
+          dbg("PCA batch correction: removed", nremoved, "principal components\n")
+        }
+        if (!is.null(pX)) {
+          colnames(pX) <- paste0("PC.", 1:ncol(pX))
+          B <- cbind(B, pX) ## update batch correction matrix
+        }
+      }
+    }
+
+    if (bc == "hc") {
+      ## --------------------------------------------------------------------
+      ## HC correction: remove remaining batch effect iteratively using
+      ## hclust
+      ## --------------------------------------------------------------------
+      if (!is.null(mod1)) {
+        ii <- 1:99
+        niter <- 0
+        nremoved <- 0
+        pX <- NULL
+        while (length(ii) > 0 && niter < max.iter) {
+          xx <- Matrix::head(cX[order(-apply(cX, 1, stats::sd)), ], hc.top)
+          hc <- stats::cutree(fastcluster::hclust(stats::dist(t(xx)), method = "ward.D2"), 2)
+          hc.rho <- stats::cor(hc, mod1)
+          hc.rho <- apply(abs(hc.rho), 1, max)
+          ii <- which(hc.rho < max.rho)
+          if (length(ii) > 0) {
+            mod1x <- cbind(1, mod1)
+            hc <- scale(hc)
+            cX <- limma::removeBatchEffect(cX, covariates = hc, design = mod1x)
+            pX <- cbind(pX, hc)
+            nremoved <- nremoved + 1
+          }
+          niter <- niter + 1
+        }
+        if (niter == max.iter) {
+          dbg("WARNING:: HC correction did not converge after", nremoved, "iterations\n")
+        } else {
+          dbg("Performed", nremoved, "iterations of HC batch correction\n")
+        }
+        if (!is.null(pX)) B <- cbind(B, pX) ## update batch correction matrix
+      }
+    }
+  } ## end of for bc.methods
 
   ## --------------------------------------------------------------------
   ## important: means seems to be affected!!! regressed out??
   ## --------------------------------------------------------------------
-  cX <- cX - rowMeans(cX) + rowMeans(X)
-
-  dbg("[pgx.superBatchCorrect] almost done!\n")
+  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
 
   ## matrix B contains the active batch correction vectors
-
   res <- list(X = cX, Y = pheno, B = B)
 
   dbg("[pgx.superBatchCorrect] done!\n")
 
   return(res)
+}
+
+#' @title Check for confounders
+#'
+#' @description
+#' Performs a correlation analysis on a phenotype matrix to detect possible confounding factors.
+#'
+#' @param pheno Dataframe containing sample metadata/covariates.
+#' @param model.par Vector of column names of covariates of interest \code{pheno}.
+#' @param max.rho Maximum allowed correlation.
+#'
+#' @details This function performs a correlation analysis on the factor with respect to the factor
+#' of interest. Correlation is compute on each level of all factors and a factor is deemed confounding
+#' if any level has a correlation larger than max.rho. For example, such factors should not be used
+#' for batch correction as they may remove 'genuine' signal correlated with the factor of interest.
+#'
+#' @return List of confounding and not-confounding factors. Correlation matrix rho.
+#'
+#' @export
+checkConfounders <- function(pheno, model.par, max.rho = 0.3) {
+  getModelMatrix <- function(v) {
+    y <- as.character(pheno[, v])
+    y[is.na(y)] <- "NA" ## or impute???
+    m1 <- stats::model.matrix(~y)[, -1, drop = FALSE]
+    colnames(m1) <- sub("^y", paste0(v, "="), colnames(m1))
+    m1
+  }
+
+  mod1 <- do.call(cbind, lapply(model.par, getModelMatrix))
+  rownames(mod1) <- rownames(pheno)
+  mod1
+
+  ## --------------------------------------------------------------------
+  ## Check confounding
+  ## --------------------------------------------------------------------
+  batch.pars <- setdiff(colnames(pheno), model.par)
+  if (is.null(batch.pars) || length(batch.pars) == 0) {
+    return(c())
+  }
+
+  mod0 <- do.call(cbind, lapply(batch.pars, getModelMatrix))
+  rho <- stats::cor(mod0, mod1)
+  rho[is.na(rho)] <- 0
+  confounding.pars <- c()
+
+  if (max(abs(rho), na.rm = TRUE) > max.rho) {
+    idx <- which(abs(rho) > max.rho, arr.ind = TRUE)
+    idx
+    for (i in 1:nrow(idx)) {
+      v0 <- colnames(mod0)[idx[i, 1]]
+      v1 <- colnames(mod1)[idx[i, 2]]
+      dbg(paste0(
+        "WARNING:: '", v0, "' is confounded with '", v1, "' ",
+        ": rho= ", round(rho[idx[i, 1], idx[i, 2]], 3), "\n"
+      ))
+    }
+    confounding <- colnames(mod0)[idx[, 1]]
+    confounding <- unique(gsub("=.*", "", confounding))
+    dbg("WARNING:: removing confounding batch factors:", confounding, "\n")
+    confounding.pars <- c(confounding.pars, confounding)
+    batch.pars <- setdiff(batch.pars, confounding.pars)
+  }
+
+  list(
+    confounding = confounding.pars,
+    not.confounding = batch.pars,
+    rho = rho
+  )
 }
 
 
@@ -474,7 +558,7 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
       y1 <- factor(as.character(y1))
     } else {
       y1 <- y1 + 1e-8 * stats::rnorm(length(y1))
-      y1 <- (y1 > stats::median(y1))
+      y1 <- (y1 > stats::median(y1, na.rm = TRUE))
     }
     design <- stats::model.matrix(~ 1 + y1)
     fit <- limma::lmFit(x[, ii], design)
@@ -493,12 +577,13 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
     if (inherits(y1, "factor")) y1 <- factor(as.character(y1))
     design <- stats::model.matrix(~ 0 + y1)
 
-    r1 <- stats::cor(t(x[, ii]), design)
+    r1 <- stats::cor(t(x[, ii]), design, use = "pairwise")
     rowMeans(abs(r1))
   }
 
 
-  X <- X - rowMeans(X) ## center features
+  X <- X - rowMeans(X, na.rm = TRUE) ## center features
+  X[is.na(X)] <- mean(X, na.rm = TRUE) ## no missing allowed
   V <- irlba::irlba(X, nv = nv)$v
   rho <- list()
   px <- pheno
@@ -523,7 +608,7 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
 
   R <- do.call(rbind, rho)
   colnames(R) <- paste0("PC", 1:ncol(R))
-  if (stat == "F") R <- t(t(R) / colMeans(R))
+  if (stat == "F") R <- t(t(R) / colMeans(R, na.rm = TRUE))
 
   if (plot) {
     stat0 <- c("correlation", "F-statistic")[1 + 1 * (stat == "F")]
@@ -541,163 +626,6 @@ pgx.PC_correlation <- function(X, pheno, nv = 3, stat = "F", plot = TRUE, main =
   }
   R
 }
-
-
-NORMALIZATION.METHODS <- c("none", "mean", "scale", "NC", "CPM", "TMM", "RLE", "RLE2", "quantile")
-
-#' @title Normalize counts with TMM method
-#'
-#' @param counts Count matrix with genes in rows and samples in columns
-#' @param log Logical, whether to log transform normalized counts
-#' @param method Normalization method, default "TMM"
-#'
-#' @return Matrix of normalized counts
-#'
-#' @description
-#' Normalizes a count matrix using the TMM (Trimmed Mean of M-values) method.
-#'
-#' @details
-#' This function takes a count matrix and normalizes the counts using the TMM method
-#' implemented in the edgeR package.
-#'
-#' It converts the count matrix to a DGEList object. Then it calculates normalization
-#' factors using the calcNormFactors function with default TMM method.
-#'
-#' The normalized counts are returned as CPM values, optionally log-transformed.
-#'
-#' @examples
-#' \dontrun{
-#' counts <- matrix(rnbinom(100, mu = 10, size = 1), ncol = 10)
-#' norm_counts <- normalizeTMM(counts)
-#' }
-#' @export
-normalizeTMM <- function(counts, log = FALSE, method = "TMM") {
-  dge <- edgeR::DGEList(as.matrix(counts), group = NULL)
-  dge <- edgeR::calcNormFactors(dge, method = method)
-  edgeR::cpm(dge, log = log)
-}
-
-
-#' Normalize count data using RLE method
-#'
-#' @description This function normalizes count data using the Relative Log Expression (RLE) method.
-#' It supports normalization using either the edgeR or DESeq2 package.
-#'
-#' @param counts A numeric matrix of count data, where rows represent features and columns represent samples.
-#' @param log Logical, whether to return log-transformed normalized counts.
-#' @param use Character, the package to use for normalization, either "edger" or "deseq2".
-#'
-#' @return A numeric matrix of normalized count data.
-#'
-#' @examples
-#' \dontrun{
-#' counts <- matrix(rnbinom(100, mu = 10, size = 1), ncol = 10)
-#' norm_counts <- normalizeRLE(counts)
-#' }
-#' @export
-normalizeRLE <- function(counts, log = FALSE, use = "deseq2") {
-  outx <- NULL
-  if (use == "edger") {
-    dge <- edgeR::DGEList(as.matrix(counts), group = NULL)
-    dge <- edgeR::calcNormFactors(dge, method = "RLE")
-    outx <- edgeR::cpm(dge, log = log)
-  } else if (use == "deseq2") {
-    cts <- counts
-    dds <- DESeq2::DESeqDataSetFromMatrix(
-      countData = cts,
-      colData = cbind(colnames(cts), 1),
-      design = ~1
-    )
-    disp <- DESeq2::estimateSizeFactors(dds)
-    outx <- DESeq2::counts(disp, normalized = TRUE)
-  } else {
-    stop("unknown method")
-  }
-  return(outx)
-}
-
-
-#' @title Normalize count data
-#'
-#' @description
-#' Normalizes a matrix of RNA-seq count data using different methods.
-#'
-#' @param x Matrix of count data, with genes in rows and samples in columns.
-#' @param methods Normalization method(s) to use. Options are "none", "scale", "CPM", "TMM", "RLE".
-#' @param keep.zero Logical indicating whether to retain zero counts. Default is TRUE.
-#'
-#' @details
-#' This function normalizes a matrix of RNA-seq count data using different normalization methods:
-#'
-#' - "none": No normalization
-#' - "scale": Scale normalization by column means
-#' - "CPM": Counts per million
-#' - "TMM": Trimmed mean of M-values (edgeR)
-#' - "RLE": Relative log expression (DESeq2)
-#'
-#' Zero counts can be retained or set to NA after normalization based on the keep.zero parameter.
-#'
-#' @return
-#' The normalized count matrix.
-#'
-#' @examples
-#' \dontrun{
-#' counts <- matrix(rnbinom(10000, mu = 10, size = 1), 100, 100)
-#' normalized <- pgx.countNormalization(counts, c("TMM", "RLE"))
-#' }
-#' @export
-pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
-  ## Column-wise normalization (along samples).
-  ##
-  ## x:        counts (linear)
-  ## method:   single method
-
-  methods <- methods[1]
-  which.zero <- which(x == 0, arr.ind = TRUE)
-
-  for (m in methods) {
-    if (m == "none") {
-      ## normalization on individual mean
-      x <- x
-    } else if (m == "scale") {
-      ## normalization on individual mean
-      mx <- mean(x, na.rm = TRUE)
-      x <- t(t(x) / colMeans(x, na.rm = TRUE)) * mx
-    } else if (m == "CPM") {
-      x <- t(t(x) / Matrix::colSums(x, na.rm = TRUE)) * 1e6
-    } else if (m == "TMM") {
-      ## normalization on total counts (linear scale)
-      x <- normalizeTMM(x, log = FALSE) ## does TMM on counts (edgeR)
-    } else if (m == "RLE") {
-      ## normalization on total counts (linear scale)
-      x <- normalizeRLE(x, log = FALSE, use = "deseq2") ## does RLE on counts (Deseq2)
-    } else if (m == "RLE2") {
-      ## normalization on total counts (linear scale)
-      x <- normalizeRLE(x, log = FALSE, use = "edger") ## does RLE on counts (Deseq2)
-      ##        } else if(m %in% c("upperquartile")) {
-      ##            ## normalization on total counts (linear scale)
-    } else if (m == "quantile") {
-      new.x <- 0.01 * limma::normalizeQuantiles(as.matrix(100 * x)) ## shift to avoid clipping
-      rownames(new.x) <- rownames(x)
-      colnames(new.x) <- colnames(x)
-      x <- new.x
-    }
-  } ## end of for method
-
-  x <- pmax(x, 0) ## prevent negative values
-  ## put back zeros as zeros
-  if (keep.zero && nrow(which.zero) > 0) {
-    x[which.zero] <- 0
-  }
-
-  return(x)
-}
-
-
-
-
-
-
 
 
 #' @title Estimate biological variation
@@ -740,15 +668,14 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
   ## shift zero to 1% percentile
   if (!is.count) {
     q0 <- stats::quantile(X[X > 0], probs = 0.01, na.rm = TRUE)
-
-    tx <- pmax(X - q0, 0) ## log expression
-    cx <- pmax(2**tx - 1, 0) ## counts
+    tx <- pmax(X - q0, 0, na.rm = TRUE) ## log expression
+    cx <- pmax(2**tx - 1, 0, na.rm = TRUE) ## counts
   } else {
     cx <- X
     tx <- log2(cx + 1)
   }
-  nfeature <- Matrix::colSums(cx > 0) + 1
-  libsize <- Matrix::colSums(cx)
+  nfeature <- Matrix::colSums(cx > 0, na.rm = TRUE) + 1
+  libsize <- Matrix::colSums(cx, na.rm = TRUE)
 
   mt.genes <- grep("^MT-", rownames(X), ignore.case = TRUE, value = TRUE)
   rb.genes <- grep("^RP[SL]", rownames(X), ignore.case = TRUE, value = TRUE)
@@ -756,14 +683,14 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
   pct.mito <- pct.ribo <- NA
 
   if (length(mt.genes) >= 10) {
-    mito <- Matrix::colMeans(tx[mt.genes, , drop = FALSE])
+    mito <- Matrix::colMeans(tx[mt.genes, , drop = FALSE], na.rm = TRUE)
     pct.mito <- Matrix::colSums(cx[mt.genes, , drop = FALSE], na.rm = TRUE) / libsize
   }
   if (length(rb.genes) >= 10) {
     ii <- rb.genes[order(-apply(tx[rb.genes, , drop = FALSE], 1, stats::sd, na.rm = TRUE))]
     sel20 <- Matrix::head(ii, 20)
-    ribo <- Matrix::colMeans(tx[rb.genes, , drop = FALSE])
-    ribo20 <- Matrix::colMeans(tx[sel20, , drop = FALSE])
+    ribo <- Matrix::colMeans(tx[rb.genes, , drop = FALSE], na.rm = TRUE)
+    ribo20 <- Matrix::colMeans(tx[sel20, , drop = FALSE], na.rm = TRUE)
     pct.ribo <- Matrix::colSums(cx[rb.genes, , drop = FALSE], na.rm = TRUE) / libsize
   }
   pheno <- data.frame(
@@ -791,8 +718,6 @@ pgx.computeBiologicalEffects <- function(X, is.count = FALSE) {
 ## Automagic batch correction by trying all combinations of batch parameters and
 ## optimizing the number of significant genes.
 ## ================================================================================
-
-
 
 
 #' @title Compute number of significant genes

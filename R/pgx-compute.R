@@ -174,32 +174,12 @@ pgx.createPGX <- function(counts,
   message("[createPGX] input: dim(samples) = ", paste(dim(samples), collapse = "x"))
   message("[createPGX] input: dim(contrasts) = ", paste(dim(contrasts), collapse = "x"))
 
-  ## contrast matrix
-  is.numbered <- all(unique(as.vector(contrasts)) %in% c(-1, 0, 1))
-  is.numbered <- all(sapply(utils::type.convert(data.frame(contrasts), as.is = TRUE), class) %in% c("numeric", "integer"))
-  ct.type <- c("labeled (new style)", "numbered (old style)")[1 + 1 * is.numbered]
 
-  if (is.numbered && ncol(contrasts) > 0) {
-    contrasts <- contrastAsLabels(contrasts)
-  }
-
-  ## convert group-wise contrast to sample-wise
-  grp.idx <- grep("group|condition", tolower(colnames(samples)))[1]
-  if (any(!is.na(grp.idx))) {
-    # only run the code below if we identify at least one group
-    is.group.contrast <- all(rownames(contrasts) %in% samples[, grp.idx])
-
-    if (is.group.contrast && nrow(contrasts) < nrow(samples)) {
-      ## group
-      grp <- as.character(samples[, grp.idx])
-      contrasts.new <- contrasts[grp, , drop = FALSE]
-      rownames(contrasts.new) <- rownames(samples)
-      contrasts <- contrasts.new
-    }
-  }
+  ## convert old-style contrast matrix to sample-wise labeled contrasts
+  contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
 
   # prune unused samples
-  contrasts[contrasts == ""] <- NA
+  contrasts[contrasts %in% c("", " ", "NA")] <- NA
   used.samples <- names(which(rowSums(!is.na(contrasts)) > 0))
   if (prune.samples && length(used.samples) < ncol(counts)) {
     counts <- counts[, used.samples, drop = FALSE]
@@ -217,10 +197,10 @@ pgx.createPGX <- function(counts,
     is.logx <- guess.log
   }
   if (is.logx) {
-    cat("[createPGX] input assumed logarithm: undo-ing logarithm\n")
+    message("[createPGX] input assumed logarithm: undo-ing logarithm")
     counts <- pmax(2**counts - 1, 0) ## undo logarithm
   } else {
-    cat("[createPGX] input assumed counts (not logarithm)\n")
+    message("[createPGX] input assumed counts (not logarithm)")
   }
 
   ## -------------------------------------------------------------------
@@ -232,8 +212,10 @@ pgx.createPGX <- function(counts,
 
   ## impute missing values
   if (any(is.na(counts))) {
+    nmissing <- sum(is.na(counts))
+    message("[createPGX] WARNING: data has ", nmissing, " missing values.")
     impute.method <- "SVD2"
-    message("[createPGX] WARNING: Imputing missing values using ", impute.method)
+    message("[createPGX] Imputing missing values using ", impute.method)
     counts <- counts.imputeMissing(counts, method = impute.method)
   }
 
@@ -282,8 +264,9 @@ pgx.createPGX <- function(counts,
 
   if (normalize) {
     message("[createPGX] NORMALIZING log-expression matrix X...")
-    X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
-    X <- limma::normalizeQuantiles(X) ## in linear space
+    X <- logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
+    X <- limma::normalizeQuantiles(X) ## in log space
+    ## X <- 0.1*X + 0.9*limma::normalizeQuantiles(X)   ## 'weighted' to keep randomness...
   } else {
     message("[createPGX] SKIPPING NORMALIZATION!")
   }
@@ -377,15 +360,16 @@ pgx.createPGX <- function(counts,
   if (filter.genes) {
     ## There is second filter in the statistics computation. This
     ## first filter is primarily to reduce the counts table.
-    message("[createPGX] filtering out not-expressed genes...")
-    keep <- (Matrix::rowSums(pgx$counts) > 0) ## at least in one...
-    keep <- names(keep == TRUE)
-    pgx$counts <- pgx$counts[keep, , drop = FALSE]
-    pgx$genes <- pgx$genes[keep, , drop = FALSE]
-    if (!is.null(pgx$X)) {
-      pgx$X <- pgx$X[keep, , drop = FALSE]
-    }
+
+    message("[createPGX] filtering out not-expressed genes (zero counts)...")
+    pgx <- pgx.filterZeroCounts(pgx)
+
+    ## prefiltering for low-expressed genes (recommended for edgeR and
+    ## DEseq2). Require at least in 2 or 1% of total. Specify the
+    ## PRIOR CPM amount to regularize the counts and filter genes
+    pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
   }
+
 
   ## -------------------------------------------------------------------
   ## Filter genes?
@@ -532,16 +516,22 @@ pgx.computePGX <- function(pgx,
   if (!"contrasts" %in% names(pgx)) {
     stop("[pgx.computePGX] FATAL:: no contrasts in object")
   }
-
-  ## make proper contrast matrix
-  contr.matrix <- pgx$contrasts
-  contr.values <- unique(as.vector(contr.matrix))
-  is.numcontrast <- all(contr.values %in% c(NA, -1, 0, 1))
-  is.numcontrast <- is.numcontrast && (-1 %in% contr.values) && (1 %in% contr.values)
-  if (!is.numcontrast) {
-    contr.matrix <- playbase::makeContrastsFromLabelMatrix(contr.matrix)
-    contr.matrix <- sign(contr.matrix) ## sign is fine
+  if (!all(grepl("_vs_", colnames(pgx$contrasts)))) {
+    stop("[pgx.computePGX] FATAL:: all contrast names must include _vs_")
   }
+
+  ## make proper -1/1 contrast matrix
+  ## contr.matrix <- pgx$contrasts
+  ## contr.values <- unique(as.vector(contr.matrix))
+  ## is.numcontrast <- all(contr.values %in% c(NA, -1, 0, 1, "", "NA", "na", " "))
+  ## is.numcontrast <- is.numcontrast && (-1 %in% contr.values) && (1 %in% contr.values)
+  ## if (!is.numcontrast) {
+  ##   contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
+  ##   contr.matrix <- sign(contr.matrix) ## sign is fine
+  ## }
+  contr.matrix <- contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
+  contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
+  contr.matrix <- sign(contr.matrix) ## sign is fine
 
   ## select valid contrasts
   sel <- Matrix::colSums(contr.matrix == -1) > 0 & Matrix::colSums(contr.matrix == 1) > 0
@@ -552,19 +542,10 @@ pgx.computePGX <- function(pgx,
   ## RETHINK?? MOVE TO PGXCREATE??
   ## -----------------------------------------------------------------------------
 
-  ## prefiltering for low-expressed genes (recommended for edgeR and
-  ## DEseq2). Require at least in 2 or 1% of total. Specify the
-  ## PRIOR CPM amount to regularize the counts and filter genes
-  PRIOR.CPM <- 1
-  filter.low <- TRUE
-  if (filter.low) {
-    pgx <- pgx.filterLowExpressed(pgx, prior.cpm = PRIOR.CPM)
-  }
-
   ## Shrink number of genes (highest SD/var)
   if (max.genes > 0 && nrow(pgx$counts) > max.genes) {
     cat("shrinking data matrices: n=", max.genes, "\n")
-    logcpm <- playbase::logCPM(pgx$counts, total = NULL)
+    logcpm <- logCPM(pgx$counts, total = NULL)
     sdx <- apply(logcpm, 1, stats::sd)
     jj <- Matrix::head(order(-sdx), max.genes) ## how many genes?
     jj0 <- setdiff(seq_len(nrow(pgx$counts)), jj)
@@ -596,7 +577,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
   message("[pgx.computePGX] testing genes...")
 
-  pgx <- playbase::compute_testGenes(
+  pgx <- compute_testGenes(
     pgx, contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
@@ -608,7 +589,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
   message("[pgx.computePGX] testing genesets...")
-  pgx <- playbase::compute_testGenesets(
+  pgx <- compute_testGenesets(
     pgx,
     custom.geneset = custom.geneset,
     max.features = max.genesets,
@@ -621,11 +602,11 @@ pgx.computePGX <- function(pgx,
     pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset")
   }
 
-
   ## ------------------ extra analyses ---------------------
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
   message("[pgx.computePGX] computing extra modules...")
-  pgx <- compute_extra(pgx,
+  pgx <- compute_extra(
+    pgx,
     extra = extra.methods,
     pgx.dir = pgx.dir,
     libx.dir = libx.dir
@@ -717,6 +698,7 @@ counts.autoScaling <- function(counts) {
   list(counts = counts, counts_multiplier = counts_multiplier)
 }
 
+#' @export
 normalizeCounts <- function(M, method = c("TMM", "TMMwsp", "RLE", "upperquartile", "none")) {
   method <- method[1]
   dge <- edgeR::DGEList(M)
@@ -741,7 +723,6 @@ counts.mergeDuplicateFeatures <- function(counts) {
   counts
 }
 
-
 pgx.filterZeroCounts <- function(pgx) {
   ## There is second filter in the statistics computation. This
   ## first filter is primarily to reduce the counts table.
@@ -760,9 +741,12 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   keep <- (rowSums(edgeR::cpm(pgx$counts) > prior.cpm, na.rm = TRUE) >= AT.LEAST)
   pgx$filtered <- NULL
   pgx$filtered[["low.expressed"]] <- paste(rownames(pgx$counts)[which(!keep)], collapse = ";")
-  pgx$counts <- pgx$counts[which(keep), , drop = FALSE]
+  pgx$counts <- pgx$counts[keep, , drop = FALSE]
   cat("filtering out", sum(!keep), "low-expressed genes\n")
   cat("keeping", sum(keep), "expressed genes\n")
+  if (!is.null(pgx$X)) {
+    pgx$X <- pgx$X[keep, , drop = FALSE]
+  }
   pgx
 }
 

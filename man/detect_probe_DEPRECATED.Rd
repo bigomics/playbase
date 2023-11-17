@@ -26,8 +26,9 @@ most likely probe type. Useful for identifying the type of identifiers
 in a gene expression matrix when not explicitly provided.
 }
 \examples{
+\dontrun{
 probes <- probes <- c("NM_001081979", "NM_001081980", "NM_001081981", "NM_001081982", "NM_001081983")
 organism <- "Mouse"
 type <- detect_probe_DEPRECATED(probes, organism)
-
+}
 }

@@ -4,7 +4,12 @@
 \alias{pgx.crosscheckINPUT}
 \title{Cross check input files for pgx.computePGX}
 \usage{
-pgx.crosscheckINPUT(SAMPLES = NULL, COUNTS = NULL, CONTRASTS = NULL)
+pgx.crosscheckINPUT(
+  SAMPLES = NULL,
+  COUNTS = NULL,
+  CONTRASTS = NULL,
+  PASS = TRUE
+)
 }
 \arguments{
 \item{COUNTS}{data.frame. The data frame corresponding to the input file as in playbase::COUNTS}

@@ -27,9 +27,8 @@ using the provided identifiers and probe type. Returns a cleaned and
 reformatted data frame with feature identifiers as row names.
 }
 \examples{
-probes <- head(rownames(counts), 100)
-probe_type <- "ENSEMBL"
-organism <- "Human"
-annotation <- ngs.getGeneAnnotation_DEPRECATED(probes, probe_type, organism)
-
+\dontrun{
+probes <- c("ENSMUSG00000051951", "ENSMUSG00000033845")
+annot <- ngs.getGeneAnnotation_DEPRECATED(probes, "ENSEMBL", organism = "Mouse")
+}
 }

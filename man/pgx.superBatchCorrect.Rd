@@ -17,6 +17,7 @@ pgx.superBatchCorrect(
   hc.correct = TRUE,
   mnn.correct = NULL,
   nnm.correct = TRUE,
+  bc.methods = NULL,
   max.rho = 0.3,
   max.iter = 10,
   hc.top = 50

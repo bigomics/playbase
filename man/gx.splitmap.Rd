@@ -42,7 +42,8 @@ gx.splitmap(
   lab.len = 80,
   key.offset = c(0.05, 1.01),
   show_colnames = NULL,
-  use.nclust = FALSE
+  use.nclust = FALSE,
+  data = FALSE
 )
 }
 \arguments{

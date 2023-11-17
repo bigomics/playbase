@@ -36,8 +36,6 @@
 #' gset.cor(ranks, genesets)
 #' }
 #' @export
-# Write a sample function call to simulate 1000 gene names
-
 gset.cor <- function(rnk, gset, compute.p = FALSE) {
   gset.rankcor(rnk = rnk, gset = gset, compute.p = compute.p, use.rank = FALSE)
 }
@@ -62,7 +60,7 @@ gset.cor <- function(rnk, gset, compute.p = FALSE) {
 #' column of gset using \code{qlcMatrix::corSparse()}. It handles missing values in
 #' rnk by computing column-wise correlations.
 #'
-#' P-values are computed by permuting gset and finding empirical null distribution.
+#' P-values are computed from statistical distribution
 #'
 #' @examples
 #' \dontrun{
@@ -79,13 +77,13 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
   if (!any(class(gset) %in% c("Matrix", "dgCMatrix", "matrix", "array"))) {
     stop("gset must be a matrix")
   }
-  is.vec <- (NCOL(rnk) == 1 && !class(rnk) %in% c("matrix", "array", "Matrix"))
+  is.vec <- (NCOL(rnk) == 1 && !class(rnk) %in% c("matrix", "Matrix"))
   if (is.vec && is.null(names(rnk))) stop("rank vector must be named")
   if (!is.vec && is.null(rownames(rnk))) stop("rank matrix must have rownames")
   if (is.vec) rnk <- matrix(rnk, ncol = 1, dimnames = list(names(rnk), "rnk"))
   n1 <- sum(rownames(rnk) %in% colnames(gset), na.rm = TRUE)
   n2 <- sum(rownames(rnk) %in% rownames(gset), na.rm = TRUE)
-  if (n1 > n2) gset <- t(gset)
+  if (n1 > n2) gset <- Matrix::t(gset)
 
   gg <- intersect(rownames(gset), rownames(rnk))
   rnk1 <- rnk[gg, , drop = FALSE]
@@ -116,30 +114,10 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
   colnames(rho1) <- colnames(rnk1)
   rho1[is.nan(rho1)] <- NA ## ??
 
-  ## compute p-value by permutation
-  pv <- qv <- NULL
+  ## compute p-value
+  .cor.pvalue <- function(x, n) 2 * stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
   if (compute.p) {
-    message("computing permutation-based p-values...")
-    ## Permutation of the GSET matrix
-    idx <- Matrix::which(gset != 0, arr.ind = TRUE)
-    slist <- list()
-    if (ncol(gset) < 1000) {
-      nk <- ceiling(1000 / ncol(gset))
-      i <- 1
-      for (i in 1:nk) {
-        ii <- sample(idx[, 1])
-        jj <- sample(idx[, 2])
-        slist[[i]] <- Matrix::sparseMatrix(ii, jj,
-          x = rep(1, nrow(idx)),
-          dims = dim(gset), dimnames = dimnames(gset)
-        )
-      }
-      S <- do.call(cbind, slist)
-    }
-    #
-    rho2 <- gset.rankcor(rnk1, S, compute.p = FALSE, use.rank = use.rank)$rho ## warning:: do not recurse!!
-    t.abs.rho2 <- t(abs(rho2))
-    pv <- t(apply(rho1, 1, function(x) rowMeans(t.abs.rho2 > abs(x), na.rm = TRUE)))
+    pv <- apply(rho1, 2, function(x) .cor.pvalue(x, n = nrow(rnk1)))
     pv[is.nan(pv)] <- NA ## ??
     qv <- apply(pv, 2, stats::p.adjust, method = "fdr")
     df <- list(rho = rho1, p.value = pv, q.value = qv)

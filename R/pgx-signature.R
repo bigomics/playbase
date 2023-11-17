@@ -388,6 +388,9 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
     rhdf5::h5write(pos[["pca2d"]], h5.file, "clustering/pca2d") ## can write list??
     rhdf5::h5write(pos[["tsne2d"]], h5.file, "clustering/tsne2d") ## can write list??
     rhdf5::h5write(pos[["umap2d"]], h5.file, "clustering/umap2d") ## can write list??
+
+    dbg("[pgx.createSignatureDatabaseH5.fromMatrix] dim.tsne2d = ", dim(pos[["tsne2d"]]))
+    dbg("[pgx.createSignatureDatabaseH5.fromMatrix] clustering done")
   }
 
   ## --------------------------------------------------
@@ -396,6 +399,7 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
   pgx.addEnrichmentSignaturesH5(h5.file, X = X, mc.cores = 0, methods = "rankcor")
 
   ## done!
+  dbg("[pgx.createSignatureDatabaseH5.fromMatrix] done!")
   rhdf5::h5closeAll()
 }
 
