@@ -632,13 +632,13 @@ counts.removeOutliers <- function(counts) {
   counts
 }
 
-##xxl.val = NA; zsd = 10
+## xxl.val = NA; zsd = 10
 counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
   ## remove extra-large and infinite values
   X <- log2(1 + counts)
-  sdx <- apply(X, 1, function(x) mad(x[x>0], na.rm = TRUE))
+  sdx <- apply(X, 1, function(x) mad(x[x > 0], na.rm = TRUE))
   sdx[is.na(sdx)] <- 0
-  sdx0 <- 0.8 * sdx + 0.2 * mean(sdx, na.rm=TRUE)  ## moderated SD
+  sdx0 <- 0.8 * sdx + 0.2 * mean(sdx, na.rm = TRUE) ## moderated SD
   zx <- (X - colMeans(X, na.rm = TRUE)) / sdx0
   which.xxl <- which(abs(zx) > zsd, arr.ind = TRUE)
   nxxl <- nrow(which.xxl)

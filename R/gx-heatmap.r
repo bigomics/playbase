@@ -503,7 +503,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       col = row.colors,
       show_annotation_name = show_colnames,
       show_legend = FALSE,
-      annotation_name_gp = grid::gpar(fontsize = 3.3 * annot.ht* annot.cex),
+      annotation_name_gp = grid::gpar(fontsize = 3.3 * annot.ht * annot.cex),
       simple_anno_size = grid::unit(annot.ht, "mm"), ## BioC 3.8!!
       width = grid::unit(annot.ht * ncol(row.annot), "mm")
     )

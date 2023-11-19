@@ -435,25 +435,24 @@ pgx.SeuratBatchIntegrate <- function(counts, batch, qc.filter = FALSE,
 
 #' @export
 pgx.read_singlecell_counts <- function(filename) {
-
   counts <- NULL
-  if(grepl("[.]csv$",filename)) {
-    counts <- as.matrix(data.table::fread(filename, header=TRUE),row.names=1)
+  if (grepl("[.]csv$", filename)) {
+    counts <- as.matrix(data.table::fread(filename, header = TRUE), row.names = 1)
   }
-  if(grepl("[.]mtx$",filename)) {
+  if (grepl("[.]mtx$", filename)) {
     dir <- dirname(filename)
-    barcode.file <- file.path(dir,"barcodes.tsv")
-    genes.file <- file.path(dir,"genes.tsv")
-    if(!file.exists(filename)) stop("could not find counts matrix: ",filename)
-    if(!file.exists(barcode.file)) stop("could not find barcode file: ",barcode.file)
-    if(!file.exists(genes.file)) stop("could not find genes file: ",genes.file)    
+    barcode.file <- file.path(dir, "barcodes.tsv")
+    genes.file <- file.path(dir, "genes.tsv")
+    if (!file.exists(filename)) stop("could not find counts matrix: ", filename)
+    if (!file.exists(barcode.file)) stop("could not find barcode file: ", barcode.file)
+    if (!file.exists(genes.file)) stop("could not find genes file: ", genes.file)
     counts <- Matrix::readMM(filename)
-    bc <- read.csv(barcode.file,header=FALSE,sep='\t')
-    gn <- read.csv(genes.file,header=FALSE,sep='\t')
-    rownames(counts) <- gc[,2] ## gene names?
-    colnames(counts) <- bc[,1]
+    bc <- read.csv(barcode.file, header = FALSE, sep = "\t")
+    gn <- read.csv(genes.file, header = FALSE, sep = "\t")
+    rownames(counts) <- gc[, 2] ## gene names?
+    colnames(counts) <- bc[, 1]
   }
-  if(grepl("[.]h5$",filename)) {
+  if (grepl("[.]h5$", filename)) {
     counts <- Seurat::Read10X_h5(filename, use.names = TRUE, unique.features = TRUE)
   }
   dim(counts)
@@ -462,134 +461,133 @@ pgx.read_singlecell_counts <- function(filename) {
 
 
 #' @export
-pgx.supercell <- function(counts, meta, group=NULL, gamma=20) {
-
+pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
   ## require(SuperCell)
-  X <- log2(1 + edgeR::cpm(counts) / 100 )
+  X <- log2(1 + edgeR::cpm(counts) / 100)
 
-  if(is.null(group) && "group" %in% colnames(meta)) {
+  if (is.null(group) && "group" %in% colnames(meta)) {
     cat("using group detected in meta\n")
-    group <- meta[,"group"]
+    group <- meta[, "group"]
   }
-  
-  SC <- SuperCell::SCimplify(X, gamma = gamma,
+
+  SC <- SuperCell::SCimplify(X,
+    gamma = gamma,
     n.var.genes = 1000,
     ## cell.annotation = group,
     cell.split.condition = group
   )
-  
-  dsel <- which(sapply(meta,class) %in% c("factor","character","logical"))
-  group.argmax <- function(x) tapply(x,SC$membership, function(x) names(which.max(table(x))))
-  dmeta <- apply(meta[,dsel,drop=FALSE], 2, function(x) group.argmax(x))
 
-  csel <- which(sapply(meta,class) %in% c("numeric","integer"))  
-  group.mean <- function(x) tapply(x, SC$membership, function(x) mean(x,na.rm=TRUE))
-  cmeta <- apply(meta[,csel,drop=FALSE], 2, function(x) group.mean(x))
+  dsel <- which(sapply(meta, class) %in% c("factor", "character", "logical"))
+  group.argmax <- function(x) tapply(x, SC$membership, function(x) names(which.max(table(x))))
+  dmeta <- apply(meta[, dsel, drop = FALSE], 2, function(x) group.argmax(x))
+
+  csel <- which(sapply(meta, class) %in% c("numeric", "integer"))
+  group.mean <- function(x) tapply(x, SC$membership, function(x) mean(x, na.rm = TRUE))
+  cmeta <- apply(meta[, csel, drop = FALSE], 2, function(x) group.mean(x))
 
   sc.meta <- data.frame(dmeta)
-  if(length(csel)>0) sc.meta <- cbind(sc.meta, cmeta)
-  ii <- setdiff(match(colnames(meta),colnames(sc.meta)),NA)
-  sc.meta <- sc.meta[,ii]
+  if (length(csel) > 0) sc.meta <- cbind(sc.meta, cmeta)
+  ii <- setdiff(match(colnames(meta), colnames(sc.meta)), NA)
+  sc.meta <- sc.meta[, ii]
 
   ## Compute metacall expression as sum of counts
-  sc.counts  <- SuperCell::supercell_GE(counts, mode="sum", groups = SC$membership )
-  sc.membership <- paste0("mc",SC$membership)
-  colnames(sc.counts) <- paste0("mc",1:ncol(sc.counts))
+  sc.counts <- SuperCell::supercell_GE(counts, mode = "sum", groups = SC$membership)
+  sc.membership <- paste0("mc", SC$membership)
+  colnames(sc.counts) <- paste0("mc", 1:ncol(sc.counts))
   rownames(sc.meta) <- colnames(sc.counts)
-  
-  list(counts=sc.counts, meta=sc.meta, membership=sc.membership)
+
+  list(counts = sc.counts, meta = sc.meta, membership = sc.membership)
 }
 
-pgx.supercell_BIG <- function(counts, meta, group=NULL, gamma=20, batch.size=1e5) {
-
-  ##require(SuperCell)
-  if(is.null(group) && "group" %in% colnames(meta)) {
+pgx.supercell_BIG <- function(counts, meta, group = NULL, gamma = 20, batch.size = 1e5) {
+  ## require(SuperCell)
+  if (is.null(group) && "group" %in% colnames(meta)) {
     cat("using group detected in meta\n")
-    group <- meta[,"group"]
+    group <- meta[, "group"]
   }
 
   nbatch <- ceiling(ncol(counts) / batch.size)
-  idx <- head(as.vector(sapply(1:nbatch, rep, batch.size)),ncol(counts))
-  ## idx <- sample(idx) 
+  idx <- head(as.vector(sapply(1:nbatch, rep, batch.size)), ncol(counts))
+  ## idx <- sample(idx)
   table(idx)
 
-  i=1
+  i <- 1
   sc.counts <- c()
   sc.membership <- c()
   gamma
-  
-  i=1
-  for(i in sort(unique(idx))) {
-    
-    cat("processing index",i,"\n")
-    ii <- which(idx==i)
-    
+
+  i <- 1
+  for (i in sort(unique(idx))) {
+    cat("processing index", i, "\n")
+    ii <- which(idx == i)
+
     ## https://stackoverflow.com/questions/39284774/column-rescaling-for-a-very-large-sparse-matrix-in-r
-    ##X <- log2(1 + edgeR::cpm(X) / 100)
-    X1 <- as(counts[,ii], "sparseMatrix")
+    ## X <- log2(1 + edgeR::cpm(X) / 100)
+    X1 <- as(counts[, ii], "sparseMatrix")
     X1@x <- X1@x / rep.int(colSums(X1), diff(X1@p)) * 1e4
     X1@x <- log2(1 + X1@x)
 
     grp <- NULL
-    if(!is.null(group)) grp <- group[ii]
-    
-    SC <- SuperCell::SCimplify(X1, gamma = gamma, n.var.genes=1000,
-      ##cell.annotation = Y$Mouse[ii]
+    if (!is.null(group)) grp <- group[ii]
+
+    SC <- SuperCell::SCimplify(X1,
+      gamma = gamma, n.var.genes = 1000,
+      ## cell.annotation = Y$Mouse[ii]
       cell.split.condition = grp
     )
-    
+
     ## Compute metacall expression as sum of counts
     n0 <- length(unique(unlist(sc.membership)))
-    sc1  <- SuperCell::supercell_GE(counts[,ii], mode="sum", groups = SC$membership )
-    colnames(sc1) <- paste0("mc",n0 + 1:ncol(sc1))
+    sc1 <- SuperCell::supercell_GE(counts[, ii], mode = "sum", groups = SC$membership)
+    colnames(sc1) <- paste0("mc", n0 + 1:ncol(sc1))
 
     sc.counts <- cbind(sc.counts, sc1)
-    sc.membership <- c(sc.membership, paste0("mc",n0 + SC$membership))
-    ##sc.membership[[i]] <- paste0("mc.",n0 + SC$membership)
+    sc.membership <- c(sc.membership, paste0("mc", n0 + SC$membership))
+    ## sc.membership[[i]] <- paste0("mc.",n0 + SC$membership)
   }
 
   dim(sc.counts)
   table(sc.membership)
 
-  meta <- meta[,colMeans(is.na(meta))<1,drop=FALSE]
-  
-  dsel <- which(sapply(meta,class) %in% c("factor","character","logical"))
-  group.argmax <- function(x) tapply(x,sc.membership, function(x) names(which.max(table(x))))
-  dmeta <- apply(meta[,dsel,drop=FALSE], 2, function(x) group.argmax(x))
-  
-  csel <- which(sapply(meta,class) %in% c("numeric","integer"))  
-  group.mean <- function(x) tapply(x, sc.membership, function(x) mean(x,na.rm=TRUE))
-  cmeta <- apply(meta[,csel,drop=FALSE], 2, function(x) group.mean(x))
-    
+  meta <- meta[, colMeans(is.na(meta)) < 1, drop = FALSE]
+
+  dsel <- which(sapply(meta, class) %in% c("factor", "character", "logical"))
+  group.argmax <- function(x) tapply(x, sc.membership, function(x) names(which.max(table(x))))
+  dmeta <- apply(meta[, dsel, drop = FALSE], 2, function(x) group.argmax(x))
+
+  csel <- which(sapply(meta, class) %in% c("numeric", "integer"))
+  group.mean <- function(x) tapply(x, sc.membership, function(x) mean(x, na.rm = TRUE))
+  cmeta <- apply(meta[, csel, drop = FALSE], 2, function(x) group.mean(x))
+
   sc.meta <- data.frame(dmeta)
-  if(length(csel)>0) sc.meta <- cbind(sc.meta, cmeta)
-  ii <- setdiff(match(colnames(meta),colnames(sc.meta)),NA)
-  sc.meta <- sc.meta[,ii]
-  mc.name <- paste0("mc",1:ncol(sc.counts))
+  if (length(csel) > 0) sc.meta <- cbind(sc.meta, cmeta)
+  ii <- setdiff(match(colnames(meta), colnames(sc.meta)), NA)
+  sc.meta <- sc.meta[, ii]
+  mc.name <- paste0("mc", 1:ncol(sc.counts))
   colnames(sc.counts) <- rownames(sc.meta) <- mc.name
 
-  list(counts=sc.counts, meta=sc.meta, membership=sc.membership)
+  list(counts = sc.counts, meta = sc.meta, membership = sc.membership)
 }
 
-pgx.createSeuratObject <- function(counts, samples, sct=TRUE) {
+pgx.createSeuratObject <- function(counts, samples, sct = TRUE) {
   obj <- Seurat::CreateSeuratObject(counts = counts, meta.data = samples)
   obj <- Seurat::NormalizeData(obj)
-  obj <- Seurat::PercentageFeatureSet(obj, pattern = "^MT-|^Mt-", col.name="percent.mt")
-  obj <- Seurat::PercentageFeatureSet(obj, pattern = "^RP[LS]|^Rp[ls]", col.name="percent.ribo")
-  if(sct) {
+  obj <- Seurat::PercentageFeatureSet(obj, pattern = "^MT-|^Mt-", col.name = "percent.mt")
+  obj <- Seurat::PercentageFeatureSet(obj, pattern = "^RP[LS]|^Rp[ls]", col.name = "percent.ribo")
+  if (sct) {
     sct <- Seurat::SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
     sct <- Seurat::RunPCA(sct, verbose = FALSE)
     sct <- Seurat::FindNeighbors(sct, dims = 1:30, verbose = FALSE)
-    sct <- Seurat::FindClusters(sct, verbose = FALSE, resolution = 0.8)  ## smaller resolution
+    sct <- Seurat::FindClusters(sct, verbose = FALSE, resolution = 0.8) ## smaller resolution
     sct <- Seurat::RunUMAP(sct, dims = 1:30, verbose = FALSE)
     obj <- sct
   }
   obj
 }
 
-pgx.runAzimuth <- function(counts, reference="pbmcref") {
-  obj <- pgx.createSeuratObject(counts, samples=NULL, sct=FALSE)
-  obj1 <- Azimuth::RunAzimuth(obj, reference = reference, verbose=FALSE)
+pgx.runAzimuth <- function(counts, reference = "pbmcref") {
+  obj <- pgx.createSeuratObject(counts, samples = NULL, sct = FALSE)
+  obj1 <- Azimuth::RunAzimuth(obj, reference = reference, verbose = FALSE)
   k1 <- !(colnames(obj1@meta.data) %in% colnames(obj@meta.data))
   k2 <- !grepl("score$|refAssay$", colnames(obj1@meta.data))
   obj1@meta.data[, (k1 & k2)]
