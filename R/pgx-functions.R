@@ -367,12 +367,11 @@ pgx.checkObject <- function(pgx) {
 #' @export
 matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1) {
   if (dir == 2) X <- t(X)
-  mX <- do.call(cbind, tapply(1:ncol(X), group, function(i) rowMeans(X[, i, drop = FALSE], na.rm = TRUE)))
+  mX <- do.call(cbind, tapply(1:ncol(X), group,
+    function(i) FUN(X[, i, drop = FALSE], na.rm = TRUE)))
   if (dir == 2) mX <- t(mX)
   mX
 }
-
-
 
 #' Convert human gene symbols to mouse
 #'
