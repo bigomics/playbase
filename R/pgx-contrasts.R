@@ -40,9 +40,6 @@ pgx.getContrastGroups <- function(pgx, contrast, as.factor = TRUE) {
 
 
 
-
-
-
 #' Get sample conditions from expression matrix
 #'
 #' @param exp.matrix Expression matrix with samples in columns
@@ -383,7 +380,8 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, slen = 2
     )
     if (is.null(ct1)) next
     ct1x <- ct1$exp.matrix
-    colnames(ct1x) <- paste0(colnames(ct1x), "@", s)
+    ##colnames(ct1x) <- paste0(colnames(ct1x), "@", s)
+    colnames(ct1x) <- sub(':',paste0('@',s,':'),colnames(ct1x))
     ss <- rownames(df1)[sel]
     if (is.null(ct.all)) {
       ct.all <- data.frame(sample = ss, ct1x, check.names = FALSE)
@@ -702,7 +700,7 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
   is.num <- all(apply(contr.matrix, 2, function(x) all(x %in% num.values)))
   is.num
   if (!is.num) {
-    message("[contrastAsLabels] already as label!")
+    ##message("[contrastAsLabels] already as label!")
     return(contr.matrix)
   }
   K <- data.frame(contr.matrix[, 0])

@@ -220,16 +220,39 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         dist.method = "euclidean",
                         col.dist.method = "euclidean",
                         plot.method = "heatmap.2",
-                        scale = "row", softmax = 0, order.groups = "clust", symm.scale = FALSE,
-                        cluster_rows = TRUE, cluster_columns = TRUE, sort_columns = NULL,
-                        col.annot = NULL, row.annot = NULL, annot.ht = 3,
-                        nmax = 1000, cmax = NULL, main = " ", verbose = 1, denoise = 0,
-                        cexRow = 1, cexCol = 1, mar = c(5, 5, 5, 5), rownames_width = 25,
+                        scale = "row",
+                        softmax = 0,
+                        order.groups = "clust",
+                        symm.scale = FALSE,
+                        cluster_rows = TRUE,
+                        cluster_columns = TRUE,
+                        sort_columns = NULL,
+                        col.annot = NULL,
+                        row.annot = NULL,
+                        annot.ht = 3,
+                        annot.cex = 1,
+                        nmax = 1000,
+                        cmax = NULL,
+                        main = " ",
+                        verbose = 1,
+                        denoise = 0,
+                        cexRow = 1,
+                        cexCol = 1,
+                        mar = c(5, 5, 5, 5),
+                        rownames_width = 25,
                         rowlab.maxlen = 20,
-                        title_cex = 1.2, column_title_rot = 0, column_names_rot = 90,
-                        show_legend = TRUE, show_key = TRUE, zlim = NULL,
-                        show_rownames = nmax, lab.len = 80, key.offset = c(0.05, 1.01),
-                        show_colnames = NULL, use.nclust = FALSE, data = FALSE) {
+                        title_cex = 1.2,
+                        column_title_rot = 0,
+                        column_names_rot = 90,
+                        show_legend = TRUE,
+                        show_key = TRUE,
+                        zlim = NULL,
+                        show_rownames = nmax,
+                        lab.len = 80,
+                        key.offset = c(0.05, 1.01),
+                        show_colnames = NULL,
+                        use.nclust = FALSE,
+                        data = FALSE) {
   ComplexHeatmap::ht_global_opt(fast_hclust = TRUE)
   graphics::par(xpd = FALSE)
 
@@ -439,8 +462,8 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     for (i in 1:ngrp) {
       jj <- grp[[i]]
       ap <- list(
-        title_gp = grid::gpar(fontsize = 3.5 * annot.ht),
-        labels_gp = grid::gpar(fontsize = 3.1 * annot.ht),
+        title_gp = grid::gpar(fontsize = 3.5 * annot.ht * annot.cex),
+        labels_gp = grid::gpar(fontsize = 3.1 * annot.ht * annot.cex),
         grid_width = grid::unit(1 * annot.ht, "mm"),
         grid_height = grid::unit(1 * annot.ht, "mm")
       )
@@ -449,10 +472,10 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       col.ha[[i]] <- ComplexHeatmap::HeatmapAnnotation(
         df = col.annot[jj, , drop = FALSE],
         col = col.colors, na_col = "#FCFCFC",
-        simple_anno_size = grid::unit(0.85 * annot.ht, "mm"), ## BioC 3.8!!
+        simple_anno_size = grid::unit(0.85 * annot.ht * annot.cex, "mm"), ## BioC 3.8!!
         show_annotation_name = (i == ngrp),
         show_legend = show_legend & (npar <= 20),
-        annotation_name_gp = grid::gpar(fontsize = 3.1 * annot.ht),
+        annotation_name_gp = grid::gpar(fontsize = 3.1 * annot.ht * annot.cex),
         annotation_legend_param = aa
       )
     }
@@ -480,7 +503,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       col = row.colors,
       show_annotation_name = show_colnames,
       show_legend = FALSE,
-      annotation_name_gp = grid::gpar(fontsize = 3.3 * annot.ht),
+      annotation_name_gp = grid::gpar(fontsize = 3.3 * annot.ht* annot.cex),
       simple_anno_size = grid::unit(annot.ht, "mm"), ## BioC 3.8!!
       width = grid::unit(annot.ht * ncol(row.annot), "mm")
     )
@@ -590,7 +613,6 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       column_names_gp = grid::gpar(fontsize = 11 * cexCol)
     )
   }
-
 
   rownames.ha <- NULL
   if (FALSE && show_rownames < nrow(gx) && show_rownames > 0) {
@@ -715,7 +737,7 @@ gx.heatmap <- function(gx, values = NULL,
                        col = grDevices::colorRampPalette(c("royalblue3", "grey90", "indianred3"))(64),
                        softmax = FALSE,
                        scale = "row", verbose = 1, symm = FALSE,
-                       col.annot = NULL, row.annot = NULL, annot.ht = 1,
+                       col.annot = NULL, row.annot = NULL, annot.ht = 1, annot.cex = 1,
                        nmax = 1000, cmax = NULL, show_colnames = TRUE,
                        indent.names = FALSE,
                        ...) {
