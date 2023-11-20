@@ -22,6 +22,7 @@ gx.splitmap(
   col.annot = NULL,
   row.annot = NULL,
   annot.ht = 3,
+  annot.cex = 1,
   nmax = 1000,
   cmax = NULL,
   main = " ",
@@ -42,7 +43,8 @@ gx.splitmap(
   lab.len = 80,
   key.offset = c(0.05, 1.01),
   show_colnames = NULL,
-  use.nclust = FALSE
+  use.nclust = FALSE,
+  data = FALSE
 )
 }
 \arguments{
