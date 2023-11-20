@@ -11,7 +11,6 @@
 pgx.checkINPUT <- function(
     df,
     type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")) {
-
   datatype <- match.arg(type)
   df_clean <- df
   PASS <- TRUE
@@ -82,23 +81,23 @@ pgx.checkINPUT <- function(
     }
 
     ## check that numerator_vs_denominator is in the contrasts
-    if(all(grepl(" vs ",colnames(df_clean)))) {
-      colnames(df_clean) <- gsub(" vs ","_vs_",colnames(df_clean))
+    if (all(grepl(" vs ", colnames(df_clean)))) {
+      colnames(df_clean) <- gsub(" vs ", "_vs_", colnames(df_clean))
     }
-    has_no_vs <- which(!grepl("_vs_",colnames(df_clean)))
+    has_no_vs <- which(!grepl("_vs_", colnames(df_clean)))
     if (length(has_no_vs) > 0 && PASS) {
       check_return$e24 <- colnames(df_clean)[has_no_vs]
       PASS <- FALSE
     }
 
-    if(PASS) {
+    if (PASS) {
       # Split the column names at "_vs_"
       split_names <- strsplit(colnames(df_clean), "_vs_")
 
       # Get the numerators and denominators
       numerators <- sapply(split_names, "[[", 1)
       split_numerators <- strsplit(numerators, ":")
-      
+
       # if colon is present in numerators, keep the elements after colon
       numerators <- sapply(split_numerators, function(x) {
         if (length(x) > 1) {
@@ -107,11 +106,11 @@ pgx.checkINPUT <- function(
           x[1]
         }
       })
-      
+
       denominators <- sapply(split_names, "[[", 2)
       # Check if all elements in the matrix are character
       all_numeric <- any(apply(df_clean, c(1, 2), is.numeric))
-      
+
       if (!all_numeric && PASS) {
         # only run if we have characters in matrix
         NUMERATORS_IN_COLUMN <- sapply(1:length(numerators), function(i) {
@@ -120,20 +119,19 @@ pgx.checkINPUT <- function(
         DENOMINATORS_IN_COLUMN <- sapply(1:length(denominators), function(i) {
           denominators[i] %in% df_clean[, i]
         })
-        
+
         CONTRASTS_GROUPS_MISSING <- NUMERATORS_IN_COLUMN & DENOMINATORS_IN_COLUMN
-        
+
         if (all(!CONTRASTS_GROUPS_MISSING) && PASS) {
           check_return$e23 <- "All comparisons were invalid."
           PASS <- FALSE
         }
-        
+
         if (any(!CONTRASTS_GROUPS_MISSING) && PASS) {
           check_return$e22 <- colnames(df_clean)[!CONTRASTS_GROUPS_MISSING]
           df_clean <- df_clean[, CONTRASTS_GROUPS_MISSING, drop = FALSE]
         }
       }
-
     } ## if PASS
   }
 
