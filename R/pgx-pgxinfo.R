@@ -668,7 +668,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     if (!file.exists(tsne.file) || pgxfc.changed) {
       h5 <- rhdf5::h5ls(sigdb.file)
       has.tsne2d <- ("tsne2d" %in% h5$name)
-      if(has.tsne2d) {
+      if (has.tsne2d) {
         cn <- rhdf5::h5read(sigdb.file, "data/colnames")
         tsne <- rhdf5::h5read(sigdb.file, "clustering/tsne2d")
         if (length(cn) != nrow(tsne)) {
@@ -688,7 +688,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
           find.clusters = FALSE
         )$tsne2d
       }
-      colnames(tsne) <- paste0("tsne.", 1:ncol(tsne))        
+      colnames(tsne) <- paste0("tsne.", 1:ncol(tsne))
       utils::write.csv(tsne, file = tsne.file)
     }
   }
