@@ -133,10 +133,12 @@ compute_extra <- function(pgx, extra = c(
           sigdb <- c(sigdb, user.sigdb)
         }
         if (!is.null(libx.dir)) {
-          libx.sigdb <- dir(file.path(libx.dir, "sigdb"), pattern = "h5$",
-            full.names = TRUE)
+          libx.sigdb <- dir(file.path(libx.dir, "sigdb"),
+            pattern = "h5$",
+            full.names = TRUE
+          )
           ## do not follow symlinks because they can just be old names/aliases
-          is.symlink <- (Sys.readlink(libx.sigdb)!='')
+          is.symlink <- (Sys.readlink(libx.sigdb) != "")
           libx.sigdb <- libx.sigdb[!is.symlink]
           libx.sigdb
           sigdb <- c(sigdb, libx.sigdb)
