@@ -180,7 +180,6 @@ pgx.crosscheckINPUT <- function(
   check_return <- list()
 
   if (!is.null(samples) && !is.null(counts)) {
-    
     # Check that rownames(samples) match colnames(counts)
     COUNTS_NAMES_NOT_MATCHING_SAMPLES <- colnames(counts)[!colnames(counts) %in% rownames(samples)]
 
