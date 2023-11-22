@@ -18,15 +18,15 @@
 compute_extra <- function(pgx, extra = c(
                             "meta.go", "infer", "deconv", "drugs", ## "graph",
                             "connectivity", "wordcloud", "wgcna"
-                          ), sigdb = NULL, pgx.dir = './data', libx.dir = './libx') {
+                          ), sigdb = NULL, pgx.dir = "./data", libx.dir = "./libx") {
   timings <- c()
 
   if (length(extra) == 0) {
     return(pgx)
   }
-  if(!is.null(pgx.dir) && !dir.exists(pgx.dir)) pgx.dir <- NULL
-  if(!is.null(libx.dir) && !dir.exists(libx.dir)) libx.dir <- NULL
-  
+  if (!is.null(pgx.dir) && !dir.exists(pgx.dir)) pgx.dir <- NULL
+  if (!is.null(libx.dir) && !dir.exists(libx.dir)) libx.dir <- NULL
+
   ## detect if it is single or multi-omics
   single.omics <- !any(grepl("\\[", rownames(pgx$counts)))
   single.omics
