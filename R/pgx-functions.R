@@ -641,16 +641,15 @@ trimsame0 <- function(s, split = " ", summarize = FALSE, rev = FALSE) {
 #' }
 #' @export
 read.as_matrix <- function(file, skip_row_check = FALSE) {
-
   ## determine if there are empty lines in header
-  x0 <-data.table::fread(
+  x0 <- data.table::fread(
     file = file,
     header = FALSE,
     nrow = 100
   )
-  x0[is.na(x0)] <- ''
-  skip <- min(which(cumsum(rowMeans(x0!=''))>0))-1
-  
+  x0[is.na(x0)] <- ""
+  skip <- min(which(cumsum(rowMeans(x0 != "")) > 0)) - 1
+
   ## read delimited table automatically determine separator. allow
   ## duplicated rownames. This implements with faster fread.
   x0 <- data.table::fread(
