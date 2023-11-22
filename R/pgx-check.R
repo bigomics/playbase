@@ -14,7 +14,6 @@ pgx.checkINPUT <- function(
   datatype <- match.arg(type)
   df_clean <- df
   PASS <- TRUE
-
   check_return <- list()
 
   if (datatype == "COUNTS" || datatype == "EXPRESSION") {
@@ -38,14 +37,14 @@ pgx.checkINPUT <- function(
     }
 
     # check for zero count rows, remove them
-    ANY_ROW_ZERO <- which(rowSums(df_clean) == 0)
+    ANY_ROW_ZERO <- which(rowSums(df_clean) == 0,)
 
     if (length(ANY_ROW_ZERO) > 0 && PASS) {
       # get the row names with all zeros
       check_return$e9 <- names(ANY_ROW_ZERO)
 
       # remove the rownames with all zeros by using check_return$e9
-      df_clean <- df_clean[!(rownames(df_clean) %in% check_return$e9), ]
+      df_clean <- df_clean[!(rownames(df_clean) %in% check_return$e9),,drop = FALSE]
     }
 
     # check for zero count columns, remove them
