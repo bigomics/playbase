@@ -72,9 +72,19 @@ pgx.checkINPUT <- function(
 
   if (datatype == "CONTRASTS") {
     feature_names <- rownames(df_clean)
+    
+    # check that contrasts has at least one column
+    
+    COMPARISONS_WITHOUT_COLUMNS <- dim(df_clean)[2] == 0
+
+    if(COMPARISONS_WITHOUT_COLUMNS && PASS) {
+      check_return$e26 <- "No columns provided in comparisons."
+      PASS <- FALSE
+      }
 
     # check for duplicated rownames (but pass)
     ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
+
     if (length(x = ANY_DUPLICATED) > 0 && PASS) {
       check_return$e11 <- ANY_DUPLICATED
       PASS <- FALSE
