@@ -107,6 +107,8 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
     do.cluster = TRUE,
     use.design = TRUE,
     prune.samples = FALSE,
+    pgx.dir = pgx.dir,
+    libx.dir = libx.dir,
     progress = NULL
   )
 
@@ -637,7 +639,8 @@ counts.removeOutliers <- function(counts) {
 ## xxl.val = NA; zsd = 10
 counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
   ## remove extra-large and infinite values
-  X <- log2(1 + counts)
+  ##X <- log2(1 + counts)
+  X <- logCPM(counts)
   sdx <- apply(X, 1, function(x) mad(x[x > 0], na.rm = TRUE))
   sdx[is.na(sdx)] <- 0
   sdx0 <- 0.8 * sdx + 0.2 * mean(sdx, na.rm = TRUE) ## moderated SD
