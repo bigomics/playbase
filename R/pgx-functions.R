@@ -660,8 +660,15 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
   ## rownames. as.matrix means we do not have mixed types (such as in
   ## dataframes).
   if (length(sel)) {
-    x <- as.matrix(x0[sel, -1, drop = FALSE]) ## always as matrix
-    rownames(x) <- x0[[1]][sel]
+    if(ncol(x0) >= 2) {
+      x <- as.matrix(x0[sel, -1, drop = FALSE]) ## always as matrix
+      rownames(x) <- x0[[1]][sel]
+    } else {
+      x <- matrix(NA, length(sel), 0)
+      rownames(x) <- x0[[1]][sel]
+    }
+  } else {
+    return(NULL)
   }
 
   ## for character matrix, we strip whitespace
@@ -676,13 +683,14 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
     file = file, check.names = FALSE, na.strings = NULL,
     header = TRUE, nrows = 1, row.names = 1
   )
-  if (!all(colnames(x) == colnames(hdr))) {
+  
+  if (NCOL(x) > 0 && !all(colnames(x) == colnames(hdr))) {
     message("read.as_matrix: warning correcting missing rownames field in header")
     colnames(x) <- colnames(hdr)
   }
 
   ## some csv have trailing empty rows at end of table
-  if (!skip_row_check) { # Flag to bypass (used on contrast.csv ingest), as it can contain full NA rows
+  if (NCOL(x) && !skip_row_check) { # Flag to bypass (in contrast.csv), in case full NA rows
     empty.row <- (rowSums(is.na(x)) == ncol(x))
     if (tail(empty.row, 1)) {
       n <- which(!rev(empty.row))[1] - 1
