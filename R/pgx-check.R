@@ -288,17 +288,18 @@ contrasts_conversion_check <- function(SAMPLES, CONTRASTS, PASS) {
   samples1 <- SAMPLES
   contrasts1 <- contrasts.convertToLabelMatrix(CONTRASTS, SAMPLES)
 
+  if(is.null(contrasts1)) {
+    message("[contrasts_conversion_check] WARNING: could not convert contrasts!")
+    return(list(CONTRASTS = CONTRASTS, PASS = FALSE))
+  }
+  
   ok.contrast <- length(intersect(rownames(samples1), rownames(contrasts1))) > 0
   if (ok.contrast && NCOL(contrasts1) > 0 && PASS) {
     # check that dimentions of contrasts match samples
     if (dim(contrasts1)[1] != dim(samples1)[1] && PASS) {
       message("[contrasts_conversion_check] WARNING: numrows of contrast1 do not match samples!")
-      PASS <- FALSE
-      return(list(CONTRASTS = contrasts1, PASS = PASS))
+      return(list(CONTRASTS = contrasts1, PASS = FALSE))
     }
-    dbg("[contrasts_conversion_check] dim.CONTRASTS =", dim(CONTRASTS))
-    dbg("[contrasts_conversion_check] dim.contrasts1 =", dim(contrasts1))
-    dbg("[contrasts_conversion_check] dim.samples1 =", dim(samples1))
     rownames(contrasts1) <- rownames(samples1)
     for (i in 1:ncol(contrasts1)) {
       isz <- (contrasts1[, i] %in% c(NA, "NA", "NA ", "", " ", "  ", "   ", " NA"))

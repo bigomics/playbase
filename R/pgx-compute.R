@@ -30,7 +30,10 @@
 pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL,
                                 gxmethods = "trend.limma,edger.qlf,deseq2.wald",
                                 gsetmethods = "fisher,gsva,fgsea",
-                                extra = "meta.go,deconv,infer,drugs,wordcloud") {
+                                extra = "meta.go,deconv,infer,drugs,wordcloud",
+                                pgx.dir = './data',
+                                libx.dir = './libx'
+                                ) {
   ## compile sample table
   samples <- data.table::fread(samples.file, header = TRUE)
   samples <- data.frame(samples, check.names = FALSE, row.names = 1)
@@ -498,8 +501,7 @@ pgx.computePGX <- function(pgx,
                            prune.samples = FALSE,
                            extra.methods = c(
                              "meta.go", "infer", "deconv", "drugs",
-                             "connectivity", "wordcloud", "wgcna"
-                           )[c(1, 2)],
+                             "connectivity", "wordcloud", "wgcna")[c(1, 2)],
                            pgx.dir = NULL,
                            libx.dir = NULL,
                            progress = NULL) {
