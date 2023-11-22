@@ -660,7 +660,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
   ## rownames. as.matrix means we do not have mixed types (such as in
   ## dataframes).
   if (length(sel)) {
-    if(ncol(x0) >= 2) {
+    if (ncol(x0) >= 2) {
       x <- as.matrix(x0[sel, -1, drop = FALSE]) ## always as matrix
       rownames(x) <- x0[[1]][sel]
     } else {
@@ -683,7 +683,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
     file = file, check.names = FALSE, na.strings = NULL,
     header = TRUE, nrows = 1, row.names = 1
   )
-  
+
   if (NCOL(x) > 0 && !all(colnames(x) == colnames(hdr))) {
     message("read.as_matrix: warning correcting missing rownames field in header")
     colnames(x) <- colnames(hdr)
