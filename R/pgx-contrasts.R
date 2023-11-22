@@ -789,11 +789,6 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   is.numeric.contrast <- all(as.vector(unlist(contrasts)) %in% num.values)
   is.numeric.contrast
 
-  dbg("[contrasts.convertToLabelMatrix] 0 : dim(contrasts) = ", dim(contrasts))
-  dbg("[contrasts.convertToLabelMatrix] 0 : dim(samples) = ", dim(samples))
-  dbg("[contrasts.convertToLabelMatrix] 0 : len(contrasts) = ", length(contrasts))
-  dbg("[contrasts.convertToLabelMatrix] 0 : len(samples) = ", length(samples))
-
   ## first match of group (or condition) in colum names, regard as group column
   group.col <- head(grep("group|condition", tolower(colnames(samples))), 1)
   if (length(group.col) == 0) {
@@ -818,9 +813,6 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
     message("[contrasts.convertToLabelMatrix] ERROR: Invalid samples-wise contrast. sample names do not match.")
     return(NULL)
   }
-
-  dbg("[contrasts.convertToLabelMatrix] 1 : dim(contrasts) = ", dim(contrasts))
-  dbg("[contrasts.convertToLabelMatrix] 1 : dim(samples) = ", dim(samples))
 
   new.contrasts <- contrasts
   ## old1: group-wise -1/0/1 matrix
@@ -857,9 +849,6 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
       rownames(new.contrasts) <- rownames(samples)
     }
   }
-
-  dbg("[contrasts.convertToLabelMatrix] 3 : dim(contrasts) = ", dim(contrasts))
-  dbg("[contrasts.convertToLabelMatrix] 3 : dim(samples) = ", dim(samples))
 
   ## always clean up
   new.contrasts <- as.matrix(new.contrasts)
