@@ -288,11 +288,11 @@ contrasts_conversion_check <- function(SAMPLES, CONTRASTS, PASS) {
   samples1 <- SAMPLES
   contrasts1 <- contrasts.convertToLabelMatrix(CONTRASTS, SAMPLES)
 
-  if(is.null(contrasts1)) {
+  if (is.null(contrasts1)) {
     message("[contrasts_conversion_check] WARNING: could not convert contrasts!")
     return(list(CONTRASTS = CONTRASTS, PASS = FALSE))
   }
-  
+
   ok.contrast <- length(intersect(rownames(samples1), rownames(contrasts1))) > 0
   if (ok.contrast && NCOL(contrasts1) > 0 && PASS) {
     # check that dimentions of contrasts match samples
