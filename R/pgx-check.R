@@ -37,14 +37,14 @@ pgx.checkINPUT <- function(
     }
 
     # check for zero count rows, remove them
-    ANY_ROW_ZERO <- which(rowSums(df_clean) == 0,)
+    ANY_ROW_ZERO <- which(rowSums(df_clean) == 0, )
 
     if (length(ANY_ROW_ZERO) > 0 && PASS) {
       # get the row names with all zeros
       check_return$e9 <- names(ANY_ROW_ZERO)
 
       # remove the rownames with all zeros by using check_return$e9
-      df_clean <- df_clean[!(rownames(df_clean) %in% check_return$e9),,drop = FALSE]
+      df_clean <- df_clean[!(rownames(df_clean) %in% check_return$e9), , drop = FALSE]
     }
 
     # check for zero count columns, remove them
@@ -71,15 +71,15 @@ pgx.checkINPUT <- function(
 
   if (datatype == "CONTRASTS") {
     feature_names <- rownames(df_clean)
-    
+
     # check that contrasts has at least one column
-    
+
     COMPARISONS_WITHOUT_COLUMNS <- dim(df_clean)[2] == 0
 
-    if(COMPARISONS_WITHOUT_COLUMNS && PASS) {
+    if (COMPARISONS_WITHOUT_COLUMNS && PASS) {
       check_return$e26 <- "No columns provided in comparisons."
       PASS <- FALSE
-      }
+    }
 
     # check for duplicated rownames (but pass)
     ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
