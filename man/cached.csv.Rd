@@ -4,16 +4,16 @@
 \alias{cached.csv}
 \title{Cache a CSV file locally or on S3}
 \usage{
-cached.csv(file, bucket = NULL, FUN = read.csv, ...)
+cached.csv(file, FUN = read.csv, force = FALSE, ...)
 }
 \arguments{
 \item{file}{Character string specifying the path to the CSV file to cache}
 
-\item{bucket}{Character string specifying the S3 bucket name if caching on S3. Default is NULL for local caching.}
-
 \item{FUN}{Function to use for reading the CSV file. Default is read.csv.}
 
 \item{...}{Other arguments passed to FUN.}
+
+\item{bucket}{Character string specifying the S3 bucket name if caching on S3. Default is NULL for local caching.}
 }
 \value{
 A data frame containing the contents of the cached CSV file.
