@@ -40,9 +40,6 @@ pgx.getContrastGroups <- function(pgx, contrast, as.factor = TRUE) {
 
 
 
-
-
-
 #' Get sample conditions from expression matrix
 #'
 #' @param exp.matrix Expression matrix with samples in columns
@@ -221,7 +218,7 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
   for (i in 1:ncol(Y)) has.ref[i] <- (ref[i] %in% Y[, i] || ref[i] %in% c(all, full))
   has.ref
   if (!all(has.ref)) {
-    stop("ERROR:: reference ", which(!has.ref), " not in phenotype matrix\n")
+    message("ERROR:: reference ", which(!has.ref), " not in phenotype matrix\n")
     return(NULL)
   }
 
@@ -262,7 +259,8 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
       m1 <- m1[, !colnames(m1) %in% c("NA", "_"), drop = FALSE]
       colnames(m1) <- paste0(colnames(m1), "_vs_others")
     } else {
-      stop("[makeDirectContrasts000] FATAL")
+      message("[makeDirectContrasts000] FATAL")
+      return(NULL)
     }
     if (!is.null(m1)) {
       mm <- gsub("[: ]", "_", colnames(Y)[i])
@@ -383,7 +381,8 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, slen = 2
     )
     if (is.null(ct1)) next
     ct1x <- ct1$exp.matrix
-    colnames(ct1x) <- paste0(colnames(ct1x), "@", s)
+    ## colnames(ct1x) <- paste0(colnames(ct1x), "@", s)
+    colnames(ct1x) <- sub(":", paste0("@", s, ":"), colnames(ct1x))
     ss <- rownames(df1)[sel]
     if (is.null(ct.all)) {
       ct.all <- data.frame(sample = ss, ct1x, check.names = FALSE)
@@ -702,7 +701,7 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
   is.num <- all(apply(contr.matrix, 2, function(x) all(x %in% num.values)))
   is.num
   if (!is.num) {
-    message("[contrastAsLabels] already as label!")
+    ## message("[contrastAsLabels] already as label!")
     return(contr.matrix)
   }
   K <- data.frame(contr.matrix[, 0])
@@ -800,27 +799,24 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   has.group.col <- length(group.col) > 0
   is.group.contrast <- (nrow(contrasts) < nrow(samples)) && has.group.col
   notvalid.group.contrast <- (nrow(contrasts) < nrow(samples)) && !has.group.col
+  notvalid.sample.contrast <- (nrow(contrasts) >= nrow(samples)) &&
+    !all(rownames(contrasts) %in% rownames(samples)) &&
+    !all(rownames(samples) %in% rownames(contrasts))
   is.sample.contrast <- (nrow(contrasts) == nrow(samples) &&
     all(rownames(contrasts) == rownames(samples)))
+
   if (notvalid.group.contrast) {
-    stop("Invalid group-wise contrast. could not find 'group' column.")
+    message("[contrasts.convertToLabelMatrix] ERROR: Invalid group-wise contrast. could not find 'group' column.")
+    return(NULL)
+  }
+  if (notvalid.sample.contrast) {
+    message("[contrasts.convertToLabelMatrix] ERROR: Invalid samples-wise contrast. sample names do not match.")
     return(NULL)
   }
 
-  ## old1: group-wise -1/0/1 matrix
-  old1 <- (is.group.contrast && is.numeric.contrast)
-  ## old2: sample-wise -1/0/1 matrix
-  old2 <- (is.sample.contrast && is.numeric.contrast)
-  ## old3: group-wise label matrix
-  old3 <- (is.group.contrast && !is.numeric.contrast)
-
-  old1
-  old2
-  old3
-
-  old.style <- (old1 || old2 || old3)
   new.contrasts <- contrasts
-  if (old.style && old1) {
+  ## old1: group-wise -1/0/1 matrix
+  if (is.group.contrast && is.numeric.contrast) {
     message("[contrasts_conversion_check] WARNING: converting old1 style contrast to new format")
     new.contrasts <- samples[, 0]
     if (NCOL(contrasts) > 0) {
@@ -832,7 +828,8 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
       rownames(new.contrasts) <- rownames(samples)
     }
   }
-  if (old.style && old2) {
+  ## old2: sample-wise -1/0/1 matrix
+  if (is.sample.contrast && is.numeric.contrast) {
     message("[contrasts_conversion_check] WARNING: converting old2 style contrast to new format")
     new.contrasts <- samples[, 0]
     if (NCOL(contrasts) > 0) {
@@ -842,7 +839,8 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
       rownames(new.contrasts) <- rownames(samples)
     }
   }
-  if (old.style && old3) {
+  ## old3: group-wise label matrix
+  if (is.group.contrast && !is.numeric.contrast) {
     message("[contrasts_conversion_check] WARNING: converting group-wise label contrast to new format")
     new.contrasts <- samples[, 0]
     if (NCOL(contrasts) > 0) {

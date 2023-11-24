@@ -236,3 +236,37 @@ cached.csv <- function(file, bucket = NULL, FUN = read.csv, ...) {
   return(csv)
 }
 
+#' @export
+cached.csv.s3 <- function(file, bucket, FUN = read.csv, ...) {
+  file2 <- paste0("s3cache-", gsub("[-._/]", "", file), ".rds")
+  file2
+  cache.file <- file.path("/tmp", file2)
+  if (!file.exists(cache.file)) {
+    obj <- aws.s3::get_object(object = file, bucket = bucket)
+    csv <- data.table::fread(rawToChar(obj))
+    saveRDS(csv, file = cache.file)
+  } else {
+    csv <- readRDS(cache.file)
+  }
+  csv
+}
+
+#' @export
+sampleMatrixFromNames <- function(names) {
+  samples <- do.call(rbind, strsplit(names, split = "[_]"))
+
+  ## remove unique columns (probably sample ID)
+  id.cols <- which(apply(samples, 2, function(x) !any(duplicated(x))))
+  group.cols <- which(apply(samples, 2, function(x) any(duplicated(x))))
+
+  ## give rownames and columnames
+  rownames(samples) <- names
+  colnames(samples) <- paste0("V", 1:ncol(samples))
+  colnames(samples)[group.cols] <- paste0("group", 1:length(group.cols))
+  if (length(group.cols) == 1) colnames(samples)[group.cols[1]] <- "group"
+  colnames(samples)[id.cols] <- paste0("id", 1:length(id.cols))
+  if (length(id.cols) == 1) colnames(samples)[id.cols[1]] <- "id"
+
+  ## samples <- type.convert(data.frame(samples), as.is=TRUE)
+  samples
+}

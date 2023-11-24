@@ -22,6 +22,7 @@ gx.splitmap(
   col.annot = NULL,
   row.annot = NULL,
   annot.ht = 3,
+  annot.cex = 1,
   nmax = 1000,
   cmax = NULL,
   main = " ",

@@ -19,6 +19,7 @@ gx.heatmap(
   col.annot = NULL,
   row.annot = NULL,
   annot.ht = 1,
+  annot.cex = 1,
   nmax = 1000,
   cmax = NULL,
   show_colnames = TRUE,

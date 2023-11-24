@@ -18,12 +18,14 @@
 compute_extra <- function(pgx, extra = c(
                             "meta.go", "infer", "deconv", "drugs", ## "graph",
                             "connectivity", "wordcloud", "wgcna"
-                          ), sigdb = NULL, libx.dir = NULL, pgx.dir = NULL) {
+                          ), sigdb = NULL, pgx.dir = "./data", libx.dir = "./libx") {
   timings <- c()
 
   if (length(extra) == 0) {
     return(pgx)
   }
+  if (!is.null(pgx.dir) && !dir.exists(pgx.dir)) pgx.dir <- NULL
+  if (!is.null(libx.dir) && !dir.exists(libx.dir)) libx.dir <- NULL
 
   ## detect if it is single or multi-omics
   single.omics <- !any(grepl("\\[", rownames(pgx$counts)))
@@ -137,7 +139,14 @@ compute_extra <- function(pgx, extra = c(
           sigdb <- c(sigdb, user.sigdb)
         }
         if (!is.null(libx.dir)) {
-          libx.sigdb <- dir(file.path(libx.dir, "sigdb"), pattern = "h5$", full.names = TRUE)
+          libx.sigdb <- dir(file.path(libx.dir, "sigdb"),
+            pattern = "h5$",
+            full.names = TRUE
+          )
+          ## do not follow symlinks because they can just be old names/aliases
+          is.symlink <- (Sys.readlink(libx.sigdb) != "")
+          libx.sigdb <- libx.sigdb[!is.symlink]
+          libx.sigdb
           sigdb <- c(sigdb, libx.sigdb)
         }
       }

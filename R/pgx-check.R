@@ -13,9 +13,7 @@ pgx.checkINPUT <- function(
     type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")) {
   datatype <- match.arg(type)
   df_clean <- df
-
   PASS <- TRUE
-
   check_return <- list()
 
   if (datatype == "COUNTS" || datatype == "EXPRESSION") {
@@ -39,15 +37,14 @@ pgx.checkINPUT <- function(
     }
 
     # check for zero count rows, remove them
-
-    ANY_ROW_ZERO <- which(rowSums(df_clean) == 0)
+    ANY_ROW_ZERO <- which(rowSums(df_clean) == 0, )
 
     if (length(ANY_ROW_ZERO) > 0 && PASS) {
       # get the row names with all zeros
       check_return$e9 <- names(ANY_ROW_ZERO)
 
       # remove the rownames with all zeros by using check_return$e9
-      df_clean <- df_clean[!(rownames(df_clean) %in% check_return$e9), ]
+      df_clean <- df_clean[!(rownames(df_clean) %in% check_return$e9), , drop = FALSE]
     }
 
     # check for zero count columns, remove them
@@ -64,7 +61,6 @@ pgx.checkINPUT <- function(
     feature_names <- rownames(df_clean)
 
     # check for duplicated rownames
-
     ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
 
     if (length(x = ANY_DUPLICATED) > 0 && PASS) {
@@ -76,6 +72,15 @@ pgx.checkINPUT <- function(
   if (datatype == "CONTRASTS") {
     feature_names <- rownames(df_clean)
 
+    # check that contrasts has at least one column
+
+    COMPARISONS_WITHOUT_COLUMNS <- dim(df_clean)[2] == 0
+
+    if (COMPARISONS_WITHOUT_COLUMNS && PASS) {
+      check_return$e26 <- "No columns provided in comparisons."
+      PASS <- FALSE
+    }
+
     # check for duplicated rownames (but pass)
     ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
 
@@ -84,49 +89,59 @@ pgx.checkINPUT <- function(
       PASS <- FALSE
     }
 
-    # check that numerator_vs_denominator is in the contrasts
-
-    # Split the column names at "_vs_"
-    split_names <- strsplit(colnames(df_clean), "_vs_")
-
-    # Get the numerators and denominators
-    numerators <- sapply(split_names, "[[", 1)
-    split_numerators <- strsplit(numerators, ":")
-
-    # if colon is present in numerators, keep the elements after colon
-    numerators <- sapply(split_numerators, function(x) {
-      if (length(x) > 1) {
-        x[2]
-      } else {
-        x[1]
-      }
-    })
-
-    denominators <- sapply(split_names, "[[", 2)
-    # Check if all elements in the matrix are character
-    all_numeric <- any(apply(df_clean, c(1, 2), is.numeric))
-
-    if (!all_numeric && PASS) {
-      # only run if we have characters in matrix
-      NUMERATORS_IN_COLUMN <- sapply(1:length(numerators), function(i) {
-        numerators[i] %in% df_clean[, i]
-      })
-      DENOMINATORS_IN_COLUMN <- sapply(1:length(denominators), function(i) {
-        denominators[i] %in% df_clean[, i]
-      })
-
-      CONTRASTS_GROUPS_MISSING <- NUMERATORS_IN_COLUMN & DENOMINATORS_IN_COLUMN
-
-      if (all(!CONTRASTS_GROUPS_MISSING) && PASS) {
-        check_return$e23 <- "All comparisons were invalid."
-        PASS <- FALSE
-      }
-
-      if (any(!CONTRASTS_GROUPS_MISSING) && PASS) {
-        check_return$e22 <- colnames(df_clean)[!CONTRASTS_GROUPS_MISSING]
-        df_clean <- df_clean[, CONTRASTS_GROUPS_MISSING, drop = FALSE]
-      }
+    ## check that numerator_vs_denominator is in the contrasts
+    if (all(grepl(" vs ", colnames(df_clean)))) {
+      colnames(df_clean) <- gsub(" vs ", "_vs_", colnames(df_clean))
     }
+    has_no_vs <- which(!grepl("_vs_", colnames(df_clean)))
+    if (length(has_no_vs) > 0 && PASS) {
+      check_return$e24 <- colnames(df_clean)[has_no_vs]
+      PASS <- FALSE
+    }
+
+    if (PASS) {
+      # Split the column names at "_vs_"
+      split_names <- strsplit(colnames(df_clean), "_vs_")
+
+      # Get the numerators and denominators
+      numerators <- sapply(split_names, "[[", 1)
+      split_numerators <- strsplit(numerators, ":")
+
+      # if colon is present in numerators, keep the elements after colon
+      numerators <- sapply(split_numerators, function(x) {
+        if (length(x) > 1) {
+          x[2]
+        } else {
+          x[1]
+        }
+      })
+
+      denominators <- sapply(split_names, "[[", 2)
+      # Check if all elements in the matrix are character
+      all_numeric <- any(apply(df_clean, c(1, 2), is.numeric))
+
+      if (!all_numeric && PASS) {
+        # only run if we have characters in matrix
+        NUMERATORS_IN_COLUMN <- sapply(1:length(numerators), function(i) {
+          numerators[i] %in% df_clean[, i]
+        })
+        DENOMINATORS_IN_COLUMN <- sapply(1:length(denominators), function(i) {
+          denominators[i] %in% df_clean[, i]
+        })
+
+        CONTRASTS_GROUPS_MISSING <- NUMERATORS_IN_COLUMN & DENOMINATORS_IN_COLUMN
+
+        if (all(!CONTRASTS_GROUPS_MISSING) && PASS) {
+          check_return$e23 <- "All comparisons were invalid."
+          PASS <- FALSE
+        }
+
+        if (any(!CONTRASTS_GROUPS_MISSING) && PASS) {
+          check_return$e22 <- colnames(df_clean)[!CONTRASTS_GROUPS_MISSING]
+          df_clean <- df_clean[, CONTRASTS_GROUPS_MISSING, drop = FALSE]
+        }
+      }
+    } ## if PASS
   }
 
   # general checks for all data datatypes
@@ -175,8 +190,13 @@ pgx.crosscheckINPUT <- function(
 
   if (!is.null(samples) && !is.null(counts)) {
     # Check that rownames(samples) match colnames(counts)
-
     COUNTS_NAMES_NOT_MATCHING_SAMPLES <- colnames(counts)[!colnames(counts) %in% rownames(samples)]
+
+    # if there are not matches between samples and counts, return error e25
+    if (length(COUNTS_NAMES_NOT_MATCHING_SAMPLES) == length(colnames(counts)) && PASS) {
+      check_return$e25 <- COUNTS_NAMES_NOT_MATCHING_SAMPLES
+      PASS <- FALSE
+    }
 
     if (length(COUNTS_NAMES_NOT_MATCHING_SAMPLES) > 0 && PASS) {
       check_return$e21 <- COUNTS_NAMES_NOT_MATCHING_SAMPLES
@@ -277,17 +297,18 @@ contrasts_conversion_check <- function(SAMPLES, CONTRASTS, PASS) {
   samples1 <- SAMPLES
   contrasts1 <- contrasts.convertToLabelMatrix(CONTRASTS, SAMPLES)
 
+  if (is.null(contrasts1)) {
+    message("[contrasts_conversion_check] WARNING: could not convert contrasts!")
+    return(list(CONTRASTS = CONTRASTS, PASS = FALSE))
+  }
+
   ok.contrast <- length(intersect(rownames(samples1), rownames(contrasts1))) > 0
   if (ok.contrast && NCOL(contrasts1) > 0 && PASS) {
     # check that dimentions of contrasts match samples
     if (dim(contrasts1)[1] != dim(samples1)[1] && PASS) {
       message("[contrasts_conversion_check] WARNING: numrows of contrast1 do not match samples!")
-      PASS <- FALSE
-      return(list(CONTRASTS = contrasts1, PASS = PASS))
+      return(list(CONTRASTS = contrasts1, PASS = FALSE))
     }
-    dbg("[contrasts_conversion_check] dim.CONTRASTS =", dim(CONTRASTS))
-    dbg("[contrasts_conversion_check] dim.contrasts1 =", dim(contrasts1))
-    dbg("[contrasts_conversion_check] dim.samples1 =", dim(samples1))
     rownames(contrasts1) <- rownames(samples1)
     for (i in 1:ncol(contrasts1)) {
       isz <- (contrasts1[, i] %in% c(NA, "NA", "NA ", "", " ", "  ", "   ", " NA"))

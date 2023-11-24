@@ -30,41 +30,33 @@
 pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL,
                                 gxmethods = "trend.limma,edger.qlf,deseq2.wald",
                                 gsetmethods = "fisher,gsva,fgsea",
-                                extra = "meta.go,deconv,infer,drugs,wordcloud") {
-  ## compile sample table
-  samples <- data.table::fread(samples.file, header = TRUE)
-  samples <- data.frame(samples, check.names = FALSE, row.names = 1)
-
+                                extra = "meta.go,deconv,infer,drugs,wordcloud",
+                                pgx.dir = "./data",
+                                libx.dir = "./libx") {
   ## read counts table (allow dup rownames)
-  counts <- data.table::fread(counts.file)
-  counts.rownames <- counts[[1]]
-  counts <- as.matrix(counts[, -1])
-  rownames(counts) <- counts.rownames
+  counts <- read.as_matrix(counts.file)
 
-  ## undo logarithm if necessary
-  #  if (max(counts,na.rm=TRUE) < 100) {
-  #    cat("assuming counts were log2 values. undoing logarithm...\n")
-  #    counts <- 2**counts
-  #  }
-
-  ## match sample table and counts
-  kk <- sort(intersect(colnames(counts), rownames(samples)))
-  counts <- counts[, kk, drop = FALSE]
-  samples <- samples[kk, ]
+  ## compile sample table
+  samples <- read.as_matrix(samples.file)
+  samples <- data.frame(samples, check.names = FALSE)
 
   ## parse requested phenotypes
   if (!is.null(contrasts.file) && file.exists(contrasts.file)) {
     cat("reading contrasts file", contrasts.file, "\n")
-    contrasts <- data.table::fread(contrasts.file, header = TRUE)
-    contrasts <- data.frame(contrasts, check.names = FALSE, row.names = 1)
+    contrasts <- read.as_matrix(contrasts.file)
   } else {
-    ## take first (not-dotted) column as phenotype vector
-    pheno <- utils::head(grep("^[.]", colnames(samples), value = TRUE, invert = TRUE), 1)
-    pheno <- intersect(pheno, colnames(samples))
-    Y <- samples[, pheno, drop = FALSE]
+    ## take first (not-dotted) column in samples as phenotype vector
+    group.col <- head(grep("group|condition", colnames(samples), ignore.case = TRUE), 1)
+    if (length(group.col) == 0) {
+      group.col <- head(grep("^.*", colnames(samples), invert = TRUE), 1)
+    }
+    if (length(group.col) == 0) {
+      group.col <- colnames(samples)[1]
+    }
+    Y <- samples[, group.col, drop = FALSE]
     ## automatically guess contrasts
-    ac <- pgx.makeAutoContrasts(Y, mingrp = 3, slen = 20, ref = NA)
-    contrasts <- contrastAsLabels(ac$exp.matrix)
+    contr <- pgx.makeAutoContrasts(Y, mingrp = 3, slen = 20, ref = NA)
+    contrasts <- contrastAsLabels(contr$exp.matrix)
   }
 
   ## other params
@@ -104,6 +96,8 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
     do.cluster = TRUE,
     use.design = TRUE,
     prune.samples = FALSE,
+    pgx.dir = pgx.dir,
+    libx.dir = libx.dir,
     progress = NULL
   )
 
@@ -638,12 +632,17 @@ counts.removeOutliers <- function(counts) {
   counts
 }
 
-counts.removeXXLvalues <- function(counts, xxl.val = NA) {
+## xxl.val = NA; zsd = 10
+counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
   ## remove extra-large and infinite values
-  X <- log2(1 + counts)
-  tenSD <- colMeans(X, na.rm = TRUE) + apply(X, 2, sd, na.rm = TRUE) * 10
-  which.xxl <- which(t(t(X) > tenSD), arr.ind = TRUE)
-  nxxl <- length(which.xxl)
+  ## X <- log2(1 + counts)
+  X <- logCPM(counts)
+  sdx <- apply(X, 1, function(x) mad(x[x > 0], na.rm = TRUE))
+  sdx[is.na(sdx)] <- 0
+  sdx0 <- 0.8 * sdx + 0.2 * mean(sdx, na.rm = TRUE) ## moderated SD
+  zx <- (X - colMeans(X, na.rm = TRUE)) / sdx0
+  which.xxl <- which(abs(zx) > zsd, arr.ind = TRUE)
+  nxxl <- nrow(which.xxl)
   if (nxxl > 0) {
     message("[createPGX] WARNING: setting ", nxxl, " XXL values to NA")
     counts[which.xxl] <- xxl.val

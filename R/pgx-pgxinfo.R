@@ -646,7 +646,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
 
       if (fc.del) {
         del <- which(!cn %in% colnames(allFC))
-        ##        cn[del] <- paste("[DELETED]", sub(".*\\] ", "", cn[del]))
+        ##  cn[del] <- paste("[DELETED]", sub(".*\\] ", "", cn[del]))
         cn[del] <- paste("[DELETED]", cn[del])
         rhdf5::h5delete(sigdb.file, "data/colnames")
         rhdf5::h5write(cn, sigdb.file, "data/colnames")
@@ -666,14 +666,28 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     ## update tsne file from H5
     tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")
     if (!file.exists(tsne.file) || pgxfc.changed) {
-      cn <- rhdf5::h5read(sigdb.file, "data/colnames")
-      tsne <- rhdf5::h5read(sigdb.file, "clustering/tsne2d")
-      length(cn)
-      dim(tsne)
-      if (length(cn) != nrow(tsne)) {
-        dbg("[pgxinfo.updateDatasetFolder] ***ERROR**** length mismatch!")
+      h5 <- rhdf5::h5ls(sigdb.file)
+      has.tsne2d <- ("tsne2d" %in% h5$name)
+      if (has.tsne2d) {
+        cn <- rhdf5::h5read(sigdb.file, "data/colnames")
+        tsne <- rhdf5::h5read(sigdb.file, "clustering/tsne2d")
+        if (length(cn) != nrow(tsne)) {
+          dbg("[pgxinfo.updateDatasetFolder] ***ERROR**** length mismatch!")
+        }
+        rownames(tsne) <- cn
+      } else {
+        tsne <- pgx.clusterBigMatrix(
+          as.matrix(allFC),
+          methods = "tsne",
+          dims = 2,
+          perplexity = 50,
+          center.features = TRUE,
+          scale.features = FALSE,
+          reduce.sd = 1000,
+          reduce.pca = 50,
+          find.clusters = FALSE
+        )$tsne2d
       }
-      rownames(tsne) <- cn
       colnames(tsne) <- paste0("tsne.", 1:ncol(tsne))
       utils::write.csv(tsne, file = tsne.file)
     }

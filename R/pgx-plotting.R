@@ -3330,7 +3330,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                                      xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL,
                                      axis = TRUE, zoom = 1, legend = TRUE, bty = "n",
                                      hilight = NULL, hilight2 = hilight, hilight.col = NULL,
-                                     hilight.cex = NULL, hilight.lwd = 0.8,
+                                     hilight.cex = NULL, hilight.lwd = 0.8, opc.low = 1,
                                      zlim = NULL, zlog = FALSE, zsym = FALSE, softmax = FALSE,
                                      opacity = 1, bgcolor = NULL, box = TRUE,
                                      label.clusters = FALSE, labels = NULL, label.type = NULL,
@@ -3436,7 +3436,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
       y = pos[, 2],
       name = rownames(pos),
       value = z1,
-      size = 7 * cex,
+      size = 5 * cex,
       text = tooltip1,
       label = label1
     )
@@ -3459,13 +3459,12 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
       cpal <- add_opacity(cpal, opacity**0.33)
     }
 
-
     df <- data.frame(
       x = pos[, 1],
       y = pos[, 2],
       name = rownames(pos),
       value = z,
-      size = 7 * cex,
+      size = 5 * cex,
       text = tooltip1,
       label = label1
     )
@@ -3482,7 +3481,6 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     }
   }
 
-
   ## ---------------- call PLOTLY -----------
   if (is.null(source)) source <- paste0(sample(LETTERS, 10), collapse = "")
   ## plt <- plotly::plot_ly(df,
@@ -3498,14 +3496,19 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     plt <- plt %>%
       plotly::add_markers(
         data = df[jj, , drop = FALSE],
-        x = ~x, y = ~y,
+        x = ~x,
+        y = ~y,
         colors = cpal,
         text = ~text,
         hoverinfo = hoverinfo,
         marker = list(
           size = ~size,
           opacity = opacity,
-          color = "#DDDDDD44"
+          color = "#DDDDDD44",
+          line = list(
+            color = "#AAAAAA44",
+            width = 0.2
+          )
         ),
         showlegend = FALSE,
         key = ~name,
@@ -3516,17 +3519,23 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
 
   ## plot not missing values
   jj <- which(!is.na(df$value))
+  pt.opacity <- 1
+  if (!is.null(hilight)) {
+    jj <- which(!is.na(df$value) & !rownames(df) %in% hilight)
+    pt.opacity <- opc.low
+  }
   plt <- plt %>%
     plotly::add_markers(
       data = df[jj, , drop = FALSE],
-      x = ~x, y = ~y,
+      x = ~x,
+      y = ~y,
       color = ~value,
       colors = cpal,
       text = ~text,
       hoverinfo = hoverinfo,
       marker = list(
         size = ~size,
-        opacity = opacity,
+        opacity = opacity * pt.opacity,
         line = list(
           color = "#444444",
           width = 0.2
@@ -3548,14 +3557,17 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
       plotly::add_markers(
         data = df[jj, ],
         x = ~x, y = ~y,
-        color = ~value, colors = cpal,
+        color = ~value,
+        colors = cpal,
         color = NULL,
         key = ~name,
-        mode = "markers", type = "scattergl", #
+        mode = "markers",
+        type = "scattergl", #
         text = ~text,
         hoverinfo = hoverinfo,
         marker = list(
-          color = col1,
+          ## color = col1,
+          opacity = 1,
           size = 5 * hilight.cex,
           showlegend = FALSE,
           showscale = FALSE,

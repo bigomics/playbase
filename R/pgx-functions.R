@@ -367,7 +367,10 @@ pgx.checkObject <- function(pgx) {
 #' @export
 matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1) {
   if (dir == 2) X <- t(X)
-  mX <- do.call(cbind, tapply(1:ncol(X), group, function(i) rowMeans(X[, i, drop = FALSE], na.rm = TRUE)))
+  mX <- do.call(cbind, tapply(
+    1:ncol(X), group,
+    function(i) FUN(X[, i, drop = FALSE], na.rm = TRUE)
+  ))
   if (dir == 2) mX <- t(mX)
   mX
 }
@@ -493,6 +496,15 @@ trimsame0 <- function(s, split = " ", summarize = FALSE, rev = FALSE) {
 #' }
 #' @export
 read.as_matrix <- function(file, skip_row_check = FALSE) {
+  ## determine if there are empty lines in header
+  x0 <- data.table::fread(
+    file = file,
+    header = FALSE,
+    nrow = 100
+  )
+  x0[is.na(x0)] <- ""
+  skip <- min(which(cumsum(rowMeans(x0 != "")) > 0)) - 1
+
   ## read delimited table automatically determine separator. allow
   ## duplicated rownames. This implements with faster fread.
   x0 <- data.table::fread(
@@ -500,6 +512,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
     check.names = FALSE,
     header = TRUE,
     fill = TRUE,
+    skip = skip,
     blank.lines.skip = TRUE,
     stringsAsFactors = FALSE
   )
@@ -512,8 +525,15 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
   ## rownames. as.matrix means we do not have mixed types (such as in
   ## dataframes).
   if (length(sel)) {
-    x <- as.matrix(x0[sel, -1, drop = FALSE]) ## always as matrix
-    rownames(x) <- x0[[1]][sel]
+    if (ncol(x0) >= 2) {
+      x <- as.matrix(x0[sel, -1, drop = FALSE]) ## always as matrix
+      rownames(x) <- x0[[1]][sel]
+    } else {
+      x <- matrix(NA, length(sel), 0)
+      rownames(x) <- x0[[1]][sel]
+    }
+  } else {
+    return(NULL)
   }
 
   ## for character matrix, we strip whitespace
@@ -526,15 +546,16 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
   ## correct if needed. fread is fast but is not so robust...
   hdr <- utils::read.csv(
     file = file, check.names = FALSE, na.strings = NULL,
-    header = TRUE, nrows = 1, row.names = 1
+    header = TRUE, nrows = 1, skip = skip, row.names = 1
   )
-  if (!all(colnames(x) == colnames(hdr))) {
-    message("read.as_matrix: warning correcting missing rownames field in header")
+
+  if (NCOL(x) > 0 && !all(colnames(x) == colnames(hdr))) {
+    message("read.as_matrix: warning correcting header")
     colnames(x) <- colnames(hdr)
   }
 
-  ## some csv have trailing empty rows at end of table
-  if (!skip_row_check) { # Flag to bypass (used on contrast.csv ingest), as it can contain full NA rows
+  ## some csv have trailing empty rows/cols at end of table
+  if (NCOL(x) && !skip_row_check) { # bypass in case full NA rows
     empty.row <- (rowSums(is.na(x)) == ncol(x))
     if (tail(empty.row, 1)) {
       n <- which(!rev(empty.row))[1] - 1

@@ -13,3 +13,10 @@ install:
 	R CMD INSTALL .
 #	R CMD INSTALL ../playbase_0.1.0.tar.gz
 
+
+VERSION = "v3.2.33"
+
+tags:
+        git tag -f -a $(VERSION) -m 'version $(VERSION)'
+        git push && git push --tags
+
