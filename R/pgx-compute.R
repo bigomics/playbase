@@ -142,6 +142,7 @@ pgx.createPGX <- function(counts, samples, contrasts,
                           cluster.contrasts = FALSE,
                           do.clustergenes = TRUE,
                           only.proteincoding = TRUE,
+                          remove.xxl = TRUE,
                           normalize = TRUE) {
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("dimension of counts and X do not match\n")
@@ -193,7 +194,9 @@ pgx.createPGX <- function(counts, samples, contrasts,
   ## -------------------------------------------------------------------
 
   ## remove XXL/Infinite values and set to NA
-  counts <- counts.removeXXLvalues(counts, xxl.val = NA)
+  if(remove.xxl) {
+    counts <- counts.removeXXLvalues(counts, xxl.val = NA, zsd = 10)
+  }
 
   ## impute missing values
   if (any(is.na(counts))) {
@@ -611,7 +614,6 @@ pgx.computePGX <- function(pgx,
 ## =================== UTILITY FUNCTIONS =============================
 ## ===================================================================
 
-
 counts.removeOutliers <- function(counts) {
   ## remove samples with 1000x more or 1000x less total counts (than median)
   totcounts <- colSums(counts, na.rm = TRUE)
@@ -626,7 +628,6 @@ counts.removeOutliers <- function(counts) {
   counts
 }
 
-## xxl.val = NA; zsd = 10
 counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
   ## remove extra-large and infinite values
   ## X <- log2(1 + counts)
@@ -703,6 +704,8 @@ normalizeCounts <- function(M, method = c("TMM", "TMMwsp", "RLE", "upperquartile
 ## -------------------------------------------------------------------
 ## collapse multiple row for genes by summing up counts
 ## -------------------------------------------------------------------
+
+#' @export
 counts.mergeDuplicateFeatures <- function(counts) {
   ## take only first gene as rowname, retain others as alias
   gene0 <- rownames(counts)
