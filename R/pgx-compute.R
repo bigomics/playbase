@@ -634,16 +634,20 @@ counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
   ## remove extra-large and infinite values
   ## X <- log2(1 + counts)
   X <- logCPM(counts)
-  sdx <- apply(X, 1, function(x) mad(x[x > 0], na.rm = TRUE))
+  ##sdx <- apply(X, 1, function(x) mad(x[x > 0], na.rm = TRUE))
+  sdx <- matrixStats::rowSds(X, na.rm = TRUE)  
   sdx[is.na(sdx)] <- 0
   sdx0 <- 0.8 * sdx + 0.2 * mean(sdx, na.rm = TRUE) ## moderated SD
   mx <- rowMeans(X, na.rm = TRUE)
   z <- (X - mx) / sdx0
+  ##table(abs(z)>10)
   which.xxl <- which(abs(z) > zsd, arr.ind = TRUE)
   nxxl <- nrow(which.xxl)
   if (nxxl > 0) {
     message("[createPGX] WARNING: setting ", nxxl, " XXL values to NA")
     counts[which.xxl] <- xxl.val
+  } else {
+    message("[createPGX] no XXL values detected")
   }
   counts
 }
