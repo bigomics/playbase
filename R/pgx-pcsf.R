@@ -3,44 +3,50 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-level='gene';ntop=250;ncomp=3;fx=NULL
-level='geneset';ntop=250;ncomp=3;fx=NULL
+level <- "gene"
+ntop <- 250
+ncomp <- 3
+fx <- NULL
+level <- "geneset"
+ntop <- 250
+ncomp <- 3
+fx <- NULL
 
-pgx.pcsf <- function(pgx, level='gene', fx=NULL, ntop=250, ncomp=3,
-                     highlightby = "centrality", plot='visnet',
-                     node_cex = 30, label_cex=30) {
-
-  if(is.null(fx)) {
-    F <- pgx.getMetaMatrix(pgx, level=level)$fc
+pgx.pcsf <- function(pgx, level = "gene", fx = NULL, ntop = 250, ncomp = 3,
+                     highlightby = "centrality", plot = "visnet",
+                     node_cex = 30, label_cex = 30) {
+  if (is.null(fx)) {
+    F <- pgx.getMetaMatrix(pgx, level = level)$fc
     fx <- rowMeans(F)
-    if(level=='geneset') {
-      fx <- fx[grep("^GO",names(fx))]
+    if (level == "geneset") {
+      fx <- fx[grep("^GO", names(fx))]
     }
   }
-  
-  sel1 <- head(order(fx),ntop)
-  sel2 <- head(order(-fx),ntop)
-  sel <- c(sel1,sel2)
+
+  sel1 <- head(order(fx), ntop)
+  sel2 <- head(order(-fx), ntop)
+  sel <- c(sel1, sel2)
   fx <- fx[sel]
   fx[is.na(fx)] <- 0
-  
+
   ## first pass
   get_edges <- function(nodes) {
-    if(level == 'gene') {
+    if (level == "gene") {
       genes <- names(fx)
       data(STRING, package = "PCSF")
       sel <- (STRING$from %in% nodes & STRING$to %in% nodes)
       ee <- STRING[sel, ]
     }
-    if(level == 'geneset') {
-      G <- pgx$GMT[,nodes]
+    if (level == "geneset") {
+      G <- pgx$GMT[, nodes]
       R <- cor(as.matrix(G))
       diag(R) <- 0
-      jj <- which(abs(R) > 0.5, arr.ind=TRUE)
+      jj <- which(abs(R) > 0.5, arr.ind = TRUE)
       ee <- data.frame(
-        from = rownames(R)[jj[,1]],
-        to = rownames(R)[jj[,2]],
-        cost = 1-R[jj] )
+        from = rownames(R)[jj[, 1]],
+        to = rownames(R)[jj[, 2]],
+        cost = 1 - R[jj]
+      )
     }
     ee
   }
@@ -48,51 +54,51 @@ pgx.pcsf <- function(pgx, level='gene', fx=NULL, ntop=250, ncomp=3,
   ee <- get_edges(names(fx))
   ppi <- PCSF::construct_interactome(ee)
   prize1 <- abs(fx[V(ppi)$name])
-  net <- PCSF::PCSF(ppi, terminals=prize1, w=2, b=exp(.01))
-  
+  net <- PCSF::PCSF(ppi, terminals = prize1, w = 2, b = exp(.01))
+
   ## remove small clusters...
   cmp <- igraph::components(net)
-  if(ncomp < 1) {
+  if (ncomp < 1) {
     sel.kk <- which(cmp$csize > ncomp * max(cmp$csize))
   } else {
-    sel.kk <- head( order(-cmp$csize), ncomp )
+    sel.kk <- head(order(-cmp$csize), ncomp)
   }
   net <- igraph::subgraph(net, cmp$membership %in% sel.kk)
   class(net) <- c("PCSF", "igraph")
   net
 
   ## set node size
-  wt <- abs(fx[V(net)$name]/mean(abs(fx)))**0.8
-  node_cex1 <- node_cex * pmax(wt,1)
-  
-  ## set colors 
+  wt <- abs(fx[V(net)$name] / mean(abs(fx)))**0.8
+  node_cex1 <- node_cex * pmax(wt, 1)
+
+  ## set colors
   vv <- igraph::V(net)$name
   igraph::V(net)$type <- c("down", "up")[1 + 1 * (sign(fx[vv]) > 0)]
-  
-  do.physics=TRUE
+
+  do.physics <- TRUE
   layout <- "hierarchical"
   layout <- "layout_with_kk"
-    
+
   ## set label size
   if (highlightby == "centrality") {
     wt <- igraph::E(net)$weight
-    ewt <- 1.0 / (0.01*mean(wt) + wt)   ##
+    ewt <- 1.0 / (0.01 * mean(wt) + wt) ##
     bc <- igraph::page_rank(net, weights = ewt)$vector
-    label_cex1 <- label_cex * (1 + 3*(bc / max(bc))**3)
+    label_cex1 <- label_cex * (1 + 3 * (bc / max(bc))**3)
   }
   if (highlightby == "prize") {
     vv <- igraph::V(net)$name
     fx1 <- abs(fx[vv])
-    label_cex1 <- label_cex * (1 + 3*(fx1 / max(fx1))**3)
+    label_cex1 <- label_cex * (1 + 3 * (fx1 / max(fx1))**3)
   }
 
   ## set name
-  if(level == 'geneset') {
-    V(net)$name <- gsub(".*:| \\(.*","",V(net)$name)
+  if (level == "geneset") {
+    V(net)$name <- gsub(".*:| \\(.*", "", V(net)$name)
   }
 
   out <- NULL
-  if(plot == 'visnet') {
+  if (plot == "visnet") {
     library(igraph)
     out <- visplot.PCSF(
       net,
@@ -110,11 +116,11 @@ pgx.pcsf <- function(pgx, level='gene', fx=NULL, ntop=250, ncomp=3,
     )
   }
 
-  if(plot == 'igraph') {
-    plot.pcsf(net, fx0 = NULL, label.cex = 1) 
+  if (plot == "igraph") {
+    plot.pcsf(net, fx0 = NULL, label.cex = 1)
     out <- net
   }
-  
+
   out
 }
 
@@ -130,7 +136,6 @@ visplot.PCSF <- function(
     layout = "layout_with_fr", physics = TRUE, layoutMatrix = NULL,
     width = 1800, height = 1800, invert.weight = FALSE,
     extra_node_colors = list(), ...) {
-
   subnet <- x
   if (missing(subnet)) {
     stop("Need to specify the subnetwork obtained from the PCSF algorithm.")
@@ -209,11 +214,10 @@ visplot.PCSF <- function(
 #' @return
 #' @export
 plot.pcsf <- function(net, fx0 = NULL, label.cex = 1) {
-
   ## take largest connected graph
-#  csize <- clusters(net)$csize
-#  csize
-#  net <- igraph::decompose.graph(net)[[which.max(csize)]]
+  #  csize <- clusters(net)$csize
+  #  csize
+  #  net <- igraph::decompose.graph(net)[[which.max(csize)]]
 
   if (is.null(fx0)) fx0 <- igraph::V(net)$prize
   fx0 <- tanh(1.3 * fx0)
@@ -234,13 +238,13 @@ plot.pcsf <- function(net, fx0 = NULL, label.cex = 1) {
     spring.constant = 1
   )
 
-  vv <- (vertex.size/ mean(vertex.size))**1
+  vv <- (vertex.size / mean(vertex.size))**1
   plot(net,
     vertex.size = vertex.size,
     vertex.color = vertex.color,
     vertex.label.cex = vertex.label.cex,
-    vertex.label.dist = 0.4 + 0.7*vv,
-    vertex.label.degree = -0*pi,
+    vertex.label.dist = 0.4 + 0.7 * vv,
+    vertex.label.degree = -0 * pi,
     vertex.label.family = "sans",
     edge.width = 5 * edge.width,
     layout = pos

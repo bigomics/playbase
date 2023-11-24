@@ -156,6 +156,3 @@ pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
 
   return(x)
 }
-
-
-
