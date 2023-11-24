@@ -194,10 +194,15 @@ pgx.createPGX <- function(counts, samples, contrasts,
   ## -------------------------------------------------------------------
 
   ## remove XXL/Infinite values and set to NA
+<<<<<<< HEAD
   if(remove.xxl) {
     zsd <- 10  ## default value
     if(is.numeric(remove.xxl)) zsd <- remove.xxl
     counts <- counts.removeXXLvalues(counts, xxl.val = NA, zsd = zsd)
+=======
+  if (remove.xxl) {
+    counts <- counts.removeXXLvalues(counts, xxl.val = NA, zsd = 10)
+>>>>>>> 52ce412e8d733a7ce938ad178992ce836a50ac0e
   }
 
   ## impute missing values
