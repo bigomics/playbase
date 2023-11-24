@@ -10,7 +10,7 @@ pgx.computePGX(
   max.genesets = 5000,
   gx.methods = c("trend.limma", "edger.qlf", "deseq2.wald"),
   gset.methods = c("fisher", "gsva", "fgsea"),
-  custom.geneset = c(gmt = NULL, info = NULL),
+  custom.geneset = list(gmt = NULL, info = NULL),
   do.cluster = TRUE,
   use.design = TRUE,
   prune.samples = FALSE,

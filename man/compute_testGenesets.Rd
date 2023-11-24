@@ -7,7 +7,7 @@
 compute_testGenesets(
   pgx,
   max.features = 1000,
-  custom.geneset = NULL,
+  custom.geneset = list(gmt = NULL, info = NULL),
   test.methods = c("gsva", "camera", "fgsea"),
   remove.outputs = TRUE
 )

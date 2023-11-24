@@ -23,6 +23,7 @@ pgx.createPGX(
   cluster.contrasts = FALSE,
   do.clustergenes = TRUE,
   only.proteincoding = TRUE,
+  remove.xxl = TRUE,
   normalize = TRUE
 )
 }
