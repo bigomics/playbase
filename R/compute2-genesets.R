@@ -36,13 +36,13 @@ normalize_matrix_by_row <- function(G) {
 #' @export
 compute_testGenesets <- function(pgx,
                                  max.features = 1000,
-                                 custom.geneset = list(gmt=NULL, info=NULL),
+                                 custom.geneset = list(gmt = NULL, info = NULL),
                                  test.methods = c("gsva", "camera", "fgsea"),
                                  remove.outputs = TRUE) {
   if (!"X" %in% names(pgx)) {
     stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
   }
-  
+
   ## -----------------------------------------------------------
   ## Load huge geneset matrix
   ## -----------------------------------------------------------
@@ -75,7 +75,7 @@ compute_testGenesets <- function(pgx,
   }
 
   G <- G[which(size.ok), ]
-  G <- Matrix::t(G)  ## ???
+  G <- Matrix::t(G) ## ???
 
   # Load custom genesets (if user provided)
   if (!is.null(custom.geneset) && !is.null(custom.geneset$gmt)) {
@@ -211,9 +211,9 @@ compute_testGenesets <- function(pgx,
   pgx$gsetX <- pgx$gset.meta$matrices[["meta"]] ## META or average FC?
   pgx$GMT <- G[, rownames(pgx$gsetX)]
 
-  ##-------------------------------------------------------
+  ## -------------------------------------------------------
   ## calculate gset info and store as pgx$gset.meta
-  ##-------------------------------------------------------
+  ## -------------------------------------------------------
   gset.size <- Matrix::colSums(pgx$GMT != 0)
   gset.size.raw <- playdata::GSET_SIZE
 

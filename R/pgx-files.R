@@ -186,34 +186,34 @@ pgx.readOptions <- function(file = "./OPTIONS") {
 
 
 #' @export
-cached.csv <- function(file, FUN = read.csv, force=FALSE, ...) {
+cached.csv <- function(file, FUN = read.csv, force = FALSE, ...) {
   file2 <- paste0("cache-", gsub("[-._/]", "", file), ".rds")
-  file2  
+  file2
   ## cache.file <- file.path("/tmp", file2)
   cache.file <- file.path(tempdir(), file2)
   if (force || !file.exists(cache.file)) {
-    message("[cached.csv] reading from file ",file)
+    message("[cached.csv] reading from file ", file)
     csv <- FUN(file, ...)
     saveRDS(csv, file = cache.file)
   } else {
-    message("[cached.csv] reading from cache ",cache.file)
+    message("[cached.csv] reading from cache ", cache.file)
     csv <- readRDS(cache.file)
   }
   csv
 }
 
 #' @export
-cached.csv.s3 <- function(file, bucket, FUN = read.csv, force=FALSE, ...) {
+cached.csv.s3 <- function(file, bucket, FUN = read.csv, force = FALSE, ...) {
   file2 <- paste0("s3cache-", gsub("[-._/]", "", file), ".rds")
   file2
   cache.file <- file.path("/tmp", file2)
   if (force || !file.exists(cache.file)) {
-    message("[cached.csv.s3] reading from S3 bucket=",bucket, "   file=",file)    
+    message("[cached.csv.s3] reading from S3 bucket=", bucket, "   file=", file)
     obj <- aws.s3::get_object(object = file, bucket = bucket)
     csv <- data.table::fread(rawToChar(obj))
     saveRDS(csv, file = cache.file)
-  } else {    
-    message("[cached.csv.s3] reading from cache ",cache.file)
+  } else {
+    message("[cached.csv.s3] reading from cache ", cache.file)
     csv <- readRDS(cache.file)
   }
   csv
