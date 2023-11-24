@@ -33,7 +33,6 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
                                 extra = "meta.go,deconv,infer,drugs,wordcloud",
                                 pgx.dir = "./data",
                                 libx.dir = "./libx") {
-
   ## read counts table (allow dup rownames)
   counts <- read.as_matrix(counts.file)
 
@@ -47,11 +46,11 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
     contrasts <- read.as_matrix(contrasts.file)
   } else {
     ## take first (not-dotted) column in samples as phenotype vector
-    group.col <- head(grep("group|condition",colnames(samples),ignore.case=TRUE),1)
-    if(length(group.col)==0) {
-      group.col <- head(grep("^.*",colnames(samples),invert=TRUE),1)
+    group.col <- head(grep("group|condition", colnames(samples), ignore.case = TRUE), 1)
+    if (length(group.col) == 0) {
+      group.col <- head(grep("^.*", colnames(samples), invert = TRUE), 1)
     }
-    if(length(group.col)==0) {
+    if (length(group.col) == 0) {
       group.col <- colnames(samples)[1]
     }
     Y <- samples[, group.col, drop = FALSE]
