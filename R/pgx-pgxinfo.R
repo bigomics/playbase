@@ -132,7 +132,7 @@ pgxinfo.add <- function(pgxinfo, pgx, remove.old = TRUE) {
 #' If \code{match=TRUE}, the function filters the info to only datasets matching .pgx files in the directory.
 #'
 #' @export
-pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE) {
+pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE, use.cache=FALSE) {
   ##  pgx.dir="~/Playground/pgx";file = "datasets-info.csv"
   ##  pgx.dir="~/Downloads";file = "datasets-info.csv"
   pgx.files <- dir(pgx.dir, pattern = "[.]pgx$")
@@ -144,7 +144,11 @@ pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE) {
   pgxinfo.file <- file.path(pgx.dir, file)
   if (file.exists(pgxinfo.file)) {
     ## do not use fread.csv or fread here!! see issue #441
-    pgxinfo <- utils::read.csv(pgxinfo.file, stringsAsFactors = FALSE, row.names = NULL, sep = ",")
+    if(use.cache) {
+      pgxinfo <- cached.csv(pgxinfo.file, stringsAsFactors = FALSE, row.names = NULL, sep = ",")
+    } else {
+      pgxinfo <- utils::read.csv(pgxinfo.file, stringsAsFactors = FALSE, row.names = NULL, sep = ",")
+    }
     pgxinfo$X <- NULL ## delete first column
     pgxinfo <- pgxinfo[which(!is.na(pgxinfo$dataset)), ] ## remove NA
     if (match && nrow(pgxinfo)) {
