@@ -10,7 +10,9 @@ pgx.createFromFiles(
   contrasts.file = NULL,
   gxmethods = "trend.limma,edger.qlf,deseq2.wald",
   gsetmethods = "fisher,gsva,fgsea",
-  extra = "meta.go,deconv,infer,drugs,wordcloud"
+  extra = "meta.go,deconv,infer,drugs,wordcloud",
+  pgx.dir = "./data",
+  libx.dir = "./libx"
 )
 }
 \arguments{

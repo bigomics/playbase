@@ -28,6 +28,7 @@ pgx.scatterPlotXY.PLOTLY(
   hilight.col = NULL,
   hilight.cex = NULL,
   hilight.lwd = 0.8,
+  opc.low = 1,
   zlim = NULL,
   zlog = FALSE,
   zsym = FALSE,
