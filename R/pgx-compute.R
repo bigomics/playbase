@@ -194,7 +194,7 @@ pgx.createPGX <- function(counts, samples, contrasts,
   ## -------------------------------------------------------------------
 
   ## remove XXL/Infinite values and set to NA
-  if(remove.xxl) {
+  if (remove.xxl) {
     counts <- counts.removeXXLvalues(counts, xxl.val = NA, zsd = 10)
   }
 
