@@ -362,7 +362,8 @@ makeFullContrasts <- function(labels, by.sample = FALSE) {
 #' of 0/1/-1 indicating the sample groups being compared within each stratum.
 #'
 #' @export
-pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, slen = 20, ref = NULL,
+pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, max.level = 99,
+                                            ref = NULL, slen = 20,
                                             fix.degenerate = FALSE, skip.hidden = TRUE) {
   df1 <- df[, -match(strata.var, colnames(df)), drop = FALSE]
   strata <- df[, strata.var]
@@ -373,9 +374,10 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, slen = 2
     sel <- which(strata == s)
     if (length(sel) < mingrp) next
     suppressWarnings(
-      ct1 <- pgx.makeAutoContrasts(df1[sel, , drop = FALSE],
-        mingrp = mingrp, slen = slen,
-        ref = ref, fix.degenerate = fix.degenerate,
+      ct1 <- pgx.makeAutoContrasts(
+        df1[sel, , drop = FALSE],
+        mingrp = mingrp, max.level = max.level, ref = ref,
+        slen = slen, fix.degenerate = fix.degenerate,
         skip.hidden = skip.hidden
       )
     )
@@ -437,7 +439,7 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, slen = 2
 #' for differential analysis.
 #'
 #' @export
-pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL, max.level = 10,
+pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL, max.level = 99,
                                   fix.degenerate = FALSE, skip.hidden = TRUE) {
   shortestunique <- function(xx, slen = 3) {
     dup <- sapply(

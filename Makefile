@@ -17,6 +17,6 @@ install:
 VERSION = "v3.2.33"
 
 tags:
-        git tag -f -a $(VERSION) -m 'version $(VERSION)'
-        git push && git push --tags
+	git tag -f -a $(VERSION) -m 'version $(VERSION)'
+	git push && git push --tags
 

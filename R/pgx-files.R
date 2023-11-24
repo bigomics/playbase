@@ -207,29 +207,17 @@ pgx.readOptions <- function(file = "./OPTIONS") {
 #' df <- cached.csv("s3://mybucket/data.csv", bucket = "mybucket")
 #' }
 #' @export
-cached.csv <- function(file, bucket = NULL, FUN = read.csv, ...) {
-  # Make prefix 
-  if (is.null(bucket) == "local") {
-    prefix <- "cache"
-  } else {
-    prefix <- "s3cache"
-  } 
-
-  # Assemble file path
-  file2 <- paste0(prefix, "-", gsub("[-._/]", "", file), ".rds")
-  cache.file <- file.path("/tmp", file2)
-
-  # If don't exist in cache, read and save
-  # Else, read from local or S3
-  if (!file.exists(cache.file)) {
-    if (is.null(bucket)) {
-      csv <- FUN(file, ...)
-    } else {
-      obj <- aws.s3::get_object(object = file, bucket = bucket)
-      csv <- data.table::fread(rawToChar(obj))
-    }
+cached.csv <- function(file, FUN = read.csv, force = FALSE, ...) {
+  file2 <- paste0("cache-", gsub("[-._/]", "", file), ".rds")
+  file2
+  ## cache.file <- file.path("/tmp", file2)
+  cache.file <- file.path(tempdir(), file2)
+  if (force || !file.exists(cache.file)) {
+    message("[cached.csv] reading from file ", file)
+    csv <- FUN(file, ...)
     saveRDS(csv, file = cache.file)
   } else {
+    message("[cached.csv] reading from cache ", cache.file)
     csv <- readRDS(cache.file)
   }
 
@@ -237,15 +225,17 @@ cached.csv <- function(file, bucket = NULL, FUN = read.csv, ...) {
 }
 
 #' @export
-cached.csv.s3 <- function(file, bucket, FUN = read.csv, ...) {
+cached.csv.s3 <- function(file, bucket, FUN = read.csv, force = FALSE, ...) {
   file2 <- paste0("s3cache-", gsub("[-._/]", "", file), ".rds")
   file2
   cache.file <- file.path("/tmp", file2)
-  if (!file.exists(cache.file)) {
+  if (force || !file.exists(cache.file)) {
+    message("[cached.csv.s3] reading from S3 bucket=", bucket, "   file=", file)
     obj <- aws.s3::get_object(object = file, bucket = bucket)
     csv <- data.table::fread(rawToChar(obj))
     saveRDS(csv, file = cache.file)
   } else {
+    message("[cached.csv.s3] reading from cache ", cache.file)
     csv <- readRDS(cache.file)
   }
   csv

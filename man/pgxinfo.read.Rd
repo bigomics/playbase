@@ -4,7 +4,12 @@
 \alias{pgxinfo.read}
 \title{Read dataset information file (aka PGX info)}
 \usage{
-pgxinfo.read(pgx.dir, file = "datasets-info.csv", match = TRUE)
+pgxinfo.read(
+  pgx.dir,
+  file = "datasets-info.csv",
+  match = TRUE,
+  use.cache = FALSE
+)
 }
 \arguments{
 \item{pgx.dir}{Character string specifying the path to the PGX directory containing .pgx files.}

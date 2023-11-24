@@ -36,7 +36,7 @@ normalize_matrix_by_row <- function(G) {
 #' @export
 compute_testGenesets <- function(pgx,
                                  max.features = 1000,
-                                 custom.geneset = NULL,
+                                 custom.geneset = list(gmt = NULL, info = NULL),
                                  test.methods = c("gsva", "camera", "fgsea"),
                                  remove.outputs = TRUE) {
 
@@ -49,21 +49,7 @@ compute_testGenesets <- function(pgx,
     # which will ensure consistency between old and new pgx
     pgx$genes$human_ortholog <- NA
   }
-  # Load custom genesets (if user provided)
-  if (!is.null(custom.geneset$gmt)) {
-    # convert gmt standard to SPARSE matrix
-    custom_gmt <- playbase::createSparseGenesetMatrix(
-      gmt.all = custom.geneset$gmt,
-      min.geneset.size = 3,
-      max.geneset.size = 9999,
-      min_gene_frequency = 1,
-      all_genes = pgx$all_genes,
-      annot = pgx$genes,
-      filter_genes = FALSE
-    )
-
-  }
-
+  
   ## -----------------------------------------------------------
   ## Load huge geneset matrix
   ## -----------------------------------------------------------
@@ -112,17 +98,29 @@ compute_testGenesets <- function(pgx,
   }
 
   G <- G[which(size.ok), ]
+  G <- Matrix::t(G) ## ???
 
   # Transpose G
 
   G <- Matrix::t(G)
 
   if (!is.null(custom.geneset$gmt)) {
+    # convert gmt standard to SPARSE matrix
+    custom_gmt <- playbase::createSparseGenesetMatrix(
+      gmt.all = custom.geneset$gmt,
+      min.geneset.size = 3,
+      max.geneset.size = 9999,
+      min_gene_frequency = 1,
+      all_genes = pgx$all_genes,
+      annot = pgx$genes,
+      filter_genes = FALSE
+    )
 
     custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes, drop = FALSE]
     custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
 
     G <- playbase::merge_sparse_matrix(m1 = G, m2 = Matrix::t(custom_gmt))
+    remove(custom_gmt)
   }
 
   ## -----------------------------------------------------------
@@ -251,7 +249,9 @@ compute_testGenesets <- function(pgx,
   pgx$gsetX <- pgx$gset.meta$matrices[["meta"]] ## META or average FC?
   pgx$GMT <- G[, rownames(pgx$gsetX)]
 
-  # calculate gset info and store as pgx$gset.meta
+  ## -------------------------------------------------------
+  ## calculate gset info and store as pgx$gset.meta
+  ## -------------------------------------------------------
   gset.size <- Matrix::colSums(pgx$GMT != 0)
   gset.size.raw <- playdata::GSET_SIZE
 

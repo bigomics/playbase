@@ -152,6 +152,7 @@ pgx.createPGX <- function(counts,
                           cluster.contrasts = FALSE, 
                           do.clustergenes = TRUE,
                           only.proteincoding = TRUE,
+                          remove.xxl = TRUE,
                           normalize = TRUE) {
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("dimension of counts and X do not match\n")
@@ -202,7 +203,11 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
 
   ## remove XXL/Infinite values and set to NA
-  counts <- counts.removeXXLvalues(counts, xxl.val = NA)
+  if (remove.xxl) {
+    zsd <- 10 ## default value
+    if (is.numeric(remove.xxl)) zsd <- remove.xxl
+    counts <- counts.removeXXLvalues(counts, xxl.val = NA, zsd = zsd)
+  }
 
   ## impute missing values
   if (any(is.na(counts))) {
@@ -492,7 +497,7 @@ pgx.computePGX <- function(pgx,
                            max.genesets = 5000,
                            gx.methods = c("trend.limma", "edger.qlf", "deseq2.wald"),
                            gset.methods = c("fisher", "gsva", "fgsea"),
-                           custom.geneset = c(gmt = NULL, info = NULL),
+                           custom.geneset = list(gmt = NULL, info = NULL),
                            do.cluster = TRUE,
                            use.design = TRUE,
                            prune.samples = FALSE,
@@ -617,7 +622,6 @@ pgx.computePGX <- function(pgx,
 ## =================== UTILITY FUNCTIONS =============================
 ## ===================================================================
 
-
 counts.removeOutliers <- function(counts) {
   ## remove samples with 1000x more or 1000x less total counts (than median)
   totcounts <- colSums(counts, na.rm = TRUE)
@@ -632,20 +636,24 @@ counts.removeOutliers <- function(counts) {
   counts
 }
 
-## xxl.val = NA; zsd = 10
 counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
   ## remove extra-large and infinite values
   ## X <- log2(1 + counts)
   X <- logCPM(counts)
-  sdx <- apply(X, 1, function(x) mad(x[x > 0], na.rm = TRUE))
+  ## sdx <- apply(X, 1, function(x) mad(x[x > 0], na.rm = TRUE))
+  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
   sdx[is.na(sdx)] <- 0
   sdx0 <- 0.8 * sdx + 0.2 * mean(sdx, na.rm = TRUE) ## moderated SD
-  zx <- (X - colMeans(X, na.rm = TRUE)) / sdx0
-  which.xxl <- which(abs(zx) > zsd, arr.ind = TRUE)
+  mx <- rowMeans(X, na.rm = TRUE)
+  z <- (X - mx) / sdx0
+  ## table(abs(z)>10)
+  which.xxl <- which(abs(z) > zsd, arr.ind = TRUE)
   nxxl <- nrow(which.xxl)
   if (nxxl > 0) {
     message("[createPGX] WARNING: setting ", nxxl, " XXL values to NA")
     counts[which.xxl] <- xxl.val
+  } else {
+    message("[createPGX] no XXL values detected")
   }
   counts
 }
@@ -709,6 +717,8 @@ normalizeCounts <- function(M, method = c("TMM", "TMMwsp", "RLE", "upperquartile
 ## -------------------------------------------------------------------
 ## collapse multiple row for genes by summing up counts
 ## -------------------------------------------------------------------
+
+#' @export
 counts.mergeDuplicateFeatures <- function(counts) {
   ## take only first gene as rowname, retain others as alias
   gene0 <- rownames(counts)
