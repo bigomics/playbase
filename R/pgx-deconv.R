@@ -306,8 +306,6 @@ pgx.inferCellCyclePhase <- function(counts) {
     g2m.features = g2m_genes, set.ident = TRUE
   ))
   ## view cell cycle scores and phase assignments
-
-
   s.score <- obj@meta.data$S.Score
   g2m.score <- obj@meta.data$G2M.Score
   phase <- obj@meta.data$Phase

@@ -36,25 +36,13 @@ normalize_matrix_by_row <- function(G) {
 #' @export
 compute_testGenesets <- function(pgx,
                                  max.features = 1000,
-                                 custom.geneset = NULL,
+                                 custom.geneset = list(gmt=NULL, info=NULL),
                                  test.methods = c("gsva", "camera", "fgsea"),
                                  remove.outputs = TRUE) {
   if (!"X" %in% names(pgx)) {
     stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
   }
-
-  # Load custom genesets (if user provided)
-  if (!is.null(custom.geneset$gmt)) {
-    # convert gmt standard to SPARSE matrix
-    custom_gmt <- createSparseGenesetMatrix(
-      gmt.all = custom.geneset$gmt,
-      min.geneset.size = 3,
-      max.geneset.size = 9999,
-      min_gene_frequency = 1,
-      filter_genes = FALSE
-    )
-  }
-
+  
   ## -----------------------------------------------------------
   ## Load huge geneset matrix
   ## -----------------------------------------------------------
@@ -69,10 +57,6 @@ compute_testGenesets <- function(pgx,
   genes <- unique(as.character(pgx$genes$gene_name))
   genes <- toupper(genes) ## handle mouse genes...
   G <- G[, colnames(G) %in% genes]
-
-  # Normalize G after removal of genes
-
-
   G <- playbase::normalize_matrix_by_row(G)
 
   ## -----------------------------------------------------------
@@ -91,20 +75,26 @@ compute_testGenesets <- function(pgx,
   }
 
   G <- G[which(size.ok), ]
+  G <- Matrix::t(G)  ## ???
 
-  # Transpose G
-
-  G <- Matrix::t(G)
-
-  if (!is.null(custom.geneset$gmt)) {
+  # Load custom genesets (if user provided)
+  if (!is.null(custom.geneset) && !is.null(custom.geneset$gmt)) {
+    # convert gmt standard to SPARSE matrix
+    custom_gmt <- createSparseGenesetMatrix(
+      gmt.all = custom.geneset$gmt,
+      min.geneset.size = 3,
+      max.geneset.size = 9999,
+      min_gene_frequency = 1,
+      filter_genes = FALSE
+    )
     # upper case in custom gmt genes (to accomodate for mouse genes)
     colnames(custom_gmt) <- toupper(colnames(custom_gmt))
     custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes, drop = FALSE]
     custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
 
     # combine standard genesets with custom genesets
-
     G <- playbase::merge_sparse_matrix(m1 = G, m2 = Matrix::t(custom_gmt))
+    remove(custom_gmt)
   }
 
   ## -----------------------------------------------------------
@@ -221,7 +211,9 @@ compute_testGenesets <- function(pgx,
   pgx$gsetX <- pgx$gset.meta$matrices[["meta"]] ## META or average FC?
   pgx$GMT <- G[, rownames(pgx$gsetX)]
 
-  # calculate gset info and store as pgx$gset.meta
+  ##-------------------------------------------------------
+  ## calculate gset info and store as pgx$gset.meta
+  ##-------------------------------------------------------
   gset.size <- Matrix::colSums(pgx$GMT != 0)
   gset.size.raw <- playdata::GSET_SIZE
 
