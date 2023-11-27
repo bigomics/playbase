@@ -298,7 +298,7 @@ pgx.createPGX <- function(counts,
   counter <- 0
   while (!"genes" %in% names(pgx) & counter < 5) {
     
-    message(paste0("[createPGX] attempting to annotate genes, call number", counter + 1))
+    message(paste0("[createPGX] attempting to annotate genes, call number ", counter + 1))
     Sys.sleep(60 * counter)
     try(pgx <- pgx.gene_table(pgx, organism = organism))
     counter <- counter + 1
@@ -307,9 +307,11 @@ pgx.createPGX <- function(counts,
   # For fallback purposes we can use the old method to add gene annotation if biomaRt fails
   if (!"genes" %in% names(pgx) & organism %in% c("Mouse" , "Human")) {
     probe_type <- detect_probe_DEPRECATED(probes = rownames(pgx$counts), organism = organism)
-    pgx <- ngs.getGeneAnnotation_DEPRECATED(probes = rownames(pgx$counts), probe_type = probe_type, organism = organism)
+    pgx$genes <- ngs.getGeneAnnotation_DEPRECATED(probes = rownames(pgx$counts), probe_type = probe_type, organism = organism)
   }
-
+  if (!("genes" %in% names(pgx))) {
+    stop("Could not compute gene table")
+  }
   ## -------------------------------------------------------------------
   ## convert probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------
@@ -367,6 +369,10 @@ pgx.createPGX <- function(counts,
     ## DEseq2). Require at least in 2 or 1% of total. Specify the
     ## PRIOR CPM amount to regularize the counts and filter genes
     pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
+
+    # Conform gene table
+    keep <- intersect(unique(pgx$genes$gene_name),  rownames(pgx$counts))
+    pgx$genes <- pgx$genes[keep, , drop = FALSE]
   }
 
 
@@ -379,11 +385,12 @@ pgx.createPGX <- function(counts,
 
     pgx$genes <- pgx$genes[!is.na(pgx$genes$symbol)|pgx$genes$symbol == "",]
     if (only.proteincoding) {
-      pgx$genes <- pgx$genes[pgx$genes$gene_biotype %in% c("protein_coding"), ]
+      pgx$genes <- pgx$genes[pgx$genes$gene_biotype %in% c("protein_coding", "protein-coding"), ]
     }
-    pgx$counts <- pgx$counts[unique(pgx$genes$gene_name), , drop = FALSE]
+    keep <- intersect(unique(pgx$genes$gene_name), rownames(pgx$counts))
+    pgx$counts <- pgx$counts[keep, , drop = FALSE]
     if (!is.null(pgx$X)) {
-      pgx$X <- pgx$X[unique(pgx$genes$gene_name), , drop = FALSE]
+      pgx$X <- pgx$X[keep, , drop = FALSE]
     }
   }
 

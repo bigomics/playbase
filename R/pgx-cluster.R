@@ -443,7 +443,6 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   res.svd <- NULL
   if (reduce.pca > 0) {
     reduce.pca <- max(3, min(c(reduce.pca, dim(X) - 1)))
-    reduce.pca
     message("Reducing to ", reduce.pca, " PCA dimenstions...")
     cnx <- colnames(X)
     suppressMessages(suppressWarnings(
