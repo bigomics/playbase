@@ -532,8 +532,14 @@ ngs.getGeneAnnotation_DEPRECATED <- function(probes, probe_type, organism) {
   } 
 
   # Rename cols, add extra cols, reorder cols and rows
+  if (probe_type == "SYMBOL") {
+    d[, feature := SYMBOL]
+    old_names <- c("feature", "SYMBOL", "GENENAME", "CHR", "CHRLOC", "MAP", "GENETYPE")
+  } else {
+    old_names <- c(probe_type, "SYMBOL", "GENENAME", "CHR", "CHRLOC", "MAP", "GENETYPE")
+  }
   data.table::setnames(d,
-                       old = c(probe_type, "SYMBOL", "GENENAME", "CHR", "CHRLOC", "MAP", "GENETYPE"), 
+                       old = old_names, 
                        new = c("feature", "symbol", "gene_title", "chr", "pos", "map", "gene_biotype"))
 
   d$tx_len <- 1000
@@ -553,5 +559,5 @@ ngs.getGeneAnnotation_DEPRECATED <- function(probes, probe_type, organism) {
   # match per gene/probe, we remove duplicates
   d <- d[!duplicated(d$feature),]
   rownames(d) <- d$feature
-  return(d)
+  return(d[probes, , drop = FALSE])
 }
