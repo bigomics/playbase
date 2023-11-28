@@ -98,10 +98,6 @@ compute_testGenesets <- function(pgx,
   }
 
   G <- G[which(size.ok), ]
-  G <- Matrix::t(G) ## ???
-
-  # Transpose G
-
   G <- Matrix::t(G)
 
   if (!is.null(custom.geneset$gmt)) {
@@ -163,7 +159,7 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
   cat("Matching gene set matrix...\n")
 
-  gg <- rownames(X) 
+  gg <- rownames(X)
   ii <- intersect(gg, rownames(G))
   G <- G[ii, , drop = FALSE]
   xx <- setdiff(gg, rownames(G))

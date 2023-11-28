@@ -537,7 +537,7 @@ pgx.computePGX <- function(pgx,
   ##   contr.matrix <- sign(contr.matrix) ## sign is fine
   ## }
   contr.matrix <- playbase::contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
-  contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
+  contr.matrix <- playbase::makeContrastsFromLabelMatrix(contr.matrix)
   contr.matrix <- sign(contr.matrix) ## sign is fine
 
   ## select valid contrasts
@@ -584,7 +584,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
   message("[pgx.computePGX] testing genes...")
 
-  pgx <- compute_testGenes(
+  pgx <- playbase::compute_testGenes(
     pgx, contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
@@ -596,8 +596,9 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
   message("[pgx.computePGX] testing genesets...")
-  pgx <- compute_testGenesets(
-    pgx,
+
+  pgx <- playbase::compute_testGenesets(
+    pgx = pgx,
     custom.geneset = custom.geneset,
     max.features = max.genesets,
     test.methods = gset.methods
