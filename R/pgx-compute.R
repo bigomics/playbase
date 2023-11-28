@@ -438,7 +438,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   if (do.cluster || cluster.contrasts) {
     message("[createPGX] clustering samples...")
-    pgx <- pgx.clusterSamples2(
+    pgx <- playbase::pgx.clusterSamples2(
       pgx,
       dims = c(2, 3),
       perplexity = NULL,
@@ -447,7 +447,7 @@ pgx.createPGX <- function(counts,
 
     ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
     posx <- scale(cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]]))
-    idx <- pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
+    idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
     if (length(unique(idx)) == 1) {
       ## try again with finer settings if single cluster...
       idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
@@ -462,8 +462,8 @@ pgx.createPGX <- function(counts,
     if (length(unique(Y[, 1])) < 2) {
       message("[createPGX] warning: only one cluster.")
     } else {
-      ct <- makeDirectContrasts(Y, ref = "others")
-      ctx <- contrastAsLabels(ct$exp.matrix)
+      ct <- playbase::makeDirectContrasts(Y, ref = "others")
+      ctx <- playbase::contrastAsLabels(ct$exp.matrix)
       if (ncol(pgx$contrasts) == 0) {
         pgx$contrasts <- ctx
       } else {
@@ -474,7 +474,7 @@ pgx.createPGX <- function(counts,
 
   if (do.clustergenes) {
     message("[createPGX] clustering genes...")
-    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "gene")
+    pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "gene")
   }
 
   ### done
