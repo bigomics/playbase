@@ -301,7 +301,7 @@ pgx.createPGX <- function(counts,
     
     message(paste0("[createPGX] attempting to annotate genes, call number ", counter + 1))
     Sys.sleep(60 * counter)
-    try(pgx <- pgx.gene_table(pgx, organism = organism))
+    try(pgx <- playbase::pgx.gene_table(pgx, organism = organism))
     counter <- counter + 1
 
   } 
