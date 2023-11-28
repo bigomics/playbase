@@ -263,7 +263,7 @@ pgx.createPGX <- function(counts,
 
   if (normalize) {
     message("[createPGX] NORMALIZING log-expression matrix X...")
-    X <- logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
+    X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
     X <- limma::normalizeQuantiles(X) ## in log space
     ## X <- 0.1*X + 0.9*limma::normalizeQuantiles(X)   ## 'weighted' to keep randomness...
   } else {
@@ -771,3 +771,6 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
 ## ----------------------------------------------------------------------
 ## -------------------------- end of file -------------------------------
 ## ----------------------------------------------------------------------
+
+
+
