@@ -669,7 +669,7 @@ counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
 counts.imputeMissing <- function(counts, method = "SVD2") {
   X <- log2(1 + counts)
   table(is.na(X))
-  impX <- imputeMissing(X, method = method)
+  impX <- playbase::imputeMissing(X, method = method)
   pmax(2**impX - 1, 0)
 }
 
