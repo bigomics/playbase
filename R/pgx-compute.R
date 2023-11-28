@@ -398,7 +398,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
-  pgx <- compute_cellcycle_gender(pgx, pgx$counts)
+  pgx <- playbase::compute_cellcycle_gender(pgx, pgx$counts)
 
   ## -------------------------------------------------------------------
   ## Batch-correction (if requested. WARNING: changes counts )
