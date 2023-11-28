@@ -131,9 +131,9 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 #' @return List. PGX object containing input data and parameters.
 #'
 #' @export
-pgx.createPGX <- function(counts, 
-                          samples, 
-                          contrasts, 
+pgx.createPGX <- function(counts,
+                          samples,
+                          contrasts,
                           organism = "Human",
                           name = "Data set",
                           datatype = "unknown",
@@ -161,7 +161,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## clean up input files
   ## -------------------------------------------------------------------
-  samples <- data.frame(samples)
+  samples <- data.frame(samples, drop = FALSE)
   counts <- as.matrix(counts)
   if (is.null(contrasts)) contrasts <- samples[, 0]
 
@@ -171,7 +171,7 @@ pgx.createPGX <- function(counts,
 
 
   ## convert old-style contrast matrix to sample-wise labeled contrasts
-  contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
+  contrasts <- playbase::contrasts.convertToLabelMatrix(contrasts, samples)
 
   # prune unused samples
   contrasts[contrasts %in% c("", " ", "NA")] <- NA
@@ -296,6 +296,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
 
   counter <- 0
+
   while (!"genes" %in% names(pgx) & counter < 5) {
     
     message(paste0("[createPGX] attempting to annotate genes, call number ", counter + 1))
@@ -535,7 +536,7 @@ pgx.computePGX <- function(pgx,
   ##   contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
   ##   contr.matrix <- sign(contr.matrix) ## sign is fine
   ## }
-  contr.matrix <- contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
+  contr.matrix <- playbase::contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
   contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
   contr.matrix <- sign(contr.matrix) ## sign is fine
 
@@ -646,7 +647,7 @@ counts.removeOutliers <- function(counts) {
 counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
   ## remove extra-large and infinite values
   ## X <- log2(1 + counts)
-  X <- logCPM(counts)
+  X <- playbase::logCPM(counts)
   ## sdx <- apply(X, 1, function(x) mad(x[x > 0], na.rm = TRUE))
   sdx <- matrixStats::rowSds(X, na.rm = TRUE)
   sdx[is.na(sdx)] <- 0
