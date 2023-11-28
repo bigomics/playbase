@@ -337,6 +337,8 @@ pgx.createPGX <- function(counts,
     if (!is.null(pgx$X)) {
         # For X, sum the 2^X values of rows with the same gene symbol
         # And then take log2 again.
+        pgx$X <- pgx$X[probes_with_symbol, , drop = FALSE]
+        rownames(pgx$X) <- selected_symbols
         pgx$X <- log2(rowsum(2**pgx$X, selected_symbols))
     }
 
