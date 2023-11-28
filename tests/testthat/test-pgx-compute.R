@@ -6,7 +6,7 @@
 test_that("pgx.createPGX produce all pgx slots", {
 
   # Call example data
-  pgx_data <- playbase:::get_mini_example_data()
+  pgx_data <- playbase::get_mini_example_data()
 
   # Run function
   # Use while to prevent crash on ensembl calls

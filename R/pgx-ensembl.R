@@ -96,7 +96,7 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
                             filters = x,
                             values = subset_probes,
                             mart = mart)
-      Sys.sleep(2)  # Sleep time to prevent bounce from ensembl for consecutive calls
+      Sys.sleep(5)  # Sleep time to prevent bounce from ensembl for consecutive calls
       out <- nrow(tmp)
       return(out)
     }, error = function(e) {
@@ -355,6 +355,7 @@ pgx.gene_table <- function(pgx, organism) {
   # Init vals
   genes <- NULL
   counter <- 0
+  ensembl_dataset <- NULL
   counts <- pgx$counts
   probes <- rownames(counts)
   probe_type <- NA_character_
@@ -372,35 +373,31 @@ pgx.gene_table <- function(pgx, organism) {
     # Set waiter so that we can make multiple calls with waiting time
     Sys.sleep(counter * 60)
     
-    # lock ensembl to version 110 (latest) and genes dataset
-    if (species_info$mart == "ensembl") {
-      ensembl <- biomaRt::useEnsembl(biomart = "genes", host = species_info$host, version = species_info$version)
-      # lock ensembl to species
-      ensembl <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
-      
-    } else {
-      ensembl <- biomaRt::useEnsemblGenomes(
-        biomart = species_info$mart,
-        dataset = species_info$dataset)
-
-      ensembl <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
+    # Get ensembl
+    if (is.null(ensembl_dataset)) {
+      try({
+        ensembl <- biomaRt::useEnsembl(biomart = "ensembl")
+        ensembl_dataset <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
+      })
     }
     
     # Get probe type
-    if (is.na(probe_type)) {
-      probe_type <- detect_probe(probes, ensembl)
+    if (!is.null(ensembl_dataset) & is.na(probe_type)) {
+      probe_type <- detect_probe(probes, ensembl_dataset)
     }
 
     # Get gene table
-    genes <- ngs.getGeneAnnotation(
-      probes = probes,
-      organism = organism,
-      probe_type = probe_type,
-      mart = ensembl)
+    if (!is.na(probe_type) & !is.null(ensembl_dataset)) {
+      genes <- ngs.getGeneAnnotation(
+        probes = probes,
+        organism = organism,
+        probe_type = probe_type,
+        mart = ensembl_dataset)
 
-    all_genes <- biomaRt::getBM(attributes = "external_gene_name", mart = ensembl)
-    all_genes <- all_genes[, 1]
-
+      all_genes <- biomaRt::getBM(attributes = "external_gene_name", mart = ensembl_dataset)
+      all_genes <- all_genes[, 1]
+    }
+    counter <- counter + 1
   }
 
   # Return data
