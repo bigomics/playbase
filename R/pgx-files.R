@@ -185,6 +185,27 @@ pgx.readOptions <- function(file = "./OPTIONS") {
 }
 
 
+#' @title Cache a CSV file locally or on S3
+#'
+#' @param file Character string specifying the path to the CSV file to cache
+#' @param bucket Character string specifying the S3 bucket name if caching on S3. Default is NULL for local caching.  
+#' @param FUN Function to use for reading the CSV file. Default is read.csv.
+#' @param ... Other arguments passed to FUN.
+#'
+#' @return A data frame containing the contents of the cached CSV file.
+#' 
+#' @details This function checks if a cached copy of the CSV file exists locally in /tmp or on S3. 
+#' If not, it reads the file using FUN(), caches it locally or on S3, and returns the contents.
+#' On subsequent calls it returns the cached copy instead of re-reading the file.
+#' 
+#' @examples
+#' \dontrun{
+#' # Cache locally
+#' df <- cached.csv("data.csv") 
+#' 
+#' # Cache on S3  
+#' df <- cached.csv("s3://mybucket/data.csv", bucket = "mybucket")
+#' }
 #' @export
 cached.csv <- function(file, FUN = read.csv, force = FALSE, ...) {
   file2 <- paste0("cache-", gsub("[-._/]", "", file), ".rds")
@@ -199,7 +220,8 @@ cached.csv <- function(file, FUN = read.csv, force = FALSE, ...) {
     message("[cached.csv] reading from cache ", cache.file)
     csv <- readRDS(cache.file)
   }
-  csv
+
+  return(csv)
 }
 
 #' @export

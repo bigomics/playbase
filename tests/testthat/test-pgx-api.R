@@ -1,17 +1,23 @@
 #' Test for pgx.getFamilies
-d <- get_mini_example_data()
-pgx <- playbase::pgx.createPGX(
-  counts = d$counts,
-  samples = d$samples,
-  contrast = d$contrast
-)
 test_that("pgx.getFamilies returns expected families", {
+  # Create mock data
+  pgx <- list(
+    samples = playbase::SAMPLES,
+    counts = as.matrix(playbase::COUNTS),
+    genes = playbase::GENES_TABLE,
+    organism = "Human"
+  )
+  pgx$counts <- pgx$counts[!duplicated(rownames(pgx$counts)), , drop = FALSE]
+  pgx$genes <- pgx$genes[!pgx$genes$symbol == "", ,drop = FALSE]
+  pgx$counts <- pgx$counts[rownames(pgx$counts) %in% pgx$genes$symbol, , drop = FALSE]
+
   # Test with default parameters
-  families <- pgx.getFamilies(pgx)
+  families <- playbase::pgx.getFamilies(pgx)
 
-  # Expect 2 families returned
-  expect_equal(length(families), 1)
+  # Expect 65 families returned
+  expect_equal(length(families), 65)
 
-  # Expect FAMILY1 and FAMILY3 returned
-  expect_equal(families, "<all>")
+  # Expect <all> family returned
+  expect_equal(families[1], "<all>")
+  expect_equal(families[65], "FAMILY:Zinc fingers C2H2-type (HGNC)")
 })

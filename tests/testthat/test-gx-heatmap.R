@@ -21,7 +21,7 @@ test_that("gx.splitmap runs correctly with defaults", {
   colnames(gx) <- sample(letters, 10)
   # Create a grouping variable
 
-  plot_check <- gx.splitmap(
+  plot_check <- playbase::gx.splitmap(
     gx,
     scale = "row",
     cluster_rows = FALSE,
@@ -69,7 +69,7 @@ test_that("frozenmap returns matrix with selected dim", {
   mat
 
   # Run function
-  z <- frozenmap(mat, m = 2, n = 2)
+  z <- playbase::frozenmap(mat, m = 2, n = 2)
 
   # Test class
   expect_equal(class(z), c("matrix", "array"))
@@ -89,8 +89,8 @@ test_that("multi.dist runs correctly", {
   )
   mat <- matrix(data, 5, 4)
   rownames(mat) <- replicate(5, paste(sample(LETTERS, 4, replace = TRUE), collapse = ""))
-  D <- multi.dist(mat)
-  D2 <- multi.dist(mat, p = 20)
+  D <- playbase::multi.dist(mat)
+  D2 <- playbase::multi.dist(mat, p = 20)
   # Expected result
   expected <- c(0.3061224, 0.6326531, 0.8775510, 1.0000000, 0.3877551, 0.5918367, 0.8775510, 0.3877551, 0.6326531, 0.3061224)
 

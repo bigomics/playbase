@@ -84,7 +84,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   }
 
   is.expmatrix <- all(rownames(contr.matrix) %in% rownames(pgx$samples))
-  is.expmatrix
   if (!is.expmatrix) {
     stop("[compute_testGenesSingleOmics] FATAL: contrast must be sample-wise")
   }
@@ -95,7 +94,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     stat.group <- playbase::pgx.getConditions(contr.matrix, nmax = 0) ## !!!
     names(stat.group) <- rownames(contr.matrix)
     nlev <- length(unique(stat.group))
-    nlev
+
     if (nlev >= nrow(contr.matrix)) {
       message("[compute_testGenesSingleOmics] cannot use groups, switching to no design")
       use.design <- FALSE
@@ -197,13 +196,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   ## Rescale if too low. Often EdgeR/DeSeq can give errors of total counts
   ## are too low. Happens often with single-cell (10x?). We rescale
   ## to a minimum of 1 million counts (CPM)
-  ## -----------------------------------------------------------------------------
-  ## mean.counts <- mean(Matrix::colSums(counts, na.rm = TRUE))
-  ## if (mean.counts < 1e6) {
-  ##   cat("[compute_testGenesSingleOmics] WARNING:: low total counts = ", mean.counts, "\n")
-  ##   cat("[compute_testGenesSingleOmics] applying global mean scaling to 1e6...\n")
-  ##   counts <- counts * 1e6 / mean.counts
-  ## }
 
   ## -----------------------------------------------------------------------------
   ## Do the fitting

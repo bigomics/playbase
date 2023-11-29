@@ -10,7 +10,9 @@
 #' summing counts across rows.
 #'
 #' @examples
-#' counts <- read_counts(playbase::example_file("counts.csv"))
+#' \dontrun{
+#'  counts <- read_counts(playbase::example_file("counts.csv"))
+#' }
 #' @export
 read_counts <- function(file, convert_names = FALSE) {
   df <- read.as_matrix(file)
@@ -21,7 +23,8 @@ read_counts <- function(file, convert_names = FALSE) {
   # convert to gene names (needed for biological effects)
   if (convert_names) {
     pp <- rownames(df)
-    rownames(df) <- probe2symbol(pp)
+    # rownames(df) <- probe2symbol(pp) TODO: remove this line as with the
+    # new biomaRt version will not work anymore
     sel <- !(rownames(df) %in% c(NA, "", "NA"))
     df <- df[sel, ]
     xx <- tapply(
@@ -50,7 +53,9 @@ read_counts <- function(file, convert_names = FALSE) {
 #' @return matrix. the file with the data
 #'
 #' @examples
-#' counts <- read_expression(playbase::example_file("counts.csv"))
+#' \dontrun{
+#'  counts <- read_expression(playbase::example_file("counts.csv"))
+#' }
 #' @export
 read_expression <- function(file, convert_names = TRUE) {
   df <- read.as_matrix(file)
@@ -61,8 +66,8 @@ read_expression <- function(file, convert_names = TRUE) {
 
   # convert to gene names (needed for biological effects)
   if (convert_names) {
-    pp <- rownames(df)
-    rownames(df) <- probe2symbol(pp)
+    # rownames(df) <- probe2symbol(pp) TODO: remove this line as with the
+    # new biomaRt version will not work anymore
     sel <- !(rownames(df) %in% c(NA, "", "NA"))
     df <- df[sel, ]
     xx <- tapply(

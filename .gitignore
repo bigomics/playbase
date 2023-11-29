@@ -2,6 +2,10 @@
 .Rhistory
 .RData
 .Ruserdata
+.Rprofile
+
+# Ignore renv
+renv/
 
 # backup
 *~

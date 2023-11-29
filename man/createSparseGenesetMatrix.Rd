@@ -9,6 +9,8 @@ createSparseGenesetMatrix(
   min.geneset.size = 15,
   max.geneset.size = 500,
   min_gene_frequency = 10,
+  all_genes = NULL,
+  annot = NULL,
   filter_genes = TRUE
 )
 }
