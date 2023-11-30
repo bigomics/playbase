@@ -748,6 +748,11 @@ fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
     file = file, check.names = check.names, header = header,
     sep = sep, fill = TRUE
   )
+  if(NCOL(df) == 1) {
+    x <- matrix(NA,nrow(df),0)
+    rownames(x) <- df[[row.names]] ## allow dups if matrix
+    return(x)
+  }
   x <- data.frame(df[, 2:ncol(df)],
     stringsAsFactors = stringsAsFactors,
     check.names = check.names
