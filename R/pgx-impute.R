@@ -30,13 +30,13 @@ imputeMissing <- function(X,
   ## ------------ simple rowmeans -----------
   if ("rowmeans" %in% method) {
     cx <- X
-    ii <- which(is.na(cx), arr.ind=TRUE)
-    cx[ii] <- rowMeans(cx, na.rm=TRUE)[ii[,1]]
-    ii <- which(is.na(cx), arr.ind=TRUE)
-    cx[ii] <- colMeans(cx, na.rm=TRUE)[ii[,2]]    
+    ii <- which(is.na(cx), arr.ind = TRUE)
+    cx[ii] <- rowMeans(cx, na.rm = TRUE)[ii[, 1]]
+    ii <- which(is.na(cx), arr.ind = TRUE)
+    cx[ii] <- colMeans(cx, na.rm = TRUE)[ii[, 2]]
     ii <- which(is.na(cx))
-    cx[ii] <- mean(cx, na.rm=TRUE)
-    impX[["rowmeans"]] <- cx    
+    cx[ii] <- mean(cx, na.rm = TRUE)
+    impX[["rowmeans"]] <- cx
   }
 
   ## ------------ msImpute --------------
@@ -57,7 +57,7 @@ imputeMissing <- function(X,
     X1 <- X[ii, jj]
     X1 <- X1 + 1e-2 * matrix(rnorm(length(X1)), nrow = nrow(X1), ncol = ncol(X1))
     k <- min(10, dim(X1) - 1)
-    result <- try(pcaMethods::llsImpute(t(X1), k = k, allVariables=TRUE))
+    result <- try(pcaMethods::llsImpute(t(X1), k = k, allVariables = TRUE))
     if (!"try-error" %in% class(result)) {
       resX <- t(pcaMethods::completeObs(result))
       resX[!is.na(X1)] <- X1[!is.na(X1)]
@@ -87,15 +87,15 @@ imputeMissing <- function(X,
   }
 
   if ("NMF" %in% method) {
-    minx <- min(X,na.rm=TRUE)
+    minx <- min(X, na.rm = TRUE)
     X1 <- X - minx
     impX[["NMF"]] <- log(nmfImpute(exp(X1), k = 3)) + minx
   }
 
   if ("RF" %in% method) {
     ## missForest
-    df <- as.data.frame(t(X),check.names=FALSE)
-    colnames(df) <- paste0("rfvar.",1:ncol(df))
+    df <- as.data.frame(t(X), check.names = FALSE)
+    colnames(df) <- paste0("rfvar.", 1:ncol(df))
     res <- missForest::missForest(df,
       maxiter = 10,
       ## parallelize = 'variables',
@@ -104,7 +104,7 @@ imputeMissing <- function(X,
     ximp <- as.matrix(t(res$ximp))
     cx <- X
     ii <- match(rownames(ximp), colnames(df))
-    cx[ii,] <- ximp
+    cx[ii, ] <- ximp
     impX[["RF"]] <- cx
   }
 
@@ -195,12 +195,12 @@ svdImpute2 <- function(M, nv = 3, threshold = 0.001, init = NULL,
   empty.rows <- which(rowMeans(is.na(M)) == 1)
   empty.cols <- which(colMeans(is.na(M)) == 1)
 
-  if( is.character(init) && grepl("%",init)) {
-    q <- as.numeric(sub("%","",init))
-    init <- quantile(M[!is.na(M)],probs=q)[1]
-    message(paste0("setting initial values to ",q,"%. init=",init))
+  if (is.character(init) && grepl("%", init)) {
+    q <- as.numeric(sub("%", "", init))
+    init <- quantile(M[!is.na(M)], probs = q)[1]
+    message(paste0("setting initial values to ", q, "%. init=", init))
   }
-  
+
   if (!is.null(init)) {
     ## initialize missing values with fixed value
     M[ind.missing] <- init
@@ -209,28 +209,28 @@ svdImpute2 <- function(M, nv = 3, threshold = 0.001, init = NULL,
     row.mx <- apply(M, 1, median, na.rm = TRUE)
     col.mx <- apply(M, 2, median, na.rm = TRUE)
     row.mx[is.nan(row.mx)] <- NA
-    col.mx[is.nan(col.mx)] <- NA    
+    col.mx[is.nan(col.mx)] <- NA
     M[ind.missing] <- row.mx[ind.missing[, 1]]
-    ind.missing2 <- which(is.na(M), arr.ind = TRUE)    
+    ind.missing2 <- which(is.na(M), arr.ind = TRUE)
     M[ind.missing2] <- col.mx[ind.missing2[, 2]]
   }
 
   ## randomize initial values?
-  if( randomize.init ) {
-    sdx <- mean(matrixStats::rowSds(M, na.rm=TRUE), na.rm=TRUE)
-    rr <- rnorm( nrow(ind.missing), mean=0, sd=sdx)
+  if (randomize.init) {
+    sdx <- mean(matrixStats::rowSds(M, na.rm = TRUE), na.rm = TRUE)
+    rr <- rnorm(nrow(ind.missing), mean = 0, sd = sdx)
     M[ind.missing] <- M[ind.missing] + rr
   }
-  
+
   ## do SVD iterations
   count <- 0
   error <- Inf
   Mold <- M
-  nv <- min(nv, dim(M)-1)
+  nv <- min(nv, dim(M) - 1)
   while ((error > threshold) && (count < maxSteps)) {
     res <- irlba::irlba(M, nv = nv)
-    if(nv==1) {
-      imx <- res$d * (res$u %*% t(res$v))      
+    if (nv == 1) {
+      imx <- res$d * (res$u %*% t(res$v))
     } else {
       imx <- res$u %*% (diag(res$d) %*% t(res$v))
     }
@@ -274,9 +274,9 @@ svdImpute2 <- function(M, nv = 3, threshold = 0.001, init = NULL,
 
 
 #' @title Impute missing values with non-negative matrix factorization
-#' 
+#'
 #' @description Imputes missing values in matrix non-negative matrix factorization
-#' 
+#'
 #' @export
 nmfImpute <- function(x, k = 5) {
   ## Impute missing values with NMF
