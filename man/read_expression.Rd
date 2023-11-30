@@ -27,6 +27,6 @@ summing expression across rows.
 }
 \examples{
 \dontrun{
- counts <- read_expression(playbase::example_file("counts.csv"))
+counts <- read_expression(playbase::example_file("counts.csv"))
 }
 }

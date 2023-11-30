@@ -15,11 +15,11 @@ pgx.gene_table(pgx, organism)
 Updated PGX object with gene annotation table
 }
 \description{
-Retrieves a gene annotation table for the given organism 
+Retrieves a gene annotation table for the given organism
 from Ensembl using biomaRt. Adds the table to the PGX object.
 }
 \details{
-Queries the Ensembl database to get a gene annotation table 
+Queries the Ensembl database to get a gene annotation table
 containing external gene IDs mapped to Ensembl IDs. Handles retries in case
 of temporary Ensembl API errors.
 }

@@ -22,16 +22,16 @@ A data frame containing the contents of the cached CSV file.
 Cache a CSV file locally or on S3
 }
 \details{
-This function checks if a cached copy of the CSV file exists locally in /tmp or on S3. 
+This function checks if a cached copy of the CSV file exists locally in /tmp or on S3.
 If not, it reads the file using FUN(), caches it locally or on S3, and returns the contents.
 On subsequent calls it returns the cached copy instead of re-reading the file.
 }
 \examples{
 \dontrun{
 # Cache locally
-df <- cached.csv("data.csv") 
+df <- cached.csv("data.csv")
 
-# Cache on S3  
+# Cache on S3
 df <- cached.csv("s3://mybucket/data.csv", bucket = "mybucket")
 }
 }

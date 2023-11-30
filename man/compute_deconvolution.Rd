@@ -26,8 +26,9 @@ and methods. It estimates the abundance of different cell types or tissue compon
 probes <- rownames(playbase::COUNTS)
 mart <- biomaRt::useMart(biomart = "ensembl", dataset = species)
 annot_table <- ngs.getGeneAnnotation(rownames(counts),
-                                   probe_type = NULL,
-                                   mart = mart)
+  probe_type = NULL,
+  mart = mart
+)
 deconv <- compute_deconvolution(probes, annot_table)
 }
 }

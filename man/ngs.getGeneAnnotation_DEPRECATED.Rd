@@ -22,8 +22,8 @@ annotation package. This function has been deprecated
 and is mantained for fallback purposes.
 }
 \details{
-Queries an annotation package for the specified organism 
-using the provided identifiers and probe type. Returns a cleaned and 
+Queries an annotation package for the specified organism
+using the provided identifiers and probe type. Returns a cleaned and
 reformatted data frame with feature identifiers as row names.
 }
 \examples{

@@ -15,12 +15,12 @@ detect_probe_DEPRECATED(probes, organism)
 The probe type with the most matches to the input identifiers.
 }
 \description{
-Detects the most likely probe type (ENSEMBL, SYMBOL, etc) 
+Detects the most likely probe type (ENSEMBL, SYMBOL, etc)
 for a set of gene/transcript identifiers. This function has been deprecated
 and is mantained for fallback purposes.
 }
 \details{
-Checks the input identifiers against known gene/transcript 
+Checks the input identifiers against known gene/transcript
 identifiers from an organism-specific annotation package to determine the
 most likely probe type. Useful for identifying the type of identifiers
 in a gene expression matrix when not explicitly provided.
