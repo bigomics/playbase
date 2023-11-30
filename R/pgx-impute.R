@@ -19,13 +19,25 @@
 #' @export
 imputeMissing <- function(X,
                           method = c(
-                            "LLS", "bpca", "msImpute", "SVD", "SVD2", "RF",
+                            "LLS", "bpca", "msImpute", "SVD", "SVD2", "NMF", "RF",
                             "knn", "QRILC", "MLE", "MinDet", "MinProb",
-                            "min", "zero", "nbavg"
+                            "min", "zero", "nbavg", "rowmeans"
                           )[1:3],
                           rf.ntree = 100,
                           plot = FALSE) {
   impX <- list()
+
+  ## ------------ simple rowmeans -----------
+  if ("rowmeans" %in% method) {
+    cx <- X
+    ii <- which(is.na(cx), arr.ind=TRUE)
+    cx[ii] <- rowMeans(cx, na.rm=TRUE)[ii[,1]]
+    ii <- which(is.na(cx), arr.ind=TRUE)
+    cx[ii] <- colMeans(cx, na.rm=TRUE)[ii[,2]]    
+    ii <- which(is.na(cx))
+    cx[ii] <- mean(cx, na.rm=TRUE)
+    impX[["rowmeans"]] <- cx    
+  }
 
   ## ------------ msImpute --------------
   if ("msImpute" %in% method) {
@@ -45,7 +57,7 @@ imputeMissing <- function(X,
     X1 <- X[ii, jj]
     X1 <- X1 + 1e-2 * matrix(rnorm(length(X1)), nrow = nrow(X1), ncol = ncol(X1))
     k <- min(10, dim(X1) - 1)
-    result <- try(pcaMethods::llsImpute(t(X1), k = k))
+    result <- try(pcaMethods::llsImpute(t(X1), k = k, allVariables=TRUE))
     if (!"try-error" %in% class(result)) {
       resX <- t(pcaMethods::completeObs(result))
       resX[!is.na(X1)] <- X1[!is.na(X1)]
@@ -74,14 +86,26 @@ imputeMissing <- function(X,
     impX[["SVD2"]] <- svdImpute2(X, nv = 3)
   }
 
+  if ("NMF" %in% method) {
+    minx <- min(X,na.rm=TRUE)
+    X1 <- X - minx
+    impX[["NMF"]] <- log(nmfImpute(exp(X1), k = 3)) + minx
+  }
+
   if ("RF" %in% method) {
     ## missForest
-    res <- missForest::missForest(as.data.frame(t(X)),
+    df <- as.data.frame(t(X),check.names=FALSE)
+    colnames(df) <- paste0("rfvar.",1:ncol(df))
+    res <- missForest::missForest(df,
       maxiter = 10,
       ## parallelize = 'variables',
       ntree = rf.ntree
     )
-    impX[["RF"]] <- t(as.matrix(res$ximp))
+    ximp <- as.matrix(t(res$ximp))
+    cx <- X
+    ii <- match(rownames(ximp), colnames(df))
+    cx[ii,] <- ximp
+    impX[["RF"]] <- cx
   }
 
   ## ------------ MSnbase --------------
@@ -163,6 +187,7 @@ imputeMissing <- function(X,
 #' @export
 svdImpute2 <- function(M, nv = 3, threshold = 0.001, init = NULL,
                        maxSteps = 100, fill.empty = "median",
+                       randomize.init = FALSE,
                        verbose = FALSE) {
   ## nv=3;threshold=0.001;init=NULL;maxSteps=100;fill.empty="median";verbose=FALSE
 
@@ -170,6 +195,12 @@ svdImpute2 <- function(M, nv = 3, threshold = 0.001, init = NULL,
   empty.rows <- which(rowMeans(is.na(M)) == 1)
   empty.cols <- which(colMeans(is.na(M)) == 1)
 
+  if( is.character(init) && grepl("%",init)) {
+    q <- as.numeric(sub("%","",init))
+    init <- quantile(M[!is.na(M)],probs=q)[1]
+    message(paste0("setting initial values to ",q,"%. init=",init))
+  }
+  
   if (!is.null(init)) {
     ## initialize missing values with fixed value
     M[ind.missing] <- init
@@ -177,18 +208,32 @@ svdImpute2 <- function(M, nv = 3, threshold = 0.001, init = NULL,
     ## initialize missing values with col/row medians
     row.mx <- apply(M, 1, median, na.rm = TRUE)
     col.mx <- apply(M, 2, median, na.rm = TRUE)
-    mx <- rowMeans(cbind(row.mx[ind.missing[, 1]], col.mx[ind.missing[, 2]]), na.rm = TRUE)
-    M[ind.missing] <- mx
+    row.mx[is.nan(row.mx)] <- NA
+    col.mx[is.nan(col.mx)] <- NA    
+    M[ind.missing] <- row.mx[ind.missing[, 1]]
+    ind.missing2 <- which(is.na(M), arr.ind = TRUE)    
+    M[ind.missing2] <- col.mx[ind.missing2[, 2]]
   }
 
+  ## randomize initial values?
+  if( randomize.init ) {
+    sdx <- mean(matrixStats::rowSds(M, na.rm=TRUE), na.rm=TRUE)
+    rr <- rnorm( nrow(ind.missing), mean=0, sd=sdx)
+    M[ind.missing] <- M[ind.missing] + rr
+  }
+  
   ## do SVD iterations
   count <- 0
   error <- Inf
   Mold <- M
-  nv <- min(nv, dim(M))
+  nv <- min(nv, dim(M)-1)
   while ((error > threshold) && (count < maxSteps)) {
     res <- irlba::irlba(M, nv = nv)
-    imx <- res$u %*% (diag(res$d) %*% t(res$v))
+    if(nv==1) {
+      imx <- res$d * (res$u %*% t(res$v))      
+    } else {
+      imx <- res$u %*% (diag(res$d) %*% t(res$v))
+    }
     M[ind.missing] <- imx[ind.missing]
     count <- count + 1
     if (count > 0) {
@@ -228,14 +273,14 @@ svdImpute2 <- function(M, nv = 3, threshold = 0.001, init = NULL,
 }
 
 
-
-
-#' @describeIn knnImputeMissing Impute missing values with non-negative matrix factorization
+#' @title Impute missing values with non-negative matrix factorization
+#' 
+#' @description Imputes missing values in matrix non-negative matrix factorization
+#' 
 #' @export
 nmfImpute <- function(x, k = 5) {
   ## Impute missing values with NMF
   ##
-
   k <- min(k, dim(x))
   nmf <- NNLM::nnmf(x, k = k, check.k = FALSE, rel.tol = 1e-2, verbose = 0)
   xhat <- with(nmf, W %*% H)
@@ -247,43 +292,6 @@ nmfImpute <- function(x, k = 5) {
   }
   x
 }
-
-
-#' @title Impute Missing Values with k-Nearest Neighbors
-#'
-#' @description This function imputes missing values in a vector using k-nearest neighbors.
-#' @param x A numeric vector containing missing values to be imputed.
-#' @param pos A matrix of positions for each element in `x`.
-#' @param missing An optional value specifying the value used to represent missing values in `x`.
-#' The default value is `NA`.
-#' @param k An optional numeric value specifying the number of nearest neighbors to use for imputation.
-#' The default value is 10.
-#'
-#' @details This function takes a numeric vector `x` containing missing values, a matrix of positions `pos`
-#' for each element in `x`, and an optional value `missing` representing the missing values in `x` as input.
-#' The function uses the k-nearest neighbors algorithm to impute the missing values in `x` based on their positions in `pos`.
-#' The number of nearest neighbors used for imputation is specified by the `k` parameter.
-#' The imputed values are returned as a numeric vector of the same length as `x`.
-#'
-#' @return A numeric vector of the same length as `x`, containing the imputed values.
-#'
-#' @export
-knnImputeMissing <- function(x, pos, missing = NA, k = 10) {
-  k0 <- which(x == missing)
-  k1 <- which(x != missing)
-  if (length(k0) == 0) {
-    return(x)
-  }
-  pos0 <- pos[k0, ]
-  pos1 <- pos[k1, ]
-  nb <- FNN::get.knnx(pos1, pos0, k = k)$nn.index
-  fx <- factor(x[k1])
-  mx <- matrix(fx[as.vector(nb)], nrow = nrow(nb), ncol = ncol(nb))
-  x.imp <- apply(mx, 1, function(x) names(which.max(table(x))))
-  x[which(x == missing)] <- x.imp
-  x
-}
-
 
 
 ## ----------------------------------------------------------------------
