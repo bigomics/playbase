@@ -603,8 +603,8 @@ fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
     file = file, check.names = check.names, header = header,
     sep = sep, fill = TRUE
   )
-  if(NCOL(df) == 1) {
-    x <- matrix(NA,nrow(df),0)
+  if (NCOL(df) == 1) {
+    x <- matrix(NA, nrow(df), 0)
     rownames(x) <- df[[row.names]] ## allow dups if matrix
     return(x)
   }
@@ -1107,11 +1107,11 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 #'
 #' @param pgx A pgx object with the pgx$organism information and the pgx$counts slot for the
 #' guessing approach.
-#' @param capitalise logical: by default FALSE. Parameter to capitalise the first letter of the 
+#' @param capitalise logical: by default FALSE. Parameter to capitalise the first letter of the
 #' specie if mouse or human.
-#' @details This function retreives the pgx$organism slot. If it is not found, then it examines 
-#' the gene identifiers in the row names of a count matrix to determine if the data is from human 
-#' or mouse (main organism supported in the old playbase version). It checks if the identifiers 
+#' @details This function retreives the pgx$organism slot. If it is not found, then it examines
+#' the gene identifiers in the row names of a count matrix to determine if the data is from human
+#' or mouse (main organism supported in the old playbase version). It checks if the identifiers
 #' match common patterns found in mouse genes, like "rik", "loc", "orf". If more than 20% match
 #'  these mouse patterns, it assigns the organism as "mouse". Otherwise it assigns "human".
 #'
@@ -1119,21 +1119,20 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 #' If this fraction is >0.8, it assigns "human". This relies on the assumption that human data
 #' will tend to have more uppercase ENSEMBL identifiers.
 #'
-#' @return Character string the organism. 
+#' @return Character string the organism.
 #' @export
 pgx.getOrganism <- function(pgx, capitalise = FALSE) {
-
   pgx.counts <- pgx$counts
   if (!is.null(pgx$organism)) {
     org <- pgx$organism
   } else {
-  rownames.counts <- grep("^rik|^loc|^orf", rownames(pgx$counts),
-    value = TRUE,
-    ignore.case = TRUE, invert = TRUE
-  )
-  cap.fraction <- mean(grepl("^[A-Z][a-z]+", rownames.counts), na.rm = TRUE)
-  is.mouse <- (cap.fraction > 0.8)
-  org <- ifelse(is.mouse, "mouse", "human")
+    rownames.counts <- grep("^rik|^loc|^orf", rownames(pgx$counts),
+      value = TRUE,
+      ignore.case = TRUE, invert = TRUE
+    )
+    cap.fraction <- mean(grepl("^[A-Z][a-z]+", rownames.counts), na.rm = TRUE)
+    is.mouse <- (cap.fraction > 0.8)
+    org <- ifelse(is.mouse, "mouse", "human")
   }
 
   if (capitalise && org %in% c("mouse", "human")) {
@@ -1501,7 +1500,7 @@ filterProbes <- function(genes, gg) {
   } else {
     p3 <- rep(FALSE, nrow(genes))
   }
-  
+
   # Ensure all p* are valids
   p_list <- list(p0, p1, p2, p3)
   p_list <- p_list[sapply(p_list, length) > 0]
@@ -1517,10 +1516,10 @@ filterProbes <- function(genes, gg) {
 
 #' Rename rownames of counts matrix by annotation table
 #'
-#' @param counts Numeric matrix of counts, with genes/probes as rownames. 
+#' @param counts Numeric matrix of counts, with genes/probes as rownames.
 #' @param annot_table Data frame with rownames matching counts and annotation columns.
 #' @param new_id_col Column name in annot_table containing new identifiers. Default 'symbol'.
-#' 
+#'
 #' @return Matrix with rownames changed to values from annot_table.
 #' Duplicate new rownames are summed.
 #'
@@ -1528,21 +1527,20 @@ filterProbes <- function(genes, gg) {
 #' Looks up the `new_id_col` in the annot_table and replaces counts rownames.
 #' Handles special cases like missing values.
 #' Sums duplicate rows after renaming.
-#' 
-#' @export 
+#'
+#' @export
 rename_by <- function(counts, annot_table, new_id_col = "symbol") {
-  symbol <- annot_table[rownames(counts), new_id_col] 
+  symbol <- annot_table[rownames(counts), new_id_col]
 
   # Guard agaisn human_hommolog == NA
-  if (all(is.na(symbol))) { 
-    symbol <- annot_table[rownames(counts), "symbol"] 
-
+  if (all(is.na(symbol))) {
+    symbol <- annot_table[rownames(counts), "symbol"]
   }
 
   # Sum columns of rows with the same gene symbol
   if (is.matrix(counts) | is.data.frame(counts)) {
     rownames(counts) <- symbol
-    return(counts[!rownames(counts) %in% c("", "NA"),, drop = FALSE])
+    return(counts[!rownames(counts) %in% c("", "NA"), , drop = FALSE])
   } else {
     return(symbol)
   }

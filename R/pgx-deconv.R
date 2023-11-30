@@ -303,7 +303,7 @@ pgx.inferCellCyclePhase <- function(counts) {
   obj <- Seurat::NormalizeData(obj, verbose = 0)
   suppressWarnings(obj <- Seurat::CellCycleScoring(obj,
     s.features = s_genes,
-    g2m.features = g2m_genes, 
+    g2m.features = g2m_genes,
     set.ident = TRUE
   ))
   ## view cell cycle scores and phase assignments

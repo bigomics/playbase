@@ -73,9 +73,9 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
         names(fc) <- toupper(names(fc)) ## for MOUSE!!
       }
     } else {
-        # For old datasets
-        names(fc) <- rownames(meta$fc)
-        names(fc) <- toupper(names(fc)) ## for MOUSE!!
+      # For old datasets
+      names(fc) <- rownames(meta$fc)
+      names(fc) <- toupper(names(fc)) ## for MOUSE!!
     }
     res <- pgx.correlateSignatureH5(
       fc,
@@ -101,8 +101,8 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
 }
 
 
-#' @title  Correlate SignatureH5 
-#' 
+#' @title  Correlate SignatureH5
+#'
 #' @description pgx.correlateSignatureH5 computes correlation and gene set enrichment between a
 #' signature and datasets in an HDF5 file using on-disk chunked computations
 #' @param fc:      fold change matrix
@@ -110,7 +110,7 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
 #' @param nsig:    number of significant genes
 #' @param ntop:    number of top signatures (in abs(rho)) to report
 #' @param nperm:   number of permuations for fGSEA
-#' 
+#'
 #' @export
 pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm = 10000) {
   if (is.null(names(fc))) stop("fc must have names")

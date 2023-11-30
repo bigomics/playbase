@@ -39,17 +39,16 @@ compute_testGenesets <- function(pgx,
                                  custom.geneset = list(gmt = NULL, info = NULL),
                                  test.methods = c("gsva", "camera", "fgsea"),
                                  remove.outputs = TRUE) {
-
   if (!"X" %in% names(pgx)) {
     stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
   }
 
-  if(is.null(pgx$genes$human_ortholog)){
+  if (is.null(pgx$genes$human_ortholog)) {
     # this is needed in case the species is human, and we dont have the homolog column or if we have an old pgx
     # which will ensure consistency between old and new pgx
     pgx$genes$human_ortholog <- NA
   }
-  
+
   ## -----------------------------------------------------------
   ## Load huge geneset matrix
   ## -----------------------------------------------------------
@@ -63,9 +62,10 @@ compute_testGenesets <- function(pgx,
   ## filter genes by gene or homologous, if it exists
   # replace "" to NA in pgx$genes$human_ortholog
   if (pgx$organism != "Human") {
-    human_genes <- ifelse(!is.na(pgx$genes$human_ortholog), 
-                    pgx$genes$human_ortholog, 
-                    pgx$genes$symbol)
+    human_genes <- ifelse(!is.na(pgx$genes$human_ortholog),
+      pgx$genes$human_ortholog,
+      pgx$genes$symbol
+    )
   } else {
     human_genes <- pgx$genes$symbol
   }
@@ -74,7 +74,7 @@ compute_testGenesets <- function(pgx,
   # Change HUMAN gene names to species symbols if NOT human and human_ortholog column is NOT all NA
   G <- G[, colnames(G) %in% human_genes]
 
-  if(pgx$organism != "Human" && !all(is.na(pgx$genes$human_ortholog))){
+  if (pgx$organism != "Human" && !all(is.na(pgx$genes$human_ortholog))) {
     colnames(G) <- pgx$genes$symbol[match(colnames(G), pgx$genes$human_ortholog)]
   }
 
@@ -139,7 +139,6 @@ compute_testGenesets <- function(pgx,
 
 
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
-  
     X <- rename_by(X, pgx$genes, "symbol")
     X <- X[!rownames(X) == "", , drop = FALSE]
     if (any(duplicated(rownames(X)))) {
@@ -362,7 +361,7 @@ createSparseGenesetMatrix <- function(
   ## ------------- filter genes by minimum frequency and chrom
   genes.table <- table(unlist(gmt.all))
   genes <- names(which(genes.table >= min_gene_frequency))
-  
+
   annot <- annot
 
   if (filter_genes == TRUE) {
@@ -374,7 +373,7 @@ createSparseGenesetMatrix <- function(
     annot <- annot[annot$chr %in% c(1:22, "X", "Y"), ]
     genes <- genes[!is.na(annot$chr)]
   }
-  
+
   ## Filter genesets with permitted genes (official and min.sharing)
   gmt.all <- lapply(gmt.all, function(s) intersect(s, genes))
 
@@ -395,7 +394,7 @@ createSparseGenesetMatrix <- function(
   rownames(G) <- names(gmt.all)
 
   # remove NA rows
-  G <- G[!is.na(rownames(G)), ,drop = FALSE]
+  G <- G[!is.na(rownames(G)), , drop = FALSE]
 
   return(G)
 }
