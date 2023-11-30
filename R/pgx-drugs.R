@@ -63,12 +63,18 @@ pgx.createComboDrugAnnot <- function(combo, annot0) {
 #' containing the enrichment results for each drug.
 #'
 #' @export
-pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor"),
+pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
+                                      methods = c("GSEA", "cor"),
                                       nmin = 15, nprune = 250, contrast = NULL) {
   ## 'obj'   : can be ngs object or fold-change matrix
   ## X       : drugs profiles (may have multiple for one drug)
-  ## xdrugs : drug associated with profile
+  ## xdrugs  : drug associated with profile
 
+  if(is.null(X)) {
+    X <- playdata::L1000_ACTIVITYS_N20D1011
+    dim(X)
+  }
+  
   if ("gx.meta" %in% names(obj)) {
     F <- pgx.getMetaMatrix(obj)$fc
     ## check if multi-omics
@@ -131,8 +137,6 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
   results <- list()
   if ("cor" %in% methods) {
     message("Calculating drug enrichment using rank correlation ...")
-
-
     D <- Matrix::sparse.model.matrix(~ 0 + xdrugs)
     colnames(D) <- sub("^xdrugs", "", colnames(D))
     rownames(D) <- colnames(X) ## not necessary..
@@ -171,6 +175,16 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
     results[["GSEA"]] <- list(X = mNES, Q = mQ, P = mP, size = msize)
   }
 
+  ## level2 and level3
+  if(!is.null(drug_info)) {
+
+
+
+
+
+  }
+
+  
   ## this takes only the top matching drugs for each comparison to
   ## reduce the size of the matrices
   nprune
