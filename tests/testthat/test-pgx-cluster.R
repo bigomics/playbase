@@ -1,5 +1,5 @@
 # Generate data for all functions
-d <- get_mini_example_data()
+d <- playbase::get_mini_example_data()
 
 now <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
 ngs <- list(

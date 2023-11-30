@@ -76,29 +76,28 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
   }
   
   if ("gx.meta" %in% names(obj)) {
-    F <- pgx.getMetaMatrix(obj)$fc
+    FC <- pgx.getMetaMatrix(obj)$fc
     ## check if multi-omics
-    is.multiomics <- any(grepl("\\[gx\\]|\\[mrna\\]", rownames(F)))
-    is.multiomics
+    is.multiomics <- any(grepl("\\[gx\\]|\\[mrna\\]", rownames(FC)))
     if (is.multiomics) {
-      jj <- grep("\\[gx\\]|\\[mrna\\]", rownames(F))
-      F <- F[jj, , drop = FALSE]
+      jj <- grep("\\[gx\\]|\\[mrna\\]", rownames(FC))
+      FC <- FC[jj, , drop = FALSE]
     }
-    rownames(F) <- toupper(sub(".*:|.*\\]", "", rownames(F)))
+    rownames(FC) <- toupper(sub(".*:|.*\\]", "", rownames(FC)))
 
-    F <- F[order(-rowMeans(F**2)), , drop = FALSE]
-    F <- F[!duplicated(rownames(F)), , drop = FALSE]
+    FC <- FC[order(-rowMeans(FC**2)), , drop = FALSE]
+    FC <- FC[!duplicated(rownames(FC)), , drop = FALSE]
   } else {
     ## it is a matrix
-    F <- obj
+    FC <- obj
   }
 
   if (is.null(contrast)) {
-    contrast <- colnames(F)
+    contrast <- colnames(FC)
   }
-  contrast <- intersect(contrast, colnames(F))
+  contrast <- intersect(contrast, colnames(FC))
   contrast
-  F <- F[, contrast, drop = FALSE]
+  FC <- FC[, contrast, drop = FALSE]
 
   ## create drug meta sets
   meta.gmt <- tapply(colnames(X), xdrugs, list)
@@ -111,7 +110,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
 
   ## first level (rank) correlation
   message("Calculating first level rank correlation ...")
-  gg <- intersect(rownames(X), rownames(F))
+  gg <- intersect(rownames(X), rownames(FC))
 
   if (length(gg) < 20) {
     message("WARNING::: pgx.computeDrugEnrichment : not enough common genes!!")
@@ -119,18 +118,18 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
   }
   if (any(class(X) == "dgCMatrix")) {
     ## gene set enrichment by rank correlation
-    fx <- apply(F[gg, , drop = FALSE], 2, rank)
+    fx <- apply(FC[gg, , drop = FALSE], 2, rank)
     R1 <- qlcMatrix::corSparse(X[gg, ], fx)
   } else {
     rnk1 <- apply(X[gg, , drop = FALSE], 2, rank, na.last = "keep")
-    rnk2 <- apply(F[gg, , drop = FALSE], 2, rank, na.last = "keep")
+    rnk2 <- apply(FC[gg, , drop = FALSE], 2, rank, na.last = "keep")
     system.time(R1 <- stats::cor(rnk1, rnk2, use = "pairwise"))
   }
   R1 <- as.matrix(R1)
   R1[is.nan(R1)] <- 0
   R1[is.infinite(R1)] <- 0
   R1 <- R1 + 1e-8 * matrix(stats::rnorm(length(R1)), nrow(R1), ncol(R1))
-  colnames(R1) <- colnames(F)
+  colnames(R1) <- colnames(FC)
   rownames(R1) <- colnames(X)
 
   ## experiment to drug
@@ -170,7 +169,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
 
     pw <- res0[[1]]$pathway
     rownames(mNES) <- rownames(mQ) <- rownames(mP) <- pw
-    colnames(mNES) <- colnames(mQ) <- colnames(mP) <- colnames(F)
+    colnames(mNES) <- colnames(mQ) <- colnames(mP) <- colnames(FC)
     msize <- res0[[1]]$size
     results[["GSEA"]] <- list(X = mNES, Q = mQ, P = mP, size = msize)
   }

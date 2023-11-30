@@ -4,7 +4,7 @@
 \alias{seurat2pgx}
 \title{Convert Seurat to PGX}
 \usage{
-seurat2pgx(obj, do.cluster = FALSE)
+seurat2pgx(obj, species, do.cluster = FALSE)
 }
 \arguments{
 \item{obj}{Seurat object to convert}

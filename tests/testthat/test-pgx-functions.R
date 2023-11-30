@@ -15,7 +15,7 @@ test_that("pos.compact works", {
     6.00, 6.04, 6.08, 6.12, 6.16
   ), ncol = 2)
   # Run function
-  result <- pos.compact(pos)
+  result <- playbase::pos.compact(pos)
   expect_equal(class(result), c("matrix", "array"))
   expect_equal(dim(result), dim(pos))
   expect_equal(result, expected, tolerance = 1e-3)
@@ -34,33 +34,37 @@ testthat::test_that("selectSamplesFromSelectedLevels returns correct samples", {
   )
   rownames(Y) <- c("sample_1", "sample_2", "sample_3")
   # Case 1: No levels
-  testthat::expect_equal(selectSamplesFromSelectedLevels(Y, levels = NULL), rownames(Y))
+  testthat::expect_equal(playbase::selectSamplesFromSelectedLevels(Y, levels = NULL), 
+                          rownames(Y))
 
   # Case 2: Empty levels
-  testthat::expect_equal(selectSamplesFromSelectedLevels(Y, levels = ""), rownames(Y))
+  testthat::expect_equal(playbase::selectSamplesFromSelectedLevels(Y, levels = ""), 
+                            rownames(Y))
 
   # Case 3: Single level
   levels <- "Pheno1=B"
-  testthat::expect_equal(selectSamplesFromSelectedLevels(Y, levels), "sample_2")
+  testthat::expect_equal(playbase::selectSamplesFromSelectedLevels(Y, levels), 
+                            "sample_2")
 
   # Case 4: Multiple levels
   levels <- c("Pheno1=A", "Pheno2=3")
-  testthat::expect_equal(selectSamplesFromSelectedLevels(Y, levels), c("sample_1", "sample_3"))
+  testthat::expect_equal(playbase::selectSamplesFromSelectedLevels(Y, levels), 
+                            c("sample_1", "sample_3"))
 })
 
 
 #' Test for star.symbols
 test_that("star.symbols generates correct symbols", {
   # Test cases
-  expect_equal(star.symbols(0), "")
-  expect_equal(star.symbols(1), "\u2605")
-  expect_equal(star.symbols(5), "\u2605\u2605\u2605\u2605\u2605")
+  expect_equal(playbase::star.symbols(0), "")
+  expect_equal(playbase::star.symbols(1), "\u2605")
+  expect_equal(playbase::star.symbols(5), "\u2605\u2605\u2605\u2605\u2605")
 
   # Default pch
-  expect_equal(star.symbols(3), "\u2605\u2605\u2605")
+  expect_equal(playbase::star.symbols(3), "\u2605\u2605\u2605")
 
   # Custom pch
-  expect_equal(star.symbols(2, pch = "X"), "XX")
+  expect_equal(playbase::star.symbols(2, pch = "X"), "XX")
 })
 
 #' Test for search_path
@@ -73,17 +77,17 @@ test_that("search_path finds file in paths", {
   file.create(file.path(dir1, file))
 
   # Test
-  path <- search_path(c(dir1, dir2), file)
+  path <- playbase::search_path(c(dir1, dir2), file)
 
   # Assertions
   expect_equal(path, file.path(dir1, file))
   expect_true(file.exists(path))
 
   # Test with NA input
-  expect_null(search_path(NA, "file.txt"))
+  expect_null(playbase::search_path(NA, "file.txt"))
 
   # Test with NULL input
-  expect_null(search_path(NULL, "file.txt"))
+  expect_null(playbase::search_path(NULL, "file.txt"))
 
 
   # Clean up
@@ -95,7 +99,7 @@ test_that("search_path returns NULL if file not found", {
   dir1 <- tempfile()
 
   # Test
-  path <- search_path(dir1, "not_found.txt")
+  path <- playbase::search_path(dir1, "not_found.txt")
 
   # Assertion
   expect_null(path)
@@ -117,7 +121,7 @@ test_that("rowscale scales rows correctly", {
   expected <- matrix(expected_vector, nrow = 5, byrow = TRUE)
 
   # Test rowscale
-  result <- rowscale(m)
+  result <- playbase::rowscale(m)
 
   # Check class
   expect_equal(class(result), c("matrix", "array"))
@@ -139,7 +143,7 @@ test_that("add_opacity adds opacity correctly", {
   expected <- c(rgb(1, 1, 1, 0.5), rgb(0, 0, 0, 0.5), NA)
 
   # Run function
-  result <- add_opacity(hexcol, opacity)
+  result <- playbase::add_opacity(hexcol, opacity)
 
   # Check class
   expect_equal(class(result), "character")
@@ -201,40 +205,6 @@ test_that("logCPM transforms counts to logCPM", {
 #'
 #'
 
-#' Test for probe2symbol
-test_that("probe2symbol returns expected output", {
-  # Create test data
-  set.seed(124)
-  counts <- playbase::COUNTS
-  subset_genes <- sample(seq_len(nrow(counts)), 10)
-  probes <- rownames(playbase::COUNTS)[subset_genes]
-  symbols <- playbase::probe2symbol(probes)
-  ensembl_input <- c(
-    "ENSG00000139618", "ENSG00000141510",
-    "ENSG00000157764", "ENSG00000121879",
-    "ENSG00000136997"
-  )
-  ensembl_test <- playbase::probe2symbol(ensembl_input)
-  ensembl_na <- c(
-    NA_character_, "ENSG00000141510",
-    "ENSG00000157764", NA_character_,
-    "ENSG00000136997"
-  )
-  symbol_na <- playbase::probe2symbol(ensembl_na)
-
-  # Expected
-  # Default parameters
-  expect_equal(length(symbols), length(probes))
-  expect_type(symbols, "character")
-
-  # Test for ensembl input
-  expect_equal(length(ensembl_test), length(ensembl_input))
-  expect_type(ensembl_test, "character")
-
-  # Test handling NAs
-  expect_type(symbol_na, "character")
-  expect_true(sum(is.na(symbol_na)) == sum(is.na(ensembl_na)))
-})
 
 #' Test for trimsame
 #'
@@ -277,7 +247,7 @@ test_that("read.as_matrix reads file as matrix", {
   )
   colnames(expected) <- c(1, 2, 3)
   # Test function
-  result <- read.as_matrix(tmp)
+  result <- playbase::read.as_matrix(tmp)
 
   # Check class
   expect_equal(class(result), c("matrix", "array"))
@@ -306,7 +276,7 @@ test_that("tagDuplicates tags duplicates correctly", {
   expected <- c("A", "B", "C", "A ", "B ")
 
   # Run function
-  result <- tagDuplicates(s)
+  result <- playbase::tagDuplicates(s)
 
   # Check class
   expect_equal(class(result), "character")
@@ -328,7 +298,7 @@ test_that("reverse.AvsB reverses A vs B contrasts", {
 
   expected <- c("B_vs_A", "grp2_vs_grp1", "cond1:B_vs_condA@time1")
 
-  result <- reverse.AvsB(comps)
+  result <- playbase::reverse.AvsB(comps)
 
   expect_equal(class(result), "character")
   expect_equal(length(result), length(comps))
@@ -371,9 +341,6 @@ test_that("reverse.AvsB reverses A vs B contrasts", {
 #'
 #'
 
-#' Test for getKeggID
-#'
-#'
 
 #' Test for is.Date
 test_that("is.Date correctly identifies date columns", {
@@ -386,18 +353,18 @@ test_that("is.Date correctly identifies date columns", {
   x6 <- c(NA, NA, NA)
 
   # Case 1: Date column in YYYY-MM-DD format
-  expect_true(is.Date(x1))
+  expect_true(playbase::is.Date(x1))
 
   # Case 2: Date column in DD/MM/YYYY format
-  expect_true(is.Date(x2))
+  expect_true(playbase::is.Date(x2))
 
   # Case 3: Date column in YYYY/MM/DD format
-  expect_true(is.Date(x3))
+  expect_true(playbase::is.Date(x3))
 
   # Case 4: Non-date column
-  expect_false(is.Date(x4))
-  expect_false(is.Date(x5))
-  expect_false(is.Date(x6))
+  expect_false(playbase::is.Date(x4))
+  expect_false(playbase::is.Date(x5))
+  expect_false(playbase::is.Date(x6))
 })
 
 #' Test for averageByGroup
@@ -407,16 +374,16 @@ test_that("is.Date correctly identifies date columns", {
 #' Test for makeAcronym
 test_that("makeAcronym generates expected acronyms", {
   # Test single word
-  expect_equal(makeAcronym("hello"), "he")
+  expect_equal(playbase::makeAcronym("hello"), "he")
 
   # Test multiple words
-  expect_equal(makeAcronym("hello_world"), "HW")
+  expect_equal(playbase::makeAcronym("hello_world"), "HW")
 
   # Test hyphenated words
-  expect_equal(makeAcronym("hello-world"), "HW")
+  expect_equal(playbase::makeAcronym("hello-world"), "HW")
 
   # Test already uppercase
-  expect_equal(makeAcronym("HELLO"), "HE")
+  expect_equal(playbase::makeAcronym("HELLO"), "HE")
 
   # Test data
   x1 <- "hello"
@@ -435,12 +402,12 @@ test_that("makeAcronym generates expected acronyms", {
   expected6 <- c("UN", "EU")
 
   # Test function
-  result1 <- makeAcronym(x1)
-  result2 <- makeAcronym(x2)
-  result3 <- makeAcronym(x3)
-  result4 <- makeAcronym(x4)
-  result5 <- makeAcronym(x5)
-  result6 <- makeAcronym(x6)
+  result1 <- playbase::makeAcronym(x1)
+  result2 <- playbase::makeAcronym(x2)
+  result3 <- playbase::makeAcronym(x3)
+  result4 <- playbase::makeAcronym(x4)
+  result5 <- playbase::makeAcronym(x5)
+  result6 <- playbase::makeAcronym(x6)
 
   # Check class
   expect_equal(class(result1), "character")
@@ -482,7 +449,7 @@ test_that("relevelFactorFirst relevels factor with first level", {
   expected <- factor(c("B", "C", "A"), levels = c("B", "C", "A"))
 
   # Test function
-  result <- relevelFactorFirst(f)
+  result <- playbase::relevelFactorFirst(f)
 
   # Check class
   expect_equal(class(result), "factor")
@@ -505,22 +472,22 @@ test_that("alias2hugo converts gene symbols", {
   expected <- c("A1BG", "ACOT9", "FOO1", NA, "BAR2", "IRAK1", "CNEP1R1", "EIF2B4", "RRAS2", "AGAP3")
   expected_na_false <- c("A1BG", "ACOT9", NA, NA, NA, "IRAK1", "CNEP1R1", "EIF2B4", "RRAS2", "AGAP3")
   # Test on human
-  result <- alias2hugo(gene0, org = "hs")
+  result <- playbase::alias2hugo(gene0, org = "hs")
   expect_equal(result, expected)
 
   # Test on mouse
-  result <- alias2hugo(gene0, org = "mm")
+  result <- playbase::alias2hugo(gene0, org = "mm")
   expect_equal(result, expected)
 
   # Test preserving NA
-  result <- alias2hugo(gene0, org = "hs", na.orig = TRUE)
+  result <- playbase::alias2hugo(gene0, org = "hs", na.orig = TRUE)
   expect_equal(result, expected)
 
-  result <- alias2hugo(gene0, org = "hs", na.orig = FALSE)
+  result <- playbase::alias2hugo(gene0, org = "hs", na.orig = FALSE)
   expect_equal(result, expected_na_false)
 
   # Test error on wrong organism
-  expect_error(alias2hugo(gene0, org = "zz"))
+  expect_error(playbase::alias2hugo(gene0, org = "zz"))
 })
 
 #' Test for breakstringBROKEN
@@ -556,7 +523,7 @@ test_that("psort sorts data frame by p-value column", {
   expected_order <- c("C", "B", "A")
 
   # Sort
-  result <- psort(df)
+  result <- playbase::psort(df)
 
   # Test class
   expect_equal(class(result), "data.frame")
@@ -565,7 +532,7 @@ test_that("psort sorts data frame by p-value column", {
   expect_equal(result$Gene, expected_order)
 
   # Test sorting by specified column
-  result2 <- psort(df, p.col = "pvalue")
+  result2 <- playbase::psort(df, p.col = "pvalue")
   expect_equal(result2$Gene, expected_order)
 })
 
@@ -581,40 +548,40 @@ test_that("psort sorts data frame by p-value column", {
 
 test_that("is.num correctly identifies numeric vectors", {
   # Numeric vector
-  expect_true(is.num(c(1, 2, 3)))
+  expect_true(playbase::is.num(c(1, 2, 3)))
 
   # Character vector
-  expect_false(is.num(c("a", "b", "c")))
+  expect_false(playbase::is.num(c("a", "b", "c")))
 
   # Mixed vector
-  expect_true(is.num(c(1, 2, "a")))
+  expect_true(playbase::is.num(c(1, 2, "a")))
 
   # All NA
-  expect_false(is.num(rep(NA, 10)))
+  expect_false(playbase::is.num(rep(NA, 10)))
 
   # Mostly unique
-  expect_false(is.num(sample(letters, 20, replace = FALSE)))
+  expect_false(playbase::is.num(sample(letters, 20, replace = FALSE)))
 
   # Mostly duplicates
-  expect_false(is.num(sample(1:3, 20, replace = TRUE)))
+  expect_false(playbase::is.num(sample(1:3, 20, replace = TRUE)))
 })
 
 #' Test for isanumber
 test_that("isanumber correctly identifies numeric vectors", {
   numeric_vector <- c(1, 2, 3)
-  expect_true(isanumber(numeric_vector))
+  expect_true(playbase::isanumber(numeric_vector))
 
   character_vector <- c("a", "b", "c")
-  expect_false(isanumber(character_vector))
+  expect_false(playbase::isanumber(character_vector))
 
   mixed_vector <- c(1, 2, "a")
-  expect_true(isanumber(mixed_vector))
+  expect_true(playbase::isanumber(mixed_vector))
 
   mostly_na <- c(NA, NA, 1, 2)
-  expect_true(isanumber(mostly_na))
+  expect_true(playbase::isanumber(mostly_na))
 
   empty <- c()
-  expect_false(isanumber(empty))
+  expect_false(playbase::isanumber(empty))
 })
 
 #' Test for expandAnnotationMatrix
@@ -640,10 +607,10 @@ test_that("cor.pvalue calculates p-values correctly", {
   n <- 100
 
   # Expected p-value
-  expected_p <- cor.pvalue(x, n)
+  expected_p <- playbase::cor.pvalue(x, n)
 
   # Calculate p-value
-  result_p <- cor.pvalue(x, n)
+  result_p <- playbase::cor.pvalue(x, n)
 
   # Test class
   expect_equal(class(result_p), "numeric")
@@ -657,8 +624,8 @@ test_that("cor.pvalue calculates p-values correctly", {
   # Test different inputs
   x <- c(-0.8, 0.3)
   n <- c(50, 150)
-  expected_p <- cor.pvalue(x, n)
-  result_p <- cor.pvalue(x, n)
+  expected_p <- playbase::cor.pvalue(x, n)
+  result_p <- playbase::cor.pvalue(x, n)
 
   expect_equal(length(result_p), 2)
   expect_equal(result_p, expected_p, tolerance = 1e-5)

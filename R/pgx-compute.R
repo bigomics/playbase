@@ -110,6 +110,8 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 #' OmicsPlayground.
 #' @param counts Matrix of count data with genes as rows and samples as columns.
 #' @param samples Data frame containing sample information.
+#' @param organism Default "Human", it indicates the species used
+#' for the gene annotation table and the probe to symbol conversion.
 #' @param contrasts Data frame defining sample contrasts.
 #' @param X (Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.
 #' @param is.logx Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.
@@ -125,21 +127,29 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 #' @param do.clustergenes Logical indicating whether to cluster genes. Default is TRUE.
 #' @param only.proteincoding Logical indicating whether to keep only protein-coding genes. Default is TRUE.
 #'
+#' @import data.table
 #' @return List. PGX object containing input data and parameters.
 #'
 #' @export
-pgx.createPGX <- function(counts, samples, contrasts,
-                          X = NULL, ## genes,
-                          is.logx = NULL,
+pgx.createPGX <- function(counts,
+                          samples,
+                          contrasts,
+                          organism = "Human",
+                          name = "Data set",
+                          datatype = "unknown",
+                          creator = "unknown",
+                          description = "No description provided.",
+                          X = NULL, 
+                          is.logx = NULL, 
                           batch.correct = TRUE,
-                          auto.scale = TRUE,
-                          filter.genes = TRUE,
+                          auto.scale = TRUE, 
+                          filter.genes = TRUE, 
                           prune.samples = FALSE,
-                          only.known = TRUE,
-                          only.hugo = TRUE,
+                          only.known = TRUE, 
+                          only.hugo = TRUE, 
                           convert.hugo = TRUE,
-                          do.cluster = TRUE,
-                          cluster.contrasts = FALSE,
+                          do.cluster = TRUE, 
+                          cluster.contrasts = FALSE, 
                           do.clustergenes = TRUE,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE,
@@ -151,7 +161,7 @@ pgx.createPGX <- function(counts, samples, contrasts,
   ## -------------------------------------------------------------------
   ## clean up input files
   ## -------------------------------------------------------------------
-  samples <- data.frame(samples)
+  samples <- data.frame(samples, drop = FALSE)
   counts <- as.matrix(counts)
   if (is.null(contrasts)) contrasts <- samples[, 0]
 
@@ -159,8 +169,9 @@ pgx.createPGX <- function(counts, samples, contrasts,
   message("[createPGX] input: dim(samples) = ", paste(dim(samples), collapse = "x"))
   message("[createPGX] input: dim(contrasts) = ", paste(dim(contrasts), collapse = "x"))
 
+
   ## convert old-style contrast matrix to sample-wise labeled contrasts
-  contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
+  contrasts <- playbase::contrasts.convertToLabelMatrix(contrasts, samples)
 
   # prune unused samples
   contrasts[contrasts %in% c("", " ", "NA")] <- NA
@@ -177,11 +188,9 @@ pgx.createPGX <- function(counts, samples, contrasts,
   message("[createPGX] check logarithm/linear...")
   guess.log <- (min(counts, na.rm = TRUE) < 0 || max(counts, na.rm = TRUE) < 100)
   guess.log <- guess.log && (is.null(is.logx) || is.logx == TRUE)
-  guess.log
   if (is.null(is.logx)) {
     is.logx <- guess.log
   }
-  is.logx
   if (is.logx) {
     message("[createPGX] input assumed logarithm: undo-ing logarithm")
     counts <- pmax(2**counts - 1, 0) ## undo logarithm
@@ -208,7 +217,6 @@ pgx.createPGX <- function(counts, samples, contrasts,
     message("[createPGX] Imputing missing values using ", impute.method)
     counts <- counts.imputeMissing(counts, method = impute.method)
   }
-  table(is.na(counts))
 
   ## -------------------------------------------------------------------
   ## Check bad samples (in total counts, after imputation)
@@ -244,38 +252,6 @@ pgx.createPGX <- function(counts, samples, contrasts,
   message("[createPGX] final: dim(contrasts) = ", paste(dim(contrasts), collapse = "x"))
 
   ## -------------------------------------------------------------------
-  ## Cleanup rownames
-  ## -------------------------------------------------------------------
-
-  ## convert probe-IDs to gene symbol (do not translate yet to HUGO)
-  message("[createPGX] converting probes to symbol...")
-  symbol <- probe2symbol(rownames(counts), type = NULL) ## auto-convert function
-  mean(rownames(counts) == symbol, na.rm = TRUE)
-  if (mean(rownames(counts) == symbol, na.rm = TRUE) > 0.5) { ## why??
-    symbol <- rownames(counts) ## probably already symbol. revert to original
-  }
-  jj <- which(!is.na(symbol) & symbol != "")
-  counts <- as.matrix(counts[jj, ])
-  rownames(counts) <- symbol[jj]
-  if (!is.null(X)) {
-    X <- X[jj, ]
-    rownames(X) <- rownames(counts)
-  }
-
-  ## convert alias to official HUGO
-  if (convert.hugo) {
-    message("[createPGX] converting to HUGO symbols...")
-    ## take only first gene as rowname, retain others as alias
-    gene1 <- sapply(rownames(counts), function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
-    rownames(counts) <- alias2hugo(gene1) ## convert to latest HUGO
-  } else {
-    message("[createPGX] skip conversion to HUGO symbols")
-  }
-
-  ## collapse multiple row for genes by summing up counts
-  counts <- counts.mergeDuplicateFeatures(counts)
-
-  ## -------------------------------------------------------------------
   ## COMPUTE LOG NORMALIZE EXPRESSION (if not given)
   ## -------------------------------------------------------------------
   if (is.null(X)) {
@@ -287,7 +263,7 @@ pgx.createPGX <- function(counts, samples, contrasts,
 
   if (normalize) {
     message("[createPGX] NORMALIZING log-expression matrix X...")
-    X <- logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
+    X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
     X <- limma::normalizeQuantiles(X) ## in log space
     ## X <- 0.1*X + 0.9*limma::normalizeQuantiles(X)   ## 'weighted' to keep randomness...
   } else {
@@ -299,21 +275,88 @@ pgx.createPGX <- function(counts, samples, contrasts,
   ## -------------------------------------------------------------------
   message("[createPGX] creating pgx object...")
 
-  pgx <- list() ## empty object
-  pgx$name <- "data set"
-  this.date <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-  pgx$date <- this.date
-  pgx$datatype <- "unknown"
-  pgx$description <- "data set"
+  pgx <- list(
+    name = name,
+    organism = organism,
+    version = packageVersion("playbase"),
+    date = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+    creator = creator,
+    datatype = datatype,
+    description = description,
+    samples = data.frame(samples, check.names = FALSE),
+    counts = as.matrix(counts),
+    contrasts = contrasts,
+    X = X,
+    total_counts = Matrix::colSums(counts, na.rm = TRUE), # input normalized log-expression (can be NULL)
+    counts_multiplier = counts_multiplier
+  )
 
-  pgx$samples <- data.frame(samples, check.names = FALSE)
-  pgx$counts <- as.matrix(counts)
-  pgx$contrasts <- contrasts
-  pgx$X <- X ## input normalized log-expression (can be NULL)
+  ## -------------------------------------------------------------------
+  ## create gene annotation table
+  ## -------------------------------------------------------------------
 
-  totcounts <- colSums(counts, na.rm = TRUE)
-  pgx$total_counts <- totcounts
-  pgx$counts_multiplier <- counts_multiplier
+  counter <- 0
+
+  while (!"genes" %in% names(pgx) & counter < 5) {
+    
+    message(paste0("[createPGX] attempting to annotate genes, call number ", counter + 1))
+    Sys.sleep(60 * counter)
+    try(pgx <- playbase::pgx.gene_table(pgx, organism = organism))
+    counter <- counter + 1
+
+  } 
+  # For fallback purposes we can use the old method to add gene annotation if biomaRt fails
+  if (!"genes" %in% names(pgx) & organism %in% c("Mouse" , "Human")) {
+    probe_type <- detect_probe_DEPRECATED(probes = rownames(pgx$counts), organism = organism)
+    pgx$genes <- ngs.getGeneAnnotation_DEPRECATED(probes = rownames(pgx$counts), probe_type = probe_type, organism = organism)
+  }
+  if (!("genes" %in% names(pgx))) {
+    stop("Could not compute gene table")
+  }
+  ## -------------------------------------------------------------------
+  ## convert probe-IDs to gene symbol and aggregate duplicates
+  ## -------------------------------------------------------------------
+  if (convert.hugo) {
+    message("[createPGX] converting probes to symbol...")
+    symbol <- pgx$genes[rownames(pgx$counts), "symbol"] 
+    mapped_symbols <- !is.na(symbol) & symbol != ""
+    probes_with_symbol <- pgx$genes[mapped_symbols, "feature"]
+    
+    ## Update counts and genes
+    pgx$counts <- pgx$counts[probes_with_symbol, , drop = FALSE]
+    pgx$genes <- pgx$genes[probes_with_symbol, , drop = FALSE]
+    pgx$genes$gene_name <- symbol[mapped_symbols]
+
+    # Sum columns of rows with the same gene symbol
+    selected_symbols <- symbol[mapped_symbols]
+    rownames(pgx$counts) <- selected_symbols
+    if (sum(duplicated(selected_symbols)) > 0) {
+        message("[createPGX:autoscale] duplicated rownames detected: summing up rows (counts).")
+        pgx$counts <- rowsum(pgx$counts, selected_symbols)
+    }
+    if (!is.null(pgx$X)) {
+        # For X, sum the 2^X values of rows with the same gene symbol
+        # And then take log2 again.
+        pgx$X <- pgx$X[probes_with_symbol, , drop = FALSE]
+        rownames(pgx$X) <- selected_symbols
+        pgx$X <- log2(rowsum(2**pgx$X, selected_symbols))
+    }
+
+    # Collapse feature as a comma-separated elements
+    # if multiple rows match to the same gene, then collapse them
+
+    features_collapsed_by_symbol <- aggregate(feature ~ symbol, data = pgx$genes, function(x) paste(unique(x), collapse = "; "))
+    pgx$genes <- pgx$genes[!duplicated(pgx$genes$symbol), , drop = FALSE]
+
+    # merge by symbol (we need to remove feature, as the new feature is collapsed)
+    pgx$genes$feature <- NULL
+
+    # merge features_collapsde_by_symbol with pgx$genes by the column symbol
+    pgx$genes <- merge(pgx$genes, features_collapsed_by_symbol, by = "symbol")
+    rownames(pgx$genes) = pgx$genes$symbol
+    pgx$counts <- pgx$counts[pgx$genes$symbol, , drop = FALSE]
+    
+  }
 
   ## -------------------------------------------------------------------
   ## Filter out not-expressed
@@ -321,6 +364,7 @@ pgx.createPGX <- function(counts, samples, contrasts,
   if (filter.genes) {
     ## There is second filter in the statistics computation. This
     ## first filter is primarily to reduce the counts table.
+
     message("[createPGX] filtering out not-expressed genes (zero counts)...")
     pgx <- pgx.filterZeroCounts(pgx)
 
@@ -328,62 +372,35 @@ pgx.createPGX <- function(counts, samples, contrasts,
     ## DEseq2). Require at least in 2 or 1% of total. Specify the
     ## PRIOR CPM amount to regularize the counts and filter genes
     pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
+
+    # Conform gene table
+    keep <- intersect(unique(pgx$genes$gene_name),  rownames(pgx$counts))
+    pgx$genes <- pgx$genes[keep, , drop = FALSE]
   }
 
-
-  ## -------------------------------------------------------------------
-  ## create gene annotation if not given (no HUGO conversion)
-  ## -------------------------------------------------------------------
-  message("[createPGX] annotating genes...")
-  pgx$genes <- ngs.getGeneAnnotation(genes = rownames(pgx$counts))
-  rownames(pgx$genes) <- rownames(pgx$counts)
-  pgx$genes[is.na(pgx$genes)] <- ""
 
   ## -------------------------------------------------------------------
   ## Filter genes?
   ## -------------------------------------------------------------------
-  organism <- pgx.getOrganism(pgx$counts)
-  message("[createPGX] detected organism: ", organism, "")
 
   do.filter <- (only.hugo | only.known | only.proteincoding)
-  if (do.filter && organism %in% c("mouse", "rat")) {
-    message("[createPGX] filtering genes...")
-    SYMBOL <- unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
-    is.hugo <- is.known <- is.protcoding <- TRUE
-    if (only.hugo) is.hugo <- (pgx$genes$gene_name %in% SYMBOL)
-    #
-    if (only.known) {
-      is.known <- !grepl("Rik|^Orf|^Loc", pgx$genes$gene_name) ## ???
-    }
+  if (do.filter) {
+
+    pgx$genes <- pgx$genes[!is.na(pgx$genes$symbol)|pgx$genes$symbol == "",]
     if (only.proteincoding) {
-      is.protcoding <- pgx$genes$gene_biotype %in% c("protein_coding")
+      pgx$genes <- pgx$genes[pgx$genes$gene_biotype %in% c("protein_coding", "protein-coding"), ]
     }
-    keep <- (is.known & is.hugo & is.protcoding)
+    keep <- intersect(unique(pgx$genes$gene_name), rownames(pgx$counts))
     pgx$counts <- pgx$counts[keep, , drop = FALSE]
-    pgx$genes <- pgx$genes[keep, , drop = FALSE]
-    if (!is.null(pgx$X)) pgx$X <- pgx$X[keep, , drop = FALSE]
-  }
-  if (do.filter && organism == "human") {
-    message("[createPGX] filtering genes...")
-    SYMBOL <- unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
-    is.hugo <- is.protcoding <- is.known <- TRUE
-    if (only.hugo) is.hugo <- (pgx$genes$gene_name %in% SYMBOL)
-    if (only.known) {
-      is.known <- !grepl("^ORF|^LOC", pgx$genes$gene_name) ## ???
+    if (!is.null(pgx$X)) {
+      pgx$X <- pgx$X[keep, , drop = FALSE]
     }
-    if (only.proteincoding) {
-      is.protcoding <- pgx$genes$gene_biotype %in% c("protein_coding")
-    }
-    keep <- (is.known & is.hugo & is.protcoding)
-    pgx$counts <- pgx$counts[keep, , drop = FALSE]
-    pgx$genes <- pgx$genes[keep, , drop = FALSE]
-    if (!is.null(pgx$X)) pgx$X <- pgx$X[keep, , drop = FALSE]
   }
 
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
-  pgx <- compute_cellcycle_gender(pgx)
+  pgx <- playbase::compute_cellcycle_gender(pgx, pgx$counts)
 
   ## -------------------------------------------------------------------
   ## Batch-correction (if requested. WARNING: changes counts )
@@ -423,7 +440,7 @@ pgx.createPGX <- function(counts, samples, contrasts,
   ## -------------------------------------------------------------------
   if (do.cluster || cluster.contrasts) {
     message("[createPGX] clustering samples...")
-    pgx <- pgx.clusterSamples2(
+    pgx <- playbase::pgx.clusterSamples2(
       pgx,
       dims = c(2, 3),
       perplexity = NULL,
@@ -432,7 +449,7 @@ pgx.createPGX <- function(counts, samples, contrasts,
 
     ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
     posx <- scale(cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]]))
-    idx <- pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
+    idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
     if (length(unique(idx)) == 1) {
       ## try again with finer settings if single cluster...
       idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
@@ -447,8 +464,8 @@ pgx.createPGX <- function(counts, samples, contrasts,
     if (length(unique(Y[, 1])) < 2) {
       message("[createPGX] warning: only one cluster.")
     } else {
-      ct <- makeDirectContrasts(Y, ref = "others")
-      ctx <- contrastAsLabels(ct$exp.matrix)
+      ct <- playbase::makeDirectContrasts(Y, ref = "others")
+      ctx <- playbase::contrastAsLabels(ct$exp.matrix)
       if (ncol(pgx$contrasts) == 0) {
         pgx$contrasts <- ctx
       } else {
@@ -459,13 +476,12 @@ pgx.createPGX <- function(counts, samples, contrasts,
 
   if (do.clustergenes) {
     message("[createPGX] clustering genes...")
-    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "gene")
+    pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "gene")
   }
 
   ### done
   return(pgx)
 }
-
 
 #' @title Compute PGX
 #' @description Main function to populate pgx with results. The function computes the analysis on a pgx object
@@ -522,8 +538,8 @@ pgx.computePGX <- function(pgx,
   ##   contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
   ##   contr.matrix <- sign(contr.matrix) ## sign is fine
   ## }
-  contr.matrix <- contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
-  contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
+  contr.matrix <- playbase::contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
+  contr.matrix <- playbase::makeContrastsFromLabelMatrix(contr.matrix)
   contr.matrix <- sign(contr.matrix) ## sign is fine
 
   ## select valid contrasts
@@ -570,7 +586,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
   message("[pgx.computePGX] testing genes...")
 
-  pgx <- compute_testGenes(
+  pgx <- playbase::compute_testGenes(
     pgx, contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
@@ -582,8 +598,9 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
   message("[pgx.computePGX] testing genesets...")
-  pgx <- compute_testGenesets(
-    pgx,
+
+  pgx <- playbase::compute_testGenesets(
+    pgx = pgx,
     custom.geneset = custom.geneset,
     max.features = max.genesets,
     test.methods = gset.methods
@@ -633,14 +650,14 @@ counts.removeOutliers <- function(counts) {
 counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
   ## remove extra-large and infinite values
   ## X <- log2(1 + counts)
-  X <- logCPM(counts)
-  ##sdx <- apply(X, 1, function(x) mad(x[x > 0], na.rm = TRUE))
-  sdx <- matrixStats::rowSds(X, na.rm = TRUE)  
+  X <- playbase::logCPM(counts)
+  ## sdx <- apply(X, 1, function(x) mad(x[x > 0], na.rm = TRUE))
+  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
   sdx[is.na(sdx)] <- 0
   sdx0 <- 0.8 * sdx + 0.2 * mean(sdx, na.rm = TRUE) ## moderated SD
   mx <- rowMeans(X, na.rm = TRUE)
   z <- (X - mx) / sdx0
-  ##table(abs(z)>10)
+  ## table(abs(z)>10)
   which.xxl <- which(abs(z) > zsd, arr.ind = TRUE)
   nxxl <- nrow(which.xxl)
   if (nxxl > 0) {
@@ -655,7 +672,7 @@ counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
 counts.imputeMissing <- function(counts, method = "SVD2") {
   X <- log2(1 + counts)
   table(is.na(X))
-  impX <- imputeMissing(X, method = method)
+  impX <- playbase::imputeMissing(X, method = method)
   pmax(2**impX - 1, 0)
 }
 
@@ -757,3 +774,6 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
 ## ----------------------------------------------------------------------
 ## -------------------------- end of file -------------------------------
 ## ----------------------------------------------------------------------
+
+
+

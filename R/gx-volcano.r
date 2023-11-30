@@ -251,7 +251,7 @@ gx.volcanoPlot.LIMMA <- function(tab, render = "scatterD3", n = 1000, highlight 
                                  use.rpkm = FALSE, ma.plot = FALSE, cex.main = 1.2,
                                  main = "", cex.axis = 1, axes = TRUE) {
   tab <- tab[order(tab$P.Value), ]
-  gene <- as.character(tab[, grep("^gene$|^gene_name$", colnames(tab))])
+  gene <- as.character(tab[, grep("^gene$|^external_gene_name$", colnames(tab))])
   if (n > 0) {
     jj <- unique(c(1:100, utils::head(sample(1:nrow(tab), replace = TRUE), n - 100)))
     if (!is.null(highlight)) {

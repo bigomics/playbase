@@ -62,8 +62,21 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
   ct <- colnames(F1)[1]
   for (ct in colnames(F1)) {
     fc <- F1[, ct]
-    names(fc) <- rownames(meta$fc)
-    names(fc) <- toupper(names(fc)) ## for MOUSE!!
+
+    if (!is.null(pgx$organism)) {
+      if (pgx$organism != "Human") {
+        names(fc) <- pgx$genes[names(fc), "human_ortholog"]
+        fc <- fc[names(fc) != ""]
+      } else {
+        # For human datasets
+        names(fc) <- rownames(meta$fc)
+        names(fc) <- toupper(names(fc)) ## for MOUSE!!
+      }
+    } else {
+        # For old datasets
+        names(fc) <- rownames(meta$fc)
+        names(fc) <- toupper(names(fc)) ## for MOUSE!!
+    }
     res <- pgx.correlateSignatureH5(
       fc,
       h5.file = h5.file,
@@ -88,12 +101,16 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
 }
 
 
-#' @describeIn  pgx.correlateSignatureH5.inmemory computes correlation and gene set enrichment between a
+#' @title  Correlate SignatureH5 
+#' 
+#' @description pgx.correlateSignatureH5 computes correlation and gene set enrichment between a
 #' signature and datasets in an HDF5 file using on-disk chunked computations
+#' @param fc:      fold change matrix
 #' @param h5.file: HDF5 file of reference expression signatures
+#' @param nsig:    number of significant genes
 #' @param ntop:    number of top signatures (in abs(rho)) to report
 #' @param nperm:   number of permuations for fGSEA
-#'
+#' 
 #' @export
 pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm = 10000) {
   if (is.null(names(fc))) stop("fc must have names")
@@ -232,7 +249,6 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
 }
 
 
-
 #' Create a signature database from PGX files
 #'
 #' @title Create signature database
@@ -289,7 +305,7 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALS
 
     ## Filter out genes (not on known chromosomes...)
     genes <- rownames(X)
-    gannot <- ngs.getGeneAnnotation(genes)
+    gannot <- ngs.getGeneAnnotation(genes, organism = pgx$organism)
     sel <- which(!is.na(gannot$chr))
     X <- X[sel, , drop = FALSE]
     remove(F)

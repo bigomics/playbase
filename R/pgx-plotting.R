@@ -299,7 +299,7 @@ pgx.scatterPlot <- function(pgx, pheno = NULL, gene = NULL,
       var <- pgx$gx.meta$meta[[contrast]]$meta.fx
       names(var) <- rownames(pgx$gx.meta$meta[[contrast]])
       var <- var[rownames(pos)]
-      tooltip <- pgx$genes[rownames(pos), "gene_title"]
+      tooltip <- probe2symbol(rownames(counts), ngs$genes)
     }
     if (level == "geneset") {
       var <- pgx$gset.meta$meta[[contrast]]$meta.fx
@@ -1269,10 +1269,6 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
     return(NULL)
   }
 
-  if (level == "gene" && !probe %in% rownames(pgx$X)) {
-    graphics::frame() ## emtpy image
-    return(NULL)
-  }
   if (level == "geneset" && !probe %in% rownames(pgx$gsetX)) {
     graphics::frame() ## emtpy image
     return(NULL)
@@ -1372,8 +1368,9 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   if (level == "geneset") {
     gx <- pgx$gsetX[probe, rownames(pgx$samples)]
   } else {
-    gx <- pgx$X[probe, rownames(pgx$samples)]
+    gx <- pgx$X[rownames(pgx$X) == probe, rownames(pgx$samples)]
   }
+  
   if (!logscale) {
     gx <- 2**(gx)
   }
@@ -1399,7 +1396,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
     klr[is.na(klr)] <- "#e5e5e5"
 
     if (plotlib == "plotly") {
-      fig <- pgx.barplot.PLOTLY(
+      fig <- playbase::pgx.barplot.PLOTLY(
         data = data.frame(
           gx = gx,
           xgroup = factor(names(gx), levels = names(gx))
@@ -1444,7 +1441,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
 
     if (plotlib == "plotly") {
       ## plot using plotly
-      fig <- pgx.barplot.PLOTLY(
+      fig <- playbase::pgx.barplot.PLOTLY(
         data = data.frame(
           gx = gx,
           xgroup = xgroup
@@ -4306,7 +4303,7 @@ plotlyCytoplot <- function(pgx,
     )
   }
 
-  if (!is.null(pgx$deconv)) {
+  if (!is.null(pgx$deconv) && length(pgx$deconv) > 0) {
     inferred.celltype <- pgx$deconv[[1]][["meta"]]
     lab1 <- Matrix::head(names(sort(-Matrix::colSums(inferred.celltype[j1, , drop = FALSE]))), 3)
     pos1 <- apply(cbind(x1, x2)[j1, , drop = FALSE], 2, stats::median)
@@ -4335,7 +4332,7 @@ plotlyCytoplot <- function(pgx,
       font = list(size = 15)
     )
   }
-  p
+  return(p)
 }
 
 

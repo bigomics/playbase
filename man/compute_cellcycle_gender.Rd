@@ -19,3 +19,14 @@ An updated object with cell cycle and gender inference results.
 This function performs cell cycle phase inference and gender estimation based on the input RNA expression data.
 The cell cycle phase inference is performed using the Seurat package.
 }
+\examples{
+\dontrun{
+counts <- playbase::COUNTS
+mart <- biomaRt::useMart(biomart = "ensembl", dataset = species)
+ngs <- list(annot_table = ngs.getGeneAnnotation(rownames(counts),
+                                   probe_type = NULL,
+                                   mart = mart)
+)
+deconv <- compute_deconvolution(ngs, counts)
+}
+}

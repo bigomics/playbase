@@ -105,7 +105,7 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
   }
   if (length(levels) != 2) {
     stop("gx.limma::fatal error:only two class comparisons. Please use gx.limmaF().")
-    return
+    return(NULL)
   }
 
   ## setup model and perform LIMMA. See LIMMA userguide p41 ("Two groups").
@@ -268,7 +268,7 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
   }
   if (0 && length(levels) != 2) {
     stop("gx.limma::fatal error:only two class comparisons")
-    return
+    return(NULL)
   }
 
   if(method==1) {

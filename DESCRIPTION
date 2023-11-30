@@ -1,7 +1,7 @@
 Package: playbase
 Type: Package
 Title: Core back-end functionality and logic for OmicsPlayground
-Version: 0.1.0
+Version: 0.1.1
 Author: BigOmics Analytics SA
 Maintainer: The package maintainer <yourself@somewhere.net>
 Description: More about what it does (maybe more than one line)
@@ -37,16 +37,10 @@ Imports:
     doParallel,
     dplyr,
     edgeR,
-    EnsDb.Hsapiens.v86,
-    EnsDb.Mmusculus.v79,
-    EnsDb.Rnorvegicus.v79,
     fastcluster,
     fgsea,
     FNN,
     foreach,
-    genefilter,
-    GenomicDataCommons,
-    GenomicFeatures,
     GEOquery,
     ggplot2,
     ggrepel,
@@ -58,7 +52,6 @@ Imports:
     gplots,
     GSVA,
     harmony,
-    homologene,
     htmlwidgets,
     igraph,
     iheatmapr,
@@ -78,7 +71,6 @@ Imports:
     NNLM,
     org.Hs.eg.db,
     org.Mm.eg.db,
-    org.Rn.eg.db,
     parallel,
     partykit,
     patchwork,
@@ -114,11 +106,7 @@ Imports:
     survival,
     sva,
     tidyr,
-    TxDb.Hsapiens.UCSC.hg19.knownGene,
-    TxDb.Mmusculus.UCSC.mm10.knownGene,
-    tximport,
     umap,
-    UNDO,
     uwot,
     vioplot,
     viridis,
