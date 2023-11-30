@@ -161,232 +161,230 @@ pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
 ## --------------------------- new stuff ---------------------------------------------------
 
 
-logNormalizeCounts <- function(counts, plot=TRUE,
+logNormalizeCounts <- function(counts, plot = TRUE,
                                q.zero = 0.01,
                                zero.method = "sdc",
                                shift.method = "slog",
                                weighted.qn = FALSE,
-                               svd.init=NULL) {
-
-  which.zero <- which(counts==0)
+                               svd.init = NULL) {
+  which.zero <- which(counts == 0)
   which.missing <- which(is.na(counts))
   nzero <- sum(length(which.zero))
   nmissing <- sum(length(which.missing))
-  message("[logNormalizeCounts] ",nzero," zero values")
-  message("[logNormalizeCounts] ",nmissing," missing values")  
-  
-  hist2 <- function(x1,...) {
-    dx <- min(x1,na.rm=TRUE) + 0.05*diff(range(x1,na.rm=TRUE))
-    hist( x1[x1>dx], ...)
+  message("[logNormalizeCounts] ", nzero, " zero values")
+  message("[logNormalizeCounts] ", nmissing, " missing values")
+
+  hist2 <- function(x1, ...) {
+    dx <- min(x1, na.rm = TRUE) + 0.05 * diff(range(x1, na.rm = TRUE))
+    hist(x1[x1 > dx], ...)
   }
-  main=""
+  main <- ""
   boxplothist <- function(x, main) {
-    boxplot(x, main=main)
-    x[is.infinite(x)] <- NA     
-    if(length(which.missing)) {
-      hist2(x[-which.missing],breaks=200)
-      if(any(!is.na(x[which.missing]))) {
-        hist(x[which.missing],breaks=200,col='red',add=TRUE,border=NA)
+    boxplot(x, main = main)
+    x[is.infinite(x)] <- NA
+    if (length(which.missing)) {
+      hist2(x[-which.missing], breaks = 200)
+      if (any(!is.na(x[which.missing]))) {
+        hist(x[which.missing], breaks = 200, col = "red", add = TRUE, border = NA)
       }
     } else {
-      hist2(x,breaks=200)
+      hist2(x, breaks = 200)
     }
   }
-  
-  if(plot) {
-    x=log2(1e-10 + counts)
-    boxplothist(log2(1e-10 + counts), main="log(counts)")
+
+  if (plot) {
+    x <- log2(1e-10 + counts)
+    boxplothist(log2(1e-10 + counts), main = "log(counts)")
   }
 
-  xmedians <- apply( counts, 2, function(x) median(x[x>0], na.rm=TRUE))
+  xmedians <- apply(counts, 2, function(x) median(x[x > 0], na.rm = TRUE))
   xcounts <- t(t(counts) / xmedians * mean(xmedians))
-  
-  if(plot) {
-    x=log2(xcounts)
-    boxplothist(log2(xcounts), main="median centered (MC)")
+
+  if (plot) {
+    x <- log2(xcounts)
+    boxplothist(log2(xcounts), main = "median centered (MC)")
   }
 
-  S <- scaled.log1p(xcounts, q=0.0001)
-##  S <- log2(xcounts)  ## zeros become -Inf
-  if(plot) {
-    boxplothist(S, main="quantile scaled (MC+QS)")
+  S <- scaled.log1p(xcounts, q = 0.0001)
+  ##  S <- log2(xcounts)  ## zeros become -Inf
+  if (plot) {
+    boxplothist(S, main = "quantile scaled (MC+QS)")
   }
-  
+
   ## detect outliers
-  mdx <- apply(S, 1, median, na.rm=TRUE)
-  sdx <- apply(S, 1, mad, na.rm=TRUE)
-  sdx0 <- mean(sdx,na.rm=TRUE)
+  mdx <- apply(S, 1, median, na.rm = TRUE)
+  sdx <- apply(S, 1, mad, na.rm = TRUE)
+  sdx0 <- mean(sdx, na.rm = TRUE)
   sdx[is.na(sdx)] <- sdx0
-  sdx <- (0.8*sdx + 0.2*sdx0) ## bayesian
+  sdx <- (0.8 * sdx + 0.2 * sdx0) ## bayesian
   Z <- (S - mdx) / sdx
   smax <- mdx + 10 * sdx
-  smin <- mdx - 10 * sdx  
-  smax[is.na(smax)] <- mean(smax,na.rm=TRUE)
-  smin[is.na(smin)] <- mean(smin,na.rm=TRUE)
-  is.outlier <- which( S > smax  )
+  smin <- mdx - 10 * sdx
+  smax[is.na(smax)] <- mean(smax, na.rm = TRUE)
+  smin[is.na(smin)] <- mean(smin, na.rm = TRUE)
+  is.outlier <- which(S > smax)
   noutlier <- length(is.outlier)
-  message("[logNormalizeCounts] detected ",noutlier," outlier values\n")
-  if(noutlier>0) {
+  message("[logNormalizeCounts] detected ", noutlier, " outlier values\n")
+  if (noutlier > 0) {
     S[is.outlier] <- NA
   }
 
-  any(is.na(S))  
-  if(any(is.na(S))) {
-    ##nv=floor(max(ncol(counts)/5,3));
-    ##svd.init=NULL
+  any(is.na(S))
+  if (any(is.na(S))) {
+    ## nv=floor(max(ncol(counts)/5,3));
+    ## svd.init=NULL
     nmissing <- sum(is.na(S))
-    message("[logNormalizeCounts] imputing ",nmissing," missing values\n")
-    S1 <- svdImpute2(S, nv=3, init=svd.init, fill.empty="sample")
-    if(plot) {
-      boxplothist(S1, main="missing imputed (MC+QS+MI)")
+    message("[logNormalizeCounts] imputing ", nmissing, " missing values\n")
+    S1 <- svdImpute2(S, nv = 3, init = svd.init, fill.empty = "sample")
+    if (plot) {
+      boxplothist(S1, main = "missing imputed (MC+QS+MI)")
     }
     S <- S1
   }
-  
+
   S <- pmin(pmax(S, smin), smax)
-  if(plot) {
-    boxplothist(S, main="clipped range (MC+QS+MI+CR)")
+  if (plot) {
+    boxplothist(S, main = "clipped range (MC+QS+MI+CR)")
   }
 
   ## Do quantile normalization????
-  if(weighted.qn) {
-    S <- 0.1*S + 0.9*limma::normalizeQuantiles(S)
+  if (weighted.qn) {
+    S <- 0.1 * S + 0.9 * limma::normalizeQuantiles(S)
   } else {
     S <- limma::normalizeQuantiles(S)
   }
 
-  if(plot) {
-    boxplothist(S, main="quantile normalized (MC+QS+MI+CR+QN)")
+  if (plot) {
+    boxplothist(S, main = "quantile normalized (MC+QS+MI+CR+QN)")
   }
 
   ## shift to 1%
-  smin <- min(S,na.rm=TRUE) + 0.05*diff(range(S))
+  smin <- min(S, na.rm = TRUE) + 0.05 * diff(range(S))
   smin
-  zero.point = 0
+  zero.point <- 0
   S1 <- S
-  S1[S<=smin] <- NA
-  S1[which.missing] <- NA    
-  if( zero.method == "sd" ) {
-    m0 <- mean(apply(S1,2,median,na.rm=TRUE))
-    s0 <- mean(apply(S1,2,sd,na.rm=TRUE))
-    zdist <- qnorm(1-q.zero)  ## SD distance
-    zero.point <- m0 - zdist * s0    
-  } else if( zero.method == "sdc" ) {
-    C1 <- S1-rowMeans(S1,na.rm=TRUE)
-    m0 <- median(S1,na.rm=TRUE)
-    s0 <- mean(apply(C1,2,sd,na.rm=TRUE))
-    zdist <- qnorm(1-q.zero)  ## SD distance
+  S1[S <= smin] <- NA
+  S1[which.missing] <- NA
+  if (zero.method == "sd") {
+    m0 <- mean(apply(S1, 2, median, na.rm = TRUE))
+    s0 <- mean(apply(S1, 2, sd, na.rm = TRUE))
+    zdist <- qnorm(1 - q.zero) ## SD distance
     zero.point <- m0 - zdist * s0
-  } else if( zero.method == "cpm" ) {
-    median.tc <- median(colSums(2**S,na.rm=TRUE),na.rm=TRUE)
+  } else if (zero.method == "sdc") {
+    C1 <- S1 - rowMeans(S1, na.rm = TRUE)
+    m0 <- median(S1, na.rm = TRUE)
+    s0 <- mean(apply(C1, 2, sd, na.rm = TRUE))
+    zdist <- qnorm(1 - q.zero) ## SD distance
+    zero.point <- m0 - zdist * s0
+  } else if (zero.method == "cpm") {
+    median.tc <- median(colSums(2**S, na.rm = TRUE), na.rm = TRUE)
     median.tc
-    a <- log2( median.tc / 1e6 )
-    median(colSums(2**(S-a),na.rm=TRUE),na.rm=TRUE)    
+    a <- log2(median.tc / 1e6)
+    median(colSums(2**(S - a), na.rm = TRUE), na.rm = TRUE)
     zero.point <- a
-  } else if( zero.method == "m4" ) {
-    a <- median(S1,na.rm=TRUE) - 4
-    median(S1-a,na.rm=TRUE)
-    median(S-a,na.rm=TRUE)    
+  } else if (zero.method == "m4") {
+    a <- median(S1, na.rm = TRUE) - 4
+    median(S1 - a, na.rm = TRUE)
+    median(S - a, na.rm = TRUE)
     zero.point <- a
-  } else if( zero.method == "mclust" ) {
+  } else if (zero.method == "mclust") {
     ## gaussian mixture modelling
-    xx <- sample(S1[!is.na(S1)],20000,replace=TRUE)
+    xx <- sample(S1[!is.na(S1)], 20000, replace = TRUE)
     require(mclust)
-    if(plot) {
-      BIC <- mclust::mclustBIC(xx, G=1:8)
+    if (plot) {
+      BIC <- mclust::mclustBIC(xx, G = 1:8)
       plot(BIC)
       summary(BIC)
     }
-    fit <- mclust::Mclust(xx, G=3, verbose=FALSE)    
-    fit2 <- summary(fit, parameters=TRUE)
+    fit <- mclust::Mclust(xx, G = 3, verbose = FALSE)
+    fit2 <- summary(fit, parameters = TRUE)
     fit2
     qq <- (fit2$mean - zdist * sqrt(fit2$variance))
-##    q0 <- weighted.mean(qq, w=fit2$pro)
-    q0 <- weighted.mean(qq[2:3], w=fit2$pro[2:3])    
+    ##    q0 <- weighted.mean(qq, w=fit2$pro)
+    q0 <- weighted.mean(qq[2:3], w = fit2$pro[2:3])
     zero.point <- q0
-    
-    if(plot) {
-      ##hist(xx, breaks=200)
-      plot(fit, what="density", main="")
-      rug(sample(xx,300))
-      abline(v=fit2$mean, col='blue')
+
+    if (plot) {
+      ## hist(xx, breaks=200)
+      plot(fit, what = "density", main = "")
+      rug(sample(xx, 300))
+      abline(v = fit2$mean, col = "blue")
       qq <- (fit2$mean - 2.3 * sqrt(fit2$variance))
-      ##q0 <- weighted.mean( qq, w=fit2$pro)
-      q0 <- weighted.mean( qq[2:3], w=fit2$pro[2:3])      
-      abline(v=qq,col='purple',lty=2)      
-      abline(v=zero.point,col='purple',lty=1,lwd=2)            
+      ## q0 <- weighted.mean( qq, w=fit2$pro)
+      q0 <- weighted.mean(qq[2:3], w = fit2$pro[2:3])
+      abline(v = qq, col = "purple", lty = 2)
+      abline(v = zero.point, col = "purple", lty = 1, lwd = 2)
     }
   } else {
     ## determine by direct quantile
-    zero.point <- quantile(S1, probs=q.zero, na.rm=TRUE)
+    zero.point <- quantile(S1, probs = q.zero, na.rm = TRUE)
   }
 
-  if(0) {
-    colSums(2**S1,na.rm=TRUE)
-    colSums(2**(S1-zero.point),na.rm=TRUE)  
-    colSums(2**S,na.rm=TRUE)
-    colSums(2**(S-zero.point),na.rm=TRUE)  
-    median(S[S>0.1],na.rm=TRUE)
-    median(S[S>0.1]-zero.point,na.rm=TRUE)
-    hist(S,breaks=200)
-    hist((S-zero.point),breaks=200)  
+  if (0) {
+    colSums(2**S1, na.rm = TRUE)
+    colSums(2**(S1 - zero.point), na.rm = TRUE)
+    colSums(2**S, na.rm = TRUE)
+    colSums(2**(S - zero.point), na.rm = TRUE)
+    median(S[S > 0.1], na.rm = TRUE)
+    median(S[S > 0.1] - zero.point, na.rm = TRUE)
+    hist(S, breaks = 200)
+    hist((S - zero.point), breaks = 200)
   }
-  
+
   ## protect zero.point
   zero.point
-  min(S,na.rm=TRUE)
-  ##zero.point <- max(min(S,na.rm=TRUE), zero.point)
+  min(S, na.rm = TRUE)
+  ## zero.point <- max(min(S,na.rm=TRUE), zero.point)
   zero.point
-    
-  if( shift.method == "slog") {
+
+  if (shift.method == "slog") {
     ## smooth log-transform
-    S <- slog(2**S, s=2**zero.point)
+    S <- slog(2**S, s = 2**zero.point)
   } else {
     ## linear shift
     S <- pmax(S - zero.point, 0)
   }
 
-  if(plot) {
-    boxplothist(S, main="quantile shifted (MC+QS+MI+CR+QN+SH)")
+  if (plot) {
+    boxplothist(S, main = "quantile shifted (MC+QS+MI+CR+QN+SH)")
   }
-  
+
   S
 }
 
-scaled.log1p <- function(counts, q=0.01) {
-  min.counts <- min(counts,na.rm=TRUE)
-  ii <- which(counts == min.counts)  ## left censored values
-  jj <- which(counts > min.counts)   ## only non-zero
-  scale <- 1 / quantile(counts[jj], probs=q, na.rm=TRUE)
-  log2( scale * counts + 1)
+scaled.log1p <- function(counts, q = 0.01) {
+  min.counts <- min(counts, na.rm = TRUE)
+  ii <- which(counts == min.counts) ## left censored values
+  jj <- which(counts > min.counts) ## only non-zero
+  scale <- 1 / quantile(counts[jj], probs = q, na.rm = TRUE)
+  log2(scale * counts + 1)
 }
 
-q=0.01
-slog <- function(x, s=1, q=NULL) {
-  if(!is.null(q)) {
-    s <- quantile(x[x>0],probs=q,na.rm=TRUE)[1]
+q <- 0.01
+slog <- function(x, s = 1, q = NULL) {
+  if (!is.null(q)) {
+    s <- quantile(x[x > 0], probs = q, na.rm = TRUE)[1]
   }
   log2(s + x) - log2(s)
 }
 
-if(0) {
-  x=2**seq(-10,10,0.1)
-  plot(x,slog(x,10),log='x')
-  plot(x,slog(x,0.1),log='x')  
+if (0) {
+  x <- 2**seq(-10, 10, 0.1)
+  plot(x, slog(x, 10), log = "x")
+  plot(x, slog(x, 0.1), log = "x")
 }
 
-safe.logCPM <- function(x, t=0.05, prior=1, q=NULL) {
-  qq <- apply( x, 2, quantile, probs=c(t,1-t), na.rm=TRUE)
-  jj <- which(t(t(x) < qq[1,] | t(x) > qq[2,]))
+safe.logCPM <- function(x, t = 0.05, prior = 1, q = NULL) {
+  qq <- apply(x, 2, quantile, probs = c(t, 1 - t), na.rm = TRUE)
+  jj <- which(t(t(x) < qq[1, ] | t(x) > qq[2, ]))
   ax <- x
   ax[jj] <- NA
-  colSums(x, na.rm=TRUE)
-  totx <- colSums(ax, na.rm=TRUE)
-  meanx <- colMeans(ax, na.rm=TRUE)  
+  colSums(x, na.rm = TRUE)
+  totx <- colSums(ax, na.rm = TRUE)
+  meanx <- colMeans(ax, na.rm = TRUE)
   nnax <- colSums(!is.na(ax))
-  cpm <- sweep(x, 2, totx, FUN='/') * 1e6
-  colSums(cpm, na.rm=TRUE)
-  ##slog(cx, s=prior, q=q)
+  cpm <- sweep(x, 2, totx, FUN = "/") * 1e6
+  colSums(cpm, na.rm = TRUE)
+  ## slog(cx, s=prior, q=q)
   log2(prior + cpm)
 }
-

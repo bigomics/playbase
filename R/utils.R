@@ -43,7 +43,6 @@ dbg <- function(...) info(..., type = "DBUG")
 #' d <- get_mini_example_data()
 #' @export
 get_mini_example_data <- function(item = "all") {
-
   if (!item %in% c("counts", "samples", "contrats", "all")) {
     stop("Item not matched. Please use: 'counts', 'samples', 'contrats', or 'all'")
   }
@@ -62,14 +61,14 @@ get_mini_example_data <- function(item = "all") {
   mini_counts <- counts[n_genes, c(1:3, 8:9, 11:12)]
   mini_samples <- samples[colnames(mini_counts), ]
   mini_contrast <- contrast[1:3, 1:3]
-  mini_data <- list(counts = mini_counts,
-                    samples = mini_samples,
-                    contrast = mini_contrast)
+  mini_data <- list(
+    counts = mini_counts,
+    samples = mini_samples,
+    contrast = mini_contrast
+  )
 
   if (item == "all") {
-
     return(mini_data)
-
   } else {
     return(mini_data[[item]])
   }
@@ -81,7 +80,7 @@ get_mini_example_data <- function(item = "all") {
 #' @description This function aims to extract the rownames of a data.table object as
 #' if it would be a data.frame. The implementation is slow but it helps to maintain back
 #' compatibility with data.frame objects.
-#' 
+#'
 #' @param dt A data.table object.
 #'
 #' @return Character vector of row names
@@ -93,13 +92,10 @@ get_mini_example_data <- function(item = "all") {
 #' }
 #' @export
 rownames.data.table <- function(dt) {
-  
-  if(is.character(dt[[1]])) {
+  if (is.character(dt[[1]])) {
     return(dt[[1]])
-    
-  } else if("rn" %in% names(dt)) {
+  } else if ("rn" %in% names(dt)) {
     return(dt$rn)
-    
   } else {
     warning("No column contains row names")
     return(NULL)

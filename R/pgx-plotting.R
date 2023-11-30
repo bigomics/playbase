@@ -1370,7 +1370,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   } else {
     gx <- pgx$X[rownames(pgx$X) == probe, rownames(pgx$samples)]
   }
-  
+
   if (!logscale) {
     gx <- 2**(gx)
   }

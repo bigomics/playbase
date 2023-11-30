@@ -139,17 +139,17 @@ pgx.createPGX <- function(counts,
                           datatype = "unknown",
                           creator = "unknown",
                           description = "No description provided.",
-                          X = NULL, 
-                          is.logx = NULL, 
+                          X = NULL,
+                          is.logx = NULL,
                           batch.correct = TRUE,
-                          auto.scale = TRUE, 
-                          filter.genes = TRUE, 
+                          auto.scale = TRUE,
+                          filter.genes = TRUE,
                           prune.samples = FALSE,
-                          only.known = TRUE, 
-                          only.hugo = TRUE, 
+                          only.known = TRUE,
+                          only.hugo = TRUE,
                           convert.hugo = TRUE,
-                          do.cluster = TRUE, 
-                          cluster.contrasts = FALSE, 
+                          do.cluster = TRUE,
+                          cluster.contrasts = FALSE,
                           do.clustergenes = TRUE,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE,
@@ -298,15 +298,13 @@ pgx.createPGX <- function(counts,
   counter <- 0
 
   while (!"genes" %in% names(pgx) & counter < 5) {
-    
     message(paste0("[createPGX] attempting to annotate genes, call number ", counter + 1))
     Sys.sleep(60 * counter)
     try(pgx <- playbase::pgx.gene_table(pgx, organism = organism))
     counter <- counter + 1
-
-  } 
+  }
   # For fallback purposes we can use the old method to add gene annotation if biomaRt fails
-  if (!"genes" %in% names(pgx) & organism %in% c("Mouse" , "Human")) {
+  if (!"genes" %in% names(pgx) & organism %in% c("Mouse", "Human")) {
     probe_type <- detect_probe_DEPRECATED(probes = rownames(pgx$counts), organism = organism)
     pgx$genes <- ngs.getGeneAnnotation_DEPRECATED(probes = rownames(pgx$counts), probe_type = probe_type, organism = organism)
   }
@@ -318,10 +316,10 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   if (convert.hugo) {
     message("[createPGX] converting probes to symbol...")
-    symbol <- pgx$genes[rownames(pgx$counts), "symbol"] 
+    symbol <- pgx$genes[rownames(pgx$counts), "symbol"]
     mapped_symbols <- !is.na(symbol) & symbol != ""
     probes_with_symbol <- pgx$genes[mapped_symbols, "feature"]
-    
+
     ## Update counts and genes
     pgx$counts <- pgx$counts[probes_with_symbol, , drop = FALSE]
     pgx$genes <- pgx$genes[probes_with_symbol, , drop = FALSE]
@@ -331,15 +329,15 @@ pgx.createPGX <- function(counts,
     selected_symbols <- symbol[mapped_symbols]
     rownames(pgx$counts) <- selected_symbols
     if (sum(duplicated(selected_symbols)) > 0) {
-        message("[createPGX:autoscale] duplicated rownames detected: summing up rows (counts).")
-        pgx$counts <- rowsum(pgx$counts, selected_symbols)
+      message("[createPGX:autoscale] duplicated rownames detected: summing up rows (counts).")
+      pgx$counts <- rowsum(pgx$counts, selected_symbols)
     }
     if (!is.null(pgx$X)) {
-        # For X, sum the 2^X values of rows with the same gene symbol
-        # And then take log2 again.
-        pgx$X <- pgx$X[probes_with_symbol, , drop = FALSE]
-        rownames(pgx$X) <- selected_symbols
-        pgx$X <- log2(rowsum(2**pgx$X, selected_symbols))
+      # For X, sum the 2^X values of rows with the same gene symbol
+      # And then take log2 again.
+      pgx$X <- pgx$X[probes_with_symbol, , drop = FALSE]
+      rownames(pgx$X) <- selected_symbols
+      pgx$X <- log2(rowsum(2**pgx$X, selected_symbols))
     }
 
     # Collapse feature as a comma-separated elements
@@ -353,9 +351,8 @@ pgx.createPGX <- function(counts,
 
     # merge features_collapsde_by_symbol with pgx$genes by the column symbol
     pgx$genes <- merge(pgx$genes, features_collapsed_by_symbol, by = "symbol")
-    rownames(pgx$genes) = pgx$genes$symbol
+    rownames(pgx$genes) <- pgx$genes$symbol
     pgx$counts <- pgx$counts[pgx$genes$symbol, , drop = FALSE]
-    
   }
 
   ## -------------------------------------------------------------------
@@ -374,7 +371,7 @@ pgx.createPGX <- function(counts,
     pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
 
     # Conform gene table
-    keep <- intersect(unique(pgx$genes$gene_name),  rownames(pgx$counts))
+    keep <- intersect(unique(pgx$genes$gene_name), rownames(pgx$counts))
     pgx$genes <- pgx$genes[keep, , drop = FALSE]
   }
 
@@ -385,8 +382,7 @@ pgx.createPGX <- function(counts,
 
   do.filter <- (only.hugo | only.known | only.proteincoding)
   if (do.filter) {
-
-    pgx$genes <- pgx$genes[!is.na(pgx$genes$symbol)|pgx$genes$symbol == "",]
+    pgx$genes <- pgx$genes[!is.na(pgx$genes$symbol) | pgx$genes$symbol == "", ]
     if (only.proteincoding) {
       pgx$genes <- pgx$genes[pgx$genes$gene_biotype %in% c("protein_coding", "protein-coding"), ]
     }
@@ -774,6 +770,3 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
 ## ----------------------------------------------------------------------
 ## -------------------------- end of file -------------------------------
 ## ----------------------------------------------------------------------
-
-
-

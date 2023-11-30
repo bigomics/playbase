@@ -139,8 +139,8 @@ pgx.saveMatrixH5 <- function(X, h5.file, chunk = NULL) {
       index = list(1:nrow(X), 1:ncol(X))
     )
   }
-  if(is.null(rownames(X))) rownames(X) <- 1:nrow(X)
-  if(is.null(colnames(X))) colnames(X) <- paste0("V",1:ncol(X)  )
+  if (is.null(rownames(X))) rownames(X) <- 1:nrow(X)
+  if (is.null(colnames(X))) colnames(X) <- paste0("V", 1:ncol(X))
   rhdf5::h5write(rownames(X), h5.file, "data/rownames")
   rhdf5::h5write(colnames(X), h5.file, "data/colnames")
 
@@ -190,37 +190,39 @@ pgx.readOptions <- function(file = "./OPTIONS") {
 #' @title Cache a CSV file locally or on S3
 #'
 #' @param file Character string specifying the path to the CSV file to cache
-#' @param bucket Character string specifying the S3 bucket name if caching on S3. Default is NULL for local caching.  
+#' @param bucket Character string specifying the S3 bucket name if caching on S3. Default is NULL for local caching.
 #' @param FUN Function to use for reading the CSV file. Default is read.csv.
 #' @param ... Other arguments passed to FUN.
 #'
 #' @return A data frame containing the contents of the cached CSV file.
-#' 
-#' @details This function checks if a cached copy of the CSV file exists locally in /tmp or on S3. 
+#'
+#' @details This function checks if a cached copy of the CSV file exists locally in /tmp or on S3.
 #' If not, it reads the file using FUN(), caches it locally or on S3, and returns the contents.
 #' On subsequent calls it returns the cached copy instead of re-reading the file.
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' # Cache locally
-#' df <- cached.csv("data.csv") 
-#' 
-#' # Cache on S3  
+#' df <- cached.csv("data.csv")
+#'
+#' # Cache on S3
 #' df <- cached.csv("s3://mybucket/data.csv", bucket = "mybucket")
 #' }
 #' @export
 cached.csv <- function(file, FUN = read.csv, force = FALSE, ...) {
-  file2 <- sub(getwd(),"",file)
+  file2 <- sub(getwd(), "", file)
   file2 <- paste0("cache-", gsub("[-._/]", "", file2), ".rds")
   file2
   ## cache.file <- file.path("/tmp", file2)
   cache.dir <- ifelse(dir.exists("cache"), "./cache", tempdir())
   cache.file <- file.path(cache.dir, file2)
   if (force || !file.exists(cache.file)) {
-    if(!file.exists(file)) return(NULL)
+    if (!file.exists(file)) {
+      return(NULL)
+    }
     message("[cached.csv] reading from file ", file)
     csv <- FUN(file, ...)
-    message("[cached.csv] saving cache at ", cache.file)    
+    message("[cached.csv] saving cache at ", cache.file)
     saveRDS(csv, file = cache.file)
   } else {
     message("[cached.csv] reading from cache ", cache.file)
@@ -232,17 +234,19 @@ cached.csv <- function(file, FUN = read.csv, force = FALSE, ...) {
 
 #' @export
 cached.csv.s3 <- function(file, bucket, FUN = read.csv, force = FALSE, ...) {
-  file2 <- sub(getwd(),"",file)
+  file2 <- sub(getwd(), "", file)
   file2 <- paste0("cache-", gsub("[-._/]", "", file2), ".rds")
   file2
   cache.dir <- ifelse(dir.exists("cache"), "./cache", tempdir())
   cache.file <- file.path(cache.dir, file2)
   if (force || !file.exists(cache.file)) {
-    if(!file.exists(file)) return(NULL)    
+    if (!file.exists(file)) {
+      return(NULL)
+    }
     message("[cached.csv.s3] reading from S3 bucket=", bucket, "   file=", file)
     obj <- aws.s3::get_object(object = file, bucket = bucket)
     csv <- data.table::fread(rawToChar(obj))
-    message("[cached.csv] saving cache at ", cache.file)        
+    message("[cached.csv] saving cache at ", cache.file)
     saveRDS(csv, file = cache.file)
   } else {
     message("[cached.csv.s3] reading from cache ", cache.file)

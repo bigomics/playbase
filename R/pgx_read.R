@@ -11,7 +11,7 @@
 #'
 #' @examples
 #' \dontrun{
-#'  counts <- read_counts(playbase::example_file("counts.csv"))
+#' counts <- read_counts(playbase::example_file("counts.csv"))
 #' }
 #' @export
 read_counts <- function(file, convert_names = FALSE) {
@@ -54,7 +54,7 @@ read_counts <- function(file, convert_names = FALSE) {
 #'
 #' @examples
 #' \dontrun{
-#'  counts <- read_expression(playbase::example_file("counts.csv"))
+#' counts <- read_expression(playbase::example_file("counts.csv"))
 #' }
 #' @export
 read_expression <- function(file, convert_names = TRUE) {

@@ -6,11 +6,13 @@ test_that("title2pheno extracts phenotype terms", {
   )
 
   expected <- matrix(
-    c("GSE1234", "tissue_liver", "disease", "cancer", 
-    "GSE4321", "tissue_lung", "disease", "cancer"),
+    c(
+      "GSE1234", "tissue_liver", "disease", "cancer",
+      "GSE4321", "tissue_lung", "disease", "cancer"
+    ),
     nrow = 2,
     dimnames = list(NULL, c("_GSE1234", "_tissue", "_disease", "_cancer"))
-    )
+  )
 
   result <- playbase::title2pheno(titles, split = "-", trim = FALSE)
 

@@ -54,8 +54,8 @@ pgx.initialize <- function(pgx) {
     return(NULL)
   }
 
-  if(is.null(pgx$version)){
-    # this is needed in case the species is human, and we dont have the 
+  if (is.null(pgx$version)) {
+    # this is needed in case the species is human, and we dont have the
     # homolog column or if we have an old pgx which will ensure consistency
     # between old and new pgx
     pgx$genes$gene_name <- as.character(pgx$genes$gene_name)
@@ -63,8 +63,10 @@ pgx.initialize <- function(pgx) {
     pgx$genes$human_ortholog <- as.character(rownames(pgx$genes))
     pgx$genes$feature <- as.character(rownames(pgx$genes))
     pgx$genes$symbol <- pgx$genes$gene_name
-    col_order <- c("feature", "symbol", "human_ortholog",
-                  "gene_title", "gene_name", colnames(pgx$genes))
+    col_order <- c(
+      "feature", "symbol", "human_ortholog",
+      "gene_title", "gene_name", colnames(pgx$genes)
+    )
     col_order <- col_order[!duplicated(col_order)]
     pgx$genes <- pgx$genes[, col_order, drop = FALSE]
     if (!"chr" %in% colnames(pgx$genes)) {
@@ -178,21 +180,23 @@ pgx.initialize <- function(pgx) {
   ## -----------------------------------------------------------------------------
   # Here we use the homologs when available, instead of gene_name
   genes <- ifelse(!is.na(pgx$genes$human_ortholog),
-                  pgx$genes$human_ortholog,
-                  pgx$genes$gene_name)
+    pgx$genes$human_ortholog,
+    pgx$genes$gene_name
+  )
 
-  if(is.null(pgx$organism)){
+  if (is.null(pgx$organism)) {
     pgx$organism <- playbase::pgx.getOrganism(pgx)
   }
   if (pgx$organism %in% c("Human", "human") | !is.null(pgx$version)) {
-    pgx$families <- lapply(playdata::FAMILIES, function(x) {intersect(x, genes)})
-
+    pgx$families <- lapply(playdata::FAMILIES, function(x) {
+      intersect(x, genes)
+    })
   } else {
     pgx$families <- lapply(playdata::FAMILIES, function(x, genes, annot_table) {
       x <- intersect(x, genes)
       x <- annot_table$symbol[match(x, annot_table$human_ortholog)]
       return(x)
-      }, genes = genes, annot_table = pgx$genes)
+    }, genes = genes, annot_table = pgx$genes)
   }
   famsize <- sapply(pgx$families, length)
   pgx$families <- pgx$families[which(famsize >= 10)]
@@ -245,27 +249,27 @@ pgx.initialize <- function(pgx) {
     message("[pgx.initialize] clustering genes...")
     pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2), level = "gene")
     pgx$cluster.genes$pos <- lapply(pgx$cluster.genes$pos, pos.compact)
-    }
-    if (!"cluster.gsets" %in% names(pgx)) {
-      message("[pgx.initialize] clustering genesets...")
-      pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2), level = "geneset")
-      pgx$cluster.gsets$pos <- lapply(pgx$cluster.gsets$pos, pos.compact)
-    }
+  }
+  if (!"cluster.gsets" %in% names(pgx)) {
+    message("[pgx.initialize] clustering genesets...")
+    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2), level = "geneset")
+    pgx$cluster.gsets$pos <- lapply(pgx$cluster.gsets$pos, pos.compact)
+  }
 
-    ## -----------------------------------------------------------------------------
-    ## Remove redundant???
-    ## -----------------------------------------------------------------------------
-    message("[pgx.initialize] Remove redundant phenotypes...")
-    if (".gender" %in% colnames(pgx$Y) &&
-      any(c("gender", "sex") %in% tolower(colnames(pgx$Y)))) {
-      pgx$Y$.gender <- NULL
-    }
+  ## -----------------------------------------------------------------------------
+  ## Remove redundant???
+  ## -----------------------------------------------------------------------------
+  message("[pgx.initialize] Remove redundant phenotypes...")
+  if (".gender" %in% colnames(pgx$Y) &&
+    any(c("gender", "sex") %in% tolower(colnames(pgx$Y)))) {
+    pgx$Y$.gender <- NULL
+  }
 
-    ## -----------------------------------------------------------------------------
-    ## Keep compatible with OLD formats
-    ## -----------------------------------------------------------------------------
-    message("[pgx.initialize] Keep compatible OLD formats...")
-    if (any(c("mono", "combo") %in% names(pgx$drugs))) {
+  ## -----------------------------------------------------------------------------
+  ## Keep compatible with OLD formats
+  ## -----------------------------------------------------------------------------
+  message("[pgx.initialize] Keep compatible OLD formats...")
+  if (any(c("mono", "combo") %in% names(pgx$drugs))) {
     dd <- pgx$drugs[["mono"]]
     aa1 <- pgx$drugs[["annot"]]
     if (is.null(aa1)) {

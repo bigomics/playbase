@@ -45,7 +45,7 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
                        "non", "no", "not", "neg", "negative", "ref", "veh", "vehicle",
                        "wt", "wildtype", "untreated", "normal", "false", "healthy"
                      ),
-                     trend = FALSE, method=1, verbose = 1) {
+                     trend = FALSE, method = 1, verbose = 1) {
   if (sum(duplicated(rownames(X))) > 0) {
     cat("WARNING:: matrix has duplicated rownames\n")
   }
@@ -110,7 +110,7 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
 
   ## setup model and perform LIMMA. See LIMMA userguide p41 ("Two groups").
   ## https://bioconductor.org/packages/devel/bioc/vignettes/limma/inst/doc/usersguide.pdf
-  if(method==1) {
+  if (method == 1) {
     ## first method without  contrast matrix
     design <- cbind(1, pheno0 == levels[2])
     colnames(design) <- c("intercept", "main_vs_ref")
@@ -121,22 +121,22 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
     }
     fit <- limma::lmFit(X0, design)
     fit <- limma::eBayes(fit, trend = trend)
-    top <- limma::topTable(fit, coef = "main_vs_ref", number = nrow(X0), sort.by='none')
+    top <- limma::topTable(fit, coef = "main_vs_ref", number = nrow(X0), sort.by = "none")
   } else {
     ## second possible method with explicit contrast matrix
-    design <- cbind(1*(pheno0 == levels[1]), 1*(pheno0 == levels[2]))
+    design <- cbind(1 * (pheno0 == levels[1]), 1 * (pheno0 == levels[2]))
     design <- as.matrix(design)
-    colnames(design) <- c("ref", "main")    
+    colnames(design) <- c("ref", "main")
     if (!is.null(B0)) {
       if (verbose > 0) cat("augmenting design matrix with:", paste(colnames(B0)), "\n")
       sel <- which(colMeans(B0 == 1) < 1) ## take out any constant term
       design <- cbind(design, B0[, sel, drop = FALSE])
     }
     fit <- limma::lmFit(X0, design)
-    contr.matrix <- limma::makeContrasts( main_vs_ref = main-ref, levels=design)
+    contr.matrix <- limma::makeContrasts(main_vs_ref = main - ref, levels = design)
     fit2 <- limma::contrasts.fit(fit, contr.matrix)
     fit2 <- limma::eBayes(fit2, trend = trend)
-    top <- limma::topTable(fit2, coef = "main_vs_ref", number = Inf, sort.by='none')
+    top <- limma::topTable(fit2, coef = "main_vs_ref", number = Inf, sort.by = "none")
   }
 
   ## give rownames
@@ -211,8 +211,8 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
                         "ctrl", "ctr", "control", "dmso", "nt", "0", "0h", "0hr",
                         "non", "no", "not", "neg", "negative", "ref", "veh", "vehicle",
                         "wt", "wildtype", "untreated", "normal", "false", "healthy"
-                        ),
-                      trend = FALSE, method=1, verbose = 1) {
+                      ),
+                      trend = FALSE, method = 1, verbose = 1) {
   if (sum(duplicated(rownames(X))) > 0) {
     cat("matrix has duplicated rownames. please remove.\n")
   }
@@ -271,7 +271,7 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
     return(NULL)
   }
 
-  if(method==1) {
+  if (method == 1) {
     ## this tests implicitly against the reference level (REF), It
     ## uses no contrast matrix.
     design <- stats::model.matrix(~pheno1)
@@ -284,38 +284,39 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
     }
     fit <- limma::lmFit(X0, design)
     fit <- limma::eBayes(fit, trend = trend)
-    top <- limma::topTable(fit, number = Inf, sort.by='none')
+    top <- limma::topTable(fit, number = Inf, sort.by = "none")
   }
-  if(method==2) {
+  if (method == 2) {
     ## this tests implicitly against the reference level (REF), It
     ## uses explicit contrast matrix.
-    design <- stats::model.matrix(~0+pheno1)
+    design <- stats::model.matrix(~ 0 + pheno1)
     colnames(design)
-    colnames(design) <- sub("^pheno1","",colnames(design))
+    colnames(design) <- sub("^pheno1", "", colnames(design))
     if (!is.null(B0)) {
       if (verbose > 0) cat("augmenting design matrix with:", paste(colnames(B0)), "\n")
       sel <- which(colMeans(B0 == 1) < 1) ## take out any constant term
       design <- cbind(design, B0[, sel, drop = FALSE])
     }
     fit <- limma::lmFit(X0, design)
-    ct <- makeDirectContrasts( data.frame(pheno1,check.names=FALSE),
-      ref=levels(pheno1)[1])   
-    contrast.matrix <- ct$contr.matrix    
+    ct <- makeDirectContrasts(data.frame(pheno1, check.names = FALSE),
+      ref = levels(pheno1)[1]
+    )
+    contrast.matrix <- ct$contr.matrix
     grp2pheno.mat <- table(ct$group, pheno1)
-    grp2pheno.mat <- grp2pheno.mat[rownames(contrast.matrix),]
+    grp2pheno.mat <- grp2pheno.mat[rownames(contrast.matrix), ]
     grp2pheno <- colnames(grp2pheno.mat)[max.col(grp2pheno.mat)]
     rownames(contrast.matrix) <- grp2pheno
-    contrast.matrix <- contrast.matrix[colnames(design),]
+    contrast.matrix <- contrast.matrix[colnames(design), ]
     fit2 <- limma::contrasts.fit(fit, contrast.matrix)
     fit2 <- limma::eBayes(fit2, trend = trend)
-    top  <- limma::topTable(fit2, number = Inf, sort.by='none')
+    top <- limma::topTable(fit2, number = Inf, sort.by = "none")
   }
-  if(method==3) {
+  if (method == 3) {
     ## this tests implicitly all comparisons, It uses explicit full
     ## contrast matrix.
-    design <- stats::model.matrix(~0+pheno1)
+    design <- stats::model.matrix(~ 0 + pheno1)
     colnames(design)
-    colnames(design) <- sub("^pheno1","",colnames(design))
+    colnames(design) <- sub("^pheno1", "", colnames(design))
     if (!is.null(B0)) {
       if (verbose > 0) cat("augmenting design matrix with:", paste(colnames(B0)), "\n")
       sel <- which(colMeans(B0 == 1) < 1) ## take out any constant term
@@ -323,14 +324,14 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
     }
     fit <- limma::lmFit(X0, design)
     contrast.matrix <- makeFullContrasts(pheno1)
-    contrast.matrix <- contrast.matrix[colnames(design),]
+    contrast.matrix <- contrast.matrix[colnames(design), ]
     fit2 <- limma::contrasts.fit(fit, contrast.matrix)
     fit2 <- limma::eBayes(fit2, trend = trend)
-    top <- limma::topTable(fit2, number = Inf, sort.by='none')
+    top <- limma::topTable(fit2, number = Inf, sort.by = "none")
   }
-  
+
   ## clean-up
-  cols <- c("logFC","AveExpr","F","P.Value","adj.P.Val")
+  cols <- c("logFC", "AveExpr", "F", "P.Value", "adj.P.Val")
   top <- top[, intersect(colnames(top), cols)]
   top$B <- NULL
   if ("ID" %in% colnames(top)) {

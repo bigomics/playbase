@@ -130,7 +130,7 @@ pgxinfo.add <- function(pgxinfo, pgx, remove.old = TRUE) {
 pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE, use.cache = FALSE) {
   ##  pgx.dir="~/Playground/pgx";file = "datasets-info.csv"
   ##  pgx.dir="~/Downloads";file = "datasets-info.csv"
-  if(match) {
+  if (match) {
     pgx.files <- dir(pgx.dir, pattern = "[.]pgx$")
     if (length(pgx.files) == 0) {
       return(NULL)
@@ -147,8 +147,10 @@ pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE, use.
   } else if (file.exists(pgxinfo.file)) {
     pgxinfo <- utils::read.csv(pgxinfo.file, stringsAsFactors = FALSE, row.names = NULL, sep = ",")
   }
-  if(is.null(pgxinfo)) return(NULL)
-  
+  if (is.null(pgxinfo)) {
+    return(NULL)
+  }
+
   pgxinfo$X <- NULL ## delete first column
   pgxinfo <- pgxinfo[which(!is.na(pgxinfo$dataset)), ] ## remove NA
   if (match && nrow(pgxinfo)) {
@@ -333,7 +335,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   pgx.files <- dir(pgx.dir, pattern = "[.]pgx$")
   pgx.files <- sub("[.]pgx$", "", pgx.files) ## strip pgx
 
-  dir(pgx.dir, pattern="^datasets-")
+  dir(pgx.dir, pattern = "^datasets-")
   allfc.file <- file.path(pgx.dir, "datasets-allFC.csv")
   info.file <- file.path(pgx.dir, "datasets-info.csv")
   sigdb.file <- file.path(pgx.dir, "datasets-sigdb.h5")
@@ -352,9 +354,9 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   ## subroutines
   ## ----------------------------------------------------------------------
   updateTSNE <- function(tsne.file, sigdb.file, allFC) {
-    dbg("[pgxinfo.updateDatasetFolder:updateTSNE] tsne.file =",tsne.file)
-    dbg("[pgxinfo.updateDatasetFolder:updateTSNE] sigdb.file =",sigdb.file)
-    
+    dbg("[pgxinfo.updateDatasetFolder:updateTSNE] tsne.file =", tsne.file)
+    dbg("[pgxinfo.updateDatasetFolder:updateTSNE] sigdb.file =", sigdb.file)
+
     h5 <- rhdf5::h5ls(sigdb.file)
     has.tsne2d <- ("tsne2d" %in% h5$name)
     if (has.tsne2d) {
@@ -398,7 +400,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     has.tsne <- FALSE
   }
 
-  
+
   ## ----------------------------------------------------------------------
   ## Check if all files are missing or have entries to be deleted
   ## ----------------------------------------------------------------------
@@ -453,18 +455,18 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   }
 
   tsne.files <- NULL
-  tsne.missing <-  pgx.files
-  if(file.exists(tsne.file)) {
-    tsne <- read.csv(tsne.file, row.names=1)
+  tsne.missing <- pgx.files
+  if (file.exists(tsne.file)) {
+    tsne <- read.csv(tsne.file, row.names = 1)
     tsne.files <- gsub("^\\[|\\].*", "", rownames(tsne))
     tsne.missing <- setdiff(pgx.files, tsne.files)
   }
 
 
-  all( pgx.files %in% pgxinfo.files )
-  all( pgx.files %in% fc.files )
-  all( pgx.files %in% h5.files )
-  all( pgx.files %in% tsne.files )
+  all(pgx.files %in% pgxinfo.files)
+  all(pgx.files %in% fc.files)
+  all(pgx.files %in% h5.files)
+  all(pgx.files %in% tsne.files)
 
 
   ## ----------------------------------------------------------------------
@@ -473,7 +475,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
 
   ## files to be done either for allFC or missing in INFO
   pgx.missing <- unique(c(fc.missing, info.missing))
-  pgx.delete  <- unique(c(fc.delete, info.delete))
+  pgx.delete <- unique(c(fc.delete, info.delete))
 
   pgxinfo.changed <- FALSE
   pgxfc.changed <- FALSE
@@ -495,22 +497,22 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
 
   ## nothing to do???
   if (length(pgx.missing) == 0 && length(pgx.delete) == 0 && length(h5.missing) == 0 &&
-      length(tsne.missing) == 0) {
+    length(tsne.missing) == 0) {
     if (verbose) message("[pgxinfo.updateDatasetFolder] All files complete. No update required.")
     return()
   }
 
   ## pgxinfo and allFC OK, but sigdb not upto date
   if (update.sigdb && length(pgx.missing) == 0 && length(pgx.delete) == 0 &&
-    (length(h5.missing) || length(tsne.missing) )) {
+    (length(h5.missing) || length(tsne.missing))) {
     allFC <- fread.csv(allfc.file, row.names = 1, check.names = FALSE)
     allFC <- as.matrix(allFC)
-    if(length(h5.missing)) {
+    if (length(h5.missing)) {
       if (verbose) message("[updateDatasetFolder] missing sigdb. Creating new sigdb file.")
       if (file.exists(sigdb.file)) unlink(sigdb.file)
       pgx.createSignatureDatabaseH5.fromMatrix(sigdb.file, X = allFC)
     }
-    if(length(tsne.missing)) {
+    if (length(tsne.missing)) {
       if (verbose) message("[updateDatasetFolder] missing tsne. Creating new tsne file.")
       updateTSNE(tsne.file, sigdb.file, allFC)
     }
@@ -526,7 +528,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   if (!force && file.exists(allfc.file)) {
     allFC <- fread.csv(allfc.file, row.names = 1, check.names = FALSE)
     allFC <- as.matrix(allFC)
-    if(ncol(allFC) == 0) allFC <- NULL
+    if (ncol(allFC) == 0) allFC <- NULL
   }
 
   ## remove from allFC matrix
@@ -729,19 +731,19 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     }
   }
 
-  ##-------------------------------------------------------
+  ## -------------------------------------------------------
   ## check tsne file. update tsne file from H5
-  ##-------------------------------------------------------
+  ## -------------------------------------------------------
   tsne.ok <- FALSE
-  if(file.exists(tsne.file)) {
-    tsne <- read.csv(tsne.file, row.names=1)
+  if (file.exists(tsne.file)) {
+    tsne <- read.csv(tsne.file, row.names = 1)
     dim(tsne)
-    cn <- rhdf5::h5read(sigdb.file, "data/colnames") ## new size    
-    cn <- grep("DELETED", cn, invert=TRUE)
-    tsne.ok <- ifelse( all(cn %in% rownames(tsne)), TRUE, FALSE )
+    cn <- rhdf5::h5read(sigdb.file, "data/colnames") ## new size
+    cn <- grep("DELETED", cn, invert = TRUE)
+    tsne.ok <- ifelse(all(cn %in% rownames(tsne)), TRUE, FALSE)
   }
-  
-  ## if needed update tsne file from H5    
+
+  ## if needed update tsne file from H5
   if (!tsne.ok || !file.exists(tsne.file) || pgxfc.changed) {
     updateTSNE(tsne.file, sigdb.file, allFC)
   }

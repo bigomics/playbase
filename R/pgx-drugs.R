@@ -70,11 +70,11 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
   ## X       : drugs profiles (may have multiple for one drug)
   ## xdrugs  : drug associated with profile
 
-  if(is.null(X)) {
+  if (is.null(X)) {
     X <- playdata::L1000_ACTIVITYS_N20D1011
     dim(X)
   }
-  
+
   if ("gx.meta" %in% names(obj)) {
     FC <- pgx.getMetaMatrix(obj)$fc
     ## check if multi-omics
@@ -175,7 +175,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
   }
 
   ## level2 and level3
-  if(!is.null(drug_info)) {
+  if (!is.null(drug_info)) {
 
 
 
@@ -183,7 +183,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
 
   }
 
-  
+
   ## this takes only the top matching drugs for each comparison to
   ## reduce the size of the matrices
   nprune

@@ -225,14 +225,15 @@ compute_extra <- function(pgx, extra = c(
 #' @param full A logical value indicating whether to use the full set of reference matrices and methods (TRUE),
 #'   or a subset of faster methods and references (FALSE).
 #' @return An updated object with deconvolution results.
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' probes <- rownames(playbase::COUNTS)
 #' mart <- biomaRt::useMart(biomart = "ensembl", dataset = species)
 #' annot_table <- ngs.getGeneAnnotation(rownames(counts),
-#'                                    probe_type = NULL,
-#'                                    mart = mart)
+#'   probe_type = NULL,
+#'   mart = mart
+#' )
 #' deconv <- compute_deconvolution(probes, annot_table)
 #' }
 #' @export
@@ -290,22 +291,21 @@ compute_deconvolution <- function(pgx, rna.counts = pgx$counts, full = FALSE) {
 #' @param rna.counts A matrix or data frame of RNA expression counts.
 #'   Defaults to the counts in the input object.
 #' @return An updated object with cell cycle and gender inference results.
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' counts <- playbase::COUNTS
 #' mart <- biomaRt::useMart(biomart = "ensembl", dataset = species)
 #' ngs <- list(annot_table = ngs.getGeneAnnotation(rownames(counts),
-#'                                    probe_type = NULL,
-#'                                    mart = mart)
-#')
+#'   probe_type = NULL,
+#'   mart = mart
+#' ))
 #' deconv <- compute_deconvolution(ngs, counts)
 #' }
 #' @export
 compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
-
   if (!is.null(pgx$organism)) {
-    is.human <- (pgx$organism == "Human")  
+    is.human <- (pgx$organism == "Human")
   } else {
     is.human <- (pgx.getOrganism(pgx) == "human")
   }
@@ -317,7 +317,7 @@ compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
     counts <- rna.counts
     # In multi-species now use symbol, and deduplicate in case
     # use retains feature as "gene_name/rowname"
-    rownames(counts) <- toupper(pgx$genes[rownames(counts), "symbol"]) 
+    rownames(counts) <- toupper(pgx$genes[rownames(counts), "symbol"])
     if (any(duplicated(rownames(counts)))) {
       message("Deduplicate counts for cell cycle and gender inference")
       counts <- rowsum(counts, rownames(counts))
