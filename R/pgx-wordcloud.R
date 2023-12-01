@@ -27,8 +27,8 @@
 #' The output is a matrix of word frequencies suitable for generating a word cloud visualization.
 #'
 #' @export
-pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
-  if (is.null(ngs$gset.meta)) {
+pgx.calculateWordCloud <- function(pgx, progress = NULL, pg.unit = 1) {
+  if (is.null(pgx$gset.meta)) {
     cat("[pgx.calculateWordCloud] FATAL ERROR: no gset.meta in object\n")
     return(NULL)
   }
@@ -36,14 +36,20 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   if (!is.null(progress)) progress$set(message = "WordCloud", value = 0)
 
   ## get gset meta foldchange-matrix
-  S <- sapply(ngs$gset.meta$meta, function(x) x$meta.fx)
-  rownames(S) <- rownames(ngs$gset.meta$meta[[1]])
-  #
+  S <- sapply(pgx$gset.meta$meta, function(x) x$meta.fx)
+  rownames(S) <- rownames(pgx$gset.meta$meta[[1]])
+  S[is.na(S)] <- 0
   S <- S[order(-rowMeans(S**2)), , drop = FALSE]
-
+  dim(S)
+  
   ## exclude down, GSE gene sets??????
   S <- S[grep("dn|down|^gse", rownames(S), ignore.case = TRUE, invert = TRUE), , drop = FALSE]
-
+  
+  if (nrow(S) <= 10 || NCOL(S) == 0) {
+    message("[pgx.calculateWordCloud] WARNING:: not enough valid genesets left")
+    return(NULL)
+  }
+  
   if (!is.null(progress)) progress$inc(0.2 * pg.unit, detail = "calculating word frequencies")
 
   ## Determine top most frequent terms
@@ -71,11 +77,13 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   W <- Matrix::sparseMatrix(idx[, 1], idx[, 2], x = 1)
   rownames(W) <- names(words2)
   colnames(W) <- terms
-
+  dim(W)
+  
   ## filter on minimal size and maximum ratio???
   nn <- Matrix::colSums(W, na.rm = TRUE)
   nr <- nn / nrow(W)
   W <- W[, which(nn >= 3 & nr <= 0.5), drop = FALSE]
+  dim(W)
 
   if (ncol(W) < 1) {
     message("[pgx.calculateWordCloud] WARNING:: no valid words left")
@@ -88,7 +96,6 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
   if (!is.null(progress)) progress$inc(0.3 * pg.unit, detail = "computing GSEA")
 
   ## compute for average contrast
-
   rms.FC <- Matrix::rowMeans(S**2)**0.5
   rms.FC <- rms.FC + 0.01 * stats::rnorm(length(rms.FC))
   gmt <- apply(W, 2, function(x) names(which(x != 0)))
@@ -122,20 +129,25 @@ pgx.calculateWordCloud <- function(ngs, progress = NULL, pg.unit = 1) {
     W <- cbind(W, W, W, W, W)
     W <- W + 1e-2 * matrix(stats::rnorm(length(W)), nrow(W), ncol(W))
   }
-  nb <- floor(pmin(pmax(ncol(W) / 4, 2), 10))
+  nb <- floor(min(max(ncol(W) / 4, 1), 10))
+  nb
   message("[pgx.calculateWordCloud] dim(W) = ", paste(dim(W), collapse = "x"))
   message("[pgx.calculateWordCloud] setting perplexity = ", nb)
-  pos1 <- Rtsne::Rtsne(t(as.matrix(W)),
-    perplexity = nb,
-    check_duplicates = FALSE
-  )$Y
-  pos2 <- uwot::umap(t(as.matrix(W)), n_neighbors = nb)
+
+  pos1 <- try(Rtsne::Rtsne( t(as.matrix(W)), perplexity = nb,  check_duplicates = FALSE )$Y)
+  class(pos1)
+  if( "try-error" %in% class(pos1)) {
+    pos1 <- try(Rtsne::Rtsne( t(as.matrix(W)), perplexity = ceiling(nb/2),
+                             check_duplicates = FALSE )$Y)
+  }
+  pos2 <- uwot::umap(t(as.matrix(W)), n_neighbors = max(nb,2))
   rownames(pos1) <- rownames(pos2) <- colnames(W)
   colnames(pos1) <- colnames(pos2) <- c("x", "y")
   pos1 <- pos1[match(res$word, rownames(pos1)), ]
   pos2 <- pos2[match(res$word, rownames(pos2)), ]
 
-  # sometimes we have words that NA is tsne, make sure we remove them (likely special characters) in windows or wsl
+  # sometimes we have words that NA is tsne, make sure we remove them
+  # (likely special characters) in windows or wsl
   pos1 <- pos1[!is.na(rownames(pos1)), ]
   pos2 <- pos2[!is.na(rownames(pos2)), ]
 
