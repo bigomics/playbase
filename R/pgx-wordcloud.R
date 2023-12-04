@@ -41,15 +41,15 @@ pgx.calculateWordCloud <- function(pgx, progress = NULL, pg.unit = 1) {
   S[is.na(S)] <- 0
   S <- S[order(-rowMeans(S**2)), , drop = FALSE]
   dim(S)
-  
+
   ## exclude down, GSE gene sets??????
   S <- S[grep("dn|down|^gse", rownames(S), ignore.case = TRUE, invert = TRUE), , drop = FALSE]
-  
+
   if (nrow(S) <= 10 || NCOL(S) == 0) {
     message("[pgx.calculateWordCloud] WARNING:: not enough valid genesets left")
     return(NULL)
   }
-  
+
   if (!is.null(progress)) progress$inc(0.2 * pg.unit, detail = "calculating word frequencies")
 
   ## Determine top most frequent terms
@@ -78,7 +78,7 @@ pgx.calculateWordCloud <- function(pgx, progress = NULL, pg.unit = 1) {
   rownames(W) <- names(words2)
   colnames(W) <- terms
   dim(W)
-  
+
   ## filter on minimal size and maximum ratio???
   nn <- Matrix::colSums(W, na.rm = TRUE)
   nr <- nn / nrow(W)
@@ -134,13 +134,15 @@ pgx.calculateWordCloud <- function(pgx, progress = NULL, pg.unit = 1) {
   message("[pgx.calculateWordCloud] dim(W) = ", paste(dim(W), collapse = "x"))
   message("[pgx.calculateWordCloud] setting perplexity = ", nb)
 
-  pos1 <- try(Rtsne::Rtsne( t(as.matrix(W)), perplexity = nb,  check_duplicates = FALSE )$Y)
+  pos1 <- try(Rtsne::Rtsne(t(as.matrix(W)), perplexity = nb, check_duplicates = FALSE)$Y)
   class(pos1)
-  if( "try-error" %in% class(pos1)) {
-    pos1 <- try(Rtsne::Rtsne( t(as.matrix(W)), perplexity = ceiling(nb/2),
-                             check_duplicates = FALSE )$Y)
+  if ("try-error" %in% class(pos1)) {
+    pos1 <- try(Rtsne::Rtsne(t(as.matrix(W)),
+      perplexity = ceiling(nb / 2),
+      check_duplicates = FALSE
+    )$Y)
   }
-  pos2 <- uwot::umap(t(as.matrix(W)), n_neighbors = max(nb,2))
+  pos2 <- uwot::umap(t(as.matrix(W)), n_neighbors = max(nb, 2))
   rownames(pos1) <- rownames(pos2) <- colnames(W)
   colnames(pos1) <- colnames(pos2) <- c("x", "y")
   pos1 <- pos1[match(res$word, rownames(pos1)), ]
