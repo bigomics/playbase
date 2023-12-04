@@ -860,18 +860,18 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   new.contrasts
 }
 
-k=3
+k <- 3
 
 #' @export
-pgx.addPCcontrasts <- function(counts, k=3) {
-  X <- edgeR::cpm(counts, log=TRUE)
-  res <- pgx.clusterBigMatrix(X, methods="pca", dims=k)
+pgx.addPCcontrasts <- function(counts, k = 3) {
+  X <- edgeR::cpm(counts, log = TRUE)
+  res <- pgx.clusterBigMatrix(X, methods = "pca", dims = k)
   pc <- res$pca3d
   dim(pc)
-  colnames(pc) <- paste0("PC.",1:k)    
-  pc3.bin <- expandPhenoMatrix(pc, drop.ref=TRUE)
-  pc3.bin[pc3.bin==TRUE]  <- "high"
-  pc3.bin[pc3.bin==FALSE] <- "low"
-  colnames(pc3.bin) <- paste0("PC",1:k)
+  colnames(pc) <- paste0("PC.", 1:k)
+  pc3.bin <- expandPhenoMatrix(pc, drop.ref = TRUE)
+  pc3.bin[pc3.bin == TRUE] <- "high"
+  pc3.bin[pc3.bin == FALSE] <- "low"
+  colnames(pc3.bin) <- paste0("PC", 1:k)
   pc3.bin
 }
