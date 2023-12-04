@@ -70,6 +70,7 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
 
   if (n > 100L) n2 <- 100L else n2 <- n
   subsample <- sample(1:n, n2)
+  subset_probes <- clean_probes[subsample]
 
 
   # Vector with input types to check
@@ -83,27 +84,37 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
                             "refseq_peptide",
                             "refseq_mrna"
                             )
-  subset_probes <- clean_probes[subsample]
+
+  # Reduce number of probes for known cases
+  probe_types_to_check <- check_known_probes(probes, probe_types_to_check)
+
 
   # often we see multiples probes at once
   # initially we can try to detect as many probes as possible from each probe type
   # the type that guess better, is the one that will be used
   # this approach still has issues, as sometimes we have mixed probe types in on study.
 
-  probe_check <- sapply(probe_types_to_check, FUN = function(x) {
+  probe_check <- numeric(length(probe_types_to_check))
+  names(probe_check) <- probe_types_to_check
+  for(i in seq_along(probe_types_to_check)) {
+    x <- probe_types_to_check[i]
     tryCatch({
       tmp <- biomaRt::getBM(attributes = x,
                             filters = x,
                             values = subset_probes,
                             mart = mart)
-      Sys.sleep(5)  # Sleep time to prevent bounce from ensembl for consecutive calls
+      # Sleep time to prevent bounce from ensembl for consecutive calls
+      Sys.sleep(5)  
       out <- nrow(tmp)
-      return(out)
+      probe_check[i] <- out
+      # If any match has more than 80% of the probes, stop
+      if(out > 0.8 * length(subset_probes)) {
+        break
+      }
     }, error = function(e) {
-      return(0)
-    }
-    )
-  })
+      probe_check[i] <- 0
+    })
+  }
 
   # Check matches and return if winner
   if (all(probe_check == 0)) {
@@ -117,6 +128,60 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE){
 }
 
 
+#' Known probes
+#' 
+#' This function checks if a vector of probe identifiers matches known patterns 
+#' for common identifier types like Ensembl IDs. It returns a vector of probe
+#' types that should be checked for mapping based on the matches.
+#'
+#' @param probes A character vector of probe identifiers.
+#' @param probe_types_to_check A character vector of probe types to check.
+#'
+#' @return A character vector of probe types to check mapping for.
+#'
+#' @details
+#' This function checks `probes` for the following known patterns:
+#'
+#' - Ensembl IDs for higher animals (ENS*) 
+#' - Drosophila melanogaster Ensembl IDs (FBgn*)
+#' - Caenorhabditis elegans Ensembl IDs (WBGene*)
+#'
+#' If a high proportion (>50%) of `probes` match one of these patterns,
+#' the corresponding Ensembl ID types are returned in `probe_types_to_check`.
+#'
+#' @examples
+#' probes <- c("ENSG000001", "ENST0001", "FBgn001", "WBGene0001")
+#' check_known_probes(probes, NULL)
+#' 
+#' @export
+check_known_probes <- function(probes, probe_types_to_check = NULL) {
+
+  # Check higher animals ENSEMBL notation
+  if(sum(grepl("^ENS*", probes)) > length(probes) * 0.5) {
+    probe_types_to_check <- c("ensembl_gene_id",
+                          "ensembl_transcript_id",
+                          "ensembl_transcript_id_version",
+                          "ensembl_peptide_id")
+                          }
+
+  # Check D. melanogaster notation
+  if(sum(grepl("^FBgn*", probes)) > length(probes) * 0.5) {
+    probe_types_to_check <- c("ensembl_gene_id",
+                          "ensembl_transcript_id",
+                          "ensembl_transcript_id_version",
+                          "ensembl_peptide_id")
+                          }
+
+  # Check C. elegans notation
+  if(sum(grepl("^WBGene*", probes)) > length(probes) * 0.5) {
+    probe_types_to_check <- c("ensembl_gene_id",
+                          "ensembl_transcript_id",
+                          "ensembl_transcript_id_version",
+                          "ensembl_peptide_id")
+                          }
+
+  return(probe_types_to_check)
+}
 #' Get gene annotation data
 #'
 #' Retrieves gene annotation information from BioMart for a set of input
