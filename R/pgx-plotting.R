@@ -3950,7 +3950,6 @@ plotlyMA <- function(x, y, names, source = "plot1",
   i1 <- which(names %in% highlight)
 
   p <- plotly::plot_ly(
-    type = marker.type, mode = "markers"
   )
 
   p <- p %>%
@@ -3963,6 +3962,8 @@ plotlyMA <- function(x, y, names, source = "plot1",
         x = x[i0],
         y = y[i0],
         text = names[i0],
+        type = marker.type, 
+        mode = "markers",
         marker = list(
           size = marker.size,
           color = "#ccc"
@@ -3977,6 +3978,8 @@ plotlyMA <- function(x, y, names, source = "plot1",
         x = x[i1],
         y = y[i1],
         text = names[i1],
+        type = marker.type, 
+        mode = "markers",
         marker = list(
           size = marker.size,
           color = "#1f77b4"
@@ -4084,10 +4087,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
   if (is.null(highlight)) highlight <- names
   i0 <- which(!names %in% highlight)
   i1 <- which(names %in% highlight)
-  p <- plotly::plot_ly(
-    type = marker.type, mode = "markers"
-    ## source=source, key=1:length(x)
-  )
+  p <- plotly::plot_ly()
   p <- p %>%
     plotly::event_register("plotly_hover") %>%
     plotly::event_register("plotly_selected")
@@ -4097,6 +4097,8 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         x = x[i0],
         y = y[i0],
         text = names[i0],
+        type = marker.type, 
+        mode = "markers",
         marker = list(
           size = marker.size,
           color = "#ccc"
@@ -4110,6 +4112,8 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         x = x[i1],
         y = y[i1],
         text = names[i1],
+        type = marker.type, 
+        mode = "markers",
         marker = list(
           size = 5,
           color = "#1f77b4"
