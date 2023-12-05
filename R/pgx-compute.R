@@ -225,11 +225,11 @@ pgx.createPGX <- function(counts,
 
   ## remove samples from counts matrix with extreme (1000x more or
   ## 1000x less) total counts (than median).
-  if(remove.outliers) {
-    message("[createPGX] removing outliers samples ")    
+  if (remove.outliers) {
+    message("[createPGX] removing outliers samples ")
     counts <- counts.removeOutliers(counts)
   }
-  
+
   ## -------------------------------------------------------------------
   ## Auto-scaling (scale down huge values, often in proteomics)
   ## -------------------------------------------------------------------
@@ -355,7 +355,7 @@ pgx.createPGX <- function(counts,
 
     # merge features_collapsde_by_symbol with pgx$genes by the column symbol
     pgx$genes <- merge(pgx$genes, features_collapsed_by_symbol, by = "symbol")
-    rownames(pgx$genes) = pgx$genes$symbol
+    rownames(pgx$genes) <- pgx$genes$symbol
     pgx$counts <- pgx$counts[rownames(pgx$genes), , drop = FALSE]
   }
 
@@ -394,7 +394,6 @@ pgx.createPGX <- function(counts,
     if (!is.null(pgx$X)) {
       pgx$X <- pgx$X[keep, , drop = FALSE]
     }
-
   }
 
   ## -------------------------------------------------------------------
@@ -766,7 +765,7 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   if (!is.null(pgx$X)) {
     ## WARNING: counts and X should match dimensions.
     pgx$X <- pgx$X[keep, , drop = FALSE]
-  }  
+  }
   pgx
 }
 
