@@ -30,7 +30,6 @@ compute_extra <- function(pgx, extra = c(
   ## detect if it is single or multi-omics
   # TEMPORARY ONLY SINGLE OMICS
   single.omics <- TRUE
-  single.omics
   if (single.omics) {
     message(">>> computing extra for SINGLE-OMICS")
     rna.counts <- pgx$counts
