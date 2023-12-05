@@ -31,8 +31,9 @@ labels2rainbow <- function(net) {
   hc <- net$dendrograms[[1]]
   nc <- length(unique(net$colors))
   n <- length(net$colors)
-  ii <- hc$order
-  col1 <- labels2colors(net$colors)
+  ii <- rep(NA, n)
+  ii[net$goodGenes] <- hc$order
+  col1 <- WGCNA::labels2colors(net$colors)
   col.rnk <- rank(tapply(1:n, col1[ii], mean))
   new.col <- grDevices::rainbow(nc)[col.rnk]
   names(new.col) <- names(col.rnk)
@@ -75,13 +76,17 @@ pgx.wgcna <- function(
     cutheight = 0.25,
     deepsplit = 2,
     ngenes = 1000) {
-  require(WGCNA) # fun fact: if we dont source WGCNA, blockwiseModules does not work
+  ## if we dont source WGCNA, blockwiseModules does not work..
+  require(WGCNA)
 
   ## get topSD matrix
   X <- as.matrix(pgx$X)
-  X <- X[order(-apply(X, 1, stats::sd, na.rm = TRUE)), ]
+  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+  X <- X[sdx > 0.1 * mean(sdx, na.rm = TRUE), ] ## filter low SD
+  X <- X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ]
   X <- X[!duplicated(rownames(X)), ]
-  datExpr <- t(utils::head(X, ngenes))
+  X <- utils::head(X, ngenes)
+  datExpr <- t(X)
 
   ## adapt for small datasets
   minmodsize <- 30
@@ -108,7 +113,6 @@ pgx.wgcna <- function(
   }
   table(net$colors)
 
-
   ## clean up traits matrix
   datTraits <- pgx$samples
   ## no dates please...
@@ -123,6 +127,7 @@ pgx.wgcna <- function(
   tr1 <- datTraits[, 0]
   if (length(sel1)) {
     tr1 <- expandPhenoMatrix(datTraits[, sel1, drop = FALSE], drop.ref = FALSE)
+    if (is.null(tr1)) tr1 <- datTraits[, 0]
   }
   ## keeping numeric phenotypes
   tr2 <- datTraits[, sel2, drop = FALSE]

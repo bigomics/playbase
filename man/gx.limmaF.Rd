@@ -16,6 +16,7 @@ gx.limmaF(
     "neg", "negative", "ref", "veh", "vehicle", "wt", "wildtype", "untreated", "normal",
     "false", "healthy"),
   trend = FALSE,
+  method = 1,
   verbose = 1
 )
 }

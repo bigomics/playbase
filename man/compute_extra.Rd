@@ -8,8 +8,8 @@ compute_extra(
   pgx,
   extra = c("meta.go", "infer", "deconv", "drugs", "connectivity", "wordcloud", "wgcna"),
   sigdb = NULL,
-  libx.dir = NULL,
-  pgx.dir = NULL
+  pgx.dir = "./data",
+  libx.dir = "./libx"
 )
 }
 \arguments{

@@ -32,7 +32,8 @@ pgx.Volcano(
   hilight = NULL,
   cpal = c("grey60", "red3"),
   title = NULL,
-  plotlib = "base"
+  plotlib = "base",
+  data = FALSE
 )
 
 pgx.plotMA(
@@ -45,7 +46,8 @@ pgx.plotMA(
   cex.lab = 0.8,
   hilight = NULL,
   ntop = 20,
-  plotlib = "base"
+  plotlib = "base",
+  data = FALSE
 )
 
 pgx.contrastScatter(
@@ -59,7 +61,8 @@ pgx.contrastScatter(
   level = "gene",
   ntop = 20,
   dir = 0,
-  plotlib = "base"
+  plotlib = "base",
+  data = FALSE
 )
 
 pgx.plotGeneUMAP(
@@ -76,7 +79,8 @@ pgx.plotGeneUMAP(
   set.par = TRUE,
   par.sq = FALSE,
   level = "gene",
-  plotlib = "ggplot"
+  plotlib = "ggplot",
+  data = FALSE
 )
 }
 \arguments{

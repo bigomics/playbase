@@ -40,9 +40,6 @@ pgx.getContrastGroups <- function(pgx, contrast, as.factor = TRUE) {
 
 
 
-
-
-
 #' Get sample conditions from expression matrix
 #'
 #' @param exp.matrix Expression matrix with samples in columns
@@ -221,7 +218,7 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
   for (i in 1:ncol(Y)) has.ref[i] <- (ref[i] %in% Y[, i] || ref[i] %in% c(all, full))
   has.ref
   if (!all(has.ref)) {
-    stop("ERROR:: reference ", which(!has.ref), " not in phenotype matrix\n")
+    message("ERROR:: reference ", which(!has.ref), " not in phenotype matrix\n")
     return(NULL)
   }
 
@@ -262,7 +259,8 @@ makeDirectContrasts000 <- function(Y, ref, na.rm = TRUE, warn = FALSE) {
       m1 <- m1[, !colnames(m1) %in% c("NA", "_"), drop = FALSE]
       colnames(m1) <- paste0(colnames(m1), "_vs_others")
     } else {
-      stop("[makeDirectContrasts000] FATAL")
+      message("[makeDirectContrasts000] FATAL")
+      return(NULL)
     }
     if (!is.null(m1)) {
       mm <- gsub("[: ]", "_", colnames(Y)[i])
@@ -364,7 +362,8 @@ makeFullContrasts <- function(labels, by.sample = FALSE) {
 #' of 0/1/-1 indicating the sample groups being compared within each stratum.
 #'
 #' @export
-pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, slen = 20, ref = NULL,
+pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, max.level = 99,
+                                            ref = NULL, slen = 20,
                                             fix.degenerate = FALSE, skip.hidden = TRUE) {
   df1 <- df[, -match(strata.var, colnames(df)), drop = FALSE]
   strata <- df[, strata.var]
@@ -375,15 +374,17 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, slen = 2
     sel <- which(strata == s)
     if (length(sel) < mingrp) next
     suppressWarnings(
-      ct1 <- pgx.makeAutoContrasts(df1[sel, , drop = FALSE],
-        mingrp = mingrp, slen = slen,
-        ref = ref, fix.degenerate = fix.degenerate,
+      ct1 <- pgx.makeAutoContrasts(
+        df1[sel, , drop = FALSE],
+        mingrp = mingrp, max.level = max.level, ref = ref,
+        slen = slen, fix.degenerate = fix.degenerate,
         skip.hidden = skip.hidden
       )
     )
     if (is.null(ct1)) next
     ct1x <- ct1$exp.matrix
-    colnames(ct1x) <- paste0(colnames(ct1x), "@", s)
+    ## colnames(ct1x) <- paste0(colnames(ct1x), "@", s)
+    colnames(ct1x) <- sub(":", paste0("@", s, ":"), colnames(ct1x))
     ss <- rownames(df1)[sel]
     if (is.null(ct.all)) {
       ct.all <- data.frame(sample = ss, ct1x, check.names = FALSE)
@@ -438,7 +439,7 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, slen = 2
 #' for differential analysis.
 #'
 #' @export
-pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL, max.level = 10,
+pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL, max.level = 99,
                                   fix.degenerate = FALSE, skip.hidden = TRUE) {
   shortestunique <- function(xx, slen = 3) {
     dup <- sapply(
@@ -698,17 +699,23 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
     if (as.factor) x <- factor(x, levels = c(grp0, grp1))
     x
   }
+  num.values <- c(-1, 0, 1, NA, "NA", "na", "", " ")
+  is.num <- all(apply(contr.matrix, 2, function(x) all(x %in% num.values)))
+  is.num
+  if (!is.num) {
+    ## message("[contrastAsLabels] already as label!")
+    return(contr.matrix)
+  }
   K <- data.frame(contr.matrix[, 0])
   i <- 1
   for (i in 1:ncol(contr.matrix)) {
-    contr <- contr.matrix[, i]
+    contr <- as.numeric(contr.matrix[, i])
     contr.name <- colnames(contr.matrix)[i]
     k1 <- contrastAsLabels.col(contr, contr.name)
     K <- cbind(K, k1)
   }
   colnames(K) <- colnames(contr.matrix)
   rownames(K) <- rownames(contr.matrix)
-
   return(K)
 }
 
@@ -734,6 +741,10 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
 #'
 #' @export
 makeContrastsFromLabelMatrix <- function(lab.matrix) {
+  if (!all(grepl("_vs_", colnames(lab.matrix)))) {
+    stop("[makeContrastsFromLabelMatrix] FATAL:: all contrast names must include _vs_")
+  }
+
   ct.names <- colnames(lab.matrix)
   main.grp <- sapply(strsplit(ct.names, split = "_vs_"), "[", 1)
   ctrl.grp <- sapply(strsplit(ct.names, split = "_vs_"), "[", 2)
@@ -752,4 +763,115 @@ makeContrastsFromLabelMatrix <- function(lab.matrix) {
   }
 
   return(contr.mat)
+}
+
+
+#' Converts old-style contrast matrix to sample-wise labeled contrast matrix
+#'
+#' @title Convert old-style contrast matrix to sample-wise labeled matrix
+#'
+#' @param contrasts Matrix of contrasts
+#' @param samples   Sample information dataframe
+#'
+#' @return Contrast matrix
+#'
+#' @description Convert old-style contrast to new-style contrast of sample-wise labels.
+#'
+#' @details This function takes a matrix of sample labels as input, where the column
+#' names indicate the sample groups being compared (e.g. "Group1_vs_Group2"). It parses
+#' the column names to extract the two groups, then constructs a labels contrast matrix by
+#' assigning the proper condition name to samples belonging to each group.
+#'
+#' The resulting contrast matrix has rows corresponding to samples, and columns
+#' corresponding to the label matrix column names. This encodes the contrasts between
+#' each pair of groups.
+#' @export
+contrasts.convertToLabelMatrix <- function(contrasts, samples) {
+  num.values <- c(-1, 0, 1, NA, "NA", "na", "", " ")
+  is.numeric.contrast <- all(as.vector(unlist(contrasts)) %in% num.values)
+  is.numeric.contrast
+
+  ## first match of group (or condition) in colum names, regard as group column
+  group.col <- head(grep("group|condition", tolower(colnames(samples))), 1)
+  if (length(group.col) == 0) {
+    ## try to detect automatically
+    group.col <- head(which(apply(samples, 2, function(x) all(rownames(contrasts) %in% x))), 1)
+    group.col
+  }
+  has.group.col <- length(group.col) > 0
+  is.group.contrast <- (nrow(contrasts) < nrow(samples)) && has.group.col
+  notvalid.group.contrast <- (nrow(contrasts) < nrow(samples)) && !has.group.col
+  notvalid.sample.contrast <- (nrow(contrasts) >= nrow(samples)) &&
+    !all(rownames(contrasts) %in% rownames(samples)) &&
+    !all(rownames(samples) %in% rownames(contrasts))
+  is.sample.contrast <- (nrow(contrasts) == nrow(samples) &&
+    all(rownames(contrasts) == rownames(samples)))
+
+  if (notvalid.group.contrast) {
+    message("[contrasts.convertToLabelMatrix] ERROR: Invalid group-wise contrast. could not find 'group' column.")
+    return(NULL)
+  }
+  if (notvalid.sample.contrast) {
+    message("[contrasts.convertToLabelMatrix] ERROR: Invalid samples-wise contrast. sample names do not match.")
+    return(NULL)
+  }
+
+  new.contrasts <- contrasts
+  ## old1: group-wise -1/0/1 matrix
+  if (is.group.contrast && is.numeric.contrast) {
+    message("[contrasts_conversion_check] WARNING: converting old1 style contrast to new format")
+    new.contrasts <- samples[, 0]
+    if (NCOL(contrasts) > 0) {
+      contrasts2 <- apply(contrasts, 2, as.numeric)
+      contrasts2 <- contrastAsLabels(contrasts2)
+      rownames(contrasts2) <- rownames(contrasts)
+      grp <- as.character(samples[, group.col])
+      new.contrasts <- contrasts2[grp, , drop = FALSE]
+      rownames(new.contrasts) <- rownames(samples)
+    }
+  }
+  ## old2: sample-wise -1/0/1 matrix
+  if (is.sample.contrast && is.numeric.contrast) {
+    message("[contrasts_conversion_check] WARNING: converting old2 style contrast to new format")
+    new.contrasts <- samples[, 0]
+    if (NCOL(contrasts) > 0) {
+      contrasts2 <- apply(contrasts, 2, as.numeric)
+      rownames(contrasts2) <- rownames(contrasts)
+      new.contrasts <- contrastAsLabels(contrasts2)
+      rownames(new.contrasts) <- rownames(samples)
+    }
+  }
+  ## old3: group-wise label matrix
+  if (is.group.contrast && !is.numeric.contrast) {
+    message("[contrasts_conversion_check] WARNING: converting group-wise label contrast to new format")
+    new.contrasts <- samples[, 0]
+    if (NCOL(contrasts) > 0) {
+      grp <- as.character(samples[, group.col])
+      new.contrasts <- contrasts[grp, , drop = FALSE]
+      rownames(new.contrasts) <- rownames(samples)
+    }
+  }
+
+  ## always clean up
+  new.contrasts <- as.matrix(new.contrasts)
+  new.contrasts <- apply(new.contrasts, 2, as.character)
+  new.contrasts[trimws(new.contrasts) %in% c("", "NA", "na", " ")] <- NA
+  rownames(new.contrasts) <- rownames(samples)
+  new.contrasts
+}
+
+k <- 3
+
+#' @export
+pgx.addPCcontrasts <- function(counts, k = 3) {
+  X <- edgeR::cpm(counts, log = TRUE)
+  res <- pgx.clusterBigMatrix(X, methods = "pca", dims = k)
+  pc <- res$pca3d
+  dim(pc)
+  colnames(pc) <- paste0("PC.", 1:k)
+  pc3.bin <- expandPhenoMatrix(pc, drop.ref = TRUE)
+  pc3.bin[pc3.bin == TRUE] <- "high"
+  pc3.bin[pc3.bin == FALSE] <- "low"
+  colnames(pc3.bin) <- paste0("PC", 1:k)
+  pc3.bin
 }

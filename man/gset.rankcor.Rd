@@ -31,7 +31,7 @@ This function calculates sparse rank correlation between rnk and each
 column of gset using \code{qlcMatrix::corSparse()}. It handles missing values in
 rnk by computing column-wise correlations.
 
-P-values are computed by permuting gset and finding empirical null distribution.
+P-values are computed from statistical distribution
 }
 \examples{
 \dontrun{

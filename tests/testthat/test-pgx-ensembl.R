@@ -2,7 +2,7 @@
 counter <- 0
 while (!exists("ensembl_human")) {
   Sys.sleep(60 * counter)
-  ensembl <- biomaRt::useEnsembl(biomart="genes", version = 110)
+  ensembl <- biomaRt::useEnsembl(biomart = "genes", version = 110)
   ensembl_human <- biomaRt::useDataset(dataset = "hsapiens_gene_ensembl", mart = ensembl)
   counter <- counter + 1
 }
@@ -10,26 +10,27 @@ while (!exists("ensembl_human")) {
 #' Test for detect_probe
 test_that("detect_probe can detect ensembl IDs", {
   # Create input data with <- for reuse
-  probes <- c("ENSG00000230915.1", "ENSG00000275728.1", "ENSG00000277599.1",
+  probes <- c(
+    "ENSG00000230915.1", "ENSG00000275728.1", "ENSG00000277599.1",
     "ENSG00000186163.9", "ENSG00000164823.11", "ENSG00000274234.1",
     "ENSG00000282461.1", "ENSG00000283056.1", "ENSG00000239021.1",
     "ENSG00000214268.2", "ENSG00000206687.1", "ENSG00000171148.14",
     "ENSG00000250027.1", "ENSG00000244217.1", "ENSG00000103502.14",
     "ENSG00000213178.3", "ENSG00000235059.5", "ENSG00000204555.3",
-    "ENSG00000221044.2", "ENSG00000267162.1")
+    "ENSG00000221044.2", "ENSG00000267162.1"
+  )
 
   # Run function
   # Use while to prevent crash on ensembl calls
   counter <- 0
-  while (!exists("type")) {  
-      type <- playbase::detect_probe(probes, mart = ensembl_human)
-      counter <- counter + 1
+  while (!exists("type")) {
+    type <- playbase::detect_probe(probes, mart = ensembl_human)
+    counter <- counter + 1
   }
 
   # Check output
   expect_equal(type, "ensembl_gene_id_version")
-  
-  })
+})
 
 test_that("detect_probe stops without mart", {
   expect_error(playbase::detect_probe(probes))
@@ -38,24 +39,27 @@ test_that("detect_probe stops without mart", {
 
 #' Test for ngs.getGeneAnnotation
 test_that("ngs.getGeneAnnotation returns annotation for genes", {
-
   # Input data
-  probes <- c("ENSG00000230915.1", "ENSG00000275728.1", "ENSG00000277599.1",
+  probes <- c(
+    "ENSG00000230915.1", "ENSG00000275728.1", "ENSG00000277599.1",
     "ENSG00000186163.9", "ENSG00000164823.11", "ENSG00000274234.1",
     "ENSG00000282461.1", "ENSG00000283056.1", "ENSG00000239021.1",
     "ENSG00000214268.2", "ENSG00000206687.1", "ENSG00000171148.14",
     "ENSG00000250027.1", "ENSG00000244217.1", "ENSG00000103502.14",
     "ENSG00000213178.3", "ENSG00000235059.5", "ENSG00000204555.3",
-    "ENSG00000221044.2", "ENSG00000267162.1")
-  
+    "ENSG00000221044.2", "ENSG00000267162.1"
+  )
+
   # Run function <- for reuse
   counter <- 0
   while (!exists("result")) {
     Sys.sleep(60 * counter)
-    result <- playbase::ngs.getGeneAnnotation(probes = probes, 
-                                              organism = "Human", 
-                                              probe_type = "ensembl_gene_id_version", 
-                                              mart = ensembl_human)
+    result <- playbase::ngs.getGeneAnnotation(
+      probes = probes,
+      organism = "Human",
+      probe_type = "ensembl_gene_id_version",
+      mart = ensembl_human
+    )
     counter <- counter + 1
   }
   # Check class
@@ -75,24 +79,27 @@ test_that("ngs.getGeneAnnotation returns annotation for genes", {
 
 #' Test for probe2symbol
 test_that("probe2symbol returns expected output", {
-  
   # Input data
-  probes <- c("ENSG00000230915.1", "ENSG00000275728.1", "ENSG00000277599.1",
+  probes <- c(
+    "ENSG00000230915.1", "ENSG00000275728.1", "ENSG00000277599.1",
     "ENSG00000186163.9", "ENSG00000164823.11", "ENSG00000274234.1",
     "ENSG00000282461.1", "ENSG00000283056.1", "ENSG00000239021.1",
     "ENSG00000214268.2", "ENSG00000206687.1", "ENSG00000171148.14",
     "ENSG00000250027.1", "ENSG00000244217.1", "ENSG00000103502.14",
     "ENSG00000213178.3", "ENSG00000235059.5", "ENSG00000204555.3",
-    "ENSG00000221044.2", "ENSG00000267162.1")
+    "ENSG00000221044.2", "ENSG00000267162.1"
+  )
 
   # Run function
   counter <- 0
   while (!exists("result")) {
     Sys.sleep(60 * counter)
-    result <- playbase::ngs.getGeneAnnotation(probes = probes, 
-                                              organism = "Human", 
-                                              probe_type = "ensembl_gene_id_version", 
-                                              mart = ensembl_human)
+    result <- playbase::ngs.getGeneAnnotation(
+      probes = probes,
+      organism = "Human",
+      probe_type = "ensembl_gene_id_version",
+      mart = ensembl_human
+    )
     counter <- counter + 1
   }
   # Run function
@@ -106,9 +113,68 @@ test_that("probe2symbol returns expected output", {
   symbol_na <- playbase::probe2symbol(probes, result, query = "symbol", fill_na = FALSE)
   expect_type(symbol_na, "character")
   expect_true(sum(symbol_na == "") == 4)
-  
+
   # Test handling NAs with fill_na = TRUE
   symbol_na <- playbase::probe2symbol(probes, result, query = "symbol", fill_na = TRUE)
   expect_type(symbol_na, "character")
   expect_true(sum(symbol_na == "") == 0)
+})
+
+
+#' Test for detect_probe_DEPRECATED
+test_that("detects ENSEMBL for human probes", {
+  probes <- c("ENSG00000136997", "ENSG00000241860")
+  expect_equal(detect_probe_DEPRECATED(probes, "Human"), "ENSEMBL")
+
+  # UNIPROT genes
+  uniprot_genes <- c("P31749", "P04637", "Q9Y6K9", "O15111", "Q9UM73")
+  expect_equal(detect_probe_DEPRECATED(uniprot_genes, "Human"), "UNIPROT")
+
+  # Fake genes
+  probes <- c("ENSG00088136997", "ENSG00099241860")
+  expect_error(detect_probe_DEPRECATED(probes, "Human"))
+})
+
+# Test with valid mouse probes
+test_that("detects Ensembl for mouse probes", {
+  probes <- c("ENSMUSG00000051951", "ENSMUSG00000033845")
+  expect_equal(detect_probe_DEPRECATED(probes, "Mouse"), "ENSEMBL")
+
+  probes <- c(
+    "NM_001081979", "NM_001081980", "NM_001081981", "NM_001081982",
+    "NM_001081983"
+  )
+  expect_equal(detect_probe_DEPRECATED(probes, "Mouse"), "REFSEQ")
+})
+
+
+#' Test for detect_probe_DEPRECATED
+test_that("ngs.getGeneAnnotation_DEPRECATED function works correctly", {
+  # Test 1: Check that the function returns the correct annotation for a known human gene
+  expect_equal(rownames(ngs.getGeneAnnotation_DEPRECATED("ENSG00000141510", "ENSEMBL", "Human"))[1], "ENSG00000141510")
+
+  # Test 2: Check that the function returns the correct annotation for a known mouse gene
+  expect_equal(rownames(ngs.getGeneAnnotation_DEPRECATED("ENSMUSG00000051951", "ENSEMBL", "Mouse"))[1], "ENSMUSG00000051951")
+
+  # Test 3: Check that the function handles multiple probes correctly
+  probes <- c("ENSG00000141510", "ENSG00000139618")
+  expect_equal(nrow(ngs.getGeneAnnotation_DEPRECATED(probes, "ENSEMBL", "Human")), length(probes))
+
+  # Test 4: Check that the function handles an unknown organism correctly
+  expect_error(ngs.getGeneAnnotation_DEPRECATED("ENSG00000141510", "ENSEMBL", "Unknown"))
+
+  # Test 5: Check that the function handles an unknown probe correctly
+  expect_error(ngs.getGeneAnnotation_DEPRECATED("Unknown", "ENSEMBL", "Human"))
+
+  # Test 6: Check that the function handles a NULL probe correctly
+  expect_error(ngs.getGeneAnnotation_DEPRECATED(NULL, "ENSEMBL", "Human"))
+
+  # Test 7: Check that the function handles a NULL organism correctly
+  expect_error(ngs.getGeneAnnotation_DEPRECATED("ENSG00000141510", "ENSEMBL", NULL))
+
+  # Test 8: Check that the function handles an empty string probe correctly
+  expect_error(ngs.getGeneAnnotation_DEPRECATED("", "ENSEMBL", "Human"))
+
+  # Test 9: Check that the function handles an empty string organism correctly
+  expect_error(ngs.getGeneAnnotation_DEPRECATED("ENSG00000141510", "ENSEMBL", ""))
 })

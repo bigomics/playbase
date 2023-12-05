@@ -36,32 +36,17 @@ normalize_matrix_by_row <- function(G) {
 #' @export
 compute_testGenesets <- function(pgx,
                                  max.features = 1000,
-                                 custom.geneset = NULL,
+                                 custom.geneset = list(gmt = NULL, info = NULL),
                                  test.methods = c("gsva", "camera", "fgsea"),
                                  remove.outputs = TRUE) {
-
   if (!"X" %in% names(pgx)) {
     stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
   }
 
-  if(is.null(pgx$genes$human_ortholog)){
+  if (is.null(pgx$genes$human_ortholog)) {
     # this is needed in case the species is human, and we dont have the homolog column or if we have an old pgx
     # which will ensure consistency between old and new pgx
     pgx$genes$human_ortholog <- NA
-  }
-  # Load custom genesets (if user provided)
-  if (!is.null(custom.geneset$gmt)) {
-    # convert gmt standard to SPARSE matrix
-    custom_gmt <- playbase::createSparseGenesetMatrix(
-      gmt.all = custom.geneset$gmt,
-      min.geneset.size = 3,
-      max.geneset.size = 9999,
-      min_gene_frequency = 1,
-      all_genes = pgx$all_genes,
-      annot = pgx$genes,
-      filter_genes = FALSE
-    )
-
   }
 
   ## -----------------------------------------------------------
@@ -77,9 +62,10 @@ compute_testGenesets <- function(pgx,
   ## filter genes by gene or homologous, if it exists
   # replace "" to NA in pgx$genes$human_ortholog
   if (pgx$organism != "Human") {
-    human_genes <- ifelse(!is.na(pgx$genes$human_ortholog), 
-                    pgx$genes$human_ortholog, 
-                    pgx$genes$symbol)
+    human_genes <- ifelse(!is.na(pgx$genes$human_ortholog),
+      pgx$genes$human_ortholog,
+      pgx$genes$symbol
+    )
   } else {
     human_genes <- pgx$genes$symbol
   }
@@ -88,7 +74,7 @@ compute_testGenesets <- function(pgx,
   # Change HUMAN gene names to species symbols if NOT human and human_ortholog column is NOT all NA
   G <- G[, colnames(G) %in% human_genes]
 
-  if(pgx$organism != "Human" && !all(is.na(pgx$genes$human_ortholog))){
+  if (pgx$organism != "Human" && !all(is.na(pgx$genes$human_ortholog))) {
     colnames(G) <- pgx$genes$symbol[match(colnames(G), pgx$genes$human_ortholog)]
   }
 
@@ -112,17 +98,25 @@ compute_testGenesets <- function(pgx,
   }
 
   G <- G[which(size.ok), ]
-
-  # Transpose G
-
   G <- Matrix::t(G)
 
   if (!is.null(custom.geneset$gmt)) {
+    # convert gmt standard to SPARSE matrix
+    custom_gmt <- playbase::createSparseGenesetMatrix(
+      gmt.all = custom.geneset$gmt,
+      min.geneset.size = 3,
+      max.geneset.size = 9999,
+      min_gene_frequency = 1,
+      all_genes = pgx$all_genes,
+      annot = pgx$genes,
+      filter_genes = FALSE
+    )
 
     custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes, drop = FALSE]
     custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
 
     G <- playbase::merge_sparse_matrix(m1 = G, m2 = Matrix::t(custom_gmt))
+    remove(custom_gmt)
   }
 
   ## -----------------------------------------------------------
@@ -145,7 +139,6 @@ compute_testGenesets <- function(pgx,
 
 
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
-  
     X <- rename_by(X, pgx$genes, "symbol")
     X <- X[!rownames(X) == "", , drop = FALSE]
     if (any(duplicated(rownames(X)))) {
@@ -165,7 +158,7 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
   cat("Matching gene set matrix...\n")
 
-  gg <- rownames(X) 
+  gg <- rownames(X)
   ii <- intersect(gg, rownames(G))
   G <- G[ii, , drop = FALSE]
   xx <- setdiff(gg, rownames(G))
@@ -251,7 +244,9 @@ compute_testGenesets <- function(pgx,
   pgx$gsetX <- pgx$gset.meta$matrices[["meta"]] ## META or average FC?
   pgx$GMT <- G[, rownames(pgx$gsetX)]
 
-  # calculate gset info and store as pgx$gset.meta
+  ## -------------------------------------------------------
+  ## calculate gset info and store as pgx$gset.meta
+  ## -------------------------------------------------------
   gset.size <- Matrix::colSums(pgx$GMT != 0)
   gset.size.raw <- playdata::GSET_SIZE
 
@@ -366,7 +361,7 @@ createSparseGenesetMatrix <- function(
   ## ------------- filter genes by minimum frequency and chrom
   genes.table <- table(unlist(gmt.all))
   genes <- names(which(genes.table >= min_gene_frequency))
-  
+
   annot <- annot
 
   if (filter_genes == TRUE) {
@@ -378,7 +373,7 @@ createSparseGenesetMatrix <- function(
     annot <- annot[annot$chr %in% c(1:22, "X", "Y"), ]
     genes <- genes[!is.na(annot$chr)]
   }
-  
+
   ## Filter genesets with permitted genes (official and min.sharing)
   gmt.all <- lapply(gmt.all, function(s) intersect(s, genes))
 
@@ -399,7 +394,7 @@ createSparseGenesetMatrix <- function(
   rownames(G) <- names(gmt.all)
 
   # remove NA rows
-  G <- G[!is.na(rownames(G)), ,drop = FALSE]
+  G <- G[!is.na(rownames(G)), , drop = FALSE]
 
   return(G)
 }

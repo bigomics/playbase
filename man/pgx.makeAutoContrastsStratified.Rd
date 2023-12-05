@@ -8,8 +8,9 @@ pgx.makeAutoContrastsStratified(
   df,
   strata.var,
   mingrp = 3,
-  slen = 20,
+  max.level = 99,
   ref = NULL,
+  slen = 20,
   fix.degenerate = FALSE,
   skip.hidden = TRUE
 )
@@ -21,9 +22,9 @@ pgx.makeAutoContrastsStratified(
 
 \item{mingrp}{Minimum group size to include}
 
-\item{slen}{Maximum contrast name length}
-
 \item{ref}{Reference level for factors}
+
+\item{slen}{Maximum contrast name length}
 
 \item{fix.degenerate}{Fix degenerate designs?}
 

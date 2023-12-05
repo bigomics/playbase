@@ -894,7 +894,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
                         psig = 0.05, fc = 1, cex = 1, cex.lab = 1, ntop = 20,
                         p.min = NULL, fc.max = NULL, hilight = NULL, #
                         cpal = c("grey60", "red3"), title = NULL,
-                        plotlib = "base") {
+                        plotlib = "base", data = FALSE) {
   if (is.integer(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
   res <- NULL
   if (level == "gene") {
@@ -925,6 +925,10 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   }
   if (!is.null(p.min)) {
     ylim <- c(0, -log10(p.min))
+  }
+
+  if (data) {
+    return(xy)
   }
 
   if (is.null(title)) title <- contrast
@@ -958,7 +962,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
 #' @export
 pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
                        cex = 1, cex.lab = 0.8, hilight = NULL, ntop = 20,
-                       plotlib = "base") {
+                       plotlib = "base", data = FALSE) {
   if (is.integer(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
 
   if (level == "gene") {
@@ -987,6 +991,10 @@ pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
     hilight <- intersect(hilight, names(sig[sig == TRUE]))
   }
   hilight <- Matrix::head(hilight, ntop)
+
+  if (data) {
+    return(xy)
+  }
 
   p <- pgx.scatterPlotXY(
     xy,
@@ -1020,7 +1028,8 @@ pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
 pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
                                 cex = 1, cex.lab = 0.8,
                                 psig = 0.05, fc = 1, level = "gene",
-                                ntop = 20, dir = 0, plotlib = "base") {
+                                ntop = 20, dir = 0, plotlib = "base",
+                                data = FALSE) {
   if (is.numeric(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
   exp.matrix <- pgx$model.parameters$exp.matrix
   ct <- exp.matrix[, contrast]
@@ -1073,6 +1082,10 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
 
   tt <- contrast
 
+  if (data) {
+    return(xy)
+  }
+
   pgx.scatterPlotXY(
     xy,
     var = sig, type = "factor", title = tt,
@@ -1107,7 +1120,8 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
                              pos = NULL, ntop = 20, cex = 1, cex.lab = 0.8,
                              hilight = NULL, title = NULL, zfix = FALSE,
                              set.par = TRUE, par.sq = FALSE,
-                             level = "gene", plotlib = "ggplot") {
+                             level = "gene", plotlib = "ggplot",
+                             data = FALSE) {
   if (!is.null(contrast)) {
     if (is.numeric(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
     res <- NULL
@@ -1168,6 +1182,12 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
     hilight1 <- Matrix::head(hilight1, ntop) ## label
     opacity <- ifelse(length(hilight1) > 0, 0.66, 1)
 
+    if (data) {
+      return(
+        cbind(xy, f1)
+      )
+    }
+
     p1 <- pgx.scatterPlotXY(
       xy,
       var = f1, type = "numeric",
@@ -1187,6 +1207,11 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
   if (plotlib == "base") {
     return()
   }
+
+  # if (plotlib == "data") {
+  #   browser()
+  #   return()
+  # }
   if (length(plist) == 1) plist <- plist[[1]]
   return(plist)
 }
@@ -1345,7 +1370,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   } else {
     gx <- pgx$X[rownames(pgx$X) == probe, rownames(pgx$samples)]
   }
-  
+
   if (!logscale) {
     gx <- 2**(gx)
   }
@@ -3305,7 +3330,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                                      xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL,
                                      axis = TRUE, zoom = 1, legend = TRUE, bty = "n",
                                      hilight = NULL, hilight2 = hilight, hilight.col = NULL,
-                                     hilight.cex = NULL, hilight.lwd = 0.8,
+                                     hilight.cex = NULL, hilight.lwd = 0.8, opc.low = 1,
                                      zlim = NULL, zlog = FALSE, zsym = FALSE, softmax = FALSE,
                                      opacity = 1, bgcolor = NULL, box = TRUE,
                                      label.clusters = FALSE, labels = NULL, label.type = NULL,
@@ -3411,7 +3436,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
       y = pos[, 2],
       name = rownames(pos),
       value = z1,
-      size = 7 * cex,
+      size = 5 * cex,
       text = tooltip1,
       label = label1
     )
@@ -3434,13 +3459,12 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
       cpal <- add_opacity(cpal, opacity**0.33)
     }
 
-
     df <- data.frame(
       x = pos[, 1],
       y = pos[, 2],
       name = rownames(pos),
       value = z,
-      size = 7 * cex,
+      size = 5 * cex,
       text = tooltip1,
       label = label1
     )
@@ -3457,7 +3481,6 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     }
   }
 
-
   ## ---------------- call PLOTLY -----------
   if (is.null(source)) source <- paste0(sample(LETTERS, 10), collapse = "")
   ## plt <- plotly::plot_ly(df,
@@ -3466,20 +3489,26 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     showlegend = FALSE
   )
 
+  ## plot NA values as light grey
   any(is.na(df$value))
   if (any(is.na(df$value))) {
     jj <- which(is.na(df$value))
     plt <- plt %>%
       plotly::add_markers(
         data = df[jj, , drop = FALSE],
-        x = ~x, y = ~y,
+        x = ~x,
+        y = ~y,
         colors = cpal,
         text = ~text,
         hoverinfo = hoverinfo,
         marker = list(
           size = ~size,
           opacity = opacity,
-          color = "#DDDDDD44"
+          color = "#DDDDDD44",
+          line = list(
+            color = "#AAAAAA44",
+            width = 0.2
+          )
         ),
         showlegend = FALSE,
         key = ~name,
@@ -3488,18 +3517,25 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
       )
   }
 
+  ## plot not missing values
   jj <- which(!is.na(df$value))
+  pt.opacity <- 1
+  if (!is.null(hilight)) {
+    jj <- which(!is.na(df$value) & !rownames(df) %in% hilight)
+    pt.opacity <- opc.low
+  }
   plt <- plt %>%
     plotly::add_markers(
       data = df[jj, , drop = FALSE],
-      x = ~x, y = ~y,
+      x = ~x,
+      y = ~y,
       color = ~value,
       colors = cpal,
       text = ~text,
       hoverinfo = hoverinfo,
       marker = list(
         size = ~size,
-        opacity = opacity,
+        opacity = opacity * pt.opacity,
         line = list(
           color = "#444444",
           width = 0.2
@@ -3511,6 +3547,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
       type = "scattergl"
     )
 
+  ## plot hilighted points
   if (!is.null(hilight)) {
     jj <- which(rownames(df) %in% hilight)
     col1 <- "transparent"
@@ -3520,14 +3557,17 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
       plotly::add_markers(
         data = df[jj, ],
         x = ~x, y = ~y,
-        color = ~value, colors = cpal,
+        color = ~value,
+        colors = cpal,
         color = NULL,
         key = ~name,
-        mode = "markers", type = "scattergl", #
+        mode = "markers",
+        type = "scattergl", #
         text = ~text,
         hoverinfo = hoverinfo,
         marker = list(
-          color = col1,
+          ## color = col1,
+          opacity = 1,
           size = 5 * hilight.cex,
           showlegend = FALSE,
           showscale = FALSE,
@@ -3539,6 +3579,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
       )
   }
 
+  ## plot hilighted points with label
   if (!is.null(hilight2)) {
     jj <- which(rownames(df) %in% hilight2)
     plt <- plt %>%
@@ -3555,7 +3596,8 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
         xref = "x", yref = "y"
       )
   }
-  ## label cluster
+
+  ## cluster labels
   if (label.clusters) {
     mpos <- apply(pos, 2, function(x) tapply(x, z1, stats::median))
     # If there is only one cluster
@@ -3568,9 +3610,11 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
 
     plt <- plt %>%
       plotly::add_annotations(
-        x = mpos[, 1], y = mpos[, 2],
-        showarrow = FALSE, text = mlab,
-        font = list(size = 15 * cex.clust),
+        x = mpos[, 1],
+        y = mpos[, 2],
+        showarrow = FALSE,
+        text = paste0("<b>", mlab, "</b>"),
+        font = list(size = 16 * cex.clust),
         xref = "x", yref = "y"
       )
   }
@@ -4259,7 +4303,7 @@ plotlyCytoplot <- function(pgx,
     )
   }
 
-  if (!is.null(pgx$deconv)) {
+  if (!is.null(pgx$deconv) && length(pgx$deconv) > 0) {
     inferred.celltype <- pgx$deconv[[1]][["meta"]]
     lab1 <- Matrix::head(names(sort(-Matrix::colSums(inferred.celltype[j1, , drop = FALSE]))), 3)
     pos1 <- apply(cbind(x1, x2)[j1, , drop = FALSE], 2, stats::median)
@@ -4288,7 +4332,7 @@ plotlyCytoplot <- function(pgx,
       font = list(size = 15)
     )
   }
-  p
+  return(p)
 }
 
 

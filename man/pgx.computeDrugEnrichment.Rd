@@ -8,6 +8,7 @@ pgx.computeDrugEnrichment(
   obj,
   X,
   xdrugs,
+  drug_info = NULL,
   methods = c("GSEA", "cor"),
   nmin = 15,
   nprune = 250,

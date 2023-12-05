@@ -63,11 +63,17 @@ pgx.createComboDrugAnnot <- function(combo, annot0) {
 #' containing the enrichment results for each drug.
 #'
 #' @export
-pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor"),
+pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
+                                      methods = c("GSEA", "cor"),
                                       nmin = 15, nprune = 250, contrast = NULL) {
   ## 'obj'   : can be ngs object or fold-change matrix
   ## X       : drugs profiles (may have multiple for one drug)
-  ## xdrugs : drug associated with profile
+  ## xdrugs  : drug associated with profile
+
+  if (is.null(X)) {
+    X <- playdata::L1000_ACTIVITYS_N20D1011
+    dim(X)
+  }
 
   if ("gx.meta" %in% names(obj)) {
     FC <- pgx.getMetaMatrix(obj)$fc
@@ -130,8 +136,6 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
   results <- list()
   if ("cor" %in% methods) {
     message("Calculating drug enrichment using rank correlation ...")
-
-
     D <- Matrix::sparse.model.matrix(~ 0 + xdrugs)
     colnames(D) <- sub("^xdrugs", "", colnames(D))
     rownames(D) <- colnames(X) ## not necessary..
@@ -139,8 +143,8 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
     rownames(rho2) <- colnames(D)
     colnames(rho2) <- colnames(R1)
     rho2 <- rho2[order(-rowMeans(rho2**2)), , drop = FALSE]
-    cor.pvalue <- function(x, n) stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
-    P <- apply(rho2, 2, cor.pvalue, n = nrow(D))
+    .cor.pvalue <- function(x, n) 2 * stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
+    P <- apply(rho2, 2, .cor.pvalue, n = nrow(D))
     Q <- apply(P, 2, stats::p.adjust, method = "fdr")
     results[["cor"]] <- list(X = rho2, Q = Q, P = P)
   }
@@ -169,6 +173,16 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, methods = c("GSEA", "cor")
     msize <- res0[[1]]$size
     results[["GSEA"]] <- list(X = mNES, Q = mQ, P = mP, size = msize)
   }
+
+  ## level2 and level3
+  if (!is.null(drug_info)) {
+
+
+
+
+
+  }
+
 
   ## this takes only the top matching drugs for each comparison to
   ## reduce the size of the matrices

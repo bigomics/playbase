@@ -303,7 +303,9 @@ logCPM <- function(counts, total = 1e6, prior = 1) {
     cpm@x <- log2(prior + cpm@x)
     return(cpm)
   } else {
-    cpm <- t(t(counts) / Matrix::colSums(counts, na.rm = TRUE)) * total
+    totcounts <- Matrix::colSums(counts, na.rm = TRUE)
+    ## cpm <- t(t(counts) / totcounts * total)
+    cpm <- sweep(counts, 2, totcounts, FUN = "/") * total
     x <- log2(prior + cpm)
     return(x)
   }
@@ -365,65 +367,12 @@ pgx.checkObject <- function(pgx) {
 #' @export
 matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1) {
   if (dir == 2) X <- t(X)
-  mX <- do.call(cbind, tapply(1:ncol(X), group, function(i) rowMeans(X[, i, drop = FALSE], na.rm = TRUE)))
+  mX <- do.call(cbind, tapply(
+    1:ncol(X), group,
+    function(i) FUN(X[, i, drop = FALSE], na.rm = TRUE)
+  ))
   if (dir == 2) mX <- t(mX)
   mX
-}
-
-
-
-#' @describeIn knnImputeMissing Impute missing values with non-negative matrix factorization
-#' @export
-nmfImpute <- function(x, k = 5) {
-  ## Impute missing values with NMF
-  ##
-
-  k <- min(k, dim(x))
-  nmf <- NNLM::nnmf(x, k = k, check.k = FALSE, rel.tol = 1e-2, verbose = 0)
-  xhat <- with(nmf, W %*% H)
-  x[is.na(x)] <- xhat[is.na(x)]
-  if (sum(is.na(x)) > 0) {
-    nmf1 <- NNLM::nnmf(x, k = 1, check.k = FALSE, rel.tol = 1e-2, verbose = 0)
-    xhat1 <- with(nmf1, W %*% H)
-    x[is.na(x)] <- xhat1[is.na(x)]
-  }
-  x
-}
-
-
-#' @title Impute Missing Values with k-Nearest Neighbors
-#'
-#' @description This function imputes missing values in a vector using k-nearest neighbors.
-#' @param x A numeric vector containing missing values to be imputed.
-#' @param pos A matrix of positions for each element in `x`.
-#' @param missing An optional value specifying the value used to represent missing values in `x`.
-#' The default value is `NA`.
-#' @param k An optional numeric value specifying the number of nearest neighbors to use for imputation.
-#' The default value is 10.
-#'
-#' @details This function takes a numeric vector `x` containing missing values, a matrix of positions `pos`
-#' for each element in `x`, and an optional value `missing` representing the missing values in `x` as input.
-#' The function uses the k-nearest neighbors algorithm to impute the missing values in `x` based on their positions in `pos`.
-#' The number of nearest neighbors used for imputation is specified by the `k` parameter.
-#' The imputed values are returned as a numeric vector of the same length as `x`.
-#'
-#' @return A numeric vector of the same length as `x`, containing the imputed values.
-#'
-#' @export
-knnImputeMissing <- function(x, pos, missing = NA, k = 10) {
-  k0 <- which(x == missing)
-  k1 <- which(x != missing)
-  if (length(k0) == 0) {
-    return(x)
-  }
-  pos0 <- pos[k0, ]
-  pos1 <- pos[k1, ]
-  nb <- FNN::get.knnx(pos1, pos0, k = k)$nn.index
-  fx <- factor(x[k1])
-  mx <- matrix(fx[as.vector(nb)], nrow = nrow(nb), ncol = ncol(nb))
-  x.imp <- apply(mx, 1, function(x) names(which.max(table(x))))
-  x[which(x == missing)] <- x.imp
-  x
 }
 
 
@@ -525,63 +474,6 @@ trimsame0 <- function(s, split = " ", summarize = FALSE, rev = FALSE) {
 }
 
 
-#' Read CSV file with automatic separator detection
-#'
-#' @param file Path to input CSV file
-#' @param as_matrix Logical indicating whether to return a matrix instead of a data frame. Default is FALSE.
-#'
-#' @return Data frame or matrix containing data from the CSV file.
-#'
-#' @details This function reads a CSV file and automatically detects the separator character (tab, comma, or semicolon).
-#' It returns the contents as a data frame or matrix. Duplicate row names are avoided by removing blank and duplicate ID rows.
-#'
-#' The file can contain comments starting with # character. Columns are read as character vectors by default.
-#' Setting as_matrix=TRUE will return a matrix instead of a data frame if possible.
-#'
-#' @examples
-#' \dontrun{
-#' dat <- read.csv3("data.csv")
-#' mat <- read.csv3("matrix.csv", as_matrix = TRUE)
-#' }
-#' @export
-read.csv3 <- function(file, as_matrix = FALSE) {
-  ## read delimited table automatically determine separator. Avoid
-  ## duplicated rownames.
-  line1 <- as.character(utils::read.csv(file, comment.char = "#", sep = "\n", nrow = 1)[1, ])
-  sep <- names(which.max(sapply(c("\t", ",", ";"), function(s) length(strsplit(line1, split = s)[[1]]))))
-  sep
-  x <- data.table::fread(file, sep = sep, check.names = FALSE, stringsAsFactors = FALSE, header = TRUE)
-  x <- as.data.frame(x)
-  x <- x[grep("^#", x[[1]], invert = TRUE), , drop = FALSE] ## drop comments
-  xnames <- as.character(x[, 1])
-  sel <- which(xnames != "" & !duplicated(xnames))
-  x <- x[sel, -1, drop = FALSE]
-  if (as_matrix) x <- as.matrix(x)
-  if (length(sel)) {
-    rownames(x) <- xnames[sel]
-  }
-
-  return(x)
-}
-
-
-#' @describeIn read.as_matrix Save as matrix in a file.
-#' @export
-read.as_matrix.SAVE <- function(file) {
-  ## read delimited table automatically determine separator. allow duplicated rownames.
-  line1 <- as.character(utils::read.csv(file, comment.char = "#", sep = "\n", nrow = 1)[1, ])
-  sep <- names(which.max(sapply(c("\t", ",", ";"), function(s) length(strsplit(line1, split = s)[[1]]))))
-  x0 <- utils::read.csv(file, comment.char = "#", sep = sep, check.names = FALSE, stringsAsFactors = FALSE)
-  x <- NULL
-  sel <- which(!as.character(x0[, 1]) %in% c("", " ", "NA", "na", NA))
-  if (length(sel)) {
-    x <- as.matrix(x0[sel, -1, drop = FALSE]) ## always as matrix
-    rownames(x) <- x0[sel, 1]
-  }
-  return(x)
-}
-
-
 #' Read data file as matrix
 #'
 #' @param file Path to input data file
@@ -604,6 +496,15 @@ read.as_matrix.SAVE <- function(file) {
 #' }
 #' @export
 read.as_matrix <- function(file, skip_row_check = FALSE) {
+  ## determine if there are empty lines in header
+  x0 <- data.table::fread(
+    file = file,
+    header = FALSE,
+    nrow = 100
+  )
+  x0[is.na(x0)] <- ""
+  skip <- min(which(cumsum(rowMeans(x0 != "")) > 0)) - 1
+
   ## read delimited table automatically determine separator. allow
   ## duplicated rownames. This implements with faster fread.
   x0 <- data.table::fread(
@@ -611,30 +512,63 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
     check.names = FALSE,
     header = TRUE,
     fill = TRUE,
+    skip = skip,
     blank.lines.skip = TRUE,
     stringsAsFactors = FALSE
   )
+
   x <- NULL
   ## drop rows without rownames
   sel <- which(!as.character(x0[[1]]) %in% c("", " ", "NA", "na", NA))
 
-  ## get values from second column forward and take first column as rownames
-
+  ## get values from second column forward and take first column as
+  ## rownames. as.matrix means we do not have mixed types (such as in
+  ## dataframes).
   if (length(sel)) {
-    x <- as.matrix(x0[sel, -1, drop = FALSE]) ## always as matrix
-    rownames(x) <- x0[[1]][sel]
-  }
-  ## drop any rows with 100% missing value (sometimes added by not-so-Excel...)
-  if (!skip_row_check) { # Flag to bypass (used on contrast.csv ingest), as it can contain full NA rows
-    zero.row <- which(rowSums(is.na(x)) == ncol(x))
-    if (length(zero.row)) {
-      x <- x[-zero.row, , drop = FALSE]
+    if (ncol(x0) >= 2) {
+      x <- as.matrix(x0[sel, -1, drop = FALSE]) ## always as matrix
+      rownames(x) <- x0[[1]][sel]
+    } else {
+      x <- matrix(NA, length(sel), 0)
+      rownames(x) <- x0[[1]][sel]
     }
+  } else {
+    return(NULL)
   }
-  ## drop any 100% missing columns (sometimes added by not-so-Excel...)
-  zero.col <- which(colSums(is.na(x)) == nrow(x))
-  if (length(zero.col)) {
-    x <- x[, -zero.col, drop = FALSE]
+
+  ## for character matrix, we strip whitespace
+  if (is.character(x)) {
+    x <- trimws(x)
+  }
+
+  ## For csv with missing rownames field at (1,1) in the header,
+  ## fill=TRUE will fail. Check header with slow read.csv() and
+  ## correct if needed. fread is fast but is not so robust...
+  hdr <- utils::read.csv(
+    file = file, check.names = FALSE, na.strings = NULL,
+    header = TRUE, nrows = 1, skip = skip, row.names = 1
+  )
+
+  if (NCOL(x) > 0 && !all(colnames(x) == colnames(hdr))) {
+    message("read.as_matrix: warning correcting header")
+    colnames(x) <- colnames(hdr)
+  }
+
+  ## some csv have trailing empty rows/cols at end of table
+  if (NCOL(x) && !skip_row_check) { # bypass in case full NA rows
+    empty.row <- (rowSums(is.na(x)) == ncol(x))
+    if (tail(empty.row, 1)) {
+      n <- which(!rev(empty.row))[1] - 1
+      ii <- (nrow(x) - n + 1):nrow(x)
+      x <- x[-ii, , drop = FALSE]
+    }
+    ## some csv have trailing empty columns at end of table
+    empty.col <- (colSums(is.na(x)) == nrow(x))
+    if (tail(empty.col, 1)) {
+      n <- which(!rev(empty.col))[1] - 1
+      ii <- (ncol(x) - n + 1):ncol(x)
+      x <- x[, -ii, drop = FALSE]
+    }
   }
   return(x)
 }
@@ -662,7 +596,6 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
 #' \dontrun{
 #' dat <- fread.csv("data.csv")
 #' }
-
 #' @export
 fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
                       stringsAsFactors = FALSE, header = TRUE, asMatrix = TRUE) {
@@ -670,10 +603,23 @@ fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
     file = file, check.names = check.names, header = header,
     sep = sep, fill = TRUE
   )
+  if (NCOL(df) == 1) {
+    x <- matrix(NA, nrow(df), 0)
+    rownames(x) <- df[[row.names]] ## allow dups if matrix
+    return(x)
+  }
   x <- data.frame(df[, 2:ncol(df)],
     stringsAsFactors = stringsAsFactors,
     check.names = check.names
   )
+  ## check&correct for truncated header
+  hdr <- colnames(read.csv(file,
+    nrow = 1, sep = sep, header = TRUE,
+    row.names = 1, check.names = check.names
+  ))
+  if (!all(colnames(x) == hdr)) {
+    colnames(x) <- hdr
+  }
   is.num <- all(sapply(x, class) == "numeric")
   is.char <- all(sapply(x, class) == "character")
   is.int <- all(sapply(x, class) == "integer")
@@ -1161,11 +1107,11 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 #'
 #' @param pgx A pgx object with the pgx$organism information and the pgx$counts slot for the
 #' guessing approach.
-#' @param capitalise logical: by default FALSE. Parameter to capitalise the first letter of the 
+#' @param capitalise logical: by default FALSE. Parameter to capitalise the first letter of the
 #' specie if mouse or human.
-#' @details This function retreives the pgx$organism slot. If it is not found, then it examines 
-#' the gene identifiers in the row names of a count matrix to determine if the data is from human 
-#' or mouse (main organism supported in the old playbase version). It checks if the identifiers 
+#' @details This function retreives the pgx$organism slot. If it is not found, then it examines
+#' the gene identifiers in the row names of a count matrix to determine if the data is from human
+#' or mouse (main organism supported in the old playbase version). It checks if the identifiers
 #' match common patterns found in mouse genes, like "rik", "loc", "orf". If more than 20% match
 #'  these mouse patterns, it assigns the organism as "mouse". Otherwise it assigns "human".
 #'
@@ -1173,21 +1119,20 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 #' If this fraction is >0.8, it assigns "human". This relies on the assumption that human data
 #' will tend to have more uppercase ENSEMBL identifiers.
 #'
-#' @return Character string the organism. 
+#' @return Character string the organism.
 #' @export
 pgx.getOrganism <- function(pgx, capitalise = FALSE) {
-
   pgx.counts <- pgx$counts
   if (!is.null(pgx$organism)) {
     org <- pgx$organism
   } else {
-  rownames.counts <- grep("^rik|^loc|^orf", rownames(pgx$counts),
-    value = TRUE,
-    ignore.case = TRUE, invert = TRUE
-  )
-  cap.fraction <- mean(grepl("^[A-Z][a-z]+", rownames.counts), na.rm = TRUE)
-  is.mouse <- (cap.fraction > 0.8)
-  org <- ifelse(is.mouse, "mouse", "human")
+    rownames.counts <- grep("^rik|^loc|^orf", rownames(pgx$counts),
+      value = TRUE,
+      ignore.case = TRUE, invert = TRUE
+    )
+    cap.fraction <- mean(grepl("^[A-Z][a-z]+", rownames.counts), na.rm = TRUE)
+    is.mouse <- (cap.fraction > 0.8)
+    org <- ifelse(is.mouse, "mouse", "human")
   }
 
   if (capitalise && org %in% c("mouse", "human")) {
@@ -1555,7 +1500,7 @@ filterProbes <- function(genes, gg) {
   } else {
     p3 <- rep(FALSE, nrow(genes))
   }
-  
+
   # Ensure all p* are valids
   p_list <- list(p0, p1, p2, p3)
   p_list <- p_list[sapply(p_list, length) > 0]
@@ -1571,10 +1516,10 @@ filterProbes <- function(genes, gg) {
 
 #' Rename rownames of counts matrix by annotation table
 #'
-#' @param counts Numeric matrix of counts, with genes/probes as rownames. 
+#' @param counts Numeric matrix of counts, with genes/probes as rownames.
 #' @param annot_table Data frame with rownames matching counts and annotation columns.
 #' @param new_id_col Column name in annot_table containing new identifiers. Default 'symbol'.
-#' 
+#'
 #' @return Matrix with rownames changed to values from annot_table.
 #' Duplicate new rownames are summed.
 #'
@@ -1582,21 +1527,20 @@ filterProbes <- function(genes, gg) {
 #' Looks up the `new_id_col` in the annot_table and replaces counts rownames.
 #' Handles special cases like missing values.
 #' Sums duplicate rows after renaming.
-#' 
-#' @export 
+#'
+#' @export
 rename_by <- function(counts, annot_table, new_id_col = "symbol") {
-  symbol <- annot_table[rownames(counts), new_id_col] 
+  symbol <- annot_table[rownames(counts), new_id_col]
 
   # Guard agaisn human_hommolog == NA
-  if (all(is.na(symbol))) { 
-    symbol <- annot_table[rownames(counts), "symbol"] 
-
+  if (all(is.na(symbol))) {
+    symbol <- annot_table[rownames(counts), "symbol"]
   }
 
   # Sum columns of rows with the same gene symbol
   if (is.matrix(counts) | is.data.frame(counts)) {
     rownames(counts) <- symbol
-    return(counts[!rownames(counts) %in% c("", "NA"),, drop = FALSE])
+    return(counts[!rownames(counts) %in% c("", "NA"), , drop = FALSE])
   } else {
     return(symbol)
   }
@@ -2285,7 +2229,7 @@ expandPhenoMatrix <- function(pheno, drop.ref = TRUE) {
 #' cor.pvalue(0.8, 100)
 #' }
 #' @export
-cor.pvalue <- function(x, n) stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
+cor.pvalue <- function(x, n) 2 * stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
 
 
 #' @title Get gene sets from playbase data
