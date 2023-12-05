@@ -4083,7 +4083,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
                           xlab = "effect size (logFC)", ylab = "significance (-log10p)",
                           lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
                           marker.size = 5, label = NULL, label.cex = 1,
-                          marker.type = "scatter", displayModeBar = TRUE) {
+                          marker.type = "scatter", displayModeBar = TRUE, max.absy = NULL) {
   if (is.null(highlight)) highlight <- names
   i0 <- which(!names %in% highlight)
   i1 <- which(names %in% highlight)
@@ -4101,7 +4101,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         mode = "markers",
         marker = list(
           size = marker.size,
-          color = "#ccc"
+          color = "#cccccc"
         ),
         showlegend = showlegend
       )
@@ -4115,7 +4115,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         type = marker.type, 
         mode = "markers",
         marker = list(
-          size = 5,
+          size = marker.size,
           color = "#1f77b4"
         ),
         showlegend = showlegend
@@ -4154,7 +4154,10 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
     line = list(dash = "dot", width = 1, color = "grey")
   )
   max.absx <- max(max(abs(x), na.rm = TRUE), lfc * 1.2)
-  max.absy <- max(max(abs(y), na.rm = TRUE), y0 * 1.2)
+
+  if (is.null(max.absy)) {
+    max.absy <- max(max(abs(y), na.rm = TRUE), y0 * 1.2)
+  } 
   xrange <- c(-1, 1) * max.absx * 1.05
   if (min(x) >= 0) xrange <- c(0, 1) * max.absx * 1.05
   yrange <- c(0, 1) * max.absy * 1.05
@@ -4178,6 +4181,106 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
       )
     )
   p
+}
+
+
+#' @export
+plotlyVolcano_multi <- function(FC, 
+                                Q, 
+                                names = NULL, 
+                                fdr = 0.05, 
+                                lfc = 0, 
+                                share_axis = FALSE, 
+                                title_y =  "significance (-log10q)", 
+                                title_x = "effect size (log2FC)", 
+                                cex = 3, 
+                                yrange = 0.5, 
+                                n_rows = 2, 
+                                margin_l = 50, 
+                                margin_b = 50, 
+                                interplot_margin = c(0.01, 0.0, 0.05, 0.1),
+                                annotation_args = list(),
+                                layout_args = list(),
+                                ...) {
+
+  ## Get tables and genes
+  fc <- as.matrix(FC)
+  qv <- as.matrix(Q)
+  if (is.null(names)) {
+    all_genes <- rownames(FC)
+  }
+  titles <- colnames(fc)
+
+  # Prepare collection list
+  nplots <- min(24, length(titles))
+  sub_plots <- vector("list", length = length(nplots))
+  if (nplots <= 5 && n_rows  > 1) {
+    n_rows <- n_rows - 1
+    }
+  for (i in 1:nplots) {
+    fx <- fc[, i]
+    qval <- qv[, i]
+    title_i <- titles[i]
+    is.sig <- (qval <= fdr & abs(fx) >= lfc)
+    sig.genes <- all_genes[is.sig]
+    qval <- -log(qval + 1e-12) # Add 1e-12 to remove 0, and avoid Infs
+    if (share_axis) {
+      title_loc <- -log(min(qv + 1e-12, na.rm = TRUE))
+      title_loc <- title_loc - title_loc *(yrange/10) 
+    } else {
+      title_loc <- max(qval, na.rm = TRUE) - max(qval, na.rm = TRUE) *(yrange/10) 
+    }
+    # Call volcano plot
+    sub_plots[[i]] <- plotlyVolcano(
+      x = fx,
+      y = qval,
+      names = all_genes,
+      source = "plot1",
+      marker.type = "scattergl",
+      highlight = sig.genes,
+      group.names = c("group1", "group0"),
+      psig = fdr,
+      lfc = lfc,
+      marker.size = cex,
+      showlegend = FALSE,
+      ...
+      # Add plot title
+    ) %>% plotly::add_annotations(
+        text = paste("<b>", title_i, "</b>"),
+        font = list(size = 15),
+        showarrow = FALSE,
+        xanchor = "centre",
+        yanchor = "bottom",
+        x = 0,
+        y = title_loc
+    ) 
+  }
+
+  # Pass argument scale_per_plot to subplot
+  shareY <- shareX <- ifelse(share_axis, TRUE, FALSE)
+
+  # Arrange subplots
+  suppressWarnings(
+  all_plts <- plotly::subplot(sub_plots, nrows = n_rows , margin = interplot_margin, 
+  titleY = FALSE, titleX = FALSE, shareX = shareX, shareY = shareY) %>%
+  
+  # Add common axis titles
+  plotly::layout(
+            annotations = modifyList(list(
+            list(x = -0.025, y = 0.5, text = title_y,
+                  font = list(size = 13),
+                  textangle = 270,
+                  showarrow = FALSE, xref='paper', yref='paper'),
+            list(x = 0.5, y = -0.10, text = title_x,
+                  font = list(size = 13),
+                  showarrow = FALSE, xref='paper', yref='paper')
+            ), annotation_args),
+              margin = modifyList(list(l = margin_l, b = margin_b), 
+                                  layout_args)
+    )
+  )
+
+  return(all_plts)
 }
 
 
