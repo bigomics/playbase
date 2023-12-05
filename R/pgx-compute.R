@@ -153,6 +153,7 @@ pgx.createPGX <- function(counts,
                           do.clustergenes = TRUE,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE,
+                          remove.outliers = TRUE,
                           normalize = TRUE) {
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("dimension of counts and X do not match\n")
@@ -224,8 +225,11 @@ pgx.createPGX <- function(counts,
 
   ## remove samples from counts matrix with extreme (1000x more or
   ## 1000x less) total counts (than median).
-  counts <- counts.removeOutliers(counts)
-
+  if(remove.outliers) {
+    message("[createPGX] removing outliers samples ")    
+    counts <- counts.removeOutliers(counts)
+  }
+  
   ## -------------------------------------------------------------------
   ## Auto-scaling (scale down huge values, often in proteomics)
   ## -------------------------------------------------------------------
@@ -351,8 +355,8 @@ pgx.createPGX <- function(counts,
 
     # merge features_collapsde_by_symbol with pgx$genes by the column symbol
     pgx$genes <- merge(pgx$genes, features_collapsed_by_symbol, by = "symbol")
-    rownames(pgx$genes) <- pgx$genes$symbol
-    pgx$counts <- pgx$counts[pgx$genes$symbol, , drop = FALSE]
+    rownames(pgx$genes) = pgx$genes$symbol
+    pgx$counts <- pgx$counts[rownames(pgx$genes), , drop = FALSE]
   }
 
   ## -------------------------------------------------------------------
@@ -361,7 +365,6 @@ pgx.createPGX <- function(counts,
   if (filter.genes) {
     ## There is second filter in the statistics computation. This
     ## first filter is primarily to reduce the counts table.
-
     message("[createPGX] filtering out not-expressed genes (zero counts)...")
     pgx <- pgx.filterZeroCounts(pgx)
 
@@ -391,6 +394,7 @@ pgx.createPGX <- function(counts,
     if (!is.null(pgx$X)) {
       pgx$X <- pgx$X[keep, , drop = FALSE]
     }
+
   }
 
   ## -------------------------------------------------------------------
@@ -546,7 +550,6 @@ pgx.computePGX <- function(pgx,
   ## Filter genes (previously in compute_testGenesSingleOmics). NEED
   ## RETHINK?? MOVE TO PGXCREATE??
   ## -----------------------------------------------------------------------------
-
   ## Shrink number of genes (highest SD/var)
   if (max.genes > 0 && nrow(pgx$counts) > max.genes) {
     cat("shrinking data matrices: n=", max.genes, "\n")
@@ -742,7 +745,7 @@ counts.mergeDuplicateFeatures <- function(counts) {
 pgx.filterZeroCounts <- function(pgx) {
   ## There is second filter in the statistics computation. This
   ## first filter is primarily to reduce the counts table.
-  message("[createPGX] filtering out not-expressed genes...")
+  message("[createPGX] filtering out not-expressed genes (zero counts)...")
   keep <- (Matrix::rowMeans(pgx$counts > 0) > 0) ## at least in one...
   pgx$counts <- pgx$counts[keep, , drop = FALSE]
   if (!is.null(pgx$X)) {
@@ -761,8 +764,9 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   cat("filtering out", sum(!keep), "low-expressed genes\n")
   cat("keeping", sum(keep), "expressed genes\n")
   if (!is.null(pgx$X)) {
+    ## WARNING: counts and X should match dimensions.
     pgx$X <- pgx$X[keep, , drop = FALSE]
-  }
+  }  
   pgx
 }
 

@@ -4,14 +4,14 @@
 \alias{pgx.calculateWordCloud}
 \title{Calculate word frequencies for word cloud}
 \usage{
-pgx.calculateWordCloud(ngs, progress = NULL, pg.unit = 1)
+pgx.calculateWordCloud(pgx, progress = NULL, pg.unit = 1)
 }
 \arguments{
-\item{ngs}{A NGStest object containing gene set results.}
-
 \item{progress}{A progress object to track progress.}
 
 \item{pg.unit}{Increment value for progress tracking.}
+
+\item{ngs}{A NGStest object containing gene set results.}
 }
 \value{
 A matrix with word frequencies for word cloud visualization.
