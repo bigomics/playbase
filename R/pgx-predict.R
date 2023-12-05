@@ -398,9 +398,8 @@ pgx.survivalVariableImportance <- function(X, time, status,
 }
 
 
-CARET.METHODS = c("ada","AdaBag","AdaBoost.M1","amdai","ANFIS","avNNet","awnb","awtan","bag","bagEarth","bagEarthGCV","bagFDA","bagFDAGCV","bartMachine","bayesglm","bdk","binda","blackboost","Boruta","brnn","BstLm","bstSm","bstTree","C5.0","C5.0Cost","C5.0Rules","C5.0Tree","cforest","chaid","CSimca","ctree","ctree2","cubist","DENFIS","dnn","dwdLinear","dwdPoly","dwdRadial","earth","elm","enet","enpls","enpls.fs","evtree","extraTrees","fda","FH.GBML","FIR.DM","foba","FRBCS.CHI","FRBCS.W","FS.HGD","gam","gamboost","gamLoess","gamSpline","gaussprLinear","gaussprPoly","gaussprRadial","gbm","gcvEarth","GFS.FR.MOGUL","GFS.GCCL","GFS.LT.RS","GFS.THRIFT","glm","glmboost","glmnet","glmStepAIC","gpls","hda","hdda","HYFIS","icr","J48","JRip","kernelpls","kknn","knn","krlsPoly","krlsRadial","lars","lars2","lasso","lda","lda2","leapBackward","leapForward","leapSeq","Linda","lm","lmStepAIC","LMT","loclda","logicBag","LogitBoost","logreg","lssvmLinear","lssvmPoly","lssvmRadial","lvq","M5","M5Rules","mda","Mlda","mlp","mlpWeightDecay","multinom","nb","nbDiscrete","nbSearch","neuralnet","nnet","nnls","nodeHarvest","oblique.tree","OneR","ORFlog","ORFpls","ORFridge","ORFsvm","ownn","pam","parRF","PART","partDSA","pcaNNet","pcr","pda","pda2","penalized","PenalizedLDA","plr","pls","plsRglm","polr","ppr","protoclass","pythonKnnReg","qda","QdaCov","qrf","qrnn","ranger","rbf","rbfDDA","rda","relaxo","rf","rFerns","RFlda","rfRules","ridge","rknn","rknnBel","rlm","rmda","rocc","rotationForest","rotationForestCp","rpart","rpart2","rpartCost","rqlasso","rqnc","RRF","RRFglobal","rrlda","RSimca","rvmLinear","rvmPoly","rvmRadial","SBC","sda","sddaLDA","sddaQDA","sdwd","simpls","SLAVE","slda","smda","snn","sparseLDA","spls","stepLDA","stepQDA","superpc","svmBoundrangeString","svmExpoString","svmLinear","svmLinear2","svmPoly","svmRadial","svmRadialCost","svmRadialWeights","svmSpectrumString","tan","tanSearch","treebag","vbmpRadial","widekernelpls","WM","wsrf","xgbLinear","xgbTree","xyf")
-
 CARET.METHODS <- c('svmLinear','rpart','glm','glmStepAIC','pda','sparseLDA','pls','plsda')
+CARET.METHODS <- c('pls','plsda')
 
 #' @describeIn pgx.survivalVariableImportance Calculates variable importance scores for predictors of a multiclass response using various methods.
 #' @param y Multiclass factor response variable. Contains the class labels for each sample
@@ -416,10 +415,14 @@ pgx.variableImportance <- function(X, y,
   xnames <- rownames(X)
   
   if (nrow(X) == 1) X <- rbind(X, X)
+
+  ## drop missing??
+  sel <- which(!is.na(y) & y!='')
+  X <- X[,sel,drop=FALSE]
+  y <- y[sel]
   
   ## convert to factor
   y <- factor(as.character(y))
-
 
   ## resample to minimum size to balance groups
   if(resample > 0) {
