@@ -91,7 +91,7 @@ compute_extra <- function(pgx, extra = c(
     message(">>> inferring extra phenotypes...")
     tt <- system.time({
       pgx <- tryCatch(
-        compute_cellcycle_gender(pgx, rna.counts = rna.counts, full = FALSE),
+        compute_cellcycle_gender(pgx, rna.counts = rna.counts),
         error = function(e) {
           write(as.character(e), file = paste0(user_input_dir, "/ERROR_INFERENCE"))
           return(pgx)
