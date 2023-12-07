@@ -59,19 +59,17 @@
 detect_probe <- function(probes, mart = NULL, verbose = TRUE) {
   # Check mart
   if (is.null(mart)) {
-    stop("Mart not found. Please specify a BioMart database to use.")
+    stop("[detect_probe] Mart not found. Specify a BioMart database to use.")
   }
   # Prepare inputs
-  if (verbose) {
-    message("[createPGX] Guessing probe type...")
-  }
+  if (verbose) message("[detect_probe] guessing probe type...")
+
   clean_probes <- probes[!is.na(probes)]
   n <- length(clean_probes)
   # if number of probes above 10, keep only 10 random probes
 
   if (n > 100L) n2 <- 100L else n2 <- n
   subsample <- sample(1:n, n2)
-
 
   # Vector with input types to check
   probe_types_to_check <- c(
@@ -115,10 +113,12 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE) {
   if (all(probe_check == 0)) {
     # TODO the probe2symbol and detect_probe code should be used in data-preview,
     # and we should warn the user in case no matches are found
-    stop("Probe type not found, please, check your probes")
+    stop("[detect_probe]Probe type not found, please, check your probes")
   } else {
     probe_type <- names(which.max(probe_check))
   }
+  if (verbose) message("[detect_probe] detected probe type = ", probe_type)
+
   return(probe_type)
 }
 
@@ -165,9 +165,11 @@ detect_probe <- function(probes, mart = NULL, verbose = TRUE) {
 ngs.getGeneAnnotation <- function(
     probes,
     organism,
-    probe_type = NULL,
     mart = NULL,
-    verbose = TRUE) {
+    probe_type = NULL,
+    verbose = TRUE)
+{
+
   # Check mart
   if (is.null(mart)) {
     stop("Mart not found. Please specify a BioMart database to use.")
@@ -175,7 +177,7 @@ ngs.getGeneAnnotation <- function(
 
   # Prepare inputs
   if (verbose) {
-    message("[createPGX] Filling genes information...")
+    message("[ngs.getGeneAnnotation] Filling genes information...")
   }
 
   clean_probes <- probes[!duplicated(probes)]
@@ -253,7 +255,7 @@ ngs.getGeneAnnotation <- function(
   data.table::setnames(out, old = attr_call, new = new_names)
 
   # Reorder columns and rows
-  if ("human_ortholog" %chin% colnames(out)) {
+  if ("human_ortholog" %in% colnames(out)) {
     col_order <- c(
       "feature",
       "symbol",
@@ -367,7 +369,6 @@ pgx.gene_table <- function(pgx, organism) {
 
   # Init vals
   genes <- NULL
-  counter <- 0
   ensembl_dataset <- NULL
   counts <- pgx$counts
   probes <- rownames(counts)
@@ -381,9 +382,11 @@ pgx.gene_table <- function(pgx, organism) {
   }
 
   # Use while loop for retries
+  counter <- 0  
   while (is.null(genes) && counter <= 5) {
+    message(paste0("[pgx.gene_table] attempt to annotate genes, counter = ", counter + 1))
     # Set waiter so that we can make multiple calls with waiting time
-    Sys.sleep(counter * 60)
+    Sys.sleep(counter * 10)
 
     # Get ensembl
     if (is.null(ensembl_dataset)) {
@@ -413,6 +416,11 @@ pgx.gene_table <- function(pgx, organism) {
     counter <- counter + 1
   }
 
+  if(counter>5 && is.null(genes)) {
+    message("[pgx.gene_table] WARNING. could not reach ensembl server to get gene annotation")
+    return(pgx)
+  }
+    
   # Return data
   pgx$genes <- genes
   pgx$all_genes <- all_genes

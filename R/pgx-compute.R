@@ -154,7 +154,9 @@ pgx.createPGX <- function(counts,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE,
                           remove.outliers = TRUE,
-                          normalize = TRUE) {
+                          normalize = TRUE,
+                          use_biomart = NA
+                          ) {
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("dimension of counts and X do not match\n")
   }
@@ -298,23 +300,39 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## create gene annotation table
   ## -------------------------------------------------------------------
+  pgx$genes <- NULL
+  if(is.na(use_biomart)) {
+    use_biomart <- !(organism %in% c("Mouse", "Human", "Rat"))
+  }
+  if(!use_biomart && organism %in% c("Mouse", "Human", "Rat")) {
+      message("[createPGX] annotating genes using R libraries")      
+      probe_type <- detect_probe_DEPRECATED(
+        probes = rownames(pgx$counts),
+        organism = organism
+      )
+      probe_type      
+      pgx$genes <- ngs.getGeneAnnotation_DEPRECATED(
+        probes = rownames(pgx$counts),
+        probe_type = probe_type,
+        organism = organism
+      )
+  }
+  
+  if(!use_biomart && !(organism %in% c("Mouse", "Human", "Rat"))) {
+    message("ERROR: organism '", organism, "' not supported using R libraries.")
+    stop("ERROR: you must set 'use_biomart=TRUE' for organism: ", organism)
+  }
+  
+  if(use_biomart) {
+    message("[createPGX] annotating genes using BiomaRt")      
+    pgx <- playbase::pgx.gene_table(pgx, organism = organism) 
+  }
 
-  counter <- 0
-
-  while (!"genes" %in% names(pgx) & counter < 5) {
-    message(paste0("[createPGX] attempting to annotate genes, call number ", counter + 1))
-    Sys.sleep(60 * counter)
-    try(pgx <- playbase::pgx.gene_table(pgx, organism = organism))
-    counter <- counter + 1
+  if(is.null(pgx$genes)) {
+    stop("[createPGX] FATAL: Could not get gene annotation!")
   }
-  # For fallback purposes we can use the old method to add gene annotation if biomaRt fails
-  if (!"genes" %in% names(pgx) & organism %in% c("Mouse", "Human")) {
-    probe_type <- detect_probe_DEPRECATED(probes = rownames(pgx$counts), organism = organism)
-    pgx$genes <- ngs.getGeneAnnotation_DEPRECATED(probes = rownames(pgx$counts), probe_type = probe_type, organism = organism)
-  }
-  if (!("genes" %in% names(pgx))) {
-    stop("Could not compute gene table")
-  }
+  
+  
   ## -------------------------------------------------------------------
   ## convert probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------
