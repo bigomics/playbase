@@ -94,9 +94,8 @@ compute_extra <- function(pgx, extra = c(
         error = function(e) {
           write(as.character(e), file = paste0(pgx.dir, "/ERROR_INFERENCE"))
           return(pgx)
-      }
-)
-      pgx <-     })
+      })
+    })
     timings <- rbind(timings, c("infer", tt))
     message("<<< done!")
   }
