@@ -533,7 +533,8 @@ pgx.computePGX <- function(pgx,
                            )[c(1, 2)],
                            pgx.dir = NULL,
                            libx.dir = NULL,
-                           progress = NULL) {
+                           progress = NULL,
+                           user_input_dir=getwd()) {
   ## ======================================================================
   ## ======================================================================
   ## ======================================================================
@@ -625,7 +626,8 @@ pgx.computePGX <- function(pgx,
     pgx,
     extra = extra.methods,
     pgx.dir = pgx.dir,
-    libx.dir = libx.dir
+    libx.dir = libx.dir,
+    user_input_dir = user_input_dir
   )
 
   message("[pgx.computePGX] done!")

@@ -18,7 +18,8 @@
 compute_extra <- function(pgx, extra = c(
                             "meta.go", "infer", "deconv", "drugs", ## "graph",
                             "connectivity", "wordcloud", "wgcna"
-                          ), sigdb = NULL, pgx.dir = "./data", libx.dir = "./libx") {
+                          ), sigdb = NULL, pgx.dir = "./data", libx.dir = "./libx",
+                          user_input_dir = getwd()) {
   timings <- c()
 
   if (length(extra) == 0) {
@@ -59,7 +60,7 @@ compute_extra <- function(pgx, extra = c(
       pgx$meta.go <- tryCatch(
         pgx.computeCoreGOgraph(pgx, fdr = 0.20),
         error = function(e){
-        write(as.character(e), file = paste0(pgx.dir, "/ERROR_METAGO"))
+        write(as.character(e), file = paste0(user_input_dir, "/ERROR_METAGO"))
         return(NULL)
       })
     })
@@ -78,7 +79,7 @@ compute_extra <- function(pgx, extra = c(
           full = FALSE
         )
       }, error = function(e) {
-        write(as.character(e), file = paste0(pgx.dir, "/ERROR_DECONVOLUTIION"))
+        write(as.character(e), file = paste0(user_input_dir, "/ERROR_DECONVOLUTIION"))
         return(pgx)
       })
     })
@@ -92,7 +93,7 @@ compute_extra <- function(pgx, extra = c(
       pgx <- tryCatch(
         compute_cellcycle_gender(pgx, rna.counts = rna.counts, full = FALSE),
         error = function(e) {
-          write(as.character(e), file = paste0(pgx.dir, "/ERROR_INFERENCE"))
+          write(as.character(e), file = paste0(user_input_dir, "/ERROR_INFERENCE"))
           return(pgx)
       })
     })
@@ -108,7 +109,7 @@ compute_extra <- function(pgx, extra = c(
       pgx <- tryCatch({
         compute_drugActivityEnrichment(pgx, libx.dir = libx.dir)
       }, error = function(e){
-        write(as.character(e), file = paste0(pgx.dir, "/ERROR_DRUG_ACTIVITY"))
+        write(as.character(e), file = paste0(user_input_dir, "/ERROR_DRUG_ACTIVITY"))
         return(pgx)
         })
     })
@@ -120,7 +121,7 @@ compute_extra <- function(pgx, extra = c(
         PGX <- tryCatch({
           compute_drugSensitivityEnrichment(pgx, libx.dir)
         }, error = function(e) {
-          write(as.character(e), file = paste0(pgx.dir, "/ERROR_DRUG_SENSITIVITY"))
+          write(as.character(e), file = paste0(user_input_dir, "/ERROR_DRUG_SENSITIVITY"))
           return(pgx)
           })
       })
@@ -137,7 +138,7 @@ compute_extra <- function(pgx, extra = c(
      pgx <- tryCatch({
         compute_omicsGraphs(pgx)
       }, error = function(e){
-        write(as.character(e), file = paste0(pgx.dir, "/ERROR_GRAPH"))
+        write(as.character(e), file = paste0(user_input_dir, "/ERROR_GRAPH"))
         return(pgx)
         })
     })
@@ -150,7 +151,7 @@ compute_extra <- function(pgx, extra = c(
     tt <- system.time({
       res <- tryCatch(pgx.calculateWordCloud(pgx, progress = NULL, pg.unit = 1),
               error = function(e){
-                write(as.character(e), file = paste0(pgx.dir, "/ERROR_WORDCLOUD"))
+                write(as.character(e), file = paste0(user_input_dir, "/ERROR_WORDCLOUD"))
                 return(NULL)
               })
     })
@@ -200,7 +201,7 @@ compute_extra <- function(pgx, extra = c(
                 remove.le = TRUE
               )
             }, error = function(e){
-              write(as.character(e), file = paste0(pgx.dir, "/ERROR_CONNECTIVITY"))
+              write(as.character(e), file = paste0(user_input_dir, "/ERROR_CONNECTIVITY"))
               return(NULL)
             })
             if(!is.null(scores)) {
@@ -224,7 +225,7 @@ compute_extra <- function(pgx, extra = c(
       tryCatch({
         pgx$wgcna <- pgx.wgcna(pgx)
       }, error = function(e){
-        write(as.character(e), file = paste0(pgx.dir, "/ERROR_WGCNA"))
+        write(as.character(e), file = paste0(user_input_dir, "/ERROR_WGCNA"))
         return(NULL)
       })
     })
