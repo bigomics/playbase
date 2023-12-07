@@ -58,8 +58,10 @@ compute_extra <- function(pgx, extra = c(
     tt <- system.time({
       pgx$meta.go <- tryCatch(
         pgx.computeCoreGOgraph(pgx, fdr = 0.20),
-        error = function(e) NULL
-      )
+        error = function(e){
+        write(as.character(e), file = paste0(pgx.dir, "/ERROR_METAGO"))
+        return(NULL)
+      })
     })
     timings <- rbind(timings, c("meta.go", tt))
     message("<<< done!")
@@ -76,7 +78,8 @@ compute_extra <- function(pgx, extra = c(
           full = FALSE
         )
       }, error = function(e) {
-        pgx
+        write(as.character(e), file = paste0(pgx.dir, "/ERROR_DECONVOLUTIION"))
+        return(pgx)
       })
     })
     timings <- rbind(timings, c("deconv", tt))
@@ -99,7 +102,10 @@ compute_extra <- function(pgx, extra = c(
     tt <- system.time({
       pgx <- tryCatch({
         compute_drugActivityEnrichment(pgx, libx.dir = libx.dir)
-      }, error = function(e) pgx)
+      }, error = function(e){
+        write(as.character(e), file = paste0(pgx.dir, "/ERROR_DRUG_ACTIVITY"))
+        return(pgx)
+        })
     })
     timings <- rbind(timings, c("drugs", tt))
 
@@ -108,7 +114,10 @@ compute_extra <- function(pgx, extra = c(
       tt <- system.time({
         PGX <- tryCatch({
           compute_drugSensitivityEnrichment(pgx, libx.dir)
-        }, error = function(e) pgx)
+        }, error = function(e) {
+          write(as.character(e), file = paste0(pgx.dir, "/ERROR_DRUG_SENSITIVITY"))
+          return(pgx)
+          })
       })
       timings <- rbind(timings, c("drugs-sx", tt))
     } else {
@@ -122,7 +131,10 @@ compute_extra <- function(pgx, extra = c(
     tt <- system.time({
      pgx <- tryCatch({
         compute_omicsGraphs(pgx)
-      }, error = function(e) pgx)
+      }, error = function(e){
+        write(as.character(e), file = paste0(pgx.dir, "/ERROR_GRAPH"))
+        return(pgx)
+        })
     })
     timings <- rbind(timings, c("graph", tt))
     message("<<< done!")
@@ -132,7 +144,10 @@ compute_extra <- function(pgx, extra = c(
     message(">>> computing WordCloud statistics...")
     tt <- system.time({
       res <- tryCatch(pgx.calculateWordCloud(pgx, progress = NULL, pg.unit = 1),
-              error = function(e) NULL)
+              error = function(e){
+                write(as.character(e), file = paste0(pgx.dir, "/ERROR_WORDCLOUD"))
+                return(NULL)
+              })
     })
     timings <- rbind(timings, c("wordcloud", tt))
     pgx$wordcloud <- res
@@ -179,10 +194,16 @@ compute_extra <- function(pgx, extra = c(
                 contrasts = NULL,
                 remove.le = TRUE
               )
-            db0 <- sub(".*/", "", db)
-            pgx$connectivity[[db0]] <- scores
+            }, error = function(e){
+              write(as.character(e), file = paste0(pgx.dir, "/ERROR_CONNECTIVITY"))
+              return(NULL)
+            })
+            if(!is.null(scores)) {
+              db0 <- sub(".*/", "", db)
+              pgx$connectivity[[db0]] <- scores
+            }
             remove(scores)
-            }, error = function(e) NULL)
+            
           })
           timings <- rbind(timings, c("connectivity", tt))
         }
@@ -197,7 +218,10 @@ compute_extra <- function(pgx, extra = c(
     tt <- system.time({
       tryCatch({
         pgx$wgcna <- pgx.wgcna(pgx)
-      }, error = function(e) NULL)
+      }, error = function(e){
+        write(as.character(e), file = paste0(pgx.dir, "/ERROR_WGCNA"))
+        return(NULL)
+      })
     })
     timings <- rbind(timings, c("wgcna", tt))
   }
