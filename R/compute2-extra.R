@@ -89,8 +89,14 @@ compute_extra <- function(pgx, extra = c(
   if ("infer" %in% extra) {
     message(">>> inferring extra phenotypes...")
     tt <- system.time({
-      pgx <- compute_cellcycle_gender(pgx, rna.counts = rna.counts)
-    })
+      pgx <- tryCatch(
+        compute_cellcycle_gender(pgx, rna.counts = rna.counts, full = FALSE),
+        error = function(e) {
+          write(as.character(e), file = paste0(pgx.dir, "/ERROR_INFERENCE"))
+          return(pgx)
+      }
+)
+      pgx <-     })
     timings <- rbind(timings, c("infer", tt))
     message("<<< done!")
   }
