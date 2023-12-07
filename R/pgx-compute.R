@@ -155,8 +155,7 @@ pgx.createPGX <- function(counts,
                           remove.xxl = TRUE,
                           remove.outliers = TRUE,
                           normalize = TRUE,
-                          use_biomart = NA
-                          ) {
+                          use_biomart = NA) {
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("dimension of counts and X do not match\n")
   }
@@ -301,38 +300,38 @@ pgx.createPGX <- function(counts,
   ## create gene annotation table
   ## -------------------------------------------------------------------
   pgx$genes <- NULL
-  if(is.na(use_biomart)) {
+  if (is.na(use_biomart)) {
     use_biomart <- !(organism %in% c("Mouse", "Human", "Rat"))
   }
-  if(!use_biomart && organism %in% c("Mouse", "Human", "Rat")) {
-      message("[createPGX] annotating genes using R libraries")      
-      probe_type <- detect_probe_DEPRECATED(
-        probes = rownames(pgx$counts),
-        organism = organism
-      )
-      probe_type      
-      pgx$genes <- ngs.getGeneAnnotation_DEPRECATED(
-        probes = rownames(pgx$counts),
-        probe_type = probe_type,
-        organism = organism
-      )
+  if (!use_biomart && organism %in% c("Mouse", "Human", "Rat")) {
+    message("[createPGX] annotating genes using R libraries")
+    probe_type <- detect_probe_DEPRECATED(
+      probes = rownames(pgx$counts),
+      organism = organism
+    )
+    probe_type
+    pgx$genes <- ngs.getGeneAnnotation_DEPRECATED(
+      probes = rownames(pgx$counts),
+      probe_type = probe_type,
+      organism = organism
+    )
   }
-  
-  if(!use_biomart && !(organism %in% c("Mouse", "Human", "Rat"))) {
+
+  if (!use_biomart && !(organism %in% c("Mouse", "Human", "Rat"))) {
     message("ERROR: organism '", organism, "' not supported using R libraries.")
     stop("ERROR: you must set 'use_biomart=TRUE' for organism: ", organism)
   }
-  
-  if(use_biomart) {
-    message("[createPGX] annotating genes using BiomaRt")      
-    pgx <- playbase::pgx.gene_table(pgx, organism = organism) 
+
+  if (use_biomart) {
+    message("[createPGX] annotating genes using BiomaRt")
+    pgx <- playbase::pgx.gene_table(pgx, organism = organism)
   }
 
-  if(is.null(pgx$genes)) {
+  if (is.null(pgx$genes)) {
     stop("[createPGX] FATAL: Could not get gene annotation!")
   }
-  
-  
+
+
   ## -------------------------------------------------------------------
   ## convert probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------

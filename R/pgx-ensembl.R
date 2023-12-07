@@ -167,9 +167,7 @@ ngs.getGeneAnnotation <- function(
     organism,
     mart = NULL,
     probe_type = NULL,
-    verbose = TRUE)
-{
-
+    verbose = TRUE) {
   # Check mart
   if (is.null(mart)) {
     stop("Mart not found. Please specify a BioMart database to use.")
@@ -382,7 +380,7 @@ pgx.gene_table <- function(pgx, organism) {
   }
 
   # Use while loop for retries
-  counter <- 0  
+  counter <- 0
   while (is.null(genes) && counter <= 5) {
     message(paste0("[pgx.gene_table] attempt to annotate genes, counter = ", counter + 1))
     # Set waiter so that we can make multiple calls with waiting time
@@ -416,11 +414,11 @@ pgx.gene_table <- function(pgx, organism) {
     counter <- counter + 1
   }
 
-  if(counter>5 && is.null(genes)) {
+  if (counter > 5 && is.null(genes)) {
     message("[pgx.gene_table] WARNING. could not reach ensembl server to get gene annotation")
     return(pgx)
   }
-    
+
   # Return data
   pgx$genes <- genes
   pgx$all_genes <- all_genes
