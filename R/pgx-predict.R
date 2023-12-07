@@ -403,9 +403,8 @@ CARET.METHODS <- c("pls", "plsda")
 
 ## for compatibility before v3.3.0
 #' @export
-pgx.multiclassVariableImportance <- function(X, y, methods)
-{
-  res <- pgx.variableImportance(X=X, y=y, methods = methods)
+pgx.multiclassVariableImportance <- function(X, y, methods) {
+  res <- pgx.variableImportance(X = X, y = y, methods = methods)
   res$importance
 }
 
