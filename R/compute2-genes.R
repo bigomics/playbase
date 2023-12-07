@@ -23,8 +23,8 @@ compute_testGenes <- function(pgx, contr.matrix, max.features = 1000,
                               test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
                               use.design = TRUE, prune.samples = FALSE,
                               remove.outputs = TRUE) {
-  single.omics <- mean(grepl("\\[", rownames(pgx$counts))) < 0.1
-  single.omics
+  # TEMPORARY ONLY SINGLE OMICS
+  single.omics <- TRUE
   data.types <- unique(gsub("\\[|\\].*", "", rownames(pgx$counts)))
   ## data.types
   if (single.omics || length(data.types) == 1) {

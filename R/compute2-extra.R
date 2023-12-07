@@ -28,8 +28,8 @@ compute_extra <- function(pgx, extra = c(
   if (!is.null(libx.dir) && !dir.exists(libx.dir)) libx.dir <- NULL
 
   ## detect if it is single or multi-omics
-  single.omics <- !any(grepl("\\[", rownames(pgx$counts)))
-  single.omics
+  # TEMPORARY ONLY SINGLE OMICS
+  single.omics <- TRUE
   if (single.omics) {
     message(">>> computing extra for SINGLE-OMICS")
     rna.counts <- pgx$counts
