@@ -401,6 +401,14 @@ pgx.survivalVariableImportance <- function(X, time, status,
 CARET.METHODS <- c("svmLinear", "rpart", "glm", "glmStepAIC", "pda", "sparseLDA", "pls", "plsda")
 CARET.METHODS <- c("pls", "plsda")
 
+## for compatibility before v3.3.0
+#' @export
+pgx.multiclassVariableImportance <- function(X, y, methods)
+{
+  res <- pgx.variableImportance(X=X, y=y, methods = methods)
+  res$importance
+}
+
 #' @describeIn pgx.survivalVariableImportance Calculates variable importance scores for predictors of a multiclass response using various methods.
 #' @param y Multiclass factor response variable. Contains the class labels for each sample
 #' @export
