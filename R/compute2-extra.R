@@ -71,7 +71,6 @@ compute_extra <- function(pgx, extra = c(
   if ("deconv" %in% extra) {
     message(">>> computing deconvolution")
     tt <- system.time({
-      pgx = 1
       pgx <- tryCatch({
         compute_deconvolution(
           pgx,
