@@ -3469,7 +3469,6 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
       label = label1
     )
     rownames(df) <- rownames(pos)
-
     ## plot low values first
     df <- df[order(abs(z)), , drop = FALSE]
 
@@ -3516,7 +3515,6 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
         type = "scattergl"
       )
   }
-
   ## plot not missing values
   jj <- which(!is.na(df$value))
   pt.opacity <- 1
@@ -3727,7 +3725,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     plt <- plt %>%
       plotly::layout(
         margin = list(l = 10, r = 10, b = 10, t = 10)
-      )
+      ) 
   }
   plt
 }
@@ -3949,8 +3947,7 @@ plotlyMA <- function(x, y, names, source = "plot1",
   i0 <- which(!names %in% highlight)
   i1 <- which(names %in% highlight)
 
-  p <- plotly::plot_ly(
-  )
+  p <- plotly::plot_ly()
 
   p <- p %>%
     plotly::event_register("plotly_hover") %>%
@@ -4051,9 +4048,10 @@ plotlyMA <- function(x, y, names, source = "plot1",
       borderpad = 3,
       bordercolor = "black",
       borderwidth = 0.6
-    )
+    ) %>%
+    plotly_build_light(.)
 
-  p
+  return(p)
 }
 
 
@@ -4179,8 +4177,9 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
       legend = list(
         font = list(size = 12)
       )
-    )
-  p
+    ) %>%
+    plotly_build_light(.)
+  return(p)
 }
 
 
@@ -4188,8 +4187,11 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
 plotlyVolcano_multi <- function(FC, 
                                 Q, 
                                 names = NULL, 
+                                by_sig = TRUE,
                                 fdr = 0.05, 
                                 lfc = 0, 
+                                gset = NULL,
+                                label = NULL,
                                 share_axis = FALSE, 
                                 title_y =  "significance (-log10q)", 
                                 title_x = "effect size (log2FC)", 
@@ -4213,17 +4215,33 @@ plotlyVolcano_multi <- function(FC,
 
   # Prepare collection list
   nplots <- min(24, length(titles))
-  sub_plots <- vector("list", length = length(nplots))
-  if (nplots <= 5 && n_rows  > 1) {
-    n_rows <- n_rows - 1
-    }
+  sub_plots <- vector("list", length = length(nplots))  
   for (i in 1:nplots) {
-    fx <- fc[, i]
-    qval <- qv[, i]
+
+    # Input variables
+    fx <- fc[, i, drop = FALSE]
+    qval <- qv[, i, drop = FALSE]
     title_i <- titles[i]
-    is.sig <- (qval <= fdr & abs(fx) >= lfc)
-    sig.genes <- all_genes[is.sig]
-    qval <- -log(qval + 1e-12) # Add 1e-12 to remove 0, and avoid Infs
+
+    # Set marker colour group
+    if (by_sig) {
+      is.sig <- (qval <= fdr & abs(fx) >= lfc)
+      sig.genes <- all_genes[is.sig]
+    } else if (!is.null(gset)) {
+      sig.genes <- all_genes[all_genes %in% gset]
+    } else {
+      stop("Please provide a gene set or set by_sig = TRUE")
+    }
+
+    # Take -log and add 1e-12 to remove 0, and avoid Infs
+    qval <- -log(qval + 1e-12)
+
+    # Set labels
+    if (!is.null(label) && is.matrix(label)) {
+      label <- label[, i]
+    }
+
+    # Set title
     if (share_axis) {
       title_loc <- -log(min(qv + 1e-12, na.rm = TRUE))
       title_loc <- title_loc - title_loc *(yrange/10) 
@@ -4238,10 +4256,12 @@ plotlyVolcano_multi <- function(FC,
       source = "plot1",
       marker.type = "scattergl",
       highlight = sig.genes,
+      label = label,
       group.names = c("group1", "group0"),
       psig = fdr,
       lfc = lfc,
       marker.size = cex,
+      max.absy = title_loc + title_loc *(yrange/10),
       showlegend = FALSE,
       ...
       # Add plot title
@@ -4253,13 +4273,19 @@ plotlyVolcano_multi <- function(FC,
         yanchor = "bottom",
         x = 0,
         y = title_loc
-    ) 
+    ) %>% plotly_build_light(.)
   }
 
   # Pass argument scale_per_plot to subplot
   shareY <- shareX <- ifelse(share_axis, TRUE, FALSE)
-
+  
   # Arrange subplots
+  if (nplots <= 5 && n_rows  > 1) {
+    n_rows <- n_rows - 1
+  }
+  if (nplots == 1) {
+    n_rows <- 1
+  }
   suppressWarnings(
   all_plts <- plotly::subplot(sub_plots, nrows = n_rows , margin = interplot_margin, 
   titleY = FALSE, titleX = FALSE, shareX = shareX, shareY = shareY) %>%
@@ -4283,6 +4309,116 @@ plotlyVolcano_multi <- function(FC,
   return(all_plts)
 }
 
+
+#' Build \code{plotly} data with low computation cost
+#'
+#' @description
+#' Before illustrating data using \code{plotly}, it must be built
+#' (\code{figure$x$data} are need to be made using \code{figure$x$attrs}).
+#' However, because a lot of procedures are necessary,
+#' the computation cost is relatively high.
+#' With this function, the data is built in quite short time by omitting
+#' several procedures for high-frequency data.
+#' Note that this function is not universally applicable to all \code{plotly}
+#' objects but made for high-frequency scatter data.
+#' \code{plotly::plotly_build} function may return better results in
+#' specific cases although it takes more time.
+#' @param fig \code{plotly} object.
+#' Note that \code{fig$x$attrs} is not \code{NULL} and
+#' each \code{fig$x$attrs} element has an element named \code{x}.
+#' This function generates \code{fig$x$data} using \code{fig$x$attrs}.
+#' @param vars_hf Character, optional.
+#' Variable names where high frequency data is included.
+#' It must include \code{x}.
+#' @return built \code{plotly} object
+#' @examples
+#' data(noise_fluct)
+#' plotly_build_light(
+#'   plotly::plot_ly(
+#'     x = noise_fluct$time,
+#'     y = noise_fluct$f500,
+#'     name = "level",
+#'     type = "scatter"
+#'   )
+#' )
+#'
+#' plotly_build_light(
+#'   plotly::plot_ly(
+#'     data = noise_fluct,
+#'     x = ~time,
+#'     y = ~f500,
+#'     name = "level",
+#'     type = "scatter"
+#'   )
+#' )
+#' @export
+plotly_build_light <- function(
+    fig, vars_hf = c("x", "y", "text", "hovertext")
+  ) {
+
+  # check_arguments
+  stopifnot(inherits(fig, "plotly"))
+  stopifnot(inherits(fig$x$attrs, "list"))
+  stopifnot(!is.null(names(fig$x$attrs)))
+
+  # just do plotly_build if the data is not large
+  n_x <- fig$x$attrs %>%
+    purrr::discard(~is.null(.x$type) || is.na(.x$type)) %>%
+    purrr::map_int(~length(.x$x)) %>%
+    max()
+
+  if (n_x > 1e3) {
+
+    # evaluate the trace, if necessary
+    traces_div <- fig$x$attrs %>%
+      purrr::discard(~is.null(.x$type) || is.na(.x$type)) %>%
+      purrr::imodify(
+        function(trace, uid) {
+          trace_eval <- purrr::modify_if(
+            trace,
+            lazyeval::is_formula,
+            ~lazyeval::f_eval(.x, plotly::plotly_data(fig, uid))
+          )
+
+          attrs_length <- purrr::map_int(trace_eval, length)
+
+          vars_long <- names(trace_eval[attrs_length == attrs_length["x"]])
+
+          data_long <- trace_eval[vars_long] %>%
+            data.table::setDT() %>%
+            .[,lapply(.SD, list), by = setdiff(vars_long, vars_hf)]
+
+          trace_data <- purrr::pmap(
+            data_long,
+            function(...) {
+              c(trace[setdiff(names(trace), vars_long)], list(...))
+            }
+          )
+
+          return(trace_data)
+        }
+      ) %>%
+      unlist(recursive = FALSE)
+
+    # replace attributes with the ones without high frequency data
+    # then build it
+    fig$x$attrs <- purrr::map(
+      traces_div,
+      ~.x[setdiff(names(.x), vars_hf)]
+    )
+    fig_built <- plotly::plotly_build(fig)
+
+    # directly input the high frequency data to the plotly data
+    fig_built$x$data <- purrr::map2(
+      fig_built$x$data, traces_div,
+      ~c(.x, .y[intersect(names(.y), vars_hf)])
+    )
+  } else {
+    fig_built <- plotly::plotly_build(fig)
+  }
+
+  return(fig_built)
+}
 
 #' Interactive cytoPlot using plotly
 #'
@@ -4916,6 +5052,7 @@ pgx.barplot.PLOTLY <- function(
     xaxistitle = FALSE,
     xlen = NULL,
     yrange = NULL,
+    barmode = "relative",
     font_family = "Lato",
     margin = list(l = 0, r = 0, b = 0, t = 0),
     grouped = TRUE, # true will calculate mean +/- (sd) across groups
@@ -4929,7 +5066,7 @@ pgx.barplot.PLOTLY <- function(
     data <- do.call(
       data.frame,
       stats::aggregate(
-        data[[y]],
+        data[y],
         list(data[[x]]),
         function(val) {
           c(mean = mean(val), sd = stats::sd(val))
@@ -4963,28 +5100,40 @@ pgx.barplot.PLOTLY <- function(
     data[["short.x"]] <- factor(sx, levels = sx)
   }
 
-  p <- plotly::plot_ly(
-    data = data,
-    x = data[["short.x"]],
-    hovertext = data[[x]] ## original long text
-  ) %>%
-    plotly::add_bars(
-      y = data[[y]],
+  if (is.null(fillcolor)) {
+    fillcolor <- RColorBrewer::brewer.pal(9, "Set1")
+  }
+  if (length(fillcolor) == 1) {
+    fillcolor <- rep(fillcolor, length(y))
+  }
+
+
+  p <- plotly::plot_ly() 
+  show_legend <- ifelse(length(y) > 1, TRUE, FALSE)
+  for (i in y) {
+
+    p <- p %>% plotly::add_trace(
+      type = "bar",
+      x = data[[x]],
+      y = data[, i],
+      marker = list(color = fillcolor[which(i == y)]),
+      name = gsub("y.", "", i),
       error_y = error_y,
-      marker = list(
-        color = fillcolor
-      ),
-      line = list(
-        color = linecolor
-      ),
+      hovertext = data[[x]],
       textposition = "none",
+      cliponaxis = FALSE,
       hoverinfo = hoverinfo,
       hovertemplate = paste0(
         "<b>%{hovertext}</b><br>",
         "%{yaxis.title.text}: %{y:", hoverformat, "}<br>",
-        "<extra></extra>"
-      )
-    ) %>%
+        "<extra></extra>",x
+      ),
+      showlegend = show_legend
+    ) 
+  
+  }
+  
+  p <- p %>%
     plotly::layout(
       title = list(
         text = title,
@@ -5005,6 +5154,14 @@ pgx.barplot.PLOTLY <- function(
       bargap = bargap,
       annotations = annotations
     )
+  
+  if (length(y) > 1) {
+    p <- p %>%
+      plotly::layout(
+        barmode = barmode,
+        legend = list(orientation = 'h', bgcolor = "transparent", y = 1.2)
+      )
+  }
 
   return(p)
 }
