@@ -29,7 +29,9 @@ pgx.createPGX(
   do.clustergenes = TRUE,
   only.proteincoding = TRUE,
   remove.xxl = TRUE,
-  normalize = TRUE
+  remove.outliers = TRUE,
+  normalize = TRUE,
+  use_biomart = NA
 )
 }
 \arguments{
