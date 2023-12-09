@@ -800,7 +800,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
     group.col
   }
   has.group.col <- length(group.col) > 0
-  is.group.contrast  <- has.group.col && all(samples[,group.col] %in% rownames(contrasts))
+  is.group.contrast <- has.group.col && all(samples[, group.col] %in% rownames(contrasts))
   is.sample.contrast <- nrow(contrasts) > 0 &&
     all(rownames(contrasts) %in% rownames(samples))
 
@@ -812,7 +812,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
     message("[contrasts.convertToLabelMatrix] ERROR: Invalid contrast.")
     return(NULL)
   }
-  
+
   new.contrasts <- contrasts
   ## old1: group-wise -1/0/1 matrix
   if (is.group.contrast && is.numeric.contrast) {
