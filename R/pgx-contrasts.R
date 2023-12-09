@@ -793,29 +793,26 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
 
   ## first match of group (or condition) in colum names, regard as group column
   group.col <- head(grep("group|condition", tolower(colnames(samples))), 1)
+  group.col
   if (length(group.col) == 0) {
     ## try to detect automatically
     group.col <- head(which(apply(samples, 2, function(x) all(rownames(contrasts) %in% x))), 1)
     group.col
   }
   has.group.col <- length(group.col) > 0
-  is.group.contrast <- (nrow(contrasts) < nrow(samples)) && has.group.col
-  notvalid.group.contrast <- (nrow(contrasts) < nrow(samples)) && !has.group.col
-  notvalid.sample.contrast <- (nrow(contrasts) >= nrow(samples)) &&
-    !all(rownames(contrasts) %in% rownames(samples)) &&
-    !all(rownames(samples) %in% rownames(contrasts))
-  is.sample.contrast <- (nrow(contrasts) == nrow(samples) &&
-    all(rownames(contrasts) == rownames(samples)))
+  is.group.contrast  <- has.group.col && all(samples[,group.col] %in% rownames(contrasts))
+  is.sample.contrast <- nrow(contrasts) > 0 &&
+    all(rownames(contrasts) %in% rownames(samples))
 
-  if (notvalid.group.contrast) {
+  if (!is.sample.contrast && !has.group.col) {
     message("[contrasts.convertToLabelMatrix] ERROR: Invalid group-wise contrast. could not find 'group' column.")
     return(NULL)
   }
-  if (notvalid.sample.contrast) {
-    message("[contrasts.convertToLabelMatrix] ERROR: Invalid samples-wise contrast. sample names do not match.")
+  if (!is.group.contrast && !is.sample.contrast) {
+    message("[contrasts.convertToLabelMatrix] ERROR: Invalid contrast.")
     return(NULL)
   }
-
+  
   new.contrasts <- contrasts
   ## old1: group-wise -1/0/1 matrix
   if (is.group.contrast && is.numeric.contrast) {
@@ -858,4 +855,20 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   new.contrasts[trimws(new.contrasts) %in% c("", "NA", "na", " ")] <- NA
   rownames(new.contrasts) <- rownames(samples)
   new.contrasts
+}
+
+k <- 3
+
+#' @export
+pgx.addPCcontrasts <- function(counts, k = 3) {
+  X <- edgeR::cpm(counts, log = TRUE)
+  res <- pgx.clusterBigMatrix(X, methods = "pca", dims = k)
+  pc <- res$pca3d
+  dim(pc)
+  colnames(pc) <- paste0("PC.", 1:k)
+  pc3.bin <- expandPhenoMatrix(pc, drop.ref = TRUE)
+  pc3.bin[pc3.bin == TRUE] <- "high"
+  pc3.bin[pc3.bin == FALSE] <- "low"
+  colnames(pc3.bin) <- paste0("PC", 1:k)
+  pc3.bin
 }
