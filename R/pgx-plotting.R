@@ -4234,7 +4234,7 @@ plotlyVolcano_multi <- function(FC,
     }
 
     # Take -log and add 1e-12 to remove 0, and avoid Infs
-    qval <- -log(qval + 1e-12)
+    qval <- -log10(qval + 1e-12)
 
     # Set labels
     if (!is.null(label) && is.matrix(label)) {
