@@ -69,7 +69,6 @@ compute_testGenesets <- function(pgx,
   } else {
     human_genes <- pgx$genes$symbol
   }
-  genes <- pgx$genes$symbol
 
   # Change HUMAN gene names to species symbols if NOT human and human_ortholog column is NOT all NA
   G <- G[, colnames(G) %in% human_genes]
@@ -111,11 +110,10 @@ compute_testGenesets <- function(pgx,
       annot = pgx$genes,
       filter_genes = FALSE
     )
-
-    custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes, drop = FALSE]
+    custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% pgx$genes$symbol, drop = FALSE]
     custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
-
     G <- playbase::merge_sparse_matrix(m1 = G, m2 = Matrix::t(custom_gmt))
+    G <- G[rownames(G) %in% pgx$genes$symbol, ,drop = FALSE]
     remove(custom_gmt)
   }
 
