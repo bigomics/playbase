@@ -4200,6 +4200,8 @@ plotlyVolcano_multi <- function(FC,
                                 n_rows = 2, 
                                 margin_l = 50, 
                                 margin_b = 50, 
+                                title_y_offset = -0.025,
+                                title_x_offset = -0.1,
                                 interplot_margin = c(0.01, 0.0, 0.05, 0.1),
                                 annotation_args = list(),
                                 layout_args = list(),
@@ -4243,7 +4245,7 @@ plotlyVolcano_multi <- function(FC,
 
     # Set title
     if (share_axis) {
-      title_loc <- -log(min(qv + 1e-12, na.rm = TRUE))
+      title_loc <- -log10(min(qv + 1e-12, na.rm = TRUE))
       title_loc <- title_loc - title_loc *(yrange/10) 
     } else {
       title_loc <- max(qval, na.rm = TRUE) - max(qval, na.rm = TRUE) *(yrange/10) 
@@ -4293,11 +4295,11 @@ plotlyVolcano_multi <- function(FC,
   # Add common axis titles
   plotly::layout(
             annotations = modifyList(list(
-            list(x = -0.025, y = 0.5, text = title_y,
+            list(x = title_y_offset, y = 0.5, text = title_y,
                   font = list(size = 13),
                   textangle = 270,
                   showarrow = FALSE, xref='paper', yref='paper'),
-            list(x = 0.5, y = -0.10, text = title_x,
+            list(x = 0.5, y = title_x_offset, text = title_x,
                   font = list(size = 13),
                   showarrow = FALSE, xref='paper', yref='paper')
             ), annotation_args),
