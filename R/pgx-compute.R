@@ -126,6 +126,26 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 #' @param custom.geneset Custom gene sets to test, as a named list with gmt and info elements.
 #' @param max.genesets Maximum number of gene sets to test. Default is 5000.
 #' 
+#' @details
+#' pgx.createPGX creates a pgx object with the following slots:
+#' 
+#' - `name`: Name of the dataset
+#' - `organism`: Organism for the dataset
+#' - `version`: Dataset version
+#' - `date`: Date the dataset was created
+#' - `creator`: Creator of the dataset
+#' - `datatype`: Type of data (e.g. RNA-seq, microarray)
+#' - `description`: Description of the dataset
+#' - `samples`: Sample metadata
+#' - `counts`: Raw count matrix
+#' - `contrasts`: Contrast matrix
+#' - `X`: Normalized expression matrix
+#' - `total_counts`: Total counts per sample
+#' - `counts_multiplier`: Counts multiplier for each sample
+#' - `genes`: Gene annotation data.frame (initially NULL)
+#' - `all_genes`: Full list of genes
+#' - `probe_type`: Probe type according to biomaRt classification(e.g. ensemble_id)
+#' - `GMT`: Gene set matrix
 #' @import data.table
 #' @return List. PGX object containing input data and parameters.
 #'
@@ -466,6 +486,7 @@ pgx.createPGX <- function(counts,
   return(pgx)
 }
 
+
 #' @title Compute PGX
 #' @description Main function to populate pgx with results. The function computes the analysis on a pgx object
 #'
@@ -481,6 +502,21 @@ pgx.createPGX <- function(counts,
 #' @param extra.methods Additional analysis methods to run. Default is c("meta.go", "infer", "deconv", "drugs", "wordcloud", "wgcna")[c(1, 2)].
 #' @param libx.dir Directory containing custom analysis modules.
 #' @param progress A progress object for tracking status.
+#'
+#' @details
+#' The slots created by pgx.computePGX are the following:
+#'
+#' - `tsne2d`: 2D tSNE coordinates matrix 
+#' - `tsne3d`: 3D tSNE coordinates matrix
+#' - `cluster`: List containing sample clustering results  
+#' - `cluster.genes`: List containing gene clustering results
+#' - `model.parameters`: Model parameters from normalization
+#' - `timings`: Matrix of timings for computations  
+#' - `gx.meta`: Gene metadata data.frame
+#' - `gset.meta`: Gene set metadata data.frame
+#' - `gsetX`: Gene set scores matrix
+#' - `cluster.gsets`: List of gene set clustering results
+#' - `meta.go`: GO graph and metadata
 #'
 #' @return An updated pgx object containing analysis results.
 #'
