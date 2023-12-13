@@ -532,7 +532,6 @@ pgx.createPGX <- function(counts,
 #' @export
 pgx.computePGX <- function(pgx,
                            max.genes = 19999,
-                           max.genesets = 5000,
                            gx.methods = c("trend.limma", "edger.qlf", "deseq2.wald"),
                            gset.methods = c("fisher", "gsva", "fgsea"),
                            custom.geneset = list(gmt = NULL, info = NULL),
@@ -656,8 +655,8 @@ pgx.computePGX <- function(pgx,
 
   ## ------------------ gene level tests ---------------------
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
+  
   message("[pgx.computePGX] testing genes...")
-
   pgx <- playbase::compute_testGenes(
     pgx, contr.matrix,
     max.features = max.genes,
@@ -666,20 +665,26 @@ pgx.computePGX <- function(pgx,
     prune.samples = prune.samples
   )
 
+
   ## ------------------ gene set tests -----------------------
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
-  message("[pgx.computePGX] testing genesets...")
-  pgx <- compute_testGenesets(
-    pgx = pgx,
-    custom.geneset = custom.geneset,
-    test.methods = gset.methods
-  )
+  if (pgx$organism != "No organism") {
+    message("[pgx.computePGX] testing genesets...")
+    pgx <- compute_testGenesets(
+      pgx = pgx,
+      custom.geneset = custom.geneset,
+      test.methods = gset.methods
+    )
 
-  # Cluster by genes
-  if (do.clustergenes) {
-    message("[createPGX] clustering genesets...")
-    pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset")
+    # Cluster by genes
+    if (do.clustergenesets) {
+      message("[createPGX] clustering genesets...")
+      pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset")
+    }
+
+  } else {
+    message("[pgx.computePGX] Skipping genesets test")
   }
 
   ## ------------------ extra analyses ---------------------
