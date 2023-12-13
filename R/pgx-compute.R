@@ -155,6 +155,7 @@ pgx.createPGX <- function(counts,
                           contrasts,
                           organism = "Human",
                           custom.geneset = NULL,
+                          custom_gene_table = NULL,
                           max.genesets = 5000,
                           name = "Data set",
                           datatype = "unknown",
@@ -326,7 +327,7 @@ pgx.createPGX <- function(counts,
       probes = rownames(pgx$counts),
       organism = organism
     )
-    probe_type
+
     pgx$genes <- ngs.getGeneAnnotation_DEPRECATED(
       probes = rownames(pgx$counts),
       probe_type = probe_type,
@@ -339,9 +340,13 @@ pgx.createPGX <- function(counts,
     stop("ERROR: you must set 'use_biomart=TRUE' for organism: ", organism)
   }
 
-  if (use_biomart) {
-    message("[createPGX] annotating genes using BiomaRt")
+  if (use_biomart && organism != "No organism") {
+    message("[createPGX] Annotating genes using BiomaRt")
     pgx <- playbase::pgx.gene_table(pgx, organism = organism)
+
+  } else if (organism == "No organism") {
+    message("[createPGX] Using custom gene annotation table")
+    pgx <- pgx.custom_annotation(pgx, custom_gene_table = custom_gene_table)
   }
 
   if (is.null(pgx$genes)) {
@@ -426,7 +431,7 @@ pgx.createPGX <- function(counts,
   do.filter <- (only.hugo | only.known | only.proteincoding)
   if (do.filter) {
     pgx$genes <- pgx$genes[!is.na(pgx$genes$symbol) | pgx$genes$symbol == "", ]
-    if (only.proteincoding) {
+    if (only.proteincoding && organism != "No organism") {
       pgx$genes <- pgx$genes[pgx$genes$gene_biotype %in% c("protein_coding", "protein-coding"), ]
     }
     keep <- intersect(unique(pgx$genes$gene_name), rownames(pgx$counts))
@@ -479,9 +484,13 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Add GMT
   ## -------------------------------------------------------------------
-
-  pgx <- pgx.add_GMT(pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
-
+  
+  if (organism != "No organism") {
+    pgx <- pgx.add_GMT(pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
+  } else {
+    pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
+  }
+  
   ### done
   return(pgx)
 }
