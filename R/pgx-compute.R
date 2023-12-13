@@ -122,11 +122,10 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 #' @param only.known Logical indicating whether to keep only known genes. Default is TRUE.
 #' @param only.hugo Logical indicating whether to convert symbols to HUGO names. Default is TRUE.
 #' @param convert.hugo Logical indicating whether to convert symbols to HUGO names. Default is TRUE.
-#' @param do.cluster Logical indicating whether to run sample clustering. Default is TRUE.
-#' @param cluster.contrasts Logical indicating whether to cluster contrasts. Default is FALSE.
-#' @param do.clustergenes Logical indicating whether to cluster genes. Default is TRUE.
 #' @param only.proteincoding Logical indicating whether to keep only protein-coding genes. Default is TRUE.
-#'
+#' @param custom.geneset Custom gene sets to test, as a named list with gmt and info elements.
+#' @param max.genesets Maximum number of gene sets to test. Default is 5000.
+#' 
 #' @import data.table
 #' @return List. PGX object containing input data and parameters.
 #'
@@ -135,6 +134,8 @@ pgx.createPGX <- function(counts,
                           samples,
                           contrasts,
                           organism = "Human",
+                          custom.geneset = NULL,
+                          max.genesets = 5000,
                           name = "Data set",
                           datatype = "unknown",
                           creator = "unknown",
@@ -148,16 +149,13 @@ pgx.createPGX <- function(counts,
                           only.known = TRUE,
                           only.hugo = TRUE,
                           convert.hugo = TRUE,
-                          do.cluster = TRUE,
-                          cluster.contrasts = FALSE,
-                          do.clustergenes = TRUE,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE,
                           remove.outliers = TRUE,
                           normalize = TRUE,
                           use_biomart = NA) {
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
-    stop("dimension of counts and X do not match\n")
+    stop("[createPGX] dimension of counts and X do not match\n")
   }
 
   ## -------------------------------------------------------------------
@@ -270,7 +268,6 @@ pgx.createPGX <- function(counts,
     message("[createPGX] NORMALIZING log-expression matrix X...")
     X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
     X <- limma::normalizeQuantiles(X) ## in log space
-    ## X <- 0.1*X + 0.9*limma::normalizeQuantiles(X)   ## 'weighted' to keep randomness...
   } else {
     message("[createPGX] SKIPPING NORMALIZATION!")
   }
@@ -329,12 +326,16 @@ pgx.createPGX <- function(counts,
 
   if (is.null(pgx$genes)) {
     stop("[createPGX] FATAL: Could not get gene annotation!")
+  } else {
+    message("[createPGX] Gene annotation table created: ", 
+            paste(dim(pgx$genes), collapse = "x"))
   }
 
 
   ## -------------------------------------------------------------------
   ## convert probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------
+  
   if (convert.hugo) {
     message("[createPGX] converting probes to symbol...")
     symbol <- pgx$genes[rownames(pgx$counts), "symbol"]
@@ -376,9 +377,11 @@ pgx.createPGX <- function(counts,
     pgx$counts <- pgx$counts[rownames(pgx$genes), , drop = FALSE]
   }
 
+
   ## -------------------------------------------------------------------
   ## Filter out not-expressed
   ## -------------------------------------------------------------------
+  
   if (filter.genes) {
     ## There is second filter in the statistics computation. This
     ## first filter is primarily to reduce the counts table.
@@ -413,15 +416,17 @@ pgx.createPGX <- function(counts,
     }
   }
 
+
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
   pgx <- playbase::compute_cellcycle_gender(pgx, pgx$counts)
 
+
   ## -------------------------------------------------------------------
   ## Batch-correction (if requested. WARNING: changes counts )
   ## -------------------------------------------------------------------
-  batch.par <- c("batch", "batch2")
+  
   has.batchpar <- any(grepl("^batch|^batch2", colnames(pgx$samples), ignore.case = TRUE))
   if (batch.correct && has.batchpar) {
     b <- "batch"
@@ -450,50 +455,12 @@ pgx.createPGX <- function(counts,
     remove(cX)
   }
 
+
   ## -------------------------------------------------------------------
-  ## Pre-calculate t-SNE for and get clusters early so we can use it
-  ## for doing differential analysis.
+  ## Add GMT
   ## -------------------------------------------------------------------
-  if (do.cluster || cluster.contrasts) {
-    message("[createPGX] clustering samples...")
-    pgx <- playbase::pgx.clusterSamples2(
-      pgx,
-      dims = c(2, 3),
-      perplexity = NULL,
-      methods = c("pca", "tsne", "umap")
-    )
 
-    ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
-    posx <- scale(cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]]))
-    idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
-    if (length(unique(idx)) == 1) {
-      ## try again with finer settings if single cluster...
-      idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
-    }
-    pgx$samples$cluster <- idx
-  }
-
-  if (cluster.contrasts) {
-    ## Add cluster contrasts
-    message("[createPGX] adding cluster contrasts...")
-    Y <- pgx$samples[, "cluster", drop = FALSE]
-    if (length(unique(Y[, 1])) < 2) {
-      message("[createPGX] warning: only one cluster.")
-    } else {
-      ct <- playbase::makeDirectContrasts(Y, ref = "others")
-      ctx <- playbase::contrastAsLabels(ct$exp.matrix)
-      if (ncol(pgx$contrasts) == 0) {
-        pgx$contrasts <- ctx
-      } else {
-        pgx$contrasts <- cbind(pgx$contrasts, ctx)
-      }
-    }
-  }
-
-  if (do.clustergenes) {
-    message("[createPGX] clustering genes...")
-    pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "gene")
-  }
+  pgx <- pgx.add_GMT(pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
 
   ### done
   return(pgx)
@@ -504,11 +471,11 @@ pgx.createPGX <- function(counts,
 #'
 #' @param pgx A pgx object containing the input data
 #' @param max.genes Maximum number of genes to test. Default is 19999.
-#' @param max.genesets Maximum number of gene sets to test. Default is 5000.
 #' @param gx.methods Methods for differential expression analysis at the gene level. Default is c("ttest.welch", "trend.limma", "edger.qlf").
 #' @param gset.methods Methods for differential analysis at the gene set level. Default is c("fisher", "gsva", "fgsea").
-#' @param custom.geneset Custom gene sets to test, as a named list with gmt and info elements.
-#' @param do.cluster Whether to run sample clustering. Default is TRUE.
+#' @param do.cluster Logical indicating whether to run sample clustering. Default is TRUE.
+#' @param cluster.contrasts Logical indicating whether to cluster contrasts. Default is FALSE.
+#' @param do.clustergenes Logical indicating whether to cluster genes. Default is TRUE.
 #' @param use.design Whether to use model design matrix for testing. Default is TRUE.
 #' @param prune.samples Whether to remove samples without valid contrasts. Default is FALSE.
 #' @param extra.methods Additional analysis methods to run. Default is c("meta.go", "infer", "deconv", "drugs", "wordcloud", "wgcna")[c(1, 2)].
@@ -525,6 +492,9 @@ pgx.computePGX <- function(pgx,
                            gset.methods = c("fisher", "gsva", "fgsea"),
                            custom.geneset = list(gmt = NULL, info = NULL),
                            do.cluster = TRUE,
+                           cluster.contrasts = TRUE,
+                           do.clustergenesets = TRUE,
+                           do.clustergenes = TRUE,
                            use.design = TRUE,
                            prune.samples = FALSE,
                            extra.methods = c(
@@ -553,10 +523,61 @@ pgx.computePGX <- function(pgx,
   sel <- Matrix::colSums(contr.matrix == -1) > 0 & Matrix::colSums(contr.matrix == 1) > 0
   contr.matrix <- contr.matrix[, sel, drop = FALSE]
 
+
+  ## -------------------------------------------------------------------
+  ## Clustering
+  ## -------------------------------------------------------------------
+  
+  # Cluster by sample
+  if (do.cluster || cluster.contrasts) {
+    message("[createPGX] clustering samples...")
+    pgx <- playbase::pgx.clusterSamples2(
+      pgx,
+      dims = c(2, 3),
+      perplexity = NULL,
+      methods = c("pca", "tsne", "umap")
+    )
+
+    ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
+    posx <- scale(cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]]))
+    idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
+    if (length(unique(idx)) == 1) {
+      ## try again with finer settings if single cluster...
+      idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
+    }
+    pgx$samples$cluster <- idx
+  }
+
+  # Cluster by contrasts
+  if (cluster.contrasts) {
+    ## Add cluster contrasts
+    message("[createPGX] adding cluster contrasts...")
+    Y <- pgx$samples[, "cluster", drop = FALSE]
+    if (length(unique(Y[, 1])) < 2) {
+      message("[createPGX] warning: only one cluster.")
+    } else {
+      ct <- playbase::makeDirectContrasts(Y, ref = "others")
+      ctx <- playbase::contrastAsLabels(ct$exp.matrix)
+      if (ncol(pgx$contrasts) == 0) {
+        pgx$contrasts <- ctx
+      } else {
+        pgx$contrasts <- cbind(pgx$contrasts, ctx)
+      }
+    }
+  }
+
+  # Cluster by genes
+  if (do.clustergenes) {
+    message("[createPGX] clustering genes...")
+    pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "gene")
+  }
+
+
   ## -----------------------------------------------------------------------------
   ## Filter genes (previously in compute_testGenesSingleOmics). NEED
   ## RETHINK?? MOVE TO PGXCREATE??
   ## -----------------------------------------------------------------------------
+  
   ## Shrink number of genes (highest SD/var)
   if (max.genes > 0 && nrow(pgx$counts) > max.genes) {
     cat("shrinking data matrices: n=", max.genes, "\n")
@@ -574,7 +595,7 @@ pgx.computePGX <- function(pgx,
   }
 
   ## ======================================================================
-  ## ================= run tests ==========================================
+  ## ================= Run tests ==========================================
   ## ======================================================================
 
   pgx$timings <- c()
@@ -604,18 +625,16 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
   message("[pgx.computePGX] testing genesets...")
-
-  pgx <- playbase::compute_testGenesets(
+  pgx <- compute_testGenesets(
     pgx = pgx,
     custom.geneset = custom.geneset,
-    max.features = max.genesets,
     test.methods = gset.methods
   )
 
-  if (do.cluster) {
-    message("[pgx.computePGX] clustering genes...")
-    ## gsetX was not ready before!!
-    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset")
+  # Cluster by genes
+  if (do.clustergenes) {
+    message("[createPGX] clustering genesets...")
+    pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset")
   }
 
   ## ------------------ extra analyses ---------------------
@@ -694,9 +713,8 @@ counts.autoScaling <- function(counts) {
   totratio <- log10(max(1 + totcounts, na.rm = TRUE) / min(1 + totcounts, na.rm = TRUE))
   totratio
   if (totratio > 6) {
-    cat("[createPGX:autoscale] WARNING: too large total counts ratio. forcing normalization.")
+    message("[createPGX:autoscale] WARNING: too large total counts ratio. forcing normalization.")
     meancounts <- exp(mean(log(1 + totcounts)))
-    meancounts
     counts <- t(t(counts) / totcounts) * meancounts
   }
 
@@ -704,25 +722,22 @@ counts.autoScaling <- function(counts) {
   ## for some proteomics intensity signals that are in billions of
   ## units.
   mean.counts <- mean(Matrix::colSums(counts, na.rm = TRUE))
-  mean.counts
   is.toobig <- log10(mean.counts) > 9
-  is.toobig
   if (is.toobig) {
+
     ## scale to about 10 million reads
-    #
-    cat("[createPGX:autoscale] WARNING: too large total counts. Scaling down to 10e6 reads.\n")
+    message("[createPGX:autoscale] WARNING: too large total counts. Scaling down to 10e6 reads.\n")
     unit <- 10**(round(log10(mean.counts)) - 7)
     unit
     counts <- counts / unit
     counts_multiplier <- unit
   }
   counts_multiplier
-  cat("[createPGX:autoscale] count_multiplier= ", counts_multiplier, "\n")
+  message("[createPGX:autoscale] count_multiplier= ", counts_multiplier, "\n")
 
   list(counts = counts, counts_multiplier = counts_multiplier)
 }
 
-#' @export
 normalizeCounts <- function(M, method = c("TMM", "TMMwsp", "RLE", "upperquartile", "none")) {
   method <- method[1]
   dge <- edgeR::DGEList(M)
@@ -731,11 +746,7 @@ normalizeCounts <- function(M, method = c("TMM", "TMMwsp", "RLE", "upperquartile
   logCPM
 }
 
-## -------------------------------------------------------------------
-## collapse multiple row for genes by summing up counts
-## -------------------------------------------------------------------
 
-#' @export
 counts.mergeDuplicateFeatures <- function(counts) {
   ## take only first gene as rowname, retain others as alias
   gene0 <- rownames(counts)
@@ -775,6 +786,174 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
     pgx$X <- pgx$X[keep, , drop = FALSE]
   }
   pgx
+}
+
+pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
+
+  if (is.null(pgx$genes$human_ortholog)) {
+    # this is needed in case the species is human, and we dont have the homolog column or if we have an old pgx
+    # which will ensure consistency between old and new pgx
+    pgx$genes$human_ortholog <- NA
+  }
+
+  # Load geneset matrix
+  G <- playdata::GSETxGENE
+
+
+  ## -----------------------------------------------------------
+  ## Filter genes by gene or homologous, if it exists
+  ## -----------------------------------------------------------
+
+  if (pgx$organism != "Human") {
+    human_genes <- ifelse(!is.na(pgx$genes$human_ortholog),
+      pgx$genes$human_ortholog,
+      pgx$genes$symbol
+    )
+  } else {
+    human_genes <- pgx$genes$symbol
+  }
+  genes <- pgx$genes$symbol
+
+  # Change HUMAN gene names to species symbols if NOT human and human_ortholog column is NOT all NA
+  G <- G[, colnames(G) %in% human_genes]
+
+  if (pgx$organism != "Human" && !all(is.na(pgx$genes$human_ortholog))) {
+    colnames(G) <- pgx$genes$symbol[match(colnames(G), pgx$genes$human_ortholog)]
+  }
+
+  # Normalize G after removal of genes
+  G <- playbase::normalize_matrix_by_row(G)
+
+
+  ## -----------------------------------------------------------
+  ## Filter gene sets on size
+  ## -----------------------------------------------------------
+
+  message("[pgx.add_GMT] Filtering gene sets on size...")
+  gmt.size <- Matrix::rowSums(G != 0)
+  size.ok <- (gmt.size >= 15 & gmt.size <= 400)
+
+  # If dataset is too small that size.ok == 0, then select top 100
+  if (sum(size.ok) == 0) {
+    top_100gs <- utils::head(sort(gmt.size, decreasing = TRUE), 100)
+    size.ok <- names(gmt.size) %in% names(top_100gs)
+  }
+
+  G <- G[which(size.ok), ]
+  G <- Matrix::t(G)
+
+
+  ## -----------------------------------------------------------
+  ## Add custom gene sets if provided
+  ## -----------------------------------------------------------
+
+  if (!is.null(custom.geneset$gmt)) {
+    message("[pgx.add_GMT] Adding custom genesets...")
+    # convert gmt standard to SPARSE matrix
+    custom_gmt <- playbase::createSparseGenesetMatrix(
+      gmt.all = custom.geneset$gmt,
+      min.geneset.size = 3,
+      max.geneset.size = 9999,
+      min_gene_frequency = 1,
+      all_genes = pgx$all_genes,
+      annot = pgx$genes,
+      filter_genes = FALSE
+    )
+    custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes, drop = FALSE]
+    custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
+    G <- playbase::merge_sparse_matrix(m1 = G, m2 = Matrix::t(custom_gmt))
+    remove(custom_gmt)
+  }
+
+
+  ## -----------------------------------------------------------
+  ## create the GENESETxGENE matrix
+  ## -----------------------------------------------------------
+    
+  message("[pgx.add_GMT] Matching gene set matrix...")
+
+  gg <- pgx$genes$symbol
+  ii <- intersect(gg, rownames(G))
+  G <- G[ii, , drop = FALSE]
+  xx <- setdiff(gg, rownames(G))
+  matX <- Matrix::Matrix(0, nrow = length(xx), ncol = ncol(G), sparse = TRUE)
+  rownames(matX) <- xx
+  colnames(matX) <- colnames(G)
+  G <- rbind(G, matX)
+  G <- G[match(gg, rownames(G)), , drop = FALSE]
+
+
+  ## -----------------------------------------------------------
+  ## create the full GENE matrix (always collapsed by gene)
+  ## -----------------------------------------------------------
+
+  X <- pgx$X
+  single.omics <- TRUE ## !!! for now...
+  if (single.omics) {
+    ## normalized matrix
+    X <- X
+  } else {
+    data.type <- gsub("\\[|\\].*", "", rownames(pgx$counts))
+    jj <- which(data.type %in% c("gx", "mrna"))
+    if (length(jj) == 0) {
+      stop("[pgx.add_GMT] FATAL. could not find gx/mrna values.")
+    }
+    X <- X[jj, ]
+  }
+
+  if (!all(rownames(X) %in% pgx$genes$symbol)) {
+    X <- rename_by(X, pgx$genes, "symbol")
+    X <- X[!rownames(X) == "", , drop = FALSE]
+    if (any(duplicated(rownames(X)))) {
+      X <- log2(rowsum(2**X, rownames(X)))
+    }
+  }
+
+
+  ## -----------------------------------------------------------
+  ## Prioritize gene sets by fast rank-correlation
+  ## -----------------------------------------------------------
+  
+  if (is.null(max.genesets)) max.genesets <- 20000
+  if (max.genesets < 0) max.genesets <- 20000
+
+  if (max.genesets > 0) {
+    message("[pgx.add_GMT] Reducing gene set matrix... ")
+    ## Reduce gene sets by selecting top varying genesets. We use the
+    ## very fast sparse rank-correlation for approximate single sample
+    ## geneset activation.
+    cX <- X - rowMeans(X, na.rm = TRUE) ## center!
+    cX <- apply(cX, 2, rank)
+    gsetX <- qlcMatrix::corSparse(G, cX) ## slow!
+    grp <- pgx$model.parameters$group
+    gsetX.bygroup <- NULL
+    ## If groups/conditions are present we calculate the SD by group
+    if (!is.null(grp)) {
+      gsetX.bygroup <- tapply(1:ncol(gsetX), grp, function(i) rowMeans(gsetX[, i, drop = FALSE]))
+      gsetX.bygroup <- do.call(cbind, gsetX.bygroup)
+      sdx <- apply(gsetX.bygroup, 1, stats::sd)
+    } else {
+      sdx <- matrixStats::rowSds(gsetX)
+    }
+
+    names(sdx) <- colnames(G)
+    jj <- Matrix::head(order(-sdx), max.genesets)
+    must.include <- "hallmark|kegg|^go|^celltype|^pathway|^custom"
+    jj <- unique(c(jj, grep(must.include, colnames(G), ignore.case = TRUE)))
+    jj <- jj[order(colnames(G)[jj])] ## sort alphabetically
+    G <- G[, jj, drop = FALSE]
+  }
+
+
+  ## -----------------------------------------------------------------------
+  ## Clean up and return pgx object
+  ## -----------------------------------------------------------------------
+
+  pgx$GMT <- G
+  message(glue::glue("[pgx.add_GMT] Final GMT: {nrow(G)}x{ncol(G)}"))
+  rm(gsetX.bygroup, gsetX, G)
+  gc()
+  return(pgx)
 }
 
 
