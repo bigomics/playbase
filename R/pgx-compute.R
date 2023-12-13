@@ -485,12 +485,12 @@ pgx.createPGX <- function(counts,
   ## Add GMT
   ## -------------------------------------------------------------------
   
-  if (organism != "No organism") {
+  if (organism != "No organism" && !is.null(custom.geneset)) {
     pgx <- pgx.add_GMT(pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
   } else {
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
   }
-  
+
   ### done
   return(pgx)
 }
