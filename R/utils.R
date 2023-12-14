@@ -24,6 +24,66 @@ info <- function(..., type = "INFO") {
 dbg <- function(...) info(..., type = "DBUG")
 
 
+
+#' Get Call Stack
+#'
+#' Returns the call stack up to a specified depth.
+#' 
+#' @param n Number of calls to include in call stack.
+#'
+#' @return Character vector of call stack.
+#'
+#' @examples
+#' \dontrun{
+#' f3 <- function(x) {
+#'   print("Show whole stack")
+#'   message(playbase:::get_call_stack(0))
+#'   print("Remove message call")
+#'   message(playbase:::get_call_stack(1))
+#'   x <- x + 1
+#'   x
+#' }
+#' 
+#' f2 <- function(x) {
+#'   x <- f3(x)
+#'   x
+#' }
+#' 
+#' f1 <- function(x) {
+#'   x <- f2(x)
+#'   x
+#' }
+#' f1(2)
+#' }
+get_call_stack <- function(n) {
+  
+  # Get calls and remove the last n calls
+  calls <- sys.calls()
+  fun_names <- vapply(calls, function(x) as.character(x[[1]]), character(1))
+  fun_names <- fun_names[-((length(fun_names)-n):length(fun_names))]
+  
+  # Concatenate all the calls using the ">" symbol
+  call_stack <- paste(fun_names, collapse = ">")
+  
+  return(call_stack)
+}
+
+
+#' Print Info Message
+#' 
+#' Print a formatted info message.
+#'
+#' @param msg Message to print.
+#'
+#' @examples 
+#' info_message("Hello")
+#'
+#' @export
+info_message <- function(msg) {
+  message(paste0("[", get_call_stack(3), "]: ", msg))
+}
+
+
 #' Get mini example dataset
 #'
 #' @description
