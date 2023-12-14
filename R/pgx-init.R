@@ -255,7 +255,7 @@ pgx.initialize <- function(pgx) {
     pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2), level = "gene")
     pgx$cluster.genes$pos <- lapply(pgx$cluster.genes$pos, pos.compact)
   }
-  if (!"cluster.gsets" %in% names(pgx)) {
+  if (!"cluster.gsets" %in% names(pgx) && length(pgx$gsetX) > 0) {
     message("[pgx.initialize] clustering genesets...")
     pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2), level = "geneset")
     pgx$cluster.gsets$pos <- lapply(pgx$cluster.gsets$pos, pos.compact)
