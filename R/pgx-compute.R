@@ -548,9 +548,6 @@ pgx.computePGX <- function(pgx,
                            pgx.dir = NULL,
                            libx.dir = NULL,
                            progress = NULL) {
-  ## ======================================================================
-  ## ======================================================================
-  ## ======================================================================
 
   if (!"contrasts" %in% names(pgx)) {
     stop("[pgx.computePGX] FATAL:: no contrasts in object")
@@ -574,7 +571,7 @@ pgx.computePGX <- function(pgx,
   
   # Cluster by sample
   if (do.cluster || cluster.contrasts) {
-    message("[createPGX] clustering samples...")
+    message("[pgx.computePGX] clustering samples...")
     pgx <- playbase::pgx.clusterSamples2(
       pgx,
       dims = c(2, 3),
@@ -595,10 +592,10 @@ pgx.computePGX <- function(pgx,
   # Cluster by contrasts
   if (cluster.contrasts) {
     ## Add cluster contrasts
-    message("[createPGX] adding cluster contrasts...")
+    message("[pgx.computePGX] adding cluster contrasts...")
     Y <- pgx$samples[, "cluster", drop = FALSE]
     if (length(unique(Y[, 1])) < 2) {
-      message("[createPGX] warning: only one cluster.")
+      message("[pgx.computePGX] warning: only one cluster.")
     } else {
       ct <- playbase::makeDirectContrasts(Y, ref = "others")
       ctx <- playbase::contrastAsLabels(ct$exp.matrix)
@@ -612,7 +609,7 @@ pgx.computePGX <- function(pgx,
 
   # Cluster by genes
   if (do.clustergenes) {
-    message("[createPGX] clustering genes...")
+    message("[pgx.computePGX] clustering genes...")
     pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "gene")
   }
 
@@ -701,7 +698,6 @@ pgx.computePGX <- function(pgx,
 
   return(pgx)
 }
-
 
 
 ## ===================================================================
