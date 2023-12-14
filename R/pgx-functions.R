@@ -327,9 +327,10 @@ logCPM <- function(counts, total = 1e6, prior = 1) {
 #'
 #' @export
 pgx.checkObject <- function(pgx) {
+
   must.have <- c(
     "counts", "samples", "genes", "model.parameters",
-    "X", "gx.meta", "gset.meta", "gsetX", "GMT"
+    "X", "gx.meta", "GMT"
   )
   not.present <- setdiff(must.have, names(pgx))
   if (length(not.present) > 0) {

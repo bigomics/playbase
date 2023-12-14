@@ -42,8 +42,8 @@ pgx.initialize <- function(pgx) {
 
   ## ----------------- check object
   obj.needed <- c(
-    "genes", ## "deconv","collections", "families", "counts",
-    "GMT", "gset.meta", "gsetX", "gx.meta", "model.parameters",
+    "genes", 
+    "GMT", "gx.meta", "model.parameters",
     "samples", "tsne2d", "X"
   )
   all(obj.needed %in% names(pgx))
@@ -127,7 +127,7 @@ pgx.initialize <- function(pgx) {
       new.contr <- contrastAsLabels(new.contr)
     }
     is.groupwise <- all(rownames(new.contr) %in% pgx$samples$group)
-    is.groupwise
+    
     if (is.groupwise) {
       grp <- as.character(pgx$samples$group)
       new.contr <- new.contr[grp, , drop = FALSE]
@@ -207,20 +207,25 @@ pgx.initialize <- function(pgx) {
   ## -----------------------------------------------------------------------------
   ## Recompute geneset meta.fx as average fold-change of genes
   ## -----------------------------------------------------------------------------
-  message("[pgx.initialize] Recomputing geneset fold-changes")
-  nc <- length(pgx$gset.meta$meta)
-  for (i in 1:nc) {
-    gs <- pgx$gset.meta$meta[[i]]
-    fc <- pgx$gx.meta$meta[[i]]$meta.fx
-    names(fc) <- rownames(pgx$gx.meta$meta[[i]])
-    # If use does not collapse by gene
-    if (!all(names(fc) %in% pgx$genes$symbol)) {
-      names(fc) <- pgx$genes$symbol[match(names(fc), rownames(pgx$genes), nomatch = 0)]
-      fc <- fc[names(fc) != ""]
+  
+  if (pgx$organism != "No organism" || nrow(pgx$GMT) > 0) {
+    message("[pgx.initialize] Recomputing geneset fold-changes")
+    nc <- length(pgx$gset.meta$meta)
+    for (i in 1:nc) {
+      gs <- pgx$gset.meta$meta[[i]]
+      fc <- pgx$gx.meta$meta[[i]]$meta.fx
+      names(fc) <- rownames(pgx$gx.meta$meta[[i]])
+      # If use does not collapse by gene
+      if (!all(names(fc) %in% pgx$genes$symbol)) {
+        names(fc) <- pgx$genes$symbol[match(names(fc), rownames(pgx$genes), nomatch = 0)]
+        fc <- fc[names(fc) != ""]
+      }
+      G1 <- Matrix::t(pgx$GMT[names(fc), rownames(gs)])
+      mx <- (G1 %*% fc)[, 1]
+      pgx$gset.meta$meta[[i]]$meta.fx <- mx
     }
-    G1 <- Matrix::t(pgx$GMT[names(fc), rownames(gs)])
-    mx <- (G1 %*% fc)[, 1]
-    pgx$gset.meta$meta[[i]]$meta.fx <- mx
+  } else {
+    message("[pgx.initialize] No genematrix found")
   }
 
   ## -----------------------------------------------------------------------------
