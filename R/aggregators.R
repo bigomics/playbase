@@ -11,11 +11,12 @@
 #' @param x Numeric vector of x data
 #' @param y Numeric vector of y data  
 #' @param n_out Integer specifying number of data points to sample
-#'
+#' @docType class
+#' @format An \code{R6::R6Class} object
 #' @export
 random_aggregator <- R6::R6Class(
   "random_aggregator",
-  inherit = aggregator,
+  inherit = shinyHugePlot::aggregator,
   public = list(
     #' @description
     #' Constructor of the Aggregator.
@@ -40,11 +41,13 @@ random_aggregator <- R6::R6Class(
   )
 )
 
-#' @describeIn random_aggregator
+#' @docType class
+#' @format An \code{R6::R6Class} object
+#' @describeIn random_aggregator gaussian aggregator constructor for the downsampler object
 #' @export
 gaussian_aggregator <- R6::R6Class(
-  "random_aggregator",
-  inherit = aggregator,
+  "gaussian_aggregator",
+  inherit = shinyHugePlot::aggregator,
   public = list(
     #' @description
     #' Constructor of the Aggregator.

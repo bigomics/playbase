@@ -4085,10 +4085,11 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
   if (is.null(highlight)) highlight <- names
   i0 <- which(!names %in% highlight)
   i1 <- which(names %in% highlight)
-  p <- plotly::plot_ly()
+  p <- plotly::plot_ly(source = source)
   p <- p %>%
     plotly::event_register("plotly_hover") %>%
     plotly::event_register("plotly_selected")
+
   if (length(i0)) {
     p <- p %>%
       plotly::add_trace(
@@ -4255,7 +4256,6 @@ plotlyVolcano_multi <- function(FC,
       x = fx,
       y = qval,
       names = all_genes,
-      source = "plot1",
       marker.type = "scattergl",
       highlight = sig.genes,
       label = label,
