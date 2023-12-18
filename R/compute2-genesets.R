@@ -3,23 +3,6 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-#' Normalize Matrix by Row
-#'
-#' Normalizes a matrix by dividing each row by the sum of its elements.
-#'
-#' @param G The matrix to be normalized.
-#'
-#' @return The normalized matrix.
-#'
-#' @export
-normalize_matrix_by_row <- function(G) {
-  # efficient normalization using linear algebra
-  row_sums <- Matrix::rowSums(G)
-  D <- Matrix::Diagonal(x = 1 / row_sums)
-  G_scaled <- D %*% G
-  rownames(G_scaled) <- rownames(G)
-  return(G_scaled)
-}
 
 #' Compute Test Genesets
 #'
@@ -43,6 +26,11 @@ compute_testGenesets <- function(pgx,
     stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
   }
 
+  if(0) {
+    max.features = 1000;custom.geneset = list(gmt = NULL, info = NULL);
+    test.methods = c("gsva", "camera", "fgsea");remove.outputs = TRUE
+  }
+  
   if (is.null(pgx$genes$human_ortholog)) {
     # this is needed in case the species is human, and we dont have the homolog column or if we have an old pgx
     # which will ensure consistency between old and new pgx
@@ -52,8 +40,7 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
   ## Load huge geneset matrix
   ## -----------------------------------------------------------
-
-  G <- playdata::GSETxGENE
+  G <- Matrix::t(playdata::GSETxGENE)
 
   ## -----------------------------------------------------------
   ## Filter genes
@@ -72,15 +59,14 @@ compute_testGenesets <- function(pgx,
   genes <- pgx$genes$symbol
 
   # Change HUMAN gene names to species symbols if NOT human and human_ortholog column is NOT all NA
-  G <- G[, colnames(G) %in% human_genes]
+  G <- G[rownames(G) %in% human_genes,, drop = FALSE]
 
   if (pgx$organism != "Human" && !all(is.na(pgx$genes$human_ortholog))) {
-    colnames(G) <- pgx$genes$symbol[match(colnames(G), pgx$genes$human_ortholog)]
+    rownames(G) <- pgx$genes$symbol[match(rownames(G), pgx$genes$human_ortholog)]
   }
 
   # Normalize G after removal of genes
-
-  G <- playbase::normalize_matrix_by_row(G)
+  G <- playbase::normalize_cols(G)
 
   ## -----------------------------------------------------------
   ## Filter gene sets
@@ -88,22 +74,40 @@ compute_testGenesets <- function(pgx,
 
   ## filter gene sets on size
   cat("Filtering gene sets on size...\n")
-  gmt.size <- Matrix::rowSums(G != 0)
-  size.ok <- (gmt.size >= 15 & gmt.size <= 400)
+  gmt.size <- Matrix::colSums(G != 0)
+  size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
 
   # If dataset is too small that size.ok == 0, then select top 100
-  if (sum(size.ok) == 0) {
-    top_100gs <- utils::head(sort(gmt.size, decreasing = TRUE), 100)
-    size.ok <- names(gmt.size) %in% names(top_100gs)
-  }
+  ## if (length(size.ok) == 0) {
+  ##   size.ok <- head(sample(1:ncol(G)),100)
+  ## }
+  G <- G[, size.ok, drop = FALSE]
 
-  G <- G[which(size.ok), ]
-  G <- Matrix::t(G)
+  ## -----------------------------------------------------------
+  ## Add random genesets
+  ## -----------------------------------------------------------
 
+  add.gmt <- NULL
+
+  rr <- sample(15:400,100)
+  gg <- rownames(pgx$X)
+  random.gmt <- lapply( rr, function(n) head(sample(gg),min(n,length(gg)/2)))
+  names(random.gmt) <- paste0("TEST:random_geneset.",1:length(random.gmt))
+  add.gmt <- random.gmt
+
+  ## -----------------------------------------------------------
+  ## Add custom genesets
+  ## -----------------------------------------------------------
+  
   if (!is.null(custom.geneset$gmt)) {
+    add.gmt <- c( add.gmt, custom.geneset$gmt )
+  }
+  
+  if (!is.null(add.gmt)) {
     # convert gmt standard to SPARSE matrix
     custom_gmt <- playbase::createSparseGenesetMatrix(
-      gmt.all = custom.geneset$gmt,
+##    gmt.all = custom.geneset$gmt,
+      gmt.all = add.gmt,
       min.geneset.size = 3,
       max.geneset.size = 9999,
       min_gene_frequency = 1,
@@ -111,11 +115,11 @@ compute_testGenesets <- function(pgx,
       annot = pgx$genes,
       filter_genes = FALSE
     )
+    custom_gmt <- Matrix::t(custom_gmt)    
+    custom_gmt <- custom_gmt[rownames(custom_gmt) %in% genes,, drop = FALSE]
+    custom_gmt <- playbase::normalize_cols(custom_gmt)
 
-    custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% genes, drop = FALSE]
-    custom_gmt <- playbase::normalize_matrix_by_row(custom_gmt)
-
-    G <- playbase::merge_sparse_matrix(m1 = G, m2 = Matrix::t(custom_gmt))
+    G <- Matrix::t(playbase::merge_sparse_matrix(m1 = Matrix::t(G), m2 = Matrix::t(custom_gmt)))
     remove(custom_gmt)
   }
 
@@ -124,20 +128,6 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
 
   X <- pgx$X
-  single.omics <- TRUE ## !!! for now...
-  if (single.omics) {
-    ## normalized matrix
-    X <- X
-  } else {
-    data.type <- gsub("\\[|\\].*", "", rownames(pgx$counts))
-    jj <- which(data.type %in% c("gx", "mrna"))
-    if (length(jj) == 0) {
-      stop("FATAL. could not find gx/mrna values.")
-    }
-    X <- X[jj, ]
-  }
-
-
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
     X <- rename_by(X, pgx$genes, "symbol")
     X <- X[!rownames(X) == "", , drop = FALSE]
@@ -145,7 +135,6 @@ compute_testGenesets <- function(pgx,
       X <- log2(rowsum(2**X, rownames(X)))
     }
   }
-
 
   ## if reduced samples
   ss <- rownames(pgx$model.parameters$exp.matrix)
@@ -157,7 +146,6 @@ compute_testGenesets <- function(pgx,
   ## create the GENESETxGENE matrix
   ## -----------------------------------------------------------
   cat("Matching gene set matrix...\n")
-
   gg <- rownames(X)
   ii <- intersect(gg, rownames(G))
   G <- G[ii, , drop = FALSE]
@@ -168,7 +156,7 @@ compute_testGenesets <- function(pgx,
   G <- rbind(G, matX)
   G <- G[match(gg, rownames(G)), , drop = FALSE]
   rownames(G) <- rownames(X) ## original name (e.g. mouse)
-
+  
   ## -----------------------------------------------------------
   ## Prioritize gene sets by fast rank-correlation
   ## -----------------------------------------------------------
