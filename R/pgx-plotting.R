@@ -223,10 +223,10 @@ repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
 
 #' @export
 pgx.dimPlot <- function(X, y, ...) {
-  jj <- head(order(-matrixStats::rowSds(X)),1000)
-  nb <- min(15, dim(X)/2)
-  pos <- uwot::umap(t(X[jj,]), n_neighbors=nb)
-  pgx.scatterPlotXY( pos, var=y, ...)
+  jj <- head(order(-matrixStats::rowSds(X)), 1000)
+  nb <- min(15, dim(X) / 2)
+  pos <- uwot::umap(t(X[jj, ]), n_neighbors = nb)
+  pgx.scatterPlotXY(pos, var = y, ...)
 }
 
 #' @title Scatter plot for PGX object
@@ -2373,7 +2373,6 @@ plot_ggbarplot <- function(mat, xlab = "x", ylab = "y", srt = 0, main = NULL,
                            axis.cex = 1, label.cex = 1, horiz = FALSE,
                            cpal = "Blues",
                            bar_width = 0.7, base_size = 12, group.name = "group") {
-
   if (NCOL(mat) == 1) mat <- rbind(mat)
   mat <- mat[nrow(mat):1, , drop = FALSE]
   df <- reshape2::melt(t(mat), value.name = "value")
@@ -2383,19 +2382,19 @@ plot_ggbarplot <- function(mat, xlab = "x", ylab = "y", srt = 0, main = NULL,
   df$x <- factor(df$x, levels = colnames(mat))
   if (!is.null(las) && las == 3) srt <- 90
 
-##  colors <- rev(grDevices::grey.colors(nrow(mat)))
-  colors <- rev(grDevices::hcl.colors(nrow(mat),cpal))
+  ##  colors <- rev(grDevices::grey.colors(nrow(mat)))
+  colors <- rev(grDevices::hcl.colors(nrow(mat), cpal))
   if (nrow(mat) == 1) colors <- "grey70"
-  
+
   posmode <- ifelse(beside, "dodge", "stack")
   x <- y <- value <- NULL
-  if(horiz) {
-    p <- ggplot2::ggplot(df, ggplot2::aes(x = value, y= x, fill = y)) +
+  if (horiz) {
+    p <- ggplot2::ggplot(df, ggplot2::aes(x = value, y = x, fill = y)) +
       ggplot2::geom_bar(
-                 stat = "identity", color = "black", size = 0.3,
-                 width = bar_width, position = posmode
-               )
-    p <-  p + ggplot2::xlab(xlab) +
+        stat = "identity", color = "black", size = 0.3,
+        width = bar_width, position = posmode
+      )
+    p <- p + ggplot2::xlab(xlab) +
       ggplot2::ylab(ylab) +
       ggplot2::labs(fill = group.name) +
       ggplot2::ggtitle(main) +
@@ -2403,17 +2402,18 @@ plot_ggbarplot <- function(mat, xlab = "x", ylab = "y", srt = 0, main = NULL,
       ggplot2::theme_classic(base_size = base_size) +
       ggplot2::scale_y_discrete(guide = ggplot2::guide_axis(angle = srt)) +
       ggplot2::theme(
-      axis.text.x = ggplot2::element_text(angle = 0, vjust = 0, size = 12 * label.cex),
-      axis.text.y = ggplot2::element_text(angle = 0, hjust = 0, size = 12 * label.cex),
-      axis.title.x = ggplot2::element_text(size = 12 * axis.cex),
-      axis.title.y = ggplot2::element_text(size = 12 * axis.cex)
-    )
+        axis.text.x = ggplot2::element_text(angle = 0, vjust = 0, size = 12 * label.cex),
+        axis.text.y = ggplot2::element_text(angle = 0, hjust = 0, size = 12 * label.cex),
+        axis.title.x = ggplot2::element_text(size = 12 * axis.cex),
+        axis.title.y = ggplot2::element_text(size = 12 * axis.cex)
+      )
   } else {
     p <- ggplot2::ggplot(df, ggplot2::aes(x = x, y = value, fill = y)) +
       ggplot2::geom_bar(
-                 stat = "identity", color = "black", size = 0.3,
-                 width = bar_width, position = posmode )
-    p <-  p + ggplot2::xlab(xlab) +
+        stat = "identity", color = "black", size = 0.3,
+        width = bar_width, position = posmode
+      )
+    p <- p + ggplot2::xlab(xlab) +
       ggplot2::ylab(ylab) +
       ggplot2::labs(fill = group.name) +
       ggplot2::ggtitle(main) +
@@ -2422,16 +2422,16 @@ plot_ggbarplot <- function(mat, xlab = "x", ylab = "y", srt = 0, main = NULL,
       ggplot2::scale_x_discrete(guide = ggplot2::guide_axis(angle = srt)) +
       ggplot2::theme(
         axis.text.x = ggplot2::element_text(angle = srt, vjust = 0, size = 10 * label.cex),
-        axis.text.y = ggplot2::element_text(angle = 0,  vjust = 0, size = 9 * label.cex),
+        axis.text.y = ggplot2::element_text(angle = 0, vjust = 0, size = 9 * label.cex),
         axis.title.x = ggplot2::element_text(size = 12 * axis.cex),
         axis.title.y = ggplot2::element_text(size = 12 * axis.cex)
       )
   }
-  
-  if(horiz) {
+
+  if (horiz) {
     legend.pos[1] <- 1 - legend.pos[1]
   }
-  
+
   p <- p + ggplot2::theme(
     legend.title = ggplot2::element_blank(),
     legend.justification = legend.pos,
@@ -2705,9 +2705,9 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     } else if (is.null(col) && nz == 2) {
       col1 <- rev(grDevices::grey.colors(2, end = 0.8))
       col1 <- c("#AAAAAA55", "#555555FF")
-      col1 <- c("#00008855", "#AA0000FF")   ## blue/red
-      col1 <- c("#CCCCCC55", "#AA0000FF")   ## grey/red
-      col1 <- c("#AAAAAA55", "#AA0000FF")   ## grey/red      
+      col1 <- c("#00008855", "#AA0000FF") ## blue/red
+      col1 <- c("#CCCCCC55", "#AA0000FF") ## grey/red
+      col1 <- c("#AAAAAA55", "#AA0000FF") ## grey/red
     } else if (is.null(col) && nz == 1) {
       col1 <- c("#22222255")
     } else {
@@ -4902,10 +4902,9 @@ pgx.barplot.PLOTLY <- function(
   }
 
 
-  p <- plotly::plot_ly() 
+  p <- plotly::plot_ly()
   show_legend <- ifelse(length(y) > 1, TRUE, FALSE)
   for (i in y) {
-
     p <- p %>% plotly::add_trace(
       type = "bar",
       x = data[[x]],
@@ -4920,13 +4919,12 @@ pgx.barplot.PLOTLY <- function(
       hovertemplate = paste0(
         "<b>%{hovertext}</b><br>",
         "%{yaxis.title.text}: %{y:", hoverformat, "}<br>",
-        "<extra></extra>",x
+        "<extra></extra>", x
       ),
       showlegend = show_legend
-    ) 
-  
+    )
   }
-  
+
   p <- p %>%
     plotly::layout(
       title = list(
@@ -4948,12 +4946,12 @@ pgx.barplot.PLOTLY <- function(
       bargap = bargap,
       annotations = annotations
     )
-  
+
   if (length(y) > 1) {
     p <- p %>%
       plotly::layout(
         barmode = barmode,
-        legend = list(orientation = 'h', bgcolor = "transparent", y = 1.2)
+        legend = list(orientation = "h", bgcolor = "transparent", y = 1.2)
       )
   }
 
