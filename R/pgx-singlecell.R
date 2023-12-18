@@ -463,8 +463,8 @@ pgx.read_singlecell_counts <- function(filename) {
 #' @export
 pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
   ## require(SuperCell)
+  
   X <- log2(1 + edgeR::cpm(counts) / 100)
-
   if (is.null(group) && "group" %in% colnames(meta)) {
     cat("using group detected in meta\n")
     group <- meta[, "group"]
@@ -479,8 +479,9 @@ pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
 
   dsel <- which(sapply(meta, class) %in% c("factor", "character", "logical"))
   group.argmax <- function(x) tapply(x, SC$membership, function(x) names(which.max(table(x))))
-  dmeta <- apply(meta[, dsel, drop = FALSE], 2, function(x) group.argmax(x))
-
+  dmeta <- apply(meta[, dsel, drop = FALSE], 2, function(x) as.character(group.argmax(x)))
+  rownames(dmeta) <- sort(unique(SC$membership))
+  
   csel <- which(sapply(meta, class) %in% c("numeric", "integer"))
   group.mean <- function(x) tapply(x, SC$membership, function(x) mean(x, na.rm = TRUE))
   cmeta <- apply(meta[, csel, drop = FALSE], 2, function(x) group.mean(x))
@@ -497,6 +498,45 @@ pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
   rownames(sc.meta) <- colnames(sc.counts)
 
   list(counts = sc.counts, meta = sc.meta, membership = sc.membership)
+}
+
+#' @export
+pgx.supercellX <- function(X, meta, group = NULL, gamma = 20) {
+  ## require(SuperCell)
+  
+  if (is.null(group) && "group" %in% colnames(meta)) {
+    cat("using group detected in meta\n")
+    group <- meta[, "group"]
+  }
+
+  SC <- SuperCell::SCimplify(X,
+    gamma = gamma,
+    n.var.genes = 1000,
+    ## cell.annotation = group,
+    cell.split.condition = group
+  )
+
+  dsel <- which(sapply(meta, class) %in% c("factor", "character", "logical"))
+  idx <- SC$membership
+  group.argmax <- function(x) tapply(x, idx, function(x) names(which.max(table(x))))
+  dmeta <- apply(meta[, dsel, drop = FALSE], 2, function(x) as.character(group.argmax(x)))
+  rownames(dmeta) <- sort(unique(idx))
+
+  csel <- which(sapply(meta, class) %in% c("numeric", "integer"))
+  group.mean <- function(x) tapply(x, idx, function(x) mean(x, na.rm = TRUE))
+  cmeta <- apply(meta[, csel, drop = FALSE], 2, function(x) group.mean(x))
+
+  sc.meta <- data.frame(dmeta)
+  if (length(csel) > 0) sc.meta <- cbind(sc.meta, cmeta)
+  ii <- setdiff(match(colnames(meta), colnames(sc.meta)), NA)
+  sc.meta <- sc.meta[, ii]
+
+  ## Compute metacall expression as sum of counts
+  sc.X <- SuperCell::supercell_GE(X, mode = "average", groups = idx)
+  colnames(sc.X) <- paste0("mc", 1:ncol(sc.X))
+  rownames(sc.meta) <- colnames(sc.X)
+
+  list(X = sc.X, meta = sc.meta, membership = sc.membership)
 }
 
 pgx.supercell_BIG <- function(counts, meta, group = NULL, gamma = 20, batch.size = 1e5) {
