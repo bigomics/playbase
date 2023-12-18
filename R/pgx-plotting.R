@@ -4846,6 +4846,7 @@ pgx.barplot.PLOTLY <- function(
     xaxistitle = FALSE,
     xlen = NULL,
     yrange = NULL,
+    barmode = "relative",
     font_family = "Lato",
     margin = list(l = 0, r = 0, b = 0, t = 0),
     grouped = TRUE, # true will calculate mean +/- (sd) across groups
@@ -4859,7 +4860,7 @@ pgx.barplot.PLOTLY <- function(
     data <- do.call(
       data.frame,
       stats::aggregate(
-        data[[y]],
+        data[y],
         list(data[[x]]),
         function(val) {
           c(mean = mean(val), sd = stats::sd(val))
@@ -4893,28 +4894,40 @@ pgx.barplot.PLOTLY <- function(
     data[["short.x"]] <- factor(sx, levels = sx)
   }
 
-  p <- plotly::plot_ly(
-    data = data,
-    x = data[["short.x"]],
-    hovertext = data[[x]] ## original long text
-  ) %>%
-    plotly::add_bars(
-      y = data[[y]],
+  if (is.null(fillcolor)) {
+    fillcolor <- RColorBrewer::brewer.pal(9, "Set1")
+  }
+  if (length(fillcolor) == 1) {
+    fillcolor <- rep(fillcolor, length(y))
+  }
+
+
+  p <- plotly::plot_ly() 
+  show_legend <- ifelse(length(y) > 1, TRUE, FALSE)
+  for (i in y) {
+
+    p <- p %>% plotly::add_trace(
+      type = "bar",
+      x = data[[x]],
+      y = data[, i],
+      marker = list(color = fillcolor[which(i == y)]),
+      name = gsub("y.", "", i),
       error_y = error_y,
-      marker = list(
-        color = fillcolor
-      ),
-      line = list(
-        color = linecolor
-      ),
+      hovertext = data[[x]],
       textposition = "none",
+      cliponaxis = FALSE,
       hoverinfo = hoverinfo,
       hovertemplate = paste0(
         "<b>%{hovertext}</b><br>",
         "%{yaxis.title.text}: %{y:", hoverformat, "}<br>",
-        "<extra></extra>"
-      )
-    ) %>%
+        "<extra></extra>",x
+      ),
+      showlegend = show_legend
+    ) 
+  
+  }
+  
+  p <- p %>%
     plotly::layout(
       title = list(
         text = title,
@@ -4935,6 +4948,14 @@ pgx.barplot.PLOTLY <- function(
       bargap = bargap,
       annotations = annotations
     )
+  
+  if (length(y) > 1) {
+    p <- p %>%
+      plotly::layout(
+        barmode = barmode,
+        legend = list(orientation = 'h', bgcolor = "transparent", y = 1.2)
+      )
+  }
 
   return(p)
 }
