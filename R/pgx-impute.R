@@ -83,7 +83,7 @@ imputeMissing <- function(X,
   }
 
   if ("SVD2" %in% method) {
-    impX[["SVD2"]] <- svdImpute2(X, nv = 3)
+    impX[["SVD2"]] <- svdImpute2(X, nv = NULL)
   }
 
   if ("NMF" %in% method) {
@@ -185,91 +185,101 @@ imputeMissing <- function(X,
 }
 
 #' @export
-svdImpute2 <- function(M, nv = 3, threshold = 0.001, init = NULL,
+svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
                        maxSteps = 100, fill.empty = "median",
-                       randomize.init = FALSE,
-                       verbose = FALSE) {
+                       randomize.init = FALSE, verbose = FALSE) {
   ## nv=3;threshold=0.001;init=NULL;maxSteps=100;fill.empty="median";verbose=FALSE
 
-  ind.missing <- which(is.na(M), arr.ind = TRUE)
-  empty.rows <- which(rowMeans(is.na(M)) == 1)
-  empty.cols <- which(colMeans(is.na(M)) == 1)
+  ind.missing <- which(is.na(X), arr.ind = TRUE)
+  empty.rows <- which(rowMeans(is.na(X)) == 1)
+  empty.cols <- which(colMeans(is.na(X)) == 1)
 
+  if(is.null(nv)) {
+    nv <- max(1, round(mean(is.na(X)) * min(dim(X))) )
+    message("setting nv = ", nv)
+  }
+
+  
   if (is.character(init) && grepl("%", init)) {
     q <- as.numeric(sub("%", "", init))
-    init <- quantile(M[!is.na(M)], probs = q)[1]
+    init <- quantile(X[!is.na(X)], probs = q)[1]
     message(paste0("setting initial values to ", q, "%. init=", init))
   }
 
   if (!is.null(init)) {
     ## initialize missing values with fixed value
-    M[ind.missing] <- init
+    X[ind.missing] <- init
   } else {
     ## initialize missing values with col/row medians
-    row.mx <- apply(M, 1, median, na.rm = TRUE)
-    col.mx <- apply(M, 2, median, na.rm = TRUE)
+    row.mx <- apply(X, 1, median, na.rm = TRUE)
+    col.mx <- apply(X, 2, median, na.rm = TRUE)
     row.mx[is.nan(row.mx)] <- NA
     col.mx[is.nan(col.mx)] <- NA
-    M[ind.missing] <- row.mx[ind.missing[, 1]]
-    ind.missing2 <- which(is.na(M), arr.ind = TRUE)
-    M[ind.missing2] <- col.mx[ind.missing2[, 2]]
+    X[ind.missing] <- row.mx[ind.missing[, 1]]
+    ind.missing2 <- which(is.na(X), arr.ind = TRUE)
+    X[ind.missing2] <- col.mx[ind.missing2[, 2]]
   }
 
   ## randomize initial values?
   if (randomize.init) {
-    sdx <- mean(matrixStats::rowSds(M, na.rm = TRUE), na.rm = TRUE)
+    sdx <- mean(matrixStats::rowSds(X, na.rm = TRUE), na.rm = TRUE)
     rr <- rnorm(nrow(ind.missing), mean = 0, sd = sdx)
-    M[ind.missing] <- M[ind.missing] + rr
+    X[ind.missing] <- X[ind.missing] + rr
   }
 
   ## do SVD iterations
   count <- 0
   error <- Inf
-  Mold <- M
-  nv <- min(nv, dim(M) - 1)
+  Xold <- X
+  nv <- min(nv, dim(X) - 1)
   while ((error > threshold) && (count < maxSteps)) {
-    res <- irlba::irlba(M, nv = nv)
+    if(nv < min(dim(X))/5) {
+      res <- irlba::irlba(X, nv = nv, nu = nv)
+    } else {
+      res <- svd(X, nv = nv, nu = nv)
+      res$d <- res$d[1:nv]
+    }
     if (nv == 1) {
       imx <- res$d * (res$u %*% t(res$v))
     } else {
       imx <- res$u %*% (diag(res$d) %*% t(res$v))
     }
-    M[ind.missing] <- imx[ind.missing]
+    X[ind.missing] <- imx[ind.missing]
     count <- count + 1
     if (count > 0) {
-      error <- sqrt(sum((Mold - M)^2) / sum(Mold^2))
+      error <- sqrt(sum((Xold - X)^2) / sum(Xold^2))
       if (verbose) {
         cat(count, ": change in estimate: ", error, "\n")
       }
     }
-    Mold <- M
+    Xold <- X
   }
 
   ## extra corrections (refill empty columns or rows)
   has.empty <- (length(empty.rows) > 0 || length(empty.cols) > 0)
   if (has.empty && fill.empty == "NA") {
-    if (length(empty.rows)) M[empty.rows, ] <- NA
-    if (length(empty.cols)) M[, empty.cols] <- NA
+    if (length(empty.rows)) X[empty.rows, ] <- NA
+    if (length(empty.cols)) X[, empty.cols] <- NA
   }
   if (has.empty && fill.empty == "sample") {
     ii <- which(
       (!ind.missing[, 1] %in% empty.rows) &
         (!ind.missing[, 2] %in% empty.cols)
     )
-    mm <- M[ind.missing[ii, ]]
+    mm <- X[ind.missing[ii, ]]
     if (length(empty.rows) && length(mm)) {
-      n1 <- length(M[empty.rows, ])
+      n1 <- length(X[empty.rows, ])
       message("[svdImpute2] warning: empty rows : n1 = ", n1)
-      M[empty.rows, ] <- sample(mm, n1, replace = TRUE)
+      X[empty.rows, ] <- sample(mm, n1, replace = TRUE)
     }
     if (length(empty.cols) && length(mm)) {
-      n2 <- length(M[, empty.cols])
+      n2 <- length(X[, empty.cols])
       message("[svdImpute2] warning: empty cols : n2 = ", n2)
-      M[, empty.cols] <- sample(mm, n2, replace = TRUE)
+      X[, empty.cols] <- sample(mm, n2, replace = TRUE)
     }
   }
 
-  return(M)
+  return(X)
 }
 
 
