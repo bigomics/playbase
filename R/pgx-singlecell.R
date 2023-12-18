@@ -463,7 +463,7 @@ pgx.read_singlecell_counts <- function(filename) {
 #' @export
 pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
   ## require(SuperCell)
-  
+
   X <- log2(1 + edgeR::cpm(counts) / 100)
   if (is.null(group) && "group" %in% colnames(meta)) {
     cat("using group detected in meta\n")
@@ -481,7 +481,7 @@ pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
   group.argmax <- function(x) tapply(x, SC$membership, function(x) names(which.max(table(x))))
   dmeta <- apply(meta[, dsel, drop = FALSE], 2, function(x) as.character(group.argmax(x)))
   rownames(dmeta) <- sort(unique(SC$membership))
-  
+
   csel <- which(sapply(meta, class) %in% c("numeric", "integer"))
   group.mean <- function(x) tapply(x, SC$membership, function(x) mean(x, na.rm = TRUE))
   cmeta <- apply(meta[, csel, drop = FALSE], 2, function(x) group.mean(x))
@@ -503,7 +503,7 @@ pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
 #' @export
 pgx.supercellX <- function(X, meta, group = NULL, gamma = 20) {
   ## require(SuperCell)
-  
+
   if (is.null(group) && "group" %in% colnames(meta)) {
     cat("using group detected in meta\n")
     group <- meta[, "group"]
