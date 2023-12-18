@@ -4,6 +4,7 @@
 ##
 
 
+
 #' @title Create a Phenotype Matrix
 #'
 #' @description This function creates a phenotype matrix from a PGX object.
@@ -1184,8 +1185,11 @@ getLevels <- function(Y) {
 #' levels defining a subset of factor levels to select. It parses the level descriptions,
 #' identifies matching samples in Y, and returns the rownames of selected samples.
 #'
-#' The levels should be strings in format 'factor=level' defining the factor name and level value.
-#' Samples in Y matching any of the provided levels will be selected.
+#' The levels should be strings in format 'factor=level' defining the
+#' factor name and level value.  Samples in Y matching any of the
+#' provided levels will be selected. Note: across factors samples as
+#' intersected ('and' operator), within a factor samples are combined
+#' ('or' operator). Not very logical but this is what people in practice want.
 #'
 #' @return A character vector of selected sample names.
 #'
@@ -1198,10 +1202,12 @@ selectSamplesFromSelectedLevels <- function(Y, levels) {
     unlist()
   ptype <- data.table::tstrsplit(levels, "=", keep = 2) %>%
     unlist()
-  sel <- rep(FALSE, nrow(Y))
+##  sel <- rep(FALSE, nrow(Y))
+  sel <- rep(TRUE, nrow(Y))
   for (ph in unique(pheno)) {
     k <- which(pheno == ph)
-    sel <- sel | (Y[, ph] %in% ptype[k])
+##    sel <- sel | (Y[, ph] %in% ptype[k])
+    sel <- sel & (Y[, ph] %in% ptype[k])
   }
 
   return(rownames(Y)[which(sel)])
@@ -2031,10 +2037,8 @@ tidy.dataframe <- function(Y) {
   is.factor <- (is.factor | grepl("batch|replicat|type|clust|group", colnames(Y)))
   new.Y <- data.frame(Y, check.names = FALSE)
   new.Y[, which(is.numeric)] <- num.Y[, which(is.numeric), drop = FALSE]
-  new.Y[, which(is.factor)] <- apply(
-    Y[, which(is.factor), drop = FALSE], 2,
-    function(a) factor(as.character(a))
-  )
+  for(i in which(is.numeric)) new.Y[[i]] <- num.Y[,i]
+  for(i in which(is.factor))  new.Y[[i]] <- factor(as.character(new.Y[,i]))
   new.Y <- data.frame(new.Y, check.names = FALSE)
   return(new.Y)
 }
@@ -2138,21 +2142,28 @@ expandAnnotationMatrix <- function(A) {
 #'
 #' @return An expanded phenotype matrix with dummy variables suitable for regression modeling.
 #' @export
-expandPhenoMatrix <- function(pheno, drop.ref = TRUE) {
+expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric=FALSE) {
   ## get expanded annotation matrix
-  a1 <- tidy.dataframe(pheno)
+  a1 <- tidy.dataframe(M)
   nlevel <- apply(a1, 2, function(x) length(setdiff(unique(x), NA)))
   nterms <- colSums(!is.na(a1))
   nratio <- nlevel / nterms
-  y.class <- sapply(utils::type.convert(a1, as.is = TRUE), class)
-
+  if(inherits(a1, "data.frame")) {
+    a1.typed <- utils::type.convert(a1, as.is = TRUE)  
+    y.class <- sapply(a1.typed, function(a) class(a)[1])
+  } else {
+    ## matrix??
+    a1.typed <- utils::type.convert(a1, as.is = TRUE)  
+    y.class <- apply(a1.typed, 2, function(a) class(a)[1])
+  }
+  
   ## these integers are probably factors... (mostly...)
   is.fac <- rep(FALSE, ncol(a1))
-  is.int <- y.class == "integer"
+  is.int <- (y.class == "integer")
   ii <- which(is.int)
   is.fac[ii] <- apply(a1[, ii, drop = FALSE], 2, function(x) {
     nlev <- length(unique(x[!is.na(x)]))
-    max(x, na.rm = TRUE) %in% c(nlev, nlev - 1)
+    max(x, na.rm = TRUE) %in% c(nlev, nlev - 1)  ## boolean
   })
   is.fac2 <- (y.class == "integer" & nlevel <= 3 & nratio < 0.66)
   y.class[is.fac | is.fac2] <- "character"
@@ -2163,20 +2174,27 @@ expandPhenoMatrix <- function(pheno, drop.ref = TRUE) {
   if (length(kk) == 0) {
     return(NULL)
   }
+
   a1 <- a1[, kk, drop = FALSE]
   a1.isnum <- y.isnum[kk]
+  
   i <- 1
   m1 <- list()
   for (i in 1:ncol(a1)) {
     if (a1.isnum[i]) {
       suppressWarnings(x <- as.numeric(a1[, i]))
-      if (drop.ref) {
-        m0 <- matrix((x > stats::median(x, na.rm = TRUE)), ncol = 1)
-        colnames(m0) <- "high"
+      if(keep.numeric) {
+        m0 <- matrix(x, ncol = 1)
+        colnames(m0) <- "#"
       } else {
-        mx <- stats::median(x, na.rm = TRUE)
-        m0 <- matrix(cbind(x <= mx, x > mx), ncol = 2)
-        colnames(m0) <- c("low", "high")
+        if (drop.ref) {
+          m0 <- matrix((x > stats::median(x, na.rm = TRUE)), ncol = 1)
+          colnames(m0) <- "high"
+        } else {
+          mx <- stats::median(x, na.rm = TRUE)
+          m0 <- matrix(cbind(x <= mx, x > mx), ncol = 2)
+          colnames(m0) <- c("low", "high")
+        }
       }
     } else if (drop.ref && nlevel[i] == 2) {
       x <- as.character(a1[, i])
@@ -2203,8 +2221,8 @@ expandPhenoMatrix <- function(pheno, drop.ref = TRUE) {
     colnames(m1[[i]]) <- paste0(names(m1)[i], "=", colnames(m1[[i]]))
   }
   m1 <- do.call(cbind, m1)
-  rownames(m1) <- rownames(pheno)
-
+  colnames(m1) <- sub("=#","",colnames(m1))
+  rownames(m1) <- rownames(M)  
   return(m1)
 }
 
@@ -2255,6 +2273,36 @@ getGSETS_playbase <- function(gsets = NULL, pattern = NULL) {
   }
   gsets <- intersect(gsets, names(playdata::iGSETS))
   lapply(playdata::iGSETS[gsets], function(idx) playdata::GSET_GENES[idx])
+}
+
+#' Normalize Matrix by Row
+#'
+#' Normalizes a matrix by dividing each row by the sum of its elements.
+#'
+#' @param G The matrix to be normalized.
+#'
+#' @return The normalized matrix.
+#'
+#' @export
+normalize_rows <- function(G) {
+  # efficient normalization using linear algebra
+  row_sums <- Matrix::rowSums(G)
+  D <- Matrix::Diagonal(x = 1 / row_sums)
+  G_scaled <- D %*% G
+  rownames(G_scaled) <- rownames(G)
+  colnames(G_scaled) <- colnames(G)  
+  return(G_scaled)
+}
+
+#' @export
+normalize_cols <- function(G) {
+  # efficient normalization using linear algebra
+  col_sums <- Matrix::colSums(G)
+  D <- Matrix::Diagonal(x = 1 / col_sums)
+  G_scaled <- G %*% D
+  rownames(G_scaled) <- rownames(G)
+  colnames(G_scaled) <- colnames(G)
+  return(G_scaled)
 }
 
 
