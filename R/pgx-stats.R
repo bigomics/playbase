@@ -151,7 +151,7 @@ stats.limma <- function(X, y, ref = NULL, test = c("B", "Treat"), add.avg = TRUE
     )
     avg <- do.call(cbind, avg)
     avg <- avg[, c(ref, setdiff(y, ref))] ## reorder ref first
-    ##colnames(avg) <- paste0("AveExpr.",colnames(avg))
+    ## colnames(avg) <- paste0("AveExpr.",colnames(avg))
     top <- cbind(top, avg)
   }
   top
@@ -248,40 +248,41 @@ stats.DESeq2 <- function(counts, y, ref = NULL, test = "Wald", add.avg = TRUE, .
 }
 
 stats.numsig <- function(X, y, lfc = 1, q = 0.05, set.na = NULL,
-                         trend=TRUE, verbose=TRUE) {
+                         trend = TRUE, verbose = TRUE) {
   if (!is.null(set.na)) y[y == set.na] <- NA
 
   ## select non-missing
   sel <- !is.na(y)
   y <- y[sel]
-  X <- X[,sel,drop=FALSE]  
+  X <- X[, sel, drop = FALSE]
 
-  ## Genes  
-  res  <- gx.limmaF(X, y, fdr=1, lfc=0, trend=trend, verbose=0)
-#  res1 <- gx.limma(X, y, fdr=1, lfc=0, trend=trend, verbose=0)  
-#  res2 <- stats.limma(X, y, ref=NULL, trend=trend)
-  
-  res <- res[order(res$P.Value),]
-  avx <- res[,grep("AveExpr",colnames(res))]
-  ldiff <- apply( avx, 1, function(x) diff(range(x)) )
-  sig <- (abs(ldiff) > lfc & res$adj.P.Val < q)  
+  ## Genes
+  res <- gx.limmaF(X, y, fdr = 1, lfc = 0, trend = trend, verbose = 0)
+  #  res1 <- gx.limma(X, y, fdr=1, lfc=0, trend=trend, verbose=0)
+  #  res2 <- stats.limma(X, y, ref=NULL, trend=trend)
+
+  res <- res[order(res$P.Value), ]
+  avx <- res[, grep("AveExpr", colnames(res))]
+  ldiff <- apply(avx, 1, function(x) diff(range(x)))
+  sig <- (abs(ldiff) > lfc & res$adj.P.Val < q)
   nsig <- sum(sig, na.rm = TRUE)
   sig.genes <- rownames(res)[which(sig)]
 
   ## Gene sets
   fc0 <- array(ldiff, dimnames = list(rownames(res)))
   sel <- grep("^go|pathway|geo_human", rownames(playdata::GSETxGENE),
-    value = TRUE, ignore.case = TRUE)
+    value = TRUE, ignore.case = TRUE
+  )
   gmt <- playdata::GSETxGENE[sel, ]
   gsa <- playbase::gset.rankcor(cbind(fc0), Matrix::t(gmt), compute.p = TRUE)
-  gsa <- data.frame( rho=gsa$rho[,1], p.value=gsa$p.value[,1], q.value=gsa$q.value[,1] )
-  gsa <- gsa[order(gsa$p.value),]
+  gsa <- data.frame(rho = gsa$rho[, 1], p.value = gsa$p.value[, 1], q.value = gsa$q.value[, 1])
+  gsa <- gsa[order(gsa$p.value), ]
   sig.gs <- (gsa$q.value < q)
   nsets <- sum(sig.gs, na.rm = TRUE)
   sig.gsets <- rownames(gsa)[which(sig.gs)]
-  if(verbose) {
-    cat("nsig.genes = ",nsig,"\n")
-    cat("nsig.gsets = ",nsets,"\n")
+  if (verbose) {
+    cat("nsig.genes = ", nsig, "\n")
+    cat("nsig.gsets = ", nsets, "\n")
   }
   list(genes = sig.genes, gsets = sig.gsets, fc = fc0)
 }

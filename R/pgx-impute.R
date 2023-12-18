@@ -194,12 +194,12 @@ svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
   empty.rows <- which(rowMeans(is.na(X)) == 1)
   empty.cols <- which(colMeans(is.na(X)) == 1)
 
-  if(is.null(nv)) {
-    nv <- max(1, round(mean(is.na(X)) * min(dim(X))) )
+  if (is.null(nv)) {
+    nv <- max(1, round(mean(is.na(X)) * min(dim(X))))
     message("setting nv = ", nv)
   }
 
-  
+
   if (is.character(init) && grepl("%", init)) {
     q <- as.numeric(sub("%", "", init))
     init <- quantile(X[!is.na(X)], probs = q)[1]
@@ -233,7 +233,7 @@ svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
   Xold <- X
   nv <- min(nv, dim(X) - 1)
   while ((error > threshold) && (count < maxSteps)) {
-    if(nv < min(dim(X))/5) {
+    if (nv < min(dim(X)) / 5) {
       res <- irlba::irlba(X, nv = nv, nu = nv)
     } else {
       res <- svd(X, nv = nv, nu = nv)

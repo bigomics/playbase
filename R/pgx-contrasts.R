@@ -780,25 +780,24 @@ makeContrastsFromLabelMatrix <- function(lab.matrix) {
 #' each pair of groups.
 #' @export
 contrasts.convertToLabelMatrix <- function(contrasts, samples) {
-
-  if(NCOL(contrasts)==1 && is.null(dim(contrasts))) {
+  if (NCOL(contrasts) == 1 && is.null(dim(contrasts))) {
     stop("contrasts must be a matrix with column names")
   }
-  if(is.null(colnames(contrasts))) {
+  if (is.null(colnames(contrasts))) {
     stop("contrasts must have column names")
   }
-  
+
   is.numeric.matrix <- inherits(contrasts, "matrix") &&
-    all(apply(contrasts,2,class) %in% c("integer","numeric"))
+    all(apply(contrasts, 2, class) %in% c("integer", "numeric"))
   is.numeric.df <- inherits(contrasts, "data.frame") &&
-    all(apply(contrasts,2,class) %in% c("integer","numeric"))
+    all(apply(contrasts, 2, class) %in% c("integer", "numeric"))
   is.numeric.contrast <- is.numeric.matrix | is.numeric.df
-#  num.values <- c(-1, 0, 1, NA, "NA", "na", "", " ")
-#  is.numeric.contrast <- all(as.vector(unlist(contrasts)) %in% num.values)
+  #  num.values <- c(-1, 0, 1, NA, "NA", "na", "", " ")
+  #  is.numeric.contrast <- all(as.vector(unlist(contrasts)) %in% num.values)
   is.numeric.contrast
 
-  if(is.numeric.contrast) {
-    contrasts[ contrasts %in% c(NA,"NA","na","")] <- 0
+  if (is.numeric.contrast) {
+    contrasts[contrasts %in% c(NA, "NA", "na", "")] <- 0
     contrasts <- sign(contrasts)
   }
 
@@ -816,7 +815,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
 
   is.group.contrast
   is.sample.contrast
-  
+
   if (!is.sample.contrast && !has.group.col) {
     message("[contrasts.convertToLabelMatrix] ERROR: Invalid group-wise contrast. could not find 'group' column.")
     return(NULL)
@@ -850,7 +849,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
       rownames(contrasts2) <- rownames(contrasts)
       contrasts2 <- contrastAsLabels(contrasts2)
       new.contrasts <- matrix(NA, nrow(samples), ncol(contrasts))
-      new.contrasts <- contrasts2[match(rownames(samples),rownames(contrasts2)),]
+      new.contrasts <- contrasts2[match(rownames(samples), rownames(contrasts2)), ]
       rownames(new.contrasts) <- rownames(samples)
     }
   }
@@ -864,7 +863,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
       rownames(new.contrasts) <- rownames(samples)
     }
   }
-  
+
   ## always clean up
   new.contrasts <- as.matrix(new.contrasts)
   new.contrasts <- apply(new.contrasts, 2, as.character)

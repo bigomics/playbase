@@ -134,7 +134,7 @@ gx.imagemap <- function(X, main = "", cex = 1, cex.main = 1.8, clust = TRUE) {
     xaxt = "n", yaxt = "n",
     xlab = "", ylab = ""
   )
-  if(cex > 0) {
+  if (cex > 0) {
     graphics::mtext(colnames(X),
       side = 1, at = 1:ncol(X), las = 3,
       cex = 0.75 * cex, line = 0.5

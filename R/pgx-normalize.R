@@ -170,14 +170,13 @@ edgeR.normalizeCounts <- function(M, method = c("TMM", "TMMwsp", "RLE", "upperqu
 ## --------------------------- new stuff -----------------------------------------
 
 #' @export
-normalizeCounts <- function(counts, 
+normalizeCounts <- function(counts,
                             q.zero = 0.01,
                             method = "sdc",
                             shift.method = "slog",
                             weighted.qn = TRUE,
                             svd.init = NULL,
-                            plot = FALSE
-                            ) {
+                            plot = FALSE) {
   which.zero <- which(counts == 0)
   which.missing <- which(is.na(counts))
   nzero <- sum(length(which.zero))
@@ -262,13 +261,13 @@ normalizeCounts <- function(counts,
   }
 
   ## regress on total counts. here or later??
-  regress.tc = FALSE
-  if(regress.tc) {
+  regress.tc <- FALSE
+  if (regress.tc) {
     message("[normalizeCounts] regressing on total counts")
-    totcounts <- scale( log2(colSums(2**S)+1) )
-    S <- limma::removeBatchEffect(S, batch=NULL, covariates=totcounts)
+    totcounts <- scale(log2(colSums(2**S) + 1))
+    S <- limma::removeBatchEffect(S, batch = NULL, covariates = totcounts)
   }
-    
+
   ## Do quantile normalization. weighted will retain a bit of
   ## variation in the values.
   message("[normalizeCounts] apply quantile normalization")
@@ -308,9 +307,9 @@ normalizeCounts <- function(counts,
     a <- log2(median.tc / 1e6)
     median(colSums(2**(S - a), na.rm = TRUE), na.rm = TRUE)
     zero.point <- a
-  } else if (grepl("^m[0-9]",method)) {
+  } else if (grepl("^m[0-9]", method)) {
     ## median centering
-    mval <- as.numeric(substring(method,2,99))
+    mval <- as.numeric(substring(method, 2, 99))
     a <- median(S1, na.rm = TRUE) - mval
     median(S1 - a, na.rm = TRUE)
     median(S - a, na.rm = TRUE)
@@ -333,7 +332,7 @@ normalizeCounts <- function(counts,
     hist((S - zero.point), breaks = 200)
   }
 
-  message("[normalizeCounts] shifting values to zero: z = ",round(zero.point,4))
+  message("[normalizeCounts] shifting values to zero: z = ", round(zero.point, 4))
   if (shift.method == "slog") {
     ## smooth log-transform. not real zeros
     S <- slog(2**S, s = 2**zero.point)

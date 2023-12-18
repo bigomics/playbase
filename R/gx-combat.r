@@ -49,8 +49,8 @@ gx.nnmcorrect <- function(X, y, dist.method = "cor",
   ## implementation creates a fully paired dataset with nearest
   ## matching neighbours when pairs are missing.
 
-  ##use.design = TRUE;dist.method = "cor";center.x = TRUE;center.m = TRUE; sdtop = 1000
-  
+  ## use.design = TRUE;dist.method = "cor";center.x = TRUE;center.m = TRUE; sdtop = 1000
+
   ## compute distance matrix for NNM-pairing
   y1 <- paste0("y=", y)
   dX <- X
@@ -69,16 +69,16 @@ gx.nnmcorrect <- function(X, y, dist.method = "cor",
     mX <- do.call(cbind, mX)
     dX <- dX - mX[, y1]
   }
-  
+
   if (dist.method == "cor") {
     message("[gx.nnmcorrect] computing correlation matrix D...")
-    ##D <- 1 - crossprod(scale(dX)) / (nrow(dX) - 1) ## faster
+    ## D <- 1 - crossprod(scale(dX)) / (nrow(dX) - 1) ## faster
     D <- 1 - cor(dX)
   } else {
     message("[gx.nnmcorrect] computing distance matrix D...\n")
     D <- as.matrix(stats::dist(t(dX)))
   }
-  ##remove(dX)
+  ## remove(dX)
   D[is.na(D)] <- 0 ## might have NA
 
   ## find neighbours
@@ -88,9 +88,9 @@ gx.nnmcorrect <- function(X, y, dist.method = "cor",
   Matrix::head(B)
 
   ## ensure sample is always present in own group
-  idx <- cbind(1:nrow(B), match(y1,colnames(B)))
+  idx <- cbind(1:nrow(B), match(y1, colnames(B)))
   B[idx] <- rownames(B)
-  
+
   ## imputing full paired data set
   kk <- match(as.vector(B), rownames(B))
   full.y <- y1[kk]
@@ -99,8 +99,8 @@ gx.nnmcorrect <- function(X, y, dist.method = "cor",
   dim(full.X)
 
   ## remove pairing effect
-  message("[gx.nnmcorrect] correcting for pairing effects...")  
-  use.batch = TRUE
+  message("[gx.nnmcorrect] correcting for pairing effects...")
+  use.batch <- TRUE
   if (use.batch) {
     design <- stats::model.matrix(~full.y)
     full.X <- limma::removeBatchEffect(
@@ -109,12 +109,13 @@ gx.nnmcorrect <- function(X, y, dist.method = "cor",
       design = design
     )
   } else {
-    V <- model.matrix(~ full.pairs)
+    V <- model.matrix(~full.pairs)
     design <- stats::model.matrix(~full.y)
     full.X <- limma::removeBatchEffect(
       full.X,
       covariates = V,
-      design = design)
+      design = design
+    )
   }
 
   ## now contract to original samples
@@ -127,18 +128,18 @@ gx.nnmcorrect <- function(X, y, dist.method = "cor",
   cX <- cX[, colnames(X)]
 
   ## retain original row means
-  cX <- cX - rowMeans(cX, na.rm=TRUE) + rowMeans(X,na.rm=TRUE)
-  
+  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
+
   res <- list(X = cX, pairings = B)
   return(res)
 }
 
 
 #' @export
-gx.nnmcorrect2 <- function(X, y, r=0.35, use.design = TRUE, dist.method = "cor",
-                           center.x = TRUE, center.m = TRUE, mode="", sdtop = 1000) {
-  ##use.design = TRUE;dist.method = "cor";center.x = TRUE;center.m = TRUE; sdtop = 1000;r=0.35
-  
+gx.nnmcorrect2 <- function(X, y, r = 0.35, use.design = TRUE, dist.method = "cor",
+                           center.x = TRUE, center.m = TRUE, mode = "", sdtop = 1000) {
+  ## use.design = TRUE;dist.method = "cor";center.x = TRUE;center.m = TRUE; sdtop = 1000;r=0.35
+
   ## compute distance matrix for NNM-pairing
   y1 <- paste0("y=", y)
   dX <- X
@@ -147,7 +148,7 @@ gx.nnmcorrect2 <- function(X, y, r=0.35, use.design = TRUE, dist.method = "cor",
   sdx <- apply(dX, 1, stats::sd)
   ii <- Matrix::head(order(-sdx), sdtop)
   dX <- dX[ii, ]
-  
+
   if (center.x) {
     dX <- dX - rowMeans(dX, na.rm = TRUE)
   }
@@ -160,13 +161,13 @@ gx.nnmcorrect2 <- function(X, y, r=0.35, use.design = TRUE, dist.method = "cor",
 
   if (dist.method == "cor") {
     message("[gx.nnmcorrect2] computing correlation matrix D...")
-    ##D <- 1 - crossprod(scale(dX)) / (nrow(dX) - 1) ## faster
-    D <- 1 - cor(dX, use='pairwise')
+    ## D <- 1 - crossprod(scale(dX)) / (nrow(dX) - 1) ## faster
+    D <- 1 - cor(dX, use = "pairwise")
   } else {
     message("[gx.nnmcorrect2] computing distance matrix D...\n")
     D <- as.matrix(stats::dist(t(dX)))
   }
-  ##remove(dX)
+  ## remove(dX)
   D[is.na(D)] <- 0 ## might have NA
 
   ## find neighbours
@@ -175,39 +176,39 @@ gx.nnmcorrect2 <- function(X, y, r=0.35, use.design = TRUE, dist.method = "cor",
   rownames(B) <- colnames(X)
 
   ## ensure sample is always present in own group
-  idx <- cbind(1:nrow(B), match(y1,colnames(B)))
+  idx <- cbind(1:nrow(B), match(y1, colnames(B)))
   B[idx] <- rownames(B)
-  
+
   ## create batch design matrix manually
   idx <- apply(B, 2, function(x) match(x, rownames(B)))
   jj <- as.vector(t(idx))
-  ii <- as.vector(mapply( rep, 1:nrow(idx), ncol(idx)))
+  ii <- as.vector(mapply(rep, 1:nrow(idx), ncol(idx)))
   P <- Matrix::sparseMatrix(
     i = ii, j = jj, x = rep(1, length(ii)),
     dims = c(nrow(B), nrow(B))
   )
 
   ## correct for pairing effect
-  message("[gx.nnmcorrect2] correcting for pairing effects...")  
+  message("[gx.nnmcorrect2] correcting for pairing effects...")
   P1 <- P
-  if(mode=="sym") P1 <- P + Matrix::t(P)  ## make symmetric
-  if(mode=="tr") P1 <- Matrix::t(P) ## transposed  
-  if(r < 1) {
-    k <- round(min( r*dim(X), dim(X)-1))  ## critical
-    k <- max(k,1)
-    if(r > 0.2) {
-      sv <- svd(P1, nu=k, nv=0)
+  if (mode == "sym") P1 <- P + Matrix::t(P) ## make symmetric
+  if (mode == "tr") P1 <- Matrix::t(P) ## transposed
+  if (r < 1) {
+    k <- round(min(r * dim(X), dim(X) - 1)) ## critical
+    k <- max(k, 1)
+    if (r > 0.2) {
+      sv <- svd(P1, nu = k, nv = 0)
     } else {
-      sv <- irlba::irlba(P1, nu=k, nv=0)
+      sv <- irlba::irlba(P1, nu = k, nv = 0)
     }
     P1 <- sv$u
   }
 
   design <- stats::model.matrix(~y1)
-  cX <- limma::removeBatchEffect( X, covariates = scale(P1), design = design )
-  
+  cX <- limma::removeBatchEffect(X, covariates = scale(P1), design = design)
+
   ## retain original row means
-  cX <- cX - rowMeans(cX, na.rm=TRUE) + rowMeans(X,na.rm=TRUE)
+  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
 
   res <- list(X = cX, pairings = B)
   return(res)

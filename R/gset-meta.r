@@ -80,7 +80,9 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
   ## some "normalization" for single-sample methods
   my.normalize <- function(zx) {
-    if(nrow(zx) <= 10) return(zx)
+    if (nrow(zx) <= 10) {
+      return(zx)
+    }
     zx <- scale(limma::normalizeQuantiles(zx))
     return(zx)
   }
@@ -129,9 +131,11 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     tt <- system.time({
       zx.gsva <- NULL
       zx.gsva <- try(
-        GSVA::gsva(as.matrix(X), gmt[], method = "gsva",
-        parallel.sz = mc.cores, verbose = FALSE
-      ))
+        GSVA::gsva(as.matrix(X), gmt[],
+          method = "gsva",
+          parallel.sz = mc.cores, verbose = FALSE
+        )
+      )
       dim(zx.gsva)
       if (is.null(zx.gsva) || "try-error" %in% class(zx.gsva)) {
         ## switch to single core...
@@ -158,7 +162,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     })
     timings <- rbind(timings, c("gsva", tt))
   }
-    
+
   if ("ssgsea" %in% methods) {
     cat("fitting contrasts using ssGSEA/limma... \n")
     tt <- system.time({
@@ -166,7 +170,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
         method = "ssgsea",
         parallel.sz = mc.cores, verbose = FALSE
       ))
-      if(!"try-error" %in% class(zx.ssgsea)) {
+      if (!"try-error" %in% class(zx.ssgsea)) {
         dim(zx.ssgsea)
         zx.ssgsea <- my.normalize(zx.ssgsea)
         jj <- match(names(gmt), rownames(zx.ssgsea))
@@ -188,7 +192,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   ## --------------------------------------------------------------
   ## Fit remaining methods
   ## --------------------------------------------------------------
-  
+
   k <- 1
   fitThisContrastWithMethod <- function(method, k) {
     jj <- which(exp.matrix[, k] != 0)
@@ -367,7 +371,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     res2 <- list(results = res, timings = timings)
     return(res2)
   }
-  
+
   method <- "fisher"
   method <- "fgsea"
   method <- "gsva"
@@ -405,10 +409,10 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   cat("[gset.fitContrastsWithAllMethods] length(all.results)=", length(all.results), "\n")
   tests <- names(all.results[[1]])
   ntest <- length(tests)
-  
+
   P <- lapply(tests, function(k) do.call(cbind, lapply(all.results, function(x) x[[k]][, "p.value"])))
   Q <- lapply(tests, function(k) do.call(cbind, lapply(all.results, function(x) x[[k]][, "q.value"])))
-  S <- lapply(tests, function(k) do.call(cbind, lapply(all.results, function(x) x[[k]][, "score"])))  
+  S <- lapply(tests, function(k) do.call(cbind, lapply(all.results, function(x) x[[k]][, "score"])))
   for (i in 1:ntest) {
     rownames(P[[i]]) <- names(gmt)
     rownames(Q[[i]]) <- names(gmt)
@@ -432,9 +436,9 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   for (i in 1:nmethod) {
     q0 <- sapply(Q, function(x) x[, i])
     s0 <- sapply(S, function(x) x[, i])
-    if(nrow(Q[[1]])==1) {
-      q0 <- matrix(q0, nrow=nrow(Q[[1]]), dimnames = list(rownames(Q[[1]]), names(Q)))
-      s0 <- matrix(s0, nrow=nrow(S[[1]]), dimnames = list(rownames(S[[1]]), names(S)))
+    if (nrow(Q[[1]]) == 1) {
+      q0 <- matrix(q0, nrow = nrow(Q[[1]]), dimnames = list(rownames(Q[[1]]), names(Q)))
+      s0 <- matrix(s0, nrow = nrow(S[[1]]), dimnames = list(rownames(S[[1]]), names(S)))
     }
     q0[is.na(q0)] <- 1
     s0[is.na(s0)] <- 0
@@ -470,7 +474,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     #
     #
     ss.rank <- function(x) scale(sign(x) * rank(abs(x), na.last = "keep"), center = FALSE)
-    if( nrow(S[[i]]) == 1 ) {
+    if (nrow(S[[i]]) == 1) {
       meta.fx <- S[[i]]
     } else {
       meta.fx <- rowMeans(apply(S[[i]], 2, ss.rank), na.rm = TRUE)

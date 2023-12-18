@@ -17,7 +17,7 @@
 #' @param pheno Dataframe containing sample metadata/covariates. Must match colnames of \code{X}.
 #' @param model.par Vector of column names of biological covariates in \code{pheno}.
 #' @param batch.par Vector of column names of batch covariates in \code{pheno}.
-#' 
+#'
 #' @param method Batch correction method to apply ("combat", "limma", "sva", etc).
 #'
 #' @details This function performs supervised batch correction, using known batch groups and biological covariates.
@@ -545,8 +545,8 @@ checkConfounders <- function(pheno, model.par, max.rho = 0.3) {
 #'
 #' @export
 pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
-                               expand = FALSE, collapse = TRUE, 
-                               plot = TRUE, horiz=FALSE,
+                               expand = FALSE, collapse = TRUE,
+                               plot = TRUE, horiz = FALSE,
                                main = NULL, text.cex = 1) {
   getF <- function(x, y) {
     x <- t(scale(t(x))) ## rowscale
@@ -558,14 +558,14 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
       y1 <- y1 + 1e-8 * stats::rnorm(length(y1))
       y1 <- (y1 > stats::median(y1, na.rm = TRUE))
     }
-    design <- stats::model.matrix(~ y1)
+    design <- stats::model.matrix(~y1)
     fit <- limma::lmFit(x[, ii], design)
     suppressWarnings(fit <- try(limma::eBayes(fit, trend = FALSE)))
     if (inherits(fit, "try-error")) {
       return(NULL)
     }
-    suppressMessages(top <- limma::topTableF(fit, number = nrow(x), sort.by='none'))
-    list( val = top$F, pv = top$P.Value )
+    suppressMessages(top <- limma::topTableF(fit, number = nrow(x), sort.by = "none"))
+    list(val = top$F, pv = top$P.Value)
   }
   getCor <- function(x, y) {
     ii <- which(!is.na(y))
@@ -575,25 +575,25 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
     r1 <- stats::cor(t(x[, ii]), design, use = "pairwise")
     r1 <- rowMeans(abs(r1))
     pv <- cor.pvalue(r1, length(y1))
-    list( val = r1, pv = pv )
+    list(val = r1, pv = pv)
   }
 
-  if(expand) {
-    Y <- expandPhenoMatrix(Y, drop.ref=FALSE)
+  if (expand) {
+    Y <- expandPhenoMatrix(Y, drop.ref = FALSE)
   }
   X <- X - rowMeans(X, na.rm = TRUE) ## center features
   X[is.na(X)] <- mean(X, na.rm = TRUE) ## no missing allowed
-  nv <- min(nv, dim(X)-1)
-  if(nv < ncol(X)/2) {
-    V <- irlba::irlba(X, nv = nv, nu=0)$v
+  nv <- min(nv, dim(X) - 1)
+  if (nv < ncol(X) / 2) {
+    V <- irlba::irlba(X, nv = nv, nu = 0)$v
   } else {
-    V <- svd(X, nv = nv, nu=0)$v
+    V <- svd(X, nv = nv, nu = 0)$v
   }
   rownames(V) <- colnames(X)
-  colnames(V) <- paste0("PC",1:ncol(V))
-  
+  colnames(V) <- paste0("PC", 1:ncol(V))
+
   rho <- list()
-  pv  <- list()  
+  pv <- list()
   p <- "Chemotherapy"
   for (p in c("<random>", colnames(Y))) {
     if (p == "<random>") {
@@ -602,54 +602,56 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
       y <- Y[, p]
     }
     nlevels <- length(unique(y[!is.na(y)]))
-    if (nlevels > 1) {    
+    if (nlevels > 1) {
       if (stat == "cor") {
         res <- getCor(x = t(V), y)
         rho[[p]] <- res$val
-        pv[[p]]  <- res$pv
+        pv[[p]] <- res$pv
       }
       if (stat == "F") {
         res <- getF(x = t(V), y)
         rho[[p]] <- res$val
-        pv[[p]]  <- res$pv
+        pv[[p]] <- res$pv
       }
     }
   }
   R <- do.call(rbind, rho)
-  P <- do.call(rbind, pv)  
+  P <- do.call(rbind, pv)
   colnames(R) <- paste0("PC", 1:ncol(R))
-  colnames(P) <- paste0("PC", 1:ncol(P))  
+  colnames(P) <- paste0("PC", 1:ncol(P))
 
   if (!horiz && stat == "F") {
     R <- t(t(R) / colMeans(R, na.rm = TRUE))
   }
 
-  if(collapse) {
-    params <- gsub("[=:].*","",rownames(R))
+  if (collapse) {
+    params <- gsub("[=:].*", "", rownames(R))
     #    params <- sub("^[.]","_",params)
     #    params <- sub("[.].*","",params)
-    
-    rr <- tapply(1:nrow(R), params, function(i) colMeans(R[i,,drop=FALSE]))
-    R <- do.call( rbind, rr)
+
+    rr <- tapply(1:nrow(R), params, function(i) colMeans(R[i, , drop = FALSE]))
+    R <- do.call(rbind, rr)
     ##    pp <- tapply(1:nrow(P), params, function(i) apply(P[i,,drop=FALSE],2,min))
-    pp <- tapply(1:nrow(P), params, function(i) exp(colMeans(log(1e-20+P[i,,drop=FALSE]))))
-    P <- do.call( rbind, pp)
+    pp <- tapply(1:nrow(P), params, function(i) exp(colMeans(log(1e-20 + P[i, , drop = FALSE]))))
+    P <- do.call(rbind, pp)
   }
 
   if (plot) {
     stat0 <- c("correlation", "F-statistic")[1 + 1 * (stat == "F")]
     tt0 <- c("PC correlation", "PC variation")[1 + 1 * (stat == "F")]
     if (is.null(main)) main <- tt0
-    if(horiz) {
-      plt <- plot_ggbarplot((R), ylab = "", srt = 0, horiz=TRUE,
-           legend.cex = 1 * text.cex,
-           label.cex = 1* text.cex,
-           axis.cex = 1 * text.cex,
-           group.name = "") 
+    if (horiz) {
+      plt <- plot_ggbarplot((R),
+        ylab = "", srt = 0, horiz = TRUE,
+        legend.cex = 1 * text.cex,
+        label.cex = 1 * text.cex,
+        axis.cex = 1 * text.cex,
+        group.name = ""
+      )
       plt <- plt + ggplot2::theme(
-           plot.margin = ggplot2::margin(0, 4, 0, 4, "mm"),
-           plot.title = ggplot2::element_text(size = 13 * text.cex)
-        ) +
+        plot.margin = ggplot2::margin(0, 4, 0, 4, "mm"),
+        plot.title = ggplot2::element_text(size = 13 * text.cex)
+      ) +
         ggplot2::xlab(stat0) + ggplot2::ggtitle(main)
     } else {
       plt <- plot_ggbarplot(t(R),
@@ -657,17 +659,18 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
         legend.cex = 1 * text.cex,
         label.cex = 1 * text.cex,
         axis.cex = 1 * text.cex,
-        group.name = "") +
+        group.name = ""
+      ) +
         ggplot2::theme(
-           plot.margin = ggplot2::margin(0, 4, 0, 4, "mm"),
-           plot.title = ggplot2::element_text(size = 13 * text.cex)
+          plot.margin = ggplot2::margin(0, 4, 0, 4, "mm"),
+          plot.title = ggplot2::element_text(size = 13 * text.cex)
         ) +
         ggplot2::xlab("") + ggplot2::ggtitle(main)
     }
     plt
     return(plt)
   }
-  list( R=R, P=P, V=V )
+  list(R = R, P = P, V = V)
 }
 
 
@@ -700,63 +703,62 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
 #' head(results$biological)
 #' }
 #' @export
-pgx.computeBiologicalEffects.DEPRECATED <- function(X, is.count=FALSE) {    
+pgx.computeBiologicalEffects.DEPRECATED <- function(X, is.count = FALSE) {
+  message("[pgx.computeBiologicalEffects] estimating biological effects...")
 
-    message("[pgx.computeBiologicalEffects] estimating biological effects...")
+  ## shift zero to 1% percentile
+  if (!is.count) {
+    q0 <- quantile(X[X > 0], probs = 0.01, na.rm = TRUE)
+    q0
+    tx <- pmax(X - q0, 0) ## log expression
+    cx <- pmax(2**tx - 1, 0) ## counts
+  } else {
+    cx <- X
+    tx <- log2(cx + 1)
+  }
+  nfeature <- Matrix::colSums(cx > 0) + 1
+  libsize <- Matrix::colSums(cx)
 
-    ## shift zero to 1% percentile
-    if(!is.count) {
-        q0 <- quantile(X[X>0], probs=0.01, na.rm=TRUE)
-        q0
-        tx <- pmax(X - q0,0)  ## log expression
-        cx <- pmax(2**tx - 1, 0)  ## counts
-    } else {
-        cx <- X
-        tx <- log2(cx + 1)
-    }
-    nfeature <- Matrix::colSums(cx>0)+1
-    libsize  <- Matrix::colSums(cx)
+  mt.genes <- grep("^MT-", rownames(X), ignore.case = TRUE, value = TRUE)
+  rb.genes <- grep("^RP[SL]", rownames(X), ignore.case = TRUE, value = TRUE)
+  mito <- ribo <- NA
+  pct.mito <- pct.ribo <- NA
+  mt.genes
+  rb.genes
+  if (length(mt.genes) >= 10) {
+    mito <- Matrix::colMeans(tx[mt.genes, , drop = FALSE])
+    pct.mito <- Matrix::colSums(cx[mt.genes, , drop = FALSE], na.rm = TRUE) / libsize
+  }
+  if (length(rb.genes) >= 10) {
+    ii <- rb.genes[order(-apply(tx[rb.genes, , drop = FALSE], 1, sd, na.rm = TRUE))]
+    sel20 <- Matrix::head(ii, 20)
+    ribo <- Matrix::colMeans(tx[rb.genes, , drop = FALSE])
+    ribo20 <- Matrix::colMeans(tx[sel20, , drop = FALSE])
+    pct.ribo <- Matrix::colSums(cx[rb.genes, , drop = FALSE], na.rm = TRUE) / libsize
+  }
+  pheno <- data.frame(
+    mito = mito,
+    ribo = ribo,
+    ## ribo20 = ribo20,
+    ## pct.mito = pct.mito,
+    ## pct.ribo = pct.ribo,
+    libsize = log2(libsize + 1),
+    ## nfeature = log2(nfeature+1),
+    check.names = FALSE
+  )
 
-    mt.genes <- grep("^MT-",rownames(X),ignore.case=TRUE,value=TRUE)
-    rb.genes <- grep("^RP[SL]",rownames(X),ignore.case=TRUE,value=TRUE)
-    mito = ribo = NA
-    pct.mito = pct.ribo = NA
-    mt.genes
-    rb.genes
-    if(length(mt.genes) >= 10) {
-        mito <- Matrix::colMeans(tx[mt.genes,,drop=FALSE])
-        pct.mito <- Matrix::colSums(cx[mt.genes,,drop=FALSE],na.rm=TRUE) / libsize
-    }
-    if(length(rb.genes) >= 10) {
-        ii <- rb.genes[order(-apply(tx[rb.genes,,drop=FALSE],1,sd,na.rm=TRUE))]
-        sel20 <- Matrix::head(ii,20)
-        ribo <- Matrix::colMeans(tx[rb.genes,,drop=FALSE])
-        ribo20 <- Matrix::colMeans(tx[sel20,,drop=FALSE])
-        pct.ribo <- Matrix::colSums(cx[rb.genes,,drop=FALSE],na.rm=TRUE) / libsize
-    }
-    pheno <- data.frame(
-        mito = mito,
-        ribo = ribo,
-        ##ribo20 = ribo20,
-        ##pct.mito = pct.mito,
-        ##pct.ribo = pct.ribo,
-        libsize = log2(libsize+1),
-        ##nfeature = log2(nfeature+1),
-        check.names=FALSE
-    )
-    
-    cc.score <- try(pgx.scoreCellCycle(cx))
-    Matrix::head(cc.score)
-    if(!any(class(cc.score)=="try-error")) {
-        ##cc.score <- cc.score[,c("s_score","g2m_score","diff_score")]
-        cc.score <- cc.score[,c("s_score","g2m_score")]
-        colnames(cc.score) <- paste0("cc.",colnames(cc.score))
-        pheno <- cbind(pheno, cc.score)
-    }
-    pheno$gender <- pgx.inferGender(cx)
+  cc.score <- try(pgx.scoreCellCycle(cx))
+  Matrix::head(cc.score)
+  if (!any(class(cc.score) == "try-error")) {
+    ## cc.score <- cc.score[,c("s_score","g2m_score","diff_score")]
+    cc.score <- cc.score[, c("s_score", "g2m_score")]
+    colnames(cc.score) <- paste0("cc.", colnames(cc.score))
+    pheno <- cbind(pheno, cc.score)
+  }
+  pheno$gender <- pgx.inferGender(cx)
 
-    Matrix::head(pheno)    
-    return(pheno)
+  Matrix::head(pheno)
+  return(pheno)
 }
 
 
@@ -797,8 +799,8 @@ pgx.computeTechnicalEffects <- function(X, is.count = FALSE, nmin = 3, nv = 2) {
 
   message("[pgx.computeTechnicalEffects] estimating technical effects...")
   nv <- min(nmin, nv)
-  nv <- min(nv, ncol(X)/2)
-  
+  nv <- min(nv, ncol(X) / 2)
+
   ## shift zero to 1% percentile
   if (!is.count) {
     counts <- pmax(2**X - 1, 0, na.rm = TRUE) ## counts
@@ -808,197 +810,203 @@ pgx.computeTechnicalEffects <- function(X, is.count = FALSE, nmin = 3, nv = 2) {
   }
 
   dbg("[pgx.computeTechnicalEffects] 1:")
-  
+
   ## technical covariates
-  nfeature  <- Matrix::colSums(counts > 0, na.rm = TRUE) + 1
-  libsize   <- Matrix::colSums(counts, na.rm = TRUE)
-  libmedian <- apply(X, 2, median, na.rm = TRUE)  
-  sel.big3  <- head(order(-rowMeans(counts, na.rm=TRUE)),3)
-  counts.big3 <- colSums(counts[sel.big3,,drop=FALSE], na.rm=TRUE)
-  big3      <- log2((1 + counts.big3) / (1 + libsize))
-  
+  nfeature <- Matrix::colSums(counts > 0, na.rm = TRUE) + 1
+  libsize <- Matrix::colSums(counts, na.rm = TRUE)
+  libmedian <- apply(X, 2, median, na.rm = TRUE)
+  sel.big3 <- head(order(-rowMeans(counts, na.rm = TRUE)), 3)
+  counts.big3 <- colSums(counts[sel.big3, , drop = FALSE], na.rm = TRUE)
+  big3 <- log2((1 + counts.big3) / (1 + libsize))
+
   ## mito/ribo genes
   mt.genes <- grep("^MT-|^ATP[68]$|^COX[1-2]$|^ND[1-6]$|^CYTB$",
-                   rownames(X), ignore.case = TRUE, value = TRUE)
+    rownames(X),
+    ignore.case = TRUE, value = TRUE
+  )
   rb.genes <- grep("^RP[SL]", rownames(X), ignore.case = TRUE, value = TRUE)
   mito <- ribo <- NA
   pct.mito <- pct.ribo <- NA
-  
+
   pheno <- data.frame(
-    lib.size   = log2(libsize + 1e-8),
+    lib.size = log2(libsize + 1e-8),
     lib.median = libmedian,
-    lib.big3 = big3, 
-#    mito = mito.pc,
-#    ribo = ribo.pc,
+    lib.big3 = big3,
+    #    mito = mito.pc,
+    #    ribo = ribo.pc,
     check.names = FALSE
   )
-  ##colnames(pheno) <- c("libsize",colnames(mito.pc),colnames(ribo.pc))
+  ## colnames(pheno) <- c("libsize",colnames(mito.pc),colnames(ribo.pc))
   mt.genes
   rb.genes
-  
+
   if (length(mt.genes) >= nmin) {
     mt.genes <- mt.genes[order(-apply(X[mt.genes, , drop = FALSE], 1, stats::sd, na.rm = TRUE))]
-    mt.genes <- head(mt.genes,20)
+    mt.genes <- head(mt.genes, 20)
     mito <- Matrix::colMeans(X[mt.genes, , drop = FALSE], na.rm = TRUE)
     pct.mito <- Matrix::colSums(counts[mt.genes, , drop = FALSE], na.rm = TRUE) / libsize
 
-    mito.pc <- svd(X[mt.genes,])$v[,1:nv]
-    if(NCOL(mito.pc)>1) {
-      colnames(mito.pc) <- paste0("PC",1:ncol(mito.pc))
+    mito.pc <- svd(X[mt.genes, ])$v[, 1:nv]
+    if (NCOL(mito.pc) > 1) {
+      colnames(mito.pc) <- paste0("PC", 1:ncol(mito.pc))
       rownames(mito.pc) <- colnames(X)
     }
-    pheno <- cbind(pheno, mito = mito.pc)    
+    pheno <- cbind(pheno, mito = mito.pc)
   }
-  
+
   if (length(rb.genes) >= nmin) {
     rb.genes <- rb.genes[order(-apply(X[rb.genes, , drop = FALSE], 1, stats::sd, na.rm = TRUE))]
-    rb.genes <- head(rb.genes,20)
+    rb.genes <- head(rb.genes, 20)
     ribo <- Matrix::colMeans(X[rb.genes, , drop = FALSE], na.rm = TRUE)
     pct.ribo <- Matrix::colSums(counts[rb.genes, , drop = FALSE], na.rm = TRUE) / libsize
 
-    ribo.pc <- svd(X[rb.genes,])$v[,1:nv]
-    if(NCOL(ribo.pc)>1) {
-      colnames(ribo.pc) <- paste0("PC",1:ncol(ribo.pc))
+    ribo.pc <- svd(X[rb.genes, ])$v[, 1:nv]
+    if (NCOL(ribo.pc) > 1) {
+      colnames(ribo.pc) <- paste0("PC", 1:ncol(ribo.pc))
       rownames(ribo.pc) <- colnames(X)
     }
     pheno <- cbind(pheno, ribo = ribo.pc)
   }
-  
+
   cc.score <- try(pgx.scoreCellCycle(counts))
   if (!any(class(cc.score) == "try-error")) {
     cc.score <- cc.score[, c("s_score", "g2m_score")]
-    colnames(cc.score) <- c("S","G2M")
-    if(nv==1) cc.score <- rowMeans(cc.score)
+    colnames(cc.score) <- c("S", "G2M")
+    if (nv == 1) cc.score <- rowMeans(cc.score)
     pheno <- cbind(pheno, cellcycle = cc.score)
   }
-  
+
   ## create gender model matrix
   gender. <- pgx.inferGender(counts)
-  if(length(table(gender.))>1) {
+  if (length(table(gender.)) > 1) {
     gender.[is.na(gender.)] <- "NA"
     mod.gender <- model.matrix(~ 0 + gender.)
-    mod.gender <- mod.gender[,setdiff(colnames(mod.gender),"gender.NA"),drop=FALSE]
+    mod.gender <- mod.gender[, setdiff(colnames(mod.gender), "gender.NA"), drop = FALSE]
     pheno <- cbind(pheno, mod.gender)
   }
-  
+
   ## take out constant columns
-  sel <- which(apply(pheno,2,sd,na.rm=TRUE)>0)
-  pheno <- pheno[,sel,drop=FALSE]
+  sel <- which(apply(pheno, 2, sd, na.rm = TRUE) > 0)
+  pheno <- pheno[, sel, drop = FALSE]
 
   return(pheno)
 }
 
 
 #' @export
-detectBatchEffects <- function(X, samples, pheno, contrasts=NULL,
-                               params = c("statistical","technical","pca"),
+detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
+                               params = c("statistical", "technical", "pca"),
                                p.pca = 0.5, p.pheno = 0.05,
                                k.pca = 10, nv = 2, xrank = NULL) {
-
-  if(0) {
-    p.pca = 0.5; p.pheno = 0.05;k.pca = 10; nv = 2; contrasts=NULL
-    params =  c("statistical","technical")
-    params =  c("statistical")    
+  if (0) {
+    p.pca <- 0.5
+    p.pheno <- 0.05
+    k.pca <- 10
+    nv <- 2
+    contrasts <- NULL
+    params <- c("statistical", "technical")
+    params <- c("statistical")
   }
-  if(!all(params %in% c("statistical","technical","pca"))) {
-    params1 <- setdiff( params, c("statistical","technical","pca"))
+  if (!all(params %in% c("statistical", "technical", "pca"))) {
+    params1 <- setdiff(params, c("statistical", "technical", "pca"))
     stop("[detectBatchEffects] unknown parameter type: ", params1)
   }
-  
-  Y <- samples[,0]
-  if("statistical" %in% params) {
+
+  Y <- samples[, 0]
+  if ("statistical" %in% params) {
     Y <- samples
   }
-  if("technical" %in% params) {
-    B <- pgx.computeTechnicalEffects(X, nv=nv)
+  if ("technical" %in% params) {
+    B <- pgx.computeTechnicalEffects(X, nv = nv)
     Y <- cbind(Y, B)
   }
 
   V <- NULL
-  if("pca" %in% params) {
+  if ("pca" %in% params) {
     ## add PC components
-    cX <- X - rowMeans(X,na.rm=TRUE)
-    k.pca <- ceiling(min(k.pca, dim(cX)-1))
-    if(k.pca < min(dim(cX))/3) {
-      V <- irlba::irlba(cX, nv = k.pca, nu=0)$v
+    cX <- X - rowMeans(X, na.rm = TRUE)
+    k.pca <- ceiling(min(k.pca, dim(cX) - 1))
+    if (k.pca < min(dim(cX)) / 3) {
+      V <- irlba::irlba(cX, nv = k.pca, nu = 0)$v
     } else {
-      V <- svd(cX, nv = k.pca, nu=0)$v      
+      V <- svd(cX, nv = k.pca, nu = 0)$v
     }
     rownames(V) <- colnames(cX)
-    colnames(V) <- paste0("pca.PC",1:ncol(V))
+    colnames(V) <- paste0("pca.PC", 1:ncol(V))
     Y <- cbind(Y, V)
   }
   dim(Y)
 
-  if(!is.null(contrasts) && is.null(pheno) ) {
-    message("pheno argument type: contrast matrix")    
-    pheno <- contrasts2pheno(contrasts, samples) 
-  } else if( length(pheno)==1 && pheno[1] %in% colnames(samples)) {
+  if (!is.null(contrasts) && is.null(pheno)) {
+    message("pheno argument type: contrast matrix")
+    pheno <- contrasts2pheno(contrasts, samples)
+  } else if (length(pheno) == 1 && pheno[1] %in% colnames(samples)) {
     message("pheno argument type: phenotype name")
-    pheno <- samples[,pheno]
-  } else if(length(pheno) == nrow(samples)) {
+    pheno <- samples[, pheno]
+  } else if (length(pheno) == nrow(samples)) {
     message("pheno argument type: vector")
-  } else {    
+  } else {
     stop("invalid pheno argument type: need pheno vector or contrast matrix")
   }
 
   ## add pheno vector
-  Y <- cbind('*pheno*' = pheno, Y)
-  
+  Y <- cbind("*pheno*" = pheno, Y)
+
   ## detect possible batch covariates (not correlated with phenotype)
   ## determine batch covariates
-  dY <- scale(1*expandPhenoMatrix(Y))
-  res <- gx.limmaF( t(dY), pheno, fdr=1, lfc=0, compute.means=FALSE, verbose=0)
-  param <- sub("=.*","",rownames(res))
-  pv.pheno <- tapply( res$P.Value, param, min )
-  
-  ## compute correlation with PC components  
-  pc <- pgx.PC_correlation(X, dY, nv=k.pca, collapse=FALSE, plot=FALSE)
-  pca.pars <- sub("=.*","", rownames(pc$P))
+  dY <- scale(1 * expandPhenoMatrix(Y))
+  res <- gx.limmaF(t(dY), pheno, fdr = 1, lfc = 0, compute.means = FALSE, verbose = 0)
+  param <- sub("=.*", "", rownames(res))
+  pv.pheno <- tapply(res$P.Value, param, min)
+
+  ## compute correlation with PC components
+  pc <- pgx.PC_correlation(X, dY, nv = k.pca, collapse = FALSE, plot = FALSE)
+  pca.pars <- sub("=.*", "", rownames(pc$P))
   P0 <- apply(pc$P, 2, function(x) tapply(x, pca.pars, min))
   pp <- intersect(rownames(P0), names(pv.pheno))
-  P0 <- P0[pp,]
-  
+  P0 <- P0[pp, ]
+
   ## determine phenotype rank
-  if(is.null(xrank))
-    xrank <- which.min( P0["*pheno*",] )
-  xrank <- min(xrank, ncol(P0)+1)
+  if (is.null(xrank)) {
+    xrank <- which.min(P0["*pheno*", ])
+  }
+  xrank <- min(xrank, ncol(P0) + 1)
   xrank
-  pv.pca.min <- apply( cbind(1,P0)[,1:xrank,drop=FALSE], 1, min, na.rm=TRUE)
+  pv.pca.min <- apply(cbind(1, P0)[, 1:xrank, drop = FALSE], 1, min, na.rm = TRUE)
   pv.pca.min
 
   ## select parameters with significant correlation with PC and
   ## not-significant with phenotype.
   pp <- setdiff(pp, "*pheno*")
-  P <- cbind( p.pca = pv.pca.min[pp], p.pheno = pv.pheno[pp] )  
+  P <- cbind(p.pca = pv.pca.min[pp], p.pheno = pv.pheno[pp])
   P
-  params <- names(which(P[,1] < p.pca & P[,2] > p.pheno))
+  params <- names(which(P[, 1] < p.pca & P[, 2] > p.pheno))
   params
-  
+
   batch.matrix <- NULL
-  batch.vec <- NULL  
-  if(length(params) > 0) {
-    batch.matrix <- Y[, params, drop=FALSE]
-    batch.matrix <- expandPhenoMatrix(batch.matrix, keep.numeric=TRUE)
+  batch.vec <- NULL
+  if (length(params) > 0) {
+    batch.matrix <- Y[, params, drop = FALSE]
+    batch.matrix <- expandPhenoMatrix(batch.matrix, keep.numeric = TRUE)
     ## determine batch covariates
-    B <- 1*expandPhenoMatrix(batch.matrix)
+    B <- 1 * expandPhenoMatrix(batch.matrix)
     B[is.na(B)] <- "x"
-    batch.vec <- apply(B, 1, paste, collapse='')
+    batch.vec <- apply(B, 1, paste, collapse = "")
     table(batch.vec)
   }
 
-  ## divide parameters by technical and statistical 
-  if(length(params)) {    
+  ## divide parameters by technical and statistical
+  if (length(params)) {
     stats.params <- intersect(params, colnames(samples))
-    pca.params <-  grep("^pca.PC",params,value=TRUE)
-    tech.params <- setdiff(params, c(pca.params,stats.params))
+    pca.params <- grep("^pca.PC", params, value = TRUE)
+    tech.params <- setdiff(params, c(pca.params, stats.params))
     params <- list(
       "statistical" = stats.params,
       "technical" = tech.params,
       "pca" = pca.params
     )
   }
-  
+
   list(
     params = params,
     batch = batch.vec,
@@ -1009,50 +1017,52 @@ detectBatchEffects <- function(X, samples, pheno, contrasts=NULL,
     v.pca = pc$V,
     xrank = xrank
   )
-  
 }
 
 
-##p.pheno=0.05;p.pca=0.5;nmin=3;nv=2
-##params = c("lib","gender","mito","ribo","cellcycle")
+## p.pheno=0.05;p.pca=0.5;nmin=3;nv=2
+## params = c("lib","gender","mito","ribo","cellcycle")
 
 #' @export
-removeTechnicalEffects <- function(X, y,  p.pheno = 0.05, p.pca = 0.5,
-                                   params=NULL, force=FALSE, nv=2, k.pca=10, xrank=NULL) {    
-  
-  dbg("[removeTechnicalEffects] dim.X) = ",dim(X))
-  if(force) {
-    bc <- detectBatchEffects(X, samples, y, params = 'technical',
-      p.pca = 1, p.pheno = 0, k.pca = k.pca, nv = nv, xrank = 999 )
+removeTechnicalEffects <- function(X, y, p.pheno = 0.05, p.pca = 0.5,
+                                   params = NULL, force = FALSE, nv = 2, k.pca = 10, xrank = NULL) {
+  dbg("[removeTechnicalEffects] dim.X) = ", dim(X))
+  if (force) {
+    bc <- detectBatchEffects(X, samples, y,
+      params = "technical",
+      p.pca = 1, p.pheno = 0, k.pca = k.pca, nv = nv, xrank = 999
+    )
   } else {
-    bc <- detectBatchEffects(X, samples, y, params = 'technical',
+    bc <- detectBatchEffects(X, samples, y,
+      params = "technical",
       p.pca = p.pca, p.pheno = p.pheno, k.pca = k.pca,
-      nv = nv, xrank = xrank )
+      nv = nv, xrank = xrank
+    )
   }
 
-  if(!is.null(params)) {
+  if (!is.null(params)) {
     B <- bc$covariates
-    sel <- lapply( params, function(p) grep(paste0("^",p,"[.]"), colnames(B)))
+    sel <- lapply(params, function(p) grep(paste0("^", p, "[.]"), colnames(B)))
     sel <- sort(unique(unlist(sel)))
-    bc$covariates <- B[,sel,drop=FALSE]
+    bc$covariates <- B[, sel, drop = FALSE]
   }
 
-  if(!is.null(bc$covariates)) {
+  if (!is.null(bc$covariates)) {
     ## perform regression
     B <- scale(bc$covariates)
-    B[ is.nan(B) | is.na(B) ] <- 0
-    B[ is.infinite(B) ] <- 0    
-    bb <- paste(unlist(bc$params), collapse=' ')
-    message("[removeTechnicalEffect] correcting for parameters: ",bb)    
+    B[is.nan(B) | is.na(B)] <- 0
+    B[is.infinite(B)] <- 0
+    bb <- paste(unlist(bc$params), collapse = " ")
+    message("[removeTechnicalEffect] correcting for parameters: ", bb)
     design <- model.matrix(~y)
-    bX <- limma::removeBatchEffect(X, batch=NULL, covariates=B, design=design)
+    bX <- limma::removeBatchEffect(X, batch = NULL, covariates = B, design = design)
   } else {
-    message("[removeTechnicalEffect] no significant technical batch effects. correction skipped.")        
+    message("[removeTechnicalEffect] no significant technical batch effects. correction skipped.")
     bX <- X
   }
 
   ## put back on original row means
-  bX <- bX - rowMeans(bX, na.rm=TRUE) + rowMeans(X, na.rm=TRUE)
+  bX <- bX - rowMeans(bX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
   bX
 }
 
@@ -1063,65 +1073,68 @@ removeTechnicalEffects <- function(X, y,  p.pheno = 0.05, p.pca = 0.5,
 
 
 #' @export
-runBatchCorrectionMethods <- function(X, batch, y, controls=NULL, ntop=2000,
-                                      combatx = FALSE, sc = FALSE, prefix='',
+runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
+                                      combatx = FALSE, sc = FALSE, prefix = "",
                                       methods = NULL, remove.failed = TRUE) {
-
   mod <- model.matrix(~y)
   nlevel <- length(unique(y[!is.na(y)]))
-  if( ntop < Inf) {
-    X <- head(X[order(-matrixStats::rowSds(X,na.rm=TRUE)),], ntop) ## faster
+  if (ntop < Inf) {
+    X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], ntop) ## faster
   }
 
-  if(is.null(methods)) {
-    methods <- c("uncorrected","normalized_to_control","ComBat",
-      "limma","superBC","PCA","RUV","SVA","NNM","MNN","Harmony")
+  if (is.null(methods)) {
+    methods <- c(
+      "uncorrected", "normalized_to_control", "ComBat",
+      "limma", "superBC", "PCA", "RUV", "SVA", "NNM", "MNN", "Harmony"
+    )
   }
-  
+
   xlist <- list()
 
-  if("uncorrected" %in% methods) {
+  if ("uncorrected" %in% methods) {
     xlist[["uncorrected"]] <- X
   }
-  
-  ##--------------------------------------------------------------
+
+  ## --------------------------------------------------------------
   ## SUPERVISED METHODS (need batch parameter)
-  ##--------------------------------------------------------------
+  ## --------------------------------------------------------------
 
   ## normalize to control
-  if (!is.null(controls) &&  "normalized_to_control" %in% methods) {
+  if (!is.null(controls) && "normalized_to_control" %in% methods) {
     nX <- normalizeToControls(X, batch, y, controls)
     xlist[["normalized_to_control"]] <- nX
   }
-  
-    ## limma -------------------------------------------------------
-  if("limma" %in% methods) {
-    if(is.null(batch)) {
+
+  ## limma -------------------------------------------------------
+  if ("limma" %in% methods) {
+    if (is.null(batch)) {
       xlist[["limma"]] <- X
     } else {
-      cX <- try( limma::removeBatchEffect(X, batch = batch, covariates = NULL,
-        mod = mod1) )
+      cX <- try(limma::removeBatchEffect(X,
+        batch = batch, covariates = NULL,
+        mod = mod1
+      ))
       xlist[["limma"]] <- cX
     }
   }
 
   ## ComBat ------------------------------------------------------
-  if("ComBat" %in% methods) {
-    if(is.null(batch)) {
+  if ("ComBat" %in% methods) {
+    if (is.null(batch)) {
       xlist[["ComBat"]] <- X
     } else {
-      if(max(table(batch)) > 1) {
-        mod1 <- model.matrix(~factor(y))
-        bX <- try( sva::ComBat(X, batch = batch, mod = mod1, par.prior=TRUE) )
-        if( "try-error" %in% class(bX) || mean(is.na(bX)) > 0.5 ) {
-          bX <- try(sva::ComBat(X, batch = batch, mod=NULL))
+      if (max(table(batch)) > 1) {
+        mod1 <- model.matrix(~ factor(y))
+        bX <- try(sva::ComBat(X, batch = batch, mod = mod1, par.prior = TRUE))
+        if ("try-error" %in% class(bX) || mean(is.na(bX)) > 0.5) {
+          bX <- try(sva::ComBat(X, batch = batch, mod = NULL))
         }
         xlist[["ComBat"]] <- bX
       }
     }
-    
+
     ## ComBatX
-    if (combatx && !is.null(batch) ) {
+    if (combatx && !is.null(batch)) {
       xlist[["ComBatX.a"]] <- ComBatX(X, batch = batch, y = NULL, controls = NULL)
       xlist[["ComBatX.b"]] <- ComBatX(X, batch = batch, y = y, controls = NULL, bc.dim = 0)
       xlist[["ComBatX.c"]] <- ComBatX(X, batch = batch, y = y, controls = NULL, bc.dim = -1)
@@ -1130,55 +1143,54 @@ runBatchCorrectionMethods <- function(X, batch, y, controls=NULL, ntop=2000,
       xlist[["ComBatX.f"]] <- ComBatX(X, batch = batch, y = y, controls = controls, bc.dim = 0)
       xlist[["ComBatX.g"]] <- ComBatX(X, batch = batch, y = y, controls = controls, bc.dim = -1)
     }
-    
   }
-  
+
   ## superbatchcorrect
-  if("superBC" %in% methods) {
-    df <- data.frame(y=y)
-    if(!is.null(batch)) df <- cbind(df, batch = batch)
-    xlist[["superBC"]] <- pgx.superBatchCorrect(X, df, model.par="y", batch.par='*')$X
+  if ("superBC" %in% methods) {
+    df <- data.frame(y = y)
+    if (!is.null(batch)) df <- cbind(df, batch = batch)
+    xlist[["superBC"]] <- pgx.superBatchCorrect(X, df, model.par = "y", batch.par = "*")$X
   }
-  
-  ##--------------------------------------------------------------
+
+  ## --------------------------------------------------------------
   ## UNSUPERVISED METHODS (need pheno vector)
-  ##--------------------------------------------------------------
+  ## --------------------------------------------------------------
 
   ## PCA
-  if("PCA" %in% methods) {  
-    message("[runBatchCorrectionMethods] correcting with PCA")    
+  if ("PCA" %in% methods) {
+    message("[runBatchCorrectionMethods] correcting with PCA")
     ##  xlist[["PCA"]] <- try(pcaCorrect.OLD(X, y = y, max.rho=0.3))
-    xlist[["PCA"]] <- try(pcaCorrect2( X, y = y, p.notsig=0.20))  
+    xlist[["PCA"]] <- try(pcaCorrect2(X, y = y, p.notsig = 0.20))
   }
-  
+
   ## RUV and SVA
-  if("RUV" %in% methods) {    
+  if ("RUV" %in% methods) {
     message("[runBatchCorrectionMethods] correcting with RUV3")
     xlist[["RUV3"]] <- try(ruvCorrect(X, y, k = NULL, type = "III"))
     ##  xlist[["RUVg"]] <- try(ruvCorrect(X, y, k = NULL, type = "g"))
   }
 
-  if("SVA" %in% methods) {      
-    message("[runBatchCorrectionMethods] correcting with SVA")  
+  if ("SVA" %in% methods) {
+    message("[runBatchCorrectionMethods] correcting with SVA")
     xlist[["SVA"]] <- try(svaCorrect(X, y))
   }
 
-  if("NNM" %in% methods) {      
-    if ( nlevel*ncol(X) < 1000) {
+  if ("NNM" %in% methods) {
+    if (nlevel * ncol(X) < 1000) {
       xlist[["NNM"]] <- gx.nnmcorrect(X, y)$X
     } else {
-      xlist[["NNM2"]] <- gx.nnmcorrect2(X, y, r=0.35)$X
+      xlist[["NNM2"]] <- gx.nnmcorrect2(X, y, r = 0.35)$X
     }
   }
-  
-  ##--------------------------------------------------------------
+
+  ## --------------------------------------------------------------
   ## scRNA-seq methods
-  ##--------------------------------------------------------------  
-    
-  if(sc) {
+  ## --------------------------------------------------------------
+
+  if (sc) {
     ## MNN ---------------------------------------------------------
-    if("MNN" %in% methods) {      
-      xlist[["MNN"]] <- try( MNNcorrect(X, batch) )
+    if ("MNN" %in% methods) {
+      xlist[["MNN"]] <- try(MNNcorrect(X, batch))
 
       ## restricted MNN ----------------------------------------------
       if (!is.null(controls)) {
@@ -1186,9 +1198,9 @@ runBatchCorrectionMethods <- function(X, batch, y, controls=NULL, ntop=2000,
         xlist[["rMNN"]] <- try(MNNcorrect(X, batch, controls = kk))
       }
     }
-    
+
     ## Harmony ----------------------------------------------------
-    if("Harmony" %in% methods) {
+    if ("Harmony" %in% methods) {
       res <- try(runHarmony(X, batch = batch))
       if (!"try-error" %in% class(res)) {
         xlist[["Harmony"]] <- as.matrix(res$corrected)
@@ -1196,116 +1208,136 @@ runBatchCorrectionMethods <- function(X, batch, y, controls=NULL, ntop=2000,
     }
   }
 
-  if(remove.failed) {
-    xlist <- xlist[!sapply(sapply(xlist, nrow),is.null)]
+  if (remove.failed) {
+    xlist <- xlist[!sapply(sapply(xlist, nrow), is.null)]
   }
 
-  mm <- c('uncorrected', sort(setdiff(names(xlist),'uncorrected')))
+  mm <- c("uncorrected", sort(setdiff(names(xlist), "uncorrected")))
   xlist <- xlist[mm]
 
-  names(xlist) <- paste0(prefix, names(xlist))   
-  
+  names(xlist) <- paste0(prefix, names(xlist))
+
   xlist
 }
 
 #' @export
-runTechCorrectionMethods <- function(X, y, p.pca = 0.5, p.pheno = 0.05, nv=2,
-                                     remove.failed=TRUE, ntop=Inf) {
-
+runTechCorrectionMethods <- function(X, y, p.pca = 0.5, p.pheno = 0.05, nv = 2,
+                                     remove.failed = TRUE, ntop = Inf) {
   mod <- model.matrix(~y)
   nlevel <- length(unique(y[!is.na(y)]))
-  X <- head(X[order(-matrixStats::rowSds(X,na.rm=TRUE)),], ntop)  ## faster
-  
+  X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], ntop) ## faster
+
   xlist <- list()
   xlist[["uncorrected"]] <- X
 
-  params = c("lib","gender","mito","ribo","cellcycle")
-  
-  xlist[["lib"]] <- removeTechnicalEffects(X, y=y, 
-    params = c("lib"), p.pheno = p.pheno, p.pca = p.pca, nv=nv) 
+  params <- c("lib", "gender", "mito", "ribo", "cellcycle")
 
-  xlist[["gender"]] <- removeTechnicalEffects(X, y=y, 
-    params = c("gender"), p.pheno = p.pheno, p.pca = p.pca, nv=nv) 
+  xlist[["lib"]] <- removeTechnicalEffects(X,
+    y = y,
+    params = c("lib"), p.pheno = p.pheno, p.pca = p.pca, nv = nv
+  )
 
-  xlist[["mito"]] <- removeTechnicalEffects(X, y=y, 
-    params = c("mito"), p.pheno = p.pheno, p.pca = p.pca, nv=nv) 
+  xlist[["gender"]] <- removeTechnicalEffects(X,
+    y = y,
+    params = c("gender"), p.pheno = p.pheno, p.pca = p.pca, nv = nv
+  )
 
-  xlist[["ribo"]] <- removeTechnicalEffects(X, y=y, 
-    params = c("ribo"), p.pheno = p.pheno, p.pca = p.pca, nv=nv) 
+  xlist[["mito"]] <- removeTechnicalEffects(X,
+    y = y,
+    params = c("mito"), p.pheno = p.pheno, p.pca = p.pca, nv = nv
+  )
 
-  xlist[["cellcycle"]] <- removeTechnicalEffects(X, y=y, 
-    params = c("cellcycle"), p.pheno = p.pheno, p.pca = p.pca, nv=nv) 
+  xlist[["ribo"]] <- removeTechnicalEffects(X,
+    y = y,
+    params = c("ribo"), p.pheno = p.pheno, p.pca = p.pca, nv = nv
+  )
+
+  xlist[["cellcycle"]] <- removeTechnicalEffects(X,
+    y = y,
+    params = c("cellcycle"), p.pheno = p.pheno, p.pca = p.pca, nv = nv
+  )
 
   xlist[["<all>"]] <- removeTechnicalEffects(
-    X, y=y, 
-    params = c("lib","gender","mito","ribo","cellcycle"),
-    p.pheno = p.pheno, p.pca = p.pca, nv=nv) 
-  
-  if(remove.failed) {
-    xlist <- xlist[!sapply(sapply(xlist, nrow),is.null)]
+    X,
+    y = y,
+    params = c("lib", "gender", "mito", "ribo", "cellcycle"),
+    p.pheno = p.pheno, p.pca = p.pca, nv = nv
+  )
+
+  if (remove.failed) {
+    xlist <- xlist[!sapply(sapply(xlist, nrow), is.null)]
   }
 
-  mm <- c('uncorrected', sort(setdiff(names(xlist),'uncorrected')))
+  mm <- c("uncorrected", sort(setdiff(names(xlist), "uncorrected")))
   xlist <- xlist[mm]
-  
+
   xlist
 }
 
 #' @export
-bc.evaluateResults <- function(xlist, pheno, lfc=0.2, q=0.05, pos = NULL,
-                               add.sil=TRUE, plot=TRUE, trend=TRUE, 
-                               clust='umap') {
-
-  if(0) {
-    lfc=0.2;q=0.05;pos = NULL;add.sil=TRUE;plot=TRUE;trend=TRUE;clust='umap'
+bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
+                               add.sil = TRUE, plot = TRUE, trend = TRUE,
+                               clust = "umap") {
+  if (0) {
+    lfc <- 0.2
+    q <- 0.05
+    pos <- NULL
+    add.sil <- TRUE
+    plot <- TRUE
+    trend <- TRUE
+    clust <- "umap"
   }
-  
+
   ## compute and make table
-  numsig <- lapply(xlist, stats.numsig, y = pheno, lfc = lfc, q = q,
-                   trend = trend, verbose = FALSE)
-  if(0) {
+  numsig <- lapply(xlist, stats.numsig,
+    y = pheno, lfc = lfc, q = q,
+    trend = trend, verbose = FALSE
+  )
+  if (0) {
     numsig <- list()
-    for(i in 1:length(xlist)) {
-      numsig[[i]] <- stats.numsig(xlist[[i]], y = pheno, lfc = lfc,
-        q = q, trend = trend, verbose = FALSE)
+    for (i in 1:length(xlist)) {
+      numsig[[i]] <- stats.numsig(xlist[[i]],
+        y = pheno, lfc = lfc,
+        q = q, trend = trend, verbose = FALSE
+      )
     }
   }
   res <- t(sapply(numsig, function(r) {
     c(sapply(r[1:2], length), avg.fc = mean(abs(r[[3]])))
   }))
-  xsd <- sapply(xlist, function(x) mean(matrixStats::rowSds(x,na.rm=TRUE)))
+  xsd <- sapply(xlist, function(x) mean(matrixStats::rowSds(x, na.rm = TRUE)))
   res <- cbind(res, avg.sd = xsd)
-  
-  g1 <- numsig[['uncorrected']]$genes
-  s1 <- numsig[['uncorrected']]$gsets
+
+  g1 <- numsig[["uncorrected"]]$genes
+  s1 <- numsig[["uncorrected"]]$gsets
   n1 <- sapply(numsig, function(s) length(intersect(s$genes, g1)))
   n2 <- sapply(numsig, function(s) length(union(s$genes, g1)))
   m1 <- sapply(numsig, function(s) length(intersect(s$gsets, s1)))
   m2 <- sapply(numsig, function(s) length(union(s$gsets, s1)))
   ##  res <- cbind(res, r.genes=r1, r.gsets=r2, s.genes=s1, s.gsets=s2)
-  r.genes = n1 / (1e-3 + n2)
-  r.gsets = m1 / (1e-3 + m2)
+  r.genes <- n1 / (1e-3 + n2)
+  r.gsets <- m1 / (1e-3 + m2)
   res <- cbind(res, r.genes, r.gsets)
-  res.score <- exp(rowMeans(log(1e-8 + t(t(res) / (1e-9+res[1, ]) ))))
+  res.score <- exp(rowMeans(log(1e-8 + t(t(res) / (1e-9 + res[1, ])))))
 
   silhouette <- rep(1, nrow(res))
-  if(add.sil) {
+  if (add.sil) {
     if (is.null(pos)) {
-      if(clust == 'umap') {
-        nb <- pmin(15, round(ncol(xlist[[1]])/3) )      
-        CLUSTFUN <- function(x) uwot::tumap(scale(t(x), scale = FALSE), n_neighbors=nb)
+      if (clust == "umap") {
+        nb <- pmin(15, round(ncol(xlist[[1]]) / 3))
+        CLUSTFUN <- function(x) uwot::tumap(scale(t(x), scale = FALSE), n_neighbors = nb)
       } else {
-        CLUSTFUN <- function(x) svd(scale(t(x), scale = FALSE))$u[,1:2]
+        CLUSTFUN <- function(x) svd(scale(t(x), scale = FALSE))$u[, 1:2]
       }
       pos <- lapply(xlist, function(x) {
-        x <- head( x[order(-matrixStats::rowSds(x,na.rm=TRUE)),], 1000)
+        x <- head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)), ], 1000)
         x <- as.matrix(x)
         x <- (x - rowMeans(x))
         CLUSTFUN(x)
       })
     }
-    p = pos[[1]]
-    pheno0 = pheno
+    p <- pos[[1]]
+    pheno0 <- pheno
     pheno0[is.na(pheno0)] <- "NA"
     silhouette <- sapply(pos, function(p) {
       score <- cluster::silhouette(as.integer(factor(pheno0)), stats::dist(p))
@@ -1314,125 +1346,126 @@ bc.evaluateResults <- function(xlist, pheno, lfc=0.2, q=0.05, pos = NULL,
     silhouette <- pmax(silhouette, 1e-4)
     res <- cbind(res, silhouette)
   }
-  
+
   score <- res.score * (silhouette / silhouette[1])**1
   res1 <- cbind(score, res)
   res1 <- res1[order(-res1[, "score"]), ]
   pos <- pos[rownames(res1)]
-  
-  if(plot) {
-    nc <- ceiling(1.2*sqrt(length(pos)))
+
+  if (plot) {
+    nc <- ceiling(1.2 * sqrt(length(pos)))
     nr <- ceiling(length(pos) / nc)
-    i=1
-    par(mfrow=c(nr,nc))
-    for(i in 1:length(pos)) {
-      plot( pos[[i]], col=factor(pheno), pch=20, cex=3,
-        main = names(pos)[i], cex.main=2 )
-      tt <- paste("score = ",round(res1[i,"score"],3))
-      legend("topleft", legend=tt, cex=1.4)      
+    i <- 1
+    par(mfrow = c(nr, nc))
+    for (i in 1:length(pos)) {
+      plot(pos[[i]],
+        col = factor(pheno), pch = 20, cex = 3,
+        main = names(pos)[i], cex.main = 2
+      )
+      tt <- paste("score = ", round(res1[i, "score"], 3))
+      legend("topleft", legend = tt, cex = 1.4)
     }
   }
 
-  list( scores = res1, pos = pos )
+  list(scores = res1, pos = pos)
 }
 
 #' @export
-bc.plotResults <- function(X, xlist, pos, pheno, samples=NULL, scores = NULL,
-                           type='umap', nmax=1000, cex=1, text.cex = 1, ncol=NULL) {
-
-
-  ##samples=NULL;scores = NULL;type='umap';nmax=1000;cex=1;text.cex = 1  
-  if(is.null(ncol)) {
+bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
+                           type = "umap", nmax = 1000, cex = 1, text.cex = 1, ncol = NULL) {
+  ## samples=NULL;scores = NULL;type='umap';nmax=1000;cex=1;text.cex = 1
+  if (is.null(ncol)) {
     ncol <- ceiling(sqrt(length(xlist)))
   }
   nr <- ceiling(length(xlist) / ncol)
-  par(mfrow=c(nr,ncol))
+  par(mfrow = c(nr, ncol))
   methods <- intersect(names(xlist), names(pos))
 
-  if(!is.null(scores)) {
+  if (!is.null(scores)) {
     methods <- intersect(methods, rownames(scores))
-    m.score <- scores[methods,"score"]
+    m.score <- scores[methods, "score"]
     methods <- methods[order(-m.score)]
-    scores <- scores[methods,]
+    scores <- scores[methods, ]
     xlist <- xlist[methods]
     pos <- pos[methods]
   }
-  
+
   cex1 <- ifelse(length(pheno) > 20, 3, 4)
   cex1 <- ifelse(length(pheno) > 100, 2, cex1)
   cex1 <- ifelse(length(pheno) > 400, 1, cex1)
   cex1 <- cex * cex1
-  
-  if(tolower(type) == 'umap') {
-    par(mar=c(2.4,3,2,1))
-    i=1
-    for(m in methods) {
-      plot( pos[[m]], col=factor(pheno), pch=20, cex=cex1)
-      title( main = m, cex.main=1.4, line = 0.5 )
-      ##tt <- paste("score = ",round(res$results[m,"score"],2))
-      ##legend("topleft", legend=tt, cex=1.4)
+
+  if (tolower(type) == "umap") {
+    par(mar = c(2.4, 3, 2, 1))
+    i <- 1
+    for (m in methods) {
+      plot(pos[[m]], col = factor(pheno), pch = 20, cex = cex1)
+      title(main = m, cex.main = 1.4, line = 0.5)
+      ## tt <- paste("score = ",round(res$results[m,"score"],2))
+      ## legend("topleft", legend=tt, cex=1.4)
     }
   }
 
-  if(type == 'heatmap') {  
-    par(mar=c(2,3,1.8,1))
-    i=1
-    for(m in methods) {
+  if (type == "heatmap") {
+    par(mar = c(2, 3, 1.8, 1))
+    i <- 1
+    for (m in methods) {
       xx <- xlist[[m]]
-      xx <- head(xx[order(-apply(xx,1,sd)),],nmax)
+      xx <- head(xx[order(-apply(xx, 1, sd)), ], nmax)
       xx <- xx - rowMeans(xx)
       xx <- abs(xx)**0.5 * sign(xx)
-      gx.imagemap(xx, main=m, cex.main=1.4, cex=0)
-      mtext("samples",1, line=0.5)
-      mtext("genes",2, line=0.5)
+      gx.imagemap(xx, main = m, cex.main = 1.4, cex = 0)
+      mtext("samples", 1, line = 0.5)
+      mtext("genes", 2, line = 0.5)
     }
   }
 
-  if(tolower(type) %in% c('pc','pc2')) {
+  if (tolower(type) %in% c("pc", "pc2")) {
+    if (is.null(samples)) message("samples in NULL!")
+    B <- pgx.computeTechnicalEffects(X, nv = 2)
+    bcat <- sub("[.].*", "", colnames(B))
+    colnames(B) <- paste0(bcat, ":", colnames(B)) ## for collapsing
+    if (!is.null(samples)) B <- cbind(B, samples)
+    horiz <- ifelse(tolower(type) == "pc2", TRUE, FALSE)
 
-    if(is.null(samples)) message("samples in NULL!")
-    B <- pgx.computeTechnicalEffects(X, nv=2)
-    bcat <- sub("[.].*","",colnames(B))
-    colnames(B) <- paste0(bcat,":",colnames(B))  ## for collapsing
-    if(!is.null(samples)) B <- cbind(B, samples)
-    horiz = ifelse( tolower(type) == "pc2", TRUE, FALSE)
-    
     plist <- list()
-    i=1
-    for(m in methods) {
+    i <- 1
+    for (m in methods) {
       xx <- xlist[[m]]
-      plist[[m]] <- pgx.PC_correlation(xx, B, nv = 3, stat = "F",
-        plot = TRUE, main=m, expand=FALSE, collapse=TRUE,
-        horiz = horiz, text.cex = text.cex)
+      plist[[m]] <- pgx.PC_correlation(xx, B,
+        nv = 3, stat = "F",
+        plot = TRUE, main = m, expand = FALSE, collapse = TRUE,
+        horiz = horiz, text.cex = text.cex
+      )
     }
-    gridExtra::grid.arrange(grobs=plist, ncol = ncol, padding = unit(0.1, "line"))    
+    gridExtra::grid.arrange(grobs = plist, ncol = ncol, padding = unit(0.1, "line"))
   }
 
-  if(type == 'hist') {  
-    par(mar=c(3,3,4,2))
-    i=1
-    for(m in methods) {
+  if (type == "hist") {
+    par(mar = c(3, 3, 4, 2))
+    i <- 1
+    for (m in methods) {
       xx <- xlist[[m]]
-      hist(xx, breaks=100, main=m, cex.main=1.8)
+      hist(xx, breaks = 100, main = m, cex.main = 1.8)
     }
   }
 
-  if(type == 'scores' && !is.null(scores) ) {  
-    m = 1
+  if (type == "scores" && !is.null(scores)) {
+    m <- 1
     plt <- list()
     ylabs <- c(
-      "score"="overall score",
+      "score" = "overall score",
       "genes" = "significant genes",
       "gsets" = "significant genesets",
       "avg.fc" = "average abs.logFC",
-      "avg.sd" = "average SD",      
+      "avg.sd" = "average SD",
       "r.genes" = "gene.coverage",
       "r.gsets" = "gset coverage",
       "silhouette" = "silhoutte score"
     )
-    for(i in 1:ncol(scores)) {
+    for (i in 1:ncol(scores)) {
       nn <- colnames(scores)[i]
-      xx  <-  scores[,i]
+      xx <- scores[, i]
       plt[[i]] <- plot_ggbarplot(
         t(xx),
         ylab = ylabs[nn],
@@ -1440,37 +1473,37 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples=NULL, scores = NULL,
         legend.cex = 1.2 * text.cex,
         label.cex = 1.2 * text.cex,
         axis.cex = 1.2 * text.cex,
-        group.name = "") +
+        group.name = ""
+      ) +
         ggplot2::theme(
-           plot.margin = ggplot2::margin(0, 4, 0, 4, "mm"),
-           plot.title = ggplot2::element_text(size = 15 * text.cex)
+          plot.margin = ggplot2::margin(0, 4, 0, 4, "mm"),
+          plot.title = ggplot2::element_text(size = 15 * text.cex)
         ) +
         ggplot2::xlab("") + ggplot2::ggtitle(nn)
     }
-    gridExtra::grid.arrange(grobs=plt, ncol = ncol, padding = unit(0.1, "line"))    
+    gridExtra::grid.arrange(grobs = plt, ncol = ncol, padding = unit(0.1, "line"))
   }
-  
 }
 
 #' @export
 contrasts2pheno <- function(contrasts, samples) {
-  M <- contrasts.convertToLabelMatrix(contrasts, samples) 
-  if(ncol(M)>10) {
+  M <- contrasts.convertToLabelMatrix(contrasts, samples)
+  if (ncol(M) > 10) {
     M <- sign(makeContrastsFromLabelMatrix(M))
-    M[ M==0 ] <- NA
-    M <- (M + 1)/2
+    M[M == 0] <- NA
+    M <- (M + 1) / 2
     M <- apply(M, 2, as.character)
   }
-  mm <- paste(colnames(M), collapse=' ')
-  M[is.na(M)] <- '_'
-  pheno <- paste0("p",apply(M,1,paste0,collapse=""))
+  mm <- paste(colnames(M), collapse = " ")
+  M[is.na(M)] <- "_"
+  pheno <- paste0("p", apply(M, 1, paste0, collapse = ""))
   pheno
 }
 
 #' @export
 samples2pheno <- function(M) {
-  px <- apply( 1*expandPhenoMatrix(M), 1, paste, collapse='')
-  px <- paste0("p",px)
+  px <- apply(1 * expandPhenoMatrix(M), 1, paste, collapse = "")
+  px <- paste0("p", px)
   px
 }
 
@@ -1479,58 +1512,58 @@ samples2pheno <- function(M) {
 ## ================================================================================
 
 #' @export
-superBC2 <- function(X, samples, y, batch=NULL, 
-                     ##methods = c("technical","batch","statistical","pca","sva","nnm"),
-                     methods = c("technical","batch","statistical","sva","nnm"),
+superBC2 <- function(X, samples, y, batch = NULL,
+                     ## methods = c("technical","batch","statistical","pca","sva","nnm"),
+                     methods = c("technical", "batch", "statistical", "sva", "nnm"),
                      p.pca = 0.5, p.pheno = 0.05, k.pca = 10, nv = 2,
                      xrank = NULL) {
-
   cX <- X
-  methods <- intersect(methods, c("technical","batch","statistical","pca","sva","nnm"))
-  
-  for(m in methods) {
-    
+  methods <- intersect(methods, c("technical", "batch", "statistical", "pca", "sva", "nnm"))
+
+  for (m in methods) {
     ## correct explicit batch effect
-    if(!is.null(batch) && m=='batch') {
-      message("[superBC2] correcting for: batch")      
-      mod1 <- model.matrix( ~ y )
-      cX <- limma::removeBatchEffect( cX, batch=batch, design=mod1)
+    if (!is.null(batch) && m == "batch") {
+      message("[superBC2] correcting for: batch")
+      mod1 <- model.matrix(~y)
+      cX <- limma::removeBatchEffect(cX, batch = batch, design = mod1)
     }
-  
+
     ## this removes typical batch effects
-    if( m %in% c("statistical","technical","pca")) {
-      bc <- detectBatchEffects(cX, samples, y, params = m,
-        p.pca = p.pca, p.pheno = p.pheno, k.pca = k.pca, nv = nv, xrank=xrank)
-      if(!is.null(bc$covariates)) {
-        message("[superBC2] correcting for: ",m)        
-        mod1 <- model.matrix( ~ bc$pheno )
+    if (m %in% c("statistical", "technical", "pca")) {
+      bc <- detectBatchEffects(cX, samples, y,
+        params = m,
+        p.pca = p.pca, p.pheno = p.pheno, k.pca = k.pca, nv = nv, xrank = xrank
+      )
+      if (!is.null(bc$covariates)) {
+        message("[superBC2] correcting for: ", m)
+        mod1 <- model.matrix(~ bc$pheno)
         B <- scale(bc$covariates)
-        B[ is.nan(B) | is.na(B) ] <- 0
-        B[ is.infinite(B) ] <- 0
-        cX <- limma::removeBatchEffect( cX, covariates=B, design=mod1)
+        B[is.nan(B) | is.na(B)] <- 0
+        B[is.infinite(B)] <- 0
+        cX <- limma::removeBatchEffect(cX, covariates = B, design = mod1)
       }
     }
-    
+
     ## 5. additional unsupervised correction
-    if(m=='sva') {
+    if (m == "sva") {
       message("[superBC2] correcting for: SVA")
       cX <- svaCorrect(cX, y)
     }
-    if(m=='ruv') {
+    if (m == "ruv") {
       message("[superBC2] correcting for: RUV")
       cX <- ruvCorrect(cX, y)
     }
-    if(m=='nnm') {
+    if (m == "nnm") {
       message("[superBC2] correcting for: NNM")
       cX <- gx.nnmcorrect(cX, y)$X
     }
-    if(m=='nnm2') {
+    if (m == "nnm2") {
       message("[superBC2] correcting for: NNM2")
       cX <- gx.nnmcorrect2(cX, y)$X
     }
   }
 
-  cX <- cX - rowMeans(cX, na.rm=TRUE) + rowMeans(X, na.rm=TRUE)  
+  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
   cX
 }
 
@@ -1547,9 +1580,9 @@ svaCorrect <- function(X, y) {
   dimx <- ncol(X)
 
   ## sva doesn't like if the dimension is too small
-  if(ncol(X) < 10) {
-    X <- cbind(X,X,X)
-    y <- rep(y,3)
+  if (ncol(X) < 10) {
+    X <- cbind(X, X, X)
+    y <- rep(y, 3)
   }
 
   mod1x <- model.matrix(~ 1 + y)
@@ -1560,8 +1593,8 @@ svaCorrect <- function(X, y) {
   #  lm.expr <- paste0("lm(t(X) ~ ", pp, ", data=pheno)")
   X.r <- t(stats::resid(lm(t(X) ~ y)))
   n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
-  ## top 1000 genes only (faster)  
-  X1 <- Matrix::head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], 1000) 
+  ## top 1000 genes only (faster)
+  X1 <- Matrix::head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], 1000)
   ## add a little bit of noise to avoid singular error
   a <- 0.01 * mean(apply(X1, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
   X1 <- X1 + a * matrix(stats::rnorm(length(X1)), nrow(X1), ncol(X1))
@@ -1575,7 +1608,7 @@ svaCorrect <- function(X, y) {
   } else {
     message("[svaCorrect] WARNING could not get covariates. no correction.")
   }
-  X <- X[,1:dimx]
+  X <- X[, 1:dimx]
   X
 }
 
@@ -1586,23 +1619,23 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.2) {
   }
 
   ## F-test using limma just variables
-  if ( length(controls)==1 && is.numeric(controls[1]) ) {
-    F <- gx.limmaF(X, y, lfc = 0, fdr = 1, method = 1, compute.means = FALSE, verbose=0)
+  if (length(controls) == 1 && is.numeric(controls[1])) {
+    F <- gx.limmaF(X, y, lfc = 0, fdr = 1, method = 1, compute.means = FALSE, verbose = 0)
     F <- F[rownames(X), ]
-    nc <- pmax( nrow(X) * as.numeric(controls), 1)
-    sel <- head(order(-F$P.Value), nc )
+    nc <- pmax(nrow(X) * as.numeric(controls), 1)
+    sel <- head(order(-F$P.Value), nc)
     controls <- rownames(F)[sel]
   }
-  message(paste("[ruvCorrect] Number of control features:", length(controls)))    
+  message(paste("[ruvCorrect] Number of control features:", length(controls)))
 
   if (is.null(k)) {
     ## this is from SVA
     ##    X.r <- t(stats::resid(lm(t(X) ~ y)))
     ##    k <- isva::EstDimRMT(X.r, FALSE)$dim + 1
-    fit <- lm(t(X[controls,,drop=FALSE]) ~ y)
+    fit <- lm(t(X[controls, , drop = FALSE]) ~ y)
     X.r <- t(stats::resid(fit))
     k <- try(isva::EstDimRMT(X.r, FALSE)$dim + 1)
-    if("try-error" %in% class(k)) {
+    if ("try-error" %in% class(k)) {
       k0 <- isva::EstDimRMT(X, FALSE)$dim
       k <- ncol(X) - k0
     }
@@ -1630,15 +1663,15 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.2) {
 
 
 #' @export
-pcaCorrect.OLD <- function(X, y, k=NULL, max.rho=0.3) {
+pcaCorrect.OLD <- function(X, y, k = NULL, max.rho = 0.3) {
   ## --------------------------------------------------------------------
   ## PCA correction: remove remaining batch effect using PCA
   ## (iteratively, only SV larger than max correlated SV)
   ## --------------------------------------------------------------------
-  mod1 <- model.matrix( ~ 0 + y)  
+  mod1 <- model.matrix(~ 0 + y)
   ii <- 1:99
   niter <- 0
-  if(is.null(k)) k <- ncol(X)
+  if (is.null(k)) k <- ncol(X)
   nremoved <- 0
   cX <- X
   while (length(ii) > 0 && niter < k) {
@@ -1665,65 +1698,67 @@ pcaCorrect.OLD <- function(X, y, k=NULL, max.rho=0.3) {
   }
 
   ## bring back mean
-  cX <- cX - rowMeans(cX, na.rm=TRUE) + rowMeans(X, na.rm=TRUE)
+  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
   cX
 }
 
 #' @export
-pcaCorrect2 <- function(X, y, k=10, p.notsig = 0.20) {
+pcaCorrect2 <- function(X, y, k = 10, p.notsig = 0.20) {
   ## --------------------------------------------------------------------
   ## PCA correction: remove remaining batch effect using PCA
   ## (iteratively, only SV larger than max correlated SV)
   ## --------------------------------------------------------------------
-  mod1 <- model.matrix( ~ 0 + y)  
+  mod1 <- model.matrix(~ 0 + y)
   k <- min(k, ncol(X) - 1)
   suppressWarnings(suppressMessages({
-    if( k < min(dim(X))/3) {
+    if (k < min(dim(X)) / 3) {
       V <- irlba::irlba(X, nv = k, nu = 0)$v
     } else {
       V <- svd(X, nv = k, nu = 0)$v
     }
   }))
   rownames(V) <- colnames(X)
-  colnames(V) <- paste0("PC",1:ncol(V))
-  res <- gx.limmaF(t(V), y, lfc=0, fdr=1, sort.by='none', compute.means=FALSE, verbose=0)
-  res <- res[colnames(V),]
-  round(res$P.Value,4)
-  
+  colnames(V) <- paste0("PC", 1:ncol(V))
+  res <- gx.limmaF(t(V), y, lfc = 0, fdr = 1, sort.by = "none", compute.means = FALSE, verbose = 0)
+  res <- res[colnames(V), ]
+  round(res$P.Value, 4)
+
   ## select pc comps that are not correlated with pheno and are
   ## smaller than strongest pheno PC component
   xrank <- which.min(res$P.Value)
   sel <- which(res$P.Value > p.notsig & 1:nrow(res) < xrank)
   sel
   cX <- X
-  if(length(sel)) {
-    V <- V[,sel,drop=FALSE]
+  if (length(sel)) {
+    V <- V[, sel, drop = FALSE]
     ## remove batch-suspected PC vectors
-    mod1 <- model.matrix( ~ 0 + y)  
+    mod1 <- model.matrix(~ 0 + y)
     cX <- limma::removeBatchEffect(X, covariates = V, design = mod1)
     nremoved <- ncol(V)
     dbg("[pcaCorrect2] removed", nremoved, "principal components\n")
   } else {
     dbg("[pcaCorrect2] no correction\n")
   }
-  
+
   ## bring back mean
-  cX <- cX - rowMeans(cX, na.rm=TRUE) + rowMeans(X, na.rm=TRUE)
+  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
   cX
 }
 
 #' @export
-pcaCorrect3 <- function(X, y, k=10, xrank=NULL, p.notsig = 0.20) {
+pcaCorrect3 <- function(X, y, k = 10, xrank = NULL, p.notsig = 0.20) {
   ## this removes typical batch effects
   cX <- X
-  bc <- detectBatchEffects(cX, samples, y, params = "pca",
-    p.pca = 0.5, p.pheno = p.notsig, k.pca = k, xrank = xrank)
-  if(!is.null(bc$covariates)) {
-    mod1 <- model.matrix( ~ y )
+  bc <- detectBatchEffects(cX, samples, y,
+    params = "pca",
+    p.pca = 0.5, p.pheno = p.notsig, k.pca = k, xrank = xrank
+  )
+  if (!is.null(bc$covariates)) {
+    mod1 <- model.matrix(~y)
     B <- scale(bc$covariates)
-    B[ is.nan(B) | is.na(B) ] <- 0
-    B[ is.infinite(B) ] <- 0
-    cX <- limma::removeBatchEffect( cX, covariates=B, design=mod1)
+    B[is.nan(B) | is.na(B)] <- 0
+    B[is.infinite(B)] <- 0
+    cX <- limma::removeBatchEffect(cX, covariates = B, design = mod1)
   }
   cX
 }
@@ -1735,11 +1770,11 @@ runHarmony <- function(X, batch) {
   nx <- ncol(X)
   cn <- colnames(X)
   X1 <- X
-  if(ncol(X) < 10) {
-    X1 <- cbind(X,X,X)
-    batch <- rep(batch,3)
+  if (ncol(X) < 10) {
+    X1 <- cbind(X, X, X)
+    batch <- rep(batch, 3)
   }
-  colnames(X1) <- paste0("col",1:ncol(X1),"_",colnames(X1))
+  colnames(X1) <- paste0("col", 1:ncol(X1), "_", colnames(X1))
   M <- data.frame(batch = batch)
   rownames(M) <- colnames(X1)
   if (is.null(rownames(X1))) rownames(X1) <- paste0("row", 1:nrow(X1))
@@ -1751,15 +1786,15 @@ runHarmony <- function(X, batch) {
   hvg <- VariableFeatures(obj)
   sX <- sX[hvg, ]
   obj[["RNA"]]@layers[["scale.data"]] <- sX
-  npcs <- min(30L, ncol(X1)/2)
+  npcs <- min(30L, ncol(X1) / 2)
   npcs
-  nn <- npcs  
+  nn <- npcs
   obj <- RunPCA(obj, npcs = npcs, verbose = FALSE)
-  obj <- RunUMAP(obj, reduction = "pca", dims = 1:npcs, n.neighbors=nn)
+  obj <- RunUMAP(obj, reduction = "pca", dims = 1:npcs, n.neighbors = nn)
   pos0 <- obj@reductions[["umap"]]@cell.embeddings
   ## DimPlot(obj, reduction="umap", group.by='batch',pt.size=5)
-  hm.obj <- harmony::RunHarmony(obj, "batch", verbose = TRUE, sigma=0.1)
-  hm.obj <- RunUMAP(hm.obj, reduction = "harmony", dims = 1:npcs, n.neighbors=nn)
+  hm.obj <- harmony::RunHarmony(obj, "batch", verbose = TRUE, sigma = 0.1)
+  hm.obj <- RunUMAP(hm.obj, reduction = "harmony", dims = 1:npcs, n.neighbors = nn)
   ## DimPlot(hm.obj, reduction="umap", group.by="batch", pt.size=4)
   pos1 <- hm.obj@reductions[["umap"]]@cell.embeddings
   ## reconstruct corrected matrix
@@ -1769,9 +1804,9 @@ runHarmony <- function(X, batch) {
   v2 <- Embeddings(hm.obj, "harmony")
   X2 <- as.matrix(u2 %*% t(v2))
 
-  X2 <- X2[,1:nx]
-  pos0 <- pos0[1:nx,]
-  pos1 <- pos1[1:nx,]
+  X2 <- X2[, 1:nx]
+  pos0 <- pos0[1:nx, ]
+  pos1 <- pos1[1:nx, ]
   colnames(X2) <- rownames(pos0) <- rownames(pos0) <- cn
   list(corrected = X2, umap = pos1, umap.orig = pos0)
 }
@@ -1942,7 +1977,7 @@ normalizeToControls <- function(X, batch, y, controls) {
 ##'
 ##' @param data_matrix A matrix (genes x samples or cells) for expression data
 ##' @param batch An integer vector of batches to correct for (converts factors or numeric vectors)
-##' @param pca whether to compute pca (defaults to TRUE) or apply correction to the raw matrix (FALSE) 
+##' @param pca whether to compute pca (defaults to TRUE) or apply correction to the raw matrix (FALSE)
 ##' @param compute_pca whether to compute PCA in Python (defaults to TRUE, requires scanpy library) or with R functions (FALSE)
 ##' @param nPcs number of principal components to compute (defaults to 50 if more than 50 genes)
 ##'
@@ -1960,54 +1995,55 @@ normalizeToControls <- function(X, batch, y, controls) {
 ##' @importFrom stats prcomp
 ##' @export
 my.bbknn <- function(data_matrix, batch, pca = TRUE, compute_pca = "python", nPcs = NULL) {
-  #import python modules with reticulate
-  if(!is.matrix(data_matrix)){
+  # import python modules with reticulate
+  if (!is.matrix(data_matrix)) {
     warning("matrix expected for data_matrix")
     data_matrix <- as.matrix(data_matrix)
-  } 
-  if(is.null(nPcs))
+  }
+  if (is.null(nPcs)) {
     nPcs <- min(50, nrow(data_matrix), ncol(data_matrix))
-  if(nPcs > nrow(data_matrix)){
+  }
+  if (nPcs > nrow(data_matrix)) {
     warning("number of genes less than nPcs")
     print(paste("using", nrow(data_matrix), "components"))
-    ##nPcs <- nrow(data_matrix)
-    nPcs <- min( nPcs, dim(data_matrix)-1)    
+    ## nPcs <- nrow(data_matrix)
+    nPcs <- min(nPcs, dim(data_matrix) - 1)
   }
-  #reticulate::use_python("/usr/local/bin/python3")
-##  reticulate::py_install("anndata")
-##  reticulate::py_install("bbknn")
-##  reticulate::py_install("scanpy")
+  # reticulate::use_python("/usr/local/bin/python3")
+  ##  reticulate::py_install("anndata")
+  ##  reticulate::py_install("bbknn")
+  ##  reticulate::py_install("scanpy")
 
-  anndata <- reticulate::import("anndata",convert=FALSE)
-  bbknn <- reticulate::import("bbknn", convert=FALSE)
-##  sc <- reticulate::import("scanpy.api",convert=FALSE)
-  sc <- reticulate::import("scanpy",convert=FALSE)  
-  
-  #set up annotation data for batches
-  if(is.character(batch))  batch <- as.factor(batch)
-  if(is.factor(batch))     batch <- as.numeric(batch)
-  if(is.numeric(batch))    batch <- as.integer(batch)
-  
-  #perform PCA
-  if(pca){
-    #sc$tl$pca(adata)
-    if(compute_pca == "python"){
-      #use PCA computed in Python
+  anndata <- reticulate::import("anndata", convert = FALSE)
+  bbknn <- reticulate::import("bbknn", convert = FALSE)
+  ##  sc <- reticulate::import("scanpy.api",convert=FALSE)
+  sc <- reticulate::import("scanpy", convert = FALSE)
+
+  # set up annotation data for batches
+  if (is.character(batch)) batch <- as.factor(batch)
+  if (is.factor(batch)) batch <- as.numeric(batch)
+  if (is.numeric(batch)) batch <- as.integer(batch)
+
+  # perform PCA
+  if (pca) {
+    # sc$tl$pca(adata)
+    if (compute_pca == "python") {
+      # use PCA computed in Python
       pca <- sc$pp$pca(t(data_matrix))
-    }else if(compute_pca != "python"){
-      #use PCA computed in R
+    } else if (compute_pca != "python") {
+      # use PCA computed in R
       print("test")
-      pca <- reticulate::r_to_py(t(prcomp(data_matrix)$x[1:nPcs,]))
+      pca <- reticulate::r_to_py(t(prcomp(data_matrix)$x[1:nPcs, ]))
     }
-    adata <- anndata$AnnData(X=pca, obs=batch)
+    adata <- anndata$AnnData(X = pca, obs = batch)
     sc$tl$pca(adata)
     adata$obsm$X_pca <- pca
   } else {
-    #use full matrix
-    adata <- anndata$AnnData(X=t(data_matrix), obs=batch)
+    # use full matrix
+    adata <- anndata$AnnData(X = t(data_matrix), obs = batch)
     sc$tl$pca(adata)
   }
-  #perform BBKNN to derive corrected components
+  # perform BBKNN to derive corrected components
   bbknn$bbknn(adata, batch_key = 0)
   corrected_matrix <- t(reticulate::py_to_r(adata$X))
   sc$tl$pca(adata)
