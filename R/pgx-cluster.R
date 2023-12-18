@@ -456,7 +456,6 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
 
   if ("pca" %in% methods && 2 %in% dims) {
     message("calculating PCA 2D/3D...")
-
     if (is.null(res.svd)) {
       suppressMessages(suppressWarnings(
         res.svd <- irlba::irlba(X, nv = 3)

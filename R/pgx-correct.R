@@ -1514,7 +1514,7 @@ samples2pheno <- function(M) {
 #' @export
 superBC2 <- function(X, samples, y, batch = NULL,
                      ## methods = c("technical","batch","statistical","pca","sva","nnm"),
-                     methods = c("technical", "batch", "statistical", "sva", "nnm"),
+                     methods = c("technical", "batch", "statistical", "sva", "nnm2"),
                      p.pca = 0.5, p.pheno = 0.05, k.pca = 10, nv = 2,
                      xrank = NULL) {
   cX <- X
@@ -1559,7 +1559,7 @@ superBC2 <- function(X, samples, y, batch = NULL,
     }
     if (m == "nnm2") {
       message("[superBC2] correcting for: NNM2")
-      cX <- gx.nnmcorrect2(cX, y)$X
+      cX <- gx.nnmcorrect2(cX, y, r=0.35)$X
     }
   }
 

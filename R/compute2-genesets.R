@@ -83,12 +83,10 @@ compute_testGenesets <- function(pgx,
   G <- G[, size.ok, drop = FALSE]
 
   ## -----------------------------------------------------------
-  ## Add random genesets
+  ## Add random genesets (in case there is no geneset left)
   ## -----------------------------------------------------------
-
   add.gmt <- NULL
-
-  rr <- sample(15:400,100)
+  rr <- sample(15:400, 100)
   gg <- rownames(pgx$X)
   random.gmt <- lapply( rr, function(n) head(sample(gg),min(n,length(gg)/2)))
   names(random.gmt) <- paste0("TEST:random_geneset.",1:length(random.gmt))
@@ -119,7 +117,6 @@ compute_testGenesets <- function(pgx,
     custom_gmt <- playbase::normalize_rows(custom_gmt)
     G <- playbase::merge_sparse_matrix(m1 = G, m2 = Matrix::t(custom_gmt))
     G <- G[rownames(G) %in% pgx$genes$symbol, ,drop = FALSE]
->>>>>>> 099f81d30bb9bb46a524b3e9c7b8a63107695f82
     remove(custom_gmt)
   }
 
