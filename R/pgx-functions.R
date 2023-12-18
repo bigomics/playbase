@@ -1202,11 +1202,11 @@ selectSamplesFromSelectedLevels <- function(Y, levels) {
     unlist()
   ptype <- data.table::tstrsplit(levels, "=", keep = 2) %>%
     unlist()
-##  sel <- rep(FALSE, nrow(Y))
+  ##  sel <- rep(FALSE, nrow(Y))
   sel <- rep(TRUE, nrow(Y))
   for (ph in unique(pheno)) {
     k <- which(pheno == ph)
-##    sel <- sel | (Y[, ph] %in% ptype[k])
+    ##    sel <- sel | (Y[, ph] %in% ptype[k])
     sel <- sel & (Y[, ph] %in% ptype[k])
   }
 
@@ -2037,8 +2037,8 @@ tidy.dataframe <- function(Y) {
   is.factor <- (is.factor | grepl("batch|replicat|type|clust|group", colnames(Y)))
   new.Y <- data.frame(Y, check.names = FALSE)
   new.Y[, which(is.numeric)] <- num.Y[, which(is.numeric), drop = FALSE]
-  for(i in which(is.numeric)) new.Y[[i]] <- num.Y[,i]
-  for(i in which(is.factor))  new.Y[[i]] <- factor(as.character(new.Y[,i]))
+  for (i in which(is.numeric)) new.Y[[i]] <- num.Y[, i]
+  for (i in which(is.factor)) new.Y[[i]] <- factor(as.character(new.Y[, i]))
   new.Y <- data.frame(new.Y, check.names = FALSE)
   return(new.Y)
 }
@@ -2142,28 +2142,28 @@ expandAnnotationMatrix <- function(A) {
 #'
 #' @return An expanded phenotype matrix with dummy variables suitable for regression modeling.
 #' @export
-expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric=FALSE) {
+expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE) {
   ## get expanded annotation matrix
   a1 <- tidy.dataframe(M)
   nlevel <- apply(a1, 2, function(x) length(setdiff(unique(x), NA)))
   nterms <- colSums(!is.na(a1))
   nratio <- nlevel / nterms
-  if(inherits(a1, "data.frame")) {
-    a1.typed <- utils::type.convert(a1, as.is = TRUE)  
+  if (inherits(a1, "data.frame")) {
+    a1.typed <- utils::type.convert(a1, as.is = TRUE)
     y.class <- sapply(a1.typed, function(a) class(a)[1])
   } else {
     ## matrix??
-    a1.typed <- utils::type.convert(a1, as.is = TRUE)  
+    a1.typed <- utils::type.convert(a1, as.is = TRUE)
     y.class <- apply(a1.typed, 2, function(a) class(a)[1])
   }
-  
+
   ## these integers are probably factors... (mostly...)
   is.fac <- rep(FALSE, ncol(a1))
   is.int <- (y.class == "integer")
   ii <- which(is.int)
   is.fac[ii] <- apply(a1[, ii, drop = FALSE], 2, function(x) {
     nlev <- length(unique(x[!is.na(x)]))
-    max(x, na.rm = TRUE) %in% c(nlev, nlev - 1)  ## boolean
+    max(x, na.rm = TRUE) %in% c(nlev, nlev - 1) ## boolean
   })
   is.fac2 <- (y.class == "integer" & nlevel <= 3 & nratio < 0.66)
   y.class[is.fac | is.fac2] <- "character"
@@ -2177,13 +2177,13 @@ expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric=FALSE) {
 
   a1 <- a1[, kk, drop = FALSE]
   a1.isnum <- y.isnum[kk]
-  
+
   i <- 1
   m1 <- list()
   for (i in 1:ncol(a1)) {
     if (a1.isnum[i]) {
       suppressWarnings(x <- as.numeric(a1[, i]))
-      if(keep.numeric) {
+      if (keep.numeric) {
         m0 <- matrix(x, ncol = 1)
         colnames(m0) <- "#"
       } else {
@@ -2221,8 +2221,8 @@ expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric=FALSE) {
     colnames(m1[[i]]) <- paste0(names(m1)[i], "=", colnames(m1[[i]]))
   }
   m1 <- do.call(cbind, m1)
-  colnames(m1) <- sub("=#","",colnames(m1))
-  rownames(m1) <- rownames(M)  
+  colnames(m1) <- sub("=#", "", colnames(m1))
+  rownames(m1) <- rownames(M)
   return(m1)
 }
 
@@ -2290,7 +2290,7 @@ normalize_rows <- function(G) {
   D <- Matrix::Diagonal(x = 1 / row_sums)
   G_scaled <- D %*% G
   rownames(G_scaled) <- rownames(G)
-  colnames(G_scaled) <- colnames(G)  
+  colnames(G_scaled) <- colnames(G)
   return(G_scaled)
 }
 

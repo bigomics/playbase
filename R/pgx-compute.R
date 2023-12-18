@@ -534,8 +534,7 @@ pgx.computePGX <- function(pgx,
                            pgx.dir = NULL,
                            libx.dir = NULL,
                            progress = NULL,
-                           user_input_dir=getwd()) {
-
+                           user_input_dir = getwd()) {
   if (!"contrasts" %in% names(pgx)) {
     stop("[pgx.computePGX] FATAL:: no contrasts in object")
   }
