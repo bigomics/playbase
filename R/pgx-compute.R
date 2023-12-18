@@ -456,7 +456,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   if (do.cluster || cluster.contrasts) {
     message("[createPGX] clustering samples...")
-    pgx <- playbase::pgx.clusterSamples2(
+    pgx <- pgx.clusterSamples2(
       pgx,
       dims = c(2, 3),
       perplexity = NULL,
@@ -534,9 +534,7 @@ pgx.computePGX <- function(pgx,
                            pgx.dir = NULL,
                            libx.dir = NULL,
                            progress = NULL) {
-  ## ======================================================================
-  ## ======================================================================
-  ## ======================================================================
+
 
   if (!"contrasts" %in% names(pgx)) {
     stop("[pgx.computePGX] FATAL:: no contrasts in object")
@@ -722,15 +720,6 @@ counts.autoScaling <- function(counts) {
   list(counts = counts, counts_multiplier = counts_multiplier)
 }
 
-#' @export
-normalizeCounts <- function(M, method = c("TMM", "TMMwsp", "RLE", "upperquartile", "none")) {
-  method <- method[1]
-  dge <- edgeR::DGEList(M)
-  dge <- edgeR::calcNormFactors(dge, method = method)
-  logCPM <- edgeR::cpm(dge, log = TRUE)
-  logCPM
-}
-
 ## -------------------------------------------------------------------
 ## collapse multiple row for genes by summing up counts
 ## -------------------------------------------------------------------
@@ -749,6 +738,7 @@ counts.mergeDuplicateFeatures <- function(counts) {
   counts
 }
 
+#' @export
 pgx.filterZeroCounts <- function(pgx) {
   ## There is second filter in the statistics computation. This
   ## first filter is primarily to reduce the counts table.
@@ -761,6 +751,7 @@ pgx.filterZeroCounts <- function(pgx) {
   pgx
 }
 
+#' @export
 pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   AT.LEAST <- ceiling(pmax(2, 0.01 * ncol(pgx$counts)))
   cat("filtering for low-expressed genes: >", prior.cpm, "CPM in >=", AT.LEAST, "samples\n")
