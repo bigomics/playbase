@@ -40,7 +40,8 @@
 #' @export
 gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
                      fdr = 0.05, compute.means = TRUE, lfc = 0.20,
-                     max.na = 0.20, ref = c(
+                     max.na = 0.20, sort.by = "FC",
+                     ref = c(
                        "ctrl", "ctr", "control", "dmso", "nt", "0", "0h", "0hr",
                        "non", "no", "not", "neg", "negative", "ref", "veh", "vehicle",
                        "wt", "wildtype", "untreated", "normal", "false", "healthy"
@@ -167,12 +168,16 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
     top$t <- NA
   }
 
-  ## reorder on fold change
-  top <- top[order(abs(top$logFC), decreasing = TRUE), ]
-
+  if( sort.by == "FC" ) {
+    ## reorder on fold change
+    top <- top[order(abs(top$logFC), decreasing = TRUE), ]
+  }
+  if( sort.by == "p" ) {
+    ## reorder on fold change
+    top <- top[order(top$P.Value), ]
+  }
 
   ## unlist???
-
   return(top)
 }
 
@@ -207,7 +212,8 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
 #' }
 #' @export
 gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc = 0.20,
-                      max.na = 0.20, ref = c(
+                      max.na = 0.20, sort.by = "FC",
+                      ref = c(
                         "ctrl", "ctr", "control", "dmso", "nt", "0", "0h", "0hr",
                         "non", "no", "not", "neg", "negative", "ref", "veh", "vehicle",
                         "wt", "wildtype", "untreated", "normal", "false", "healthy"
@@ -219,17 +225,20 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
   ## detect single sample case
   is.single <- (max(table(pheno)) == 1)
   if (is.single) {
-    cat("warning: no replicates, no stats...\n")
+    cat("warning: no replicates, no stats. duplicating\n")
     X <- cbind(X, X)
     pheno <- c(pheno, pheno)
+    ## add noise???
   }
   if (!is.null(B) && NCOL(B) == 1) {
+    ## these are batch or extra model covariates
     B <- matrix(B, ncol = 1)
     rownames(B) <- rownames(pheno)
     colnames(B) <- "batch"
   }
 
   ## filter probes and samples
+  ii=1:nrow(X);jj=1:length(pheno)
   ii <- which(rowMeans(is.na(X)) <= max.na)
   jj <- which(!is.na(pheno))
   if (verbose > 0) cat(sum(is.na(pheno) > 0), "with missing phenotype\n")
@@ -263,7 +272,7 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
   } else {
     if (verbose > 0) cat("WARNING: could not auto-detect reference\n")
     levels <- as.character(sort(unique(pheno0)))
-    if (verbose > 0) cat("setting reference to first class", levels[1], "\n")
+    if (verbose > 0) cat("setting reference to first level", levels[1], "\n")
     pheno1 <- stats::relevel(factor(pheno0), ref = levels[1])
   }
   if (0 && length(levels) != 2) {
@@ -284,7 +293,7 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
     }
     fit <- limma::lmFit(X0, design)
     fit <- limma::eBayes(fit, trend = trend)
-    top <- limma::topTable(fit, number = Inf, sort.by = "none")
+    suppressMessages( top <- limma::topTable(fit, number = Inf, sort.by = "none") )
   }
   if (method == 2) {
     ## this tests implicitly against the reference level (REF), It
@@ -309,7 +318,7 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
     contrast.matrix <- contrast.matrix[colnames(design), ]
     fit2 <- limma::contrasts.fit(fit, contrast.matrix)
     fit2 <- limma::eBayes(fit2, trend = trend)
-    top <- limma::topTable(fit2, number = Inf, sort.by = "none")
+    suppressMessages( top <- limma::topTable(fit2, number = Inf, sort.by = "none") )
   }
   if (method == 3) {
     ## this tests implicitly all comparisons, It uses explicit full
@@ -327,7 +336,7 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
     contrast.matrix <- contrast.matrix[colnames(design), ]
     fit2 <- limma::contrasts.fit(fit, contrast.matrix)
     fit2 <- limma::eBayes(fit2, trend = trend)
-    top <- limma::topTable(fit2, number = Inf, sort.by = "none")
+    suppressMessages( top <- limma::topTable(fit2, number = Inf, sort.by = "none") )
   }
 
   ## clean-up
@@ -372,8 +381,15 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
   }
 
   ## reorder on fold change
-  top <- top[order(abs(top$logFC), decreasing = TRUE), ]
 
+  if( sort.by == "FC" ) {
+    ## reorder on fold change
+    top <- top[order(abs(top$logFC), decreasing = TRUE), ]
+  }
+  if( sort.by == "p" ) {
+    ## reorder on fold change
+    top <- top[order(top$P.Value), ]
+  }
 
   ## unlist
 
