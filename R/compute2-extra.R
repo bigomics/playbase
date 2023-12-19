@@ -18,7 +18,8 @@
 compute_extra <- function(pgx, extra = c(
                             "meta.go", "infer", "deconv", "drugs", ## "graph",
                             "connectivity", "wordcloud", "wgcna"
-                          ), sigdb = NULL, pgx.dir = "./data", libx.dir = "./libx") {
+                          ), sigdb = NULL, pgx.dir = "./data", libx.dir = "./libx",
+                          user_input_dir = getwd()) {
   timings <- c()
 
   if (length(extra) == 0) {
@@ -56,7 +57,12 @@ compute_extra <- function(pgx, extra = c(
   if ("meta.go" %in% extra) {
     message(">>> Computing GO core graph...")
     tt <- system.time({
-      pgx$meta.go <- pgx.computeCoreGOgraph(pgx, fdr = 0.20)
+      pgx$meta.go <- tryCatch(
+        pgx.computeCoreGOgraph(pgx, fdr = 0.20),
+        error = function(e){
+        write(as.character(e), file = paste0(user_input_dir, "/ERROR_METAGO"))
+        return(NULL)
+      })
     })
     timings <- rbind(timings, c("meta.go", tt))
     message("<<< done!")
@@ -65,11 +71,16 @@ compute_extra <- function(pgx, extra = c(
   if ("deconv" %in% extra) {
     message(">>> computing deconvolution")
     tt <- system.time({
-      pgx <- compute_deconvolution(
-        pgx,
-        rna.counts = rna.counts,
-        full = FALSE
-      )
+      pgx <- tryCatch({
+        compute_deconvolution(
+          pgx,
+          rna.counts = rna.counts,
+          full = FALSE
+        )
+      }, error = function(e) {
+        write(as.character(e), file = paste0(user_input_dir, "/ERROR_DECONVOLUTIION"))
+        return(pgx)
+      })
     })
     timings <- rbind(timings, c("deconv", tt))
     message("<<< done!")
@@ -78,7 +89,12 @@ compute_extra <- function(pgx, extra = c(
   if ("infer" %in% extra) {
     message(">>> inferring extra phenotypes...")
     tt <- system.time({
-      pgx <- compute_cellcycle_gender(pgx, rna.counts = rna.counts)
+      pgx <- tryCatch(
+        compute_cellcycle_gender(pgx, rna.counts = rna.counts),
+        error = function(e) {
+          write(as.character(e), file = paste0(user_input_dir, "/ERROR_INFERENCE"))
+          return(pgx)
+      })
     })
     timings <- rbind(timings, c("infer", tt))
     message("<<< done!")
@@ -89,14 +105,24 @@ compute_extra <- function(pgx, extra = c(
 
     message(">>> Computing drug activity enrichment...")
     tt <- system.time({
-      pgx <- compute_drugActivityEnrichment(pgx, libx.dir = libx.dir)
+      pgx <- tryCatch({
+        compute_drugActivityEnrichment(pgx, libx.dir = libx.dir)
+      }, error = function(e){
+        write(as.character(e), file = paste0(user_input_dir, "/ERROR_DRUG_ACTIVITY"))
+        return(pgx)
+        })
     })
     timings <- rbind(timings, c("drugs", tt))
 
     if (!is.null(libx.dir)) {
       message(">>> Computing drug sensitivity enrichment...")
       tt <- system.time({
-        pgx <- compute_drugSensitivityEnrichment(pgx, libx.dir)
+        PGX <- tryCatch({
+          compute_drugSensitivityEnrichment(pgx, libx.dir)
+        }, error = function(e) {
+          write(as.character(e), file = paste0(user_input_dir, "/ERROR_DRUG_SENSITIVITY"))
+          return(pgx)
+          })
       })
       timings <- rbind(timings, c("drugs-sx", tt))
     } else {
@@ -108,7 +134,12 @@ compute_extra <- function(pgx, extra = c(
   if ("graph" %in% extra) {
     message(">>> computing OmicsGraphs...")
     tt <- system.time({
-      pgx <- compute_omicsGraphs(pgx)
+     pgx <- tryCatch({
+        compute_omicsGraphs(pgx)
+      }, error = function(e){
+        write(as.character(e), file = paste0(user_input_dir, "/ERROR_GRAPH"))
+        return(pgx)
+        })
     })
     timings <- rbind(timings, c("graph", tt))
     message("<<< done!")
@@ -117,7 +148,11 @@ compute_extra <- function(pgx, extra = c(
   if ("wordcloud" %in% extra) {
     message(">>> computing WordCloud statistics...")
     tt <- system.time({
-      res <- pgx.calculateWordCloud(pgx, progress = NULL, pg.unit = 1)
+      res <- tryCatch(pgx.calculateWordCloud(pgx, progress = NULL, pg.unit = 1),
+              error = function(e){
+                write(as.character(e), file = paste0(user_input_dir, "/ERROR_WORDCLOUD"))
+                return(NULL)
+              })
     })
     timings <- rbind(timings, c("wordcloud", tt))
     pgx$wordcloud <- res
@@ -156,19 +191,26 @@ compute_extra <- function(pgx, extra = c(
         if (file.exists(db)) {
           message("computing connectivity scores for ", db)
           tt <- system.time({
-            scores <- pgx.computeConnectivityScores(
-              pgx,
-              db,
-              ntop = 200,
-              contrasts = NULL,
-              remove.le = TRUE
-            )
+            scores <- tryCatch({
+              pgx.computeConnectivityScores(
+                pgx,
+                db,
+                ntop = 200,
+                contrasts = NULL,
+                remove.le = TRUE
+              )
+            }, error = function(e){
+              write(as.character(e), file = paste0(user_input_dir, "/ERROR_CONNECTIVITY"))
+              return(NULL)
+            })
+            if(!is.null(scores)) {
+              db0 <- sub(".*/", "", db)
+              pgx$connectivity[[db0]] <- scores
+            }
+            remove(scores)
+            
           })
           timings <- rbind(timings, c("connectivity", tt))
-
-          db0 <- sub(".*/", "", db)
-          pgx$connectivity[[db0]] <- scores
-          remove(scores)
         }
       }
     } else {
@@ -179,7 +221,12 @@ compute_extra <- function(pgx, extra = c(
   if ("wgcna" %in% extra) {
     message(">>> Computing wgcna...")
     tt <- system.time({
-      pgx$wgcna <- pgx.wgcna(pgx)
+      tryCatch({
+        pgx$wgcna <- pgx.wgcna(pgx)
+      }, error = function(e){
+        write(as.character(e), file = paste0(user_input_dir, "/ERROR_WGCNA"))
+        return(NULL)
+      })
     })
     timings <- rbind(timings, c("wgcna", tt))
   }

@@ -547,7 +547,11 @@ pgx.computePGX <- function(pgx,
                            )[c(1, 2)],
                            pgx.dir = NULL,
                            libx.dir = NULL,
-                           progress = NULL) {
+                           progress = NULL,
+                           user_input_dir=getwd()) {
+  ## ======================================================================
+  ## ======================================================================
+  ## ======================================================================
 
   if (!"contrasts" %in% names(pgx)) {
     stop("[pgx.computePGX] FATAL:: no contrasts in object")
@@ -691,7 +695,8 @@ pgx.computePGX <- function(pgx,
     pgx,
     extra = extra.methods,
     pgx.dir = pgx.dir,
-    libx.dir = libx.dir
+    libx.dir = libx.dir,
+    user_input_dir = user_input_dir
   )
 
   message("[pgx.computePGX] done!")
@@ -934,18 +939,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------
 
   X <- pgx$X
-  single.omics <- TRUE ## !!! for now...
-  if (single.omics) {
-    ## normalized matrix
-    X <- X
-  } else {
-    data.type <- gsub("\\[|\\].*", "", rownames(pgx$counts))
-    jj <- which(data.type %in% c("gx", "mrna"))
-    if (length(jj) == 0) {
-      stop("[pgx.add_GMT] FATAL. could not find gx/mrna values.")
-    }
-    X <- X[jj, ]
-  }
 
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
     X <- rename_by(X, pgx$genes, "symbol")

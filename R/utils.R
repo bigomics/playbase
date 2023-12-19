@@ -37,9 +37,9 @@ dbg <- function(...) info(..., type = "DBUG")
 #' \dontrun{
 #' f3 <- function(x) {
 #'   print("Show whole stack")
-#'   message(playbase:::get_call_stack(0))
+#'   message(get_call_stack())
 #'   print("Remove message call")
-#'   message(playbase:::get_call_stack(1))
+#'   message(get_call_stack(1))
 #'   x <- x + 1
 #'   x
 #' }
@@ -50,17 +50,24 @@ dbg <- function(...) info(..., type = "DBUG")
 #' }
 #' 
 #' f1 <- function(x) {
-#'   x <- f2(x)
 #'   x
+#'   x <- f2(x)
 #' }
-#' f1(2)
+#'  f0 <- function(x) {
+#'   x
+#'   x <- f1(x)
 #' }
-get_call_stack <- function(n) {
+#' f0(2)
+#' }
+get_call_stack <- function(n = 2, n0 = 2) {
   
   # Get calls and remove the last n calls
   calls <- sys.calls()
   fun_names <- vapply(calls, function(x) as.character(x[[1]]), character(1))
-  fun_names <- fun_names[-((length(fun_names)-n):length(fun_names))]
+  exclude_last_n <- length(fun_names)-n
+  get_last_n <- exclude_last_n - n0
+  print(get_last_n:exclude_last_n)
+  fun_names <- fun_names[get_last_n:exclude_last_n]
   
   # Concatenate all the calls using the ">" symbol
   call_stack <- paste(fun_names, collapse = ">")

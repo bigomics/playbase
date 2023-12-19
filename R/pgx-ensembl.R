@@ -252,23 +252,9 @@ ngs.getGeneAnnotation <- function(
   }
   data.table::setnames(out, old = attr_call, new = new_names)
 
-  # Reorder columns and rows
-  if ("human_ortholog" %in% colnames(out)) {
-    col_order <- c(
-      "feature",
-      "symbol",
-      "human_ortholog",
-      "gene_title",
-      "gene_biotype"
-    )
-  } else {
-    col_order <- c(
-      "feature",
-      "symbol",
-      "gene_title",
-      "gene_biotype"
-    )
-  }
+  # Reorder columns and rows (remove human_ortholog if not present)
+  col_order <- c("feature", "symbol", "human_ortholog", "gene_title", "gene_biotype")
+  col_order <- col_order[col_order %in% colnames(out)]
   data.table::setcolorder(out, col_order)
   data.table::setkeyv(out, "feature")
 
@@ -281,6 +267,13 @@ ngs.getGeneAnnotation <- function(
     out[, gene_title := data.table::tstrsplit(gene_title, ";", keep = 1)]
   }
   out[, gene_title := trimws(gene_title, which = "right")]
+  
+  # Switch NA to empty string
+  character_cols <- names(out)[sapply(out, is.character)]
+  out[, (character_cols) := 
+      lapply(.SD, function(x) data.table::fifelse(is.na(x), "", x)), 
+  .SDcols = character_cols]
+  
   # Keep it for back compatibility
   out[, gene_name := feature]
 

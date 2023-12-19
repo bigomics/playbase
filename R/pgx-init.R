@@ -41,10 +41,8 @@ pgx.initialize <- function(pgx) {
   message("[pgx.initialize] initializing pgx object")
 
   ## ----------------- check object
-  obj.needed <- c("genes", "GMT", "gx.meta", "model.parameters", 
-    "samples", "tsne2d", "X"
-    )
-    
+  obj.needed <- c("samples", "genes",  "GMT", "gx.meta", 
+    "model.parameters", "tsne2d", "X")
   all(obj.needed %in% names(pgx))
   if (!all(obj.needed %in% names(pgx))) {
     obj.missing <- setdiff(obj.needed, names(pgx))
@@ -59,7 +57,7 @@ pgx.initialize <- function(pgx) {
     # between old and new pgx
     pgx$genes$gene_name <- as.character(pgx$genes$gene_name)
     pgx$genes$gene_title <- as.character(pgx$genes$gene_title)
-    pgx$genes$human_ortholog <- toupper(as.character(rownames(pgx$gene_name)))
+    pgx$genes$human_ortholog <- toupper(as.character(pgx$genes$gene_name))
     pgx$genes$feature <- as.character(rownames(pgx$genes))
     pgx$genes$symbol <- pgx$genes$gene_name
     col_order <- c(
@@ -75,7 +73,7 @@ pgx.initialize <- function(pgx) {
 
   ## for COMPATIBILITY: if no counts, estimate from X
   if (is.null(pgx$counts)) {
-    cat("WARNING:: no counts table. estimating from X\n")
+    message("WARNING:: no counts table. estimating from X\n")
     pgx$counts <- pmax(2**pgx$X - 1, 0)
     k <- grep("lib.size|libsize", colnames(pgx$samples))[1]
     if (length(k) > 0) {
@@ -126,7 +124,7 @@ pgx.initialize <- function(pgx) {
       new.contr <- contrastAsLabels(new.contr)
     }
     is.groupwise <- all(rownames(new.contr) %in% pgx$samples$group)
-    
+    is.groupwise
     if (is.groupwise) {
       grp <- as.character(pgx$samples$group)
       new.contr <- new.contr[grp, , drop = FALSE]

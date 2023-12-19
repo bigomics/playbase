@@ -72,19 +72,6 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
 
   X <- pgx$X
-  single.omics <- TRUE ## !!! for now...
-  if (single.omics) {
-    ## normalized matrix
-    X <- X
-  } else {
-    data.type <- gsub("\\[|\\].*", "", rownames(pgx$counts))
-    jj <- which(data.type %in% c("gx", "mrna"))
-    if (length(jj) == 0) {
-      stop("[pgx.add_GMT] FATAL. could not find gx/mrna values.")
-    }
-    X <- X[jj, ]
-  }
-
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
     X <- rename_by(X, pgx$genes, "symbol")
     X <- X[!rownames(X) == "", , drop = FALSE]
@@ -96,7 +83,7 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
   ## Run methods
   ## -----------------------------------------------------------
-  cat(">>> Testing gene sets with methods:", test.methods, "\n")
+  message(">>> Testing gene sets with methods:", test.methods, "\n")
 
   Y <- pgx$samples
   gc()
