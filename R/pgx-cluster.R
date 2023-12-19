@@ -401,7 +401,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
                                  perplexity = 30, reduce.sd = 1000, reduce.pca = 50,
                                  center.features = TRUE, scale.features = FALSE,
                                  find.clusters = FALSE, svd.gamma = 1, umap.pkg = "uwot") {
-  methods <- intersect(methods, c("pca", "tsne", "umap"))
+  methods <- intersect(methods, c("pca", "tsne", "umap", "pacmap"))
   if (length(methods) == 0) methods <- "pca"
 
   ## Reduce dimensions by SD
@@ -556,6 +556,29 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
     all.pos[["umap3d"]] <- pos
   }
 
+  has.pacmap <- reticulate::py_module_available("pacmap")
+  if(has.pacmap && "pacmap" %in% methods && 2 %in% dims) {
+    message("calculating PACMAP 2D...")
+    ##reticulate::py_install("pacmap")
+    pacmap <- reticulate::import("pacmap")
+    reducer <- pacmap$PaCMAP( n_components = 2L )
+    pos <- reducer$fit_transform(t(X))
+    rownames(pos) <- colnames(X)
+    pos <- pos[1:dimx[2], ] ## if augmented
+    colnames(pos) <- paste0("PACMAP-", c("x", "y"))
+    all.pos[["pacmap2d"]] <- pos
+  }
+  if(has.pacmap && "pacmap" %in% methods && 3 %in% dims) {
+    message("calculating PACMAP 3D...")
+    pacmap <- reticulate::import("pacmap")
+    reducer <- pacmap$PaCMAP( n_components = 3L )
+    pos <- reducer$fit_transform(t(X))
+    rownames(pos) <- colnames(X)
+    pos <- pos[1:dimx[2], ] ## if augmented
+    colnames(pos) <- paste0("PACMAP-", c("x", "y", "z"))
+    all.pos[["pacmap3d"]] <- pos
+  }
+  
   all.pos$membership <- NULL
   if (find.clusters) {
     message("*** DEPRECATED *** please call seperately")
@@ -608,6 +631,8 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
                               find.clusters = TRUE, kclust = 1,
                               clust.detect = c("louvain", "hclust"),
                               method = c("tsne", "umap", "pca")) {
+
+  method <- intersect(method, c("pca", "tsne", "umap", "pacmap"))
   method <- method[1]
   clust.detect <- clust.detect[1]
   sdx <- matrixStats::rowSds(X, na.rm = TRUE)
@@ -697,6 +722,25 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
       pos3 <- svd$v[, 1:3]
       colnames(pos3) <- c("pca_1", "pca_2", "pca_3")
     }
+  } else if (method == "pacmap") {
+    has.pacmap <- reticulate::py_module_available("pacmap")
+    if(has.pacmap) {
+      message("performing PACMAP...")
+      pacmap <- reticulate::import("pacmap")
+      if (2 %in% dims) {
+        reducer <- pacmap$PaCMAP( n_components = 2L )
+        pos2 <- reducer$fit_transform(t(X))
+        colnames(pos2) <- c("pacmap_1", "pacmap_2")
+      }
+      if (3 %in% dims) {
+        reducer <- pacmap$PaCMAP( n_components = 3L )
+        pos3 <- reducer$fit_transform(t(X))
+        colnames(pos3) <- c("pacmap_1", "pacmap_2", "pacmap_3")
+      }
+    } else {
+      warning("No PaCMAP installed. please install in python.")
+      return(NULL)
+    }
   }
 
   ## add rownames
@@ -772,3 +816,19 @@ pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix 
   message("Found ", length(unique(idx)), " clusters...")
   return(idx)
 }
+
+
+pacmap <- function(X, n_components = 2L, ...) {
+  has.pacmap <- reticulate::py_module_available("pacmap")
+  if(!has.pacmap) {
+    stop("pacmap python module not installed")    
+  }
+  ##reticulate::py_install("pacmap")
+  pacmap <- reticulate::import("pacmap")
+  reducer <- pacmap$PaCMAP( n_components = as.integer(n_components) )
+  pos <- reducer$fit_transform(X)
+  rownames(pos) <- rownames(X)
+  colnames(pos) <- paste0("pacmap_",1:ncol(pos))
+  pos
+}
+
