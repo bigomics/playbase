@@ -41,11 +41,10 @@ pgx.initialize <- function(pgx) {
   message("[pgx.initialize] initializing pgx object")
 
   ## ----------------- check object
-  obj.needed <- c(
-    "genes", 
-    "GMT", "gx.meta", "model.parameters",
+  obj.needed <- c("genes", "GMT", "gx.meta", "model.parameters", 
     "samples", "tsne2d", "X"
-  )
+    )
+    
   all(obj.needed %in% names(pgx))
   if (!all(obj.needed %in% names(pgx))) {
     obj.missing <- setdiff(obj.needed, names(pgx))
@@ -60,7 +59,7 @@ pgx.initialize <- function(pgx) {
     # between old and new pgx
     pgx$genes$gene_name <- as.character(pgx$genes$gene_name)
     pgx$genes$gene_title <- as.character(pgx$genes$gene_title)
-    pgx$genes$human_ortholog <- as.character(rownames(pgx$genes))
+    pgx$genes$human_ortholog <- toupper(as.character(rownames(pgx$gene_name)))
     pgx$genes$feature <- as.character(rownames(pgx$genes))
     pgx$genes$symbol <- pgx$genes$gene_name
     col_order <- c(
