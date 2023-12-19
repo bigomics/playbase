@@ -29,7 +29,7 @@ compute_testGenes <- function(pgx, contr.matrix, max.features = 1000,
   ## data.types
   if (single.omics || length(data.types) == 1) {
     ## single-omics, no missing values
-    cat(">>> computing gene tests for SINGLE-OMICS\n")
+    message(">>> computing gene tests for SINGLE-OMICS")
     pgx <- compute_testGenesSingleOmics(
       pgx = pgx,
       contr.matrix = contr.matrix,
@@ -41,7 +41,7 @@ compute_testGenes <- function(pgx, contr.matrix, max.features = 1000,
     )
   } else {
     ## multi-omics, missing values allowed
-    cat(">>> computing gene tests for MULTI-OMICS\n")
+    message(">>> computing gene tests for MULTI-OMICS")
     pgx <- compute_testGenesMultiOmics(
       pgx = pgx, ## type is inferred
       contr.matrix = contr.matrix,
@@ -196,7 +196,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   ## Do the fitting
   ## -----------------------------------------------------------------------------
   methods <- test.methods
-  cat(">>> Testing differential expressed genes (DEG) with methods:", methods, "\n")
+  message(">>> Testing differential expressed genes (DEG) with methods: ", methods)
   PRIOR.CPM <- 1
 
   ## Run all test methods
