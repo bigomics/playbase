@@ -30,7 +30,7 @@ pgx.superBatchCorrect(
 
 \item{model.par}{Vector of column names of biological covariates in \code{pheno}.}
 
-\item{batch}{Factor or matrix indicating batch/technical groups for each sample.}
+\item{batch.par}{Vector of column names of batch covariates in \code{pheno}.}
 
 \item{method}{Batch correction method to apply ("combat", "limma", "sva", etc).}
 }

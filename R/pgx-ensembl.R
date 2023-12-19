@@ -267,13 +267,14 @@ ngs.getGeneAnnotation <- function(
     out[, gene_title := data.table::tstrsplit(gene_title, ";", keep = 1)]
   }
   out[, gene_title := trimws(gene_title, which = "right")]
-  
+
   # Switch NA to empty string
   character_cols <- names(out)[sapply(out, is.character)]
-  out[, (character_cols) := 
-      lapply(.SD, function(x) data.table::fifelse(is.na(x), "", x)), 
-  .SDcols = character_cols]
-  
+  out[, (character_cols) :=
+    lapply(.SD, function(x) data.table::fifelse(is.na(x), "", x)),
+  .SDcols = character_cols
+  ]
+
   # Keep it for back compatibility
   out[, gene_name := feature]
 

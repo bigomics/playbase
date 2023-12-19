@@ -257,6 +257,15 @@ pgx.initialize <- function(pgx) {
     pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2), level = "geneset")
     pgx$cluster.gsets$pos <- lapply(pgx$cluster.gsets$pos, pos.compact)
   }
+  if (!"cluster" %in% names(pgx)) {
+    message("[pgx.initialize] clustering samples...")
+    pgx <- pgx.clusterSamples2(
+      pgx,
+      dims = c(2, 3),
+      perplexity = NULL,
+      methods = c("pca", "tsne", "umap")
+    )
+  }
 
   ## -----------------------------------------------------------------------------
   ## Remove redundant???

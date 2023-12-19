@@ -66,7 +66,7 @@ normalizeRLE <- function(counts, log = FALSE, use = "deseq2") {
     dge <- edgeR::calcNormFactors(dge, method = "RLE")
     outx <- edgeR::cpm(dge, log = log)
   } else if (use == "deseq2") {
-    cts <- counts
+    cts <- round(counts)
     dds <- DESeq2::DESeqDataSetFromMatrix(
       countData = cts,
       colData = cbind(colnames(cts), 1),
@@ -158,21 +158,31 @@ pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
 }
 
 
-## --------------------------- new stuff ---------------------------------------------------
+#' @export
+edgeR.normalizeCounts <- function(M, method = c("TMM", "TMMwsp", "RLE", "upperquartile", "none")) {
+  method <- method[1]
+  dge <- edgeR::DGEList(M)
+  dge <- edgeR::calcNormFactors(dge, method = method)
+  edgeR::cpm(dge, log = TRUE)
+}
 
 
-logNormalizeCounts <- function(counts, plot = TRUE,
-                               q.zero = 0.01,
-                               zero.method = "sdc",
-                               shift.method = "slog",
-                               weighted.qn = FALSE,
-                               svd.init = NULL) {
+## --------------------------- new stuff -----------------------------------------
+
+#' @export
+normalizeCounts <- function(counts,
+                            q.zero = 0.01,
+                            method = "sdc",
+                            shift.method = "slog",
+                            weighted.qn = TRUE,
+                            svd.init = NULL,
+                            plot = FALSE) {
   which.zero <- which(counts == 0)
   which.missing <- which(is.na(counts))
   nzero <- sum(length(which.zero))
   nmissing <- sum(length(which.missing))
-  message("[logNormalizeCounts] ", nzero, " zero values")
-  message("[logNormalizeCounts] ", nmissing, " missing values")
+  message("[normalizeCounts] ", nzero, " zero values")
+  message("[normalizeCounts] ", nmissing, " missing values")
 
   hist2 <- function(x1, ...) {
     dx <- min(x1, na.rm = TRUE) + 0.05 * diff(range(x1, na.rm = TRUE))
@@ -211,7 +221,7 @@ logNormalizeCounts <- function(counts, plot = TRUE,
     boxplothist(S, main = "quantile scaled (MC+QS)")
   }
 
-  ## detect outliers
+  ## detect outliers (values)
   mdx <- apply(S, 1, median, na.rm = TRUE)
   sdx <- apply(S, 1, mad, na.rm = TRUE)
   sdx0 <- mean(sdx, na.rm = TRUE)
@@ -224,17 +234,18 @@ logNormalizeCounts <- function(counts, plot = TRUE,
   smin[is.na(smin)] <- mean(smin, na.rm = TRUE)
   is.outlier <- which(S > smax)
   noutlier <- length(is.outlier)
-  message("[logNormalizeCounts] detected ", noutlier, " outlier values\n")
+  message("[normalizeCounts] detected ", noutlier, " outlier values")
   if (noutlier > 0) {
     S[is.outlier] <- NA
   }
 
+  ## impute missing values (and/or previous outliers)
   any(is.na(S))
   if (any(is.na(S))) {
     ## nv=floor(max(ncol(counts)/5,3));
     ## svd.init=NULL
     nmissing <- sum(is.na(S))
-    message("[logNormalizeCounts] imputing ", nmissing, " missing values\n")
+    message("[normalizeCounts] imputing ", nmissing, " missing values")
     S1 <- svdImpute2(S, nv = 3, init = svd.init, fill.empty = "sample")
     if (plot) {
       boxplothist(S1, main = "missing imputed (MC+QS+MI)")
@@ -242,12 +253,24 @@ logNormalizeCounts <- function(counts, plot = TRUE,
     S <- S1
   }
 
+  ## clip range of values
+  message("[normalizeCounts] clipping values")
   S <- pmin(pmax(S, smin), smax)
   if (plot) {
     boxplothist(S, main = "clipped range (MC+QS+MI+CR)")
   }
 
-  ## Do quantile normalization????
+  ## regress on total counts. here or later??
+  regress.tc <- FALSE
+  if (regress.tc) {
+    message("[normalizeCounts] regressing on total counts")
+    totcounts <- scale(log2(colSums(2**S) + 1))
+    S <- limma::removeBatchEffect(S, batch = NULL, covariates = totcounts)
+  }
+
+  ## Do quantile normalization. weighted will retain a bit of
+  ## variation in the values.
+  message("[normalizeCounts] apply quantile normalization")
   if (weighted.qn) {
     S <- 0.1 * S + 0.9 * limma::normalizeQuantiles(S)
   } else {
@@ -265,59 +288,37 @@ logNormalizeCounts <- function(counts, plot = TRUE,
   S1 <- S
   S1[S <= smin] <- NA
   S1[which.missing] <- NA
-  if (zero.method == "sd") {
+  if (method == "sd") {
+    ## SD is calculated on global feature values
     m0 <- mean(apply(S1, 2, median, na.rm = TRUE))
     s0 <- mean(apply(S1, 2, sd, na.rm = TRUE))
     zdist <- qnorm(1 - q.zero) ## SD distance
     zero.point <- m0 - zdist * s0
-  } else if (zero.method == "sdc") {
+  } else if (method == "sdc") {
+    ## SD is calculated on centered feature values
     C1 <- S1 - rowMeans(S1, na.rm = TRUE)
     m0 <- median(S1, na.rm = TRUE)
     s0 <- mean(apply(C1, 2, sd, na.rm = TRUE))
     zdist <- qnorm(1 - q.zero) ## SD distance
     zero.point <- m0 - zdist * s0
-  } else if (zero.method == "cpm") {
+  } else if (method == "cpm") {
     median.tc <- median(colSums(2**S, na.rm = TRUE), na.rm = TRUE)
     median.tc
     a <- log2(median.tc / 1e6)
     median(colSums(2**(S - a), na.rm = TRUE), na.rm = TRUE)
     zero.point <- a
-  } else if (zero.method == "m4") {
-    a <- median(S1, na.rm = TRUE) - 4
+  } else if (grepl("^m[0-9]", method)) {
+    ## median centering
+    mval <- as.numeric(substring(method, 2, 99))
+    a <- median(S1, na.rm = TRUE) - mval
     median(S1 - a, na.rm = TRUE)
     median(S - a, na.rm = TRUE)
     zero.point <- a
-  } else if (zero.method == "mclust") {
-    ## gaussian mixture modelling
-    xx <- sample(S1[!is.na(S1)], 20000, replace = TRUE)
-    require(mclust)
-    if (plot) {
-      BIC <- mclust::mclustBIC(xx, G = 1:8)
-      plot(BIC)
-      summary(BIC)
-    }
-    fit <- mclust::Mclust(xx, G = 3, verbose = FALSE)
-    fit2 <- summary(fit, parameters = TRUE)
-    fit2
-    qq <- (fit2$mean - zdist * sqrt(fit2$variance))
-    ##    q0 <- weighted.mean(qq, w=fit2$pro)
-    q0 <- weighted.mean(qq[2:3], w = fit2$pro[2:3])
-    zero.point <- q0
-
-    if (plot) {
-      ## hist(xx, breaks=200)
-      plot(fit, what = "density", main = "")
-      rug(sample(xx, 300))
-      abline(v = fit2$mean, col = "blue")
-      qq <- (fit2$mean - 2.3 * sqrt(fit2$variance))
-      ## q0 <- weighted.mean( qq, w=fit2$pro)
-      q0 <- weighted.mean(qq[2:3], w = fit2$pro[2:3])
-      abline(v = qq, col = "purple", lty = 2)
-      abline(v = zero.point, col = "purple", lty = 1, lwd = 2)
-    }
-  } else {
+  } else if (method == "quantile") {
     ## determine by direct quantile
     zero.point <- quantile(S1, probs = q.zero, na.rm = TRUE)
+  } else {
+    stop("unknown method = ", method)
   }
 
   if (0) {
@@ -331,17 +332,12 @@ logNormalizeCounts <- function(counts, plot = TRUE,
     hist((S - zero.point), breaks = 200)
   }
 
-  ## protect zero.point
-  zero.point
-  min(S, na.rm = TRUE)
-  ## zero.point <- max(min(S,na.rm=TRUE), zero.point)
-  zero.point
-
+  message("[normalizeCounts] shifting values to zero: z = ", round(zero.point, 4))
   if (shift.method == "slog") {
-    ## smooth log-transform
+    ## smooth log-transform. not real zeros
     S <- slog(2**S, s = 2**zero.point)
   } else {
-    ## linear shift
+    ## linear shift. Induces real zeros
     S <- pmax(S - zero.point, 0)
   }
 
@@ -368,12 +364,7 @@ slog <- function(x, s = 1, q = NULL) {
   log2(s + x) - log2(s)
 }
 
-if (0) {
-  x <- 2**seq(-10, 10, 0.1)
-  plot(x, slog(x, 10), log = "x")
-  plot(x, slog(x, 0.1), log = "x")
-}
-
+#' @export
 safe.logCPM <- function(x, t = 0.05, prior = 1, q = NULL) {
   qq <- apply(x, 2, quantile, probs = c(t, 1 - t), na.rm = TRUE)
   jj <- which(t(t(x) < qq[1, ] | t(x) > qq[2, ]))

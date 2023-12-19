@@ -124,7 +124,7 @@ gx.PCAcomponents <- function(X, nv = 20, ngenes) {
 #' }
 #'
 #' @export
-gx.imagemap <- function(X, main = "", cex = 1, clust = TRUE) {
+gx.imagemap <- function(X, main = "", cex = 1, cex.main = 1.8, clust = TRUE) {
   if (clust) {
     ii <- fastcluster::hclust(stats::dist(X))$order
     jj <- fastcluster::hclust(stats::dist(t(X)))$order
@@ -134,15 +134,17 @@ gx.imagemap <- function(X, main = "", cex = 1, clust = TRUE) {
     xaxt = "n", yaxt = "n",
     xlab = "", ylab = ""
   )
-  graphics::mtext(colnames(X),
-    side = 1, at = 1:ncol(X), las = 3,
-    cex = 0.75 * cex, line = 0.5
-  )
-  graphics::mtext(rownames(X),
-    side = 4, at = 1:nrow(X), las = 1,
-    cex = 0.85 * cex, line = 0.5
-  )
-  graphics::title(main = main, cex = cex, line = 0.5)
+  if (cex > 0) {
+    graphics::mtext(colnames(X),
+      side = 1, at = 1:ncol(X), las = 3,
+      cex = 0.75 * cex, line = 0.5
+    )
+    graphics::mtext(rownames(X),
+      side = 4, at = 1:nrow(X), las = 1,
+      cex = 0.85 * cex, line = 0.5
+    )
+  }
+  graphics::title(main = main, cex.main = cex.main, line = 0.5)
 }
 
 

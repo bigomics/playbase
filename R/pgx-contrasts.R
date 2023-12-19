@@ -112,13 +112,6 @@ pgx.expMatrix <- function(pheno, contr.matrix) {
 ## -----------------------------------------------------------------------------
 
 
-
-
-
-
-
-
-
 #' Make direct contrasts from a factor
 #'
 #' @param Y A factor vector
@@ -787,9 +780,26 @@ makeContrastsFromLabelMatrix <- function(lab.matrix) {
 #' each pair of groups.
 #' @export
 contrasts.convertToLabelMatrix <- function(contrasts, samples) {
-  num.values <- c(-1, 0, 1, NA, "NA", "na", "", " ")
-  is.numeric.contrast <- all(as.vector(unlist(contrasts)) %in% num.values)
+  if (NCOL(contrasts) == 1 && is.null(dim(contrasts))) {
+    stop("contrasts must be a matrix with column names")
+  }
+  if (is.null(colnames(contrasts))) {
+    stop("contrasts must have column names")
+  }
+
+  is.numeric.matrix <- inherits(contrasts, "matrix") &&
+    all(apply(contrasts, 2, class) %in% c("integer", "numeric"))
+  is.numeric.df <- inherits(contrasts, "data.frame") &&
+    all(apply(contrasts, 2, class) %in% c("integer", "numeric"))
+  is.numeric.contrast <- is.numeric.matrix | is.numeric.df
+  #  num.values <- c(-1, 0, 1, NA, "NA", "na", "", " ")
+  #  is.numeric.contrast <- all(as.vector(unlist(contrasts)) %in% num.values)
   is.numeric.contrast
+
+  if (is.numeric.contrast) {
+    contrasts[contrasts %in% c(NA, "NA", "na", "")] <- 0
+    contrasts <- sign(contrasts)
+  }
 
   ## first match of group (or condition) in colum names, regard as group column
   group.col <- head(grep("group|condition", tolower(colnames(samples))), 1)
@@ -801,8 +811,10 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   }
   has.group.col <- length(group.col) > 0
   is.group.contrast <- has.group.col && all(samples[, group.col] %in% rownames(contrasts))
-  is.sample.contrast <- nrow(contrasts) > 0 &&
-    all(rownames(contrasts) %in% rownames(samples))
+  is.sample.contrast <- nrow(contrasts) > 0 && all(rownames(contrasts) %in% rownames(samples))
+
+  is.group.contrast
+  is.sample.contrast
 
   if (!is.sample.contrast && !has.group.col) {
     message("[contrasts.convertToLabelMatrix] ERROR: Invalid group-wise contrast. could not find 'group' column.")
@@ -816,7 +828,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   new.contrasts <- contrasts
   ## old1: group-wise -1/0/1 matrix
   if (is.group.contrast && is.numeric.contrast) {
-    message("[contrasts_conversion_check] WARNING: converting old1 style contrast to new format")
+    message("[contrasts.convertToLabelMatrix] WARNING: converting old1 style contrast to new format")
     new.contrasts <- samples[, 0]
     if (NCOL(contrasts) > 0) {
       contrasts2 <- apply(contrasts, 2, as.numeric)
@@ -829,18 +841,21 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   }
   ## old2: sample-wise -1/0/1 matrix
   if (is.sample.contrast && is.numeric.contrast) {
-    message("[contrasts_conversion_check] WARNING: converting old2 style contrast to new format")
+    message("[contrasts.convertToLabelMatrix] WARNING: converting old2 style contrast to new format")
     new.contrasts <- samples[, 0]
+
     if (NCOL(contrasts) > 0) {
       contrasts2 <- apply(contrasts, 2, as.numeric)
       rownames(contrasts2) <- rownames(contrasts)
-      new.contrasts <- contrastAsLabels(contrasts2)
+      contrasts2 <- contrastAsLabels(contrasts2)
+      new.contrasts <- matrix(NA, nrow(samples), ncol(contrasts))
+      new.contrasts <- contrasts2[match(rownames(samples), rownames(contrasts2)), ]
       rownames(new.contrasts) <- rownames(samples)
     }
   }
   ## old3: group-wise label matrix
   if (is.group.contrast && !is.numeric.contrast) {
-    message("[contrasts_conversion_check] WARNING: converting group-wise label contrast to new format")
+    message("[contrasts.convertToLabelMatrix] WARNING: converting group-wise label contrast to new format")
     new.contrasts <- samples[, 0]
     if (NCOL(contrasts) > 0) {
       grp <- as.character(samples[, group.col])
@@ -856,8 +871,6 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   rownames(new.contrasts) <- rownames(samples)
   new.contrasts
 }
-
-k <- 3
 
 #' @export
 pgx.addPCcontrasts <- function(counts, k = 3) {

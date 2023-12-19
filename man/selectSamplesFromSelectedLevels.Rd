@@ -22,6 +22,9 @@ This function takes a data frame Y containing sample data, and a character vecto
 levels defining a subset of factor levels to select. It parses the level descriptions,
 identifies matching samples in Y, and returns the rownames of selected samples.
 
-The levels should be strings in format 'factor=level' defining the factor name and level value.
-Samples in Y matching any of the provided levels will be selected.
+The levels should be strings in format 'factor=level' defining the
+factor name and level value.  Samples in Y matching any of the
+provided levels will be selected. Note: across factors samples as
+intersected ('and' operator), within a factor samples are combined
+('or' operator). Not very logical but this is what people in practice want.
 }

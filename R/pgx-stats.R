@@ -122,7 +122,8 @@ stats.cortest <- function(X, y, ref = NULL, add.avg = TRUE) {
   res
 }
 
-stats.limma <- function(X, y, ref = NULL, test = c("B", "Treat"), add.avg = TRUE) {
+stats.limma <- function(X, y, ref = NULL, test = c("B", "Treat"), add.avg = TRUE,
+                        trend = TRUE) {
   if (length(unique(y[!is.na(y)])) > 2) stop("only 2 levels allowed")
   if (ncol(X) != length(y)) stop("ncol(X) not equal length y")
   test <- test[1]
@@ -134,7 +135,7 @@ stats.limma <- function(X, y, ref = NULL, test = c("B", "Treat"), add.avg = TRUE
   coldata <- data.frame(y = fy)
   design <- model.matrix(~y, data = coldata)
   lmfit <- limma::lmFit(X, design)
-  efit <- limma::eBayes(lmfit, trend = TRUE) ## trend is good...
+  efit <- limma::eBayes(lmfit, trend = trend) ## trend is good...
   if (test == "Treat") {
     top <- limma::topTreat(efit, sort.by = "none", coef = 2, number = Inf)
   } else {
@@ -150,6 +151,7 @@ stats.limma <- function(X, y, ref = NULL, test = c("B", "Treat"), add.avg = TRUE
     )
     avg <- do.call(cbind, avg)
     avg <- avg[, c(ref, setdiff(y, ref))] ## reorder ref first
+    ## colnames(avg) <- paste0("AveExpr.",colnames(avg))
     top <- cbind(top, avg)
   }
   top
@@ -245,19 +247,42 @@ stats.DESeq2 <- function(counts, y, ref = NULL, test = "Wald", add.avg = TRUE, .
   top
 }
 
-stats.numsig <- function(X, y, ref, lfc = 1, q = 0.05, set.na = NULL) {
+stats.numsig <- function(X, y, lfc = 1, q = 0.05, set.na = NULL,
+                         trend = TRUE, verbose = TRUE) {
   if (!is.null(set.na)) y[y == set.na] <- NA
-  res <- stats.limma(X, y, ref)
-  sig <- (abs(res$logFC) > lfc & res$qvalue < q)
+
+  ## select non-missing
+  sel <- !is.na(y)
+  y <- y[sel]
+  X <- X[, sel, drop = FALSE]
+
+  ## Genes
+  res <- gx.limmaF(X, y, fdr = 1, lfc = 0, trend = trend, verbose = 0)
+  #  res1 <- gx.limma(X, y, fdr=1, lfc=0, trend=trend, verbose=0)
+  #  res2 <- stats.limma(X, y, ref=NULL, trend=trend)
+
+  res <- res[order(res$P.Value), ]
+  avx <- res[, grep("AveExpr", colnames(res))]
+  ldiff <- apply(avx, 1, function(x) diff(range(x)))
+  sig <- (abs(ldiff) > lfc & res$adj.P.Val < q)
   nsig <- sum(sig, na.rm = TRUE)
   sig.genes <- rownames(res)[which(sig)]
-  fc0 <- array(res$logFC, dimnames = list(rownames(res)))
-  sel <- grep("^GO|pathway", rownames(playdata::GSETxGENE), value = TRUE, ignore.case = TRUE)
+
+  ## Gene sets
+  fc0 <- array(ldiff, dimnames = list(rownames(res)))
+  sel <- grep("^go|pathway|geo_human", rownames(playdata::GSETxGENE),
+    value = TRUE, ignore.case = TRUE
+  )
   gmt <- playdata::GSETxGENE[sel, ]
   gsa <- playbase::gset.rankcor(cbind(fc0), Matrix::t(gmt), compute.p = TRUE)
-  sig.gs <- (gsa$q.value[, 1] < q)
+  gsa <- data.frame(rho = gsa$rho[, 1], p.value = gsa$p.value[, 1], q.value = gsa$q.value[, 1])
+  gsa <- gsa[order(gsa$p.value), ]
+  sig.gs <- (gsa$q.value < q)
   nsets <- sum(sig.gs, na.rm = TRUE)
-  sig.gsets <- rownames(gsa$rho)[which(sig.gs)]
-  ## cat("nsig=",nsig,"    nsets=",nsets,"\n")
+  sig.gsets <- rownames(gsa)[which(sig.gs)]
+  if (verbose) {
+    cat("nsig.genes = ", nsig, "\n")
+    cat("nsig.gsets = ", nsets, "\n")
+  }
   list(genes = sig.genes, gsets = sig.gsets, fc = fc0)
 }

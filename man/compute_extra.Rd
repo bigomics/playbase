@@ -9,7 +9,8 @@ compute_extra(
   extra = c("meta.go", "infer", "deconv", "drugs", "connectivity", "wordcloud", "wgcna"),
   sigdb = NULL,
   pgx.dir = "./data",
-  libx.dir = "./libx"
+  libx.dir = "./libx",
+  user_input_dir = getwd()
 )
 }
 \arguments{

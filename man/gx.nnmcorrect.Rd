@@ -7,20 +7,16 @@
 gx.nnmcorrect(
   X,
   y,
-  use.design = TRUE,
   dist.method = "cor",
   center.x = TRUE,
   center.m = TRUE,
-  sdtop = 1000,
-  replace = FALSE
+  sdtop = 1000
 )
 }
 \arguments{
 \item{X}{Numeric matrix of gene expression values (genes in rows, samples in columns).}
 
 \item{y}{Factor vector indicating batch for each sample.}
-
-\item{use.design}{Logical for whether to include batch design matrix in limma correction.}
 
 \item{dist.method}{Distance metric to use for matching ('cor' or 'euclidean').}
 
@@ -29,8 +25,6 @@ gx.nnmcorrect(
 \item{center.m}{Logical for whether to center expression by batch means.}
 
 \item{sdtop}{Number of top variable genes to use for correlation.}
-
-\item{replace}{Logical for whether to replace missing pairs.}
 }
 \value{
 List containing:
@@ -51,8 +45,6 @@ This function performs batch correction using the following steps:
   \item Apply limma batch correction to paired data
   \item Average paired samples back to original samples
 }
-
-It allows replacing missing pairs and using batch design matrices.
 }
 \examples{
 # TODO

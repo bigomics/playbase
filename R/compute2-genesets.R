@@ -3,23 +3,6 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-#' Normalize Matrix by Row
-#'
-#' Normalizes a matrix by dividing each row by the sum of its elements.
-#'
-#' @param G The matrix to be normalized.
-#'
-#' @return The normalized matrix.
-#'
-#' @export
-normalize_matrix_by_row <- function(G) {
-  # efficient normalization using linear algebra
-  row_sums <- Matrix::rowSums(G)
-  D <- Matrix::Diagonal(x = 1 / row_sums)
-  G_scaled <- D %*% G
-  rownames(G_scaled) <- rownames(G)
-  return(G_scaled)
-}
 
 #' Compute Test Genesets
 #'
@@ -42,6 +25,11 @@ compute_testGenesets <- function(pgx,
     stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
   }
 
+  if (is.null(pgx$genes$human_ortholog)) {
+    # this is needed in case the species is human, and we dont have the homolog column or if we have an old pgx
+    # which will ensure consistency between old and new pgx
+    pgx$genes$human_ortholog <- NA
+  }
 
   ## -----------------------------------------------------------
   ## get design and contrast matrix, and get gene list
