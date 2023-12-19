@@ -128,7 +128,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
       if (is.null(zx.gsva) || "try-error" %in% class(zx.gsva)) {
         ## switch to single core...
-        cat("WARNING:: GSVA ERROR : retrying single core ... \n")
+        warning("WARNING: GSVA ERROR: retrying single core... ")
         zx.gsva <- try(GSVA::gsva(as.matrix(X), gmt[],
           method = "gsva",
           parallel.sz = 1, verbose = FALSE
@@ -348,7 +348,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
 
   fitContrastsWithMethod <- function(method) {
-    cat("fitting contrasts using", method, "... \n")
+    message("fitting contrasts using ", method, "... ")
     results <- list()
     timings <- c()
     k <- 1
@@ -375,7 +375,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   ## Reshape matrices by comparison
   ## --------------------------------------------------------------
 
-  cat("[gset.fitContrastsWithAllMethods] length(all.results)=", length(all.results), "\n")
+  message("[gset.fitContrastsWithAllMethods] length(all.results) = ", length(all.results))
   tests <- names(all.results[[1]])
   ntest <- length(tests)
 
@@ -502,7 +502,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
                                        trend = TRUE, conform.output = FALSE) {
   if (!is.null(design)) {
-    cat("fitting gset.LIMMA contrasts with design matrix....\n")
+    message("fitting gset.LIMMA contrasts with design matrix... ")
     vfit <- limma::lmFit(gsetX, design)
     vfit <- limma::contrasts.fit(vfit, contrasts = contr.matrix)
     efit <- limma::eBayes(vfit, trend = trend, robust = TRUE)
@@ -523,7 +523,7 @@ gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
     }
     names(tables) <- colnames(contr.matrix)
   } else {
-    cat("fitting gset.LIMMA contrasts without design....\n")
+    message("fitting gset.LIMMA contrasts without design.... ")
     tables <- list()
     i <- 1
     for (i in 1:ncol(contr.matrix)) {
