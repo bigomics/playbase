@@ -26,11 +26,13 @@ compute_testGenesets <- function(pgx,
     stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
   }
 
-  if(0) {
-    max.features = 1000;custom.geneset = list(gmt = NULL, info = NULL);
-    test.methods = c("gsva", "camera", "fgsea");remove.outputs = TRUE
+  if (0) {
+    max.features <- 1000
+    custom.geneset <- list(gmt = NULL, info = NULL)
+    test.methods <- c("gsva", "camera", "fgsea")
+    remove.outputs <- TRUE
   }
-  
+
   if (is.null(pgx$genes$human_ortholog)) {
     # this is needed in case the species is human, and we dont have the homolog column or if we have an old pgx
     # which will ensure consistency between old and new pgx
@@ -58,7 +60,7 @@ compute_testGenesets <- function(pgx,
   }
 
   # Change HUMAN gene names to species symbols if NOT human and human_ortholog column is NOT all NA
-  G <- G[rownames(G) %in% human_genes,, drop = FALSE]
+  G <- G[rownames(G) %in% human_genes, , drop = FALSE]
 
   if (pgx$organism != "Human" && !all(is.na(pgx$genes$human_ortholog))) {
     rownames(G) <- pgx$genes$symbol[match(rownames(G), pgx$genes$human_ortholog)]
@@ -88,22 +90,22 @@ compute_testGenesets <- function(pgx,
   add.gmt <- NULL
   rr <- sample(15:400, 100)
   gg <- rownames(pgx$X)
-  random.gmt <- lapply( rr, function(n) head(sample(gg),min(n,length(gg)/2)))
-  names(random.gmt) <- paste0("TEST:random_geneset.",1:length(random.gmt))
+  random.gmt <- lapply(rr, function(n) head(sample(gg), min(n, length(gg) / 2)))
+  names(random.gmt) <- paste0("TEST:random_geneset.", 1:length(random.gmt))
   add.gmt <- random.gmt
 
   ## -----------------------------------------------------------
   ## Add custom genesets
   ## -----------------------------------------------------------
-  
+
   if (!is.null(custom.geneset$gmt)) {
-    add.gmt <- c( add.gmt, custom.geneset$gmt )
+    add.gmt <- c(add.gmt, custom.geneset$gmt)
   }
-  
+
   if (!is.null(add.gmt)) {
     # convert gmt standard to SPARSE matrix
     custom_gmt <- playbase::createSparseGenesetMatrix(
-##    gmt.all = custom.geneset$gmt,
+      ##    gmt.all = custom.geneset$gmt,
       gmt.all = add.gmt,
       min.geneset.size = 3,
       max.geneset.size = 9999,
@@ -116,7 +118,7 @@ compute_testGenesets <- function(pgx,
     custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% pgx$genes$symbol, drop = FALSE]
     custom_gmt <- playbase::normalize_rows(custom_gmt)
     G <- playbase::merge_sparse_matrix(m1 = G, m2 = Matrix::t(custom_gmt))
-    G <- G[rownames(G) %in% pgx$genes$symbol, ,drop = FALSE]
+    G <- G[rownames(G) %in% pgx$genes$symbol, , drop = FALSE]
     remove(custom_gmt)
   }
 
@@ -153,7 +155,7 @@ compute_testGenesets <- function(pgx,
   G <- rbind(G, matX)
   G <- G[match(gg, rownames(G)), , drop = FALSE]
   rownames(G) <- rownames(X) ## original name (e.g. mouse)
-  
+
   ## -----------------------------------------------------------
   ## Prioritize gene sets by fast rank-correlation
   ## -----------------------------------------------------------

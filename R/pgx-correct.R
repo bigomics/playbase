@@ -1559,7 +1559,7 @@ superBC2 <- function(X, samples, y, batch = NULL,
     }
     if (m == "nnm2") {
       message("[superBC2] correcting for: NNM2")
-      cX <- gx.nnmcorrect2(cX, y, r=0.35)$X
+      cX <- gx.nnmcorrect2(cX, y, r = 0.35)$X
     }
   }
 

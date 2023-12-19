@@ -1198,13 +1198,18 @@ selectSamplesFromSelectedLevels <- function(Y, levels) {
   if (is.null(levels) || all(levels == "")) {
     return(rownames(Y))
   }
+  
+  # fill ="" will (unfortunately) still return NA when level is "NA"... which crashes when phenotype is ""
   pheno <- data.table::tstrsplit(levels, "=", keep = 1) %>%
     unlist()
   ptype <- data.table::tstrsplit(levels, "=", keep = 2) %>%
     unlist()
+  # force replace "NA" by NA
+  ptype[ptype == "NA"] <- NA
   ##  sel <- rep(FALSE, nrow(Y))
   sel <- rep(TRUE, nrow(Y))
   for (ph in unique(pheno)) {
+    #ph = pheno[1]
     k <- which(pheno == ph)
     ##    sel <- sel | (Y[, ph] %in% ptype[k])
     sel <- sel & (Y[, ph] %in% ptype[k])

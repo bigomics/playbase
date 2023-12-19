@@ -4,12 +4,23 @@
 \alias{pgx.PC_correlation}
 \title{Correlate principal components with phenotypes}
 \usage{
-pgx.PC_correlation(X, pheno, nv = 3, stat = "F", plot = TRUE, main = NULL)
+pgx.PC_correlation(
+  X,
+  Y,
+  nv = 3,
+  stat = "F",
+  expand = FALSE,
+  collapse = TRUE,
+  plot = TRUE,
+  horiz = FALSE,
+  main = NULL,
+  text.cex = 1
+)
 }
 \arguments{
 \item{X}{Expression matrix}
 
-\item{pheno}{Data frame of sample phenotypes}
+\item{Y}{Data frame of sample phenotypes}
 
 \item{nv}{Number of principal components to use}
 
@@ -24,11 +35,11 @@ Named vector of correlation coefficients
 }
 \description{
 Calculates the correlation between principal components of the expression matrix X
-and sample phenotypes in pheno.
+and sample phenotypes in Y.
 }
 \details{
 This function calculates the top nv principal components of the expression matrix X
-using irlba::irlba. It then correlates each PC with each phenotype in the pheno data frame.
+using irlba::irlba. It then correlates each PC with each phenotype in the Y data frame.
 
 For categorical phenotypes, it converts to a factor and calculates the correlation with
 the model matrix. For numeric phenotypes it calculates the standard correlation coefficient.
