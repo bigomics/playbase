@@ -425,7 +425,6 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
     drug_test_genes <- rownames(X)
     prop <- sum(drug_test_genes %in% rownames(pgx$counts))/length(drug_test_genes)
     if (!pgx$organism %in% c("Human", "human") || prop < 0.8) {
-      print
       rowid <- data.table::chmatch(rownames(X), pgx$genes$human_ortholog, nomatch = NA)
       rownames(X) <- pgx$genes$gene_name[rowid]
       X <- X[!is.na(rowid), , drop = FALSE]
