@@ -66,7 +66,10 @@ species <- species[rev(seq_len(nrow(species)))]
 
 SPECIES_TABLE = species
 
+# add "No organism" as last row, for all columns
+SPECIES_TABLE <- rbind(SPECIES_TABLE, data.frame(dataset = "No organism", description = "No organism", version = "No organism", species_name = "No organism", mart = "No organism", host = "ensembl"))
+
 usethis::use_data(SPECIES_TABLE, overwrite = TRUE)
 
 # save SPECIES_DICTIONARY as tsv
-write.table(species, file = "dev/SPECIES_TABLE.tsv", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(SPECIES_TABLE, file = "dev/SPECIES_TABLE.tsv", sep = "\t", quote = FALSE, row.names = FALSE)
