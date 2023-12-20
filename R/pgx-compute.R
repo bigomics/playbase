@@ -155,6 +155,7 @@ pgx.createPGX <- function(counts,
                           contrasts,
                           organism = "Human",
                           custom.geneset = NULL,
+                          annot_table = NULL,
                           custom_gene_table = NULL,
                           max.genesets = 5000,
                           name = "Data set",
@@ -346,7 +347,7 @@ pgx.createPGX <- function(counts,
 
   } else if (organism == "No organism") {
     message("[createPGX] Using custom gene annotation table")
-    pgx <- pgx.custom_annotation(pgx, custom_gene_table = custom_gene_table)
+    pgx <- pgx.custom_annotation(pgx, custom_gene_table = annot_table)
   }
 
   if (is.null(pgx$genes)) {
