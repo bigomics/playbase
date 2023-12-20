@@ -67,7 +67,7 @@ species <- species[rev(seq_len(nrow(species)))]
 SPECIES_TABLE = species
 
 # add "No organism" as last row, for all columns
-SPECIES_TABLE <- rbind(SPECIES_TABLE, data.frame(dataset = "No organism", description = "No organism", version = "No organism", species_name = "No organism", mart = "No organism", host = "ensembl"))
+SPECIES_TABLE <- rbind(SPECIES_TABLE, data.frame(dataset = "No organism", description = "No organism", version = "No organism", species_name = "No organism", mart = "ensembl", host = "No organism"))
 
 usethis::use_data(SPECIES_TABLE, overwrite = TRUE)
 
