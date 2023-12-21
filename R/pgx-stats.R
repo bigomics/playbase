@@ -286,3 +286,4 @@ stats.numsig <- function(X, y, lfc = 1, q = 0.05, set.na = NULL,
   }
   list(genes = sig.genes, gsets = sig.gsets, fc = fc0)
 }
+

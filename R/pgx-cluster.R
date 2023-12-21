@@ -817,7 +817,7 @@ pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix 
   return(idx)
 }
 
-
+#' @export
 pacmap <- function(X, n_components = 2L, ...) {
   has.pacmap <- reticulate::py_module_available("pacmap")
   if(!has.pacmap) {

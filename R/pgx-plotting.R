@@ -222,11 +222,19 @@ repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
 ## =================================================================================
 
 #' @export
-pgx.dimPlot <- function(X, y, ...) {
+pgx.dimPlot <- function(X, y, method=c('tsne','pca','umap','pacmap'), ...) {
   jj <- head(order(-matrixStats::rowSds(X)), 1000)
-  nb <- min(15, dim(X) / 2)
-  pos <- uwot::umap(t(X[jj, ]), n_neighbors = nb)
-  pgx.scatterPlotXY(pos, var = y, ...)
+  X1 <- X[jj,]
+  X1 <- X1 - rowMeans(X1,na.rm=TRUE)
+  nb <- round(min(15, dim(X)/4))
+  for(m in method) {
+    if(m =='umap') pos <- uwot::umap(t(X1), n_neighbors = nb/2)
+    if(m =='tsne') pos <- Rtsne::Rtsne(t(X1), perplexity = nb)$Y
+    if(m =='pca')  pos <- irlba::irlba(X1, nv=2, nu=0)$v
+    if(m =='pacmap')  pos <- pacmap(t(X1))
+    rownames(pos) <- colnames(X)
+    pgx.scatterPlotXY(pos, var = y, title=m, ...)
+  }
 }
 
 #' @title Scatter plot for PGX object

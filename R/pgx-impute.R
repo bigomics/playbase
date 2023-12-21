@@ -146,14 +146,19 @@ imputeMissing <- function(X,
     return(NULL)
   }
 
-  ## ------------ meta --------------
-  metaX <- lapply(impX, as.vector)
-  metaX <- do.call(cbind, metaX)
-  metaX <- rowMeans(metaX, na.rm = TRUE)
-  metaX <- matrix(metaX,
-    nrow = nrow(X), ncol = ncol(X),
-    dimnames = dimnames(X)
-  )
+  metaX <- NULL
+  if(length(impX)>1) {
+    ## ------------ meta --------------
+    metaX <- lapply(impX, as.vector)
+    metaX <- do.call(cbind, metaX)
+    metaX <- rowMeans(metaX, na.rm = TRUE)
+    metaX <- matrix(metaX,
+      nrow = nrow(X), ncol = ncol(X),
+      dimnames = dimnames(X)
+    )
+  } else {
+    metaX <- impX[[1]]
+  }
 
   ## any remaining NA we fill with col/row medians
   if (any(is.na(metaX))) {

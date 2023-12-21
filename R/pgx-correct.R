@@ -10,8 +10,9 @@
 
 #' @title Supervised batch correction
 #'
-#' @description
-#' Performs supervised batch correction on a gene expression matrix, using known technical factors and biological covariates.
+#' @description Performs supervised batch correction on a gene
+#'   expression matrix, using known technical factors and biological
+#'   covariates.
 #'
 #' @param X Gene expression matrix, genes in rows, samples in columns.
 #' @param pheno Dataframe containing sample metadata/covariates. Must match colnames of \code{X}.
@@ -643,9 +644,9 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
     if (horiz) {
       plt <- plot_ggbarplot((R),
         ylab = "", srt = 0, horiz = TRUE,
-        legend.cex = 1 * text.cex,
-        label.cex = 1 * text.cex,
-        axis.cex = 1 * text.cex,
+        legend.cex = 1.1 * text.cex,
+        label.cex = 1.1 * text.cex,
+        axis.cex = 1.1 * text.cex,
         group.name = ""
       )
       plt <- plt + ggplot2::theme(
@@ -656,9 +657,9 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
     } else {
       plt <- plot_ggbarplot(t(R),
         ylab = stat0, srt = 45, horiz = FALSE,
-        legend.cex = 1 * text.cex,
-        label.cex = 1 * text.cex,
-        axis.cex = 1 * text.cex,
+        legend.cex = 1.1 * text.cex,
+        label.cex = 1.1 * text.cex,
+        axis.cex = 1.1 * text.cex,
         group.name = ""
       ) +
         ggplot2::theme(
@@ -808,8 +809,6 @@ pgx.computeTechnicalEffects <- function(X, is.count = FALSE, nmin = 3, nv = 2) {
     counts <- X
     X <- log2(counts + 1e-8)
   }
-
-  dbg("[pgx.computeTechnicalEffects] 1:")
 
   ## technical covariates
   nfeature <- Matrix::colSums(counts > 0, na.rm = TRUE) + 1
@@ -1019,6 +1018,30 @@ detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
   )
 }
 
+#' @export
+bc.AnalysisPlotPCA <- function (bc.results, k = 1:4, par = TRUE, col=1) {
+  bc <- bc.results
+  if (par == TRUE)  par(mfrow = c(2, 2), mar = c(4, 4, 3, 2))
+  pp <- intersect(rownames(bc$p.pca), rownames(bc$p.values))
+  pp <- grep("^pca", pp, value = TRUE, invert = TRUE)
+  k <- k[which(k <= ncol(bc$p.pca))]
+  pxx <- bc$p.pca[pp, k, drop = FALSE]
+  py <- bc$p.value[pp, 2]
+  x1 = -log10(1e-04 + py)
+  col <- rep(col,length(k))
+  for (i in k) {
+    y1 = -log10(1e-04 + pxx[, i])
+    ylim = c(-0.1 * max(y1), 1.1 * max(y1))
+    col1 <- col[i]
+    plot(x1, y1, pch = 20, cex = 1.5, col = col1,
+      xlab = "significance with phenotype (-log10p)", 
+      ylab = "significance with PC (-log10p)",
+      xlim = c(-0.4, 4.4), ylim = ylim)
+    title(paste0("PC", i), cex.main = 1.4)
+        text(x1, y1, pp, pos = c(1:4), cex = 1.3, col = col1)
+  }
+}
+
 
 ## p.pheno=0.05;p.pca=0.5;nmin=3;nv=2
 ## params = c("lib","gender","mito","ribo","cellcycle")
@@ -1026,7 +1049,7 @@ detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
 #' @export
 removeTechnicalEffects <- function(X, y, p.pheno = 0.05, p.pca = 0.5,
                                    params = NULL, force = FALSE, nv = 2, k.pca = 10, xrank = NULL) {
-  dbg("[removeTechnicalEffects] dim.X) = ", dim(X))
+
   if (force) {
     bc <- detectBatchEffects(X, samples, y,
       params = "technical",
@@ -1065,6 +1088,9 @@ removeTechnicalEffects <- function(X, y, p.pheno = 0.05, p.pca = 0.5,
   bX <- bX - rowMeans(bX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
   bX
 }
+
+
+
 
 
 ## ================================================================================
@@ -1209,11 +1235,8 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   }
 
   if (remove.failed) {
-    xlist <- xlist[!sapply(sapply(xlist, nrow), is.null)]
+    xlist <- xlist[!is.null(unlist(sapply(xlist, nrow)))]
   }
-
-  mm <- c("uncorrected", sort(setdiff(names(xlist), "uncorrected")))
-  xlist <- xlist[mm]
 
   names(xlist) <- paste0(prefix, names(xlist))
 
@@ -1306,7 +1329,8 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
     c(sapply(r[1:2], length), avg.fc = mean(abs(r[[3]])))
   }))
   xsd <- sapply(xlist, function(x) mean(matrixStats::rowSds(x, na.rm = TRUE)))
-  res <- cbind(res, avg.sd = xsd)
+  snr <- res[,"avg.fc"] / xsd
+  res <- cbind(res, avg.sd = xsd, SNR = snr)
 
   g1 <- numsig[["uncorrected"]]$genes
   s1 <- numsig[["uncorrected"]]$gsets
@@ -1320,26 +1344,35 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
   res <- cbind(res, r.genes, r.gsets)
   res.score <- exp(rowMeans(log(1e-8 + t(t(res) / (1e-9 + res[1, ])))))
 
+  ## centered top
+  xlist1 <- lapply(xlist, function(x) {
+    x <- head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)), ], 1000)
+    x <- as.matrix(x)
+    (x - rowMeans(x))
+  })
+  
   silhouette <- rep(1, nrow(res))
   if (add.sil) {
     if (is.null(pos)) {
       if (clust == "umap") {
-        nb <- pmin(15, round(ncol(xlist[[1]]) / 3))
+        nb <- max(1, min(15, round(ncol(xlist[[1]]) / 5)))
         CLUSTFUN <- function(x) uwot::tumap(scale(t(x), scale = FALSE), n_neighbors = nb)
       } else {
         CLUSTFUN <- function(x) svd(scale(t(x), scale = FALSE))$u[, 1:2]
       }
-      pos <- lapply(xlist, function(x) {
-        x <- head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)), ], 1000)
-        x <- as.matrix(x)
-        x <- (x - rowMeans(x))
+      pos <- lapply(xlist1, function(x) {
         CLUSTFUN(x)
       })
     }
+
+    nu <- max(2,min(10, dim(xlist[[1]])/3))
+    pca10 <- lapply(xlist1, function(x) {
+      svd(scale(t(x), scale = FALSE), nu=nu, nv=0)$u
+    })
     p <- pos[[1]]
     pheno0 <- pheno
     pheno0[is.na(pheno0)] <- "NA"
-    silhouette <- sapply(pos, function(p) {
+    silhouette <- sapply(pca10, function(p) {
       score <- cluster::silhouette(as.integer(factor(pheno0)), stats::dist(p))
       mean(score[, "sil_width"])
     })
@@ -1358,7 +1391,7 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
     i <- 1
     par(mfrow = c(nr, nc))
     for (i in 1:length(pos)) {
-      plot(pos[[i]],
+      plot(pos[[i]][,1:2],
         col = factor(pheno), pch = 20, cex = 3,
         main = names(pos)[i], cex.main = 2
       )
@@ -1372,15 +1405,22 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
 
 #' @export
 bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
-                           type = "umap", nmax = 1000, cex = 1, text.cex = 1, ncol = NULL) {
+                           type = "umap", nmax = 1000, cex = 1, text.cex = 1,
+                           ncol = NULL, par=TRUE) {
   ## samples=NULL;scores = NULL;type='umap';nmax=1000;cex=1;text.cex = 1
-  if (is.null(ncol)) {
-    ncol <- ceiling(sqrt(length(xlist)))
+  if(par) {
+    if (is.null(ncol)) {
+      ncol <- ceiling(sqrt(length(xlist)))
+    }
+    nr <- ceiling(length(xlist) / ncol)
+    par(mfrow = c(nr, ncol))
   }
-  nr <- ceiling(length(xlist) / ncol)
-  par(mfrow = c(nr, ncol))
-  methods <- intersect(names(xlist), names(pos))
 
+  methods <- names(xlist)
+  if(!is.null(pos)) {
+    methods <- intersect( methods, names(pos) )
+  }
+  
   if (!is.null(scores)) {
     methods <- intersect(methods, rownames(scores))
     m.score <- scores[methods, "score"]
@@ -1391,8 +1431,9 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
   }
 
   cex1 <- ifelse(length(pheno) > 20, 3, 4)
-  cex1 <- ifelse(length(pheno) > 100, 2, cex1)
-  cex1 <- ifelse(length(pheno) > 400, 1, cex1)
+  cex1 <- ifelse(length(pheno) > 100, 2.5, cex1)
+  cex1 <- ifelse(length(pheno) > 400, 2, cex1)
+  cex1 <- ifelse(length(pheno) > 1000, 1, cex1)
   cex1 <- cex * cex1
 
   if (tolower(type) == "umap") {
@@ -1438,6 +1479,7 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
         horiz = horiz, text.cex = text.cex
       )
     }
+    
     gridExtra::grid.arrange(grobs = plist, ncol = ncol, padding = unit(0.1, "line"))
   }
 
@@ -1481,6 +1523,7 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
         ) +
         ggplot2::xlab("") + ggplot2::ggtitle(nn)
     }
+    
     gridExtra::grid.arrange(grobs = plt, ncol = ncol, padding = unit(0.1, "line"))
   }
 }
