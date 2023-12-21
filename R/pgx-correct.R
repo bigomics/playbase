@@ -1365,9 +1365,10 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
       })
     }
 
-    nu <- max(2,min(10, dim(xlist[[1]])/3))
+    nu <- max(2,min(10, dim(xlist[[1]])/4))
     pca10 <- lapply(xlist1, function(x) {
-      svd(scale(t(x), scale = FALSE), nu=nu, nv=0)$u
+      ##      svd(scale(t(x), scale = FALSE), nu=nu, nv=0)$u
+      svd(t(x), nu=nu, nv=0)$u
     })
     p <- pos[[1]]
     pheno0 <- pheno
