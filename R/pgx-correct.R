@@ -1202,11 +1202,11 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   }
 
   if ("NNM" %in% methods) {
-    if (nlevel * ncol(X) < 1000) {
+##    if (nlevel * ncol(X) < 1000) {
       xlist[["NNM"]] <- gx.nnmcorrect(X, y)$X
-    } else {
+##    } else {
       xlist[["NNM2"]] <- gx.nnmcorrect2(X, y, r = 0.35)$X
-    }
+##    }
   }
 
   ## --------------------------------------------------------------
