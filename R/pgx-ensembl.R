@@ -424,12 +424,12 @@ pgx.gene_table <- function(pgx, organism) {
 
 #' @title Custom Gene Annotation
 #'
-#' Adds custom gene annotation table to a pgx object
+#' @description Adds custom gene annotation table to a pgx object
 #'
 #' @param pgx pgx object
 #' @param custom_annot data.frame with custom annotation data. If provided, 
 #' it has to contain at least the columns "feature", "symbol", "gene_name". Also,
-#' the features has to match the rownames of the counts provided (at least 50%).
+#' the features has to match the rownames of the counts provided.
 #' 
 #'
 #' @details This function allows adding a gene annotation data.frame to a pgx object when
@@ -450,28 +450,29 @@ pgx.gene_table <- function(pgx, organism) {
 #' with default values.
 #' 
 #' @examples
-#' custom_annot <- data.frame(
-#'   feature = c("A1", "A2", "A3"), 
-#'   symbol = c("TP53", "MYC", "EGFR"),
-#'   gene_name = c("A1", "A2", "A3")
-#' )
+#' \dontrun{
+#'  custom_annot <- data.frame(
+#'    feature = c("A1", "A2", "A3"), 
+#'    symbol = c("TP53", "MYC", "EGFR"),
+#'    gene_name = c("A1", "A2", "A3")
+#'  )
 #'  
-#' pgx <- pgx.custom_annotation(pgx, custom_annot)
-#' 
+#'  pgx <- pgx.custom_annotation(pgx, custom_annot)
+#' }
 #' @export
-pgx.custom_annotation <- function(pgx, custom_gene_table = NULL) {
+pgx.custom_annotation <- function(pgx, custom_annot = NULL) {
 
   message("[pgx.custom_annotation] Adding custom annotation table...")
   # If the user has provided a custom gene table, check it and use it
-  if (!is.null(custom_gene_table)) {
+  if (!is.null(custom_annot)) {
     required_cols <- c(
       "feature",
       "symbol",
       "gene_name"
     )
 
-    if (!all(required_cols %in% colnames(custom_gene_table))) {
-      missing_cols <- required_cols[!required_cols %in% colnames(custom_gene_table)]
+    if (!all(required_cols %in% colnames(custom_annot))) {
+      missing_cols <- required_cols[!required_cols %in% colnames(custom_annot)]
       stop("Custom gene table must contain the following columns: ", 
           paste0(required_cols, collapse = ", "), "\ncols missing: ", paste0(missing_cols, collapse = ", "))
     }
@@ -482,8 +483,8 @@ pgx.custom_annotation <- function(pgx, custom_gene_table = NULL) {
                     "chr", "pos", "tx_len", "map", "source"
                     )
     for (col_i in extra_cols) {
-      if (!col_i %in% colnames(custom_gene_table)) {
-        custom_gene_table[[col_i]] <- switch(col_i,
+      if (!col_i %in% colnames(custom_annot)) {
+        custom_annot[[col_i]] <- switch(col_i,
           "human_ortholog" = "",
           "gene_title" = "unknown",
           "gene_biotype" = "unknown", 
@@ -497,22 +498,22 @@ pgx.custom_annotation <- function(pgx, custom_gene_table = NULL) {
     }
 
     # Conform annotation table to pgx$counts
-    annot_genes <- sum(rownames(pgx$counts) %in% custom_gene_table$feature) 
+    annot_genes <- sum(rownames(pgx$counts) %in% custom_annot$feature) 
     annot_fraction <- annot_genes/ nrow(pgx$counts)
     
     if (annot_fraction > .5) {
       # filter annotated table by pgx$counts rownames using match
-      custom_gene_table <- custom_gene_table[match(rownames(pgx$counts), custom_gene_table$feature), ]
-      rownames(custom_gene_table) <- rownames(pgx$counts)
+      custom_annot <- custom_annot[match(rownames(pgx$counts), custom_annot$feature), ]
+      rownames(custom_annot) <- custom_annot$feature
     } else {
       stop("[pgx.custom_annotation] Not enought annoated genes. Be sure 
-        custom_gene_table$feature matches counts rownames")
+        custom_annot$feature matches counts rownames")
     }
 
   } else {
     # Create custom gene table from counts rownames
     message("[pgx.custom_annotation] Creating annotation table from counts rownames...")
-    custom_gene_table <- data.frame(
+    custom_annot <- data.frame(
       feature = rownames(pgx$counts),
       symbol = rownames(pgx$counts),
       gene_name = rownames(pgx$counts),
@@ -527,8 +528,8 @@ pgx.custom_annotation <- function(pgx, custom_gene_table = NULL) {
     )
   }
 
-  pgx$genes <- custom_gene_table
-  pgx$all_genes <- custom_gene_table$feature
+  pgx$genes <- custom_annot
+  pgx$all_genes <- custom_annot$feature
   pgx$probe_type <- "custom"
 
   return(pgx)

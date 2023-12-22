@@ -12,7 +12,7 @@ pgx.createPGX(
   contrasts,
   organism = "Human",
   custom.geneset = NULL,
-  custom_gene_table = NULL,
+  annot_table = NULL,
   max.genesets = 5000,
   name = "Data set",
   datatype = "unknown",

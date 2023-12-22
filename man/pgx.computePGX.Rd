@@ -35,7 +35,7 @@ pgx.computePGX(
 
 \item{do.cluster}{Logical indicating whether to run sample clustering. Default is TRUE.}
 
-\item{cluster.contrasts}{Logical indicating whether to cluster contrasts. Default is FALSE.}
+\item{do.clustergenesets}{Logical indicating whether to cluster gene sets.}
 
 \item{do.clustergenes}{Logical indicating whether to cluster genes. Default is TRUE.}
 

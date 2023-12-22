@@ -2,18 +2,16 @@
 % Please edit documentation in R/pgx-ensembl.R
 \name{pgx.custom_annotation}
 \alias{pgx.custom_annotation}
-\title{Custom Gene Annotation
-
-Adds custom gene annotation table to a pgx object}
+\title{Custom Gene Annotation}
 \usage{
-pgx.custom_annotation(pgx, custom_gene_table = NULL)
+pgx.custom_annotation(pgx, custom_annot = NULL)
 }
 \arguments{
 \item{pgx}{pgx object}
 
 \item{custom_annot}{data.frame with custom annotation data. If provided, 
 it has to contain at least the columns "feature", "symbol", "gene_name". Also,
-the features has to match the rownames of the counts provided (at least 50%).}
+the features has to match the rownames of the counts provided.}
 }
 \value{
 The pgx object with custom gene annotation added/appended. The gene annotation
@@ -22,8 +20,6 @@ columns human_ortholog, gene_title, gene_biotype, chr, pos, tx_len, map, source 
 with default values.
 }
 \description{
-Custom Gene Annotation
-
 Adds custom gene annotation table to a pgx object
 }
 \details{
@@ -40,12 +36,13 @@ Any columns in custom_annot that match existing pgx gene annotation columns will
 overwrite the original data. New columns will be appended.
 }
 \examples{
-custom_annot <- data.frame(
-  feature = c("A1", "A2", "A3"), 
-  symbol = c("TP53", "MYC", "EGFR"),
-  gene_name = c("A1", "A2", "A3")
-)
+\dontrun{
+ custom_annot <- data.frame(
+   feature = c("A1", "A2", "A3"), 
+   symbol = c("TP53", "MYC", "EGFR"),
+   gene_name = c("A1", "A2", "A3")
+ )
  
-pgx <- pgx.custom_annotation(pgx, custom_annot)
-
+ pgx <- pgx.custom_annotation(pgx, custom_annot)
+}
 }

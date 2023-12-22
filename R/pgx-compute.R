@@ -78,10 +78,8 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
     only.known = TRUE,
     only.hugo = TRUE,
     convert.hugo = TRUE,
-    do.cluster = TRUE,
-    cluster.contrasts = FALSE,
-    do.clustergenes = TRUE,
-    only.proteincoding = TRUE
+    only.proteincoding = TRUE,
+    max.genesets = 10000
   )
 
 
@@ -89,10 +87,12 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
   pgx <- pgx.computePGX(
     pgx,
     max.genes = 40000,
-    max.genesets = 10000,
     gx.methods = gx.methods,
     gset.methods = gset.methods,
     extra.methods = extra.methods,
+    cluster.contrasts = FALSE,
+    do.clustergenes = TRUE,
+    do.clustergenesets = TRUE,
     do.cluster = TRUE,
     use.design = TRUE,
     prune.samples = FALSE,
@@ -156,7 +156,6 @@ pgx.createPGX <- function(counts,
                           organism = "Human",
                           custom.geneset = NULL,
                           annot_table = NULL,
-                          custom_gene_table = NULL,
                           max.genesets = 5000,
                           name = "Data set",
                           datatype = "unknown",
@@ -344,10 +343,9 @@ pgx.createPGX <- function(counts,
   if (use_biomart && organism != "No organism") {
     message("[createPGX] Annotating genes using BiomaRt")
     pgx <- playbase::pgx.gene_table(pgx, organism = organism)
-
   } else if (organism == "No organism") {
     message("[createPGX] Using custom gene annotation table")
-    pgx <- pgx.custom_annotation(pgx, custom_gene_table = annot_table)
+    pgx <- pgx.custom_annotation(pgx, custom_annot = annot_table)
   }
 
   if (is.null(pgx$genes)) {
@@ -376,6 +374,7 @@ pgx.createPGX <- function(counts,
     # Sum columns of rows with the same gene symbol
     selected_symbols <- symbol[mapped_symbols]
     rownames(pgx$counts) <- selected_symbols
+    rownames(pgx$genes) <- selected_symbols
     if (sum(duplicated(selected_symbols)) > 0) {
       message("[createPGX:autoscale] duplicated rownames detected: summing up rows (counts).")
       pgx$counts <- rowsum(pgx$counts, selected_symbols)
@@ -390,17 +389,18 @@ pgx.createPGX <- function(counts,
 
     # Collapse feature as a comma-separated elements
     # if multiple rows match to the same gene, then collapse them
+    if (sum(duplicated(selected_symbols)) > 0) {
+      features_collapsed_by_symbol <- aggregate(feature ~ symbol, data = pgx$genes, function(x) paste(unique(x), collapse = "; "))
+      pgx$genes <- pgx$genes[!duplicated(pgx$genes$symbol), , drop = FALSE]
 
-    features_collapsed_by_symbol <- aggregate(feature ~ symbol, data = pgx$genes, function(x) paste(unique(x), collapse = "; "))
-    pgx$genes <- pgx$genes[!duplicated(pgx$genes$symbol), , drop = FALSE]
+      # merge by symbol (we need to remove feature, as the new feature is collapsed)
+      pgx$genes$feature <- NULL
 
-    # merge by symbol (we need to remove feature, as the new feature is collapsed)
-    pgx$genes$feature <- NULL
-
-    # merge features_collapsde_by_symbol with pgx$genes by the column symbol
-    pgx$genes <- merge(pgx$genes, features_collapsed_by_symbol, by = "symbol")
-    rownames(pgx$genes) <- pgx$genes$symbol
-    pgx$counts <- pgx$counts[rownames(pgx$genes), , drop = FALSE]
+      # merge features_collapsde_by_symbol with pgx$genes by the column symbol
+      pgx$genes <- merge(pgx$genes, features_collapsed_by_symbol, by = "symbol")
+      rownames(pgx$genes) <- pgx$genes$symbol
+      pgx$counts <- pgx$counts[rownames(pgx$genes), , drop = FALSE]
+    }
   }
 
 
@@ -438,6 +438,7 @@ pgx.createPGX <- function(counts,
     keep <- intersect(unique(pgx$genes$gene_name), rownames(pgx$counts))
     pgx$counts <- pgx$counts[keep, , drop = FALSE]
     if (!is.null(pgx$X)) {
+      keep <- intersect(keep, rownames(pgx$X))
       pgx$X <- pgx$X[keep, , drop = FALSE]
     }
   }
@@ -505,7 +506,7 @@ pgx.createPGX <- function(counts,
 #' @param gx.methods Methods for differential expression analysis at the gene level. Default is c("ttest.welch", "trend.limma", "edger.qlf").
 #' @param gset.methods Methods for differential analysis at the gene set level. Default is c("fisher", "gsva", "fgsea").
 #' @param do.cluster Logical indicating whether to run sample clustering. Default is TRUE.
-#' @param cluster.contrasts Logical indicating whether to cluster contrasts. Default is FALSE.
+#' @param do.clustergenesets Logical indicating whether to cluster gene sets.
 #' @param do.clustergenes Logical indicating whether to cluster genes. Default is TRUE.
 #' @param use.design Whether to use model design matrix for testing. Default is TRUE.
 #' @param prune.samples Whether to remove samples without valid contrasts. Default is FALSE.
@@ -816,13 +817,13 @@ pgx.filterZeroCounts <- function(pgx) {
 #' @export
 pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   AT.LEAST <- ceiling(pmax(2, 0.01 * ncol(pgx$counts)))
-  cat("filtering for low-expressed genes: >", prior.cpm, "CPM in >=", AT.LEAST, "samples\n")
+  message("filtering for low-expressed genes: > ", prior.cpm, " CPM in >= ", AT.LEAST, " samples")
   keep <- (rowSums(edgeR::cpm(pgx$counts) > prior.cpm, na.rm = TRUE) >= AT.LEAST)
   pgx$filtered <- NULL
   pgx$filtered[["low.expressed"]] <- paste(rownames(pgx$counts)[which(!keep)], collapse = ";")
   pgx$counts <- pgx$counts[keep, , drop = FALSE]
-  cat("filtering out", sum(!keep), "low-expressed genes\n")
-  cat("keeping", sum(keep), "expressed genes\n")
+  message("filtering out ", sum(!keep), " low-expressed genes")
+  message("keeping ", sum(keep), " expressed genes")
   if (!is.null(pgx$X)) {
     ## WARNING: counts and X should match dimensions.
     pgx$X <- pgx$X[keep, , drop = FALSE]
