@@ -447,7 +447,7 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
       rowid <- data.table::chmatch(rownames(X), pgx$genes$human_ortholog, nomatch = NA)
       rownames(X) <- pgx$genes$gene_name[rowid]
       X <- X[!is.na(rowid), , drop = FALSE]
-    } 
+    }
 
     xdrugs <- gsub("[_@].*$", "", colnames(X))
     ndrugs <- length(table(xdrugs))

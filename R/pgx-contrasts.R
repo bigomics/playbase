@@ -395,7 +395,7 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, max.leve
   ## sample-wise contrasts
   rownames(ct.all) <- ct.all[, "sample"]
   ct.all <- as.matrix(ct.all[, -1, drop = FALSE]) ## drop sample column
-  ct.all <- ct.all[match(rownames(df), rownames(ct.all)), , drop = FALSE ]
+  ct.all <- ct.all[match(rownames(df), rownames(ct.all)), , drop = FALSE]
   rownames(ct.all) <- rownames(df)
   ct.all[is.na(ct.all)] <- 0
 
