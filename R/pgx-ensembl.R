@@ -446,22 +446,27 @@ pgx.gene_table <- function(pgx, organism) {
 #' @export
 detect_probe_DEPRECATED <- function(probes, organism) {
   # Get org database
-  if (organism == "Human") {
+  if (tolower(organism) == "human") {
     org_db <- org.Hs.eg.db::org.Hs.eg.db
-  } else if (organism == "Mouse") {
+  } else if (tolower(organism) == "mouse") {
     org_db <- org.Mm.eg.db::org.Mm.eg.db
-  } else if (organism == "Rat") {
+  } else if (tolower(organism) == "rat") {
     org_db <- org.Rn.eg.db::org.Rn.eg.db
   }
 
   # Probe types
   keytypes <- c(
-    "ENSEMBL", "ENSEMBLTRANS", "SYMBOL",
-    "REFSEQ", "UNIPROT", "ACCNUM"
+    "ENSEMBL", "ENSEMBLTRANS", "SYMBOL", "REFSEQ", "UNIPROT", "ACCNUM"
   )
-  key_matches <- vector("character", length(keytypes))
+  ##  key_matches <- vector("character", length(keytypes))
+  key_matches <- rep( 0L, length(keytypes))
   names(key_matches) <- keytypes
 
+  ## discard version numbers if ENSEMBL
+  if(mean(grepl("^ENS",probes)) > 0.8) {
+    probes <- sub("[.][0-9]+", "", probes)
+  }
+  
   # Subset probes if too many
   if (length(probes) > 100) {
     probes <- probes[as.integer(seq(1, length(probes), 100))]
@@ -516,7 +521,8 @@ detect_probe_DEPRECATED <- function(probes, organism) {
 #' }
 #' @export
 ngs.getGeneAnnotation_DEPRECATED <- function(probes, probe_type, organism) {
-  # Get org database and columns request
+
+                                        # Get org database and columns request
   if (organism == "Human") {
     org_db <- org.Hs.eg.db::org.Hs.eg.db
     cols_req <- c("SYMBOL", "GENENAME", "CHR", "CHRLOC", "MAP", "GENETYPE")
@@ -528,6 +534,12 @@ ngs.getGeneAnnotation_DEPRECATED <- function(probes, probe_type, organism) {
     cols_req <- c("SYMBOL", "GENENAME", "CHR", "CHRLOC", "GENETYPE")
   }
 
+  ## discard version numbers if ENSEMBL
+  orig.probes <- probes
+  if(mean(grepl("^ENS",probes)) > 0.8) {
+    probes <- sub("[.][0-9]+", "", probes)
+  }
+  
   # Call for annotation table
   suppressWarnings(d <- AnnotationDbi::select(org_db,
     keys = probes,
@@ -544,6 +556,11 @@ ngs.getGeneAnnotation_DEPRECATED <- function(probes, probe_type, organism) {
     d$MAP <- d$CHR
   }
 
+  ## if ENSEMBL get original probe names with version
+  if(probe_type == "ENSEMBL") {
+    d$ENSEMBL <- orig.probes[match(d$ENSEMBL, probes)]
+  }
+  
   # Rename cols, add extra cols, reorder cols and rows
   if (probe_type == "SYMBOL") {
     d[, feature := SYMBOL]

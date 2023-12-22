@@ -171,7 +171,6 @@ pgx.createPGX <- function(counts,
   message("[createPGX] input: dim(samples) = ", paste(dim(samples), collapse = "x"))
   message("[createPGX] input: dim(contrasts) = ", paste(dim(contrasts), collapse = "x"))
 
-
   ## convert old-style contrast matrix to sample-wise labeled contrasts
   contrasts <- playbase::contrasts.convertToLabelMatrix(contrasts, samples)
 
