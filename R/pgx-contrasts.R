@@ -395,7 +395,7 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, max.leve
   ## sample-wise contrasts
   rownames(ct.all) <- ct.all[, "sample"]
   ct.all <- as.matrix(ct.all[, -1, drop = FALSE]) ## drop sample column
-  ct.all <- ct.all[match(rownames(df), rownames(ct.all)), ]
+  ct.all <- ct.all[match(rownames(df), rownames(ct.all)), , drop = FALSE ]
   rownames(ct.all) <- rownames(df)
   ct.all[is.na(ct.all)] <- 0
 
@@ -849,7 +849,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
       rownames(contrasts2) <- rownames(contrasts)
       contrasts2 <- contrastAsLabels(contrasts2)
       new.contrasts <- matrix(NA, nrow(samples), ncol(contrasts))
-      new.contrasts <- contrasts2[match(rownames(samples), rownames(contrasts2)), ]
+      new.contrasts <- contrasts2[match(rownames(samples), rownames(contrasts2)), , drop = FALSE]
       rownames(new.contrasts) <- rownames(samples)
     }
   }
