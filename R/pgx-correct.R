@@ -1311,11 +1311,23 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
     clust <- "umap"
   }
 
+  dbg("[bc.evaluateResults] 0 :")
+  
+  dbg("[bc.evaluateResults] called!")
+  dbg("[bc.evaluateResults] len.xlist = ", length(xlist))
+  dbg("[bc.evaluateResults] len.pheno = ", length(pheno))
+  dbg("[bc.evaluateResults] dim.xlist[[1]] = ", dim(xlist[[1]]))
+  dbg("[bc.evaluateResults] names.xlist = ", names(xlist))
+  dbg("[bc.evaluateResults] nrow.xlist = ", sapply(xlist, nrow))
+  dbg("[bc.evaluateResults] ncol.xlist = ", sapply(xlist, ncol))
+  
   ## compute and make table
   numsig <- lapply(xlist, stats.numsig,
     y = pheno, lfc = lfc, q = q,
     trend = trend, verbose = FALSE
-  )
+    )
+
+  
   if (0) {
     numsig <- list()
     for (i in 1:length(xlist)) {
@@ -1325,6 +1337,9 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
       )
     }
   }
+
+  dbg("[bc.evaluateResults] 1 :")
+  
   res <- t(sapply(numsig, function(r) {
     c(sapply(r[1:2], length), avg.fc = mean(abs(r[[3]])))
   }))
@@ -1332,6 +1347,8 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
   snr <- res[,"avg.fc"] / xsd
   res <- cbind(res, avg.sd = xsd, SNR = snr)
 
+  dbg("[bc.evaluateResults] 2 :")
+  
   g1 <- numsig[["uncorrected"]]$genes
   s1 <- numsig[["uncorrected"]]$gsets
   n1 <- sapply(numsig, function(s) length(intersect(s$genes, g1)))
@@ -1344,12 +1361,16 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
   res <- cbind(res, r.genes, r.gsets)
   res.score <- exp(rowMeans(log(1e-8 + t(t(res) / (1e-9 + res[1, ])))))
 
+  dbg("[bc.evaluateResults] 3 :")
+  
   ## centered top
   xlist1 <- lapply(xlist, function(x) {
     x <- head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)), ], 1000)
     x <- as.matrix(x)
     (x - rowMeans(x))
   })
+
+  dbg("[bc.evaluateResults] 4 :")
   
   silhouette <- rep(1, nrow(res))
   if (add.sil) {
@@ -1381,11 +1402,15 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
     res <- cbind(res, silhouette)
   }
 
+  dbg("[bc.evaluateResults] 5 :")
+  
   score <- res.score * (silhouette / silhouette[1])**1
   res1 <- cbind(score, res)
   res1 <- res1[order(-res1[, "score"]), ]
   pos <- pos[rownames(res1)]
 
+  dbg("[bc.evaluateResults] 6 :")
+  
   if (plot) {
     nc <- ceiling(1.2 * sqrt(length(pos)))
     nr <- ceiling(length(pos) / nc)
@@ -1401,6 +1426,8 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
     }
   }
 
+  dbg("[bc.evaluateResults] done!")
+  
   list(scores = res1, pos = pos)
 }
 
@@ -1527,28 +1554,6 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
     
     gridExtra::grid.arrange(grobs = plt, ncol = ncol, padding = unit(0.1, "line"))
   }
-}
-
-#' @export
-contrasts2pheno <- function(contrasts, samples) {
-  M <- contrasts.convertToLabelMatrix(contrasts, samples)
-  if (ncol(M) > 10) {
-    M <- sign(makeContrastsFromLabelMatrix(M))
-    M[M == 0] <- NA
-    M <- (M + 1) / 2
-    M <- apply(M, 2, as.character)
-  }
-  mm <- paste(colnames(M), collapse = " ")
-  M[is.na(M)] <- "_"
-  pheno <- paste0("p", apply(M, 1, paste0, collapse = ""))
-  pheno
-}
-
-#' @export
-samples2pheno <- function(M) {
-  px <- apply(1 * expandPhenoMatrix(M), 1, paste, collapse = "")
-  px <- paste0("p", px)
-  px
 }
 
 ## ================================================================================

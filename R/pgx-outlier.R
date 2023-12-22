@@ -63,10 +63,11 @@ plotOutlierScores <- function(res.outliers, z.threshold=c(3,6,9), par=TRUE) {
     barplot(x, ylim=c(0,max(12,max(Z))), ylab = "z-score", ... )
     abline(h = z.threshold, lty=3, col='red')
   }
-  barplot2(zz, main='z-outlier (mean)')
-  barplot2(zz2, main='z-outlier (geom.mean)')
+  barplot2(zz, main='z.outlier (mean)')
+  barplot2(zz2, main='z.outlier (geom.mean)')
   for(i in 1:ncol(Z)) {
     z1 <- Z[,i]
     barplot2(z1, main=colnames(Z)[i])
   }
 }
+

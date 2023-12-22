@@ -23,8 +23,7 @@ imputeMissing <- function(X,
                             "knn", "QRILC", "MLE", "MinDet", "MinProb",
                             "min", "zero", "nbavg", "rowmeans"
                           )[1:3],
-                          rf.ntree = 100,
-                          plot = FALSE) {
+                          rf.ntree = 100, nv=5, plot = FALSE) {
   impX <- list()
 
   ## ------------ simple rowmeans -----------
@@ -83,7 +82,7 @@ imputeMissing <- function(X,
   }
 
   if ("SVD2" %in% method) {
-    impX[["SVD2"]] <- svdImpute2(X, nv = NULL)
+    impX[["SVD2"]] <- svdImpute2(X, nv = nv)
   }
 
   if ("NMF" %in% method) {

@@ -143,6 +143,15 @@ gx.imagemap <- function(X, main = "", cex = 1, cex.main = 1.8, clust = TRUE) {
       side = 4, at = 1:nrow(X), las = 1,
       cex = 0.85 * cex, line = 0.5
     )
+  } else {
+    graphics::mtext("samples",
+                    side = 1, las = 1,
+                    cex = abs(cex), line = 0.65
+                    )
+    graphics::mtext("genes",
+                    side = 4, las = 3,
+                    cex = abs(cex), line = 0.65
+                    )
   }
   graphics::title(main = main, cex.main = cex.main, line = 0.5)
 }
