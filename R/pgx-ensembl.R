@@ -537,10 +537,10 @@ ngs.getGeneAnnotation_ORGDB <- function(probes, organism, probe_type) {
     cols_req <- c("SYMBOL", "GENENAME", "CHR", "CHRLOC", "GENETYPE")
   }
 
-  if(!probe_type %in% keytypes(org_db)) {
+  if(!probe_type %in% AnnotationDbi::keytypes(org_db)) {
     warning("[ngs.getGeneAnnotation_ORGDB] ERROR : probe_type not in keytypes: ",probe_type)
     warning("[ngs.getGeneAnnotation_ORGDB] keytypes available: ",
-      paste(keytypes(org_db),collapse=" ") )    
+      paste(AnnotationDbi::keytypes(org_db),collapse=" ") )    
     return(NULL)
   }
 
