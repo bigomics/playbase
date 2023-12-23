@@ -504,7 +504,6 @@ pgx.custom_annotation <- function(pgx, custom_annot = NULL) {
     if (annot_fraction > .5) {
       # filter annotated table by pgx$counts rownames using match
       custom_annot <- custom_annot[match(rownames(pgx$counts), custom_annot$feature), ]
-      rownames(custom_annot) <- custom_annot$feature
     } else {
       stop("[pgx.custom_annotation] Not enought annoated genes. Be sure 
         custom_annot$feature matches counts rownames")
@@ -528,6 +527,7 @@ pgx.custom_annotation <- function(pgx, custom_annot = NULL) {
     )
   }
 
+  rownames(custom_annot) <- rownames(pgx$counts)
   pgx$genes <- custom_annot
   pgx$all_genes <- custom_annot$feature
   pgx$probe_type <- "custom"
