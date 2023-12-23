@@ -4,10 +4,12 @@
 \alias{get_call_stack}
 \title{Get Call Stack}
 \usage{
-get_call_stack(n = 2, n0 = 2)
+get_call_stack(n = 3, n0 = 2)
 }
 \arguments{
 \item{n}{Number of calls to include in call stack.}
+
+\item{n0}{Number of calls to exclude from the call stack.}
 }
 \value{
 Character vector of call stack.

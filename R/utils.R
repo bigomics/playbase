@@ -24,13 +24,12 @@ info <- function(..., type = "INFO") {
 dbg <- function(...) info(..., type = "DBUG")
 
 
-
 #' Get Call Stack
 #'
 #' Returns the call stack up to a specified depth.
 #' 
 #' @param n Number of calls to include in call stack.
-#'
+#' @param n0 Number of calls to exclude from the call stack.
 #' @return Character vector of call stack.
 #'
 #' @examples
@@ -59,16 +58,22 @@ dbg <- function(...) info(..., type = "DBUG")
 #' }
 #' f0(2)
 #' }
-get_call_stack <- function(n = 2, n0 = 2) {
+get_call_stack <- function(n = 3, n0 = 2) {
   
-  # Get calls and remove the last n calls
+  # Get calls, extract last n remove  and remove the last n calls
   calls <- sys.calls()
-  fun_names <- vapply(calls, function(x) as.character(x[[1]]), character(1))
+  fun_names <- lapply(calls, function(x) {
+      x <- as.character(x[[1]])
+      if (length(x) > 1) {
+        x <- x[length(x)]
+      }
+      return(x)
+    })
+  n <- ifelse(n > length(fun_names), length(fun_names) - 1, n)
   exclude_last_n <- length(fun_names)-n
-  get_last_n <- exclude_last_n - n0
-  print(get_last_n:exclude_last_n)
-  fun_names <- fun_names[get_last_n:exclude_last_n]
-  
+  n0 <- ifelse(n0 > exclude_last_n, exclude_last_n - 1, n0)
+  get_last_n0 <- exclude_last_n - n0  
+  fun_names <- fun_names[get_last_n0:exclude_last_n]
   # Concatenate all the calls using the ">" symbol
   call_stack <- paste(fun_names, collapse = ">")
   
@@ -76,18 +81,51 @@ get_call_stack <- function(n = 2, n0 = 2) {
 }
 
 
-#' Print Info Message
+#' @title Print Info Message
 #' 
-#' Print a formatted info message.
+#' @description Print a formatted info message. By default it includes the last 3 calls.
 #'
 #' @param msg Message to print.
+#' @param n Number of calls to include in call stack.
+#' @param n0 Number of calls to exclude from the call stack.
 #'
+#' @return Prints a formatted message.
+#' 
 #' @examples 
+#' \dontrun{
 #' info_message("Hello")
-#'
+#' f <- function(x) {
+#'   playbase::infomessage("test")
+#'   x <- x + 1
+#'   x
+#' }
+#' f1 <- function(x) {
+#'   playbase::infomessage("test1")
+#'   x <- f(x)
+#' }
+#' f2 <- function(x) {
+#'   playbase::infomessage("test2")
+#'   x <- f1(x)
+#' }
+#' 
+#' f3 <- function(x) {
+#'   playbase::infomessage("test3")
+#'   x <- f2(x)
+#' }
+#' 
+#' f4 <- function(x) {
+#'   playbase::infomessage("test3")
+#'   x <- f3(x)
+#' }
+#' 
+#' f(1)
+#' f4(1)
+#' }
 #' @export
-info_message <- function(msg) {
-  message(paste0("[", get_call_stack(3), "]: ", msg))
+infomessage <- function(..., n = 3, n0 = 2) {
+
+  stack <- paste0("[", get_call_stack(n, n0), "]: ")
+  message(stack, ...)
 }
 
 

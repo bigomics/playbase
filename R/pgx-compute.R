@@ -42,7 +42,7 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 
   ## parse requested phenotypes
   if (!is.null(contrasts.file) && file.exists(contrasts.file)) {
-    cat("reading contrasts file", contrasts.file, "\n")
+    message("reading contrasts file ", contrasts.file)
     contrasts <- read.as_matrix(contrasts.file)
   } else {
     ## take first (not-dotted) column in samples as phenotype vector
@@ -623,7 +623,7 @@ pgx.computePGX <- function(pgx,
   
   ## Shrink number of genes (highest SD/var)
   if (max.genes > 0 && nrow(pgx$counts) > max.genes) {
-    cat("shrinking data matrices: n=", max.genes, "\n")
+    message("shrinking data matrices: n= ", max.genes)
     logcpm <- logCPM(pgx$counts, total = NULL)
     sdx <- apply(logcpm, 1, stats::sd)
     jj <- Matrix::head(order(-sdx), max.genes) ## how many genes?
