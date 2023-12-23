@@ -5,71 +5,58 @@
 library(biomaRt)
 library(data.table)
 
-# get species from main ensembl vertebrate
+# Get species from main ensembl vertebrate
 
 ensembl <- useMart("ensembl")
 species <- listDatasets(ensembl)
 species <- data.table(species)
 species[, species_name := sub("\\s*\\(.*\\)", "", description)]
 species[, species_name := sub(" genes", "", species_name)]
-
-# add col ds to species table
 species$mart <- "ensembl"
 
-
-# get other taxonomies from ensenbl genome
-
+# Get other taxonomies from ensenbl genome
 genomes <- listEnsemblGenomes()
-
 ds_genomes <- lapply(genomes$biomart, function(x) {
-    #x = genomes$biomart[1]
     ensembl <- useEnsemblGenomes(biomart = x)
     ds <- listDatasets(ensembl)
     ds$mart <- x
+    ds <- data.table(ds)
     return(ds)
 })
+ds_genomes <- rbindlist(ds_genomes)
 
-ds_genomes <- do.call("rbind", ds_genomes)
+# Clean up species names (remove genes, short variants, structural variants, etc)
+ds_genomes[ ,species_name := sub("\\s*\\(.*", "", description)]
+ds_genomes[ ,species_name := sub(" genes", "", species_name)]
+ds_genomes[ ,species_name := sub(" Short Variants", "", species_name)]
+ds_genomes[ ,species_name := sub(" Structural Variants", "", species_name)]
 
-ds_genomes$species_name <- sub("\\s*\\(.*", "", ds_genomes$description)
-# remove " genes" fro the string
-ds_genomes$species_name <- sub(" genes", "", ds_genomes$species_name)
-# remoe Short Variants from the string
-ds_genomes$species_name <- sub(" Short Variants", "", ds_genomes$species_name)
-# remove Structural Variants from the string
-ds_genomes$species_name <- sub(" Structural Variants", "", ds_genomes$species_name)
-# if duplicate, keep only first entry
-ds_genomes <- ds_genomes[!duplicated(ds_genomes$species_name), ]
+# Add No organism, use I() because species and ds_genomes have "AsIs" class 
+no_org <- data.table(dataset = I("No organism"), 
+                     description = I("No organism"), 
+                     version = I("No organism"), 
+                     species_name = I("No organism"), 
+                     mart = "ensembl")
 
-# reorder rows of ds_genomes to match species
-ds_genomes <- ds_genomes[,colnames(species) ]
-
-# merge two tables
-
-species <- rbind(species, ds_genomes)
-
-# order table by Human, Mouse and Rat to appear first in species_name
-species <- species[order(species_name %in% c("Human", "Mouse", "Rat"), -as.character(species_name))]
-    
-# reverse order of table, where lst row becomes first and so on
-species <- species[rev(seq_len(nrow(species)))]
-
+# Deduplicate species and Merge
+ds_genomes <- ds_genomes[!duplicated(species_name), ]
+species <- rbindlist(list(species, ds_genomes, no_org), use.names = TRUE)
 
 # add servers
- species[, host :=  data.table::fcase(mart ==  "ensembl", "https://www.ensembl.org",
+species[, host :=  data.table::fcase(mart ==  "ensembl", "https://www.ensembl.org",
     mart == "plants_mart", "https://plants.ensembl.org",
     mart == "protists_mart", "https://protists.ensembl.org",
     mart == "metazoa_mart", "https://metazoa.ensembl.org",
-    mart == "fungi_mart", "https://fungi.ensembl.org")]
+    mart == "fungi_mart", "https://fungi.ensembl.org",
+    TRUE, "")]
 
-# save Rdata
+# Order table by Human, Mouse and Rat to appear first in species_name
+preferred_order <- c("Human", "Mouse", "Rat", "No organism")
+species[, species_name := factor(species_name, levels = c(preferred_order, sort(setdiff(unique(species_name), preferred_order))))]
+setorder(species, mart, species_name)
+species
 
-SPECIES_TABLE = species
-
-# add "No organism" as last row, for all columns
-SPECIES_TABLE <- rbind(SPECIES_TABLE, data.frame(dataset = "No organism", description = "No organism", version = "No organism", species_name = "No organism", mart = "ensembl", host = "No organism"))
-
+# Save as Rdata and tsv
+SPECIES_TABLE <- species
 usethis::use_data(SPECIES_TABLE, overwrite = TRUE)
-
-# save SPECIES_DICTIONARY as tsv
 write.table(SPECIES_TABLE, file = "dev/SPECIES_TABLE.tsv", sep = "\t", quote = FALSE, row.names = FALSE)
