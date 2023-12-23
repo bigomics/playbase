@@ -23,6 +23,10 @@ info <- function(..., type = "INFO") {
 
 dbg <- function(...) info(..., type = "DBUG")
 
+#' @export
+capitalize <- function(s) {
+  paste(toupper(substring(s,1,1)),tolower(substring(s,2,nchar(s))),sep='')
+}
 
 #' Get mini example dataset
 #'

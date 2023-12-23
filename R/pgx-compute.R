@@ -304,12 +304,12 @@ pgx.createPGX <- function(counts,
   }
   if (!use_biomart && organism %in% c("Mouse", "Human", "Rat")) {
     message("[createPGX] annotating genes using R libraries")
-    probe_type <- detect_probe_DEPRECATED(
+    probe_type <- detect_probe_ORGDB(
       probes = rownames(pgx$counts),
       organism = organism
     )
     probe_type
-    pgx$genes <- ngs.getGeneAnnotation_DEPRECATED(
+    pgx$genes <- ngs.getGeneAnnotation_ORGDB(
       probes = rownames(pgx$counts),
       probe_type = probe_type,
       organism = organism

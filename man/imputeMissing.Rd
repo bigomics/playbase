@@ -9,6 +9,7 @@ imputeMissing(
   method = c("LLS", "bpca", "msImpute", "SVD", "SVD2", "NMF", "RF", "knn", "QRILC",
     "MLE", "MinDet", "MinProb", "min", "zero", "nbavg", "rowmeans")[1:3],
   rf.ntree = 100,
+  nv = 5,
   plot = FALSE
 )
 }
