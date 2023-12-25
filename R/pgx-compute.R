@@ -287,9 +287,11 @@ pgx.createPGX <- function(counts,
   if(is.null(organism)) {
     organism <- guess_organism
   }
-  if(!is.null(organism) && tolower(organism) != tolower(guess_organism)) {
-    warning("[createPGX] WARNING : guessed organism is '", guess_organism,
-      "' but '", organism, "' was provided!")
+  if(!is.null(organism) && !is.null(guess_organism)) {
+    if(tolower(organism) != tolower(guess_organism)) {        
+       warning("[createPGX] WARNING : guessed organism is '", guess_organism,
+               "' but '", organism, "' was provided!")
+    }
   }
   
   pgx <- list(
@@ -322,7 +324,7 @@ pgx.createPGX <- function(counts,
   
   message("[createPGX] annotating genes")
   pgx <- pgx.addGeneAnnotation(pgx, organism = organism, use_biomart = use_biomart)
-
+    
   if (is.null(pgx$genes)) {
     stop("[createPGX] FATAL: Could not build gene annotation")
   }
@@ -341,8 +343,9 @@ pgx.createPGX <- function(counts,
     ## PRIOR CPM amount to regularize the counts and filter genes
     pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
 
-    # Conform gene table
-    pgx$genes <- pgx$genes[rownames(pgx$counts), , drop = FALSE]
+    ## Conform gene table
+    ii <- match(rownames(pgx$counts), rownames(pgx$genes))
+    pgx$genes <- pgx$genes[ii, , drop = FALSE]
   }
   
   ## -------------------------------------------------------------------
@@ -804,7 +807,7 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   cat("keeping", sum(keep), "expressed genes\n")
   if (!is.null(pgx$X)) {
     ## WARNING: counts and X should match dimensions.
-    pgx$X <- pgx$X[keep, , drop = FALSE]
+    pgx$X <- pgx$X[which(keep), , drop = FALSE]
   }
   pgx
 }

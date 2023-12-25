@@ -217,16 +217,12 @@ ngs.getGeneAnnotation <- function(probes, organism = NULL, use_biomart = NULL ) 
       message("[ngs.getGeneAnnotation] FAIL : could not connect to mart")
       return(NULL)
     }
-    ## remove versioning and put back later
-    clean.probes <- sub("[.][0-9]+","",probes)   
     genes <- ngs.getGeneAnnotation_BIOMART(
-      probes = clean.probes,
+      probes = probes,
       organism = organism,
       probe_type = as.character(probe_type),
       mart = mart
     )
-    rownames(genes) <- probes    
-    genes$feature <- probes
   }
 
   if(is.null(genes)) {
@@ -251,7 +247,7 @@ ngs.getGeneAnnotation_BIOMART <- function(
 
   # Prepare inputs
   if (verbose) {
-    message("[ngs.getGeneAnnotation_BIOMART] Retrieving genes information...")
+    message("[ngs.getGeneAnnotation_BIOMART] Retrieving gene annotations...")
   }
 
   clean_probes <- probes[!duplicated(probes)]
@@ -387,7 +383,7 @@ ngs.getGeneAnnotation_ORGDB <- function(probes, organism, probe_type) {
 
   organism <- tolower(organism)
   if(is.null(probe_type)) {
-
+      stop("must provide probe_type")
   }
   
   # Get org database and columns request
@@ -409,17 +405,17 @@ ngs.getGeneAnnotation_ORGDB <- function(probes, organism, probe_type) {
     return(NULL)
   }
 
-  ## discard version numbers if ENSEMBL
-  orig.probes <- probes
-  if (mean(grepl("^ENS", probes)) > 0.8) {
-    probes <- sub("[.][0-9]+", "", probes)
+  ## discard version numbers if ENSEMBL/ENSEMBLTRANS
+  clean.probes <- probes
+  if (grepl("^ENSEMBL", probe_type)) {
+    clean.probes <- sub("[.][0-9]+", "", probes)
   }
 
   # Call for annotation table
   suppressWarnings(
     d <- AnnotationDbi::select(
       org_db,
-      keys = probes,
+      keys = clean.probes,
       keytype = probe_type,
       columns = cols_req
     )
@@ -435,8 +431,11 @@ ngs.getGeneAnnotation_ORGDB <- function(probes, organism, probe_type) {
   }
 
   ## if ENSEMBL get original probe names with version
-  if (probe_type == "ENSEMBL") {
-    d$ENSEMBL <- orig.probes[match(d$ENSEMBL, probes)]
+  if ( probe_type == "ENSEMBL" ) {
+    d$ENSEMBL <- probes[match(d$ENSEMBL, clean.probes)]
+  }
+  if ( probe_type == "ENSEMBLTRANS" ) {
+    d$ENSEMBLTRANS <- probes[match(d$ENSEMBLTRANS, clean.probes)]
   }
 
   # Rename cols, add extra cols, reorder cols and rows
@@ -468,7 +467,9 @@ ngs.getGeneAnnotation_ORGDB <- function(probes, organism, probe_type) {
   # match per gene/probe, we remove duplicates
   d <- d[!duplicated(d$feature), ]
   rownames(d) <- d$feature
-  return(d[probes, , drop = FALSE])
+  ii <- match(probes, rownames(d))  
+  d <- d[ii, , drop = FALSE]
+  return(d)
 }
 
 
@@ -627,6 +628,12 @@ guess_probetype <- function(probes, organism = NULL, for.biomart = FALSE) {
       "REFSEQ"       = "refseq_mrna"
     )
     probe_type <- keytype2biomart[ probe_type ]
+
+    ## add version if versioned
+    if(probe_type %in% c("ensembl_gene_id","ensembl_transcript_id")) {
+        has.version <- (mean(grepl("[.][0-9]+$", probes)) > 0.8)
+        if(has.version) probe_type <- paste0(probe_type,"_version")
+    }
   }
 
   if(is.null(probe_type) || probe_type == "") {
