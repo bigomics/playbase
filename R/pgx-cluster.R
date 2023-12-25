@@ -135,10 +135,11 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
 #' replace.orig=FALSE to retain the original.
 #'
 #' @export
-pgx.clusterSamples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2, 3),
-                                reduce.sd = 1000, reduce.pca = 50, perplexity = 30,
-                                center.rows = TRUE, scale.rows = FALSE,
-                                X = NULL, umap.pkg = "uwot", replace.orig = TRUE) {
+pgx.clusterSamples <- function(pgx, methods = c("pca", "tsne", "umap", "pacmap"),
+                               dims = c(2, 3),
+                               reduce.sd = 1000, reduce.pca = 50, perplexity = 30,
+                               center.rows = TRUE, scale.rows = FALSE,
+                               X = NULL, umap.pkg = "uwot", replace.orig = TRUE) {
   if (!is.null(X)) {
     message("using provided X matrix...")
   } else if (!is.null(pgx$X)) {
@@ -182,6 +183,8 @@ pgx.clusterSamples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = 
   pgx
 }
 
+#' @export
+pgx.clusterSamples2 <- function(...) pgx.clusterSamples(...)
 
 
 
@@ -213,12 +216,12 @@ pgx.clusterSamples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = 
 #' By default it tries to detect the optimal number of clusters using the elbow method.
 #'
 #' @export
-pgx.clusterSamples <- function(pgx, X = NULL, skipifexists = FALSE, perplexity = 30,
-                               ntop = 1000, npca = 50, prefix = "C", kclust = 1,
-                               dims = c(2, 3), find.clusters = TRUE,
-                               clust.detect = c("louvain", "hclust"),
-                               row.center = TRUE, row.scale = FALSE,
-                               method = c("tsne", "umap", "pca")) {
+pgx.clusterSamples.DEPRECATED <- function(pgx, X = NULL, skipifexists = FALSE, perplexity = 30,
+                                          ntop = 1000, npca = 50, prefix = "C", kclust = 1,
+                                          dims = c(2, 3), find.clusters = TRUE,
+                                          clust.detect = c("louvain", "hclust"),
+                                          row.center = TRUE, row.scale = FALSE,
+                                          method = c("tsne", "umap", "pca")) {
   clust.detect <- clust.detect[1]
   if (!is.null(X)) {
     message("using provided X matrix...")
@@ -397,10 +400,11 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
 #' clusters using the elbow method.
 #'
 #' @export
-pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c(2, 3),
-                                 perplexity = 30, reduce.sd = 1000, reduce.pca = 50,
-                                 center.features = TRUE, scale.features = FALSE,
-                                 find.clusters = FALSE, svd.gamma = 1, umap.pkg = "uwot") {
+pgx.clusterMatrix <- function(X, methods = c("pca", "tsne", "umap", "pacmap"),
+                              dims = c(2, 3),
+                              perplexity = 30, reduce.sd = 1000, reduce.pca = 50,
+                              center.features = TRUE, scale.features = FALSE,
+                              find.clusters = FALSE, svd.gamma = 1, umap.pkg = "uwot") {
   methods <- intersect(methods, c("pca", "tsne", "umap", "pacmap"))
   if (length(methods) == 0) methods <- "pca"
 
@@ -590,6 +594,9 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   return(all.pos)
 }
 
+#' @export
+pgx.clusterBigMatrix <- function(...) pgx.clusterMatrix(...)
+
 
 #' @title Cluster rows of a matrix
 #'
@@ -625,12 +632,12 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
 #' By default it tries to detect the optimal number of clusters.
 #'
 #' @export
-pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
-                              ntop = 1000, npca = 50, prefix = "c",
-                              row.center = TRUE, row.scale = FALSE,
-                              find.clusters = TRUE, kclust = 1,
-                              clust.detect = c("louvain", "hclust"),
-                              method = c("tsne", "umap", "pca")) {
+pgx.clusterMatrix.DEPRECATED <- function(X, perplexity = 30, dims = c(2, 3),
+                                         ntop = 1000, npca = 50, prefix = "c",
+                                         row.center = TRUE, row.scale = FALSE,
+                                         find.clusters = TRUE, kclust = 1,
+                                         clust.detect = c("louvain", "hclust"),
+                                         method = c("tsne", "umap", "pca")) {
   method <- intersect(method, c("pca", "tsne", "umap", "pacmap"))
   method <- method[1]
   clust.detect <- clust.detect[1]

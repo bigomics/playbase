@@ -10,7 +10,7 @@ pgx.createPGX(
   counts,
   samples,
   contrasts,
-  organism = "Human",
+  organism = NULL,
   name = "Data set",
   datatype = "unknown",
   creator = "unknown",

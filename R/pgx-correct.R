@@ -1089,10 +1089,6 @@ removeTechnicalEffects <- function(X, y, p.pheno = 0.05, p.pca = 0.5,
   bX
 }
 
-
-
-
-
 ## ================================================================================
 ## Run/compare multiple batch-correction methods
 ## ================================================================================
@@ -1202,11 +1198,8 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   }
 
   if ("NNM" %in% methods) {
-##    if (nlevel * ncol(X) < 1000) {
-      xlist[["NNM"]] <- gx.nnmcorrect(X, y)$X
-##    } else {
-      xlist[["NNM2"]] <- gx.nnmcorrect2(X, y, r = 0.35)$X
-##    }
+    ## xlist[["NNM"]] <- gx.nnmcorrect(X, y)$X
+    xlist[["NNM"]] <- nnmCorrect2(X, y)
   }
 
   ## --------------------------------------------------------------
@@ -1310,16 +1303,6 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
     trend <- TRUE
     clust <- "umap"
   }
-
-  dbg("[bc.evaluateResults] 0 :")
-  
-  dbg("[bc.evaluateResults] called!")
-  dbg("[bc.evaluateResults] len.xlist = ", length(xlist))
-  dbg("[bc.evaluateResults] len.pheno = ", length(pheno))
-  dbg("[bc.evaluateResults] dim.xlist[[1]] = ", dim(xlist[[1]]))
-  dbg("[bc.evaluateResults] names.xlist = ", names(xlist))
-  dbg("[bc.evaluateResults] nrow.xlist = ", sapply(xlist, nrow))
-  dbg("[bc.evaluateResults] ncol.xlist = ", sapply(xlist, ncol))
   
   ## compute and make table
   numsig <- lapply(xlist, stats.numsig,
@@ -1338,16 +1321,12 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
     }
   }
 
-  dbg("[bc.evaluateResults] 1 :")
-  
   res <- t(sapply(numsig, function(r) {
     c(sapply(r[1:2], length), avg.fc = mean(abs(r[[3]])))
   }))
   xsd <- sapply(xlist, function(x) mean(matrixStats::rowSds(x, na.rm = TRUE)))
   snr <- res[,"avg.fc"] / xsd
   res <- cbind(res, avg.sd = xsd, SNR = snr)
-
-  dbg("[bc.evaluateResults] 2 :")
   
   g1 <- numsig[["uncorrected"]]$genes
   s1 <- numsig[["uncorrected"]]$gsets
@@ -1361,8 +1340,6 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
   res <- cbind(res, r.genes, r.gsets)
   res.score <- exp(rowMeans(log(1e-8 + t(t(res) / (1e-9 + res[1, ])))))
 
-  dbg("[bc.evaluateResults] 3 :")
-  
   ## centered top
   xlist1 <- lapply(xlist, function(x) {
     x <- head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)), ], 1000)
@@ -1370,8 +1347,6 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
     (x - rowMeans(x))
   })
 
-  dbg("[bc.evaluateResults] 4 :")
-  
   silhouette <- rep(1, nrow(res))
   if (add.sil) {
     if (is.null(pos)) {
@@ -1402,15 +1377,11 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
     res <- cbind(res, silhouette)
   }
 
-  dbg("[bc.evaluateResults] 5 :")
-  
   score <- res.score * (silhouette / silhouette[1])**1
   res1 <- cbind(score, res)
   res1 <- res1[order(-res1[, "score"]), ]
   pos <- pos[rownames(res1)]
 
-  dbg("[bc.evaluateResults] 6 :")
-  
   if (plot) {
     nc <- ceiling(1.2 * sqrt(length(pos)))
     nr <- ceiling(length(pos) / nc)
@@ -1425,8 +1396,6 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
       legend("topleft", legend = tt, cex = 1.4)
     }
   }
-
-  dbg("[bc.evaluateResults] done!")
   
   list(scores = res1, pos = pos)
 }
@@ -1531,6 +1500,7 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
       "avg.sd" = "average SD",
       "r.genes" = "gene.coverage",
       "r.gsets" = "gset coverage",
+      "SNR" = "signal-to-noise",      
       "silhouette" = "silhoutte score"
     )
     for (i in 1:ncol(scores)) {
@@ -1556,20 +1526,162 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
   }
 }
 
+#' @export
+get_model_parameters <- function(X, samples, pheno=NULL, contrasts=NULL ) {
+
+  if(is.null(pheno) && is.null(contrasts)) {
+    stop("must give either pheno vector or contrasts matrix")
+  }
+  if(!is.null(contrasts)) {
+    pheno <- playbase::contrasts2pheno( contrasts, samples )
+  }
+  
+  bc <- playbase::detectBatchEffects(X, samples, pheno,  params = "statistical",
+    k.pca=10, p.pca=0.5, p.pheno=0.05, xrank = 10)
+
+  bc$p.values
+  
+  ##pheno.pars <- names(which(bc$p.values[,'p.pheno'] < 1e-20))
+  p.pheno <- bc$p.values[,'p.pheno']
+  if(nrow(bc$p.values)==1) names(p.pheno)[1] <- rownames(bc$p.values)
+  p.pheno
+  pheno.pars <- names(which( p.pheno == min(p.pheno) | p.pheno < 1e-80 ))
+  pheno.pars <- pheno.pars[ order(p.pheno[pheno.pars]) ]
+  pheno.pars
+
+  batch.pars <- NULL
+  if("statistical" %in% names(bc$params)) {
+    batch.pars <- bc$params$statistical
+    batch.pars
+    batch.pars <- setdiff(batch.pars, pheno.pars)
+    batch.pars2 <- grep("batch",colnames(samples),ignore.case=TRUE,value=TRUE)
+    if(length(batch.pars2)) batch.pars <- c(batch.pars, batch.pars2)
+    batch.pars <- sort(batch.pars)
+  }
+  
+  batch.vec <- NULL
+  if(length(batch.pars)) {
+    batch.vec <- apply(samples[,batch.pars,drop=FALSE],1,paste,collapse='_')
+  }
+  pheno.vec <- NULL
+  if(length(pheno.pars)) {
+    pheno.vec <- apply(samples[,pheno.pars,drop=FALSE],1,paste,collapse='_')
+  }
+  
+  list(
+    batch.pars = batch.pars,
+    pheno.pars = pheno.pars,
+    batch = batch.vec,
+    pheno = pheno.vec
+  )
+}
+
+
+#' @export
+compare_batchcorrection_methods  <- function(X, samples, pheno, contrasts ) {
+
+  methods <- c("uncorrected","ComBat", "limma","superBC",
+    "PCA","RUV","SVA","NNM")
+  methods <- c("uncorrected","ComBat", "limma","RUV","SVA","NNM")
+  
+  batch <- NULL
+  pars <- get_model_parameters(X, samples, pheno=pheno, contrasts=contrasts)
+  pars
+  
+  message("Running methods...")  
+  xlist <- runBatchCorrectionMethods(
+    X = X,
+    batch = pars$batch,
+    y = pars$pheno,  
+    controls = NULL,
+    methods = methods,
+    combatx = FALSE,
+    ntop = 2000,
+    sc = FALSE,
+    remove.failed=TRUE
+  )         
+  names(xlist)
+  
+  ## PCA is faster than UMAP
+  pos <- list()
+  t2 <- function(x) t(scale(t(scale(t(x),scale=FALSE))))
+  nb <- max(2,round(min(30, dim(X)/4)))
+  
+##  incProgress( amount = 0.1, "Computing PCA clustering...")          
+  message("Computing PCA clustering...")
+  pos[['pca']] <- lapply(xlist, function(x) {
+    irlba::irlba(t2(x), nu=2, nv=2)$u[,1:2]
+  })
+
+  ##  incProgress( amount = 0.1, "Computing t-SNE clustering...")
+  message("Computing t-SNE clustering...")
+  pos[['tsne']] <- lapply(xlist, function(x) {
+    Rtsne::Rtsne(t2(x), perplexity=nb, check_duplicates=FALSE)$Y
+  })
+            
+##  incProgress( amount = 0.1, "Comparing results...")          
+  message("Comparing results...")
+  res <- playbase::bc.evaluateResults(
+    xlist,
+    pheno = pheno,
+    lfc = 0.2,
+    q = 0.05,
+    pos = pos[['tsne']],
+    add.sil = TRUE,
+    plot = FALSE,
+    trend = TRUE
+  )
+  
+  ##shiny::removeModal()
+  score <- res$scores[,"score"]
+  score.uncorrected <- score['uncorrected']
+  best.method <- names(which.max(score))
+
+  ## if the improvement is small, we rather choose the uncorrected solution
+  score.ratio <- score[best.method] / score['uncorrected'] 
+  best.method <- ifelse( score.ratio < 1.10, 'uncorrected', best.method )
+  message("[select_batchcorrect_method] best.method = ", best.method)
+        
+  list(
+    xlist = xlist,
+    pos = pos,
+    scores = res$scores,
+    pheno = pheno,
+    pars = pars,
+    best.method = best.method
+  )
+}
+
 ## ================================================================================
 ## Single batch-correction methods wrappers
 ## ================================================================================
 
+
 #' @export
 superBC2 <- function(X, samples, y, batch = NULL,
                      ## methods = c("technical","batch","statistical","pca","sva","nnm"),
-                     methods = c("technical", "batch", "statistical", "sva", "nnm2"),
+                     methods = c("batch", "technical", "statistical", "sva", "nnm2"),
                      p.pca = 0.5, p.pheno = 0.05, k.pca = 10, nv = 2,
                      xrank = NULL) {
+
+  if(y[1] %in% colnames(samples)) {
+    y <- samples[,y[1]]
+  }
+  if(!is.null(batch) && grepl("batch",colnames(samples),ignore.case=TRUE)) {
+    batch.col <- grep("batch",colnames(samples),ignore.case=TRUE)[1]
+    message("[superBC2] found batch column in sample info: ", colnames(samples)[batch.col] )
+    batch <- samples[,batch.col]
+  }
+  if(!is.null(batch) && batch[1] %in% colnames(samples)) {
+    message("[superBC2] using batch column in sample info: ", batch[1])    
+    batch <- samples[,batch[1]]
+  }
+  
   cX <- X
   methods <- intersect(methods, c("technical", "batch", "statistical", "pca", "sva", "nnm"))
 
   for (m in methods) {
+
     ## correct explicit batch effect
     if (!is.null(batch) && m == "batch") {
       message("[superBC2] correcting for: batch")
@@ -1579,9 +1691,13 @@ superBC2 <- function(X, samples, y, batch = NULL,
 
     ## this removes typical batch effects
     if (m %in% c("statistical", "technical", "pca")) {
-      bc <- detectBatchEffects(cX, samples, y,
-        params = m,
-        p.pca = p.pca, p.pheno = p.pheno, k.pca = k.pca, nv = nv, xrank = xrank
+
+      bc <- detectBatchEffects(
+        ## cX,
+        X,  ## on original matrix??
+        samples, y,  params = m,
+        p.pca = p.pca, p.pheno = p.pheno, k.pca = k.pca,
+        nv = nv, xrank = xrank
       )
       if (!is.null(bc$covariates)) {
         message("[superBC2] correcting for: ", m)
@@ -2104,6 +2220,278 @@ my.bbknn <- function(data_matrix, batch, pca = TRUE, compute_pca = "python", nPc
   output <- list(corrected_matrix = corrected_matrix, pca = pca, tsne = tsne, umap = umap)
   return(output)
 }
+
+
+#' Nearest neighbor matching batch correction
+#'
+#' Correct for batch effects in a gene expression matrix using nearest neighbor matching.
+#'
+#' @param X Numeric matrix of gene expression values (genes in rows, samples in columns).
+#' @param y Factor vector indicating batch for each sample.
+#' @param dist.method Distance metric to use for matching ('cor' or 'euclidean').
+#' @param center.x Logical for whether to center gene expression by row means.
+#' @param center.m Logical for whether to center expression by batch means.
+#' @param sdtop Number of top variable genes to use for correlation.
+#'
+#' @return List containing:
+#' \itemize{
+#'   \item X - Batch corrected gene expression matrix
+#'   \item pairings - Matrix of sample pairings used for correction
+#' }
+#'
+#' @details This function performs batch correction using the following steps:
+#' \enumerate{
+#'   \item Compute distance matrix between all samples
+#'   \item Find nearest neighbor matches between batches
+#'   \item Construct full paired dataset with matches
+#'   \item Apply limma batch correction to paired data
+#'   \item Average paired samples back to original samples
+#' }
+#'
+#'
+#' @seealso
+#' \code{\link[limma]{removeBatchEffect}} for the batch correction method used.
+#'
+#' @examples
+#' # TODO
+#'
+#' @export
+nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TRUE,
+                       sdtop = 2000, return.B=FALSE) {
+  ## Nearest-neighbour matching for batch correction. This
+  ## implementation creates a fully paired dataset with nearest
+  ## matching neighbours when pairs are missing.
+
+  ## use.design = TRUE;dist.method = "cor";center.x = TRUE;center.m = TRUE; sdtop = 1000
+
+  ## compute distance matrix for NNM-pairing
+  y1 <- paste0("y=", y)
+  dX <- X
+
+  ## reduce for speed
+  sdx <- apply(dX, 1, stats::sd)
+  ii <- Matrix::head(order(-sdx), sdtop)
+  dX <- dX[ii, ]
+
+  if (center.x) {
+    dX <- dX - rowMeans(dX, na.rm = TRUE)
+  }
+  if (center.m) {
+    ## center per condition group (takes out batch differences)
+    mX <- tapply(1:ncol(dX), y1, function(i) rowMeans(dX[, i, drop = FALSE]))
+    mX <- do.call(cbind, mX)
+    dX <- dX - mX[, y1]
+  }
+
+  if (dist.method == "cor") {
+    message("[nnmCorrect] computing correlation matrix D...")
+    ## D <- 1 - crossprod(scale(dX)) / (nrow(dX) - 1) ## faster
+    D <- 1 - cor(dX)
+  } else {
+    message("[nnmCorrect] computing distance matrix D...\n")
+    D <- as.matrix(stats::dist(t(dX)))
+  }
+  ## remove(dX)
+  D[is.na(D)] <- 0 ## might have NA
+
+  ## find neighbours
+  message("[nnmCorrect] finding nearest neighbours...")
+  B <- t(apply(D, 1, function(r) tapply(r, y1, function(s) names(which.min(s)))))
+  rownames(B) <- colnames(X)
+  Matrix::head(B)
+
+  ## ensure sample is always present in own group
+  idx <- cbind(1:nrow(B), match(y1, colnames(B)))
+  B[idx] <- rownames(B)
+
+  ## imputing full paired data set
+  kk <- match(as.vector(B), rownames(B))
+  full.y <- y1[kk]
+  full.pairs <- rep(rownames(B), ncol(B))
+  full.X <- X[, kk]
+  dim(full.X)
+
+  ## remove pairing effect
+  message("[nnmCorrect] correcting for pairing effects...")
+  use.batch <- TRUE
+  if (use.batch) {
+    design <- stats::model.matrix(~full.y)
+    full.X <- limma::removeBatchEffect(
+      full.X,
+      batch = full.pairs,
+      design = design
+    )
+  } else {
+    V <- model.matrix(~full.pairs)
+    design <- stats::model.matrix(~full.y)
+    full.X <- limma::removeBatchEffect(
+      full.X,
+      covariates = V,
+      design = design
+    )
+  }
+
+  ## now contract to original samples
+  message("[nnmCorrect] matching result...")
+  full.idx <- rownames(B)[kk]
+  cX <- do.call(cbind, tapply(
+    1:ncol(full.X), full.idx,
+    function(i) rowMeans(full.X[, i, drop = FALSE])
+  ))
+  cX <- cX[, colnames(X)]
+
+  ## retain original row means
+  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
+  res <- cX
+  if(return.B) {
+    res <- list(X = cX, pairings = B)
+  }
+  return(res)
+}
+
+
+#' @export
+nnmCorrect2 <- function(X, y, r = 0.35,  center.x = TRUE, center.m = TRUE,
+                        scale.x = FALSE, center.y = TRUE, mode = "sym",
+                        knn = 3, sdtop = 2000, return.B = FALSE) {
+  
+  ##center.x=TRUE;center.m=TRUE;scale.x=FALSE;sdtop=1000;r=0.35;knn=3
+
+  ## compute distance matrix for NNM-pairing
+  y1 <- paste0("y=", y)
+  dX <- X
+
+  ## reduce for speed
+  sdx <- apply(dX, 1, stats::sd)
+  ii <- Matrix::head(order(-sdx), sdtop)
+  dX <- dX[ii, ]
+  if (center.x) {
+    dX <- dX - rowMeans(dX, na.rm = TRUE)
+  }
+  if (scale.x) {
+    row.sdx <- matrixStats::rowSds(dX, na.rm=TRUE)
+    dX <- dX / (row.sdx + 1e-4 * mean(row.sdx,na.rm=TRUE))
+  }
+  if (center.m) {
+    ## center per condition group (takes out batch differences)
+    mX <- tapply(1:ncol(dX), y1, function(i) rowMeans(dX[, i, drop = FALSE]))
+    mX <- do.call(cbind, mX)
+    dX <- dX - mX[, y1]
+  }
+  if (center.y) {
+    ## finally sample scaling
+    dX <- scale(dX)
+    dX[is.na(dX)] <- 0  ## zero SD can cause NA
+  }
+  
+  ## find neighbours using fast KNN search
+  message("[nnmCorrect2] finding nearest neighbours...")
+  a=y1[1]
+  bb <- list()
+  nn <- list()
+  for(a in sort(unique(y1))) {
+    x1 <- dX[, which(y1 == a), drop = FALSE]
+    knn1 <- min(knn, ncol(x1))
+    res <- FNN::get.knnx( t(x1), query = t(dX), k = knn1)
+    bb[[a]] <- apply( res$nn.index, 2, function(i) colnames(x1)[i] )
+    nn[[a]] <- knn1
+  }
+  B <- do.call(cbind, bb)
+  colnames(B) <- as.vector(unlist(mapply(rep, names(bb), nn)))
+  rownames(B) <- colnames(dX)
+  ## ensure sample is always present in own group
+  B <- cbind( rownames(B), B)
+
+  ## create batch design matrix manually
+  idx <- apply(B, 1, function(x) match(x, rownames(B)))
+  jj <- as.vector(idx)
+  ii <- as.vector(mapply(rep, 1:ncol(idx), nrow(idx)))
+  P <- Matrix::sparseMatrix(
+    i = jj, j = ii, x = rep(1, length(ii)),
+    dims = c(nrow(B), nrow(B))
+  )
+  P <- 1*(P>0)  ## dupcliated got summed
+  
+  ## correct for pairing effect
+  message("[nnmCorrect2] correcting for pairing effects...")
+  P1 <- P
+  if (mode == "sym") P1 <- P + Matrix::t(P) ## make symmetric
+  if (mode == "tr")  P1 <- Matrix::t(P) ## transposed
+  if (r < 1) {
+    k <- round(min(r * dim(X), dim(X) - 1)) ## critical
+    k <- max(k, 1)
+    if (r > 0.2) {
+      sv <- svd(P1, nu = k, nv = 0)
+    } else {
+      sv <- irlba::irlba(P1, nu = k, nv = 0)
+    }
+    P1 <- sv$u
+  }
+
+  design <- stats::model.matrix(~y1)
+  cX <- limma::removeBatchEffect(X, covariates = scale(P1), design = design)
+
+  ## retain original row means
+  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
+  res <- cX
+  if(return.B) {
+    res <- list(X = cX, pairings = B)
+  }
+  return(res)
+}
+
+#' Nearest neighbor matching batch correction
+#'
+#' Correct for batch effects in a gene expression matrix using nearest neighbor matching.
+#'
+#' @param x Numeric matrix of gene expression values (genes in rows, samples in columns).
+#' @param y Factor vector indicating batch for each sample.
+#' @param k Number of nearest neighbors to use (default 3).
+#'
+#' @return Batch corrected gene expression matrix.
+#'
+#' @details This function performs batch correction by matching each sample to its
+#' k-nearest neighbors from other batches based on expression profile correlation.
+#' The batch effect for a sample is estimated as the mean difference between it and its
+#' matched neighbors. This difference is subtracted from the sample's expression profile.
+#'
+#' @seealso
+#' \code{\link[limma]{removeBatchEffect}} for an alternative batch correction method
+#'
+#' @examples
+#' \dontrun{
+#' x <- matrix(rnorm(100 * 30), 100, 30) # random expression matrix
+#' y <- gl(3, 10) # 3 batches of 10 samples each
+#' xcorr <- nnmCorrect.SAVE(x, y)
+#' }
+#' @export
+nnmCorrect.SIMPLE <- function(x, y, k = 3) {
+  ## -----------------------------------------------------
+  ## nearest-neighbour matching for batch correction
+  ## -----------------------------------------------------
+  xcor <- stats::cor(x)
+  diag(xcor) <- 0
+  nx <- x
+  j <- 1
+  for (j in 1:ncol(x)) {
+    nj <- which(y != y[j])
+    nn <- intersect(order(-xcor[j, ]), nj)
+    nn <- Matrix::head(nn, k)
+    nx[, j] <- x[, j] - rowMeans(x[, nn, drop = FALSE])
+  }
+  nx <- nx + rowMeans(x)
+  return(nx)
+}
+
+
+## compatibility
+
+#' @export
+gx.nnmcorrect  <- function(...)  nnmCorrect(... , return.B=TRUE)
+
+#' @export
+gx.nnmcorrect2 <- function(...)  nnmCorrect2(..., return.B=TRUE)
+
 
 ## =====================================================================================
 ## =========================== END OF FILE =============================================
