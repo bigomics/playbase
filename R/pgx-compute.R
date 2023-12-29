@@ -669,7 +669,7 @@ pgx.computePGX <- function(pgx,
   ## ------------------ gene set tests -----------------------
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
-  if (pgx$organism != "No organism") {
+  if (pgx$organism != "No organism" || nrow(pgx$GMT) > 0) {
     message("[pgx.computePGX] testing genesets...")
     pgx <- compute_testGenesets(
       pgx = pgx,
@@ -833,13 +833,11 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
 
 pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
-  message("[pgx.add_GMT] Creating GMT matrix... ")
-
-
   ## -----------------------------------------------------------
   ## Load Gsetmat and filter genes by gene or homologous
   ## -----------------------------------------------------------
   
+  message("[pgx.add_GMT] Creating GMT matrix... ")
   # Load geneset matrix
   G <- Matrix::t(playdata::GSETxGENE)
   if (pgx$organism != "Human" && !is.null(pgx$genes$human_ortholog)) {
