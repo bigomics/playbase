@@ -284,6 +284,13 @@ stats.numsig <- function(X, y, lfc = 1, q = 0.05, set.na = NULL,
     cat("nsig.genes = ", nsig, "\n")
     cat("nsig.gsets = ", nsets, "\n")
   }
-  list(genes = sig.genes, gsets = sig.gsets, fc = fc0)
+
+  list(
+      genes = sig.genes,
+      gsets = sig.gsets,
+      fc = fc0,
+      p.genes = res$P.Value,
+      p.gsets = gsa$p.value       
+  )
 }
 

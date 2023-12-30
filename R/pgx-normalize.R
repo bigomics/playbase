@@ -84,7 +84,7 @@ NORMALIZATION.METHODS <- c("none", "mean", "scale", "NC", "CPM", "TMM", "RLE", "
 #' normalized <- pgx.countNormalization(counts, c("TMM", "RLE"))
 #' }
 #' @export
-pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
+pgx.countNormalization <- function(x, methods) {
   ## Column-wise normalization (along samples).
   ##
   ## x:        counts (linear)
@@ -92,20 +92,22 @@ pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
 
   methods <- methods[1]
   which.zero <- which(x == 0, arr.ind = TRUE)
-
+  x1 <- x
+  x1[which.zero] <- NA
+    
   for (m in methods) {
     if (m == "none") {
       ## normalization on individual mean
       x <- x
     } else if (m %in% c("scale","mean.center")) {
       ## normalization on individual mean
-      mx <- mean(x, na.rm = TRUE)
-      x <- t(t(x) / colMeans(x, na.rm = TRUE)) * mx
+      mx <- mean(x1, na.rm = TRUE)
+      x <- t(t(x) / (1 + colMeans(x1, na.rm = TRUE))) * mx
     } else if (m == "median.center") {
-      mx <- apply(x, 2, median, na.rm = TRUE)
-      x <- t(t(x) / mx) * mean(mx, na.rm = TRUE )
+      mx <- apply(x1, 2, median, na.rm = TRUE)
+      x <- t(t(x) / (1+mx)) * mean(mx, na.rm = TRUE)
     } else if (m == "CPM") {
-      x <- t(t(x) / Matrix::colSums(x, na.rm = TRUE)) * 1e6
+      x <- t(t(x) / (1+Matrix::colSums(x1, na.rm = TRUE)) ) * 1e6
     } else if (m == "TMM") {
       ## normalization on total counts (linear scale)
       x <- normalizeTMM(x, log = FALSE) ## does TMM on counts (edgeR)
@@ -118,7 +120,7 @@ pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
       ##        } else if(m %in% c("upperquartile")) {
       ##            ## normalization on total counts (linear scale)
     } else if (m == "quantile") {
-      new.x <- 0.01 * limma::normalizeQuantiles(as.matrix(100 * x)) ## shift to avoid clipping
+      new.x <- 0.01 * limma::normalizeQuantiles(as.matrix(100 * x1)) ## shift to avoid clipping
       rownames(new.x) <- rownames(x)
       colnames(new.x) <- colnames(x)
       x <- new.x
@@ -127,9 +129,7 @@ pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
 
   x <- pmax(x, 0) ## prevent negative values
   ## put back zeros as zeros
-  if (keep.zero && nrow(which.zero) > 0) {
-    x[which.zero] <- 0
-  }
+  x[which.zero] <- 0
 
   return(x)
 }
@@ -427,7 +427,7 @@ scale_counts <- function(counts, method, shift="clip", q.zero=0.01) {
 
   eps <- 1e-20
   eps <- 0
-  X <- log2(counts)
+  X <- log2(counts)  ## zero counts become NA
   X[is.infinite(X)] <- NA
   zero.point <- 0
   

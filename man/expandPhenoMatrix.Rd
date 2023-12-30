@@ -4,7 +4,7 @@
 \alias{expandPhenoMatrix}
 \title{Expand phenotype matrix}
 \usage{
-expandPhenoMatrix(M, drop.ref = TRUE, keep.numeric = FALSE)
+expandPhenoMatrix(M, drop.ref = TRUE, keep.numeric = FALSE, check = TRUE)
 }
 \arguments{
 \item{drop.ref}{Logical indicating whether to drop the reference level for each factor.}

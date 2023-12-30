@@ -20,6 +20,13 @@ contrasts2pheno <- function(contrasts, samples) {
   mm <- paste(colnames(M), collapse = " ")
   M[is.na(M)] <- "_"
   pheno <- paste0("p", apply(M, 1, paste0, collapse = ""))
+  ## check if pheno equals one of canonical phenotypes
+  col1 <- apply(samples,2,function(x) all(colSums(table(x,pheno)!=0)==1))
+  row1 <- apply(samples,2,function(x) all(rowSums(table(x,pheno)!=0)==1))
+  if(any(col1 & row1)) {
+      sel <- names(which(col1 & row1))[1]
+      pheno <- samples[,sel]
+  }
   names(pheno) <- rownames(samples)
   pheno
 }

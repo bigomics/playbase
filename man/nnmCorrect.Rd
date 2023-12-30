@@ -10,6 +10,7 @@ nnmCorrect(
   dist.method = "cor",
   center.x = TRUE,
   center.m = TRUE,
+  knn = 1,
   sdtop = 2000,
   return.B = FALSE
 )
