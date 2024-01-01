@@ -8,9 +8,9 @@
 read.files <- function(path) {
     f0 <- dir(path, full.names=FALSE)
     f1 <- dir(path, full.names=TRUE)    
-    counts.file <- grep("count",f0)
-    samples.file <- grep("sample",f0)
-    contrasts.file <- grep("contrast",f0)
+    counts.file <- grep("count.*csv$",f0)
+    samples.file <- grep("sample.*csv$",f0)
+    contrasts.file <- grep("contrast.*csv$",f0)
     ok <- (length(counts.file) == 1 &&
         length(samples.file) == 1 &&
         length(contrasts.file) == 1 )

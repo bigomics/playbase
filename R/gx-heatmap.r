@@ -924,7 +924,7 @@ gx.heatmap <- function(gx, values = NULL,
   if (plot.method == "heatmap.3" && !is.na(cc0) && !is.na(cc1)) {
     if (verbose > 1) cat("plotting with heatmap.3 + both ColSideColors\n")
     if (is.null(h1) && is.null(h2)) {
-      playbase::heatmap.3(gx,
+      heatmap.3(gx,
         Colv = NULL, Rowv = NULL,
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none",
@@ -934,7 +934,7 @@ gx.heatmap <- function(gx, values = NULL,
         ...
       )
     } else {
-      playbase::heatmap.3(gx,
+      heatmap.3(gx,
         Colv = stats::as.dendrogram(h1), Rowv = stats::as.dendrogram(h2),
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none",
@@ -948,7 +948,7 @@ gx.heatmap <- function(gx, values = NULL,
   } else if (plot.method == "heatmap.3" && !is.na(cc0) && is.na(cc1)) {
     if (verbose > 1) cat("plotting with heatmap.3 + ColSideColors\n")
     if (is.null(h1) && is.null(h2)) {
-      playbase::heatmap.3(gx,
+      heatmap.3(gx,
         Colv = NULL, Rowv = NULL,
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none",
@@ -957,7 +957,7 @@ gx.heatmap <- function(gx, values = NULL,
         ...
       )
     } else {
-      playbase::heatmap.3(gx,
+      heatmap.3(gx,
         Colv = stats::as.dendrogram(h1), Rowv = stats::as.dendrogram(h2),
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none",
@@ -978,7 +978,7 @@ gx.heatmap <- function(gx, values = NULL,
         ...
       )
     } else {
-      playbase::heatmap.3(gx,
+      heatmap.3(gx,
         Colv = stats::as.dendrogram(h1), Rowv = stats::as.dendrogram(h2),
         dendrogram = dd, col = col, scale = scale,
         symkey = sym0, symbreaks = sym0, trace = "none",
@@ -990,7 +990,7 @@ gx.heatmap <- function(gx, values = NULL,
   } else if (plot.method == "heatmap.3" && is.na(cc0) && is.na(cc1)) {
     if (verbose > 1) cat("plotting with heatmap.3 no ColSideColors\n")
     if (is.null(h1) && is.null(h2)) {
-      playbase::heatmap.3(gx,
+      heatmap.3(gx,
         Colv = NULL, Rowv = NULL,
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none",
@@ -998,7 +998,7 @@ gx.heatmap <- function(gx, values = NULL,
         ...
       )
     } else {
-      playbase::heatmap.3(gx,
+      heatmap.3(gx,
         Colv = stats::as.dendrogram(h1), Rowv = stats::as.dendrogram(h2),
         dendrogram = dd, col = col, scale = "none",
         symkey = sym0, symbreaks = sym0, trace = "none",
@@ -1190,7 +1190,7 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
       labcol[h2$order[!k2]] <- ""
       labcol[h2$order[k2]] <- paste(". . . +", labcol[h2$order[k2]])
     }
-    playbase::heatmap.3(kx,
+    heatmap.3(kx,
       Colv = stats::as.dendrogram(h2), Rowv = stats::as.dendrogram(h1),
       col = my.col, labRow = labrow, labCol = labcol,
       ColSideColors = cc0, ...
@@ -1775,14 +1775,14 @@ heatmap.3 <- function(x,
     )
   }
   graphics::axis(1, 1:nc,
-    labels = labCol, las = 2, line = -0.5, tick = 0,
+    labels = labCol, las = 2, line = -0.2, tick = 0, 
     cex.axis = cexCol
   )
   if (!is.null(xlab)) {
     graphics::mtext(xlab, side = 1, line = margins[1] - 1.25)
   }
   graphics::axis(4, iy,
-    labels = labRow, las = 2, line = -0.5, tick = 0,
+    labels = labRow, las = 2, line = -0.2, tick = 0,
     cex.axis = cexRow
   )
   if (!is.null(ylab)) {

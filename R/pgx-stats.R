@@ -265,24 +265,29 @@ stats.numsig <- function(X, y, lfc = 1, q = 0.05, set.na = NULL,
   avx <- res[, grep("AveExpr", colnames(res))]
   ldiff <- apply(avx, 1, function(x) diff(range(x)))
   sig <- (abs(ldiff) > lfc & res$adj.P.Val < q)
-  nsig <- sum(sig, na.rm = TRUE)
   sig.genes <- rownames(res)[which(sig)]
+  fc0 <- array(ldiff, dimnames = list(rownames(res)))
+  names(fc0) <- toupper(names(fc0))
 
   ## Gene sets
-  fc0 <- array(ldiff, dimnames = list(rownames(res)))
-  sel <- grep("^go|pathway|geo_human", rownames(playdata::GSETxGENE),
-    value = TRUE, ignore.case = TRUE
-  )
-  gmt <- playdata::GSETxGENE[sel, ]
-  gsa <- playbase::gset.rankcor(cbind(fc0), Matrix::t(gmt), compute.p = TRUE)
-  gsa <- data.frame(rho = gsa$rho[, 1], p.value = gsa$p.value[, 1], q.value = gsa$q.value[, 1])
-  gsa <- gsa[order(gsa$p.value), ]
-  sig.gs <- (gsa$q.value < q)
-  nsets <- sum(sig.gs, na.rm = TRUE)
-  sig.gsets <- rownames(gsa)[which(sig.gs)]
+  is.symbol <- (mean(names(fc0) %in% colnames(playdata::GSETxGENE)) > 0.2)
+  sig.gsets <- c()
+  gsa <- list(rho=NULL, p.value=NULL, q.value=NULL)
+  if(is.symbol) {
+    sel <- grep("^go|pathway|geo_human", rownames(playdata::GSETxGENE),
+      value = TRUE, ignore.case = TRUE
+      )
+    gmt <- playdata::GSETxGENE[sel, ]
+    gsa <- playbase::gset.rankcor(cbind(fc0), Matrix::t(gmt), compute.p = TRUE)
+    gsa <- data.frame(rho = gsa$rho[, 1], p.value = gsa$p.value[, 1], q.value = gsa$q.value[, 1])
+    gsa <- gsa[order(gsa$p.value), ]
+    sig.gs <- (gsa$q.value < q)
+    sig.gsets <- rownames(gsa)[which(sig.gs)]
+  }
+  
   if (verbose) {
-    cat("nsig.genes = ", nsig, "\n")
-    cat("nsig.gsets = ", nsets, "\n")
+    cat("nsig.genes = ", length(sig.genes), "\n")
+    cat("nsig.gsets = ", length(sig.gsets), "\n")
   }
 
   list(

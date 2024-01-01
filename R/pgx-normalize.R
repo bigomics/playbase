@@ -345,13 +345,6 @@ normalizeCounts <- function(counts,
     s0 <- mean(apply(S1, 2, sd, na.rm = TRUE))
     zdist <- qnorm(1 - q.zero) ## SD distance
     zero.point <- m0 - zdist * s0
-  } else if (method == "sdc") {
-    ## SD is calculated on centered feature values
-    C1 <- S1 - rowMeans(S1, na.rm = TRUE)
-    m0 <- median(S1, na.rm = TRUE)
-    s0 <- mean(apply(C1, 2, sd, na.rm = TRUE))
-    zdist <- qnorm(1 - q.zero) ## SD distance
-    zero.point <- m0 - zdist * s0
   } else if (method == "cpm") {
     median.tc <- median(colSums(2**S, na.rm = TRUE), na.rm = TRUE)
     median.tc
@@ -423,39 +416,36 @@ safe.logCPM <- function(x, t = 0.05, prior = 1, q = NULL) {
 }
 
 #' @export
-scale_counts <- function(counts, method, shift="clip", q.zero=0.01) {
+scale_counts <- function(counts, method, shift="clip") {
 
   eps <- 1e-20
   eps <- 0
-  X <- log2(counts)  ## zero counts become NA
+  X <- log2(counts)  ## zero counts become NA!
   X[is.infinite(X)] <- NA
   zero.point <- 0
   
-  if (method == "sd") {
-    ## SD is calculated on global feature values
-    m0 <- mean(apply(X, 2, median, na.rm = TRUE))
-    s0 <- mean(apply(X, 2, sd, na.rm = TRUE))
-    zdist <- qnorm(1 - q.zero) ## SD distance
-    zero.point <- m0 - zdist * s0
-  } else if (method == "sdc") {
-    ## SD is calculated on centered feature values
-    cX <- X - rowMeans(X, na.rm = TRUE)
-    m0 <- median(cX, na.rm = TRUE)
-    s0 <- mean(apply(cX, 2, sd, na.rm = TRUE))
-    zdist <- qnorm(1 - q.zero) ## SD distance
-    zero.point <- m0 - zdist * s0
-  } else if (method == "cpm") {
+  if (method == "cpm") {
     median.tc <- median(colSums(counts, na.rm = TRUE), na.rm = TRUE)
-    a <- log2(median.tc / 1e6)
+    a <- log2(median.tc) - log2(1e6)
     zero.point <- a
   } else if (grepl("^m[0-9]", method)) {
     ## median centering
     mval <- as.numeric(substring(method, 2, 99))
+    dbg("[scale_counts] mval = ",mval)            
     a <- median(X, na.rm = TRUE) - mval
     zero.point <- a
-  } else if (method == "quantile") {
-    ## determine by direct quantile
-    zero.point <- quantile(X, probs = q.zero, na.rm = TRUE)
+  } else if (grepl("^z[0-9]+", method)) {
+    ## zero at z-distance from median
+    zdist <- as.numeric(substring(method, 2, 99))
+    dbg("[scale_counts] zdist = ",zdist)      
+    m0 <- mean(apply(X, 2, median, na.rm = TRUE))
+    s0 <- mean(apply(X, 2, sd, na.rm = TRUE))
+    zero.point <- m0 - zdist * s0
+  } else if (grepl("^q[0.][.0-9]+", method)) {
+    ## direct quantile
+    probs <- as.numeric(substring(method, 2, 99))
+    dbg("[scale_counts] q.probs = ",probs)
+    zero.point <- quantile(X, probs = probs, na.rm = TRUE)
   } else {
     stop("unknown method = ", method)
   }

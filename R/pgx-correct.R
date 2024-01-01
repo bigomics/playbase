@@ -1036,13 +1036,10 @@ detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
 
 #' @export
 bc.plotCovariateHeatmap <- function(bc.res) {
-
-    bc <- detectBatchEffects(X, samples, pheno, contrasts = NULL,
-                             params = c("statistical", "technical", "pca"),
-                             p.pca = 0.5, p.pheno = 0.05,
-                             k.pca = 10, nv = 2, xrank = NULL) 
-
-    
+    ## bc <- detectBatchEffects(X, samples, pheno, contrasts = NULL,
+    ##                          params = c("statistical", "technical", "pca"),
+    ##                          p.pca = 0.5, p.pheno = 0.05,
+    ##                          k.pca = 10, nv = 2, xrank = NULL) 
     B <- bc.res$covariates_plus
     rho <- cor(apply(B,2,rank))
     colnames(rho) <- rep("",ncol(rho))
@@ -1347,16 +1344,21 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
   ## compute relative genes/geneset overlap
   message("computing overlap...")
   g1 <- numsig[[ref]]$genes
-  s1 <- numsig[[ref]]$gsets
   n1 <- sapply(numsig, function(s) length(intersect(s$genes, g1)))
   n2 <- sapply(numsig, function(s) length(union(s$genes, g1)))
-  m1 <- sapply(numsig, function(s) length(intersect(s$gsets, s1)))
-  m2 <- sapply(numsig, function(s) length(union(s$gsets, s1)))
   ##  res <- cbind(res, r.genes=r1, r.gsets=r2, s.genes=s1, s.gsets=s2)
   r.genes <- n1 / (1e-3 + n2)
-  r.gsets <- m1 / (1e-3 + m2)
-  res <- cbind(res, r.genes, r.gsets)
+  res <- cbind(res, r.genes)
 
+  any.gsets <- any(sapply(numsig, function(s) length(s$gsets)>0))
+  if(any.gsets) {
+      s1 <- numsig[[ref]]$gsets
+      m1 <- sapply(numsig, function(s) length(intersect(s$gsets, s1)))
+      m2 <- sapply(numsig, function(s) length(union(s$gsets, s1)))
+      r.gsets <- m1 / (1e-3 + m2)
+      res <- cbind(res, r.gsets)
+  }
+  
   ## centered top
   xlist1 <- lapply(xlist, function(x) {
     x <- head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)), ], 1000)
@@ -1402,9 +1404,10 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
 
   ## use only these for score
   sel <- c("genes","gsets","SNR","pc1.ratio","silhouette")
+  sel <- intersect(sel, colnames(res))
   
 ##  score <- res.score * (silhouette / silhouette[1])**1
-  overall.score <- t(t(res[,sel]) / (1e-8 + res[ref,sel]))
+  overall.score <- t(t(1e-4 + res[,sel]) / (1e-4 + res[ref,sel]))
   overall.score[,"silhouette"] <- overall.score[,"silhouette"]**2 ## give more weight
   overall.score <- exp(rowMeans(log(overall.score)))  ## geometric mean
   
@@ -1563,9 +1566,6 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
     gridExtra::grid.arrange(grobs = plt, ncol = ncol, padding = unit(0.0, "line"))
   }    
 }
-
-
-
 
 #' @export
 bc.CovariateAnalysisPlot <- function (bc.results, k = 1:3, par = TRUE, col=1) {
