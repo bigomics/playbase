@@ -423,7 +423,7 @@ pgx.createPGX <- function(counts,
 
     # Conform gene table
     keep <- intersect(unique(pgx$genes$gene_name), rownames(pgx$counts))
-    pgx$genes <- pgx$genes[keep, , drop = FALSE]
+    pgx$genes <- pgx$genes[keep, , drop = FALSE]  ## IK. NOT ALIGNED??!!
   }
 
 
@@ -441,10 +441,14 @@ pgx.createPGX <- function(counts,
     pgx$counts <- pgx$counts[keep, , drop = FALSE]
     if (!is.null(pgx$X)) {
       keep <- intersect(keep, rownames(pgx$X))
-      pgx$X <- pgx$X[keep, , drop = FALSE]
+      pgx$X <- pgx$X[keep, , drop = FALSE]  ##  NOT ALIGNED???
     }
   }
 
+  ## NOTE: generally pgx$X, pgx$counts, and pgx$genes should always be
+  ## aligned to prevent mistakes and unneeded matching of tables.
+  ##
+  
 
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
@@ -453,7 +457,9 @@ pgx.createPGX <- function(counts,
 
 
   ## -------------------------------------------------------------------
-  ## Batch-correction (if requested. WARNING: changes counts )
+  ## Batch-correction (if requested. WARNING: changes counts ). This
+  ## may be taken out if more general pre-processing will be done
+  ## before/inside createPGX.
   ## -------------------------------------------------------------------
   
   has.batchpar <- any(grepl("^batch|^batch2", colnames(pgx$samples), ignore.case = TRUE))
