@@ -559,7 +559,9 @@ pgx.custom_annotation <- function(pgx, custom_annot = NULL) {
 #' }
 #' @export
 detect_probe_DEPRECATED <- function(probes, organism) {
-  # Get org database
+
+  ## Get org database
+  message("[detect_probe_DEPRECATED] organism = ", organism)
   if (organism == "Human") {
     org_db <- org.Hs.eg.db::org.Hs.eg.db
   } else if (organism == "Mouse") {
@@ -573,7 +575,8 @@ detect_probe_DEPRECATED <- function(probes, organism) {
     "ENSEMBL", "ENSEMBLTRANS", "SYMBOL",
     "REFSEQ", "UNIPROT", "ACCNUM"
   )
-  key_matches <- vector("character", length(keytypes))
+    ##  key_matches <- vector("character", length(keytypes))
+  key_matches <- rep(0L, length(keytypes))    
   names(key_matches) <- keytypes
 
   # Subset probes if too many
@@ -581,6 +584,11 @@ detect_probe_DEPRECATED <- function(probes, organism) {
     probes <- probes[as.integer(seq(1, length(probes), 100))]
   }
 
+  ## remove versioning postfix from ensembl
+  if( mean(grepl("^ENST",probes)) > 0.5 ) {
+    probes <- sub("[.][0-9]+$","",probes)  
+  }
+    
   # Iterate over probe types
   for (key in keytypes) {
     n <- 0
@@ -597,7 +605,8 @@ detect_probe_DEPRECATED <- function(probes, organism) {
     key_matches[key] <- n
   }
 
-  # Return top match
+  ## Return top match
+##  key_matches    
   if (all(key_matches == 0)) {
     stop("Probe type not found, please, check your probes")
   } else {

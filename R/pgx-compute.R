@@ -321,33 +321,31 @@ pgx.createPGX <- function(counts,
   if (is.na(use_biomart)) {
     use_biomart <- !(organism %in% c("Mouse", "Human", "Rat"))
   }
-  if (!use_biomart && organism %in% c("Mouse", "Human", "Rat")) {
+
+  if (organism == "No organism") {
+    message("[createPGX] Using custom gene annotation table")
+    pgx <- pgx.custom_annotation(pgx, custom_annot = annot_table)
+  } else if (!use_biomart && organism %in% c("Mouse", "Human", "Rat")) {
     message("[createPGX] annotating genes using R libraries")
     probe_type <- detect_probe_DEPRECATED(
       probes = rownames(pgx$counts),
       organism = organism
     )
-
     pgx$genes <- ngs.getGeneAnnotation_DEPRECATED(
       probes = rownames(pgx$counts),
       probe_type = probe_type,
       organism = organism
     )
-  }
-
-  if (!use_biomart && !(organism %in% c("Mouse", "Human", "Rat"))) {
+  } else if (!use_biomart && !(organism %in% c("Mouse", "Human", "Rat"))) {
     message("ERROR: organism '", organism, "' not supported using R libraries.")
     stop("ERROR: you must set 'use_biomart=TRUE' for organism: ", organism)
-  }
-
-  if (use_biomart && organism != "No organism") {
+  } else if (use_biomart) {
     message("[createPGX] Annotating genes using BiomaRt")
     pgx <- playbase::pgx.gene_table(pgx, organism = organism)
-  } else if (organism == "No organism") {
-    message("[createPGX] Using custom gene annotation table")
-    pgx <- pgx.custom_annotation(pgx, custom_annot = annot_table)
+  } else {
+    stop("[pgx.createPGX] FATAL : getGeneAnnotation/pgx.gene_table if-else error")
   }
-
+  
   if (is.null(pgx$genes)) {
     stop("[createPGX] FATAL: Could not get gene annotation!")
   } else {
@@ -374,7 +372,7 @@ pgx.createPGX <- function(counts,
     # Sum columns of rows with the same gene symbol
     selected_symbols <- symbol[mapped_symbols]
     rownames(pgx$counts) <- selected_symbols
-    rownames(pgx$genes) <- selected_symbols
+    ## rownames(pgx$genes) <- selected_symbols   ## IK. duplicated rownames error
     if (sum(duplicated(selected_symbols)) > 0) {
       message("[createPGX:autoscale] duplicated rownames detected: summing up rows (counts).")
       pgx$counts <- rowsum(pgx$counts, selected_symbols)
@@ -400,7 +398,11 @@ pgx.createPGX <- function(counts,
       pgx$genes <- merge(pgx$genes, features_collapsed_by_symbol, by = "symbol")
       rownames(pgx$genes) <- pgx$genes$symbol
       pgx$counts <- pgx$counts[rownames(pgx$genes), , drop = FALSE]
+      if (!is.null(pgx$X)) {
+          pgx$X <- pgx$X[rownames(pgx$counts),]
+      }
     }
+    
   }
 
 
@@ -487,7 +489,7 @@ pgx.createPGX <- function(counts,
   ## Add GMT
   ## -------------------------------------------------------------------
   
-  # If no organism, no custom annotation table and no custom geneset, then create empty GMT
+  ## If no organism, no custom annotation table and no custom geneset, then create empty GMT
   if (pgx$organism == "No organism" && is.null(annot_table) && is.null(custom.geneset)) {
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
   } else {
@@ -850,6 +852,13 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   }
   G <- G[rownames(G) %in% human_genes, , drop = FALSE]
 
+  dbg("[pgx.add_GMT] dim.G = ", dim(G))
+  if(nrow(G)==0) {
+      message("[pgx.add_GMT] WARNING : no overlapping genes. no GMT added.")
+      return(pgx)
+  }
+    
+    
   # Change HUMAN gene names to species symbols if NOT human and human_ortholog column is NOT NULL
   if (pgx$organism != "Human" && !is.null(pgx$genes$human_ortholog)) {
     rownames(G) <- pgx$genes$symbol[match(rownames(G), pgx$genes$human_ortholog)]
