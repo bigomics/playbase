@@ -898,7 +898,7 @@ pgx.computeTechnicalEffects <- function(X, is.count = FALSE, nmin = 3, nv = 2) {
 #' @export
 detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
                                params = c("statistical", "technical", "pca"),
-                               p.pca = 0.5, p.pheno = 0.05,
+                               p.pca = 0.5, p.pheno = 0.05, force = FALSE,
                                k.pca = 10, nv = 2, xrank = NULL) {
   if (0) {
     p.pca <- 0.5
@@ -910,6 +910,13 @@ detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
     params <- c("statistical")
     params <- c("technical")    
   }
+
+  if( force == TRUE ) {
+      p.pca <- 1
+      p.pheno <- 0
+      ##params = c("statistical", "technical", "pca")
+  }
+  
   if (!all(params %in% c("statistical", "technical", "pca"))) {
     params1 <- setdiff(params, c("statistical", "technical", "pca"))
     stop("[detectBatchEffects] unknown parameter type: ", params1)
@@ -1114,6 +1121,13 @@ removeTechnicalEffects <- function(X, samples, y, p.pheno = 0.05, p.pca = 0.5,
 runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
                                       combatx = FALSE, sc = FALSE, prefix = "",
                                       methods = NULL, remove.failed = TRUE) {
+
+  if(0) {
+    controls = NULL; ntop = 2000;
+    combatx = FALSE; sc = FALSE; prefix = "";
+    methods = NULL; remove.failed = TRUE
+  }
+    
   mod <- model.matrix(~y)
   nlevel <- length(unique(y[!is.na(y)]))
   if (ntop < Inf) {
@@ -1380,7 +1394,7 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
       }
       pos <- lapply(xlist1, function(x)  CLUSTFUN(x))
     }
-    pheno0 <- pheno
+    pheno0 <- as.character(pheno)
     pheno0[is.na(pheno0)] <- "NA"
     silhouette <- sapply( pos, function(p) {
       score <- cluster::silhouette(as.integer(factor(pheno0)), stats::dist(p))
@@ -1493,8 +1507,8 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
       xx <- xx - rowMeans(xx)
       xx <- abs(xx)**0.5 * sign(xx)
       gx.imagemap(xx, main = m, cex.main = 1.4, cex = 0)
-      mtext("samples", 1, line = 0.5)
-      mtext("genes", 2, line = 0.5)
+      mtext("samples", 1, line = 0.5, las=1)
+      mtext("genes", 2, line = 0.5, las=3)
     }
   }
 
@@ -1667,11 +1681,12 @@ compare_batchcorrection_methods  <- function(X, samples, pheno, contrasts,
                                              ntop = 4000, xlist.init = list(),
                                              ref = NULL ) {
 
-## methods <- c("uncorrected","ComBat", "limma","RUV","SVA","NNM")
+    ## methods <- c("uncorrected","ComBat", "limma","RUV","SVA","NNM")
+    ##ntop = 4000; xlist.init = list()
   batch <- NULL
   pars <- get_model_parameters(X, samples, pheno=pheno, contrasts=contrasts)
   
-  message("Running methods...")  
+  message("Running batch-correction methods...")  
   xlist <- runBatchCorrectionMethods(
     X = X,
     batch = pars$batch,
@@ -1685,6 +1700,11 @@ compare_batchcorrection_methods  <- function(X, samples, pheno, contrasts,
   )         
   names(xlist)
   if(length(xlist.init)>0) xlist <- c( xlist.init, xlist )
+
+
+    dbg("[compare_batchcorrection_methods] names.xlist = ",names(xlist))
+    dbg("[compare_batchcorrection_methods] xlist.nrow = ",sapply(xlist,nrow))    
+    dbg("[compare_batchcorrection_methods] xlist.ncol = ",sapply(xlist,ncol))
     
   ## PCA is faster than UMAP
   pos <- list()
@@ -1868,18 +1888,19 @@ svaCorrect <- function(X, y) {
 }
 
 #' @export
-ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.2) {
+ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
   if (any(is.na(X))) {
     stop("[ruvCorrect] cannot handle missing values")
   }
 
   ## F-test using limma just variables
   if (length(controls) == 1 && is.numeric(controls[1])) {
-    F <- gx.limmaF(X, y, lfc = 0, fdr = 1, method = 1, compute.means = FALSE, verbose = 0)
-    F <- F[rownames(X), ]
+    ii <- which(!duplicated(rownames(X)))
+    F <- gx.limmaF(X[ii,], y, lfc = 0, fdr = 1, method = 1, sort.by='none', compute.means = FALSE, verbose = 0)
     nc <- pmax(nrow(X) * as.numeric(controls), 1)
     sel <- head(order(-F$P.Value), nc)
     controls <- rownames(F)[sel]
+    controls <- intersect(controls, rownames(X))
   }
   message(paste("[ruvCorrect] Number of control features:", length(controls)))
 
@@ -1897,7 +1918,7 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.2) {
   }
   message(paste("[ruvCorrect] Number of significant surrogate variables is:", k))
 
-  M <- model.matrix(~ y - 1)
+  M <- model.matrix(~ 0 + y)
   rownames(M) <- colnames(X)
 
   # Actually run correction
@@ -1912,7 +1933,6 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.2) {
   } else {
     stop("[ruvCorrect] unknown RUV type", type)
   }
-
   ruvX
 }
 

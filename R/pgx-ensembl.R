@@ -31,8 +31,6 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, use_biomart = NULL) {
   # Safety checks
   stopifnot(is.list(pgx))
   probes <- rownames(pgx$counts)
-
-  message("[pgx.addGeneAnnotation] 1: organism = ", organism)
   
   if(is.null(organism) && !is.null(pgx$organism) ) {
     organism <- pgx$organism
@@ -43,8 +41,6 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, use_biomart = NULL) {
   if(is.null(organism) ) {
     stop("could not determine organism. please specify")
   }
-
-  message("[pgx.addGeneAnnotation] 2: organism = ", organism)
   
   # Get gene table
   genes <- ngs.getGeneAnnotation(
