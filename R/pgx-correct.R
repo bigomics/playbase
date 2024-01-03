@@ -644,9 +644,9 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
     if (horiz) {
       plt <- plot_ggbarplot((R),
         ylab = "", srt = 0, horiz = TRUE,
-        legend.cex = 1.1 * text.cex,
-        label.cex = 1.1 * text.cex,
-        axis.cex = 1.1 * text.cex,
+        legend.cex = 1.0 * text.cex,
+        label.cex = 1.15 * text.cex,
+        axis.cex = 1.05 * text.cex,
         group.name = ""
       )
       plt <- plt + ggplot2::theme(
@@ -657,9 +657,9 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
     } else {
       plt <- plot_ggbarplot(t(R),
         ylab = stat0, srt = 45, horiz = FALSE,
-        legend.cex = 1.1 * text.cex,
-        label.cex = 1.1 * text.cex,
-        axis.cex = 1.1 * text.cex,
+        legend.cex = 1.0 * text.cex,
+        label.cex = 1.15 * text.cex,
+        axis.cex = 1.05 * text.cex,
         group.name = ""
       ) +
         ggplot2::theme(
