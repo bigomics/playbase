@@ -33,33 +33,33 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, use_biomart = NULL) {
   probes <- rownames(pgx$counts)
 
   message("[pgx.addGeneAnnotation] 1: organism = ", organism)
-  
-  if(is.null(organism) && !is.null(pgx$organism) ) {
+
+  if (is.null(organism) && !is.null(pgx$organism)) {
     organism <- pgx$organism
   }
-  if(is.null(organism) && !is.null(pgx$organism) ) {
+  if (is.null(organism) && !is.null(pgx$organism)) {
     organism <- guess_organism(probes)
   }
-  if(is.null(organism) ) {
+  if (is.null(organism)) {
     stop("could not determine organism. please specify")
   }
 
   message("[pgx.addGeneAnnotation] 2: organism = ", organism)
-  
+
   # Get gene table
   genes <- ngs.getGeneAnnotation(
     probes = probes,
     organism = organism,
-    use_biomart = use_biomart  ## auto-select
+    use_biomart = use_biomart ## auto-select
   )
 
-  all_genes  <- sort(genes$symbol)
+  all_genes <- sort(genes$symbol)
   probe_type <- guess_probetype(probes)
-  
+
   # Return data
   pgx$genes <- genes
-  pgx$all_genes <- all_genes    ## Why need this at all?? unneeded baggage.. (IK)
-  pgx$probe_type <- probe_type  ## Why need this at all?? unneeded baggage.. (IK)
+  pgx$all_genes <- all_genes ## Why need this at all?? unneeded baggage.. (IK)
+  pgx$probe_type <- probe_type ## Why need this at all?? unneeded baggage.. (IK)
 
   return(pgx)
 }
@@ -122,11 +122,11 @@ pgx.gene_table.OLD <- function(pgx, organism) {
     message("[pgx.gene_table] WARNING. could not reach ensembl server to get gene annotation")
     return(pgx)
   }
-  
+
   # Return data
   pgx$genes <- genes
-  pgx$all_genes <- all_genes  ## Why need this?? unneeded baggage.. (IK)
-  pgx$probe_type <- probe_type  ## Why need this?? unneeded baggage.. (IK)
+  pgx$all_genes <- all_genes ## Why need this?? unneeded baggage.. (IK)
+  pgx$probe_type <- probe_type ## Why need this?? unneeded baggage.. (IK)
 
   return(pgx)
 }
@@ -171,54 +171,53 @@ pgx.gene_table.OLD <- function(pgx, organism) {
 #' head(result)
 #' }
 #' @export
-ngs.getGeneAnnotation <- function(probes, organism = NULL, use_biomart = NULL ) {
-
-  if(is.null(organism)) {
-    organism <- guess_organism( probes )
+ngs.getGeneAnnotation <- function(probes, organism = NULL, use_biomart = NULL) {
+  if (is.null(organism)) {
+    organism <- guess_organism(probes)
   }
-  if(is.null(organism)) {
+  if (is.null(organism)) {
     warning("[getGeneAnnotation] ERROR could not detect organism")
     return(NULL)
   }
-  
+
   message("[ngs.getGeneAnnotation] organism = ", organism)
 
-  is.primary_organism <- (tolower(organism) %in% c("human","mouse","rat"))
-  if(is.null(use_biomart) && is.primary_organism ) {
+  is.primary_organism <- (tolower(organism) %in% c("human", "mouse", "rat"))
+  if (is.null(use_biomart) && is.primary_organism) {
     use_biomart <- FALSE
   }
-  if(is.null(use_biomart) && !is.primary_organism ) {
+  if (is.null(use_biomart) && !is.primary_organism) {
     use_biomart <- TRUE
   }
 
   genes <- NULL
-  
+
   ## first try ORGDB for human, mouse, rat
-  if( is.null(genes) && !use_biomart ) {
+  if (is.null(genes) && !use_biomart) {
     message("[getGeneAnnotation] >>> annotating genes using ORGDB libraries")
-    probe_type <- guess_probetype( probes, for.biomart = FALSE)
-    if(is.null(probe_type)) stop("probe_type is NULL")
+    probe_type <- guess_probetype(probes, for.biomart = FALSE)
+    if (is.null(probe_type)) stop("probe_type is NULL")
     message("[ngs.getGeneAnnotation] probe_type = ", probe_type)
-#    clean.probes <- probes
-#    if(grep("ENSEMBL",probe_type)) clean.probes <- sub("[.][0-9]+","",probes)
+    #    clean.probes <- probes
+    #    if(grep("ENSEMBL",probe_type)) clean.probes <- sub("[.][0-9]+","",probes)
     genes <- ngs.getGeneAnnotation_ORGDB(
       probes = probes,
       organism = organism,
       probe_type = probe_type
     )
-#    rownames(genes) <- probes    
-#    genes$feature <- probes
-#    genes$gene_name <- probes    
+    #    rownames(genes) <- probes
+    #    genes$feature <- probes
+    #    genes$gene_name <- probes
   }
 
   ## try biomaRt for the rest
-  if( is.null(genes) ) {
+  if (is.null(genes)) {
     message("[ngs.getGeneAnnotation] >>> annotating genes using biomaRt")
-    probe_type <- guess_probetype( probes, for.biomart = TRUE )    
+    probe_type <- guess_probetype(probes, for.biomart = TRUE)
     message("[ngs.getGeneAnnotation] probe_type = ", probe_type)
-    if(is.null(probe_type)) stop("probe_type is NULL")
-    mart <- use_mart(organism) 
-    if(is.null(mart)) {
+    if (is.null(probe_type)) stop("probe_type is NULL")
+    mart <- use_mart(organism)
+    if (is.null(mart)) {
       message("[ngs.getGeneAnnotation] FAIL : could not connect to mart")
       return(NULL)
     }
@@ -230,7 +229,7 @@ ngs.getGeneAnnotation <- function(probes, organism = NULL, use_biomart = NULL ) 
     )
   }
 
-  if(is.null(genes)) {
+  if (is.null(genes)) {
     warning("[getGeneAnnotation] ERROR : could not create gene annotation")
     return(NULL)
   }
@@ -243,10 +242,9 @@ ngs.getGeneAnnotation_BIOMART <- function(
     mart = NULL,
     probe_type = NULL,
     verbose = TRUE) {
-
   # Check mart
   if (is.null(mart)) {
-    mart <- use_mart(organism) 
+    mart <- use_mart(organism)
     if (is.null(mart)) stop("ERROR : could not establish connection to MART.")
   }
 
@@ -259,7 +257,7 @@ ngs.getGeneAnnotation_BIOMART <- function(
 
   if (is.null(probe_type)) {
     ##  probe_type <- detect_probe.DEPRECATED(probes, mart)
-    probe_type <- guess_probetype(probes, for.biomart = TRUE )    
+    probe_type <- guess_probetype(probes, for.biomart = TRUE)
   }
 
   # Select attributes
@@ -366,7 +364,7 @@ ngs.getGeneAnnotation_BIOMART <- function(
 
 #' @title Get gene annotation data
 #' @description Retrieves gene annotation data from an organism-specific
-#' annotation package. 
+#' annotation package.
 #'
 #' @param probes Character vector of gene/transcript identifiers.
 #' @param probe_type Type of identifiers provided in probes (e.g. "ENSEMBL").
@@ -385,12 +383,11 @@ ngs.getGeneAnnotation_BIOMART <- function(
 #' }
 #' @export
 ngs.getGeneAnnotation_ORGDB <- function(probes, organism, probe_type) {
-
   organism <- tolower(organism)
-  if(is.null(probe_type)) {
-      stop("must provide probe_type")
+  if (is.null(probe_type)) {
+    stop("must provide probe_type")
   }
-  
+
   # Get org database and columns request
   if (organism == "human") {
     org_db <- org.Hs.eg.db::org.Hs.eg.db
@@ -403,10 +400,12 @@ ngs.getGeneAnnotation_ORGDB <- function(probes, organism, probe_type) {
     cols_req <- c("SYMBOL", "GENENAME", "CHR", "CHRLOC", "GENETYPE")
   }
 
-  if(!probe_type %in% AnnotationDbi::keytypes(org_db)) {
-    warning("[ngs.getGeneAnnotation_ORGDB] ERROR : probe_type not in keytypes: ",probe_type)
-    warning("[ngs.getGeneAnnotation_ORGDB] keytypes available: ",
-      paste(AnnotationDbi::keytypes(org_db),collapse=" ") )    
+  if (!probe_type %in% AnnotationDbi::keytypes(org_db)) {
+    warning("[ngs.getGeneAnnotation_ORGDB] ERROR : probe_type not in keytypes: ", probe_type)
+    warning(
+      "[ngs.getGeneAnnotation_ORGDB] keytypes available: ",
+      paste(AnnotationDbi::keytypes(org_db), collapse = " ")
+    )
     return(NULL)
   }
 
@@ -436,10 +435,10 @@ ngs.getGeneAnnotation_ORGDB <- function(probes, organism, probe_type) {
   }
 
   ## if ENSEMBL get original probe names with version
-  if ( probe_type == "ENSEMBL" ) {
+  if (probe_type == "ENSEMBL") {
     d$ENSEMBL <- probes[match(d$ENSEMBL, clean.probes)]
   }
-  if ( probe_type == "ENSEMBLTRANS" ) {
+  if (probe_type == "ENSEMBLTRANS") {
     d$ENSEMBLTRANS <- probes[match(d$ENSEMBLTRANS, clean.probes)]
   }
 
@@ -472,7 +471,7 @@ ngs.getGeneAnnotation_ORGDB <- function(probes, organism, probe_type) {
   # match per gene/probe, we remove duplicates
   d <- d[!duplicated(d$feature), ]
   rownames(d) <- d$feature
-  ii <- match(probes, rownames(d))  
+  ii <- match(probes, rownames(d))
   d <- d[ii, , drop = FALSE]
   return(d)
 }
@@ -522,8 +521,8 @@ probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE)
 }
 
 use_mart <- function(organism) {
-  organism <- capitalize(organism)  ## in utils.R
-  message("[use_mart] connecting to bioMART server for organism ",organism)      
+  organism <- capitalize(organism) ## in utils.R
+  message("[use_mart] connecting to bioMART server for organism ", organism)
   species_info <- playbase::SPECIES_TABLE[species_name == organism]
   # Some species appear in more than one mart, select ensembl only to avoid confusion
   if (nrow(species_info) > 1) {
@@ -589,63 +588,62 @@ use_mart <- function(organism) {
 #'
 #' @export
 guess_probetype <- function(probes, organism = NULL, for.biomart = FALSE) {
-
   ## 1. determine probe type using regular expression
   probe_type <- xbioc::idtype(probes)
-  if(probe_type == '') probe_type <- NULL
+  if (probe_type == "") probe_type <- NULL
 
   ## 2. match with human/mouse/rat genesets
-  if( is.null(probe_type) ) {
+  if (is.null(probe_type)) {
     ## matches SYMBOL for human, mouse and rat
     symbol <- as.list(org.Hs.eg.db::org.Hs.egSYMBOL)
     avg.match <- mean(toupper(probes) %in% symbol)
-    if( avg.match > 0.5 ) probe_type <- "SYMBOL"
-  }   
+    if (avg.match > 0.5) probe_type <- "SYMBOL"
+  }
 
   ## 3. check if they are proteins
-  if(is.null(probe_type) ) {
+  if (is.null(probe_type)) {
     type.regex <- list(
       "UNIPROT" = "^[OPQ][0-9]",
       "REFSEQ"  = "^N[MP]_[0-9]+$"
     )
-    avg.match <- sapply( type.regex, function(s) mean(grepl(s, probes)))
-    if( any(avg.match > 0.5) ) {
+    avg.match <- sapply(type.regex, function(s) mean(grepl(s, probes)))
+    if (any(avg.match > 0.5)) {
       probe_type <- names(which.max(avg.match))
     }
   }
 
-  KEYTYPES = c("ENSEMBL","ENSEMBLPROT","ENSEMBLTRANS","ENTREZID","REFSEQ","SYMBOL","UNIPROT")
-  if(!probe_type %in% KEYTYPES) {
-    warning("[guess_probetype] ERROR : unsupported probe_type: ",probe_type)
-    warning("[guess_probetype] keytypes available: ",KEYTYPES)    
+  KEYTYPES <- c("ENSEMBL", "ENSEMBLPROT", "ENSEMBLTRANS", "ENTREZID", "REFSEQ", "SYMBOL", "UNIPROT")
+  if (!probe_type %in% KEYTYPES) {
+    warning("[guess_probetype] ERROR : unsupported probe_type: ", probe_type)
+    warning("[guess_probetype] keytypes available: ", KEYTYPES)
     return(NULL)
   }
 
   ## for biomart we have different nomenclature
-  if(for.biomart) {
+  if (for.biomart) {
     keytype2biomart <- c(
-      "ENSEMBL"      = "ensembl_gene_id",
-      "ENSEMBLTRANS" = "ensembl_transcript_id", 
-      "ENSEMBLPROT"  = "ensembl_peptide_id", 
-      "SYMBOL"       = "external_gene_name",
-      "UNIPROT"      = "uniprot_gn_id", 
-##    "REFSEQPROT"   = "refseq_peptide",
-      "REFSEQ"       = "refseq_mrna"
+      "ENSEMBL" = "ensembl_gene_id",
+      "ENSEMBLTRANS" = "ensembl_transcript_id",
+      "ENSEMBLPROT" = "ensembl_peptide_id",
+      "SYMBOL" = "external_gene_name",
+      "UNIPROT" = "uniprot_gn_id",
+      ##    "REFSEQPROT"   = "refseq_peptide",
+      "REFSEQ" = "refseq_mrna"
     )
-    probe_type <- keytype2biomart[ probe_type ]
+    probe_type <- keytype2biomart[probe_type]
 
     ## add version if versioned
-    if(probe_type %in% c("ensembl_gene_id","ensembl_transcript_id")) {
-        has.version <- (mean(grepl("[.][0-9]+$", probes)) > 0.8)
-        if(has.version) probe_type <- paste0(probe_type,"_version")
+    if (probe_type %in% c("ensembl_gene_id", "ensembl_transcript_id")) {
+      has.version <- (mean(grepl("[.][0-9]+$", probes)) > 0.8)
+      if (has.version) probe_type <- paste0(probe_type, "_version")
     }
   }
 
-  if(is.null(probe_type) || probe_type == "") {
+  if (is.null(probe_type) || probe_type == "") {
     warning("[guess_probe] Could not guess probe_type. Please provide.")
   } else {
     message("[guess_probe] auto-detected probe_type = ", probe_type)
-  }  
+  }
   probe_type
 }
 
@@ -657,17 +655,17 @@ guess_organism <- function(probes) {
     "Rat" = "^ENSRNO|^[A-Z][a-z]{2,}"
   )
   org.match <- function(probes, org) {
-    mean(grepl(org.regex[[org]],probes))
+    mean(grepl(org.regex[[org]], probes))
   }
-  avg.match <- sapply( names(org.regex), function(g) org.match(probes, g))
+  avg.match <- sapply(names(org.regex), function(g) org.match(probes, g))
   avg.match
-  
-  if( any(avg.match > 0.33) ) {
+
+  if (any(avg.match > 0.33)) {
     organism <- names(which.max(avg.match))
   } else {
     organism <- NULL
   }
-  if(is.null(organism)) {
+  if (is.null(organism)) {
     warning("[guess_organism] Could not auto-detect organism.")
   } else {
     message("[guess_organism] auto-detected organism = ", organism)
@@ -676,29 +674,29 @@ guess_organism <- function(probes) {
 }
 
 #' @export
-id2symbol <- function(probes, organism="human") {
-  if(is.null(organism)) {
-    organism   <- guess_organism(probes)
-    if(is.null(organism)) {
+id2symbol <- function(probes, organism = "human") {
+  if (is.null(organism)) {
+    organism <- guess_organism(probes)
+    if (is.null(organism)) {
       stop("could not determine organism. please specify.")
     }
   }
   ## this auto-selects using ORG.DB or BIOMARRT
-  genes <- ngs.getGeneAnnotation(probes, organism = organism, use_biomart = NULL )
-  genes <- genes[match(probes,rownames(genes)),]  ## just to be sure
+  genes <- ngs.getGeneAnnotation(probes, organism = organism, use_biomart = NULL)
+  genes <- genes[match(probes, rownames(genes)), ] ## just to be sure
   ## just return the symbol
-  genes$symbol  
+  genes$symbol
 }
 
 
-##================================================================================
-##========================= DEPRECATED ===========================================
-##================================================================================
+## ================================================================================
+## ========================= DEPRECATED ===========================================
+## ================================================================================
 
 
 #' @title Detect probe type from probe set
 #' @description Detects the most likely probe type (ENSEMBL, SYMBOL, etc)
-#' for a set of gene/transcript identifiers. 
+#' for a set of gene/transcript identifiers.
 #'
 #' @param probes Character vector of gene/transcript identifiers.
 #' @param organism Organism name (e.g. "Human", "Mouse", "Rat").
@@ -718,8 +716,7 @@ id2symbol <- function(probes, organism="human") {
 #' }
 #' @export
 detect_probetype_ORGDB <- function(probes, organism) {
-
-  warning("DEPRECATED. Please use guess_probetype")  
+  warning("DEPRECATED. Please use guess_probetype")
 
   # Get org database
   if (tolower(organism) == "human") {
@@ -829,9 +826,8 @@ detect_probetype_ORGDB <- function(probes, organism) {
 #'
 #' @export
 detect_probe.DEPRECATED <- function(probes, mart = NULL, verbose = TRUE) {
-
   warning("DEPRECATED. Please use guess_probetype")
-  
+
   # Check mart
   if (is.null(mart)) {
     stop("[detect_probe] Mart not found. Specify a BioMart database to use.")
@@ -846,7 +842,7 @@ detect_probe.DEPRECATED <- function(probes, mart = NULL, verbose = TRUE) {
   if (n > 100L) n2 <- 100L else n2 <- n
   subsample <- sample(1:n, n2)
   subset_probes <- clean_probes[subsample]
-  
+
   # Vector with input types to check
   probe_types_to_check <- c(
     "ensembl_gene_id",
@@ -901,138 +897,134 @@ detect_probe.DEPRECATED <- function(probes, mart = NULL, verbose = TRUE) {
 
 
 
-##type=NULL;org="human";keep.na=FALSE
-id2symbol.DEPRECATED <- function(probes, type=NULL, org="human", keep.na=FALSE) {
-    require(org.Hs.eg.db)
-    require(org.Mm.eg.db)
-    require(org.Rn.eg.db)
+## type=NULL;org="human";keep.na=FALSE
+id2symbol.DEPRECATED <- function(probes, type = NULL, org = "human", keep.na = FALSE) {
+  require(org.Hs.eg.db)
+  require(org.Mm.eg.db)
+  require(org.Rn.eg.db)
 
-    ## strip postfix for ensemble codes
-    if(mean(grepl("^ENS",probes))>0.5) {
-        probes <- gsub("[.].*","",probes)
+  ## strip postfix for ensemble codes
+  if (mean(grepl("^ENS", probes)) > 0.5) {
+    probes <- gsub("[.].*", "", probes)
+  }
+
+  if (is.null(type) || is.null(org)) {
+    hs.list <- list(
+      "human.ensembl" = unlist(as.list(org.Hs.egENSEMBL)),
+      "human.ensemblTRANS" = unlist(as.list(org.Hs.egENSEMBLTRANS)),
+      # "human.unigene" = unlist(as.list(org.Hs.egUNIGENE)),
+      "human.refseq" = unlist(as.list(org.Hs.egREFSEQ)),
+      "human.accnum" = unlist(as.list(org.Hs.egACCNUM)),
+      "human.uniprot" = unlist(as.list(org.Hs.egUNIPROT)),
+      "human.symbol" = unlist(as.list(org.Hs.egSYMBOL))
+    )
+
+    mm.list <- list(
+      "mouse.ensembl" = unlist(as.list(org.Mm.egENSEMBL)),
+      "mouse.ensemblTRANS" = unlist(as.list(org.Mm.egENSEMBLTRANS)),
+      # "mouse.unigene" = unlist(as.list(org.Mm.egUNIGENE)),
+      "mouse.refseq" = unlist(as.list(org.Mm.egREFSEQ)),
+      "mouse.accnum" = unlist(as.list(org.Mm.egACCNUM)),
+      "mouse.uniprot" = unlist(as.list(org.Mm.egUNIPROT)),
+      "mouse.symbol" = unlist(as.list(org.Mm.egSYMBOL))
+    )
+
+    rn.list <- list(
+      "rat.ensembl" = unlist(as.list(org.Rn.egENSEMBL)),
+      "rat.ensemblTRANS" = unlist(as.list(org.Rn.egENSEMBLTRANS)),
+      # "rat.unigene" = unlist(as.list(org.Rn.egUNIGENE)),
+      "rat.refseq" = unlist(as.list(org.Rn.egREFSEQ)),
+      "rat.accnum" = unlist(as.list(org.Rn.egACCNUM)),
+      "rat.uniprot" = unlist(as.list(org.Rn.egUNIPROT)),
+      "rat.symbol" = unlist(as.list(org.Rn.egSYMBOL))
+    )
+
+    id.list <- c(hs.list, mm.list, rn.list)
+    mx <- sapply(id.list, function(id) mean(probes %in% id))
+    mx
+    org <- type <- NULL
+    max.mx <- max(mx, na.rm = TRUE)
+    mx0 <- names(mx)[which.max(mx)]
+    org <- sub("[.].*", "", mx0)
+    type <- sub(".*[.]", "", mx0)
+    message("[id2symbol] mapped ", format(100 * max.mx, digits = 2), "% of probes")
+    if (max.mx < 0.5 && max.mx > 0) {
+      message("[id2symbol] WARNING! low mapping ratio: r= ", max.mx)
     }
-
-    if( is.null(type) || is.null(org) ) {
-
-        hs.list <- list(
-            "human.ensembl" = unlist(as.list(org.Hs.egENSEMBL)),
-            "human.ensemblTRANS" = unlist(as.list(org.Hs.egENSEMBLTRANS)),
-            #"human.unigene" = unlist(as.list(org.Hs.egUNIGENE)),
-            "human.refseq"  = unlist(as.list(org.Hs.egREFSEQ)),
-            "human.accnum"  = unlist(as.list(org.Hs.egACCNUM)),
-            "human.uniprot" = unlist(as.list(org.Hs.egUNIPROT)),
-            "human.symbol"  = unlist(as.list(org.Hs.egSYMBOL))
-            )
-
-        mm.list <- list(
-            "mouse.ensembl" = unlist(as.list(org.Mm.egENSEMBL)),
-            "mouse.ensemblTRANS" = unlist(as.list(org.Mm.egENSEMBLTRANS)),
-            #"mouse.unigene" = unlist(as.list(org.Mm.egUNIGENE)),
-            "mouse.refseq"  = unlist(as.list(org.Mm.egREFSEQ)),
-            "mouse.accnum"  = unlist(as.list(org.Mm.egACCNUM)),
-            "mouse.uniprot" = unlist(as.list(org.Mm.egUNIPROT)),
-            "mouse.symbol"  = unlist(as.list(org.Mm.egSYMBOL))
-        )
-
-        rn.list <- list(
-          "rat.ensembl" = unlist(as.list(org.Rn.egENSEMBL)),
-          "rat.ensemblTRANS" = unlist(as.list(org.Rn.egENSEMBLTRANS)),
-          #"rat.unigene" = unlist(as.list(org.Rn.egUNIGENE)),
-          "rat.refseq"  = unlist(as.list(org.Rn.egREFSEQ)),
-          "rat.accnum"  = unlist(as.list(org.Rn.egACCNUM)),
-          "rat.uniprot" = unlist(as.list(org.Rn.egUNIPROT)),
-          "rat.symbol"  = unlist(as.list(org.Rn.egSYMBOL))
-        )
-
-        id.list <- c(hs.list, mm.list, rn.list)
-        mx <- sapply(id.list, function(id) mean(probes %in% id))
-        mx
-        org=type=NULL
-        max.mx <- max(mx,na.rm=TRUE)
-        mx0 <- names(mx)[which.max(mx)]
-        org  <- sub("[.].*","",mx0)
-        type <- sub(".*[.]","",mx0)
-        message("[id2symbol] mapped ",format(100*max.mx,digits=2),"% of probes")
-        if(max.mx < 0.5 && max.mx>0) {
-            message("[id2symbol] WARNING! low mapping ratio: r= ",max.mx)
-        }
-        if(max.mx==0) {
-            message("[id2symbol] WARNING! zero mapping ratio: r= ")
-            type = NULL
-        }
-        org
-        type
+    if (max.mx == 0) {
+      message("[id2symbol] WARNING! zero mapping ratio: r= ")
+      type <- NULL
     }
-
-    ## checks
-    if(is.null(type)) {
-        cat("id2symbol: missing type: type = NULL\n")
-        return(NULL)
-    }
-    if(!type %in% c("ensembl","ensemblTRANS","unigene","refseq","accnum","uniprot","symbol")) {
-        cat("id2symbol: invalid type: ",type,"\n")
-        return(NULL)
-    }
-
-    if(is.null(org)) {
-        cat("id2symbol: missing organism: org = NULL\n")
-        return(NULL)
-    }
-    if(!tolower(org) %in% c("human","mouser","rat")) {
-        cat("id2symbol: not supported organism: org = ",org,"\n")
-        return(NULL)
-    }
-
-    
-    cat("[id2symbol] organism = ",org,"\n")
-    cat("[id2symbol] probe.type = ",type,"\n")
+    org
     type
+  }
 
-    if(type=="symbol") {
-        cat("id2symbol: probe is already symbol\n")
-        if(any(grep(" /// ",probes))) {
-            symbol0 <- strsplit(probes, split=" /// ")
-        } else if(any(grep("[;,]",probes))) {
-            symbol0 <- strsplit(probes, split="[;,\\|]")
-        } else {
-            symbol0 <- probes
-        }
-        ## all.symbols <- NULL
-        ## if(org=="human") all.symbols <- unlist(as.list(org.Hs.egSYMBOL))
-        ## if(org=="mouse") all.symbols <- unlist(as.list(org.Mm.egSYMBOL))
-        ## symbol0 <- lapply(symbol0, function(s) intersect(s,all.symbols))
+  ## checks
+  if (is.null(type)) {
+    cat("id2symbol: missing type: type = NULL\n")
+    return(NULL)
+  }
+  if (!type %in% c("ensembl", "ensemblTRANS", "unigene", "refseq", "accnum", "uniprot", "symbol")) {
+    cat("id2symbol: invalid type: ", type, "\n")
+    return(NULL)
+  }
 
+  if (is.null(org)) {
+    cat("id2symbol: missing organism: org = NULL\n")
+    return(NULL)
+  }
+  if (!tolower(org) %in% c("human", "mouser", "rat")) {
+    cat("id2symbol: not supported organism: org = ", org, "\n")
+    return(NULL)
+  }
+
+
+  cat("[id2symbol] organism = ", org, "\n")
+  cat("[id2symbol] probe.type = ", type, "\n")
+  type
+
+  if (type == "symbol") {
+    cat("id2symbol: probe is already symbol\n")
+    if (any(grep(" /// ", probes))) {
+      symbol0 <- strsplit(probes, split = " /// ")
+    } else if (any(grep("[;,]", probes))) {
+      symbol0 <- strsplit(probes, split = "[;,\\|]")
     } else {
-        org
-        if(org=="human") {
-            symbol0 <- AnnotationDbi::mapIds(org.Hs.eg.db, probes, 'SYMBOL', toupper(type))
-        }
-        if(org=="mouse") {
-            symbol0 <- AnnotationDbi::mapIds(org.Mm.eg.db, probes, 'SYMBOL', toupper(type))
-        }
-        if(org=="rat") {
-          symbol0 <- AnnotationDbi::mapIds(org.Rn.eg.db, probes, 'SYMBOL', toupper(type))
-        }
+      symbol0 <- probes
     }
-
-    ## Unrecognize probes
-    nna <- which(is.na(names(symbol0)))
-    length(nna)
-    if(length(nna)) names(symbol0)[nna] <- probes[nna]
-
-    ## What to do with unmapped/missing symbols????
-    symbol <- sapply(symbol0,"[",1)  ## takes first symbol only!!!
-    isnull <- which(sapply(symbol,is.null))
-    symbol[isnull] <- NA
-    if(keep.na) {
-        sel.na <- which(is.na(symbol))
-        symbol[sel.na] <- probes[sel.na]
+    ## all.symbols <- NULL
+    ## if(org=="human") all.symbols <- unlist(as.list(org.Hs.egSYMBOL))
+    ## if(org=="mouse") all.symbols <- unlist(as.list(org.Mm.egSYMBOL))
+    ## symbol0 <- lapply(symbol0, function(s) intersect(s,all.symbols))
+  } else {
+    org
+    if (org == "human") {
+      symbol0 <- AnnotationDbi::mapIds(org.Hs.eg.db, probes, "SYMBOL", toupper(type))
     }
-    symbol <- unlist(symbol)
-    names(symbol) <- NULL
-    Matrix::head(symbol)
+    if (org == "mouse") {
+      symbol0 <- AnnotationDbi::mapIds(org.Mm.eg.db, probes, "SYMBOL", toupper(type))
+    }
+    if (org == "rat") {
+      symbol0 <- AnnotationDbi::mapIds(org.Rn.eg.db, probes, "SYMBOL", toupper(type))
+    }
+  }
 
-    symbol
+  ## Unrecognize probes
+  nna <- which(is.na(names(symbol0)))
+  length(nna)
+  if (length(nna)) names(symbol0)[nna] <- probes[nna]
+
+  ## What to do with unmapped/missing symbols????
+  symbol <- sapply(symbol0, "[", 1) ## takes first symbol only!!!
+  isnull <- which(sapply(symbol, is.null))
+  symbol[isnull] <- NA
+  if (keep.na) {
+    sel.na <- which(is.na(symbol))
+    symbol[sel.na] <- probes[sel.na]
+  }
+  symbol <- unlist(symbol)
+  names(symbol) <- NULL
+  Matrix::head(symbol)
+
+  symbol
 }
-
-
