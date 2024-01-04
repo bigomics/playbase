@@ -1775,7 +1775,7 @@ heatmap.3 <- function(x,
     )
   }
   graphics::axis(1, 1:nc,
-    labels = labCol, las = 2, line = -0.2, tick = 0, 
+    labels = labCol, las = 2, line = -0.2, tick = 0,
     cex.axis = cexCol
   )
   if (!is.null(xlab)) {

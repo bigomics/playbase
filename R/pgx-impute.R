@@ -23,7 +23,7 @@ imputeMissing <- function(X,
                             "knn", "QRILC", "MLE", "MinDet", "MinProb",
                             "min", "zero", "nbavg", "rowmeans"
                           )[1:3],
-                          rf.ntree = 100, nv=5, plot = FALSE) {
+                          rf.ntree = 100, nv = 5, plot = FALSE) {
   impX <- list()
 
   ## ------------ simple rowmeans -----------
@@ -146,7 +146,7 @@ imputeMissing <- function(X,
   }
 
   metaX <- NULL
-  if(length(impX)>1) {
+  if (length(impX) > 1) {
     ## ------------ meta --------------
     metaX <- lapply(impX, as.vector)
     metaX <- do.call(cbind, metaX)

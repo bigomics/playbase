@@ -264,10 +264,10 @@ gx.b3plot <- function(x, y, first = NULL,
 #' gx.hist(gx)
 #' }
 #' @export
-gx.hist <- function(gx, ... ) {
+gx.hist <- function(gx, ...) {
   h0 <- graphics::hist(
-    as.vector(gx), 
-    col = "grey90", border = 'grey80', freq = FALSE,
+    as.vector(gx),
+    col = "grey90", border = "grey80", freq = FALSE,
     ...
   )
   i <- 1
