@@ -6,37 +6,38 @@
 \usage{
 pgx.clusterSamples(
   pgx,
-  X = NULL,
-  skipifexists = FALSE,
-  perplexity = 30,
-  ntop = 1000,
-  npca = 50,
-  prefix = "C",
-  kclust = 1,
+  methods = c("pca", "tsne", "umap", "pacmap"),
   dims = c(2, 3),
-  find.clusters = TRUE,
-  clust.detect = c("louvain", "hclust"),
-  row.center = TRUE,
-  row.scale = FALSE,
-  method = c("tsne", "umap", "pca")
+  reduce.sd = 1000,
+  reduce.pca = 50,
+  perplexity = 30,
+  center.rows = TRUE,
+  scale.rows = FALSE,
+  X = NULL,
+  umap.pkg = "uwot",
+  replace.orig = TRUE
 )
 }
 \arguments{
 \item{pgx}{A PGX object}
 
+\item{dims}{Dimensions for dimensionality reduction (by default 2,and 3)}
+
+\item{reduce.sd}{Perform dimensionality reduction if original dims > reduce.sd}
+
+\item{reduce.pca}{For PCA, take first reduce.pca components}
+
 \item{perplexity}{Perplexity parameter for tSNE and UMAP}
 
-\item{ntop}{Number of top features to use for PCA}
+\item{center.rows}{Center rows before clustering?}
 
-\item{npca}{Number of PCA components to reduce to}
+\item{scale.rows}{Scale rows to unit variance before clustering?}
 
-\item{prefix}{Prefix for cluster variable names}
+\item{X}{Use this matrix instead of pgx$X}
 
-\item{kclust}{Number of clusters for k-means}
+\item{umap.pkg}{UMAP package to use (umap or uwot)}
 
-\item{dims}{Dimensions for dimensionality reduction (by default 2,3)}
-
-\item{find.clusters}{Logical to find optimal number of clusters}
+\item{replace.orig}{Replace original pgx$X with reduced data?}
 
 \item{method}{Character vector of clustering methods to apply (choose between "pca", "tsne", and "umap")}
 }
@@ -47,12 +48,17 @@ The updated PGX object with cluster assignments in pgx$cluster$sample
 Performs dimensionality reduction and clustering on the samples in a PGX object.
 }
 \details{
-This function takes a PGX object and performs PCA, tSNE, and/or UMAP on the samples.
-It clusters the samples in the reduced space and stores the cluster assignments in pgx$cluster$sample.
+This function takes a PGX object and performs PCA, tSNE, and/or UMAP on the
+samples. It clusters the samples in the reduced space and stores the cluster
+assignments in the pgx$cluster$sample slot.
 
-PCA is performed first to reduce dimensions. tSNE and UMAP are then applied for further reduction.
-k-means clustering is performed on the reduced data to group samples into clusters.
+Dimensionality reduction is performed on pgx$X or a provided matrix X. If the
+original number of dimensions is large, PCA is used to reduce to reduce.pca dimensions
+first. tSNE and UMAP are then applied to further reduce to 2 or 3 dimensions.
 
-Multiple parameters control the methods, perplexity, number of clusters, etc.
-By default it tries to detect the optimal number of clusters using the elbow method.
+Multiple parameter options are available to control the clustering, including
+choice of methods, perplexity, centering/scaling samples first, etc.
+
+By default the original pgx$X matrix is replaced with the reduced data. Set
+replace.orig=FALSE to retain the original.
 }

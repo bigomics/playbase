@@ -110,7 +110,8 @@ compute_testGenesets <- function(pgx,
       min.geneset.size = 3,
       max.geneset.size = 9999,
       min_gene_frequency = 1,
-      all_genes = pgx$all_genes,
+      ## all_genes = pgx$all_genes,
+      all_genes = rownames(pgx$X),      
       annot = pgx$genes,
       filter_genes = FALSE
     )
@@ -338,32 +339,32 @@ createSparseGenesetMatrix <- function(
   # WARNING #
   # This function is used in playbase and playdata to generate curated GMT. Do not change it without testing it in both packages to ensure reproducibility.
 
+  if(is.null(all_genes)) {
+    all_genes <- unique(unlist(gmt.all))
+  }
   all_genes <- sort(all_genes)
 
   ## ------------- filter by size
   gmt.size <- sapply(gmt.all, length)
-
   gmt.all <- gmt.all[which(gmt.size >= min.geneset.size & gmt.size <= max.geneset.size)]
 
   ## ------------- filter genes by minimum frequency and chrom
   genes.table <- table(unlist(gmt.all))
   genes <- names(which(genes.table >= min_gene_frequency))
-
-  annot <- annot
-
+  genes <- intersect(genes, all_genes)
+  
   if (filter_genes == TRUE) {
     genes <- genes[grep("^LOC|RIK$", genes, invert = TRUE)]
-    genes <- intersect(genes, all_genes)
   }
 
-  if (filter_genes == TRUE) {
+  if (!is.null(annot) && filter_genes == TRUE) {
+    annot <- annot[genes,]
     annot <- annot[annot$chr %in% c(1:22, "X", "Y"), ]
     genes <- genes[!is.na(annot$chr)]
   }
 
   ## Filter genesets with permitted genes (official and min.sharing)
   gmt.all <- lapply(gmt.all, function(s) intersect(s, genes))
-
   gmt.all <- gmt.all[which(gmt.size >= min.geneset.size & gmt.size <= max.geneset.size)] # legacy
   ## build huge sparsematrix gene x genesets
   genes <- sort(genes)

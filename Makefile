@@ -20,3 +20,7 @@ tags:
 	git tag -f -a $(VERSION) -m 'version $(VERSION)'
 	git push && git push --tags
 
+clean:
+	rm `find . -name '.#*' -o -name '#*' -o -name '*~'`
+
+

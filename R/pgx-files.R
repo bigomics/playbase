@@ -4,6 +4,30 @@
 ##
 
 
+#' @export
+read.files <- function(path) {
+    f0 <- dir(path, full.names=FALSE)
+    f1 <- dir(path, full.names=TRUE)    
+    counts.file <- grep("count.*csv$",f0)
+    samples.file <- grep("sample.*csv$",f0)
+    contrasts.file <- grep("contrast.*csv$",f0)
+    ok <- (length(counts.file) == 1 &&
+        length(samples.file) == 1 &&
+        length(contrasts.file) == 1 )
+    if(!ok) {
+        message("Must exactly have one csv file for each input in folder.")
+        return(NULL)
+    }
+    message("reading counts file : ",f1[counts.file])
+    counts <- read_counts( f1[counts.file] )
+    message("reading samples file : ",f1[samples.file])    
+    samples <- read_counts( f1[samples.file] )
+    message("reading contrasts file : ",f1[contrasts.file])        
+    contrasts <- read_counts( f1[contrasts.file] )    
+    list( counts = counts, samples = samples, contrasts = contrasts )
+}
+
+
 #' @title Load an R Object from a File
 #'
 #' @description This function loads an R object from a file and makes it available in the local environment.

@@ -2,10 +2,10 @@
 % Please edit documentation in R/pgx-correct.R
 \name{bbknn State Matrix}
 \alias{bbknn State Matrix}
-\alias{my.bbknn}
+\alias{bbknn}
 \title{Run bbknn clustering algorithm}
 \usage{
-my.bbknn(data_matrix, batch, pca = TRUE, compute_pca = "python", nPcs = NULL)
+bbknn(data_matrix, batch, pca = TRUE, compute_pca = "python", nPcs = NULL)
 }
 \arguments{
 \item{data_matrix}{A matrix (genes x samples or cells) for expression data}

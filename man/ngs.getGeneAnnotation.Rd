@@ -4,23 +4,17 @@
 \alias{ngs.getGeneAnnotation}
 \title{Get gene annotation data}
 \usage{
-ngs.getGeneAnnotation(
-  probes,
-  organism,
-  mart = NULL,
-  probe_type = NULL,
-  verbose = TRUE
-)
+ngs.getGeneAnnotation(probes, organism = NULL, use_biomart = NULL)
 }
 \arguments{
 \item{probes}{Character vector of gene/transcript identifiers to retrieve annotation for.}
 
 \item{organism}{Organism name, e.g. "hsapiens_gene_ensembl".}
 
-\item{mart}{BioMart object specifying the database to query.}
-
 \item{probe_type}{Character specifying the type of input identifiers. If NULL,
 it will be automatically detected. Options are "ensembl_gene_id", "ensembl_transcript_id", etc.}
+
+\item{mart}{BioMart object specifying the database to query.}
 
 \item{verbose}{Logical indicating whether to print status messages.}
 }

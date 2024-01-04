@@ -57,7 +57,6 @@ pos.compact <- function(pos, d = 0.01) {
   pos
 }
 
-
 #' Find non-overlapping boxes for points
 #'
 #' @param df Data frame containing point positions
@@ -266,51 +265,6 @@ add_opacity <- function(hexcol, opacity) {
 }
 
 
-#' Log-counts-per-million transformation
-#'
-#' @param counts Numeric matrix of read counts, with genes in rows and samples in columns.
-#' @param total Total count to scale to. Default is 1e6.
-#' @param prior Pseudocount to add prior to log transform. Default is 1.
-#'
-#' @return Matrix of log-transformed values.
-#'
-#' @details Transforms a matrix of read counts to log-counts-per-million (logCPM).
-#' Adds a pseudocount \code{prior} (default 1) before taking the log transform.
-#' Values are scaled to \code{total} counts (default 1e6).
-#'
-#' This stabilizes variance and normalizes for sequencing depth.
-#'
-#' @examples
-#' \dontrun{
-#' counts <- matrix(rnbinom(100 * 10, mu = 100, size = 1), 100, 10)
-#' logcpm <- logCPM(counts)
-#' }
-#' @export
-logCPM <- function(counts, total = 1e6, prior = 1) {
-  ## Transform to logCPM (log count-per-million) if total counts is
-  ## larger than 1e6, otherwise scale to previous avarage total count.
-  ##
-  ##
-  if (is.null(total)) {
-    total0 <- mean(Matrix::colSums(counts, na.rm = TRUE)) ## previous sum
-    total <- ifelse(total0 < 1e6, total0, 1e6)
-    message("[logCPM] setting column sums to = ", round(total, 2))
-  }
-  if (any(class(counts) == "dgCMatrix")) {
-    ## fast/sparse calculate CPM
-    cpm <- counts
-    cpm[is.na(cpm)] <- 0 ## OK??
-    cpm@x <- total * cpm@x / rep.int(Matrix::colSums(cpm), diff(cpm@p)) ## fast divide by columns sum
-    cpm@x <- log2(prior + cpm@x)
-    return(cpm)
-  } else {
-    totcounts <- Matrix::colSums(counts, na.rm = TRUE)
-    ## cpm <- t(t(counts) / totcounts * total)
-    cpm <- sweep(counts, 2, totcounts, FUN = "/") * total
-    x <- log2(prior + cpm)
-    return(x)
-  }
-}
 
 
 #' @title Check for Required Fields in a PGX Object
@@ -2147,7 +2101,7 @@ expandAnnotationMatrix <- function(A) {
 #'
 #' @return An expanded phenotype matrix with dummy variables suitable for regression modeling.
 #' @export
-expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE) {
+expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check=TRUE) {
   ## get expanded annotation matrix
   a1 <- tidy.dataframe(M)
   nlevel <- apply(a1, 2, function(x) length(setdiff(unique(x), NA)))
@@ -2179,7 +2133,6 @@ expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE) {
   if (length(kk) == 0) {
     return(NULL)
   }
-
   a1 <- a1[, kk, drop = FALSE]
   a1.isnum <- y.isnum[kk]
 

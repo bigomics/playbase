@@ -2,64 +2,65 @@
 % Please edit documentation in R/pgx-cluster.R
 \name{pgx.clusterMatrix}
 \alias{pgx.clusterMatrix}
-\title{Cluster rows of a matrix}
+\title{Cluster large matrices}
 \usage{
 pgx.clusterMatrix(
   X,
-  perplexity = 30,
+  methods = c("pca", "tsne", "umap", "pacmap"),
   dims = c(2, 3),
-  ntop = 1000,
-  npca = 50,
-  prefix = "c",
-  row.center = TRUE,
-  row.scale = FALSE,
-  find.clusters = TRUE,
-  kclust = 1,
-  clust.detect = c("louvain", "hclust"),
-  method = c("tsne", "umap", "pca")
+  perplexity = 30,
+  reduce.sd = 1000,
+  reduce.pca = 50,
+  center.features = TRUE,
+  scale.features = FALSE,
+  find.clusters = FALSE,
+  svd.gamma = 1,
+  umap.pkg = "uwot"
 )
 }
 \arguments{
-\item{X}{Numeric matrix with rows as features to cluster}
+\item{X}{Numeric matrix of data to cluster}
+
+\item{methods}{Character vector of methods to use (pca, tsne, umap)}
+
+\item{dims}{Output dimensions for dimensionality reduction}
 
 \item{perplexity}{Perplexity parameter for tSNE and UMAP}
 
-\item{dims}{Output dimensions for tSNE/UMAP (2 or 3)}
+\item{reduce.sd}{Perform PCA if original dimensions > reduce.sd}
 
-\item{ntop}{Number of top variable rows to use}
+\item{reduce.pca}{Number of PCA components for initial reduction}
 
-\item{npca}{Number of PCA components for initial reduction}
+\item{center.features}{Center the rows before clustering?}
 
-\item{prefix}{Prefix for cluster variable names}
-
-\item{row.center}{Center rows before clustering?}
-
-\item{row.scale}{Scale rows before clustering?}
+\item{scale.features}{Scale the rows before clustering?}
 
 \item{find.clusters}{Detect optimal number of clusters?}
 
-\item{kclust}{Number of clusters for k-means}
+\item{svd.gamma}{Gamma parameter for randomized SVD}
 
-\item{clust.detect}{Clustering method for optimal clusters (louvain, hclust)}
-
-\item{method}{Embedding method (tsne, umap, pca)}
+\item{umap.pkg}{UMAP package to use (umap or uwot)}
 }
 \value{
-Updated matrix with cluster assignments
+List of cluster assignments
 }
 \description{
-Clusters the rows of a matrix using dimensionality reduction and clustering.
-Designed for large matrices where tSNE/UMAP cannot be run directly.
+Performs dimensionality reduction and clustering on large data matrices
 }
 \details{
-This function takes a matrix and clusters the rows using a combination of
-PCA, tSNE/UMAP, and k-means clustering.
+Cluster large matrices
 
-PCA is first used to reduce the dimensions if the matrix is large. The top
-variable rows are selected before reduction. tSNE or UMAP is then applied
-to further reduce the dimensions to 2 or 3. k-means clustering finally
-groups the rows into clusters.
 
-Multiple parameters control perplexity, centering/scaling, number of clusters, etc.
-By default it tries to detect the optimal number of clusters.
+This function takes a large data matrix and reduces the dimensions using
+PCA and tSNE/UMAP before clustering the rows. It is designed to handle
+matrices that are too large to embed directly with tSNE or UMAP.
+
+PCA is first used to reduce the dimensions if the original size is over
+reduce.sd rows. tSNE or UMAP is then applied to further reduce the
+dimensions for clustering. k-means clustering is performed on the
+reduced data.
+
+Multiple parameters allow customization of the methods, perplexity,
+dimensions, etc. By default it tries to detect the optimal number of
+clusters using the elbow method.
 }

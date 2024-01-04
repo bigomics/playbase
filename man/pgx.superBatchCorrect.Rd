@@ -38,7 +38,9 @@ pgx.superBatchCorrect(
 The batch corrected gene expression matrix.
 }
 \description{
-Performs supervised batch correction on a gene expression matrix, using known technical factors and biological covariates.
+Performs supervised batch correction on a gene
+  expression matrix, using known technical factors and biological
+  covariates.
 }
 \details{
 This function performs supervised batch correction, using known batch groups and biological covariates.

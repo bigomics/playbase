@@ -32,8 +32,6 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, use_biomart = NULL) {
   stopifnot(is.list(pgx))
   probes <- rownames(pgx$counts)
 
-  message("[pgx.addGeneAnnotation] 1: organism = ", organism)
-
   if (is.null(organism) && !is.null(pgx$organism)) {
     organism <- pgx$organism
   }
@@ -43,9 +41,6 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, use_biomart = NULL) {
   if (is.null(organism)) {
     stop("could not determine organism. please specify")
   }
-
-  message("[pgx.addGeneAnnotation] 2: organism = ", organism)
-
   # Get gene table
   genes <- ngs.getGeneAnnotation(
     probes = probes,
@@ -198,16 +193,11 @@ ngs.getGeneAnnotation <- function(probes, organism = NULL, use_biomart = NULL) {
     probe_type <- guess_probetype(probes, for.biomart = FALSE)
     if (is.null(probe_type)) stop("probe_type is NULL")
     message("[ngs.getGeneAnnotation] probe_type = ", probe_type)
-    #    clean.probes <- probes
-    #    if(grep("ENSEMBL",probe_type)) clean.probes <- sub("[.][0-9]+","",probes)
     genes <- ngs.getGeneAnnotation_ORGDB(
       probes = probes,
       organism = organism,
       probe_type = probe_type
     )
-    #    rownames(genes) <- probes
-    #    genes$feature <- probes
-    #    genes$gene_name <- probes
   }
 
   ## try biomaRt for the rest
