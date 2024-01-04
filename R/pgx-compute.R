@@ -156,7 +156,6 @@ pgx.createPGX <- function(counts,
                           remove.outliers = TRUE,
                           normalize = TRUE,
                           use_biomart = NA) {
-
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("dimension of counts and X do not match\n")
   }
@@ -220,11 +219,11 @@ pgx.createPGX <- function(counts,
   }
 
   ## sum up duplicated
-  counts <- counts.mergeDuplicateFeatures(counts) 
-  if(!is.null(X)) {
+  counts <- counts.mergeDuplicateFeatures(counts)
+  if (!is.null(X)) {
     X <- counts.mergeDuplicateFeatures(X, is.counts = FALSE)
   }
-  
+
   ## -------------------------------------------------------------------
   ## Check bad samples (in total counts, after imputation)
   ## -------------------------------------------------------------------
@@ -262,7 +261,7 @@ pgx.createPGX <- function(counts,
   } else {
     message("[createPGX] SKIPPING NORMALIZATION!")
   }
-   
+
   ## -------------------------------------------------------------------
   ## conform all matrices (after filtering)
   ## -------------------------------------------------------------------
@@ -273,27 +272,29 @@ pgx.createPGX <- function(counts,
   samples <- utils::type.convert(samples, as.is = TRUE) ## automatic type conversion
   if (!is.null(X)) {
     X <- X[, kk, drop = FALSE]
-    X <- X[match( rownames(counts), rownames(X)),]    
+    X <- X[match(rownames(counts), rownames(X)), ]
   }
   if (all(kk %in% rownames(contrasts))) {
     contrasts <- contrasts[kk, , drop = FALSE]
   }
-  
+
   ## -------------------------------------------------------------------
   ## create pgx object
   ## -------------------------------------------------------------------
   message("[createPGX] creating pgx object...")
   guess_organism <- guess_organism(rownames(counts))
-  if(is.null(organism)) {
+  if (is.null(organism)) {
     organism <- guess_organism
   }
-  if(!is.null(organism) && !is.null(guess_organism)) {
-    if(tolower(organism) != tolower(guess_organism)) {        
-       warning("[createPGX] WARNING : guessed organism is '", guess_organism,
-               "' but '", organism, "' was provided!")
+  if (!is.null(organism) && !is.null(guess_organism)) {
+    if (tolower(organism) != tolower(guess_organism)) {
+      warning(
+        "[createPGX] WARNING : guessed organism is '", guess_organism,
+        "' but '", organism, "' was provided!"
+      )
     }
   }
-  
+
   pgx <- list(
     name = name,
     organism = organism,
@@ -309,26 +310,26 @@ pgx.createPGX <- function(counts,
     total_counts = Matrix::colSums(counts, na.rm = TRUE), # input normalized log-expression (can be NULL)
     counts_multiplier = counts_multiplier
   )
-  
+
   ## -------------------------------------------------------------------
   ## create gene annotation table
   ## -------------------------------------------------------------------
   pgx$genes <- NULL
-  if (is.null(use_biomart)  || is.na(use_biomart) ) {
+  if (is.null(use_biomart) || is.na(use_biomart)) {
     use_biomart <- !(organism %in% c("Mouse", "Human", "Rat"))
   }
   if (!use_biomart && !(organism %in% c("Mouse", "Human", "Rat"))) {
     message("ERROR: organism '", organism, "' not supported using R libraries.")
     stop("ERROR: you must set 'use_biomart=TRUE' for organism: ", organism)
   }
-  
+
   message("[createPGX] annotating genes")
   pgx <- pgx.addGeneAnnotation(pgx, organism = organism, use_biomart = use_biomart)
-    
+
   if (is.null(pgx$genes)) {
     stop("[createPGX] FATAL: Could not build gene annotation")
   }
-  
+
   ## -------------------------------------------------------------------
   ## Filter out not-expressed
   ## -------------------------------------------------------------------
@@ -347,33 +348,32 @@ pgx.createPGX <- function(counts,
     ii <- match(rownames(pgx$counts), rownames(pgx$genes))
     pgx$genes <- pgx$genes[ii, , drop = FALSE]
   }
-  
+
   ## -------------------------------------------------------------------
   ## Filter genes?
   ## -------------------------------------------------------------------
   do.filter <- (only.known | only.proteincoding)
   if (do.filter) {
-
     if (only.known) {
       has.symbol <- (!is.na(pgx$genes$symbol) & pgx$genes$symbol != "")
       table(has.symbol)
-      pgx$genes <- pgx$genes[ which(has.symbol), ]
+      pgx$genes <- pgx$genes[which(has.symbol), ]
     }
-    
+
     if (only.proteincoding) {
-      is.proteincoding <- grepl("protein.coding",pgx$genes$gene_biotype)
+      is.proteincoding <- grepl("protein.coding", pgx$genes$gene_biotype)
       table(pgx$genes$gene_biotype)
-      tt <- paste(paste(names(table(pgx$genes$gene_biotype)), table(pgx$genes$gene_biotype), sep='='),collapse=';')
+      tt <- paste(paste(names(table(pgx$genes$gene_biotype)), table(pgx$genes$gene_biotype), sep = "="), collapse = ";")
       dbg("[createPGX] table.biotype = ", tt)
-      dbg("[createPGX] table.isproteincoding = ", table(is.proteincoding))      
-      pgx$genes <- pgx$genes[is.proteincoding, ,drop = FALSE ]
+      dbg("[createPGX] table.isproteincoding = ", table(is.proteincoding))
+      pgx$genes <- pgx$genes[is.proteincoding, , drop = FALSE]
     }
-    
+
     keep <- rownames(pgx$genes)
     pgx$counts <- pgx$counts[keep, , drop = FALSE]
     if (!is.null(pgx$X)) {
       pgx$X <- pgx$X[keep, , drop = FALSE]
-    }    
+    }
   }
 
   ## -------------------------------------------------------------------
@@ -422,9 +422,9 @@ pgx.createPGX <- function(counts,
   if (convert.hugo) {
     message("[createPGX] collapsing probes by SYMBOL")
     symbol <- pgx$genes[rownames(pgx$counts), "symbol"]
-    symbol[is.na(symbol)] <- ""  ## avoids warning
-    
-    ## sum up duplicated rows 
+    symbol[is.na(symbol)] <- "" ## avoids warning
+
+    ## sum up duplicated rows
     pgx$counts <- rowsum(pgx$counts, symbol)
     if (!is.null(pgx$X)) {
       pgx$X <- log2(rowsum(2**pgx$X, symbol))
@@ -437,16 +437,16 @@ pgx.createPGX <- function(counts,
       function(x) paste(unique(x), collapse = ";")
     )
 
-    # merge by symbol, replace features by collapsed features 
-    pgx$genes <- pgx$genes[match(rownames(pgx$counts), symbol),]
+    # merge by symbol, replace features by collapsed features
+    pgx$genes <- pgx$genes[match(rownames(pgx$counts), symbol), ]
     rownames(pgx$genes) <- rownames(pgx$counts)
-    jj <- match(rownames(pgx$counts), agg_features[,'symbol'])
-    pgx$genes$feature <- agg_features[jj,"feature"]
+    jj <- match(rownames(pgx$counts), agg_features[, "symbol"])
+    pgx$genes$feature <- agg_features[jj, "feature"]
 
     ## rename gene_name with new rownames
     pgx$genes$gene_name <- rownames(pgx$counts)
   }
-  
+
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
@@ -483,7 +483,7 @@ pgx.createPGX <- function(counts,
     }
     remove(cX)
   }
-  
+
   ## -------------------------------------------------------------------
   ## Pre-calculate t-SNE for and get clusters early so we can use it
   ## for doing differential analysis.
@@ -524,12 +524,12 @@ pgx.createPGX <- function(counts,
     }
   }
 
-  
+
   if (do.clustergenes) {
     message("[createPGX] clustering genes...")
     pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "gene")
   }
-  
+
   ### done
   return(pgx)
 }
@@ -687,7 +687,7 @@ counts.removeSampleOutliers <- function(counts) {
 }
 
 #' @export
-is.xxl <- function(X, z=10) {
+is.xxl <- function(X, z = 10) {
   ## sdx <- apply(X, 1, function(x) mad(x[x > 0], na.rm = TRUE))
   sdx <- matrixStats::rowSds(X, na.rm = TRUE)
   sdx[is.na(sdx)] <- 0
@@ -701,7 +701,7 @@ counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
   ## remove extra-large and infinite values
   ## X <- log2(1 + counts)
   X <- playbase::logCPM(counts)
-  which.xxl <- which( is.xxl(X), arr.ind = TRUE)
+  which.xxl <- which(is.xxl(X), arr.ind = TRUE)
   nxxl <- nrow(which.xxl)
   if (nxxl > 0) {
     message("[createPGX] WARNING: setting ", nxxl, " XXL values to NA")
@@ -772,7 +772,7 @@ counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE) {
   ndup
   if (ndup > 0) {
     message("[mergeDuplicateFeatures] ", ndup, " duplicated rownames: summing rows (in counts).")
-    if(is.counts) {
+    if (is.counts) {
       counts <- base::rowsum(counts, gene1, na.rm = TRUE)
     } else {
       ## for expression logX
