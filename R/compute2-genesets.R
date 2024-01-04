@@ -111,7 +111,7 @@ compute_testGenesets <- function(pgx,
       max.geneset.size = 9999,
       min_gene_frequency = 1,
       ## all_genes = pgx$all_genes,
-      all_genes = rownames(pgx$X),      
+      all_genes = rownames(pgx$X),
       annot = pgx$genes,
       filter_genes = FALSE
     )
@@ -339,7 +339,7 @@ createSparseGenesetMatrix <- function(
   # WARNING #
   # This function is used in playbase and playdata to generate curated GMT. Do not change it without testing it in both packages to ensure reproducibility.
 
-  if(is.null(all_genes)) {
+  if (is.null(all_genes)) {
     all_genes <- unique(unlist(gmt.all))
   }
   all_genes <- sort(all_genes)
@@ -352,13 +352,13 @@ createSparseGenesetMatrix <- function(
   genes.table <- table(unlist(gmt.all))
   genes <- names(which(genes.table >= min_gene_frequency))
   genes <- intersect(genes, all_genes)
-  
+
   if (filter_genes == TRUE) {
     genes <- genes[grep("^LOC|RIK$", genes, invert = TRUE)]
   }
 
   if (!is.null(annot) && filter_genes == TRUE) {
-    annot <- annot[genes,]
+    annot <- annot[genes, ]
     annot <- annot[annot$chr %in% c(1:22, "X", "Y"), ]
     genes <- genes[!is.na(annot$chr)]
   }

@@ -578,7 +578,7 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
     pv <- cor.pvalue(r1, length(y1))
     list(val = r1, pv = pv)
   }
-  
+
   if (expand) {
     Y <- expandPhenoMatrix(Y, drop.ref = FALSE)
   }
@@ -620,7 +620,7 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
   P <- do.call(rbind, pv)
   colnames(R) <- paste0("PC", 1:ncol(R))
   colnames(P) <- paste0("PC", 1:ncol(P))
-  
+
   if (!horiz && stat == "F") {
     R <- t(t(R) / colMeans(R, na.rm = TRUE))
   }
@@ -650,7 +650,7 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
         group.name = ""
       )
       plt <- plt + ggplot2::theme(
-        plot.margin = ggplot2::margin(t=0, r=4, b=0, l=8, "pt"),
+        plot.margin = ggplot2::margin(t = 0, r = 4, b = 0, l = 8, "pt"),
         plot.title = ggplot2::element_text(size = 13 * text.cex)
       ) +
         ggplot2::xlab(stat0) + ggplot2::ggtitle(main)
@@ -663,7 +663,7 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
         group.name = ""
       ) +
         ggplot2::theme(
-          plot.margin = ggplot2::margin(t=0, r=4, b=0, l=8, "pt"),
+          plot.margin = ggplot2::margin(t = 0, r = 4, b = 0, l = 8, "pt"),
           plot.title = ggplot2::element_text(size = 13 * text.cex)
         ) +
         ggplot2::xlab("") + ggplot2::ggtitle(main)
@@ -800,7 +800,7 @@ pgx.computeTechnicalEffects <- function(X, is.count = FALSE, nmin = 3, nv = 2) {
 
   ##  is.count = FALSE; nmin = 3;nv=2
   ##  nmin=3:nv=2
-    
+
   message("[pgx.computeTechnicalEffects] estimating technical effects...")
   nv <- min(nmin, nv)
   nv <- min(nv, ncol(X) / 2)
@@ -908,15 +908,15 @@ detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
     contrasts <- NULL
     params <- c("statistical", "technical", "pca")
     params <- c("statistical")
-    params <- c("technical")    
+    params <- c("technical")
   }
 
-  if( force == TRUE ) {
-      p.pca <- 1
-      p.pheno <- 0
-      ##params = c("statistical", "technical", "pca")
+  if (force == TRUE) {
+    p.pca <- 1
+    p.pheno <- 0
+    ## params = c("statistical", "technical", "pca")
   }
-  
+
   if (!all(params %in% c("statistical", "technical", "pca"))) {
     params1 <- setdiff(params, c("statistical", "technical", "pca"))
     stop("[detectBatchEffects] unknown parameter type: ", params1)
@@ -957,19 +957,19 @@ detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
   }
 
   ## add pheno vector
-  dpheno <- model.matrix(~0 + pheno)
-  colnames(dpheno) <- sub("^pheno","*pheno*=",colnames(dpheno))
+  dpheno <- model.matrix(~ 0 + pheno)
+  colnames(dpheno) <- sub("^pheno", "*pheno*=", colnames(dpheno))
   dY <- cbind(dpheno, expandPhenoMatrix(Y))
-  Y <- cbind( "*pheno*"=pheno, Y)
-  
+  Y <- cbind("*pheno*" = pheno, Y)
+
   ## detect possible batch covariates (not correlated with phenotype)
   ## determine batch covariates
   dY <- scale(dY)
-  
+
   res <- gx.limmaF(t(dY), pheno, fdr = 1, lfc = 0, compute.means = FALSE, verbose = 0)
   param <- sub("=.*", "", rownames(res))
   pv.pheno <- tapply(res$P.Value, param, min)
-  
+
   ## compute correlation with PC components
   pc <- pgx.PC_correlation(X, dY, nv = k.pca, collapse = FALSE, plot = FALSE)
   pca.pars <- sub("=.*", "", rownames(pc$P))
@@ -983,9 +983,9 @@ detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
   }
   xrank <- min(xrank, ncol(P0))
   xrank
-  
+
   ##  pv.pca.min <- apply(cbind(1, P0)[, 1:xrank, drop = FALSE], 1, min, na.rm = TRUE)
-  pv.pca.min <- apply(P0[, 1:xrank, drop = FALSE], 1, min, na.rm = TRUE)  
+  pv.pca.min <- apply(P0[, 1:xrank, drop = FALSE], 1, min, na.rm = TRUE)
   pv.pca.min
 
   ## select parameters with significant correlation with PC and
@@ -1022,15 +1022,15 @@ detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
   }
 
   ## covariate plus phenotype
-#  Y2 <- expandPhenoMatrix(Y, keep.numeric = TRUE)
+  #  Y2 <- expandPhenoMatrix(Y, keep.numeric = TRUE)
   M <- expandPhenoMatrix(cbind(pheno))
-  batch.matrix_plus <- cbind(batch.matrix, pheno=M)
+  batch.matrix_plus <- cbind(batch.matrix, pheno = M)
 
   list(
     params = params,
     batch = batch.vec,
     covariates = batch.matrix,
-    covariates_plus = batch.matrix_plus,   
+    covariates_plus = batch.matrix_plus,
     pheno = pheno,
     p.values = P,
     p.pca = P0,
@@ -1043,15 +1043,17 @@ detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
 
 #' @export
 bc.plotCovariateHeatmap <- function(bc.res) {
-    ## bc <- detectBatchEffects(X, samples, pheno, contrasts = NULL,
-    ##                          params = c("statistical", "technical", "pca"),
-    ##                          p.pca = 0.5, p.pheno = 0.05,
-    ##                          k.pca = 10, nv = 2, xrank = NULL) 
-    B <- bc.res$covariates_plus
-    rho <- cor(apply(B,2,rank))
-    colnames(rho) <- rep("",ncol(rho))
-    gx.heatmap( rho, sym=TRUE, mar=c(1,15), keysize=0.4, cexCol=0.0001,
-               scale='none', key=FALSE)    
+  ## bc <- detectBatchEffects(X, samples, pheno, contrasts = NULL,
+  ##                          params = c("statistical", "technical", "pca"),
+  ##                          p.pca = 0.5, p.pheno = 0.05,
+  ##                          k.pca = 10, nv = 2, xrank = NULL)
+  B <- bc.res$covariates_plus
+  rho <- cor(apply(B, 2, rank))
+  colnames(rho) <- rep("", ncol(rho))
+  gx.heatmap(rho,
+    sym = TRUE, mar = c(1, 15), keysize = 0.4, cexCol = 0.0001,
+    scale = "none", key = FALSE
+  )
 }
 
 ## p.pheno=0.05;p.pca=0.5;nmin=3;nv=2
@@ -1059,29 +1061,31 @@ bc.plotCovariateHeatmap <- function(bc.res) {
 
 #' @export
 removeTechnicalEffects <- function(X, samples, y, p.pheno = 0.05, p.pca = 0.5,
-                                   params = c("lib","mito","ribo","cellcycle","gender"),
+                                   params = c("lib", "mito", "ribo", "cellcycle", "gender"),
                                    force = FALSE, nv = 2, k.pca = 10, xrank = NULL) {
-##  p.pheno = 0.05;p.pca = 0.5;force = FALSE; nv = 2;k.pca = 10;xrank = NULL
-##  params = c("lib","mito","ribo","cellcycle","gender")
+  ##  p.pheno = 0.05;p.pca = 0.5;force = FALSE; nv = 2;k.pca = 10;xrank = NULL
+  ##  params = c("lib","mito","ribo","cellcycle","gender")
 
   X1 <- X
-  X1 <- svdImpute2(X1)   ## temporary hack. need to refactor: allowing for real NA!!
+  X1 <- svdImpute2(X1) ## temporary hack. need to refactor: allowing for real NA!!
   if (force) {
-    bc <- detectBatchEffects(X1, samples, y, params = "technical",
+    bc <- detectBatchEffects(X1, samples, y,
+      params = "technical",
       p.pca = 1, p.pheno = 0, k.pca = k.pca, nv = nv, xrank = 999
     )
   } else {
-    bc <- detectBatchEffects(X1, samples, y, params = "technical",
+    bc <- detectBatchEffects(X1, samples, y,
+      params = "technical",
       p.pca = p.pca, p.pheno = p.pheno, k.pca = k.pca,
       nv = nv, xrank = xrank
     )
   }
   bc$params
 
-    message("[removeTechnicalEffect] params = ", paste(params,collapse=' '))
-    message("[removeTechnicalEffect] length(bc.params) = ", length(bc$params))
-    message("[removeTechnicalEffect] bc.params = ", paste(unlist(bc$params),collapse=' '))    
-        
+  message("[removeTechnicalEffect] params = ", paste(params, collapse = " "))
+  message("[removeTechnicalEffect] length(bc.params) = ", length(bc$params))
+  message("[removeTechnicalEffect] bc.params = ", paste(unlist(bc$params), collapse = " "))
+
   if (!is.null(params)) {
     B <- bc$covariates
     sel <- lapply(params, function(p) grep(paste0("^", p, "[.]"), colnames(B)))
@@ -1095,7 +1099,7 @@ removeTechnicalEffects <- function(X, samples, y, p.pheno = 0.05, p.pca = 0.5,
     B <- scale(bc$covariates)
     B[is.nan(B) | is.na(B)] <- 0
     B[is.infinite(B)] <- 0
-    bb <- paste( colnames(B), collapse= '+')
+    bb <- paste(colnames(B), collapse = "+")
     message("[removeTechnicalEffect] correcting for parameters: ", bb)
     design <- model.matrix(~y)
     bX <- limma::removeBatchEffect(X1, batch = NULL, covariates = B, design = design)
@@ -1104,9 +1108,9 @@ removeTechnicalEffects <- function(X, samples, y, p.pheno = 0.05, p.pca = 0.5,
     bX <- X
   }
 
-  ## put back missing values    
-  bX[is.na(X)] <- NA  
-    
+  ## put back missing values
+  bX[is.na(X)] <- NA
+
   ## put back on original row means
   bX <- bX - rowMeans(bX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
   bX
@@ -1121,13 +1125,16 @@ removeTechnicalEffects <- function(X, samples, y, p.pheno = 0.05, p.pca = 0.5,
 runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
                                       combatx = FALSE, sc = FALSE, prefix = "",
                                       methods = NULL, remove.failed = TRUE) {
-
-  if(0) {
-    controls = NULL; ntop = 2000;
-    combatx = FALSE; sc = FALSE; prefix = "";
-    methods = NULL; remove.failed = TRUE
+  if (0) {
+    controls <- NULL
+    ntop <- 2000
+    combatx <- FALSE
+    sc <- FALSE
+    prefix <- ""
+    methods <- NULL
+    remove.failed <- TRUE
   }
-    
+
   mod <- model.matrix(~y)
   nlevel <- length(unique(y[!is.na(y)]))
   if (ntop < Inf) {
@@ -1269,9 +1276,8 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
 runTechCorrectionMethods <- function(X, samples, y, p.pca = 0.5, p.pheno = 0.05, nv = 2,
                                      xrank = NULL, force = FALSE,
                                      remove.failed = TRUE, ntop = Inf) {
+  ##  p.pca = 0.5;p.pheno = 0.05;nv = 2;remove.failed = TRUE;ntop = Inf
 
-##  p.pca = 0.5;p.pheno = 0.05;nv = 2;remove.failed = TRUE;ntop = Inf    
-    
   mod <- model.matrix(~y)
   nlevel <- length(unique(y[!is.na(y)]))
   X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], ntop) ## faster
@@ -1282,37 +1288,43 @@ runTechCorrectionMethods <- function(X, samples, y, p.pca = 0.5, p.pheno = 0.05,
   params <- c("lib", "gender", "mito", "ribo", "cellcycle")
 
   xlist[["lib"]] <- removeTechnicalEffects(
-      X, samples, y = y, params = c("lib"),
-      p.pheno = p.pheno, p.pca = p.pca, nv = nv,
-      xrank = xrank, force = force
+    X, samples,
+    y = y, params = c("lib"),
+    p.pheno = p.pheno, p.pca = p.pca, nv = nv,
+    xrank = xrank, force = force
   )
 
   xlist[["gender"]] <- removeTechnicalEffects(
-      X, samples, y = y, params = c("gender"),
-      p.pheno = p.pheno, p.pca = p.pca, nv = nv,
-      xrank = xrank, force = force      
+    X, samples,
+    y = y, params = c("gender"),
+    p.pheno = p.pheno, p.pca = p.pca, nv = nv,
+    xrank = xrank, force = force
   )
 
   xlist[["mito"]] <- removeTechnicalEffects(
-      X, samples, y = y, params = c("mito"),
-      p.pheno = p.pheno, p.pca = p.pca, nv = nv,
-      xrank = xrank, force = force      
+    X, samples,
+    y = y, params = c("mito"),
+    p.pheno = p.pheno, p.pca = p.pca, nv = nv,
+    xrank = xrank, force = force
   )
 
   xlist[["ribo"]] <- removeTechnicalEffects(
-      X, samples, y = y, params = c("ribo"),
-      p.pheno = p.pheno, p.pca = p.pca, nv = nv,
-      xrank = xrank, force = force      
+    X, samples,
+    y = y, params = c("ribo"),
+    p.pheno = p.pheno, p.pca = p.pca, nv = nv,
+    xrank = xrank, force = force
   )
 
   xlist[["cellcycle"]] <- removeTechnicalEffects(
-      X, samples, y = y, params = c("cellcycle"),
-      p.pheno = p.pheno, p.pca = p.pca, nv = nv,
-      xrank = xrank, force = force      
+    X, samples,
+    y = y, params = c("cellcycle"),
+    p.pheno = p.pheno, p.pca = p.pca, nv = nv,
+    xrank = xrank, force = force
   )
 
   xlist[["<all>"]] <- removeTechnicalEffects(
-    X, samples,  y = y,
+    X, samples,
+    y = y,
     params = c("lib", "gender", "mito", "ribo", "cellcycle"),
     p.pheno = p.pheno, p.pca = p.pca, nv = nv,
     xrank = xrank, force = force
@@ -1328,7 +1340,7 @@ runTechCorrectionMethods <- function(X, samples, y, p.pca = 0.5, p.pheno = 0.05,
 #' @export
 bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
                                add.sil = TRUE, plot = TRUE, trend = TRUE,
-                               ref='uncorrected', clust = "tsne") {
+                               ref = "uncorrected", clust = "tsne") {
   if (0) {
     lfc <- 0.2
     q <- 0.05
@@ -1339,8 +1351,8 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
     clust <- "tsne"
   }
 
-  if(!ref %in% names(xlist)) ref <- names(xlist)[1]
-  
+  if (!ref %in% names(xlist)) ref <- names(xlist)[1]
+
   ## compute and make table
   message("computing statistics...")
   numsig <- lapply(xlist, stats.numsig,
@@ -1349,10 +1361,10 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
   )
 
   res <- t(sapply(numsig, function(r) {
-    c( sapply(r[1:2], length), avg.fc = mean(abs(r[[3]])))
+    c(sapply(r[1:2], length), avg.fc = mean(abs(r[[3]])))
   }))
   sdx <- sapply(xlist, function(x) mean(matrixStats::rowSds(x, na.rm = TRUE)))
-  snr <- res[,"avg.fc"] / sdx
+  snr <- res[, "avg.fc"] / sdx
   res <- cbind(res, avg.sd = sdx, SNR = snr)
 
   ## compute relative genes/geneset overlap
@@ -1364,15 +1376,15 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
   r.genes <- n1 / (1e-3 + n2)
   res <- cbind(res, r.genes)
 
-  any.gsets <- any(sapply(numsig, function(s) length(s$gsets)>0))
-  if(any.gsets) {
-      s1 <- numsig[[ref]]$gsets
-      m1 <- sapply(numsig, function(s) length(intersect(s$gsets, s1)))
-      m2 <- sapply(numsig, function(s) length(union(s$gsets, s1)))
-      r.gsets <- m1 / (1e-3 + m2)
-      res <- cbind(res, r.gsets)
+  any.gsets <- any(sapply(numsig, function(s) length(s$gsets) > 0))
+  if (any.gsets) {
+    s1 <- numsig[[ref]]$gsets
+    m1 <- sapply(numsig, function(s) length(intersect(s$gsets, s1)))
+    m2 <- sapply(numsig, function(s) length(union(s$gsets, s1)))
+    r.gsets <- m1 / (1e-3 + m2)
+    res <- cbind(res, r.gsets)
   }
-  
+
   ## centered top
   xlist1 <- lapply(xlist, function(x) {
     x <- head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)), ], 1000)
@@ -1380,51 +1392,55 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
     (x - rowMeans(x))
   })
 
-  message("computing silhouette scores...")  
+  message("computing silhouette scores...")
   silhouette <- rep(1, nrow(res))
   if (add.sil) {
     if (is.null(pos)) {
       if (clust == "tsne") {
         nb <- max(1, min(30, round(ncol(xlist[[1]]) / 5)))
-        ##CLUSTFUN <- function(x) uwot::tumap(scale(t(x), scale = FALSE), n_neighbors = nb)
-        CLUSTFUN <- function(x) Rtsne::Rtsne(scale(t(x)), check_duplicates=FALSE,
-                                             perplexity = nb)$Y
+        ## CLUSTFUN <- function(x) uwot::tumap(scale(t(x), scale = FALSE), n_neighbors = nb)
+        CLUSTFUN <- function(x) {
+          Rtsne::Rtsne(scale(t(x)),
+            check_duplicates = FALSE,
+            perplexity = nb
+          )$Y
+        }
       } else {
         CLUSTFUN <- function(x) svd(scale(t(x), scale = FALSE))$u[, 1:2]
       }
-      pos <- lapply(xlist1, function(x)  CLUSTFUN(x))
+      pos <- lapply(xlist1, function(x) CLUSTFUN(x))
     }
     pheno0 <- as.character(pheno)
     pheno0[is.na(pheno0)] <- "NA"
-    silhouette <- sapply( pos, function(p) {
+    silhouette <- sapply(pos, function(p) {
       score <- cluster::silhouette(as.integer(factor(pheno0)), stats::dist(p))
       mean(score[, "sil_width"])
     })
     silhouette <- pmax(silhouette, 1e-4)
 
     ## PCA score
-    nu <- max(2,min(10, dim(xlist[[1]])/4))
+    nu <- max(2, min(10, dim(xlist[[1]]) / 4))
     pca10 <- lapply(xlist1, function(x) {
       ## svd(scale(t(x), scale = FALSE), nu=nu, nv=0)$u
-      svd(t(x), nu=nu, nv=0)$u
-    })    
-    Y <- model.matrix( ~pheno)[,-1]
-    rho <- lapply( pca10, function(x) cor(x, Y) )
-    rho <- lapply( rho, function(x) rowMeans(abs(x)))
-    pc1.ratio <- sapply( rho, function(r) abs(r[1]) / sum(abs(r)))
+      svd(t(x), nu = nu, nv = 0)$u
+    })
+    Y <- model.matrix(~pheno)[, -1]
+    rho <- lapply(pca10, function(x) cor(x, Y))
+    rho <- lapply(rho, function(x) rowMeans(abs(x)))
+    pc1.ratio <- sapply(rho, function(r) abs(r[1]) / sum(abs(r)))
 
     res <- cbind(res, silhouette, pc1.ratio)
   }
 
   ## use only these for score
-  sel <- c("genes","gsets","SNR","pc1.ratio","silhouette")
+  sel <- c("genes", "gsets", "SNR", "pc1.ratio", "silhouette")
   sel <- intersect(sel, colnames(res))
-  
-##  score <- res.score * (silhouette / silhouette[1])**1
-  overall.score <- t(t(1e-4 + res[,sel]) / (1e-4 + res[ref,sel]))
-  overall.score[,"silhouette"] <- overall.score[,"silhouette"]**2 ## give more weight
-  overall.score <- exp(rowMeans(log(overall.score)))  ## geometric mean
-  
+
+  ##  score <- res.score * (silhouette / silhouette[1])**1
+  overall.score <- t(t(1e-4 + res[, sel]) / (1e-4 + res[ref, sel]))
+  overall.score[, "silhouette"] <- overall.score[, "silhouette"]**2 ## give more weight
+  overall.score <- exp(rowMeans(log(overall.score))) ## geometric mean
+
   res1 <- cbind(score = overall.score, res)
   res1 <- res1[order(-res1[, "score"]), ]
   pos <- pos[rownames(res1)]
@@ -1434,12 +1450,12 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
     nr <- ceiling(length(pos) / nc)
     i <- 1
     xdim <- nrow(pos[[1]])
-    cex1 <- cut( xdim, breaks=c(0,20,100,400,1000,999999), c(1.8,1.5,1.2,0.9,0.6))
-    cex1 <- as.numeric( as.character( cex1))
+    cex1 <- cut(xdim, breaks = c(0, 20, 100, 400, 1000, 999999), c(1.8, 1.5, 1.2, 0.9, 0.6))
+    cex1 <- as.numeric(as.character(cex1))
 
     par(mfrow = c(nr, nc))
     for (i in 1:length(pos)) {
-      plot(pos[[i]][,1:2],
+      plot(pos[[i]][, 1:2],
         col = factor(pheno), pch = 20, cex = cex1,
         main = names(pos)[i], cex.main = 1.6
       )
@@ -1448,18 +1464,18 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
     }
   }
 
-  p.genes <- lapply( numsig, function(s) s$p.genes )
-  p.gsets <- lapply( numsig, function(s) s$p.gsets )  
-  
-  list(scores = res1, pos = pos, p.genes = p.genes, p.gsets = p.gsets )
+  p.genes <- lapply(numsig, function(s) s$p.genes)
+  p.gsets <- lapply(numsig, function(s) s$p.gsets)
+
+  list(scores = res1, pos = pos, p.genes = p.genes, p.gsets = p.gsets)
 }
 
 #' @export
 bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
                            type = "umap", nmax = 1000, cex = 1, text.cex = 1,
-                           ncol = NULL, par=TRUE) {
+                           ncol = NULL, par = TRUE) {
   ## samples=NULL;scores = NULL;type='umap';nmax=1000;cex=1;text.cex = 1
-  if(par) {
+  if (par) {
     if (is.null(ncol)) {
       ncol <- ceiling(sqrt(length(xlist)))
     }
@@ -1468,10 +1484,10 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
   }
 
   methods <- names(xlist)
-  if(!is.null(pos)) {
-    methods <- intersect( methods, names(pos) )
+  if (!is.null(pos)) {
+    methods <- intersect(methods, names(pos))
   }
-  
+
   if (!is.null(scores)) {
     methods <- intersect(methods, rownames(scores))
     m.score <- scores[methods, "score"]
@@ -1507,8 +1523,8 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
       xx <- xx - rowMeans(xx)
       xx <- abs(xx)**0.5 * sign(xx)
       gx.imagemap(xx, main = m, cex.main = 1.4, cex = 0)
-      mtext("samples", 1, line = 0.5, las=1)
-      mtext("genes", 2, line = 0.5, las=3)
+      mtext("samples", 1, line = 0.5, las = 1)
+      mtext("genes", 2, line = 0.5, las = 3)
     }
   }
 
@@ -1530,7 +1546,7 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
         horiz = horiz, text.cex = text.cex
       )
     }
-    
+
     gridExtra::grid.arrange(grobs = plist, ncol = ncol, padding = unit(0.0, "line"))
   }
 
@@ -1555,7 +1571,7 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
       "r.genes" = "gene.coverage",
       "r.gsets" = "gset coverage",
       "SNR" = "signal-to-noise",
-      "pc1.ratio" = "PC1 ratio",            
+      "pc1.ratio" = "PC1 ratio",
       "silhouette" = "silhoutte score"
     )
     for (i in 1:ncol(scores)) {
@@ -1571,100 +1587,111 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
         group.name = ""
       ) +
         ggplot2::theme(
-          plot.margin = ggplot2::margin(t=0, r=4, b=0, l=8, "pt"),
+          plot.margin = ggplot2::margin(t = 0, r = 4, b = 0, l = 8, "pt"),
           plot.title = ggplot2::element_text(size = 15 * text.cex)
         ) +
         ggplot2::xlab("") + ggplot2::ggtitle(nn)
     }
-    
+
     gridExtra::grid.arrange(grobs = plt, ncol = ncol, padding = unit(0.0, "line"))
-  }    
+  }
 }
 
 #' @export
-bc.CovariateAnalysisPlot <- function (bc.results, k = 1:3, par = TRUE, col=1) {
+bc.CovariateAnalysisPlot <- function(bc.results, k = 1:3, par = TRUE, col = 1) {
   bc <- bc.results
-  if (par == TRUE)  par(mfrow = c(2, 2), mar = c(4, 4, 3, 2))
+  if (par == TRUE) par(mfrow = c(2, 2), mar = c(4, 4, 3, 2))
   pp <- intersect(rownames(bc$p.pca), rownames(bc$p.values))
   pp <- grep("^pca", pp, value = TRUE, invert = TRUE)
   k <- k[which(k <= ncol(bc$p.pca))]
   pxx <- bc$p.pca[pp, k, drop = FALSE]
   py <- bc$p.value[pp, 2]
-  x1 = -log10(1e-04 + py)
-  col <- rep(col,length(k))
-  for (i in c(0,k)) {
-    if(i == 0) {
-      plot.new()  
+  x1 <- -log10(1e-04 + py)
+  col <- rep(col, length(k))
+  for (i in c(0, k)) {
+    if (i == 0) {
+      plot.new()
       abline(h = 0.5, lty = 2)
       abline(v = 0.5, lty = 2)
-      mtext("correlation with PC   →", side=2, line=1.3, cex=0.85)
-      mtext("correlation with phenotype   →", side=1, line=1.3, cex=0.85)
-##      axis(side=1, tick='n', cex.axis=0.001)
-##      axis(side=2, tick='n', cex.axis=0.001)        
-      text( x = 0.2, y = 0.80, adj = 0.5, 
-        labels = "strong batch-effects\nor\nstratification factors" )
-      text( x = 0.75, y = 0.80, adj = 0.5, 
-        labels = "well designed model-parameters\nor\nstrong confouders" )
-      text( x = 0.2, y = 0.20, adj = 0.5, 
-        labels = 'nuisance parameters\nor\n"noise"' )
-      text( x = 0.75, y = 0.20, adj = 0.5, 
-        labels = "weak model-parameters\nor\nweak confouders")
+      mtext("correlation with PC   →", side = 2, line = 1.3, cex = 0.85)
+      mtext("correlation with phenotype   →", side = 1, line = 1.3, cex = 0.85)
+      ##      axis(side=1, tick='n', cex.axis=0.001)
+      ##      axis(side=2, tick='n', cex.axis=0.001)
+      text(
+        x = 0.2, y = 0.80, adj = 0.5,
+        labels = "strong batch-effects\nor\nstratification factors"
+      )
+      text(
+        x = 0.75, y = 0.80, adj = 0.5,
+        labels = "well designed model-parameters\nor\nstrong confouders"
+      )
+      text(
+        x = 0.2, y = 0.20, adj = 0.5,
+        labels = 'nuisance parameters\nor\n"noise"'
+      )
+      text(
+        x = 0.75, y = 0.20, adj = 0.5,
+        labels = "weak model-parameters\nor\nweak confouders"
+      )
     } else {
-      y1 = -log10(1e-04 + pxx[, i])
-      ylim = c(-0.1 * max(y1), 1.1 * max(y1))
+      y1 <- -log10(1e-04 + pxx[, i])
+      ylim <- c(-0.1 * max(y1), 1.1 * max(y1))
       col1 <- col[i]
-      plot(x1, y1, pch = 20, cex = 1.5, col = col1,
-        xlab = "significance with phenotype (-log10p)", 
+      plot(x1, y1,
+        pch = 20, cex = 1.5, col = col1,
+        xlab = "significance with phenotype (-log10p)",
         ylab = "significance with PC (-log10p)",
-        xlim = c(-0.4, 4.4), ylim = ylim)
+        xlim = c(-0.4, 4.4), ylim = ylim
+      )
       title(paste0("PC", i), cex.main = 1.4)
       text(x1, y1, pp, pos = c(1:4), cex = 1.3, col = col1)
-    }      
+    }
   }
 }
 
 #' @export
-get_model_parameters <- function(X, samples, pheno=NULL, contrasts=NULL ) {
-
-  if(is.null(pheno) && is.null(contrasts)) {
+get_model_parameters <- function(X, samples, pheno = NULL, contrasts = NULL) {
+  if (is.null(pheno) && is.null(contrasts)) {
     stop("must give either pheno vector or contrasts matrix")
   }
-  if(!is.null(contrasts)) {
-    pheno <- playbase::contrasts2pheno( contrasts, samples )
+  if (!is.null(contrasts)) {
+    pheno <- playbase::contrasts2pheno(contrasts, samples)
   }
-  
-  bc <- playbase::detectBatchEffects(X, samples, pheno,  params = "statistical",
-    k.pca=10, p.pca=0.5, p.pheno=0.05, xrank = 10)
+
+  bc <- playbase::detectBatchEffects(X, samples, pheno,
+    params = "statistical",
+    k.pca = 10, p.pca = 0.5, p.pheno = 0.05, xrank = 10
+  )
 
   bc$p.values
-  
-  ##pheno.pars <- names(which(bc$p.values[,'p.pheno'] < 1e-20))
-  p.pheno <- bc$p.values[,'p.pheno']
-  if(nrow(bc$p.values)==1) names(p.pheno)[1] <- rownames(bc$p.values)
+
+  ## pheno.pars <- names(which(bc$p.values[,'p.pheno'] < 1e-20))
+  p.pheno <- bc$p.values[, "p.pheno"]
+  if (nrow(bc$p.values) == 1) names(p.pheno)[1] <- rownames(bc$p.values)
   p.pheno
-  pheno.pars <- names(which( p.pheno == min(p.pheno) | p.pheno < 1e-80 ))
-  pheno.pars <- pheno.pars[ order(p.pheno[pheno.pars]) ]
+  pheno.pars <- names(which(p.pheno == min(p.pheno) | p.pheno < 1e-80))
+  pheno.pars <- pheno.pars[order(p.pheno[pheno.pars])]
   pheno.pars
 
   batch.pars <- NULL
-  if("statistical" %in% names(bc$params)) {
+  if ("statistical" %in% names(bc$params)) {
     batch.pars <- bc$params$statistical
     batch.pars
     batch.pars <- setdiff(batch.pars, pheno.pars)
-    batch.pars2 <- grep("batch",colnames(samples),ignore.case=TRUE,value=TRUE)
-    if(length(batch.pars2)) batch.pars <- c(batch.pars, batch.pars2)
+    batch.pars2 <- grep("batch", colnames(samples), ignore.case = TRUE, value = TRUE)
+    if (length(batch.pars2)) batch.pars <- c(batch.pars, batch.pars2)
     batch.pars <- sort(batch.pars)
   }
-  
+
   batch.vec <- NULL
-  if(length(batch.pars)) {
-    batch.vec <- apply(samples[,batch.pars,drop=FALSE],1,paste,collapse='_')
+  if (length(batch.pars)) {
+    batch.vec <- apply(samples[, batch.pars, drop = FALSE], 1, paste, collapse = "_")
   }
   pheno.vec <- NULL
-  if(length(pheno.pars)) {
-    pheno.vec <- apply(samples[,pheno.pars,drop=FALSE],1,paste,collapse='_')
+  if (length(pheno.pars)) {
+    pheno.vec <- apply(samples[, pheno.pars, drop = FALSE], 1, paste, collapse = "_")
   }
-  
+
   list(
     batch.pars = batch.pars,
     pheno.pars = pheno.pars,
@@ -1675,83 +1702,84 @@ get_model_parameters <- function(X, samples, pheno=NULL, contrasts=NULL ) {
 
 
 #' @export
-compare_batchcorrection_methods  <- function(X, samples, pheno, contrasts,
-                                             methods = c("uncorrected","ComBat",
-                                                         "limma","RUV","SVA","NNM"),
-                                             ntop = 4000, xlist.init = list(),
-                                             ref = NULL ) {
-
-    ## methods <- c("uncorrected","ComBat", "limma","RUV","SVA","NNM")
-    ##ntop = 4000; xlist.init = list()
+compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
+                                            methods = c(
+                                              "uncorrected", "ComBat",
+                                              "limma", "RUV", "SVA", "NNM"
+                                            ),
+                                            ntop = 4000, xlist.init = list(),
+                                            ref = NULL) {
+  ## methods <- c("uncorrected","ComBat", "limma","RUV","SVA","NNM")
+  ## ntop = 4000; xlist.init = list()
   batch <- NULL
-  pars <- get_model_parameters(X, samples, pheno=pheno, contrasts=contrasts)
-  
-  message("Running batch-correction methods...")  
+  pars <- get_model_parameters(X, samples, pheno = pheno, contrasts = contrasts)
+
+  message("Running batch-correction methods...")
   xlist <- runBatchCorrectionMethods(
     X = X,
     batch = pars$batch,
-    y = pars$pheno,  
+    y = pars$pheno,
     controls = NULL,
     methods = methods,
     combatx = FALSE,
     ntop = ntop,
     sc = FALSE,
-    remove.failed=TRUE
-  )         
+    remove.failed = TRUE
+  )
   names(xlist)
-  if(length(xlist.init)>0) xlist <- c( xlist.init, xlist )
+  if (length(xlist.init) > 0) xlist <- c(xlist.init, xlist)
 
 
-    dbg("[compare_batchcorrection_methods] names.xlist = ",names(xlist))
-    dbg("[compare_batchcorrection_methods] xlist.nrow = ",sapply(xlist,nrow))    
-    dbg("[compare_batchcorrection_methods] xlist.ncol = ",sapply(xlist,ncol))
-    
+  dbg("[compare_batchcorrection_methods] names.xlist = ", names(xlist))
+  dbg("[compare_batchcorrection_methods] xlist.nrow = ", sapply(xlist, nrow))
+  dbg("[compare_batchcorrection_methods] xlist.ncol = ", sapply(xlist, ncol))
+
   ## PCA is faster than UMAP
   pos <- list()
-  t2 <- function(x) t(scale(t(scale(t(x),scale=FALSE))))
-  nb <- max(2,round(min(30, dim(X)/5)))
-  
-##  incProgress( amount = 0.1, "Computing PCA clustering...")          
+  t2 <- function(x) t(scale(t(scale(t(x), scale = FALSE))))
+  nb <- max(2, round(min(30, dim(X) / 5)))
+
+  ##  incProgress( amount = 0.1, "Computing PCA clustering...")
   message("Computing PCA clustering...")
-  pos[['pca']] <- lapply(xlist, function(x) {
-      irlba::irlba(t2(x), nu=2, nv=2)$u[,1:2]
+  pos[["pca"]] <- lapply(xlist, function(x) {
+    irlba::irlba(t2(x), nu = 2, nv = 2)$u[, 1:2]
   })
-  for(i in 1:length(pos[['pca']])) {
-      rownames(pos[['pca']][[i]]) <- colnames(X)
+  for (i in 1:length(pos[["pca"]])) {
+    rownames(pos[["pca"]][[i]]) <- colnames(X)
   }
-    
+
   ##  incProgress( amount = 0.1, "Computing t-SNE clustering...")
   message("Computing t-SNE clustering...")
-  pos[['tsne']] <- lapply(xlist, function(x) {
-    Rtsne::Rtsne(t2(x), perplexity=nb, check_duplicates=FALSE)$Y
+  pos[["tsne"]] <- lapply(xlist, function(x) {
+    Rtsne::Rtsne(t2(x), perplexity = nb, check_duplicates = FALSE)$Y
   })
-  for(i in 1:length(pos[['tsne']])) {
-      rownames(pos[['tsne']][[i]]) <- colnames(X)
+  for (i in 1:length(pos[["tsne"]])) {
+    rownames(pos[["tsne"]][[i]]) <- colnames(X)
   }
-            
-##  incProgress( amount = 0.1, "Comparing results...")          
+
+  ##  incProgress( amount = 0.1, "Comparing results...")
   message("Comparing results...")
   res <- playbase::bc.evaluateResults(
     xlist,
     pheno = pars$pheno,
     lfc = 0.2,
     q = 0.05,
-    pos = pos[['tsne']],
+    pos = pos[["tsne"]],
     add.sil = TRUE,
     plot = FALSE,
     trend = TRUE
   )
-  
-  ##shiny::removeModal()
-  score <- res$scores[,"score"]
-  if(is.null(ref)) ref <- names(xlist)[1]
+
+  ## shiny::removeModal()
+  score <- res$scores[, "score"]
+  if (is.null(ref)) ref <- names(xlist)[1]
   best.method <- names(which.max(score))
 
   ## if the improvement is small, we rather choose the uncorrected solution
-  score.ratio <- score[best.method] / score[ref] 
-##  best.method <- ifelse( score.ratio < 1.10, ref, best.method )
+  score.ratio <- score[best.method] / score[ref]
+  ##  best.method <- ifelse( score.ratio < 1.10, ref, best.method )
   message("[select_batchcorrect_method] best.method = ", best.method)
-        
+
   list(
     xlist = xlist,
     pos = pos,
@@ -1773,25 +1801,23 @@ superBC2 <- function(X, samples, y, batch = NULL,
                      methods = c("batch", "technical", "statistical", "sva", "nnm2"),
                      p.pca = 0.5, p.pheno = 0.05, k.pca = 10, nv = 2,
                      xrank = NULL) {
+  if (y[1] %in% colnames(samples)) {
+    y <- samples[, y[1]]
+  }
+  if (!is.null(batch) && grepl("batch", colnames(samples), ignore.case = TRUE)) {
+    batch.col <- grep("batch", colnames(samples), ignore.case = TRUE)[1]
+    message("[superBC2] found batch column in sample info: ", colnames(samples)[batch.col])
+    batch <- samples[, batch.col]
+  }
+  if (!is.null(batch) && batch[1] %in% colnames(samples)) {
+    message("[superBC2] using batch column in sample info: ", batch[1])
+    batch <- samples[, batch[1]]
+  }
 
-  if(y[1] %in% colnames(samples)) {
-    y <- samples[,y[1]]
-  }
-  if(!is.null(batch) && grepl("batch",colnames(samples),ignore.case=TRUE)) {
-    batch.col <- grep("batch",colnames(samples),ignore.case=TRUE)[1]
-    message("[superBC2] found batch column in sample info: ", colnames(samples)[batch.col] )
-    batch <- samples[,batch.col]
-  }
-  if(!is.null(batch) && batch[1] %in% colnames(samples)) {
-    message("[superBC2] using batch column in sample info: ", batch[1])    
-    batch <- samples[,batch[1]]
-  }
-  
   cX <- X
   methods <- intersect(methods, c("technical", "batch", "statistical", "pca", "sva", "nnm"))
 
   for (m in methods) {
-
     ## correct explicit batch effect
     if (!is.null(batch) && m == "batch") {
       message("[superBC2] correcting for: batch")
@@ -1801,11 +1827,11 @@ superBC2 <- function(X, samples, y, batch = NULL,
 
     ## this removes typical batch effects
     if (m %in% c("statistical", "technical", "pca")) {
-
       bc <- detectBatchEffects(
         ## cX,
-        X,  ## on original matrix??
-        samples, y,  params = m,
+        X, ## on original matrix??
+        samples, y,
+        params = m,
         p.pca = p.pca, p.pheno = p.pheno, k.pca = k.pca,
         nv = nv, xrank = xrank
       )
@@ -1896,7 +1922,7 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
   ## F-test using limma just variables
   if (length(controls) == 1 && is.numeric(controls[1])) {
     ii <- which(!duplicated(rownames(X)))
-    F <- gx.limmaF(X[ii,], y, lfc = 0, fdr = 1, method = 1, sort.by='none', compute.means = FALSE, verbose = 0)
+    F <- gx.limmaF(X[ii, ], y, lfc = 0, fdr = 1, method = 1, sort.by = "none", compute.means = FALSE, verbose = 0)
     nc <- pmax(nrow(X) * as.numeric(controls), 1)
     sel <- head(order(-F$P.Value), nc)
     controls <- rownames(F)[sel]
@@ -2024,7 +2050,8 @@ pcaCorrect2 <- function(X, y, k = 10, p.notsig = 0.20) {
 pcaCorrect3 <- function(X, y, k = 10, xrank = NULL, p.notsig = 0.20) {
   ## this removes typical batch effects
   cX <- X
-  bc <- detectBatchEffects(cX, samples, y,  params = "pca",
+  bc <- detectBatchEffects(cX, samples, y,
+    params = "pca",
     p.pca = 0.5, p.pheno = p.notsig, k.pca = k, xrank = xrank
   )
   if (!is.null(bc$covariates)) {
@@ -2089,14 +2116,17 @@ runHarmony <- function(X, batch) {
 ComBatX <- function(X, batch, y = NULL, controls = NULL, b = 50,
                     recenter = TRUE, add.star = TRUE, bc.dim = 3,
                     bc.method = "combat") {
+  if (0) {
+    y <- NULL
+    controls <- NULL
+    b <- 50
+    recenter <- TRUE
+    add.star <- TRUE
+    bc.dim <- 3
+    bc.method <- "combat"
+  }
 
-if(0) {
-    y = NULL;controls = NULL; b = 50;
-    recenter = TRUE;add.star = TRUE; bc.dim = 3;
-    bc.method = "combat"
-}
-
-  batch <- paste0("b_",as.character(batch))
+  batch <- paste0("b_", as.character(batch))
   ## Get anchors: phenotypes that are in more than one batches
   if (is.null(y)) {
     if (!is.null(controls)) controls <- NULL
@@ -2277,10 +2307,9 @@ normalizeToControls <- function(X, batch, y, controls) {
 ##' @importFrom stats prcomp
 ##' @export
 bbknn <- function(data_matrix, batch, pca = TRUE, compute_pca = "python", nPcs = NULL) {
+  ## reticulate::py_install("anndata")
+  ## reticulate::py_install("bbknn")
 
-  ##reticulate::py_install("anndata")
-  ##reticulate::py_install("bbknn")
-    
   # import python modules with reticulate
   if (!is.matrix(data_matrix)) {
     warning("matrix expected for data_matrix")
@@ -2378,7 +2407,7 @@ bbknn <- function(data_matrix, batch, pca = TRUE, compute_pca = "python", nPcs =
 #'
 #' @export
 nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TRUE,
-                       knn=1, sdtop = 2000, return.B=FALSE) {
+                       knn = 1, sdtop = 2000, return.B = FALSE) {
   ## Nearest-neighbour matching for batch correction. This
   ## implementation creates a fully paired dataset with nearest
   ## matching neighbours when pairs are missing.
@@ -2417,8 +2446,8 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
 
   ## find neighbours
   message("[nnmCorrect] finding nearest neighbours...")
-  if(knn > 1) {
-    bb <- t(apply(D, 1, function(r) tapply(r, y1, function(s) head(names(sort(s)),nn))))
+  if (knn > 1) {
+    bb <- t(apply(D, 1, function(r) tapply(r, y1, function(s) head(names(sort(s)), nn))))
     B <- do.call(rbind, lapply(bb, function(x) unlist(x)))
   } else {
     B <- t(apply(D, 1, function(r) tapply(r, y1, function(s) names(which.min(s)))))
@@ -2427,10 +2456,10 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   Matrix::head(B)
 
   ## ensure sample is always present in own group
-##  idx <- cbind(1:nrow(B), match(y1, colnames(B)))
-##  B[idx] <- rownames(B)
-  B <- cbind( rownames(B), B)
-    
+  ##  idx <- cbind(1:nrow(B), match(y1, colnames(B)))
+  ##  B[idx] <- rownames(B)
+  B <- cbind(rownames(B), B)
+
   ## imputing full paired data set
   kk <- match(as.vector(B), rownames(B))
   full.y <- y1[kk]
@@ -2470,7 +2499,7 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   ## retain original row means
   cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
   res <- cX
-  if(return.B) {
+  if (return.B) {
     res <- list(X = cX, pairings = B)
   }
   return(res)
@@ -2478,11 +2507,10 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
 
 
 #' @export
-nnmCorrect2 <- function(X, y, r = 0.35,  center.x = TRUE, center.m = TRUE,
+nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
                         scale.x = FALSE, center.y = TRUE, mode = "sym",
                         knn = 3, sdtop = 2000, return.B = FALSE) {
-  
-  ##center.x=TRUE;center.m=TRUE;scale.x=FALSE;sdtop=1000;r=0.35;knn=3
+  ## center.x=TRUE;center.m=TRUE;scale.x=FALSE;sdtop=1000;r=0.35;knn=3
 
   ## compute distance matrix for NNM-pairing
   y1 <- paste0("y=", y)
@@ -2496,8 +2524,8 @@ nnmCorrect2 <- function(X, y, r = 0.35,  center.x = TRUE, center.m = TRUE,
     dX <- dX - rowMeans(dX, na.rm = TRUE)
   }
   if (scale.x) {
-    row.sdx <- matrixStats::rowSds(dX, na.rm=TRUE)
-    dX <- dX / (row.sdx + 1e-4 * mean(row.sdx,na.rm=TRUE))
+    row.sdx <- matrixStats::rowSds(dX, na.rm = TRUE)
+    dX <- dX / (row.sdx + 1e-4 * mean(row.sdx, na.rm = TRUE))
   }
   if (center.m) {
     ## center per condition group (takes out batch differences)
@@ -2508,26 +2536,26 @@ nnmCorrect2 <- function(X, y, r = 0.35,  center.x = TRUE, center.m = TRUE,
   if (center.y) {
     ## finally sample scaling
     dX <- scale(dX)
-    dX[is.na(dX)] <- 0  ## zero SD can cause NA
+    dX[is.na(dX)] <- 0 ## zero SD can cause NA
   }
-  
+
   ## find neighbours using fast KNN search
   message("[nnmCorrect2] finding nearest neighbours...")
-  a=y1[1]
+  a <- y1[1]
   bb <- list()
   nn <- list()
-  for(a in sort(unique(y1))) {
+  for (a in sort(unique(y1))) {
     x1 <- dX[, which(y1 == a), drop = FALSE]
     knn1 <- min(knn, ncol(x1))
-    res <- FNN::get.knnx( t(x1), query = t(dX), k = knn1)
-    bb[[a]] <- apply( res$nn.index, 2, function(i) colnames(x1)[i] )
+    res <- FNN::get.knnx(t(x1), query = t(dX), k = knn1)
+    bb[[a]] <- apply(res$nn.index, 2, function(i) colnames(x1)[i])
     nn[[a]] <- knn1
   }
   B <- do.call(cbind, bb)
   colnames(B) <- as.vector(unlist(mapply(rep, names(bb), nn)))
   rownames(B) <- colnames(dX)
   ## ensure sample is always present in own group
-  B <- cbind( rownames(B), B)
+  B <- cbind(rownames(B), B)
 
   ## create batch design matrix manually
   idx <- apply(B, 1, function(x) match(x, rownames(B)))
@@ -2537,13 +2565,13 @@ nnmCorrect2 <- function(X, y, r = 0.35,  center.x = TRUE, center.m = TRUE,
     i = jj, j = ii, x = rep(1, length(ii)),
     dims = c(nrow(B), nrow(B))
   )
-  P <- 1*(P>0)  ## dupcliated got summed
-  
+  P <- 1 * (P > 0) ## dupcliated got summed
+
   ## correct for pairing effect
   message("[nnmCorrect2] correcting for pairing effects...")
   P1 <- P
   if (mode == "sym") P1 <- P + Matrix::t(P) ## make symmetric
-  if (mode == "tr")  P1 <- Matrix::t(P) ## transposed
+  if (mode == "tr") P1 <- Matrix::t(P) ## transposed
   if (r < 1) {
     k <- round(min(r * dim(X), dim(X) - 1)) ## critical
     k <- max(k, 1)
@@ -2561,7 +2589,7 @@ nnmCorrect2 <- function(X, y, r = 0.35,  center.x = TRUE, center.m = TRUE,
   ## retain original row means
   cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
   res <- cX
-  if(return.B) {
+  if (return.B) {
     res <- list(X = cX, pairings = B)
   }
   return(res)
@@ -2614,35 +2642,35 @@ nnmCorrect.SIMPLE <- function(x, y, k = 3) {
 ## compatibility
 
 #' @export
-gx.nnmcorrect  <- function(...)  nnmCorrect(... , return.B=TRUE)
+gx.nnmcorrect <- function(...) nnmCorrect(..., return.B = TRUE)
 
 #' @export
-gx.nnmcorrect2 <- function(...)  nnmCorrect2(..., return.B=TRUE)
+gx.nnmcorrect2 <- function(...) nnmCorrect2(..., return.B = TRUE)
 
 
 #' @export
-bcKNN <- function(X, batch, y=NULL) {
-    if(is.null(batch)) stop("batch must be provided")
-    bb.list <- list()
-    batch <- as.character(batch)
-    b = batch[1]
-    for(b in sort(unique(batch))) {
-        X1 <- X[, which(batch == b), drop = FALSE]
-        res <- FNN::get.knnx( t(X1), query = t(X), k = 1)
-        xx <- X1[,res$nn.index[,1]]
-        bb.list[[b]] <- xx
-    }
-    if(!is.null(y)) {
-        bb.list <- lapply( bb.list, function(x) t(rowsum(t(x), y)))
-    } else {
-        bb.list <- lapply( bb.list, function(x) rowMeans(x))
-    }
-    bb.mean <- Reduce('+', bb.list ) / length(bb.list)
-    bb.list <- lapply( bb.list, function(x) (x - bb.mean) )
-    B <- do.call( cbind, bb.list )
-    dim(B)
-    bX <- t(limma::removeBatchEffect( t(X), covariates = scale(B))) ## model??
-    bX
+bcKNN <- function(X, batch, y = NULL) {
+  if (is.null(batch)) stop("batch must be provided")
+  bb.list <- list()
+  batch <- as.character(batch)
+  b <- batch[1]
+  for (b in sort(unique(batch))) {
+    X1 <- X[, which(batch == b), drop = FALSE]
+    res <- FNN::get.knnx(t(X1), query = t(X), k = 1)
+    xx <- X1[, res$nn.index[, 1]]
+    bb.list[[b]] <- xx
+  }
+  if (!is.null(y)) {
+    bb.list <- lapply(bb.list, function(x) t(rowsum(t(x), y)))
+  } else {
+    bb.list <- lapply(bb.list, function(x) rowMeans(x))
+  }
+  bb.mean <- Reduce("+", bb.list) / length(bb.list)
+  bb.list <- lapply(bb.list, function(x) (x - bb.mean))
+  B <- do.call(cbind, bb.list)
+  dim(B)
+  bX <- t(limma::removeBatchEffect(t(X), covariates = scale(B))) ## model??
+  bX
 }
 
 ## =====================================================================================

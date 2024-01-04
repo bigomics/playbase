@@ -4,21 +4,20 @@
 ##
 
 #' @export
-detectOutlierSamples <- function(X, plot=TRUE, y=NULL, par=TRUE) {
-
+detectOutlierSamples <- function(X, plot = TRUE, y = NULL, par = TRUE) {
   ## correlation and distance
-  ##X <- playbase::logCPM(playbase::COUNTS)
-  ##X <- safe.logCPM(2**X) ## quick normalization
-  X <- head( X[order(-matrixStats::rowSds(X, na.rm = TRUE)),], 4000 )
-  X <- X - median(X, na.rm=TRUE)
-  corX <- cor(X, use = 'pairwise')
-  distX <- as.matrix(dist(t(X)) )
+  ## X <- playbase::logCPM(playbase::COUNTS)
+  ## X <- safe.logCPM(2**X) ## quick normalization
+  X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], 4000)
+  X <- X - median(X, na.rm = TRUE)
+  corX <- cor(X, use = "pairwise")
+  distX <- as.matrix(dist(t(X)))
 
   ## z-score based on correlation
-  cor.min <- apply( abs(corX), 1, min, na.rm = TRUE)
-  cor.max <- apply( abs(corX), 1, max, na.rm = TRUE)
-  cor.median <- apply( abs(corX), 1, median, na.rm = TRUE)
-  cor.q10 <- apply(abs(corX), 1, quantile, probs=0.1, na.rm = TRUE)
+  cor.min <- apply(abs(corX), 1, min, na.rm = TRUE)
+  cor.max <- apply(abs(corX), 1, max, na.rm = TRUE)
+  cor.median <- apply(abs(corX), 1, median, na.rm = TRUE)
+  cor.q10 <- apply(abs(corX), 1, quantile, probs = 0.1, na.rm = TRUE)
   x1 <- (cor.median - mean(cor.median, na.rm = TRUE))
   z1 <- abs(x1 - median(x1, na.rm = TRUE)) / mad(x1, na.rm = TRUE)
   z1
@@ -26,48 +25,47 @@ detectOutlierSamples <- function(X, plot=TRUE, y=NULL, par=TRUE) {
   ## z-score based on euclidean distance
   dist.max <- apply(distX, 1, max, na.rm = TRUE)
   dist.median <- apply(distX, 1, median, na.rm = TRUE)
-  dist.q90 <- apply(distX, 1, quantile, probs=0.9, na.rm = TRUE)
-  dist.q10 <- apply(distX, 1, quantile, probs=0.1, na.rm = TRUE)
+  dist.q90 <- apply(distX, 1, quantile, probs = 0.9, na.rm = TRUE)
+  dist.q10 <- apply(distX, 1, quantile, probs = 0.1, na.rm = TRUE)
   dist.r <- dist.q10 / dist.max
   z2 <- abs(dist.r - median(dist.r, na.rm = TRUE)) / mad(dist.r, na.rm = TRUE)
   z2
-  
-  ## gene-wise z-score
-  xz <- abs(X - rowMeans(X,na.rm=TRUE)) / matrixStats::rowSds(X,na.rm=TRUE)
-  xz <- colMeans(xz,na.rm=TRUE)
-  z3 <- abs(xz - median(xz,na.rm=TRUE)) / mad(xz,na.rm=TRUE)
 
-  Z <- cbind(z1,z2,z3)
-  colnames(Z) <- c("z.correlation","z.distance","z.features")
-  zz <- rowMeans(Z,na.rm=TRUE)
-  z0 <- 0.1 * mean(Z,na.rm=TRUE)
-  zz2 <- exp(rowMeans(log(Z + z0),na.rm=TRUE)) - z0
-  
+  ## gene-wise z-score
+  xz <- abs(X - rowMeans(X, na.rm = TRUE)) / matrixStats::rowSds(X, na.rm = TRUE)
+  xz <- colMeans(xz, na.rm = TRUE)
+  z3 <- abs(xz - median(xz, na.rm = TRUE)) / mad(xz, na.rm = TRUE)
+
+  Z <- cbind(z1, z2, z3)
+  colnames(Z) <- c("z.correlation", "z.distance", "z.features")
+  zz <- rowMeans(Z, na.rm = TRUE)
+  z0 <- 0.1 * mean(Z, na.rm = TRUE)
+  zz2 <- exp(rowMeans(log(Z + z0), na.rm = TRUE)) - z0
+
   res <- list(z.outlier = zz, z.outlier2 = zz2, Z = Z)
-  
-  if(plot) {
-    par(mfrow=c(3,3))
-    plotOutlierScores(res, par=FALSE) 
+
+  if (plot) {
+    par(mfrow = c(3, 3))
+    plotOutlierScores(res, par = FALSE)
   }
-  
+
   res
 }
 
 #' @export
-plotOutlierScores <- function(res.outliers, z.threshold=c(3,6,9), par=TRUE) {
-  if(par==TRUE) par(mfrow=c(2,3))
-  Z <-  res.outliers$Z
+plotOutlierScores <- function(res.outliers, z.threshold = c(3, 6, 9), par = TRUE) {
+  if (par == TRUE) par(mfrow = c(2, 3))
+  Z <- res.outliers$Z
   zz <- res.outliers$z.outlier
-  zz2 <- res.outliers$z.outlier2  
+  zz2 <- res.outliers$z.outlier2
   barplot2 <- function(x, ...) {
-    barplot(x, ylim=c(0,max(12,max(Z))), ylab = "z-score", ... )
-    abline(h = z.threshold, lty=3, col='red')
+    barplot(x, ylim = c(0, max(12, max(Z))), ylab = "z-score", ...)
+    abline(h = z.threshold, lty = 3, col = "red")
   }
-  barplot2(zz, main='z.outlier (mean)')
-  barplot2(zz2, main='z.outlier (geom.mean)')
-  for(i in 1:ncol(Z)) {
-    z1 <- Z[,i]
-    barplot2(z1, main=colnames(Z)[i])
+  barplot2(zz, main = "z.outlier (mean)")
+  barplot2(zz2, main = "z.outlier (geom.mean)")
+  for (i in 1:ncol(Z)) {
+    z1 <- Z[, i]
+    barplot2(z1, main = colnames(Z)[i])
   }
 }
-

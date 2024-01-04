@@ -34,7 +34,7 @@ seurat2pgx <- function(obj, do.cluster = FALSE) {
   pgx$samples <- obj@meta.data
 
   probes <- rownames(pgx$counts)
-  organism <- guess_organism(probes) 
+  organism <- guess_organism(probes)
   pgx$genes <- ngs.getGeneAnnotation(rownames(pgx$counts), organism = organism)
 
   if (do.cluster) {

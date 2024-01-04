@@ -2101,7 +2101,7 @@ expandAnnotationMatrix <- function(A) {
 #'
 #' @return An expanded phenotype matrix with dummy variables suitable for regression modeling.
 #' @export
-expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check=TRUE) {
+expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = TRUE) {
   ## get expanded annotation matrix
   a1 <- tidy.dataframe(M)
   nlevel <- apply(a1, 2, function(x) length(setdiff(unique(x), NA)))

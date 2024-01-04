@@ -21,11 +21,11 @@ contrasts2pheno <- function(contrasts, samples) {
   M[is.na(M)] <- "_"
   pheno <- paste0("p", apply(M, 1, paste0, collapse = ""))
   ## check if pheno equals one of canonical phenotypes
-  col1 <- apply(samples,2,function(x) all(colSums(table(x,pheno)!=0)==1))
-  row1 <- apply(samples,2,function(x) all(rowSums(table(x,pheno)!=0)==1))
-  if(any(col1 & row1)) {
-      sel <- names(which(col1 & row1))[1]
-      pheno <- samples[,sel]
+  col1 <- apply(samples, 2, function(x) all(colSums(table(x, pheno) != 0) == 1))
+  row1 <- apply(samples, 2, function(x) all(rowSums(table(x, pheno) != 0) == 1))
+  if (any(col1 & row1)) {
+    sel <- names(which(col1 & row1))[1]
+    pheno <- samples[, sel]
   }
   names(pheno) <- rownames(samples)
   pheno
@@ -35,7 +35,7 @@ contrasts2pheno <- function(contrasts, samples) {
 samples2pheno <- function(M) {
   px <- apply(1 * expandPhenoMatrix(M), 1, paste, collapse = "")
   px <- paste0("p", px)
-  names(px) <- rownames(M)  
+  names(px) <- rownames(M)
   px
 }
 
@@ -827,7 +827,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   #  num.values <- c(-1, 0, 1, NA, "NA", "na", "", " ")
   #  is.numeric.contrast <- all(as.vector(unlist(contrasts)) %in% num.values)
   is.numeric.contrast
-  
+
   if (is.numeric.contrast) {
     contrasts[contrasts %in% c(NA, "NA", "na", "")] <- 0
     contrasts <- sign(contrasts)
@@ -848,7 +848,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   is.group.contrast
   is.sample.contrast
   is.numeric.contrast
-  
+
   if (!is.sample.contrast && !has.group.col) {
     message("[contrasts.convertToLabelMatrix] ERROR: Invalid group-wise contrast. could not find 'group' column.")
     return(NULL)
@@ -882,7 +882,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
       rownames(contrasts2) <- rownames(contrasts)
       contrasts2 <- contrastAsLabels(contrasts2)
       new.contrasts <- matrix(NA, nrow(samples), ncol(contrasts))
-      new.contrasts <- contrasts2[match(rownames(samples), rownames(contrasts2)), ,drop = FALSE]
+      new.contrasts <- contrasts2[match(rownames(samples), rownames(contrasts2)), , drop = FALSE]
       rownames(new.contrasts) <- rownames(samples)
     }
   }

@@ -94,20 +94,20 @@ pgx.countNormalization <- function(x, methods) {
   which.zero <- which(x == 0, arr.ind = TRUE)
   x1 <- x
   x1[which.zero] <- NA
-    
+
   for (m in methods) {
     if (m == "none") {
       ## normalization on individual mean
       x <- x
-    } else if (m %in% c("scale","mean.center")) {
+    } else if (m %in% c("scale", "mean.center")) {
       ## normalization on individual mean
       mx <- mean(x1, na.rm = TRUE)
       x <- t(t(x) / (1 + colMeans(x1, na.rm = TRUE))) * mx
     } else if (m == "median.center") {
       mx <- apply(x1, 2, median, na.rm = TRUE)
-      x <- t(t(x) / (1+mx)) * mean(mx, na.rm = TRUE)
+      x <- t(t(x) / (1 + mx)) * mean(mx, na.rm = TRUE)
     } else if (m == "CPM") {
-      x <- t(t(x) / (1+Matrix::colSums(x1, na.rm = TRUE)) ) * 1e6
+      x <- t(t(x) / (1 + Matrix::colSums(x1, na.rm = TRUE))) * 1e6
     } else if (m == "TMM") {
       ## normalization on total counts (linear scale)
       x <- normalizeTMM(x, log = FALSE) ## does TMM on counts (edgeR)
@@ -416,14 +416,13 @@ safe.logCPM <- function(x, t = 0.05, prior = 1, q = NULL) {
 }
 
 #' @export
-scale_counts <- function(counts, method, shift="clip") {
-
+scale_counts <- function(counts, method, shift = "clip") {
   eps <- 1e-20
   eps <- 0
-  X <- log2(counts)  ## zero counts become NA!
+  X <- log2(counts) ## zero counts become NA!
   X[is.infinite(X)] <- NA
   zero.point <- 0
-  
+
   if (method == "cpm") {
     median.tc <- median(colSums(counts, na.rm = TRUE), na.rm = TRUE)
     a <- log2(median.tc) - log2(1e6)
@@ -431,20 +430,20 @@ scale_counts <- function(counts, method, shift="clip") {
   } else if (grepl("^m[0-9]", method)) {
     ## median centering
     mval <- as.numeric(substring(method, 2, 99))
-    dbg("[scale_counts] mval = ",mval)            
+    dbg("[scale_counts] mval = ", mval)
     a <- median(X, na.rm = TRUE) - mval
     zero.point <- a
   } else if (grepl("^z[0-9]+", method)) {
     ## zero at z-distance from median
     zdist <- as.numeric(substring(method, 2, 99))
-    dbg("[scale_counts] zdist = ",zdist)      
+    dbg("[scale_counts] zdist = ", zdist)
     m0 <- mean(apply(X, 2, median, na.rm = TRUE))
     s0 <- mean(apply(X, 2, sd, na.rm = TRUE))
     zero.point <- m0 - zdist * s0
   } else if (grepl("^q[0.][.0-9]+", method)) {
     ## direct quantile
     probs <- as.numeric(substring(method, 2, 99))
-    dbg("[scale_counts] q.probs = ",probs)
+    dbg("[scale_counts] q.probs = ", probs)
     zero.point <- quantile(X, probs = probs, na.rm = TRUE)
   } else {
     stop("unknown method = ", method)
@@ -463,7 +462,7 @@ scale_counts <- function(counts, method, shift="clip") {
 
   ## put back to exponential space and set to zero
   X <- 2**X - 1
-  X[which(counts==0)] <- 0
-  
+  X[which(counts == 0)] <- 0
+
   X
 }
