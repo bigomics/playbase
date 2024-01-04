@@ -4,7 +4,7 @@
 \alias{gx.hist}
 \title{Histogram of gene expression values}
 \usage{
-gx.hist(gx, main = "", ylim = NULL)
+gx.hist(gx, ...)
 }
 \arguments{
 \item{gx}{Gene expression matrix with genes in rows and samples in columns.}
