@@ -100,12 +100,12 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
 
   if (!is.null(custom.geneset$gmt)) {
-    message("Adding custom genesets...")      
+    message("Adding custom genesets...")
     add.gmt <- c(add.gmt, custom.geneset$gmt)
   }
 
   if (!is.null(add.gmt)) {
-    message("Merging custom/random genesets...")            
+    message("Merging custom/random genesets...")
     # convert gmt standard to SPARSE matrix
     custom_gmt <- playbase::createSparseGenesetMatrix(
       ##    gmt.all = custom.geneset$gmt,
@@ -121,8 +121,8 @@ compute_testGenesets <- function(pgx,
 
     custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% pgx$genes$symbol, drop = FALSE]
     custom_gmt <- Matrix::t(playbase::normalize_rows(custom_gmt))
-    G <- merge_sparse_matrix(m1 = G, m2 = custom_gmt)  
-    G <- G[rownames(G) %in% pgx$genes$symbol, , drop = FALSE]    ## gene on rows
+    G <- merge_sparse_matrix(m1 = G, m2 = custom_gmt)
+    G <- G[rownames(G) %in% pgx$genes$symbol, , drop = FALSE] ## gene on rows
     remove(custom_gmt)
   }
 
@@ -167,7 +167,7 @@ compute_testGenesets <- function(pgx,
   if (max.features < 0) max.features <- 20000
 
   if (max.features > 0) {
-    dbg("[compute_testGenesets] Reducing gene set matrix...\n")      
+    dbg("[compute_testGenesets] Reducing gene set matrix...\n")
     ## Reduce gene sets by selecting top varying genesets. We use the
     ## very fast sparse rank-correlation for approximate single sample
     ## geneset activation.
@@ -412,7 +412,7 @@ merge_sparse_matrix <- function(m1, m2) {
     genes_missing_in_m1 <- setdiff(gene_vector, rownames(m1))
     rownames(zero_rows) <- genes_missing_in_m1
     m1 <- rbind(m1, zero_rows)
-    m1 <- m1[gene_vector,]
+    m1 <- m1[gene_vector, ]
   }
 
   if (num_rows2 < length(gene_vector)) {
@@ -421,14 +421,14 @@ merge_sparse_matrix <- function(m1, m2) {
     genes_missing_in_m2 <- setdiff(gene_vector, rownames(m2))
     rownames(zero_rows) <- genes_missing_in_m2
     m2 <- rbind(m2, zero_rows)
-    m2 <- m2[gene_vector,]
+    m2 <- m2[gene_vector, ]
   }
 
   combined_gmt <- Matrix::cbind2(m1, m2)
 
-  # if duplicated genesets, then keep only largest one 
-  combined_gmt <- combined_gmt[, order(-colSums(combined_gmt!=0))]
+  # if duplicated genesets, then keep only largest one
+  combined_gmt <- combined_gmt[, order(-colSums(combined_gmt != 0))]
   combined_gmt <- combined_gmt[, !duplicated(colnames(combined_gmt))]
-  
+
   return(combined_gmt)
 }
