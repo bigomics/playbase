@@ -427,7 +427,7 @@ merge_sparse_matrix <- function(m1, m2) {
   combined_gmt <- Matrix::cbind2(m1, m2)
 
   # if duplicated genesets, then keep only largest one
-  combined_gmt <- combined_gmt[, order(-colSums(combined_gmt != 0))]
+  combined_gmt <- combined_gmt[, order(-Matrix::colSums(combined_gmt != 0))]
   combined_gmt <- combined_gmt[, !duplicated(colnames(combined_gmt))]
 
   return(combined_gmt)
