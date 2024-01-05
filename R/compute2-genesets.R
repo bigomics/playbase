@@ -74,7 +74,7 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
 
   ## filter gene sets on size
-  cat("Filtering gene sets on size...\n")
+  dbg("[compute_testGenesets] Filtering gene sets on size...")
   gmt.size <- Matrix::colSums(G != 0)
   size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
 
@@ -87,6 +87,7 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
   ## Add random genesets (in case there is no geneset left)
   ## -----------------------------------------------------------
+  dbg("[compute_testGenesets] Adding random genesets...")
   add.gmt <- NULL
   rr <- sample(15:400, 100)
   gg <- rownames(pgx$X)
@@ -99,10 +100,12 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
 
   if (!is.null(custom.geneset$gmt)) {
+    message("Adding custom genesets...")      
     add.gmt <- c(add.gmt, custom.geneset$gmt)
   }
 
   if (!is.null(add.gmt)) {
+    message("Merging custom/random genesets...")            
     # convert gmt standard to SPARSE matrix
     custom_gmt <- playbase::createSparseGenesetMatrix(
       ##    gmt.all = custom.geneset$gmt,
@@ -117,16 +120,16 @@ compute_testGenesets <- function(pgx,
     )
 
     custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% pgx$genes$symbol, drop = FALSE]
-    custom_gmt <- playbase::normalize_rows(custom_gmt)
-    G <- playbase::merge_sparse_matrix(m1 = G, m2 = Matrix::t(custom_gmt))
-    G <- G[rownames(G) %in% pgx$genes$symbol, , drop = FALSE]
+    custom_gmt <- Matrix::t(playbase::normalize_rows(custom_gmt))
+    G <- merge_sparse_matrix(m1 = G, m2 = custom_gmt)  
+    G <- G[rownames(G) %in% pgx$genes$symbol, , drop = FALSE]    ## gene on rows
     remove(custom_gmt)
   }
 
   ## -----------------------------------------------------------
   ## create the full GENE matrix (always collapsed by gene)
   ## -----------------------------------------------------------
-
+  dbg("creating GENE matrix by SYMBOL...")
   X <- pgx$X
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
     X <- rename_by(X, pgx$genes, "symbol")
@@ -145,7 +148,7 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
   ## create the GENESETxGENE matrix
   ## -----------------------------------------------------------
-  cat("Matching gene set matrix...\n")
+  dbg("[compute_testGenesets] Matching gene set matrix...\n")
   gg <- rownames(X)
   ii <- intersect(gg, rownames(G))
   G <- G[ii, , drop = FALSE]
@@ -164,7 +167,7 @@ compute_testGenesets <- function(pgx,
   if (max.features < 0) max.features <- 20000
 
   if (max.features > 0) {
-    cat("Reducing gene set matrix...\n")
+    dbg("[compute_testGenesets] Reducing gene set matrix...\n")      
     ## Reduce gene sets by selecting top varying genesets. We use the
     ## very fast sparse rank-correlation for approximate single sample
     ## geneset activation.
@@ -399,50 +402,33 @@ createSparseGenesetMatrix <- function(
 #'
 #' @export
 merge_sparse_matrix <- function(m1, m2) {
-  num_cols1 <- ncol(m1)
-  num_cols2 <- ncol(m2)
+  num_rows1 <- nrow(m1)
+  num_rows2 <- nrow(m2)
+  gene_vector <- unique(c(rownames(m1), rownames(m2)))
 
-  gene_vector <- unique(c(colnames(m1), colnames(m2)))
-
-  if (num_cols1 < length(gene_vector)) {
-    num_missing_cols <- length(gene_vector) - num_cols1
-    zero_cols <- Matrix::Matrix(0, nrow = nrow(m1), ncol = num_missing_cols, sparse = TRUE)
-    genes_missing_in_m1 <- setdiff(gene_vector, colnames(m1))
-    colnames(zero_cols) <- genes_missing_in_m1
-
-    m1 <- cbind(m1, zero_cols)
-
-    m1 <- m1[, gene_vector]
+  if (num_rows1 < length(gene_vector)) {
+    num_missing_rows <- length(gene_vector) - num_rows1
+    zero_rows <- Matrix::Matrix(0, nrow = num_missing_rows, ncol = ncol(m1), sparse = TRUE)
+    genes_missing_in_m1 <- setdiff(gene_vector, rownames(m1))
+    rownames(zero_rows) <- genes_missing_in_m1
+    m1 <- rbind(m1, zero_rows)
+    m1 <- m1[gene_vector,]
   }
 
-  if (num_cols2 < length(gene_vector)) {
-    num_missing_cols <- length(gene_vector) - num_cols2
-    zero_cols <- Matrix::Matrix(0, nrow = nrow(m2), ncol = num_missing_cols, sparse = TRUE)
-    genes_missing_in_m2 <- setdiff(gene_vector, colnames(m2))
-    colnames(zero_cols) <- genes_missing_in_m2
-    m2 <- cbind(m2, zero_cols)
-    m2 <- m2[, gene_vector]
+  if (num_rows2 < length(gene_vector)) {
+    num_missing_rows <- length(gene_vector) - num_rows2
+    zero_rows <- Matrix::Matrix(0, nrow = num_missing_rows, ncol = ncol(m2), sparse = TRUE)
+    genes_missing_in_m2 <- setdiff(gene_vector, rownames(m2))
+    rownames(zero_rows) <- genes_missing_in_m2
+    m2 <- rbind(m2, zero_rows)
+    m2 <- m2[gene_vector,]
   }
 
-  combined_gmt <- Matrix::rbind2(m1, m2)
+  combined_gmt <- Matrix::cbind2(m1, m2)
 
-  # if rows have duplicated names, then sum them and keep only one row
-  if (any(duplicated(rownames(combined_gmt)))) {
-    dup_rows <- unique(rownames(combined_gmt)[duplicated(rownames(combined_gmt))])
-    summed_rows <- lapply(dup_rows, function(x) Matrix::colSums(combined_gmt[rownames(combined_gmt) == x, ]))
-
-    # convert summed rows to a matrix
-    summed_rows <- do.call(rbind, summed_rows)
-
-    # add names to summed rows
-    rownames(summed_rows) <- dup_rows
-
-    # remove duplicated rows
-    combined_gmt <- combined_gmt[!rownames(combined_gmt) %in% dup_rows, ]
-
-    # add summed rows
-
-    combined_gmt <- Matrix::rbind2(combined_gmt, summed_rows)
-  }
+  # if duplicated genesets, then keep only largest one 
+  combined_gmt <- combined_gmt[, order(-colSums(combined_gmt!=0))]
+  combined_gmt <- combined_gmt[, !duplicated(colnames(combined_gmt))]
+  
   return(combined_gmt)
 }
