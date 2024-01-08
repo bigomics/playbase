@@ -14,7 +14,6 @@ pgx.createPGX(
   custom.geneset = NULL,
   annot_table = NULL,
   max.genesets = 5000,
-  organism = NULL,
   name = "Data set",
   datatype = "unknown",
   creator = "unknown",
