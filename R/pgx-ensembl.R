@@ -50,84 +50,8 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL, use_
     use_biomart = use_biomart ## auto-select
   )
 
-  all_genes <- sort(genes$symbol)
-  if (organism != "No organism") {
-    probe_type <- guess_probetype(probes)
-  } else {
-    probe_type <- "custom"
-  }
-
   # Return data
   pgx$genes <- genes
-  pgx$all_genes <- all_genes ## Why need this at all?? unneeded baggage.. (IK)
-  pgx$probe_type <- probe_type ## Why need this at all?? unneeded baggage.. (IK)
-
-  return(pgx)
-}
-
-pgx.gene_table.OLD <- function(pgx, organism) {
-  # Safety checks
-  stopifnot(is.list(pgx))
-  stopifnot(is.character(organism))
-
-  # Init vals
-  genes <- NULL
-  ensembl_dataset <- NULL
-  counts <- pgx$counts
-  probes <- rownames(counts)
-  probe_type <- NA_character_
-  species_info <- playbase::SPECIES_TABLE[species_name == organism]
-
-  # Some species appear in more than one mart, select ensembl only to avoid confusion
-  if (nrow(species_info) > 1) {
-    species_info <- species_info[mart == "ensembl"]
-    species_info <- species_info[1, ]
-  }
-
-  # Use while loop for retries
-  counter <- 0
-  while (is.null(genes) && counter <= 5) {
-    message(paste0("[pgx.gene_table] attempt to annotate genes, counter = ", counter + 1))
-    # Set waiter so that we can make multiple calls with waiting time
-    Sys.sleep(counter * 10)
-
-    # Get ensembl
-    if (is.null(ensembl_dataset)) {
-      try({
-        ensembl <- biomaRt::useEnsembl(biomart = "ensembl")
-        ensembl_dataset <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
-      })
-    }
-
-    # Get probe type
-    if (!is.null(ensembl_dataset) & is.na(probe_type)) {
-      probe_type <- detect_probe.DEPRECATED(probes, ensembl_dataset)
-    }
-
-    # Get gene table
-    if (!is.na(probe_type) & !is.null(ensembl_dataset)) {
-      genes <- ngs.getGeneAnnotation_BIOMART(
-        probes = probes,
-        organism = organism,
-        probe_type = probe_type,
-        mart = ensembl_dataset
-      )
-
-      all_genes <- biomaRt::getBM(attributes = "external_gene_name", mart = ensembl_dataset)
-      all_genes <- all_genes[, 1]
-    }
-    counter <- counter + 1
-  }
-
-  if (counter > 5 && is.null(genes)) {
-    message("[pgx.gene_table] WARNING. could not reach ensembl server to get gene annotation")
-    return(pgx)
-  }
-
-  # Return data
-  pgx$genes <- genes
-  pgx$all_genes <- all_genes ## Why need this?? unneeded baggage.. (IK)
-  pgx$probe_type <- probe_type ## Why need this?? unneeded baggage.. (IK)
 
   return(pgx)
 }
@@ -209,14 +133,13 @@ ngs.getGeneAnnotation <- function(pgx, probes, organism = NULL, annot_table = NU
   ## try biomaRt for the rest
   if (is.null(genes) && organism != "No organism") {
     message("[ngs.getGeneAnnotation] >>> annotating genes using biomaRt")
-    probe_type <- guess_probetype(probes, for.biomart = TRUE)
-    message("[ngs.getGeneAnnotation] probe_type = ", probe_type)
-    if (is.null(probe_type)) stop("probe_type is NULL")
     mart <- use_mart(organism)
     if (is.null(mart)) {
       message("[ngs.getGeneAnnotation] FAIL : could not connect to mart")
-      return(NULL)
     }
+    probe_type <- detect_probe.DEPRECATED(probes, mart)
+    message("[ngs.getGeneAnnotation] probe_type = ", probe_type)
+    if (is.null(probe_type)) stop("probe_type is NULL")
     genes <- ngs.getGeneAnnotation_BIOMART(
       probes = probes,
       organism = organism,
@@ -254,8 +177,7 @@ ngs.getGeneAnnotation_BIOMART <- function(
   clean_probes <- probes[!duplicated(probes)]
 
   if (is.null(probe_type)) {
-    ##  probe_type <- detect_probe.DEPRECATED(probes, mart)
-    probe_type <- guess_probetype(probes, for.biomart = TRUE)
+    probe_type <- detect_probe.DEPRECATED(probes, mart)
   }
 
   # Select attributes
@@ -529,7 +451,7 @@ use_mart <- function(organism) {
   }
   ensembl <- biomaRt::useEnsembl(biomart = "ensembl")
   mart <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
-  mart
+  return(mart)
 }
 
 #' Guess probe type
@@ -980,24 +902,30 @@ detect_probe.DEPRECATED <- function(probes, mart = NULL, verbose = TRUE) {
   # this approach still has issues, as sometimes we have mixed probe types in on study.
 
   ## !!!!!NEED REFACTORING!!!!! : this is so bad... (IK)
-  probe_check <- sapply(probe_types_to_check, FUN = function(x) {
-    tryCatch(
+  probe_check <- rep(0L, length(probe_types_to_check))
+  names(probe_check) <- probe_types_to_check
+  for(i in seq_along(probe_types_to_check)) {
+    probe_check[i] <- tryCatch(
       {
         tmp <- biomaRt::getBM(
-          attributes = x,
-          filters = x,
+          attributes = probe_types_to_check[i],
+          filters = probe_types_to_check[i],
           values = subset_probes,
           mart = mart
         )
         Sys.sleep(5) # Sleep time to prevent bounce from ensembl for consecutive calls
         out <- nrow(tmp)
-        return(out)
+        out
       },
       error = function(e) {
         return(0)
       }
     )
-  })
+    # If more than 50 probes are found, stop
+    if(probe_check[i] > 50) {
+      break
+    }
+  }
 
   # Check matches and return if winner
   if (all(probe_check == 0)) {
@@ -1107,10 +1035,6 @@ id2symbol.DEPRECATED <- function(probes, type = NULL, org = "human", keep.na = F
     } else {
       symbol0 <- probes
     }
-    ## all.symbols <- NULL
-    ## if(org=="human") all.symbols <- unlist(as.list(org.Hs.egSYMBOL))
-    ## if(org=="mouse") all.symbols <- unlist(as.list(org.Mm.egSYMBOL))
-    ## symbol0 <- lapply(symbol0, function(s) intersect(s,all.symbols))
   } else {
     org
     if (org == "human") {
@@ -1142,4 +1066,72 @@ id2symbol.DEPRECATED <- function(probes, type = NULL, org = "human", keep.na = F
   Matrix::head(symbol)
 
   symbol
+}
+
+
+pgx.gene_table.OLD <- function(pgx, organism) {
+  # Safety checks
+  stopifnot(is.list(pgx))
+  stopifnot(is.character(organism))
+
+  # Init vals
+  genes <- NULL
+  ensembl_dataset <- NULL
+  counts <- pgx$counts
+  probes <- rownames(counts)
+  probe_type <- NA_character_
+  species_info <- playbase::SPECIES_TABLE[species_name == organism]
+
+  # Some species appear in more than one mart, select ensembl only to avoid confusion
+  if (nrow(species_info) > 1) {
+    species_info <- species_info[mart == "ensembl"]
+    species_info <- species_info[1, ]
+  }
+
+  # Use while loop for retries
+  counter <- 0
+  while (is.null(genes) && counter <= 5) {
+    message(paste0("[pgx.gene_table] attempt to annotate genes, counter = ", counter + 1))
+    # Set waiter so that we can make multiple calls with waiting time
+    Sys.sleep(counter * 10)
+
+    # Get ensembl
+    if (is.null(ensembl_dataset)) {
+      try({
+        ensembl <- biomaRt::useEnsembl(biomart = "ensembl")
+        ensembl_dataset <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
+      })
+    }
+
+    # Get probe type
+    if (!is.null(ensembl_dataset) & is.na(probe_type)) {
+      probe_type <- detect_probe.DEPRECATED(probes, ensembl_dataset)
+    }
+
+    # Get gene table
+    if (!is.na(probe_type) & !is.null(ensembl_dataset)) {
+      genes <- ngs.getGeneAnnotation_BIOMART(
+        probes = probes,
+        organism = organism,
+        probe_type = probe_type,
+        mart = ensembl_dataset
+      )
+
+      all_genes <- biomaRt::getBM(attributes = "external_gene_name", mart = ensembl_dataset)
+      all_genes <- all_genes[, 1]
+    }
+    counter <- counter + 1
+  }
+
+  if (counter > 5 && is.null(genes)) {
+    message("[pgx.gene_table] WARNING. could not reach ensembl server to get gene annotation")
+    return(pgx)
+  }
+
+  # Return data
+  pgx$genes <- genes
+  pgx$all_genes <- all_genes ## Why need this?? unneeded baggage.. (IK)
+  pgx$probe_type <- probe_type ## Why need this?? unneeded baggage.. (IK)
+
+  return(pgx)
 }
