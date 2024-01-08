@@ -263,10 +263,12 @@ gx.b3plot <- function(x, y, first = NULL,
 #' gx <- matrix(rnorm(100 * 10), 100, 10)
 #' gx.hist(gx)
 #' }
-gx.hist <- function(gx, main = "", ylim = NULL) {
-  h0 <- graphics::hist(as.vector(gx),
-    breaks = 120, main = main,
-    col = "grey", freq = FALSE, ylim = ylim, xlab = "signal"
+#' @export
+gx.hist <- function(gx, ...) {
+  h0 <- graphics::hist(
+    as.vector(gx),
+    col = "grey90", border = "grey80", freq = FALSE,
+    ...
   )
   i <- 1
   for (i in 1:ncol(gx)) {

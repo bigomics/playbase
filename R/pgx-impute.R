@@ -23,8 +23,7 @@ imputeMissing <- function(X,
                             "knn", "QRILC", "MLE", "MinDet", "MinProb",
                             "min", "zero", "nbavg", "rowmeans"
                           )[1:3],
-                          rf.ntree = 100,
-                          plot = FALSE) {
+                          rf.ntree = 100, nv = 5, plot = FALSE) {
   impX <- list()
 
   ## ------------ simple rowmeans -----------
@@ -83,7 +82,7 @@ imputeMissing <- function(X,
   }
 
   if ("SVD2" %in% method) {
-    impX[["SVD2"]] <- svdImpute2(X, nv = NULL)
+    impX[["SVD2"]] <- svdImpute2(X, nv = nv)
   }
 
   if ("NMF" %in% method) {
@@ -146,14 +145,19 @@ imputeMissing <- function(X,
     return(NULL)
   }
 
-  ## ------------ meta --------------
-  metaX <- lapply(impX, as.vector)
-  metaX <- do.call(cbind, metaX)
-  metaX <- rowMeans(metaX, na.rm = TRUE)
-  metaX <- matrix(metaX,
-    nrow = nrow(X), ncol = ncol(X),
-    dimnames = dimnames(X)
-  )
+  metaX <- NULL
+  if (length(impX) > 1) {
+    ## ------------ meta --------------
+    metaX <- lapply(impX, as.vector)
+    metaX <- do.call(cbind, metaX)
+    metaX <- rowMeans(metaX, na.rm = TRUE)
+    metaX <- matrix(metaX,
+      nrow = nrow(X), ncol = ncol(X),
+      dimnames = dimnames(X)
+    )
+  } else {
+    metaX <- impX[[1]]
+  }
 
   ## any remaining NA we fill with col/row medians
   if (any(is.na(metaX))) {

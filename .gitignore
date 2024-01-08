@@ -39,6 +39,36 @@ renv/
 # RStudio files
 .Rproj.user/
 
+# debug files and folders
+ERROR_*
+data/*
+data_public/*
+data_shared/*
+trace/*
+logs/*.rds
+/logs/
+USER_INPUT/
+user_input/
+
+# Sensitive files #
+firebase.rds
+chirp_data.db
+chirp_data.csv
+gmail_creds
+test-firestore.R
+.httr-oauth
+bigomics-extra.js
+.Rproj.user
+Renviron.site
+.Rdata
+inst/doc
+*.csv
+*.RData
+params*
+processx-error.log
+processx-output.log
+raw_*
+
 # produced vignettes
 vignettes/*.html
 vignettes/*.pdf

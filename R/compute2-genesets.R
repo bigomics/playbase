@@ -58,7 +58,7 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
   ## Collapse X by gene
   ## -----------------------------------------------------------
-
+  dbg("creating GENE matrix by SYMBOL...")
   X <- pgx$X
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
     X <- rename_by(X, pgx$genes, "symbol")
@@ -202,32 +202,32 @@ createSparseGenesetMatrix <- function(
   # WARNING #
   # This function is used in playbase and playdata to generate curated GMT. Do not change it without testing it in both packages to ensure reproducibility.
 
+  if (is.null(all_genes)) {
+    all_genes <- unique(unlist(gmt.all))
+  }
   all_genes <- sort(all_genes)
 
   ## ------------- filter by size
   gmt.size <- sapply(gmt.all, length)
-
   gmt.all <- gmt.all[which(gmt.size >= min.geneset.size & gmt.size <= max.geneset.size)]
 
   ## ------------- filter genes by minimum frequency and chrom
   genes.table <- table(unlist(gmt.all))
   genes <- names(which(genes.table >= min_gene_frequency))
-
-  annot <- annot
+  genes <- intersect(genes, all_genes)
 
   if (filter_genes == TRUE) {
     genes <- genes[grep("^LOC|RIK$", genes, invert = TRUE)]
-    genes <- intersect(genes, all_genes)
   }
 
-  if (filter_genes == TRUE) {
+  if (!is.null(annot) && filter_genes == TRUE) {
+    annot <- annot[genes, ]
     annot <- annot[annot$chr %in% c(1:22, "X", "Y"), ]
     genes <- genes[!is.na(annot$chr)]
   }
 
   ## Filter genesets with permitted genes (official and min.sharing)
   gmt.all <- lapply(gmt.all, function(s) intersect(s, genes))
-
   gmt.all <- gmt.all[which(gmt.size >= min.geneset.size & gmt.size <= max.geneset.size)] # legacy
   ## build huge sparsematrix gene x genesets
   genes <- sort(genes)
@@ -262,50 +262,33 @@ createSparseGenesetMatrix <- function(
 #'
 #' @export
 merge_sparse_matrix <- function(m1, m2) {
-  num_cols1 <- ncol(m1)
-  num_cols2 <- ncol(m2)
+  num_rows1 <- nrow(m1)
+  num_rows2 <- nrow(m2)
+  gene_vector <- unique(c(rownames(m1), rownames(m2)))
 
-  gene_vector <- unique(c(colnames(m1), colnames(m2)))
-
-  if (num_cols1 < length(gene_vector)) {
-    num_missing_cols <- length(gene_vector) - num_cols1
-    zero_cols <- Matrix::Matrix(0, nrow = nrow(m1), ncol = num_missing_cols, sparse = TRUE)
-    genes_missing_in_m1 <- setdiff(gene_vector, colnames(m1))
-    colnames(zero_cols) <- genes_missing_in_m1
-
-    m1 <- cbind(m1, zero_cols)
-
-    m1 <- m1[, gene_vector]
+  if (num_rows1 < length(gene_vector)) {
+    num_missing_rows <- length(gene_vector) - num_rows1
+    zero_rows <- Matrix::Matrix(0, nrow = num_missing_rows, ncol = ncol(m1), sparse = TRUE)
+    genes_missing_in_m1 <- setdiff(gene_vector, rownames(m1))
+    rownames(zero_rows) <- genes_missing_in_m1
+    m1 <- rbind(m1, zero_rows)
+    m1 <- m1[gene_vector, ]
   }
 
-  if (num_cols2 < length(gene_vector)) {
-    num_missing_cols <- length(gene_vector) - num_cols2
-    zero_cols <- Matrix::Matrix(0, nrow = nrow(m2), ncol = num_missing_cols, sparse = TRUE)
-    genes_missing_in_m2 <- setdiff(gene_vector, colnames(m2))
-    colnames(zero_cols) <- genes_missing_in_m2
-    m2 <- cbind(m2, zero_cols)
-    m2 <- m2[, gene_vector]
+  if (num_rows2 < length(gene_vector)) {
+    num_missing_rows <- length(gene_vector) - num_rows2
+    zero_rows <- Matrix::Matrix(0, nrow = num_missing_rows, ncol = ncol(m2), sparse = TRUE)
+    genes_missing_in_m2 <- setdiff(gene_vector, rownames(m2))
+    rownames(zero_rows) <- genes_missing_in_m2
+    m2 <- rbind(m2, zero_rows)
+    m2 <- m2[gene_vector, ]
   }
 
-  combined_gmt <- Matrix::rbind2(m1, m2)
+  combined_gmt <- Matrix::cbind2(m1, m2)
 
-  # if rows have duplicated names, then sum them and keep only one row
-  if (any(duplicated(rownames(combined_gmt)))) {
-    dup_rows <- unique(rownames(combined_gmt)[duplicated(rownames(combined_gmt))])
-    summed_rows <- lapply(dup_rows, function(x) Matrix::colSums(combined_gmt[rownames(combined_gmt) == x, ]))
+  # if duplicated genesets, then keep only largest one
+  combined_gmt <- combined_gmt[, order(-Matrix::colSums(combined_gmt != 0))]
+  combined_gmt <- combined_gmt[, !duplicated(colnames(combined_gmt))]
 
-    # convert summed rows to a matrix
-    summed_rows <- do.call(rbind, summed_rows)
-
-    # add names to summed rows
-    rownames(summed_rows) <- dup_rows
-
-    # remove duplicated rows
-    combined_gmt <- combined_gmt[!rownames(combined_gmt) %in% dup_rows, ]
-
-    # add summed rows
-
-    combined_gmt <- Matrix::rbind2(combined_gmt, summed_rows)
-  }
   return(combined_gmt)
 }

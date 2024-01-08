@@ -295,13 +295,8 @@ compute_extra <- function(pgx, extra = c(
 #'
 #' @examples
 #' \dontrun{
-#' probes <- rownames(playbase::COUNTS)
-#' mart <- biomaRt::useMart(biomart = "ensembl", dataset = species)
-#' annot_table <- ngs.getGeneAnnotation(rownames(counts),
-#'   probe_type = NULL,
-#'   mart = mart
-#' )
-#' deconv <- compute_deconvolution(probes, annot_table)
+#' pgx <- playdata::GEIGER_PGX
+#' deconv <- compute_deconvolution(pgx)
 #' }
 #' @export
 compute_deconvolution <- function(pgx, rna.counts = pgx$counts, full = FALSE) {
@@ -361,13 +356,8 @@ compute_deconvolution <- function(pgx, rna.counts = pgx$counts, full = FALSE) {
 #'
 #' @examples
 #' \dontrun{
-#' counts <- playbase::COUNTS
-#' mart <- biomaRt::useMart(biomart = "ensembl", dataset = species)
-#' ngs <- list(annot_table = ngs.getGeneAnnotation(rownames(counts),
-#'   probe_type = NULL,
-#'   mart = mart
-#' ))
-#' deconv <- compute_deconvolution(ngs, counts)
+#' pgx <- playbase::GEIGER_PGX
+#' deconv <- compute_cellcycle_gender(pgx)
 #' }
 #' @export
 compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
@@ -442,6 +432,13 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
     message("[compute_drugActivityEnrichment] computing activity CMAP for ", f)
 
     X <- ref.db[[i]]
+    drug_test_genes <- rownames(X)
+    if (!pgx$organism %in% c("Human", "human")) {
+      rowid <- data.table::chmatch(rownames(X), pgx$genes$human_ortholog, nomatch = NA)
+      rownames(X) <- pgx$genes$gene_name[rowid]
+      X <- X[!is.na(rowid), , drop = FALSE]
+    }
+
     xdrugs <- gsub("[_@].*$", "", colnames(X))
     ndrugs <- length(table(xdrugs))
     is.drug <- grepl("activity|drug|ChemPert", f, ignore.case = TRUE)

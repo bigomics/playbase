@@ -259,7 +259,7 @@ pgx.initialize <- function(pgx) {
   }
   if (!"cluster" %in% names(pgx)) {
     message("[pgx.initialize] clustering samples...")
-    pgx <- pgx.clusterSamples2(
+    pgx <- pgx.clusterSamples(
       pgx,
       dims = c(2, 3),
       perplexity = NULL,

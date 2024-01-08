@@ -222,11 +222,34 @@ repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
 ## =================================================================================
 
 #' @export
-pgx.dimPlot <- function(X, y, ...) {
+pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap", "pacmap"), nb = NULL, ...) {
+  ## method=c('tsne','pca','umap','pacmap')
   jj <- head(order(-matrixStats::rowSds(X)), 1000)
-  nb <- min(15, dim(X) / 2)
-  pos <- uwot::umap(t(X[jj, ]), n_neighbors = nb)
-  pgx.scatterPlotXY(pos, var = y, ...)
+  X1 <- X[jj, ]
+  X1 <- X1 - rowMeans(X1, na.rm = TRUE)
+  if (ncol(X1) < 20) {
+    X1 <- cbind(X1, X1, X1)
+  }
+  if (is.null(nb)) nb <- ceiling(min(15, dim(X) / 8))
+  message("[pgx.dimPlot] nb = ", nb)
+
+  for (m in method) {
+    if (m == "umap") pos <- try(uwot::umap(t(X1), n_neighbors = nb))
+    if (m == "tsne") {
+      pos <- try(Rtsne::Rtsne(t(X1),
+        perplexity = 2 * nb,
+        check_duplicates = FALSE
+      )$Y)
+    }
+    if (m == "pca") pos <- try(irlba::irlba(X1, nv = 2, nu = 0)$v)
+    if (m == "pacmap") pos <- try(pacmap(t(X1)))
+    if ("try-errror" %in% class(pos)) {
+      return(NULL)
+    }
+    pos <- pos[1:ncol(X), ]
+    rownames(pos) <- colnames(X)
+    pgx.scatterPlotXY(pos, var = y, title = m, ...)
+  }
 }
 
 #' @title Scatter plot for PGX object

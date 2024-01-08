@@ -8,6 +8,38 @@
 ## ----------------------------------------------------------------------
 
 
+#' @export
+contrasts2pheno <- function(contrasts, samples) {
+  M <- contrasts.convertToLabelMatrix(contrasts, samples)
+  if (ncol(M) > 10) {
+    M <- sign(makeContrastsFromLabelMatrix(M))
+    M[M == 0] <- NA
+    M <- (M + 1) / 2
+    M <- apply(M, 2, as.character)
+  }
+  mm <- paste(colnames(M), collapse = " ")
+  M[is.na(M)] <- "_"
+  pheno <- paste0("p", apply(M, 1, paste0, collapse = ""))
+  ## check if pheno equals one of canonical phenotypes
+  col1 <- apply(samples, 2, function(x) all(colSums(table(x, pheno) != 0) == 1))
+  row1 <- apply(samples, 2, function(x) all(rowSums(table(x, pheno) != 0) == 1))
+  if (any(col1 & row1)) {
+    sel <- names(which(col1 & row1))[1]
+    pheno <- samples[, sel]
+  }
+  names(pheno) <- rownames(samples)
+  pheno
+}
+
+#' @export
+samples2pheno <- function(M) {
+  px <- apply(1 * expandPhenoMatrix(M), 1, paste, collapse = "")
+  px <- paste0("p", px)
+  names(px) <- rownames(M)
+  px
+}
+
+
 ##' Get contrast groups from PGX object
 #'
 #' @title Get contrast groups
@@ -395,7 +427,7 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, max.leve
   ## sample-wise contrasts
   rownames(ct.all) <- ct.all[, "sample"]
   ct.all <- as.matrix(ct.all[, -1, drop = FALSE]) ## drop sample column
-  ct.all <- ct.all[match(rownames(df), rownames(ct.all)), ]
+  ct.all <- ct.all[match(rownames(df), rownames(ct.all)), , drop = FALSE]
   rownames(ct.all) <- rownames(df)
   ct.all[is.na(ct.all)] <- 0
 
@@ -815,6 +847,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
 
   is.group.contrast
   is.sample.contrast
+  is.numeric.contrast
 
   if (!is.sample.contrast && !has.group.col) {
     message("[contrasts.convertToLabelMatrix] ERROR: Invalid group-wise contrast. could not find 'group' column.")
@@ -849,7 +882,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
       rownames(contrasts2) <- rownames(contrasts)
       contrasts2 <- contrastAsLabels(contrasts2)
       new.contrasts <- matrix(NA, nrow(samples), ncol(contrasts))
-      new.contrasts <- contrasts2[match(rownames(samples), rownames(contrasts2)), ]
+      new.contrasts <- contrasts2[match(rownames(samples), rownames(contrasts2)), , drop = FALSE]
       rownames(new.contrasts) <- rownames(samples)
     }
   }
