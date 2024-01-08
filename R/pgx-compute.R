@@ -342,7 +342,7 @@ pgx.createPGX <- function(counts,
   }
 
   message("[createPGX] annotating genes")
-  pgx <- pgx.addGeneAnnotation(pgx, organism = organism, use_biomart = use_biomart)
+  pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table, use_biomart = use_biomart)
 
   if (is.null(pgx$genes)) {
     stop("[createPGX] FATAL: Could not build gene annotation")
@@ -385,8 +385,6 @@ pgx.createPGX <- function(counts,
       is.proteincoding <- grepl("protein.coding", pgx$genes$gene_biotype)
       table(pgx$genes$gene_biotype)
       tt <- paste(paste(names(table(pgx$genes$gene_biotype)), table(pgx$genes$gene_biotype), sep = "="), collapse = ";")
-      dbg("[createPGX] table.biotype = ", tt)
-      dbg("[createPGX] table.isproteincoding = ", table(is.proteincoding))
       pgx$genes <- pgx$genes[is.proteincoding, , drop = FALSE]
     }
 
@@ -406,45 +404,6 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## convert probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------
-
-  ## if (FALSE && convert.hugo) {
-  ##   message("[createPGX] converting probes to symbol...")
-  ##   symbol <- pgx$genes[rownames(pgx$counts), "symbol"]
-  ##   mapped_symbols <- !is.na(symbol) & symbol != ""
-  ##   probes_with_symbol <- pgx$genes[mapped_symbols, "feature"]
-  ##   ## Update counts and genes
-  ##   pgx$counts <- pgx$counts[probes_with_symbol, , drop = FALSE]
-  ##   pgx$genes  <- pgx$genes[probes_with_symbol, , drop = FALSE]
-  ##   pgx$genes$gene_name <- symbol[mapped_symbols]
-  ##   # Sum columns of rows with the same gene symbol
-  ##   selected_symbols <- symbol[mapped_symbols]
-  ##   rownames(pgx$counts) <- selected_symbols
-  ##   if (sum(duplicated(selected_symbols)) > 0) {
-  ##     message("[createPGX:autoscale] duplicated rownames detected: summing up rows (counts).")
-  ##     pgx$counts <- rowsum(pgx$counts, selected_symbols)
-  ##   }
-  ##   if (!is.null(pgx$X)) {
-  ##     # For X, sum the 2^X values of rows with the same gene symbol
-  ##     # And then take log2 again.
-  ##     pgx$X <- pgx$X[probes_with_symbol, , drop = FALSE]
-  ##     rownames(pgx$X) <- selected_symbols
-  ##     pgx$X <- log2(rowsum(2**pgx$X, selected_symbols))
-  ##   }
-  ##   # Collapse feature as a comma-separated elements
-  ##   # if multiple rows match to the same gene, then collapse them
-  ##   features_collapsed_by_symbol <- aggregate(
-  ##     feature ~ symbol,
-  ##     data = pgx$genes,
-  ##     function(x) paste(unique(x), collapse = "; ")
-  ##   )
-  ##   pgx$genes <- pgx$genes[!duplicated(pgx$genes$symbol), , drop = FALSE]
-  ##   # merge by symbol (we need to remove feature, as the new feature is collapsed)
-  ##   pgx$genes$feature <- NULL
-  ##   # merge features_collapsde_by_symbol with pgx$genes by the column symbol
-  ##   pgx$genes <- merge(pgx$genes, features_collapsed_by_symbol, by = "symbol")
-  ##   rownames(pgx$genes) <- pgx$genes$symbol
-  ##   pgx$counts <- pgx$counts[rownames(pgx$genes), , drop = FALSE]
-  ## }
 
   if (convert.hugo) {
     message("[createPGX] collapsing probes by SYMBOL")
@@ -892,7 +851,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   }
   G <- G[rownames(G) %in% human_genes, , drop = FALSE]
 
-  dbg("[pgx.add_GMT] dim.G = ", dim(G))
   if(nrow(G)==0) {
       message("[pgx.add_GMT] WARNING : no overlapping genes. no GMT added.")
       return(pgx)

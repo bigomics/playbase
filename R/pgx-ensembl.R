@@ -10,9 +10,9 @@
 #'
 #' @param pgx PGX object with a counts table.
 #' @param organism Char. Organism name. For more info see \code{\link{playbase::SPECIES_TABLE}}.
-#'
+#' @param annot_table Custom annotation table. See \code{\link{playbase::pgx.custom_annotation}}.
+#' @param use_biomart Logical. If TRUE, use biomaRt to retrieve gene annotation.
 #' @return Updated PGX object with gene annotation table
-#'
 #'
 #' @details Queries the Ensembl database to get a gene annotation table
 #' containing external gene IDs mapped to Ensembl IDs. Handles retries in case
@@ -27,7 +27,7 @@
 #' pgx <- pgx.gene_table(pgx, "Human")
 #' }
 #' @export
-pgx.addGeneAnnotation <- function(pgx, organism = NULL, use_biomart = NULL) {
+pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL, use_biomart = NULL) {
   # Safety checks
   stopifnot(is.list(pgx))
   probes <- rownames(pgx$counts)
@@ -43,13 +43,19 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, use_biomart = NULL) {
   }
   # Get gene table
   genes <- ngs.getGeneAnnotation(
+    pgx = pgx, 
     probes = probes,
+    annot_table = annot_table,
     organism = organism,
     use_biomart = use_biomart ## auto-select
   )
 
   all_genes <- sort(genes$symbol)
-  probe_type <- guess_probetype(probes)
+  if (organism != "No organism") {
+    probe_type <- guess_probetype(probes)
+  } else {
+    probe_type <- "custom"
+  }
 
   # Return data
   pgx$genes <- genes
@@ -166,7 +172,7 @@ pgx.gene_table.OLD <- function(pgx, organism) {
 #' head(result)
 #' }
 #' @export
-ngs.getGeneAnnotation <- function(probes, organism = NULL, use_biomart = NULL) {
+ngs.getGeneAnnotation <- function(pgx, probes, organism = NULL, annot_table = NULL, use_biomart = NULL) {
   if (is.null(organism)) {
     organism <- guess_organism(probes)
   }
@@ -188,7 +194,7 @@ ngs.getGeneAnnotation <- function(probes, organism = NULL, use_biomart = NULL) {
   genes <- NULL
 
   ## first try ORGDB for human, mouse, rat
-  if (is.null(genes) && !use_biomart) {
+  if (is.null(genes) && is.primary_organism && !use_biomart) {
     message("[getGeneAnnotation] >>> annotating genes using ORGDB libraries")
     probe_type <- guess_probetype(probes, for.biomart = FALSE)
     if (is.null(probe_type)) stop("probe_type is NULL")
@@ -201,7 +207,7 @@ ngs.getGeneAnnotation <- function(probes, organism = NULL, use_biomart = NULL) {
   }
 
   ## try biomaRt for the rest
-  if (is.null(genes)) {
+  if (is.null(genes) && organism != "No organism") {
     message("[ngs.getGeneAnnotation] >>> annotating genes using biomaRt")
     probe_type <- guess_probetype(probes, for.biomart = TRUE)
     message("[ngs.getGeneAnnotation] probe_type = ", probe_type)
@@ -217,13 +223,15 @@ ngs.getGeneAnnotation <- function(probes, organism = NULL, use_biomart = NULL) {
       probe_type = as.character(probe_type),
       mart = mart
     )
+  } else if (organism == "No organism") {
+    genes <- pgx.custom_annotation(pgx, custom_annot = annot_table)
   }
 
   if (is.null(genes)) {
     warning("[getGeneAnnotation] ERROR : could not create gene annotation")
     return(NULL)
   }
-  genes
+  return(genes)
 }
 
 ngs.getGeneAnnotation_BIOMART <- function(
@@ -679,11 +687,6 @@ id2symbol <- function(probes, organism = "human") {
 }
 
 
-## ================================================================================
-## ========================= DEPRECATED ===========================================
-## ================================================================================
-
-
 #' @title Custom Gene Annotation
 #'
 #' @description Adds custom gene annotation table to a pgx object
@@ -790,11 +793,8 @@ pgx.custom_annotation <- function(pgx, custom_annot = NULL) {
   }
 
   rownames(custom_annot) <- rownames(pgx$counts)
-  pgx$genes <- custom_annot
-  pgx$all_genes <- custom_annot$feature
-  pgx$probe_type <- "custom"
 
-  return(pgx)
+  return(custom_annot)
 }
 
 
@@ -882,6 +882,11 @@ detect_probetype_ORGDB <- function(probes, organism) {
 
   return(top_match)
 }
+
+
+## ================================================================================
+## ========================= DEPRECATED ===========================================
+## ================================================================================
 
 
 #' Detect probe type
@@ -1008,8 +1013,6 @@ detect_probe.DEPRECATED <- function(probes, mart = NULL, verbose = TRUE) {
 }
 
 
-
-## type=NULL;org="human";keep.na=FALSE
 id2symbol.DEPRECATED <- function(probes, type = NULL, org = "human", keep.na = FALSE) {
   require(org.Hs.eg.db)
   require(org.Mm.eg.db)
