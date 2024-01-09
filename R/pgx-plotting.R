@@ -234,7 +234,7 @@ pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap", "pacmap"), nb = 
   message("[pgx.dimPlot] nb = ", nb)
 
   for (m in method) {
-    if (m == "umap") pos <- try(uwot::umap(t(X1), n_neighbors = nb))
+    if (m == "umap") pos <- try(uwot::umap(t(X1), n_neighbors = max(2,nb)))
     if (m == "tsne") {
       pos <- try(Rtsne::Rtsne(t(X1),
         perplexity = 2 * nb,
@@ -243,12 +243,11 @@ pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap", "pacmap"), nb = 
     }
     if (m == "pca") pos <- try(irlba::irlba(X1, nv = 2, nu = 0)$v)
     if (m == "pacmap") pos <- try(pacmap(t(X1)))
-    if ("try-errror" %in% class(pos)) {
-      return(NULL)
+    if (!"try-errror" %in% class(pos)) {
+      pos <- pos[1:ncol(X), ]
+      rownames(pos) <- colnames(X)
+      pgx.scatterPlotXY(pos, var = y, title = m, ...)
     }
-    pos <- pos[1:ncol(X), ]
-    rownames(pos) <- colnames(X)
-    pgx.scatterPlotXY(pos, var = y, title = m, ...)
   }
 }
 

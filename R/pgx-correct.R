@@ -1338,12 +1338,12 @@ runTechCorrectionMethods <- function(X, samples, y, p.pca = 0.5, p.pheno = 0.05,
 }
 
 #' @export
-bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
+bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
                                add.sil = TRUE, plot = TRUE, trend = TRUE,
                                ref = "uncorrected", clust = "tsne") {
   if (0) {
     lfc <- 0.2
-    q <- 0.05
+    q <- 0.2
     pos <- NULL
     add.sil <- TRUE
     plot <- TRUE
@@ -1371,7 +1371,8 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
   message("computing overlap...")
   g1 <- numsig[[ref]]$genes
   n1 <- sapply(numsig, function(s) length(intersect(s$genes, g1)))
-  n2 <- sapply(numsig, function(s) length(union(s$genes, g1)))
+  ##  n2 <- sapply(numsig, function(s) length(union(s$genes, g1)))
+  n2 <- sapply(numsig, function(s) length(g1))  
   ##  res <- cbind(res, r.genes=r1, r.gsets=r2, s.genes=s1, s.gsets=s2)
   r.genes <- n1 / (1e-3 + n2)
   res <- cbind(res, r.genes)
@@ -1380,7 +1381,8 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.05, pos = NULL,
   if (any.gsets) {
     s1 <- numsig[[ref]]$gsets
     m1 <- sapply(numsig, function(s) length(intersect(s$gsets, s1)))
-    m2 <- sapply(numsig, function(s) length(union(s$gsets, s1)))
+    ##    m2 <- sapply(numsig, function(s) length(union(s$gsets, s1)))
+    m2 <- sapply(numsig, function(s) length(s1))    
     r.gsets <- m1 / (1e-3 + m2)
     res <- cbind(res, r.gsets)
   }
@@ -1777,7 +1779,7 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
 
   ## if the improvement is small, we rather choose the uncorrected solution
   score.ratio <- score[best.method] / score[ref]
-  ##  best.method <- ifelse( score.ratio < 1.10, ref, best.method )
+  best.method <- ifelse( score.ratio < 1.20, ref, best.method )
   message("[select_batchcorrect_method] best.method = ", best.method)
 
   list(

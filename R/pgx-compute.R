@@ -263,17 +263,39 @@ pgx.createPGX <- function(counts,
   }
 
   ## -------------------------------------------------------------------
-  ## conform all matrices (after filtering)
+  ## Batch-correction (if requested. WARNING: changes counts )
+  ## -------------------------------------------------------------------
+  batch.par <- c("batch", "batch2")
+  has.batchpar <- any(grepl("^batch|^batch2", colnames(samples), ignore.case = TRUE))
+  if (batch.correct && has.batchpar) {
+    b <- "batch"
+    bb <- grep("^batch|^batch2", colnames(samples), ignore.case = TRUE, value = TRUE)
+    for (b in bb) {
+      message("[createPGX] batch correcting for parameter '", b, "'\n")
+      which.zero <- which(counts == 0, arr.ind = TRUE)
+      bx <- samples[, b]
+      if (length(unique(bx[!is.na(bx)])) > 1) {
+        message("[createPGX] batch correcting for counts using ComBat\n")
+        ##X <- limma::removeBatchEffect(X, batch = bx) ## in log-space
+        X <- sva::ComBat(X, batch = bx) ## in log-space
+        X[which.zero] <- 0
+        ## counts <- pmax(2**X - 1, 0) ## batch corrected counts???
+      } else {
+        message("createPGX:batch.correct] batch parameter needs more than two levels")
+      }
+    }
+  }
+
+  ## -------------------------------------------------------------------
+  ## conform all matrices
   ## -------------------------------------------------------------------
   message("[createPGX] conforming matrices...")
   kk <- intersect(colnames(counts), rownames(samples))
   counts <- counts[, kk, drop = FALSE]
   samples <- samples[kk, , drop = FALSE]
   samples <- utils::type.convert(samples, as.is = TRUE) ## automatic type conversion
-  if (!is.null(X)) {
-    X <- X[, kk, drop = FALSE]
-    X <- X[match(rownames(counts), rownames(X)), ]
-  }
+  X <- X[, kk, drop = FALSE]
+  X <- X[match(rownames(counts), rownames(X)), ]
   if (all(kk %in% rownames(contrasts))) {
     contrasts <- contrasts[kk, , drop = FALSE]
   }
@@ -377,47 +399,8 @@ pgx.createPGX <- function(counts,
   }
 
   ## -------------------------------------------------------------------
-  ## convert probe-IDs to gene symbol and aggregate duplicates
+  ## collapse probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------
-
-  ## if (FALSE && convert.hugo) {
-  ##   message("[createPGX] converting probes to symbol...")
-  ##   symbol <- pgx$genes[rownames(pgx$counts), "symbol"]
-  ##   mapped_symbols <- !is.na(symbol) & symbol != ""
-  ##   probes_with_symbol <- pgx$genes[mapped_symbols, "feature"]
-  ##   ## Update counts and genes
-  ##   pgx$counts <- pgx$counts[probes_with_symbol, , drop = FALSE]
-  ##   pgx$genes  <- pgx$genes[probes_with_symbol, , drop = FALSE]
-  ##   pgx$genes$gene_name <- symbol[mapped_symbols]
-  ##   # Sum columns of rows with the same gene symbol
-  ##   selected_symbols <- symbol[mapped_symbols]
-  ##   rownames(pgx$counts) <- selected_symbols
-  ##   if (sum(duplicated(selected_symbols)) > 0) {
-  ##     message("[createPGX:autoscale] duplicated rownames detected: summing up rows (counts).")
-  ##     pgx$counts <- rowsum(pgx$counts, selected_symbols)
-  ##   }
-  ##   if (!is.null(pgx$X)) {
-  ##     # For X, sum the 2^X values of rows with the same gene symbol
-  ##     # And then take log2 again.
-  ##     pgx$X <- pgx$X[probes_with_symbol, , drop = FALSE]
-  ##     rownames(pgx$X) <- selected_symbols
-  ##     pgx$X <- log2(rowsum(2**pgx$X, selected_symbols))
-  ##   }
-  ##   # Collapse feature as a comma-separated elements
-  ##   # if multiple rows match to the same gene, then collapse them
-  ##   features_collapsed_by_symbol <- aggregate(
-  ##     feature ~ symbol,
-  ##     data = pgx$genes,
-  ##     function(x) paste(unique(x), collapse = "; ")
-  ##   )
-  ##   pgx$genes <- pgx$genes[!duplicated(pgx$genes$symbol), , drop = FALSE]
-  ##   # merge by symbol (we need to remove feature, as the new feature is collapsed)
-  ##   pgx$genes$feature <- NULL
-  ##   # merge features_collapsde_by_symbol with pgx$genes by the column symbol
-  ##   pgx$genes <- merge(pgx$genes, features_collapsed_by_symbol, by = "symbol")
-  ##   rownames(pgx$genes) <- pgx$genes$symbol
-  ##   pgx$counts <- pgx$counts[rownames(pgx$genes), , drop = FALSE]
-  ## }
 
   if (convert.hugo) {
     message("[createPGX] collapsing probes by SYMBOL")
@@ -451,38 +434,6 @@ pgx.createPGX <- function(counts,
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
   pgx <- playbase::compute_cellcycle_gender(pgx, pgx$counts)
-
-  ## -------------------------------------------------------------------
-  ## Batch-correction (if requested. WARNING: changes counts )
-  ## -------------------------------------------------------------------
-  batch.par <- c("batch", "batch2")
-  has.batchpar <- any(grepl("^batch|^batch2", colnames(pgx$samples), ignore.case = TRUE))
-  if (batch.correct && has.batchpar) {
-    b <- "batch"
-    bb <- grep("^batch|^batch2", colnames(pgx$samples), ignore.case = TRUE, value = TRUE)
-    for (b in bb) {
-      message("[createPGX] batch correcting for parameter '", b, "'\n")
-      zz <- which(pgx$counts == 0, arr.ind = TRUE)
-      cX <- log2(1 + pgx$counts)
-      bx <- pgx$sample[, b]
-      if (length(unique(bx[!is.na(bx)])) > 1) {
-        message("[createPGX] batch correcting for counts using LIMMA\n")
-        cX <- limma::removeBatchEffect(cX, batch = bx) ## in log-space
-        cX <- pmax(2**cX - 1, 0)
-        cX[zz] <- 0
-        pgx$counts <- pmax(cX, 0) ## batch corrected counts...
-
-        if (!is.null(pgx$X)) {
-          message("[createPGX] batch correcting for logX using LIMMA\n")
-          pgx$X <- limma::removeBatchEffect(pgx$X, batch = bx) ## in log-space
-          pgx$X[zz] <- 0
-        }
-      } else {
-        message("createPGX] invalid batch paramater")
-      }
-    }
-    remove(cX)
-  }
 
   ## -------------------------------------------------------------------
   ## Pre-calculate t-SNE for and get clusters early so we can use it
@@ -524,7 +475,6 @@ pgx.createPGX <- function(counts,
     }
   }
 
-
   if (do.clustergenes) {
     message("[createPGX] clustering genes...")
     pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "gene")
@@ -533,6 +483,7 @@ pgx.createPGX <- function(counts,
   ### done
   return(pgx)
 }
+
 
 #' @title Compute PGX
 #' @description Main function to populate pgx with results. The function computes the analysis on a pgx object
@@ -686,16 +637,6 @@ counts.removeSampleOutliers <- function(counts) {
   counts
 }
 
-#' @export
-is.xxl <- function(X, z = 10) {
-  ## sdx <- apply(X, 1, function(x) mad(x[x > 0], na.rm = TRUE))
-  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
-  sdx[is.na(sdx)] <- 0
-  sdx0 <- 0.8 * sdx + 0.2 * mean(sdx, na.rm = TRUE) ## moderated SD
-  mx <- rowMeans(X, na.rm = TRUE)
-  this.z <- (X - mx) / sdx0
-  (abs(this.z) > z)
-}
 
 counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
   ## remove extra-large and infinite values
