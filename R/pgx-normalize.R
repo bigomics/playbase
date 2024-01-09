@@ -7,7 +7,6 @@
 #' @export
 normalizeData <- function(pgx, do.impute = TRUE, do.regress = TRUE,
                           impute.method = "SVD2", scale.method = "cpm") {
-
   which.zero <- which(counts == 0)
   which.missing <- which(is.na(counts))
   nzero <- sum(length(which.zero))
@@ -16,32 +15,32 @@ normalizeData <- function(pgx, do.impute = TRUE, do.regress = TRUE,
   message("[normalizeData] ", nmissing, " missing values")
 
   contrasts <- pgx$contrasts
-  if(is.null(contrasts)) contrasts <- sign(pgx$model.parameters$exp.matrix)
-  samples   <- pgx$samples
-  counts   <- pgx$counts
-  
+  if (is.null(contrasts)) contrasts <- sign(pgx$model.parameters$exp.matrix)
+  samples <- pgx$samples
+  counts <- pgx$counts
+
   X <- log2(counts + 1)
 
-  if( do.impute ) {
+  if (do.impute) {
     ## remove XXL/Infinite values and set to NA
     which.xxl <- c()
-    which.xxl <- which(is.xxl( X, z = 10 )) 
+    which.xxl <- which(is.xxl(X, z = 10))
     X[which.xxl] <- NA
-    
+
     ## impute missing values
     if (any(is.na(counts))) {
       nmissing <- sum(is.na(counts))
       message("[createPGX] WARNING: data has ", nmissing, " missing values.")
-      ##counts <- counts.imputeMissing(counts, method = impute.method)
-      if(impute.method == "SVD2") {
-        X <- playbase::imputeMissing(X, method = "SVD2" )
-        which.na <- which( is.na(counts), arr.ind=TRUE )
-        counts[which.na] <- pmax(2**X - 1, 0)  ## also update counts??
+      ## counts <- counts.imputeMissing(counts, method = impute.method)
+      if (impute.method == "SVD2") {
+        X <- playbase::imputeMissing(X, method = "SVD2")
+        which.na <- which(is.na(counts), arr.ind = TRUE)
+        counts[which.na] <- pmax(2**X - 1, 0) ## also update counts??
       }
-      if(impute.method == "NMF") {
-        which.na <- which( is.na(counts), arr.ind=TRUE )
-        counts <- nmfImpute( counts, k = 3 )
-        X[which.na] <- log2( counts[which.na] + 1 )
+      if (impute.method == "NMF") {
+        which.na <- which(is.na(counts), arr.ind = TRUE)
+        counts <- nmfImpute(counts, k = 3)
+        X[which.na] <- log2(counts[which.na] + 1)
       }
     }
   }
@@ -60,30 +59,32 @@ normalizeData <- function(pgx, do.impute = TRUE, do.regress = TRUE,
   ## } else {
   ##   message("[createPGX] SKIPPING NORMALIZATION!")
   ## }
-   
-  message("[normalizeData] Median centering..." )          
+
+  message("[normalizeData] Median centering...")
   ## eX <- playbase::pgx.countNormalization( eX, methods = "median.center")
   mx <- apply(X, 2, median, na.rm = TRUE)
-  X <- t(t(X) - mx ) + mean(mx)
+  X <- t(t(X) - mx) + mean(mx)
 
   message("[normalizeData] Global scaling")
-  X <- global_scaling(X, method = scale.method )
-  hist(X, breaks=100)
-    
+  X <- global_scaling(X, method = scale.method)
+  hist(X, breaks = 100)
+
   ## technical effects correction
-  message("[normalizeData] Correcting for technical effects..." )            
-  pheno <- playbase::contrasts2pheno( contrasts, samples )
+  message("[normalizeData] Correcting for technical effects...")
+  pheno <- playbase::contrasts2pheno(contrasts, samples)
   X <- playbase::removeTechnicalEffects(
-      X, samples, pheno, p.pheno = 0.05, p.pca = 0.5, force = FALSE,
-      params = c("lib","mito","ribo","cellcycle","gender"),          
-      nv = 2, k.pca = 10, xrank = NULL) 
-  hist(X, breaks=100)
-  
+    X, samples, pheno,
+    p.pheno = 0.05, p.pca = 0.5, force = FALSE,
+    params = c("lib", "mito", "ribo", "cellcycle", "gender"),
+    nv = 2, k.pca = 10, xrank = NULL
+  )
+  hist(X, breaks = 100)
+
   ## for quantile normalization we omit the zero value and put back later
-  message("Quantile normalization..." )
-  jj <- which( X < 0.01 )
+  message("Quantile normalization...")
+  jj <- which(X < 0.01)
   X[jj] <- NA
-  X <- limma::normalizeQuantiles( X ) 
+  X <- limma::normalizeQuantiles(X)
   X[jj] <- 0
 
   ## add normalized data to pgx object
@@ -340,11 +341,10 @@ safe.logCPM <- function(x, t = 0.05, prior = 1, q = NULL) {
 
 #' @export
 global_scaling <- function(X, method, shift = "clip") {
-
   X[is.infinite(X)] <- NA
   zero.point <- 0
   which.zero <- which(X == 0)
-  
+
   if (method == "cpm") {
     median.tc <- median(colSums(2**X, na.rm = TRUE), na.rm = TRUE)
     a <- log2(median.tc) - log2(1e6)
@@ -394,4 +394,3 @@ is.xxl <- function(X, z = 10) {
   this.z <- (X - mx) / sdx0
   (abs(this.z) > z)
 }
-

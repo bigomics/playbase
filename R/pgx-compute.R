@@ -276,7 +276,7 @@ pgx.createPGX <- function(counts,
       bx <- samples[, b]
       if (length(unique(bx[!is.na(bx)])) > 1) {
         message("[createPGX] batch correcting for counts using ComBat\n")
-        ##X <- limma::removeBatchEffect(X, batch = bx) ## in log-space
+        ## X <- limma::removeBatchEffect(X, batch = bx) ## in log-space
         X <- sva::ComBat(X, batch = bx) ## in log-space
         X[which.zero] <- 0
         ## counts <- pmax(2**X - 1, 0) ## batch corrected counts???

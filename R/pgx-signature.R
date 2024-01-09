@@ -341,9 +341,9 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALS
 pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = FALSE) {
   if (file.exists(h5.file)) unlink(h5.file)
   X <- as.matrix(X)
-  
+
   pgx.saveMatrixH5(X, h5.file, chunk = c(nrow(X), 1))
-  
+
   ## --------------------------------------------------
   ## Calculate top100 gene signatures
   ## --------------------------------------------------
@@ -385,7 +385,7 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
       reduce.sd = 2000,
       reduce.pca = min(200, round(ncol(X) / 3))
     )
-    rhdf5::h5write(pos[["pca2d"]],  h5.file, "clustering/pca2d") ## can write list??
+    rhdf5::h5write(pos[["pca2d"]], h5.file, "clustering/pca2d") ## can write list??
     rhdf5::h5write(pos[["tsne2d"]], h5.file, "clustering/tsne2d") ## can write list??
     rhdf5::h5write(pos[["umap2d"]], h5.file, "clustering/umap2d") ## can write list??
   }

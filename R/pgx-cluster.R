@@ -401,7 +401,7 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
 #'
 #' @export
 pgx.clusterMatrix <- function(X,
-                              ##methods = c("pca", "tsne", "umap", "pacmap"),
+                              ## methods = c("pca", "tsne", "umap", "pacmap"),
                               methods = c("pca", "tsne", "umap"),
                               dims = c(2, 3),
                               perplexity = 30, reduce.sd = 1000, reduce.pca = 50,
@@ -485,7 +485,7 @@ pgx.clusterMatrix <- function(X,
     colnames(pos) <- paste0("PC-", c("x", "y", "z"))
     all.pos[["pca3d"]] <- pos
   }
-  
+
   if ("tsne" %in% methods && 2 %in% dims) {
     message("calculating t-SNE 2D...")
     perplexity <- pmax(min(ncol(X) / 4, perplexity), 2)
@@ -495,7 +495,7 @@ pgx.clusterMatrix <- function(X,
       is_distance = FALSE,
       check_duplicates = FALSE,
       perplexity = perplexity,
-      num_threads = 1  ## NOTE: multi-threading may have MEM problems...
+      num_threads = 1 ## NOTE: multi-threading may have MEM problems...
     )
     pos <- res1$Y
     rownames(pos) <- colnames(X)
@@ -515,7 +515,7 @@ pgx.clusterMatrix <- function(X,
       is_distance = FALSE,
       check_duplicates = FALSE,
       perplexity = perplexity,
-      num_threads = 1  ## NOTE: multi-threading may have MEM problems...
+      num_threads = 1 ## NOTE: multi-threading may have MEM problems...
     )$Y
     rownames(pos) <- colnames(X)
     pos <- pos[1:dimx[2], ] ## if augmented
@@ -567,7 +567,7 @@ pgx.clusterMatrix <- function(X,
 
   ## NOTE: this pacmap package seem to require GB memory for importing
   ## the python package and calling. Need more testing!!!
-  if(FALSE && "pacmap" %in% methods) {
+  if (FALSE && "pacmap" %in% methods) {
     has.pacmap <- reticulate::py_module_available("pacmap")
     if (has.pacmap && 2 %in% dims) {
       message("calculating PACMAP 2D...")
