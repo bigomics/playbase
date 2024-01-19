@@ -1752,6 +1752,7 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
 
   ##  incProgress( amount = 0.1, "Computing t-SNE clustering...")
   message("Computing t-SNE clustering...")
+  message("[Comuputing] nb = ",nb)    
   pos[["tsne"]] <- lapply(xlist, function(x) {
     Rtsne::Rtsne(t2(x), perplexity = nb, check_duplicates = FALSE)$Y
   })

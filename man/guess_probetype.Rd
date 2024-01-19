@@ -4,7 +4,7 @@
 \alias{guess_probetype}
 \title{Guess probe type}
 \usage{
-guess_probetype(probes, organism = NULL, for.biomart = FALSE)
+guess_probetype(probes, organism = "", for.biomart = FALSE)
 }
 \arguments{
 \item{probes}{Character vector of probes to detect type for.}

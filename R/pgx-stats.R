@@ -247,6 +247,35 @@ stats.DESeq2 <- function(counts, y, ref = NULL, test = "Wald", add.avg = TRUE, .
   top
 }
 
+stats.enrichment <- function(F, pattern="^go|pathway") {
+    ## Gene sets
+    if(NCOL(F)==1 && !"Matrix" %in% class(F)) {
+        F <- cbind(F)
+    }
+    is.symbol <- (mean(rownames(F) %in% colnames(playdata::GSETxGENE)) > 0.2)
+    if(!is.symbol) {
+        stop("features are not SYMBOL")
+        return(NULL)
+    }
+    gmt <- playdata::GSETxGENE
+    if(!is.null(pattern)) {
+        sel <- grep(pattern, rownames(playdata::GSETxGENE), value = TRUE, ignore.case = TRUE)
+        gmt <- gmt[sel, ]
+    }
+    gsa <- playbase::gset.rankcor(F, Matrix::t(gmt), compute.p = TRUE)
+    names(gsa)
+    if(NCOL(F)==1) {
+        gsa <- data.frame(rho = gsa$rho[, 1], p.value = gsa$p.value[, 1], q.value = gsa$q.value[, 1])
+        gsa <- gsa[order(gsa$p.value), ]
+    } else {
+        ii <- order(-rowMeans(-log(gsa$p.value)))
+        gsa$rho <- gsa$rho[ii,,drop=FALSE]
+        gsa$p.value <- gsa$p.value[ii,,drop=FALSE]
+        gsa$q.value <- gsa$q.value[ii,,drop=FALSE]        
+    }
+    gsa
+}
+
 stats.numsig <- function(X, y, lfc = 1, q = 0.05, set.na = NULL,
                          trend = TRUE, verbose = TRUE) {
   if (!is.null(set.na)) y[y == set.na] <- NA

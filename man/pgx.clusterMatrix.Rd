@@ -6,7 +6,7 @@
 \usage{
 pgx.clusterMatrix(
   X,
-  methods = c("pca", "tsne", "umap", "pacmap"),
+  methods = c("pca", "tsne", "umap"),
   dims = c(2, 3),
   perplexity = 30,
   reduce.sd = 1000,
