@@ -578,8 +578,7 @@ use_mart <- function(organism) {
 #'
 #' @export
 guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
-
-  best.match <- function(type.regex, avg.min=0.33) {
+  best.match <- function(type.regex, avg.min = 0.33) {
     avg.match <- sapply(type.regex, function(s) mean(grepl(s, probes)))
     probe_type <- ""
     if (any(avg.match > 0.5)) {
@@ -588,13 +587,13 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
     probe_type
   }
   probe_type <- ""
-  
+
   ## 0. Organism specific matching
-  if(organism == "Saccharomyces cerevisiae") {
+  if (organism == "Saccharomyces cerevisiae") {
     type.regex <- list(
       "ENSEMBL" = "^Y[A-Z][LR]"
     )
-    probe_type <- best.match(type.regex, 0.33)    
+    probe_type <- best.match(type.regex, 0.33)
   }
 
   ## 1. determine probe type using regular expression
@@ -623,7 +622,7 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
   KEYTYPES <- c("ENSEMBL", "ENSEMBLPROT", "ENSEMBLTRANS", "ENTREZID", "REFSEQ", "SYMBOL", "UNIPROT")
   if (!probe_type %in% KEYTYPES) {
     warning("[guess_probetype] ERROR : unsupported probe_type: ", probe_type)
-    warning("[guess_probetype] keytypes available: ", paste(KEYTYPES,collapse=" "))
+    warning("[guess_probetype] keytypes available: ", paste(KEYTYPES, collapse = " "))
     return(NULL)
   }
 
@@ -663,7 +662,7 @@ guess_organism <- function(probes) {
     "Rat" = "^ENSRNO|^[A-Z][a-z]{2,}",
     "Worm" = "^WBGene",
     "Fly" = "^FBgn0",
-    "Yeast" = "^Y[A-P][RL]"    
+    "Yeast" = "^Y[A-P][RL]"
   )
   org.match <- function(probes, org) {
     mean(grepl(org.regex[[org]], probes))
@@ -730,7 +729,7 @@ detect_probetype_ORGDB <- function(probes, organism) {
   warning("DEPRECATED. Please use guess_probetype")
 
   ## Get org database
-  org_db <-  NULL
+  org_db <- NULL
   if (tolower(organism) == "human") {
     org_db <- org.Hs.eg.db::org.Hs.eg.db
   } else if (tolower(organism) == "mouse") {
@@ -739,10 +738,10 @@ detect_probetype_ORGDB <- function(probes, organism) {
     org_db <- org.Rn.eg.db::org.Rn.eg.db
   }
 
-  if(is.null(org_db)) {
+  if (is.null(org_db)) {
     return(NULL)
   }
-  
+
   # Probe types
   keytypes <- c(
     "ENSEMBL", "ENSEMBLTRANS", "SYMBOL", "REFSEQ", "UNIPROT", "ACCNUM"
@@ -910,5 +909,3 @@ detect_probe.DEPRECATED <- function(probes, mart = NULL, verbose = TRUE) {
 
   return(probe_type)
 }
-
-
