@@ -23,4 +23,5 @@ tags:
 clean:
 	rm `find . -name '.#*' -o -name '#*' -o -name '*~'`
 
-
+test:
+	R -e "devtools::test()"
