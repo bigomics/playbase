@@ -7,8 +7,8 @@ while (!exists("ensembl_human")) {
   counter <- counter + 1
 }
 
-#' Test for detect_probe
-test_that("detect_probe can detect ensembl IDs", {
+#' Test for guess_probetype
+test_that("guess_probetype can detect ensembl IDs", {
   # Create input data with <- for reuse
   probes <- c(
     "ENSG00000230915.1", "ENSG00000275728.1", "ENSG00000277599.1",
@@ -24,7 +24,7 @@ test_that("detect_probe can detect ensembl IDs", {
   # Use while to prevent crash on ensembl calls
   counter <- 0
   while (!exists("type")) {
-    type <- playbase::detect_probe(probes, mart = ensembl_human)
+    type <- playbase::guess_probetype()(probes, mart = ensembl_human)
     counter <- counter + 1
   }
 
@@ -32,8 +32,8 @@ test_that("detect_probe can detect ensembl IDs", {
   expect_equal(type, "ensembl_gene_id_version")
 })
 
-test_that("detect_probe stops without mart", {
-  expect_error(playbase::detect_probe(probes))
+test_that("guess_probetype stops without mart", {
+  expect_error(playbase::guess_probetype(probes))
 })
 
 
@@ -121,34 +121,34 @@ test_that("probe2symbol returns expected output", {
 })
 
 
-#' Test for detect_probe_DEPRECATED
+#' Test for guess_probetype
 test_that("detects ENSEMBL for human probes", {
   probes <- c("ENSG00000136997", "ENSG00000241860")
-  expect_equal(detect_probe_DEPRECATED(probes, "Human"), "ENSEMBL")
+  expect_equal(guess_probetype(probes, "Human"), "ENSEMBL")
 
   # UNIPROT genes
   uniprot_genes <- c("P31749", "P04637", "Q9Y6K9", "O15111", "Q9UM73")
-  expect_equal(detect_probe_DEPRECATED(uniprot_genes, "Human"), "UNIPROT")
+  expect_equal(guess_probetype(uniprot_genes, "Human"), "UNIPROT")
 
   # Fake genes
   probes <- c("ENSG00088136997", "ENSG00099241860")
-  expect_error(detect_probe_DEPRECATED(probes, "Human"))
+  expect_error(guess_probetype(probes, "Human"))
 })
 
 # Test with valid mouse probes
 test_that("detects Ensembl for mouse probes", {
   probes <- c("ENSMUSG00000051951", "ENSMUSG00000033845")
-  expect_equal(detect_probe_DEPRECATED(probes, "Mouse"), "ENSEMBL")
+  expect_equal(guess_probetype(probes, "Mouse"), "ENSEMBL")
 
   probes <- c(
     "NM_001081979", "NM_001081980", "NM_001081981", "NM_001081982",
     "NM_001081983"
   )
-  expect_equal(detect_probe_DEPRECATED(probes, "Mouse"), "REFSEQ")
+  expect_equal(guess_probetype(probes, "Mouse"), "REFSEQ")
 })
 
 
-#' Test for detect_probe_DEPRECATED
+#' Test for guess_probetype
 test_that("ngs.getGeneAnnotation_DEPRECATED function works correctly", {
   # Test 1: Check that the function returns the correct annotation for a known human gene
   expect_equal(rownames(ngs.getGeneAnnotation_DEPRECATED("ENSG00000141510", "ENSEMBL", "Human"))[1], "ENSG00000141510")
