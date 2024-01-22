@@ -154,7 +154,7 @@ test_that("ngs.getGeneAnnotation_ORGDB function works correctly", {
   expect_equal(rownames(ngs.getGeneAnnotation_ORGDB("ENSG00000141510", "ENSEMBL", "Human"))[1], "ENSG00000141510")
 
   # Test 2: Check that the function returns the correct annotation for a known mouse gene
-  expect_equal(rownames(ngs.getGeneAnnotation_ORGDB()("ENSMUSG00000051951", "ENSEMBL", "Mouse"))[1], "ENSMUSG00000051951")
+  expect_equal(rownames(ngs.getGeneAnnotation_ORGDB("ENSMUSG00000051951", "ENSEMBL", "Mouse"))[1], "ENSMUSG00000051951")
 
   # Test 3: Check that the function handles multiple probes correctly
   probes <- c("ENSG00000141510", "ENSG00000139618")
