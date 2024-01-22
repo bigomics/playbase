@@ -91,6 +91,7 @@ Imports:
     RColorBrewer,
     recount,
     reshape2,
+    reticulate,
     rhdf5,
     rlang,
     rliger,
