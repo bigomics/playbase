@@ -115,6 +115,7 @@ Imports:
     webshot,
     WGCNA,
     wordcloud,
+    xbioc,
     xgboost
 Remotes:
     bigomics/playdata,
