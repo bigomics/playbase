@@ -1124,7 +1124,7 @@ removeTechnicalEffects <- function(X, samples, y, p.pheno = 0.05, p.pca = 0.5,
 #' @export
 runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
                                       combatx = FALSE, sc = FALSE, prefix = "",
-                                      methods = NULL, remove.failed = TRUE) {
+                                      methods = NULL, remove.failed = TRUE ) {
   if (0) {
     controls <- NULL
     ntop <- 2000
@@ -1170,10 +1170,11 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
       xlist[["limma"]] <- X
     } else {
       cX <- try(limma::removeBatchEffect(X,
-        batch = batch, covariates = NULL,
-        mod = mod1
-      ))
+        batch = batch, covariates = NULL, mod = mod1))
       xlist[["limma"]] <- cX
+      cX <- try(limma::removeBatchEffect(X,
+        batch = batch, covariates = NULL))
+      xlist[["limma.no_mod"]] <- cX
     }
   }
 
@@ -1185,10 +1186,9 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
       if (max(table(batch)) > 1) {
         mod1 <- model.matrix(~ factor(y))
         bX <- try(sva::ComBat(X, batch = batch, mod = mod1, par.prior = TRUE))
-        if ("try-error" %in% class(bX) || mean(is.na(bX)) > 0.5) {
-          bX <- try(sva::ComBat(X, batch = batch, mod = NULL))
-        }
         xlist[["ComBat"]] <- bX
+        bX <- try(sva::ComBat(X, batch = batch, mod = NULL, par.prior = TRUE))
+        xlist[["ComBat.no_mod"]] <- bX
       }
     }
 
@@ -1236,7 +1236,8 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
 
   if ("NNM" %in% methods) {
     ## xlist[["NNM"]] <- gx.nnmcorrect(X, y)$X
-    xlist[["NNM"]] <- nnmCorrect2(X, y)
+    xlist[["NNM"]] <- nnmCorrect2(X, y, use.design = TRUE)
+    xlist[["NNM.no_mod"]] <- nnmCorrect2(X, y, use.design = FALSE)
   }
 
   ## --------------------------------------------------------------
@@ -1803,7 +1804,7 @@ superBC2 <- function(X, samples, y, batch = NULL,
                      ## methods = c("technical","batch","statistical","pca","sva","nnm"),
                      methods = c("batch", "technical", "statistical", "sva", "nnm2"),
                      p.pca = 0.5, p.pheno = 0.05, k.pca = 10, nv = 2,
-                     xrank = NULL) {
+                     xrank = NULL, use.design = TRUE) {
   if (y[1] %in% colnames(samples)) {
     y <- samples[, y[1]]
   }
@@ -1818,14 +1819,19 @@ superBC2 <- function(X, samples, y, batch = NULL,
   }
 
   cX <- X
-  methods <- intersect(methods, c("technical", "batch", "statistical", "pca", "sva", "nnm"))
+  methods <- intersect(methods, c("technical", "batch", "statistical", "pca", "sva",
+                                  "ruv", "nnm", "nnm2"))
 
   for (m in methods) {
     ## correct explicit batch effect
     if (!is.null(batch) && m == "batch") {
       message("[superBC2] correcting for: batch")
-      mod1 <- model.matrix(~y)
-      cX <- limma::removeBatchEffect(cX, batch = batch, design = mod1)
+      if(use.design) {
+        mod1 <- model.matrix(~y)
+        cX <- limma::removeBatchEffect(cX, batch = batch, design = mod1)
+      } else {
+        cX <- limma::removeBatchEffect(cX, batch = batch)
+      }
     }
 
     ## this removes typical batch effects
@@ -1840,11 +1846,15 @@ superBC2 <- function(X, samples, y, batch = NULL,
       )
       if (!is.null(bc$covariates)) {
         message("[superBC2] correcting for: ", m)
-        mod1 <- model.matrix(~ bc$pheno)
         B <- scale(bc$covariates)
         B[is.nan(B) | is.na(B)] <- 0
         B[is.infinite(B)] <- 0
-        cX <- limma::removeBatchEffect(cX, covariates = B, design = mod1)
+        if(use.design) {
+          mod1 <- model.matrix(~ bc$pheno)
+          cX <- limma::removeBatchEffect(cX, covariates = B, design = mod1)
+        } else {
+          cX <- limma::removeBatchEffect(cX, covariates = B)
+        }
       }
     }
 
@@ -1859,11 +1869,11 @@ superBC2 <- function(X, samples, y, batch = NULL,
     }
     if (m == "nnm") {
       message("[superBC2] correcting for: NNM")
-      cX <- gx.nnmcorrect(cX, y)$X
+      cX <- gx.nnmcorrect(cX, y, use.design = use.design)$X
     }
     if (m == "nnm2") {
       message("[superBC2] correcting for: NNM2")
-      cX <- gx.nnmcorrect2(cX, y, r = 0.35)$X
+      cX <- gx.nnmcorrect2(cX, y, r = 0.35, use.design = use.design)$X
     }
   }
 
@@ -2410,7 +2420,7 @@ bbknn <- function(data_matrix, batch, pca = TRUE, compute_pca = "python", nPcs =
 #'
 #' @export
 nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TRUE,
-                       knn = 1, sdtop = 2000, return.B = FALSE) {
+                       knn = 1, sdtop = 2000, return.B = FALSE, use.design = TRUE) {
   ## Nearest-neighbour matching for batch correction. This
   ## implementation creates a fully paired dataset with nearest
   ## matching neighbours when pairs are missing.
@@ -2475,6 +2485,7 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   use.batch <- TRUE
   if (use.batch) {
     design <- stats::model.matrix(~full.y)
+    if(!use.design) design <- matrix(1,ncol(full.X),1)
     full.X <- limma::removeBatchEffect(
       full.X,
       batch = full.pairs,
@@ -2483,6 +2494,7 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   } else {
     V <- model.matrix(~full.pairs)
     design <- stats::model.matrix(~full.y)
+    if(!use.design) design <- matrix(1,ncol(full.X),1)    
     full.X <- limma::removeBatchEffect(
       full.X,
       covariates = V,
@@ -2512,7 +2524,7 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
 #' @export
 nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
                         scale.x = FALSE, center.y = TRUE, mode = "sym",
-                        knn = 3, sdtop = 2000, return.B = FALSE) {
+                        knn = 3, sdtop = 2000, return.B = FALSE, use.design = TRUE) {
   ## center.x=TRUE;center.m=TRUE;scale.x=FALSE;sdtop=1000;r=0.35;knn=3
 
   ## compute distance matrix for NNM-pairing
@@ -2587,6 +2599,7 @@ nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
   }
 
   design <- stats::model.matrix(~y1)
+  if(!use.design) design <- matrix(1,ncol(X),1)      
   cX <- limma::removeBatchEffect(X, covariates = scale(P1), design = design)
 
   ## retain original row means
