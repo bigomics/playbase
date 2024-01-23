@@ -5,18 +5,18 @@
 #' Test for pgx.createPGX
 test_that("pgx.createPGX produce all pgx slots", {
   # Call example data
-  pgx_data <- playbase::get_mini_example_data()
+  # pgx_data <- playbase::get_mini_example_data()
 
   # Run function
   # Use while to prevent crash on ensembl calls
   suppressWarnings(pgx <- playbase::pgx.createPGX(
-    samples = pgx_data$samples,
-    counts = pgx_data$counts,
-    contrasts = pgx_data$contrast,
+    samples = playbase::SAMPLES,
+    counts = playbase::COUNTS,
+    contrasts = playbase::CONTRASTS,
     organism = "Human"
   ))
   # For every function that uses biomaRt, we need to wait 60 seconds
-  Sys.sleep(60)
+  # Sys.sleep(60)
   # Create expected outputs
   expected_tests <- c(
     "name", "organism", "version", "date", "creator", "datatype",
