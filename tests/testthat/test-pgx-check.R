@@ -62,7 +62,7 @@ test_that("checkINPUT function handles zero count columns", {
 test_that("checkINPUT function handles valid contrast names", {
   df_contrasts <- df
   colnames(df_contrasts) <- c("sample1_sample2", "sample2_sample3")
-  expect_error(pgx.checkINPUT(df_contrasts, "CONTRASTS"))
+  expect_equal(pgx.checkINPUT(df_contrasts, "CONTRASTS")$PASS, FALSE)
 })
 
 # Test 8:
@@ -117,3 +117,7 @@ test_that("crosscheckINPUT function returns a list", {
 # })
 
 #' Test for contrasts_conversion_check
+
+
+
+
