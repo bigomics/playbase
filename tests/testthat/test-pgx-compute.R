@@ -24,7 +24,7 @@ test_that("pgx.createPGX produce all pgx slots", {
     "total_counts", "counts_multiplier", "genes", "all_genes",
     "probe_type", "tsne2d", "tsne3d", "cluster", "cluster.genes"
   )
-  total_counts <- apply(pgx_data$counts, 2, sum)
+  total_counts <- apply(playbase::COUNTS, 2, sum)
 
   gene_table <- data.frame(
     symbol = c("A1BG", "AGAP2", "ANXA4", "ARPC1A", "BATF", "C19orf53"),
@@ -67,12 +67,22 @@ test_that("pgx.createPGX produce all pgx slots", {
     apply(pgx$genes, 2, class),
     apply(gene_table, 2, class)
   )
-
+shiny::observe({
+        shiny::req(pgx$X)
+        ct <- colnames(pgx$model.parameters$contr.matrix)
+        ct <- sort(ct)
+        selected_ct <- head(ct, 7)
+        shiny::updateSelectInput(
+          session,
+          "selected_contrasts",
+          choices = ct,
+          selected = selected_ct)
+      })
   ## Check cluster.genes
-  expect_equal(dim(pgx$cluster$pos$pca2d), c(ncol(pgx_data$counts), 2))
-  expect_equal(dim(pgx$cluster$pos$tsne3d), c(ncol(pgx_data$counts), 3))
-  expect_equal(dim(pgx$cluster$pos$umap2d), c(ncol(pgx_data$counts), 2))
-  expect_equal(dim(pgx$cluster$pos$umap3d), c(ncol(pgx_data$counts), 3))
+  expect_equal(dim(pgx$cluster$pos$pca2d), c(ncol(playbase::COUNTS), 2))
+  expect_equal(dim(pgx$cluster$pos$tsne3d), c(ncol(playbase::COUNTS), 3))
+  expect_equal(dim(pgx$cluster$pos$umap2d), c(ncol(playbase::COUNTS), 2))
+  expect_equal(dim(pgx$cluster$pos$umap3d), c(ncol(playbase::COUNTS), 3))
 })
 
 
