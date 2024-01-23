@@ -52,12 +52,13 @@ testthat::test_that("selectSamplesFromSelectedLevels returns correct samples", {
     "sample_2"
   )
 
-  # Case 4: Multiple levels #TODO
-  # levels <- c("Pheno1=A", "Pheno2=3")
-  # testthat::expect_equal(
-  #   playbase::selectSamplesFromSelectedLevels(Y, levels),
-  #   c("sample_1", "sample_3")
-  # )
+  Case 4: Multiple levels #TODO
+  levels <- c("Pheno1=A", "Pheno2=3")
+  testthat::expect_equal(
+    skip("test needs to be fixed")
+    playbase::selectSamplesFromSelectedLevels(Y, levels),
+    c("sample_1", "sample_3")
+  )
 })
 
 
