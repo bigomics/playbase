@@ -460,42 +460,6 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   pgx <- playbase::compute_cellcycle_gender(pgx, pgx$counts)
 
-
-  ## -------------------------------------------------------------------
-  ## Batch-correction (if requested. WARNING: changes counts ). This
-  ## may be taken out if more general pre-processing will be done
-  ## before/inside createPGX.
-  ## -------------------------------------------------------------------
-  
-  has.batchpar <- any(grepl("^batch|^batch2", colnames(pgx$samples), ignore.case = TRUE))
-  if (batch.correct && has.batchpar) {
-    b <- "batch"
-    bb <- grep("^batch|^batch2", colnames(pgx$samples), ignore.case = TRUE, value = TRUE)
-    for (b in bb) {
-      message("[createPGX] batch correcting for parameter ", b)
-      zz <- which(pgx$counts == 0, arr.ind = TRUE)
-      cX <- log2(1 + pgx$counts)
-      bx <- pgx$sample[, b]
-      if (length(unique(bx[!is.na(bx)])) > 1) {
-        message("[createPGX] batch correcting for counts using LIMMA")
-        cX <- limma::removeBatchEffect(cX, batch = bx) ## in log-space
-        cX <- pmax(2**cX - 1, 0)
-        cX[zz] <- 0
-        pgx$counts <- pmax(cX, 0) ## batch corrected counts...
-
-        if (!is.null(pgx$X)) {
-          message("[createPGX] batch correcting for logX using LIMMA")
-          pgx$X <- limma::removeBatchEffect(pgx$X, batch = bx) ## in log-space
-          pgx$X[zz] <- 0
-        }
-      } else {
-        message("[createPGX] invalid batch paramater")
-      }
-    }
-    remove(cX)
-  }
-
-
   ## -------------------------------------------------------------------
   ## Add GMT
   ## -------------------------------------------------------------------
