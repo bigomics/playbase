@@ -282,7 +282,6 @@ add_opacity <- function(hexcol, opacity) {
 #'
 #' @export
 pgx.checkObject <- function(pgx) {
-
   must.have <- c(
     "counts", "samples", "genes", "model.parameters",
     "X", "gx.meta", "GMT"

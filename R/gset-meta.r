@@ -160,7 +160,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
         parallel.sz = mc.cores, verbose = FALSE
       ))
       if (!"try-error" %in% class(zx.ssgsea)) {
-
         zx.ssgsea <- my.normalize(zx.ssgsea)
         jj <- match(names(gmt), rownames(zx.ssgsea))
         zx.ssgsea <- zx.ssgsea[jj, colnames(X), drop = FALSE] ## make sure..
@@ -457,7 +456,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   ## --------------------------------------------------
   ## Add meta matrices (this becomes quite large...)
   ## --------------------------------------------------
-  
+
   message("computing meta-matrix... ")
   m <- list(gsva = zx.gsva, ssgsea = zx.ssgsea, rnkcorr = zx.rnkcorr)
   m <- m[which(!sapply(m, is.null))]

@@ -1124,7 +1124,7 @@ removeTechnicalEffects <- function(X, samples, y, p.pheno = 0.05, p.pca = 0.5,
 #' @export
 runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
                                       combatx = FALSE, sc = FALSE, prefix = "",
-                                      methods = NULL, remove.failed = TRUE ) {
+                                      methods = NULL, remove.failed = TRUE) {
   if (0) {
     controls <- NULL
     ntop <- 2000
@@ -1170,10 +1170,12 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
       xlist[["limma"]] <- X
     } else {
       cX <- try(limma::removeBatchEffect(X,
-        batch = batch, covariates = NULL, mod = mod1))
+        batch = batch, covariates = NULL, mod = mod1
+      ))
       xlist[["limma"]] <- cX
       cX <- try(limma::removeBatchEffect(X,
-        batch = batch, covariates = NULL))
+        batch = batch, covariates = NULL
+      ))
       xlist[["limma.no_mod"]] <- cX
     }
   }
@@ -1819,14 +1821,16 @@ superBC2 <- function(X, samples, y, batch = NULL,
   }
 
   cX <- X
-  methods <- intersect(methods, c("technical", "batch", "statistical", "pca", "sva",
-                                  "ruv", "nnm", "nnm2"))
+  methods <- intersect(methods, c(
+    "technical", "batch", "statistical", "pca", "sva",
+    "ruv", "nnm", "nnm2"
+  ))
 
   for (m in methods) {
     ## correct explicit batch effect
     if (!is.null(batch) && m == "batch") {
       message("[superBC2] correcting for: batch")
-      if(use.design) {
+      if (use.design) {
         mod1 <- model.matrix(~y)
         cX <- limma::removeBatchEffect(cX, batch = batch, design = mod1)
       } else {
@@ -1849,7 +1853,7 @@ superBC2 <- function(X, samples, y, batch = NULL,
         B <- scale(bc$covariates)
         B[is.nan(B) | is.na(B)] <- 0
         B[is.infinite(B)] <- 0
-        if(use.design) {
+        if (use.design) {
           mod1 <- model.matrix(~ bc$pheno)
           cX <- limma::removeBatchEffect(cX, covariates = B, design = mod1)
         } else {
@@ -2485,7 +2489,7 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   use.batch <- TRUE
   if (use.batch) {
     design <- stats::model.matrix(~full.y)
-    if(!use.design) design <- matrix(1,ncol(full.X),1)
+    if (!use.design) design <- matrix(1, ncol(full.X), 1)
     full.X <- limma::removeBatchEffect(
       full.X,
       batch = full.pairs,
@@ -2494,7 +2498,7 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   } else {
     V <- model.matrix(~full.pairs)
     design <- stats::model.matrix(~full.y)
-    if(!use.design) design <- matrix(1,ncol(full.X),1)    
+    if (!use.design) design <- matrix(1, ncol(full.X), 1)
     full.X <- limma::removeBatchEffect(
       full.X,
       covariates = V,
@@ -2599,7 +2603,7 @@ nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
   }
 
   design <- stats::model.matrix(~y1)
-  if(!use.design) design <- matrix(1,ncol(X),1)      
+  if (!use.design) design <- matrix(1, ncol(X), 1)
   cX <- limma::removeBatchEffect(X, covariates = scale(P1), design = design)
 
   ## retain original row means

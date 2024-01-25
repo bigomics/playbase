@@ -43,7 +43,7 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL, use_
   }
   # Get gene table
   genes <- ngs.getGeneAnnotation(
-    pgx = pgx, 
+    pgx = pgx,
     probes = probes,
     annot_table = annot_table,
     organism = organism,
@@ -634,41 +634,40 @@ id2symbol <- function(probes, organism = "human") {
 #' @description Adds custom gene annotation table to a pgx object
 #'
 #' @param pgx pgx object
-#' @param custom_annot data.frame with custom annotation data. If provided, 
+#' @param custom_annot data.frame with custom annotation data. If provided,
 #' it has to contain at least the columns "feature", "symbol", "gene_name". Also,
 #' the features has to match the rownames of the counts provided.
-#' 
+#'
 #'
 #' @details This function allows adding a gene annotation data.frame to a pgx object when
-#' the user has not provided an organism or it's not known.  The custom_annot data.frame 
-#' should contain gene IDs that match the pgx object genes, plus any additional columns 
+#' the user has not provided an organism or it's not known.  The custom_annot data.frame
+#' should contain gene IDs that match the pgx object genes, plus any additional columns
 #' of annotation data.
-#' 
+#'
 #' The id_type parameter specifies the type of ID used in custom_annot to match genes.
 #' Possible options are "symbol", "ensembl_gene_id", etc. By default it will try to match
 #' on the "symbol" field.
 #'
-#' Any columns in custom_annot that match existing pgx gene annotation columns will 
+#' Any columns in custom_annot that match existing pgx gene annotation columns will
 #' overwrite the original data. New columns will be appended.
 #'
 #' @return The pgx object with custom gene annotation added/appended. The gene annotation
-#' table has the same format as the one returned by pgx.gene_table(). However, the 
+#' table has the same format as the one returned by pgx.gene_table(). However, the
 #' columns human_ortholog, gene_title, gene_biotype, chr, pos, tx_len, map, source are filled
 #' with default values.
-#' 
+#'
 #' @examples
 #' \dontrun{
-#'  custom_annot <- data.frame(
-#'    feature = c("A1", "A2", "A3"), 
-#'    symbol = c("TP53", "MYC", "EGFR"),
-#'    gene_name = c("A1", "A2", "A3")
-#'  )
-#'  
-#'  pgx <- pgx.custom_annotation(pgx, custom_annot)
+#' custom_annot <- data.frame(
+#'   feature = c("A1", "A2", "A3"),
+#'   symbol = c("TP53", "MYC", "EGFR"),
+#'   gene_name = c("A1", "A2", "A3")
+#' )
+#'
+#' pgx <- pgx.custom_annotation(pgx, custom_annot)
 #' }
 #' @export
 pgx.custom_annotation <- function(pgx, custom_annot = NULL) {
-
   message("[pgx.custom_annotation] Adding custom annotation table...")
   # If the user has provided a custom gene table, check it and use it
   if (!is.null(custom_annot)) {
@@ -680,42 +679,44 @@ pgx.custom_annotation <- function(pgx, custom_annot = NULL) {
 
     if (!all(required_cols %in% colnames(custom_annot))) {
       missing_cols <- required_cols[!required_cols %in% colnames(custom_annot)]
-      stop("Custom gene table must contain the following columns: ", 
-          paste0(required_cols, collapse = ", "), "\ncols missing: ", paste0(missing_cols, collapse = ", "))
+      stop(
+        "Custom gene table must contain the following columns: ",
+        paste0(required_cols, collapse = ", "), "\ncols missing: ", paste0(missing_cols, collapse = ", ")
+      )
     }
 
     # add extra cols if not present
     message("[pgx.custom_annotation] Filling annotation table...")
-    extra_cols <- c("human_ortholog", "gene_title", "gene_biotype",  
-                    "chr", "pos", "tx_len", "map", "source"
-                    )
+    extra_cols <- c(
+      "human_ortholog", "gene_title", "gene_biotype",
+      "chr", "pos", "tx_len", "map", "source"
+    )
     for (col_i in extra_cols) {
       if (!col_i %in% colnames(custom_annot)) {
         custom_annot[[col_i]] <- switch(col_i,
           "human_ortholog" = "",
           "gene_title" = "unknown",
-          "gene_biotype" = "unknown", 
+          "gene_biotype" = "unknown",
           "chr" = "unknown",
           "pos" = 0,
           "tx_len" = 0,
           "map" = "1",
           "source" = "custom"
-          )
+        )
       }
     }
 
     # Conform annotation table to pgx$counts
-    annot_genes <- sum(rownames(pgx$counts) %in% custom_annot$feature) 
-    annot_fraction <- annot_genes/ nrow(pgx$counts)
-    
+    annot_genes <- sum(rownames(pgx$counts) %in% custom_annot$feature)
+    annot_fraction <- annot_genes / nrow(pgx$counts)
+
     if (annot_fraction > .5) {
       # filter annotated table by pgx$counts rownames using match
       custom_annot <- custom_annot[match(rownames(pgx$counts), custom_annot$feature), ]
     } else {
-      stop("[pgx.custom_annotation] Not enought annoated genes. Be sure 
+      stop("[pgx.custom_annotation] Not enought annoated genes. Be sure
         custom_annot$feature matches counts rownames")
     }
-
   } else {
     # Create custom gene table from counts rownames
     message("[pgx.custom_annotation] Creating annotation table from counts rownames...")
@@ -725,7 +726,7 @@ pgx.custom_annotation <- function(pgx, custom_annot = NULL) {
       gene_name = rownames(pgx$counts),
       human_ortholog = "",
       gene_title = "unknown",
-      gene_biotype = "unknown", 
+      gene_biotype = "unknown",
       chr = "unknown",
       pos = 0,
       tx_len = 0,
@@ -799,10 +800,10 @@ detect_probetype_ORGDB <- function(probes, organism) {
   }
 
   ## remove versioning postfix from ensembl
-  if( mean(grepl("^ENST",probes)) > 0.5 ) {
-    probes <- sub("[.][0-9]+$","",probes)  
+  if (mean(grepl("^ENST", probes)) > 0.5) {
+    probes <- sub("[.][0-9]+$", "", probes)
   }
-    
+
   # Iterate over probe types
   for (key in keytypes) {
     n <- 0
@@ -820,7 +821,7 @@ detect_probetype_ORGDB <- function(probes, organism) {
   }
 
   ## Return top match
-##  key_matches    
+  ##  key_matches
   if (all(key_matches == 0)) {
     stop("Probe type not found, please, check your probes")
   } else {
@@ -929,7 +930,7 @@ detect_probe.DEPRECATED <- function(probes, mart = NULL, verbose = TRUE) {
   ## !!!!!NEED REFACTORING!!!!! : this is so bad... (IK)
   probe_check <- rep(0L, length(probe_types_to_check))
   names(probe_check) <- probe_types_to_check
-  for(i in seq_along(probe_types_to_check)) {
+  for (i in seq_along(probe_types_to_check)) {
     probe_check[i] <- tryCatch(
       {
         tmp <- biomaRt::getBM(
@@ -947,7 +948,7 @@ detect_probe.DEPRECATED <- function(probes, mart = NULL, verbose = TRUE) {
       }
     )
     # If more than 50 probes are found, stop
-    if(probe_check[i] > 50) {
+    if (probe_check[i] > 50) {
       break
     }
   }

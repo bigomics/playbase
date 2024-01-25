@@ -132,7 +132,7 @@ fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
     rownames(x) <- df[[row.names]] ## allow dups if matrix
     return(x)
   }
-  n0 <- ifelse(row.names == 0 ||is.null(row.names), 1, 2)
+  n0 <- ifelse(row.names == 0 || is.null(row.names), 1, 2)
   x <- data.frame(df[, n0:ncol(df)],
     stringsAsFactors = stringsAsFactors,
     check.names = check.names

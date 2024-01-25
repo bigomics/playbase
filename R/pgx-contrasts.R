@@ -859,7 +859,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
     message("[contrasts.convertToLabelMatrix] ERROR: Invalid contrast.")
     return(NULL)
   }
-  
+
   new.contrasts <- contrasts
   ## old1: group-wise -1/0/1 matrix
   if (is.group.contrast && is.numeric.contrast) {

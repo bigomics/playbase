@@ -125,10 +125,10 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 #' @param only.proteincoding Logical indicating whether to keep only protein-coding genes. Default is TRUE.
 #' @param custom.geneset Custom gene sets to test, as a named list with gmt and info elements.
 #' @param max.genesets Maximum number of gene sets to test. Default is 5000.
-#' 
+#'
 #' @details
 #' pgx.createPGX creates a pgx object with the following slots:
-#' 
+#'
 #' - `name`: Name of the dataset
 #' - `organism`: Organism for the dataset
 #' - `version`: Dataset version
@@ -374,7 +374,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Filter out not-expressed
   ## -------------------------------------------------------------------
-  
+
   if (filter.genes) {
     ## There is second filter in the statistics computation. This
     ## first filter is primarily to reduce the counts table.
@@ -389,7 +389,6 @@ pgx.createPGX <- function(counts,
     ## Conform gene table
     ii <- match(rownames(pgx$counts), rownames(pgx$genes))
     pgx$genes <- pgx$genes[ii, , drop = FALSE]
-
   }
 
   ## -------------------------------------------------------------------
@@ -414,14 +413,14 @@ pgx.createPGX <- function(counts,
     pgx$counts <- pgx$counts[keep, , drop = FALSE]
     if (!is.null(pgx$X)) {
       keep <- intersect(keep, rownames(pgx$X))
-      pgx$X <- pgx$X[keep, , drop = FALSE]  ##  NOT ALIGNED???
+      pgx$X <- pgx$X[keep, , drop = FALSE] ##  NOT ALIGNED???
     }
   }
 
   ## NOTE: generally pgx$X, pgx$counts, and pgx$genes should always be
   ## aligned to prevent mistakes and unneeded matching of tables.
   ##
-  
+
 
   ## -------------------------------------------------------------------
   ## collapse probe-IDs to gene symbol and aggregate duplicates
@@ -463,7 +462,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Add GMT
   ## -------------------------------------------------------------------
-  
+
   ## If no organism, no custom annotation table and no custom geneset, then create empty GMT
   if (pgx$organism == "No organism" && is.null(annot_table) && is.null(custom.geneset)) {
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
@@ -495,12 +494,12 @@ pgx.createPGX <- function(counts,
 #' @details
 #' The slots created by pgx.computePGX are the following:
 #'
-#' - `tsne2d`: 2D tSNE coordinates matrix 
+#' - `tsne2d`: 2D tSNE coordinates matrix
 #' - `tsne3d`: 3D tSNE coordinates matrix
-#' - `cluster`: List containing sample clustering results  
+#' - `cluster`: List containing sample clustering results
 #' - `cluster.genes`: List containing gene clustering results
 #' - `model.parameters`: Model parameters from normalization
-#' - `timings`: Matrix of timings for computations  
+#' - `timings`: Matrix of timings for computations
 #' - `gx.meta`: Gene metadata data.frame
 #' - `gset.meta`: Gene set metadata data.frame
 #' - `gsetX`: Gene set scores matrix
@@ -548,7 +547,7 @@ pgx.computePGX <- function(pgx,
   ## -------------------------------------------------------------------
   ## Clustering
   ## -------------------------------------------------------------------
-  
+
   # Cluster by sample
   if (do.cluster || cluster.contrasts) {
     message("[pgx.computePGX] clustering samples...")
@@ -598,7 +597,7 @@ pgx.computePGX <- function(pgx,
   ## Filter genes (previously in compute_testGenesSingleOmics). NEED
   ## RETHINK?? MOVE TO PGXCREATE??
   ## -----------------------------------------------------------------------------
-  
+
   ## Shrink number of genes (highest SD/var)
   if (max.genes > 0 && nrow(pgx$counts) > max.genes) {
     message("shrinking data matrices: n= ", max.genes)
@@ -632,7 +631,7 @@ pgx.computePGX <- function(pgx,
 
   ## ------------------ gene level tests ---------------------
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
-  
+
   message("[pgx.computePGX] testing genes...")
   pgx <- playbase::compute_testGenes(
     pgx, contr.matrix,
@@ -659,7 +658,6 @@ pgx.computePGX <- function(pgx,
       message("[createPGX] clustering genesets...")
       pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset")
     }
-
   } else {
     message("[pgx.computePGX] Skipping genesets test")
   }
@@ -745,7 +743,6 @@ counts.autoScaling <- function(counts) {
   mean.counts <- mean(Matrix::colSums(counts, na.rm = TRUE))
   is.toobig <- log10(mean.counts) > 9
   if (is.toobig) {
-
     ## scale to about 10 million reads
     message("[createPGX:autoscale] WARNING: too large total counts. Scaling down to 10e6 reads.")
     unit <- 10**(round(log10(mean.counts)) - 7)
@@ -809,11 +806,10 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
 }
 
 pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
-
   ## -----------------------------------------------------------
   ## Load Gsetmat and filter genes by gene or homologous
   ## -----------------------------------------------------------
-  
+
   message("[pgx.add_GMT] Creating GMT matrix... ")
   # Load geneset matrix
   G <- Matrix::t(playdata::GSETxGENE)
@@ -827,12 +823,12 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   }
   G <- G[rownames(G) %in% human_genes, , drop = FALSE]
 
-  if(nrow(G)==0) {
-      message("[pgx.add_GMT] WARNING : no overlapping genes. no GMT added.")
-      return(pgx)
+  if (nrow(G) == 0) {
+    message("[pgx.add_GMT] WARNING : no overlapping genes. no GMT added.")
+    return(pgx)
   }
-    
-    
+
+
   # Change HUMAN gene names to species symbols if NOT human and human_ortholog column is NOT NULL
   if (pgx$organism != "Human" && !is.null(pgx$genes$human_ortholog)) {
     rownames(G) <- pgx$genes$symbol[match(rownames(G), pgx$genes$human_ortholog)]
@@ -841,7 +837,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   # Normalize G after removal of genes
   G <- playbase::normalize_cols(G)
 
-  
+
   ## -----------------------------------------------------------
   ## Filter gene sets on size
   ## -----------------------------------------------------------
@@ -912,7 +908,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------
   ## create the GENESETxGENE matrix
   ## -----------------------------------------------------------
-    
+
   message("[pgx.add_GMT] Matching gene set matrix...")
   gg <- rownames(X)
   ii <- intersect(gg, rownames(G))
@@ -929,7 +925,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------
   ## Prioritize gene sets by fast rank-correlation
   ## -----------------------------------------------------------
-  
+
   if (is.null(max.genesets)) max.genesets <- 20000
   if (max.genesets < 0) max.genesets <- 20000
 

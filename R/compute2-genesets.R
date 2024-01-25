@@ -11,7 +11,7 @@
 #' @param pgx A data object representing multi-omics data.
 #' @param custom.geneset Custom geneset object.
 #' @param test.methods Character vector with the methods to use for testing.
-#'  Currently supported: "gsva", "camera", "fgsea". 
+#'  Currently supported: "gsva", "camera", "fgsea".
 #' @param remove.outputs Logical indicating whether to remove large outputs.
 #'
 #' @return The updated \code{pgx} object with computed test genesets.
@@ -92,7 +92,7 @@ compute_testGenesets <- function(pgx,
   rownames(gset.meta$timings) <- paste("[test.genesets]", rownames(gset.meta$timings))
   pgx$timings <- rbind(pgx$timings, gset.meta$timings)
   pgx$gset.meta <- gset.meta
-  
+
   pgx$gsetX <- pgx$gset.meta$matrices[["meta"]] ## META or average FC?
   pgx$GMT <- G[, rownames(pgx$gsetX)]
 
@@ -100,7 +100,7 @@ compute_testGenesets <- function(pgx,
   ## -------------------------------------------------------
   ## calculate gset info and store as pgx$gset.meta
   ## -------------------------------------------------------
-  
+
   gset.size <- Matrix::colSums(pgx$GMT != 0)
   gset.size.raw <- playdata::GSET_SIZE
 
