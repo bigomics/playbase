@@ -1,7 +1,7 @@
 Package: playbase
 Type: Package
 Title: Core back-end functionality and logic for OmicsPlayground
-Version: 0.1.14
+Version: 0.1.15
 Author: BigOmics Analytics SA
 Maintainer: The package maintainer <yourself@somewhere.net>
 Description: More about what it does (maybe more than one line)
