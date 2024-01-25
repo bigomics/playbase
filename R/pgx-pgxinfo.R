@@ -702,6 +702,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
       if (file.exists(sigdb.file)) unlink(sigdb.file)
       dbg("[pgxinfo.updateDatasetFolder] creating signature DB")
       pgx.createSignatureDatabaseH5.fromMatrix(sigdb.file, X = allFC)
+      dbg("[pgxinfo.updateDatasetFolder] done. created sigdb.file = ", sigdb.file)
     } else if (pgxfc.changed) {
       cn <- rhdf5::h5read(sigdb.file, "data/colnames")
       fc.add <- any(!colnames(allFC) %in% cn)
@@ -736,6 +737,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   ## -------------------------------------------------------
   tsne.ok <- FALSE
   if (file.exists(tsne.file)) {
+    dbg("[pgxinfo.updateDatasetFolder] checking TSNE file...")
     tsne <- read.csv(tsne.file, row.names = 1)
     dim(tsne)
     cn <- rhdf5::h5read(sigdb.file, "data/colnames") ## new size
@@ -745,6 +747,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
 
   ## if needed update tsne file from H5
   if (!tsne.ok || !file.exists(tsne.file) || pgxfc.changed) {
+    dbg("[pgxinfo.updateDatasetFolder] updating TSNE...")
     updateTSNE(tsne.file, sigdb.file, allFC)
   }
 

@@ -3,6 +3,97 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
+
+#' @export
+normalizeData <- function(pgx, do.impute = TRUE, do.regress = TRUE,
+                          impute.method = "SVD2", scale.method = "cpm") {
+  which.zero <- which(counts == 0)
+  which.missing <- which(is.na(counts))
+  nzero <- sum(length(which.zero))
+  nmissing <- sum(length(which.missing))
+  message("[normalizeData] ", nzero, " zero values")
+  message("[normalizeData] ", nmissing, " missing values")
+
+  contrasts <- pgx$contrasts
+  if (is.null(contrasts)) contrasts <- sign(pgx$model.parameters$exp.matrix)
+  samples <- pgx$samples
+  counts <- pgx$counts
+
+  X <- log2(counts + 1)
+
+  if (do.impute) {
+    ## remove XXL/Infinite values and set to NA
+    which.xxl <- c()
+    which.xxl <- which(is.xxl(X, z = 10))
+    X[which.xxl] <- NA
+
+    ## impute missing values
+    if (any(is.na(counts))) {
+      nmissing <- sum(is.na(counts))
+      message("[createPGX] WARNING: data has ", nmissing, " missing values.")
+      ## counts <- counts.imputeMissing(counts, method = impute.method)
+      if (impute.method == "SVD2") {
+        X <- playbase::imputeMissing(X, method = "SVD2")
+        which.na <- which(is.na(counts), arr.ind = TRUE)
+        counts[which.na] <- pmax(2**X - 1, 0) ## also update counts??
+      }
+      if (impute.method == "NMF") {
+        which.na <- which(is.na(counts), arr.ind = TRUE)
+        counts <- nmfImpute(counts, k = 3)
+        X[which.na] <- log2(counts[which.na] + 1)
+      }
+    }
+  }
+
+  ## ## Auto-scaling (scale down huge values, often in proteomics)
+  ## res <- counts.autoScaling(counts)
+  ## counts <- res$counts
+  ## counts_multiplier <- res$counts_multiplier
+  ## remove(res)
+
+  ## if (normalize) {
+  ##   message("[createPGX] NORMALIZING log-expression matrix X...")
+  ##   X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
+  ##   X <- limma::normalizeQuantiles(X) ## in log space
+  ##   ## X <- 0.1*X + 0.9*limma::normalizeQuantiles(X)   ## 'weighted' to keep randomness...
+  ## } else {
+  ##   message("[createPGX] SKIPPING NORMALIZATION!")
+  ## }
+
+  message("[normalizeData] Median centering...")
+  ## eX <- playbase::pgx.countNormalization( eX, methods = "median.center")
+  mx <- apply(X, 2, median, na.rm = TRUE)
+  X <- t(t(X) - mx) + mean(mx)
+
+  message("[normalizeData] Global scaling")
+  X <- global_scaling(X, method = scale.method)
+  hist(X, breaks = 100)
+
+  ## technical effects correction
+  message("[normalizeData] Correcting for technical effects...")
+  pheno <- playbase::contrasts2pheno(contrasts, samples)
+  X <- playbase::removeTechnicalEffects(
+    X, samples, pheno,
+    p.pheno = 0.05, p.pca = 0.5, force = FALSE,
+    params = c("lib", "mito", "ribo", "cellcycle", "gender"),
+    nv = 2, k.pca = 10, xrank = NULL
+  )
+  hist(X, breaks = 100)
+
+  ## for quantile normalization we omit the zero value and put back later
+  message("Quantile normalization...")
+  jj <- which(X < 0.01)
+  X[jj] <- NA
+  X <- limma::normalizeQuantiles(X)
+  X[jj] <- 0
+
+  ## add normalized data to pgx object
+  pgx$X <- X
+  pgx
+}
+
+
+
 ## Normalization methods
 ##
 ##
@@ -216,173 +307,6 @@ normalizeRLE <- function(counts, log = FALSE, use = "deseq2") {
 }
 
 
-
-
-## --------------------------- new stuff -----------------------------------------
-
-#' @export
-normalizeCounts <- function(counts,
-                            q.zero = 0.01,
-                            method = "sdc",
-                            shift.method = "slog",
-                            weighted.qn = TRUE,
-                            svd.init = NULL,
-                            plot = FALSE) {
-  which.zero <- which(counts == 0)
-  which.missing <- which(is.na(counts))
-  nzero <- sum(length(which.zero))
-  nmissing <- sum(length(which.missing))
-  message("[normalizeCounts] ", nzero, " zero values")
-  message("[normalizeCounts] ", nmissing, " missing values")
-
-  hist2 <- function(x1, ...) {
-    dx <- min(x1, na.rm = TRUE) + 0.05 * diff(range(x1, na.rm = TRUE))
-    hist(x1[x1 > dx], ...)
-  }
-  main <- ""
-  boxplothist <- function(x, main) {
-    boxplot(x, main = main)
-    x[is.infinite(x)] <- NA
-    if (length(which.missing)) {
-      hist2(x[-which.missing], breaks = 200)
-      if (any(!is.na(x[which.missing]))) {
-        hist(x[which.missing], breaks = 200, col = "red", add = TRUE, border = NA)
-      }
-    } else {
-      hist2(x, breaks = 200)
-    }
-  }
-
-  if (plot) {
-    x <- log2(1e-10 + counts)
-    boxplothist(log2(1e-10 + counts), main = "log(counts)")
-  }
-
-  xmedians <- apply(counts, 2, function(x) median(x[x > 0], na.rm = TRUE))
-  xcounts <- t(t(counts) / xmedians * mean(xmedians))
-
-  if (plot) {
-    x <- log2(xcounts)
-    boxplothist(log2(xcounts), main = "median centered (MC)")
-  }
-
-  S <- scaled.log1p(xcounts, q = 0.0001)
-  ##  S <- log2(xcounts)  ## zeros become -Inf
-  if (plot) {
-    boxplothist(S, main = "quantile scaled (MC+QS)")
-  }
-
-  ## detect outliers (values)
-  mdx <- apply(S, 1, median, na.rm = TRUE)
-  sdx <- apply(S, 1, mad, na.rm = TRUE)
-  sdx0 <- mean(sdx, na.rm = TRUE)
-  sdx[is.na(sdx)] <- sdx0
-  sdx <- (0.8 * sdx + 0.2 * sdx0) ## bayesian
-  Z <- (S - mdx) / sdx
-  smax <- mdx + 10 * sdx
-  smin <- mdx - 10 * sdx
-  smax[is.na(smax)] <- mean(smax, na.rm = TRUE)
-  smin[is.na(smin)] <- mean(smin, na.rm = TRUE)
-  is.outlier <- which(S > smax)
-  noutlier <- length(is.outlier)
-  message("[normalizeCounts] detected ", noutlier, " outlier values")
-  if (noutlier > 0) {
-    S[is.outlier] <- NA
-  }
-
-  ## impute missing values (and/or previous outliers)
-  any(is.na(S))
-  if (any(is.na(S))) {
-    ## nv=floor(max(ncol(counts)/5,3));
-    ## svd.init=NULL
-    nmissing <- sum(is.na(S))
-    message("[normalizeCounts] imputing ", nmissing, " missing values")
-    S1 <- svdImpute2(S, nv = 3, init = svd.init, fill.empty = "sample")
-    if (plot) {
-      boxplothist(S1, main = "missing imputed (MC+QS+MI)")
-    }
-    S <- S1
-  }
-
-  ## clip range of values
-  message("[normalizeCounts] clipping values")
-  S <- pmin(pmax(S, smin), smax)
-  if (plot) {
-    boxplothist(S, main = "clipped range (MC+QS+MI+CR)")
-  }
-
-  ## regress on total counts. here or later??
-  regress.tc <- FALSE
-  if (regress.tc) {
-    message("[normalizeCounts] regressing on total counts")
-    totcounts <- scale(log2(colSums(2**S) + 1))
-    S <- limma::removeBatchEffect(S, batch = NULL, covariates = totcounts)
-  }
-
-  ## Do quantile normalization. weighted will retain a bit of
-  ## variation in the values.
-  message("[normalizeCounts] apply quantile normalization")
-  if (weighted.qn) {
-    S <- 0.1 * S + 0.9 * limma::normalizeQuantiles(S)
-  } else {
-    S <- limma::normalizeQuantiles(S)
-  }
-
-  if (plot) {
-    boxplothist(S, main = "quantile normalized (MC+QS+MI+CR+QN)")
-  }
-
-  ## shift to 1%
-  smin <- min(S, na.rm = TRUE) + 0.05 * diff(range(S))
-  smin
-  zero.point <- 0
-  S1 <- S
-  S1[S <= smin] <- NA
-  S1[which.missing] <- NA
-  if (method == "sd") {
-    ## SD is calculated on global feature values
-    m0 <- mean(apply(S1, 2, median, na.rm = TRUE))
-    s0 <- mean(apply(S1, 2, sd, na.rm = TRUE))
-    zdist <- qnorm(1 - q.zero) ## SD distance
-    zero.point <- m0 - zdist * s0
-  } else if (method == "cpm") {
-    median.tc <- median(colSums(2**S, na.rm = TRUE), na.rm = TRUE)
-    median.tc
-    a <- log2(median.tc / 1e6)
-    median(colSums(2**(S - a), na.rm = TRUE), na.rm = TRUE)
-    zero.point <- a
-  } else if (grepl("^m[0-9]", method)) {
-    ## median centering
-    mval <- as.numeric(substring(method, 2, 99))
-    a <- median(S1, na.rm = TRUE) - mval
-    median(S1 - a, na.rm = TRUE)
-    median(S - a, na.rm = TRUE)
-    zero.point <- a
-  } else if (method == "quantile") {
-    ## determine by direct quantile
-    zero.point <- quantile(S1, probs = q.zero, na.rm = TRUE)
-  } else {
-    stop("unknown method = ", method)
-  }
-
-  message("[normalizeCounts] shifting values to zero: z = ", round(zero.point, 4))
-  if (shift.method == "slog") {
-    ## smooth log-transform. not real zeros
-    S <- slog(2**S, s = 2**zero.point)
-  } else {
-    ## linear shift. Induces real zeros
-    S <- pmax(S - zero.point, 0)
-  }
-
-  if (plot) {
-    boxplothist(S, main = "quantile shifted (MC+QS+MI+CR+QN+SH)")
-  }
-
-  S
-}
-
-
-
 scaled.log1p <- function(counts, q = 0.01) {
   min.counts <- min(counts, na.rm = TRUE)
   ii <- which(counts == min.counts) ## left censored values
@@ -416,34 +340,29 @@ safe.logCPM <- function(x, t = 0.05, prior = 1, q = NULL) {
 }
 
 #' @export
-scale_counts <- function(counts, method, shift = "clip") {
-  eps <- 1e-20
-  eps <- 0
-  X <- log2(counts) ## zero counts become NA!
+global_scaling <- function(X, method, shift = "clip") {
   X[is.infinite(X)] <- NA
   zero.point <- 0
+  which.zero <- which(X == 0)
 
   if (method == "cpm") {
-    median.tc <- median(colSums(counts, na.rm = TRUE), na.rm = TRUE)
+    median.tc <- median(colSums(2**X, na.rm = TRUE), na.rm = TRUE)
     a <- log2(median.tc) - log2(1e6)
     zero.point <- a
   } else if (grepl("^m[0-9]", method)) {
     ## median centering
     mval <- as.numeric(substring(method, 2, 99))
-    dbg("[scale_counts] mval = ", mval)
     a <- median(X, na.rm = TRUE) - mval
     zero.point <- a
   } else if (grepl("^z[0-9]+", method)) {
     ## zero at z-distance from median
     zdist <- as.numeric(substring(method, 2, 99))
-    dbg("[scale_counts] zdist = ", zdist)
     m0 <- mean(apply(X, 2, median, na.rm = TRUE))
     s0 <- mean(apply(X, 2, sd, na.rm = TRUE))
     zero.point <- m0 - zdist * s0
   } else if (grepl("^q[0.][.0-9]+", method)) {
     ## direct quantile
     probs <- as.numeric(substring(method, 2, 99))
-    dbg("[scale_counts] q.probs = ", probs)
     zero.point <- quantile(X, probs = probs, na.rm = TRUE)
   } else {
     stop("unknown method = ", method)
@@ -460,9 +379,18 @@ scale_counts <- function(counts, method, shift = "clip") {
     stop("unknown shift method")
   }
 
-  ## put back to exponential space and set to zero
-  X <- 2**X - 1
-  X[which(counts == 0)] <- 0
-
+  ## put back zeros
+  X[which.zero] <- 0
   X
+}
+
+#' @export
+is.xxl <- function(X, z = 10) {
+  ## sdx <- apply(X, 1, function(x) mad(x[x > 0], na.rm = TRUE))
+  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+  sdx[is.na(sdx)] <- 0
+  sdx0 <- 0.8 * sdx + 0.2 * mean(sdx, na.rm = TRUE) ## moderated SD
+  mx <- rowMeans(X, na.rm = TRUE)
+  this.z <- (X - mx) / sdx0
+  (abs(this.z) > z)
 }

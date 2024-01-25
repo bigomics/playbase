@@ -135,7 +135,7 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
 #' replace.orig=FALSE to retain the original.
 #'
 #' @export
-pgx.clusterSamples <- function(pgx, methods = c("pca", "tsne", "umap", "pacmap"),
+pgx.clusterSamples <- function(pgx, methods = c("pca", "tsne", "umap"),
                                dims = c(2, 3),
                                reduce.sd = 1000, reduce.pca = 50, perplexity = 30,
                                center.rows = TRUE, scale.rows = FALSE,
@@ -400,7 +400,9 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
 #' clusters using the elbow method.
 #'
 #' @export
-pgx.clusterMatrix <- function(X, methods = c("pca", "tsne", "umap", "pacmap"),
+pgx.clusterMatrix <- function(X,
+                              ## methods = c("pca", "tsne", "umap", "pacmap"),
+                              methods = c("pca", "tsne", "umap"),
                               dims = c(2, 3),
                               perplexity = 30, reduce.sd = 1000, reduce.pca = 50,
                               center.features = TRUE, scale.features = FALSE,
@@ -437,7 +439,6 @@ pgx.clusterMatrix <- function(X, methods = c("pca", "tsne", "umap", "pacmap"),
   }
 
   if (ncol(X) <= 6) X <- cbind(X, X, X, X, X, X)
-
   if (nrow(X) <= 3) X <- rbind(X, X, X, X)
 
   ## add small variation...
@@ -487,19 +488,21 @@ pgx.clusterMatrix <- function(X, methods = c("pca", "tsne", "umap", "pacmap"),
 
   if ("tsne" %in% methods && 2 %in% dims) {
     message("calculating t-SNE 2D...")
-
     perplexity <- pmax(min(ncol(X) / 4, perplexity), 2)
     perplexity
-    pos <- Rtsne::Rtsne(t(X),
+    res1 <- Rtsne::Rtsne(t(X),
       dims = 2,
-      ## pca = TRUE, partial_pca = TRUE,
-      is_distance = FALSE, check_duplicates = FALSE,
-      perplexity = perplexity, num_threads = 0
-    )$Y
+      is_distance = FALSE,
+      check_duplicates = FALSE,
+      perplexity = perplexity,
+      num_threads = 1 ## NOTE: multi-threading may have MEM problems...
+    )
+    pos <- res1$Y
     rownames(pos) <- colnames(X)
     pos <- pos[1:dimx[2], ] ## if augmented
     colnames(pos) <- paste0("tSNE-", c("x", "y"))
     all.pos[["tsne2d"]] <- pos
+    remove(res1)
   }
 
   if ("tsne" %in% methods && 3 %in% dims) {
@@ -507,10 +510,12 @@ pgx.clusterMatrix <- function(X, methods = c("pca", "tsne", "umap", "pacmap"),
 
     perplexity <- pmax(min(dimx[2] / 4, perplexity), 2)
     perplexity
-    pos <- Rtsne::Rtsne(t(X[, ]),
+    pos <- Rtsne::Rtsne(t(X),
       dims = 3,
-      is_distance = FALSE, check_duplicates = FALSE,
-      perplexity = perplexity, num_threads = 0
+      is_distance = FALSE,
+      check_duplicates = FALSE,
+      perplexity = perplexity,
+      num_threads = 1 ## NOTE: multi-threading may have MEM problems...
     )$Y
     rownames(pos) <- colnames(X)
     pos <- pos[1:dimx[2], ] ## if augmented
@@ -522,7 +527,7 @@ pgx.clusterMatrix <- function(X, methods = c("pca", "tsne", "umap", "pacmap"),
     message("calculating UMAP 2D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
-      pos <- uwot::tumap(t(X[, ]),
+      pos <- uwot::tumap(t(X),
         n_components = 2,
         n_neighbors = nb,
         local_connectivity = ceiling(nb / 15)
@@ -531,7 +536,7 @@ pgx.clusterMatrix <- function(X, methods = c("pca", "tsne", "umap", "pacmap"),
       custom.config <- umap.defaults
       custom.config$n_components <- 2
       custom.config$n_neighbors <- pmax(min(dimx[2] / 4, perplexity), 2)
-      pos <- umap::umap(t(X[, ]), custom.config)$layout
+      pos <- umap::umap(t(X), custom.config)$layout
     }
     rownames(pos) <- colnames(X)
     pos <- pos[1:dimx[2], ] ## if augmented
@@ -543,7 +548,7 @@ pgx.clusterMatrix <- function(X, methods = c("pca", "tsne", "umap", "pacmap"),
     message("calculating UMAP 3D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
-      pos <- uwot::tumap(t(X[, ]),
+      pos <- uwot::tumap(t(X),
         n_components = 3,
         n_neighbors = nb,
         local_connectivity = ceiling(nb / 15)
@@ -552,7 +557,7 @@ pgx.clusterMatrix <- function(X, methods = c("pca", "tsne", "umap", "pacmap"),
       custom.config <- umap.defaults
       custom.config$n_components <- 3
       custom.config$n_neighbors <- pmax(min(dimx[2] / 4, perplexity), 2)
-      pos <- umap::umap(t(X[, ]), custom.config)$layout
+      pos <- umap::umap(t(X), custom.config)$layout
     }
     rownames(pos) <- colnames(X)
     pos <- pos[1:dimx[2], ] ## if augmented
@@ -560,27 +565,31 @@ pgx.clusterMatrix <- function(X, methods = c("pca", "tsne", "umap", "pacmap"),
     all.pos[["umap3d"]] <- pos
   }
 
-  has.pacmap <- reticulate::py_module_available("pacmap")
-  if (has.pacmap && "pacmap" %in% methods && 2 %in% dims) {
-    message("calculating PACMAP 2D...")
-    ## reticulate::py_install("pacmap")
-    pacmap <- reticulate::import("pacmap")
-    reducer <- pacmap$PaCMAP(n_components = 2L)
-    pos <- reducer$fit_transform(t(X))
-    rownames(pos) <- colnames(X)
-    pos <- pos[1:dimx[2], ] ## if augmented
-    colnames(pos) <- paste0("PACMAP-", c("x", "y"))
-    all.pos[["pacmap2d"]] <- pos
-  }
-  if (has.pacmap && "pacmap" %in% methods && 3 %in% dims) {
-    message("calculating PACMAP 3D...")
-    pacmap <- reticulate::import("pacmap")
-    reducer <- pacmap$PaCMAP(n_components = 3L)
-    pos <- reducer$fit_transform(t(X))
-    rownames(pos) <- colnames(X)
-    pos <- pos[1:dimx[2], ] ## if augmented
-    colnames(pos) <- paste0("PACMAP-", c("x", "y", "z"))
-    all.pos[["pacmap3d"]] <- pos
+  ## NOTE: this pacmap package seem to require GB memory for importing
+  ## the python package and calling. Need more testing!!!
+  if (FALSE && "pacmap" %in% methods) {
+    has.pacmap <- reticulate::py_module_available("pacmap")
+    if (has.pacmap && 2 %in% dims) {
+      message("calculating PACMAP 2D...")
+      ## reticulate::py_install("pacmap")
+      pacmap <- reticulate::import("pacmap")
+      reducer <- pacmap$PaCMAP(n_components = 2L)
+      pos <- reducer$fit_transform(t(X))
+      rownames(pos) <- colnames(X)
+      pos <- pos[1:dimx[2], ] ## if augmented
+      colnames(pos) <- paste0("PACMAP-", c("x", "y"))
+      all.pos[["pacmap2d"]] <- pos
+    }
+    if (has.pacmap && 3 %in% dims) {
+      message("calculating PACMAP 3D...")
+      pacmap <- reticulate::import("pacmap")
+      reducer <- pacmap$PaCMAP(n_components = 3L)
+      pos <- reducer$fit_transform(t(X))
+      rownames(pos) <- colnames(X)
+      pos <- pos[1:dimx[2], ] ## if augmented
+      colnames(pos) <- paste0("PACMAP-", c("x", "y", "z"))
+      all.pos[["pacmap3d"]] <- pos
+    }
   }
 
   all.pos$membership <- NULL
@@ -591,6 +600,7 @@ pgx.clusterMatrix <- function(X, methods = c("pca", "tsne", "umap", "pacmap"),
     all.pos$membership <- idx[1:dimx[2]]
   }
 
+  gc()
   return(all.pos)
 }
 

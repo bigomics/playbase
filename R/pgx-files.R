@@ -5,9 +5,9 @@
 
 
 #' @export
-read.files <- function(path) {
-  f0 <- dir(path, full.names = FALSE)
-  f1 <- dir(path, full.names = TRUE)
+read.files <- function(path = ".", pattern = NULL) {
+  f0 <- dir(path, full.names = FALSE, pattern = pattern)
+  f1 <- dir(path, full.names = TRUE, pattern = pattern)
   counts.file <- grep("count.*csv$", f0)
   samples.file <- grep("sample.*csv$", f0)
   contrasts.file <- grep("contrast.*csv$", f0)

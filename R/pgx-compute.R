@@ -281,17 +281,39 @@ pgx.createPGX <- function(counts,
   }
 
   ## -------------------------------------------------------------------
-  ## conform all matrices (after filtering)
+  ## Batch-correction (if requested. WARNING: changes counts )
+  ## -------------------------------------------------------------------
+  batch.par <- c("batch", "batch2")
+  has.batchpar <- any(grepl("^batch|^batch2", colnames(samples), ignore.case = TRUE))
+  if (batch.correct && has.batchpar) {
+    b <- "batch"
+    bb <- grep("^batch|^batch2", colnames(samples), ignore.case = TRUE, value = TRUE)
+    for (b in bb) {
+      message("[createPGX] batch correcting for parameter '", b, "'\n")
+      which.zero <- which(counts == 0, arr.ind = TRUE)
+      bx <- samples[, b]
+      if (length(unique(bx[!is.na(bx)])) > 1) {
+        message("[createPGX] batch correcting for counts using ComBat\n")
+        ## X <- limma::removeBatchEffect(X, batch = bx) ## in log-space
+        X <- sva::ComBat(X, batch = bx) ## in log-space
+        X[which.zero] <- 0
+        ## counts <- pmax(2**X - 1, 0) ## batch corrected counts???
+      } else {
+        message("createPGX:batch.correct] batch parameter needs more than two levels")
+      }
+    }
+  }
+
+  ## -------------------------------------------------------------------
+  ## conform all matrices
   ## -------------------------------------------------------------------
   message("[createPGX] conforming matrices...")
   kk <- intersect(colnames(counts), rownames(samples))
   counts <- counts[, kk, drop = FALSE]
   samples <- samples[kk, , drop = FALSE]
   samples <- utils::type.convert(samples, as.is = TRUE) ## automatic type conversion
-  if (!is.null(X)) {
-    X <- X[, kk, drop = FALSE]
-    X <- X[match(rownames(counts), rownames(X)), ]
-  }
+  X <- X[, kk, drop = FALSE]
+  X <- X[match(rownames(counts), rownames(X)), ]
   if (all(kk %in% rownames(contrasts))) {
     contrasts <- contrasts[kk, , drop = FALSE]
   }
@@ -402,7 +424,7 @@ pgx.createPGX <- function(counts,
   
 
   ## -------------------------------------------------------------------
-  ## convert probe-IDs to gene symbol and aggregate duplicates
+  ## collapse probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------
 
   if (convert.hugo) {
@@ -713,16 +735,6 @@ counts.removeSampleOutliers <- function(counts) {
   counts
 }
 
-#' @export
-is.xxl <- function(X, z = 10) {
-  ## sdx <- apply(X, 1, function(x) mad(x[x > 0], na.rm = TRUE))
-  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
-  sdx[is.na(sdx)] <- 0
-  sdx0 <- 0.8 * sdx + 0.2 * mean(sdx, na.rm = TRUE) ## moderated SD
-  mx <- rowMeans(X, na.rm = TRUE)
-  this.z <- (X - mx) / sdx0
-  (abs(this.z) > z)
-}
 
 counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
   ## remove extra-large and infinite values
