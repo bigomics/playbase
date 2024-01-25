@@ -9,28 +9,20 @@
 #' Computes test genesets for the given multi-omics data.
 #'
 #' @param pgx A data object representing multi-omics data.
-#' @param max.features Maximum number of features to consider.
 #' @param custom.geneset Custom geneset object.
-#' @param test.methods Methods to use for testing.
+#' @param test.methods Character vector with the methods to use for testing.
+#'  Currently supported: "gsva", "camera", "fgsea". 
 #' @param remove.outputs Logical indicating whether to remove large outputs.
 #'
 #' @return The updated \code{pgx} object with computed test genesets.
 #'
 #' @export
 compute_testGenesets <- function(pgx,
-                                 max.features = 1000,
                                  custom.geneset = list(gmt = NULL, info = NULL),
                                  test.methods = c("gsva", "camera", "fgsea"),
                                  remove.outputs = TRUE) {
   if (!"X" %in% names(pgx)) {
     stop("[compute_testGenesets] FATAL : object must have normalized matrix X")
-  }
-
-  if (0) {
-    max.features <- 1000
-    custom.geneset <- list(gmt = NULL, info = NULL)
-    test.methods <- c("gsva", "camera", "fgsea")
-    remove.outputs <- TRUE
   }
 
   if (is.null(pgx$genes$human_ortholog)) {
@@ -40,94 +32,31 @@ compute_testGenesets <- function(pgx,
   }
 
   ## -----------------------------------------------------------
-  ## Load huge geneset matrix
-  ## -----------------------------------------------------------
-  G <- Matrix::t(playdata::GSETxGENE)
-
-  ## -----------------------------------------------------------
-  ## Filter genes
+  ## get design and contrast matrix, and get gene list
   ## -----------------------------------------------------------
 
-  ## filter genes by gene or homologous, if it exists
-  # replace "" to NA in pgx$genes$human_ortholog
-  if (pgx$organism != "Human") {
-    human_genes <- ifelse(!is.na(pgx$genes$human_ortholog),
-      pgx$genes$human_ortholog,
-      pgx$genes$symbol
-    )
-  } else {
-    human_genes <- pgx$genes$symbol
-  }
+  # Get X matrix
+  X <- pgx$X
+  design <- pgx$model.parameters$design
+  contr.matrix <- pgx$model.parameters$contr.matrix
 
-  # Change HUMAN gene names to species symbols if NOT human and human_ortholog column is NOT all NA
-  G <- G[rownames(G) %in% human_genes, , drop = FALSE]
+  ALL.GSET.METHODS <- c(
+    "fisher", "ssgsea", "gsva", "spearman", "camera", "fry",
+    "fgsea", "gsea.permPH", "gsea.permGS", "gseaPR"
+  )
 
-  if (pgx$organism != "Human" && !all(is.na(pgx$genes$human_ortholog))) {
-    rownames(G) <- pgx$genes$symbol[match(rownames(G), pgx$genes$human_ortholog)]
-  }
+  ## convert to gene list
+  G <- pgx$G
+  gmt <- playbase::mat2gmt(G)
 
-  # Normalize G after removal of genes
-  G <- playbase::normalize_cols(G)
-
-  ## -----------------------------------------------------------
-  ## Filter gene sets
-  ## -----------------------------------------------------------
-
-  ## filter gene sets on size
-  dbg("[compute_testGenesets] Filtering gene sets on size...")
-  gmt.size <- Matrix::colSums(G != 0)
-  size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
-
-  # If dataset is too small that size.ok == 0, then select top 100
-  ## if (length(size.ok) == 0) {
-  ##   size.ok <- head(sample(1:ncol(G)),100)
-  ## }
-  G <- G[, size.ok, drop = FALSE]
-
-  ## -----------------------------------------------------------
-  ## Add random genesets (in case there is no geneset left)
-  ## -----------------------------------------------------------
-  dbg("[compute_testGenesets] Adding random genesets...")
-  add.gmt <- NULL
-  rr <- sample(15:400, 100)
-  gg <- rownames(pgx$X)
-  random.gmt <- lapply(rr, function(n) head(sample(gg), min(n, length(gg) / 2)))
-  names(random.gmt) <- paste0("TEST:random_geneset.", 1:length(random.gmt))
-  add.gmt <- random.gmt
-
-  ## -----------------------------------------------------------
-  ## Add custom genesets
-  ## -----------------------------------------------------------
-
-  if (!is.null(custom.geneset$gmt)) {
-    message("Adding custom genesets...")
-    add.gmt <- c(add.gmt, custom.geneset$gmt)
-  }
-
-  if (!is.null(add.gmt)) {
-    message("Merging custom/random genesets...")
-    # convert gmt standard to SPARSE matrix
-    custom_gmt <- playbase::createSparseGenesetMatrix(
-      ##    gmt.all = custom.geneset$gmt,
-      gmt.all = add.gmt,
-      min.geneset.size = 3,
-      max.geneset.size = 9999,
-      min_gene_frequency = 1,
-      ## all_genes = pgx$all_genes,
-      all_genes = rownames(pgx$X),
-      annot = pgx$genes,
-      filter_genes = FALSE
-    )
-
-    custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% pgx$genes$symbol, drop = FALSE]
-    custom_gmt <- Matrix::t(playbase::normalize_rows(custom_gmt))
-    G <- merge_sparse_matrix(m1 = G, m2 = custom_gmt)
-    G <- G[rownames(G) %in% pgx$genes$symbol, , drop = FALSE] ## gene on rows
-    remove(custom_gmt)
+  ## if reduced samples
+  ss <- rownames(pgx$model.parameters$exp.matrix)
+  if (!is.null(ss)) {
+    X <- X[, ss, drop = FALSE]
   }
 
   ## -----------------------------------------------------------
-  ## create the full GENE matrix (always collapsed by gene)
+  ## Collapse X by gene
   ## -----------------------------------------------------------
   dbg("creating GENE matrix by SYMBOL...")
   X <- pgx$X
@@ -139,83 +68,15 @@ compute_testGenesets <- function(pgx,
     }
   }
 
-  ## if reduced samples
-  ss <- rownames(pgx$model.parameters$exp.matrix)
-  if (!is.null(ss)) {
-    X <- X[, ss, drop = FALSE]
-  }
-
-  ## -----------------------------------------------------------
-  ## create the GENESETxGENE matrix
-  ## -----------------------------------------------------------
-  dbg("[compute_testGenesets] Matching gene set matrix...\n")
-  gg <- rownames(X)
-  ii <- intersect(gg, rownames(G))
-  G <- G[ii, , drop = FALSE]
-  xx <- setdiff(gg, rownames(G))
-  matX <- Matrix::Matrix(0, nrow = length(xx), ncol = ncol(G), sparse = TRUE)
-  rownames(matX) <- xx
-  colnames(matX) <- colnames(G)
-  G <- rbind(G, matX)
-  G <- G[match(gg, rownames(G)), , drop = FALSE]
-  rownames(G) <- rownames(X) ## original name (e.g. mouse)
-
-  ## -----------------------------------------------------------
-  ## Prioritize gene sets by fast rank-correlation
-  ## -----------------------------------------------------------
-  if (is.null(max.features)) max.features <- 20000
-  if (max.features < 0) max.features <- 20000
-
-  if (max.features > 0) {
-    dbg("[compute_testGenesets] Reducing gene set matrix...\n")
-    ## Reduce gene sets by selecting top varying genesets. We use the
-    ## very fast sparse rank-correlation for approximate single sample
-    ## geneset activation.
-    cX <- X - rowMeans(X, na.rm = TRUE) ## center!
-    cX <- apply(cX, 2, rank)
-    gsetX <- qlcMatrix::corSparse(G, cX) ## slow!
-    grp <- pgx$model.parameters$group
-    gsetX.bygroup <- NULL
-    ## If groups/conditions are present we calculate the SD by group
-    if (!is.null(grp)) {
-      gsetX.bygroup <- tapply(1:ncol(gsetX), grp, function(i) rowMeans(gsetX[, i, drop = FALSE]))
-      gsetX.bygroup <- do.call(cbind, gsetX.bygroup)
-      sdx <- apply(gsetX.bygroup, 1, stats::sd)
-    } else {
-      sdx <- matrixStats::rowSds(gsetX)
-    }
-    rm(gsetX)
-    rm(gsetX.bygroup)
-    names(sdx) <- colnames(G)
-    jj <- Matrix::head(order(-sdx), max.features)
-    must.include <- "hallmark|kegg|^go|^celltype|^pathway|^custom"
-    jj <- unique(c(jj, grep(must.include, colnames(G), ignore.case = TRUE)))
-    jj <- jj[order(colnames(G)[jj])] ## sort alphabetically
-    G <- G[, jj, drop = FALSE]
-  }
-
-  ## -----------------------------------------------------------
-  ## get design and contrast matrix
-  ## -----------------------------------------------------------
-  design <- pgx$model.parameters$design
-  contr.matrix <- pgx$model.parameters$contr.matrix
-
-  ALL.GSET.METHODS <- c(
-    "fisher", "ssgsea", "gsva", "spearman", "camera", "fry",
-    "fgsea", "gsea.permPH", "gsea.permGS", "gseaPR"
-  )
-
   ## -----------------------------------------------------------
   ## Run methods
   ## -----------------------------------------------------------
-  cat(">>> Testing gene sets with methods:", test.methods, "\n")
+  message(">>> Testing gene sets with methods:", test.methods, "\n")
 
-  ## convert to gene list
-  gmt <- playbase::mat2gmt(G)
   Y <- pgx$samples
   gc()
 
-  gset.meta <- playbase::gset.fitContrastsWithAllMethods(
+  gset.meta <- gset.fitContrastsWithAllMethods(
     gmt = gmt,
     X = X,
     Y = Y,
@@ -231,13 +92,15 @@ compute_testGenesets <- function(pgx,
   rownames(gset.meta$timings) <- paste("[test.genesets]", rownames(gset.meta$timings))
   pgx$timings <- rbind(pgx$timings, gset.meta$timings)
   pgx$gset.meta <- gset.meta
-
+  
   pgx$gsetX <- pgx$gset.meta$matrices[["meta"]] ## META or average FC?
   pgx$GMT <- G[, rownames(pgx$gsetX)]
+
 
   ## -------------------------------------------------------
   ## calculate gset info and store as pgx$gset.meta
   ## -------------------------------------------------------
+  
   gset.size <- Matrix::colSums(pgx$GMT != 0)
   gset.size.raw <- playdata::GSET_SIZE
 
@@ -266,10 +129,7 @@ compute_testGenesets <- function(pgx,
     pgx$gset.meta$outputs <- NULL
   }
 
-  remove(X)
-  remove(Y)
-  remove(G)
-  remove(gmt)
+  remove(X, Y, G, gmt)
   gc()
   return(pgx)
 }
