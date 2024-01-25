@@ -725,6 +725,12 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
     x
   }
   num.values <- c(-1, 0, 1, NA, "NA", "na", "", " ")
+
+  # convert values <0 to 1 and values >0 to 1 (necessary for some old design matrix with float values)
+  # sign function will fail when non-numeric values are present, use try catch to preserve input
+
+  contr.matrix <- tryCatch(sign(contr.matrix), error = function(e) contr.matrix)
+
   is.num <- all(apply(contr.matrix, 2, function(x) all(x %in% num.values)))
   is.num
   if (!is.num) {
