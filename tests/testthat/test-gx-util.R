@@ -16,14 +16,14 @@ mat <- matrix(rep(1:10, 10), ncol = 10, byrow = TRUE)
 groups <- gl(2, 5)
 
 test_that("averageByGroup returns a numeric matrix", {
-  means <- averageByGroup(mat, groups)
+  means <- playbase::averageByGroup(mat, groups)
 
   expect_type(means, "double")
   expect_equal(dim(means), c(10, 2))
 })
 
 test_that("averageByGroup calculates correct group means", {
-  means <- averageByGroup(mat, groups)
+  means <- playbase::averageByGroup(mat, groups)
   expected_means <- matrix(c(
     rep(3, 10),
     rep(8, 10)

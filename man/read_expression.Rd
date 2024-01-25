@@ -26,5 +26,7 @@ It removes rows with NA, blank or invalid symbols, and collapses duplicate symbo
 summing expression across rows.
 }
 \examples{
+\dontrun{
 counts <- read_expression(playbase::example_file("counts.csv"))
+}
 }

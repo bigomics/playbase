@@ -10,6 +10,11 @@ pgx.createPGX(
   counts,
   samples,
   contrasts,
+  organism = NULL,
+  name = "Data set",
+  datatype = "unknown",
+  creator = "unknown",
+  description = "No description provided.",
   X = NULL,
   is.logx = NULL,
   batch.correct = TRUE,
@@ -24,7 +29,9 @@ pgx.createPGX(
   do.clustergenes = TRUE,
   only.proteincoding = TRUE,
   remove.xxl = TRUE,
-  normalize = TRUE
+  remove.outliers = TRUE,
+  normalize = TRUE,
+  use_biomart = NA
 )
 }
 \arguments{
@@ -33,6 +40,9 @@ pgx.createPGX(
 \item{samples}{Data frame containing sample information.}
 
 \item{contrasts}{Data frame defining sample contrasts.}
+
+\item{organism}{Default "Human", it indicates the species used
+for the gene annotation table and the probe to symbol conversion.}
 
 \item{X}{(Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.}
 

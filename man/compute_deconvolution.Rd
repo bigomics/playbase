@@ -21,3 +21,9 @@ An updated object with deconvolution results.
 This function performs deconvolution analysis on the input RNA expression data using various reference matrices
 and methods. It estimates the abundance of different cell types or tissue components present in the data.
 }
+\examples{
+\dontrun{
+pgx <- playdata::GEIGER_PGX
+deconv <- compute_deconvolution(pgx)
+}
+}

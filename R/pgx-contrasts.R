@@ -8,6 +8,38 @@
 ## ----------------------------------------------------------------------
 
 
+#' @export
+contrasts2pheno <- function(contrasts, samples) {
+  M <- contrasts.convertToLabelMatrix(contrasts, samples)
+  if (ncol(M) > 10) {
+    M <- sign(makeContrastsFromLabelMatrix(M))
+    M[M == 0] <- NA
+    M <- (M + 1) / 2
+    M <- apply(M, 2, as.character)
+  }
+  mm <- paste(colnames(M), collapse = " ")
+  M[is.na(M)] <- "_"
+  pheno <- paste0("p", apply(M, 1, paste0, collapse = ""))
+  ## check if pheno equals one of canonical phenotypes
+  col1 <- apply(samples, 2, function(x) all(colSums(table(x, pheno) != 0) == 1))
+  row1 <- apply(samples, 2, function(x) all(rowSums(table(x, pheno) != 0) == 1))
+  if (any(col1 & row1)) {
+    sel <- names(which(col1 & row1))[1]
+    pheno <- samples[, sel]
+  }
+  names(pheno) <- rownames(samples)
+  pheno
+}
+
+#' @export
+samples2pheno <- function(M) {
+  px <- apply(1 * expandPhenoMatrix(M), 1, paste, collapse = "")
+  px <- paste0("p", px)
+  names(px) <- rownames(M)
+  px
+}
+
+
 ##' Get contrast groups from PGX object
 #'
 #' @title Get contrast groups
@@ -110,13 +142,6 @@ pgx.expMatrix <- function(pheno, contr.matrix) {
 ## -----------------------------------------------------------------------------
 ## Contrast creation functions
 ## -----------------------------------------------------------------------------
-
-
-
-
-
-
-
 
 
 #' Make direct contrasts from a factor
@@ -402,7 +427,7 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, max.leve
   ## sample-wise contrasts
   rownames(ct.all) <- ct.all[, "sample"]
   ct.all <- as.matrix(ct.all[, -1, drop = FALSE]) ## drop sample column
-  ct.all <- ct.all[match(rownames(df), rownames(ct.all)), ]
+  ct.all <- ct.all[match(rownames(df), rownames(ct.all)), , drop = FALSE]
   rownames(ct.all) <- rownames(df)
   ct.all[is.na(ct.all)] <- 0
 
@@ -793,9 +818,26 @@ makeContrastsFromLabelMatrix <- function(lab.matrix) {
 #' each pair of groups.
 #' @export
 contrasts.convertToLabelMatrix <- function(contrasts, samples) {
-  num.values <- c(-1, 0, 1, NA, "NA", "na", "", " ")
-  is.numeric.contrast <- all(as.vector(unlist(contrasts)) %in% num.values)
+  if (NCOL(contrasts) == 1 && is.null(dim(contrasts))) {
+    stop("contrasts must be a matrix with column names")
+  }
+  if (is.null(colnames(contrasts))) {
+    stop("contrasts must have column names")
+  }
+
+  is.numeric.matrix <- inherits(contrasts, "matrix") &&
+    all(apply(contrasts, 2, class) %in% c("integer", "numeric"))
+  is.numeric.df <- inherits(contrasts, "data.frame") &&
+    all(apply(contrasts, 2, class) %in% c("integer", "numeric"))
+  is.numeric.contrast <- is.numeric.matrix | is.numeric.df
+  #  num.values <- c(-1, 0, 1, NA, "NA", "na", "", " ")
+  #  is.numeric.contrast <- all(as.vector(unlist(contrasts)) %in% num.values)
   is.numeric.contrast
+
+  if (is.numeric.contrast) {
+    contrasts[contrasts %in% c(NA, "NA", "na", "")] <- 0
+    contrasts <- sign(contrasts)
+  }
 
   ## first match of group (or condition) in colum names, regard as group column
   group.col <- head(grep("group|condition", tolower(colnames(samples))), 1)
@@ -806,9 +848,8 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
     group.col
   }
   has.group.col <- length(group.col) > 0
-  is.group.contrast  <- has.group.col && all(samples[,group.col] %in% rownames(contrasts))
-  is.sample.contrast <- nrow(contrasts) > 0 &&
-    all(rownames(contrasts) %in% rownames(samples))
+  is.group.contrast <- has.group.col && all(samples[, group.col] %in% rownames(contrasts))
+  is.sample.contrast <- nrow(contrasts) > 0 && all(rownames(contrasts) %in% rownames(samples))
 
   if (!is.sample.contrast && !has.group.col) {
     message("[contrasts.convertToLabelMatrix] ERROR: Invalid group-wise contrast. could not find 'group' column.")
@@ -822,7 +863,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   new.contrasts <- contrasts
   ## old1: group-wise -1/0/1 matrix
   if (is.group.contrast && is.numeric.contrast) {
-    message("[contrasts_conversion_check] WARNING: converting old1 style contrast to new format")
+    message("[contrasts.convertToLabelMatrix] WARNING: converting old1 style contrast to new format")
     new.contrasts <- samples[, 0]
     if (NCOL(contrasts) > 0) {
       contrasts2 <- apply(contrasts, 2, as.numeric)
@@ -835,18 +876,21 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   }
   ## old2: sample-wise -1/0/1 matrix
   if (is.sample.contrast && is.numeric.contrast) {
-    message("[contrasts_conversion_check] WARNING: converting old2 style contrast to new format")
+    message("[contrasts.convertToLabelMatrix] WARNING: converting old2 style contrast to new format")
     new.contrasts <- samples[, 0]
+
     if (NCOL(contrasts) > 0) {
       contrasts2 <- apply(contrasts, 2, as.numeric)
       rownames(contrasts2) <- rownames(contrasts)
-      new.contrasts <- contrastAsLabels(contrasts2)
+      contrasts2 <- contrastAsLabels(contrasts2)
+      new.contrasts <- matrix(NA, nrow(samples), ncol(contrasts))
+      new.contrasts <- contrasts2[match(rownames(samples), rownames(contrasts2)), , drop = FALSE]
       rownames(new.contrasts) <- rownames(samples)
     }
   }
   ## old3: group-wise label matrix
   if (is.group.contrast && !is.numeric.contrast) {
-    message("[contrasts_conversion_check] WARNING: converting group-wise label contrast to new format")
+    message("[contrasts.convertToLabelMatrix] WARNING: converting group-wise label contrast to new format")
     new.contrasts <- samples[, 0]
     if (NCOL(contrasts) > 0) {
       grp <- as.character(samples[, group.col])
@@ -862,8 +906,6 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   rownames(new.contrasts) <- rownames(samples)
   new.contrasts
 }
-
-k <- 3
 
 #' @export
 pgx.addPCcontrasts <- function(counts, k = 3) {

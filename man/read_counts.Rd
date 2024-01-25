@@ -23,5 +23,7 @@ It removes rows with NA, blank or invalid symbols, and collapses any duplicate s
 summing counts across rows.
 }
 \examples{
+\dontrun{
 counts <- read_counts(playbase::example_file("counts.csv"))
+}
 }

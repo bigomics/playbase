@@ -18,7 +18,8 @@ pgx.computePGX(
     "wgcna")[c(1, 2)],
   pgx.dir = NULL,
   libx.dir = NULL,
-  progress = NULL
+  progress = NULL,
+  user_input_dir = getwd()
 )
 }
 \arguments{

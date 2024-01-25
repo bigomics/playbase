@@ -54,6 +54,26 @@ pgx.initialize <- function(pgx) {
     return(NULL)
   }
 
+  if (is.null(pgx$version)) {
+    # this is needed in case the species is human, and we dont have the
+    # homolog column or if we have an old pgx which will ensure consistency
+    # between old and new pgx
+    pgx$genes$gene_name <- as.character(pgx$genes$gene_name)
+    pgx$genes$gene_title <- as.character(pgx$genes$gene_title)
+    pgx$genes$human_ortholog <- as.character(rownames(pgx$genes))
+    pgx$genes$feature <- as.character(rownames(pgx$genes))
+    pgx$genes$symbol <- pgx$genes$gene_name
+    col_order <- c(
+      "feature", "symbol", "human_ortholog",
+      "gene_title", "gene_name", colnames(pgx$genes)
+    )
+    col_order <- col_order[!duplicated(col_order)]
+    pgx$genes <- pgx$genes[, col_order, drop = FALSE]
+    if (!"chr" %in% colnames(pgx$genes)) {
+      pgx$genes$chr <- 0
+    }
+  }
+
   ## for COMPATIBILITY: if no counts, estimate from X
   if (is.null(pgx$counts)) {
     cat("WARNING:: no counts table. estimating from X\n")
@@ -95,7 +115,7 @@ pgx.initialize <- function(pgx) {
 
   is.numlev <- all(unique(pgx$contrasts) %in% c(NA, "", -1, 0, 1))
   is.samplewise <- all(rownames(pgx$contrasts) == rownames(pgx$samples))
-  is.samplewise
+
   if ("contrasts" %in% names(pgx) && (!is.samplewise || is.numlev)) {
     design <- pgx$model.parameters$design
     expmat <- pgx$model.parameters$exp.matrix
@@ -127,7 +147,7 @@ pgx.initialize <- function(pgx) {
   is.num <- sapply(pgx$samples, class) %in% c("numeric", "integer")
   numlev <- apply(pgx$samples, 2, function(x) length(unique(x[!is.na(x)])))
   is.numfac <- (is.num & numlev <= 3)
-  is.numfac
+
   if (any(is.numfac)) {
     for (i in which(is.numfac)) pgx$samples[, i] <- as.character(pgx$samples[, i])
   }
@@ -154,38 +174,34 @@ pgx.initialize <- function(pgx) {
   kk <- sort(unique(c(k1, k2)))
   pgx$Y <- pgx$Y[, kk, drop = FALSE]
 
-  ## ----------------------------------------------------------------
-  ## Tidy up genes matrix
-  ## ----------------------------------------------------------------
-  pgx$genes <- pgx$genes[rownames(pgx$counts), , drop = FALSE]
-  pgx$genes$gene_name <- as.character(pgx$genes$gene_name)
-  pgx$genes$gene_title <- as.character(pgx$genes$gene_title)
-
-  ## Add chromosome annotation if not
-  if (!("chr" %in% names(pgx$genes))) {
-    symbol <- sapply(as.list(org.Hs.eg.db::org.Hs.egSYMBOL), "[", 1) ## some have multiple chroms..
-    CHR <- sapply(as.list(org.Hs.eg.db::org.Hs.egCHR), "[", 1) ## some have multiple chroms..
-    MAP <- sapply(as.list(org.Hs.eg.db::org.Hs.egMAP), "[", 1) ## some have multiple chroms..
-    names(CHR) <- names(MAP) <- symbol
-    pgx$genes$chr <- CHR[pgx$genes$gene_name]
-    pgx$genes$map <- MAP[pgx$genes$gene_name]
-  }
 
   ## -----------------------------------------------------------------------------
   ## intersect and filter gene families (convert species to human gene sets)
   ## -----------------------------------------------------------------------------
-  if ("hgnc_symbol" %in% colnames(pgx$genes)) {
-    hgenes <- toupper(pgx$genes$hgnc_symbol)
-    genes <- pgx$genes$gene_name
-    pgx$families <- lapply(playdata::FAMILIES, function(x) setdiff(genes[match(x, hgenes)], NA))
+  # Here we use the homologs when available, instead of gene_name
+  genes <- ifelse(!is.na(pgx$genes$human_ortholog),
+    pgx$genes$human_ortholog,
+    pgx$genes$gene_name
+  )
+
+  if (is.null(pgx$organism)) {
+    pgx$organism <- playbase::pgx.getOrganism(pgx)
+  }
+  if (pgx$organism %in% c("Human", "human") | !is.null(pgx$version)) {
+    pgx$families <- lapply(playdata::FAMILIES, function(x) {
+      intersect(x, genes)
+    })
   } else {
-    genes <- toupper(pgx$genes$gene_name)
-    pgx$families <- lapply(playdata::FAMILIES, function(x) intersect(x, genes))
+    pgx$families <- lapply(playdata::FAMILIES, function(x, genes, annot_table) {
+      x <- intersect(x, genes)
+      x <- annot_table$symbol[match(x, annot_table$human_ortholog)]
+      return(x)
+    }, genes = genes, annot_table = pgx$genes)
   }
   famsize <- sapply(pgx$families, length)
   pgx$families <- pgx$families[which(famsize >= 10)]
 
-  all.genes <- sort(rownames(pgx$genes))
+  all.genes <- sort(unique(pgx$genes$gene_name))
   pgx$families[["<all>"]] <- all.genes
 
   ## -----------------------------------------------------------------------------
@@ -193,12 +209,15 @@ pgx.initialize <- function(pgx) {
   ## -----------------------------------------------------------------------------
   message("[pgx.initialize] Recomputing geneset fold-changes")
   nc <- length(pgx$gset.meta$meta)
-  i <- 1
   for (i in 1:nc) {
     gs <- pgx$gset.meta$meta[[i]]
     fc <- pgx$gx.meta$meta[[i]]$meta.fx
     names(fc) <- rownames(pgx$gx.meta$meta[[i]])
-    fc <- fc[which(toupper(names(fc)) %in% colnames(playdata::GSETxGENE))]
+    # If use does not collapse by gene
+    if (!all(names(fc) %in% pgx$genes$symbol)) {
+      names(fc) <- pgx$genes$symbol[match(names(fc), rownames(pgx$genes), nomatch = 0)]
+      fc <- fc[names(fc) != ""]
+    }
     G1 <- Matrix::t(pgx$GMT[names(fc), rownames(gs)])
     mx <- (G1 %*% fc)[, 1]
     pgx$gset.meta$meta[[i]]$meta.fx <- mx
@@ -235,6 +254,15 @@ pgx.initialize <- function(pgx) {
     message("[pgx.initialize] clustering genesets...")
     pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2), level = "geneset")
     pgx$cluster.gsets$pos <- lapply(pgx$cluster.gsets$pos, pos.compact)
+  }
+  if (!"cluster" %in% names(pgx)) {
+    message("[pgx.initialize] clustering samples...")
+    pgx <- pgx.clusterSamples(
+      pgx,
+      dims = c(2, 3),
+      perplexity = NULL,
+      methods = c("pca", "tsne", "umap")
+    )
   }
 
   ## -----------------------------------------------------------------------------

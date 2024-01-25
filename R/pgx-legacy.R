@@ -7527,3 +7527,444 @@
 #'   counts <- counts[, sel]
 #'   counts
 #' }
+
+
+#' #' @title Import Salmon Abundance Estimates
+#' #'
+#' #' @description This function imports Salmon transcript abundance estimates from Salmon SF files
+#' #' and converts them to a DGEList object for use with edgeR.
+#' #'
+#' #' @param sf.files A named character vector of Salmon SF files.
+#' #' @param count.type The type of counts to extract, either "TPM", "NumReads" or "lengthScaledTPM".
+#' #' @param organism The organism name, either "Hsapiens" or "Mmusculus".
+#' #' @param txOut Whether to output transcript-level estimates in addition to gene-level.
+#' #'
+#' #' @details This function takes a named character vector of Salmon SF files, extracts the abundance
+#' #' estimates, converts them to a DGEList object with integer counts scaled to library size.
+#' #' It requires the EnsDb and org packages for the corresponding organism.
+#' #'
+#' #' @return A DGEList object containing the abundance estimates, ready for use with edgeR.
+#' #'
+#' #' @export
+# ngs.tximportSalmon <- function(sf.files, count.type = "lengthScaledTPM", organism = "Hsapiens",
+#                                txOut = FALSE) {
+#   if (is.null(names(sf.files))) stop("sf.files must be named!")
+#   if (!all(file.exists(sf.files))) stop("missing SF files")
+#
+#   if (organism == "Hsapiens") {
+#     edb <- EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86
+#     org <- org.Hs.eg.db::org.Hs.eg.db
+#   }
+#   if (organism == "mouse") {
+#     edb <- EnsDb.Mmusculus.v79::EnsDb.Mmusculus.v79
+#     org <- org.Mm.eg.db::org.Mm.eg.db
+#   }
+#
+#   ## ------------------------------------------------------------
+#   ## get transcript annotation
+#   ## ------------------------------------------------------------
+#   ## then the transcript to gene file from Ensembl
+#   listColumns(edb)
+#   daf <- GenomicFeatures::transcripts(edb,
+#                                       columns = c(
+#                                         "tx_id", "gene_id", "entrezid",
+#                                         "gene_name", "gene_biotype", "name"
+#                                       ),
+#                                       return.type = "DataFrame"
+#   )
+#   dim(daf)
+#   Matrix::head(daf)
+#   annot_genes <- AnnotationDbi::select(org,
+#                                        keytype = "ENSEMBL", keys = daf$gene_id,
+#                                        columns = c("SYMBOL", "REFSEQ", "ENTREZID", "GENENAME")
+#   )
+#   if (1) {
+#     ## Add REFSEQ????
+#     cat("quering biomaRt...\n")
+#
+#     ensembl <- biomaRt::useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
+#     bm.res <- biomaRt::getBM(
+#       attributes = c("refseq_mrna", "ensembl_gene_id", "ensembl_transcript_id", "external_gene_name"),
+#       filters = "ensembl_transcript_id",
+#       values = daf$tx_id,
+#       mart = ensembl
+#     )
+#     Matrix::head(bm.res)
+#     dim(bm.res)
+#     daf$refseq2 <- NULL
+#     daf$refseq <- bm.res[match(daf$tx_id, bm.res[, "ensembl_transcript_id"]), "refseq_mrna"]
+#     Matrix::head(daf)
+#   }
+#
+#   dim(annot_genes)
+#   Matrix::head(annot_genes)
+#   daf$gene_title <- annot_genes$GENENAME[match(daf$gene_id, annot_genes$ENSEMBL)]
+#   Matrix::head(daf, 200)
+#
+#   ## ------------------------------------------------------------
+#   ## Import Salmon files using tximport
+#   ## ------------------------------------------------------------
+#   tx2gene <- daf[, c("tx_id", "gene_id")] ## map to Ensemble gene ID
+#
+#   ## now import all files and collapse to gene. The 'lengthScaleTPM'
+#   ## is essential for LIMMA/VOOM and Deseq2 handles this fine (see
+#   ## code for DESeqDataSetFromTximport)
+#
+#
+#   if (txOut == FALSE) {
+#     ## collapse gene level
+#     txi <- tximport::tximport(sf.files,
+#                               type = "salmon",
+#                               countsFromAbundance = count.type, txOut = FALSE,
+#                               tx2gene = tx2gene, ignoreTxVersion = TRUE
+#     )
+#     daf0 <- daf
+#     daf <- daf[match(rownames(txi$counts), daf$gene_id), ]
+#
+#     ## collapse also transcript-level annotation
+#     tx.ids <- tapply(tx2gene$tx_id, tx2gene$gene_id, paste, collapse = ",")
+#     daf$tx_id <- tx.ids[match(daf$gene_id, names(tx.ids))] ## replace with TX list
+#     if (!is.null(daf$refseq)) {
+#       rfq.ids <- tapply(daf0$refseq, daf0$gene_id, function(x) paste(setdiff(x, ""), collapse = ","))
+#       daf$refseq <- rfq.ids[match(daf$gene_id, names(rfq.ids))] ## replace with TX list
+#     }
+#     remove(daf0)
+#   } else {
+#     ## transcript level
+#     txi <- tximport::tximport(sf.files,
+#                               type = "salmon",
+#                               countsFromAbundance = count.type, txOut = TRUE,
+#                               tx2gene = NULL, ignoreTxVersion = TRUE
+#     )
+#     tx.id <- sub("[.][0-9]*$", "", rownames(txi$counts))
+#     daf <- daf[match(tx.id, daf$tx_id), ]
+#   }
+#
+#   txi$genes <- daf[, c("tx_id", "gene_id", "refseq", "gene_name", "gene_biotype", "gene_title")]
+#   rownames(txi$genes) <- rownames(txi$counts)
+#   return(txi)
+# }
+
+
+#' #' @title Get gene annotation data
+#' #'
+#' #' @description Retrieves additional gene annotation data for a Salmon quantification object.
+#' #'
+#' #' @param keys Character vector of row names in the Salmon quant matrix.
+#' #' @param keytype The type of identifiers in `keys` (e.g. 'ENSEMBL').
+#' #' @param gencode Data frame with GENCODE gene annotation data.
+#' #'
+#' #' @details This function takes a Salmon quantification object and retrieves additional
+#' #' gene annotation data for the quantified genes. It extracts the row names from the
+#' #' Salmon counts matrix as the `keys`. It then uses these keys to retrieve corresponding
+#' #' annotation from the provided `gencode` data frame, matching on the gene identifiers.
+#' #'
+#' #' Additional annotation columns added are:
+#' #' - gene_id: GENCODE gene identifier
+#' #' - gene_type: GENCODE gene type
+#' #' - gene_name: Gene name
+#' #' - chr: Chromosome
+#' #' - start: Gene start position
+#' #' - stop: Gene end position
+#' #'
+#' #' The additional annotation is added to the `genes` slot of the Salmon object.
+#' #'
+#' #' @return The Salmon quantification object with additional gene annotation data added.
+#' #'
+#' #' @export
+#' ngs.getGeneAnnot <- function(keys, keytype, gencode) {
+#'   ## add more gene annotation
+#'   ## build gene annotation (expects pure ENSEMBL.ID in rows)
+#'   idx <- match(keys, sub("[.].*", "", gencode$gene_id)) ## assumes single match
+#'   kk <- c("gene_id", "gene_type", "gene_name", "chr", "start", "stop")
+#'   gencode <- gencode[idx, kk]
+#'   dim(gencode)
+#'
+#'
+#'   ## add annotation using org.Hs.eg.db (NEED RETHINK ON MULTIPLE MATCHES)
+#'   biomaRt::columns(org.Hs.eg.db::org.Hs.eg.db)
+#'
+#'   sel.keys <- c("ENTREZID", "GENENAME")
+#'   org.annot <- plotly::select(org.Hs.eg.db::org.Hs.eg.db,
+#'     keys = keys, keytype = keytype, columns = sel.keys
+#'   )
+#'   dim(org.annot)
+#'   idx <- match(keys, org.annot$ENSEMBL) ## assumes single match
+#'   org.annot <- org.annot[idx, ]
+#'
+#'
+#'   genes <- data.frame(gencode, org.annot)
+#'   rownames(genes) <- keys
+#'   Matrix::head(genes)
+#'   return(genes)
+#' }
+
+
+#' #' @title Run tximport on Kallisto quantification
+#' #'
+#' #' @param srr_id Character vector of SRR IDs for samples
+#' #' @param species Species name, used to get gene annotation data. Default is c("human", "mouse", "rat").
+#' #' @param kallisto_dir Directory containing Kallisto output folders for each sample.
+#' #'
+#' #' @return List containing gene and transcript count matrices and tximport result objects.
+#' #'
+#' #' @description Imports Kallisto transcript-level abundance estimates into R matrices at gene and transcript level using tximport.
+#' #'
+#' #' @details This function takes a vector of SRR IDs and the path to the Kallisto output directory containing abundance estimates (abundance.tsv files) for each sample.
+#' #' It imports the transcript counts into R using tximport, summarizing into gene-level counts based on gene annotation data for the specified species.
+#' #'
+#' #' The output is a list containing the gene counts matrix, transcript counts matrix, and the tximport result objects.
+#' #'
+#' #' @export
+#' run_tximport_kallisto <- function(srr_id, species = c("human", "mouse", "rat"), kallisto_dir) {
+#'   species <- match.arg(species, c("human", "mouse", "rat"))
+#'   edb <- function(species) {
+#'     if (species == "human") {
+#'       GenomicFeatures::transcripts(EnsDb.Hsapiens.v86::EnsDb.Hsapiens.v86,
+#'         columns = c("tx_id", "gene_id", "gene_name"),
+#'         return.type = "DataFrame"
+#'       )
+#'     } else if (species == "mouse") {
+#'       GenomicFeatures::transcripts(EnsDb.Mmusculus.v79::EnsDb.Mmusculus.v79,
+#'         columns = c("tx_id", "gene_id", "gene_name"),
+#'         return.type = "DataFrame"
+#'       )
+#'     } else if (species == "rat") {
+#'       GenomicFeatures::transcripts(EnsDb.Rnorvegicus.v79::EnsDb.Rnorvegicus.v79,
+#'         columns = c("tx_id", "gene_id", "gene_name"),
+#'         return.type = "DataFrame"
+#'       )
+#'     } else {
+#'       return(NULL)
+#'     }
+#'   }
+#'   gene_ensembl <- function(species) {
+#'     if (species == "human") {
+#'       return(org.Hs.eg.db::org.Hs.eg.db)
+#'     } else if (species == "mousee") {
+#'       return(org.Mm.eg.db::org.Mm.eg.db)
+#'     } else {
+#'       return(NULL)
+#'     }
+#'   }
+#'   assign("Tx.ensemble", edb(species))
+#'   Tx.ensemble <- get("Tx.ensemble")
+#'   tx2gene <- Tx.ensemble[, c(1, 2)]
+#'   files <- file.path(paste0(kallisto_dir, "/", srr_id, "/abundance.tsv"))
+#'   names(files) <- srr_id
+#'   file.exists(files)
+#'
+#'   cat("generating counts table\n")
+#'   txi.t <- tximport::tximport(files,
+#'     type = "kallisto", tx2gene = tx2gene,
+#'     txOut = TRUE,
+#'     dropInfReps = TRUE
+#'   )
+#'   txi.g <- tximport::summarizeToGene(txi.t, tx2gene,
+#'     ignoreTxVersion = TRUE, ignoreAfterBar = TRUE
+#'   )
+#'   gene_counts <- txi.g$counts
+#'   gene_counts[is.na(gene_counts)] <- 0
+#'   colnames(gene_counts) <- srr_id
+#'   transcript_counts <- txi.t$counts
+#'   transcript_counts[is.na(transcript_counts)] <- 0
+#'   colnames(transcript_counts) <- srr_id
+#'   annot_genes <- AnnotationDbi::select(gene_ensembl(species),
+#'     keys = rownames(gene_counts), columns = c(
+#'       "SYMBOL", "SYMBOL",
+#'       "GENENAME"
+#'     ), keytype = "ENSEMBL"
+#'   )
+#'   annot_genes2 <- annot_genes[match(
+#'     rownames(gene_counts),
+#'     annot_genes[, 1]
+#'   ), , drop = FALSE]
+#'   gene_counts <- cbind(annot_genes2, gene_counts)
+#'   counts <- list(
+#'     gene_counts = gene_counts, transcript_counts = transcript_counts,
+#'     tximport_gene_data = txi.g, tximport_transcript_data = txi.t
+#'   )
+#'   return(counts)
+#' }
+
+#' #' @title Extract gene symbols from GEO feature data
+#' #'
+#' #' @description Extracts official gene symbols from the feature data table of a GEO dataset.
+#' #'
+#' #' @param fdata The featureData table from a GEOquery GEO dataset object.
+#' #'
+#' #' @details This function tries to extract official gene symbols from the featureData table of a GEO dataset downloaded with GEOquery.
+#' #' It first looks for a column containing gene symbols by matching against the org.Hs.egSYMBOL database.
+#' #' If no direct symbol column is found, it looks for an ENTREZ identifier column and maps that to symbols using org.Hs.egSYMBOL.
+#' #' If neither approach works, it tries to extract symbols from the gene title or description columns by regex matching.
+#' #'
+#' #' @return A character vector of gene symbols, or NULL if symbols could not be extracted.
+#' #'
+#' #' @export
+#' pgx.getSymbolFromFeatureData <- function(fdata) {
+#'   ## extract GENE symbol from featureData. The problem is that we don't
+#'   ## know the gene column because the column names are not always
+#'   ## consistent. Also the actual gene symbol may be part of an
+#'   ## annotation string instead of single symbol column.
+#'
+#'   symbol <- NULL
+#'
+#'   ## If there is a symbol column, than it is easy
+#'   SYMBOL <- as.character(unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL)))
+#'   symbol.col <- grep("symbol|gene|hugo", colnames(fdata), ignore.case = TRUE)
+#'
+#'   ok.symbol <- apply(
+#'     fdata[, symbol.col, drop = FALSE], 2,
+#'     function(g) mean(toupper(g[!is.na(g)]) %in% SYMBOL)
+#'   )
+#'   ok.symbol
+#'   if (any(ok.symbol > 0.5)) {
+#'     k <- symbol.col[which.max(ok.symbol)]
+#'     symbol <- fdata[, k]
+#'     return(symbol)
+#'   }
+#'
+#'   ## If there is an ENTREZ column, than it is easy
+#'   ENTREZ <- biomaRt::keys(org.Hs.eg.db::org.Hs.egSYMBOL)
+#'   entrez.col <- grep("entrez", colnames(fdata), ignore.case = TRUE)
+#'
+#'   entrez.match <- apply(
+#'     fdata[, entrez.col, drop = FALSE], 2,
+#'     function(g) mean(g[!is.na(g)] %in% ENTREZ)
+#'   )
+#'   entrez.match
+#'   entrez.ok <- length(entrez.col) && entrez.match > 0.5
+#'
+#'   if (entrez.ok) {
+#'     k <- entrez.col[which.max(entrez.match)]
+#'     probes <- as.character(fdata[, k])
+#'     symbol <- AnnotationDbi::mapIds(org.Hs.eg.db::org.Hs.eg.db, probes, "SYMBOL", "ENTREZID")
+#'     return(symbol)
+#'   }
+#'
+#'   ## If there is an REFSEQ column
+#'   REFSEQ <- unlist(as.list(org.Hs.eg.db::org.Hs.egREFSEQ))
+#'   refseq.col <- grep("refseq", colnames(fdata), ignore.case = TRUE)
+#'   refseq.col
+#'   refseq.match <- apply(
+#'     fdata[, refseq.col, drop = FALSE], 2,
+#'     function(g) mean(sub("[.].*", "", g[!is.na(g)]) %in% REFSEQ)
+#'   )
+#'
+#'   refseq.ok <- length(refseq.col) && refseq.match > 0.5
+#'   refseq.ok
+#'   if (refseq.ok) {
+#'     k <- refseq.col[which.max(refseq.match)]
+#'     probes <- sub("[.].*", "", as.character(fdata[, k]))
+#'     symbol <- AnnotationDbi::mapIds(org.Hs.eg.db::org.Hs.eg.db, probes, "SYMBOL", "REFSEQ")
+#'     return(symbol)
+#'   }
+#'
+#'   ## Otherwise try Ensemble ID
+#'   gene.column <- grep("gene|mrna|transcript", colnames(fdata), ignore.case = TRUE)
+#'
+#'   has.ens <- apply(fdata[, gene.column, drop = FALSE], 2, function(s) mean(grepl("ENS", s)))
+#'   has.ens
+#'   if (any(has.ens > 0.3)) {
+#'     ens.col <- ifelse(max(has.ens) > 0, names(which.max(has.ens)), NA)
+#'     ens.ann <- lapply(fdata[, ens.col], function(a) trimws(strsplit(a, split = "//|///")[[1]]))
+#'     ens.probes <- sapply(ens.ann, function(s) Matrix::head(grep("^ENS", s, value = TRUE), 1))
+#'     ens.probes[sapply(ens.probes, length) == 0] <- NA
+#'     ens.probes <- unlist(ens.probes)
+#'     symbol <- probe2symbol(ens.probes)
+#'     return(symbol)
+#'   }
+#'
+#'   message("WARNING:: could not parse symbol information from featureData!")
+#'   return(NULL)
+#' }
+
+
+#' #' Convert gene symbols to official HUGO gene symbols
+#' #'
+#' #' @param genes Character vector of gene symbols to convert
+#' #' @param remove.non.hugo Logical indicating whether to remove non-HUGO symbols. Default is TRUE.
+#' #' @param silent Logical indicating whether to suppress messages about conversions. Default is FALSE.
+#' #' @param take.only.first Logical indicating whether to take only first HUGO symbol for aliases. Default is FALSE.
+#' #' @param split.char Character used to split multiple aliases. Default ";".
+#' #' @param unknown Character string to use for unknown symbols. Default "unknown_gene".
+#' #'
+#' #' @return Character vector of official HUGO gene symbols.
+#' #'
+#' #' @details This function converts a character vector of gene symbols to official HUGO gene symbols.
+#' #' It first removes any aliases by mapping to the primary HUGO symbol list.
+#' #' For any remaining non-HUGO symbols, it attempts to find the official symbol by alias mapping.
+#' #'
+#' #' If take.only.first is TRUE, only the first HUGO symbol is taken when a gene maps to multiple aliases.
+#' #' Multiple aliases are concatenated by split.char when take.only.first=FALSE.
+#' #'
+#' #' Non-HUGO symbols that cannot be converted are replaced with unknown by default.
+#' #' Messages about conversions are printed unless silent=TRUE.
+#' #'
+#' #' @examples
+#' #' \dontrun{
+#' #' genes <- c("EGFR", "CDKN2A", "FOO", "BAR")
+#' #' hugo_symbols <- symbol2hugo(genes)
+#' #' }
+#' #'
+#' #' @export
+#' symbol2hugo <- function(genes, remove.non.hugo = TRUE, silent = FALSE,
+#'                         take.only.first = FALSE, split.char = ";", unknown = "unknown_gene") {
+#'   HUGO.SYMBOLS <- unique(unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL)))
+#'   ss <- as.character(genes)
+#'   ss <- gsub("Sep 0", "SEPT", ss) # typical XLS error
+#'   ss[is.na(ss) | ss == ""] <- unknown
+#'   ii <- which(!(ss %in% HUGO.SYMBOLS) & ss != unknown)
+#'   length(ii)
+#'   if (length(ii) == 0) {
+#'     return(genes)
+#'   }
+#'   if (!silent) cat("trying to convert", length(ii), "aliases to HUGO\n")
+#'   ss0 <- sapply(ss[ii], strsplit, split = split.char)
+#'   ee0 <- lapply(ss0, function(s) unlist(mget(s, envir = org.Hs.eg.db::org.Hs.egALIAS2EG, ifnotfound = NA)))
+#'   ee0 <- lapply(ee0, function(e) {
+#'     e[is.na(e) | e == "" | is.nan(e)] <- unknown
+#'     e
+#'   })
+#'   gg <- lapply(ee0, function(e) unlist(mget(e, envir = org.Hs.eg.db::org.Hs.egSYMBOL, ifnotfound = NA)))
+#'   if (remove.non.hugo) {
+#'     gg <- lapply(gg, intersect, HUGO.SYMBOLS)
+#'   }
+#'   gg.len <- lapply(gg, length)
+#'   sum(gg.len > 1)
+#'   if (sum(gg.len > 1) && !silent) {
+#'     cat("warning:", sum(gg.len > 1), "entrezID have multiple symbols\n")
+#'   }
+#'   if (sum(gg.len > 1) && take.only.first) {
+#'     gg <- sapply(gg, "[", 1)
+#'   } else {
+#'     gg <- sapply(gg, paste, collapse = split.char)
+#'   }
+#'   if (!silent) {
+#'     cat("updating", length(gg), "deprecated symbols\n")
+#'   }
+#'   gg[is.na(gg) | gg == ""] <- unknown
+#'   ss[ii] <- gg
+#'   ss
+#' }
+#'
+
+
+#' #' Convert human gene symbols to mouse
+#' #'
+#' #' @param x Character vector of human gene symbols
+#' #'
+#' #' @return Character vector of converted mouse gene symbols
+#' #'
+#' #'
+#' #' @export
+#' human2mouse <- function(x) {
+#'   homologene::human2mouse(x)
+#' }
+#'
+#'
+#' #' @describeIn human2mouse Convert human to mouse gene symbols using HomoloGene database
+#' #' @export
+#' mouse2human <- function(x) {
+#'   homologene::mouse2human(x)
+#' }

@@ -4,6 +4,7 @@
 ##
 
 
+
 #' @title Create a Phenotype Matrix
 #'
 #' @description This function creates a phenotype matrix from a PGX object.
@@ -55,7 +56,6 @@ pos.compact <- function(pos, d = 0.01) {
   }
   pos
 }
-
 
 #' Find non-overlapping boxes for points
 #'
@@ -265,51 +265,6 @@ add_opacity <- function(hexcol, opacity) {
 }
 
 
-#' Log-counts-per-million transformation
-#'
-#' @param counts Numeric matrix of read counts, with genes in rows and samples in columns.
-#' @param total Total count to scale to. Default is 1e6.
-#' @param prior Pseudocount to add prior to log transform. Default is 1.
-#'
-#' @return Matrix of log-transformed values.
-#'
-#' @details Transforms a matrix of read counts to log-counts-per-million (logCPM).
-#' Adds a pseudocount \code{prior} (default 1) before taking the log transform.
-#' Values are scaled to \code{total} counts (default 1e6).
-#'
-#' This stabilizes variance and normalizes for sequencing depth.
-#'
-#' @examples
-#' \dontrun{
-#' counts <- matrix(rnbinom(100 * 10, mu = 100, size = 1), 100, 10)
-#' logcpm <- logCPM(counts)
-#' }
-#' @export
-logCPM <- function(counts, total = 1e6, prior = 1) {
-  ## Transform to logCPM (log count-per-million) if total counts is
-  ## larger than 1e6, otherwise scale to previous avarage total count.
-  ##
-  ##
-  if (is.null(total)) {
-    total0 <- mean(Matrix::colSums(counts, na.rm = TRUE)) ## previous sum
-    total <- ifelse(total0 < 1e6, total0, 1e6)
-    message("[logCPM] setting column sums to = ", round(total, 2))
-  }
-  if (any(class(counts) == "dgCMatrix")) {
-    ## fast/sparse calculate CPM
-    cpm <- counts
-    cpm[is.na(cpm)] <- 0 ## OK??
-    cpm@x <- total * cpm@x / rep.int(Matrix::colSums(cpm), diff(cpm@p)) ## fast divide by columns sum
-    cpm@x <- log2(prior + cpm@x)
-    return(cpm)
-  } else {
-    totcounts <- Matrix::colSums(counts, na.rm = TRUE)
-    ## cpm <- t(t(counts) / totcounts * total)
-    cpm <- sweep(counts, 2, totcounts, FUN = "/") * total
-    x <- log2(prior + cpm)
-    return(x)
-  }
-}
 
 
 #' @title Check for Required Fields in a PGX Object
@@ -375,151 +330,6 @@ matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1) {
   mX
 }
 
-#' Convert human gene symbols to mouse
-#'
-#' @param x Character vector of human gene symbols
-#'
-#' @return Character vector of converted mouse gene symbols
-#'
-#'
-#' @export
-human2mouse <- function(x) {
-  homologene::human2mouse(x)
-}
-
-
-#' @describeIn human2mouse Convert human to mouse gene symbols using HomoloGene database
-#' @export
-mouse2human <- function(x) {
-  homologene::mouse2human(x)
-}
-
-
-#' Map probe identifiers to gene symbols
-#'
-#' @param probes Character vector of probe identifiers
-#' @param type Character specifying the type of identifier in probes. If NULL,
-#'   the function will try to detect the identifier type automatically.
-#' @param keep.na Logical indicating whether to keep NA symbols (TRUE) or replace
-#'   them with the original probe identifiers (FALSE).
-#'
-#' @return Character vector of mapped gene symbols.
-#'
-#' @examples
-#' \dontrun{
-#' counts <- playbase::COUNTS
-#' subset_genes <- round(seq(1, nrow(counts), length.out = 10))
-#' probes <- rownames(playbase::COUNTS)[subset_genes]
-#' symbols <- playbase::probe2symbol(probes)
-#' }
-#'
-#' @export
-
-probe2symbol <- function(probes, type = NULL, keep.na = FALSE) {
-  ## strip postfix for ensemble codes
-  if (mean(grepl("^ENS", probes)) > 0.5) {
-    probes <- gsub("[.].*", "", probes)
-  }
-
-  if (is.null(type)) {
-    hs.list <- list(
-      "human.ensembl" = unlist(as.list(org.Hs.eg.db::org.Hs.egENSEMBL)),
-      "human.ensemblTRANS" = unlist(as.list(org.Hs.eg.db::org.Hs.egENSEMBLTRANS)),
-      "human.refseq" = unlist(as.list(org.Hs.eg.db::org.Hs.egREFSEQ)),
-      "human.accnum" = unlist(as.list(org.Hs.eg.db::org.Hs.egACCNUM)),
-      "human.uniprot" = unlist(as.list(org.Hs.eg.db::org.Hs.egUNIPROT)),
-      "human.symbol" = unlist(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
-    )
-
-    mm.list <- list(
-      "mouse.ensembl" = unlist(as.list(org.Mm.eg.db::org.Mm.egENSEMBL)),
-      "mouse.ensemblTRANS" = unlist(as.list(org.Mm.eg.db::org.Mm.egENSEMBLTRANS)),
-      "mouse.refseq" = unlist(as.list(org.Mm.eg.db::org.Mm.egREFSEQ)),
-      "mouse.accnum" = unlist(as.list(org.Mm.eg.db::org.Mm.egACCNUM)),
-      "mouse.uniprot" = unlist(as.list(org.Mm.eg.db::org.Mm.egUNIPROT)),
-      "mouse.symbol" = unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL))
-    )
-
-    rn.list <- list(
-      "rat.ensembl" = unlist(as.list(org.Rn.eg.db::org.Rn.egENSEMBL)),
-      "rat.ensemblTRANS" = unlist(as.list(org.Rn.eg.db::org.Rn.egENSEMBLTRANS)),
-      "rat.refseq" = unlist(as.list(org.Rn.eg.db::org.Rn.egREFSEQ)),
-      "rat.accnum" = unlist(as.list(org.Rn.eg.db::org.Rn.egACCNUM)),
-      "rat.uniprot" = unlist(as.list(org.Rn.eg.db::org.Rn.egUNIPROT)),
-      "rat.symbol" = unlist(as.list(org.Rn.eg.db::org.Rn.egSYMBOL))
-    )
-
-    id.list <- c(hs.list, mm.list, rn.list)
-    mx <- sapply(id.list, function(id) mean(probes %in% id))
-    org <- type <- NULL
-    max.mx <- max(mx, na.rm = TRUE)
-    mx0 <- names(mx)[which.max(mx)]
-    org <- sub("[.].*", "", mx0)
-    type <- sub(".*[.]", "", mx0)
-    message("[probe2symbol] mapped ", format(100 * max.mx, digits = 2), "% of probes")
-    if (max.mx < 0.5 && max.mx > 0) {
-      message("[probe2symbol] WARNING! low mapping ratio: r= ", max.mx)
-    }
-    if (max.mx == 0) {
-      message("[probe2symbol] WARNING! zero mapping ratio: r= ")
-      type <- NULL
-    }
-    org
-    type
-  }
-  if (is.null(type)) {
-    cat("probe2symbol: invalid type: ", type, "\n")
-    return(NULL)
-  }
-  if (!type %in% c("ensembl", "ensemblTRANS", "unigene", "refseq", "accnum", "uniprot", "symbol")) {
-    cat("probe2symbol: invalid type: ", type, "\n")
-    return(NULL)
-  }
-
-  cat("[probe2symbol] organism = ", org, "\n")
-  cat("[probe2symbol] probe.type = ", type, "\n")
-  type
-
-  if (type == "symbol") {
-    cat("probe2symbol: probe is already symbol\n")
-    if (any(grep(" /// ", probes))) {
-      symbol0 <- strsplit(probes, split = " /// ")
-    } else if (any(grep("[;,]", probes))) {
-      symbol0 <- strsplit(probes, split = "[;,\\|]")
-    } else {
-      symbol0 <- probes
-    }
-  } else {
-    org
-    if (org == "human") {
-      symbol0 <- AnnotationDbi::mapIds(org.Hs.eg.db::org.Hs.eg.db, probes, "SYMBOL", toupper(type))
-    }
-    if (org == "mouse") {
-      symbol0 <- AnnotationDbi::mapIds(org.Mm.eg.db::org.Mm.eg.db, probes, "SYMBOL", toupper(type))
-    }
-    if (org == "rat") {
-      symbol0 <- AnnotationDbi::mapIds(org.Rn.eg.db::org.Rn.eg.db, probes, "SYMBOL", toupper(type))
-    }
-  }
-
-  ## Unrecognize probes
-  nna <- which(is.na(names(symbol0)))
-
-  if (length(nna)) names(symbol0)[nna] <- probes[nna]
-
-  ## What to do with unmapped/missing symbols????
-  symbol <- sapply(symbol0, "[", 1) ## takes first symbol only!!!
-  isnull <- which(sapply(symbol, is.null))
-  symbol[isnull] <- NA
-  if (keep.na) {
-    sel.na <- which(is.na(symbol))
-    symbol[sel.na] <- probes[sel.na]
-  }
-  symbol <- unlist(symbol)
-  names(symbol) <- NULL
-
-  symbol
-}
 
 #' @describeIn trimsame0 trimsame is a function that trims common prefixes and/or
 #' suffixes from a character vector by applying trimsame0 forwards and/or backwards.
@@ -748,6 +558,11 @@ fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
     file = file, check.names = check.names, header = header,
     sep = sep, fill = TRUE
   )
+  if (NCOL(df) == 1) {
+    x <- matrix(NA, nrow(df), 0)
+    rownames(x) <- df[[row.names]] ## allow dups if matrix
+    return(x)
+  }
   x <- data.frame(df[, 2:ncol(df)],
     stringsAsFactors = stringsAsFactors,
     check.names = check.names
@@ -1077,15 +892,11 @@ is.POSvsNEG <- function(pgx) {
 is.categorical <- function(x, max.ncat = NULL, min.ncat = 2) {
   max.ncat <- length(x) - 1
   is.factor <- any(class(x) %in% c("factor", "character"))
-  is.factor
   n.unique <- length(unique(setdiff(x, NA)))
   n.notna <- length(x[!is.na(x)])
-  n.unique
-  n.notna
   is.id <- (n.unique > 0.8 * n.notna)
-  is.id
   is.factor2 <- (is.factor & !is.id & n.unique >= min.ncat & n.unique <= max.ncat)
-  is.factor2
+  return(is.factor2)
 }
 
 
@@ -1249,29 +1060,40 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 #'
 #' @description Determines if count data is from human or mouse based on gene identifiers.
 #'
-#' @param pgx.counts Matrix of count data, with genes as rows.
-#'
-#' @details This function examines the gene identifiers in the row names of a count matrix
-#' to determine if the data is from human or mouse. It checks if the identifiers match common
-#' patterns found in mouse genes, like "rik", "loc", "orf". If more than 20% match these mouse
-#' patterns, it assigns the organism as "mouse". Otherwise it assigns "human".
+#' @param pgx A pgx object with the pgx$organism information and the pgx$counts slot for the
+#' guessing approach.
+#' @param capitalise logical: by default FALSE. Parameter to capitalise the first letter of the
+#' specie if mouse or human.
+#' @details This function retreives the pgx$organism slot. If it is not found, then it examines
+#' the gene identifiers in the row names of a count matrix to determine if the data is from human
+#' or mouse (main organism supported in the old playbase version). It checks if the identifiers
+#' match common patterns found in mouse genes, like "rik", "loc", "orf". If more than 20% match
+#'  these mouse patterns, it assigns the organism as "mouse". Otherwise it assigns "human".
 #'
 #' The function calculates the fraction of row names that do NOT match the mouse gene patterns.
 #' If this fraction is >0.8, it assigns "human". This relies on the assumption that human data
 #' will tend to have more uppercase ENSEMBL identifiers.
 #'
-#' @return Character string indicating "mouse" or "human" organism.
-#'
+#' @return Character string the organism.
 #' @export
-pgx.getOrganism <- function(pgx.counts) {
-  ## NEED RETHINK FOR MULTI-ORGANISM
-  rownames.counts <- grep("^rik|^loc|^orf", rownames(pgx.counts),
-    value = TRUE,
-    ignore.case = TRUE, invert = TRUE
-  )
-  cap.fraction <- mean(grepl("^[A-Z][a-z]+", rownames.counts), na.rm = TRUE)
-  is.mouse <- (cap.fraction > 0.8)
-  org <- ifelse(is.mouse, "mouse", "human")
+pgx.getOrganism <- function(pgx, capitalise = FALSE) {
+  pgx.counts <- pgx$counts
+  if (!is.null(pgx$organism)) {
+    org <- pgx$organism
+  } else {
+    rownames.counts <- grep("^rik|^loc|^orf", rownames(pgx$counts),
+      value = TRUE,
+      ignore.case = TRUE, invert = TRUE
+    )
+    cap.fraction <- mean(grepl("^[A-Z][a-z]+", rownames.counts), na.rm = TRUE)
+    is.mouse <- (cap.fraction > 0.8)
+    org <- ifelse(is.mouse, "mouse", "human")
+  }
+
+  if (capitalise && org %in% c("mouse", "human")) {
+    if (org == "mouse") org <- "Mouse"
+    if (org == "human") org <- "Human"
+  }
   return(org)
 }
 
@@ -1317,8 +1139,11 @@ getLevels <- function(Y) {
 #' levels defining a subset of factor levels to select. It parses the level descriptions,
 #' identifies matching samples in Y, and returns the rownames of selected samples.
 #'
-#' The levels should be strings in format 'factor=level' defining the factor name and level value.
-#' Samples in Y matching any of the provided levels will be selected.
+#' The levels should be strings in format 'factor=level' defining the
+#' factor name and level value.  Samples in Y matching any of the
+#' provided levels will be selected. Note: across factors samples as
+#' intersected ('and' operator), within a factor samples are combined
+#' ('or' operator). Not very logical but this is what people in practice want.
 #'
 #' @return A character vector of selected sample names.
 #'
@@ -1327,14 +1152,21 @@ selectSamplesFromSelectedLevels <- function(Y, levels) {
   if (is.null(levels) || all(levels == "")) {
     return(rownames(Y))
   }
+
+  # fill ="" will (unfortunately) still return NA when level is "NA"... which crashes when phenotype is ""
   pheno <- data.table::tstrsplit(levels, "=", keep = 1) %>%
     unlist()
   ptype <- data.table::tstrsplit(levels, "=", keep = 2) %>%
     unlist()
-  sel <- rep(FALSE, nrow(Y))
+  # force replace "NA" by NA
+  ptype[ptype == "NA"] <- NA
+  ##  sel <- rep(FALSE, nrow(Y))
+  sel <- rep(TRUE, nrow(Y))
   for (ph in unique(pheno)) {
+    # ph = pheno[1]
     k <- which(pheno == ph)
-    sel <- sel | (Y[, ph] %in% ptype[k])
+    ##    sel <- sel | (Y[, ph] %in% ptype[k])
+    sel <- sel & (Y[, ph] %in% ptype[k])
   }
 
   return(rownames(Y)[which(sel)])
@@ -1495,13 +1327,12 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
       names(gset) <- paste0(names(gset), " (", gmt.source, ")")
     }
 
-    gset
+    return(gset)
   }
 
   ## -----------------------------------------------------------------------------
   ## Gene families
   ## -----------------------------------------------------------------------------
-
 
   families <- list()
   families[["<all>"]] <- genes ## X is sorted
@@ -1553,19 +1384,6 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
   families[["Nuclear receptors"]] <- genes[grep("^NR[0-9]|^RXR|^ESR|^PGR$|^AR$|^HNF4|^ROR|^PPAR|^THR|^VDR", genes)]
   families[["Cytochrome family"]] <- genes[grep("^CYP|^CYB|^CYC|^COX|^COA", genes)]
   families[["Micro RNA"]] <- genes[grep("^MIR", genes)]
-
-  ## add pathways?
-
-  ## convert to mouse???
-  is.mouse <- (mean(grepl("[a-z]", sub(".*:", "", genes))) > 0.8)
-
-  if (is.mouse) {
-    mouse.genes <- as.character(unlist(as.list(org.Mm.eg.db::org.Mm.egSYMBOL)))
-    names(mouse.genes) <- toupper(mouse.genes)
-    families <- lapply(families, function(s) {
-      setdiff(as.character(mouse.genes[toupper(s)]), NA)
-    })
-  }
 
   ## sort all
   families <- lapply(families, function(f) intersect(f, genes))
@@ -1620,8 +1438,6 @@ pgx.getGeneSetCollections <- function(gsets = rownames(playdata::GSETxGENE)) {
 ## -----------------------------------------------------------------------------
 
 
-
-
 #' Filter probes from gene expression data
 #'
 #' @param genes Gene expression data.frame with probes as row names.
@@ -1644,11 +1460,55 @@ filterProbes <- function(genes, gg) {
   p0 <- (toupper(sub(".*:", "", rownames(genes))) %in% toupper(gg))
   p1 <- (toupper(rownames(genes)) %in% toupper(gg))
   p2 <- (toupper(as.character(genes$gene_name)) %in% toupper(gg))
-  jj <- which(p0 | p1 | p2)
+  if ("human_ortholog" %in% colnames(genes)) {
+    p3 <- (toupper(as.character(genes$human_ortholog)) %in% toupper(gg))
+  } else {
+    p3 <- rep(FALSE, nrow(genes))
+  }
+
+  # Ensure all p* are valids
+  p_list <- list(p0, p1, p2, p3)
+  p_list <- p_list[sapply(p_list, length) > 0]
+
+  # Combine list using OR operator
+  jj <- which(Reduce("|", p_list))
   if (length(jj) == 0) {
     return(NULL)
   }
   return(rownames(genes)[jj])
+}
+
+
+#' Rename rownames of counts matrix by annotation table
+#'
+#' @param counts Numeric matrix of counts, with genes/probes as rownames.
+#' @param annot_table Data frame with rownames matching counts and annotation columns.
+#' @param new_id_col Column name in annot_table containing new identifiers. Default 'symbol'.
+#'
+#' @return Matrix with rownames changed to values from annot_table.
+#' Duplicate new rownames are summed.
+#'
+#' @details Renames rownames of counts matrix using an annotation data frame.
+#' Looks up the `new_id_col` in the annot_table and replaces counts rownames.
+#' Handles special cases like missing values.
+#' Sums duplicate rows after renaming.
+#'
+#' @export
+rename_by <- function(counts, annot_table, new_id_col = "symbol") {
+  symbol <- annot_table[rownames(counts), new_id_col]
+
+  # Guard agaisn human_hommolog == NA
+  if (all(is.na(symbol))) {
+    symbol <- annot_table[rownames(counts), "symbol"]
+  }
+
+  # Sum columns of rows with the same gene symbol
+  if (is.matrix(counts) | is.data.frame(counts)) {
+    rownames(counts) <- symbol
+    return(counts[!rownames(counts) %in% c("", "NA"), , drop = FALSE])
+  } else {
+    return(symbol)
+  }
 }
 
 
@@ -1713,49 +1573,6 @@ computeFeatureScore <- function(X, Y, features) {
   return(S)
 }
 
-
-## -----------------------------------------------------------------------------
-## KEGG
-## -----------------------------------------------------------------------------
-
-
-#' @title Get KEGG ID from Gene Set Name
-#'
-#' @description This function guesses the KEGG ID from a gene set name.
-#'
-#' @param gsets A character vector of gene set names.
-#'
-#' @details The function takes a character vector of gene set names
-#' `gsets` as input and tries to guess the corresponding KEGG IDs.
-#' The function uses the `KEGG.db` package to retrieve a list of
-#' KEGG pathway names and IDs.
-#' It then searches for gene set names that contain a KEGG ID or a
-#' KEGG pathway name and returns the corresponding KEGG IDs.
-#'
-#' @return A character vector of the same length as `gsets`, containing
-#' the guessed KEGG IDs for each gene set name.
-#'
-#' @export
-getKeggID <- function(gsets) {
-  ## Guess KEGG id from gene set name
-  ##
-
-  kegg.names <- unlist(as.list(KEGG.db::KEGGPATHID2NAME))
-  kegg.ids <- names(kegg.names)
-  kegg.namesUPPERCASE <- toupper(gsub("[- ]", "_", gsub("[)(/,.']", "", kegg.names)))
-  kegg.namesUPPERCASE <- gsub("__|___", "_", kegg.namesUPPERCASE)
-
-  k1 <- grep("hsa[0-9]{5}$", gsets, value = TRUE, ignore.case = TRUE)
-  names(k1) <- sub(".*_hsa0", "0", k1)
-  k2 <- grep("kegg", gsets, value = TRUE, ignore.case = TRUE)
-  k2x <- sub(".*KEGG_", "", k2)
-  names(k2) <- kegg.ids[match(k2x, kegg.namesUPPERCASE)]
-
-  kegg.gsets <- c(k1, k2)
-  kegg.ids <- names(kegg.gsets)[match(gsets, kegg.gsets)]
-
-  return(kegg.ids)
-}
 
 ## -----------------------------------------------------------------------------
 ## Generic helper functions
@@ -2179,10 +1996,8 @@ tidy.dataframe <- function(Y) {
   is.factor <- (is.factor | grepl("batch|replicat|type|clust|group", colnames(Y)))
   new.Y <- data.frame(Y, check.names = FALSE)
   new.Y[, which(is.numeric)] <- num.Y[, which(is.numeric), drop = FALSE]
-  new.Y[, which(is.factor)] <- apply(
-    Y[, which(is.factor), drop = FALSE], 2,
-    function(a) factor(as.character(a))
-  )
+  for (i in which(is.numeric)) new.Y[[i]] <- num.Y[, i]
+  for (i in which(is.factor)) new.Y[[i]] <- factor(as.character(new.Y[, i]))
   new.Y <- data.frame(new.Y, check.names = FALSE)
   return(new.Y)
 }
@@ -2286,21 +2101,28 @@ expandAnnotationMatrix <- function(A) {
 #'
 #' @return An expanded phenotype matrix with dummy variables suitable for regression modeling.
 #' @export
-expandPhenoMatrix <- function(pheno, drop.ref = TRUE) {
+expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = TRUE) {
   ## get expanded annotation matrix
-  a1 <- tidy.dataframe(pheno)
+  a1 <- tidy.dataframe(M)
   nlevel <- apply(a1, 2, function(x) length(setdiff(unique(x), NA)))
   nterms <- colSums(!is.na(a1))
   nratio <- nlevel / nterms
-  y.class <- sapply(utils::type.convert(a1, as.is = TRUE), class)
+  if (inherits(a1, "data.frame")) {
+    a1.typed <- utils::type.convert(a1, as.is = TRUE)
+    y.class <- sapply(a1.typed, function(a) class(a)[1])
+  } else {
+    ## matrix??
+    a1.typed <- utils::type.convert(a1, as.is = TRUE)
+    y.class <- apply(a1.typed, 2, function(a) class(a)[1])
+  }
 
   ## these integers are probably factors... (mostly...)
   is.fac <- rep(FALSE, ncol(a1))
-  is.int <- y.class == "integer"
+  is.int <- (y.class == "integer")
   ii <- which(is.int)
   is.fac[ii] <- apply(a1[, ii, drop = FALSE], 2, function(x) {
     nlev <- length(unique(x[!is.na(x)]))
-    max(x, na.rm = TRUE) %in% c(nlev, nlev - 1)
+    max(x, na.rm = TRUE) %in% c(nlev, nlev - 1) ## boolean
   })
   is.fac2 <- (y.class == "integer" & nlevel <= 3 & nratio < 0.66)
   y.class[is.fac | is.fac2] <- "character"
@@ -2313,18 +2135,24 @@ expandPhenoMatrix <- function(pheno, drop.ref = TRUE) {
   }
   a1 <- a1[, kk, drop = FALSE]
   a1.isnum <- y.isnum[kk]
+
   i <- 1
   m1 <- list()
   for (i in 1:ncol(a1)) {
     if (a1.isnum[i]) {
       suppressWarnings(x <- as.numeric(a1[, i]))
-      if (drop.ref) {
-        m0 <- matrix((x > stats::median(x, na.rm = TRUE)), ncol = 1)
-        colnames(m0) <- "high"
+      if (keep.numeric) {
+        m0 <- matrix(x, ncol = 1)
+        colnames(m0) <- "#"
       } else {
-        mx <- stats::median(x, na.rm = TRUE)
-        m0 <- matrix(cbind(x <= mx, x > mx), ncol = 2)
-        colnames(m0) <- c("low", "high")
+        if (drop.ref) {
+          m0 <- matrix((x > stats::median(x, na.rm = TRUE)), ncol = 1)
+          colnames(m0) <- "high"
+        } else {
+          mx <- stats::median(x, na.rm = TRUE)
+          m0 <- matrix(cbind(x <= mx, x > mx), ncol = 2)
+          colnames(m0) <- c("low", "high")
+        }
       }
     } else if (drop.ref && nlevel[i] == 2) {
       x <- as.character(a1[, i])
@@ -2351,8 +2179,8 @@ expandPhenoMatrix <- function(pheno, drop.ref = TRUE) {
     colnames(m1[[i]]) <- paste0(names(m1)[i], "=", colnames(m1[[i]]))
   }
   m1 <- do.call(cbind, m1)
-  rownames(m1) <- rownames(pheno)
-
+  colnames(m1) <- sub("=#", "", colnames(m1))
+  rownames(m1) <- rownames(M)
   return(m1)
 }
 
@@ -2403,6 +2231,36 @@ getGSETS_playbase <- function(gsets = NULL, pattern = NULL) {
   }
   gsets <- intersect(gsets, names(playdata::iGSETS))
   lapply(playdata::iGSETS[gsets], function(idx) playdata::GSET_GENES[idx])
+}
+
+#' Normalize Matrix by Row
+#'
+#' Normalizes a matrix by dividing each row by the sum of its elements.
+#'
+#' @param G The matrix to be normalized.
+#'
+#' @return The normalized matrix.
+#'
+#' @export
+normalize_rows <- function(G) {
+  # efficient normalization using linear algebra
+  row_sums <- Matrix::rowSums(G)
+  D <- Matrix::Diagonal(x = 1 / row_sums)
+  G_scaled <- D %*% G
+  rownames(G_scaled) <- rownames(G)
+  colnames(G_scaled) <- colnames(G)
+  return(G_scaled)
+}
+
+#' @export
+normalize_cols <- function(G) {
+  # efficient normalization using linear algebra
+  col_sums <- Matrix::colSums(G)
+  D <- Matrix::Diagonal(x = 1 / col_sums)
+  G_scaled <- G %*% D
+  rownames(G_scaled) <- rownames(G)
+  colnames(G_scaled) <- colnames(G)
+  return(G_scaled)
 }
 
 

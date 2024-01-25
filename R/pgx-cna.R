@@ -26,50 +26,39 @@
 #' The output CNV segments are added to the NGS object for downstream analysis and plotting.
 #'
 #' @export
-pgx.inferCNV <- function(ngs, refgroup = NULL, progress = NULL) {
+pgx.inferCNV <- function(pgx, refgroup = NULL, progress = NULL) {
   ## InferCNV: Inferring copy number alterations from tumor single
   ## cell RNA-Seq data
   ##
   ## https://github.com/broadinstitute/inferCNV/wiki
   ##
 
-  symbol <- as.vector(as.list(org.Hs.eg.db::org.Hs.egSYMBOL))
-  chrloc <- as.list(org.Hs.eg.db::org.Hs.egCHRLOC)
-  chr <- as.vector(sapply(chrloc, function(x) names(x)[1]))
-  pos <- abs(as.integer(as.vector(sapply(chrloc, function(x) x[1]))))
-  chr[sapply(chr, is.null)] <- NA
-  chr <- as.character(unlist(chr))
-  chr <- chr[match(ngs$genes$gene_name, symbol)]
-  pos <- pos[match(ngs$genes$gene_name, symbol)]
-  genes <- data.frame(
-    chr = paste0("chr", chr),
-    start = pos - 1000,
-    stop = pos - 1000
-  ) ## fake start/stop
-  rownames(genes) <- ngs$genes$gene_name
+  # Prepare input data
+  annots <- pgx$samples[, "group", drop = FALSE]
+
+  # Get gene symbol and chromosome location info
+  genes_info <- data.table::data.table(pgx$genes[rownames(data), , drop = FALSE])
+
+  # Get approx start and stop
+  genes_info[, c("chr", "start", "stop") :=
+    .(
+      paste0("chr", chr),
+      pos,
+      pos + tx_len
+    )]
 
   ## filter known genes
-  jj <- which(genes$chr %in% paste0("chr", c(1:22, "X", "Y")) &
-    !is.na(genes$start) & !is.na(genes$stop))
-  genes <- genes[jj, ]
+  jj <- which(genes_info[["chr"]] %in% paste0("chr", c(1:22, "X", "Y")) &
+    !is.na(genes_info[["start"]]) &
+    !is.na(genes_info[["stop"]]))
+  genes_info <- genes_info[jj, ]
 
-  ## prepare data objects
-  gg <- intersect(rownames(genes), rownames(ngs$counts))
-  data <- ngs$counts[gg, ]
-  genes <- genes[gg, ]
-  annots <- ngs$samples[, "group", drop = FALSE]
-
-  if (FALSE && is.null(refgroup)) {
-    ## if no reference group is given, we create a reference by
-    ## random sampling of genes.
-    ref <- t(apply(data, 1, function(x) sample(x, 50, replace = TRUE)))
-    colnames(ref) <- paste0("random.", 1:ncol(ref))
-    data <- cbind(data, ref)
-    annots <- matrix(c(annots[, 1], rep("random", ncol(ref))), ncol = 1)
-    rownames(annots) <- colnames(data)
-    colnames(annots) <- "group"
-    refgroup <- c("random")
-  }
+  ## Reshape objects for infercnv
+  gg <- intersect(genes_info[[1]], rownames(ngs$counts))
+  data <- data[gg, ]
+  genes_info <- genes_info[, .SD, .SDcols = c("chr", "start", "stop")]
+  genes_info <- as.data.frame(genes_info)
+  rownames(genes_info) <- rownames(data)
 
   ## take out tiny groups
   selgrp <- names(which(table(annots[, 1]) >= 2))
@@ -77,15 +66,14 @@ pgx.inferCNV <- function(ngs, refgroup = NULL, progress = NULL) {
   data <- data[, kk]
   annots <- annots[colnames(data), , drop = FALSE]
 
-  ## From inferCNV vignette
+  ## Run inferCNV
   infercnv_obj <- infercnv::CreateInfercnvObject(
     raw_counts_matrix = data,
-    gene_order_file = genes,
+    gene_order_file = genes_info,
     annotations_file = annots,
     ref_group_names = refgroup
   )
 
-  out_dir <- "/tmp/Rtmpn8rPtL/file19b68b27f09/"
   out_dir <- tempfile()
   cat("DBG pgx.inferCNV:: setting out_dir=", out_dir, "\n")
 
@@ -105,18 +93,17 @@ pgx.inferCNV <- function(ngs, refgroup = NULL, progress = NULL) {
   cnv <- as.matrix(cnv)
   rownames(cnv) <- symbol
 
-  genes <- genes[rownames(cnv), ]
-  pos <- (genes$start + genes$stop) / 2
-  ichr <- as.integer(sub("X", 23, sub("Y", 24, sub("chr", "", genes$chr))))
+  genes_info <- genes_info[rownames(cnv), ]
+  pos <- (genes_info$start + genes_info$stop) / 2
+  ichr <- as.integer(sub("X", 23, sub("Y", 24, sub("chr", "", genes_info$chr))))
   jj <- order(ichr, pos)
   pos <- pos[jj]
-  chr <- as.character(genes$chr)[jj]
+  chr <- as.character(genes_info$chr)[jj]
   logcnv <- log2(cnv[jj, ] / mean(cnv, na.rm = TRUE)) ## logarithmic
 
 
 
   img <- png::readPNG(img.file)
-
   res <- list(cna = logcnv, chr = chr, pos = pos, png = img)
 
   ## clean up folder??

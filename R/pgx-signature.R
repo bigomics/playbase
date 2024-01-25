@@ -62,8 +62,21 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
   ct <- colnames(F1)[1]
   for (ct in colnames(F1)) {
     fc <- F1[, ct]
-    names(fc) <- rownames(meta$fc)
-    names(fc) <- toupper(names(fc)) ## for MOUSE!!
+
+    if (!is.null(pgx$organism)) {
+      if (pgx$organism != "Human") {
+        names(fc) <- pgx$genes[names(fc), "human_ortholog"]
+        fc <- fc[names(fc) != ""]
+      } else {
+        # For human datasets
+        names(fc) <- rownames(meta$fc)
+        names(fc) <- toupper(names(fc)) ## for MOUSE!!
+      }
+    } else {
+      # For old datasets
+      names(fc) <- rownames(meta$fc)
+      names(fc) <- toupper(names(fc)) ## for MOUSE!!
+    }
     res <- pgx.correlateSignatureH5(
       fc,
       h5.file = h5.file,
@@ -88,9 +101,13 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
 }
 
 
-#' @describeIn  pgx.correlateSignatureH5.inmemory computes correlation and gene set enrichment between a
+#' @title  Correlate SignatureH5
+#'
+#' @description pgx.correlateSignatureH5 computes correlation and gene set enrichment between a
 #' signature and datasets in an HDF5 file using on-disk chunked computations
+#' @param fc:      fold change matrix
 #' @param h5.file: HDF5 file of reference expression signatures
+#' @param nsig:    number of significant genes
 #' @param ntop:    number of top signatures (in abs(rho)) to report
 #' @param nperm:   number of permuations for fGSEA
 #'
@@ -232,7 +249,6 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
 }
 
 
-
 #' Create a signature database from PGX files
 #'
 #' @title Create signature database
@@ -289,7 +305,7 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALS
 
     ## Filter out genes (not on known chromosomes...)
     genes <- rownames(X)
-    gannot <- ngs.getGeneAnnotation(genes)
+    gannot <- ngs.getGeneAnnotation(genes, organism = pgx$organism)
     sel <- which(!is.na(gannot$chr))
     X <- X[sel, , drop = FALSE]
     remove(F)
@@ -325,6 +341,7 @@ pgx.createSignatureDatabaseH5 <- function(h5.file, pgx.files, update.only = FALS
 pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = FALSE) {
   if (file.exists(h5.file)) unlink(h5.file)
   X <- as.matrix(X)
+
   pgx.saveMatrixH5(X, h5.file, chunk = c(nrow(X), 1))
 
   ## --------------------------------------------------
@@ -351,8 +368,6 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
     if (!h5exists(h5.file, "signature")) rhdf5::h5createGroup(h5.file, "signature")
     rhdf5::h5write(sig100.dn, h5.file, "signature/sig100.dn") ## can write list???
     rhdf5::h5write(sig100.up, h5.file, "signature/sig100.up") ## can write list??
-
-    remove(orderx)
     remove(sig100.dn)
     remove(sig100.up)
   }
@@ -362,6 +377,7 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
   ## --------------------------------------------------
   if (!update.only || !h5exists(h5.file, "clustering")) {
     if (!h5exists(h5.file, "clustering")) rhdf5::h5createGroup(h5.file, "clustering")
+
     pos <- pgx.clusterBigMatrix(
       abs(X), ## on absolute foldchange!!
       methods = c("pca", "tsne", "umap"),
@@ -372,9 +388,6 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
     rhdf5::h5write(pos[["pca2d"]], h5.file, "clustering/pca2d") ## can write list??
     rhdf5::h5write(pos[["tsne2d"]], h5.file, "clustering/tsne2d") ## can write list??
     rhdf5::h5write(pos[["umap2d"]], h5.file, "clustering/umap2d") ## can write list??
-
-    dbg("[pgx.createSignatureDatabaseH5.fromMatrix] dim.tsne2d = ", dim(pos[["tsne2d"]]))
-    dbg("[pgx.createSignatureDatabaseH5.fromMatrix] clustering done")
   }
 
   ## --------------------------------------------------
@@ -382,8 +395,11 @@ pgx.createSignatureDatabaseH5.fromMatrix <- function(h5.file, X, update.only = F
   ## --------------------------------------------------
   pgx.addEnrichmentSignaturesH5(h5.file, X = X, mc.cores = 0, methods = "rankcor")
 
+  remove(X)
+  remove(pos)
+  gc()
+
   ## done!
-  dbg("[pgx.createSignatureDatabaseH5.fromMatrix] done!")
   rhdf5::h5closeAll()
 }
 

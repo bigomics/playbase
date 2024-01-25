@@ -3,11 +3,237 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
+
+#' @export
+normalizeData <- function(pgx, do.impute = TRUE, do.regress = TRUE,
+                          impute.method = "SVD2", scale.method = "cpm") {
+  which.zero <- which(counts == 0)
+  which.missing <- which(is.na(counts))
+  nzero <- sum(length(which.zero))
+  nmissing <- sum(length(which.missing))
+  message("[normalizeData] ", nzero, " zero values")
+  message("[normalizeData] ", nmissing, " missing values")
+
+  contrasts <- pgx$contrasts
+  if (is.null(contrasts)) contrasts <- sign(pgx$model.parameters$exp.matrix)
+  samples <- pgx$samples
+  counts <- pgx$counts
+
+  X <- log2(counts + 1)
+
+  if (do.impute) {
+    ## remove XXL/Infinite values and set to NA
+    which.xxl <- c()
+    which.xxl <- which(is.xxl(X, z = 10))
+    X[which.xxl] <- NA
+
+    ## impute missing values
+    if (any(is.na(counts))) {
+      nmissing <- sum(is.na(counts))
+      message("[createPGX] WARNING: data has ", nmissing, " missing values.")
+      ## counts <- counts.imputeMissing(counts, method = impute.method)
+      if (impute.method == "SVD2") {
+        X <- playbase::imputeMissing(X, method = "SVD2")
+        which.na <- which(is.na(counts), arr.ind = TRUE)
+        counts[which.na] <- pmax(2**X - 1, 0) ## also update counts??
+      }
+      if (impute.method == "NMF") {
+        which.na <- which(is.na(counts), arr.ind = TRUE)
+        counts <- nmfImpute(counts, k = 3)
+        X[which.na] <- log2(counts[which.na] + 1)
+      }
+    }
+  }
+
+  ## ## Auto-scaling (scale down huge values, often in proteomics)
+  ## res <- counts.autoScaling(counts)
+  ## counts <- res$counts
+  ## counts_multiplier <- res$counts_multiplier
+  ## remove(res)
+
+  ## if (normalize) {
+  ##   message("[createPGX] NORMALIZING log-expression matrix X...")
+  ##   X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
+  ##   X <- limma::normalizeQuantiles(X) ## in log space
+  ##   ## X <- 0.1*X + 0.9*limma::normalizeQuantiles(X)   ## 'weighted' to keep randomness...
+  ## } else {
+  ##   message("[createPGX] SKIPPING NORMALIZATION!")
+  ## }
+
+  message("[normalizeData] Median centering...")
+  ## eX <- playbase::pgx.countNormalization( eX, methods = "median.center")
+  mx <- apply(X, 2, median, na.rm = TRUE)
+  X <- t(t(X) - mx) + mean(mx)
+
+  message("[normalizeData] Global scaling")
+  X <- global_scaling(X, method = scale.method)
+  hist(X, breaks = 100)
+
+  ## technical effects correction
+  message("[normalizeData] Correcting for technical effects...")
+  pheno <- playbase::contrasts2pheno(contrasts, samples)
+  X <- playbase::removeTechnicalEffects(
+    X, samples, pheno,
+    p.pheno = 0.05, p.pca = 0.5, force = FALSE,
+    params = c("lib", "mito", "ribo", "cellcycle", "gender"),
+    nv = 2, k.pca = 10, xrank = NULL
+  )
+  hist(X, breaks = 100)
+
+  ## for quantile normalization we omit the zero value and put back later
+  message("Quantile normalization...")
+  jj <- which(X < 0.01)
+  X[jj] <- NA
+  X <- limma::normalizeQuantiles(X)
+  X[jj] <- 0
+
+  ## add normalized data to pgx object
+  pgx$X <- X
+  pgx
+}
+
+
+
 ## Normalization methods
 ##
 ##
 
+#' Log-counts-per-million transformation
+#'
+#' @param counts Numeric matrix of read counts, with genes in rows and samples in columns.
+#' @param total Total count to scale to. Default is 1e6.
+#' @param prior Pseudocount to add prior to log transform. Default is 1.
+#'
+#' @return Matrix of log-transformed values.
+#'
+#' @details Transforms a matrix of read counts to log-counts-per-million (logCPM).
+#' Adds a pseudocount \code{prior} (default 1) before taking the log transform.
+#' Values are scaled to \code{total} counts (default 1e6).
+#'
+#' This stabilizes variance and normalizes for sequencing depth.
+#'
+#' @examples
+#' \dontrun{
+#' counts <- matrix(rnbinom(100 * 10, mu = 100, size = 1), 100, 10)
+#' logcpm <- logCPM(counts)
+#' }
+#' @export
+logCPM <- function(counts, total = 1e6, prior = 1) {
+  ## Transform to logCPM (log count-per-million) if total counts is
+  ## larger than 1e6, otherwise scale to previous avarage total count.
+  ##
+  ##
+  if (is.null(total)) {
+    total0 <- mean(Matrix::colSums(counts, na.rm = TRUE)) ## previous sum
+    total <- ifelse(total0 < 1e6, total0, 1e6)
+    message("[logCPM] setting column sums to = ", round(total, 2))
+  }
+  if (any(class(counts) == "dgCMatrix")) {
+    ## fast/sparse calculate CPM
+    cpm <- counts
+    cpm[is.na(cpm)] <- 0 ## OK??
+    cpm@x <- total * cpm@x / rep.int(Matrix::colSums(cpm), diff(cpm@p)) ## fast divide by columns sum
+    cpm@x <- log2(prior + cpm@x)
+    return(cpm)
+  } else {
+    totcounts <- Matrix::colSums(counts, na.rm = TRUE)
+    ## cpm <- t(t(counts) / totcounts * total)
+    cpm <- sweep(counts, 2, totcounts, FUN = "/") * total
+    x <- log2(prior + cpm)
+    return(x)
+  }
+}
+
 NORMALIZATION.METHODS <- c("none", "mean", "scale", "NC", "CPM", "TMM", "RLE", "RLE2", "quantile")
+
+#' @title Normalize count data
+#'
+#' @description
+#' Normalizes a matrix of RNA-seq count data using different methods.
+#'
+#' @param x Matrix of count data, with genes in rows and samples in columns.
+#' @param methods Normalization method(s) to use. Options are "none", "scale", "CPM", "TMM", "RLE".
+#' @param keep.zero Logical indicating whether to retain zero counts. Default is TRUE.
+#'
+#' @details
+#' This function normalizes a matrix of RNA-seq count data using different normalization methods:
+#'
+#' - "none": No normalization
+#' - "scale": Scale normalization by column means
+#' - "CPM": Counts per million
+#' - "TMM": Trimmed mean of M-values (edgeR)
+#' - "RLE": Relative log expression (DESeq2)
+#'
+#' Zero counts can be retained or set to NA after normalization based on the keep.zero parameter.
+#'
+#' @return
+#' The normalized count matrix.
+#'
+#' @examples
+#' \dontrun{
+#' counts <- matrix(rnbinom(10000, mu = 10, size = 1), 100, 100)
+#' normalized <- pgx.countNormalization(counts, c("TMM", "RLE"))
+#' }
+#' @export
+pgx.countNormalization <- function(x, methods) {
+  ## Column-wise normalization (along samples).
+  ##
+  ## x:        counts (linear)
+  ## method:   single method
+
+  methods <- methods[1]
+  which.zero <- which(x == 0, arr.ind = TRUE)
+  x1 <- x
+  x1[which.zero] <- NA
+
+  for (m in methods) {
+    if (m == "none") {
+      ## normalization on individual mean
+      x <- x
+    } else if (m %in% c("scale", "mean.center")) {
+      ## normalization on individual mean
+      mx <- mean(x1, na.rm = TRUE)
+      x <- t(t(x) / (1 + colMeans(x1, na.rm = TRUE))) * mx
+    } else if (m == "median.center") {
+      mx <- apply(x1, 2, median, na.rm = TRUE)
+      x <- t(t(x) / (1 + mx)) * mean(mx, na.rm = TRUE)
+    } else if (m == "CPM") {
+      x <- t(t(x) / (1 + Matrix::colSums(x1, na.rm = TRUE))) * 1e6
+    } else if (m == "TMM") {
+      ## normalization on total counts (linear scale)
+      x <- normalizeTMM(x, log = FALSE) ## does TMM on counts (edgeR)
+    } else if (m == "RLE") {
+      ## normalization on total counts (linear scale)
+      x <- normalizeRLE(x, log = FALSE, use = "deseq2") ## does RLE on counts (Deseq2)
+    } else if (m == "RLE2") {
+      ## normalization on total counts (linear scale)
+      x <- normalizeRLE(x, log = FALSE, use = "edger") ## does RLE on counts
+      ##        } else if(m %in% c("upperquartile")) {
+      ##            ## normalization on total counts (linear scale)
+    } else if (m == "quantile") {
+      new.x <- 0.01 * limma::normalizeQuantiles(as.matrix(100 * x1)) ## shift to avoid clipping
+      rownames(new.x) <- rownames(x)
+      colnames(new.x) <- colnames(x)
+      x <- new.x
+    }
+  } ## end of for method
+
+  x <- pmax(x, 0) ## prevent negative values
+  ## put back zeros as zeros
+  x[which.zero] <- 0
+
+  return(x)
+}
+
+
+#' @export
+edgeR.normalizeCounts <- function(M, method = c("TMM", "TMMwsp", "RLE", "upperquartile", "none")) {
+  method <- method[1]
+  dge <- edgeR::DGEList(M)
+  dge <- edgeR::calcNormFactors(dge, method = method)
+  edgeR::cpm(dge, log = TRUE)
+}
+
 
 #' @title Normalize counts with TMM method
 #'
@@ -66,7 +292,7 @@ normalizeRLE <- function(counts, log = FALSE, use = "deseq2") {
     dge <- edgeR::calcNormFactors(dge, method = "RLE")
     outx <- edgeR::cpm(dge, log = log)
   } else if (use == "deseq2") {
-    cts <- counts
+    cts <- round(counts)
     dds <- DESeq2::DESeqDataSetFromMatrix(
       countData = cts,
       colData = cbind(colnames(cts), 1),
@@ -81,78 +307,90 @@ normalizeRLE <- function(counts, log = FALSE, use = "deseq2") {
 }
 
 
-#' @title Normalize count data
-#'
-#' @description
-#' Normalizes a matrix of RNA-seq count data using different methods.
-#'
-#' @param x Matrix of count data, with genes in rows and samples in columns.
-#' @param methods Normalization method(s) to use. Options are "none", "scale", "CPM", "TMM", "RLE".
-#' @param keep.zero Logical indicating whether to retain zero counts. Default is TRUE.
-#'
-#' @details
-#' This function normalizes a matrix of RNA-seq count data using different normalization methods:
-#'
-#' - "none": No normalization
-#' - "scale": Scale normalization by column means
-#' - "CPM": Counts per million
-#' - "TMM": Trimmed mean of M-values (edgeR)
-#' - "RLE": Relative log expression (DESeq2)
-#'
-#' Zero counts can be retained or set to NA after normalization based on the keep.zero parameter.
-#'
-#' @return
-#' The normalized count matrix.
-#'
-#' @examples
-#' \dontrun{
-#' counts <- matrix(rnbinom(10000, mu = 10, size = 1), 100, 100)
-#' normalized <- pgx.countNormalization(counts, c("TMM", "RLE"))
-#' }
+scaled.log1p <- function(counts, q = 0.01) {
+  min.counts <- min(counts, na.rm = TRUE)
+  ii <- which(counts == min.counts) ## left censored values
+  jj <- which(counts > min.counts) ## only non-zero
+  scale <- 1 / quantile(counts[jj], probs = q, na.rm = TRUE)
+  log2(scale * counts + 1)
+}
+
+q <- 0.01
+slog <- function(x, s = 1, q = NULL) {
+  if (!is.null(q)) {
+    s <- quantile(x[x > 0], probs = q, na.rm = TRUE)[1]
+  }
+  log2(s + x) - log2(s)
+}
+
 #' @export
-pgx.countNormalization <- function(x, methods, keep.zero = TRUE) {
-  ## Column-wise normalization (along samples).
-  ##
-  ## x:        counts (linear)
-  ## method:   single method
+safe.logCPM <- function(x, t = 0.05, prior = 1, q = NULL) {
+  qq <- apply(x, 2, quantile, probs = c(t, 1 - t), na.rm = TRUE)
+  jj <- which(t(t(x) < qq[1, ] | t(x) > qq[2, ]))
+  ax <- x
+  ax[jj] <- NA
+  colSums(x, na.rm = TRUE)
+  totx <- colSums(ax, na.rm = TRUE)
+  meanx <- colMeans(ax, na.rm = TRUE)
+  nnax <- colSums(!is.na(ax))
+  cpm <- sweep(x, 2, totx, FUN = "/") * 1e6
+  colSums(cpm, na.rm = TRUE)
+  ## slog(cx, s=prior, q=q)
+  log2(prior + cpm)
+}
 
-  methods <- methods[1]
-  which.zero <- which(x == 0, arr.ind = TRUE)
+#' @export
+global_scaling <- function(X, method, shift = "clip") {
+  X[is.infinite(X)] <- NA
+  zero.point <- 0
+  which.zero <- which(X == 0)
 
-  for (m in methods) {
-    if (m == "none") {
-      ## normalization on individual mean
-      x <- x
-    } else if (m == "scale") {
-      ## normalization on individual mean
-      mx <- mean(x, na.rm = TRUE)
-      x <- t(t(x) / colMeans(x, na.rm = TRUE)) * mx
-    } else if (m == "CPM") {
-      x <- t(t(x) / Matrix::colSums(x, na.rm = TRUE)) * 1e6
-    } else if (m == "TMM") {
-      ## normalization on total counts (linear scale)
-      x <- normalizeTMM(x, log = FALSE) ## does TMM on counts (edgeR)
-    } else if (m == "RLE") {
-      ## normalization on total counts (linear scale)
-      x <- normalizeRLE(x, log = FALSE, use = "deseq2") ## does RLE on counts (Deseq2)
-    } else if (m == "RLE2") {
-      ## normalization on total counts (linear scale)
-      x <- normalizeRLE(x, log = FALSE, use = "edger") ## does RLE on counts (Deseq2)
-      ##        } else if(m %in% c("upperquartile")) {
-      ##            ## normalization on total counts (linear scale)
-    } else if (m == "quantile") {
-      new.x <- 0.01 * limma::normalizeQuantiles(as.matrix(100 * x)) ## shift to avoid clipping
-      rownames(new.x) <- rownames(x)
-      colnames(new.x) <- colnames(x)
-      x <- new.x
-    }
-  } ## end of for method
-
-  x <- pmax(x, 0) ## prevent negative values
-  ## put back zeros as zeros
-  if (keep.zero && nrow(which.zero) > 0) {
-    x[which.zero] <- 0
+  if (method == "cpm") {
+    median.tc <- median(colSums(2**X, na.rm = TRUE), na.rm = TRUE)
+    a <- log2(median.tc) - log2(1e6)
+    zero.point <- a
+  } else if (grepl("^m[0-9]", method)) {
+    ## median centering
+    mval <- as.numeric(substring(method, 2, 99))
+    a <- median(X, na.rm = TRUE) - mval
+    zero.point <- a
+  } else if (grepl("^z[0-9]+", method)) {
+    ## zero at z-distance from median
+    zdist <- as.numeric(substring(method, 2, 99))
+    m0 <- mean(apply(X, 2, median, na.rm = TRUE))
+    s0 <- mean(apply(X, 2, sd, na.rm = TRUE))
+    zero.point <- m0 - zdist * s0
+  } else if (grepl("^q[0.][.0-9]+", method)) {
+    ## direct quantile
+    probs <- as.numeric(substring(method, 2, 99))
+    zero.point <- quantile(X, probs = probs, na.rm = TRUE)
+  } else {
+    stop("unknown method = ", method)
   }
 
-  return(x)
+  message("[normalizeCounts] shifting values to zero: z = ", round(zero.point, 4))
+  if (shift == "slog") {
+    ## smooth log-transform. not real zeros
+    X <- slog(2**X, s = 2**zero.point)
+  } else if (shift == "clip") {
+    ## linear shift and clip. Induces real zeros
+    X <- pmax(X - zero.point, 0)
+  } else {
+    stop("unknown shift method")
+  }
+
+  ## put back zeros
+  X[which.zero] <- 0
+  X
+}
+
+#' @export
+is.xxl <- function(X, z = 10) {
+  ## sdx <- apply(X, 1, function(x) mad(x[x > 0], na.rm = TRUE))
+  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+  sdx[is.na(sdx)] <- 0
+  sdx0 <- 0.8 * sdx + 0.2 * mean(sdx, na.rm = TRUE) ## moderated SD
+  mx <- rowMeans(X, na.rm = TRUE)
+  this.z <- (X - mx) / sdx0
+  (abs(this.z) > z)
 }

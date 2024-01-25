@@ -19,3 +19,9 @@ An updated object with cell cycle and gender inference results.
 This function performs cell cycle phase inference and gender estimation based on the input RNA expression data.
 The cell cycle phase inference is performed using the Seurat package.
 }
+\examples{
+\dontrun{
+pgx <- playbase::GEIGER_PGX
+deconv <- compute_cellcycle_gender(pgx)
+}
+}

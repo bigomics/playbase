@@ -5,7 +5,7 @@ names(ranks) <- replicate(1000, paste(sample(LETTERS, 4, replace = TRUE), collap
 genesets <- matrix(rnorm(1000 * 20), ncol = 20)
 rownames(genesets) <- names(ranks)
 
-result <- gset.rankcor(ranks, genesets)
+result <- playbase::gset.rankcor(ranks, genesets)
 
 test_that("gset.rankcor returns a list", {
   expect_type(result, "list")
@@ -25,7 +25,7 @@ test_that("gset.rankcor constant rho", {
 x <- matrix(rnorm(100 * 30), 100, 30)
 y <- gl(3, 10)
 test_that("gx.nnmcorrect.SAVE returns a matrix of proper dim", {
-  xcorr <- gx.nnmcorrect.SAVE(x, y)
+  xcorr <- playbase::gx.nnmcorrect.SAVE(x, y)
 
   expect_type(xcorr, "double")
   expect_equal(dim(xcorr), dim(x))

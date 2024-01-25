@@ -11,10 +11,13 @@ plot_ggbarplot(
   srt = 0,
   main = NULL,
   las = NULL,
-  col = NULL,
   beside = FALSE,
   legend.pos = c(0.016, 1),
   legend.cex = 1,
+  axis.cex = 1,
+  label.cex = 1,
+  horiz = FALSE,
+  cpal = "Blues",
   bar_width = 0.7,
   base_size = 12,
   group.name = "group"
@@ -33,8 +36,6 @@ plot_ggbarplot(
 
 \item{las}{Style for axis labels. Default is NULL.}
 
-\item{col}{Vector of colors to use for bars. Default is NULL.}
-
 \item{beside}{Logical to draw bars beside each other. Default is FALSE.}
 
 \item{legend.pos}{Numeric vector of legend position. Default is c(0.016, 1).}
@@ -46,6 +47,8 @@ plot_ggbarplot(
 \item{base_size}{Base font size for plot. Default is 12.}
 
 \item{group.name}{Label for legend groups. Default is "group".}
+
+\item{col}{Vector of colors to use for bars. Default is NULL.}
 }
 \value{
 A ggplot bar plot object is returned.

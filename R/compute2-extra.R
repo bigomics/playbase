@@ -18,7 +18,8 @@
 compute_extra <- function(pgx, extra = c(
                             "meta.go", "infer", "deconv", "drugs", ## "graph",
                             "connectivity", "wordcloud", "wgcna"
-                          ), sigdb = NULL, pgx.dir = "./data", libx.dir = "./libx") {
+                          ), sigdb = NULL, pgx.dir = "./data", libx.dir = "./libx",
+                          user_input_dir = getwd()) {
   timings <- c()
 
   if (length(extra) == 0) {
@@ -28,8 +29,8 @@ compute_extra <- function(pgx, extra = c(
   if (!is.null(libx.dir) && !dir.exists(libx.dir)) libx.dir <- NULL
 
   ## detect if it is single or multi-omics
-  single.omics <- !any(grepl("\\[", rownames(pgx$counts)))
-  single.omics
+  # TEMPORARY ONLY SINGLE OMICS
+  single.omics <- TRUE
   if (single.omics) {
     message(">>> computing extra for SINGLE-OMICS")
     rna.counts <- pgx$counts
@@ -48,11 +49,21 @@ compute_extra <- function(pgx, extra = c(
       rna.counts <- 2**rna.counts
     }
   }
+  # If working on non-human species, use homologs
+  if (!all(is.na(pgx$genes$human_ortholog))) {
+    rownames(rna.counts) <- probe2symbol(rownames(rna.counts), pgx$genes, query = "human_ortholog")
+  }
 
   if ("meta.go" %in% extra) {
     message(">>> Computing GO core graph...")
     tt <- system.time({
-      pgx$meta.go <- pgx.computeCoreGOgraph(pgx, fdr = 0.20)
+      pgx$meta.go <- tryCatch(
+        pgx.computeCoreGOgraph(pgx, fdr = 0.20),
+        error = function(e) {
+          write(as.character(e), file = paste0(user_input_dir, "/ERROR_METAGO"))
+          return(NULL)
+        }
+      )
     })
     timings <- rbind(timings, c("meta.go", tt))
     message("<<< done!")
@@ -61,10 +72,18 @@ compute_extra <- function(pgx, extra = c(
   if ("deconv" %in% extra) {
     message(">>> computing deconvolution")
     tt <- system.time({
-      pgx <- compute_deconvolution(
-        pgx,
-        rna.counts = rna.counts,
-        full = FALSE
+      pgx <- tryCatch(
+        {
+          compute_deconvolution(
+            pgx,
+            rna.counts = rna.counts,
+            full = FALSE
+          )
+        },
+        error = function(e) {
+          write(as.character(e), file = paste0(user_input_dir, "/ERROR_DECONVOLUTIION"))
+          return(pgx)
+        }
       )
     })
     timings <- rbind(timings, c("deconv", tt))
@@ -74,7 +93,13 @@ compute_extra <- function(pgx, extra = c(
   if ("infer" %in% extra) {
     message(">>> inferring extra phenotypes...")
     tt <- system.time({
-      pgx <- compute_cellcycle_gender(pgx, rna.counts = rna.counts)
+      pgx <- tryCatch(
+        compute_cellcycle_gender(pgx, rna.counts = rna.counts),
+        error = function(e) {
+          write(as.character(e), file = paste0(user_input_dir, "/ERROR_INFERENCE"))
+          return(pgx)
+        }
+      )
     })
     timings <- rbind(timings, c("infer", tt))
     message("<<< done!")
@@ -85,14 +110,30 @@ compute_extra <- function(pgx, extra = c(
 
     message(">>> Computing drug activity enrichment...")
     tt <- system.time({
-      pgx <- compute_drugActivityEnrichment(pgx, libx.dir = libx.dir)
+      pgx <- tryCatch(
+        {
+          compute_drugActivityEnrichment(pgx, libx.dir = libx.dir)
+        },
+        error = function(e) {
+          write(as.character(e), file = paste0(user_input_dir, "/ERROR_DRUG_ACTIVITY"))
+          return(pgx)
+        }
+      )
     })
     timings <- rbind(timings, c("drugs", tt))
 
     if (!is.null(libx.dir)) {
       message(">>> Computing drug sensitivity enrichment...")
       tt <- system.time({
-        pgx <- compute_drugSensitivityEnrichment(pgx, libx.dir)
+        PGX <- tryCatch(
+          {
+            compute_drugSensitivityEnrichment(pgx, libx.dir)
+          },
+          error = function(e) {
+            write(as.character(e), file = paste0(user_input_dir, "/ERROR_DRUG_SENSITIVITY"))
+            return(pgx)
+          }
+        )
       })
       timings <- rbind(timings, c("drugs-sx", tt))
     } else {
@@ -104,7 +145,15 @@ compute_extra <- function(pgx, extra = c(
   if ("graph" %in% extra) {
     message(">>> computing OmicsGraphs...")
     tt <- system.time({
-      pgx <- compute_omicsGraphs(pgx)
+      pgx <- tryCatch(
+        {
+          compute_omicsGraphs(pgx)
+        },
+        error = function(e) {
+          write(as.character(e), file = paste0(user_input_dir, "/ERROR_GRAPH"))
+          return(pgx)
+        }
+      )
     })
     timings <- rbind(timings, c("graph", tt))
     message("<<< done!")
@@ -113,7 +162,12 @@ compute_extra <- function(pgx, extra = c(
   if ("wordcloud" %in% extra) {
     message(">>> computing WordCloud statistics...")
     tt <- system.time({
-      res <- pgx.calculateWordCloud(pgx, progress = NULL, pg.unit = 1)
+      res <- tryCatch(pgx.calculateWordCloud(pgx, progress = NULL, pg.unit = 1),
+        error = function(e) {
+          write(as.character(e), file = paste0(user_input_dir, "/ERROR_WORDCLOUD"))
+          return(NULL)
+        }
+      )
     })
     timings <- rbind(timings, c("wordcloud", tt))
     pgx$wordcloud <- res
@@ -152,19 +206,28 @@ compute_extra <- function(pgx, extra = c(
         if (file.exists(db)) {
           message("computing connectivity scores for ", db)
           tt <- system.time({
-            scores <- pgx.computeConnectivityScores(
-              pgx,
-              db,
-              ntop = 200,
-              contrasts = NULL,
-              remove.le = TRUE
+            scores <- tryCatch(
+              {
+                pgx.computeConnectivityScores(
+                  pgx,
+                  db,
+                  ntop = 200,
+                  contrasts = NULL,
+                  remove.le = TRUE
+                )
+              },
+              error = function(e) {
+                write(as.character(e), file = paste0(user_input_dir, "/ERROR_CONNECTIVITY"))
+                return(NULL)
+              }
             )
+            if (!is.null(scores)) {
+              db0 <- sub(".*/", "", db)
+              pgx$connectivity[[db0]] <- scores
+            }
+            remove(scores)
           })
           timings <- rbind(timings, c("connectivity", tt))
-
-          db0 <- sub(".*/", "", db)
-          pgx$connectivity[[db0]] <- scores
-          remove(scores)
         }
       }
     } else {
@@ -175,7 +238,15 @@ compute_extra <- function(pgx, extra = c(
   if ("wgcna" %in% extra) {
     message(">>> Computing wgcna...")
     tt <- system.time({
-      pgx$wgcna <- pgx.wgcna(pgx)
+      tryCatch(
+        {
+          pgx$wgcna <- pgx.wgcna(pgx)
+        },
+        error = function(e) {
+          write(as.character(e), file = paste0(user_input_dir, "/ERROR_WGCNA"))
+          return(NULL)
+        }
+      )
     })
     timings <- rbind(timings, c("wgcna", tt))
   }
@@ -221,6 +292,12 @@ compute_extra <- function(pgx, extra = c(
 #' @param full A logical value indicating whether to use the full set of reference matrices and methods (TRUE),
 #'   or a subset of faster methods and references (FALSE).
 #' @return An updated object with deconvolution results.
+#'
+#' @examples
+#' \dontrun{
+#' pgx <- playdata::GEIGER_PGX
+#' deconv <- compute_deconvolution(pgx)
+#' }
 #' @export
 compute_deconvolution <- function(pgx, rna.counts = pgx$counts, full = FALSE) {
   ## list of reference matrices
@@ -276,16 +353,32 @@ compute_deconvolution <- function(pgx, rna.counts = pgx$counts, full = FALSE) {
 #' @param rna.counts A matrix or data frame of RNA expression counts.
 #'   Defaults to the counts in the input object.
 #' @return An updated object with cell cycle and gender inference results.
+#'
+#' @examples
+#' \dontrun{
+#' pgx <- playbase::GEIGER_PGX
+#' deconv <- compute_cellcycle_gender(pgx)
+#' }
 #' @export
 compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
-  is.human <- (pgx.getOrganism(rna.counts) == "human")
+  if (!is.null(pgx$organism)) {
+    is.human <- (pgx$organism == "Human")
+  } else {
+    is.human <- (pgx.getOrganism(pgx) == "human")
+  }
   if (is.human) {
     message("estimating cell cycle (using Seurat)...")
     pgx$samples$cell.cycle <- NULL
     pgx$samples$.cell.cycle <- NULL
 
     counts <- rna.counts
-    rownames(counts) <- toupper(pgx$genes[rownames(counts), "gene_name"])
+    # In multi-species now use symbol, and deduplicate in case
+    # use retains feature as "gene_name/rowname"
+    rownames(counts) <- toupper(pgx$genes[rownames(counts), "symbol"])
+    if (any(duplicated(rownames(counts)))) {
+      message("Deduplicate counts for cell cycle and gender inference")
+      counts <- rowsum(counts, rownames(counts))
+    }
     res <- try(pgx.inferCellCyclePhase(counts)) ## can give bins error
     if (!inherits(res, "try-error")) {
       pgx$samples$.cell_cycle <- res
@@ -294,8 +387,8 @@ compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
       message("estimating gender...")
       pgx$samples$.gender <- NULL
       X <- log2(1 + rna.counts)
-      gene_name <- pgx$genes[rownames(X), "gene_name"]
-      pgx$samples$.gender <- pgx.inferGender(X, gene_name)
+      gene_symbol <- pgx$genes[rownames(X), "symbol"] # Use gene-symbol also for gender
+      pgx$samples$.gender <- pgx.inferGender(X, gene_symbol)
     } else {
       message("gender already estimated. skipping...")
     }
@@ -325,7 +418,6 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
     ## scan for extra connectivity reference files in libx
     cmap.dir <- file.path(libx.dir, "cmap")
     db.files <- dir(cmap.dir, pattern = "L1000-activity.*rds$|L1000-gene.*rds$")
-    db.files
     ref.db <- lapply(db.files, function(f) readRDS(file.path(cmap.dir, f)))
     names(ref.db) <- sub("-", "/", gsub("_.*", "", db.files))
   } else {
@@ -340,6 +432,13 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
     message("[compute_drugActivityEnrichment] computing activity CMAP for ", f)
 
     X <- ref.db[[i]]
+    drug_test_genes <- rownames(X)
+    if (!pgx$organism %in% c("Human", "human")) {
+      rowid <- data.table::chmatch(rownames(X), pgx$genes$human_ortholog, nomatch = NA)
+      rownames(X) <- pgx$genes$gene_name[rowid]
+      X <- X[!is.na(rowid), , drop = FALSE]
+    }
+
     xdrugs <- gsub("[_@].*$", "", colnames(X))
     ndrugs <- length(table(xdrugs))
     is.drug <- grepl("activity|drug|ChemPert", f, ignore.case = TRUE)

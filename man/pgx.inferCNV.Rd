@@ -4,14 +4,14 @@
 \alias{pgx.inferCNV}
 \title{Infer copy number variations from single cell RNA-seq data}
 \usage{
-pgx.inferCNV(ngs, refgroup = NULL, progress = NULL)
+pgx.inferCNV(pgx, refgroup = NULL, progress = NULL)
 }
 \arguments{
-\item{ngs}{An NGS object containing single cell RNA-seq data}
-
 \item{refgroup}{Name of the reference sample group for normalization}
 
 \item{progress}{Show progress bar?}
+
+\item{ngs}{An NGS object containing single cell RNA-seq data}
 }
 \value{
 Updated NGS object with inferred CNV segments

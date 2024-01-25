@@ -230,9 +230,11 @@ pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
   } else {
     fam.pattern <- "^[<].*|^FAMILY|^CUSTOM"
   }
-  xgenes <- toupper(rownames(pgx$X))
-  xgenes <- toupper(pgx$genes$gene_name)
-  gsets <- getGSETS_playbase(pattern = fam.pattern)
+
+
+  xgenes <- pgx$genes[, "symbol"]
+  xgenes <- unique(xgenes)
+  gsets <- playbase::getGSETS_playbase(pattern = fam.pattern)
   jj <- which(sapply(gsets, function(x) sum(x %in% xgenes)) >= nmin)
   return(sort(names(gsets)[jj])) ## sort alphabetically
 }

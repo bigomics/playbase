@@ -135,10 +135,11 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
 #' replace.orig=FALSE to retain the original.
 #'
 #' @export
-pgx.clusterSamples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2, 3),
-                                reduce.sd = 1000, reduce.pca = 50, perplexity = 30,
-                                center.rows = TRUE, scale.rows = FALSE,
-                                X = NULL, umap.pkg = "uwot", replace.orig = TRUE) {
+pgx.clusterSamples <- function(pgx, methods = c("pca", "tsne", "umap"),
+                               dims = c(2, 3),
+                               reduce.sd = 1000, reduce.pca = 50, perplexity = 30,
+                               center.rows = TRUE, scale.rows = FALSE,
+                               X = NULL, umap.pkg = "uwot", replace.orig = TRUE) {
   if (!is.null(X)) {
     message("using provided X matrix...")
   } else if (!is.null(pgx$X)) {
@@ -182,6 +183,8 @@ pgx.clusterSamples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = 
   pgx
 }
 
+#' @export
+pgx.clusterSamples2 <- function(...) pgx.clusterSamples(...)
 
 
 
@@ -213,12 +216,12 @@ pgx.clusterSamples2 <- function(pgx, methods = c("pca", "tsne", "umap"), dims = 
 #' By default it tries to detect the optimal number of clusters using the elbow method.
 #'
 #' @export
-pgx.clusterSamples <- function(pgx, X = NULL, skipifexists = FALSE, perplexity = 30,
-                               ntop = 1000, npca = 50, prefix = "C", kclust = 1,
-                               dims = c(2, 3), find.clusters = TRUE,
-                               clust.detect = c("louvain", "hclust"),
-                               row.center = TRUE, row.scale = FALSE,
-                               method = c("tsne", "umap", "pca")) {
+pgx.clusterSamples.DEPRECATED <- function(pgx, X = NULL, skipifexists = FALSE, perplexity = 30,
+                                          ntop = 1000, npca = 50, prefix = "C", kclust = 1,
+                                          dims = c(2, 3), find.clusters = TRUE,
+                                          clust.detect = c("louvain", "hclust"),
+                                          row.center = TRUE, row.scale = FALSE,
+                                          method = c("tsne", "umap", "pca")) {
   clust.detect <- clust.detect[1]
   if (!is.null(X)) {
     message("using provided X matrix...")
@@ -397,11 +400,14 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
 #' clusters using the elbow method.
 #'
 #' @export
-pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c(2, 3),
-                                 perplexity = 30, reduce.sd = 1000, reduce.pca = 50,
-                                 center.features = TRUE, scale.features = FALSE,
-                                 find.clusters = FALSE, svd.gamma = 1, umap.pkg = "uwot") {
-  methods <- intersect(methods, c("pca", "tsne", "umap"))
+pgx.clusterMatrix <- function(X,
+                              ## methods = c("pca", "tsne", "umap", "pacmap"),
+                              methods = c("pca", "tsne", "umap"),
+                              dims = c(2, 3),
+                              perplexity = 30, reduce.sd = 1000, reduce.pca = 50,
+                              center.features = TRUE, scale.features = FALSE,
+                              find.clusters = FALSE, svd.gamma = 1, umap.pkg = "uwot") {
+  methods <- intersect(methods, c("pca", "tsne", "umap", "pacmap"))
   if (length(methods) == 0) methods <- "pca"
 
   ## Reduce dimensions by SD
@@ -433,7 +439,6 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   }
 
   if (ncol(X) <= 6) X <- cbind(X, X, X, X, X, X)
-
   if (nrow(X) <= 3) X <- rbind(X, X, X, X)
 
   ## add small variation...
@@ -443,7 +448,6 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
   res.svd <- NULL
   if (reduce.pca > 0) {
     reduce.pca <- max(3, min(c(reduce.pca, dim(X) - 1)))
-    reduce.pca
     message("Reducing to ", reduce.pca, " PCA dimenstions...")
     cnx <- colnames(X)
     suppressMessages(suppressWarnings(
@@ -457,7 +461,6 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
 
   if ("pca" %in% methods && 2 %in% dims) {
     message("calculating PCA 2D/3D...")
-
     if (is.null(res.svd)) {
       suppressMessages(suppressWarnings(
         res.svd <- irlba::irlba(X, nv = 3)
@@ -485,19 +488,21 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
 
   if ("tsne" %in% methods && 2 %in% dims) {
     message("calculating t-SNE 2D...")
-
     perplexity <- pmax(min(ncol(X) / 4, perplexity), 2)
     perplexity
-    pos <- Rtsne::Rtsne(t(X),
+    res1 <- Rtsne::Rtsne(t(X),
       dims = 2,
-      ## pca = TRUE, partial_pca = TRUE,
-      is_distance = FALSE, check_duplicates = FALSE,
-      perplexity = perplexity, num_threads = 0
-    )$Y
+      is_distance = FALSE,
+      check_duplicates = FALSE,
+      perplexity = perplexity,
+      num_threads = 1 ## NOTE: multi-threading may have MEM problems...
+    )
+    pos <- res1$Y
     rownames(pos) <- colnames(X)
     pos <- pos[1:dimx[2], ] ## if augmented
     colnames(pos) <- paste0("tSNE-", c("x", "y"))
     all.pos[["tsne2d"]] <- pos
+    remove(res1)
   }
 
   if ("tsne" %in% methods && 3 %in% dims) {
@@ -505,10 +510,12 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
 
     perplexity <- pmax(min(dimx[2] / 4, perplexity), 2)
     perplexity
-    pos <- Rtsne::Rtsne(t(X[, ]),
+    pos <- Rtsne::Rtsne(t(X),
       dims = 3,
-      is_distance = FALSE, check_duplicates = FALSE,
-      perplexity = perplexity, num_threads = 0
+      is_distance = FALSE,
+      check_duplicates = FALSE,
+      perplexity = perplexity,
+      num_threads = 1 ## NOTE: multi-threading may have MEM problems...
     )$Y
     rownames(pos) <- colnames(X)
     pos <- pos[1:dimx[2], ] ## if augmented
@@ -520,7 +527,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
     message("calculating UMAP 2D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
-      pos <- uwot::tumap(t(X[, ]),
+      pos <- uwot::tumap(t(X),
         n_components = 2,
         n_neighbors = nb,
         local_connectivity = ceiling(nb / 15)
@@ -529,7 +536,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
       custom.config <- umap.defaults
       custom.config$n_components <- 2
       custom.config$n_neighbors <- pmax(min(dimx[2] / 4, perplexity), 2)
-      pos <- umap::umap(t(X[, ]), custom.config)$layout
+      pos <- umap::umap(t(X), custom.config)$layout
     }
     rownames(pos) <- colnames(X)
     pos <- pos[1:dimx[2], ] ## if augmented
@@ -541,7 +548,7 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
     message("calculating UMAP 3D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
-      pos <- uwot::tumap(t(X[, ]),
+      pos <- uwot::tumap(t(X),
         n_components = 3,
         n_neighbors = nb,
         local_connectivity = ceiling(nb / 15)
@@ -550,12 +557,39 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
       custom.config <- umap.defaults
       custom.config$n_components <- 3
       custom.config$n_neighbors <- pmax(min(dimx[2] / 4, perplexity), 2)
-      pos <- umap::umap(t(X[, ]), custom.config)$layout
+      pos <- umap::umap(t(X), custom.config)$layout
     }
     rownames(pos) <- colnames(X)
     pos <- pos[1:dimx[2], ] ## if augmented
     colnames(pos) <- paste0("UMAP-", c("x", "y", "z"))
     all.pos[["umap3d"]] <- pos
+  }
+
+  ## NOTE: this pacmap package seem to require GB memory for importing
+  ## the python package and calling. Need more testing!!!
+  if (FALSE && "pacmap" %in% methods) {
+    has.pacmap <- reticulate::py_module_available("pacmap")
+    if (has.pacmap && 2 %in% dims) {
+      message("calculating PACMAP 2D...")
+      ## reticulate::py_install("pacmap")
+      pacmap <- reticulate::import("pacmap")
+      reducer <- pacmap$PaCMAP(n_components = 2L)
+      pos <- reducer$fit_transform(t(X))
+      rownames(pos) <- colnames(X)
+      pos <- pos[1:dimx[2], ] ## if augmented
+      colnames(pos) <- paste0("PACMAP-", c("x", "y"))
+      all.pos[["pacmap2d"]] <- pos
+    }
+    if (has.pacmap && 3 %in% dims) {
+      message("calculating PACMAP 3D...")
+      pacmap <- reticulate::import("pacmap")
+      reducer <- pacmap$PaCMAP(n_components = 3L)
+      pos <- reducer$fit_transform(t(X))
+      rownames(pos) <- colnames(X)
+      pos <- pos[1:dimx[2], ] ## if augmented
+      colnames(pos) <- paste0("PACMAP-", c("x", "y", "z"))
+      all.pos[["pacmap3d"]] <- pos
+    }
   }
 
   all.pos$membership <- NULL
@@ -566,8 +600,12 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
     all.pos$membership <- idx[1:dimx[2]]
   }
 
+  gc()
   return(all.pos)
 }
+
+#' @export
+pgx.clusterBigMatrix <- function(...) pgx.clusterMatrix(...)
 
 
 #' @title Cluster rows of a matrix
@@ -604,12 +642,13 @@ pgx.clusterBigMatrix <- function(X, methods = c("pca", "tsne", "umap"), dims = c
 #' By default it tries to detect the optimal number of clusters.
 #'
 #' @export
-pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
-                              ntop = 1000, npca = 50, prefix = "c",
-                              row.center = TRUE, row.scale = FALSE,
-                              find.clusters = TRUE, kclust = 1,
-                              clust.detect = c("louvain", "hclust"),
-                              method = c("tsne", "umap", "pca")) {
+pgx.clusterMatrix.DEPRECATED <- function(X, perplexity = 30, dims = c(2, 3),
+                                         ntop = 1000, npca = 50, prefix = "c",
+                                         row.center = TRUE, row.scale = FALSE,
+                                         find.clusters = TRUE, kclust = 1,
+                                         clust.detect = c("louvain", "hclust"),
+                                         method = c("tsne", "umap", "pca")) {
+  method <- intersect(method, c("pca", "tsne", "umap", "pacmap"))
   method <- method[1]
   clust.detect <- clust.detect[1]
   sdx <- matrixStats::rowSds(X, na.rm = TRUE)
@@ -699,6 +738,25 @@ pgx.clusterMatrix <- function(X, perplexity = 30, dims = c(2, 3),
       pos3 <- svd$v[, 1:3]
       colnames(pos3) <- c("pca_1", "pca_2", "pca_3")
     }
+  } else if (method == "pacmap") {
+    has.pacmap <- reticulate::py_module_available("pacmap")
+    if (has.pacmap) {
+      message("performing PACMAP...")
+      pacmap <- reticulate::import("pacmap")
+      if (2 %in% dims) {
+        reducer <- pacmap$PaCMAP(n_components = 2L)
+        pos2 <- reducer$fit_transform(t(X))
+        colnames(pos2) <- c("pacmap_1", "pacmap_2")
+      }
+      if (3 %in% dims) {
+        reducer <- pacmap$PaCMAP(n_components = 3L)
+        pos3 <- reducer$fit_transform(t(X))
+        colnames(pos3) <- c("pacmap_1", "pacmap_2", "pacmap_3")
+      }
+    } else {
+      warning("No PaCMAP installed. please install in python.")
+      return(NULL)
+    }
   }
 
   ## add rownames
@@ -773,4 +831,19 @@ pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix 
   idx <- as.character(idx)
   message("Found ", length(unique(idx)), " clusters...")
   return(idx)
+}
+
+#' @export
+pacmap <- function(X, n_components = 2L, ...) {
+  has.pacmap <- reticulate::py_module_available("pacmap")
+  if (!has.pacmap) {
+    stop("pacmap python module not installed")
+  }
+  ## reticulate::py_install("pacmap")
+  pacmap <- reticulate::import("pacmap")
+  reducer <- pacmap$PaCMAP(n_components = as.integer(n_components))
+  pos <- reducer$fit_transform(X)
+  rownames(pos) <- rownames(X)
+  colnames(pos) <- paste0("pacmap_", 1:ncol(pos))
+  pos
 }
