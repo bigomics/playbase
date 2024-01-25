@@ -66,7 +66,7 @@ pgx.gene_table.OLD <- function(pgx, organism) {
 
   # Init vals
   genes <- NULL
-  ensembl_dataset <- NULL
+  mart <- NULL
   counts <- pgx$counts
   probes <- rownames(counts)
   probe_type <- NA_character_
@@ -86,28 +86,28 @@ pgx.gene_table.OLD <- function(pgx, organism) {
     Sys.sleep(counter * 10)
 
     # Get ensembl
-    if (is.null(ensembl_dataset)) {
+    if (is.null(mart)) {
       try({
         ensembl <- biomaRt::useEnsembl(biomart = "ensembl")
-        ensembl_dataset <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
+        mart <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
       })
     }
 
     # Get probe type
-    if (!is.null(ensembl_dataset) & is.na(probe_type)) {
-      probe_type <- detect_probe.DEPRECATED(probes, ensembl_dataset)
+    if (!is.null(mart) & is.na(probe_type)) {
+      probe_type <- detect_probetype.BIOMART(probes, mart)
     }
 
     # Get gene table
-    if (!is.na(probe_type) & !is.null(ensembl_dataset)) {
+    if (!is.na(probe_type) & !is.null(mart)) {
       genes <- ngs.getGeneAnnotation_BIOMART(
         probes = probes,
         organism = organism,
         probe_type = probe_type,
-        mart = ensembl_dataset
+        mart = mart
       )
 
-      all_genes <- biomaRt::getBM(attributes = "external_gene_name", mart = ensembl_dataset)
+      all_genes <- biomaRt::getBM(attributes = "external_gene_name", mart = mart)
       all_genes <- all_genes[, 1]
     }
     counter <- counter + 1
@@ -193,6 +193,7 @@ ngs.getGeneAnnotation <- function(probes, organism = NULL, use_biomart = NULL) {
     probe_type <- guess_probetype(probes, for.biomart = FALSE)
     if (is.null(probe_type)) stop("probe_type is NULL")
     message("[ngs.getGeneAnnotation] probe_type = ", probe_type)
+
     genes <- ngs.getGeneAnnotation_ORGDB(
       probes = probes,
       organism = organism,
@@ -202,15 +203,20 @@ ngs.getGeneAnnotation <- function(probes, organism = NULL, use_biomart = NULL) {
 
   ## try biomaRt for the rest
   if (is.null(genes)) {
-    message("[ngs.getGeneAnnotation] >>> annotating genes using biomaRt")
-    probe_type <- guess_probetype(probes, for.biomart = TRUE)
-    message("[ngs.getGeneAnnotation] probe_type = ", probe_type)
-    if (is.null(probe_type)) stop("probe_type is NULL")
     mart <- use_mart(organism)
     if (is.null(mart)) {
       message("[ngs.getGeneAnnotation] FAIL : could not connect to mart")
       return(NULL)
     }
+    message("[ngs.getGeneAnnotation] >>> annotating genes using biomaRt")
+    probe_type <- guess_probetype(probes, for.biomart = TRUE)
+    message("[ngs.getGeneAnnotation] 1: probe_type = ", probe_type)
+    if (is.null(probe_type) || probe_type == "") {
+      ## Fall back on 
+      probe_type <- detect_probetype.BIOMART(probes, mart = mart)
+    }
+    message("[ngs.getGeneAnnotation] 2: probe_type = ", probe_type)    
+    if (is.null(probe_type) || probe_type == "") stop("probe_type is NULL")
     genes <- ngs.getGeneAnnotation_BIOMART(
       probes = probes,
       organism = organism,
@@ -246,7 +252,7 @@ ngs.getGeneAnnotation_BIOMART <- function(
   clean_probes <- probes[!duplicated(probes)]
 
   if (is.null(probe_type)) {
-    ##  probe_type <- detect_probe.DEPRECATED(probes, mart)
+    ##  probe_type <- detect_probetype.BIOMART(probes, mart)
     probe_type <- guess_probetype(probes, for.biomart = TRUE)
   }
 
@@ -511,14 +517,18 @@ probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE)
 }
 
 use_mart <- function(organism) {
-  organism <- capitalize(organism) ## in utils.R
   message("[use_mart] connecting to bioMART server for organism ", organism)
+  if(!organism %in% playbase::SPECIES_TABLE$species_name ) {
+    stop("organism '",organism,"' not in SPECIES_TABLE")
+    return(NULL)
+  }
   species_info <- playbase::SPECIES_TABLE[species_name == organism]
   # Some species appear in more than one mart, select ensembl only to avoid confusion
   if (nrow(species_info) > 1) {
     species_info <- species_info[mart == "ensembl"]
     species_info <- species_info[1, ]
   }
+  message("[use_mart] using dataset = ", species_info$dataset)
   ensembl <- biomaRt::useEnsembl(biomart = "ensembl")
   mart <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
   mart
@@ -578,6 +588,7 @@ use_mart <- function(organism) {
 #'
 #' @export
 guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
+  
   best.match <- function(type.regex, avg.min = 0.33) {
     avg.match <- sapply(type.regex, function(s) mean(grepl(s, probes)))
     probe_type <- ""
@@ -619,6 +630,10 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
     probe_type <- best.match(type.regex, 0.33)
   }
 
+  if(for.biomart && probe_type == "") {
+    probe_type <- detect_probetype.BIOMART(probes, mart = mart )   
+  }
+  
   KEYTYPES <- c("ENSEMBL", "ENSEMBLPROT", "ENSEMBLTRANS", "ENTREZID", "REFSEQ", "SYMBOL", "UNIPROT")
   if (!probe_type %in% KEYTYPES) {
     warning("[guess_probetype] ERROR : unsupported probe_type: ", probe_type)
@@ -722,10 +737,10 @@ id2symbol <- function(probes, organism = "human") {
 #' \dontrun{
 #' probes <- probes <- c("NM_001081979", "NM_001081980", "NM_001081981", "NM_001081982", "NM_001081983")
 #' organism <- "Mouse"
-#' type <- detect_probetype_ORGDB(probes, organism)
+#' type <- detect_probetype.ORGDB(probes, organism)
 #' }
 #' @export
-detect_probetype_ORGDB <- function(probes, organism) {
+detect_probetype.ORGDB <- function(probes, organism) {
   warning("DEPRECATED. Please use guess_probetype")
 
   ## Get org database
@@ -840,37 +855,40 @@ detect_probetype_ORGDB <- function(probes, organism) {
 #' }
 #'
 #' @export
-detect_probe.DEPRECATED <- function(probes, mart = NULL, verbose = TRUE) {
-  warning("DEPRECATED. Please use guess_probetype")
+detect_probetype.BIOMART <- function(probes, mart = NULL, organism = NULL, verbose = TRUE, nsample = 100, dbounce=1) {
+
+  message("[detect_probetype.BIOMART] DEPRECATED. Please use guess_probetype")
 
   # Check mart
-  if (is.null(mart)) {
-    stop("[detect_probe] Mart not found. Specify a BioMart database to use.")
+  if (is.null(mart) && is.null(organism)) {
+    stop("[detect_probetype.BIOMART] Mart not found. Specify a BioMart database or organism to use.")
   }
+  if (is.null(mart) && !is.null(organism)) {
+    mart <- use_mart(organism)
+  }
+  if (is.null(mart)) stop("ERROR : could not establish connection to MART.")
+  
   # Prepare inputs
-  if (verbose) message("[detect_probe] guessing probe type...")
+  if (verbose) message("[detect_probetype.BIOMART] guessing probe type...")
 
   clean_probes <- probes[!is.na(probes)]
-
   n <- length(clean_probes)
-  # if number of probes above 10, keep only 10 random probes
-  if (n > 100L) n2 <- 100L else n2 <- n
+  n2 <- ifelse( n > nsample, nsample, n )
   subsample <- sample(1:n, n2)
   subset_probes <- clean_probes[subsample]
 
   # Vector with input types to check
   probe_types_to_check <- c(
     "ensembl_gene_id",
+    "ensembl_gene_id_version",
+    "external_gene_name",
+    "refseq_mrna",
+    "uniprot_gn_id",
     "ensembl_transcript_id",
     "ensembl_transcript_id_version",
     "ensembl_peptide_id",
-    "external_gene_name",
-    "ensembl_gene_id_version",
-    "uniprot_gn_id",
-    "refseq_peptide",
-    "refseq_mrna"
+    "refseq_peptide"
   )
-
 
   # often we see multiples probes at once
   # initially we can try to detect as many probes as possible from each probe type
@@ -878,34 +896,62 @@ detect_probe.DEPRECATED <- function(probes, mart = NULL, verbose = TRUE) {
   # this approach still has issues, as sometimes we have mixed probe types in on study.
 
   ## !!!!!NEED REFACTORING!!!!! : this is so bad... (IK)
-  probe_check <- sapply(probe_types_to_check, FUN = function(x) {
-    tryCatch(
-      {
-        tmp <- biomaRt::getBM(
-          attributes = x,
-          filters = x,
-          values = subset_probes,
-          mart = mart
-        )
-        Sys.sleep(5) # Sleep time to prevent bounce from ensembl for consecutive calls
-        out <- nrow(tmp)
-        return(out)
-      },
-      error = function(e) {
-        return(0)
-      }
-    )
-  })
+  ## if(0) {
+  ## probe_check <- sapply(probe_types_to_check, FUN = function(x) {
+  ##   tryCatch(
+  ##     {
+  ##       tmp <- biomaRt::getBM(
+  ##         attributes = x,
+  ##         filters = x,
+  ##         values = subset_probes,
+  ##         mart = mart
+  ##       )
+  ##       Sys.sleep(dbounce) # Sleep time to prevent bounce from ensembl for consecutive calls
+  ##       out <- nrow(tmp) / length(subset_probes)
+  ##       return(out)
+  ##     },
+  ##     error = function(e) {
+  ##       return(0)
+  ##     }
+  ##   )
+  ## })
+  ## }
 
-  # Check matches and return if winner
+  ## As above but we stop the search if 50% of the subset-probes match
+  probe_check <- c()
+  check.ratio <- 0
+  x = probe_types_to_check[2]
+  for( x in probe_types_to_check ) {
+    bm <- try(
+      biomaRt::getBM(
+        attributes = x,
+        filters = x,
+        values = subset_probes,
+        mart = mart
+        )
+    )
+    if("try-error" %in% class(bm)) {
+      check.ratio <- 0
+    } else {
+      check.ratio <- nrow(bm) / length(subset_probes)
+    }
+    probe_check[x] <- check.ratio
+    if( check.ratio > 0.5) break
+    Sys.sleep(dbounce) # Sleep time to prevent bounce from ensembl for consecutive calls
+  }
+  
+  dbg("[detect_probetype.BIOMART] probe_check = ", probe_check)
+  
+  ## Check matches and return if winner
+  probe_type <- ""  ## default fail type
   if (all(probe_check == 0)) {
     # TODO the probe2symbol and detect_probe code should be used in data-preview,
     # and we should warn the user in case no matches are found
-    stop("[detect_probe] Probe type not found, please, check your probes")
+    message("[detect_probetype.BIOMART] ERROR. Probe type not found, please, check your probes")
   } else {
     probe_type <- names(which.max(probe_check))
   }
-  if (verbose) message("[detect_probe] detected probe type = ", probe_type)
+  if (verbose) message("[detect_probetype.BIOMART] detected probe type = ", probe_type)
 
   return(probe_type)
 }
