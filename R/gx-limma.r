@@ -398,10 +398,6 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
 }
 
 
-
-
-
-
 #' Differential expression analysis for paired data
 #'
 #' @title Differential expression analysis using limma for paired samples
@@ -524,13 +520,6 @@ gx.limma.paired <- function(X, pheno, pair, fdr = 0.05, lfc = 0.20,
   top$B <- NULL
   return(top)
 }
-
-## two-factorial design
-
-
-
-
-
 
 
 #' Differential expression analysis using limma for RNA-seq data

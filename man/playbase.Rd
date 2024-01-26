@@ -2,8 +2,8 @@
 % Please edit documentation in R/playbase-package.R
 \docType{package}
 \name{playbase}
-\alias{playbase}
 \alias{playbase-package}
+\alias{playbase}
 \title{Playbase package}
 \description{
 More about what it does (maybe more than one line) Use four spaces when indenting paragraphs within the Description.

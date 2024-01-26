@@ -11,6 +11,9 @@ pgx.createPGX(
   samples,
   contrasts,
   organism = NULL,
+  custom.geneset = NULL,
+  annot_table = NULL,
+  max.genesets = 5000,
   name = "Data set",
   datatype = "unknown",
   creator = "unknown",
@@ -24,9 +27,6 @@ pgx.createPGX(
   only.known = TRUE,
   only.hugo = TRUE,
   convert.hugo = TRUE,
-  do.cluster = TRUE,
-  cluster.contrasts = FALSE,
-  do.clustergenes = TRUE,
   only.proteincoding = TRUE,
   remove.xxl = TRUE,
   remove.outliers = TRUE,
@@ -43,6 +43,10 @@ pgx.createPGX(
 
 \item{organism}{Default "Human", it indicates the species used
 for the gene annotation table and the probe to symbol conversion.}
+
+\item{custom.geneset}{Custom gene sets to test, as a named list with gmt and info elements.}
+
+\item{max.genesets}{Maximum number of gene sets to test. Default is 5000.}
 
 \item{X}{(Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.}
 
@@ -62,12 +66,6 @@ for the gene annotation table and the probe to symbol conversion.}
 
 \item{convert.hugo}{Logical indicating whether to convert symbols to HUGO names. Default is TRUE.}
 
-\item{do.cluster}{Logical indicating whether to run sample clustering. Default is TRUE.}
-
-\item{cluster.contrasts}{Logical indicating whether to cluster contrasts. Default is FALSE.}
-
-\item{do.clustergenes}{Logical indicating whether to cluster genes. Default is TRUE.}
-
 \item{only.proteincoding}{Logical indicating whether to keep only protein-coding genes. Default is TRUE.}
 }
 \value{
@@ -77,4 +75,25 @@ List. PGX object containing input data and parameters.
 Create a PGX object
 This function creates a pgx object, which is the core object in the
 OmicsPlayground.
+}
+\details{
+pgx.createPGX creates a pgx object with the following slots:
+
+- `name`: Name of the dataset
+- `organism`: Organism for the dataset
+- `version`: Dataset version
+- `date`: Date the dataset was created
+- `creator`: Creator of the dataset
+- `datatype`: Type of data (e.g. RNA-seq, microarray)
+- `description`: Description of the dataset
+- `samples`: Sample metadata
+- `counts`: Raw count matrix
+- `contrasts`: Contrast matrix
+- `X`: Normalized expression matrix
+- `total_counts`: Total counts per sample
+- `counts_multiplier`: Counts multiplier for each sample
+- `genes`: Gene annotation data.frame (initially NULL)
+- `all_genes`: Full list of genes
+- `probe_type`: Probe type according to biomaRt classification(e.g. ensemble_id)
+- `GMT`: Gene set matrix
 }

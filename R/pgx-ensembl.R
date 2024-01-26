@@ -10,9 +10,9 @@
 #'
 #' @param pgx PGX object with a counts table.
 #' @param organism Char. Organism name. For more info see \code{\link{playbase::SPECIES_TABLE}}.
-#'
+#' @param annot_table Custom annotation table. See \code{\link{playbase::pgx.custom_annotation}}.
+#' @param use_biomart Logical. If TRUE, use biomaRt to retrieve gene annotation.
 #' @return Updated PGX object with gene annotation table
-#'
 #'
 #' @details Queries the Ensembl database to get a gene annotation table
 #' containing external gene IDs mapped to Ensembl IDs. Handles retries in case
@@ -27,7 +27,7 @@
 #' pgx <- pgx.gene_table(pgx, "Human")
 #' }
 #' @export
-pgx.addGeneAnnotation <- function(pgx, organism = NULL, use_biomart = NULL) {
+pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL, use_biomart = NULL) {
   # Safety checks
   stopifnot(is.list(pgx))
   probes <- rownames(pgx$counts)
@@ -43,85 +43,20 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, use_biomart = NULL) {
   }
   # Get gene table
   genes <- ngs.getGeneAnnotation(
+    pgx = pgx, 
     probes = probes,
+    annot_table = annot_table,
     organism = organism,
     use_biomart = use_biomart ## auto-select
   )
 
-  all_genes <- sort(genes$symbol)
-  probe_type <- guess_probetype(probes)
-
-  # Return data
+  all_genes <- unique(genes$symbol)  ## ????
+  probe_type <- guess_probetype(probes, organism)
+  
+  ## Return data
   pgx$genes <- genes
-  pgx$all_genes <- all_genes ## Why need this at all?? unneeded baggage.. (IK)
-  pgx$probe_type <- probe_type ## Why need this at all?? unneeded baggage.. (IK)
-
-  return(pgx)
-}
-
-pgx.gene_table.OLD <- function(pgx, organism) {
-  # Safety checks
-  stopifnot(is.list(pgx))
-  stopifnot(is.character(organism))
-
-  # Init vals
-  genes <- NULL
-  mart <- NULL
-  counts <- pgx$counts
-  probes <- rownames(counts)
-  probe_type <- NA_character_
-  species_info <- playbase::SPECIES_TABLE[species_name == organism]
-
-  # Some species appear in more than one mart, select ensembl only to avoid confusion
-  if (nrow(species_info) > 1) {
-    species_info <- species_info[mart == "ensembl"]
-    species_info <- species_info[1, ]
-  }
-
-  # Use while loop for retries
-  counter <- 0
-  while (is.null(genes) && counter <= 5) {
-    message(paste0("[pgx.gene_table] attempt to annotate genes, counter = ", counter + 1))
-    # Set waiter so that we can make multiple calls with waiting time
-    Sys.sleep(counter * 10)
-
-    # Get ensembl
-    if (is.null(mart)) {
-      try({
-        ensembl <- biomaRt::useEnsembl(biomart = "ensembl")
-        mart <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
-      })
-    }
-
-    # Get probe type
-    if (!is.null(mart) & is.na(probe_type)) {
-      probe_type <- detect_probetype.BIOMART(probes, mart)
-    }
-
-    # Get gene table
-    if (!is.na(probe_type) & !is.null(mart)) {
-      genes <- ngs.getGeneAnnotation_BIOMART(
-        probes = probes,
-        organism = organism,
-        probe_type = probe_type,
-        mart = mart
-      )
-
-      all_genes <- biomaRt::getBM(attributes = "external_gene_name", mart = mart)
-      all_genes <- all_genes[, 1]
-    }
-    counter <- counter + 1
-  }
-
-  if (counter > 5 && is.null(genes)) {
-    message("[pgx.gene_table] WARNING. could not reach ensembl server to get gene annotation")
-    return(pgx)
-  }
-
-  # Return data
-  pgx$genes <- genes
-  pgx$all_genes <- all_genes ## Why need this?? unneeded baggage.. (IK)
-  pgx$probe_type <- probe_type ## Why need this?? unneeded baggage.. (IK)
+##  pgx$all_genes <- all_genes ## really need this?
+##  pgx$probe_type <- probe_type ## really need this?
 
   return(pgx)
 }
@@ -166,7 +101,7 @@ pgx.gene_table.OLD <- function(pgx, organism) {
 #' head(result)
 #' }
 #' @export
-ngs.getGeneAnnotation <- function(probes, organism = NULL, use_biomart = NULL) {
+ngs.getGeneAnnotation <- function(pgx, probes, organism = NULL, annot_table = NULL, use_biomart = NULL) {
   if (is.null(organism)) {
     organism <- guess_organism(probes)
   }
@@ -188,12 +123,11 @@ ngs.getGeneAnnotation <- function(probes, organism = NULL, use_biomart = NULL) {
   genes <- NULL
 
   ## first try ORGDB for human, mouse, rat
-  if (is.null(genes) && !use_biomart) {
+  if (is.null(genes) && is.primary_organism && !use_biomart) {
     message("[getGeneAnnotation] >>> annotating genes using ORGDB libraries")
     probe_type <- guess_probetype(probes, for.biomart = FALSE)
     if (is.null(probe_type)) stop("probe_type is NULL")
     message("[ngs.getGeneAnnotation] probe_type = ", probe_type)
-
     genes <- ngs.getGeneAnnotation_ORGDB(
       probes = probes,
       organism = organism,
@@ -202,18 +136,18 @@ ngs.getGeneAnnotation <- function(probes, organism = NULL, use_biomart = NULL) {
   }
 
   ## try biomaRt for the rest
-  if (is.null(genes)) {
+  if (is.null(genes) && organism != "No organism") {
+    message("[ngs.getGeneAnnotation] >>> annotating genes using biomaRt")
     mart <- use_mart(organism)
     if (is.null(mart)) {
       message("[ngs.getGeneAnnotation] FAIL : could not connect to mart")
-      return(NULL)
     }
     message("[ngs.getGeneAnnotation] >>> annotating genes using biomaRt")
-    probe_type <- guess_probetype(probes, for.biomart = TRUE)
+    probe_type <- guess_probetype(probes, organism = organism, for.biomart = TRUE, mart = mart)
     message("[ngs.getGeneAnnotation] 1: probe_type = ", probe_type)
     if (is.null(probe_type) || probe_type == "") {
       ## Fall back on 
-      probe_type <- detect_probetype.BIOMART(probes, mart = mart)
+      probe_type <- guess_probetype.BIOMART(probes, mart = mart)
     }
     message("[ngs.getGeneAnnotation] 2: probe_type = ", probe_type)    
     if (is.null(probe_type) || probe_type == "") stop("probe_type is NULL")
@@ -223,13 +157,15 @@ ngs.getGeneAnnotation <- function(probes, organism = NULL, use_biomart = NULL) {
       probe_type = as.character(probe_type),
       mart = mart
     )
+  } else if (organism == "No organism") {
+    genes <- pgx.custom_annotation(pgx, custom_annot = annot_table)
   }
 
   if (is.null(genes)) {
     warning("[getGeneAnnotation] ERROR : could not create gene annotation")
     return(NULL)
   }
-  genes
+  return(genes)
 }
 
 ngs.getGeneAnnotation_BIOMART <- function(
@@ -252,7 +188,7 @@ ngs.getGeneAnnotation_BIOMART <- function(
   clean_probes <- probes[!duplicated(probes)]
 
   if (is.null(probe_type)) {
-    ##  probe_type <- detect_probetype.BIOMART(probes, mart)
+    ##  probe_type <- guess_probetype.BIOMART(probes, mart)
     probe_type <- guess_probetype(probes, for.biomart = TRUE)
   }
 
@@ -519,7 +455,7 @@ probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE)
 use_mart <- function(organism) {
   message("[use_mart] connecting to bioMART server for organism ", organism)
   if(!organism %in% playbase::SPECIES_TABLE$species_name ) {
-    stop("organism '",organism,"' not in SPECIES_TABLE")
+    message("[use_mart] ERROR. organism '",organism,"' not in SPECIES_TABLE")
     return(NULL)
   }
   species_info <- playbase::SPECIES_TABLE[species_name == organism]
@@ -531,7 +467,11 @@ use_mart <- function(organism) {
   message("[use_mart] using dataset = ", species_info$dataset)
   ensembl <- biomaRt::useEnsembl(biomart = "ensembl")
   mart <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
-  mart
+  if(class(mart) != "Mart") {
+    message("[use_mart] ERROR. Could not connect to mart server")    
+    return(NULL)
+  }
+  return(mart)
 }
 
 #' Guess probe type
@@ -587,7 +527,7 @@ use_mart <- function(organism) {
 #' }
 #'
 #' @export
-guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
+guess_probetype <- function(probes, organism = "", for.biomart = FALSE, mart = NULL) {
   
   best.match <- function(type.regex, avg.min = 0.33) {
     avg.match <- sapply(type.regex, function(s) mean(grepl(s, probes)))
@@ -599,20 +539,25 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
   }
   probe_type <- ""
 
-  ## 0. Organism specific matching
-  if (organism == "Saccharomyces cerevisiae") {
+  ## 0. No organism 
+  if (organism == "No organism") {
+    probe_type <- "Unknown"
+  }
+  
+  ## 1. Organism specific matching
+  if (probe_type == "") {
     type.regex <- list(
-      "ENSEMBL" = "^Y[A-Z][LR]"
+      "ENSEMBL" = "^Y[A-Z][LR]|^FBgn|WBGene"   ## yeast, fly, worm
     )
     probe_type <- best.match(type.regex, 0.33)
   }
 
-  ## 1. determine probe type using regular expression
+  ## 2. determine probe type using regular expression
   if (probe_type == "") {
     probe_type <- xbioc::idtype(probes)
   }
-
-  ## 2. match with human/mouse/rat genesets
+  
+  ## 3. match with human/mouse/rat genesets
   if (probe_type == "") {
     ## matches SYMBOL for human, mouse and rat
     symbol <- as.list(org.Hs.eg.db::org.Hs.egSYMBOL)
@@ -621,7 +566,7 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
     if (avg.match > 0.5) probe_type <- "SYMBOL"
   }
 
-  ## 3. check if they are proteins
+  ## 4. check if they are proteins
   if (probe_type == "") {
     type.regex <- list(
       "UNIPROT" = "^[OPQ][0-9]",
@@ -629,15 +574,21 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
     )
     probe_type <- best.match(type.regex, 0.33)
   }
-
+  
   if(for.biomart && probe_type == "") {
-    probe_type <- detect_probetype.BIOMART(probes, mart = mart )   
+    if(is.null(mart)) mart <- use_mart(organism)
+    probe_type <- guess_probetype.BIOMART(probes, mart = mart )   
+  }
+
+  if(probe_type == "") {
+    message("[guess_probetype] WARNING. could not detect probe_type")
+    return(NULL)
   }
   
   KEYTYPES <- c("ENSEMBL", "ENSEMBLPROT", "ENSEMBLTRANS", "ENTREZID", "REFSEQ", "SYMBOL", "UNIPROT")
   if (!probe_type %in% KEYTYPES) {
-    warning("[guess_probetype] ERROR : unsupported probe_type: ", probe_type)
-    warning("[guess_probetype] keytypes available: ", paste(KEYTYPES, collapse = " "))
+    message("[guess_probetype] ERROR : unsupported probe_type: ", probe_type)
+    message("[guess_probetype] keytypes available: ", paste(KEYTYPES, collapse = " "))
     return(NULL)
   }
 
@@ -672,12 +623,12 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
 #' @export
 guess_organism <- function(probes) {
   org.regex <- list(
-    "Human" = "^ENSG|^ENST|^[A-Z]+[0-9]*$",
+    "Human" = "^ENSG|^ENST|^[A-D,F-Z][A-Z]+[0-9]*$",
     "Mouse" = "^ENSMUS|^[A-Z][a-z]{2,}",
     "Rat" = "^ENSRNO|^[A-Z][a-z]{2,}",
-    "Worm" = "^WBGene",
-    "Fly" = "^FBgn0",
-    "Yeast" = "^Y[A-P][RL]"
+    "Caenorhabditis elegans" = "^WBGene",
+    "Drosophila melanogaster" = "^FBgn0",
+    "Saccharomyces cerevisiae" = "^Y[A-P][RL]"
   )
   org.match <- function(probes, org) {
     mean(grepl(org.regex[[org]], probes))
@@ -714,9 +665,115 @@ id2symbol <- function(probes, organism = "human") {
 }
 
 
-## ================================================================================
-## ========================= DEPRECATED ===========================================
-## ================================================================================
+#' @title Custom Gene Annotation
+#'
+#' @description Adds custom gene annotation table to a pgx object
+#'
+#' @param pgx pgx object
+#' @param custom_annot data.frame with custom annotation data. If provided, 
+#' it has to contain at least the columns "feature", "symbol", "gene_name". Also,
+#' the features has to match the rownames of the counts provided.
+#' 
+#'
+#' @details This function allows adding a gene annotation data.frame to a pgx object when
+#' the user has not provided an organism or it's not known.  The custom_annot data.frame 
+#' should contain gene IDs that match the pgx object genes, plus any additional columns 
+#' of annotation data.
+#' 
+#' The id_type parameter specifies the type of ID used in custom_annot to match genes.
+#' Possible options are "symbol", "ensembl_gene_id", etc. By default it will try to match
+#' on the "symbol" field.
+#'
+#' Any columns in custom_annot that match existing pgx gene annotation columns will 
+#' overwrite the original data. New columns will be appended.
+#'
+#' @return The pgx object with custom gene annotation added/appended. The gene annotation
+#' table has the same format as the one returned by pgx.gene_table(). However, the 
+#' columns human_ortholog, gene_title, gene_biotype, chr, pos, tx_len, map, source are filled
+#' with default values.
+#' 
+#' @examples
+#' \dontrun{
+#'  custom_annot <- data.frame(
+#'    feature = c("A1", "A2", "A3"), 
+#'    symbol = c("TP53", "MYC", "EGFR"),
+#'    gene_name = c("A1", "A2", "A3")
+#'  )
+#'  
+#'  pgx <- pgx.custom_annotation(pgx, custom_annot)
+#' }
+#' @export
+pgx.custom_annotation <- function(pgx, custom_annot = NULL) {
+
+  message("[pgx.custom_annotation] Adding custom annotation table...")
+  # If the user has provided a custom gene table, check it and use it
+  if (!is.null(custom_annot)) {
+    required_cols <- c(
+      "feature",
+      "symbol",
+      "gene_name"
+    )
+
+    if (!all(required_cols %in% colnames(custom_annot))) {
+      missing_cols <- required_cols[!required_cols %in% colnames(custom_annot)]
+      stop("Custom gene table must contain the following columns: ", 
+          paste0(required_cols, collapse = ", "), "\ncols missing: ", paste0(missing_cols, collapse = ", "))
+    }
+
+    # add extra cols if not present
+    message("[pgx.custom_annotation] Filling annotation table...")
+    extra_cols <- c("human_ortholog", "gene_title", "gene_biotype",  
+                    "chr", "pos", "tx_len", "map", "source"
+                    )
+    for (col_i in extra_cols) {
+      if (!col_i %in% colnames(custom_annot)) {
+        custom_annot[[col_i]] <- switch(col_i,
+          "human_ortholog" = "",
+          "gene_title" = "unknown",
+          "gene_biotype" = "unknown", 
+          "chr" = "unknown",
+          "pos" = 0,
+          "tx_len" = 0,
+          "map" = "1",
+          "source" = "custom"
+          )
+      }
+    }
+
+    # Conform annotation table to pgx$counts
+    annot_genes <- sum(rownames(pgx$counts) %in% custom_annot$feature) 
+    annot_fraction <- annot_genes/ nrow(pgx$counts)
+    
+    if (annot_fraction > .5) {
+      # filter annotated table by pgx$counts rownames using match
+      custom_annot <- custom_annot[match(rownames(pgx$counts), custom_annot$feature), ]
+    } else {
+      stop("[pgx.custom_annotation] Not enought annoated genes. Be sure 
+        custom_annot$feature matches counts rownames")
+    }
+
+  } else {
+    # Create custom gene table from counts rownames
+    message("[pgx.custom_annotation] Creating annotation table from counts rownames...")
+    custom_annot <- data.frame(
+      feature = rownames(pgx$counts),
+      symbol = rownames(pgx$counts),
+      gene_name = rownames(pgx$counts),
+      human_ortholog = "",
+      gene_title = "unknown",
+      gene_biotype = "unknown", 
+      chr = "unknown",
+      pos = 0,
+      tx_len = 0,
+      map = "1",
+      source = "custom"
+    )
+  }
+
+  rownames(custom_annot) <- rownames(pgx$counts)
+
+  return(custom_annot)
+}
 
 
 #' @title Detect probe type from probe set
@@ -737,10 +794,10 @@ id2symbol <- function(probes, organism = "human") {
 #' \dontrun{
 #' probes <- probes <- c("NM_001081979", "NM_001081980", "NM_001081981", "NM_001081982", "NM_001081983")
 #' organism <- "Mouse"
-#' type <- detect_probetype.ORGDB(probes, organism)
+#' type <- guess_probetype.ORGDB(probes, organism)
 #' }
 #' @export
-detect_probetype.ORGDB <- function(probes, organism) {
+guess_probetype.ORGDB <- function(probes, organism) {
   warning("DEPRECATED. Please use guess_probetype")
 
   ## Get org database
@@ -761,6 +818,7 @@ detect_probetype.ORGDB <- function(probes, organism) {
   keytypes <- c(
     "ENSEMBL", "ENSEMBLTRANS", "SYMBOL", "REFSEQ", "UNIPROT", "ACCNUM"
   )
+
   ##  key_matches <- vector("character", length(keytypes))
   key_matches <- rep(0L, length(keytypes))
   names(key_matches) <- keytypes
@@ -775,6 +833,11 @@ detect_probetype.ORGDB <- function(probes, organism) {
     probes <- probes[as.integer(seq(1, length(probes), 100))]
   }
 
+  ## remove versioning postfix from ensembl
+  if( mean(grepl("^ENST",probes)) > 0.5 ) {
+    probes <- sub("[.][0-9]+$","",probes)  
+  }
+    
   # Iterate over probe types
   for (key in keytypes) {
     n <- 0
@@ -791,7 +854,8 @@ detect_probetype.ORGDB <- function(probes, organism) {
     key_matches[key] <- n
   }
 
-  # Return top match
+  ## Return top match
+##  key_matches    
   if (all(key_matches == 0)) {
     stop("Probe type not found, please, check your probes")
   } else {
@@ -800,6 +864,11 @@ detect_probetype.ORGDB <- function(probes, organism) {
 
   return(top_match)
 }
+
+
+## ================================================================================
+## ========================= DEPRECATED ===========================================
+## ================================================================================
 
 
 #' Detect probe type
@@ -855,13 +924,13 @@ detect_probetype.ORGDB <- function(probes, organism) {
 #' }
 #'
 #' @export
-detect_probetype.BIOMART <- function(probes, mart = NULL, organism = NULL, verbose = TRUE, nsample = 100, dbounce=1) {
+guess_probetype.BIOMART <- function(probes, mart = NULL, organism = NULL, verbose = TRUE, nsample = 100, dbounce=1) {
 
-  message("[detect_probetype.BIOMART] DEPRECATED. Please use guess_probetype")
+  message("[guess_probetype.BIOMART] DEPRECATED. Please use guess_probetype")
 
   # Check mart
   if (is.null(mart) && is.null(organism)) {
-    stop("[detect_probetype.BIOMART] Mart not found. Specify a BioMart database or organism to use.")
+    stop("[guess_probetype.BIOMART] Mart not found. Specify a BioMart database or organism to use.")
   }
   if (is.null(mart) && !is.null(organism)) {
     mart <- use_mart(organism)
@@ -869,7 +938,7 @@ detect_probetype.BIOMART <- function(probes, mart = NULL, organism = NULL, verbo
   if (is.null(mart)) stop("ERROR : could not establish connection to MART.")
   
   # Prepare inputs
-  if (verbose) message("[detect_probetype.BIOMART] guessing probe type...")
+  if (verbose) message("[guess_probetype.BIOMART] guessing probe type...")
 
   clean_probes <- probes[!is.na(probes)]
   n <- length(clean_probes)
@@ -890,34 +959,7 @@ detect_probetype.BIOMART <- function(probes, mart = NULL, organism = NULL, verbo
     "refseq_peptide"
   )
 
-  # often we see multiples probes at once
-  # initially we can try to detect as many probes as possible from each probe type
-  # the type that guess better, is the one that will be used
-  # this approach still has issues, as sometimes we have mixed probe types in on study.
-
-  ## !!!!!NEED REFACTORING!!!!! : this is so bad... (IK)
-  ## if(0) {
-  ## probe_check <- sapply(probe_types_to_check, FUN = function(x) {
-  ##   tryCatch(
-  ##     {
-  ##       tmp <- biomaRt::getBM(
-  ##         attributes = x,
-  ##         filters = x,
-  ##         values = subset_probes,
-  ##         mart = mart
-  ##       )
-  ##       Sys.sleep(dbounce) # Sleep time to prevent bounce from ensembl for consecutive calls
-  ##       out <- nrow(tmp) / length(subset_probes)
-  ##       return(out)
-  ##     },
-  ##     error = function(e) {
-  ##       return(0)
-  ##     }
-  ##   )
-  ## })
-  ## }
-
-  ## As above but we stop the search if 50% of the subset-probes match
+  ## Check probetype match and stop the search if 50% of the subset-probes match
   probe_check <- c()
   check.ratio <- 0
   x = probe_types_to_check[2]
@@ -940,18 +982,86 @@ detect_probetype.BIOMART <- function(probes, mart = NULL, organism = NULL, verbo
     Sys.sleep(dbounce) # Sleep time to prevent bounce from ensembl for consecutive calls
   }
   
-  dbg("[detect_probetype.BIOMART] probe_check = ", probe_check)
+  dbg("[guess_probetype.BIOMART] probe_check = ", probe_check)
   
   ## Check matches and return if winner
   probe_type <- ""  ## default fail type
   if (all(probe_check == 0)) {
     # TODO the probe2symbol and detect_probe code should be used in data-preview,
     # and we should warn the user in case no matches are found
-    message("[detect_probetype.BIOMART] ERROR. Probe type not found, please, check your probes")
+    message("[guess_probetype.BIOMART] ERROR. Probe type not found, please, check your probes")
   } else {
     probe_type <- names(which.max(probe_check))
   }
-  if (verbose) message("[detect_probetype.BIOMART] detected probe type = ", probe_type)
+  if (verbose) message("[guess_probetype.BIOMART] detected probe type = ", probe_type)
 
   return(probe_type)
+}
+
+
+pgx.gene_table.OLD <- function(pgx, organism) {
+  # Safety checks
+  stopifnot(is.list(pgx))
+  stopifnot(is.character(organism))
+
+  # Init vals
+  genes <- NULL
+  ensembl_dataset <- NULL
+  counts <- pgx$counts
+  probes <- rownames(counts)
+  probe_type <- NA_character_
+  species_info <- playbase::SPECIES_TABLE[species_name == organism]
+
+  # Some species appear in more than one mart, select ensembl only to avoid confusion
+  if (nrow(species_info) > 1) {
+    species_info <- species_info[mart == "ensembl"]
+    species_info <- species_info[1, ]
+  }
+
+  # Use while loop for retries
+  counter <- 0
+  while (is.null(genes) && counter <= 5) {
+    message(paste0("[pgx.gene_table] attempt to annotate genes, counter = ", counter + 1))
+    # Set waiter so that we can make multiple calls with waiting time
+    Sys.sleep(counter * 10)
+
+    # Get ensembl
+    if (is.null(ensembl_dataset)) {
+      try({
+        ensembl <- biomaRt::useEnsembl(biomart = "ensembl")
+        ensembl_dataset <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
+      })
+    }
+
+    # Get probe type
+    if (!is.null(ensembl_dataset) & is.na(probe_type)) {
+      probe_type <- detect_probe.DEPRECATED(probes, ensembl_dataset)
+    }
+
+    # Get gene table
+    if (!is.na(probe_type) & !is.null(ensembl_dataset)) {
+      genes <- ngs.getGeneAnnotation_BIOMART(
+        probes = probes,
+        organism = organism,
+        probe_type = probe_type,
+        mart = ensembl_dataset
+      )
+
+      all_genes <- biomaRt::getBM(attributes = "external_gene_name", mart = ensembl_dataset)
+      all_genes <- all_genes[, 1]
+    }
+    counter <- counter + 1
+  }
+
+  if (counter > 5 && is.null(genes)) {
+    message("[pgx.gene_table] WARNING. could not reach ensembl server to get gene annotation")
+    return(pgx)
+  }
+
+  # Return data
+  pgx$genes <- genes
+  pgx$all_genes <- all_genes ## Why need this?? unneeded baggage.. (IK)
+  pgx$probe_type <- probe_type ## Why need this?? unneeded baggage.. (IK)
+
+  return(pgx)
 }

@@ -1,3 +1,166 @@
+#' Read data file as matrix
+#'
+#' @param file Path to input data file
+#' @param skip_row_check (default `FALSE`) Flag to skip the removal
+#' of empty rows
+#'
+#' @return Matrix object containing data from file
+#'
+#' @description Reads a tabular data file and returns a matrix object.
+#' Automatically detects separator and allows duplicate row names.
+#'
+#' @details This function reads a tabular text file, automatically detecting the
+#' separator (tab, comma, semicolon). It returns a matrix containing the data values,
+#' using the first column as rownames (allowing duplicates). Blank rows and rows with
+#' NA as rowname are skipped.
+#'
+#' @examples
+#' \dontrun{
+#' mymatrix <- read.as_matrix(mydata.csv)
+#' }
+#' @export
+read.as_matrix <- function(file, skip_row_check = FALSE) {
+  ## determine if there are empty lines in header
+  x0 <- data.table::fread(
+    file = file,
+    header = FALSE,
+    nrow = 100
+  )
+  x0[is.na(x0)] <- ""
+  skip <- min(which(cumsum(rowMeans(x0 != "")) > 0)) - 1
+
+  ## read delimited table automatically determine separator. allow
+  ## duplicated rownames. This implements with faster fread.
+  x0 <- data.table::fread(
+    file = file,
+    check.names = FALSE,
+    header = TRUE,
+    fill = TRUE,
+    skip = skip,
+    blank.lines.skip = TRUE,
+    stringsAsFactors = FALSE
+  )
+
+  x <- NULL
+  ## drop rows without rownames
+  sel <- which(!as.character(x0[[1]]) %in% c("", " ", "NA", "na", NA))
+
+  ## get values from second column forward and take first column as
+  ## rownames. as.matrix means we do not have mixed types (such as in
+  ## dataframes).
+  if (length(sel)) {
+    if (ncol(x0) >= 2) {
+      x <- as.matrix(x0[sel, -1, drop = FALSE]) ## always as matrix
+      rownames(x) <- x0[[1]][sel]
+    } else {
+      x <- matrix(NA, length(sel), 0)
+      rownames(x) <- x0[[1]][sel]
+    }
+  } else {
+    return(NULL)
+  }
+
+  ## for character matrix, we strip whitespace
+  if (is.character(x)) {
+    x <- trimws(x)
+  }
+
+  ## For csv with missing rownames field at (1,1) in the header,
+  ## fill=TRUE will fail. Check header with slow read.csv() and
+  ## correct if needed. fread is fast but is not so robust...
+  hdr <- utils::read.csv(
+    file = file, check.names = FALSE, na.strings = NULL,
+    header = TRUE, nrows = 1, skip = skip, row.names = 1
+  )
+
+  if (NCOL(x) > 0 && !all(colnames(x) == colnames(hdr))) {
+    message("read.as_matrix: warning correcting header")
+    colnames(x) <- colnames(hdr)
+  }
+
+  ## some csv have trailing empty rows/cols at end of table
+  if (NCOL(x) && !skip_row_check) { # bypass in case full NA rows
+    empty.row <- (rowSums(is.na(x)) == ncol(x))
+    if (tail(empty.row, 1)) {
+      n <- which(!rev(empty.row))[1] - 1
+      ii <- (nrow(x) - n + 1):nrow(x)
+      x <- x[-ii, , drop = FALSE]
+    }
+    ## some csv have trailing empty columns at end of table
+    empty.col <- (colSums(is.na(x)) == nrow(x))
+    if (tail(empty.col, 1)) {
+      n <- which(!rev(empty.col))[1] - 1
+      ii <- (ncol(x) - n + 1):ncol(x)
+      x <- x[, -ii, drop = FALSE]
+    }
+  }
+  return(x)
+}
+
+
+#' Read CSV file into R efficiently
+#'
+#' @param file Path to CSV file
+#' @param check.names Logical, should column names be checked for syntactic validity. Default is FALSE.
+#' @param row.names Column to use for row names, default is 1 (first column).
+#' @param sep Separator character, default is "auto" for automatic detection.
+#' @param stringsAsFactors Logical, should character columns be converted to factors? Default is FALSE.
+#' @param header Logical, does the file have a header row? Default is TRUE.
+#' @param asMatrix Logical, should the result be returned as a matrix instead of a data frame? Default is TRUE.
+#'
+#' @return A data frame or matrix containing the parsed CSV data.
+#'
+#' @details This function efficiently reads a CSV file into R using \code{data.table::fread()}, then converts it into a regular data frame or matrix.
+#' It is faster than \code{read.csv()} especially for large files.
+#'
+#' By default it converts the result to a matrix if all columns are numeric, character or integer. The row names are taken from the first column.
+#' Factor conversion, column type checking, and header parsing can be controlled with parameters.
+#'
+#' @examples
+#' \dontrun{
+#' dat <- fread.csv("data.csv")
+#' }
+#' @export
+fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
+                      stringsAsFactors = FALSE, header = TRUE, asMatrix = TRUE) {
+  df <- data.table::fread(
+    file = file, check.names = check.names, header = header,
+    sep = sep, fill = TRUE
+  )
+  if (NCOL(df) == 1) {
+    x <- matrix(NA, nrow(df), 0)
+    rownames(x) <- df[[row.names]] ## allow dups if matrix
+    return(x)
+  }
+  n0 <- ifelse(row.names == 0 ||is.null(row.names), 1, 2)
+  x <- data.frame(df[, n0:ncol(df)],
+    stringsAsFactors = stringsAsFactors,
+    check.names = check.names
+  )
+  ## check&correct for truncated header
+  if (row.names == 0) {
+    rn <- NULL
+  } else {
+    rn <- 1
+  }
+  hdr <- colnames(read.csv(file,
+    nrow = 1, sep = sep, header = TRUE,
+    row.names = rn, check.names = check.names
+  ))
+  if (!all(colnames(x) == hdr)) {
+    colnames(x) <- hdr
+  }
+  is.num <- all(sapply(x, class) == "numeric")
+  is.char <- all(sapply(x, class) == "character")
+  is.int <- all(sapply(x, class) == "integer")
+  if (asMatrix && (is.num || is.char || is.int)) x <- as.matrix(x)
+  if (!is.null(row.names) && row.names != 0) {
+    rownames(x) <- df[[row.names]] ## allow dups if matrix
+  }
+  return(x)
+}
+
+
 #' Read counts data from file
 #'
 #' @param file string. path to file

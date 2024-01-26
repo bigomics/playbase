@@ -6,7 +6,6 @@
 \usage{
 compute_testGenesets(
   pgx,
-  max.features = 1000,
   custom.geneset = list(gmt = NULL, info = NULL),
   test.methods = c("gsva", "camera", "fgsea"),
   remove.outputs = TRUE
@@ -15,11 +14,10 @@ compute_testGenesets(
 \arguments{
 \item{pgx}{A data object representing multi-omics data.}
 
-\item{max.features}{Maximum number of features to consider.}
-
 \item{custom.geneset}{Custom geneset object.}
 
-\item{test.methods}{Methods to use for testing.}
+\item{test.methods}{Character vector with the methods to use for testing.
+Currently supported: "gsva", "camera", "fgsea".}
 
 \item{remove.outputs}{Logical indicating whether to remove large outputs.}
 }

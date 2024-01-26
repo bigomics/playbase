@@ -42,29 +42,20 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     mc.cores <- round(0.5 * parallel::detectCores(all.tests = TRUE, logical = FALSE))
     mc.cores <- pmax(mc.cores, 1)
     mc.cores <- pmin(mc.cores, 16)
-    mc.cores
   }
-  cat("using", mc.cores, "number of cores\n")
-  cat("using", mc.threads, "number of threads\n")
+  message("using", mc.cores, "number of cores")
+  message("using", mc.threads, "number of threads")
 
   if (methods[1] == "*") {
     methods <- ALL.GENESET.METHODS
   }
   methods <- intersect(methods, ALL.GENESET.METHODS)
-  cat("calculating methods:", methods, "\n")
-
-  ## ##  filter small gene sets
-  ## cat("filtering gene sets...\n")
-  ## gmt <- lapply(gmt, function(s) intersect(s, rownames(X)))
-  ## gmt.size <- sapply(gmt, length)
-  ## summary(gmt.size)
-  ## keep <- which(gmt.size >= 10 & gmt.size <= 200)
-  ## gmt <- gmt[keep]
+  message("calculating methods:", methods)
 
   ## If degenerate set design to NULL
   if (!is.null(design) && ncol(design) >= ncol(X)) {
     ## "no-replicate" design!!!
-    cat("WARNING: degenerate design. setting design to NULL\n")
+    message("WARNING: degenerate design. setting design to NULL")
     contr.matrix <- design %*% contr.matrix
     design <- NULL
   }
@@ -76,7 +67,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     exp.matrix <- contr.matrix[colnames(X), , drop = FALSE]
   }
   Y <- Y[colnames(X), , drop = FALSE]
-  dim(exp.matrix)
 
   ## some "normalization" for single-sample methods
   my.normalize <- function(zx) {
@@ -91,12 +81,11 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   ## pre-compute matrices
   zx.gsva <- zx.ssgsea <- zx.rnkcorr <- NULL
   res.gsva <- res.ssgsea <- res.rnkcorr <- NULL
-  methods
 
   G <- G[rownames(X), names(gmt), drop = FALSE]
 
   if ("spearman" %in% methods) {
-    cat("fitting contrasts using spearman/limma... \n")
+    message("fitting contrasts using spearman/limma... ")
 
     ## single-sample gene set enrichment using (fast) rank correlation
     xx1 <- X - rowMeans(X, na.rm = TRUE) ## center it...
@@ -127,7 +116,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   }
 
   if ("gsva" %in% methods) {
-    cat("fitting contrasts using GSVA/limma... \n")
+    message("fitting contrasts using GSVA/limma... ")
     tt <- system.time({
       zx.gsva <- NULL
       zx.gsva <- try(
@@ -136,16 +125,16 @@ gset.fitContrastsWithAllMethods <- function(gmt,
           parallel.sz = mc.cores, verbose = FALSE
         )
       )
-      dim(zx.gsva)
+
       if (is.null(zx.gsva) || "try-error" %in% class(zx.gsva)) {
         ## switch to single core...
-        cat("WARNING:: GSVA ERROR : retrying single core ... \n")
+        warning("WARNING: GSVA ERROR: retrying single core... ")
         zx.gsva <- try(GSVA::gsva(as.matrix(X), gmt[],
           method = "gsva",
           parallel.sz = 1, verbose = FALSE
         ))
       }
-      class(zx.gsva)
+
       if (!"try-error" %in% class(zx.gsva)) {
         zx.gsva <- my.normalize(zx.gsva)
         jj <- match(names(gmt), rownames(zx.gsva))
@@ -164,14 +153,14 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   }
 
   if ("ssgsea" %in% methods) {
-    cat("fitting contrasts using ssGSEA/limma... \n")
+    message("fitting contrasts using ssGSEA/limma... ")
     tt <- system.time({
       zx.ssgsea <- try(GSVA::gsva(as.matrix(X), gmt[],
         method = "ssgsea",
         parallel.sz = mc.cores, verbose = FALSE
       ))
       if (!"try-error" %in% class(zx.ssgsea)) {
-        dim(zx.ssgsea)
+
         zx.ssgsea <- my.normalize(zx.ssgsea)
         jj <- match(names(gmt), rownames(zx.ssgsea))
         zx.ssgsea <- zx.ssgsea[jj, colnames(X), drop = FALSE] ## make sure..
@@ -198,11 +187,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     jj <- which(exp.matrix[, k] != 0)
     yy <- 1 * (exp.matrix[jj, k] > 0)
     xx <- X[, jj]
-    dim(xx)
-    table(yy)
     ref <- 0
-    ref
-
     timings <- c()
     res <- list()
 
@@ -245,8 +230,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       })
 
       timings <- rbind(timings, c("fisher", tt))
-      Matrix::head(output)
-      dim(output)
       output <- output[match(names(gmt), rownames(output)), ]
       rownames(output) <- names(gmt)
       output <- output[, c("sign", "p.value", "q.value", "odd.ratio", "overlap")]
@@ -257,7 +240,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     ## ----------------------------------------------------
     ## GSVA-limma
     ## ----------------------------------------------------
-    LIMMA.TREND <- FALSE
+
     LIMMA.TREND <- TRUE
     if ("ssgsea" %in% method) {
       zx <- zx.ssgsea[, colnames(xx)]
@@ -284,8 +267,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
         ) ## ssgsea
       })
       timings <- rbind(timings, c("gsva", tt))
-      Matrix::head(output)
-      dim(output)
       output <- output[match(names(gmt), rownames(output)), ]
       rownames(output) <- names(gmt)
       output <- output[, c("logFC", "P.Value", "adj.P.Val", "0", "1")]
@@ -320,8 +301,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       timings <- rbind(timings, c("camera", tt))
       ## note: camera does not provide any score!!!!
       output$score <- c(-1, 1)[1 + 1 * (output$Direction == "Up")] * -log10(output$PValue)
-      Matrix::head(output)
-      dim(output)
       output <- output[match(names(gmt), rownames(output)), ]
       rownames(output) <- names(gmt)
       output <- output[, c("score", "PValue", "FDR", "NGenes", "Direction")]
@@ -336,8 +315,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       timings <- rbind(timings, c("fry", tt))
       ## note: camera does not provide any logFC!!!!
       output$score <- c(-1, 1)[1 + 1 * (output$Direction == "Up")] * -log10(output$PValue)
-      Matrix::head(output)
-      dim(output)
       output <- output[match(names(gmt), rownames(output)), ]
       rownames(output) <- names(gmt)
       output <- output[, c("score", "PValue", "FDR", "NGenes", "Direction")]
@@ -349,7 +326,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     if ("fgsea" %in% method) {
       rnk <- rowMeans(xx[, which(yy == 1), drop = FALSE]) - rowMeans(xx[, which(yy == 0), drop = FALSE])
       rnk <- rnk + 1e-8 * stats::rnorm(length(rnk))
-      #
+
       tt <- system.time(
         output <- fgsea::fgseaSimple(gmt, rnk,
           nperm = 10000,
@@ -357,12 +334,9 @@ gset.fitContrastsWithAllMethods <- function(gmt,
         ) ## nproc0 fails!!!
       )
       timings <- rbind(timings, c("fgsea", tt))
-      names(output)
       output <- as.data.frame(output)
       output <- output[match(names(gmt), output$pathway), ]
       rownames(output) <- names(gmt)
-      Matrix::head(output)
-      dim(output)
       output <- output[, c("NES", "pval", "padj", "size", "leadingEdge")]
       colnames(output) <- c("score", "p.value", "q.value", "SIZE", "LEADING GENES")
       res[["fgsea"]] <- output
@@ -372,11 +346,9 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     return(res2)
   }
 
-  method <- "fisher"
-  method <- "fgsea"
-  method <- "gsva"
+
   fitContrastsWithMethod <- function(method) {
-    cat("fitting contrasts using", method, "... \n")
+    message("fitting contrasts using ", method, "... ")
     results <- list()
     timings <- c()
     k <- 1
@@ -392,10 +364,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
   names(all.results)
   methods2 <- setdiff(methods, names(all.results))
-  methods2
-  m <- "camera"
-  m <- "fgsea"
-  m <- "fisher"
+
   for (m in methods2) {
     res <- fitContrastsWithMethod(method = m)
     all.results[[m]] <- res$results
@@ -405,8 +374,8 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   ## --------------------------------------------------------------
   ## Reshape matrices by comparison
   ## --------------------------------------------------------------
-  names(all.results)
-  cat("[gset.fitContrastsWithAllMethods] length(all.results)=", length(all.results), "\n")
+
+  message("[gset.fitContrastsWithAllMethods] length(all.results) = ", length(all.results))
   tests <- names(all.results[[1]])
   ntest <- length(tests)
 
@@ -423,11 +392,10 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   ## --------------------------------------------------------------
   ## Compute sig counts (by method)
   ## --------------------------------------------------------------
-  cat("computing sigcounts... \n")
+  message("computing sigcounts... ")
 
   methods <- colnames(Q[[1]])
   nmethod <- length(methods)
-  nmethod
   pv.list <- sort(c(1e-16, 10**seq(-8, -2, 2), 0.05, 0.1, 0.2, 0.5, 1))
   sig.counts <- list()
   i <- 1
@@ -461,7 +429,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   ## --------------------------------------------------
   ## meta analysis, aggregate p-values
   ## --------------------------------------------------
-  cat("computing meta-p values... \n")
+  message("computing meta-p values... \n")
 
   all.meta <- list()
   i <- 1
@@ -471,8 +439,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     fc <- S[[i]]
     meta.p <- apply(pv, 1, max, na.rm = TRUE) ## maximum p-statistic (simple & fast)
     meta.q <- apply(qv, 1, max, na.rm = TRUE) ## maximum q-statistic (simple & fast)
-    #
-    #
     ss.rank <- function(x) scale(sign(x) * rank(abs(x), na.last = "keep"), center = FALSE)
     if (nrow(S[[i]]) == 1) {
       meta.fx <- S[[i]]
@@ -491,12 +457,10 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   ## --------------------------------------------------
   ## Add meta matrices (this becomes quite large...)
   ## --------------------------------------------------
-  cat("computing meta-matrix... \n")
-
+  
+  message("computing meta-matrix... ")
   m <- list(gsva = zx.gsva, ssgsea = zx.ssgsea, rnkcorr = zx.rnkcorr)
   m <- m[which(!sapply(m, is.null))]
-  names(m)
-
 
   ## average expression of geneset members
   ng <- Matrix::colSums(G != 0)
@@ -538,7 +502,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
                                        trend = TRUE, conform.output = FALSE) {
   if (!is.null(design)) {
-    cat("fitting gset.LIMMA contrasts with design matrix....\n")
+    message("fitting gset.LIMMA contrasts with design matrix... ")
     vfit <- limma::lmFit(gsetX, design)
     vfit <- limma::contrasts.fit(vfit, contrasts = contr.matrix)
     efit <- limma::eBayes(vfit, trend = trend, robust = TRUE)
@@ -559,7 +523,7 @@ gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
     }
     names(tables) <- colnames(contr.matrix)
   } else {
-    cat("fitting gset.LIMMA contrasts without design....\n")
+    message("fitting gset.LIMMA contrasts without design.... ")
     tables <- list()
     i <- 1
     for (i in 1:ncol(contr.matrix)) {

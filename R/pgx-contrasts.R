@@ -725,6 +725,12 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
     x
   }
   num.values <- c(-1, 0, 1, NA, "NA", "na", "", " ")
+
+  # convert values <0 to 1 and values >0 to 1 (necessary for some old design matrix with float values)
+  # sign function will fail when non-numeric values are present, use try catch to preserve input
+
+  contr.matrix <- tryCatch(sign(contr.matrix), error = function(e) contr.matrix)
+
   is.num <- all(apply(contr.matrix, 2, function(x) all(x %in% num.values)))
   is.num
   if (!is.num) {
@@ -845,10 +851,6 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   is.group.contrast <- has.group.col && all(samples[, group.col] %in% rownames(contrasts))
   is.sample.contrast <- nrow(contrasts) > 0 && all(rownames(contrasts) %in% rownames(samples))
 
-  is.group.contrast
-  is.sample.contrast
-  is.numeric.contrast
-
   if (!is.sample.contrast && !has.group.col) {
     message("[contrasts.convertToLabelMatrix] ERROR: Invalid group-wise contrast. could not find 'group' column.")
     return(NULL)
@@ -857,7 +859,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
     message("[contrasts.convertToLabelMatrix] ERROR: Invalid contrast.")
     return(NULL)
   }
-
+  
   new.contrasts <- contrasts
   ## old1: group-wise -1/0/1 matrix
   if (is.group.contrast && is.numeric.contrast) {
