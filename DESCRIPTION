@@ -91,6 +91,7 @@ Imports:
     RColorBrewer,
     recount,
     reshape2,
+    reticulate,
     rhdf5,
     rlang,
     rliger,
@@ -114,6 +115,7 @@ Imports:
     webshot,
     WGCNA,
     wordcloud,
+    xbioc,
     xgboost
 Remotes:
     bigomics/playdata,
