@@ -9,5 +9,14 @@ res=$(cat test_result.txt)
 # # return test result as an output (will be deprecated)
 echo ::set-output name=test_result::$res
 
-# line above should be switched to this, but for some reason it does not work
-#echo "test_result=$res" >> $GITHUB_OUTPUT
+
+# return exit status
+failed_tests_count=$(grep -i -c "Failed tests" test-results-fail.txt)
+
+if (( failed_tests_count -gr 0 )); then
+    echo "There are failed tests."
+    exit 1
+else
+    echo "All tests passed."
+    exit 0
+fi
