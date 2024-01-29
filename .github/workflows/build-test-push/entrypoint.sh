@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Run tests
-R -e "x <- shiny::runTests(assert = FALSE); writeLines(as.character(all(x[[2]])), 'test_result.txt')"
+R -e "x <- devtools::test(quiet=T)" > test_result.txt
 
 # Read test results from file
 res=$(cat test_result.txt)

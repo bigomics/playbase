@@ -15,7 +15,7 @@ jobs:
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       -
-        name: Shinytest docker
+        name: Unittest docker
         id: test-snapshot
         run: |
           docker build --build-arg GITHUB_SHA=${{ github.sha }} -t ${{ env.DOCKER_TAG }} -f ./.github/workflows/build-test-push/Dockerfile .
