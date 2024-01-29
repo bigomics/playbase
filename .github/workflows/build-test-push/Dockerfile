@@ -28,8 +28,6 @@ RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
 #------------------------------------------------------------
 
 RUN R -e "remotes::install_github('bigomics/PCSF',dependencies=FALSE)"
-RUN R -e "remotes::install_github('bigomics/bigdash',dependencies=FALSE)"
-RUN R -e "remotes::install_github('bigomics/bigLoaders',dependencies=FALSE)"
 RUN R -e "remotes::install_github('bigomics/fgsea')"
 
 # check if playbase@{$GITHUB_HEAD_REF} exists, if it does, install.. other wise install main
@@ -40,23 +38,6 @@ RUN BRANCH_EXISTS=$(git ls-remote --heads https://github.com/bigomics/playbase.g
     else \
         R -e "remotes::install_github('bigomics/playbase@${BRANCH_PLAYBASE}',dependencies=FALSE)"; \
     fi
-
-#------------------------------------------------------------
-# Update configuration files into the Docker image
-#------------------------------------------------------------
-
-RUN rm -fr /omicsplayground  \
-    && git clone -b ${BRANCH} --depth 1 \
-    https://github.com/bigomics/omicsplayground.git /omicsplayground \
-    && cd /omicsplayground \
-    && git fetch origin $GITHUB_SHA \
-    && git checkout $GITHUB_SHA \
-    && chmod -R ugo+rwX /omicsplayground
-
-WORKDIR /omicsplayground
-
-RUN if test -f renv.lock; then mv renv.lock renv.lock.DISABLED; fi
-RUN make sass
 
 # add entrypoint to execute when the docker container starts up
 
