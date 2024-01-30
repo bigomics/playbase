@@ -41,6 +41,6 @@ RUN R CMD INSTALL /playbase
 # add entrypoint to execute when the docker container starts up
 
 # echo list files in current directory
-RUN ls -l .
+RUN chmod +x /playbvase/.github/workflows/build-test-push/entrypoint.sh
 
 ENTRYPOINT ["/playbase/.github/workflows/build-test-push/entrypoint.sh"]
