@@ -10,7 +10,9 @@
 # Start from lastest base image
 #------------------------------------------------------------
 
-FROM bigomics/omicsplayground-base:ub2204_v2
+ARG DOCKER_TAG=bigomics/omicsplayground:latest
+
+FROM ${DOCKER_TAG}  
 
 #------------------------------------------------------------
 # Set env variables 
@@ -19,7 +21,7 @@ WORKDIR /
 ARG BRANCH=master
 ARG BRANCH_PLAYBASE=main
 ARG GITHUB_SHA=master
-ENV DEBIAN_FRONTEND noninteractive
+
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8 
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
 
@@ -32,13 +34,13 @@ RUN R -e "remotes::install_github('bigomics/fgsea')"
 
 
 # copy bigomics/playbase code from github checkout
-COPY ./playbase /playbase
+COPY . /playbase
 
 RUN R CMD INSTALL /playbase 
 
 # add entrypoint to execute when the docker container starts up
 
-# give permission to execute the entrypoint
-RUN chmod +x .github/workflows/build-test-push/entrypoint.sh
+# echo list files in current directory
+RUN chmod +x /playbase/.github/workflows/build-test-push/entrypoint.sh
 
-ENTRYPOINT [".github/workflows/build-test-push/entrypoint.sh"]
+ENTRYPOINT ["/playbase/.github/workflows/build-test-push/entrypoint.sh"]

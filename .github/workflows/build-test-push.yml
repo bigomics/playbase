@@ -1,4 +1,4 @@
-name: Snapshot test
+name: Playbase unittest
 on: 
   pull_request:
   workflow_dispatch:
@@ -14,12 +14,21 @@ jobs:
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+      # - 
+      #   name: Setup upterm session
+      #   uses: lhotari/action-upterm@v1
+      #   with:
+      #     ## limits ssh access and adds the ssh public key for the user which triggered the workflow
+      #     limit-access-to-actor: true
+      #     ## limits ssh access and adds the ssh public keys of the listed GitHub users
+      #     limit-access-to-users: mauromiguelm
+      #     wait-timeout-minutes: 120
       -
         name: Unittest docker
         id: test-snapshot
         run: |
-          docker build --build-arg GITHUB_SHA=${{ github.sha }} -t ${{ env.DOCKER_TAG }} -f ./.github/workflows/build-test-push/Dockerfile .
-          docker run --name run_tests bigomics/omicsplayground:latest
+          docker build --build-arg DOCKER_TAG=$DOCKER_TAG -t $DOCKER_TAG -f ./.github/workflows/build-test-push/Dockerfile .
+          docker run --name run_tests $DOCKER_TAG
           docker cp run_tests:/test_result.txt .
       - 
         name: Upload error log
@@ -29,12 +38,4 @@ jobs:
           name: test-error-log
           path: ./test_result.txt
           if-no-files-found: ignore
-      - 
-        name: Setup upterm session
-        uses: lhotari/action-upterm@v1
-        with:
-          ## limits ssh access and adds the ssh public key for the user which triggered the workflow
-          limit-access-to-actor: true
-          ## limits ssh access and adds the ssh public keys of the listed GitHub users
-          limit-access-to-users: mauromiguelm
-          wait-timeout-minutes: 120
+      

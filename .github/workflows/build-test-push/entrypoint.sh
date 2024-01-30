@@ -9,7 +9,6 @@ res=$(cat test_result.txt)
 # # return test result as an output (will be deprecated)
 echo ::set-output name=test_result::$res
 
-
 # return exit status
 failed_tests_count=$(grep -i -c "Failed tests" test-results-fail.txt)
 
