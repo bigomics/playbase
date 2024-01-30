@@ -40,4 +40,4 @@ RUN R CMD INSTALL /playbase
 
 # add entrypoint to execute when the docker container starts up
 
-ENTRYPOINT [".github/workflows/build-test-push/entrypoint.sh"]
+ENTRYPOINT ["/playbase/.github/workflows/build-test-push/entrypoint.sh"]
