@@ -10,7 +10,7 @@
 # Start from lastest base image
 #------------------------------------------------------------
 
-FROM bigomics/omicsplayground-base:ub2204_v2
+FROM bigomics/omicsplayground:latest
 
 #------------------------------------------------------------
 # Set env variables 
@@ -32,7 +32,7 @@ RUN R -e "remotes::install_github('bigomics/fgsea')"
 
 
 # copy bigomics/playbase code from github checkout
-COPY ./playbase /playbase
+COPY . /playbase
 
 RUN R CMD INSTALL /playbase 
 
