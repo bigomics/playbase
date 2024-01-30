@@ -10,7 +10,9 @@
 # Start from lastest base image
 #------------------------------------------------------------
 
-FROM bigomics/omicsplayground:latest
+ARG DOCKER_TAG=bigomics/omicsplayground:latest
+
+FROM ${DOCKER_TAG}  
 
 #------------------------------------------------------------
 # Set env variables 
@@ -19,7 +21,7 @@ WORKDIR /
 ARG BRANCH=master
 ARG BRANCH_PLAYBASE=main
 ARG GITHUB_SHA=master
-ENV DEBIAN_FRONTEND noninteractive
+
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8 
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
 

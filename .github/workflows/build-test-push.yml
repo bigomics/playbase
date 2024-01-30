@@ -1,4 +1,4 @@
-name: Run unittest
+name: Playbase unittest
 on: 
   pull_request:
   workflow_dispatch:
@@ -27,7 +27,7 @@ jobs:
         name: Unittest docker
         id: test-snapshot
         run: |
-          docker build --build-arg GITHUB_SHA=${{ github.sha }} -t ${{ env.DOCKER_TAG }} -f ./.github/workflows/build-test-push/Dockerfile .
+          docker build --build-arg ${{ env.DOCKER_TAG}} --name playbase-unittest  -f ./.github/workflows/build-test-push/Dockerfile .
           docker run --name run_tests bigomics/omicsplayground:latest
           docker cp run_tests:/test_result.txt .
       - 
