@@ -52,8 +52,6 @@ testthat::test_that("selectSamplesFromSelectedLevels returns correct samples", {
     "sample_2"
   )
 
-  skip("TODO: fix this test")
-
   # Case 4: Multiple levels #TODO needs to be fixed
   levels <- c("Pheno1=A", "Pheno2=3")
   testthat::expect_equal(
