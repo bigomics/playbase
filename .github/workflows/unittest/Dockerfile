@@ -18,9 +18,6 @@ FROM ${DOCKER_TAG}
 # Set env variables 
 #------------------------------------------------------------
 WORKDIR /
-ARG BRANCH=master
-ARG BRANCH_PLAYBASE=main
-ARG GITHUB_SHA=master
 
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8 
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
@@ -41,6 +38,8 @@ RUN R CMD INSTALL /playbase
 # add entrypoint to execute when the docker container starts up
 
 # echo list files in current directory
-RUN chmod +x /playbase/.github/workflows/build-test-push/entrypoint.sh
 
-ENTRYPOINT ["/playbase/.github/workflows/build-test-push/entrypoint.sh"]
+WORKDIR /playbase
+RUN chmod +x /playbase/.github/workflows/unittest/entrypoint.sh
+
+ENTRYPOINT ["/playbase/.github/workflows/unittest/entrypoint.sh"]
