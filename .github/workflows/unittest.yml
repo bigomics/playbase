@@ -44,7 +44,15 @@ jobs:
         run: |
           docker run --name run_tests $DOCKER_TAG
           docker cp run_tests:/test_result.txt .
-
+      
+      - 
+        name: Check workflow result
+        id: check-workflow-result
+        run: |
+          if [[ "${{ steps.test-snapshot.outputs.workflow_result }}" == "false" ]]; then
+            echo "Workflow failed."
+            exit 1
+          fi
       - 
         name: Upload error log
         if: always()
