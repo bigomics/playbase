@@ -10,9 +10,9 @@ res=$(cat test_result.txt)
 echo ::set-output name=test_result::$res
 
 # return exit status
-failed_tests_count=$(grep -i -c "Failed tests" test-results-fail.txt)
+failed_tests_count=$(grep -i -c "Failed tests" test_result.txt)
 
-if (( failed_tests_count -gr 0 )); then
+if (( failed_tests_count > 0 )); then
     echo "There are failed tests."
     exit 1
 else
