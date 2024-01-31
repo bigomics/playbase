@@ -194,6 +194,9 @@ pgx.createPGX <- function(counts,
 
   # prune unused samples
   contrasts[contrasts %in% c("", " ", "NA")] <- NA
+  
+  # make a crash here
+  stop("trigger crash")
   used.samples <- names(which(rowSums(!is.na(contrasts)) > 0))
   if (prune.samples && length(used.samples) < ncol(counts)) {
     counts <- counts[, used.samples, drop = FALSE]
