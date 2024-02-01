@@ -27,7 +27,7 @@ pgx.checkINPUT <- function(
     ANY_NON_NUMERIC <- which(!is.na(df) & is.na(df_clean), arr.ind = TRUE)
 
     if (length(ANY_NON_NUMERIC) > 0 && PASS) {
-      check_return$e27 <- paste("gene:",rownames(ANY_NON_NUMERIC),"sample:", colnames(df_clean)[ANY_NON_NUMERIC[,2]])
+      check_return$e27 <- paste("gene:",rownames(ANY_NON_NUMERIC)," and ","sample:", colnames(df_clean)[ANY_NON_NUMERIC[,2]])
     }
 
     # check for duplicated colnanes (gives error)
