@@ -1,7 +1,7 @@
 Package: playbase
 Type: Package
 Title: Core back-end functionality and logic for OmicsPlayground
-Version: 0.1.16
+Version: 0.1.19
 Author: BigOmics Analytics SA
 Maintainer: The package maintainer <yourself@somewhere.net>
 Description: More about what it does (maybe more than one line)
@@ -91,6 +91,7 @@ Imports:
     RColorBrewer,
     recount,
     reshape2,
+    reticulate,
     rhdf5,
     rlang,
     rliger,
@@ -114,6 +115,7 @@ Imports:
     webshot,
     WGCNA,
     wordcloud,
+    xbioc,
     xgboost
 Remotes:
     bigomics/playdata,
