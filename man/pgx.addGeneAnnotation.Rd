@@ -37,6 +37,6 @@ of temporary Ensembl API errors.
 pgx <- list()
 pgx$counts <- matrix(rnorm(4), nrow = 2)
 rownames(pgx$counts) <- c("ENSG00000142192", "ENSG00000288602")
-pgx <- pgx.gene_table(pgx, "Human")
+pgx <- pgx.pgx.addGeneAnnotation(pgx, "Human")
 }
 }
