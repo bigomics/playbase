@@ -21,12 +21,7 @@ The cell cycle phase inference is performed using the Seurat package.
 }
 \examples{
 \dontrun{
-counts <- playbase::COUNTS
-mart <- biomaRt::useMart(biomart = "ensembl", dataset = species)
-ngs <- list(annot_table = ngs.getGeneAnnotation(rownames(counts),
-                                   probe_type = NULL,
-                                   mart = mart)
-)
-deconv <- compute_deconvolution(ngs, counts)
+pgx <- playbase::GEIGER_PGX
+deconv <- compute_cellcycle_gender(pgx)
 }
 }

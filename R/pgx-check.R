@@ -17,6 +17,10 @@ pgx.checkINPUT <- function(
   check_return <- list()
 
   if (datatype == "COUNTS" || datatype == "EXPRESSION") {
+    # convert matrix from character to numeric, sometimes we receive character matrix from read.csv function
+    df_clean <- apply(df_clean, 2, as.numeric, simplify = TRUE)
+    rownames(df_clean) <- rownames(df)
+
     sample_names <- colnames(df_clean)
 
     # check for duplicated colnanes (gives error)

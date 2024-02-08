@@ -89,7 +89,7 @@ example_file <- function(file = NULL) {
 
 #' GENES_TABLE dataset
 #'
-#' A PGX object after running pgx.createPGX() on the mini example counts, 
+#' A PGX object after running pgx.createPGX() on the mini example counts,
 #' samples and contrast data
 #'
 #' @format A PGX object

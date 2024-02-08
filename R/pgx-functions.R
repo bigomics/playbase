@@ -4,6 +4,7 @@
 ##
 
 
+
 #' @title Create a Phenotype Matrix
 #'
 #' @description This function creates a phenotype matrix from a PGX object.
@@ -55,7 +56,6 @@ pos.compact <- function(pos, d = 0.01) {
   }
   pos
 }
-
 
 #' Find non-overlapping boxes for points
 #'
@@ -265,51 +265,6 @@ add_opacity <- function(hexcol, opacity) {
 }
 
 
-#' Log-counts-per-million transformation
-#'
-#' @param counts Numeric matrix of read counts, with genes in rows and samples in columns.
-#' @param total Total count to scale to. Default is 1e6.
-#' @param prior Pseudocount to add prior to log transform. Default is 1.
-#'
-#' @return Matrix of log-transformed values.
-#'
-#' @details Transforms a matrix of read counts to log-counts-per-million (logCPM).
-#' Adds a pseudocount \code{prior} (default 1) before taking the log transform.
-#' Values are scaled to \code{total} counts (default 1e6).
-#'
-#' This stabilizes variance and normalizes for sequencing depth.
-#'
-#' @examples
-#' \dontrun{
-#' counts <- matrix(rnbinom(100 * 10, mu = 100, size = 1), 100, 10)
-#' logcpm <- logCPM(counts)
-#' }
-#' @export
-logCPM <- function(counts, total = 1e6, prior = 1) {
-  ## Transform to logCPM (log count-per-million) if total counts is
-  ## larger than 1e6, otherwise scale to previous avarage total count.
-  ##
-  ##
-  if (is.null(total)) {
-    total0 <- mean(Matrix::colSums(counts, na.rm = TRUE)) ## previous sum
-    total <- ifelse(total0 < 1e6, total0, 1e6)
-    message("[logCPM] setting column sums to = ", round(total, 2))
-  }
-  if (any(class(counts) == "dgCMatrix")) {
-    ## fast/sparse calculate CPM
-    cpm <- counts
-    cpm[is.na(cpm)] <- 0 ## OK??
-    cpm@x <- total * cpm@x / rep.int(Matrix::colSums(cpm), diff(cpm@p)) ## fast divide by columns sum
-    cpm@x <- log2(prior + cpm@x)
-    return(cpm)
-  } else {
-    totcounts <- Matrix::colSums(counts, na.rm = TRUE)
-    ## cpm <- t(t(counts) / totcounts * total)
-    cpm <- sweep(counts, 2, totcounts, FUN = "/") * total
-    x <- log2(prior + cpm)
-    return(x)
-  }
-}
 
 
 #' @title Check for Required Fields in a PGX Object
@@ -329,7 +284,7 @@ logCPM <- function(counts, total = 1e6, prior = 1) {
 pgx.checkObject <- function(pgx) {
   must.have <- c(
     "counts", "samples", "genes", "model.parameters",
-    "X", "gx.meta", "gset.meta", "gsetX", "GMT"
+    "X", "gx.meta", "GMT"
   )
   not.present <- setdiff(must.have, names(pgx))
   if (length(not.present) > 0) {
@@ -471,156 +426,6 @@ trimsame0 <- function(s, split = " ", summarize = FALSE, rev = FALSE) {
   }
   s <- sapply(s, paste, collapse = split)
   s
-}
-
-
-#' Read data file as matrix
-#'
-#' @param file Path to input data file
-#' @param skip_row_check (default `FALSE`) Flag to skip the removal
-#' of empty rows
-#'
-#' @return Matrix object containing data from file
-#'
-#' @description Reads a tabular data file and returns a matrix object.
-#' Automatically detects separator and allows duplicate row names.
-#'
-#' @details This function reads a tabular text file, automatically detecting the
-#' separator (tab, comma, semicolon). It returns a matrix containing the data values,
-#' using the first column as rownames (allowing duplicates). Blank rows and rows with
-#' NA as rowname are skipped.
-#'
-#' @examples
-#' \dontrun{
-#' mymatrix <- read.as_matrix(mydata.csv)
-#' }
-#' @export
-read.as_matrix <- function(file, skip_row_check = FALSE) {
-  ## determine if there are empty lines in header
-  x0 <- data.table::fread(
-    file = file,
-    header = FALSE,
-    nrow = 100
-  )
-  x0[is.na(x0)] <- ""
-  skip <- min(which(cumsum(rowMeans(x0 != "")) > 0)) - 1
-
-  ## read delimited table automatically determine separator. allow
-  ## duplicated rownames. This implements with faster fread.
-  x0 <- data.table::fread(
-    file = file,
-    check.names = FALSE,
-    header = TRUE,
-    fill = TRUE,
-    skip = skip,
-    blank.lines.skip = TRUE,
-    stringsAsFactors = FALSE
-  )
-
-  x <- NULL
-  ## drop rows without rownames
-  sel <- which(!as.character(x0[[1]]) %in% c("", " ", "NA", "na", NA))
-
-  ## get values from second column forward and take first column as
-  ## rownames. as.matrix means we do not have mixed types (such as in
-  ## dataframes).
-  if (length(sel)) {
-    if (ncol(x0) >= 2) {
-      x <- as.matrix(x0[sel, -1, drop = FALSE]) ## always as matrix
-      rownames(x) <- x0[[1]][sel]
-    } else {
-      x <- matrix(NA, length(sel), 0)
-      rownames(x) <- x0[[1]][sel]
-    }
-  } else {
-    return(NULL)
-  }
-
-  ## for character matrix, we strip whitespace
-  if (is.character(x)) {
-    x <- trimws(x)
-  }
-
-  ## For csv with missing rownames field at (1,1) in the header,
-  ## fill=TRUE will fail. Check header with slow read.csv() and
-  ## correct if needed. fread is fast but is not so robust...
-  hdr <- utils::read.csv(
-    file = file, check.names = FALSE, na.strings = NULL,
-    header = TRUE, nrows = 1, skip = skip, row.names = 1
-  )
-
-  if (NCOL(x) > 0 && !all(colnames(x) == colnames(hdr))) {
-    message("read.as_matrix: warning correcting header")
-    colnames(x) <- colnames(hdr)
-  }
-
-  ## some csv have trailing empty rows/cols at end of table
-  if (NCOL(x) && !skip_row_check) { # bypass in case full NA rows
-    empty.row <- (rowSums(is.na(x)) == ncol(x))
-    if (tail(empty.row, 1)) {
-      n <- which(!rev(empty.row))[1] - 1
-      ii <- (nrow(x) - n + 1):nrow(x)
-      x <- x[-ii, , drop = FALSE]
-    }
-    ## some csv have trailing empty columns at end of table
-    empty.col <- (colSums(is.na(x)) == nrow(x))
-    if (tail(empty.col, 1)) {
-      n <- which(!rev(empty.col))[1] - 1
-      ii <- (ncol(x) - n + 1):ncol(x)
-      x <- x[, -ii, drop = FALSE]
-    }
-  }
-  return(x)
-}
-
-
-#' Read CSV file into R efficiently
-#'
-#' @param file Path to CSV file
-#' @param check.names Logical, should column names be checked for syntactic validity. Default is FALSE.
-#' @param row.names Column to use for row names, default is 1 (first column).
-#' @param sep Separator character, default is "auto" for automatic detection.
-#' @param stringsAsFactors Logical, should character columns be converted to factors? Default is FALSE.
-#' @param header Logical, does the file have a header row? Default is TRUE.
-#' @param asMatrix Logical, should the result be returned as a matrix instead of a data frame? Default is TRUE.
-#'
-#' @return A data frame or matrix containing the parsed CSV data.
-#'
-#' @details This function efficiently reads a CSV file into R using \code{data.table::fread()}, then converts it into a regular data frame or matrix.
-#' It is faster than \code{read.csv()} especially for large files.
-#'
-#' By default it converts the result to a matrix if all columns are numeric, character or integer. The row names are taken from the first column.
-#' Factor conversion, column type checking, and header parsing can be controlled with parameters.
-#'
-#' @examples
-#' \dontrun{
-#' dat <- fread.csv("data.csv")
-#' }
-#' @export
-fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
-                      stringsAsFactors = FALSE, header = TRUE, asMatrix = TRUE) {
-  df <- data.table::fread(
-    file = file, check.names = check.names, header = header,
-    sep = sep, fill = TRUE
-  )
-  x <- data.frame(df[, 2:ncol(df)],
-    stringsAsFactors = stringsAsFactors,
-    check.names = check.names
-  )
-  ## check&correct for truncated header
-  hdr <- colnames(read.csv(file,
-    nrow = 1, sep = sep, header = TRUE,
-    row.names = 1, check.names = check.names
-  ))
-  if (!all(colnames(x) == hdr)) {
-    colnames(x) <- hdr
-  }
-  is.num <- all(sapply(x, class) == "numeric")
-  is.char <- all(sapply(x, class) == "character")
-  is.int <- all(sapply(x, class) == "integer")
-  if (asMatrix && (is.num || is.char || is.int)) x <- as.matrix(x)
-  rownames(x) <- df[[row.names]] ## allow dups if matrix
-  return(x)
 }
 
 
@@ -1102,11 +907,11 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 #'
 #' @param pgx A pgx object with the pgx$organism information and the pgx$counts slot for the
 #' guessing approach.
-#' @param capitalise logical: by default FALSE. Parameter to capitalise the first letter of the 
+#' @param capitalise logical: by default FALSE. Parameter to capitalise the first letter of the
 #' specie if mouse or human.
-#' @details This function retreives the pgx$organism slot. If it is not found, then it examines 
-#' the gene identifiers in the row names of a count matrix to determine if the data is from human 
-#' or mouse (main organism supported in the old playbase version). It checks if the identifiers 
+#' @details This function retreives the pgx$organism slot. If it is not found, then it examines
+#' the gene identifiers in the row names of a count matrix to determine if the data is from human
+#' or mouse (main organism supported in the old playbase version). It checks if the identifiers
 #' match common patterns found in mouse genes, like "rik", "loc", "orf". If more than 20% match
 #'  these mouse patterns, it assigns the organism as "mouse". Otherwise it assigns "human".
 #'
@@ -1114,21 +919,20 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 #' If this fraction is >0.8, it assigns "human". This relies on the assumption that human data
 #' will tend to have more uppercase ENSEMBL identifiers.
 #'
-#' @return Character string the organism. 
+#' @return Character string the organism.
 #' @export
 pgx.getOrganism <- function(pgx, capitalise = FALSE) {
-
   pgx.counts <- pgx$counts
   if (!is.null(pgx$organism)) {
     org <- pgx$organism
   } else {
-  rownames.counts <- grep("^rik|^loc|^orf", rownames(pgx$counts),
-    value = TRUE,
-    ignore.case = TRUE, invert = TRUE
-  )
-  cap.fraction <- mean(grepl("^[A-Z][a-z]+", rownames.counts), na.rm = TRUE)
-  is.mouse <- (cap.fraction > 0.8)
-  org <- ifelse(is.mouse, "mouse", "human")
+    rownames.counts <- grep("^rik|^loc|^orf", rownames(pgx$counts),
+      value = TRUE,
+      ignore.case = TRUE, invert = TRUE
+    )
+    cap.fraction <- mean(grepl("^[A-Z][a-z]+", rownames.counts), na.rm = TRUE)
+    is.mouse <- (cap.fraction > 0.8)
+    org <- ifelse(is.mouse, "mouse", "human")
   }
 
   if (capitalise && org %in% c("mouse", "human")) {
@@ -1180,8 +984,11 @@ getLevels <- function(Y) {
 #' levels defining a subset of factor levels to select. It parses the level descriptions,
 #' identifies matching samples in Y, and returns the rownames of selected samples.
 #'
-#' The levels should be strings in format 'factor=level' defining the factor name and level value.
-#' Samples in Y matching any of the provided levels will be selected.
+#' The levels should be strings in format 'factor=level' defining the
+#' factor name and level value.  Samples in Y matching any of the
+#' provided levels will be selected. Note: across factors samples as
+#' intersected ('and' operator), within a factor samples are combined
+#' ('or' operator). Not very logical but this is what people in practice want.
 #'
 #' @return A character vector of selected sample names.
 #'
@@ -1190,14 +997,21 @@ selectSamplesFromSelectedLevels <- function(Y, levels) {
   if (is.null(levels) || all(levels == "")) {
     return(rownames(Y))
   }
+
+  # fill ="" will (unfortunately) still return NA when level is "NA"... which crashes when phenotype is ""
   pheno <- data.table::tstrsplit(levels, "=", keep = 1) %>%
     unlist()
   ptype <- data.table::tstrsplit(levels, "=", keep = 2) %>%
     unlist()
-  sel <- rep(FALSE, nrow(Y))
+  # force replace "NA" by NA
+  ptype[ptype == "NA"] <- NA
+  ##  sel <- rep(FALSE, nrow(Y))
+  sel <- rep(TRUE, nrow(Y))
   for (ph in unique(pheno)) {
+    # ph = pheno[1]
     k <- which(pheno == ph)
-    sel <- sel | (Y[, ph] %in% ptype[k])
+    ##    sel <- sel | (Y[, ph] %in% ptype[k])
+    sel <- sel & (Y[, ph] %in% ptype[k])
   }
 
   return(rownames(Y)[which(sel)])
@@ -1496,7 +1310,7 @@ filterProbes <- function(genes, gg) {
   } else {
     p3 <- rep(FALSE, nrow(genes))
   }
-  
+
   # Ensure all p* are valids
   p_list <- list(p0, p1, p2, p3)
   p_list <- p_list[sapply(p_list, length) > 0]
@@ -1512,10 +1326,10 @@ filterProbes <- function(genes, gg) {
 
 #' Rename rownames of counts matrix by annotation table
 #'
-#' @param counts Numeric matrix of counts, with genes/probes as rownames. 
+#' @param counts Numeric matrix of counts, with genes/probes as rownames.
 #' @param annot_table Data frame with rownames matching counts and annotation columns.
 #' @param new_id_col Column name in annot_table containing new identifiers. Default 'symbol'.
-#' 
+#'
 #' @return Matrix with rownames changed to values from annot_table.
 #' Duplicate new rownames are summed.
 #'
@@ -1523,21 +1337,20 @@ filterProbes <- function(genes, gg) {
 #' Looks up the `new_id_col` in the annot_table and replaces counts rownames.
 #' Handles special cases like missing values.
 #' Sums duplicate rows after renaming.
-#' 
-#' @export 
+#'
+#' @export
 rename_by <- function(counts, annot_table, new_id_col = "symbol") {
-  symbol <- annot_table[rownames(counts), new_id_col] 
+  symbol <- annot_table[rownames(counts), new_id_col]
 
   # Guard agaisn human_hommolog == NA
-  if (all(is.na(symbol))) { 
-    symbol <- annot_table[rownames(counts), "symbol"] 
-
+  if (all(is.na(symbol))) {
+    symbol <- annot_table[rownames(counts), "symbol"]
   }
 
   # Sum columns of rows with the same gene symbol
   if (is.matrix(counts) | is.data.frame(counts)) {
     rownames(counts) <- symbol
-    return(counts[!rownames(counts) %in% c("", "NA"),, drop = FALSE])
+    return(counts[!rownames(counts) %in% c("", "NA"), , drop = FALSE])
   } else {
     return(symbol)
   }
@@ -2028,10 +1841,8 @@ tidy.dataframe <- function(Y) {
   is.factor <- (is.factor | grepl("batch|replicat|type|clust|group", colnames(Y)))
   new.Y <- data.frame(Y, check.names = FALSE)
   new.Y[, which(is.numeric)] <- num.Y[, which(is.numeric), drop = FALSE]
-  new.Y[, which(is.factor)] <- apply(
-    Y[, which(is.factor), drop = FALSE], 2,
-    function(a) factor(as.character(a))
-  )
+  for (i in which(is.numeric)) new.Y[[i]] <- num.Y[, i]
+  for (i in which(is.factor)) new.Y[[i]] <- factor(as.character(new.Y[, i]))
   new.Y <- data.frame(new.Y, check.names = FALSE)
   return(new.Y)
 }
@@ -2135,21 +1946,28 @@ expandAnnotationMatrix <- function(A) {
 #'
 #' @return An expanded phenotype matrix with dummy variables suitable for regression modeling.
 #' @export
-expandPhenoMatrix <- function(pheno, drop.ref = TRUE) {
+expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = TRUE) {
   ## get expanded annotation matrix
-  a1 <- tidy.dataframe(pheno)
+  a1 <- tidy.dataframe(M)
   nlevel <- apply(a1, 2, function(x) length(setdiff(unique(x), NA)))
   nterms <- colSums(!is.na(a1))
   nratio <- nlevel / nterms
-  y.class <- sapply(utils::type.convert(a1, as.is = TRUE), class)
+  if (inherits(a1, "data.frame")) {
+    a1.typed <- utils::type.convert(a1, as.is = TRUE)
+    y.class <- sapply(a1.typed, function(a) class(a)[1])
+  } else {
+    ## matrix??
+    a1.typed <- utils::type.convert(a1, as.is = TRUE)
+    y.class <- apply(a1.typed, 2, function(a) class(a)[1])
+  }
 
   ## these integers are probably factors... (mostly...)
   is.fac <- rep(FALSE, ncol(a1))
-  is.int <- y.class == "integer"
+  is.int <- (y.class == "integer")
   ii <- which(is.int)
   is.fac[ii] <- apply(a1[, ii, drop = FALSE], 2, function(x) {
     nlev <- length(unique(x[!is.na(x)]))
-    max(x, na.rm = TRUE) %in% c(nlev, nlev - 1)
+    max(x, na.rm = TRUE) %in% c(nlev, nlev - 1) ## boolean
   })
   is.fac2 <- (y.class == "integer" & nlevel <= 3 & nratio < 0.66)
   y.class[is.fac | is.fac2] <- "character"
@@ -2162,18 +1980,24 @@ expandPhenoMatrix <- function(pheno, drop.ref = TRUE) {
   }
   a1 <- a1[, kk, drop = FALSE]
   a1.isnum <- y.isnum[kk]
+
   i <- 1
   m1 <- list()
   for (i in 1:ncol(a1)) {
     if (a1.isnum[i]) {
       suppressWarnings(x <- as.numeric(a1[, i]))
-      if (drop.ref) {
-        m0 <- matrix((x > stats::median(x, na.rm = TRUE)), ncol = 1)
-        colnames(m0) <- "high"
+      if (keep.numeric) {
+        m0 <- matrix(x, ncol = 1)
+        colnames(m0) <- "#"
       } else {
-        mx <- stats::median(x, na.rm = TRUE)
-        m0 <- matrix(cbind(x <= mx, x > mx), ncol = 2)
-        colnames(m0) <- c("low", "high")
+        if (drop.ref) {
+          m0 <- matrix((x > stats::median(x, na.rm = TRUE)), ncol = 1)
+          colnames(m0) <- "high"
+        } else {
+          mx <- stats::median(x, na.rm = TRUE)
+          m0 <- matrix(cbind(x <= mx, x > mx), ncol = 2)
+          colnames(m0) <- c("low", "high")
+        }
       }
     } else if (drop.ref && nlevel[i] == 2) {
       x <- as.character(a1[, i])
@@ -2200,8 +2024,8 @@ expandPhenoMatrix <- function(pheno, drop.ref = TRUE) {
     colnames(m1[[i]]) <- paste0(names(m1)[i], "=", colnames(m1[[i]]))
   }
   m1 <- do.call(cbind, m1)
-  rownames(m1) <- rownames(pheno)
-
+  colnames(m1) <- sub("=#", "", colnames(m1))
+  rownames(m1) <- rownames(M)
   return(m1)
 }
 
@@ -2252,6 +2076,36 @@ getGSETS_playbase <- function(gsets = NULL, pattern = NULL) {
   }
   gsets <- intersect(gsets, names(playdata::iGSETS))
   lapply(playdata::iGSETS[gsets], function(idx) playdata::GSET_GENES[idx])
+}
+
+#' Normalize Matrix by Row
+#'
+#' Normalizes a matrix by dividing each row by the sum of its elements.
+#'
+#' @param G The matrix to be normalized.
+#'
+#' @return The normalized matrix.
+#'
+#' @export
+normalize_rows <- function(G) {
+  # efficient normalization using linear algebra
+  row_sums <- Matrix::rowSums(G)
+  D <- Matrix::Diagonal(x = 1 / row_sums)
+  G_scaled <- D %*% G
+  rownames(G_scaled) <- rownames(G)
+  colnames(G_scaled) <- colnames(G)
+  return(G_scaled)
+}
+
+#' @export
+normalize_cols <- function(G) {
+  # efficient normalization using linear algebra
+  col_sums <- Matrix::colSums(G)
+  D <- Matrix::Diagonal(x = 1 / col_sums)
+  G_scaled <- G %*% D
+  rownames(G_scaled) <- rownames(G)
+  colnames(G_scaled) <- colnames(G)
+  return(G_scaled)
 }
 
 

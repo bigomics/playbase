@@ -1,7 +1,6 @@
 #' Test for compute_testGenes
 test_that("compute_testGenes returns correct number of genes", {
-  
-  # Call mock data 
+  # Call mock data
   pgx <- playbase::PGX_CREATE
   ## make proper contrast matrix
   contr.matrix <- pgx$contrasts
@@ -18,10 +17,11 @@ test_that("compute_testGenes returns correct number of genes", {
   contr.matrix <- contr.matrix[, sel, drop = FALSE]
 
   suppressWarnings(
-  test_genes <- playbase::compute_testGenes(
-    pgx, contr.matrix,
-    test.methods = c("ttest.welch", "trend.limma", "edger.qlf")
-  ))
+    test_genes <- playbase::compute_testGenes(
+      pgx, contr.matrix,
+      test.methods = c("ttest.welch", "trend.limma", "edger.qlf")
+    )
+  )
 
   # Check that all the test have ran
   expect_equal(length(test_genes$gx.meta$meta), 2)
@@ -38,7 +38,7 @@ test_that("compute_testGenes returns correct number of genes", {
 
 #' Test for compute_testGenesSingleOmics
 test_that("compute_testGenesSingleOmics runs without errors", {
-  # Call mock data 
+  # Call mock data
   pgx <- playbase::PGX_CREATE
   ## make proper contrast matrix
   contr.matrix <- pgx$contrasts

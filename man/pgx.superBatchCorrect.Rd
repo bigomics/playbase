@@ -30,7 +30,7 @@ pgx.superBatchCorrect(
 
 \item{model.par}{Vector of column names of biological covariates in \code{pheno}.}
 
-\item{batch}{Factor or matrix indicating batch/technical groups for each sample.}
+\item{batch.par}{Vector of column names of batch covariates in \code{pheno}.}
 
 \item{method}{Batch correction method to apply ("combat", "limma", "sva", etc).}
 }
@@ -38,7 +38,9 @@ pgx.superBatchCorrect(
 The batch corrected gene expression matrix.
 }
 \description{
-Performs supervised batch correction on a gene expression matrix, using known technical factors and biological covariates.
+Performs supervised batch correction on a gene
+  expression matrix, using known technical factors and biological
+  covariates.
 }
 \details{
 This function performs supervised batch correction, using known batch groups and biological covariates.

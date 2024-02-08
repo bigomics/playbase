@@ -7,18 +7,21 @@
 pgx.computePGX(
   pgx,
   max.genes = 19999,
-  max.genesets = 5000,
   gx.methods = c("trend.limma", "edger.qlf", "deseq2.wald"),
   gset.methods = c("fisher", "gsva", "fgsea"),
   custom.geneset = list(gmt = NULL, info = NULL),
   do.cluster = TRUE,
+  cluster.contrasts = TRUE,
+  do.clustergenesets = TRUE,
+  do.clustergenes = TRUE,
   use.design = TRUE,
   prune.samples = FALSE,
   extra.methods = c("meta.go", "infer", "deconv", "drugs", "connectivity", "wordcloud",
     "wgcna")[c(1, 2)],
   pgx.dir = NULL,
   libx.dir = NULL,
-  progress = NULL
+  progress = NULL,
+  user_input_dir = getwd()
 )
 }
 \arguments{
@@ -26,15 +29,15 @@ pgx.computePGX(
 
 \item{max.genes}{Maximum number of genes to test. Default is 19999.}
 
-\item{max.genesets}{Maximum number of gene sets to test. Default is 5000.}
-
 \item{gx.methods}{Methods for differential expression analysis at the gene level. Default is c("ttest.welch", "trend.limma", "edger.qlf").}
 
 \item{gset.methods}{Methods for differential analysis at the gene set level. Default is c("fisher", "gsva", "fgsea").}
 
-\item{custom.geneset}{Custom gene sets to test, as a named list with gmt and info elements.}
+\item{do.cluster}{Logical indicating whether to run sample clustering. Default is TRUE.}
 
-\item{do.cluster}{Whether to run sample clustering. Default is TRUE.}
+\item{do.clustergenesets}{Logical indicating whether to cluster gene sets.}
+
+\item{do.clustergenes}{Logical indicating whether to cluster genes. Default is TRUE.}
 
 \item{use.design}{Whether to use model design matrix for testing. Default is TRUE.}
 
@@ -51,4 +54,19 @@ An updated pgx object containing analysis results.
 }
 \description{
 Main function to populate pgx with results. The function computes the analysis on a pgx object
+}
+\details{
+The slots created by pgx.computePGX are the following:
+
+- `tsne2d`: 2D tSNE coordinates matrix 
+- `tsne3d`: 3D tSNE coordinates matrix
+- `cluster`: List containing sample clustering results  
+- `cluster.genes`: List containing gene clustering results
+- `model.parameters`: Model parameters from normalization
+- `timings`: Matrix of timings for computations  
+- `gx.meta`: Gene metadata data.frame
+- `gset.meta`: Gene set metadata data.frame
+- `gsetX`: Gene set scores matrix
+- `cluster.gsets`: List of gene set clustering results
+- `meta.go`: GO graph and metadata
 }
