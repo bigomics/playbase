@@ -23,6 +23,13 @@ pgx.checkINPUT <- function(
 
     sample_names <- colnames(df_clean)
 
+    # check if any value in df had a non-NA value that was converted to NA in df_clean
+    ANY_NON_NUMERIC <- which(!is.na(df) & is.na(df_clean), arr.ind = TRUE)
+
+    if (length(ANY_NON_NUMERIC) > 0 && PASS) {
+      check_return$e27 <- paste("gene:",rownames(ANY_NON_NUMERIC)," and ","sample:", colnames(df_clean)[ANY_NON_NUMERIC[,2]])
+    }
+
     # check for duplicated colnanes (gives error)
     ANY_DUPLICATED <- unique(sample_names[which(duplicated(sample_names))])
 
@@ -59,6 +66,7 @@ pgx.checkINPUT <- function(
       # remove the column names with all zeros by using check_return$e9
       df_clean <- df_clean[, !(colnames(df_clean) %in% check_return$e10)]
     }
+
   }
 
   if (datatype == "SAMPLES") {
