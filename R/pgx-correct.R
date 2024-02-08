@@ -1238,8 +1238,9 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
 
   if ("NNM" %in% methods) {
     ## xlist[["NNM"]] <- gx.nnmcorrect(X, y)$X
-    xlist[["NNM"]] <- nnmCorrect2(X, y, use.design = TRUE)
-    xlist[["NNM.no_mod"]] <- nnmCorrect2(X, y, use.design = FALSE)
+    xlist[["NNM1"]] <- nnmCorrect(X, y, use.design = TRUE)
+    xlist[["NNM2"]] <- nnmCorrect2(X, y, use.design = TRUE)      
+##    xlist[["NNM.no_mod"]] <- nnmCorrect2(X, y, use.design = FALSE)
   }
 
   ## --------------------------------------------------------------
@@ -2424,12 +2425,13 @@ bbknn <- function(data_matrix, batch, pca = TRUE, compute_pca = "python", nPcs =
 #'
 #' @export
 nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TRUE,
-                       knn = 1, sdtop = 2000, return.B = FALSE, use.design = TRUE) {
+                       knn = 1, sdtop = 2000, return.B = FALSE,
+                       use.design = TRUE, use.cov = FALSE) {
   ## Nearest-neighbour matching for batch correction. This
   ## implementation creates a fully paired dataset with nearest
   ## matching neighbours when pairs are missing.
 
-  ## use.design = TRUE;dist.method = "cor";center.x = TRUE;center.m = TRUE; sdtop = 1000
+  ## use.design=TRUE;dist.method="cor";center.x=TRUE;center.m=TRUE;sdtop=1000;knn=2
 
   ## compute distance matrix for NNM-pairing
   y1 <- paste0("y=", y)
@@ -2462,20 +2464,21 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   D[is.na(D)] <- 0 ## might have NA
 
   ## find neighbours
-  message("[nnmCorrect] finding nearest neighbours...")
   if (knn > 1) {
-    bb <- t(apply(D, 1, function(r) tapply(r, y1, function(s) head(names(sort(s)), nn))))
+    message(paste0("[nnmCorrect] finding ",knn,"-nearest neighbours..."))
+    bb <- apply(D, 1, function(r) tapply(r, y1, function(s) head(names(sort(s)), knn)))
     B <- do.call(rbind, lapply(bb, function(x) unlist(x)))
+    colnames(B) <- unlist(mapply(rep, names(bb[[1]]), sapply(bb[[1]],length)),use.names=FALSE)
   } else {
+    message("[nnmCorrect] finding nearest neighbours...")       
     B <- t(apply(D, 1, function(r) tapply(r, y1, function(s) names(which.min(s)))))
   }
   rownames(B) <- colnames(X)
-  Matrix::head(B)
 
   ## ensure sample is always present in own group
-  ##  idx <- cbind(1:nrow(B), match(y1, colnames(B)))
-  ##  B[idx] <- rownames(B)
-  B <- cbind(rownames(B), B)
+  idx <- cbind(1:nrow(B), match(y1, colnames(B)))
+  B[idx] <- rownames(B)
+##  B <- cbind(rownames(B), B)
 
   ## imputing full paired data set
   kk <- match(as.vector(B), rownames(B))
@@ -2486,8 +2489,7 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
 
   ## remove pairing effect
   message("[nnmCorrect] correcting for pairing effects...")
-  use.batch <- TRUE
-  if (use.batch) {
+  if (use.cov == FALSE) {
     design <- stats::model.matrix(~full.y)
     if (!use.design) design <- matrix(1, ncol(full.X), 1)
     full.X <- limma::removeBatchEffect(
@@ -2496,12 +2498,12 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
       design = design
     )
   } else {
-    V <- model.matrix(~full.pairs)
+    V <- model.matrix(~ 0 + full.pairs)
     design <- stats::model.matrix(~full.y)
     if (!use.design) design <- matrix(1, ncol(full.X), 1)
     full.X <- limma::removeBatchEffect(
       full.X,
-      covariates = V,
+      covariates = scale(V),
       design = design
     )
   }
@@ -2528,9 +2530,10 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
 #' @export
 nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
                         scale.x = FALSE, center.y = TRUE, mode = "sym",
-                        knn = 3, sdtop = 2000, return.B = FALSE, use.design = TRUE) {
-  ## center.x=TRUE;center.m=TRUE;scale.x=FALSE;sdtop=1000;r=0.35;knn=3
+                        knn = 1, sdtop = 2000, return.B = FALSE, use.design = TRUE) {
 
+##  center.x=TRUE;center.m=TRUE;scale.x=FALSE;sdtop=1000;r=0.35;knn=5
+    
   ## compute distance matrix for NNM-pairing
   y1 <- paste0("y=", y)
   dX <- X
@@ -2573,31 +2576,49 @@ nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
   B <- do.call(cbind, bb)
   colnames(B) <- as.vector(unlist(mapply(rep, names(bb), nn)))
   rownames(B) <- colnames(dX)
-  ## ensure sample is always present in own group
-  B <- cbind(rownames(B), B)
 
-  ## create batch design matrix manually
+  if(1) {
+    ## delete neighbours in own group (???)
+    jj <- lapply(y1, function(a) which(colnames(B)==a)) 
+    ii <- mapply(rep, 1:length(y1), sapply(jj,length))
+    idx <- cbind( as.vector(unlist(ii)), as.vector(unlist(jj)))
+    B[idx] <- NA
+  }
+    
+  ## ensure sample is always present in own group
+  idx <- cbind(1:nrow(B), match(y1, colnames(B)))
+  B[idx] <- rownames(B)
+
+  ## create pairing design matrix manually
   idx <- apply(B, 1, function(x) match(x, rownames(B)))
   jj <- as.vector(idx)
   ii <- as.vector(mapply(rep, 1:ncol(idx), nrow(idx)))
+  ii <- ii[!is.na(jj)]
+  jj <- jj[!is.na(jj)]    
   P <- Matrix::sparseMatrix(
     i = jj, j = ii, x = rep(1, length(ii)),
     dims = c(nrow(B), nrow(B))
   )
+  P <- as.matrix(P)    
   P <- 1 * (P > 0) ## dupcliated got summed
-
+    
   ## correct for pairing effect
   message("[nnmCorrect2] correcting for pairing effects...")
   P1 <- P
   if (mode == "sym") P1 <- P + Matrix::t(P) ## make symmetric
   if (mode == "tr") P1 <- Matrix::t(P) ## transposed
+
+  ## take out duplicate columns  
+  P1 <- P1[,!duplicated.matrix( t(as.matrix(P1))), drop=FALSE]  
+  dim(P1)
+
   if (r < 1) {
-    k <- round(min(r * dim(X), dim(X) - 1)) ## critical
+    k <- round(min(r * dim(P), dim(P) - 1)) ## critical
     k <- max(k, 1)
     if (r > 0.2) {
-      sv <- svd(P1, nu = k, nv = 0)
+      sv <- svd(P1, nu = k, nv = k)
     } else {
-      sv <- irlba::irlba(P1, nu = k, nv = 0)
+      sv <- irlba::irlba(P1, nu = k, nv = k)
     }
     P1 <- sv$u
   }
