@@ -1239,8 +1239,8 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   if ("NNM" %in% methods) {
     ## xlist[["NNM"]] <- gx.nnmcorrect(X, y)$X
     xlist[["NNM1"]] <- nnmCorrect(X, y, use.design = TRUE)
-    xlist[["NNM2"]] <- nnmCorrect2(X, y, use.design = TRUE)      
-##    xlist[["NNM.no_mod"]] <- nnmCorrect2(X, y, use.design = FALSE)
+    xlist[["NNM2"]] <- nnmCorrect2(X, y, use.design = TRUE)
+    ##    xlist[["NNM.no_mod"]] <- nnmCorrect2(X, y, use.design = FALSE)
   }
 
   ## --------------------------------------------------------------
@@ -2465,12 +2465,12 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
 
   ## find neighbours
   if (knn > 1) {
-    message(paste0("[nnmCorrect] finding ",knn,"-nearest neighbours..."))
+    message(paste0("[nnmCorrect] finding ", knn, "-nearest neighbours..."))
     bb <- apply(D, 1, function(r) tapply(r, y1, function(s) head(names(sort(s)), knn)))
     B <- do.call(rbind, lapply(bb, function(x) unlist(x)))
-    colnames(B) <- unlist(mapply(rep, names(bb[[1]]), sapply(bb[[1]],length)),use.names=FALSE)
+    colnames(B) <- unlist(mapply(rep, names(bb[[1]]), sapply(bb[[1]], length)), use.names = FALSE)
   } else {
-    message("[nnmCorrect] finding nearest neighbours...")       
+    message("[nnmCorrect] finding nearest neighbours...")
     B <- t(apply(D, 1, function(r) tapply(r, y1, function(s) names(which.min(s)))))
   }
   rownames(B) <- colnames(X)
@@ -2478,7 +2478,7 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   ## ensure sample is always present in own group
   idx <- cbind(1:nrow(B), match(y1, colnames(B)))
   B[idx] <- rownames(B)
-##  B <- cbind(rownames(B), B)
+  ##  B <- cbind(rownames(B), B)
 
   ## imputing full paired data set
   kk <- match(as.vector(B), rownames(B))
@@ -2531,9 +2531,8 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
 nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
                         scale.x = FALSE, center.y = TRUE, mode = "sym",
                         knn = 1, sdtop = 2000, return.B = FALSE, use.design = TRUE) {
+  ##  center.x=TRUE;center.m=TRUE;scale.x=FALSE;sdtop=1000;r=0.35;knn=5
 
-##  center.x=TRUE;center.m=TRUE;scale.x=FALSE;sdtop=1000;r=0.35;knn=5
-    
   ## compute distance matrix for NNM-pairing
   y1 <- paste0("y=", y)
   dX <- X
@@ -2577,14 +2576,14 @@ nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
   colnames(B) <- as.vector(unlist(mapply(rep, names(bb), nn)))
   rownames(B) <- colnames(dX)
 
-  if(1) {
+  if (1) {
     ## delete neighbours in own group (???)
-    jj <- lapply(y1, function(a) which(colnames(B)==a)) 
-    ii <- mapply(rep, 1:length(y1), sapply(jj,length))
-    idx <- cbind( as.vector(unlist(ii)), as.vector(unlist(jj)))
+    jj <- lapply(y1, function(a) which(colnames(B) == a))
+    ii <- mapply(rep, 1:length(y1), sapply(jj, length))
+    idx <- cbind(as.vector(unlist(ii)), as.vector(unlist(jj)))
     B[idx] <- NA
   }
-    
+
   ## ensure sample is always present in own group
   idx <- cbind(1:nrow(B), match(y1, colnames(B)))
   B[idx] <- rownames(B)
@@ -2594,22 +2593,22 @@ nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
   jj <- as.vector(idx)
   ii <- as.vector(mapply(rep, 1:ncol(idx), nrow(idx)))
   ii <- ii[!is.na(jj)]
-  jj <- jj[!is.na(jj)]    
+  jj <- jj[!is.na(jj)]
   P <- Matrix::sparseMatrix(
     i = jj, j = ii, x = rep(1, length(ii)),
     dims = c(nrow(B), nrow(B))
   )
-  P <- as.matrix(P)    
+  P <- as.matrix(P)
   P <- 1 * (P > 0) ## dupcliated got summed
-    
+
   ## correct for pairing effect
   message("[nnmCorrect2] correcting for pairing effects...")
   P1 <- P
   if (mode == "sym") P1 <- P + Matrix::t(P) ## make symmetric
   if (mode == "tr") P1 <- Matrix::t(P) ## transposed
 
-  ## take out duplicate columns  
-  P1 <- P1[,!duplicated.matrix( t(as.matrix(P1))), drop=FALSE]  
+  ## take out duplicate columns
+  P1 <- P1[, !duplicated.matrix(t(as.matrix(P1))), drop = FALSE]
   dim(P1)
 
   if (r < 1) {

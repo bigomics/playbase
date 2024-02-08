@@ -13,9 +13,9 @@ test_that("guess_probetype can detect ensembl IDs", {
 
   # Run function
   # Use while to prevent crash on ensembl calls
-  
+
   type <- playbase::guess_probetype(probes)
-  
+
   # Check output
   expect_equal(type, "ENSEMBL")
 })
@@ -81,8 +81,8 @@ test_that("probe2symbol returns expected output", {
   # Test handling NAs with fill_na = FALSE
   symbol_na <- playbase::probe2symbol(probes, result, query = "symbol", fill_na = FALSE)
   expect_type(symbol_na, "character")
-  
-  
+
+
   # expect_true(sum(symbol_na == "") == 4) #TODO this test needs to be fixed
 
   # Test handling NAs with fill_na = TRUE
@@ -120,7 +120,6 @@ test_that("detects Ensembl for mouse probes", {
 
 #' Test for guess_probetype
 test_that("ngs.getGeneAnnotation_ORGDB function works correctly", {
-  
   skip("these tests need to be fixed")
 
   # Test 1: Check that the function returns the correct annotation for a known human gene
@@ -151,4 +150,3 @@ test_that("ngs.getGeneAnnotation_ORGDB function works correctly", {
   # Test 9: Check that the function handles an empty string organism correctly
   expect_error(playbase::ngs.getGeneAnnotation_ORGDB("ENSG00000141510", "ENSEMBL", ""))
 })
-

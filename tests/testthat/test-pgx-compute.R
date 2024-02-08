@@ -20,7 +20,7 @@ test_that("pgx.createPGX produce all pgx slots", {
     "name", "organism", "version", "date", "creator", "datatype",
     "description", "samples", "counts", "contrasts", "X",
     "total_counts", "counts_multiplier", "genes", "all_genes",
-    "probe_type","filtered", "tsne2d", "tsne3d", "cluster", "cluster.genes"
+    "probe_type", "filtered", "tsne2d", "tsne3d", "cluster", "cluster.genes"
   )
   total_counts <- apply(playbase::COUNTS, 2, sum)
 
@@ -60,8 +60,8 @@ test_that("pgx.createPGX produce all pgx slots", {
 
 
   ## Check that the gene info is generated correctly
-  #TODO expect_equal(pgx$genes[c(1, 10, 20, 30, 40, 50), , drop = FALSE], gene_table)
-   
+  # TODO expect_equal(pgx$genes[c(1, 10, 20, 30, 40, 50), , drop = FALSE], gene_table)
+
   ## Check cluster.genes
   expect_equal(dim(pgx$cluster$pos$pca2d), c(ncol(playbase::COUNTS), 2))
   expect_equal(dim(pgx$cluster$pos$tsne3d), c(ncol(playbase::COUNTS), 3))

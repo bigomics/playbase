@@ -117,7 +117,3 @@ test_that("crosscheckINPUT function returns a list", {
 # })
 
 #' Test for contrasts_conversion_check
-
-
-
-

@@ -21,7 +21,7 @@ test_that("gset.rankcor constant rho", {
   expect_equal(mean(result$rho), 0, tolerance = 1)
 })
 
-# ' Test for gx.nnmcorrect.SAVE 
+# ' Test for gx.nnmcorrect.SAVE
 # ' deprecated?
 # x <- matrix(rnorm(100 * 30), 100, 30)
 # y <- gl(3, 10)
