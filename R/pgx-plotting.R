@@ -5186,12 +5186,12 @@ pgx.barplot.PLOTLY <- function(
       hovertemplate = paste0(
         "<b>%{hovertext}</b><br>",
         "%{yaxis.title.text}: %{y:", hoverformat, "}<br>",
-        "<extra></extra>", x
+        "<extra></extra>",x
       ),
       showlegend = show_legend
-    )
+    ) 
+  
   }
-
   p <- p %>%
     plotly::layout(
       title = list(

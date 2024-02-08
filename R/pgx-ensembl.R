@@ -157,7 +157,6 @@ ngs.getGeneAnnotation <- function(probes, pgx=NULL, organism = NULL, annot_table
   return(genes)
 }
 
-
 #' @title Get gene annotation data
 #' @description Retrieves gene annotation data from an organism-specific
 #' annotation package.
