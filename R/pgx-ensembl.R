@@ -24,7 +24,7 @@
 #' pgx <- list()
 #' pgx$counts <- matrix(rnorm(4), nrow = 2)
 #' rownames(pgx$counts) <- c("ENSG00000142192", "ENSG00000288602")
-#' pgx <- pgx.gene_table(pgx, "Human")
+#' pgx <- pgx.pgx.addGeneAnnotation(pgx, "Human")
 #' }
 #' @export
 pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL, use_biomart = NULL) {
@@ -157,7 +157,7 @@ ngs.getGeneAnnotation <- function(probes, pgx=NULL, organism = NULL, annot_table
   return(genes)
 }
 
-ngs.getGeneAnnotation_BIOMART <- function(
+ngs.getGeneAnnotation_BIOMART.save <- function(
     probes,
     organism,
     mart = NULL,
@@ -590,9 +590,9 @@ guess_organism <- function(probes) {
     "Human" = "^ENSG|^ENST|^[A-Z]+[0-9]*$",
     "Mouse" = "^ENSMUS|^[A-Z][a-z]{2,}",
     "Rat" = "^ENSRNO|^[A-Z][a-z]{2,}",
-    "Worm" = "^WBGene",
-    "Fly" = "^FBgn0",
-    "Yeast" = "^Y[A-P][RL]"
+    "Caenorhabditis elegans" = "^WBGene",
+    "Drosophila melanogaster" = "^FBgn0",
+    "Saccharomyces cerevisiae" = "^Y[A-P][RL]"
   )
   org.match <- function(probes, org) {
     mean(grepl(org.regex[[org]], probes))
@@ -1022,6 +1022,7 @@ check_known_probes <- function(probes, probe_types_to_check = NULL) {
 
   return(probe_types_to_check)
 }
+
 #' Get gene annotation data
 #'
 #' Retrieves gene annotation information from BioMart for a set of input
@@ -1061,7 +1062,7 @@ check_known_probes <- function(probes, probe_types_to_check = NULL) {
 #' head(result)
 #' }
 #' @export
-ngs.getGeneAnnotation <- function(
+ngs.getGeneAnnotation_BIOMART <- function(
   probes,
   organism,
   probe_type = NULL,
@@ -1069,12 +1070,12 @@ ngs.getGeneAnnotation <- function(
   verbose = TRUE) {
   # Check mart
   if (is.null(mart)) {
-    stop("Mart not found. Please specify a BioMart database to use.")
+    stop("[ngs.getGeneAnnotation_BIOMART] Mart not found. Please specify a BioMart database.")
   }
 
   # Prepare inputs
   if (verbose) {
-    message("[createPGX] Filling genes information...")
+    message("[ngs.getGeneAnnotation_BIOMART] Filling genes information...")
   }
 
   clean_probes <- probes[!duplicated(probes)]
