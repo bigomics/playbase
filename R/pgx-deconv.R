@@ -303,7 +303,7 @@ pgx.inferCellCyclePhase <- function(counts) {
   obj <- Seurat::NormalizeData(obj, verbose = 0)
   suppressWarnings(obj <- Seurat::CellCycleScoring(obj,
     s.features = s_genes,
-    g2m.features = g2m_genes, 
+    g2m.features = g2m_genes,
     set.ident = TRUE
   ))
   ## view cell cycle scores and phase assignments
@@ -558,7 +558,6 @@ pgx.deconvolution <- function(X, ref,
   if ("CIBERSORT" %in% methods && file.exists(CIBERSORT.code)) {
     ## CIBERSORT
     source(CIBERSORT.code)
-    dbg("starting deconvolution using CIBERSORT...\n")
     ciber.out <- NULL
     stime <- system.time(
       # The f CIBERSORT is likely from CIBERSORT package but better confirm
@@ -566,7 +565,6 @@ pgx.deconvolution <- function(X, ref,
     )
     if (!is.null(ciber.out)) {
       timings[["CIBERSORT"]] <- stime
-      dbg("deconvolution using CIBERSORT took", stime[3], "s\n")
       ciber.out <- ciber.out[, !(colnames(ciber.out) %in% c("P-value", "Correlation", "RMSE"))]
       results[["CIBERSORT"]] <- ciber.out
     } else {
@@ -576,9 +574,6 @@ pgx.deconvolution <- function(X, ref,
 
   if ("EPIC" %in% methods) {
     ## EPIC
-
-    dbg("[pgx.deconvolution] calculating EPIC...")
-
     out <- NULL
     gg <- intersect(rownames(ref), rownames(mat))
     ref1 <- ref
@@ -593,7 +588,6 @@ pgx.deconvolution <- function(X, ref,
     ))
     remove(mat1)
     if (!is.null(out)) {
-      dbg(paste0("deconvolution using EPIC took", stime[3], "s\n"))
       timings[["EPIC"]] <- stime
       out.mat <- out[["cellFractions"]]
       colnames(out.mat) <- sub("otherCells", "other_cells", colnames(out.mat))
@@ -609,11 +603,9 @@ pgx.deconvolution <- function(X, ref,
     ## ---- needs psych & pcaMethods inside namespace----
     ## DeconRNAseq
     if ("package:Seurat" %in% search()) detach("package:Seurat", unload = TRUE)
-    dbg("[pgx.deconvolution] calculating DeconRNAseq...")
 
     ## DeconRNASeq need psych and pcaMethods, so we temporarily
     ## load the library...
-
     drs <- NULL
     stime <- system.time(suppressMessages(suppressWarnings(
       drs <- try(DeconRNASeq::DeconRNASeq(
@@ -626,7 +618,6 @@ pgx.deconvolution <- function(X, ref,
 
     timings[["DeconRNAseq"]] <- stime
     if (!is.null(drs) && !inherits(drs, "try-error")) {
-      dbg("deconvolution using DeconRNAseq took", stime[3], "s\n")
       rownames(drs) <- colnames(mat)
       results[["DeconRNAseq"]] <- drs
     } else {
@@ -637,9 +628,6 @@ pgx.deconvolution <- function(X, ref,
   ## --------- DCQ from ComICS ---------------------
   if ("DCQ" %in% methods) {
     ## DCQ seems to work in logX, so we use log-transform
-
-    dbg("[pgx.deconvolution] calculating DCQ...")
-
     res.dcq <- NULL
     stime <- system.time(
       res.dcq <- try(
@@ -655,7 +643,6 @@ pgx.deconvolution <- function(X, ref,
     )
     if (!is.null(res.dcq) && !inherits(res.dcq, "try-error")) {
       timings[["DCQ"]] <- stime
-      dbg("deconvolution using DCQ took", stime[3], "s\n")
       results[["DCQ"]] <- res.dcq$average
     } else {
       dbg("WARNING:: DCQ failed\n")
@@ -665,8 +652,6 @@ pgx.deconvolution <- function(X, ref,
   if ("I-NNLS" %in% methods) {
     ## !!!!!!!!!!!!!! WARNING:: needs more testing/validation !!!!!!!!!!!!!
     ## ----- Constrained iterative non-negative least squares (Abbas et al. 2009) ----
-    dbg("[pgx.deconvolution] calculating I-NNLS...")
-
     GetFractions.Abbas <- function(XX, y, w = NA) {
       ## XX is immune expression data
       ## y is cancer expression data
@@ -713,7 +698,6 @@ pgx.deconvolution <- function(X, ref,
       res.abbas <- try(apply(YY, 2, function(y) GetFractions.Abbas(XX, y, w = NA)))
     )
     timings[["I-NNLS"]] <- stime
-    dbg("deconvolution using I-NNLS took", stime[3], "s\n")
     if (!is.null(res.abbas) && !inherits(res.abbas, "try-error")) {
       rownames(res.abbas) <- colnames(ref)
       results[["I-NNLS"]] <- t(res.abbas)
@@ -723,9 +707,6 @@ pgx.deconvolution <- function(X, ref,
   ## Own NNLM (non-negative linear modeling)...
   if ("NNLM" %in% methods) {
     ## NNLM
-
-    dbg("[pgx.deconvolution] calculating NNLM...")
-
     x1 <- log2(1 + ref[gg, , drop = FALSE])
     x2 <- log2(1 + mat[gg, , drop = FALSE])
     x1 <- cbind(offset = 1, x1)
@@ -733,7 +714,6 @@ pgx.deconvolution <- function(X, ref,
       cf <- NNLM::nnlm(x1, x2)$coefficients[-1, , drop = FALSE]
     )
     timings[["NNLM"]] <- stime
-    dbg("deconvolution using NNLM took", stime[3], "s\n")
     results[["NNLM"]] <- t(cf)
 
     ## very much the same as I-NNLS
@@ -748,25 +728,20 @@ pgx.deconvolution <- function(X, ref,
 
   ## Simple (rank) correlation
   if ("cor" %in% methods) {
-    dbg("[pgx.deconvolution] calculating cor...")
-
     r1 <- apply(mat[gg, , drop = FALSE], 2, rank, na.last = "keep")
     r2 <- apply(ref[gg, , drop = FALSE], 2, rank, na.last = "keep")
     stime <- system.time(
       cf <- stats::cor(r1, r2, use = "pairwise")
     )
     timings[["cor"]] <- stime
-    dbg("deconvolution using COR took", stime[3], "s\n")
     results[["cor"]] <- cf
   }
 
   if ("SingleR" %in% methods) {
-    dbg("[pgx.deconvolution] calculating SingleR...")
     stime <- system.time(
       sr1 <- SingleR::SingleR(test = mat, ref = ref, labels = colnames(ref))
     )
     timings[["SingleR"]] <- stime
-    dbg("deconvolution using SingleR took", stime[3], "s\n")
     results[["SingleR"]] <- sr1$scores
   }
   ## clean up
@@ -775,8 +750,6 @@ pgx.deconvolution <- function(X, ref,
     x[is.na(x)] <- 0
     x
   })
-
-  dbg("[pgx.deconvolution] calculating meta values...")
 
   ## meta
   if (length(results) > 1) {
@@ -791,8 +764,6 @@ pgx.deconvolution <- function(X, ref,
 
   timings0 <- do.call(rbind, timings)
   res2 <- list(results = results, timings = timings0)
-
-  dbg("[pgx.deconvolution] done!")
 
   return(res2)
 }

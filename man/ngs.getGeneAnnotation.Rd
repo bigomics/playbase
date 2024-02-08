@@ -6,10 +6,10 @@
 \usage{
 ngs.getGeneAnnotation(
   probes,
-  organism,
-  probe_type = NULL,
-  mart = NULL,
-  verbose = TRUE
+  pgx = NULL,
+  organism = NULL,
+  annot_table = NULL,
+  use_biomart = NULL
 )
 }
 \arguments{

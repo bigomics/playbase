@@ -23,13 +23,13 @@ compute_testGenes <- function(pgx, contr.matrix, max.features = 1000,
                               test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
                               use.design = TRUE, prune.samples = FALSE,
                               remove.outputs = TRUE) {
-  single.omics <- mean(grepl("\\[", rownames(pgx$counts))) < 0.1
-  single.omics
+  # TEMPORARY ONLY SINGLE OMICS
+  single.omics <- TRUE
   data.types <- unique(gsub("\\[|\\].*", "", rownames(pgx$counts)))
   ## data.types
   if (single.omics || length(data.types) == 1) {
     ## single-omics, no missing values
-    cat(">>> computing gene tests for SINGLE-OMICS\n")
+    message(">>> computing gene tests for SINGLE-OMICS")
     pgx <- compute_testGenesSingleOmics(
       pgx = pgx,
       contr.matrix = contr.matrix,
@@ -41,7 +41,7 @@ compute_testGenes <- function(pgx, contr.matrix, max.features = 1000,
     )
   } else {
     ## multi-omics, missing values allowed
-    cat(">>> computing gene tests for MULTI-OMICS\n")
+    message(">>> computing gene tests for MULTI-OMICS")
     pgx <- compute_testGenesMultiOmics(
       pgx = pgx, ## type is inferred
       contr.matrix = contr.matrix,
@@ -193,15 +193,10 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   X <- pgx$X[gg, ss, drop = FALSE]
 
   ## -----------------------------------------------------------------------------
-  ## Rescale if too low. Often EdgeR/DeSeq can give errors of total counts
-  ## are too low. Happens often with single-cell (10x?). We rescale
-  ## to a minimum of 1 million counts (CPM)
-
-  ## -----------------------------------------------------------------------------
   ## Do the fitting
   ## -----------------------------------------------------------------------------
   methods <- test.methods
-  cat(">>> Testing differential expressed genes (DEG) with methods:", methods, "\n")
+  message(">>> Testing differential expressed genes (DEG) with methods: ", methods)
   PRIOR.CPM <- 1
 
   ## Run all test methods

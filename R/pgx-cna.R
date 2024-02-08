@@ -36,19 +36,21 @@ pgx.inferCNV <- function(pgx, refgroup = NULL, progress = NULL) {
   # Prepare input data
   annots <- pgx$samples[, "group", drop = FALSE]
 
-  #Get gene symbol and chromosome location info
+  # Get gene symbol and chromosome location info
   genes_info <- data.table::data.table(pgx$genes[rownames(data), , drop = FALSE])
 
   # Get approx start and stop
   genes_info[, c("chr", "start", "stop") :=
-               .(paste0("chr", chr),
-                 pos,
-                 pos  + tx_len)]
+    .(
+      paste0("chr", chr),
+      pos,
+      pos + tx_len
+    )]
 
   ## filter known genes
   jj <- which(genes_info[["chr"]] %in% paste0("chr", c(1:22, "X", "Y")) &
-                !is.na(genes_info[["start"]]) &
-                !is.na(genes_info[["stop"]]))
+    !is.na(genes_info[["start"]]) &
+    !is.na(genes_info[["stop"]]))
   genes_info <- genes_info[jj, ]
 
   ## Reshape objects for infercnv
@@ -76,11 +78,11 @@ pgx.inferCNV <- function(pgx, refgroup = NULL, progress = NULL) {
   cat("DBG pgx.inferCNV:: setting out_dir=", out_dir, "\n")
 
   infercnv_obj <- infercnv::run(infercnv_obj,
-                                cutoff = 1,
-                                out_dir = out_dir,
-                                cluster_by_groups = TRUE,
-                                num_threads = 4,
-                                no_plot = FALSE
+    cutoff = 1,
+    out_dir = out_dir,
+    cluster_by_groups = TRUE,
+    num_threads = 4,
+    no_plot = FALSE
   )
 
 

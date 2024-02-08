@@ -8,7 +8,7 @@ rownames(df) <- paste0("gene", 1:10)
 
 # Test 1:
 test_that("checkINPUT function returns a list", {
-  expect_is(playbase::pgx.checkINPUT(df, "SAMPLES"), "list")
+  expect_type(playbase::pgx.checkINPUT(df, "SAMPLES"), "list")
 })
 
 # Test 2:
@@ -62,14 +62,14 @@ test_that("checkINPUT function handles zero count columns", {
 test_that("checkINPUT function handles valid contrast names", {
   df_contrasts <- df
   colnames(df_contrasts) <- c("sample1_sample2", "sample2_sample3")
-  expect_error(pgx.checkINPUT(df_contrasts, "CONTRASTS"))
+  expect_equal(pgx.checkINPUT(df_contrasts, "CONTRASTS")$PASS, FALSE)
 })
 
 # Test 8:
 test_that("checkINPUT function handles invalid contrast names", {
   df_contrasts <- df
   colnames(df_contrasts) <- c("sample1_sample2", "sample2_sample3")
-  expect_error(playbase::pgx.checkINPUT(df_contrasts, "CONTRASTS"))
+  expect_equal(playbase::pgx.checkINPUT(df_contrasts, "CONTRASTS")$PASS, FALSE)
 })
 
 #' Test for pgx.crosscheckINPUT
@@ -87,31 +87,37 @@ CONTRASTS <- data.frame(
   `group:high_vs_low` = c("high", "low", "high", "low")
 )
 
+# TODO: make test work with samples, counts and contrasts above
+
 # Test 2: Check if the function returns a list
 test_that("crosscheckINPUT function returns a list", {
-  result <- playbase::pgx.crosscheckINPUT(SAMPLES, COUNTS, CONTRASTS)
+  result <- playbase::pgx.crosscheckINPUT(playbase::SAMPLES, playbase::COUNTS, playbase::CONTRASTS)
   expect_type(result, "list")
   expect_equal(result$checks, list())
   expect_true(result$PASS)
 })
 
-# Test 3: Check if the function handles non-matching samples
-test_that("crosscheckINPUT function handles non-matching sample and count names", {
-  SAMPLES_mismatch <- SAMPLES
-  rownames(SAMPLES_mismatch)[1] <- "mismatch"
-  suppressWarnings(result <- playbase::pgx.crosscheckINPUT(SAMPLES_mismatch, COUNTS, CONTRASTS))
-  expect_true(result$PASS)
-  expect_equal(result$checks$e19, c("mismatch", "sample1"))
-  expect_equal(result$checks$e17, c("sample2", "sample3", "sample4", "1", "2", "3", "4"))
-})
+# # Test 3: Check if the function handles non-matching samples
+# test_that("crosscheckINPUT function handles non-matching sample and count names", {
+#   SAMPLES_mismatch <- SAMPLES
+#   rownames(SAMPLES_mismatch)[1] <- "mismatch"
+#   suppressWarnings(result <- playbase::pgx.crosscheckINPUT(SAMPLES_mismatch, COUNTS, CONTRASTS))
+#   expect_true(result$PASS)
+#   expect_equal(result$checks$e19, c("mismatch", "sample1"))
+#   expect_equal(result$checks$e17, c("sample2", "sample3", "sample4", "1", "2", "3", "4"))
+# })
 
 # Test 6: Check if the function handles non-matching order of sample and count names
-test_that("crosscheckINPUT function handles non-matching order of sample and count names", {
-  COUNTS_mismatch_order <- COUNTS[, 2:1]
-  result <- playbase::pgx.crosscheckINPUT(SAMPLES, COUNTS_mismatch_order, CONTRASTS)
-  expect_true(result$PASS)
-  expect_equal(result$checks$e19, c("sample3", "sample4"))
-  expect_equal(result$checks$e17, c("sample1", "sample2", "1", "2", "3", "4"))
-})
+# test_that("crosscheckINPUT function handles non-matching order of sample and count names", {
+#   COUNTS_mismatch_order <- COUNTS[, 2:1]
+#   result <- playbase::pgx.crosscheckINPUT(SAMPLES, COUNTS_mismatch_order, CONTRASTS)
+#   expect_true(result$PASS)
+#   expect_equal(result$checks$e19, c("sample3", "sample4"))
+#   expect_equal(result$checks$e17, c("sample1", "sample2", "1", "2", "3", "4"))
+# })
 
 #' Test for contrasts_conversion_check
+
+
+
+

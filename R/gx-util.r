@@ -93,41 +93,6 @@ gmean <- function(x) {
 }
 
 
-
-
-#' @title Histogram of gene expression values
-#'
-#' @description Generate a histogram of gene expression values.
-#'
-#' @param gx Gene expression matrix with genes in rows and samples in columns.
-#' @param main Title for the plot.
-#' @param ylim Limits for the y-axis.
-#'
-#' @details This function generates a histogram of the gene expression values in \code{gx}.
-#' It first creates a histogram of all values using \code{\link[graphics]{hist}}.
-#' It then overlays density histograms for each sample, with colors corresponding to column numbers.
-#'
-#' @return A histogram plot is generated, no value is returned.
-#'
-#' @examples
-#' \dontrun{
-#' gx <- matrix(rnorm(100 * 10), 100, 10)
-#' gx.hist(gx)
-#' }
-gx.hist <- function(gx, main = "", ylim = NULL) {
-  h0 <- graphics::hist(as.vector(gx),
-    breaks = 120, main = main,
-    col = "grey", freq = FALSE, ylim = ylim, xlab = "signal"
-  )
-  i <- 1
-  for (i in 1:ncol(gx)) {
-    h1 <- graphics::hist(gx[, i], breaks = h0$breaks, plot = FALSE)
-    graphics::lines(h0$mids, h1$density, col = i + 1)
-  }
-}
-
-
-
 #' @title Convert values to colors
 #'
 #' @description

@@ -2,7 +2,6 @@
 % Please edit documentation in R/pgx-predict.R
 \name{pgx.survivalVariableImportance}
 \alias{pgx.survivalVariableImportance}
-\alias{pgx.multiclassVariableImportance}
 \alias{pgx.variableImportance}
 \title{Variable importance for survival models}
 \usage{
@@ -13,16 +12,15 @@ pgx.survivalVariableImportance(
   methods = c("glmnet", "randomforest", "boruta", "xgboost", "pls")
 )
 
-pgx.multiclassVariableImportance(
-  X,
-  y,
-  methods = c("glmnet", "randomforest", "boruta", "xgboost", "pls")
-)
-
 pgx.variableImportance(
   X,
   y,
-  methods = c("glmnet", "randomforest", "boruta", "xgboost", "pls")
+  methods = c("glmnet", "randomforest", "xgboost", "splsda", "correlation", "ftest",
+    "boruta", CARET.METHODS)[1:6],
+  scale = TRUE,
+  reduce = 1000,
+  resample = 0,
+  add.noise = 0
 )
 }
 \arguments{
@@ -60,8 +58,6 @@ These scores can be used to select important predictors for survival modeling.
 }
 \section{Functions}{
 \itemize{
-\item \code{pgx.multiclassVariableImportance()}: Calculates variable importance scores for predictors of a multiclass response using various methods.
-
-\item \code{pgx.variableImportance()}: Calculates variable importance scores for predictors.
+\item \code{pgx.variableImportance()}: Calculates variable importance scores for predictors of a multiclass response using various methods.
 
 }}

@@ -4,7 +4,7 @@
 \alias{gx.imagemap}
 \title{Create an image heatmap of a data matrix}
 \usage{
-gx.imagemap(X, main = "", cex = 1, clust = TRUE)
+gx.imagemap(X, main = "", cex = 1, cex.main = 1.8, clust = TRUE)
 }
 \arguments{
 \item{X}{Numeric data matrix with genes/features as rows and samples/conditions as columns.}

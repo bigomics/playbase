@@ -4,12 +4,12 @@
 \alias{expandPhenoMatrix}
 \title{Expand phenotype matrix}
 \usage{
-expandPhenoMatrix(pheno, drop.ref = TRUE)
+expandPhenoMatrix(M, drop.ref = TRUE, keep.numeric = FALSE, check = TRUE)
 }
 \arguments{
-\item{pheno}{Data frame containing the phenotype variables.}
-
 \item{drop.ref}{Logical indicating whether to drop the reference level for each factor.}
+
+\item{pheno}{Data frame containing the phenotype variables.}
 }
 \value{
 An expanded phenotype matrix with dummy variables suitable for regression modeling.

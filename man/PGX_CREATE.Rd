@@ -14,7 +14,7 @@ Proteome profiles of activated vs resting human naive T cells at different times
 PGX_CREATE
 }
 \description{
-A PGX object after running pgx.createPGX() on the mini example counts, 
+A PGX object after running pgx.createPGX() on the mini example counts,
 samples and contrast data
 }
 \keyword{datasets}

@@ -231,7 +231,7 @@ pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
     fam.pattern <- "^[<].*|^FAMILY|^CUSTOM"
   }
 
-  
+
   xgenes <- pgx$genes[, "symbol"]
   xgenes <- unique(xgenes)
   gsets <- playbase::getGSETS_playbase(pattern = fam.pattern)

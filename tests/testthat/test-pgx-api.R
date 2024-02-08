@@ -8,7 +8,7 @@ test_that("pgx.getFamilies returns expected families", {
     organism = "Human"
   )
   pgx$counts <- pgx$counts[!duplicated(rownames(pgx$counts)), , drop = FALSE]
-  pgx$genes <- pgx$genes[!pgx$genes$symbol == "", ,drop = FALSE]
+  pgx$genes <- pgx$genes[!pgx$genes$symbol == "", , drop = FALSE]
   pgx$counts <- pgx$counts[rownames(pgx$counts) %in% pgx$genes$symbol, , drop = FALSE]
 
   # Test with default parameters

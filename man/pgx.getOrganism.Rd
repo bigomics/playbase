@@ -10,7 +10,7 @@ pgx.getOrganism(pgx, capitalise = FALSE)
 \item{pgx}{A pgx object with the pgx$organism information and the pgx$counts slot for the
 guessing approach.}
 
-\item{capitalise}{logical: by default FALSE. Parameter to capitalise the first letter of the 
+\item{capitalise}{logical: by default FALSE. Parameter to capitalise the first letter of the
 specie if mouse or human.}
 }
 \value{
@@ -20,9 +20,9 @@ Character string the organism.
 Determines if count data is from human or mouse based on gene identifiers.
 }
 \details{
-This function retreives the pgx$organism slot. If it is not found, then it examines 
-the gene identifiers in the row names of a count matrix to determine if the data is from human 
-or mouse (main organism supported in the old playbase version). It checks if the identifiers 
+This function retreives the pgx$organism slot. If it is not found, then it examines
+the gene identifiers in the row names of a count matrix to determine if the data is from human
+or mouse (main organism supported in the old playbase version). It checks if the identifiers
 match common patterns found in mouse genes, like "rik", "loc", "orf". If more than 20% match
  these mouse patterns, it assigns the organism as "mouse". Otherwise it assigns "human".
 

@@ -398,78 +398,137 @@ pgx.survivalVariableImportance <- function(X, time, status,
 }
 
 
+CARET.METHODS <- c("svmLinear", "rpart", "glm", "glmStepAIC", "pda", "sparseLDA", "pls", "plsda")
+CARET.METHODS <- c("pls", "plsda")
+
+## for compatibility before v3.3.0
+#' @export
+pgx.multiclassVariableImportance <- function(X, y, methods) {
+  res <- pgx.variableImportance(X = X, y = y, methods = methods)
+  res$importance
+}
+
 #' @describeIn pgx.survivalVariableImportance Calculates variable importance scores for predictors of a multiclass response using various methods.
 #' @param y Multiclass factor response variable. Contains the class labels for each sample
 #' @export
-pgx.multiclassVariableImportance <- function(X, y,
-                                             methods = c("glmnet", "randomforest", "boruta", "xgboost", "pls")) {
-  ## ----------------------------------------------------------------------
-  ## multi-class version
-  ## ----------------------------------------------------------------------
-
+pgx.variableImportance <- function(X, y,
+                                   methods = c(
+                                     "glmnet", "randomforest",
+                                     "xgboost", "splsda", "correlation", "ftest",
+                                     "boruta", CARET.METHODS
+                                   )[1:6],
+                                   scale = TRUE, reduce = 1000, resample = 0, add.noise = 0) {
+  ## variables
   imp <- list()
+  runtime <- list()
   xnames <- rownames(X)
 
   if (nrow(X) == 1) X <- rbind(X, X)
-  sdx <- apply(X, 1, stats::sd)
+
+  ## drop missing??
+  sel <- which(!is.na(y) & y != "")
+  X <- X[, sel, drop = FALSE]
+  y <- y[sel]
 
   ## convert to factor
-  y <- factor(y)
+  y <- factor(as.character(y))
 
   ## resample to minimum size to balance groups
-  NFOLD <- 5
+  if (resample > 0) {
+    NSIZE <- resample
+    jj <- tapply(1:length(y), y, function(ii) {
+      if (length(ii) < NSIZE) ii <- sample(c(ii, ii), NSIZE, replace = TRUE)
+      return(ii)
+    })
+    jj <- unlist(jj)
+    dbg("[pgx.variableImportance] resampling levels from: ", table(y))
+    dbg("[pgx.variableImportance] resampling levels to: ", table(y[jj]))
+    X <- X[, jj]
+    y <- y[jj]
+  }
 
-  NSIZE <- 20
-  jj <- unlist(tapply(1:length(y), y, function(ii) {
-    if (length(ii) < NSIZE) ii <- sample(ii, NSIZE, replace = TRUE)
-    return(ii)
-  }))
-  cat(
-    "pgx.multiclassVariableImportance:: augmenting data from",
-    length(y), "to", length(jj), "samples\n"
-  )
-  X <- X[, jj]
-  y <- y[jj]
 
+  ## add noise
+  if (add.noise > 0) {
+    sdx0 <- matrixStats::rowSds(X, na.rm = TRUE)
+    sdx1 <- add.noise * (0.5 * sdx0 + 0.5 * mean(sdx0))
+    X <- X + sdx1 * matrix(rnorm(length(X)), nrow(X), ncol(X)) ## add some noise
+  }
+
+  if (scale) {
+    sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+    X <- (X - rowMeans(X, na.rm = TRUE)) / (sdx + 1e-8)
+  }
+
+  ## reduce features using fast correlation/cov
+  if (reduce > 0 && reduce < nrow(X)) {
+    dy <- model.matrix(~ 0 + y)
+    rho <- cov(t(X), dy) ## note: using covariance
+    imp1 <- sqrt(rowMeans(rho**2))
+    sel <- head(names(sort(-imp1)), reduce)
+    X <- X[sel, ]
+  }
+
+  if ("correlation" %in% methods) {
+    runtime[["correlation"]] <- system.time({
+      dy <- model.matrix(~ 0 + y)
+      rho <- cov(t(X), dy)
+    })
+    imp[["correlation"]] <- sqrt(rowMeans(rho**2))
+  }
+
+  if ("ftest" %in% methods) {
+    runtime[["ftest"]] <- system.time({
+      res <- playbase::gx.limmaF(X, y, lfc = 0, fdr = 1)
+    })
+    imp1 <- -log10(res[rownames(X), "P.Value"])
+    names(imp1) <- rownames(X)
+    imp[["ftest"]] <- imp1
+  }
 
   if ("glmnet" %in% methods) {
     fam <- "multinomial"
+    NFOLD <- 5
+    runtime[["glmnet.a0"]] <- system.time({
+      out0 <- glmnet::cv.glmnet(t(X), y, alpha = 0, family = fam, standardize = TRUE, nfold = NFOLD)
+      cf0 <- Matrix::rowMeans(do.call(cbind, coef(out0, s = "lambda.min"))[-1, ]**2)
+      out0a <- glmnet::cv.glmnet(t(X), y, alpha = 0, family = fam, standardize = FALSE, nfold = NFOLD)
+      cf0a <- Matrix::rowMeans(do.call(cbind, coef(out0a, s = "lambda.min"))[-1, ]**2)
+    })
 
+    runtime[["glmnet.a1"]] <- system.time({
+      out1 <- glmnet::cv.glmnet(t(X), y, alpha = 0.99, family = fam, standardize = TRUE, nfold = NFOLD)
+      cf1 <- Matrix::rowMeans(do.call(cbind, coef(out1, s = "lambda.min"))[-1, ]**2)
+      out1a <- glmnet::cv.glmnet(t(X), y, alpha = 0.99, family = fam, standardize = FALSE, nfold = NFOLD)
+      cf1a <- Matrix::rowMeans(do.call(cbind, coef(out1a, s = "lambda.min"))[-1, ]**2)
+    })
 
-    out0 <- glmnet::cv.glmnet(t(X), y, alpha = 0, family = fam, standardize = TRUE, nfold = NFOLD)
-    cf0 <- Matrix::rowMeans(do.call(cbind, stats::coef(out0, s = "lambda.min"))[-1, ]**2)
-
-    out1 <- glmnet::cv.glmnet(t(X), y, alpha = 1, family = fam, standardize = TRUE, nfold = NFOLD)
-    cf1 <- Matrix::rowMeans(do.call(cbind, stats::coef(out1, s = "lambda.min"))[-1, ]**2)
-
-    out0a <- glmnet::cv.glmnet(t(X), y, alpha = 0, family = fam, standardize = FALSE, nfold = NFOLD)
-    cf0a <- Matrix::rowMeans(do.call(cbind, stats::coef(out0a, s = "lambda.min"))[-1, ]**2)
-
-    out1a <- glmnet::cv.glmnet(t(X), y, alpha = 1, family = fam, standardize = FALSE, nfold = NFOLD)
-    cf1a <- Matrix::rowMeans(do.call(cbind, stats::coef(out1a, s = "lambda.min"))[-1, ]**2)
-
+    sdx <- matrixStats::rowSds(X, na.rm = TRUE)
     imp[["glmnet.a0"]] <- (cf0 / max(abs(cf0)) + cf0a / max(abs(cf0a))) * sdx[names(cf0)]
     imp[["glmnet.a1"]] <- (cf1 / max(abs(cf1)) + cf1a / max(abs(cf1a))) * sdx[names(cf1)]
   }
 
   if ("randomforest" %in% methods) {
-    fit_rf <- randomForest::randomForest(t(X), factor(y))
+    runtime[["randomForest"]] <- system.time({
+      fit_rf <- randomForest::randomForest(t(X), factor(y))
+    })
     imp[["randomForest"]] <- fit_rf$importance[, 1]
   }
 
   if ("boruta" %in% methods) {
     imp4 <- rep(0, nrow(X))
     niter <- 4
-    for (k in 1:niter) {
-      jj <- sample(ncol(X), ncol(X) * 0.9)
-      out3 <- Boruta::Boruta(t(X[, jj, drop = FALSE]), y[jj])
-      fd <- factor(out3$finalDecision,
-        levels = c("Rejected", "Tentative", "Confirmed")
-      )
-      fd <- (as.integer(fd) - 1) / 2
-      imp4 <- imp4 + fd / niter
-    }
-
+    runtime[["Boruta"]] <- system.time({
+      for (k in 1:niter) {
+        jj <- sample(ncol(X), ncol(X) * 0.9)
+        out3 <- Boruta::Boruta(t(X[, jj, drop = FALSE]), y[jj])
+        fd <- factor(out3$finalDecision,
+          levels = c("Rejected", "Tentative", "Confirmed")
+        )
+        fd <- (as.integer(fd) - 1) / 2
+        imp4 <- imp4 + fd / niter
+      }
+    })
     names(imp4) <- rownames(X)
     imp[["Boruta"]] <- imp4
   }
@@ -477,12 +536,14 @@ pgx.multiclassVariableImportance <- function(X, y,
   if ("xgboost" %in% methods) {
     ny <- length(table(y))
     yy <- as.integer(factor(y)) - 1
-    bst <- xgboost::xgboost(
-      data = t(X), label = yy, booster = "gbtree",
-      max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
-      num_class = ny,
-      verbose = 0, objective = "multi:softmax"
-    )
+    runtime[["xgboost"]] <- system.time({
+      bst <- xgboost::xgboost(
+        data = t(X), label = yy, booster = "gbtree",
+        max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
+        num_class = ny,
+        verbose = 0, objective = "multi:softmax"
+      )
+    })
 
     xgmat <- xgboost::xgb.importance(model = bst)
     imp5 <- xgmat$Gain**0.2
@@ -491,12 +552,14 @@ pgx.multiclassVariableImportance <- function(X, y,
     imp[["xgboost"]] <- imp5
 
     ## linear model
-    bst2 <- xgboost::xgboost(
-      data = t(X), label = yy, booster = "gblinear",
-      max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
-      num_class = ny,
-      verbose = 0, objective = "multi:softmax"
-    )
+    runtime[["xgboost.lin"]] <- system.time({
+      bst2 <- xgboost::xgboost(
+        data = t(X), label = yy, booster = "gblinear",
+        max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
+        num_class = ny,
+        verbose = 0, objective = "multi:softmax"
+      )
+    })
     xgmat <- xgboost::xgb.importance(model = bst2)
     imp6 <- xgmat$Weight
     names(imp6) <- xgmat$Feature
@@ -504,147 +567,117 @@ pgx.multiclassVariableImportance <- function(X, y,
     imp[["xgboost.lin"]] <- imp6
   }
 
-  if ("pls" %in% methods) {
+  if ("splsda" %in% methods) {
     n <- min(25, nrow(X))
     colnames(X) <- names(y) <- paste0("sample", 1:length(y))
-    res <- mixOmics::splsda(t(X), y, keepX = c(n, n))
+    runtime[["splsda"]] <- system.time({
+      res <- mixOmics::splsda(t(X), y, keepX = c(n, n))
+    })
     impx <- rowMeans(res$loadings$X[rownames(X), ]**2)
-    imp[["spls.da"]] <- impx
+    imp[["splsda"]] <- impx
   }
 
+  #  CARET.METHODS = c("glmnet",'svmLinear','rpart','xgbLinear','glm','glmStepAIC',
+  #  'pda','sparseLDA','pls','plsda')
+  caret.methods <- intersect(methods, CARET.METHODS)
+  if (length(caret.methods)) {
+    repeatedcv <- caret::trainControl(method = "repeatedcv", number = 25, repeats = 1)
+    m <- "pls"
+    for (m in caret.methods) {
+      message("computing variable importance for ", m)
+      t0 <- NULL
+      if (m == "plsda") {
+        runtime[["plsda"]] <- system.time({
+          fit <- try(caret::plsda(x = t(X), y = y, ncomp = min(20, nrow(X) / 3)))
+        })
+        if (!"try-error" %in% class(fit)) {
+          imp[[m]] <- sqrt(rowMeans(caret::varImp(fit)**2))
+        }
+      } else {
+        runtime[[m]] <- system.time({
+          fit <- try(caret::train(
+            x = t(X), y = y, method = m,
+            trControl = repeatedcv, trace = FALSE
+          ))
+        })
+        if (!"try-error" %in% class(fit)) {
+          imp[[m]] <- sqrt(rowMeans(caret::varImp(fit)$importance**2))
+        }
+      }
+    } ## for caret.methods
+  }
+  names(imp)
+
+  imp <- imp[!sapply(imp, is.null)]
+  imp <- lapply(imp, function(v) v[match(xnames, names(v))])
   P <- do.call(cbind, imp)
+  colnames(P) <- names(imp)
+  rownames(P) <- xnames
   P <- abs(P) ## always positive??
   P[is.na(P)] <- 0
-  P <- P[xnames, , drop = FALSE]
-  return(P)
+  ## P <- P[xnames, , drop = FALSE]
+
+  ## normalize values by ranking
+  ii <- which(P == 0)
+  P <- 1 / apply(-P, 2, rank)
+  P[ii] <- 0
+
+  ## parse runtimes
+  tt <- unlist(sapply(runtime[colnames(P)], function(t) t[1]))
+  names(tt) <- sub(".user.self", "", names(tt))
+  tt <- tt[match(colnames(P), names(tt))]
+  names(tt) <- colnames(P)
+  tt
+  sort(tt)
+
+  res <- list(importance = P, runtime = tt)
+  return(res)
 }
 
 
-#' @describeIn pgx.survivalVariableImportance Calculates variable importance scores for predictors.
 #' @export
-pgx.variableImportance <- function(X, y,
-                                   methods = c("glmnet", "randomforest", "boruta", "xgboost", "pls")) {
-  if (length(unique(y[!is.na(y)])) != 2) {
-    stop("pgx.variableImportance:: only binary outcome variables")
-  }
-
-  imp <- list()
-  xnames <- rownames(X)
-  if (nrow(X) == 1) X <- rbind(X, X)
-  sdx <- apply(X, 1, stats::sd)
-
-  ## convert to factor
-  y <- factor(y)
-
-  ## resample to minimum size to balance groups
-
-  NFOLD <- 5
-
-  NSIZE <- 20
-  jj <- unlist(tapply(1:length(y), y, function(ii) {
-    if (length(ii) < NSIZE) ii <- sample(ii, NSIZE, replace = TRUE)
-    return(ii)
-  }))
-  cat(
-    "pgx.variableImportance:: augmenting data from",
-    length(y), "to", length(jj), "\n"
-  )
-  X <- X[, jj]
-  y <- y[jj]
-
-  if ("glmnet" %in% methods) {
-    out0 <- glmnet::cv.glmnet(t(X), y,
-      alpha = 0, family = "binomial",
-      standardize = TRUE
-    )
-    cf0 <- stats::coef(out0, s = "lambda.min")[-1, 1]
-
-
-    out1 <- glmnet::cv.glmnet(t(X), y,
-      alpha = 1, family = "binomial",
-      standardize = TRUE
-    )
-    cf1 <- stats::coef(out1, s = "lambda.min")[-1, 1]
-
-
-    out0a <- glmnet::cv.glmnet(t(X), y,
-      alpha = 0, family = "binomial",
-      standardize = FALSE
-    )
-    cf0a <- stats::coef(out0a, s = "lambda.min")[-1, 1]
-
-
-    out1a <- glmnet::cv.glmnet(t(X), y,
-      alpha = 1, family = "binomial",
-      standardize = FALSE
-    )
-    cf1a <- stats::coef(out1a, s = "lambda.min")[-1, 1]
-
-
-    imp[["glmnet.a0"]] <- (cf0 / max(abs(cf0)) + cf0a / max(abs(cf0a))) * sdx[names(cf0)]
-    imp[["glmnet.a1"]] <- (cf1 / max(abs(cf1)) + cf1a / max(abs(cf1a))) * sdx[names(cf1)]
-  }
-
-  if ("randomforest" %in% methods) {
-    fit_rf <- randomForest::randomForest(t(X), factor(y))
-    imp[["randomForest"]] <- fit_rf$importance[, 1]
-  }
-
-  if ("boruta" %in% methods) {
-    imp4 <- rep(0, nrow(X))
-    niter <- 4
-    for (k in 1:niter) {
-      jj <- sample(ncol(X), ncol(X) * 0.9)
-      out3 <- Boruta::Boruta(t(X[, jj, drop = FALSE]), y[jj])
-      fd <- factor(out3$finalDecision, levels = c("Rejected", "Tentative", "Confirmed"))
-      fd <- (as.integer(fd) - 1) / 2
-      imp4 <- imp4 + fd / niter
-    }
-    names(imp4) <- rownames(X)
-    imp[["Boruta"]] <- imp4
-  }
-
-  if ("xgboost" %in% methods) {
-    y1 <- as.integer(factor(y)) - 1
-    bst <- xgboost::xgboost(
-      data = t(X), label = y1, booster = "gbtree",
-      max_depth = 2, eta = 1, nthread = 2, nrounds = 2,
-      verbose = 0, objective = "binary:logistic"
-    )
-
-    xgmat <- xgboost::xgb.importance(model = bst)
-    imp5 <- xgmat$Gain**0.2
-    imp5 <- imp5[match(rownames(X), xgmat$Feature)]
-    names(imp5) <- rownames(X)
-    imp[["xgboost"]] <- imp5
-
-    bst2 <- xgboost::xgboost(
-      data = t(X), label = y1, booster = "gblinear",
-      eta = 0.3, nthread = 1, nrounds = 20,
-      verbose = 0, objective = "binary:logistic"
-    )
-    xgmat <- xgboost::xgb.importance(model = bst2)
-    imp6 <- xgmat$Weight
-    names(imp6) <- xgmat$Feature
-    imp6 <- imp6[match(rownames(X), names(imp6))]
-    imp[["xgboost.lin"]] <- imp6
-  }
-
-  if ("pls" %in% methods) {
-    n <- min(25, nrow(X))
-    colnames(X) <- names(y) <- paste0("sample", 1:length(y))
-    res <- mixOmics::splsda(t(X), y, keepX = c(n, n))
-
-    impx <- rowMeans(res$loadings$X[rownames(X), ]**2)
-    imp[["spls.da"]] <- impx
-  }
-
-  P <- do.call(cbind, imp)
-  P <- abs(P) ## always positive??
+plotImportance <- function(P, p.sign = NULL, top = 50, runtime = NULL) {
   P[is.na(P)] <- 0
-  P <- P[xnames, , drop = FALSE]
-  return(P)
+  if (is.null(p.sign)) p.sign <- rep(1, nrow(P))
+  p.sign <- sign(p.sign)
+  P1 <- 1 / apply(-abs(P), 2, rank) * p.sign
+  P1 <- P1[order(-rowMeans(P1, na.rm = TRUE)), ]
+  if (any(p.sign < 0)) {
+    sel <- unique(head(rownames(P1), top / 2), tail(rownames(P1), top / 2))
+  } else {
+    sel <- head(rownames(P1), top)
+  }
+  P1 <- P1[sel, ]
+  P1 <- P1[order(rowMeans(P1, na.rm = TRUE)), ]
+
+  par(mfrow = c(2, 2), mar = c(5, 15, 4, 4))
+  if (is.null(runtime)) par(mfrow = c(1, 2))
+  barplot(t(P1),
+    las = 1, horiz = TRUE,
+    xlab = "cumulative importance", main = "variable importance"
+  )
+  legend("bottomright", legend = colnames(P1), fill = grey.colors(ncol(P1)))
+
+  par(mar = c(8, 4, 4, 15))
+  playbase::gx.imagemap(scale(P1, center = FALSE))
+
+  if (!is.null(runtime)) {
+    par(mar = c(5, 15, 4, 4))
+    runtime <- sort(runtime, decreasing = TRUE)
+    runtime <- pmax(runtime, 0.1 * min(runtime[runtime > 0], na.rm = TRUE))
+    log.runtime <- log10(runtime)
+    log.runtime <- log.runtime - min(log10(runtime))
+    barplot(log.runtime,
+      las = 1, horiz = TRUE,
+      xlab = "time (log10)", main = "algorithm runtime"
+    )
+  }
 }
+
+
+
+
+
 
 ## =====================================================================================
 ## =========================== END OF FILE =============================================
