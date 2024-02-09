@@ -4141,7 +4141,6 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
                           lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
                           marker.size = 5, label = NULL, label.cex = 1,
                           marker.type = "scatter", displayModeBar = TRUE, max.absy = NULL) {
-
   if (is.null(highlight)) highlight <- names
   i0 <- which(!names %in% highlight)
   i1 <- which(names %in% highlight)
@@ -4181,7 +4180,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         showlegend = showlegend
       )
   }
-  
+
   if (!is.null(label) && length(label) > 0) {
     i2 <- which(names %in% label)
     p <- p %>%
@@ -4199,7 +4198,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         textposition = "top"
       )
   }
-  
+
   y0 <- -log10(psig)
   y1 <- 1.05 * max(y, na.rm = TRUE)
   xx <- 1.05 * max(abs(x), na.rm = TRUE)
@@ -4224,8 +4223,8 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
 
   if (min(x, na.rm = TRUE) >= 0) xrange <- c(0, 1) * max.absx * 1.05
   yrange <- c(0, 1) * max.absy * 1.05
-  xaxis <- list(title = xlab, range = xrange, showgrid = FALSE) 
-  yaxis <- list(title = list(text = ylab, standoff = 20L), range = yrange, showgrid = FALSE) 
+  xaxis <- list(title = xlab, range = xrange, showgrid = FALSE)
+  yaxis <- list(title = list(text = ylab, standoff = 20L), range = yrange, showgrid = FALSE)
 
   p <- p %>%
     plotly::layout(
