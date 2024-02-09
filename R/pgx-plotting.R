@@ -4255,7 +4255,8 @@ plotlyVolcano_multi <- function(FC,
                                 share_axis = FALSE, 
                                 title_y =  "significance (-log10q)", 
                                 title_x = "effect size (log2FC)", 
-                                cex = 3, 
+                                cex = 3,  ## marker size
+                                label.cex = 1,  ## label size                               
                                 yrange = 0.5, 
                                 n_rows = 2, 
                                 margin_l = 50, 
@@ -4306,9 +4307,9 @@ plotlyVolcano_multi <- function(FC,
     # Set title
     if (share_axis) {
       title_loc <- -log10(min(qv + 1e-12, na.rm = TRUE))
-      title_loc <- title_loc - title_loc *(yrange/10) 
+      title_loc <- title_loc + title_loc * (yrange/20) 
     } else {
-      title_loc <- max(qval, na.rm = TRUE) - max(qval, na.rm = TRUE) *(yrange/10) 
+      title_loc <- max(qval, na.rm = TRUE) + max(qval, na.rm = TRUE) *(yrange/20) 
     }
     # Call volcano plot
     sub_plots[[i]] <- plotlyVolcano(
@@ -4316,19 +4317,20 @@ plotlyVolcano_multi <- function(FC,
       y = qval,
       names = all_genes,
       marker.type = "scattergl",
+      marker.size = cex,
       highlight = sig.genes,
       label = label,
+      label.cex = label.cex,      
       group.names = c("group1", "group0"),
       psig = fdr,
       lfc = lfc,
-      marker.size = cex,
       max.absy = title_loc + title_loc *(yrange/10),
       showlegend = FALSE,
       ...
       # Add plot title
     ) %>% plotly::add_annotations(
         text = paste("<b>", title_i, "</b>"),
-        font = list(size = 15),
+        font = list(size = 16),
         showarrow = FALSE,
         xanchor = "centre",
         yanchor = "bottom",
@@ -4362,7 +4364,7 @@ plotlyVolcano_multi <- function(FC,
                   font = list(size = 13),
                   showarrow = FALSE, xref='paper', yref='paper')
             ), annotation_args),
-              margin = modifyList(list(l = margin_l, b = margin_b), 
+            margin = modifyList(list(l = margin_l, b = margin_b),
                                   layout_args)
     )
   )
