@@ -395,11 +395,11 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
 
   ## 0. Matching: worm, fly, yeast
   type.regex <- list(
-    "ENSEMBL" = "^WBGene|^FBgn0|^Y[A-Z][LR]"  ## worm, fly, yeast
+    "ENSEMBL" = "^WBGene|^FBgn0|^Y[A-Z][LR]" ## worm, fly, yeast
   )
   probe_type <- best.match(type.regex, 0.33)
 
-  
+
   ## 1. determine probe type using regular expression
   if (probe_type == "") {
     probe_type <- xbioc::idtype(probes)
@@ -825,7 +825,6 @@ detect_probetype.BIOMART <- function(probes, mart = NULL, verbose = TRUE) {
     if (probe_check[i] > 50) {
       break
     }
-
   }
 
   # Check matches and return if winner
@@ -843,8 +842,8 @@ detect_probetype.BIOMART <- function(probes, mart = NULL, verbose = TRUE) {
 
 
 #' Known probes
-#' 
-#' This function checks if a vector of probe identifiers matches known patterns 
+#'
+#' This function checks if a vector of probe identifiers matches known patterns
 #' for common identifier types like Ensembl IDs. It returns a vector of probe
 #' types that should be checked for mapping based on the matches.
 #'
@@ -856,7 +855,7 @@ detect_probetype.BIOMART <- function(probes, mart = NULL, verbose = TRUE) {
 #' @details
 #' This function checks `probes` for the following known patterns:
 #'
-#' - Ensembl IDs for higher animals (ENS*) 
+#' - Ensembl IDs for higher animals (ENS*)
 #' - Drosophila melanogaster Ensembl IDs (FBgn*)
 #' - Caenorhabditis elegans Ensembl IDs (WBGene*)
 #'
@@ -866,33 +865,38 @@ detect_probetype.BIOMART <- function(probes, mart = NULL, verbose = TRUE) {
 #' @examples
 #' probes <- c("ENSG000001", "ENST0001", "FBgn001", "WBGene0001")
 #' check_known_probes(probes, NULL)
-#' 
+#'
 #' @export
 check_known_probes <- function(probes, probe_types_to_check = NULL) {
-
   # Check higher animals ENSEMBL notation
-  if(sum(grepl("^ENS*", probes)) > length(probes) * 0.5) {
-    probe_types_to_check <- c("ensembl_gene_id",
-                          "ensembl_transcript_id",
-                          "ensembl_transcript_id_version",
-                          "ensembl_peptide_id")
-                          }
+  if (sum(grepl("^ENS*", probes)) > length(probes) * 0.5) {
+    probe_types_to_check <- c(
+      "ensembl_gene_id",
+      "ensembl_transcript_id",
+      "ensembl_transcript_id_version",
+      "ensembl_peptide_id"
+    )
+  }
 
   # Check D. melanogaster notation
-  if(sum(grepl("^FBgn*", probes)) > length(probes) * 0.5) {
-    probe_types_to_check <- c("ensembl_gene_id",
-                          "ensembl_transcript_id",
-                          "ensembl_transcript_id_version",
-                          "ensembl_peptide_id")
-                          }
+  if (sum(grepl("^FBgn*", probes)) > length(probes) * 0.5) {
+    probe_types_to_check <- c(
+      "ensembl_gene_id",
+      "ensembl_transcript_id",
+      "ensembl_transcript_id_version",
+      "ensembl_peptide_id"
+    )
+  }
 
   # Check C. elegans notation
-  if(sum(grepl("^WBGene*", probes)) > length(probes) * 0.5) {
-    probe_types_to_check <- c("ensembl_gene_id",
-                          "ensembl_transcript_id",
-                          "ensembl_transcript_id_version",
-                          "ensembl_peptide_id")
-                          }
+  if (sum(grepl("^WBGene*", probes)) > length(probes) * 0.5) {
+    probe_types_to_check <- c(
+      "ensembl_gene_id",
+      "ensembl_transcript_id",
+      "ensembl_transcript_id_version",
+      "ensembl_peptide_id"
+    )
+  }
 
   return(probe_types_to_check)
 }
@@ -903,7 +907,7 @@ check_known_probes <- function(probes, probe_types_to_check = NULL) {
 #' gene/transcript identifiers.
 #'
 #' @param probes Character vector of gene/transcript identifiers to retrieve annotation for.
-#' @param organism Organism name, e.g. "hsapiens_gene_ensembl".  
+#' @param organism Organism name, e.g. "hsapiens_gene_ensembl".
 #' @param probe_type Character specifying the type of input identifiers. If NULL,
 #' it will be automatically detected. Options are "ensembl_gene_id", "ensembl_transcript_id", etc.
 #' @param mart BioMart object specifying the database to query.
@@ -937,11 +941,11 @@ check_known_probes <- function(probes, probe_types_to_check = NULL) {
 #' }
 #' @export
 ngs.getGeneAnnotation_BIOMART <- function(
-  probes,
-  organism,
-  probe_type = NULL,
-  mart = NULL,
-  verbose = TRUE) {
+    probes,
+    organism,
+    probe_type = NULL,
+    mart = NULL,
+    verbose = TRUE) {
   # Check mart
   if (is.null(mart)) {
     stop("[ngs.getGeneAnnotation_BIOMART] Mart not found. Please specify a BioMart database.")
@@ -961,13 +965,13 @@ ngs.getGeneAnnotation_BIOMART <- function(
   # Select attributes
   attr_call <- c(
     probe_type,
-    "external_gene_name",  # gene_name
-    "description",         # gene_title
-    "gene_biotype",        # gene_biotype
-    "chromosome_name",     # chr
-    "transcript_start",    # pos
-    "transcript_length",   # tx_len
-    "band"                 # map
+    "external_gene_name", # gene_name
+    "description", # gene_title
+    "gene_biotype", # gene_biotype
+    "chromosome_name", # chr
+    "transcript_start", # pos
+    "transcript_length", # tx_len
+    "band" # map
   )
   attr_call <- attr_call[!duplicated(attr_call)]
 
@@ -990,9 +994,10 @@ ngs.getGeneAnnotation_BIOMART <- function(
       mart = mart
     )
     annot_homologs <- data.table::data.table(annot_homologs)
-    data.table::setnames(annot_homologs, 
-                        old = "hsapiens_homolog_associated_gene_name", 
-                        new = "human_ortholog")
+    data.table::setnames(annot_homologs,
+      old = "hsapiens_homolog_associated_gene_name",
+      new = "human_ortholog"
+    )
     annot <- annot[annot_homologs, on = "external_gene_name", mult = "first"]
   }
 
@@ -1001,49 +1006,57 @@ ngs.getGeneAnnotation_BIOMART <- function(
 
   # Renaming for backwards compatibility
   if (probe_type != "external_gene_name") {
-    new_names <- c("feature", 
-                  "symbol",
-                  "gene_title",
-                  "gene_biotype",
-                  "chr", 
-                  "pos",
-                  "tx_len", 
-                  "map")
+    new_names <- c(
+      "feature",
+      "symbol",
+      "gene_title",
+      "gene_biotype",
+      "chr",
+      "pos",
+      "tx_len",
+      "map"
+    )
   } else {
-    new_names <- c("feature", 
-                  "gene_title",
-                  "gene_biotype",
-                  "chr", 
-                  "pos",
-                  "tx_len", 
-                  "map")
+    new_names <- c(
+      "feature",
+      "gene_title",
+      "gene_biotype",
+      "chr",
+      "pos",
+      "tx_len",
+      "map"
+    )
     out[, symbol := external_gene_name]
   }
   data.table::setnames(out, old = attr_call, new = new_names)
-  
+
   # Reorder columns and rows
   if ("human_ortholog" %chin% colnames(out)) {
-    col_order <- c("feature", 
-                   "symbol", 
-                   "human_ortholog",
-                   "gene_title",
-                   "gene_biotype")
+    col_order <- c(
+      "feature",
+      "symbol",
+      "human_ortholog",
+      "gene_title",
+      "gene_biotype"
+    )
   } else {
-    col_order <- c("feature", 
-                   "symbol", 
-                   "gene_title",
-                   "gene_biotype")
+    col_order <- c(
+      "feature",
+      "symbol",
+      "gene_title",
+      "gene_biotype"
+    )
   }
   data.table::setcolorder(out, col_order)
   data.table::setkeyv(out, "feature")
-  
+
   # Take out the source info from gene_title
-  out[, c("gene_title", "source") :=  
-        data.table::tstrsplit(gene_title, "\\[", keep = 1:2)]
+  out[, c("gene_title", "source") :=
+    data.table::tstrsplit(gene_title, "\\[", keep = 1:2)]
   out[, source := gsub("\\]", "", source)]
 
   if (organism == "Saccharomyces cerevisiae") {
-    out[, gene_title :=  data.table::tstrsplit(gene_title, ";", keep = 1)]
+    out[, gene_title := data.table::tstrsplit(gene_title, ";", keep = 1)]
   }
   out[, gene_title := trimws(gene_title, which = "right")]
   # Keep it for back compatibility
@@ -1073,7 +1086,7 @@ ngs.getGeneAnnotation_BIOMART <- function(
 #'   (matching type of probes input) and a column with the corresponding HGNC
 #'   gene symbols. This function matches the input probes to the table
 #'   to retrieve the gene symbols. Unmatched probes are returned as is.
-#' @examples 
+#' @examples
 #' \dontrun{
 #' probes <- c("ENSG00000142192", "ENST00000288602")
 #' annot_table <- data.frame(
@@ -1085,16 +1098,15 @@ ngs.getGeneAnnotation_BIOMART <- function(
 #' @import data.table
 #' @export
 probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE) {
-
   # Prepare inputs
   query_col <- annot_table[probes, query]
 
   # Deal with NA
   if (fill_na) {
-    query_col <- data.table::fifelse(query_col ==  "" | is.na(query_col),
-          yes = probes,
-          no = query_col
-          )
+    query_col <- data.table::fifelse(query_col == "" | is.na(query_col),
+      yes = probes,
+      no = query_col
+    )
   }
 
   # Return queryed col
@@ -1104,16 +1116,16 @@ probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE)
 
 #' Retrieve gene annotation table
 #'
-#' @description Retrieves a gene annotation table for the given organism 
+#' @description Retrieves a gene annotation table for the given organism
 #' from Ensembl using biomaRt. Adds the table to the PGX object.
-#' 
+#'
 #' @param pgx PGX object with a counts table.
-#' @param organism Char. Organism name. For more info see \code{\link{playbase::SPECIES_TABLE}}. 
+#' @param organism Char. Organism name. For more info see \code{\link{playbase::SPECIES_TABLE}}.
 #'
 #' @return Updated PGX object with gene annotation table
-#' 
 #'
-#' @details Queries the Ensembl database to get a gene annotation table 
+#'
+#' @details Queries the Ensembl database to get a gene annotation table
 #' containing external gene IDs mapped to Ensembl IDs. Handles retries in case
 #' of temporary Ensembl API errors.
 #'
