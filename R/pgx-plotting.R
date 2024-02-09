@@ -3784,7 +3784,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     plt <- plt %>%
       plotly::layout(
         margin = list(l = 10, r = 10, b = 10, t = 10)
-      ) 
+      )
   }
   plt
 }
@@ -4018,7 +4018,7 @@ plotlyMA <- function(x, y, names, source = "plot1",
         x = x[i0],
         y = y[i0],
         text = names[i0],
-        type = marker.type, 
+        type = marker.type,
         mode = "markers",
         marker = list(
           size = marker.size,
@@ -4034,7 +4034,7 @@ plotlyMA <- function(x, y, names, source = "plot1",
         x = x[i1],
         y = y[i1],
         text = names[i1],
-        type = marker.type, 
+        type = marker.type,
         mode = "markers",
         marker = list(
           size = marker.size,
@@ -4155,7 +4155,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         x = x[i0],
         y = y[i0],
         text = names[i0],
-        type = marker.type, 
+        type = marker.type,
         mode = "markers",
         marker = list(
           size = marker.size,
@@ -4170,7 +4170,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         x = x[i1],
         y = y[i1],
         text = names[i1],
-        type = marker.type, 
+        type = marker.type,
         mode = "markers",
         marker = list(
           size = marker.size,
@@ -4215,7 +4215,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
 
   if (is.null(max.absy)) {
     max.absy <- max(max(abs(y), na.rm = TRUE), y0 * 1.2)
-  } 
+  }
   xrange <- c(-1, 1) * max.absx * 1.05
   if (min(x) >= 0) xrange <- c(0, 1) * max.absx * 1.05
   yrange <- c(0, 1) * max.absy * 1.05
@@ -4244,14 +4244,15 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
 
 
 #' @export
-plotlyVolcano_multi <- function(FC, 
-                                Q, 
-                                names = NULL, 
+plotlyVolcano_multi <- function(FC,
+                                Q,
+                                names = NULL,
                                 by_sig = TRUE,
-                                fdr = 0.05, 
-                                lfc = 0, 
+                                fdr = 0.05,
+                                lfc = 0,
                                 gset = NULL,
                                 label = NULL,
+<<<<<<< HEAD
                                 share_axis = FALSE, 
                                 title_y =  "significance (-log10q)", 
                                 title_x = "effect size (log2FC)", 
@@ -4261,13 +4262,23 @@ plotlyVolcano_multi <- function(FC,
                                 n_rows = NULL, 
                                 margin_l = 45, 
                                 margin_b = 60, 
+=======
+                                share_axis = FALSE,
+                                title_y = "significance (-log10q)",
+                                title_x = "effect size (log2FC)",
+                                cex = 3, ## marker size
+                                label.cex = 1, ## label size
+                                yrange = 0.5,
+                                n_rows = 2,
+                                margin_l = 50,
+                                margin_b = 50,
+>>>>>>> 5f661788be56ff63d68fbb67a8b7c2986dc3a3c8
                                 title_y_offset = -0.025,
                                 title_x_offset = -0.12,
                                 interplot_margin = c(0.01, 0.0, 0.05, 0.1),
                                 annotation_args = list(),
                                 layout_args = list(),
                                 ...) {
-
   ## Get tables and genes
   fc <- as.matrix(FC)
   qv <- as.matrix(Q)
@@ -4278,9 +4289,8 @@ plotlyVolcano_multi <- function(FC,
 
   # Prepare collection list
   nplots <- min(24, length(titles))
-  sub_plots <- vector("list", length = length(nplots))  
+  sub_plots <- vector("list", length = length(nplots))
   for (i in 1:nplots) {
-
     # Input variables
     fx <- fc[, i, drop = FALSE]
     qval <- qv[, i, drop = FALSE]
@@ -4307,9 +4317,9 @@ plotlyVolcano_multi <- function(FC,
     # Set title
     if (share_axis) {
       title_loc <- -log10(min(qv + 1e-12, na.rm = TRUE))
-      title_loc <- title_loc + title_loc * (yrange/20) 
+      title_loc <- title_loc + title_loc * (yrange / 20)
     } else {
-      title_loc <- max(qval, na.rm = TRUE) + max(qval, na.rm = TRUE) *(yrange/20) 
+      title_loc <- max(qval, na.rm = TRUE) + max(qval, na.rm = TRUE) * (yrange / 20)
     }
     # Call volcano plot
     sub_plots[[i]] <- plotlyVolcano(
@@ -4320,15 +4330,16 @@ plotlyVolcano_multi <- function(FC,
       marker.size = cex,
       highlight = sig.genes,
       label = label,
-      label.cex = label.cex,      
+      label.cex = label.cex,
       group.names = c("group1", "group0"),
       psig = fdr,
       lfc = lfc,
-      max.absy = title_loc + title_loc *(yrange/10),
+      max.absy = title_loc + title_loc * (yrange / 10),
       showlegend = FALSE,
       ...
       # Add plot title
-    ) %>% plotly::add_annotations(
+    ) %>%
+      plotly::add_annotations(
         text = paste("<b>", title_i, "</b>"),
         font = list(size = 16),
         showarrow = FALSE,
@@ -4336,12 +4347,13 @@ plotlyVolcano_multi <- function(FC,
         yanchor = "bottom",
         x = 0,
         y = title_loc
-    ) %>% plotly_build_light(.)
+      ) %>%
+      plotly_build_light(.)
   }
 
   # Pass argument scale_per_plot to subplot
   shareY <- shareX <- ifelse(share_axis, TRUE, FALSE)
-  
+
   # Arrange subplots
   if (is.null(n_rows)) {
     n_rows <- floor(sqrt(nplots))
@@ -4350,23 +4362,30 @@ plotlyVolcano_multi <- function(FC,
     n_rows <- 1
   }
   suppressWarnings(
-  all_plts <- plotly::subplot(sub_plots, nrows = n_rows , margin = interplot_margin, 
-  titleY = FALSE, titleX = FALSE, shareX = shareX, shareY = shareY) %>%
-  
-  # Add common axis titles
-  plotly::layout(
-            annotations = modifyList(list(
-            list(x = title_y_offset, y = 0.5, text = title_y,
-                  font = list(size = 13),
-                  textangle = 270,
-                  showarrow = FALSE, xref='paper', yref='paper'),
-            list(x = 0.5, y = title_x_offset, text = title_x,
-                  font = list(size = 13),
-                  showarrow = FALSE, xref='paper', yref='paper')
-            ), annotation_args),
-            margin = modifyList(list(l = margin_l, b = margin_b),
-                                  layout_args)
-    )
+    all_plts <- plotly::subplot(sub_plots,
+      nrows = n_rows, margin = interplot_margin,
+      titleY = FALSE, titleX = FALSE, shareX = shareX, shareY = shareY
+    ) %>%
+      # Add common axis titles
+      plotly::layout(
+        annotations = modifyList(list(
+          list(
+            x = title_y_offset, y = 0.5, text = title_y,
+            font = list(size = 13),
+            textangle = 270,
+            showarrow = FALSE, xref = "paper", yref = "paper"
+          ),
+          list(
+            x = 0.5, y = title_x_offset, text = title_x,
+            font = list(size = 13),
+            showarrow = FALSE, xref = "paper", yref = "paper"
+          )
+        ), annotation_args),
+        margin = modifyList(
+          list(l = margin_l, b = margin_b),
+          layout_args
+        )
+      )
   )
 
   return(all_plts)
@@ -4416,9 +4435,7 @@ plotlyVolcano_multi <- function(FC,
 #' )
 #' @export
 plotly_build_light <- function(
-    fig, vars_hf = c("x", "y", "text", "hovertext")
-  ) {
-
+    fig, vars_hf = c("x", "y", "text", "hovertext")) {
   # check_arguments
   stopifnot(inherits(fig, "plotly"))
   stopifnot(inherits(fig$x$attrs, "list"))
@@ -4426,21 +4443,20 @@ plotly_build_light <- function(
 
   # just do plotly_build if the data is not large
   n_x <- fig$x$attrs %>%
-    purrr::discard(~is.null(.x$type) || is.na(.x$type)) %>%
-    purrr::map_int(~length(.x$x)) %>%
+    purrr::discard(~ is.null(.x$type) || is.na(.x$type)) %>%
+    purrr::map_int(~ length(.x$x)) %>%
     max()
 
   if (n_x > 1e3) {
-
     # evaluate the trace, if necessary
     traces_div <- fig$x$attrs %>%
-      purrr::discard(~is.null(.x$type) || is.na(.x$type)) %>%
+      purrr::discard(~ is.null(.x$type) || is.na(.x$type)) %>%
       purrr::imodify(
         function(trace, uid) {
           trace_eval <- purrr::modify_if(
             trace,
             lazyeval::is_formula,
-            ~lazyeval::f_eval(.x, plotly::plotly_data(fig, uid))
+            ~ lazyeval::f_eval(.x, plotly::plotly_data(fig, uid))
           )
 
           attrs_length <- purrr::map_int(trace_eval, length)
@@ -4449,7 +4465,7 @@ plotly_build_light <- function(
 
           data_long <- trace_eval[vars_long] %>%
             data.table::setDT() %>%
-            .[,lapply(.SD, list), by = setdiff(vars_long, vars_hf)]
+            .[, lapply(.SD, list), by = setdiff(vars_long, vars_hf)]
 
           trace_data <- purrr::pmap(
             data_long,
@@ -4467,14 +4483,14 @@ plotly_build_light <- function(
     # then build it
     fig$x$attrs <- purrr::map(
       traces_div,
-      ~.x[setdiff(names(.x), vars_hf)]
+      ~ .x[setdiff(names(.x), vars_hf)]
     )
     fig_built <- plotly::plotly_build(fig)
 
     # directly input the high frequency data to the plotly data
     fig_built$x$data <- purrr::map2(
       fig_built$x$data, traces_div,
-      ~c(.x, .y[intersect(names(.y), vars_hf)])
+      ~ c(.x, .y[intersect(names(.y), vars_hf)])
     )
   } else {
     fig_built <- plotly::plotly_build(fig)
@@ -5171,7 +5187,7 @@ pgx.barplot.PLOTLY <- function(
   }
 
 
-  p <- plotly::plot_ly() 
+  p <- plotly::plot_ly()
   show_legend <- ifelse(length(y) > 1, TRUE, FALSE)
   for (i in y) {
     p <- p %>% plotly::add_trace(
@@ -5188,11 +5204,10 @@ pgx.barplot.PLOTLY <- function(
       hovertemplate = paste0(
         "<b>%{hovertext}</b><br>",
         "%{yaxis.title.text}: %{y:", hoverformat, "}<br>",
-        "<extra></extra>",x
+        "<extra></extra>", x
       ),
       showlegend = show_legend
-    ) 
-  
+    )
   }
   p <- p %>%
     plotly::layout(
@@ -5215,12 +5230,12 @@ pgx.barplot.PLOTLY <- function(
       bargap = bargap,
       annotations = annotations
     )
-  
+
   if (length(y) > 1) {
     p <- p %>%
       plotly::layout(
         barmode = barmode,
-        legend = list(orientation = 'h', bgcolor = "transparent", y = 1.2)
+        legend = list(orientation = "h", bgcolor = "transparent", y = 1.2)
       )
   }
 
