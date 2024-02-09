@@ -4141,6 +4141,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
                           lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
                           marker.size = 5, label = NULL, label.cex = 1,
                           marker.type = "scatter", displayModeBar = TRUE, max.absy = NULL) {
+
   if (is.null(highlight)) highlight <- names
   i0 <- which(!names %in% highlight)
   i1 <- which(names %in% highlight)
@@ -4164,6 +4165,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         showlegend = showlegend
       )
   }
+
   if (length(i1)) {
     p <- p %>%
       plotly::add_trace(
@@ -4179,6 +4181,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         showlegend = showlegend
       )
   }
+  
   if (!is.null(label) && length(label) > 0) {
     i2 <- which(names %in% label)
     p <- p %>%
@@ -4196,9 +4199,10 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         textposition = "top"
       )
   }
+  
   y0 <- -log10(psig)
-  y1 <- 1.05 * max(y)
-  xx <- 1.05 * max(abs(x))
+  y1 <- 1.05 * max(y, na.rm = TRUE)
+  xx <- 1.05 * max(abs(x), na.rm = TRUE)
   abline1 <- list(
     type = "line", x0 = -lfc, x1 = -lfc, y0 = 0, y1 = y1,
     line = list(dash = "dot", width = 1, color = "grey")
@@ -4211,16 +4215,17 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
     type = "line", x0 = -xx, x1 = +xx, y0 = y0, y1 = y0,
     line = list(dash = "dot", width = 1, color = "grey")
   )
-  max.absx <- max(max(abs(x), na.rm = TRUE), lfc * 1.2)
+  max.absx <- max(max(abs(x), na.rm = TRUE), lfc * 1.2, na.rm = TRUE)
 
   if (is.null(max.absy)) {
-    max.absy <- max(max(abs(y), na.rm = TRUE), y0 * 1.2)
+    max.absy <- max(max(abs(y), na.rm = TRUE), y0 * 1.2, na.rm = TRUE)
   }
   xrange <- c(-1, 1) * max.absx * 1.05
-  if (min(x) >= 0) xrange <- c(0, 1) * max.absx * 1.05
+
+  if (min(x, na.rm = TRUE) >= 0) xrange <- c(0, 1) * max.absx * 1.05
   yrange <- c(0, 1) * max.absy * 1.05
-  xaxis <- list(title = xlab, range = xrange, showgrid = FALSE) # titlefont = list(size = 12))
-  yaxis <- list(title = list(text = ylab, standoff = 20L), range = yrange, showgrid = FALSE) # titlefont = list(size = 12))
+  xaxis <- list(title = xlab, range = xrange, showgrid = FALSE) 
+  yaxis <- list(title = list(text = ylab, standoff = 20L), range = yrange, showgrid = FALSE) 
 
   p <- p %>%
     plotly::layout(
@@ -4252,17 +4257,6 @@ plotlyVolcano_multi <- function(FC,
                                 lfc = 0,
                                 gset = NULL,
                                 label = NULL,
-<<<<<<< HEAD
-                                share_axis = FALSE, 
-                                title_y =  "significance (-log10q)", 
-                                title_x = "effect size (log2FC)", 
-                                cex = 3,  ## marker size
-                                label.cex = 1,  ## label size                               
-                                yrange = 0.5, 
-                                n_rows = NULL, 
-                                margin_l = 45, 
-                                margin_b = 60, 
-=======
                                 share_axis = FALSE,
                                 title_y = "significance (-log10q)",
                                 title_x = "effect size (log2FC)",
@@ -4270,9 +4264,8 @@ plotlyVolcano_multi <- function(FC,
                                 label.cex = 1, ## label size
                                 yrange = 0.5,
                                 n_rows = 2,
-                                margin_l = 50,
-                                margin_b = 50,
->>>>>>> 5f661788be56ff63d68fbb67a8b7c2986dc3a3c8
+                                margin_l = 45,
+                                margin_b = 60,
                                 title_y_offset = -0.025,
                                 title_x_offset = -0.12,
                                 interplot_margin = c(0.01, 0.0, 0.05, 0.1),
