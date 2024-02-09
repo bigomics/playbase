@@ -670,6 +670,10 @@ id2symbol <- function(probes, organism = "human") {
 pgx.custom_annotation <- function(pgx, custom_annot = NULL) {
   message("[pgx.custom_annotation] Adding custom annotation table...")
   # If the user has provided a custom gene table, check it and use it
+  
+  # remove all NA columns, otherwise the for loop below will not work
+  custom_annot <- custom_annot[, !sapply(custom_annot, function(x) all(is.na(x)))]
+  
   if (!is.null(custom_annot)) {
     required_cols <- c(
       "feature",
@@ -679,6 +683,7 @@ pgx.custom_annotation <- function(pgx, custom_annot = NULL) {
 
     if (!all(required_cols %in% colnames(custom_annot))) {
       missing_cols <- required_cols[!required_cols %in% colnames(custom_annot)]
+      #FIXME this stop has to go... add a warning/error in upload/check instead MMM
       stop(
         "Custom gene table must contain the following columns: ",
         paste0(required_cols, collapse = ", "), "\ncols missing: ", paste0(missing_cols, collapse = ", ")
@@ -691,6 +696,8 @@ pgx.custom_annotation <- function(pgx, custom_annot = NULL) {
       "human_ortholog", "gene_title", "gene_biotype",
       "chr", "pos", "tx_len", "map", "source"
     )
+
+    #FIXME we need a more robust filling algorythm that accounts for present and absense genes in annot_table MMM
     for (col_i in extra_cols) {
       if (!col_i %in% colnames(custom_annot)) {
         custom_annot[[col_i]] <- switch(col_i,
@@ -708,16 +715,19 @@ pgx.custom_annotation <- function(pgx, custom_annot = NULL) {
 
     # Conform annotation table to pgx$counts
     annot_genes <- sum(rownames(pgx$counts) %in% custom_annot$feature)
-    annot_fraction <- annot_genes / nrow(pgx$counts)
 
-    if (annot_fraction > .5) {
+    #FIXME right now we are excluding features not matched in annot_table, we should instead keep them (?) with the code below in the else statement MMM 
+    if (annot_genes > 100) { # FIXME we need to define the minimum number of features to proceed, 100 is arbitrary and will pass to the else statement MMM
       # filter annotated table by pgx$counts rownames using match
       custom_annot <- custom_annot[match(rownames(pgx$counts), custom_annot$feature), ]
-    } else {
-      stop("[pgx.custom_annotation] Not enought annoated genes. Be sure
-        custom_annot$feature matches counts rownames")
+    # } else {
+      #FIXME this should be a warning at the upload level/check instead MMM
+      # A error was added in PR #861 in case <100 genes are matched, so we can probably kick this stop out
+      # stop("[pgx.custom_annotation] Not enought annoated genes. Be sure
+      #   custom_annot$feature matches counts rownames")
+    # }
     }
-  } else {
+    } else {
     # Create custom gene table from counts rownames
     message("[pgx.custom_annotation] Creating annotation table from counts rownames...")
     custom_annot <- data.frame(
