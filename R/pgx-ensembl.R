@@ -694,7 +694,7 @@ pgx.custom_annotation <- function(counts, custom_annot = NULL) {
   table_col_order <- c(required_cols,names(annot_map))
 
   # legacy code but maybe this could be removed in the future...
-  required_in_annot <- all(required_cols %in% colnames(annot))
+  required_in_annot <- all(required_cols %in% colnames(custom_annot))
 
   if ( !is.null(custom_annot) && annot_genes > 1 && required_in_annot ) {
     
