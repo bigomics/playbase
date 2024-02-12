@@ -162,18 +162,47 @@ test_that("pgx.custom_annotation works correctly with no input annot table",{
 
 })
 
+test_that("pgx.custom_annotation has all expected columns in output",{
+    annot_map <- list(
+    "human_ortholog" = "",
+    "gene_title" = "unknown",
+    "gene_biotype" = "unknown",
+    "chr" = "unknown",
+    "pos" = 0,
+    "tx_len" = 0,
+    "map" = "1",
+    "source" = "custom"
+  )
+
+  required_cols <- c(
+      "feature",
+      "symbol",
+      "gene_name"
+    )
+  
+  table_col_order <- c(required_cols,names(annot_map))
+
+  counts <- playbase::COUNTS[1:10, 1:3] #mini counts
+
+  annot <- playbase::pgx.custom_annotation(counts)
+
+  expect_equal(colnames(annot), table_col_order)
+
+})
 
 test_that("pgx.custom_annotation works correctly with input custom annot of different sizes",{
   counts <- playbase::COUNTS[1:10, 1:3] #mini counts
 
   # load inst/extdata/custom-annot-example.csv
-  annot <- playbase::read.as_matrix(system.file("extdata", "custom-annot-example.csv", package = "playbase"))
+  annot <- data.frame(playbase::read.as_matrix(system.file("extdata", "custom-annot-example.csv", package = "playbase")))
 
-  res <- playbase::pgx.custom_annotation(counts, annot[1:3,])
+  res <- playbase::pgx.custom_annotation(counts = counts, custom_annot = annot[1:3,])
 
   expect_equal(nrow(counts), nrow(res))
 
-  expect_equal(as.character(res[4,]), c("A1BG", "A1BG", "A1BG","", "unknown","unknown","unknown","0","0","1","custom"))
+  expect_equal(rownames(counts), rownames(res))
+
+  expect_equal(as.character(res[1,]), c("A1BG", "A1BG", "A1BG","", "unknown","unknown","unknown","0","0","1","custom"))
 
 })
 
@@ -181,15 +210,13 @@ test_that("pgx.custom_annotation can handle missing values",{
   counts <- playbase::COUNTS[1:10, 1:3] #mini counts
 
   # load inst/extdata/custom-annot-example.csv
-  annot <- playbase::read.as_matrix(system.file("extdata", "custom-annot-example.csv", package = "playbase"))
+  annot <- data.frame(playbase::read.as_matrix(system.file("extdata", "custom-annot-example.csv", package = "playbase")))
 
   annot[1,"gene_title"] <- NA
-  annot[1,"map"] <- ""
 
   res <- playbase::pgx.custom_annotation(counts, annot[1:3,])
 
-  expect_equal(annot[1,"gene_title"], "unknown")
-  expect_equal(annot[1,"map"], "1")
+  expect_equal(res[1,"gene_title"], "unknown")
 
 })
 
@@ -197,7 +224,7 @@ test_that("pgx.custom_annotation can handle missing columns",{
   counts <- playbase::COUNTS[1:10, 1:3] #mini counts
 
   # load inst/extdata/custom-annot-example.csv
-  annot <- playbase::read.as_matrix(system.file("extdata", "custom-annot-example.csv", package = "playbase"))
+  annot <- data.frame(playbase::read.as_matrix(system.file("extdata", "custom-annot-example.csv", package = "playbase")))
 
   annot["gene_title"] <- NA
   annot["map"] <- NA
