@@ -633,7 +633,7 @@ id2symbol <- function(probes, organism = "human") {
 #'
 #' @description Adds custom gene annotation table to a pgx object
 #'
-#' @param pgx pgx object
+#' @param counts A counts matrix
 #' @param custom_annot data.frame with custom annotation data. If provided,
 #' it has to contain at least the columns "feature", "symbol", "gene_name". Also,
 #' the features has to match the rownames of the counts provided.
@@ -664,10 +664,10 @@ id2symbol <- function(probes, organism = "human") {
 #'   gene_name = c("A1", "A2", "A3")
 #' )
 #'
-#' pgx <- pgx.custom_annotation(pgx, custom_annot)
+#' pgx <- pgx.custom_annotation(counts, custom_annot)
 #' }
 #' @export
-pgx.custom_annotation <- function(pgx, custom_annot = NULL) {
+pgx.custom_annotation <- function(counts, custom_annot = NULL) {
   message("[pgx.custom_annotation] Adding custom annotation table...")
   # If the user has provided a custom gene table, check it and use it
   
@@ -714,12 +714,12 @@ pgx.custom_annotation <- function(pgx, custom_annot = NULL) {
     }
 
     # Conform annotation table to pgx$counts
-    annot_genes <- sum(rownames(pgx$counts) %in% custom_annot$feature)
+    annot_genes <- sum(rownames(counts) %in% custom_annot$feature)
 
     #FIXME right now we are excluding features not matched in annot_table, we should instead keep them (?) with the code below in the else statement MMM 
     if (annot_genes > 100) { # FIXME we need to define the minimum number of features to proceed, 100 is arbitrary and will pass to the else statement MMM
       # filter annotated table by pgx$counts rownames using match
-      custom_annot <- custom_annot[match(rownames(pgx$counts), custom_annot$feature), ]
+      custom_annot <- custom_annot[match(rownames(counts), custom_annot$feature), ]
     # } else {
       #FIXME this should be a warning at the upload level/check instead MMM
       # A error was added in PR #861 in case <100 genes are matched, so we can probably kick this stop out
@@ -731,9 +731,9 @@ pgx.custom_annotation <- function(pgx, custom_annot = NULL) {
     # Create custom gene table from counts rownames
     message("[pgx.custom_annotation] Creating annotation table from counts rownames...")
     custom_annot <- data.frame(
-      feature = rownames(pgx$counts),
-      symbol = rownames(pgx$counts),
-      gene_name = rownames(pgx$counts),
+      feature = rownames(counts),
+      symbol = rownames(counts),
+      gene_name = rownames(counts),
       human_ortholog = "",
       gene_title = "unknown",
       gene_biotype = "unknown",
@@ -745,7 +745,7 @@ pgx.custom_annotation <- function(pgx, custom_annot = NULL) {
     )
   }
 
-  rownames(custom_annot) <- rownames(pgx$counts)
+  rownames(custom_annot) <- rownames(counts)
 
   return(custom_annot)
 }
