@@ -433,8 +433,11 @@ pgx.createPGX <- function(counts,
 
     ## sum up duplicated rows
     pgx$counts <- rowsum(pgx$counts, symbol)
+    pgx$counts <- pgx$counts[rownames(pgx$counts) != "",,drop = FALSE]
+
     if (!is.null(pgx$X)) {
       pgx$X <- log2(rowsum(2**pgx$X, symbol))
+      pgx$X <- pgx$X[rownames(pgx$X) != "",,drop = FALSE]
     }
 
     # Collapse features as a comma-separated elements
@@ -645,7 +648,7 @@ pgx.computePGX <- function(pgx,
   ## ------------------ gene set tests -----------------------
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
-  if (pgx$organism != "No organism" || nrow(pgx$GMT) > 0) {
+  if (pgx$organism != "No organism" || !is.null(pgx$GMT) && nrow(pgx$GMT) > 0) {
     message("[pgx.computePGX] testing genesets...")
     pgx <- compute_testGenesets(
       pgx = pgx,
@@ -665,7 +668,7 @@ pgx.computePGX <- function(pgx,
   ## ------------------ extra analyses ---------------------
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
   message("[pgx.computePGX] computing extra modules...")
-  pgx <- compute_extra(
+  pgx <- playbase::compute_extra(
     pgx,
     extra = extra.methods,
     pgx.dir = pgx.dir,
