@@ -4539,8 +4539,8 @@ plotlyCytoplot <- function(pgx,
   names(x1) <- samples
   names(x2) <- samples
 
-  m1 <- mean(x1)
-  m2 <- mean(x2)
+  m1 <- mean(x1, na.rm = TRUE)
+  m2 <- mean(x2, na.rm = TRUE)
 
   ## select samples in different quadrants
   j1 <- length(samples[which(x1 < m1 & x2 > m2)])
@@ -4553,7 +4553,6 @@ plotlyCytoplot <- function(pgx,
 
   xaxis <- list(title = xlab1, range = range(x1), gridwidth = 0.2, showgrid = TRUE, showline = TRUE, autorange = TRUE)
   yaxis <- list(title = ylab1, range = range(x2), gridwidth = 0.2, showgrid = TRUE, showline = TRUE, autorange = TRUE)
-
 
   p <- plotly::plot_ly(
     x = x1,
@@ -4600,9 +4599,7 @@ plotlyCytoplot <- function(pgx,
 
 
   N <- length(x1)
-
   quadrants <- c(j3, j1, j2, j4)
-
   positions <- matrix(c(1, 1, 0, 1, 1, 0, 0, 0), ncol = 2, byrow = TRUE)
 
   for (i in 1:4) {

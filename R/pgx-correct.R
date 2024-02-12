@@ -2530,7 +2530,8 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
 #' @export
 nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
                         scale.x = FALSE, center.y = TRUE, mode = "sym",
-                        knn = 1, sdtop = 2000, return.B = FALSE, use.design = TRUE) {
+                        knn = 1, sdtop = 2000, return.B = FALSE,
+                        use.design = TRUE, delete.kin = TRUE) {
   ##  center.x=TRUE;center.m=TRUE;scale.x=FALSE;sdtop=1000;r=0.35;knn=5
 
   ## compute distance matrix for NNM-pairing
@@ -2576,7 +2577,7 @@ nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
   colnames(B) <- as.vector(unlist(mapply(rep, names(bb), nn)))
   rownames(B) <- colnames(dX)
 
-  if (1) {
+  if (delete.kin) {
     ## delete neighbours in own group (???)
     jj <- lapply(y1, function(a) which(colnames(B) == a))
     ii <- mapply(rep, 1:length(y1), sapply(jj, length))
