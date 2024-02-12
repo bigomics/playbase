@@ -97,6 +97,7 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL, use_
 #' }
 #' @export
 ngs.getGeneAnnotation <- function(probes, pgx = NULL, organism = NULL, annot_table = NULL, use_biomart = NULL) {
+  
   if (is.null(organism)) {
     organism <- guess_organism(probes)
   }
@@ -147,7 +148,7 @@ ngs.getGeneAnnotation <- function(probes, pgx = NULL, organism = NULL, annot_tab
       mart = mart
     )
   } else if (organism == "No organism" && !is.null(pgx)) {
-    genes <- pgx.custom_annotation(pgx, custom_annot = annot_table)
+    genes <- pgx.custom_annotation(counts = pgx$counts, custom_annot = annot_table)
   }
 
   if (is.null(genes)) {
