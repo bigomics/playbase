@@ -150,3 +150,61 @@ test_that("ngs.getGeneAnnotation_ORGDB function works correctly", {
   # Test 9: Check that the function handles an empty string organism correctly
   expect_error(playbase::ngs.getGeneAnnotation_ORGDB("ENSG00000141510", "ENSEMBL", ""))
 })
+
+test_that("pgx.custom_annotation works correctly with no input annot table",{
+  counts <- playbase::COUNTS[1:10, 1:3] #mini counts
+
+  annot <- playbase::pgx.custom_annotation(counts)
+
+  expect_equal(nrow(counts), nrow(annot))
+
+  expect_equal(as.character(annot[1,]), c("A1BG", "A1BG", "A1BG","", "unknown","unknown","unknown","0","0","1","custom"))
+
+})
+
+
+test_that("pgx.custom_annotation works correctly with input custom annot of different sizes",{
+  counts <- playbase::COUNTS[1:10, 1:3] #mini counts
+
+  # load inst/extdata/custom-annot-example.csv
+  annot <- playbase::read.as_matrix(system.file("extdata", "custom-annot-example.csv", package = "playbase"))
+
+  res <- playbase::pgx.custom_annotation(counts, annot[1:3,])
+
+  expect_equal(nrow(counts), nrow(res))
+
+  expect_equal(as.character(res[4,]), c("A1BG", "A1BG", "A1BG","", "unknown","unknown","unknown","0","0","1","custom"))
+
+})
+
+test_that("pgx.custom_annotation can handle missing values",{
+  counts <- playbase::COUNTS[1:10, 1:3] #mini counts
+
+  # load inst/extdata/custom-annot-example.csv
+  annot <- playbase::read.as_matrix(system.file("extdata", "custom-annot-example.csv", package = "playbase"))
+
+  annot[1,"gene_title"] <- NA
+  annot[1,"map"] <- ""
+
+  res <- playbase::pgx.custom_annotation(counts, annot[1:3,])
+
+  expect_equal(annot[1,"gene_title"], "unknown")
+  expect_equal(annot[1,"map"], "1")
+
+})
+
+test_that("pgx.custom_annotation can handle missing columns",{
+  counts <- playbase::COUNTS[1:10, 1:3] #mini counts
+
+  # load inst/extdata/custom-annot-example.csv
+  annot <- playbase::read.as_matrix(system.file("extdata", "custom-annot-example.csv", package = "playbase"))
+
+  annot["gene_title"] <- NA
+  annot["map"] <- NA
+
+  res <- playbase::pgx.custom_annotation(counts, annot[1:3,])
+
+  expect_true("gene_title" %in% colnames(res))
+  expect_true("map" %in% colnames(res))
+
+})
