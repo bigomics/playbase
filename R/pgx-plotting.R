@@ -4539,7 +4539,11 @@ plotlyCytoplot <- function(pgx,
 
   m1 <- mean(x1, na.rm = TRUE)
   m2 <- mean(x2, na.rm = TRUE)
+<<<<<<< HEAD
   
+=======
+
+>>>>>>> 0961932f9c26802046cc8f24d07320d2a07a3330
   ## select samples in different quadrants
   j1 <- length(samples[which(x1 < m1 & x2 > m2)])  ## top-left
   j2 <- length(samples[which(x1 > m1 & x2 < m2)])  ## bottom-right
@@ -4552,7 +4556,6 @@ plotlyCytoplot <- function(pgx,
                 zerolinewidth = 0, zerolinecolor = '#fff', autorange = TRUE)
   yaxis <- list(title = ylab1, range = range(x2), gridwidth = 0.2, showgrid = TRUE, showline = TRUE,
                 zerolinewidth = 0, zerolinecolor = '#fff', autorange = TRUE)
-
 
   p <- plotly::plot_ly(
     x = x1,
@@ -4607,7 +4610,7 @@ plotlyCytoplot <- function(pgx,
   quadrants <- c(j3, j1, j2, j4)
   N <- sum(quadrants)
   positions <- matrix(c(0.98, 0.98, 0.02, 0.98, 0.98, 0.02, 0.02, 0.02), ncol = 2, byrow = TRUE)
-  
+
   for (i in 1:4) {
     p <- p %>% plotly::add_annotations(
       x = positions[i, 1],
