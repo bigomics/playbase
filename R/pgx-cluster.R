@@ -236,7 +236,7 @@ pgx.clusterSamples.DEPRECATED <- function(pgx, X = NULL, skipifexists = FALSE, p
   }
 
   res <- NULL
-  res <- pgx.clusterMatrix(
+  res <- pgx.clusterMatrix.DEPRECATED(
     X,
     perplexity = perplexity, dims = dims,
     ntop = ntop, npca = npca, prefix = prefix,
