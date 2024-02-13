@@ -4539,11 +4539,7 @@ plotlyCytoplot <- function(pgx,
 
   m1 <- mean(x1, na.rm = TRUE)
   m2 <- mean(x2, na.rm = TRUE)
-<<<<<<< HEAD
-  
-=======
 
->>>>>>> 0961932f9c26802046cc8f24d07320d2a07a3330
   ## select samples in different quadrants
   j1 <- length(samples[which(x1 < m1 & x2 > m2)])  ## top-left
   j2 <- length(samples[which(x1 > m1 & x2 < m2)])  ## bottom-right
