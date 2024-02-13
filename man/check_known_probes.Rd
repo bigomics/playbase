@@ -15,14 +15,14 @@ check_known_probes(probes, probe_types_to_check = NULL)
 A character vector of probe types to check mapping for.
 }
 \description{
-This function checks if a vector of probe identifiers matches known patterns 
+This function checks if a vector of probe identifiers matches known patterns
 for common identifier types like Ensembl IDs. It returns a vector of probe
 types that should be checked for mapping based on the matches.
 }
 \details{
 This function checks `probes` for the following known patterns:
 
-- Ensembl IDs for higher animals (ENS*) 
+- Ensembl IDs for higher animals (ENS*)
 - Drosophila melanogaster Ensembl IDs (FBgn*)
 - Caenorhabditis elegans Ensembl IDs (WBGene*)
 
