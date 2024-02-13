@@ -843,7 +843,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------
 
   message("[pgx.add_GMT] Filtering gene sets on size...")
-  gmt.size <- Matrix::rowSums(G != 0)
+  gmt.size <- Matrix::colSums(G != 0)
   size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
   G <- G[, size.ok, drop = FALSE]
 
