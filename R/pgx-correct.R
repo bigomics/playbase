@@ -2503,41 +2503,41 @@ gx.nnmcorrect2 <- function(...) nnmCorrect2(..., return.B = TRUE)
 
 
 #' @export
-ComBatX <- function(X, batch, y=NULL, nv=3, nn=3) {
-
+ComBatX <- function(X, batch, y = NULL, nv = 3, nn = 3) {
   ## Finds mutual neighbours between two datasets and returns
   ## corresponding correction vectors.
   getCV <- function(x1, x2) {
-    res <- batchelor::findMutualNN( t(x1), t(x2), k1=nn)
-    x2[,res$second] - x1[,res$first]
+    res <- batchelor::findMutualNN(t(x1), t(x2), k1 = nn)
+    x2[, res$second] - x1[, res$first]
   }
 
   ## if no phenotype is given, just do one group
-  if(is.null(y)) {
+  if (is.null(y)) {
     y <- rep("y", ncol(X))
   }
-  
+
   ## For all combinations of batches, get correction vector
   nbatch <- length(unique(batch))
   comb <- combn(unique(batch), 2)
-  i=1;y0=y[1]
-  B <- c()  
-  for(i in 1:ncol(comb)) {
-    for(y0 in unique(y)) {
-      x1 <- X[,which(batch == comb[1,i] & y == y0)]
-      x2 <- X[,which(batch == comb[2,i] & y == y0)]
+  i <- 1
+  y0 <- y[1]
+  B <- c()
+  for (i in 1:ncol(comb)) {
+    for (y0 in unique(y)) {
+      x1 <- X[, which(batch == comb[1, i] & y == y0)]
+      x2 <- X[, which(batch == comb[2, i] & y == y0)]
       b1 <- getCV(x1, x2)
-      B <-  cbind(B, b1)
+      B <- cbind(B, b1)
     }
   }
   dim(B)
-  message("[ComBatX] dim(B) = ", paste(dim(B),collapse="x"))
-  
+  message("[ComBatX] dim(B) = ", paste(dim(B), collapse = "x"))
+
   ## remove batch effects in transposed gene space
-  nv <- max(1,min(nv, dim(B)-1))
+  nv <- max(1, min(nv, dim(B) - 1))
   message("[ComBatX] nv = ", nv)
-  dU <- irlba::irlba(B, nu=nv, nv=nv)$u
-  cX <- t(limma::removeBatchEffect( t(X), covariates = dU ))
+  dU <- irlba::irlba(B, nu = nv, nv = nv)$u
+  cX <- t(limma::removeBatchEffect(t(X), covariates = dU))
   cX
 }
 
