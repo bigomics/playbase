@@ -1196,13 +1196,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
 
     ## ComBatX
     if (combatx && !is.null(batch)) {
-      xlist[["ComBatX.a"]] <- ComBatX(X, batch = batch, y = NULL, controls = NULL)
-      xlist[["ComBatX.b"]] <- ComBatX(X, batch = batch, y = y, controls = NULL, bc.dim = 0)
-      xlist[["ComBatX.c"]] <- ComBatX(X, batch = batch, y = y, controls = NULL, bc.dim = -1)
-      ##  xlist[['ComBatX.d']] <- ComBatX(X, batch=batch, y=y, controls=NULL, bc.dim=10)
-      xlist[["ComBatX.e"]] <- ComBatX(X, batch = batch, y = NULL, controls = controls)
-      xlist[["ComBatX.f"]] <- ComBatX(X, batch = batch, y = y, controls = controls, bc.dim = 0)
-      xlist[["ComBatX.g"]] <- ComBatX(X, batch = batch, y = y, controls = controls, bc.dim = -1)
+      xlist[["ComBatX"]] <- ComBatX(X, batch = batch, y = y)
     }
   }
 
@@ -1220,7 +1214,6 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   ## PCA
   if ("PCA" %in% methods) {
     message("[runBatchCorrectionMethods] correcting with PCA")
-    ##  xlist[["PCA"]] <- try(pcaCorrect.OLD(X, y = y, max.rho=0.3))
     xlist[["PCA"]] <- try(pcaCorrect2(X, y = y, p.notsig = 0.20))
   }
 
@@ -1980,47 +1973,6 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
   ruvX
 }
 
-
-#' @export
-pcaCorrect.OLD <- function(X, y, k = NULL, max.rho = 0.3) {
-  ## --------------------------------------------------------------------
-  ## PCA correction: remove remaining batch effect using PCA
-  ## (iteratively, only SV larger than max correlated SV)
-  ## --------------------------------------------------------------------
-  mod1 <- model.matrix(~ 0 + y)
-  ii <- 1:99
-  niter <- 0
-  if (is.null(k)) k <- ncol(X)
-  nremoved <- 0
-  cX <- X
-  while (length(ii) > 0 && niter < k) {
-    nv <- min(10, ncol(cX) - 1)
-    suppressWarnings(suppressMessages(
-      pc <- irlba::irlba(cX, nv = nv)$v
-    ))
-    pc.rho <- stats::cor(pc, mod1)
-    pc.rho <- apply(abs(pc.rho), 1, max)
-    ii <- which(pc.rho < max.rho)
-    ii <- ii[ii < which.max(pc.rho)]
-    if (length(ii) > 0) {
-      mod1x <- cbind(1, mod1)
-      cX <- limma::removeBatchEffect(cX, covariates = pc[, ii], design = mod1x)
-      nremoved <- nremoved + 1
-    }
-    niter <- niter + 1
-  }
-  niter
-  if (niter == k) {
-    dbg("WARNING:: PCA correction did not converge after", nremoved, "iterations\n")
-  } else {
-    dbg("[pcaCorrect] removed", nremoved, "principal components\n")
-  }
-
-  ## bring back mean
-  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
-  cX
-}
-
 #' @export
 pcaCorrect2 <- function(X, y, k = 10, p.notsig = 0.20) {
   ## --------------------------------------------------------------------
@@ -2128,145 +2080,6 @@ runHarmony <- function(X, batch) {
   pos1 <- pos1[1:nx, ]
   colnames(X2) <- rownames(pos0) <- rownames(pos0) <- cn
   list(corrected = X2, umap = pos1, umap.orig = pos0)
-}
-
-#' @export
-ComBatX <- function(X, batch, y = NULL, controls = NULL, b = 50,
-                    recenter = TRUE, add.star = TRUE, bc.dim = 3,
-                    bc.method = "combat") {
-  if (0) {
-    y <- NULL
-    controls <- NULL
-    b <- 50
-    recenter <- TRUE
-    add.star <- TRUE
-    bc.dim <- 3
-    bc.method <- "combat"
-  }
-
-  batch <- paste0("b_", as.character(batch))
-  ## Get anchors: phenotypes that are in more than one batches
-  if (is.null(y)) {
-    if (!is.null(controls)) controls <- NULL
-    y <- rep("all.samples", ncol(X))
-  }
-  anchors <- names(which(table(y) > 1))
-  if (!is.null(batch)) anchors <- names(which(rowSums(table(y, batch) > 0) > 1))
-  anchors <- setdiff(anchors, NA)
-  if (!is.null(controls)) {
-    if (!any(controls %in% y)) {
-      stop("[ComBatX] controls do not match phenotype")
-    }
-    anchors <- intersect(anchors, controls)
-  }
-  message("Found ", length(anchors), " anchor conditions")
-  message("anchors: ", paste(anchors, sep = "", collapse = " "))
-
-  if (!is.null(batch) && add.star) anchors <- c("*", anchors)
-
-  ## For each anchor determine correction vector
-  cat("Computing correction vectors\n")
-  ref <- anchors[1]
-  dx.list <- list()
-  message("[ComBatX] using batch vector")
-  message("[ComBatX] bc.dim = ", bc.dim)
-  for (ref in anchors) {
-    if (ref == "*") {
-      ii <- 1:ncol(X)
-    } else {
-      ii <- which(y == ref)
-    }
-    X0 <- X[, ii, drop = FALSE]
-    dX <- NULL
-    has.batch <- length(unique(batch[ii])) > 1
-    if (!is.null(batch) && has.batch) {
-      bb <- batch[ii]
-      if (bc.method == "combat") {
-        if (ncol(X0) == 2) {
-          mx <- rowMeans(X0)
-          X1 <- cbind(mx, mx)
-        } else {
-          X1 <- suppressWarnings(suppressMessages(
-            sva::ComBat(X0, batch = bb)
-          ))
-        }
-      } else {
-        X1 <- limma::removeBatchEffect(X0, batch = bb)
-      }
-      dX <- X1 - X0
-    } else if (NCOL(X0) > 1) {
-      dX <- X0 - rowMeans(X0, na.rm = TRUE)
-      bb <- rep(1, ncol(dX))
-    }
-
-    if (!is.null(dX)) {
-      ## get correction vectors
-      if (bc.dim < 0) {
-        dxx <- dX
-      }
-      if (bc.dim == 0) {
-        ## determine delta vectors in each batch
-        dxx <- tapply(1:ncol(dX), bb, function(ii) {
-          if (length(ii) == 1) ii <- c(ii, ii)
-          rowMeans(dX[, ii])
-        })
-        dxx <- do.call(cbind, dxx)
-      }
-      if (bc.dim > 0) {
-        ## determine delta vectors in each batch
-        if (0) {
-          dxx <- tapply(1:ncol(dX), bb, function(ii) {
-            if (length(ii) == 1) ii <- c(ii, ii)
-            nu <- min(bc.dim, length(ii) - 1)
-            res <- irlba::irlba(dX[, ii], nu = nu)
-            res$u[, 1:nu]
-          })
-        } else {
-          dxx <- list()
-          for (b1 in unique(bb)) {
-            ii <- which(bb == b1)
-            if (length(ii) == 1) {
-              dxx[[b1]] <- dX[, ii]
-            } else {
-              nu <- min(bc.dim, length(ii) - 1)
-              res <- irlba::irlba(dX[, ii], nu = nu)
-              dxx[[b1]] <- res$u[, 1:nu]
-            }
-          }
-        }
-        dxx <- do.call(cbind, dxx)
-      }
-    }
-    dx.list[[ref]] <- dxx
-  }
-
-  dX <- do.call(cbind, dx.list)
-  dim(dX)
-  cat("Found", ncol(dX), "correction vectors\n")
-
-  ## combat sometimes give
-  sum(is.na(dX))
-  dX[is.na(dX)] <- 0
-
-  ## Correct original data with all correction vectors
-  # dX <- irlba::irlba(dX, nv=round(0.9*ncol(dX)))$u
-  nv <- min(b, ncol(dX) - 1)
-  cat("Factorizing differences using", nv, "dimensions\n")
-  sv <- try(irlba::irlba(dX, nv = nv))
-  if ("try-error" %in% class(sv)) {
-    sv <- svd(dX, nv = nv)
-  }
-  dX <- sv$u[, 1:nv, drop = FALSE]
-
-  cat("Correcting input matrix\n")
-  cX <- t(limma::removeBatchEffect(t(X), covariates = dX))
-
-  ## recenter on original mean?
-  if (recenter) {
-    cX <- cX - rowMeans(cX) + rowMeans(X)
-  }
-
-  cX
 }
 
 
@@ -2690,29 +2503,44 @@ gx.nnmcorrect2 <- function(...) nnmCorrect2(..., return.B = TRUE)
 
 
 #' @export
-bcKNN <- function(X, batch, y = NULL) {
-  if (is.null(batch)) stop("batch must be provided")
-  bb.list <- list()
-  batch <- as.character(batch)
-  b <- batch[1]
-  for (b in sort(unique(batch))) {
-    X1 <- X[, which(batch == b), drop = FALSE]
-    res <- FNN::get.knnx(t(X1), query = t(X), k = 1)
-    xx <- X1[, res$nn.index[, 1]]
-    bb.list[[b]] <- xx
+ComBatX <- function(X, batch, y=NULL, nv=3, nn=3) {
+
+  ## Finds mutual neighbours between two datasets and returns
+  ## corresponding correction vectors.
+  getCV <- function(x1, x2) {
+    res <- batchelor::findMutualNN( t(x1), t(x2), k1=nn)
+    x2[,res$second] - x1[,res$first]
   }
-  if (!is.null(y)) {
-    bb.list <- lapply(bb.list, function(x) t(rowsum(t(x), y)))
-  } else {
-    bb.list <- lapply(bb.list, function(x) rowMeans(x))
+
+  ## if no phenotype is given, just do one group
+  if(is.null(y)) {
+    y <- rep("y", ncol(X))
   }
-  bb.mean <- Reduce("+", bb.list) / length(bb.list)
-  bb.list <- lapply(bb.list, function(x) (x - bb.mean))
-  B <- do.call(cbind, bb.list)
+  
+  ## For all combinations of batches, get correction vector
+  nbatch <- length(unique(batch))
+  comb <- combn(unique(batch), 2)
+  i=1;y0=y[1]
+  B <- c()  
+  for(i in 1:ncol(comb)) {
+    for(y0 in unique(y)) {
+      x1 <- X[,which(batch == comb[1,i] & y == y0)]
+      x2 <- X[,which(batch == comb[2,i] & y == y0)]
+      b1 <- getCV(x1, x2)
+      B <-  cbind(B, b1)
+    }
+  }
   dim(B)
-  bX <- t(limma::removeBatchEffect(t(X), covariates = scale(B))) ## model??
-  bX
+  message("[ComBatX] dim(B) = ", paste(dim(B),collapse="x"))
+  
+  ## remove batch effects in transposed gene space
+  nv <- max(1,min(nv, dim(B)-1))
+  message("[ComBatX] nv = ", nv)
+  dU <- irlba::irlba(B, nu=nv, nv=nv)$u
+  cX <- t(limma::removeBatchEffect( t(X), covariates = dU ))
+  cX
 }
+
 
 ## =====================================================================================
 ## =========================== END OF FILE =============================================
