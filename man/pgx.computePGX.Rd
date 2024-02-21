@@ -58,12 +58,12 @@ Main function to populate pgx with results. The function computes the analysis o
 \details{
 The slots created by pgx.computePGX are the following:
 
-- `tsne2d`: 2D tSNE coordinates matrix 
+- `tsne2d`: 2D tSNE coordinates matrix
 - `tsne3d`: 3D tSNE coordinates matrix
-- `cluster`: List containing sample clustering results  
+- `cluster`: List containing sample clustering results
 - `cluster.genes`: List containing gene clustering results
 - `model.parameters`: Model parameters from normalization
-- `timings`: Matrix of timings for computations  
+- `timings`: Matrix of timings for computations
 - `gx.meta`: Gene metadata data.frame
 - `gset.meta`: Gene set metadata data.frame
 - `gsetX`: Gene set scores matrix

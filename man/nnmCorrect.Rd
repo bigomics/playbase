@@ -12,7 +12,9 @@ nnmCorrect(
   center.m = TRUE,
   knn = 1,
   sdtop = 2000,
-  return.B = FALSE
+  return.B = FALSE,
+  use.design = TRUE,
+  use.cov = FALSE
 )
 }
 \arguments{

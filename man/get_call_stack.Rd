@@ -37,7 +37,7 @@ f1 <- function(x) {
   x
   x <- f2(x)
 }
- f0 <- function(x) {
+f0 <- function(x) {
   x
   x <- f1(x)
 }
