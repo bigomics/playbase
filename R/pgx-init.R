@@ -45,6 +45,11 @@ pgx.initialize <- function(pgx) {
     "samples", "genes", "GMT", "gx.meta",
     "model.parameters", "tsne2d", "X"
   )
+
+  # if pgx$organism == "No organism" then do not need the gmt column
+  if (pgx$organism == "No organism") {
+    obj.needed <- setdiff(obj.needed, "GMT")
+  }
   all(obj.needed %in% names(pgx))
   if (!all(obj.needed %in% names(pgx))) {
     obj.missing <- setdiff(obj.needed, names(pgx))
@@ -207,7 +212,7 @@ pgx.initialize <- function(pgx) {
   ## Recompute geneset meta.fx as average fold-change of genes
   ## -----------------------------------------------------------------------------
 
-  if (pgx$organism != "No organism" || nrow(pgx$GMT) > 0) {
+  if (pgx$organism != "No organism" || !is.null(pgx$GMT) && nrow(pgx$GMT) > 0) {
     message("[pgx.initialize] Recomputing geneset fold-changes")
     nc <- length(pgx$gset.meta$meta)
     for (i in 1:nc) {
