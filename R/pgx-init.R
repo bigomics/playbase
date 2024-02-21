@@ -47,7 +47,7 @@ pgx.initialize <- function(pgx) {
   )
 
   # if pgx$organism == "No organism" then do not need the gmt column
-  if (pgx$organism == "No organism") {
+  if (!is.null(pgx$organism) && pgx$organism == "No organism") {
     obj.needed <- setdiff(obj.needed, "GMT")
   }
   all(obj.needed %in% names(pgx))
