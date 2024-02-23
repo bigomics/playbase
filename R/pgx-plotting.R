@@ -4541,56 +4541,60 @@ plotlyCytoplot <- function(pgx,
   m2 <- mean(x2, na.rm = TRUE)
 
   ## select samples in different quadrants
-  j1 <- length(samples[which(x1 < m1 & x2 > m2)])  ## top-left
-  j2 <- length(samples[which(x1 > m1 & x2 < m2)])  ## bottom-right
-  j3 <- length(samples[which(x1 > m1 & x2 > m2)])  ## top-right
-  j4 <- length(samples[which(x1 < m1 & x2 < m2)])  ## bottom-left
+  j1 <- length(samples[which(x1 < m1 & x2 > m2)]) ## top-left
+  j2 <- length(samples[which(x1 > m1 & x2 < m2)]) ## bottom-right
+  j3 <- length(samples[which(x1 > m1 & x2 > m2)]) ## top-right
+  j4 <- length(samples[which(x1 < m1 & x2 < m2)]) ## bottom-left
 
   xlab1 <- paste(gene1, lab.unit, collapse = "  ")
   ylab1 <- paste(gene2, lab.unit, collapse = "  ")
-  xaxis <- list(title = xlab1, range = range(x1), gridwidth = 0.2, showgrid = TRUE, showline = TRUE,
-                zerolinewidth = 0, zerolinecolor = '#fff', autorange = TRUE)
-  yaxis <- list(title = ylab1, range = range(x2), gridwidth = 0.2, showgrid = TRUE, showline = TRUE,
-                zerolinewidth = 0, zerolinecolor = '#fff', autorange = TRUE)
+  xaxis <- list(
+    title = xlab1, range = range(x1), gridwidth = 0.2, showgrid = TRUE, showline = TRUE,
+    zerolinewidth = 0, zerolinecolor = "#fff", autorange = TRUE
+  )
+  yaxis <- list(
+    title = ylab1, range = range(x2), gridwidth = 0.2, showgrid = TRUE, showline = TRUE,
+    zerolinewidth = 0, zerolinecolor = "#fff", autorange = TRUE
+  )
 
   p <- plotly::plot_ly(
     x = x1,
     y = x2,
     text = names(x1),
-    hoverinfo = "text",                 
+    hoverinfo = "text",
     type = "scatter",
     mode = "markers",
-    marker = list( size = marker.size, color = marker.color),
+    marker = list(size = marker.size, color = marker.color),
     showlegend = TRUE
   ) %>%
-  plotly::add_trace(
-    type = "histogram2dcontour",
-    mode = NULL,
-    contours = list(coloring = contour.coloring),
-    nbinsx = nbinsx,
-    nbinsy = nbinsy
-  )
-  
+    plotly::add_trace(
+      type = "histogram2dcontour",
+      mode = NULL,
+      contours = list(coloring = contour.coloring),
+      nbinsx = nbinsx,
+      nbinsy = nbinsy
+    )
+
   p <- p %>%
-  ## plotly::add_trace(
-  ##      x = x1,
-  ##      y = x2,
-  ##      text = names(x1),
-  ##      hoverinfo = "text",
-  ##      type = "scatter",
-  ##      mode = "markers",
-  ##      marker = list(size = marker.size, color = "black")
-  ## ) %>%
-  plotly::layout(
+    ## plotly::add_trace(
+    ##      x = x1,
+    ##      y = x2,
+    ##      text = names(x1),
+    ##      hoverinfo = "text",
+    ##      type = "scatter",
+    ##      mode = "markers",
+    ##      marker = list(size = marker.size, color = "black")
+    ## ) %>%
+    plotly::layout(
       shapes = list(list(
         type = "line",
         x0 = 0,
-         x1 = 1,
+        x1 = 1,
         xref = "paper",
         y0 = m2,
         y1 = m2,
         line = list(color = "#bebebe", dash = "dot")
-     ), list(
+      ), list(
         type = "line",
         y0 = 0,
         y1 = 1,
@@ -4598,10 +4602,10 @@ plotlyCytoplot <- function(pgx,
         x0 = m1,
         x1 = m1,
         line = list(color = "#bebebe", dash = "dot")
-     )),
-     xaxis = xaxis,
-     yaxis = yaxis
-  )
+      )),
+      xaxis = xaxis,
+      yaxis = yaxis
+    )
 
   quadrants <- c(j3, j1, j2, j4)
   N <- sum(quadrants)
