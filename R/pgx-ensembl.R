@@ -411,7 +411,7 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
     symbol <- as.list(org.Hs.eg.db::org.Hs.egSYMBOL)
     avg.match <- mean(toupper(probes) %in% symbol)
     avg.match
-    if (avg.match > 0.5) probe_type <- "SYMBOL"
+    if (avg.match > 0.3) probe_type <- "SYMBOL"
   }
 
   ## 3. check if they are proteins
