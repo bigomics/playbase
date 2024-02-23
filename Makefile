@@ -23,5 +23,6 @@ tags:
 clean:
 	rm `find . -name '.#*' -o -name '#*' -o -name '*~'`
 
+filter=NULL
 test:
-	R -e "devtools::test()"
+	R -e "devtools::test(filter='$(filter)')"
