@@ -4454,10 +4454,11 @@ plotly_build_light <- function(
           attrs_length <- purrr::map_int(trace_eval, length)
 
           vars_long <- names(trace_eval[attrs_length == attrs_length["x"]])
+          vars_long <- intersect(vars_long, vars_hf)
 
           data_long <- trace_eval[vars_long] %>%
             data.table::setDT() %>%
-            .[, lapply(.SD, list), by = setdiff(vars_long, vars_hf)]
+            .[, lapply(.SD, list)]
 
           trace_data <- purrr::pmap(
             data_long,
