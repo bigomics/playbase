@@ -97,7 +97,6 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL, use_
 #' }
 #' @export
 ngs.getGeneAnnotation <- function(probes, pgx = NULL, organism = NULL, annot_table = NULL, use_biomart = NULL) {
-  
   if (is.null(organism)) {
     organism <- guess_organism(probes)
   }
@@ -560,21 +559,20 @@ pgx.custom_annotation <- function(counts, custom_annot = NULL) {
   )
 
   required_cols <- c(
-      "feature",
-      "symbol",
-      "gene_name"
-    )
+    "feature",
+    "symbol",
+    "gene_name"
+  )
 
   # this will be used at the end to order df columns
-  table_col_order <- c(required_cols,names(annot_map))
+  table_col_order <- c(required_cols, names(annot_map))
 
   # legacy code but maybe this could be removed in the future...
   required_in_annot <- all(required_cols %in% colnames(custom_annot))
 
-  if ( !is.null(custom_annot) && annot_genes > 1 && required_in_annot ) {
-    
+  if (!is.null(custom_annot) && annot_genes > 1 && required_in_annot) {
     # remove all NA columns, otherwise the for loop below will not work
-    custom_annot <- custom_annot[, !apply(custom_annot,2, function(x) all(is.na(x)))]
+    custom_annot <- custom_annot[, !apply(custom_annot, 2, function(x) all(is.na(x)))]
 
     # identify missing columns and fill them with annot_map
     missing_cols <- setdiff(names(annot_map), names(custom_annot))
@@ -588,12 +586,12 @@ pgx.custom_annotation <- function(counts, custom_annot = NULL) {
 
     rownames(custom_annot) <- rownames(counts)
 
-    custom_annot$feature <- ifelse(is.na(custom_annot$feature),rownames(custom_annot),custom_annot$feature)
-    custom_annot$symbol <- ifelse(is.na(custom_annot$symbol),rownames(custom_annot),custom_annot$symbol)
-    custom_annot$gene_name <- ifelse(is.na(custom_annot$gene_name),rownames(custom_annot),custom_annot$gene_name)
+    custom_annot$feature <- ifelse(is.na(custom_annot$feature), rownames(custom_annot), custom_annot$feature)
+    custom_annot$symbol <- ifelse(is.na(custom_annot$symbol), rownames(custom_annot), custom_annot$symbol)
+    custom_annot$gene_name <- ifelse(is.na(custom_annot$gene_name), rownames(custom_annot), custom_annot$gene_name)
 
     # Fill NA values with corresponding values from annot_map
-    
+
     res <- lapply(names(annot_map), function(x) {
       ifelse(is.na(custom_annot[[x]]), annot_map[[x]], custom_annot[[x]])
     })
@@ -602,9 +600,8 @@ pgx.custom_annotation <- function(counts, custom_annot = NULL) {
 
     res <- as.data.frame(res)
 
-    custom_annot[,names(annot_map)] <- res[,names(annot_map)]
-
-    } else {
+    custom_annot[, names(annot_map)] <- res[, names(annot_map)]
+  } else {
     # Create custom gene table from counts rownames
     message("[pgx.custom_annotation] Creating annotation table from counts rownames...")
     custom_annot <- data.frame(
@@ -623,7 +620,7 @@ pgx.custom_annotation <- function(counts, custom_annot = NULL) {
     rownames(custom_annot) <- rownames(counts)
   }
 
-  custom_annot <- custom_annot[,table_col_order]
+  custom_annot <- custom_annot[, table_col_order]
 
   return(custom_annot)
 }

@@ -433,11 +433,11 @@ pgx.createPGX <- function(counts,
 
     ## sum up duplicated rows
     pgx$counts <- rowsum(pgx$counts, symbol)
-    pgx$counts <- pgx$counts[rownames(pgx$counts) != "",,drop = FALSE]
+    pgx$counts <- pgx$counts[rownames(pgx$counts) != "", , drop = FALSE]
 
     if (!is.null(pgx$X)) {
       pgx$X <- log2(rowsum(2**pgx$X, symbol))
-      pgx$X <- pgx$X[rownames(pgx$X) != "",,drop = FALSE]
+      pgx$X <- pgx$X[rownames(pgx$X) != "", , drop = FALSE]
     }
 
     # Collapse features as a comma-separated elements
@@ -846,8 +846,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   message("[pgx.add_GMT] Filtering gene sets on size...")
   gmt.size <- Matrix::colSums(G != 0)
   size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
-  if(length(size.ok) < 100) {
-    jj <- head(unique(c(size.ok, sample(1:ncol(G)))), 100)  ## at least 100
+  if (length(size.ok) < 100) {
+    jj <- head(unique(c(size.ok, sample(1:ncol(G)))), 100) ## at least 100
     G <- G[, jj, drop = FALSE]
   } else {
     G <- G[, size.ok, drop = FALSE]
