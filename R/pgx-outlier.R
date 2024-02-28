@@ -4,7 +4,7 @@
 ##
 
 #' @export
-detectOutlierSamples <- function(X, plot = TRUE, y = NULL, par = TRUE) {
+detectOutlierSamples <- function(X, plot = TRUE, par=NULL) {
   ## correlation and distance
   ## X <- playbase::logCPM(playbase::COUNTS)
   ## X <- safe.logCPM(2**X) ## quick normalization
@@ -45,8 +45,7 @@ detectOutlierSamples <- function(X, plot = TRUE, y = NULL, par = TRUE) {
   res <- list(z.outlier = zz, z.outlier2 = zz2, Z = Z)
 
   if (plot) {
-    par(mfrow = c(3, 3))
-    plotOutlierScores(res, par = FALSE)
+    plotOutlierScores(res, par = par)
   }
 
   res
@@ -54,18 +53,18 @@ detectOutlierSamples <- function(X, plot = TRUE, y = NULL, par = TRUE) {
 
 #' @export
 plotOutlierScores <- function(res.outliers, z.threshold = c(3, 6, 9), par = TRUE) {
-  if (par == TRUE) par(mfrow = c(2, 3))
+  if (par) par(mfrow = c(2, 3), mar=c(8,4,2,2))
   Z <- res.outliers$Z
   zz <- res.outliers$z.outlier
   zz2 <- res.outliers$z.outlier2
   barplot2 <- function(x, ...) {
-    barplot(x, ylim = c(0, max(12, max(Z))), ylab = "z-score", ...)
+    barplot(x, ylim = c(0, max(10, max(Z))), ylab = "z-score", ...)
     abline(h = z.threshold, lty = 3, col = "red")
   }
-  barplot2(zz, main = "z.outlier (mean)")
-  barplot2(zz2, main = "z.outlier (geom.mean)")
+  barplot2(zz, main = "z.outlier (mean)", las = 3)
+  barplot2(zz2, main = "z.outlier (geom.mean)", las = 3)
   for (i in 1:ncol(Z)) {
     z1 <- Z[, i]
-    barplot2(z1, main = colnames(Z)[i])
+    barplot2(z1, main = colnames(Z)[i], las = 3)
   }
 }
