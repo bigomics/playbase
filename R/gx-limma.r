@@ -85,7 +85,8 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
     cat("testing", nrow(X0), "features\n")
     cat("lfc = ", lfc,"\n")    
     cat("fdr = ", fdr,"\n")
-    cat("max.na = ", max.na,"\n")    if (!is.null(B0)) cat("including", ncol(B0), "batch covariates\n")
+    cat("max.na = ", max.na,"\n")
+    if (!is.null(B0)) cat("including", ncol(B0), "batch covariates\n")
   }
 
   ## auto-detect reference
