@@ -209,15 +209,15 @@ pgx.readOptions <- function(file = "./OPTIONS", default = NULL) {
   opt <- lapply(opt, utils::type.convert, as.is = TRUE)
   if (!is.null(default)) {
     ## add default options not in options
-    ##which.add <- c("a","b","c")
+    ## which.add <- c("a","b","c")
     which.add <- setdiff(names(default), names(opt))
-    if(length(which.add)) {
-      cat("[pgx.readOptions] adding missing defaults:",paste(which.add,collapse=" "),"\n")
+    if (length(which.add)) {
+      cat("[pgx.readOptions] adding missing defaults:", paste(which.add, collapse = " "), "\n")
       opt <- c(opt, default[which.add])
     }
-    which.extra <- setdiff(names(opt),names(default))
-    if(length(which.extra)) {
-      cat("[pgx.readOptions] warning: extra options:",paste(which.extra,collapse=" "),"\n")
+    which.extra <- setdiff(names(opt), names(default))
+    if (length(which.extra)) {
+      cat("[pgx.readOptions] warning: extra options:", paste(which.extra, collapse = " "), "\n")
     }
   }
   opt <- opt[order(names(opt))]
