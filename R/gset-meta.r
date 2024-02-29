@@ -50,7 +50,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     methods <- ALL.GENESET.METHODS
   }
   methods <- intersect(methods, ALL.GENESET.METHODS)
-  message("calculating methods:", paste(methods,collapse=" "))
+  message("calculating methods:", paste(methods, collapse = " "))
 
   ## If degenerate set design to NULL
   if (!is.null(design) && ncol(design) >= ncol(X)) {
@@ -79,7 +79,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
   all.results <- list()
   ## pre-compute matrices
-  zx.gsva  <- zx.ssgsea <- zx.rnkcorr <- NULL
+  zx.gsva <- zx.ssgsea <- zx.rnkcorr <- NULL
   res.gsva <- res.ssgsea <- res.rnkcorr <- NULL
 
   G <- G[rownames(X), names(gmt), drop = FALSE]
@@ -119,11 +119,11 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     message("fitting contrasts using GSVA/limma... ")
 
     ## check if we have the new version of GSVA
-    new.gsva <- exists('gsvaParam', where=asNamespace('GSVA'), mode='function')
-    new.gsva    
+    new.gsva <- exists("gsvaParam", where = asNamespace("GSVA"), mode = "function")
+    new.gsva
     tt <- system.time({
       zx.gsva <- NULL
-      if(new.gsva) {
+      if (new.gsva) {
         zx.gsva <- try({
           bpparam <- BiocParallel::MulticoreParam(mc.cores)
           GSVA::gsva(GSVA::gsvaParam(as.matrix(X), gmt), BPPARAM = bpparam)
@@ -137,10 +137,10 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       if (is.null(zx.gsva) || "try-error" %in% class(zx.gsva)) {
         ## switch to single core...
         warning("WARNING: GSVA ERROR: retrying single core... ")
-        if(new.gsva) {
+        if (new.gsva) {
           zx.gsva <- try(GSVA::gsva(GSVA::gsvaParam(as.matrix(X), gmt)))
         } else {
-          zx.gsva <- try(GSVA::gsva(as.matrix(X), gmt, method = "gsva", parallel.sz = 1, verbose = FALSE ))
+          zx.gsva <- try(GSVA::gsva(as.matrix(X), gmt, method = "gsva", parallel.sz = 1, verbose = FALSE))
         }
       }
 
@@ -372,7 +372,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
   names(all.results)
   methods2 <- setdiff(methods, names(all.results))
-  methods2 <- setdiff(methods2, c("gsva","ssgsea")) ## not do
+  methods2 <- setdiff(methods2, c("gsva", "ssgsea")) ## not do
 
   for (m in methods2) {
     res <- fitContrastsWithMethod(method = m)
