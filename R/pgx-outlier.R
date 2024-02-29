@@ -4,7 +4,7 @@
 ##
 
 #' @export
-detectOutlierSamples <- function(X, plot = TRUE, par=NULL) {
+detectOutlierSamples <- function(X, plot = TRUE, par = NULL) {
   ## correlation and distance
   ## X <- playbase::logCPM(playbase::COUNTS)
   ## X <- safe.logCPM(2**X) ## quick normalization
@@ -53,7 +53,7 @@ detectOutlierSamples <- function(X, plot = TRUE, par=NULL) {
 
 #' @export
 plotOutlierScores <- function(res.outliers, z.threshold = c(3, 6, 9), par = TRUE) {
-  if (par) par(mfrow = c(2, 3), mar=c(8,4,2,2))
+  if (par) par(mfrow = c(2, 3), mar = c(8, 4, 2, 2))
   Z <- res.outliers$Z
   zz <- res.outliers$z.outlier
   zz2 <- res.outliers$z.outlier2

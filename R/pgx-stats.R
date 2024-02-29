@@ -90,7 +90,7 @@ stats.ttest <- function(X, y, ref = NULL, add.avg = TRUE) {
   res <- matrixTests::row_t_welch(xx, yy, conf.level = NA)
   res <- res[rownames(X), ]
   res$qvalue <- p.adjust(res$pvalue, method = "fdr")
-  res$mean <- rowMeans(X, na.rm=TRUE)
+  res$mean <- rowMeans(X, na.rm = TRUE)
   res$mean.diff <- -res$mean.diff ## negative!!
   top <- res[, c("mean.diff", "mean", "pvalue", "qvalue", "mean.x", "mean.y")]
   notref <- paste(setdiff(y, ref), collapse = "|")
