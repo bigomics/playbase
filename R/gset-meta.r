@@ -356,7 +356,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
 
   fitContrastsWithMethod <- function(method) {
-    message("fitting contrasts using ", method, "... ")
+    message("fitting contrasts using ", method, "...")
     results <- list()
     timings <- c()
     k <- 1
@@ -383,8 +383,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   ## --------------------------------------------------------------
   ## Reshape matrices by comparison
   ## --------------------------------------------------------------
-
-  message("[gset.fitContrastsWithAllMethods] length(all.results) = ", length(all.results))
   tests <- names(all.results[[1]])
   ntest <- length(tests)
 
