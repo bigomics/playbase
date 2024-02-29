@@ -4,10 +4,10 @@
 \alias{pgx.custom_annotation}
 \title{Custom Gene Annotation}
 \usage{
-pgx.custom_annotation(pgx, custom_annot = NULL)
+pgx.custom_annotation(counts, custom_annot = NULL)
 }
 \arguments{
-\item{pgx}{pgx object}
+\item{counts}{A counts matrix}
 
 \item{custom_annot}{data.frame with custom annotation data. If provided,
 it has to contain at least the columns "feature", "symbol", "gene_name". Also,
@@ -43,6 +43,6 @@ custom_annot <- data.frame(
   gene_name = c("A1", "A2", "A3")
 )
 
-pgx <- pgx.custom_annotation(pgx, custom_annot)
+pgx <- pgx.custom_annotation(counts, custom_annot)
 }
 }

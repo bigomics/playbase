@@ -4,7 +4,7 @@
 \alias{pgx.computeTechnicalEffects}
 \title{Estimate technical effects variation}
 \usage{
-pgx.computeTechnicalEffects(X, is.count = FALSE, nmin = 3, nv = 2)
+pgx.computeTechnicalEffects(X, is.count = FALSE, nmin = 3, nv = 1)
 }
 \arguments{
 \item{X}{Gene expression matrix, with genes in rows and samples in columns}
