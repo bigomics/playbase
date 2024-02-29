@@ -196,7 +196,8 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   ## Do the fitting
   ## -----------------------------------------------------------------------------
   methods <- test.methods
-  message(">>> Testing differential expressed genes (DEG) with methods: ", methods)
+  message(">>> Testing differential expressed genes (DEG) with methods: ",
+          paste(methods,collapse=" "))
   PRIOR.CPM <- 1
 
   ## Run all test methods
