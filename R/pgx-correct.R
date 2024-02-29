@@ -306,7 +306,7 @@ pgx.superBatchCorrect <- function(X, pheno,
         b <- pheno[, mnn.correct]
         ## out <- mnnCorrect(cX, batch = b, cos.norm.out = FALSE)
         ## cX <- out@assays@data[["corrected"]]
-        cX <- MNNcorrect(cX, batch = b)        
+        cX <- MNNcorrect(cX, batch = b)
       }
     }
 
@@ -1187,11 +1187,11 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
       if (max(table(batch)) > 1) {
         mod1 <- model.matrix(~ factor(y))
         bX <- try(sva::ComBat(X, batch = batch, mod = mod1, par.prior = TRUE))
-        if(!"try-error" %in% class(bX)) {
+        if (!"try-error" %in% class(bX)) {
           xlist[["ComBat"]] <- bX
         }
         bX <- try(sva::ComBat(X, batch = batch, mod = NULL, par.prior = TRUE))
-        if(!"try-error" %in% class(bX)) {
+        if (!"try-error" %in% class(bX)) {
           xlist[["ComBat.no_mod"]] <- bX
         }
       }
@@ -1918,7 +1918,7 @@ svaCorrect <- function(X, y) {
   } else {
     message("[svaCorrect] WARNING could not get covariates. no correction.")
   }
-  X <- X[, 1:dimx]  ## reduce to original dim
+  X <- X[, 1:dimx] ## reduce to original dim
   X
 }
 
@@ -1930,7 +1930,7 @@ fsvaCorrect <- function(X, y) {
   }
   dimx <- ncol(X)
   xnames <- colnames(X)
-  
+
   ## sva doesn't like if the dimension is too small
   if (ncol(X) < 10) {
     X <- cbind(X, X, X)
@@ -1941,12 +1941,12 @@ fsvaCorrect <- function(X, y) {
   ii <- which(!is.na(y))
   has.na <- any(is.na(y))
   y1 <- y[ii]
-  X1 <- X[,ii]
+  X1 <- X[, ii]
   y0 <- y[-ii]
-  X0 <- X[,-ii]
+  X0 <- X[, -ii]
   names(y0) <- colnames(X0)
   names(y1) <- colnames(X1)
-  
+
   ##
   mod1x <- model.matrix(~ 1 + y1)
   mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
@@ -1971,37 +1971,38 @@ fsvaCorrect <- function(X, y) {
     message("[svaCorrect] WARNING could not get covariates. no correction.")
   }
 
-  if(has.na) {
+  if (has.na) {
     dim(X0)
-    fsvaobj <- fsva( X1, mod1x, sv, X0)
-    data1 <- list( x = X1, y = y1)
-    model <- pamr::pamr.train( data1 )
-    pred_y0 <- pamr::pamr.predict( model, fsvaobj$new, threshold=1)
+    fsvaobj <- fsva(X1, mod1x, sv, X0)
+    data1 <- list(x = X1, y = y1)
+    model <- pamr::pamr.train(data1)
+    pred_y0 <- pamr::pamr.predict(model, fsvaobj$new, threshold = 1)
     pred_y0 <- as.character(pred_y0)
     table(pred_y0)
-    
+
     ## redo SVA with predicted labels
     XX <- cbind(X0, X1)
     yy <- c(pred_y0, y1)
     names(yy) <- colnames(XX)
     mod1x <- model.matrix(~ 1 + yy)
-    mod0x <- mod1x[, 1, drop = FALSE] ## just ones...    
-    
+    mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
+
     XXa <- Matrix::head(XX[order(-matrixStats::rowSds(XX, na.rm = TRUE)), ], 1000)
     a <- 0.01 * mean(apply(XXa, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
     XXa <- XXa + a * matrix(stats::rnorm(length(XXa)), nrow(XXa), ncol(XXa))
     sv <- try(sva::sva(XXa, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1))$sv)
     cX <- limma::removeBatchEffect(XX, covariates = sv, design = mod1x)
-    cX <- cX[,colnames(X)]
+    cX <- cX[, colnames(X)]
     y0 <- yy[colnames(X0)]
   }
 
-  if(is.null(cX)) return(NULL)  
-  cX <- cX[, match(xnames,colnames(cX))]  ## reduce to original size
+  if (is.null(cX)) {
+    return(NULL)
+  }
+  cX <- cX[, match(xnames, colnames(cX))] ## reduce to original size
   predy <- c(y0, y1)
-  predy <- predy[match(xnames,names(predy))]
-  list( X=cX, y=predy )
-
+  predy <- predy[match(xnames, names(predy))]
+  list(X = cX, y = predy)
 }
 
 #' @export
@@ -2009,7 +2010,7 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
   if (any(is.na(X))) {
     stop("[ruvCorrect] cannot handle missing values in X.")
   }
-  
+
   ## F-test using limma just variables
   if (!is.null(y) && length(controls) == 1 && is.numeric(controls[1])) {
     ii <- which(!duplicated(rownames(X)))
@@ -2024,8 +2025,8 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
 
   if (is.null(k)) {
     ## this is from SVA
-    jj <- which(!is.na(y))    
-    fit <- lm(t(X[controls, jj, drop = FALSE]) ~ y[jj])  ## only within controls???
+    jj <- which(!is.na(y))
+    fit <- lm(t(X[controls, jj, drop = FALSE]) ~ y[jj]) ## only within controls???
     X.r <- t(stats::resid(fit))
     k <- try(isva::EstDimRMT(X.r, FALSE)$dim + 1)
     if ("try-error" %in% class(k)) {
@@ -2041,7 +2042,7 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
   type <- type[1]
   if (type == "III") {
     ## setup model matrix
-    M <- model.matrix(~ 0 + y)  ## how deal with missing values??
+    M <- model.matrix(~ 0 + y) ## how deal with missing values??
     rownames(M) <- colnames(X)
     ruvX <- t(ruv::RUVIII(Y = t(X), M = M, ctl = ctl, k = k, eta = NULL))
     ruvX <- ruvX - mean(ruvX) + mean(X) ## ??
@@ -2100,7 +2101,8 @@ pcaCorrect <- function(X, y, k = 10, p.notsig = 0.20) {
 pcaCorrect3 <- function(X, y, k = 10, xrank = NULL, p.notsig = 0.20) {
   ## this removes typical batch effects
   cX <- X
-  bc <- detectBatchEffects(cX, samples, y, params = "pca",
+  bc <- detectBatchEffects(cX, samples, y,
+    params = "pca",
     p.pca = 0.5, p.pheno = p.notsig, k.pca = k, xrank = xrank
   )
   if (!is.null(bc$covariates)) {
@@ -2587,11 +2589,11 @@ gx.nnmcorrect2 <- function(...) nnmCorrect2(..., return.B = TRUE)
 
 #' Supervised MNN correction. Finds mutual neighbours with same label
 #' between two datasets and returns corresponding correction vectors.
-#' 
-sMNN <- function(X, batch, y, nv = 0.33, nn = 3, return.idx=FALSE) {
+#'
+sMNN <- function(X, batch, y, nv = 0.33, nn = 3, return.idx = FALSE) {
   getMNN <- function(x1, x2) {
     res <- batchelor::findMutualNN(t(x1), t(x2), k1 = nn)
-    cbind( colnames(x1)[res$first], colnames(x2)[res$second] )
+    cbind(colnames(x1)[res$first], colnames(x2)[res$second])
   }
 
   ## if no phenotype is given, just do one group
@@ -2609,93 +2611,93 @@ sMNN <- function(X, batch, y, nv = 0.33, nn = 3, return.idx=FALSE) {
   message("[sMNN] searching in ", ncol(comb), " batch pairs...")
   for (i in 1:ncol(comb)) {
     for (y0 in unique(y)) {
-      x1 <- X[, which(batch == comb[1, i] & y == y0), drop=FALSE]
-      x2 <- X[, which(batch == comb[2, i] & y == y0), drop=FALSE]
-      if(ncol(x1)>0 && ncol(x2)>0) {
+      x1 <- X[, which(batch == comb[1, i] & y == y0), drop = FALSE]
+      x2 <- X[, which(batch == comb[2, i] & y == y0), drop = FALSE]
+      if (ncol(x1) > 0 && ncol(x2) > 0) {
         idx <- getMNN(x1, x2)
-        dx <- x2[, idx[,2]] - x1[, idx[,1]]
+        dx <- x2[, idx[, 2]] - x1[, idx[, 1]]
         B <- cbind(B, dx)
-        all.idx <- rbind( all.idx, idx)
+        all.idx <- rbind(all.idx, idx)
       }
     }
   }
   dim(B)
   message("[sMNN] dim(B) = ", paste(dim(B), collapse = "x"))
-  message("[sMNN] Found total ", ncol(B), " MNN pairs")    
+  message("[sMNN] Found total ", ncol(B), " MNN pairs")
 
   ## remove batch effects in transposed gene space
-  if(nv < 1) nv <- floor(nv * min(dim(B)))
+  if (nv < 1) nv <- floor(nv * min(dim(B)))
   nv <- max(1, min(nv, dim(B) - 1))
   message("[sMNN] nv = ", nv)
   B <- scale(B)
   dU <- irlba::irlba(B, nu = nv, nv = nv)$u
-##  dU <- scale(dU) ## no???
+  ##  dU <- scale(dU) ## no???
   cX <- t(limma::removeBatchEffect(t(X), covariates = dU))
 
-  ## restore original mean  
+  ## restore original mean
   cX <- cX - rowMeans(cX) + rowMeans(X)
 
-  if(return.idx) {
-    res <- list(X = cX, idx = all.idx )
+  if (return.idx) {
+    res <- list(X = cX, idx = all.idx)
     return(res)
   }
-  
+
   cX
 }
 
 
 #' Mutual Farthest Neighbour correction
-#' 
-mfnCorrect <- function(X, y, nv = 3, nn = 3, return.idx=FALSE) {
-    ##nv=0.33;nn=10
-    B <- NULL
-    all.idx <- c()
-    a=y[2]
-    for(a in unique(y)) {
-        
-        X1 <- X[,which(y==a)]
-        ##X1 <- X1 - rowMeans(X1)
-        R1 <- cor(X1)
-        mfn <- c()
-        ## determine mutual farthest neighbors
-        idx <- apply(R1, 1, function(x) head(order(x),nn))
-        if(nn==1) idx <- cbind(idx)
-        if(nn>1)  idx <- t(idx)
-        
-        mfn.match <- sapply(1:nrow(idx), function(j) j %in% as.vector(idx[idx[j,],]))
-        table(mfn.match)
-        mfn <- which(mfn.match)        
-        message("Found ", length(mfn), " farthest neighbors for y= ",a)
+#'
+mfnCorrect <- function(X, y, nv = 3, nn = 3, return.idx = FALSE) {
+  ## nv=0.33;nn=10
+  B <- NULL
+  all.idx <- c()
+  a <- y[2]
+  for (a in unique(y)) {
+    X1 <- X[, which(y == a)]
+    ## X1 <- X1 - rowMeans(X1)
+    R1 <- cor(X1)
+    mfn <- c()
+    ## determine mutual farthest neighbors
+    idx <- apply(R1, 1, function(x) head(order(x), nn))
+    if (nn == 1) idx <- cbind(idx)
+    if (nn > 1) idx <- t(idx)
 
-        ## get correction vectors
-        if(length(mfn)>0) {
-            idx <- idx[mfn,,drop=FALSE]
-            X2 <- apply( idx, 1, function(i) rowMeans(X1[,i,drop=FALSE]))
-            dX <- X1[,rownames(idx)] - X2
-            B <- cbind(B, dX)
-            idx1 <- apply(idx, 2, function(i) colnames(X1)[i])
-            idx1 <- cbind( rownames(idx), as.vector(idx1))
-            all.idx <- rbind( all.idx, idx1 )
-        } 
+    mfn.match <- sapply(1:nrow(idx), function(j) j %in% as.vector(idx[idx[j, ], ]))
+    table(mfn.match)
+    mfn <- which(mfn.match)
+    message("Found ", length(mfn), " farthest neighbors for y= ", a)
+
+    ## get correction vectors
+    if (length(mfn) > 0) {
+      idx <- idx[mfn, , drop = FALSE]
+      X2 <- apply(idx, 1, function(i) rowMeans(X1[, i, drop = FALSE]))
+      dX <- X1[, rownames(idx)] - X2
+      B <- cbind(B, dX)
+      idx1 <- apply(idx, 2, function(i) colnames(X1)[i])
+      idx1 <- cbind(rownames(idx), as.vector(idx1))
+      all.idx <- rbind(all.idx, idx1)
     }
-    dim(B)
+  }
+  dim(B)
 
-    if(NCOL(B)>0)
-    ## apply correction   
-    if(nv < 1) nv <- max(1,floor(nv * min(dim(B))))
-    dU <- svd(B, nu=nv, nv=nv)$u
-    message("Correcting with ", ncol(dU), " MFN components")    
-    cX <- t(limma::removeBatchEffect(t(X), covariates=dU))
+  if (NCOL(B) > 0) {
+    ## apply correction
+    if (nv < 1) nv <- max(1, floor(nv * min(dim(B))))
+  }
+  dU <- svd(B, nu = nv, nv = nv)$u
+  message("Correcting with ", ncol(dU), " MFN components")
+  cX <- t(limma::removeBatchEffect(t(X), covariates = dU))
 
-    ## restore original mean  
-    cX <- cX - rowMeans(cX) + rowMeans(X)
+  ## restore original mean
+  cX <- cX - rowMeans(cX) + rowMeans(X)
 
-    if(return.idx) {
-        res <- list(X = cX, idx = all.idx )
-        return(res)
-    }
+  if (return.idx) {
+    res <- list(X = cX, idx = all.idx)
+    return(res)
+  }
 
-    cX
+  cX
 }
 
 
