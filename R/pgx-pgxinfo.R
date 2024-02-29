@@ -61,7 +61,7 @@ pgxinfo.add <- function(pgxinfo, pgx, remove.old = TRUE) {
     date = as.character(date),
     path = NULL
   )
-  
+
   ## force to be character...
   if (!is.null(pgxinfo) && NCOL(pgxinfo) > 0 && nrow(pgxinfo) > 0) {
     if ("date" %in% colnames(pgxinfo)) {
@@ -182,7 +182,7 @@ pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE, use.
 #' @param pgxinfo Character string specifying the pgxinfo dataframe
 #' @param pgx.dir Character string specifying the target folder
 #' @param info.file Character string specifying the filename for the dataset info file. Default is "datasets-info.csv".
-#' 
+#'
 #' @description Write the dataset information CSV file with some safety processing
 #'
 #' @details This function writes the dataset info CSV located in a PGX directory. It contains metadata like datatype, organism, sample sizes, etc.
@@ -193,19 +193,18 @@ pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE, use.
 #'
 #' @export
 pgxinfo.write <- function(pgxinfo, pgx.dir, info.file = "datasets-info.csv") {
-
   info.file <- basename(info.file)
   rownames(pgxinfo) <- NULL
   pgxinfo <- data.frame(pgxinfo, check.names = FALSE)
-  
-  ## remove special characters from description (other columns too??)
-  pgxinfo$description <- gsub("[\"\']"," ",pgxinfo$description)  ## remove quotes (important!!)
-  pgxinfo$description <- gsub("[\n]",". ",pgxinfo$description)   ## replace newline
-  pgxinfo$description <- trimws(gsub("[ ]+"," ",pgxinfo$description))  ## remove ws
 
-  file1 <- file.path(pgx.dir,info.file)
+  ## remove special characters from description (other columns too??)
+  pgxinfo$description <- gsub("[\"\']", " ", pgxinfo$description) ## remove quotes (important!!)
+  pgxinfo$description <- gsub("[\n]", ". ", pgxinfo$description) ## replace newline
+  pgxinfo$description <- trimws(gsub("[ ]+", " ", pgxinfo$description)) ## remove ws
+
+  file1 <- file.path(pgx.dir, info.file)
   dbg("[pgxinfo.write] writing pgx-info file: ", file1)
-  utils::write.csv(pgxinfo, file = file1)  
+  utils::write.csv(pgxinfo, file = file1)
 }
 
 
