@@ -133,7 +133,7 @@ fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
     return(x)
   }
   n0 <- ifelse(row.names == 0 || is.null(row.names), 1, 2)
-  colnames(df) <- substring(colnames(df), 1, 1000)  ## safety, avoid length overflow
+  colnames(df) <- substring(colnames(df), 1, 1000) ## safety, avoid length overflow
   x <- data.frame(df[, n0:ncol(df)],
     stringsAsFactors = stringsAsFactors,
     check.names = check.names

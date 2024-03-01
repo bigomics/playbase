@@ -175,14 +175,14 @@ pgxinfo.read <- function(pgx.dir, file = "datasets-info.csv", match = TRUE, use.
   ii <- match(info.colnames, colnames(pgxinfo))
   pgxinfo <- pgxinfo[, ii]
 
-  if(clean.description) {
+  if (clean.description) {
     ## clean up description: remove special characters from description
     ## (other columns too??)
-    pgxinfo$description <- gsub("[\"\']"," ",pgxinfo$description)  ## remove quotes (important!!)
-    pgxinfo$description <- gsub("[\n]",". ",pgxinfo$description)   ## replace newline
-    pgxinfo$description <- trimws(gsub("[ ]+"," ",pgxinfo$description))  ## remove ws
+    pgxinfo$description <- gsub("[\"\']", " ", pgxinfo$description) ## remove quotes (important!!)
+    pgxinfo$description <- gsub("[\n]", ". ", pgxinfo$description) ## replace newline
+    pgxinfo$description <- trimws(gsub("[ ]+", " ", pgxinfo$description)) ## remove ws
   }
-  
+
   return(pgxinfo)
 }
 
@@ -378,7 +378,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   info.file <- file.path(pgx.dir, "datasets-info.csv")
   sigdb.file <- file.path(pgx.dir, "datasets-sigdb.h5")
   tsne.file <- file.path(pgx.dir, "datasets-tsne.csv")
-  
+
   if (length(pgx.files) == 0) {
     file.remove(info.file)
     file.remove(allfc.file)
@@ -453,8 +453,8 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   if (has.fc) {
     ## read just header
     allFC <- read.csv(allfc.file, check.names = FALSE, nrows = 1)
-    colnames(allFC) <- gsub("[\"\'\n\t]","",colnames(allFC))
-    
+    colnames(allFC) <- gsub("[\"\'\n\t]", "", colnames(allFC))
+
     fc.files <- gsub("\\].*", "", colnames(allFC)[-1])
     fc.files <- gsub("^.*\\[", "", fc.files)
     fc.missing <- setdiff(pgx.files, fc.files)
@@ -567,7 +567,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   if (!force && file.exists(allfc.file)) {
     allFC <- fread.csv(allfc.file, row.names = 1, check.names = FALSE)
     allFC <- as.matrix(allFC)
-    colnames(allFC) <- gsub("[\"\']", "", colnames(allFC))  ## safety
+    colnames(allFC) <- gsub("[\"\']", "", colnames(allFC)) ## safety
     if (ncol(allFC) == 0) allFC <- NULL
   }
 
@@ -641,7 +641,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
       ## ---------------------------------------------
       if (pgxfile %in% fc.missing) {
         meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
-        rownames(meta$fc) <- toupper(rownames(meta$fc))  ## human genes
+        rownames(meta$fc) <- toupper(rownames(meta$fc)) ## human genes
         missing.FC[[pgxfile]] <- meta$fc
         pgxfc.changed <- TRUE
       }
@@ -691,9 +691,9 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     for (i in 1:length(missing.FC)) {
       ## clean up string
       fcnames <- colnames(missing.FC[[i]])
-      fcnames <- gsub("[\"\']"," ",fcnames)  ## remove quotes (important!!)
-      fcnames <- gsub("[\n]",". ",fcnames)   ## replace newline
-      fcnames <- trimws(gsub("[ ]+"," ",fcnames))  ## remove ws
+      fcnames <- gsub("[\"\']", " ", fcnames) ## remove quotes (important!!)
+      fcnames <- gsub("[\n]", ". ", fcnames) ## replace newline
+      fcnames <- trimws(gsub("[ ]+", " ", fcnames)) ## remove ws
       colnames(missing.FC[[i]]) <- paste0(id[i], " ", fcnames)
     }
     allFC.new <- do.call(cbind, missing.FC)
