@@ -336,9 +336,9 @@ pgx.createPGX <- function(counts,
   }
 
   ## remove special characters from description (other columns too??)
-  description <- gsub("[\"\']"," ",description)  ## remove quotes (important!!)
-  description <- gsub("[\n]",". ",description)   ## replace newline
-  description <- trimws(gsub("[ ]+"," ",description))  ## remove ws
+  description <- gsub("[\"\']", " ", description) ## remove quotes (important!!)
+  description <- gsub("[\n]", ". ", description) ## replace newline
+  description <- trimws(gsub("[ ]+", " ", description)) ## remove ws
 
   pgx <- list(
     name = name,
@@ -355,7 +355,7 @@ pgx.createPGX <- function(counts,
     total_counts = Matrix::colSums(counts, na.rm = TRUE), # input normalized log-expression (can be NULL)
     counts_multiplier = counts_multiplier
   )
-  
+
   ## -------------------------------------------------------------------
   ## create gene annotation table
   ## -------------------------------------------------------------------
