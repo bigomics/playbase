@@ -185,7 +185,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## clean up input files
   ## -------------------------------------------------------------------
-  samples <- data.frame(samples, drop = FALSE)
+  samples <- as.data.frame(samples, drop = FALSE)
   counts <- as.matrix(counts)
   if (is.null(contrasts)) contrasts <- samples[, 0]
 
