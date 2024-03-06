@@ -124,15 +124,16 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
 fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
                       stringsAsFactors = FALSE, header = TRUE, asMatrix = TRUE) {
   df <- data.table::fread(
-    file = file, check.names = check.names, header = header,
-    sep = sep, fill = TRUE
+    file = file, check.names = check.names, header = header, sep = sep, fill = TRUE
   )
   if (NCOL(df) == 1) {
+    ## empty file, only rownames
     x <- matrix(NA, nrow(df), 0)
     rownames(x) <- df[[row.names]] ## allow dups if matrix
     return(x)
   }
   n0 <- ifelse(row.names == 0 || is.null(row.names), 1, 2)
+  colnames(df) <- substring(colnames(df), 1, 1000) ## safety, avoid length overflow
   x <- data.frame(df[, n0:ncol(df)],
     stringsAsFactors = stringsAsFactors,
     check.names = check.names

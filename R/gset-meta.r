@@ -43,14 +43,14 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     mc.cores <- pmax(mc.cores, 1) ## min 1 core
     mc.cores <- pmin(mc.cores, 16) ## max 16 cores
   }
-  message("using", mc.cores, "number of cores")
-  message("using", mc.threads, "number of threads")
+  message("using ", mc.cores, " number of cores")
+  message("using ", mc.threads, " number of threads")
 
   if (methods[1] == "*") {
     methods <- ALL.GENESET.METHODS
   }
   methods <- intersect(methods, ALL.GENESET.METHODS)
-  message("calculating methods:", methods)
+  message("calculating methods:", paste(methods, collapse = " "))
 
   ## If degenerate set design to NULL
   if (!is.null(design) && ncol(design) >= ncol(X)) {
@@ -117,19 +117,31 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
   if ("gsva" %in% methods) {
     message("fitting contrasts using GSVA/limma... ")
+
+    ## check if we have the new version of GSVA
+    new.gsva <- exists("gsvaParam", where = asNamespace("GSVA"), mode = "function")
+    new.gsva
     tt <- system.time({
       zx.gsva <- NULL
-      zx.gsva <- try({
-        ## GSVA::gsva(as.matrix(X), gmt, method = "gsva", parallel.sz = mc.cores, verbose = FALSE)
-        bpparam <- BiocParallel::MulticoreParam(mc.cores)
-        GSVA::gsva(GSVA::gsvaParam(as.matrix(X), gmt), BPPARAM = bpparam)
-      })
+      if (new.gsva) {
+        zx.gsva <- try({
+          bpparam <- BiocParallel::MulticoreParam(mc.cores)
+          GSVA::gsva(GSVA::gsvaParam(as.matrix(X), gmt), BPPARAM = bpparam)
+        })
+      } else {
+        zx.gsva <- try({
+          GSVA::gsva(as.matrix(X), gmt, method = "gsva", parallel.sz = mc.cores, verbose = FALSE)
+        })
+      }
 
       if (is.null(zx.gsva) || "try-error" %in% class(zx.gsva)) {
         ## switch to single core...
         warning("WARNING: GSVA ERROR: retrying single core... ")
-        ##        zx.gsva <- try(GSVA::gsva(as.matrix(X), gmt, method = "gsva", parallel.sz = 1, verbose = FALSE ))
-        zx.gsva <- try(GSVA::gsva(GSVA::gsvaParam(as.matrix(X), gmt)))
+        if (new.gsva) {
+          zx.gsva <- try(GSVA::gsva(GSVA::gsvaParam(as.matrix(X), gmt)))
+        } else {
+          zx.gsva <- try(GSVA::gsva(as.matrix(X), gmt, method = "gsva", parallel.sz = 1, verbose = FALSE))
+        }
       }
 
       if (!"try-error" %in% class(zx.gsva)) {
@@ -238,7 +250,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     ## ----------------------------------------------------
 
     LIMMA.TREND <- TRUE
-    if ("ssgsea" %in% method) {
+    if (FALSE && "ssgsea" %in% method) {
       zx <- zx.ssgsea[, colnames(xx)]
       gs <- intersect(names(gmt), rownames(zx))
       tt <- system.time(
@@ -253,7 +265,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       res[["ssgsea"]] <- output
     }
 
-    if ("gsva" %in% method) {
+    if (FALSE && "gsva" %in% method) {
       zx <- zx.gsva[, colnames(xx)]
       gs <- intersect(names(gmt), rownames(zx))
       tt <- system.time({
@@ -344,7 +356,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
 
   fitContrastsWithMethod <- function(method) {
-    message("fitting contrasts using ", method, "... ")
+    message("fitting contrasts using ", method, "...")
     results <- list()
     timings <- c()
     k <- 1
@@ -360,6 +372,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
   names(all.results)
   methods2 <- setdiff(methods, names(all.results))
+  methods2 <- setdiff(methods2, c("gsva", "ssgsea")) ## not do
 
   for (m in methods2) {
     res <- fitContrastsWithMethod(method = m)
@@ -370,8 +383,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   ## --------------------------------------------------------------
   ## Reshape matrices by comparison
   ## --------------------------------------------------------------
-
-  message("[gset.fitContrastsWithAllMethods] length(all.results) = ", length(all.results))
   tests <- names(all.results[[1]])
   ntest <- length(tests)
 

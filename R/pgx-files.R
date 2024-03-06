@@ -194,7 +194,7 @@ pgx.saveMatrixH5 <- function(X, h5.file, chunk = NULL) {
 #' an analysis with the same settings.
 #'
 #' @export
-pgx.readOptions <- function(file = "./OPTIONS") {
+pgx.readOptions <- function(file = "./OPTIONS", default = NULL) {
   if (!file.exists(file)) {
     return(NULL)
   }
@@ -207,6 +207,20 @@ pgx.readOptions <- function(file = "./OPTIONS") {
   opt <- sapply(opt, strsplit, split = "[;]")
   ## convert character to R types
   opt <- lapply(opt, utils::type.convert, as.is = TRUE)
+  if (!is.null(default)) {
+    ## add default options not in options
+    ## which.add <- c("a","b","c")
+    which.add <- setdiff(names(default), names(opt))
+    if (length(which.add)) {
+      cat("[pgx.readOptions] adding missing defaults:", paste(which.add, collapse = " "), "\n")
+      opt <- c(opt, default[which.add])
+    }
+    which.extra <- setdiff(names(opt), names(default))
+    if (length(which.extra)) {
+      cat("[pgx.readOptions] warning: extra options:", paste(which.extra, collapse = " "), "\n")
+    }
+  }
+  opt <- opt[order(names(opt))]
   opt
 }
 
