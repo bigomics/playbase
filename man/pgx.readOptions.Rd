@@ -4,7 +4,7 @@
 \alias{pgx.readOptions}
 \title{Read PGX Options}
 \usage{
-pgx.readOptions(file = "./OPTIONS")
+pgx.readOptions(file = "./OPTIONS", default = NULL)
 }
 \arguments{
 \item{file}{The path to the PGX options file. Default is "./OPTIONS".}

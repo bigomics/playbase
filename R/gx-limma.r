@@ -83,6 +83,9 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
     cat("analyzing", ncol(X0), "samples\n")
     cat("table.pheno: ", table(pheno), "samples\n")
     cat("testing", nrow(X0), "features\n")
+    cat("lfc = ", lfc, "\n")
+    cat("fdr = ", fdr, "\n")
+    cat("max.na = ", max.na, "\n")
     if (!is.null(B0)) cat("including", ncol(B0), "batch covariates\n")
   }
 
@@ -102,7 +105,7 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
   } else {
     if (verbose > 0) cat("WARNING: could not auto-detect reference\n")
     levels <- as.character(sort(unique(pheno0)))
-    if (verbose > 0) cat("setting reference to first class", levels[1], "\n")
+    if (verbose > 0) cat("setting reference to first class:", levels[1], "\n")
   }
   if (length(levels) != 2) {
     stop("gx.limma::fatal error:only two class comparisons. Please use gx.limmaF().")

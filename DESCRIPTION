@@ -1,7 +1,7 @@
 Package: playbase
 Type: Package
 Title: Core back-end functionality and logic for OmicsPlayground
-Version: 0.1.19
+Version: 0.1.25
 Author: BigOmics Analytics SA
 Maintainer: The package maintainer <yourself@somewhere.net>
 Description: More about what it does (maybe more than one line)
@@ -12,7 +12,7 @@ LazyData: true
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
 Depends: 
     R (>= 2.10)
 biocViews:
@@ -123,4 +123,3 @@ Remotes:
     ncullen93/KEGG.db,
     ropensci/iheatmapr,
     renozao/xbioc
-    

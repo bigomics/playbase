@@ -20,7 +20,8 @@ plotlyVolcano(
   label = NULL,
   label.cex = 1,
   marker.type = "scatter",
-  displayModeBar = TRUE
+  displayModeBar = TRUE,
+  max.absy = NULL
 )
 }
 \arguments{

@@ -286,6 +286,12 @@ pgx.checkObject <- function(pgx) {
     "counts", "samples", "genes", "model.parameters",
     "X", "gx.meta", "GMT"
   )
+
+  # if pgx$organism == "No organism", then GMT might not be there...
+  if (pgx$organism == "No organism") {
+    must.have <- setdiff(must.have, "GMT")
+  }
+
   not.present <- setdiff(must.have, names(pgx))
   if (length(not.present) > 0) {
     not.present <- paste(not.present, collapse = " ")
