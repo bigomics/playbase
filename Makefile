@@ -23,6 +23,7 @@ tags:
 clean:
 	rm `find . -name '.#*' -o -name '#*' -o -name '*~'`
 
+# filter by file name (eg. ensembl) will run tests inside file test-pgx-ensembl.R
 filter=NULL
 test:
 	R -e "devtools::test(filter='$(filter)')"
