@@ -4805,7 +4805,8 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
                                        xtips = NULL, ytips = NULL, row_clust = TRUE,
                                        row_annot_width = 0.03, scale = "row.center",
                                        colors = NULL, lmar = 60,
-                                       rowcex = 1, colcex = 1, show_legend = TRUE) {
+                                       rowcex = 1, colcex = 1, show_legend = TRUE,
+                                       return_x_matrix = FALSE) {
   ## constants
   col_annot_height <- 0.021
   if (!is.null(idx)) idx <- as.character(idx)
@@ -5035,7 +5036,14 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
     )
   }
 
-  return(plt)
+  if(return_x_matrix) {
+    return(list(
+      plt = plt,
+      X = X
+    ))
+  } else {
+    return(plt)
+  }
 }
 
 
