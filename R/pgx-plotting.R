@@ -4792,6 +4792,7 @@ iheatmapr.add_col_annotation <- function(p,
 #' @param rowcex Row text size scaling. Default is 1.
 #' @param colcex Column text size scaling. Default is 1.
 #' @param show_legend Show color legend? Default is TRUE.
+#' @param return_x_matrix Return the X matrix of the plot along the plotly object (as a list)
 #'
 #' @return A plotly split heatmap object
 #'
