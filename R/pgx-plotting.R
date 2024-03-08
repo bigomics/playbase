@@ -4792,6 +4792,7 @@ iheatmapr.add_col_annotation <- function(p,
 #' @param rowcex Row text size scaling. Default is 1.
 #' @param colcex Column text size scaling. Default is 1.
 #' @param show_legend Show color legend? Default is TRUE.
+#' @param return_x_matrix Return the X matrix of the plot along the plotly object (as a list)
 #'
 #' @return A plotly split heatmap object
 #'
@@ -4805,7 +4806,8 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
                                        xtips = NULL, ytips = NULL, row_clust = TRUE,
                                        row_annot_width = 0.03, scale = "row.center",
                                        colors = NULL, lmar = 60,
-                                       rowcex = 1, colcex = 1, show_legend = TRUE) {
+                                       rowcex = 1, colcex = 1, show_legend = TRUE,
+                                       return_x_matrix = FALSE) {
   ## constants
   col_annot_height <- 0.021
   if (!is.null(idx)) idx <- as.character(idx)
@@ -5035,7 +5037,14 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
     )
   }
 
-  return(plt)
+  if(return_x_matrix) {
+    return(list(
+      plt = plt,
+      X = X
+    ))
+  } else {
+    return(plt)
+  }
 }
 
 
