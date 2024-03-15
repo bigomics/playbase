@@ -30,6 +30,18 @@ pgx.checkINPUT <- function(
       check_return$e27 <- paste("gene:", rownames(ANY_NON_NUMERIC), " and ", "sample:", colnames(df_clean)[ANY_NON_NUMERIC[, 2]])
     }
 
+    # replace infinite values in counts by the maximum value of the feature + 10%
+    # check if there are any infinite values
+    ANY_INFINITE <- which(is.infinite(df_clean), arr.ind = TRUE)
+    
+    if(length(ANY_INFINITE) > 0 && PASS) {
+      df_clean <- apply(df_clean, 1, function(x) {
+        max_val <- max(x, na.rm = TRUE)
+        ifelse(is.infinite(x), max_val * 1.1, x)
+    })
+      check_return$e28 <- paste("gene:", rownames(ANY_INFINITE), " and ", "sample:", colnames(df_clean)[ANY_INFINITE[, 2]])
+    }
+
     # check for duplicated colnanes (gives error)
     ANY_DUPLICATED <- unique(sample_names[which(duplicated(sample_names))])
 
