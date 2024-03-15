@@ -201,7 +201,7 @@ svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
   if (is.null(nv)) {
     nv <- max(1, round(mean(is.na(X)) * min(dim(X))))
   }
-  nv <- min(nv, dim(X)-1)
+  nv <- min(nv, dim(X) - 1)
   message("setting nv = ", nv)
 
   if (is.character(init) && grepl("%", init)) {
@@ -295,7 +295,7 @@ svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
 nmfImpute <- function(x, k = 5) {
   ## Impute missing values with NMF
   ##
-  k <- min(k, dim(x)-1)
+  k <- min(k, dim(x) - 1)
   nmf <- NNLM::nnmf(x, k = k, check.k = FALSE, rel.tol = 1e-2, verbose = 0)
   xhat <- with(nmf, W %*% H)
   x[is.na(x)] <- xhat[is.na(x)]
@@ -313,13 +313,13 @@ nmfImpute <- function(x, k = 5) {
 #' @description Imputes missing values using BPCA
 #'
 #' @export
-BPCAimpute <- function(X, k=2) {
-  k <- min(k, dim(X)-1)
-  ii <- which(rowMeans(is.na(X)) < 1)  
-  pc <- pcaMethods::pca(t(X[ii,]), method="bpca", nPcs=k)
+BPCAimpute <- function(X, k = 2) {
+  k <- min(k, dim(X) - 1)
+  ii <- which(rowMeans(is.na(X)) < 1)
+  pc <- pcaMethods::pca(t(X[ii, ]), method = "bpca", nPcs = k)
   obsX <- t(pcaMethods::completeObs(pc))
-  impX <- X  
-  impX[ii,] <- obsX
+  impX <- X
+  impX[ii, ] <- obsX
   impX
 }
 

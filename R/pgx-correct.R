@@ -1195,7 +1195,6 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
         }
       }
     }
-
   }
 
   ## superbatchcorrect

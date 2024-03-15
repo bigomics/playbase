@@ -5037,7 +5037,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
     )
   }
 
-  if(return_x_matrix) {
+  if (return_x_matrix) {
     return(list(
       plt = plt,
       X = X
