@@ -1122,12 +1122,11 @@ removeTechnicalEffects <- function(X, samples, y, p.pheno = 0.05, p.pca = 0.5,
 
 #' @export
 runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
-                                      combatx = FALSE, sc = FALSE, prefix = "",
+                                      sc = FALSE, prefix = "",
                                       methods = NULL, remove.failed = TRUE) {
   if (0) {
     controls <- NULL
     ntop <- 2000
-    combatx <- FALSE
     sc <- FALSE
     prefix <- ""
     methods <- NULL
@@ -1197,10 +1196,6 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
       }
     }
 
-    ## ComBatX
-    if (combatx && !is.null(batch)) {
-      xlist[["ComBatX"]] <- ComBatX(X, batch = batch, y = y, nv = 0.33)
-    }
   }
 
   ## superbatchcorrect
@@ -1723,7 +1718,6 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
     y = pars$pheno,
     controls = NULL,
     methods = methods,
-    combatx = FALSE,
     ntop = ntop,
     sc = FALSE,
     remove.failed = TRUE
@@ -2114,6 +2108,7 @@ pcaCorrect3 <- function(X, y, k = 10, xrank = NULL, p.notsig = 0.20) {
   }
   cX
 }
+
 
 #' @export
 runHarmony <- function(X, batch) {
