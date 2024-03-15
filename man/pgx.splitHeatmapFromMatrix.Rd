@@ -18,7 +18,8 @@ pgx.splitHeatmapFromMatrix(
   lmar = 60,
   rowcex = 1,
   colcex = 1,
-  show_legend = TRUE
+  show_legend = TRUE,
+  return_x_matrix = FALSE
 )
 }
 \arguments{
@@ -49,6 +50,8 @@ pgx.splitHeatmapFromMatrix(
 \item{colcex}{Column text size scaling. Default is 1.}
 
 \item{show_legend}{Show color legend? Default is TRUE.}
+
+\item{return_x_matrix}{Return the X matrix of the plot along the plotly object (as a list)}
 }
 \value{
 A plotly split heatmap object
