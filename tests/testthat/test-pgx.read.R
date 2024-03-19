@@ -19,11 +19,11 @@ testthat::test_that("read_contrasts works", {
 
 test_that("read.as_matrix works correctly", {
   # Test that read.as_matrix correctly reads a simple matrix
-  # write.table(matrix(1:4, nrow = 2), file = ".//tests/data/test1.txt", sep = "\t", row.names = FALSE, col.names = FALSE)
-  expect_equal(read.as_matrix("./tests/data/test1.txt"), matrix(1:4, nrow = 2))
+  #write.table(matrix(1:4, nrow = 2), file = ".//tests/data/test1.csv", sep = ";", row.names = c("a", "b"), col.names = c("c","d") )
+  expect_equal(as.numeric(read.as_matrix("./tests/data/test1.csv")), c(1,2,3,4))
 
   # Test that read.as_matrix correctly reads a matrix with extreme values
-  # write.table(matrix(c(1e100, 1e-100, -1e100, -1e-100), nrow = 2), file = "./tests/data/test2.txt", sep = "\t", row.names = FALSE, col.names = FALSE)
-  expect_equal(read.as_matrix("./tests/data/test2.txt"), matrix(c(1e100, 1e-100, -1e100, -1e-100), nrow = 2))
+  #write.table(matrix(c(1e100, 1e-100, -1e100, -1e-100), nrow = 2), file = ".//tests/data/test2.csv", sep = ";", row.names = c("a", "b"), col.names = c("c","d") )
+  expect_equal(as.numeric(read.as_matrix("./tests/data/test2.csv")), c(1e100, 1e-100, -1e100, -1e-100))
 
 })
