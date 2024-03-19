@@ -26,4 +26,8 @@ test_that("read.as_matrix works correctly", {
   #write.table(matrix(c(1e100, 1e-100, -1e100, -1e-100), nrow = 2), file = ".//tests/data/test2.csv", sep = ";", row.names = c("a", "b"), col.names = c("c","d") )
   expect_equal(as.numeric(read.as_matrix("./tests/data/test2.csv")), c(1e100, 1e-100, -1e100, -1e-100))
 
+  expect_equal(
+    as.numeric(read.as_matrix("./tests/data/large_integers.csv")), 
+    c(395000000, 895050000, 84760000000,  4760700000,  2390000000, 1290000000, 4680000000, 4680000000)
+    )
 })
