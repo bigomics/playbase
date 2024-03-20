@@ -38,7 +38,8 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
     fill = TRUE,
     skip = skip,
     blank.lines.skip = TRUE,
-    stringsAsFactors = FALSE
+    stringsAsFactors = FALSE,
+    integer64 = "numeric"
   )
 
   x <- NULL
