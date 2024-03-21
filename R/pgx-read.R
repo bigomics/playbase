@@ -30,8 +30,6 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
   skip.rows <- min(which(cumsum(rowMeans(x0 != "")) > 0)) - 1
 
   ## try to detect decimal separator
-  dec = ','
-  dec = '.'
   dec = detect_decimal(file)
   
   ## read delimited table automatically determine separator. allow
@@ -65,7 +63,6 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
   } else {
     return(NULL)
   }
-  class(x)
   
   ## for character matrix, we strip whitespace
   if (is.character(x)) {
@@ -74,7 +71,6 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
 
   ## detect delimiter/seperator
   sep <- detect_delim(file)
-  sep
 
   ## For csv with missing rownames field at (1,1) in the header,
   ## fill=TRUE will fail. Check header with slow read.csv() and
@@ -114,9 +110,6 @@ detect_delim <- function(file) {
   n_commas <- length( setdiff(gregexpr(",", hdr, fixed = TRUE)[[1]],-1) )
   n_semicolons <- length( setdiff(gregexpr(";", hdr, fixed = TRUE)[[1]],-1) )
   n_tabs <- length( setdiff(gregexpr("\t", hdr, fixed = TRUE)[[1]],-1) )
-  n_commas
-  n_semicolons
-  n_tabs
   delim <- c(',',';','\t')[which.max(c(n_commas,n_semicolons,n_tabs))]
   delim
 }
@@ -129,8 +122,6 @@ detect_decimal <- function(file) {
   vals <- as.vector(as.matrix(ff[,-1]))
   n_commas <- length(grep(",", vals, fixed = TRUE))
   n_dots   <- length(grep(".", vals, fixed = TRUE))
-  n_commas
-  n_dots
   dec <- c('.',',')[which.max(c(n_dots,n_commas))]
   dec
 }
