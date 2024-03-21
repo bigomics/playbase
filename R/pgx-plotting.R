@@ -4984,7 +4984,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
         ## add_col_clustering() %>%
       }
 
-      if(!is.null(annot)) {
+      if (!is.null(annot)) {
         plt <- plt %>%
           iheatmapr::add_col_title(names(xx)[i], side = "top") %>%
           iheatmapr.add_col_annotation(
