@@ -27,29 +27,34 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
     nrow = 100
   )
   x0[is.na(x0)] <- ""
-  skip <- min(which(cumsum(rowMeans(x0 != "")) > 0)) - 1
+  skip.rows <- min(which(cumsum(rowMeans(x0 != "")) > 0)) - 1
 
+  ## try to detect decimal separator
+  dec = ','
+  dec = '.'
+  dec = detect_decimal(file)
+  
   ## read delimited table automatically determine separator. allow
   ## duplicated rownames. This implements with faster fread.
   x0 <- data.table::fread(
     file = file,
     check.names = FALSE,
     header = TRUE,
+    dec = dec,
     fill = TRUE,
-    skip = skip,
+    skip = skip.rows,
     blank.lines.skip = TRUE,
     stringsAsFactors = FALSE,
     integer64 = "numeric"
-  )
-
+    )
+  
   x <- NULL
   ## drop rows without rownames
   sel <- which(!as.character(x0[[1]]) %in% c("", " ", "NA", "na", NA))
-
-  ## get values from second column forward and take first column as
-  ## rownames. as.matrix means we do not have mixed types (such as in
-  ## dataframes).
   if (length(sel)) {
+    ## get values from second column forward and take first column as
+    ## rownames. as.matrix means we do not have mixed types (such as in
+    ## dataframes).
     if (ncol(x0) >= 2) {
       x <- as.matrix(x0[sel, -1, drop = FALSE]) ## always as matrix
       rownames(x) <- x0[[1]][sel]
@@ -60,20 +65,24 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
   } else {
     return(NULL)
   }
-
+  class(x)
+  
   ## for character matrix, we strip whitespace
   if (is.character(x)) {
     x <- trimws(x)
   }
 
+  ## detect delimiter/seperator
+  sep <- detect_delim(file)
+  sep
+
   ## For csv with missing rownames field at (1,1) in the header,
   ## fill=TRUE will fail. Check header with slow read.csv() and
   ## correct if needed. fread is fast but is not so robust...
   hdr <- utils::read.csv(
-    file = file, check.names = FALSE, na.strings = NULL,
-    header = TRUE, nrows = 1, skip = skip, row.names = 1
+    file = file, sep = sep, check.names = FALSE, na.strings = NULL,
+    header = TRUE, nrows = 1, skip = skip.rows, row.names = 1
   )
-
   if (NCOL(x) > 0 && !all(colnames(x) == colnames(hdr))) {
     message("read.as_matrix: warning correcting header")
     colnames(x) <- colnames(hdr)
@@ -98,6 +107,33 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
   return(x)
 }
 
+#' Detect delimiter of text file from header (or first line)
+#' 
+detect_delim <- function(file) {
+  hdr <- readLines(file, n=1)
+  n_commas <- length( setdiff(gregexpr(",", hdr, fixed = TRUE)[[1]],-1) )
+  n_semicolons <- length( setdiff(gregexpr(";", hdr, fixed = TRUE)[[1]],-1) )
+  n_tabs <- length( setdiff(gregexpr("\t", hdr, fixed = TRUE)[[1]],-1) )
+  n_commas
+  n_semicolons
+  n_tabs
+  delim <- c(',',';','\t')[which.max(c(n_commas,n_semicolons,n_tabs))]
+  delim
+}
+
+#' Detect delimiter of text file from first 10 lines. Assumes there is
+#' a header and rownames column.
+#' 
+detect_decimal <- function(file) {
+  ff <- data.table::fread(file, nrows=10, header=TRUE, colClasses="character")
+  vals <- as.vector(as.matrix(ff[,-1]))
+  n_commas <- length(grep(",", vals, fixed = TRUE))
+  n_dots   <- length(grep(".", vals, fixed = TRUE))
+  n_commas
+  n_dots
+  dec <- c('.',',')[which.max(c(n_dots,n_commas))]
+  dec
+}
 
 #' Read CSV file into R efficiently
 #'
