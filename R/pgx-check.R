@@ -8,9 +8,9 @@
 #' @return a list with two elements: `checks` which contains the status of the checks, and
 #'  `PASS` which contains the overall status of the check.
 #' @export
-pgx.checkINPUT <- function(
-    df,
-    type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")) {
+pgx.checkINPUT <- function(df,
+                           type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS"))
+{
   datatype <- match.arg(type)
   df_clean <- df
   PASS <- TRUE
@@ -64,10 +64,18 @@ pgx.checkINPUT <- function(
 
     if (length(ANY_ROW_ZERO) > 0 && PASS) {
       # get the row names with all zeros
-      check_return$e9 <- names(ANY_ROW_ZERO)
+      zero.rows <- names(ANY_ROW_ZERO)
 
-      # remove the rownames with all zeros by using check_return$e9
-      df_clean <- df_clean[!(rownames(df_clean) %in% check_return$e9), , drop = FALSE]
+      # remove the rownames with all zeros
+      df_clean <- df_clean[!(rownames(df_clean) %in% zero.rows), , drop = FALSE]
+
+      nzerorows <- length(ANY_ROW_ZERO)
+      if( nzerorows < 10 ) {
+        err.mesg <- zero.rows
+      } else {
+        err.mesg <- c( head(zero.rows, 10),"+more",paste("(total",nzerorows,"rows)"))
+      }
+      check_return$e9 <- err.mesg     
     }
 
     # check for zero count columns, remove them
