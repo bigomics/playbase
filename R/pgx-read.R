@@ -30,8 +30,8 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
   skip.rows <- min(which(cumsum(rowMeans(x0 != "")) > 0)) - 1
 
   ## try to detect decimal separator
-  dec = detect_decimal(file)
-  
+  dec <- detect_decimal(file)
+
   ## read delimited table automatically determine separator. allow
   ## duplicated rownames. This implements with faster fread.
   x0 <- data.table::fread(
@@ -44,8 +44,8 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
     blank.lines.skip = TRUE,
     stringsAsFactors = FALSE,
     integer64 = "numeric"
-    )
-  
+  )
+
   x <- NULL
   ## drop rows without rownames
   sel <- which(!as.character(x0[[1]]) %in% c("", " ", "NA", "na", NA))
@@ -63,7 +63,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
   } else {
     return(NULL)
   }
-  
+
   ## for character matrix, we strip whitespace
   if (is.character(x)) {
     x <- trimws(x)
@@ -104,25 +104,25 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
 }
 
 #' Detect delimiter of text file from header (or first line)
-#' 
+#'
 detect_delim <- function(file) {
-  hdr <- readLines(file, n=1)
-  n_commas <- length( setdiff(gregexpr(",", hdr, fixed = TRUE)[[1]],-1) )
-  n_semicolons <- length( setdiff(gregexpr(";", hdr, fixed = TRUE)[[1]],-1) )
-  n_tabs <- length( setdiff(gregexpr("\t", hdr, fixed = TRUE)[[1]],-1) )
-  delim <- c(',',';','\t')[which.max(c(n_commas,n_semicolons,n_tabs))]
+  hdr <- readLines(file, n = 1)
+  n_commas <- length(setdiff(gregexpr(",", hdr, fixed = TRUE)[[1]], -1))
+  n_semicolons <- length(setdiff(gregexpr(";", hdr, fixed = TRUE)[[1]], -1))
+  n_tabs <- length(setdiff(gregexpr("\t", hdr, fixed = TRUE)[[1]], -1))
+  delim <- c(",", ";", "\t")[which.max(c(n_commas, n_semicolons, n_tabs))]
   delim
 }
 
 #' Detect delimiter of text file from first 10 lines. Assumes there is
 #' a header and rownames column.
-#' 
+#'
 detect_decimal <- function(file) {
-  ff <- data.table::fread(file, nrows=10, header=TRUE, colClasses="character")
-  vals <- as.vector(as.matrix(ff[,-1]))
+  ff <- data.table::fread(file, nrows = 10, header = TRUE, colClasses = "character")
+  vals <- as.vector(as.matrix(ff[, -1]))
   n_commas <- length(grep(",", vals, fixed = TRUE))
-  n_dots   <- length(grep(".", vals, fixed = TRUE))
-  dec <- c('.',',')[which.max(c(n_dots,n_commas))]
+  n_dots <- length(grep(".", vals, fixed = TRUE))
+  dec <- c(".", ",")[which.max(c(n_dots, n_commas))]
   dec
 }
 
