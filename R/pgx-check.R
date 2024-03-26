@@ -154,12 +154,11 @@ pgx.checkINPUT <- function(df,
         ## only run if we have characters in matrix
 
         COLUMN_IN_GROUPS <- sapply(1:length(denominators), function(i) {
-          vv <- setdiff( df_clean[, i], c(NA,""," ","NA") )
-          all(grepl(paste0("^",numerators[i],"|^",denominators[i]), vv))
-          
-        })        
+          vv <- setdiff(df_clean[, i], c(NA, "", " ", "NA"))
+          all(grepl(paste0("^", numerators[i], "|^", denominators[i]), vv))
+        })
         CONTRASTS_IN_GROUPS <- COLUMN_IN_GROUPS
-        
+
         if (all(!CONTRASTS_IN_GROUPS) && PASS) {
           check_return$e23 <- "All comparisons were invalid."
           PASS <- FALSE
