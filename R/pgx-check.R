@@ -148,28 +148,27 @@ pgx.checkINPUT <- function(df,
       })
 
       denominators <- sapply(split_names, "[[", 2)
-      # Check if all elements in the matrix are character
+      ## Check if all elements in the matrix are character
       all_numeric <- any(apply(df_clean, c(1, 2), is.numeric))
 
       if (!all_numeric && PASS) {
-        # only run if we have characters in matrix
-        NUMERATORS_IN_COLUMN <- sapply(1:length(numerators), function(i) {
-          numerators[i] %in% df_clean[, i]
-        })
-        DENOMINATORS_IN_COLUMN <- sapply(1:length(denominators), function(i) {
-          denominators[i] %in% df_clean[, i]
-        })
+        ## only run if we have characters in matrix
 
-        CONTRASTS_GROUPS_MISSING <- NUMERATORS_IN_COLUMN & DENOMINATORS_IN_COLUMN
-
-        if (all(!CONTRASTS_GROUPS_MISSING) && PASS) {
+        COLUMN_IN_GROUPS <- sapply(1:length(denominators), function(i) {
+          vv <- setdiff( df_clean[, i], c(NA,""," ","NA") )
+          all(grepl(paste0("^",numerators[i],"|^",denominators[i]), vv))
+          
+        })        
+        CONTRASTS_IN_GROUPS <- COLUMN_IN_GROUPS
+        
+        if (all(!CONTRASTS_IN_GROUPS) && PASS) {
           check_return$e23 <- "All comparisons were invalid."
           PASS <- FALSE
         }
 
-        if (any(!CONTRASTS_GROUPS_MISSING) && PASS) {
-          check_return$e22 <- colnames(df_clean)[!CONTRASTS_GROUPS_MISSING]
-          df_clean <- df_clean[, CONTRASTS_GROUPS_MISSING, drop = FALSE]
+        if (any(!CONTRASTS_IN_GROUPS) && PASS) {
+          check_return$e22 <- colnames(df_clean)[!CONTRASTS_IN_GROUPS]
+          df_clean <- df_clean[, CONTRASTS_IN_GROUPS, drop = FALSE]
         }
       }
     } ## if PASS
