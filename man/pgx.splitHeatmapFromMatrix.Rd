@@ -6,7 +6,7 @@
 \usage{
 pgx.splitHeatmapFromMatrix(
   X,
-  annot,
+  annot = NULL,
   idx = NULL,
   splitx = NULL,
   xtips = NULL,
