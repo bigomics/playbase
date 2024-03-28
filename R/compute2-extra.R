@@ -108,10 +108,10 @@ compute_extra <- function(pgx, extra = c(
   if ("drugs" %in% extra) {
     pgx$drugs <- NULL ## reset??
 
-    libx.dir <- getwd()
-    # go up once
-    libx.dir <- dirname(libx.dir)
-    libx.dir <- file.path(libx.dir, "libx")
+    # libx.dir <- getwd()
+    # # go up once
+    # libx.dir <- dirname(libx.dir)
+    # libx.dir <- file.path(libx.dir, "libx")
 
     message(">>> Computing drug activity enrichment...")
     tt <- system.time({
@@ -126,15 +126,17 @@ compute_extra <- function(pgx, extra = c(
       )
     })
     timings <- rbind(timings, c("drugs", tt))
-
+    ass=2
+    browser()
     if (!is.null(libx.dir)) {
       message(">>> Computing drug sensitivity enrichment...")
       tt <- system.time({
-        PGX <- tryCatch(
+        pgx <- tryCatch(
           {
             compute_drugSensitivityEnrichment(pgx, libx.dir)
           },
           error = function(e) {
+            print("error in drug sensitivity")
             write(as.character(e), file = paste0(user_input_dir, "/ERROR_DRUG_SENSITIVITY"))
             return(pgx)
           }
@@ -509,6 +511,8 @@ compute_drugSensitivityEnrichment <- function(pgx, libx.dir = NULL) {
   if (is.null(libx.dir) || !dir.exists(libx.dir)) {
     return(pgx)
   }
+  ass=3
+  browser()
 
   cmap.dir <- file.path(libx.dir, "cmap")
   ref.db <- dir(cmap.dir, pattern = "sensitivity.*rds$")
@@ -517,9 +521,11 @@ compute_drugSensitivityEnrichment <- function(pgx, libx.dir = NULL) {
     return(pgx)
   }
   names(ref.db) <- sub("-", "/", gsub("_.*", "", ref.db))
+  
   ref.db
   ref <- ref.db[1]
   for (i in seq_along(ref.db)) {
+    # i=2
     ref <- ref.db[i]
     message("[compute_drugSensitivityEnrichment] computing sensitivity CMAP for ", ref)
     X <- readRDS(file = file.path(cmap.dir, ref))
