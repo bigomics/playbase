@@ -108,11 +108,6 @@ compute_extra <- function(pgx, extra = c(
   if ("drugs" %in% extra) {
     pgx$drugs <- NULL ## reset??
 
-    # libx.dir <- getwd()
-    # # go up once
-    # libx.dir <- dirname(libx.dir)
-    # libx.dir <- file.path(libx.dir, "libx")
-
     message(">>> Computing drug activity enrichment...")
     tt <- system.time({
       pgx <- tryCatch(
@@ -135,7 +130,6 @@ compute_extra <- function(pgx, extra = c(
             compute_drugSensitivityEnrichment(pgx, libx.dir)
           },
           error = function(e) {
-            print("error in drug sensitivity")
             write(as.character(e), file = paste0(user_input_dir, "/ERROR_DRUG_SENSITIVITY"))
             return(pgx)
           }
@@ -508,7 +502,7 @@ compute_drugSensitivityEnrichment <- function(pgx, libx.dir = NULL) {
   if (is.null(libx.dir) || !dir.exists(libx.dir)) {
     return(pgx)
   }
-  
+
   cmap.dir <- file.path(libx.dir, "cmap")
   ref.db <- dir(cmap.dir, pattern = "sensitivity.*rds$")
   if (length(ref.db) == 0) {
