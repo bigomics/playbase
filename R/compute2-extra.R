@@ -126,8 +126,7 @@ compute_extra <- function(pgx, extra = c(
       )
     })
     timings <- rbind(timings, c("drugs", tt))
-    ass=2
-    browser()
+
     if (!is.null(libx.dir)) {
       message(">>> Computing drug sensitivity enrichment...")
       tt <- system.time({
@@ -440,9 +439,7 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
 
     X <- ref.db[[i]]
     drug_test_genes <- rownames(X)
-    # browser()
-    #FC = pgx.getMetaMatrix(pgx)$fc
-      if (!pgx$organism %in% c("Human", "human")) {
+    if (!pgx$organism %in% c("Human", "human")) {
       rowid <- data.table::chmatch(rownames(X), pgx$genes$human_ortholog, nomatch = NA)
       rownames(X) <- pgx$genes$human_ortholog[rowid]
       X <- X[!is.na(rowid), , drop = FALSE]
@@ -511,9 +508,7 @@ compute_drugSensitivityEnrichment <- function(pgx, libx.dir = NULL) {
   if (is.null(libx.dir) || !dir.exists(libx.dir)) {
     return(pgx)
   }
-  ass=3
-  browser()
-
+  
   cmap.dir <- file.path(libx.dir, "cmap")
   ref.db <- dir(cmap.dir, pattern = "sensitivity.*rds$")
   if (length(ref.db) == 0) {

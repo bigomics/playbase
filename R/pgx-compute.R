@@ -673,8 +673,7 @@ pgx.computePGX <- function(pgx,
   ## ------------------ extra analyses ---------------------
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
   message("[pgx.computePGX] computing extra modules...")
-  as=1
-  browser()
+  
   pgx <- playbase::compute_extra(
     pgx,
     extra = extra.methods,

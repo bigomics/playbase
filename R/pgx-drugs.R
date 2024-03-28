@@ -97,7 +97,6 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
   }
   contrast <- intersect(contrast, colnames(FC))
 
-  # browser()
   FC <- FC[, contrast, drop = FALSE]
 
   if (!obj$organism %in% c("Human", "human")) {
