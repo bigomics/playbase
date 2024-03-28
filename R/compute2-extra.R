@@ -108,6 +108,11 @@ compute_extra <- function(pgx, extra = c(
   if ("drugs" %in% extra) {
     pgx$drugs <- NULL ## reset??
 
+    libx.dir <- getwd()
+    # go up once
+    libx.dir <- dirname(libx.dir)
+    libx.dir <- file.path(libx.dir, "libx")
+
     message(">>> Computing drug activity enrichment...")
     tt <- system.time({
       pgx <- tryCatch(
@@ -433,9 +438,11 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
 
     X <- ref.db[[i]]
     drug_test_genes <- rownames(X)
-    if (!pgx$organism %in% c("Human", "human")) {
+    # browser()
+    #FC = pgx.getMetaMatrix(pgx)$fc
+      if (!pgx$organism %in% c("Human", "human")) {
       rowid <- data.table::chmatch(rownames(X), pgx$genes$human_ortholog, nomatch = NA)
-      rownames(X) <- pgx$genes$gene_name[rowid]
+      rownames(X) <- pgx$genes$human_ortholog[rowid]
       X <- X[!is.na(rowid), , drop = FALSE]
     }
 
