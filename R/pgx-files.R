@@ -4,30 +4,6 @@
 ##
 
 
-#' @export
-read.files <- function(path = ".", pattern = NULL) {
-  f0 <- dir(path, full.names = FALSE, pattern = pattern)
-  f1 <- dir(path, full.names = TRUE, pattern = pattern)
-  counts.file <- grep("count.*csv$", f0)
-  samples.file <- grep("sample.*csv$", f0)
-  contrasts.file <- grep("contrast.*csv$", f0)
-  ok <- (length(counts.file) == 1 &&
-    length(samples.file) == 1 &&
-    length(contrasts.file) == 1)
-  if (!ok) {
-    message("Must exactly have one csv file for each input in folder.")
-    return(NULL)
-  }
-  message("reading counts file : ", f1[counts.file])
-  counts <- read_counts(f1[counts.file])
-  message("reading samples file : ", f1[samples.file])
-  samples <- read_counts(f1[samples.file])
-  message("reading contrasts file : ", f1[contrasts.file])
-  contrasts <- read_counts(f1[contrasts.file])
-  list(counts = counts, samples = samples, contrasts = contrasts)
-}
-
-
 #' @title Load an R Object from a File
 #'
 #' @description This function loads an R object from a file and makes it available in the local environment.
@@ -194,7 +170,7 @@ pgx.saveMatrixH5 <- function(X, h5.file, chunk = NULL) {
 #' an analysis with the same settings.
 #'
 #' @export
-pgx.readOptions <- function(file = "./OPTIONS") {
+pgx.readOptions <- function(file = "./OPTIONS", default = NULL) {
   if (!file.exists(file)) {
     return(NULL)
   }
@@ -207,6 +183,20 @@ pgx.readOptions <- function(file = "./OPTIONS") {
   opt <- sapply(opt, strsplit, split = "[;]")
   ## convert character to R types
   opt <- lapply(opt, utils::type.convert, as.is = TRUE)
+  if (!is.null(default)) {
+    ## add default options not in options
+    ## which.add <- c("a","b","c")
+    which.add <- setdiff(names(default), names(opt))
+    if (length(which.add)) {
+      cat("[pgx.readOptions] adding missing defaults:", paste(which.add, collapse = " "), "\n")
+      opt <- c(opt, default[which.add])
+    }
+    which.extra <- setdiff(names(opt), names(default))
+    if (length(which.extra)) {
+      cat("[pgx.readOptions] warning: extra options:", paste(which.extra, collapse = " "), "\n")
+    }
+  }
+  opt <- opt[order(names(opt))]
   opt
 }
 

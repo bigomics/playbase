@@ -4,12 +4,21 @@
 \alias{pgx.addGeneAnnotation}
 \title{Retrieve gene annotation table}
 \usage{
-pgx.addGeneAnnotation(pgx, organism = NULL, use_biomart = NULL)
+pgx.addGeneAnnotation(
+  pgx,
+  organism = NULL,
+  annot_table = NULL,
+  use_biomart = NULL
+)
 }
 \arguments{
 \item{pgx}{PGX object with a counts table.}
 
 \item{organism}{Char. Organism name. For more info see \code{\link{playbase::SPECIES_TABLE}}.}
+
+\item{annot_table}{Custom annotation table. See \code{\link{playbase::pgx.custom_annotation}}.}
+
+\item{use_biomart}{Logical. If TRUE, use biomaRt to retrieve gene annotation.}
 }
 \value{
 Updated PGX object with gene annotation table
@@ -28,6 +37,6 @@ of temporary Ensembl API errors.
 pgx <- list()
 pgx$counts <- matrix(rnorm(4), nrow = 2)
 rownames(pgx$counts) <- c("ENSG00000142192", "ENSG00000288602")
-pgx <- pgx.gene_table(pgx, "Human")
+pgx <- pgx.pgx.addGeneAnnotation(pgx, "Human")
 }
 }

@@ -304,8 +304,9 @@ pgx.superBatchCorrect <- function(X, pheno,
       if (!is.null(mnn.correct)) {
         dbg("[pgx.superBatchCorrect] Mutual Nearest Neighbour (MNN) correction on", mnn.correct, "\n")
         b <- pheno[, mnn.correct]
-        out <- mnnCorrect(cX, batch = b, cos.norm.out = FALSE)
-        cX <- out@assays@data[["corrected"]]
+        ## out <- mnnCorrect(cX, batch = b, cos.norm.out = FALSE)
+        ## cX <- out@assays@data[["corrected"]]
+        cX <- MNNcorrect(cX, batch = b)
       }
     }
 
@@ -792,7 +793,7 @@ pgx.computeBiologicalEffects.DEPRECATED <- function(X, is.count = FALSE) {
 #' head(results$biological)
 #' }
 #' @export
-pgx.computeTechnicalEffects <- function(X, is.count = FALSE, nmin = 3, nv = 2) {
+pgx.computeTechnicalEffects <- function(X, is.count = FALSE, nmin = 3, nv = 1) {
   ## estimate biological variation
   ##
   ## X:     log-expression matrix
@@ -899,7 +900,7 @@ pgx.computeTechnicalEffects <- function(X, is.count = FALSE, nmin = 3, nv = 2) {
 detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
                                params = c("statistical", "technical", "pca"),
                                p.pca = 0.5, p.pheno = 0.05, force = FALSE,
-                               k.pca = 10, nv = 2, xrank = NULL) {
+                               k.pca = 10, nv = 1, xrank = NULL) {
   if (0) {
     p.pca <- 0.5
     p.pheno <- 0.05
@@ -1046,7 +1047,7 @@ bc.plotCovariateHeatmap <- function(bc.res) {
   ## bc <- detectBatchEffects(X, samples, pheno, contrasts = NULL,
   ##                          params = c("statistical", "technical", "pca"),
   ##                          p.pca = 0.5, p.pheno = 0.05,
-  ##                          k.pca = 10, nv = 2, xrank = NULL)
+  ##                          k.pca = 10, nv = 1, xrank = NULL)
   B <- bc.res$covariates_plus
   rho <- cor(apply(B, 2, rank))
   colnames(rho) <- rep("", ncol(rho))
@@ -1056,13 +1057,11 @@ bc.plotCovariateHeatmap <- function(bc.res) {
   )
 }
 
-## p.pheno=0.05;p.pca=0.5;nmin=3;nv=2
-## params = c("lib","gender","mito","ribo","cellcycle")
 
 #' @export
 removeTechnicalEffects <- function(X, samples, y, p.pheno = 0.05, p.pca = 0.5,
                                    params = c("lib", "mito", "ribo", "cellcycle", "gender"),
-                                   force = FALSE, nv = 2, k.pca = 10, xrank = NULL) {
+                                   force = FALSE, nv = 1, k.pca = 10, xrank = NULL) {
   ##  p.pheno = 0.05;p.pca = 0.5;force = FALSE; nv = 2;k.pca = 10;xrank = NULL
   ##  params = c("lib","mito","ribo","cellcycle","gender")
 
@@ -1123,12 +1122,11 @@ removeTechnicalEffects <- function(X, samples, y, p.pheno = 0.05, p.pca = 0.5,
 
 #' @export
 runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
-                                      combatx = FALSE, sc = FALSE, prefix = "",
+                                      sc = FALSE, prefix = "",
                                       methods = NULL, remove.failed = TRUE) {
   if (0) {
     controls <- NULL
     ntop <- 2000
-    combatx <- FALSE
     sc <- FALSE
     prefix <- ""
     methods <- NULL
@@ -1188,21 +1186,14 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
       if (max(table(batch)) > 1) {
         mod1 <- model.matrix(~ factor(y))
         bX <- try(sva::ComBat(X, batch = batch, mod = mod1, par.prior = TRUE))
-        xlist[["ComBat"]] <- bX
+        if (!"try-error" %in% class(bX)) {
+          xlist[["ComBat"]] <- bX
+        }
         bX <- try(sva::ComBat(X, batch = batch, mod = NULL, par.prior = TRUE))
-        xlist[["ComBat.no_mod"]] <- bX
+        if (!"try-error" %in% class(bX)) {
+          xlist[["ComBat.no_mod"]] <- bX
+        }
       }
-    }
-
-    ## ComBatX
-    if (combatx && !is.null(batch)) {
-      xlist[["ComBatX.a"]] <- ComBatX(X, batch = batch, y = NULL, controls = NULL)
-      xlist[["ComBatX.b"]] <- ComBatX(X, batch = batch, y = y, controls = NULL, bc.dim = 0)
-      xlist[["ComBatX.c"]] <- ComBatX(X, batch = batch, y = y, controls = NULL, bc.dim = -1)
-      ##  xlist[['ComBatX.d']] <- ComBatX(X, batch=batch, y=y, controls=NULL, bc.dim=10)
-      xlist[["ComBatX.e"]] <- ComBatX(X, batch = batch, y = NULL, controls = controls)
-      xlist[["ComBatX.f"]] <- ComBatX(X, batch = batch, y = y, controls = controls, bc.dim = 0)
-      xlist[["ComBatX.g"]] <- ComBatX(X, batch = batch, y = y, controls = controls, bc.dim = -1)
     }
   }
 
@@ -1220,8 +1211,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   ## PCA
   if ("PCA" %in% methods) {
     message("[runBatchCorrectionMethods] correcting with PCA")
-    ##  xlist[["PCA"]] <- try(pcaCorrect.OLD(X, y = y, max.rho=0.3))
-    xlist[["PCA"]] <- try(pcaCorrect2(X, y = y, p.notsig = 0.20))
+    xlist[["PCA"]] <- try(pcaCorrect(X, y = y, p.notsig = 0.20))
   }
 
   ## RUV and SVA
@@ -1277,7 +1267,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
 }
 
 #' @export
-runTechCorrectionMethods <- function(X, samples, y, p.pca = 0.5, p.pheno = 0.05, nv = 2,
+runTechCorrectionMethods <- function(X, samples, y, p.pca = 0.5, p.pheno = 0.05, nv = 1,
                                      xrank = NULL, force = FALSE,
                                      remove.failed = TRUE, ntop = Inf) {
   ##  p.pca = 0.5;p.pheno = 0.05;nv = 2;remove.failed = TRUE;ntop = Inf
@@ -1536,7 +1526,7 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
 
   if (tolower(type) %in% c("pc", "pc2")) {
     if (is.null(samples)) message("samples in NULL!")
-    B <- pgx.computeTechnicalEffects(X, nv = 2)
+    B <- pgx.computeTechnicalEffects(X, nv = 1)
     bcat <- sub("[.].*", "", colnames(B))
     colnames(B) <- paste0(bcat, ":", colnames(B)) ## for collapsing
     if (!is.null(samples)) B <- cbind(B, samples)
@@ -1727,18 +1717,12 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
     y = pars$pheno,
     controls = NULL,
     methods = methods,
-    combatx = FALSE,
     ntop = ntop,
     sc = FALSE,
     remove.failed = TRUE
   )
   names(xlist)
   if (length(xlist.init) > 0) xlist <- c(xlist.init, xlist)
-
-
-  dbg("[compare_batchcorrection_methods] names.xlist = ", names(xlist))
-  dbg("[compare_batchcorrection_methods] xlist.nrow = ", sapply(xlist, nrow))
-  dbg("[compare_batchcorrection_methods] xlist.ncol = ", sapply(xlist, ncol))
 
   ## PCA is faster than UMAP
   pos <- list()
@@ -1806,7 +1790,7 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
 superBC2 <- function(X, samples, y, batch = NULL,
                      ## methods = c("technical","batch","statistical","pca","sva","nnm"),
                      methods = c("batch", "technical", "statistical", "sva", "nnm2"),
-                     p.pca = 0.5, p.pheno = 0.05, k.pca = 10, nv = 2,
+                     p.pca = 0.5, p.pheno = 0.05, k.pca = 10, nv = 1,
                      xrank = NULL, use.design = TRUE) {
   if (y[1] %in% colnames(samples)) {
     y <- samples[, y[1]]
@@ -1927,20 +1911,104 @@ svaCorrect <- function(X, y) {
   } else {
     message("[svaCorrect] WARNING could not get covariates. no correction.")
   }
-  X <- X[, 1:dimx]
+  X <- X[, 1:dimx] ## reduce to original dim
   X
+}
+
+fsvaCorrect <- function(X, y) {
+  ## Frozen SVA
+
+  if (any(is.na(X))) {
+    stop("[svaCorrect] cannot handle missing values in X")
+  }
+  dimx <- ncol(X)
+  xnames <- colnames(X)
+
+  ## sva doesn't like if the dimension is too small
+  if (ncol(X) < 10) {
+    X <- cbind(X, X, X)
+    y <- rep(y, 3)
+  }
+
+  ## get not-missing
+  ii <- which(!is.na(y))
+  has.na <- any(is.na(y))
+  y1 <- y[ii]
+  X1 <- X[, ii]
+  y0 <- y[-ii]
+  X0 <- X[, -ii]
+  names(y0) <- colnames(X0)
+  names(y1) <- colnames(X1)
+
+  ##
+  mod1x <- model.matrix(~ 1 + y1)
+  mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
+
+  ## fast method using SmartSVA
+  #  pp <- paste0(model.par, collapse = "+")
+  #  lm.expr <- paste0("lm(t(X) ~ ", pp, ", data=pheno)")
+  X.r <- t(stats::resid(lm(t(X1) ~ y1)))
+  n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
+  ## top 1000 genes only (faster)
+  X1a <- Matrix::head(X1[order(-matrixStats::rowSds(X1, na.rm = TRUE)), ], 1000)
+  ## add a little bit of noise to avoid singular error
+  a <- 0.01 * mean(apply(X1a, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
+  X1a <- X1a + a * matrix(stats::rnorm(length(X1a)), nrow(X1a), ncol(X1a))
+  sv <- try(sva::sva(X1a, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1)))
+
+  cX <- NULL
+  if (!any(class(sv) == "try-error")) {
+    message("[svaCorrect] Performing SVA correction...")
+    cX <- limma::removeBatchEffect(X1, covariates = sv$sv, design = mod1x)
+  } else {
+    message("[svaCorrect] WARNING could not get covariates. no correction.")
+  }
+
+  if (has.na) {
+    dim(X0)
+    fsvaobj <- fsva(X1, mod1x, sv, X0)
+    data1 <- list(x = X1, y = y1)
+    model <- pamr::pamr.train(data1)
+    pred_y0 <- pamr::pamr.predict(model, fsvaobj$new, threshold = 1)
+    pred_y0 <- as.character(pred_y0)
+    table(pred_y0)
+
+    ## redo SVA with predicted labels
+    XX <- cbind(X0, X1)
+    yy <- c(pred_y0, y1)
+    names(yy) <- colnames(XX)
+    mod1x <- model.matrix(~ 1 + yy)
+    mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
+
+    XXa <- Matrix::head(XX[order(-matrixStats::rowSds(XX, na.rm = TRUE)), ], 1000)
+    a <- 0.01 * mean(apply(XXa, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
+    XXa <- XXa + a * matrix(stats::rnorm(length(XXa)), nrow(XXa), ncol(XXa))
+    sv <- try(sva::sva(XXa, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1))$sv)
+    cX <- limma::removeBatchEffect(XX, covariates = sv, design = mod1x)
+    cX <- cX[, colnames(X)]
+    y0 <- yy[colnames(X0)]
+  }
+
+  if (is.null(cX)) {
+    return(NULL)
+  }
+  cX <- cX[, match(xnames, colnames(cX))] ## reduce to original size
+  predy <- c(y0, y1)
+  predy <- predy[match(xnames, names(predy))]
+  list(X = cX, y = predy)
 }
 
 #' @export
 ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
   if (any(is.na(X))) {
-    stop("[ruvCorrect] cannot handle missing values")
+    stop("[ruvCorrect] cannot handle missing values in X.")
   }
 
   ## F-test using limma just variables
-  if (length(controls) == 1 && is.numeric(controls[1])) {
+  if (!is.null(y) && length(controls) == 1 && is.numeric(controls[1])) {
     ii <- which(!duplicated(rownames(X)))
-    F <- gx.limmaF(X[ii, ], y, lfc = 0, fdr = 1, method = 1, sort.by = "none", compute.means = FALSE, verbose = 0)
+    jj <- which(!is.na(y))
+    F <- gx.limmaF(X[ii, jj], y[jj], lfc = 0, fdr = 1, method = 1, sort.by = "none", compute.means = FALSE, verbose = 0)
     nc <- pmax(nrow(X) * as.numeric(controls), 1)
     sel <- head(order(-F$P.Value), nc)
     controls <- rownames(F)[sel]
@@ -1950,9 +2018,8 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
 
   if (is.null(k)) {
     ## this is from SVA
-    ##    X.r <- t(stats::resid(lm(t(X) ~ y)))
-    ##    k <- isva::EstDimRMT(X.r, FALSE)$dim + 1
-    fit <- lm(t(X[controls, , drop = FALSE]) ~ y)
+    jj <- which(!is.na(y))
+    fit <- lm(t(X[controls, jj, drop = FALSE]) ~ y[jj]) ## only within controls???
     X.r <- t(stats::resid(fit))
     k <- try(isva::EstDimRMT(X.r, FALSE)$dim + 1)
     if ("try-error" %in% class(k)) {
@@ -1962,14 +2029,14 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
   }
   message(paste("[ruvCorrect] Number of significant surrogate variables is:", k))
 
-  M <- model.matrix(~ 0 + y)
-  rownames(M) <- colnames(X)
-
   # Actually run correction
   # Set number of threads for CRAN
   ctl <- which(controls %in% rownames(X))
   type <- type[1]
   if (type == "III") {
+    ## setup model matrix
+    M <- model.matrix(~ 0 + y) ## how deal with missing values??
+    rownames(M) <- colnames(X)
     ruvX <- t(ruv::RUVIII(Y = t(X), M = M, ctl = ctl, k = k, eta = NULL))
     ruvX <- ruvX - mean(ruvX) + mean(X) ## ??
   } else if (type == "g") {
@@ -1980,49 +2047,8 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
   ruvX
 }
 
-
 #' @export
-pcaCorrect.OLD <- function(X, y, k = NULL, max.rho = 0.3) {
-  ## --------------------------------------------------------------------
-  ## PCA correction: remove remaining batch effect using PCA
-  ## (iteratively, only SV larger than max correlated SV)
-  ## --------------------------------------------------------------------
-  mod1 <- model.matrix(~ 0 + y)
-  ii <- 1:99
-  niter <- 0
-  if (is.null(k)) k <- ncol(X)
-  nremoved <- 0
-  cX <- X
-  while (length(ii) > 0 && niter < k) {
-    nv <- min(10, ncol(cX) - 1)
-    suppressWarnings(suppressMessages(
-      pc <- irlba::irlba(cX, nv = nv)$v
-    ))
-    pc.rho <- stats::cor(pc, mod1)
-    pc.rho <- apply(abs(pc.rho), 1, max)
-    ii <- which(pc.rho < max.rho)
-    ii <- ii[ii < which.max(pc.rho)]
-    if (length(ii) > 0) {
-      mod1x <- cbind(1, mod1)
-      cX <- limma::removeBatchEffect(cX, covariates = pc[, ii], design = mod1x)
-      nremoved <- nremoved + 1
-    }
-    niter <- niter + 1
-  }
-  niter
-  if (niter == k) {
-    dbg("WARNING:: PCA correction did not converge after", nremoved, "iterations\n")
-  } else {
-    dbg("[pcaCorrect] removed", nremoved, "principal components\n")
-  }
-
-  ## bring back mean
-  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
-  cX
-}
-
-#' @export
-pcaCorrect2 <- function(X, y, k = 10, p.notsig = 0.20) {
+pcaCorrect <- function(X, y, k = 10, p.notsig = 0.20) {
   ## --------------------------------------------------------------------
   ## PCA correction: remove remaining batch effect using PCA
   ## (iteratively, only SV larger than max correlated SV)
@@ -2054,9 +2080,9 @@ pcaCorrect2 <- function(X, y, k = 10, p.notsig = 0.20) {
     mod1 <- model.matrix(~ 0 + y)
     cX <- limma::removeBatchEffect(X, covariates = V, design = mod1)
     nremoved <- ncol(V)
-    dbg("[pcaCorrect2] removed", nremoved, "principal components\n")
+    dbg("[pcaCorrect] removed", nremoved, "principal components\n")
   } else {
-    dbg("[pcaCorrect2] no correction\n")
+    dbg("[pcaCorrect] no correction\n")
   }
 
   ## bring back mean
@@ -2081,6 +2107,7 @@ pcaCorrect3 <- function(X, y, k = 10, xrank = NULL, p.notsig = 0.20) {
   }
   cX
 }
+
 
 #' @export
 runHarmony <- function(X, batch) {
@@ -2128,145 +2155,6 @@ runHarmony <- function(X, batch) {
   pos1 <- pos1[1:nx, ]
   colnames(X2) <- rownames(pos0) <- rownames(pos0) <- cn
   list(corrected = X2, umap = pos1, umap.orig = pos0)
-}
-
-#' @export
-ComBatX <- function(X, batch, y = NULL, controls = NULL, b = 50,
-                    recenter = TRUE, add.star = TRUE, bc.dim = 3,
-                    bc.method = "combat") {
-  if (0) {
-    y <- NULL
-    controls <- NULL
-    b <- 50
-    recenter <- TRUE
-    add.star <- TRUE
-    bc.dim <- 3
-    bc.method <- "combat"
-  }
-
-  batch <- paste0("b_", as.character(batch))
-  ## Get anchors: phenotypes that are in more than one batches
-  if (is.null(y)) {
-    if (!is.null(controls)) controls <- NULL
-    y <- rep("all.samples", ncol(X))
-  }
-  anchors <- names(which(table(y) > 1))
-  if (!is.null(batch)) anchors <- names(which(rowSums(table(y, batch) > 0) > 1))
-  anchors <- setdiff(anchors, NA)
-  if (!is.null(controls)) {
-    if (!any(controls %in% y)) {
-      stop("[ComBatX] controls do not match phenotype")
-    }
-    anchors <- intersect(anchors, controls)
-  }
-  message("Found ", length(anchors), " anchor conditions")
-  message("anchors: ", paste(anchors, sep = "", collapse = " "))
-
-  if (!is.null(batch) && add.star) anchors <- c("*", anchors)
-
-  ## For each anchor determine correction vector
-  cat("Computing correction vectors\n")
-  ref <- anchors[1]
-  dx.list <- list()
-  message("[ComBatX] using batch vector")
-  message("[ComBatX] bc.dim = ", bc.dim)
-  for (ref in anchors) {
-    if (ref == "*") {
-      ii <- 1:ncol(X)
-    } else {
-      ii <- which(y == ref)
-    }
-    X0 <- X[, ii, drop = FALSE]
-    dX <- NULL
-    has.batch <- length(unique(batch[ii])) > 1
-    if (!is.null(batch) && has.batch) {
-      bb <- batch[ii]
-      if (bc.method == "combat") {
-        if (ncol(X0) == 2) {
-          mx <- rowMeans(X0)
-          X1 <- cbind(mx, mx)
-        } else {
-          X1 <- suppressWarnings(suppressMessages(
-            sva::ComBat(X0, batch = bb)
-          ))
-        }
-      } else {
-        X1 <- limma::removeBatchEffect(X0, batch = bb)
-      }
-      dX <- X1 - X0
-    } else if (NCOL(X0) > 1) {
-      dX <- X0 - rowMeans(X0, na.rm = TRUE)
-      bb <- rep(1, ncol(dX))
-    }
-
-    if (!is.null(dX)) {
-      ## get correction vectors
-      if (bc.dim < 0) {
-        dxx <- dX
-      }
-      if (bc.dim == 0) {
-        ## determine delta vectors in each batch
-        dxx <- tapply(1:ncol(dX), bb, function(ii) {
-          if (length(ii) == 1) ii <- c(ii, ii)
-          rowMeans(dX[, ii])
-        })
-        dxx <- do.call(cbind, dxx)
-      }
-      if (bc.dim > 0) {
-        ## determine delta vectors in each batch
-        if (0) {
-          dxx <- tapply(1:ncol(dX), bb, function(ii) {
-            if (length(ii) == 1) ii <- c(ii, ii)
-            nu <- min(bc.dim, length(ii) - 1)
-            res <- irlba::irlba(dX[, ii], nu = nu)
-            res$u[, 1:nu]
-          })
-        } else {
-          dxx <- list()
-          for (b1 in unique(bb)) {
-            ii <- which(bb == b1)
-            if (length(ii) == 1) {
-              dxx[[b1]] <- dX[, ii]
-            } else {
-              nu <- min(bc.dim, length(ii) - 1)
-              res <- irlba::irlba(dX[, ii], nu = nu)
-              dxx[[b1]] <- res$u[, 1:nu]
-            }
-          }
-        }
-        dxx <- do.call(cbind, dxx)
-      }
-    }
-    dx.list[[ref]] <- dxx
-  }
-
-  dX <- do.call(cbind, dx.list)
-  dim(dX)
-  cat("Found", ncol(dX), "correction vectors\n")
-
-  ## combat sometimes give
-  sum(is.na(dX))
-  dX[is.na(dX)] <- 0
-
-  ## Correct original data with all correction vectors
-  # dX <- irlba::irlba(dX, nv=round(0.9*ncol(dX)))$u
-  nv <- min(b, ncol(dX) - 1)
-  cat("Factorizing differences using", nv, "dimensions\n")
-  sv <- try(irlba::irlba(dX, nv = nv))
-  if ("try-error" %in% class(sv)) {
-    sv <- svd(dX, nv = nv)
-  }
-  dX <- sv$u[, 1:nv, drop = FALSE]
-
-  cat("Correcting input matrix\n")
-  cX <- t(limma::removeBatchEffect(t(X), covariates = dX))
-
-  ## recenter on original mean?
-  if (recenter) {
-    cX <- cX - rowMeans(cX) + rowMeans(X)
-  }
-
-  cX
 }
 
 
@@ -2530,7 +2418,8 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
 #' @export
 nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
                         scale.x = FALSE, center.y = TRUE, mode = "sym",
-                        knn = 1, sdtop = 2000, return.B = FALSE, use.design = TRUE) {
+                        knn = 1, sdtop = 2000, return.B = FALSE,
+                        use.design = TRUE, delete.kin = TRUE) {
   ##  center.x=TRUE;center.m=TRUE;scale.x=FALSE;sdtop=1000;r=0.35;knn=5
 
   ## compute distance matrix for NNM-pairing
@@ -2576,7 +2465,7 @@ nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
   colnames(B) <- as.vector(unlist(mapply(rep, names(bb), nn)))
   rownames(B) <- colnames(dX)
 
-  if (1) {
+  if (delete.kin) {
     ## delete neighbours in own group (???)
     jj <- lapply(y1, function(a) which(colnames(B) == a))
     ii <- mapply(rep, 1:length(y1), sapply(jj, length))
@@ -2688,31 +2577,126 @@ gx.nnmcorrect <- function(...) nnmCorrect(..., return.B = TRUE)
 gx.nnmcorrect2 <- function(...) nnmCorrect2(..., return.B = TRUE)
 
 
-#' @export
-bcKNN <- function(X, batch, y = NULL) {
-  if (is.null(batch)) stop("batch must be provided")
-  bb.list <- list()
-  batch <- as.character(batch)
-  b <- batch[1]
-  for (b in sort(unique(batch))) {
-    X1 <- X[, which(batch == b), drop = FALSE]
-    res <- FNN::get.knnx(t(X1), query = t(X), k = 1)
-    xx <- X1[, res$nn.index[, 1]]
-    bb.list[[b]] <- xx
+## ----------------------------------------------------------------------
+## -------------- EXPERIMENTAL (not exported) ---------------------------
+## ----------------------------------------------------------------------
+
+#' Supervised MNN correction. Finds mutual neighbours with same label
+#' between two datasets and returns corresponding correction vectors.
+#'
+sMNN <- function(X, batch, y, nv = 0.33, nn = 3, return.idx = FALSE) {
+  getMNN <- function(x1, x2) {
+    res <- batchelor::findMutualNN(t(x1), t(x2), k1 = nn)
+    cbind(colnames(x1)[res$first], colnames(x2)[res$second])
   }
-  if (!is.null(y)) {
-    bb.list <- lapply(bb.list, function(x) t(rowsum(t(x), y)))
-  } else {
-    bb.list <- lapply(bb.list, function(x) rowMeans(x))
+
+  ## if no phenotype is given, just do one group
+  if (is.null(y)) {
+    y <- rep("y", ncol(X))
   }
-  bb.mean <- Reduce("+", bb.list) / length(bb.list)
-  bb.list <- lapply(bb.list, function(x) (x - bb.mean))
-  B <- do.call(cbind, bb.list)
+
+  ## For all combinations of batches, get correction vector
+  nbatch <- length(unique(batch))
+  comb <- combn(unique(batch), 2)
+  i <- 1
+  y0 <- y[1]
+  B <- c()
+  all.idx <- c()
+  message("[sMNN] searching in ", ncol(comb), " batch pairs...")
+  for (i in 1:ncol(comb)) {
+    for (y0 in unique(y)) {
+      x1 <- X[, which(batch == comb[1, i] & y == y0), drop = FALSE]
+      x2 <- X[, which(batch == comb[2, i] & y == y0), drop = FALSE]
+      if (ncol(x1) > 0 && ncol(x2) > 0) {
+        idx <- getMNN(x1, x2)
+        dx <- x2[, idx[, 2]] - x1[, idx[, 1]]
+        B <- cbind(B, dx)
+        all.idx <- rbind(all.idx, idx)
+      }
+    }
+  }
   dim(B)
-  bX <- t(limma::removeBatchEffect(t(X), covariates = scale(B))) ## model??
-  bX
+  message("[sMNN] dim(B) = ", paste(dim(B), collapse = "x"))
+  message("[sMNN] Found total ", ncol(B), " MNN pairs")
+
+  ## remove batch effects in transposed gene space
+  if (nv < 1) nv <- floor(nv * min(dim(B)))
+  nv <- max(1, min(nv, dim(B) - 1))
+  message("[sMNN] nv = ", nv)
+  B <- scale(B)
+  dU <- irlba::irlba(B, nu = nv, nv = nv)$u
+  ##  dU <- scale(dU) ## no???
+  cX <- t(limma::removeBatchEffect(t(X), covariates = dU))
+
+  ## restore original mean
+  cX <- cX - rowMeans(cX) + rowMeans(X)
+
+  if (return.idx) {
+    res <- list(X = cX, idx = all.idx)
+    return(res)
+  }
+
+  cX
 }
 
-## =====================================================================================
-## =========================== END OF FILE =============================================
-## =====================================================================================
+
+#' Mutual Farthest Neighbour correction
+#'
+mfnCorrect <- function(X, y, nv = 3, nn = 3, return.idx = FALSE) {
+  ## nv=0.33;nn=10
+  B <- NULL
+  all.idx <- c()
+  a <- y[2]
+  for (a in unique(y)) {
+    X1 <- X[, which(y == a)]
+    ## X1 <- X1 - rowMeans(X1)
+    R1 <- cor(X1)
+    mfn <- c()
+    ## determine mutual farthest neighbors
+    idx <- apply(R1, 1, function(x) head(order(x), nn))
+    if (nn == 1) idx <- cbind(idx)
+    if (nn > 1) idx <- t(idx)
+
+    mfn.match <- sapply(1:nrow(idx), function(j) j %in% as.vector(idx[idx[j, ], ]))
+    table(mfn.match)
+    mfn <- which(mfn.match)
+    message("Found ", length(mfn), " farthest neighbors for y= ", a)
+
+    ## get correction vectors
+    if (length(mfn) > 0) {
+      idx <- idx[mfn, , drop = FALSE]
+      X2 <- apply(idx, 1, function(i) rowMeans(X1[, i, drop = FALSE]))
+      dX <- X1[, rownames(idx)] - X2
+      B <- cbind(B, dX)
+      idx1 <- apply(idx, 2, function(i) colnames(X1)[i])
+      idx1 <- cbind(rownames(idx), as.vector(idx1))
+      all.idx <- rbind(all.idx, idx1)
+    }
+  }
+  dim(B)
+
+  if (NCOL(B) > 0) {
+    ## apply correction
+    if (nv < 1) nv <- max(1, floor(nv * min(dim(B))))
+  }
+  dU <- svd(B, nu = nv, nv = nv)$u
+  message("Correcting with ", ncol(dU), " MFN components")
+  cX <- t(limma::removeBatchEffect(t(X), covariates = dU))
+
+  ## restore original mean
+  cX <- cX - rowMeans(cX) + rowMeans(X)
+
+  if (return.idx) {
+    res <- list(X = cX, idx = all.idx)
+    return(res)
+  }
+
+  cX
+}
+
+
+
+
+## =================================================================================
+## ======================= END OF FILE =============================================
+## =================================================================================

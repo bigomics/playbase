@@ -73,7 +73,7 @@ imputeMissing <- function(X,
     ## SVD does not allow rows with all NA
     ii <- which(rowMeans(is.na(X)) < 1)
     jj <- which(colMeans(is.na(X)) < 1)
-    res <- try(pcaMethods::pca(t(X[ii, jj]), method = "svdImpute", nPcs = 3))
+    res <- try(pcaMethods::pca(t(X[ii, jj]), method = "svdImpute", nPcs = nv))
     if (!"try-error" %in% class(res)) {
       cx <- X * NA
       cx[ii, jj] <- t(pcaMethods::completeObs(res))
@@ -200,9 +200,9 @@ svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
 
   if (is.null(nv)) {
     nv <- max(1, round(mean(is.na(X)) * min(dim(X))))
-    message("setting nv = ", nv)
   }
-
+  nv <- min(nv, dim(X) - 1)
+  message("setting nv = ", nv)
 
   if (is.character(init) && grepl("%", init)) {
     q <- as.numeric(sub("%", "", init))
@@ -295,7 +295,7 @@ svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
 nmfImpute <- function(x, k = 5) {
   ## Impute missing values with NMF
   ##
-  k <- min(k, dim(x))
+  k <- min(k, dim(x) - 1)
   nmf <- NNLM::nnmf(x, k = k, check.k = FALSE, rel.tol = 1e-2, verbose = 0)
   xhat <- with(nmf, W %*% H)
   x[is.na(x)] <- xhat[is.na(x)]
@@ -305,6 +305,22 @@ nmfImpute <- function(x, k = 5) {
     x[is.na(x)] <- xhat1[is.na(x)]
   }
   x
+}
+
+
+#' @title Impute missing values using Bayesian PCA
+#'
+#' @description Imputes missing values using BPCA
+#'
+#' @export
+BPCAimpute <- function(X, k = 2) {
+  k <- min(k, dim(X) - 1)
+  ii <- which(rowMeans(is.na(X)) < 1)
+  pc <- pcaMethods::pca(t(X[ii, ]), method = "bpca", nPcs = k)
+  obsX <- t(pcaMethods::completeObs(pc))
+  impX <- X
+  impX[ii, ] <- obsX
+  impX
 }
 
 

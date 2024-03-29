@@ -185,7 +185,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## clean up input files
   ## -------------------------------------------------------------------
-  samples <- data.frame(samples, drop = FALSE)
+  samples <- as.data.frame(samples, drop = FALSE)
   counts <- as.matrix(counts)
   if (is.null(contrasts)) contrasts <- samples[, 0]
 
@@ -335,6 +335,11 @@ pgx.createPGX <- function(counts,
     }
   }
 
+  ## remove special characters from description (other columns too??)
+  description <- gsub("[\"\']", " ", description) ## remove quotes (important!!)
+  description <- gsub("[\n]", ". ", description) ## replace newline
+  description <- trimws(gsub("[ ]+", " ", description)) ## remove ws
+
   pgx <- list(
     name = name,
     organism = organism,
@@ -433,11 +438,11 @@ pgx.createPGX <- function(counts,
 
     ## sum up duplicated rows
     pgx$counts <- rowsum(pgx$counts, symbol)
-    pgx$counts <- pgx$counts[rownames(pgx$counts) != "",,drop = FALSE]
+    pgx$counts <- pgx$counts[rownames(pgx$counts) != "", , drop = FALSE]
 
     if (!is.null(pgx$X)) {
       pgx$X <- log2(rowsum(2**pgx$X, symbol))
-      pgx$X <- pgx$X[rownames(pgx$X) != "",,drop = FALSE]
+      pgx$X <- pgx$X[rownames(pgx$X) != "", , drop = FALSE]
     }
 
     # Collapse features as a comma-separated elements
@@ -831,7 +836,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     return(pgx)
   }
 
-
   # Change HUMAN gene names to species symbols if NOT human and human_ortholog column is NOT NULL
   if (pgx$organism != "Human" && !is.null(pgx$genes$human_ortholog)) {
     rownames(G) <- pgx$genes$symbol[match(rownames(G), pgx$genes$human_ortholog)]
@@ -840,33 +844,26 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   # Normalize G after removal of genes
   G <- playbase::normalize_cols(G)
 
-
   ## -----------------------------------------------------------
   ## Filter gene sets on size
   ## -----------------------------------------------------------
 
   message("[pgx.add_GMT] Filtering gene sets on size...")
-  gmt.size <- Matrix::rowSums(G != 0)
+  gmt.size <- Matrix::colSums(G != 0)
   size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
-  G <- G[, size.ok, drop = FALSE]
-
-
-  ## -----------------------------------------------------------
-  ## Add random genesets (in case there is no geneset left)
-  ## -----------------------------------------------------------
-  add.gmt <- NULL
-  rr <- sample(15:400, 100)
-  gg <- rownames(pgx$X)
-  random.gmt <- lapply(rr, function(n) head(sample(gg), min(n, length(gg) / 2)))
-  names(random.gmt) <- paste0("TEST:random_geneset.", 1:length(random.gmt))
-  add.gmt <- random.gmt
+  if (length(size.ok) < 100) {
+    jj <- head(unique(c(size.ok, sample(1:ncol(G)))), 100) ## at least 100
+    G <- G[, jj, drop = FALSE]
+  } else {
+    G <- G[, size.ok, drop = FALSE]
+  }
 
   ## -----------------------------------------------------------
   ## Add custom gene sets if provided
   ## -----------------------------------------------------------
-
+  add.gmt <- NULL
   if (!is.null(custom.geneset$gmt)) {
-    add.gmt <- c(add.gmt, custom.geneset$gmt)
+    add.gmt <- custom.geneset$gmt
   }
 
   if (!is.null(add.gmt)) {
