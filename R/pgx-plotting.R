@@ -1242,10 +1242,6 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
     return()
   }
 
-  # if (plotlib == "data") {
-  #   browser()
-  #   return()
-  # }
   if (length(plist) == 1) plist <- plist[[1]]
   return(plist)
 }
@@ -4792,6 +4788,7 @@ iheatmapr.add_col_annotation <- function(p,
 #' @param rowcex Row text size scaling. Default is 1.
 #' @param colcex Column text size scaling. Default is 1.
 #' @param show_legend Show color legend? Default is TRUE.
+#' @param return_x_matrix Return the X matrix of the plot along the plotly object (as a list)
 #'
 #' @return A plotly split heatmap object
 #'
@@ -4801,11 +4798,12 @@ iheatmapr.add_col_annotation <- function(p,
 #' Various graphical parameters like colors, labels, text sizes can be adjusted.
 #'
 #' @export
-pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
+pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NULL,
                                        xtips = NULL, ytips = NULL, row_clust = TRUE,
                                        row_annot_width = 0.03, scale = "row.center",
                                        colors = NULL, lmar = 60,
-                                       rowcex = 1, colcex = 1, show_legend = TRUE) {
+                                       rowcex = 1, colcex = 1, show_legend = TRUE,
+                                       return_x_matrix = FALSE) {
   ## constants
   col_annot_height <- 0.021
   if (!is.null(idx)) idx <- as.character(idx)
@@ -4986,15 +4984,19 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
         ## add_col_clustering() %>%
       }
 
-      plt <- plt %>%
-        iheatmapr::add_col_title(names(xx)[i], side = "top") %>%
-        iheatmapr.add_col_annotation(
-          annotation = data.frame(annotF[colnames(x1), , drop = FALSE]),
-          size = col_annot_height,
-          buffer = 0.005, side = "bottom",
-          show_title = FALSE, show_legend = show_legend,
-          colors = colors0
-        )
+      if (!is.null(annot)) {
+        plt <- plt %>%
+          iheatmapr::add_col_title(names(xx)[i], side = "top") %>%
+          iheatmapr.add_col_annotation(
+            annotation = data.frame(annotF[colnames(x1), , drop = FALSE]),
+            size = col_annot_height,
+            buffer = 0.005, side = "bottom",
+            show_title = FALSE, show_legend = show_legend,
+            colors = colors0
+          )
+      } else {
+        plt <- plt %>% iheatmapr::add_col_title(names(xx)[i], side = "top")
+      }
 
       if (ncol(X) < 100 && colcex > 0) {
         plt <- plt %>%
@@ -5035,7 +5037,14 @@ pgx.splitHeatmapFromMatrix <- function(X, annot, idx = NULL, splitx = NULL,
     )
   }
 
-  return(plt)
+  if (return_x_matrix) {
+    return(list(
+      plt = plt,
+      X = X
+    ))
+  } else {
+    return(plt)
+  }
 }
 
 

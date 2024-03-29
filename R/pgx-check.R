@@ -8,9 +8,8 @@
 #' @return a list with two elements: `checks` which contains the status of the checks, and
 #'  `PASS` which contains the overall status of the check.
 #' @export
-pgx.checkINPUT <- function(
-    df,
-    type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")) {
+pgx.checkINPUT <- function(df,
+                           type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")) {
   datatype <- match.arg(type)
   df_clean <- df
   PASS <- TRUE
@@ -28,6 +27,18 @@ pgx.checkINPUT <- function(
 
     if (length(ANY_NON_NUMERIC) > 0 && PASS) {
       check_return$e27 <- paste("gene:", rownames(ANY_NON_NUMERIC), " and ", "sample:", colnames(df_clean)[ANY_NON_NUMERIC[, 2]])
+    }
+
+    # replace infinite values in counts by the maximum value of the feature + 10%
+    # check if there are any infinite values
+    ANY_INFINITE <- which(is.infinite(df_clean), arr.ind = TRUE)
+
+    if (length(ANY_INFINITE) > 0 && PASS) {
+      df_clean <- apply(df_clean, 1, function(x) {
+        max_val <- max(x, na.rm = TRUE)
+        ifelse(is.infinite(x), max_val * 1.1, x)
+      })
+      check_return$e28 <- paste("gene:", rownames(ANY_INFINITE), " and ", "sample:", colnames(df_clean)[ANY_INFINITE[, 2]])
     }
 
     # check for duplicated colnanes (gives error)
@@ -52,10 +63,18 @@ pgx.checkINPUT <- function(
 
     if (length(ANY_ROW_ZERO) > 0 && PASS) {
       # get the row names with all zeros
-      check_return$e9 <- names(ANY_ROW_ZERO)
+      zero.rows <- names(ANY_ROW_ZERO)
 
-      # remove the rownames with all zeros by using check_return$e9
-      df_clean <- df_clean[!(rownames(df_clean) %in% check_return$e9), , drop = FALSE]
+      # remove the rownames with all zeros
+      df_clean <- df_clean[!(rownames(df_clean) %in% zero.rows), , drop = FALSE]
+
+      nzerorows <- length(ANY_ROW_ZERO)
+      if (nzerorows < 10) {
+        err.mesg <- zero.rows
+      } else {
+        err.mesg <- c(head(zero.rows, 10), "+more", paste("(total", nzerorows, "rows)"))
+      }
+      check_return$e9 <- err.mesg
     }
 
     # check for zero count columns, remove them
@@ -128,28 +147,26 @@ pgx.checkINPUT <- function(
       })
 
       denominators <- sapply(split_names, "[[", 2)
-      # Check if all elements in the matrix are character
+      ## Check if all elements in the matrix are character
       all_numeric <- any(apply(df_clean, c(1, 2), is.numeric))
 
       if (!all_numeric && PASS) {
-        # only run if we have characters in matrix
-        NUMERATORS_IN_COLUMN <- sapply(1:length(numerators), function(i) {
-          numerators[i] %in% df_clean[, i]
-        })
-        DENOMINATORS_IN_COLUMN <- sapply(1:length(denominators), function(i) {
-          denominators[i] %in% df_clean[, i]
-        })
+        ## only run if we have characters in matrix
 
-        CONTRASTS_GROUPS_MISSING <- NUMERATORS_IN_COLUMN & DENOMINATORS_IN_COLUMN
+        COLUMN_IN_GROUPS <- sapply(1:length(denominators), function(i) {
+          vv <- setdiff(df_clean[, i], c(NA, "", " ", "NA"))
+          all(grepl(paste0("^", numerators[i], "|^", denominators[i]), vv))
+        })
+        CONTRASTS_IN_GROUPS <- COLUMN_IN_GROUPS
 
-        if (all(!CONTRASTS_GROUPS_MISSING) && PASS) {
+        if (all(!CONTRASTS_IN_GROUPS) && PASS) {
           check_return$e23 <- "All comparisons were invalid."
           PASS <- FALSE
         }
 
-        if (any(!CONTRASTS_GROUPS_MISSING) && PASS) {
-          check_return$e22 <- colnames(df_clean)[!CONTRASTS_GROUPS_MISSING]
-          df_clean <- df_clean[, CONTRASTS_GROUPS_MISSING, drop = FALSE]
+        if (any(!CONTRASTS_IN_GROUPS) && PASS) {
+          check_return$e22 <- colnames(df_clean)[!CONTRASTS_IN_GROUPS]
+          df_clean <- df_clean[, CONTRASTS_IN_GROUPS, drop = FALSE]
         }
       }
     } ## if PASS

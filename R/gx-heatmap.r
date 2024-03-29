@@ -504,7 +504,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       x <- row.annot[, i]
       klrs <- rev(grDevices::grey.colors(npar[i], start = 0.3, end = 0.8))
       if (npar[i] == 1) klrs <- "#E6E6E6"
-      if (npar[i] > 0) klrs <- rep(RColorBrewer::brewer.pal(8, "Set2"), 99)[1:npar[i]]
+      if (npar[i] > 0) klrs <- omics_pal_d("muted_light")(npar)[1:npar[i]]
       names(klrs) <- sort(setdiff(unique(x), NA))
       if (any(is.na(x))) klrs <- c(klrs, "NA" = "grey90")
       row.colors[[prm]] <- klrs

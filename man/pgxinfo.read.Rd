@@ -8,7 +8,8 @@ pgxinfo.read(
   pgx.dir,
   file = "datasets-info.csv",
   match = TRUE,
-  use.cache = FALSE
+  use.cache = FALSE,
+  clean.description = TRUE
 )
 }
 \arguments{

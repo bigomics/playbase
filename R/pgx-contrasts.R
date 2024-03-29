@@ -787,8 +787,15 @@ makeContrastsFromLabelMatrix <- function(lab.matrix) {
   colnames(contr.mat) <- colnames(lab.matrix)
   for (i in 1:ncol(lab.matrix)) {
     lab1 <- trimws(lab.matrix[, i])
-    j1 <- which(lab1 == main.grp[i])
-    j0 <- which(lab1 == ctrl.grp[i])
+    lab1x <- setdiff(lab1, c(NA, ""))
+    grps <- c(main.grp[i], ctrl.grp[i])
+    if (all(lab1x %in% grps)) {
+      j1 <- which(lab1 == main.grp[i])
+      j0 <- which(lab1 == ctrl.grp[i])
+    } else {
+      j1 <- grep(paste0("^", toupper(main.grp[i])), toupper(lab1))
+      j0 <- grep(paste0("^", toupper(ctrl.grp[i])), toupper(lab1))
+    }
     contr.mat[j1, i] <- +1 / length(j1)
     contr.mat[j0, i] <- -1 / length(j0)
   }
