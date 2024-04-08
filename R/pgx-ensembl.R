@@ -96,7 +96,8 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL, use_
 #' head(result)
 #' }
 #' @export
-ngs.getGeneAnnotation <- function(probes, pgx = NULL, organism = NULL, annot_table = NULL, use_biomart = NULL) {
+ngs.getGeneAnnotation <- function(probes, pgx = NULL, organism = NULL,
+                                  annot_table = NULL, use_biomart = NULL) {
   if (is.null(organism)) {
     organism <- guess_organism(probes)
   }
@@ -140,7 +141,10 @@ ngs.getGeneAnnotation <- function(probes, pgx = NULL, organism = NULL, annot_tab
     ##probe_type <- detect_probetype.BIOMART(probes, mart)
     probe_type <- guess_probetype(probes, for.mart=TRUE)
     message("[ngs.getGeneAnnotation] probe_type = ", probe_type)
-    if (is.null(probe_type)) stop("probe_type is NULL")
+    if (is.null(probe_type)) {
+      dbg("[ngs.getGeneAnnotation] FATAL ERROR: could not determine probe_type")      
+      stop("[ngs.getGeneAnnotation] FATAL ERROR: could not determine probe_type") 
+    }
     genes <- ngs.getGeneAnnotation_BIOMART(
       organism = organism,
       probes = probes,
