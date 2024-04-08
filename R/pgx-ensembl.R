@@ -185,14 +185,18 @@ ngs.getGeneAnnotation_ORGDB <- function(organism, probes, probe_type) {
   }
   message("probe_type = ",probe_type)
   
+  if (organism == "homo sapiens") organism <- "human"
+  if (organism == "mus musculus") organism <- "mouse"
+  if (organism == "rattus norvegicus") organism <- "rat"
+  
   # Get org database and columns request
-  if (tolower(organism) %in% c("human","homo sapiens")) {
+  if (organism == "human") {
     org_db <- org.Hs.eg.db::org.Hs.eg.db
     cols_req <- c("SYMBOL", "GENENAME", "CHR", "CHRLOC", "MAP", "GENETYPE")
-  } else if (tolower(organism) %in% c("mouse","mus musculus")) {
+  } else if (organism == "mouse") {
     org_db <- org.Mm.eg.db::org.Mm.eg.db
     cols_req <- c("SYMBOL", "GENENAME", "CHR", "CHRLOC", "GENETYPE")
-  } else if (tolower(organism) %in% c("rat","rattus norvegicus")) {
+  } else if (organism == "rat") {
     org_db <- org.Rn.eg.db::org.Rn.eg.db
     cols_req <- c("SYMBOL", "GENENAME", "CHR", "CHRLOC", "GENETYPE")
   } else {
@@ -228,7 +232,7 @@ ngs.getGeneAnnotation_ORGDB <- function(organism, probes, probe_type) {
 
   # Add human ortholog and map for non-human organisms
   # Here, we use the old strategy of capitalise the symbol
-  if (tolower(organism) %in% c("mouse", "rat")) {
+  if (organism %in% c("mouse", "rat")) {
     d$human_ortholog <- toupper(d$SYMBOL)
     d$MAP <- d$CHR
   }
@@ -631,26 +635,6 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   out <- out[match(probes0,out$feature), , drop = FALSE]
   rownames(out) <- out$feature
   return(out)
-}
-
-
-if(0) {
-  organism = "Mouse"
-  probes = head(keys(orgdb),1000)
-
-  organism
-  head(probes)
-  
-  probe_type <- guess_probetype(probes)
-  probe_type2 <- guess_probetype(probes, for.biomart=TRUE)  
-  probe_type
-  probe_type2  
-  mart <- use_mart(organism)
-
-  a1 <- ngs.getGeneAnnotation_ORGDB(organism, probes, probe_type=NULL)
-  a2 <- ngs.getGeneAnnotation_BIOMART(organism, probes, mart=mart, probe_type=NULL)
-  a3 <- ngs.getGeneAnnotation_ANNOTHUB(organism, probes, probe_type=probe_type)
-
 }
 
 

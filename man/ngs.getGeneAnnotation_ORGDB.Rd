@@ -4,12 +4,12 @@
 \alias{ngs.getGeneAnnotation_ORGDB}
 \title{Get gene annotation data}
 \usage{
-ngs.getGeneAnnotation_ORGDB(probes, organism, probe_type)
+ngs.getGeneAnnotation_ORGDB(organism, probes, probe_type)
 }
 \arguments{
-\item{probes}{Character vector of gene/transcript identifiers.}
-
 \item{organism}{Organism name (e.g. "Human", "Mouse", "Rat").}
+
+\item{probes}{Character vector of gene/transcript identifiers.}
 
 \item{probe_type}{Type of identifiers provided in probes (e.g. "ENSEMBL").}
 }

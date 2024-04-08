@@ -813,15 +813,82 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   pgx
 }
 
-pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
-  ## -----------------------------------------------------------
-  ## Load Gsetmat and filter genes by gene or homologous
-  ## -----------------------------------------------------------
+#' Get GO gene sets for organism directly from
+#' AnnotationHub/OrgDB. Restrict to genes as background.
+#'
+#' export
+getOrganismGO <- function(organism, genes, ah=NULL) {
 
+  if( tolower(organism) == 'human') organism <- "Homo sapiens"
+  if( tolower(organism) == 'mouse') organism <- "Mus musculus"
+  if( tolower(organism) == 'rat')   organism <- "Rattus norvegicus"  
+  
+  ## Load the annotation resource.
+  if(is.null(ah)) ah <- AnnotationHub::AnnotationHub()
+  cat("querying AnnotationHub for",organism,"\n")
+  ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
+  names(ahDb)
+  tolower(ahDb$species)
+  
+  ## select on exact organism name
+  ahDb <- ahDb[ which(tolower(ahDb$species) == tolower(organism))]
+  if(length(ahDb) == 0) return(list())    
+
+  ## select latest/last
+  ahDb$species
+  k <- length(ahDb)
+  cat("selecting database for",ahDb$species[k],"\n")
+  orgdb <- ahDb[[k]]  ## last one, newest version
+
+  go.gmt <- list()
+  keytypes(orgdb)  
+  if(!"GOALL" %in% keytypes(orgdb)) {
+    cat("WARNING:: missing GO annotation in database!\n")
+  } else {
+    ## create GO annotets
+    cat("\nCreating GO annotation...\n")        
+    ont_classes <- c("BP","CC","MF")
+    k="BP"
+    for(k in ont_classes) {
+      go_id <- AnnotationDbi::mapIds(orgdb, keys = k, keytype = "ONTOLOGY", 
+                                     column = "GO", multiVals = "list")[[1]]
+      go_id <- unique(go_id)
+      sets <- AnnotationDbi::mapIds(orgdb, keys = go_id, keytype = "GOALL", 
+                                    column = "SYMBOL", multiVals = "list")
+      sets <- parallel::mclapply( sets, function(s) intersect(s, genes))
+      
+      ## get GO title
+      go <- mget(names(sets), GO.db::GOTERM, ifnotfound=NA)
+      go_term <- sapply(go, function(x) x@Term)
+      new_names <- paste0("GO_",k,":",go_term," (",sub("GO:","GO_",names(sets)),")")
+      names(sets) <- new_names
+
+      ## add to list
+      go.gmt <- c(go.gmt, sets)
+    }
+  }
+  go.gmt
+}
+
+
+pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
+
+  if(!"symbol" %in% colnames(pgx$genes)) {
+    message("[pgx.add_GMT] ERROR: could not find 'symbol' column. Is this an old gene annotation?")
+    return(pgx)
+  }
+  
+  is.human <- ( tolower(pgx$organism) %in% c("human","homo sapiens"))
+  is.mouse <- ( tolower(pgx$organism) %in% c("mouse","mus musculus"))
+  is.rat <- ( tolower(pgx$organism) %in% c("rat","rattus norvegicus"))
+
+  ## -----------------------------------------------------------
+  ## Load Geneset matrix and filter genes by gene or homologous
+  ## -----------------------------------------------------------
   message("[pgx.add_GMT] Creating GMT matrix... ")
   # Load geneset matrix
-  G <- Matrix::t(playdata::GSETxGENE)
-  if (pgx$organism != "Human" && !is.null(pgx$genes$human_ortholog)) {
+  G <- Matrix::t(playdata::GSETxGENE)  
+  if (!is.human && !is.null(pgx$genes$human_ortholog)) {
     human_genes <- ifelse(!is.na(pgx$genes$human_ortholog),
       pgx$genes$human_ortholog,
       pgx$genes$symbol
@@ -830,20 +897,18 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     human_genes <- pgx$genes$symbol
   }
   G <- G[rownames(G) %in% human_genes, , drop = FALSE]
-
+  dim(G)
+  
   if (nrow(G) == 0) {
     message("[pgx.add_GMT] WARNING : no overlapping genes. no GMT added.")
     return(pgx)
   }
 
   # Change HUMAN gene names to species symbols if NOT human and human_ortholog column is NOT NULL
-  if (pgx$organism != "Human" && !is.null(pgx$genes$human_ortholog)) {
+  if (!is.human && !is.null(pgx$genes$human_ortholog)) {
     rownames(G) <- pgx$genes$symbol[match(rownames(G), pgx$genes$human_ortholog)]
   }
-
-  # Normalize G after removal of genes
-  G <- playbase::normalize_cols(G)
-
+  
   ## -----------------------------------------------------------
   ## Filter gene sets on size
   ## -----------------------------------------------------------
@@ -852,7 +917,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   gmt.size <- Matrix::colSums(G != 0)
   size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
   if (length(size.ok) < 100) {
-    jj <- head(unique(c(size.ok, sample(1:ncol(G)))), 100) ## at least 100
+    ## take at least 100 gene sets, adding random selected
+    jj <- head(unique(c(size.ok, sample(1:ncol(G)))), 100) 
     G <- G[, jj, drop = FALSE]
   } else {
     G <- G[, size.ok, drop = FALSE]
@@ -866,9 +932,26 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     add.gmt <- custom.geneset$gmt
   }
 
+  ## Should we always add???
+  ##  if(!is.human && !is.mouse && !is.rat) {
+  ## if(!is.human) {
+  if(TRUE) {  
+    ## add species GO genesets from AnnotationHub
+    dbg("[pgx.add_GMT] Adding species GO for organism", pgx$organism)
+    go.genesets <- getOrganismGO( pgx$organism, rownames(G), ah = NULL)
+    if (!is.null(go.genesets)) {
+      dbg("[pgx.add_GMT] got",length(go.genesets),"genesets")
+      go.size <- sapply( go.genesets, length )
+      size.ok <- which(go.size >= 15 & go.size <= 400)
+      go.genesets <- go.genesets[ size.ok ]
+      add.gmt <- c(add.gmt, go.genesets)
+    }
+  }
+  
   if (!is.null(add.gmt)) {
     message("[pgx.add_GMT] Adding custom genesets...")
-    # convert gmt standard to SPARSE matrix
+    ## convert gmt standard to SPARSE matrix: gset in rows, genes in
+    ## columns.
     custom_gmt <- playbase::createSparseGenesetMatrix(
       gmt.all = add.gmt,
       min.geneset.size = 3,
@@ -879,12 +962,12 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       filter_genes = FALSE
     )
     custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% pgx$genes$symbol, drop = FALSE]
-    custom_gmt <- playbase::normalize_rows(custom_gmt)
-    G <- playbase::merge_sparse_matrix(m1 = G, m2 = Matrix::t(custom_gmt))
+    ## merge_sparse_matrix removes duplicated genesets 
+    G <- playbase::merge_sparse_matrix( m1 = G,
+                                        m2 = Matrix::t(custom_gmt))
     G <- G[rownames(G) %in% pgx$genes$symbol, , drop = FALSE]
     remove(custom_gmt)
   }
-
 
   ## -----------------------------------------------------------
   ## create the full GENE matrix (always collapsed by gene)
@@ -892,7 +975,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
   X <- pgx$X
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
-    X <- rename_by(X, pgx$genes, "symbol")
+    X <- rename_by(X, pgx$genes, "symbol")  ## pgx-functions.R
     X <- X[!rownames(X) == "", , drop = FALSE]
     if (any(duplicated(rownames(X)))) {
       X <- log2(rowsum(2**X, rownames(X)))
@@ -906,9 +989,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   }
 
   ## -----------------------------------------------------------
-  ## create the GENESETxGENE matrix
+  ## Align the GENESETxGENE matrix with genes in X
   ## -----------------------------------------------------------
-
   message("[pgx.add_GMT] Matching gene set matrix...")
   gg <- rownames(X)
   ii <- intersect(gg, rownames(G))
@@ -920,7 +1002,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   G <- rbind(G, matX)
   G <- G[match(gg, rownames(G)), , drop = FALSE]
   rownames(G) <- rownames(X) ## original name (e.g. mouse)
-
 
   ## -----------------------------------------------------------
   ## Prioritize gene sets by fast rank-correlation
@@ -961,6 +1042,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## Clean up and return pgx object
   ## -----------------------------------------------------------------------
 
+  ## Normalize G??
+  ##G <- playbase::normalize_cols(G)
   pgx$GMT <- G
   message(glue::glue("[pgx.add_GMT] Final GMT: {nrow(G)}x{ncol(G)}"))
   rm(gsetX.bygroup, gsetX, G)
