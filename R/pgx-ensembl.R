@@ -124,8 +124,8 @@ ngs.getGeneAnnotation <- function(probes, pgx = NULL, organism = NULL, annot_tab
     if (is.null(probe_type)) stop("probe_type is NULL")
     message("[ngs.getGeneAnnotation] probe_type = ", probe_type)
     genes <- ngs.getGeneAnnotation_ORGDB(
-      probes = probes,
       organism = organism,
+      probes = probes,
       probe_type = probe_type
     )
   }
@@ -137,12 +137,13 @@ ngs.getGeneAnnotation <- function(probes, pgx = NULL, organism = NULL, annot_tab
     if (is.null(mart)) {
       message("[ngs.getGeneAnnotation] FAIL : could not connect to mart")
     }
-    probe_type <- detect_probetype.BIOMART(probes, mart)
+    ##probe_type <- detect_probetype.BIOMART(probes, mart)
+    probe_type <- guess_probetype(probes, for.mart=TRUE)
     message("[ngs.getGeneAnnotation] probe_type = ", probe_type)
     if (is.null(probe_type)) stop("probe_type is NULL")
     genes <- ngs.getGeneAnnotation_BIOMART(
-      probes = probes,
       organism = organism,
+      probes = probes,
       probe_type = as.character(probe_type),
       mart = mart
     )
@@ -177,22 +178,26 @@ ngs.getGeneAnnotation <- function(probes, pgx = NULL, organism = NULL, annot_tab
 #' annot <- ngs.getGeneAnnotation_ORGDB(probes, "ENSEMBL", organism = "Mouse")
 #' }
 #' @export
-ngs.getGeneAnnotation_ORGDB <- function(probes, organism, probe_type) {
+ngs.getGeneAnnotation_ORGDB <- function(organism, probes, probe_type) {
   organism <- tolower(organism)
   if (is.null(probe_type)) {
-    stop("must provide probe_type")
+    probe_type <- guess_probetype( probes, organism, for.biomart=FALSE)
   }
-
+  message("probe_type = ",probe_type)
+  
   # Get org database and columns request
-  if (organism == "human") {
+  if (tolower(organism) %in% c("human","homo sapiens")) {
     org_db <- org.Hs.eg.db::org.Hs.eg.db
     cols_req <- c("SYMBOL", "GENENAME", "CHR", "CHRLOC", "MAP", "GENETYPE")
-  } else if (organism == "mouse") {
+  } else if (tolower(organism) %in% c("mouse","mus musculus")) {
     org_db <- org.Mm.eg.db::org.Mm.eg.db
     cols_req <- c("SYMBOL", "GENENAME", "CHR", "CHRLOC", "GENETYPE")
-  } else if (organism == "rat") {
+  } else if (tolower(organism) %in% c("rat","rattus norvegicus")) {
     org_db <- org.Rn.eg.db::org.Rn.eg.db
     cols_req <- c("SYMBOL", "GENENAME", "CHR", "CHRLOC", "GENETYPE")
+  } else {
+    stop("ERROR: organism",organism,"not supported by ORGDB")
+    return(NULL)
   }
 
   if (!probe_type %in% AnnotationDbi::keytypes(org_db)) {
@@ -219,12 +224,11 @@ ngs.getGeneAnnotation_ORGDB <- function(probes, organism, probe_type) {
       columns = cols_req
     )
   )
-
   d <- data.table::as.data.table(d)
 
   # Add human ortholog and map for non-human organisms
   # Here, we use the old strategy of capitalise the symbol
-  if (organism %in% c("mouse", "rat")) {
+  if (tolower(organism) %in% c("mouse", "rat")) {
     d$human_ortholog <- toupper(d$SYMBOL)
     d$MAP <- d$CHR
   }
@@ -250,7 +254,7 @@ ngs.getGeneAnnotation_ORGDB <- function(probes, organism, probe_type) {
   )
 
   d$tx_len <- 1000
-  d$source <- "local db"
+  d$source <- org_db$packageName
   d$CHRLOCCHR <- NULL
   d$gene_name <- d$feature
 
@@ -272,234 +276,381 @@ ngs.getGeneAnnotation_ORGDB <- function(probes, organism, probe_type) {
 }
 
 
-#' Map probe identifiers to gene symbols
+#' Get gene annotation data using BioMart
 #'
-#' This function converts a vector of probe identifiers to
-#' standard HGNC gene symbols using an annotation lookup table.
+#' Retrieves gene annotation information from BioMart for a set of input
+#' gene/transcript identifiers.
 #'
-#' @param probes Character vector of probe IDs to convert.
-#' @param annot_table Data frame with columns "probe_type" and "hgnc_symbol".
-#'   The probe_type matches the type of IDs in probes.
+#' @param probes Character vector of gene/transcript identifiers to retrieve annotation for.
+#' @param organism Organism name, e.g. "hsapiens_gene_ensembl".
+#' @param probe_type Character specifying the type of input identifiers. If NULL,
+#' it will be automatically detected. Options are "ensembl_gene_id", "ensembl_transcript_id", etc.
+#' @param mart BioMart object specifying the database to query.
+#' @param verbose Logical indicating whether to print status messages.
 #'
-#' @import data.table
-#' @return Character vector of mapped HGNC gene symbols.
+#' @return Data frame with gene annotation data for the input identifiers. Columns are:
+#' \itemize{
+#'   \item \code{feature}: The probe identifier.
+#'   \item \code{symbol}: Human readable gene name.
+#'   \item \code{human_ortholog}: Gene symbol for human. Only present if working with non-human dataset.
+#'   \item \code{gene_title}: Gene description
+#'   \item \code{gene_biotype}: Gene biotype
+#'   \item \code{chr}: Chromosome
+#'   \item \code{pos}: Transcript start position
+#'   \item \code{tx_len}: Transcript length
+#'   \item \code{map}: Chromosome band
+#'   \item \code{gene_name}: equivalent to the rownames. Kept for back compatibility
+#' }
 #'
-#' @details The annot_table should contain a column with the probe IDs
-#'   (matching type of probes input) and a column with the corresponding HGNC
-#'   gene symbols. This function matches the input probes to the table
-#'   to retrieve the gene symbols. Unmatched probes are returned as is.
+#' @details This function queries BioMart to retrieve key gene annotation data for
+#' a set of input gene/transcript identifiers. It can detect the identifier
+#' type automatically if not provided.
+#'
+#'
 #' @examples
 #' \dontrun{
 #' probes <- c("ENSG00000142192", "ENST00000288602")
-#' annot_table <- data.frame(
-#'   ensembl_gene_id = c("ENSG00000142192", "ENSG00000099977"),
-#'   hgnc_symbol = c("EGFR", "CDKN2A")
-#' )
-#' symbols <- probe2symbol(probes, annot_table)
+#' mart <- biomaRt::useMart("ensembl")
+#' result <- ngs.getGeneAnnotation(probes, mart)
+#' head(result)
 #' }
-#' @import data.table
 #' @export
-probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE) {
-  # Prepare inputs
-  query_col <- annot_table[probes, query]
+ngs.getGeneAnnotation_BIOMART <- function(
+    organism,
+    probes,
+    probe_type = NULL,
+    mart = NULL,
+    verbose = TRUE)
+{
 
-  # Deal with NA
-  if (fill_na) {
-    query_col <- data.table::fifelse(query_col == "" | is.na(query_col),
-      yes = probes,
-      no = query_col
+  ## Check mart
+  if (is.null(mart)) {
+    mart <- use_mart(organism)
+  }
+
+  # Prepare inputs
+  if (verbose) {
+    message("[ngs.getGeneAnnotation_BIOMART] Retrieving gene annotation...")
+  }
+
+  clean_probes <- probes[!duplicated(probes)]
+
+  if (is.null(probe_type)) {
+    ##  probe_type <- detect_probetype.BIOMART(probes, mart)
+    probe_type <- guess_probetype(probes, for.biomart=TRUE)    
+  }
+  message("probe_type = ",probe_type)
+  
+  # Select attributes
+  attr_call <- c(
+    probe_type,
+    "external_gene_name", # gene_name
+    "description", # gene_title
+    "gene_biotype", # gene_biotype
+    "chromosome_name", # chr
+    "transcript_start", # pos
+    "transcript_length", # tx_len
+    "band" # map
+  )
+  attr_call <- attr_call[!duplicated(attr_call)]
+
+  # Get the gene annotations
+  annot <- biomaRt::getBM(
+    attributes = attr_call,
+    filters = probe_type,
+    values = clean_probes,
+    mart = mart
+  )
+  annot <- data.table::data.table(annot)
+  annot[[probe_type]] <- as.character(annot[[probe_type]])
+  
+  # Get homologs if working with non-human dataset
+  # This should come as separate call because attr belong to diff. page
+  if (!mart@dataset == "hsapiens_gene_ensembl") {
+    annot_homologs <- biomaRt::getBM(
+      attributes = c("external_gene_name", "hsapiens_homolog_associated_gene_name"),
+      filters = "external_gene_name",
+      values = annot[!is.na(external_gene_name), external_gene_name],
+      mart = mart
+    )
+    annot_homologs <- data.table::data.table(annot_homologs)
+    data.table::setnames(annot_homologs,
+      old = "hsapiens_homolog_associated_gene_name",
+      new = "human_ortholog"
+    )
+    annot <- annot[annot_homologs, on = "external_gene_name", mult = "first"]
+  } else {
+    ## annot$human_ortholog <- annot$external_gene_name
+  }
+
+  # Join with clean_probes vector
+  out <- annot[clean_probes, on = probe_type, mult = "first"]
+
+  # Renaming for backwards compatibility
+  if (probe_type != "external_gene_name") {
+    new_names <- c(
+      "feature",
+      "symbol",
+      "gene_title",
+      "gene_biotype",
+      "chr",
+      "pos",
+      "tx_len",
+      "map"
+    )
+  } else {
+    new_names <- c(
+      "feature",
+      "gene_title",
+      "gene_biotype",
+      "chr",
+      "pos",
+      "tx_len",
+      "map"
+    )
+    out[, symbol := external_gene_name]
+  }
+  data.table::setnames(out, old = attr_call, new = new_names)
+
+  # Reorder columns and rows
+  if ("human_ortholog" %in% colnames(out)) {
+    col_order <- c(
+      "feature",
+      "symbol",
+      "human_ortholog",
+      "gene_title",
+      "gene_biotype"
+    )
+  } else {
+    col_order <- c(
+      "feature",
+      "symbol",
+      "gene_title",
+      "gene_biotype"
     )
   }
+  data.table::setcolorder(out, col_order)
+  data.table::setkeyv(out, "feature")
 
-  # Return queryed col
-  return(query_col)
-}
+  # Take out the source info from gene_title
+  out[, c("gene_title", "source") :=
+    data.table::tstrsplit(gene_title, "\\[", keep = 1:2)]
+  out[, source := gsub("\\]", "", source)]
 
-use_mart <- function(organism) {
-  organism <- capitalize(organism) ## in utils.R
-  message("[use_mart] connecting to bioMART server for organism ", organism)
-  species_info <- playbase::SPECIES_TABLE[species_name == organism]
-  # Some species appear in more than one mart, select ensembl only to avoid confusion
-  if (nrow(species_info) > 1) {
-    species_info <- species_info[mart == "ensembl"]
-    species_info <- species_info[1, ]
+  if (organism == "Saccharomyces cerevisiae") {
+    out[, gene_title := data.table::tstrsplit(gene_title, ";", keep = 1)]
   }
-  ensembl <- biomaRt::useEnsembl(biomart = "ensembl")
-  mart <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
-  return(mart)
+  out[, gene_title := trimws(gene_title, which = "right")]
+  # Keep it for back compatibility
+  out[, gene_name := feature]
+
+  # Return as data.frame and in the same order as input probes
+  out <- as.data.frame(out)
+  rownames(out) <- out$feature
+  out <- out[probes, , drop = FALSE]
+
+  ## info
+  out$source <- mart@dataset
+
+  return(out)
 }
 
-#' Guess probe type
+#' Get gene annotation data using AnnotationHub/OrgDb
 #'
-#' This function tries to automatically detect the probe type of a set
-#' of input probes using regular exprssion or by testing mapping
-#' success against different identifier types in a BioMart database.
+#' Retrieves gene annotation information from AnnotationHub for a set of input
+#' gene/transcript identifiers.
 #'
-#' @param probes Character vector of probes to detect type for.
-#' @param mart BioMart object specifying the database to use for mapping.
-#' @param verbose Logical indicating whether to print progress messages.
+#' @param probes Character vector of gene/transcript identifiers to retrieve annotation for.
+#' @param organism Organism name, e.g. "hsapiens_gene_ensembl".
+#' @param probe_type Character specifying the type of input identifiers. If NULL,
+#' it will be automatically detected. Options are "ensembl_gene_id", "ensembl_transcript_id", etc.
+#' @param mart BioMart object specifying the database to query.
+#' @param verbose Logical indicating whether to print status messages.
 #'
-#' @return The probe type with the best mapping performance. One of:
+#' @return Data frame with gene annotation data for the input identifiers. Columns are:
 #' \itemize{
-#'  \item ensembl_transcript_id
-#'  \item ensembl_transcript_id_version
-#'  \item ensembl_gene_id
-#'  \item ensembl_gene_id_version
-#'  \item uniprot_gn_id
-#'  \item refseq_peptide
-#'  \item refseq_mrna
-#'  \item hgnc_symbol
+#'   \item \code{feature}: The probe identifier.
+#'   \item \code{sybmol}: Human readable gene name.
+#'   \item \code{human_homolog}: Gene symbol for human. Only present if working with non-human dataset.
+#'   \item \code{gene_title}: Gene description
+#'   \item \code{gene_biotype}: Gene biotype
+#'   \item \code{chr}: Chromosome
+#'   \item \code{pos}: Transcript start position
+#'   \item \code{tx_len}: Transcript length
+#'   \item \code{map}: Chromosome band
+#'   \item \code{gene_name}: equivalent to the rownames. Kept for back compatibility
 #' }
 #'
-#' @details
-#' This function subsamples a subset of the input probes and tries mapping
-#' them to each identifier type in the specified BioMart database. It returns
-#' the type with the maximum number of mapped probes.
+#' @details This function queries BioMart to retrieve key gene annotation data for
+#' a set of input gene/transcript identifiers. It can detect the identifier
+#' type automatically if not provided.
+#'
 #'
 #' @examples
 #' \dontrun{
-#' library(playbase)
-#' library(biomaRt)
-#' # list databases
-#' listEnsembl(version = 110)
-#' # use genes database
-#' ensembl <- useEnsembl(biomart = "genes", version = 110)
-#' # here we see a list of 214 species available in ensembl
-#' datasets <- listDatasets(ensembl)
-#' # here we can select between 214 species
-#' dataset_hsa <- searchDatasets(mart = ensembl, pattern = "hsapiens")
-#' ensembl_species <- useDataset(dataset = dataset_hsa$dataset, mart = ensembl)
-#' probes <- c(
-#'   "ENSG00000230915.1", "ENSG00000275728.1", "ENSG00000277599.1",
-#'   "ENSG00000186163.9", "ENSG00000164823.11", "ENSG00000274234.1",
-#'   "ENSG00000282461.1", "ENSG00000283056.1", "ENSG00000239021.1",
-#'   "ENSG00000214268.2", "ENSG00000206687.1", "ENSG00000171148.14",
-#'   "ENSG00000250027.1", "ENSG00000244217.1", "ENSG00000103502.14",
-#'   "ENSG00000213178.3", "ENSG00000235059.5", "ENSG00000204555.3",
-#'   "ENSG00000221044.2", "ENSG00000267162.1"
-#' )
-#' type <- detect_probe(probes, mart = ensembl_species)
+#' probes <- c("ENSG00000142192", "ENST00000288602")
+#' mart <- biomaRt::useMart("ensembl")
+#' result <- ngs.getGeneAnnotation(probes, mart)
+#' head(result)
 #' }
-#'
 #' @export
-guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
-  best.match <- function(type.regex, avg.min = 0.33) {
-    avg.match <- sapply(type.regex, function(s) mean(grepl(s, probes)))
-    probe_type <- ""
-    if (any(avg.match > 0.5)) {
-      probe_type <- names(which.max(avg.match))
-    }
-    probe_type
+ngs.getGeneAnnotation_ANNOTHUB <- function(
+    organism,
+    probes,
+    probe_type = NULL,
+    verbose = TRUE) {
+
+  # Prepare inputs
+  if (verbose) {
+    message("[ngs.getGeneAnnotation_ANNOTHUB] Retrieving gene annotation...")
   }
-  probe_type <- ""
+  require(AnnotationHub)
+  require(GO.db)
 
-  ## 0. Matching: worm, fly, yeast
-  type.regex <- list(
-    "ENSEMBL" = "^WBGene|^FBgn0|^Y[A-Z][LR]" ## worm, fly, yeast
-  )
-  probe_type <- best.match(type.regex, 0.33)
-
-
-  ## 1. determine probe type using regular expression
-  if (probe_type == "") {
-    probe_type <- xbioc::idtype(probes)
-  }
-
-  ## 2. match with human/mouse/rat genesets
-  if (probe_type == "") {
-    ## matches SYMBOL for human, mouse and rat
-    symbol <- as.list(org.Hs.eg.db::org.Hs.egSYMBOL)
-    avg.match <- mean(toupper(probes) %in% symbol)
-    avg.match
-    if (avg.match > 0.3) probe_type <- "SYMBOL"
-  }
-
-  ## 3. check if they are proteins
-  if (probe_type == "") {
-    type.regex <- list(
-      "UNIPROT" = "^[OPQ][0-9]",
-      "REFSEQ"  = "^N[MP]_[0-9]+$"
-    )
-    probe_type <- best.match(type.regex, 0.33)
-  }
-
-  KEYTYPES <- c("ENSEMBL", "ENSEMBLPROT", "ENSEMBLTRANS", "ENTREZID", "REFSEQ", "SYMBOL", "UNIPROT")
-  if (!probe_type %in% KEYTYPES) {
-    warning("[guess_probetype] ERROR : unsupported probe_type: ", probe_type)
-    warning("[guess_probetype] keytypes available: ", paste(KEYTYPES, collapse = " "))
-    return(NULL)
-  }
-
-  ## for biomart we have different nomenclature
-  if (for.biomart) {
-    keytype2biomart <- c(
-      "ENSEMBL" = "ensembl_gene_id",
-      "ENSEMBLTRANS" = "ensembl_transcript_id",
-      "ENSEMBLPROT" = "ensembl_peptide_id",
-      "SYMBOL" = "external_gene_name",
-      "UNIPROT" = "uniprot_gn_id",
-      ## "REFSEQPROT"   = "refseq_peptide",
-      "REFSEQ" = "refseq_mrna"
-    )
-    probe_type <- keytype2biomart[probe_type]
-
-    ## add version if versioned
-    if (probe_type %in% c("ensembl_gene_id", "ensembl_transcript_id")) {
-      has.version <- (mean(grepl("[.][0-9]+$", probes)) > 0.8)
-      if (has.version) probe_type <- paste0(probe_type, "_version")
-    }
-  }
-
-  if (is.null(probe_type) || probe_type == "") {
-    warning("[guess_probe] Could not guess probe_type. Please provide.")
-  } else {
-    message("[guess_probe] auto-detected probe_type = ", probe_type)
-  }
-  probe_type
-}
-
-#' @export
-guess_organism <- function(probes) {
-  org.regex <- list(
-    "Human" = "^ENSG|^ENST|^[A-Z]+[0-9]*$",
-    "Mouse" = "^ENSMUS|^[A-Z][a-z]{2,}",
-    "Rat" = "^ENSRNO|^[A-Z][a-z]{2,}",
-    "Caenorhabditis elegans" = "^WBGene",
-    "Drosophila melanogaster" = "^FBgn0",
-    "Saccharomyces cerevisiae" = "^Y[A-P][RL]"
-  )
-  org.match <- function(probes, org) {
-    mean(grepl(org.regex[[org]], probes))
-  }
-  avg.match <- sapply(names(org.regex), function(g) org.match(probes, g))
-  avg.match
-
-  if (any(avg.match > 0.33)) {
-    organism <- names(which.max(avg.match))
-  } else {
-    organism <- NULL
-  }
-  if (is.null(organism)) {
-    warning("[guess_organism] Could not auto-detect organism.")
-  } else {
-    message("[guess_organism] auto-detected organism = ", organism)
-  }
+  if( tolower(organism) == 'human') organism <- "Homo sapiens"
+  if( tolower(organism) == 'mouse') organism <- "Mus musculus"
+  if( tolower(organism) == 'rat')   organism <- "Rattus norvegicus"
   organism
+  
+  ## Load the annotation resource.
+  ah <- AnnotationHub::AnnotationHub()
+  cat("querying AnnotationHub for",organism,"\n")
+  ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
+
+  ## select on exact organism name
+  ahDb <- ahDb[ which(tolower(ahDb$species) == tolower(organism))]
+  k <- length(ahDb)
+  cat("selecting database for",ahDb$species[k],"\n")
+  orgdb <- ahDb[[k]]  ## last one, newest version
+  keytypes(orgdb)
+
+  if(is.null(probes)) probes <- keys(orgdb)
+  probes0 <- probes
+  probes <- probes[!is.na(probes) & probes!=""]
+  if(sum(duplicated(probes)) > 0) {
+    message("WARNING: duplicated probes")
+    probes <- unique(probes)
+  }
+
+  if(is.null(probe_type)) {
+    probe_type <- guess_probetype(probes, organism=organism)
+  }
+  message("probe_type = ",probe_type)
+  
+  ##--------------------------------------------
+  ## retrieve table
+  ##--------------------------------------------  
+  cols <- c("SYMBOL", "GENENAME","GENETYPE","ENTREZID",
+    ## "ALIAS", "ACCNUM","REFSEQ",  ## balloon warning!!!
+    "ENSEMBL","ENSEMBLPROT","UNIPROT",
+    "GENETYPE","MAP","MGI")
+  mean_transcript <- mean(grepl("ENS[A-Z]*T[0]",probes))
+  mean_transcript
+  is_transcript <- (mean_transcript > 0.33)
+  if(is_transcript) {
+    ## add transcript/peptide level
+    cols <- c(cols, "ENSEMBLTRANS")
+  }
+  cols <- intersect(cols, keytypes(orgdb))
+
+  cat("get gene annotation columns:",cols,"\n")
+  if(is.null(probe_type)) {
+    eg <- keys(orgdb)
+    cat("retrieving annotation for",length(eg),"features...\n")
+    annot <- select(orgdb, keys=eg, columns=cols, keytype="ENTREZID")
+    cat("got",length(unique(annot$SYMBOL)),"unique SYMBOLs...\n")
+
+    ##--------------------------------------------
+    ## determine probe type and map to given probes
+    ##--------------------------------------------
+    type_cols <- c("SYMBOL","ENTREZID","ACCNUM","REFSEQ",  
+      "ENSEMBL","ENSEMBLTRANS","MGI","ENSEMBLPROT","UNIPROT")
+    type_cols <- intersect(type_cols, colnames(annot))
+    type_cols
+    match_probes <- apply(annot[,type_cols], 2, function(x) mean(probes %in% x[!is.na(x)]))
+    match_probes  
+    probe_type <- names(which(match_probes > 0.5 & match_probes == max(match_probes, na.rm=TRUE)))
+    probe_type
+    if(length(probe_type)==0) {
+      message("ERROR: could match probe type")
+      return(NULL)
+    }
+    probe_type <- probe_type[1]
+    cat("guessing probe type is",probe_type,"\n")
+  } else {
+    message("probe_type = ",probe_type)    
+    message("retrieving annotation for",length(probes),"features...")
+    annot <- select(orgdb, keys=probes, columns=cols, keytype=probe_type)
+  }
+
+  ## match annotation table to probes
+  cat("got",length(unique(annot$SYMBOL)),"unique SYMBOLs...\n")  
+  annot <- annot[match(probes, annot[,probe_type]),]
+  annot$PROBE <- probes
+
+  ##--------------------------------------------
+  ## get human ortholog using 'orthogene'
+  ##--------------------------------------------
+  ortho.map <- orthogene::map_species(method="gprofiler") 
+  head(ortho.map)
+  cat("\ngetting human orthologs...\n")  
+  if( organism != "Homo sapiens") {
+    if( !organism %in% ortho.map$scientific_name ) {
+      message("WARNING: ", organism, " not found in orthogene database. please check name.")
+    } else {
+      ortho.out <- orthogene::convert_orthologs(
+                                gene_df = unique(annot$SYMBOL),
+                                input_species = organism,
+                                output_species = "human",
+                                non121_strategy = "drop_both_species",
+                                method = "gprofiler") 
+      ii <- match(annot$SYMBOL, ortho.out$input_gene)
+      annot$ORTHOGENE <- rownames(ortho.out)[ii]
+    }
+  } else {
+    annot$ORTHOGENE <- annot$SYMBOL
+  }
+  
+  ## Return as standardized data.frame and in the same order as input
+  ## probes.
+  annot$SOURCE <- ahDb$dataprovider
+  annot.cols <- c("PROBE", "SYMBOL", "ORTHOGENE", "GENENAME", "GENETYPE", "MAP", "CHR", "POS", 
+    "TXLEN", "SOURCE", "SYMBOL")
+  missing.cols <- setdiff( annot.cols, colnames(annot))
+  missing.cols
+  out <- annot
+  for(a in missing.cols) out[[a]] <- NA
+  colnames(out)
+  out <- out[,annot.cols]
+  dim(out)
+  new.names <- c("feature","symbol", "human_ortholog","gene_title","gene_biotype",
+    "map", "chr","pos","tx_len","source","gene_name")
+  colnames(out) <- new.names
+  
+  out <- as.data.frame(out)
+  out <- out[match(probes0,out$feature), , drop = FALSE]
+  rownames(out) <- out$feature
+  return(out)
 }
 
-#' @export
-id2symbol <- function(probes, organism = "human") {
-  if (is.null(organism)) {
-    organism <- guess_organism(probes)
-    if (is.null(organism)) {
-      stop("could not determine organism. please specify.")
-    }
-  }
-  ## this auto-selects using ORG.DB or BIOMARRT
-  genes <- ngs.getGeneAnnotation(probes, organism = organism, use_biomart = NULL)
-  genes <- genes[match(probes, rownames(genes)), ] ## just to be sure
-  ## just return the symbol
-  genes$symbol
+
+if(0) {
+  organism = "Mouse"
+  probes = head(keys(orgdb),1000)
+
+  organism
+  head(probes)
+  
+  probe_type <- guess_probetype(probes)
+  probe_type2 <- guess_probetype(probes, for.biomart=TRUE)  
+  probe_type
+  probe_type2  
+  mart <- use_mart(organism)
+
+  a1 <- ngs.getGeneAnnotation_ORGDB(organism, probes, probe_type=NULL)
+  a2 <- ngs.getGeneAnnotation_BIOMART(organism, probes, mart=mart, probe_type=NULL)
+  a3 <- ngs.getGeneAnnotation_ANNOTHUB(organism, probes, probe_type=probe_type)
+
 }
 
 
@@ -626,6 +777,251 @@ pgx.custom_annotation <- function(counts, custom_annot = NULL) {
 }
 
 
+
+## ================================================================================
+## ========================= FUNCTIONS ============================================
+## ================================================================================
+
+
+#' Map probe identifiers to gene symbols
+#'
+#' This function converts a vector of probe identifiers to
+#' standard HGNC gene symbols using an annotation lookup table.
+#'
+#' @param probes Character vector of probe IDs to convert.
+#' @param annot_table Data frame with columns "probe_type" and "hgnc_symbol".
+#'   The probe_type matches the type of IDs in probes.
+#'
+#' @import data.table
+#' @return Character vector of mapped HGNC gene symbols.
+#'
+#' @details The annot_table should contain a column with the probe IDs
+#'   (matching type of probes input) and a column with the corresponding HGNC
+#'   gene symbols. This function matches the input probes to the table
+#'   to retrieve the gene symbols. Unmatched probes are returned as is.
+#' @examples
+#' \dontrun{
+#' probes <- c("ENSG00000142192", "ENST00000288602")
+#' annot_table <- data.frame(
+#'   ensembl_gene_id = c("ENSG00000142192", "ENSG00000099977"),
+#'   hgnc_symbol = c("EGFR", "CDKN2A")
+#' )
+#' symbols <- probe2symbol(probes, annot_table)
+#' }
+#' @import data.table
+#' @export
+probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE) {
+  # Prepare inputs
+  query_col <- annot_table[probes, query]
+
+  # Deal with NA
+  if (fill_na) {
+    query_col <- data.table::fifelse(query_col == "" | is.na(query_col),
+      yes = probes,
+      no = query_col
+    )
+  }
+
+  # Return queryed col
+  return(query_col)
+}
+
+use_mart <- function(organism) {
+  ##organism <- capitalize(organism) ## in utils.R
+  organism <- sub("[H|h]omo sapiens","Human",organism)
+  organism <- sub("[M|m]us musculus","Mouse",organism)
+  organism <- sub("[R|r]attus norvegicus","Rat",organism)    
+  message("[use_mart] connecting to bioMART server for organism ", organism)
+  species_info <- playbase::SPECIES_TABLE[tolower(species_name) == tolower(organism)]
+  # Some species appear in more than one mart, select ensembl only to avoid confusion
+  if (nrow(species_info) > 1) {
+    species_info <- species_info[mart == "ensembl"]
+    species_info <- species_info[1, ]
+  }
+  ensembl <- biomaRt::useEnsembl(biomart = "ensembl")
+  mart <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
+  return(mart)
+}
+
+#' Guess probe type
+#'
+#' This function tries to automatically detect the probe type of a set
+#' of input probes using regular exprssion or by testing mapping
+#' success against different identifier types in a BioMart database.
+#'
+#' @param probes Character vector of probes to detect type for.
+#' @param mart BioMart object specifying the database to use for mapping.
+#' @param verbose Logical indicating whether to print progress messages.
+#'
+#' @return The probe type with the best mapping performance. One of:
+#' \itemize{
+#'  \item ensembl_transcript_id
+#'  \item ensembl_transcript_id_version
+#'  \item ensembl_gene_id
+#'  \item ensembl_gene_id_version
+#'  \item uniprot_gn_id
+#'  \item refseq_peptide
+#'  \item refseq_mrna
+#'  \item hgnc_symbol
+#' }
+#'
+#' @details
+#' This function subsamples a subset of the input probes and tries mapping
+#' them to each identifier type in the specified BioMart database. It returns
+#' the type with the maximum number of mapped probes.
+#'
+#' @examples
+#' \dontrun{
+#' library(playbase)
+#' library(biomaRt)
+#' # list databases
+#' listEnsembl(version = 110)
+#' # use genes database
+#' ensembl <- useEnsembl(biomart = "genes", version = 110)
+#' # here we see a list of 214 species available in ensembl
+#' datasets <- listDatasets(ensembl)
+#' # here we can select between 214 species
+#' dataset_hsa <- searchDatasets(mart = ensembl, pattern = "hsapiens")
+#' ensembl_species <- useDataset(dataset = dataset_hsa$dataset, mart = ensembl)
+#' probes <- c(
+#'   "ENSG00000230915.1", "ENSG00000275728.1", "ENSG00000277599.1",
+#'   "ENSG00000186163.9", "ENSG00000164823.11", "ENSG00000274234.1",
+#'   "ENSG00000282461.1", "ENSG00000283056.1", "ENSG00000239021.1",
+#'   "ENSG00000214268.2", "ENSG00000206687.1", "ENSG00000171148.14",
+#'   "ENSG00000250027.1", "ENSG00000244217.1", "ENSG00000103502.14",
+#'   "ENSG00000213178.3", "ENSG00000235059.5", "ENSG00000204555.3",
+#'   "ENSG00000221044.2", "ENSG00000267162.1"
+#' )
+#' type <- detect_probe(probes, mart = ensembl_species)
+#' }
+#'
+#' @export
+guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
+  best.match <- function(type.regex, avg.min = 0.33) {
+    avg.match <- sapply(type.regex, function(s) mean(grepl(s, probes)))
+    probe_type <- ""
+    if (any(avg.match > 0.5)) {
+      probe_type <- names(which.max(avg.match))
+    }
+    probe_type
+  }
+  probe_type <- ""
+
+  ## 0. Matching: worm, fly, yeast
+  type.regex <- list(
+    "ENSEMBL" = "^WBGene|^FBgn0|^Y[A-Z][LR]" ## worm, fly, yeast
+  )
+  probe_type <- best.match(type.regex, 0.33)
+  probe_type
+
+  ## 1. determine probe type using regular expression
+  if (probe_type == "") {
+    probe_type <- xbioc::idtype(probes)
+  }
+  probe_type
+  
+  ## 2. match with human/mouse/rat genesets
+  if (probe_type == "") {
+    ## matches SYMBOL for human, mouse and rat
+    symbol <- as.list(org.Hs.eg.db::org.Hs.egSYMBOL)
+    avg.match <- mean(toupper(probes) %in% symbol)
+    avg.match
+    if (avg.match > 0.3) probe_type <- "SYMBOL"
+  }
+  probe_type
+  
+  ## 3. check if they are proteins
+  if (probe_type == "") {
+    type.regex <- list(
+      "UNIPROT" = "^[OPQ][0-9]",
+      "REFSEQ"  = "^N[MP]_[0-9]+$"
+    )
+    probe_type <- best.match(type.regex, 0.33)
+  }
+
+  KEYTYPES <- c("ENSEMBL", "ENSEMBLPROT", "ENSEMBLTRANS", "ENTREZID", "REFSEQ", "SYMBOL", "UNIPROT")
+  if (!probe_type %in% KEYTYPES) {
+    warning("[guess_probetype] ERROR : unsupported probe_type: ", probe_type)
+    warning("[guess_probetype] keytypes available: ", paste(KEYTYPES, collapse = " "))
+    return(NULL)
+  }
+
+  ## for biomart we have different nomenclature
+  if (for.biomart) {
+    keytype2biomart <- c(
+      "ENTREZID" = "entrezgene_id",
+      "ENSEMBL" = "ensembl_gene_id",      
+      "ENSEMBLTRANS" = "ensembl_transcript_id",
+      "ENSEMBLPROT" = "ensembl_peptide_id",
+      "SYMBOL" = "external_gene_name",
+      "UNIPROT" = "uniprot_gn_id",
+      ## "REFSEQPROT"   = "refseq_peptide",
+      "REFSEQ" = "refseq_mrna"
+    )
+    probe_type <- keytype2biomart[probe_type]
+    probe_type
+
+    ## add version if versioned
+    if (probe_type %in% c("ensembl_gene_id", "ensembl_transcript_id")) {
+      has.version <- (mean(grepl("[.][0-9]+$", probes)) > 0.8)
+      if (has.version) probe_type <- paste0(probe_type, "_version")
+    }
+  }
+  probe_type <- as.character(probe_type)
+  if (is.null(probe_type) || probe_type == "") {
+    warning("[guess_probe] Could not guess probe_type. Please provide.")
+  } else {
+    message("[guess_probe] auto-detected probe_type = ", probe_type)
+  }
+  return(probe_type)
+}
+
+#' @export
+guess_organism <- function(probes) {
+  org.regex <- list(
+    "Human" = "^ENSG|^ENST|^[A-Z]+[0-9]*$",
+    "Mouse" = "^ENSMUS|^[A-Z][a-z]{2,}",
+    "Rat" = "^ENSRNO|^[A-Z][a-z]{2,}",
+    "Caenorhabditis elegans" = "^WBGene",
+    "Drosophila melanogaster" = "^FBgn0",
+    "Saccharomyces cerevisiae" = "^Y[A-P][RL]"
+  )
+  org.match <- function(probes, org) {
+    mean(grepl(org.regex[[org]], probes))
+  }
+  avg.match <- sapply(names(org.regex), function(g) org.match(probes, g))
+  avg.match
+
+  if (any(avg.match > 0.33)) {
+    organism <- names(which.max(avg.match))
+  } else {
+    organism <- NULL
+  }
+  if (is.null(organism)) {
+    warning("[guess_organism] Could not auto-detect organism.")
+  } else {
+    message("[guess_organism] auto-detected organism = ", organism)
+  }
+  organism
+}
+
+#' @export
+id2symbol <- function(probes, organism = "human") {
+  if (is.null(organism)) {
+    organism <- guess_organism(probes)
+    if (is.null(organism)) {
+      stop("could not determine organism. please specify.")
+    }
+  }
+  ## this auto-selects using ORG.DB or BIOMARRT
+  genes <- ngs.getGeneAnnotation(probes, organism = organism, use_biomart = NULL)
+  genes <- genes[match(probes, rownames(genes)), ] ## just to be sure
+  ## just return the symbol
+  genes$symbol
+}
+
+
+
 #' @title Detect probe type from probe set
 #' @description Detects the most likely probe type (ENSEMBL, SYMBOL, etc)
 #' for a set of gene/transcript identifiers.
@@ -647,7 +1043,6 @@ pgx.custom_annotation <- function(counts, custom_annot = NULL) {
 #' type <- detect_probetype.ORGDB(probes, organism)
 #' }
 #' @export
-
 detect_probetype.ORGDB <- function(probes, organism) {
   warning("DEPRECATED. Please use guess_probetype")
 
@@ -715,11 +1110,6 @@ detect_probetype.ORGDB <- function(probes, organism) {
 
   return(top_match)
 }
-
-
-## ================================================================================
-## ========================= DEPRECATED ===========================================
-## ================================================================================
 
 
 #' Detect probe type
@@ -801,11 +1191,11 @@ detect_probetype.BIOMART <- function(probes, mart = NULL, verbose = TRUE) {
     "ensembl_transcript_id_version",
     "ensembl_peptide_id",
     "external_gene_name",
-    "uniprot_gn_id",
+    "entrezgene_id",
+    "uniprot_gn_id",    
     "refseq_peptide",
     "refseq_mrna"
   )
-
 
   # often we see multiples probes at once
   # initially we can try to detect as many probes as possible from each probe type
@@ -878,7 +1268,7 @@ detect_probetype.BIOMART <- function(probes, mart = NULL, verbose = TRUE) {
 #' check_known_probes(probes, NULL)
 #'
 #' @export
-check_known_probes <- function(probes, probe_types_to_check = NULL) {
+check_known_probes.NOTUSED <- function(probes, probe_types_to_check = NULL) {
   # Check higher animals ENSEMBL notation
   if (sum(grepl("^ENS*", probes)) > length(probes) * 0.5) {
     probe_types_to_check <- c(
@@ -910,308 +1300,4 @@ check_known_probes <- function(probes, probe_types_to_check = NULL) {
   }
 
   return(probe_types_to_check)
-}
-
-#' Get gene annotation data
-#'
-#' Retrieves gene annotation information from BioMart for a set of input
-#' gene/transcript identifiers.
-#'
-#' @param probes Character vector of gene/transcript identifiers to retrieve annotation for.
-#' @param organism Organism name, e.g. "hsapiens_gene_ensembl".
-#' @param probe_type Character specifying the type of input identifiers. If NULL,
-#' it will be automatically detected. Options are "ensembl_gene_id", "ensembl_transcript_id", etc.
-#' @param mart BioMart object specifying the database to query.
-#' @param verbose Logical indicating whether to print status messages.
-#'
-#' @return Data frame with gene annotation data for the input identifiers. Columns are:
-#' \itemize{
-#'    \item \code{feature}: The probe identifier.
-#'   \item \code{sybmol}: Human readable gene name.
-#'   \item \code{human_homolog}: Gene symbol for human. Only present if working with non-human dataset.
-#'   \item \code{gene_title}: Gene description
-#'   \item \code{gene_biotype}: Gene biotype
-#'   \item \code{chr}: Chromosome
-#'   \item \code{pos}: Transcript start position
-#'   \item \code{tx_len}: Transcript length
-#'   \item \code{map}: Chromosome band
-#'   \item \code{gene_name}: equivalent to the rownames. Kept for back compatibility
-#' }
-#'
-#' @details This function queries BioMart to retrieve key gene annotation data for
-#' a set of input gene/transcript identifiers. It can detect the identifier
-#' type automatically if not provided.
-#'
-#'
-#' @examples
-#' \dontrun{
-#' probes <- c("ENSG00000142192", "ENST00000288602")
-#' mart <- biomaRt::useMart("ensembl")
-#' result <- ngs.getGeneAnnotation(probes, mart)
-#' head(result)
-#' }
-#' @export
-ngs.getGeneAnnotation_BIOMART <- function(
-    probes,
-    organism,
-    probe_type = NULL,
-    mart = NULL,
-    verbose = TRUE) {
-  # Check mart
-  if (is.null(mart)) {
-    stop("[ngs.getGeneAnnotation_BIOMART] Mart not found. Please specify a BioMart database.")
-  }
-
-  # Prepare inputs
-  if (verbose) {
-    message("[ngs.getGeneAnnotation_BIOMART] Filling genes information...")
-  }
-
-  clean_probes <- probes[!duplicated(probes)]
-
-  if (is.null(probe_type)) {
-    probe_type <- detect_probe(probes, mart)
-  }
-
-  # Select attributes
-  attr_call <- c(
-    probe_type,
-    "external_gene_name", # gene_name
-    "description", # gene_title
-    "gene_biotype", # gene_biotype
-    "chromosome_name", # chr
-    "transcript_start", # pos
-    "transcript_length", # tx_len
-    "band" # map
-  )
-  attr_call <- attr_call[!duplicated(attr_call)]
-
-  # Get the gene annotations
-  annot <- biomaRt::getBM(
-    attributes = attr_call,
-    filters = probe_type,
-    values = clean_probes,
-    mart = mart
-  )
-  annot <- data.table::data.table(annot)
-
-  # Get homologs if working with non-human dataset
-  # This should come as separate call because attr belong to diff. page
-  if (!mart@dataset == "hsapiens_gene_ensembl") {
-    annot_homologs <- biomaRt::getBM(
-      attributes = c("external_gene_name", "hsapiens_homolog_associated_gene_name"),
-      filters = "external_gene_name",
-      values = annot[!is.na(external_gene_name), external_gene_name],
-      mart = mart
-    )
-    annot_homologs <- data.table::data.table(annot_homologs)
-    data.table::setnames(annot_homologs,
-      old = "hsapiens_homolog_associated_gene_name",
-      new = "human_ortholog"
-    )
-    annot <- annot[annot_homologs, on = "external_gene_name", mult = "first"]
-  }
-
-  # Join with clean_probes vector
-  out <- annot[clean_probes, on = probe_type, mult = "first"]
-
-  # Renaming for backwards compatibility
-  if (probe_type != "external_gene_name") {
-    new_names <- c(
-      "feature",
-      "symbol",
-      "gene_title",
-      "gene_biotype",
-      "chr",
-      "pos",
-      "tx_len",
-      "map"
-    )
-  } else {
-    new_names <- c(
-      "feature",
-      "gene_title",
-      "gene_biotype",
-      "chr",
-      "pos",
-      "tx_len",
-      "map"
-    )
-    out[, symbol := external_gene_name]
-  }
-  data.table::setnames(out, old = attr_call, new = new_names)
-
-  # Reorder columns and rows
-  if ("human_ortholog" %chin% colnames(out)) {
-    col_order <- c(
-      "feature",
-      "symbol",
-      "human_ortholog",
-      "gene_title",
-      "gene_biotype"
-    )
-  } else {
-    col_order <- c(
-      "feature",
-      "symbol",
-      "gene_title",
-      "gene_biotype"
-    )
-  }
-  data.table::setcolorder(out, col_order)
-  data.table::setkeyv(out, "feature")
-
-  # Take out the source info from gene_title
-  out[, c("gene_title", "source") :=
-    data.table::tstrsplit(gene_title, "\\[", keep = 1:2)]
-  out[, source := gsub("\\]", "", source)]
-
-  if (organism == "Saccharomyces cerevisiae") {
-    out[, gene_title := data.table::tstrsplit(gene_title, ";", keep = 1)]
-  }
-  out[, gene_title := trimws(gene_title, which = "right")]
-  # Keep it for back compatibility
-  out[, gene_name := feature]
-
-  # Return as data.frame and in the same order as input probes
-  out <- as.data.frame(out)
-  rownames(out) <- out$feature
-  out <- out[probes, , drop = FALSE]
-  return(out)
-}
-
-
-#' Map probe identifiers to gene symbols
-#'
-#' This function converts a vector of probe identifiers to
-#' standard HGNC gene symbols using an annotation lookup table.
-#'
-#' @param probes Character vector of probe IDs to convert.
-#' @param annot_table Data frame with columns "probe_type" and "hgnc_symbol".
-#'   The probe_type matches the type of IDs in probes.
-#'
-#' @import data.table
-#' @return Character vector of mapped HGNC gene symbols.
-#'
-#' @details The annot_table should contain a column with the probe IDs
-#'   (matching type of probes input) and a column with the corresponding HGNC
-#'   gene symbols. This function matches the input probes to the table
-#'   to retrieve the gene symbols. Unmatched probes are returned as is.
-#' @examples
-#' \dontrun{
-#' probes <- c("ENSG00000142192", "ENST00000288602")
-#' annot_table <- data.frame(
-#'   ensembl_gene_id = c("ENSG00000142192", "ENSG00000099977"),
-#'   hgnc_symbol = c("EGFR", "CDKN2A")
-#' )
-#' symbols <- probe2symbol(probes, annot_table)
-#' }
-#' @import data.table
-#' @export
-probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE) {
-  # Prepare inputs
-  query_col <- annot_table[probes, query]
-
-  # Deal with NA
-  if (fill_na) {
-    query_col <- data.table::fifelse(query_col == "" | is.na(query_col),
-      yes = probes,
-      no = query_col
-    )
-  }
-
-  # Return queryed col
-  return(query_col)
-}
-
-
-#' Retrieve gene annotation table
-#'
-#' @description Retrieves a gene annotation table for the given organism
-#' from Ensembl using biomaRt. Adds the table to the PGX object.
-#'
-#' @param pgx PGX object with a counts table.
-#' @param organism Char. Organism name. For more info see \code{\link{playbase::SPECIES_TABLE}}.
-#'
-#' @return Updated PGX object with gene annotation table
-#'
-#'
-#' @details Queries the Ensembl database to get a gene annotation table
-#' containing external gene IDs mapped to Ensembl IDs. Handles retries in case
-#' of temporary Ensembl API errors.
-#'
-#'
-#' @examples
-#' \dontrun{
-#' pgx <- list()
-#' pgx$counts <- matrix(rnorm(4), nrow = 2)
-#' rownames(pgx$counts) <- c("ENSG00000142192", "ENSG00000288602")
-#' pgx <- pgx.gene_table(pgx, "Human")
-#' }
-#' @export
-pgx.gene_table.OLD <- function(pgx, organism) {
-  # Safety checks
-  stopifnot(is.list(pgx))
-  stopifnot(is.character(organism))
-
-  # Init vals
-  genes <- NULL
-  ensembl_dataset <- NULL
-  counts <- pgx$counts
-  probes <- rownames(counts)
-  probe_type <- NA_character_
-  species_info <- playbase::SPECIES_TABLE[species_name == organism]
-
-  # Some species appear in more than one mart, select ensembl only to avoid confusion
-  if (nrow(species_info) > 1) {
-    species_info <- species_info[mart == "ensembl"]
-    species_info <- species_info[1, ]
-  }
-
-  # Use while loop for retries
-  counter <- 0
-  while (is.null(genes) && counter <= 5) {
-    message(paste0("[pgx.gene_table] attempt to annotate genes, counter = ", counter + 1))
-    # Set waiter so that we can make multiple calls with waiting time
-    Sys.sleep(counter * 10)
-
-    # Get ensembl
-    if (is.null(ensembl_dataset)) {
-      try({
-        ensembl <- biomaRt::useEnsembl(biomart = "ensembl")
-        ensembl_dataset <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
-      })
-    }
-
-    # Get probe type
-    if (!is.null(ensembl_dataset) & is.na(probe_type)) {
-      probe_type <- detect_probetype.BIOMART(probes, ensembl_dataset)
-    }
-
-    # Get gene table
-    if (!is.na(probe_type) & !is.null(ensembl_dataset)) {
-      genes <- ngs.getGeneAnnotation_BIOMART(
-        probes = probes,
-        organism = organism,
-        probe_type = probe_type,
-        mart = ensembl_dataset
-      )
-
-      all_genes <- biomaRt::getBM(attributes = "external_gene_name", mart = ensembl_dataset)
-      all_genes <- all_genes[, 1]
-    }
-    counter <- counter + 1
-  }
-
-  if (counter > 5 && is.null(genes)) {
-    message("[pgx.gene_table] WARNING. could not reach ensembl server to get gene annotation")
-    return(pgx)
-  }
-
-  # Return data
-  pgx$genes <- genes
-  pgx$all_genes <- all_genes ## Why need this?? unneeded baggage.. (IK)
-  pgx$probe_type <- probe_type ## Why need this?? unneeded baggage.. (IK)
-
-  return(pgx)
 }
