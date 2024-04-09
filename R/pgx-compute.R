@@ -932,8 +932,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     add.gmt <- custom.geneset$gmt
   }
 
-  ## Should we always add???
-  ##  if(!is.human && !is.mouse && !is.rat) {
+  ## Should we always add??? Only non-human, non-model?
+  ## if(!is.human && !is.mouse && !is.rat) {
   ## if(!is.human) {
   if(TRUE) {  
     ## add species GO genesets from AnnotationHub
