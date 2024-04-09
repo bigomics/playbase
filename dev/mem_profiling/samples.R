@@ -1,17 +1,12 @@
 library(playbase)
-library(profmem)
 
-
-options(profmem.threshold = 20000)
-n = dim(samples)[1]
-
+options(app.profile = TRUE)
 
 duplicate_samples <- function(n) {
     samples <- playbase::SAMPLES
     counts <- playbase::COUNTS
     contrasts <- playbase::CONTRASTS
 
-    
     # check that n is a multiple of samples
     if (n %% dim(samples)[1] != 0) {
         stop("n must be a multiple of the number of samples")
@@ -40,18 +35,22 @@ duplicate_samples <- function(n) {
 
 input <- duplicate_samples(n=18)
 
+
+Rprof(memory.profiling = TRUE)
+
 pgx <- playbase::pgx.createPGX(
- samples = input$samples,
- counts = input$counts,
- contrasts = input$contrasts
+    samples = input$samples,
+    counts = input$counts,
+    contrasts = input$contrasts
+)
+Rprof(NULL)
+
+pgx <- playbase::pgx.computePGX(
+    pgx = pgx
 )
 
-# Step 2. Populate pgx object with results
+Rprof(NULL)
 
-
-p <- profmem({
-    pgx <- playbase::pgx.computePGX(
-        pgx = pgx
-        )
-    })
+# summarize
+write.csv(summaryRprof(memory = "both"), "test.csv")
 
