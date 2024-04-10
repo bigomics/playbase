@@ -182,6 +182,10 @@ pgx.createPGX <- function(counts,
     stop("rownames of counts and X do not match\n")
   }
 
+  if(getOption("app.profile", FALSE)) {
+    Rprof(memory.profiling = TRUE)
+  }
+
   ## -------------------------------------------------------------------
   ## clean up input files
   ## -------------------------------------------------------------------
@@ -478,6 +482,10 @@ pgx.createPGX <- function(counts,
     pgx <- pgx.add_GMT(pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
   }
 
+  if(getOption("app.profile", FALSE)) {
+    Rprof(NULL)
+  }
+
   ### done
   return(pgx)
 }
@@ -541,6 +549,10 @@ pgx.computePGX <- function(pgx,
   }
   if (!all(grepl("_vs_", colnames(pgx$contrasts)))) {
     stop("[pgx.computePGX] FATAL:: all contrast names must include _vs_")
+  }
+
+  if (getOption("app.profile", FALSE)) {
+    Rprof(memory.profiling = TRUE)
   }
 
   contr.matrix <- playbase::contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
@@ -680,6 +692,10 @@ pgx.computePGX <- function(pgx,
     libx.dir = libx.dir,
     user_input_dir = user_input_dir
   )
+
+  if(getOption("app.profile", FALSE)) {
+    Rprof(NULL)
+  }
 
   message("[pgx.computePGX] done!")
 
