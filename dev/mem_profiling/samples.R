@@ -45,10 +45,8 @@ duplicate_samples <- function(n) {
 
 iterations = seq(1,101,10) * 18
 
-sapply(iterations, function(i) {
-    
+for(i in iterations) {
     input <- duplicate_samples(n=i)
-    
     pgx <- playbase::pgx.createPGX(
         samples = input$samples,
         counts = input$counts,
@@ -59,4 +57,4 @@ sapply(iterations, function(i) {
         pgx = pgx
     )
     write.csv(summaryRprof(memory = "tseries"), paste(output_dir,"sample_mem_compute_tseries_", i, ".csv", sep=""))
-})
+}
