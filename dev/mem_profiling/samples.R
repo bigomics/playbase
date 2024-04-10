@@ -2,6 +2,10 @@ library(playbase)
 
 options(app.profile = TRUE)
 
+output_dir <- getwd()
+
+# save in dev/mem_profiling
+output_dir <- paste0(output_dir, "/dev/mem_profiling/")
 
 duplicate_samples <- function(n) {
     samples <- playbase::SAMPLES
@@ -39,33 +43,20 @@ duplicate_samples <- function(n) {
 }
 
 
-iterations = 1:10 * 18
+iterations = seq(1,101,10) * 18
 
 sapply(iterations, function(i) {
-    #i=18
+    
     input <- duplicate_samples(n=i)
+    
     pgx <- playbase::pgx.createPGX(
         samples = input$samples,
         counts = input$counts,
         contrasts = input$contrasts
     )
-
-    write.csv(summaryRprof(memory = "both")$by.self, paste("sample_mem_create_", i, ".csv", sep=""))
-
+    write.csv(summaryRprof(memory = "tseries"), paste(output_dir,"sample_mem_create_tseries_", i, ".csv", sep=""))
     pgx <- playbase::pgx.computePGX(
         pgx = pgx
     )
+    write.csv(summaryRprof(memory = "tseries"), paste(output_dir,"sample_mem_compute_tseries_", i, ".csv", sep=""))
 })
-
-
-
-pgx <- playbase::pgx.computePGX(
-    pgx = pgx
-)
-
-summaryRprof(memory = "stats")
-
-write.csv(summaryRprof(memory = "both")$by.self, "mem_compute.csv")
-
-
-
