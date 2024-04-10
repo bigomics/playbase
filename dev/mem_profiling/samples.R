@@ -2,6 +2,7 @@ library(playbase)
 
 options(app.profile = TRUE)
 
+
 duplicate_samples <- function(n) {
     samples <- playbase::SAMPLES
     counts <- playbase::COUNTS
@@ -28,29 +29,43 @@ duplicate_samples <- function(n) {
     # add hash to rownames counts
     colnames(counts) <- paste(colnames(counts), hash, sep="_")
 
+    # add random noise in counts
+    noise_factor <- 0.05
+    counts <- counts + abs(rnorm(n = length(counts))* noise_factor)
+
     INPUTS_CHECKED <- pgx.crosscheckINPUT(samples, counts, contrasts)
 
     return(list(samples=INPUTS_CHECKED$SAMPLES, counts=INPUTS_CHECKED$COUNTS, contrasts=INPUTS_CHECKED$CONTRASTS))
 }
 
-input <- duplicate_samples(n=18)
+
+iterations = 1:10 * 18
+
+sapply(iterations, function(i) {
+    #i=18
+    input <- duplicate_samples(n=i)
+    pgx <- playbase::pgx.createPGX(
+        samples = input$samples,
+        counts = input$counts,
+        contrasts = input$contrasts
+    )
+
+    write.csv(summaryRprof(memory = "both")$by.self, paste("sample_mem_create_", i, ".csv", sep=""))
+
+    pgx <- playbase::pgx.computePGX(
+        pgx = pgx
+    )
+})
 
 
-Rprof(memory.profiling = TRUE)
-
-pgx <- playbase::pgx.createPGX(
-    samples = input$samples,
-    counts = input$counts,
-    contrasts = input$contrasts
-)
-Rprof(NULL)
 
 pgx <- playbase::pgx.computePGX(
     pgx = pgx
 )
 
-Rprof(NULL)
+summaryRprof(memory = "stats")
 
-# summarize
-write.csv(summaryRprof(memory = "both"), "test.csv")
+write.csv(summaryRprof(memory = "both")$by.self, "mem_compute.csv")
+
+
 
