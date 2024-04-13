@@ -10,6 +10,8 @@
 #' @export
 pgx.checkINPUT <- function(df,
                            type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")) {
+  a=1
+  browser()
   datatype <- match.arg(type)
   df_clean <- df
   PASS <- TRUE
@@ -89,6 +91,8 @@ pgx.checkINPUT <- function(df,
 
   if (datatype == "SAMPLES") {
     feature_names <- rownames(df_clean)
+    # replace "" by NA
+    df_clean[df_clean == ""] <- NA
 
     # check for duplicated rownames
     ANY_DUPLICATED <- unique(feature_names[which(duplicated(feature_names))])
@@ -210,6 +214,9 @@ pgx.crosscheckINPUT <- function(
     COUNTS = NULL,
     CONTRASTS = NULL,
     PASS = TRUE) {
+
+  a=2
+  browser()
   samples <- SAMPLES
   counts <- COUNTS
   contrasts <- CONTRASTS
