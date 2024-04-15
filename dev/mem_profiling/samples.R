@@ -2,6 +2,8 @@ library(playbase)
 
 options(app.profile = TRUE)
 
+print(getwd())
+
 output_dir <- getwd() # root playbase
 output_dir <- paste0(output_dir, "/dev/mem_profiling")
 
@@ -86,7 +88,7 @@ for(i in iterations) {
         do.clustergenesets = params$do.cluster,
         cluster.contrasts = params$cluster.contrasts,
         pgx.dir = params$pgx.save.folder,
-        libx.dir = params$libx.dir,
+        libx.dir = "./libx",
         user_input_dir = output_dir
     )
 
