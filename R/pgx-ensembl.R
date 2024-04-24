@@ -512,8 +512,8 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   if (verbose) {
     message("[ngs.getGeneAnnotation_ANNOTHUB] Retrieving gene annotation...")
   }
-  require(AnnotationHub)
-  require(GO.db)
+##  require(AnnotationHub)
+##  require(GO.db)
 
   if( tolower(organism) == 'human') organism <- "Homo sapiens"
   if( tolower(organism) == 'mouse') organism <- "Mus musculus"
@@ -521,16 +521,17 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   organism
   
   ## Load the annotation resource.
-  ah <- AnnotationHub::AnnotationHub()
-  cat("querying AnnotationHub for",organism,"\n")
-  ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
+  suppressMessages({
+    ah <- AnnotationHub::AnnotationHub()
+    cat("querying AnnotationHub for",organism,"\n")
+    ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
 
-  ## select on exact organism name
-  ahDb <- ahDb[ which(tolower(ahDb$species) == tolower(organism))]
-  k <- length(ahDb)
-  cat("selecting database for",ahDb$species[k],"\n")
-  orgdb <- ahDb[[k]]  ## last one, newest version
-  keytypes(orgdb)
+    ## select on exact organism name
+    ahDb <- ahDb[ which(tolower(ahDb$species) == tolower(organism))]
+    k <- length(ahDb)
+    cat("selecting database for",ahDb$species[k],"\n")
+    orgdb <- ahDb[[k]]  ## last one, newest version
+  })
 
   if(is.null(probes)) probes <- keys(orgdb)
   probes0 <- probes
@@ -764,8 +765,6 @@ pgx.custom_annotation <- function(counts, custom_annot = NULL) {
   return(custom_annot)
 }
 
-
-
 ## ================================================================================
 ## ========================= FUNCTIONS ============================================
 ## ================================================================================
@@ -829,6 +828,35 @@ use_mart <- function(organism) {
   ensembl <- biomaRt::useEnsembl(biomart = "ensembl")
   mart <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
   return(mart)
+}
+
+#' @export
+guess_organism <- function(probes) {
+  org.regex <- list(
+    "Human" = "^ENSG|^ENST|^[A-Z]+[0-9]*$",
+    "Mouse" = "^ENSMUS|^[A-Z][a-z]{2,}",
+    "Rat" = "^ENSRNO|^[A-Z][a-z]{2,}",
+    "Caenorhabditis elegans" = "^WBGene",
+    "Drosophila melanogaster" = "^FBgn0",
+    "Saccharomyces cerevisiae" = "^Y[A-P][RL]"
+  )
+  org.match <- function(probes, org) {
+    mean(grepl(org.regex[[org]], probes))
+  }
+  avg.match <- sapply(names(org.regex), function(g) org.match(probes, g))
+  avg.match
+
+  if (any(avg.match > 0.33)) {
+    organism <- names(which.max(avg.match))
+  } else {
+    organism <- NULL
+  }
+  if (is.null(organism)) {
+    warning("[guess_organism] Could not auto-detect organism.")
+  } else {
+    message("[guess_organism] auto-detected organism = ", organism)
+  }
+  organism
 }
 
 #' Guess probe type
@@ -964,33 +992,66 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
   return(probe_type)
 }
 
-#' @export
-guess_organism <- function(probes) {
-  org.regex <- list(
-    "Human" = "^ENSG|^ENST|^[A-Z]+[0-9]*$",
-    "Mouse" = "^ENSMUS|^[A-Z][a-z]{2,}",
-    "Rat" = "^ENSRNO|^[A-Z][a-z]{2,}",
-    "Caenorhabditis elegans" = "^WBGene",
-    "Drosophila melanogaster" = "^FBgn0",
-    "Saccharomyces cerevisiae" = "^Y[A-P][RL]"
-  )
-  org.match <- function(probes, org) {
-    mean(grepl(org.regex[[org]], probes))
-  }
-  avg.match <- sapply(names(org.regex), function(g) org.match(probes, g))
-  avg.match
 
-  if (any(avg.match > 0.33)) {
-    organism <- names(which.max(avg.match))
-  } else {
-    organism <- NULL
-  }
-  if (is.null(organism)) {
-    warning("[guess_organism] Could not auto-detect organism.")
-  } else {
-    message("[guess_organism] auto-detected organism = ", organism)
-  }
+guess_probetype.ANNOTHUB <- function(organism, probes) {
+
+  require(AnnotationHub)
+  require(GO.db)
+
+  if( tolower(organism) == 'human') organism <- "Homo sapiens"
+  if( tolower(organism) == 'mouse') organism <- "Mus musculus"
+  if( tolower(organism) == 'rat')   organism <- "Rattus norvegicus"
   organism
+  
+  ## Load the annotation resource.
+  suppressMessages({  
+    ah <- AnnotationHub::AnnotationHub()
+    cat("querying AnnotationHub for",organism,"\n")
+    ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
+
+    ## select on exact organism name
+    ahDb <- ahDb[ which(tolower(ahDb$species) == tolower(organism))]
+    k <- length(ahDb)
+    cat("selecting database for",ahDb$species[k],"\n")
+    orgdb <- ahDb[[k]]  ## last one, newest version
+  })
+
+  if(is.null(probes)) probes <- keys(orgdb)
+  probes <- probes[!is.na(probes) & probes!=""]
+  if(sum(duplicated(probes)) > 0) {
+    message("WARNING: duplicated probes")
+    probes <- unique(probes)
+  }
+
+  ##--------------------------------------------
+  ## determine probe type and map to given probes
+  ##--------------------------------------------
+  type_cols <- c("SYMBOL","ENTREZID","ACCNUM","REFSEQ",  
+                 "ENSEMBL","ENSEMBLTRANS","MGI","ENSEMBLPROT","UNIPROT")
+  eg <- keys(orgdb)
+  cat("retrieving annotation for",length(eg),"features...\n")
+  annot <- list()
+  k = type_cols[1]
+  for(k in type_cols) {
+    if( k == "ENTREZID" ) {
+      annot[[k]] <- cbind(eg, "ENTREZID" = eg )
+    } else {
+      suppressMessages( suppressWarnings(  
+        annot[[k]] <- select(orgdb, keys=eg, columns=k, keytype="ENTREZID")
+      ))
+    }
+  }
+  cat("got",length(unique(annot$SYMBOL)),"unique SYMBOLs...\n")
+  match_ratio <- sapply( annot, function(a) mean(probes %in% a[,2]) )
+  match_ratio
+  probe_type <- names(which(match_ratio > 0.33 & match_ratio == max(match_ratio, na.rm=TRUE)))
+  if(length(probe_type) == 0) {
+    message("WARNING: could match probe type")
+    return(NULL)
+  }
+  rr <- round(match_ratio[probe_type], digits=4)
+  cat("[guess_probetype.ANNOTHUB] guessing probe type is",probe_type,"  (r=",rr,")\n")
+  probe_type
 }
 
 #' @export
