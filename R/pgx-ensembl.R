@@ -399,13 +399,7 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
   )
   probe_type <- best.match(type.regex, 0.33)
 
-
-  ## 1. determine probe type using regular expression
-  if (probe_type == "") {
-    probe_type <- xbioc::idtype(probes)
-  }
-
-  ## 2. match with human/mouse/rat genesets
+  ## 1. match with human/mouse/rat genesets
   if (probe_type == "") {
     ## matches SYMBOL for human, mouse and rat
     symbol <- as.list(org.Hs.eg.db::org.Hs.egSYMBOL)
@@ -414,6 +408,13 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
     if (avg.match > 0.3) probe_type <- "SYMBOL"
   }
 
+  ## 2. determine probe type using regular expression
+  if (probe_type == "") {
+    ## probe_type <- xbioc::idtype(probes)
+    idtype.table <- table(sapply(head(sample(probes),1000), xbioc::idtype))
+    probe_type <- names(which.max(idtype.table))
+  }
+  
   ## 3. check if they are proteins
   if (probe_type == "") {
     type.regex <- list(
@@ -461,21 +462,29 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
 #' @export
 guess_organism <- function(probes) {
   org.regex <- list(
-    "Human" = "^ENSG|^ENST|^[A-Z]+[0-9]*$",
+    "Human" = "^ENSG|^ENST|^[A-Z]{2,}",
     "Mouse" = "^ENSMUS|^[A-Z][a-z]{2,}",
     "Rat" = "^ENSRNO|^[A-Z][a-z]{2,}",
     "Caenorhabditis elegans" = "^WBGene",
     "Drosophila melanogaster" = "^FBgn0",
     "Saccharomyces cerevisiae" = "^Y[A-P][RL]"
   )
+  not.regex <- list(
+    "Human" = "^ENS[MUS|RNO]",
+    "Mouse" = "^ENS[G|T]",
+    "Rat" = "^ENS[G|T]",
+    "Caenorhabditis elegans" = "^ENS",
+    "Drosophila melanogaster" = "^ENS",
+    "Saccharomyces cerevisiae" = "^ENS"
+  )
   org.match <- function(probes, org) {
-    mean(grepl(org.regex[[org]], probes))
+    mean(grepl(org.regex[[org]], probes) & !grepl(not.regex[[org]], probes))
   }
   avg.match <- sapply(names(org.regex), function(g) org.match(probes, g))
   avg.match
 
   if (any(avg.match > 0.33)) {
-    organism <- names(which.max(avg.match))
+    organism <- names(which(avg.match == max(avg.match)))
   } else {
     organism <- NULL
   }
