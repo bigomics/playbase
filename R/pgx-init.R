@@ -111,7 +111,11 @@ pgx.initialize <- function(pgx) {
   ## ----------------------------------------------------------------
   ## Convert to labeled contrast matrix (new style)
   ## ----------------------------------------------------------------
-
+  
+  if (!"contrasts" %in% names(pgx) && "model.parameters" %in% names(pgx)) {
+    pgx$contrasts <- pgx$model.parameters$contr.matrix
+  }
+  
   is.numlev <- all(unique(pgx$contrasts) %in% c(NA, "", -1, 0, 1))
   is.samplewise <- all(rownames(pgx$contrasts) == rownames(pgx$samples))
 
