@@ -833,21 +833,29 @@ use_mart <- function(organism) {
 #' @export
 guess_organism <- function(probes) {
   org.regex <- list(
-    "Human" = "^ENSG|^ENST|^[A-Z]+[0-9]*$",
+    "Human" = "^ENSG|^ENST|^[A-Z]{2,}",
     "Mouse" = "^ENSMUS|^[A-Z][a-z]{2,}",
     "Rat" = "^ENSRNO|^[A-Z][a-z]{2,}",
     "Caenorhabditis elegans" = "^WBGene",
     "Drosophila melanogaster" = "^FBgn0",
     "Saccharomyces cerevisiae" = "^Y[A-P][RL]"
   )
+  not.regex <- list(
+    "Human" = "^ENS[MUS|RNO]",
+    "Mouse" = "^ENS[G|T]",
+    "Rat" = "^ENS[G|T]",
+    "Caenorhabditis elegans" = "^ENS",
+    "Drosophila melanogaster" = "^ENS",
+    "Saccharomyces cerevisiae" = "^ENS"
+  )
   org.match <- function(probes, org) {
-    mean(grepl(org.regex[[org]], probes))
+    mean(grepl(org.regex[[org]], probes) & !grepl(not.regex[[org]], probes))
   }
   avg.match <- sapply(names(org.regex), function(g) org.match(probes, g))
   avg.match
 
   if (any(avg.match > 0.33)) {
-    organism <- names(which.max(avg.match))
+    organism <- names(which(avg.match == max(avg.match)))
   } else {
     organism <- NULL
   }
@@ -912,7 +920,11 @@ guess_organism <- function(probes) {
 #' }
 #'
 #' @export
-guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
+guess_probetype <- function(probes, organism, for.biomart = FALSE) {
+  guess_probetype.MATCH(probes = probes, organism = organism, for.biomart = for.biomart) 
+}
+
+guess_probetype.MATCH <- function(organism, probes, for.biomart = FALSE) {  
   best.match <- function(type.regex, avg.min = 0.33) {
     avg.match <- sapply(type.regex, function(s) mean(grepl(s, probes)))
     probe_type <- ""
@@ -928,15 +940,8 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
     "ENSEMBL" = "^WBGene|^FBgn0|^Y[A-Z][LR]" ## worm, fly, yeast
   )
   probe_type <- best.match(type.regex, 0.33)
-  probe_type
 
-  ## 1. determine probe type using regular expression
-  if (probe_type == "") {
-    probe_type <- xbioc::idtype(probes)
-  }
-  probe_type
-  
-  ## 2. match with human/mouse/rat genesets
+  ## 1. match with human/mouse/rat genesets
   if (probe_type == "") {
     ## matches SYMBOL for human, mouse and rat
     symbol <- as.list(org.Hs.eg.db::org.Hs.egSYMBOL)
@@ -944,7 +949,13 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
     avg.match
     if (avg.match > 0.3) probe_type <- "SYMBOL"
   }
-  probe_type
+
+  ## 2. determine probe type using regular expression
+  if (probe_type == "") {
+    ## probe_type <- xbioc::idtype(probes)
+    idtype.table <- table(sapply(head(sample(probes),1000), xbioc::idtype))
+    probe_type <- names(which.max(idtype.table))
+  }
   
   ## 3. check if they are proteins
   if (probe_type == "") {
@@ -965,8 +976,7 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
   ## for biomart we have different nomenclature
   if (for.biomart) {
     keytype2biomart <- c(
-      "ENTREZID" = "entrezgene_id",
-      "ENSEMBL" = "ensembl_gene_id",      
+      "ENSEMBL" = "ensembl_gene_id",
       "ENSEMBLTRANS" = "ensembl_transcript_id",
       "ENSEMBLPROT" = "ensembl_peptide_id",
       "SYMBOL" = "external_gene_name",
@@ -975,7 +985,6 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
       "REFSEQ" = "refseq_mrna"
     )
     probe_type <- keytype2biomart[probe_type]
-    probe_type
 
     ## add version if versioned
     if (probe_type %in% c("ensembl_gene_id", "ensembl_transcript_id")) {
@@ -983,20 +992,19 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
       if (has.version) probe_type <- paste0(probe_type, "_version")
     }
   }
-  probe_type <- as.character(probe_type)
+
   if (is.null(probe_type) || probe_type == "") {
     warning("[guess_probe] Could not guess probe_type. Please provide.")
   } else {
     message("[guess_probe] auto-detected probe_type = ", probe_type)
   }
-  return(probe_type)
+  probe_type
 }
-
 
 guess_probetype.ANNOTHUB <- function(organism, probes) {
 
-  require(AnnotationHub)
-  require(GO.db)
+##  require(AnnotationHub)
+##  require(GO.db)
 
   if( tolower(organism) == 'human') organism <- "Homo sapiens"
   if( tolower(organism) == 'mouse') organism <- "Mus musculus"
@@ -1037,7 +1045,7 @@ guess_probetype.ANNOTHUB <- function(organism, probes) {
       annot[[k]] <- cbind(eg, "ENTREZID" = eg )
     } else {
       suppressMessages( suppressWarnings(  
-        annot[[k]] <- select(orgdb, keys=eg, columns=k, keytype="ENTREZID")
+        annot[[k]] <- AnnotationDbi::select(orgdb, keys=eg, columns=k, keytype="ENTREZID")
       ))
     }
   }
