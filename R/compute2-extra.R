@@ -510,7 +510,7 @@ compute_drugSensitivityEnrichment <- function(pgx, libx.dir = NULL) {
     return(pgx)
   }
   names(ref.db) <- sub("-", "/", gsub("_.*", "", ref.db))
-  
+
   ref.db
   ref <- ref.db[1]
   for (i in seq_along(ref.db)) {

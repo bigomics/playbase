@@ -411,10 +411,10 @@ guess_probetype <- function(probes, organism = "", for.biomart = FALSE) {
   ## 2. determine probe type using regular expression
   if (probe_type == "") {
     ## probe_type <- xbioc::idtype(probes)
-    idtype.table <- table(sapply(head(sample(probes),1000), xbioc::idtype))
+    idtype.table <- table(sapply(head(sample(probes), 1000), xbioc::idtype))
     probe_type <- names(which.max(idtype.table))
   }
-  
+
   ## 3. check if they are proteins
   if (probe_type == "") {
     type.regex <- list(

@@ -100,12 +100,12 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
   FC <- FC[, contrast, drop = FALSE]
 
   if (!obj$organism %in% c("Human", "human")) {
-      human_genes <- ifelse(!is.na(obj$genes$human_ortholog),
-        obj$genes$human_ortholog,
-        obj$genes$symbol
-      )
-      rownames(FC) <- human_genes
-    }
+    human_genes <- ifelse(!is.na(obj$genes$human_ortholog),
+      obj$genes$human_ortholog,
+      obj$genes$symbol
+    )
+    rownames(FC) <- human_genes
+  }
 
   ## create drug meta sets
   meta.gmt <- tapply(colnames(X), xdrugs, list)

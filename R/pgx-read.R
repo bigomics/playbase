@@ -192,15 +192,15 @@ fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
 #' Read all CSV file in folder or current directory
 #'
 #' @export
-read_files <- function(dir='.', pattern = NULL) {
+read_files <- function(dir = ".", pattern = NULL) {
   ff <- dir(dir, pattern = pattern)
-  file1 <- head(grep("count", ff, value = TRUE ),1)
-  file2 <- head(grep("sample", ff, value = TRUE ),1)
-  file3 <- head(grep("contrast|comparison", ff, value = TRUE ),1)
-  counts=samples=contrasts=NULL  
-  if(length(file1)) counts <- read_counts(file1)
-  if(length(file2)) samples <- read_samples(file2)
-  if(length(file3)) contrasts <- read_contrasts(file3)
+  file1 <- head(grep("count", ff, value = TRUE), 1)
+  file2 <- head(grep("sample", ff, value = TRUE), 1)
+  file3 <- head(grep("contrast|comparison", ff, value = TRUE), 1)
+  counts <- samples <- contrasts <- NULL
+  if (length(file1)) counts <- read_counts(file1)
+  if (length(file2)) samples <- read_samples(file2)
+  if (length(file3)) contrasts <- read_contrasts(file3)
 
   list(
     counts = counts,
@@ -232,16 +232,16 @@ read_counts <- function(file) {
   is_valid <- validate_counts(df)
   if (!is_valid) stop("Counts file is not valid.")
   is.numeric.matrix <- all(apply(df, 2, is.numeric))
-  if(!is.numeric.matrix) {
+  if (!is.numeric.matrix) {
     message("warning: converting to numeric values")
     rn <- rownames(df)
-    suppressWarnings( df <- apply(df, 2, as.numeric) )
+    suppressWarnings(df <- apply(df, 2, as.numeric))
     rownames(df) <- rn
   }
   sel1 <- !(rownames(df) %in% c(NA, "", "NA"))
   sel2 <- rowMeans(is.na(df)) < 1
-  df <- df[sel1 & sel2,,drop=FALSE ]
-  df <- rowsum(df, rownames(df), reorder = FALSE)  
+  df <- df[sel1 & sel2, , drop = FALSE]
+  df <- rowsum(df, rownames(df), reorder = FALSE)
   return(df)
 }
 
