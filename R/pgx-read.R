@@ -189,6 +189,27 @@ fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
   return(x)
 }
 
+#' Read all CSV file in folder or current directory
+#'
+#' @export
+read_files <- function(dir='.', pattern = NULL) {
+  ff <- dir(dir, pattern = pattern)
+  file1 <- head(grep("count", ff, value = TRUE ),1)
+  file2 <- head(grep("sample", ff, value = TRUE ),1)
+  file3 <- head(grep("contrast|comparison", ff, value = TRUE ),1)
+  counts=samples=contrasts=NULL  
+  if(length(file1)) counts <- read_counts(file1)
+  if(length(file2)) samples <- read_samples(file2)
+  if(length(file3)) contrasts <- read_contrasts(file3)
+
+  list(
+    counts = counts,
+    samples = samples,
+    contrasts = contrasts
+  )
+}
+
+
 
 #' Read counts data from file
 #'
@@ -206,71 +227,24 @@ fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
 #' counts <- read_counts(playbase::example_file("counts.csv"))
 #' }
 #' @export
-read_counts <- function(file, convert_names = FALSE) {
+read_counts <- function(file) {
   df <- read.as_matrix(file)
-
   is_valid <- validate_counts(df)
   if (!is_valid) stop("Counts file is not valid.")
-
-  # convert to gene names (needed for biological effects)
-  if (convert_names) {
-    pp <- rownames(df)
-    # rownames(df) <- probe2symbol(pp) TODO: remove this line as with the
-    # new biomaRt version will not work anymore
-    sel <- !(rownames(df) %in% c(NA, "", "NA"))
-    df <- df[sel, ]
-    xx <- tapply(
-      1:nrow(df), rownames(df),
-      function(i) colSums(df[i, , drop = FALSE])
-    )
-    df <- do.call(rbind, xx)
+  is.numeric.matrix <- all(apply(df, 2, is.numeric))
+  if(!is.numeric.matrix) {
+    message("warning: converting to numeric values")
+    rn <- rownames(df)
+    suppressWarnings( df <- apply(df, 2, as.numeric) )
+    rownames(df) <- rn
   }
-
+  sel1 <- !(rownames(df) %in% c(NA, "", "NA"))
+  sel2 <- rowMeans(is.na(df)) < 1
+  df <- df[sel1 & sel2,,drop=FALSE ]
+  df <- rowsum(df, rownames(df), reorder = FALSE)  
   return(df)
 }
 
-#' Read expression data from file
-#'
-#' Reads an expression data matrix from file and performs validation and preprocessing.
-#'
-#' @param file Path to input expression data file. Should be matrix with genes as rows and samples as columns.
-#' @param convert_names Logical indicating whether to convert row names from IDs to gene symbols. Default is TRUE.
-##'
-#' @details This function reads an expression matrix using playbase::read.as_matrix(),
-#' squares the values, validates with validate_counts(), and optionally converts row names
-#' from IDs to gene symbols using playbase::probe2symbol().
-#'
-#' It removes rows with NA, blank or invalid symbols, and collapses duplicate symbols by
-#' summing expression across rows.
-#' @return matrix. the file with the data
-#'
-#' @examples
-#' \dontrun{
-#' counts <- read_expression(playbase::example_file("counts.csv"))
-#' }
-#' @export
-read_expression <- function(file, convert_names = TRUE) {
-  df <- read.as_matrix(file)
-  df <- df**2
-
-  is_valid <- validate_counts(df)
-  if (!is_valid) stop("Expression file is not valid.")
-
-  # convert to gene names (needed for biological effects)
-  if (convert_names) {
-    # rownames(df) <- probe2symbol(pp) TODO: remove this line as with the
-    # new biomaRt version will not work anymore
-    sel <- !(rownames(df) %in% c(NA, "", "NA"))
-    df <- df[sel, ]
-    xx <- tapply(
-      1:nrow(df), rownames(df),
-      function(i) colSums(df[i, , drop = FALSE])
-    )
-    df <- do.call(rbind, xx)
-  }
-
-  return(df)
-}
 
 #' Read samples data from file
 #'
