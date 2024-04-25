@@ -924,7 +924,7 @@ guess_probetype <- function(probes, organism, for.biomart = FALSE) {
   guess_probetype.MATCH(probes = probes, organism = organism, for.biomart = for.biomart) 
 }
 
-guess_probetype.MATCH <- function(organism, probes, for.biomart = FALSE) {  
+guess_probetype.MATCH <- function(probes, organism = "", for.biomart = FALSE) {
   best.match <- function(type.regex, avg.min = 0.33) {
     avg.match <- sapply(type.regex, function(s) mean(grepl(s, probes)))
     probe_type <- ""
@@ -953,10 +953,10 @@ guess_probetype.MATCH <- function(organism, probes, for.biomart = FALSE) {
   ## 2. determine probe type using regular expression
   if (probe_type == "") {
     ## probe_type <- xbioc::idtype(probes)
-    idtype.table <- table(sapply(head(sample(probes),1000), xbioc::idtype))
+    idtype.table <- table(sapply(head(sample(probes), 1000), xbioc::idtype))
     probe_type <- names(which.max(idtype.table))
   }
-  
+
   ## 3. check if they are proteins
   if (probe_type == "") {
     type.regex <- list(
