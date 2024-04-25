@@ -125,7 +125,7 @@ compute_extra <- function(pgx, extra = c(
     if (!is.null(libx.dir)) {
       message(">>> Computing drug sensitivity enrichment...")
       tt <- system.time({
-        PGX <- tryCatch(
+        pgx <- tryCatch(
           {
             compute_drugSensitivityEnrichment(pgx, libx.dir)
           },
@@ -435,7 +435,7 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
     drug_test_genes <- rownames(X)
     if (!pgx$organism %in% c("Human", "human")) {
       rowid <- data.table::chmatch(rownames(X), pgx$genes$human_ortholog, nomatch = NA)
-      rownames(X) <- pgx$genes$gene_name[rowid]
+      rownames(X) <- pgx$genes$human_ortholog[rowid]
       X <- X[!is.na(rowid), , drop = FALSE]
     }
 
@@ -510,9 +510,11 @@ compute_drugSensitivityEnrichment <- function(pgx, libx.dir = NULL) {
     return(pgx)
   }
   names(ref.db) <- sub("-", "/", gsub("_.*", "", ref.db))
+
   ref.db
   ref <- ref.db[1]
   for (i in seq_along(ref.db)) {
+    # i=2
     ref <- ref.db[i]
     message("[compute_drugSensitivityEnrichment] computing sensitivity CMAP for ", ref)
     X <- readRDS(file = file.path(cmap.dir, ref))
