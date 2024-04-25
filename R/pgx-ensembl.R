@@ -1001,6 +1001,7 @@ guess_probetype.MATCH <- function(probes, organism = "", for.biomart = FALSE) {
   probe_type
 }
 
+#' @export
 guess_probetype.ANNOTHUB <- function(organism, probes) {
 
 ##  require(AnnotationHub)
