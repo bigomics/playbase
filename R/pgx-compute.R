@@ -182,6 +182,11 @@ pgx.createPGX <- function(counts,
     stop("rownames of counts and X do not match\n")
   }
 
+  # return if organism is null
+  if (is.null(organism)) {
+    stop("[createPGX] FATAL: organism is NULL")
+  }
+
   ## -------------------------------------------------------------------
   ## clean up input files
   ## -------------------------------------------------------------------
@@ -322,18 +327,8 @@ pgx.createPGX <- function(counts,
   ## create pgx object
   ## -------------------------------------------------------------------
   message("[createPGX] creating pgx object...")
-  guess_organism <- guess_organism(rownames(counts))
-  if (is.null(organism)) {
-    organism <- guess_organism
-  }
-  if (!is.null(organism) && !is.null(guess_organism)) {
-    if (tolower(organism) != tolower(guess_organism)) {
-      warning(
-        "[createPGX] WARNING : guessed organism is '", guess_organism,
-        "' but '", organism, "' was provided!"
-      )
-    }
-  }
+
+  browser()
 
   ## remove special characters from description (other columns too??)
   description <- gsub("[\"\']", " ", description) ## remove quotes (important!!)
