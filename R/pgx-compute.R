@@ -328,8 +328,6 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   message("[createPGX] creating pgx object...")
 
-  browser()
-
   ## remove special characters from description (other columns too??)
   description <- gsub("[\"\']", " ", description) ## remove quotes (important!!)
   description <- gsub("[\n]", ". ", description) ## replace newline
