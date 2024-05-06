@@ -35,9 +35,7 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL, use_
   if (is.null(organism) && !is.null(pgx$organism)) {
     organism <- pgx$organism
   }
-  if (is.null(organism) && !is.null(pgx$organism)) {
-    organism <- guess_organism(probes)
-  }
+  
   if (is.null(organism)) {
     stop("could not determine organism. please specify")
   }
@@ -99,11 +97,7 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL, use_
 ngs.getGeneAnnotation <- function(probes, pgx = NULL, organism = NULL,
                                   annot_table = NULL, use_biomart = NULL) {
   if (is.null(organism)) {
-    organism <- guess_organism(probes)
-  }
-  if (is.null(organism)) {
-    warning("[getGeneAnnotation] ERROR could not detect organism")
-    return(NULL)
+    stop("Organism not provided.")
   }
 
   message("[ngs.getGeneAnnotation] organism = ", organism)
@@ -830,42 +824,6 @@ use_mart <- function(organism) {
   return(mart)
 }
 
-#' @export
-guess_organism <- function(probes) {
-  org.regex <- list(
-    "Human" = "^ENSG|^ENST|^[A-Z]{2,}",
-    "Mouse" = "^ENSMUS|^[A-Z][a-z]{2,}",
-    "Rat" = "^ENSRNO|^[A-Z][a-z]{2,}",
-    "Caenorhabditis elegans" = "^WBGene",
-    "Drosophila melanogaster" = "^FBgn0",
-    "Saccharomyces cerevisiae" = "^Y[A-P][RL]"
-  )
-  not.regex <- list(
-    "Human" = "^ENS[MUS|RNO]",
-    "Mouse" = "^ENS[G|T]",
-    "Rat" = "^ENS[G|T]",
-    "Caenorhabditis elegans" = "^ENS",
-    "Drosophila melanogaster" = "^ENS",
-    "Saccharomyces cerevisiae" = "^ENS"
-  )
-  org.match <- function(probes, org) {
-    mean(grepl(org.regex[[org]], probes) & !grepl(not.regex[[org]], probes))
-  }
-  avg.match <- sapply(names(org.regex), function(g) org.match(probes, g))
-  avg.match
-
-  if (any(avg.match > 0.33)) {
-    organism <- names(which(avg.match == max(avg.match)))
-  } else {
-    organism <- NULL
-  }
-  if (is.null(organism)) {
-    warning("[guess_organism] Could not auto-detect organism.")
-  } else {
-    message("[guess_organism] auto-detected organism = ", organism)
-  }
-  organism
-}
 
 #' Guess probe type
 #'
@@ -1066,10 +1024,7 @@ guess_probetype.ANNOTHUB <- function(organism, probes) {
 #' @export
 id2symbol <- function(probes, organism = "human") {
   if (is.null(organism)) {
-    organism <- guess_organism(probes)
-    if (is.null(organism)) {
-      stop("could not determine organism. please specify.")
-    }
+    stop("could not determine organism. please specify.")
   }
   ## this auto-selects using ORG.DB or BIOMARRT
   genes <- ngs.getGeneAnnotation(probes, organism = organism, use_biomart = NULL)
