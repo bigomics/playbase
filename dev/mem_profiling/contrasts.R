@@ -10,11 +10,11 @@ output_dir <- paste0(output_dir, "/dev/mem_profiling")
 # read params of a FULL settings computation
 params <- readRDS(file.path(output_dir,"params.RData"))
 
-iterations = c(5,10,25,seq(1,10) *50)
+iterations = as.integer(c(5,10,25,seq(1,10) *50))
 
-for(c in iterations) {
-    #i=5
-    input <- playbase::duplicate_samples_contrasts(n=18,c=c)
+for(i in iterations) {
+    #i=iterations[1]
+    input <- playbase::duplicate_samples_contrasts(n=18,c=i)
     
     pgx <- playbase::pgx.createPGX(
         organism = params$organism,
@@ -39,7 +39,9 @@ for(c in iterations) {
         annot_table = params$annot_table
     )
     
-    write.csv(summaryRprof(memory = "tseries"), paste(output_dir,"/samples_output/","sample_mem_create_tseries_", i, ".csv", sep=""))
+    dir.create(file.path(output_dir,"contrasts_output"), showWarnings = FALSE)
+    
+    write.csv(summaryRprof(memory = "tseries"), paste(output_dir,"/contrasts_output/","sample_mem_create_tseries_", i, ".csv", sep=""))
     
     pgx <- playbase::pgx.computePGX(
         pgx = pgx,
@@ -56,6 +58,6 @@ for(c in iterations) {
         libx.dir = "./libx",
         user_input_dir = output_dir
     )
-
-    write.csv(summaryRprof(memory = "tseries"), paste(output_dir,"/samples_output/","sample_mem_compute_tseries_", i, ".csv", sep=""))
+    
+    write.csv(summaryRprof(memory = "tseries"), paste(output_dir,"/contrasts_output/","sample_mem_compute_tseries_", i, ".csv", sep=""))
 }
