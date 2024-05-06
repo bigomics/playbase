@@ -1,0 +1,89 @@
+
+#' @export
+duplicate_samples <- function(n) {
+    samples <- playbase::SAMPLES
+    counts <- playbase::COUNTS
+    contrasts <- playbase::CONTRASTS
+
+    # check that n is a multiple of samples
+    if (n %% dim(samples)[1] != 0) {
+        stop("n must be a multiple of the number of samples")
+    }
+
+    # create a hash with same length as n
+    hash <- paste0("sample", 1:n)
+
+    # duplicate samples
+    duplications <- rep(1:dim(samples)[1], n/dim(samples)[1])
+    samples <- samples[duplications, ]
+
+    # add hash to rownames samples
+    rownames(samples) <- paste(rownames(samples), hash, sep="_")
+
+    # duplicate counts
+    counts <- counts[,duplications]
+
+    # add hash to rownames counts
+    colnames(counts) <- paste(colnames(counts), hash, sep="_")
+
+    # add random noise in counts
+    noise_factor <- 0.05
+    counts <- counts + abs(rnorm(n = length(counts))* noise_factor)
+
+    INPUTS_CHECKED <- pgx.crosscheckINPUT(samples, counts, contrasts)
+
+    return(list(samples=INPUTS_CHECKED$SAMPLES, counts=INPUTS_CHECKED$COUNTS, contrasts=INPUTS_CHECKED$CONTRASTS))
+}
+
+
+#' @export
+duplicate_samples_contrasts <- function(n, c) {
+    samples <- playbase::SAMPLES
+    counts <- playbase::COUNTS
+
+    # check that n is a multiple of samples
+    if (n %% dim(samples)[1] != 0) {
+        stop("n must be a multiple of the number of samples")
+    }
+
+    if (c %% dim(contrasts)[1] != 0) {
+        stop("c must be a multiple of the number of contrasts")
+    }
+
+    # create a hash with same length as n
+    hash <- paste0("sample", 1:n)
+
+    # duplicate samples
+    duplications <- rep(1:dim(samples)[1], n/dim(samples)[1])
+    samples <- samples[duplications, ]
+
+    # add hash to rownames samples
+    rownames(samples) <- paste(rownames(samples), hash, sep="_")
+
+    # duplicate counts
+    counts <- counts[,duplications]
+
+    # add hash to rownames counts
+    colnames(counts) <- paste(colnames(counts), hash, sep="_")
+
+    # add random noise in counts
+    noise_factor <- 0.05
+    counts <- counts + abs(rnorm(n = length(counts))* noise_factor)
+
+    # duplicate contrasts
+    
+    hash_contrasts <- paste0("contrast", 1:c)
+
+    # create random vector of length n with 1 or 0 assigned to it
+    sapply(hash_contrasts, function(x) {
+        sample(c(x, "control"), n, replace = TRUE)
+    }) -> contrast_matrix
+
+    contrast_matrix <- data.frame(contrast_matrix, row.names = rownames(samples))
+
+    colnames(contrast_matrix) <- paste0(colnames(contrast_matrix),"_vs_", "control")
+
+    INPUTS_CHECKED <- playbase::pgx.crosscheckINPUT(samples, counts, contrast_matrix)
+
+    return(list(samples=INPUTS_CHECKED$SAMPLES, counts=INPUTS_CHECKED$COUNTS, contrasts=INPUTS_CHECKED$CONTRASTS))
+}

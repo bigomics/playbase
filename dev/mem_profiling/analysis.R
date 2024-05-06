@@ -4,7 +4,7 @@ library(tidyr)
 library(plyr)
 library(ggplot2)
 # real all samples files under samples_output
-samples_output <- list.files("dev/mem_profiling/samples_output", full.names = TRUE)
+samples_output <- list.files("dev/mem_profiling/samples_output_libx", full.names = TRUE)
 
 # read csv
 samples <- lapply(samples_output, read.csv)
