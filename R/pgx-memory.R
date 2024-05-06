@@ -55,9 +55,10 @@ duplicate_samples_contrasts <- function(n, c) {
         stop("n must be a multiple of the number of samples")
     }
 
-    if (c %% dim(contrasts)[1] != 0) {
-        stop("c must be a multiple of the number of contrasts")
+    if (!is.integer(c) || c < 1) {
+        stop("c must be an integer higher than 1")
     }
+
 
     # create a hash with same length as n
     hash <- paste0("sample", 1:n)
