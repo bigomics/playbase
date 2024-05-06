@@ -1,4 +1,12 @@
+##
+## This file is part of the Omics Playground project.
+## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+##
 
+
+
+
+#' @describeIn duplicate_samples Duplicate samples in the samples and counts matrix
 #' @export
 duplicate_samples <- function(n) {
     samples <- playbase::SAMPLES
@@ -36,6 +44,7 @@ duplicate_samples <- function(n) {
 }
 
 
+#' @describeIn duplicate_samples_contrasts Duplicate samples and contrasts in the samples, counts and contrasts matrix
 #' @export
 duplicate_samples_contrasts <- function(n, c) {
     samples <- playbase::SAMPLES
