@@ -10,10 +10,11 @@ output_dir <- paste0(output_dir, "/dev/mem_profiling")
 # read params of a FULL settings computation
 params <- readRDS(file.path(output_dir,"params.RData"))
 
-iterations = seq(1,101,10) * 18
+iterations = c(5,10,25,seq(1,10) *50)
 
-for(i in iterations) {
-    input <- playbase::duplicate_samples(n=i)
+for(c in iterations) {
+    #i=5
+    input <- playbase::duplicate_samples_contrasts(n=18,c=c)
     
     pgx <- playbase::pgx.createPGX(
         organism = params$organism,
