@@ -4126,6 +4126,7 @@ plotlyMA <- function(x, y, names, source = "plot1",
 #' @param marker.size Marker size. Default 5.
 #' @param label Vector of labels for highlighted genes. Default NULL.
 #' @param label.cex Text size for labels. Default 1.
+#' @param color_up_down Color up/down regulated features
 #' @param marker.type Marker type (scatter, line, etc). Default "scatter".
 #' @param displayModeBar Show plotly modebar? Logical. Default TRUE.
 #'
@@ -4135,7 +4136,7 @@ plotlyMA <- function(x, y, names, source = "plot1",
 plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1", "group2"),
                           xlab = "effect size (logFC)", ylab = "significance (-log10p)",
                           lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
-                          marker.size = 5, label = NULL, label.cex = 1,
+                          marker.size = 5, label = NULL, label.cex = 1, color_up_down = TRUE,
                           marker.type = "scatter", displayModeBar = TRUE, max.absy = NULL) {
   if (is.null(highlight)) highlight <- names
   i0 <- which(!names %in% highlight)
@@ -4162,37 +4163,101 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
   }
 
   if (length(i1)) {
-    p <- p %>%
-      plotly::add_trace(
-        x = x[i1],
-        y = y[i1],
-        text = names[i1],
-        type = marker.type,
-        mode = "markers",
-        marker = list(
-          size = marker.size,
-          color = "#1f77b4"
-        ),
-        showlegend = showlegend
-      )
+    if (color_up_down) {
+      upreg <- x[i1] > 0
+      dwreg <- x[i1] < 0
+      p <- p %>%
+        plotly::add_trace(
+          x = x[i1][upreg],
+          y = y[i1][upreg],
+          text = names[i1][upreg],
+          type = marker.type,
+          mode = "markers",
+          marker = list(
+            size = marker.size,
+            color = "#f23451"
+          ),
+          showlegend = showlegend
+        )
+      p <- p %>%
+        plotly::add_trace(
+          x = x[i1][dwreg],
+          y = y[i1][dwreg],
+          text = names[i1][dwreg],
+          type = marker.type,
+          mode = "markers",
+          marker = list(
+            size = marker.size,
+            color = "#1f77b4"
+          ),
+          showlegend = showlegend
+        )
+    } else {
+      p <- p %>%
+        plotly::add_trace(
+          x = x[i1],
+          y = y[i1],
+          text = names[i1],
+          type = marker.type,
+          mode = "markers",
+          marker = list(
+            size = marker.size,
+            color = "#1f77b4"
+          ),
+          showlegend = showlegend
+        )
+    }
   }
 
   if (!is.null(label) && length(label) > 0) {
     i2 <- which(names %in% label)
-    p <- p %>%
-      plotly::add_annotations(
-        x = x[i2],
-        y = y[i2],
-        text = names[i2],
-        font = list(
-          size = 12 * label.cex,
-          color = "#1f77b4"
-        ),
-        showarrow = FALSE,
-        yanchor = "bottom",
-        yshift = 2,
-        textposition = "top"
-      )
+    upreg <- x[i2] > 0
+    dwreg <- x[i2] < 0
+    if (color_up_down) {
+      p <- p %>%
+        plotly::add_annotations(
+          x = x[i2][upreg],
+          y = y[i2][upreg],
+          text = names[i2][upreg],
+          font = list(
+            size = 12 * label.cex,
+            color = "#f23451"
+          ),
+          showarrow = FALSE,
+          yanchor = "bottom",
+          yshift = 2,
+          textposition = "top"
+        )
+      p <- p %>%
+        plotly::add_annotations(
+          x = x[i2][dwreg],
+          y = y[i2][dwreg],
+          text = names[i2][dwreg],
+          font = list(
+            size = 12 * label.cex,
+            color = "#1f77b4"
+          ),
+          showarrow = FALSE,
+          yanchor = "bottom",
+          yshift = 2,
+          textposition = "top"
+        )
+    } else {
+      p <- p %>%
+        plotly::add_annotations(
+          x = x[i2],
+          y = y[i2],
+          text = names[i2],
+          font = list(
+            size = 12 * label.cex,
+            color = "#1f77b4"
+          ),
+          showarrow = FALSE,
+          yanchor = "bottom",
+          yshift = 2,
+          textposition = "top"
+        )
+    }
   }
 
   y0 <- -log10(psig)
