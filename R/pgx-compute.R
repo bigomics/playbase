@@ -552,7 +552,7 @@ pgx.computePGX <- function(pgx,
   }
 
   if (getOption("app.profile", FALSE)) {
-    Rprof(memory.profiling = TRUE)
+    Rprof(memory.profiling = TRUE, line=TRUE, gc=TRUE, filter.callframes = TRUE)
   }
 
   contr.matrix <- playbase::contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
