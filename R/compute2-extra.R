@@ -63,12 +63,14 @@ compute_extra <- function(pgx, extra = c(
   if ("meta.go" %in% extra) {
     message(">>> Computing GO core graph...")
     tt <- system.time({
-      pgx$meta.go <- tryCatch(
+
+      pgx$meta.go <- tryCatch({
         if (getOption("app.profile", FALSE)) {
-          Rprof(memory.profiling = TRUE, append=TRUE)
+          Rprof("metago.out",memory.profiling = TRUE, append=TRUE)
         }
-        pgx.computeCoreGOgraph(pgx, fdr = 0.20),
-        error = function(e) {
+        pgx.computeCoreGOgraph(pgx, fdr = 0.20)
+      },
+,        error = function(e) {
           write(as.character(e), file = paste0(user_input_dir, "/ERROR_METAGO"))
           return(NULL)
         }
@@ -81,22 +83,23 @@ compute_extra <- function(pgx, extra = c(
   if ("deconv" %in% extra) {
     message(">>> computing deconvolution")
     tt <- system.time({
-      if (getOption("app.profile", FALSE)) {
-        Rprof(memory.profiling = TRUE, append=TRUE)
-      }
+      
       pgx <- tryCatch(
-        {
-          compute_deconvolution(
-            pgx,
-            rna.counts = rna.counts,
-            full = FALSE
-          )
-        },
-        error = function(e) {
-          write(as.character(e), file = paste0(user_input_dir, "/ERROR_DECONVOLUTIION"))
-          return(pgx)
+      {
+        if (getOption("app.profile", FALSE)) {
+          Rprof(memory.profiling = TRUE, append=TRUE)
         }
-      )
+        compute_deconvolution(
+          pgx,
+          rna.counts = rna.counts,
+          full = FALSE
+        )
+      },
+      error = function(e) {
+        write(as.character(e), file = paste0(user_input_dir, "/ERROR_DECONVOLUTIION"))
+        return(pgx)
+      }
+    )
     })
     timings <- rbind(timings, c("deconv", tt))
     message("<<< done!")
