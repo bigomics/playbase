@@ -20,6 +20,12 @@ compute_extra <- function(pgx, extra = c(
                             "connectivity", "wordcloud", "wgcna"
                           ), sigdb = NULL, pgx.dir = "./data", libx.dir = "./libx",
                           user_input_dir = getwd()) {
+  
+  
+  if (getOption("app.profile", FALSE)) {
+    Rprof(memory.profiling = TRUE, append=TRUE)
+  }
+
   timings <- c()
 
   if (length(extra) == 0) {
