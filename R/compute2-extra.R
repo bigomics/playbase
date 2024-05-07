@@ -64,6 +64,9 @@ compute_extra <- function(pgx, extra = c(
     message(">>> Computing GO core graph...")
     tt <- system.time({
       pgx$meta.go <- tryCatch(
+        if (getOption("app.profile", FALSE)) {
+          Rprof(memory.profiling = TRUE, append=TRUE)
+        }
         pgx.computeCoreGOgraph(pgx, fdr = 0.20),
         error = function(e) {
           write(as.character(e), file = paste0(user_input_dir, "/ERROR_METAGO"))
@@ -78,6 +81,9 @@ compute_extra <- function(pgx, extra = c(
   if ("deconv" %in% extra) {
     message(">>> computing deconvolution")
     tt <- system.time({
+      if (getOption("app.profile", FALSE)) {
+        Rprof(memory.profiling = TRUE, append=TRUE)
+      }
       pgx <- tryCatch(
         {
           compute_deconvolution(
