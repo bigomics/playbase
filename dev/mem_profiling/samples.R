@@ -8,7 +8,7 @@ output_dir <- getwd() # root playbase
 output_dir <- paste0(output_dir, "/dev/mem_profiling")
 
 # read params of a FULL settings computation
-params <- readRDS(file.path(output_dir,"params.RData"))
+params <- readRDS(file.path(output_dir,"params_ED_full.RData"))
 
 iterations = seq(1,101,10) * 18
 
