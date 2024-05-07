@@ -8,11 +8,14 @@ type <- c("samples", "contrasts","samples_contrasts")[2]
 
 samples_output <- list.files(sprintf("dev/mem_profiling/%s_output_libx",type), full.names = TRUE)
 
+samples_output <- samples_output[3]
+
 # read csv
 samples <- lapply(samples_output, read.csv)
 
 # add the name of the file (containing number of samples) as a column
 samples <- lapply(seq_along(samples), function(i) {
+    i=1
     samples[[i]]$file <- as.numeric(gsub(".*_(\\d+).csv", "\\1", samples_output[i]))
     # create a regex to get the number 1818 from "dev/mem_profiling/samples_output/sample_mem_create_tseries_1818.csv" 
     return(samples[[i]])
@@ -30,9 +33,9 @@ head(samples)
 samples_grouped <- 
     samples %>% 
     group_by(stack.2, file) %>% 
-    dplyr::summarise(vsize.large = max(vsize.large))
+    dplyr::summarize(vsize.large = max(vsize.large))
 
-
+View(samples_grouped)
 # convert vsize from bytes to MB
 samples_grouped$vsize.large <- samples_grouped$vsize.large / 1024 / 1024
 
@@ -43,7 +46,7 @@ ggplot(samples_grouped, aes(x = stack.2, y = vsize.large, color = file)) +
     theme_minimal() +
     scale_color_gradient(low = "blue", high = "red") +
     ylab("vsize.large (MB)") +
-    theme(axis.text.x = element_text(angle = 45, hjust=1))
+    theme(axis.text.x = element_text(angle = 90))
 
 
 subset(samples_grouped, stack.2 == "pgx.createPGX")
