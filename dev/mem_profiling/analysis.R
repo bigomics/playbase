@@ -4,7 +4,9 @@ library(tidyr)
 library(plyr)
 library(ggplot2)
 # real all samples files under samples_output
-samples_output <- list.files("dev/mem_profiling/samples_output_libx", full.names = TRUE)
+type <- c("samples", "contrasts","samples_contrasts")[2]
+
+samples_output <- list.files(sprintf("dev/mem_profiling/%s_output_libx",type), full.names = TRUE)
 
 # read csv
 samples <- lapply(samples_output, read.csv)
@@ -28,7 +30,7 @@ head(samples)
 samples_grouped <- 
     samples %>% 
     group_by(stack.2, file) %>% 
-    summarise(vsize.large = max(vsize.large))
+    dplyr::summarise(vsize.large = max(vsize.large))
 
 
 # convert vsize from bytes to MB
@@ -41,7 +43,7 @@ ggplot(samples_grouped, aes(x = stack.2, y = vsize.large, color = file)) +
     theme_minimal() +
     scale_color_gradient(low = "blue", high = "red") +
     ylab("vsize.large (MB)") +
-    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))  # Rotate x-axis labels for better visibility
+    theme(axis.text.x = element_text(angle = 45, hjust=1))
 
 
 subset(samples_grouped, stack.2 == "pgx.createPGX")
