@@ -65,9 +65,6 @@ compute_extra <- function(pgx, extra = c(
     tt <- system.time({
 
       pgx$meta.go <- tryCatch({
-        if (getOption("app.profile", FALSE)) {
-          Rprof("metago.out",memory.profiling = TRUE, append=TRUE)
-        }
         pgx.computeCoreGOgraph(pgx, fdr = 0.20)
       },
 ,        error = function(e) {
@@ -86,9 +83,6 @@ compute_extra <- function(pgx, extra = c(
       
       pgx <- tryCatch(
       {
-        if (getOption("app.profile", FALSE)) {
-          Rprof(memory.profiling = TRUE, append=TRUE)
-        }
         compute_deconvolution(
           pgx,
           rna.counts = rna.counts,
