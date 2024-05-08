@@ -20,12 +20,6 @@ compute_extra <- function(pgx, extra = c(
                             "connectivity", "wordcloud", "wgcna"
                           ), sigdb = NULL, pgx.dir = "./data", libx.dir = "./libx",
                           user_input_dir = getwd()) {
-  
-  
-  if (getOption("app.profile", FALSE)) {
-    Rprof(memory.profiling = TRUE, append=TRUE)
-  }
-
   timings <- c()
 
   if (length(extra) == 0) {
@@ -63,11 +57,9 @@ compute_extra <- function(pgx, extra = c(
   if ("meta.go" %in% extra) {
     message(">>> Computing GO core graph...")
     tt <- system.time({
-
-      pgx$meta.go <- tryCatch({
-        pgx.computeCoreGOgraph(pgx, fdr = 0.20)
-      },
-,        error = function(e) {
+      pgx$meta.go <- tryCatch(
+        pgx.computeCoreGOgraph(pgx, fdr = 0.20),
+        error = function(e) {
           write(as.character(e), file = paste0(user_input_dir, "/ERROR_METAGO"))
           return(NULL)
         }
@@ -80,20 +72,19 @@ compute_extra <- function(pgx, extra = c(
   if ("deconv" %in% extra) {
     message(">>> computing deconvolution")
     tt <- system.time({
-      
       pgx <- tryCatch(
-      {
-        compute_deconvolution(
-          pgx,
-          rna.counts = rna.counts,
-          full = FALSE
-        )
-      },
-      error = function(e) {
-        write(as.character(e), file = paste0(user_input_dir, "/ERROR_DECONVOLUTIION"))
-        return(pgx)
-      }
-    )
+        {
+          compute_deconvolution(
+            pgx,
+            rna.counts = rna.counts,
+            full = FALSE
+          )
+        },
+        error = function(e) {
+          write(as.character(e), file = paste0(user_input_dir, "/ERROR_DECONVOLUTIION"))
+          return(pgx)
+        }
+      )
     })
     timings <- rbind(timings, c("deconv", tt))
     message("<<< done!")
@@ -134,7 +125,7 @@ compute_extra <- function(pgx, extra = c(
     if (!is.null(libx.dir)) {
       message(">>> Computing drug sensitivity enrichment...")
       tt <- system.time({
-        PGX <- tryCatch(
+        pgx <- tryCatch(
           {
             compute_drugSensitivityEnrichment(pgx, libx.dir)
           },
@@ -519,9 +510,11 @@ compute_drugSensitivityEnrichment <- function(pgx, libx.dir = NULL) {
     return(pgx)
   }
   names(ref.db) <- sub("-", "/", gsub("_.*", "", ref.db))
+
   ref.db
   ref <- ref.db[1]
   for (i in seq_along(ref.db)) {
+    # i=2
     ref <- ref.db[i]
     message("[compute_drugSensitivityEnrichment] computing sensitivity CMAP for ", ref)
     X <- readRDS(file = file.path(cmap.dir, ref))
