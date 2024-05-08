@@ -4214,11 +4214,13 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
     upreg <- x[i2] > 0
     dwreg <- x[i2] < 0
     if (color_up_down) {
+      annot_text <- names[i2][upreg]
+      if (length(annot_text) == 0) annot_text <- ""
       p <- p %>%
         plotly::add_annotations(
           x = x[i2][upreg],
           y = y[i2][upreg],
-          text = names[i2][upreg],
+          text = annot_text,
           font = list(
             size = 12 * label.cex,
             color = "#f23451"
@@ -4228,11 +4230,13 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           yshift = 2,
           textposition = "top"
         )
+      annot_text <- names[i2][dwreg]
+      if (length(annot_text) == 0) annot_text <- ""
       p <- p %>%
         plotly::add_annotations(
           x = x[i2][dwreg],
           y = y[i2][dwreg],
-          text = names[i2][dwreg],
+          text = annot_text,
           font = list(
             size = 12 * label.cex,
             color = "#1f77b4"
