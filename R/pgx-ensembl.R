@@ -544,8 +544,12 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   }
 
   if(is.null(probe_type)) {
+<<<<<<< HEAD
     probe_type <- detect_probetype.ANNOTHUB(
       organism, probes, ah = ah)
+=======
+    probe_type <- playbase::guess_probetype(probes, organism=organism)
+>>>>>>> 6dab092fb917f70ad01a967115126d5d00293672
   }
   message("probe_type = ",probe_type)
   
@@ -1019,15 +1023,20 @@ detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL) {
 
   ## get probe types for organism
   type_cols <- c("SYMBOL","ENTREZID","ACCNUM","REFSEQ",  
+<<<<<<< HEAD
                  "ENSEMBL","ENSEMBLTRANS","MGI",
                  "ENSEMBLPROT","UNIPROT")
   type_cols <- intersect(type_cols, keytypes(orgdb))
 
+=======
+                 "ENSEMBL","ENSEMBLTRANS","ENSEMBLPROT","UNIPROT") #,"MGI") # Invalid columns: MGI. Please use the columns method to see a listing of valid arguments.
+>>>>>>> 6dab092fb917f70ad01a967115126d5d00293672
   eg <- keys(orgdb)
   cat("retrieving annotation for",length(eg),"features...\n")
   annot <- list()
-  k = type_cols[1]
+  
   for(k in type_cols) {
+    #k=type_cols[1]
     if( k == "ENTREZID" ) {
       annot[[k]] <- cbind(eg, "ENTREZID" = eg )
     } else {

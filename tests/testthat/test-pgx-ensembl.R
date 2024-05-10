@@ -35,7 +35,7 @@ test_that("ngs.getGeneAnnotation returns annotation for genes", {
   )
 
   # Run function <- for reuse
-  result <- playbase::ngs.getGeneAnnotation(
+  result <- playbase::ngs.getGeneAnnotation_ANNOTHUB(
     probes = probes,
     organism = "Human"
   )
