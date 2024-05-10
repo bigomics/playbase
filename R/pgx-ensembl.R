@@ -533,7 +533,9 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
     orgdb <- ahDb[[k]]  ## last one, newest version
   })
 
-  if(is.null(probes)) probes <- keys(orgdb)
+  if(is.null(probes)) {
+    probes <- keys(orgdb)
+  }
   probes0 <- probes
   probes <- probes[!is.na(probes) & probes!=""]
   if(sum(duplicated(probes)) > 0) {
@@ -542,17 +544,18 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   }
 
   if(is.null(probe_type)) {
-    probe_type <- guess_probetype(probes, organism=organism)
+    probe_type <- detect_probetype.ANNOTHUB(
+      organism, probes, ah = ah)
   }
   message("probe_type = ",probe_type)
   
   ##--------------------------------------------
   ## retrieve table
   ##--------------------------------------------  
+  keytypes(orgdb)
   cols <- c("SYMBOL", "GENENAME","GENETYPE","ENTREZID",
     ## "ALIAS", "ACCNUM","REFSEQ",  ## balloon warning!!!
-    "ENSEMBL","ENSEMBLPROT","UNIPROT",
-    "GENETYPE","MAP","MGI")
+    "ENSEMBL","ENSEMBLPROT","UNIPROT","GENETYPE","MAP","MGI")
   mean_transcript <- mean(grepl("ENS[A-Z]*T[0]",probes))
   mean_transcript
   is_transcript <- (mean_transcript > 0.33)
@@ -564,33 +567,13 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
 
   cat("get gene annotation columns:",cols,"\n")
   if(is.null(probe_type)) {
-    eg <- keys(orgdb)
-    cat("retrieving annotation for",length(eg),"features...\n")
-    annot <- select(orgdb, keys=eg, columns=cols, keytype="ENTREZID")
-    cat("got",length(unique(annot$SYMBOL)),"unique SYMBOLs...\n")
-
-    ##--------------------------------------------
-    ## determine probe type and map to given probes
-    ##--------------------------------------------
-    type_cols <- c("SYMBOL","ENTREZID","ACCNUM","REFSEQ",  
-      "ENSEMBL","ENSEMBLTRANS","MGI","ENSEMBLPROT","UNIPROT")
-    type_cols <- intersect(type_cols, colnames(annot))
-    type_cols
-    match_probes <- apply(annot[,type_cols], 2, function(x) mean(probes %in% x[!is.na(x)]))
-    match_probes  
-    probe_type <- names(which(match_probes > 0.5 & match_probes == max(match_probes, na.rm=TRUE)))
-    probe_type
-    if(length(probe_type)==0) {
-      message("ERROR: could match probe type")
-      return(NULL)
-    }
-    probe_type <- probe_type[1]
+    probe_type <- detect_probetype.ANNOTHUB(organism, probes)    
     cat("guessing probe type is",probe_type,"\n")
-  } else {
-    message("probe_type = ",probe_type)    
-    message("retrieving annotation for",length(probes),"features...")
-    annot <- select(orgdb, keys=probes, columns=cols, keytype=probe_type)
   }
+
+  message("probe_type = ",probe_type)    
+  message("retrieving annotation for ",length(probes)," features...")
+  annot <- select(orgdb, keys=probes, columns=cols, keytype=probe_type)
 
   ## match annotation table to probes
   cat("got",length(unique(annot$SYMBOL)),"unique SYMBOLs...\n")  
@@ -921,10 +904,10 @@ guess_organism <- function(probes) {
 #'
 #' @export
 guess_probetype <- function(probes, organism, for.biomart = FALSE) {
-  guess_probetype.MATCH(probes = probes, organism = organism, for.biomart = for.biomart) 
+  detect_probetype.MATCH(probes = probes, organism = organism, for.biomart = for.biomart) 
 }
 
-guess_probetype.MATCH <- function(probes, organism = "", for.biomart = FALSE) {
+detect_probetype.MATCH <- function(probes, organism = "", for.biomart = FALSE) {
   best.match <- function(type.regex, avg.min = 0.33) {
     avg.match <- sapply(type.regex, function(s) mean(grepl(s, probes)))
     probe_type <- ""
@@ -968,8 +951,8 @@ guess_probetype.MATCH <- function(probes, organism = "", for.biomart = FALSE) {
 
   KEYTYPES <- c("ENSEMBL", "ENSEMBLPROT", "ENSEMBLTRANS", "ENTREZID", "REFSEQ", "SYMBOL", "UNIPROT")
   if (!probe_type %in% KEYTYPES) {
-    warning("[guess_probetype] ERROR : unsupported probe_type: ", probe_type)
-    warning("[guess_probetype] keytypes available: ", paste(KEYTYPES, collapse = " "))
+    warning("[detect_probetype] ERROR : unsupported probe_type: ", probe_type)
+    warning("[detect_probetype] keytypes available: ", paste(KEYTYPES, collapse = " "))
     return(NULL)
   }
 
@@ -994,15 +977,15 @@ guess_probetype.MATCH <- function(probes, organism = "", for.biomart = FALSE) {
   }
 
   if (is.null(probe_type) || probe_type == "") {
-    warning("[guess_probe] Could not guess probe_type. Please provide.")
+    warning("[detect_probe] Could not guess probe_type. Please provide.")
   } else {
-    message("[guess_probe] auto-detected probe_type = ", probe_type)
+    message("[detect_probe] auto-detected probe_type = ", probe_type)
   }
   probe_type
 }
 
 #' @export
-guess_probetype.ANNOTHUB <- function(organism, probes) {
+detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL) {
 
 ##  require(AnnotationHub)
 ##  require(GO.db)
@@ -1013,8 +996,10 @@ guess_probetype.ANNOTHUB <- function(organism, probes) {
   organism
   
   ## Load the annotation resource.
-  suppressMessages({  
+  if(is.null(ah)) {
     ah <- AnnotationHub::AnnotationHub()
+  }
+  suppressMessages({  
     cat("querying AnnotationHub for",organism,"\n")
     ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
 
@@ -1025,18 +1010,19 @@ guess_probetype.ANNOTHUB <- function(organism, probes) {
     orgdb <- ahDb[[k]]  ## last one, newest version
   })
 
-  if(is.null(probes)) probes <- keys(orgdb)
+  ## clean up probes
   probes <- probes[!is.na(probes) & probes!=""]
   if(sum(duplicated(probes)) > 0) {
     message("WARNING: duplicated probes")
     probes <- unique(probes)
   }
 
-  ##--------------------------------------------
-  ## determine probe type and map to given probes
-  ##--------------------------------------------
+  ## get probe types for organism
   type_cols <- c("SYMBOL","ENTREZID","ACCNUM","REFSEQ",  
-                 "ENSEMBL","ENSEMBLTRANS","MGI","ENSEMBLPROT","UNIPROT")
+                 "ENSEMBL","ENSEMBLTRANS","MGI",
+                 "ENSEMBLPROT","UNIPROT")
+  type_cols <- intersect(type_cols, keytypes(orgdb))
+
   eg <- keys(orgdb)
   cat("retrieving annotation for",length(eg),"features...\n")
   annot <- list()
@@ -1051,6 +1037,8 @@ guess_probetype.ANNOTHUB <- function(organism, probes) {
     }
   }
   cat("got",length(unique(annot$SYMBOL)),"unique SYMBOLs...\n")
+  
+  ## map to given probes and determine probe type
   match_ratio <- sapply( annot, function(a) mean(probes %in% a[,2]) )
   match_ratio
   probe_type <- names(which(match_ratio > 0.33 & match_ratio == max(match_ratio, na.rm=TRUE)))
@@ -1058,26 +1046,95 @@ guess_probetype.ANNOTHUB <- function(organism, probes) {
     message("WARNING: could match probe type")
     return(NULL)
   }
-  rr <- round(match_ratio[probe_type], digits=4)
-  cat("[guess_probetype.ANNOTHUB] guessing probe type is",probe_type,"  (r=",rr,")\n")
+  rr <- round(100*match_ratio[probe_type], digits=0)
+  cat(paste0("[detect_probetype.ANNOTHUB] guessing probe type is ",probe_type,
+      " (",rr,"%)\n"))
   probe_type
 }
 
-#' @export
-id2symbol <- function(probes, organism = "human") {
-  if (is.null(organism)) {
-    organism <- guess_organism(probes)
-    if (is.null(organism)) {
-      stop("could not determine organism. please specify.")
-    }
-  }
-  ## this auto-selects using ORG.DB or BIOMARRT
-  genes <- ngs.getGeneAnnotation(probes, organism = organism, use_biomart = NULL)
-  genes <- genes[match(probes, rownames(genes)), ] ## just to be sure
-  ## just return the symbol
-  genes$symbol
-}
+detect_probetype2.ANNOTHUB <- function(organism, probes, ah = NULL) {
 
+##  require(AnnotationHub)
+##  require(GO.db)
+
+  if( tolower(organism) == 'human') organism <- "Homo sapiens"
+  if( tolower(organism) == 'mouse') organism <- "Mus musculus"
+  if( tolower(organism) == 'rat')   organism <- "Rattus norvegicus"
+  organism
+  
+  ## Load the annotation resource.
+  if(is.null(ah)) {
+    ah <- AnnotationHub::AnnotationHub()
+  }
+  suppressMessages({  
+    cat("querying AnnotationHub for",organism,"\n")
+    ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
+
+    ## select on exact organism name
+    ahDb <- ahDb[ which(tolower(ahDb$species) == tolower(organism))]
+    k <- length(ahDb)
+    cat("selecting database for",ahDb$species[k],"\n")
+    orgdb <- ahDb[[k]]  ## last one, newest version
+  })
+
+  ## clean up probes
+  probes <- probes[!is.na(probes) & probes!=""]
+  if(sum(duplicated(probes)) > 0) {
+    message("WARNING: duplicated probes")
+    probes <- unique(probes)
+  }
+
+  ## get probe types for organism
+  keytypes <- c( "ENSEMBL", "ENSEMBLTRANS", "SYMBOL", "REFSEQ", "UNIPROT",
+                "ACCNUM", "ENTREZID")
+  keytypes <- c("SYMBOL","ENTREZID","ACCNUM","REFSEQ",  
+                 "ENSEMBL","ENSEMBLTRANS","MGI",
+                 "ENSEMBLPROT","UNIPROT")
+  keytypes <- intersect(keytypes, keytypes(orgdb))
+
+  ##  key_matches <- vector("character", length(keytypes))
+  key_matches <- rep(0L, length(keytypes))
+  names(key_matches) <- keytypes
+
+  ## discard version numbers if ENSEMBL
+  if (mean(grepl("^ENS", probes)) > 0.5) {
+    probes <- sub("[.][0-9]+$", "", probes)
+  }
+
+  # Subset probes if too many
+  if (length(probes) > 100) {
+    probes <- probes[as.integer(seq(1, length(probes), 100))]
+  }
+
+  # Iterate over probe types
+  for (key in keytypes) {
+    n <- 0
+    probe_matches <- data.frame(NULL)
+    try(
+      probe_matches <- AnnotationDbi::select(
+        orgdb,
+        keys = probes,
+        keytype = key,
+        columns = key
+      ),
+      silent = TRUE
+    )
+    n <- nrow(probe_matches)
+    key_matches[key] <- n
+  }
+
+  ## Return top match
+  ##  key_matches
+  top_match <- NULL
+  if (all(key_matches == 0)) {
+    message("WARNING:: Probe type not found, please check your probes")
+  } else {
+    top_match <- names(which.max(key_matches))
+    message("Guessed probe type = ", top_match)
+  }
+
+  return(top_match)
+}
 
 
 #' @title Detect probe type from probe set
@@ -1102,8 +1159,11 @@ id2symbol <- function(probes, organism = "human") {
 #' }
 #' @export
 detect_probetype.ORGDB <- function(probes, organism) {
-  warning("DEPRECATED. Please use guess_probetype")
 
+  if(grepl("homo sapiens", tolower(organism))) organism <- "Human"
+  if(grepl("mus musculus", tolower(organism))) organism <- "Mouse"
+  if(grepl("rattus norvegicus", tolower(organism))) organism <- "Rat"
+  
   ## Get org database
   org_db <- NULL
   if (tolower(organism) == "human") {
@@ -1120,7 +1180,7 @@ detect_probetype.ORGDB <- function(probes, organism) {
 
   # Probe types
   keytypes <- c(
-    "ENSEMBL", "ENSEMBLTRANS", "SYMBOL", "REFSEQ", "UNIPROT", "ACCNUM"
+    "ENSEMBL", "ENSEMBLTRANS", "SYMBOL", "REFSEQ", "UNIPROT", "ACCNUM", "ENTREZID"
   )
 
   ##  key_matches <- vector("character", length(keytypes))
@@ -1128,18 +1188,13 @@ detect_probetype.ORGDB <- function(probes, organism) {
   names(key_matches) <- keytypes
 
   ## discard version numbers if ENSEMBL
-  if (mean(grepl("^ENS", probes)) > 0.8) {
+  if (mean(grepl("^ENS", probes)) > 0.5) {
     probes <- sub("[.][0-9]+", "", probes)
   }
 
   # Subset probes if too many
   if (length(probes) > 100) {
     probes <- probes[as.integer(seq(1, length(probes), 100))]
-  }
-
-  ## remove versioning postfix from ensembl
-  if (mean(grepl("^ENST", probes)) > 0.5) {
-    probes <- sub("[.][0-9]+$", "", probes)
   }
 
   # Iterate over probe types
@@ -1159,11 +1214,13 @@ detect_probetype.ORGDB <- function(probes, organism) {
   }
 
   ## Return top match
-  ##  key_matches
+  key_matches
+  top_match <- NULL
   if (all(key_matches == 0)) {
-    stop("Probe type not found, please, check your probes")
+    message("WARNING:: Probe type not found, please check your probes")
   } else {
     top_match <- names(which.max(key_matches))
+    message("Guessed probe type = ", top_match)
   }
 
   return(top_match)
@@ -1224,7 +1281,7 @@ detect_probetype.ORGDB <- function(probes, organism) {
 #'
 #' @export
 detect_probetype.BIOMART <- function(probes, mart = NULL, verbose = TRUE) {
-  warning("DEPRECATED. Please use guess_probetype")
+##  warning("DEPRECATED. Please use guess_probetype")
 
   # Check mart
   if (is.null(mart)) {
@@ -1299,6 +1356,21 @@ detect_probetype.BIOMART <- function(probes, mart = NULL, verbose = TRUE) {
   return(probe_type)
 }
 
+
+#' @export
+id2symbol <- function(probes, organism = "human") {
+  if (is.null(organism)) {
+    organism <- guess_organism(probes)
+    if (is.null(organism)) {
+      stop("could not determine organism. please specify.")
+    }
+  }
+  ## this auto-selects using ORG.DB or BIOMARRT
+  genes <- ngs.getGeneAnnotation(probes, organism = organism, use_biomart = NULL)
+  genes <- genes[match(probes, rownames(genes)), ] ## just to be sure
+  ## just return the symbol
+  genes$symbol
+}
 
 #' Known probes
 #'
