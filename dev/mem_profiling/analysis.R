@@ -4,18 +4,18 @@ library(tidyr)
 library(plyr)
 library(ggplot2)
 # real all samples files under samples_output
-type <- c("samples", "contrasts","samples_contrasts")[2]
+type <- c("samples", "contrasts","contrasts_gc","samples_contrasts")[3]
 
 samples_output <- list.files(sprintf("dev/mem_profiling/%s_output_libx",type), full.names = TRUE)
 
-samples_output <- samples_output[3]
+samples_output <- samples_output
 
 # read csv
 samples <- lapply(samples_output, read.csv)
 
 # add the name of the file (containing number of samples) as a column
 samples <- lapply(seq_along(samples), function(i) {
-    i=1
+    #i=1
     samples[[i]]$file <- as.numeric(gsub(".*_(\\d+).csv", "\\1", samples_output[i]))
     # create a regex to get the number 1818 from "dev/mem_profiling/samples_output/sample_mem_create_tseries_1818.csv" 
     return(samples[[i]])
