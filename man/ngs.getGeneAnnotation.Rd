@@ -6,8 +6,8 @@
 \usage{
 ngs.getGeneAnnotation(
   probes,
+  organism,
   pgx = NULL,
-  organism = NULL,
   annot_table = NULL,
   use_biomart = NULL
 )
