@@ -139,7 +139,7 @@ ngs.getGeneAnnotation <- function(probes, pgx = NULL, organism = NULL,
       message("[ngs.getGeneAnnotation] FAIL : could not connect to mart")
     }
     ## probe_type <- detect_probetype.BIOMART(probes, mart)
-    probe_type <- guess_probetype(probes, for.mart = TRUE)
+    probe_type <- guess_probetype(probes, for.biomart = TRUE)
     message("[ngs.getGeneAnnotation] probe_type = ", probe_type)
     if (is.null(probe_type)) {
       dbg("[ngs.getGeneAnnotation] FATAL ERROR: could not determine probe_type")
