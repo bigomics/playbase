@@ -814,43 +814,6 @@ use_mart <- function(organism) {
   return(mart)
 }
 
-#' @export
-guess_organism.DEPRECATED <- function(probes) {
-  org.regex <- list(
-    "Human" = "^ENSG|^ENST|^[A-Z]{3,}",
-    "Mouse" = "^ENSMUS|^[A-Z][a-z]{2,}",
-    "Rat" = "^ENSRNO|^[A-Z][a-z]{2,}",
-    "Caenorhabditis elegans" = "^WBGene",
-    "Drosophila melanogaster" = "^FBgn0",
-    "Saccharomyces cerevisiae" = "^Y[A-P][RL]"
-  )
-  not.regex <- list(
-    "Human" = "^ENS[MUS|RNO]",
-    "Mouse" = "^ENS[G|T]",
-    "Rat" = "^ENS[G|T]",
-    "Caenorhabditis elegans" = "^ENS",
-    "Drosophila melanogaster" = "^ENS",
-    "Saccharomyces cerevisiae" = "^ENS"
-  )
-  org.match <- function(probes, org) {
-    mean(grepl(org.regex[[org]], probes) & !grepl(not.regex[[org]], probes))
-  }
-  avg.match <- sapply(names(org.regex), function(g) org.match(probes, g))
-  avg.match
-
-  if (any(avg.match > 0.33)) {
-    organism <- names(which(avg.match == max(avg.match)))
-  } else {
-    organism <- NULL
-  }
-  if (is.null(organism)) {
-    warning("[guess_organism] Could not auto-detect organism.")
-  } else {
-    message("[guess_organism] auto-detected organism = ", organism)
-  }
-  organism
-}
-
 #' Guess probe type
 #'
 #' This function tries to automatically detect the probe type of a set
