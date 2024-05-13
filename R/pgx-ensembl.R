@@ -547,7 +547,7 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   }
 
   if(is.null(probe_type)) {
-    probe_type <- detect_probetype.ANNOTHUB(probes, organism, ah = ah)
+    probe_type <- detect_probetype.ANNOTHUB(organism, probes, ah = ah)
   }
   message("detected probe_type = ",probe_type)
   
@@ -987,7 +987,7 @@ detect_probetype.MATCH <- function(probes, organism = "", for.biomart = FALSE) {
   probe_type
 }
 
-detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL) {
+detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL, nprobe=100) {
   ##  require(AnnotationHub)
   ##  require(GO.db)
 
@@ -1018,7 +1018,6 @@ detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL) {
     probes <- unique(probes)
   }
 
->>>>>>> 1b9e716f4b2d93c556bd21b2eba96a1d21b2b6eb
   ## get probe types for organism
   keytypes <- c(
     "ENSEMBL", "ENSEMBLTRANS", "SYMBOL", "REFSEQ", "UNIPROT",
@@ -1309,7 +1308,7 @@ id2symbol <- function(probes, organism) {
   if (is.null(organism)) {
     stop("could not determine organism. please specify.")
   }
-  ## this auto-selects using ORG.DB or BIOMARRT
+  ## this auto-selects using ORG.DB or BIOMART
   genes <- ngs.getGeneAnnotation(probes, organism = organism, use_biomart = NULL)
   genes <- genes[match(probes, rownames(genes)), ] ## just to be sure
   ## just return the symbol
