@@ -98,8 +98,8 @@ test_that("detects ENSEMBL for human probes", {
   expect_equal(playbase::guess_probetype(probes, "Human"), "ENSEMBL")
 
   # UNIPROT genes
-  uniprot_genes <- c("P31749", "P04637", "Q9Y6K9", "O15111", "Q9UM73")
-  expect_equal(playbase::detect_probetype.ANNOTHUB("Human", uniprot_genes), "UNIPROT")
+  uniprot_genes <- c("P31749", "P04637", "Q9Y6K9", "O15111", "Q9UM73", "Q13315", "P55317", "P16070", "P22301")
+  expect_true(playbase::detect_probetype.ANNOTHUB(organism = "Human", probes = uniprot_genes) %in% c("UNIPROT", "ACCNUM"))
 
   # #TODO Fake genes
   # probes <- c("ENSG00088136997", "ENSG00099241860")

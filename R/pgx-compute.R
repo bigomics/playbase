@@ -182,6 +182,11 @@ pgx.createPGX <- function(counts,
     stop("rownames of counts and X do not match\n")
   }
 
+  # stop if is.null organism
+  if (is.null(organism)) {
+    stop("[createPGX] FATAL: organism must be provided")
+  }
+
   ## -------------------------------------------------------------------
   ## clean up input files
   ## -------------------------------------------------------------------
@@ -335,7 +340,7 @@ pgx.createPGX <- function(counts,
   ##     )
   ##   }
   ## }
-
+  
   ## remove special characters from description (other columns too??)
   description <- gsub("[\"\']", " ", description) ## remove quotes (important!!)
   description <- gsub("[\n]", ". ", description) ## replace newline
