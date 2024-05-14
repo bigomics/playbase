@@ -924,33 +924,42 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------
   ## Add custom gene sets if provided
   ## -----------------------------------------------------------
-  add.gmt <- NULL
-  if (!is.null(custom.geneset$gmt)) {
-    add.gmt <- custom.geneset$gmt
-  }
 
-  ## Should we always add??? Only non-human, non-model?
-  ## if(!is.human && !is.mouse && !is.rat) {
-  ## if(!is.human) {
-  if (TRUE) {
-    ## add species GO genesets from AnnotationHub
-    dbg("[pgx.add_GMT] Adding species GO for organism", pgx$organism)
-    go.genesets <- getOrganismGO(pgx$organism, rownames(G), ah = NULL)
-    if (!is.null(go.genesets)) {
-      dbg("[pgx.add_GMT] got", length(go.genesets), "genesets")
-      go.size <- sapply(go.genesets, length)
-      size.ok <- which(go.size >= 15 & go.size <= 400)
-      go.genesets <- go.genesets[size.ok]
-      add.gmt <- c(add.gmt, go.genesets)
+  ## add species GO genesets from AnnotationHub
+  dbg("[pgx.add_GMT] Adding species GO for organism", pgx$organism)
+
+  go.genesets <- tryCatch(
+    {
+      getOrganismGO(pgx$organism, rownames(G), ah = NULL)
+    },
+    error = function(e) {
+      message("Error in getOrganismsGO:", e)
+      return(NULL)
     }
-  }
+  )
 
-  if (!is.null(add.gmt)) {
+  browser()
+
+
+  if (!is.null(go.genesets)) {
+    dbg("[pgx.add_GMT] got", length(go.genesets), "genesets")
+    go.size <- sapply(go.genesets, length)
+    size.ok <- which(go.size >= 15 & go.size <= 400)
+    go.genesets <- go.genesets[size.ok]
+
+    # add CU
+    custom.geneset$gmt <- c(custom.geneset$gmt, go.genesets)
+
+    # get the length of go.genesets and add to gmt info
+    go.size <- sapply(go.genesets, length)
+    custom.geneset$info$GSET_SIZE <- c(custom.geneset$info$GSET_SIZE, go.size)
+  }
+  if (!is.null(custom.geneset$gmt)) {
     message("[pgx.add_GMT] Adding custom genesets...")
     ## convert gmt standard to SPARSE matrix: gset in rows, genes in
     ## columns.
     custom_gmt <- playbase::createSparseGenesetMatrix(
-      gmt.all = add.gmt,
+      gmt.all = custom.geneset$gmt,
       min.geneset.size = 3,
       max.geneset.size = 9999,
       min_gene_frequency = 1,
@@ -958,6 +967,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       annot = pgx$genes,
       filter_genes = FALSE
     )
+
     custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% pgx$genes$symbol, drop = FALSE]
     ## merge_sparse_matrix removes duplicated genesets
     G <- playbase::merge_sparse_matrix(
