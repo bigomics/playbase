@@ -468,7 +468,7 @@ pgx.createPGX <- function(counts,
   if (pgx$organism == "No organism" && is.null(annot_table) && is.null(custom.geneset)) {
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
   } else {
-    pgx <- pgx.add_GMT(pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
+    pgx <- pgx.add_GMT(pgx = pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
   }
 
   ### done
@@ -927,6 +927,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
   ## add species GO genesets from AnnotationHub
   dbg("[pgx.add_GMT] Adding species GO for organism", pgx$organism)
+  go.genesets <- NULL
 
   go.genesets <- tryCatch(
     {
@@ -934,12 +935,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     },
     error = function(e) {
       message("Error in getOrganismsGO:", e)
-      return(NULL)
     }
   )
-
-  browser()
-
 
   if (!is.null(go.genesets)) {
     dbg("[pgx.add_GMT] got", length(go.genesets), "genesets")
