@@ -322,18 +322,19 @@ pgx.createPGX <- function(counts,
   ## create pgx object
   ## -------------------------------------------------------------------
   message("[createPGX] creating pgx object...")
-  guess_organism <- guess_organism(rownames(counts))
-  if (is.null(organism)) {
-    organism <- guess_organism
-  }
-  if (!is.null(organism) && !is.null(guess_organism)) {
-    if (tolower(organism) != tolower(guess_organism)) {
-      warning(
-        "[createPGX] WARNING : guessed organism is '", guess_organism,
-        "' but '", organism, "' was provided!"
-      )
-    }
-  }
+
+  ## guess_organism <- guess_organism(rownames(counts))
+  ## if (is.null(organism)) {
+  ##   organism <- guess_organism
+  ## }
+  ## if (!is.null(organism) && !is.null(guess_organism)) {
+  ##   if (tolower(organism) != tolower(guess_organism)) {
+  ##     warning(
+  ##       "[createPGX] WARNING : guessed organism is '", guess_organism,
+  ##       "' but '", organism, "' was provided!"
+  ##     )
+  ##   }
+  ## }
 
   ## remove special characters from description (other columns too??)
   description <- gsub("[\"\']", " ", description) ## remove quotes (important!!)
@@ -828,8 +829,6 @@ getOrganismGO <- function(organism, genes, ah=NULL) {
   if(is.null(ah)) ah <- AnnotationHub::AnnotationHub()
   cat("querying AnnotationHub for",organism,"\n")
   ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
-  names(ahDb)
-  tolower(ahDb$species)
   
   ## select on exact organism name
   ahDb <- ahDb[ which(tolower(ahDb$species) == tolower(organism))]
@@ -842,12 +841,12 @@ getOrganismGO <- function(organism, genes, ah=NULL) {
   orgdb <- ahDb[[k]]  ## last one, newest version
 
   go.gmt <- list()
-  keytypes(orgdb)  
-  if(!"GOALL" %in% keytypes(orgdb)) {
+  AnnotationDbi::keytypes(orgdb)  
+  if(!"GOALL" %in% AnnotationDbi::keytypes(orgdb)) {
     cat("WARNING:: missing GO annotation in database!\n")
   } else {
     ## create GO annotets
-    cat("\nCreating GO annotation...\n")        
+    cat("\nCreating GO annotation from AnnotationHub...\n")        
     ont_classes <- c("BP","CC","MF")
     k="BP"
     for(k in ont_classes) {
@@ -890,7 +889,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   # Load geneset matrix
   G <- Matrix::t(playdata::GSETxGENE)  
   if (!is.human && !is.null(pgx$genes$human_ortholog)) {
-    human_genes <- ifelse(!is.na(pgx$genes$human_ortholog),
+    human_genes <- ifelse(
+      !is.na(pgx$genes$human_ortholog),
       pgx$genes$human_ortholog,
       pgx$genes$symbol
     )
