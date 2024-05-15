@@ -526,7 +526,15 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
     ahDb <- ahDb[which(tolower(ahDb$species) == tolower(organism))]
     k <- length(ahDb)
     cat("selecting database for", ahDb$species[k], "\n")
-    orgdb <- ahDb[[k]] ## last one, newest version
+    orgdb <- tryCatch(
+      {
+        ahDb[[k]]
+      },
+      error = function(e) {
+        message("An error occurred: ", e, ". Retrying with force=TRUE.")
+        ahDb[[k, force = TRUE]]
+      }
+    )
   })
 
   if (is.null(probes)) {
@@ -968,6 +976,7 @@ detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL, nprobe = 100)
   }
   suppressMessages({
     cat("querying AnnotationHub for", organism, "\n")
+
     ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
 
     ## select on exact organism name
@@ -1021,6 +1030,7 @@ detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL, nprobe = 100)
 
   # Iterate over probe types
   for (key in keytypes) {
+    # key = keytypes[4]
     n <- 0
     probe_matches <- data.frame(NULL)
     try(
