@@ -353,6 +353,7 @@ pgx.createPGX <- function(counts,
   ## create gene annotation table
   ## -------------------------------------------------------------------
   pgx$genes <- NULL
+
   if (is.null(use_biomart) || is.na(use_biomart)) {
     use_biomart <- !(organism %in% c("Mouse", "Human", "Rat"))
   }
@@ -392,6 +393,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Filter genes?
   ## -------------------------------------------------------------------
+
   do.filter <- (only.known | only.proteincoding)
   if (do.filter) {
     if (only.known) {
@@ -400,7 +402,7 @@ pgx.createPGX <- function(counts,
       pgx$genes <- pgx$genes[which(has.symbol), ]
     }
 
-    if (only.proteincoding && organism != "No organism") {
+    if (only.proteincoding && organism != "No organism" && c("protein.coding" %in% pgx$genes$gene_biotype)) { # TODO some organisms do not have gene_biotype, that need to be fixed
       is.proteincoding <- grepl("protein.coding", pgx$genes$gene_biotype)
       table(pgx$genes$gene_biotype)
       tt <- paste(paste(names(table(pgx$genes$gene_biotype)), table(pgx$genes$gene_biotype), sep = "="), collapse = ";")
