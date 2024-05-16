@@ -4375,7 +4375,7 @@ plotlyVolcano_multi <- function(FC,
         )
       )
   )
-
+  all_plts$plots <- sub_plots
   return(all_plts)
 }
 
