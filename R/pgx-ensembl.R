@@ -126,19 +126,6 @@ ngs.getGeneAnnotation <- function(probes, organism, pgx = NULL,
 
   ## try biomaRt for the rest
   if (is.null(genes) && organism != "No organism") {
-    ## message("[ngs.getGeneAnnotation] >>> annotating genes using biomaRt")
-    ## mart <- use_mart(organism)
-    ## if (is.null(mart)) {
-    ##   message("[ngs.getGeneAnnotation] FAIL : could not connect to mart")
-    ## }
-    ## ##probe_type <- detect_probetype.BIOMART(probes, mart)
-    ## probe_type <- guess_probetype(probes, for.mart=TRUE)
-    ## message("[ngs.getGeneAnnotation] probe_type = ", probe_type)
-    ## if (is.null(probe_type)) {
-    ##   dbg("[ngs.getGeneAnnotation] FATAL ERROR: could not determine probe_type")
-    ##   stop("[ngs.getGeneAnnotation] FATAL ERROR: could not determine probe_type")
-    ## }
-
     genes <- ngs.getGeneAnnotation_ANNOTHUB(
       organism = organism,
       probes = probes,
