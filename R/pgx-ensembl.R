@@ -765,6 +765,8 @@ detect_probetype.MATCH <- function(probes, organism = "", for.biomart = FALSE) {
   probe_type
 }
 
+#' @title Detect probe type from probe set
+#' @export
 detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL, nprobe = 100) {
   ##  require(AnnotationHub)
   ##  require(GO.db)
