@@ -439,6 +439,10 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   # add space after ; to conform with playbase <= 1.3.2
   out$gene_title <- gsub(";", "; ", out$gene_title)
 
+  # rename protein-coding to protein_coding to confirm with playbase <= v1.3.2
+  out$gene_biotype <- sub("protein-coding", "protein_coding", out$gene_biotype)
+
+
   rownames(out) <- out$feature
   return(out)
 }
