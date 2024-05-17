@@ -54,12 +54,9 @@ test_that("ngs.getGeneAnnotation returns annotation for genes", {
 })
 
 # Get the list of CSV files in the annotation directory
-csv_files <- list.files(path = "./tests/data/annotation", pattern = "*.csv", full.names = TRUE)
+csv_files <- list.files(path = "../data/annotation", pattern = "*.csv", full.names = TRUE)
 
-# Iterate over each CSV file
-for (file in csv_files) {
-  # file = csv_files[2]
-
+lapply(csv_files, function(file) {
   species <- strsplit(basename(file), split = "_")[[1]][1]
 
   # Read the probes from the CSV file
@@ -117,7 +114,7 @@ for (file in csv_files) {
     # Check position match
     expect_equal(result$pos, data$pos)
   })
-}
+})
 
 
 #' Test for probe2symbol
