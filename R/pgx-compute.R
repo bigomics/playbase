@@ -440,11 +440,14 @@ pgx.createPGX <- function(counts,
       pgx$X <- pgx$X[rownames(pgx$X) != "", , drop = FALSE]
     }
 
+    # add space after ; to conform with playbase <= 1.3.2
+    pgx$genes$gene_title <- gsub(";", "; ", pgx$genes$gene_title)
+
     # Collapse features as a comma-separated elements
     agg_features <- aggregate(
       feature ~ symbol,
       data = pgx$genes,
-      function(x) paste(unique(x), collapse = "; ") # old symbol annotation has "; " as separator, we should keep it for compatibility
+      function(x) paste(unique(x), collapse = "; ") # old symbol annotation has "; " as separator, we should keep it for compatibility with playbase <= 1.3.2
     )
 
     # merge by symbol, replace features by collapsed features
