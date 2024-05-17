@@ -97,11 +97,12 @@ lapply(csv_files, function(file) {
     # check feature match
     expect_equal(result$feature, data$feature)
 
-    skip_if(all(is.na(result$gene_biotype)))
+    skip_if(all(is.na(result$tx_len)))
 
     # Check transcript length match
     expect_equal(result$tx_len, data$tx_len)
 
+    skip_if(all(is.na(result$gene_biotype)))
     # Check gene biotypes match
     expect_equal(result$gene_biotype, data$gene_biotype)
 
