@@ -53,6 +53,49 @@ test_that("ngs.getGeneAnnotation returns annotation for genes", {
   expect_equal(result$gene_name, probes)
 })
 
+# Get the list of CSV files in the annotation directory
+csv_files <- list.files(path = "./tests/data/annotation", pattern = "*.csv", full.names = TRUE)
+
+# Iterate over each CSV file
+for (file in csv_files) {
+  #file = csv_files[1]
+  
+  species <- strsplit(basename(file), split = "_")[[1]][1]
+  
+  # Read the probes from the CSV file
+  data <- read.csv(file)
+  
+  # Get a sample of 5 probes (always the same probes)
+  data <- data[round(seq(1, nrow(data), length.out=5)), ]
+  probes <- data$feature
+  
+  # check that results from annotation match csv
+  test_that(paste("ngs.getGeneAnnotation returns correct annotation for", species), {
+    # Run function
+    result <- playbase::ngs.getGeneAnnotation(
+      probes = probes,
+      organism = species
+    )
+    # Check class
+    expect_s3_class(result, "data.frame")
+    
+    # Check number of rows
+    expect_equal(nrow(result), length(probes))
+    
+    # Check presence of expected columns
+    expected_cols <- c("gene_name", "gene_title", "gene_biotype", "chr", "pos", "tx_len", "map")
+    expect_true(all(expected_cols %in% colnames(result)))
+    
+    # Check gene names match
+    expect_equal(result$gene_name, data$gene_name)
+
+    # Check gene titles match
+    expect_equal(result$gene_title, data$gene_title)
+  })
+  
+
+}
+
 
 #' Test for probe2symbol
 test_that("probe2symbol returns expected output", {
