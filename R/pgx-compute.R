@@ -444,7 +444,7 @@ pgx.createPGX <- function(counts,
     agg_features <- aggregate(
       feature ~ symbol,
       data = pgx$genes,
-      function(x) paste(unique(x), collapse = ";")
+      function(x) paste(unique(x), collapse = "; ") # old symbol annotation has "; " as separator, we should keep it for compatibility
     )
 
     # merge by symbol, replace features by collapsed features

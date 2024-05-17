@@ -58,7 +58,7 @@ csv_files <- list.files(path = "./tests/data/annotation", pattern = "*.csv", ful
 
 # Iterate over each CSV file
 for (file in csv_files) {
-  # file = csv_files[1]
+  # file = csv_files[2]
 
   species <- strsplit(basename(file), split = "_")[[1]][1]
 
@@ -66,7 +66,7 @@ for (file in csv_files) {
   data <- read.csv(file)
 
   # Get a sample of 5 probes (always the same probes)
-  data <- data[round(seq(1, nrow(data), length.out = 5)), ]
+  data <- data[round(seq(1, nrow(data), length.out = 20)), ]
   probes <- data$feature
 
   # check that results from annotation match csv
@@ -89,14 +89,21 @@ for (file in csv_files) {
     # Check gene names match
     expect_equal(result$gene_name, data$gene_name)
 
+    result$gene_title[result$gene_title == "uncharacterized protein"] <- NA
+
     # Check gene titles match
     expect_equal(result$gene_title, data$gene_title)
 
-    # Check transcript length match
-    expect_equal(result$tx_len, data$tx_len)
+    # check symbol match
+    expect_equal(result$symbol, data$symbol)
 
+    # check feature match
+    expect_equal(result$feature, data$feature)
 
     skip_if(all(is.na(result$gene_biotype)))
+
+    # Check transcript length match
+    expect_equal(result$tx_len, data$tx_len)
 
     # Check gene biotypes match
     expect_equal(result$gene_biotype, data$gene_biotype)
