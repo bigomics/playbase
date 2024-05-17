@@ -382,6 +382,7 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   cat("get gene annotation columns:", cols, "\n")
   message("retrieving annotation for ", length(probes), " features...")
   annot <- AnnotationDbi::select(orgdb, keys = probes, columns = cols, keytype = probe_type)
+
   annot$SYMBOL[is.na(annot$SYMBOL)] <- ""
 
   ## match annotation table to probes
@@ -434,6 +435,10 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
     message("WARNING: not all probes could be annotated")
   }
   out <- out[match(probes0, out$feature), , drop = FALSE]
+
+  # add space after ; to conform with playbase <= 1.3.2
+  out$gene_title <- gsub(";", "; ", out$gene_title)
+
   rownames(out) <- out$feature
   return(out)
 }
