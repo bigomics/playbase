@@ -38,7 +38,8 @@ RUN R -e "BiocManager::install('orthogene')"
 RUN R -e "install.packages('plsRcox', dependencies = FALSE)"
 RUN R -e "remotes::install_version('SeuratObject', '4.1.4', repos = c('https://satijalab.r-universe.dev', getOption('repos')))"
 RUN R -e "remotes::install_version('Seurat', '4.4.0', repos = c('https://satijalab.r-universe.dev', getOption('repos')))"
-
+RUN R -e "BiocManager::install('org.Rn.eg.db')"
+RUN R -e "BiocManager::install('AnnotationHub')"
 
 RUN set -e && \
     R CMD INSTALL /playbase
