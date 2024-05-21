@@ -450,7 +450,7 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   # replace NA in gene_ortholog by "" to conform with old pgx objects
   out$human_ortholog[is.na(out$human_ortholog)] <- ""
 
-  # if organism is human, human_ortholog is gene symbol
+  # if organism is human, human_ortholog should be NA (matching old playbase annot)
   if (is.null(out$human_ortholog)) {
     out$human_ortholog <- NA
   }

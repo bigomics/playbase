@@ -57,7 +57,7 @@ test_that("ngs.getGeneAnnotation returns annotation for genes", {
 csv_files <- list.files(path = "../data/annotation", pattern = "*.csv", full.names = TRUE)
 
 lapply(csv_files, function(file) {
-  #file = csv_files[1]
+  # file = csv_files[3]
   species <- strsplit(basename(file), split = "_")[[1]][1]
 
   # Read the probes from the CSV file
@@ -99,7 +99,15 @@ lapply(csv_files, function(file) {
     expect_equal(result$feature, data$feature)
 
     # check human_ortholog match at least 80% match
-    expect_true(sum(result$human_ortholog == data$human_ortholog) >= 0.8 * length(probes))
+
+    match <- sum(result$human_ortholog == data$human_ortholog) >= 0.8 * length(probes)
+
+    # if match is na, check that both human_orthologs are NA
+    if (is.na(match)) {
+      match <- sum(is.na(result$human_ortholog) == is.na(data$human_ortholog)) == length(probes)
+    }
+
+    expect_true(match)
 
     skip_if(all(is.na(result$tx_len)))
 
