@@ -27,14 +27,11 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Install de-novo bigomics stuff (as R packages)
 #------------------------------------------------------------
 
-RUN R -e "remotes::install_github('bigomics/PCSF',dependencies=FALSE)"
-RUN R -e "remotes::install_github('bigomics/fgsea')"
-
-
 # copy bigomics/playbase code from github checkout
 COPY . /playbase
 
-RUN R CMD INSTALL /playbase 
+RUN set -e && \
+    R CMD INSTALL /playbase
 
 # add entrypoint to execute when the docker container starts up
 
