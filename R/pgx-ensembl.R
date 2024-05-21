@@ -261,6 +261,11 @@ ngs.getGeneAnnotation_ORGDB <- function(organism, probes, probe_type) {
   rownames(d) <- d$feature
   ii <- match(probes, rownames(d))
   d <- d[ii, , drop = FALSE]
+
+  if (is.null(d$human_ortholog)) {
+    d$human_ortholog <- NA
+  }
+
   return(d)
 }
 
