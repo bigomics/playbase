@@ -21,6 +21,7 @@ WORKDIR /
 
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8 
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 #------------------------------------------------------------
 # Install de-novo bigomics stuff (as R packages)
