@@ -442,6 +442,14 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   # rename protein-coding to protein_coding to confirm with playbase <= v1.3.2
   out$gene_biotype <- sub("protein-coding", "protein_coding", out$gene_biotype)
 
+  # replace NA in gene_ortholog by "" to conform with old pgx objects
+  out$human_ortholog[is.na(out$human_ortholog)] <- ""
+
+  # if organism is human, human_ortholog is gene symbol
+  if (is.null(out$human_ortholog)) {
+    out$human_ortholog <- NA
+  }
+
 
   rownames(out) <- out$feature
   return(out)
