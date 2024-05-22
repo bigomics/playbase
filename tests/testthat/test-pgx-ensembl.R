@@ -175,11 +175,19 @@ test_that("detects ENSEMBL", {
 })
 
 
+uniprot_genes <- c("P31749", "P04637", "Q9Y6K9", "O15111", "Q9UM73", "Q13315", "P55317", "P16070", "P22301")
 #' Test for guess_probetype
 test_that("detects UNIPROT", {
   # UNIPROT genes
-  uniprot_genes <- c("P31749", "P04637", "Q9Y6K9", "O15111", "Q9UM73", "Q13315", "P55317", "P16070", "P22301")
   expect_true(playbase::detect_probetype.ANNOTHUB(organism = "Human", probes = uniprot_genes) %in% c("UNIPROT", "ACCNUM"))
+})
+
+res_uniprot <- playbase::ngs.getGeneAnnotation_ANNOTHUB(probes = uniprot_genes, organism = "Human", probe_type = "UNIPROT")
+
+res_accnum <- playbase::ngs.getGeneAnnotation_ANNOTHUB(probes = uniprot_genes, organism = "Human", probe_type = "ACCNUM")
+
+test_that("UNIPROT and ACCNUM annotations are the same", {
+  expect_equal(res_uniprot, res_accnum)
 })
 
 # Test for ENSEMBLTRANS
