@@ -423,8 +423,9 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   annot$SOURCE <- ahDb$dataprovider
   annot.cols <- c(
     "PROBE", "SYMBOL", "ORTHOGENE", "GENENAME", "GENETYPE",
-    "MAP", "CHR", "POS", "TXLEN", "SOURCE", "SYMBOL"
+    "MAP", "CHR", "POS", "TXLEN", "SOURCE"
   )
+
   missing.cols <- setdiff(annot.cols, colnames(annot))
   missing.cols
   out <- annot
@@ -432,10 +433,14 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   out <- out[, annot.cols]
   new.names <- c(
     "feature", "symbol", "human_ortholog", "gene_title", "gene_biotype",
-    "map", "chr", "pos", "tx_len", "source", "gene_name"
+    "map", "chr", "pos", "tx_len", "source"
   )
   colnames(out) <- new.names
   out <- as.data.frame(out)
+
+  # gene_name should ALWAYS be assigned to feature for compatibility with gene_name legacy implementation
+  out$gene_name <- out$feature
+
   if (!all(probes0 %in% out$feature)) {
     message("WARNING: not all probes could be annotated")
   }

@@ -57,7 +57,6 @@ test_that("ngs.getGeneAnnotation returns annotation for genes", {
 csv_files <- list.files(path = "../data/annotation", pattern = "*.csv", full.names = TRUE)
 
 lapply(csv_files, function(file) {
-  # file = csv_files[5]
   species <- strsplit(basename(file), split = "_")[[1]][1]
 
   # Read the probes from the CSV file
