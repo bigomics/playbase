@@ -1113,6 +1113,17 @@ detect_probetype.BIOMART <- function(probes, mart = NULL, verbose = TRUE) {
   return(probe_type)
 }
 
+#' @title Get all species in AnnotationHub/OrgDB
+#' @export
+getAllSpecies <- function(ah = NULL) {
+  if (is.null(ah)) {
+    ah <- AnnotationHub::AnnotationHub()  ## make global??
+  }
+  ah.tables <- query(ah, "OrgDb")
+  ah.species <- sort(unique(ah.tables$species))
+  ah.species
+}
+
 
 #' @export
 id2symbol <- function(probes, organism) {
