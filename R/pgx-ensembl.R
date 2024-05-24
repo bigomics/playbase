@@ -11,7 +11,7 @@
 #' @param pgx PGX object with a counts table.
 #' @param organism Char. Organism name. For more info see \code{\link{playbase::SPECIES_TABLE}}.
 #' @param annot_table Custom annotation table. See \code{\link{playbase::pgx.custom_annotation}}.
-#' @param use_biomart Logical. If TRUE, use biomaRt to retrieve gene annotation.
+#' @param use_annothub Logical. If TRUE, use biomaRt to retrieve gene annotation.
 #' @return Updated PGX object with gene annotation table
 #'
 #' @details Queries the Ensembl database to get a gene annotation table
@@ -27,7 +27,7 @@
 #' pgx <- pgx.addGeneAnnotation(pgx, "Human")
 #' }
 #' @export
-pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL, use_biomart = NULL) {
+pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL, use_annothub = NULL) {
   # Safety checks
   stopifnot(is.list(pgx))
   probes <- rownames(pgx$counts)
@@ -44,7 +44,7 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL, use_
     probes = probes,
     annot_table = annot_table,
     organism = organism,
-    use_biomart = use_biomart ## auto-select
+    use_annothub = use_annothub ## auto-select
   )
 
   # Return data
@@ -94,7 +94,7 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL, use_
 #' }
 #' @export
 ngs.getGeneAnnotation <- function(probes, organism, pgx = NULL,
-                                  annot_table = NULL, use_biomart = NULL) {
+                                  annot_table = NULL, use_annothub = NULL) {
   if (is.null(organism)) {
     warning("[getGeneAnnotation] Please specify organism")
     return(NULL)
@@ -102,17 +102,17 @@ ngs.getGeneAnnotation <- function(probes, organism, pgx = NULL,
   message("[ngs.getGeneAnnotation] organism = ", organism)
 
   is.primary_organism <- (tolower(organism) %in% c("human", "mouse", "rat"))
-  if (is.null(use_biomart) && is.primary_organism) {
-    use_biomart <- FALSE
+  if (is.null(use_annothub) && is.primary_organism) {
+    use_annothub <- FALSE
   }
-  if (is.null(use_biomart) && !is.primary_organism) {
-    use_biomart <- TRUE
+  if (is.null(use_annothub) && !is.primary_organism) {
+    use_annothub <- TRUE
   }
 
   genes <- NULL
 
   ## first try ORGDB for human, mouse, rat
-  if (is.null(genes) && is.primary_organism && !use_biomart) {
+  if (is.null(genes) && is.primary_organism && !use_annothub) {
     message("[getGeneAnnotation] >>> annotating genes using ORGDB libraries")
     probe_type <- guess_probetype(probes, for.biomart = FALSE)
     if (is.null(probe_type)) stop("probe_type is NULL")
@@ -1131,7 +1131,7 @@ id2symbol <- function(probes, organism) {
     stop("could not determine organism. please specify.")
   }
   ## this auto-selects using ORG.DB or BIOMART
-  genes <- ngs.getGeneAnnotation(probes, organism = organism, use_biomart = NULL)
+  genes <- ngs.getGeneAnnotation(probes, organism = organism, use_annothub = NULL)
   genes <- genes[match(probes, rownames(genes)), ] ## just to be sure
   ## just return the symbol
   genes$symbol

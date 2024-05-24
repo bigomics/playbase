@@ -174,7 +174,7 @@ pgx.createPGX <- function(counts,
                           remove.xxl = TRUE,
                           remove.outliers = TRUE,
                           normalize = TRUE,
-                          use_biomart = NA) {
+                          use_annothub = NA) {
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("[createPGX] dimension of counts and X do not match\n")
   }
@@ -354,16 +354,16 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   pgx$genes <- NULL
 
-  if (is.null(use_biomart) || is.na(use_biomart)) {
-    use_biomart <- !(organism %in% c("Mouse", "Human", "Rat"))
+  if (is.null(use_annothub) || is.na(use_annothub)) {
+    use_annothub <- !(organism %in% c("Mouse", "Human", "Rat"))
   }
-  if (!use_biomart && !(organism %in% c("Mouse", "Human", "Rat"))) {
+  if (!use_annothub && !(organism %in% c("Mouse", "Human", "Rat"))) {
     message("ERROR: organism '", organism, "' not supported using R libraries.")
-    stop("ERROR: you must set 'use_biomart=TRUE' for organism: ", organism)
+    stop("ERROR: you must set 'use_annothub=TRUE' for organism: ", organism)
   }
 
   message("[createPGX] annotating genes")
-  pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table, use_biomart = use_biomart)
+  pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table, use_annothub = use_annothub)
 
   if (is.null(pgx$genes)) {
     stop("[createPGX] FATAL: Could not build gene annotation")
