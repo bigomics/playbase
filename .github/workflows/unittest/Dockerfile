@@ -10,7 +10,7 @@
 # Start from lastest base image
 #------------------------------------------------------------
 
-ARG DOCKER_TAG=bigomics/omicsplayground:latest
+ARG DOCKER_TAG=bigomics/omicsplayground:test
 
 FROM ${DOCKER_TAG}  
 
