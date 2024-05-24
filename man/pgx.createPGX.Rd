@@ -31,7 +31,7 @@ pgx.createPGX(
   remove.xxl = TRUE,
   remove.outliers = TRUE,
   normalize = TRUE,
-  use_biomart = NA
+  use_annothub = NA
 )
 }
 \arguments{

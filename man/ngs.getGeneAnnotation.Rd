@@ -9,7 +9,7 @@ ngs.getGeneAnnotation(
   organism,
   pgx = NULL,
   annot_table = NULL,
-  use_biomart = NULL
+  use_annothub = NULL
 )
 }
 \arguments{
