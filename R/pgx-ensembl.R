@@ -636,23 +636,6 @@ probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE)
   return(query_col)
 }
 
-use_mart <- function(organism) {
-  ## organism <- capitalize(organism) ## in utils.R
-  organism <- sub("[H|h]omo sapiens", "Human", organism)
-  organism <- sub("[M|m]us musculus", "Mouse", organism)
-  organism <- sub("[R|r]attus norvegicus", "Rat", organism)
-  message("[use_mart] connecting to bioMART server for organism ", organism)
-  species_info <- playbase::SPECIES_TABLE[tolower(species_name) == tolower(organism)]
-  # Some species appear in more than one mart, select ensembl only to avoid confusion
-  if (nrow(species_info) > 1) {
-    species_info <- species_info[mart == "ensembl"]
-    species_info <- species_info[1, ]
-  }
-  ensembl <- biomaRt::useEnsembl(biomart = "ensembl")
-  mart <- biomaRt::useDataset(dataset = species_info$dataset, mart = ensembl)
-  return(mart)
-}
-
 #' Guess probe type
 #'
 #' This function tries to automatically detect the probe type of a set
@@ -992,17 +975,4 @@ getAllSpecies <- function(ah = NULL) {
   ah.tables <- AnnotationHub::query(ah, "OrgDb")
   ah.species <- sort(unique(ah.tables$species))
   ah.species
-}
-
-
-#' @export
-id2symbol <- function(probes, organism) {
-  if (is.null(organism)) {
-    stop("could not determine organism. please specify.")
-  }
-  ## this auto-selects using ORG.DB or BIOMART
-  genes <- ngs.getGeneAnnotation(probes, organism = organism, use_annothub = NULL)
-  genes <- genes[match(probes, rownames(genes)), ] ## just to be sure
-  ## just return the symbol
-  genes$symbol
 }
