@@ -587,6 +587,7 @@ pgx.custom_annotation <- function(counts, custom_annot = NULL) {
 
   return(custom_annot)
 }
+  
 
 ## ================================================================================
 ## ========================= FUNCTIONS ============================================
@@ -967,6 +968,7 @@ detect_probetype.ORGDB <- function(probes, organism) {
 }
 
 #' @title Get all species in AnnotationHub/OrgDB
+#' 
 #' @export
 getAllSpecies <- function(ah = NULL) {
   if (is.null(ah)) {
@@ -975,4 +977,20 @@ getAllSpecies <- function(ah = NULL) {
   ah.tables <- AnnotationHub::query(ah, "OrgDb")
   ah.species <- sort(unique(ah.tables$species))
   ah.species
+}
+
+#' @title Check if probes are valid for organism
+#' 
+#' @return TRUE    if probes match any probetype of organism
+#' @return FALSE   if probes do not any probetype of organism
+#'
+#' @export
+checkProbes <- function(organism, probes, ah = NULL) {
+  probe_type <- detect_probetype.ANNOTHUB(organism, probes, ah = ah)
+  if(is.null(probe_type)) {
+    message("[checkProbes] WARNING: could not validate probes"  )
+    return(FALSE)
+  }
+  message("[checkProbes] detected probe_type = ", probe_type)
+  return(TRUE)
 }
