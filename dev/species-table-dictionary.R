@@ -5,6 +5,7 @@
 
 
 # Get species from annotation hub/orgdb
+library(data.table)
 
 species <- data.table(playbase::getAllSpecies())
 
@@ -33,6 +34,8 @@ setorder(species, species_name)
 
 write.table(species, file = "dev/SPECIES_TABLE_ANNOTHUB.tsv", sep = "\t", quote = FALSE, row.names = FALSE)
 
+SPECIES_TABLE <- species
+usethis::use_data(SPECIES_TABLE, overwrite = TRUE)
 
 
 # # Get species from main ensembl vertebrate
