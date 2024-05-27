@@ -170,9 +170,9 @@ ngs.getGeneAnnotation_ORGDB <- function(organism, probes, probe_type) {
   }
   message("probe_type = ", probe_type)
 
-  if (organism == "homo sapiens") organism <- "human"
-  if (organism == "mus musculus") organism <- "mouse"
-  if (organism == "rattus norvegicus") organism <- "rat"
+  if (tolower(organism) == "homo sapiens") organism <- "human"
+  if (tolower(organism) == "mus musculus") organism <- "mouse"
+  if (tolower(organism) == "rattus norvegicus") organism <- "rat"
 
   # Get org database and columns request
   if (organism == "human") {
