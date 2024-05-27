@@ -587,7 +587,7 @@ pgx.custom_annotation <- function(counts, custom_annot = NULL) {
 
   return(custom_annot)
 }
-  
+
 
 ## ================================================================================
 ## ========================= FUNCTIONS ============================================
@@ -968,27 +968,43 @@ detect_probetype.ORGDB <- function(probes, organism) {
 }
 
 #' @title Get all species in AnnotationHub/OrgDB
-#' 
+#'
 #' @export
 getAllSpecies <- function(ah = NULL) {
   if (is.null(ah)) {
     ah <- AnnotationHub::AnnotationHub() ## make global??
   }
   ah.tables <- AnnotationHub::query(ah, "OrgDb")
-  ah.species <- sort(unique(ah.tables$species))
-  ah.species
+
+  variables <- c(
+    "ah_id", "species", "description", "rdatadateadded", "rdataclass",
+    "title", "taxonomyid", "coordinate_1_based", "preparerclass", "sourceurl",
+    "dataprovider", "genome", "maintainer", "tags", "sourcetype"
+  )
+
+  # Iterate through each variable and store it as a table
+  tables <- lapply(variables, function(var) {
+    table <- eval(parse(text = paste0("ah.tables$", var)))
+  })
+  tables <- do.call(cbind, tables)
+
+  colnames(tables) <- variables
+
+
+  names(tables) <- variables
+  return(tables)
 }
 
 #' @title Check if probes are valid for organism
-#' 
+#'
 #' @return TRUE    if probes match any probetype of organism
 #' @return FALSE   if probes do not any probetype of organism
 #'
 #' @export
 checkProbes <- function(organism, probes, ah = NULL) {
   probe_type <- detect_probetype.ANNOTHUB(organism, probes, ah = ah)
-  if(is.null(probe_type)) {
-    message("[checkProbes] WARNING: could not validate probes"  )
+  if (is.null(probe_type)) {
+    message("[checkProbes] WARNING: could not validate probes")
     return(FALSE)
   }
   message("[checkProbes] detected probe_type = ", probe_type)
