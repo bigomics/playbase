@@ -32,11 +32,15 @@ preferred_order <- c("Human", "Mouse", "Rat", "No organism")
 species[, species_name := factor(species_name, levels = c(preferred_order, sort(setdiff(unique(species_name), preferred_order))))]
 setorder(species, species_name)
 
+# remove duplicates
+
+species <- unique(species, by = "species_name", fromLast = FALSE)
+
+
 write.table(species, file = "dev/SPECIES_TABLE_ANNOTHUB.tsv", sep = "\t", quote = FALSE, row.names = FALSE)
 
 SPECIES_TABLE <- species
 usethis::use_data(SPECIES_TABLE, overwrite = TRUE)
-
 
 # # Get species from main ensembl vertebrate
 # library(biomaRt)
