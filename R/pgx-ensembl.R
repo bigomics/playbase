@@ -335,15 +335,13 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
     ahDb <- ahDb[which(tolower(ahDb$species) == tolower(organism))]
     k <- length(ahDb)
     cat("selecting database for", ahDb$species[k], "\n")
-    orgdb <- tryCatch(
-      {
-        ahDb[[k]]
-      },
-      error = function(e) {
-        message("An error occurred: ", e, ". Retrying with force=TRUE.")
-        ahDb[[k, force = TRUE]]
-      }
-    )
+    orgdb <- tryCatch({
+      ahDb[[k]]
+    },
+    error = function(e) {
+      message("An error occurred: ", e, ". Retrying with force=TRUE.")
+      ahDb[[k, force = TRUE]]
+    })
   })
 
   if (is.null(probes)) {
@@ -351,49 +349,38 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   }
   probes0 <- probes
   names(probes) <- probes0
-
+  
   ## clean up probes
   probes <- probes[!is.na(probes) & probes != ""]
+  probes <- sapply(strsplit(probes,split=";"),head,1)   ## take first
   is.ensembl <- mean(grepl("^ENS", probes)) > 0.5
   if (is.ensembl) probes <- sub("[.][0-9]+$", "", probes)
-  if (sum(duplicated(probes)) > 0) {
-    message("WARNING: duplicated probes")
-    probes <- probes[!duplicated(probes)]
-  }
 
   if (is.null(probe_type)) {
     probe_type <- detect_probetype.ANNOTHUB(organism, probes, ah = ah)
   }
   message("detected probe_type = ", probe_type)
-
+  if(is.null(probe_type)) {
+    message("ERROR: could not determine probe_type ")
+    return(NULL)
+  }
+  
   ## --------------------------------------------
   ## retrieve table
   ## --------------------------------------------
   keytypes(orgdb)
-  cols <- c(
-    "SYMBOL", "GENENAME", "GENETYPE", "ENTREZID",
-    ## "ALIAS", "ACCNUM","REFSEQ",  ## balloon warning!!!
-    "ENSEMBL", "ENSEMBLPROT", "UNIPROT", "GENETYPE", "MAP", "MGI"
-  )
-  mean_transcript <- mean(grepl("ENS[A-Z]*T[0]", probes))
-  mean_transcript
-  is_transcript <- (mean_transcript > 0.33)
-  if (is_transcript) {
-    ## add transcript/peptide level
-    cols <- c(cols, "ENSEMBLTRANS")
-  }
+  cols <- c("SYMBOL", "GENENAME", "GENETYPE", "GENETYPE", "MAP")
   cols <- intersect(cols, keytypes(orgdb))
 
   cat("get gene annotation columns:", cols, "\n")
   message("retrieving annotation for ", length(probes), " features...")
   annot <- AnnotationDbi::select(orgdb, keys = probes, columns = cols, keytype = probe_type)
-
   annot$SYMBOL[is.na(annot$SYMBOL)] <- ""
 
   ## match annotation table to probes
   cat("got", length(unique(annot$SYMBOL)), "unique SYMBOLs...\n")
   annot <- annot[match(probes, annot[, probe_type]), ]
-  annot$PROBE <- names(probes) ## original probes
+  annot$PROBE <- names(probes) ## original probe names
 
   ## --------------------------------------------
   ## get human ortholog using 'orthogene'
@@ -401,9 +388,11 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   ortho.map <- orthogene::map_species(method = "gprofiler")
   head(ortho.map)
   cat("\ngetting human orthologs...\n")
+  has.ortho <- organism %in% ortho.map$scientific_name
+  has.symbol <- "SYMBOL" %in% colnames(annot)
   if (organism == "Homo sapiens") {
     annot$ORTHOGENE <- annot$SYMBOL
-  } else if (organism %in% ortho.map$scientific_name) {
+  } else if (has.ortho && has.symbol) {
     ortho.out <- orthogene::convert_orthologs(
       gene_df = unique(annot$SYMBOL),
       input_species = organism,
@@ -425,7 +414,6 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
     "PROBE", "SYMBOL", "ORTHOGENE", "GENENAME", "GENETYPE",
     "MAP", "CHR", "POS", "TXLEN", "SOURCE"
   )
-
   missing.cols <- setdiff(annot.cols, colnames(annot))
   missing.cols
   out <- annot
@@ -438,7 +426,8 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   colnames(out) <- new.names
   out <- as.data.frame(out)
 
-  # gene_name should ALWAYS be assigned to feature for compatibility with gene_name legacy implementation
+  # gene_name should ALWAYS be assigned to feature for compatibility
+  # with gene_name legacy implementation
   out$gene_name <- out$feature
 
   if (!all(probes0 %in% out$feature)) {
@@ -459,9 +448,8 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   if (is.null(out$human_ortholog)) {
     out$human_ortholog <- NA
   }
-
-
-  rownames(out) <- out$feature
+ 
+  rownames(out) <- probes0
   return(out)
 }
 
@@ -692,6 +680,7 @@ probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE)
 #' @export
 guess_probetype <- function(probes, organism, for.biomart = FALSE) {
   detect_probetype.MATCH(probes = probes, organism = organism, for.biomart = for.biomart)
+  ## detect_probetype.ANNOTHUB(organism, probes, ah = NULL, nprobe = 100) 
 }
 
 detect_probetype.MATCH <- function(probes, organism = "", for.biomart = FALSE) {
@@ -803,13 +792,6 @@ detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL, nprobe = 100)
     orgdb <- ahDb[[k]] ## last one, newest version
   })
 
-  ## clean up probes
-  probes <- probes[!is.na(probes) & probes != ""]
-  if (sum(duplicated(probes)) > 0) {
-    message("WARNING: duplicated probes")
-    probes <- unique(probes)
-  }
-
   ## get probe types for organism
   keytypes <- c(
     "ENSEMBL", "ENSEMBLTRANS", "SYMBOL", "REFSEQ", "UNIPROT",
@@ -827,6 +809,7 @@ detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL, nprobe = 100)
 
   ## clean up probes
   probes <- probes[!is.na(probes) & probes != ""]
+  probes <- sapply(strsplit(probes,split=";"),head,1)   ## take first  
   if (sum(duplicated(probes)) > 0) {
     message("WARNING: duplicated probes")
     probes <- unique(probes)
@@ -840,7 +823,6 @@ detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL, nprobe = 100)
   ## Subset probes if too many
   if (length(probes) > nprobe) {
     if (nprobe > length(probes)) nprobe <- length(probes)
-
     # get random probes for query
     probes <- sample(probes, nprobe)
   }
@@ -989,8 +971,6 @@ getAllSpecies <- function(ah = NULL) {
   tables <- do.call(cbind, tables)
 
   colnames(tables) <- variables
-
-
   names(tables) <- variables
   return(tables)
 }
