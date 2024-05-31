@@ -650,6 +650,7 @@ pgx.computePGX <- function(pgx,
 
   if (pgx$organism != "No organism" || !is.null(pgx$GMT) && nrow(pgx$GMT) > 0) {
     message("[pgx.computePGX] testing genesets...")
+
     pgx <- compute_testGenesets(
       pgx = pgx,
       custom.geneset = custom.geneset,
@@ -1050,8 +1051,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## Clean up and return pgx object
   ## -----------------------------------------------------------------------
 
-  ## Normalize G??
-  ## G <- playbase::normalize_cols(G)
+  G <- playbase::normalize_cols(G)
+
   pgx$GMT <- G
   message(glue::glue("[pgx.add_GMT] Final GMT: {nrow(G)}x{ncol(G)}"))
   rm(gsetX.bygroup, gsetX, G)
