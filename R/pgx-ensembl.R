@@ -357,7 +357,7 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   if (is.ensembl) probes <- sub("[.][0-9]+$", "", probes)
 
   if (is.null(probe_type)) {
-    probe_type <- detect_probetype.ANNOTHUB(organism, probes, ah = ah)
+    probe_type <- playbase::detect_probetype.ANNOTHUB(organism, probes, ah = ah)
   }
   message("detected probe_type = ", probe_type)
   if(is.null(probe_type)) {
@@ -849,7 +849,7 @@ detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL, nprobe = 100)
   ##  key_matches
   top_match <- NULL
   if (all(key_matches == 0)) {
-    message("WARNING:: Probe type not found, please check your probes")
+    message("WARNING:: Probe type not found, use one of the following probe types: ", paste(keytypes, collapse = " "))
     return(NULL)
   } else {
     top_match <- names(which.max(key_matches))
