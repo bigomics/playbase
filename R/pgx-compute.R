@@ -648,7 +648,7 @@ pgx.computePGX <- function(pgx,
   ## ------------------ gene set tests -----------------------
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
-  if (pgx$organism != "No organism" || !is.null(pgx$GMT) && nrow(pgx$GMT) > 0) {
+  if (pgx$organism != "No organism" && !is.null(pgx$GMT) && nrow(pgx$GMT) > 0) {
     message("[pgx.computePGX] testing genesets...")
 
     pgx <- compute_testGenesets(
