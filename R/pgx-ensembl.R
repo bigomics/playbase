@@ -335,13 +335,15 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
     ahDb <- ahDb[which(tolower(ahDb$species) == tolower(organism))]
     k <- length(ahDb)
     cat("selecting database for", ahDb$species[k], "\n")
-    orgdb <- tryCatch({
-      ahDb[[k]]
-    },
-    error = function(e) {
-      message("An error occurred: ", e, ". Retrying with force=TRUE.")
-      ahDb[[k, force = TRUE]]
-    })
+    orgdb <- tryCatch(
+      {
+        ahDb[[k]]
+      },
+      error = function(e) {
+        message("An error occurred: ", e, ". Retrying with force=TRUE.")
+        ahDb[[k, force = TRUE]]
+      }
+    )
   })
 
   if (is.null(probes)) {
@@ -349,10 +351,10 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   }
   probes0 <- probes
   names(probes) <- probes0
-  
+
   ## clean up probes
   probes <- probes[!is.na(probes) & probes != ""]
-  probes <- sapply(strsplit(probes,split=";"),head,1)   ## take first
+  probes <- sapply(strsplit(probes, split = ";"), head, 1) ## take first
   is.ensembl <- mean(grepl("^ENS", probes)) > 0.5
   if (is.ensembl) probes <- sub("[.][0-9]+$", "", probes)
 
@@ -360,11 +362,11 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
     probe_type <- playbase::detect_probetype.ANNOTHUB(organism, probes, ah = ah)
   }
   message("detected probe_type = ", probe_type)
-  if(is.null(probe_type)) {
+  if (is.null(probe_type)) {
     message("ERROR: could not determine probe_type ")
     return(NULL)
   }
-  
+
   ## --------------------------------------------
   ## retrieve table
   ## --------------------------------------------
@@ -400,6 +402,27 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
       non121_strategy = "drop_both_species",
       method = "gprofiler"
     )
+
+    if (dim(ortho.out)[1] == 0) {
+      ortho.out <- orthogene::convert_orthologs(
+        gene_df = unique(annot$SYMBOL),
+        input_species = organism,
+        output_species = "human",
+        non121_strategy = "drop_both_species",
+        method = "homologene"
+      )
+    }
+
+    if (dim(ortho.out)[1] == 0) {
+      ortho.out <- orthogene::convert_orthologs(
+        gene_df = unique(annot$SYMBOL),
+        input_species = organism,
+        output_species = "human",
+        non121_strategy = "drop_both_species",
+        method = "babelgene"
+      )
+    }
+
     ii <- match(annot$SYMBOL, ortho.out$input_gene)
     annot$ORTHOGENE <- rownames(ortho.out)[ii]
   } else {
@@ -448,7 +471,7 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   if (is.null(out$human_ortholog)) {
     out$human_ortholog <- NA
   }
- 
+
   rownames(out) <- probes0
   return(out)
 }
@@ -680,7 +703,7 @@ probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE)
 #' @export
 guess_probetype <- function(probes, organism, for.biomart = FALSE) {
   detect_probetype.MATCH(probes = probes, organism = organism, for.biomart = for.biomart)
-  ## detect_probetype.ANNOTHUB(organism, probes, ah = NULL, nprobe = 100) 
+  ## detect_probetype.ANNOTHUB(organism, probes, ah = NULL, nprobe = 100)
 }
 
 detect_probetype.MATCH <- function(probes, organism = "", for.biomart = FALSE) {
@@ -809,7 +832,7 @@ detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL, nprobe = 100)
 
   ## clean up probes
   probes <- probes[!is.na(probes) & probes != ""]
-  probes <- sapply(strsplit(probes,split=";"),head,1)   ## take first  
+  probes <- sapply(strsplit(probes, split = ";"), head, 1) ## take first
   if (sum(duplicated(probes)) > 0) {
     message("WARNING: duplicated probes")
     probes <- unique(probes)
