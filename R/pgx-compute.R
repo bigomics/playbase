@@ -812,7 +812,7 @@ counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE, keep.NA = FA
             dups <- unique(gene0[duplicated(gene0)])
             i=1
             for(i in 1:length(dups)) {
-                jj <- rownames(counts) %in% dups[i]
+                jj <- which(rownames(counts) == dups[i])
                 counts <- rbind(colSums(counts[jj, ], na.rm = TRUE), counts[-jj, ])
                 rownames(counts)[1] <- dups[i]
             }
