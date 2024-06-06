@@ -19,6 +19,7 @@ plotlyVolcano(
   marker.size = 5,
   label = NULL,
   label.cex = 1,
+  color_up_down = TRUE,
   marker.type = "scatter",
   displayModeBar = TRUE,
   max.absy = NULL
@@ -52,6 +53,8 @@ plotlyVolcano(
 \item{label}{Vector of labels for highlighted genes. Default NULL.}
 
 \item{label.cex}{Text size for labels. Default 1.}
+
+\item{color_up_down}{Color up/down regulated features}
 
 \item{marker.type}{Marker type (scatter, line, etc). Default "scatter".}
 
