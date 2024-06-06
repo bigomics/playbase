@@ -208,7 +208,8 @@ pgx.createPGX <- function(counts,
   ## ------------------------------------------------------------------
   if (datatype == "proteomics") {
       if (any(counts<0, na.rm = TRUE)) {
-          counts <- counts + abs(min(counts, na.rm = TRUE))
+          message("[createPGX] Proteomics data: negative values detected. Adding offset.")
+          counts <- counts + abs(min(counts, na.rm = TRUE))  
       }
   }
   
