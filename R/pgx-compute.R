@@ -802,8 +802,7 @@ counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE, keep.NA = FA
     gene1 <- sapply(gene0, function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
     ndup <- sum(duplicated(gene1))
     if (ndup > 0) {
-        if (is.counts) counts <- counts
-        if (!is.counts) counts <- 2**(counts) ## for log2 data
+        if (is.counts) counts <- counts else counts <- 2**(counts)
         if (!keep.NA) {
             ## take only first gene as rowname, retain others as alias
             message("[mergeDuplicateFeatures] ", ndup,
@@ -818,8 +817,7 @@ counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE, keep.NA = FA
                 rownames(counts)[1] <- dups[i]
             }
         }
-        if (is.counts) counts <- counts
-        if (!is.counts) counts <- log2(counts)
+        if (is.counts) counts <- counts else counts <- log2(counts)
     }
     counts
 }
