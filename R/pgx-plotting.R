@@ -4404,12 +4404,15 @@ plotlyVolcano_multi <- function(FC,
                                 interplot_margin = c(0.01, 0.0, 0.05, 0.1),
                                 annotation_args = list(),
                                 layout_args = list(),
+                                highlight = NULL,
                                 ...) {
   ## Get tables and genes
   fc <- as.matrix(FC)
   qv <- as.matrix(Q)
   if (is.null(names)) {
     all_genes <- rownames(FC)
+  } else {
+    all_genes <- names
   }
   titles <- colnames(fc)
 
@@ -4429,7 +4432,7 @@ plotlyVolcano_multi <- function(FC,
     } else if (!is.null(gset)) {
       sig.genes <- all_genes[all_genes %in% gset]
     } else {
-      stop("Please provide a gene set or set by_sig = TRUE")
+      sig.genes <- highlight
     }
 
     # Take -log and add 1e-12 to remove 0, and avoid Infs
