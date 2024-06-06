@@ -135,6 +135,7 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 #' - `date`: Date the dataset was created
 #' - `creator`: Creator of the dataset
 #' - `datatype`: Type of data (e.g. RNA-seq, microarray)
+#' - `datasubtype`: Subtype of data (e.g. TMT, Silac - for proteomics)
 #' - `description`: Description of the dataset
 #' - `samples`: Sample metadata
 #' - `counts`: Raw count matrix
@@ -159,6 +160,7 @@ pgx.createPGX <- function(counts,
                           max.genesets = 5000,
                           name = "Data set",
                           datatype = "unknown",
+                          datasubtype = "unknown",
                           creator = "unknown",
                           description = "No description provided.",
                           X = NULL,
@@ -201,6 +203,15 @@ pgx.createPGX <- function(counts,
     contrasts <- contrasts[used.samples, , drop = FALSE] ## sample-based!!!
   }
 
+  ## ------------------------------------------------------------------
+  ## check datatype & counts: if any negative values, add offset
+  ## ------------------------------------------------------------------
+  if (datatype == "proteomics") {
+      if (any(counts<0, na.rm = TRUE)) {
+          counts <- counts + abs(min(counts, na.rm = TRUE))
+      }
+  }
+  
   ## -------------------------------------------------------------------
   ## check counts: linear or logarithm?
   ## -------------------------------------------------------------------
@@ -229,24 +240,36 @@ pgx.createPGX <- function(counts,
   }
 
   ## impute missing values
-  if (any(is.na(counts))) {
-    nmissing <- sum(is.na(counts))
-    message("[createPGX] WARNING: data has ", nmissing, " missing values.")
-    impute.method <- "SVD2"
-    message("[createPGX] Imputing missing values using ", impute.method)
-    counts <- counts.imputeMissing(counts, method = impute.method)
+  if (datatype == "proteomics" & creator == "MPoC") {
+      nmissing <- sum(is.na(counts))
+      message("[createPGX] WARNING: data has ", nmissing, " missing values.")
+      message("[createPGX] Skipping imputation.")
+  } else { 
+      if (any(is.na(counts))) {
+          nmissing <- sum(is.na(counts))
+          message("[createPGX] WARNING: data has ", nmissing, " missing values.")
+          impute.method <- "SVD2"
+          message("[createPGX] Imputing missing values using ", impute.method)
+          counts <- counts.imputeMissing(counts, method = impute.method)
+      }
   }
 
   ## sum up duplicated
-  counts <- counts.mergeDuplicateFeatures(counts)
-  if (!is.null(X)) {
-    X <- counts.mergeDuplicateFeatures(X, is.counts = FALSE)
+  if (datatype == "proteomics" & creator == "MPoC") {
+      counts <- counts.mergeDuplicateFeatures(counts, keep.NA = TRUE)
+      if(!is.null(X)) {
+          X <- counts.mergeDuplicateFeatures(X, is.counts = FALSE, keep.NA = TRUE)
+      }
+  } else {
+      counts <- counts.mergeDuplicateFeatures(counts)
+      if (!is.null(X)) {
+          X <- counts.mergeDuplicateFeatures(X, is.counts = FALSE)
+      }
   }
 
   ## -------------------------------------------------------------------
   ## Check bad samples (in total counts, after imputation)
   ## -------------------------------------------------------------------
-
   ## remove samples from counts matrix with extreme (1000x more or
   ## 1000x less) total counts (than median).
   if (remove.outliers) {
@@ -271,13 +294,18 @@ pgx.createPGX <- function(counts,
   } else {
     message("[createPGX] using passed log-expression matrix X...")
   }
-
+  
   if (normalize) {
-    message("[createPGX] NORMALIZING log-expression matrix X...")
-    X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
-    X <- limma::normalizeQuantiles(X) ## in log space
+      if (datatype == "proteomics" & creator == "MPoC") {
+          message("[createPGX] NORMALIZING proteomic data")
+          X <- logMaxMedianNorm(2**X -1, toLog = TRUE, prior = 1)
+          ## X <- logMaxIntensityNorm(2**X -1, toLog = TRUE, prior = 1)
+      } else {
+          X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
+          X <- limma::normalizeQuantiles(X) ## in log space
+      }
   } else {
-    message("[createPGX] SKIPPING NORMALIZATION!")
+      message("[createPGX] SKIPPING NORMALIZATION!")
   }
 
   ## -------------------------------------------------------------------
@@ -347,6 +375,7 @@ pgx.createPGX <- function(counts,
     date = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
     creator = creator,
     datatype = datatype,
+    datasubtype = datasubtype,
     description = description,
     samples = data.frame(samples, check.names = FALSE),
     counts = as.matrix(counts),
@@ -767,22 +796,31 @@ counts.autoScaling <- function(counts) {
 
 
 #' @export
-counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE) {
-  ## take only first gene as rowname, retain others as alias
-  gene0 <- rownames(counts)
-  gene1 <- sapply(gene0, function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
-  ndup <- sum(duplicated(gene1))
-  ndup
-  if (ndup > 0) {
-    message("[mergeDuplicateFeatures] ", ndup, " duplicated rownames: summing rows (in counts).")
-    if (is.counts) {
-      counts <- base::rowsum(counts, gene1, na.rm = TRUE)
-    } else {
-      ## for expression logX
-      counts <- log2(base::rowsum(2**(counts), gene1, na.rm = TRUE))
+counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE, keep.NA = FALSE) {
+    gene0 <- rownames(counts)
+    gene1 <- sapply(gene0, function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
+    ndup <- sum(duplicated(gene1))
+    if (ndup > 0) {
+        if (is.counts) counts <- counts
+        if (!is.counts) counts <- 2**(counts) ## for log2 data
+        if (!keep.NA) {
+            ## take only first gene as rowname, retain others as alias
+            message("[mergeDuplicateFeatures] ", ndup,
+                    " duplicated rownames: summing rows (in counts).")
+            counts <- base::rowsum(counts, gene1, na.rm = TRUE)
+        } else {
+            dups <- unique(gene0[duplicated(gene0)])
+            i=1
+            for(i in 1:length(dups)) {
+                jj <- rownames(counts) %in% dups[i]
+                counts <- rbind(colSums(counts[jj, ], na.rm = TRUE), counts[-jj, ])
+                rownames(counts)[1] <- dups[i]
+            }
+        }
+        if (is.counts) counts <- counts
+        if (!is.counts) counts <- log2(counts)
     }
-  }
-  counts
+    counts
 }
 
 #' @export
