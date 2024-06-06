@@ -395,9 +395,9 @@ is.xxl <- function(X, z = 10) {
   (abs(this.z) > z)
 }
 
-#' Normalization for TMT and Silac data: logMaxMedianNorm, logMaxIntensityNorm
+#' Normalization for TMT and Silac data: logMaxMedianNorm
 #' 
-#' @description This function normalizes TMT and Silac data using max median or max sum
+#' @description This function normalizes TMT and Silac data using max median
 #' 
 #' @param counts Numeric matrix of raw intensities: genes in rows, samples in columns.
 #' @param prior Pseudocount to add prior to log transform. Default is 1.
@@ -410,7 +410,6 @@ is.xxl <- function(X, z = 10) {
 #' \dontrun{
 #' counts <- matrix(rnbinom(100 * 10, mu = 100, size = 1), 100, 10)
 #' norm_counts <- logMaxMedianNorm(counts)
-#' norm_counts <- logMaxIntensityNorm(counts)
 #' }
 #' @export
 logMaxMedianNorm <- function(counts, toLog = TRUE, prior = 1) {
@@ -423,8 +422,24 @@ logMaxMedianNorm <- function(counts, toLog = TRUE, prior = 1) {
     return(X)
 }
 
+#' Normalization for TMT and Silac data: logMaxSumNorm
+#' 
+#' @description This function normalizes TMT and Silac data using max sum of intensities
+#' 
+#' @param counts Numeric matrix of raw intensities: genes in rows, samples in columns.
+#' @param prior Pseudocount to add prior to log transform. Default is 1.
+#'
+#' @return Normalized matrix of log2-transformed values.
+#'
+#' @details Most used normalization methods for TMT/Silac proteomics data: make the median or sum of each sample column equal to the max median or sum.
+#'
+#' @examples
+#' \dontrun{
+#' counts <- matrix(rnbinom(100 * 10, mu = 100, size = 1), 100, 10)
+#' norm_counts <- logMaxSumNorm(counts)
+#' }
 #' @export
-logMaxIntensityNorm <- function(counts, prior = 1) {
+logMaxSumNorm <- function(counts, prior = 1) {
     X <- log2(prior + counts)
     mx <- colSums(X, na.rm = TRUE)
     vv <- apply(X, 2, function(x) length(x[!is.na(x)]))
