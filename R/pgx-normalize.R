@@ -270,7 +270,7 @@ normalizeTMM <- function(counts, log = FALSE, method = "TMM") {
 
 #' Normalize count data using RLE method
 #'
-#' @description This function normalizes count data using the Relative Log Expression (RLE) method.
+#' @description This function normalizes count datasing the Relative Log Expression (RLE) method.
 #' It supports normalization using either the edgeR or DESeq2 package.
 #'
 #' @param counts A numeric matrix of count data, where rows represent features and columns represent samples.
@@ -393,4 +393,46 @@ is.xxl <- function(X, z = 10) {
   mx <- rowMeans(X, na.rm = TRUE)
   this.z <- (X - mx) / sdx0
   (abs(this.z) > z)
+}
+
+#' Normalization for TMT and Silac data: logMaxMedianNorm, logMaxIntensityNorm
+#' 
+#' @description This function normalizes TMT and Silac data using max median or max sum
+#' 
+#' @param counts Numeric matrix of raw intensities: genes in rows, samples in columns.
+#' @param prior Pseudocount to add prior to log transform. Default is 1.
+#'
+#' @return Normalized matrix of log2-transformed values.
+#'
+#' @details Most used normalization methods for TMT/Silac proteomics data: make the median or sum of each sample column equal to the max median or sum.
+#'
+#' @examples
+#' \dontrun{
+#' counts <- matrix(rnbinom(100 * 10, mu = 100, size = 1), 100, 10)
+#' norm_counts <- logMaxMedianNorm(counts)
+#' norm_counts <- logMaxIntensityNorm(counts)
+#' }
+#' @export
+logMaxMedianNorm <- function(counts, toLog = TRUE, prior = 1) {
+    counts0 <- counts
+    mx <- apply(counts0, 2, median, na.rm = TRUE)
+    counts0 <- t(t(counts0) / mx) * max(mx)
+    if(toLog) {
+        X <- log2(prior + counts0)
+    }
+    return(X)
+}
+
+#' @export
+logMaxIntensityNorm <- function(counts, prior = 1) {
+    X <- log2(prior + counts)
+    mx <- colSums(X, na.rm = TRUE)
+    vv <- apply(X, 2, function(x) length(x[!is.na(x)]))
+    norm.factor <- (max(mx) - mx) / vv
+    i=1
+    for(i in 1:ncol(X)) {
+        jj <- !is.na(X[,i])
+        X[jj, i] <- X[jj, i] + norm.factor[i]
+    }
+    return(X)
 }
