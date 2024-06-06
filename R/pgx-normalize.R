@@ -270,7 +270,7 @@ normalizeTMM <- function(counts, log = FALSE, method = "TMM") {
 
 #' Normalize count data using RLE method
 #'
-#' @description This function normalizes count datasing the Relative Log Expression (RLE) method.
+#' @description This function normalizes count data using the Relative Log Expression (RLE) method.
 #' It supports normalization using either the edgeR or DESeq2 package.
 #'
 #' @param counts A numeric matrix of count data, where rows represent features and columns represent samples.
