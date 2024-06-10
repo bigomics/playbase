@@ -202,9 +202,6 @@ pgx.createPGX <- function(counts,
     samples <- samples[used.samples, , drop = FALSE]
     contrasts <- contrasts[used.samples, , drop = FALSE] ## sample-based!!!
   }
-
-  ## check "" in rownames. Remove if any.
-  counts <- counts[rownames(counts) != "", ]
   
   ## ------------------------------------------------------------------
   ## check datatype & counts: if any negative values, add offset
@@ -258,7 +255,7 @@ pgx.createPGX <- function(counts,
       }
   }
 
-  ## sum up duplicated
+  ## fix gene (feature) names and sum up duplicated
   if (datatype == "proteomics" & creator == "MPoC") {
       counts <- counts.mergeDuplicateFeatures(counts, keep.NA = TRUE)
       if(!is.null(X)) {
@@ -803,6 +800,7 @@ counts.autoScaling <- function(counts) {
 counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE, keep.NA = FALSE) {
     nas <- which(is.na(counts), arr.ind = TRUE)
     counts[nas] <- NA
+    counts <- counts[rownames(counts) != "", ]
     gene0 <- rownames(counts)
     gene1 <- sapply(gene0, function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
     ndup <- sum(duplicated(gene1))
@@ -822,7 +820,11 @@ counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE, keep.NA = FA
                 rownames(counts)[1] <- dups[i]
             }
         }
-        if (is.counts) counts <- counts else counts <- log2(counts)
+        if (is.counts) {
+          counts <- counts
+          } else {
+            counts <- log2(counts)
+        }
     }
     counts
 }
