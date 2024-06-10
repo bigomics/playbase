@@ -749,7 +749,7 @@ detect_probetype.MATCH <- function(probes, organism = "", for.biomart = FALSE) {
   }
 
   ## 4. if probetype == genebank, replace by uniprot
-  if (probe_type == "GENBANK") {
+  if (probe_type %in% c("GENBANK", "GENEBANK")) {
     probe_type <- "UNIPROT"
   }
 
