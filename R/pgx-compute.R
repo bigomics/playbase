@@ -798,6 +798,8 @@ counts.autoScaling <- function(counts) {
 
 #' @export
 counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE, keep.NA = FALSE) {
+    nas <- which(is.na(counts), arr.ind = TRUE)
+    counts[nas] <- NA
     gene0 <- rownames(counts)
     gene1 <- sapply(gene0, function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
     ndup <- sum(duplicated(gene1))
