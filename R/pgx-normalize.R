@@ -418,7 +418,9 @@ logMaxMedianNorm <- function(counts, toLog = TRUE, prior = 1) {
     counts0 <- t(t(counts0) / mx) * max(mx)
     if(toLog) {
         X <- log2(prior + counts0)
-    }
+    } else {
+        X <- counts0
+    }  
     return(X)
 }
 
