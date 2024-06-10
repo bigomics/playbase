@@ -798,8 +798,6 @@ counts.autoScaling <- function(counts) {
 
 #' @export
 counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE, keep.NA = FALSE) {
-    nas <- which(is.na(counts), arr.ind = TRUE)
-    counts[nas] <- NA
     counts <- counts[rownames(counts) != "", ]
     gene0 <- rownames(counts)
     gene1 <- sapply(gene0, function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
@@ -808,10 +806,10 @@ counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE, keep.NA = FA
         if (is.counts) counts <- counts else counts <- 2**(counts)
         if (!keep.NA) {
             ## take only first gene as rowname, retain others as alias
-            message("[mergeDuplicateFeatures] ", ndup,
-                    " duplicated rownames: summing rows (in counts).")
+            message("[mergeDuplicateFeatures] ", ndup, " duplicated rownames: summing rows (in counts).")
             counts <- base::rowsum(counts, gene1, na.rm = TRUE)
         } else {
+            counts[which(is.na(counts), arr.ind = TRUE)] <- NA
             dups <- unique(gene0[duplicated(gene0)])
             i=1
             for(i in 1:length(dups)) {
@@ -819,12 +817,9 @@ counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE, keep.NA = FA
                 counts <- rbind(colSums(counts[jj, ], na.rm = TRUE), counts[-jj, ])
                 rownames(counts)[1] <- dups[i]
             }
+            rownames(counts) <- unname(sapply(rownames(counts), function(s) strsplit(s, split = "[;,\\|]")[[1]][1]))
         }
-        if (is.counts) {
-          counts <- counts
-          } else {
-            counts <- log2(counts)
-        }
+        if (is.counts) counts <- counts else counts <- log2(counts)
     }
     counts
 }
