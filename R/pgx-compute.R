@@ -298,7 +298,7 @@ pgx.createPGX <- function(counts,
   
   if (normalize) {
       if (datatype == "proteomics" & creator == "MPoC") {
-          message("[createPGX] NORMALIZING proteomic data")
+          message("[createPGX] NORMALIZING proteomic data -- TEST1")
           X <- logMaxMedianNorm(2**X -1, toLog = TRUE, prior = 1)
           ## X <- logMaxIntensityNorm(2**X -1, toLog = TRUE, prior = 1)
       } else {
