@@ -194,7 +194,7 @@ pgx.createPGX <- function(counts,
   ## convert old-style contrast matrix to sample-wise labeled contrasts
   contrasts <- playbase::contrasts.convertToLabelMatrix(contrasts, samples)
 
-  # prune unused samples
+  ## prune unused samples
   contrasts[contrasts %in% c("", " ", "NA")] <- NA
   used.samples <- names(which(rowSums(!is.na(contrasts)) > 0))
   if (prune.samples && length(used.samples) < ncol(counts)) {
@@ -203,6 +203,9 @@ pgx.createPGX <- function(counts,
     contrasts <- contrasts[used.samples, , drop = FALSE] ## sample-based!!!
   }
 
+  ## check "" in rownames. Remove if any.
+  counts <- counts[rownames(counts) != "", ]
+  
   ## ------------------------------------------------------------------
   ## check datatype & counts: if any negative values, add offset
   ## ------------------------------------------------------------------
