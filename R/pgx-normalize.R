@@ -368,9 +368,7 @@ global_scaling <- function(X, method, shift = "clip") {
     X <- playbase::logMaxMedianNorm(counts = 2**X)
   } else if (method == "logMS") {
     X <- playbase::logMaxSumNorm(counts = 2**X)   
-  } else 
-  ......
-    else {
+  } else {
     stop("unknown method = ", method)
   }
 
