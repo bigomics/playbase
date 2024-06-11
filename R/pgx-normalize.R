@@ -345,6 +345,7 @@ global_scaling <- function(X, method, shift = "clip") {
   zero.point <- 0
   which.zero <- which(X == 0)
 
+  ##---logMM & logMS created for MPoC
   if (method == "logMM") {
     X <- playbase::logMaxMedianNorm(counts = 2**X)
     X
