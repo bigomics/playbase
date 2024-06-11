@@ -364,6 +364,8 @@ global_scaling <- function(X, method, shift = "clip") {
     ## direct quantile
     probs <- as.numeric(substring(method, 2, 99))
     zero.point <- quantile(X, probs = probs, na.rm = TRUE)
+  } else if (method == "logMM") {
+    message("TEST logMM")
   } else {
     stop("unknown method = ", method)
   }
