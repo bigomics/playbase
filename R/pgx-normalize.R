@@ -13,7 +13,7 @@ normalizeData <- function(pgx, do.impute = TRUE, do.regress = TRUE,
   nmissing <- sum(length(which.missing))
   message("[normalizeData] ", nzero, " zero values")
   message("[normalizeData] ", nmissing, " missing values")
-
+  
   contrasts <- pgx$contrasts
   if (is.null(contrasts)) contrasts <- sign(pgx$model.parameters$exp.matrix)
   samples <- pgx$samples
@@ -365,8 +365,12 @@ global_scaling <- function(X, method, shift = "clip") {
     probs <- as.numeric(substring(method, 2, 99))
     zero.point <- quantile(X, probs = probs, na.rm = TRUE)
   } else if (method == "logMM") {
-    message("TEST logMM")
-  } else {
+    X <- playbase::logMaxMedianNorm(counts = 2**X)
+  } else if (method == "logMS") {
+    X <- playbase::logMaxSumNorm(counts = 2**X)   
+  } else 
+  ......
+    else {
     stop("unknown method = ", method)
   }
 
