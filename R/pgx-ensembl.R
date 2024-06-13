@@ -101,6 +101,7 @@ ngs.getGeneAnnotation <- function(probes, organism, pgx = NULL,
   }
   message("[ngs.getGeneAnnotation] organism = ", organism)
 
+
   is.primary_organism <- (tolower(organism) %in% c("human", "mouse", "rat"))
   if (is.null(use_annothub) && is.primary_organism) {
     use_annothub <- FALSE
@@ -335,6 +336,7 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
     ahDb <- ahDb[which(tolower(ahDb$species) == tolower(organism))]
     k <- length(ahDb)
     cat("selecting database for", ahDb$species[k], "\n")
+
     orgdb <- tryCatch(
       {
         ahDb[[k]]
@@ -376,7 +378,14 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
 
   cat("get gene annotation columns:", cols, "\n")
   message("retrieving annotation for ", length(probes), " features...")
+
   annot <- AnnotationDbi::select(orgdb, keys = probes, columns = cols, keytype = probe_type)
+
+  # some organisms do not provide symbol but rather gene name (e.g. yeast)
+  if (!"SYMBOL" %in% colnames(annot)) {
+    annot$SYMBOL <- annot$GENENAME
+  }
+
   annot$SYMBOL[is.na(annot$SYMBOL)] <- ""
 
   ## match annotation table to probes
