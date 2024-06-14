@@ -296,18 +296,18 @@ pgx.createPGX <- function(counts,
     message("[createPGX] using passed log-expression matrix X...")
   }
   
-  if (normalize) {
-      if (datatype == "proteomics" & creator == "MPoC") {
-          message("[createPGX] NORMALIZING proteomic data -- TEST1")
-          X <- logMaxMedianNorm(2**X -1, toLog = TRUE, prior = 1)
-          ## X <- logMaxIntensityNorm(2**X -1, toLog = TRUE, prior = 1)
-      } else {
-          X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
-          X <- limma::normalizeQuantiles(X) ## in log space
-      }
-  } else {
-      message("[createPGX] SKIPPING NORMALIZATION!")
-  }
+  ## if (normalize) {
+  ##    if (datatype == "proteomics" & creator == "MPoC") {
+  ##        message("[createPGX] NORMALIZING proteomic data -- TEST1")
+  ##        X <- logMaxMedianNorm(2**X -1, toLog = TRUE, prior = 1)
+  ##        ## X <- logMaxIntensityNorm(2**X -1, toLog = TRUE, prior = 1)
+  ##    } else {
+  ##        X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
+  ##        X <- limma::normalizeQuantiles(X) ## in log space
+  ##    }
+  ##} else {
+  ##    message("[createPGX] SKIPPING NORMALIZATION!")
+  ##}
 
   ## -------------------------------------------------------------------
   ## Batch-correction (if requested. WARNING: changes counts )
