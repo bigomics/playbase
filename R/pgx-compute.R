@@ -202,17 +202,7 @@ pgx.createPGX <- function(counts,
     samples <- samples[used.samples, , drop = FALSE]
     contrasts <- contrasts[used.samples, , drop = FALSE] ## sample-based!!!
   }
-  
-  ## ------------------------------------------------------------------
-  ## check datatype & counts: if any negative values, add offset
-  ## ------------------------------------------------------------------
-  if (datatype == "proteomics") {
-      if (any(counts<0, na.rm = TRUE)) {
-          message("[createPGX] Proteomics data: negative values detected. Adding offset.")
-          counts <- counts + abs(min(counts, na.rm = TRUE))  
-      }
-  }
-  
+    
   ## -------------------------------------------------------------------
   ## check counts: linear or logarithm?
   ## -------------------------------------------------------------------
