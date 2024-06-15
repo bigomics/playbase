@@ -45,7 +45,7 @@ normalizeData <- function(pgx, do.impute = TRUE, do.regress = TRUE,
     }
   }
 
-  ## ## Auto-scaling (scale down huge values, often in proteomics)
+  ## Auto-scaling (scale down huge values, often in proteomics)
   ## res <- counts.autoScaling(counts)
   ## counts <- res$counts
   ## counts_multiplier <- res$counts_multiplier
@@ -347,14 +347,14 @@ global_scaling <- function(X, method, shift = "clip") {
 
   ##---logMM & logMS created for MPoC
   if (method == "logMM") {
-    X <- playbase::logMaxMedianNorm(counts = 2**X)
+    X <- playbase::logMaxMedianNorm(counts = 2**X-1)
     X
   } else if (method == "logMS") {
-    X <- playbase::logMaxSumNorm(counts = 2**X)   
+    X <- playbase::logMaxSumNorm(counts = 2**X-1)   
     X
   } else {
      if (method == "cpm") {
-        median.tc <- median(colSums(2**X, na.rm = TRUE), na.rm = TRUE)
+        median.tc <- median(colSums(2**X-1, na.rm = TRUE), na.rm = TRUE)
         a <- log2(median.tc) - log2(1e6)
         zero.point <- a
       } else if (grepl("^m[0-9]", method)) {
