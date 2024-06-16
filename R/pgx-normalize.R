@@ -341,57 +341,58 @@ safe.logCPM <- function(x, t = 0.05, prior = 1, q = NULL) {
 
 #' @export
 global_scaling <- function(X, method, shift = "clip") {
-  X[is.infinite(X)] <- NA
-  zero.point <- 0
-  which.zero <- which(X == 0)
-
-  ##---logMM & logMS created for MPoC
-  if (method == "logMM") {
-    X <- playbase::logMaxMedianNorm(counts = 2**X)
-    X
-  } else if (method == "logMS") {
-    X <- playbase::logMaxSumNorm(counts = 2**X)   
-    X
-  } else {
-     if (method == "cpm") {
-        median.tc <- median(colSums(2**X, na.rm = TRUE), na.rm = TRUE)
-        a <- log2(median.tc) - log2(1e6)
-        zero.point <- a
-      } else if (grepl("^m[0-9]", method)) {
-        ## median centering
-        mval <- as.numeric(substring(method, 2, 99))
-        a <- median(X, na.rm = TRUE) - mval
-        zero.point <- a
-      } else if (grepl("^z[0-9]+", method)) {
-        ## zero at z-distance from median
-        zdist <- as.numeric(substring(method, 2, 99))
-        m0 <- mean(apply(X, 2, median, na.rm = TRUE))
-        s0 <- mean(apply(X, 2, sd, na.rm = TRUE))
-        zero.point <- m0 - zdist * s0
-      } else if (grepl("^q[0.][.0-9]+", method)) {
-        ## direct quantile
-        probs <- as.numeric(substring(method, 2, 99))
-        zero.point <- quantile(X, probs = probs, na.rm = TRUE)
-      } else {
-        stop("unknown method = ", method)
-      }
-  
-      message("[normalizeCounts] shifting values to zero: z = ", round(zero.point, 4))
-      if (shift == "slog") {
-        ## smooth log-transform. not real zeros
-        X <- slog(2**X, s = 2**zero.point)
-      } else if (shift == "clip") {
-        ## linear shift and clip. Induces real zeros
-        X <- pmax(X - zero.point, 0)
-      } else {
-        stop("unknown shift method")
-      }
-  }
-
-  ## put back zeros
-  X[which.zero] <- 0
-  X
-  
+    X[is.infinite(X)] <- NA
+    
+    ##---logMM & logMS created for MPoC
+    ##---logCPM conformed to existing deployed master
+    if (method == "logMM") {
+        X <- playbase::logMaxMedianNorm(counts = 2**X-1)
+        X
+    } else if (method == "logMS") {
+        X <- playbase::logMaxSumNorm(counts = 2**X-1)
+        X
+    } else if (method == "cpm") {
+        X <- playbase::logCPM(counts = 2**X-1)
+        X
+        ## median.tc <- median(colSums(2**X, na.rm = TRUE), na.rm = TRUE)
+        ## a <- log2(median.tc) - log2(1e6)
+        ## zero.point <- a
+    } else {
+        zero.point <- 0
+        which.zero <- which(X == 0)
+        if (grepl("^m[0-9]", method)) {
+            ## median centering
+            mval <- as.numeric(substring(method, 2, 99))
+            a <- median(X, na.rm = TRUE) - mval
+            zero.point <- a
+        } else if (grepl("^z[0-9]+", method)) {
+            ## zero at z-distance from median
+            zdist <- as.numeric(substring(method, 2, 99))
+            m0 <- mean(apply(X, 2, median, na.rm = TRUE))
+            s0 <- mean(apply(X, 2, sd, na.rm = TRUE))
+            zero.point <- m0 - zdist * s0
+        } else if (grepl("^q[0.][.0-9]+", method)) {
+            ## direct quantile
+            probs <- as.numeric(substring(method, 2, 99))
+            zero.point <- quantile(X, probs = probs, na.rm = TRUE)
+        } else {
+            stop("unknown method = ", method)
+        }
+        
+        message("[normalizeCounts] shifting values to zero: z = ", round(zero.point, 4))
+        if (shift == "slog") {
+            ## smooth log-transform. not real zeros
+            X <- slog(2**X, s = 2**zero.point)
+        } else if (shift == "clip") {
+            ## linear shift and clip. Induces real zeros
+            X <- pmax(X - zero.point, 0)
+        } else {
+            stop("unknown shift method")
+        }
+        ## put back zeros
+        X[which.zero] <- 0
+        X
+    }
 }
 
 #' @export
