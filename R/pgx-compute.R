@@ -135,7 +135,6 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 #' - `date`: Date the dataset was created
 #' - `creator`: Creator of the dataset
 #' - `datatype`: Type of data (e.g. RNA-seq, microarray)
-#' - `datasubtype`: Subtype of data (e.g. TMT, Silac - for proteomics)
 #' - `description`: Description of the dataset
 #' - `samples`: Sample metadata
 #' - `counts`: Raw count matrix
@@ -160,7 +159,7 @@ pgx.createPGX <- function(counts,
                           max.genesets = 5000,
                           name = "Data set",
                           datatype = "unknown",
-                          datasubtype = "unknown",
+                          ## datasubtype = "unknown",
                           creator = "unknown",
                           description = "No description provided.",
                           X = NULL,
@@ -175,7 +174,7 @@ pgx.createPGX <- function(counts,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE,
                           remove.outliers = TRUE,
-                          normalize = TRUE,
+                          ## normalize = TRUE,
                           use_biomart = NA) {
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("[createPGX] dimension of counts and X do not match\n")
@@ -224,39 +223,39 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
 
   ## remove XXL/Infinite values and set to NA
-  if (remove.xxl) {
-    zsd <- 10 ## default value
-    if (is.numeric(remove.xxl)) zsd <- remove.xxl
-    counts <- counts.removeXXLvalues(counts, xxl.val = NA, zsd = zsd)
-  }
+  ## if (remove.xxl) {
+  ##  zsd <- 10 ## default value
+  ##  if (is.numeric(remove.xxl)) zsd <- remove.xxl
+  ##  counts <- counts.removeXXLvalues(counts, xxl.val = NA, zsd = zsd)
+  ## }
 
   ## impute missing values
-  if (datatype == "proteomics" & creator == "MPoC") {
-      nmissing <- sum(is.na(counts))
-      message("[createPGX] WARNING: data has ", nmissing, " missing values.")
-      message("[createPGX] Skipping imputation.")
-  } else { 
-      if (any(is.na(counts))) {
-          nmissing <- sum(is.na(counts))
-          message("[createPGX] WARNING: data has ", nmissing, " missing values.")
-          impute.method <- "SVD2"
-          message("[createPGX] Imputing missing values using ", impute.method)
-          counts <- counts.imputeMissing(counts, method = impute.method)
-      }
-  }
+  ## if (datatype == "proteomics" & creator == "MPoC") {
+  ##    nmissing <- sum(is.na(counts))
+  ##    message("[createPGX] WARNING: data has ", nmissing, " missing values.")
+  ##    message("[createPGX] Skipping imputation.")
+  ## } else { 
+  ##    if (any(is.na(counts))) {
+  ##        nmissing <- sum(is.na(counts))
+  ##        message("[createPGX] WARNING: data has ", nmissing, " missing values.")
+  ##        impute.method <- "SVD2"
+  ##        message("[createPGX] Imputing missing values using ", impute.method)
+  ##        counts <- counts.imputeMissing(counts, method = impute.method)
+  ##    }
+  ## }
 
   ## fix gene (feature) names and sum up duplicated
-  if (datatype == "proteomics" & creator == "MPoC") {
-      counts <- counts.mergeDuplicateFeatures(counts, keep.NA = TRUE)
-      if(!is.null(X)) {
-          X <- counts.mergeDuplicateFeatures(X, is.counts = FALSE, keep.NA = TRUE)
-      }
-  } else {
-      counts <- counts.mergeDuplicateFeatures(counts)
-      if (!is.null(X)) {
-          X <- counts.mergeDuplicateFeatures(X, is.counts = FALSE)
-      }
-  }
+  ## if (datatype == "proteomics" & creator == "MPoC") {
+  ##    counts <- counts.mergeDuplicateFeatures(counts, keep.NA = TRUE)
+  ##    if(!is.null(X)) {
+  ##        X <- counts.mergeDuplicateFeatures(X, is.counts = FALSE, keep.NA = TRUE)
+  ##    }
+  ##} else {
+  ##    counts <- counts.mergeDuplicateFeatures(counts)
+  ##    if (!is.null(X)) {
+  ##        X <- counts.mergeDuplicateFeatures(X, is.counts = FALSE)
+  ##    }
+  ## }
 
   ## -------------------------------------------------------------------
   ## Check bad samples (in total counts, after imputation)
@@ -264,8 +263,8 @@ pgx.createPGX <- function(counts,
   ## remove samples from counts matrix with extreme (1000x more or
   ## 1000x less) total counts (than median).
   if (remove.outliers) {
-    message("[createPGX] removing outliers samples ")
-    counts <- counts.removeSampleOutliers(counts)
+      message("[createPGX] removing outliers samples ")
+      counts <- counts.removeSampleOutliers(counts)
   }
 
   ## -------------------------------------------------------------------
@@ -279,12 +278,12 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## COMPUTE LOG NORMALIZE EXPRESSION (if not given)
   ## -------------------------------------------------------------------
-  if (is.null(X)) {
-    message("[createPGX] creating log-expression matrix X...")
-    X <- log2(1 + counts)
-  } else {
-    message("[createPGX] using passed log-expression matrix X...")
-  }
+  ## if (is.null(X)) {
+  ##  message("[createPGX] creating log-expression matrix X...")
+  ##  X <- log2(1 + counts)
+  ##} else {
+  ##  message("[createPGX] using passed log-expression matrix X...")
+  ##}
   
   ## if (normalize) {
   ##    if (datatype == "proteomics" & creator == "MPoC") {
@@ -366,7 +365,7 @@ pgx.createPGX <- function(counts,
     date = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
     creator = creator,
     datatype = datatype,
-    datasubtype = datasubtype,
+    ## datasubtype = datasubtype,
     description = description,
     samples = data.frame(samples, check.names = FALSE),
     counts = as.matrix(counts),
@@ -399,21 +398,24 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Filter out not-expressed
   ## -------------------------------------------------------------------
-
   if (filter.genes) {
-    ## There is second filter in the statistics computation. This
-    ## first filter is primarily to reduce the counts table.
-    message("[createPGX] filtering out not-expressed genes (zero counts)...")
-    pgx <- pgx.filterZeroCounts(pgx)
+      ## There is second filter in the statistics computation. This
+      ## first filter is primarily to reduce the counts table.
+      message("[createPGX] filtering out not-expressed genes (zero counts)...")
+      pgx <- pgx.filterZeroCounts(pgx)
 
-    ## prefiltering for low-expressed genes (recommended for edgeR and
-    ## DEseq2). Require at least in 2 or 1% of total. Specify the
-    ## PRIOR CPM amount to regularize the counts and filter genes
-    pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
+      ## prefiltering for low-expressed genes (recommended for edgeR and
+      ## DEseq2). Require at least in 2 or 1% of total. Specify the
+      ## PRIOR CPM amount to regularize the counts and filter genes
+      ## ps (16.6.24): crashes in presence of NAs
+      nas <- which(is.na(pgx$counts))
+      message("[createPGX] found ", length(nas), "NA values in the data")
+      message("[createPGX] filtering out lowly expressed genes (zero counts)...")
+      pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
 
-    ## Conform gene table
-    ii <- match(rownames(pgx$counts), rownames(pgx$genes))
-    pgx$genes <- pgx$genes[ii, , drop = FALSE]
+      ## Conform gene table
+      ii <- match(rownames(pgx$counts), rownames(pgx$genes))
+      pgx$genes <- pgx$genes[ii, , drop = FALSE]
   }
 
   ## -------------------------------------------------------------------
@@ -444,9 +446,8 @@ pgx.createPGX <- function(counts,
 
   ## NOTE: generally pgx$X, pgx$counts, and pgx$genes should always be
   ## aligned to prevent mistakes and unneeded matching of tables.
-  ##
 
-
+  
   ## -------------------------------------------------------------------
   ## collapse probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------
