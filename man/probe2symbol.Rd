@@ -5,8 +5,6 @@
 \title{Map probe identifiers to gene symbols}
 \usage{
 probe2symbol(probes, annot_table, query = "symbol", fill_na = FALSE)
-
-probe2symbol(probes, annot_table, query = "symbol", fill_na = FALSE)
 }
 \arguments{
 \item{probes}{Character vector of probe IDs to convert.}
@@ -16,13 +14,8 @@ The probe_type matches the type of IDs in probes.}
 }
 \value{
 Character vector of mapped HGNC gene symbols.
-
-Character vector of mapped HGNC gene symbols.
 }
 \description{
-This function converts a vector of probe identifiers to
-standard HGNC gene symbols using an annotation lookup table.
-
 This function converts a vector of probe identifiers to
 standard HGNC gene symbols using an annotation lookup table.
 }
@@ -31,21 +24,8 @@ The annot_table should contain a column with the probe IDs
   (matching type of probes input) and a column with the corresponding HGNC
   gene symbols. This function matches the input probes to the table
   to retrieve the gene symbols. Unmatched probes are returned as is.
-
-The annot_table should contain a column with the probe IDs
-  (matching type of probes input) and a column with the corresponding HGNC
-  gene symbols. This function matches the input probes to the table
-  to retrieve the gene symbols. Unmatched probes are returned as is.
 }
 \examples{
-\dontrun{
-probes <- c("ENSG00000142192", "ENST00000288602")
-annot_table <- data.frame(
-  ensembl_gene_id = c("ENSG00000142192", "ENSG00000099977"),
-  hgnc_symbol = c("EGFR", "CDKN2A")
-)
-symbols <- probe2symbol(probes, annot_table)
-}
 \dontrun{
 probes <- c("ENSG00000142192", "ENST00000288602")
 annot_table <- data.frame(

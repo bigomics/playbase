@@ -174,12 +174,17 @@ pgx.createPGX <- function(counts,
                           remove.xxl = TRUE,
                           remove.outliers = TRUE,
                           normalize = TRUE,
-                          use_biomart = NA) {
+                          use_annothub = NA) {
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("[createPGX] dimension of counts and X do not match\n")
   }
   if (!all(rownames(counts) == rownames(X))) {
     stop("rownames of counts and X do not match\n")
+  }
+
+  # stop if is.null organism
+  if (is.null(organism)) {
+    stop("[createPGX] FATAL: organism must be provided")
   }
 
   ## -------------------------------------------------------------------
@@ -322,18 +327,6 @@ pgx.createPGX <- function(counts,
   ## create pgx object
   ## -------------------------------------------------------------------
   message("[createPGX] creating pgx object...")
-  ## guess_organism <- guess_organism(rownames(counts))
-  ## if (is.null(organism)) {
-  ##   organism <- guess_organism
-  ## }
-  ## if (!is.null(organism) && !is.null(guess_organism)) {
-  ##   if (tolower(organism) != tolower(guess_organism)) {
-  ##     warning(
-  ##       "[createPGX] WARNING : guessed organism is '", guess_organism,
-  ##       "' but '", organism, "' was provided!"
-  ##     )
-  ##   }
-  ## }
 
   ## remove special characters from description (other columns too??)
   description <- gsub("[\"\']", " ", description) ## remove quotes (important!!)
@@ -360,16 +353,17 @@ pgx.createPGX <- function(counts,
   ## create gene annotation table
   ## -------------------------------------------------------------------
   pgx$genes <- NULL
-  if (is.null(use_biomart) || is.na(use_biomart)) {
-    use_biomart <- !(organism %in% c("Mouse", "Human", "Rat"))
+
+  if (is.null(use_annothub) || is.na(use_annothub)) {
+    use_annothub <- !(organism %in% c("Mouse", "Human", "Rat"))
   }
-  if (!use_biomart && !(organism %in% c("Mouse", "Human", "Rat"))) {
+  if (!use_annothub && !(organism %in% c("Mouse", "Human", "Rat"))) {
     message("ERROR: organism '", organism, "' not supported using R libraries.")
-    stop("ERROR: you must set 'use_biomart=TRUE' for organism: ", organism)
+    stop("ERROR: you must set 'use_annothub=TRUE' for organism: ", organism)
   }
 
   message("[createPGX] annotating genes")
-  pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table, use_biomart = use_biomart)
+  pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table, use_annothub = use_annothub)
 
   if (is.null(pgx$genes)) {
     stop("[createPGX] FATAL: Could not build gene annotation")
@@ -399,6 +393,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Filter genes?
   ## -------------------------------------------------------------------
+
   do.filter <- (only.known | only.proteincoding)
   if (do.filter) {
     if (only.known) {
@@ -407,7 +402,7 @@ pgx.createPGX <- function(counts,
       pgx$genes <- pgx$genes[which(has.symbol), ]
     }
 
-    if (only.proteincoding && organism != "No organism") {
+    if (only.proteincoding && organism != "No organism" && c("protein.coding" %in% pgx$genes$gene_biotype)) { # TODO some organisms do not have gene_biotype, that need to be fixed
       is.proteincoding <- grepl("protein.coding", pgx$genes$gene_biotype)
       table(pgx$genes$gene_biotype)
       tt <- paste(paste(names(table(pgx$genes$gene_biotype)), table(pgx$genes$gene_biotype), sep = "="), collapse = ";")
@@ -449,7 +444,7 @@ pgx.createPGX <- function(counts,
     agg_features <- aggregate(
       feature ~ symbol,
       data = pgx$genes,
-      function(x) paste(unique(x), collapse = ";")
+      function(x) paste(unique(x), collapse = "; ") # old symbol annotation has "; " as separator, we should keep it for compatibility with playbase <= 1.3.2
     )
 
     # merge by symbol, replace features by collapsed features
@@ -475,7 +470,7 @@ pgx.createPGX <- function(counts,
   if (pgx$organism == "No organism" && is.null(annot_table) && is.null(custom.geneset)) {
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
   } else {
-    pgx <- pgx.add_GMT(pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
+    pgx <- pgx.add_GMT(pgx = pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
   }
 
   ### done
@@ -653,8 +648,9 @@ pgx.computePGX <- function(pgx,
   ## ------------------ gene set tests -----------------------
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
-  if (pgx$organism != "No organism" || !is.null(pgx$GMT) && nrow(pgx$GMT) > 0) {
+  if (pgx$organism != "No organism" && !is.null(pgx$GMT) && nrow(pgx$GMT) > 0) {
     message("[pgx.computePGX] testing genesets...")
+
     pgx <- compute_testGenesets(
       pgx = pgx,
       custom.geneset = custom.geneset,
@@ -814,16 +810,86 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   pgx
 }
 
-pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
-  ## -----------------------------------------------------------
-  ## Load Gsetmat and filter genes by gene or homologous
-  ## -----------------------------------------------------------
+#' Get GO gene sets for organism directly from
+#' AnnotationHub/OrgDB. Restrict to genes as background.
+#'
+#' export
+getOrganismGO <- function(organism, genes, ah = NULL) {
+  if (tolower(organism) == "human") organism <- "Homo sapiens"
+  if (tolower(organism) == "mouse") organism <- "Mus musculus"
+  if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
 
+  ## Load the annotation resource.
+  if (is.null(ah)) ah <- AnnotationHub::AnnotationHub()
+  cat("querying AnnotationHub for", organism, "\n")
+  ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
+
+  ## select on exact organism name
+  ahDb <- ahDb[which(tolower(ahDb$species) == tolower(organism))]
+  if (length(ahDb) == 0) {
+    return(list())
+  }
+
+  ## select latest/last
+  ahDb$species
+  k <- length(ahDb)
+  cat("selecting database for", ahDb$species[k], "\n")
+  orgdb <- ahDb[[k]] ## last one, newest version
+
+  go.gmt <- list()
+  AnnotationDbi::keytypes(orgdb)
+  if (!"GOALL" %in% AnnotationDbi::keytypes(orgdb)) {
+    cat("WARNING:: missing GO annotation in database!\n")
+  } else {
+    ## create GO annotets
+    cat("\nCreating GO annotation from AnnotationHub...\n")
+    ont_classes <- c("BP", "CC", "MF")
+    k <- "BP"
+    for (k in ont_classes) {
+      go_id <- AnnotationDbi::mapIds(orgdb,
+        keys = k, keytype = "ONTOLOGY",
+        column = "GO", multiVals = "list"
+      )[[1]]
+      go_id <- unique(go_id)
+      sets <- AnnotationDbi::mapIds(orgdb,
+        keys = go_id, keytype = "GOALL",
+        column = "SYMBOL", multiVals = "list"
+      )
+      sets <- parallel::mclapply(sets, function(s) intersect(s, genes))
+
+      ## get GO title
+      go <- mget(names(sets), GO.db::GOTERM, ifnotfound = NA)
+      go_term <- sapply(go, function(x) x@Term)
+      new_names <- paste0("GO_", k, ":", go_term, " (", sub("GO:", "GO_", names(sets)), ")")
+      names(sets) <- new_names
+
+      ## add to list
+      go.gmt <- c(go.gmt, sets)
+    }
+  }
+  go.gmt
+}
+
+
+pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
+  if (!"symbol" %in% colnames(pgx$genes)) {
+    message("[pgx.add_GMT] ERROR: could not find 'symbol' column. Is this an old gene annotation?")
+    return(pgx)
+  }
+
+  is.human <- (tolower(pgx$organism) %in% c("human", "homo sapiens"))
+  is.mouse <- (tolower(pgx$organism) %in% c("mouse", "mus musculus"))
+  is.rat <- (tolower(pgx$organism) %in% c("rat", "rattus norvegicus"))
+
+  ## -----------------------------------------------------------
+  ## Load Geneset matrix and filter genes by gene or homologous
+  ## -----------------------------------------------------------
   message("[pgx.add_GMT] Creating GMT matrix... ")
   # Load geneset matrix
   G <- Matrix::t(playdata::GSETxGENE)
-  if (pgx$organism != "Human" && !is.null(pgx$genes$human_ortholog)) {
-    human_genes <- ifelse(!is.na(pgx$genes$human_ortholog),
+  if (!is.human && !is.null(pgx$genes$human_ortholog)) {
+    human_genes <- ifelse(
+      !is.na(pgx$genes$human_ortholog),
       pgx$genes$human_ortholog,
       pgx$genes$symbol
     )
@@ -831,6 +897,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     human_genes <- pgx$genes$symbol
   }
   G <- G[rownames(G) %in% human_genes, , drop = FALSE]
+  dim(G)
 
   if (nrow(G) == 0) {
     message("[pgx.add_GMT] WARNING : no overlapping genes. no GMT added.")
@@ -838,12 +905,9 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   }
 
   # Change HUMAN gene names to species symbols if NOT human and human_ortholog column is NOT NULL
-  if (pgx$organism != "Human" && !is.null(pgx$genes$human_ortholog)) {
+  if (!is.human && !is.null(pgx$genes$human_ortholog)) {
     rownames(G) <- pgx$genes$symbol[match(rownames(G), pgx$genes$human_ortholog)]
   }
-
-  # Normalize G after removal of genes
-  G <- playbase::normalize_cols(G)
 
   ## -----------------------------------------------------------
   ## Filter gene sets on size
@@ -853,7 +917,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   gmt.size <- Matrix::colSums(G != 0)
   size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
   if (length(size.ok) < 100) {
-    jj <- head(unique(c(size.ok, sample(1:ncol(G)))), 100) ## at least 100
+    ## take at least 100 gene sets, adding random selected
+    jj <- head(unique(c(size.ok, sample(1:ncol(G)))), 100)
     G <- G[, jj, drop = FALSE]
   } else {
     G <- G[, size.ok, drop = FALSE]
@@ -862,16 +927,39 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------
   ## Add custom gene sets if provided
   ## -----------------------------------------------------------
-  add.gmt <- NULL
-  if (!is.null(custom.geneset$gmt)) {
-    add.gmt <- custom.geneset$gmt
-  }
 
-  if (!is.null(add.gmt)) {
+  ## add species GO genesets from AnnotationHub
+  dbg("[pgx.add_GMT] Adding species GO for organism", pgx$organism)
+  go.genesets <- NULL
+
+  go.genesets <- tryCatch(
+    {
+      getOrganismGO(pgx$organism, rownames(G), ah = NULL)
+    },
+    error = function(e) {
+      message("Error in getOrganismsGO:", e)
+    }
+  )
+
+  if (!is.null(go.genesets)) {
+    dbg("[pgx.add_GMT] got", length(go.genesets), "genesets")
+    go.size <- sapply(go.genesets, length)
+    size.ok <- which(go.size >= 15 & go.size <= 400)
+    go.genesets <- go.genesets[size.ok]
+
+    # add CU
+    custom.geneset$gmt <- c(custom.geneset$gmt, go.genesets)
+
+    # get the length of go.genesets and add to gmt info
+    go.size <- sapply(go.genesets, length)
+    custom.geneset$info$GSET_SIZE <- c(custom.geneset$info$GSET_SIZE, go.size)
+  }
+  if (!is.null(custom.geneset$gmt)) {
     message("[pgx.add_GMT] Adding custom genesets...")
-    # convert gmt standard to SPARSE matrix
+    ## convert gmt standard to SPARSE matrix: gset in rows, genes in
+    ## columns.
     custom_gmt <- playbase::createSparseGenesetMatrix(
-      gmt.all = add.gmt,
+      gmt.all = custom.geneset$gmt,
       min.geneset.size = 3,
       max.geneset.size = 9999,
       min_gene_frequency = 1,
@@ -879,13 +967,16 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       annot = pgx$genes,
       filter_genes = FALSE
     )
+
     custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% pgx$genes$symbol, drop = FALSE]
-    custom_gmt <- playbase::normalize_rows(custom_gmt)
-    G <- playbase::merge_sparse_matrix(m1 = G, m2 = Matrix::t(custom_gmt))
+    ## merge_sparse_matrix removes duplicated genesets
+    G <- playbase::merge_sparse_matrix(
+      m1 = G,
+      m2 = Matrix::t(custom_gmt)
+    )
     G <- G[rownames(G) %in% pgx$genes$symbol, , drop = FALSE]
     remove(custom_gmt)
   }
-
 
   ## -----------------------------------------------------------
   ## create the full GENE matrix (always collapsed by gene)
@@ -893,7 +984,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
   X <- pgx$X
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
-    X <- rename_by(X, pgx$genes, "symbol")
+    X <- rename_by(X, pgx$genes, "symbol") ## pgx-functions.R
     X <- X[!rownames(X) == "", , drop = FALSE]
     if (any(duplicated(rownames(X)))) {
       X <- log2(rowsum(2**X, rownames(X)))
@@ -907,9 +998,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   }
 
   ## -----------------------------------------------------------
-  ## create the GENESETxGENE matrix
+  ## Align the GENESETxGENE matrix with genes in X
   ## -----------------------------------------------------------
-
   message("[pgx.add_GMT] Matching gene set matrix...")
   gg <- rownames(X)
   ii <- intersect(gg, rownames(G))
@@ -921,7 +1011,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   G <- rbind(G, matX)
   G <- G[match(gg, rownames(G)), , drop = FALSE]
   rownames(G) <- rownames(X) ## original name (e.g. mouse)
-
 
   ## -----------------------------------------------------------
   ## Prioritize gene sets by fast rank-correlation
@@ -961,6 +1050,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------------------
   ## Clean up and return pgx object
   ## -----------------------------------------------------------------------
+
+  G <- playbase::normalize_cols(G)
 
   pgx$GMT <- G
   message(glue::glue("[pgx.add_GMT] Final GMT: {nrow(G)}x{ncol(G)}"))

@@ -21,7 +21,7 @@
 #' Any existing tsne/umap embeddings and cluster assignments are copied over from the Seurat object.
 #'
 #' @export
-seurat2pgx <- function(obj, do.cluster = FALSE) {
+seurat2pgx <- function(obj, do.cluster = FALSE, organism) {
   ## Convert a Seurat object to a minimal PGX object.
   message("[createPGX.10X] creating PGX object...")
   pgx <- list()
@@ -34,7 +34,6 @@ seurat2pgx <- function(obj, do.cluster = FALSE) {
   pgx$samples <- obj@meta.data
 
   probes <- rownames(pgx$counts)
-  organism <- guess_organism(probes)
   pgx$genes <- ngs.getGeneAnnotation(rownames(pgx$counts), organism = organism)
 
   if (do.cluster) {
