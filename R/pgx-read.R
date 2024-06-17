@@ -118,7 +118,7 @@ detect_delim <- function(file) {
 #' a header and rownames column.
 #'
 detect_decimal <- function(file) {
-  ff <- data.table::fread(file, nrows = 10, header = TRUE, colClasses = "character")
+  ff <- data.table::fread(file, header = TRUE, colClasses = "character")
   vals <- as.vector(as.matrix(ff[, -1]))
   n_commas <- length(grep(",", vals, fixed = TRUE))
   n_dots <- length(grep(".", vals, fixed = TRUE))
