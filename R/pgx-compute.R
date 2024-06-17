@@ -809,9 +809,10 @@ counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE, keep.NA = FA
                 jj <- which(rownames(counts) == dups[i])
                 mv <- apply(counts[jj,], 2, function(x) sum(is.na(x)))
                 ss <- names(mv[mv==length(jj)])
-                counts <- rbind(colSums(counts[jj, ], na.rm = TRUE), counts[-jj, ])
+                new_row <- colSums(counts[jj, ], na.rm = TRUE)
+                if(length(ss)>0) new_row[ss] <- NA
+                counts <- rbind(new_row, counts[-jj, ])
                 rownames(counts)[1] <- dups[i]
-                if(length(ss)>0) counts[dups[i], ss] <- NA
             }
             rownames(counts) <- unname(sapply(rownames(counts), function(s) strsplit(s, split = "[;,\\|]")[[1]][1]))
         }
