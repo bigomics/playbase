@@ -345,15 +345,12 @@ global_scaling <- function(X, method, shift = "clip") {
     
     ##---logMM & logMS created for MPoC
     ##---logCPM conformed to existing deployed master
-    if (method == "logMM") {
+    if (method == "logMaxMedian") {
         X <- playbase::logMaxMedianNorm(counts = 2**X-1)
-        X
-    } else if (method == "logMS") {
+    } else if (method == "logMaxSum") { 
         X <- playbase::logMaxSumNorm(counts = 2**X-1)
-        X
     } else if (method == "cpm") {
         X <- playbase::logCPM(counts = 2**X-1)
-        X
         ## median.tc <- median(colSums(2**X, na.rm = TRUE), na.rm = TRUE)
         ## a <- log2(median.tc) - log2(1e6)
         ## zero.point <- a
@@ -391,8 +388,9 @@ global_scaling <- function(X, method, shift = "clip") {
         }
         ## put back zeros
         X[which.zero] <- 0
-        X
     }
+
+    return(X)    
 }
 
 #' @export
@@ -444,7 +442,7 @@ logMaxMedianNorm <- function(counts, toLog = TRUE, prior = 1) {
 #'
 #' @return Normalized matrix of log2-transformed values.
 #'
-#' @details Most used normalization methods for TMT/Silac proteomics data: make the median or sum of each sample column equal to the max median or sum.
+#' @details Most used norm. for TMT/Silac data: make median or sum of each sample equal to max median or sum.
 #'
 #' @examples
 #' \dontrun{
@@ -453,6 +451,13 @@ logMaxMedianNorm <- function(counts, toLog = TRUE, prior = 1) {
 #' }
 #' @export
 logMaxSumNorm <- function(counts, prior = 1) {
+    mx <- colSums(counts, na.rm = TRUE)
+    counts <- t(t(counts) / mx) * max(mx)
+    X <- log2(prior + counts)
+    return(X)
+}
+
+logMaxSumNorm.OLD <- function(counts, prior = 1) {
     X <- log2(prior + counts)
     mx <- colSums(X, na.rm = TRUE)
     vv <- apply(X, 2, function(x) length(x[!is.na(x)]))
@@ -464,3 +469,4 @@ logMaxSumNorm <- function(counts, prior = 1) {
     }
     return(X)
 }
+
