@@ -159,7 +159,6 @@ pgx.createPGX <- function(counts,
                           max.genesets = 5000,
                           name = "Data set",
                           datatype = "unknown",
-                          ## datasubtype = "unknown",
                           creator = "unknown",
                           description = "No description provided.",
                           X = NULL,
@@ -182,6 +181,8 @@ pgx.createPGX <- function(counts,
   if (!all(rownames(counts) == rownames(X))) {
     stop("rownames of counts and X do not match\n")
   }
+
+  message("[createPGX] datatype = ", datatype)
 
   ## -------------------------------------------------------------------
   ## clean up input files
@@ -365,7 +366,6 @@ pgx.createPGX <- function(counts,
     date = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
     creator = creator,
     datatype = datatype,
-    ## datasubtype = datasubtype,
     description = description,
     samples = data.frame(samples, check.names = FALSE),
     counts = as.matrix(counts),
@@ -408,11 +408,12 @@ pgx.createPGX <- function(counts,
       ## DEseq2). Require at least in 2 or 1% of total. Specify the
       ## PRIOR CPM amount to regularize the counts and filter genes
       ## ps (16.6.24): crashes in presence of NAs
-      nas <- which(is.na(pgx$counts))
-      message("[createPGX] found ", length(nas), "NA values in the data")
-      message("[createPGX] filtering out lowly expressed genes (zero counts)...")
-      pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
-
+      nmissing <- sum(is.na(counts))
+      message("[createPGX] found ", nmissing, " NA values in the data")
+      if(nmissing==0) {
+          message("[createPGX] filtering out lowly expressed genes (zero counts)...")
+          pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
+      }
       ## Conform gene table
       ii <- match(rownames(pgx$counts), rownames(pgx$genes))
       pgx$genes <- pgx$genes[ii, , drop = FALSE]
@@ -788,19 +789,20 @@ counts.autoScaling <- function(counts) {
 
 
 #' @export
-counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE, keep.NA = FALSE) {
+counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE, keep.NA = FALSE) { ## Needs review.
     counts <- counts[rownames(counts) != "", ]
     gene0 <- rownames(counts)
     gene1 <- sapply(gene0, function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
     ndup <- sum(duplicated(gene1))
     if (ndup > 0) {
-        if (is.counts) counts <- counts else counts <- 2**(counts)
+        if (!is.counts) counts <- 2 ** counts - 1
         if (!keep.NA) {
             ## take only first gene as rowname, retain others as alias
             message("[mergeDuplicateFeatures] ", ndup, " duplicated rownames: summing rows (in counts).")
             counts <- base::rowsum(counts, gene1, na.rm = TRUE)
         } else {
-            counts[which(is.na(counts), arr.ind = TRUE)] <- NA
+            message("[mergeDuplicateFeatures] ", ndup, " duplicated rownames: summing rows (in counts) and keeping NAs.")
+            counts[which(is.nan(counts))] <- NA
             dups <- unique(gene0[duplicated(gene0)])
             i=1
             for(i in 1:length(dups)) {
@@ -810,7 +812,7 @@ counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE, keep.NA = FA
             }
             rownames(counts) <- unname(sapply(rownames(counts), function(s) strsplit(s, split = "[;,\\|]")[[1]][1]))
         }
-        if (is.counts) counts <- counts else counts <- log2(counts)
+        if (!is.counts) counts <- log2(counts + 1)
     }
     counts
 }
