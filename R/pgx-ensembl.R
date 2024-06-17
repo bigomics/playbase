@@ -373,11 +373,11 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   ## retrieve table
   ## --------------------------------------------
   keytypes(orgdb)
-  cols <- c("SYMBOL", "GENENAME", "GENETYPE", "GENETYPE", "MAP")
+  cols <- c("SYMBOL", "GENENAME", "GENETYPE", "MAP")
   cols <- intersect(cols, keytypes(orgdb))
 
   cat("get gene annotation columns:", cols, "\n")
-  message("retrieving annotation for ", length(probes), " features...")
+  message("retrieving annotation for ", length(probes), " ", probe_type," features...")
 
   annot <- AnnotationDbi::select(orgdb, keys = probes, columns = cols, keytype = probe_type)
 
@@ -826,16 +826,14 @@ detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL, nprobe = 100)
 
   ## get probe types for organism
   keytypes <- c(
-    "ENSEMBL", "ENSEMBLTRANS", "SYMBOL", "REFSEQ", "UNIPROT",
-    "ACCNUM", "ENTREZID"
-  )
-  keytypes <- c(
-    "SYMBOL", "ENTREZID", "ACCNUM", "REFSEQ",
-    "ENSEMBL", "ENSEMBLTRANS", "MGI",
-    "ENSEMBLPROT", "UNIPROT"
+    "SYMBOL", "MGI", 
+    "ENSEMBL", "ENSEMBLTRANS", "ENSEMBLPROT",
+    "ACCNUM", "UNIPROT",
+    "REFSEQ", "ENTREZID"
   )
   keytypes <- intersect(keytypes, keytypes(orgdb))
-
+  keytypes
+  
   key_matches <- rep(0L, length(keytypes))
   names(key_matches) <- keytypes
 
@@ -861,19 +859,24 @@ detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL, nprobe = 100)
 
   # Iterate over probe types
   for (key in keytypes) {
-    # key = keytypes[4]
     n <- 0
     probe_matches <- data.frame(NULL)
+    key2 <- c(key, c("SYMBOL","GENENAME"))
+    key2 <- intersect(key2, keytypes)
     try(
       probe_matches <- AnnotationDbi::select(
         orgdb,
         keys = probes,
         keytype = key,
-        columns = key
+        columns = key2
       ),
       silent = TRUE
     )
     n <- nrow(probe_matches)
+    n1 = n2 = 0
+    if("SYMBOL" %in% colnames(probe_matches))   n1 <- sum(!is.na(probe_matches[,"SYMBOL"]))
+    if("GENENAME" %in% colnames(probe_matches)) n2 <- sum(!is.na(probe_matches[,"GENENAME"]))
+    n <- min(n, max(n1,n2))
     key_matches[key] <- n
   }
 
