@@ -377,7 +377,7 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   cols <- intersect(cols, keytypes(orgdb))
 
   cat("get gene annotation columns:", cols, "\n")
-  message("retrieving annotation for ", length(probes), " ", probe_type," features...")
+  message("retrieving annotation for ", length(probes), " ", probe_type, " features...")
 
   annot <- AnnotationDbi::select(orgdb, keys = probes, columns = cols, keytype = probe_type)
 
@@ -826,14 +826,14 @@ detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL, nprobe = 100)
 
   ## get probe types for organism
   keytypes <- c(
-    "SYMBOL", "GENENAME", "MGI", 
+    "SYMBOL", "GENENAME", "MGI",
     "ENSEMBL", "ENSEMBLTRANS", "ENSEMBLPROT",
     "ACCNUM", "UNIPROT",
     "REFSEQ", "ENTREZID"
   )
   keytypes <- intersect(keytypes, keytypes(orgdb))
   keytypes
-  
+
   key_matches <- rep(0L, length(keytypes))
   names(key_matches) <- keytypes
 
@@ -860,7 +860,9 @@ detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL, nprobe = 100)
   # Iterate over probe types
   for (key in keytypes) {
     probe_matches <- data.frame(NULL)
-    key2 <- c(key, c("SYMBOL","GENENAME"))
+
+    # add symbol and genename on top of key as they will be used to count the real number of probe matches
+    key2 <- c(key, c("SYMBOL", "GENENAME"))
     key2 <- intersect(key2, keytypes)
     try(
       probe_matches <- AnnotationDbi::select(
@@ -871,12 +873,16 @@ detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL, nprobe = 100)
       ),
       silent = TRUE
     )
-    n <- nrow(probe_matches)
-    n1 = n2 = 0
-    if("SYMBOL" %in% colnames(probe_matches))   n1 <- sum(!is.na(probe_matches[,"SYMBOL"]))
-    if("GENENAME" %in% colnames(probe_matches)) n2 <- sum(!is.na(probe_matches[,"GENENAME"]))
-    n <- min(n, max(n1,n2))
-    key_matches[key] <- n
+
+
+    # check which probe types (genename, symbol) return the most matches
+    n1 <- n2 <- 0
+
+    # set empty character to NA, as we only count NA to define probe type
+    probe_matches[probe_matches == ""] <- NA
+    if ("SYMBOL" %in% colnames(probe_matches)) n1 <- sum(!is.na(probe_matches[, "SYMBOL"]))
+    if ("GENENAME" %in% colnames(probe_matches)) n2 <- sum(!is.na(probe_matches[, "GENENAME"]))
+    key_matches[key] <- max(n1, n2)
   }
 
   ## Return top match
