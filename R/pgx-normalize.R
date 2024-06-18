@@ -176,53 +176,53 @@ NORMALIZATION.METHODS <- c("none", "mean", "scale", "NC", "CPM", "TMM", "RLE", "
 #' }
 #' @export
 pgx.countNormalization <- function(x, methods) {
-  ## Column-wise normalization (along samples).
-  ##
-  ## x:        counts (linear)
-  ## method:   single method
+    ## Column-wise normalization (along samples).
+    ##
+    ## x:        counts (linear)
+    ## method:   single method
 
-  methods <- methods[1]
-  which.zero <- which(x == 0, arr.ind = TRUE)
-  x1 <- x
-  x1[which.zero] <- NA
+    methods <- methods[1]
+    which.zero <- which(x == 0, arr.ind = TRUE)
+    x1 <- x
+    x1[which.zero] <- NA
 
-  for (m in methods) {
-    if (m == "none") {
-      ## normalization on individual mean
-      x <- x
-    } else if (m %in% c("scale", "mean.center")) {
-      ## normalization on individual mean
-      mx <- mean(x1, na.rm = TRUE)
-      x <- t(t(x) / (1 + colMeans(x1, na.rm = TRUE))) * mx
-    } else if (m == "median.center") {
-      mx <- apply(x1, 2, median, na.rm = TRUE)
-      x <- t(t(x) / (1 + mx)) * mean(mx, na.rm = TRUE)
-    } else if (m == "CPM") {
-      x <- t(t(x) / (1 + Matrix::colSums(x1, na.rm = TRUE))) * 1e6
-    } else if (m == "TMM") {
-      ## normalization on total counts (linear scale)
-      x <- normalizeTMM(x, log = FALSE) ## does TMM on counts (edgeR)
-    } else if (m == "RLE") {
-      ## normalization on total counts (linear scale)
-      x <- normalizeRLE(x, log = FALSE, use = "deseq2") ## does RLE on counts (Deseq2)
-    } else if (m == "RLE2") {
-      ## normalization on total counts (linear scale)
-      x <- normalizeRLE(x, log = FALSE, use = "edger") ## does RLE on counts
-      ##        } else if(m %in% c("upperquartile")) {
-      ##            ## normalization on total counts (linear scale)
-    } else if (m == "quantile") {
-      new.x <- 0.01 * limma::normalizeQuantiles(as.matrix(100 * x1)) ## shift to avoid clipping
-      rownames(new.x) <- rownames(x)
-      colnames(new.x) <- colnames(x)
-      x <- new.x
+    for (m in methods) {
+        if (m == "none") {
+            x <- x
+        } else if (m %in% c("scale", "mean.center")) {
+            mx <- mean(x1, na.rm = TRUE)
+            x <- t(t(x) / (1 + colMeans(x1, na.rm = TRUE))) * mx
+        } else if (m == "median.center") {
+            mx <- apply(x1, 2, median, na.rm = TRUE)
+            x <- t(t(x) / (1 + mx)) * mean(mx, na.rm = TRUE)
+        } else if (m == "CPM") {
+            x <- t(t(x) / (1 + Matrix::colSums(x1, na.rm = TRUE))) * 1e6
+        } else if (m == "TMM") {
+            ## normalization on total counts (linear scale)
+            x <- normalizeTMM(x, log = FALSE) ## does TMM on counts (edgeR)
+        } else if (m == "RLE") {
+            ## normalization on total counts (linear scale)
+            x <- normalizeRLE(x, log = FALSE, use = "deseq2") ## does RLE on counts (Deseq2)
+        } else if (m == "RLE2") {
+            ## normalization on total counts (linear scale)
+            x <- normalizeRLE(x, log = FALSE, use = "edger") ## does RLE on counts
+        } else if (m == "quantile") {
+            new.x <- 0.01 * limma::normalizeQuantiles(as.matrix(100 * x1)) ## shift to avoid clipping
+            rownames(new.x) <- rownames(x)
+            colnames(new.x) <- colnames(x)
+            x <- new.x
+        } else if (m == "logMaxMedian") {
+            x <- logMaxMedianNorm(x, toLog = FALSE)
+        } else if (m == "logMaxSum") {
+            x <- logMaxSumNorm(x, toLog = FALSE)
+        }
     }
-  } ## end of for method
 
-  x <- pmax(x, 0) ## prevent negative values
-  ## put back zeros as zeros
-  x[which.zero] <- 0
+    x <- pmax(x, 0) ## prevent negative values
+    ## put back zeros as zeros
+    x[which.zero] <- 0
 
-  return(x)
+    return(x)
 }
 
 
@@ -422,13 +422,12 @@ is.xxl <- function(X, z = 10) {
 #' }
 #' @export
 logMaxMedianNorm <- function(counts, toLog = TRUE, prior = 1) {
-    counts0 <- counts
-    mx <- apply(counts0, 2, median, na.rm = TRUE)
-    counts0 <- t(t(counts0) / mx) * max(mx)
+    mx <- apply(counts, 2, median, na.rm = TRUE)
+    counts <- t(t(counts) / mx) * max(mx)
     if(toLog) {
-        X <- log2(prior + counts0)
+        X <- log2(prior + counts)
     } else {
-        X <- counts0
+        X <- counts
     }  
     return(X)
 }
@@ -450,10 +449,14 @@ logMaxMedianNorm <- function(counts, toLog = TRUE, prior = 1) {
 #' norm_counts <- logMaxSumNorm(counts)
 #' }
 #' @export
-logMaxSumNorm <- function(counts, prior = 1) {
+logMaxSumNorm <- function(counts, toLog = TRUE, prior = 1) {
     mx <- colSums(counts, na.rm = TRUE)
     counts <- t(t(counts) / mx) * max(mx)
-    X <- log2(prior + counts)
+    if(toLog) {
+        X <- log2(prior + counts)
+    } else {
+        X <- counts
+    }
     return(X)
 }
 
