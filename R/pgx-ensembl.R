@@ -826,7 +826,7 @@ detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL, nprobe = 100)
 
   ## get probe types for organism
   keytypes <- c(
-    "SYMBOL", "MGI", 
+    "SYMBOL", "GENENAME", "MGI", 
     "ENSEMBL", "ENSEMBLTRANS", "ENSEMBLPROT",
     "ACCNUM", "UNIPROT",
     "REFSEQ", "ENTREZID"
@@ -859,7 +859,6 @@ detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL, nprobe = 100)
 
   # Iterate over probe types
   for (key in keytypes) {
-    n <- 0
     probe_matches <- data.frame(NULL)
     key2 <- c(key, c("SYMBOL","GENENAME"))
     key2 <- intersect(key2, keytypes)
