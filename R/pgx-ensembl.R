@@ -743,8 +743,15 @@ detect_probetype.MATCH <- function(probes, organism = "", for.biomart = FALSE) {
 
   ## 2. determine probe type using regular expression
   if (probe_type == "") {
-    ## probe_type <- xbioc::idtype(probes)
-    idtype.table <- table(sapply(head(sample(probes), 1000), xbioc::idtype))
+    
+    idtype.table <- sapply(head(sample(probes), 1000), xbioc::idtype)
+
+    # remove empty columns and ".nuID" from idtypetable
+    idtype.table <- gsub(".nuID", NA, idtype.table)
+    idtype.table <- idtype.table[which(idtype.table != "")]
+
+    idtype.table <- table(idtype.table)
+
     probe_type <- names(which.max(idtype.table))
   }
 
