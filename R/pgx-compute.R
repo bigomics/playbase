@@ -363,7 +363,7 @@ pgx.createPGX <- function(counts,
   }
 
   message("[createPGX] annotating genes")
-  pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table, use_annothub = use_annothub)
+  pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table, use_annothub = TRUE)
 
   if (is.null(pgx$genes)) {
     stop("[createPGX] FATAL: Could not build gene annotation")
