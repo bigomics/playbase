@@ -326,7 +326,7 @@ matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1, reorder = TRUE) {
     1:ncol(X), group,
     function(i) FUN(X[, i, drop = FALSE], na.rm = TRUE)
   ))
-  if(!reorder) mX <- mX[,unique(group),drop=FALSE]
+  if (!reorder) mX <- mX[, unique(group), drop = FALSE]
   if (dir == 2) mX <- t(mX)
   mX
 }
@@ -336,8 +336,8 @@ matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1, reorder = TRUE) {
 #'
 #' @export
 rowmean <- function(X, group, reorder = TRUE) {
-  sumX <- base::rowsum(X, group, na.rm=TRUE, reorder = reorder)
-  nX <- base::rowsum(1*(!is.na(X)), group, reorder = reorder)
+  sumX <- base::rowsum(X, group, na.rm = TRUE, reorder = reorder)
+  nX <- base::rowsum(1 * (!is.na(X)), group, reorder = reorder)
   sumX / nX
 }
 
