@@ -320,16 +320,26 @@ pgx.checkObject <- function(pgx) {
 #' means <- matGroupMeans(X, groups)
 #' }
 #' @export
-matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1) {
+matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1, reorder = TRUE) {
   if (dir == 2) X <- t(X)
   mX <- do.call(cbind, tapply(
     1:ncol(X), group,
     function(i) FUN(X[, i, drop = FALSE], na.rm = TRUE)
   ))
+  if(!reorder) mX <- mX[,unique(group),drop=FALSE]
   if (dir == 2) mX <- t(mX)
   mX
 }
 
+#' Calculate group-wise row means (like base::rowsum) from a
+#' matrix. Faster than matGroupMeans.
+#'
+#' @export
+rowmean <- function(X, group, reorder = TRUE) {
+  sumX <- base::rowsum(X, group, na.rm=TRUE, reorder = reorder)
+  nX <- base::rowsum(1*(!is.na(X)), group, reorder = reorder)
+  sumX / nX
+}
 
 #' @describeIn trimsame0 trimsame is a function that trims common prefixes and/or
 #' suffixes from a character vector by applying trimsame0 forwards and/or backwards.
