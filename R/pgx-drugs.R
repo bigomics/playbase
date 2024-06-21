@@ -129,8 +129,8 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
     fx <- apply(FC[gg, , drop = FALSE], 2, rank)
     R1 <- qlcMatrix::corSparse(X[gg, ], fx)
   } else {
-    rnk1 <- apply(X[gg, , drop = FALSE], 2, rank, na.last = "keep")
-    rnk2 <- apply(FC[gg, , drop = FALSE], 2, rank, na.last = "keep")
+    rnk1 <- t(matrixStats::colRanks(X[gg, , drop = FALSE], ties.method = "average", na.last = "keep"))
+    rnk2 <- t(matrixStats::colRanks(FC[gg, , drop = FALSE], ties.method = "average", na.last = "keep"))
     system.time(R1 <- stats::cor(rnk1, rnk2, use = "pairwise"))
   }
   R1 <- as.matrix(R1)
