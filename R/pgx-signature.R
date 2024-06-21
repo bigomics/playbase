@@ -114,6 +114,7 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
 #' @export
 pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm = 10000) {
   if (is.null(names(fc))) stop("fc must have names")
+  browser()
   ## mouse... mouse...
   names(fc) <- toupper(names(fc))
 
@@ -146,11 +147,11 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
     gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
     names(gmt) <- colnames(sig100.up)
     suppressMessages(suppressWarnings(
-      res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm, scoreType = "pos")
+      res <- fgsea::fgseaMultilevel(gmt, abs(fc), nPermSimple = nperm, scoreType = "pos")
+      # https://github.com/ctlab/fgsea/issues/103
     )) ## really unsigned???
   })
 
-  res$nMoreExtreme <- NULL
   res$ES <- NULL
   res$leadingEdge <- NULL
   res$pval <- NULL
