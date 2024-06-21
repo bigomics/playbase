@@ -69,24 +69,29 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
   ## 'obj'   : can be ngs object or fold-change matrix
   ## X       : drugs profiles (may have multiple for one drug)
   ## xdrugs  : drug associated with profile
-
+  message(">>> [pgx-drugs] point 1")
   if (is.null(X)) {
     X <- playdata::L1000_ACTIVITYS_N20D1011
     dim(X)
   }
+  message(">>> [pgx-drugs] point 2")
 
   if ("gx.meta" %in% names(obj)) {
+    message(">>> [pgx-drugs] point 3")
     FC <- pgx.getMetaMatrix(obj)$fc
+    message(">>> [pgx-drugs] point 4")
     ## check if multi-omics
     is.multiomics <- any(grepl("\\[gx\\]|\\[mrna\\]", rownames(FC)))
     if (is.multiomics) {
       jj <- grep("\\[gx\\]|\\[mrna\\]", rownames(FC))
       FC <- FC[jj, , drop = FALSE]
     }
+    message(">>> [pgx-drugs] point 5")
     rownames(FC) <- toupper(sub(".*:|.*\\]", "", rownames(FC)))
 
     FC <- FC[order(-rowMeans(FC**2)), , drop = FALSE]
     FC <- FC[!duplicated(rownames(FC)), , drop = FALSE]
+    message(">>> [pgx-drugs] point 6")
   } else {
     ## it is a matrix
     FC <- obj
@@ -96,7 +101,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
     contrast <- colnames(FC)
   }
   contrast <- intersect(contrast, colnames(FC))
-
+  message(">>> [pgx-drugs] point 7")
   FC <- FC[, contrast, drop = FALSE]
 
   if (!obj$organism %in% c("Human", "human")) {
@@ -104,13 +109,14 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
       obj$genes$human_ortholog,
       obj$genes$symbol
     )
+    message(">>> [pgx-drugs] point 8")
     rownames(FC) <- human_genes
   }
-
+message(">>> [pgx-drugs] point 9")
   ## create drug meta sets
   meta.gmt <- tapply(colnames(X), xdrugs, list)
   meta.gmt <- meta.gmt[which(sapply(meta.gmt, length) >= nmin)]
-
+message(">>> [pgx-drugs] point 10")
   if (length(meta.gmt) == 0) {
     message("WARNING::: pgx.computeDrugEnrichment : no valid genesets!!")
     return(NULL)
@@ -119,41 +125,50 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
   ## first level (rank) correlation
   message("Calculating first level rank correlation ...")
   gg <- intersect(rownames(X), rownames(FC))
-
+message(">>> [pgx-drugs] point 11")
   if (length(gg) < 20) {
     message("WARNING::: pgx.computeDrugEnrichment : not enough common genes!!")
     return(NULL)
   }
   if (any(class(X) == "dgCMatrix")) {
+    message(">>> [pgx-drugs] point 12")
     ## gene set enrichment by rank correlation
     fx <- apply(FC[gg, , drop = FALSE], 2, rank)
     R1 <- qlcMatrix::corSparse(X[gg, ], fx)
   } else {
+    message(">>> [pgx-drugs] point 13")
     rnk1 <- t(matrixStats::colRanks(X[gg, , drop = FALSE], ties.method = "average", na.last = "keep"))
     rnk2 <- t(matrixStats::colRanks(FC[gg, , drop = FALSE], ties.method = "average", na.last = "keep"))
     system.time(R1 <- stats::cor(rnk1, rnk2, use = "pairwise"))
   }
+  message(">>> [pgx-drugs] point 14")
   R1 <- as.matrix(R1)
   R1[is.nan(R1)] <- 0
   R1[is.infinite(R1)] <- 0
+  message(">>> [pgx-drugs] point 15")
   R1 <- R1 + 1e-8 * matrix(stats::rnorm(length(R1)), nrow(R1), ncol(R1))
   colnames(R1) <- colnames(FC)
   rownames(R1) <- colnames(X)
-
+  message(">>> [pgx-drugs] point 16")
   ## experiment to drug
   results <- list()
   if ("cor" %in% methods) {
     message("Calculating drug enrichment using rank correlation ...")
     D <- Matrix::sparse.model.matrix(~ 0 + xdrugs)
+    message(">>> [pgx-drugs] point 17")
     colnames(D) <- sub("^xdrugs", "", colnames(D))
     rownames(D) <- colnames(X) ## not necessary..
     rho2 <- qlcMatrix::corSparse(D, R1)
+    message(">>> [pgx-drugs] point 18")
     rownames(rho2) <- colnames(D)
     colnames(rho2) <- colnames(R1)
     rho2 <- rho2[order(-rowMeans(rho2**2)), , drop = FALSE]
+    message(">>> [pgx-drugs] point 19")
     .cor.pvalue <- function(x, n) 2 * stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
     P <- apply(rho2, 2, .cor.pvalue, n = nrow(D))
+    message(">>> [pgx-drugs] point 20")
     Q <- apply(P, 2, stats::p.adjust, method = "fdr")
+    message(">>> [pgx-drugs] point 21")
     results[["cor"]] <- list(X = rho2, Q = Q, P = P)
   }
 
@@ -161,14 +176,17 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
     message("Calculating drug enrichment using GSEA ...")
     res0 <- list()
     i <- 1
+    message(">>> [pgx-drugs] point 22")
     for (i in 1:ncol(R1)) {
       suppressWarnings(res0[[i]] <- fgsea::fgseaSimple(meta.gmt, stats = R1[, i], nperm = 10000))
     }
     names(res0) <- colnames(R1)
+    message(">>> [pgx-drugs] point 23")
 
     mNES <- sapply(res0, function(x) x$NES)
     mQ <- sapply(res0, function(x) x$padj)
     mP <- sapply(res0, function(x) x$pval)
+    message(">>> [pgx-drugs] point 24")
     if (length(res0) == 1) {
       mNES <- cbind(mNES)
       mP <- cbind(mP)
@@ -179,6 +197,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
     rownames(mNES) <- rownames(mQ) <- rownames(mP) <- pw
     colnames(mNES) <- colnames(mQ) <- colnames(mP) <- colnames(FC)
     msize <- res0[[1]]$size
+    message(">>> [pgx-drugs] point 25")
     results[["GSEA"]] <- list(X = mNES, Q = mQ, P = mP, size = msize)
   }
 
@@ -212,10 +231,12 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
       results[[k]]$Q <- res$Q[mtop, , drop = FALSE]
       results[[k]]$size <- res$size[mtop]
     }
+    message(">>> [pgx-drugs] point 26")
   }
 
   ## reduce large stats object
   sel.drugs <- unique(unlist(sapply(results, function(res) rownames(res$X))))
+  message(">>> [pgx-drugs] point 27")
   sel <- which(xdrugs %in% sel.drugs)
   results$stats <- R1[sel, , drop = FALSE]
 
