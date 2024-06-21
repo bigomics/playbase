@@ -116,6 +116,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   if (is.null(names(fc))) stop("fc must have names")
   ## mouse... mouse...
   names(fc) <- toupper(names(fc))
+  dbg(">>> [pgx-sign] point 1")
 
   ## or instead compute correlation on top100 fc genes (read from file)
   rhdf5::h5closeAll()
@@ -123,7 +124,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   cn <- rhdf5::h5read(h5.file, "data/colnames")
   gg <- intersect(names(fc), rn)
   fc <- fc[gg]
-
+  dbg(">>> [pgx-sign] point 2")
   ## --------------------------------------------------
   ## get top100 signatures
   ## --------------------------------------------------
@@ -131,9 +132,11 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   nsig <- min(100, round(length(fc) / 5))
   sel.idx <- 1:length(cn) ## all
   sel.idx <- grep("DELETED", cn, invert = TRUE)
+  dbg(">>> [pgx-sign] point 3")
   idx <- list(1:nsig, sel.idx)
   sig100.up <- rhdf5::h5read(h5.file, "signature/sig100.up", index = idx)
   sig100.dn <- rhdf5::h5read(h5.file, "signature/sig100.dn", index = idx)
+  dbg(">>> [pgx-sign] point 4")
   colnames(sig100.up) <- cn[sel.idx]
   colnames(sig100.dn) <- cn[sel.idx]
 
@@ -145,10 +148,12 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
     gmt <- rbind(sig100.up, sig100.dn)
     gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
     names(gmt) <- colnames(sig100.up)
+    dbg(">>> [pgx-sign] point 5")
     suppressMessages(suppressWarnings(
       res <- fgsea::fgseaMultilevel(gmt, abs(fc), nPermSimple = nperm, scoreType = "pos")
       # https://github.com/ctlab/fgsea/issues/103
     )) ## really unsigned???
+    dbg(">>> [pgx-sign] point 6")
   })
 
   res$ES <- NULL
@@ -165,6 +170,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   }
   gmt <- gmt[sel]
   length(gmt)
+  dbg(">>> [pgx-sign] point 7")
 
   ## --------------------------------------------------
   ## Fisher test
@@ -175,12 +181,14 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   top.dn <- head(names(sort(+fc.dn)), 3 * nsig)
   top.fc <- unique(c(top.up, top.dn))
   bg <- intersect(names(fc), rn)
+  dbg(">>> [pgx-sign] point 8")
   system.time({
     stats <- playbase::gset.fisher(top.fc, gmt,
       background = bg, fdr = 1,
       min.genes = 0, nmin = 0
     )
   })
+  dbg(">>> [pgx-sign] point 9")
   or.max <- max(stats$odd.ratio[!is.infinite(stats$odd.ratio)])
   stats$odd.ratio[is.infinite(stats$odd.ratio)] <- max(99, 2 * or.max)
 
@@ -193,10 +201,12 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
     gg1 <- unique(names(c(Matrix::head(fc1, nsig), Matrix::tail(fc1, nsig))))
     row.idx <- match(gg1, rn)
     col.idx <- match(sel, cn)
+    dbg(">>> [pgx-sign] point 10")
     G <- rhdf5::h5read(h5.file, "data/matrix", index = list(row.idx, col.idx))
     G[which(G < -999999)] <- NA
     dimnames(G) <- list(gg1, sel)
     dim(G)
+    dbg(">>> [pgx-sign] point 11")
 
     ## rank correlation??
     rG <- apply(G[gg1, ], 2, rank, na.last = "keep")
@@ -206,6 +216,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
     suppressWarnings({
       rho <- stats::cor(rG, rfc, use = "pairwise")[, 1]
     })
+    dbg(">>> [pgx-sign] point 12")
   })
   remove(G, rG, rfc)
 
@@ -213,19 +224,23 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   ## Cosine distance with sparse GSET matrix
   ## --------------------------------------------------
   system.time({
+    dbg(">>> [pgx-sign] point 13")
     bg <- intersect(names(fc), rn)
     gmt100.up <- unlist(apply(sig100.up[, sel], 2, list), recursive = FALSE)
     gmt100.dn <- unlist(apply(sig100.dn[, sel], 2, list), recursive = FALSE)
+    dbg(">>> [pgx-sign] point 14")
     G1 <- playbase::gmt2mat(gmt100.up, bg = bg)
     G2 <- playbase::gmt2mat(gmt100.dn, bg = bg)
     G1 <- G1[match(bg, rownames(G1)), ]
     G2 <- G2[match(bg, rownames(G2)), colnames(G1)]
+    dbg(">>> [pgx-sign] point 15")
     G <- G1 - G2
     dim(G)
     remove(G1, G2)
     ##  tau <- qlcMatrix::corSparse( G[bg,], cbind(fc[bg]) )[,1]
     tau <- qlcMatrix::cosSparse(G[bg, ], cbind(fc[bg]))[, 1]
     jj <- match(res$pathway, colnames(G))
+    dbg(">>> [pgx-sign] point 16")
     res$tau <- tau[jj]
   })
 
@@ -235,12 +250,13 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   jj <- match(res$pathway, names(rho))
   res$rho <- rho[jj]
   res$R2 <- rho[jj]**2
-
+  dbg(">>> [pgx-sign] point 17")
   ii <- match(res$pathway, rownames(stats))
   res$odd.ratio <- stats$odd.ratio[ii]
   res$overlap <- stats$overlap[ii]
   res$score <- abs(res$rho) * res$NES * log(pmax(res$odd.ratio, 1)) * abs(res$tau)
   res <- res[order(abs(res$score), decreasing = TRUE), ]
+  dbg(">>> [pgx-sign] point 18")
 
   ## force garbage collection...
   remove(gmt, stats)
