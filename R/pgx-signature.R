@@ -116,7 +116,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   if (is.null(names(fc))) stop("fc must have names")
   ## mouse... mouse...
   names(fc) <- toupper(names(fc))
-  dbg(">>> [pgx-sign] h5.file")
+  dbg(paste0(">>> [pgx-sign-file] ", h5.file))
   dbg(">>> [pgx-sign] point 1")
 
   ## or instead compute correlation on top100 fc genes (read from file)
@@ -154,7 +154,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
     names(gmt) <- colnames(sig100.up)
     dbg(">>> [pgx-sign] point 5")
     #suppressMessages(suppressWarnings(
-      gmt_blocks <- split_list(gmt, 1000)
+      gmt_blocks <- split_list(gmt, 5000)
       results_list <- list()
       for (i in seq_along(gmt_blocks)) {
         block_result <- fgsea::fgseaMultilevel(gmt_blocks[[i]], abs(fc), nPermSimple = nperm, scoreType = "pos")
