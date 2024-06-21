@@ -116,6 +116,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   if (is.null(names(fc))) stop("fc must have names")
   ## mouse... mouse...
   names(fc) <- toupper(names(fc))
+  dbg(">>> [pgx-sign] h5.file")
   dbg(">>> [pgx-sign] point 1")
 
   ## or instead compute correlation on top100 fc genes (read from file)
@@ -144,21 +145,34 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   ## Test signatures using fGSEA (this is pretty fast. amazing.)
   ## ------------------------------------------------------------
   ## combine up/down into one (unsigned GSEA test)
+  split_list <- function(input_list, chunk_size) {
+    split(input_list, ceiling(seq_along(input_list)/chunk_size))
+  }
   system.time({
     gmt <- rbind(sig100.up, sig100.dn)
     gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
     names(gmt) <- colnames(sig100.up)
     dbg(">>> [pgx-sign] point 5")
-    suppressMessages(suppressWarnings(
-      res <- fgsea::fgseaMultilevel(gmt, abs(fc), nPermSimple = nperm, scoreType = "pos")
+    #suppressMessages(suppressWarnings(
+      gmt_blocks <- split_list(gmt, 1000)
+      for (i in seq_along(gmt_blocks)) {
+        block_result <- fgsea::fgseaMultilevel(gmt_blocks[[i]], abs(fc), nPermSimple = nperm, scoreType = "pos")
+        block_result$ES <- NULL
+        block_result$leadingEdge <- NULL
+        block_result$pval <- NULL
+        results_list[[i]] <- block_result
+      }
+      res <- do.call(rbind, results_list)
+
+      # res <- fgsea::fgseaMultilevel(gmt, abs(fc), nPermSimple = nperm, scoreType = "pos")
       # https://github.com/ctlab/fgsea/issues/103
-    )) ## really unsigned???
+    #)) ## really unsigned???
     dbg(">>> [pgx-sign] point 6")
   })
 
-  res$ES <- NULL
-  res$leadingEdge <- NULL
-  res$pval <- NULL
+  # res$ES <- NULL
+  # res$leadingEdge <- NULL
+  # res$pval <- NULL
 
   ## --------------------------------------------------
   ## select ntop best
