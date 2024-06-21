@@ -114,7 +114,6 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
 #' @export
 pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm = 10000) {
   if (is.null(names(fc))) stop("fc must have names")
-  browser()
   ## mouse... mouse...
   names(fc) <- toupper(names(fc))
 
