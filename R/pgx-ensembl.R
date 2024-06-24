@@ -239,7 +239,7 @@ ngs.getGeneAnnotation <- function(
   missing.cols <- setdiff(annot.cols, colnames(annot))
   missing.cols
   genes <- annot
-  for (a in missing.cols) out[[a]] <- NA
+  for (a in missing.cols) genes[[a]] <- NA
   genes <- genes[, annot.cols]
   new.names <- c(
     "feature", "symbol", "human_ortholog", "gene_title", "gene_biotype",
