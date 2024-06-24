@@ -11,7 +11,6 @@
 #' @param pgx PGX object with a counts table.
 #' @param organism Char. Organism name. For more info see \code{\link{playbase::SPECIES_TABLE}}.
 #' @param annot_table Custom annotation table. See \code{\link{playbase::pgx.custom_annotation}}.
-#' @param use_annothub Logical. If TRUE, use biomaRt to retrieve gene annotation.
 #' @return Updated PGX object with gene annotation table
 #'
 #' @details Queries the Ensembl database to get a gene annotation table
@@ -27,7 +26,7 @@
 #' pgx <- pgx.addGeneAnnotation(pgx, "Human")
 #' }
 #' @export
-pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL, use_annothub = NULL) {
+pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL) {
   # Safety checks
   stopifnot(is.list(pgx))
   probes <- rownames(pgx$counts)
@@ -43,8 +42,7 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL, use_
     pgx = pgx,
     probes = probes,
     annot_table = annot_table,
-    organism = organism,
-    use_annothub = use_annothub ## auto-select
+    organism = organism
   )
 
   # Return data
@@ -94,7 +92,7 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL, use_
 #' }
 #' @export
 ngs.getGeneAnnotation <- function(probes, organism, pgx = NULL,
-                                  annot_table = NULL, use_annothub = NULL) {
+                                  annot_table = NULL) {
   if (is.null(organism)) {
     warning("[getGeneAnnotation] Please specify organism")
     return(NULL)

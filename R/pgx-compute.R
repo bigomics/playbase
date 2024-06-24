@@ -173,8 +173,7 @@ pgx.createPGX <- function(counts,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE,
                           remove.outliers = TRUE,
-                          normalize = TRUE,
-                          use_annothub = NA) {
+                          normalize = TRUE) {
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("[createPGX] dimension of counts and X do not match\n")
   }
@@ -354,16 +353,9 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   pgx$genes <- NULL
 
-  if (is.null(use_annothub) || is.na(use_annothub)) {
-    use_annothub <- !(organism %in% c("Mouse", "Human", "Rat"))
-  }
-  if (!use_annothub && !(organism %in% c("Mouse", "Human", "Rat"))) {
-    message("ERROR: organism '", organism, "' not supported using R libraries.")
-    stop("ERROR: you must set 'use_annothub=TRUE' for organism: ", organism)
-  }
 
   message("[createPGX] annotating genes")
-  pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table, use_annothub = TRUE)
+  pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table)
 
   if (is.null(pgx$genes)) {
     stop("[createPGX] FATAL: Could not build gene annotation")
