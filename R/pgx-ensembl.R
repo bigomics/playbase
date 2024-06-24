@@ -52,74 +52,6 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL) {
 }
 
 
-#' Get gene annotation data
-#'
-#' Retrieves gene annotation information from BioMart for a set of input
-#' gene/transcript identifiers.
-#'
-#' @param probes Character vector of gene/transcript identifiers to retrieve annotation for.
-#' @param organism Organism name, e.g. "hsapiens_gene_ensembl".
-#' @param probe_type Character specifying the type of input identifiers. If NULL,
-#' it will be automatically detected. Options are "ensembl_gene_id", "ensembl_transcript_id", etc.
-#' @param mart BioMart object specifying the database to query.
-#' @param verbose Logical indicating whether to print status messages.
-#'
-#' @return Data frame with gene annotation data for the input identifiers. Columns are:
-#' \itemize{
-#'    \item \code{feature}: The probe identifier.
-#'   \item \code{sybmol}: Human readable gene name.
-#'   \item \code{human_homolog}: Gene symbol for human. Only present if working with non-human dataset.
-#'   \item \code{gene_title}: Gene description
-#'   \item \code{gene_biotype}: Gene biotype
-#'   \item \code{chr}: Chromosome
-#'   \item \code{pos}: Transcript start position
-#'   \item \code{tx_len}: Transcript length
-#'   \item \code{map}: Chromosome band
-#'   \item \code{gene_name}: equivalent to the rownames. Kept for back compatibility
-#' }
-#'
-#' @details This function queries BioMart to retrieve key gene annotation data for
-#' a set of input gene/transcript identifiers. It can detect the identifier
-#' type automatically if not provided.
-#'
-#'
-#' @examples
-#' \dontrun{
-#' probes <- c("ENSG00000142192", "ENST00000288602")
-#' mart <- biomaRt::useMart("ensembl")
-#' result <- ngs.getGeneAnnotation(probes, mart)
-#' head(result)
-#' }
-#' @export
-ngs.getGeneAnnotation <- function(probes, organism, pgx = NULL,
-                                  annot_table = NULL) {
-  if (is.null(organism)) {
-    warning("[getGeneAnnotation] Please specify organism")
-    return(NULL)
-  }
-  message("[ngs.getGeneAnnotation] organism = ", organism)
-
-  genes <- NULL
-
-  genes <- ngs.getGeneAnnotation_ANNOTHUB(
-    organism = organism,
-    probes = probes,
-    probe_type = NULL,
-    verbose = FALSE
-  )
-
-  # annotation table is mandatory for No organism (until server side can handle missing genesets)
-  if (organism == "No organism" && !is.null(pgx)) {
-    genes <- pgx.custom_annotation(counts = pgx$counts, custom_annot = annot_table)
-  }
-
-  if (is.null(genes)) {
-    warning("[getGeneAnnotation] ERROR : could not create gene annotation")
-    return(NULL)
-  }
-  return(genes)
-}
-
 #' Get gene annotation data using AnnotationHub
 #'
 #' Retrieves gene annotation information from AnnotationHub for a set of input
@@ -172,6 +104,10 @@ ngs.getGeneAnnotation <- function(
   }
   ##  require(AnnotationHub)
   ##  require(GO.db)
+  if (is.null(organism)) {
+    warning("[getGeneAnnotation] Please specify organism")
+    return(NULL)
+  }
 
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
