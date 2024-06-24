@@ -120,133 +120,7 @@ ngs.getGeneAnnotation <- function(probes, organism, pgx = NULL,
   return(genes)
 }
 
-#' @title Get gene annotation data
-#' @description Retrieves gene annotation data from an organism-specific
-#' annotation package.
-#'
-#' @param probes Character vector of gene/transcript identifiers.
-#' @param probe_type Type of identifiers provided in probes (e.g. "ENSEMBL").
-#' @param organism Organism name (e.g. "Human", "Mouse", "Rat").
-#'
-#' @return Data frame containing annotation data for the provided identifiers.
-#'
-#' @details Queries an annotation package for the specified organism
-#' using the provided identifiers and probe type. Returns a cleaned and
-#' reformatted data frame with feature identifiers as row names.
-#'
-#' @examples
-#' \dontrun{
-#' probes <- c("ENSMUSG00000051951", "ENSMUSG00000033845")
-#' annot <- ngs.getGeneAnnotation_ORGDB(probes, "ENSEMBL", organism = "Mouse")
-#' }
-#' @export
-ngs.getGeneAnnotation_ORGDB <- function(organism, probes, probe_type) {
-  organism <- tolower(organism)
-  if (is.null(probe_type)) {
-    probe_type <- guess_probetype(probes, organism, for.biomart = FALSE)
-  }
-  message("probe_type = ", probe_type)
-
-  if (tolower(organism) == "homo sapiens") organism <- "human"
-  if (tolower(organism) == "mus musculus") organism <- "mouse"
-  if (tolower(organism) == "rattus norvegicus") organism <- "rat"
-
-  # Get org database and columns request
-  if (organism == "human") {
-    org_db <- org.Hs.eg.db::org.Hs.eg.db
-    cols_req <- c("SYMBOL", "GENENAME", "CHR", "CHRLOC", "MAP", "GENETYPE")
-  } else if (organism == "mouse") {
-    org_db <- org.Mm.eg.db::org.Mm.eg.db
-    cols_req <- c("SYMBOL", "GENENAME", "CHR", "CHRLOC", "GENETYPE")
-  } else if (organism == "rat") {
-    org_db <- org.Rn.eg.db::org.Rn.eg.db
-    cols_req <- c("SYMBOL", "GENENAME", "CHR", "CHRLOC", "GENETYPE")
-  } else {
-    stop("ERROR: organism", organism, "not supported by ORGDB")
-    return(NULL)
-  }
-
-  if (!probe_type %in% AnnotationDbi::keytypes(org_db)) {
-    warning("[ngs.getGeneAnnotation_ORGDB] ERROR : probe_type not in keytypes: ", probe_type)
-    warning(
-      "[ngs.getGeneAnnotation_ORGDB] keytypes available: ",
-      paste(AnnotationDbi::keytypes(org_db), collapse = " ")
-    )
-    return(NULL)
-  }
-
-  ## discard version numbers if ENSEMBL/ENSEMBLTRANS
-  clean.probes <- probes
-  if (grepl("^ENSEMBL", probe_type)) {
-    clean.probes <- sub("[.][0-9]+", "", probes)
-  }
-
-  # Call for annotation table
-  suppressWarnings(
-    d <- AnnotationDbi::select(
-      org_db,
-      keys = clean.probes,
-      keytype = probe_type,
-      columns = cols_req
-    )
-  )
-  d <- data.table::as.data.table(d)
-
-  # Add human ortholog and map for non-human organisms
-  # Here, we use the old strategy of capitalise the symbol
-  if (organism %in% c("mouse", "rat")) {
-    d$human_ortholog <- toupper(d$SYMBOL)
-    d$MAP <- d$CHR
-  }
-
-  ## if ENSEMBL get original probe names with version
-  if (probe_type == "ENSEMBL") {
-    d$ENSEMBL <- probes[match(d$ENSEMBL, clean.probes)]
-  }
-  if (probe_type == "ENSEMBLTRANS") {
-    d$ENSEMBLTRANS <- probes[match(d$ENSEMBLTRANS, clean.probes)]
-  }
-
-  # Rename cols, add extra cols, reorder cols and rows
-  if (probe_type == "SYMBOL") {
-    d[, feature := SYMBOL]
-    old_names <- c("feature", "SYMBOL", "GENENAME", "CHR", "CHRLOC", "MAP", "GENETYPE")
-  } else {
-    old_names <- c(probe_type, "SYMBOL", "GENENAME", "CHR", "CHRLOC", "MAP", "GENETYPE")
-  }
-  data.table::setnames(d,
-    old = old_names,
-    new = c("feature", "symbol", "gene_title", "chr", "pos", "map", "gene_biotype")
-  )
-
-  d$tx_len <- 1000
-  d$source <- org_db$packageName
-  d$CHRLOCCHR <- NULL
-  d$gene_name <- d$feature
-
-  col_order <- c("feature", "symbol", "human_ortholog", "gene_title", "gene_biotype")
-  col_order <- col_order[col_order %in% colnames(d)]
-  data.table::setcolorder(d, col_order)
-  data.table::setkeyv(d, "feature")
-
-  # Return data.frame with rownames
-  d <- as.data.frame(d)
-
-  # Current DF do not admit multiple rownames, since CHRLOC can have more than one
-  # match per gene/probe, we remove duplicates
-  d <- d[!duplicated(d$feature), ]
-  rownames(d) <- d$feature
-  ii <- match(probes, rownames(d))
-  d <- d[ii, , drop = FALSE]
-
-  if (is.null(d$human_ortholog)) {
-    d$human_ortholog <- NA
-  }
-
-  return(d)
-}
-
-#' Get gene annotation data using AnnotationHub/OrgDb
+#' Get gene annotation data using AnnotationHub
 #'
 #' Retrieves gene annotation information from AnnotationHub for a set of input
 #' gene/transcript identifiers.
@@ -285,10 +159,12 @@ ngs.getGeneAnnotation_ORGDB <- function(organism, probes, probe_type) {
 #' head(result)
 #' }
 #' @export
-ngs.getGeneAnnotation_ANNOTHUB <- function(
+ngs.getGeneAnnotation <- function(
     organism,
     probes,
     probe_type = NULL,
+    pgx = NULL,
+    annot_table = NULL,
     verbose = TRUE) {
   # Prepare inputs
   if (verbose) {
@@ -424,41 +300,51 @@ ngs.getGeneAnnotation_ANNOTHUB <- function(
   )
   missing.cols <- setdiff(annot.cols, colnames(annot))
   missing.cols
-  out <- annot
+  genes <- annot
   for (a in missing.cols) out[[a]] <- NA
-  out <- out[, annot.cols]
+  genes <- genes[, annot.cols]
   new.names <- c(
     "feature", "symbol", "human_ortholog", "gene_title", "gene_biotype",
     "map", "chr", "pos", "tx_len", "source"
   )
-  colnames(out) <- new.names
-  out <- as.data.frame(out)
+  colnames(genes) <- new.names
+  genes <- as.data.frame(genes)
 
   # gene_name should ALWAYS be assigned to feature for compatibility
   # with gene_name legacy implementation
-  out$gene_name <- out$feature
+  genes$gene_name <- genes$feature
 
-  if (!all(probes0 %in% out$feature)) {
+  if (!all(probes0 %in% genes$feature)) {
     message("WARNING: not all probes could be annotated")
   }
-  out <- out[match(probes0, out$feature), , drop = FALSE]
+  genes <- genes[match(probes0, genes$feature), , drop = FALSE]
 
   # add space after ; to conform with playbase <= 1.3.2
-  out$gene_title <- gsub(";", "; ", out$gene_title)
+  genes$gene_title <- gsub(";", "; ", genes$gene_title)
 
   # rename protein-coding to protein_coding to confirm with playbase <= v1.3.2
-  out$gene_biotype <- sub("protein-coding", "protein_coding", out$gene_biotype)
+  genes$gene_biotype <- sub("protein-coding", "protein_coding", genes$gene_biotype)
 
   # replace NA in gene_ortholog by "" to conform with old pgx objects
-  out$human_ortholog[is.na(out$human_ortholog)] <- ""
+  genes$human_ortholog[is.na(genes$human_ortholog)] <- ""
 
   # if organism is human, human_ortholog should be NA (matching old playbase annot)
-  if (is.null(out$human_ortholog)) {
-    out$human_ortholog <- NA
+  if (is.null(genes$human_ortholog)) {
+    genes$human_ortholog <- NA
   }
 
-  rownames(out) <- probes0
-  return(out)
+  rownames(genes) <- probes0
+
+  # annotation table is mandatory for No organism (until server side can handle missing genesets)
+  if (organism == "No organism" && !is.null(pgx)) {
+    genes <- pgx.custom_annotation(counts = pgx$counts, custom_annot = annot_table)
+  }
+
+  if (is.null(genes)) {
+    warning("[getGeneAnnotation] ERROR : could not create gene annotation")
+    return(NULL)
+  }
+  return(genes)
 }
 
 
