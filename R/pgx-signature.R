@@ -113,7 +113,7 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
 #'
 #' @export
 pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm = 10000) {
-  bpparam <- BiocParallel::MulticoreParam(1)
+  bpparam <- BiocParallel::MulticoreParam(2)
 
   if (is.null(names(fc))) stop("fc must have names")
   ## mouse... mouse...
