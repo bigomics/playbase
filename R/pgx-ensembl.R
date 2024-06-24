@@ -178,6 +178,8 @@ ngs.getGeneAnnotation <- function(
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
   organism
 
+  genes <- NULL
+
   ## Load the annotation resource.
   suppressMessages({
     ah <- AnnotationHub::AnnotationHub()
