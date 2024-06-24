@@ -119,7 +119,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     message("fitting contrasts using GSVA/limma... ")
 
     ## check if we have the new version of GSVA
-    browser()
     new.gsva <- exists("gsvaParam", where = asNamespace("GSVA"), mode = "function")
     new.gsva
     tt <- system.time({
