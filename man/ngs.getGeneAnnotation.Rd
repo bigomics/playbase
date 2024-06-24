@@ -2,17 +2,8 @@
 % Please edit documentation in R/pgx-ensembl.R
 \name{ngs.getGeneAnnotation}
 \alias{ngs.getGeneAnnotation}
-\title{Get gene annotation data}
+\title{Get gene annotation data using AnnotationHub}
 \usage{
-ngs.getGeneAnnotation(
-  organism,
-  probes,
-  probe_type = NULL,
-  pgx = NULL,
-  annot_table = NULL,
-  verbose = TRUE
-)
-
 ngs.getGeneAnnotation(
   organism,
   probes,
@@ -37,20 +28,6 @@ it will be automatically detected. Options are "ensembl_gene_id", "ensembl_trans
 \value{
 Data frame with gene annotation data for the input identifiers. Columns are:
 \itemize{
-   \item \code{feature}: The probe identifier.
-  \item \code{sybmol}: Human readable gene name.
-  \item \code{human_homolog}: Gene symbol for human. Only present if working with non-human dataset.
-  \item \code{gene_title}: Gene description
-  \item \code{gene_biotype}: Gene biotype
-  \item \code{chr}: Chromosome
-  \item \code{pos}: Transcript start position
-  \item \code{tx_len}: Transcript length
-  \item \code{map}: Chromosome band
-  \item \code{gene_name}: equivalent to the rownames. Kept for back compatibility
-}
-
-Data frame with gene annotation data for the input identifiers. Columns are:
-\itemize{
   \item \code{feature}: The probe identifier.
   \item \code{sybmol}: Human readable gene name.
   \item \code{human_homolog}: Gene symbol for human. Only present if working with non-human dataset.
@@ -64,9 +41,6 @@ Data frame with gene annotation data for the input identifiers. Columns are:
 }
 }
 \description{
-Retrieves gene annotation information from BioMart for a set of input
-gene/transcript identifiers.
-
 Retrieves gene annotation information from AnnotationHub for a set of input
 gene/transcript identifiers.
 }
@@ -74,18 +48,8 @@ gene/transcript identifiers.
 This function queries BioMart to retrieve key gene annotation data for
 a set of input gene/transcript identifiers. It can detect the identifier
 type automatically if not provided.
-
-This function queries BioMart to retrieve key gene annotation data for
-a set of input gene/transcript identifiers. It can detect the identifier
-type automatically if not provided.
 }
 \examples{
-\dontrun{
-probes <- c("ENSG00000142192", "ENST00000288602")
-mart <- biomaRt::useMart("ensembl")
-result <- ngs.getGeneAnnotation(probes, mart)
-head(result)
-}
 \dontrun{
 probes <- c("ENSG00000142192", "ENST00000288602")
 mart <- biomaRt::useMart("ensembl")
