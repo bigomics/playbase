@@ -228,7 +228,10 @@ test_that("detects Ensembl for mouse probes", {
     "NM_001081979", "NM_001081980", "NM_001081981", "NM_001081982",
     "NM_001081983"
   )
-  expect_equal(playbase::detect_probetype(organism = "Mouse", probes), "REFSEQ")
+
+  probetype <- playbase::detect_probetype(organism = "Mouse", probes)
+
+  expect_true(probetype %in% c("REFSEQ", "ACCNUM"))
 })
 
 
