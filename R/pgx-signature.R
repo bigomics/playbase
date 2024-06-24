@@ -154,18 +154,18 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
     names(gmt) <- colnames(sig100.up)
     dbg(">>> [pgx-sign] point 5")
     #suppressMessages(suppressWarnings(
-      # gmt_blocks <- split_list(gmt, 5000)
-      # results_list <- list()
-      # for (i in seq_along(gmt_blocks)) {
-      #   block_result <- fgsea::fgseaMultilevel(gmt_blocks[[i]], abs(fc), nPermSimple = nperm, scoreType = "pos")
-      #   block_result$ES <- NULL
-      #   block_result$leadingEdge <- NULL
-      #   block_result$pval <- NULL
-      #   results_list[[i]] <- block_result
-      # }
-      # res <- do.call(rbind, results_list)
+      gmt_blocks <- split_list(gmt, 5000)
+      results_list <- list()
+      for (i in seq_along(gmt_blocks)) {
+        block_result <- fgsea::fgseaMultilevel(gmt_blocks[[i]], abs(fc), scoreType = "pos")
+        block_result$ES <- NULL
+        block_result$leadingEdge <- NULL
+        block_result$pval <- NULL
+        results_list[[i]] <- block_result
+      }
+      res <- do.call(rbind, results_list)
 
-      res <- fgsea::fgseaMultilevel(gmt, abs(fc), nPermSimple = nperm, scoreType = "pos")
+      # res <- fgsea::fgseaMultilevel(gmt, abs(fc), nPermSimple = nperm, scoreType = "pos")
       # https://github.com/ctlab/fgsea/issues/103
     #)) ## really unsigned???
     dbg(">>> [pgx-sign] point 6")
