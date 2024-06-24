@@ -170,7 +170,7 @@ test_that("probe2symbol returns expected output", {
 #' Test for guess_probetype
 test_that("detects ENSEMBL", {
   probes <- c("ENSG00000136997", "ENSG00000241860")
-  expect_equal(playbase::detect_probetype.ANNOTHUB(probes = probes, organism = "Human"), "ENSEMBL")
+  expect_equal(playbase::detect_probetype(probes = probes, organism = "Human"), "ENSEMBL")
 })
 
 
@@ -178,7 +178,7 @@ uniprot_genes <- c("P31749", "P04637", "Q9Y6K9", "O15111", "Q9UM73", "Q13315", "
 #' Test for guess_probetype
 test_that("detects UNIPROT", {
   # UNIPROT genes
-  expect_true(playbase::detect_probetype.ANNOTHUB(organism = "Human", probes = uniprot_genes) %in% c("UNIPROT", "ACCNUM"))
+  expect_true(playbase::detect_probetype(organism = "Human", probes = uniprot_genes) %in% c("UNIPROT", "ACCNUM"))
 })
 
 res_uniprot <- playbase::ngs.getGeneAnnotation_ANNOTHUB(probes = uniprot_genes, organism = "Human", probe_type = "UNIPROT")
@@ -192,7 +192,7 @@ test_that("UNIPROT and ACCNUM annotations are the same", {
 # Test for ENSEMBLTRANS
 test_that("detects ENSEMBLTRANS for human probes", {
   probes <- c("ENST00000335137", "ENST00000362079")
-  detected_keytype <- playbase::detect_probetype.ANNOTHUB(organism = "Human", probes = probes)
+  detected_keytype <- playbase::detect_probetype(organism = "Human", probes = probes)
   expect_equal(detected_keytype, "ENSEMBLTRANS")
 })
 
@@ -200,14 +200,14 @@ test_that("detects ENSEMBLTRANS for human probes", {
 # Test for ENTREZID
 test_that("detects ENTREZID for human probes", {
   probes <- c("7157", "7422")
-  detected_keytype <- playbase::detect_probetype.ANNOTHUB(organism = "Human", probes = probes)
+  detected_keytype <- playbase::detect_probetype(organism = "Human", probes = probes)
   expect_equal(detected_keytype, "ENTREZID")
 })
 
 # Test for SYMBOL
 test_that("detects SYMBOL for human probes", {
   probes <- c("TP53", "EGFR")
-  detected_keytype <- playbase::detect_probetype.ANNOTHUB(organism = "Human", probes = probes)
+  detected_keytype <- playbase::detect_probetype(organism = "Human", probes = probes)
   expect_equal(detected_keytype, "SYMBOL")
 })
 

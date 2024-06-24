@@ -151,7 +151,7 @@ ngs.getGeneAnnotation <- function(
   if (is.ensembl) probes <- sub("[.][0-9]+$", "", probes)
 
   if (is.null(probe_type)) {
-    probe_type <- playbase::detect_probetype.ANNOTHUB(organism, probes, ah = ah)
+    probe_type <- playbase::detect_probetype(organism, probes, ah = ah)
   }
   message("detected probe_type = ", probe_type)
   if (is.null(probe_type)) {
@@ -459,10 +459,7 @@ probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE)
 
 #' @title Detect probe type from probe set
 #' @export
-detect_probetype.ANNOTHUB <- function(organism, probes, ah = NULL, nprobe = 100) {
-  ##  require(AnnotationHub)
-  ##  require(GO.db)
-
+detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
@@ -592,7 +589,7 @@ getAllSpecies <- function(ah = NULL) {
 #'
 #' @export
 checkProbes <- function(organism, probes, ah = NULL) {
-  probe_type <- detect_probetype.ANNOTHUB(organism, probes, ah = ah)
+  probe_type <- detect_probetype(organism, probes, ah = ah)
   if (is.null(probe_type)) {
     message("[checkProbes] WARNING: could not validate probes")
     return(FALSE)
