@@ -1,4 +1,4 @@
-#' Test for guess_probetype
+#' Test for detect_probetype
 test_that("Detect _probetype can detect ensembl IDs for human", {
   # Create input data with <- for reuse
   probes <- c(
@@ -99,14 +99,22 @@ lapply(csv_files, function(file) {
 
     # check human_ortholog match at least 80% match
 
-    match <- sum(result$human_ortholog == data$human_ortholog) >= 0.8 * length(probes)
+    if (species != "Human") {
+      # check that at least 80% of human_orthologs match
+      match <- sum(result$human_ortholog == data$human_ortholog) >= 0.8 * length(probes)
 
-    # if match is na, check that both human_orthologs are NA
-    if (is.na(match)) {
-      match <- sum(is.na(result$human_ortholog) == is.na(data$human_ortholog)) == length(probes)
+      # if match is na, check that both human_orthologs are NA
+      if (is.na(match)) {
+        match <- sum(is.na(result$human_ortholog) == is.na(data$human_ortholog)) == length(probes)
+      }
+
+      expect_true(match)
     }
 
-    expect_true(match)
+    if (species == "Human") {
+      # for humans, symbol should match human_ortholog
+      expect_equal(result$symbol, result$human_ortholog)
+    }
 
     skip_if(all(is.na(result$tx_len)))
 
@@ -167,7 +175,7 @@ test_that("probe2symbol returns expected output", {
 })
 
 
-#' Test for guess_probetype
+#' Test for detect_probetype
 test_that("detects ENSEMBL", {
   probes <- c("ENSG00000136997", "ENSG00000241860")
   expect_equal(playbase::detect_probetype(probes = probes, organism = "Human"), "ENSEMBL")
@@ -175,7 +183,7 @@ test_that("detects ENSEMBL", {
 
 
 uniprot_genes <- c("P31749", "P04637", "Q9Y6K9", "O15111", "Q9UM73", "Q13315", "P55317", "P16070", "P22301")
-#' Test for guess_probetype
+#' Test for detect_probetype
 test_that("detects UNIPROT", {
   # UNIPROT genes
   expect_true(playbase::detect_probetype(organism = "Human", probes = uniprot_genes) %in% c("UNIPROT", "ACCNUM"))
@@ -220,7 +228,7 @@ test_that("detects Ensembl for mouse probes", {
     "NM_001081979", "NM_001081980", "NM_001081981", "NM_001081982",
     "NM_001081983"
   )
-  expect_equal(playbase::guess_probetype(organism = "Mouse", probes), "REFSEQ")
+  expect_equal(playbase::detect_probetype(organism = "Mouse", probes), "REFSEQ")
 })
 
 
