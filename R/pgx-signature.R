@@ -113,6 +113,8 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
 #'
 #' @export
 pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm = 10000) {
+  bpparam <- BiocParallel::MulticoreParam(1)
+
   if (is.null(names(fc))) stop("fc must have names")
   ## mouse... mouse...
   names(fc) <- toupper(names(fc))
@@ -157,7 +159,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
       gmt_blocks <- split_list(gmt, 2000)
       results_list <- list()
       for (i in seq_along(gmt_blocks)) {
-        block_result <- fgsea::fgseaMultilevel(gmt_blocks[[i]], abs(fc), scoreType = "pos")
+        block_result <- fgsea::fgseaMultilevel(gmt_blocks[[i]], abs(fc), scoreType = "pos", BPPARAM = bpparam)
         block_result$ES <- NULL
         block_result$leadingEdge <- NULL
         block_result$pval <- NULL
