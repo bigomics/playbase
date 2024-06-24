@@ -145,9 +145,9 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   ## Test signatures using fGSEA (this is pretty fast. amazing.)
   ## ------------------------------------------------------------
   ## combine up/down into one (unsigned GSEA test)
-  # split_list <- function(input_list, chunk_size) {
-  #   split(input_list, ceiling(seq_along(input_list)/chunk_size))
-  # }
+  split_list <- function(input_list, chunk_size) {
+    split(input_list, ceiling(seq_along(input_list)/chunk_size))
+  }
   system.time({
     gmt <- rbind(sig100.up, sig100.dn)
     gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
