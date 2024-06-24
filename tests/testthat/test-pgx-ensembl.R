@@ -1,5 +1,5 @@
 #' Test for guess_probetype
-test_that("guess_probetype can detect ensembl IDs", {
+test_that("Detect _probetype can detect ensembl IDs for human", {
   # Create input data with <- for reuse
   probes <- c(
     "ENSG00000230915.1", "ENSG00000275728.1", "ENSG00000277599.1",
@@ -14,7 +14,7 @@ test_that("guess_probetype can detect ensembl IDs", {
   # Run function
   # Use while to prevent crash on ensembl calls
 
-  type <- playbase::guess_probetype(probes)
+  type <- playbase::detect_probetype(organism = "Human", probes = probes, )
 
   # Check output
   expect_equal(type, "ENSEMBL")
@@ -181,9 +181,9 @@ test_that("detects UNIPROT", {
   expect_true(playbase::detect_probetype(organism = "Human", probes = uniprot_genes) %in% c("UNIPROT", "ACCNUM"))
 })
 
-res_uniprot <- playbase::ngs.getGeneAnnotation_ANNOTHUB(probes = uniprot_genes, organism = "Human", probe_type = "UNIPROT")
+res_uniprot <- playbase::ngs.getGeneAnnotation(probes = uniprot_genes, organism = "Human", probe_type = "UNIPROT")
 
-res_accnum <- playbase::ngs.getGeneAnnotation_ANNOTHUB(probes = uniprot_genes, organism = "Human", probe_type = "ACCNUM")
+res_accnum <- playbase::ngs.getGeneAnnotation(probes = uniprot_genes, organism = "Human", probe_type = "ACCNUM")
 
 test_that("UNIPROT and ACCNUM annotations are the same", {
   expect_equal(res_uniprot, res_accnum)
@@ -214,13 +214,13 @@ test_that("detects SYMBOL for human probes", {
 # Test with valid mouse probes
 test_that("detects Ensembl for mouse probes", {
   probes <- c("ENSMUSG00000051951", "ENSMUSG00000033845")
-  expect_equal(playbase::guess_probetype(probes, "Mouse"), "ENSEMBL")
+  expect_equal(playbase::detect_probetype(organism = "Mouse", probes), "ENSEMBL")
 
   probes <- c(
     "NM_001081979", "NM_001081980", "NM_001081981", "NM_001081982",
     "NM_001081983"
   )
-  expect_equal(playbase::guess_probetype(probes, "Mouse"), "REFSEQ")
+  expect_equal(playbase::guess_probetype(organism = "Mouse", probes), "REFSEQ")
 })
 
 
