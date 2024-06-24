@@ -107,6 +107,8 @@ ngs.getGeneAnnotation <- function(probes, organism, pgx = NULL,
     probe_type = NULL,
     verbose = FALSE
   )
+
+  # annotation table is mandatory for No organism (until server side can handle missing genesets)
   if (organism == "No organism" && !is.null(pgx)) {
     genes <- pgx.custom_annotation(counts = pgx$counts, custom_annot = annot_table)
   }
