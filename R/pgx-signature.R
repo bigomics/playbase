@@ -154,7 +154,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
     names(gmt) <- colnames(sig100.up)
     dbg(">>> [pgx-sign] point 5")
     #suppressMessages(suppressWarnings(
-      gmt_blocks <- split_list(gmt, 5000)
+      gmt_blocks <- split_list(gmt, 2000)
       results_list <- list()
       for (i in seq_along(gmt_blocks)) {
         block_result <- fgsea::fgseaMultilevel(gmt_blocks[[i]], abs(fc), scoreType = "pos")
