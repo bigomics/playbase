@@ -501,7 +501,7 @@ pgx.addEnrichmentSignaturesH5 <- function(h5.file, X = NULL, mc.cores = 0,
 
       xi <- xi + 1e-3 * stats::rnorm(length(xi))
       suppressMessages(suppressWarnings(
-        res1 <- fgsea::fgseaSimple(gmt, xi, nperm = 10000, nproc = mc.cores)
+        res1 <- fgsea::fgseaMultilevel(gmt, xi, nPermSimple = 10000, nproc = mc.cores)
       ))
       r <- res1$NES
       names(r) <- res1$pathway
