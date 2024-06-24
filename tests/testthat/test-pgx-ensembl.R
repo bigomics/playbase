@@ -223,38 +223,6 @@ test_that("detects Ensembl for mouse probes", {
   expect_equal(playbase::guess_probetype(probes, "Mouse"), "REFSEQ")
 })
 
-#' Test for guess_probetype
-test_that("ngs.getGeneAnnotation_ORGDB function works correctly", {
-  skip("these tests need to be fixed")
-
-  # Test 1: Check that the function returns the correct annotation for a known human gene
-  expect_equal(rownames(playbase::ngs.getGeneAnnotation_ORGDB("ENSG00000141510", "ENSEMBL", "Human"))[1], "ENSG00000141510")
-
-  # Test 2: Check that the function returns the correct annotation for a known mouse gene
-  expect_equal(rownames(playbase::ngs.getGeneAnnotation_ORGDB("ENSMUSG00000051951", "ENSEMBL", "Mouse"))[1], "ENSMUSG00000051951")
-
-  # Test 3: Check that the function handles multiple probes correctly
-  probes <- c("ENSG00000141510", "ENSG00000139618")
-  expect_equal(playbase::nrow(ngs.getGeneAnnotation_ORGDB(probes, "ENSEMBL", "Human")), length(probes))
-
-  # Test 4: Check that the function handles an unknown organism correctly
-  expect_error(playbase::ngs.getGeneAnnotation_ORGDB("ENSG00000141510", "ENSEMBL", "Unknown"))
-
-  # Test 5: Check that the function handles an unknown probe correctly
-  expect_error(playbase::ngs.getGeneAnnotation_ORGDB("Unknown", "ENSEMBL", "Human"))
-
-  # Test 6: Check that the function handles a NULL probe correctly
-  expect_error(playbase::ngs.getGeneAnnotation_ORGDB(NULL, "ENSEMBL", "Human"))
-
-  # Test 7: Check that the function handles a NULL organism correctly
-  expect_error(playbase::ngs.getGeneAnnotation_ORGDB("ENSG00000141510", "ENSEMBL", NULL))
-
-  # Test 8: Check that the function handles an empty string probe correctly
-  expect_error(playbase::ngs.getGeneAnnotation_ORGDB("", "ENSEMBL", "Human"))
-
-  # Test 9: Check that the function handles an empty string organism correctly
-  expect_error(playbase::ngs.getGeneAnnotation_ORGDB("ENSG00000141510", "ENSEMBL", ""))
-})
 
 test_that("pgx.custom_annotation works correctly with no input annot table", {
   counts <- playbase::COUNTS[1:10, 1:3] # mini counts
