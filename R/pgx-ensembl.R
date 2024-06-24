@@ -101,39 +101,15 @@ ngs.getGeneAnnotation <- function(probes, organism, pgx = NULL,
   }
   message("[ngs.getGeneAnnotation] organism = ", organism)
 
-
-  is.primary_organism <- (tolower(organism) %in% c("human", "mouse", "rat"))
-  if (is.null(use_annothub) && is.primary_organism) {
-    use_annothub <- FALSE
-  }
-  if (is.null(use_annothub) && !is.primary_organism) {
-    use_annothub <- TRUE
-  }
-
   genes <- NULL
 
-  ## first try ORGDB for human, mouse, rat
-  if (is.null(genes) && is.primary_organism && !use_annothub) {
-    message("[getGeneAnnotation] >>> annotating genes using ORGDB libraries")
-    probe_type <- guess_probetype(probes, for.biomart = FALSE)
-    if (is.null(probe_type)) stop("probe_type is NULL")
-    message("[ngs.getGeneAnnotation] probe_type = ", probe_type)
-    genes <- ngs.getGeneAnnotation_ORGDB(
-      organism = organism,
-      probes = probes,
-      probe_type = probe_type
-    )
-  }
-
-  ## try biomaRt for the rest
-  if (is.null(genes) && organism != "No organism") {
-    genes <- ngs.getGeneAnnotation_ANNOTHUB(
-      organism = organism,
-      probes = probes,
-      probe_type = NULL,
-      verbose = FALSE
-    )
-  } else if (organism == "No organism" && !is.null(pgx)) {
+  genes <- ngs.getGeneAnnotation_ANNOTHUB(
+    organism = organism,
+    probes = probes,
+    probe_type = NULL,
+    verbose = FALSE
+  )
+  if (organism == "No organism" && !is.null(pgx)) {
     genes <- pgx.custom_annotation(counts = pgx$counts, custom_annot = annot_table)
   }
 
