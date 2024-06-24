@@ -173,12 +173,13 @@ message(">>> [pgx-drugs] point 11")
   }
 
   if ("GSEA" %in% methods) {
+    bpparam <- BiocParallel::MulticoreParam(1)
     message("Calculating drug enrichment using GSEA ...")
     res0 <- list()
     i <- 1
     message(">>> [pgx-drugs] point 22")
     for (i in 1:ncol(R1)) {
-      suppressWarnings(res0[[i]] <- fgsea::fgseaMultilevel(meta.gmt, stats = R1[, i]))
+      suppressWarnings(res0[[i]] <- fgsea::fgseaMultilevel(meta.gmt, stats = R1[, i], BPPARAM = bpparam))
     }
     names(res0) <- colnames(R1)
     message(">>> [pgx-drugs] point 23")
