@@ -125,6 +125,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   cn <- rhdf5::h5read(h5.file, "data/colnames")
   gg <- intersect(names(fc), rn)
   fc <- fc[gg]
+
   ## --------------------------------------------------
   ## get top100 signatures
   ## --------------------------------------------------
@@ -142,9 +143,6 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   ## Test signatures using fGSEA (this is pretty fast. amazing.)
   ## ------------------------------------------------------------
   ## combine up/down into one (unsigned GSEA test)
-  # split_list <- function(input_list, chunk_size) {
-  #   split(input_list, ceiling(seq_along(input_list)/chunk_size))
-  # }
   system.time({
     gmt <- rbind(sig100.up, sig100.dn)
     gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
@@ -152,9 +150,9 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
     res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm, scoreType = "pos", BPPARAM = bpparam)
   })
 
-  # res$ES <- NULL
-  # res$leadingEdge <- NULL
-  # res$pval <- NULL
+  res$ES <- NULL
+  res$leadingEdge <- NULL
+  res$pval <- NULL
 
   ## --------------------------------------------------
   ## select ntop best
@@ -236,6 +234,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   jj <- match(res$pathway, names(rho))
   res$rho <- rho[jj]
   res$R2 <- rho[jj]**2
+
   ii <- match(res$pathway, rownames(stats))
   res$odd.ratio <- stats$odd.ratio[ii]
   res$overlap <- stats$overlap[ii]
@@ -470,7 +469,7 @@ pgx.addEnrichmentSignaturesH5 <- function(h5.file, X = NULL, mc.cores = 0,
 
       xi <- xi + 1e-3 * stats::rnorm(length(xi))
       suppressMessages(suppressWarnings(
-        res1 <- fgsea::fgseaMultilevel(gmt, xi, nPermSimple = 10000, nproc = mc.cores)
+        res1 <- fgsea::fgseaSimple(gmt, xi, nperm = 10000, nproc = 1)
       ))
       r <- res1$NES
       names(r) <- res1$pathway

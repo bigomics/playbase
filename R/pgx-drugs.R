@@ -70,6 +70,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
   ## X       : drugs profiles (may have multiple for one drug)
   ## xdrugs  : drug associated with profile
   if (is.null(X)) {
+
     X <- playdata::L1000_ACTIVITYS_N20D1011
     dim(X)
   }
@@ -95,6 +96,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
     contrast <- colnames(FC)
   }
   contrast <- intersect(contrast, colnames(FC))
+
   FC <- FC[, contrast, drop = FALSE]
 
   if (!obj$organism %in% c("Human", "human")) {
@@ -104,9 +106,11 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
     )
     rownames(FC) <- human_genes
   }
+
   ## create drug meta sets
   meta.gmt <- tapply(colnames(X), xdrugs, list)
   meta.gmt <- meta.gmt[which(sapply(meta.gmt, length) >= nmin)]
+
   if (length(meta.gmt) == 0) {
     message("WARNING::: pgx.computeDrugEnrichment : no valid genesets!!")
     return(NULL)
@@ -115,6 +119,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
   ## first level (rank) correlation
   message("Calculating first level rank correlation ...")
   gg <- intersect(rownames(X), rownames(FC))
+
   if (length(gg) < 20) {
     message("WARNING::: pgx.computeDrugEnrichment : not enough common genes!!")
     return(NULL)
@@ -134,6 +139,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
   R1 <- R1 + 1e-8 * matrix(stats::rnorm(length(R1)), nrow(R1), ncol(R1))
   colnames(R1) <- colnames(FC)
   rownames(R1) <- colnames(X)
+  
   ## experiment to drug
   results <- list()
   if ("cor" %in% methods) {
@@ -207,12 +213,10 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
       results[[k]]$Q <- res$Q[mtop, , drop = FALSE]
       results[[k]]$size <- res$size[mtop]
     }
-    message(">>> [pgx-drugs] point 26")
   }
 
   ## reduce large stats object
   sel.drugs <- unique(unlist(sapply(results, function(res) rownames(res$X))))
-  message(">>> [pgx-drugs] point 27")
   sel <- which(xdrugs %in% sel.drugs)
   results$stats <- R1[sel, , drop = FALSE]
 
