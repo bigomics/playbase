@@ -69,8 +69,8 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
   ## 'obj'   : can be ngs object or fold-change matrix
   ## X       : drugs profiles (may have multiple for one drug)
   ## xdrugs  : drug associated with profile
-  if (is.null(X)) {
 
+  if (is.null(X)) {
     X <- playdata::L1000_ACTIVITYS_N20D1011
     dim(X)
   }
@@ -139,7 +139,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
   R1 <- R1 + 1e-8 * matrix(stats::rnorm(length(R1)), nrow(R1), ncol(R1))
   colnames(R1) <- colnames(FC)
   rownames(R1) <- colnames(X)
-  
+
   ## experiment to drug
   results <- list()
   if ("cor" %in% methods) {
