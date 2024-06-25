@@ -179,8 +179,7 @@ message(">>> [pgx-drugs] point 11")
     i <- 1
     message(">>> [pgx-drugs] point 22")
     for (i in 1:ncol(R1)) {
-      # suppressWarnings(res0[[i]] <- fgsea::fgseaMultilevel(meta.gmt, stats = R1[, i], BPPARAM = bpparam))
-      suppressWarnings(res0[[i]] <- fgsea::fgseaSimple(meta.gmt, stats = R1[, i], nperm = 10000 BPPARAM = bpparam))
+      suppressWarnings(res0[[i]] <- fgsea::fgseaMultilevel(meta.gmt, stats = R1[, i], BPPARAM = bpparam))
     }
     names(res0) <- colnames(R1)
     message(">>> [pgx-drugs] point 23")

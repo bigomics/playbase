@@ -167,8 +167,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
       # }
       # res <- do.call(rbind, results_list)
 
-      # res <- fgsea::fgseaMultilevel(gmt, abs(fc), nPermSimple = nperm, scoreType = "pos", BPPARAM = bpparam)
-      res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm, scoreType = "pos", BPPARAM = bpparam)
+      res <- fgsea::fgseaMultilevel(gmt, abs(fc), nPermSimple = nperm, scoreType = "pos", BPPARAM = bpparam)
       # https://github.com/ctlab/fgsea/issues/103
     #)) ## really unsigned???
     dbg(">>> [pgx-sign] point 6")
