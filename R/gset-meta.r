@@ -39,9 +39,8 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   timings <- c()
 
   if (is.null(mc.cores)) {
-    mc.cores <- round(0.25 * parallel::detectCores(all.tests = TRUE, logical = FALSE)) ## max 25% of cores
-    mc.cores <- pmax(mc.cores, 1) ## min 1 core
-    mc.cores <- pmin(mc.cores, 16) ## max 16 cores
+    # Multi-thread on gsva makes RAM usage go up (crashing computations) and in most cases it's slower due to overheads
+    mc.cores <- 1
   }
   message("using ", mc.cores, " number of cores")
   message("using ", mc.threads, " number of threads")
@@ -132,16 +131,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
         zx.gsva <- try({
           GSVA::gsva(as.matrix(X), gmt, method = "gsva", parallel.sz = mc.cores, verbose = FALSE)
         })
-      }
-
-      if (is.null(zx.gsva) || "try-error" %in% class(zx.gsva)) {
-        ## switch to single core...
-        warning("WARNING: GSVA ERROR: retrying single core... ")
-        if (new.gsva) {
-          zx.gsva <- try(GSVA::gsva(GSVA::gsvaParam(as.matrix(X), gmt)))
-        } else {
-          zx.gsva <- try(GSVA::gsva(as.matrix(X), gmt, method = "gsva", parallel.sz = 1, verbose = FALSE))
-        }
       }
 
       if (!"try-error" %in% class(zx.gsva)) {
