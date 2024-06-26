@@ -16,7 +16,6 @@ pgx.createPGX(
   max.genesets = 5000,
   name = "Data set",
   datatype = "unknown",
-  datasubtype = "unknown",
   creator = "unknown",
   description = "No description provided.",
   X = NULL,
@@ -31,7 +30,6 @@ pgx.createPGX(
   only.proteincoding = TRUE,
   remove.xxl = TRUE,
   remove.outliers = TRUE,
-  normalize = TRUE,
   use_biomart = NA
 )
 }
@@ -86,7 +84,6 @@ pgx.createPGX creates a pgx object with the following slots:
 - `date`: Date the dataset was created
 - `creator`: Creator of the dataset
 - `datatype`: Type of data (e.g. RNA-seq, microarray)
-- `datasubtype`: Subtype of data (e.g. TMT, Silac - for proteomics)
 - `description`: Description of the dataset
 - `samples`: Sample metadata
 - `counts`: Raw count matrix

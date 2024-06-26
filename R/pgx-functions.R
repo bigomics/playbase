@@ -330,6 +330,12 @@ matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1) {
   mX
 }
 
+#' @export
+rowmean <- function(X, group, reorder = TRUE) {
+  sumX <- base::rowsum(X, group, na.rm = TRUE, reorder = reorder)
+  nX <- base::rowsum(1 * (!is.na(X)), group, reorder = reorder)
+  sumX / nX
+}
 
 #' @describeIn trimsame0 trimsame is a function that trims common prefixes and/or
 #' suffixes from a character vector by applying trimsame0 forwards and/or backwards.
