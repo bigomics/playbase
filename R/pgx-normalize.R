@@ -421,7 +421,7 @@ is.xxl <- function(X, z = 10) {
 #' norm_counts <- logMaxMedianNorm(counts)
 #' }
 #' @export
-logMaxMedianNorm <- function(counts, toLog = TRUE, prior = 1) {
+logMaxMedianNorm <- function(counts, toLog = TRUE, prior = 0) {
     mx <- apply(counts, 2, median, na.rm = TRUE)
     counts <- t(t(counts) / mx) * max(mx)
     if(toLog) {
@@ -449,7 +449,7 @@ logMaxMedianNorm <- function(counts, toLog = TRUE, prior = 1) {
 #' norm_counts <- logMaxSumNorm(counts)
 #' }
 #' @export
-logMaxSumNorm <- function(counts, toLog = TRUE, prior = 1) {
+logMaxSumNorm <- function(counts, toLog = TRUE, prior = 0) {
     mx <- colSums(counts, na.rm = TRUE)
     counts <- t(t(counts) / mx) * max(mx)
     if(toLog) {
@@ -472,4 +472,3 @@ logMaxSumNorm.OLD <- function(counts, prior = 1) {
     }
     return(X)
 }
-
