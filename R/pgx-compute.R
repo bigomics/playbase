@@ -214,7 +214,8 @@ pgx.createPGX <- function(counts,
   }
   if (is.logx) {
     message("[createPGX] input assumed logarithm: undo-ing logarithm")
-    counts <- pmax(2**counts - 1, 0) ## undo logarithm
+    ## counts <- pmax(2**counts - 1, 0)
+    counts <- 2 ** counts
   } else {
     message("[createPGX] input assumed counts (not logarithm)")
   }
@@ -222,7 +223,6 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## How to deal with missing or infinite values??
   ## -------------------------------------------------------------------
-
   ## remove XXL/Infinite values and set to NA
   ## if (remove.xxl) {
   ##  zsd <- 10 ## default value
@@ -263,10 +263,10 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## remove samples from counts matrix with extreme (1000x more or
   ## 1000x less) total counts (than median).
-  if (remove.outliers) {
-      message("[createPGX] removing outliers samples ")
-      counts <- counts.removeSampleOutliers(counts)
-  }
+  ## if (remove.outliers) {
+  ##     message("[createPGX] removing outliers samples ")
+  ##    counts <- counts.removeSampleOutliers(counts)
+  ## }
 
   ## -------------------------------------------------------------------
   ## Auto-scaling (scale down huge values, often in proteomics)
@@ -302,26 +302,26 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Batch-correction (if requested. WARNING: changes counts )
   ## -------------------------------------------------------------------
-  batch.par <- c("batch", "batch2")
-  has.batchpar <- any(grepl("^batch|^batch2", colnames(samples), ignore.case = TRUE))
-  if (batch.correct && has.batchpar) {
-    b <- "batch"
-    bb <- grep("^batch|^batch2", colnames(samples), ignore.case = TRUE, value = TRUE)
-    for (b in bb) {
-      message("[createPGX] batch correcting for parameter '", b, "'\n")
-      which.zero <- which(counts == 0, arr.ind = TRUE)
-      bx <- samples[, b]
-      if (length(unique(bx[!is.na(bx)])) > 1) {
-        message("[createPGX] batch correcting for counts using ComBat\n")
-        ## X <- limma::removeBatchEffect(X, batch = bx) ## in log-space
-        X <- sva::ComBat(X, batch = bx) ## in log-space
-        X[which.zero] <- 0
-        ## counts <- pmax(2**X - 1, 0) ## batch corrected counts???
-      } else {
-        message("createPGX:batch.correct] batch parameter needs more than two levels")
-      }
-    }
-  }
+  ## batch.par <- c("batch", "batch2")
+  ## has.batchpar <- any(grepl("^batch|^batch2", colnames(samples), ignore.case = TRUE))
+  ## if (batch.correct && has.batchpar) {
+  ##  b <- "batch"
+  ##  bb <- grep("^batch|^batch2", colnames(samples), ignore.case = TRUE, value = TRUE)
+  ##  for (b in bb) {
+  ##    message("[createPGX] batch correcting for parameter '", b, "'\n")
+  ##    which.zero <- which(counts == 0, arr.ind = TRUE)
+  ##    bx <- samples[, b]
+  ##    if (length(unique(bx[!is.na(bx)])) > 1) {
+  ##      message("[createPGX] batch correcting for counts using ComBat\n")
+  ##      ## X <- limma::removeBatchEffect(X, batch = bx) ## in log-space
+  ##      X <- sva::ComBat(X, batch = bx) ## in log-space
+  ##      X[which.zero] <- 0
+  ##      ## counts <- pmax(2**X - 1, 0) ## batch corrected counts???
+  ##    } else {
+  ##      message("createPGX:batch.correct] batch parameter needs more than two levels")
+  ##    }
+  ##  }
+  ## }
 
   ## -------------------------------------------------------------------
   ## conform all matrices
@@ -387,13 +387,11 @@ pgx.createPGX <- function(counts,
     stop("ERROR: you must set 'use_biomart=TRUE' for organism: ", organism)
   }
 
-  message("[createPGX] annotating genes")
+  ## message("[createPGX] annotating genes")
   pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table, use_biomart = use_biomart)
-
   if (is.null(pgx$genes)) {
-    stop("[createPGX] FATAL: Could not build gene annotation")
+     stop("[createPGX] FATAL: Could not build gene annotation")
   }
-
 
   ## -------------------------------------------------------------------
   ## Filter out not-expressed
@@ -411,7 +409,7 @@ pgx.createPGX <- function(counts,
       nmissing <- sum(is.na(counts))
       message("[createPGX] found ", nmissing, " NA values in the data")
       if(nmissing==0) {
-          message("[createPGX] filtering out lowly expressed genes (zero counts)...")
+           message("[createPGX] filtering out lowly expressed genes (zero counts)...")
           pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
       }
       ## Conform gene table

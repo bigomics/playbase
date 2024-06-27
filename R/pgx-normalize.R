@@ -177,14 +177,13 @@ NORMALIZATION.METHODS <- c("none", "mean", "scale", "NC", "CPM", "TMM", "RLE", "
 #' @export
 pgx.countNormalization <- function(x, methods) {
     ## Column-wise normalization (along samples).
-    ##
     ## x:        counts (linear)
     ## method:   single method
 
     methods <- methods[1]
-    which.zero <- which(x == 0, arr.ind = TRUE)
-    x1 <- x
-    x1[which.zero] <- NA
+    ## which.zero <- which(x == 0, arr.ind = TRUE)
+    ## x1 <- x
+    ## x1[which.zero] <- NA
 
     for (m in methods) {
         if (m == "none") {
@@ -196,7 +195,9 @@ pgx.countNormalization <- function(x, methods) {
             mx <- apply(x1, 2, median, na.rm = TRUE)
             x <- t(t(x) / (1 + mx)) * mean(mx, na.rm = TRUE)
         } else if (m == "CPM") {
-            x <- t(t(x) / (1 + Matrix::colSums(x1, na.rm = TRUE))) * 1e6
+            ## x <- t(t(x) / (1 + Matrix::colSums(x1, na.rm = TRUE))) * 1e6
+            x <- playbase::logCPM(x)
+            x <- 2 ** x - 1
         } else if (m == "TMM") {
             ## normalization on total counts (linear scale)
             x <- normalizeTMM(x, log = FALSE) ## does TMM on counts (edgeR)
@@ -212,16 +213,14 @@ pgx.countNormalization <- function(x, methods) {
             colnames(new.x) <- colnames(x)
             x <- new.x
         } else if (m == "logMaxMedian") {
-            x <- logMaxMedianNorm(x, toLog = FALSE)
+            x <- playbase::logMaxMedianNorm(x, toLog = FALSE)
         } else if (m == "logMaxSum") {
-            x <- logMaxSumNorm(x, toLog = FALSE)
+            x <- playbase::logMaxSumNorm(x, toLog = FALSE)
         }
     }
 
-    x <- pmax(x, 0) ## prevent negative values
     ## put back zeros as zeros
-    x[which.zero] <- 0
-
+    ## x[which.zero] <- 0
     return(x)
 }
 
