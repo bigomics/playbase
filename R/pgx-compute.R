@@ -230,18 +230,18 @@ pgx.createPGX <- function(counts,
   ##  counts <- counts.removeXXLvalues(counts, xxl.val = NA, zsd = zsd)
   ## }
 
-  ## impute missing values
+  ## impute missing values - only temporary. We will disable then.
   ## if (datatype == "proteomics" & creator == "MPoC") {
-  ##    nmissing <- sum(is.na(counts))
-  ##    message("[createPGX] WARNING: data has ", nmissing, " missing values.")
-  ##    message("[createPGX] Skipping imputation.")
+  ## nmissing <- sum(is.na(counts))
+  ## message("[createPGX] WARNING: data has ", nmissing, " missing values. Imputing...")
+  ##     message("[createPGX] Skipping imputation.")
   ## } else { 
   ##    if (any(is.na(counts))) {
   ##        nmissing <- sum(is.na(counts))
   ##        message("[createPGX] WARNING: data has ", nmissing, " missing values.")
-  ##        impute.method <- "SVD2"
-  ##        message("[createPGX] Imputing missing values using ", impute.method)
-  ##        counts <- counts.imputeMissing(counts, method = impute.method)
+  ## impute.method <- "SVD2"
+  ## message("[createPGX] Imputing missing values using ", impute.method)
+  ## counts <- counts.imputeMissing(counts, method = impute.method)
   ##    }
   ## }
 
@@ -388,7 +388,8 @@ pgx.createPGX <- function(counts,
   }
 
   ## message("[createPGX] annotating genes")
-  pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table, use_biomart = use_biomart)
+  pgx <- pgx.addGeneAnnotation(pgx, organism = organism,
+                               annot_table = annot_table, use_biomart = use_biomart)
   if (is.null(pgx$genes)) {
      stop("[createPGX] FATAL: Could not build gene annotation")
   }
@@ -396,26 +397,26 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Filter out not-expressed
   ## -------------------------------------------------------------------
-  if (filter.genes) {
+  ## if (filter.genes) {
       ## There is second filter in the statistics computation. This
       ## first filter is primarily to reduce the counts table.
-      message("[createPGX] filtering out not-expressed genes (zero counts)...")
-      pgx <- pgx.filterZeroCounts(pgx)
+      ## message("[createPGX] filtering out not-expressed genes (zero counts)...")
+      ## pgx <- pgx.filterZeroCounts(pgx)
 
       ## prefiltering for low-expressed genes (recommended for edgeR and
       ## DEseq2). Require at least in 2 or 1% of total. Specify the
       ## PRIOR CPM amount to regularize the counts and filter genes
       ## ps (16.6.24): crashes in presence of NAs
-      nmissing <- sum(is.na(counts))
-      message("[createPGX] found ", nmissing, " NA values in the data")
-      if(nmissing==0) {
-           message("[createPGX] filtering out lowly expressed genes (zero counts)...")
-          pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
-      }
+      ## nmissing <- sum(is.na(counts))
+      ## message("[createPGX] found ", nmissing, " NA values in the data")
+      ## if(nmissing==0) {
+      ##     message("[createPGX] filtering out lowly expressed genes (zero counts)...")
+      ##    pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
+      ## }
       ## Conform gene table
-      ii <- match(rownames(pgx$counts), rownames(pgx$genes))
-      pgx$genes <- pgx$genes[ii, , drop = FALSE]
-  }
+      ## ii <- match(rownames(pgx$counts), rownames(pgx$genes))
+      ## pgx$genes <- pgx$genes[ii, , drop = FALSE]
+  ## }
 
   ## -------------------------------------------------------------------
   ## Filter genes?
