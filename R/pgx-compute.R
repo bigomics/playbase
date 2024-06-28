@@ -814,7 +814,7 @@ getOrganismGO <- function(organism, genes, ah = NULL) {
   ## Load the annotation resource.
   if (is.null(ah)) ah <- AnnotationHub::AnnotationHub()
   cat("querying AnnotationHub for", organism, "\n")
-  browser()
+
   ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
 
   ## select on exact organism name
@@ -848,15 +848,17 @@ getOrganismGO <- function(organism, genes, ah = NULL) {
         keys = go_id, keytype = "GOALL",
         column = "SYMBOL", multiVals = "list"
       )
-      sets <- lapply(sets, function(s) intersect(s, genes))
+
+      # intersect with genes should be done later, as we need to count the gset size before
+      # sets <- lapply(sets, function(s) intersect(s, genes))
 
       ## get GO title
-      go <- mget(names(sets), GO.db::GOTERM, ifnotfound = NA)
-      go_term <- sapply(go, function(x) x@Term)
-      new_names <- paste0("GO_", k, ":", go_term, " (", sub("GO:", "GO_", names(sets)), ")")
+      go <- sapply(GOTERM[names(sets)], Term)
+      new_names <- paste0("GO_", k, ":", go, " (", sub("GO:", "GO_", names(sets)), ")")
       names(sets) <- new_names
 
       ## add to list
+      browser()
       go.gmt <- c(go.gmt, sets)
     }
   }
