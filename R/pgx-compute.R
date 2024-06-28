@@ -814,6 +814,7 @@ getOrganismGO <- function(organism, genes, ah = NULL) {
   ## Load the annotation resource.
   if (is.null(ah)) ah <- AnnotationHub::AnnotationHub()
   cat("querying AnnotationHub for", organism, "\n")
+
   ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
 
   ## select on exact organism name
@@ -847,15 +848,17 @@ getOrganismGO <- function(organism, genes, ah = NULL) {
         keys = go_id, keytype = "GOALL",
         column = "SYMBOL", multiVals = "list"
       )
-      sets <- parallel::mclapply(sets, function(s) intersect(s, genes))
+
+      # intersect with genes should be done later, as we need to count the gset size before
+      # sets <- lapply(sets, function(s) intersect(s, genes))
 
       ## get GO title
-      go <- mget(names(sets), GO.db::GOTERM, ifnotfound = NA)
-      go_term <- sapply(go, function(x) x@Term)
-      new_names <- paste0("GO_", k, ":", go_term, " (", sub("GO:", "GO_", names(sets)), ")")
+      go <- sapply(GO.db::GOTERM[names(sets)], Term)
+      new_names <- paste0("GO_", k, ":", go, " (", sub("GO:", "GO_", names(sets)), ")")
       names(sets) <- new_names
 
       ## add to list
+
       go.gmt <- c(go.gmt, sets)
     }
   }
@@ -950,6 +953,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     message("[pgx.add_GMT] Adding custom genesets...")
     ## convert gmt standard to SPARSE matrix: gset in rows, genes in
     ## columns.
+
     custom_gmt <- playbase::createSparseGenesetMatrix(
       gmt.all = custom.geneset$gmt,
       min.geneset.size = 3,
@@ -1046,6 +1050,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   G <- playbase::normalize_cols(G)
 
   pgx$GMT <- G
+  pgx$custom.geneset <- custom.geneset
   message(glue::glue("[pgx.add_GMT] Final GMT: {nrow(G)}x{ncol(G)}"))
   rm(gsetX.bygroup, gsetX, G)
   gc()
