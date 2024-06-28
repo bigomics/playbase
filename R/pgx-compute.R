@@ -162,7 +162,7 @@ pgx.createPGX <- function(counts,
                           creator = "unknown",
                           description = "No description provided.",
                           X = NULL,
-                          is.logx = NULL,
+                          is.logx = FALSE, ## NULL,
                           batch.correct = TRUE,
                           auto.scale = TRUE,
                           filter.genes = TRUE,
@@ -212,9 +212,7 @@ pgx.createPGX <- function(counts,
   message("[createPGX] check logarithm/linear...")
   guess.log <- (min(counts, na.rm = TRUE) < 0 || max(counts, na.rm = TRUE) < 100)
   guess.log <- guess.log && (is.null(is.logx) || is.logx == TRUE)
-  if (is.null(is.logx)) {
-    is.logx <- guess.log
-  }
+  if (is.null(is.logx)) { is.logx <- guess.log }
   if (is.logx) {
     message("[createPGX] input assumed logarithm: undo-ing logarithm")
     ## counts <- pmax(2**counts - 1, 0)
