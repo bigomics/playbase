@@ -186,7 +186,7 @@ pgx.createPGX <- function(counts,
   message("[createPGX] datatype = ", datatype)
   message("[createPGX] dim.counts: ", dim(counts))
   if(!is.null(X)) { message("[createPGX] dim.X: ", dim(X)) }
-
+ 
   ## -------------------------------------------------------------------
   ## clean up input files
   ## -------------------------------------------------------------------
@@ -398,26 +398,24 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Filter out not-expressed
   ## -------------------------------------------------------------------
-  ## if (filter.genes) {
+  if (filter.genes) {
       ## There is second filter in the statistics computation. This
       ## first filter is primarily to reduce the counts table.
-      ## message("[createPGX] filtering out not-expressed genes (zero counts)...")
-      ## pgx <- pgx.filterZeroCounts(pgx)
+      message("[createPGX] filtering out not-expressed genes (zero counts)...")
+      pgx <- pgx.filterZeroCounts(pgx)
 
       ## prefiltering for low-expressed genes (recommended for edgeR and
       ## DEseq2). Require at least in 2 or 1% of total. Specify the
       ## PRIOR CPM amount to regularize the counts and filter genes
-      ## ps (16.6.24): crashes in presence of NAs
-      ## nmissing <- sum(is.na(counts))
-      ## message("[createPGX] found ", nmissing, " NA values in the data")
-      ## if(nmissing==0) {
-      ##     message("[createPGX] filtering out lowly expressed genes (zero counts)...")
-      ##    pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
-      ## }
+      ## AZ (16.6.24): it crashes in presence of NAs
+      if(datatype != "proteomics") {
+          message("[createPGX] filtering out lowly expressed genes (zero counts)...")
+          pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
+      }
       ## Conform gene table
-      ## ii <- match(rownames(pgx$counts), rownames(pgx$genes))
-      ## pgx$genes <- pgx$genes[ii, , drop = FALSE]
-  ## }
+      ii <- match(rownames(pgx$counts), rownames(pgx$genes))
+      pgx$genes <- pgx$genes[ii, , drop = FALSE]
+  }
 
   ## -------------------------------------------------------------------
   ## Filter genes?
