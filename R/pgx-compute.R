@@ -839,6 +839,7 @@ getOrganismGO <- function(organism, genes, ah = NULL) {
     ont_classes <- c("BP", "CC", "MF")
     k <- "BP"
     for (k in ont_classes) {
+      browser()
       go_id <- AnnotationDbi::mapIds(orgdb,
         keys = k, keytype = "ONTOLOGY",
         column = "GO", multiVals = "list"
@@ -853,15 +854,16 @@ getOrganismGO <- function(organism, genes, ah = NULL) {
       # sets <- lapply(sets, function(s) intersect(s, genes))
 
       ## get GO title
-      go <- sapply(GOTERM[names(sets)], Term)
+      go <- sapply(GO.db::GOTERM[names(sets)], Term)
       new_names <- paste0("GO_", k, ":", go, " (", sub("GO:", "GO_", names(sets)), ")")
       names(sets) <- new_names
 
       ## add to list
-      browser()
+
       go.gmt <- c(go.gmt, sets)
     }
   }
+  browser()
   go.gmt
 }
 
