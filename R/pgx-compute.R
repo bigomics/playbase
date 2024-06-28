@@ -814,6 +814,7 @@ getOrganismGO <- function(organism, genes, ah = NULL) {
   ## Load the annotation resource.
   if (is.null(ah)) ah <- AnnotationHub::AnnotationHub()
   cat("querying AnnotationHub for", organism, "\n")
+  browser()
   ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
 
   ## select on exact organism name
@@ -847,7 +848,7 @@ getOrganismGO <- function(organism, genes, ah = NULL) {
         keys = go_id, keytype = "GOALL",
         column = "SYMBOL", multiVals = "list"
       )
-      sets <- parallel::mclapply(sets, function(s) intersect(s, genes))
+      sets <- lapply(sets, function(s) intersect(s, genes))
 
       ## get GO title
       go <- mget(names(sets), GO.db::GOTERM, ifnotfound = NA)
