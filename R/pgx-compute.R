@@ -794,11 +794,11 @@ counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE) {
     rownames(counts) <- unname(genes)
     ndup <- sum(duplicated(rownames(counts)))
     if (ndup > 0) {
-        if (!is.counts) counts <- 2 ** counts - 1
+        if (!is.counts) counts <- 2 ** counts
         message("[mergeDuplicateFeatures] ", ndup, " duplicated rownames: averaging rows (in counts).")
         counts <- playbase::rowmean(counts, group=rownames(counts), reorder=TRUE)
         counts[which(is.nan(counts))] <- NA
-        if (!is.counts) counts <- log2(counts + 1)
+        if (!is.counts) counts <- log2(counts)
     }
     counts
 }
