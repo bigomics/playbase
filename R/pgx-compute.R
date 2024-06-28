@@ -839,7 +839,6 @@ getOrganismGO <- function(organism, genes, ah = NULL) {
     ont_classes <- c("BP", "CC", "MF")
     k <- "BP"
     for (k in ont_classes) {
-      browser()
       go_id <- AnnotationDbi::mapIds(orgdb,
         keys = k, keytype = "ONTOLOGY",
         column = "GO", multiVals = "list"
@@ -863,7 +862,6 @@ getOrganismGO <- function(organism, genes, ah = NULL) {
       go.gmt <- c(go.gmt, sets)
     }
   }
-  browser()
   go.gmt
 }
 
@@ -955,6 +953,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     message("[pgx.add_GMT] Adding custom genesets...")
     ## convert gmt standard to SPARSE matrix: gset in rows, genes in
     ## columns.
+
     custom_gmt <- playbase::createSparseGenesetMatrix(
       gmt.all = custom.geneset$gmt,
       min.geneset.size = 3,
@@ -1051,6 +1050,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   G <- playbase::normalize_cols(G)
 
   pgx$GMT <- G
+  pgx$custom.geneset <- custom.geneset
   message(glue::glue("[pgx.add_GMT] Final GMT: {nrow(G)}x{ncol(G)}"))
   rm(gsetX.bygroup, gsetX, G)
   gc()
