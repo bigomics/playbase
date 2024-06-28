@@ -4,7 +4,7 @@
 \alias{logMaxMedianNorm}
 \title{Normalization for TMT and Silac data: logMaxMedianNorm}
 \usage{
-logMaxMedianNorm(counts, toLog = TRUE, prior = 1)
+logMaxMedianNorm(counts, toLog = TRUE, prior = 0)
 }
 \arguments{
 \item{counts}{Numeric matrix of raw intensities: genes in rows, samples in columns.}

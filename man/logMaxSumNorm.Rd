@@ -4,7 +4,7 @@
 \alias{logMaxSumNorm}
 \title{Normalization for TMT and Silac data: logMaxSumNorm}
 \usage{
-logMaxSumNorm(counts, toLog = TRUE, prior = 1)
+logMaxSumNorm(counts, toLog = TRUE, prior = 0)
 }
 \arguments{
 \item{counts}{Numeric matrix of raw intensities: genes in rows, samples in columns.}

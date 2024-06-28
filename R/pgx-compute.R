@@ -175,6 +175,7 @@ pgx.createPGX <- function(counts,
                           remove.outliers = TRUE,
                           ## normalize = TRUE,
                           use_biomart = NA) {
+
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("[createPGX] dimension of counts and X do not match\n")
   }
@@ -183,6 +184,8 @@ pgx.createPGX <- function(counts,
   }
 
   message("[createPGX] datatype = ", datatype)
+  message("[createPGX] dim.counts: ", dim(counts))
+  if(!is.null(X)) { message("[createPGX] dim.X: ", dim(X)) }
 
   ## -------------------------------------------------------------------
   ## clean up input files
