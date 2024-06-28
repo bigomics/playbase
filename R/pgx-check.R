@@ -8,8 +8,9 @@
 #' @return a list with two elements: `checks` which contains the status of the checks, and
 #'  `PASS` which contains the overall status of the check.
 #' @export
-pgx.checkINPUT <- function(df,
-                           type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")) {
+pgx.checkINPUT <- function(
+    df,
+    type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")) {
   datatype <- match.arg(type)
   df_clean <- df
   PASS <- TRUE
