@@ -216,6 +216,8 @@ pgx.countNormalization <- function(x, methods) {
             x <- playbase::logMaxMedianNorm(x, toLog = FALSE)
         } else if (m == "logMaxSum") {
             x <- playbase::logMaxSumNorm(x, toLog = FALSE)
+        } else {
+            stop("playbase::pgx.countNormalization: unknown method")
         }
     }
 
