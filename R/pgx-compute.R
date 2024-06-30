@@ -162,7 +162,7 @@ pgx.createPGX <- function(counts,
                           creator = "unknown",
                           description = "No description provided.",
                           X = NULL,
-                          is.logx = FALSE, ## NULL,
+                          is.logx = NULL,
                           batch.correct = TRUE,
                           auto.scale = TRUE,
                           filter.genes = TRUE,
@@ -176,7 +176,8 @@ pgx.createPGX <- function(counts,
                           ## normalize = TRUE,
                           use_biomart = NA) {
 
-  if (!is.null(X) && !all(dim(counts) == dim(X))) {
+    if (is.null(X)) stop("X IS NULL")
+    if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("[createPGX] dimension of counts and X do not match\n")
   }
   if (!all(rownames(counts) == rownames(X))) {
@@ -184,8 +185,10 @@ pgx.createPGX <- function(counts,
   }
 
   message("[createPGX] datatype = ", datatype)
-  message("[createPGX] dim.counts: ", dim(counts))
-  if(!is.null(X)) { message("[createPGX] dim.X: ", dim(X)) }
+  message("[createPGX] dim.counts: ", dim(counts)[1], ",", dim(counts)[2])
+    if(!is.null(X)) {
+        message("[createPGX] dim.X: ", dim(X)[1], ", ", dim(X)[2])
+    }
  
   ## -------------------------------------------------------------------
   ## clean up input files
@@ -206,20 +209,29 @@ pgx.createPGX <- function(counts,
     contrasts <- contrasts[used.samples, , drop = FALSE] ## sample-based!!!
   }
     
-  ## -------------------------------------------------------------------
-  ## check counts: linear or logarithm?
-  ## -------------------------------------------------------------------
-  message("[createPGX] check logarithm/linear...")
-  guess.log <- (min(counts, na.rm = TRUE) < 0 || max(counts, na.rm = TRUE) < 100)
-  guess.log <- guess.log && (is.null(is.logx) || is.logx == TRUE)
-  if (is.null(is.logx)) { is.logx <- guess.log }
-  if (is.logx) {
-    message("[createPGX] input assumed logarithm: undo-ing logarithm")
-    ## counts <- pmax(2**counts - 1, 0)
-    counts <- 2 ** counts
-  } else {
-    message("[createPGX] input assumed counts (not logarithm)")
-  }
+  ## ------------------------------------------------------------------------------------
+  ## check counts: linear or logarithm?: Change log2+0 | log2+1 according to datatype
+  ## ------------------------------------------------------------------------------------
+  ## NEED TO HANDLE AT THE UPLOAD - work in progress.
+  ##  message("[createPGX] check logarithm/linear...")
+  ##  if (datatype == "proteomics: SNR") {
+  ##      is.logx <- FALSE
+  ##      prior <- 0
+  ##  } else {
+  ##      is.logx <- NULL
+  ##      prior <- 1
+  ##  }
+
+    guess.log <- (min(counts, na.rm = TRUE) < 0 || max(counts, na.rm = TRUE) < 100)
+    guess.log <- guess.log && (is.null(is.logx) || is.logx == TRUE)
+    if (is.null(is.logx)) { is.logx <- guess.log }
+    if (is.logx) {
+        message("[createPGX] input assumed logarithm: undo-ing logarithm")
+        ## counts <- pmax(2**counts - 1, 0)
+        counts <- 2 ** counts ## - prior
+    } else {
+        message("[createPGX] input assumed counts (not logarithm)")
+    }    
 
   ## -------------------------------------------------------------------
   ## How to deal with missing or infinite values??
@@ -408,7 +420,7 @@ pgx.createPGX <- function(counts,
       ## DEseq2). Require at least in 2 or 1% of total. Specify the
       ## PRIOR CPM amount to regularize the counts and filter genes
       ## AZ (16.6.24): it crashes in presence of NAs
-      if(datatype != "proteomics") {
+      if(!datatype %in% c("proteomics: SNR")) {
           message("[createPGX] filtering out lowly expressed genes (zero counts)...")
           pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
       }
@@ -492,6 +504,8 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
 
   ## If no organism, no custom annotation table and no custom geneset, then create empty GMT
+  message("CHECK1:  ", dim(pgx$counts)[1], ",", dim(pgx$counts)[2])
+  message("CHECK2:  ", dim(pgx$X)[1], ",", dim(pgx$X)[2])
   if (pgx$organism == "No organism" && is.null(annot_table) && is.null(custom.geneset)) {
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
   } else {

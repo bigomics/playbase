@@ -196,6 +196,7 @@ pgx.countNormalization <- function(x, methods) {
             x <- t(t(x) / (1 + mx)) * mean(mx, na.rm = TRUE)
         } else if (m == "CPM") {
             ## x <- t(t(x) / (1 + Matrix::colSums(x1, na.rm = TRUE))) * 1e6
+            message("playbase::logCPM")
             x <- playbase::logCPM(x)
             x <- 2 ** x - 1
         } else if (m == "TMM") {
@@ -213,8 +214,10 @@ pgx.countNormalization <- function(x, methods) {
             colnames(new.x) <- colnames(x)
             x <- new.x
         } else if (m == "logMaxMedian") {
+            message("playbase::logMaxMedianNorm")
             x <- playbase::logMaxMedianNorm(x, toLog = FALSE)
         } else if (m == "logMaxSum") {
+            message("playbase::logMaxSumNorm")
             x <- playbase::logMaxSumNorm(x, toLog = FALSE)
         } else {
             stop("playbase::pgx.countNormalization: unknown method")
