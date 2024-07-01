@@ -222,16 +222,16 @@ pgx.createPGX <- function(counts,
   ##      prior <- 1
   ##  }
 
-    guess.log <- (min(counts, na.rm = TRUE) < 0 || max(counts, na.rm = TRUE) < 100)
-    guess.log <- guess.log && (is.null(is.logx) || is.logx == TRUE)
-    if (is.null(is.logx)) { is.logx <- guess.log }
-    if (is.logx) {
-        message("[createPGX] input assumed logarithm: undo-ing logarithm")
+  ##  guess.log <- (min(counts, na.rm = TRUE) < 0 || max(counts, na.rm = TRUE) < 100)
+  ##  guess.log <- guess.log && (is.null(is.logx) || is.logx == TRUE)
+  ##  if (is.null(is.logx)) { is.logx <- guess.log }
+  ##  if (is.logx) {
+  ##      message("[createPGX] input assumed logarithm: undo-ing logarithm")
         ## counts <- pmax(2**counts - 1, 0)
-        counts <- 2 ** counts ## - prior
-    } else {
-        message("[createPGX] input assumed counts (not logarithm)")
-    }    
+  ##      counts <- 2 ** counts ## - prior
+  ##  } else {
+  ##      message("[createPGX] input assumed counts (not logarithm)")
+  ##  }    
 
   ## -------------------------------------------------------------------
   ## How to deal with missing or infinite values??
