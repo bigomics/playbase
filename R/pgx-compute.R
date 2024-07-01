@@ -409,10 +409,11 @@ pgx.createPGX <- function(counts,
       pgx$genes <- pgx$genes[is.proteincoding, , drop = FALSE]
     }
 
-    keep <- rownames(pgx$genes)
+    keep <- match(rownames(pgx$genes), rownames(pgx$counts))
+
     pgx$counts <- pgx$counts[keep, , drop = FALSE]
     if (!is.null(pgx$X)) {
-      keep <- intersect(keep, rownames(pgx$X))
+      keep <- match(rownames(pgx$genes), rownames(pgx$X))
       pgx$X <- pgx$X[keep, , drop = FALSE] ##  NOT ALIGNED???
     }
   }
