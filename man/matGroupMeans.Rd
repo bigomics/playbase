@@ -4,7 +4,7 @@
 \alias{matGroupMeans}
 \title{Calculate group-wise summary statistics from a matrix}
 \usage{
-matGroupMeans(X, group, FUN = rowMeans, dir = 1)
+matGroupMeans(X, group, FUN = rowMeans, dir = 1, reorder = TRUE)
 }
 \arguments{
 \item{X}{Numeric matrix with samples in columns.}
