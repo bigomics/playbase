@@ -138,6 +138,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
         jj <- match(names(gmt), rownames(zx.gsva))
         zx.gsva <- zx.gsva[jj, colnames(X), drop = FALSE] ## make sure..
         zx.gsva[is.na(zx.gsva)] <- 0
+        zx.gsva <- zx.gsva[!is.na(rownames(zx.gsva)),] # Remove NA rows that GSVA may produce
         all.results[["gsva"]] <- playbase::gset.fitContrastsWithLIMMA(
           zx.gsva,
           contr.matrix,
