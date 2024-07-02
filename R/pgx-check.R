@@ -104,7 +104,7 @@ pgx.checkINPUT <- function(
     probe_type <- playbase::detect_probetype(organism = organism, probes = rownames(df_clean))
 
     if (is.null(probe_type)) {
-      check_return$e30 <- "Invalid probe types detected, please check documentation for valid probetypes."
+      check_return$e30 <- head(rownames(df_clean), 10)
       PASS <- FALSE
     }
   }
