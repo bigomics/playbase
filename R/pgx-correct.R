@@ -1216,8 +1216,8 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
 
   ## RUV and SVA
   if ("RUV" %in% methods) {
-    message("[runBatchCorrectionMethods] correcting with RUV3")
-    xlist[["RUV3"]] <- try(ruvCorrect(X, y, k = NULL, type = "III"))
+    message("[runBatchCorrectionMethods] correcting with RUV")
+    xlist[["RUV"]] <- try(ruvCorrect(X, y, k = NULL, type = "III"))
     ##  xlist[["RUVg"]] <- try(ruvCorrect(X, y, k = NULL, type = "g"))
   }
 
