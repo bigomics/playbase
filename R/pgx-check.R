@@ -10,11 +10,17 @@
 #' @export
 pgx.checkINPUT <- function(
     df,
+    organism = NULL,
     type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")) {
   datatype <- match.arg(type)
   df_clean <- df
   PASS <- TRUE
   check_return <- list()
+
+  # counts must have organism
+  if (datatype == "COUNTS" && is.null(organism)) {
+    stop("Organism must be provided for counts data.")
+  }
 
   if (datatype == "COUNTS" || datatype == "EXPRESSION") {
     # convert matrix from character to numeric, sometimes we receive character matrix from read.csv function
@@ -92,6 +98,14 @@ pgx.checkINPUT <- function(
     check.log <- (all(df_clean < 60) || min(df_clean, na.rm = TRUE) < 0)
     if (check.log) {
       check_return$e29 <- "Possible log transformed counts detected."
+    }
+
+
+    # check if counts has valid probe types
+    probe_type <- playbase::detect_probetype(organism = organism, probes = rownames(df_clean))
+
+    if (is.null(probe_type)) {
+      check_return$e30 <- "Invalid probe types detected, please check documentation for valid probetypes."
     }
   }
 
