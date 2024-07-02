@@ -100,12 +100,12 @@ pgx.checkINPUT <- function(
       check_return$e29 <- "Possible log transformed counts detected."
     }
 
-
     # check if counts has valid probe types
     probe_type <- playbase::detect_probetype(organism = organism, probes = rownames(df_clean))
 
     if (is.null(probe_type)) {
       check_return$e30 <- "Invalid probe types detected, please check documentation for valid probetypes."
+      PASS <- FALSE
     }
   }
 
