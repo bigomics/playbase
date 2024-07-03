@@ -243,34 +243,6 @@ pgx.createPGX <- function(counts,
   ##  counts <- counts.removeXXLvalues(counts, xxl.val = NA, zsd = zsd)
   ## }
 
-  ## impute missing values - only temporary. We will disable then.
-  ## if (datatype == "proteomics" & creator == "MPoC") {
-  ## nmissing <- sum(is.na(counts))
-  ## message("[createPGX] WARNING: data has ", nmissing, " missing values. Imputing...")
-  ##     message("[createPGX] Skipping imputation.")
-  ## } else { 
-  ##    if (any(is.na(counts))) {
-  ##        nmissing <- sum(is.na(counts))
-  ##        message("[createPGX] WARNING: data has ", nmissing, " missing values.")
-  ## impute.method <- "SVD2"
-  ## message("[createPGX] Imputing missing values using ", impute.method)
-  ## counts <- counts.imputeMissing(counts, method = impute.method)
-  ##    }
-  ## }
-
-  ## fix gene (feature) names and sum up duplicated
-  ## if (datatype == "proteomics" & creator == "MPoC") {
-  ##    counts <- counts.mergeDuplicateFeatures(counts, keep.NA = TRUE)
-  ##    if(!is.null(X)) {
-  ##        X <- counts.mergeDuplicateFeatures(X, is.counts = FALSE, keep.NA = TRUE)
-  ##    }
-  ##} else {
-  ##    counts <- counts.mergeDuplicateFeatures(counts)
-  ##    if (!is.null(X)) {
-  ##        X <- counts.mergeDuplicateFeatures(X, is.counts = FALSE)
-  ##    }
-  ## }
-
   ## -------------------------------------------------------------------
   ## Check bad samples (in total counts, after imputation)
   ## -------------------------------------------------------------------
@@ -300,17 +272,11 @@ pgx.createPGX <- function(counts,
   ##}
   
   ## if (normalize) {
-  ##    if (datatype == "proteomics" & creator == "MPoC") {
-  ##        message("[createPGX] NORMALIZING proteomic data -- TEST1")
-  ##        X <- logMaxMedianNorm(2**X -1, toLog = TRUE, prior = 1)
-  ##        ## X <- logMaxIntensityNorm(2**X -1, toLog = TRUE, prior = 1)
-  ##    } else {
-  ##        X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
-  ##        X <- limma::normalizeQuantiles(X) ## in log space
-  ##    }
-  ##} else {
+  ##  X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
+  ##  X <- limma::normalizeQuantiles(X) ## in log space
+  ## } else {
   ##    message("[createPGX] SKIPPING NORMALIZATION!")
-  ##}
+  ## }
 
   ## -------------------------------------------------------------------
   ## Batch-correction (if requested. WARNING: changes counts )
@@ -354,18 +320,6 @@ pgx.createPGX <- function(counts,
   ## create pgx object
   ## -------------------------------------------------------------------
   message("[createPGX] creating pgx object...")
-  ## guess_organism <- guess_organism(rownames(counts))
-  ## if (is.null(organism)) {
-  ##   organism <- guess_organism
-  ## }
-  ## if (!is.null(organism) && !is.null(guess_organism)) {
-  ##   if (tolower(organism) != tolower(guess_organism)) {
-  ##     warning(
-  ##       "[createPGX] WARNING : guessed organism is '", guess_organism,
-  ##       "' but '", organism, "' was provided!"
-  ##     )
-  ##   }
-  ## }
 
   ## remove special characters from description (other columns too??)
   description <- gsub("[\"\']", " ", description) ## remove quotes (important!!)
@@ -477,14 +431,14 @@ pgx.createPGX <- function(counts,
       pgx$X <- pgx$X[rownames(pgx$X) != "", , drop = FALSE]
     }
 
-    # Collapse features as a comma-separated elements
+    ## Collapse features as a comma-separated elements
     agg_features <- aggregate(
       feature ~ symbol,
       data = pgx$genes,
       function(x) paste(unique(x), collapse = ";")
     )
 
-    # merge by symbol, replace features by collapsed features
+    ## merge by symbol, replace features by collapsed features
     pgx$genes <- pgx$genes[match(rownames(pgx$counts), symbol), ]
     rownames(pgx$genes) <- rownames(pgx$counts)
     jj <- match(rownames(pgx$counts), agg_features[, "symbol"])
@@ -502,7 +456,6 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Add GMT
   ## -------------------------------------------------------------------
-
   ## If no organism, no custom annotation table and no custom geneset, then create empty GMT
   if (pgx$organism == "No organism" && is.null(annot_table) && is.null(custom.geneset)) {
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
