@@ -11,7 +11,8 @@
 pgx.checkINPUT <- function(
     df,
     organism = NULL,
-    type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")) {
+    type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS"),
+    orgdb = NULL) {
   datatype <- match.arg(type)
   df_clean <- df
   PASS <- TRUE
@@ -101,7 +102,7 @@ pgx.checkINPUT <- function(
     }
 
     # check if counts has valid probe types
-    probe_type <- playbase::detect_probetype(organism = organism, probes = rownames(df_clean))
+    probe_type <- playbase::detect_probetype(organism = organism, probes = rownames(df_clean), orgdb = orgdb)
 
     if (is.null(probe_type)) {
       check_return$e30 <- head(rownames(df_clean), 10)

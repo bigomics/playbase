@@ -151,7 +151,7 @@ ngs.getGeneAnnotation <- function(
   if (is.ensembl) probes <- sub("[.][0-9]+$", "", probes)
 
   if (is.null(probe_type)) {
-    probe_type <- playbase::detect_probetype(organism, probes, ah = ah)
+    probe_type <- playbase::detect_probetype(organism, probes, orgdb = orgdb)
   }
   message("detected probe_type = ", probe_type)
   if (is.null(probe_type)) {
@@ -459,27 +459,27 @@ probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE)
 
 #' @title Detect probe type from probe set
 #' @export
-detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
+detect_probetype <- function(organism, probes, orgdb = NULL, nprobe = 100) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
   organism
 
   ## Load the annotation resource.
-  if (is.null(ah)) {
-    ah <- AnnotationHub::AnnotationHub()
+  if (is.null(orgdb)) {
+    suppressMessages({
+      cat("querying AnnotationHub for", organism, "\n")
+      ah <- AnnotationHub::AnnotationHub()
+
+      ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
+
+      ## select on exact organism name
+      ahDb <- ahDb[which(tolower(ahDb$species) == tolower(organism))]
+      k <- length(ahDb)
+      cat("selecting database for", ahDb$species[k], "\n")
+      orgdb <- ahDb[[k]] ## last one, newest version
+    })
   }
-  suppressMessages({
-    cat("querying AnnotationHub for", organism, "\n")
-
-    ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
-
-    ## select on exact organism name
-    ahDb <- ahDb[which(tolower(ahDb$species) == tolower(organism))]
-    k <- length(ahDb)
-    cat("selecting database for", ahDb$species[k], "\n")
-    orgdb <- ahDb[[k]] ## last one, newest version
-  })
 
   ## get probe types for organism
   keytypes <- c(
