@@ -504,8 +504,6 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
 
   ## If no organism, no custom annotation table and no custom geneset, then create empty GMT
-  message("CHECK1:  ", dim(pgx$counts)[1], ",", dim(pgx$counts)[2])
-  message("CHECK2:  ", dim(pgx$X)[1], ",", dim(pgx$X)[2])
   if (pgx$organism == "No organism" && is.null(annot_table) && is.null(custom.geneset)) {
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
   } else {
