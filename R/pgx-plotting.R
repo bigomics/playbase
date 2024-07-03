@@ -223,49 +223,50 @@ repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
 
 
 #' @export
-pgx.plotEnrichmentDotPlot <- function(pgx, ntop = 10, filter=NULL,
+pgx.plotEnrichmentDotPlot <- function(pgx, ntop = 10, filter = NULL,
                                       dir = "both",
                                       main = "Enrichment Analysis") {
   gs <- pgx$gset.meta$meta[[1]]
-  df <- data.frame(pathway=rownames(gs), fx = gs$meta.fx,
-                   pval=gs$meta.q, size = abs(gs$meta.fx))
-  df <- df[order(-df$fx),]
+  df <- data.frame(
+    pathway = rownames(gs), fx = gs$meta.fx,
+    pval = gs$meta.q, size = abs(gs$meta.fx)
+  )
+  df <- df[order(-df$fx), ]
 
-  if(!is.null(filter)) {
-    sel <- grep(filter, df$pathway,ignore.case=TRUE)
-    df$pathway <- gsub(filter,"",df$pathway)
+  if (!is.null(filter)) {
+    sel <- grep(filter, df$pathway, ignore.case = TRUE)
+    df$pathway <- gsub(filter, "", df$pathway)
   }
 
-  if( dir == "up") {
+  if (dir == "up") {
     sel <- head(sel, ntop)
-  } else if( dir == "down") {
+  } else if (dir == "down") {
     sel <- tail(sel, ntop)
   } else {
     ## both
-    sel <- c(head(sel, ntop/2), tail(sel, ntop/2))
+    sel <- c(head(sel, ntop / 2), tail(sel, ntop / 2))
   }
-  df  <- df[unique(sel),]
+  df <- df[unique(sel), ]
 
   ## cleaning...
-  df$pathway <- sub(".Homo.sapiens","",df$pathway)
+  df$pathway <- sub(".Homo.sapiens", "", df$pathway)
   df$pathway <- substring(df$pathway, 1, 60)
 
-  df$pathway <- factor(df$pathway, levels=rev(df$pathway))
-  
-  ggplot2::ggplot(df, ggplot2::aes(x=fx, y=pathway)) + 
-    ggplot2::geom_point( ggplot2::aes(color=pval, size=size)) +
-      ggplot2::scale_size_area(max_size = 12) +
-      ggplot2::scale_color_gradient(low = "red", high = "blue") +  
-      ggplot2::labs(x='Enrichment score', y=NULL, color='P-value', size='Score' ) +
-      ggplot2::ggtitle(main) +
-      ggplot2::theme(
-        axis.title = ggplot2::element_text(size=30),
-        axis.text = ggplot2::element_text(size=30),
-        title = ggplot2::element_text(size=36),
-        legend.title = ggplot2::element_text(size=20),
-        legend.text = ggplot2::element_text(size=14)                 
-      )
-  
+  df$pathway <- factor(df$pathway, levels = rev(df$pathway))
+
+  ggplot2::ggplot(df, ggplot2::aes(x = fx, y = pathway)) +
+    ggplot2::geom_point(ggplot2::aes(color = pval, size = size)) +
+    ggplot2::scale_size_area(max_size = 12) +
+    ggplot2::scale_color_gradient(low = "red", high = "blue") +
+    ggplot2::labs(x = "Enrichment score", y = NULL, color = "P-value", size = "Score") +
+    ggplot2::ggtitle(main) +
+    ggplot2::theme(
+      axis.title = ggplot2::element_text(size = 30),
+      axis.text = ggplot2::element_text(size = 30),
+      title = ggplot2::element_text(size = 36),
+      legend.title = ggplot2::element_text(size = 20),
+      legend.text = ggplot2::element_text(size = 14)
+    )
 }
 
 #' @export
