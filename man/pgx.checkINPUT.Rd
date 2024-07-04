@@ -4,7 +4,12 @@
 \alias{pgx.checkINPUT}
 \title{Check input files for pgx.computePGX}
 \usage{
-pgx.checkINPUT(df, type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS"))
+pgx.checkINPUT(
+  df,
+  organism = NULL,
+  type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS"),
+  orgdb = NULL
+)
 }
 \arguments{
 \item{df}{data.frame. The data frame corresponding to the input file as
