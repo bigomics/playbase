@@ -176,8 +176,7 @@ pgx.createPGX <- function(counts,
                           ## normalize = TRUE,
                           use_biomart = NA) {
 
-    if (is.null(X)) stop("X IS NULL")
-    if (!is.null(X) && !all(dim(counts) == dim(X))) {
+  if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("[createPGX] dimension of counts and X do not match\n")
   }
   if (!all(rownames(counts) == rownames(X))) {
