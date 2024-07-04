@@ -67,7 +67,7 @@ pgx.superBatchCorrect <- function(X, pheno,
   } else {
     bc <- c()
     if (!is.null(mnn.correct)) bc <- c(bc, "mnn")
-    if (nnm.correct) bc <- c(bc, "nnm")
+    if (nnm.correct) bc <- c(bc, "npm")
     if (sva.correct) bc <- c(bc, "sva")
     if (pca.correct) bc <- c(bc, "pca")
     if (hc.correct) bc <- c(bc, "hc")
@@ -310,11 +310,11 @@ pgx.superBatchCorrect <- function(X, pheno,
       }
     }
 
-    if (bc == "nnm") {
+    if (bc == "npm") {
       ## --------------------------------------------------------------------
       ## Nearest-neighbour matching (NNM)
       ## --------------------------------------------------------------------
-      dbg("[pgx.superBatchCorrect] Correcting with nearest-neighbour matching (NNM)")
+      dbg("[pgx.superBatchCorrect] Correcting with nearest-neighbour matching (NPM)")
       dbg("[pgx.superBatchCorrect] model.par = ", model.par)
       y1 <- pheno[, model.par, drop = FALSE]
       y1 <- apply(y1, 1, paste, collapse = ":")
@@ -1142,7 +1142,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   if (is.null(methods)) {
     methods <- c(
       "uncorrected", "normalized_to_control", "ComBat",
-      "limma", "superBC", "PCA", "RUV", "SVA", "NNM", "MNN", "Harmony"
+      "limma", "superBC", "PCA", "RUV", "SVA", "NPM", "MNN", "Harmony"
     )
   }
 
@@ -1226,10 +1226,10 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
     xlist[["SVA"]] <- try(svaCorrect(X, y))
   }
 
-  if ("NNM" %in% methods) {
+  if ("NPM" %in% methods) {
     ## xlist[["NNM"]] <- gx.nnmcorrect(X, y)$X
-    xlist[["NNM1"]] <- nnmCorrect(X, y, use.design = TRUE)
-    xlist[["NNM2"]] <- nnmCorrect2(X, y, use.design = TRUE)
+    xlist[["NPM"]] <- nnmCorrect(X, y, use.design = TRUE)
+    ## xlist[["NNM2"]] <- nnmCorrect2(X, y, use.design = TRUE)
     ##    xlist[["NNM.no_mod"]] <- nnmCorrect2(X, y, use.design = FALSE)
   }
 
@@ -1701,11 +1701,11 @@ get_model_parameters <- function(X, samples, pheno = NULL, contrasts = NULL) {
 compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
                                             methods = c(
                                               "uncorrected", "ComBat",
-                                              "limma", "RUV", "SVA", "NNM"
+                                              "limma", "RUV", "SVA", "NPM"
                                             ),
                                             ntop = 4000, xlist.init = list(),
                                             ref = NULL) {
-  ## methods <- c("uncorrected","ComBat", "limma","RUV","SVA","NNM")
+  ## methods <- c("uncorrected","ComBat", "limma","RUV","SVA","NPM")
   ## ntop = 4000; xlist.init = list()
   batch <- NULL
   pars <- get_model_parameters(X, samples, pheno = pheno, contrasts = contrasts)
@@ -1739,23 +1739,31 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
   }
 
   ##  incProgress( amount = 0.1, "Computing t-SNE clustering...")
-  message("Computing t-SNE clustering...")
-  message("[Comuputing] nb = ", nb)
-  pos[["tsne"]] <- lapply(xlist, function(x) {
-    Rtsne::Rtsne(t2(x), perplexity = nb, check_duplicates = FALSE)$Y
-  })
-  for (i in 1:length(pos[["tsne"]])) {
-    rownames(pos[["tsne"]][[i]]) <- colnames(X)
+  nmissing <- sum(is.na(X))
+  if(nmissing == 0) {
+      message("Computing t-SNE clustering...")
+      message("[Comuputing] nb = ", nb)
+      pos[["tsne"]] <- lapply(xlist, function(x) {
+          Rtsne::Rtsne(t2(x), perplexity = nb, check_duplicates = FALSE)$Y
+      })
+      for (i in 1:length(pos[["tsne"]])) {
+          rownames(pos[["tsne"]][[i]]) <- colnames(X)
+      }
   }
 
   ##  incProgress( amount = 0.1, "Comparing results...")
   message("Comparing results...")
+  if("tsne" %in% names(pos)) {
+      pos.name <- "tsne"
+  } else {
+      pos.name <- "pca"
+  }
   res <- playbase::bc.evaluateResults(
     xlist,
     pheno = pars$pheno,
     lfc = 0.2,
     q = 0.05,
-    pos = pos[["tsne"]],
+    pos = pos[[pos.name]],
     add.sil = TRUE,
     plot = FALSE,
     trend = TRUE
@@ -1788,8 +1796,8 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
 
 #' @export
 superBC2 <- function(X, samples, y, batch = NULL,
-                     ## methods = c("technical","batch","statistical","pca","sva","nnm"),
-                     methods = c("batch", "technical", "statistical", "sva", "nnm2"),
+                     ## methods = c("technical","batch","statistical","pca","sva","npm"),
+                     methods = c("batch", "technical", "statistical", "sva", "npm"),
                      p.pca = 0.5, p.pheno = 0.05, k.pca = 10, nv = 1,
                      xrank = NULL, use.design = TRUE) {
   if (y[1] %in% colnames(samples)) {
@@ -1808,7 +1816,7 @@ superBC2 <- function(X, samples, y, batch = NULL,
   cX <- X
   methods <- intersect(methods, c(
     "technical", "batch", "statistical", "pca", "sva",
-    "ruv", "nnm", "nnm2"
+    "ruv", "npm", "npm2"
   ))
 
   for (m in methods) {
@@ -1856,12 +1864,12 @@ superBC2 <- function(X, samples, y, batch = NULL,
       message("[superBC2] correcting for: RUV")
       cX <- ruvCorrect(cX, y)
     }
-    if (m == "nnm") {
-      message("[superBC2] correcting for: NNM")
+    if (m == "npm") {
+      message("[superBC2] correcting for: NPM")
       cX <- gx.nnmcorrect(cX, y, use.design = use.design)$X
     }
-    if (m == "nnm2") {
-      message("[superBC2] correcting for: NNM2")
+    if (m == "npm2") {
+      message("[superBC2] correcting for: NPM2")
       cX <- gx.nnmcorrect2(cX, y, r = 0.35, use.design = use.design)$X
     }
   }
