@@ -581,19 +581,3 @@ getAllSpecies <- function(ah = NULL) {
   names(tables) <- variables
   return(tables)
 }
-
-#' @title Check if probes are valid for organism
-#'
-#' @return TRUE    if probes match any probetype of organism
-#' @return FALSE   if probes do not any probetype of organism
-#'
-#' @export
-checkProbes <- function(organism, probes, ah = NULL) {
-  probe_type <- detect_probetype(organism, probes, ah = ah)
-  if (is.null(probe_type)) {
-    message("[checkProbes] WARNING: could not validate probes")
-    return(FALSE)
-  }
-  message("[checkProbes] detected probe_type = ", probe_type)
-  return(TRUE)
-}
