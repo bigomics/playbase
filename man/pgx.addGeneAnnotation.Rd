@@ -8,7 +8,7 @@ pgx.addGeneAnnotation(
   pgx,
   organism = NULL,
   annot_table = NULL,
-  use_biomart = NULL
+  use_annothub = NULL
 )
 }
 \arguments{
@@ -18,7 +18,7 @@ pgx.addGeneAnnotation(
 
 \item{annot_table}{Custom annotation table. See \code{\link{playbase::pgx.custom_annotation}}.}
 
-\item{use_biomart}{Logical. If TRUE, use biomaRt to retrieve gene annotation.}
+\item{use_annothub}{Logical. If TRUE, use biomaRt to retrieve gene annotation.}
 }
 \value{
 Updated PGX object with gene annotation table
@@ -37,6 +37,6 @@ of temporary Ensembl API errors.
 pgx <- list()
 pgx$counts <- matrix(rnorm(4), nrow = 2)
 rownames(pgx$counts) <- c("ENSG00000142192", "ENSG00000288602")
-pgx <- pgx.pgx.addGeneAnnotation(pgx, "Human")
+pgx <- pgx.addGeneAnnotation(pgx, "Human")
 }
 }

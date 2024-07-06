@@ -30,7 +30,7 @@ pgx.createPGX(
   only.proteincoding = TRUE,
   remove.xxl = TRUE,
   remove.outliers = TRUE,
-  use_biomart = NA
+  use_annothub = NA
 )
 }
 \arguments{

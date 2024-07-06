@@ -54,8 +54,16 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
     ## rownames. as.matrix means we do not have mixed types (such as in
     ## dataframes).
     if (ncol(x0) >= 2) {
-      x <- as.matrix(x0[sel, -1, drop = FALSE]) ## always as matrix
+      x <- x0[sel, -1, drop = FALSE]
+      # convert x from data.table to matrix. This is needed as fread reads numeric as integer64, which is not supported by matrix
+      # at this stage since we handle samples, counts and contrasts, it is dangerous to force conversion to numeric
+      # hence, the conversion from character to numeric for counts is handled at pgx.checkINPUT
+      colnames_x <- colnames(x)
+      x <- sapply(1:ncol(x), function(i) {
+        as.character(x[[i]])
+      })
       rownames(x) <- x0[[1]][sel]
+      colnames(x) <- colnames_x
     } else {
       x <- matrix(NA, length(sel), 0)
       rownames(x) <- x0[[1]][sel]
@@ -118,7 +126,7 @@ detect_delim <- function(file) {
 #' a header and rownames column.
 #'
 detect_decimal <- function(file) {
-  ff <- data.table::fread(file, nrows = 10, header = TRUE, colClasses = "character")
+  ff <- data.table::fread(file, header = TRUE, colClasses = "character")
   vals <- as.vector(as.matrix(ff[, -1]))
   n_commas <- length(grep(",", vals, fixed = TRUE))
   n_dots <- length(grep(".", vals, fixed = TRUE))

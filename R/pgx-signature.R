@@ -113,6 +113,8 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
 #'
 #' @export
 pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm = 10000) {
+  bpparam <- BiocParallel::MulticoreParam(2)
+
   if (is.null(names(fc))) stop("fc must have names")
   ## mouse... mouse...
   names(fc) <- toupper(names(fc))
@@ -145,12 +147,9 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
     gmt <- rbind(sig100.up, sig100.dn)
     gmt <- unlist(apply(gmt, 2, list), recursive = FALSE)
     names(gmt) <- colnames(sig100.up)
-    suppressMessages(suppressWarnings(
-      res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm, scoreType = "pos")
-    )) ## really unsigned???
+    res <- fgsea::fgseaSimple(gmt, abs(fc), nperm = nperm, scoreType = "pos", BPPARAM = bpparam)
   })
 
-  res$nMoreExtreme <- NULL
   res$ES <- NULL
   res$leadingEdge <- NULL
   res$pval <- NULL
@@ -470,7 +469,7 @@ pgx.addEnrichmentSignaturesH5 <- function(h5.file, X = NULL, mc.cores = 0,
 
       xi <- xi + 1e-3 * stats::rnorm(length(xi))
       suppressMessages(suppressWarnings(
-        res1 <- fgsea::fgseaSimple(gmt, xi, nperm = 10000, nproc = mc.cores)
+        res1 <- fgsea::fgseaSimple(gmt, xi, nperm = 10000, nproc = 1)
       ))
       r <- res1$NES
       names(r) <- res1$pathway

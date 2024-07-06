@@ -1,7 +1,6 @@
 testthat::test_that("read_counts works", {
   counts <- playbase::read_counts(
-    playbase::example_file("counts.csv"),
-    convert_names = FALSE
+    playbase::example_file("counts.csv")
   )
   testthat::expect_equal(nrow(counts), 7439)
 })
