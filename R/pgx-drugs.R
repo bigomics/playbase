@@ -218,17 +218,16 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
 #' @export
 pgx.plotDrugEnrichment <- function(pgx, contrast,
                                    db = "L1000/activity",
-                                   moatype = c("target gene","drug class")[1],
+                                   moatype = c("target gene", "drug class")[1],
                                    ntop = 10) {
-
-  if(!"drugs" %in% names(pgx)) {
+  if (!"drugs" %in% names(pgx)) {
     stop("pgx does not have drug enrichment results")
   }
 
-  if(!db %in% names(pgx$drugs)) {
-    stop("pgx$drugs does not have database db = ",db)
+  if (!db %in% names(pgx$drugs)) {
+    stop("pgx$drugs does not have database db = ", db)
   }
-  
+
   ## common getData-esque function for drug connectivity plots / tables
   getActiveDSEA <- function(pgx, contrast, db) {
     dr <- pgx$drugs[[db]]
@@ -246,7 +245,7 @@ pgx.plotDrugEnrichment <- function(pgx, contrast,
     if (is.null(annot)) {
       stop("[getActiveDSEA] WARNING:: missing drug annotation in PGX file!")
     }
-    
+
     ## compile results matrix
     jj <- match(toupper(drug), toupper(rownames(annot)))
     annot <- annot[jj, c("moa", "target")]
@@ -305,10 +304,10 @@ pgx.plotDrugEnrichment <- function(pgx, contrast,
     return(moa.class)
   }
 
-  
+
   plotTopBarplot <- function(res, ntop) {
     res$score <- res$NES
-    qweight = FALSE
+    qweight <- FALSE
     if (qweight) {
       res$score <- res$NES * (1 - res$padj) * (1 - 1 / res$size**1)
       yaxistitle <- "score (qNES)"
@@ -316,12 +315,12 @@ pgx.plotDrugEnrichment <- function(pgx, contrast,
     jj <- unique(c(head(order(-res$score), ntop), tail(order(-res$score), ntop)))
     moa.top <- res$score[jj]
     names(moa.top) <- res$pathway[jj]
-    
+
     df <- data.frame(
       x = factor(names(moa.top), levels = names(moa.top)),
       y = as.numeric(moa.top)
     )
-    
+
     barplot(
       height = df$y,
       names.arg = df$x,
@@ -341,5 +340,5 @@ pgx.plotDrugEnrichment <- function(pgx, contrast,
   }
 
   ## actual plotting
-  plotTopBarplot(res, ntop=ntop) 
+  plotTopBarplot(res, ntop = ntop)
 }
