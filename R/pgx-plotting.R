@@ -264,8 +264,7 @@ pgx.plotEnrichmentDotPlot <- function(pgx, contrast,
         title = ggplot2::element_text(size=36),
         legend.title = ggplot2::element_text(size=20),
         legend.text = ggplot2::element_text(size=14)                 
-      )
-  
+      )  
 }
 
 #' @export
@@ -5324,7 +5323,7 @@ pgx.barplot.PLOTLY <- function(
     y = NULL,
     title = NULL,
     color = "#3181de",
-    fillcolor = "#2fb5e3",
+    fillcolor = "#A6CEE3",
     linecolor = "#3181de",
     titlecolor = "#1f77b4",
     hoverinfo = "y",
