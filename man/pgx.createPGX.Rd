@@ -29,8 +29,7 @@ pgx.createPGX(
   convert.hugo = TRUE,
   only.proteincoding = TRUE,
   remove.xxl = TRUE,
-  remove.outliers = TRUE,
-  use_annothub = NA
+  remove.outliers = TRUE
 )
 }
 \arguments{

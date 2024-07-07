@@ -53,7 +53,7 @@ pgx.pcsf <- function(pgx, level = "gene", fx = NULL, ntop = 250, ncomp = 3,
 
   ee <- get_edges(names(fx))
   ppi <- PCSF::construct_interactome(ee)
-  prize1 <- abs(fx[V(ppi)$name])
+  prize1 <- abs(fx[igraph::V(ppi)$name])
   net <- PCSF::PCSF(ppi, terminals = prize1, w = 2, b = exp(.01))
 
   ## remove small clusters...
@@ -68,7 +68,7 @@ pgx.pcsf <- function(pgx, level = "gene", fx = NULL, ntop = 250, ncomp = 3,
   net
 
   ## set node size
-  wt <- abs(fx[V(net)$name] / mean(abs(fx)))**0.8
+  wt <- abs(fx[igraph::V(net)$name] / mean(abs(fx)))**0.8
   node_cex1 <- node_cex * pmax(wt, 1)
 
   ## set colors
@@ -94,7 +94,7 @@ pgx.pcsf <- function(pgx, level = "gene", fx = NULL, ntop = 250, ncomp = 3,
 
   ## set name
   if (level == "geneset") {
-    V(net)$name <- gsub(".*:| \\(.*", "", V(net)$name)
+    igraph::V(net)$name <- gsub(".*:| \\(.*", "", igraph::V(net)$name)
   }
 
   out <- NULL

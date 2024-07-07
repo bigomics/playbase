@@ -859,8 +859,8 @@ gx.heatmap <- function(gx, values = NULL,
     rownames(gx) <- paste(nn.sp, rownames(gx))
   }
 
-  cc0 <- NA
-  cc1 <- NA
+  cc0 <- NULL
+  cc1 <- NULL
   if (!is.null(col.annot)) {
     plot.method <- "heatmap.3"
     col.annot <- col.annot[, which(colMeans(is.na(col.annot)) < 1), drop = FALSE]
@@ -917,11 +917,11 @@ gx.heatmap <- function(gx, values = NULL,
   if (0 && symm && !is.null(cc0)) {
     cc1 <- t(cc0)
   }
-  if (!is.null(cc0) && !is.na(cc0)) cc0 <- cc0[colnames(gx), , drop = FALSE]
-  if (!is.null(cc1) && !is.na(cc1)) cc1 <- cc1[, rownames(gx), drop = FALSE]
+  if (!is.null(cc0)) cc0 <- cc0[colnames(gx), , drop = FALSE]
+  if (!is.null(cc1)) cc1 <- cc1[, rownames(gx), drop = FALSE]
 
   ## draw heatmap
-  if (plot.method == "heatmap.3" && !is.na(cc0) && !is.na(cc1)) {
+  if (plot.method == "heatmap.3" && !is.null(cc0) && !is.null(cc1)) {
     if (verbose > 1) cat("plotting with heatmap.3 + both ColSideColors\n")
     if (is.null(h1) && is.null(h2)) {
       heatmap.3(gx,
@@ -945,7 +945,7 @@ gx.heatmap <- function(gx, values = NULL,
         ...
       )
     }
-  } else if (plot.method == "heatmap.3" && !is.na(cc0) && is.na(cc1)) {
+  } else if (plot.method == "heatmap.3" && !is.null(cc0) && is.null(cc1)) {
     if (verbose > 1) cat("plotting with heatmap.3 + ColSideColors\n")
     if (is.null(h1) && is.null(h2)) {
       heatmap.3(gx,
@@ -966,7 +966,7 @@ gx.heatmap <- function(gx, values = NULL,
         ...
       )
     }
-  } else if (plot.method == "heatmap.3" && is.na(cc0) && !is.na(cc1)) {
+  } else if (plot.method == "heatmap.3" && is.null(cc0) && !is.null(cc1)) {
     if (verbose > 1) cat("plotting with heatmap.3 + RowSideColors\n")
     if (is.null(h1) && is.null(h2)) {
       heatmap.3(gx,
@@ -987,7 +987,7 @@ gx.heatmap <- function(gx, values = NULL,
         ...
       )
     }
-  } else if (plot.method == "heatmap.3" && is.na(cc0) && is.na(cc1)) {
+  } else if (plot.method == "heatmap.3" && is.null(cc0) && is.null(cc1)) {
     if (verbose > 1) cat("plotting with heatmap.3 no ColSideColors\n")
     if (is.null(h1) && is.null(h2)) {
       heatmap.3(gx,
@@ -1483,12 +1483,12 @@ heatmap.3 <- function(x,
       "specified can produce unpredictable results.", "Please consider using only one or the other."
     )
   }
-  if (is.null(Rowv) || is.na(Rowv)) {
+  if (is.null(Rowv) || all(is.na(Rowv))) {
     Rowv <- FALSE
   }
-  if (is.null(Colv) || is.na(Colv)) {
+  if (is.null(Colv) || all(is.na(Colv))) {
     Colv <- FALSE
-  } else if (Colv == "Rowv" && !isTRUE(Rowv)) {
+  } else if (Colv[1] == "Rowv" && !all(isTRUE(Rowv))) {
     Colv <- FALSE
   }
   if (length(di <- dim(x)) != 2 || !is.numeric(x)) {

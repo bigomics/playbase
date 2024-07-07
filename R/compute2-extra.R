@@ -327,7 +327,6 @@ compute_deconvolution <- function(pgx, rna.counts = pgx$counts, full = FALSE) {
   }
 
   counts <- rna.counts
-  rownames(counts) <- toupper(pgx$genes[rownames(counts), "gene_name"])
   res <- pgx.multipleDeconvolution(counts, refmat = refmat, methods = methods)
 
   pgx$deconv <- res$results
