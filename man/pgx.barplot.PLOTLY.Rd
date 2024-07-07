@@ -10,7 +10,7 @@ pgx.barplot.PLOTLY(
   y = NULL,
   title = NULL,
   color = "#3181de",
-  fillcolor = "#2fb5e3",
+  fillcolor = "#A6CEE3",
   linecolor = "#3181de",
   titlecolor = "#1f77b4",
   hoverinfo = "y",

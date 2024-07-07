@@ -19,7 +19,7 @@ pgx.createPGX(
   creator = "unknown",
   description = "No description provided.",
   X = NULL,
-  is.logx = FALSE,
+  is.logx = NULL,
   batch.correct = TRUE,
   auto.scale = TRUE,
   filter.genes = TRUE,
@@ -29,8 +29,7 @@ pgx.createPGX(
   convert.hugo = TRUE,
   only.proteincoding = TRUE,
   remove.xxl = TRUE,
-  remove.outliers = TRUE,
-  use_annothub = NA
+  remove.outliers = TRUE
 )
 }
 \arguments{
