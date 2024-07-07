@@ -19,7 +19,7 @@ pgx.createPGX(
   creator = "unknown",
   description = "No description provided.",
   X = NULL,
-  is.logx = FALSE,
+  is.logx = NULL,
   batch.correct = TRUE,
   auto.scale = TRUE,
   filter.genes = TRUE,
