@@ -172,14 +172,21 @@ pgx.createPGX <- function(counts,
                           convert.hugo = TRUE,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE,
-                          remove.outliers = TRUE,
-                          normalize = TRUE) {
+                          remove.outliers = TRUE
+                          ) {
+
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
     stop("[createPGX] dimension of counts and X do not match\n")
   }
   if (!all(rownames(counts) == rownames(X))) {
     stop("rownames of counts and X do not match\n")
   }
+
+  message("[createPGX] datatype = ", datatype)
+  message("[createPGX] dim.counts: ", dim(counts)[1], ",", dim(counts)[2])
+    if(!is.null(X)) {
+        message("[createPGX] dim.X: ", dim(X)[1], ", ", dim(X)[2])
+    }
 
   # stop if is.null organism
   if (is.null(organism)) {
@@ -196,7 +203,7 @@ pgx.createPGX <- function(counts,
   ## convert old-style contrast matrix to sample-wise labeled contrasts
   contrasts <- playbase::contrasts.convertToLabelMatrix(contrasts, samples)
 
-  # prune unused samples
+  ## prune unused samples
   contrasts[contrasts %in% c("", " ", "NA")] <- NA
   used.samples <- names(which(rowSums(!is.na(contrasts)) > 0))
   if (prune.samples && length(used.samples) < ncol(counts)) {
@@ -204,59 +211,50 @@ pgx.createPGX <- function(counts,
     samples <- samples[used.samples, , drop = FALSE]
     contrasts <- contrasts[used.samples, , drop = FALSE] ## sample-based!!!
   }
+    
+  ## ------------------------------------------------------------------------------------
+  ## check counts: linear or logarithm?: Change log2+0 | log2+1 according to datatype
+  ## ------------------------------------------------------------------------------------
+  ## NEED TO HANDLE AT THE UPLOAD - work in progress.
+  ##  message("[createPGX] check logarithm/linear...")
+  ##  if (datatype == "proteomics: SNR") {
+  ##      is.logx <- FALSE
+  ##      prior <- 0
+  ##  } else {
+  ##      is.logx <- NULL
+  ##      prior <- 1
+  ##  }
 
-  ## -------------------------------------------------------------------
-  ## check counts: linear or logarithm?
-  ## -------------------------------------------------------------------
-  message("[createPGX] check logarithm/linear...")
-  guess.log <- (min(counts, na.rm = TRUE) < 0 || max(counts, na.rm = TRUE) < 100)
-  guess.log <- guess.log && (is.null(is.logx) || is.logx == TRUE)
-  if (is.null(is.logx)) {
-    is.logx <- guess.log
-  }
-  if (is.logx) {
-    message("[createPGX] input assumed logarithm: undo-ing logarithm")
-    counts <- pmax(2**counts - 1, 0) ## undo logarithm
-  } else {
-    message("[createPGX] input assumed counts (not logarithm)")
-  }
+  ##  guess.log <- (min(counts, na.rm = TRUE) < 0 || max(counts, na.rm = TRUE) < 100)
+  ##  guess.log <- guess.log && (is.null(is.logx) || is.logx == TRUE)
+  ##  if (is.null(is.logx)) { is.logx <- guess.log }
+  ##  if (is.logx) {
+  ##      message("[createPGX] input assumed logarithm: undo-ing logarithm")
+        ## counts <- pmax(2**counts - 1, 0)
+  ##      counts <- 2 ** counts ## - prior
+  ##  } else {
+  ##      message("[createPGX] input assumed counts (not logarithm)")
+  ##  }    
 
   ## -------------------------------------------------------------------
   ## How to deal with missing or infinite values??
   ## -------------------------------------------------------------------
-
   ## remove XXL/Infinite values and set to NA
-  if (remove.xxl) {
-    zsd <- 10 ## default value
-    if (is.numeric(remove.xxl)) zsd <- remove.xxl
-    counts <- counts.removeXXLvalues(counts, xxl.val = NA, zsd = zsd)
-  }
-
-  ## impute missing values
-  if (any(is.na(counts))) {
-    nmissing <- sum(is.na(counts))
-    message("[createPGX] WARNING: data has ", nmissing, " missing values.")
-    impute.method <- "SVD2"
-    message("[createPGX] Imputing missing values using ", impute.method)
-    counts <- counts.imputeMissing(counts, method = impute.method)
-  }
-
-  ## sum up duplicated
-  counts <- counts.mergeDuplicateFeatures(counts)
-  if (!is.null(X)) {
-    X <- counts.mergeDuplicateFeatures(X, is.counts = FALSE)
-  }
+  ## if (remove.xxl) {
+  ##  zsd <- 10 ## default value
+  ##  if (is.numeric(remove.xxl)) zsd <- remove.xxl
+  ##  counts <- counts.removeXXLvalues(counts, xxl.val = NA, zsd = zsd)
+  ## }
 
   ## -------------------------------------------------------------------
   ## Check bad samples (in total counts, after imputation)
   ## -------------------------------------------------------------------
-
   ## remove samples from counts matrix with extreme (1000x more or
   ## 1000x less) total counts (than median).
-  if (remove.outliers) {
-    message("[createPGX] removing outliers samples ")
-    counts <- counts.removeSampleOutliers(counts)
-  }
+  ## if (remove.outliers) {
+  ##     message("[createPGX] removing outliers samples ")
+  ##    counts <- counts.removeSampleOutliers(counts)
+  ## }
 
   ## -------------------------------------------------------------------
   ## Auto-scaling (scale down huge values, often in proteomics)
@@ -269,44 +267,43 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## COMPUTE LOG NORMALIZE EXPRESSION (if not given)
   ## -------------------------------------------------------------------
-  if (is.null(X)) {
-    message("[createPGX] creating log-expression matrix X...")
-    X <- log2(1 + counts)
-  } else {
-    message("[createPGX] using passed log-expression matrix X...")
-  }
-
-  if (normalize) {
-    message("[createPGX] NORMALIZING log-expression matrix X...")
-    X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
-    X <- limma::normalizeQuantiles(X) ## in log space
-  } else {
-    message("[createPGX] SKIPPING NORMALIZATION!")
-  }
+  ## if (is.null(X)) {
+  ##  message("[createPGX] creating log-expression matrix X...")
+  ##  X <- log2(1 + counts)
+  ##} else {
+  ##  message("[createPGX] using passed log-expression matrix X...")
+  ##}
+  
+  ## if (normalize) {
+  ##  X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
+  ##  X <- limma::normalizeQuantiles(X) ## in log space
+  ## } else {
+  ##    message("[createPGX] SKIPPING NORMALIZATION!")
+  ## }
 
   ## -------------------------------------------------------------------
   ## Batch-correction (if requested. WARNING: changes counts )
   ## -------------------------------------------------------------------
-  batch.par <- c("batch", "batch2")
-  has.batchpar <- any(grepl("^batch|^batch2", colnames(samples), ignore.case = TRUE))
-  if (batch.correct && has.batchpar) {
-    b <- "batch"
-    bb <- grep("^batch|^batch2", colnames(samples), ignore.case = TRUE, value = TRUE)
-    for (b in bb) {
-      message("[createPGX] batch correcting for parameter '", b, "'\n")
-      which.zero <- which(counts == 0, arr.ind = TRUE)
-      bx <- samples[, b]
-      if (length(unique(bx[!is.na(bx)])) > 1) {
-        message("[createPGX] batch correcting for counts using ComBat\n")
-        ## X <- limma::removeBatchEffect(X, batch = bx) ## in log-space
-        X <- sva::ComBat(X, batch = bx) ## in log-space
-        X[which.zero] <- 0
-        ## counts <- pmax(2**X - 1, 0) ## batch corrected counts???
-      } else {
-        message("createPGX:batch.correct] batch parameter needs more than two levels")
-      }
-    }
-  }
+  ## batch.par <- c("batch", "batch2")
+  ## has.batchpar <- any(grepl("^batch|^batch2", colnames(samples), ignore.case = TRUE))
+  ## if (batch.correct && has.batchpar) {
+  ##  b <- "batch"
+  ##  bb <- grep("^batch|^batch2", colnames(samples), ignore.case = TRUE, value = TRUE)
+  ##  for (b in bb) {
+  ##    message("[createPGX] batch correcting for parameter '", b, "'\n")
+  ##    which.zero <- which(counts == 0, arr.ind = TRUE)
+  ##    bx <- samples[, b]
+  ##    if (length(unique(bx[!is.na(bx)])) > 1) {
+  ##      message("[createPGX] batch correcting for counts using ComBat\n")
+  ##      ## X <- limma::removeBatchEffect(X, batch = bx) ## in log-space
+  ##      X <- sva::ComBat(X, batch = bx) ## in log-space
+  ##      X[which.zero] <- 0
+  ##      ## counts <- pmax(2**X - 1, 0) ## batch corrected counts???
+  ##    } else {
+  ##      message("createPGX:batch.correct] batch parameter needs more than two levels")
+  ##    }
+  ##  }
+  ## }
 
   ## -------------------------------------------------------------------
   ## conform all matrices
@@ -358,28 +355,29 @@ pgx.createPGX <- function(counts,
   pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table)
 
   if (is.null(pgx$genes)) {
-    stop("[createPGX] FATAL: Could not build gene annotation")
+     stop("[createPGX] FATAL: Could not build gene annotation")
   }
-
 
   ## -------------------------------------------------------------------
   ## Filter out not-expressed
   ## -------------------------------------------------------------------
-
   if (filter.genes) {
-    ## There is second filter in the statistics computation. This
-    ## first filter is primarily to reduce the counts table.
-    message("[createPGX] filtering out not-expressed genes (zero counts)...")
-    pgx <- pgx.filterZeroCounts(pgx)
+      ## There is second filter in the statistics computation. This
+      ## first filter is primarily to reduce the counts table.
+      message("[createPGX] filtering out not-expressed genes (zero counts)...")
+      pgx <- pgx.filterZeroCounts(pgx)
 
-    ## prefiltering for low-expressed genes (recommended for edgeR and
-    ## DEseq2). Require at least in 2 or 1% of total. Specify the
-    ## PRIOR CPM amount to regularize the counts and filter genes
-    pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
-
-    ## Conform gene table
-    ii <- match(rownames(pgx$counts), rownames(pgx$genes))
-    pgx$genes <- pgx$genes[ii, , drop = FALSE]
+      ## prefiltering for low-expressed genes (recommended for edgeR and
+      ## DEseq2). Require at least in 2 or 1% of total. Specify the
+      ## PRIOR CPM amount to regularize the counts and filter genes
+      ## AZ (16.6.24): it crashes in presence of NAs
+      if(!datatype %in% c("proteomics: SNR")) {
+          message("[createPGX] filtering out lowly expressed genes (zero counts)...")
+          pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
+      }
+      ## Conform gene table
+      ii <- match(rownames(pgx$counts), rownames(pgx$genes))
+      pgx$genes <- pgx$genes[ii, , drop = FALSE]
   }
 
   ## -------------------------------------------------------------------
@@ -412,9 +410,8 @@ pgx.createPGX <- function(counts,
 
   ## NOTE: generally pgx$X, pgx$counts, and pgx$genes should always be
   ## aligned to prevent mistakes and unneeded matching of tables.
-  ##
 
-
+  
   ## -------------------------------------------------------------------
   ## collapse probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------
@@ -433,14 +430,14 @@ pgx.createPGX <- function(counts,
       pgx$X <- pgx$X[rownames(pgx$X) != "", , drop = FALSE]
     }
 
-    # Collapse features as a comma-separated elements
+    ## Collapse features as a comma-separated elements
     agg_features <- aggregate(
       feature ~ symbol,
       data = pgx$genes,
       function(x) paste(unique(x), collapse = "; ") # old symbol annotation has "; " as separator, we should keep it for compatibility with playbase <= 1.3.2
     )
 
-    # merge by symbol, replace features by collapsed features
+    ## merge by symbol, replace features by collapsed features
     pgx$genes <- pgx$genes[match(rownames(pgx$counts), symbol), ]
     rownames(pgx$genes) <- rownames(pgx$counts)
     jj <- match(rownames(pgx$counts), agg_features[, "symbol"])
@@ -458,7 +455,6 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Add GMT
   ## -------------------------------------------------------------------
-
   ## If no organism, no custom annotation table and no custom geneset, then create empty GMT
   if (pgx$organism == "No organism" && is.null(annot_table) && is.null(custom.geneset)) {
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
@@ -757,21 +753,50 @@ counts.autoScaling <- function(counts) {
 
 #' @export
 counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE) {
-  ## take only first gene as rowname, retain others as alias
-  gene0 <- rownames(counts)
-  gene1 <- sapply(gene0, function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
-  ndup <- sum(duplicated(gene1))
-  ndup
-  if (ndup > 0) {
-    message("[mergeDuplicateFeatures] ", ndup, " duplicated rownames: summing rows (in counts).")
-    if (is.counts) {
-      counts <- base::rowsum(counts, gene1, na.rm = TRUE)
-    } else {
-      ## for expression logX
-      counts <- log2(base::rowsum(2**(counts), gene1, na.rm = TRUE))
+    counts <- counts[rownames(counts) != "", ]
+    counts[which(is.nan(counts))] <- NA
+    genes <- sapply(rownames(counts), function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
+    rownames(counts) <- unname(genes)
+    ndup <- sum(duplicated(rownames(counts)))
+    if (ndup > 0) {
+        if (!is.counts) counts <- 2 ** counts
+        message("[mergeDuplicateFeatures] ", ndup, " duplicated rownames: averaging rows (in counts).")
+        counts <- playbase::rowmean(counts, group=rownames(counts), reorder=TRUE)
+        counts[which(is.nan(counts))] <- NA
+        if (!is.counts) counts <- log2(counts)
     }
-  }
-  counts
+    counts
+}
+
+counts.mergeDuplicateFeatures.OLD <- function(counts, is.counts = TRUE, keep.NA = FALSE) { ## Needs review.
+    counts <- counts[rownames(counts) != "", ]
+    counts[which(is.nan(counts))] <- NA
+    gene0 <- rownames(counts)
+    gene1 <- sapply(gene0, function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
+    ndup <- sum(duplicated(gene1))
+    if (ndup > 0) {
+        if (!is.counts) counts <- 2 ** counts - 1
+        if (!keep.NA) {
+            message("[mergeDuplicateFeatures] ", ndup, " duplicated rownames: summing rows (in counts).")
+            counts <- base::rowsum(counts, gene1, na.rm = TRUE)
+        } else {
+            message("[mergeDuplicateFeatures] ", ndup, " duplicated rownames: summing rows (in counts) and keeping NAs.")
+            dups <- unique(gene0[duplicated(gene0)])
+            i=1
+            for(i in 1:length(dups)) {
+                jj <- which(rownames(counts) == dups[i])
+                mv <- apply(counts[jj,], 2, function(x) sum(is.na(x)))
+                ss <- names(mv[mv==length(jj)])
+                new_row <- colMeans(counts[jj, ], na.rm = TRUE) ## was colSums()
+                if(length(ss)>0) new_row[ss] <- NA
+                counts <- rbind(new_row, counts[-jj, ])
+                rownames(counts)[1] <- dups[i]
+            }
+            rownames(counts) <- unname(sapply(rownames(counts), function(s) strsplit(s, split = "[;,\\|]")[[1]][1]))
+        }
+        if (!is.counts) counts <- log2(counts + 1)
+    }
+    counts
 }
 
 #' @export
