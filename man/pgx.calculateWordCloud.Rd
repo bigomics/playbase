@@ -7,11 +7,11 @@
 pgx.calculateWordCloud(pgx, progress = NULL, pg.unit = 1)
 }
 \arguments{
+\item{pgx}{A PGX object}
+
 \item{progress}{A progress object to track progress.}
 
 \item{pg.unit}{Increment value for progress tracking.}
-
-\item{ngs}{A NGStest object containing gene set results.}
 }
 \value{
 A matrix with word frequencies for word cloud visualization.
