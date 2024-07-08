@@ -10,7 +10,7 @@
 
 #' @title Calculate word frequencies for word cloud
 #'
-#' @param ngs A NGStest object containing gene set results.
+#' @param pgx A PGX object 
 #' @param progress A progress object to track progress.
 #' @param pg.unit Increment value for progress tracking.
 #'
@@ -159,4 +159,54 @@ pgx.calculateWordCloud <- function(pgx, progress = NULL, pg.unit = 1) {
 
   all.res <- list(gsea = all.gsea, S = S, W = W, tsne = pos1, umap = pos2)
   return(all.res)
+}
+
+
+
+#' @title Plot wordcloud graphic from pgx 
+#'
+#' @param pgx A NGStest object containing gene set results.
+#' @param progress A progress object to track progress.
+#' @param pg.unit Increment value for progress tracking.
+#'
+#' @return A wordcloud plot 
+#'
+#' @description Plot wordcloud graphic from pgx 
+#'
+#' @export
+pgx.plotWordCloud <- function(pgx, contrast) {
+  
+  res <- pgx$wordcloud
+  gsea1 <- res$gsea[[contrast]]
+  
+  ## sometimes we have words that NA is tsne, make sure we remove
+  ## them (likely special characters) in windows or wsl
+  res$tsne <- res$tsne[!is.na(rownames(res$tsne)), ]
+  res$umap <- res$umap[!is.na(rownames(res$umap)), ]
+  
+  ordered_words <- gsea1$word
+  res$tsne <- res$tsne[ordered_words, ]
+  res$umap <- res$umap[ordered_words, ]
+
+  ## end sometimes we have words that NA is tsne, make sure we
+  ## remove them (likely special characters) in windows or wsl
+  df <- data.frame(gsea1, tsne = res$tsne, umap = res$umap)
+  df <- df[order(-df$NES), ]
+  
+  cex1 <- 1 + round((5 * rank(abs(df$NES)) / nrow(df))**2)
+  cex2 <- (-log10(df$padj))**1.0
+  size <- 10 * abs(cex1 * cex2)**1
+  size[is.na(size)] <- 0
+  minsize <- tail(sort(size), 250)[1]
+  
+  color.pal <- c("Blues", "Greys", "Accent", "Dark2")[1]
+
+  par(mar = c(1, 1, 1, 1) * 0)
+  suppressWarnings(suppressMessages(
+    wordcloud::wordcloud(
+      words = df$word, freq = size,
+      colors = RColorBrewer::brewer.pal(8, color.pal),
+      scale = c(2, 0.1) * 0.9, min.freq = minsize
+    )
+  ))
 }
