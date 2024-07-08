@@ -216,18 +216,19 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
 
 
 #' @export
-pgx.plotDrugEnrichment <- function(pgx, contrast,
+pgx.plotDrugConnectivity <- function(pgx, contrast,
                                    db = "L1000/activity",
-                                   moatype = c("target gene", "drug class")[1],
+                                   moatype = c("class","gene","drug")[1],
                                    ntop = 10) {
-  if (!"drugs" %in% names(pgx)) {
+
+  if(!"drugs" %in% names(pgx)) {
     stop("pgx does not have drug enrichment results")
   }
 
-  if (!db %in% names(pgx$drugs)) {
-    stop("pgx$drugs does not have database db = ", db)
+  if(!db %in% names(pgx$drugs)) {
+    stop("pgx$drugs does not have database db = ",db)
   }
-
+  
   ## common getData-esque function for drug connectivity plots / tables
   getActiveDSEA <- function(pgx, contrast, db) {
     dr <- pgx$drugs[[db]]
@@ -240,12 +241,12 @@ pgx.plotDrugEnrichment <- function(pgx, contrast,
     nes[is.na(nes)] <- 0
     qv[is.na(qv)] <- 1
     pv[is.na(pv)] <- 1
-
+    
     ## !!!SHOULD MAYBE BE DONE IN PREPROCESSING???
     if (is.null(annot)) {
       stop("[getActiveDSEA] WARNING:: missing drug annotation in PGX file!")
     }
-
+    
     ## compile results matrix
     jj <- match(toupper(drug), toupper(rownames(annot)))
     annot <- annot[jj, c("moa", "target")]
@@ -260,7 +261,7 @@ pgx.plotDrugEnrichment <- function(pgx, contrast,
     dsea <- list(table = dt, clust = dr$clust, stats = stats)
     return(dsea)
   }
-
+  
   getMOA.target <- function(dsea) {
     ## meta-GSEA on molecular targets
     dt <- dsea$table
@@ -283,13 +284,13 @@ pgx.plotDrugEnrichment <- function(pgx, contrast,
     moa.target <- moa.target[order(-abs(moa.target$NES)), ]
     return(moa.target)
   }
-
+  
   getMOA.class <- function(dsea) {
     ## meta-GSEA on MOA terms
     dt <- dsea$table
     moa.list <- lapply(
       enc2utf8(as.character(dt$moa)),
-      function(s) trimws(strsplit(s, split = "[\\|;,]")[[1]])
+        function(s) trimws(strsplit(s, split = "[\\|;,]")[[1]])
     )
     names(moa.list) <- rownames(dt)
     moa <- setdiff(unlist(moa.list), c("", NA, " "))
@@ -303,11 +304,11 @@ pgx.plotDrugEnrichment <- function(pgx, contrast,
     moa.class <- moa.class[order(-abs(moa.class$NES)), ]
     return(moa.class)
   }
-
-
-  plotTopBarplot <- function(res, ntop) {
+  
+  plotTopEnriched <- function(res, ntop) {
     res$score <- res$NES
-    qweight <- FALSE
+
+    qweight = FALSE
     if (qweight) {
       res$score <- res$NES * (1 - res$padj) * (1 - 1 / res$size**1)
       yaxistitle <- "score (qNES)"
@@ -315,12 +316,12 @@ pgx.plotDrugEnrichment <- function(pgx, contrast,
     jj <- unique(c(head(order(-res$score), ntop), tail(order(-res$score), ntop)))
     moa.top <- res$score[jj]
     names(moa.top) <- res$pathway[jj]
-
+    
     df <- data.frame(
       x = factor(names(moa.top), levels = names(moa.top)),
       y = as.numeric(moa.top)
     )
-
+    
     barplot(
       height = df$y,
       names.arg = df$x,
@@ -331,14 +332,26 @@ pgx.plotDrugEnrichment <- function(pgx, contrast,
     )
   }
 
+  plotTopDrugs <- function(db, ntop=15) {
+    dr <- pgx$drugs[[db]]
+    sel <- 1:nrow(dr$annot)
+    sel <- grepl("[a-z]{4}",rownames(dr$annot)) & !is.na(dr$annot[,"moa"])
+    dx <- sort(dr$X[sel,1], decreasing=TRUE)
+    dx.top <- c(head(dx,ntop), tail(dx,ntop))
+    barplot(dx.top, las=3, horiz=FALSE, ylab="similarity (NES)")    
+  }
+  
   ## this should move to pgx.computeDrugEnrichment...
   dsea <- getActiveDSEA(pgx, contrast, db)
-  if (moatype == "target gene") {
+  if (moatype == "gene") {
     res <- getMOA.target(dsea)
-  } else if (moatype == "drug class") {
+    plotTopEnriched(res, ntop=ntop) 
+  } else if (moatype == "class") {
     res <- getMOA.class(dsea)
+    plotTopEnriched(res, ntop=ntop) 
+  } else if (moatype == "drug") {
+    plotTopDrugs(db, ntop=ntop) 
   }
 
-  ## actual plotting
-  plotTopBarplot(res, ntop = ntop)
 }
+

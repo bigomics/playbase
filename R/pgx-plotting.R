@@ -224,49 +224,48 @@ repelwords <- function(x, y, words, cex = 1, rotate90 = FALSE,
 
 #' @export
 pgx.plotEnrichmentDotPlot <- function(pgx, contrast,
-                                      ntop = 10, filter = NULL, dir = "both",
+                                      ntop = 10, filter=NULL, dir = "both",
                                       main = "Enrichment Analysis") {
   gs <- pgx$gset.meta$meta[[contrast]]
-  df <- data.frame(
-    pathway = rownames(gs), fx = gs$meta.fx,
-    pval = gs$meta.q, size = abs(gs$meta.fx)
-  )
-  df <- df[order(-df$fx), ]
+  df <- data.frame(pathway=rownames(gs), fx = gs$meta.fx,
+                   pval=gs$meta.q, size = abs(gs$meta.fx))
+  df <- df[order(-df$fx),]
 
-  if (!is.null(filter)) {
-    sel <- grep(filter, df$pathway, ignore.case = TRUE)
-    df$pathway <- gsub(filter, "", df$pathway)
+  if(!is.null(filter)) {
+    sel <- grep(filter, df$pathway,ignore.case=TRUE)
+    df$pathway <- gsub(filter,"",df$pathway)
   }
 
-  if (dir == "up") {
+  if( dir == "up") {
     sel <- head(sel, ntop)
-  } else if (dir == "down") {
+  } else if( dir == "down") {
     sel <- tail(sel, ntop)
   } else {
     ## both
-    sel <- c(head(sel, ntop / 2), tail(sel, ntop / 2))
+    sel <- c(head(sel, ntop/2), tail(sel, ntop/2))
   }
-  df <- df[unique(sel), ]
+  df  <- df[unique(sel),]
 
   ## cleaning...
-  df$pathway <- sub(".Homo.sapiens", "", df$pathway)
+  df$pathway <- sub(".Homo.sapiens","",df$pathway)
   df$pathway <- substring(df$pathway, 1, 60)
-  df$pathway <- factor(df$pathway, levels = rev(df$pathway))
+  df$pathway <- factor(df$pathway, levels=rev(df$pathway))
 
-
-  ggplot2::ggplot(df, ggplot2::aes(x = fx, y = pathway)) +
-    ggplot2::geom_point(ggplot2::aes(color = pval, size = size)) +
-    ggplot2::scale_size_area(max_size = 12) +
-    ggplot2::scale_color_gradient(low = "red", high = "blue") +
-    ggplot2::labs(x = "Enrichment score", y = NULL, color = "P-value", size = "Score") +
-    ggplot2::ggtitle(main) +
-    ggplot2::theme(
-      axis.title = ggplot2::element_text(size = 30),
-      axis.text = ggplot2::element_text(size = 30),
-      title = ggplot2::element_text(size = 36),
-      legend.title = ggplot2::element_text(size = 20),
-      legend.text = ggplot2::element_text(size = 14)
-    )
+  
+  ggplot2::ggplot(df, ggplot2::aes(x=fx, y=pathway)) + 
+    ggplot2::geom_point( ggplot2::aes(color=pval, size=size)) +
+      ggplot2::scale_size_area(max_size = 12) +
+      ggplot2::scale_color_gradient(low = "red", high = "blue") +  
+      ggplot2::labs(x='Enrichment score', y=NULL, color='P-value', size='Score' ) +
+      ggplot2::ggtitle(main) +
+      ggplot2::theme(
+        axis.title = ggplot2::element_text(size=30),
+        axis.text = ggplot2::element_text(size=30),
+        title = ggplot2::element_text(size=36),
+        legend.title = ggplot2::element_text(size=20),
+        legend.text = ggplot2::element_text(size=14)                 
+      )
+  
 }
 
 #' @export
@@ -5457,31 +5456,33 @@ pgx.barplot.PLOTLY <- function(
 #' @export
 pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
                                plotlib = "base", filter = NULL,
-                               normalize = FALSE, rotate = FALSE, maxterm = 40, maxfc = 10,
-                               tl.cex = 0.85, row.nchar = 60, colorbar = FALSE) {
-  ## contrasts=NULL;normalize=FALSE;rotate=FALSE;maxterm=40;maxfc=10;tl.cex=0.85;row.nchar=60;colorbar=FALSE
-  if (what == "geneset") {
+                               normalize=FALSE, rotate=FALSE, maxterm=40, maxfc=10,
+                               tl.cex = 0.85, row.nchar = 60, colorbar = FALSE)
+{
+
+  ##contrasts=NULL;normalize=FALSE;rotate=FALSE;maxterm=40;maxfc=10;tl.cex=0.85;row.nchar=60;colorbar=FALSE
+  if( what == "geneset") {
     score <- pgx.getMetaMatrix(pgx, level = "geneset")$fc
   }
-  if (what == "gene") {
+  if( what == "gene") {
     score <- pgx.getMetaMatrix(pgx, level = "gene")$fc
   }
-  if (what == "drugs") {
+  if( what == "drugs") {
     score <- pgx$drugs[[1]]$X
   }
   dim(score)
-
+  
   ## avoid errors!!!
   score[is.na(score) | is.infinite(score)] <- 0
   score[is.na(score)] <- 0
 
-  if (!is.null(contrasts)) {
+  if(!is.null(contrasts)) {
     score <- score[, contrasts, drop = FALSE]
   }
-  if (!is.null(filter)) {
+  if(!is.null(filter)) {
     sel <- grep(filter, rownames(score))
     score <- score[sel, , drop = FALSE]
-    rownames(score) <- sub(filter, "", rownames(score))
+    rownames(score) <- sub(filter,"",rownames(score))
   }
 
   ## reduce score matrix
@@ -5489,7 +5490,7 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   score <- score[, head(order(-colSums(score**2, na.rm = TRUE)), maxfc), drop = FALSE] ## max comparisons/FC
   score <- score + 1e-3 * matrix(rnorm(length(score)), nrow(score), ncol(score))
   dim(score)
-
+  
   ## normalize colums
   if (normalize) {
     ## column scale???
@@ -5497,7 +5498,7 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   }
   score <- score / max(abs(score), na.rm = TRUE) ## global normalize
   score <- sign(score) * abs(score)**0.5 ## fudging for better colors
-
+  
   d1 <- as.dist(1 - cor(t(score), use = "pairwise"))
   d2 <- as.dist(1 - cor(score, use = "pairwise"))
   d1 <- dist(score)
@@ -5513,7 +5514,7 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
     jj <- hclust(d2)$order
     score <- score[ii, jj, drop = FALSE]
   }
-
+  
   colnames(score) <- substring(colnames(score), 1, 30)
   rownames(score) <- substring(rownames(score), 1, row.nchar)
   colnames(score) <- paste0(colnames(score), " ")
@@ -5526,61 +5527,62 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   y_axis <- rownames(score)
 
   fig <- NULL
-  if (plotlib == "base") {
+  if(plotlib == "base") {
     ## par(mfrow = c(1, 1), mar = c(1, 1, 1, 1), oma = c(0, 1.5, 0, 0.5))
     gx.heatmap(score,
-      dist.method = "euclidean", ## important
-      scale = "none", ## important
-      mar = c(15, 25),
-      keysize = 0.4,
-      key = FALSE,
-      cexRow = 1.2,
-      softmax = FALSE
-    )
+               dist.method = "euclidean",  ## important
+               scale = "none",  ## important
+               mar = c(15,25), 
+               keysize = 0.4,
+               key = FALSE,
+               cexRow = 1.2,
+               softmax = FALSE
+               )
   }
-  if (plotlib == "plotly") {
+  if(plotlib == "plotly") {
     fig <- plotly::plot_ly(
-      x = x_axis, y = y_axis,
-      z = score, type = "heatmap",
-      colors = bluered.pal,
-      showscale = colorbar
-    )
+       x = x_axis, y = y_axis,
+       z = score, type = "heatmap",
+       colors = bluered.pal,
+       showscale = colorbar
+     )
   }
   return(fig)
 }
 
 
 #' @export
-pgx.topTable <- function(pgx, contrast = 1, level = "gene", dir = "up", n = 10, plot = FALSE) {
-  if (level == "gene") {
+pgx.topTable <- function(pgx, contrast=1, level="gene", dir="up", n=10, plot=FALSE) {
+
+  if(level == "gene") {
     M <- pgx$gx.meta$meta[[contrast]]
   }
-  if (level == "geneset") {
+  if(level == "geneset") {
     M <- pgx$gset.meta$meta[[contrast]]
   }
   dim(M)
-  dbg("[pgx.topTable] dim.M = ", dim(M))
-
-  if (dir == "up") {
-    sel <- head(order(-M$meta.fx), n)
+  dbg("[pgx.topTable] dim.M = ",dim(M))
+  
+  if(dir == "up") {
+    sel <- head(order(-M$meta.fx),n)
   }
-  if (dir == "down") {
-    sel <- head(order(M$meta.fx), n)
+  if(dir == "down") {
+    sel <- head(order(M$meta.fx),n)
   }
-  if (dir == "both") {
-    sel <- c(head(order(-M$meta.fx), n), tail(order(-M$meta.fx), n))
+  if(dir == "both") {
+    sel <- c( head(order(-M$meta.fx),n), tail(order(-M$meta.fx),n) )
   }
   sel <- unique(sel)
-  M <- M[sel, c("meta.fx", "meta.q")]
-  colnames(M) <- sub("meta.fx", "logFC", colnames(M))
-  M <- format(M, digits = 3)
-  aa <- pgx$genes[rownames(M), c("gene_name", "gene_title")]
+  M <- M[sel,c("meta.fx","meta.q")]
+  colnames(M) <- sub("meta.fx","logFC",colnames(M))
+  M <- format(M, digits=3)
+  aa <- pgx$genes[rownames(M),c("gene_name","gene_title")]
   aa <- cbind(aa, M)
   aa$gene_title <- substring(aa$gene_title, 1, 50)
   rownames(aa) <- NULL
-  if (plot) {
-    ## Plot your table with table Grob in the library(gridExtra)
-    tab <- gridExtra::tableGrob(aa, rows = NULL)
+  if(plot) {
+    ##Plot your table with table Grob in the library(gridExtra)
+    tab <- gridExtra::tableGrob(aa, rows=NULL)
     gridExtra::grid.arrange(tab)
   }
   aa

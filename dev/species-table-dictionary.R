@@ -7,7 +7,7 @@
 # Get species from annotation hub/orgdb
 library(data.table)
 
-species <- data.table(playbase::getAllSpecies())
+species <- data.table(playbase::getSpeciesTable())
 
 species$species_name <- species$species
 
