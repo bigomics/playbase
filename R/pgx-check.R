@@ -24,6 +24,9 @@ pgx.checkINPUT <- function(
   }
 
   if (datatype == "COUNTS" || datatype == "EXPRESSION") {
+    
+    # remove special characters before converting to numeric (keep commas, dots) as they define the decimal separator
+    df_clean <- apply(df_clean, 2, function(x) gsub("[^0-9,.]", "", x))
     # convert matrix from character to numeric, sometimes we receive character matrix from read.csv function
     df_clean <- apply(df_clean, 2, as.numeric, simplify = TRUE)
     rownames(df_clean) <- rownames(df)
