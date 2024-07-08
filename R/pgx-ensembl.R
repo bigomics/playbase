@@ -559,11 +559,25 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
 #'
 #' @export
 getAllSpecies <- function(ah = NULL) {
+
+  if (is.null(ah)) {
+    ah <- AnnotationHub::AnnotationHub() ## make global??
+  }
+  db <- AnnotationHub::query(ah, "OrgDb")
+  sort(unique(mcols(db)$species))
+}
+
+
+#' @title Get species table in AnnotationHub/OrgDB
+#'
+#' @export
+getSpeciesTable <- function(ah = NULL) {
+
   if (is.null(ah)) {
     ah <- AnnotationHub::AnnotationHub() ## make global??
   }
   ah.tables <- AnnotationHub::query(ah, "OrgDb")
-
+  
   variables <- c(
     "ah_id", "species", "description", "rdatadateadded", "rdataclass",
     "title", "taxonomyid", "coordinate_1_based", "preparerclass", "sourceurl",
