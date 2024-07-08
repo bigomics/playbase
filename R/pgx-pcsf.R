@@ -3,13 +3,6 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-if(0) {
-  level <- "gene"
-  ntop <- 250
-  ncomp <- 3
-  contrast <- NULL
-}
-
 
 #' @export
 pgx.computePCSF <- function(pgx, contrast, level = "gene", 
