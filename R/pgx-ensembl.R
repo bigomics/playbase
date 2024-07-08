@@ -112,7 +112,6 @@ ngs.getGeneAnnotation <- function(
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
-  organism
 
   genes <- NULL
 
@@ -127,15 +126,13 @@ ngs.getGeneAnnotation <- function(
     k <- length(ahDb)
     cat("selecting database for", ahDb$species[k], "\n")
 
-    orgdb <- tryCatch(
-      {
-        ahDb[[k]]
-      },
-      error = function(e) {
-        message("An error occurred: ", e, ". Retrying with force=TRUE.")
-        ahDb[[k, force = TRUE]]
-      }
-    )
+    orgdb <- tryCatch({
+      ahDb[[k]]
+    },
+    error = function(e) {
+      message("An error occurred: ", e, ". Retrying with force=TRUE.")
+      ahDb[[k, force = TRUE]]
+    })
   })
 
   if (is.null(probes)) {
@@ -194,6 +191,7 @@ ngs.getGeneAnnotation <- function(
   if (organism == "Homo sapiens") {
     annot$ORTHOGENE <- annot$SYMBOL
   } else if (has.ortho && has.symbol) {
+
     ortho.out <- orthogene::convert_orthologs(
       gene_df = unique(annot$SYMBOL),
       input_species = organism,
@@ -471,7 +469,6 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
   }
   suppressMessages({
     cat("querying AnnotationHub for", organism, "\n")
-
     ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
 
     ## select on exact organism name
@@ -489,8 +486,6 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
     "REFSEQ", "ENTREZID"
   )
   keytypes <- intersect(keytypes, keytypes(orgdb))
-  keytypes
-
   key_matches <- rep(0L, length(keytypes))
   names(key_matches) <- keytypes
 
@@ -515,10 +510,12 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
   }
 
   # Iterate over probe types
+  key = keytypes[1]
   for (key in keytypes) {
     probe_matches <- data.frame(NULL)
 
-    # add symbol and genename on top of key as they will be used to count the real number of probe matches
+    # add symbol and genename on top of key as they will be used to
+    # count the real number of probe matches
     key2 <- c(key, c("SYMBOL", "GENENAME"))
     key2 <- intersect(key2, keytypes)
     try(
@@ -531,15 +528,17 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
       silent = TRUE
     )
 
-
+    # set empty character to NA, as we only count not-NA to define probe type
+    probe_matches[probe_matches == ""] <- NA
     # check which probe types (genename, symbol) return the most matches
     n1 <- n2 <- 0
-
-    # set empty character to NA, as we only count NA to define probe type
-    probe_matches[probe_matches == ""] <- NA
     if ("SYMBOL" %in% colnames(probe_matches)) n1 <- sum(!is.na(probe_matches[, "SYMBOL"]))
     if ("GENENAME" %in% colnames(probe_matches)) n2 <- sum(!is.na(probe_matches[, "GENENAME"]))
-    key_matches[key] <- max(n1, n2)
+    matchratio <- max(n1, n2) / length(probes)
+    key_matches[key] <- matchratio
+
+    ## stop search prematurely if matchratio > 95%
+    if(matchratio > 0.95) break()
   }
 
   ## Return top match
@@ -576,7 +575,7 @@ getAllSpecies <- function(ah = NULL) {
     table <- eval(parse(text = paste0("ah.tables$", var)))
   })
   tables <- do.call(cbind, tables)
-
+    
   colnames(tables) <- variables
   names(tables) <- variables
   return(tables)
