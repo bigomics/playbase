@@ -256,7 +256,6 @@ plotPCSF.IGRAPH <- function(net, fx0 = NULL, label.cex = 1) {
     vertex.color = vertex.color,
     vertex.label.cex = vertex.label.cex,
     vertex.label.dist = 0.3 + 0.7 * vv,
-    ##vertex.label.dist = 3,
     vertex.label.degree = -0 * pi,
     vertex.label.family = "sans",
     edge.width = 5 * edge.width,
@@ -292,6 +291,6 @@ pgx.getPCSFcentrality <- function(pgx, contrast, pcsf = NULL, plot = TRUE, n=10)
     tab <- gridExtra::tableGrob(aa, rows=NULL)
     gridExtra::grid.arrange(tab)
   }
-
-  aa
+  
+  return(aa)
 }

@@ -252,8 +252,8 @@ pgx.plotDrugConnectivity <- function(pgx, contrast,
     annot <- annot[jj, c("moa", "target")]
     dt <- data.frame(drug = drug, NES = nes, pval = pv, padj = qv, annot)
     dt <- dt[order(-dt$NES), ]
-    
-    filter_empty = FALSE
+
+    filter_empty <- FALSE
     if (filter_empty) {
       sel <- which(dt$moa != "" | dt$target != "")
       dt <- dt[sel, , drop = FALSE]
@@ -275,7 +275,7 @@ pgx.plotDrugConnectivity <- function(pgx, contrast,
       names(which(sapply(targets.list, function(t) (g %in% t))))
     })
     names(gmt) <- targets
-    
+
     rnk <- dt$NES
     names(rnk) <- rownames(dt)
     suppressWarnings(
@@ -340,7 +340,6 @@ pgx.plotDrugConnectivity <- function(pgx, contrast,
     dx.top <- c(head(dx,ntop), tail(dx,ntop))
     barplot(dx.top, las=3, horiz=FALSE, ylab="similarity (NES)")    
   }
-
   
   ## this should move to pgx.computeDrugEnrichment...
   dsea <- getActiveDSEA(pgx, contrast, db)
@@ -355,6 +354,4 @@ pgx.plotDrugConnectivity <- function(pgx, contrast,
   }
 
 }
-
-
 
