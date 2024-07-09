@@ -7,7 +7,7 @@
 #'
 #' @description
 #' Compute PCSF solution from pgx object for given contrast.
-#' 
+#'
 #' @export
 pgx.computePCSF <- function(pgx, contrast, level = "gene",
                             ntop = 250, ncomp = 3) {
@@ -81,7 +81,7 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
 #'
 #' @description Plot PCSF graph (visnetwork or igraph) from result of
 #'   pgx.computePCSF
-#' 
+#'
 #' @export
 plotPCSF <- function(pcsf,
                      highlightby = c("centrality", "prize")[1],
