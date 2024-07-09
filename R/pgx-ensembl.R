@@ -210,7 +210,7 @@ ngs.getGeneAnnotation <- function(
 
   ## Return as standardized data.frame and in the same order as input
   ## probes.
-  annot$SOURCE <- ahDb$dataprovider
+  annot$SOURCE <- "AnnotationHub/OrgDb"
   annot.cols <- c(
     "PROBE", "SYMBOL", "ORTHOGENE", "GENENAME", "GENETYPE",
     "MAP", "CHR", "POS", "TXLEN", "SOURCE"
