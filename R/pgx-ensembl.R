@@ -595,7 +595,7 @@ getAllSpecies <- function(ah = NULL) {
     ah <- AnnotationHub::AnnotationHub() ## make global??
   }
   db <- AnnotationHub::query(ah, "OrgDb")
-  sort(unique(mcols(db)$species))
+  sort(unique(AnnotationHub::mcols(db)$species))
 }
 
 
