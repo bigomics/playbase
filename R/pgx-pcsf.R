@@ -3,13 +3,6 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-if (0) {
-  level <- "gene"
-  ntop <- 250
-  ncomp <- 3
-  contrast <- NULL
-}
-
 
 #' @export
 pgx.computePCSF <- function(pgx, contrast, level = "gene",
@@ -135,7 +128,7 @@ plotPCSF <- function(pcsf,
 
   if (plot == "igraph") {
     plotPCSF.IGRAPH(pcsf, fx0 = NULL, label.cex = label_cex1)
-    out <- pcsf
+    out <- NULL
   }
 
   return(out)
@@ -259,7 +252,6 @@ plotPCSF.IGRAPH <- function(net, fx0 = NULL, label.cex = 1) {
     vertex.color = vertex.color,
     vertex.label.cex = vertex.label.cex,
     vertex.label.dist = 0.3 + 0.7 * vv,
-    ## vertex.label.dist = 3,
     vertex.label.degree = -0 * pi,
     vertex.label.family = "sans",
     edge.width = 5 * edge.width,
@@ -295,5 +287,5 @@ pgx.getPCSFcentrality <- function(pgx, contrast, pcsf = NULL, plot = TRUE, n = 1
     gridExtra::grid.arrange(tab)
   }
 
-  aa
+  return(aa)
 }

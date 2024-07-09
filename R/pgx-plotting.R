@@ -5459,7 +5459,6 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
                                plotlib = "base", filter = NULL,
                                normalize = FALSE, rotate = FALSE, maxterm = 40, maxfc = 10,
                                tl.cex = 0.85, row.nchar = 60, colorbar = FALSE) {
-  ## contrasts=NULL;normalize=FALSE;rotate=FALSE;maxterm=40;maxfc=10;tl.cex=0.85;row.nchar=60;colorbar=FALSE
   if (what == "geneset") {
     score <- pgx.getMetaMatrix(pgx, level = "geneset")$fc
   }
@@ -5479,9 +5478,11 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
     score <- score[, contrasts, drop = FALSE]
   }
   if (!is.null(filter)) {
-    sel <- grep(filter, rownames(score))
-    score <- score[sel, , drop = FALSE]
-    rownames(score) <- sub(filter, "", rownames(score))
+    for (f in filter) {
+      sel <- grep(f, rownames(score))
+      score <- score[sel, , drop = FALSE]
+      rownames(score) <- sub(f, "", rownames(score), ignore.case = TRUE)
+    }
   }
 
   ## reduce score matrix
@@ -5531,7 +5532,7 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
     gx.heatmap(score,
       dist.method = "euclidean", ## important
       scale = "none", ## important
-      mar = c(15, 25),
+      mar = c(15, 30),
       keysize = 0.4,
       key = FALSE,
       cexRow = 1.2,

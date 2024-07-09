@@ -216,10 +216,10 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
 
 
 #' @export
-pgx.plotDrugEnrichment <- function(pgx, contrast,
-                                   db = "L1000/activity",
-                                   moatype = c("target gene", "drug class")[1],
-                                   ntop = 10) {
+pgx.plotDrugConnectivity <- function(pgx, contrast,
+                                     db = "L1000/activity",
+                                     moatype = c("class", "gene", "drug")[1],
+                                     ntop = 10) {
   if (!"drugs" %in% names(pgx)) {
     stop("pgx does not have drug enrichment results")
   }
@@ -304,9 +304,9 @@ pgx.plotDrugEnrichment <- function(pgx, contrast,
     return(moa.class)
   }
 
-
-  plotTopBarplot <- function(res, ntop) {
+  plotTopEnriched <- function(res, ntop) {
     res$score <- res$NES
+
     qweight <- FALSE
     if (qweight) {
       res$score <- res$NES * (1 - res$padj) * (1 - 1 / res$size**1)
@@ -331,14 +331,24 @@ pgx.plotDrugEnrichment <- function(pgx, contrast,
     )
   }
 
-  ## this should move to pgx.computeDrugEnrichment...
-  dsea <- getActiveDSEA(pgx, contrast, db)
-  if (moatype == "target gene") {
-    res <- getMOA.target(dsea)
-  } else if (moatype == "drug class") {
-    res <- getMOA.class(dsea)
+  plotTopDrugs <- function(db, ntop = 15) {
+    dr <- pgx$drugs[[db]]
+    sel <- 1:nrow(dr$annot)
+    sel <- grepl("[a-z]{4}", rownames(dr$annot)) & !is.na(dr$annot[, "moa"])
+    dx <- sort(dr$X[sel, 1], decreasing = TRUE)
+    dx.top <- c(head(dx, ntop), tail(dx, ntop))
+    barplot(dx.top, las = 3, horiz = FALSE, ylab = "similarity (NES)")
   }
 
-  ## actual plotting
-  plotTopBarplot(res, ntop = ntop)
+  ## this should move to pgx.computeDrugEnrichment...
+  dsea <- getActiveDSEA(pgx, contrast, db)
+  if (moatype == "gene") {
+    res <- getMOA.target(dsea)
+    plotTopEnriched(res, ntop = ntop)
+  } else if (moatype == "class") {
+    res <- getMOA.class(dsea)
+    plotTopEnriched(res, ntop = ntop)
+  } else if (moatype == "drug") {
+    plotTopDrugs(db, ntop = ntop)
+  }
 }
