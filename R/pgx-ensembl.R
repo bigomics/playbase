@@ -129,7 +129,7 @@ ngs.getGeneAnnotation <- function(
   if (is.ensembl) probes <- sub("[.][0-9]+$", "", probes)
 
   if (is.null(probe_type)) {
-    probe_type <- playbase::detect_probetype(organism, probes, orgdb = orgdb)
+    probe_type <- playbase::detect_probetype(organism, probes, orgdb = NULL)
   }
   message("detected probe_type = ", probe_type)
   if (is.null(probe_type)) {
@@ -210,7 +210,7 @@ ngs.getGeneAnnotation <- function(
 
   ## Return as standardized data.frame and in the same order as input
   ## probes.
-  annot$SOURCE <- ahDb$dataprovider
+  annot$SOURCE <- "AnnotationHub/OrgDb" ## ahDb$dataprovider
   annot.cols <- c(
     "PROBE", "SYMBOL", "ORTHOGENE", "GENENAME", "GENETYPE",
     "MAP", "CHR", "POS", "TXLEN", "SOURCE"
@@ -504,7 +504,7 @@ detect_probetype <- function(organism, probes, orgdb = NULL, nprobe = 100) {
   organism
 
   ## get correct OrgDb database for organism
-  orgdb <- getOrgDb(organism, ah = ah)
+  orgdb <- getOrgDb(organism, ah = NULL)
   if (is.null(orgdb)) {
     message("WARNING: unsupported organism '", organism, "'\n")
     return(NULL)
