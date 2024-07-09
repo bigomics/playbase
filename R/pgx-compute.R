@@ -172,7 +172,8 @@ pgx.createPGX <- function(counts,
                           convert.hugo = TRUE,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE,
-                          remove.outliers = TRUE
+                          remove.outliers = TRUE,
+                          normalize = TRUE
                           ) {
 
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
@@ -274,12 +275,12 @@ pgx.createPGX <- function(counts,
   ##  message("[createPGX] using passed log-expression matrix X...")
   ##}
   
-  ## if (normalize) {
-  ##  X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
-  ##  X <- limma::normalizeQuantiles(X) ## in log space
-  ## } else {
-  ##    message("[createPGX] SKIPPING NORMALIZATION!")
-  ## }
+  if (normalize) {
+   X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
+   X <- limma::normalizeQuantiles(X) ## in log space
+  } else {
+     message("[createPGX] SKIPPING NORMALIZATION!")
+  }
 
   ## -------------------------------------------------------------------
   ## Batch-correction (if requested. WARNING: changes counts )
