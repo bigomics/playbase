@@ -98,7 +98,6 @@ ngs.getGeneAnnotation <- function(
     pgx = NULL,
     annot_table = NULL,
     verbose = TRUE) {
-
   if (is.null(organism)) {
     warning("[getGeneAnnotation] Please specify organism")
     return(NULL)
@@ -147,7 +146,7 @@ ngs.getGeneAnnotation <- function(
   cat("get gene annotation columns:", cols, "\n")
   message("retrieving annotation for ", length(probes), " ", probe_type, " features...")
 
-  suppressMessages( suppressWarnings( 
+  suppressMessages(suppressWarnings(
     annot <- AnnotationDbi::select(orgdb, keys = probes, columns = cols, keytype = probe_type)
   ))
 
@@ -174,7 +173,6 @@ ngs.getGeneAnnotation <- function(
   if (organism == "Homo sapiens") {
     annot$ORTHOGENE <- annot$SYMBOL
   } else if (has.ortho && has.symbol) {
-
     ortho.out <- orthogene::convert_orthologs(
       gene_df = unique(annot$SYMBOL),
       input_species = organism,
@@ -441,65 +439,65 @@ probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE)
 
 ## not exported
 getOrgDb <- function(organism, ah = NULL) {
-
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
 
-  if(!is.null(ah)) {
+  if (!is.null(ah)) {
     all_species <- getAllSpecies(ah)
   } else {
     ## If organism is in localHub we select localHub=TRUE because
     ## this is faster. Otherwise switch to online Hub
     suppressMessages(
-      ah <- AnnotationHub::AnnotationHub(localHub=TRUE)
+      ah <- AnnotationHub::AnnotationHub(localHub = TRUE)
     )
-    local_species <- getAllSpecies(ah)  ## orgDb species only
-    if(tolower(organism) %in% tolower(local_species)) {
-      message("[selectAnnotationHub] organism '",organism,"' in local Hub")
+    local_species <- getAllSpecies(ah) ## orgDb species only
+    if (tolower(organism) %in% tolower(local_species)) {
+      message("[selectAnnotationHub] organism '", organism, "' in local Hub")
       all_species <- local_species
     } else {
       message("[selectAnnotationHub] querying online Hub...")
-      ah <- AnnotationHub::AnnotationHub(localHub=FALSE)  
+      ah <- AnnotationHub::AnnotationHub(localHub = FALSE)
       all_species <- getAllSpecies(ah)
     }
   }
 
-  if(!tolower(organism) %in% tolower(all_species)) {
-    message("WARNING: organism '",organism,"' not in AnnotationHub")
+  if (!tolower(organism) %in% tolower(all_species)) {
+    message("WARNING: organism '", organism, "' not in AnnotationHub")
     return(NULL)
   }
 
   ## correct capitalization
   species <- all_species[which(tolower(all_species) == tolower(organism))]
-  
+
   suppressMessages({
     message("querying AnnotationHub for '", organism, "'\n")
     ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
 
     ## select on exact organism name
     ahDb <- ahDb[which(tolower(ahDb$species) == tolower(organism))]
-    k <- length(ahDb)  ## latest of multiple
+    k <- length(ahDb) ## latest of multiple
     message("selecting database for '", ahDb$species[k], "'\n")
 
     message("retrieving annotation...\n")
-    orgdb <- tryCatch({
-      ahDb[[k]]
-    },
-    error = function(e) {
-      message("An error occurred: ", e, ". Retrying with force=TRUE.")
-      ahDb[[k, force = TRUE]]
-    })
+    orgdb <- tryCatch(
+      {
+        ahDb[[k]]
+      },
+      error = function(e) {
+        message("An error occurred: ", e, ". Retrying with force=TRUE.")
+        ahDb[[k, force = TRUE]]
+      }
+    )
   })
-  
-  return(orgdb)  
+
+  return(orgdb)
 }
 
 
 #' @title Detect probe type from probe set
 #' @export
 detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
-
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
@@ -507,15 +505,15 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
 
   ## get correct OrgDb database for organism
   orgdb <- getOrgDb(organism, ah = ah)
-  if(is.null(orgdb)) {
-    message("WARNING: unsupported organism '",organism,"'\n")
+  if (is.null(orgdb)) {
+    message("WARNING: unsupported organism '", organism, "'\n")
     return(NULL)
   }
-  
+
   ## get probe types for organism
   keytypes <- c(
     "SYMBOL", "ENSEMBL", "UNIPROT",
-    "GENENAME", "MGI",    
+    "GENENAME", "MGI",
     "ENSEMBLTRANS", "ENSEMBLPROT",
     "ACCNUM", "REFSEQ", "ENTREZID"
   )
@@ -544,7 +542,7 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
   }
 
   # Iterate over probe types
-  key = keytypes[1]
+  key <- keytypes[1]
   for (key in keytypes) {
     probe_matches <- data.frame(NULL)
 
@@ -552,7 +550,7 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
     # count the real number of probe matches
     key2 <- c(key, c("SYMBOL", "GENENAME"))
     key2 <- intersect(key2, keytypes)
-    suppressMessages( suppressWarnings( try(
+    suppressMessages(suppressWarnings(try(
       probe_matches <- AnnotationDbi::select(
         orgdb,
         keys = probes,
@@ -572,7 +570,7 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
     key_matches[key] <- matchratio
 
     ## stop search prematurely if matchratio > 95%
-    if(matchratio > 0.95) break()
+    if (matchratio > 0.95) break()
   }
 
   ## Return top match
@@ -593,7 +591,6 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
 #'
 #' @export
 getAllSpecies <- function(ah = NULL) {
-
   if (is.null(ah)) {
     ah <- AnnotationHub::AnnotationHub() ## make global??
   }
@@ -606,12 +603,11 @@ getAllSpecies <- function(ah = NULL) {
 #'
 #' @export
 getSpeciesTable <- function(ah = NULL) {
-
   if (is.null(ah)) {
     ah <- AnnotationHub::AnnotationHub() ## make global??
   }
   ah.tables <- AnnotationHub::query(ah, "OrgDb")
-  
+
   variables <- c(
     "ah_id", "species", "description", "rdatadateadded", "rdataclass",
     "title", "taxonomyid", "coordinate_1_based", "preparerclass", "sourceurl",
@@ -623,7 +619,7 @@ getSpeciesTable <- function(ah = NULL) {
     table <- eval(parse(text = paste0("ah.tables$", var)))
   })
   tables <- do.call(cbind, tables)
-    
+
   colnames(tables) <- variables
   names(tables) <- variables
   return(tables)
