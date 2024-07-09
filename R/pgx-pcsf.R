@@ -3,7 +3,11 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-
+#' @title Compute PCSF solution from pgx object
+#'
+#' @description
+#' Compute PCSF solution from pgx object for given contrast.
+#' 
 #' @export
 pgx.computePCSF <- function(pgx, contrast, level = "gene",
                             ntop = 250, ncomp = 3) {
@@ -72,6 +76,12 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   return(pcsf)
 }
 
+
+#' @title Plot PCSF graph from results object
+#'
+#' @description Plot PCSF graph (visnetwork or igraph) from result of
+#'   pgx.computePCSF
+#' 
 #' @export
 plotPCSF <- function(pcsf,
                      highlightby = c("centrality", "prize")[1],
@@ -135,9 +145,12 @@ plotPCSF <- function(pcsf,
 }
 
 
-#' @param x
+#' @title Plot interactive visnetwork graph from PCSF results object
 #'
-#' @return
+#' @description Plot interactive visnetwork PCSF graph from result of
+#'   pgx.computePCSF. To be called from plotPCSF.
+#'
+#' @return visNetwork plot object
 #' @export
 visplot.PCSF <- function(
     net, style = 0, edge_width = 5, node_size = 40, node_label_cex = 30,
@@ -220,9 +233,14 @@ visplot.PCSF <- function(
   visNet
 }
 
+#' @title Plot static igraph network from PCSF results object
+#'
+#' @description Plot static igraph PCSF graph from result of
+#'   pgx.computePCSF. To be called from plotPCSF.
+#'
+#' @return NULL
 #' @param x
 #'
-#' @return
 plotPCSF.IGRAPH <- function(net, fx0 = NULL, label.cex = 1) {
   if (is.null(fx0)) fx0 <- igraph::V(net)$prize
   ## fx0 <- tanh(1.3 * fx0)
