@@ -216,9 +216,18 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
 
 
 #' @export
-pgx.plotDrugEnrichment <- function(pgx, contrast, db,
+pgx.plotDrugEnrichment <- function(pgx, contrast,
+                                   db = "L1000/activity",
                                    moatype = c("target gene", "drug class")[1],
                                    ntop = 10) {
+  if (!"drugs" %in% names(pgx)) {
+    stop("pgx does not have drug enrichment results")
+  }
+
+  if (!db %in% names(pgx$drugs)) {
+    stop("pgx$drugs does not have database db = ", db)
+  }
+
   ## common getData-esque function for drug connectivity plots / tables
   getActiveDSEA <- function(pgx, contrast, db) {
     dr <- pgx$drugs[[db]]
@@ -295,9 +304,9 @@ pgx.plotDrugEnrichment <- function(pgx, contrast, db,
     return(moa.class)
   }
 
+
   plotTopBarplot <- function(res, ntop) {
     res$score <- res$NES
-    yaxistitle <- "score (NES)"
     qweight <- FALSE
     if (qweight) {
       res$score <- res$NES * (1 - res$padj) * (1 - 1 / res$size**1)
@@ -315,7 +324,7 @@ pgx.plotDrugEnrichment <- function(pgx, contrast, db,
     barplot(
       height = df$y,
       names.arg = df$x,
-      ylab = yaxistitle,
+      ylab = "score (NES)",
       xlab = "",
       las = 3,
       ylim = c(-1.1, 1.1) * max(abs(as.numeric(moa.top)))
@@ -329,7 +338,6 @@ pgx.plotDrugEnrichment <- function(pgx, contrast, db,
   } else if (moatype == "drug class") {
     res <- getMOA.class(dsea)
   }
-  res
 
   ## actual plotting
   plotTopBarplot(res, ntop = ntop)

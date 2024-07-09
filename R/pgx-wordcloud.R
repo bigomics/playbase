@@ -177,7 +177,6 @@ pgx.calculateWordCloud <- function(pgx, progress = NULL, pg.unit = 1) {
 pgx.plotWordCloud <- function(pgx, contrast) {
   res <- pgx$wordcloud
   gsea1 <- res$gsea[[contrast]]
-
   ## sometimes we have words that NA is tsne, make sure we remove
   ## them (likely special characters) in windows or wsl
   res$tsne <- res$tsne[!is.na(rownames(res$tsne)), ]
