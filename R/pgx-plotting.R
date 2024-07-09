@@ -5456,11 +5456,10 @@ pgx.barplot.PLOTLY <- function(
 
 #' @export
 pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
-                               plotlib = "base", filter = NULL, 
-                               normalize=FALSE, rotate=FALSE, maxterm=40, maxfc=10,
-                               tl.cex = 0.85, row.nchar = 60, colorbar = FALSE)
-{
-  if( what == "geneset") {
+                               plotlib = "base", filter = NULL,
+                               normalize = FALSE, rotate = FALSE, maxterm = 40, maxfc = 10,
+                               tl.cex = 0.85, row.nchar = 60, colorbar = FALSE) {
+  if (what == "geneset") {
     score <- pgx.getMetaMatrix(pgx, level = "geneset")$fc
   }
   if (what == "gene") {
@@ -5478,11 +5477,11 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   if (!is.null(contrasts)) {
     score <- score[, contrasts, drop = FALSE]
   }
-  if(!is.null(filter)) {
-    for(f in filter) {
+  if (!is.null(filter)) {
+    for (f in filter) {
       sel <- grep(f, rownames(score))
       score <- score[sel, , drop = FALSE]
-      rownames(score) <- sub(f,"",rownames(score), ignore.case = TRUE)
+      rownames(score) <- sub(f, "", rownames(score), ignore.case = TRUE)
     }
   }
 
@@ -5531,14 +5530,14 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   if (plotlib == "base") {
     ## par(mfrow = c(1, 1), mar = c(1, 1, 1, 1), oma = c(0, 1.5, 0, 0.5))
     gx.heatmap(score,
-               dist.method = "euclidean",  ## important
-               scale = "none",  ## important
-               mar = c(15,30), 
-               keysize = 0.4,
-               key = FALSE,
-               cexRow = 1.2,
-               softmax = FALSE
-               )
+      dist.method = "euclidean", ## important
+      scale = "none", ## important
+      mar = c(15, 30),
+      keysize = 0.4,
+      key = FALSE,
+      cexRow = 1.2,
+      softmax = FALSE
+    )
   }
   if (plotlib == "plotly") {
     fig <- plotly::plot_ly(
