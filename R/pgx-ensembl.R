@@ -129,7 +129,7 @@ ngs.getGeneAnnotation <- function(
   if (is.ensembl) probes <- sub("[.][0-9]+$", "", probes)
 
   if (is.null(probe_type)) {
-    probe_type <- playbase::detect_probetype(organism, probes, ah = ah)
+    probe_type <- playbase::detect_probetype(organism, probes, ah = NULL)
   }
   message("detected probe_type = ", probe_type)
   if (is.null(probe_type)) {
