@@ -5,21 +5,20 @@
 
 
 #' @export
-pgx.computePCSF <- function(pgx, contrast, level = "gene", 
-                            ntop = 250, ncomp = 3 ) {
-
+pgx.computePCSF <- function(pgx, contrast, level = "gene",
+                            ntop = 250, ncomp = 3) {
   F <- pgx.getMetaMatrix(pgx, level = level)$fc
-  if (is.null(contrast)) {    
+  if (is.null(contrast)) {
     fx <- rowMeans(F**2)**0.5
   } else {
-    if(!contrast %in% colnames(F)) {
+    if (!contrast %in% colnames(F)) {
       stop("[pgx.computePCSF] invalid contrast")
     }
-    fx <- F[,contrast]
+    fx <- F[, contrast]
     names(fx) <- rownames(F)
   }
   if (level == "geneset") {
-    fx <- fx[grep("^GOBP:", names(fx))]  ## really?
+    fx <- fx[grep("^GOBP:", names(fx))] ## really?
     ## names(fx) <- gsub(".*:| \\(.*", "", names(fx))
   }
 
@@ -52,11 +51,11 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   }
 
   ee <- get_edges(names(fx))
-  suppressMessages( suppressWarnings(
+  suppressMessages(suppressWarnings(
     ppi <- PCSF::construct_interactome(ee)
   ))
   prize1 <- abs(fx[igraph::V(ppi)$name])
-  suppressMessages( suppressWarnings(
+  suppressMessages(suppressWarnings(
     pcsf <- PCSF::PCSF(ppi, terminals = prize1, w = 2, b = exp(.01), verbose = 0)
   ))
 
@@ -69,16 +68,15 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   }
   pcsf <- igraph::subgraph(pcsf, cmp$membership %in% sel.kk)
   class(pcsf) <- c("PCSF", "igraph")
-  
+
   return(pcsf)
 }
 
 #' @export
 plotPCSF <- function(pcsf,
-                     highlightby = c("centrality","prize")[1],
-                     plot = c("visnet","igraph"),
-                     node_cex = 30, label_cex = 30)
-{
+                     highlightby = c("centrality", "prize")[1],
+                     plot = c("visnet", "igraph"),
+                     node_cex = 30, label_cex = 30) {
   ## set node size
   fx <- igraph::V(pcsf)$prize
   wt <- abs(fx / mean(abs(fx)))**0.8
@@ -109,7 +107,7 @@ plotPCSF <- function(pcsf,
   ##   igraph::V(pcsf)$name <- gsub(".*:| \\(.*", "", igraph::V(pcsf)$name)
   ## }
 
-  out <- NULL  
+  out <- NULL
   if (plot == "visnet") {
     library(igraph)
     out <- visplot.PCSF(
@@ -148,7 +146,6 @@ visplot.PCSF <- function(
     layout = "layout_with_fr", physics = TRUE, layoutMatrix = NULL,
     width = 1800, height = 1800, invert.weight = FALSE,
     extra_node_colors = list(), ...) {
-
   if (missing(net)) {
     stop("Need to specify the subnetwork obtained from the PCSF algorithm.")
   }
@@ -189,7 +186,7 @@ visplot.PCSF <- function(
   nodes$label <- nodes$name
   nodes$label.cex <- node_label_cex
   nodes$font.size <- node_label_cex
-  
+
   edges <- data.frame(igraph::ends(net, es = igraph::E(net)), adjusted_weight)
   names(edges) <- c("from", "to", "value")
   edges$from <- match(edges$from, nodes$name)
@@ -227,10 +224,9 @@ visplot.PCSF <- function(
 #'
 #' @return
 plotPCSF.IGRAPH <- function(net, fx0 = NULL, label.cex = 1) {
-
   if (is.null(fx0)) fx0 <- igraph::V(net)$prize
   ## fx0 <- tanh(1.3 * fx0)
-  fx0 <- fx0 / max(abs(fx0),na.rm=TRUE)
+  fx0 <- fx0 / max(abs(fx0), na.rm = TRUE)
   label.cex <- label.cex / mean(label.cex, na.rm = TRUE)
   vertex.label.cex <- 0.8 * label.cex**0.80
 
@@ -264,33 +260,32 @@ plotPCSF.IGRAPH <- function(net, fx0 = NULL, label.cex = 1) {
 }
 
 #' @export
-pgx.getPCSFcentrality <- function(pgx, contrast, pcsf = NULL, plot = TRUE, n=10) {
-
-  if(is.null(pcsf)) {
+pgx.getPCSFcentrality <- function(pgx, contrast, pcsf = NULL, plot = TRUE, n = 10) {
+  if (is.null(pcsf)) {
     pcsf <- pgx.computePCSF(pgx, contrast, level = "gene", ntop = 250, ncomp = 3)
   }
 
   ## centrality
   ewt <- 1.0 / igraph::E(pcsf)$weight
   cc <- igraph::page_rank(pcsf, weights = ewt)$vector
-  tail(sort(cc),20)
-  top.cc <- sort(cc, decreasing = TRUE)  
+  tail(sort(cc), 20)
+  top.cc <- sort(cc, decreasing = TRUE)
   M <- pgx$gx.meta$meta[[contrast]]
   sel <- intersect(names(top.cc), rownames(M))
   sel <- head(sel, n)
-  fc <- M[sel,c("meta.fx")]
+  fc <- M[sel, c("meta.fx")]
   M <- data.frame(logFC = fc, centrality = top.cc[sel])
-  M <- format(M, digits=3)
-  aa <- pgx$genes[rownames(M),c("gene_name","gene_title")]
+  M <- format(M, digits = 3)
+  aa <- pgx$genes[rownames(M), c("gene_name", "gene_title")]
   aa <- cbind(aa, M)
   aa$gene_title <- substring(aa$gene_title, 1, 50)
   rownames(aa) <- NULL
 
-  if(plot) {
-    ##Plot your table with table Grob in the library(gridExtra)
-    tab <- gridExtra::tableGrob(aa, rows=NULL)
+  if (plot) {
+    ## Plot your table with table Grob in the library(gridExtra)
+    tab <- gridExtra::tableGrob(aa, rows = NULL)
     gridExtra::grid.arrange(tab)
   }
-  
+
   return(aa)
 }
