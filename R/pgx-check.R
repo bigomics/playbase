@@ -10,21 +10,14 @@
 #' @export
 pgx.checkINPUT <- function(
     df,
-    organism = NULL,
-    type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS"),
-    orgdb = NULL) {
+    type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")) {
+  
   datatype <- match.arg(type)
   df_clean <- df
   PASS <- TRUE
   check_return <- list()
 
-  # counts must have organism
-  if (datatype == "COUNTS" && is.null(organism)) {
-    stop("Organism must be provided for counts data.")
-  }
-
   if (datatype == "COUNTS" || datatype == "EXPRESSION") {
-    
     # remove special characters before converting to numeric (keep commas, dots) as they define the decimal separator
     df_clean <- apply(df_clean, 2, function(x) gsub("[^0-9,.]", "", x))
     # convert matrix from character to numeric, sometimes we receive character matrix from read.csv function
@@ -103,14 +96,6 @@ pgx.checkINPUT <- function(
     if (check.log) {
       check_return$e29 <- "Possible log transformed counts detected."
     }
-
-    # # check if counts has valid probe types
-    # probe_type <- playbase::detect_probetype(organism = organism, probes = rownames(df_clean), orgdb = orgdb)
-
-    # if (is.null(probe_type)) {
-    #   check_return$e30 <- head(rownames(df_clean), 10)
-    #   PASS <- FALSE
-    # }
   }
 
   if (datatype == "SAMPLES") {
