@@ -5472,7 +5472,6 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
 
   ## avoid errors!!!
   score[is.na(score) | is.infinite(score)] <- 0
-  score[is.na(score)] <- 0
 
   if (!is.null(contrasts)) {
     score <- score[, contrasts, drop = FALSE]
@@ -5485,9 +5484,11 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
     }
   }
 
-  ## reduce score matrix
-  score <- score[head(order(-rowSums(score**2, na.rm = TRUE)), maxterm), , drop = FALSE] ## max number terms
-  score <- score[, head(order(-colSums(score**2, na.rm = TRUE)), maxfc), drop = FALSE] ## max comparisons/FC
+  ## max number terms
+  score <- score[head(order(-rowSums(score**2, na.rm = TRUE)), maxterm), , drop = FALSE] 
+
+  ## max comparisons/FC
+  score <- score[, head(order(-colSums(score**2, na.rm = TRUE)), maxfc), drop = FALSE] 
   score <- score + 1e-3 * matrix(rnorm(length(score)), nrow(score), ncol(score))
   dim(score)
 
@@ -5497,7 +5498,7 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
     score <- t(t(score) / (1e-8 + sqrt(colMeans(score**2, na.rm = TRUE))))
   }
   score <- score / max(abs(score), na.rm = TRUE) ## global normalize
-  score <- sign(score) * abs(score)**0.5 ## fudging for better colors
+  score <- sign(score) * abs(score)**0.5 ## fudging for better colors???
 
   d1 <- as.dist(1 - cor(t(score), use = "pairwise"))
   d2 <- as.dist(1 - cor(score, use = "pairwise"))
@@ -5509,12 +5510,14 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   jj <- 1:ncol(score)
   if (NCOL(score) == 1) {
     score <- score[order(-score[, 1]), 1, drop = FALSE]
+    score <- cbind(score, score)
+    colnames(score)[2] <- ""
   } else {
     ii <- hclust(d1)$order
     jj <- hclust(d2)$order
     score <- score[ii, jj, drop = FALSE]
   }
-
+  dim(score)
   colnames(score) <- substring(colnames(score), 1, 30)
   rownames(score) <- substring(rownames(score), 1, row.nchar)
   colnames(score) <- paste0(colnames(score), " ")
@@ -5522,20 +5525,21 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   if (rotate) score <- t(score)
 
   bluered.pal <- colorRamp(colors = c("royalblue3", "#ebeffa", "white", "#faeeee", "indianred3"))
-  score <- score[nrow(score):1, ]
+  score <- score[nrow(score):1, , drop=FALSE]
   x_axis <- colnames(score)
   y_axis <- rownames(score)
 
   fig <- NULL
   if (plotlib == "base") {
-    ## par(mfrow = c(1, 1), mar = c(1, 1, 1, 1), oma = c(0, 1.5, 0, 0.5))
-    gx.heatmap(score,
+    gx.heatmap(
+      score,
       dist.method = "euclidean", ## important
       scale = "none", ## important
       mar = c(15, 30),
       keysize = 0.4,
       key = FALSE,
       cexRow = 1.2,
+      cexCol = 1.8,
       softmax = FALSE
     )
   }
