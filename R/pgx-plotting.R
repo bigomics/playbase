@@ -5485,10 +5485,10 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   }
 
   ## max number terms
-  score <- score[head(order(-rowSums(score**2, na.rm = TRUE)), maxterm), , drop = FALSE] 
+  score <- score[head(order(-rowSums(score**2, na.rm = TRUE)), maxterm), , drop = FALSE]
 
   ## max comparisons/FC
-  score <- score[, head(order(-colSums(score**2, na.rm = TRUE)), maxfc), drop = FALSE] 
+  score <- score[, head(order(-colSums(score**2, na.rm = TRUE)), maxfc), drop = FALSE]
   score <- score + 1e-3 * matrix(rnorm(length(score)), nrow(score), ncol(score))
   dim(score)
 
@@ -5525,7 +5525,7 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   if (rotate) score <- t(score)
 
   bluered.pal <- colorRamp(colors = c("royalblue3", "#ebeffa", "white", "#faeeee", "indianred3"))
-  score <- score[nrow(score):1, , drop=FALSE]
+  score <- score[nrow(score):1, , drop = FALSE]
   x_axis <- colnames(score)
   y_axis <- rownames(score)
 
