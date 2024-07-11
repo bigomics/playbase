@@ -628,7 +628,6 @@ showProbeTypes <- function(organism, keytypes = NULL, ah = NULL, nprobe = 10) {
   key_matches <- list()
   key <- keytypes[1]
   for (key in keytypes) {
-
     # add symbol and genename on top of key as they will be used to
     # count the real number of probe matches
     suppressMessages(suppressWarnings(try(
@@ -643,7 +642,7 @@ showProbeTypes <- function(organism, keytypes = NULL, ah = NULL, nprobe = 10) {
 
     # set empty character to NA, as we only count not-NA to define probe type
     probe_matches[probe_matches == ""] <- NA
-    key_matches[[key]] <- probe_matches[,key]
+    key_matches[[key]] <- head(probe_matches[, key], nprobe)
   }
 
   return(key_matches)
