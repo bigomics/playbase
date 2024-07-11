@@ -172,8 +172,8 @@ pgx.createPGX <- function(counts,
                           convert.hugo = TRUE,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE,
-                          remove.outliers = TRUE,
-                          normalize = TRUE
+                          remove.outliers = TRUE
+                          ## normalize = TRUE
                           ) {
 
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
@@ -275,12 +275,12 @@ pgx.createPGX <- function(counts,
   ##  message("[createPGX] using passed log-expression matrix X...")
   ##}
   
-  if (normalize) {
-   X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
-   X <- limma::normalizeQuantiles(X) ## in log space
-  } else {
-     message("[createPGX] SKIPPING NORMALIZATION!")
-  }
+  ## if (normalize) {
+  ## X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
+  ## X <- limma::normalizeQuantiles(X) ## in log space
+  ## } else {
+  ##   message("[createPGX] SKIPPING NORMALIZATION!")
+  ## }
 
   ## -------------------------------------------------------------------
   ## Batch-correction (if requested. WARNING: changes counts )
@@ -351,7 +351,6 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   pgx$genes <- NULL
 
-
   message("[createPGX] annotating genes")
   pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table)
 
@@ -372,7 +371,7 @@ pgx.createPGX <- function(counts,
       ## DEseq2). Require at least in 2 or 1% of total. Specify the
       ## PRIOR CPM amount to regularize the counts and filter genes
       ## AZ (16.6.24): it crashes in presence of NAs
-      if(!datatype %in% c("proteomics: SNR")) {
+      if(datatype != "proteomics") {
           message("[createPGX] filtering out lowly expressed genes (zero counts)...")
           pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
       }
