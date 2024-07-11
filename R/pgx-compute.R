@@ -176,23 +176,33 @@ pgx.createPGX <- function(counts,
                           ## normalize = TRUE
                           ) {
 
-  if (!is.null(X) && !all(dim(counts) == dim(X))) {
-    stop("[createPGX] dimension of counts and X do not match\n")
-  }
-  if (!all(rownames(counts) == rownames(X))) {
-    stop("rownames of counts and X do not match\n")
-  }
+    message("[createPGX] datatype = ", datatype)
 
-  message("[createPGX] datatype = ", datatype)
-  message("[createPGX] dim.counts: ", dim(counts)[1], ",", dim(counts)[2])
-    if(!is.null(X)) {
-        message("[createPGX] dim.X: ", dim(X)[1], ", ", dim(X)[2])
+    if(!is.null(counts)) {
+        message("[createPGX] dim.counts: ", dim(counts)[1], ",", dim(counts)[2])
+        message("[createPGX] class.counts: ", class(counts))
+    } else {
+        stop("[createPGX] FATAL: counts must be provided")
     }
 
-  # stop if is.null organism
-  if (is.null(organism)) {
-    stop("[createPGX] FATAL: organism must be provided")
-  }
+    if(!is.null(X)) {
+        message("[createPGX] class.X: ", class(X))
+        message("[createPGX] dim.X: ", dim(X)[1], ", ", dim(X)[2])
+    } else {
+        stop("[createPGX] FATAL: X must be provided")
+    }
+
+    if (!is.null(X) && !all(dim(counts) == dim(X))) {
+        stop("[createPGX] dimension of counts and X do not match\n")
+    }
+
+    if (!all(rownames(counts) == rownames(X))) {
+        stop("rownames of counts and X do not match\n")
+    }
+
+    if (is.null(organism)) {
+        stop("[createPGX] FATAL: organism must be provided")
+    }
 
   ## -------------------------------------------------------------------
   ## clean up input files
