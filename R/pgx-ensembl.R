@@ -515,7 +515,7 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
     "SYMBOL", "ENSEMBL", "UNIPROT", "ENTREZID",
     "GENENAME", "MGI",
     "ENSEMBLTRANS", "ENSEMBLPROT",
-    "ACCNUM", "REFSEQ" 
+    "ACCNUM", "REFSEQ"
   )
   keytypes <- intersect(keytypes, keytypes(orgdb))
   key_matches <- rep(0L, length(keytypes))
@@ -589,7 +589,7 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
 
 
 #' @title Show some probe types for selected organism
-#' 
+#'
 #' @export
 showProbeTypes <- function(organism, keytypes = NULL, ah = NULL, nprobe = 10) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
@@ -605,7 +605,7 @@ showProbeTypes <- function(organism, keytypes = NULL, ah = NULL, nprobe = 10) {
   }
 
   ## get probe types for organism
-  if(is.null(keytypes)) {
+  if (is.null(keytypes)) {
     keytypes <- c(
       "SYMBOL", "ENSEMBL", "UNIPROT", "ENTREZID",
       "GENENAME", "MGI",
@@ -616,13 +616,13 @@ showProbeTypes <- function(organism, keytypes = NULL, ah = NULL, nprobe = 10) {
   keytypes0 <- keytypes
   keytypes <- intersect(keytypes, keytypes(orgdb))
 
-  if(length(keytypes) == 0) {
+  if (length(keytypes) == 0) {
     message("ERROR: no valid keytypes in: ", keytypes0)
     return(NULL)
   }
-  
+
   ## example probes
-  probes <- head(keys(orgdb),nprobe)
+  probes <- head(keys(orgdb), nprobe)
 
   ## Iterate over probe types
   key_matches <- list()
