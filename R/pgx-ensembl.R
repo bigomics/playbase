@@ -506,16 +506,16 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
   ## get correct OrgDb database for organism
   orgdb <- getOrgDb(organism, ah = ah)
   if (is.null(orgdb)) {
-    message("WARNING: unsupported organism '", organism, "'\n")
+    message("ERROR: unsupported organism '", organism, "'\n")
     return(NULL)
   }
 
   ## get probe types for organism
   keytypes <- c(
-    "SYMBOL", "ENSEMBL", "UNIPROT",
+    "SYMBOL", "ENSEMBL", "UNIPROT", "ENTREZID",
     "GENENAME", "MGI",
     "ENSEMBLTRANS", "ENSEMBLPROT",
-    "ACCNUM", "REFSEQ", "ENTREZID"
+    "ACCNUM", "REFSEQ" 
   )
   keytypes <- intersect(keytypes, keytypes(orgdb))
   key_matches <- rep(0L, length(keytypes))
@@ -577,7 +577,7 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
   ##  key_matches
   top_match <- NULL
   if (all(key_matches == 0)) {
-    message("WARNING:: Probe type not found, use one of the following probe types: ", paste(keytypes, collapse = " "))
+    message("WARNING:: Probe type not found. Valid probe types: ", paste(keytypes, collapse = " "))
     return(NULL)
   } else {
     top_match <- names(which.max(key_matches))
@@ -586,6 +586,69 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
 
   return(top_match)
 }
+
+
+#' @title Show some probe types for selected organism
+#' 
+#' @export
+showProbeTypes <- function(organism, keytypes = NULL, ah = NULL, nprobe = 10) {
+  if (tolower(organism) == "human") organism <- "Homo sapiens"
+  if (tolower(organism) == "mouse") organism <- "Mus musculus"
+  if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
+  organism
+
+  ## get correct OrgDb database for organism
+  orgdb <- getOrgDb(organism, ah = ah)
+  if (is.null(orgdb)) {
+    message("ERROR: unsupported organism '", organism, "'\n")
+    return(NULL)
+  }
+
+  ## get probe types for organism
+  if(is.null(keytypes)) {
+    keytypes <- c(
+      "SYMBOL", "ENSEMBL", "UNIPROT", "ENTREZID",
+      "GENENAME", "MGI",
+      "ENSEMBLTRANS", "ENSEMBLPROT",
+      "ACCNUM", "REFSEQ"
+    )
+  }
+  keytypes0 <- keytypes
+  keytypes <- intersect(keytypes, keytypes(orgdb))
+
+  if(length(keytypes) == 0) {
+    message("ERROR: no valid keytypes in: ", keytypes0)
+    return(NULL)
+  }
+  
+  ## example probes
+  probes <- head(keys(orgdb),nprobe)
+
+  ## Iterate over probe types
+  key_matches <- list()
+  key <- keytypes[1]
+  for (key in keytypes) {
+
+    # add symbol and genename on top of key as they will be used to
+    # count the real number of probe matches
+    suppressMessages(suppressWarnings(try(
+      probe_matches <- AnnotationDbi::select(
+        orgdb,
+        keys = probes,
+        keytype = "ENTREZID",
+        columns = key
+      ),
+      silent = TRUE
+    )))
+
+    # set empty character to NA, as we only count not-NA to define probe type
+    probe_matches[probe_matches == ""] <- NA
+    key_matches[[key]] <- probe_matches[,key]
+  }
+
+  return(key_matches)
+}
+
 
 #' @title Get all species in AnnotationHub/OrgDB
 #'
