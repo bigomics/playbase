@@ -113,13 +113,13 @@ plotPCSF <- function(pcsf,
   }
 
   igraph::V(pcsf)$label <- igraph::V(pcsf)$name
-  
-  if( nlabel > 0) {
-    top.cex <- head(order(-label_cex1),nlabel)
-    bottom.cex <- setdiff( 1:length(label_cex1), top.cex)
+
+  if (nlabel > 0) {
+    top.cex <- head(order(-label_cex1), nlabel)
+    bottom.cex <- setdiff(1:length(label_cex1), top.cex)
     igraph::V(pcsf)$label[bottom.cex] <- ""
   }
-  
+
   out <- NULL
   if (plot == "visnet") {
     library(igraph)
