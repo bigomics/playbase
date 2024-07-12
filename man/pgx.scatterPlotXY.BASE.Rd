@@ -41,6 +41,7 @@ pgx.scatterPlotXY.BASE(
   cex.clust = 1.5,
   tstep = 0.1,
   rstep = 0.1,
+  na.color = "#AAAAAA55",
   tooltip = NULL,
   theme = NULL,
   set.par = TRUE,

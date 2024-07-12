@@ -9,6 +9,7 @@ pgx.scatterPlotXY.PLOTLY(
   var = NULL,
   type = NULL,
   col = NULL,
+  na.color = "#AAAAAA55",
   cex = NULL,
   cex.lab = 0.8,
   cex.title = 1.2,
