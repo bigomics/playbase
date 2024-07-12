@@ -5518,9 +5518,9 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   score <- score / max(abs(score), na.rm = TRUE) ## global normalize
   score <- sign(score) * abs(score)**0.5 ## fudging for better colors???
 
-  message("dim.score = ", paste(dim(score),collapse="x"))
+  message("dim.score = ", paste(dim(score), collapse = "x"))
   message("NCOL.score = ", NCOL(score))
-  
+
   if (NCOL(score) == 1) {
     score <- score[order(-score[, 1]), 1, drop = FALSE]
     score <- cbind(score, score)
@@ -5538,7 +5538,7 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
     jj <- hclust(d2)$order
     score <- score[ii, jj, drop = FALSE]
   }
-  
+
   dim(score)
   colnames(score) <- substring(colnames(score), 1, 30)
   rownames(score) <- substring(rownames(score), 1, row.nchar)

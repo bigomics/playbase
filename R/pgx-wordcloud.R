@@ -175,12 +175,11 @@ pgx.calculateWordCloud <- function(pgx, progress = NULL, pg.unit = 1) {
 #'
 #' @export
 pgx.plotWordCloud <- function(pgx, contrast) {
-
-  if(!"wordcloud" %in% names(pgx)) {
+  if (!"wordcloud" %in% names(pgx)) {
     message("[pgx.plotWordCloud] ERROR: pgx object has no wordcloud results")
     return()
   }
-  
+
   res <- pgx$wordcloud
   gsea1 <- res$gsea[[contrast]]
 
