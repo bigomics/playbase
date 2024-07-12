@@ -3443,7 +3443,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   if (is.null(type)) {
     type <- c("numeric", "factor")[1 + class(var) %in% c("factor", "character")]
   }
-  
+
   ## automatically set pointsize of dots
   if (is.null(cex)) {
     nr <- nrow(pos)
