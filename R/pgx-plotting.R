@@ -3213,14 +3213,14 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
           legend.text = ggplot2::element_text(size = 9 * cex.legend),
           legend.key.size = grid::unit(legend.ysp * 0.8 * cex.legend, "lines"),
           legend.key.height = grid::unit(legend.ysp * 0.8 * cex.legend, "lines"),
-          legend.key = element_rect(color = "transparent", fill = scales::alpha("white", 0.0)),
+          legend.key = ggplot2::element_rect(color = "transparent", fill = scales::alpha("white", 0.0)),
           legend.justification = legend.justification,
           legend.position = legend.position,
           legend.background = ggplot2::element_rect(fill = scales::alpha("white", 0.5)),
-          legend.margin = margin(0, 4, 4, 4),
+          legend.margin = ggplot2::margin(0, 4, 4, 4),
           legend.box.just = "right",
           legend.box.background = ggplot2::element_rect(color = "#888888", size = 0.25),
-          legend.box.margin = margin(0.8, 1, 1, 1)
+          legend.box.margin = ggplot2::margin(0.8, 1, 1, 1)
         ) +
         ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(size = 2.8 * cex.legend)))
     } else {
