@@ -9,7 +9,8 @@ plotPCSF(
   highlightby = c("centrality", "prize")[1],
   plot = c("visnet", "igraph"),
   node_cex = 30,
-  label_cex = 30
+  label_cex = 30,
+  nlabel = -1
 )
 }
 \description{

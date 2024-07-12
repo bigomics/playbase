@@ -133,8 +133,10 @@ pgx.getContrasts <- function(pgx) {
 #' @export
 pgx.getContrastMatrix <- function(pgx) {
   ct.matrix <- pgx$contrasts
-  if (is.null(ct.matrix)) ct.matrix <- pgx$model.parameters$exp.matrix
-  ct.matrix <- contrastAsLabels(ct.matrix)
+  if (is.null(ct.matrix)) {
+    ct.matrix <- pgx$model.parameters$exp.matrix
+    ct.matrix <- contrastAsLabels(ct.matrix)
+  }
   ct.matrix
 }
 
