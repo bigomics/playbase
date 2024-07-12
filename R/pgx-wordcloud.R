@@ -29,7 +29,7 @@
 #' @export
 pgx.calculateWordCloud <- function(pgx, progress = NULL, pg.unit = 1) {
   if (is.null(pgx$gset.meta)) {
-    cat("[pgx.calculateWordCloud] FATAL ERROR: no gset.meta in object\n")
+    message("[pgx.calculateWordCloud] ERROR: no gset.meta in object")
     return(NULL)
   }
 
@@ -175,6 +175,12 @@ pgx.calculateWordCloud <- function(pgx, progress = NULL, pg.unit = 1) {
 #'
 #' @export
 pgx.plotWordCloud <- function(pgx, contrast) {
+
+  if(!"wordcloud" %in% names(pgx)) {
+    message("[pgx.plotWordCloud] ERROR: pgx object has no wordcloud results")
+    return()
+  }
+  
   res <- pgx$wordcloud
   gsea1 <- res$gsea[[contrast]]
 

@@ -348,7 +348,8 @@ pgx.scatterPlot <- function(pgx, pheno = NULL, gene = NULL,
     plt <- pgx.scatterPlotXY(
       pos, var,
       plotlib = plotlib, #
-      xlab = colnames(pos)[1], ylab = colnames(pos)[2],
+      xlab = colnames(pos)[1],
+      ylab = colnames(pos)[2],
       type = "numeric", ...
     )
   }
@@ -359,11 +360,27 @@ pgx.scatterPlot <- function(pgx, pheno = NULL, gene = NULL,
     plt <- pgx.scatterPlotXY(
       pos, var,
       plotlib = plotlib, #
-      xlab = colnames(pos)[1], ylab = colnames(pos)[2],
+      xlab = colnames(pos)[1],
+      ylab = colnames(pos)[2],
       ...
     )
   }
   if (!is.null(contrast)) {
+    if (is.null(pos) && level == "gene") pos <- pgx$tsne2d
+    var <- pgx$contrast[rownames(pos), contrast]
+    title <- contrast
+    plt <- pgx.scatterPlotXY(
+      pos, var,
+      plotlib = plotlib, #
+      xlab = colnames(pos)[1],
+      ylab = colnames(pos)[2],
+      ...
+    )
+  }
+
+
+
+  if (FALSE && !is.null(contrast)) {
     if (is.null(pos) && "cluster.genes" %in% names(pgx)) {
       pos <- pgx$cluster.genes$pos[[1]][, 1:2]
     }
@@ -374,7 +391,7 @@ pgx.scatterPlot <- function(pgx, pheno = NULL, gene = NULL,
       var <- pgx$gx.meta$meta[[contrast]]$meta.fx
       names(var) <- rownames(pgx$gx.meta$meta[[contrast]])
       var <- var[rownames(pos)]
-      tooltip <- probe2symbol(rownames(counts), ngs$genes)
+      tooltip <- probe2symbol(rownames(counts), pgx$genes)
     }
     if (level == "geneset") {
       var <- pgx$gset.meta$meta[[contrast]]$meta.fx
@@ -2770,10 +2787,10 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
       ) # omics_pal_d("dark")(8))
     } else if (is.null(col) && nz == 2) {
       col1 <- rev(grDevices::grey.colors(2, end = 0.8))
-      col1 <- c("#AAAAAA55", "#555555FF")
-      col1 <- c("#00008855", "#AA0000FF") ## blue/red
-      col1 <- c("#CCCCCC55", "#AA0000FF") ## grey/red
-      col1 <- c("#AAAAAA55", "#AA0000FF") ## grey/red
+      col1 <- c("#AAAAAA88", "#555555FF")
+      col1 <- c("#00008888", "#AA0000FF") ## blue/red
+      col1 <- c("#CCCCCC88", "#AA0000FF") ## grey/red
+      col1 <- c("#88888899", "#AA0000FF") ## grey/red
     } else if (is.null(col) && nz == 1) {
       col1 <- c("#22222255")
     } else {
@@ -2781,7 +2798,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     }
     col1 <- Matrix::head(rep(col1, 99), nz)
     pt.col <- col1[z1]
-    pt.col[is.na(pt.col)] <- "#DDDDDD33"
+    pt.col[is.na(pt.col)] <- "#AAAAAA55"
     pt.col0 <- pt.col
     if (opacity < 1) {
       pt.col <- add_opacity(pt.col, opacity)
@@ -5457,6 +5474,7 @@ pgx.barplot.PLOTLY <- function(
 #' @export
 pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
                                plotlib = "base", filter = NULL,
+                               cexCol = 1.4, cexRow = 1,
                                normalize = FALSE, rotate = FALSE, maxterm = 40, maxfc = 10,
                                tl.cex = 0.85, row.nchar = 60, colorbar = FALSE) {
   if (what == "geneset") {
@@ -5500,23 +5518,27 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   score <- score / max(abs(score), na.rm = TRUE) ## global normalize
   score <- sign(score) * abs(score)**0.5 ## fudging for better colors???
 
-  d1 <- as.dist(1 - cor(t(score), use = "pairwise"))
-  d2 <- as.dist(1 - cor(score, use = "pairwise"))
-  d1 <- dist(score)
-  d2 <- dist(t(score))
-  d1[is.na(d1)] <- 1
-  d2[is.na(d2)] <- 1
-  ii <- 1:nrow(score)
-  jj <- 1:ncol(score)
+  message("dim.score = ", paste(dim(score),collapse="x"))
+  message("NCOL.score = ", NCOL(score))
+  
   if (NCOL(score) == 1) {
     score <- score[order(-score[, 1]), 1, drop = FALSE]
     score <- cbind(score, score)
     colnames(score)[2] <- ""
   } else {
+    d1 <- as.dist(1 - cor(t(score), use = "pairwise"))
+    d2 <- as.dist(1 - cor(score, use = "pairwise"))
+    d1 <- dist(score)
+    d2 <- dist(t(score))
+    d1[is.na(d1)] <- 1
+    d2[is.na(d2)] <- 1
+    ii <- 1:nrow(score)
+    jj <- 1:ncol(score)
     ii <- hclust(d1)$order
     jj <- hclust(d2)$order
     score <- score[ii, jj, drop = FALSE]
   }
+  
   dim(score)
   colnames(score) <- substring(colnames(score), 1, 30)
   rownames(score) <- substring(rownames(score), 1, row.nchar)
@@ -5538,8 +5560,8 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
       mar = c(15, 30),
       keysize = 0.4,
       key = FALSE,
-      cexRow = 1.2,
-      cexCol = 1.8,
+      cexRow = cexRow,
+      cexCol = cexCol,
       softmax = FALSE
     )
   }

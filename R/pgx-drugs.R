@@ -334,7 +334,9 @@ pgx.plotDrugConnectivity <- function(pgx, contrast,
   plotTopDrugs <- function(db, ntop = 15) {
     dr <- pgx$drugs[[db]]
     sel <- 1:nrow(dr$annot)
-    sel <- grepl("[a-z]{4}", rownames(dr$annot)) & !is.na(dr$annot[, "moa"])
+    dd <- rownames(dr$X)
+    ##  sel <- grepl("[a-z]{4}", dd) & !is.na(dr$annot[dd, "moa"])
+    sel <- grepl("[a-z]{4}", dd)
     dx <- sort(dr$X[sel, 1], decreasing = TRUE)
     dx.top <- c(head(dx, ntop), tail(dx, ntop))
     barplot(dx.top, las = 3, horiz = FALSE, ylab = "similarity (NES)")
