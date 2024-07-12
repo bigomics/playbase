@@ -3002,7 +3002,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
                                      zlim = NULL, zlog = FALSE, softmax = FALSE, zsym = FALSE,
                                      xlab = NULL, ylab = NULL, cmin = 0, cmax = 1, xlim = NULL, ylim = NULL,
                                      hilight2 = hilight, hilight.col = "black",
-                                     hilight.lwd = 0.8, hilight.cex = NULL,
+                                     hilight.lwd = 0.8, hilight.cex = NULL, na.color = "#AAAAAA55",
                                      opacity = 1, label.clusters = FALSE, labels = NULL,
                                      legend.ysp = 0.85, legend.pos = "bottomleft",
                                      tooltip = NULL, theme = NULL, set.par = TRUE,
@@ -3410,7 +3410,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
 #'
 #' @export
 pgx.scatterPlotXY.PLOTLY <- function(pos,
-                                     var = NULL, type = NULL, col = NULL,
+                                     var = NULL, type = NULL, col = NULL, na.color = "#AAAAAA55",
                                      cex = NULL, cex.lab = 0.8, cex.title = 1.2,
                                      cex.clust = 1.5, cex.legend = 1, cex.axis = 1,
                                      xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL,
@@ -3434,14 +3434,13 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     var <- rep("_", nrow(pos))
     names(var) <- rownames(pos)
   }
-
   var <- var[match(rownames(pos), names(var))]
   names(var) <- rownames(pos)
 
   if (is.null(type)) {
     type <- c("numeric", "factor")[1 + class(var) %in% c("factor", "character")]
   }
-
+  
   ## automatically set pointsize of dots
   if (is.null(cex)) {
     nr <- nrow(pos)
@@ -3853,8 +3852,8 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
 #' @param barscale Not used.
 #'
 #' @export
-pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, cex = 1,
-                                 cex.lab = 0.8, cex.title = 1.2, cex.clust = 1.5, cex.legend = 1,
+pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, na.color = "#AAAAAA55",
+                                 cex = 1, cex.lab = 0.8, cex.title = 1.2, cex.clust = 1.5, cex.legend = 1,
                                  zoom = 1, legend = TRUE, bty = "n", hilight = NULL,
                                  zlim = NULL, zlog = FALSE, softmax = FALSE,
                                  xlab = NULL, ylab = NULL, hilight2 = hilight,
