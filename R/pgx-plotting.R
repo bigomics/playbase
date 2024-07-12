@@ -325,7 +325,7 @@ pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap", "pacmap"), nb = 
 pgx.scatterPlot <- function(pgx, pheno = NULL,
                             gene = NULL, geneset = NULL,
                             contrast = NULL, level = "gene",
-                            method = "tsne", pos = NULL, 
+                            method = "tsne", pos = NULL,
                             plotlib = "base", ...) {
   ## Scatter t-SNE plot samples (or genes) colored on phenotype,
   ## gene expression, geneset expresssion or (correlation with)
@@ -335,15 +335,15 @@ pgx.scatterPlot <- function(pgx, pheno = NULL,
   if (is.null(pos)) {
     pos <- pgx$tsne2d
     cpos <- pgx$cluster$pos
-    if(method == "tsne" && 'tsne2d' %in% names(cpos)) pos <- cpos[['tsne2d']]
-    if(method == "pca" && 'tsne2d' %in% names(cpos))  pos <- cpos[['pca2d']]
-    if(method == "umap"&& 'tsne2d' %in% names(cpos))  pos <- cpos[['umap2d']]
+    if (method == "tsne" && "tsne2d" %in% names(cpos)) pos <- cpos[["tsne2d"]]
+    if (method == "pca" && "tsne2d" %in% names(cpos)) pos <- cpos[["pca2d"]]
+    if (method == "umap" && "tsne2d" %in% names(cpos)) pos <- cpos[["umap2d"]]
   }
 
-  if( nrow(pos) != nrow(pgx$samples) ) {
+  if (nrow(pos) != nrow(pgx$samples)) {
     stop("[pgx.scatterPlot] dimension mismatch of positions")
   }
-  
+
   plt <- NULL
   vartype <- c("numeric", "factor")[1]
   if (!is.null(pheno)) {
