@@ -8,10 +8,12 @@ pgx.scatterPlot(
   pgx,
   pheno = NULL,
   gene = NULL,
+  geneset = NULL,
   contrast = NULL,
   level = "gene",
-  plotlib = "base",
+  method = "tsne",
   pos = NULL,
+  plotlib = "base",
   ...
 )
 }
@@ -26,9 +28,9 @@ pgx.scatterPlot(
 
 \item{level}{Data level to use ("gene", "geneset")}
 
-\item{plotlib}{Plotting library ("base", "plotly")}
-
 \item{pos}{Positions for points (if level="geneset")}
+
+\item{plotlib}{Plotting library ("base", "plotly")}
 
 \item{...}{Other arguments passed to plotting functions}
 }
