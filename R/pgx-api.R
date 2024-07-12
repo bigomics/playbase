@@ -132,10 +132,10 @@ pgx.getContrasts <- function(pgx) {
 #' @describeIn pgx.getMetaMatrix Get the contrast matrix from PGX
 #' @export
 pgx.getContrastMatrix <- function(pgx) {
-    ct.matrix <- pgx$contrasts
-    if(is.null(ct.matrix)) ct.matrix <- pgx$model.parameters$exp.matrix
-    ct.matrix <- contrastAsLabels(ct.matrix)
-    ct.matrix
+  ct.matrix <- pgx$contrasts
+  if (is.null(ct.matrix)) ct.matrix <- pgx$model.parameters$exp.matrix
+  ct.matrix <- contrastAsLabels(ct.matrix)
+  ct.matrix
 }
 
 #' @describeIn pgx.getMetaMatrix get the top genesets from PGX

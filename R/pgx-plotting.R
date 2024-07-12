@@ -354,7 +354,7 @@ pgx.scatterPlot <- function(pgx, pheno = NULL,
   if (!is.null(contrast)) {
     if (is.null(pos) && level == "gene") pos <- pgx$tsne2d
     ct.matrix <- pgx$contrasts
-    if(is.null(ct.matrix)) ct.matrix <- pgx$model.parameters$exp.matrix
+    if (is.null(ct.matrix)) ct.matrix <- pgx$model.parameters$exp.matrix
     ct.matrix <- playbase::contrastAsLabels(ct.matrix)
     var <- ct.matrix[rownames(pos), contrast]
     title <- contrast
