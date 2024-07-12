@@ -2679,7 +2679,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
                                    zlim = NULL, zlog = FALSE, zsym = FALSE, softmax = FALSE, pch = 20,
                                    cex = NULL, cex.lab = 1, cex.title = 1.2, cex.legend = 1,
                                    zoom = 1, legend = TRUE, bty = "o", legend.ysp = 0.85,
-                                   legend.pos = "bottomleft", lab.pos = NULL, repel = TRUE,
+                                   legend.pos = "bottomright", lab.pos = NULL, repel = TRUE,
                                    xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL, dlim = 0.05,
                                    hilight2 = hilight, hilight.cex = NULL, lab.xpd = TRUE,
                                    hilight = NULL, hilight.col = NULL, hilight.lwd = 0.8,
@@ -3006,7 +3006,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
                                      hilight2 = hilight, hilight.col = "black",
                                      hilight.lwd = 0.8, hilight.cex = NULL, na.color = "#AAAAAA55",
                                      opacity = 1, label.clusters = FALSE, labels = NULL,
-                                     legend.ysp = 0.85, legend.pos = "bottomleft",
+                                     legend.ysp = 0.85, legend.pos = "bottomright",
                                      tooltip = NULL, theme = NULL, set.par = TRUE,
                                      label.type = c("text", "box"), base_size = 11,
                                      title = NULL, barscale = 0.8, axis = TRUE, box = TRUE, guide = "legend") {
@@ -3860,7 +3860,7 @@ pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, na.co
                                  zlim = NULL, zlog = FALSE, softmax = FALSE,
                                  xlab = NULL, ylab = NULL, hilight2 = hilight,
                                  opacity = 1, label.clusters = FALSE, labels = NULL,
-                                 legend.ysp = 0.85, legend.pos = "bottomleft",
+                                 legend.ysp = 0.85, legend.pos = "bottomright",
                                  tooltip = NULL, theme = NULL, set.par = TRUE,
                                  title = NULL, barscale = 0.8) {
   if (is.null(colnames(pos))) {
