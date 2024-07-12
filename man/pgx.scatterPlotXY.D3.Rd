@@ -9,6 +9,7 @@ pgx.scatterPlotXY.D3(
   var = NULL,
   type = NULL,
   col = NULL,
+  na.color = "#AAAAAA55",
   cex = 1,
   cex.lab = 0.8,
   cex.title = 1.2,

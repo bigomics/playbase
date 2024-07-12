@@ -35,6 +35,7 @@ pgx.scatterPlotXY.GGPLOT(
   hilight.col = "black",
   hilight.lwd = 0.8,
   hilight.cex = NULL,
+  na.color = "#AAAAAA55",
   opacity = 1,
   label.clusters = FALSE,
   labels = NULL,
