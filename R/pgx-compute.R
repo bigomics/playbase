@@ -173,7 +173,6 @@ pgx.createPGX <- function(counts,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE,
                           remove.outliers = TRUE
-                          ## normalize = TRUE
                           ) {
 
     message("[createPGX] datatype = ", datatype)
@@ -223,50 +222,6 @@ pgx.createPGX <- function(counts,
     contrasts <- contrasts[used.samples, , drop = FALSE] ## sample-based!!!
   }
     
-  ## ------------------------------------------------------------------------------------
-  ## check counts: linear or logarithm?: Change log2+0 | log2+1 according to datatype
-  ## ------------------------------------------------------------------------------------
-  ## NEED TO HANDLE AT THE UPLOAD - work in progress.
-  ##  message("[createPGX] check logarithm/linear...")
-  ##  if (datatype == "proteomics: SNR") {
-  ##      is.logx <- FALSE
-  ##      prior <- 0
-  ##  } else {
-  ##      is.logx <- NULL
-  ##      prior <- 1
-  ##  }
-
-  ##  guess.log <- (min(counts, na.rm = TRUE) < 0 || max(counts, na.rm = TRUE) < 100)
-  ##  guess.log <- guess.log && (is.null(is.logx) || is.logx == TRUE)
-  ##  if (is.null(is.logx)) { is.logx <- guess.log }
-  ##  if (is.logx) {
-  ##      message("[createPGX] input assumed logarithm: undo-ing logarithm")
-        ## counts <- pmax(2**counts - 1, 0)
-  ##      counts <- 2 ** counts ## - prior
-  ##  } else {
-  ##      message("[createPGX] input assumed counts (not logarithm)")
-  ##  }    
-
-  ## -------------------------------------------------------------------
-  ## How to deal with missing or infinite values??
-  ## -------------------------------------------------------------------
-  ## remove XXL/Infinite values and set to NA
-  ## if (remove.xxl) {
-  ##  zsd <- 10 ## default value
-  ##  if (is.numeric(remove.xxl)) zsd <- remove.xxl
-  ##  counts <- counts.removeXXLvalues(counts, xxl.val = NA, zsd = zsd)
-  ## }
-
-  ## -------------------------------------------------------------------
-  ## Check bad samples (in total counts, after imputation)
-  ## -------------------------------------------------------------------
-  ## remove samples from counts matrix with extreme (1000x more or
-  ## 1000x less) total counts (than median).
-  ## if (remove.outliers) {
-  ##     message("[createPGX] removing outliers samples ")
-  ##    counts <- counts.removeSampleOutliers(counts)
-  ## }
-
   ## -------------------------------------------------------------------
   ## Auto-scaling (scale down huge values, often in proteomics)
   ## -------------------------------------------------------------------
@@ -274,23 +229,6 @@ pgx.createPGX <- function(counts,
   counts <- res$counts
   counts_multiplier <- res$counts_multiplier
   remove(res)
-
-  ## -------------------------------------------------------------------
-  ## COMPUTE LOG NORMALIZE EXPRESSION (if not given)
-  ## -------------------------------------------------------------------
-  ## if (is.null(X)) {
-  ##  message("[createPGX] creating log-expression matrix X...")
-  ##  X <- log2(1 + counts)
-  ##} else {
-  ##  message("[createPGX] using passed log-expression matrix X...")
-  ##}
-  
-  ## if (normalize) {
-  ## X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
-  ## X <- limma::normalizeQuantiles(X) ## in log space
-  ## } else {
-  ##   message("[createPGX] SKIPPING NORMALIZATION!")
-  ## }
 
   ## -------------------------------------------------------------------
   ## Batch-correction (if requested. WARNING: changes counts )
@@ -393,7 +331,6 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Filter genes?
   ## -------------------------------------------------------------------
-
   do.filter <- (only.known | only.proteincoding)
   if (do.filter) {
     if (only.known) {
