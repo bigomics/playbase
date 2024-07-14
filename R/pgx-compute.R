@@ -70,6 +70,7 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
     samples = samples,
     contrasts = contrasts,
     X = NULL,
+    impX = NULL,
     is.logx = NULL,
     batch.correct = TRUE,
     auto.scale = TRUE,
@@ -162,6 +163,7 @@ pgx.createPGX <- function(counts,
                           creator = "unknown",
                           description = "No description provided.",
                           X = NULL,
+                          impX = NULL,
                           is.logx = NULL,
                           batch.correct = TRUE,
                           auto.scale = TRUE,
@@ -180,6 +182,8 @@ pgx.createPGX <- function(counts,
     if(!is.null(counts)) {
         message("[createPGX] dim.counts: ", dim(counts)[1], ",", dim(counts)[2])
         message("[createPGX] class.counts: ", class(counts))
+        nmissing <- sum(is.na(counts))
+        message("[createPGX] counts has ", nmissing, " missing values")
     } else {
         stop("[createPGX] FATAL: counts must be provided")
     }
@@ -187,8 +191,15 @@ pgx.createPGX <- function(counts,
     if(!is.null(X)) {
         message("[createPGX] class.X: ", class(X))
         message("[createPGX] dim.X: ", dim(X)[1], ", ", dim(X)[2])
+        nmissing <- sum(is.na(X))
+        message("[createPGX] X has ", nmissing, " missing values")
     } else {
         stop("[createPGX] FATAL: X must be provided")
+    }
+
+    if(!is.null(impX)) {
+        message("[createPGX] dim.impX: impX matrix also provided.")
+        message("[createPGX] dim.impX: ", dim(impX)[1], ", ", dim(impX)[2])
     }
 
     if (!is.null(X) && !all(dim(counts) == dim(X))) {
@@ -203,214 +214,246 @@ pgx.createPGX <- function(counts,
         stop("[createPGX] FATAL: organism must be provided")
     }
 
-  ## -------------------------------------------------------------------
-  ## clean up input files
-  ## -------------------------------------------------------------------
-  samples <- as.data.frame(samples, drop = FALSE)
-  counts <- as.matrix(counts)
-  if (is.null(contrasts)) contrasts <- samples[, 0]
+    ## -------------------------------------------------------------------
+    ## clean up input files
+    ## -------------------------------------------------------------------
+    samples <- as.data.frame(samples, drop = FALSE)
+    counts <- as.matrix(counts)
+    if (is.null(contrasts)) contrasts <- samples[, 0]
 
-  ## convert old-style contrast matrix to sample-wise labeled contrasts
-  contrasts <- playbase::contrasts.convertToLabelMatrix(contrasts, samples)
+    ## convert old-style contrast matrix to sample-wise labeled contrasts
+    contrasts <- playbase::contrasts.convertToLabelMatrix(contrasts, samples)
 
-  ## prune unused samples
-  contrasts[contrasts %in% c("", " ", "NA")] <- NA
-  used.samples <- names(which(rowSums(!is.na(contrasts)) > 0))
-  if (prune.samples && length(used.samples) < ncol(counts)) {
-    counts <- counts[, used.samples, drop = FALSE]
-    samples <- samples[used.samples, , drop = FALSE]
-    contrasts <- contrasts[used.samples, , drop = FALSE] ## sample-based!!!
-  }
+    ## prune unused samples
+    contrasts[contrasts %in% c("", " ", "NA")] <- NA
+    used.samples <- names(which(rowSums(!is.na(contrasts)) > 0))
+    if (prune.samples && length(used.samples) < ncol(counts)) {
+        counts <- counts[, used.samples, drop = FALSE]
+        samples <- samples[used.samples, , drop = FALSE]
+        contrasts <- contrasts[used.samples, , drop = FALSE] ## sample-based!!!
+    }
     
-  ## -------------------------------------------------------------------
-  ## Auto-scaling (scale down huge values, often in proteomics)
-  ## -------------------------------------------------------------------
-  res <- counts.autoScaling(counts)
-  counts <- res$counts
-  counts_multiplier <- res$counts_multiplier
-  remove(res)
+    ## -------------------------------------------------------------------
+    ## Auto-scaling (scale down huge values, often in proteomics)
+    ## -------------------------------------------------------------------
+    res <- counts.autoScaling(counts)
+    counts <- res$counts
+    counts_multiplier <- res$counts_multiplier
+    remove(res)
 
-  ## -------------------------------------------------------------------
-  ## Batch-correction (if requested. WARNING: changes counts )
-  ## -------------------------------------------------------------------
-  ## batch.par <- c("batch", "batch2")
-  ## has.batchpar <- any(grepl("^batch|^batch2", colnames(samples), ignore.case = TRUE))
-  ## if (batch.correct && has.batchpar) {
-  ##  b <- "batch"
-  ##  bb <- grep("^batch|^batch2", colnames(samples), ignore.case = TRUE, value = TRUE)
-  ##  for (b in bb) {
-  ##    message("[createPGX] batch correcting for parameter '", b, "'\n")
-  ##    which.zero <- which(counts == 0, arr.ind = TRUE)
-  ##    bx <- samples[, b]
-  ##    if (length(unique(bx[!is.na(bx)])) > 1) {
-  ##      message("[createPGX] batch correcting for counts using ComBat\n")
-  ##      ## X <- limma::removeBatchEffect(X, batch = bx) ## in log-space
-  ##      X <- sva::ComBat(X, batch = bx) ## in log-space
-  ##      X[which.zero] <- 0
-  ##      ## counts <- pmax(2**X - 1, 0) ## batch corrected counts???
-  ##    } else {
-  ##      message("createPGX:batch.correct] batch parameter needs more than two levels")
-  ##    }
-  ##  }
-  ## }
+    ## -------------------------------------------------------------------
+    ## Batch-correction (if requested. WARNING: changes counts )
+    ## -------------------------------------------------------------------
+    ## batch.par <- c("batch", "batch2")
+    ## has.batchpar <- any(grepl("^batch|^batch2", colnames(samples), ignore.case = TRUE))
+    ## if (batch.correct && has.batchpar) {
+    ##  b <- "batch"
+    ##  bb <- grep("^batch|^batch2", colnames(samples), ignore.case = TRUE, value = TRUE)
+    ##  for (b in bb) {
+    ##    message("[createPGX] batch correcting for parameter '", b, "'\n")
+    ##    which.zero <- which(counts == 0, arr.ind = TRUE)
+    ##    bx <- samples[, b]
+    ##    if (length(unique(bx[!is.na(bx)])) > 1) {
+    ##      message("[createPGX] batch correcting for counts using ComBat\n")
+    ##      ## X <- limma::removeBatchEffect(X, batch = bx) ## in log-space
+    ##      X <- sva::ComBat(X, batch = bx) ## in log-space
+    ##      X[which.zero] <- 0
+    ##      ## counts <- pmax(2**X - 1, 0) ## batch corrected counts???
+    ##    } else {
+    ##      message("createPGX:batch.correct] batch parameter needs more than two levels")
+    ##    }
+    ##  }
+    ## }
 
-  ## -------------------------------------------------------------------
-  ## conform all matrices
-  ## -------------------------------------------------------------------
-  message("[createPGX] conforming matrices...")
-  kk <- intersect(colnames(counts), rownames(samples))
-  counts <- counts[, kk, drop = FALSE]
-  samples <- samples[kk, , drop = FALSE]
-  samples <- utils::type.convert(samples, as.is = TRUE) ## automatic type conversion
-  X <- X[, kk, drop = FALSE]
-  X <- X[match(rownames(counts), rownames(X)), ]
-  if (all(kk %in% rownames(contrasts))) {
-    contrasts <- contrasts[kk, , drop = FALSE]
-  }
-
-  ## -------------------------------------------------------------------
-  ## create pgx object
-  ## -------------------------------------------------------------------
-  message("[createPGX] creating pgx object...")
-
-  ## remove special characters from description (other columns too??)
-  description <- gsub("[\"\']", " ", description) ## remove quotes (important!!)
-  description <- gsub("[\n]", ". ", description) ## replace newline
-  description <- trimws(gsub("[ ]+", " ", description)) ## remove ws
-
-  pgx <- list(
-    name = name,
-    organism = organism,
-    version = packageVersion("playbase"),
-    date = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
-    creator = creator,
-    datatype = datatype,
-    description = description,
-    samples = data.frame(samples, check.names = FALSE),
-    counts = as.matrix(counts),
-    contrasts = contrasts,
-    X = X,
-    total_counts = Matrix::colSums(counts, na.rm = TRUE), # input normalized log-expression (can be NULL)
-    counts_multiplier = counts_multiplier
-  )
-
-  ## -------------------------------------------------------------------
-  ## create gene annotation table
-  ## -------------------------------------------------------------------
-  pgx$genes <- NULL
-
-  message("[createPGX] annotating genes")
-  pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table)
-
-  if (is.null(pgx$genes)) {
-     stop("[createPGX] FATAL: Could not build gene annotation")
-  }
-
-  ## -------------------------------------------------------------------
-  ## Filter out not-expressed
-  ## -------------------------------------------------------------------
-  if (filter.genes) {
-      ## There is second filter in the statistics computation. This
-      ## first filter is primarily to reduce the counts table.
-      message("[createPGX] filtering out not-expressed genes (zero counts)...")
-      pgx <- pgx.filterZeroCounts(pgx)
-
-      ## prefiltering for low-expressed genes (recommended for edgeR and
-      ## DEseq2). Require at least in 2 or 1% of total. Specify the
-      ## PRIOR CPM amount to regularize the counts and filter genes
-      ## AZ (16.6.24): it crashes in presence of NAs
-      if(datatype != "proteomics") {
-          message("[createPGX] filtering out lowly expressed genes (zero counts)...")
-          pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
-      }
-      ## Conform gene table
-      ii <- match(rownames(pgx$counts), rownames(pgx$genes))
-      pgx$genes <- pgx$genes[ii, , drop = FALSE]
-  }
-
-  ## -------------------------------------------------------------------
-  ## Filter genes?
-  ## -------------------------------------------------------------------
-  do.filter <- (only.known | only.proteincoding)
-  if (do.filter) {
-    if (only.known) {
-      has.symbol <- (!is.na(pgx$genes$symbol) & pgx$genes$symbol != "")
-      table(has.symbol)
-      pgx$genes <- pgx$genes[which(has.symbol), ]
+    ## -------------------------------------------------------------------
+    ## conform all matrices
+    ## -------------------------------------------------------------------
+    message("[createPGX] conforming matrices...")
+    kk <- intersect(colnames(counts), rownames(samples))
+    counts <- counts[, kk, drop = FALSE]
+    samples <- samples[kk, , drop = FALSE]
+    samples <- utils::type.convert(samples, as.is = TRUE) ## automatic type conversion
+    X <- X[, kk, drop = FALSE]
+    X <- X[match(rownames(counts), rownames(X)), ]
+    if (all(kk %in% rownames(contrasts))) {
+        contrasts <- contrasts[kk, , drop = FALSE]
     }
 
-    if (only.proteincoding && organism != "No organism" && c("protein.coding" %in% pgx$genes$gene_biotype)) { # TODO some organisms do not have gene_biotype, that need to be fixed
-      is.proteincoding <- grepl("protein.coding", pgx$genes$gene_biotype)
-      table(pgx$genes$gene_biotype)
-      tt <- paste(paste(names(table(pgx$genes$gene_biotype)), table(pgx$genes$gene_biotype), sep = "="), collapse = ";")
-      pgx$genes <- pgx$genes[is.proteincoding, , drop = FALSE]
-    }
+    ## -------------------------------------------------------------------
+    ## create pgx object
+    ## -------------------------------------------------------------------
+    message("[createPGX] creating pgx object...")
 
-    keep <- match(rownames(pgx$genes), rownames(pgx$counts))
+    ## remove special characters from description (other columns too??)
+    description <- gsub("[\"\']", " ", description) ## remove quotes (important!!)
+    description <- gsub("[\n]", ". ", description) ## replace newline
+    description <- trimws(gsub("[ ]+", " ", description)) ## remove ws
 
-    pgx$counts <- pgx$counts[keep, , drop = FALSE]
-    if (!is.null(pgx$X)) {
-      keep <- match(rownames(pgx$genes), rownames(pgx$X))
-      pgx$X <- pgx$X[keep, , drop = FALSE] ##  NOT ALIGNED???
-    }
-  }
-
-  ## NOTE: generally pgx$X, pgx$counts, and pgx$genes should always be
-  ## aligned to prevent mistakes and unneeded matching of tables.
-
-  
-  ## -------------------------------------------------------------------
-  ## collapse probe-IDs to gene symbol and aggregate duplicates
-  ## -------------------------------------------------------------------
-
-  if (convert.hugo) {
-    message("[createPGX] collapsing probes by SYMBOL")
-    symbol <- pgx$genes[rownames(pgx$counts), "symbol"]
-    symbol[is.na(symbol)] <- "" ## avoids warning
-
-    ## sum up duplicated rows
-    pgx$counts <- rowsum(pgx$counts, symbol)
-    pgx$counts <- pgx$counts[rownames(pgx$counts) != "", , drop = FALSE]
-
-    if (!is.null(pgx$X)) {
-      pgx$X <- log2(rowsum(2**pgx$X, symbol))
-      pgx$X <- pgx$X[rownames(pgx$X) != "", , drop = FALSE]
-    }
-
-    ## Collapse features as a comma-separated elements
-    agg_features <- aggregate(
-      feature ~ symbol,
-      data = pgx$genes,
-      function(x) paste(unique(x), collapse = "; ") # old symbol annotation has "; " as separator, we should keep it for compatibility with playbase <= 1.3.2
+    pgx <- list(
+        name = name,
+        organism = organism,
+        version = packageVersion("playbase"),
+        date = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+        creator = creator,
+        datatype = datatype,
+        description = description,
+        samples = data.frame(samples, check.names = FALSE),
+        counts = as.matrix(counts),
+        contrasts = contrasts,
+        X = X,
+        impX = impX,
+        total_counts = Matrix::colSums(counts, na.rm = TRUE),
+        counts_multiplier = counts_multiplier
     )
 
-    ## merge by symbol, replace features by collapsed features
-    pgx$genes <- pgx$genes[match(rownames(pgx$counts), symbol), ]
-    rownames(pgx$genes) <- rownames(pgx$counts)
-    jj <- match(rownames(pgx$counts), agg_features[, "symbol"])
-    pgx$genes$feature <- agg_features[jj, "feature"]
+    ## -------------------------------------------------------------------
+    ## create gene annotation table
+    ## -------------------------------------------------------------------
+    pgx$genes <- NULL
 
-    ## rename gene_name with new rownames
-    pgx$genes$gene_name <- rownames(pgx$counts)
-  }
+    message("[createPGX] annotating genes")
+    pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table)
+    if (is.null(pgx$genes)) {
+        stop("[createPGX] FATAL: Could not build gene annotation")
+    }
 
-  ## -------------------------------------------------------------------
-  ## Infer cell cycle/gender here (before any batchcorrection)
-  ## -------------------------------------------------------------------
-  pgx <- playbase::compute_cellcycle_gender(pgx, pgx$counts)
+    ## -------------------------------------------------------------------
+    ## Filter out not-expressed
+    ## -------------------------------------------------------------------
+    if (filter.genes) {
+        ## There is second filter in the statistics computation. This
+        ## first filter is primarily to reduce the counts table.
+        message("[createPGX] filtering out not-expressed genes (zero counts)...")
+        pgx <- pgx.filterZeroCounts(pgx)
 
-  ## -------------------------------------------------------------------
-  ## Add GMT
-  ## -------------------------------------------------------------------
-  ## If no organism, no custom annotation table and no custom geneset, then create empty GMT
-  if (pgx$organism == "No organism" && is.null(annot_table) && is.null(custom.geneset)) {
-    pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
-  } else {
-    pgx <- pgx.add_GMT(pgx = pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
-  }
+        ## prefiltering for low-expressed genes (recommended for edgeR and
+        ## DEseq2). Require at least in 2 or 1% of total. Specify the
+        ## PRIOR CPM amount to regularize the counts and filter genes
+        ## AZ (16.6.24): it crashes in presence of NAs
+        if(datatype != "Proteomics") {
+            message("[createPGX] filtering out lowly expressed genes (zero counts)...")
+            pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
+        }
+        ## Conform gene table
+        ii <- match(rownames(pgx$counts), rownames(pgx$genes))
+        pgx$genes <- pgx$genes[ii, , drop = FALSE]
+    }
 
-  ### done
-  return(pgx)
+    ## -------------------------------------------------------------------
+    ## Filter genes?
+    ## -------------------------------------------------------------------
+    do.filter <- (only.known | only.proteincoding)
+    if (do.filter) {
+        if (only.known) {
+            if(datatype != "Proteomics") {
+                has.symbol <- (!is.na(pgx$genes$symbol) & pgx$genes$symbol != "")
+                table(has.symbol)
+                pgx$genes <- pgx$genes[which(has.symbol), ]
+            } else {
+                has.symbol <- (!is.na(pgx$genes$feature) & pgx$genes$feature != "")
+                table(has.symbol)
+                pgx$genes <- pgx$genes[which(has.symbol), ]
+            }
+        }
+
+        if(datatype != "Proteomics") {
+            if (only.proteincoding && c("protein.coding" %in% pgx$genes$gene_biotype)) {
+                is.proteincoding <- grepl("protein.coding", pgx$genes$gene_biotype)
+                table(pgx$genes$gene_biotype)
+                tt <- paste(paste(names(table(pgx$genes$gene_biotype)),
+                                  table(pgx$genes$gene_biotype), sep = "="),
+                            collapse = ";")
+                pgx$genes <- pgx$genes[is.proteincoding, , drop = FALSE]
+            }
+        }
+
+        keep <- match(rownames(pgx$genes), rownames(pgx$counts))
+        pgx$counts <- pgx$counts[keep, , drop = FALSE]
+        if (!is.null(pgx$X)) {
+            keep <- match(rownames(pgx$genes), rownames(pgx$X))
+            pgx$X <- pgx$X[keep, , drop = FALSE] ##  NOT ALIGNED???
+        }
+    }
+    
+    ## NOTE: generally pgx$X, pgx$counts, and pgx$genes should always be
+    ## aligned to prevent mistakes and unneeded matching of tables.
+
+    ## -------------------------------------------------------------------
+    ## collapse probe-IDs to gene symbol and aggregate duplicates
+    ## -------------------------------------------------------------------
+    if (convert.hugo) {
+        message("[createPGX] collapsing probes by SYMBOL")
+        if(datatype == "Proteomics") {
+            hh <- grep("-", rownames(pgx$genes))
+            if(length(hh)>0) {
+                feat0 <- rownames(pgx$genes)[hh]
+                feat1 <- unlist(lapply(feat0, function(x) strsplit(x,"-")[[1]][1]))
+                jj1 <- which(feat1 %in% rownames(pgx$genes))
+                jj2 <- match(feat1[jj1], rownames(pgx$genes))
+                pgx$genes[feat0[jj1], "symbol"] <- pgx$genes$symbol[jj2]
+                pgx$genes[feat0[jj1], "gene_title"] <- pgx$genes$gene_title[jj2]
+                pgx$genes[feat0[jj1], "gene_biotype"] <- pgx$genes$gene_biotype[jj2]
+                pgx$genes[feat0[jj1], "map"] <- pgx$genes$map[jj2]
+                pgx$genes[feat0[jj1], "chr"] <- pgx$genes$chr[jj2]
+            }
+            ## For the rest, use the feature name.
+            jj <- which(pgx$genes$symbol == "")
+            pgx$genes$symbol[jj] <- pgx$genes$feature[jj]
+        }
+
+        symbol <- pgx$genes[rownames(pgx$counts), "symbol"]
+        symbol[is.na(symbol)] <- "" ## avoids warning
+
+        ## sum up duplicated rows
+        ## pgx$counts <- rowsum(pgx$counts, symbol)
+        ## pgx$counts <- pgx$counts[rownames(pgx$counts) != "", , drop = FALSE]
+        ## if (!is.null(pgx$X)) {
+        ##    pgx$X <- log2(rowsum(2**pgx$X, symbol))
+        ##    pgx$X <- pgx$X[rownames(pgx$X) != "", , drop = FALSE]
+        ## }
+
+        ## Collapse features as a comma-separated elements
+        agg_features <- aggregate(feature ~ symbol, data = pgx$genes,
+                                  function(x) paste(unique(x), collapse = "; "))
+
+        ## merge by symbol, replace features by collapsed features
+        if(datatype == "Proteomics") {
+            jj <- match(pgx$genes$symbol, agg_features$symbol)
+            pgx$genes$feature <- agg_features[jj, "feature"]
+        } else {
+            pgx$genes <- pgx$genes[match(rownames(pgx$counts), symbol), ]
+            rownames(pgx$genes) <- rownames(pgx$counts)
+            jj <- match(rownames(pgx$counts), agg_features[, "symbol"])
+            pgx$genes$feature <- agg_features[jj, "feature"]
+        }
+
+        ## rename gene_name with new rownames
+        pgx$genes$gene_name <- rownames(pgx$counts)
+    }
+
+    ## -------------------------------------------------------------------
+    ## Infer cell cycle/gender here (before any batchcorrection)
+    ## -------------------------------------------------------------------
+    ## AZ: for proteomics, this needs gene names.
+    pgx <- playbase::compute_cellcycle_gender(pgx, pgx$counts)
+
+    ## -------------------------------------------------------------------
+    ## Add GMT
+    ## -------------------------------------------------------------------
+    ## If no organism, no custom annotation table and no custom geneset, then create empty GMT
+    if (pgx$organism == "No organism" && is.null(annot_table) && is.null(custom.geneset)) {
+        pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
+    } else {
+        pgx <- pgx.add_GMT(pgx = pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
+    }
+
+    message("[createPGX] done! PGX being returned")
+    message("[createPGX] dim.pgx$counts: ", dim(pgx$counts)[1], ",", dim(pgx$counts)[2])
+    message("[createPGX] pgx$counts has ", sum(is.na(pgx$counts)), " missing values")
+    message("[createPGX] dim.pgx$X: ", dim(pgx$X)[1], ",", dim(pgx$X)[2])
+    message("[createPGX] pgx$counts has ", sum(is.na(pgx$X)), " missing values")
+    return(pgx)
+    
 }
 
 
@@ -460,163 +503,166 @@ pgx.computePGX <- function(pgx,
                            use.design = TRUE,
                            prune.samples = FALSE,
                            extra.methods = c(
-                             "meta.go", "infer", "deconv", "drugs",
-                             "connectivity", "wordcloud", "wgcna"
+                               "meta.go", "infer", "deconv", "drugs",
+                               "connectivity", "wordcloud", "wgcna"
                            )[c(1, 2)],
                            pgx.dir = NULL,
                            libx.dir = NULL,
                            progress = NULL,
                            user_input_dir = getwd()) {
-  if (!"contrasts" %in% names(pgx)) {
-    stop("[pgx.computePGX] FATAL:: no contrasts in object")
-  }
-  if (!all(grepl("_vs_", colnames(pgx$contrasts)))) {
-    stop("[pgx.computePGX] FATAL:: all contrast names must include _vs_")
-  }
 
-  contr.matrix <- playbase::contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
-  contr.matrix <- playbase::makeContrastsFromLabelMatrix(contr.matrix)
-  contr.matrix <- sign(contr.matrix) ## sign is fine
-
-  ## select valid contrasts
-  sel <- Matrix::colSums(contr.matrix == -1) > 0 & Matrix::colSums(contr.matrix == 1) > 0
-  contr.matrix <- contr.matrix[, sel, drop = FALSE]
-
-
-  ## -------------------------------------------------------------------
-  ## Clustering
-  ## -------------------------------------------------------------------
-
-  # Cluster by sample
-  if (do.cluster || cluster.contrasts) {
-    message("[pgx.computePGX] clustering samples...")
-    pgx <- playbase::pgx.clusterSamples2(
-      pgx,
-      dims = c(2, 3),
-      perplexity = NULL,
-      methods = c("pca", "tsne", "umap")
-    )
-
-    ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
-    posx <- scale(cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]]))
-    idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
-    if (length(unique(idx)) == 1) {
-      ## try again with finer settings if single cluster...
-      idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
+    message("[pgx.computePGX] Starting pgx.computePGX")
+    
+    if (!"contrasts" %in% names(pgx)) {
+        stop("[pgx.computePGX] FATAL:: no contrasts in object")
     }
-    pgx$samples$cluster <- idx
-  }
+    if (!all(grepl("_vs_", colnames(pgx$contrasts)))) {
+        stop("[pgx.computePGX] FATAL:: all contrast names must include _vs_")
+    }
 
-  # Cluster by contrasts
-  if (cluster.contrasts) {
-    ## Add cluster contrasts
-    message("[pgx.computePGX] adding cluster contrasts...")
-    Y <- pgx$samples[, "cluster", drop = FALSE]
-    if (length(unique(Y[, 1])) < 2) {
-      message("[pgx.computePGX] warning: only one cluster.")
+    contr.matrix <- playbase::contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
+    contr.matrix <- playbase::makeContrastsFromLabelMatrix(contr.matrix)
+    contr.matrix <- sign(contr.matrix) ## sign is fine
+
+    ## select valid contrasts
+    sel <- Matrix::colSums(contr.matrix == -1) > 0 & Matrix::colSums(contr.matrix == 1) > 0
+    contr.matrix <- contr.matrix[, sel, drop = FALSE]
+
+
+    ## -------------------------------------------------------------------
+    ## Clustering
+    ## -------------------------------------------------------------------
+
+    ## Cluster by sample
+    if (do.cluster || cluster.contrasts) {
+        message("[pgx.computePGX] clustering samples...")
+        mm <- c("pca", "tsne", "umap")
+        nmissing <- sum(is.na(pgx$X))
+        if(nmissing == 0) {
+            pgx <- playbase::pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, methods = mm)
+        } else {
+            message("[pgx.computePGX:pgx.clusterSamples2] Missing values found in pgx$X. Using pgx$impX.")
+            pgx <- playbase::pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, X = pgx$impX, methods = mm)
+        }
+
+        ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
+        posx <- scale(cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]]))
+        idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
+        if (length(unique(idx)) == 1) {
+            ## try again with finer settings if single cluster...
+            idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
+        }
+        pgx$samples$cluster <- idx
+    }
+
+    ## Cluster by contrasts
+    if (cluster.contrasts) {
+        ## Add cluster contrasts
+        message("[pgx.computePGX] adding cluster contrasts...")
+        Y <- pgx$samples[, "cluster", drop = FALSE]
+        if (length(unique(Y[, 1])) < 2) {
+            message("[pgx.computePGX] warning: only one cluster.")
+        } else {
+            ct <- playbase::makeDirectContrasts(Y, ref = "others")
+            ctx <- playbase::contrastAsLabels(ct$exp.matrix)
+            if (ncol(pgx$contrasts) == 0) {
+                pgx$contrasts <- ctx
+            } else {
+                pgx$contrasts <- cbind(pgx$contrasts, ctx)
+            }
+        }
+    }
+
+    ## Cluster by genes
+    if (do.clustergenes) {
+        message("[pgx.computePGX] clustering genes...")
+        nmissing <- sum(is.na(pgx$X))
+        if(nmissing == 0) {
+            pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "gene")
+        } else {
+            message("[pgx.computePGX:pgx.clusterGenes] Missing values found in pgx$X. Using pgx$impX.")
+            pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), X = pgx$impX, level = "gene")
+        }
+    }
+
+    ## -----------------------------------------------------------------------------
+    ## Filter genes (previously in compute_testGenesSingleOmics). NEED
+    ## RETHINK?? MOVE TO PGXCREATE??
+    ## -----------------------------------------------------------------------------
+
+    ## Shrink number of genes (highest SD/var)
+    if (max.genes > 0 && nrow(pgx$counts) > max.genes) {
+        message("shrinking data matrices: n= ", max.genes)
+        logcpm <- logCPM(pgx$counts, total = NULL)
+        sdx <- apply(logcpm, 1, stats::sd)
+        jj <- Matrix::head(order(-sdx), max.genes) ## how many genes?
+        jj0 <- setdiff(seq_len(nrow(pgx$counts)), jj)
+        pgx$filtered[["low.variance"]] <- paste(rownames(pgx$counts)[jj0], collapse = ";")
+        pgx$counts <- pgx$counts[jj, ]
+    }
+
+    if (!is.null(pgx$X)) {
+        gg <- intersect(rownames(pgx$counts), rownames(pgx$X))
+        pgx$X <- pgx$X[gg, ]
+    }
+
+    ## ======================================================================
+    ## ================= Run tests ==========================================
+    ## ======================================================================
+
+    pgx$timings <- c()
+    GENETEST.METHODS <- c(
+        "ttest", "ttest.welch", "ttest.rank",
+        "voom.limma", "trend.limma", "notrend.limma",
+        "edger.qlf", "edger.lrt", "deseq2.wald", "deseq2.lrt"
+    )
+    GENESETTEST.METHODS <- c(
+        "fisher", "gsva", "ssgsea", "spearman",
+        "camera", "fry", "fgsea"
+    ) ## no GSEA, too slow...
+
+    ## ------------------ gene level tests ---------------------
+    if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
+
+    message("[pgx.computePGX] testing genes...")
+    pgx <- playbase::compute_testGenes(pgx, contr.matrix,
+                                       max.features = max.genes,
+                                       test.methods = gx.methods,
+                                       use.design = use.design,
+                                       prune.samples = prune.samples)
+
+
+    ## ------------------ gene set tests -----------------------
+    if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
+
+    if (pgx$organism != "No organism" && !is.null(pgx$GMT) && nrow(pgx$GMT) > 0) {
+        message("[pgx.computePGX] testing genesets...")
+
+        pgx <- compute_testGenesets(pgx = pgx,
+                                    custom.geneset = custom.geneset,
+                                    test.methods = gset.methods)
+
+        ## Cluster by genes
+        if (do.clustergenesets) {
+            message("[createPGX] clustering genesets...")
+            pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset")
+        }
     } else {
-      ct <- playbase::makeDirectContrasts(Y, ref = "others")
-      ctx <- playbase::contrastAsLabels(ct$exp.matrix)
-      if (ncol(pgx$contrasts) == 0) {
-        pgx$contrasts <- ctx
-      } else {
-        pgx$contrasts <- cbind(pgx$contrasts, ctx)
-      }
+        message("[pgx.computePGX] Skipping genesets test")
     }
-  }
 
-  # Cluster by genes
-  if (do.clustergenes) {
-    message("[pgx.computePGX] clustering genes...")
-    pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "gene")
-  }
+    ## ------------------ extra analyses ---------------------
+    if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
+    message("[pgx.computePGX] computing extra modules...")
 
+    pgx <- playbase::compute_extra(pgx, extra = extra.methods,
+                                   pgx.dir = pgx.dir,
+                                   libx.dir = libx.dir,
+                                   user_input_dir = user_input_dir)
 
-  ## -----------------------------------------------------------------------------
-  ## Filter genes (previously in compute_testGenesSingleOmics). NEED
-  ## RETHINK?? MOVE TO PGXCREATE??
-  ## -----------------------------------------------------------------------------
+    message("[pgx.computePGX] done!")
 
-  ## Shrink number of genes (highest SD/var)
-  if (max.genes > 0 && nrow(pgx$counts) > max.genes) {
-    message("shrinking data matrices: n= ", max.genes)
-    logcpm <- logCPM(pgx$counts, total = NULL)
-    sdx <- apply(logcpm, 1, stats::sd)
-    jj <- Matrix::head(order(-sdx), max.genes) ## how many genes?
-    jj0 <- setdiff(seq_len(nrow(pgx$counts)), jj)
-    pgx$filtered[["low.variance"]] <- paste(rownames(pgx$counts)[jj0], collapse = ";")
-    pgx$counts <- pgx$counts[jj, ]
-  }
-
-  if (!is.null(pgx$X)) {
-    gg <- intersect(rownames(pgx$counts), rownames(pgx$X))
-    pgx$X <- pgx$X[gg, ]
-  }
-
-  ## ======================================================================
-  ## ================= Run tests ==========================================
-  ## ======================================================================
-
-  pgx$timings <- c()
-  GENETEST.METHODS <- c(
-    "ttest", "ttest.welch", "ttest.rank",
-    "voom.limma", "trend.limma", "notrend.limma",
-    "edger.qlf", "edger.lrt", "deseq2.wald", "deseq2.lrt"
-  )
-  GENESETTEST.METHODS <- c(
-    "fisher", "gsva", "ssgsea", "spearman",
-    "camera", "fry", "fgsea"
-  ) ## no GSEA, too slow...
-
-  ## ------------------ gene level tests ---------------------
-  if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
-
-  message("[pgx.computePGX] testing genes...")
-  pgx <- playbase::compute_testGenes(
-    pgx, contr.matrix,
-    max.features = max.genes,
-    test.methods = gx.methods,
-    use.design = use.design,
-    prune.samples = prune.samples
-  )
-
-
-  ## ------------------ gene set tests -----------------------
-  if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
-
-  if (pgx$organism != "No organism" && !is.null(pgx$GMT) && nrow(pgx$GMT) > 0) {
-    message("[pgx.computePGX] testing genesets...")
-
-    pgx <- compute_testGenesets(
-      pgx = pgx,
-      custom.geneset = custom.geneset,
-      test.methods = gset.methods
-    )
-
-    # Cluster by genes
-    if (do.clustergenesets) {
-      message("[createPGX] clustering genesets...")
-      pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), level = "geneset")
-    }
-  } else {
-    message("[pgx.computePGX] Skipping genesets test")
-  }
-
-  ## ------------------ extra analyses ---------------------
-  if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
-  message("[pgx.computePGX] computing extra modules...")
-
-  pgx <- playbase::compute_extra(
-    pgx,
-    extra = extra.methods,
-    pgx.dir = pgx.dir,
-    libx.dir = libx.dir,
-    user_input_dir = user_input_dir
-  )
-
-  message("[pgx.computePGX] done!")
-
-  return(pgx)
+    return(pgx)
 }
 
 
@@ -748,14 +794,24 @@ counts.mergeDuplicateFeatures.OLD <- function(counts, is.counts = TRUE, keep.NA 
 
 #' @export
 pgx.filterZeroCounts <- function(pgx) {
-  ## There is second filter in the statistics computation. This
-  ## first filter is primarily to reduce the counts table.
-  keep <- (Matrix::rowMeans(pgx$counts > 0) > 0) ## at least in one...
-  pgx$counts <- pgx$counts[keep, , drop = FALSE]
-  if (!is.null(pgx$X)) {
-    pgx$X <- pgx$X[keep, , drop = FALSE]
-  }
-  pgx
+    ## There is second filter in the statistics computation. This
+    ## first filter is primarily to reduce the counts table.
+    ## AZ: added na.rm=TRUE to avoid introducing NAs and edit to keep NAs.
+    keep <- (Matrix::rowMeans(pgx$counts > 0, na.rm = TRUE) > 0) ## at least in one...
+
+    nas <- which(is.na(keep))
+    jj <- which(keep)
+    if(is.null(nas)) {
+        keep <- names(keep)[jj]
+    } else {
+        keep <- names(keep)[c(nas,jj)]
+    }
+    
+    pgx$counts <- pgx$counts[keep, , drop = FALSE]
+    if (!is.null(pgx$X)) {
+        pgx$X <- pgx$X[keep, , drop = FALSE]
+    }
+    pgx
 }
 
 #' @export
