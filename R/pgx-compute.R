@@ -280,6 +280,7 @@ pgx.createPGX <- function(counts,
         contrasts = contrasts,
         X = X,
         impX = impX,
+        norm_method = norm_method,
         total_counts = Matrix::colSums(counts, na.rm = TRUE),
         counts_multiplier = counts_multiplier
     )
@@ -335,10 +336,8 @@ pgx.createPGX <- function(counts,
 
         keep <- match(rownames(pgx$genes), rownames(pgx$counts))
         pgx$counts <- pgx$counts[keep, , drop = FALSE]
-        if (!is.null(pgx$X)) {
-            keep <- match(rownames(pgx$genes), rownames(pgx$X))
-            pgx$X <- pgx$X[keep, , drop = FALSE] ##  NOT ALIGNED???
-        }
+        keep <- match(rownames(pgx$genes), rownames(pgx$X))
+        pgx$X <- pgx$X[keep, , drop = FALSE]
     }
     
     ## -------------------------------------------------------------------
@@ -349,24 +348,24 @@ pgx.createPGX <- function(counts,
         symbol <- pgx$genes[rownames(pgx$counts), "symbol"]
         symbol[is.na(symbol)] <- "" ## avoids warning
 
-        ## average duplicated rows
-        pgx$counts <- rowmean(pgx$counts, group = symbol, reorder = TRUE)
+        ## Average duplicated rows
+        pgx$counts <- playbase::rowmean(pgx$counts, group = symbol, reorder = TRUE)
         pgx$counts <- pgx$counts[rownames(pgx$counts) != "", , drop = FALSE]
         prior <- ifelse(norm_method == "CPM", 1, 1e-3)
-        pgx$X <- log2(rowsum(2 ** pgx$X - prior, symbol) + prior)
+        pgx$X <- log2(playbase::rowmean(2 ** pgx$X - prior, group = symbol, reorder = TRUE) + prior)
         pgx$X <- pgx$X[rownames(pgx$X) != "", , drop = FALSE]
 
         ## Collapse features as a comma-separated elements
         agg_features <- aggregate(feature ~ symbol, data = pgx$genes,
                                   function(x) paste(unique(x), collapse = "; "))
 
-        ## merge by symbol, replace features by collapsed features
+        ## Merge by symbol, replace features by collapsed features
         pgx$genes <- pgx$genes[match(rownames(pgx$counts), symbol), ]
         rownames(pgx$genes) <- rownames(pgx$counts)
         jj <- match(pgx$genes$symbol, agg_features$symbol)
         pgx$genes$feature <- agg_features[jj, "feature"]
 
-        ## rename gene_name with new rownames
+        ## Rename gene_name with new rownames
         pgx$genes$gene_name <- rownames(pgx$counts)
     }
 
@@ -388,9 +387,10 @@ pgx.createPGX <- function(counts,
 
     message("[createPGX] done! PGX being returned")
     message("[createPGX] dim.pgx$counts: ", dim(pgx$counts)[1], ",", dim(pgx$counts)[2])
-    message("[createPGX] pgx$counts has ", sum(is.na(pgx$counts)), " missing values")
     message("[createPGX] dim.pgx$X: ", dim(pgx$X)[1], ",", dim(pgx$X)[2])
-    message("[createPGX] pgx$counts has ", sum(is.na(pgx$X)), " missing values")
+    message("[createPGX] pgx$counts has ", sum(is.na(pgx$counts)), " missing values")
+    message("[createPGX] pgx$X has ", sum(is.na(pgx$X)), " missing values")
+
     return(pgx)
     
 }
@@ -476,13 +476,7 @@ pgx.computePGX <- function(pgx,
     if (do.cluster || cluster.contrasts) {
         message("[pgx.computePGX] clustering samples...")
         mm <- c("pca", "tsne", "umap")
-        ## nmissing <- sum(is.na(pgx$X))
-        ## if(nmissing == 0) {
-        ##     pgx <- playbase::pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
-        ## } else {
-        ##     message("[pgx.computePGX:pgx.clusterSamples2] Missing values found in pgx$X. Using pgx$impX.")
         pgx <- playbase::pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, X = pgx$impX, methods = mm)
-        ## }
 
         ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
         posx <- scale(cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]]))
