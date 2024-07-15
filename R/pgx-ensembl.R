@@ -449,7 +449,8 @@ getOrgDb <- function(organism, ah = NULL) {
     ## If organism is in localHub we select localHub=TRUE because
     ## this is faster. Otherwise switch to online Hub
     suppressMessages(
-      ah <- AnnotationHub::AnnotationHub(localHub = TRUE)
+      ## ah <- AnnotationHub::AnnotationHub(localHub = TRUE)
+      ah <- AnnotationHub::AnnotationHub(localHub = FALSE) ## AZ
     )
     local_species <- getAllSpecies(ah) ## orgDb species only
     if (tolower(organism) %in% tolower(local_species)) {
