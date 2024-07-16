@@ -2,7 +2,8 @@
 % Please edit documentation in R/gx-heatmap.r
 \name{gx.splitmap}
 \alias{gx.splitmap}
-\title{Create a split heatmap of gene expression data}
+\title{Create a split heatmap of gene expression data using
+ComplexHeatmap.}
 \usage{
 gx.splitmap(
   gx,
@@ -30,6 +31,7 @@ gx.splitmap(
   denoise = 0,
   cexRow = 1,
   cexCol = 1,
+  na_col = "green",
   mar = c(5, 5, 5, 5),
   rownames_width = 25,
   rowlab.maxlen = 20,
@@ -146,7 +148,7 @@ rownames(gx) <- sample(LETTERS, 25)
 colnames(gx) <- sample(letters, 10)
 # Create a grouping variable
 
-p <- playbase::gx.splitmap(
+p <- gx.splitmap(
   gx,
   scale = "row",
   cluster_rows = FALSE,

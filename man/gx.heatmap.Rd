@@ -86,6 +86,6 @@ set.seed(123)
 gx <- matrix(rnorm(250)^2, nrow = 25, ncol = 10)
 rownames(gx) <- sample(LETTERS, 25)
 colnames(gx) <- sample(letters, 10)
-p <- playbase::gx.heatmap(gx)
+p <- gx.heatmap(gx)
 }
 }

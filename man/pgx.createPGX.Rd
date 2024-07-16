@@ -19,6 +19,8 @@ pgx.createPGX(
   creator = "unknown",
   description = "No description provided.",
   X = NULL,
+  impX = NULL,
+  norm_method = "CPM",
   is.logx = NULL,
   batch.correct = TRUE,
   auto.scale = TRUE,
