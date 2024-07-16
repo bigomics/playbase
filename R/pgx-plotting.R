@@ -4961,7 +4961,7 @@ iheatmapr.add_col_annotation <- function(p,
 }
 
 
-#' Split heatmap from matrix
+#' Split heatmap from matrix using Plotly
 #'
 #' @param X Numeric data matrix
 #' @param annot Data frame with row and column annotations
@@ -5028,7 +5028,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   ## ------ split Y-axis (genes) by factor
   hc.order <- function(x) {
     suppressWarnings(dd <- stats::as.dist(1 - stats::cor(t(x), use = "pairwise")))
-    if (sum(is.na(dd))) dd[is.na(dd)] <- 1
+    if (sum(is.na(dd))) dd[is.na(dd) | is.nan(dd)] <- 1
     hc <- fastcluster::hclust(dd, method = "ward.D2")
     rownames(x)[hc$order]
   }
@@ -5103,14 +5103,18 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   )
 
   x1 <- xx[[1]]
-
-
+  zmax <- max(abs(X), na.rm=TRUE)
+  
   plt <- iheatmapr::main_heatmap(
     x1,
     name = "expression",
     colorbar_grid = grid_params,
     x = xtips[colnames(x1)],
     y = ytips[rownames(x1)],
+    colors = c("royalblue3", "#EEEEE4", "indianred3"),
+    zmid = 0,
+    zmin = -zmax,
+    zmax = zmax,
     tooltip = tooltip,
     layout = list(margin = mar)
   )
@@ -5162,6 +5166,10 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
           name = "expression",
           x = xtips[colnames(x1)],
           y = ytips[rownames(x1)],
+          colors = c("royalblue3", "#EEEEE4", "indianred3"),
+          zmid = 0,
+          zmin = -zmax,
+          zmax = zmax,
           tooltip = tooltip,
           size = sizes[i],
           buffer = 0.007 * ex
