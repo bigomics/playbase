@@ -369,15 +369,15 @@ pgx.scatterPlot <- function(pgx, samples = NULL, pheno = NULL,
     title <- gene
     vartype <- "numeric"
   }
-  if(!is.null(samples)) {
+  if (!is.null(samples)) {
     sel <- 1:nrow(pos)
-    if(is.character(samples)) {
+    if (is.character(samples)) {
       sel <- which(rownames(pos) %in% samples)
     }
-    if(is.integer(samples)) {
+    if (is.integer(samples)) {
       sel <- samples
     }
-    pos <- pos[sel,]
+    pos <- pos[sel, ]
     var <- var[sel]
   }
   plt <- pgx.scatterPlotXY(
@@ -968,8 +968,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
                         p.min = NULL, fc.max = NULL, hilight = NULL, #
                         cpal = c("grey60", "red3"), title = NULL,
                         xlim = NULL, ylim = NULL,
-                        set.par = TRUE, plotlib = "base", data = FALSE)
-{
+                        set.par = TRUE, plotlib = "base", data = FALSE) {
   if (is.integer(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
   res <- NULL
   if (level == "gene") {
@@ -1024,13 +1023,13 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
     set.par = set.par,
     plotlib = plotlib
   )
-  if(plotlib == "base") {
-    abline(v = 0, lty=1, lwd=0.5)
-    abline(h = 0, lty=1, lwd=0.5)
-    abline(v = c(-1,1)*fc, lty=2, lwd=0.5)
-    abline(h = -log10(psig), lty=2, lwd=0.5)
+  if (plotlib == "base") {
+    abline(v = 0, lty = 1, lwd = 0.5)
+    abline(h = 0, lty = 1, lwd = 0.5)
+    abline(v = c(-1, 1) * fc, lty = 2, lwd = 0.5)
+    abline(h = -log10(psig), lty = 2, lwd = 0.5)
   }
-  
+
   p
 }
 
@@ -1205,7 +1204,7 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
 #' @export
 pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
                              pos = NULL, ntop = 20, cex = 1, cex.lab = 0.8,
-                             cex.legend = 1, 
+                             cex.legend = 1,
                              hilight = NULL, title = NULL, zfix = FALSE,
                              set.par = TRUE, par.sq = FALSE,
                              level = "gene", plotlib = "ggplot",
@@ -2734,9 +2733,9 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
   var <- var[match(rownames(pos), names(var))]
 
   ## x/y limits
-  dbg("[pgx.scatterPlotXY.BASE] 1: xlim = ",xlim)
-  dbg("[pgx.scatterPlotXY.BASE] 1: ylim = ",ylim)
-  if(!is.null(xlim)) { 
+  dbg("[pgx.scatterPlotXY.BASE] 1: xlim = ", xlim)
+  dbg("[pgx.scatterPlotXY.BASE] 1: ylim = ", ylim)
+  if (!is.null(xlim)) {
     xlim0 <- xlim
   } else {
     xlim0 <- range(pos[, 1])
@@ -2746,7 +2745,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
       xlim0 <- cx + 0.5 * c(-1, 1.05) * dx / zoom
     }
   }
-  if(!is.null(ylim)) { 
+  if (!is.null(ylim)) {
     ylim0 <- ylim
   } else {
     ylim0 <- range(pos[, 2])
@@ -2757,8 +2756,8 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     }
   }
 
-  dbg("[pgx.scatterPlotXY.BASE] 1: xlim0 = ",xlim0)
-  dbg("[pgx.scatterPlotXY.BASE] 1: ylim0 = ",ylim0)
+  dbg("[pgx.scatterPlotXY.BASE] 1: xlim0 = ", xlim0)
+  dbg("[pgx.scatterPlotXY.BASE] 1: ylim0 = ", ylim0)
 
   if (length(dlim) == 1) dlim <- rep(dlim, 2)
   xlim0[1] <- xlim0[1] - dlim[1] * diff(xlim0)
@@ -2766,9 +2765,9 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
   ylim0[1] <- ylim0[1] - dlim[2] * diff(ylim0)
   ylim0[2] <- ylim0[2] + dlim[2] * diff(ylim0)
 
-  dbg("[pgx.scatterPlotXY.BASE] 2: xlim0 = ",xlim0)
-  dbg("[pgx.scatterPlotXY.BASE] 2: ylim0 = ",ylim0)
-  
+  dbg("[pgx.scatterPlotXY.BASE] 2: xlim0 = ", xlim0)
+  dbg("[pgx.scatterPlotXY.BASE] 2: ylim0 = ", ylim0)
+
   if (is.null(xlab)) xlab <- colnames(pos)[1]
   if (is.null(ylab)) ylab <- colnames(pos)[2]
 
