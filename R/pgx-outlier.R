@@ -5,9 +5,8 @@
 
 #' @export
 detectOutlierSamples <- function(X, plot = TRUE, par = NULL) {
+
   ## correlation and distance
-  ## X <- playbase::logCPM(playbase::COUNTS)
-  ## X <- safe.logCPM(2**X) ## quick normalization
   X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], 4000)
   X <- X - median(X, na.rm = TRUE)
   corX <- cor(X, use = "pairwise")
@@ -20,7 +19,6 @@ detectOutlierSamples <- function(X, plot = TRUE, par = NULL) {
   cor.q10 <- apply(abs(corX), 1, quantile, probs = 0.1, na.rm = TRUE)
   x1 <- (cor.median - mean(cor.median, na.rm = TRUE))
   z1 <- abs(x1 - median(x1, na.rm = TRUE)) / mad(x1, na.rm = TRUE)
-  z1
 
   ## z-score based on euclidean distance
   dist.max <- apply(distX, 1, max, na.rm = TRUE)
@@ -29,7 +27,6 @@ detectOutlierSamples <- function(X, plot = TRUE, par = NULL) {
   dist.q10 <- apply(distX, 1, quantile, probs = 0.1, na.rm = TRUE)
   dist.r <- dist.q10 / dist.max
   z2 <- abs(dist.r - median(dist.r, na.rm = TRUE)) / mad(dist.r, na.rm = TRUE)
-  z2
 
   ## gene-wise z-score
   xz <- abs(X - rowMeans(X, na.rm = TRUE)) / matrixStats::rowSds(X, na.rm = TRUE)
