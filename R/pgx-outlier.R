@@ -5,7 +5,6 @@
 
 #' @export
 detectOutlierSamples <- function(X, plot = TRUE, par = NULL) {
-
   ## correlation and distance
   X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], 4000)
   X <- X - median(X, na.rm = TRUE)
