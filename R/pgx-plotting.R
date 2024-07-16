@@ -322,7 +322,7 @@ pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap", "pacmap"), nb = 
 #' Useful for exploring sample relationships and associations.
 #'
 #' @export
-pgx.scatterPlot <- function(pgx, pheno = NULL,
+pgx.scatterPlot <- function(pgx, samples = NULL, pheno = NULL,
                             gene = NULL, geneset = NULL,
                             contrast = NULL, level = "gene",
                             method = "tsne", pos = NULL,
@@ -369,7 +369,17 @@ pgx.scatterPlot <- function(pgx, pheno = NULL,
     title <- gene
     vartype <- "numeric"
   }
-
+  if(!is.null(samples)) {
+    sel <- 1:nrow(pos)
+    if(is.character(samples)) {
+      sel <- which(rownames(pos) %in% samples)
+    }
+    if(is.integer(samples)) {
+      sel <- samples
+    }
+    pos <- pos[sel,]
+    var <- var[sel]
+  }
   plt <- pgx.scatterPlotXY(
     pos,
     var,
@@ -957,7 +967,9 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
                         psig = 0.05, fc = 1, cex = 1, cex.lab = 1, ntop = 20,
                         p.min = NULL, fc.max = NULL, hilight = NULL, #
                         cpal = c("grey60", "red3"), title = NULL,
-                        plotlib = "base", data = FALSE) {
+                        xlim = NULL, ylim = NULL,
+                        set.par = TRUE, plotlib = "base", data = FALSE)
+{
   if (is.integer(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
   res <- NULL
   if (level == "gene") {
@@ -973,8 +985,6 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   sig <- (q <= psig & abs(f) >= fc)
   xy <- cbind(fc = f, y = -log10(q))
 
-
-
   if (is.null(hilight)) {
     wt <- rowSums(scale(xy, center = FALSE)**2)
     hilight <- rownames(xy)[order(-wt)]
@@ -982,11 +992,11 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   }
   hilight <- Matrix::head(hilight, ntop) ## label
 
-  xlim <- ylim <- NULL
-  if (!is.null(fc.max)) {
+  ## xlim <- ylim <- NULL
+  if (is.null(xlim) && !is.null(fc.max)) {
     xlim <- c(-1.1, 1.1) * fc.max
   }
-  if (!is.null(p.min)) {
+  if (is.null(ylim) && !is.null(p.min)) {
     ylim <- c(0, -log10(p.min))
   }
 
@@ -1011,9 +1021,16 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
     legend = FALSE,
     col = cpal,
     opacity = 1,
+    set.par = set.par,
     plotlib = plotlib
   )
-
+  if(plotlib == "base") {
+    abline(v = 0, lty=1, lwd=0.5)
+    abline(h = 0, lty=1, lwd=0.5)
+    abline(v = c(-1,1)*fc, lty=2, lwd=0.5)
+    abline(h = -log10(psig), lty=2, lwd=0.5)
+  }
+  
   p
 }
 
@@ -1188,6 +1205,7 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
 #' @export
 pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
                              pos = NULL, ntop = 20, cex = 1, cex.lab = 0.8,
+                             cex.legend = 1, 
                              hilight = NULL, title = NULL, zfix = FALSE,
                              set.par = TRUE, par.sq = FALSE,
                              level = "gene", plotlib = "ggplot",
@@ -1267,8 +1285,10 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
       zlim = zlim, zsym = TRUE, softmax = 1,
       cex = cex, cex.lab = cex.lab,
       title = title1, cex.title = 1.0,
+      cex.legend = cex.legend,
       legend = TRUE,
       opacity = 0.5,
+      set.par = set.par,
       plotlib = plotlib
     )
 
@@ -2680,7 +2700,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
                                    cex = NULL, cex.lab = 1, cex.title = 1.2, cex.legend = 1,
                                    zoom = 1, legend = TRUE, bty = "o", legend.ysp = 0.85,
                                    legend.pos = "bottomright", lab.pos = NULL, repel = TRUE,
-                                   xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL, dlim = 0.05,
+                                   xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL, dlim = 0.02,
                                    hilight2 = hilight, hilight.cex = NULL, lab.xpd = TRUE,
                                    hilight = NULL, hilight.col = NULL, hilight.lwd = 0.8,
                                    label.clusters = FALSE, cex.clust = 1.5,
@@ -2713,17 +2733,32 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
   }
   var <- var[match(rownames(pos), names(var))]
 
-  ## normalize pos
-  xlim0 <- range(pos[, 1])
-  ylim0 <- range(pos[, 2])
-  if (zoom != 1) {
-    cx <- mean(range(pos[, 1]))
-    cy <- mean(range(pos[, 2]))
-    dx <- diff(range(pos[, 1]))
-    dy <- diff(range(pos[, 2]))
-    xlim0 <- cx + 0.5 * c(-1, 1.05) * dx / zoom
-    ylim0 <- cy + 0.5 * c(-1, 1.05) * dy / zoom
+  ## x/y limits
+  dbg("[pgx.scatterPlotXY.BASE] 1: xlim = ",xlim)
+  dbg("[pgx.scatterPlotXY.BASE] 1: ylim = ",ylim)
+  if(!is.null(xlim)) { 
+    xlim0 <- xlim
+  } else {
+    xlim0 <- range(pos[, 1])
+    if (zoom != 1) {
+      cx <- mean(range(pos[, 1]))
+      dx <- diff(range(pos[, 1]))
+      xlim0 <- cx + 0.5 * c(-1, 1.05) * dx / zoom
+    }
   }
+  if(!is.null(ylim)) { 
+    ylim0 <- ylim
+  } else {
+    ylim0 <- range(pos[, 2])
+    if (zoom != 1) {
+      cy <- mean(range(pos[, 2]))
+      dy <- diff(range(pos[, 2]))
+      ylim0 <- cy + 0.5 * c(-1, 1.05) * dy / zoom
+    }
+  }
+
+  dbg("[pgx.scatterPlotXY.BASE] 1: xlim0 = ",xlim0)
+  dbg("[pgx.scatterPlotXY.BASE] 1: ylim0 = ",ylim0)
 
   if (length(dlim) == 1) dlim <- rep(dlim, 2)
   xlim0[1] <- xlim0[1] - dlim[1] * diff(xlim0)
@@ -2731,6 +2766,9 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
   ylim0[1] <- ylim0[1] - dlim[2] * diff(ylim0)
   ylim0[2] <- ylim0[2] + dlim[2] * diff(ylim0)
 
+  dbg("[pgx.scatterPlotXY.BASE] 2: xlim0 = ",xlim0)
+  dbg("[pgx.scatterPlotXY.BASE] 2: ylim0 = ",ylim0)
+  
   if (is.null(xlab)) xlab <- colnames(pos)[1]
   if (is.null(ylab)) ylab <- colnames(pos)[2]
 
@@ -5442,8 +5480,11 @@ pgx.barplot.PLOTLY <- function(
 pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
                                plotlib = "base", filter = NULL,
                                cexCol = 1.4, cexRow = 1,
-                               normalize = FALSE, rotate = FALSE, maxterm = 40, maxfc = 10,
-                               tl.cex = 0.85, row.nchar = 60, colorbar = FALSE) {
+                               normalize = FALSE, rotate = FALSE,
+                               maxterm = 40, maxfc = 100,
+                               mar = c(15, 30),
+                               tl.cex = 0.85, row.nchar = 60,
+                               colorbar = FALSE) {
   if (what == "geneset") {
     score <- pgx.getMetaMatrix(pgx, level = "geneset")$fc
   }
@@ -5524,7 +5565,7 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
       score,
       dist.method = "euclidean", ## important
       scale = "none", ## important
-      mar = c(15, 30),
+      mar = mar,
       keysize = 0.4,
       key = FALSE,
       cexRow = cexRow,
