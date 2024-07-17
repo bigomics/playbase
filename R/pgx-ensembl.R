@@ -165,17 +165,25 @@ ngs.getGeneAnnotation <- function(
   ## --------------------------------------------
   ## get human ortholog using 'orthogene'
   ## --------------------------------------------
+
+  # Dog id should be canis lupus familiaris and not cannis familiaris, as in ah
+  if (organism == "Canis familiaris") {
+    org_orthogene <- "Canis lupus familiaris"
+  } else {
+    org_orthogene <- organism
+  }
+
   ortho.map <- orthogene::map_species(method = "gprofiler")
   head(ortho.map)
   cat("\ngetting human orthologs...\n")
-  has.ortho <- organism %in% ortho.map$scientific_name
+  has.ortho <- org_orthogene %in% ortho.map$scientific_name
   has.symbol <- "SYMBOL" %in% colnames(annot)
   if (organism == "Homo sapiens") {
     annot$ORTHOGENE <- annot$SYMBOL
   } else if (has.ortho && has.symbol) {
     ortho.out <- orthogene::convert_orthologs(
       gene_df = unique(annot$SYMBOL),
-      input_species = organism,
+      input_species = org_orthogene,
       output_species = "human",
       non121_strategy = "drop_both_species",
       method = "gprofiler"
@@ -184,7 +192,7 @@ ngs.getGeneAnnotation <- function(
     if (dim(ortho.out)[1] == 0) {
       ortho.out <- orthogene::convert_orthologs(
         gene_df = unique(annot$SYMBOL),
-        input_species = organism,
+        input_species = org_orthogene,
         output_species = "human",
         non121_strategy = "drop_both_species",
         method = "homologene"
@@ -194,7 +202,7 @@ ngs.getGeneAnnotation <- function(
     if (dim(ortho.out)[1] == 0) {
       ortho.out <- orthogene::convert_orthologs(
         gene_df = unique(annot$SYMBOL),
-        input_species = organism,
+        input_species = org_orthogene,
         output_species = "human",
         non121_strategy = "drop_both_species",
         method = "babelgene"

@@ -1347,22 +1347,29 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
 
   if (!ref %in% names(xlist)) ref <- names(xlist)[1]
 
+  dbg("[bc.evaluateResults] length.xlist = ", length(xlist))
+
   ## compute and make table
-  message("computing statistics...")
+  message("[bc.evaluateResults] computing statistics...")
   numsig <- lapply(xlist, stats.numsig,
     y = pheno, lfc = lfc, q = q,
     trend = trend, verbose = FALSE
   )
 
+  dbg("[bc.evaluateResults] length.numsig = ", length(numsig))
+  
   res <- t(sapply(numsig, function(r) {
     c(sapply(r[1:2], length), avg.fc = mean(abs(r[[3]])))
   }))
+
+  dbg("[bc.evaluateResults] dim.res = ", dim(res))
+  
   sdx <- sapply(xlist, function(x) mean(matrixStats::rowSds(x, na.rm = TRUE)))
   snr <- res[, "avg.fc"] / sdx
   res <- cbind(res, avg.sd = sdx, SNR = snr)
 
   ## compute relative genes/geneset overlap
-  message("computing overlap...")
+  message("[bc.evaluateResults] computing overlap...")
   g1 <- numsig[[ref]]$genes
   n1 <- sapply(numsig, function(s) length(intersect(s$genes, g1)))
   ##  n2 <- sapply(numsig, function(s) length(union(s$genes, g1)))
@@ -1388,7 +1395,7 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
     (x - rowMeans(x))
   })
 
-  message("computing silhouette scores...")
+  message("[bc.evaluateResults] computing silhouette scores...")
   silhouette <- rep(1, nrow(res))
   if (add.sil) {
     if (is.null(pos)) {
