@@ -32,6 +32,7 @@ gx.splitmap(
   cexRow = 1,
   cexCol = 1,
   na_col = "green",
+  na_text = NULL,
   mar = c(5, 5, 5, 5),
   rownames_width = 25,
   rowlab.maxlen = 20,

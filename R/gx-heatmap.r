@@ -252,6 +252,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         cexRow = 1,
                         cexCol = 1,
                         na_col = "green",
+                        na_text = NULL,
                         mar = c(5, 5, 5, 5),
                         rownames_width = 25,
                         rowlab.maxlen = 20,
@@ -601,10 +602,16 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       )
     }
 
+    cell_fun <- NULL
+    if(!is.null(na_text)) {
+      cell_fun <- function(j, i, x, y, width, height, fill) {
+        grid::grid.text(ifelse(is.na(gx0[i, j]),na_text,""), x, y)
+      }
+    }
+    
     hmap <- hmap + ComplexHeatmap::Heatmap(
       gx0,
       col = col_scale, ## from input
-      na_col = na_col,
       cluster_rows = cluster_rows,
       cluster_columns = cluster_columns,
       clustering_distance_rows = dist.method,
@@ -623,7 +630,9 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       show_row_names = FALSE,
       show_column_names = FALSE,
       bottom_annotation = gx0.colnames,
-      column_names_gp = grid::gpar(fontsize = 11 * cexCol)
+      column_names_gp = grid::gpar(fontsize = 11 * cexCol),
+      na_col = na_col,
+      cell_fun = cell_fun
     )
   }
 
