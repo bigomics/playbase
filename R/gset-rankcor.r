@@ -77,7 +77,7 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
   if (!any(class(gset) %in% c("Matrix", "dgCMatrix", "matrix", "array"))) {
     stop("gset must be a matrix")
   }
-  is.vec <- (NCOL(rnk) == 1 && !class(rnk) %in% c("matrix", "Matrix"))
+  is.vec <- (NCOL(rnk) == 1 && !any(class(rnk) %in% c("matrix", "Matrix")))
   if (is.vec && is.null(names(rnk))) stop("rank vector must be named")
   if (!is.vec && is.null(rownames(rnk))) stop("rank matrix must have rownames")
   if (is.vec) rnk <- matrix(rnk, ncol = 1, dimnames = list(names(rnk), "rnk"))
