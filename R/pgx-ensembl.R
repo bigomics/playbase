@@ -786,3 +786,71 @@ checkProbes <- function(organism, probes, ah = NULL) {
   return(TRUE)
 }
 
+
+
+## ==================== using orthogene =====================
+
+
+getGeneAnnotation.ORTHOGENE <- function(
+    organism,
+    probes,
+    probe_type = NULL,
+    pgx = NULL,
+    annot_table = NULL,
+    verbose = TRUE)
+{
+
+  if(is.null(organism)) {
+    species <- orthogene::infer_species( probes, method='gprofiler' )
+  } else {
+    species <- orthogene::map_species( organism, method='gprofiler', verbose = FALSE )
+  }
+  species
+
+  if(is.null(species)) {
+    message("ERROR: unknown organism",organism)
+    return(NULL)
+  }
+  
+  gene.out <- orthogene::map_genes(
+    genes = probes,
+    species = species,
+    verbose = FALSE    
+  )
+  head(gene.out)
+  gene.out <- gene.out[match(probes, gene.out$input),]
+  
+  ortho.out <- orthogene::convert_orthologs(
+    gene_df = probes,
+    input_species = species,
+    output_species = "human",
+    non121_strategy = "drop_both_species",
+    method = "gprofiler",
+    verbose = FALSE
+  )
+  head(ortho.out)
+  ortholog <- rownames(ortho.out)[match(probes, ortho.out$input_gene)]
+  ortholog[grep("^NA[.][1-9]",ortholog)] <- NA
+  
+  df <- data.frame(
+    feature = probes,
+    symbol = gene.out$name,
+    human_ortholog = ortholog,
+    gene_title = sub(" \\[.*","",gene.out$description),
+    gene_biotype = NA,
+    map = NA,
+    chr = NA,
+    pos = NA,
+    tx_len = NA,    
+    source = gene.out$namespace,
+    gene_name = probes
+  )
+  head(df)
+
+  return(df)
+}
+
+getAllSpecies.ORTHOGENE <- function() {
+  M <- orthogene::all_species()
+  M$scientific_name
+}
