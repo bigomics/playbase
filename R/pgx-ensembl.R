@@ -117,7 +117,7 @@ ngs.getGeneAnnotation <- function(
   orgdb <- getOrgDb(organism, ah = NULL)
 
   if (is.null(probes)) {
-    probes <- keys(orgdb)
+    probes <- AnnotationDbi::keys(orgdb)
   }
   probes0 <- probes
   names(probes) <- probes0
@@ -130,8 +130,10 @@ ngs.getGeneAnnotation <- function(
 
   if (is.null(probe_type)) {
     probe_type <- playbase::detect_probetype(organism, probes, ah = NULL)
+    message("detected probe_type = ", probe_type)
+  } else {
+    message("probe_type = ", probe_type)
   }
-  message("detected probe_type = ", probe_type)
   if (is.null(probe_type)) {
     message("ERROR: could not determine probe_type ")
     return(NULL)
@@ -141,13 +143,14 @@ ngs.getGeneAnnotation <- function(
   ## retrieve table
   ## --------------------------------------------
   cols <- c("SYMBOL", "GENENAME", "GENETYPE", "MAP")
-  cols <- intersect(cols, keytypes(orgdb))
+  cols <- intersect(cols, AnnotationDbi::keytypes(orgdb))
 
   cat("get gene annotation columns:", cols, "\n")
   message("retrieving annotation for ", length(probes), " ", probe_type, " features...")
 
   suppressMessages(suppressWarnings(
-    annot <- AnnotationDbi::select(orgdb, keys = probes, columns = cols, keytype = probe_type)
+    annot <- AnnotationDbi::select(orgdb, keys = probes, columns = cols,
+                                   keytype = probe_type)
   ))
 
   # some organisms do not provide symbol but rather gene name (e.g. yeast)
@@ -165,7 +168,7 @@ ngs.getGeneAnnotation <- function(
   ## get human ortholog using 'orthogene'
   if ("SYMBOL" %in% colnames(annot)) {
     H <- getHumanOrtholog(organism, annot$SYMBOL)
-    annot$ORTHOGENE <- H[, "human"]
+    annot$ORTHOGENE <- H$human
   } else {
     message("WARNING: ", organism, " not found in orthogene database. please check name.")
     annot$ORTHOGENE <- NA
@@ -213,7 +216,8 @@ ngs.getGeneAnnotation <- function(
     genes$human_ortholog <- NA
   }
 
-  rownames(genes) <- probes0
+  ## in case there were duplicated probe names we must make them unique
+  rownames(genes) <- make_unique(probes0)  ## in pgx-functions.R
 
   # annotation table is mandatory for No organism (until server side can handle missing genesets)
   if (organism == "No organism" && !is.null(pgx)) {
@@ -550,10 +554,22 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
   return(top_match)
 }
 
-#' @title Show some probe types for selected organism
+#' @title Get human ortholog from given symbols of organism by using
+#'   orthogene package. This package needs internet connection.
 #'
 #' @export
 getHumanOrtholog <- function(organism, symbols) {
+
+  ## test if orthogene server is reachable
+  res <- try(orthogene::map_genes("CDK1"))
+  if("try-error" %in% class(res)) {
+    message("[getHumanOrtholog] failed to contact server")
+    df <- data.frame(symbols, "human" = NA)
+    colnames(df)[1] <- organism
+    rownames(df) <- NULL
+    return(NULL)
+  }
+
   # Dog id should be 'Canis lupus familiaris' (in orthogene) and not
   # Canis familiaris (in AH)
   if (organism == "Canis familiaris") {
@@ -565,25 +581,25 @@ getHumanOrtholog <- function(organism, symbols) {
   }
 
   organism <- gsub("[_]", " ", organism) ## orgDB names have sometimes underscores
-  organism2 <- clean2(organism)
-  genus <- strsplit(organism, split = " ")[[1]][1]
   ortho.methods <- c("gprofiler", "homologene", "babelgene")
-  ortho.species <- lapply(ortho.methods, function(m) {
-    orthogene::map_species(method = m, verbose = FALSE)$scientific_name
-  })
-  has.ortho <- sapply(ortho.species, function(s) organism %in% s)
+  has.ortho <- sapply(ortho.methods, function(m) !is.null(orthogene::map_species(organism, method = m, verbose=FALSE)))
   has.ortho
 
   ## build clean species list (only 'Genus species')
+  ortho.species <- lapply(ortho.methods, function(m) {
+    orthogene::map_species(method = m, verbose = FALSE)$scientific_name
+  })
   ortho.clean <- lapply(ortho.species, function(s) {
     g <- sapply(s, clean2)
     names(g) <- s
     g
   })
-  has.clean <- sapply(ortho.clean, function(s) clean2(organism) %in% s)
+  organism2 <- clean2(organism)
+  has.clean <- sapply(ortho.clean, function(s) organism2 %in% s)
   has.clean
 
   ## build Genus list
+  genus <- strsplit(organism, split = " ")[[1]][1]  
   ortho.genus <- lapply(ortho.species, function(s) {
     g <- gsub(" .*|\\[|\\]", "", s)
     names(g) <- s
@@ -598,8 +614,8 @@ getHumanOrtholog <- function(organism, symbols) {
   if (any(has.ortho)) {
     sel <- head(which(has.ortho), 1)
     method <- ortho.methods[sel]
-    ortho_organism <- organism
-    message("exact matching: ", organism)
+    ortho_organism <- orthogene::map_species(organism, method = method, verbose=FALSE)
+    message("auto matching: ", organism)
   } else if (any(has.clean)) {
     ## if no exact species match, we try a clean2
     sel <- head(which(has.clean), 1)
@@ -622,9 +638,12 @@ getHumanOrtholog <- function(organism, symbols) {
   message("organism = ", organism)
   message("ortho_organism = ", ortho_organism)
 
-  already.ortholog <- FALSE
-
-  if (organism == "Homo sapiens" || already.ortholog) {
+  human.genes <- playdata::GENE_SYMBOL
+  looks.human <- mean(toupper(symbols) %in% human.genes)
+  looks.human
+  message("looks.human = ", looks.human)
+  
+  if (organism == "Homo sapiens") {
     orthogenes <- symbols
   } else if (!is.null(method)) {
     ortho.out <- orthogene::convert_orthologs(
@@ -637,6 +656,10 @@ getHumanOrtholog <- function(organism, symbols) {
     )
     ii <- match(symbols, ortho.out$input_gene)
     orthogenes <- rownames(ortho.out)[ii]
+  } else if (looks.human > 0.5) {
+    message("WARNING: symbols look 'human', using capitalized symbols")
+    orthogenes <- toupper(symbols)
+    orthogenes[which(!orthogenes %in% human.genes)] <- NA
   } else {
     message("WARNING: ", organism, " not found in orthogene database.")
     orthogenes <- rep(NA, length(symbols))
@@ -644,7 +667,6 @@ getHumanOrtholog <- function(organism, symbols) {
 
   df <- data.frame(symbols, "human" = orthogenes)
   colnames(df)[1] <- organism
-
   return(df)
 }
 
@@ -683,7 +705,7 @@ showProbeTypes <- function(organism, keytypes = NULL, ah = NULL, nprobe = 10) {
   }
 
   ## example probes
-  probes <- head(keys(orgdb), nprobe)
+  probes <- head(keys(orgdb, keytype="ENTREZID"), nprobe)
 
   ## Iterate over probe types
   key_matches <- list()
@@ -763,3 +785,4 @@ checkProbes <- function(organism, probes, ah = NULL) {
   message("[checkProbes] detected probe_type = ", probe_type)
   return(TRUE)
 }
+
