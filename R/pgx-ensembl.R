@@ -34,18 +34,29 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL) {
   if (is.null(organism) && !is.null(pgx$organism)) {
     organism <- pgx$organism
   }
+  
   if (is.null(organism)) {
     stop("could not determine organism. please specify")
   }
-  # Get gene table
-  genes <- ngs.getGeneAnnotation(
-    pgx = pgx,
-    probes = probes,
-    annot_table = annot_table,
-    organism = organism
-  )
 
-  # Return data
+  if (organism == "No organism") {
+    # annotation table is mandatory for 'No organism' (until server side
+    # can handle missing genesets)
+    genes <- getCustomAnnotation(
+      probes = probes,
+      custom_annot = annot_table
+    )
+  }
+
+  if (organism != "No organism") {
+    # Get gene table
+    genes <- ngs.getGeneAnnotation(
+      organism = organism,
+      probes = probes
+    )
+  }
+  
+  # Add to pgx object
   pgx$genes <- genes
 
   return(pgx)
@@ -95,9 +106,10 @@ ngs.getGeneAnnotation <- function(
     organism,
     probes,
     probe_type = NULL,
-    pgx = NULL,
+##    pgx = NULL,
     annot_table = NULL,
-    verbose = TRUE) {
+    verbose = TRUE)
+{
   if (is.null(organism)) {
     warning("[getGeneAnnotation] Please specify organism")
     return(NULL)
@@ -106,7 +118,7 @@ ngs.getGeneAnnotation <- function(
   if (verbose) {
     message("[ngs.getGeneAnnotation] Retrieving gene annotation...")
   }
-
+  
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
@@ -193,17 +205,47 @@ ngs.getGeneAnnotation <- function(
   colnames(genes) <- new.names
   genes <- as.data.frame(genes)
 
-  # gene_name should ALWAYS be assigned to feature for compatibility
-  # with gene_name legacy implementation
-  genes$gene_name <- genes$feature
-
   if (!all(probes0 %in% genes$feature)) {
     message("WARNING: not all probes could be annotated")
   }
   genes <- genes[match(probes0, genes$feature), , drop = FALSE]
 
+  if (is.null(genes)) {
+    warning("[getGeneAnnotation] ERROR : could not create gene annotation")
+    return(NULL)
+  }
+
+  ## in case there were duplicated probe names we must make them unique
+  rownames(genes) <- make_unique(probes0)  ## in pgx-functions.R
+
+  ## clean up
+  genes <- cleanupAnnotation(genes) 
+  
+  return(genes)
+}
+
+
+#'
+#' @no-export
+cleanupAnnotation <- function(genes) {
+
+  ## add missing columns if needed, then reorder
+  columns <- c(
+    "feature", "symbol", "human_ortholog", "gene_title", "gene_biotype",
+    "map", "chr", "pos", "tx_len", "source", "gene_name"
+  )
+  missing.cols <- setdiff(columns, colnames(genes))
+  missing.cols
+  for (a in missing.cols) genes[[a]] <- NA
+  genes <- genes[, columns]
+  colnames(genes) <- columns
+  
+  # gene_name should ALWAYS be assigned to feature for compatibility
+  # with gene_name legacy implementation
+  genes$gene_name <- genes$feature
+
   # add space after ; to conform with playbase <= 1.3.2
-  genes$gene_title <- gsub(";", "; ", genes$gene_title)
+  genes$gene_title <- gsub(";[ ]*", "; ", genes$gene_title)
 
   # rename protein-coding to protein_coding to confirm with playbase <= v1.3.2
   genes$gene_biotype <- sub("protein-coding", "protein_coding", genes$gene_biotype)
@@ -216,20 +258,9 @@ ngs.getGeneAnnotation <- function(
     genes$human_ortholog <- NA
   }
 
-  ## in case there were duplicated probe names we must make them unique
-  rownames(genes) <- make_unique(probes0)  ## in pgx-functions.R
-
-  # annotation table is mandatory for No organism (until server side can handle missing genesets)
-  if (organism == "No organism" && !is.null(pgx)) {
-    genes <- pgx.custom_annotation(counts = pgx$counts, custom_annot = annot_table)
-  }
-
-  if (is.null(genes)) {
-    warning("[getGeneAnnotation] ERROR : could not create gene annotation")
-    return(NULL)
-  }
-  return(genes)
+  genes
 }
+
 
 
 #' @title Custom Gene Annotation
@@ -267,14 +298,16 @@ ngs.getGeneAnnotation <- function(
 #'   gene_name = c("A1", "A2", "A3")
 #' )
 #'
-#' pgx <- pgx.custom_annotation(counts, custom_annot)
+#' pgx <- getCustomAnnotation(counts, custom_annot)
 #' }
 #' @export
-pgx.custom_annotation <- function(counts, custom_annot = NULL) {
-  message("[pgx.custom_annotation] Adding custom annotation table...")
+getCustomAnnotation <- function(probes, custom_annot = NULL)
+{
+
+  message("[getCustomAnnotation] Adding custom annotation table...")
   # If the user has provided a custom gene table, check it and use it
 
-  annot_genes <- sum(rownames(counts) %in% custom_annot$feature)
+  num_annot <- sum(probes %in% custom_annot$feature)
 
   annot_map <- list(
     "human_ortholog" = "",
@@ -299,7 +332,7 @@ pgx.custom_annotation <- function(counts, custom_annot = NULL) {
   # legacy code but maybe this could be removed in the future...
   required_in_annot <- all(required_cols %in% colnames(custom_annot))
 
-  if (!is.null(custom_annot) && annot_genes > 1 && required_in_annot) {
+  if (!is.null(custom_annot) && num_annot > 1 && required_in_annot) {
     # remove all NA columns, otherwise the for loop below will not work
     custom_annot <- custom_annot[, !apply(custom_annot, 2, function(x) all(is.na(x)))]
 
@@ -308,12 +341,12 @@ pgx.custom_annotation <- function(counts, custom_annot = NULL) {
 
     custom_annot[missing_cols] <- annot_map[missing_cols]
 
-    # filter annotated table by counts using match
-    custom_annot <- custom_annot[match(rownames(counts), custom_annot$feature), ]
+    # filter annotated table by probes using match
+    custom_annot <- custom_annot[match(probes, custom_annot$feature), ]
 
-    # if row was missing from annotation table (NA from match call above), input NA based on rownames(counts)
+    # if row was missing from annotation table (NA from match call above), input NA based on probes
 
-    rownames(custom_annot) <- rownames(counts)
+    rownames(custom_annot) <- probes
 
     custom_annot$feature <- ifelse(is.na(custom_annot$feature), rownames(custom_annot), custom_annot$feature)
     custom_annot$symbol <- ifelse(is.na(custom_annot$symbol), rownames(custom_annot), custom_annot$symbol)
@@ -331,12 +364,12 @@ pgx.custom_annotation <- function(counts, custom_annot = NULL) {
 
     custom_annot[, names(annot_map)] <- res[, names(annot_map)]
   } else {
-    # Create custom gene table from counts rownames
-    message("[pgx.custom_annotation] Creating annotation table from counts rownames...")
+    # Create custom gene table from probe names
+    message("[getCustomAnnotation] Creating annotation table from probe names...")
     custom_annot <- data.frame(
-      feature = rownames(counts),
-      symbol = rownames(counts),
-      gene_name = rownames(counts),
+      feature = probes,
+      symbol = probes,
+      gene_name = probes,
       human_ortholog = "",
       gene_title = "unknown",
       gene_biotype = "unknown",
@@ -346,11 +379,11 @@ pgx.custom_annotation <- function(counts, custom_annot = NULL) {
       map = "1",
       source = "custom"
     )
-    rownames(custom_annot) <- rownames(counts)
+    rownames(custom_annot) <- probes
   }
 
   custom_annot <- custom_annot[, table_col_order]
-
+  custom_annot <- cleanupAnnotation(custom_annot)     
   return(custom_annot)
 }
 
