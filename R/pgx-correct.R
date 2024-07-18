@@ -1710,13 +1710,17 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
                                               "uncorrected", "ComBat",
                                               "limma", "RUV", "SVA", "NPM"
                                             ),
+                                            clust.method = "tsne",
                                             ntop = 4000, xlist.init = list(),
-                                            ref = NULL) {
+                                            ref = NULL, evaluate = TRUE ) {
   ## methods <- c("uncorrected","ComBat", "limma","RUV","SVA","NPM")
   ## ntop = 4000; xlist.init = list()
   batch <- NULL
   pars <- get_model_parameters(X, samples, pheno = pheno, contrasts = contrasts)
 
+  nmissing <- sum(is.na(X))
+  if(nmissing) message("WARNING: missing values in X. some methods may fail")
+  
   message("Running batch-correction methods...")
   xlist <- runBatchCorrectionMethods(
     X = X,
@@ -1732,59 +1736,59 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
   if (length(xlist.init) > 0) xlist <- c(xlist.init, xlist)
 
   ## PCA is faster than UMAP
-  pos <- list()
+  pos <- NULL
   t2 <- function(x) t(scale(t(scale(t(x), scale = FALSE))))
-  nb <- max(2, round(min(30, dim(X) / 5)))
-
-  ##  incProgress( amount = 0.1, "Computing PCA clustering...")
-  message("Computing PCA clustering...")
-  pos[["pca"]] <- lapply(xlist, function(x) {
-    irlba::irlba(t2(x), nu = 2, nv = 2)$u[, 1:2]
-  })
-  for (i in 1:length(pos[["pca"]])) {
-    rownames(pos[["pca"]][[i]]) <- colnames(X)
+  
+  if(clust.method == 'pca') {
+    ##  incProgress( amount = 0.1, "Computing PCA clustering...")
+    message("Computing PCA clustering...")
+    pos <- lapply(xlist, function(x) {
+      irlba::irlba(t2(x), nu = 2, nv = 2)$u[, 1:2]
+    })
+    for (i in 1:length(pos)) {
+      rownames(pos[[i]]) <- colnames(X)
+    }
   }
-
-  ##  incProgress( amount = 0.1, "Computing t-SNE clustering...")
-  nmissing <- sum(is.na(X))
-  if(nmissing == 0) {
+  if(clust.method == 'tsne') {
+    ##  incProgress( amount = 0.1, "Computing t-SNE clustering...")
+    nb <- max(2, round(min(30, dim(X) / 5)))
+    nmissing <- sum(is.na(X))
+    if(nmissing == 0) {
       message("Computing t-SNE clustering...")
-      message("[Comuputing] nb = ", nb)
-      pos[["tsne"]] <- lapply(xlist, function(x) {
-          Rtsne::Rtsne(t2(x), perplexity = nb, check_duplicates = FALSE)$Y
+      pos <- lapply(xlist, function(x) {
+        Rtsne::Rtsne(t2(x), perplexity = nb, check_duplicates = FALSE)$Y
       })
-      for (i in 1:length(pos[["tsne"]])) {
-          rownames(pos[["tsne"]][[i]]) <- colnames(X)
+      for (i in 1:length(pos)) {
+        rownames(pos[[i]]) <- colnames(X)
       }
+    }
   }
 
-  ##  incProgress( amount = 0.1, "Comparing results...")
-  message("Comparing results...")
-  if("tsne" %in% names(pos)) {
-      pos.name <- "tsne"
-  } else {
-      pos.name <- "pca"
+  res <- NULL
+  best.method <- ref
+
+  if(evaluate) {
+    ## compare results using scoring
+    res <- playbase::bc.evaluateResults(
+      xlist,
+      pheno = pars$pheno,
+      lfc = 0.2,
+      q = 0.05,
+      pos = pos,
+      add.sil = TRUE,
+      plot = FALSE,
+      trend = TRUE
+    )
+    ## shiny::removeModal()
+    score <- res$scores[, "score"]
+    if (is.null(ref)) ref <- names(xlist)[1]
+    best.method <- names(which.max(score))
+  
+    ## if the improvement is small, we rather choose the uncorrected solution
+    score.ratio <- score[best.method] / score[ref]
+    best.method <- ifelse(score.ratio < 1.20, ref, best.method)
+    message("[select_batchcorrect_method] best.method = ", best.method)
   }
-  res <- playbase::bc.evaluateResults(
-    xlist,
-    pheno = pars$pheno,
-    lfc = 0.2,
-    q = 0.05,
-    pos = pos[[pos.name]],
-    add.sil = TRUE,
-    plot = FALSE,
-    trend = TRUE
-  )
-
-  ## shiny::removeModal()
-  score <- res$scores[, "score"]
-  if (is.null(ref)) ref <- names(xlist)[1]
-  best.method <- names(which.max(score))
-
-  ## if the improvement is small, we rather choose the uncorrected solution
-  score.ratio <- score[best.method] / score[ref]
-  best.method <- ifelse(score.ratio < 1.20, ref, best.method)
-  message("[select_batchcorrect_method] best.method = ", best.method)
 
   list(
     xlist = xlist,
