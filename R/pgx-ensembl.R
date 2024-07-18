@@ -451,20 +451,25 @@ getOrgDb <- function(organism, ah = NULL) {
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
 
+  dbg("[getOrgDb:selectAnnotationHub] organism =", organism)
+  
   if (!is.null(ah)) {
     all_species <- getAllSpecies(ah)
   } else {
     ## If organism is in localHub we select localHub=TRUE because
     ## this is faster. Otherwise switch to online Hub
     suppressMessages(
-      ah <- AnnotationHub::AnnotationHub(localHub = TRUE)
+      ah <- try(AnnotationHub::AnnotationHub(localHub = TRUE))
     )
-    local_species <- getAllSpecies(ah) ## orgDb species only
+    local_species <- c()
+    if(!"try-error" %in% class(ah)) {
+      local_species <- getAllSpecies(ah) ## orgDb species only
+    }
     if (tolower(organism) %in% tolower(local_species)) {
-      message("[selectAnnotationHub] organism '", organism, "' in local Hub")
+      dbg("[getOrgDb:selectAnnotationHub] querying LOCAL hub")
       all_species <- local_species
     } else {
-      message("[selectAnnotationHub] querying online Hub...")
+      dbg("[getOrgDb:selectAnnotationHub] querying ONLINE hub")
       ah <- AnnotationHub::AnnotationHub(localHub = FALSE)
       all_species <- getAllSpecies(ah)
     }
@@ -488,15 +493,13 @@ getOrgDb <- function(organism, ah = NULL) {
     message("selecting database for '", ahDb$species[k], "'\n")
 
     message("retrieving annotation...\n")
-    orgdb <- tryCatch(
-      {
-        ahDb[[k]]
-      },
-      error = function(e) {
-        message("An error occurred: ", e, ". Retrying with force=TRUE.")
-        ahDb[[k, force = TRUE]]
-      }
-    )
+    orgdb <- tryCatch({
+      ahDb[[k]]
+    },
+    error = function(e) {
+      message("An error occurred: ", e, ". Retrying with force=TRUE.")
+      ahDb[[k, force = TRUE]]
+    })
   })
 
   return(orgdb)
@@ -509,8 +512,10 @@ detect_probetype <- function(organism, probes, orgdb = NULL, nprobe = 100) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
-  organism
 
+  dbg("[detect_probetype] organism = ", organism)
+##  dbg("[detect_probetype] class(orgdb) = ", class(orgdb))
+  
   ## get correct OrgDb database for organism
   orgdb <- getOrgDb(organism, ah = NULL)
   if (is.null(orgdb)) {
@@ -600,10 +605,13 @@ detect_probetype <- function(organism, probes, orgdb = NULL, nprobe = 100) {
 #'
 #' @export
 showProbeTypes <- function(organism, keytypes = NULL, ah = NULL, nprobe = 10) {
+  
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
   organism
+
+  message(paste("retrieving probe types for", organism, "..."))
 
   ## get correct OrgDb database for organism
   orgdb <- getOrgDb(organism, ah = ah)
