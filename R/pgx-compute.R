@@ -735,9 +735,12 @@ pgx.filterZeroCounts <- function(pgx) {
     }
     
     pgx$counts <- pgx$counts[keep, , drop = FALSE]
-    if (!is.null(pgx$X)) {
-        pgx$X <- pgx$X[keep, , drop = FALSE]
+    pgx$X <- pgx$X[keep, , drop = FALSE]
+    if (!is.null(pgx$impX)) {
+        pgx$impX <- pgx$impX[keep, , drop = FALSE]
     }
+    pgx$genes <- pgx$genes[keep, , drop = FALSE]
+
     pgx
 }
 
