@@ -248,11 +248,17 @@ pgx.createPGX <- function(counts,
     ## -------------------------------------------------------------------
     message("[createPGX] conforming matrices...")
     kk <- intersect(colnames(counts), rownames(samples))
+    kk <- intersect(kk, colnames(X))
+    if(!is.null(impX)) {
+        kk <- intersect(kk, colnames(impX))
+    }
     counts <- counts[, kk, drop = FALSE]
-    samples <- samples[kk, , drop = FALSE]
-    samples <- utils::type.convert(samples, as.is = TRUE) ## automatic type conversion
     X <- X[, kk, drop = FALSE]
-    X <- X[match(rownames(counts), rownames(X)), ]
+    samples <- samples[kk, , drop = FALSE]
+    if(!is.null(impX)) {
+        impX <- impX[, kk, drop = FALSE]
+    }
+    samples <- utils::type.convert(samples, as.is = TRUE) ## automatic type conversion
     if (all(kk %in% rownames(contrasts))) {
         contrasts <- contrasts[kk, , drop = FALSE]
     }
@@ -338,30 +344,43 @@ pgx.createPGX <- function(counts,
         pgx$counts <- pgx$counts[keep, , drop = FALSE]
         keep <- match(rownames(pgx$genes), rownames(pgx$X))
         pgx$X <- pgx$X[keep, , drop = FALSE]
+        if (!is.null(pgx$impX)) {
+            keep <- match(rownames(pgx$genes), rownames(pgx$impX))
+            pgx$impX <- pgx$impX[keep, , drop = FALSE]
+        }
     }
-    
+
     ## -------------------------------------------------------------------
     ## collapse probe-IDs to gene symbol and aggregate duplicates
     ## -------------------------------------------------------------------
     if (convert.hugo) {
+        ## Average duplicated rows if any
+        group <- rownames(pgx$counts)
+        pgx$counts <- playbase::rowmean(pgx$counts, group = group, reorder = TRUE)
+        pgx$counts <- pgx$counts[rownames(pgx$counts) != "", , drop = FALSE]
+        prior <- ifelse(norm_method == "CPM", 1, 1e-3)
+        pgx$X <- playbase::rowmean(2 ** pgx$X - prior, group = group, reorder = TRUE)
+        pgx$X <- log2(pgx$X + prior)
+        pgx$X <- pgx$X[rownames(pgx$X) != "", , drop = FALSE]
+        if (!is.null(pgx$impX)) {
+            pgx$impX <- playbase::rowmean(2 ** pgx$impX - prior, group = group, reorder = TRUE)
+            pgx$impX <- log2(pgx$impX + prior)
+            pgx$impX <- pgx$impX[rownames(pgx$impX) != "", , drop = FALSE]
+        }
+        
+        ## Collapse features as a comma-separated elements
         message("[createPGX] collapsing probes by SYMBOL")
         symbol <- pgx$genes[rownames(pgx$counts), "symbol"]
         symbol[is.na(symbol)] <- "" ## avoids warning
 
-        ## Average duplicated rows
-        pgx$counts <- playbase::rowmean(pgx$counts, group = symbol, reorder = TRUE)
-        pgx$counts <- pgx$counts[rownames(pgx$counts) != "", , drop = FALSE]
-        prior <- ifelse(norm_method == "CPM", 1, 1e-3)
-        pgx$X <- log2(playbase::rowmean(2 ** pgx$X - prior, group = symbol, reorder = TRUE) + prior)
-        pgx$X <- pgx$X[rownames(pgx$X) != "", , drop = FALSE]
-
-        ## Collapse features as a comma-separated elements
         agg_features <- aggregate(feature ~ symbol, data = pgx$genes,
                                   function(x) paste(unique(x), collapse = "; "))
 
         ## Merge by symbol, replace features by collapsed features
-        pgx$genes <- pgx$genes[match(rownames(pgx$counts), symbol), ]
-        rownames(pgx$genes) <- rownames(pgx$counts)
+        ## pgx$genes <- pgx$genes[match(rownames(pgx$counts), symbol), ]
+        ## rownames(pgx$genes) <- rownames(pgx$counts)
+        jj <- match(rownames(pgx$counts), rownames(pgx$genes))
+        pgx$genes <- pgx$genes[jj, ]
         jj <- match(pgx$genes$symbol, agg_features$symbol)
         pgx$genes$feature <- agg_features[jj, "feature"]
 
@@ -476,7 +495,7 @@ pgx.computePGX <- function(pgx,
     if (do.cluster || cluster.contrasts) {
         message("[pgx.computePGX] clustering samples...")
         mm <- c("pca", "tsne", "umap")
-        pgx <- playbase::pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, X = pgx$impX, methods = mm)
+        pgx <- playbase::pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
 
         ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
         posx <- scale(cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]]))
@@ -528,9 +547,11 @@ pgx.computePGX <- function(pgx,
         pgx$counts <- pgx$counts[jj, ]
     }
 
-    if (!is.null(pgx$X)) {
-        gg <- intersect(rownames(pgx$counts), rownames(pgx$X))
-        pgx$X <- pgx$X[gg, ]
+    gg <- intersect(rownames(pgx$counts), rownames(pgx$X))
+    pgx$counts <- pgx$counts[gg, ]
+    pgx$X <- pgx$X[gg, ]
+    if( !is.null(pgx$impX)) {
+        pgx$impX <- pgx$impX[gg, ]
     }
 
     ## ======================================================================
