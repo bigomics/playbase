@@ -150,6 +150,10 @@ pgx.clusterSamples <- function(pgx, methods = c("pca", "tsne", "umap"),
     X <- logCPM(pgx$counts, total = NULL)
   }
 
+  if(any(is.na(X))) {
+      X <- X[complete.cases(X), , drop = FALSE]
+  }
+  
   clust.pos <- pgx.clusterBigMatrix(
     X,
     methods = methods,
