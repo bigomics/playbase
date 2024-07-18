@@ -4961,7 +4961,7 @@ iheatmapr.add_col_annotation <- function(p,
 }
 
 
-#' Split heatmap from matrix
+#' Split heatmap from matrix using iHeatmapR
 #'
 #' @param X Numeric data matrix
 #' @param annot Data frame with row and column annotations
@@ -4972,7 +4972,7 @@ iheatmapr.add_col_annotation <- function(p,
 #' @param row_clust Cluster rows? Default is TRUE.
 #' @param row_annot_width Width for row annotations. Default is 0.03.
 #' @param scale Scaling for data. Default is "row.center".
-#' @param colors Vector of colors to use. Default is RColorBrewer Set1.
+#' @param colors Vector of colors to use for annotation. Default is RColorBrewer Set1.
 #' @param lmar Label margin parameter. Default is 60.
 #' @param rowcex Row text size scaling. Default is 1.
 #' @param colcex Column text size scaling. Default is 1.
@@ -4990,7 +4990,7 @@ iheatmapr.add_col_annotation <- function(p,
 pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NULL,
                                        xtips = NULL, ytips = NULL, row_clust = TRUE,
                                        row_annot_width = 0.03, scale = "row.center",
-                                       colors = NULL, lmar = 60,
+                                       colors = NULL, lmar = 60, na_text = NULL,
                                        rowcex = 1, colcex = 1, show_legend = TRUE,
                                        return_x_matrix = FALSE) {
   ## constants
@@ -5028,7 +5028,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   ## ------ split Y-axis (genes) by factor
   hc.order <- function(x) {
     suppressWarnings(dd <- stats::as.dist(1 - stats::cor(t(x), use = "pairwise")))
-    if (sum(is.na(dd))) dd[is.na(dd)] <- 1
+    if (sum(is.na(dd))) dd[is.na(dd) | is.nan(dd)] <- 1
     hc <- fastcluster::hclust(dd, method = "ward.D2")
     rownames(x)[hc$order]
   }
@@ -5043,7 +5043,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     kk <- unlist(kk)
     kk <- kk[1:(length(kk) - 1)] ## remove trailing spacer
     idx <- idx[1:(length(idx) - 1)]
-    X <- rbind(X, "   " = 0)[kk, ]
+    X <- rbind(X, "   " = NA)[kk, ]
 
     ## invert
     X <- X[nrow(X):1, ]
@@ -5103,14 +5103,18 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   )
 
   x1 <- xx[[1]]
-
-
+  zmax <- max(abs(X), na.rm=TRUE)
+  
   plt <- iheatmapr::main_heatmap(
     x1,
     name = "expression",
     colorbar_grid = grid_params,
     x = xtips[colnames(x1)],
     y = ytips[rownames(x1)],
+    colors = c("royalblue3", "grey90", "indianred3"),
+    zmid = 0,
+    zmin = -zmax,
+    zmax = zmax,
     tooltip = tooltip,
     layout = list(margin = mar)
   )
@@ -5149,8 +5153,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     i <- 2
     for (i in 2:length(xx)) {
       x1 <- xx[[i]]
-
-
       hc <- NULL
       if (NCOL(x1) > 1) {
         hc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(x1, use = "pairwise")))
@@ -5162,6 +5164,10 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
           name = "expression",
           x = xtips[colnames(x1)],
           y = ytips[rownames(x1)],
+          colors = c("royalblue3", "#EEEEE4", "indianred3"),
+          zmid = 0,
+          zmin = -zmax,
+          zmax = zmax,
           tooltip = tooltip,
           size = sizes[i],
           buffer = 0.007 * ex
@@ -5226,6 +5232,12 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     )
   }
 
+  if(0) {
+    ## ---------- Always convert to plotly??? (new)
+    plt <- plt %>% iheatmapr::to_plotly_list()
+    plt <- plotly::as_widget(plt)
+  }
+  
   if (return_x_matrix) {
     return(list(
       plt = plt,
@@ -5234,7 +5246,9 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   } else {
     return(plt)
   }
+
 }
+
 
 
 #' Box plot using plotly
@@ -5456,8 +5470,8 @@ pgx.barplot.PLOTLY <- function(
 
 #' @export
 pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
-                               plotlib = "base", filter = NULL,
-                               normalize = FALSE, rotate = FALSE, maxterm = 40, maxfc = 10,
+                               plotlib = "base", filter = NULL, normalize = FALSE, 
+                               rotate = FALSE, maxterm = 40, maxfc = 10,
                                tl.cex = 0.85, row.nchar = 60, colorbar = FALSE) {
   if (what == "geneset") {
     score <- pgx.getMetaMatrix(pgx, level = "geneset")$fc
@@ -5522,13 +5536,13 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   if (rotate) score <- t(score)
 
   bluered.pal <- colorRamp(colors = c("royalblue3", "#ebeffa", "white", "#faeeee", "indianred3"))
+  bluered.pal <- colorRamp(colors = c("royalblue3", "grey90", "indianred3"))  
   score <- score[nrow(score):1, ]
   x_axis <- colnames(score)
   y_axis <- rownames(score)
 
   fig <- NULL
   if (plotlib == "base") {
-    ## par(mfrow = c(1, 1), mar = c(1, 1, 1, 1), oma = c(0, 1.5, 0, 0.5))
     gx.heatmap(score,
       dist.method = "euclidean", ## important
       scale = "none", ## important

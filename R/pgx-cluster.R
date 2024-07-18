@@ -434,9 +434,9 @@ pgx.clusterMatrix <- function(X,
   }
 
   ## impute on row median
-  if (any(is.na(X))) {
-    X <- imputeMedian(X)
-  }
+  ## if (any(is.na(X))) {
+  ##   X <- imputeMedian(X)
+  ## }
 
   if (ncol(X) <= 6) X <- cbind(X, X, X, X, X, X)
   if (nrow(X) <= 3) X <- rbind(X, X, X, X)
@@ -448,7 +448,7 @@ pgx.clusterMatrix <- function(X,
   res.svd <- NULL
   if (reduce.pca > 0) {
     reduce.pca <- max(3, min(c(reduce.pca, dim(X) - 1)))
-    message("Reducing to ", reduce.pca, " PCA dimenstions...")
+    message("Reducing to ", reduce.pca, " PCA dimensions...")
     cnx <- colnames(X)
     suppressMessages(suppressWarnings(
       res.svd <- irlba::irlba(X, nv = reduce.pca)

@@ -37,7 +37,7 @@ gx.markermap <- function(X, splitx, n = 5, ...) {
   topg <- apply(topg, 2, function(i) rownames(F1)[i])
   gg <- as.vector(topg)
   gg.idx <- as.vector(sapply(colnames(topg), rep, n))
-  playbase::gx.splitmap(X[gg, ], splitx = splitx, split = gg.idx, ...)
+  gx.splitmap(X[gg, ], splitx = splitx, split = gg.idx, ...)
 }
 
 
@@ -70,7 +70,7 @@ gx.PCAheatmap <- function(X, nv = 5, ngenes = 10, ...) {
   res <- irlba::irlba(X, nv = nv)
   gg <- apply(res$u, 2, function(x) Matrix::head(rownames(X)[order(-abs(x))], ngenes))
   sx <- paste0("PC.", as.vector(sapply(1:nv, rep, 10)))
-  playbase::gx.splitmap(X[gg, ], split = sx, ...)
+  gx.splitmap(X[gg, ], split = sx, ...)
 }
 
 
@@ -100,7 +100,7 @@ gx.PCAcomponents <- function(X, nv = 20, ngenes) {
     X1 <- X[gg, ]
     X1 <- (X1 - rowMeans(X1)) / (1e-4 + apply(X1, 1, stats::sd)) ## scale??
     colnames(X1) <- NULL
-    playbase::gx.imagemap(X1, main = paste0("PC", i), cex = 0.8)
+    gx.imagemap(X1, main = paste0("PC", i), cex = 0.8)
   }
 }
 
@@ -158,7 +158,8 @@ gx.imagemap <- function(X, main = "", cex = 1, cex.main = 1.8, clust = TRUE) {
 }
 
 
-#' Create a split heatmap of gene expression data
+#' Create a split heatmap of gene expression data using
+#' ComplexHeatmap.
 #'
 #' Visualize a gene expression matrix as a heatmap, with samples split into groups.
 #'
@@ -218,7 +219,7 @@ gx.imagemap <- function(X, main = "", cex = 1, cex.main = 1.8, clust = TRUE) {
 #' colnames(gx) <- sample(letters, 10)
 #' # Create a grouping variable
 #'
-#' p <- playbase::gx.splitmap(
+#' p <- gx.splitmap(
 #'   gx,
 #'   scale = "row",
 #'   cluster_rows = FALSE,
@@ -250,6 +251,8 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         denoise = 0,
                         cexRow = 1,
                         cexCol = 1,
+                        na_col = "green",
+                        na_text = NULL,
                         mar = c(5, 5, 5, 5),
                         rownames_width = 25,
                         rowlab.maxlen = 20,
@@ -274,7 +277,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   }
   ## give unique name if duplicated
   if (sum(duplicated(rownames(gx))) > 0) {
-    rownames(gx) <- playbase::tagDuplicates(rownames(gx))
+    rownames(gx) <- tagDuplicates(rownames(gx))
     if (!is.null(row.annot)) rownames(row.annot) <- rownames(gx)
   }
   if (!is.null(split) && length(split) == 1 && split == 1) split <- NULL
@@ -300,7 +303,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   }
   if ("row" %in% scale || "both" %in% scale) {
     gx <- gx - rowMeans(gx, na.rm = TRUE)
-    gx <- gx / (1e-4 + apply(gx, 1, stats::sd, na.rm = TRUE)) ## small EPS maintains SD order!
+    gx <- gx / (1e-4 + matrixStats::rowSds(gx, na.rm = TRUE)) ## small EPS maintains SD order!
   }
   if ("col.center" %in% scale) {
     gx <- t(t(gx) - colMeans(gx, na.rm = TRUE))
@@ -569,6 +572,11 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     grp.order <- match(order.groups, names(grp))
   }
 
+  # Get plot data (for csv downloads)
+  if (data) {
+    return(gx)
+  }
+
   ## ------------- draw heatmap
 
   hmap <- NULL
@@ -594,15 +602,15 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       )
     }
 
-    ## Here NA goes wrong... distance calc should be done manually
-    gx0[is.na(gx0)] <- mean(gx0, na.rm = TRUE) ## TEMPORARY HACK!!
-
-    # Get plot data (for csv downloads)
-    if (data) {
-      return(gx0)
+    cell_fun <- NULL
+    if(!is.null(na_text)) {
+      cell_fun <- function(j, i, x, y, width, height, fill) {
+        grid::grid.text(ifelse(is.na(gx0[i, j]),na_text,""), x, y)
+      }
     }
-
-    hmap <- hmap + ComplexHeatmap::Heatmap(gx0,
+    
+    hmap <- hmap + ComplexHeatmap::Heatmap(
+      gx0,
       col = col_scale, ## from input
       cluster_rows = cluster_rows,
       cluster_columns = cluster_columns,
@@ -622,7 +630,9 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       show_row_names = FALSE,
       show_column_names = FALSE,
       bottom_annotation = gx0.colnames,
-      column_names_gp = grid::gpar(fontsize = 11 * cexCol)
+      column_names_gp = grid::gpar(fontsize = 11 * cexCol),
+      na_col = na_col,
+      cell_fun = cell_fun
     )
   }
 
@@ -738,7 +748,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
 #' gx <- matrix(rnorm(250)^2, nrow = 25, ncol = 10)
 #' rownames(gx) <- sample(LETTERS, 25)
 #' colnames(gx) <- sample(letters, 10)
-#' p <- playbase::gx.heatmap(gx)
+#' p <- gx.heatmap(gx)
 #' }
 #' @export
 gx.heatmap <- function(gx, values = NULL,
@@ -1262,7 +1272,7 @@ frozenmap <- function(x, m = 8, n = 8, ...) {
 
   cx <- x.downsample(x, n = m)
   cx <- t(x.downsample(t(cx), n = n))
-  res <- playbase::gx.heatmap(cx, ...)
+  res <- gx.heatmap(cx, ...)
   cx <- cx[res$row.clust$order, res$col.clust$order]
   invisible(cx)
 }

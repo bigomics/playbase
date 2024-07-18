@@ -2,7 +2,7 @@
 % Please edit documentation in R/pgx-plotting.R
 \name{pgx.splitHeatmapFromMatrix}
 \alias{pgx.splitHeatmapFromMatrix}
-\title{Split heatmap from matrix}
+\title{Split heatmap from matrix using iHeatmapR}
 \usage{
 pgx.splitHeatmapFromMatrix(
   X,
@@ -16,6 +16,7 @@ pgx.splitHeatmapFromMatrix(
   scale = "row.center",
   colors = NULL,
   lmar = 60,
+  na_text = NULL,
   rowcex = 1,
   colcex = 1,
   show_legend = TRUE,
@@ -41,7 +42,7 @@ pgx.splitHeatmapFromMatrix(
 
 \item{scale}{Scaling for data. Default is "row.center".}
 
-\item{colors}{Vector of colors to use. Default is RColorBrewer Set1.}
+\item{colors}{Vector of colors to use for annotation. Default is RColorBrewer Set1.}
 
 \item{lmar}{Label margin parameter. Default is 60.}
 
@@ -57,7 +58,7 @@ pgx.splitHeatmapFromMatrix(
 A plotly split heatmap object
 }
 \description{
-Split heatmap from matrix
+Split heatmap from matrix using iHeatmapR
 }
 \details{
 This function generates an interactive split heatmap from a data matrix.

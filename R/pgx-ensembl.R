@@ -128,8 +128,11 @@ ngs.getGeneAnnotation <- function(
   is.ensembl <- mean(grepl("^ENS", probes)) > 0.5
   if (is.ensembl) probes <- sub("[.][0-9]+$", "", probes)
 
+  is.uniprot <- mean(grepl("^[QP][0-9]*", probes)) > 0.8
+  if (is.uniprot) probes <- sub("-[0-9]+", "", probes)
+
   if (is.null(probe_type)) {
-    probe_type <- playbase::detect_probetype(organism, probes, orgdb = NULL)
+    probe_type <- detect_probetype(organism, probes, orgdb = NULL)
   }
   message("detected probe_type = ", probe_type)
   if (is.null(probe_type)) {
@@ -545,7 +548,11 @@ detect_probetype <- function(organism, probes, orgdb = NULL, nprobe = 100) {
   ## discard version numbers if ENSEMBL
   if (mean(grepl("^ENS", probes)) > 0.5) {
     probes <- sub("[.][0-9]+$", "", probes)
-  }
+  }  
+
+  ## discard isoform if UNIPROT
+  is.uniprot <- mean(grepl("^[QP][0-9]*", probes)) > 0.8
+  if (is.uniprot) probes <- sub("-[0-9]+", "", probes)
 
   ## Subset probes if too many
   if (length(probes) > nprobe) {
