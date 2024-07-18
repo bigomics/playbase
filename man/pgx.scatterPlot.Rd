@@ -6,6 +6,7 @@
 \usage{
 pgx.scatterPlot(
   pgx,
+  samples = NULL,
   pheno = NULL,
   gene = NULL,
   geneset = NULL,

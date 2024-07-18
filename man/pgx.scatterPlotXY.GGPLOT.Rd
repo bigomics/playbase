@@ -40,7 +40,7 @@ pgx.scatterPlotXY.GGPLOT(
   label.clusters = FALSE,
   labels = NULL,
   legend.ysp = 0.85,
-  legend.pos = "bottomleft",
+  legend.pos = "bottomright",
   tooltip = NULL,
   theme = NULL,
   set.par = TRUE,

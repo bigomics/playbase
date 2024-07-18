@@ -162,52 +162,15 @@ ngs.getGeneAnnotation <- function(
   annot <- annot[match(probes, annot[, probe_type]), ]
   annot$PROBE <- names(probes) ## original probe names
 
-  ## --------------------------------------------
   ## get human ortholog using 'orthogene'
-  ## --------------------------------------------
-  ortho.map <- orthogene::map_species(method = "gprofiler")
-  head(ortho.map)
-  cat("\ngetting human orthologs...\n")
-  has.ortho <- organism %in% ortho.map$scientific_name
-  has.symbol <- "SYMBOL" %in% colnames(annot)
-  if (organism == "Homo sapiens") {
-    annot$ORTHOGENE <- annot$SYMBOL
-  } else if (has.ortho && has.symbol) {
-    ortho.out <- orthogene::convert_orthologs(
-      gene_df = unique(annot$SYMBOL),
-      input_species = organism,
-      output_species = "human",
-      non121_strategy = "drop_both_species",
-      method = "gprofiler"
-    )
-
-    if (dim(ortho.out)[1] == 0) {
-      ortho.out <- orthogene::convert_orthologs(
-        gene_df = unique(annot$SYMBOL),
-        input_species = organism,
-        output_species = "human",
-        non121_strategy = "drop_both_species",
-        method = "homologene"
-      )
-    }
-
-    if (dim(ortho.out)[1] == 0) {
-      ortho.out <- orthogene::convert_orthologs(
-        gene_df = unique(annot$SYMBOL),
-        input_species = organism,
-        output_species = "human",
-        non121_strategy = "drop_both_species",
-        method = "babelgene"
-      )
-    }
-
-    ii <- match(annot$SYMBOL, ortho.out$input_gene)
-    annot$ORTHOGENE <- rownames(ortho.out)[ii]
+  if( "SYMBOL" %in% colnames(annot)) {
+    H <- getHumanOrtholog(organism, annot$SYMBOL) 
+    annot$ORTHOGENE <- H[,"human"]
   } else {
     message("WARNING: ", organism, " not found in orthogene database. please check name.")
     annot$ORTHOGENE <- NA
   }
-
+  
   ## Return as standardized data.frame and in the same order as input
   ## probes.
   annot$SOURCE <- "AnnotationHub/OrgDb"
@@ -585,6 +548,105 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
   }
 
   return(top_match)
+}
+
+#' @title Show some probe types for selected organism
+#'
+#' @export
+getHumanOrtholog <- function(organism, symbols) {
+
+  # Dog id should be 'Canis lupus familiaris' (in orthogene) and not
+  # Canis familiaris (in AH)
+  if (organism == "Canis familiaris") {
+    organism <- "Canis lupus familiaris"
+  } 
+
+  clean2 <- function(s) {
+    paste(head(strsplit(s, split='[ _-]')[[1]],2), collapse=' ')
+  }
+  
+  organism <- gsub("[_]"," ",organism)  ## orgDB names have sometimes underscores
+  organism2 <- clean2(organism)
+  genus <- strsplit(organism,split=' ')[[1]][1]  
+  ortho.methods <- c("gprofiler","homologene","babelgene")
+  ortho.species <- lapply( ortho.methods, function(m)
+    orthogene::map_species(method = m, verbose = FALSE)$scientific_name
+  )
+  has.ortho  <- sapply(ortho.species, function(s) organism %in% s)
+  has.ortho
+  
+  ## build clean species list (only 'Genus species')
+  ortho.clean <- lapply(ortho.species, function(s) {
+    g <- sapply(s, clean2)
+    names(g) <- s
+    g
+  })
+  has.clean  <- sapply(ortho.clean, function(s) clean2(organism) %in% s)
+  has.clean
+
+  ## build Genus list
+  ortho.genus <- lapply(ortho.species, function(s) {
+    g <- gsub(" .*|\\[|\\]","",s)
+    names(g) <- s
+    g
+  })
+  has.genus  <- sapply(ortho.genus, function(s) genus %in% s)
+  has.genus
+  
+  ## select orthogene method (DB) and best matching species. If a
+  ## species does not match, then we take the first matching species
+  ## with the same Genus that is in the DB.
+  if(any(has.ortho)) {
+    sel <- head(which(has.ortho),1)
+    method <- ortho.methods[sel]
+    ortho_organism <- organism
+    message("exact matching: ", organism)
+  } else if(any(has.clean)) {
+    ## if no exact species match, we try a clean2 
+    sel <- head(which(has.clean),1)
+    method <- ortho.methods[sel]
+    ortho_organism <- head(names(which(ortho.clean[[sel]] == organism2)),1)
+    message("cleaned matching: ", organism2)
+  } else if(any(has.genus)) {
+    ## if no species match, we take the first Genus hit
+    sel <- head(which(has.genus),1)
+    method <- ortho.methods[sel]
+    ortho_organism <- head(names(which(ortho.genus[[sel]] == genus)),1)
+    message("genus matching: ", genus)
+  } else {
+    ## no match
+    method <- NULL
+    ortho_organism <- NULL
+  }
+  
+  message("method = ", method)
+  message("organism = ", organism)
+  message("ortho_organism = ", ortho_organism)
+
+  already.ortholog <- FALSE
+
+  if (organism == "Homo sapiens" || already.ortholog ) {
+    orthogenes <- symbols
+  } else if (!is.null(method)) {
+    ortho.out <- orthogene::convert_orthologs(
+      gene_df = unique(symbols),
+      input_species = ortho_organism,
+      output_species = "human",
+      non121_strategy = "drop_both_species",
+      method = method,
+      verbose = FALSE
+    )
+    ii <- match(symbols, ortho.out$input_gene)
+    orthogenes <- rownames(ortho.out)[ii]
+  } else {
+    message("WARNING: ", organism, " not found in orthogene database.")
+    orthogenes <- rep(NA, length(symbols))
+  }
+
+  df <- data.frame( symbols, "human" = orthogenes )
+  colnames(df)[1] <- organism
+  
+  return(df)
 }
 
 
