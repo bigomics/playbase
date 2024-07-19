@@ -594,7 +594,8 @@ pgx.computePGX <- function(pgx,
         ## Cluster by genes
         if (do.clustergenesets) {
             message("[pgx.computePGX] clustering genesets...")
-            pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), X = NULL, level = "geneset")
+            pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap",
+                                              dims = c(2, 3), X = NULL, level = "geneset")
         }
     } else {
         message("[pgx.computePGX] Skipping genesets test")
