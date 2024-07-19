@@ -446,9 +446,6 @@ getOrgDb <- function(organism, ah = NULL) {
   } else {
     ## If organism is in localHub we select localHub=TRUE because
     ## this is faster. Otherwise switch to online Hub
-    suppressMessages({
-      ah <- 
-    }
     ah <- tryCatch({
       AnnotationHub::AnnotationHub(localHub = TRUE)
     }, error = function(e) {
