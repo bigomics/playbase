@@ -441,7 +441,7 @@ getOrgDb <- function(organism, ah = NULL) {
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
 
-  if (!is.null(ah)) {
+  if (is.null(ah)) {
     ah <- AnnotationHub::AnnotationHub()
   }
   all_species <- getAllSpecies(ah)
