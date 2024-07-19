@@ -540,7 +540,8 @@ pgx.computePGX <- function(pgx,
     if (max.genes > 0 && nrow(pgx$counts) > max.genes) {
         message("shrinking data matrices: n= ", max.genes)
         logcpm <- logCPM(pgx$counts, total = NULL)
-        sdx <- apply(logcpm, 1, stats::sd)
+        sdx <- matrixStats::rowSds(logcpm, na.rm = TRUE)
+        ## sdx <- apply(logcpm, 1, stats::sd)
         jj <- Matrix::head(order(-sdx), max.genes) ## how many genes?
         jj0 <- setdiff(seq_len(nrow(pgx$counts)), jj)
         pgx$filtered[["low.variance"]] <- paste(rownames(pgx$counts)[jj0], collapse = ";")
@@ -593,7 +594,7 @@ pgx.computePGX <- function(pgx,
         ## Cluster by genes
         if (do.clustergenesets) {
             message("[pgx.computePGX] clustering genesets...")
-            pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), X = pgx$impX, level = "geneset")
+            pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), X = NULL, level = "geneset")
         }
     } else {
         message("[pgx.computePGX] Skipping genesets test")

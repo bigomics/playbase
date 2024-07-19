@@ -46,12 +46,14 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
   } else if (!is.null(pgx$gsetX) && level == "geneset") {
     message("using expression geneset X matrix...")
     X <- pgx$gsetX
+    X <- X[complete.cases(X), ]
   } else {
     message("WARNING:: could not find matrix X")
     return(pgx)
   }
+
   if (center.rows) {
-    X <- X - rowMeans(X)
+    X <- X - rowMeans(X, na.rm = TRUE)
   }
   if (scale.rows) {
     X <- X / (1e-6 + matrixStats::rowSds(X, na.rm = TRUE))
@@ -439,9 +441,9 @@ pgx.clusterMatrix <- function(X,
 
   ## impute on row median
   ## if (any(is.na(X))) {
-  ##   X <- imputeMedian(X)
+  ##    X <- imputeMedian(X)
   ## }
-
+  
   if (ncol(X) <= 6) X <- cbind(X, X, X, X, X, X)
   if (nrow(X) <= 3) X <- rbind(X, X, X, X)
 
