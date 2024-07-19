@@ -446,29 +446,29 @@ getOrgDb <- function(organism, ah = NULL) {
   } else {
     ## If organism is in localHub we select localHub=TRUE because
     ## this is faster. Otherwise switch to online Hub
-  ##   ah <- tryCatch(
-  ##     {
-  ##       AnnotationHub::AnnotationHub(localHub = TRUE)
-  ##     },
-  ##     error = function(e) {
-  ##       AnnotationHub::AnnotationHub(localHub = FALSE)
-  ##     }
-  ##   )
-  ##   local_species <- getAllSpecies(ah) ## orgDb species only
-  ##   if (tolower(organism) %in% tolower(local_species)) {
-  ##     message("[selectAnnotationHub] organism '", organism, "' in local Hub")
-  ##     all_species <- local_species
-  ##   } else {
-  ##     message("[selectAnnotationHub] querying online Hub...")
-  ##     ah <- AnnotationHub::AnnotationHub(localHub = FALSE)
-  ##     all_species <- getAllSpecies(ah)
-  ##   }
+    ##   ah <- tryCatch(
+    ##     {
+    ##       AnnotationHub::AnnotationHub(localHub = TRUE)
+    ##     },
+    ##     error = function(e) {
+    ##       AnnotationHub::AnnotationHub(localHub = FALSE)
+    ##     }
+    ##   )
+    ##   local_species <- getAllSpecies(ah) ## orgDb species only
+    ##   if (tolower(organism) %in% tolower(local_species)) {
+    ##     message("[selectAnnotationHub] organism '", organism, "' in local Hub")
+    ##     all_species <- local_species
+    ##   } else {
+    ##     message("[selectAnnotationHub] querying online Hub...")
+    ##     ah <- AnnotationHub::AnnotationHub(localHub = FALSE)
+    ##     all_species <- getAllSpecies(ah)
+    ##   }
 
     ## default call
     ah <- AnnotationHub::AnnotationHub()
     all_species <- getAllSpecies(ah)
   }
-    
+
   if (!tolower(organism) %in% tolower(all_species)) {
     message("WARNING: organism '", organism, "' not in AnnotationHub")
     return(NULL)
