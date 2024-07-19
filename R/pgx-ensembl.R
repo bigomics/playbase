@@ -227,7 +227,7 @@ ngs.getGeneAnnotation <- function(
 
 
 #'
-#' @no-export
+#' no-export
 cleanupAnnotation <- function(genes) {
   ## add missing columns if needed, then reorder
   columns <- c(
