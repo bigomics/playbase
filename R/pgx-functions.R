@@ -2118,6 +2118,7 @@ normalize_cols <- function(G) {
   return(G_scaled)
 }
 
+#' @export
 make_unique <- function(s) {
   has.dup <- sum(duplicated(s)) > 0
   if(!has.dup) return(s)

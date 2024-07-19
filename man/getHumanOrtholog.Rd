@@ -2,10 +2,12 @@
 % Please edit documentation in R/pgx-ensembl.R
 \name{getHumanOrtholog}
 \alias{getHumanOrtholog}
-\title{Show some probe types for selected organism}
+\title{Get human ortholog from given symbols of organism by using
+  orthogene package. This package needs internet connection.}
 \usage{
 getHumanOrtholog(organism, symbols)
 }
 \description{
-Show some probe types for selected organism
+Get human ortholog from given symbols of organism by using
+  orthogene package. This package needs internet connection.
 }

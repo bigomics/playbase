@@ -8,7 +8,6 @@ ngs.getGeneAnnotation(
   organism,
   probes,
   probe_type = NULL,
-  pgx = NULL,
   annot_table = NULL,
   verbose = TRUE
 )

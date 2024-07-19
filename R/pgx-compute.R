@@ -410,11 +410,6 @@ pgx.createPGX <- function(counts,
     }
   }
 
-  ## NOTE: generally pgx$X, pgx$counts, and pgx$genes should always be
-  ## aligned to prevent mistakes and unneeded matching of tables.
-  ##
-
-
   ## -------------------------------------------------------------------
   ## collapse probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------
@@ -465,6 +460,11 @@ pgx.createPGX <- function(counts,
   } else {
     pgx <- pgx.add_GMT(pgx = pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
   }
+  
+  ## NOTE: generally pgx$X, pgx$counts, pgx$genes, pgx$GMT should
+  ## always be aligned to prevent mistakes and unneeded matching of
+  ## tables.
+  ##
 
   ### done
   return(pgx)
