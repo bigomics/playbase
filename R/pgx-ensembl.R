@@ -820,28 +820,25 @@ checkProbes <- function(organism, probes, ah = NULL) {
 }
 
 
-
 ## ==================== using orthogene =====================
-
+## WIP. This seems much faster than AnnotHub. There are about 700
+## species supported. Online connection to server is needed but we are
+## already using remote AnnotHub and orthogene for ortholog
+## matching. The advantage is that probe type detection is not needed
+## because orthogene seems to detect is automatically.
 
 getGeneAnnotation.ORTHOGENE <- function(
     organism,
     probes,
     probe_type = NULL,
-    pgx = NULL,
-    annot_table = NULL,
     verbose = TRUE)
 {
 
-  if(is.null(organism)) {
-    species <- orthogene::infer_species( probes, method='gprofiler' )
-  } else {
-    species <- orthogene::map_species( organism, method='gprofiler', verbose = FALSE )
-  }
+  species <- orthogene::map_species( organism, method='gprofiler', verbose = FALSE )
   species
 
   if(is.null(species)) {
-    message("ERROR: unknown organism",organism)
+    message("ERROR: unknown organism ",organism)
     return(NULL)
   }
   
