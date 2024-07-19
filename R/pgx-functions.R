@@ -2121,11 +2121,13 @@ normalize_cols <- function(G) {
 #' @export
 make_unique <- function(s) {
   has.dup <- sum(duplicated(s)) > 0
-  if(!has.dup) return(s)
-  n = 1
-  while(has.dup) {
+  if (!has.dup) {
+    return(s)
+  }
+  n <- 1
+  while (has.dup) {
     jj <- which(duplicated(s))
-    s[jj] <- paste0(sub("[.][1-9]*","",s[jj]),'.',n)
+    s[jj] <- paste0(sub("[.][1-9]*", "", s[jj]), ".", n)
     has.dup <- sum(duplicated(s)) > 0
     n <- n + 1
   }
