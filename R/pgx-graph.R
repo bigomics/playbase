@@ -236,7 +236,7 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
     i1 <- min(i0 + bs - 1, nrow(ee))
     ii <- i0:i1
     ## fast method to compute rowwise-correlation (xx should be row-scaled)
-    ee.rho[ii] <- rowMeans(xx[ee[ii, 1], ] * xx[ee[ii, 2], ])
+    ee.rho[ii] <- rowMeans(xx[ee[ii, 1], ] * xx[ee[ii, 2], ], na.rm = TRUE)
   }
   igraph::E(gr1)$weight <- ee.rho ## replace weight with correlation
 
@@ -440,7 +440,7 @@ pgx.createVipGeneLayer <- function(gr, genes, z = 0, reconnect = 40) {
   igraph::V(gr2)$name <- rownames(pos1)
   gr2$layout <- pos1
   vv <- igraph::get.edgelist(gr2)
-  rho <- rowMeans(gr1$scaled.data[vv[, 1], ] * gr1$scaled.data[vv[, 2], ]) ## rho
+  rho <- rowMeans(gr1$scaled.data[vv[, 1], ] * gr1$scaled.data[vv[, 2], ], na.rm = TRUE) ## rho
   vname1 <- igraph::V(gr1)$name
   ee1 <- cbind(match(vv[, 1], vname1), match(vv[, 2], vname1))
   jj <- which(rowSums(is.na(ee1)) == 0)

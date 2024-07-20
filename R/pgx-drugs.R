@@ -85,7 +85,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
     }
     rownames(FC) <- toupper(sub(".*:|.*\\]", "", rownames(FC)))
 
-    FC <- FC[order(-rowMeans(FC**2)), , drop = FALSE]
+    FC <- FC[order(-rowMeans(FC**2, na.rm = TRUE)), , drop = FALSE]
     FC <- FC[!duplicated(rownames(FC)), , drop = FALSE]
   } else {
     ## it is a matrix
@@ -150,7 +150,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
     rho2 <- qlcMatrix::corSparse(D, R1)
     rownames(rho2) <- colnames(D)
     colnames(rho2) <- colnames(R1)
-    rho2 <- rho2[order(-rowMeans(rho2**2)), , drop = FALSE]
+    rho2 <- rho2[order(-rowMeans(rho2**2, na.rm = TRUE)), , drop = FALSE]
     .cor.pvalue <- function(x, n) 2 * stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
     P <- apply(rho2, 2, .cor.pvalue, n = nrow(D))
     Q <- apply(P, 2, stats::p.adjust, method = "fdr")
@@ -194,7 +194,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
 
       rx <- apply(abs(res$X), 2, rank)
       rownames(rx) <- rownames(res$X)
-      mtop <- names(utils::head(sort(rowMeans(rx), decreasing = TRUE), nprune))
+      mtop <- names(utils::head(sort(rowMeans(rx, na.rm = TRUE), decreasing = TRUE), nprune))
       top.idx <- unique(unlist(meta.gmt[mtop]))
 
       results[[k]]$X <- res$X[mtop, , drop = FALSE]

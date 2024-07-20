@@ -1490,7 +1490,7 @@ is.Date <- function(x) {
 averageByGroup <- function(mat, group, FUN = mean) {
   out <- do.call(cbind, tapply(
     1:ncol(mat), group,
-    function(i) rowMeans(mat[, i, drop = FALSE])
+    function(i) rowMeans(mat[, i, drop = FALSE], na.rm = TRUE)
   ))
   return(out)
 }
