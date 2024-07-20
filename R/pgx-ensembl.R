@@ -690,7 +690,7 @@ getHumanOrtholog <- function(organism, symbols) {
 #' @title Show some probe types for selected organism
 #'
 #' @export
-showProbeTypes <- function(organism, keytypes = NULL, ah = NULL, nprobe = 10) {
+showProbeTypes <- function(organism, keytypes = NULL, ah = NULL, n = 10) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
@@ -721,7 +721,7 @@ showProbeTypes <- function(organism, keytypes = NULL, ah = NULL, nprobe = 10) {
   }
 
   ## example probes
-  probes <- head(keys(orgdb, keytype = "ENTREZID"), nprobe)
+  probes <- head(keys(orgdb, keytype = "ENTREZID"), n)
 
   ## Iterate over probe types
   key_matches <- list()
@@ -740,8 +740,9 @@ showProbeTypes <- function(organism, keytypes = NULL, ah = NULL, nprobe = 10) {
     )))
 
     # set empty character to NA, as we only count not-NA to define probe type
-    probe_matches[probe_matches == ""] <- NA
-    key_matches[[key]] <- head(probe_matches[, key], nprobe)
+    types <- probe_matches[, key]
+    types <- setdiff(types, c("",NA))    
+    key_matches[[key]] <- head(types, n)
   }
 
   return(key_matches)
@@ -813,8 +814,8 @@ checkProbes <- function(organism, probes, ah = NULL) {
 getGeneAnnotation.ORTHOGENE <- function(
     organism,
     probes,
-    probe_type = NULL,
     verbose = TRUE) {
+  
   species <- orthogene::map_species(organism, method = "gprofiler", verbose = FALSE)
   species
 
