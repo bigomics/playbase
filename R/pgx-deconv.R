@@ -58,7 +58,7 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
 
   ## Filter count matrix
   X <- counts
-  X <- X[(rowMeans(X >= min.count) > low.th, na.rm = TRUE), ] ## OK???
+  X <- X[(rowMeans(X >= min.count, na.rm = TRUE) > low.th), ] ## OK???
 
   ## Match matrices
   rownames(X) <- toupper(rownames(X))
@@ -67,7 +67,7 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
   X1 <- X[gg, ]
   M1 <- M[gg, ]
   M1 <- M1[, Matrix::colSums(M1 != 0) > 0, drop = FALSE]
-  if (scalex) X1 <- X1 / (1 + rowMeans(X1, na.rm = TRUE)))
+  if (scalex) X1 <- X1 / (1 + rowMeans(X1, na.rm = TRUE))
 
   ## run deconvolution algorithm
 
@@ -82,9 +82,9 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
 
   ## Collapse to single cell.type
   if (collapse == "sum") {
-    P <- tapply(1:ncol(P), colnames(P), function(i) rowSums(P[, i, drop = FALSE], na.rm = TRUE)))
+    P <- tapply(1:ncol(P), colnames(P), function(i) rowSums(P[, i, drop = FALSE], na.rm = TRUE))
   } else if (collapse == "mean") {
-    P <- tapply(1:ncol(P), colnames(P), function(i) rowMeans(P[, i, drop = FALSE], na.rm = TRUE)))
+    P <- tapply(1:ncol(P), colnames(P), function(i) rowMeans(P[, i, drop = FALSE], na.rm = TRUE))
   } else {
     P <- tapply(1:ncol(P), colnames(P), function(i) apply(P[, i, drop = FALSE], 1, max))
   }
