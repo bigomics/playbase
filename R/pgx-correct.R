@@ -575,7 +575,7 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
     if (inherits(y1, "factor")) y1 <- factor(as.character(y1))
     design <- stats::model.matrix(~ 0 + y1)
     r1 <- stats::cor(t(x[, ii]), design, use = "pairwise")
-    r1 <- rowMeans(abs(r1))
+    r1 <- rowMeans(abs(r1), na.rm = TRUE)
     pv <- cor.pvalue(r1, length(y1))
     list(val = r1, pv = pv)
   }
@@ -875,7 +875,7 @@ pgx.computeTechnicalEffects <- function(X, is.count = FALSE, nmin = 3, nv = 1) {
   if (!any(class(cc.score) == "try-error")) {
     cc.score <- cc.score[, c("s_score", "g2m_score")]
     colnames(cc.score) <- c("S", "G2M")
-    if (nv == 1) cc.score <- rowMeans(cc.score)
+    if (nv == 1) cc.score <- rowMeans(cc.score, na.rm = TRUE)
     pheno <- cbind(pheno, cellcycle = cc.score)
   }
 
@@ -1392,7 +1392,7 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
   xlist1 <- lapply(xlist, function(x) {
     x <- head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)), ], 1000)
     x <- as.matrix(x)
-    (x - rowMeans(x))
+    (x - rowMeans(x, na.rm = TRUE))
   })
 
   message("[bc.evaluateResults] computing silhouette scores...")
@@ -1429,7 +1429,7 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
     })
     Y <- model.matrix(~pheno)[, -1]
     rho <- lapply(pca10, function(x) cor(x, Y))
-    rho <- lapply(rho, function(x) rowMeans(abs(x)))
+    rho <- lapply(rho, function(x) rowMeans(abs(x), na.rm = TRUE))
     pc1.ratio <- sapply(rho, function(r) abs(r[1]) / sum(abs(r)))
 
     res <- cbind(res, silhouette, pc1.ratio)
@@ -1442,7 +1442,7 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
   ##  score <- res.score * (silhouette / silhouette[1])**1
   overall.score <- t(t(1e-4 + res[, sel]) / (1e-4 + res[ref, sel]))
   overall.score[, "silhouette"] <- overall.score[, "silhouette"]**2 ## give more weight
-  overall.score <- exp(rowMeans(log(overall.score))) ## geometric mean
+  overall.score <- exp(rowMeans(log(overall.score), na.rm = TRUE)) ## geometric mean
 
   res1 <- cbind(score = overall.score, res)
   res1 <- res1[order(-res1[, "score"]), ]
@@ -1523,7 +1523,7 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
     for (m in methods) {
       xx <- xlist[[m]]
       xx <- head(xx[order(-apply(xx, 1, sd)), ], nmax)
-      xx <- xx - rowMeans(xx)
+      xx <- xx - rowMeans(xx, na.rm = TRUE)
       xx <- abs(xx)**0.5 * sign(xx)
       gx.imagemap(xx, main = m, cex.main = 1.4, cex = 0)
       mtext("samples", 1, line = 0.5, las = 1)
@@ -2194,9 +2194,9 @@ MNNcorrect <- function(X, batch, controls = NULL) {
 #' @export
 normalizeToControls <- function(X, batch, y, controls) {
   ii <- which(y %in% controls)
-  batch.ctl <- tapply(ii, batch[ii], function(k) rowMeans(X[, k, drop = FALSE]))
+  batch.ctl <- tapply(ii, batch[ii], function(k) rowMeans(X[, k, drop = FALSE], na.rm = TRUE))
   batch.ctl <- do.call(cbind, batch.ctl)
-  nX <- (X - batch.ctl[, batch]) + rowMeans(X)
+  nX <- (X - batch.ctl[, batch]) + rowMeans(X, na.rm = TRUE)
   ## nX <- limma::normalizeQuantiles(X)
   nX
 }
@@ -2354,7 +2354,7 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   }
   if (center.m) {
     ## center per condition group (takes out batch differences)
-    mX <- tapply(1:ncol(dX), y1, function(i) rowMeans(dX[, i, drop = FALSE]))
+    mX <- tapply(1:ncol(dX), y1, function(i) rowMeans(dX[, i, drop = FALSE], na.rm = TRUE))
     mX <- do.call(cbind, mX)
     dX <- dX - mX[, y1]
   }
@@ -2420,7 +2420,7 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   full.idx <- rownames(B)[kk]
   cX <- do.call(cbind, tapply(
     1:ncol(full.X), full.idx,
-    function(i) rowMeans(full.X[, i, drop = FALSE])
+    function(i) rowMeans(full.X[, i, drop = FALSE], na.rm = TRUE)
   ))
   cX <- cX[, colnames(X)]
 
@@ -2458,7 +2458,7 @@ nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
   }
   if (center.m) {
     ## center per condition group (takes out batch differences)
-    mX <- tapply(1:ncol(dX), y1, function(i) rowMeans(dX[, i, drop = FALSE]))
+    mX <- tapply(1:ncol(dX), y1, function(i) rowMeans(dX[, i, drop = FALSE], na.rm = TRUE))
     mX <- do.call(cbind, mX)
     dX <- dX - mX[, y1]
   }
@@ -2580,9 +2580,9 @@ nnmCorrect.SIMPLE <- function(x, y, k = 3) {
     nj <- which(y != y[j])
     nn <- intersect(order(-xcor[j, ]), nj)
     nn <- Matrix::head(nn, k)
-    nx[, j] <- x[, j] - rowMeans(x[, nn, drop = FALSE])
+    nx[, j] <- x[, j] - rowMeans(x[, nn, drop = FALSE], na.rm = TRUE)
   }
-  nx <- nx + rowMeans(x)
+  nx <- nx + rowMeans(x, na.rm = TRUE)
   return(nx)
 }
 
@@ -2648,7 +2648,7 @@ sMNN <- function(X, batch, y, nv = 0.33, nn = 3, return.idx = FALSE) {
   cX <- t(limma::removeBatchEffect(t(X), covariates = dU))
 
   ## restore original mean
-  cX <- cX - rowMeans(cX) + rowMeans(X)
+  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
 
   if (return.idx) {
     res <- list(X = cX, idx = all.idx)
@@ -2684,7 +2684,7 @@ mfnCorrect <- function(X, y, nv = 3, nn = 3, return.idx = FALSE) {
     ## get correction vectors
     if (length(mfn) > 0) {
       idx <- idx[mfn, , drop = FALSE]
-      X2 <- apply(idx, 1, function(i) rowMeans(X1[, i, drop = FALSE]))
+      X2 <- apply(idx, 1, function(i) rowMeans(X1[, i, drop = FALSE], na.rm = TRUE))
       dX <- X1[, rownames(idx)] - X2
       B <- cbind(B, dX)
       idx1 <- apply(idx, 2, function(i) colnames(X1)[i])
@@ -2703,7 +2703,7 @@ mfnCorrect <- function(X, y, nv = 3, nn = 3, return.idx = FALSE) {
   cX <- t(limma::removeBatchEffect(t(X), covariates = dU))
 
   ## restore original mean
-  cX <- cX - rowMeans(cX) + rowMeans(X)
+  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
 
   if (return.idx) {
     res <- list(X = cX, idx = all.idx)

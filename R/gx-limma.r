@@ -356,7 +356,7 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
 
   ## compute averages
   avg <- do.call(cbind, tapply(1:ncol(X0), pheno1, function(i) {
-    rowMeans(X0[, i, drop = FALSE])
+    rowMeans(X0[, i, drop = FALSE], na.rm = TRUE)
   }))
 
   if (!"logFC" %in% colnames(top)) {
@@ -605,5 +605,5 @@ seq_limma <- function(countdata, y, method = "edgeR") {
   }
   colnames(xmean) <- paste0("mean.", unique(y))
   Matrix::head(xmean)
-  xmean <- cbind(mean = rowMeans(xmean), xmean)
+  xmean <- cbind(mean = rowMeans(xmean, na.rm = TRUE), xmean)
 }

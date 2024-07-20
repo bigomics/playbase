@@ -1009,7 +1009,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     gsetX.bygroup <- NULL
     ## If groups/conditions are present we calculate the SD by group
     if (!is.null(grp)) {
-      gsetX.bygroup <- tapply(1:ncol(gsetX), grp, function(i) rowMeans(gsetX[, i, drop = FALSE]))
+      gsetX.bygroup <- tapply(1:ncol(gsetX), grp, function(i) rowMeans(gsetX[, i, drop = FALSE], na.rm = TRUE))
       gsetX.bygroup <- do.call(cbind, gsetX.bygroup)
       sdx <- apply(gsetX.bygroup, 1, stats::sd)
     } else {
