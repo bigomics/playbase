@@ -58,7 +58,7 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
 
   ## Filter count matrix
   X <- counts
-  X <- X[(rowMeans(X >= min.count) > low.th), ] ## OK???
+  X <- X[(rowMeans(X >= min.count) > low.th, na.rm = TRUE), ] ## OK???
 
   ## Match matrices
   rownames(X) <- toupper(rownames(X))
@@ -67,7 +67,7 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
   X1 <- X[gg, ]
   M1 <- M[gg, ]
   M1 <- M1[, Matrix::colSums(M1 != 0) > 0, drop = FALSE]
-  if (scalex) X1 <- X1 / (1 + rowMeans(X1))
+  if (scalex) X1 <- X1 / (1 + rowMeans(X1, na.rm = TRUE)))
 
   ## run deconvolution algorithm
 
@@ -82,9 +82,9 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
 
   ## Collapse to single cell.type
   if (collapse == "sum") {
-    P <- tapply(1:ncol(P), colnames(P), function(i) rowSums(P[, i, drop = FALSE]))
+    P <- tapply(1:ncol(P), colnames(P), function(i) rowSums(P[, i, drop = FALSE], na.rm = TRUE)))
   } else if (collapse == "mean") {
-    P <- tapply(1:ncol(P), colnames(P), function(i) rowMeans(P[, i, drop = FALSE]))
+    P <- tapply(1:ncol(P), colnames(P), function(i) rowMeans(P[, i, drop = FALSE], na.rm = TRUE)))
   } else {
     P <- tapply(1:ncol(P), colnames(P), function(i) apply(P[, i, drop = FALSE], 1, max))
   }
@@ -503,26 +503,26 @@ pgx.deconvolution <- function(X, ref,
   mat <- as.matrix(X)
   rownames(mat) <- gsub(".*:", "", rownames(mat)) ## strip prefix
   rownames(mat) <- toupper(rownames(mat)) ## handle mouse??
-  mat <- mat[order(-rowMeans(mat)), , drop = FALSE]
+  mat <- mat[order(-rowMeans(mat, na.rm = TRUE)), , drop = FALSE]
   mat <- as.matrix(mat[!duplicated(rownames(mat)), , drop = FALSE])
 
   ref <- as.matrix(ref)
   rownames(ref) <- toupper(rownames(ref))
-  ref <- ref[order(-rowMeans(ref)), , drop = FALSE]
+  ref <- ref[order(-rowMeans(ref, na.rm = TRUE)), , drop = FALSE]
   ref <- as.matrix(ref[!duplicated(rownames(ref)), , drop = FALSE])
 
   ## Add "unknown" class to reference matrix
   if (add.unknown) {
     gg <- intersect(rownames(ref), rownames(mat))
     x1 <- log(1 + ref[gg, , drop = FALSE])
-    y1 <- log(1 + rowMeans(mat[gg, , drop = FALSE]))
+    y1 <- log(1 + rowMeans(mat[gg, , drop = FALSE], na.rm = TRUE))
     x1 <- cbind(offset = 1, x1)
 
     ## compute residual matrix by substracting all possible linear
     ## combinations of reference.
 
     x1 <- ref[gg, , drop = FALSE]
-    y1 <- rowMeans(mat[gg, , drop = FALSE])
+    y1 <- rowMeans(mat[gg, , drop = FALSE], na.rm = TRUE)
     cf <- NNLM::nnlm(x1, cbind(y1))$coefficients
     cf[is.na(cf)] <- 0
     resid <- pmax(y1 - x1 %*% cf, 0) ## residual vector
