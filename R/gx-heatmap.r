@@ -30,11 +30,11 @@
 #' }
 #' @export
 gx.markermap <- function(X, splitx, n = 5, ...) {
-  F1 <- tapply(1:ncol(X), splitx, function(i) rowMeans(X[, i, drop = FALSE]))
+  F1 <- tapply(1:ncol(X), splitx, function(i) rowMeans(X[, i, drop = FALSE], na.rm = TRUE))
   F1 <- do.call(cbind, F1)
-  F1 <- F1 - rowMeans(F1)
+  F1 <- F1 - rowMeans(F1, na.rm = TRUE)
   topg <- apply(F1, 2, function(x) Matrix::head(order(-x), n))
-  topg <- apply(topg, 2, function(i) rownames(F1)[i])
+  topg <- apply(topg, 2, function(i) rownames(F1, na.rm = TRUE)[i])
   gg <- as.vector(topg)
   gg.idx <- as.vector(sapply(colnames(topg), rep, n))
   gx.splitmap(X[gg, ], splitx = splitx, split = gg.idx, ...)
@@ -64,7 +64,7 @@ gx.markermap <- function(X, splitx, n = 5, ...) {
 #' @export
 gx.PCAheatmap <- function(X, nv = 5, ngenes = 10, ...) {
   if (inherits(X, "list") && "X" %in% names(X)) {
-    X <- X$X - rowMeans(X$X)
+    X <- X$X - rowMeans(X$X, na.rm = TRUE)
   }
   X <- X - rowMeans(X, na.rm = TRUE)
   res <- irlba::irlba(X, nv = nv)
@@ -94,11 +94,11 @@ gx.PCAheatmap <- function(X, nv = 5, ngenes = 10, ...) {
 #' @export
 gx.PCAcomponents <- function(X, nv = 20, ngenes) {
   if (inherits(X, "list") && "X" %in% names(X)) X <- X$X
-  res <- irlba::irlba(X - rowMeans(X), nv = nv)
+  res <- irlba::irlba(X - rowMeans(X, na.rm = TRUE), nv = nv)
   for (i in 1:nv) {
     gg <- Matrix::head(rownames(X)[order(-abs(res$u[, i]))], ngenes)
     X1 <- X[gg, ]
-    X1 <- (X1 - rowMeans(X1)) / (1e-4 + apply(X1, 1, stats::sd)) ## scale??
+    X1 <- (X1 - rowMeans(X1, na.rm = TRUE)) / (1e-4 + apply(X1, 1, stats::sd)) ## scale??
     colnames(X1) <- NULL
     gx.imagemap(X1, main = paste0("PC", i), cex = 0.8)
   }
@@ -564,7 +564,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   grp.order <- 1:ngrp
   if (!is.null(order.groups) && ngrp > 1 && order.groups[1] == "clust") {
     ## Reorder cluster indices based on similarity clustering
-    mx <- do.call(cbind, lapply(grp, function(i) rowMeans(gx[, i, drop = FALSE])))
+    mx <- do.call(cbind, lapply(grp, function(i) rowMeans(gx[, i, drop = FALSE], na.rm = TRUE)))
     mx <- t(scale(t(mx)))
     grp.order <- fastcluster::hclust(stats::dist(t(mx)))$order
   }
