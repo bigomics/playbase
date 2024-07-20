@@ -34,7 +34,7 @@ gx.markermap <- function(X, splitx, n = 5, ...) {
   F1 <- do.call(cbind, F1)
   F1 <- F1 - rowMeans(F1, na.rm = TRUE)
   topg <- apply(F1, 2, function(x) Matrix::head(order(-x), n))
-  topg <- apply(topg, 2, function(i) rownames(F1, na.rm = TRUE)[i])
+  topg <- apply(topg, 2, function(i) rownames(F1)[i])
   gg <- as.vector(topg)
   gg.idx <- as.vector(sapply(colnames(topg), rep, n))
   gx.splitmap(X[gg, ], splitx = splitx, split = gg.idx, ...)
