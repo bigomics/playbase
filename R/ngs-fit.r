@@ -285,9 +285,9 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
     samples1 <- lapply(apply(exp.matrix > 0, 2, which), function(i) rownames(exp.matrix)[i])
     samples0 <- lapply(apply(exp.matrix < 0, 2, which), function(i) rownames(exp.matrix)[i])
 
-    avgX <- sapply(samplesX, function(s) rowMeans(X[, s, drop = FALSE]))
-    avg.1 <- sapply(samples1, function(s) rowMeans(X[, s, drop = FALSE]))
-    avg.0 <- sapply(samples0, function(s) rowMeans(X[, s, drop = FALSE]))
+    avgX <- sapply(samplesX, function(s) rowMeans(X[, s, drop = FALSE], na.rm = TRUE))
+    avg.1 <- sapply(samples1, function(s) rowMeans(X[, s, drop = FALSE], na.rm = TRUE))
+    avg.0 <- sapply(samples0, function(s) rowMeans(X[, s, drop = FALSE], na.rm = TRUE))
 
     dim(avgX)
     i <- j <- 1
@@ -401,7 +401,7 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
 
 
     ## !!!!!!!!!!!!!!!!!!!!!!!! NEED RETHINK !!!!!!!!!!!!!!!!!!!!!!!!
-    meta.p <- apply(pv, 1, function(p) exp(mean(log(p)))) ## geometric mean
+    meta.p <- apply(pv, 1, function(p) exp(mean(log(p), na.rm = TRUE))) ## geometric mean
     meta.q <- stats::p.adjust(meta.p, method = "BH")
     meta.fx <- rowMeans(fc, na.rm = TRUE)
     meta.avg <- rowMeans(mx, na.rm = TRUE)
