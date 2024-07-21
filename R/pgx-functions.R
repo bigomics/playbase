@@ -2139,7 +2139,7 @@ is_logged <- function(x) {
   ## if all values are 'small' it may be log
   all.lt60 <- all(x < 60, na.rm = TRUE)
 
-  ## if any value is smaller than -1 is may be log. The -1 because of
+  ## if we have negative  values it may be log. The -1 because of
   ## possible RNAseq prior = 1 in log2(x+1)
   minx.neg <- min(x, na.rm = TRUE) < -1  ## 
 
