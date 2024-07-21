@@ -2134,27 +2134,54 @@ make_unique <- function(s) {
 }
 
 #' @export
-is_logged <- function(x) {
+is_logged <- function(x, verbose=1) {
+
+  ## force as matrix
+  if(any(class(x) == "data.frame"))  x <- as.matrix(x)
+  
   ## if all values are 'small' it may be log
   all.lt60 <- all(x < 60, na.rm = TRUE)
-
+  has.bigx <- any(x > 1000, na.rm = TRUE) 
+  
   ## if we have negative  values it may be log. The -1 because of
   ## possible RNAseq prior = 1 in log2(x+1)
   minx.neg <- min(x, na.rm = TRUE) < -1 ##
+  all.pos  <- all(x >= 0, na.rm = TRUE) ##  
 
-  ## rows of ratio data matrices (like TMT) sum to some constant value.
+  ## check for ratio/fraction data: rows of ratio data matrices (like
+  ## TMT) sum to some constant value.
   is.ratio <- FALSE
-  if (NCOL(x) > 1) {
+  if (NCOL(x) > 1 && all.pos) {
     rowx.mean <- rowMeans(x, na.rm = TRUE)
     rowx.mean <- rowx.mean[!is.na(rowx.mean)]
     is.ratio <- (sd(rowx.mean) / mean(rowx.mean)) < 0.01
   }
 
-  is.log <- (all.lt60 || minx.neg) && !is.ratio
+  ## check raw count data: if all values are integer
+  fraction.diff <- (x - round(x)) / mean(x,na.rm=TRUE)
+  all.integer <- all( fraction.diff < 1e-8 )
+  is.counts <- all.pos && all.integer
+
+  ## check for low-count single-cell data: they may be all <60
+  ## so they look like log
+  zero.inflated <- mean((is.na(x) | x==0)) > 0.5
+  is.singlecell <- NCOL(x) > 1000 && all.pos && all.lt60 && zero.inflated
+
+  if(verbose > 0) {
+    message("[is_logged] all.lt60 = ",all.lt60)
+    message("[is_logged] minx.neg = ",minx.neg)
+    message("[is_logged] has.bigx = ",has.bigx)
+    message("[is_logged] all.pos = ",all.pos)    
+    message("[is_logged] is.ratio = ",is.ratio)
+  }
+  
+  possible.log <- (all.lt60 || minx.neg)
+  possible.linear <- (is.ratio || has.bigx || is.counts || is.singlecell)
+  is.log <- possible.log && !possible.linear
   is.log
 }
 
 
-## =====================================================================================
-## =========================== END OF FILE =============================================
-## =====================================================================================
+## =================================================================================
+## ========================= END OF FILE ===========================================
+## =================================================================================
