@@ -88,7 +88,7 @@ pgx.checkINPUT <- function(
     }
 
     # check if counts are log transformed
-    check.log <- is_logged( df_clean )
+    check.log <- is_logged(df_clean)
     if (check.log) {
       check_return$e29 <- "Possible log transformed counts detected."
     }
