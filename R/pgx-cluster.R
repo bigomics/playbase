@@ -304,7 +304,7 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
   }
 
   ## reduce dimensions
-  X <- Matrix::head(X[order(apply(X, 1, stats::sd)), ], top.sd)
+  X <- Matrix::head(X[order(apply(X, 1, stats::sd, na.rm = TRUE)), ], top.sd)
   X <- t(scale(t(X))) ## scale features??
   if (nrow(X) > npca) {
     npca <- min(npca, dim(X) - 1)
@@ -665,7 +665,7 @@ pgx.clusterMatrix.DEPRECATED <- function(X, perplexity = 30, dims = c(2, 3),
   ## adding some randomization is sometimes necessary if the data is 'too
   ## clean' and some methods get stuck... (IK)
   sdx <- matrixStats::rowSds(X, na.rm = TRUE)
-  small.sd <- 0.05 * mean(sdx)
+  small.sd <- 0.05 * mean(sdx, na.rm = TRUE)
   X <- X + small.sd * matrix(rnorm(length(X)), nrow(X), ncol(X))
 
   ## ------------ find t-SNE clusters

@@ -541,7 +541,7 @@ pgx.computePGX <- function(pgx,
         message("shrinking data matrices: n= ", max.genes)
         logcpm <- logCPM(pgx$counts, total = NULL)
         sdx <- matrixStats::rowSds(logcpm, na.rm = TRUE)
-        ## sdx <- apply(logcpm, 1, stats::sd)
+        ## sdx <- apply(logcpm, 1, stats::sd, na.rm = TRUE)
         jj <- Matrix::head(order(-sdx), max.genes) ## how many genes?
         jj0 <- setdiff(seq_len(nrow(pgx$counts)), jj)
         pgx$filtered[["low.variance"]] <- paste(rownames(pgx$counts)[jj0], collapse = ";")
@@ -1011,9 +1011,9 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     if (!is.null(grp)) {
       gsetX.bygroup <- tapply(1:ncol(gsetX), grp, function(i) rowMeans(gsetX[, i, drop = FALSE], na.rm = TRUE))
       gsetX.bygroup <- do.call(cbind, gsetX.bygroup)
-      sdx <- apply(gsetX.bygroup, 1, stats::sd)
+      sdx <- apply(gsetX.bygroup, 1, stats::sd, na.rm = TRUE)
     } else {
-      sdx <- matrixStats::rowSds(gsetX)
+      sdx <- matrixStats::rowSds(gsetX, na.rm = TRUE)
     }
 
     names(sdx) <- colnames(G)

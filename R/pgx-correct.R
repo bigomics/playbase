@@ -339,14 +339,14 @@ pgx.superBatchCorrect <- function(X, pheno,
         X.r <- t(stats::resid(eval(parse(text = lm.expr))))
         n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
 
-        cX1 <- Matrix::head(cX[order(-apply(cX, 1, stats::sd)), ], 1000) ## top 1000 genes only (faster)
+        cX1 <- Matrix::head(cX[order(-apply(cX, 1, stats::sd, na.rm = TRUE)), ], 1000) ## top 1000 genes only (faster)
         sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = n.sv)$sv)
 
         if (any(class(sv) == "try-error")) {
           ## try again with little bit of noise...
           a <- 0.01 * mean(apply(cX, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
           cX1 <- cX + a * matrix(stats::rnorm(length(cX)), nrow(cX), ncol(cX))
-          cX1 <- Matrix::head(cX1[order(-apply(cX1, 1, stats::sd)), ], 1000) ## top 1000 genes only (faster)
+          cX1 <- Matrix::head(cX1[order(-apply(cX1, 1, stats::sd, na.rm = TRUE)), ], 1000) ## top 1000 genes only (faster)
           sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1))$sv)
         }
         if (!any(class(sv) == "try-error")) {
@@ -413,7 +413,7 @@ pgx.superBatchCorrect <- function(X, pheno,
         nremoved <- 0
         pX <- NULL
         while (length(ii) > 0 && niter < max.iter) {
-          xx <- Matrix::head(cX[order(-apply(cX, 1, stats::sd)), ], hc.top)
+          xx <- Matrix::head(cX[order(-apply(cX, 1, stats::sd, na.rm = TRUE)), ], hc.top)
           hc <- stats::cutree(fastcluster::hclust(stats::dist(t(xx)), method = "ward.D2"), 2)
           hc.rho <- stats::cor(hc, mod1)
           hc.rho <- apply(abs(hc.rho), 1, max)
@@ -1522,7 +1522,7 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
     i <- 1
     for (m in methods) {
       xx <- xlist[[m]]
-      xx <- head(xx[order(-apply(xx, 1, sd)), ], nmax)
+      xx <- head(xx[order(-apply(xx, 1, sd, na.rm = TRUE)), ], nmax)
       xx <- xx - rowMeans(xx, na.rm = TRUE)
       xx <- abs(xx)**0.5 * sign(xx)
       gx.imagemap(xx, main = m, cex.main = 1.4, cex = 0)
@@ -2345,7 +2345,7 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   dX <- X
 
   ## reduce for speed
-  sdx <- apply(dX, 1, stats::sd)
+  sdx <- apply(dX, 1, stats::sd, na.rm = TRUE)
   ii <- Matrix::head(order(-sdx), sdtop)
   dX <- dX[ii, ]
 
@@ -2446,7 +2446,7 @@ nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
   dX <- X
 
   ## reduce for speed
-  sdx <- apply(dX, 1, stats::sd)
+  sdx <- apply(dX, 1, stats::sd, na.rm = TRUE)
   ii <- Matrix::head(order(-sdx), sdtop)
   dX <- dX[ii, ]
   if (center.x) {

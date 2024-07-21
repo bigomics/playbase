@@ -98,7 +98,7 @@ gx.PCAcomponents <- function(X, nv = 20, ngenes) {
   for (i in 1:nv) {
     gg <- Matrix::head(rownames(X)[order(-abs(res$u[, i]))], ngenes)
     X1 <- X[gg, ]
-    X1 <- (X1 - rowMeans(X1, na.rm = TRUE)) / (1e-4 + apply(X1, 1, stats::sd)) ## scale??
+    X1 <- (X1 - rowMeans(X1, na.rm = TRUE)) / (1e-4 + apply(X1, 1, stats::sd, na.rm = TRUE)) ## scale??
     colnames(X1) <- NULL
     gx.imagemap(X1, main = paste0("PC", i), cex = 0.8)
   }
@@ -776,12 +776,12 @@ gx.heatmap <- function(gx, values = NULL,
   ## scaling options
   if ("col" %in% scale || "both" %in% scale) {
     tgx <- t(gx) - colMeans(gx, na.rm = TRUE)
-    gx <- t(tgx / (1e-4 + apply(gx, 2, stats::sd))) ## small eps maintains SD order!
+    gx <- t(tgx / (1e-4 + apply(gx, 2, stats::sd, na.rm = TRUE))) ## small eps maintains SD order!
     remove(tgx)
   }
   if ("row" %in% scale || "both" %in% scale) {
     gx <- gx - rowMeans(gx, na.rm = TRUE)
-    gx <- gx / (1e-4 + apply(gx, 1, stats::sd)) ## small eps maintains SD order!
+    gx <- gx / (1e-4 + apply(gx, 1, stats::sd, na.rm = TRUE)) ## small eps maintains SD order!
   }
   if ("col.center" %in% scale) {
     gx <- t(t(gx) - colMeans(gx, na.rm = TRUE))

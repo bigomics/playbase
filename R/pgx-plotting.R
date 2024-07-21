@@ -504,7 +504,7 @@ pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast = NULL) {
   X <- list()
   for (i in 1:length(matlist)) {
     X[[i]] <- matlist[[i]] - rowMeans(matlist[[i]])
-    X[[i]] <- X[[i]] / apply(X[[i]], 1, stats::sd)
+    X[[i]] <- X[[i]] / apply(X[[i]], 1, stats::sd, na.rm = TRUE)
   }
 
   ## Counts cross-table between matrices
@@ -1779,7 +1779,7 @@ pgx.splitHeatmap <- function(ngs, splitx = NULL, top.mode = "specific",
     X1 <- X0[jj, ]
     idx <- paste0("M", as.vector(mapply(rep, 1:ncol(grpX), ntop1)))
   } else {
-    X1 <- Matrix::head(X0[order(-apply(X0, 1, stats::sd)), ], ntop)
+    X1 <- Matrix::head(X0[order(-apply(X0, 1, stats::sd, na.rm = TRUE)), ], ntop)
     hc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(t(X1), use = "pairwise")), method = "ward.D2")
     idx <- paste0("S", stats::cutree(hc, 5))
   }
