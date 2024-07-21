@@ -63,7 +63,7 @@ pgx.checkINPUT <- function(
     }
 
     # check for zero count rows, remove them
-    ANY_ROW_ZERO <- which(rowSums(df_clean) == 0, )
+    ANY_ROW_ZERO <- which(rowSums(df_clean, na.rm = TRUE) == 0, )
 
     if (length(ANY_ROW_ZERO) > 0 && PASS) {
       # get the row names with all zeros

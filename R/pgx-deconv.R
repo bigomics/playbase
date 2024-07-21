@@ -754,7 +754,7 @@ pgx.deconvolution <- function(X, ref,
   ## meta
   if (length(results) > 1) {
     jj <- colnames(ref)
-    norm.results <- lapply(results, function(x) x[, jj, drop = FALSE] / (1e-8 + rowSums(x[, jj, drop = FALSE])))
+    norm.results <- lapply(results, function(x) x[, jj, drop = FALSE] / (1e-8 + rowSums(x[, jj, drop = FALSE], na.rm = TRUE)))
     lognorm.results <- lapply(norm.results, function(x) log(0.001 + pmax(x, 0)))
     res.meta1 <- Reduce("+", norm.results) / length(norm.results)
     res.meta2 <- exp(Reduce("+", lognorm.results) / length(lognorm.results))
