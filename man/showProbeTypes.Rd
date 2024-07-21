@@ -4,7 +4,7 @@
 \alias{showProbeTypes}
 \title{Show some probe types for selected organism}
 \usage{
-showProbeTypes(organism, keytypes = NULL, ah = NULL, nprobe = 10)
+showProbeTypes(organism, keytypes = NULL, ah = NULL, n = 10)
 }
 \description{
 Show some probe types for selected organism

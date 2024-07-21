@@ -900,7 +900,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     return(pgx)
   }
 
-  # Change HUMAN gene names to species symbols if NOT human and human_ortholog column is NOT NULL
+  # Change HUMAN gene names to species symbols if NOT human and
+  # human_ortholog column is NOT NULL
   if (!is.human && !is.null(pgx$genes$human_ortholog)) {
     rownames(G) <- pgx$genes$symbol[match(rownames(G), pgx$genes$human_ortholog)]
   }
