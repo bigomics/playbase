@@ -741,7 +741,7 @@ showProbeTypes <- function(organism, keytypes = NULL, ah = NULL, n = 10) {
 
     # set empty character to NA, as we only count not-NA to define probe type
     types <- probe_matches[, key]
-    types <- setdiff(types, c("",NA))    
+    types <- setdiff(types, c("", NA))
     key_matches[[key]] <- head(types, n)
   }
 
@@ -815,7 +815,6 @@ getGeneAnnotation.ORTHOGENE <- function(
     organism,
     probes,
     verbose = TRUE) {
-  
   species <- orthogene::map_species(organism, method = "gprofiler", verbose = FALSE)
   species
 
