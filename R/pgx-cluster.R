@@ -415,7 +415,7 @@ pgx.clusterMatrix <- function(X,
   namesx <- colnames(X)
   if (reduce.sd > 0 && nrow(X) > reduce.sd) {
     sdx <- matrixStats::rowSds(X, na.rm = TRUE)
-    is.constant <- all(abs(sdx - mean(sdx, na.rm = TRUE)) < 1e-8)
+    is.constant <- all(abs(sdx - mean(sdx, na.rm = TRUE)) < 1e-8, na.rm = TRUE)
     if (is.constant) {
       message("WARNING:: SD is constant. Skipping SD reduction...\n")
     } else {
