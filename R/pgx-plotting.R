@@ -1230,9 +1230,10 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
     return(NULL)
   }
 
-  F <- F[match(rownames(xy), rownames(F)), , drop = FALSE]
-
-  rownames(F) <- rownames(xy)
+  cm <- intersect(rownames(xy), rownames(F))
+  F <- F[cm, , drop = FALSE]
+  ## F <- F[match(rownames(xy), rownames(F)), , drop = FALSE]
+  ## rownames(F) <- rownames(xy)
 
   if (set.par) {
     nc <- ceiling(sqrt(ncol(F)))
