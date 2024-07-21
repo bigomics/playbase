@@ -497,7 +497,7 @@ ngs.fitContrastsWithLIMMA <- function(X, contr.matrix, design, method = c("voom"
     exp0 <- design %*% contr.matrix
     kk <- rownames(exp0)
     if (prune.samples) {
-      kk <- rownames(exp0)[which(rowSums(abs(exp0)) > 0)]
+      kk <- rownames(exp0)[which(rowSums(abs(exp0), na.rm = TRUE) > 0)]
     }
     design1 <- design[kk, , drop = FALSE]
     X1 <- X[, kk, drop = FALSE]
@@ -883,10 +883,10 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
 
   rownames.counts <- rownames(counts)
   counts <- round(counts) ## WARNING!!!
-  if (all(rowSums(counts == 0) > 0)) {
+  if (all(rowSums(counts == 0, na.rm = TRUE) > 0)) {
     ## ERROR: 'every gene contains at least one zero, cannot compute log
     ## geometric means' so we fix it villager-style
-    jmax <- which.max(rowSums(counts))
+    jmax <- which.max(rowSums(counts, na.rm = TRUE))
     counts[jmax, ] <- pmax(counts[jmax, ], 1)
   }
   dds <- DESeq2::DESeqDataSetFromMatrix(

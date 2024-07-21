@@ -67,7 +67,7 @@ gmt2mat <- function(gmt, max.genes = -1, ntop = -1, sparse = TRUE,
       if (length(ii0) > 0) D[ii0, j] <- +1
     }
   }
-  D <- D[order(-Matrix::rowSums(D != 0)), ]
+  D <- D[order(-Matrix::rowSums(D != 0, na.rm = TRUE)), ]
   D
 }
 

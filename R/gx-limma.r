@@ -565,7 +565,7 @@ seq_limma <- function(countdata, y, method = "edgeR") {
   ## Identify genes with at least 0.5 CPM in at least 2 samples
   myCPM <- edgeR::cpm(countdata)
   thresh <- myCPM > 0.5
-  keep <- rowSums(thresh) >= 2
+  keep <- rowSums(thresh, na.rm = TRUE) >= 2
   ## Subset the rows of countdata to keep the more highly expressed genes
   counts.keep <- countdata[keep, ]
 
