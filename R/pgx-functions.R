@@ -2099,7 +2099,7 @@ getGSETS_playbase <- function(gsets = NULL, pattern = NULL) {
 #' @export
 normalize_rows <- function(G) {
   # efficient normalization using linear algebra
-  row_sums <- Matrix::rowSums(G)
+  row_sums <- Matrix::rowSums(G, na.rm = TRUE)
   D <- Matrix::Diagonal(x = 1 / row_sums)
   G_scaled <- D %*% G
   rownames(G_scaled) <- rownames(G)

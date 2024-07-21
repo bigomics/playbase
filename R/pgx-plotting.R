@@ -272,7 +272,7 @@ pgx.plotEnrichmentDotPlot <- function(pgx, contrast,
 #' @export
 pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap", "pacmap"), nb = NULL, ...) {
   ## method=c('tsne','pca','umap','pacmap')
-  jj <- head(order(-matrixStats::rowSds(X)), 1000)
+  jj <- head(order(-matrixStats::rowSds(X, na.rm = TRUE)), 1000)
   X1 <- X[jj, ]
   X1 <- X1 - rowMeans(X1, na.rm = TRUE)
   if (ncol(X1) < 20) {
@@ -988,7 +988,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
 
 
   if (is.null(hilight)) {
-    wt <- rowSums(scale(xy, center = FALSE)**2)
+    wt <- rowSums(scale(xy, center = FALSE)**2, na.rm = TRUE)
     hilight <- rownames(xy)[order(-wt)]
     hilight <- intersect(hilight, names(sig[sig == TRUE]))
   }
@@ -1068,7 +1068,7 @@ pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
   # <- gg
   cpal <- c("grey60", "red3")
   if (is.null(hilight)) {
-    wt <- rowSums(scale(cbind(xy, m), center = FALSE)**2)
+    wt <- rowSums(scale(cbind(xy, m), center = FALSE)**2, na.rm = TRUE)
     hilight <- rownames(xy)[order(-wt)]
     hilight <- intersect(hilight, names(sig[sig == TRUE]))
   }
