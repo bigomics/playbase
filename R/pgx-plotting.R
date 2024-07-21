@@ -1447,7 +1447,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   if (level == "geneset") {
     gx <- pgx$gsetX[probe, rownames(pgx$samples)]
   } else {
-    gx <- pgx$X[rownames(pgx$X) == probe, rownames(pgx$samples)]
+    gx <- pgx$X[which(rownames(pgx$X) == probe), rownames(pgx$samples)]
   }
 
   if (!logscale) {
@@ -5366,7 +5366,7 @@ pgx.barplot.PLOTLY <- function(
         data[y],
         list(data[[x]]),
         function(val) {
-          c(mean = mean(val), sd = stats::sd(val))
+          c(mean = mean(val, na.rm = TRUE), sd = stats::sd(val, na.rm = TRUE))
         }
       )
     )
