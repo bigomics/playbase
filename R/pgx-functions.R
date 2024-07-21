@@ -2135,23 +2135,22 @@ make_unique <- function(s) {
 
 #' @export
 is_logged <- function(x) {
-
   ## if all values are 'small' it may be log
   all.lt60 <- all(x < 60, na.rm = TRUE)
 
   ## if any value is smaller than -1 is may be log. The -1 because of
   ## possible RNAseq prior = 1 in log2(x+1)
-  minx.neg <- min(x, na.rm = TRUE) < -1  ## 
+  minx.neg <- min(x, na.rm = TRUE) < -1 ##
 
   ## rows of ratio data matrices (like TMT) sum to some constant value.
   is.ratio <- FALSE
-  if(NCOL(x) > 1) {
+  if (NCOL(x) > 1) {
     rowx.mean <- rowMeans(x, na.rm = TRUE)
     rowx.mean <- rowx.mean[!is.na(rowx.mean)]
     is.ratio <- (sd(rowx.mean) / mean(rowx.mean)) < 0.01
   }
-  
-  is.log <- ( all.lt60 || minx.neg ) && !is.ratio
+
+  is.log <- (all.lt60 || minx.neg) && !is.ratio
   is.log
 }
 
