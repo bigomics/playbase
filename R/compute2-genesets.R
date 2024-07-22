@@ -46,7 +46,7 @@ compute_testGenesets <- function(pgx,
   )
 
   ## convert to gene list
-  G <- pgx$G
+  G <- pgx$GMT
   gmt <- playbase::mat2gmt(G)
 
   ## if reduced samples

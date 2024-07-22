@@ -411,7 +411,6 @@ pgx.createPGX <- function(counts,
     message("[createPGX] pgx$X has ", sum(is.na(pgx$X)), " missing values")
 
     return(pgx)
-    
 }
 
 
@@ -784,69 +783,6 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   pgx
 }
 
-#' Get GO gene sets for organism directly from
-#' AnnotationHub/OrgDB. Restrict to genes as background.
-#'
-#' export
-getOrganismGO <- function(organism, genes, ah = NULL) {
-  if (tolower(organism) == "human") organism <- "Homo sapiens"
-  if (tolower(organism) == "mouse") organism <- "Mus musculus"
-  if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
-
-  ## Load the annotation resource.
-  if (is.null(ah)) ah <- AnnotationHub::AnnotationHub()
-  cat("querying AnnotationHub for", organism, "\n")
-
-  ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
-
-  ## select on exact organism name
-  ahDb <- ahDb[which(tolower(ahDb$species) == tolower(organism))]
-  if (length(ahDb) == 0) {
-    return(list())
-  }
-
-  ## select latest/last
-  ahDb$species
-  k <- length(ahDb)
-  cat("selecting database for", ahDb$species[k], "\n")
-  orgdb <- ahDb[[k]] ## last one, newest version
-
-  go.gmt <- list()
-  AnnotationDbi::keytypes(orgdb)
-  if (!"GOALL" %in% AnnotationDbi::keytypes(orgdb)) {
-    cat("WARNING:: missing GO annotation in database!\n")
-  } else {
-    ## create GO annotets
-    cat("\nCreating GO annotation from AnnotationHub...\n")
-    ont_classes <- c("BP", "CC", "MF")
-    k <- "BP"
-    for (k in ont_classes) {
-      go_id <- AnnotationDbi::mapIds(orgdb,
-        keys = k, keytype = "ONTOLOGY",
-        column = "GO", multiVals = "list"
-      )[[1]]
-      go_id <- unique(go_id)
-      sets <- AnnotationDbi::mapIds(orgdb,
-        keys = go_id, keytype = "GOALL",
-        column = "SYMBOL", multiVals = "list"
-      )
-
-      # intersect with genes should be done later, as we need to count the gset size before
-      # sets <- lapply(sets, function(s) intersect(s, genes))
-
-      ## get GO title
-      go <- sapply(GO.db::GOTERM[names(sets)], Term)
-      new_names <- paste0("GO_", k, ":", go, " (", sub("GO:", "GO_", names(sets)), ")")
-      names(sets) <- new_names
-
-      ## add to list
-
-      go.gmt <- c(go.gmt, sets)
-    }
-  }
-  go.gmt
-}
-
 
 pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   if (!"symbol" %in% colnames(pgx$genes)) {
@@ -881,7 +817,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     return(pgx)
   }
 
-  # Change HUMAN gene names to species symbols if NOT human and human_ortholog column is NOT NULL
+  # Change HUMAN gene names to species symbols if NOT human and
+  # human_ortholog column is NOT NULL
   if (!is.human && !is.null(pgx$genes$human_ortholog)) {
     rownames(G) <- pgx$genes$symbol[match(rownames(G), pgx$genes$human_ortholog)]
   }
@@ -911,7 +848,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
   go.genesets <- tryCatch(
     {
-      getOrganismGO(pgx$organism, rownames(G), ah = NULL)
+      getOrganismGO(pgx$organism, ah = NULL)
     },
     error = function(e) {
       message("Error in getOrganismsGO:", e)

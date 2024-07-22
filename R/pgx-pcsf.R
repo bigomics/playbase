@@ -86,7 +86,7 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
 plotPCSF <- function(pcsf,
                      highlightby = c("centrality", "prize")[1],
                      plot = c("visnet", "igraph"),
-                     node_cex = 30, label_cex = 30) {
+                     node_cex = 30, label_cex = 30, nlabel = -1) {
   ## set node size
   fx <- igraph::V(pcsf)$prize
   wt <- abs(fx / mean(abs(fx), na.rm = TRUE))**0.8
@@ -112,10 +112,13 @@ plotPCSF <- function(pcsf,
     label_cex1 <- label_cex * (1 + 3 * (fx1 / max(fx1))**3)
   }
 
-  ## ## set name
-  ## if (level == "geneset") {
-  ##   igraph::V(pcsf)$name <- gsub(".*:| \\(.*", "", igraph::V(pcsf)$name)
-  ## }
+  igraph::V(pcsf)$label <- igraph::V(pcsf)$name
+
+  if (nlabel > 0) {
+    top.cex <- head(order(-label_cex1), nlabel)
+    bottom.cex <- setdiff(1:length(label_cex1), top.cex)
+    igraph::V(pcsf)$label[bottom.cex] <- ""
+  }
 
   out <- NULL
   if (plot == "visnet") {

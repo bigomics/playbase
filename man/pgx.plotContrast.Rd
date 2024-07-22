@@ -32,6 +32,9 @@ pgx.Volcano(
   hilight = NULL,
   cpal = c("grey60", "red3"),
   title = NULL,
+  xlim = NULL,
+  ylim = NULL,
+  set.par = TRUE,
   plotlib = "base",
   data = FALSE
 )
@@ -73,6 +76,7 @@ pgx.plotGeneUMAP(
   ntop = 20,
   cex = 1,
   cex.lab = 0.8,
+  cex.legend = 1,
   hilight = NULL,
   title = NULL,
   zfix = FALSE,

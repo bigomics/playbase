@@ -322,75 +322,73 @@ pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap", "pacmap"), nb = 
 #' Useful for exploring sample relationships and associations.
 #'
 #' @export
-pgx.scatterPlot <- function(pgx, pheno = NULL, gene = NULL,
+pgx.scatterPlot <- function(pgx, samples = NULL, pheno = NULL,
+                            gene = NULL, geneset = NULL,
                             contrast = NULL, level = "gene",
-                            plotlib = "base", pos = NULL, ...) {
+                            method = "tsne", pos = NULL,
+                            plotlib = "base", ...) {
   ## Scatter t-SNE plot samples (or genes) colored on phenotype,
   ## gene expression, geneset expresssion or (correlation with)
   ## contrast.
   ##
-  if (level == "geneset" && is.null(pos)) {
-    stop("FATAL:: geneset scatter needs position vector")
+
+  if (is.null(pos)) {
+    pos <- pgx$tsne2d
+    cpos <- pgx$cluster$pos
+    if (method == "tsne" && "tsne2d" %in% names(cpos)) pos <- cpos[["tsne2d"]]
+    if (method == "pca" && "tsne2d" %in% names(cpos)) pos <- cpos[["pca2d"]]
+    if (method == "umap" && "tsne2d" %in% names(cpos)) pos <- cpos[["umap2d"]]
   }
 
-  if (level == "geneset") {
-    X <- pgx$gsetX
-  } else {
-    X <- pgx$X
+  if (nrow(pos) != nrow(pgx$samples)) {
+    stop("[pgx.scatterPlot] dimension mismatch of positions")
   }
 
   plt <- NULL
-
-  if (!is.null(gene)) {
-    if (is.null(pos) && level == "gene") pos <- pgx$tsne2d
-    var <- X[gene, rownames(pos)]
-    title <- gene
-    plt <- pgx.scatterPlotXY(
-      pos, var,
-      plotlib = plotlib, #
-      xlab = colnames(pos)[1], ylab = colnames(pos)[2],
-      type = "numeric", ...
-    )
-  }
+  vartype <- c("numeric", "factor")[1]
   if (!is.null(pheno)) {
-    if (is.null(pos) && level == "gene") pos <- pgx$tsne2d
     var <- pgx$samples[rownames(pos), pheno]
     title <- pheno
-    plt <- pgx.scatterPlotXY(
-      pos, var,
-      plotlib = plotlib, #
-      xlab = colnames(pos)[1], ylab = colnames(pos)[2],
-      ...
-    )
+    vartype <- "factor"
   }
   if (!is.null(contrast)) {
-    if (is.null(pos) && "cluster.genes" %in% names(pgx)) {
-      pos <- pgx$cluster.genes$pos[[1]][, 1:2]
-    }
-    if (is.null(pos)) {
-      stop("must supply positions for gene contrasts")
-    }
-    if (level == "gene") {
-      var <- pgx$gx.meta$meta[[contrast]]$meta.fx
-      names(var) <- rownames(pgx$gx.meta$meta[[contrast]])
-      var <- var[rownames(pos)]
-      tooltip <- probe2symbol(rownames(counts), ngs$genes)
-    }
-    if (level == "geneset") {
-      var <- pgx$gset.meta$meta[[contrast]]$meta.fx
-      names(var) <- rownames(pgx$gset.meta$meta[[contrast]])
-      var <- var[rownames(pos)]
-      tooltip <- rownames(pos)
-    }
-
-    plt <- pgx.scatterPlotXY(
-      pos, var,
-      plotlib = plotlib, #
-      xlab = colnames(pos)[1], ylab = colnames(pos)[2],
-      tooltip = tooltip,
-      ...
-    )
+    ct.matrix <- pgx$contrasts
+    if (is.null(ct.matrix)) ct.matrix <- pgx$model.parameters$exp.matrix
+    ct.matrix <- playbase::contrastAsLabels(ct.matrix)
+    var <- ct.matrix[rownames(pos), contrast]
+    title <- contrast
+    vartype <- "factor"
   }
+  if (!is.null(gene)) {
+    var <- pgx$X[gene, rownames(pos)]
+    title <- gene
+    vartype <- "numeric"
+  }
+  if (!is.null(geneset)) {
+    var <- pgx$gsetX[geneset, rownames(pos)]
+    title <- gene
+    vartype <- "numeric"
+  }
+  if (!is.null(samples)) {
+    sel <- 1:nrow(pos)
+    if (is.character(samples)) {
+      sel <- which(rownames(pos) %in% samples)
+    }
+    if (is.integer(samples)) {
+      sel <- samples
+    }
+    pos <- pos[sel, ]
+    var <- var[sel]
+  }
+  plt <- pgx.scatterPlotXY(
+    pos,
+    var,
+    plotlib = plotlib, #
+    xlab = colnames(pos)[1],
+    ylab = colnames(pos)[2],
+    type = vartype,
+    ...
+  )
 
   if (plotlib == "base") {
     return(NULL)
@@ -969,7 +967,8 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
                         psig = 0.05, fc = 1, cex = 1, cex.lab = 1, ntop = 20,
                         p.min = NULL, fc.max = NULL, hilight = NULL, #
                         cpal = c("grey60", "red3"), title = NULL,
-                        plotlib = "base", data = FALSE) {
+                        xlim = NULL, ylim = NULL,
+                        set.par = TRUE, plotlib = "base", data = FALSE) {
   if (is.integer(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
   res <- NULL
   if (level == "gene") {
@@ -985,8 +984,6 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   sig <- (q <= psig & abs(f) >= fc)
   xy <- cbind(fc = f, y = -log10(q))
 
-
-
   if (is.null(hilight)) {
     wt <- rowSums(scale(xy, center = FALSE)**2, na.rm = TRUE)
     hilight <- rownames(xy)[order(-wt)]
@@ -994,11 +991,11 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   }
   hilight <- Matrix::head(hilight, ntop) ## label
 
-  xlim <- ylim <- NULL
-  if (!is.null(fc.max)) {
+  ## xlim <- ylim <- NULL
+  if (is.null(xlim) && !is.null(fc.max)) {
     xlim <- c(-1.1, 1.1) * fc.max
   }
-  if (!is.null(p.min)) {
+  if (is.null(ylim) && !is.null(p.min)) {
     ylim <- c(0, -log10(p.min))
   }
 
@@ -1023,8 +1020,15 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
     legend = FALSE,
     col = cpal,
     opacity = 1,
+    set.par = set.par,
     plotlib = plotlib
   )
+  if (plotlib == "base") {
+    abline(v = 0, lty = 1, lwd = 0.5)
+    abline(h = 0, lty = 1, lwd = 0.5)
+    abline(v = c(-1, 1) * fc, lty = 2, lwd = 0.5)
+    abline(h = -log10(psig), lty = 2, lwd = 0.5)
+  }
 
   p
 }
@@ -1200,6 +1204,7 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
 #' @export
 pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
                              pos = NULL, ntop = 20, cex = 1, cex.lab = 0.8,
+                             cex.legend = 1,
                              hilight = NULL, title = NULL, zfix = FALSE,
                              set.par = TRUE, par.sq = FALSE,
                              level = "gene", plotlib = "ggplot",
@@ -1280,8 +1285,10 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
       zlim = zlim, zsym = TRUE, softmax = 1,
       cex = cex, cex.lab = cex.lab,
       title = title1, cex.title = 1.0,
+      cex.legend = cex.legend,
       legend = TRUE,
       opacity = 0.5,
+      set.par = set.par,
       plotlib = plotlib
     )
 
@@ -2692,12 +2699,12 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
                                    zlim = NULL, zlog = FALSE, zsym = FALSE, softmax = FALSE, pch = 20,
                                    cex = NULL, cex.lab = 1, cex.title = 1.2, cex.legend = 1,
                                    zoom = 1, legend = TRUE, bty = "o", legend.ysp = 0.85,
-                                   legend.pos = "bottomleft", lab.pos = NULL, repel = TRUE,
-                                   xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL, dlim = 0.05,
+                                   legend.pos = "bottomright", lab.pos = NULL, repel = TRUE,
+                                   xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL, dlim = 0.02,
                                    hilight2 = hilight, hilight.cex = NULL, lab.xpd = TRUE,
                                    hilight = NULL, hilight.col = NULL, hilight.lwd = 0.8,
                                    label.clusters = FALSE, cex.clust = 1.5,
-                                   tstep = 0.1, rstep = 0.1,
+                                   tstep = 0.1, rstep = 0.1, na.color = "#AAAAAA55",
                                    tooltip = NULL, theme = NULL, set.par = TRUE,
                                    axt = "s", xaxs = TRUE, yaxs = TRUE,
                                    labels = NULL, label.type = NULL, opacity = 1) {
@@ -2726,16 +2733,26 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
   }
   var <- var[match(rownames(pos), names(var))]
 
-  ## normalize pos
-  xlim0 <- range(pos[, 1])
-  ylim0 <- range(pos[, 2])
-  if (zoom != 1) {
-    cx <- mean(range(pos[, 1], na.rm = TRUE), na.rm = TRUE)
-    cy <- mean(range(pos[, 2], na.rm = TRUE), na.rm = TRUE)
-    dx <- diff(range(pos[, 1], na.rm = TRUE))
-    dy <- diff(range(pos[, 2], na.rm = TRUE))
-    xlim0 <- cx + 0.5 * c(-1, 1.05) * dx / zoom
-    ylim0 <- cy + 0.5 * c(-1, 1.05) * dy / zoom
+  ## x/y limits
+  if (!is.null(xlim)) {
+    xlim0 <- xlim
+  } else {
+    xlim0 <- range(pos[, 1])
+    if (zoom != 1) {
+      cx <- mean(range(pos[, 1]))
+      dx <- diff(range(pos[, 1]))
+      xlim0 <- cx + 0.5 * c(-1, 1.05) * dx / zoom
+    }
+  }
+  if (!is.null(ylim)) {
+    ylim0 <- ylim
+  } else {
+    ylim0 <- range(pos[, 2])
+    if (zoom != 1) {
+      cy <- mean(range(pos[, 2]))
+      dy <- diff(range(pos[, 2]))
+      ylim0 <- cy + 0.5 * c(-1, 1.05) * dy / zoom
+    }
   }
 
   if (length(dlim) == 1) dlim <- rep(dlim, 2)
@@ -2771,10 +2788,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
       ) # omics_pal_d("dark")(8))
     } else if (is.null(col) && nz == 2) {
       col1 <- rev(grDevices::grey.colors(2, end = 0.8))
-      col1 <- c("#AAAAAA55", "#555555FF")
-      col1 <- c("#00008855", "#AA0000FF") ## blue/red
-      col1 <- c("#CCCCCC55", "#AA0000FF") ## grey/red
-      col1 <- c("#AAAAAA55", "#AA0000FF") ## grey/red
+      col1 <- c("#888888AA", "#AA0000FF") ## grey/red
     } else if (is.null(col) && nz == 1) {
       col1 <- c("#22222255")
     } else {
@@ -2782,7 +2796,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     }
     col1 <- Matrix::head(rep(col1, 99), nz)
     pt.col <- col1[z1]
-    pt.col[is.na(pt.col)] <- "#DDDDDD33"
+    pt.col[is.na(pt.col)] <- na.color
     pt.col0 <- pt.col
     if (opacity < 1) {
       pt.col <- add_opacity(pt.col, opacity)
@@ -2865,7 +2879,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
       pt.col <- add_opacity(pt.col, opacity)
       cpal <- add_opacity(cpal, opacity**0.33)
     }
-    pt.col[is.na(pt.col)] <- "#DDDDDD33" ## missing values color
+    pt.col[is.na(pt.col)] <- na.color ## missing values color
 
     jj <- 1:nrow(pos)
     jj <- order(abs(z), na.last = FALSE) ## higher values last??
@@ -3020,9 +3034,9 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
                                      zlim = NULL, zlog = FALSE, softmax = FALSE, zsym = FALSE,
                                      xlab = NULL, ylab = NULL, cmin = 0, cmax = 1, xlim = NULL, ylim = NULL,
                                      hilight2 = hilight, hilight.col = "black",
-                                     hilight.lwd = 0.8, hilight.cex = NULL,
+                                     hilight.lwd = 0.8, hilight.cex = NULL, na.color = "#AAAAAA55",
                                      opacity = 1, label.clusters = FALSE, labels = NULL,
-                                     legend.ysp = 0.85, legend.pos = "bottomleft",
+                                     legend.ysp = 0.85, legend.pos = "bottomright",
                                      tooltip = NULL, theme = NULL, set.par = TRUE,
                                      label.type = c("text", "box"), base_size = 11,
                                      title = NULL, barscale = 0.8, axis = TRUE, box = TRUE, guide = "legend") {
@@ -3197,14 +3211,14 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
           legend.text = ggplot2::element_text(size = 9 * cex.legend),
           legend.key.size = grid::unit(legend.ysp * 0.8 * cex.legend, "lines"),
           legend.key.height = grid::unit(legend.ysp * 0.8 * cex.legend, "lines"),
-          legend.key = element_rect(color = "transparent", fill = scales::alpha("white", 0.0)),
+          legend.key = ggplot2::element_rect(color = "transparent", fill = scales::alpha("white", 0.0)),
           legend.justification = legend.justification,
           legend.position = legend.position,
           legend.background = ggplot2::element_rect(fill = scales::alpha("white", 0.5)),
-          legend.margin = margin(0, 4, 4, 4),
+          legend.margin = ggplot2::margin(0, 4, 4, 4),
           legend.box.just = "right",
           legend.box.background = ggplot2::element_rect(color = "#888888", size = 0.25),
-          legend.box.margin = margin(0.8, 1, 1, 1)
+          legend.box.margin = ggplot2::margin(0.8, 1, 1, 1)
         ) +
         ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(size = 2.8 * cex.legend)))
     } else {
@@ -3428,7 +3442,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
 #'
 #' @export
 pgx.scatterPlotXY.PLOTLY <- function(pos,
-                                     var = NULL, type = NULL, col = NULL,
+                                     var = NULL, type = NULL, col = NULL, na.color = "#AAAAAA55",
                                      cex = NULL, cex.lab = 0.8, cex.title = 1.2,
                                      cex.clust = 1.5, cex.legend = 1, cex.axis = 1,
                                      xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL,
@@ -3452,7 +3466,6 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     var <- rep("_", nrow(pos))
     names(var) <- rownames(pos)
   }
-
   var <- var[match(rownames(pos), names(var))]
   names(var) <- rownames(pos)
 
@@ -3871,13 +3884,13 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
 #' @param barscale Not used.
 #'
 #' @export
-pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, cex = 1,
-                                 cex.lab = 0.8, cex.title = 1.2, cex.clust = 1.5, cex.legend = 1,
+pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, na.color = "#AAAAAA55",
+                                 cex = 1, cex.lab = 0.8, cex.title = 1.2, cex.clust = 1.5, cex.legend = 1,
                                  zoom = 1, legend = TRUE, bty = "n", hilight = NULL,
                                  zlim = NULL, zlog = FALSE, softmax = FALSE,
                                  xlab = NULL, ylab = NULL, hilight2 = hilight,
                                  opacity = 1, label.clusters = FALSE, labels = NULL,
-                                 legend.ysp = 0.85, legend.pos = "bottomleft",
+                                 legend.ysp = 0.85, legend.pos = "bottomright",
                                  tooltip = NULL, theme = NULL, set.par = TRUE,
                                  title = NULL, barscale = 0.8) {
   if (is.null(colnames(pos))) {
@@ -5471,9 +5484,13 @@ pgx.barplot.PLOTLY <- function(
 
 #' @export
 pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
-                               plotlib = "base", filter = NULL, normalize = FALSE, 
-                               rotate = FALSE, maxterm = 40, maxfc = 10,
-                               tl.cex = 0.85, row.nchar = 60, colorbar = FALSE) {
+                               plotlib = "base", filter = NULL,
+                               cexCol = 1.4, cexRow = 1,
+                               normalize = FALSE, rotate = FALSE,
+                               maxterm = 40, maxfc = 100,
+                               mar = c(15, 30),
+                               tl.cex = 0.85, row.nchar = 60,
+                               colorbar = FALSE) {
   if (what == "geneset") {
     score <- pgx.getMetaMatrix(pgx, level = "geneset")$fc
   }
@@ -5487,7 +5504,6 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
 
   ## avoid errors!!!
   score[is.na(score) | is.infinite(score)] <- 0
-  score[is.na(score)] <- 0
 
   if (!is.null(contrasts)) {
     score <- score[, contrasts, drop = FALSE]
@@ -5500,9 +5516,11 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
     }
   }
 
-  ## reduce score matrix
-  score <- score[head(order(-rowSums(score**2, na.rm = TRUE)), maxterm), , drop = FALSE] ## max number terms
-  score <- score[, head(order(-colSums(score**2, na.rm = TRUE)), maxfc), drop = FALSE] ## max comparisons/FC
+  ## max number terms
+  score <- score[head(order(-rowSums(score**2, na.rm = TRUE)), maxterm), , drop = FALSE]
+
+  ## max comparisons/FC
+  score <- score[, head(order(-colSums(score**2, na.rm = TRUE)), maxfc), drop = FALSE]
   score <- score + 1e-3 * matrix(rnorm(length(score)), nrow(score), ncol(score))
   dim(score)
 
@@ -5512,24 +5530,30 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
     score <- t(t(score) / (1e-8 + sqrt(colMeans(score**2, na.rm = TRUE))))
   }
   score <- score / max(abs(score), na.rm = TRUE) ## global normalize
-  score <- sign(score) * abs(score)**0.5 ## fudging for better colors
+  score <- sign(score) * abs(score)**0.5 ## fudging for better colors???
 
-  d1 <- as.dist(1 - cor(t(score), use = "pairwise"))
-  d2 <- as.dist(1 - cor(score, use = "pairwise"))
-  d1 <- dist(score)
-  d2 <- dist(t(score))
-  d1[is.na(d1)] <- 1
-  d2[is.na(d2)] <- 1
-  ii <- 1:nrow(score)
-  jj <- 1:ncol(score)
+  message("dim.score = ", paste(dim(score), collapse = "x"))
+  message("NCOL.score = ", NCOL(score))
+
   if (NCOL(score) == 1) {
     score <- score[order(-score[, 1]), 1, drop = FALSE]
+    score <- cbind(score, score)
+    colnames(score)[2] <- ""
   } else {
+    d1 <- as.dist(1 - cor(t(score), use = "pairwise"))
+    d2 <- as.dist(1 - cor(score, use = "pairwise"))
+    d1 <- dist(score)
+    d2 <- dist(t(score))
+    d1[is.na(d1)] <- 1
+    d2[is.na(d2)] <- 1
+    ii <- 1:nrow(score)
+    jj <- 1:ncol(score)
     ii <- hclust(d1)$order
     jj <- hclust(d2)$order
     score <- score[ii, jj, drop = FALSE]
   }
 
+  dim(score)
   colnames(score) <- substring(colnames(score), 1, 30)
   rownames(score) <- substring(rownames(score), 1, row.nchar)
   colnames(score) <- paste0(colnames(score), " ")
@@ -5538,19 +5562,21 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
 
   bluered.pal <- colorRamp(colors = c("royalblue3", "#ebeffa", "white", "#faeeee", "indianred3"))
   bluered.pal <- colorRamp(colors = c("royalblue3", "grey90", "indianred3"))  
-  score <- score[nrow(score):1, ]
+  score <- score[nrow(score):1, , drop = FALSE]
   x_axis <- colnames(score)
   y_axis <- rownames(score)
 
   fig <- NULL
   if (plotlib == "base") {
-    gx.heatmap(score,
+    gx.heatmap(
+      score,
       dist.method = "euclidean", ## important
       scale = "none", ## important
-      mar = c(15, 30),
+      mar = mar,
       keysize = 0.4,
       key = FALSE,
-      cexRow = 1.2,
+      cexRow = cexRow,
+      cexCol = cexCol,
       softmax = FALSE
     )
   }
@@ -5574,9 +5600,6 @@ pgx.topTable <- function(pgx, contrast = 1, level = "gene", dir = "up", n = 10, 
   if (level == "geneset") {
     M <- pgx$gset.meta$meta[[contrast]]
   }
-  dim(M)
-  dbg("[pgx.topTable] dim.M = ", dim(M))
-
   if (dir == "up") {
     sel <- head(order(-M$meta.fx), n)
   }

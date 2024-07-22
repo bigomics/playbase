@@ -724,15 +724,14 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
     if (as.factor) x <- factor(x, levels = c(grp0, grp1))
     x
   }
-  num.values <- c(-1, 0, 1, NA, "NA", "na", "", " ")
 
-  # convert values <0 to 1 and values >0 to 1 (necessary for some old design matrix with float values)
+  # convert values <0 to -1 and values >0 to 1 (for old design matrix with float values)
   # sign function will fail when non-numeric values are present, use try catch to preserve input
-
   contr.matrix <- tryCatch(sign(contr.matrix), error = function(e) contr.matrix)
 
+  num.values <- c(-1, 0, 1, NA, "NA", "na", "", " ")
   is.num <- all(apply(contr.matrix, 2, function(x) all(x %in% num.values)))
-  is.num
+  is.num <- is.num && all(c(-1, 1) %in% contr.matrix) ## must have at least -1 and 1!!
   if (!is.num) {
     ## message("[contrastAsLabels] already as label!")
     return(contr.matrix)

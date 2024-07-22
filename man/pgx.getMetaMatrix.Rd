@@ -4,6 +4,7 @@
 \alias{pgx.getMetaMatrix}
 \alias{pgx.getMetaFoldChangeMatrix}
 \alias{pgx.getContrasts}
+\alias{pgx.getContrastMatrix}
 \alias{pgx.getTopGeneSets}
 \alias{pgx.getMarkerGenes}
 \alias{pgx.getFamilies}
@@ -14,6 +15,8 @@ pgx.getMetaMatrix(pgx, methods = "meta", level = "gene")
 pgx.getMetaFoldChangeMatrix(pgx, what = "meta", level = "gene")
 
 pgx.getContrasts(pgx)
+
+pgx.getContrastMatrix(pgx)
 
 pgx.getTopGeneSets(pgx, n = 10, ng = 100, dir = 0, sym = FALSE, filt = NULL)
 
@@ -83,6 +86,8 @@ present in the PGX gene expression matrix. Useful for checking which gene famili
 \item \code{pgx.getMetaFoldChangeMatrix()}: Get the Meta-Fold ChangeMatrix from PGX
 
 \item \code{pgx.getContrasts()}: Get the contrast from PGX
+
+\item \code{pgx.getContrastMatrix()}: Get the contrast matrix from PGX
 
 \item \code{pgx.getTopGeneSets()}: get the top genesets from PGX
 
