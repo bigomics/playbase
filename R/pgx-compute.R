@@ -697,8 +697,6 @@ counts.autoScaling <- function(counts) {
 counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE) {
     counts <- counts[rownames(counts) != "", ]
     counts[which(is.nan(counts))] <- NA
-    genes <- sapply(rownames(counts), function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
-    rownames(counts) <- unname(genes)
     ndup <- sum(duplicated(rownames(counts)))
     if (ndup > 0) {
         if (!is.counts) counts <- 2 ** counts
@@ -706,37 +704,6 @@ counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE) {
         counts <- playbase::rowmean(counts, group=rownames(counts), reorder=TRUE)
         counts[which(is.nan(counts))] <- NA
         if (!is.counts) counts <- log2(counts)
-    }
-    counts
-}
-
-counts.mergeDuplicateFeatures.OLD <- function(counts, is.counts = TRUE, keep.NA = FALSE) { ## Needs review.
-    counts <- counts[rownames(counts) != "", ]
-    counts[which(is.nan(counts))] <- NA
-    gene0 <- rownames(counts)
-    gene1 <- sapply(gene0, function(s) strsplit(s, split = "[;,\\|]")[[1]][1])
-    ndup <- sum(duplicated(gene1))
-    if (ndup > 0) {
-        if (!is.counts) counts <- 2 ** counts - 1
-        if (!keep.NA) {
-            message("[mergeDuplicateFeatures] ", ndup, " duplicated rownames: summing rows (in counts).")
-            counts <- base::rowsum(counts, gene1, na.rm = TRUE)
-        } else {
-            message("[mergeDuplicateFeatures] ", ndup, " duplicated rownames: summing rows (in counts) and keeping NAs.")
-            dups <- unique(gene0[duplicated(gene0)])
-            i=1
-            for(i in 1:length(dups)) {
-                jj <- which(rownames(counts) == dups[i])
-                mv <- apply(counts[jj,], 2, function(x) sum(is.na(x)))
-                ss <- names(mv[mv==length(jj)])
-                new_row <- colMeans(counts[jj, ], na.rm = TRUE) ## was colSums()
-                if(length(ss)>0) new_row[ss] <- NA
-                counts <- rbind(new_row, counts[-jj, ])
-                rownames(counts)[1] <- dups[i]
-            }
-            rownames(counts) <- unname(sapply(rownames(counts), function(s) strsplit(s, split = "[;,\\|]")[[1]][1]))
-        }
-        if (!is.counts) counts <- log2(counts + 1)
     }
     counts
 }

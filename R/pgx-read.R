@@ -249,7 +249,8 @@ read_counts <- function(file) {
   sel1 <- !(rownames(df) %in% c(NA, "", "NA"))
   sel2 <- rowMeans(is.na(df)) < 1
   df <- df[sel1 & sel2, , drop = FALSE]
-  df <- rowsum(df, rownames(df), reorder = FALSE)
+  ##  df <- rowsum(df, rownames(df), reorder = FALSE)  ## sum or average???
+  rownames(df) <- first_feature(rownames(df))
   return(df)
 }
 
@@ -267,10 +268,8 @@ read_counts <- function(file) {
 #' @export
 read_samples <- function(file) {
   df <- read.as_matrix(file)
-
   is_valid <- validate_samples(df)
   if (!is_valid) stop("Samples file is not valid.")
-
   df <- as.data.frame(df)
   return(df)
 }
