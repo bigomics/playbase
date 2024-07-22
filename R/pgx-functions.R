@@ -2134,12 +2134,7 @@ make_unique <- function(s) {
 }
 
 #' @export
-<<<<<<< HEAD
 is_logged <- function(x, verbose=0) {
-
-=======
-is_logged <- function(x, verbose = 1) {
->>>>>>> 01e3d60ed45d5fd3a145768ddabeb3b3be82284e
   ## force as matrix
   if (any(class(x) == "data.frame")) x <- as.matrix(x)
 
@@ -2171,7 +2166,6 @@ is_logged <- function(x, verbose = 1) {
   zero.inflated <- mean((is.na(x) | x == 0)) > 0.5
   is.singlecell <- NCOL(x) > 1000 && all.pos && all.lt60 && zero.inflated
 
-<<<<<<< HEAD
   if(verbose > 0) {
     message("[is_logged] all.lt60 = ",all.lt60)
     message("[is_logged] minx.neg = ",minx.neg)
@@ -2182,14 +2176,6 @@ is_logged <- function(x, verbose = 1) {
     message("[is_logged] is.counts = ",is.counts)    
     message("[is_logged] zero.inflated = ",zero.inflated)
     message("[is_logged] is.singlecell = ",is.singlecell)    
-=======
-  if (verbose > 0) {
-    message("[is_logged] all.lt60 = ", all.lt60)
-    message("[is_logged] minx.neg = ", minx.neg)
-    message("[is_logged] has.bigx = ", has.bigx)
-    message("[is_logged] all.pos = ", all.pos)
-    message("[is_logged] is.ratio = ", is.ratio)
->>>>>>> 01e3d60ed45d5fd3a145768ddabeb3b3be82284e
   }
 
   possible.log <- (all.lt60 || minx.neg)
