@@ -2134,7 +2134,7 @@ make_unique <- function(s) {
 }
 
 #' @export
-is_logged <- function(x, verbose=1) {
+is_logged <- function(x, verbose=0) {
 
   ## force as matrix
   if(any(class(x) == "data.frame"))  x <- as.matrix(x)
@@ -2173,6 +2173,10 @@ is_logged <- function(x, verbose=1) {
     message("[is_logged] has.bigx = ",has.bigx)
     message("[is_logged] all.pos = ",all.pos)    
     message("[is_logged] is.ratio = ",is.ratio)
+    message("[is_logged] all.integer = ",all.integer)    
+    message("[is_logged] is.counts = ",is.counts)    
+    message("[is_logged] zero.inflated = ",zero.inflated)
+    message("[is_logged] is.singlecell = ",is.singlecell)    
   }
   
   possible.log <- (all.lt60 || minx.neg)
