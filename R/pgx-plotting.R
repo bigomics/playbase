@@ -2733,8 +2733,6 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
   var <- var[match(rownames(pos), names(var))]
 
   ## x/y limits
-  dbg("[pgx.scatterPlotXY.BASE] 1: xlim = ", xlim)
-  dbg("[pgx.scatterPlotXY.BASE] 1: ylim = ", ylim)
   if (!is.null(xlim)) {
     xlim0 <- xlim
   } else {
@@ -2755,18 +2753,12 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
       ylim0 <- cy + 0.5 * c(-1, 1.05) * dy / zoom
     }
   }
-
-  dbg("[pgx.scatterPlotXY.BASE] 1: xlim0 = ", xlim0)
-  dbg("[pgx.scatterPlotXY.BASE] 1: ylim0 = ", ylim0)
-
+  
   if (length(dlim) == 1) dlim <- rep(dlim, 2)
   xlim0[1] <- xlim0[1] - dlim[1] * diff(xlim0)
   xlim0[2] <- xlim0[2] + dlim[1] * diff(xlim0)
   ylim0[1] <- ylim0[1] - dlim[2] * diff(ylim0)
   ylim0[2] <- ylim0[2] + dlim[2] * diff(ylim0)
-
-  dbg("[pgx.scatterPlotXY.BASE] 2: xlim0 = ", xlim0)
-  dbg("[pgx.scatterPlotXY.BASE] 2: ylim0 = ", ylim0)
 
   if (is.null(xlab)) xlab <- colnames(pos)[1]
   if (is.null(ylab)) ylab <- colnames(pos)[2]
@@ -5592,9 +5584,6 @@ pgx.topTable <- function(pgx, contrast = 1, level = "gene", dir = "up", n = 10, 
   if (level == "geneset") {
     M <- pgx$gset.meta$meta[[contrast]]
   }
-  dim(M)
-  dbg("[pgx.topTable] dim.M = ", dim(M))
-
   if (dir == "up") {
     sel <- head(order(-M$meta.fx), n)
   }
