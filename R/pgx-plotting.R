@@ -1475,8 +1475,8 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
     ## NOT GROUPED BARPLOTS
     nx <- length(gx)
     if (is.null(ylab)) {
-      ylab <- "expression (log2CPM)"
-      if (!logscale) ylab <- "expression (CPM)"
+      ylab <- "Expression (log2)"
+      if (!logscale) ylab <- "Expression"
     }
     klr <- grp.klr[as.character(xgroup)]
     klr[is.na(klr)] <- "#e5e5e5"
@@ -1514,8 +1514,8 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   } else {
     ## GROUPED PLOTS
     if (is.null(ylab)) {
-      ylab <- "expression (log2CPM)"
-      if (!logscale) ylab <- "expression (CPM)"
+      ylab <- "Expression (log2)"
+      if (!logscale) ylab <- "Expression"
     }
     bee.cex <- c(0.3, 0.1, 0.05)[cut(length(gx), c(0, 100, 500, 99999))]
 
