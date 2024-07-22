@@ -2753,7 +2753,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
       ylim0 <- cy + 0.5 * c(-1, 1.05) * dy / zoom
     }
   }
-  
+
   if (length(dlim) == 1) dlim <- rep(dlim, 2)
   xlim0[1] <- xlim0[1] - dlim[1] * diff(xlim0)
   xlim0[2] <- xlim0[2] + dlim[1] * diff(xlim0)
