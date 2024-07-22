@@ -63,7 +63,7 @@ normalizeData <- function(pgx, do.impute = TRUE, do.regress = TRUE,
   message("[normalizeData] Median centering...")
   ## eX <- playbase::pgx.countNormalization( eX, methods = "median.center")
   mx <- apply(X, 2, median, na.rm = TRUE)
-  X <- t(t(X) - mx) + mean(mx)
+  X <- t(t(X) - mx) + mean(mx, na.rm = TRUE)
 
   message("[normalizeData] Global scaling")
   X <- global_scaling(X, method = scale.method)

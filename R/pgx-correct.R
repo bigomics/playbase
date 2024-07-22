@@ -1359,7 +1359,7 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
   dbg("[bc.evaluateResults] length.numsig = ", length(numsig))
   
   res <- t(sapply(numsig, function(r) {
-    c(sapply(r[1:2], length), avg.fc = mean(abs(r[[3]])))
+    c(sapply(r[1:2], length), avg.fc = mean(abs(r[[3]]), na.rm = TRUE))
   }))
 
   dbg("[bc.evaluateResults] dim.res = ", dim(res))
@@ -1417,7 +1417,7 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
     pheno0[is.na(pheno0)] <- "NA"
     silhouette <- sapply(pos, function(p) {
       score <- cluster::silhouette(as.integer(factor(pheno0)), stats::dist(p))
-      mean(score[, "sil_width"])
+      mean(score[, "sil_width"], na.rm = TRUE)
     })
     silhouette <- pmax(silhouette, 1e-4)
 
@@ -2057,7 +2057,7 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
     M <- model.matrix(~ 0 + y) ## how deal with missing values??
     rownames(M) <- colnames(X)
     ruvX <- t(ruv::RUVIII(Y = t(X), M = M, ctl = ctl, k = k, eta = NULL))
-    ruvX <- ruvX - mean(ruvX) + mean(X) ## ??
+    ruvX <- ruvX - mean(ruvX, na.rm = TRUE) + mean(X, na.rm = TRUE) ## ??
   } else if (type == "g") {
     ruvX <- RUVSeq::RUVg(x = X, cIdx = ctl, k = k, isLog = TRUE)$normalizedCounts
   } else {

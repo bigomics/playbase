@@ -642,10 +642,10 @@ run.GSEA.preranked <- function(rnk, gmt, output.dir = NULL, fdr = 0.25,
     jj0 <- which(!is.na(res$NES))
     for (j in jj) {
       j1 <- jj0[utils::head(order(abs(res$ES[jj0] - res$ES[j])), 3)]
-      res[j, "NES"] <- mean(res[j1, "NES"])
-      res[j, "NOM p-val"] <- mean(res[j1, "NOM p-val"])
-      res[j, "FDR q-val"] <- mean(res[j1, "FDR q-val"])
-      res[j, "FWER p-val"] <- mean(res[j1, "FWER p-val"])
+      res[j, "NES"] <- mean(res[j1, "NES"], na.rm = TRUE)
+      res[j, "NOM p-val"] <- mean(res[j1, "NOM p-val"], na.rm = TRUE)
+      res[j, "FDR q-val"] <- mean(res[j1, "FDR q-val"], na.rm = TRUE)
+      res[j, "FWER p-val"] <- mean(res[j1, "FWER p-val"], na.rm = TRUE)
     }
   }
 
@@ -1113,7 +1113,7 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
   length(kk)
   i <- 1
   for (i in 1:(length(kk) - 1)) {
-    r <- mean(rnk[kk[c(i, i + 1)]])
+    r <- mean(rnk[kk[c(i, i + 1)]], na.rm = TRUE)
     r1 <- (r / max(abs(rnk), na.rm = TRUE))
     r1 <- abs(r1)**0.5 * sign(r1)
     irnk <- floor(31 * (1 + r1) / 2)

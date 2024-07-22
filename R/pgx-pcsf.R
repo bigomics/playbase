@@ -13,7 +13,7 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
                             ntop = 250, ncomp = 3) {
   F <- pgx.getMetaMatrix(pgx, level = level)$fc
   if (is.null(contrast)) {
-    fx <- rowMeans(F**2)**0.5
+    fx <- rowMeans(F**2, na.rm = TRUE)**0.5
   } else {
     if (!contrast %in% colnames(F)) {
       stop("[pgx.computePCSF] invalid contrast")
@@ -89,7 +89,7 @@ plotPCSF <- function(pcsf,
                      node_cex = 30, label_cex = 30) {
   ## set node size
   fx <- igraph::V(pcsf)$prize
-  wt <- abs(fx / mean(abs(fx)))**0.8
+  wt <- abs(fx / mean(abs(fx), na.rm = TRUE))**0.8
   node_cex1 <- node_cex * pmax(wt, 1)
   node_cex1
 
@@ -103,7 +103,7 @@ plotPCSF <- function(pcsf,
   ## set label size
   if (highlightby == "centrality") {
     wt <- igraph::E(pcsf)$weight
-    ewt <- 1.0 / (0.01 * mean(wt) + wt) ##
+    ewt <- 1.0 / (0.01 * mean(wt, na.rm = TRUE) + wt) ##
     bc <- igraph::page_rank(pcsf, weights = ewt)$vector
     label_cex1 <- label_cex * (1 + 3 * (bc / max(bc))**3)
   }
@@ -263,7 +263,7 @@ plotPCSF.IGRAPH <- function(net, fx0 = NULL, label.cex = 1) {
     spring.constant = 1
   )
 
-  vv <- (vertex.size / mean(vertex.size))**1
+  vv <- (vertex.size / mean(vertex.size, na.rm = TRUE))**1
   plot(
     net,
     vertex.size = vertex.size,

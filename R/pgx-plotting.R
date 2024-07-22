@@ -513,7 +513,7 @@ pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast = NULL) {
   for (i in 1:(length(X) - 1)) {
     mm <- pmax(X[[i]], 0) %*% t(pmax(X[[i + 1]], 0))
     mm <- mm**4
-    mm <- mm / mean(mm)
+    mm <- mm / mean(mm, na.rm = TRUE)
 
     M[[i]] <- mm
   }
@@ -2730,10 +2730,10 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
   xlim0 <- range(pos[, 1])
   ylim0 <- range(pos[, 2])
   if (zoom != 1) {
-    cx <- mean(range(pos[, 1]))
-    cy <- mean(range(pos[, 2]))
-    dx <- diff(range(pos[, 1]))
-    dy <- diff(range(pos[, 2]))
+    cx <- mean(range(pos[, 1], na.rm = TRUE), na.rm = TRUE)
+    cy <- mean(range(pos[, 2], na.rm = TRUE), na.rm = TRUE)
+    dx <- diff(range(pos[, 1], na.rm = TRUE))
+    dy <- diff(range(pos[, 2], na.rm = TRUE))
     xlim0 <- cx + 0.5 * c(-1, 1.05) * dx / zoom
     ylim0 <- cy + 0.5 * c(-1, 1.05) * dy / zoom
   }
@@ -3061,10 +3061,10 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   if (is.null(xlim)) xlim <- range(pos[, 1])
   if (is.null(ylim)) ylim <- range(pos[, 2])
   if (zoom != 1) {
-    cx <- mean(range(pos[, 1]))
-    cy <- mean(range(pos[, 2]))
-    dx <- diff(range(pos[, 1]))
-    dy <- diff(range(pos[, 2]))
+    cx <- mean(range(pos[, 1], na.rm = TRUE), na.rm = TRUE)
+    cy <- mean(range(pos[, 2], na.rm = TRUE), na.rm = TRUE)
+    dx <- diff(range(pos[, 1], na.rm = TRUE))
+    dy <- diff(range(pos[, 2], na.rm = TRUE))
     xlim <- cx + 0.5 * c(-1, 1.05) * dx / zoom
     ylim <- cy + 0.5 * c(-1, 1.05) * dy / zoom
   }
@@ -3475,10 +3475,10 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   xlim0 <- range(pos[, 1])
   ylim0 <- range(pos[, 2])
   if (zoom != 1) {
-    cx <- mean(range(pos[, 1]))
-    cy <- mean(range(pos[, 2]))
-    dx <- diff(range(pos[, 1]))
-    dy <- diff(range(pos[, 2]))
+    cx <- mean(range(pos[, 1], na.rm = TRUE), na.rm = TRUE)
+    cy <- mean(range(pos[, 2], na.rm = TRUE), na.rm = TRUE)
+    dx <- diff(range(pos[, 1], na.rm = TRUE))
+    dy <- diff(range(pos[, 2], na.rm = TRUE))
     xlim0 <- cx + 0.5 * c(-1, 1.05) * dx / zoom
     ylim0 <- cy + 0.5 * c(-1, 1.05) * dy / zoom
   }

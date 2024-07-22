@@ -670,7 +670,7 @@ counts.autoScaling <- function(counts) {
   totratio
   if (totratio > 6) {
     message("[createPGX:autoscale] WARNING: too large total counts ratio. forcing normalization.")
-    meancounts <- exp(mean(log(1 + totcounts)))
+    meancounts <- exp(mean(log(1 + totcounts), na.rm = TRUE))
     counts <- t(t(counts) / totcounts) * meancounts
   }
 
