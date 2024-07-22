@@ -922,7 +922,6 @@ getGeneAnnotation.ORTHOGENE <- function(
 }
 
 getAllSpecies.ORTHOGENE <- function() {
-  M <- orthogene::map_species(method="gprofiler")
+  M <- orthogene::map_species(method = "gprofiler")
   M$scientific_name
 }
-
