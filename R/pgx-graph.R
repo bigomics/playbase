@@ -236,7 +236,7 @@ pgx.createOmicsGraph <- function(ngs, do.intersect = TRUE) {
     i1 <- min(i0 + bs - 1, nrow(ee))
     ii <- i0:i1
     ## fast method to compute rowwise-correlation (xx should be row-scaled)
-    ee.rho[ii] <- rowMeans(xx[ee[ii, 1], ] * xx[ee[ii, 2], ])
+    ee.rho[ii] <- rowMeans(xx[ee[ii, 1], ] * xx[ee[ii, 2], ], na.rm = TRUE)
   }
   igraph::E(gr1)$weight <- ee.rho ## replace weight with correlation
 
@@ -292,7 +292,7 @@ pgx.reduceOmicsGraph <- function(ngs) {
   idx0 <- c(h1[, 1], h2[, 1])[igraph::V(gr)$name]
   idx <- c(hc1, hc2)[igraph::V(gr)$name]
   R <- t(stats::model.matrix(~ 0 + idx))
-  R <- R / rowSums(R)
+  R <- R / rowSums(R, na.rm = TRUE)
 
   colnames(R) <- igraph::V(gr)$name
   rownames(R) <- sub("^idx", "", rownames(R))
@@ -440,7 +440,7 @@ pgx.createVipGeneLayer <- function(gr, genes, z = 0, reconnect = 40) {
   igraph::V(gr2)$name <- rownames(pos1)
   gr2$layout <- pos1
   vv <- igraph::get.edgelist(gr2)
-  rho <- rowMeans(gr1$scaled.data[vv[, 1], ] * gr1$scaled.data[vv[, 2], ]) ## rho
+  rho <- rowMeans(gr1$scaled.data[vv[, 1], ] * gr1$scaled.data[vv[, 2], ], na.rm = TRUE) ## rho
   vname1 <- igraph::V(gr1)$name
   ee1 <- cbind(match(vv[, 1], vname1), match(vv[, 2], vname1))
   jj <- which(rowSums(is.na(ee1)) == 0)
@@ -602,9 +602,9 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
 #' terms and biological processes enriched in the analysis.
 #'
 #' @export
-pgx.computeCoreGOgraph <- function(ngs, fdr = 0.05) {
+pgx.computeCoreGOgraph <- function(pgx, fdr = 0.05) {
   ## test if there are GO terms
-  mx <- ngs$gset.meta$meta[[1]]
+  mx <- pgx$gset.meta$meta[[1]]
   jj <- grep("^GO", rownames(mx))
   has.go <- (length(jj) > 10)
   has.go
@@ -613,14 +613,15 @@ pgx.computeCoreGOgraph <- function(ngs, fdr = 0.05) {
     return(NULL)
   }
 
-  comparisons <- names(ngs$gset.meta$meta)
+  comparisons <- names(pgx$gset.meta$meta)
   comparisons
   subgraphs <- list()
 
   i <- 1
+  comparison = comparisons[1]
   for (i in 1:length(comparisons)) {
     subgraphs[[i]] <- pgx.getSigGO(
-      ngs,
+      pgx,
       comparison = comparisons[i],
       methods = NULL, ## should be actual selected methods!!
       fdr = fdr, nterms = 200, ntop = 20
@@ -647,7 +648,7 @@ pgx.computeCoreGOgraph <- function(ngs, fdr = 0.05) {
   colnames(Q) <- colnames(V) <- colnames(S) <- comparisons
 
   ## can we match the GO terms with our gsetX values??
-  go.sets <- grep("^GO.*\\(GO_", rownames(ngs$gsetX), value = TRUE)
+  go.sets <- grep("^GO.*\\(GO_", rownames(pgx$gsetX), value = TRUE)
   go.id <- gsub("GO_", "GO:", gsub(".*\\(|\\)", "", go.sets))
   matched.gset <- go.sets[match(igraph::V(go_graph)$name, go.id)]
   names(matched.gset) <- igraph::V(go_graph)$name
@@ -702,7 +703,7 @@ getGOgraph <- function() {
 #'
 #' @description Retrieve significant GO terms from a PGX analysis
 #'
-#' @param ngs PGX object containing gene set analysis results
+#' @param pgx PGX object containing gene set analysis results
 #' @param comparison Name of the contrast to extract results for
 #' @param methods Character vector of methods to include. Default NULL uses all.
 #' @param fdr FDR cutoff for significance. Default 0.20.
@@ -721,8 +722,10 @@ getGOgraph <- function() {
 #' GO terms to gene sets.
 #'
 #' @export
-pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 500, ntop = 100) {
-  mx <- ngs$gset.meta$meta[[comparison]]
+pgx.getSigGO <- function(pgx, comparison, methods = NULL, fdr = 0.20, nterms = 500, ntop = 100) {
+  ##methods = NULL;fdr = 0.20;nterms = 500;ntop = 100
+  
+  mx <- pgx$gset.meta$meta[[comparison]]
   jj <- grep("^GO", rownames(mx))
 
   if (length(jj) == 0) {
@@ -738,7 +741,6 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
   methods
 
   ## recalculate meta values
-
   pv <- unclass(mx$p)[, methods, drop = FALSE]
   qv <- unclass(mx$q)[, methods, drop = FALSE]
   fc <- unclass(mx$fc)[, methods, drop = FALSE]
@@ -754,12 +756,12 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
     score <- rowMeans(apply(score, 2, ss.rank), na.rm = TRUE)
   }
 
-
   vinfo <- data.frame(geneset = rownames(mx), score = score, fc = fc, pv = pv, qv = qv)
   colnames(vinfo) <- c("geneset", "score", "fc", "pv", "qv") ## need
   rownames(vinfo) <- rownames(mx)
   remove(fc)
-
+  dim(vinfo)
+  
   terms <- AnnotationDbi::toTable(GO.db::GOTERM)[, 2:5]
   colnames(terms)[1] <- "go_id"
   terms <- terms[!duplicated(terms[, 1]), ]
@@ -771,7 +773,6 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
     go_id <- gsub(".*\\(|\\)$", "", rownames(vinfo))
     go_id <- gsub("GO_|GO", "", go_id)
     go_id <- paste0("GO:", go_id)
-    rownames(vinfo) <- go_id
     vinfo <- cbind(vinfo, terms[match(go_id, terms$go_id), , drop = FALSE])
   } else {
     ## rownames have no GO ID (downloaded from from MSigDB)
@@ -779,9 +780,13 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
     idx <- match(vv, gsub("[ ]", "_", toupper(terms$Term)))
     jj <- which(!is.na(idx))
     vinfo <- cbind(vinfo[jj, , drop = FALSE], terms[idx[jj], , drop = FALSE])
-    rownames(vinfo) <- vinfo$go_id
   }
+
+  ## remove duplicated entries or empty GO id
+  vinfo <- vinfo[order(-vinfo$score), , drop = FALSE]
   vinfo <- vinfo[which(!is.na(vinfo$go_id)), , drop = FALSE]
+  vinfo <- vinfo[!duplicated(vinfo$go_id), , drop=FALSE]
+  rownames(vinfo) <- vinfo$go_id
 
   ## Get full GO graph and assign node prizes
   go_graph <- getGOgraph()
@@ -790,9 +795,7 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
   igraph::V(go_graph)[vinfo$go_id]$qvalue <- vinfo$qv
 
   ## !!!!!!!!!!!!!!!!!!! THIS DEFINES THE SCORE !!!!!!!!!!!!!!!!!
-
   igraph::V(go_graph)[vinfo$go_id]$value <- vinfo$fc * (1 - vinfo$qv)**1
-
 
   get.vpath <- function(v1) {
     igraph::shortest_paths(go_graph, v1, "all")$vpath[[1]]
@@ -802,7 +805,6 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
     sp
     sum((igraph::V(go_graph)[sp]$value))
   }
-
 
   sig.terms10 <- Matrix::head(rownames(vinfo)[order(vinfo$qv)], 10)
   sig.terms <- rownames(vinfo)[which(vinfo$qv <= fdr)]
@@ -821,7 +823,6 @@ pgx.getSigGO <- function(ngs, comparison, methods = NULL, fdr = 0.20, nterms = 5
   igraph::V(sub1)$score <- pathscore[igraph::V(sub1)$name]
   igraph::V(sub1)$color <- gplots::bluered(32)[16 + round(15 * score1)]
   igraph::V(sub1)$label <- vinfo[igraph::V(sub1)$name, "Term"]
-
 
   return(sub1)
 }
