@@ -235,7 +235,7 @@ read_files <- function(dir = ".", pattern = NULL) {
 #' counts <- read_counts(playbase::example_file("counts.csv"))
 #' }
 #' @export
-read_counts <- function(file) {
+read_counts <- function(file, drop_na_rows = TRUE) {
   df <- read.as_matrix(file)
   is_valid <- validate_counts(df)
   if (!is_valid) stop("Counts file is not valid.")
@@ -246,9 +246,8 @@ read_counts <- function(file) {
     suppressWarnings(df <- apply(df, 2, as.numeric))
     rownames(df) <- rn
   }
-  sel1 <- !(rownames(df) %in% c(NA, "", "NA"))
-  sel2 <- rowMeans(is.na(df)) < 1
-  df <- df[sel1 & sel2, , drop = FALSE]
+  df <- df[!(rownames(df) %in% c(NA, "", "NA")), , drop = FALSE]
+  if(drop_na_rows) df <- df[rowMeans(is.na(df)) < 1, , drop = FALSE]
   ##  df <- rowsum(df, rownames(df), reorder = FALSE)  ## sum or average???
   rownames(df) <- first_feature(rownames(df))
   return(df)
