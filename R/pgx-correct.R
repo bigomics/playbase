@@ -1183,7 +1183,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
     if (is.null(batch)) {
       xlist[["ComBat"]] <- X
     } else {
-      if (max(table(batch)) > 1) {
+      if (max(table(batch), na.rm = TRUE) > 1) {
         mod1 <- model.matrix(~ factor(y))
         bX <- try(sva::ComBat(X, batch = batch, mod = mod1, par.prior = TRUE))
         if (!"try-error" %in% class(bX)) {
@@ -1638,7 +1638,7 @@ bc.CovariateAnalysisPlot <- function(bc.results, k = 1:3, par = TRUE, col = 1) {
       )
     } else {
       y1 <- -log10(1e-04 + pxx[, i])
-      ylim <- c(-0.1 * max(y1), 1.1 * max(y1))
+      ylim <- c(-0.1 * max(y1, na.rm = TRUE), 1.1 * max(y1, na.rm = TRUE))
       col1 <- col[i]
       plot(x1, y1,
         pch = 20, cex = 1.5, col = col1,
@@ -1672,7 +1672,7 @@ get_model_parameters <- function(X, samples, pheno = NULL, contrasts = NULL) {
   p.pheno <- bc$p.values[, "p.pheno"]
   if (nrow(bc$p.values) == 1) names(p.pheno)[1] <- rownames(bc$p.values)
   p.pheno
-  pheno.pars <- names(which(p.pheno == min(p.pheno) | p.pheno < 1e-80))
+  pheno.pars <- names(which(p.pheno == min(p.pheno, na.rm = TRUE) | p.pheno < 1e-80))
   pheno.pars <- pheno.pars[order(p.pheno[pheno.pars])]
   pheno.pars
 
@@ -2639,7 +2639,7 @@ sMNN <- function(X, batch, y, nv = 0.33, nn = 3, return.idx = FALSE) {
   message("[sMNN] Found total ", ncol(B), " MNN pairs")
 
   ## remove batch effects in transposed gene space
-  if (nv < 1) nv <- floor(nv * min(dim(B)))
+  if (nv < 1) nv <- floor(nv * min(dim(B), na.rm = TRUE))
   nv <- max(1, min(nv, dim(B) - 1))
   message("[sMNN] nv = ", nv)
   B <- scale(B)

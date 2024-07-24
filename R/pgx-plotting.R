@@ -534,7 +534,7 @@ pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast = NULL) {
       if (cty.mode == 3) node.wt <- abs(outer(fc[[i]], fc[[i + 1]]))
       if (cty.mode == 2) node.wt <- pmax(outer(fc[[i]], fc[[i + 1]]), 0)
       ww <- R[[i]] * node.wt
-      ww <- ww / max(ww) ## normalize??
+      ww <- ww / max(ww, na.rm = TRUE) ## normalize??
       F[[i]] <- ww
     }
   }
@@ -624,11 +624,11 @@ pgx.SankeyFromMRF.PLOTLY <- function(M, R, F, fill = TRUE, labels = NULL) {
   nodes <- data.frame(label = igraph::V(gr)$name, color = col1)
   nodes$info <- paste(igraph::V(gr)$name, unlist(labels)[igraph::V(gr)$name])
   nodes$label <- sub(".*[:]", "", nodes$label)
-  nodes$x <- (vlevel - 1) / max(vlevel - 1)
+  nodes$x <- (vlevel - 1) / max(vlevel - 1, na.rm = TRUE)
 
   if (fill) {
     wt <- igraph::E(gr)$weight
-    ev2 <- 0.05 + 0.55 * (wt / max(wt))
+    ev2 <- 0.05 + 0.55 * (wt / max(wt, na.rm = TRUE))
     col2 <- paste("rgba(80,80,120,", ev2, ")")
   } else {
     col2 <- paste("rgba(80,80,120,0.2)")
@@ -1407,7 +1407,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   ## label rotation
   if (is.null(srt)) {
     srt <- 0
-    if (max(nchar(group.names)) >= 7) srt <- 45
+    if (max(nchar(group.names), na.rm = TRUE) >= 7) srt <- 45
   }
 
   ## create groups
@@ -1503,8 +1503,8 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
     } else {
       ## plot using base graphics
       gx.min <- 0
-      if (min(gx) < 0) gx.min <- min(gx)
-      ylim <- c(gx.min, 1.3 * max(gx))
+      if (min(gx, na.rm = TRUE) < 0) gx.min <- min(gx, na.rm = TRUE)
+      ylim <- c(gx.min, 1.3 * max(gx, na.rm = TRUE))
       bx <- graphics::barplot(gx[],
         col = klr[], ylim = ylim,
         ## offset = 0, ylim=c(gx.min,max(gx)),
@@ -1924,14 +1924,14 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
   r1 <- cumsum(x0) / (1e-4 + sum(x0))
 
   rnk.trace <- (r1 - r0)
-  rnk.trace <- rnk.trace / max(abs(rnk.trace)) * 0.8
+  rnk.trace <- rnk.trace / max(abs(rnk.trace), na.rm = TRUE) * 0.8
 
   qq <- range(fc)
   y1 <- qq[2]
   y0 <- 0.8 * qq[1]
   dy <- ticklen * (y1 - y0)
-  if (max(rnk.trace) >= abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y1)
-  if (max(rnk.trace) < abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y0)
+  if (max(rnk.trace, na.rm = TRUE) >= abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y1)
+  if (max(rnk.trace, na.rm = TRUE) < abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y0)
 
   cc <- sign(fc) * rank(abs(fc))
   df <- data.frame(x = rank(-fc), y = fc, trace = rnk.trace, cc = cc)
@@ -2112,14 +2112,14 @@ ggenplot <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ylab = NULL) {
   r1 <- cumsum(x0) / (1e-4 + sum(x0))
 
   rnk.trace <- (r1 - r0)
-  rnk.trace <- rnk.trace / max(abs(rnk.trace)) * 0.8
+  rnk.trace <- rnk.trace / max(abs(rnk.trace), na.rm = TRUE) * 0.8
 
   qq <- range(fc)
   y1 <- qq[2]
   y0 <- qq[1]
   dy <- 0.2 * (y1 - y0)
-  if (max(rnk.trace) >= abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y1)
-  if (max(rnk.trace) < abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y0)
+  if (max(rnk.trace, na.rm = TRUE) >= abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y1)
+  if (max(rnk.trace, na.rm = TRUE) < abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y0)
 
   cc <- sign(fc) * rank(abs(fc))
   df <- data.frame(rank = rank(-fc), fc = fc, run = rnk.trace, cc)
@@ -2127,7 +2127,7 @@ ggenplot <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ylab = NULL) {
 
 
   cpal <- colorspace::diverge_hcl(64, c = 60, l = c(30, 100), power = 1)
-  ii <- 1 + 32 + range(round(32 * (fc / max(abs(fc)))))
+  ii <- 1 + 32 + range(round(32 * (fc / max(abs(fc), na.rm = TRUE))))
   cpal <- colorspace::diverge_hcl(65)[ii[1]:ii[2]]
 
   cex.title <- 1
@@ -2854,7 +2854,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     }
 
     ## z1 is normalized [0;1] for coloring
-    z1 <- (z - min(zlim)) / diff(zlim)
+    z1 <- (z - min(zlim, na.rm = TRUE)) / diff(zlim)
     z1 <- pmin(pmax(z1, 0), 1) ## clip
     if (softmax) {
       z1 <- 0.5 * (tanh(4 * (z1 - 0.5)) + 1)
@@ -4189,8 +4189,8 @@ plotlyMA <- function(x, y, names, source = "plot1",
     }
   }
 
-  x1 <- 1.05 * max(x)
-  yy <- 1.05 * max(abs(y))
+  x1 <- 1.05 * max(x, na.rm = TRUE)
+  yy <- 1.05 * max(abs(y), na.rm = TRUE)
   abline1 <- list(
     type = "line", y0 = -lfc, y1 = -lfc, x0 = 0, x1 = x1,
     line = list(dash = "dot", width = 1, color = "grey")
@@ -4200,7 +4200,7 @@ plotlyMA <- function(x, y, names, source = "plot1",
     line = list(dash = "dot", width = 1, color = "grey")
   )
 
-  xrange <- c(0, 1) * max(abs(x)) * 1.05
+  xrange <- c(0, 1) * max(abs(x), na.rm = TRUE) * 1.05
   xrange <- range(x, na.rm = TRUE)
   yrange <- c(-1, 1) * max(abs(y), na.rm = TRUE) * 1.05
   xaxis <- list(title = xlab, range = xrange, gridwidth = 0.2, showgrid = FALSE)
@@ -4949,8 +4949,8 @@ iheatmapr.add_col_annotation <- function(p,
       } else {
         tmp_colors <- pick_continuous_colors(
           zmid = 0,
-          zmin = min(x[, i]),
-          zmax = max(x[, i]), p
+          zmin = min(x[, i], na.rm = TRUE),
+          zmax = max(x[, i], na.rm = TRUE), p
         )
       }
       p <- iheatmapr::add_col_signal(p,
@@ -5236,7 +5236,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     gnames <- shortstring(gnames, 25) ## shorten
     gnames <- sub("   ", "-", gnames)
 
-    maxlen <- max(sapply(gnames, nchar))
+    maxlen <- max(sapply(gnames, nchar), na.rm = TRUE)
     w <- ifelse(maxlen >= 20, 0.45, 0.20)
     s1 <- ifelse(maxlen >= 20, 9, 11) * rowcex
     plt <- iheatmapr::add_row_labels(

@@ -181,9 +181,9 @@ gx.b3plot <- function(x, y, first = NULL,
   }
 
   dx <- max(x, na.rm = TRUE) * 0.11
-  ylim <- c(xoff, max(x) * 1.3)
+  ylim <- c(xoff, max(x, na.rm = TRUE) * 1.3)
   if (!is.null(ymax)) ylim <- c(xoff, ymax)
-  if (min(x) < 0) ylim <- c(1.3 * min(c(x, xoff)), max(x) * 1.3)
+  if (min(x, na.rm = TRUE) < 0) ylim <- c(1.3 * min(c(x, xoff)), max(x, na.rm = TRUE) * 1.3)
   if (sig.stars) {
     if (ncol(yc) > 8) dx <- dx / 5
     ylim[2] <- ylim[2] * 1.05 + (2 + NCOL(yc)) * dx
@@ -209,7 +209,7 @@ gx.b3plot <- function(x, y, first = NULL,
 
   n <- length(unique(y))
   if (names == TRUE) {
-    y0 <- min(ylim) - diff(ylim) * 0.05
+    y0 <- min(ylim, na.rm = TRUE) - diff(ylim) * 0.05
     graphics::text(bx[, 1], y0, names(mx),
       cex = names.cex,
       srt = srt, adj = ifelse(srt == 0, 0.5, 0.965), xpd = TRUE,
