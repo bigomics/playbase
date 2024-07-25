@@ -371,19 +371,21 @@ compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
     pgx$samples$.cell.cycle <- NULL
 
     counts <- rna.counts
-    # In multi-species now use symbol, and deduplicate in case
-    # use retains feature as "gene_name/rowname"
+    ## In multi-species now use symbol, and deduplicate in case
+    ## use retains feature as "gene_name/rowname"
     rownames(counts) <- toupper(pgx$genes[rownames(counts), "symbol"])
+    counts <- counts[which(!is.na(rownames(counts))), ]
     if (any(duplicated(rownames(counts)))) {
       message("Deduplicate counts for cell cycle and gender inference")
-      counts <- rowsum(counts, rownames(counts))
+      counts <- playbase::rowmean(counts, group = rownames(counts))
+      counts[which(is.nan(counts))] <- NA
     }
     res <- try(pgx.inferCellCyclePhase(counts)) ## can give bins error
     if (!inherits(res, "try-error")) {
       pgx$samples$.cell_cycle <- res
     }
     if (!(".gender" %in% colnames(pgx$samples))) {
-      message("estimating gender...")
+        message("estimating gender...")
       pgx$samples$.gender <- NULL
       X <- log2(1 + rna.counts)
       gene_symbol <- pgx$genes[rownames(X), "symbol"] # Use gene-symbol also for gender
