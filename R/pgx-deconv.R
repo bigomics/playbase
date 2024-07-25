@@ -495,7 +495,7 @@ pgx.deconvolution <- function(X, ref,
                                 "cor", "SingleR"
                               ),
                               add.unknown = FALSE, normalize.mat = TRUE) {
-  if (max(X) < 50 || min(X) < 0) {
+  if (max(X, na.rm = TRUE) < 50 || min(X, na.rm = TRUE) < 0) {
     dbg("WARNING:: pgx.deconvolution: is X really counts? (not logarithmic)\n")
   }
 
