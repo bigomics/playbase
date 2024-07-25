@@ -118,6 +118,8 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
 
   ## first level (rank) correlation
   message("Calculating first level rank correlation ...")
+  jj <- match(rownames(FC), rownames(obj$genes)) ## Enable enrichment for proteomics
+  rownames(FC) <- obj$genes$symbol[jj]
   gg <- intersect(rownames(X), rownames(FC))
 
   if (length(gg) < 20) {
