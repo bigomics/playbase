@@ -89,7 +89,7 @@ averageByGroup <- function(X, y) {
 #' @export
 gmean <- function(x) {
   ## geometric mean
-  exp(mean(log(x + 1e-40)))
+  exp(mean(log(x + 1e-40), na.rm = TRUE))
 }
 
 

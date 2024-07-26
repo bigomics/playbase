@@ -13,7 +13,7 @@ normalizeData <- function(pgx, do.impute = TRUE, do.regress = TRUE,
   nmissing <- sum(length(which.missing))
   message("[normalizeData] ", nzero, " zero values")
   message("[normalizeData] ", nmissing, " missing values")
-
+  
   contrasts <- pgx$contrasts
   if (is.null(contrasts)) contrasts <- sign(pgx$model.parameters$exp.matrix)
   samples <- pgx$samples
@@ -45,7 +45,7 @@ normalizeData <- function(pgx, do.impute = TRUE, do.regress = TRUE,
     }
   }
 
-  ## ## Auto-scaling (scale down huge values, often in proteomics)
+  ## Auto-scaling (scale down huge values, often in proteomics)
   ## res <- counts.autoScaling(counts)
   ## counts <- res$counts
   ## counts_multiplier <- res$counts_multiplier
@@ -63,7 +63,7 @@ normalizeData <- function(pgx, do.impute = TRUE, do.regress = TRUE,
   message("[normalizeData] Median centering...")
   ## eX <- playbase::pgx.countNormalization( eX, methods = "median.center")
   mx <- apply(X, 2, median, na.rm = TRUE)
-  X <- t(t(X) - mx) + mean(mx)
+  X <- t(t(X) - mx) + mean(mx, na.rm = TRUE)
 
   message("[normalizeData] Global scaling")
   X <- global_scaling(X, method = scale.method)
@@ -176,53 +176,57 @@ NORMALIZATION.METHODS <- c("none", "mean", "scale", "NC", "CPM", "TMM", "RLE", "
 #' }
 #' @export
 pgx.countNormalization <- function(x, methods) {
-  ## Column-wise normalization (along samples).
-  ##
-  ## x:        counts (linear)
-  ## method:   single method
+    ## Column-wise normalization (along samples).
+    ## x:        counts (linear)
+    ## method:   single method
 
-  methods <- methods[1]
-  which.zero <- which(x == 0, arr.ind = TRUE)
-  x1 <- x
-  x1[which.zero] <- NA
+    methods <- methods[1]
+    ## which.zero <- which(x == 0, arr.ind = TRUE)
+    ## x1 <- x
+    ## x1[which.zero] <- NA
 
-  for (m in methods) {
-    if (m == "none") {
-      ## normalization on individual mean
-      x <- x
-    } else if (m %in% c("scale", "mean.center")) {
-      ## normalization on individual mean
-      mx <- mean(x1, na.rm = TRUE)
-      x <- t(t(x) / (1 + colMeans(x1, na.rm = TRUE))) * mx
-    } else if (m == "median.center") {
-      mx <- apply(x1, 2, median, na.rm = TRUE)
-      x <- t(t(x) / (1 + mx)) * mean(mx, na.rm = TRUE)
-    } else if (m == "CPM") {
-      x <- t(t(x) / (1 + Matrix::colSums(x1, na.rm = TRUE))) * 1e6
-    } else if (m == "TMM") {
-      ## normalization on total counts (linear scale)
-      x <- normalizeTMM(x, log = FALSE) ## does TMM on counts (edgeR)
-    } else if (m == "RLE") {
-      ## normalization on total counts (linear scale)
-      x <- normalizeRLE(x, log = FALSE, use = "deseq2") ## does RLE on counts (Deseq2)
-    } else if (m == "RLE2") {
-      ## normalization on total counts (linear scale)
-      x <- normalizeRLE(x, log = FALSE, use = "edger") ## does RLE on counts
-      ##        } else if(m %in% c("upperquartile")) {
-      ##            ## normalization on total counts (linear scale)
-    } else if (m == "quantile") {
-      new.x <- 0.01 * limma::normalizeQuantiles(as.matrix(100 * x1)) ## shift to avoid clipping
-      rownames(new.x) <- rownames(x)
-      colnames(new.x) <- colnames(x)
-      x <- new.x
+    for (m in methods) {
+        if (m == "none") {
+            x <- x
+        } else if (m %in% c("scale", "mean.center")) {
+            mx <- mean(x1, na.rm = TRUE)
+            x <- t(t(x) / (1 + colMeans(x1, na.rm = TRUE))) * mx
+        } else if (m == "median.center") {
+            mx <- apply(x1, 2, median, na.rm = TRUE)
+            x <- t(t(x) / (1 + mx)) * mean(mx, na.rm = TRUE)
+        } else if (m == "CPM") {
+            ## x <- t(t(x) / (1 + Matrix::colSums(x1, na.rm = TRUE))) * 1e6
+            message("playbase::logCPM")
+            x <- playbase::logCPM(x)
+            x <- 2 ** x - 1
+        } else if (m == "TMM") {
+            ## normalization on total counts (linear scale)
+            x <- normalizeTMM(x, log = FALSE) ## does TMM on counts (edgeR)
+        } else if (m == "RLE") {
+            ## normalization on total counts (linear scale)
+            x <- normalizeRLE(x, log = FALSE, use = "deseq2") ## does RLE on counts (Deseq2)
+        } else if (m == "RLE2") {
+            ## normalization on total counts (linear scale)
+            x <- normalizeRLE(x, log = FALSE, use = "edger") ## does RLE on counts
+        } else if (m == "quantile") {
+            new.x <- 0.01 * limma::normalizeQuantiles(as.matrix(100 * x1)) ## shift to avoid clipping
+            rownames(new.x) <- rownames(x)
+            colnames(new.x) <- colnames(x)
+            x <- new.x
+        } else if (m == "logMaxMedian") {
+            message("playbase::logMaxMedianNorm")
+            x <- playbase::logMaxMedianNorm(x, toLog = FALSE)
+        } else if (m == "logMaxSum") {
+            message("playbase::logMaxSumNorm")
+            x <- playbase::logMaxSumNorm(x, toLog = FALSE)
+        } else {
+            stop("playbase::pgx.countNormalization: unknown method")
+        }
     }
-  } ## end of for method
 
-  x <- pmax(x, 0) ## prevent negative values
-  ## put back zeros as zeros
-  x[which.zero] <- 0
-
-  return(x)
+    ## put back zeros as zeros
+    ## x[which.zero] <- 0
+    return(x)
 }
 
 
@@ -341,47 +345,56 @@ safe.logCPM <- function(x, t = 0.05, prior = 1, q = NULL) {
 
 #' @export
 global_scaling <- function(X, method, shift = "clip") {
-  X[is.infinite(X)] <- NA
-  zero.point <- 0
-  which.zero <- which(X == 0)
+    X[is.infinite(X)] <- NA
+    
+    ##---logMM & logMS created for MPoC
+    ##---logCPM conformed to existing deployed master
+    if (method == "logMaxMedian") {
+        X <- playbase::logMaxMedianNorm(counts = 2**X-1)
+    } else if (method == "logMaxSum") { 
+        X <- playbase::logMaxSumNorm(counts = 2**X-1)
+    } else if (method == "cpm") {
+        X <- playbase::logCPM(counts = 2**X-1)
+        ## median.tc <- median(colSums(2**X, na.rm = TRUE), na.rm = TRUE)
+        ## a <- log2(median.tc) - log2(1e6)
+        ## zero.point <- a
+    } else {
+        zero.point <- 0
+        which.zero <- which(X == 0)
+        if (grepl("^m[0-9]", method)) {
+            ## median centering
+            mval <- as.numeric(substring(method, 2, 99))
+            a <- median(X, na.rm = TRUE) - mval
+            zero.point <- a
+        } else if (grepl("^z[0-9]+", method)) {
+            ## zero at z-distance from median
+            zdist <- as.numeric(substring(method, 2, 99))
+            m0 <- mean(apply(X, 2, median, na.rm = TRUE))
+            s0 <- mean(apply(X, 2, sd, na.rm = TRUE))
+            zero.point <- m0 - zdist * s0
+        } else if (grepl("^q[0.][.0-9]+", method)) {
+            ## direct quantile
+            probs <- as.numeric(substring(method, 2, 99))
+            zero.point <- quantile(X, probs = probs, na.rm = TRUE)
+        } else {
+            stop("unknown method = ", method)
+        }
+        
+        message("[normalizeCounts] shifting values to zero: z = ", round(zero.point, 4))
+        if (shift == "slog") {
+            ## smooth log-transform. not real zeros
+            X <- slog(2**X, s = 2**zero.point)
+        } else if (shift == "clip") {
+            ## linear shift and clip. Induces real zeros
+            X <- pmax(X - zero.point, 0)
+        } else {
+            stop("unknown shift method")
+        }
+        ## put back zeros
+        X[which.zero] <- 0
+    }
 
-  if (method == "cpm") {
-    median.tc <- median(colSums(2**X, na.rm = TRUE), na.rm = TRUE)
-    a <- log2(median.tc) - log2(1e6)
-    zero.point <- a
-  } else if (grepl("^m[0-9]", method)) {
-    ## median centering
-    mval <- as.numeric(substring(method, 2, 99))
-    a <- median(X, na.rm = TRUE) - mval
-    zero.point <- a
-  } else if (grepl("^z[0-9]+", method)) {
-    ## zero at z-distance from median
-    zdist <- as.numeric(substring(method, 2, 99))
-    m0 <- mean(apply(X, 2, median, na.rm = TRUE))
-    s0 <- mean(apply(X, 2, sd, na.rm = TRUE))
-    zero.point <- m0 - zdist * s0
-  } else if (grepl("^q[0.][.0-9]+", method)) {
-    ## direct quantile
-    probs <- as.numeric(substring(method, 2, 99))
-    zero.point <- quantile(X, probs = probs, na.rm = TRUE)
-  } else {
-    stop("unknown method = ", method)
-  }
-
-  message("[normalizeCounts] shifting values to zero: z = ", round(zero.point, 4))
-  if (shift == "slog") {
-    ## smooth log-transform. not real zeros
-    X <- slog(2**X, s = 2**zero.point)
-  } else if (shift == "clip") {
-    ## linear shift and clip. Induces real zeros
-    X <- pmax(X - zero.point, 0)
-  } else {
-    stop("unknown shift method")
-  }
-
-  ## put back zeros
-  X[which.zero] <- 0
-  X
+    return(X)    
 }
 
 #' @export
@@ -394,3 +407,72 @@ is.xxl <- function(X, z = 10) {
   this.z <- (X - mx) / sdx0
   (abs(this.z) > z)
 }
+
+#' Normalization for TMT and Silac data: logMaxMedianNorm
+#' 
+#' @description This function normalizes TMT and Silac data using max median
+#' 
+#' @param counts Numeric matrix of raw intensities: genes in rows, samples in columns.
+#' @param prior Pseudocount to add prior to log transform. Default is 1.
+#'
+#' @return Normalized matrix of log2-transformed values.
+#'
+#' @details Most used normalization methods for TMT/Silac proteomics data: make the median or sum of each sample column equal to the max median or sum.
+#'
+#' @examples
+#' \dontrun{
+#' counts <- matrix(rnbinom(100 * 10, mu = 100, size = 1), 100, 10)
+#' norm_counts <- logMaxMedianNorm(counts)
+#' }
+#' @export
+logMaxMedianNorm <- function(counts, toLog = TRUE, prior = 0) {
+    mx <- apply(counts, 2, median, na.rm = TRUE)
+    counts <- t(t(counts) / mx) * max(mx, na.rm = TRUE)
+    if(toLog) {
+        X <- log2(prior + counts)
+    } else {
+        X <- counts
+    }  
+    return(X)
+}
+
+#' Normalization for TMT and Silac data: logMaxSumNorm
+#' 
+#' @description This function normalizes TMT and Silac data using max sum of intensities
+#' 
+#' @param counts Numeric matrix of raw intensities: genes in rows, samples in columns.
+#' @param prior Pseudocount to add prior to log transform. Default is 1.
+#'
+#' @return Normalized matrix of log2-transformed values.
+#'
+#' @details Most used norm. for TMT/Silac data: make median or sum of each sample equal to max median or sum.
+#'
+#' @examples
+#' \dontrun{
+#' counts <- matrix(rnbinom(100 * 10, mu = 100, size = 1), 100, 10)
+#' norm_counts <- logMaxSumNorm(counts)
+#' }
+#' @export
+logMaxSumNorm <- function(counts, toLog = TRUE, prior = 0) {
+    mx <- colSums(counts, na.rm = TRUE)
+    counts <- t(t(counts) / mx) * max(mx, na.rm = TRUE)
+    if(toLog) {
+        X <- log2(prior + counts)
+    } else {
+        X <- counts
+    }
+    return(X)
+}
+
+## logMaxSumNorm.OLD <- function(counts, prior = 1) {
+##    X <- log2(prior + counts)
+##    mx <- colSums(X, na.rm = TRUE)
+##    vv <- apply(X, 2, function(x) length(x[!is.na(x)]))
+##    norm.factor <- (max(mx) - mx) / vv
+##    i=1
+##    for(i in 1:ncol(X)) {
+##        jj <- !is.na(X[,i])
+##        X[jj, i] <- X[jj, i] + norm.factor[i]
+##   }
+##    return(X)
+## }

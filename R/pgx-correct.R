@@ -67,7 +67,7 @@ pgx.superBatchCorrect <- function(X, pheno,
   } else {
     bc <- c()
     if (!is.null(mnn.correct)) bc <- c(bc, "mnn")
-    if (nnm.correct) bc <- c(bc, "nnm")
+    if (nnm.correct) bc <- c(bc, "npm")
     if (sva.correct) bc <- c(bc, "sva")
     if (pca.correct) bc <- c(bc, "pca")
     if (hc.correct) bc <- c(bc, "hc")
@@ -310,11 +310,11 @@ pgx.superBatchCorrect <- function(X, pheno,
       }
     }
 
-    if (bc == "nnm") {
+    if (bc == "npm") {
       ## --------------------------------------------------------------------
       ## Nearest-neighbour matching (NNM)
       ## --------------------------------------------------------------------
-      dbg("[pgx.superBatchCorrect] Correcting with nearest-neighbour matching (NNM)")
+      dbg("[pgx.superBatchCorrect] Correcting with nearest-neighbour matching (NPM)")
       dbg("[pgx.superBatchCorrect] model.par = ", model.par)
       y1 <- pheno[, model.par, drop = FALSE]
       y1 <- apply(y1, 1, paste, collapse = ":")
@@ -339,14 +339,14 @@ pgx.superBatchCorrect <- function(X, pheno,
         X.r <- t(stats::resid(eval(parse(text = lm.expr))))
         n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
 
-        cX1 <- Matrix::head(cX[order(-apply(cX, 1, stats::sd)), ], 1000) ## top 1000 genes only (faster)
+        cX1 <- Matrix::head(cX[order(-apply(cX, 1, stats::sd, na.rm = TRUE)), ], 1000) ## top 1000 genes only (faster)
         sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = n.sv)$sv)
 
         if (any(class(sv) == "try-error")) {
           ## try again with little bit of noise...
           a <- 0.01 * mean(apply(cX, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
           cX1 <- cX + a * matrix(stats::rnorm(length(cX)), nrow(cX), ncol(cX))
-          cX1 <- Matrix::head(cX1[order(-apply(cX1, 1, stats::sd)), ], 1000) ## top 1000 genes only (faster)
+          cX1 <- Matrix::head(cX1[order(-apply(cX1, 1, stats::sd, na.rm = TRUE)), ], 1000) ## top 1000 genes only (faster)
           sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1))$sv)
         }
         if (!any(class(sv) == "try-error")) {
@@ -413,7 +413,7 @@ pgx.superBatchCorrect <- function(X, pheno,
         nremoved <- 0
         pX <- NULL
         while (length(ii) > 0 && niter < max.iter) {
-          xx <- Matrix::head(cX[order(-apply(cX, 1, stats::sd)), ], hc.top)
+          xx <- Matrix::head(cX[order(-apply(cX, 1, stats::sd, na.rm = TRUE)), ], hc.top)
           hc <- stats::cutree(fastcluster::hclust(stats::dist(t(xx)), method = "ward.D2"), 2)
           hc.rho <- stats::cor(hc, mod1)
           hc.rho <- apply(abs(hc.rho), 1, max)
@@ -575,7 +575,7 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
     if (inherits(y1, "factor")) y1 <- factor(as.character(y1))
     design <- stats::model.matrix(~ 0 + y1)
     r1 <- stats::cor(t(x[, ii]), design, use = "pairwise")
-    r1 <- rowMeans(abs(r1))
+    r1 <- rowMeans(abs(r1), na.rm = TRUE)
     pv <- cor.pvalue(r1, length(y1))
     list(val = r1, pv = pv)
   }
@@ -875,7 +875,7 @@ pgx.computeTechnicalEffects <- function(X, is.count = FALSE, nmin = 3, nv = 1) {
   if (!any(class(cc.score) == "try-error")) {
     cc.score <- cc.score[, c("s_score", "g2m_score")]
     colnames(cc.score) <- c("S", "G2M")
-    if (nv == 1) cc.score <- rowMeans(cc.score)
+    if (nv == 1) cc.score <- rowMeans(cc.score, na.rm = TRUE)
     pheno <- cbind(pheno, cellcycle = cc.score)
   }
 
@@ -1142,7 +1142,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   if (is.null(methods)) {
     methods <- c(
       "uncorrected", "normalized_to_control", "ComBat",
-      "limma", "superBC", "PCA", "RUV", "SVA", "NNM", "MNN", "Harmony"
+      "limma", "superBC", "PCA", "RUV", "SVA", "NPM", "MNN", "Harmony"
     )
   }
 
@@ -1183,7 +1183,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
     if (is.null(batch)) {
       xlist[["ComBat"]] <- X
     } else {
-      if (max(table(batch)) > 1) {
+      if (max(table(batch), na.rm = TRUE) > 1) {
         mod1 <- model.matrix(~ factor(y))
         bX <- try(sva::ComBat(X, batch = batch, mod = mod1, par.prior = TRUE))
         if (!"try-error" %in% class(bX)) {
@@ -1216,8 +1216,8 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
 
   ## RUV and SVA
   if ("RUV" %in% methods) {
-    message("[runBatchCorrectionMethods] correcting with RUV3")
-    xlist[["RUV3"]] <- try(ruvCorrect(X, y, k = NULL, type = "III"))
+    message("[runBatchCorrectionMethods] correcting with RUV")
+    xlist[["RUV"]] <- try(ruvCorrect(X, y, k = NULL, type = "III"))
     ##  xlist[["RUVg"]] <- try(ruvCorrect(X, y, k = NULL, type = "g"))
   }
 
@@ -1226,10 +1226,10 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
     xlist[["SVA"]] <- try(svaCorrect(X, y))
   }
 
-  if ("NNM" %in% methods) {
+  if ("NPM" %in% methods) {
     ## xlist[["NNM"]] <- gx.nnmcorrect(X, y)$X
-    xlist[["NNM1"]] <- nnmCorrect(X, y, use.design = TRUE)
-    xlist[["NNM2"]] <- nnmCorrect2(X, y, use.design = TRUE)
+    xlist[["NPM"]] <- nnmCorrect(X, y, use.design = TRUE)
+    ## xlist[["NNM2"]] <- nnmCorrect2(X, y, use.design = TRUE)
     ##    xlist[["NNM.no_mod"]] <- nnmCorrect2(X, y, use.design = FALSE)
   }
 
@@ -1347,22 +1347,29 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
 
   if (!ref %in% names(xlist)) ref <- names(xlist)[1]
 
+  dbg("[bc.evaluateResults] length.xlist = ", length(xlist))
+
   ## compute and make table
-  message("computing statistics...")
+  message("[bc.evaluateResults] computing statistics...")
   numsig <- lapply(xlist, stats.numsig,
     y = pheno, lfc = lfc, q = q,
     trend = trend, verbose = FALSE
   )
 
+  dbg("[bc.evaluateResults] length.numsig = ", length(numsig))
+  
   res <- t(sapply(numsig, function(r) {
-    c(sapply(r[1:2], length), avg.fc = mean(abs(r[[3]])))
+    c(sapply(r[1:2], length), avg.fc = mean(abs(r[[3]]), na.rm = TRUE))
   }))
+
+  dbg("[bc.evaluateResults] dim.res = ", dim(res))
+  
   sdx <- sapply(xlist, function(x) mean(matrixStats::rowSds(x, na.rm = TRUE)))
   snr <- res[, "avg.fc"] / sdx
   res <- cbind(res, avg.sd = sdx, SNR = snr)
 
   ## compute relative genes/geneset overlap
-  message("computing overlap...")
+  message("[bc.evaluateResults] computing overlap...")
   g1 <- numsig[[ref]]$genes
   n1 <- sapply(numsig, function(s) length(intersect(s$genes, g1)))
   ##  n2 <- sapply(numsig, function(s) length(union(s$genes, g1)))
@@ -1385,10 +1392,10 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
   xlist1 <- lapply(xlist, function(x) {
     x <- head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)), ], 1000)
     x <- as.matrix(x)
-    (x - rowMeans(x))
+    (x - rowMeans(x, na.rm = TRUE))
   })
 
-  message("computing silhouette scores...")
+  message("[bc.evaluateResults] computing silhouette scores...")
   silhouette <- rep(1, nrow(res))
   if (add.sil) {
     if (is.null(pos)) {
@@ -1410,7 +1417,7 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
     pheno0[is.na(pheno0)] <- "NA"
     silhouette <- sapply(pos, function(p) {
       score <- cluster::silhouette(as.integer(factor(pheno0)), stats::dist(p))
-      mean(score[, "sil_width"])
+      mean(score[, "sil_width"], na.rm = TRUE)
     })
     silhouette <- pmax(silhouette, 1e-4)
 
@@ -1422,7 +1429,7 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
     })
     Y <- model.matrix(~pheno)[, -1]
     rho <- lapply(pca10, function(x) cor(x, Y))
-    rho <- lapply(rho, function(x) rowMeans(abs(x)))
+    rho <- lapply(rho, function(x) rowMeans(abs(x), na.rm = TRUE))
     pc1.ratio <- sapply(rho, function(r) abs(r[1]) / sum(abs(r)))
 
     res <- cbind(res, silhouette, pc1.ratio)
@@ -1435,7 +1442,7 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
   ##  score <- res.score * (silhouette / silhouette[1])**1
   overall.score <- t(t(1e-4 + res[, sel]) / (1e-4 + res[ref, sel]))
   overall.score[, "silhouette"] <- overall.score[, "silhouette"]**2 ## give more weight
-  overall.score <- exp(rowMeans(log(overall.score))) ## geometric mean
+  overall.score <- exp(rowMeans(log(overall.score), na.rm = TRUE)) ## geometric mean
 
   res1 <- cbind(score = overall.score, res)
   res1 <- res1[order(-res1[, "score"]), ]
@@ -1515,8 +1522,8 @@ bc.plotResults <- function(X, xlist, pos, pheno, samples = NULL, scores = NULL,
     i <- 1
     for (m in methods) {
       xx <- xlist[[m]]
-      xx <- head(xx[order(-apply(xx, 1, sd)), ], nmax)
-      xx <- xx - rowMeans(xx)
+      xx <- head(xx[order(-apply(xx, 1, sd, na.rm = TRUE)), ], nmax)
+      xx <- xx - rowMeans(xx, na.rm = TRUE)
       xx <- abs(xx)**0.5 * sign(xx)
       gx.imagemap(xx, main = m, cex.main = 1.4, cex = 0)
       mtext("samples", 1, line = 0.5, las = 1)
@@ -1631,7 +1638,7 @@ bc.CovariateAnalysisPlot <- function(bc.results, k = 1:3, par = TRUE, col = 1) {
       )
     } else {
       y1 <- -log10(1e-04 + pxx[, i])
-      ylim <- c(-0.1 * max(y1), 1.1 * max(y1))
+      ylim <- c(-0.1 * max(y1, na.rm = TRUE), 1.1 * max(y1, na.rm = TRUE))
       col1 <- col[i]
       plot(x1, y1,
         pch = 20, cex = 1.5, col = col1,
@@ -1665,7 +1672,7 @@ get_model_parameters <- function(X, samples, pheno = NULL, contrasts = NULL) {
   p.pheno <- bc$p.values[, "p.pheno"]
   if (nrow(bc$p.values) == 1) names(p.pheno)[1] <- rownames(bc$p.values)
   p.pheno
-  pheno.pars <- names(which(p.pheno == min(p.pheno) | p.pheno < 1e-80))
+  pheno.pars <- names(which(p.pheno == min(p.pheno, na.rm = TRUE) | p.pheno < 1e-80))
   pheno.pars <- pheno.pars[order(p.pheno[pheno.pars])]
   pheno.pars
 
@@ -1701,15 +1708,19 @@ get_model_parameters <- function(X, samples, pheno = NULL, contrasts = NULL) {
 compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
                                             methods = c(
                                               "uncorrected", "ComBat",
-                                              "limma", "RUV", "SVA", "NNM"
+                                              "limma", "RUV", "SVA", "NPM"
                                             ),
+                                            clust.method = "tsne",
                                             ntop = 4000, xlist.init = list(),
-                                            ref = NULL) {
-  ## methods <- c("uncorrected","ComBat", "limma","RUV","SVA","NNM")
+                                            ref = NULL, evaluate = TRUE ) {
+  ## methods <- c("uncorrected","ComBat", "limma","RUV","SVA","NPM")
   ## ntop = 4000; xlist.init = list()
   batch <- NULL
   pars <- get_model_parameters(X, samples, pheno = pheno, contrasts = contrasts)
 
+  nmissing <- sum(is.na(X))
+  if(nmissing) message("WARNING: missing values in X. some methods may fail")
+  
   message("Running batch-correction methods...")
   xlist <- runBatchCorrectionMethods(
     X = X,
@@ -1725,51 +1736,59 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
   if (length(xlist.init) > 0) xlist <- c(xlist.init, xlist)
 
   ## PCA is faster than UMAP
-  pos <- list()
+  pos <- NULL
   t2 <- function(x) t(scale(t(scale(t(x), scale = FALSE))))
-  nb <- max(2, round(min(30, dim(X) / 5)))
-
-  ##  incProgress( amount = 0.1, "Computing PCA clustering...")
-  message("Computing PCA clustering...")
-  pos[["pca"]] <- lapply(xlist, function(x) {
-    irlba::irlba(t2(x), nu = 2, nv = 2)$u[, 1:2]
-  })
-  for (i in 1:length(pos[["pca"]])) {
-    rownames(pos[["pca"]][[i]]) <- colnames(X)
+  
+  if(clust.method == 'pca') {
+    ##  incProgress( amount = 0.1, "Computing PCA clustering...")
+    message("Computing PCA clustering...")
+    pos <- lapply(xlist, function(x) {
+      irlba::irlba(t2(x), nu = 2, nv = 2)$u[, 1:2]
+    })
+    for (i in 1:length(pos)) {
+      rownames(pos[[i]]) <- colnames(X)
+    }
+  }
+  if(clust.method == 'tsne') {
+    ##  incProgress( amount = 0.1, "Computing t-SNE clustering...")
+    nb <- max(2, round(min(30, dim(X) / 5)))
+    nmissing <- sum(is.na(X))
+    if(nmissing == 0) {
+      message("Computing t-SNE clustering...")
+      pos <- lapply(xlist, function(x) {
+        Rtsne::Rtsne(t2(x), perplexity = nb, check_duplicates = FALSE)$Y
+      })
+      for (i in 1:length(pos)) {
+        rownames(pos[[i]]) <- colnames(X)
+      }
+    }
   }
 
-  ##  incProgress( amount = 0.1, "Computing t-SNE clustering...")
-  message("Computing t-SNE clustering...")
-  message("[Comuputing] nb = ", nb)
-  pos[["tsne"]] <- lapply(xlist, function(x) {
-    Rtsne::Rtsne(t2(x), perplexity = nb, check_duplicates = FALSE)$Y
-  })
-  for (i in 1:length(pos[["tsne"]])) {
-    rownames(pos[["tsne"]][[i]]) <- colnames(X)
+  res <- NULL
+  best.method <- ref
+
+  if(evaluate) {
+    ## compare results using scoring
+    res <- playbase::bc.evaluateResults(
+      xlist,
+      pheno = pars$pheno,
+      lfc = 0.2,
+      q = 0.05,
+      pos = pos,
+      add.sil = TRUE,
+      plot = FALSE,
+      trend = TRUE
+    )
+    ## shiny::removeModal()
+    score <- res$scores[, "score"]
+    if (is.null(ref)) ref <- names(xlist)[1]
+    best.method <- names(which.max(score))
+  
+    ## if the improvement is small, we rather choose the uncorrected solution
+    score.ratio <- score[best.method] / score[ref]
+    best.method <- ifelse(score.ratio < 1.20, ref, best.method)
+    message("[select_batchcorrect_method] best.method = ", best.method)
   }
-
-  ##  incProgress( amount = 0.1, "Comparing results...")
-  message("Comparing results...")
-  res <- playbase::bc.evaluateResults(
-    xlist,
-    pheno = pars$pheno,
-    lfc = 0.2,
-    q = 0.05,
-    pos = pos[["tsne"]],
-    add.sil = TRUE,
-    plot = FALSE,
-    trend = TRUE
-  )
-
-  ## shiny::removeModal()
-  score <- res$scores[, "score"]
-  if (is.null(ref)) ref <- names(xlist)[1]
-  best.method <- names(which.max(score))
-
-  ## if the improvement is small, we rather choose the uncorrected solution
-  score.ratio <- score[best.method] / score[ref]
-  best.method <- ifelse(score.ratio < 1.20, ref, best.method)
-  message("[select_batchcorrect_method] best.method = ", best.method)
 
   list(
     xlist = xlist,
@@ -1788,8 +1807,8 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
 
 #' @export
 superBC2 <- function(X, samples, y, batch = NULL,
-                     ## methods = c("technical","batch","statistical","pca","sva","nnm"),
-                     methods = c("batch", "technical", "statistical", "sva", "nnm2"),
+                     ## methods = c("technical","batch","statistical","pca","sva","npm"),
+                     methods = c("batch", "technical", "statistical", "sva", "npm"),
                      p.pca = 0.5, p.pheno = 0.05, k.pca = 10, nv = 1,
                      xrank = NULL, use.design = TRUE) {
   if (y[1] %in% colnames(samples)) {
@@ -1808,7 +1827,7 @@ superBC2 <- function(X, samples, y, batch = NULL,
   cX <- X
   methods <- intersect(methods, c(
     "technical", "batch", "statistical", "pca", "sva",
-    "ruv", "nnm", "nnm2"
+    "ruv", "npm", "npm2"
   ))
 
   for (m in methods) {
@@ -1856,12 +1875,12 @@ superBC2 <- function(X, samples, y, batch = NULL,
       message("[superBC2] correcting for: RUV")
       cX <- ruvCorrect(cX, y)
     }
-    if (m == "nnm") {
-      message("[superBC2] correcting for: NNM")
+    if (m == "npm") {
+      message("[superBC2] correcting for: NPM")
       cX <- gx.nnmcorrect(cX, y, use.design = use.design)$X
     }
-    if (m == "nnm2") {
-      message("[superBC2] correcting for: NNM2")
+    if (m == "npm2") {
+      message("[superBC2] correcting for: NPM2")
       cX <- gx.nnmcorrect2(cX, y, r = 0.35, use.design = use.design)$X
     }
   }
@@ -2038,7 +2057,7 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
     M <- model.matrix(~ 0 + y) ## how deal with missing values??
     rownames(M) <- colnames(X)
     ruvX <- t(ruv::RUVIII(Y = t(X), M = M, ctl = ctl, k = k, eta = NULL))
-    ruvX <- ruvX - mean(ruvX) + mean(X) ## ??
+    ruvX <- ruvX - mean(ruvX, na.rm = TRUE) + mean(X, na.rm = TRUE) ## ??
   } else if (type == "g") {
     ruvX <- RUVSeq::RUVg(x = X, cIdx = ctl, k = k, isLog = TRUE)$normalizedCounts
   } else {
@@ -2175,9 +2194,9 @@ MNNcorrect <- function(X, batch, controls = NULL) {
 #' @export
 normalizeToControls <- function(X, batch, y, controls) {
   ii <- which(y %in% controls)
-  batch.ctl <- tapply(ii, batch[ii], function(k) rowMeans(X[, k, drop = FALSE]))
+  batch.ctl <- tapply(ii, batch[ii], function(k) rowMeans(X[, k, drop = FALSE], na.rm = TRUE))
   batch.ctl <- do.call(cbind, batch.ctl)
-  nX <- (X - batch.ctl[, batch]) + rowMeans(X)
+  nX <- (X - batch.ctl[, batch]) + rowMeans(X, na.rm = TRUE)
   ## nX <- limma::normalizeQuantiles(X)
   nX
 }
@@ -2326,7 +2345,7 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   dX <- X
 
   ## reduce for speed
-  sdx <- apply(dX, 1, stats::sd)
+  sdx <- apply(dX, 1, stats::sd, na.rm = TRUE)
   ii <- Matrix::head(order(-sdx), sdtop)
   dX <- dX[ii, ]
 
@@ -2335,7 +2354,7 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   }
   if (center.m) {
     ## center per condition group (takes out batch differences)
-    mX <- tapply(1:ncol(dX), y1, function(i) rowMeans(dX[, i, drop = FALSE]))
+    mX <- tapply(1:ncol(dX), y1, function(i) rowMeans(dX[, i, drop = FALSE], na.rm = TRUE))
     mX <- do.call(cbind, mX)
     dX <- dX - mX[, y1]
   }
@@ -2401,7 +2420,7 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   full.idx <- rownames(B)[kk]
   cX <- do.call(cbind, tapply(
     1:ncol(full.X), full.idx,
-    function(i) rowMeans(full.X[, i, drop = FALSE])
+    function(i) rowMeans(full.X[, i, drop = FALSE], na.rm = TRUE)
   ))
   cX <- cX[, colnames(X)]
 
@@ -2427,7 +2446,7 @@ nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
   dX <- X
 
   ## reduce for speed
-  sdx <- apply(dX, 1, stats::sd)
+  sdx <- apply(dX, 1, stats::sd, na.rm = TRUE)
   ii <- Matrix::head(order(-sdx), sdtop)
   dX <- dX[ii, ]
   if (center.x) {
@@ -2439,7 +2458,7 @@ nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
   }
   if (center.m) {
     ## center per condition group (takes out batch differences)
-    mX <- tapply(1:ncol(dX), y1, function(i) rowMeans(dX[, i, drop = FALSE]))
+    mX <- tapply(1:ncol(dX), y1, function(i) rowMeans(dX[, i, drop = FALSE], na.rm = TRUE))
     mX <- do.call(cbind, mX)
     dX <- dX - mX[, y1]
   }
@@ -2561,9 +2580,9 @@ nnmCorrect.SIMPLE <- function(x, y, k = 3) {
     nj <- which(y != y[j])
     nn <- intersect(order(-xcor[j, ]), nj)
     nn <- Matrix::head(nn, k)
-    nx[, j] <- x[, j] - rowMeans(x[, nn, drop = FALSE])
+    nx[, j] <- x[, j] - rowMeans(x[, nn, drop = FALSE], na.rm = TRUE)
   }
-  nx <- nx + rowMeans(x)
+  nx <- nx + rowMeans(x, na.rm = TRUE)
   return(nx)
 }
 
@@ -2620,7 +2639,7 @@ sMNN <- function(X, batch, y, nv = 0.33, nn = 3, return.idx = FALSE) {
   message("[sMNN] Found total ", ncol(B), " MNN pairs")
 
   ## remove batch effects in transposed gene space
-  if (nv < 1) nv <- floor(nv * min(dim(B)))
+  if (nv < 1) nv <- floor(nv * min(dim(B), na.rm = TRUE))
   nv <- max(1, min(nv, dim(B) - 1))
   message("[sMNN] nv = ", nv)
   B <- scale(B)
@@ -2629,7 +2648,7 @@ sMNN <- function(X, batch, y, nv = 0.33, nn = 3, return.idx = FALSE) {
   cX <- t(limma::removeBatchEffect(t(X), covariates = dU))
 
   ## restore original mean
-  cX <- cX - rowMeans(cX) + rowMeans(X)
+  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
 
   if (return.idx) {
     res <- list(X = cX, idx = all.idx)
@@ -2665,7 +2684,7 @@ mfnCorrect <- function(X, y, nv = 3, nn = 3, return.idx = FALSE) {
     ## get correction vectors
     if (length(mfn) > 0) {
       idx <- idx[mfn, , drop = FALSE]
-      X2 <- apply(idx, 1, function(i) rowMeans(X1[, i, drop = FALSE]))
+      X2 <- apply(idx, 1, function(i) rowMeans(X1[, i, drop = FALSE], na.rm = TRUE))
       dX <- X1[, rownames(idx)] - X2
       B <- cbind(B, dX)
       idx1 <- apply(idx, 2, function(i) colnames(X1)[i])
@@ -2684,7 +2703,7 @@ mfnCorrect <- function(X, y, nv = 3, nn = 3, return.idx = FALSE) {
   cX <- t(limma::removeBatchEffect(t(X), covariates = dU))
 
   ## restore original mean
-  cX <- cX - rowMeans(cX) + rowMeans(X)
+  cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
 
   if (return.idx) {
     res <- list(X = cX, idx = all.idx)

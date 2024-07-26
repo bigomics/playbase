@@ -80,7 +80,7 @@ cosine_similarity <- function(X, Y = NULL, method = NULL) {
 tcosine.sparse <- function(X, k = 100, th = 0.01, block = 100, ties.method = "random",
                            gpu = FALSE) {
   dim(X)
-  X <- X / (1e-20 + Matrix::rowSums(X**2)**0.5)
+  X <- X / (1e-20 + Matrix::rowSums(X**2, na.rm = TRUE)**0.5)
   nblock <- ceiling(nrow(X) / block)
   nblock
   idx <- c()

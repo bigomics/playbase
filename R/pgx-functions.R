@@ -692,23 +692,23 @@ is.POSvsNEG <- function(pgx) {
     is.pn <- rep(NA, length(grp1))
     i <- 1
     for (i in 1:length(grp1)) {
-      a1 <- apply(pgx$samples, 1, function(a) mean(grepl(grp1[i], a)))
-      a2 <- apply(pgx$samples, 1, function(a) mean(grepl(grp2[i], a)))
+      a1 <- apply(pgx$samples, 1, function(a) mean(grepl(grp1[i], a), na.rm = TRUE))
+      a2 <- apply(pgx$samples, 1, function(a) mean(grepl(grp2[i], a), na.rm = TRUE))
       j1 <- which(a1 > a2) ## samples with phenotype  more in grp1
       j2 <- which(a2 >= a1) ## samples with phenotype  more in grp2
       s1 <- s2 <- 0
       if (length(j1)) s1 <- rowMeans(expmat[j1, i, drop = FALSE] > 0, na.rm = TRUE)
       if (length(j2)) s2 <- rowMeans(expmat[j2, i, drop = FALSE] > 0, na.rm = TRUE)
-      if (mean(s1) > mean(s2)) is.pn[i] <- TRUE
-      if (mean(s2) > mean(s1)) is.pn[i] <- FALSE
+      if (mean(s1, na.rm = TRUE) > mean(s2, na.rm = TRUE)) is.pn[i] <- TRUE
+      if (mean(s2, na.rm = TRUE) > mean(s1, na.rm = TRUE)) is.pn[i] <- FALSE
     }
 
     is.PosvsNeg1 <- mean(is.pn, na.rm = TRUE) > 0
   }
 
   ## look for keywords
-  grp1.neg2 <- mean(grepl("neg|untr|ref|wt|ctr|control", tolower(grp1)))
-  grp2.neg2 <- mean(grepl("neg|untr|ref|wt|ctr|control", tolower(grp2)))
+  grp1.neg2 <- mean(grepl("neg|untr|ref|wt|ctr|control", tolower(grp1)), na.rm = TRUE)
+  grp2.neg2 <- mean(grepl("neg|untr|ref|wt|ctr|control", tolower(grp2)), na.rm = TRUE)
 
   is.PosvsNeg2 <- NA
   if (grp1.neg2 > 0 || grp2.neg2 > 0) {
@@ -1489,7 +1489,7 @@ is.Date <- function(x) {
 averageByGroup <- function(mat, group, FUN = mean) {
   out <- do.call(cbind, tapply(
     1:ncol(mat), group,
-    function(i) rowMeans(mat[, i, drop = FALSE])
+    function(i) rowMeans(mat[, i, drop = FALSE], na.rm = TRUE)
   ))
   return(out)
 }
@@ -2098,7 +2098,7 @@ getGSETS_playbase <- function(gsets = NULL, pattern = NULL) {
 #' @export
 normalize_rows <- function(G) {
   # efficient normalization using linear algebra
-  row_sums <- Matrix::rowSums(G)
+  row_sums <- Matrix::rowSums(G, na.rm = TRUE)
   D <- Matrix::Diagonal(x = 1 / row_sums)
   G_scaled <- D %*% G
   rownames(G_scaled) <- rownames(G)
@@ -2184,6 +2184,10 @@ is_logged <- function(x, verbose = 0) {
   is.log
 }
 
+#' @export
+first_feature <- function(x) {
+  unname(sapply(strsplit(x, split = "[;,\\|]"),"[[",1))
+}
 
 ## =================================================================================
 ## ========================= END OF FILE ===========================================

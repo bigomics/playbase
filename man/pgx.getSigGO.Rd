@@ -5,7 +5,7 @@
 \title{Get Significant GO Terms}
 \usage{
 pgx.getSigGO(
-  ngs,
+  pgx,
   comparison,
   methods = NULL,
   fdr = 0.2,
@@ -14,7 +14,7 @@ pgx.getSigGO(
 )
 }
 \arguments{
-\item{ngs}{PGX object containing gene set analysis results}
+\item{pgx}{PGX object containing gene set analysis results}
 
 \item{comparison}{Name of the contrast to extract results for}
 

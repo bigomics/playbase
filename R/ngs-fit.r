@@ -67,9 +67,23 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
   ## Run all tests on raw counts
   ## --------------------------------------------------------------
 
+  ## Do not test features with full missingness.
+  ## Put them back in the TopTable
+  counts0 <- counts
+  nas <- apply(counts, 1, function(x) sum(is.na(x)))
+  Ex <- names(nas)[which(nas == ncol(counts))]
+  keep <- names(nas)[which(nas != ncol(counts))] 
+  if(length(Ex)>0) counts <- counts[keep, ]  
 
+  if(!is.null(X)) {
+      X0 <- X
+      nas <- apply(X, 1, function(x) sum(is.na(x)))
+      Ex <- names(nas)[which(nas == ncol(X))]
+      keep <- names(nas)[which(nas != ncol(X))] 
+      if(length(Ex)>0) X <- X[keep, ]  
+  }
 
-  if (methods[1] == "*") {
+    if (methods[1] == "*") {
     methods <- c(
       "ttest", "ttest.welch", "voom.limma", "trend.limma", "notrend.limma",
       "deseq2.wald", "deseq2.lrt", "edger.qlf", "edger.lrt"
@@ -258,7 +272,9 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
   ## "corrections" ...
   ## ----------------------------------------------------------------------
   if (correct.AveExpr) {
-    message("[ngs.fitContrastsWithAllMethods] correcting AveExpr values...")
+      message("[ngs.fitContrastsWithAllMethods] correcting AveExpr values...")
+      message("[ngs.fitContrastsWithAllMethods] dim.X: ", dim(X)[1], ",", dim(X)[2])
+    
     ## Some methods like edgeR and Deseq2 compute some weird
     ## normalized expression matrix. We need to "correct" for
     ## those.
@@ -269,9 +285,9 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
     samples1 <- lapply(apply(exp.matrix > 0, 2, which), function(i) rownames(exp.matrix)[i])
     samples0 <- lapply(apply(exp.matrix < 0, 2, which), function(i) rownames(exp.matrix)[i])
 
-    avgX <- sapply(samplesX, function(s) rowMeans(X[, s, drop = FALSE]))
-    avg.1 <- sapply(samples1, function(s) rowMeans(X[, s, drop = FALSE]))
-    avg.0 <- sapply(samples0, function(s) rowMeans(X[, s, drop = FALSE]))
+    avgX <- sapply(samplesX, function(s) rowMeans(X[, s, drop = FALSE], na.rm = TRUE))
+    avg.1 <- sapply(samples1, function(s) rowMeans(X[, s, drop = FALSE], na.rm = TRUE))
+    avg.0 <- sapply(samples0, function(s) rowMeans(X[, s, drop = FALSE], na.rm = TRUE))
 
     dim(avgX)
     i <- j <- 1
@@ -385,7 +401,7 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
 
 
     ## !!!!!!!!!!!!!!!!!!!!!!!! NEED RETHINK !!!!!!!!!!!!!!!!!!!!!!!!
-    meta.p <- apply(pv, 1, function(p) exp(mean(log(p)))) ## geometric mean
+    meta.p <- apply(pv, 1, function(p) exp(mean(log(p), na.rm = TRUE))) ## geometric mean
     meta.q <- stats::p.adjust(meta.p, method = "BH")
     meta.fx <- rowMeans(fc, na.rm = TRUE)
     meta.avg <- rowMeans(mx, na.rm = TRUE)
@@ -461,6 +477,15 @@ ngs.fitContrastsWithTTEST <- function(X, contr.matrix, design, method = "welch",
 ngs.fitContrastsWithLIMMA <- function(X, contr.matrix, design, method = c("voom", "limma"),
                                       trend = TRUE, robust = TRUE, prune.samples = FALSE,
                                       conform.output = FALSE, plot = FALSE) {
+
+  ## Do not test features with full missingness.
+  ## Put them back in the TopTable
+  X0 <- X  
+  nas <- apply(X, 1, function(x) sum(is.na(x)))
+  Ex <- names(nas)[which(nas == ncol(X))]
+  keep <- names(nas)[which(nas != ncol(X))] 
+  if(length(Ex)>0) X <- X[keep, ]  
+    
   design
   method <- method[1]
 
@@ -472,7 +497,7 @@ ngs.fitContrastsWithLIMMA <- function(X, contr.matrix, design, method = c("voom"
     exp0 <- design %*% contr.matrix
     kk <- rownames(exp0)
     if (prune.samples) {
-      kk <- rownames(exp0)[which(rowSums(abs(exp0)) > 0)]
+      kk <- rownames(exp0)[which(rowSums(abs(exp0), na.rm = TRUE) > 0)]
     }
     design1 <- design[kk, , drop = FALSE]
     X1 <- X[, kk, drop = FALSE]
@@ -858,10 +883,10 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
 
   rownames.counts <- rownames(counts)
   counts <- round(counts) ## WARNING!!!
-  if (all(rowSums(counts == 0) > 0)) {
+  if (all(rowSums(counts == 0, na.rm = TRUE) > 0)) {
     ## ERROR: 'every gene contains at least one zero, cannot compute log
     ## geometric means' so we fix it villager-style
-    jmax <- which.max(rowSums(counts))
+    jmax <- which.max(rowSums(counts, na.rm = TRUE))
     counts[jmax, ] <- pmax(counts[jmax, ], 1)
   }
   dds <- DESeq2::DESeqDataSetFromMatrix(

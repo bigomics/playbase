@@ -9,6 +9,7 @@ ngs.getGeneAnnotation(
   probes,
   probe_type = NULL,
   annot_table = NULL,
+  use.ah = NULL,
   verbose = TRUE
 )
 }

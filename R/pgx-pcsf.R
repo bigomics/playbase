@@ -13,7 +13,7 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
                             ntop = 250, ncomp = 3) {
   F <- pgx.getMetaMatrix(pgx, level = level)$fc
   if (is.null(contrast)) {
-    fx <- rowMeans(F**2)**0.5
+    fx <- rowMeans(F**2, na.rm = TRUE)**0.5
   } else {
     if (!contrast %in% colnames(F)) {
       stop("[pgx.computePCSF] invalid contrast")
@@ -66,7 +66,7 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   ## remove small clusters...
   cmp <- igraph::components(pcsf)
   if (ncomp < 1) {
-    sel.kk <- which(cmp$csize > ncomp * max(cmp$csize))
+    sel.kk <- which(cmp$csize > ncomp * max(cmp$csize, na.rm = TRUE))
   } else {
     sel.kk <- head(order(-cmp$csize), ncomp)
   }
@@ -89,7 +89,7 @@ plotPCSF <- function(pcsf,
                      node_cex = 30, label_cex = 30, nlabel = -1) {
   ## set node size
   fx <- igraph::V(pcsf)$prize
-  wt <- abs(fx / mean(abs(fx)))**0.8
+  wt <- abs(fx / mean(abs(fx), na.rm = TRUE))**0.8
   node_cex1 <- node_cex * pmax(wt, 1)
   node_cex1
 
@@ -103,13 +103,13 @@ plotPCSF <- function(pcsf,
   ## set label size
   if (highlightby == "centrality") {
     wt <- igraph::E(pcsf)$weight
-    ewt <- 1.0 / (0.01 * mean(wt) + wt) ##
+    ewt <- 1.0 / (0.01 * mean(wt, na.rm = TRUE) + wt) ##
     bc <- igraph::page_rank(pcsf, weights = ewt)$vector
-    label_cex1 <- label_cex * (1 + 3 * (bc / max(bc))**3)
+    label_cex1 <- label_cex * (1 + 3 * (bc / max(bc, na.rm = TRUE))**3)
   }
   if (highlightby == "prize") {
     fx1 <- abs(fx)
-    label_cex1 <- label_cex * (1 + 3 * (fx1 / max(fx1))**3)
+    label_cex1 <- label_cex * (1 + 3 * (fx1 / max(fx1, na.rm = TRUE))**3)
   }
 
   igraph::V(pcsf)$label <- igraph::V(pcsf)$name
@@ -178,8 +178,8 @@ visplot.PCSF <- function(
   min1 <- 10
   max1 <- node_size
   r1 <- max1 - min1
-  min2 <- min(prize)
-  max2 <- max(prize)
+  min2 <- min(prize, na.rm = TRUE)
+  max2 <- max(prize, na.rm = TRUE)
   r2 <- max2 - min2
   adjusted_prize <- r1 * (prize - min2) / r2 + min1
 
@@ -188,8 +188,8 @@ visplot.PCSF <- function(
   min1 <- 1
   max1 <- edge_width
   r1 <- max1 - min1
-  min2 <- min(weight)
-  max2 <- max(weight)
+  min2 <- min(weight, na.rm = TRUE)
+  max2 <- max(weight, na.rm = TRUE)
   r2 <- max2 - min2
   adjusted_weight <- r1 * (weight - min2) / r2 + min1
 
@@ -255,7 +255,7 @@ plotPCSF.IGRAPH <- function(net, fx0 = NULL, label.cex = 1) {
   vertex.color <- "lightblue"
   cpal <- colorRampPalette(c("blue2", "grey90", "red3"))(33)
   vertex.color <- cpal[1 + 16 + round(16 * fx0)]
-  edge.width <- (1 - igraph::E(net)$weight / max(igraph::E(net)$weight))
+  edge.width <- (1 - igraph::E(net)$weight / max(igraph::E(net)$weight, na.rm = TRUE))
 
   pos <- igraph::layout_with_graphopt(
     net,
@@ -266,7 +266,7 @@ plotPCSF.IGRAPH <- function(net, fx0 = NULL, label.cex = 1) {
     spring.constant = 1
   )
 
-  vv <- (vertex.size / mean(vertex.size))**1
+  vv <- (vertex.size / mean(vertex.size, na.rm = TRUE))**1
   plot(
     net,
     vertex.size = vertex.size,

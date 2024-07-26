@@ -40,7 +40,7 @@
 #' @export
 pgx.computeGlassoAroundGene <- function(X, gene, nmax = 100) {
   rho <- stats::cor(t(X), t(X[gene, , drop = FALSE]))
-  jj <- Matrix::head(order(-rowMeans(rho**2)), nmax)
+  jj <- Matrix::head(order(-rowMeans(rho**2, na.rm = TRUE)), nmax)
   tX <- t(X[jj, ])
 
   vX <- stats::var(tX)
@@ -197,7 +197,7 @@ PCOR.METHODS <- c(
 #' @export
 pgx.computePartialCorrelationAroundGene <- function(X, gene, method = PCOR.METHODS, nmax = 100, fast = FALSE) {
   rho <- stats::cor(t(X), t(X[gene, , drop = FALSE]))
-  jj <- Matrix::head(order(-rowMeans(rho**2)), nmax)
+  jj <- Matrix::head(order(-rowMeans(rho**2, na.rm = TRUE)), nmax)
   tX <- t(X[jj, ])
   res <- pgx.computePartialCorrelationMatrix(
     tX,

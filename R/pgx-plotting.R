@@ -272,7 +272,7 @@ pgx.plotEnrichmentDotPlot <- function(pgx, contrast,
 #' @export
 pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap", "pacmap"), nb = NULL, ...) {
   ## method=c('tsne','pca','umap','pacmap')
-  jj <- head(order(-matrixStats::rowSds(X)), 1000)
+  jj <- head(order(-matrixStats::rowSds(X, na.rm = TRUE)), 1000)
   X1 <- X[jj, ]
   X1 <- X1 - rowMeans(X1, na.rm = TRUE)
   if (ncol(X1) < 20) {
@@ -502,7 +502,7 @@ pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast = NULL) {
   X <- list()
   for (i in 1:length(matlist)) {
     X[[i]] <- matlist[[i]] - rowMeans(matlist[[i]])
-    X[[i]] <- X[[i]] / apply(X[[i]], 1, stats::sd)
+    X[[i]] <- X[[i]] / apply(X[[i]], 1, stats::sd, na.rm = TRUE)
   }
 
   ## Counts cross-table between matrices
@@ -511,7 +511,7 @@ pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast = NULL) {
   for (i in 1:(length(X) - 1)) {
     mm <- pmax(X[[i]], 0) %*% t(pmax(X[[i + 1]], 0))
     mm <- mm**4
-    mm <- mm / mean(mm)
+    mm <- mm / mean(mm, na.rm = TRUE)
 
     M[[i]] <- mm
   }
@@ -534,7 +534,7 @@ pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast = NULL) {
       if (cty.mode == 3) node.wt <- abs(outer(fc[[i]], fc[[i + 1]]))
       if (cty.mode == 2) node.wt <- pmax(outer(fc[[i]], fc[[i + 1]]), 0)
       ww <- R[[i]] * node.wt
-      ww <- ww / max(ww) ## normalize??
+      ww <- ww / max(ww, na.rm = TRUE) ## normalize??
       F[[i]] <- ww
     }
   }
@@ -624,11 +624,11 @@ pgx.SankeyFromMRF.PLOTLY <- function(M, R, F, fill = TRUE, labels = NULL) {
   nodes <- data.frame(label = igraph::V(gr)$name, color = col1)
   nodes$info <- paste(igraph::V(gr)$name, unlist(labels)[igraph::V(gr)$name])
   nodes$label <- sub(".*[:]", "", nodes$label)
-  nodes$x <- (vlevel - 1) / max(vlevel - 1)
+  nodes$x <- (vlevel - 1) / max(vlevel - 1, na.rm = TRUE)
 
   if (fill) {
     wt <- igraph::E(gr)$weight
-    ev2 <- 0.05 + 0.55 * (wt / max(wt))
+    ev2 <- 0.05 + 0.55 * (wt / max(wt, na.rm = TRUE))
     col2 <- paste("rgba(80,80,120,", ev2, ")")
   } else {
     col2 <- paste("rgba(80,80,120,0.2)")
@@ -985,7 +985,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   xy <- cbind(fc = f, y = -log10(q))
 
   if (is.null(hilight)) {
-    wt <- rowSums(scale(xy, center = FALSE)**2)
+    wt <- rowSums(scale(xy, center = FALSE)**2, na.rm = TRUE)
     hilight <- rownames(xy)[order(-wt)]
     hilight <- intersect(hilight, names(sig[sig == TRUE]))
   }
@@ -1072,7 +1072,7 @@ pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
   # <- gg
   cpal <- c("grey60", "red3")
   if (is.null(hilight)) {
-    wt <- rowSums(scale(cbind(xy, m), center = FALSE)**2)
+    wt <- rowSums(scale(cbind(xy, m), center = FALSE)**2, na.rm = TRUE)
     hilight <- rownames(xy)[order(-wt)]
     hilight <- intersect(hilight, names(sig[sig == TRUE]))
   }
@@ -1235,9 +1235,10 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
     return(NULL)
   }
 
-  F <- F[match(rownames(xy), rownames(F)), , drop = FALSE]
-
-  rownames(F) <- rownames(xy)
+  cm <- intersect(rownames(xy), rownames(F))
+  F <- F[cm, , drop = FALSE]
+  ## F <- F[match(rownames(xy), rownames(F)), , drop = FALSE]
+  ## rownames(F) <- rownames(xy)
 
   if (set.par) {
     nc <- ceiling(sqrt(ncol(F)))
@@ -1406,7 +1407,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   ## label rotation
   if (is.null(srt)) {
     srt <- 0
-    if (max(nchar(group.names)) >= 7) srt <- 45
+    if (max(nchar(group.names), na.rm = TRUE) >= 7) srt <- 45
   }
 
   ## create groups
@@ -1453,7 +1454,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   if (level == "geneset") {
     gx <- pgx$gsetX[probe, rownames(pgx$samples)]
   } else {
-    gx <- pgx$X[rownames(pgx$X) == probe, rownames(pgx$samples)]
+    gx <- pgx$X[which(rownames(pgx$X) == probe), rownames(pgx$samples)]
   }
 
   if (!logscale) {
@@ -1474,8 +1475,8 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
     ## NOT GROUPED BARPLOTS
     nx <- length(gx)
     if (is.null(ylab)) {
-      ylab <- "expression (log2CPM)"
-      if (!logscale) ylab <- "expression (CPM)"
+      ylab <- "Expression (log2)"
+      if (!logscale) ylab <- "Expression"
     }
     klr <- grp.klr[as.character(xgroup)]
     klr[is.na(klr)] <- "#e5e5e5"
@@ -1502,8 +1503,8 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
     } else {
       ## plot using base graphics
       gx.min <- 0
-      if (min(gx) < 0) gx.min <- min(gx)
-      ylim <- c(gx.min, 1.3 * max(gx))
+      if (min(gx, na.rm = TRUE) < 0) gx.min <- min(gx, na.rm = TRUE)
+      ylim <- c(gx.min, 1.3 * max(gx, na.rm = TRUE))
       bx <- graphics::barplot(gx[],
         col = klr[], ylim = ylim,
         ## offset = 0, ylim=c(gx.min,max(gx)),
@@ -1513,8 +1514,8 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   } else {
     ## GROUPED PLOTS
     if (is.null(ylab)) {
-      ylab <- "expression (log2CPM)"
-      if (!logscale) ylab <- "expression (CPM)"
+      ylab <- "Expression (log2)"
+      if (!logscale) ylab <- "Expression"
     }
     bee.cex <- c(0.3, 0.1, 0.05)[cut(length(gx), c(0, 100, 500, 99999))]
 
@@ -1785,7 +1786,7 @@ pgx.splitHeatmap <- function(ngs, splitx = NULL, top.mode = "specific",
     X1 <- X0[jj, ]
     idx <- paste0("M", as.vector(mapply(rep, 1:ncol(grpX), ntop1)))
   } else {
-    X1 <- Matrix::head(X0[order(-apply(X0, 1, stats::sd)), ], ntop)
+    X1 <- Matrix::head(X0[order(-apply(X0, 1, stats::sd, na.rm = TRUE)), ], ntop)
     hc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(t(X1), use = "pairwise")), method = "ward.D2")
     idx <- paste0("S", stats::cutree(hc, 5))
   }
@@ -1923,14 +1924,14 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
   r1 <- cumsum(x0) / (1e-4 + sum(x0))
 
   rnk.trace <- (r1 - r0)
-  rnk.trace <- rnk.trace / max(abs(rnk.trace)) * 0.8
+  rnk.trace <- rnk.trace / max(abs(rnk.trace), na.rm = TRUE) * 0.8
 
   qq <- range(fc)
   y1 <- qq[2]
   y0 <- 0.8 * qq[1]
   dy <- ticklen * (y1 - y0)
-  if (max(rnk.trace) >= abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y1)
-  if (max(rnk.trace) < abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y0)
+  if (max(rnk.trace, na.rm = TRUE) >= abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y1)
+  if (max(rnk.trace, na.rm = TRUE) < abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y0)
 
   cc <- sign(fc) * rank(abs(fc))
   df <- data.frame(x = rank(-fc), y = fc, trace = rnk.trace, cc = cc)
@@ -2111,14 +2112,14 @@ ggenplot <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ylab = NULL) {
   r1 <- cumsum(x0) / (1e-4 + sum(x0))
 
   rnk.trace <- (r1 - r0)
-  rnk.trace <- rnk.trace / max(abs(rnk.trace)) * 0.8
+  rnk.trace <- rnk.trace / max(abs(rnk.trace), na.rm = TRUE) * 0.8
 
   qq <- range(fc)
   y1 <- qq[2]
   y0 <- qq[1]
   dy <- 0.2 * (y1 - y0)
-  if (max(rnk.trace) >= abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y1)
-  if (max(rnk.trace) < abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y0)
+  if (max(rnk.trace, na.rm = TRUE) >= abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y1)
+  if (max(rnk.trace, na.rm = TRUE) < abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y0)
 
   cc <- sign(fc) * rank(abs(fc))
   df <- data.frame(rank = rank(-fc), fc = fc, run = rnk.trace, cc)
@@ -2126,7 +2127,7 @@ ggenplot <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ylab = NULL) {
 
 
   cpal <- colorspace::diverge_hcl(64, c = 60, l = c(30, 100), power = 1)
-  ii <- 1 + 32 + range(round(32 * (fc / max(abs(fc)))))
+  ii <- 1 + 32 + range(round(32 * (fc / max(abs(fc), na.rm = TRUE))))
   cpal <- colorspace::diverge_hcl(65)[ii[1]:ii[2]]
 
   cex.title <- 1
@@ -2853,7 +2854,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     }
 
     ## z1 is normalized [0;1] for coloring
-    z1 <- (z - min(zlim)) / diff(zlim)
+    z1 <- (z - min(zlim, na.rm = TRUE)) / diff(zlim)
     z1 <- pmin(pmax(z1, 0), 1) ## clip
     if (softmax) {
       z1 <- 0.5 * (tanh(4 * (z1 - 0.5)) + 1)
@@ -3074,10 +3075,10 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   if (is.null(xlim)) xlim <- range(pos[, 1])
   if (is.null(ylim)) ylim <- range(pos[, 2])
   if (zoom != 1) {
-    cx <- mean(range(pos[, 1]))
-    cy <- mean(range(pos[, 2]))
-    dx <- diff(range(pos[, 1]))
-    dy <- diff(range(pos[, 2]))
+    cx <- mean(range(pos[, 1], na.rm = TRUE), na.rm = TRUE)
+    cy <- mean(range(pos[, 2], na.rm = TRUE), na.rm = TRUE)
+    dx <- diff(range(pos[, 1], na.rm = TRUE))
+    dy <- diff(range(pos[, 2], na.rm = TRUE))
     xlim <- cx + 0.5 * c(-1, 1.05) * dx / zoom
     ylim <- cy + 0.5 * c(-1, 1.05) * dy / zoom
   }
@@ -3487,10 +3488,10 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   xlim0 <- range(pos[, 1])
   ylim0 <- range(pos[, 2])
   if (zoom != 1) {
-    cx <- mean(range(pos[, 1]))
-    cy <- mean(range(pos[, 2]))
-    dx <- diff(range(pos[, 1]))
-    dy <- diff(range(pos[, 2]))
+    cx <- mean(range(pos[, 1], na.rm = TRUE), na.rm = TRUE)
+    cy <- mean(range(pos[, 2], na.rm = TRUE), na.rm = TRUE)
+    dx <- diff(range(pos[, 1], na.rm = TRUE))
+    dy <- diff(range(pos[, 2], na.rm = TRUE))
     xlim0 <- cx + 0.5 * c(-1, 1.05) * dx / zoom
     ylim0 <- cy + 0.5 * c(-1, 1.05) * dy / zoom
   }
@@ -4188,8 +4189,8 @@ plotlyMA <- function(x, y, names, source = "plot1",
     }
   }
 
-  x1 <- 1.05 * max(x)
-  yy <- 1.05 * max(abs(y))
+  x1 <- 1.05 * max(x, na.rm = TRUE)
+  yy <- 1.05 * max(abs(y), na.rm = TRUE)
   abline1 <- list(
     type = "line", y0 = -lfc, y1 = -lfc, x0 = 0, x1 = x1,
     line = list(dash = "dot", width = 1, color = "grey")
@@ -4199,7 +4200,7 @@ plotlyMA <- function(x, y, names, source = "plot1",
     line = list(dash = "dot", width = 1, color = "grey")
   )
 
-  xrange <- c(0, 1) * max(abs(x)) * 1.05
+  xrange <- c(0, 1) * max(abs(x), na.rm = TRUE) * 1.05
   xrange <- range(x, na.rm = TRUE)
   yrange <- c(-1, 1) * max(abs(y), na.rm = TRUE) * 1.05
   xaxis <- list(title = xlab, range = xrange, gridwidth = 0.2, showgrid = FALSE)
@@ -4948,8 +4949,8 @@ iheatmapr.add_col_annotation <- function(p,
       } else {
         tmp_colors <- pick_continuous_colors(
           zmid = 0,
-          zmin = min(x[, i]),
-          zmax = max(x[, i]), p
+          zmin = min(x[, i], na.rm = TRUE),
+          zmax = max(x[, i], na.rm = TRUE), p
         )
       }
       p <- iheatmapr::add_col_signal(p,
@@ -4974,7 +4975,7 @@ iheatmapr.add_col_annotation <- function(p,
 }
 
 
-#' Split heatmap from matrix
+#' Split heatmap from matrix using iHeatmapR
 #'
 #' @param X Numeric data matrix
 #' @param annot Data frame with row and column annotations
@@ -4985,7 +4986,7 @@ iheatmapr.add_col_annotation <- function(p,
 #' @param row_clust Cluster rows? Default is TRUE.
 #' @param row_annot_width Width for row annotations. Default is 0.03.
 #' @param scale Scaling for data. Default is "row.center".
-#' @param colors Vector of colors to use. Default is RColorBrewer Set1.
+#' @param colors Vector of colors to use for annotation. Default is RColorBrewer Set1.
 #' @param lmar Label margin parameter. Default is 60.
 #' @param rowcex Row text size scaling. Default is 1.
 #' @param colcex Column text size scaling. Default is 1.
@@ -5003,7 +5004,7 @@ iheatmapr.add_col_annotation <- function(p,
 pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NULL,
                                        xtips = NULL, ytips = NULL, row_clust = TRUE,
                                        row_annot_width = 0.03, scale = "row.center",
-                                       colors = NULL, lmar = 60,
+                                       colors = NULL, lmar = 60, na_text = NULL,
                                        rowcex = 1, colcex = 1, show_legend = TRUE,
                                        return_x_matrix = FALSE) {
   ## constants
@@ -5041,7 +5042,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   ## ------ split Y-axis (genes) by factor
   hc.order <- function(x) {
     suppressWarnings(dd <- stats::as.dist(1 - stats::cor(t(x), use = "pairwise")))
-    if (sum(is.na(dd))) dd[is.na(dd)] <- 1
+    if (sum(is.na(dd))) dd[is.na(dd) | is.nan(dd)] <- 1
     hc <- fastcluster::hclust(dd, method = "ward.D2")
     rownames(x)[hc$order]
   }
@@ -5056,7 +5057,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     kk <- unlist(kk)
     kk <- kk[1:(length(kk) - 1)] ## remove trailing spacer
     idx <- idx[1:(length(idx) - 1)]
-    X <- rbind(X, "   " = 0)[kk, ]
+    X <- rbind(X, "   " = NA)[kk, ]
 
     ## invert
     X <- X[nrow(X):1, ]
@@ -5116,14 +5117,18 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   )
 
   x1 <- xx[[1]]
-
-
+  zmax <- max(abs(X), na.rm=TRUE)
+  
   plt <- iheatmapr::main_heatmap(
     x1,
     name = "expression",
     colorbar_grid = grid_params,
     x = xtips[colnames(x1)],
     y = ytips[rownames(x1)],
+    colors = c("royalblue3", "grey90", "indianred3"),
+    zmid = 0,
+    zmin = -zmax,
+    zmax = zmax,
     tooltip = tooltip,
     layout = list(margin = mar)
   )
@@ -5162,8 +5167,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     i <- 2
     for (i in 2:length(xx)) {
       x1 <- xx[[i]]
-
-
       hc <- NULL
       if (NCOL(x1) > 1) {
         hc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(x1, use = "pairwise")))
@@ -5175,6 +5178,10 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
           name = "expression",
           x = xtips[colnames(x1)],
           y = ytips[rownames(x1)],
+          colors = c("royalblue3", "#EEEEE4", "indianred3"),
+          zmid = 0,
+          zmin = -zmax,
+          zmax = zmax,
           tooltip = tooltip,
           size = sizes[i],
           buffer = 0.007 * ex
@@ -5229,7 +5236,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     gnames <- shortstring(gnames, 25) ## shorten
     gnames <- sub("   ", "-", gnames)
 
-    maxlen <- max(sapply(gnames, nchar))
+    maxlen <- max(sapply(gnames, nchar), na.rm = TRUE)
     w <- ifelse(maxlen >= 20, 0.45, 0.20)
     s1 <- ifelse(maxlen >= 20, 9, 11) * rowcex
     plt <- iheatmapr::add_row_labels(
@@ -5239,6 +5246,12 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     )
   }
 
+  if(0) {
+    ## ---------- Always convert to plotly??? (new)
+    plt <- plt %>% iheatmapr::to_plotly_list()
+    plt <- plotly::as_widget(plt)
+  }
+  
   if (return_x_matrix) {
     return(list(
       plt = plt,
@@ -5247,7 +5260,9 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   } else {
     return(plt)
   }
+
 }
+
 
 
 #' Box plot using plotly
@@ -5364,7 +5379,7 @@ pgx.barplot.PLOTLY <- function(
         data[y],
         list(data[[x]]),
         function(val) {
-          c(mean = mean(val), sd = stats::sd(val))
+          c(mean = mean(val, na.rm = TRUE), sd = stats::sd(val, na.rm = TRUE))
         }
       )
     )
@@ -5546,6 +5561,7 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   if (rotate) score <- t(score)
 
   bluered.pal <- colorRamp(colors = c("royalblue3", "#ebeffa", "white", "#faeeee", "indianred3"))
+  bluered.pal <- colorRamp(colors = c("royalblue3", "grey90", "indianred3"))  
   score <- score[nrow(score):1, , drop = FALSE]
   x_axis <- colnames(score)
   y_axis <- rownames(score)

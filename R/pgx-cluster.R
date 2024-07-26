@@ -46,12 +46,14 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
   } else if (!is.null(pgx$gsetX) && level == "geneset") {
     message("using expression geneset X matrix...")
     X <- pgx$gsetX
+    X <- X[complete.cases(X), ]
   } else {
     message("WARNING:: could not find matrix X")
     return(pgx)
   }
+
   if (center.rows) {
-    X <- X - rowMeans(X)
+    X <- X - rowMeans(X, na.rm = TRUE)
   }
   if (scale.rows) {
     X <- X / (1e-6 + matrixStats::rowSds(X, na.rm = TRUE))
@@ -150,6 +152,10 @@ pgx.clusterSamples <- function(pgx, methods = c("pca", "tsne", "umap"),
     X <- logCPM(pgx$counts, total = NULL)
   }
 
+  if(any(is.na(X))) {
+      X <- X[complete.cases(X), , drop = FALSE]
+  }
+  
   clust.pos <- pgx.clusterBigMatrix(
     X,
     methods = methods,
@@ -298,7 +304,7 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
   }
 
   ## reduce dimensions
-  X <- Matrix::head(X[order(apply(X, 1, stats::sd)), ], top.sd)
+  X <- Matrix::head(X[order(apply(X, 1, stats::sd, na.rm = TRUE)), ], top.sd)
   X <- t(scale(t(X))) ## scale features??
   if (nrow(X) > npca) {
     npca <- min(npca, dim(X) - 1)
@@ -434,10 +440,10 @@ pgx.clusterMatrix <- function(X,
   }
 
   ## impute on row median
-  if (any(is.na(X))) {
-    X <- imputeMedian(X)
-  }
-
+  ## if (any(is.na(X))) {
+  ##    X <- imputeMedian(X)
+  ## }
+  
   if (ncol(X) <= 6) X <- cbind(X, X, X, X, X, X)
   if (nrow(X) <= 3) X <- rbind(X, X, X, X)
 
@@ -448,7 +454,7 @@ pgx.clusterMatrix <- function(X,
   res.svd <- NULL
   if (reduce.pca > 0) {
     reduce.pca <- max(3, min(c(reduce.pca, dim(X) - 1)))
-    message("Reducing to ", reduce.pca, " PCA dimenstions...")
+    message("Reducing to ", reduce.pca, " PCA dimensions...")
     cnx <- colnames(X)
     suppressMessages(suppressWarnings(
       res.svd <- irlba::irlba(X, nv = reduce.pca)
@@ -659,7 +665,7 @@ pgx.clusterMatrix.DEPRECATED <- function(X, perplexity = 30, dims = c(2, 3),
   ## adding some randomization is sometimes necessary if the data is 'too
   ## clean' and some methods get stuck... (IK)
   sdx <- matrixStats::rowSds(X, na.rm = TRUE)
-  small.sd <- 0.05 * mean(sdx)
+  small.sd <- 0.05 * mean(sdx, na.rm = TRUE)
   X <- X + small.sd * matrix(rnorm(length(X)), nrow(X), ncol(X))
 
   ## ------------ find t-SNE clusters

@@ -4,12 +4,12 @@
 \alias{pgx.computeCoreGOgraph}
 \title{Compute Core GO Graph}
 \usage{
-pgx.computeCoreGOgraph(ngs, fdr = 0.05)
+pgx.computeCoreGOgraph(pgx, fdr = 0.05)
 }
 \arguments{
-\item{ngs}{pgx object containing GO enrichment results}
-
 \item{fdr}{FDR threshold for selecting significant GO terms}
+
+\item{ngs}{pgx object containing GO enrichment results}
 }
 \value{
 An igraph object representing the core GO graph

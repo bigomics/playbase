@@ -305,7 +305,7 @@ pgx.survivalVariableImportance <- function(X, time, status,
 
   imp <- list()
   xnames <- rownames(X)
-  sdx <- apply(X, 1, stats::sd)
+  sdx <- apply(X, 1, stats::sd, na.rm = TRUE)
   if (nrow(X) == 1) X <- rbind(X, X)
 
   if (!inherits(status, "logical") && all(status %in% c(0, 1, NA))) {
@@ -451,7 +451,7 @@ pgx.variableImportance <- function(X, y,
   ## add noise
   if (add.noise > 0) {
     sdx0 <- matrixStats::rowSds(X, na.rm = TRUE)
-    sdx1 <- add.noise * (0.5 * sdx0 + 0.5 * mean(sdx0))
+    sdx1 <- add.noise * (0.5 * sdx0 + 0.5 * mean(sdx0, na.rm = TRUE))
     X <- X + sdx1 * matrix(rnorm(length(X)), nrow(X), ncol(X)) ## add some noise
   }
 

@@ -181,7 +181,7 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
   }
   if (stats == "sum") {
     pool.counts <- tapply(1:ncol(counts), cluster.id, function(ii) {
-      Matrix::rowSums(counts[, ii, drop = FALSE])
+      Matrix::rowSums(counts[, ii, drop = FALSE], na.rm = TRUE)
     })
   }
   pool.counts <- do.call(cbind, pool.counts)

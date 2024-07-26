@@ -11,12 +11,15 @@
 pgx.checkINPUT <- function(
     df,
     type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")) {
+  
   datatype <- match.arg(type)
   df_clean <- df
   PASS <- TRUE
   check_return <- list()
 
   if (datatype == "COUNTS" || datatype == "EXPRESSION") {
+    # remove special characters before converting to numeric (keep commas, dots) as they define the decimal separator
+    df_clean <- apply(df_clean, 2, function(x) gsub("[^0-9,.]", "", x))
     # convert matrix from character to numeric, sometimes we receive character matrix from read.csv function
     df_clean <- apply(df_clean, 2, as.numeric, simplify = TRUE)
     rownames(df_clean) <- rownames(df)
@@ -60,7 +63,7 @@ pgx.checkINPUT <- function(
     }
 
     # check for zero count rows, remove them
-    ANY_ROW_ZERO <- which(rowSums(df_clean) == 0, )
+    ANY_ROW_ZERO <- which(rowSums(df_clean, na.rm = TRUE) == 0, )
 
     if (length(ANY_ROW_ZERO) > 0 && PASS) {
       # get the row names with all zeros

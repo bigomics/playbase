@@ -58,7 +58,7 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
 
   ## Filter count matrix
   X <- counts
-  X <- X[(rowMeans(X >= min.count) > low.th), ] ## OK???
+  X <- X[(rowMeans(X >= min.count, na.rm = TRUE) > low.th), ] ## OK???
 
   ## Match matrices
   rownames(X) <- toupper(rownames(X))
@@ -67,7 +67,7 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
   X1 <- X[gg, ]
   M1 <- M[gg, ]
   M1 <- M1[, Matrix::colSums(M1 != 0) > 0, drop = FALSE]
-  if (scalex) X1 <- X1 / (1 + rowMeans(X1))
+  if (scalex) X1 <- X1 / (1 + rowMeans(X1, na.rm = TRUE))
 
   ## run deconvolution algorithm
 
@@ -82,9 +82,9 @@ pgx.inferCellType <- function(counts, low.th = 0.01, add.unknown = FALSE,
 
   ## Collapse to single cell.type
   if (collapse == "sum") {
-    P <- tapply(1:ncol(P), colnames(P), function(i) rowSums(P[, i, drop = FALSE]))
+    P <- tapply(1:ncol(P), colnames(P), function(i) rowSums(P[, i, drop = FALSE], na.rm = TRUE))
   } else if (collapse == "mean") {
-    P <- tapply(1:ncol(P), colnames(P), function(i) rowMeans(P[, i, drop = FALSE]))
+    P <- tapply(1:ncol(P), colnames(P), function(i) rowMeans(P[, i, drop = FALSE], na.rm = TRUE))
   } else {
     P <- tapply(1:ncol(P), colnames(P), function(i) apply(P[, i, drop = FALSE], 1, max))
   }
@@ -289,31 +289,32 @@ pgx.purify <- function(X, ref, k = 3, method = 2) {
 #'
 #' @export
 pgx.inferCellCyclePhase <- function(counts) {
-  ## List of cell cycle markers, from Tirosh et al, 2015
-  ##
+    ## List of cell cycle markers, from Tirosh et al, 2015
+    ##
 
-  rownames(counts) <- toupper(rownames(counts)) ## mouse...
-  cc.genes <- strsplit("MCM5 PCNA TYMS FEN1 MCM2 MCM4 RRM1 UNG GINS2 MCM6 CDCA7 DTL PRIM1 UHRF1 MLF1IP HELLS RFC2 RPA2 NASP RAD51AP1 GMNN WDR76 SLBP CCNE2 UBR7 POLD3 MSH2 ATAD2 RAD51 RRM2 CDC45 CDC6 EXO1 TIPIN DSCC1 BLM CASP8AP2 USP1 CLSPN POLA1 CHAF1B BRIP1 E2F8 HMGB2 CDK1 NUSAP1 UBE2C BIRC5 TPX2 TOP2A NDC80 CKS2 NUF2 CKS1B MKI67 TMPO CENPF TACC3 FAM64A SMC4 CCNB2 CKAP2L CKAP2 AURKB BUB1 KIF11 ANP32E TUBB4B GTSE1 KIF20B HJURP CDCA3 HN1 CDC20 TTK CDC25C KIF2C RANGAP1 NCAPD2 DLGAP5 CDCA2 CDCA8 ECT2 KIF23 HMMR AURKA PSRC1 ANLN LBR CKAP5 CENPE CTCF NEK2 G2E3 GAS2L3 CBX5 CENPA", split = " ")[[1]]
-  cc.genes <- cc.genes[cc.genes %in% rownames(counts)] # Subset for small datasets
-  s_genes <- cc.genes[1:43]
-  g2m_genes <- cc.genes[44:97]
-  ## Create our Seurat object and complete the initalization steps
+    rownames(counts) <- toupper(rownames(counts)) ## mouse...
+    cc.genes <- strsplit("MCM5 PCNA TYMS FEN1 MCM2 MCM4 RRM1 UNG GINS2 MCM6 CDCA7 DTL PRIM1 UHRF1 MLF1IP HELLS RFC2 RPA2 NASP RAD51AP1 GMNN WDR76 SLBP CCNE2 UBR7 POLD3 MSH2 ATAD2 RAD51 RRM2 CDC45 CDC6 EXO1 TIPIN DSCC1 BLM CASP8AP2 USP1 CLSPN POLA1 CHAF1B BRIP1 E2F8 HMGB2 CDK1 NUSAP1 UBE2C BIRC5 TPX2 TOP2A NDC80 CKS2 NUF2 CKS1B MKI67 TMPO CENPF TACC3 FAM64A SMC4 CCNB2 CKAP2L CKAP2 AURKB BUB1 KIF11 ANP32E TUBB4B GTSE1 KIF20B HJURP CDCA3 HN1 CDC20 TTK CDC25C KIF2C RANGAP1 NCAPD2 DLGAP5 CDCA2 CDCA8 ECT2 KIF23 HMMR AURKA PSRC1 ANLN LBR CKAP5 CENPE CTCF NEK2 G2E3 GAS2L3 CBX5 CENPA", split = " ")[[1]]
+    ## cc.genes <- cc.genes[cc.genes %in% rownames(counts)] # Subset for small datasets
+    s_genes <- cc.genes[1:43]
+    g2m_genes <- cc.genes[44:97]
 
-  obj <- Seurat::CreateSeuratObject(counts)
-  obj <- Seurat::NormalizeData(obj, verbose = 0)
-  suppressWarnings(obj <- Seurat::CellCycleScoring(obj,
-    s.features = s_genes,
-    g2m.features = g2m_genes,
-    set.ident = TRUE
-  ))
-  ## view cell cycle scores and phase assignments
-  s.score <- obj@meta.data$S.Score
-  g2m.score <- obj@meta.data$G2M.Score
-  phase <- obj@meta.data$Phase
-  if (is.null(phase) || length(phase) == 0) {
-    return(NULL)
-  }
-  return(phase)
+    ## Create our Seurat object and complete the initalization steps
+    counts[which(is.na(counts))] <- 0
+    obj <- Seurat::CreateSeuratObject(counts)
+    obj <- Seurat::NormalizeData(obj, verbose = 0)
+    suppressWarnings(obj <- Seurat::CellCycleScoring(obj,
+                                                     s.features = s_genes,
+                                                     g2m.features = g2m_genes,
+                                                     set.ident = TRUE
+                                                     ))
+    ## view cell cycle scores and phase assignments
+    s.score <- obj@meta.data$S.Score
+    g2m.score <- obj@meta.data$G2M.Score
+    phase <- obj@meta.data$Phase
+    if (is.null(phase) || length(phase) == 0) {
+        return(NULL)
+    }
+    return(phase)
 }
 
 
@@ -494,7 +495,7 @@ pgx.deconvolution <- function(X, ref,
                                 "cor", "SingleR"
                               ),
                               add.unknown = FALSE, normalize.mat = TRUE) {
-  if (max(X) < 50 || min(X) < 0) {
+  if (max(X, na.rm = TRUE) < 50 || min(X, na.rm = TRUE) < 0) {
     dbg("WARNING:: pgx.deconvolution: is X really counts? (not logarithmic)\n")
   }
 
@@ -503,26 +504,26 @@ pgx.deconvolution <- function(X, ref,
   mat <- as.matrix(X)
   rownames(mat) <- gsub(".*:", "", rownames(mat)) ## strip prefix
   rownames(mat) <- toupper(rownames(mat)) ## handle mouse??
-  mat <- mat[order(-rowMeans(mat)), , drop = FALSE]
+  mat <- mat[order(-rowMeans(mat, na.rm = TRUE)), , drop = FALSE]
   mat <- as.matrix(mat[!duplicated(rownames(mat)), , drop = FALSE])
 
   ref <- as.matrix(ref)
   rownames(ref) <- toupper(rownames(ref))
-  ref <- ref[order(-rowMeans(ref)), , drop = FALSE]
+  ref <- ref[order(-rowMeans(ref, na.rm = TRUE)), , drop = FALSE]
   ref <- as.matrix(ref[!duplicated(rownames(ref)), , drop = FALSE])
 
   ## Add "unknown" class to reference matrix
   if (add.unknown) {
     gg <- intersect(rownames(ref), rownames(mat))
     x1 <- log(1 + ref[gg, , drop = FALSE])
-    y1 <- log(1 + rowMeans(mat[gg, , drop = FALSE]))
+    y1 <- log(1 + rowMeans(mat[gg, , drop = FALSE], na.rm = TRUE))
     x1 <- cbind(offset = 1, x1)
 
     ## compute residual matrix by substracting all possible linear
     ## combinations of reference.
 
     x1 <- ref[gg, , drop = FALSE]
-    y1 <- rowMeans(mat[gg, , drop = FALSE])
+    y1 <- rowMeans(mat[gg, , drop = FALSE], na.rm = TRUE)
     cf <- NNLM::nnlm(x1, cbind(y1))$coefficients
     cf[is.na(cf)] <- 0
     resid <- pmax(y1 - x1 %*% cf, 0) ## residual vector
@@ -754,7 +755,7 @@ pgx.deconvolution <- function(X, ref,
   ## meta
   if (length(results) > 1) {
     jj <- colnames(ref)
-    norm.results <- lapply(results, function(x) x[, jj, drop = FALSE] / (1e-8 + rowSums(x[, jj, drop = FALSE])))
+    norm.results <- lapply(results, function(x) x[, jj, drop = FALSE] / (1e-8 + rowSums(x[, jj, drop = FALSE], na.rm = TRUE)))
     lognorm.results <- lapply(norm.results, function(x) log(0.001 + pmax(x, 0)))
     res.meta1 <- Reduce("+", norm.results) / length(norm.results)
     res.meta2 <- exp(Reduce("+", lognorm.results) / length(lognorm.results))

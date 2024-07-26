@@ -106,8 +106,8 @@ ngs.getGeneAnnotation <- function(
     organism,
     probes,
     probe_type = NULL,
-    ##    pgx = NULL,
     annot_table = NULL,
+    use.ah = NULL,
     verbose = TRUE) {
   if (is.null(organism)) {
     warning("[getGeneAnnotation] Please specify organism")
@@ -125,7 +125,7 @@ ngs.getGeneAnnotation <- function(
   genes <- NULL
 
   ## get correct OrgDb database for this organism
-  orgdb <- getOrgDb(organism, ah = NULL)
+  orgdb <- getOrgDb(organism, use.ah = use.ah)
 
   if (is.null(probes)) {
     probes <- AnnotationDbi::keys(orgdb)
@@ -139,11 +139,11 @@ ngs.getGeneAnnotation <- function(
   is.ensembl <- mean(grepl("^ENS", probes)) > 0.5
   if (is.ensembl) probes <- sub("[.][0-9]+$", "", probes)
 
+  is.uniprot <- mean(grepl("^[QP][0-9]*", probes)) > 0.8
+  if (is.uniprot) probes <- sub("-[0-9]+", "", probes)
+
   if (is.null(probe_type)) {
-    probe_type <- playbase::detect_probetype(organism, probes, ah = NULL)
-    message("detected probe_type = ", probe_type)
-  } else {
-    message("probe_type = ", probe_type)
+    probe_type <- detect_probetype(organism, probes, orgdb = NULL)
   }
   if (is.null(probe_type)) {
     message("ERROR: could not determine probe_type ")
@@ -178,10 +178,52 @@ ngs.getGeneAnnotation <- function(
   annot <- annot[match(probes, annot[, probe_type]), ]
   annot$PROBE <- names(probes) ## original probe names
 
+  # Dog id should be canis lupus familiaris and not cannis familiaris, as in ah
+  if (organism == "Canis familiaris") {
+    org_orthogene <- "Canis lupus familiaris"
+  } else {
+    org_orthogene <- organism
+  }
+
   ## get human ortholog using 'orthogene'
-  if ("SYMBOL" %in% colnames(annot)) {
-    H <- getHumanOrtholog(organism, annot$SYMBOL)
-    annot$ORTHOGENE <- H$human
+  ortho.map <- orthogene::map_species(method = "gprofiler")
+  head(ortho.map)
+  cat("\ngetting human orthologs...\n")
+  has.ortho <- org_orthogene %in% ortho.map$scientific_name
+  has.symbol <- "SYMBOL" %in% colnames(annot)
+  if (organism == "Homo sapiens") {
+    annot$ORTHOGENE <- annot$SYMBOL
+  } else if (has.ortho && has.symbol) {
+    ortho.out <- orthogene::convert_orthologs(
+      gene_df = unique(annot$SYMBOL),
+      input_species = org_orthogene,
+      output_species = "human",
+      non121_strategy = "drop_both_species",
+      method = "gprofiler"
+    )
+
+    if (dim(ortho.out)[1] == 0) {
+      ortho.out <- orthogene::convert_orthologs(
+        gene_df = unique(annot$SYMBOL),
+        input_species = org_orthogene,
+        output_species = "human",
+        non121_strategy = "drop_both_species",
+        method = "homologene"
+      )
+    }
+
+    if (dim(ortho.out)[1] == 0) {
+      ortho.out <- orthogene::convert_orthologs(
+        gene_df = unique(annot$SYMBOL),
+        input_species = org_orthogene,
+        output_species = "human",
+        non121_strategy = "drop_both_species",
+        method = "babelgene"
+      )
+    }
+
+    ii <- match(annot$SYMBOL, ortho.out$input_gene)
+    annot$ORTHOGENE <- rownames(ortho.out)[ii]
   } else {
     message("WARNING: ", organism, " not found in orthogene database. please check name.")
     annot$ORTHOGENE <- NA
@@ -189,7 +231,7 @@ ngs.getGeneAnnotation <- function(
 
   ## Return as standardized data.frame and in the same order as input
   ## probes.
-  annot$SOURCE <- "AnnotationHub/OrgDb"
+  annot$SOURCE <- "OrgDb"
   annot.cols <- c(
     "PROBE", "SYMBOL", "ORTHOGENE", "GENENAME", "GENETYPE",
     "MAP", "CHR", "POS", "TXLEN", "SOURCE"
@@ -436,16 +478,29 @@ probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE)
 
 
 ## not exported
-getOrgDb <- function(organism, ah = NULL) {
+.getOrgDb <- function(organism, use.ah = NULL) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
-
-  if (is.null(ah)) {
-    ah <- AnnotationHub::AnnotationHub()
+  organism
+  
+  if(is.null(use.ah) || !use.ah) {
+    if(organism == "Homo sapiens" && require("org.Hs.eg.db", quietly=TRUE)) {
+      message("[getOrgDb] returning org.Hs.eg.db for '", organism, "'\n")
+      return(org.Hs.eg.db::org.Hs.eg.db)
+    }
+    if(organism == "Mus musculus" && require("org.Mm.eg.db", quietly=TRUE)) {
+      message("[getOrgDb] returning org.Mm.eg.db for '", organism, "'\n")    
+      return(org.Mm.eg.db::org.Mm.eg.db)
+    }
+    if(organism == "Rattus norvegicus" && require("org.Rn.eg.db", quietly=TRUE)) {
+      message("[getOrgDb] returning org.Rn.eg.db for '", organism, "'\n")
+      return(org.Rn.eg.db::org.Rn.eg.db)
+    }
   }
+  
+  ah <- AnnotationHub::AnnotationHub()
   all_species <- getAllSpecies(ah)
-
   if (!tolower(organism) %in% tolower(all_species)) {
     message("WARNING: organism '", organism, "' not in AnnotationHub")
     return(NULL)
@@ -454,43 +509,67 @@ getOrgDb <- function(organism, ah = NULL) {
   ## correct capitalization
   species <- all_species[which(tolower(all_species) == tolower(organism))]
 
+  message("querying AnnotationHub for '", organism, "'\n")
   suppressMessages({
-    message("querying AnnotationHub for '", organism, "'\n")
     ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
+  })
 
-    ## select on exact organism name
-    ahDb <- ahDb[which(tolower(ahDb$species) == tolower(organism))]
-    k <- length(ahDb) ## latest of multiple
-    message("selecting database for '", ahDb$species[k], "'\n")
-
-    message("retrieving annotation...\n")
-    orgdb <- tryCatch(
-      {
-        ahDb[[k]]
-      },
-      error = function(e) {
-        message("An error occurred: ", e, ". Retrying with force=TRUE.")
-        ahDb[[k, force = TRUE]]
-      }
-    )
+  ## select on exact organism name
+  ahDb <- ahDb[which(tolower(ahDb$species) == tolower(organism))]
+  k <- length(ahDb) ## latest of multiple
+  message("selecting database for '", ahDb$species[k], "'\n")
+  
+  message("retrieving annotation...\n")
+  orgdb <- tryCatch({
+    ahDb[[k]]
+  },
+  error = function(e) {
+    message("An error occurred: ", e, ". Retrying with force=TRUE.")
+    ahDb[[k, force = TRUE]]
   })
 
   return(orgdb)
 }
 
-
-#' @title Detect probe type from probe set
 #' @export
-detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
+getOrgDb <- function(organism, use.ah = NULL) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
   organism
+  orgdb <- .getOrgDb(organism, use.ah = use.ah) 
+  if(is.null(orgdb)) return(NULL)
+  
+  suppressMessages({
+    check.org <- grep("ORGANISM",capture.output(orgdb),value=TRUE)
+  })
+  check.org <- sub(".*ORGANISM: ","",check.org)
+  check.org
+  if( is.null(check.org) || check.org != organism ) {
+    message("[getOrgDb] ***WARNING***: AnnotationHub is corrupt! removing cache")
+    ah <- AnnotationHub::AnnotationHub(localHub=TRUE)
+    AnnotationHub::removeCache(ah, ask=FALSE)
+    orgdb <- .getOrgDb(organism, use.ah = use.ah) 
+  }
+  orgdb
+}
 
+
+
+#' @title Detect probe type from probe set
+#' @export
+detect_probetype <- function(organism, probes, orgdb = NULL,
+                             nprobe = 100, use.ah = NULL) {
+  if (tolower(organism) == "human") organism <- "Homo sapiens"
+  if (tolower(organism) == "mouse") organism <- "Mus musculus"
+  if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
+  
   ## get correct OrgDb database for organism
-  orgdb <- getOrgDb(organism, ah = ah)
+  if(is.null(orgdb)) {
+    orgdb <- getOrgDb(organism, use.ah = use.ah)
+  }
   if (is.null(orgdb)) {
-    message("ERROR: unsupported organism '", organism, "'\n")
+    message("[detect_probetype] ERROR: unsupported organism '", organism, "'\n")
     return(NULL)
   }
 
@@ -516,7 +595,11 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
   ## discard version numbers if ENSEMBL
   if (mean(grepl("^ENS", probes)) > 0.5) {
     probes <- sub("[.][0-9]+$", "", probes)
-  }
+  }  
+
+  ## discard isoform if UNIPROT
+  is.uniprot <- mean(grepl("^[QP][0-9]*", probes)) > 0.8
+  if (is.uniprot) probes <- sub("-[0-9]+", "", probes)
 
   ## Subset probes if too many
   if (length(probes) > nprobe) {
@@ -543,7 +626,7 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
       ),
       silent = TRUE
     )))
-
+    
     # set empty character to NA, as we only count not-NA to define probe type
     probe_matches[probe_matches == ""] <- NA
     # check which probe types (genename, symbol) return the most matches
@@ -552,11 +635,11 @@ detect_probetype <- function(organism, probes, ah = NULL, nprobe = 100) {
     if ("GENENAME" %in% colnames(probe_matches)) n2 <- sum(!is.na(probe_matches[, "GENENAME"]))
     matchratio <- max(n1, n2) / length(probes)
     key_matches[key] <- matchratio
-
+    
     ## stop search prematurely if matchratio > 95%
     if (matchratio > 0.95) break()
   }
-
+  
   ## Return top match
   ##  key_matches
   top_match <- NULL
@@ -690,14 +773,16 @@ getHumanOrtholog <- function(organism, symbols) {
 #' @title Show some probe types for selected organism
 #'
 #' @export
-showProbeTypes <- function(organism, keytypes = NULL, ah = NULL, n = 10) {
+showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
   organism
 
+  message(paste("retrieving probe types for", organism, "..."))
+
   ## get correct OrgDb database for organism
-  orgdb <- getOrgDb(organism, ah = ah)
+  orgdb <- getOrgDb(organism, use.ah = use.ah)
   if (is.null(orgdb)) {
     message("ERROR: unsupported organism '", organism, "'\n")
     return(NULL)
@@ -721,28 +806,35 @@ showProbeTypes <- function(organism, keytypes = NULL, ah = NULL, n = 10) {
   }
 
   ## example probes
-  probes <- head(keys(orgdb, keytype = "ENTREZID"), n)
-
+  keytype0 <- "ENTREZID"
+  probes <- try(head(keys(orgdb, keytype = keytype0), n))
+  if("try-error" %in% class(probes)) {
+    keytype0 <- "SYMBOL"
+    probes <- try(head(keys(orgdb, keytype = keytype0), n))
+  }
+  
   ## Iterate over probe types
   key_matches <- list()
   key <- keytypes[1]
   for (key in keytypes) {
-    # add symbol and genename on top of key as they will be used to
-    # count the real number of probe matches
-    suppressMessages(suppressWarnings(try(
-      probe_matches <- AnnotationDbi::select(
-        orgdb,
-        keys = probes,
-        keytype = "ENTREZID",
-        columns = key
-      ),
+    ## add symbol and genename on top of key as they will be used to
+    ## count the real number of probe matches
+    probe_matches <- try(
+      suppressMessages(suppressWarnings(
+        AnnotationDbi::select(
+          orgdb,
+          keys = probes,
+          keytype = keytype0,
+          columns = key
+        ))),
       silent = TRUE
-    )))
-
-    # set empty character to NA, as we only count not-NA to define probe type
-    types <- probe_matches[, key]
-    types <- setdiff(types, c("", NA))
-    key_matches[[key]] <- head(types, n)
+    )
+    if(!"try-error" %in% class(probe_matches)) {
+      ## set empty character to NA, as we only count not-NA to define probe type
+      types <- probe_matches[, key]
+      types <- setdiff(types, c("", NA))
+      key_matches[[key]] <- head(types, n)
+    }
   }
 
   return(key_matches)
@@ -766,7 +858,7 @@ getAllSpecies <- function(ah = NULL) {
 #' @export
 getSpeciesTable <- function(ah = NULL) {
   if (is.null(ah)) {
-    ah <- AnnotationHub::AnnotationHub() ## make global??
+    ah <- AnnotationHub::AnnotationHub(localHub=FALSE) ## make global??
   }
   ah.tables <- AnnotationHub::query(ah, "OrgDb")
 
@@ -787,49 +879,20 @@ getSpeciesTable <- function(ah = NULL) {
   return(tables)
 }
 
-#' @title Check if probes are valid for organism
-#'
-#' @return TRUE    if probes match any probetype of organism
-#' @return FALSE   if probes do not any probetype of organism
-#'
-#' @export
-checkProbes <- function(organism, probes, ah = NULL) {
-  probe_type <- detect_probetype(organism, probes, ah = ah)
-  if (is.null(probe_type)) {
-    message("[checkProbes] WARNING: could not validate probes")
-    return(FALSE)
-  }
-  message("[checkProbes] detected probe_type = ", probe_type)
-  return(TRUE)
-}
-
 #' Get GO gene sets for organism directly from
 #' AnnotationHub/OrgDB. Restrict to genes as background.
 #'
 #' export
-getOrganismGO <- function(organism, ah = NULL) {
+getOrganismGO <- function(organism, use.ah = NULL, orgdb = NULL) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
 
   ## Load the annotation resource.
-  if (is.null(ah)) ah <- AnnotationHub::AnnotationHub()
-  cat("querying AnnotationHub for", organism, "\n")
-
-  ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
-
-  ## select on exact organism name
-  ahDb <- ahDb[which(tolower(ahDb$species) == tolower(organism))]
-  if (length(ahDb) == 0) {
-    return(list())
+  if(is.null(orgdb)) {
+    orgdb <- getOrgDb(organism, use.ah = use.ah)
   }
-
-  ## select latest/last
-  ahDb$species
-  k <- length(ahDb)
-  cat("selecting database for", ahDb$species[k], "\n")
-  orgdb <- ahDb[[k]] ## last one, newest version
-
+  
   go.gmt <- list()
   AnnotationDbi::keytypes(orgdb)
   if (!"GOALL" %in% AnnotationDbi::keytypes(orgdb)) {
@@ -840,23 +903,27 @@ getOrganismGO <- function(organism, ah = NULL) {
     ont_classes <- c("BP", "CC", "MF")
     k <- "BP"
     for (k in ont_classes) {
-      go_id <- AnnotationDbi::mapIds(orgdb,
-        keys = k, keytype = "ONTOLOGY",
-        column = "GO", multiVals = "list"
-      )[[1]]
+      suppressMessages(suppressWarnings(
+        go_id <- AnnotationDbi::mapIds(orgdb,
+          keys = k, keytype = "ONTOLOGY",
+          column = "GO", multiVals = "list"
+        )[[1]]
+      ))
       go_id <- unique(go_id)
-      sets <- AnnotationDbi::mapIds(orgdb,
-        keys = go_id, keytype = "GOALL",
-        column = "SYMBOL", multiVals = "list"
-      )
-
+      suppressMessages(suppressWarnings(      
+        sets <- AnnotationDbi::mapIds(orgdb,
+          keys = go_id, keytype = "GOALL",
+          column = "SYMBOL", multiVals = "list"
+        )
+      ))
+      
       ## get GO title
+      sets <- sets[which(names(sets) %in% keys(GO.db::GOTERM))]      
       go <- sapply(GO.db::GOTERM[names(sets)], Term)
       new_names <- paste0("GO_", k, ":", go, " (", sub("GO:", "GO_", names(sets)), ")")
       names(sets) <- new_names
 
       ## add to list
-
       go.gmt <- c(go.gmt, sets)
     }
   }
@@ -871,6 +938,7 @@ getOrganismGO <- function(organism, ah = NULL) {
 ## matching. The advantage is that probe type detection is not needed
 ## because orthogene seems to detect is automatically.
 
+#' export
 getGeneAnnotation.ORTHOGENE <- function(
     organism,
     probes,
@@ -921,6 +989,7 @@ getGeneAnnotation.ORTHOGENE <- function(
   return(df)
 }
 
+#' export
 getAllSpecies.ORTHOGENE <- function() {
   M <- orthogene::map_species(method = "gprofiler")
   M$scientific_name
