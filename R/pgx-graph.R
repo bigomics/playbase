@@ -618,7 +618,6 @@ pgx.computeCoreGOgraph <- function(pgx, fdr = 0.05) {
   subgraphs <- list()
 
   i <- 1
-  comparison = comparisons[1]
   for (i in 1:length(comparisons)) {
     subgraphs[[i]] <- pgx.getSigGO(
       pgx,
@@ -723,8 +722,6 @@ getGOgraph <- function() {
 #'
 #' @export
 pgx.getSigGO <- function(pgx, comparison, methods = NULL, fdr = 0.20, nterms = 500, ntop = 100) {
-  ##methods = NULL;fdr = 0.20;nterms = 500;ntop = 100
-  
   mx <- pgx$gset.meta$meta[[comparison]]
   jj <- grep("^GO", rownames(mx))
 
@@ -760,7 +757,6 @@ pgx.getSigGO <- function(pgx, comparison, methods = NULL, fdr = 0.20, nterms = 5
   colnames(vinfo) <- c("geneset", "score", "fc", "pv", "qv") ## need
   rownames(vinfo) <- rownames(mx)
   remove(fc)
-  dim(vinfo)
   
   terms <- AnnotationDbi::toTable(GO.db::GOTERM)[, 2:5]
   colnames(terms)[1] <- "go_id"
@@ -785,7 +781,7 @@ pgx.getSigGO <- function(pgx, comparison, methods = NULL, fdr = 0.20, nterms = 5
   ## remove duplicated entries or empty GO id
   vinfo <- vinfo[order(-vinfo$score), , drop = FALSE]
   vinfo <- vinfo[which(!is.na(vinfo$go_id)), , drop = FALSE]
-  vinfo <- vinfo[!duplicated(vinfo$go_id), , drop=FALSE]
+  vinfo <- vinfo[!duplicated(vinfo$go_id), , drop = FALSE]
   rownames(vinfo) <- vinfo$go_id
 
   ## Get full GO graph and assign node prizes
