@@ -545,7 +545,7 @@ getOrgDb <- function(organism, use.ah = NULL) {
   })
   check.org <- sub(".*ORGANISM: ","",check.org)
   check.org
-  if( check.org != organism ) {
+  if( is.null(check.org) || check.org != organism ) {
     message("[getOrgDb] ***WARNING***: AnnotationHub is corrupt! removing cache")
     ah <- AnnotationHub::AnnotationHub(localHub=TRUE)
     AnnotationHub::removeCache(ah, ask=FALSE)
@@ -883,29 +883,16 @@ getSpeciesTable <- function(ah = NULL) {
 #' AnnotationHub/OrgDB. Restrict to genes as background.
 #'
 #' export
-getOrganismGO <- function(organism, ah = NULL) {
+getOrganismGO <- function(organism, use.ah = NULL, orgdb = NULL) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
 
   ## Load the annotation resource.
-  if (is.null(ah)) ah <- AnnotationHub::AnnotationHub()
-  cat("querying AnnotationHub for", organism, "\n")
-
-  ahDb <- AnnotationHub::query(ah, pattern = c(organism, "OrgDb"))
-
-  ## select on exact organism name
-  ahDb <- ahDb[which(tolower(ahDb$species) == tolower(organism))]
-  if (length(ahDb) == 0) {
-    return(list())
+  if(is.null(orgdb)) {
+    orgdb <- getOrgDb(organism, use.ah = use.ah)
   }
-
-  ## select latest/last
-  ahDb$species
-  k <- length(ahDb)
-  cat("selecting database for", ahDb$species[k], "\n")
-  orgdb <- ahDb[[k]] ## last one, newest version
-
+  
   go.gmt <- list()
   AnnotationDbi::keytypes(orgdb)
   if (!"GOALL" %in% AnnotationDbi::keytypes(orgdb)) {
@@ -916,23 +903,27 @@ getOrganismGO <- function(organism, ah = NULL) {
     ont_classes <- c("BP", "CC", "MF")
     k <- "BP"
     for (k in ont_classes) {
-      go_id <- AnnotationDbi::mapIds(orgdb,
-        keys = k, keytype = "ONTOLOGY",
-        column = "GO", multiVals = "list"
-      )[[1]]
+      suppressMessages(suppressWarnings(
+        go_id <- AnnotationDbi::mapIds(orgdb,
+          keys = k, keytype = "ONTOLOGY",
+          column = "GO", multiVals = "list"
+        )[[1]]
+      ))
       go_id <- unique(go_id)
-      sets <- AnnotationDbi::mapIds(orgdb,
-        keys = go_id, keytype = "GOALL",
-        column = "SYMBOL", multiVals = "list"
-      )
-
+      suppressMessages(suppressWarnings(      
+        sets <- AnnotationDbi::mapIds(orgdb,
+          keys = go_id, keytype = "GOALL",
+          column = "SYMBOL", multiVals = "list"
+        )
+      ))
+      
       ## get GO title
+      sets <- sets[which(names(sets) %in% keys(GO.db::GOTERM))]      
       go <- sapply(GO.db::GOTERM[names(sets)], Term)
       new_names <- paste0("GO_", k, ":", go, " (", sub("GO:", "GO_", names(sets)), ")")
       names(sets) <- new_names
 
       ## add to list
-
       go.gmt <- c(go.gmt, sets)
     }
   }
