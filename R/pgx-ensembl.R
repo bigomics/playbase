@@ -538,6 +538,8 @@ getOrgDb <- function(organism, use.ah = NULL) {
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
   organism
   orgdb <- .getOrgDb(organism, use.ah = use.ah) 
+  if(is.null(orgdb)) return(NULL)
+  
   suppressMessages({
     check.org <- grep("ORGANISM",capture.output(orgdb),value=TRUE)
   })
