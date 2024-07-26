@@ -295,7 +295,7 @@ run.GSEA <- function(X, y, gmt, output.dir = NULL, fdr = 0.25, set.min = 15,
   if (!(permute %in% c("phenotype", "gene_set"))) {
     stop("permute must be phenotype or gene_set")
   }
-  if (min(table(y)) < 7 && permute == "phenotype" && !force.permute) {
+  if (min(table(y), na.rm = TRUE) < 7 && permute == "phenotype" && !force.permute) {
     if (!quiet) cat("WARNING: less than 7 samples. Switching to gene_set permutation\n")
     permute <- "gene_set"
   }
@@ -1129,9 +1129,9 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
   r0 <- cumsum(x0 == 0) / sum(x0 == 0)
   r1 <- cumsum(x0) / (1e-4 + sum(x0))
   rnk.trace <- (r1 - r0)
-  rnk.trace <- rnk.trace / max(abs(rnk.trace)) * 0.9
-  if (max(rnk.trace) >= abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y1)
-  if (max(rnk.trace) < abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y0)
+  rnk.trace <- rnk.trace / max(abs(rnk.trace), na.rm = TRUE) * 0.9
+  if (max(rnk.trace, na.rm = TRUE) >= abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y1)
+  if (max(rnk.trace, na.rm = TRUE) < abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y0)
   if (!decreasing) rnk.trace <- -1 * rnk.trace
   graphics::lines(ii, rnk.trace[ii], col = "green", type = "l", lwd = 2.4)
 
@@ -1386,7 +1386,7 @@ gsea.radarplot <- function(values, names = NULL, mar = c(2, 5, 3, 5) * 2,
   }
   if (!is.null(names)) names(values) <- names
   M <- rbind(pmax(-mx, 0), pmax(mx, 0))
-  M <- pmax(M / max(M), offset)
+  M <- pmax(M / max(M, na.rm = TRUE), offset)
   M <- rbind(M, 1)
   colnames(M) <- names(values)
   rownames(M) <- c("neg", "pos", "unit")

@@ -180,7 +180,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
       min.genes = 0, nmin = 0
     )
   })
-  or.max <- max(stats$odd.ratio[!is.infinite(stats$odd.ratio)])
+  or.max <- max(stats$odd.ratio[!is.infinite(stats$odd.ratio)], na.rm = TRUE)
   stats$odd.ratio[is.infinite(stats$odd.ratio)] <- max(99, 2 * or.max)
 
   ## ---------------------------------------------------------------

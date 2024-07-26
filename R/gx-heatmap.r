@@ -1096,8 +1096,8 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
     d2 <- stats::as.dist(stats::cor(x, use = "pairwise"))
     d1[is.na(d1)] <- mean(d1, na.rm = TRUE)
     d2[is.na(d2)] <- mean(d2, na.rm = TRUE)
-    d1 <- (max(d1) - d1)**(p / 2)
-    d2 <- (max(d2) - d2)**(p / 2)
+    d1 <- (max(d1, na.rm = TRUE) - d1)**(p / 2)
+    d2 <- (max(d2, na.rm = TRUE) - d2)**(p / 2)
     h1 <- fastcluster::hclust(d1, method = "ward.D2")
     h2 <- fastcluster::hclust(d2, method = "ward.D2")
   } else if (method == "minkowski") {
@@ -1471,7 +1471,7 @@ heatmap.3 <- function(x,
   }
 
   x <- as.matrix(x)
-  scale01 <- function(x, low = min(x), high = max(x)) {
+  scale01 <- function(x, low = min(x, na.rm = TRUE), high = max(x, na.rm = TRUE)) {
     x <- (x - low) / (high - low)
     x
   }
@@ -1664,8 +1664,8 @@ heatmap.3 <- function(x,
   if (inherits(col, "function")) {
     col <- col(ncol)
   }
-  min.breaks <- min(breaks)
-  max.breaks <- max(breaks)
+  min.breaks <- min(breaks, na.rm = TRUE)
+  max.breaks <- max(breaks, na.rm = TRUE)
   x[x < min.breaks] <- min.breaks
   x[x > max.breaks] <- max.breaks
   if (missing(lhei) || is.null(lhei)) {
@@ -1807,8 +1807,8 @@ heatmap.3 <- function(x,
   if (!missing(rowsep)) {
     for (rsep in rowsep) graphics::rect(xleft = 0, ybottom = (ncol(x) + 1 - rsep) - 0.5, xright = nrow(x) + 1, ytop = (ncol(x) + 1 - rsep) - 0.5 - sepwidth[2], lty = 1, lwd = 1, col = sepcolor, border = sepcolor)
   }
-  min.scale <- min(breaks)
-  max.scale <- max(breaks)
+  min.scale <- min(breaks, na.rm = TRUE)
+  max.scale <- max(breaks, na.rm = TRUE)
   x.scaled <- scale01(t(x), min.scale, max.scale)
   if (trace %in% c("both", "column")) {
     retval$vline <- vline
@@ -1891,15 +1891,15 @@ heatmap.3 <- function(x,
     }
     if (density.info == "density") {
       dens <- stats::density(x, adjust = densadj, na.rm = TRUE)
-      omit <- dens$x < min(breaks) | dens$x > max(breaks)
+      omit <- dens$x < min(breaks, na.rm = TRUE) | dens$x > max(breaks, na.rm = TRUE)
       dens$x <- dens$x[-omit]
       dens$y <- dens$y[-omit]
       dens$x <- scale01(dens$x, min.raw, max.raw)
-      graphics::lines(dens$x, dens$y / max(dens$y) * 0.95,
+      graphics::lines(dens$x, dens$y / max(dens$y, na.rm = TRUE) * 0.95,
         col = denscol,
         lwd = 1
       )
-      graphics::axis(2, at = pretty(dens$y) / max(dens$y) * 0.95, pretty(dens$y))
+      graphics::axis(2, at = pretty(dens$y) / max(dens$y, na.rm = TRUE) * 0.95, pretty(dens$y))
       graphics::title("Color Key\nand Density Plot")
       graphics::par(cex = 0.5)
       graphics::mtext(side = 2, "Density", line = 2)
@@ -1907,11 +1907,11 @@ heatmap.3 <- function(x,
       h <- graphics::hist(x, plot = FALSE, breaks = breaks)
       hx <- scale01(breaks, min.raw, max.raw)
       hy <- c(h$counts, h$counts[length(h$counts)])
-      graphics::lines(hx, hy / max(hy) * 0.95,
+      graphics::lines(hx, hy / max(hy, na.rm = TRUE) * 0.95,
         lwd = 1, type = "s",
         col = denscol
       )
-      graphics::axis(2, at = pretty(hy) / max(hy) * 0.95, pretty(hy))
+      graphics::axis(2, at = pretty(hy) / max(hy, na.rm = TRUE) * 0.95, pretty(hy))
       graphics::title("Color Key\nand Histogram")
       graphics::par(cex = 0.5)
       graphics::mtext(side = 2, "Count", line = 2)

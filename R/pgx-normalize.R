@@ -427,7 +427,7 @@ is.xxl <- function(X, z = 10) {
 #' @export
 logMaxMedianNorm <- function(counts, toLog = TRUE, prior = 0) {
     mx <- apply(counts, 2, median, na.rm = TRUE)
-    counts <- t(t(counts) / mx) * max(mx)
+    counts <- t(t(counts) / mx) * max(mx, na.rm = TRUE)
     if(toLog) {
         X <- log2(prior + counts)
     } else {
@@ -455,7 +455,7 @@ logMaxMedianNorm <- function(counts, toLog = TRUE, prior = 0) {
 #' @export
 logMaxSumNorm <- function(counts, toLog = TRUE, prior = 0) {
     mx <- colSums(counts, na.rm = TRUE)
-    counts <- t(t(counts) / mx) * max(mx)
+    counts <- t(t(counts) / mx) * max(mx, na.rm = TRUE)
     if(toLog) {
         X <- log2(prior + counts)
     } else {
@@ -464,15 +464,15 @@ logMaxSumNorm <- function(counts, toLog = TRUE, prior = 0) {
     return(X)
 }
 
-logMaxSumNorm.OLD <- function(counts, prior = 1) {
-    X <- log2(prior + counts)
-    mx <- colSums(X, na.rm = TRUE)
-    vv <- apply(X, 2, function(x) length(x[!is.na(x)]))
-    norm.factor <- (max(mx) - mx) / vv
-    i=1
-    for(i in 1:ncol(X)) {
-        jj <- !is.na(X[,i])
-        X[jj, i] <- X[jj, i] + norm.factor[i]
-    }
-    return(X)
-}
+## logMaxSumNorm.OLD <- function(counts, prior = 1) {
+##    X <- log2(prior + counts)
+##    mx <- colSums(X, na.rm = TRUE)
+##    vv <- apply(X, 2, function(x) length(x[!is.na(x)]))
+##    norm.factor <- (max(mx) - mx) / vv
+##    i=1
+##    for(i in 1:ncol(X)) {
+##        jj <- !is.na(X[,i])
+##        X[jj, i] <- X[jj, i] + norm.factor[i]
+##   }
+##    return(X)
+## }
