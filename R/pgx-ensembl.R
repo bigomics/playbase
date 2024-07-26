@@ -804,28 +804,35 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
   }
 
   ## example probes
-  probes <- head(keys(orgdb, keytype = "ENTREZID"), n)
-
+  keytype0 <- "ENTREZID"
+  probes <- try(head(keys(orgdb, keytype = keytype0), n))
+  if("try-error" %in% class(probes)) {
+    keytype0 <- "SYMBOL"
+    probes <- try(head(keys(orgdb, keytype = keytype0), n))
+  }
+  
   ## Iterate over probe types
   key_matches <- list()
   key <- keytypes[1]
   for (key in keytypes) {
-    # add symbol and genename on top of key as they will be used to
-    # count the real number of probe matches
-    suppressMessages(suppressWarnings(try(
-      probe_matches <- AnnotationDbi::select(
-        orgdb,
-        keys = probes,
-        keytype = "ENTREZID",
-        columns = key
-      ),
+    ## add symbol and genename on top of key as they will be used to
+    ## count the real number of probe matches
+    probe_matches <- try(
+      suppressMessages(suppressWarnings(
+        AnnotationDbi::select(
+          orgdb,
+          keys = probes,
+          keytype = keytype0,
+          columns = key
+        ))),
       silent = TRUE
-    )))
-
-    # set empty character to NA, as we only count not-NA to define probe type
-    types <- probe_matches[, key]
-    types <- setdiff(types, c("", NA))
-    key_matches[[key]] <- head(types, n)
+    )
+    if(!"try-error" %in% class(probe_matches)) {
+      ## set empty character to NA, as we only count not-NA to define probe type
+      types <- probe_matches[, key]
+      types <- setdiff(types, c("", NA))
+      key_matches[[key]] <- head(types, n)
+    }
   }
 
   return(key_matches)
