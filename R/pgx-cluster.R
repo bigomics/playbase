@@ -152,10 +152,10 @@ pgx.clusterSamples <- function(pgx, methods = c("pca", "tsne", "umap"),
     X <- logCPM(pgx$counts, total = NULL)
   }
 
-  if(any(is.na(X))) {
-      X <- X[complete.cases(X), , drop = FALSE]
+  if (any(is.na(X))) {
+    X <- X[complete.cases(X), , drop = FALSE]
   }
-  
+
   clust.pos <- pgx.clusterBigMatrix(
     X,
     methods = methods,
@@ -443,7 +443,7 @@ pgx.clusterMatrix <- function(X,
   ## if (any(is.na(X))) {
   ##    X <- imputeMedian(X)
   ## }
-  
+
   if (ncol(X) <= 6) X <- cbind(X, X, X, X, X, X)
   if (nrow(X) <= 3) X <- rbind(X, X, X, X)
 

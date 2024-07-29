@@ -247,7 +247,7 @@ read_counts <- function(file, drop_na_rows = TRUE) {
     rownames(df) <- rn
   }
   df <- df[!(rownames(df) %in% c(NA, "", "NA")), , drop = FALSE]
-  if(drop_na_rows) df <- df[rowMeans(is.na(df)) < 1, , drop = FALSE]
+  if (drop_na_rows) df <- df[rowMeans(is.na(df)) < 1, , drop = FALSE]
   ##  df <- rowsum(df, rownames(df), reorder = FALSE)  ## sum or average???
   rownames(df) <- first_feature(rownames(df))
   return(df)

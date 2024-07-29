@@ -5117,8 +5117,8 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   )
 
   x1 <- xx[[1]]
-  zmax <- max(abs(X), na.rm=TRUE)
-  
+  zmax <- max(abs(X), na.rm = TRUE)
+
   plt <- iheatmapr::main_heatmap(
     x1,
     name = "expression",
@@ -5246,12 +5246,12 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     )
   }
 
-  if(0) {
+  if (0) {
     ## ---------- Always convert to plotly??? (new)
     plt <- plt %>% iheatmapr::to_plotly_list()
     plt <- plotly::as_widget(plt)
   }
-  
+
   if (return_x_matrix) {
     return(list(
       plt = plt,
@@ -5260,7 +5260,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   } else {
     return(plt)
   }
-
 }
 
 
@@ -5561,7 +5560,7 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   if (rotate) score <- t(score)
 
   bluered.pal <- colorRamp(colors = c("royalblue3", "#ebeffa", "white", "#faeeee", "indianred3"))
-  bluered.pal <- colorRamp(colors = c("royalblue3", "grey90", "indianred3"))  
+  bluered.pal <- colorRamp(colors = c("royalblue3", "grey90", "indianred3"))
   score <- score[nrow(score):1, , drop = FALSE]
   x_axis <- colnames(score)
   y_axis <- rownames(score)

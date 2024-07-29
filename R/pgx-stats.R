@@ -284,7 +284,7 @@ stats.numsig <- function(X, y, lfc = 1, q = 0.05, set.na = NULL,
   sel <- !is.na(y)
   y <- y[sel]
   X <- X[, sel, drop = FALSE]
-  
+
   ## Genes
   res <- gx.limmaF(X, y, fdr = 1, lfc = 0, trend = trend, verbose = 0)
   #  res1 <- gx.limma(X, y, fdr=1, lfc=0, trend=trend, verbose=0)
@@ -307,7 +307,7 @@ stats.numsig <- function(X, y, lfc = 1, q = 0.05, set.na = NULL,
       value = TRUE, ignore.case = TRUE
     )
     gmt <- playdata::GSETxGENE[sel, ]
-    
+
     if (gs.method == "rankcor") {
       gsa <- gset.rankcor(cbind(fc0), Matrix::t(gmt), compute.p = TRUE)
       gsa <- data.frame(rho = gsa$rho[, 1], p.value = gsa$p.value[, 1], q.value = gsa$q.value[, 1])

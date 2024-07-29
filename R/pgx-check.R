@@ -11,7 +11,6 @@
 pgx.checkINPUT <- function(
     df,
     type = c("SAMPLES", "COUNTS", "EXPRESSION", "CONTRASTS")) {
-  
   datatype <- match.arg(type)
   df_clean <- df
   PASS <- TRUE

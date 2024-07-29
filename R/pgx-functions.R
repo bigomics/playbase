@@ -2186,7 +2186,7 @@ is_logged <- function(x, verbose = 0) {
 
 #' @export
 first_feature <- function(x) {
-  unname(sapply(strsplit(x, split = "[;,\\|]"),"[[",1))
+  unname(sapply(strsplit(x, split = "[;,\\|]"), "[[", 1))
 }
 
 ## =================================================================================

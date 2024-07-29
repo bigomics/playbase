@@ -757,7 +757,7 @@ pgx.getSigGO <- function(pgx, comparison, methods = NULL, fdr = 0.20, nterms = 5
   colnames(vinfo) <- c("geneset", "score", "fc", "pv", "qv") ## need
   rownames(vinfo) <- rownames(mx)
   remove(fc)
-  
+
   terms <- AnnotationDbi::toTable(GO.db::GOTERM)[, 2:5]
   colnames(terms)[1] <- "go_id"
   terms <- terms[!duplicated(terms[, 1]), ]

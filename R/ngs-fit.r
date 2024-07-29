@@ -72,18 +72,18 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
   counts0 <- counts
   nas <- apply(counts, 1, function(x) sum(is.na(x)))
   Ex <- names(nas)[which(nas == ncol(counts))]
-  keep <- names(nas)[which(nas != ncol(counts))] 
-  if(length(Ex)>0) counts <- counts[keep, ]  
+  keep <- names(nas)[which(nas != ncol(counts))]
+  if (length(Ex) > 0) counts <- counts[keep, ]
 
-  if(!is.null(X)) {
-      X0 <- X
-      nas <- apply(X, 1, function(x) sum(is.na(x)))
-      Ex <- names(nas)[which(nas == ncol(X))]
-      keep <- names(nas)[which(nas != ncol(X))] 
-      if(length(Ex)>0) X <- X[keep, ]  
+  if (!is.null(X)) {
+    X0 <- X
+    nas <- apply(X, 1, function(x) sum(is.na(x)))
+    Ex <- names(nas)[which(nas == ncol(X))]
+    keep <- names(nas)[which(nas != ncol(X))]
+    if (length(Ex) > 0) X <- X[keep, ]
   }
 
-    if (methods[1] == "*") {
+  if (methods[1] == "*") {
     methods <- c(
       "ttest", "ttest.welch", "voom.limma", "trend.limma", "notrend.limma",
       "deseq2.wald", "deseq2.lrt", "edger.qlf", "edger.lrt"
@@ -272,9 +272,9 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
   ## "corrections" ...
   ## ----------------------------------------------------------------------
   if (correct.AveExpr) {
-      message("[ngs.fitContrastsWithAllMethods] correcting AveExpr values...")
-      message("[ngs.fitContrastsWithAllMethods] dim.X: ", dim(X)[1], ",", dim(X)[2])
-    
+    message("[ngs.fitContrastsWithAllMethods] correcting AveExpr values...")
+    message("[ngs.fitContrastsWithAllMethods] dim.X: ", dim(X)[1], ",", dim(X)[2])
+
     ## Some methods like edgeR and Deseq2 compute some weird
     ## normalized expression matrix. We need to "correct" for
     ## those.
@@ -477,15 +477,14 @@ ngs.fitContrastsWithTTEST <- function(X, contr.matrix, design, method = "welch",
 ngs.fitContrastsWithLIMMA <- function(X, contr.matrix, design, method = c("voom", "limma"),
                                       trend = TRUE, robust = TRUE, prune.samples = FALSE,
                                       conform.output = FALSE, plot = FALSE) {
-
   ## Do not test features with full missingness.
   ## Put them back in the TopTable
-  X0 <- X  
+  X0 <- X
   nas <- apply(X, 1, function(x) sum(is.na(x)))
   Ex <- names(nas)[which(nas == ncol(X))]
-  keep <- names(nas)[which(nas != ncol(X))] 
-  if(length(Ex)>0) X <- X[keep, ]  
-    
+  keep <- names(nas)[which(nas != ncol(X))]
+  if (length(Ex) > 0) X <- X[keep, ]
+
   design
   method <- method[1]
 

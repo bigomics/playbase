@@ -1357,13 +1357,13 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
   )
 
   dbg("[bc.evaluateResults] length.numsig = ", length(numsig))
-  
+
   res <- t(sapply(numsig, function(r) {
     c(sapply(r[1:2], length), avg.fc = mean(abs(r[[3]]), na.rm = TRUE))
   }))
 
   dbg("[bc.evaluateResults] dim.res = ", dim(res))
-  
+
   sdx <- sapply(xlist, function(x) mean(matrixStats::rowSds(x, na.rm = TRUE)))
   snr <- res[, "avg.fc"] / sdx
   res <- cbind(res, avg.sd = sdx, SNR = snr)
@@ -1712,15 +1712,15 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
                                             ),
                                             clust.method = "tsne",
                                             ntop = 4000, xlist.init = list(),
-                                            ref = NULL, evaluate = TRUE ) {
+                                            ref = NULL, evaluate = TRUE) {
   ## methods <- c("uncorrected","ComBat", "limma","RUV","SVA","NPM")
   ## ntop = 4000; xlist.init = list()
   batch <- NULL
   pars <- get_model_parameters(X, samples, pheno = pheno, contrasts = contrasts)
 
   nmissing <- sum(is.na(X))
-  if(nmissing) message("WARNING: missing values in X. some methods may fail")
-  
+  if (nmissing) message("WARNING: missing values in X. some methods may fail")
+
   message("Running batch-correction methods...")
   xlist <- runBatchCorrectionMethods(
     X = X,
@@ -1738,8 +1738,8 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
   ## PCA is faster than UMAP
   pos <- NULL
   t2 <- function(x) t(scale(t(scale(t(x), scale = FALSE))))
-  
-  if(clust.method == 'pca') {
+
+  if (clust.method == "pca") {
     ##  incProgress( amount = 0.1, "Computing PCA clustering...")
     message("Computing PCA clustering...")
     pos <- lapply(xlist, function(x) {
@@ -1749,11 +1749,11 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
       rownames(pos[[i]]) <- colnames(X)
     }
   }
-  if(clust.method == 'tsne') {
+  if (clust.method == "tsne") {
     ##  incProgress( amount = 0.1, "Computing t-SNE clustering...")
     nb <- max(2, round(min(30, dim(X) / 5)))
     nmissing <- sum(is.na(X))
-    if(nmissing == 0) {
+    if (nmissing == 0) {
       message("Computing t-SNE clustering...")
       pos <- lapply(xlist, function(x) {
         Rtsne::Rtsne(t2(x), perplexity = nb, check_duplicates = FALSE)$Y
@@ -1767,7 +1767,7 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
   res <- NULL
   best.method <- ref
 
-  if(evaluate) {
+  if (evaluate) {
     ## compare results using scoring
     res <- playbase::bc.evaluateResults(
       xlist,
@@ -1783,7 +1783,7 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
     score <- res$scores[, "score"]
     if (is.null(ref)) ref <- names(xlist)[1]
     best.method <- names(which.max(score))
-  
+
     ## if the improvement is small, we rather choose the uncorrected solution
     score.ratio <- score[best.method] / score[ref]
     best.method <- ifelse(score.ratio < 1.20, ref, best.method)

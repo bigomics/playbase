@@ -84,7 +84,7 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
   n1 <- sum(rownames(rnk) %in% colnames(gset), na.rm = TRUE)
   n2 <- sum(rownames(rnk) %in% rownames(gset), na.rm = TRUE)
   if (n1 > n2) gset <- Matrix::t(gset)
-  
+
   gg <- intersect(rownames(gset), rownames(rnk))
   rnk1 <- rnk[gg, , drop = FALSE]
   gset <- gset[gg, ]
@@ -92,7 +92,7 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
   if (use.rank) {
     rnk1 <- apply(rnk1, 2, base::rank, na.last = "keep")
   }
-  
+
   ## two cases: (1) in case no missing values, just use corSparse on
   ## whole matrix. (2) in case the rnk matrix has missing values, we
   ## must proceed 1-column at time and do reduced corSparse on

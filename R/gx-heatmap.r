@@ -603,12 +603,12 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     }
 
     cell_fun <- NULL
-    if(!is.null(na_text)) {
+    if (!is.null(na_text)) {
       cell_fun <- function(j, i, x, y, width, height, fill) {
-        grid::grid.text(ifelse(is.na(gx0[i, j]),na_text,""), x, y)
+        grid::grid.text(ifelse(is.na(gx0[i, j]), na_text, ""), x, y)
       }
     }
-    
+
     hmap <- hmap + ComplexHeatmap::Heatmap(
       gx0,
       col = col_scale, ## from input

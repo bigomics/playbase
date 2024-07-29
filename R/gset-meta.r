@@ -324,7 +324,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     if ("fgsea" %in% method) {
       rnk <- rowMeans(xx[, which(yy == 1), drop = FALSE], na.rm = TRUE) - rowMeans(xx[, which(yy == 0), drop = FALSE], na.rm = TRUE)
       rnk <- rnk + 1e-8 * stats::rnorm(length(rnk))
-      if(any(is.na(rnk))) rnk <- rnk[which(!is.na(rnk))]
+      if (any(is.na(rnk))) rnk <- rnk[which(!is.na(rnk))]
       tt <- system.time(
         output <- fgsea::fgseaSimple(gmt, rnk,
           nperm = 10000,

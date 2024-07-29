@@ -371,28 +371,28 @@ compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
     pgx$samples$.cell.cycle <- NULL
 
     if (!(".cell_cycle" %in% colnames(pgx$samples))) {
-        counts <- rna.counts
-        message("length(unique(rownames(counts))): ", length(unique(rownames(counts))))
-        message("dim(counts): ", dim(counts))
-        ## In multi-species now use symbol, and deduplicate in case
-        ## use retains feature as "gene_name/rowname"
-        rownames(counts) <- toupper(pgx$genes[rownames(counts), "symbol"])
-        counts <- counts[which(!is.na(rownames(counts))), ]
-        if (any(duplicated(rownames(counts)))) {
-            message("Deduplicate counts for cell cycle and gender inference")
-            counts <- playbase::rowmean(counts, group = rownames(counts))
-            counts[which(is.nan(counts))] <- NA
-        }
-        res <- try(pgx.inferCellCyclePhase(counts))
-        if (!inherits(res, "try-error")) {
-            pgx$samples$.cell_cycle <- res
-        }
+      counts <- rna.counts
+      message("length(unique(rownames(counts))): ", length(unique(rownames(counts))))
+      message("dim(counts): ", dim(counts))
+      ## In multi-species now use symbol, and deduplicate in case
+      ## use retains feature as "gene_name/rowname"
+      rownames(counts) <- toupper(pgx$genes[rownames(counts), "symbol"])
+      counts <- counts[which(!is.na(rownames(counts))), ]
+      if (any(duplicated(rownames(counts)))) {
+        message("Deduplicate counts for cell cycle and gender inference")
+        counts <- playbase::rowmean(counts, group = rownames(counts))
+        counts[which(is.nan(counts))] <- NA
+      }
+      res <- try(pgx.inferCellCyclePhase(counts))
+      if (!inherits(res, "try-error")) {
+        pgx$samples$.cell_cycle <- res
+      }
     } else {
-        message("cell cycle already estimated. skipping...")
+      message("cell cycle already estimated. skipping...")
     }
 
     if (!(".gender" %in% colnames(pgx$samples))) {
-        message("estimating gender...")
+      message("estimating gender...")
       pgx$samples$.gender <- NULL
       X <- log2(1 + rna.counts)
       gene_symbol <- pgx$genes[rownames(X), "symbol"] # Use gene-symbol also for gender
