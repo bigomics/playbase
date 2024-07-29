@@ -5,8 +5,9 @@
 \title{Get GO gene sets for organism directly from
 AnnotationHub/OrgDB. Restrict to genes as background.}
 \usage{
-getOrganismGO(organism, ah = NULL)
+getOrganismGO(organism, use.ah = NULL, orgdb = NULL)
 }
 \description{
-export
+Get GO gene sets for organism directly from
+AnnotationHub/OrgDB. Restrict to genes as background.
 }
