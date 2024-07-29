@@ -89,7 +89,7 @@ ngs.getGeneAnnotation <- function(
   }
 
   ## clean up
-  genes <- cleanupAnnotation(genes)
+  annot <- cleanupAnnotation(annot)
 
   return(annot)
 }
