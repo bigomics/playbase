@@ -58,7 +58,7 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
   ## Collapse X by gene
   ## -----------------------------------------------------------
-  dbg("creating GENE matrix by SYMBOL...")
+  dbg("creating temporary GENE matrix by SYMBOL...")
   X <- pgx$X
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
     X <- rename_by(X, pgx$genes, "symbol")
