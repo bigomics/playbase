@@ -4,12 +4,12 @@
 \alias{getHSGeneInfo}
 \title{Get human gene information from annotation packages}
 \usage{
-getHSGeneInfo(eg, as.link = TRUE)
+getHSGeneInfo(gene, as.link = TRUE)
 }
 \arguments{
-\item{eg}{Character vector of gene symbols}
-
 \item{as.link}{Logical indicating whether to return symbols as hyperlinks. Default is TRUE.}
+
+\item{eg}{Character vector of gene symbols}
 }
 \value{
 Named character vector with gene information.
