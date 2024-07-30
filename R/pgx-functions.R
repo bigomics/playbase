@@ -1073,7 +1073,44 @@ getMyGeneInfo <- function(eg, fields = c("symbol", "name", "alias", "map_locatio
 #' info <- getHSGeneInfo(genes)
 #' }
 #' @export
-getHSGeneInfo <- function(eg, as.link = TRUE) {
+getHSGeneInfo <- function(gene, as.link = TRUE) {
+  
+  if(is.null(gene) || length(gene) == 0) {
+    return(NULL)
+  }
+  if(is.na(gene) || gene=="") {
+    return(NULL)
+  }
+  
+  gene <- toupper(gene)
+  is.symbol <- gene %in% AnnotationDbi::keys(org.Hs.eg.db::org.Hs.egSYMBOL2EG)
+  is.alias  <- gene %in% AnnotationDbi::keys(org.Hs.eg.db::org.Hs.egALIAS2EG)  
+
+  if(!is.symbol && !is.alias) return(NULL)
+  if(is.symbol) {
+    eg <- AnnotationDbi::mget(
+      gene,
+      envir = org.Hs.eg.db::org.Hs.egSYMBOL2EG,
+      ifnotfound = NA
+    )[[1]]
+  } else {
+    eg <- AnnotationDbi::mget(
+      gene,
+      envir = org.Hs.eg.db::org.Hs.egALIAS2EG,
+      ifnotfound = NA
+    )[[1]]
+  }
+
+  if(length(eg)>0) eg <- eg[[1]]
+  if(length(eg)>1) eg <- eg[1]  
+  if (is.null(eg) || length(eg) == 0 || is.na(eg)) {
+    return(NULL)
+  }
+  getHSGeneInfo.eg(eg, as.link = as.link) 
+}
+
+
+getHSGeneInfo.eg <- function(eg, as.link = TRUE) {
   env.list <- c(
     "symbol" = org.Hs.eg.db::org.Hs.egSYMBOL,
     "name" = org.Hs.eg.db::org.Hs.egGENENAME,
