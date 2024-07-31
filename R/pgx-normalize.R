@@ -118,7 +118,7 @@ normalizeData <- function(pgx, do.impute = TRUE, do.regress = TRUE,
 #' logcpm <- logCPM(counts)
 #' }
 #' @export
-logCPM <- function(counts, total = 1e6, prior = 1, log=TRUE) {
+logCPM <- function(counts, total = 1e6, prior = 1, log = TRUE) {
   ## Transform to logCPM (log count-per-million) if total counts is
   ## larger than 1e6, otherwise scale to previous avarage total count.
   ##
@@ -133,13 +133,13 @@ logCPM <- function(counts, total = 1e6, prior = 1, log=TRUE) {
     cpm <- counts
     cpm[is.na(cpm)] <- 0 ## OK??
     cpm@x <- total * cpm@x / rep.int(Matrix::colSums(cpm), diff(cpm@p)) ## fast divide by columns sum
-    if(log) cpm@x <- log2(prior + cpm@x)
+    if (log) cpm@x <- log2(prior + cpm@x)
     return(cpm)
   } else {
     totcounts <- Matrix::colSums(counts, na.rm = TRUE)
     ## cpm <- t(t(counts) / totcounts * total)
     cpm <- sweep(counts, 2, totcounts, FUN = "/") * total
-    if(log) cpm <- log2(prior + cpm)
+    if (log) cpm <- log2(prior + cpm)
     return(cpm)
   }
 }
@@ -175,7 +175,7 @@ NORMALIZATION.METHODS <- c("none", "mean", "scale", "NC", "CPM", "TMM", "RLE", "
 #' normalized <- pgx.countNormalization(counts, c("TMM", "RLE"))
 #' }
 #' @export
-pgx.countNormalization <- function(x, methods, ref=NULL) {
+pgx.countNormalization <- function(x, methods, ref = NULL) {
   ## Column-wise normalization (along samples).
   ## x:        counts (linear)
   ## method:   single method
@@ -216,7 +216,7 @@ pgx.countNormalization <- function(x, methods, ref=NULL) {
     } else if (m == "maxSum") {
       x <- maxSumNormalization(x, toLog = FALSE)
     } else if (m == "reference") {
-      x <- referenceNormalization(x, ref=ref, toLog = FALSE)
+      x <- referenceNormalization(x, ref = ref, toLog = FALSE)
     } else {
       stop("pgx.countNormalization: unknown method")
     }
@@ -465,8 +465,10 @@ maxSumNormalization <- function(counts, toLog = TRUE, prior = 0) {
 #' @export
 referenceNormalization <- function(counts, ref, toLog = TRUE, prior = 0) {
   ref <- intersect(ref, rownames(counts))
-  if(length(ref)==0) return(counts)
-  mx <- colMeans(counts[ref,,drop=FALSE], na.rm=TRUE)
+  if (length(ref) == 0) {
+    return(counts)
+  }
+  mx <- colMeans(counts[ref, , drop = FALSE], na.rm = TRUE)
   counts <- t(t(counts) / mx)
   if (toLog) {
     X <- log2(prior + counts)
@@ -475,4 +477,3 @@ referenceNormalization <- function(counts, ref, toLog = TRUE, prior = 0) {
   }
   return(X)
 }
-
