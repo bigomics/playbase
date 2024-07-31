@@ -1115,9 +1115,9 @@ removeTechnicalEffects <- function(X, samples, y, p.pheno = 0.05, p.pca = 0.5,
   bX
 }
 
-## ================================================================================
+## =============================================================================
 ## Run/compare multiple batch-correction methods
-## ================================================================================
+## =============================================================================
 
 
 #' @export
@@ -1210,19 +1210,17 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
 
   ## PCA
   if ("PCA" %in% methods) {
-    message("[runBatchCorrectionMethods] correcting with PCA")
     xlist[["PCA"]] <- try(pcaCorrect(X, y = y, p.notsig = 0.20))
   }
 
   ## RUV and SVA
   if ("RUV" %in% methods) {
-    message("[runBatchCorrectionMethods] correcting with RUV")
     xlist[["RUV"]] <- try(ruvCorrect(X, y, k = NULL, type = "III"))
     ##  xlist[["RUVg"]] <- try(ruvCorrect(X, y, k = NULL, type = "g"))
   }
 
   if ("SVA" %in% methods) {
-    message("[runBatchCorrectionMethods] correcting with SVA")
+    dbg("[runBatchCorrectionMethods] y =",y)
     xlist[["SVA"]] <- try(svaCorrect(X, y))
   }
 
@@ -1259,10 +1257,13 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   }
 
   if (remove.failed) {
-    xlist <- xlist[!is.null(unlist(sapply(xlist, nrow)))]
+    is.error <- sapply(xlist, function(x) ("try-error" %in% class(x)))
+    is.nullrow <- sapply(sapply(xlist, nrow),is.null)
+    is.xnull <- sapply(xlist,is.null)
+    xlist <- xlist[which(!is.xnull & !is.nullrow & !is.error)]
   }
 
-  names(xlist) <- paste0(prefix, names(xlist))
+  names(xlist) <- paste0(prefix, names(xlist))  
   xlist
 }
 
@@ -1347,8 +1348,6 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
 
   if (!ref %in% names(xlist)) ref <- names(xlist)[1]
 
-  dbg("[bc.evaluateResults] length.xlist = ", length(xlist))
-
   ## compute and make table
   message("[bc.evaluateResults] computing statistics...")
   numsig <- lapply(xlist, stats.numsig,
@@ -1356,13 +1355,9 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
     trend = trend, verbose = FALSE
   )
 
-  dbg("[bc.evaluateResults] length.numsig = ", length(numsig))
-
   res <- t(sapply(numsig, function(r) {
     c(sapply(r[1:2], length), avg.fc = mean(abs(r[[3]]), na.rm = TRUE))
   }))
-
-  dbg("[bc.evaluateResults] dim.res = ", dim(res))
 
   sdx <- sapply(xlist, function(x) mean(matrixStats::rowSds(x, na.rm = TRUE)))
   snr <- res[, "avg.fc"] / sdx
@@ -1737,31 +1732,21 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
 
   ## PCA is faster than UMAP
   pos <- NULL
-  t2 <- function(x) t(scale(t(scale(t(x), scale = FALSE))))
-
-  if (clust.method == "pca") {
-    ##  incProgress( amount = 0.1, "Computing PCA clustering...")
+  t2 <- function(x) as.matrix(t(scale(t(scale(t(x), scale = FALSE)))))
+  if (clust.method == "tsne" && nmissing == 0) {
+    message("Computing t-SNE clustering...")
+    nb <- max(2, round(min(30, dim(X) / 5)))
+    pos <- lapply(xlist, function(x) {
+      Rtsne::Rtsne(t2(x), perplexity = nb, check_duplicates = FALSE)$Y
+    })
+  } else {
     message("Computing PCA clustering...")
     pos <- lapply(xlist, function(x) {
       irlba::irlba(t2(x), nu = 2, nv = 2)$u[, 1:2]
     })
-    for (i in 1:length(pos)) {
-      rownames(pos[[i]]) <- colnames(X)
-    }
   }
-  if (clust.method == "tsne") {
-    ##  incProgress( amount = 0.1, "Computing t-SNE clustering...")
-    nb <- max(2, round(min(30, dim(X) / 5)))
-    nmissing <- sum(is.na(X))
-    if (nmissing == 0) {
-      message("Computing t-SNE clustering...")
-      pos <- lapply(xlist, function(x) {
-        Rtsne::Rtsne(t2(x), perplexity = nb, check_duplicates = FALSE)$Y
-      })
-      for (i in 1:length(pos)) {
-        rownames(pos[[i]]) <- colnames(X)
-      }
-    }
+  for (i in 1:length(pos)) {
+    rownames(pos[[i]]) <- colnames(X)
   }
 
   res <- NULL
@@ -1800,9 +1785,9 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
   )
 }
 
-## ================================================================================
+## =============================================================================
 ## Single batch-correction methods wrappers
-## ================================================================================
+## =============================================================================
 
 
 #' @export
@@ -1922,6 +1907,7 @@ svaCorrect <- function(X, y) {
   X1 <- X1 + a * matrix(stats::rnorm(length(X1)), nrow(X1), ncol(X1))
   sv <- try(sva::sva(X1, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1))$sv)
   class(sv)
+
   if (!any(class(sv) == "try-error")) {
     message("[svaCorrect] Performing SVA correction...")
     rownames(sv) <- colnames(X)
