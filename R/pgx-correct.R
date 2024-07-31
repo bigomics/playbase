@@ -1220,7 +1220,6 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   }
 
   if ("SVA" %in% methods) {
-    dbg("[runBatchCorrectionMethods] y =",y)
     xlist[["SVA"]] <- try(svaCorrect(X, y))
   }
 
