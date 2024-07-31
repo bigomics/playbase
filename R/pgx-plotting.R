@@ -4366,6 +4366,8 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
 
   if (!is.null(label) && length(label) > 0) {
     i2 <- which(names %in% label)
+    # Remove gray labels
+    i2 <- i2[!(i2 %in% which(names %in% names[ib]))]
     upreg <- x[i2] > 0
     dwreg <- x[i2] < 0
     if (color_up_down) {
@@ -4417,12 +4419,14 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           textposition = "top"
         )
     }
-    if (length(ib)) {
+    grey_labels <- intersect(label, names[ib])
+    grey_labels_id <- which(names %in% grey_labels)
+    if (length(grey_labels)) {
       p <- p %>%
         plotly::add_annotations(
-          x = x[ib],
-          y = y[ib],
-          text = names[ib],
+          x = x[grey_labels_id],
+          y = y[grey_labels_id],
+          text = names[grey_labels_id],
           font = list(
             size = 12 * label.cex,
             color = "#787878"
