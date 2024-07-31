@@ -62,6 +62,12 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL) {
   return(pgx)
 }
 
+#' @export
+getGeneAnnotation <- function(...) {
+  ngs.getGeneAnnotation(...)
+}
+
+# old function call
 ngs.getGeneAnnotation <- function(
     organism,
     probes,
