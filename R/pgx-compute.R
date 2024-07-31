@@ -352,12 +352,13 @@ pgx.createPGX <- function(counts,
   ## collapse probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------
   if (convert.hugo) {
+
     dbg("[createPGX] collapsing probes by SYMBOL")
     symbol <- pgx$genes[rownames(pgx$counts), "symbol"]
     pgx$genes <- pgx$genes[rownames(pgx$counts), ]
 
     ## Average duplicated rows if any
-    ## group <- rownames(pgx$counts)
+    ##group <- rownames(pgx$counts)
     group <- pgx$genes$symbol
     pgx$counts <- playbase::rowmean(pgx$counts, group = group, reorder = TRUE)
     pgx$counts <- pgx$counts[rownames(pgx$counts) != "", , drop = FALSE]
@@ -380,7 +381,7 @@ pgx.createPGX <- function(counts,
     rownames(pgx$genes) <- rownames(pgx$counts)
     jj <- match(pgx$genes$symbol, agg_features$symbol)
     pgx$genes$feature <- agg_features[jj, "feature"]
-
+        
     ## Rename gene_name with new rownames (gene symbol)
     pgx$genes$gene_name <- rownames(pgx$counts)
   }

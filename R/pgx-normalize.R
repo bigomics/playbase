@@ -118,7 +118,7 @@ normalizeData <- function(pgx, do.impute = TRUE, do.regress = TRUE,
 #' logcpm <- logCPM(counts)
 #' }
 #' @export
-logCPM <- function(counts, total = 1e6, prior = 1) {
+logCPM <- function(counts, total = 1e6, prior = 1, log=TRUE) {
   ## Transform to logCPM (log count-per-million) if total counts is
   ## larger than 1e6, otherwise scale to previous avarage total count.
   ##
@@ -133,14 +133,14 @@ logCPM <- function(counts, total = 1e6, prior = 1) {
     cpm <- counts
     cpm[is.na(cpm)] <- 0 ## OK??
     cpm@x <- total * cpm@x / rep.int(Matrix::colSums(cpm), diff(cpm@p)) ## fast divide by columns sum
-    cpm@x <- log2(prior + cpm@x)
+    if(log) cpm@x <- log2(prior + cpm@x)
     return(cpm)
   } else {
     totcounts <- Matrix::colSums(counts, na.rm = TRUE)
     ## cpm <- t(t(counts) / totcounts * total)
     cpm <- sweep(counts, 2, totcounts, FUN = "/") * total
-    x <- log2(prior + cpm)
-    return(x)
+    if(log) cpm <- log2(prior + cpm)
+    return(cpm)
   }
 }
 
@@ -175,7 +175,7 @@ NORMALIZATION.METHODS <- c("none", "mean", "scale", "NC", "CPM", "TMM", "RLE", "
 #' normalized <- pgx.countNormalization(counts, c("TMM", "RLE"))
 #' }
 #' @export
-pgx.countNormalization <- function(x, methods) {
+pgx.countNormalization <- function(x, methods, ref=NULL) {
   ## Column-wise normalization (along samples).
   ## x:        counts (linear)
   ## method:   single method
@@ -196,9 +196,7 @@ pgx.countNormalization <- function(x, methods) {
       x <- t(t(x) / (1 + mx)) * mean(mx, na.rm = TRUE)
     } else if (m == "CPM") {
       ## x <- t(t(x) / (1 + Matrix::colSums(x1, na.rm = TRUE))) * 1e6
-      message("playbase::logCPM")
-      x <- playbase::logCPM(x)
-      x <- 2**x - 1
+      x <- logCPM(x, log = FALSE)
     } else if (m == "TMM") {
       ## normalization on total counts (linear scale)
       x <- normalizeTMM(x, log = FALSE) ## does TMM on counts (edgeR)
@@ -213,14 +211,14 @@ pgx.countNormalization <- function(x, methods) {
       rownames(new.x) <- rownames(x)
       colnames(new.x) <- colnames(x)
       x <- new.x
-    } else if (m == "logMaxMedian") {
-      message("playbase::logMaxMedianNorm")
-      x <- playbase::logMaxMedianNorm(x, toLog = FALSE)
-    } else if (m == "logMaxSum") {
-      message("playbase::logMaxSumNorm")
-      x <- playbase::logMaxSumNorm(x, toLog = FALSE)
+    } else if (m == "maxMedian") {
+      x <- maxMedianNormalization(x, toLog = FALSE)
+    } else if (m == "maxSum") {
+      x <- maxSumNormalization(x, toLog = FALSE)
+    } else if (m == "reference") {
+      x <- referenceNormalization(x, ref=ref, toLog = FALSE)
     } else {
-      stop("playbase::pgx.countNormalization: unknown method")
+      stop("pgx.countNormalization: unknown method")
     }
   }
 
@@ -349,12 +347,12 @@ global_scaling <- function(X, method, shift = "clip") {
 
   ## ---logMM & logMS created for MPoC
   ## ---logCPM conformed to existing deployed master
-  if (method == "logMaxMedian") {
-    X <- playbase::logMaxMedianNorm(counts = 2**X - 1)
-  } else if (method == "logMaxSum") {
-    X <- playbase::logMaxSumNorm(counts = 2**X - 1)
+  if (method == "maxMedian") {
+    X <- maxMedianNormalization(counts = 2**X - 1)
+  } else if (method == "maxSum") {
+    X <- maxSumNormalization(counts = 2**X - 1)
   } else if (method == "cpm") {
-    X <- playbase::logCPM(counts = 2**X - 1)
+    X <- logCPM(counts = 2**X - 1, log = TRUE)
     ## median.tc <- median(colSums(2**X, na.rm = TRUE), na.rm = TRUE)
     ## a <- log2(median.tc) - log2(1e6)
     ## zero.point <- a
@@ -408,7 +406,7 @@ is.xxl <- function(X, z = 10) {
   (abs(this.z) > z)
 }
 
-#' Normalization for TMT and Silac data: logMaxMedianNorm
+#' Normalization for TMT and Silac data: maxMedianNorm
 #'
 #' @description This function normalizes TMT and Silac data using max median
 #'
@@ -422,10 +420,10 @@ is.xxl <- function(X, z = 10) {
 #' @examples
 #' \dontrun{
 #' counts <- matrix(rnbinom(100 * 10, mu = 100, size = 1), 100, 10)
-#' norm_counts <- logMaxMedianNorm(counts)
+#' norm_counts <- maxMedianNormalization(counts, toLog = TRUE)
 #' }
 #' @export
-logMaxMedianNorm <- function(counts, toLog = TRUE, prior = 0) {
+maxMedianNormalization <- function(counts, toLog = TRUE, prior = 0) {
   mx <- apply(counts, 2, median, na.rm = TRUE)
   counts <- t(t(counts) / mx) * max(mx, na.rm = TRUE)
   if (toLog) {
@@ -436,7 +434,7 @@ logMaxMedianNorm <- function(counts, toLog = TRUE, prior = 0) {
   return(X)
 }
 
-#' Normalization for TMT and Silac data: logMaxSumNorm
+#' Normalization for TMT and Silac data: maxSumNormalization
 #'
 #' @description This function normalizes TMT and Silac data using max sum of intensities
 #'
@@ -450,10 +448,10 @@ logMaxMedianNorm <- function(counts, toLog = TRUE, prior = 0) {
 #' @examples
 #' \dontrun{
 #' counts <- matrix(rnbinom(100 * 10, mu = 100, size = 1), 100, 10)
-#' norm_counts <- logMaxSumNorm(counts)
+#' norm_counts <- maxSumNormalization(counts, toLog = TRUE)
 #' }
 #' @export
-logMaxSumNorm <- function(counts, toLog = TRUE, prior = 0) {
+maxSumNormalization <- function(counts, toLog = TRUE, prior = 0) {
   mx <- colSums(counts, na.rm = TRUE)
   counts <- t(t(counts) / mx) * max(mx, na.rm = TRUE)
   if (toLog) {
@@ -464,15 +462,17 @@ logMaxSumNorm <- function(counts, toLog = TRUE, prior = 0) {
   return(X)
 }
 
-## logMaxSumNorm.OLD <- function(counts, prior = 1) {
-##    X <- log2(prior + counts)
-##    mx <- colSums(X, na.rm = TRUE)
-##    vv <- apply(X, 2, function(x) length(x[!is.na(x)]))
-##    norm.factor <- (max(mx) - mx) / vv
-##    i=1
-##    for(i in 1:ncol(X)) {
-##        jj <- !is.na(X[,i])
-##        X[jj, i] <- X[jj, i] + norm.factor[i]
-##   }
-##    return(X)
-## }
+#' @export
+referenceNormalization <- function(counts, ref, toLog = TRUE, prior = 0) {
+  ref <- intersect(ref, rownames(counts))
+  if(length(ref)==0) return(counts)
+  mx <- colMeans(counts[ref,,drop=FALSE], na.rm=TRUE)
+  counts <- t(t(counts) / mx)
+  if (toLog) {
+    X <- log2(prior + counts)
+  } else {
+    X <- counts
+  }
+  return(X)
+}
+

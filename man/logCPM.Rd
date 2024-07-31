@@ -4,7 +4,7 @@
 \alias{logCPM}
 \title{Log-counts-per-million transformation}
 \usage{
-logCPM(counts, total = 1e+06, prior = 1)
+logCPM(counts, total = 1e+06, prior = 1, log = TRUE)
 }
 \arguments{
 \item{counts}{Numeric matrix of read counts, with genes in rows and samples in columns.}
