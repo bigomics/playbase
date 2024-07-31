@@ -4274,8 +4274,8 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
   i1 <- which(names %in% highlight)
 
   # Detect wich i1 genes are under the thresholds
-  sig.genes <- which(y <= -log10(psig))
-  ib <- intersect(sig.genes, i1)
+  unsig.genes <- which(y <= -log10(psig) | abs(x) < lfc)
+  ib <- intersect(unsig.genes, i1)
 
   p <- plotly::plot_ly(
     source = source,
@@ -4366,8 +4366,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
 
   if (!is.null(label) && length(label) > 0) {
     i2 <- which(names %in% label)
-    # Remove gray labels
-    i2 <- i2[!(i2 %in% which(names %in% names[ib]))]
+    i2 <- i2[!i2 %in% ib]
     upreg <- x[i2] > 0
     dwreg <- x[i2] < 0
     if (color_up_down) {
@@ -4419,14 +4418,13 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           textposition = "top"
         )
     }
-    grey_labels <- intersect(label, names[ib])
-    grey_labels_id <- which(names %in% grey_labels)
-    if (length(grey_labels)) {
+    idl <- which(names[ib] %in% label)
+    if (length(idl)) {
       p <- p %>%
         plotly::add_annotations(
-          x = x[grey_labels_id],
-          y = y[grey_labels_id],
-          text = names[grey_labels_id],
+          x = x[ib][idl],
+          y = y[ib][idl],
+          text = names[ib][idl],
           font = list(
             size = 12 * label.cex,
             color = "#787878"
