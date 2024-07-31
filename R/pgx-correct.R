@@ -1257,12 +1257,12 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
 
   if (remove.failed) {
     is.error <- sapply(xlist, function(x) ("try-error" %in% class(x)))
-    is.nullrow <- sapply(sapply(xlist, nrow),is.null)
-    is.xnull <- sapply(xlist,is.null)
+    is.nullrow <- sapply(sapply(xlist, nrow), is.null)
+    is.xnull <- sapply(xlist, is.null)
     xlist <- xlist[which(!is.xnull & !is.nullrow & !is.error)]
   }
 
-  names(xlist) <- paste0(prefix, names(xlist))  
+  names(xlist) <- paste0(prefix, names(xlist))
   xlist
 }
 
