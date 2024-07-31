@@ -4272,7 +4272,15 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
   if (is.null(highlight)) highlight <- names
   i0 <- which(!names %in% highlight)
   i1 <- which(names %in% highlight)
-  p <- plotly::plot_ly(source = source)
+
+  # Detect wich i1 genes are under the thresholds
+  unsig.genes <- which(y <= -log10(psig) | abs(x) < lfc)
+  ib <- intersect(unsig.genes, i1)
+
+  p <- plotly::plot_ly(
+    source = source,
+    hovertemplate = "<b>%{text}</b><br><b>Effect size</b>: %{x:.2f}<br><b>Significance</b>: %{y:.2f}<extra></extra>"
+  )
   p <- p %>%
     plotly::event_register("plotly_hover") %>%
     plotly::event_register("plotly_selected")
@@ -4340,8 +4348,25 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
     }
   }
 
+  if (length(ib)) {
+    p <- p %>%
+      plotly::add_trace(
+        x = x[ib],
+        y = y[ib],
+        text = names[ib],
+        type = marker.type,
+        mode = "markers",
+        marker = list(
+          size = marker.size,
+          color = "#787878"
+        ),
+        showlegend = showlegend
+      )
+  }
+
   if (!is.null(label) && length(label) > 0) {
     i2 <- which(names %in% label)
+    i2 <- i2[!i2 %in% ib]
     upreg <- x[i2] > 0
     dwreg <- x[i2] < 0
     if (color_up_down) {
@@ -4386,6 +4411,23 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           font = list(
             size = 12 * label.cex,
             color = "#1f77b4"
+          ),
+          showarrow = FALSE,
+          yanchor = "bottom",
+          yshift = 2,
+          textposition = "top"
+        )
+    }
+    idl <- which(names[ib] %in% label)
+    if (length(idl)) {
+      p <- p %>%
+        plotly::add_annotations(
+          x = x[ib][idl],
+          y = y[ib][idl],
+          text = names[ib][idl],
+          font = list(
+            size = 12 * label.cex,
+            color = "#787878"
           ),
           showarrow = FALSE,
           yanchor = "bottom",
