@@ -9,12 +9,14 @@ check:
 	R -e "devtools::check()"
 
 install: 
-	R -e "devtools::document()"
 	R CMD INSTALL .
-#	R CMD INSTALL ../playbase_0.1.0.tar.gz
 
+install.dep:
+	mv DESCRIPTION DESCRIPTION.save
+	Rscript dev/create_description.R
+	R -e "devtools::install_local('.',dependencies=TRUE, force=TRUE)"
 
-VERSION = "v3.2.35"
+VERSION = "v3.5.0-beta"
 
 tags:
 	git tag -f -a $(VERSION) -m 'version $(VERSION)'
