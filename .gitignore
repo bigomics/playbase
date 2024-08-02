@@ -59,7 +59,6 @@ test-firestore.R
 .httr-oauth
 bigomics-extra.js
 .Rproj.user
-Renviron.site
 .Rdata
 inst/doc
 *.csv
@@ -68,6 +67,7 @@ params*
 processx-error.log
 processx-output.log
 raw_*
+github_pat
 
 # produced vignettes
 vignettes/*.html
@@ -86,6 +86,7 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+Renviron.site
 
 # pkgdown site
 docs/
@@ -97,5 +98,4 @@ po/*~
 rsconnect/
 
 .DS_Store
-
 *.DS_Store
