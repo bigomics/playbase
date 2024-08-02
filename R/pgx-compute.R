@@ -336,7 +336,7 @@ pgx.createPGX <- function(counts,
 
     ## some organism do not have biotype column
     has.biotype <- "gene_biotype" %in% colnames(pgx$genes)
-    is.proteincoding <- grepl("protein.coding", pgx$genes$gene_biotype)    
+    is.proteincoding <- grepl("protein.coding", pgx$genes$gene_biotype)
     if (has.biotype && only.proteincoding && any(is.proteincoding)) {
       pgx$genes <- pgx$genes[which(is.proteincoding), , drop = FALSE]
     }
