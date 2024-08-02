@@ -314,7 +314,8 @@ pgx.createPGX <- function(counts,
     ## PRIOR CPM amount to regularize the counts and filter genes
     ## AZ (16.6.24): it crashes in presence of NAs
     ## NEED RETHINK - add datatype as argument.
-    if (datatype != "proteomics") {
+    ## IK: let's remove
+    if (FALSE && datatype != "proteomics") {
       message("[createPGX] filtering out lowly expressed genes (zero counts)...")
       pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
     }
@@ -333,8 +334,10 @@ pgx.createPGX <- function(counts,
       pgx$genes <- pgx$genes[which(has.symbol), ]
     }
 
-    is.proteincoding <- grepl("protein.coding", pgx$genes$gene_biotype)
-    if (only.proteincoding && any(is.proteincoding)) {
+    ## some organism do not have biotype column
+    has.biotype <- "gene_biotype" %in% colnames(pgx$genes)
+    is.proteincoding <- grepl("protein.coding", pgx$genes$gene_biotype)    
+    if (has.biotype && only.proteincoding && any(is.proteincoding)) {
       pgx$genes <- pgx$genes[which(is.proteincoding), , drop = FALSE]
     }
 
