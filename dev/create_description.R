@@ -26,7 +26,9 @@ pkg.remotes <- c(
   "SuperCell" = "GfellerLab/SuperCell",
   "Azimuth" = "satijalab/azimuth",
   "org.Pf.plasmo.db" = "url::https://www.bioconductor.org/packages//2.12/data/annotation/src/contrib/org.Pf.plasmo.db_2.9.0.tar.gz",
-  "infercnv" = "broadinstitute/infercnv@infercnv-v1.3.3"
+  "infercnv" = "broadinstitute/infercnv@infercnv-v1.3.3",
+  "PCSF" = "bigomics/PCSF",
+  "EPIC" = "GfellerLab/EPIC"
 )
 
 pkg.remotes <- pkg.remotes[names(pkg.remotes) %in% pkg.used]
