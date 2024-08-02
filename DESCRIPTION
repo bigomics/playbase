@@ -14,7 +14,7 @@ Suggests:
 Config/testthat/edition: 3
 RoxygenNote: 7.3.2
 Depends: 
-    R (>= 2.10)
+    R (>= 4.3.3)
 biocViews:
 Imports:
     AnnotationDbi,
@@ -24,6 +24,7 @@ Imports:
     batchelor,
     beeswarm,
     BiocParallel,
+    BiocManager (>= 1.30.23),	
     biomaRt,
     Boruta,
     caret,

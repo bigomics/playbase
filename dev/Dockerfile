@@ -35,15 +35,17 @@ FROM os-base AS r-base1
 WORKDIR /
 
 # Install basic stuff and R
-#RUN apt install -y r-base r-base-dev 
+RUN apt install -y r-base r-base-dev 
+COPY dev/rspm.R /root/.Rprofile
 RUN R -e "install.packages('remotes')"
+RUN R -e "remotes::install_version('BiocManager', version='1.30.23')"
+RUN R -e "BiocManager::install(version='3.18')"
 
 # install Playbase with dependencies using RStudio binary packages
 RUN echo Downloading Playbase
-COPY dev/rspm.R rspm.R
-RUN R -e "source('rspm.R'); remotes::install_github('bigomics/playbase',dependencies=TRUE)"
+RUN R -e "remotes::install_github('bigomics/playbase',dependencies=TRUE)"
 
-## add any missing packages manually------------------------
+## add any missing packages manually
 FROM r-base1 AS r-base2
 #RUN R -e "BiocManager::install(c('rhdf5', 'monocle', 'mygene'))"
 #RUN R -e "install.packages(c('RSpectra'))"

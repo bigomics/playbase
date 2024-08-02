@@ -12,12 +12,9 @@ apt update && apt install -y \
     libgsl-dev librsvg2-dev libgsl-dev curl \
     libsodium-dev cmake
 
-# Install basic stuff and R
-apt install -y r-base r-base-dev r-recommended
-
 # remove ugly snaps
-snap remove --purge -y firefox
-sudo apt purge snapd
+#snap remove --purge -y firefox
+#apt purge snapd
 
 # Install Chrome
 apt-get update && apt-get install -y wget gnupg2

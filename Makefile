@@ -32,9 +32,13 @@ test:
 	R -e "devtools::test(filter='$(filter)')"
 
 docker: FORCE
-	docker build -f dev/Dockerfile -t playbase .
+	docker build \
+		--progress plain \
+		-f dev/Dockerfile -t playbase .
 
 docker.nc: FORCE
-	docker build --no-cache -f dev/Dockerfile -t playbase .
+	docker build \
+		--progress plain --no-cache \
+		-f dev/Dockerfile -t playbase .
 
 FORCE: ;
