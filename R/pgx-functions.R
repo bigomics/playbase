@@ -2228,15 +2228,15 @@ first_feature <- function(x) {
 }
 
 #' @export
-abbreviate_pheno <- function( pheno, minlength=1, abbrev.colnames=FALSE) {
-  new.ct <- abbreviate(as.vector(unlist(pheno)), method="left", minlength=minlength)
+abbreviate_pheno <- function(pheno, minlength = 1, abbrev.colnames = FALSE) {
+  new.ct <- abbreviate(as.vector(unlist(pheno)), method = "left", minlength = minlength)
   lut <- new.ct[!duplicated(new.ct) & !is.na(new.ct)]
   lut
   new.pheno <- apply(pheno, 2, function(x) lut[x])
   new.pheno <- as.data.frame(new.pheno)
   rownames(new.pheno) <- rownames(pheno)
-  if(abbrev.colnames) {
-    colnames(new.pheno) <- abbreviate(colnames(pheno), minlength=4)
+  if (abbrev.colnames) {
+    colnames(new.pheno) <- abbreviate(colnames(pheno), minlength = 4)
   }
   new.pheno
 }
