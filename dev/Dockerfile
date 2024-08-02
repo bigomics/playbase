@@ -37,6 +37,8 @@ WORKDIR /
 # Install basic stuff and R
 RUN apt install -y r-base r-base-dev 
 COPY dev/rspm.R /root/.Rprofile
+COPY dev/github_pat /root/.Renviron
+
 RUN R -e "install.packages('remotes')"
 RUN R -e "remotes::install_version('BiocManager', version='1.30.23')"
 RUN R -e "BiocManager::install(version='3.18')"
@@ -61,4 +63,4 @@ FROM r-base1 AS r-base2
 #------------------------------------------------------------
 #RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 #RUN chmod ugo+rwX /tmp && chmod o+t /tmp
-
+RUN rm /root/.Renviron 
