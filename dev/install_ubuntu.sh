@@ -10,7 +10,8 @@ apt update && apt install -y \
     pdftk vim-tiny less wget gdebi-core \
     pandoc imagemagick libfftw3-dev libglpk-dev \
     libgsl-dev librsvg2-dev libgsl-dev curl \
-    libsodium-dev cmake
+    libsodium-dev cmake \
+    libharfbuzz-dev libfribidi-dev    
 
 # remove ugly snaps
 #snap remove --purge -y firefox
@@ -26,3 +27,7 @@ apt-get update && apt-get install -y google-chrome-stable
 mv /usr/include/c++/13/bits/c++0x_warning.h \
     /usr/include/c++/13/bits/c++0x_warning.h.DISABLED && \
     touch /usr/include/c++/13/bits/c++0x_warning.h 
+
+## basic R
+apt install -y r-base r-base-dev 
+R -e "install.packages(c('devtools','remotes','renv'))"
