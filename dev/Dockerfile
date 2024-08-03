@@ -19,6 +19,9 @@ RUN R -e "install.packages('remotes')"
 RUN R -e "remotes::install_version('BiocManager', version='1.30.23')"
 RUN R -e "BiocManager::install(version='3.18')"
 
+COPY dev/install_conda.R /tmp/install_conda.R
+RUN Rscript /tmp/install_conda.R
+
 ## add problematics packages manually
 RUN R -e "BiocManager::install('msa')"
 RUN R -e "BiocManager::install('orthogene')"
@@ -37,6 +40,11 @@ RUN R -e "remotes::install_github('bigomics/playbase',dependencies=TRUE)"
 #RUN git clone -b main --single-branch --depth 1 \
 #    https://github.com/bigomics/playdata.git \
 #    && R CMD INSTALL playdata && rm -fr playdata
+
+
+
+
+
 
 #------------------------------------------------------------
 # Clean up when done.

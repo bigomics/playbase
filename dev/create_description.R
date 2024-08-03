@@ -3,52 +3,74 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-
 # This file is supposed to run from the root Playground folder
 if (basename(getwd()) != "playbase") {
     stop("This file is supposed to run from the root Playbase folder")
 }
+
+if(!require("renv")) install.packages("renv")
+if(!require("remotes")) install.packages("remotes")
+if(!require("devtools")) install.packages("devtools")
 
 ## ---------------------------------------------------------------------
 ## Automatically scan all used packages and install
 ## ---------------------------------------------------------------------
 ## We use renv to detect dependencies. Renv is looking for library and
 ## require statements in the r/R source files.
-## install.packages("renv")
-cat("RENV:: building dependencies...\n")
 renv.out <- renv::dependencies(path = "R", root = getwd(), errors = "ignored")
 pkg.used <- unique(renv.out$Package)
 pkg.used <- setdiff(pkg.used, "playbase")
-cat("RENV:: done!\n")
 
 ## Define remote locations or versions
-pkg.remotes <- c(
-  "playdata" = "bigomics/playdata",
-  "NNLM" = "linxihui/NNLM",
-  "KEGG.db" = "ncullen93/KEGG.db",
-  "iheatmapr" = "ropensci/iheatmapr",
-  "SuperCell" = "GfellerLab/SuperCell",
-  "Azimuth" = "satijalab/azimuth",
-  "org.Pf.plasmo.db" = "url::https://www.bioconductor.org/packages/3.14/data/annotation/src/contrib/org.Pf.plasmo.db_3.14.0.tar.gz",
-  "infercnv" = "broadinstitute/infercnv@infercnv-v1.3.3",
-  "PCSF" = "bigomics/PCSF",
-  "EPIC" = "GfellerLab/EPIC"
-)
+github_url <- function(repo) paste0("github::",repo)
+github_url <- function(repo) {
+  if(grepl("@",repo)) {
+    branch <- sub(".*@","",repo)
+    repo <- sub("@.*","",repo)    
+    paste0("url::https://github.com/",repo,"/archive/refs/heads/",branch,".zip")
+  } else {
+    paste0("url::https://github.com/",repo,"/archive/HEAD.zip")
+  }
+}
 
+add_github <- function(repo) {
+  pkg.name <- gsub(".*[/]|@.*","",repo)
+  remotes.url[pkg.name] <<- github_url(repo)
+}
 remotes.url <- c(
-  "PCSF" = "url::https://github.com/bigomics/PCSF/archive/HEAD.zip",
-  "playdata" = "url::https://github.com/bigomics/playdata/archive/HEAD.zip",
-  "infercnv" = "url::https://github.com/broadinstitute/infercnv/archive/HEAD.zip",
-  "EPIC" = "url::https://github.com/GfellerLab/EPIC/archive/HEAD.zip",
-  "SuperCell" = "url::https://github.com/GfellerLab/SuperCell/archive/HEAD.zip",
-  "NNLM" = "url::https://github.com/linxihui/NNLM/archive/HEAD.zip",
-  "iheatmapr" = "url::https://github.com/ropensci/iheatmapr/archive/HEAD.zip",
-  "Azimuth" = "url::https://github.com/satijalab/azimuth/archive/HEAD.zip",
-  "org.Pf.plasmo.db" = "url::https://bioconductor.org/packages/3.14/data/annotation/src/contrib/org.Pf.plasmo.db_3.14.0.tar.gz",
-  "KEGG.db" = "url::https://bioconductor.org/packages/3.11/data/annotation/src/contrib/KEGG.db_3.2.4.tar.gz"
+  "KEGG.db" = "url::https://bioconductor.org/packages/3.11/data/annotation/src/contrib/KEGG.db_3.2.4.tar.gz",
+  "org.Pf.plasmo.db" = "url::https://bioconductor.org/packages/3.14/data/annotation/src/contrib/org.Pf.plasmo.db_3.14.0.tar.gz"
 )
+add_github("bigomics/PCSF")
+add_github("bigomics/playdata")
+add_github("bigomics/playbase")
+add_github("bigomics/bigdash")
+add_github("bigomics/bigLoaders")
+add_github("bigomics/fgsea")
+add_github("bigomics/wizardR")
+add_github("GfellerLab/EPIC")
+add_github("broadinstitute/infercnv")
+add_github("GfellerLab/SuperCell")
+add_github("linxihui/NNLM")
+add_github("Coolgenome/iTALK")
+add_github("wt2015-github/FastGGM")
+add_github("satijalab/azimuth")
+add_github("JohnCoene/waiter")
+add_github("JohnCoene/firebase@omics")
+add_github("JohnCoene/bsutils")
+add_github("ropensci/iheatmapr")
+##add_github("rstudio/bslib@v0.6.1")
+add_github("rstudio/htmltools")
+add_github("bigomics/biomaRt")
+add_github("Bioconductor/BiocFileCache")
+add_github("cysouw/qlcMatrix")
+add_github("cole-trapnell-lab/leidenbase")
+add_github('cole-trapnell-lab/monocle3')
+add_github('bartongroup/Proteus')
+add_github('cran/riverplot')
+add_github('Ironholds/rgeolocate')
 
-#pkg.remotes <- pkg.remotes[names(pkg.remotes) %in% pkg.used]
+
 pkg.remotes <- remotes.url[names(remotes.url) %in% pkg.used]
 pkg.imports <- setdiff(pkg.used, names(pkg.remotes))
 

@@ -5,12 +5,12 @@ apt update && apt install -y \
     libgl-dev libglu-dev tk-dev libhdf5-dev \
     libgit2-dev libssh2-1-dev libnetcdf-dev \
     libudunits2-dev libgdal-dev libbz2-dev \
-    jags git procps htop \
+    jags cmake git procps htop \
     python3 python3-pip python-is-python3 \
     pdftk vim-tiny less wget gdebi-core \
     pandoc imagemagick libfftw3-dev libglpk-dev \
     libgsl-dev librsvg2-dev libgsl-dev curl \
-    libsodium-dev cmake \
+    libsodium-dev libnlopt-dev \
     libharfbuzz-dev libfribidi-dev    
 
 # remove ugly snaps
