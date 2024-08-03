@@ -12,8 +12,7 @@ install:
 	R CMD INSTALL .
 
 first.install:
-	mv DESCRIPTION DESCRIPTION.save
-	sh dev/install_ubuntu.sh
+	sudo sh dev/install_ubuntu.sh
 	Rscript dev/create_description.R
 	R -e "devtools::install_local('.',dependencies=TRUE, force=TRUE)"
 
