@@ -33,12 +33,10 @@ test:
 
 FORCE: ;
 
-docker1: FORCE
-	docker build \
-		--progress plain \
-		-f dev/Dockerfile.os -t playbase-os .
+docker.os: FORCE
+	docker build --progress plain \
+	  -f dev/Dockerfile.os -t playbase-os .
 
-docker2: FORCE
-	docker build \
-		--progress plain  \
-		-f dev/Dockerfile.rbase -t playbase-rbase .
+docker: FORCE
+	docker build --progress plain \
+	  -f dev/Dockerfile -t bigomics/playbase .

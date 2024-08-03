@@ -21,3 +21,8 @@ apt-get update && apt-get install -y wget gnupg2
 wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
 echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
 apt-get update && apt-get install -y google-chrome-stable
+
+# disable c++ version warning (msa package)
+mv /usr/include/c++/13/bits/c++0x_warning.h \
+    /usr/include/c++/13/bits/c++0x_warning.h.DISABLED && \
+    touch /usr/include/c++/13/bits/c++0x_warning.h 
