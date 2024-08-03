@@ -32,12 +32,12 @@ test:
 
 FORCE: ;
 
-docker.os: FORCE
-	docker build --progress plain \
+docker.os: 
+	docker build  \
 	  -f dev/Dockerfile.os -t playbase-os . \
-	2>&1 | tee docker-os.log
+	  2>&1 | tee docker-os.log
 
-docker: FORCE
-	docker build --progress plain \
+docker: docker.os
+	docker build  \
 	  -f dev/Dockerfile -t bigomics/playbase . \
-	2>&1 | tee docker.log
+	  2>&1 | tee docker.log

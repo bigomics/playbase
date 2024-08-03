@@ -39,7 +39,8 @@ add_github <- function(repo) {
 }
 remotes.url <- c(
   "KEGG.db" = "url::https://bioconductor.org/packages/3.11/data/annotation/src/contrib/KEGG.db_3.2.4.tar.gz",
-  "org.Pf.plasmo.db" = "url::https://bioconductor.org/packages/3.14/data/annotation/src/contrib/org.Pf.plasmo.db_3.14.0.tar.gz"
+  "org.Pf.plasmo.db" = "url::https://bioconductor.org/packages/3.14/data/annotation/src/contrib/org.Pf.plasmo.db_3.14.0.tar.gz",
+  "Azimuth" = "url::https://github.com/satijalab/azimuth/archive/HEAD.zip"
 )
 add_github("bigomics/PCSF")
 add_github("bigomics/playdata")
@@ -75,8 +76,11 @@ pkg.remotes <- remotes.url[names(remotes.url) %in% pkg.used]
 pkg.imports <- setdiff(pkg.used, names(pkg.remotes))
 
 if(file.exists("DESCRIPTION")) {
-  stop("ERROR: existing DESCRIPTION file. Please remove first.")
+  hash <- substring(tempfile(),nchar(tempfile())-3, nchar(tempfile()))
+  file.copy("DESCRIPTION",paste0("DESCRIPTION.save.",hash))
+  message("WARNING: overwriting existing DESCRIPTION file.")
 }
+
 desc.header <- readLines("dev/DESCRIPTION.header")
 desc.file <- "DESCRIPTION"
 

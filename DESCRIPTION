@@ -20,7 +20,6 @@ Imports:
     AnnotationDbi,
     AnnotationHub,
     aws.s3,
-    Azimuth,
     base,
     batchelor,
     beeswarm,
@@ -134,3 +133,4 @@ Remotes:
     url::https://github.com/GfellerLab/SuperCell/archive/HEAD.zip,
     url::https://github.com/linxihui/NNLM/archive/HEAD.zip,
     url::https://github.com/ropensci/iheatmapr/archive/HEAD.zip,
+    url::https://github.com/satijalab/azimuth/archive/HEAD.zip,
