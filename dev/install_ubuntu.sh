@@ -10,7 +10,7 @@ apt update && apt install -y \
     pdftk vim-tiny less wget gdebi-core \
     pandoc imagemagick libfftw3-dev libglpk-dev \
     libgsl-dev librsvg2-dev libgsl-dev curl \
-    libsodium-dev cmake
+    libsodium-dev cmake libnlopt-dev
 
 # remove ugly snaps
 #snap remove --purge -y firefox
