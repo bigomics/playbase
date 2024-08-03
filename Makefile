@@ -35,8 +35,10 @@ FORCE: ;
 
 docker.os: FORCE
 	docker build --progress plain \
-	  -f dev/Dockerfile.os -t playbase-os .
+	  -f dev/Dockerfile.os -t playbase-os . \
+	2>&1 | tee docker-os.log
 
 docker: FORCE
 	docker build --progress plain \
-	  -f dev/Dockerfile -t bigomics/playbase .
+	  -f dev/Dockerfile -t bigomics/playbase . \
+	2>&1 | tee docker.log
