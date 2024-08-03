@@ -11,7 +11,7 @@ check:
 install: 
 	R CMD INSTALL .
 
-install.dep:
+first.install:
 	mv DESCRIPTION DESCRIPTION.save
 	sh dev/install_ubuntu.sh
 	Rscript dev/create_description.R
