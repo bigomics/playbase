@@ -1,6 +1,4 @@
 # R options for docker building
-cat("sourcing .Rprofile (docker)\n")
-
 options(Ncpus = 8L)
 options(timeout = 99999)  ## download time.out
 

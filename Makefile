@@ -31,14 +31,14 @@ filter=
 test:
 	R -e "devtools::test(filter='$(filter)')"
 
-docker: FORCE
+FORCE: ;
+
+docker1: FORCE
 	docker build \
 		--progress plain \
-		-f dev/Dockerfile -t playbase .
+		-f dev/Dockerfile.os -t playbase-os .
 
-docker.nc: FORCE
+docker2: FORCE
 	docker build \
-		--progress plain --no-cache \
-		-f dev/Dockerfile -t playbase .
-
-FORCE: ;
+		--progress plain  \
+		-f dev/Dockerfile.rbase -t playbase-rbase .
