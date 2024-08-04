@@ -8,13 +8,19 @@ doc:
 check: 
 	R -e "devtools::check()"
 
+update: 
+	R -e "source('dev/rspm.R');BiocManager::install(ask=FALSE)"
+
 install: 
 	R CMD INSTALL .
 
-first.install:
+installx: 
+	Rscript dev/install_playbase.R
+
+full.install:
 	sudo sh dev/install_ubuntu.sh
 	Rscript dev/create_description.R
-	R -e "devtools::install_local('.',dependencies=TRUE, force=TRUE)"
+	Rscript dev/install_playground.R
 
 VERSION="v3.5.0-beta"
 
@@ -37,7 +43,12 @@ docker.os:
 	  -f dev/Dockerfile.os -t playbase-os . \
 	  2>&1 | tee docker-os.log
 
-docker: docker.os
+docker: 
 	docker build --no-cache \
 	  -f dev/Dockerfile -t bigomics/playbase . \
 	  2>&1 | tee docker.log
+dockerx:
+	cat dev/Dockerfile.os dev/Dockerfile > dev/Dockerfilex
+	docker build --no-cache \
+	  -f dev/Dockerfilex -t bigomics/playbase:x . \
+	  2>&1 | tee dockerx.log

@@ -1,3 +1,8 @@
+export DEBIAN_FRONTEND=noninteractive
+export LANG=en_US.UTF-8
+export LANGUAGE=en_US:en
+export LC_ALL=en_US.UTF-8 
+
 apt update && apt install -y \
     locales apt-utils software-properties-common \
     libcurl4-gnutls-dev libnode-dev libv8-dev \
@@ -16,6 +21,7 @@ apt update && apt install -y \
 # remove ugly snaps
 #snap remove --purge -y firefox
 #apt purge snapd
+apt autoremove
 
 # Install Chrome
 apt-get update && apt-get install -y wget gnupg2
@@ -30,4 +36,4 @@ mv /usr/include/c++/13/bits/c++0x_warning.h \
 
 ## basic R
 apt install -y r-base r-base-dev 
-R -e "install.packages(c('devtools','remotes','renv'))"
+R -e "install.packages(c('devtools','remotes'))"

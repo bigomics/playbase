@@ -3,9 +3,7 @@
 ## Copyright (c) 2018-2020 BigOmics Analytics Sagl. All rights reserved.
 ##
 
-FROM ubuntu:24.04 AS os-base
-##FROM ubuntu:20.10
-##FROM ubuntu:20.04
+FROM ubuntu:24.04 AS playbase-os
 
 MAINTAINER BigOmics "support@bigomics.ch"
 
