@@ -36,5 +36,5 @@ RUN mv /usr/include/c++/13/bits/c++0x_warning.h \
 #------------------------------------------------------------
 # Clean up when done.
 #------------------------------------------------------------
-#RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-#RUN chmod ugo+rwX /tmp && chmod o+t /tmp
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN chmod ugo+rwX /tmp && chmod o+t /tmp

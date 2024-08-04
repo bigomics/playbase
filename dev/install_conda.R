@@ -9,3 +9,6 @@ reticulate::install_miniconda()
 reticulate::conda_install("r-reticulate", "python-kaleido")
 reticulate::conda_install("r-reticulate", "plotly", channel = "plotly")
 reticulate::use_miniconda("r-reticulate")
+
+## clean up downloaded packages
+unlink("~/.local/share/r-miniconda/pkgs", recursive = TRUE)

@@ -13,7 +13,9 @@ WORKDIR /
 # Install basic stuff and R
 RUN apt install -y r-base r-base-dev 
 COPY dev/rspm.R /root/.Rprofile
-COPY dev/github_pat /root/.Renviron
+
+# if a github PAT is available put it here
+COPY github_pat /root/.Renviron
 
 RUN R -e "install.packages('remotes')"
 RUN R -e "remotes::install_version('BiocManager', version='1.30.23')"
@@ -31,24 +33,13 @@ RUN R -e "BiocManager::install('MSnbase')"
 RUN echo Downloading Playbase
 RUN R -e "remotes::install_github('bigomics/playbase',dependencies=TRUE)"
 
-## add any missing packages manually
-#RUN R -e "BiocManager::install(c('rhdf5', 'monocle', 'mygene'))"
-#RUN R -e "install.packages(c('RSpectra'))"
-
-## playdata: perhaps not needed because playbase already states
-## playdata as dependency in DESCRIPTION file.
-#RUN git clone -b main --single-branch --depth 1 \
-#    https://github.com/bigomics/playdata.git \
-#    && R CMD INSTALL playdata && rm -fr playdata
-
-
-
-
-
+## add any missed packages manually
+RUN R -e "BiocManager::install(c('topGO'))"
+RUN R -e "remotes::install_github('bigomics/PCSF')"
 
 #------------------------------------------------------------
 # Clean up when done.
 #------------------------------------------------------------
-#RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-#RUN chmod ugo+rwX /tmp && chmod o+t /tmp
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN chmod ugo+rwX /tmp && chmod o+t /tmp
 RUN rm -f /.Renviron /root/.Renviron 

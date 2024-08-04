@@ -16,7 +16,7 @@ first.install:
 	Rscript dev/create_description.R
 	R -e "devtools::install_local('.',dependencies=TRUE, force=TRUE)"
 
-VERSION = "v3.5.0-beta"
+VERSION="v3.5.0-beta"
 
 tags:
 	git tag -f -a $(VERSION) -m 'version $(VERSION)'
@@ -33,11 +33,11 @@ test:
 FORCE: ;
 
 docker.os: 
-	docker build  \
+	docker build --no-cache \
 	  -f dev/Dockerfile.os -t playbase-os . \
 	  2>&1 | tee docker-os.log
 
 docker: docker.os
-	docker build  \
+	docker build --no-cache \
 	  -f dev/Dockerfile -t bigomics/playbase . \
 	  2>&1 | tee docker.log
