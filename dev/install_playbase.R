@@ -2,15 +2,31 @@
 ## Install Playbase and dependencies from GitHub as packages using R
 ## package manager
 ## ---------------------------------------------------------------------
-
-if(basename(getwd())=="dev") setwd('..')
+#!/usr/bin/env Rscript
 
 # This file is supposed to run from the root Playground folder
+if(basename(getwd())=="dev") setwd('..')
 if (basename(getwd()) != "playbase") {
     stop("This file is supposed to run from the root Playbase folder")
 }
 
+# test if there is at least one argument: if not, return an error
+args = commandArgs(trailingOnly=TRUE)
+message("installing playbase from ", args)
+
+source = "github"
+if (length(args)==0) {
+  source <- "github"
+} else if (length(args)>=1) {
+  source <- as.character(args[1])
+}
+if(!(source %in% c("local","github","rcmd"))) {
+  stop("source argument must be 'local', 'github' or 'rcmd'")
+}
+
 source("dev/rspm.R")
+source("dev/functions.R")
+
 require <- function(pkg) (pkg %in% installed.packages()[,'Package'])
 
 if(!require("remotes")) install.packages('remotes')
@@ -24,13 +40,23 @@ if(!require("msa")) BiocManager::install('msa')
 if(!require("orthogene")) BiocManager::install('orthogene')
 if(!require("MSnbase")) BiocManager::install('MSnbase')
 
-# install Playbase with dependencies
-remotes::install_github('bigomics/playbase',dependencies=TRUE)
+## Install dependencies first
+install_dependencies( use.remotes=0 )
+
+## Install playbase without dependencies
+if(source == 'github') {
+  remotes::install_github('bigomics/playbase',dependencies=FALSE)
+} else if(source == 'local') {
+  remotes::install_local(paste='.', dependencies=FALSE)
+} else if(source == 'rcmd') {
+  system("R CMD INSTALL .")
+}
 
 ## add any missed packages manually
 if(!require("topGO")) BiocManager::install(c('topGO'))
 if(!require("PCSF"))  remotes::install_github('bigomics/PCSF')
 
 # remove big non-used packages
-try(remove.packages('BSgenome.Hsapiens.UCSC.hg38'))
-try(remove.packages('EnsDb.Hsapiens.v86'))
+remove.pkg <- function(p) if(require(p)) try(remove.packages(p))
+remove.pkg('BSgenome.Hsapiens.UCSC.hg38')
+remove.pkg('EnsDb.Hsapiens.v86')

@@ -21,7 +21,6 @@ apt update && apt install -y \
 # remove ugly snaps
 #snap remove --purge -y firefox
 #apt purge snapd
-apt autoremove
 
 # Install Chrome
 apt-get update && apt-get install -y wget gnupg2
@@ -36,4 +35,3 @@ mv /usr/include/c++/13/bits/c++0x_warning.h \
 
 ## basic R
 apt install -y r-base r-base-dev 
-R -e "install.packages(c('devtools','remotes'))"

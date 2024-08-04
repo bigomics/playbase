@@ -15,12 +15,12 @@ install:
 	R CMD INSTALL .
 
 installx: 
-	Rscript dev/install_playbase.R
+	Rscript dev/install_playbase.R 'local'
 
 full.install:
 	sudo sh dev/install_ubuntu.sh
-	Rscript dev/create_description.R
-	Rscript dev/install_playground.R
+	Rscript dev/write_description.R
+	Rscript dev/install_playbase.R 'github'
 
 VERSION="v3.5.0-beta"
 
