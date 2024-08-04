@@ -1050,7 +1050,6 @@ getMyGeneInfo <- function(eg, fields = c("symbol", "name", "alias", "map_locatio
   names(info) <- fields
   info <- lapply(info, function(x) ifelse(length(x) == 3, x[[3]], "(not available)"))
   info <- sapply(info, paste, collapse = ",")
-
   return(info)
 }
 

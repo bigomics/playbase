@@ -109,7 +109,6 @@ ngs.getGeneAnnotation <- function(
 #' @param organism Organism name, e.g. "hsapiens_gene_ensembl".
 #' @param probe_type Character specifying the type of input identifiers. If NULL,
 #' it will be automatically detected. Options are "ensembl_gene_id", "ensembl_transcript_id", etc.
-#' @param mart BioMart object specifying the database to query.
 #' @param verbose Logical indicating whether to print status messages.
 #'
 #' @return Data frame with gene annotation data for the input identifiers. Columns are:
@@ -126,7 +125,7 @@ ngs.getGeneAnnotation <- function(
 #'   \item \code{gene_name}: equivalent to the rownames. Kept for back compatibility
 #' }
 #'
-#' @details This function queries BioMart to retrieve key gene annotation data for
+#' @details This function queries AnnotHub to retrieve key gene annotation data for
 #' a set of input gene/transcript identifiers. It can detect the identifier
 #' type automatically if not provided.
 #'
@@ -134,8 +133,7 @@ ngs.getGeneAnnotation <- function(
 #' @examples
 #' \dontrun{
 #' probes <- c("ENSG00000142192", "ENST00000288602")
-#' mart <- biomaRt::useMart("ensembl")
-#' result <- ngs.getGeneAnnotation(probes, mart)
+#' result <- ngs.getGeneAnnotation(organism, probes)
 #' head(result)
 #' }
 #' @export
