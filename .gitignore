@@ -86,7 +86,10 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+Renviron
 Renviron.site
+.Rprofile
+Rprofile
 
 # pkgdown site
 docs/

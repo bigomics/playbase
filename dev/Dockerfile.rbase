@@ -1,0 +1,52 @@
+##
+## This file is part of the Omics Playground project.
+## Copyright (c) 2018-2020 BigOmics Analytics Sagl. All rights reserved.
+##
+
+FROM playbase-os AS playbase-rbase
+
+#------------------------------------------------------------
+# Install base R packages that are required
+#------------------------------------------------------------
+# Install basic stuff and R
+RUN apt install -y r-base r-base-dev 
+
+RUN mkdir -p /playbase/dev
+WORKDIR /playground
+COPY dev/Dockerfile* dev/install* dev/Makevars* dev/functions.R \
+     /playbase/dev/
+
+RUN echo ********* PREPARING R ENVIRONMENT ***************
+COPY dev/Rprofile /root/.Rprofile
+# if a github PAT is available put it in Renviron (but remove after!!!)
+COPY dev/Renviron /root/.Renviron
+
+RUN R -e "install.packages(c('remotes','renv','reticulate'))"
+RUN R -e "remotes::install_version('BiocManager', version='1.30.23')"
+RUN R -e "BiocManager::install(version='3.18')"
+
+RUN echo ********* INSTALLING MINI-CONDA ***************
+COPY dev/install_conda.R dev/
+RUN Rscript dev/install_conda.R && rm -fr ~/.local/share/r-miniconda/pkgs*
+
+#------------------------------------------------------------
+# Problematic packages
+#------------------------------------------------------------
+
+# RcppEigen gives millions of errors, so we turn of compile
+# warnings temporarily
+COPY dev/Makevars.no-error /root/.R/Makevars
+RUN R -e "BiocManager::install('RcppEigen')"
+RUN rm /root/.R/Makevars
+
+## add problematic packages first
+RUN R -e "BiocManager::install('msa')"
+RUN R -e "BiocManager::install('orthogene')"
+RUN R -e "BiocManager::install('MSnbase')"
+
+#------------------------------------------------------------
+# Clean up when done.
+#------------------------------------------------------------
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN chmod ugo+rwX /tmp && chmod o+t /tmp
+RUN rm -f /.Renviron /root/.Renviron /playbase/.Renviron 

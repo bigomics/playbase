@@ -3,33 +3,38 @@
 ## Copyright (c) 2018-2020 BigOmics Analytics Sagl. All rights reserved.
 ##
 
-FROM playbase-os AS playbase
+FROM playbase-rbase AS playbase
 
 #------------------------------------------------------------
-# Install R packages that are required
+# Install playbase 
 #------------------------------------------------------------
-# Install basic stuff and R
-RUN apt install -y r-base r-base-dev 
 
-RUN mkdir -p /playbase/dev
-COPY dev/ /playbase/dev/
-
+RUN echo ********* INSTALLING PLAYBASE ***************
 WORKDIR /playbase
-RUN cp dev/rspm.R /root/.Rprofile
 
-# if a github PAT is available put it here
-COPY github_pat /root/.Renviron
+COPY dev/rspm.R dev/rspm.R
+COPY DESCRIPTION ./DESCRIPTION
 
-RUN R -e "install.packages('remotes')"
-RUN R -e "remotes::install_version('BiocManager', version='1.30.23')"
-RUN R -e "BiocManager::install(version='3.18')"
+# pre-install some needed packages
+RUN R -e "BiocManager::install('AnnotationDbi')"
+#RUN R -e "BiocManager::install('RSQLite')"
+RUN R -e "BiocManager::install('topGO')"
+RUN R -e "BiocManager::install('org.Hs.eg.db')"
 
-RUN Rscript dev/install_conda.R && rm -fr ~/.local/share/r-miniconda/pkgs*
-RUN Rscript dev/install_playbase.R && rm -fr /tmp/Rtmp*
+#RUN Rscript dev/install_playbase.R github
+RUN R -e "remotes::install_github('bigomics/playbase')"
+
+# reinstall some failed ones
+RUN R -e "remotes::install_github('bigomics/PCSF')"
+
+# update all packages
+COPY dev/install_updates.R dev/
+RUN Rscript dev/install_updates.R 
 
 #------------------------------------------------------------
 # Clean up when done.
 #------------------------------------------------------------
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 RUN chmod ugo+rwX /tmp && chmod o+t /tmp
-RUN rm -f /.Renviron /root/.Renviron 
+RUN rm -f /.Renviron /root/.Renviron /playbase/.Renviron 
+RUN rm -fr /tmp/Rtmp*

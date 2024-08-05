@@ -3,6 +3,8 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
+require <- function(pkg) (pkg %in% installed.packages()[,'Package'])
+
 scan_packages <- function(path='R') {
   
   ## ---------------------------------------------------------------------
@@ -89,7 +91,7 @@ scan_packages <- function(path='R') {
 install_dependencies <- function(use.remotes=FALSE) {
   
   require <- function(pkg) (pkg %in% installed.packages()[,'Package'])
-  remove.pkg <- function(p) if(require(p)) try(remove.packages(p))
+  remove.pkg <- function(p) if(require(p, character.only=TRUE)) try(remove.packages(p))
 
   if(!require("remotes")) install.packages('remotes')
   if(!require("BiocManager")) {

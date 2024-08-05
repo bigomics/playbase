@@ -12,7 +12,6 @@ if (basename(getwd()) != "playbase") {
 
 # test if there is at least one argument: if not, return an error
 args = commandArgs(trailingOnly=TRUE)
-message("installing playbase from ", args)
 
 source = "github"
 if (length(args)==0) {
@@ -23,6 +22,7 @@ if (length(args)==0) {
 if(!(source %in% c("local","github","rcmd"))) {
   stop("source argument must be 'local', 'github' or 'rcmd'")
 }
+message("installing playbase from ", source)
 
 source("dev/rspm.R")
 source("dev/functions.R")
@@ -36,12 +36,21 @@ if(!require("BiocManager")) {
 }
 
 ## add problematic packages first
+if(any(c("RccpEigen","ggforce") %in% missing.imports)) {
+  if(!dir.exists("~/.R")) dir.create("~/.R")
+  if(!file.exists("~/.R/Makevars")) file.copy("dev/Makevars","~/.R/Makevars.save")
+  file.copy("dev/Makevars.no-error","~/.R/Makevars")
+  BiocManager::install(c("RccpEigen","ggforce"),ask=FALSE)
+  file.remove("~/.R/Makevars")
+  if(!file.exists("~/.R/Makevars.save")) file.copy("dev/Makevars.save","~/.R/Makevars")  
+}
 if(!require("msa")) BiocManager::install('msa')
 if(!require("orthogene")) BiocManager::install('orthogene')
 if(!require("MSnbase")) BiocManager::install('MSnbase')
 
+
 ## Install dependencies first
-install_dependencies( use.remotes=0 )
+install_dependencies( use.remotes=TRUE )
 
 ## Install playbase without dependencies
 if(source == 'github') {
@@ -54,6 +63,7 @@ if(source == 'github') {
 
 ## add any missed packages manually
 if(!require("topGO")) BiocManager::install(c('topGO'))
+if(!require("org.Hs.eg.db")) BiocManager::install(c('org.Hs.eg.db'))
 if(!require("PCSF"))  remotes::install_github('bigomics/PCSF')
 
 # remove big non-used packages
