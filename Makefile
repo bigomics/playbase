@@ -16,6 +16,9 @@ check:
 update: 
 	R -e "source('dev/rspm.R');BiocManager::install(ask=FALSE)"
 
+depend: 
+	Rscript dev/install_dependencies.R 
+
 install: 
 	R CMD INSTALL .
 

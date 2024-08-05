@@ -28,8 +28,8 @@ RUN R -e "remotes::install_github('bigomics/playbase')"
 RUN R -e "remotes::install_github('bigomics/PCSF')"
 
 # update all packages
-COPY dev/install_updates.R dev/
-RUN Rscript dev/install_updates.R 
+COPY dev/install_dependencies.R dev/
+RUN Rscript dev/install_dependencies.R 
 
 #------------------------------------------------------------
 # Clean up when done.

@@ -17,9 +17,9 @@ COPY dev/Dockerfile* dev/install* dev/Makevars* dev/functions.R \
      /playbase/dev/
 
 RUN echo ********* PREPARING R ENVIRONMENT ***************
-COPY dev/Rprofile /root/.Rprofile
+COPY dev/Rprofil[e] /root/.Rprofile
 # if a github PAT is available put it in Renviron (but remove after!!!)
-COPY dev/Renviron /root/.Renviron
+COPY dev/Renviro[n] /root/.Renviron
 
 RUN R -e "install.packages(c('remotes','renv','reticulate'))"
 RUN R -e "remotes::install_version('BiocManager', version='1.30.23')"

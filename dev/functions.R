@@ -48,7 +48,7 @@ scan_packages <- function(path='R') {
   add_github("bigomics/wizardR")
   ##add_github("bigomics/biomaRt")
   add_github("GfellerLab/EPIC")
-  add_github("broadinstitute/infercnv")
+  add_github("broadinstitute/infercnv@infercnv-v1.3.3")
   add_github("GfellerLab/SuperCell")
   add_github("linxihui/NNLM")
   add_github("Coolgenome/iTALK")
