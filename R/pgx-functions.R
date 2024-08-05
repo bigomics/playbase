@@ -1072,7 +1072,7 @@ getMyGeneInfo <- function(eg, fields = c("symbol", "name", "alias", "map_locatio
 #' info <- getHSGeneInfo(genes)
 #' }
 #' @export
-getHSGeneInfo <- function(gene, as.link = TRUE) {
+getHSGeneInfo <- function(gene, feature, as.link = TRUE) {
   if (is.null(gene) || length(gene) == 0) {
     return(NULL)
   }
@@ -1106,13 +1106,13 @@ getHSGeneInfo <- function(gene, as.link = TRUE) {
   if (is.null(eg) || length(eg) == 0 || is.na(eg)) {
     return(NULL)
   }
-  getHSGeneInfo.eg(eg, as.link = as.link)
+  getHSGeneInfo.eg(eg, feature, as.link = as.link)
 }
 
 
-getHSGeneInfo.eg <- function(eg, as.link = TRUE) {
+getHSGeneInfo.eg <- function(eg, feature, as.link = TRUE) {
   env.list <- c(
-    "symbol" = org.Hs.eg.db::org.Hs.egSYMBOL,
+    "gene_symbol" = org.Hs.eg.db::org.Hs.egSYMBOL,
     "name" = org.Hs.eg.db::org.Hs.egGENENAME,
     "map_location" = org.Hs.eg.db::org.Hs.egMAP,
     "OMIM" = org.Hs.eg.db::org.Hs.egOMIM,
@@ -1125,12 +1125,12 @@ getHSGeneInfo.eg <- function(eg, as.link = TRUE) {
   gene.symbol <- toupper(AnnotationDbi::mget(as.character(eg),
     envir = org.Hs.eg.db::org.Hs.egSYMBOL
   ))[1]
-  info[["symbol"]] <- gene.symbol
+  info[["gene_symbol"]] <- gene.symbol
 
   ## create link to GeneCards
   if (as.link) {
     genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GENE</a>"
-    info[["symbol"]] <- gsub("GENE", info[["symbol"]], genecards.link)
+    info[["gene_symbol"]] <- gsub("GENE", info[["gene_symbol"]], genecards.link)
   }
 
   ## create link to OMIM
@@ -1184,6 +1184,8 @@ getHSGeneInfo.eg <- function(eg, as.link = TRUE) {
       info[["GO"]] <- NULL
     }
   }
+
+  info[["feature_name"]] <- feature
 
   return(info)
 }
