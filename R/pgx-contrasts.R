@@ -727,9 +727,9 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
 
   ## any data.frame to matrix
   contr.matrix <- as.matrix(contr.matrix)
-  
+
   # convert values <0 to -1 and values >0 to 1 (for old design matrix with float values)
-  # sign function will fail when non-numeric values are present, use try catch to preserve input  
+  # sign function will fail when non-numeric values are present, use try catch to preserve input
   contr.matrix <- tryCatch(sign(contr.matrix), error = function(e) contr.matrix)
 
   num.values <- c(-1, 0, 1, NA, "NA", "na", "", " ")
@@ -737,7 +737,7 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
   is.num <- is.num && all(c(-1, 1) %in% contr.matrix) ## must have at least -1 and 1!!
   if (!is.num) {
     ## message("[contrastAsLabels] already as label!")
-    contr.matrix[which(contr.matrix=="")] <- NA
+    contr.matrix[which(contr.matrix == "")] <- NA
     return(contr.matrix)
   }
   K <- contr.matrix[, 0]
@@ -748,7 +748,7 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
     k1 <- contrastAsLabels.col(contr, contr.name)
     K <- cbind(K, k1)
   }
-  K[which(K=="")] <- NA
+  K[which(K == "")] <- NA
   colnames(K) <- colnames(contr.matrix)
   rownames(K) <- rownames(contr.matrix)
   return(K)
@@ -835,15 +835,15 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   if (is.null(colnames(contrasts))) {
     stop("contrasts must have column names")
   }
-  contrasts <- type.convert(contrasts, as.is=TRUE)
+  contrasts <- type.convert(contrasts, as.is = TRUE)
   is.numeric.matrix <- inherits(contrasts, "matrix") &&
     all(apply(contrasts, 2, class) %in% c("integer", "numeric"))
   is.numeric.df <- inherits(contrasts, "data.frame") &&
     all(apply(contrasts, 2, class) %in% c("integer", "numeric"))
   is.numeric.contrast <- is.numeric.matrix | is.numeric.df
   if (is.numeric.contrast) {
-    has.negpos <- any(contrasts<0) && any(contrasts>0)
-    if(has.negpos) {
+    has.negpos <- any(contrasts < 0) && any(contrasts > 0)
+    if (has.negpos) {
       contrasts[contrasts %in% c(NA, "NA", "na", "")] <- 0
       contrasts <- sign(contrasts)
     }
