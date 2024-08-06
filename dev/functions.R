@@ -73,17 +73,17 @@ scan_packages <- function(path='R') {
 
   pkg.installed <- installed.packages()[,'Package']
   pkg.missing <- setdiff( c(pkg.imports,names(pkg.remotes)), pkg.installed)
-  imports.missing <- setdiff(pkg.imports, pkg.installed)
-  remotes.missing <- pkg.remotes[!(names(pkg.remotes) %in% pkg.installed)]
+  missing.imports <- setdiff(pkg.imports, pkg.installed)
+  missing.remotes <- pkg.remotes[!(names(pkg.remotes) %in% pkg.installed)]
   
   list(
-    pkg.used = pkg.used,
-    pkg.installed = pkg.installed,
-    pkg.missing = pkg.missing,
+    used = pkg.used,
+    installed = pkg.installed,
+    missing = pkg.missing,
     imports = pkg.imports,
     remotes = pkg.remotes,    
-    imports.missing = imports.missing,
-    remotes.missing = remotes.missing
+    missing.imports = missing.imports,
+    missing.remotes = missing.remotes
   )
 
 }
@@ -106,17 +106,88 @@ install_dependencies <- function(use.remotes=FALSE) {
     ## Here we handle missing dependencies ourselves. Better control of
     ## skipping packages that are already installed.
     pkg <- scan_packages('R')
-    if( length(pkg$imports.missing) || length(pkg$remotes.missing) ) {
-      for(p in pkg$imports.missing) {
+    if( length(pkg$missing.imports) || length(pkg$missing.remotes) ) {
+      for(p in pkg$missing.imports) {
         if(!require(p)) BiocManager::install(p, ask=FALSE, dependencies=TRUE)
       }
-      for(p in pkg$remotes.missing) {
+      for(p in pkg$missing.remotes) {
         if(!require(p)) remotes::install_url(p, ask=FALSE, dependencies=TRUE)
       }
     } else {
       message("All dependencies installed. Nothing to install!")
     }
   }
-
 }
 
+install_silent <- function(pkg.list, linkto=NULL, force=FALSE) {
+  ## suppress ultra-verbose packages that issue loads of warnings
+  ## during compilation.
+  if(!is.null(linkto)) {
+    P <- available.packages()
+    pkg.noisy <- c("PCSF","SeuratObject","RSpectra")
+    for( k in linkto) {
+      pkg1 <- rownames(P)[grep(k,as.character(P[,"LinkingTo"]))]
+      pkg.noisy <- c(pkg.noisy, k, pkg1)
+    }
+    pkg <- intersect(pkg.list, pkg.noisy)
+  } else {
+    pkg <- pkg.list
+  }
+  
+  if(length(pkg) > 0) {
+    message("> Pre-installing ultra-verbose packages: ", paste(pkg,collapse=" "))
+    if(!dir.exists("~/.R")) dir.create("~/.R")
+    if(file.exists("~/.R/Makevars")) file.copy("~/.R/Makevars","~/.R/Makevars.save")
+    file.copy("dev/Makevars.no-error","~/.R/Makevars")
+    for(p in pkg) {
+      if(grepl("url::",p)) {
+        p <- sub("url::","",p)        
+        remotes::install_url(p, ask=FALSE, force=force)
+      } else if(grepl("github::",p)) {
+        p <- sub("github::","",p)
+        remotes::install_github(p, ask=FALSE, force=force)
+      } else {
+        BiocManager::install(p, ask=FALSE, force=force)
+      }
+    }
+    file.remove("~/.R/Makevars")
+    if(file.exists("~/.R/Makevars.save")) file.copy("~/.R/Makevars.save","~/.R/Makevars")
+    pkg.list <- setdiff(pkg.list, pkg)
+  } else {
+    print("> No ultra-verbose packages!")
+  }
+  pkg.list
+}
+
+scan_description <- function(path=NULL) {
+
+  if(is.null(path)) {
+    search_paths = c('.', '/usr/lib/R/library/playbase',
+                     '/usr/local/lib/R/site-library/playbase')
+    sel <- which(file.exists(file.path(search_paths,"DESCRIPTION")))
+    if(length(sel) > 0) {
+      path <- search_paths[sel[1]]
+    }
+  }
+  if(is.null(path)) stop("could not find playbase DESCRIPTION file")
+  desc <- readLines(file.path(path,'DESCRIPTION'))
+  sel1 <- (grep("Imports:",desc)) : (grep("Remotes:",desc)-1)
+  imports <- desc[sel1]
+  imports <- setdiff(unlist(strsplit( imports, split='[ ]')), c("","Imports:"))
+  imports <- trimws(gsub("[,]","",imports))
+  imports
+  
+  sel2 <- (grep("Remotes:",desc)+1) : length(desc)
+  remotes <- trimws(gsub("[,]","",desc[sel2]))
+  remotes <- grep("^url::", remotes, value=TRUE)
+  remotes <- sub("^url::","",remotes)
+  remotes.names <- gsub(".*contrib/|.*github.com/","",remotes)
+  remotes.names <- gsub("_[0-9].*|/archive.*","",remotes.names)
+  remotes.names <- gsub(".*/","",remotes.names)  
+  names(remotes) <- remotes.names
+  
+  list(
+    imports = imports,
+    remotes = remotes
+  )  
+}

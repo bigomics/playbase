@@ -13,19 +13,19 @@ doc:
 check: 
 	R -e "devtools::check()"
 
-update: 
-	R -e "source('dev/rspm.R');BiocManager::install(ask=FALSE)"
-
 depend: 
 	Rscript dev/install_dependencies.R 
 
 install: 
 	R CMD INSTALL .
 
-installx: 
+install.rcmd: 
+	Rscript dev/install_playbase.R 'rcmd'
+
+install.local: 
 	Rscript dev/install_playbase.R 'local'
 
-full.install:
+install.full:
 	sudo sh dev/install_ubuntu.sh
 	Rscript dev/write_description.R
 	Rscript dev/install_playbase.R 'github'
@@ -56,12 +56,18 @@ docker.pkg:
 	docker build -f dev/Dockerfile \
 	    -t playbase-pkg . 2>&1 | tee docker.log
 
+docker.pkg2: 
+	docker build -f dev/Dockerfile2 \
+	    -t playbase-pkg . 2>&1 | tee docker2.log
+
 ## we need to squash the layer to minimize the size but also to hide
 ## the use of any temporary tokens. Install docker-squash from pipx.
-docker: docker.os docker.rbase docker.pkg
-	@if [ -z `command -v pipx &> /dev/null`]; then \
+docker.squash: 
+	@if [ -z `command -v pipx &> /dev/null` ]; then \
 	    echo ERROR: please install docker-squash; \
 	    exit 1; \
 	fi
 	docker-squash playbase-pkg -t bigomics/playbase:latest
 
+docker: docker.os docker.rbase docker.pkg docker.squash
+	@echo "% building playbase docker..."

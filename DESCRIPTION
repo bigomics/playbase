@@ -129,7 +129,7 @@ Remotes:
     url::https://bioconductor.org/packages/3.14/data/annotation/src/contrib/org.Pf.plasmo.db_3.14.0.tar.gz,
     url::https://github.com/bigomics/PCSF/archive/HEAD.zip,
     url::https://github.com/bigomics/playdata/archive/HEAD.zip,
-    url::https://github.com/broadinstitute/infercnv/archive/HEAD.zip,
+    url::https://github.com/broadinstitute/infercnv/archive/refs/heads/infercnv-v1.3.3.zip,
     url::https://github.com/GfellerLab/EPIC/archive/HEAD.zip,
     url::https://github.com/GfellerLab/SuperCell/archive/HEAD.zip,
     url::https://github.com/linxihui/NNLM/archive/HEAD.zip,
