@@ -22,7 +22,7 @@ scan_packages <- function(path='R') {
     if(grepl("@",repo)) {
       branch <- sub(".*@","",repo)
       repo <- sub("@.*","",repo)    
-      paste0("url::https://github.com/",repo,"/archive/refs/heads/",branch,".zip")
+      paste0("url::https://github.com/",repo,"/archive/refs/tags/",branch,".zip")
     } else {
       paste0("url::https://github.com/",repo,"/archive/HEAD.zip")
     }

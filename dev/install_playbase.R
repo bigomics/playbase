@@ -60,7 +60,7 @@ if(!require("msa")) BiocManager::install('msa')
 if(!require("orthogene")) BiocManager::install('orthogene')
 if(!require("MSnbase")) BiocManager::install('MSnbase')
 
-## Install dependencies
+## Install dependencies first
 message('>>> installing dependencies...')
 if(source == "github") {
   install_dependencies( use.remotes = TRUE )
@@ -68,7 +68,7 @@ if(source == "github") {
   install_dependencies( use.remotes = FALSE )
 }
 
-## Install playbase without dependencies
+## Install playbase 
 if(source == 'github') {
   message('>>> installing playbase from github')
   remotes::install_github('bigomics/playbase',dependencies=FALSE)
@@ -92,10 +92,12 @@ if(length(missing.imports)) {
 }
 if(length(missing.remotes)) {
   message(">>> Retrying failed remotes: ", paste(names(missing.remotes),collapse=" "))  
-  for(r in missing.remotes) remotes::install_url(r)
+  for(r in missing.remotes) {
+    remotes::install_url(r)
+  }
 }
 
-## final few
+## final few that often fail
 if(!require("topGO")) BiocManager::install(c('topGO'))
 if(!require("org.Hs.eg.db")) BiocManager::install(c('org.Hs.eg.db'))
 if(!require("PCSF"))  install_silent('github::bigomics/PCSF')
