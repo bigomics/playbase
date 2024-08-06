@@ -11,6 +11,7 @@ pgx.createPGX(
   samples,
   contrasts,
   organism = NULL,
+  probe_type = NULL,
   custom.geneset = NULL,
   annot_table = NULL,
   max.genesets = 5000,

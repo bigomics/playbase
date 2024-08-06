@@ -155,6 +155,7 @@ pgx.createPGX <- function(counts,
                           samples,
                           contrasts,
                           organism = NULL,
+                          probe_type = NULL,
                           custom.geneset = NULL,
                           annot_table = NULL,
                           max.genesets = 5000,
@@ -293,9 +294,16 @@ pgx.createPGX <- function(counts,
   ## create gene annotation table
   ## -------------------------------------------------------------------
   pgx$genes <- NULL
+  pgx$probe_type <- probe_type
 
   message("[createPGX] annotating genes")
-  pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table)
+  if (datatype == "metabolomics") {
+    pgx$genes <- playbase::getMetaboliteAnnotation(rownames(counts), probe_type)
+  } else {
+    # for all other data types other than metabolomics
+    pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table)
+  }
+
   if (is.null(pgx$genes)) {
     stop("[createPGX] FATAL: Could not build gene annotation")
   }
