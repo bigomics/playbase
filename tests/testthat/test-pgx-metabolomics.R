@@ -1,21 +1,20 @@
-# Sample data frame containing all IDs
-
+# example of metabolite ids for testing
 ChEBI <- c("8874", "UnrecognizedId", "1445644", "49603", "15903", "", NA)
-HMDB <- c("HMDB0015464", "HMDB0250234", "HMDB0000190", NA, "HMDB00004", "UnrecognizedId")
-KEGG <- c("C00001", "C00002", "C00003", "UnrecognizedId", "C00004")
+HMDB <- c("HMDB0015464", "HMDB0250234", "HMDB0000190", NA, "HMDB0000466", "UnrecognizedId", "HMDB999999")
+KEGG <- c("C06958", "C06849", "C18044", "UnrecognizedId", "C16545")
 
 
 # Test cases
 test_that("probe_type is correctly validated and converted for metabolomics", {
     # Test valid probe types
-    expect_equal(convert_probe_to_chebi(ids = ChEBI, probe_type = "ChEBI"), "ADD TEST HERE")
-    expect_equal(convert_probe_to_chebi(ids = HMDB, probe_type = "HMDB"), "ADD TEST HERE")
-    expect_equal(convert_probe_to_chebi(ChEBI, "ChEBI"), "ADD TEST HERE")
+    expect_equal(convert_probe_to_chebi(ids = ChEBI, probe_type = "ChEBI"), c("8874", NA, NA, "49603", "15903", NA, NA))
+    expect_equal(convert_probe_to_chebi(ids = HMDB, probe_type = "HMDB"), c("10093", "135377", "422", NA, "9171", NA, NA))
+    expect_equal(convert_probe_to_chebi(KEGG, "KEGG"), c("101278", "3082", "35420", NA, "63825"))
 
 
-    # Test invalid probe type
-    expect_error(convert_to_chebi(ids, "InvalidType"), "arg should be one of")
+    # Test invalid probe type returns error
+    expect_error(convert_probe_to_chebi(ids, "InvalidType"), "arg should be one of")
+
+    # Test empty string is converted to NA
+    expect_equal(convert_probe_to_chebi(c("", "HMDB0015464"), "HMDB"), c(NA, "10093"))
 })
-
-# Run the tests
-test_file("test_convert_to_chebi.R")
