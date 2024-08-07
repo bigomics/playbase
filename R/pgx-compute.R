@@ -848,6 +848,21 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     go.size <- sapply(go.genesets, length)
     custom.geneset$info$GSET_SIZE <- c(custom.geneset$info$GSET_SIZE, go.size)
   }
+  browser()
+
+  # add metabolomics if data.type is metabolomics
+  if (pgx$datatype == "metabolomics") {
+    dbg("[pgx.add_GMT] Adding metabolomics genesets")
+    metabolic_pathways <- playdata::REACTOME_METABOLITES
+
+    custom.geneset$gmt <- c(custom.geneset$gmt, metabolic_pathways)
+
+    # get the length of go.genesets and add to gmt info
+    metabolic_pathways.size <- sapply(metabolic_pathways, length)
+    custom.geneset$info$GSET_SIZE <- c(custom.geneset$info$GSET_SIZE, metabolic_pathways.size)
+  }
+
+
   if (!is.null(custom.geneset$gmt)) {
     message("[pgx.add_GMT] Adding custom genesets...")
     ## convert gmt standard to SPARSE matrix: gset in rows, genes in
