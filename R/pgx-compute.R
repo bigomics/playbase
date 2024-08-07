@@ -794,8 +794,17 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   dim(G)
 
   if (nrow(G) == 0) {
-    message("[pgx.add_GMT] WARNING : no overlapping genes. no GMT added.")
-    return(pgx)
+    add.gmt <- NULL
+    rr <- sample(3:400, 100)
+    gg <- rownames(pgx$X)
+    random.gmt <- lapply(rr, function(n) head(sample(gg), min(n, length(gg) / 2)))
+    names(random.gmt) <- paste0("TEST:random_geneset.", 1:length(random.gmt))
+    add.gmt <- random.gmt
+    # add to custom genesets
+    custom.geneset$gmt <- c(custom.geneset$gmt, add.gmt)
+
+    random.size <- sapply(add.gmt, length)
+    custom.geneset$info$GSET_SIZE <- c(custom.geneset$info$GSET_SIZE, random.size)
   }
 
   # Change HUMAN gene names to species symbols if NOT human and
@@ -818,6 +827,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   } else {
     G <- G[, size.ok, drop = FALSE]
   }
+
+
 
   ## -----------------------------------------------------------
   ## Add custom gene sets if provided
