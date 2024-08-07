@@ -35,7 +35,7 @@ convert_probe_to_chebi <- function(probes, probe_type) {
 }
 
 #' @export
-getMetaboliteAnnotation <- function(probes, probe_type) {
+getMetaboliteAnnotation <- function(probes, probe_type = "HMDB") {
     # get annotation for probes
     probes_chebi <- playbase::convert_probe_to_chebi(probes, probe_type)
 
