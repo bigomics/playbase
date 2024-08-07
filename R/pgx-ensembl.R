@@ -590,10 +590,14 @@ getOrgDb <- function(organism, use.ah = NULL) {
 #' @title Detect probe type from probe set
 #' @export
 detect_probetype <- function(organism, probes, orgdb = NULL,
-                             nprobe = 100, use.ah = NULL) {
+                             nprobe = 100, use.ah = NULL, datatype = NULL) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
+
+  if (datatype == "metabolomics") {
+    return("metabolomics")
+  }
 
   ## get correct OrgDb database for organism
   if (is.null(orgdb)) {
