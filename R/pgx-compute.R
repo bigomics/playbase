@@ -155,7 +155,7 @@ pgx.createPGX <- function(counts,
                           samples,
                           contrasts,
                           organism = NULL,
-                          probe_type = NULL,
+                          probe_type = "ChEBI",
                           custom.geneset = NULL,
                           annot_table = NULL,
                           max.genesets = 5000,
@@ -848,7 +848,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     go.size <- sapply(go.genesets, length)
     custom.geneset$info$GSET_SIZE <- c(custom.geneset$info$GSET_SIZE, go.size)
   }
-  browser()
 
   # add metabolomics if data.type is metabolomics
   if (pgx$datatype == "metabolomics") {

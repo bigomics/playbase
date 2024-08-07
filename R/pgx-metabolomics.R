@@ -14,8 +14,8 @@ convert_probe_to_chebi <- function(probes, probe_type) {
     if (probe_type == "ChEBI") {
         # keep only numbers in ids, as chebi ids are numeric
         chebi_ids <- gsub("[^0-9]", "", probes)
-        # check that ChEBI ids are in the dictionary
-        chebi_ids <- ifelse(chebi_ids %in% probe_type_dictionary$ChEBI, chebi_ids, NA)
+        # check that ChEBI ids are in the dictionary (for better results always use ChEBI own ids (ID col) not MetaboAnalyst derived)
+        chebi_ids <- ifelse(chebi_ids %in% probe_type_dictionary$ID, chebi_ids, NA)
     } else if (probe_type == "HMDB") {
         # use match
         matches <- match(probes, probe_type_dictionary$HMDB)
@@ -35,8 +35,9 @@ convert_probe_to_chebi <- function(probes, probe_type) {
 }
 
 #' @export
-getMetaboliteAnnotation <- function(probes, probe_type = "HMDB") {
+getMetaboliteAnnotation <- function(probes, probe_type = "ChEBI") {
     # get annotation for probes
+
     probes_chebi <- playbase::convert_probe_to_chebi(probes, probe_type)
 
     metabolite_metadata <- playdata::METABOLITE_METADATA
@@ -44,8 +45,6 @@ getMetaboliteAnnotation <- function(probes, probe_type = "HMDB") {
     match_ids <- match(probes_chebi, metabolite_metadata$ID)
 
     metabolite_metadata <- metabolite_metadata[match_ids, ]
-
-
 
     df <- data.frame(
         feature = probes,
