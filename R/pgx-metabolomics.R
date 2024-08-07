@@ -60,6 +60,7 @@ getMetaboliteAnnotation <- function(probes, probe_type = "HMDB") {
         source = "MetaboAnalyst",
         gene_name = probes_chebi
     )
+    rownames(df) <- probes
 
     return(df)
 }
