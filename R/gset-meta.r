@@ -125,7 +125,10 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       if (new.gsva) {
         zx.gsva <- try({
           bpparam <- BiocParallel::MulticoreParam(mc.cores)
-          GSVA::gsva(GSVA::gsvaParam(as.matrix(X), gmt), BPPARAM = bpparam)
+          ## Some genesets will have size = 1. Set minSize=2 ?? (AZ)
+          GSVA::gsva(GSVA::gsvaParam(exprData = as.matrix(X), geneSets = gmt, minSize = 1),
+            BPPARAM = bpparam
+          )
         })
       } else {
         zx.gsva <- try({
