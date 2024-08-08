@@ -283,7 +283,7 @@ clean_probe_names <- function(probes) {
   probes <- sapply(strsplit(probes, split = ";"), head, 1) ## take first
 
   ## strip away anything after a dot or underscore
-  probes <- sub("[._].*","",probes)
+  probes <- sub("[._].*", "", probes)
 
   ## is.ensembl <- mean(grepl("^ENS", probes)) > 0.5
   ## if (is.ensembl) {
@@ -293,7 +293,7 @@ clean_probe_names <- function(probes) {
   ## If UNIPROT we strip isoform extension (orgDb does not like it)
   is.uniprot <- mean(grepl("^[QP][0-9]*", probes)) > 0.8
   if (is.uniprot) {
-    ##probes <- sub("[.][0-9]+$", "", probes) ## strip phosphosite
+    ## probes <- sub("[.][0-9]+$", "", probes) ## strip phosphosite
     probes <- sub("-[0-9]+", "", probes) ## strip isoform
   }
   names(probes) <- probes0
@@ -1076,27 +1076,27 @@ check_probetype <- function(organism, probes) {
   return(FALSE)
 }
 
-#' Create new feature name by concatenating some columns of input 
+#' Create new feature name by concatenating some columns of input
 #' annotation table. Make all feature names unique.
 #'
 #' @param annot  some annotation dataframe
 #' @param target vector of character. e.g. c("feature","_","symbol")
-#' 
-#' export  
+#'
+#' export
 combine_feature_names <- function(annot, target) {
-  new.feature <- annot[,0]
-  for(i in 1:length(target)) {
-    if(target[i] == 0 || target[i] == "rownames") {
+  new.feature <- annot[, 0]
+  for (i in 1:length(target)) {
+    if (target[i] == 0 || target[i] == "rownames") {
       new.feature <- paste0(new.feature, rownames(annot))
-    } else if(target[i] %in% colnames(annot)) {
-      new.feature <- paste0(new.feature, annot[,target[i]])
+    } else if (target[i] %in% colnames(annot)) {
+      new.feature <- paste0(new.feature, annot[, target[i]])
     } else {
       ## some character
       new.feature <- paste0(new.feature, target[i])
     }
   }
-  if(sum(duplicated(new.feature)) > 0) {
-    message("[merge feature names] duplicated = ",sum(duplicated(new.feature)))
+  if (sum(duplicated(new.feature)) > 0) {
+    message("[merge feature names] duplicated = ", sum(duplicated(new.feature)))
     new.feature <- make_unique(new.feature)
   }
   new.feature

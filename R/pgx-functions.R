@@ -1139,7 +1139,7 @@ getHSGeneInfo.eg <- function(eg, as.link = TRUE) {
     uniprot.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>UniProtKB</a>"
     genecards.link <- sub("GENE", gene_symbol, genecards.link)
     uniprot.link <- sub("GENE", gene_symbol, uniprot.link)
-    info[["databases"]] <- paste( c(genecards.link, uniprot.link), collapse=", ")
+    info[["databases"]] <- paste(c(genecards.link, uniprot.link), collapse = ", ")
   }
 
   ## create link to OMIM
@@ -2164,15 +2164,15 @@ normalize_cols <- function(G) {
 }
 
 #' @export
-make_unique <- function(s, sep='') {
+make_unique <- function(s, sep = "") {
   num.dup <- sum(duplicated(s)) > 0
   if (!num.dup) {
     return(s)
   }
   dups <- unique(s[which(duplicated(s))])
-  for(d in dups) {
-    jj <- which( s == d )
-    newx <- paste0(s[jj], c("",paste0(".",1:(length(jj)-1))))
+  for (d in dups) {
+    jj <- which(s == d)
+    newx <- paste0(s[jj], c("", paste0(".", 1:(length(jj) - 1))))
     s[jj] <- newx
   }
   s
