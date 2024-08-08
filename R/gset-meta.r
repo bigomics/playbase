@@ -31,8 +31,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
                                             mc.threads = 1,
                                             mc.cores = NULL,
                                             batch.correct = TRUE) {
-
-    ALL.GENESET.METHODS <- c(
+  ALL.GENESET.METHODS <- c(
     "fisher", "ssgsea", "gsva", "spearman", "camera", "fry",
     "gsea.permPH", "gsea.permGS", "gseaPR", "fgsea"
   )
@@ -125,10 +124,11 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       zx.gsva <- NULL
       if (new.gsva) {
         zx.gsva <- try({
-            bpparam <- BiocParallel::MulticoreParam(mc.cores)
-            ## Some genesets will have size = 1. Set minSize=2 ?? (AZ)
+          bpparam <- BiocParallel::MulticoreParam(mc.cores)
+          ## Some genesets will have size = 1. Set minSize=2 ?? (AZ)
           GSVA::gsva(GSVA::gsvaParam(exprData = as.matrix(X), geneSets = gmt, minSize = 1),
-                     BPPARAM = bpparam)
+            BPPARAM = bpparam
+          )
         })
       } else {
         zx.gsva <- try({
