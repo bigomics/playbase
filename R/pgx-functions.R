@@ -1072,7 +1072,7 @@ getMyGeneInfo <- function(eg, fields = c("symbol", "name", "alias", "map_locatio
 #' info <- getHSGeneInfo(genes)
 #' }
 #' @export
-getHSGeneInfo <- function(gene, feature, as.link = TRUE) {
+getHSGeneInfo <- function(gene, as.link = TRUE) {
   if (is.null(gene) || length(gene) == 0) {
     return(NULL)
   }
@@ -1106,11 +1106,11 @@ getHSGeneInfo <- function(gene, feature, as.link = TRUE) {
   if (is.null(eg) || length(eg) == 0 || is.na(eg)) {
     return(NULL)
   }
-  getHSGeneInfo.eg(eg, feature, as.link = as.link)
+  getHSGeneInfo.eg(eg, as.link = as.link)
 }
 
 
-getHSGeneInfo.eg <- function(eg, feature, as.link = TRUE) {
+getHSGeneInfo.eg <- function(eg, as.link = TRUE) {
   env.list <- c(
     "gene_symbol" = org.Hs.eg.db::org.Hs.egSYMBOL,
     "name" = org.Hs.eg.db::org.Hs.egGENENAME,
@@ -1122,15 +1122,24 @@ getHSGeneInfo.eg <- function(eg, feature, as.link = TRUE) {
 
   info <- lapply(env.list, function(env) AnnotationDbi::mget(eg, envir = env, ifnotfound = NA)[[1]])
   names(info) <- names(env.list)
-  gene.symbol <- toupper(AnnotationDbi::mget(as.character(eg),
+  gene_symbol <- toupper(AnnotationDbi::mget(as.character(eg),
     envir = org.Hs.eg.db::org.Hs.egSYMBOL
   ))[1]
-  info[["gene_symbol"]] <- gene.symbol
+  info[["gene_symbol"]] <- gene_symbol
 
   ## create link to GeneCards
+  ## if (as.link) {
+  ##   genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GENE</a>"
+  ##   info[["gene_symbol"]] <- gsub("GENE", info[["gene_symbol"]], genecards.link)
+  ## }
+
+  ## create link to external databases: OMIM, GeneCards, Uniprot
   if (as.link) {
-    genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GENE</a>"
-    info[["gene_symbol"]] <- gsub("GENE", info[["gene_symbol"]], genecards.link)
+    genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GeneCards</a>"
+    uniprot.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>UniProtKB</a>"
+    genecards.link <- sub("GENE", gene_symbol, genecards.link)
+    uniprot.link <- sub("GENE", gene_symbol, uniprot.link)
+    info[["databases"]] <- paste( c(genecards.link, uniprot.link), collapse=", ")
   }
 
   ## create link to OMIM
@@ -1184,8 +1193,6 @@ getHSGeneInfo.eg <- function(eg, feature, as.link = TRUE) {
       info[["GO"]] <- NULL
     }
   }
-
-  info[["feature_name"]] <- feature
 
   return(info)
 }
@@ -1348,15 +1355,15 @@ pgx.getGeneSetCollections <- function(gsets = rownames(playdata::GSETxGENE)) {
 #' matches <- filterProbes(data, probes)
 #' }
 #' @export
-filterProbes <- function(genes, gg) {
+filterProbes <- function(annot, genes) {
   ## check probe name, short probe name or gene name for match
-  p0 <- (toupper(sub(".*:", "", rownames(genes))) %in% toupper(gg))
-  p1 <- (toupper(rownames(genes)) %in% toupper(gg))
-  p2 <- (toupper(as.character(genes$gene_name)) %in% toupper(gg))
-  if ("human_ortholog" %in% colnames(genes)) {
-    p3 <- (toupper(as.character(genes$human_ortholog)) %in% toupper(gg))
+  p0 <- (toupper(sub(".*:", "", rownames(annot))) %in% toupper(genes))
+  p1 <- (toupper(rownames(annot)) %in% toupper(genes))
+  p2 <- (toupper(as.character(annot$symbol)) %in% toupper(genes))
+  if ("human_ortholog" %in% colnames(annot)) {
+    p3 <- (toupper(as.character(annot$human_ortholog)) %in% toupper(genes))
   } else {
-    p3 <- rep(FALSE, nrow(genes))
+    p3 <- rep(FALSE, nrow(annot))
   }
 
   # Ensure all p* are valids
@@ -1368,7 +1375,7 @@ filterProbes <- function(genes, gg) {
   if (length(jj) == 0) {
     return(NULL)
   }
-  return(rownames(genes)[jj])
+  return(rownames(annot)[jj])
 }
 
 
@@ -2157,17 +2164,16 @@ normalize_cols <- function(G) {
 }
 
 #' @export
-make_unique <- function(s) {
-  has.dup <- sum(duplicated(s)) > 0
-  if (!has.dup) {
+make_unique <- function(s, sep='') {
+  num.dup <- sum(duplicated(s)) > 0
+  if (!num.dup) {
     return(s)
   }
-  n <- 1
-  while (has.dup) {
-    jj <- which(duplicated(s))
-    s[jj] <- paste0(sub("[.][1-9]*", "", s[jj]), ".", n)
-    has.dup <- sum(duplicated(s)) > 0
-    n <- n + 1
+  dups <- unique(s[which(duplicated(s))])
+  for(d in dups) {
+    jj <- which( s == d )
+    newx <- paste0(s[jj], c("",paste0(".",1:(length(jj)-1))))
+    s[jj] <- newx
   }
   s
 }
