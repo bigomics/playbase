@@ -332,6 +332,10 @@ cleanupAnnotation <- function(genes) {
     genes$human_ortholog <- NA
   }
 
+  ## Attempt: remove "pos", "tx_len"
+  keep <- colnames(genes)[!colnames(genes) %in% c("pos", "tx_len")]
+  genes <- genes[, keep]
+
   genes
 }
 
