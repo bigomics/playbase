@@ -64,7 +64,8 @@ compute_testGenesets <- function(pgx,
     X <- rename_by(X, pgx$genes, "symbol")
     X <- X[!rownames(X) == "", , drop = FALSE]
     if (any(duplicated(rownames(X)))) {
-      X <- log2(rowsum(2**X, rownames(X)))
+        X <- playbase::rowmean(X, group = rownames(X), reorder = TRUE)
+        ## X <- log2(rowsum(2**X, rownames(X)))
     }
   }
 
@@ -76,6 +77,7 @@ compute_testGenesets <- function(pgx,
   Y <- pgx$samples
   gc()
 
+  message("----------MONITORING 1")
   gset.meta <- gset.fitContrastsWithAllMethods(
     gmt = gmt,
     X = X,
@@ -88,6 +90,7 @@ compute_testGenesets <- function(pgx,
     mc.cores = NULL,
     batch.correct = TRUE
   )
+  message("----------MONITORING 2")
 
   rownames(gset.meta$timings) <- paste("[test.genesets]", rownames(gset.meta$timings))
   pgx$timings <- rbind(pgx$timings, gset.meta$timings)

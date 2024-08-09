@@ -391,7 +391,6 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
-  ## AZ: for proteomics, this needs gene names.
   pgx <- playbase::compute_cellcycle_gender(pgx, pgx$counts)
 
   ## -------------------------------------------------------------------
