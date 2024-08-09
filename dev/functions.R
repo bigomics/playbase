@@ -88,9 +88,12 @@ scan_packages <- function(path='R') {
 
 }
 
-
-install_newest_orgdb <- function() {
-  system("cd /tmp && wget https://bioconductor.org/packages/release/data/annotation/src/contrib/org.Hs.eg.db_3.19.1.tar.gz && tar xvfz org.Hs.eg.db_3.19.1.tar.gz && cd org.Hs.eg.db && sed -i 's/1.65.2/1.64.0/' DESCRIPTION && R CMD INSTALL .")
+install_newest_orgdb <- function(org="Hs") {
+  db <- sub("Hs",org,'org.Hs.eg.db')
+  if(require(db) && packageVersion(db) =="3.19.1") return(NULL)  
+  CMD <- "cd /tmp && wget https://bioconductor.org/packages/release/data/annotation/src/contrib/org.Hs.eg.db_3.19.1.tar.gz && tar xvfz org.Hs.eg.db_3.19.1.tar.gz && cd org.Hs.eg.db && sed -i 's/1.65.2/1.64.0/' DESCRIPTION && R CMD INSTALL ."
+  if(org!="Hs") CMD <- gsub("Hs",org,CMD)
+  system(CMD)
 }
 
 install_dependencies <- function(use.remotes=FALSE) {
@@ -126,9 +129,9 @@ install_dependencies <- function(use.remotes=FALSE) {
   }
 
   ## overwrite
-  if(packageVersion('org.Hs.eg.db')!="3.19.1") install_newest_orgdb() 
-
-  
+  install_newest_orgdb("Hs")
+  install_newest_orgdb("Mm")
+  install_newest_orgdb("Rn")   
 }
 
 install_silent <- function(pkg.list, linkto=NULL, force=FALSE) {
