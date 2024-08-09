@@ -157,11 +157,11 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   if ("ssgsea" %in% methods) {
     message("fitting contrasts using ssGSEA/limma... ")
     tt <- system.time({
-        nmissing <- sum(is.na(X))
-        if(nmissing > 0) {
-            message("Found ", nmissing, " missing values in X. Removing prior to GSVA::ssgsea.")
-        }
-        zx.ssgsea <- try(GSVA::gsva(as.matrix(X[complete.cases(X), ]),
+      nmissing <- sum(is.na(X))
+      if (nmissing > 0) {
+        message("Found ", nmissing, " missing values in X. Removing prior to GSVA::ssgsea.")
+      }
+      zx.ssgsea <- try(GSVA::gsva(as.matrix(X[complete.cases(X), ]),
         gmt[],
         method = "ssgsea",
         parallel.sz = mc.cores, verbose = FALSE
