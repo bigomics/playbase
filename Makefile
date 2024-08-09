@@ -16,7 +16,7 @@ check:
 depend: 
 	Rscript dev/install_dependencies.R 
 
-install: 
+install: depend
 	R CMD INSTALL .
 
 install.rcmd: 

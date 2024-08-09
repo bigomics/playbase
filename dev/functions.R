@@ -35,7 +35,7 @@ scan_packages <- function(path='R') {
   remotes.url <- c(
     "KEGG.db" = "url::https://bioconductor.org/packages/3.11/data/annotation/src/contrib/KEGG.db_3.2.4.tar.gz",
     "org.Pf.plasmo.db" = "url::https://bioconductor.org/packages/3.14/data/annotation/src/contrib/org.Pf.plasmo.db_3.14.0.tar.gz",
-    "Azimuth" = "url::https://github.com/satijalab/azimuth/archive/HEAD.zip"
+    "Azimuth" = "url::https://github.com/satijalab/azimuth/archive/refs/heads/master.zip"
   )
   
   ## commented out entries are now in standard CRAN/cBio repo
@@ -53,7 +53,7 @@ scan_packages <- function(path='R') {
   add_github("linxihui/NNLM")
   add_github("Coolgenome/iTALK")
   add_github("wt2015-github/FastGGM")
-  add_github("satijalab/azimuth")
+  #add_github("satijalab/azimuth")
   #add_github("JohnCoene/waiter")
   add_github("JohnCoene/firebase@omics")
   add_github("JohnCoene/bsutils")
@@ -88,6 +88,14 @@ scan_packages <- function(path='R') {
 
 }
 
+install_newest_orgdb <- function(org="Hs") {
+  db <- sub("Hs",org,'org.Hs.eg.db')
+  if(require(db) && packageVersion(db) =="3.19.1") return(NULL)  
+  CMD <- "cd /tmp && wget https://bioconductor.org/packages/release/data/annotation/src/contrib/org.Hs.eg.db_3.19.1.tar.gz && tar xvfz org.Hs.eg.db_3.19.1.tar.gz && cd org.Hs.eg.db && sed -i 's/1.65.2/1.64.0/' DESCRIPTION && R CMD INSTALL ."
+  if(org!="Hs") CMD <- gsub("Hs",org,CMD)
+  system(CMD)
+}
+
 install_dependencies <- function(use.remotes=FALSE) {
   
   require <- function(pkg) (pkg %in% installed.packages()[,'Package'])
@@ -107,16 +115,23 @@ install_dependencies <- function(use.remotes=FALSE) {
     ## skipping packages that are already installed.
     pkg <- scan_packages('R')
     if( length(pkg$missing.imports) || length(pkg$missing.remotes) ) {
+      message("Installing missing dependencies...")
       for(p in pkg$missing.imports) {
         if(!require(p)) BiocManager::install(p, ask=FALSE, dependencies=TRUE)
       }
-      for(p in pkg$missing.remotes) {
-        if(!require(p)) remotes::install_url(p, ask=FALSE, dependencies=TRUE)
+      for(p in names(pkg$missing.remotes)) {
+        url <- sub("url::","",pkg$missing.remotes[p])
+        if(!require(p)) remotes::install_url(url, ask=FALSE, dependencies=TRUE)
       }
     } else {
-      message("All dependencies installed. Nothing to install!")
+      message("All dependencies aleady installed")
     }
   }
+
+  ## overwrite
+  install_newest_orgdb("Hs")
+  install_newest_orgdb("Mm")
+  install_newest_orgdb("Rn")   
 }
 
 install_silent <- function(pkg.list, linkto=NULL, force=FALSE) {

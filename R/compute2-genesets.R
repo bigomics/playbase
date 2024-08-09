@@ -64,7 +64,8 @@ compute_testGenesets <- function(pgx,
     X <- rename_by(X, pgx$genes, "symbol")
     X <- X[!rownames(X) == "", , drop = FALSE]
     if (any(duplicated(rownames(X)))) {
-      X <- log2(rowsum(2**X, rownames(X)))
+      X <- playbase::rowmean(X, group = rownames(X), reorder = TRUE)
+      ## X <- log2(rowsum(2**X, rownames(X)))
     }
   }
 
