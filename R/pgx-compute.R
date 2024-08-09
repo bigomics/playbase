@@ -363,6 +363,7 @@ pgx.createPGX <- function(counts,
       target = c("rownames", "_", "symbol")
     )
     rownames(pgx$genes) <- new.rownames
+    pgx$genes$gene_name <- new.rownames  ## gene_name should also be renamed
     rownames(pgx$counts) <- new.rownames
     rownames(pgx$X) <- new.rownames
     if (!is.null(pgx$impX)) {
