@@ -39,7 +39,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   timings <- c()
 
   if (is.null(mc.cores)) {
-    # Multi-thread on gsva makes RAM usage go up (crashing computations) and in most cases it's slower due to overheads
+    ## Multi-thread on gsva makes RAM usage go up (crashing computations) and in most cases it's slower due to overheads
     mc.cores <- 1
   }
   message("using ", mc.cores, " number of cores")
@@ -157,15 +157,28 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   if ("ssgsea" %in% methods) {
     message("fitting contrasts using ssGSEA/limma... ")
     tt <- system.time({
-      zx.ssgsea <- try(GSVA::gsva(as.matrix(X), gmt[],
+      nmissing <- sum(is.na(X))
+      if (nmissing > 0) {
+        message("Found ", nmissing, " missing values in X. Removing prior to GSVA::ssgsea.")
+      }
+      zx.ssgsea <- try(GSVA::gsva(as.matrix(X[complete.cases(X), ]),
+        gmt[],
         method = "ssgsea",
-        parallel.sz = mc.cores, verbose = FALSE
+        parallel.sz = mc.cores,
+        verbose = FALSE
       ))
       if (!"try-error" %in% class(zx.ssgsea)) {
         zx.ssgsea <- my.normalize(zx.ssgsea)
-        jj <- match(names(gmt), rownames(zx.ssgsea))
-        zx.ssgsea <- zx.ssgsea[jj, colnames(X), drop = FALSE] ## make sure..
+        kk <- intersect(names(gmt), rownames(zx.ssgsea))
+        gmt <- gmt[kk]
+        zx.ssgsea <- zx.ssgsea[kk, colnames(X), drop = FALSE]
         zx.ssgsea[is.na(zx.ssgsea)] <- 0
+        ## dups <- any(duplicated(rownames(zx.ssgsea)))
+        ## if (dups) {
+        ##      zx.ssgsea <- playbase::rowmean(zx.ssgsea,
+        ##                                     group = rownames(zx.ssgsea),
+        ##                                     reorder = TRUE)
+        ## }
         all.results[["ssgsea"]] <- playbase::gset.fitContrastsWithLIMMA(
           zx.ssgsea,
           contr.matrix,

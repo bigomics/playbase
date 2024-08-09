@@ -77,7 +77,6 @@ compute_testGenesets <- function(pgx,
   Y <- pgx$samples
   gc()
 
-  message("----------MONITORING 1")
   gset.meta <- gset.fitContrastsWithAllMethods(
     gmt = gmt,
     X = X,
@@ -90,7 +89,6 @@ compute_testGenesets <- function(pgx,
     mc.cores = NULL,
     batch.correct = TRUE
   )
-  message("----------MONITORING 2")
 
   rownames(gset.meta$timings) <- paste("[test.genesets]", rownames(gset.meta$timings))
   pgx$timings <- rbind(pgx$timings, gset.meta$timings)
