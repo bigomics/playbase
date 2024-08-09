@@ -13,7 +13,7 @@ RUN echo ********* INSTALLING PLAYBASE ***************
 WORKDIR /playbase
 
 COPY DESCRIPTION ./DESCRIPTION
-COPY dev/rspm.R dev/rspm.R
+COPY dev/*.R Makevars* dev/
 
 # pre-install some needed packages
 RUN R -e "BiocManager::install('AnnotationDbi')"
@@ -21,11 +21,13 @@ RUN R -e "BiocManager::install('AnnotationDbi')"
 RUN R -e "BiocManager::install('topGO')"
 RUN R -e "BiocManager::install('org.Hs.eg.db')"
 
-#RUN Rscript dev/install_playbase.R github
+# preinstall dependencies
+RUN Rscript dev/install_dependencies.R 
+
+#RUN Rscript dev/install_playbase.R 'github'
 RUN R -e "remotes::install_github('bigomics/playbase')"
 
-# install all packages (should mostly be done..)
-COPY dev/install_dependencies.R dev/
+# update all dependencies (should mostly be done..)
 RUN Rscript dev/install_dependencies.R 
 
 # reinstall some failed ones

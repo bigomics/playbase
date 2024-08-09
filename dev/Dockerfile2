@@ -17,6 +17,9 @@ COPY dev/*.R Makevars* dev/
 
 RUN Rscript dev/install_playbase.R 'github'
 
+# update dependencies (should mostly be done..)
+RUN Rscript dev/install_dependencies.R 
+
 # reinstall some failed ones
 #RUN R -e "remotes::install_github('bigomics/PCSF')"
 
