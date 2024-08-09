@@ -15,8 +15,6 @@ getGeneAnnotation.ANNOTHUB(organism, probes, use.ah = NULL, verbose = TRUE)
 
 \item{probe_type}{Character specifying the type of input identifiers. If NULL,
 it will be automatically detected. Options are "ensembl_gene_id", "ensembl_transcript_id", etc.}
-
-\item{mart}{BioMart object specifying the database to query.}
 }
 \value{
 Data frame with gene annotation data for the input identifiers. Columns are:
@@ -38,15 +36,14 @@ Retrieves gene annotation information from AnnotationHub for a set of input
 gene/transcript identifiers.
 }
 \details{
-This function queries BioMart to retrieve key gene annotation data for
+This function queries AnnotHub to retrieve key gene annotation data for
 a set of input gene/transcript identifiers. It can detect the identifier
 type automatically if not provided.
 }
 \examples{
 \dontrun{
 probes <- c("ENSG00000142192", "ENST00000288602")
-mart <- biomaRt::useMart("ensembl")
-result <- ngs.getGeneAnnotation(probes, mart)
+result <- ngs.getGeneAnnotation(organism, probes)
 head(result)
 }
 }

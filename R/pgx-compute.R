@@ -160,6 +160,7 @@ pgx.createPGX <- function(counts,
                           max.genesets = 5000,
                           name = "Data set",
                           datatype = "unknown",
+                          probe_type = NULL,
                           creator = "unknown",
                           description = "No description provided.",
                           X = NULL,
@@ -293,9 +294,16 @@ pgx.createPGX <- function(counts,
   ## create gene annotation table
   ## -------------------------------------------------------------------
   pgx$genes <- NULL
+  pgx$probe_type <- probe_type
 
   message("[createPGX] annotating genes")
-  pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table)
+  if (datatype == "metabolomics") {
+    pgx$genes <- playbase::getMetaboliteAnnotation(rownames(counts), probe_type)
+  } else {
+    # for all other data types other than metabolomics
+    pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table)
+  }
+
   if (is.null(pgx$genes)) {
     stop("[createPGX] FATAL: Could not build gene annotation")
   }
@@ -805,8 +813,17 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   dim(G)
 
   if (nrow(G) == 0) {
-    message("[pgx.add_GMT] WARNING : no overlapping genes. no GMT added.")
-    return(pgx)
+    add.gmt <- NULL
+    rr <- sample(3:400, 100)
+    gg <- rownames(pgx$X)
+    random.gmt <- lapply(rr, function(n) head(sample(gg), min(n, length(gg) / 2)))
+    names(random.gmt) <- paste0("TEST:random_geneset.", 1:length(random.gmt))
+    add.gmt <- random.gmt
+    # add to custom genesets
+    custom.geneset$gmt <- c(custom.geneset$gmt, add.gmt)
+
+    random.size <- sapply(add.gmt, length)
+    custom.geneset$info$GSET_SIZE <- c(custom.geneset$info$GSET_SIZE, random.size)
   }
 
   # Change HUMAN gene names to species symbols if NOT human and
@@ -829,6 +846,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   } else {
     G <- G[, size.ok, drop = FALSE]
   }
+
+
 
   ## -----------------------------------------------------------
   ## Add custom gene sets if provided
@@ -859,6 +878,20 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     go.size <- sapply(go.genesets, length)
     custom.geneset$info$GSET_SIZE <- c(custom.geneset$info$GSET_SIZE, go.size)
   }
+
+  # add metabolomics if data.type is metabolomics
+  if (pgx$datatype == "metabolomics") {
+    dbg("[pgx.add_GMT] Adding metabolomics genesets")
+    metabolic_pathways <- playdata::REACTOME_METABOLITES
+
+    custom.geneset$gmt <- c(custom.geneset$gmt, metabolic_pathways)
+
+    # get the length of go.genesets and add to gmt info
+    metabolic_pathways.size <- sapply(metabolic_pathways, length)
+    custom.geneset$info$GSET_SIZE <- c(custom.geneset$info$GSET_SIZE, metabolic_pathways.size)
+  }
+
+
   if (!is.null(custom.geneset$gmt)) {
     message("[pgx.add_GMT] Adding custom genesets...")
     ## convert gmt standard to SPARSE matrix: gset in rows, genes in
