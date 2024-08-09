@@ -91,7 +91,7 @@ scan_packages <- function(path='R') {
 
 install_newest_orgdb <- function(org="Hs") {
   CMD <- "cd /tmp && wget https://bioconductor.org/packages/release/data/annotation/src/contrib/org.Hs.eg.db_3.19.1.tar.gz && tar xvfz org.Hs.eg.db_3.19.1.tar.gz && cd org.Hs.eg.db && sed -i 's/1.65.2/1.64.0/' DESCRIPTION && R CMD INSTALL ."
-  if(org!="Hs") gsub("Hs",org,CMD)
+  if(org!="Hs") CMD <- gsub("Hs",org,CMD)
   system(CMD)
 }
 
