@@ -354,14 +354,31 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## collapse probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------
-  if (convert.hugo) {
+
+  ## if feature/rownames are not symbol, we attach symbol to row name.
+  rows_not_symbol <- mean(rownames(pgx$genes) == pgx$genes$symbol, na.rm = TRUE) < 0.2
+  if (convert.hugo && rows_not_symbol) {
+    new.rownames <- combine_feature_names(
+      pgx$genes,
+      target = c("rownames", "_", "symbol")
+    )
+    rownames(pgx$genes) <- new.rownames
+    rownames(pgx$counts) <- new.rownames
+    rownames(pgx$X) <- new.rownames
+    if (!is.null(pgx$impX)) {
+      rownames(pgx$impX) <- new.rownames
+    }
+  }
+
+  if (FALSE && convert.hugo) {
     dbg("[createPGX] collapsing probes by SYMBOL")
-    symbol <- pgx$genes[rownames(pgx$counts), "symbol"]
     pgx$genes <- pgx$genes[rownames(pgx$counts), ]
 
     ## Average duplicated rows if any
     ## group <- rownames(pgx$counts)
     group <- pgx$genes$symbol
+    group <- paste0(rownames(pgx$genes), "_", pgx$genes$symbol)
+
     pgx$counts <- playbase::rowmean(pgx$counts, group = group, reorder = TRUE)
     pgx$counts <- pgx$counts[rownames(pgx$counts) != "", , drop = FALSE]
     pgx$X <- playbase::rowmean(pgx$X, group = group, reorder = TRUE)
@@ -372,16 +389,18 @@ pgx.createPGX <- function(counts,
     }
 
     ## Collapse features as a comma-separated elements
-    symbol[is.na(symbol)] <- "" ## avoids warning
-    agg_features <- aggregate(feature ~ symbol,
+    group[is.na(group)] <- "" ## avoids warning
+    agg_features <- aggregate(
+      feature ~ group,
       data = pgx$genes,
       function(x) paste(unique(x), collapse = "; ")
     )
+    agg_features <- agg_features[agg_features$group != "", , drop = FALSE]
 
     ## Merge by symbol, replace features by collapsed features
-    pgx$genes <- pgx$genes[match(rownames(pgx$counts), pgx$genes$symbol), ]
+    pgx$genes <- pgx$genes[match(rownames(pgx$counts), group), ]
     rownames(pgx$genes) <- rownames(pgx$counts)
-    jj <- match(pgx$genes$symbol, agg_features$symbol)
+    jj <- match(rownames(pgx$counts), agg_features$group)
     pgx$genes$feature <- agg_features[jj, "feature"]
 
     ## Rename gene_name with new rownames (gene symbol)
