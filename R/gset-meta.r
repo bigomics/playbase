@@ -169,24 +169,24 @@ gset.fitContrastsWithAllMethods <- function(gmt,
                                     ))
         if (!"try-error" %in% class(zx.ssgsea)) {
             zx.ssgsea <- my.normalize(zx.ssgsea)
-        kk <- intersect(names(gmt), rownames(zx.ssgsea))
-        gmt <- gmt[kk]
-        zx.ssgsea <- zx.ssgsea[kk, colnames(X), drop = FALSE]
-        zx.ssgsea[is.na(zx.ssgsea)] <- 0
-        ## dups <- any(duplicated(rownames(zx.ssgsea)))
-        ## if (dups) {
-        ##      zx.ssgsea <- playbase::rowmean(zx.ssgsea,
-        ##                                     group = rownames(zx.ssgsea),
-        ##                                     reorder = TRUE)
-        ## }
-        all.results[["ssgsea"]] <- playbase::gset.fitContrastsWithLIMMA(
-          zx.ssgsea,
-          contr.matrix,
-          design,
-          trend = TRUE,
-          conform.output = TRUE
-        )
-      }
+            kk <- intersect(names(gmt), rownames(zx.ssgsea))
+            gmt <- gmt[kk]
+            zx.ssgsea <- zx.ssgsea[kk, colnames(X), drop = FALSE]
+            zx.ssgsea[is.na(zx.ssgsea)] <- 0
+            ## dups <- any(duplicated(rownames(zx.ssgsea)))
+            ## if (dups) {
+            ##      zx.ssgsea <- playbase::rowmean(zx.ssgsea,
+            ##                                     group = rownames(zx.ssgsea),
+            ##                                     reorder = TRUE)
+            ## }
+            all.results[["ssgsea"]] <- playbase::gset.fitContrastsWithLIMMA(
+                                                     zx.ssgsea,
+                                                     contr.matrix,
+                                                     design,
+                                                     trend = TRUE,
+                                                     conform.output = TRUE
+                                                 )
+        }
     })
     timings <- rbind(timings, c("ssgsea", tt))
   }
