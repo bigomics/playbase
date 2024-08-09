@@ -767,7 +767,7 @@ getHumanOrtholog <- function(organism, symbols) {
     orthogenes <- symbols
   } else if (!is.null(ortho_organism)) {
     ortho.out <- try(orthogene::convert_orthologs(
-      gene_df = unique(symbols),
+      gene_df = unique(symbols[!is.na(symbols)]),
       input_species = ortho_organism,
       output_species = "human",
       non121_strategy = "drop_both_species",
@@ -979,12 +979,15 @@ getGeneAnnotation.ORTHOGENE <- function(
     organism,
     probes,
     verbose = TRUE) {
+
+  ## correct organism names different from OrgDb
   if (organism == "Canis familiaris") {
     organism <- "Canis lupus familiaris"
   }
 
   ## map given name to official species name
   species <- try(orthogene::map_species(organism, method = "gprofiler", verbose = FALSE))
+  species
   if ("try-error" %in% class(species)) {
     message("[getGeneAnnotation.ORTHOGENE] *WARNING* could not connect to server")
     return(NULL)
