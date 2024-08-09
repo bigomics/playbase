@@ -333,9 +333,9 @@ cleanupAnnotation <- function(genes) {
   }
 
   ## Attempt: remove "pos", "tx_len"
-  keep <- colnames(genes)[!colnames(genes) %in% c("pos","tx_len")]
+  keep <- colnames(genes)[!colnames(genes) %in% c("pos", "tx_len")]
   genes <- genes[, keep]
-    
+
   genes
 }
 
@@ -1026,7 +1026,7 @@ getGeneAnnotation.ORTHOGENE <- function(
     source = gene.out$namespace,
     gene_name = probes
   )
-    
+
   return(df)
 }
 
