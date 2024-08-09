@@ -979,7 +979,6 @@ getGeneAnnotation.ORTHOGENE <- function(
     organism,
     probes,
     verbose = TRUE) {
-
   ## correct organism names different from OrgDb
   if (organism == "Canis familiaris") {
     organism <- "Canis lupus familiaris"
