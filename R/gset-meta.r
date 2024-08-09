@@ -162,20 +162,22 @@ gset.fitContrastsWithAllMethods <- function(gmt,
             message("Found ", nmissing, " missing values in X. Removing prior to GSVA::ssgsea.")
         }
         zx.ssgsea <- try(GSVA::gsva(as.matrix(X[complete.cases(X), ]),
-        gmt[],
-        method = "ssgsea",
-        parallel.sz = mc.cores, verbose = FALSE
-      ))
-      if (!"try-error" %in% class(zx.ssgsea)) {
-        zx.ssgsea <- my.normalize(zx.ssgsea)
+                                    gmt[],
+                                    method = "ssgsea",
+                                    parallel.sz = mc.cores,
+                                    verbose = FALSE
+                                    ))
+        if (!"try-error" %in% class(zx.ssgsea)) {
+            zx.ssgsea <- my.normalize(zx.ssgsea)
         kk <- intersect(names(gmt), rownames(zx.ssgsea))
         gmt <- gmt[kk]
         zx.ssgsea <- zx.ssgsea[kk, colnames(X), drop = FALSE]
         zx.ssgsea[is.na(zx.ssgsea)] <- 0
-        ## if (any(duplicated(rownames(zx.ssgsea)))) {
-        ## zx.ssgsea <- playbase::rowmean(zx.ssgsea,
-        ##                                group = rownames(zx.ssgsea),
-        ##                                reorder = TRUE)
+        ## dups <- any(duplicated(rownames(zx.ssgsea)))
+        ## if (dups) {
+        ##      zx.ssgsea <- playbase::rowmean(zx.ssgsea,
+        ##                                     group = rownames(zx.ssgsea),
+        ##                                     reorder = TRUE)
         ## }
         all.results[["ssgsea"]] <- playbase::gset.fitContrastsWithLIMMA(
           zx.ssgsea,
