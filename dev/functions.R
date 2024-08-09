@@ -112,6 +112,7 @@ install_dependencies <- function(use.remotes=FALSE) {
     ## skipping packages that are already installed.
     pkg <- scan_packages('R')
     if( length(pkg$missing.imports) || length(pkg$missing.remotes) ) {
+      message("Installing missing dependencies...")
       for(p in pkg$missing.imports) {
         if(!require(p)) BiocManager::install(p, ask=FALSE, dependencies=TRUE)
       }
@@ -120,7 +121,7 @@ install_dependencies <- function(use.remotes=FALSE) {
         if(!require(p)) remotes::install_url(url, ask=FALSE, dependencies=TRUE)
       }
     } else {
-      message("All dependencies installed. Nothing to install!")
+      message("All dependencies aleady installed")
     }
   }
 
