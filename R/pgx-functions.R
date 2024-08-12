@@ -1340,19 +1340,19 @@ pgx.getGeneSetCollections <- function(gsets = rownames(playdata::GSETxGENE)) {
 
 #' Filter probes from gene expression data
 #'
-#' @param genes Gene expression data.frame with probes as row names.
-#' @param gg Character vector of probes to filter for.
+#' @param annot Gene annotation data.frame with probes as row names.
+#' @param genes Character vector of genes to filter for.
 #'
 #' @return Character vector of matching probe names.
 #'
-#' @details This function filters a gene expression data.frame to return only probes matching the input vector.
-#' It checks the probe name, short probe name, and gene name for matches.
+#' @details This function filters a  data.frame to return only probes matching the input vector.
+#' It checks the rownames, symbol, and ortholog name for matches.
 #'
 #' @examples
 #' \dontrun{
-#' data <- utils::read.csv("expression.csv", row.names = 1)
-#' probes <- c("FOO", "BAR")
-#' matches <- filterProbes(data, probes)
+#' annot <- pgx$genes
+#' genes <- c("FOO", "BAR")
+#' probes <- filterProbes(annot, genes)
 #' }
 #' @export
 filterProbes <- function(annot, genes) {
@@ -1394,21 +1394,40 @@ filterProbes <- function(annot, genes) {
 #' Sums duplicate rows after renaming.
 #'
 #' @export
-rename_by <- function(counts, annot_table, new_id_col = "symbol") {
-  symbol <- annot_table[rownames(counts), new_id_col]
+rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm=TRUE) {
+  if (is.matrix(counts) || is.data.frame(counts)) {
+    probes <- rownames(counts)
+  } else {
+    probes <- names(counts)
+  }
+  symbol <- annot_table[probes, new_id_col]
 
-  # Guard agaisn human_hommolog == NA
+  # Guard against human_hommolog == NA
   if (all(is.na(symbol))) {
     symbol <- annot_table[rownames(counts), "symbol"]
   }
 
   # Sum columns of rows with the same gene symbol
-  if (is.matrix(counts) | is.data.frame(counts)) {
+  if (is.matrix(counts) || is.data.frame(counts)) {
     rownames(counts) <- symbol
-    return(counts[!rownames(counts) %in% c("", "NA"), , drop = FALSE])
+    if(na.rm) counts <- counts[!rownames(counts) %in% c("", "NA"), , drop = FALSE]
+    return(counts)
   } else {
-    return(symbol)
+    names(counts) <- symbol
+    if(na.rm) counts <- counts[!names(counts) %in% c("", "NA")]
+    return(counts)
   }
+}
+
+#' @export
+map_probes <- function(annot, genes, column=NULL) {
+  ## check probe name, short probe name or gene name for match
+  annot <- cbind(annot, rownames(annot))
+  if(is.null(column)) {
+    column <- which.max(apply(annot, 2, function(x) sum(genes %in% x, na.rm=TRUE)))
+  }
+  ii <- which( annot[,column] %in% genes)
+  rownames(annot)[ii]
 }
 
 
