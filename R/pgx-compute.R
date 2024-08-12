@@ -330,17 +330,17 @@ pgx.createPGX <- function(counts,
   do.filter <- (only.known || only.proteincoding)
   if (do.filter) {
     if (only.known) {
-      message("[createPGX] removing genes without symbol...")      
+      message("[createPGX] removing genes without symbol...")
       no.symbol <- (is.na(pgx$genes$symbol) | pgx$genes$symbol == "")
       pgx$genes <- pgx$genes[which(!no.symbol), ]
     }
-    
+
     if (only.proteincoding) {
       message("[createPGX] removing Rik/ORF/LOC genes...")
       is.unknown <- grepl("^rik|^loc|^orf", tolower(pgx$genes$symbol))
       pgx$genes <- pgx$genes[which(!is.unknown), ]
     }
-    
+
     ## some organism do not have biotype column
     ## has.biotype <- "gene_biotype" %in% colnames(pgx$genes)
     ## is.proteincoding <- grepl("protein.coding", pgx$genes$gene_biotype)
@@ -358,7 +358,7 @@ pgx.createPGX <- function(counts,
       pgx$impX <- pgx$impX[keep, , drop = FALSE]
     }
   }
-  
+
   ## -------------------------------------------------------------------
   ## collapse probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------

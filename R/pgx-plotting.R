@@ -3157,7 +3157,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     pt.col <- pt.col[jj]
     cex1 <- ifelse(length(cex) > 1, cex[jj], cex)
     x <- y <- NULL
-    plt <- ggplot2::ggplot( df, ggplot2::aes(x, y), legend = legend) +
+    plt <- ggplot2::ggplot(df, ggplot2::aes(x, y), legend = legend) +
       ggplot2::geom_point(
         shape = 21,
         alpha = opacity,
@@ -3304,7 +3304,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     } else {
       plt <- plt + theme(legend.position = "none")
     }
-  }  ## end-of-is-numerice
+  } ## end-of-is-numerice
 
   if (!is.null(hilight)) {
     ## this hilights some points (with color and size)  at certain positions
@@ -3327,7 +3327,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     if (label.type == "text") labelFUN <- ggrepel::geom_text_repel
     if (label.type == "box") labelFUN <- ggrepel::geom_label_repel
     df2 <- subset(df, name %in% hilight2)
-    if(!is.null(names(hilight2))) {
+    if (!is.null(names(hilight2))) {
       df2$label <- names(hilight2)[match(df2$label, hilight2)]
     }
     plt <- plt + labelFUN(
@@ -3706,10 +3706,10 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   ## plot hilighted points with label
   if (!is.null(hilight2)) {
     jj <- which(rownames(df) %in% hilight2)
-    df2 <- df[jj, ,drop=FALSE]
-    if(!is.null(names(hilight2))) {
+    df2 <- df[jj, , drop = FALSE]
+    if (!is.null(names(hilight2))) {
       df2$label <- names(hilight2)[match(df2$label, hilight2)]
-    }    
+    }
     plt <- plt %>%
       plotly::add_annotations(
         data = df2,
