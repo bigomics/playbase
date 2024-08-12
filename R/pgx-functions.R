@@ -1392,12 +1392,8 @@ filterProbes <- function(annot, genes) {
 #' Looks up the `new_id_col` in the annot_table and replaces counts rownames.
 #' 
 #' @export
-<<<<<<< HEAD
 rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm=TRUE) {
   type = NA
-=======
-rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm = TRUE) {
->>>>>>> 91ddcd27614a02aa53fa236d6b41393809ac416b
   if (is.matrix(counts) || is.data.frame(counts)) {
     probes <- rownames(counts)
     type <- "matrix"
