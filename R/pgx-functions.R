@@ -1390,15 +1390,15 @@ filterProbes <- function(annot, genes) {
 #'
 #' @details Renames rownames of counts matrix using an annotation data frame.
 #' Looks up the `new_id_col` in the annot_table and replaces counts rownames.
-#' 
+#'
 #' @export
-rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm=TRUE) {
-  type = NA
+rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm = TRUE) {
+  type <- NA
   if (is.matrix(counts) || is.data.frame(counts)) {
     probes <- rownames(counts)
     type <- "matrix"
   } else {
-    if(class(counts) == "character") {
+    if (class(counts) == "character") {
       probes <- counts
       type <- "character"
     } else {
@@ -1417,9 +1417,9 @@ rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm=TRUE) {
   if (type == "matrix") {
     rownames(counts) <- make_unique(symbol)
     return(counts)
-  } else if( type == "character") {
+  } else if (type == "character") {
     return(symbol)
-  } else if( type == "vector") {
+  } else if (type == "vector") {
     names(counts) <- make_unique(symbol)
     return(counts)
   }
