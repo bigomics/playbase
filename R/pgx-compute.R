@@ -335,20 +335,28 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Filter genes?
   ## -------------------------------------------------------------------
-  do.filter <- (only.known | only.proteincoding)
+  do.filter <- (only.known || only.proteincoding)
   if (do.filter) {
     if (only.known) {
-      has.symbol <- (!is.na(pgx$genes$symbol) & pgx$genes$symbol != "")
-      pgx$genes <- pgx$genes[which(has.symbol), ]
+      message("[createPGX] removing genes without symbol...")
+      no.symbol <- (is.na(pgx$genes$symbol) | pgx$genes$symbol == "")
+      pgx$genes <- pgx$genes[which(!no.symbol), ]
+    }
+
+    if (only.proteincoding) {
+      message("[createPGX] removing Rik/ORF/LOC genes...")
+      is.unknown <- grepl("^rik|^loc|^orf", tolower(pgx$genes$symbol))
+      pgx$genes <- pgx$genes[which(!is.unknown), ]
     }
 
     ## some organism do not have biotype column
-    has.biotype <- "gene_biotype" %in% colnames(pgx$genes)
-    is.proteincoding <- grepl("protein.coding", pgx$genes$gene_biotype)
-    if (has.biotype && only.proteincoding && any(is.proteincoding)) {
-      pgx$genes <- pgx$genes[which(is.proteincoding), , drop = FALSE]
-    }
+    ## has.biotype <- "gene_biotype" %in% colnames(pgx$genes)
+    ## is.proteincoding <- grepl("protein.coding", pgx$genes$gene_biotype)
+    ## if (has.biotype && only.proteincoding && any(is.proteincoding)) {
+    ##   pgx$genes <- pgx$genes[which(is.proteincoding), , drop = FALSE]
+    ## }
 
+    ## conform
     keep <- match(rownames(pgx$genes), rownames(pgx$counts))
     pgx$counts <- pgx$counts[keep, , drop = FALSE]
     keep <- match(rownames(pgx$genes), rownames(pgx$X))
@@ -363,9 +371,10 @@ pgx.createPGX <- function(counts,
   ## collapse probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------
 
-  ## if feature/rownames are not symbol, we attach symbol to row name.
+  ## if feature/rownames are not symbol, we paste symbol to row name.
   rows_not_symbol <- mean(rownames(pgx$genes) == pgx$genes$symbol, na.rm = TRUE) < 0.2
   if (convert.hugo && rows_not_symbol) {
+    dbg("[createPGX] creating compound rownames FEATURE_SYMBOL")
     new.rownames <- combine_feature_names(
       pgx$genes,
       target = c("rownames", "_", "symbol")

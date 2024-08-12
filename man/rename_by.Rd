@@ -4,7 +4,7 @@
 \alias{rename_by}
 \title{Rename rownames of counts matrix by annotation table}
 \usage{
-rename_by(counts, annot_table, new_id_col = "symbol")
+rename_by(counts, annot_table, new_id_col = "symbol", na.rm = TRUE)
 }
 \arguments{
 \item{counts}{Numeric matrix of counts, with genes/probes as rownames.}
