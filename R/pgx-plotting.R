@@ -3506,9 +3506,9 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   if (type == "numeric") var <- round(var, digits = 4)
   hoverinfo <- "text"
   tooltip1 <- paste0(
-    rownames(pos),
-    "<br>value = ", var,
-    "<br>x = ", round(pos[, 1], 2), "; y = ", round(pos[, 2], 2)
+    "<b>", rownames(pos), "</b>",
+    "<br>value: <b>", var,
+    "</b><br>x: <b>", round(pos[, 1], 2), "</b><br>y: <b>", round(pos[, 2], 2), "</b>"
   )
   if (!is.null(tooltip) && length(tooltip) == length(var)) {
     tooltip1 <- paste0(tooltip1, "<br>", tooltip)
@@ -3977,7 +3977,8 @@ pgx.stackedBarplot <- function(x,
     y = ~Effect,
     type = "bar",
     name = ~variable,
-    color = ~variable
+    color = ~variable,
+    hovertemplate = "<b>%{x}</b><br>%{fullData.name}: <b>%{y}</b><br><extra></extra>"
   ) %>%
     plotly::layout(
       showlegend = showlegend,
@@ -4073,7 +4074,9 @@ plotlyMA <- function(x, y, names, label.names = names,
   i0 <- which(!names %in% highlight & !label.names %in% highlight)
   i1 <- which(names %in% highlight | label.names %in% highlight)
 
-  p <- plotly::plot_ly()
+  p <- plotly::plot_ly(
+    hovertemplate = "<b>%{text}</b><br><b>Average expression</b>: %{x:.2f}<br><b>Effect size</b>: %{y:.2f}<extra></extra>"
+  )
 
   p <- p %>%
     plotly::event_register("plotly_hover") %>%
@@ -5487,8 +5490,8 @@ pgx.barplot.PLOTLY <- function(
       hoverinfo = hoverinfo,
       hovertemplate = paste0(
         "<b>%{hovertext}</b><br>",
-        "%{yaxis.title.text}: %{y:", hoverformat, "}<br>",
-        "<extra></extra>", x
+        "<b>%{yaxis.title.text}:</b> %{y:", hoverformat, "}<br>",
+        "<extra></extra>"
       ),
       showlegend = show_legend
     )
