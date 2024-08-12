@@ -15,7 +15,7 @@ rename_by(counts, annot_table, new_id_col = "symbol", na.rm = TRUE)
 }
 \value{
 Matrix with rownames changed to values from annot_table.
-Duplicate new rownames are summed.
+Duplicate new rownames are made unique.
 }
 \description{
 Rename rownames of counts matrix by annotation table
@@ -23,6 +23,4 @@ Rename rownames of counts matrix by annotation table
 \details{
 Renames rownames of counts matrix using an annotation data frame.
 Looks up the `new_id_col` in the annot_table and replaces counts rownames.
-Handles special cases like missing values.
-Sums duplicate rows after renaming.
 }
