@@ -4066,7 +4066,7 @@ plotlyMA <- function(x, y, names, label.names = names,
                      lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
                      marker.size = 5, label = NULL, label.cex = 1,
                      color_up_down = TRUE,
-                     colors = c(up="#f23451", notsig="#8F8F8F", down="#1f77b4"),
+                     colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#1f77b4"),
                      marker.type = "scatter", source = "plot1",
                      displayModeBar = TRUE) {
   if (is.null(highlight)) highlight <- names
@@ -4108,7 +4108,7 @@ plotlyMA <- function(x, y, names, label.names = names,
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = colors['up']
+            color = colors["up"]
           ),
           showlegend = showlegend
         )
@@ -4121,7 +4121,7 @@ plotlyMA <- function(x, y, names, label.names = names,
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = colors['down']
+            color = colors["down"]
           ),
           showlegend = showlegend
         )
@@ -4135,7 +4135,7 @@ plotlyMA <- function(x, y, names, label.names = names,
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = colors['notsig']
+            color = colors["notsig"]
           ),
           showlegend = showlegend
         )
@@ -4156,7 +4156,7 @@ plotlyMA <- function(x, y, names, label.names = names,
           text = annot_text,
           font = list(
             size = 12 * label.cex,
-            color = colors['up']
+            color = colors["up"]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4172,7 +4172,7 @@ plotlyMA <- function(x, y, names, label.names = names,
           text = annot_text,
           font = list(
             size = 12 * label.cex,
-            color = colors['down']
+            color = colors["down"]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4187,7 +4187,7 @@ plotlyMA <- function(x, y, names, label.names = names,
           text = label.names[i2],
           font = list(
             size = 12 * label.cex,
-            color = colors['notsig']
+            color = colors["notsig"]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4278,13 +4278,13 @@ plotlyVolcano <- function(x, y, names, label.names = names,
                           lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
                           marker.size = 5, label = NULL, label.cex = 1, max.absy = NULL,
                           color_up_down = TRUE,
-                          colors = c(up="#f23451", notsig="#8F8F8F", down="#1f77b4"),
+                          colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#1f77b4"),
                           marker.type = "scatter", displayModeBar = TRUE, source = "plot1") {
   if (is.null(highlight)) highlight <- names
 
   i0 <- which(!names %in% highlight & !label.names %in% highlight)
   i1 <- which(names %in% highlight | label.names %in% highlight)
-  
+
   # Detect wich i1 genes are under the thresholds
   notsig.genes <- which(y <= -log10(psig) | abs(x) < lfc)
   ib <- intersect(notsig.genes, i1)
@@ -4327,7 +4327,7 @@ plotlyVolcano <- function(x, y, names, label.names = names,
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = colors['up']
+            color = colors["up"]
           ),
           showlegend = showlegend
         )
@@ -4340,7 +4340,7 @@ plotlyVolcano <- function(x, y, names, label.names = names,
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = colors['down']
+            color = colors["down"]
           ),
           showlegend = showlegend
         )
@@ -4371,7 +4371,7 @@ plotlyVolcano <- function(x, y, names, label.names = names,
         mode = "markers",
         marker = list(
           size = marker.size,
-          color = colors['notsig']
+          color = colors["notsig"]
         ),
         showlegend = showlegend
       )
@@ -4392,7 +4392,7 @@ plotlyVolcano <- function(x, y, names, label.names = names,
           text = annot_text,
           font = list(
             size = 12 * label.cex,
-            color = colors['up']
+            color = colors["up"]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4408,7 +4408,7 @@ plotlyVolcano <- function(x, y, names, label.names = names,
           text = annot_text,
           font = list(
             size = 12 * label.cex,
-            color = colors['down']
+            color = colors["down"]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4423,7 +4423,7 @@ plotlyVolcano <- function(x, y, names, label.names = names,
           text = label.names[i2],
           font = list(
             size = 12 * label.cex,
-            color = 'black'
+            color = "black"
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4440,7 +4440,7 @@ plotlyVolcano <- function(x, y, names, label.names = names,
           text = label.names[ib][idl],
           font = list(
             size = 12 * label.cex,
-            color = colors['notsig']
+            color = colors["notsig"]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
