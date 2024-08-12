@@ -3326,12 +3326,8 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     ## this put text labels at certain positions with geom_text_repel(
     if (label.type == "text") labelFUN <- ggrepel::geom_text_repel
     if (label.type == "box") labelFUN <- ggrepel::geom_label_repel
-    df2 <- subset(df, name %in% hilight2)
-    if(!is.null(names(hilight2))) {
-      df2$label <- names(hilight2)[match(df2$label, hilight2)]
-    }
     plt <- plt + labelFUN(
-      data = df2,
+      data = subset(df, name %in% hilight2),
       ggplot2::aes(label = label),
       size = 3.0 * cex.lab,
       color = "black",
@@ -3456,11 +3452,11 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                                      cex.clust = 1.5, cex.legend = 1, cex.axis = 1,
                                      xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL,
                                      axis = TRUE, zoom = 1, legend = TRUE, bty = "n",
-                                     hilight = NULL, hilight2 = hilight, hilight.col = NULL,
-                                     hilight.cex = NULL, hilight.lwd = 0.8, opc.low = 1,
+                                     hilight = NULL, hilight2 = hilight, labels = hilight2, 
+                                     hilight.col = NULL, hilight.cex = NULL, hilight.lwd = 0.8,
                                      zlim = NULL, zlog = FALSE, zsym = FALSE, softmax = FALSE,
-                                     opacity = 1, bgcolor = NULL, box = TRUE,
-                                     label.clusters = FALSE, labels = NULL, label.type = NULL,
+                                     opc.low = 1, opacity = 1, bgcolor = NULL, box = TRUE,
+                                     label.clusters = FALSE, label.type = NULL,
                                      tooltip = NULL, theme = NULL, set.par = TRUE,
                                      title = "", title.y = 1, gridcolor = NULL,
                                      source = NULL, key = NULL,
@@ -3522,11 +3518,11 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     hoverinfo <- "none"
   }
 
-  label1 <- rownames(pos)
-  if (!is.null(labels) && labels[1] != FALSE) label1 <- labels
-  label1 <- gsub("[)(]", "", label1) ## HTML labels do not like it...
-  label1 <- gsub("[_]", " ", label1) ## HTML labels do not like it...
-  label1 <- sapply(label1, function(s) paste(strwrap(s, 50), collapse = "<br>"))
+  if(is.null(labels)) {
+    label1 <- rownames(pos)
+  } else {
+    label1 <- labels
+  }
 
   plt <- NULL
   ## Plot the discrete variables
@@ -3706,13 +3702,9 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   ## plot hilighted points with label
   if (!is.null(hilight2)) {
     jj <- which(rownames(df) %in% hilight2)
-    df2 <- df[jj, ,drop=FALSE]
-    if(!is.null(names(hilight2))) {
-      df2$label <- names(hilight2)[match(df2$label, hilight2)]
-    }    
     plt <- plt %>%
       plotly::add_annotations(
-        data = df2,
+        data = df[jj, ,drop=FALSE],
         x = ~x,
         y = ~y,
         text = ~label,
@@ -4280,7 +4272,8 @@ plotlyMA <- function(x, y, names, source = "plot1",
 plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1", "group2"),
                           xlab = "effect size (logFC)", ylab = "significance (-log10p)",
                           lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
-                          marker.size = 5, label = NULL, label.cex = 1, color_up_down = TRUE,
+                          marker.size = 5, label = NULL, label.cex = 1,
+                          color_up_down = TRUE, up_down_colors = c("#f23451","#1f77b4"),
                           marker.type = "scatter", displayModeBar = TRUE, max.absy = NULL) {
   if (is.null(highlight)) highlight <- names
   i0 <- which(!names %in% highlight)
@@ -4314,6 +4307,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
       )
   }
 
+  
   if (length(i1)) {
     if (color_up_down) {
       upreg <- x[i1] > 0
@@ -4327,7 +4321,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = "#f23451"
+            color = up_down_colors[1]
           ),
           showlegend = showlegend
         )
@@ -4340,7 +4334,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = "#1f77b4"
+            color = up_down_colors[2]
           ),
           showlegend = showlegend
         )
@@ -4354,7 +4348,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = "#1f77b4"
+            color = "black"
           ),
           showlegend = showlegend
         )
@@ -4379,11 +4373,17 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
 
   if (!is.null(label) && length(label) > 0) {
     i2 <- which(names %in% label)
+    named.labels <- !is.null(names(label)) 
+    annot.names <- names
+    if(named.labels) {
+      i2 <- which(names %in% names(label))
+      annot.names <- label[match(names,names(label))]
+    }
     i2 <- i2[!i2 %in% ib]
     upreg <- x[i2] > 0
     dwreg <- x[i2] < 0
     if (color_up_down) {
-      annot_text <- names[i2][upreg]
+      annot_text <- annot.names[i2][upreg]
       if (length(annot_text) == 0) annot_text <- ""
       p <- p %>%
         plotly::add_annotations(
@@ -4399,7 +4399,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           yshift = 2,
           textposition = "top"
         )
-      annot_text <- names[i2][dwreg]
+      annot_text <- annot.names[i2][dwreg]
       if (length(annot_text) == 0) annot_text <- ""
       p <- p %>%
         plotly::add_annotations(
@@ -4420,7 +4420,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         plotly::add_annotations(
           x = x[i2],
           y = y[i2],
-          text = names[i2],
+          text = annot.names[i2],
           font = list(
             size = 12 * label.cex,
             color = "#1f77b4"
@@ -4437,7 +4437,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         plotly::add_annotations(
           x = x[ib][idl],
           y = y[ib][idl],
-          text = names[ib][idl],
+          text = annot.names[ib][idl],
           font = list(
             size = 12 * label.cex,
             color = "#787878"

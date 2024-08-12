@@ -4,12 +4,12 @@
 \alias{filterProbes}
 \title{Filter probes from gene expression data}
 \usage{
-filterProbes(genes, gg)
+filterProbes(annot, genes)
 }
 \arguments{
-\item{genes}{Gene expression data.frame with probes as row names.}
+\item{annot}{Gene annotation data.frame with probes as row names.}
 
-\item{gg}{Character vector of probes to filter for.}
+\item{genes}{Character vector of genes to filter for.}
 }
 \value{
 Character vector of matching probe names.
@@ -18,13 +18,13 @@ Character vector of matching probe names.
 Filter probes from gene expression data
 }
 \details{
-This function filters a gene expression data.frame to return only probes matching the input vector.
-It checks the probe name, short probe name, and gene name for matches.
+This function filters a  data.frame to return only probes matching the input vector.
+It checks the rownames, symbol, and ortholog name for matches.
 }
 \examples{
 \dontrun{
-data <- utils::read.csv("expression.csv", row.names = 1)
-probes <- c("FOO", "BAR")
-matches <- filterProbes(data, probes)
+annot <- pgx$genes
+genes <- c("FOO", "BAR")
+probes <- filterProbes(annot, genes)
 }
 }
