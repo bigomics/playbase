@@ -3452,7 +3452,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                                      cex.clust = 1.5, cex.legend = 1, cex.axis = 1,
                                      xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL,
                                      axis = TRUE, zoom = 1, legend = TRUE, bty = "n",
-                                     hilight = NULL, hilight2 = hilight, labels = hilight2, 
+                                     hilight = NULL, hilight2 = hilight, labels = hilight2,
                                      hilight.col = NULL, hilight.cex = NULL, hilight.lwd = 0.8,
                                      zlim = NULL, zlog = FALSE, zsym = FALSE, softmax = FALSE,
                                      opc.low = 1, opacity = 1, bgcolor = NULL, box = TRUE,
@@ -3518,7 +3518,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     hoverinfo <- "none"
   }
 
-  if(is.null(labels)) {
+  if (is.null(labels)) {
     label1 <- rownames(pos)
   } else {
     label1 <- labels
@@ -3704,7 +3704,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     jj <- which(rownames(df) %in% hilight2)
     plt <- plt %>%
       plotly::add_annotations(
-        data = df[jj, ,drop=FALSE],
+        data = df[jj, , drop = FALSE],
         x = ~x,
         y = ~y,
         text = ~label,
@@ -4273,7 +4273,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
                           xlab = "effect size (logFC)", ylab = "significance (-log10p)",
                           lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
                           marker.size = 5, label = NULL, label.cex = 1,
-                          color_up_down = TRUE, up_down_colors = c("#f23451","#1f77b4"),
+                          color_up_down = TRUE, up_down_colors = c("#f23451", "#1f77b4"),
                           marker.type = "scatter", displayModeBar = TRUE, max.absy = NULL) {
   if (is.null(highlight)) highlight <- names
   i0 <- which(!names %in% highlight)
@@ -4307,7 +4307,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
       )
   }
 
-  
+
   if (length(i1)) {
     if (color_up_down) {
       upreg <- x[i1] > 0
@@ -4373,11 +4373,11 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
 
   if (!is.null(label) && length(label) > 0) {
     i2 <- which(names %in% label)
-    named.labels <- !is.null(names(label)) 
+    named.labels <- !is.null(names(label))
     annot.names <- names
-    if(named.labels) {
+    if (named.labels) {
       i2 <- which(names %in% names(label))
-      annot.names <- label[match(names,names(label))]
+      annot.names <- label[match(names, names(label))]
     }
     i2 <- i2[!i2 %in% ib]
     upreg <- x[i2] > 0
