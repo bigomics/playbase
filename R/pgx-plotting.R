@@ -3138,7 +3138,6 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       col1 <- add_opacity(col1, opacity**0.33)
     }
 
-
     tt <- ifelse(!is.null(title), title, "var")
     tt <- "value"
     tooltip <- rownames(pos)
@@ -3147,15 +3146,18 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     if (!is.null(labels) && length(labels) == nrow(pos)) label1 <- labels
 
     df <- data.frame(
-      x = pos[, 1], y = pos[, 2], name = rownames(pos),
-      text = tooltip, label = label1
+      x = pos[, 1],
+      y = pos[, 2],
+      name = rownames(pos),
+      text = tooltip,
+      label = label1
     )
     jj <- order(-table(pt.col)[pt.col]) ## plot less frequent points last...
     df <- df[jj, ]
     pt.col <- pt.col[jj]
     cex1 <- ifelse(length(cex) > 1, cex[jj], cex)
     x <- y <- NULL
-    plt <- ggplot2::ggplot(df, ggplot2::aes(x, y), legend = legend) +
+    plt <- ggplot2::ggplot( df, ggplot2::aes(x, y), legend = legend) +
       ggplot2::geom_point(
         shape = 21,
         alpha = opacity,
@@ -3238,15 +3240,19 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       cpal <- add_opacity(cpal, opacity**0.33)
     }
 
-
     tt <- ifelse(!is.null(title), title, "var")
     tt <- "value"
     tooltip <- paste(rownames(pos), "<br>", tt, "=", round(z, digits = 4))
     label1 <- rownames(pos)
     if (!is.null(labels) && length(labels) == nrow(pos)) label1 <- labels
+
     df <- data.frame(
-      x = pos[, 1], y = pos[, 2], name = rownames(pos),
-      variable = z, text = tooltip, label = label1
+      x = pos[, 1],
+      y = pos[, 2],
+      name = rownames(pos),
+      variable = z,
+      text = tooltip,
+      label = label1
     )
     jj <- order(abs(z), na.last = FALSE)
     df <- df[jj, ] ## strongest last??
@@ -3298,7 +3304,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     } else {
       plt <- plt + theme(legend.position = "none")
     }
-  }
+  }  ## end-of-is-numerice
 
   if (!is.null(hilight)) {
     ## this hilights some points (with color and size)  at certain positions
@@ -3317,12 +3323,15 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   }
 
   if (!is.null(hilight2)) {
-    ## this put text labels at certain positions
+    ## this put text labels at certain positions with geom_text_repel(
     if (label.type == "text") labelFUN <- ggrepel::geom_text_repel
     if (label.type == "box") labelFUN <- ggrepel::geom_label_repel
-    ## geom_text_repel(
+    df2 <- subset(df, name %in% hilight2)
+    if(!is.null(names(hilight2))) {
+      df2$label <- names(hilight2)[match(df2$label, hilight2)]
+    }
     plt <- plt + labelFUN(
-      data = subset(df, name %in% hilight2),
+      data = df2,
       ggplot2::aes(label = label),
       size = 3.0 * cex.lab,
       color = "black",
@@ -3697,9 +3706,13 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   ## plot hilighted points with label
   if (!is.null(hilight2)) {
     jj <- which(rownames(df) %in% hilight2)
+    df2 <- df[jj, ,drop=FALSE]
+    if(!is.null(names(hilight2))) {
+      df2$label <- names(hilight2)[match(df2$label, hilight2)]
+    }    
     plt <- plt %>%
       plotly::add_annotations(
-        data = df[jj, , drop = FALSE],
+        data = df2,
         x = ~x,
         y = ~y,
         text = ~label,
