@@ -882,7 +882,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   # add metabolomics if data.type is metabolomics
   if (pgx$datatype == "metabolomics") {
     dbg("[pgx.add_GMT] Adding metabolomics genesets")
-    metabolic_pathways <- playdata::REACTOME_METABOLITES
+    metabolic_pathways <- c(playdata::REACTOME_METABOLITES, playdata::WP_METABOLITES)
 
     custom.geneset$gmt <- c(custom.geneset$gmt, metabolic_pathways)
 
