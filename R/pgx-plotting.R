@@ -4485,7 +4485,6 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
       hovermode = "closest",
       dragmode = "select"
     ) %>%
-    plotly_modal_default() %>%
     plotly::layout(
       margin = list(l = 0, b = 1, t = 10, r = 10),
       font = list(size = 12),
