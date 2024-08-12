@@ -3157,7 +3157,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     pt.col <- pt.col[jj]
     cex1 <- ifelse(length(cex) > 1, cex[jj], cex)
     x <- y <- NULL
-    plt <- ggplot2::ggplot( df, ggplot2::aes(x, y), legend = legend) +
+    plt <- ggplot2::ggplot(df, ggplot2::aes(x, y), legend = legend) +
       ggplot2::geom_point(
         shape = 21,
         alpha = opacity,
@@ -3304,7 +3304,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     } else {
       plt <- plt + theme(legend.position = "none")
     }
-  }  ## end-of-is-numerice
+  } ## end-of-is-numerice
 
   if (!is.null(hilight)) {
     ## this hilights some points (with color and size)  at certain positions

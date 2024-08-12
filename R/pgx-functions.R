@@ -1392,8 +1392,12 @@ filterProbes <- function(annot, genes) {
 #' Looks up the `new_id_col` in the annot_table and replaces counts rownames.
 #' 
 #' @export
+<<<<<<< HEAD
 rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm=TRUE) {
   type = NA
+=======
+rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm = TRUE) {
+>>>>>>> 91ddcd27614a02aa53fa236d6b41393809ac416b
   if (is.matrix(counts) || is.data.frame(counts)) {
     probes <- rownames(counts)
     type <- "matrix"
@@ -1416,25 +1420,23 @@ rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm=TRUE) {
   # Sum columns of rows with the same gene symbol
   if (type == "matrix") {
     rownames(counts) <- make_unique(symbol)
-##    if(na.rm) counts <- counts[!rownames(counts) %in% c("", "NA"), , drop = FALSE]
     return(counts)
   } else if( type == "character") {
     return(symbol)
   } else if( type == "vector") {
     names(counts) <- make_unique(symbol)
-##    if(na.rm) counts <- counts[!names(counts) %in% c("", "NA")]
     return(counts)
   }
 }
 
 #' @export
-map_probes <- function(annot, genes, column=NULL) {
+map_probes <- function(annot, genes, column = NULL) {
   ## check probe name, short probe name or gene name for match
   annot <- cbind(annot, rownames(annot))
-  if(is.null(column)) {
-    column <- which.max(apply(annot, 2, function(x) sum(genes %in% x, na.rm=TRUE)))
+  if (is.null(column)) {
+    column <- which.max(apply(annot, 2, function(x) sum(genes %in% x, na.rm = TRUE)))
   }
-  ii <- which( annot[,column] %in% genes)
+  ii <- which(annot[, column] %in% genes)
   rownames(annot)[ii]
 }
 
