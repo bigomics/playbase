@@ -222,7 +222,10 @@ read_files <- function(dir = ".", pattern = NULL) {
 #' Read counts data from file
 #'
 #' @param file string. path to file
-#' @param convert_names boolean.
+#' @param drop_na_rows boolean. drop rows without rownames
+#' @param first boolean. drop multiple feature names (separated by ;)
+#' @param unique boolean. make duplicated rows unique by pasting a number
+#'
 #' @details This function reads a count matrix using \code{playbase::read.as_matrix()},
 #' validates it with \code{validate_counts()}, and optionally converts row names from IDs to
 #' gene symbols using \code{playbase::probe2symbol()}.
@@ -235,8 +238,14 @@ read_files <- function(dir = ".", pattern = NULL) {
 #' counts <- read_counts(playbase::example_file("counts.csv"))
 #' }
 #' @export
-read_counts <- function(file, drop_na_rows = TRUE) {
-  df <- read.as_matrix(file)
+read_counts <- function(file, drop_na_rows = TRUE, first = FALSE, unique = TRUE) {
+  if (is.character(file)) {
+    df <- read.as_matrix(file)
+  } else if (is.matrix(file) || is.data.frame(file)) {
+    df <- file
+  } else {
+    stop("input error")
+  }
   is_valid <- validate_counts(df)
   if (!is_valid) stop("Counts file is not valid.")
   is.numeric.matrix <- all(apply(df, 2, is.numeric))
@@ -249,7 +258,8 @@ read_counts <- function(file, drop_na_rows = TRUE) {
   df <- df[!(rownames(df) %in% c(NA, "", "NA")), , drop = FALSE]
   if (drop_na_rows) df <- df[rowMeans(is.na(df)) < 1, , drop = FALSE]
   ##  df <- rowsum(df, rownames(df), reorder = FALSE)  ## sum or average???
-  rownames(df) <- first_feature(rownames(df))
+  if (first) rownames(df) <- first_feature(rownames(df))
+  if (unique) rownames(df) <- make_unique(rownames(df))
   return(df)
 }
 
