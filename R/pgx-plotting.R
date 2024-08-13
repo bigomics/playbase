@@ -4297,9 +4297,7 @@ plotlyVolcano <- function(x,
                           colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#1f77b4"),
                           marker.type = "scatter",
                           displayModeBar = TRUE,
-                          source = "plot1")
-{
-
+                          source = "plot1") {
   if (is.null(highlight)) highlight <- names
 
   i0 <- which(!names %in% highlight & !label.names %in% highlight)
