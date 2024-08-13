@@ -1282,8 +1282,11 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
       xlab = "UMAP-x  (genes)",
       ylab = "UMAP-y  (genes)",
       hilight = hilight1,
-      zlim = zlim, zsym = TRUE, softmax = 1,
-      cex = cex, cex.lab = cex.lab,
+      zlim = zlim,
+      zsym = TRUE,
+      softmax = 1,
+      cex = cex,
+      cex.lab = cex.lab,
       title = title1, cex.title = 1.0,
       cex.legend = cex.legend,
       legend = TRUE,
@@ -3452,7 +3455,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                                      cex.clust = 1.5, cex.legend = 1, cex.axis = 1,
                                      xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL,
                                      axis = TRUE, zoom = 1, legend = TRUE, bty = "n",
-                                     hilight = NULL, hilight2 = hilight, labels = hilight2,
+                                     hilight = NULL, hilight2 = hilight, labels = rownames(pos),
                                      hilight.col = NULL, hilight.cex = NULL, hilight.lwd = 0.8,
                                      zlim = NULL, zlog = FALSE, zsym = FALSE, softmax = FALSE,
                                      opc.low = 1, opacity = 1, bgcolor = NULL, box = TRUE,
@@ -3565,7 +3568,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
 
     ## plot less frequent points first... (NEED RETHINK)
     jj <- order(-table(z1)[z1])
-    df <- df[jj, ]
+    df <- df[jj, , drop = FALSE]
   }
 
   ## Plot the continous variables
