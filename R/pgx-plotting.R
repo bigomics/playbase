@@ -1937,13 +1937,9 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
   df <- data.frame(x = rank(-fc), y = fc, trace = rnk.trace, cc = cc)
 
   ## downsample
-  # ai=2
-  # browser()
   ii <- which(rownames(df) %in% gset)
   unknown_parameter <- round(nrow(df) / 1000)
   if (unknown_parameter == 0) unknown_parameter <- round(nrow(df) / 10)
-
-
   ii <- unique(c(ii, seq(1, nrow(df), unknown_parameter)))
   df <- df[ii, ]
   df <- df[order(-df$y), ]
@@ -1953,7 +1949,6 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
 
   ## colorbar segments
   db <- nrow(df) / 11
-
   bb <- round(seq(1, nrow(df), db))
   cbar.x <- df$x[bb]
   cbar.xend <- df$x[c(bb[-1], nrow(df))]
