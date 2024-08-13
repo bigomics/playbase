@@ -238,10 +238,10 @@ read_files <- function(dir = ".", pattern = NULL) {
 #' counts <- read_counts(playbase::example_file("counts.csv"))
 #' }
 #' @export
-read_counts <- function(file, drop_na_rows = TRUE, first=FALSE, unique=TRUE) {
-  if(is.character(file)) {
+read_counts <- function(file, drop_na_rows = TRUE, first = FALSE, unique = TRUE) {
+  if (is.character(file)) {
     df <- read.as_matrix(file)
-  } else if(is.matrix(file) || is.data.frame(file)) {
+  } else if (is.matrix(file) || is.data.frame(file)) {
     df <- file
   } else {
     stop("input error")
@@ -258,8 +258,8 @@ read_counts <- function(file, drop_na_rows = TRUE, first=FALSE, unique=TRUE) {
   df <- df[!(rownames(df) %in% c(NA, "", "NA")), , drop = FALSE]
   if (drop_na_rows) df <- df[rowMeans(is.na(df)) < 1, , drop = FALSE]
   ##  df <- rowsum(df, rownames(df), reorder = FALSE)  ## sum or average???
-  if(first) rownames(df) <- first_feature(rownames(df))
-  if(unique) rownames(df) <- make_unique(rownames(df))
+  if (first) rownames(df) <- first_feature(rownames(df))
+  if (unique) rownames(df) <- make_unique(rownames(df))
   return(df)
 }
 
