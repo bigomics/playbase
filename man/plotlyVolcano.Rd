@@ -20,6 +20,7 @@ plotlyVolcano(
   label = NULL,
   label.cex = 1,
   color_up_down = TRUE,
+  up_down_colors = c("#f23451", "#1f77b4"),
   marker.type = "scatter",
   displayModeBar = TRUE,
   max.absy = NULL

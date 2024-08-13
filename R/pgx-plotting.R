@@ -3518,9 +3518,9 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   if (type == "numeric") var <- round(var, digits = 4)
   hoverinfo <- "text"
   tooltip1 <- paste0(
-    rownames(pos),
-    "<br>value = ", var,
-    "<br>x = ", round(pos[, 1], 2), "; y = ", round(pos[, 2], 2)
+    "<b>", rownames(pos), "</b>",
+    "<br>value: <b>", var,
+    "</b><br>x: <b>", round(pos[, 1], 2), "</b><br>y: <b>", round(pos[, 2], 2), "</b>"
   )
   if (!is.null(tooltip) && length(tooltip) == length(var)) {
     tooltip1 <- paste0(tooltip1, "<br>", tooltip)
@@ -3989,7 +3989,8 @@ pgx.stackedBarplot <- function(x,
     y = ~Effect,
     type = "bar",
     name = ~variable,
-    color = ~variable
+    color = ~variable,
+    hovertemplate = "<b>%{x}</b><br>%{fullData.name}: <b>%{y}</b><br><extra></extra>"
   ) %>%
     plotly::layout(
       showlegend = showlegend,
@@ -4071,18 +4072,23 @@ darkmode <- function(p, dim = 2) {
 #' @return A plotly interactive MA plot object.
 #'
 #' @export
-plotlyMA <- function(x, y, names, source = "plot1",
+plotlyMA <- function(x, y, names, label.names = names,
                      group.names = c("group1", "group2"),
                      xlab = "average expression (log2.CPM)",
                      ylab = "effect size (log2.FC)",
                      lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
-                     marker.size = 5, label = NULL, label.cex = 1, color_up_down = TRUE,
-                     marker.type = "scatter", displayModeBar = TRUE) {
+                     marker.size = 5, label = NULL, label.cex = 1,
+                     color_up_down = TRUE,
+                     colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#1f77b4"),
+                     marker.type = "scatter", source = "plot1",
+                     displayModeBar = TRUE) {
   if (is.null(highlight)) highlight <- names
-  i0 <- which(!names %in% highlight)
-  i1 <- which(names %in% highlight)
+  i0 <- which(!names %in% highlight & !label.names %in% highlight)
+  i1 <- which(names %in% highlight | label.names %in% highlight)
 
-  p <- plotly::plot_ly()
+  p <- plotly::plot_ly(
+    hovertemplate = "<b>%{text}</b><br><b>Average expression</b>: %{x:.2f}<br><b>Effect size</b>: %{y:.2f}<extra></extra>"
+  )
 
   p <- p %>%
     plotly::event_register("plotly_hover") %>%
@@ -4117,7 +4123,7 @@ plotlyMA <- function(x, y, names, source = "plot1",
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = "#f23451"
+            color = colors["up"]
           ),
           showlegend = showlegend
         )
@@ -4130,7 +4136,7 @@ plotlyMA <- function(x, y, names, source = "plot1",
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = "#1f77b4"
+            color = colors["down"]
           ),
           showlegend = showlegend
         )
@@ -4144,7 +4150,7 @@ plotlyMA <- function(x, y, names, source = "plot1",
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = "#1f77b4"
+            color = colors["notsig"]
           ),
           showlegend = showlegend
         )
@@ -4152,11 +4158,11 @@ plotlyMA <- function(x, y, names, source = "plot1",
   }
 
   if (!is.null(label) && length(label) > 0) {
-    i2 <- which(names %in% label)
+    i2 <- which(names %in% label | label.names %in% label)
     if (color_up_down) {
       upreg <- y[i2] > 0
       dwreg <- y[i2] < 0
-      annot_text <- names[i2][upreg]
+      annot_text <- label.names[i2][upreg]
       if (length(annot_text) == 0) annot_text <- ""
       p <- p %>%
         plotly::add_annotations(
@@ -4165,14 +4171,14 @@ plotlyMA <- function(x, y, names, source = "plot1",
           text = annot_text,
           font = list(
             size = 12 * label.cex,
-            color = "#f23451"
+            color = colors["up"]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
           yshift = 2,
           textposition = "top"
         )
-      annot_text <- names[i2][dwreg]
+      annot_text <- label.names[i2][dwreg]
       if (length(annot_text) == 0) annot_text <- ""
       p <- p %>%
         plotly::add_annotations(
@@ -4181,7 +4187,7 @@ plotlyMA <- function(x, y, names, source = "plot1",
           text = annot_text,
           font = list(
             size = 12 * label.cex,
-            color = "#1f77b4"
+            color = colors["down"]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4193,10 +4199,10 @@ plotlyMA <- function(x, y, names, source = "plot1",
         plotly::add_annotations(
           x = x[i2],
           y = y[i2],
-          text = names[i2],
+          text = label.names[i2],
           font = list(
             size = 12 * label.cex,
-            color = "#1f77b4"
+            color = colors["notsig"]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4281,19 +4287,22 @@ plotlyMA <- function(x, y, names, source = "plot1",
 #' @return A plotly interactive volcano plot object.
 #'
 #' @export
-plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1", "group2"),
+plotlyVolcano <- function(x, y, names, label.names = names,
+                          group.names = c("group1", "group2"),
                           xlab = "effect size (logFC)", ylab = "significance (-log10p)",
                           lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
-                          marker.size = 5, label = NULL, label.cex = 1,
-                          color_up_down = TRUE, up_down_colors = c("#f23451", "#1f77b4"),
-                          marker.type = "scatter", displayModeBar = TRUE, max.absy = NULL) {
+                          marker.size = 5, label = NULL, label.cex = 1, max.absy = NULL,
+                          color_up_down = TRUE,
+                          colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#1f77b4"),
+                          marker.type = "scatter", displayModeBar = TRUE, source = "plot1") {
   if (is.null(highlight)) highlight <- names
-  i0 <- which(!names %in% highlight)
-  i1 <- which(names %in% highlight)
+
+  i0 <- which(!names %in% highlight & !label.names %in% highlight)
+  i1 <- which(names %in% highlight | label.names %in% highlight)
 
   # Detect wich i1 genes are under the thresholds
-  unsig.genes <- which(y <= -log10(psig) | abs(x) < lfc)
-  ib <- intersect(unsig.genes, i1)
+  notsig.genes <- which(y <= -log10(psig) | abs(x) < lfc)
+  ib <- intersect(notsig.genes, i1)
 
   p <- plotly::plot_ly(
     source = source,
@@ -4333,7 +4342,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = up_down_colors[1]
+            color = colors["up"]
           ),
           showlegend = showlegend
         )
@@ -4346,7 +4355,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = up_down_colors[2]
+            color = colors["down"]
           ),
           showlegend = showlegend
         )
@@ -4377,25 +4386,19 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         mode = "markers",
         marker = list(
           size = marker.size,
-          color = "#787878"
+          color = colors["notsig"]
         ),
         showlegend = showlegend
       )
   }
 
   if (!is.null(label) && length(label) > 0) {
-    i2 <- which(names %in% label)
-    named.labels <- !is.null(names(label))
-    annot.names <- names
-    if (named.labels) {
-      i2 <- which(names %in% names(label))
-      annot.names <- label[match(names, names(label))]
-    }
+    i2 <- which(names %in% label | label.names %in% label)
     i2 <- i2[!i2 %in% ib]
     upreg <- x[i2] > 0
     dwreg <- x[i2] < 0
     if (color_up_down) {
-      annot_text <- annot.names[i2][upreg]
+      annot_text <- label.names[i2][upreg]
       if (length(annot_text) == 0) annot_text <- ""
       p <- p %>%
         plotly::add_annotations(
@@ -4404,14 +4407,14 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           text = annot_text,
           font = list(
             size = 12 * label.cex,
-            color = "#f23451"
+            color = colors["up"]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
           yshift = 2,
           textposition = "top"
         )
-      annot_text <- annot.names[i2][dwreg]
+      annot_text <- label.names[i2][dwreg]
       if (length(annot_text) == 0) annot_text <- ""
       p <- p %>%
         plotly::add_annotations(
@@ -4420,7 +4423,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           text = annot_text,
           font = list(
             size = 12 * label.cex,
-            color = "#1f77b4"
+            color = colors["down"]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4432,10 +4435,10 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         plotly::add_annotations(
           x = x[i2],
           y = y[i2],
-          text = annot.names[i2],
+          text = label.names[i2],
           font = list(
             size = 12 * label.cex,
-            color = "#1f77b4"
+            color = "black"
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4449,10 +4452,10 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         plotly::add_annotations(
           x = x[ib][idl],
           y = y[ib][idl],
-          text = annot.names[ib][idl],
+          text = label.names[ib][idl],
           font = list(
             size = 12 * label.cex,
-            color = "#787878"
+            color = colors["notsig"]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4497,7 +4500,6 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
       hovermode = "closest",
       dragmode = "select"
     ) %>%
-    plotly_modal_default() %>%
     plotly::layout(
       margin = list(l = 0, b = 1, t = 10, r = 10),
       font = list(size = 12),
@@ -5500,8 +5502,8 @@ pgx.barplot.PLOTLY <- function(
       hoverinfo = hoverinfo,
       hovertemplate = paste0(
         "<b>%{hovertext}</b><br>",
-        "%{yaxis.title.text}: %{y:", hoverformat, "}<br>",
-        "<extra></extra>", x
+        "<b>%{yaxis.title.text}:</b> %{y:", hoverformat, "}<br>",
+        "<extra></extra>"
       ),
       showlegend = show_legend
     )
