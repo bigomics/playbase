@@ -911,19 +911,25 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       min.geneset.size = 3,
       max.geneset.size = 9999,
       min_gene_frequency = 1,
-      all_genes = pgx$all_genes,
+      all_genes = pgx$genes$human_ortholog,
       annot = pgx$genes,
       filter_genes = FALSE
     )
 
     custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% pgx$genes$symbol, drop = FALSE]
     ## merge_sparse_matrix removes duplicated genesets
-    G <- playbase::merge_sparse_matrix(
-      m1 = G,
-      m2 = Matrix::t(custom_gmt)
-    )
-    G <- G[rownames(G) %in% pgx$genes$symbol, , drop = FALSE]
-    remove(custom_gmt)
+
+    if (nrow(G) > 0) {
+      G <- playbase::merge_sparse_matrix(
+        m1 = G,
+        m2 = Matrix::t(custom_gmt)
+      )
+      G <- G[rownames(G) %in% pgx$genes$symbol, , drop = FALSE]
+      remove(custom_gmt)
+    } else {
+      G <- custom_gmt
+      remove(custom_gmt)
+    }
   }
 
   ## -----------------------------------------------------------
