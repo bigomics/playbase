@@ -610,7 +610,7 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
 
-  if (datatype == "metabolomics") {
+  if (!is.null(datatype) && datatype == "metabolomics") {
     return("metabolomics")
   }
 
