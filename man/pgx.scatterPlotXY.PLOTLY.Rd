@@ -26,19 +26,19 @@ pgx.scatterPlotXY.PLOTLY(
   bty = "n",
   hilight = NULL,
   hilight2 = hilight,
+  labels = hilight2,
   hilight.col = NULL,
   hilight.cex = NULL,
   hilight.lwd = 0.8,
-  opc.low = 1,
   zlim = NULL,
   zlog = FALSE,
   zsym = FALSE,
   softmax = FALSE,
+  opc.low = 1,
   opacity = 1,
   bgcolor = NULL,
   box = TRUE,
   label.clusters = FALSE,
-  labels = NULL,
   label.type = NULL,
   tooltip = NULL,
   theme = NULL,
@@ -88,6 +88,8 @@ pgx.scatterPlotXY.PLOTLY(
 
 \item{hilight2}{Secondary highlight indices}
 
+\item{labels}{Point labels}
+
 \item{hilight.col}{Color for highlighted points}
 
 \item{hilight.cex}{Size for highlighted points}
@@ -109,8 +111,6 @@ pgx.scatterPlotXY.PLOTLY(
 \item{box}{Draw box around plot? Logical}
 
 \item{label.clusters}{Logical, label clusters?}
-
-\item{labels}{Point labels}
 
 \item{label.type}{Label type, "text" or "box"}
 
