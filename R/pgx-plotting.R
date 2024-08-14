@@ -4395,6 +4395,8 @@ plotlyVolcano <- function(x,
       )
   }
 
+  ## label those points that are in 'label' vector. It should match
+  ## either the names or label.names
   if (!is.null(label) && length(label) > 0) {
     i2 <- which(names %in% label | label.names %in% label)
     i2 <- i2[!i2 %in% ib]
@@ -4466,10 +4468,11 @@ plotlyVolcano <- function(x,
           textposition = "top"
         )
     }
-  }
+  } ## end of if-label
 
+  ## draw vertical logFC threshold lines at specified logFC
   y0 <- -log10(psig)
-  y1 <- 1.05 * max(y, na.rm = TRUE)
+  y1 <- 0.95 * max(y, na.rm = TRUE)
   xx <- 1.05 * max(abs(x), na.rm = TRUE)
   abline1 <- list(
     type = "line", x0 = -lfc, x1 = -lfc, y0 = 0, y1 = y1,
@@ -4479,17 +4482,23 @@ plotlyVolcano <- function(x,
     type = "line", x0 = +lfc, x1 = +lfc, y0 = 0, y1 = y1,
     line = list(dash = "dot", width = 1, color = "grey")
   )
+  ## draw horizontal significance lines at p=0.05
   abline3 <- list(
     type = "line", x0 = -xx, x1 = +xx, y0 = y0, y1 = y0,
     line = list(dash = "dot", width = 1, color = "grey")
   )
+  if( lfc == 0 ){
+    significance.lines = list(abline3)
+  } else {
+    significance.lines = list(abline1, abline2, abline3)
+  }
+  
+  ## calculate explicit ranges for x and y so we can add some padding.
   max.absx <- max(max(abs(x), na.rm = TRUE), lfc * 1.2, na.rm = TRUE)
-
   if (is.null(max.absy)) {
     max.absy <- max(max(abs(y), na.rm = TRUE), y0 * 1.2, na.rm = TRUE)
   }
   xrange <- c(-1, 1) * max.absx * 1.05
-
   if (min(x, na.rm = TRUE) >= 0) xrange <- c(0, 1) * max.absx * 1.05
   yrange <- c(0, 1) * max.absy * 1.05
   xaxis <- list(title = xlab, range = xrange, showgrid = FALSE)
@@ -4497,8 +4506,9 @@ plotlyVolcano <- function(x,
 
   p <- p %>%
     plotly::layout(
-      shapes = list(abline1, abline2, abline3),
-      xaxis = xaxis, yaxis = yaxis,
+      shapes = significance.lines,
+      xaxis = xaxis,
+      yaxis = yaxis,
       showlegend = showlegend,
       hovermode = "closest",
       dragmode = "select"
@@ -4518,11 +4528,9 @@ plotlyVolcano <- function(x,
 #' @export
 plotlyVolcano_multi <- function(FC,
                                 Q,
-                                names = NULL,
                                 by_sig = TRUE,
                                 fdr = 0.05,
                                 lfc = 0,
-                                gset = NULL,
                                 label = NULL,
                                 share_axis = FALSE,
                                 title_y = "significance (-log10q)",
@@ -4540,16 +4548,19 @@ plotlyVolcano_multi <- function(FC,
                                 layout_args = list(),
                                 highlight = NULL,
                                 ...) {
+
+  dots <- list(...)
+
   ## Get tables and genes
   fc <- as.matrix(FC)
   qv <- as.matrix(Q)
-  if (is.null(names)) {
-    all_genes <- rownames(FC)
-  } else {
-    all_genes <- names
-  }
   titles <- colnames(fc)
 
+  all_genes <- rownames(FC)
+  all_labels <- all_genes
+  if("names" %in% names(dots)) all_genes <- dots$names
+  if("label.names" %in% names(dots)) all_labels <- dots$label.names  
+  
   # Prepare collection list
   nplots <- min(24, length(titles))
   sub_plots <- vector("list", length = length(nplots))
@@ -4560,21 +4571,27 @@ plotlyVolcano_multi <- function(FC,
     title_i <- titles[i]
 
     # Set marker colour group
+    hi.genes <- NULL
     if (by_sig) {
       is.sig <- (qval <= fdr & abs(fx) >= lfc)
-      sig.genes <- all_genes[is.sig]
-    } else if (!is.null(gset)) {
-      sig.genes <- all_genes[all_genes %in% gset]
-    } else {
-      sig.genes <- highlight
+      hi.genes <- all_genes[is.sig]
+    }
+    if(!is.null(highlight)) {
+      hi.genes1 <- all_genes[all_genes %in% highlight | all_labels %in% highlight]
+      if(!is.null(hi.genes)) {
+        hi.genes <- intersect(hi.genes, hi.genes1)
+      } else {
+        hi.genes <- hi.genes1
+      }
     }
 
     # Take -log and add 1e-12 to remove 0, and avoid Infs
     qval <- -log10(qval + 1e-12)
 
     # Set labels
-    if (!is.null(label) && is.matrix(label)) {
-      label <- label[, i]
+    sub.label <- label
+    if (!is.null(label) && is.list(label)) {
+      sub.label <- label[[i]]
     }
 
     # Set title
@@ -4588,12 +4605,10 @@ plotlyVolcano_multi <- function(FC,
     sub_plots[[i]] <- plotlyVolcano(
       x = fx,
       y = qval,
-      names = all_genes,
-      label.names = all_genes,
+      label = sub.label,
       marker.type = "scattergl",
       marker.size = cex,
-      highlight = sig.genes,
-      label = label,
+      highlight = hi.genes,
       label.cex = label.cex,
       group.names = c("group1", "group0"),
       psig = fdr,
@@ -4605,7 +4620,7 @@ plotlyVolcano_multi <- function(FC,
     ) %>%
       plotly::add_annotations(
         text = paste("<b>", title_i, "</b>"),
-        font = list(size = 16),
+        font = list(size = 15),
         showarrow = FALSE,
         xanchor = "centre",
         yanchor = "bottom",
@@ -4627,26 +4642,41 @@ plotlyVolcano_multi <- function(FC,
   }
   suppressWarnings(
     all_plts <- plotly::subplot(sub_plots,
-      nrows = n_rows, margin = interplot_margin,
-      titleY = FALSE, titleX = FALSE, shareX = shareX, shareY = shareY
+      nrows = n_rows,
+      margin = interplot_margin,
+      titleY = FALSE,
+      titleX = FALSE,
+      shareX = shareX,
+      shareY = shareY
     ) %>%
       # Add common axis titles
       plotly::layout(
         annotations = modifyList(list(
           list(
-            x = title_y_offset, y = 0.5, text = title_y,
+            x = title_y_offset,
+            y = 0.5,
+            text = title_y,
             font = list(size = 13),
             textangle = 270,
-            showarrow = FALSE, xref = "paper", yref = "paper"
+            showarrow = FALSE,
+            xref = "paper",
+            yref = "paper"
           ),
           list(
-            x = 0.5, y = title_x_offset, text = title_x,
+            x = 0.5,
+            y = title_x_offset,
+            text = title_x,
             font = list(size = 13),
-            showarrow = FALSE, xref = "paper", yref = "paper"
+            showarrow = FALSE,
+            xref = "paper",
+            yref = "paper"
           )
         ), annotation_args),
         margin = modifyList(
-          list(l = margin_l, b = margin_b),
+          list(
+            l = margin_l,
+            b = margin_b
+          ),
           layout_args
         )
       )
