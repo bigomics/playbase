@@ -71,16 +71,16 @@ getGeneAnnotation <- function(...) {
 ngs.getGeneAnnotation <- function(
     organism,
     probes,
-    use = c("annothub","orthogene")[1],
+    use = c("annothub", "orthogene")[1],
     use.ah = NULL,
     verbose = TRUE) {
   annot <- NULL
 
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
-  if (tolower(organism) == "rat")  organism <- "Rattus norvegicus"
-  if (tolower(organism) == "dog")  organism <- "Canis familiaris"
-  
+  if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
+  if (tolower(organism) == "dog") organism <- "Canis familiaris"
+
   if (is.null(annot) && use == "annothub") {
     annot <- getGeneAnnotation.ANNOTHUB(
       organism = organism,
@@ -91,14 +91,14 @@ ngs.getGeneAnnotation <- function(
   }
 
   if (is.null(annot) && use == "orthogene") {
-    organism <- sub("Canis familiaris","Canis lupus familiaris",organism)
+    organism <- sub("Canis familiaris", "Canis lupus familiaris", organism)
     annot <- getGeneAnnotation.ORTHOGENE(
       organism = organism,
       probes = probes,
       verbose = verbose
     )
   }
-  
+
   ## clean up
   annot <- cleanupAnnotation(annot)
 
@@ -872,7 +872,7 @@ allSpecies.ANNOTHUB <- function() {
   ah <- AnnotationHub::AnnotationHub() ## make global??
   db <- AnnotationHub::query(ah, "OrgDb")
   M <- AnnotationHub::mcols(db)
-  ##M <- data.frame(playbase::SPECIES_TABLE)
+  ## M <- data.frame(playbase::SPECIES_TABLE)
   M <- M[M$rdataclass == "OrgDb", ]
   species <- as.character(M[, "species"])
   names(species) <- M[, "taxonomyid"]
@@ -1188,7 +1188,7 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
   }
 
   ## pull summary
-  info[['SUMMARY']] <- "(no info available)"
+  info[["SUMMARY"]] <- "(no info available)"
   ortholog <- getHumanOrtholog(organism, symbol)$human
   if (ortholog %in% names(playdata::GENE_SUMMARY)) {
     info[["SUMMARY"]] <- playdata::GENE_SUMMARY[ortholog]
@@ -1199,14 +1199,14 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
 
 #' Automatically detects species by trying to detect probetype from
 #' list of test_species. Warning. bit slow.
-#' 
+#'
 #' @export
 detect_species_probetype <- function(probes,
-                                     test_species = c("human","mouse","rat")) {
+                                     test_species = c("human", "mouse", "rat")) {
   probes <- unique(clean_probe_names(probes))
   ptype <- list()
-  for(s in test_species) {
-    ptype[[s]] <- detect_probetype(s, probes, use.ah=FALSE)
+  for (s in test_species) {
+    ptype[[s]] <- detect_probetype(s, probes, use.ah = FALSE)
   }
   ptype <- unlist(ptype)
   out <- list(
