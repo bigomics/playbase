@@ -936,23 +936,25 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## create the full GENE matrix (always collapsed by gene)
   ## -----------------------------------------------------------
 
-  X <- pgx$X
-  if (!all(rownames(X) %in% pgx$genes$symbol)) {
-    X <- rename_by(X, pgx$genes, "symbol") ## pgx-functions.R
-    X <- X[!rownames(X) == "", , drop = FALSE]
-    if (any(duplicated(rownames(X)))) {
-      X <- log2(rowsum(2**X, rownames(X)))
+  X_geneset <- pgx$X
+  if (!all(rownames(X_geneset) %in% pgx$genes$symbol)) {
+    X_geneset <- rename_by(X_geneset, pgx$genes, "symbol") ## pgx-functions.R
+    X_geneset <- X_geneset[!rownames(X_geneset) == "", , drop = FALSE]
+    # remove NA
+    X_geneset <- X_geneset[!is.na(rownames(X_geneset)), , drop = FALSE]
+    if (any(duplicated(rownames(X_geneset)))) {
+      X_geneset <- log2(rowsum(2**X_geneset, group=rownames(X_geneset)))
     }
   }
 
   ## if reduced samples
   ss <- rownames(pgx$model.parameters$exp.matrix)
   if (!is.null(ss)) {
-    X <- X[, ss, drop = FALSE]
+    X_geneset <- X_geneset[, ss, drop = FALSE]
   }
 
   ## -----------------------------------------------------------
-  ## Align the GENESETxGENE matrix with genes in X
+  ## Align the GENESETxGENE matrix with genes in X_geneset
   ## -----------------------------------------------------------
   message("[pgx.add_GMT] Matching gene set matrix...")
   gg <- rownames(X)
@@ -964,7 +966,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   colnames(matX) <- colnames(G)
   G <- rbind(G, matX)
   G <- G[match(gg, rownames(G)), , drop = FALSE]
-  rownames(G) <- rownames(X) ## original name (e.g. mouse)
+  rownames(G) <- rownames(X_geneset) ## original name (e.g. mouse)
 
   ## -----------------------------------------------------------
   ## Prioritize gene sets by fast rank-correlation
@@ -978,7 +980,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     ## Reduce gene sets by selecting top varying genesets. We use the
     ## very fast sparse rank-correlation for approximate single sample
     ## geneset activation.
-    cX <- X - rowMeans(X, na.rm = TRUE) ## center!
+    cX <- X_geneset - rowMeans(X_geneset, na.rm = TRUE) ## center!
     cX <- apply(cX, 2, rank)
     gsetX <- qlcMatrix::corSparse(G, cX) ## slow!
     grp <- pgx$model.parameters$group
