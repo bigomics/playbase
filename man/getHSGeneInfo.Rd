@@ -4,7 +4,7 @@
 \alias{getHSGeneInfo}
 \title{Get human gene information from annotation packages}
 \usage{
-getHSGeneInfo(gene, feature, as.link = TRUE)
+getHSGeneInfo(gene, as.link = TRUE)
 }
 \arguments{
 \item{as.link}{Logical indicating whether to return symbols as hyperlinks. Default is TRUE.}
