@@ -432,9 +432,9 @@ pgx.createPGX <- function(counts,
     pgx <- pgx.add_GMT(pgx = pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
   }
 
-  dbg("[createPGX] dim(pgx$X) = ",dim(pgx$X))
-  dbg("[createPGX] dim(pgx$counts) = ",dim(pgx$counts))
-  dbg("[createPGX] dim(pgx$GMT) = ",dim(pgx$GMT))  
+  dbg("[createPGX] dim(pgx$X) = ", dim(pgx$X))
+  dbg("[createPGX] dim(pgx$counts) = ", dim(pgx$counts))
+  dbg("[createPGX] dim(pgx$GMT) = ", dim(pgx$GMT))
 
   return(pgx)
 }
@@ -845,7 +845,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     go.size <- sapply(go.genesets, length)
     custom.geneset$info$GSET_SIZE <- c(custom.geneset$info$GSET_SIZE, go.size)
   }
-  
+
   if (!is.null(custom.geneset$gmt)) {
     message("[pgx.add_GMT] Adding custom genesets...")
     ## convert gmt standard to SPARSE matrix: gset in rows, genes in
@@ -877,7 +877,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
   X <- pgx$X
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
-    X <- rename_by(X, pgx$genes, "symbol", na.rm=TRUE) ## pgx-functions.R
+    X <- rename_by(X, pgx$genes, "symbol", na.rm = TRUE) ## pgx-functions.R
     if (any(duplicated(rownames(X)))) {
       X <- log2(rowsum(2**X, rownames(X)))
     }
@@ -955,21 +955,21 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     G <- G[, jj, drop = FALSE]
   }
 
-  
+
   ## NEED RETHINK!!! IK: Should we convert to probes???
-  if(0) {
+  if (0) {
     map2probes <- match(pgx$genes$symbol, rownames(G))
-    G <- G[map2probes,]
+    G <- G[map2probes, ]
     rownames(G) <- rownames(pgx$genes)
   }
-  
+
   ## normalize columns
   G <- playbase::normalize_cols(G)
 
   pgx$GMT <- G
-  pgx$custom.geneset <- custom.geneset  ## really? this can be BIG...
+  pgx$custom.geneset <- custom.geneset ## really? this can be BIG...
   message(glue::glue("[pgx.add_GMT] Final GMT: {nrow(G)} x {ncol(G)}"))
-  
+
   ## Clean up and return pgx object
   rm(gsetX.bygroup, gsetX, G)
   gc()

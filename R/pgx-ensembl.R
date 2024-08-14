@@ -569,8 +569,8 @@ probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE)
   return(orgdb)
 }
 
-#' 
-#' 
+#'
+#'
 #' @export
 getOrgDb <- function(organism, use.ah = NULL) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
@@ -628,7 +628,7 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   names(key_matches) <- keytypes
 
   dbg("[detect_probetype] 1: head(probes) = ", head(probes))
-  
+
   ## clean up probes
   probes <- probes[!is.na(probes) & probes != ""]
   probes <- sapply(strsplit(probes, split = ";"), head, 1) ## take first
@@ -636,7 +636,7 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   probes <- clean_probe_names(probes)
 
   dbg("[detect_probetype] 2: head(probes) = ", head(probes))
-  
+
   ## Subset probes if too many
   if (length(probes) > nprobe) {
     if (nprobe > length(probes)) nprobe <- length(probes)
@@ -875,8 +875,8 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
 #'
 #' @export
 allSpecies <- function() {
-  gp.species <- allSpecies.ORTHOGENE() 
-  ah.species <- allSpecies.ANNOTHUB() 
+  gp.species <- allSpecies.ORTHOGENE()
+  ah.species <- allSpecies.ANNOTHUB()
   both <- intersect(names(gp.species), names(ah.species))
   gp.species[both]
 }
@@ -1111,7 +1111,6 @@ combine_feature_names <- function(annot, target) {
 
 #' @export
 getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
-
   if (is.null(gene) || length(gene) == 0) {
     return(NULL)
   }
@@ -1119,34 +1118,35 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
     return(NULL)
   }
 
-  if(0) {
-    organism = "Human"
-    gene = "CDK4"
+  if (0) {
+    organism <- "Human"
+    gene <- "CDK4"
   }
-  
-  orgdb <- getOrgDb(organism, use.ah = NULL)  
+
+  orgdb <- getOrgDb(organism, use.ah = NULL)
   cols <- c(
     "SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH", "GO"
   )
   cols <- intersect(cols, keytypes(orgdb))
 
   ## get info from different environments
-  info <- lapply( cols, function(k) 
+  info <- lapply(cols, function(k) {
     AnnotationDbi::select(
       orgdb,
       keys = gene,
       keytype = "SYMBOL",
       columns = k
-    )[[k]])
+    )[[k]]
+  })
   names(info) <- cols
 
-  info[['ORGANISM']] <- organism
-  
+  info[["ORGANISM"]] <- organism
+
   ## take out duplicates
   info <- lapply(info, unique)
   symbol <- info[["SYMBOL"]]
   uniprot <- info[["UNIPROT"]]
-  
+
   ## create link to external databases: OMIM, GeneCards, Uniprot
   if (as.link) {
     genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GeneCards</a>"
@@ -1179,7 +1179,6 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
 
   ## create link to GO
   if (!is.na(info[["GO"]][1])) {
-
     ## sometimes GO.db is broken...
     suppressWarnings(try.out <- try(AnnotationDbi::Term(AnnotationDbi::mget("GO:0000001",
       envir = GO.db::GOTERM,
@@ -1204,46 +1203,44 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
   }
 
 
-  info[['SUMMARY']] <- "(no info available)"
+  info[["SUMMARY"]] <- "(no info available)"
   ortholog <- getHumanOrtholog(organism, symbol)$human
   if (ortholog %in% names(playdata::GENE_SUMMARY)) {
-    info[['SUMMARY']] <- playdata::GENE_SUMMARY[ortholog]
-    info[['SUMMARY']] <- gsub("Publication Note.*|##.*", "", info[['SUMMARY']])
-  }  
+    info[["SUMMARY"]] <- playdata::GENE_SUMMARY[ortholog]
+    info[["SUMMARY"]] <- gsub("Publication Note.*|##.*", "", info[["SUMMARY"]])
+  }
   return(info)
 }
 
 
 #' @export
 inferSpecies <- function(probes) {
-
   probes <- unique(clean_probe_names(probes))
 
   res <- orthogene::infer_species(
     probes,
     ## test_species = c("human","mouse","rat"), method = "homologene",
     test_species = "homologene", method = "homologene",
-    ## test_species = "homologene", method = "gprofiler",    
+    ## test_species = "homologene", method = "gprofiler",
     ## test_species = "gprofiler", method = "gprofiler",
-    ## test_species = "babelgene", method = "babelgene",    
+    ## test_species = "babelgene", method = "babelgene",
     make_plot = TRUE,
     show_plot = FALSE,
     ## standardise_genes = TRUE,
     verbose = TRUE
-  )  
+  )
   head(res$data)
   head(probes)
-  
+
   all.species <- allSpecies()
   has.match <- any(res$data$percent_match > 50)
-  has.match  
-  ##best.match <- res$top_match
-  if(has.match) {
+  has.match
+  ## best.match <- res$top_match
+  if (has.match) {
     possible.matches <- res$data$species[which(res$data$percent_match > 50)]
     possible.matches <- intersect(all.species, possible.matches)
   } else {
     possible.matches <- all.species
   }
   possible.matches
-
 }

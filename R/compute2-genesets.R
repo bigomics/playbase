@@ -74,11 +74,11 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
   message(">>> Testing gene sets with methods:", test.methods, "\n")
 
-  if( length(intersect(rownames(X), rownames(G))) == 0) {
+  if (length(intersect(rownames(X), rownames(G))) == 0) {
     message("[compute_testGenesets] ERROR : matrix X and G do not overlap")
     return(pgx)
   }
-  
+
   Y <- pgx$samples
   gc()
 
