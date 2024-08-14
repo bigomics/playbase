@@ -554,8 +554,8 @@ probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE)
   return(orgdb)
 }
 
-#' 
-#' 
+#'
+#'
 #' @export
 getOrgDb <- function(organism, use.ah = NULL) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
@@ -611,13 +611,13 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   keytypes <- intersect(keytypes, keytypes(orgdb))
   key_matches <- rep(0L, length(keytypes))
   names(key_matches) <- keytypes
-  
+
   ## clean up probes
   probes <- probes[!is.na(probes) & probes != ""]
   probes <- sapply(strsplit(probes, split = ";"), head, 1) ## take first
   probes <- unique(probes)
   probes <- clean_probe_names(probes)
-  
+
   ## Subset probes if too many
   if (length(probes) > nprobe) {
     if (nprobe > length(probes)) nprobe <- length(probes)
@@ -856,8 +856,8 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
 #'
 #' @export
 allSpecies <- function() {
-  gp.species <- allSpecies.ORTHOGENE() 
-  ah.species <- allSpecies.ANNOTHUB() 
+  gp.species <- allSpecies.ORTHOGENE()
+  ah.species <- allSpecies.ANNOTHUB()
   both <- intersect(names(gp.species), names(ah.species))
   gp.species[both]
 }
@@ -1096,7 +1096,6 @@ combine_feature_names <- function(annot, target) {
 
 #' @export
 getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
-
   if (is.null(gene) || length(gene) == 0) {
     return(NULL)
   }
@@ -1104,34 +1103,35 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
     return(NULL)
   }
 
-  if(0) {
-    organism = "Human"
-    gene = "CDK4"
+  if (0) {
+    organism <- "Human"
+    gene <- "CDK4"
   }
-  
-  orgdb <- getOrgDb(organism, use.ah = NULL)  
+
+  orgdb <- getOrgDb(organism, use.ah = NULL)
   cols <- c(
     "SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH", "GO"
   )
   cols <- intersect(cols, keytypes(orgdb))
 
   ## get info from different environments
-  info <- lapply( cols, function(k) 
+  info <- lapply(cols, function(k) {
     AnnotationDbi::select(
       orgdb,
       keys = gene,
       keytype = "SYMBOL",
       columns = k
-    )[[k]])
+    )[[k]]
+  })
   names(info) <- cols
 
-  info[['ORGANISM']] <- organism
-  
+  info[["ORGANISM"]] <- organism
+
   ## take out duplicates
   info <- lapply(info, unique)
   symbol <- info[["SYMBOL"]]
   uniprot <- info[["UNIPROT"]]
-  
+
   ## create link to external databases: OMIM, GeneCards, Uniprot
   if (as.link) {
     genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GeneCards</a>"
@@ -1164,7 +1164,6 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
 
   ## create link to GO
   if (!is.na(info[["GO"]][1])) {
-
     ## sometimes GO.db is broken...
     suppressWarnings(try.out <- try(AnnotationDbi::Term(AnnotationDbi::mget("GO:0000001",
       envir = GO.db::GOTERM,
@@ -1192,9 +1191,9 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
   info[['SUMMARY']] <- "(no info available)"
   ortholog <- getHumanOrtholog(organism, symbol)$human
   if (ortholog %in% names(playdata::GENE_SUMMARY)) {
-    info[['SUMMARY']] <- playdata::GENE_SUMMARY[ortholog]
-    info[['SUMMARY']] <- gsub("Publication Note.*|##.*", "", info[['SUMMARY']])
-  }  
+    info[["SUMMARY"]] <- playdata::GENE_SUMMARY[ortholog]
+    info[["SUMMARY"]] <- gsub("Publication Note.*|##.*", "", info[["SUMMARY"]])
+  }
   return(info)
 }
 

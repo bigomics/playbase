@@ -1084,10 +1084,9 @@ getHSGeneInfo <- function(gene, as.link = TRUE) {
 
 
 getHSGeneInfo.eg <- function(eg, as.link = TRUE) {
-  
   env.list <- c(
     "gene_symbol" = org.Hs.eg.db::org.Hs.egSYMBOL,
-    "uniprot" = org.Hs.eg.db::org.Hs.egUNIPROT,    
+    "uniprot" = org.Hs.eg.db::org.Hs.egUNIPROT,
     "name" = org.Hs.eg.db::org.Hs.egGENENAME,
     "map_location" = org.Hs.eg.db::org.Hs.egMAP,
     "OMIM" = org.Hs.eg.db::org.Hs.egOMIM,
@@ -1096,8 +1095,9 @@ getHSGeneInfo.eg <- function(eg, as.link = TRUE) {
   )
 
   ## get info from different environments
-  info <- lapply(env.list, function(env)
-    AnnotationDbi::mget(eg, envir = env, ifnotfound = NA)[[1]])
+  info <- lapply(env.list, function(env) {
+    AnnotationDbi::mget(eg, envir = env, ifnotfound = NA)[[1]]
+  })
   names(info) <- names(env.list)
 
   ## create link to external databases: OMIM, GeneCards, Uniprot
@@ -1362,7 +1362,7 @@ filterProbes <- function(annot, genes) {
 #'
 #' @export
 rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm = TRUE,
-                      unique=FALSE) {
+                      unique = FALSE) {
   type <- NA
   if (is.matrix(counts) || is.data.frame(counts)) {
     probes <- rownames(counts)
@@ -1386,13 +1386,13 @@ rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm = TRUE,
   # Sum columns of rows with the same gene symbol
   if (type == "matrix") {
     rownames(counts) <- symbol
-    if(unique) rownames(counts) <- make_unique(symbol)
+    if (unique) rownames(counts) <- make_unique(symbol)
     return(counts)
   } else if (type == "character") {
     return(symbol)
   } else if (type == "vector") {
     names(counts) <- symbol
-    if(unique) names(counts) <- make_unique(symbol)
+    if (unique) names(counts) <- make_unique(symbol)
     return(counts)
   }
 }
@@ -1401,10 +1401,11 @@ rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm = TRUE,
 map_probes <- function(annot, genes, column = NULL, ignore.case = FALSE) {
   ## check probe name, short probe name or gene name for match
   annot <- cbind(annot, rownames(annot))
-  if(ignore.case) {
+  if (ignore.case) {
     if (is.null(column)) {
-      column <- which.max(apply(annot, 2, function(x)
-        sum(toupper(genes) %in% toupper(x), na.rm = TRUE)))
+      column <- which.max(apply(annot, 2, function(x) {
+        sum(toupper(genes) %in% toupper(x), na.rm = TRUE)
+      }))
     }
     ii <- which(toupper(annot[, column]) %in% toupper(genes))
   } else {
