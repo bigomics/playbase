@@ -81,6 +81,11 @@ pgx.wgcna <- function(
 
   ## get topSD matrix
   X <- as.matrix(pgx$X)
+  nmissing <- sum(is.na(X))
+  if(nmissing > 0) {
+      message("Found ", nmissing, " missing values in X. Removing prior to WGCNA.")
+      X <- X[complete.cases(X), ]
+  }
   sdx <- matrixStats::rowSds(X, na.rm = TRUE)
   X <- X[sdx > 0.1 * mean(sdx, na.rm = TRUE), ] ## filter low SD
   X <- X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ]
@@ -154,7 +159,10 @@ pgx.wgcna <- function(
   ## Do quick geneset analysis using fisher-test (fastest method)
   gmt <- getGSETS_playbase(pattern = "HALLMARK|GOBP|^C[1-9]")
   gse <- NULL
-  bg <- toupper(rownames(pgx$X))
+  bg <- rownames(pgx$X)
+  bg <- probe2symbol(bg, pgx$genes, query = "human_ortholog")
+  bg <- toupper(bg[!is.na(bg)])
+  ## bg <- toupper(rownames(pgx$X))
 
   gmt1 <- lapply(gmt, function(m) intersect(m, bg))
   gmt1.size <- sapply(gmt1, length)
@@ -162,14 +170,12 @@ pgx.wgcna <- function(
 
   i <- 1
   for (i in 1:length(me.genes)) {
-    gg <- toupper(me.genes[[i]])
+    ## gg <- toupper(me.genes[[i]])
+    gg <- probe2symbol(me.genes[[i]], pgx$genes, query = "human_ortholog")
+    gg <- toupper(gg)
     rr <- try(gset.fisher(gg, gmt1, background = bg, fdr = 1, min.genes = 10))
     if (!"try-error" %in% class(rr)) {
-      rr <- cbind(
-        module = names(me.genes)[i],
-        geneset = rownames(rr),
-        rr
-      )
+      rr <- cbind(module = names(me.genes)[i], geneset = rownames(rr), rr)
       rr <- rr[order(rr$p.value), , drop = FALSE]
       if (is.null(gse)) {
         gse <- rr
