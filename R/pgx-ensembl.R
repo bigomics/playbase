@@ -71,25 +71,30 @@ getGeneAnnotation <- function(...) {
 ngs.getGeneAnnotation <- function(
     organism,
     probes,
-    ##  use = c("annothub","orthogene"),
-    use = "annothub",
+    use = c("annothub", "orthogene")[1],
     use.ah = NULL,
     verbose = TRUE) {
   annot <- NULL
 
-  if (is.null(annot) && "orthogene" %in% use) {
-    annot <- getGeneAnnotation.ORTHOGENE(
-      organism = organism,
-      probes = probes,
-      verbose = verbose
-    )
-  }
+  if (tolower(organism) == "human") organism <- "Homo sapiens"
+  if (tolower(organism) == "mouse") organism <- "Mus musculus"
+  if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
+  if (tolower(organism) == "dog") organism <- "Canis familiaris"
 
-  if (is.null(annot) && "annothub" %in% use) {
+  if (is.null(annot) && use == "annothub") {
     annot <- getGeneAnnotation.ANNOTHUB(
       organism = organism,
       probes = probes,
       use.ah = use.ah,
+      verbose = verbose
+    )
+  }
+
+  if (is.null(annot) && use == "orthogene") {
+    organism <- sub("Canis familiaris", "Canis lupus familiaris", organism)
+    annot <- getGeneAnnotation.ORTHOGENE(
+      organism = organism,
+      probes = probes,
       verbose = verbose
     )
   }
@@ -216,27 +221,7 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   ## get human ortholog using 'orthogene'
   cat("\ngetting human orthologs...\n")
-  ## ortho.map <- orthogene::map_species(method = "gprofiler")
-  ## has.ortho <- org_orthogene %in% ortho.map$scientific_name
-  ## has.symbol <- "SYMBOL" %in% colnames(annot)
-  ## if (organism == "Homo sapiens") {
-  ##   annot$ORTHOGENE <- annot$SYMBOL
-  ## } else if (has.ortho && has.symbol) {
-  ##   ortho.out <- orthogene::convert_orthologs(
-  ##     gene_df = unique(annot$SYMBOL),
-  ##     input_species = org_orthogene,
-  ##     output_species = "human",
-  ##     non121_strategy = "drop_both_species",
-  ##     method = "gprofiler"
-  ##   )
-  ##   ii <- match(annot$SYMBOL, ortho.out$input_gene)
-  ##   annot$ORTHOGENE <- rownames(ortho.out)[ii]
-  ## } else {
-  ##   message("WARNING: ", organism, " not found in orthogene database. please check name.")
-  ##   annot$ORTHOGENE <- NA
-  ## }
   annot$ORTHOGENE <- getHumanOrtholog(organism, annot$SYMBOL)$human
-
 
   ## Return as standardized data.frame and in the same order as input
   ## probes.
@@ -627,15 +612,11 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   key_matches <- rep(0L, length(keytypes))
   names(key_matches) <- keytypes
 
-  dbg("[detect_probetype] 1: head(probes) = ", head(probes))
-
   ## clean up probes
   probes <- probes[!is.na(probes) & probes != ""]
   probes <- sapply(strsplit(probes, split = ";"), head, 1) ## take first
   probes <- unique(probes)
   probes <- clean_probe_names(probes)
-
-  dbg("[detect_probetype] 2: head(probes) = ", head(probes))
 
   ## Subset probes if too many
   if (length(probes) > nprobe) {
@@ -881,15 +862,19 @@ allSpecies <- function() {
   gp.species[both]
 }
 
+#' Return all species that are supported by the ANNOTHUB annotation
+#' engine.
+#'
+#' @return character vector of species names
+#'
+#' @export
 allSpecies.ANNOTHUB <- function() {
-  ## if (is.null(ah)) {
-  ##   ah <- AnnotationHub::AnnotationHub() ## make global??
-  ## }
-  ## db <- AnnotationHub::query(ah, "OrgDb")
-  ## M <- AnnotationHub::mcols(db)
-  M <- data.frame(playbase::SPECIES_TABLE)
+  ah <- AnnotationHub::AnnotationHub() ## make global??
+  db <- AnnotationHub::query(ah, "OrgDb")
+  M <- AnnotationHub::mcols(db)
+  ## M <- data.frame(playbase::SPECIES_TABLE)
   M <- M[M$rdataclass == "OrgDb", ]
-  species <- M[, "species"]
+  species <- as.character(M[, "species"])
   names(species) <- M[, "taxonomyid"]
   species
 }
@@ -1202,7 +1187,7 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
     }
   }
 
-
+  ## pull summary
   info[["SUMMARY"]] <- "(no info available)"
   ortholog <- getHumanOrtholog(organism, symbol)$human
   if (ortholog %in% names(playdata::GENE_SUMMARY)) {
@@ -1212,35 +1197,21 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
   return(info)
 }
 
-
+#' Automatically detects species by trying to detect probetype from
+#' list of test_species. Warning. bit slow.
+#'
 #' @export
-inferSpecies <- function(probes) {
+detect_species_probetype <- function(probes,
+                                     test_species = c("human", "mouse", "rat")) {
   probes <- unique(clean_probe_names(probes))
-
-  res <- orthogene::infer_species(
-    probes,
-    ## test_species = c("human","mouse","rat"), method = "homologene",
-    test_species = "homologene", method = "homologene",
-    ## test_species = "homologene", method = "gprofiler",
-    ## test_species = "gprofiler", method = "gprofiler",
-    ## test_species = "babelgene", method = "babelgene",
-    make_plot = TRUE,
-    show_plot = FALSE,
-    ## standardise_genes = TRUE,
-    verbose = TRUE
-  )
-  head(res$data)
-  head(probes)
-
-  all.species <- allSpecies()
-  has.match <- any(res$data$percent_match > 50)
-  has.match
-  ## best.match <- res$top_match
-  if (has.match) {
-    possible.matches <- res$data$species[which(res$data$percent_match > 50)]
-    possible.matches <- intersect(all.species, possible.matches)
-  } else {
-    possible.matches <- all.species
+  ptype <- list()
+  for (s in test_species) {
+    ptype[[s]] <- detect_probetype(s, probes, use.ah = FALSE)
   }
-  possible.matches
+  ptype <- unlist(ptype)
+  out <- list(
+    species = names(ptype),
+    probetype = ptype
+  )
+  return(out)
 }
