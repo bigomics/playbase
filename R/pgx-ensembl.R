@@ -71,16 +71,16 @@ getGeneAnnotation <- function(...) {
 ngs.getGeneAnnotation <- function(
     organism,
     probes,
-    use = c("annothub", "orthogene")[1],
+    use = c("annothub","orthogene")[1],
     use.ah = NULL,
     verbose = TRUE) {
   annot <- NULL
 
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
-  if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
-  if (tolower(organism) == "dog") organism <- "Canis familiaris"
-
+  if (tolower(organism) == "rat")  organism <- "Rattus norvegicus"
+  if (tolower(organism) == "dog")  organism <- "Canis familiaris"
+  
   if (is.null(annot) && use == "annothub") {
     annot <- getGeneAnnotation.ANNOTHUB(
       organism = organism,
@@ -91,14 +91,14 @@ ngs.getGeneAnnotation <- function(
   }
 
   if (is.null(annot) && use == "orthogene") {
-    organism <- sub("Canis familiaris", "Canis lupus familiaris", organism)
+    organism <- sub("Canis familiaris","Canis lupus familiaris",organism)
     annot <- getGeneAnnotation.ORTHOGENE(
       organism = organism,
       probes = probes,
       verbose = verbose
     )
   }
-
+  
   ## clean up
   annot <- cleanupAnnotation(annot)
 
@@ -718,28 +718,19 @@ getHumanOrtholog <- function(organism, symbols) {
   ## with the same Genus that is in the DB.
   if (any(has.ortho)) {
     ortho_organism <- orthogene::map_species(organism, method = "gprofiler", verbose = FALSE)
-    message("auto matching: ", organism)
   } else if (any(has.clean)) {
     ## if no exact species match, we try a clean2
     ortho_organism <- head(names(which(ortho.clean == organism2)), 1)
-    message("cleaned matching: ", organism2)
   } else if (any(has.genus)) {
     ## if no species match, we take the first Genus hit
     ortho_organism <- head(names(which(ortho.genus == genus)), 1)
-    message("genus matching: ", genus)
   } else {
     ## no match
     ortho_organism <- NULL
   }
 
-  message("organism = ", organism)
-  message("genus = ", genus)
-  message("ortho_organism = ", ortho_organism)
-
   human.genes <- playdata::GENE_SYMBOL
   looks.human <- mean(toupper(symbols) %in% human.genes)
-  looks.human
-  message("looks.human = ", looks.human)
 
   orthogenes <- NULL
   if (!is.null(ortho_organism) && ortho_organism == "Homo sapiens") {
@@ -872,7 +863,7 @@ allSpecies.ANNOTHUB <- function() {
   ah <- AnnotationHub::AnnotationHub() ## make global??
   db <- AnnotationHub::query(ah, "OrgDb")
   M <- AnnotationHub::mcols(db)
-  ## M <- data.frame(playbase::SPECIES_TABLE)
+  ##M <- data.frame(playbase::SPECIES_TABLE)
   M <- M[M$rdataclass == "OrgDb", ]
   species <- as.character(M[, "species"])
   names(species) <- M[, "taxonomyid"]
@@ -1128,21 +1119,21 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
   uniprot <- info[["UNIPROT"]]
 
   if (as.link) {
-    genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GENE</a>"
+    gene.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GENE</a>"
     uniprot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UNIPROT</a>"
-    symbol.link <- sapply(symbol, function(s) sub("GENE", s, genecards.link))
-    uniprot.link <- sapply(uniprot, function(s) sub("UNIPROT", s, uniprot.link))
-    info[["SYMBOL"]] <- paste(symbol.link, collapse = ", ")
-    info[["UNIPROT"]] <- paste(uniprot.link, collapse = ", ")
+    gene.link <- sapply(symbol, function(s) gsub("GENE", s, gene.link))
+    prot.link <- sapply(uniprot, function(s) gsub("UNIPROT", s, prot.link))
+    info[["SYMBOL"]] <- paste(gene.link, collapse = ", ")
+    info[["UNIPROT"]] <- paste(prot.link, collapse = ", ")
   }
 
   ## create link to external databases: OMIM, GeneCards, Uniprot
   if (as.link) {
-    genecards.link2 <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GeneCards</a>"
-    uniprot.link2 <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UniProtKB</a>"
-    genecards.link2 <- sub("GENE", symbol, genecards.link2)
-    uniprot.link2 <- sub("UNIPROT", uniprot[1], uniprot.link2)
-    info[["databases"]] <- paste(c(genecards.link2, uniprot.link2), collapse = ", ")
+    genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GeneCards</a>"
+    uniprot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UniProtKB</a>"
+    genecards.link <- sub("GENE", symbol[1], genecards.link)
+    uniprot.link <- sub("UNIPROT", uniprot[1], uniprot.link)
+    info[["databases"]] <- paste(c(genecards.link, uniprot.link), collapse = ", ")
   }
 
   ## create link to OMIM
@@ -1192,7 +1183,7 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
   }
 
   ## pull summary
-  info[["SUMMARY"]] <- "(no info available)"
+  info[['SUMMARY']] <- "(no info available)"
   ortholog <- getHumanOrtholog(organism, symbol)$human
   if (ortholog %in% names(playdata::GENE_SUMMARY)) {
     info[["SUMMARY"]] <- playdata::GENE_SUMMARY[ortholog]
@@ -1211,14 +1202,14 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
 
 #' Automatically detects species by trying to detect probetype from
 #' list of test_species. Warning. bit slow.
-#'
+#' 
 #' @export
 detect_species_probetype <- function(probes,
-                                     test_species = c("human", "mouse", "rat")) {
+                                     test_species = c("human","mouse","rat")) {
   probes <- unique(clean_probe_names(probes))
   ptype <- list()
-  for (s in test_species) {
-    ptype[[s]] <- detect_probetype(s, probes, use.ah = FALSE)
+  for(s in test_species) {
+    ptype[[s]] <- detect_probetype(s, probes, use.ah=FALSE)
   }
   ptype <- unlist(ptype)
   out <- list(
