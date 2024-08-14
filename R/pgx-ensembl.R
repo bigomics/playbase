@@ -1120,7 +1120,7 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
 
   if (as.link) {
     gene.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GENE</a>"
-    uniprot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UNIPROT</a>"
+    prot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UNIPROT</a>"
     gene.link <- sapply(symbol, function(s) gsub("GENE", s, gene.link))
     prot.link <- sapply(uniprot, function(s) gsub("UNIPROT", s, prot.link))
     info[["SYMBOL"]] <- paste(gene.link, collapse = ", ")
