@@ -59,12 +59,15 @@ compute_testGenesets <- function(pgx,
   ## Collapse X by gene
   ## -----------------------------------------------------------
   dbg("creating temporary GENE matrix by SYMBOL...")
+
   X <- pgx$X
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
     X <- rename_by(X, pgx$genes, "symbol")
     X <- X[!rownames(X) == "", , drop = FALSE]
+    X <- X[!is.na(rownames(X)), , drop = FALSE]
     if (any(duplicated(rownames(X)))) {
       X <- playbase::rowmean(X, group = rownames(X), reorder = TRUE)
+
       ## X <- log2(rowsum(2**X, rownames(X)))
     }
   }
