@@ -239,7 +239,7 @@ read_files <- function(dir = ".", pattern = NULL) {
 #' }
 #' @export
 read_counts <- function(file, drop_na_rows = TRUE, drop_na_cols = TRUE,
-                        first = FALSE, unique = TRUE, paste_char="_") {
+                        first = FALSE, unique = TRUE, paste_char = "_") {
   if (is.character(file)) {
     df <- read.as_matrix(file)
   } else if (is.matrix(file) || is.data.frame(file)) {
@@ -252,13 +252,15 @@ read_counts <- function(file, drop_na_rows = TRUE, drop_na_cols = TRUE,
 
   ## if the second column is a character, then we paste that column to
   ## the rownames (first column) as postfix.
-  col1char <- is.character(type.convert(df[,1],as.is=TRUE))
+  col1char <- is.character(type.convert(df[, 1], as.is = TRUE))
   col1annot <- grepl("symbol|gene|name|position",
-                     colnames(df)[1],ignore.case=TRUE)
-  if(col1char || col1annot) {
+    colnames(df)[1],
+    ignore.case = TRUE
+  )
+  if (col1char || col1annot) {
     message("warning: second column has annotation. pasting to rownames...")
-    rownames(df) <- paste0(rownames(df), paste_char, df[,1])
-    df <- df[,-1]
+    rownames(df) <- paste0(rownames(df), paste_char, df[, 1])
+    df <- df[, -1]
   }
 
   ## convert to numeric if needed (probably yes...)
@@ -274,13 +276,13 @@ read_counts <- function(file, drop_na_rows = TRUE, drop_na_cols = TRUE,
   if (drop_na_cols) {
     no_colnames <- colnames(df) %in% c(NA, "", "NA")
     sel <- which((colMeans(is.na(df)) == 1) & no_colnames)
-    if(length(sel)) df <- df[, -sel, drop = FALSE]
+    if (length(sel)) df <- df[, -sel, drop = FALSE]
   }
   if (drop_na_rows) {
     no_rownames <- rownames(df) %in% c(NA, "", "NA")
     sel <- which((rowMeans(is.na(df)) == 1) & no_rownames)
-    if(length(sel)) df <- df[-sel, , drop = FALSE]
-  }  
+    if (length(sel)) df <- df[-sel, , drop = FALSE]
+  }
   if (first) rownames(df) <- first_feature(rownames(df))
   if (unique) rownames(df) <- make_unique(rownames(df))
   return(df)
