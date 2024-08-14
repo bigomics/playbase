@@ -8,7 +8,7 @@ plotlyVolcano(
   x,
   y,
   names,
-  source = "plot1",
+  label.names = names,
   group.names = c("group1", "group2"),
   xlab = "effect size (logFC)",
   ylab = "significance (-log10p)",
@@ -19,11 +19,12 @@ plotlyVolcano(
   marker.size = 5,
   label = NULL,
   label.cex = 1,
+  max.absy = NULL,
   color_up_down = TRUE,
-  up_down_colors = c("#f23451", "#1f77b4"),
+  colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#1f77b4"),
   marker.type = "scatter",
   displayModeBar = TRUE,
-  max.absy = NULL
+  source = "plot1"
 )
 }
 \arguments{
@@ -32,8 +33,6 @@ plotlyVolcano(
 \item{y}{Numeric vector of p-values (-log10 transformed)}
 
 \item{names}{Vector of gene or feature names}
-
-\item{source}{Character label for plot source. Default "plot1".}
 
 \item{group.names}{Character vector of group names for legend.}
 
@@ -60,6 +59,8 @@ plotlyVolcano(
 \item{marker.type}{Marker type (scatter, line, etc). Default "scatter".}
 
 \item{displayModeBar}{Show plotly modebar? Logical. Default TRUE.}
+
+\item{source}{Character label for plot source. Default "plot1".}
 }
 \value{
 A plotly interactive volcano plot object.

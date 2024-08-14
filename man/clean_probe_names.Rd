@@ -2,10 +2,10 @@
 % Please edit documentation in R/pgx-ensembl.R
 \name{clean_probe_names}
 \alias{clean_probe_names}
-\title{Cleanup probes}
+\title{Cleanup probe names from postfixes or version numbers}
 \usage{
 clean_probe_names(probes)
 }
 \description{
-Cleanup probes
+Cleanup probe names from postfixes or version numbers
 }

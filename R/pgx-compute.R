@@ -425,18 +425,16 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Add GMT
   ## -------------------------------------------------------------------
-  ## If no organism, no custom annotation table and no custom geneset, then create empty GMT
+  ## If no organism, no custom annotation and no custom geneset, then create empty GMT
   if (pgx$organism == "No organism" && is.null(annot_table) && is.null(custom.geneset)) {
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
   } else {
     pgx <- pgx.add_GMT(pgx = pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
   }
 
-  message("[createPGX] done! PGX being returned")
-  message("[createPGX] dim.pgx$counts: ", dim(pgx$counts)[1], ",", dim(pgx$counts)[2])
-  message("[createPGX] dim.pgx$X: ", dim(pgx$X)[1], ",", dim(pgx$X)[2])
-  message("[createPGX] pgx$counts has ", sum(is.na(pgx$counts)), " missing values")
-  message("[createPGX] pgx$X has ", sum(is.na(pgx$X)), " missing values")
+  dbg("[createPGX] dim(pgx$X) = ",dim(pgx$X))
+  dbg("[createPGX] dim(pgx$counts) = ",dim(pgx$counts))
+  dbg("[createPGX] dim(pgx$GMT) = ",dim(pgx$GMT))  
 
   return(pgx)
 }
@@ -784,7 +782,6 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
   pgx
 }
 
-
 pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   if (!"symbol" %in% colnames(pgx$genes)) {
     message("[pgx.add_GMT] ERROR: could not find 'symbol' column. Is this an old gene annotation?")
@@ -813,30 +810,10 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   G <- G[rownames(G) %in% human_genes, , drop = FALSE]
   dim(G)
 
-  if (nrow(G) == 0) {
-    message("[pgx.add_GMT] WARNING : no overlapping genes. no GMT added.")
-    return(pgx)
-  }
-
-  # Change HUMAN gene names to species symbols if NOT human and
-  # human_ortholog column is NOT NULL
-  if (!is.human && !is.null(pgx$genes$human_ortholog)) {
+  if (nrow(G) > 0 && !is.human && !is.null(pgx$genes$human_ortholog)) {
+    # Change HUMAN gene names to species symbols if NOT human and
+    # human_ortholog column is NOT NULL
     rownames(G) <- pgx$genes$symbol[match(rownames(G), pgx$genes$human_ortholog)]
-  }
-
-  ## -----------------------------------------------------------
-  ## Filter gene sets on size
-  ## -----------------------------------------------------------
-
-  message("[pgx.add_GMT] Filtering gene sets on size...")
-  gmt.size <- Matrix::colSums(G != 0)
-  size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
-  if (length(size.ok) < 100) {
-    ## take at least 100 gene sets, adding random selected
-    jj <- head(unique(c(size.ok, sample(1:ncol(G)))), 100)
-    G <- G[, jj, drop = FALSE]
-  } else {
-    G <- G[, size.ok, drop = FALSE]
   }
 
   ## -----------------------------------------------------------
@@ -868,6 +845,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     go.size <- sapply(go.genesets, length)
     custom.geneset$info$GSET_SIZE <- c(custom.geneset$info$GSET_SIZE, go.size)
   }
+  
   if (!is.null(custom.geneset$gmt)) {
     message("[pgx.add_GMT] Adding custom genesets...")
     ## convert gmt standard to SPARSE matrix: gset in rows, genes in
@@ -899,8 +877,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
   X <- pgx$X
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
-    X <- rename_by(X, pgx$genes, "symbol") ## pgx-functions.R
-    X <- X[!rownames(X) == "", , drop = FALSE]
+    X <- rename_by(X, pgx$genes, "symbol", na.rm=TRUE) ## pgx-functions.R
     if (any(duplicated(rownames(X)))) {
       X <- log2(rowsum(2**X, rownames(X)))
     }
@@ -913,12 +890,29 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   }
 
   ## -----------------------------------------------------------
+  ## Filter gene sets on size
+  ## -----------------------------------------------------------
+
+  message("[pgx.add_GMT] Filtering gene sets on size...")
+  gmt.size <- Matrix::colSums(G != 0)
+  size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
+  if (length(size.ok) < 100) {
+    ## take at least 100 gene sets, adding random selected
+    jj <- head(unique(c(size.ok, sample(1:ncol(G)))), 100)
+    G <- G[, jj, drop = FALSE]
+  } else {
+    G <- G[, size.ok, drop = FALSE]
+  }
+
+  ## -----------------------------------------------------------
   ## Align the GENESETxGENE matrix with genes in X
   ## -----------------------------------------------------------
   message("[pgx.add_GMT] Matching gene set matrix...")
   gg <- rownames(X)
   ii <- intersect(gg, rownames(G))
   G <- G[ii, , drop = FALSE]
+
+  ## augment G so it covers same genes as X
   xx <- setdiff(gg, rownames(G))
   matX <- Matrix::Matrix(0, nrow = length(xx), ncol = ncol(G), sparse = TRUE)
   rownames(matX) <- xx
@@ -961,16 +955,22 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     G <- G[, jj, drop = FALSE]
   }
 
-
-  ## -----------------------------------------------------------------------
-  ## Clean up and return pgx object
-  ## -----------------------------------------------------------------------
-
+  
+  ## NEED RETHINK!!! IK: Should we convert to probes???
+  if(0) {
+    map2probes <- match(pgx$genes$symbol, rownames(G))
+    G <- G[map2probes,]
+    rownames(G) <- rownames(pgx$genes)
+  }
+  
+  ## normalize columns
   G <- playbase::normalize_cols(G)
 
   pgx$GMT <- G
-  pgx$custom.geneset <- custom.geneset
-  message(glue::glue("[pgx.add_GMT] Final GMT: {nrow(G)}x{ncol(G)}"))
+  pgx$custom.geneset <- custom.geneset  ## really? this can be BIG...
+  message(glue::glue("[pgx.add_GMT] Final GMT: {nrow(G)} x {ncol(G)}"))
+  
+  ## Clean up and return pgx object
   rm(gsetX.bygroup, gsetX, G)
   gc()
   return(pgx)

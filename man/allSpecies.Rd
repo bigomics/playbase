@@ -4,7 +4,7 @@
 \alias{allSpecies}
 \title{Get all species in AnnotationHub/OrgDB}
 \usage{
-allSpecies(ah = NULL)
+allSpecies()
 }
 \description{
 Get all species in AnnotationHub/OrgDB
