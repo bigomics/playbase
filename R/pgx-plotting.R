@@ -4487,12 +4487,12 @@ plotlyVolcano <- function(x,
     type = "line", x0 = -xx, x1 = +xx, y0 = y0, y1 = y0,
     line = list(dash = "dot", width = 1, color = "grey")
   )
-  if( lfc == 0 ){
-    significance.lines = list(abline3)
+  if (lfc == 0) {
+    significance.lines <- list(abline3)
   } else {
-    significance.lines = list(abline1, abline2, abline3)
+    significance.lines <- list(abline1, abline2, abline3)
   }
-  
+
   ## calculate explicit ranges for x and y so we can add some padding.
   max.absx <- max(max(abs(x), na.rm = TRUE), lfc * 1.2, na.rm = TRUE)
   if (is.null(max.absy)) {
@@ -4548,7 +4548,6 @@ plotlyVolcano_multi <- function(FC,
                                 layout_args = list(),
                                 highlight = NULL,
                                 ...) {
-
   dots <- list(...)
 
   ## Get tables and genes
@@ -4558,9 +4557,9 @@ plotlyVolcano_multi <- function(FC,
 
   all_genes <- rownames(FC)
   all_labels <- all_genes
-  if("names" %in% names(dots)) all_genes <- dots$names
-  if("label.names" %in% names(dots)) all_labels <- dots$label.names  
-  
+  if ("names" %in% names(dots)) all_genes <- dots$names
+  if ("label.names" %in% names(dots)) all_labels <- dots$label.names
+
   # Prepare collection list
   nplots <- min(24, length(titles))
   sub_plots <- vector("list", length = length(nplots))
@@ -4576,9 +4575,9 @@ plotlyVolcano_multi <- function(FC,
       is.sig <- (qval <= fdr & abs(fx) >= lfc)
       hi.genes <- all_genes[is.sig]
     }
-    if(!is.null(highlight)) {
+    if (!is.null(highlight)) {
       hi.genes1 <- all_genes[all_genes %in% highlight | all_labels %in% highlight]
-      if(!is.null(hi.genes)) {
+      if (!is.null(hi.genes)) {
         hi.genes <- intersect(hi.genes, hi.genes1)
       } else {
         hi.genes <- hi.genes1
