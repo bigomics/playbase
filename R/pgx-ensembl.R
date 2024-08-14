@@ -728,28 +728,19 @@ getHumanOrtholog <- function(organism, symbols) {
   ## with the same Genus that is in the DB.
   if (any(has.ortho)) {
     ortho_organism <- orthogene::map_species(organism, method = "gprofiler", verbose = FALSE)
-    message("auto matching: ", organism)
   } else if (any(has.clean)) {
     ## if no exact species match, we try a clean2
     ortho_organism <- head(names(which(ortho.clean == organism2)), 1)
-    message("cleaned matching: ", organism2)
   } else if (any(has.genus)) {
     ## if no species match, we take the first Genus hit
     ortho_organism <- head(names(which(ortho.genus == genus)), 1)
-    message("genus matching: ", genus)
   } else {
     ## no match
     ortho_organism <- NULL
   }
 
-  message("organism = ", organism)
-  message("genus = ", genus)
-  message("ortho_organism = ", ortho_organism)
-
   human.genes <- playdata::GENE_SYMBOL
   looks.human <- mean(toupper(symbols) %in% human.genes)
-  looks.human
-  message("looks.human = ", looks.human)
 
   orthogenes <- NULL
   if (!is.null(ortho_organism) && ortho_organism == "Homo sapiens") {
@@ -1113,11 +1104,6 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
     return(NULL)
   }
 
-  if (0) {
-    organism <- "Human"
-    gene <- "CDK4"
-  }
-
   orgdb <- getOrgDb(organism, use.ah = NULL)
   cols <- c(
     "SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH", "GO"
@@ -1142,12 +1128,21 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
   symbol <- info[["SYMBOL"]]
   uniprot <- info[["UNIPROT"]]
 
+  if (as.link) {
+    gene.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GENE</a>"
+    prot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UNIPROT</a>"
+    gene.link <- sapply(symbol, function(s) gsub("GENE", s, gene.link))
+    prot.link <- sapply(uniprot, function(s) gsub("UNIPROT", s, prot.link))
+    info[["SYMBOL"]] <- paste(gene.link, collapse = ", ")
+    info[["UNIPROT"]] <- paste(prot.link, collapse = ", ")
+  }
+
   ## create link to external databases: OMIM, GeneCards, Uniprot
   if (as.link) {
     genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GeneCards</a>"
     uniprot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UniProtKB</a>"
-    genecards.link <- sub("GENE", symbol, genecards.link)
-    uniprot.link <- sub("UNIPROT", uniprot, uniprot.link)
+    genecards.link <- sub("GENE", symbol[1], genecards.link)
+    uniprot.link <- sub("UNIPROT", uniprot[1], uniprot.link)
     info[["databases"]] <- paste(c(genecards.link, uniprot.link), collapse = ", ")
   }
 
@@ -1204,6 +1199,18 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
     info[["SUMMARY"]] <- playdata::GENE_SUMMARY[ortholog]
     info[["SUMMARY"]] <- gsub("Publication Note.*|##.*", "", info[["SUMMARY"]])
   }
+
+  ## rename
+  tags <- c(
+    "ORGANISM", "SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH",
+    "GO", "SUMMARY", "databases"
+  )
+  info <- info[tags]
+  names(info) <- c(
+    "organism", "gene_symbol", "uniprot", "name", "map_location",
+    "OMIM", "pathway", "GO", "summary", "databases"
+  )
+
   return(info)
 }
 
