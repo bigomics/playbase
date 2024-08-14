@@ -1200,12 +1200,16 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
   }
 
   ## rename
-  tags <- c("ORGANISM", "SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH",
-    "GO", "SUMMARY", "databases")
+  tags <- c(
+    "ORGANISM", "SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH",
+    "GO", "SUMMARY", "databases"
+  )
   info <- info[tags]
-  names(info) <- c("organism", "gene_symbol", "uniprot", "name", "map_location",
-    "OMIM", "pathway", "GO", "summary", "databases")
-  
+  names(info) <- c(
+    "organism", "gene_symbol", "uniprot", "name", "map_location",
+    "OMIM", "pathway", "GO", "summary", "databases"
+  )
+
   return(info)
 }
 
