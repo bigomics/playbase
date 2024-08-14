@@ -821,10 +821,14 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   G <- G[rownames(G) %in% human_genes, , drop = FALSE]
   dim(G)
 
-  if (nrow(G) == 0) {
+  if (ncol(G) < 10 || nrow(G) < 3) {
     add.gmt <- NULL
     rr <- sample(3:400, 100)
-    gg <- rownames(pgx$X)
+    if (is.null(pgx$genes$human_ortholog)) {
+      gg <- pgx$genes$symbol
+    } else {
+      gg <- pgx$genes$human_ortholog # gmt should always map to human_ortholog
+    }
     random.gmt <- lapply(rr, function(n) head(sample(gg), min(n, length(gg) / 2)))
     names(random.gmt) <- paste0("TEST:random_geneset.", 1:length(random.gmt))
     add.gmt <- random.gmt
@@ -927,7 +931,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       G <- G[rownames(G) %in% pgx$genes$symbol, , drop = FALSE]
       remove(custom_gmt)
     } else {
-      G <- custom_gmt
+      G <- Matrix::t(custom_gmt)
       remove(custom_gmt)
     }
   }
@@ -943,7 +947,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     # remove NA
     X_geneset <- X_geneset[!is.na(rownames(X_geneset)), , drop = FALSE]
     if (any(duplicated(rownames(X_geneset)))) {
-      X_geneset <- log2(rowsum(2**X_geneset, group=rownames(X_geneset)))
+      X_geneset <- log2(rowsum(2**X_geneset, group = rownames(X_geneset)))
     }
   }
 
