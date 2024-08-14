@@ -1103,11 +1103,6 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
     return(NULL)
   }
 
-  if (0) {
-    organism <- "Human"
-    gene <- "CDK4"
-  }
-
   orgdb <- getOrgDb(organism, use.ah = NULL)
   cols <- c(
     "SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH", "GO"
@@ -1132,13 +1127,22 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
   symbol <- info[["SYMBOL"]]
   uniprot <- info[["UNIPROT"]]
 
+  if (as.link) {
+    genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GENE</a>"
+    uniprot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UNIPROT</a>"
+    symbol.link <- sapply(symbol, function(s) sub("GENE", s, genecards.link))
+    uniprot.link <- sapply(uniprot, function(s) sub("UNIPROT", s, uniprot.link))
+    info[["SYMBOL"]] <- paste(symbol.link, collapse = ", ")
+    info[["UNIPROT"]] <- paste(uniprot.link, collapse = ", ")
+  }
+
   ## create link to external databases: OMIM, GeneCards, Uniprot
   if (as.link) {
-    genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GeneCards</a>"
-    uniprot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UniProtKB</a>"
-    genecards.link <- sub("GENE", symbol, genecards.link)
-    uniprot.link <- sub("UNIPROT", uniprot, uniprot.link)
-    info[["databases"]] <- paste(c(genecards.link, uniprot.link), collapse = ", ")
+    genecards.link2 <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GeneCards</a>"
+    uniprot.link2 <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UniProtKB</a>"
+    genecards.link2 <- sub("GENE", symbol, genecards.link2)
+    uniprot.link2 <- sub("UNIPROT", uniprot[1], uniprot.link2)
+    info[["databases"]] <- paste(c(genecards.link2, uniprot.link2), collapse = ", ")
   }
 
   ## create link to OMIM
@@ -1194,6 +1198,14 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
     info[["SUMMARY"]] <- playdata::GENE_SUMMARY[ortholog]
     info[["SUMMARY"]] <- gsub("Publication Note.*|##.*", "", info[["SUMMARY"]])
   }
+
+  ## rename
+  tags <- c("ORGANISM", "SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH",
+    "GO", "SUMMARY", "databases")
+  info <- info[tags]
+  names(info) <- c("organism", "gene_symbol", "uniprot", "name", "map_location",
+    "OMIM", "pathway", "GO", "summary", "databases")
+  
   return(info)
 }
 
