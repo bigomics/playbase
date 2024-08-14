@@ -26,7 +26,7 @@ pgx.scatterPlotXY.PLOTLY(
   bty = "n",
   hilight = NULL,
   hilight2 = hilight,
-  labels = hilight2,
+  labels = rownames(pos),
   hilight.col = NULL,
   hilight.cex = NULL,
   hilight.lwd = 0.8,

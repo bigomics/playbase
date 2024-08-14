@@ -1,3 +1,30 @@
+## #' @title Get Gene Information
+## #'
+## #' @description This function retrieves gene information from the biomaRt package.
+## #'
+## #' @param eg A character vector of Entrez Gene IDs for which to retrieve information.
+## #' @param fields A character vector of fields to retrieve, with default values of
+## #' "symbol", "name", "alias", "map_location", and "summary".
+## #'
+## #' @details The function takes a character vector of Entrez Gene IDs `eg` and a
+## #' character vector of fields `fields` as input.
+## #' The function uses the `getGene` function from the `biomaRt` package to retrieve
+## #' the specified fields for each Entrez Gene ID.
+## #' The resulting information is returned as a named list, where each element
+## #' corresponds to one of the specified fields and contains a character vector of the retrieved values.
+## #'
+## #' @return A named list containing the retrieved gene information for each of the specified fields.
+## #'
+## #' #' @export
+## getMyGeneInfo <- function(eg, fields = c("symbol", "name", "alias", "map_location", "summary")) {
+##   info <- lapply(fields, function(f) biomaRt::getGene(eg, fields = f)[[1]])
+##   names(info) <- fields
+##   info <- lapply(info, function(x) ifelse(length(x) == 3, x[[3]], "(not available)"))
+##   info <- sapply(info, paste, collapse = ",")
+##   return(info)
+## }
+
+
 #' #' @describeIn knnImputeMissing Randomly impute missing values
 #' #' @export
 #' randomImputeMissing <- function(x) {

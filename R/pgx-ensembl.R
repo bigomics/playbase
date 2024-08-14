@@ -274,15 +274,15 @@ getGeneAnnotation.ANNOTHUB <- function(
 }
 
 
-
-#' Cleanup probes
+#' Cleanup probe names from postfixes or version numbers
 #'
+#' @export
 clean_probe_names <- function(probes) {
   probes0 <- probes
   probes <- probes[!is.na(probes) & probes != ""]
   probes <- sapply(strsplit(probes, split = ";"), head, 1) ## take first
 
-  ## strip away anything after a dot or underscore
+  ## strip away anything after a 'dot' or 'underscore'
   probes <- sub("[._].*", "", probes)
 
   ## is.ensembl <- mean(grepl("^ENS", probes)) > 0.5
@@ -290,7 +290,7 @@ clean_probe_names <- function(probes) {
   ##   probes <- sub("[.][0-9]+$", "", probes) ## strip version number
   ## }
 
-  ## If UNIPROT we strip isoform extension (orgDb does not like it)
+  ## If UNIPROT we also strip isoform extension (orgDb does not like it)
   is.uniprot <- mean(grepl("^[QP][0-9]*", probes)) > 0.8
   if (is.uniprot) {
     ## probes <- sub("[.][0-9]+$", "", probes) ## strip phosphosite
@@ -536,7 +536,7 @@ probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE)
   }
 
   ah <- AnnotationHub::AnnotationHub()
-  all_species <- allSpecies(ah)
+  all_species <- allSpecies()
   if (!tolower(organism) %in% tolower(all_species)) {
     message("WARNING: organism '", organism, "' not in AnnotationHub")
     return(NULL)
@@ -569,6 +569,8 @@ probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE)
   return(orgdb)
 }
 
+#'
+#'
 #' @export
 getOrgDb <- function(organism, use.ah = NULL) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
@@ -580,6 +582,7 @@ getOrgDb <- function(organism, use.ah = NULL) {
     return(NULL)
   }
 
+  ## Extra check for validity of database
   suppressMessages({
     check.org <- grep("ORGANISM", capture.output(orgdb), value = TRUE)
   })
@@ -634,25 +637,15 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   key_matches <- rep(0L, length(keytypes))
   names(key_matches) <- keytypes
 
+  dbg("[detect_probetype] 1: head(probes) = ", head(probes))
+
   ## clean up probes
   probes <- probes[!is.na(probes) & probes != ""]
   probes <- sapply(strsplit(probes, split = ";"), head, 1) ## take first
-  if (sum(duplicated(probes)) > 0) {
-    message("WARNING: duplicated probes")
-    probes <- unique(probes)
-  }
+  probes <- unique(probes)
+  probes <- clean_probe_names(probes)
 
-  ## discard version numbers if ENSEMBL
-  if (mean(grepl("^ENS", probes)) > 0.5) {
-    probes <- sub("[.][0-9]+$", "", probes)
-  }
-
-  ## discard isoform if UNIPROT
-  is.uniprot <- mean(grepl("^[QP][0-9]*", probes)) > 0.8
-  if (is.uniprot) {
-    probes <- sub("[.][0-9]+$", "", probes) ## strip phosphosite
-    probes <- sub("-[0-9]+", "", probes) ## strip isoform
-  }
+  dbg("[detect_probetype] 2: head(probes) = ", head(probes))
 
   ## Subset probes if too many
   if (length(probes) > nprobe) {
@@ -697,7 +690,8 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   ##  key_matches
   top_match <- NULL
   if (all(key_matches == 0)) {
-    message("WARNING:: Probe type not found. Valid probe types: ", paste(keytypes, collapse = " "))
+    message("head.probes = ", paste(head(probes), collapse = " "))
+    message("WARNING: Probe type not found. Valid probe types: ", paste(keytypes, collapse = " "))
     return(NULL)
   } else {
     top_match <- names(which.max(key_matches))
@@ -890,18 +884,38 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
 #' @title Get all species in AnnotationHub/OrgDB
 #'
 #' @export
-allSpecies <- function(ah = NULL) {
-  if (is.null(ah)) {
-    ah <- AnnotationHub::AnnotationHub() ## make global??
-  }
-  db <- AnnotationHub::query(ah, "OrgDb")
-  M <- AnnotationHub::mcols(db)
+allSpecies <- function() {
+  gp.species <- allSpecies.ORTHOGENE()
+  ah.species <- allSpecies.ANNOTHUB()
+  both <- intersect(names(gp.species), names(ah.species))
+  gp.species[both]
+}
+
+allSpecies.ANNOTHUB <- function() {
+  ## if (is.null(ah)) {
+  ##   ah <- AnnotationHub::AnnotationHub() ## make global??
+  ## }
+  ## db <- AnnotationHub::query(ah, "OrgDb")
+  ## M <- AnnotationHub::mcols(db)
+  M <- data.frame(playbase::SPECIES_TABLE)
   M <- M[M$rdataclass == "OrgDb", ]
   species <- M[, "species"]
   names(species) <- M[, "taxonomyid"]
   species
 }
 
+#' Return all species that are supported by the ORTHOGENE annotation
+#' engine.
+#'
+#' @return character vector of species names
+#'
+#' @export
+allSpecies.ORTHOGENE <- function() {
+  M <- orthogene::map_species(method = "gprofiler", verbose = FALSE)
+  species <- M[, "scientific_name"]
+  names(species) <- M[, "taxonomy_id"]
+  species
+}
 
 #' @title Get species table in AnnotationHub/OrgDB
 #'
@@ -1061,19 +1075,6 @@ check_probetype.ORTHOGENE <- function(organism, probes) {
   return(TRUE)
 }
 
-#' Return all species that are supported by the ORTHOGENE annotation
-#' engine.
-#'
-#' @return character vector of species names
-#'
-#' @export
-allSpecies.ORTHOGENE <- function() {
-  M <- orthogene::map_species(method = "gprofiler", verbose = FALSE)
-  species <- M[, "scientific_name"]
-  names(species) <- M[, "taxonomy_id"]
-  species
-}
-
 
 #' Check if probes can be detected by Orthogene or AnnotHub/OrgDb
 #' annotation engines.
@@ -1116,4 +1117,140 @@ combine_feature_names <- function(annot, target) {
     new.feature <- make_unique(new.feature)
   }
   new.feature
+}
+
+#' @export
+getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
+  if (is.null(gene) || length(gene) == 0) {
+    return(NULL)
+  }
+  if (is.na(gene) || gene == "") {
+    return(NULL)
+  }
+
+  if (0) {
+    organism <- "Human"
+    gene <- "CDK4"
+  }
+
+  orgdb <- getOrgDb(organism, use.ah = NULL)
+  cols <- c(
+    "SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH", "GO"
+  )
+  cols <- intersect(cols, keytypes(orgdb))
+
+  ## get info from different environments
+  info <- lapply(cols, function(k) {
+    AnnotationDbi::select(
+      orgdb,
+      keys = gene,
+      keytype = "SYMBOL",
+      columns = k
+    )[[k]]
+  })
+  names(info) <- cols
+
+  info[["ORGANISM"]] <- organism
+
+  ## take out duplicates
+  info <- lapply(info, unique)
+  symbol <- info[["SYMBOL"]]
+  uniprot <- info[["UNIPROT"]]
+
+  ## create link to external databases: OMIM, GeneCards, Uniprot
+  if (as.link) {
+    genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GeneCards</a>"
+    uniprot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UniProtKB</a>"
+    genecards.link <- sub("GENE", symbol, genecards.link)
+    uniprot.link <- sub("UNIPROT", uniprot, uniprot.link)
+    info[["databases"]] <- paste(c(genecards.link, uniprot.link), collapse = ", ")
+  }
+
+  ## create link to OMIM
+  if (as.link) {
+    omim.link <- "<a href='https://www.omim.org/entry/OMIM' target='_blank'>OMIM</a>"
+    info[["OMIM"]] <- sapply(info[["OMIM"]], function(x) gsub("OMIM", x, omim.link))
+  }
+
+  ## create link to KEGG
+  kegg.link <- "<a href='https://www.genome.jp/kegg-bin/show_pathway?map=hsaKEGGID&show_description=show' target='_blank'>KEGGNAME (KEGGID)</a>"
+  for (i in 1:length(info[["PATH"]])) {
+    kegg.id <- info[["PATH"]][[i]]
+    kegg.id <- setdiff(kegg.id, NA)
+    if (length(kegg.id) > 0) {
+      kegg.name <- AnnotationDbi::mget(kegg.id, envir = KEGG.db::KEGGPATHID2NAME, ifnotfound = NA)[[1]]
+      if (!is.na(kegg.name) && as.link) {
+        info[["PATH"]][[i]] <- gsub("KEGGNAME", kegg.name, gsub("KEGGID", kegg.id, kegg.link))
+      } else {
+        info[["PATH"]][[i]] <- kegg.name
+      }
+    }
+  }
+
+  ## create link to GO
+  if (!is.na(info[["GO"]][1])) {
+    ## sometimes GO.db is broken...
+    suppressWarnings(try.out <- try(AnnotationDbi::Term(AnnotationDbi::mget("GO:0000001",
+      envir = GO.db::GOTERM,
+      ifnotfound = NA
+    )[[1]])))
+    go.ok <- (class(try.out) != "try-error")
+    if (go.ok) {
+      amigo.link <- "<a href='http://amigo.geneontology.org/amigo/term/GOID' target='_blank'>GOTERM (GOID)</a>"
+      i <- 1
+      for (i in 1:length(info[["GO"]])) {
+        go_id <- info[["GO"]][i]
+        go_term <- AnnotationDbi::Term(AnnotationDbi::mget(go_id, envir = GO.db::GOTERM, ifnotfound = NA)[[1]])
+        if (as.link) {
+          info[["GO"]][i] <- gsub("GOTERM", go_term, gsub("GOID", go_id, amigo.link))
+        } else {
+          info[["GO"]][i] <- go_term
+        }
+      }
+    } else {
+      info[["GO"]] <- NULL
+    }
+  }
+
+
+  info[["SUMMARY"]] <- "(no info available)"
+  ortholog <- getHumanOrtholog(organism, symbol)$human
+  if (ortholog %in% names(playdata::GENE_SUMMARY)) {
+    info[["SUMMARY"]] <- playdata::GENE_SUMMARY[ortholog]
+    info[["SUMMARY"]] <- gsub("Publication Note.*|##.*", "", info[["SUMMARY"]])
+  }
+  return(info)
+}
+
+
+#' @export
+inferSpecies <- function(probes) {
+  probes <- unique(clean_probe_names(probes))
+
+  res <- orthogene::infer_species(
+    probes,
+    ## test_species = c("human","mouse","rat"), method = "homologene",
+    test_species = "homologene", method = "homologene",
+    ## test_species = "homologene", method = "gprofiler",
+    ## test_species = "gprofiler", method = "gprofiler",
+    ## test_species = "babelgene", method = "babelgene",
+    make_plot = TRUE,
+    show_plot = FALSE,
+    ## standardise_genes = TRUE,
+    verbose = TRUE
+  )
+  head(res$data)
+  head(probes)
+
+  all.species <- allSpecies()
+  has.match <- any(res$data$percent_match > 50)
+  has.match
+  ## best.match <- res$top_match
+  if (has.match) {
+    possible.matches <- res$data$species[which(res$data$percent_match > 50)]
+    possible.matches <- intersect(all.species, possible.matches)
+  } else {
+    possible.matches <- all.species
+  }
+  possible.matches
 }

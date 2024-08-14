@@ -1282,8 +1282,11 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
       xlab = "UMAP-x  (genes)",
       ylab = "UMAP-y  (genes)",
       hilight = hilight1,
-      zlim = zlim, zsym = TRUE, softmax = 1,
-      cex = cex, cex.lab = cex.lab,
+      zlim = zlim,
+      zsym = TRUE,
+      softmax = 1,
+      cex = cex,
+      cex.lab = cex.lab,
       title = title1, cex.title = 1.0,
       cex.legend = cex.legend,
       legend = TRUE,
@@ -3459,7 +3462,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                                      cex.clust = 1.5, cex.legend = 1, cex.axis = 1,
                                      xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL,
                                      axis = TRUE, zoom = 1, legend = TRUE, bty = "n",
-                                     hilight = NULL, hilight2 = hilight, labels = hilight2,
+                                     hilight = NULL, hilight2 = hilight, labels = rownames(pos),
                                      hilight.col = NULL, hilight.cex = NULL, hilight.lwd = 0.8,
                                      zlim = NULL, zlog = FALSE, zsym = FALSE, softmax = FALSE,
                                      opc.low = 1, opacity = 1, bgcolor = NULL, box = TRUE,
@@ -3572,7 +3575,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
 
     ## plot less frequent points first... (NEED RETHINK)
     jj <- order(-table(z1)[z1])
-    df <- df[jj, ]
+    df <- df[jj, , drop = FALSE]
   }
 
   ## Plot the continous variables
@@ -4282,14 +4285,26 @@ plotlyMA <- function(x, y, names, label.names = names,
 #' @return A plotly interactive volcano plot object.
 #'
 #' @export
-plotlyVolcano <- function(x, y, names, label.names = names,
+plotlyVolcano <- function(x,
+                          y,
+                          names,
+                          label.names = names,
                           group.names = c("group1", "group2"),
-                          xlab = "effect size (logFC)", ylab = "significance (-log10p)",
-                          lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
-                          marker.size = 5, label = NULL, label.cex = 1, max.absy = NULL,
+                          xlab = "effect size (logFC)",
+                          ylab = "significance (-log10p)",
+                          lfc = 1,
+                          psig = 0.05,
+                          showlegend = TRUE,
+                          highlight = NULL,
+                          marker.size = 5,
+                          label = NULL,
+                          label.cex = 1,
+                          max.absy = NULL,
                           color_up_down = TRUE,
                           colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#1f77b4"),
-                          marker.type = "scatter", displayModeBar = TRUE, source = "plot1") {
+                          marker.type = "scatter",
+                          displayModeBar = TRUE,
+                          source = "plot1") {
   if (is.null(highlight)) highlight <- names
 
   i0 <- which(!names %in% highlight & !label.names %in% highlight)
@@ -4581,6 +4596,7 @@ plotlyVolcano_multi <- function(FC,
       x = fx,
       y = qval,
       names = all_genes,
+      label.names = all_genes,
       marker.type = "scattergl",
       marker.size = cex,
       highlight = sig.genes,

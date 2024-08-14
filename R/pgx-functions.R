@@ -1027,33 +1027,6 @@ selectSamplesFromSelectedLevels <- function(Y, levels) {
 }
 
 
-#' @title Get Gene Information
-#'
-#' @description This function retrieves gene information from the biomaRt package.
-#'
-#' @param eg A character vector of Entrez Gene IDs for which to retrieve information.
-#' @param fields A character vector of fields to retrieve, with default values of
-#' "symbol", "name", "alias", "map_location", and "summary".
-#'
-#' @details The function takes a character vector of Entrez Gene IDs `eg` and a
-#' character vector of fields `fields` as input.
-#' The function uses the `getGene` function from the `biomaRt` package to retrieve
-#' the specified fields for each Entrez Gene ID.
-#' The resulting information is returned as a named list, where each element
-#' corresponds to one of the specified fields and contains a character vector of the retrieved values.
-#'
-#' @return A named list containing the retrieved gene information for each of the specified fields.
-#'
-#' @export
-getMyGeneInfo <- function(eg, fields = c("symbol", "name", "alias", "map_location", "summary")) {
-  info <- lapply(fields, function(f) biomaRt::getGene(eg, fields = f)[[1]])
-  names(info) <- fields
-  info <- lapply(info, function(x) ifelse(length(x) == 3, x[[3]], "(not available)"))
-  info <- sapply(info, paste, collapse = ",")
-  return(info)
-}
-
-
 #' Get human gene information from annotation packages
 #'
 #' @param eg Character vector of gene symbols
@@ -1113,6 +1086,7 @@ getHSGeneInfo <- function(gene, as.link = TRUE) {
 getHSGeneInfo.eg <- function(eg, as.link = TRUE) {
   env.list <- c(
     "gene_symbol" = org.Hs.eg.db::org.Hs.egSYMBOL,
+    "uniprot" = org.Hs.eg.db::org.Hs.egUNIPROT,
     "name" = org.Hs.eg.db::org.Hs.egGENENAME,
     "map_location" = org.Hs.eg.db::org.Hs.egMAP,
     "OMIM" = org.Hs.eg.db::org.Hs.egOMIM,
@@ -1120,25 +1094,20 @@ getHSGeneInfo.eg <- function(eg, as.link = TRUE) {
     "GO" = org.Hs.eg.db::org.Hs.egGO
   )
 
-  info <- lapply(env.list, function(env) AnnotationDbi::mget(eg, envir = env, ifnotfound = NA)[[1]])
+  ## get info from different environments
+  info <- lapply(env.list, function(env) {
+    AnnotationDbi::mget(eg, envir = env, ifnotfound = NA)[[1]]
+  })
   names(info) <- names(env.list)
-  gene_symbol <- toupper(AnnotationDbi::mget(as.character(eg),
-    envir = org.Hs.eg.db::org.Hs.egSYMBOL
-  ))[1]
-  info[["gene_symbol"]] <- gene_symbol
-
-  ## create link to GeneCards
-  ## if (as.link) {
-  ##   genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GENE</a>"
-  ##   info[["gene_symbol"]] <- gsub("GENE", info[["gene_symbol"]], genecards.link)
-  ## }
 
   ## create link to external databases: OMIM, GeneCards, Uniprot
   if (as.link) {
     genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GeneCards</a>"
-    uniprot.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>UniProtKB</a>"
+    uniprot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UniProtKB</a>"
+    gene_symbol <- info[["gene_symbol"]]
     genecards.link <- sub("GENE", gene_symbol, genecards.link)
-    uniprot.link <- sub("GENE", gene_symbol, uniprot.link)
+    uniprot <- info[["uniprot"]]
+    uniprot.link <- sub("UNIPROT", uniprot, uniprot.link)
     info[["databases"]] <- paste(c(genecards.link, uniprot.link), collapse = ", ")
   }
 
@@ -1392,7 +1361,8 @@ filterProbes <- function(annot, genes) {
 #' Looks up the `new_id_col` in the annot_table and replaces counts rownames.
 #'
 #' @export
-rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm = TRUE) {
+rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm = TRUE,
+                      unique = FALSE) {
   type <- NA
   if (is.matrix(counts) || is.data.frame(counts)) {
     probes <- rownames(counts)
@@ -1415,24 +1385,35 @@ rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm = TRUE) 
 
   # Sum columns of rows with the same gene symbol
   if (type == "matrix") {
-    rownames(counts) <- make_unique(symbol)
+    rownames(counts) <- symbol
+    if (unique) rownames(counts) <- make_unique(symbol)
     return(counts)
   } else if (type == "character") {
     return(symbol)
   } else if (type == "vector") {
-    names(counts) <- make_unique(symbol)
+    names(counts) <- symbol
+    if (unique) names(counts) <- make_unique(symbol)
     return(counts)
   }
 }
 
 #' @export
-map_probes <- function(annot, genes, column = NULL) {
+map_probes <- function(annot, genes, column = NULL, ignore.case = FALSE) {
   ## check probe name, short probe name or gene name for match
   annot <- cbind(annot, rownames(annot))
-  if (is.null(column)) {
-    column <- which.max(apply(annot, 2, function(x) sum(genes %in% x, na.rm = TRUE)))
+  if (ignore.case) {
+    if (is.null(column)) {
+      column <- which.max(apply(annot, 2, function(x) {
+        sum(toupper(genes) %in% toupper(x), na.rm = TRUE)
+      }))
+    }
+    ii <- which(toupper(annot[, column]) %in% toupper(genes))
+  } else {
+    if (is.null(column)) {
+      column <- which.max(apply(annot, 2, function(x) sum(genes %in% x, na.rm = TRUE)))
+    }
+    ii <- which(annot[, column] %in% genes)
   }
-  ii <- which(annot[, column] %in% genes)
   rownames(annot)[ii]
 }
 

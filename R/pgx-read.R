@@ -238,7 +238,8 @@ read_files <- function(dir = ".", pattern = NULL) {
 #' counts <- read_counts(playbase::example_file("counts.csv"))
 #' }
 #' @export
-read_counts <- function(file, drop_na_rows = TRUE, first = FALSE, unique = TRUE) {
+read_counts <- function(file, drop_na_rows = TRUE, drop_na_cols = TRUE,
+                        first = FALSE, unique = TRUE, paste_char = "_") {
   if (is.character(file)) {
     df <- read.as_matrix(file)
   } else if (is.matrix(file) || is.data.frame(file)) {
@@ -248,6 +249,21 @@ read_counts <- function(file, drop_na_rows = TRUE, first = FALSE, unique = TRUE)
   }
   is_valid <- validate_counts(df)
   if (!is_valid) stop("Counts file is not valid.")
+
+  ## if the second column is a character, then we paste that column to
+  ## the rownames (first column) as postfix.
+  col1char <- is.character(type.convert(df[, 1], as.is = TRUE))
+  col1annot <- grepl("symbol|gene|name|position",
+    colnames(df)[1],
+    ignore.case = TRUE
+  )
+  if (col1char || col1annot) {
+    message("warning: second column has annotation. pasting to rownames...")
+    rownames(df) <- paste0(rownames(df), paste_char, df[, 1])
+    df <- df[, -1]
+  }
+
+  ## convert to numeric if needed (probably yes...)
   is.numeric.matrix <- all(apply(df, 2, is.numeric))
   if (!is.numeric.matrix) {
     message("warning: converting to numeric values")
@@ -255,9 +271,18 @@ read_counts <- function(file, drop_na_rows = TRUE, first = FALSE, unique = TRUE)
     suppressWarnings(df <- apply(df, 2, as.numeric))
     rownames(df) <- rn
   }
-  df <- df[!(rownames(df) %in% c(NA, "", "NA")), , drop = FALSE]
-  if (drop_na_rows) df <- df[rowMeans(is.na(df)) < 1, , drop = FALSE]
-  ##  df <- rowsum(df, rownames(df), reorder = FALSE)  ## sum or average???
+
+  ## some spreadsheets errorenously add empty rows or columns
+  if (drop_na_cols) {
+    no_colnames <- colnames(df) %in% c(NA, "", "NA")
+    sel <- which((colMeans(is.na(df)) == 1) & no_colnames)
+    if (length(sel)) df <- df[, -sel, drop = FALSE]
+  }
+  if (drop_na_rows) {
+    no_rownames <- rownames(df) %in% c(NA, "", "NA")
+    sel <- which((rowMeans(is.na(df)) == 1) & no_rownames)
+    if (length(sel)) df <- df[-sel, , drop = FALSE]
+  }
   if (first) rownames(df) <- first_feature(rownames(df))
   if (unique) rownames(df) <- make_unique(rownames(df))
   return(df)
