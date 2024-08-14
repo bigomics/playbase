@@ -957,7 +957,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## Align the GENESETxGENE matrix with genes in X_geneset
   ## -----------------------------------------------------------
   message("[pgx.add_GMT] Matching gene set matrix...")
-  gg <- rownames(X)
+  gg <- rownames(X_geneset)
   ii <- intersect(gg, rownames(G))
   G <- G[ii, , drop = FALSE]
   xx <- setdiff(gg, rownames(G))
