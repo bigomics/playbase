@@ -1349,7 +1349,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
                                max.points = 200, group.names = NULL,
                                main = NULL, xlab = NULL, ylab = NULL, names = TRUE,
                                plotly.annotations = NULL,
-                               plotly.margin = NULL,
+                               plotly.margin = NULL, verbose = 0,
                                plotlib = "base") {
   if (is.null(probe)) {
     return(NULL)
@@ -1374,12 +1374,12 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   comp
 
   if (!is.null(group.names)) {
-    message("[pgx.plotExpression] using group names from argument")
+    if(verbose) message("[pgx.plotExpression] using group names from argument")
   }
 
   ## if a named contrast table is available it is safer
   if (is.null(group.names) && "contrasts" %in% names(pgx)) {
-    message("[pgx.plotExpression] parsing group names from pgx$contrast labels")
+    if(verbose) message("[pgx.plotExpression] parsing group names from contrast labels")
     contr.labels <- pgx$contrasts[, comp]
     contr.idx <- expmat[, comp]
     group1 <- names(which.max(table(contr.labels[contr.idx > 0])))
@@ -1390,7 +1390,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
 
   ## Otherwise we guess from the contrast title but this is dangerous
   if (is.null(group.names) && grepl("_vs_|_VS_", comp)) {
-    message("[pgx.plotExpression] parsing group names contrast name (warning!)")
+    if(verbose) message("[pgx.plotExpression] parsing group names contrast name (warning!)")
     comp1 <- sub(".*:", "", comp) ## remove prefix
     group.names <- strsplit(comp1, split = "_vs_|_VS_")[[1]]
     group.names <- rev(group.names) ## first is main group
@@ -5612,6 +5612,7 @@ pgx.plotActivation <- function(pgx,
     score <- pgx$drugs[[1]]$X
   }
   if (what == "matrix") {
+    if(is.null(matrix)) stop("must provide matrix")
     score <- matrix
   }
   dim(score)
