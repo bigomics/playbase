@@ -5601,7 +5601,7 @@ pgx.plotActivation <- function(pgx,
                                tl.cex = 0.85,
                                row.nchar = 60,
                                showscale = TRUE,
-                               cexBar = 0.66 ) {
+                               cexBar = 0.66) {
   if (what == "geneset") {
     score <- pgx.getMetaMatrix(pgx, level = "geneset")$fc
   }
@@ -5630,15 +5630,15 @@ pgx.plotActivation <- function(pgx,
     }
   }
 
-  if(!is.null(features)) {
+  if (!is.null(features)) {
     features <- intersect(features, rownames(score))
-    score <- score[ features, ,drop = FALSE]
+    score <- score[features, , drop = FALSE]
   }
-  
-  ## max number terms
-  score <- score[order(-rowSums(score**2, na.rm = TRUE)), ,drop = FALSE]
 
-  ## max number terms  
+  ## max number terms
+  score <- score[order(-rowSums(score**2, na.rm = TRUE)), , drop = FALSE]
+
+  ## max number terms
   score <- head(score, maxterm)
 
   ## max comparisons/FC
@@ -5649,7 +5649,7 @@ pgx.plotActivation <- function(pgx,
   ## normalize colums
   if (normalize) {
     ## column scale???
-    score <- t(t(score) / (1e-8 + apply(abs(score),2,max,na.rm=TRUE)))
+    score <- t(t(score) / (1e-8 + apply(abs(score), 2, max, na.rm = TRUE)))
   }
 
   if (NCOL(score) == 1) {
@@ -5679,7 +5679,7 @@ pgx.plotActivation <- function(pgx,
 
   bluered.pal <- colorRamp(colors = c("royalblue3", "#ebeffa", "white", "#faeeee", "indianred3"))
   bluered.pal <- colorRamp(colors = c("royalblue3", "grey90", "indianred3"))
-  bluered.pal <- colorRamp(playbase::omics_pal_c("blue_red_grey", reverse=TRUE)(30))
+  bluered.pal <- colorRamp(playbase::omics_pal_c("blue_red_grey", reverse = TRUE)(30))
 
   score <- score[nrow(score):1, , drop = FALSE]
   x_axis <- colnames(score)
@@ -5704,18 +5704,17 @@ pgx.plotActivation <- function(pgx,
       x = x_axis,
       y = y_axis,
       z = score,
-      zauto = FALSE,  
+      zauto = FALSE,
       zmin = -max(abs(score)),
-      zmax = +max(abs(score)),  
+      zmax = +max(abs(score)),
       type = "heatmap",
       colors = bluered.pal,
       showscale = showscale
-    )  %>%
+    ) %>%
       plotly::colorbar(
-        len = 0.5*cexBar,
-        thickness = 30*cexBar
+        len = 0.5 * cexBar,
+        thickness = 30 * cexBar
       )
-
   }
   return(fig)
 }
