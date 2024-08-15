@@ -5584,14 +5584,24 @@ pgx.barplot.PLOTLY <- function(
 
 
 #' @export
-pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
-                               plotlib = "base", filter = NULL,
-                               cexCol = 1.4, cexRow = 1,
-                               normalize = FALSE, rotate = FALSE,
-                               maxterm = 40, maxfc = 100,
+pgx.plotActivation <- function(pgx,
+                               features = NULL,
+                               contrasts = NULL,
+                               what = "geneset",
+                               matrix = NULL,
+                               plotlib = "base",
+                               filter = NULL,
+                               cexCol = 1.4,
+                               cexRow = 1,
+                               normalize = FALSE,
+                               rotate = FALSE,
+                               maxterm = 40,
+                               maxfc = 100,
                                mar = c(15, 30),
-                               tl.cex = 0.85, row.nchar = 60,
-                               colorbar = FALSE) {
+                               tl.cex = 0.85,
+                               row.nchar = 60,
+                               showscale = TRUE,
+                               cexBar = 0.66 ) {
   if (what == "geneset") {
     score <- pgx.getMetaMatrix(pgx, level = "geneset")$fc
   }
@@ -5600,6 +5610,9 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   }
   if (what == "drugs") {
     score <- pgx$drugs[[1]]$X
+  }
+  if (what == "matrix") {
+    score <- matrix
   }
   dim(score)
 
@@ -5617,8 +5630,16 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
     }
   }
 
+  if(!is.null(features)) {
+    features <- intersect(features, rownames(score))
+    score <- score[ features, ,drop = FALSE]
+  }
+  
   ## max number terms
-  score <- score[head(order(-rowSums(score**2, na.rm = TRUE)), maxterm), , drop = FALSE]
+  score <- score[order(-rowSums(score**2, na.rm = TRUE)), ,drop = FALSE]
+
+  ## max number terms  
+  score <- head(score, maxterm)
 
   ## max comparisons/FC
   score <- score[, head(order(-colSums(score**2, na.rm = TRUE)), maxfc), drop = FALSE]
@@ -5628,13 +5649,8 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   ## normalize colums
   if (normalize) {
     ## column scale???
-    score <- t(t(score) / (1e-8 + sqrt(colMeans(score**2, na.rm = TRUE))))
+    score <- t(t(score) / (1e-8 + apply(abs(score),2,max,na.rm=TRUE)))
   }
-  score <- score / max(abs(score), na.rm = TRUE) ## global normalize
-  score <- sign(score) * abs(score)**0.5 ## fudging for better colors???
-
-  message("dim.score = ", paste(dim(score), collapse = "x"))
-  message("NCOL.score = ", NCOL(score))
 
   if (NCOL(score) == 1) {
     score <- score[order(-score[, 1]), 1, drop = FALSE]
@@ -5663,6 +5679,8 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
 
   bluered.pal <- colorRamp(colors = c("royalblue3", "#ebeffa", "white", "#faeeee", "indianred3"))
   bluered.pal <- colorRamp(colors = c("royalblue3", "grey90", "indianred3"))
+  bluered.pal <- colorRamp(playbase::omics_pal_c("blue_red_grey", reverse=TRUE)(30))
+
   score <- score[nrow(score):1, , drop = FALSE]
   x_axis <- colnames(score)
   y_axis <- rownames(score)
@@ -5683,11 +5701,21 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   }
   if (plotlib == "plotly") {
     fig <- plotly::plot_ly(
-      x = x_axis, y = y_axis,
-      z = score, type = "heatmap",
+      x = x_axis,
+      y = y_axis,
+      z = score,
+      zauto = FALSE,  
+      zmin = -max(abs(score)),
+      zmax = +max(abs(score)),  
+      type = "heatmap",
       colors = bluered.pal,
-      showscale = colorbar
-    )
+      showscale = showscale
+    )  %>%
+      plotly::colorbar(
+        len = 0.5*cexBar,
+        thickness = 30*cexBar
+      )
+
   }
   return(fig)
 }
