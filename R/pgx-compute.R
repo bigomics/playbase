@@ -522,7 +522,8 @@ pgx.computePGX <- function(pgx,
     pgx <- playbase::pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
 
     ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
-    posx <- scale(cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]]))
+    posx <- cbind( pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]] )
+    posx <- scale(posx)
     idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
     if (length(unique(idx)) == 1) {
       ## try again with finer settings if single cluster...
@@ -531,7 +532,7 @@ pgx.computePGX <- function(pgx,
     pgx$samples$cluster <- idx
   }
 
-  ## Cluster by contrasts
+  ## Make contrasts by cluster
   if (cluster.contrasts) {
     ## Add cluster contrasts
     message("[pgx.computePGX] adding cluster contrasts...")
