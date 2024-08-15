@@ -9,7 +9,7 @@ apt update && apt install -y \
     libssl-dev libxml2-dev libjpeg-dev \
     libgl-dev libglu-dev tk-dev libhdf5-dev \
     libgit2-dev libssh2-1-dev libnetcdf-dev \
-    libudunits2-dev libgdal-dev libbz2-dev \
+    libudunits2-dev libgdal-dev libproj-dev libbz2-dev \
     jags cmake git procps htop \
     python3 python3-pip python-is-python3 \
     pdftk vim-tiny less wget gdebi-core \
