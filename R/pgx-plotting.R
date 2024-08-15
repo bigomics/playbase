@@ -1623,7 +1623,8 @@ pgx.plotPhenotypeMatrix <- function(annot) {
     iheatmapr::add_col_annotation(
       annotation = annotF[, ],
       size = col_annot_height,
-      buffer = 0.005, side = "bottom",
+      buffer = 0.005,
+      side = "bottom",
       colors = colors0
     )
   colcex <- 1
@@ -2102,9 +2103,6 @@ ggenplot <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ylab = NULL) {
 
   ## compute running metrix
   fc <- sort(fc, decreasing = TRUE)
-
-
-
 
   ## weighted cumulative random walk
   x0 <- 1 * (names(fc) %in% gset)

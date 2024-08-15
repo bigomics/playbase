@@ -1361,8 +1361,14 @@ filterProbes <- function(annot, genes) {
 #' Looks up the `new_id_col` in the annot_table and replaces counts rownames.
 #'
 #' @export
-rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm = TRUE,
-                      unique = FALSE) {
+rename_by <- function(counts, annot_table, new_id_col = "symbol",
+                      na.rm = TRUE, unique = TRUE) {
+
+  ## dummy do-noting return
+  if(new_id_col %in% c("rownames",NA,NULL)) {
+    return(counts)
+  }
+
   type <- NA
   if (is.matrix(counts) || is.data.frame(counts)) {
     probes <- rownames(counts)
@@ -1386,15 +1392,31 @@ rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm = TRUE,
   # Sum columns of rows with the same gene symbol
   if (type == "matrix") {
     rownames(counts) <- symbol
-    if (unique) rownames(counts) <- make_unique(symbol)
+    if(na.rm) {
+      counts <- counts[!rownames(counts) %in% c("", "NA", NA), , drop = FALSE]
+    }
+  ##  if (unique) rownames(counts) <- make_unique(rownames(counts))
+    if (unique) counts <- rowmean(counts, rownames(counts))
     return(counts)
   } else if (type == "character") {
+    if(na.rm) {
+      symbol <- symbol[!symbol %in% c("","NA",NA)]
+    }
+    if (unique) symbol <- symbol[!duplicated(symbol)]
     return(symbol)
   } else if (type == "vector") {
     names(counts) <- symbol
-    if (unique) names(counts) <- make_unique(symbol)
+    if(na.rm) {
+       counts <- counts[!rownames(counts) %in% c("", "NA", NA)]
+    }
+    ##if (unique) names(counts) <- make_unique(names(counts))
+    n0 <- unique(names(counts))
+    if (unique) counts <- tapply(counts, rownames(counts), mean, na.rm=TRUE)
+    counts <- counts[match(n0, names(counts))]
     return(counts)
   }
+  
+  
 }
 
 #' @export
