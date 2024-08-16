@@ -63,20 +63,37 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
   for (ct in colnames(F1)) {
     fc <- F1[, ct]
 
-    if (!is.null(pgx$organism)) {
-      if (pgx$organism != "Human") {
-        names(fc) <- pgx$genes[names(fc), "human_ortholog"]
-        fc <- fc[names(fc) != ""]
-      } else {
-        # For human datasets
-        names(fc) <- rownames(meta$fc)
-        names(fc) <- toupper(names(fc)) ## for MOUSE!!
-      }
+    ## if (!is.null(pgx$organism)) {
+    ##   if (pgx$organism != "Human") {
+    ##     names(fc) <- pgx$genes[names(fc), "human_ortholog"]
+    ##     fc <- fc[names(fc) != ""]
+    ##   } else {
+    ##     # For human datasets
+    ##     names(fc) <- rownames(meta$fc)
+    ##     names(fc) <- toupper(names(fc)) ## for MOUSE!!
+    ##   }
+    ## } else {
+    ##   # For old datasets
+    ##   names(fc) <- rownames(meta$fc)
+    ##   names(fc) <- toupper(names(fc)) ## for MOUSE!!
+    ## }
+
+    k <- intersect(c("human_ortholog", "symbol", "gene_name"), colnames(pgx$genes))
+    k <- k[ which(colMeans(is.na(pgx$genes[,k])) < 1) ]  ## no all NA columns...
+    k
+    if(length(k)==0) {
+      ## old-style, if no pgx$gene columns match
+      names(fc) <- toupper(names(fc))
     } else {
-      # For old datasets
-      names(fc) <- rownames(meta$fc)
-      names(fc) <- toupper(names(fc)) ## for MOUSE!!
+      ## use first best mapping column
+      names(fc) <- toupper(pgx$genes[,k[1]])
     }
+
+    ## collapse duplicates by average or max absFC
+    ##fc <- tapply( fc, names(fc), mean, na.rm = TRUE)
+    fc <- tapply( fc, names(fc), function(x) x[which.max(abs(x))] )
+    fc[is.na(fc)] <- 0
+    
     res <- pgx.correlateSignatureH5(
       fc,
       h5.file = h5.file,
@@ -84,6 +101,7 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
       ntop = ntop,
       nperm = 9999
     )
+    
     scores[[ct]] <- res
   }
   if (is.null(names(scores))) names(scores) <- contrasts
