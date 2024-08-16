@@ -51,13 +51,13 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
 
   info("[pgx.computeConnectivityScores] computing connectivity for sigdb = ", sigdb)
   meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
-  
+
   if (is.null(contrasts)) {
     contrasts <- colnames(meta$fc)
   }
   contrasts <- intersect(contrasts, colnames(meta$fc))
   F1 <- meta$fc[, contrasts, drop = FALSE]
-  
+
   scores <- list()
   ct <- colnames(F1)[1]
   for (ct in colnames(F1)) {
