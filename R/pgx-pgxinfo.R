@@ -643,7 +643,7 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
       if (pgxfile %in% fc.missing) {
         meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
         ## rownames(meta$fc) <- toupper(rownames(meta$fc)) ## human genes
-        F <- playbase::rename_by_humansymbol(meta$fc, pgx$genes)
+        F <- rename_by_humansymbol(meta$fc, pgx$genes)
         missing.FC[[pgxfile]] <- F
         pgxfc.changed <- TRUE
       }
