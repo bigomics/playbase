@@ -1385,7 +1385,7 @@ rename_by <- function(counts, annot_table, new_id_col = "symbol",
 
   # Guard against human_hommolog == NA
   if (all(is.na(symbol))) {
-    symbol <- annot_table[rownames(counts), "symbol"]
+    symbol <- annot_table[probes, "symbol"]
   }
 
   # Sum columns of rows with the same gene symbol
@@ -1395,7 +1395,21 @@ rename_by <- function(counts, annot_table, new_id_col = "symbol",
       counts <- counts[!rownames(counts) %in% c("", "NA", NA), , drop = FALSE]
     }
     ##  if (unique) rownames(counts) <- make_unique(rownames(counts))
-    if (unique) counts <- rowmean(counts, rownames(counts))
+    if (unique) {
+      counts <- rowmean(counts, rownames(counts))
+    }
+    return(counts)
+  } else if (type == "vector") {
+    names(counts) <- symbol
+    if (na.rm) {
+      counts <- counts[!names(counts) %in% c("", "NA", NA)]
+    }
+    ## if (unique) names(counts) <- make_unique(names(counts))
+    if (unique) {
+      n0 <- unique(names(counts))
+      counts <- tapply(counts, names(counts), mean, na.rm = TRUE)
+      counts <- counts[match(n0, names(counts))]
+    }
     return(counts)
   } else if (type == "character") {
     if (na.rm) {
@@ -1403,16 +1417,6 @@ rename_by <- function(counts, annot_table, new_id_col = "symbol",
     }
     if (unique) symbol <- symbol[!duplicated(symbol)]
     return(symbol)
-  } else if (type == "vector") {
-    names(counts) <- symbol
-    if (na.rm) {
-      counts <- counts[!rownames(counts) %in% c("", "NA", NA)]
-    }
-    ## if (unique) names(counts) <- make_unique(names(counts))
-    n0 <- unique(names(counts))
-    if (unique) counts <- tapply(counts, rownames(counts), mean, na.rm = TRUE)
-    counts <- counts[match(n0, names(counts))]
-    return(counts)
   }
 }
 
