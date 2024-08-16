@@ -335,18 +335,19 @@ matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1, reorder = TRUE) {
 #'
 #' @export
 rowmean <- function(X, group = rownames(X), reorder = TRUE) {
-  if( is.matrix(X) || any(class(X) %in% c("matrix")) ) {
+  if (is.matrix(X) || any(class(X) %in% c("matrix"))) {
     sumX <- base::rowsum(X, group, na.rm = TRUE, reorder = reorder)
     nX <- base::rowsum(1 * (!is.na(X)), group, reorder = reorder)
     newX <- sumX / nX
   } else {
     ## slower but safer. also for sparse matrix.
-    newX <- tapply(1:nrow(X), group, function(i)
-      Matrix::colMeans(X[i,,drop=FALSE],na.rm=TRUE))
+    newX <- tapply(1:nrow(X), group, function(i) {
+      Matrix::colMeans(X[i, , drop = FALSE], na.rm = TRUE)
+    })
     newX <- do.call(rbind, newX)
-    if(reorder) {
-      ii <- match(unique(group),rownames(newX))
-      newX <- newX[ii,,drop=FALSE]
+    if (reorder) {
+      ii <- match(unique(group), rownames(newX))
+      newX <- newX[ii, , drop = FALSE]
     }
   }
   newX
@@ -1382,16 +1383,16 @@ rename_by <- function(counts, annot_table, new_id_col = "symbol",
     return(counts)
   }
 
-  # Guard against human_homolog == NA. probably old-style human  
-  if( "human_homolog" %in% colnames(annot_table) &&
-        all( is.na(annot_table$human_homolog) ) ) {
+  # Guard against human_homolog == NA. probably old-style human
+  if ("human_homolog" %in% colnames(annot_table) &&
+    all(is.na(annot_table$human_homolog))) {
     annot_table$human_homolog <- annot_table$symbol
   }
-  
+
   type <- NA
   if (is.matrix(counts) || is.data.frame(counts) || !is.null(dim(counts))) {
-      probes <- rownames(counts)      
-      type <- "matrix"
+    probes <- rownames(counts)
+    type <- "matrix"
   } else {
     if (class(counts) == "character") {
       probes <- counts
@@ -1401,12 +1402,12 @@ rename_by <- function(counts, annot_table, new_id_col = "symbol",
       type <- "vector"
     }
   }
-  if( is.null( from_id )) {
+  if (is.null(from_id)) {
     from <- rownames(annot_table)
   } else {
-    from <- annot_table[,from_id]
+    from <- annot_table[, from_id]
   }
-  symbol <- annot_table[ match( probes, from ), new_id_col]
+  symbol <- annot_table[match(probes, from), new_id_col]
 
   # Sum columns of rows with the same gene symbol
   if (type == "matrix") {

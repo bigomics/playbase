@@ -1225,7 +1225,7 @@ detect_species_probetype <- function(probes,
 
 #' Collapse object rownames/names to human symbol. Warning this function
 #' does not maintain the original dimensions/length of object.
-#' 
+#'
 #' @export
 rename_by_humansymbol <- function(obj, annot) {
   annot <- cbind(annot, rownames = rownames(annot))
