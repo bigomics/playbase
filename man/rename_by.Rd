@@ -9,7 +9,7 @@ rename_by(
   annot_table,
   new_id_col = "symbol",
   na.rm = TRUE,
-  unique = FALSE
+  unique = TRUE
 )
 }
 \arguments{

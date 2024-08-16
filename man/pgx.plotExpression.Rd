@@ -23,6 +23,7 @@ pgx.plotExpression(
   names = TRUE,
   plotly.annotations = NULL,
   plotly.margin = NULL,
+  verbose = 0,
   plotlib = "base"
 )
 }
