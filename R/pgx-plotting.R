@@ -3062,8 +3062,8 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   if (is.null(colnames(pos))) {
     colnames(pos) <- c("x", "y")
   }
-  if(is.null(zlim) && !is.null(cmin) && !is.null(cmax)) zlim <- c(cmin,cmax)
-  
+  if (is.null(zlim) && !is.null(cmin) && !is.null(cmax)) zlim <- c(cmin, cmax)
+
   ## automatically set pointsize of dots
   if (is.null(cex)) {
     nr <- nrow(pos)
@@ -3265,17 +3265,18 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     zr <- range(z)
     if (zsym && min(zr, na.rm = TRUE) < 0) zr <- c(-1, 1) * max(abs(zr), na.rm = TRUE)
     zz <- round(c(zr[1], zr[2]), digits = 2)
-##    variable <- NULL
-    if(is.null(zlim)) {
-      cmin0 <- min(z,na.rm=TRUE)
-      cmax0 <- max(z,na.rm=TRUE)
+    ##    variable <- NULL
+    if (is.null(zlim)) {
+      cmin0 <- min(z, na.rm = TRUE)
+      cmax0 <- max(z, na.rm = TRUE)
     } else {
       cmin0 <- zlim[1]
       cmax0 <- zlim[2]
     }
-    
+
     plt <- ggplot2::ggplot(
-      df, ggplot2::aes(x, y, fill = variable)) +
+      df, ggplot2::aes(x, y, fill = variable)
+    ) +
       ggplot2::geom_point(
         shape = 21,
         alpha = opacity,
