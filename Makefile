@@ -2,6 +2,7 @@ BRANCH:=`git rev-parse --abbrev-ref HEAD`  ## get active GIT branch
 BRANCH:=$(strip $(BRANCH))
 TAG=$(BRANCH)
 VERSION="v3.5.0-beta"
+ARG=
 
 build: doc
 	R -e "devtools::build()"
@@ -45,20 +46,16 @@ test:
 FORCE: ;
 
 docker.os: 
-	docker build --no-cache -f dev/Dockerfile.os \
+	docker build $(ARG) --no-cache -f dev/Dockerfile.os \
 	    -t playbase-os . 2>&1 | tee docker-os.log
 
 docker.rbase: 
-	docker build --no-cache -f dev/Dockerfile.rbase \
+	docker build $(ARG) --no-cache -f dev/Dockerfile.rbase \
 	    -t playbase-rbase . 2>&1 | tee docker-rbase.log
 
 docker.pkg: 
-	docker build -f dev/Dockerfile \
+	docker build $(ARG) -f dev/Dockerfile \
 	    -t playbase-pkg . 2>&1 | tee docker.log
-
-docker.pkg2: 
-	docker build -f dev/Dockerfile2 \
-	    -t playbase-pkg . 2>&1 | tee docker2.log
 
 ## we need to squash the layer to minimize the size but also to hide
 ## the use of any temporary tokens. Install docker-squash from pipx.
