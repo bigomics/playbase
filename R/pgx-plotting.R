@@ -3032,8 +3032,9 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
                                      cex.lab = 0.8, cex.title = 1.2, cex.clust = 1.5,
                                      cex.legend = 1, cex.axis = 1, gridcolor = NULL, bgcolor = NULL,
                                      zoom = 1, legend = TRUE, bty = "n", hilight = NULL,
-                                     zlim = NULL, zlog = FALSE, softmax = FALSE, zsym = FALSE,
-                                     xlab = NULL, ylab = NULL, cmin = 0, cmax = 1, xlim = NULL, ylim = NULL,
+                                     zlim = NULL, cmin = NULL, cmax = NULL,
+                                     zlog = FALSE, softmax = FALSE, zsym = FALSE,
+                                     xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL,
                                      hilight2 = hilight, hilight.col = "black",
                                      hilight.lwd = 0.8, hilight.cex = NULL, na.color = "#AAAAAA55",
                                      opacity = 1, label.clusters = FALSE, labels = NULL,
@@ -3061,7 +3062,8 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   if (is.null(colnames(pos))) {
     colnames(pos) <- c("x", "y")
   }
-
+  if(is.null(zlim) && !is.null(cmin) && !is.null(cmax)) zlim <- c(cmin,cmax)
+  
   ## automatically set pointsize of dots
   if (is.null(cex)) {
     nr <- nrow(pos)
@@ -3263,8 +3265,17 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     zr <- range(z)
     if (zsym && min(zr, na.rm = TRUE) < 0) zr <- c(-1, 1) * max(abs(zr), na.rm = TRUE)
     zz <- round(c(zr[1], zr[2]), digits = 2)
-    variable <- NULL
-    plt <- ggplot2::ggplot(df, ggplot2::aes(x, y, fill = variable)) +
+##    variable <- NULL
+    if(is.null(zlim)) {
+      cmin0 <- min(z,na.rm=TRUE)
+      cmax0 <- max(z,na.rm=TRUE)
+    } else {
+      cmin0 <- zlim[1]
+      cmax0 <- zlim[2]
+    }
+    
+    plt <- ggplot2::ggplot(
+      df, ggplot2::aes(x, y, fill = variable)) +
       ggplot2::geom_point(
         shape = 21,
         alpha = opacity,
@@ -3274,7 +3285,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       ) +
       ggplot2::scale_fill_gradientn(
         colors = cpal,
-        limits = c(cmin, cmax),
+        limits = c(cmin0, cmax0),
         guide = guide,
         breaks = zz,
         labels = c(zz[1], zz[2]),
