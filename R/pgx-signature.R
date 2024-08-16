@@ -49,34 +49,19 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
     return(NULL)
   }
 
-  dbg("[pgx.computeConnectivityScores] computing connectivity scores for sigdb = ", sigdb)
+  info("[pgx.computeConnectivityScores] computing connectivity for sigdb = ", sigdb)
   meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
-
+  
   if (is.null(contrasts)) {
     contrasts <- colnames(meta$fc)
   }
   contrasts <- intersect(contrasts, colnames(meta$fc))
   F1 <- meta$fc[, contrasts, drop = FALSE]
-
+  
   scores <- list()
   ct <- colnames(F1)[1]
   for (ct in colnames(F1)) {
     fc <- F1[, ct]
-
-    ## if (!is.null(pgx$organism)) {
-    ##   if (pgx$organism != "Human") {
-    ##     names(fc) <- pgx$genes[names(fc), "human_ortholog"]
-    ##     fc <- fc[names(fc) != ""]
-    ##   } else {
-    ##     # For human datasets
-    ##     names(fc) <- rownames(meta$fc)
-    ##     names(fc) <- toupper(names(fc)) ## for MOUSE!!
-    ##   }
-    ## } else {
-    ##   # For old datasets
-    ##   names(fc) <- rownames(meta$fc)
-    ##   names(fc) <- toupper(names(fc)) ## for MOUSE!!
-    ## }
 
     k <- intersect(c("human_ortholog", "symbol", "gene_name"), colnames(pgx$genes))
     k <- k[which(colMeans(is.na(pgx$genes[, k])) < 1)] ## no all NA columns...
@@ -85,8 +70,8 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
       ## old-style, if no pgx$gene columns match
       names(fc) <- toupper(names(fc))
     } else {
-      ## use first best mapping column
-      names(fc) <- toupper(pgx$genes[, k[1]])
+      ## use first best mapping column for "human"-like genes
+      names(fc) <- toupper(pgx$genes[names(fc), k[1]])
     }
 
     ## collapse duplicates by average or max absFC
