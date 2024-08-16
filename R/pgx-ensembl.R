@@ -1224,20 +1224,20 @@ detect_species_probetype <- function(probes,
 }
 
 #' @export
-rename_by_humansymbol <- function(obj, annot ) {
-  annot <- cbind( annot, rownames = rownames(annot) )
-  target <- c("human_ortholog","symbol","gene_name", "rownames")
+rename_by_humansymbol <- function(obj, annot) {
+  annot <- cbind(annot, rownames = rownames(annot))
+  target <- c("human_ortholog", "symbol", "gene_name", "rownames")
   target <- intersect(target, colnames(annot))
-  target <- target[ which(colSums(is.na(annot[,target])) < 1)]
+  target <- target[which(colSums(is.na(annot[, target])) < 1)]
   target
-  if(length(target)==0) {
+  if (length(target) == 0) {
     message("[map_humansymbol] WARNING: could not find symbol mapping column.")
     return(obj)
   } else {
     ## call rename_by with target column
-    map.obj <- rename_by( obj, annot_table = annot, new_id_col = target[1])
+    map.obj <- rename_by(obj, annot_table = annot, new_id_col = target[1])
   }
-  if(!is.null(dim(map.obj))) rownames(map.obj) <- toupper(rownames(map.obj))
-  if(is.null(dim(map.obj))) names(map.obj) <- toupper(names(map.obj))  
+  if (!is.null(dim(map.obj))) rownames(map.obj) <- toupper(rownames(map.obj))
+  if (is.null(dim(map.obj))) names(map.obj) <- toupper(names(map.obj))
   map.obj
 }
