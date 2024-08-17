@@ -849,8 +849,9 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
 allSpecies <- function() {
   gp.species <- allSpecies.ORTHOGENE()
   ah.species <- allSpecies.ANNOTHUB()
+  ## we select on organism_id but return the namings of annothub
   both <- intersect(names(gp.species), names(ah.species))
-  gp.species[both]
+  ah.species[both]
 }
 
 #' Return all species that are supported by the ANNOTHUB annotation
