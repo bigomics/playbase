@@ -1276,9 +1276,10 @@ annotate_phospho_residue <- function(features, detect.only = FALSE) {
 
   if (is_phospho) {
     ## determine separators
-    info(paste("[annotate_phospho_residue] annotating",length(uniprot),"features with phosposite"))
-    sep1.match <- sapply( c("_","."), function(s)
-      sum(grepl(s, features, fixed=TRUE),na.rm=TRUE))
+    info(paste("[annotate_phospho_residue] annotating", length(uniprot), "features with phosposite"))
+    sep1.match <- sapply(c("_", "."), function(s) {
+      sum(grepl(s, features, fixed = TRUE), na.rm = TRUE)
+    })
     sep1 <- names(which.max(sep1.match))
     sel <- grep("[;/,]", features)
     sep2.match <- sapply(c(";", "/", ","), function(s) {
