@@ -250,10 +250,10 @@ read_counts <- function(file, first = FALSE, unique = TRUE, paste_char = "_") {
   if (!is_valid) stop("Counts file is not valid.")
 
   ## determine column types
-  df1 <- type.convert(data.frame(df),as.is=TRUE)
-  col.type <- sapply(df1,class)
+  df1 <- type.convert(data.frame(df), as.is = TRUE)
+  col.type <- sapply(df1, class)
   col.type
-  
+
   ## if the second column is a character, then we paste that column to
   ## the rownames (first column) as postfix.
   col1char <- is.character(type.convert(df[, 1], as.is = TRUE))
@@ -319,7 +319,7 @@ read_contrasts <- function(file) {
 }
 
 #' Read gene/probe annotation file
-#' 
+#'
 #' @export
 read_annot <- function(file, drop_na_rows = TRUE, drop_na_cols = TRUE,
                        first = FALSE, unique = TRUE, paste_char = "_") {
@@ -331,13 +331,13 @@ read_annot <- function(file, drop_na_rows = TRUE, drop_na_cols = TRUE,
     stop("input error")
   }
 
-  df <- type.convert(data.frame(df),as.is=TRUE)
-  col.type <- sapply(df,class)
+  df <- type.convert(data.frame(df), as.is = TRUE)
+  col.type <- sapply(df, class)
   col.type
 
   ## drop numerical columns (these can be intensities)
-  num.cols <- which( col.type %in% c("numeric","integer","double"))
-  if(length(num.cols)) {
+  num.cols <- which(col.type %in% c("numeric", "integer", "double"))
+  if (length(num.cols)) {
     df <- df[, -num.cols]
   }
 

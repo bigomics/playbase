@@ -82,7 +82,7 @@ getGeneAnnotation <- function(
   if (tolower(organism) == "dog") organism <- "Canis familiaris"
 
   if (is.null(annot) && "annothub" %in% use) {
-    info("[ngs.getGeneAnnotation] annotating with ANNOTHUB")    
+    info("[ngs.getGeneAnnotation] annotating with ANNOTHUB")
     annot <- getGeneAnnotation.ANNOTHUB(
       organism = organism,
       probes = probes,
@@ -102,8 +102,8 @@ getGeneAnnotation <- function(
   }
 
   ## add specials
-  ## rownames(annot) <- annotate_phosphotype(rownames(annot), organism=organism) 
-  
+  ## rownames(annot) <- annotate_phosphotype(rownames(annot), organism=organism)
+
   ## clean up
   annot <- cleanupAnnotation(annot)
 
@@ -1272,21 +1272,21 @@ annotate_phospho_residue <- function(features, detect.only = FALSE) {
   prot.match <- mean(uniprot %in% P$UniProt, na.rm = TRUE)
   pos.match  <- mean(positions %in% P$Position, na.rm = TRUE)    
   is_phospho <- ( valid_name && prot.match > 0.50 && pos.match > 0.50 )
-  is_phospho
 
-  if(detect.only) {
-    return( is_phospho )
+  if (detect.only) {
+    return(is_phospho)
   }
-  
-  if(is_phospho) {
+
+  if (is_phospho) {
     ## determine separators
     info(paste("[annotate_phosphotype] annotating",length(uniprot),"features with phosposite"))
     sep1.match <- sapply( c("_","."), function(s)
       sum(grepl(s, features, fixed=TRUE),na.rm=TRUE))
     sep1 <- names(which.max(sep1.match))
     sel <- grep("[;/,]", features)
-    sep2.match <- sapply( c(";","/",","), function(s)
-      sum(grepl(s,features[sel],fixed=TRUE),na.rm=TRUE))
+    sep2.match <- sapply(c(";", "/", ","), function(s) {
+      sum(grepl(s, features[sel], fixed = TRUE), na.rm = TRUE)
+    })
     sep2 <- names(which.max(sep2.match))
     sep1
     sep2
@@ -1308,13 +1308,11 @@ annotate_phospho_residue <- function(features, detect.only = FALSE) {
 
     new.features <- sapply(1:length(features), function(i) {
       tt <- type[[i]]
-      pp <- paste( paste0( tt, positions[[i]] ), collapse=sep2)
-      paste0(uniprot[i],sep1,pp)
+      pp <- paste(paste0(tt, positions[[i]]), collapse = sep2)
+      paste0(uniprot[i], sep1, pp)
     })
-    head( cbind( features, new.features))
+    head(cbind(features, new.features))
     features <- new.features
-  }  
+  }
   features
 }
-
-
