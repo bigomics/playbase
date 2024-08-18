@@ -1141,6 +1141,7 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
   if (datatype == "proteomics") {
     phosphoELM.link1 <- "<a href='http://phospho.elm.eu.org/byAccession/UNIPROT' target='_blank'>PhosphoELM_protein</a>"
     feature1 <- sub("[-._].*", "", feature)
+    dbg("----MNT: ", feature, " --- ", feature1)
     phosphoELM.link1 <- sub("UNIPROT", feature1, phosphoELM.link1)
     phosphoELM.link2 <- "<a href='http://phospho.elm.eu.org/bySubstrate/GENE' target='_blank'>PhosphoELM_gene</a>"
     phosphoELM.link2 <- sub("GENE", symbol, phosphoELM.link2)
