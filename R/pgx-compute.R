@@ -272,12 +272,16 @@ pgx.createPGX <- function(counts,
   ## Special case for PTM phospho-proteomics
   is.phospho <- annotate_phospho_residue(rownames(counts), detect.only = TRUE)
   if (datatype == "proteomics" && is.phospho) {
+    info("[createPGX] annotating rownames with phospho residue...")
     newnames <- annotate_phospho_residue(rownames(counts))
-    dbg("[createPGX] head.rownames(counts) = ", head(rownames(counts)))
-    dbg("[createPGX] head.newnames = ", head(newnames))
+    names(newnames) <- rownames(counts)
     rownames(counts) <- newnames
     rownames(X) <- newnames
     if (!is.null(impX)) rownames(impX) <- newnames
+    if (!is.null(annot_table)) {
+      ## if nrow(annot_table) is not nrow(counts)
+      rownames(annot_table) <- newnames[rownames(annot_table)]
+    }
   }
 
   ## -------------------------------------------------------------------
