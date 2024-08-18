@@ -1261,14 +1261,14 @@ rename_by_humansymbol <- function(obj, annot) {
 #'
 #' @export
 annotate_phospho_residue <- function(features, detect.only = FALSE) {
-  valid_name <- mean(grepl("[_.][1-9].*", features),na.rm=TRUE) > 0.9
-  uniprot <- sub("[_.][1-9].*","",features)
-  positions <- strsplit( sub(".*[_.]","",features), split="[;/,]")
+  valid_name <- mean(grepl("[_.][1-9].*", features), na.rm = TRUE) > 0.9
+  uniprot <- sub("[_.][1-9].*", "", features)
+  positions <- strsplit(sub(".*[_.]", "", features), split = "[;/,]")
 
-  P <- playdata::PHOSPHOSITE  
+  P <- playdata::PHOSPHOSITE
   prot.match <- mean(uniprot %in% P$UniProt, na.rm = TRUE)
-  pos.match  <- mean(positions %in% P$Position, na.rm = TRUE)    
-  is_phospho <- ( valid_name && prot.match > 0.50 && pos.match > 0.50 )
+  pos.match <- mean(positions %in% P$Position, na.rm = TRUE)
+  is_phospho <- (valid_name && prot.match > 0.50 && pos.match > 0.50)
 
   if (detect.only) {
     return(is_phospho)
@@ -1288,18 +1288,19 @@ annotate_phospho_residue <- function(features, detect.only = FALSE) {
     sep1
     sep2
 
-    P <- P[which( P$UniProt %in% uniprot ),]
+    P <- P[which(P$UniProt %in% uniprot), ]
     dim(P)
-    P.id <- paste0(P$UniProt,"_",P$Position)
-    F.id <- lapply(1:length(uniprot), function(i)
-      paste0( uniprot[i], '_', positions[[i]] ))
+    P.id <- paste0(P$UniProt, "_", P$Position)
+    F.id <- lapply(1:length(uniprot), function(i) {
+      paste0(uniprot[i], "_", positions[[i]])
+    })
 
     ## this takes a while...
     p.idx <- lapply(uniprot, function(p) which(P$UniProt == p))
     type <- sapply(1:length(positions), function(i) {
-      jj <- match( positions[[i]], P$Position[p.idx[[i]]] )
+      jj <- match(positions[[i]], P$Position[p.idx[[i]]])
       tt <- P$Residue[p.idx[[i]][jj]]
-      tt[is.na(tt)] <- ""  ## not found
+      tt[is.na(tt)] <- "" ## not found
       tt
     })
 
