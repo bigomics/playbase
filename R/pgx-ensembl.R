@@ -1087,7 +1087,7 @@ combine_feature_names <- function(annot, target) {
 }
 
 #' @export
-getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
+getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
   if (is.null(gene) || length(gene) == 0) {
     return(NULL)
   }
@@ -1096,9 +1096,7 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
   }
 
   orgdb <- getOrgDb(organism, use.ah = NULL)
-  cols <- c(
-    "SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH", "GO"
-  )
+  cols <- c("SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH", "GO")
   cols <- intersect(cols, keytypes(orgdb))
 
   ## get info from different environments
@@ -1135,6 +1133,16 @@ getOrgGeneInfo <- function(organism, gene, as.link = TRUE) {
     genecards.link <- sub("GENE", symbol[1], genecards.link)
     uniprot.link <- sub("UNIPROT", uniprot[1], uniprot.link)
     info[["databases"]] <- paste(c(genecards.link, uniprot.link), collapse = ", ")
+  }
+
+  ## create links to PhosphoELM for proten and gene: db of S/T/Y phosphorylation sites
+  if(datatype == "proteomics") {
+      phosphoELM.link1 <- "<a href='http://phospho.elm.eu.org/byAccession/UNIPROT' target='_blank'>PhosphoELM_protein</a>"
+      feature1 <- strsplit(strsplit(feature, "[.]")[[1]][1], "-")[[1]][1]
+      phosphoELM.link1 <- sub("UNIPROT", feature1, phosphoELM.link1)
+      phosphoELM.link2 <- "<a href='http://phospho.elm.eu.org/bySubstrate/GENE' target='_blank'>PhosphoELM_gene</a>"
+      phosphoELM.link2 <- sub("GENE", symbol, phosphoELM.link2)
+      info[["databases"]] <- paste(c(info[["databases"]], phosphoELM.link1, phosphoELM.link2), collapse = ", ")
   }
 
   ## create link to OMIM
