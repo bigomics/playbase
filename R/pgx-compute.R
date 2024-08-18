@@ -270,8 +270,9 @@ pgx.createPGX <- function(counts,
   }
 
   ## Special case for PTM phospho-proteomics
-  if (datatype == "proteomics") {
-    newnames <- playbase::annotate_phosphotype(rownames(counts), organism = organism)
+  is.phospho <- annotate_phospho_residue(rownames(counts), detect.only=TRUE)
+  if (datatype == "proteomics" && is.phospho) {
+    newnames <- annotate_phospho_residue(rownames(counts))
     dbg("[createPGX] head.rownames(counts) = ", head(rownames(counts)))
     dbg("[createPGX] head.newnames = ", head(newnames))
     rownames(counts) <- newnames
