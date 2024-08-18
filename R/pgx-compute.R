@@ -188,12 +188,12 @@ pgx.createPGX <- function(counts,
   }
 
   if (is.null(X)) {
-    min.nz <- min(counts[ counts > 0], na.rm=TRUE)
-    prior <- ifelse( norm_method == "CPM", 1, 1e-4 )
-    if( min.nz < 1e-4 ) {
+    min.nz <- min(counts[counts > 0], na.rm = TRUE)
+    prior <- ifelse(norm_method == "CPM", 1, 1e-4)
+    if (min.nz < 1e-4) {
       info("[createPGX] WARNING : small non-zero values detected. check prior.")
     }
-    X <- log2( counts + prior )
+    X <- log2(counts + prior)
   }
 
   if (!is.null(X)) {
@@ -226,7 +226,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   samples <- as.data.frame(samples, drop = FALSE)
   counts <- as.matrix(counts)
-  X <- as.matrix(X)  
+  X <- as.matrix(X)
   if (is.null(contrasts)) contrasts <- samples[, 0]
 
   ## convert old-style contrast matrix to sample-wise labeled contrasts
@@ -270,15 +270,15 @@ pgx.createPGX <- function(counts,
   }
 
   ## Special case for PTM phospho-proteomics
-  if( datatype == "proteomics" ) {
-    newnames <- playbase::annotate_phosphotype( rownames(counts), organism = organism )
+  if (datatype == "proteomics") {
+    newnames <- playbase::annotate_phosphotype(rownames(counts), organism = organism)
     dbg("[createPGX] head.rownames(counts) = ", head(rownames(counts)))
-    dbg("[createPGX] head.newnames = ", head(newnames))    
+    dbg("[createPGX] head.newnames = ", head(newnames))
     rownames(counts) <- newnames
     rownames(X) <- newnames
-    if(!is.null(impX)) rownames(impX) <- newnames
+    if (!is.null(impX)) rownames(impX) <- newnames
   }
-  
+
   ## -------------------------------------------------------------------
   ## create pgx object
   ## -------------------------------------------------------------------
