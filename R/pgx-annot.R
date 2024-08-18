@@ -1263,21 +1263,13 @@ rename_by_humansymbol <- function(obj, annot) {
 #' form 'uniprot_position'.
 #'
 #' @export
-annotate_phosphotype <- function(features, organism=NA, detect.only = FALSE) {
+annotate_phospho_residue <- function(features, detect.only = FALSE) {
   valid_name <- mean(grepl("[_.][1-9].*", features),na.rm=TRUE) > 0.9
   uniprot <- sub("[_.][1-9].*","",features)
   positions <- strsplit( sub(".*[_.]","",features), split="[;/,]")
 
-  P <- playdata::PHOSPHOSITE
-  if(!is.na(organism)) {
-    sel <- grep( organism, P$Species )
-    if(length(sel) == 0) {
-      sel <- which(is.na(P$Species))
-    }
-    P <- P[sel,]
-  }
-  
-  prot.match <- mean(uniprot %in% P$Uniprot, na.rm = TRUE)
+  P <- playdata::PHOSPHOSITE  
+  prot.match <- mean(uniprot %in% P$UniProt, na.rm = TRUE)
   pos.match  <- mean(positions %in% P$Position, na.rm = TRUE)    
   is_phospho <- ( valid_name && prot.match > 0.50 && pos.match > 0.50 )
   is_phospho
@@ -1288,7 +1280,7 @@ annotate_phosphotype <- function(features, organism=NA, detect.only = FALSE) {
   
   if(is_phospho) {
     ## determine separators
-    info("[annotate_phosphotype] annotating features with phosposite")
+    info(paste("[annotate_phosphotype] annotating",length(uniprot),"features with phosposite"))
     sep1.match <- sapply( c("_","."), function(s)
       sum(grepl(s, features, fixed=TRUE),na.rm=TRUE))
     sep1 <- names(which.max(sep1.match))
@@ -1298,17 +1290,18 @@ annotate_phosphotype <- function(features, organism=NA, detect.only = FALSE) {
     sep2 <- names(which.max(sep2.match))
     sep1
     sep2
-    
-    P.id <- paste0(P$Uniprot,"_",P$Position)
+
+    P <- P[which( P$UniProt %in% uniprot ),]
+    dim(P)
+    P.id <- paste0(P$UniProt,"_",P$Position)
     F.id <- lapply(1:length(uniprot), function(i)
       paste0( uniprot[i], '_', positions[[i]] ))
 
     ## this takes a while...
-    p.idx <- lapply(uniprot, function(p) which(P$Uniprot == p))
-
+    p.idx <- lapply(uniprot, function(p) which(P$UniProt == p))
     type <- sapply(1:length(positions), function(i) {
       jj <- match( positions[[i]], P$Position[p.idx[[i]]] )
-      tt <- P$Type[p.idx[[i]][jj]]
+      tt <- P$Residue[p.idx[[i]][jj]]
       tt[is.na(tt)] <- ""  ## not found
       tt
     })
