@@ -10,7 +10,7 @@ pgx.createPGX(
   counts,
   samples,
   contrasts,
-  organism = NULL,
+  organism,
   custom.geneset = NULL,
   annot_table = NULL,
   max.genesets = 5000,

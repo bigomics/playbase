@@ -238,8 +238,7 @@ read_files <- function(dir = ".", pattern = NULL) {
 #' counts <- read_counts(playbase::example_file("counts.csv"))
 #' }
 #' @export
-read_counts <- function(file, drop_na_rows = TRUE, drop_na_cols = TRUE,
-                        first = FALSE, unique = TRUE, paste_char = "_") {
+read_counts <- function(file, first = FALSE, unique = TRUE, paste_char = "_") {
   if (is.character(file)) {
     df <- read.as_matrix(file)
   } else if (is.matrix(file) || is.data.frame(file)) {
@@ -250,6 +249,11 @@ read_counts <- function(file, drop_na_rows = TRUE, drop_na_cols = TRUE,
   is_valid <- validate_counts(df)
   if (!is_valid) stop("Counts file is not valid.")
 
+  ## determine column types
+  df1 <- type.convert(data.frame(df),as.is=TRUE)
+  col.type <- sapply(df1,class)
+  col.type
+  
   ## if the second column is a character, then we paste that column to
   ## the rownames (first column) as postfix.
   col1char <- is.character(type.convert(df[, 1], as.is = TRUE))
@@ -272,22 +276,10 @@ read_counts <- function(file, drop_na_rows = TRUE, drop_na_cols = TRUE,
     rownames(df) <- rn
   }
 
-  ## some spreadsheets errorenously add empty rows or columns
-  if (drop_na_cols) {
-    no_colnames <- colnames(df) %in% c(NA, "", "NA")
-    sel <- which((colMeans(is.na(df)) == 1) & no_colnames)
-    if (length(sel)) df <- df[, -sel, drop = FALSE]
-  }
-  if (drop_na_rows) {
-    no_rownames <- rownames(df) %in% c(NA, "", "NA")
-    sel <- which((rowMeans(is.na(df)) == 1) & no_rownames)
-    if (length(sel)) df <- df[-sel, , drop = FALSE]
-  }
   if (first) rownames(df) <- first_feature(rownames(df))
   if (unique) rownames(df) <- make_unique(rownames(df))
   return(df)
 }
-
 
 #' Read samples data from file
 #'
@@ -326,6 +318,31 @@ read_contrasts <- function(file) {
   df
 }
 
+#' Read gene/probe annotation file
+#' 
+#' @export
+read_annot <- function(file, drop_na_rows = TRUE, drop_na_cols = TRUE,
+                       first = FALSE, unique = TRUE, paste_char = "_") {
+  if (is.character(file)) {
+    df <- read.as_matrix(file)
+  } else if (is.matrix(file) || is.data.frame(file)) {
+    df <- file
+  } else {
+    stop("input error")
+  }
+
+  df <- type.convert(data.frame(df),as.is=TRUE)
+  col.type <- sapply(df,class)
+  col.type
+
+  ## drop numerical columns (these can be intensities)
+  num.cols <- which( col.type %in% c("numeric","integer","double"))
+  if(length(num.cols)) {
+    df <- df[, -num.cols]
+  }
+
+  return(df)
+}
 
 #' Validate counts data
 #'

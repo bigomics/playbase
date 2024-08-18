@@ -62,16 +62,16 @@ pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL) {
   return(pgx)
 }
 
-#' @export
-getGeneAnnotation <- function(...) {
-  ngs.getGeneAnnotation(...)
+# old function call
+ngs.getGeneAnnotation <- function(...) {
+  getGeneAnnotation(...)
 }
 
-# old function call
-ngs.getGeneAnnotation <- function(
+#' @export
+getGeneAnnotation <- function(
     organism,
     probes,
-    use = c("annothub", "orthogene")[1],
+    use = c("annothub", "orthogene"),
     use.ah = NULL,
     verbose = TRUE) {
   annot <- NULL
@@ -81,7 +81,8 @@ ngs.getGeneAnnotation <- function(
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
   if (tolower(organism) == "dog") organism <- "Canis familiaris"
 
-  if (is.null(annot) && use == "annothub") {
+  if (is.null(annot) && "annothub" %in% use) {
+    info("[ngs.getGeneAnnotation] annotating with ANNOTHUB")    
     annot <- getGeneAnnotation.ANNOTHUB(
       organism = organism,
       probes = probes,
@@ -90,7 +91,8 @@ ngs.getGeneAnnotation <- function(
     )
   }
 
-  if (is.null(annot) && use == "orthogene") {
+  if (is.null(annot) && "orthogene" %in% use) {
+    info("[ngs.getGeneAnnotation] annotating with ORTHOGENE")
     organism <- sub("Canis familiaris", "Canis lupus familiaris", organism)
     annot <- getGeneAnnotation.ORTHOGENE(
       organism = organism,
@@ -99,6 +101,9 @@ ngs.getGeneAnnotation <- function(
     )
   }
 
+  ## add specials
+  ## rownames(annot) <- annotate_phosphotype(rownames(annot), organism=organism) 
+  
   ## clean up
   annot <- cleanupAnnotation(annot)
 
@@ -1245,3 +1250,70 @@ rename_by_humansymbol <- function(obj, annot) {
   if (is.null(dim(map.obj))) names(map.obj) <- toupper(names(map.obj))
   map.obj
 }
+
+#' Annotate phosphosite with residue symbol. Feature names must be of
+#' form 'uniprot_position'.
+#'
+#' @export
+annotate_phosphotype <- function(features, organism=NA, detect.only = FALSE) {
+  valid_name <- mean(grepl("[_.][1-9].*", features),na.rm=TRUE) > 0.9
+  uniprot <- sub("[_.][1-9].*","",features)
+  positions <- strsplit( sub(".*[_.]","",features), split="[;/,]")
+
+  P <- playdata::PHOSPHOSITE
+  if(!is.na(organism)) {
+    sel <- grep( organism, P$Species )
+    if(length(sel) == 0) {
+      sel <- which(is.na(P$Species))
+    }
+    P <- P[sel,]
+  }
+  
+  prot.match <- mean(uniprot %in% P$Uniprot, na.rm = TRUE)
+  pos.match  <- mean(positions %in% P$Position, na.rm = TRUE)    
+  is_phospho <- ( valid_name && prot.match > 0.50 && pos.match > 0.50 )
+  is_phospho
+
+  if(detect.only) {
+    return( is_phospho )
+  }
+  
+  if(is_phospho) {
+    ## determine separators
+    info("[annotate_phosphotype] annotating features with phosposite")
+    sep1.match <- sapply( c("_","."), function(s)
+      sum(grepl(s, features, fixed=TRUE),na.rm=TRUE))
+    sep1 <- names(which.max(sep1.match))
+    sel <- grep("[;/,]", features)
+    sep2.match <- sapply( c(";","/",","), function(s)
+      sum(grepl(s,features[sel],fixed=TRUE),na.rm=TRUE))
+    sep2 <- names(which.max(sep2.match))
+    sep1
+    sep2
+    
+    P.id <- paste0(P$Uniprot,"_",P$Position)
+    F.id <- lapply(1:length(uniprot), function(i)
+      paste0( uniprot[i], '_', positions[[i]] ))
+
+    ## this takes a while...
+    p.idx <- lapply(uniprot, function(p) which(P$Uniprot == p))
+
+    type <- sapply(1:length(positions), function(i) {
+      jj <- match( positions[[i]], P$Position[p.idx[[i]]] )
+      tt <- P$Type[p.idx[[i]][jj]]
+      tt[is.na(tt)] <- ""  ## not found
+      tt
+    })
+
+    new.features <- sapply(1:length(features), function(i) {
+      tt <- type[[i]]
+      pp <- paste( paste0( tt, positions[[i]] ), collapse=sep2)
+      paste0(uniprot[i],sep1,pp)
+    })
+    head( cbind( features, new.features))
+    features <- new.features
+  }  
+  features
+}
+
+

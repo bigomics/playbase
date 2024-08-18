@@ -154,7 +154,7 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 pgx.createPGX <- function(counts,
                           samples,
                           contrasts,
-                          organism = NULL,
+                          organism,
                           custom.geneset = NULL,
                           annot_table = NULL,
                           max.genesets = 5000,
@@ -187,14 +187,21 @@ pgx.createPGX <- function(counts,
     stop("[createPGX] FATAL: counts must be provided")
   }
 
+  if (is.null(X)) {
+    min.nz <- min(counts[ counts > 0], na.rm=TRUE)
+    prior <- ifelse( norm_method == "CPM", 1, 1e-4 )
+    if( min.nz < 1e-4 ) {
+      info("[createPGX] WARNING : small non-zero values detected. check prior.")
+    }
+    X <- log2( counts + prior )
+  }
+
   if (!is.null(X)) {
     message("[createPGX] class.X: ", class(X))
     message("[createPGX] dim.X: ", dim(X)[1], ", ", dim(X)[2])
     message("[createPGX] Normalization method:", norm_method)
     nmissing <- sum(is.na(X))
     message("[createPGX] X has ", nmissing, " missing values")
-  } else {
-    stop("[createPGX] FATAL: X must be provided")
   }
 
   if (!is.null(impX)) {
@@ -219,6 +226,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   samples <- as.data.frame(samples, drop = FALSE)
   counts <- as.matrix(counts)
+  X <- as.matrix(X)  
   if (is.null(contrasts)) contrasts <- samples[, 0]
 
   ## convert old-style contrast matrix to sample-wise labeled contrasts
@@ -261,6 +269,16 @@ pgx.createPGX <- function(counts,
     contrasts <- contrasts[kk, , drop = FALSE]
   }
 
+  ## Special case for PTM phospho-proteomics
+  if( datatype == "proteomics" ) {
+    newnames <- playbase::annotate_phosphotype( rownames(counts), organism = organism )
+    dbg("[createPGX] head.rownames(counts) = ", head(rownames(counts)))
+    dbg("[createPGX] head.newnames = ", head(newnames))    
+    rownames(counts) <- newnames
+    rownames(X) <- newnames
+    if(!is.null(impX)) rownames(impX) <- newnames
+  }
+  
   ## -------------------------------------------------------------------
   ## create pgx object
   ## -------------------------------------------------------------------
