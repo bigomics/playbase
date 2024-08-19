@@ -13,13 +13,8 @@ species$species_name <- species$species
 
 # rename Homo sapiens to Human in the species_name column
 species[species_name == "Homo sapiens", species_name := "Human"]
-
-# rename Mus musculus to mouse
 species[species_name == "Mus musculus", species_name := "Mouse"]
-
-# rename Mus musculus to mouse
 species[species_name == "Rattus norvegicus", species_name := "Rat"]
-
 
 # Create a new row with "No organism" in all columns
 new_row <- data.table(lapply(species, function(x) "No organism"))
@@ -33,7 +28,6 @@ species[, species_name := factor(species_name, levels = c(preferred_order, sort(
 setorder(species, species_name)
 
 # remove duplicates
-
 species <- unique(species, by = "species_name", fromLast = FALSE)
 
 
