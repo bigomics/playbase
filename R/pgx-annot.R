@@ -238,9 +238,6 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   ## Return as standardized data.frame and in the same order as input
   ## probes.
-  db.info <- eval(parse(text = paste0(orgdb$packageName, "::org.Hs.eg_dbInfo()")))
-  eg.version <- db.info[match("EGSOURCEDATE", db.info[, 1]), 2]
-  ##  annot$SOURCE <- paste0(orgdb$packageName," (",eg.version,")")
   annot$SOURCE <- orgdb$packageName
 
   annot.cols <- c(
