@@ -964,15 +964,9 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## create the full GENE matrix (always collapsed by gene)
   ## -----------------------------------------------------------
 
-  X_geneset <- pgx$X
-  if (!all(rownames(X_geneset) %in% pgx$genes$symbol)) {
-    X_geneset <- rename_by(X_geneset, pgx$genes, "symbol") ## pgx-functions.R
-    X_geneset <- X_geneset[!rownames(X_geneset) == "", , drop = FALSE]
-    # remove NA
-    X_geneset <- X_geneset[!is.na(rownames(X_geneset)), , drop = FALSE]
-    if (any(duplicated(rownames(X_geneset)))) {
-      X_geneset <- log2(rowsum(2**X_geneset, group = rownames(X_geneset)))
-    }
+  X <- pgx$X
+  if (!all(rownames(X) %in% pgx$genes$symbol)) {
+    X <- rename_by(X, pgx$genes, "symbol", unique = TRUE) ## pgx-functions.R
   }
 
   ## if reduced samples

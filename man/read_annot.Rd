@@ -4,14 +4,7 @@
 \alias{read_annot}
 \title{Read gene/probe annotation file}
 \usage{
-read_annot(
-  file,
-  drop_na_rows = TRUE,
-  drop_na_cols = TRUE,
-  first = FALSE,
-  unique = TRUE,
-  paste_char = "_"
-)
+read_annot(file, unique = TRUE)
 }
 \description{
 Read gene/probe annotation file
