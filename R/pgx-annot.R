@@ -1252,12 +1252,14 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
 #' list of test_species. Warning. bit slow.
 #'
 #' @export
-detect_species_probetype <- function(probes,
-                                     test_species = c("human", "mouse", "rat")) {
+detect_species_probetype <- function(
+    probes,
+    test_species = c("human", "mouse", "rat"),
+    ...) {
   probes <- unique(clean_probe_names(probes))
   ptype <- list()
   for (s in test_species) {
-    ptype[[s]] <- detect_probetype(s, probes, use.ah = FALSE)
+    ptype[[s]] <- detect_probetype(s, probes, use.ah = FALSE, ...)
   }
   ptype <- unlist(ptype)
   out <- list(
