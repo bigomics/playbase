@@ -14,6 +14,10 @@ WORKDIR /playbase
 
 COPY DESCRIPTION ./DESCRIPTION
 COPY dev/*.R Makevars* dev/
+COPY dev/Rprofil[e] /root/.Rprofile
+# if a github PAT is available put it in Renviron (but remove after!!!)
+COPY dev/Renviro[n] /root/.Renviron
+
 
 RUN Rscript dev/install_playbase.R 'github'
 
