@@ -1431,11 +1431,11 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
 
 #' @export
 rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
-  if(!all(rownames(counts) %in% rownames(annot_table))) {
+  if (!all(rownames(counts) %in% rownames(annot_table))) {
     stop("[rename_by] ERROR. rownames(counts) not in rownames(annot_table)")
   }
   probes <- rownames(counts)
-  if(is.vector(counts)) {
+  if (is.vector(counts)) {
     probes <- names(counts)
   }
   symbol <- annot_table[probes, new_id]
@@ -1454,10 +1454,10 @@ rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
   } else if (is.vector(counts)) {
     names(counts) <- symbol
     counts <- counts[!names(counts) %in% c("", "NA")]
-    if (unique) counts <- tapply(counts, names(counts), mean, na.rm=TRUE)
+    if (unique) counts <- tapply(counts, names(counts), mean, na.rm = TRUE)
     return(counts)
   } else {
-    return(symbol)  ## ???? IK
+    return(symbol) ## ???? IK
   }
 }
 
