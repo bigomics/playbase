@@ -867,16 +867,16 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
 #' @title Get all species in AnnotationHub/OrgDB
 #'
 #' @export
-allSpecies <- function(ah.query=FALSE) {
+allSpecies <- function(ah.query = FALSE) {
   gp.species <- allSpecies.ORTHOGENE()
-  ah.species <- allSpecies.ANNOTHUB(query=ah.query)
+  ah.species <- allSpecies.ANNOTHUB(query = ah.query)
   ## we select on organism_id but return the namings of annothub
   both <- intersect(names(gp.species), names(ah.species))
   species <- ah.species[both]
-  if(0) {
-    species <- sub("Homo sapiens","Human",species)
-    species <- sub("Mus musculus","Mouse",species)
-    species <- sub("Rattus Norvegicus","Rat",species)    
+  if (0) {
+    species <- sub("Homo sapiens", "Human", species)
+    species <- sub("Mus musculus", "Mouse", species)
+    species <- sub("Rattus Norvegicus", "Rat", species)
   }
   species
 }
@@ -887,8 +887,8 @@ allSpecies <- function(ah.query=FALSE) {
 #' @return character vector of species names
 #'
 #' @export
-allSpecies.ANNOTHUB <- function(query=FALSE) {
-  if(query) {
+allSpecies.ANNOTHUB <- function(query = FALSE) {
+  if (query) {
     ah <- AnnotationHub::AnnotationHub() ## make global??
     db <- AnnotationHub::query(ah, "OrgDb")
     M <- AnnotationHub::mcols(db)
