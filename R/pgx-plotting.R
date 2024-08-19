@@ -429,10 +429,10 @@ plot_SPLOM <- function(F, F2 = NULL, hilight = NULL, cex = 0.5, cex.axis = 1, ce
   F <- F[gg, , drop = FALSE]
   F2 <- F2[gg, , drop = FALSE]
 
-  x0 <- range(as.vector(apply(F, 2, stats::quantile, probs = c(0.001, 0.999))))
-  x1 <- range(as.vector(apply(F2, 2, stats::quantile, probs = c(0.001, 0.999))))
-  x0 <- range(as.vector(F))
-  x1 <- range(as.vector(F2))
+  x0 <- range(as.vector(apply(F, 2, stats::quantile, probs = c(0.001, 0.999))), na.rm=TRUE)
+  x1 <- range(as.vector(apply(F2, 2, stats::quantile, probs = c(0.001, 0.999))), na.rm=TRUE)
+  x0 <- range(as.vector(F), na.rm=TRUE)
+  x1 <- range(as.vector(F2), na.rm=TRUE)
   x0 <- x0 + c(-1, 1) * diff(x0) * 0.05
   x1 <- x1 + c(-1, 1) * diff(x1) * 0.05
 
@@ -1203,8 +1203,8 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
 #'
 #' @export
 pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
-                             pos = NULL, ntop = 20, cex = 1, cex.lab = 0.8,
-                             cex.legend = 1,
+                             pos = NULL, ntop = 20, cex = 1,
+                             cex.lab = 0.8, cex.legend = 1,
                              hilight = NULL, title = NULL, zfix = FALSE,
                              set.par = TRUE, par.sq = FALSE,
                              level = "gene", plotlib = "ggplot",
@@ -1226,20 +1226,18 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
     F <- cbind(value)
   }
 
-  if (!is.null(pos)) {
-    xy <- pos
-  } else if ("cluster.genes" %in% names(pgx)) {
-    xy <- pgx$cluster.genes$pos[["umap2d"]]
-  } else {
+  if (is.null(pos) && "cluster.genes" %in% names(pgx)) {
+    pos <- pgx$cluster.genes$pos[["umap2d"]]
+  } else if (is.null(pos) && !"cluster.genes" %in% names(pgx)) {
     message("[WARNING] no cluster.genes in object. please supply positions")
     return(NULL)
   }
-
-  cm <- intersect(rownames(xy), rownames(F))
+  
+  pos <- pos[which(rowMeans(is.na(pos))==0),,drop=FALSE]  
+  cm <- intersect(rownames(pos), rownames(F))
   F <- F[cm, , drop = FALSE]
-  ## F <- F[match(rownames(xy), rownames(F)), , drop = FALSE]
-  ## rownames(F) <- rownames(xy)
-
+  pos <- pos[cm,]
+  
   if (set.par) {
     nc <- ceiling(sqrt(ncol(F)))
     nr <- ceiling(ncol(F) / nc)
@@ -1272,12 +1270,12 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
 
     if (data) {
       return(
-        cbind(xy, f1)
+        cbind(pos, f1)
       )
     }
 
     p1 <- pgx.scatterPlotXY(
-      xy,
+      pos,
       var = f1, type = "numeric",
       xlab = "UMAP-x  (genes)",
       ylab = "UMAP-y  (genes)",
@@ -1930,7 +1928,7 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
   rnk.trace <- (r1 - r0)
   rnk.trace <- rnk.trace / max(abs(rnk.trace), na.rm = TRUE) * 0.8
 
-  qq <- range(fc)
+  qq <- range(fc, na.rm=TRUE)
   y1 <- qq[2]
   y0 <- 0.8 * qq[1]
   dy <- ticklen * (y1 - y0)
@@ -2115,7 +2113,7 @@ ggenplot <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ylab = NULL) {
   rnk.trace <- (r1 - r0)
   rnk.trace <- rnk.trace / max(abs(rnk.trace), na.rm = TRUE) * 0.8
 
-  qq <- range(fc)
+  qq <- range(fc, na.rm=TRUE)
   y1 <- qq[2]
   y0 <- qq[1]
   dy <- 0.2 * (y1 - y0)
@@ -2128,7 +2126,7 @@ ggenplot <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ylab = NULL) {
 
 
   cpal <- colorspace::diverge_hcl(64, c = 60, l = c(30, 100), power = 1)
-  ii <- 1 + 32 + range(round(32 * (fc / max(abs(fc), na.rm = TRUE))))
+  ii <- 1 + 32 + range(round(32 * (fc / max(abs(fc), na.rm = TRUE))), na.rm=TRUE)
   cpal <- colorspace::diverge_hcl(65)[ii[1]:ii[2]]
 
   cex.title <- 1
@@ -2212,7 +2210,7 @@ plot_ggscatterFILL <- function(x, y = NULL, col = NULL, shape = NULL,
   if (!is.null(col)) {
     cpal <- rev(RColorBrewer::brewer.pal(11, "RdYlBu"))
 
-    zr <- range(col)
+    zr <- range(col, na.rm=TRUE)
     zz <- round(c(zr[1], zr[2]), digits = 2)
     cgamma <- seq(0, 1, 1 / (length(cpal) - 1))**(1 / gamma)
     p <- p +
@@ -2558,7 +2556,7 @@ pgx.violinPlot <- function(x, y, group = NULL, xlab = "", ylab = "",
   fig <- NULL
   if (plotlib == "base") {
     if (is.null(maxbee)) maxbee <- 100 * length(setdiff(unique(y), NA))
-    if (jitter > 0) x <- x + jitter * diff(range(x)) * stats::rnorm(length(x))
+    if (jitter > 0) x <- x + jitter * diff(range(x, na.rm=TRUE)) * stats::rnorm(length(x))
 
 
     vioplot::vioplot(x ~ y,
@@ -2573,7 +2571,7 @@ pgx.violinPlot <- function(x, y, group = NULL, xlab = "", ylab = "",
     yy <- sort(unique(y))
     graphics::text(
       x = 1:length(yy),
-      y = graphics::par("usr")[3] - 0.03 * diff(range(x)),
+      y = graphics::par("usr")[3] - 0.03 * diff(range(x, na.rm=TRUE)),
       labels = yy,
       xpd = NA,
       srt = srt,
@@ -2738,20 +2736,20 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
   if (!is.null(xlim)) {
     xlim0 <- xlim
   } else {
-    xlim0 <- range(pos[, 1])
+    xlim0 <- range(pos[, 1], na.rm=TRUE)
     if (zoom != 1) {
-      cx <- mean(range(pos[, 1]))
-      dx <- diff(range(pos[, 1]))
+      cx <- mean(range(pos[, 1], na.rm=TRUE))
+      dx <- diff(range(pos[, 1], na.rm=TRUE))
       xlim0 <- cx + 0.5 * c(-1, 1.05) * dx / zoom
     }
   }
   if (!is.null(ylim)) {
     ylim0 <- ylim
   } else {
-    ylim0 <- range(pos[, 2])
+    ylim0 <- range(pos[, 2], na.rm=TRUE)
     if (zoom != 1) {
-      cy <- mean(range(pos[, 2]))
-      dy <- diff(range(pos[, 2]))
+      cy <- mean(range(pos[, 2], na.rm=TRUE))
+      dy <- diff(range(pos[, 2], na.rm=TRUE))
       ylim0 <- cy + 0.5 * c(-1, 1.05) * dy / zoom
     }
   }
@@ -3075,8 +3073,8 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   }
 
   ## normalize pos
-  if (is.null(xlim)) xlim <- range(pos[, 1])
-  if (is.null(ylim)) ylim <- range(pos[, 2])
+  if (is.null(xlim)) xlim <- range(pos[, 1], na.rm=TRUE)
+  if (is.null(ylim)) ylim <- range(pos[, 2], na.rm=TRUE)
   if (zoom != 1) {
     cx <- mean(range(pos[, 1], na.rm = TRUE), na.rm = TRUE)
     cy <- mean(range(pos[, 2], na.rm = TRUE), na.rm = TRUE)
@@ -3262,7 +3260,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     cex1 <- ifelse(length(cex) > 1, cex[jj], cex)
 
     ## determine range for colorbar
-    zr <- range(z)
+    zr <- range(z, na.rm=TRUE)
     if (zsym && min(zr, na.rm = TRUE) < 0) zr <- c(-1, 1) * max(abs(zr), na.rm = TRUE)
     zz <- round(c(zr[1], zr[2]), digits = 2)
     ##    variable <- NULL
@@ -3503,8 +3501,8 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   if (is.null(hilight.cex)) hilight.cex <- cex
 
   ## normalize pos
-  xlim0 <- range(pos[, 1])
-  ylim0 <- range(pos[, 2])
+  xlim0 <- range(pos[, 1], na.rm=TRUE)
+  ylim0 <- range(pos[, 2], na.rm=TRUE)
   if (zoom != 1) {
     cx <- mean(range(pos[, 1], na.rm = TRUE), na.rm = TRUE)
     cy <- mean(range(pos[, 2], na.rm = TRUE), na.rm = TRUE)
@@ -4861,11 +4859,11 @@ plotlyCytoplot <- function(pgx,
   xlab1 <- paste(gene1, lab.unit, collapse = "  ")
   ylab1 <- paste(gene2, lab.unit, collapse = "  ")
   xaxis <- list(
-    title = xlab1, range = range(x1), gridwidth = 0.2, showgrid = TRUE, showline = TRUE,
+    title = xlab1, range = range(x1, na.rm=TRUE), gridwidth = 0.2, showgrid = TRUE, showline = TRUE,
     zerolinewidth = 0, zerolinecolor = "#fff", autorange = TRUE
   )
   yaxis <- list(
-    title = ylab1, range = range(x2), gridwidth = 0.2, showgrid = TRUE, showline = TRUE,
+    title = ylab1, range = range(x2, na.rm=TRUE), gridwidth = 0.2, showgrid = TRUE, showline = TRUE,
     zerolinewidth = 0, zerolinecolor = "#fff", autorange = TRUE
   )
 
