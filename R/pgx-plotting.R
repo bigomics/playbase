@@ -275,12 +275,14 @@ pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap", "pacmap"), nb = 
   jj <- head(order(-matrixStats::rowSds(X, na.rm = TRUE)), 1000)
   X1 <- X[jj, ]
   X1 <- X1 - rowMeans(X1, na.rm = TRUE)
+  if(any(is.na(X1))) {
+    X1 <- svdImpute2(X1)
+  }
   if (ncol(X1) < 20) {
     X1 <- cbind(X1, X1, X1)
   }
+  
   if (is.null(nb)) nb <- ceiling(min(15, dim(X) / 8))
-  message("[pgx.dimPlot] nb = ", nb)
-
   for (m in method) {
     if (m == "umap") pos <- try(uwot::umap(t(X1), n_neighbors = max(2, nb)))
     if (m == "tsne") {
