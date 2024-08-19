@@ -1255,11 +1255,18 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
 detect_species_probetype <- function(
     probes,
     test_species = c("human", "mouse", "rat"),
-    ...) {
+    datatype = NULL,
+    probe_type = NULL) {
   probes <- unique(clean_probe_names(probes))
   ptype <- list()
   for (s in test_species) {
-    ptype[[s]] <- detect_probetype(s, probes, use.ah = FALSE, ...)
+    ptype[[s]] <- detect_probetype(
+      organism = s,
+      probes = probes,
+      use.ah = FALSE,
+      datatype = datatype,
+      probe_type = probe_type
+    )
   }
   ptype <- unlist(ptype)
   out <- list(
