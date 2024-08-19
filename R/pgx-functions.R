@@ -1431,11 +1431,18 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
 
 #' @export
 rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
-  symbol <- annot_table[rownames(counts), new_id]
+  if(!all(rownames(counts) %in% rownames(annot_table))) {
+    stop("[rename_by] ERROR. rownames(counts) not in rownames(annot_table)")
+  }
+  probes <- rownames(counts)
+  if(is.vector(counts)) {
+    probes <- names(counts)
+  }
+  symbol <- annot_table[probes, new_id]
 
   # Guard agaisn human_hommolog == NA
   if (all(is.na(symbol))) {
-    symbol <- annot_table[rownames(counts), "symbol"]
+    symbol <- annot_table[probes, "symbol"]
   }
 
   # Sum columns of rows with the same gene symbol
@@ -1444,8 +1451,13 @@ rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
     counts <- counts[!rownames(counts) %in% c("", "NA"), , drop = FALSE]
     if (unique) counts <- rowmean(counts, rownames(counts))
     return(counts)
+  } else if (is.vector(counts)) {
+    names(counts) <- symbol
+    counts <- counts[!names(counts) %in% c("", "NA")]
+    if (unique) counts <- tapply(counts, names(counts), mean, na.rm=TRUE)
+    return(counts)
   } else {
-    return(symbol)
+    return(symbol)  ## ???? IK
   }
 }
 
