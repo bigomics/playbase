@@ -1367,78 +1367,110 @@ filterProbes <- function(annot, genes) {
 #'
 #' @param counts Numeric matrix of counts, with genes/probes as rownames.
 #' @param annot_table Data frame with rownames matching counts and annotation columns.
-#' @param new_id_col Column name in annot_table containing new identifiers. Default 'symbol'.
+#' @param new_id Column name in annot_table containing new identifiers. Default 'symbol'.
 #'
 #' @return Matrix with rownames changed to values from annot_table.
 #' Duplicate new rownames are made unique.
 #'
 #' @details Renames rownames of counts matrix using an annotation data frame.
-#' Looks up the `new_id_col` in the annot_table and replaces counts rownames.
+#' Looks up the `new_id` in the annot_table and replaces counts rownames.
 #'
 #' @export
-rename_by <- function(counts, annot_table, new_id_col = "symbol",
-                      from_id = NULL, na.rm = TRUE, unique = TRUE) {
+rename_by2 <- function(counts, annot_table, new_id = "symbol",
+                      na.rm = TRUE, unique = TRUE) {
+
+  ## add rownames
+  annot_table$rownames <- rownames(annot_table)
+
+  probes <- rownames(counts)
+  probe_match <- apply(annot_table,2,function(x) sum(probes %in% x))
+  probe_match
+  from_id <- names(which.max(probe_match))
+  from_id
+  
   ## dummy do-noting return
-  if (new_id_col %in% c("rownames", NA, NULL)) {
+  if ( new_id ==  from_id ) {
     return(counts)
   }
-
-  # Guard against human_homolog == NA. probably old-style human
-  if ("human_homolog" %in% colnames(annot_table) &&
-    all(is.na(annot_table$human_homolog))) {
-    annot_table$human_homolog <- annot_table$symbol
-  }
-
+  
   type <- NA
   if (is.matrix(counts) || is.data.frame(counts) || !is.null(dim(counts))) {
-    probes <- rownames(counts)
     type <- "matrix"
   } else {
-    if (class(counts) == "character") {
-      probes <- counts
-      type <- "character"
-    } else {
-      probes <- names(counts)
-      type <- "vector"
-    }
+    type <- "vector"
+    counts <- cbind(counts)
   }
-  if (is.null(from_id)) {
-    from <- rownames(annot_table)
+
+  probes <- rownames(counts)
+  from <- annot_table[, from_id]
+  if(!any(duplicated(from)) || unique) {
+    ii <- match(probes, from)
+    new.name <- annot_table[ii, new_id]
   } else {
-    from <- annot_table[, from_id]
+    to <- lapply(probes, function(p) which(from == p))
+    ii <- lapply( 1:length(to), function(i) rep(i, length(to[[i]])))
+    counts <- counts[unlist(ii),]
+    new.name <- annot_table[unlist(to), new_id]
   }
-  symbol <- annot_table[match(probes, from), new_id_col]
+  rownames(counts) <- new.name
+  
+  # Sum columns of rows with the same gene symbol
+  if (na.rm) {
+    counts <- counts[!rownames(counts) %in% c("", "NA", NA), , drop = FALSE]
+  }
+  ##  if (unique) rownames(counts) <- make_unique(rownames(counts))
+  if (unique) {
+    counts <- rowmean(counts, rownames(counts))
+  }
+
+  if (type == "vector") {
+    counts <- counts[,1]
+  }
+  return(counts)
+}
+
+
+#' @export
+rename_by <- function(counts, annot_table, new_id = "symbol", unique=TRUE) {
+  symbol <- annot_table[rownames(counts), new_id]
+
+  # Guard agaisn human_hommolog == NA
+  if (all(is.na(symbol))) {
+    symbol <- annot_table[rownames(counts), "symbol"]
+  }
 
   # Sum columns of rows with the same gene symbol
-  if (type == "matrix") {
+  if (is.matrix(counts) | is.data.frame(counts)) {
     rownames(counts) <- symbol
-    if (na.rm) {
-      counts <- counts[!rownames(counts) %in% c("", "NA", NA), , drop = FALSE]
-    }
-    ##  if (unique) rownames(counts) <- make_unique(rownames(counts))
-    if (unique) {
-      counts <- rowmean(counts, rownames(counts))
-    }
+    counts <- counts[!rownames(counts) %in% c("", "NA"), , drop = FALSE]
+    if(unique) counts <- rowmean(counts, rownames(counts))
     return(counts)
-  } else if (type == "vector") {
-    names(counts) <- symbol
-    if (na.rm) {
-      counts <- counts[!names(counts) %in% c("", "NA", NA)]
-    }
-    ## if (unique) names(counts) <- make_unique(names(counts))
-    if (unique) {
-      n0 <- unique(names(counts))
-      counts <- tapply(counts, names(counts), mean, na.rm = TRUE)
-      counts <- counts[match(n0, names(counts))]
-    }
-    return(counts)
-  } else if (type == "character") {
-    if (na.rm) {
-      symbol <- symbol[!symbol %in% c("", "NA", NA)]
-    }
-    if (unique) symbol <- symbol[!duplicated(symbol)]
+  } else {
     return(symbol)
   }
+}
+
+
+#' Collapse object rownames/names to human symbol. Warning this function
+#' does not maintain the original dimensions/length of object.
+#'
+#' @export
+collapse_by_humansymbol <- function(obj, annot) {
+  annot <- cbind(annot, rownames = rownames(annot))
+  target <- c("human_ortholog", "symbol", "gene_name", "rownames")
+  target <- intersect(target, colnames(annot))
+  target <- target[which(colSums(is.na(annot[, target])) < 1)]
+  target
+  if (length(target) == 0) {
+    message("[map_humansymbol] WARNING: could not find symbol mapping column.")
+    return(obj)
+  } else {
+    ## call rename_by with target column
+    map.obj <- rename_by(obj, annot_table = annot, new_id = target[1])
+  }
+  if (!is.null(dim(map.obj))) rownames(map.obj) <- toupper(rownames(map.obj))
+  if (is.null(dim(map.obj))) names(map.obj) <- toupper(names(map.obj))
+  map.obj
 }
 
 #' @export
