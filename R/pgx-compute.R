@@ -901,7 +901,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
   X <- pgx$X
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
-    X <- rename_by(X, pgx$genes, "symbol", unique=TRUE) ## pgx-functions.R
+    X <- rename_by(X, pgx$genes, "symbol", unique = TRUE) ## pgx-functions.R
   }
 
   ## if reduced samples

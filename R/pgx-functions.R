@@ -1377,22 +1377,21 @@ filterProbes <- function(annot, genes) {
 #'
 #' @export
 rename_by2 <- function(counts, annot_table, new_id = "symbol",
-                      na.rm = TRUE, unique = TRUE) {
-
+                       na.rm = TRUE, unique = TRUE) {
   ## add rownames
   annot_table$rownames <- rownames(annot_table)
 
   probes <- rownames(counts)
-  probe_match <- apply(annot_table,2,function(x) sum(probes %in% x))
+  probe_match <- apply(annot_table, 2, function(x) sum(probes %in% x))
   probe_match
   from_id <- names(which.max(probe_match))
   from_id
-  
+
   ## dummy do-noting return
-  if ( new_id ==  from_id ) {
+  if (new_id == from_id) {
     return(counts)
   }
-  
+
   type <- NA
   if (is.matrix(counts) || is.data.frame(counts) || !is.null(dim(counts))) {
     type <- "matrix"
@@ -1403,17 +1402,17 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
 
   probes <- rownames(counts)
   from <- annot_table[, from_id]
-  if(!any(duplicated(from)) || unique) {
+  if (!any(duplicated(from)) || unique) {
     ii <- match(probes, from)
     new.name <- annot_table[ii, new_id]
   } else {
     to <- lapply(probes, function(p) which(from == p))
-    ii <- lapply( 1:length(to), function(i) rep(i, length(to[[i]])))
-    counts <- counts[unlist(ii),]
+    ii <- lapply(1:length(to), function(i) rep(i, length(to[[i]])))
+    counts <- counts[unlist(ii), ]
     new.name <- annot_table[unlist(to), new_id]
   }
   rownames(counts) <- new.name
-  
+
   # Sum columns of rows with the same gene symbol
   if (na.rm) {
     counts <- counts[!rownames(counts) %in% c("", "NA", NA), , drop = FALSE]
@@ -1424,14 +1423,14 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   }
 
   if (type == "vector") {
-    counts <- counts[,1]
+    counts <- counts[, 1]
   }
   return(counts)
 }
 
 
 #' @export
-rename_by <- function(counts, annot_table, new_id = "symbol", unique=TRUE) {
+rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
   symbol <- annot_table[rownames(counts), new_id]
 
   # Guard agaisn human_hommolog == NA
@@ -1443,7 +1442,7 @@ rename_by <- function(counts, annot_table, new_id = "symbol", unique=TRUE) {
   if (is.matrix(counts) | is.data.frame(counts)) {
     rownames(counts) <- symbol
     counts <- counts[!rownames(counts) %in% c("", "NA"), , drop = FALSE]
-    if(unique) counts <- rowmean(counts, rownames(counts))
+    if (unique) counts <- rowmean(counts, rownames(counts))
     return(counts)
   } else {
     return(symbol)
