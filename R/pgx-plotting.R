@@ -1349,7 +1349,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
                                max.points = 200, group.names = NULL,
                                main = NULL, xlab = NULL, ylab = NULL, names = TRUE,
                                plotly.annotations = NULL,
-                               plotly.margin = NULL,
+                               plotly.margin = NULL, verbose = 0,
                                plotlib = "base") {
   if (is.null(probe)) {
     return(NULL)
@@ -1374,12 +1374,12 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   comp
 
   if (!is.null(group.names)) {
-    message("[pgx.plotExpression] using group names from argument")
+    if (verbose) message("[pgx.plotExpression] using group names from argument")
   }
 
   ## if a named contrast table is available it is safer
   if (is.null(group.names) && "contrasts" %in% names(pgx)) {
-    message("[pgx.plotExpression] parsing group names from pgx$contrast labels")
+    if (verbose) message("[pgx.plotExpression] parsing group names from contrast labels")
     contr.labels <- pgx$contrasts[, comp]
     contr.idx <- expmat[, comp]
     group1 <- names(which.max(table(contr.labels[contr.idx > 0])))
@@ -1390,7 +1390,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
 
   ## Otherwise we guess from the contrast title but this is dangerous
   if (is.null(group.names) && grepl("_vs_|_VS_", comp)) {
-    message("[pgx.plotExpression] parsing group names contrast name (warning!)")
+    if (verbose) message("[pgx.plotExpression] parsing group names contrast name (warning!)")
     comp1 <- sub(".*:", "", comp) ## remove prefix
     group.names <- strsplit(comp1, split = "_vs_|_VS_")[[1]]
     group.names <- rev(group.names) ## first is main group
@@ -1623,7 +1623,8 @@ pgx.plotPhenotypeMatrix <- function(annot) {
     iheatmapr::add_col_annotation(
       annotation = annotF[, ],
       size = col_annot_height,
-      buffer = 0.005, side = "bottom",
+      buffer = 0.005,
+      side = "bottom",
       colors = colors0
     )
   colcex <- 1
@@ -2109,9 +2110,6 @@ ggenplot <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ylab = NULL) {
 
   ## compute running metrix
   fc <- sort(fc, decreasing = TRUE)
-
-
-
 
   ## weighted cumulative random walk
   x0 <- 1 * (names(fc) %in% gset)
@@ -3041,8 +3039,9 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
                                      cex.lab = 0.8, cex.title = 1.2, cex.clust = 1.5,
                                      cex.legend = 1, cex.axis = 1, gridcolor = NULL, bgcolor = NULL,
                                      zoom = 1, legend = TRUE, bty = "n", hilight = NULL,
-                                     zlim = NULL, zlog = FALSE, softmax = FALSE, zsym = FALSE,
-                                     xlab = NULL, ylab = NULL, cmin = 0, cmax = 1, xlim = NULL, ylim = NULL,
+                                     zlim = NULL, cmin = NULL, cmax = NULL,
+                                     zlog = FALSE, softmax = FALSE, zsym = FALSE,
+                                     xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL,
                                      hilight2 = hilight, hilight.col = "black",
                                      hilight.lwd = 0.8, hilight.cex = NULL, na.color = "#AAAAAA55",
                                      opacity = 1, label.clusters = FALSE, labels = NULL,
@@ -3070,6 +3069,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   if (is.null(colnames(pos))) {
     colnames(pos) <- c("x", "y")
   }
+  if (is.null(zlim) && !is.null(cmin) && !is.null(cmax)) zlim <- c(cmin, cmax)
 
   ## automatically set pointsize of dots
   if (is.null(cex)) {
@@ -3272,8 +3272,18 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     zr <- range(z)
     if (zsym && min(zr, na.rm = TRUE) < 0) zr <- c(-1, 1) * max(abs(zr), na.rm = TRUE)
     zz <- round(c(zr[1], zr[2]), digits = 2)
-    variable <- NULL
-    plt <- ggplot2::ggplot(df, ggplot2::aes(x, y, fill = variable)) +
+    ##    variable <- NULL
+    if (is.null(zlim)) {
+      cmin0 <- min(z, na.rm = TRUE)
+      cmax0 <- max(z, na.rm = TRUE)
+    } else {
+      cmin0 <- zlim[1]
+      cmax0 <- zlim[2]
+    }
+
+    plt <- ggplot2::ggplot(
+      df, ggplot2::aes(x, y, fill = variable)
+    ) +
       ggplot2::geom_point(
         shape = 21,
         alpha = opacity,
@@ -3283,7 +3293,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       ) +
       ggplot2::scale_fill_gradientn(
         colors = cpal,
-        limits = c(cmin, cmax),
+        limits = c(cmin0, cmax0),
         guide = guide,
         breaks = zz,
         labels = c(zz[1], zz[2]),
@@ -4402,6 +4412,8 @@ plotlyVolcano <- function(x,
       )
   }
 
+  ## label those points that are in 'label' vector. It should match
+  ## either the names or label.names
   if (!is.null(label) && length(label) > 0) {
     i2 <- which(names %in% label | label.names %in% label)
     i2 <- i2[!i2 %in% ib]
@@ -4473,10 +4485,11 @@ plotlyVolcano <- function(x,
           textposition = "top"
         )
     }
-  }
+  } ## end of if-label
 
+  ## draw vertical logFC threshold lines at specified logFC
   y0 <- -log10(psig)
-  y1 <- 1.05 * max(y, na.rm = TRUE)
+  y1 <- 0.95 * max(y, na.rm = TRUE)
   xx <- 1.05 * max(abs(x), na.rm = TRUE)
   abline1 <- list(
     type = "line", x0 = -lfc, x1 = -lfc, y0 = 0, y1 = y1,
@@ -4486,17 +4499,23 @@ plotlyVolcano <- function(x,
     type = "line", x0 = +lfc, x1 = +lfc, y0 = 0, y1 = y1,
     line = list(dash = "dot", width = 1, color = "grey")
   )
+  ## draw horizontal significance lines at p=0.05
   abline3 <- list(
     type = "line", x0 = -xx, x1 = +xx, y0 = y0, y1 = y0,
     line = list(dash = "dot", width = 1, color = "grey")
   )
-  max.absx <- max(max(abs(x), na.rm = TRUE), lfc * 1.2, na.rm = TRUE)
+  if (lfc == 0) {
+    significance.lines <- list(abline3)
+  } else {
+    significance.lines <- list(abline1, abline2, abline3)
+  }
 
+  ## calculate explicit ranges for x and y so we can add some padding.
+  max.absx <- max(max(abs(x), na.rm = TRUE), lfc * 1.2, na.rm = TRUE)
   if (is.null(max.absy)) {
     max.absy <- max(max(abs(y), na.rm = TRUE), y0 * 1.2, na.rm = TRUE)
   }
   xrange <- c(-1, 1) * max.absx * 1.05
-
   if (min(x, na.rm = TRUE) >= 0) xrange <- c(0, 1) * max.absx * 1.05
   yrange <- c(0, 1) * max.absy * 1.05
   xaxis <- list(title = xlab, range = xrange, showgrid = FALSE)
@@ -4504,8 +4523,9 @@ plotlyVolcano <- function(x,
 
   p <- p %>%
     plotly::layout(
-      shapes = list(abline1, abline2, abline3),
-      xaxis = xaxis, yaxis = yaxis,
+      shapes = significance.lines,
+      xaxis = xaxis,
+      yaxis = yaxis,
       showlegend = showlegend,
       hovermode = "closest",
       dragmode = "select"
@@ -4525,11 +4545,9 @@ plotlyVolcano <- function(x,
 #' @export
 plotlyVolcano_multi <- function(FC,
                                 Q,
-                                names = NULL,
                                 by_sig = TRUE,
                                 fdr = 0.05,
                                 lfc = 0,
-                                gset = NULL,
                                 label = NULL,
                                 share_axis = FALSE,
                                 title_y = "significance (-log10q)",
@@ -4547,15 +4565,17 @@ plotlyVolcano_multi <- function(FC,
                                 layout_args = list(),
                                 highlight = NULL,
                                 ...) {
+  dots <- list(...)
+
   ## Get tables and genes
   fc <- as.matrix(FC)
   qv <- as.matrix(Q)
-  if (is.null(names)) {
-    all_genes <- rownames(FC)
-  } else {
-    all_genes <- names
-  }
   titles <- colnames(fc)
+
+  all_genes <- rownames(FC)
+  all_labels <- all_genes
+  if ("names" %in% names(dots)) all_genes <- dots$names
+  if ("label.names" %in% names(dots)) all_labels <- dots$label.names
 
   # Prepare collection list
   nplots <- min(24, length(titles))
@@ -4567,21 +4587,27 @@ plotlyVolcano_multi <- function(FC,
     title_i <- titles[i]
 
     # Set marker colour group
+    hi.genes <- NULL
     if (by_sig) {
       is.sig <- (qval <= fdr & abs(fx) >= lfc)
-      sig.genes <- all_genes[is.sig]
-    } else if (!is.null(gset)) {
-      sig.genes <- all_genes[all_genes %in% gset]
-    } else {
-      sig.genes <- highlight
+      hi.genes <- all_genes[is.sig]
+    }
+    if (!is.null(highlight)) {
+      hi.genes1 <- all_genes[all_genes %in% highlight | all_labels %in% highlight]
+      if (!is.null(hi.genes)) {
+        hi.genes <- intersect(hi.genes, hi.genes1)
+      } else {
+        hi.genes <- hi.genes1
+      }
     }
 
     # Take -log and add 1e-12 to remove 0, and avoid Infs
     qval <- -log10(qval + 1e-12)
 
     # Set labels
-    if (!is.null(label) && is.matrix(label)) {
-      label <- label[, i]
+    sub.label <- label
+    if (!is.null(label) && is.list(label)) {
+      sub.label <- label[[i]]
     }
 
     # Set title
@@ -4595,12 +4621,10 @@ plotlyVolcano_multi <- function(FC,
     sub_plots[[i]] <- plotlyVolcano(
       x = fx,
       y = qval,
-      names = all_genes,
-      label.names = all_genes,
+      label = sub.label,
       marker.type = "scattergl",
       marker.size = cex,
-      highlight = sig.genes,
-      label = label,
+      highlight = hi.genes,
       label.cex = label.cex,
       group.names = c("group1", "group0"),
       psig = fdr,
@@ -4612,7 +4636,7 @@ plotlyVolcano_multi <- function(FC,
     ) %>%
       plotly::add_annotations(
         text = paste("<b>", title_i, "</b>"),
-        font = list(size = 16),
+        font = list(size = 15),
         showarrow = FALSE,
         xanchor = "centre",
         yanchor = "bottom",
@@ -4634,26 +4658,41 @@ plotlyVolcano_multi <- function(FC,
   }
   suppressWarnings(
     all_plts <- plotly::subplot(sub_plots,
-      nrows = n_rows, margin = interplot_margin,
-      titleY = FALSE, titleX = FALSE, shareX = shareX, shareY = shareY
+      nrows = n_rows,
+      margin = interplot_margin,
+      titleY = FALSE,
+      titleX = FALSE,
+      shareX = shareX,
+      shareY = shareY
     ) %>%
       # Add common axis titles
       plotly::layout(
         annotations = modifyList(list(
           list(
-            x = title_y_offset, y = 0.5, text = title_y,
+            x = title_y_offset,
+            y = 0.5,
+            text = title_y,
             font = list(size = 13),
             textangle = 270,
-            showarrow = FALSE, xref = "paper", yref = "paper"
+            showarrow = FALSE,
+            xref = "paper",
+            yref = "paper"
           ),
           list(
-            x = 0.5, y = title_x_offset, text = title_x,
+            x = 0.5,
+            y = title_x_offset,
+            text = title_x,
             font = list(size = 13),
-            showarrow = FALSE, xref = "paper", yref = "paper"
+            showarrow = FALSE,
+            xref = "paper",
+            yref = "paper"
           )
         ), annotation_args),
         margin = modifyList(
-          list(l = margin_l, b = margin_b),
+          list(
+            l = margin_l,
+            b = margin_b
+          ),
           layout_args
         )
       )
@@ -5562,14 +5601,24 @@ pgx.barplot.PLOTLY <- function(
 
 
 #' @export
-pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
-                               plotlib = "base", filter = NULL,
-                               cexCol = 1.4, cexRow = 1,
-                               normalize = FALSE, rotate = FALSE,
-                               maxterm = 40, maxfc = 100,
+pgx.plotActivation <- function(pgx,
+                               features = NULL,
+                               contrasts = NULL,
+                               what = "geneset",
+                               matrix = NULL,
+                               plotlib = "base",
+                               filter = NULL,
+                               cexCol = 1.4,
+                               cexRow = 1,
+                               normalize = FALSE,
+                               rotate = FALSE,
+                               maxterm = 40,
+                               maxfc = 100,
                                mar = c(15, 30),
-                               tl.cex = 0.85, row.nchar = 60,
-                               colorbar = FALSE) {
+                               tl.cex = 0.85,
+                               row.nchar = 60,
+                               showscale = TRUE,
+                               cexBar = 0.66) {
   if (what == "geneset") {
     score <- pgx.getMetaMatrix(pgx, level = "geneset")$fc
   }
@@ -5578,6 +5627,10 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   }
   if (what == "drugs") {
     score <- pgx$drugs[[1]]$X
+  }
+  if (what == "matrix") {
+    if (is.null(matrix)) stop("must provide matrix")
+    score <- matrix
   }
   dim(score)
 
@@ -5595,8 +5648,16 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
     }
   }
 
+  if (!is.null(features)) {
+    features <- intersect(features, rownames(score))
+    score <- score[features, , drop = FALSE]
+  }
+
   ## max number terms
-  score <- score[head(order(-rowSums(score**2, na.rm = TRUE)), maxterm), , drop = FALSE]
+  score <- score[order(-rowSums(score**2, na.rm = TRUE)), , drop = FALSE]
+
+  ## max number terms
+  score <- head(score, maxterm)
 
   ## max comparisons/FC
   score <- score[, head(order(-colSums(score**2, na.rm = TRUE)), maxfc), drop = FALSE]
@@ -5606,13 +5667,8 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   ## normalize colums
   if (normalize) {
     ## column scale???
-    score <- t(t(score) / (1e-8 + sqrt(colMeans(score**2, na.rm = TRUE))))
+    score <- t(t(score) / (1e-8 + apply(abs(score), 2, max, na.rm = TRUE)))
   }
-  score <- score / max(abs(score), na.rm = TRUE) ## global normalize
-  score <- sign(score) * abs(score)**0.5 ## fudging for better colors???
-
-  message("dim.score = ", paste(dim(score), collapse = "x"))
-  message("NCOL.score = ", NCOL(score))
 
   if (NCOL(score) == 1) {
     score <- score[order(-score[, 1]), 1, drop = FALSE]
@@ -5641,6 +5697,8 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
 
   bluered.pal <- colorRamp(colors = c("royalblue3", "#ebeffa", "white", "#faeeee", "indianred3"))
   bluered.pal <- colorRamp(colors = c("royalblue3", "grey90", "indianred3"))
+  bluered.pal <- colorRamp(playbase::omics_pal_c("blue_red_grey", reverse = TRUE)(30))
+
   score <- score[nrow(score):1, , drop = FALSE]
   x_axis <- colnames(score)
   y_axis <- rownames(score)
@@ -5661,11 +5719,20 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   }
   if (plotlib == "plotly") {
     fig <- plotly::plot_ly(
-      x = x_axis, y = y_axis,
-      z = score, type = "heatmap",
+      x = x_axis,
+      y = y_axis,
+      z = score,
+      zauto = FALSE,
+      zmin = -max(abs(score)),
+      zmax = +max(abs(score)),
+      type = "heatmap",
       colors = bluered.pal,
-      showscale = colorbar
-    )
+      showscale = showscale
+    ) %>%
+      plotly::colorbar(
+        len = 0.5 * cexBar,
+        thickness = 30 * cexBar
+      )
   }
   return(fig)
 }

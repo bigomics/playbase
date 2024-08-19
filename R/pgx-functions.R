@@ -334,10 +334,23 @@ matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1, reorder = TRUE) {
 #' matrix. Faster than matGroupMeans.
 #'
 #' @export
-rowmean <- function(X, group, reorder = TRUE) {
-  sumX <- base::rowsum(X, group, na.rm = TRUE, reorder = reorder)
-  nX <- base::rowsum(1 * (!is.na(X)), group, reorder = reorder)
-  sumX / nX
+rowmean <- function(X, group = rownames(X), reorder = TRUE) {
+  if (is.matrix(X) || any(class(X) %in% c("matrix"))) {
+    sumX <- base::rowsum(X, group, na.rm = TRUE, reorder = reorder)
+    nX <- base::rowsum(1 * (!is.na(X)), group, reorder = reorder)
+    newX <- sumX / nX
+  } else {
+    ## slower but safer. also for sparse matrix.
+    newX <- tapply(1:nrow(X), group, function(i) {
+      Matrix::colMeans(X[i, , drop = FALSE], na.rm = TRUE)
+    })
+    newX <- do.call(rbind, newX)
+    if (reorder) {
+      ii <- match(unique(group), rownames(newX))
+      newX <- newX[ii, , drop = FALSE]
+    }
+  }
+  newX
 }
 
 #' @describeIn trimsame0 trimsame is a function that trims common prefixes and/or
@@ -1348,7 +1361,9 @@ filterProbes <- function(annot, genes) {
 }
 
 
-#' Rename rownames of counts matrix by annotation table
+#' Rename rownames of counts matrix by annotation table. Warning this
+#' function does not maintain the original dimensions/length of
+#' object.
 #'
 #' @param counts Numeric matrix of counts, with genes/probes as rownames.
 #' @param annot_table Data frame with rownames matching counts and annotation columns.
@@ -1361,10 +1376,21 @@ filterProbes <- function(annot, genes) {
 #' Looks up the `new_id_col` in the annot_table and replaces counts rownames.
 #'
 #' @export
-rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm = TRUE,
-                      unique = FALSE) {
+rename_by <- function(counts, annot_table, new_id_col = "symbol",
+                      from_id = NULL, na.rm = TRUE, unique = TRUE) {
+  ## dummy do-noting return
+  if (new_id_col %in% c("rownames", NA, NULL)) {
+    return(counts)
+  }
+
+  # Guard against human_homolog == NA. probably old-style human
+  if ("human_homolog" %in% colnames(annot_table) &&
+    all(is.na(annot_table$human_homolog))) {
+    annot_table$human_homolog <- annot_table$symbol
+  }
+
   type <- NA
-  if (is.matrix(counts) || is.data.frame(counts)) {
+  if (is.matrix(counts) || is.data.frame(counts) || !is.null(dim(counts))) {
     probes <- rownames(counts)
     type <- "matrix"
   } else {
@@ -1376,24 +1402,42 @@ rename_by <- function(counts, annot_table, new_id_col = "symbol", na.rm = TRUE,
       type <- "vector"
     }
   }
-  symbol <- annot_table[probes, new_id_col]
-
-  # Guard against human_hommolog == NA
-  if (all(is.na(symbol))) {
-    symbol <- annot_table[rownames(counts), "symbol"]
+  if (is.null(from_id)) {
+    from <- rownames(annot_table)
+  } else {
+    from <- annot_table[, from_id]
   }
+  symbol <- annot_table[match(probes, from), new_id_col]
 
   # Sum columns of rows with the same gene symbol
   if (type == "matrix") {
     rownames(counts) <- symbol
-    if (unique) rownames(counts) <- make_unique(symbol)
+    if (na.rm) {
+      counts <- counts[!rownames(counts) %in% c("", "NA", NA), , drop = FALSE]
+    }
+    ##  if (unique) rownames(counts) <- make_unique(rownames(counts))
+    if (unique) {
+      counts <- rowmean(counts, rownames(counts))
+    }
     return(counts)
-  } else if (type == "character") {
-    return(symbol)
   } else if (type == "vector") {
     names(counts) <- symbol
-    if (unique) names(counts) <- make_unique(symbol)
+    if (na.rm) {
+      counts <- counts[!names(counts) %in% c("", "NA", NA)]
+    }
+    ## if (unique) names(counts) <- make_unique(names(counts))
+    if (unique) {
+      n0 <- unique(names(counts))
+      counts <- tapply(counts, names(counts), mean, na.rm = TRUE)
+      counts <- counts[match(n0, names(counts))]
+    }
     return(counts)
+  } else if (type == "character") {
+    if (na.rm) {
+      symbol <- symbol[!symbol %in% c("", "NA", NA)]
+    }
+    if (unique) symbol <- symbol[!duplicated(symbol)]
+    return(symbol)
   }
 }
 

@@ -15,19 +15,9 @@ WORKDIR /playbase
 COPY DESCRIPTION ./DESCRIPTION
 COPY dev/*.R Makevars* dev/
 
-# pre-install some needed packages
-RUN R -e "BiocManager::install('AnnotationDbi')"
-#RUN R -e "BiocManager::install('RSQLite')"
-RUN R -e "BiocManager::install('topGO')"
-RUN R -e "BiocManager::install('org.Hs.eg.db')"
+RUN Rscript dev/install_playbase.R 'github'
 
-# preinstall dependencies
-RUN Rscript dev/install_dependencies.R 
-
-#RUN Rscript dev/install_playbase.R 'github'
-RUN R -e "remotes::install_github('bigomics/playbase')"
-
-# update all dependencies (should mostly be done..)
+# update dependencies (should mostly be done..)
 RUN Rscript dev/install_dependencies.R 
 
 # reinstall some failed ones

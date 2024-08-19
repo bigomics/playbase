@@ -154,7 +154,7 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
 pgx.createPGX <- function(counts,
                           samples,
                           contrasts,
-                          organism = NULL,
+                          organism,
                           custom.geneset = NULL,
                           annot_table = NULL,
                           max.genesets = 5000,
@@ -188,14 +188,21 @@ pgx.createPGX <- function(counts,
     stop("[createPGX] FATAL: counts must be provided")
   }
 
+  if (is.null(X)) {
+    min.nz <- min(counts[counts > 0], na.rm = TRUE)
+    prior <- ifelse(norm_method == "CPM", 1, 1e-4)
+    if (min.nz < 1e-4) {
+      info("[createPGX] WARNING : small non-zero values detected. check prior.")
+    }
+    X <- log2(counts + prior)
+  }
+
   if (!is.null(X)) {
     message("[createPGX] class.X: ", class(X))
     message("[createPGX] dim.X: ", dim(X)[1], ", ", dim(X)[2])
     message("[createPGX] Normalization method:", norm_method)
     nmissing <- sum(is.na(X))
     message("[createPGX] X has ", nmissing, " missing values")
-  } else {
-    stop("[createPGX] FATAL: X must be provided")
   }
 
   if (!is.null(impX)) {
@@ -220,6 +227,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   samples <- as.data.frame(samples, drop = FALSE)
   counts <- as.matrix(counts)
+  X <- as.matrix(X)
   if (is.null(contrasts)) contrasts <- samples[, 0]
 
   ## convert old-style contrast matrix to sample-wise labeled contrasts
@@ -260,6 +268,21 @@ pgx.createPGX <- function(counts,
   samples <- utils::type.convert(samples, as.is = TRUE) ## automatic type conversion
   if (all(kk %in% rownames(contrasts))) {
     contrasts <- contrasts[kk, , drop = FALSE]
+  }
+
+  ## Special case for PTM phospho-proteomics
+  is.phospho <- annotate_phospho_residue(rownames(counts), detect.only = TRUE)
+  if (datatype == "proteomics" && is.phospho) {
+    info("[createPGX] annotating rownames with phospho residue...")
+    newnames <- annotate_phospho_residue(rownames(counts))
+    names(newnames) <- rownames(counts)
+    rownames(counts) <- newnames
+    rownames(X) <- newnames
+    if (!is.null(impX)) rownames(impX) <- newnames
+    if (!is.null(annot_table)) {
+      ## if nrow(annot_table) is not nrow(counts)
+      rownames(annot_table) <- newnames[rownames(annot_table)]
+    }
   }
 
   ## -------------------------------------------------------------------
@@ -532,7 +555,8 @@ pgx.computePGX <- function(pgx,
     pgx <- playbase::pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
 
     ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
-    posx <- scale(cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]]))
+    posx <- cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]])
+    posx <- scale(posx)
     idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
     if (length(unique(idx)) == 1) {
       ## try again with finer settings if single cluster...
@@ -541,7 +565,7 @@ pgx.computePGX <- function(pgx,
     pgx$samples$cluster <- idx
   }
 
-  ## Cluster by contrasts
+  ## Make contrasts by cluster
   if (cluster.contrasts) {
     ## Add cluster contrasts
     message("[pgx.computePGX] adding cluster contrasts...")

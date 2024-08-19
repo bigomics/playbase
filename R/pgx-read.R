@@ -19,7 +19,7 @@
 #' mymatrix <- read.as_matrix(mydata.csv)
 #' }
 #' @export
-read.as_matrix <- function(file, skip_row_check = FALSE) {
+read.as_matrix <- function(file, skip_row_check = FALSE, row.names = 1) {
   ## determine if there are empty lines in header
   x0 <- data.table::fread(
     file = file,
@@ -46,28 +46,38 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
     integer64 = "numeric"
   )
 
+  ## For csv with missing rownames field at (1,1) in the header,
+  ## fill=TRUE will fail. Check header with slow read.csv() and
+  ## correct if needed. fread is fast but is not so robust...
+  ## detect delimiter/seperator
+  sep <- detect_delim(file)
+  hdr <- utils::read.csv(
+    file = file, sep = sep, check.names = FALSE, na.strings = NULL,
+    header = TRUE, nrows = 1, skip = skip.rows, row.names = NULL
+  )
+  if (NCOL(x0) > 0 && !all(colnames(x0) == colnames(hdr))) {
+    message("read.as_matrix: warning correcting header")
+    colnames(x0) <- colnames(hdr)
+  }
+
   x <- NULL
   ## drop rows without rownames
   sel <- which(!as.character(x0[[1]]) %in% c("", " ", "NA", "na", NA))
   if (length(sel)) {
-    ## get values from second column forward and take first column as
-    ## rownames. as.matrix means we do not have mixed types (such as in
-    ## dataframes).
-    if (ncol(x0) >= 2) {
-      x <- x0[sel, -1, drop = FALSE]
-      # convert x from data.table to matrix. This is needed as fread reads numeric as integer64, which is not supported by matrix
-      # at this stage since we handle samples, counts and contrasts, it is dangerous to force conversion to numeric
-      # hence, the conversion from character to numeric for counts is handled at pgx.checkINPUT
-      colnames_x <- colnames(x)
-      x <- sapply(1:ncol(x), function(i) {
-        as.character(x[[i]])
-      })
-      rownames(x) <- x0[[1]][sel]
-      colnames(x) <- colnames_x
-    } else {
-      x <- matrix(NA, length(sel), 0)
-      rownames(x) <- x0[[1]][sel]
-    }
+    ##
+    x <- x0[sel, , drop = FALSE]
+    # convert x from data.table to matrix. as.matrix means we do not
+    # have mixed types (such as in dataframes). This is needed as
+    # fread reads numeric as integer64, which is not supported by
+    # matrix at this stage since we handle samples, counts and
+    # contrasts, it is dangerous to force conversion to numeric hence,
+    # the conversion from character to numeric for counts is handled
+    # at pgx.checkINPUT
+    colnames_x <- colnames(x)
+    x <- sapply(1:ncol(x), function(i) {
+      as.character(x[[i]]) ## always character!
+    })
+    colnames(x) <- colnames_x
   } else {
     return(NULL)
   }
@@ -77,19 +87,10 @@ read.as_matrix <- function(file, skip_row_check = FALSE) {
     x <- trimws(x)
   }
 
-  ## detect delimiter/seperator
-  sep <- detect_delim(file)
-
-  ## For csv with missing rownames field at (1,1) in the header,
-  ## fill=TRUE will fail. Check header with slow read.csv() and
-  ## correct if needed. fread is fast but is not so robust...
-  hdr <- utils::read.csv(
-    file = file, sep = sep, check.names = FALSE, na.strings = NULL,
-    header = TRUE, nrows = 1, skip = skip.rows, row.names = 1
-  )
-  if (NCOL(x) > 0 && !all(colnames(x) == colnames(hdr))) {
-    message("read.as_matrix: warning correcting header")
-    colnames(x) <- colnames(hdr)
+  ## set rownames
+  if (!is.null(row.names) && !is.na(row.names) && row.names >= 1) {
+    x <- x[, -row.names, drop = FALSE]
+    rownames(x) <- x0[[row.names]]
   }
 
   ## some csv have trailing empty rows/cols at end of table
@@ -238,8 +239,7 @@ read_files <- function(dir = ".", pattern = NULL) {
 #' counts <- read_counts(playbase::example_file("counts.csv"))
 #' }
 #' @export
-read_counts <- function(file, drop_na_rows = TRUE, drop_na_cols = TRUE,
-                        first = FALSE, unique = TRUE, paste_char = "_") {
+read_counts <- function(file, first = FALSE, unique = TRUE, paste_char = "_") {
   if (is.character(file)) {
     df <- read.as_matrix(file)
   } else if (is.matrix(file) || is.data.frame(file)) {
@@ -250,17 +250,29 @@ read_counts <- function(file, drop_na_rows = TRUE, drop_na_cols = TRUE,
   is_valid <- validate_counts(df)
   if (!is_valid) stop("Counts file is not valid.")
 
-  ## if the second column is a character, then we paste that column to
-  ## the rownames (first column) as postfix.
-  col1char <- is.character(type.convert(df[, 1], as.is = TRUE))
-  col1annot <- grepl("symbol|gene|name|position",
-    colnames(df)[1],
-    ignore.case = TRUE
-  )
-  if (col1char || col1annot) {
-    message("warning: second column has annotation. pasting to rownames...")
-    rownames(df) <- paste0(rownames(df), paste_char, df[, 1])
-    df <- df[, -1]
+  ## determine column types
+  df1 <- type.convert(data.frame(df, check.names = FALSE), as.is = TRUE)
+  col.type <- sapply(df1, class)
+  col.type
+  char.cols <- which(col.type == "character")
+  last.charcol <- tail(char.cols, 1)
+  last.charcol
+
+  ## if the rownames are not unique, and some more character columns
+  ## exists, then search for best column and paste after rowname.
+  if (length(char.cols) > 0 && sum(duplicated(rownames(df)))) {
+    ndup <- sapply(char.cols, function(k) {
+      sum(duplicated(paste0(rownames(df), "_", df[, k])))
+    })
+    ndup
+    sel <- names(which.min(ndup))
+    rownames(df) <- paste0(rownames(df), "_", df[, sel])
+  }
+
+  ## As expression values we take all columns after the last character
+  ## column (if any).
+  if (length(last.charcol)) {
+    df <- df[, (last.charcol + 1):ncol(df)]
   }
 
   ## convert to numeric if needed (probably yes...)
@@ -272,22 +284,13 @@ read_counts <- function(file, drop_na_rows = TRUE, drop_na_cols = TRUE,
     rownames(df) <- rn
   }
 
-  ## some spreadsheets errorenously add empty rows or columns
-  if (drop_na_cols) {
-    no_colnames <- colnames(df) %in% c(NA, "", "NA")
-    sel <- which((colMeans(is.na(df)) == 1) & no_colnames)
-    if (length(sel)) df <- df[, -sel, drop = FALSE]
-  }
-  if (drop_na_rows) {
-    no_rownames <- rownames(df) %in% c(NA, "", "NA")
-    sel <- which((rowMeans(is.na(df)) == 1) & no_rownames)
-    if (length(sel)) df <- df[-sel, , drop = FALSE]
-  }
+  ## when multiple feature names, should we take only first feature?
   if (first) rownames(df) <- first_feature(rownames(df))
+
+  ## if rownames are duplicated, we append a number behing
   if (unique) rownames(df) <- make_unique(rownames(df))
   return(df)
 }
-
 
 #' Read samples data from file
 #'
@@ -326,6 +329,49 @@ read_contrasts <- function(file) {
   df
 }
 
+#' Read gene/probe annotation file
+#'
+#' @export
+read_annot <- function(file, unique = TRUE) {
+  if (is.character(file)) {
+    ## we read without rownames because we want to retain full header
+    df <- read.as_matrix(file, row.names = NULL)
+    rownames(df) <- df[, 1]
+  } else if (is.matrix(file) || is.data.frame(file)) {
+    df <- file
+  } else {
+    stop("input error")
+  }
+
+  ## determine last character column
+  df1 <- type.convert(data.frame(df, check.names = FALSE), as.is = TRUE)
+  col.type <- sapply(df1, class)
+  col.type
+  char.cols <- which(col.type == "character")
+  last.charcol <- tail(char.cols, 1)
+  last.charcol
+
+  ## if the rownames are not unique, and some more character columns
+  ## exists, then search for best column and paste after rowname.
+  if (length(char.cols) > 0 && sum(duplicated(rownames(df)))) {
+    ndup <- sapply(char.cols, function(k) {
+      sum(duplicated(paste0(rownames(df), "_", df[, k])))
+    })
+    ndup
+    sel <- names(which.min(ndup))
+    rownames(df) <- paste0(rownames(df), "_", df[, sel])
+  }
+
+  ## drop numerical columns (these can be intensities)
+  if (length(last.charcol)) {
+    df <- df[, 1:last.charcol, drop = FALSE]
+  } else {
+    df <- NULL
+  }
+
+  df <- data.frame(df, check.names = FALSE)
+  return(df)
+}
 
 #' Validate counts data
 #'

@@ -22,13 +22,13 @@ pgx.scatterPlotXY.GGPLOT(
   bty = "n",
   hilight = NULL,
   zlim = NULL,
+  cmin = NULL,
+  cmax = NULL,
   zlog = FALSE,
   softmax = FALSE,
   zsym = FALSE,
   xlab = NULL,
   ylab = NULL,
-  cmin = 0,
-  cmax = 1,
   xlim = NULL,
   ylim = NULL,
   hilight2 = hilight,
@@ -88,6 +88,8 @@ pgx.scatterPlotXY.GGPLOT(
 
 \item{zlim}{Color scale limits.}
 
+\item{cmin, cmax}{Min and max color values.}
+
 \item{zlog}{Log scale z axis? Logical.}
 
 \item{softmax}{Apply softmax to z axis? Logical.}
@@ -95,8 +97,6 @@ pgx.scatterPlotXY.GGPLOT(
 \item{zsym}{Symmetrize z axis? Logical.}
 
 \item{xlab, ylab}{Axis labels.}
-
-\item{cmin, cmax}{Min and max color values.}
 
 \item{xlim, ylim}{Axis limits.}
 

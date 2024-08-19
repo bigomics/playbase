@@ -205,7 +205,7 @@ pgx.initialize <- function(pgx) {
   famsize <- sapply(pgx$families, length)
   pgx$families <- pgx$families[which(famsize >= 10)]
 
-  all.genes <- sort(unique(pgx$genes$gene_name))
+  all.genes <- sort(unique(pgx$genes$symbol))
   pgx$families[["<all>"]] <- all.genes
 
   ## -----------------------------------------------------------------------------

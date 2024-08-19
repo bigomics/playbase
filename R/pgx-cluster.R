@@ -809,10 +809,14 @@ pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix 
   idx <- NULL
   message("Finding clusters using Louvain...\n")
 
-
   if (graph.method == "dist") {
     dist <- stats::as.dist(stats::dist(scale(X)))
-    gr <- igraph::graph_from_adjacency_matrix(1.0 / dist**gamma, diag = FALSE, mode = "undirected")
+    adjmatrix <- 1.0 / dist**gamma
+    gr <- igraph::graph_from_adjacency_matrix(
+      as.matrix(adjmatrix),
+      diag = FALSE,
+      mode = "undirected"
+    )
   } else if (graph.method == "snn") {
     suppressMessages(suppressWarnings(gr <- scran::buildSNNGraph(t(X), d = 50)))
   } else {

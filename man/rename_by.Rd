@@ -2,14 +2,17 @@
 % Please edit documentation in R/pgx-functions.R
 \name{rename_by}
 \alias{rename_by}
-\title{Rename rownames of counts matrix by annotation table}
+\title{Rename rownames of counts matrix by annotation table. Warning this
+function does not maintain the original dimensions/length of
+object.}
 \usage{
 rename_by(
   counts,
   annot_table,
   new_id_col = "symbol",
+  from_id = NULL,
   na.rm = TRUE,
-  unique = FALSE
+  unique = TRUE
 )
 }
 \arguments{
@@ -24,7 +27,9 @@ Matrix with rownames changed to values from annot_table.
 Duplicate new rownames are made unique.
 }
 \description{
-Rename rownames of counts matrix by annotation table
+Rename rownames of counts matrix by annotation table. Warning this
+function does not maintain the original dimensions/length of
+object.
 }
 \details{
 Renames rownames of counts matrix using an annotation data frame.
