@@ -19,7 +19,7 @@
 #' mymatrix <- read.as_matrix(mydata.csv)
 #' }
 #' @export
-read.as_matrix <- function(file, skip_row_check = FALSE, row.names=1) {
+read.as_matrix <- function(file, skip_row_check = FALSE, row.names = 1) {
   ## determine if there are empty lines in header
   x0 <- data.table::fread(
     file = file,
@@ -59,12 +59,12 @@ read.as_matrix <- function(file, skip_row_check = FALSE, row.names=1) {
     message("read.as_matrix: warning correcting header")
     colnames(x0) <- colnames(hdr)
   }
-  
+
   x <- NULL
   ## drop rows without rownames
   sel <- which(!as.character(x0[[1]]) %in% c("", " ", "NA", "na", NA))
   if (length(sel)) {
-    ## 
+    ##
     x <- x0[sel, , drop = FALSE]
     # convert x from data.table to matrix. as.matrix means we do not
     # have mixed types (such as in dataframes). This is needed as
@@ -75,7 +75,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE, row.names=1) {
     # at pgx.checkINPUT
     colnames_x <- colnames(x)
     x <- sapply(1:ncol(x), function(i) {
-      as.character(x[[i]])   ## always character!
+      as.character(x[[i]]) ## always character!
     })
     colnames(x) <- colnames_x
   } else {
@@ -88,11 +88,11 @@ read.as_matrix <- function(file, skip_row_check = FALSE, row.names=1) {
   }
 
   ## set rownames
-  if( !is.null(row.names) && !is.na(row.names) && row.names>=1) {
+  if (!is.null(row.names) && !is.na(row.names) && row.names >= 1) {
     x <- x[, -row.names, drop = FALSE]
     rownames(x) <- x0[[row.names]]
   }
-  
+
   ## some csv have trailing empty rows/cols at end of table
   if (NCOL(x) && !skip_row_check) { # bypass in case full NA rows
     empty.row <- (rowSums(is.na(x)) == ncol(x))
@@ -251,27 +251,28 @@ read_counts <- function(file, first = FALSE, unique = TRUE, paste_char = "_") {
   if (!is_valid) stop("Counts file is not valid.")
 
   ## determine column types
-  df1 <- type.convert(data.frame(df, check.names=FALSE), as.is = TRUE)
+  df1 <- type.convert(data.frame(df, check.names = FALSE), as.is = TRUE)
   col.type <- sapply(df1, class)
   col.type
-  char.cols <- which(col.type == 'character')
-  last.charcol <- tail(char.cols,1)
-  last.charcol  
+  char.cols <- which(col.type == "character")
+  last.charcol <- tail(char.cols, 1)
+  last.charcol
 
   ## if the rownames are not unique, and some more character columns
   ## exists, then search for best column and paste after rowname.
-  if(length(char.cols) > 0 && sum(duplicated(rownames(df)))) {
-    ndup <- sapply( char.cols, function(k)
-      sum(duplicated(paste0(rownames(df),"_",df[,k]))))
+  if (length(char.cols) > 0 && sum(duplicated(rownames(df)))) {
+    ndup <- sapply(char.cols, function(k) {
+      sum(duplicated(paste0(rownames(df), "_", df[, k])))
+    })
     ndup
     sel <- names(which.min(ndup))
-    rownames(df) <- paste0(rownames(df), "_", df[,sel])
+    rownames(df) <- paste0(rownames(df), "_", df[, sel])
   }
 
   ## As expression values we take all columns after the last character
   ## column (if any).
   if (length(last.charcol)) {
-    df <- df[, (last.charcol+1):ncol(df)]
+    df <- df[, (last.charcol + 1):ncol(df)]
   }
 
   ## convert to numeric if needed (probably yes...)
@@ -334,8 +335,8 @@ read_contrasts <- function(file) {
 read_annot <- function(file, unique = TRUE) {
   if (is.character(file)) {
     ## we read without rownames because we want to retain full header
-    df <- read.as_matrix(file, row.names=NULL)
-    rownames(df) <- df[,1]
+    df <- read.as_matrix(file, row.names = NULL)
+    rownames(df) <- df[, 1]
   } else if (is.matrix(file) || is.data.frame(file)) {
     df <- file
   } else {
@@ -343,31 +344,32 @@ read_annot <- function(file, unique = TRUE) {
   }
 
   ## determine last character column
-  df1 <- type.convert(data.frame(df, check.names=FALSE), as.is = TRUE)
+  df1 <- type.convert(data.frame(df, check.names = FALSE), as.is = TRUE)
   col.type <- sapply(df1, class)
   col.type
-  char.cols <- which(col.type == 'character')
-  last.charcol <- tail(char.cols,1)
-  last.charcol  
+  char.cols <- which(col.type == "character")
+  last.charcol <- tail(char.cols, 1)
+  last.charcol
 
   ## if the rownames are not unique, and some more character columns
   ## exists, then search for best column and paste after rowname.
-  if(length(char.cols) > 0 && sum(duplicated(rownames(df)))) {
-    ndup <- sapply( char.cols, function(k)
-      sum(duplicated(paste0(rownames(df),"_",df[,k]))))
+  if (length(char.cols) > 0 && sum(duplicated(rownames(df)))) {
+    ndup <- sapply(char.cols, function(k) {
+      sum(duplicated(paste0(rownames(df), "_", df[, k])))
+    })
     ndup
     sel <- names(which.min(ndup))
-    rownames(df) <- paste0(rownames(df), "_", df[,sel])
+    rownames(df) <- paste0(rownames(df), "_", df[, sel])
   }
 
   ## drop numerical columns (these can be intensities)
   if (length(last.charcol)) {
-    df <- df[, 1:last.charcol, drop=FALSE]
+    df <- df[, 1:last.charcol, drop = FALSE]
   } else {
     df <- NULL
   }
-  
-  df <- data.frame(df, check.names=FALSE)
+
+  df <- data.frame(df, check.names = FALSE)
   return(df)
 }
 
