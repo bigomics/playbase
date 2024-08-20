@@ -16,7 +16,8 @@ apt update && apt install -y \
     pandoc imagemagick libfftw3-dev libglpk-dev \
     libgsl-dev librsvg2-dev libgsl-dev curl \
     libsodium-dev libnlopt-dev \
-    libharfbuzz-dev libfribidi-dev    
+    libharfbuzz-dev libfribidi-dev \
+    fonts-lato
 
 # remove ugly snaps
 #snap remove --purge -y firefox
