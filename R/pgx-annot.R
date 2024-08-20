@@ -708,10 +708,9 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
 #'   orthogene package. This package needs internet connection.
 #'
 getHumanOrtholog.SAVE <- function(organism, symbols) {
-
   ## Too complicated this code...
   ##
-  
+
   ## test if orthogene server is reachable
   res <- try(orthogene::map_genes("CDK1", verbose = FALSE))
   if ("try-error" %in% class(res)) {
@@ -807,7 +806,6 @@ getHumanOrtholog.SAVE <- function(organism, symbols) {
 #'
 #' @export
 getHumanOrtholog <- function(organism, symbols) {
-  
   ## test if orthogene server is reachable
   res <- try(orthogene::map_genes("CDK1", verbose = FALSE))
   if ("try-error" %in% class(res)) {
@@ -843,7 +841,7 @@ getHumanOrtholog <- function(organism, symbols) {
     ii <- match(symbols, ortho.out$input_gene)
     orthogenes <- rownames(ortho.out)[ii]
   }
-  
+
   if (is.null(orthogenes)) {
     message("WARNING: could not find orthogene for ", organism)
     orthogenes <- rep(NA, length(symbols))
@@ -934,7 +932,7 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
 #' @title Get all species in AnnotationHub/OrgDB
 #'
 #' @export
-allSpecies <- function(col=c("species","ortho_species","species_name")[1]) {
+allSpecies <- function(col = c("species", "ortho_species", "species_name")[1]) {
   M <- data.frame(playbase::SPECIES_TABLE)
   species <- as.character(M[, col])
   names(species) <- M[, "taxonomyid"]
