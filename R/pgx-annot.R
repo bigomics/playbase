@@ -238,9 +238,6 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   ## Return as standardized data.frame and in the same order as input
   ## probes.
-  db.info <- eval(parse(text = paste0(orgdb$packageName, "::org.Hs.eg_dbInfo()")))
-  eg.version <- db.info[match("EGSOURCEDATE", db.info[, 1]), 2]
-  ##  annot$SOURCE <- paste0(orgdb$packageName," (",eg.version,")")
   annot$SOURCE <- orgdb$packageName
 
   annot.cols <- c(
@@ -880,12 +877,18 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
 #' @title Get all species in AnnotationHub/OrgDB
 #'
 #' @export
-allSpecies <- function() {
+allSpecies <- function(ah.query = FALSE) {
   gp.species <- allSpecies.ORTHOGENE()
-  ah.species <- allSpecies.ANNOTHUB()
+  ah.species <- allSpecies.ANNOTHUB(query = ah.query)
   ## we select on organism_id but return the namings of annothub
   both <- intersect(names(gp.species), names(ah.species))
-  ah.species[both]
+  species <- ah.species[both]
+  if (0) {
+    species <- sub("Homo sapiens", "Human", species)
+    species <- sub("Mus musculus", "Mouse", species)
+    species <- sub("Rattus Norvegicus", "Rat", species)
+  }
+  species
 }
 
 #' Return all species that are supported by the ANNOTHUB annotation
@@ -894,11 +897,14 @@ allSpecies <- function() {
 #' @return character vector of species names
 #'
 #' @export
-allSpecies.ANNOTHUB <- function() {
-  ah <- AnnotationHub::AnnotationHub() ## make global??
-  db <- AnnotationHub::query(ah, "OrgDb")
-  M <- AnnotationHub::mcols(db)
-  ## M <- data.frame(playbase::SPECIES_TABLE)
+allSpecies.ANNOTHUB <- function(query = FALSE) {
+  if (query) {
+    ah <- AnnotationHub::AnnotationHub() ## make global??
+    db <- AnnotationHub::query(ah, "OrgDb")
+    M <- AnnotationHub::mcols(db)
+  } else {
+    M <- data.frame(playbase::SPECIES_TABLE)
+  }
   M <- M[M$rdataclass == "OrgDb", ]
   species <- as.character(M[, "species"])
   names(species) <- M[, "taxonomyid"]
@@ -1172,8 +1178,7 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
   ## create links to PhosphoELM for proten and gene: db of S/T/Y phosphorylation sites
   if (datatype == "proteomics") {
     phosphoELM.link1 <- "<a href='http://phospho.elm.eu.org/byAccession/UNIPROT' target='_blank'>PhosphoELM_protein</a>"
-    feature1 <- sub("[-._].*", "", feature)
-    dbg("----MNT: ", feature, " --- ", feature1)
+    feature1 <- sub("[-._].*", "", feature) ## is it always uniprot???
     phosphoELM.link1 <- sub("UNIPROT", feature1, phosphoELM.link1)
     phosphoELM.link2 <- "<a href='http://phospho.elm.eu.org/bySubstrate/GENE' target='_blank'>PhosphoELM_gene</a>"
     phosphoELM.link2 <- sub("GENE", symbol, phosphoELM.link2)
