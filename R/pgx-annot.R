@@ -227,7 +227,7 @@ getGeneAnnotation.ANNOTHUB <- function(
     ortho_organism <- "Canis lupus familiaris"
   } else {
     S <- playbase::SPECIES_TABLE
-    ortho_organism <- S[match(organism,S$species),"ortho_species"]
+    ortho_organism <- S[match(organism, S$species), "ortho_species"]
     ortho_organism <- try(orthogene::map_species(
       organism,
       method = "gprofiler", verbose = FALSE
@@ -822,9 +822,9 @@ getHumanOrtholog <- function(organism, symbols) {
   ## names.
   ortho_organism <- organism
   S <- playbase::SPECIES_TABLE
-  if( organism  %in% S$species && 
-        !organism  %in% S$ortho_species ) {
-    ortho_organism <- S[ match(organism, S$species), "ortho_species"]
+  if (organism %in% S$species &&
+    !organism %in% S$ortho_species) {
+    ortho_organism <- S[match(organism, S$species), "ortho_species"]
   }
 
   orthogenes <- NULL
