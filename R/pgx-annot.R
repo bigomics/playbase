@@ -225,7 +225,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   if (organism == "Canis familiaris") {
     org_orthogene <- "Canis lupus familiaris"
   } else {
-    org_orthogene <- SPECIES_TABLE[match(organism,SPECIES_TABLE$species),"ortho_species"]
+    org_orthogene <- SPECIES_TABLE[match(organism, SPECIES_TABLE$species), "ortho_species"]
     org_orthogene <- try(orthogene::map_species(
       organism,
       method = "gprofiler", verbose = FALSE
@@ -706,10 +706,9 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
 #'   orthogene package. This package needs internet connection.
 #'
 getHumanOrtholog.SAVE <- function(organism, symbols) {
-
   ## Too complicated this code...
   ##
-  
+
   ## test if orthogene server is reachable
   res <- try(orthogene::map_genes("CDK1", verbose = FALSE))
   if ("try-error" %in% class(res)) {
@@ -805,7 +804,6 @@ getHumanOrtholog.SAVE <- function(organism, symbols) {
 #'
 #' @export
 getHumanOrtholog <- function(organism, symbols) {
-  
   ## test if orthogene server is reachable
   res <- try(orthogene::map_genes("CDK1", verbose = FALSE))
   if ("try-error" %in% class(res)) {
@@ -821,9 +819,9 @@ getHumanOrtholog <- function(organism, symbols) {
   ## SPECIES_TABLE$ortho_species are matched orthogene/gprofiler
   ## names.
   ortho_organism <- organism
-  if( organism  %in% SPECIES_TABLE$species && 
-        !organism  %in% SPECIES_TABLE$ortho_species ) {
-    ortho_organism <- SPECIES_TABLE[ match(organism,SPECIES_TABLE$species), "ortho_species"]
+  if (organism %in% SPECIES_TABLE$species &&
+    !organism %in% SPECIES_TABLE$ortho_species) {
+    ortho_organism <- SPECIES_TABLE[match(organism, SPECIES_TABLE$species), "ortho_species"]
   }
 
   orthogenes <- NULL
@@ -840,7 +838,7 @@ getHumanOrtholog <- function(organism, symbols) {
     ii <- match(symbols, ortho.out$input_gene)
     orthogenes <- rownames(ortho.out)[ii]
   }
-  
+
   if (is.null(orthogenes)) {
     message("WARNING: could not find orthogene for ", organism)
     orthogenes <- rep(NA, length(symbols))
@@ -931,7 +929,7 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
 #' @title Get all species in AnnotationHub/OrgDB
 #'
 #' @export
-allSpecies <- function(col=c("species","ortho_species","species_name")[1]) {
+allSpecies <- function(col = c("species", "ortho_species", "species_name")[1]) {
   M <- data.frame(playbase::SPECIES_TABLE)
   species <- as.character(M[, col])
   names(species) <- M[, "taxonomyid"]
