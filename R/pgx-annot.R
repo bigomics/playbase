@@ -1285,9 +1285,12 @@ getMetaboliteInfo <- function(organism, chebi) {
     annotation[, k]
   })
 
+  # merge all info
+  names(res) <- cols
   info <- c(info, res)
 
-  names(info) <- cols
+
+
   ## create link to external databases
 
   hmdb.link <- NULL
