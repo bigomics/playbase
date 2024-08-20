@@ -1134,6 +1134,8 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
   if (is.na(gene) || gene == "") {
     return(NULL)
   }
+  ai <- 1
+  browser()
 
   orgdb <- getOrgDb(organism, use.ah = NULL)
   cols <- c("SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH", "GO")
@@ -1249,6 +1251,57 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
     "organism", "gene_symbol", "uniprot", "name", "map_location",
     "OMIM", "pathway", "GO", "summary", "databases"
   )
+
+  return(info)
+}
+
+#' @export
+getMetaboliteInfo <- function(organism, chebi) {
+  if (is.null(chebi) || length(chebi) == 0) {
+    return(NULL)
+  }
+  if (is.na(chebi) || chebi == "") {
+    return(NULL)
+  }
+  info <- list()
+
+  # chebi = 16664
+
+  metabolite_metadata <- playdata::METABOLITE_METADATA
+  orgdb <- playdata::METABOLITE_ANNOTATION
+
+  info[["name"]] <- metabolite_metadata[metabolite_metadata$ID == chebi, "NAME"]
+  info[["summary"]] <- metabolite_metadata[metabolite_metadata$ID == chebi, "DEFINITION"]
+  info[["organism"]] <- organism
+
+  annotation <- orgdb[orgdb$ID == chebi, ]
+  # remove NA columns from anntoation
+  annotation <- annotation[, colSums(is.na(annotation)) < nrow(annotation)]
+  cols <- colnames(annotation)[-1] ## exclude chebi IDS as we already have it
+
+
+  ## get info from different environments
+  res <- lapply(cols, function(k) {
+    annotation[, k]
+  })
+
+  info <- c(info, res)
+
+  names(info) <- cols
+  ## create link to external databases
+
+  hmdb.link <- NULL
+  kegg.link <- NULL
+  pubchem.link <- NULL
+  if (!is.null(info[["HMDB"]])) hmdb.link <- glue::glue("<a href='https://hmdb.ca/metabolites/{info[['HMDB']][1]}' target='_blank'>HMDB</a>")
+  if (!is.null(info[["KEGG"]])) kegg.link <- glue::glue("<a href='https://www.kegg.jp/dbget-bin/www_bget?{info[['KEGG']][1]}' target='_blank'>KEGG</a>")
+  if (!is.null(info[["PubChem"]])) pubchem.link <- glue::glue("<a href='https://pubchem.ncbi.nlm.nih.gov/compound/{info[['PubChem']][1]}' target='_blank'>PubChem</a>")
+
+  chebi.link <- glue::glue("<a href='https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:{chebi}' target='_blank'>ChEBI</a>")
+  reactome.link <- glue::glue("<a href='https://reactome.org/content/query?q=chebi%3A{chebi}' target='_blank'>Reactome</a>")
+
+
+  info[["databases"]] <- paste(c(hmdb.link, kegg.link, reactome.link, pubchem.link, chebi.link), collapse = ", ")
 
   return(info)
 }
