@@ -343,33 +343,38 @@ read_annot <- function(file, unique = TRUE) {
     stop("input error")
   }
 
+  ## add column title
+  if( colnames(df)[1] == "") colnames(df)[1] <- "row.names"
+  
   ## determine last character column
   df1 <- type.convert(data.frame(df, check.names = FALSE), as.is = TRUE)
   col.type <- sapply(df1, class)
   col.type
   char.cols <- which(col.type == "character")
+  char.cols  
   last.charcol <- tail(char.cols, 1)
   last.charcol
 
   ## if the rownames are not unique, and some more character columns
-  ## exists, then search for best column and paste after rowname.
-  if (length(char.cols) > 0 && sum(duplicated(rownames(df)))) {
-    ndup <- sapply(char.cols, function(k) {
-      sum(duplicated(paste0(rownames(df), "_", df[, k])))
+  ## exists, then search for best column and paste after rownames
+  ## (first column).
+  if (sum(duplicated(df[,1])) && length(char.cols) >= 2 ) {
+    ndup <- sapply(char.cols[-1], function(k) {
+      sum(duplicated(paste0(df[,1], "_", df[,k])))
     })
     ndup
-    sel <- names(which.min(ndup))
+    sel <- names(which.min(ndup))[1]
     rownames(df) <- paste0(rownames(df), "_", df[, sel])
   }
 
-  ## drop numerical columns (these can be intensities)
-  if (length(last.charcol)) {
-    df <- df[, 1:last.charcol, drop = FALSE]
+  ## drop numerical columns (these can be intensities). We check if we
+  ## have equal or more than two columns. First column are rownames.
+  if (length(last.charcol) >= 2) {
+    df <- df[,1:last.charcol, drop = FALSE]
+    df <- data.frame(df, check.names = FALSE)
   } else {
     df <- NULL
   }
-
-  df <- data.frame(df, check.names = FALSE)
   return(df)
 }
 
