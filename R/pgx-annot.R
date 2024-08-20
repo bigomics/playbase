@@ -608,10 +608,20 @@ getOrgDb <- function(organism, use.ah = NULL) {
 #' @title Detect probe type from probe set
 #' @export
 detect_probetype <- function(organism, probes, orgdb = NULL,
-                             nprobe = 100, use.ah = NULL) {
+                             nprobe = 100, use.ah = NULL, datatype = NULL,
+                             probe_type = NULL) {
+  # if probe type is not null, return probetype
+  if (!is.null(probe_type)) {
+    # TODO check that probes for metabolomics are valid
+    return(probe_type)
+  }
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
+
+  if (!is.null(datatype) && datatype == "metabolomics") {
+    return("metabolomics")
+  }
 
   ## get correct OrgDb database for organism
   if (is.null(orgdb)) {
@@ -1247,12 +1257,21 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
 #' list of test_species. Warning. bit slow.
 #'
 #' @export
-detect_species_probetype <- function(probes,
-                                     test_species = c("human", "mouse", "rat")) {
+detect_species_probetype <- function(
+    probes,
+    test_species = c("human", "mouse", "rat"),
+    datatype = NULL,
+    probe_type = NULL) {
   probes <- unique(clean_probe_names(probes))
   ptype <- list()
   for (s in test_species) {
-    ptype[[s]] <- detect_probetype(s, probes, use.ah = FALSE)
+    ptype[[s]] <- detect_probetype(
+      organism = s,
+      probes = probes,
+      use.ah = FALSE,
+      datatype = datatype,
+      probe_type = probe_type
+    )
   }
   ptype <- unlist(ptype)
   out <- list(

@@ -223,6 +223,7 @@ pgx.initialize <- function(pgx) {
       if (!all(names(fc) %in% pgx$genes$symbol)) {
         names(fc) <- pgx$genes$symbol[match(names(fc), rownames(pgx$genes), nomatch = 0)]
         fc <- fc[names(fc) != ""]
+        fc <- fc[!is.na(names(fc))]
       }
       G1 <- Matrix::t(pgx$GMT[names(fc), rownames(gs)])
       mx <- (G1 %*% fc)[, 1]

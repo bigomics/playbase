@@ -1942,7 +1942,9 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
 
   ## downsample
   ii <- which(rownames(df) %in% gset)
-  ii <- unique(c(ii, seq(1, nrow(df), round(nrow(df) / 1000))))
+  unknown_parameter <- round(nrow(df) / 1000)
+  if (unknown_parameter == 0) unknown_parameter <- round(nrow(df) / 10)
+  ii <- unique(c(ii, seq(1, nrow(df), unknown_parameter)))
   df <- df[ii, ]
   df <- df[order(-df$y), ]
 
@@ -1974,7 +1976,12 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
     tooltips2 <- paste0("<b>", tooltips2, "</b><br>", tooltips[sel.tt])
   }
 
-  ii <- seq(1, nrow(df), round(nrow(df) / 200))
+  unknown_parameter <- round(nrow(df) / 200)
+
+  if (unknown_parameter == 0) unknown_parameter <- round(nrow(df) / 5)
+
+  ii <- seq(1, nrow(df), unknown_parameter)
+
   fig <- plotly::plot_ly() %>%
     plotly::add_trace(
       ## -------- grey ordered line
