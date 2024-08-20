@@ -65,7 +65,7 @@ example_file <- function(file = NULL) {
 #' @format ## `SPECIES_TABLE`
 #' data.frame with columns "dataset"	"description"	"version"	"species_name"
 #' @source BiomaRt
-"GENES_TABLE"
+"SPECIES_TABLE"
 
 
 #' GENES_TABLE dataset
