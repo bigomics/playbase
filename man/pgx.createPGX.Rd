@@ -16,6 +16,7 @@ pgx.createPGX(
   max.genesets = 5000,
   name = "Data set",
   datatype = "unknown",
+  probe_type = NULL,
   creator = "unknown",
   description = "No description provided.",
   X = NULL,
