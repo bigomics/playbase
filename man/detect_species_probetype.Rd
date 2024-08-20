@@ -5,7 +5,12 @@
 \title{Automatically detects species by trying to detect probetype from
 list of test_species. Warning. bit slow.}
 \usage{
-detect_species_probetype(probes, test_species = c("human", "mouse", "rat"))
+detect_species_probetype(
+  probes,
+  test_species = c("human", "mouse", "rat"),
+  datatype = NULL,
+  probe_type = NULL
+)
 }
 \description{
 Automatically detects species by trying to detect probetype from

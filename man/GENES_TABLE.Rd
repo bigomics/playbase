@@ -3,11 +3,8 @@
 \docType{data}
 \name{GENES_TABLE}
 \alias{GENES_TABLE}
-\title{Table for species ID conversin conversion from scientific name to Ensembl db ID}
+\title{GENES_TABLE dataset}
 \format{
-## `SPECIES_TABLE`
-data.frame with columns "dataset"	"description"	"version"	"species_name"
-
 A data frame with 6826 rows and 10 columns:
 \describe{
   \item{symbol}{Description of column1}
@@ -21,13 +18,9 @@ A data frame with 6826 rows and 10 columns:
 }
 }
 \source{
-BiomaRt
-
 Proteome profiles of activated vs resting human naive T cells at different times (Geiger et al., Cell 2016).
 }
 \usage{
-GENES_TABLE
-
 GENES_TABLE
 }
 \description{
