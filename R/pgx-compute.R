@@ -963,9 +963,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------
   ## create the full GENE matrix (always collapsed by gene)
   ## -----------------------------------------------------------
-
   X_geneset <- pgx$X
-  if (!all(rownames(X) %in% pgx$genes$symbol)) {
+  if (!all(rownames(X_geneset) %in% pgx$genes$symbol)) {
     X_geneset <- rename_by(X_geneset, pgx$genes, "symbol", unique = TRUE) ## pgx-functions.R
   }
 
