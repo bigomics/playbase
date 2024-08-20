@@ -225,7 +225,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   if (organism == "Canis familiaris") {
     org_orthogene <- "Canis lupus familiaris"
   } else {
-    ## org_orthogene <- organism
+    org_orthogene <- SPECIES_TABLE[match(organism,SPECIES_TABLE$species),"ortho_species"]
     org_orthogene <- try(orthogene::map_species(
       organism,
       method = "gprofiler", verbose = FALSE
@@ -234,7 +234,7 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   ## get human ortholog using 'orthogene'
   cat("\ngetting human orthologs...\n")
-  annot$ORTHOGENE <- getHumanOrtholog(organism, annot$SYMBOL)$human
+  annot$ORTHOGENE <- getHumanOrtholog(org_organism, annot$SYMBOL)$human
 
   ## Return as standardized data.frame and in the same order as input
   ## probes.
@@ -695,8 +695,11 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
 #' @title Get human ortholog from given symbols of organism by using
 #'   orthogene package. This package needs internet connection.
 #'
-#' @export
-getHumanOrtholog <- function(organism, symbols) {
+getHumanOrtholog.SAVE <- function(organism, symbols) {
+
+  ## Too complicated this code...
+  ##
+  
   ## test if orthogene server is reachable
   res <- try(orthogene::map_genes("CDK1", verbose = FALSE))
   if ("try-error" %in% class(res)) {
@@ -787,6 +790,57 @@ getHumanOrtholog <- function(organism, symbols) {
   return(df)
 }
 
+#' @title Get human ortholog from given symbols of organism by using
+#'   orthogene package. This package needs internet connection.
+#'
+#' @export
+getHumanOrtholog <- function(organism, symbols) {
+  
+  ## test if orthogene server is reachable
+  res <- try(orthogene::map_genes("CDK1", verbose = FALSE))
+  if ("try-error" %in% class(res)) {
+    message("[getHumanOrtholog] failed to contact server")
+    df <- data.frame(symbols, "human" = NA)
+    colnames(df)[1] <- organism
+    rownames(df) <- NULL
+    return(NULL)
+  }
+
+  ## map to correct orthogene species name, if not
+  ## done. SPECIES_TABLE$species are annothub names,
+  ## SPECIES_TABLE$ortho_species are matched orthogene/gprofiler
+  ## names.
+  ortho_organism <- organism
+  if( organism  %in% SPECIES_TABLE$species && 
+        !organism  %in% SPECIES_TABLE$ortho_species ) {
+    ortho_organism <- SPECIES_TABLE[ match(organism,SPECIES_TABLE$species), "ortho_species"]
+  }
+
+  orthogenes <- NULL
+  ortho.out <- try(orthogene::convert_orthologs(
+    gene_df = unique(symbols[!is.na(symbols)]),
+    input_species = ortho_organism,
+    output_species = "human",
+    non121_strategy = "drop_both_species",
+    method = "gprofiler",
+    verbose = FALSE
+  ))
+
+  if (!"try-error" %in% class(ortho.out)) {
+    ii <- match(symbols, ortho.out$input_gene)
+    orthogenes <- rownames(ortho.out)[ii]
+  }
+  
+  if (is.null(orthogenes)) {
+    message("WARNING: could not find orthogene for ", organism)
+    orthogenes <- rep(NA, length(symbols))
+  }
+
+  df <- data.frame(symbols, "human" = orthogenes)
+  colnames(df)[1] <- organism
+  return(df)
+}
+
 
 #' @title Show some probe types for selected organism
 #'
@@ -867,17 +921,10 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
 #' @title Get all species in AnnotationHub/OrgDB
 #'
 #' @export
-allSpecies <- function(ah.query = FALSE) {
-  gp.species <- allSpecies.ORTHOGENE()
-  ah.species <- allSpecies.ANNOTHUB(query = ah.query)
-  ## we select on organism_id but return the namings of annothub
-  both <- intersect(names(gp.species), names(ah.species))
-  species <- ah.species[both]
-  if (0) {
-    species <- sub("Homo sapiens", "Human", species)
-    species <- sub("Mus musculus", "Mouse", species)
-    species <- sub("Rattus Norvegicus", "Rat", species)
-  }
+allSpecies <- function(col=c("species","ortho_species","species_name")[1]) {
+  M <- data.frame(playbase::SPECIES_TABLE)
+  species <- as.character(M[, col])
+  names(species) <- M[, "taxonomyid"]
   species
 }
 
@@ -887,14 +934,9 @@ allSpecies <- function(ah.query = FALSE) {
 #' @return character vector of species names
 #'
 #' @export
-allSpecies.ANNOTHUB <- function(query = FALSE) {
-  if (query) {
-    ah <- AnnotationHub::AnnotationHub() ## make global??
-    db <- AnnotationHub::query(ah, "OrgDb")
-    M <- AnnotationHub::mcols(db)
-  } else {
-    M <- data.frame(playbase::SPECIES_TABLE)
-  }
+allSpecies.ANNOTHUB <- function() {
+  M <- getSpeciesTable(ah = NULL)
+  M <- data.frame(M)
   M <- M[M$rdataclass == "OrgDb", ]
   species <- as.character(M[, "species"])
   names(species) <- M[, "taxonomyid"]
