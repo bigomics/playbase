@@ -4,7 +4,15 @@
 \alias{detect_probetype}
 \title{Detect probe type from probe set}
 \usage{
-detect_probetype(organism, probes, orgdb = NULL, nprobe = 100, use.ah = NULL)
+detect_probetype(
+  organism,
+  probes,
+  orgdb = NULL,
+  nprobe = 100,
+  use.ah = NULL,
+  datatype = NULL,
+  probe_type = NULL
+)
 }
 \description{
 Detect probe type from probe set
