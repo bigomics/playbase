@@ -189,13 +189,12 @@ pgx.countNormalization <- function(x, methods, ref = NULL) {
     if (m == "none") {
       x <- x
     } else if (m %in% c("scale", "mean.center")) {
-      mx <- mean(x1, na.rm = TRUE)
-      x <- t(t(x) / (1 + colMeans(x1, na.rm = TRUE))) * mx
+      mx <- mean(x, na.rm = TRUE)
+      x <- t(t(x) / (1 + colMeans(x, na.rm = TRUE))) * mx
     } else if (m == "median.center") {
-      mx <- apply(x1, 2, median, na.rm = TRUE)
+      mx <- apply(x, 2, median, na.rm = TRUE)
       x <- t(t(x) / (1 + mx)) * mean(mx, na.rm = TRUE)
     } else if (m == "CPM") {
-      ## x <- t(t(x) / (1 + Matrix::colSums(x1, na.rm = TRUE))) * 1e6
       x <- logCPM(x, log = FALSE)
     } else if (m == "TMM") {
       ## normalization on total counts (linear scale)
@@ -207,7 +206,7 @@ pgx.countNormalization <- function(x, methods, ref = NULL) {
       ## normalization on total counts (linear scale)
       x <- normalizeRLE(x, log = FALSE, use = "edger") ## does RLE on counts
     } else if (m == "quantile") {
-      new.x <- 0.01 * limma::normalizeQuantiles(as.matrix(100 * x1)) ## shift to avoid clipping
+      new.x <- 0.001 * limma::normalizeQuantiles(as.matrix(1000 * x)) ## shift to avoid clipping
       rownames(new.x) <- rownames(x)
       colnames(new.x) <- colnames(x)
       x <- new.x
