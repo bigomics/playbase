@@ -102,6 +102,7 @@ getGeneAnnotation <- function(
     )
   }
 
+  ## fallback
   if (is.null(annot) && "orthogene" %in% use) {
     info("[getGeneAnnotation] annotating with ORTHOGENE")
     organism <- sub("Canis familiaris", "Canis lupus familiaris", organism)
@@ -229,18 +230,22 @@ getGeneAnnotation.ANNOTHUB <- function(
     S <- playbase::SPECIES_TABLE
     ortho_organism <- S[match(organism, S$species), "ortho_species"]
     ortho_organism <- try(orthogene::map_species(
-      organism,
+      ortho_organism,
       method = "gprofiler", verbose = FALSE
     ))
   }
 
+  orthogene::map_species(ortho_organism,method = "gprofiler", verbose = FALSE)
+  
   ## get human ortholog using 'orthogene'
   cat("\ngetting human orthologs...\n")
   annot$ORTHOGENE <- getHumanOrtholog(ortho_organism, annot$SYMBOL)$human
 
   ## Return as standardized data.frame and in the same order as input
   ## probes.
-  annot$SOURCE <- orgdb$packageName
+  pkgname <- orgdb$packageName
+  if(length(pgkname)==0) pkgname <- "OrgDb"
+  annot$SOURCE <- orgdb$packageName[1]
 
   annot.cols <- c(
     "PROBE", "SYMBOL", "ORTHOGENE", "GENENAME",
