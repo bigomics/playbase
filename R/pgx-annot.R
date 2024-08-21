@@ -235,8 +235,8 @@ getGeneAnnotation.ANNOTHUB <- function(
     ))
   }
 
-  orthogene::map_species(ortho_organism,method = "gprofiler", verbose = FALSE)
-  
+  orthogene::map_species(ortho_organism, method = "gprofiler", verbose = FALSE)
+
   ## get human ortholog using 'orthogene'
   cat("\ngetting human orthologs...\n")
   annot$ORTHOGENE <- getHumanOrtholog(ortho_organism, annot$SYMBOL)$human
@@ -244,7 +244,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   ## Return as standardized data.frame and in the same order as input
   ## probes.
   pkgname <- orgdb$packageName
-  if(length(pgkname)==0) pkgname <- "OrgDb"
+  if (length(pgkname) == 0) pkgname <- "OrgDb"
   annot$SOURCE <- orgdb$packageName[1]
 
   annot.cols <- c(
