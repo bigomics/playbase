@@ -244,11 +244,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   ## Return as standardized data.frame and in the same order as input
   ## probes.
   pkgname <- orgdb$packageName
-<<<<<<< HEAD
   if(length(pkgname)==0) pkgname <- "OrgDb"
-=======
-  if (length(pgkname) == 0) pkgname <- "OrgDb"
->>>>>>> 0f3ae16959d2e7fcd0a380284b80eedd597bbe14
   annot$SOURCE <- orgdb$packageName[1]
 
   annot.cols <- c(
