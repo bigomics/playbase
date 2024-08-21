@@ -1313,6 +1313,9 @@ getMetaboliteInfo <- function(organism, chebi) {
   info[["summary"]] <- metabolite_metadata[metabolite_metadata$ID == chebi, "DEFINITION"]
   info[["organism"]] <- organism
 
+  if (info[["summary"]] == "null") info[["summary"]] <- NA
+  if (is.null(info[["summary"]])) info[["summary"]] <- NA
+
   annotation <- orgdb[orgdb$ID == chebi, ]
   # remove NA columns from anntoation
   annotation <- annotation[, colSums(is.na(annotation)) < nrow(annotation)]
