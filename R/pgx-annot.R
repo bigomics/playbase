@@ -245,7 +245,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   ## probes.
   pkgname <- orgdb$packageName
   if(length(pkgname)==0) pkgname <- "OrgDb"
-  annot$SOURCE <- orgdb$packageName[1]
+  annot$SOURCE <- pkgname[1]
 
   annot.cols <- c(
     "PROBE", "SYMBOL", "ORTHOGENE", "GENENAME",
