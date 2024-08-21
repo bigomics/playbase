@@ -1297,7 +1297,7 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
 }
 
 #' @export
-getMetaboliteInfo <- function(organism, chebi) {
+getMetaboliteInfo <- function(organism = "Human", chebi) {
   if (is.null(chebi) || length(chebi) == 0) {
     return(NULL)
   }
@@ -1313,24 +1313,28 @@ getMetaboliteInfo <- function(organism, chebi) {
   info[["summary"]] <- metabolite_metadata[metabolite_metadata$ID == chebi, "DEFINITION"]
   info[["organism"]] <- organism
 
-  if (info[["summary"]] == "null") info[["summary"]] <- NA
-  if (is.null(info[["summary"]])) info[["summary"]] <- NA
 
+  # remove summary if it is null
+  if (info[["summary"]] == "null") info[["summary"]] <- "Summary not available for this metabolite."
+  if (is.null(info[["summary"]])) info[["summary"]] <- "Summary not available for this metabolite."
+
+
+  # get annotation for a given chebi id
   annotation <- orgdb[orgdb$ID == chebi, ]
+
   # remove NA columns from anntoation
   annotation <- annotation[, colSums(is.na(annotation)) < nrow(annotation)]
   cols <- colnames(annotation)[-1] ## exclude chebi IDS as we already have it
 
-
   ## get info from different environments
   res <- lapply(cols, function(k) {
-    # k = "ChEBI"
     link <- NULL
     matched_id <- annotation[annotation$ID == chebi, k]
     if (k == "HMDB") link <- glue::glue("<a href='https://hmdb.ca/metabolites/{matched_id}' target='_blank'>{matched_id}</a>")
     if (k == "KEGG") link <- glue::glue("<a href='https://www.kegg.jp/dbget-bin/www_bget?{matched_id}' target='_blank'>{matched_id}</a>")
     if (k == "PubChem") link <- glue::glue("<a href='https://pubchem.ncbi.nlm.nih.gov/compound/{matched_id}' target='_blank'>{matched_id}</a>")
     if (k == "ChEBI") link <- glue::glue("<a href='https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:{matched_id}' target='_blank'>{matched_id}</a>")
+    if (k == "METLIN") link <- matched_id # METLIN is offline at the time of this request, needs to be updated
     if (k == "SMILES") link <- matched_id
     return(link)
   })
@@ -1339,10 +1343,7 @@ getMetaboliteInfo <- function(organism, chebi) {
   names(res) <- cols
   info <- c(info, res)
 
-
-
   ## create link to external databases
-
 
   # these libraries are not always available for a given chebi id
   hmdb.link <- NULL
