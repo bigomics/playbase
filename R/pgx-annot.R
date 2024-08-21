@@ -1174,8 +1174,6 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
   if (is.na(gene) || gene == "") {
     return(NULL)
   }
-  ai <- 1
-  browser()
 
   orgdb <- getOrgDb(organism, use.ah = NULL)
   cols <- c("SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH", "GO")
@@ -1305,7 +1303,9 @@ getMetaboliteInfo <- function(organism, chebi) {
   }
   info <- list()
 
-  # chebi = 16664
+  ai <- 12
+  browser()
+
 
   metabolite_metadata <- playdata::METABOLITE_METADATA
   orgdb <- playdata::METABOLITE_ANNOTATION
@@ -1322,7 +1322,15 @@ getMetaboliteInfo <- function(organism, chebi) {
 
   ## get info from different environments
   res <- lapply(cols, function(k) {
-    annotation[, k]
+    # k = "ChEBI"
+    link <- NULL
+    matched_id <- annotation[annotation$ID == chebi, k]
+    if (k == "HMDB") link <- glue::glue("<a href='https://hmdb.ca/metabolites/{matched_id}' target='_blank'>{matched_id}</a>")
+    if (k == "KEGG") link <- glue::glue("<a href='https://www.kegg.jp/dbget-bin/www_bget?{{matched_id}}' target='_blank'>{matched_id}</a>")
+    if (k == "PubChem") link <- glue::glue("<a href='https://pubchem.ncbi.nlm.nih.gov/compound/{{matched_id}}' target='_blank'>{matched_id}</a>")
+    if (k == "ChEBI") link <- glue::glue("<a href='https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:{matched_id}' target='_blank'>{matched_id}</a>")
+    if (k == "SMILES") link <- matched_id
+    return(link)
   })
 
   # merge all info
