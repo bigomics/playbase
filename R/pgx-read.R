@@ -369,7 +369,7 @@ read_annot <- function(file, unique = TRUE) {
 
   ## drop numerical columns (these can be intensities). We check if we
   ## have equal or more than two columns. First column are rownames.
-  if (length(last.charcol) >= 2) {
+  if (length(char.cols) && last.charcol >= 2) {
     df <- df[, 1:last.charcol, drop = FALSE]
     df <- data.frame(df, check.names = FALSE)
   } else {
