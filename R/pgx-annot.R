@@ -222,11 +222,13 @@ getGeneAnnotation.ANNOTHUB <- function(
   annot$PROBE <- names(probes) ## original probe names
 
   # Dog id should be canis lupus familiaris and not cannis familiaris, as in ah
+  ortho_organism <- NULL
   if (organism == "Canis familiaris") {
-    org_orthogene <- "Canis lupus familiaris"
+    ortho_organism <- "Canis lupus familiaris"
   } else {
-    org_orthogene <- playbase::SPECIES_TABLE[match(organism, SPECIES_TABLE$species), "ortho_species"]
-    org_orthogene <- try(orthogene::map_species(
+    S <- playbase::SPECIES_TABLE
+    ortho_organism <- S[match(organism, S$species), "ortho_species"]
+    ortho_organism <- try(orthogene::map_species(
       organism,
       method = "gprofiler", verbose = FALSE
     ))
@@ -234,7 +236,7 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   ## get human ortholog using 'orthogene'
   cat("\ngetting human orthologs...\n")
-  annot$ORTHOGENE <- getHumanOrtholog(org_organism, annot$SYMBOL)$human
+  annot$ORTHOGENE <- getHumanOrtholog(ortho_organism, annot$SYMBOL)$human
 
   ## Return as standardized data.frame and in the same order as input
   ## probes.
@@ -819,9 +821,10 @@ getHumanOrtholog <- function(organism, symbols) {
   ## SPECIES_TABLE$ortho_species are matched orthogene/gprofiler
   ## names.
   ortho_organism <- organism
-  if (organism %in% playbase::SPECIES_TABLE$species &&
-    !organism %in% playbase::SPECIES_TABLE$ortho_species) {
-    ortho_organism <- playbase::SPECIES_TABLE[match(organism, SPECIES_TABLE$species), "ortho_species"]
+  S <- playbase::SPECIES_TABLE
+  if (organism %in% S$species &&
+    !organism %in% S$ortho_species) {
+    ortho_organism <- S[match(organism, S$species), "ortho_species"]
   }
 
   orthogenes <- NULL
