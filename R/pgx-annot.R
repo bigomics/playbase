@@ -1306,10 +1306,6 @@ getMetaboliteInfo <- function(organism, chebi) {
   }
   info <- list()
 
-  ai <- 12
-  browser()
-
-
   metabolite_metadata <- playdata::METABOLITE_METADATA
   orgdb <- playdata::METABOLITE_ANNOTATION
 
@@ -1329,8 +1325,8 @@ getMetaboliteInfo <- function(organism, chebi) {
     link <- NULL
     matched_id <- annotation[annotation$ID == chebi, k]
     if (k == "HMDB") link <- glue::glue("<a href='https://hmdb.ca/metabolites/{matched_id}' target='_blank'>{matched_id}</a>")
-    if (k == "KEGG") link <- glue::glue("<a href='https://www.kegg.jp/dbget-bin/www_bget?{{matched_id}}' target='_blank'>{matched_id}</a>")
-    if (k == "PubChem") link <- glue::glue("<a href='https://pubchem.ncbi.nlm.nih.gov/compound/{{matched_id}}' target='_blank'>{matched_id}</a>")
+    if (k == "KEGG") link <- glue::glue("<a href='https://www.kegg.jp/dbget-bin/www_bget?{matched_id}' target='_blank'>{matched_id}</a>")
+    if (k == "PubChem") link <- glue::glue("<a href='https://pubchem.ncbi.nlm.nih.gov/compound/{matched_id}' target='_blank'>{matched_id}</a>")
     if (k == "ChEBI") link <- glue::glue("<a href='https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:{matched_id}' target='_blank'>{matched_id}</a>")
     if (k == "SMILES") link <- matched_id
     return(link)
@@ -1344,16 +1340,19 @@ getMetaboliteInfo <- function(organism, chebi) {
 
   ## create link to external databases
 
+
+  # these libraries are not always available for a given chebi id
   hmdb.link <- NULL
   kegg.link <- NULL
   pubchem.link <- NULL
-  if (!is.null(info[["HMDB"]])) hmdb.link <- glue::glue("<a href='https://hmdb.ca/metabolites/{info[['HMDB']][1]}' target='_blank'>HMDB</a>")
-  if (!is.null(info[["KEGG"]])) kegg.link <- glue::glue("<a href='https://www.kegg.jp/dbget-bin/www_bget?{info[['KEGG']][1]}' target='_blank'>KEGG</a>")
-  if (!is.null(info[["PubChem"]])) pubchem.link <- glue::glue("<a href='https://pubchem.ncbi.nlm.nih.gov/compound/{info[['PubChem']][1]}' target='_blank'>PubChem</a>")
+  if (!is.null(info[["HMDB"]])) hmdb.link <- glue::glue("<a href='https://hmdb.ca/metabolites/{annotation[,'HMDB']}' target='_blank'>HMDB</a>")
+  if (!is.null(info[["KEGG"]])) kegg.link <- glue::glue("<a href='https://www.kegg.jp/dbget-bin/www_bget?{annotation[,'KEGG']}' target='_blank'>KEGG</a>")
+  if (!is.null(info[["PubChem"]])) pubchem.link <- glue::glue("<a href='https://pubchem.ncbi.nlm.nih.gov/compound/{annotation[,'PubChem']}' target='_blank'>PubChem</a>")
 
+
+  # these libraries are always available
   chebi.link <- glue::glue("<a href='https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:{chebi}' target='_blank'>ChEBI</a>")
   reactome.link <- glue::glue("<a href='https://reactome.org/content/query?q=chebi%3A{chebi}' target='_blank'>Reactome</a>")
-
 
   info[["databases"]] <- paste(c(hmdb.link, kegg.link, reactome.link, pubchem.link, chebi.link), collapse = ", ")
 
