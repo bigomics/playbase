@@ -37,6 +37,10 @@ scan_packages <- function(path='R') {
     "org.Pf.plasmo.db" = "url::https://bioconductor.org/packages/3.14/data/annotation/src/contrib/org.Pf.plasmo.db_3.14.0.tar.gz",
     "Azimuth" = "url::https://github.com/satijalab/azimuth/archive/refs/heads/master.zip"
   )
+
+  force.remotes.url <- c(
+    "rjson" = "url::https://cran.r-project.org/src/contrib/Archive/rjson/rjson_0.2.21.tar.gz"
+  )
   
   ## commented out entries are now in standard CRAN/cBio repo
   add_github("bigomics/PCSF")
@@ -75,6 +79,7 @@ scan_packages <- function(path='R') {
   pkg.missing <- setdiff( c(pkg.imports,names(pkg.remotes)), pkg.installed)
   missing.imports <- setdiff(pkg.imports, pkg.installed)
   missing.remotes <- pkg.remotes[!(names(pkg.remotes) %in% pkg.installed)]
+  missing.remotes <- c(missing.remotes, force.remotes.url)
   
   list(
     used = pkg.used,
