@@ -475,9 +475,12 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   m <- list(gsva = zx.gsva, ssgsea = zx.ssgsea, rnkcorr = zx.rnkcorr)
   m <- m[which(!sapply(m, is.null))]
 
-  ## average expression of geneset members
+  ## average *relative* expression of geneset members. Note: since
+  ## v.3.5.0 we use average relative expression instead of average
+  ## expression.
   ng <- Matrix::colSums(G != 0)
-  meta.matrix <- as.matrix(Matrix::t(G != 0) %*% X) / ng
+  mX <- X - rowMeans(X, na.rm=TRUE) ## see note above
+  meta.matrix <- as.matrix(Matrix::t(G != 0) %*% mX) / ng
 
   m[["meta"]] <- meta.matrix
 
@@ -491,8 +494,11 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   }
 
   res <- list(
-    meta = all.meta, sig.counts = sig.counts, outputs = all.results,
-    matrices = m, timings = timings0
+    meta       = all.meta,
+    sig.counts = sig.counts,
+    outputs    = all.results,
+    matrices   = m,
+    timings    = timings0
   )
 
   return(res)
