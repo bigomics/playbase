@@ -245,10 +245,14 @@ read_counts <- function(file, first = FALSE, unique = TRUE, paste_char = "_") {
   } else if (is.matrix(file) || is.data.frame(file)) {
     df <- file
   } else {
-    stop("input error")
+    message("[read_counts] ERROR: Input must be filename or matrix")
+    return(NULL)
   }
   is_valid <- validate_counts(df)
-  if (!is_valid) stop("Counts file is not valid.")
+  if (!is_valid) {
+    message("[read_counts] ERROR: Counts file is not valid.")
+    return(NULL)
+  }
 
   ## determine column types
   df1 <- type.convert(data.frame(df, check.names = FALSE), as.is = TRUE)
@@ -306,7 +310,10 @@ read_counts <- function(file, first = FALSE, unique = TRUE, paste_char = "_") {
 read_samples <- function(file) {
   df <- read.as_matrix(file)
   is_valid <- validate_samples(df)
-  if (!is_valid) stop("Samples file is not valid.")
+  if (!is_valid) {
+    message("[read_samples] ERROR: Samples file is not valid.")
+    return(NULL)    
+  }
   df <- as.data.frame(df)
   return(df)
 }
@@ -324,7 +331,10 @@ read_contrasts <- function(file) {
   df <- read.as_matrix(file)
 
   is_valid <- validate_contrasts(df)
-  if (!is_valid) stop("Contrasts file is not valid.")
+  if (!is_valid) {
+    message("[read_contrasts] ERROR: Contrasts file is not valid.")
+    return(NULL)        
+  }
 
   df
 }
@@ -340,7 +350,8 @@ read_annot <- function(file, unique = TRUE) {
   } else if (is.matrix(file) || is.data.frame(file)) {
     df <- file
   } else {
-    stop("input error")
+    message("[read_annot] ERROR: Annot file is not valid.")
+    return(NULL)        
   }
 
   ## add column title
