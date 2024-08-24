@@ -1675,9 +1675,10 @@ get_model_parameters <- function(X, samples, pheno = NULL, contrasts = NULL) {
     batch.pars <- bc$params$statistical
     batch.pars
     batch.pars <- setdiff(batch.pars, pheno.pars)
+    ## if there are columns names batch, we add them to batch parameters
     batch.pars2 <- grep("batch", colnames(samples), ignore.case = TRUE, value = TRUE)
     if (length(batch.pars2)) batch.pars <- c(batch.pars, batch.pars2)
-    batch.pars <- sort(batch.pars)
+    batch.pars <- sort(unique(batch.pars))
   }
 
   batch.vec <- NULL
