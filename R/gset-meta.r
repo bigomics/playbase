@@ -479,7 +479,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   ## v.3.5.0 we use average relative expression instead of average
   ## expression.
   ng <- Matrix::colSums(G != 0)
-  mX <- X - rowMeans(X, na.rm=TRUE) ## see note above
+  mX <- X - rowMeans(X, na.rm = TRUE) ## see note above
   meta.matrix <- as.matrix(Matrix::t(G != 0) %*% mX) / ng
 
   m[["meta"]] <- meta.matrix

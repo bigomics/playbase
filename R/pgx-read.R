@@ -312,7 +312,7 @@ read_samples <- function(file) {
   is_valid <- validate_samples(df)
   if (!is_valid) {
     message("[read_samples] ERROR: Samples file is not valid.")
-    return(NULL)    
+    return(NULL)
   }
   df <- as.data.frame(df)
   return(df)
@@ -333,7 +333,7 @@ read_contrasts <- function(file) {
   is_valid <- validate_contrasts(df)
   if (!is_valid) {
     message("[read_contrasts] ERROR: Contrasts file is not valid.")
-    return(NULL)        
+    return(NULL)
   }
 
   df
@@ -351,7 +351,7 @@ read_annot <- function(file, unique = TRUE) {
     df <- file
   } else {
     message("[read_annot] ERROR: Annot file is not valid.")
-    return(NULL)        
+    return(NULL)
   }
 
   ## add column title
