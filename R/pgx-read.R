@@ -39,7 +39,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE, row.names = 1) {
     check.names = FALSE,
     header = TRUE,
     dec = dec,
-    fill = TRUE,
+    # fill = TRUE, ## fill=TRUE will fail for some datasets
     skip = skip.rows,
     blank.lines.skip = TRUE,
     stringsAsFactors = FALSE,
