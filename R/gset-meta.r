@@ -69,7 +69,9 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
   ## some "normalization" for single-sample methods
   my.normalize <- function(zx) {
-    if (nrow(zx) <= 10) { return(zx) }
+    if (nrow(zx) <= 10) {
+      return(zx)
+    }
     zx <- scale(limma::normalizeQuantiles(zx))
     return(zx)
   }
@@ -103,12 +105,12 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       zx.rnkcorr <- zx.rnkcorr[cm1, cm2, drop = FALSE] ## make sure..
       ii <- apply(zx.rnkcorr, 1, function(x) sum(is.na(x)))
       kk <- any(ii == ncol(zx.rnkcorr))
-      if(kk) {
-          Ex <- which(ii == ncol(zx.rnkcorr))
-          message("Removing ", length(Ex), " full NA rows from zx.rnkcorr.")
-          zx.rnkcorr <- zx.rnkcorr[-Ex, , drop = FALSE]
+      if (kk) {
+        Ex <- which(ii == ncol(zx.rnkcorr))
+        message("Removing ", length(Ex), " full NA rows from zx.rnkcorr.")
+        zx.rnkcorr <- zx.rnkcorr[-Ex, , drop = FALSE]
       }
-      
+
       ## compute LIMMA
       all.results[["spearman"]] <- playbase::gset.fitContrastsWithLIMMA(
         zx.rnkcorr,
@@ -525,7 +527,7 @@ gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
     message("fitting gset.LIMMA contrasts with design matrix... ")
     vfit <- limma::lmFit(gsetX, design)
     vfit <- limma::contrasts.fit(vfit, contrasts = contr.matrix)
-    efit <- limma::eBayes(vfit, trend = trend, robust = TRUE)    
+    efit <- limma::eBayes(vfit, trend = trend, robust = TRUE)
 
     tables <- list()
     i <- 1
