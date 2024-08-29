@@ -1035,6 +1035,123 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   p
 }
 
+#' @describeIn pgx.plotContrast Create a volcano plot from a PGX object
+#'
+#' @param pgx A PGX object containing differential expression results.
+#' @param contrast The contrast name to extract results for.
+#' @param level The data level to extract ("gene", "exon", etc). Default "gene".
+#' @param methods The meta-analysis methods to include. Default "meta".
+#' @param psig P-value cutoff for significance. Default 0.05.
+#' @param fc Fold change cutoff. Default 1.
+#' @param cex Point size. Default 1.
+#' @param cex.lab Label size. Default 1.
+#' @param ntop Number of top genes to highlight. Default 20.
+#' @param p.min Minimum p-value for y-axis. Default NULL.
+#' @param fc.max Maximum fold change for x-axis. Default NULL.
+#' @param hilight Vector of genes to highlight. Default NULL.
+#' @param cpal Color palette. Default c("grey60", "red3").
+#' @param title Plot title. Default NULL.
+#' @param plotlib Plotting library to use. Default "base".
+#'
+#' @export
+pgx.Volcano2 <- function(x,
+                         y,
+                         names,
+                         label.names = names,
+                         facet = NULL,
+                         highlight = NULL,
+                         xlab = "effect size (logFC)",
+                         ylab = "significance (-log10p)",
+                         lfc = 1,
+                         psig = 0.05,
+                         showlegend = TRUE,
+                         marker.size = 5,
+                         marker.alpha = 0.7,
+                         label.cex = 5,
+                         axis.text.size = 14,
+                         label = NULL,
+                         colors = c(
+                           up = "#f23451",
+                           notsig = "#707070",
+                           sighigh = "#cccccc",
+                           down = "#3181de"
+                         )) {
+
+  if (is.null(highlight)) highlight <- names
+  if(showlegend) {
+    legend <- "right"
+  } else {
+    legend <- "none"
+  }
+  xy <- data.frame(
+    fc = x,
+    y = y
+  )
+  if(!is.null(facet)) {
+    xy$facet <- facet
+  }
+  xy$category <- ifelse(
+    xy$y > -log10(psig) & xy$fc > lfc, "Significant Right",
+    ifelse(xy$y > -log10(psig) & xy$fc < -lfc, "Significant Left", "Not Significant")
+  )
+  xy$label <- ifelse(names %in% label, label.names, NA)
+  xy$category[!(names %in% highlight)] <- "Not Significant2"
+
+  plt <- ggplot2::ggplot(xy, aes(x = fc, y = y)) +
+    ggplot2::geom_point(aes(color = category), alpha = marker.alpha, size = marker.size) +
+    ggplot2::scale_color_manual(values = c("Significant Left" = colors[["down"]],
+                                "Significant Right" = colors[["up"]],
+                                "Not Significant" = colors[["notsig"]],
+                                "Not Significant2" = colors[["sighigh"]])) +
+    ggplot2::geom_point(
+      data = xy[xy$category == "Not Significant2", ],
+      aes(x = fc, y = y),
+      color = colors[["sighigh"]],
+      alpha = marker.alpha,
+      size = marker.size
+    ) +
+    ggplot2::geom_point(data = xy[xy$category == "Significant Left", ],
+      aes(x = fc, y = y),
+      color = colors[["down"]],
+      alpha = 1,
+      size = marker.size) +
+    ggplot2::geom_point(data = xy[xy$category == "Significant Right", ],
+      aes(x = fc, y = y),
+      color = colors[["up"]],
+      alpha = 1,
+      size = marker.size) +
+    ggplot2::geom_point(data = xy[xy$category == "Not Significant", ],
+      aes(x = fc, y = y),
+      color = colors[["notsig"]],
+      alpha = 1,
+      size = marker.size) +
+    ggplot2::geom_hline(yintercept = -log10(psig), linetype = "dashed", color = "gray") +
+    ggplot2::geom_vline(xintercept = c(-lfc, lfc), linetype = "dashed", color = "gray") +
+    ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey") +
+    ggrepel::geom_label_repel(aes(label = label, color = category), size = label.cex, family = "lato", box.padding = 0.1, max.overlaps = 20) +
+    ggplot2::scale_y_continuous(limits = c(0, NA)) +
+    ggplot2::scale_y_continuous(expand = expansion(mult = c(0, 0))) +
+    ggplot2::labs(
+      x = xlab,
+      y = ylab
+    ) +
+    ggplot2::theme_minimal(base_size = 15) +
+    ggplot2::theme(
+      legend.position = legend,
+      panel.grid = ggplot2::element_blank(),
+      axis.line.x = ggplot2::element_line(color = "darkgrey"),
+      axis.title = ggplot2::element_text(face = "plain", size = axis.text.size, family = "lato"),
+      axis.text = ggplot2::element_text(family = "lato"),
+      plot.margin = ggplot2::margin(l = 9, b = 0, t = 9, r = 9)
+    )
+  if(!is.null(facet)) {
+    ncol_row <- ceiling(sqrt(length(unique(facet))))
+    plt <- plt +
+      ggplot2::facet_wrap(facet ~ ., nrow = ncol_row, ncol = ncol_row)
+  }
+  return(plt)
+}
+
 
 #' @describeIn pgx.plotContrast Meta-analysis plots for PGX results
 #' @param pgx PGX object containing results
