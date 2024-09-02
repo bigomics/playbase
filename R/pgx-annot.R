@@ -1224,18 +1224,18 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
   }
 
   if (datatype == "proteomics") {
-      ## create link to PhosphoSitePlus
-      phosphositeplus.link <- "<a href='https://www.phosphosite.org/simpleSearchSubmitAction.action?searchStr=GENE' target='_blank'>PhosphoSitePlus</a>"
-      phosphositeplus.link <- sub("GENE", symbol, phosphositeplus.link)
-      info[["databases"]] <- paste(c(info[["databases"]], phosphositeplus.link), collapse = ", ")
-      
-      ## create links to PhosphoELM for proten and gene: db of S/T/Y phosphorylation sites
-      phosphoELM.link1 <- "<a href='http://phospho.elm.eu.org/byAccession/UNIPROT' target='_blank'>PhosphoELM_protein</a>"
-      feature1 <- sub("[-._].*", "", feature) ## is it always uniprot???
-      phosphoELM.link1 <- sub("UNIPROT", feature1, phosphoELM.link1)
-      phosphoELM.link2 <- "<a href='http://phospho.elm.eu.org/bySubstrate/GENE' target='_blank'>PhosphoELM_gene</a>"
-      phosphoELM.link2 <- sub("GENE", symbol, phosphoELM.link2)
-      info[["databases"]] <- paste(c(info[["databases"]], phosphoELM.link1, phosphoELM.link2), collapse = ", ")
+    ## create link to PhosphoSitePlus
+    phosphositeplus.link <- "<a href='https://www.phosphosite.org/simpleSearchSubmitAction.action?searchStr=GENE' target='_blank'>PhosphoSitePlus</a>"
+    phosphositeplus.link <- sub("GENE", symbol, phosphositeplus.link)
+    info[["databases"]] <- paste(c(info[["databases"]], phosphositeplus.link), collapse = ", ")
+
+    ## create links to PhosphoELM for proten and gene: db of S/T/Y phosphorylation sites
+    phosphoELM.link1 <- "<a href='http://phospho.elm.eu.org/byAccession/UNIPROT' target='_blank'>PhosphoELM_protein</a>"
+    feature1 <- sub("[-._].*", "", feature) ## is it always uniprot???
+    phosphoELM.link1 <- sub("UNIPROT", feature1, phosphoELM.link1)
+    phosphoELM.link2 <- "<a href='http://phospho.elm.eu.org/bySubstrate/GENE' target='_blank'>PhosphoELM_gene</a>"
+    phosphoELM.link2 <- sub("GENE", symbol, phosphoELM.link2)
+    info[["databases"]] <- paste(c(info[["databases"]], phosphoELM.link1, phosphoELM.link2), collapse = ", ")
   }
 
   ## create link to OMIM
