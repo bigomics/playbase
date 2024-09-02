@@ -4550,8 +4550,8 @@ plotlyVolcano_multi <- function(FC,
                                 lfc = 0,
                                 label = NULL,
                                 share_axis = FALSE,
-                                title_y = "significance (-log10q)",
-                                title_x = "effect size (log2FC)",
+                                title_y = "ylab",
+                                title_x = "xlab",
                                 cex = 3, ## marker size
                                 label.cex = 1, ## label size
                                 yrange = 0.5,
