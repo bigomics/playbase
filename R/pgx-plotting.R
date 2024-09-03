@@ -1094,8 +1094,8 @@ pgx.Volcano2 <- function(x,
     xy$y > -log10(psig) & xy$fc > lfc, "Significant Right",
     ifelse(xy$y > -log10(psig) & xy$fc < -lfc, "Significant Left", "Not Significant")
   )
-  xy$label <- ifelse(names %in% label, label.names, NA)
-  xy$category[!(names %in% highlight)] <- "Not Significant2"
+  xy$label <- ifelse(names %in% label | label.names %in% label, label.names, NA)
+  xy$category[!(names %in% highlight | label.names %in% highlight)] <- "Not Significant2"
 
   plt <- ggplot2::ggplot(xy, aes(x = fc, y = y)) +
     ggplot2::geom_point(aes(color = category), alpha = marker.alpha, size = marker.size) +
