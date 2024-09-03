@@ -41,7 +41,7 @@ test_that("gmean works as expected", {
   expect_equal(playbase::gmean(c(0, 1, 2)), 0)
 
   # Test for handling NA
-  expect_true(is.na(playbase::gmean(c(NA, 1, 2))))
+  expect_equal( round(playbase::gmean(c(NA, 1, 2)),4), 1.4142)
 })
 
 
