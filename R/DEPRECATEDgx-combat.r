@@ -138,8 +138,7 @@ gx.nnmcorrect <- function(X, y, dist.method = "cor",
 #' @export
 gx.nnmcorrect2 <- function(X, y, r = 0.35, use.design = TRUE, dist.method = "cor",
                            center.x = TRUE, center.m = TRUE, scale.x = FALSE,
-                           mode = "", knn=1, sdtop = 1000) {
-
+                           mode = "", knn = 1, sdtop = 1000) {
   ## use.design = TRUE;dist.method = "cor";center.x = TRUE;center.m = TRUE; sdtop = 1000;r=0.35
 
   ## compute distance matrix for NNM-pairing
@@ -154,8 +153,8 @@ gx.nnmcorrect2 <- function(X, y, r = 0.35, use.design = TRUE, dist.method = "cor
     dX <- dX - rowMeans(dX, na.rm = TRUE)
   }
   if (scale.x) {
-    row.sdx <- matrixStats::rowSds(dX, na.rm=TRUE)
-    dX <- dX / (row.sdx + 1e-4 * mean(row.sdx,na.rm=TRUE))
+    row.sdx <- matrixStats::rowSds(dX, na.rm = TRUE)
+    dX <- dX / (row.sdx + 1e-4 * mean(row.sdx, na.rm = TRUE))
   }
   if (center.m) {
     ## center per condition group (takes out batch differences)
@@ -166,34 +165,34 @@ gx.nnmcorrect2 <- function(X, y, r = 0.35, use.design = TRUE, dist.method = "cor
 
   ## find neighbours
   message("[gx.nnmcorrect2] finding nearest neighbours...")
-  if(1) {
+  if (1) {
     ## uses full distance matrices. This can cost too much memory for
     ## large sample sizes.
     message("[gx.nnmcorrect2] computing distance matrix D...\n")
     D <- as.matrix(stats::dist(t(dX)))
     D[is.na(D)] <- 0 ## might have NA
-    if(knn == 1) {
+    if (knn == 1) {
       B <- t(apply(D, 1, function(x) tapply(x, y1, function(s) names(which.min(s)))))
     } else {
-      bb <- apply(D, 1, function(x) tapply(x, y1, function(s) head(names(sort(s)),knn) ))
-      bb <- lapply( bb, function(x) unlist(x))
-      B  <- do.call( rbind, bb )
+      bb <- apply(D, 1, function(x) tapply(x, y1, function(s) head(names(sort(s)), knn)))
+      bb <- lapply(bb, function(x) unlist(x))
+      B <- do.call(rbind, bb)
     }
     rownames(B) <- colnames(X)
   } else {
     ## using fast KNN search
-    a=y1[1]
+    a <- y1[1]
     nn <- list()
-    for(a in sort(unique(y1))) {
-      x1 <- dX[, which(y1 == a), drop = FALSE]    
-      res <- FNN::get.knnx( t(x1), query = t(dX), k = knn)
-      nn[[a]] <- apply( res$nn.index, 2, function(i) colnames(x1)[i] )
+    for (a in sort(unique(y1))) {
+      x1 <- dX[, which(y1 == a), drop = FALSE]
+      res <- FNN::get.knnx(t(x1), query = t(dX), k = knn)
+      nn[[a]] <- apply(res$nn.index, 2, function(i) colnames(x1)[i])
     }
     B <- do.call(cbind, nn)
     colnames(B) <- as.vector(mapply(rep, names(nn), 2))
     rownames(B) <- colnames(dX)
   }
-  
+
   ## ensure sample is always present in own group
   idx <- cbind(1:nrow(B), match(y1, colnames(B)))
   B[idx] <- rownames(B)
@@ -275,5 +274,3 @@ gx.nnmcorrect.SAVE <- function(x, y, k = 3) {
   nx <- nx + rowMeans(x)
   return(nx)
 }
-
-
