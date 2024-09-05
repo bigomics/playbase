@@ -1196,13 +1196,12 @@ ggVolcano <- function(x,
     ) +
     ggplot2::scale_y_continuous(limits = c(0, NA)) +
     ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0))) +
-    ggplot2::labs(
-      x = xlab,
-      y = ylab
-    ) +
+    ggplot2::labs( x = xlab, y = ylab ) +
+    guides(colour = guide_legend(reverse=T)) +
     ggplot2::theme_minimal(base_size = 15) +
     ggplot2::theme(
       legend.position = legend,
+      legend.justification = "top",
       legend.title = ggplot2::element_blank(),
       panel.grid = ggplot2::element_blank(),
       axis.line.x = ggplot2::element_line(color = "darkgrey"),
