@@ -966,7 +966,7 @@ pgx.plotContrast <- function(pgx, contrast = NULL, type = "scatter",
 #'
 #' @export
 pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
-                        psig = 0.05, fc = 1, cex = 1, 
+                        psig = 0.05, fc = 1, cex = 1,
                         p.min = NULL, fc.max = NULL, hilight = NULL,
                         label = NULL, cex.lab = 1, ntop = 20,
                         cpal = c("grey60", "red3", "blue3"), title = NULL,
@@ -987,7 +987,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   sig <- (q <= psig & abs(f) >= fc)
   df <- data.frame(fc = f, y = -log10(q))
 
-  if(is.null(hilight)) hilight <- rownames(df)
+  if (is.null(hilight)) hilight <- rownames(df)
   if (is.null(label)) {
     wt <- rowSums(scale(df, center = FALSE)**2, na.rm = TRUE)
     label <- rownames(df)[order(-wt)]
@@ -1009,7 +1009,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
 
   if (is.null(title)) title <- contrast
 
-  if(plotlib == "ggplot") {
+  if (plotlib == "ggplot") {
     p <- ggVolcano(
       x = df$fc,
       y = df$y,
@@ -1022,9 +1022,9 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       lfc = fc,
       psig = psig,
       showlegend = TRUE,
-      marker.size = 2*cex,
+      marker.size = 2 * cex,
       marker.alpha = 0.7,
-      label.cex = 4.5*cex.lab,
+      label.cex = 4.5 * cex.lab,
       axis.text.size = 14,
       label = label,
       colors = c(
@@ -1034,7 +1034,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
         down = "#3181de"
       )
     )
-  } else if(plotlib == "plotly") {
+  } else if (plotlib == "plotly") {
     p <- plotlyVolcano(
       x = df$fc,
       y = df$y,
@@ -1047,15 +1047,16 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       psig = psig,
       showlegend = TRUE,
       highlight = hilight,
-      marker.size = 6*cex,
+      marker.size = 6 * cex,
       label = label,
-      label.cex = 1*cex.lab,
+      label.cex = 1 * cex.lab,
       max.absy = NULL,
       color_up_down = TRUE,
       colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#1f77b4"),
       marker.type = "scatter",
       displayModeBar = TRUE,
-      source = "plot1") 
+      source = "plot1"
+    )
   } else {
     p <- pgx.scatterPlotXY(
       df,
@@ -1065,8 +1066,8 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       xlab = "differential expression (log2FC)",
       ylab = "significance (-log10q)",
       hilight = label, #
-      cex = 1.3*cex,
-      cex.lab = 1.4*cex.lab,
+      cex = 1.3 * cex,
+      cex.lab = 1.4 * cex.lab,
       cex.title = 1.0,
       xlim = xlim,
       ylim = ylim,
@@ -1125,13 +1126,12 @@ ggVolcano <- function(x,
                       label = NULL,
                       colors = c(
                         up = "#f23451",
-                           notsig = "#707070",
+                        notsig = "#707070",
                         sighigh = "#cccccc",
                         down = "#3181de"
                       )) {
-  
   if (is.null(highlight)) highlight <- names
-  if(showlegend) {
+  if (showlegend) {
     legend <- "right"
   } else {
     legend <- "none"
@@ -1140,7 +1140,7 @@ ggVolcano <- function(x,
     fc = x,
     y = y
   )
-  if(!is.null(facet)) {
+  if (!is.null(facet)) {
     df$facet <- facet
   }
   df$category <- ifelse(
@@ -1151,12 +1151,15 @@ ggVolcano <- function(x,
   df$category[!(names %in% highlight | label.names %in% highlight)] <- "Not significant2"
 
   plt <- ggplot2::ggplot(df, ggplot2::aes(x = fc, y = y)) +
-    ggplot2::geom_point( ggplot2::aes(color = category),
-      alpha = marker.alpha, size = marker.size) +
-    ggplot2::scale_color_manual(values = c("Significant down" = colors[["down"]],
-                                "Significant up" = colors[["up"]],
-                                "Not significant" = colors[["notsig"]],
-                                "Not significant2" = colors[["sighigh"]])) +
+    ggplot2::geom_point(ggplot2::aes(color = category),
+      alpha = marker.alpha, size = marker.size
+    ) +
+    ggplot2::scale_color_manual(values = c(
+      "Significant down" = colors[["down"]],
+      "Significant up" = colors[["up"]],
+      "Not significant" = colors[["notsig"]],
+      "Not significant2" = colors[["sighigh"]]
+    )) +
     ggplot2::geom_point(
       data = df[df$category == "Not significant2", ],
       ggplot2::aes(x = fc, y = y),
@@ -1169,24 +1172,28 @@ ggVolcano <- function(x,
       ggplot2::aes(x = fc, y = y),
       color = colors[["down"]],
       alpha = 1,
-      size = marker.size) +
+      size = marker.size
+    ) +
     ggplot2::geom_point(
       data = df[df$category == "Significant up", ],
       ggplot2::aes(x = fc, y = y),
       color = colors[["up"]],
       alpha = 1,
-      size = marker.size) +
+      size = marker.size
+    ) +
     ggplot2::geom_point(
       data = df[df$category == "Not significant", ],
       ggplot2::aes(x = fc, y = y),
       color = colors[["notsig"]],
       alpha = 1,
-      size = marker.size) +
+      size = marker.size
+    ) +
     ggplot2::geom_hline(yintercept = -log10(psig), linetype = "dashed", color = "gray") +
     ggplot2::geom_vline(xintercept = c(-lfc, lfc), linetype = "dashed", color = "gray") +
     ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey") +
-    ggrepel::geom_label_repel( ggplot2::aes(label = label, color = category),
-      size = label.cex, family = "lato", box.padding = 0.1, max.overlaps = 20, show.legend = FALSE) +
+    ggrepel::geom_label_repel(ggplot2::aes(label = label, color = category),
+      size = label.cex, family = "lato", box.padding = 0.1, max.overlaps = 20, show.legend = FALSE
+    ) +
     ggplot2::scale_y_continuous(limits = c(0, NA)) +
     ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0))) +
     ggplot2::labs(
@@ -1203,7 +1210,7 @@ ggVolcano <- function(x,
       axis.text = ggplot2::element_text(family = "lato"),
       plot.margin = ggplot2::margin(l = 9, b = 3, t = 9, r = 9)
     )
-  if(!is.null(facet)) {
+  if (!is.null(facet)) {
     ncol_row <- ceiling(sqrt(length(unique(facet))))
     plt <- plt +
       ggplot2::facet_wrap(facet ~ ., nrow = ncol_row, ncol = ncol_row)
@@ -2910,7 +2917,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     names(var) <- rownames(pos)
   }
   if (is.null(type)) {
-    type <- c("numeric", "factor")[1 + class(var) %in% c("factor", "character","logical")]
+    type <- c("numeric", "factor")[1 + class(var) %in% c("factor", "character", "logical")]
   }
   if (is.null(colnames(pos))) {
     colnames(pos) <- c("x", "y")
@@ -2976,13 +2983,13 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     } else if (is.null(col) && nz == 1) {
       col <- c("#22222255")
     }
-    dbg("nz = ",nz)
+    dbg("nz = ", nz)
     col1 <- head(rep(col, 99), nz)
     pt.col <- col1[z1]
-    if(nz==2 && length(col)==3) {
-      dbg("col = ",col)
-      sel <- which(as.integer(z1)==2 & pos[,1] < 0)
-      dbg("length.sel = ",length(sel))
+    if (nz == 2 && length(col) == 3) {
+      dbg("col = ", col)
+      sel <- which(as.integer(z1) == 2 & pos[, 1] < 0)
+      dbg("length.sel = ", length(sel))
       pt.col[sel] <- col[3]
     }
     pt.col[is.na(pt.col)] <- na.color
@@ -4546,7 +4553,7 @@ plotlyVolcano <- function(x,
             color = colors["up"]
           ),
           showlegend = showlegend,
-          name = 'Significant up'
+          name = "Significant up"
         )
       p <- p %>%
         plotly::add_trace(
@@ -4560,7 +4567,7 @@ plotlyVolcano <- function(x,
             color = colors["down"]
           ),
           showlegend = showlegend,
-          name = 'Significant down'          
+          name = "Significant down"
         )
     } else {
       p <- p %>%
@@ -4592,7 +4599,7 @@ plotlyVolcano <- function(x,
           color = colors["notsig"]
         ),
         showlegend = showlegend,
-        name = 'Not significant'
+        name = "Not significant"
       )
   }
 

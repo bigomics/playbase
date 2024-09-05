@@ -674,29 +674,28 @@ plotImportance <- function(P, p.sign = NULL, top = 50, runtime = NULL) {
 
 
 #' @export
-plotDecisionTreeFromImportance <- function(X, P, maxfeatures=100, add.splits=0) {
-  
+plotDecisionTreeFromImportance <- function(X, P, maxfeatures = 100, add.splits = 0) {
   P <- abs(P) ## sometimes negative according to sign
-  
+
   P[is.na(P)] <- 0
   P[is.nan(P)] <- 0
   P <- t(t(P) / (1e-3 + apply(P, 2, max, na.rm = TRUE)))
   P <- P[order(-rowSums(P, na.rm = TRUE)), , drop = FALSE]
-  
+
   R <- P
   if (nrow(R) > 1) {
     R <- (apply(P, 2, rank) / nrow(P))**4
     R <- R[order(-rowSums(R, na.rm = TRUE)), , drop = FALSE]
   }
-  
+
   ## ------------------------------
   ## create partition tree
   ## ------------------------------
-  
+
   R <- R[order(-rowSums(R, na.rm = TRUE)), , drop = FALSE]
   sel <- head(rownames(R), maxfeatures) ## top50 features
   tx <- t(X[sel, , drop = FALSE])
-    
+
   ## formula wants clean names, so save original names
   colnames(tx) <- gsub("[: +-.,]", "_", colnames(tx))
   colnames(tx) <- gsub("[')(]", "", colnames(tx))
@@ -705,7 +704,7 @@ plotDecisionTreeFromImportance <- function(X, P, maxfeatures=100, add.splits=0) 
   names(orig.names) <- colnames(tx)
   jj <- names(y)
 
-  do.survival = FALSE
+  do.survival <- FALSE
   if (do.survival) {
     time <- abs(y)
     status <- (y > 0) ## dead if positive time
@@ -718,20 +717,20 @@ plotDecisionTreeFromImportance <- function(X, P, maxfeatures=100, add.splits=0) 
   table(rf$where)
   rf$cptable
   rf$orig.names <- orig.names
-  
+
   rf.nsplit <- rf$cptable[, "nsplit"]
-#  if (grepl("survival", ct)) {
-#    MAXSPLIT <- 4 ## maximum five groups....
-#  } else {
-  ##MAXSPLIT <- ceiling(1.5 * length(unique(y))) ## maximum N+1 groups
-  MAXSPLIT <- length(unique(y)) + 1 + add.splits ## maximum N+1 groups 
-#  }
+  #  if (grepl("survival", ct)) {
+  #    MAXSPLIT <- 4 ## maximum five groups....
+  #  } else {
+  ## MAXSPLIT <- ceiling(1.5 * length(unique(y))) ## maximum N+1 groups
+  MAXSPLIT <- length(unique(y)) + 1 + add.splits ## maximum N+1 groups
+  #  }
   if (max(rf.nsplit) > MAXSPLIT) {
     cp.idx <- max(which(rf.nsplit <= MAXSPLIT))
     cp0 <- rf$cptable[cp.idx, "CP"]
     rf <- rpart::prune(rf, cp = cp0)
   }
-  
+
   is.surv <- grepl("Surv", rf$call)[2]
   is.surv
   if (is.surv) {

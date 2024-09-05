@@ -5,11 +5,11 @@
 
 
 #' Fast matrix correlation
-#' 
+#'
 #' @export
-fastCor <- function(x,y) {
-  scaledx <- scale(x) / sqrt(nrow(x)-1)
-  scaledy <- scale(y) / sqrt(nrow(y)-1)
+fastCor <- function(x, y) {
+  scaledx <- scale(x) / sqrt(nrow(x) - 1)
+  scaledy <- scale(y) / sqrt(nrow(y) - 1)
   t(scaledx) %*% scaledy
 }
 
@@ -372,7 +372,7 @@ rowFUN <- function(X, group = rownames(X), FUN = matrixStats::colMeans2, reorder
     1:nrow(X), group,
     function(i) FUN(X[i, , drop = FALSE], na.rm = TRUE)
   )))
-  if (reorder) mX <- mX[unique(group),, drop = FALSE]
+  if (reorder) mX <- mX[unique(group), , drop = FALSE]
   mX
 }
 
