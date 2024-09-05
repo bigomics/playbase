@@ -622,8 +622,6 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
 
-  browser()
-
   if (!is.null(datatype) && datatype == "metabolomics") {
     # check if probetype matches ids from selected probetype
     if (any(probes %in% playdata::METABOLITE_ANNOTATION[, probe_type])) {
