@@ -1019,12 +1019,12 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       highlight = hilight,
       xlab = "effect size (logFC)",
       ylab = "significance (-log10q)",
-      lfc = lfc,
+      lfc = fc,
       psig = psig,
       showlegend = TRUE,
       marker.size = 2*cex,
       marker.alpha = 0.7,
-      label.cex = 5*cex.lab,
+      label.cex = 4.5*cex.lab,
       axis.text.size = 14,
       label = label,
       colors = c(
@@ -1043,7 +1043,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       group.names = c("group1", "group2"),
       xlab = "effect size (logFC)",
       ylab = "significance (-log10q)",
-      lfc = lfc,
+      lfc = fc,
       psig = psig,
       showlegend = TRUE,
       highlight = hilight,
@@ -1120,7 +1120,7 @@ ggVolcano <- function(x,
                       showlegend = TRUE,
                       marker.size = 5,
                       marker.alpha = 0.7,
-                         label.cex = 5,
+                      label.cex = 4.5,
                       axis.text.size = 14,
                       label = NULL,
                       colors = c(
@@ -1164,17 +1164,20 @@ ggVolcano <- function(x,
       alpha = marker.alpha,
       size = marker.size
     ) +
-    ggplot2::geom_point(data = df[df$category == "Significant down", ],
+    ggplot2::geom_point(
+      data = df[df$category == "Significant down", ],
       ggplot2::aes(x = fc, y = y),
       color = colors[["down"]],
       alpha = 1,
       size = marker.size) +
-    ggplot2::geom_point(data = df[df$category == "Significant up", ],
+    ggplot2::geom_point(
+      data = df[df$category == "Significant up", ],
       ggplot2::aes(x = fc, y = y),
       color = colors[["up"]],
       alpha = 1,
       size = marker.size) +
-    ggplot2::geom_point(data = df[df$category == "Not significant", ],
+    ggplot2::geom_point(
+      data = df[df$category == "Not significant", ],
       ggplot2::aes(x = fc, y = y),
       color = colors[["notsig"]],
       alpha = 1,
@@ -1183,7 +1186,7 @@ ggVolcano <- function(x,
     ggplot2::geom_vline(xintercept = c(-lfc, lfc), linetype = "dashed", color = "gray") +
     ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey") +
     ggrepel::geom_label_repel( ggplot2::aes(label = label, color = category),
-      size = label.cex, family = "lato", box.padding = 0.1, max.overlaps = 20) +
+      size = label.cex, family = "lato", box.padding = 0.1, max.overlaps = 20, show.legend = FALSE) +
     ggplot2::scale_y_continuous(limits = c(0, NA)) +
     ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0))) +
     ggplot2::labs(
@@ -1193,11 +1196,12 @@ ggVolcano <- function(x,
     ggplot2::theme_minimal(base_size = 15) +
     ggplot2::theme(
       legend.position = legend,
+      legend.title = ggplot2::element_blank(),
       panel.grid = ggplot2::element_blank(),
       axis.line.x = ggplot2::element_line(color = "darkgrey"),
       axis.title = ggplot2::element_text(face = "plain", size = axis.text.size, family = "lato"),
       axis.text = ggplot2::element_text(family = "lato"),
-      plot.margin = ggplot2::margin(l = 9, b = 0, t = 9, r = 9)
+      plot.margin = ggplot2::margin(l = 9, b = 3, t = 9, r = 9)
     )
   if(!is.null(facet)) {
     ncol_row <- ceiling(sqrt(length(unique(facet))))
