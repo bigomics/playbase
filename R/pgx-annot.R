@@ -625,7 +625,12 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   browser()
 
   if (!is.null(datatype) && datatype == "metabolomics") {
-    return("metabolomics")
+    # check if probetype matches ids from selected probetype
+    if (any(probes %in% playdata::METABOLITE_ANNOTATION[, probe_type])) {
+      return(probe_type)
+    } else {
+      return(NULL)
+    }
   }
 
   ## get correct OrgDb database for organism
