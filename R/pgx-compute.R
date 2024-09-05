@@ -331,6 +331,10 @@ pgx.createPGX <- function(counts,
     stop("[createPGX] FATAL: Could not build gene annotation")
   }
 
+  if (all(is.na(pgx$genes$symbol))) {
+    pgx$genes$symbol <- rownames(pgx$genes)
+  }
+
   ## -------------------------------------------------------------------
   ## Filter out not-expressed
   ## -------------------------------------------------------------------
@@ -848,7 +852,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   if (ncol(G) < 10 || nrow(G) < 3) {
     add.gmt <- NULL
     rr <- sample(3:400, 100)
-    if (is.null(pgx$genes$human_ortholog)) {
+    if (is.null(pgx$genes$human_ortholog) | all(is.na(pgx$genes$human_ortholog))) {
       gg <- pgx$genes$symbol
     } else {
       gg <- pgx$genes$human_ortholog # gmt should always map to human_ortholog
@@ -939,7 +943,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       min.geneset.size = 3,
       max.geneset.size = 9999,
       min_gene_frequency = 1,
-      all_genes = pgx$genes$human_ortholog,
       annot = pgx$genes,
       filter_genes = FALSE
     )
