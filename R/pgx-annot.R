@@ -618,16 +618,17 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
                              nprobe = 100, use.ah = NULL, datatype = NULL,
                              probe_type = NULL) {
   # if probe type is not null, return probetype
-  if (!is.null(probe_type)) {
-    # TODO check that probes for metabolomics are valid
-    return(probe_type)
-  }
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
 
   if (!is.null(datatype) && datatype == "metabolomics") {
-    return("metabolomics")
+    # check if probetype matches ids from selected probetype
+    if (any(probes %in% playdata::METABOLITE_ANNOTATION[, probe_type])) {
+      return(probe_type)
+    } else {
+      return(NULL)
+    }
   }
 
   ## get correct OrgDb database for organism
