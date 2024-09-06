@@ -2422,14 +2422,14 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
         title = xlab,
         gridwidth = 0.3,
         tickfont = list(size = 9 * cex.axis),
-        titlefont = list(size = 11 * cex.axis)        
+        titlefont = list(size = 11 * cex.axis)
       ),
       yaxis = list(
         title = ylab,
         gridwidth = 0.3,
         range = c(y0 - 1.1 * dy, y1),
         tickfont = list(size = 9 * cex.axis),
-        titlefont = list(size = 11 * cex.axis)        
+        titlefont = list(size = 11 * cex.axis)
       )
     ) %>%
     plotly::config(toImageButtonOptions = list(format = "svg")) %>%
