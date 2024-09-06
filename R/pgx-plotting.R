@@ -2253,7 +2253,7 @@ plotly2ggplot <- function(plot, width = NULL, height = NULL, scale = 1, hjust = 
 #' @export
 gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen = 0.25,
                           ylab = NULL, yth = 1, tooltips = NULL, cex.text = 1, cex.title = 1.4,
-                          cbar.width = 32) {
+                          cex.axis = 1, cbar.width = 32) {
   if (is.null(xlab)) {
     xlab <- "Rank in ordered dataset"
   }
@@ -2266,9 +2266,6 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
 
   ## compute running metrix
   fc <- sort(fc, decreasing = TRUE)
-
-
-
 
   ## weighted cumulative random walk
   x0 <- 1 * (names(fc) %in% gset)
@@ -2421,8 +2418,19 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
     plotly::layout(
       font = list(size = 12 * cex.text),
       title = list(text = main, y = 0.99, font = list(size = 12 * cex.title)),
-      xaxis = list(title = xlab, gridwidth = 0.3),
-      yaxis = list(title = ylab, gridwidth = 0.3, range = c(y0 - 1.1 * dy, y1))
+      xaxis = list(
+        title = xlab,
+        gridwidth = 0.3,
+        tickfont = list(size = 9 * cex.axis),
+        titlefont = list(size = 11 * cex.axis)        
+      ),
+      yaxis = list(
+        title = ylab,
+        gridwidth = 0.3,
+        range = c(y0 - 1.1 * dy, y1),
+        tickfont = list(size = 9 * cex.axis),
+        titlefont = list(size = 11 * cex.axis)        
+      )
     ) %>%
     plotly::config(toImageButtonOptions = list(format = "svg")) %>%
     plotly::hide_legend()
