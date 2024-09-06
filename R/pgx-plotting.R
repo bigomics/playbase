@@ -969,8 +969,11 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
                         psig = 0.05, fc = 1, cex = 1,
                         p.min = NULL, fc.max = NULL, hilight = NULL,
                         label = NULL, cex.lab = 1, ntop = 20,
-                        cpal = c("grey60", "red3", "blue3"), title = NULL,
-                        xlim = NULL, ylim = NULL,
+                        colors = c( up = "#f23451", notsig = "#707070AA",
+                          notsel = "#cccccc44", down = "#3181de" ),
+                        title = NULL, xlim = NULL, ylim = NULL,
+                        xlab = "effect size (logFC)",
+                        ylab = "significance (-log10q)",
                         set.par = TRUE, plotlib = "base", data = FALSE) {
   if (is.integer(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
   res <- NULL
@@ -981,17 +984,21 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   } else {
     stop("FATAL:: invalid level=", level)
   }
+
   f <- res$fc[, contrast]
   q <- res$qv[, contrast]
-
   sig <- (q <= psig & abs(f) >= fc)
-  df <- data.frame(fc = f, y = -log10(q))
+  df <- data.frame(fc = f, y = -log10(q), q = q, sig = sig)
 
-  if (is.null(hilight)) hilight <- rownames(df)
+  hilight0 <- hilight
+  if (FALSE && is.null(hilight)) {
+    hilight <- rownames(res$fc)
+  }
   if (is.null(label)) {
     wt <- rowSums(scale(df, center = FALSE)**2, na.rm = TRUE)
     label <- rownames(df)[order(-wt)]
-    label <- intersect(label, names(sig[sig == TRUE]))
+    if(!is.null(hilight)) label <- intersect(label, hilight)
+    ## if(!is.null(sig)) label <- intersect(label, names(sig[sig == TRUE]))
   }
   label <- Matrix::head(label, ntop) ## label
 
@@ -1009,6 +1016,16 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
 
   if (is.null(title)) title <- contrast
 
+  ## if(is.null(colors)) {
+  ##   colors = c(
+  ##     up = "#f23451",
+  ##     notsig = "#70707088",
+  ##     notsel = "#cccccc44",
+  ##     down = "#3181de"
+  ##   )
+  ## }
+  
+  p <- NULL
   if (plotlib == "ggplot") {
     p <- ggVolcano(
       x = df$fc,
@@ -1017,22 +1034,17 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       label.names = rownames(df),
       facet = NULL,
       highlight = hilight,
-      xlab = "effect size (logFC)",
-      ylab = "significance (-log10q)",
+      xlab = xlab,
+      ylab = ylab,
       lfc = fc,
       psig = psig,
       showlegend = TRUE,
       marker.size = 2 * cex,
       marker.alpha = 0.7,
-      label.cex = 4.5 * cex.lab,
+      label.cex = 5 * cex.lab,
       axis.text.size = 14,
       label = label,
-      colors = c(
-        up = "#f23451",
-        notsig = "#707070",
-        sighigh = "#cccccc",
-        down = "#3181de"
-      )
+      colors = colors
     )
   } else if (plotlib == "plotly") {
     p <- plotlyVolcano(
@@ -1041,30 +1053,51 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       names = rownames(df),
       label.names = rownames(df),
       group.names = c("group1", "group2"),
-      xlab = "effect size (logFC)",
-      ylab = "significance (-log10q)",
+      xlab = xlab,
+      ylab = ylab,
       lfc = fc,
       psig = psig,
       showlegend = TRUE,
       highlight = hilight,
-      marker.size = 6 * cex,
+      marker.size = 8 * cex,
       label = label,
-      label.cex = 1 * cex.lab,
+      label.cex = 1.2 * cex.lab,
       max.absy = NULL,
       color_up_down = TRUE,
-      colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#1f77b4"),
+      colors = colors,
       marker.type = "scatter",
       displayModeBar = TRUE,
-      source = "plot1"
+      source = "plot1"      
     )
+  } else if (plotlib == "base") {
+    if(is.null(hilight0)) hilight <- NULL
+    plot_volcano(
+      x = df$fc,
+      y = df$q,
+      names = rownames(df),
+      label.names = rownames(df),
+      highlight = hilight,
+      label = label,
+      xlab = xlab,
+      ylab = ylab,
+      lfc = fc,
+      psig = psig,
+      sig = sig,
+      showlegend = TRUE,
+      cex = 1.2 * cex,
+      cex.lab = 1.1 * cex.lab,
+      colors = colors,
+      repel = FALSE
+    )
+    
   } else {
     p <- pgx.scatterPlotXY(
-      df,
-      var = sig,
+      df[,1:2],
+      var = df$sig,
       type = "factor",
       title = title,
-      xlab = "differential expression (log2FC)",
-      ylab = "significance (-log10q)",
+      xlab = xlab,
+      ylab = ylab,
       hilight = label, #
       cex = 1.3 * cex,
       cex.lab = 1.4 * cex.lab,
@@ -1072,22 +1105,106 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       xlim = xlim,
       ylim = ylim,
       legend = FALSE,
-      col = cpal,
+      col = colors,
       opacity = 1,
       set.par = set.par,
       plotlib = plotlib
     )
-  }
-
-  if (plotlib == "base") {
-    abline(v = 0, lty = 1, lwd = 0.5)
-    abline(h = 0, lty = 1, lwd = 0.5)
-    abline(v = c(-1, 1) * fc, lty = 2, lwd = 0.5)
-    abline(h = -log10(psig), lty = 2, lwd = 0.5)
+    if (plotlib == "base") {
+      abline(v = 0, lty = 1, lwd = 0.5)
+      abline(h = 0, lty = 1, lwd = 0.5)
+      abline(v = c(-1, 1) * fc, lty = 2, lwd = 0.5)
+      abline(h = -log10(psig), lty = 2, lwd = 0.5)
+    }
   }
 
   p
 }
+
+
+plot_volcano <- function(x,
+                         y,
+                         names,
+                         label.names = names,
+                         facet = NULL,
+                         highlight = NULL,
+                         label = NULL,
+                         ntop = 10,
+                         xlab = "effect size (logFC)",
+                         ylab = "significance (-log10p)",
+                         lfc = 1,
+                         psig = 0.05,
+                         sig = NULL,
+                         showlegend = TRUE,
+                         cex = 1,
+                         cex.lab = 1,
+                         marker.alpha = 0.7,
+                         axis.text.size = 14,
+                         title = "Volcano plot",
+                         colors = c(
+                           up = "#f23451",
+                           notsig = "#707070",
+                           notsel = "#cccccc44",
+                           down = "#3181de"
+                         ),
+                         repel = TRUE
+                         ) {
+  
+  if(is.null(sig)) {
+    sig <- (y <= psig & abs(x) >= lfc)
+  }
+  if (FALSE && is.null(highlight)) {
+    highlight <- rownames(df)
+  }
+  
+  log10.y <- -log10(y)
+  pos <- cbind(x, log10.y)
+  if(!is.null(names)) rownames(pos) <- names
+
+  if (is.null(label)) {
+    wt <- rowSums(scale(pos, center = FALSE)**2, na.rm = TRUE)
+    label <- rownames(pos)[order(-wt)]
+    if(!is.null(highlight)) label <- intersect(label, highlight)
+    ## if(!is.null(sig)) label <- intersect(label, names(sig[sig == TRUE]))    
+  }
+  label <- Matrix::head(label, ntop) ## label
+  
+  p <- pgx.scatterPlotXY.BASE(
+    pos = pos,
+    var = sig,
+    type = "factor",
+    title = title,
+    xlab = "effect size (log2FC)",
+    ylab = "significance (-log10q)",
+    hilight  = highlight, #
+    hilight2 = label, #
+    cex = 1.3 * cex,
+    cex.lab = 1.4 * cex.lab,
+    cex.title = 1.0,
+#    xlim = xlim,
+#    ylim = ylim,
+    legend = FALSE,
+    col = colors[c("notsig","up","down")],
+    na.color = colors['notsel'],
+    opacity = 1,
+    repel = repel
+#    set.par = set.par
+    )
+  
+  abline(v = 0, lty = 1, lwd = 0.5)
+  abline(h = 0, lty = 1, lwd = 0.5)
+  abline(v = c(-1, 1) * lfc[1], lty = 2, lwd = 0.5)
+  abline(h = -log10(psig[1]), lty = 2, lwd = 0.5)
+
+  if(showlegend) {
+    cc <- colors[c("notsig","up","down")]
+    legend("topright", legend = c("Not significant","Up","Down"),
+           pch=20, col=cc, pt.cex=1.5*cex, bty='n', border=NA)
+  }
+  
+}
+
+
 
 #' @describeIn pgx.plotContrast Create a volcano plot from a PGX object
 #'
@@ -1115,21 +1232,23 @@ ggVolcano <- function(x,
                       facet = NULL,
                       highlight = NULL,
                       xlab = "effect size (logFC)",
-                      ylab = "significance (-log10p)",
+                      ylab = "significance (-log10q)",
                       lfc = 1,
                       psig = 0.05,
                       showlegend = TRUE,
-                      marker.size = 5,
+                      marker.size = 2.5,
                       marker.alpha = 0.7,
                       label.cex = 4.5,
                       axis.text.size = 14,
                       label = NULL,
+                      title = "Volcano plot",
                       colors = c(
                         up = "#f23451",
-                        notsig = "#707070",
-                        sighigh = "#cccccc",
+                        notsig = "#70707044",
+                        notsel = "#cccccc44",
                         down = "#3181de"
-                      )) {
+                      ),
+                      girafe = FALSE) {
   if (is.null(highlight)) highlight <- names
   if (showlegend) {
     legend <- "right"
@@ -1138,67 +1257,114 @@ ggVolcano <- function(x,
   }
   df <- data.frame(
     fc = x,
-    y = y
+    y = y,
+    name = names,
+    tooltip = label.names
   )
   if (!is.null(facet)) {
     df$facet <- facet
   }
   df$category <- ifelse(
-    df$y > -log10(psig) & df$fc > lfc, "Significant up",
-    ifelse(df$y > -log10(psig) & df$fc < -lfc, "Significant down", "Not significant")
+    df$y > -log10(psig) & df$fc > lfc, "Up",
+
+    ifelse(df$y > -log10(psig) & df$fc < -lfc, "Down", "Not significant")
   )
   df$label <- ifelse(names %in% label | label.names %in% label, label.names, NA)
-  df$category[!(names %in% highlight | label.names %in% highlight)] <- "Not significant2"
+  df$category[!(names %in% highlight | label.names %in% highlight)] <- "Not selected"
+
+  df$tooltip <- gsub("[\\'\\`-]","",df$tooltip)
+  df$name <- gsub("[\\'\\`-]","",df$name)
 
   plt <- ggplot2::ggplot(df, ggplot2::aes(x = fc, y = y)) +
     ggplot2::geom_point(ggplot2::aes(color = category),
       alpha = marker.alpha, size = marker.size
     ) +
     ggplot2::scale_color_manual(values = c(
-      "Significant down" = colors[["down"]],
-      "Significant up" = colors[["up"]],
+      "Down" = colors[["down"]],
+      "Up" = colors[["up"]],
       "Not significant" = colors[["notsig"]],
-      "Not significant2" = colors[["sighigh"]]
-    )) +
-    ggplot2::geom_point(
-      data = df[df$category == "Not significant2", ],
-      ggplot2::aes(x = fc, y = y),
-      color = colors[["sighigh"]],
-      alpha = marker.alpha,
-      size = marker.size
-    ) +
-    ggplot2::geom_point(
-      data = df[df$category == "Significant down", ],
-      ggplot2::aes(x = fc, y = y),
-      color = colors[["down"]],
-      alpha = 1,
-      size = marker.size
-    ) +
-    ggplot2::geom_point(
-      data = df[df$category == "Significant up", ],
-      ggplot2::aes(x = fc, y = y),
-      color = colors[["up"]],
-      alpha = 1,
-      size = marker.size
-    ) +
-    ggplot2::geom_point(
-      data = df[df$category == "Not significant", ],
-      ggplot2::aes(x = fc, y = y),
-      color = colors[["notsig"]],
-      alpha = 1,
-      size = marker.size
-    ) +
+      "Not selected" = colors[["notsel"]]
+    ))
+
+  if(!girafe) {
+    plt <- plt +
+      ggplot2::geom_point(
+        data = df[df$category == "Not selected", ],
+        ggplot2::aes(x = fc, y = y),
+        color = colors[["notsel"]],
+        alpha = marker.alpha,
+        size = marker.size
+      ) +
+      ggplot2::geom_point(
+        data = df[df$category == "Down", ],
+        ggplot2::aes(x = fc, y = y),
+        color = colors[["down"]],
+        alpha = 1,
+        size = marker.size
+      ) +
+      ggplot2::geom_point(
+        data = df[df$category == "Up", ],
+        ggplot2::aes(x = fc, y = y),
+        color = colors[["up"]],
+        alpha = 1,
+        size = marker.size
+      ) +
+      ggplot2::geom_point(
+        data = df[df$category == "Not significant", ],
+        ggplot2::aes(x = fc, y = y),
+        color = colors[["notsig"]],
+        alpha = 1,
+        size = marker.size
+      )
+  }
+  if(girafe) {    
+    plt <- plt +
+      ggiraph::geom_point_interactive(
+        data = df[df$category == "Not selected", ],
+        ggplot2::aes(x = fc, y = y, tooltip = tooltip, data_id = name),
+        color = colors[["notsel"]],
+        alpha = marker.alpha,
+        size = marker.size
+      ) +
+      ggiraph::geom_point_interactive(
+        data = df[df$category == "Down", ],
+        ggplot2::aes(x = fc, y = y, tooltip = tooltip, data_id = name),
+        color = colors[["down"]],
+        alpha = 1,
+        size = marker.size
+      ) +
+      ggiraph::geom_point_interactive(
+        data = df[df$category == "Up", ],
+        ggplot2::aes(x = fc, y = y, tooltip = tooltip, data_id = name),
+        color = colors[["up"]],
+        alpha = 1,
+        size = marker.size
+      ) +
+      ggiraph::geom_point_interactive(
+        data = df[df$category == "Not significant", ],
+        ggplot2::aes(x = fc, y = y, tooltip = tooltip, data_id = name),
+        color = colors[["notsig"]],
+        alpha = 1,
+        size = marker.size
+      )
+  }
+
+  plt <- plt +
+    ggrepel::geom_label_repel(
+      ggplot2::aes(label = label, color = category),
+      size = label.cex, family = "lato", box.padding = 0.1, max.overlaps = 20, show.legend = FALSE
+    ) 
+  
+  plt <- plt +
     ggplot2::geom_hline(yintercept = -log10(psig), linetype = "dashed", color = "gray") +
     ggplot2::geom_vline(xintercept = c(-lfc, lfc), linetype = "dashed", color = "gray") +
     ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey") +
-    ggrepel::geom_label_repel(ggplot2::aes(label = label, color = category),
-      size = label.cex, family = "lato", box.padding = 0.1, max.overlaps = 20, show.legend = FALSE
-    ) +
     ggplot2::scale_y_continuous(limits = c(0, NA)) +
     ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0))) +
     ggplot2::labs( x = xlab, y = ylab ) +
     guides(colour = guide_legend(reverse=T)) +
     ggplot2::theme_minimal(base_size = 15) +
+    ggplot2::ggtitle(title) +
     ggplot2::theme(
       legend.position = legend,
       legend.justification = "top",
@@ -1213,6 +1379,10 @@ ggVolcano <- function(x,
     ncol_row <- ceiling(sqrt(length(unique(facet))))
     plt <- plt +
       ggplot2::facet_wrap(facet ~ ., nrow = ncol_row, ncol = ncol_row)
+  }
+
+  if(girafe) {
+    plt <- ggiraph::girafe(ggobj=plt, pointsize=12, width_svg = NULL, height_svg = NULL)
   }
   return(plt)
 }
@@ -2892,11 +3062,11 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
                                    legend.pos = "bottomright", lab.pos = NULL, repel = TRUE,
                                    xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL, dlim = 0.02,
                                    hilight2 = hilight, hilight.cex = NULL, lab.xpd = TRUE,
-                                   hilight = NULL, hilight.col = NULL, hilight.lwd = 0.8,
+                                   hilight = NULL, hilight.col = NULL, hilight.lwd = 0.4,
                                    label.clusters = FALSE, cex.clust = 1.5,
-                                   tstep = 0.1, rstep = 0.1, na.color = "#AAAAAA55",
+                                   tstep = 0.1, rstep = 0.1, na.color = "#AAAAAA44",
                                    tooltip = NULL, theme = NULL, set.par = TRUE,
-                                   axt = "s", xaxs = TRUE, yaxs = TRUE,
+                                   axt = "s", xaxs = TRUE, yaxs = TRUE, color_up_down = TRUE,
                                    labels = NULL, label.type = NULL, opacity = 1) {
   ## automatically set pointsize of dots
   if (is.null(cex)) {
@@ -2982,16 +3152,23 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     } else if (is.null(col) && nz == 1) {
       col <- c("#22222255")
     }
-    dbg("nz = ", nz)
     col1 <- head(rep(col, 99), nz)
+
     pt.col <- col1[z1]
-    if (nz == 2 && length(col) == 3) {
-      dbg("col = ", col)
+    if (color_up_down && nz == 2 && length(col) == 3) {
       sel <- which(as.integer(z1) == 2 & pos[, 1] < 0)
-      dbg("length.sel = ", length(sel))
       pt.col[sel] <- col[3]
     }
+
+    ## NA points with light grey
     pt.col[is.na(pt.col)] <- na.color
+
+    ## also dim not highlighted points
+    if (!is.null(hilight) && length(hilight) > 0) {
+      jj <- which(!rownames(pos) %in% hilight)
+      if(length(jj)) pt.col[jj] <- na.color
+    }
+
     pt.col0 <- pt.col
     if (opacity < 1) {
       pt.col <- add_opacity(pt.col, opacity)
@@ -3016,7 +3193,6 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     if (label.clusters) {
       mpos <- apply(pos, 2, function(x) tapply(x, z1, stats::median))
       mlab <- rownames(mpos)
-
       graphics::text(mpos, labels = mlab, cex = cex.clust, lheight = 0.8)
     }
 
@@ -3025,7 +3201,9 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     if (legend.pos != "none" && legend && nlev < 30) {
       cex1 <- ifelse(length(levels(z1)) >= 8, 0.85, 1)
       cex1 <- ifelse(length(levels(z1)) >= 15, 0.75, cex1)
-      graphics::legend(legend.pos, levels(z1),
+      graphics::legend(
+        legend.pos,
+        legend = levels(z1),
         bty = bty, fill = col1,
         ## cex=cex1, y.intersp=0.75, x.intersp=0.7
         cex = 0.85 * cex1 * cex.legend,
@@ -3076,6 +3254,12 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     }
     pt.col[is.na(pt.col)] <- na.color ## missing values color
 
+    ## dim not highlighted points
+    if (!is.null(hilight) && length(hilight) > 0) {
+      jj <- which(!rownames(pos) %in% hilight)
+      if(length(jj)) pt.col[jj] <- na.color
+    }
+        
     jj <- 1:nrow(pos)
     jj <- order(abs(z), na.last = FALSE) ## higher values last??
     if (length(cex) > 1) cex <- cex[jj]
@@ -3104,11 +3288,12 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
         y.intersp = 0.18, x.intersp = 0.5, border = NA, bty = bty,
         inset = c(0.01, 0.02),
         fill = rev(cpal[seq(from = 1, to = length(cpal), length.out = 11)]),
-        legend = c(zr[2], rep(NA, 9), zr[1]),
+        legend = c(zr[2], rep(NA, 9), zr[1])
       )
     }
   }
 
+  ## hightlight points in hilight with a border
   if (!is.null(hilight) && length(hilight) > 0) {
     jj <- which(rownames(pos) %in% hilight)
     if (length(jj)) {
@@ -3121,12 +3306,13 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     }
   }
 
+  ## labels points in hilight2 (should be renamed...IK
   if (!is.null(hilight2) && length(hilight2) > 0) {
     jj <- which(rownames(pos) %in% hilight2)
     if (length(jj)) {
       if (length(cex.lab) == 1) cex.lab <- rep(cex.lab, nrow(pos))
       df <- data.frame(x = pos[jj, 1], y = pos[jj, 2], z = labels[jj], cex = cex.lab[jj])
-      if (is.null(lab.pos)) {
+      if (repel) {
         ## repelling text using wordcloud package
         df2 <- rbind(df, df)
         df2$z[1:nrow(df)] <- "x"
@@ -3147,12 +3333,15 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
         } else {
           lab.pos <- data.frame(x = pos[jj, 1], y = pos[jj, 2])
         }
-        rownames(lab.pos) <- rownames(pos)[jj]
+        rownames(lab.pos) <- rownames(pos)[jj]      
+        graphics::segments(df$x, df$y, lab.pos$x, lab.pos$y, col = "#222222AA", lwd = 0.85)
+        graphics::text(lab.pos$x, lab.pos$y, labels = df$z, cex = 0.7 * df$cex)
       } else {
-        lab.pos <- lab.pos[match(rownames(df), rownames(lab.pos)), ]
+        boxes <- sapply( 0.8*nchar(df$z), function(n) paste(rep("\U2588", n), collapse=""))
+        cex1 <- 0.7 * df$cex
+        graphics::text(df$x, df$y, labels = boxes, col="#FFFFFFAA", cex=1.15*cex1, pos=3, offset=0.5)
+        graphics::text(df$x, df$y, labels = df$z, cex = cex1, pos=3, offset=0.45)
       }
-      graphics::segments(df$x, df$y, lab.pos$x, lab.pos$y, col = "#222222AA", lwd = 0.85)
-      graphics::text(lab.pos$x, lab.pos$y, labels = df$z, cex = 0.7 * df$cex)
     }
   }
 
@@ -4498,7 +4687,8 @@ plotlyVolcano <- function(x,
                           label.cex = 1,
                           max.absy = NULL,
                           color_up_down = TRUE,
-                          colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#1f77b4"),
+                          colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#1f77b4",
+                                     notsel = "#cccccc44"),
                           marker.type = "scatter",
                           displayModeBar = TRUE,
                           source = "plot1") {
@@ -4510,7 +4700,8 @@ plotlyVolcano <- function(x,
   # Detect wich i1 genes are under the thresholds
   notsig.genes <- which(y <= -log10(psig) | abs(x) < lfc)
   ib <- intersect(notsig.genes, i1)
-
+  i1 <- setdiff(i1, ib)
+  
   p <- plotly::plot_ly(
     source = source,
     hovertemplate = "<b>%{text}</b><br><b>Effect size</b>: %{x:.2f}<br><b>Significance</b>: %{y:.2f}<extra></extra>"
@@ -4519,6 +4710,7 @@ plotlyVolcano <- function(x,
     plotly::event_register("plotly_hover") %>%
     plotly::event_register("plotly_selected")
 
+  ## not in highlight, not selected
   if (length(i0)) {
     p <- p %>%
       plotly::add_trace(
@@ -4529,13 +4721,14 @@ plotlyVolcano <- function(x,
         mode = "markers",
         marker = list(
           size = marker.size,
-          color = "#cccccc"
+          color = colors["notsel"]
         ),
-        showlegend = showlegend
+        showlegend = FALSE
       )
   }
 
 
+  ## highlighted, selected
   if (length(i1)) {
     if (color_up_down) {
       upreg <- x[i1] > 0
@@ -4552,7 +4745,7 @@ plotlyVolcano <- function(x,
             color = colors["up"]
           ),
           showlegend = showlegend,
-          name = "Significant up"
+          name = "Up"
         )
       p <- p %>%
         plotly::add_trace(
@@ -4566,7 +4759,7 @@ plotlyVolcano <- function(x,
             color = colors["down"]
           ),
           showlegend = showlegend,
-          name = "Significant down"
+          name = "Down"
         )
     } else {
       p <- p %>%
@@ -4585,6 +4778,7 @@ plotlyVolcano <- function(x,
     }
   }
 
+  ## highlighted but not significant
   if (length(ib)) {
     p <- p %>%
       plotly::add_trace(
@@ -4609,7 +4803,7 @@ plotlyVolcano <- function(x,
     i2 <- i2[!i2 %in% ib]
     upreg <- x[i2] > 0
     dwreg <- x[i2] < 0
-    if (color_up_down) {
+    if (FALSE && color_up_down) {
       annot_text <- label.names[i2][upreg]
       if (length(annot_text) == 0) annot_text <- ""
       p <- p %>%
