@@ -1361,8 +1361,8 @@ ggVolcano <- function(x,
     ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey") +
     ggplot2::scale_y_continuous(limits = c(0, NA)) +
     ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0))) +
-    ggplot2::labs( x = xlab, y = ylab ) +
-    guides(colour = guide_legend(reverse=T)) +
+    ggplot2::labs(x = xlab, y = ylab) +
+    guides(colour = guide_legend(reverse = T)) +
     ggplot2::theme_minimal(base_size = 15) +
     ggplot2::ggtitle(title) +
     ggplot2::theme(
