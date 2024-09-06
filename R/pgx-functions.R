@@ -4,6 +4,16 @@
 ##
 
 
+#' Fast matrix correlation
+#'
+#' @export
+fastCor <- function(x, y) {
+  scaledx <- scale(x) / sqrt(nrow(x) - 1)
+  scaledy <- scale(y) / sqrt(nrow(y) - 1)
+  t(scaledx) %*% scaledy
+}
+
+
 #' @title Create a Phenotype Matrix
 #'
 #' @description This function creates a phenotype matrix from a PGX object.
@@ -325,7 +335,7 @@ matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1, reorder = TRUE) {
     1:ncol(X), group,
     function(i) FUN(X[, i, drop = FALSE], na.rm = TRUE)
   ))
-  if (!reorder) mX <- mX[, unique(group), drop = FALSE]
+  if (reorder) mX <- mX[, unique(group), drop = FALSE]
   if (dir == 2) mX <- t(mX)
   mX
 }
@@ -352,6 +362,20 @@ rowmean <- function(X, group = rownames(X), reorder = TRUE) {
   }
   newX
 }
+
+#' Calculate group-wise row function call FUN from a matrix. Like rowmean
+#' but generalized. NOTE: only with functions from matrixStats.
+#'
+#' @export
+rowFUN <- function(X, group = rownames(X), FUN = matrixStats::colMeans2, reorder = TRUE) {
+  mX <- t(do.call(cbind, tapply(
+    1:nrow(X), group,
+    function(i) FUN(X[i, , drop = FALSE], na.rm = TRUE)
+  )))
+  if (reorder) mX <- mX[unique(group), , drop = FALSE]
+  mX
+}
+
 
 #' @describeIn trimsame0 trimsame is a function that trims common prefixes and/or
 #' suffixes from a character vector by applying trimsame0 forwards and/or backwards.

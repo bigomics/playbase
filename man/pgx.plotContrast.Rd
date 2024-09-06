@@ -3,6 +3,7 @@
 \name{pgx.plotContrast}
 \alias{pgx.plotContrast}
 \alias{pgx.Volcano}
+\alias{ggVolcano}
 \alias{pgx.plotMA}
 \alias{pgx.contrastScatter}
 \alias{pgx.plotGeneUMAP}
@@ -25,18 +26,39 @@ pgx.Volcano(
   psig = 0.05,
   fc = 1,
   cex = 1,
-  cex.lab = 1,
-  ntop = 20,
   p.min = NULL,
   fc.max = NULL,
   hilight = NULL,
-  cpal = c("grey60", "red3"),
+  label = NULL,
+  cex.lab = 1,
+  ntop = 20,
+  cpal = c("grey60", "red3", "blue3"),
   title = NULL,
   xlim = NULL,
   ylim = NULL,
   set.par = TRUE,
   plotlib = "base",
   data = FALSE
+)
+
+ggVolcano(
+  x,
+  y,
+  names,
+  label.names = names,
+  facet = NULL,
+  highlight = NULL,
+  xlab = "effect size (logFC)",
+  ylab = "significance (-log10p)",
+  lfc = 1,
+  psig = 0.05,
+  showlegend = TRUE,
+  marker.size = 5,
+  marker.alpha = 0.7,
+  label.cex = 4.5,
+  axis.text.size = 14,
+  label = NULL,
+  colors = c(up = "#f23451", notsig = "#707070", sighigh = "#cccccc", down = "#3181de")
 )
 
 pgx.plotMA(
@@ -110,15 +132,15 @@ pgx.plotGeneUMAP(
 
 \item{cex}{Point size}
 
-\item{cex.lab}{Label size}
-
-\item{ntop}{Number of top genes to label}
-
 \item{p.min}{Minimum p-value for y-axis. Default NULL.}
 
 \item{fc.max}{Maximum fold change for x-axis. Default NULL.}
 
 \item{hilight}{Vector of genes to highlight}
+
+\item{cex.lab}{Label size}
+
+\item{ntop}{Number of top genes to label}
 
 \item{cpal}{Color palette. Default c("grey60", "red3").}
 
@@ -158,6 +180,8 @@ Additional parameters can be passed to the plotting functions via \code{...}.
 \section{Functions}{
 \itemize{
 \item \code{pgx.Volcano()}: Create a volcano plot from a PGX object
+
+\item \code{ggVolcano()}: Create a volcano plot from a PGX object
 
 \item \code{pgx.plotMA()}: Meta-analysis plots for PGX results
 
