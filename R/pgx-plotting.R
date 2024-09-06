@@ -4803,7 +4803,7 @@ plotlyVolcano <- function(x,
     i2 <- i2[!i2 %in% ib]
     upreg <- x[i2] > 0
     dwreg <- x[i2] < 0
-    if (FALSE && color_up_down) {
+    if (TRUE && color_up_down) {
       annot_text <- label.names[i2][upreg]
       if (length(annot_text) == 0) annot_text <- ""
       p <- p %>%
