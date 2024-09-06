@@ -971,7 +971,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
                         label = NULL, cex.lab = 1, ntop = 20,
                         colors = c(
                           up = "#f23451", notsig = "#707070AA",
-                          notsel = "#cccccc44", down = "#3181de"
+                          notsel = "#cccccc88", down = "#3181de"
                         ),
                         title = NULL, xlim = NULL, ylim = NULL,
                         xlab = "effect size (logFC)",
@@ -1021,7 +1021,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   ## if(is.null(colors)) {
   ##   colors = c(
   ##     up = "#f23451",
-  ##     notsig = "#70707088",
+  ##     notsig = "#707070AA",
   ##     notsel = "#cccccc44",
   ##     down = "#3181de"
   ##   )
@@ -1144,8 +1144,8 @@ plot_volcano <- function(x,
                          title = "Volcano plot",
                          colors = c(
                            up = "#f23451",
-                           notsig = "#707070",
-                           notsel = "#cccccc44",
+                           notsig = "#707070AA",
+                           notsel = "#cccccc88",
                            down = "#3181de"
                          ),
                          repel = TRUE) {
@@ -1244,8 +1244,8 @@ ggVolcano <- function(x,
                       title = "Volcano plot",
                       colors = c(
                         up = "#f23451",
-                        notsig = "#70707044",
-                        notsel = "#cccccc44",
+                        notsig = "#707070AA",
+                        notsel = "#cccccc88",
                         down = "#3181de"
                       ),
                       girafe = FALSE) {
@@ -4687,8 +4687,8 @@ plotlyVolcano <- function(x,
                           max.absy = NULL,
                           color_up_down = TRUE,
                           colors = c(
-                            up = "#f23451", notsig = "#8F8F8F", down = "#1f77b4",
-                            notsel = "#cccccc44"
+                            up = "#f23451", notsig = "#8F8F8F",
+                            down = "#1f77b4", notsel = "#cccccc88"
                           ),
                           marker.type = "scatter",
                           displayModeBar = TRUE,
