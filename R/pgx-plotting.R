@@ -3242,12 +3242,10 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
 
     ## -------------- set colors
 
-    cpal <- colorspace::diverge_hcl(64, c = 60, l = c(30, 100), power = 1)
-    cpal <- grDevices::colorRampPalette(c("#313695", "#FFFFDF", "#A50026"))(64)
     if (!is.null(col)) {
       cpal <- grDevices::colorRampPalette(col)(64)
     } else {
-      cpal <- grDevices::colorRampPalette(c("#3136B5", "#FFFFDF", "#B50026"))(64)
+      cpal <- grDevices::colorRampPalette(c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")))(64)
     }
     cpal <- sapply(1:length(cpal), function(i) add_opacity(cpal[i], 0.2 + 0.8 * abs(i - 32.5) / 32))
 
@@ -3625,7 +3623,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   if (type == "numeric") {
     z <- as.numeric(var)
     cpal <- rev(viridis::viridis(11))
-    cpal <- rev(RColorBrewer::brewer.pal(11, "RdYlBu")) ## default
+    cpal <- c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))# rev(RColorBrewer::brewer.pal(11, "RdYlBu")) ## default
     if (!is.null(col)) {
       cpal <- col
     }
@@ -3976,7 +3974,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     z <- as.numeric(var)
     z1 <- NULL
     if (is.null(col)) {
-      cpal <- rev(RColorBrewer::brewer.pal(11, "RdYlBu"))
+      cpal <- c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))# rev(RColorBrewer::brewer.pal(11, "RdYlBu"))
     } else {
       cpal <- col
     }
