@@ -16,6 +16,7 @@ gsea.enplotly(
   tooltips = NULL,
   cex.text = 1,
   cex.title = 1.4,
+  cex.axis = 1,
   cbar.width = 32
 )
 }
