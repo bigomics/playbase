@@ -548,7 +548,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     colmax <- max(abs(gx[, ]), na.rm = TRUE)
     col_scale <- circlize::colorRamp2(
       c(-colmax, 0, colmax),
-      c("royalblue3", "grey90", "indianred3")
+      c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))
     )
   } else {
     colmin <- min(gx[, ], na.rm = TRUE)
