@@ -1244,7 +1244,7 @@ ggVolcano <- function(x,
                       title = "Volcano plot",
                       colors = c(
                         up = "#f23451",
-                        notsig = "#707070AA",
+                        notsig = "#8F8F8F",
                         notsel = "#cccccc88",
                         down = "#3181de"
                       ),
