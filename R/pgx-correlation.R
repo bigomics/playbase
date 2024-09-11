@@ -118,6 +118,7 @@ pgx.plotPartialCorrelationGraph <- function(res, gene, rho.min = 0.1, nsize = -1
   igraph::E(G)$width <- edge.width * ew**1.5
   igraph::E(G)$color <- c("red", "darkgreen")[1 + 1 * (sign(R[ee]) > 0)]
   igraph::E(G)$color <- c("#FF000033", "#44444433")[1 + 1 * (sign(R[ee]) > 0)]
+  igraph::E(G)$color <- c(paste0(omics_colors("red"), "33"), paste0(omics_colors("brand_blue"), "33"))[1 + 1 * (sign(R[ee]) > 0)]
 
   ## delete weak edges
   G1 <- igraph::delete_edges(G, which(abs(igraph::E(G)$weight) < rho.min))
@@ -501,7 +502,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE
     Q <- (Q + t(Q)) / 2
   }
 
-  BLUERED <- grDevices::colorRampPalette(c("blue3", "white", "red3"))
+  BLUERED <- grDevices::colorRampPalette(c(omics_colors("brand_blue"), "white", omics_colors("red")))
 
   if (plot == TRUE) {
     if (compute.pv) {
