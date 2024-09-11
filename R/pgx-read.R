@@ -89,8 +89,9 @@ read.as_matrix <- function(file, skip_row_check = FALSE, row.names = 1) {
 
   ## set rownames
   if (!is.null(row.names) && !is.na(row.names) && row.names >= 1) {
+    rownamesx <- x[,row.names]
     x <- x[, -row.names, drop = FALSE]
-    rownames(x) <- x0[[row.names]]
+    rownames(x) <- rownamesx
   }
 
   ## some csv have trailing empty rows/cols at end of table
