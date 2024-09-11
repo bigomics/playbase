@@ -4468,7 +4468,7 @@ plotlyMA <- function(x, y, names, label.names = names,
                      lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
                      marker.size = 5, label = NULL, label.cex = 1,
                      color_up_down = TRUE,
-                     colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#1f77b4"),
+                     colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#3181de"),
                      marker.type = "scatter", source = "plot1",
                      displayModeBar = TRUE) {
   if (is.null(highlight)) highlight <- names
@@ -4694,7 +4694,7 @@ plotlyVolcano <- function(x,
                           color_up_down = TRUE,
                           colors = c(
                             up = "#f23451", notsig = "#8F8F8F",
-                            down = "#1f77b4", notsel = "#cccccc88"
+                            down = "#3181de", notsel = "#cccccc88"
                           ),
                           marker.type = "scatter",
                           displayModeBar = TRUE,
