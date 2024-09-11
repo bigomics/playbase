@@ -2310,7 +2310,7 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
   r1 <- (fx / max(abs(fx), na.rm = TRUE))
   r1 <- abs(r1)**0.66 * sign(r1)
   suppressWarnings(
-    cc <- gplots::colorpanel(21, "royalblue3", "grey90", "indianred3")
+    cc <- gplots::colorpanel(21, omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))
   )
   irnk <- 1 + round((length(cc) - 1) * (1 + r1) * 0.5)
 
