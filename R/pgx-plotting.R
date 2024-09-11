@@ -1500,9 +1500,9 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
   xlab <- paste("expression", grp0, "  (logCPM)")
   ylab <- paste("expression", grp1, "  (logCPM)")
 
-  if(is.null(hilight)) hilight <- names(fx)
+  if (is.null(hilight)) hilight <- names(fx)
   hilight <- intersect(hilight, names(fx))
-  
+
   if (is.null(label)) {
     top.gg <- c(
       Matrix::head(names(sort(fx)), ntop / 2),
@@ -1622,12 +1622,12 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
     if (is.null(this.hilight)) {
       this.hilight <- names(sort(-abs(f1)))
     }
-    this.hilight <- intersect(this.hilight,rownames(F))
+    this.hilight <- intersect(this.hilight, rownames(F))
     this.label <- label
-    if(is.null(this.label)) {
+    if (is.null(this.label)) {
       this.label <- Matrix::head(this.hilight, ntop) ## label
     }
-    this.label <- intersect(this.label,rownames(F))    
+    this.label <- intersect(this.label, rownames(F))
     opacity <- ifelse(length(this.hilight) > 0, 0.66, 1)
 
     if (data) {
@@ -1645,7 +1645,7 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
       hilight = this.hilight,
       hilight2 = this.label,
       hilight.lwd = 0.0,
-      hilight2.lwd = 0.8,      
+      hilight2.lwd = 0.8,
       zlim = zlim,
       zsym = TRUE,
       softmax = 1,
@@ -3355,13 +3355,13 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
           lab.pos <- data.frame(x = pos[jj, 1], y = pos[jj, 2])
         }
         rownames(lab.pos) <- rownames(pos)[jj]
-        graphics::points(df$x, df$y, pch = 1, lwd = hilight2.lwd, cex = 0.85 * hcex)        
+        graphics::points(df$x, df$y, pch = 1, lwd = hilight2.lwd, cex = 0.85 * hcex)
         graphics::segments(df$x, df$y, lab.pos$x, lab.pos$y, col = "#222222AA", lwd = 0.85)
         graphics::text(lab.pos$x, lab.pos$y, labels = df$z, cex = 0.7 * df$cex)
       } else {
         boxes <- sapply(0.8 * nchar(df$z), function(n) paste(rep("\U2588", n), collapse = ""))
         cex1 <- 0.7 * df$cex
-        graphics::points(df$x, df$y, pch = 1, lwd = hilight2.lwd, cex = 0.85 * hcex)                
+        graphics::points(df$x, df$y, pch = 1, lwd = hilight2.lwd, cex = 0.85 * hcex)
         graphics::text(df$x, df$y, labels = boxes, col = "#FFFFFFAA", cex = 1.15 * cex1, pos = 3, offset = 0.5)
         graphics::text(df$x, df$y, labels = df$z, cex = cex1, pos = 3, offset = 0.45)
       }
@@ -3749,7 +3749,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     plt <- plt +
       ggplot2::geom_point(
         data = subset(df, name %in% hilight2),
-        ##mapping = ggplot2::aes(x, y),
+        ## mapping = ggplot2::aes(x, y),
         size = 2.1 * hilight.cex,
         shape = 21,
         stroke = 0.5 * hilight2.lwd,
@@ -3761,9 +3761,9 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
         ggplot2::aes(label = label),
         size = 5.0 * cex.lab,
         color = "black",
-        ##label.size = 0.08,
+        ## label.size = 0.08,
         max.overlaps = 99,
-        ##fill = scales::alpha(c("white"), 0.6),
+        ## fill = scales::alpha(c("white"), 0.6),
         segment.color = "grey20",
         segment.size = 0.5,
         box.padding = grid::unit(0.25, "lines"),
