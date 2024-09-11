@@ -278,7 +278,7 @@ read_counts <- function(file, first = FALSE, unique = TRUE, paste_char = "_") {
   ## As expression values we take all columns after the last character
   ## column (if any).
   if (length(last.charcol)) {
-    message("[read_counts] extra annotation columns = ", paste(1:last.charcol,collapse=" "))
+    message("[read_counts] extra annotation columns = ", paste(1:last.charcol, collapse = " "))
     df <- df[, (last.charcol + 1):ncol(df)]
   }
 
