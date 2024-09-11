@@ -5638,7 +5638,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     colorbar_grid = grid_params,
     x = xtips[colnames(x1)],
     y = ytips[rownames(x1)],
-    colors = c("royalblue3", "grey90", "indianred3"),
+    colors = c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")),
     zmid = 0,
     zmin = -zmax,
     zmax = zmax,

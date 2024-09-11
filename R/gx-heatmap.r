@@ -542,7 +542,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       zz <- c(zlim[1], zmean, zlim[2])
       if (zlim[1] < 0) zz <- c(zlim[1], 0, zlim[2])
     }
-    col_scale <- circlize::colorRamp2(zz, c("royalblue3", "grey90", "indianred3"))
+    col_scale <- circlize::colorRamp2(zz, c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")))
   } else if (symm.scale) {
     colmax <- 1
     colmax <- max(abs(gx[, ]), na.rm = TRUE)
@@ -556,7 +556,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     colmean <- mean(gx[, ], na.rm = TRUE)
     col_scale <- circlize::colorRamp2(
       c(colmin, colmean, colmax),
-      c("royalblue3", "grey90", "indianred3")
+      c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))
     )
   }
 
