@@ -3315,7 +3315,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
   }
 
   ## hightlight points in hilight with a border
-  hcex <- hilight.cex
+  hcex <- 0.9*hilight.cex
   if (length(hcex) > 1) hcex <- hcex[jj]
   if (!is.null(hilight) && length(hilight) > 0) {
     jj <- which(rownames(pos) %in% hilight)
@@ -3323,7 +3323,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
       hcol1 <- hilight.col
       if (is.null(hcol1)) hcol1 <- pt.col0[jj]
       graphics::points(pos[jj, , drop = FALSE], pch = 20, col = hcol1, cex = 1.05 * hcex)
-      graphics::points(pos[jj, , drop = FALSE], pch = 1, lwd = hilight.lwd, cex = 0.85 * hcex)
+      graphics::points(pos[jj, , drop = FALSE], pch = 1, lwd = hilight.lwd, cex = 0.8 * hcex)
     }
   }
 
@@ -3355,13 +3355,13 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
           lab.pos <- data.frame(x = pos[jj, 1], y = pos[jj, 2])
         }
         rownames(lab.pos) <- rownames(pos)[jj]
-        graphics::points(df$x, df$y, pch = 1, lwd = hilight2.lwd, cex = 0.85 * hcex)        
+        graphics::points(df$x, df$y, pch = 1, lwd = hilight2.lwd, cex = 0.8 * hcex)        
         graphics::segments(df$x, df$y, lab.pos$x, lab.pos$y, col = "#222222AA", lwd = 0.85)
         graphics::text(lab.pos$x, lab.pos$y, labels = df$z, cex = 0.7 * df$cex)
       } else {
         boxes <- sapply(0.8 * nchar(df$z), function(n) paste(rep("\U2588", n), collapse = ""))
         cex1 <- 0.7 * df$cex
-        graphics::points(df$x, df$y, pch = 1, lwd = hilight2.lwd, cex = 0.85 * hcex)                
+        graphics::points(df$x, df$y, pch = 1, lwd = hilight2.lwd, cex = 0.8 * hcex)                
         graphics::text(df$x, df$y, labels = boxes, col = "#FFFFFFAA", cex = 1.15 * cex1, pos = 3, offset = 0.5)
         graphics::text(df$x, df$y, labels = df$z, cex = cex1, pos = 3, offset = 0.45)
       }
