@@ -395,7 +395,7 @@ getError <- function(e, what="Description") {
   if(!e %in% ERROR_MSG$error) {
     return(paste("unknown error",e))
   }
-  error_list[match(e,ERROR_MSG$error),what]
+  ERROR_MSG[match(e,ERROR_MSG$error),what]
 }
 
 
