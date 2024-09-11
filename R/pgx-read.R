@@ -56,7 +56,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE, row.names = 1) {
     header = TRUE, nrows = 1, skip = skip.rows, row.names = NULL
   )
   if (NCOL(x0) > 0 && !all(colnames(x0) == colnames(hdr))) {
-    message("read.as_matrix: warning correcting header")
+    message("[read.as_matrix] correcting header")
     colnames(x0) <- colnames(hdr)
   }
 
@@ -220,7 +220,6 @@ read_files <- function(dir = ".", pattern = NULL) {
 }
 
 
-
 #' Read counts data from file
 #'
 #' @param file string. path to file
@@ -251,8 +250,8 @@ read_counts <- function(file, first = FALSE, unique = TRUE, paste_char = "_") {
   }
   is_valid <- validate_counts(df)
   if (!is_valid) {
-    message("[read_counts] ERROR: Counts file is not valid.")
-    return(NULL)
+    message("[read_counts] WARNING: Counts file has errors")
+    ## return(NULL)
   }
 
   ## determine column types (NEED RETHINK!)
@@ -285,7 +284,7 @@ read_counts <- function(file, first = FALSE, unique = TRUE, paste_char = "_") {
   ## convert to numeric if needed (probably yes...)
   is.numeric.matrix <- all(apply(df, 2, is.numeric))
   if (!is.numeric.matrix) {
-    message("[read_counts] warning: force to numeric values")
+    message("[read_counts] force to numeric values")
     rn <- rownames(df)
     suppressWarnings(df <- apply(df, 2, as.numeric))
     rownames(df) <- rn
@@ -314,8 +313,8 @@ read_samples <- function(file) {
   df <- read.as_matrix(file)
   is_valid <- validate_samples(df)
   if (!is_valid) {
-    message("[read_samples] ERROR: Samples file is not valid.")
-    return(NULL)
+    message("[read_samples] WARNING: Samples file has errors")
+    ##return(NULL)
   }
   df <- as.data.frame(df)
   return(df)
@@ -332,13 +331,11 @@ read_samples <- function(file) {
 #' @export
 read_contrasts <- function(file) {
   df <- read.as_matrix(file)
-
   is_valid <- validate_contrasts(df)
   if (!is_valid) {
-    message("[read_contrasts] ERROR: Contrasts file is not valid.")
-    return(NULL)
+    message("[read_contrasts] WARNING: Contrasts file has errors")
+    ##return(NULL)
   }
-
   df
 }
 
@@ -353,7 +350,7 @@ read_annot <- function(file, unique = TRUE) {
   } else if (is.matrix(file) || is.data.frame(file)) {
     df <- file
   } else {
-    message("[read_annot] ERROR: Annot file is not valid.")
+    message("[read_annot] ERROR: input not valid.")
     return(NULL)
   }
 
@@ -393,6 +390,15 @@ read_annot <- function(file, unique = TRUE) {
   return(df)
 }
 
+getError <- function(e, what="Description") {
+  ERROR_MSG <- playbase::PGX_CHECKS
+  if(!e %in% ERROR_MSG$error) {
+    return(paste("unknown error",e))
+  }
+  error_list[match(e,ERROR_MSG$error),what]
+}
+
+
 #' Validate counts data
 #'
 #' Counts data is valid if:
@@ -404,11 +410,19 @@ read_annot <- function(file, unique = TRUE) {
 #'
 #' @return boolean. true if data is valid
 #' @export
-validate_counts <- function(data) {
-  t1 <- check_duplicate_rows(data)
-  t2 <- check_empty_rows(data)
-  t3 <- check_duplicate_cols(data)
-  return(t2 && t3)
+validate_counts <- function(df) {
+  if(is.character(df) && is.null(dim(df))) {
+    df <- read.as_matrix(df)
+  }
+  chk <- pgx.checkINPUT(df, "COUNTS")
+  ERROR_MSG <- playbase::PGX_CHECKS
+  err <- names(chk$checks)
+  if(length(err)) {
+    msg <- lapply(err, function(e) getError(e))
+    msg <- paste(msg, collapse="; ")
+    message("WARNING: ", msg)
+  }
+  chk$PASS
 }
 
 #' Validate samples data
@@ -423,12 +437,19 @@ validate_counts <- function(data) {
 #'
 #' @return boolean. true if data is valid
 #' @export
-validate_samples <- function(data) {
-  t1 <- check_duplicate_rows(data)
-  t2 <- check_empty_rows(data)
-  t3 <- check_duplicate_cols(data)
-  t4 <- check_max_samples(data)
-  return(t1 & t2 & t3 & t4)
+validate_samples <- function(df) {
+  if(is.character(df) && is.null(dim(df))) {
+    df <- read.as_matrix(df)
+  }
+  chk <- pgx.checkINPUT(df, "SAMPLES")
+  ERROR_MSG <- playbase::PGX_CHECKS
+  err <- names(chk$checks)
+  if(length(err)) {
+    msg <- lapply(err, function(e) getError(e))
+    msg <- paste(msg, collapse="; ")
+    message("WARNING: ", msg)
+  }
+  chk$PASS
 }
 
 #' Validate contrasts data
@@ -443,19 +464,28 @@ validate_samples <- function(data) {
 #'
 #' @return boolean. true if data is valid
 #' @export
-validate_contrasts <- function(data) {
-  t1 <- check_duplicate_rows(data)
-  t2 <- check_empty_rows(data)
-  t3 <- check_duplicate_cols(data)
-  vs_names <- colnames(data)[-1]
-  t4 <- all(grepl("_vs_", vs_names))
-  return(t1 & t2 & t3 & t4)
+validate_contrasts <- function(df) {
+  if(is.character(df) && is.null(dim(df))) {
+    df <- read.as_matrix(df)
+  }
+  chk <- pgx.checkINPUT(df, "CONTRASTS")
+  ERROR_MSG <- playbase::PGX_CHECKS
+  err <- names(chk$checks)
+  if(length(err)) {
+    msg <- lapply(err, function(e) getError(e))
+    msg <- paste(msg, collapse="; ")
+    message("WARNING: ", msg)
+  }
+  chk$PASS  
 }
+
+##--------------------------------------------------------------------
+##--------------------------------------------------------------------
+##--------------------------------------------------------------------
 
 
 #' @describeIn check_duplicate_cols check if there is any duplicate row in the input data
-#' @export
-check_duplicate_rows <- function(data) {
+check_duplicate_rows.DEPRECATED <- function(data) {
   rn <- setdiff(data[[1]], c("", "NA", NA))
   t1 <- sum(duplicated(rn)) == 0
   return(t1)
@@ -463,12 +493,10 @@ check_duplicate_rows <- function(data) {
 
 
 #' @describeIn check_duplicate_cols checks if there is any empty row in the data
-#' @export
-check_empty_rows <- function(data) {
+check_empty_rows.DEPRECATED <- function(data) {
   t1 <- nrow(data) > 0
   return(t1)
 }
-
 
 #' @title Input Checks
 #'
@@ -496,16 +524,13 @@ check_empty_rows <- function(data) {
 #' check_duplicate_cols(data)
 #' # Returns FALSE
 #' }
-#' @export
-check_duplicate_cols <- function(data) {
+check_duplicate_cols.DEPRECATED <- function(data) {
   t1 <- sum(duplicated(colnames(data))) == 0
   return(t1)
 }
 
-
 #' @describeIn check_duplicate_cols Checks if the number of sample is below the allowed maximum
-#' @export
-check_max_samples <- function(data, max_samples = 2000) {
+check_max_samples.DEPRECATED <- function(data, max_samples = 2000) {
   MAXSAMPLES <- as.integer(max_samples)
   t1 <- (ncol(data) - 1) <= MAXSAMPLES
   return(t1)

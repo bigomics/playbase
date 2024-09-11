@@ -4,7 +4,7 @@
 \alias{validate_samples}
 \title{Validate samples data}
 \usage{
-validate_samples(data)
+validate_samples(df)
 }
 \arguments{
 \item{data}{matrix.}
