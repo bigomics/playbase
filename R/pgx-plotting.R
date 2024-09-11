@@ -1400,8 +1400,8 @@ ggVolcano <- function(x,
 #' @param plotlib Plotting library to use
 #' @export
 pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
-                       cex = 1, cex.lab = 0.8, hilight = NULL, ntop = 20,
-                       plotlib = "base", data = FALSE) {
+                       cex = 1, cex.lab = 0.8, hilight = NULL, label = NULL,
+                       ntop = 20, plotlib = "base", data = FALSE) {
   if (is.integer(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
 
   if (level == "gene") {
@@ -1465,7 +1465,7 @@ pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
 #'
 #' @export
 pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
-                                cex = 1, cex.lab = 0.8,
+                                cex = 1, cex.lab = 0.8, label = NULL,
                                 psig = 0.05, fc = 1, level = "gene",
                                 ntop = 20, dir = 0, plotlib = "base",
                                 data = FALSE) {
@@ -1500,7 +1500,10 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
   xlab <- paste("expression", grp0, "  (logCPM)")
   ylab <- paste("expression", grp1, "  (logCPM)")
 
-  if (is.null(hilight)) {
+  if(is.null(hilight)) hilight <- names(fx)
+  hilight <- intersect(hilight, names(fx))
+  
+  if (is.null(label)) {
     top.gg <- c(
       Matrix::head(names(sort(fx)), ntop / 2),
       Matrix::tail(names(sort(fx)), ntop / 2)
@@ -1511,13 +1514,12 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
     if (dir < 0) {
       top.gg <- Matrix::head(names(sort(fx)), ntop)
     }
-    hilight <- top.gg
+    label <- top.gg
   }
-  hilight <- Matrix::head(hilight, ntop)
+  label <- Matrix::head(label, ntop)
 
   sig <- 1 * (q < psig & abs(fx) > fc)
   names(sig) <- gg
-
 
   tt <- contrast
 
@@ -1529,7 +1531,9 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
     xy,
     var = sig, type = "factor", title = tt,
     xlab = xlab, ylab = ylab,
-    hilight = hilight, cex = 0.9 * cex,
+    hilight = hilight,
+    hilight2 = label,
+    cex = 0.9 * cex,
     cex.lab = cex.lab, cex.title = 1.0,
     legend = FALSE, col = c("grey70", "red3"), opacity = 1,
     plotlib = plotlib
@@ -1558,7 +1562,8 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
 pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
                              pos = NULL, ntop = 20, cex = 1,
                              cex.lab = 0.8, cex.legend = 1,
-                             hilight = NULL, title = NULL, zfix = FALSE,
+                             hilight = NULL, label = NULL,
+                             title = NULL, zfix = FALSE,
                              set.par = TRUE, par.sq = FALSE,
                              level = "gene", plotlib = "ggplot",
                              data = FALSE) {
@@ -1601,7 +1606,6 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
   ## z-scale
   zlim <- NULL
   if (zfix) {
-    zlim <- stats::quantile(F, probs = c(0.01, 0.99), na.rm = TRUE)
     zlim <- stats::quantile(F, probs = c(0.002, 0.998), na.rm = TRUE)
     zlim
   }
@@ -1614,12 +1618,17 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
 
     f1 <- F[, i]
 
-    hilight1 <- hilight
-    if (is.null(hilight)) {
-      hilight1 <- names(sort(-abs(f1)))
+    this.hilight <- hilight
+    if (is.null(this.hilight)) {
+      this.hilight <- names(sort(-abs(f1)))
     }
-    hilight1 <- Matrix::head(hilight1, ntop) ## label
-    opacity <- ifelse(length(hilight1) > 0, 0.66, 1)
+    this.hilight <- intersect(this.hilight,rownames(F))
+    this.label <- label
+    if(is.null(this.label)) {
+      this.label <- Matrix::head(this.hilight, ntop) ## label
+    }
+    this.label <- intersect(this.label,rownames(F))    
+    opacity <- ifelse(length(this.hilight) > 0, 0.66, 1)
 
     if (data) {
       return(
@@ -1629,16 +1638,21 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
 
     p1 <- pgx.scatterPlotXY(
       pos,
-      var = f1, type = "numeric",
+      var = f1,
+      type = "numeric",
       xlab = "UMAP-x  (genes)",
       ylab = "UMAP-y  (genes)",
-      hilight = hilight1,
+      hilight = this.hilight,
+      hilight2 = this.label,
+      hilight.lwd = 0.0,
+      hilight2.lwd = 0.8,      
       zlim = zlim,
       zsym = TRUE,
       softmax = 1,
       cex = cex,
       cex.lab = cex.lab,
-      title = title1, cex.title = 1.0,
+      title = title1,
+      cex.title = 1.0,
       cex.legend = cex.legend,
       legend = TRUE,
       opacity = 0.5,
@@ -3069,7 +3083,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
                                    legend.pos = "bottomright", lab.pos = NULL, repel = TRUE,
                                    xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL, dlim = 0.02,
                                    hilight2 = hilight, hilight.cex = NULL, lab.xpd = TRUE,
-                                   hilight = NULL, hilight.col = NULL, hilight.lwd = 0.4,
+                                   hilight = NULL, hilight.col = NULL, hilight.lwd = 0.2, hilight2.lwd = 0.6,
                                    label.clusters = FALSE, cex.clust = 1.5,
                                    tstep = 0.1, rstep = 0.1, na.color = "#AAAAAA44",
                                    tooltip = NULL, theme = NULL, set.par = TRUE,
@@ -3301,13 +3315,13 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
   }
 
   ## hightlight points in hilight with a border
+  hcex <- hilight.cex
+  if (length(hcex) > 1) hcex <- hcex[jj]
   if (!is.null(hilight) && length(hilight) > 0) {
     jj <- which(rownames(pos) %in% hilight)
     if (length(jj)) {
       hcol1 <- hilight.col
       if (is.null(hcol1)) hcol1 <- pt.col0[jj]
-      hcex <- hilight.cex
-      if (length(hcex) > 1) hcex <- hcex[jj]
       graphics::points(pos[jj, , drop = FALSE], pch = 20, col = hcol1, cex = 1.05 * hcex)
       graphics::points(pos[jj, , drop = FALSE], pch = 1, lwd = hilight.lwd, cex = 0.85 * hcex)
     }
@@ -3341,11 +3355,13 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
           lab.pos <- data.frame(x = pos[jj, 1], y = pos[jj, 2])
         }
         rownames(lab.pos) <- rownames(pos)[jj]
+        graphics::points(df$x, df$y, pch = 1, lwd = hilight2.lwd, cex = 0.85 * hcex)        
         graphics::segments(df$x, df$y, lab.pos$x, lab.pos$y, col = "#222222AA", lwd = 0.85)
         graphics::text(lab.pos$x, lab.pos$y, labels = df$z, cex = 0.7 * df$cex)
       } else {
         boxes <- sapply(0.8 * nchar(df$z), function(n) paste(rep("\U2588", n), collapse = ""))
         cex1 <- 0.7 * df$cex
+        graphics::points(df$x, df$y, pch = 1, lwd = hilight2.lwd, cex = 0.85 * hcex)                
         graphics::text(df$x, df$y, labels = boxes, col = "#FFFFFFAA", cex = 1.15 * cex1, pos = 3, offset = 0.5)
         graphics::text(df$x, df$y, labels = df$z, cex = cex1, pos = 3, offset = 0.45)
       }
@@ -3425,8 +3441,9 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
                                      zlim = NULL, cmin = NULL, cmax = NULL,
                                      zlog = FALSE, softmax = FALSE, zsym = FALSE,
                                      xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL,
-                                     hilight2 = hilight, hilight.col = "black",
-                                     hilight.lwd = 0.8, hilight.cex = NULL, na.color = "#AAAAAA55",
+                                     hilight2 = hilight, hilight.col = NULL,
+                                     hilight.lwd = 0.3, hilight2.lwd = 1, hilight.cex = NULL,
+                                     na.color = "#AAAAAA55",
                                      opacity = 1, label.clusters = FALSE, labels = NULL,
                                      legend.ysp = 0.85, legend.pos = "bottomright",
                                      tooltip = NULL, theme = NULL, set.par = TRUE,
@@ -3670,7 +3687,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       ggplot2::geom_point(
         shape = 21,
         alpha = opacity,
-        size = 1.8 * cex1,
+        size = 2.0 * cex1,
         color = "#444444",
         stroke = 0.2
       ) +
@@ -3717,7 +3734,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       ggplot2::geom_point(
         data = df[sel, ],
         mapping = ggplot2::aes(x, y),
-        size = 2.0 * hilight.cex,
+        size = 2.1 * hilight.cex,
         shape = 21,
         stroke = 0.5 * hilight.lwd,
         fill = hilight.col,
@@ -3729,19 +3746,29 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     ## this put text labels at certain positions with geom_text_repel(
     if (label.type == "text") labelFUN <- ggrepel::geom_text_repel
     if (label.type == "box") labelFUN <- ggrepel::geom_label_repel
-    plt <- plt + labelFUN(
-      data = subset(df, name %in% hilight2),
-      ggplot2::aes(label = label),
-      size = 3.0 * cex.lab,
-      color = "black",
-      label.size = 0.08,
-      max.overlaps = 99,
-      fill = scales::alpha(c("white"), 0.6),
-      segment.color = "grey20",
-      segment.size = 0.5,
-      box.padding = grid::unit(0.25, "lines"),
-      point.padding = grid::unit(0.2, "lines")
-    )
+    plt <- plt +
+      ggplot2::geom_point(
+        data = subset(df, name %in% hilight2),
+        ##mapping = ggplot2::aes(x, y),
+        size = 2.1 * hilight.cex,
+        shape = 21,
+        stroke = 0.5 * hilight2.lwd,
+        fill = hilight.col,
+        color = "grey20"
+      ) +
+      labelFUN(
+        data = subset(df, name %in% hilight2),
+        ggplot2::aes(label = label),
+        size = 5.0 * cex.lab,
+        color = "black",
+        ##label.size = 0.08,
+        max.overlaps = 99,
+        ##fill = scales::alpha(c("white"), 0.6),
+        segment.color = "grey20",
+        segment.size = 0.5,
+        box.padding = grid::unit(0.25, "lines"),
+        point.padding = grid::unit(0.2, "lines")
+      )
   }
 
 
@@ -3856,7 +3883,8 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                                      xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL,
                                      axis = TRUE, zoom = 1, legend = TRUE, bty = "n",
                                      hilight = NULL, hilight2 = hilight, labels = rownames(pos),
-                                     hilight.col = NULL, hilight.cex = NULL, hilight.lwd = 0.8,
+                                     hilight.col = NULL, hilight.cex = NULL,
+                                     hilight.lwd = 0.4, hilight2.lwd = 0.8,
                                      zlim = NULL, zlog = FALSE, zsym = FALSE, softmax = FALSE,
                                      opc.low = 1, opacity = 1, bgcolor = NULL, box = TRUE,
                                      label.clusters = FALSE, label.type = NULL,
@@ -4106,6 +4134,29 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   if (!is.null(hilight2)) {
     jj <- which(rownames(df) %in% hilight2)
     plt <- plt %>%
+      plotly::add_markers(
+        data = df[jj, ],
+        x = ~x,
+        y = ~y,
+        color = ~value,
+        colors = cpal,
+        key = ~name,
+        mode = "markers",
+        type = "scattergl", #
+        ## text = ~text,
+        ## hoverinfo = hoverinfo,
+        marker = list(
+          ## color = col1,
+          opacity = 1,
+          size = 5 * hilight.cex,
+          showlegend = FALSE,
+          showscale = FALSE,
+          line = list(
+            color = "#000000",
+            width = 1.0 * hilight2.lwd
+          )
+        )
+      ) %>%
       plotly::add_annotations(
         data = df[jj, , drop = FALSE],
         x = ~x,
@@ -4297,6 +4348,8 @@ pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, na.co
                                  zoom = 1, legend = TRUE, bty = "n", hilight = NULL,
                                  zlim = NULL, zlog = FALSE, softmax = FALSE,
                                  xlab = NULL, ylab = NULL, hilight2 = hilight,
+                                 hilight.lwd = 0, hilight2.lwd = 0, zsym = TRUE,
+                                 xlim = NULL, ylim = NULL,
                                  opacity = 1, label.clusters = FALSE, labels = NULL,
                                  legend.ysp = 0.85, legend.pos = "bottomright",
                                  tooltip = NULL, theme = NULL, set.par = TRUE,
@@ -4311,20 +4364,31 @@ pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, na.co
     ylab <- colnames(pos)[2]
   }
   x <- y <- z <- NULL # Init vars to prevent warning
-  df <- data.frame(x = pos[, 1], y = pos[, 2], z = var, names = rownames(pos))
+  df <- data.frame(
+    x = pos[, 1],
+    y = pos[, 2],
+    z = var,
+    names = rownames(pos)
+  )
   if (!is.null(var)) {
     plt <- scatterD3::scatterD3(
-      data = df, x = x, y = y,
+      data = df,
+      x = x,
+      y = y,
       col_var = z,
-      xlab = xlab, ylab = ylab,
+      xlab = xlab,
+      ylab = ylab,
       point_size = 32 * cex,
       legend_width = 70,
       col_lab = "value"
     )
   } else {
     plt <- scatterD3::scatterD3(
-      data = df, x = x, y = y, #
-      xlab = xlab, ylab = ylab,
+      data = df,
+      x = x,
+      y = y, #
+      xlab = xlab,
+      ylab = ylab,
       point_size = 32 * cex,
       col_lab = "value"
     )
