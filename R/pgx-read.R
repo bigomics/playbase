@@ -254,11 +254,12 @@ read_counts <- function(file, first = FALSE, unique = TRUE, paste_char = "_") {
     return(NULL)
   }
 
-  ## determine column types
+  ## determine column types (NEED RETHINK!)
   df1 <- type.convert(data.frame(df, check.names = FALSE), as.is = TRUE)
   col.type <- sapply(df1, class)
-  col.type
-  char.cols <- which(col.type == "character")
+  xannot.names <- "gene|symbol|protein|compound|title|description|name|position"
+  is.xannot <- grepl(xannot.names, tolower(colnames(df)))
+  char.cols <- which(col.type == "character" | is.xannot)
   last.charcol <- tail(char.cols, 1)
   last.charcol
 
@@ -276,13 +277,14 @@ read_counts <- function(file, first = FALSE, unique = TRUE, paste_char = "_") {
   ## As expression values we take all columns after the last character
   ## column (if any).
   if (length(last.charcol)) {
+    message("[read_counts] extra annotation columns = ", paste(1:last.charcol,collapse=" "))
     df <- df[, (last.charcol + 1):ncol(df)]
   }
 
   ## convert to numeric if needed (probably yes...)
   is.numeric.matrix <- all(apply(df, 2, is.numeric))
   if (!is.numeric.matrix) {
-    message("warning: converting to numeric values")
+    message("[read_counts] warning: force to numeric values")
     rn <- rownames(df)
     suppressWarnings(df <- apply(df, 2, as.numeric))
     rownames(df) <- rn
@@ -360,8 +362,9 @@ read_annot <- function(file, unique = TRUE) {
   ## determine last character column
   df1 <- type.convert(data.frame(df, check.names = FALSE), as.is = TRUE)
   col.type <- sapply(df1, class)
-  col.type
-  char.cols <- which(col.type == "character")
+  xannot.names <- "gene|symbol|protein|compound|title|description|name|position"
+  is.xannot <- grepl(xannot.names, tolower(colnames(df)))
+  char.cols <- which(col.type == "character" | is.xannot)
   char.cols
   last.charcol <- tail(char.cols, 1)
   last.charcol
