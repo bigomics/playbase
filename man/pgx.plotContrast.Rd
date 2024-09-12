@@ -76,6 +76,7 @@ pgx.plotMA(
   cex = 1,
   cex.lab = 0.8,
   hilight = NULL,
+  label = NULL,
   ntop = 20,
   plotlib = "base",
   data = FALSE
@@ -87,6 +88,7 @@ pgx.contrastScatter(
   hilight = NULL,
   cex = 1,
   cex.lab = 0.8,
+  label = NULL,
   psig = 0.05,
   fc = 1,
   level = "gene",
