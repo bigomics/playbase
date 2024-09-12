@@ -37,6 +37,7 @@ pgx.scatterPlotXY.BASE(
   hilight = NULL,
   hilight.col = NULL,
   hilight.lwd = 0.4,
+  hilight2.lwd = 0.4,
   label.clusters = FALSE,
   cex.clust = 1.5,
   tstep = 0.1,

@@ -106,6 +106,7 @@ pgx.plotGeneUMAP(
   cex.lab = 0.8,
   cex.legend = 1,
   hilight = NULL,
+  label = NULL,
   title = NULL,
   zfix = FALSE,
   set.par = TRUE,
