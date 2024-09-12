@@ -4,7 +4,7 @@
 \alias{validate_contrasts}
 \title{Validate contrasts data}
 \usage{
-validate_contrasts(data)
+validate_contrasts(df)
 }
 \arguments{
 \item{data}{matrix.}
