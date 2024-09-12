@@ -65,6 +65,7 @@ heatmapWithAnnot <- function(F, anno.type = c("boxplot", "barplot"),
   ht <- ComplexHeatmap::Heatmap(
     t(F),
     name = "logFC",
+    col = circlize::colorRamp2(colors = c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")), breaks = c(-10, 0, 10)),
     top_annotation = ha,
     row_names_gp = grid::gpar(fontsize = row_fontsize),
     column_names_gp = grid::gpar(fontsize = column_fontsize),
