@@ -211,7 +211,9 @@ fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
 read_files <- function(dir = ".", pattern = NULL) {
   ff <- dir(dir, pattern = pattern)
   file1 <- head(grep("count|expression|abundance|concentration|intensity",
-                     ff, value = TRUE), 1)
+    ff,
+    value = TRUE
+  ), 1)
   file2 <- head(grep("sample", ff, value = TRUE), 1)
   file3 <- head(grep("contrast|comparison", ff, value = TRUE), 1)
   counts <- samples <- contrasts <- NULL

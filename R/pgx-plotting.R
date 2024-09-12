@@ -1150,8 +1150,7 @@ plot_volcano <- function(x,
                            down = "#3181de"
                          ),
                          repel = TRUE,
-                         ...
-                         ) {
+                         ...) {
   if (is.null(sig)) {
     sig <- (y <= psig & abs(x) >= lfc)
   }
