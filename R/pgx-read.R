@@ -32,7 +32,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE, row.names = 1) {
   ## try to detect decimal separator
   sep <- detect_delim(file)
   dec <- detect_decimal(file)
-  if(dec==',' && sep == ',') dec <- '.'  ## exception
+  if (dec == "," && sep == ",") dec <- "." ## exception
 
   ## read delimited table automatically determine separator. allow
   ## duplicated rownames. This implements with faster fread.
@@ -129,10 +129,12 @@ detect_delim <- function(file) {
 #' a header and rownames column.
 #'
 detect_decimal <- function(file) {
-  f1 <- data.table::fread(file, header = TRUE, nrows=100)
-  f2 <- data.table::fread(file, header = TRUE, colClasses = "character", nrows=100)  
-  numcols <- which(sapply(f1,class) == "numeric")
-  if(length(numcols)==0) return('.') ## default
+  f1 <- data.table::fread(file, header = TRUE, nrows = 100)
+  f2 <- data.table::fread(file, header = TRUE, colClasses = "character", nrows = 100)
+  numcols <- which(sapply(f1, class) == "numeric")
+  if (length(numcols) == 0) {
+    return(".")
+  } ## default
   numvals <- as.vector(as.matrix(f2[, ..numcols]))
   n_commas <- length(grep(",", numvals, fixed = TRUE))
   n_dots <- length(grep(".", numvals, fixed = TRUE))
@@ -318,7 +320,7 @@ read_samples <- function(file) {
   is_valid <- validate_samples(df)
   if (!is_valid) {
     message("[read_samples] WARNING: Samples file has errors")
-    ##return(NULL)
+    ## return(NULL)
   }
   df <- as.data.frame(df)
   return(df)
@@ -338,7 +340,7 @@ read_contrasts <- function(file) {
   is_valid <- validate_contrasts(df)
   if (!is_valid) {
     message("[read_contrasts] WARNING: Contrasts file has errors")
-    ##return(NULL)
+    ## return(NULL)
   }
   df
 }
@@ -394,12 +396,12 @@ read_annot <- function(file, unique = TRUE) {
   return(df)
 }
 
-getError <- function(e, what="Description") {
+getError <- function(e, what = "Description") {
   ERROR_MSG <- playbase::PGX_CHECKS
-  if(!e %in% ERROR_MSG$error) {
-    return(paste("unknown error",e))
+  if (!e %in% ERROR_MSG$error) {
+    return(paste("unknown error", e))
   }
-  ERROR_MSG[match(e,ERROR_MSG$error),what]
+  ERROR_MSG[match(e, ERROR_MSG$error), what]
 }
 
 
@@ -415,15 +417,15 @@ getError <- function(e, what="Description") {
 #' @return boolean. true if data is valid
 #' @export
 validate_counts <- function(df) {
-  if(is.character(df) && is.null(dim(df))) {
+  if (is.character(df) && is.null(dim(df))) {
     df <- read.as_matrix(df)
   }
   chk <- pgx.checkINPUT(df, "COUNTS")
   ERROR_MSG <- playbase::PGX_CHECKS
   err <- names(chk$checks)
-  if(length(err)) {
+  if (length(err)) {
     msg <- lapply(err, function(e) getError(e))
-    msg <- paste(msg, collapse="; ")
+    msg <- paste(msg, collapse = "; ")
     message("WARNING: ", msg)
   }
   chk$PASS
@@ -442,15 +444,15 @@ validate_counts <- function(df) {
 #' @return boolean. true if data is valid
 #' @export
 validate_samples <- function(df) {
-  if(is.character(df) && is.null(dim(df))) {
+  if (is.character(df) && is.null(dim(df))) {
     df <- read.as_matrix(df)
   }
   chk <- pgx.checkINPUT(df, "SAMPLES")
   ERROR_MSG <- playbase::PGX_CHECKS
   err <- names(chk$checks)
-  if(length(err)) {
+  if (length(err)) {
     msg <- lapply(err, function(e) getError(e))
-    msg <- paste(msg, collapse="; ")
+    msg <- paste(msg, collapse = "; ")
     message("WARNING: ", msg)
   }
   chk$PASS
@@ -469,23 +471,23 @@ validate_samples <- function(df) {
 #' @return boolean. true if data is valid
 #' @export
 validate_contrasts <- function(df) {
-  if(is.character(df) && is.null(dim(df))) {
+  if (is.character(df) && is.null(dim(df))) {
     df <- read.as_matrix(df)
   }
   chk <- pgx.checkINPUT(df, "CONTRASTS")
   ERROR_MSG <- playbase::PGX_CHECKS
   err <- names(chk$checks)
-  if(length(err)) {
+  if (length(err)) {
     msg <- lapply(err, function(e) getError(e))
-    msg <- paste(msg, collapse="; ")
+    msg <- paste(msg, collapse = "; ")
     message("WARNING: ", msg)
   }
-  chk$PASS  
+  chk$PASS
 }
 
-##--------------------------------------------------------------------
-##--------------------------------------------------------------------
-##--------------------------------------------------------------------
+## --------------------------------------------------------------------
+## --------------------------------------------------------------------
+## --------------------------------------------------------------------
 
 
 #' @describeIn check_duplicate_cols check if there is any duplicate row in the input data
