@@ -18,7 +18,9 @@
 #'
 #' @export
 pgx.load <- function(file, verbose = 0) {
-  local(get(load(file, verbose = verbose)))
+  pgx <- local(get(load(file, verbose = verbose)))
+  pgx$filename <- file
+  pgx
 }
 
 
