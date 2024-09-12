@@ -4,7 +4,7 @@
 \alias{validate_counts}
 \title{Validate counts data}
 \usage{
-validate_counts(data)
+validate_counts(df)
 }
 \arguments{
 \item{data}{matrix.}
