@@ -30,7 +30,9 @@ read.as_matrix <- function(file, skip_row_check = FALSE, row.names = 1) {
   skip.rows <- min(which(cumsum(rowMeans(x0 != "")) > 0)) - 1
 
   ## try to detect decimal separator
+  sep <- detect_delim(file)
   dec <- detect_decimal(file)
+  if(dec==',' && sep == ',') dec <- '.'  ## exception
 
   ## read delimited table automatically determine separator. allow
   ## duplicated rownames. This implements with faster fread.
@@ -50,7 +52,6 @@ read.as_matrix <- function(file, skip_row_check = FALSE, row.names = 1) {
   ## fill=TRUE will fail. Check header with slow read.csv() and
   ## correct if needed. fread is fast but is not so robust...
   ## detect delimiter/seperator
-  sep <- detect_delim(file)
   hdr <- utils::read.csv(
     file = file, sep = sep, check.names = FALSE, na.strings = NULL,
     header = TRUE, nrows = 1, skip = skip.rows, row.names = NULL
@@ -128,10 +129,13 @@ detect_delim <- function(file) {
 #' a header and rownames column.
 #'
 detect_decimal <- function(file) {
-  ff <- data.table::fread(file, header = TRUE, colClasses = "character")
-  vals <- as.vector(as.matrix(ff[, -1]))
-  n_commas <- length(grep(",", vals, fixed = TRUE))
-  n_dots <- length(grep(".", vals, fixed = TRUE))
+  f1 <- data.table::fread(file, header = TRUE, nrows=100)
+  f2 <- data.table::fread(file, header = TRUE, colClasses = "character", nrows=100)  
+  numcols <- which(sapply(f1,class) == "numeric")
+  if(length(numcols)==0) return('.') ## default
+  numvals <- as.vector(as.matrix(f2[, ..numcols]))
+  n_commas <- length(grep(",", numvals, fixed = TRUE))
+  n_dots <- length(grep(".", numvals, fixed = TRUE))
   dec <- c(".", ",")[which.max(c(n_dots, n_commas))]
   dec
 }
