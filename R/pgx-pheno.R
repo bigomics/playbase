@@ -127,17 +127,17 @@ pgx.discretizePhenotypeMatrix <- function(df, min.ncat = 2, max.ncat = 20, remov
 #' @export
 binarizeNumericalColumns <- function(S) {
   S <- as.data.frame(S)
-  typedS <- type.convert(S, as.is=TRUE)
-  is.num <- sapply(typedS,class) %in% c("integer","numeric")
-  numlevels <- apply(S,2,function(s) length(unique(s[!is.na(s)])))
-  is.cat <- ( !is.num | numlevels <= 3 )
-  which.num <- which( is.num & !is.cat)
+  typedS <- type.convert(S, as.is = TRUE)
+  is.num <- sapply(typedS, class) %in% c("integer", "numeric")
+  numlevels <- apply(S, 2, function(s) length(unique(s[!is.na(s)])))
+  is.cat <- (!is.num | numlevels <= 3)
+  which.num <- which(is.num & !is.cat)
   which.num
   i <- which.num[1]
-  for(i in which.num) {
-    mx <- round(median( typedS[,i], na.rm = TRUE),digits=2)
-    grp <- paste0(c(">=","<"),mx)[ 1 + 1*(typedS[,i] >= mx) ]
-    S[,i] <- grp
+  for (i in which.num) {
+    mx <- round(median(typedS[, i], na.rm = TRUE), digits = 2)
+    grp <- paste0(c(">=", "<"), mx)[1 + 1 * (typedS[, i] >= mx)]
+    S[, i] <- grp
   }
   S
 }
