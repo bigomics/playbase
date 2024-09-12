@@ -1135,6 +1135,7 @@ plot_volcano <- function(x,
                          ylab = "significance (-log10p)",
                          lfc = 1,
                          psig = 0.05,
+                         plim = 12,
                          sig = NULL,
                          showlegend = TRUE,
                          cex = 1,
@@ -1148,7 +1149,9 @@ plot_volcano <- function(x,
                            notsel = "#cccccc88",
                            down = "#3181de"
                          ),
-                         repel = TRUE) {
+                         repel = TRUE,
+                         ...
+                         ) {
   if (is.null(sig)) {
     sig <- (y <= psig & abs(x) >= lfc)
   }
@@ -1156,7 +1159,7 @@ plot_volcano <- function(x,
     highlight <- rownames(df)
   }
 
-  log10.y <- -log10(y)
+  log10.y <- -log10(y + 10^(-plim))
   pos <- cbind(x, log10.y)
   if (!is.null(names)) rownames(pos) <- names
 
@@ -1186,7 +1189,8 @@ plot_volcano <- function(x,
     col = colors[c("notsig", "up", "down")],
     na.color = colors["notsel"],
     opacity = 1,
-    repel = repel
+    repel = repel,
+    ...
     #    set.par = set.par
   )
 
