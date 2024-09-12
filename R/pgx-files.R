@@ -54,7 +54,8 @@ ngs.save <- function(ngs, file, update.date = TRUE, light = TRUE, system = FALSE
 #' @export
 pgx.save <- function(pgx, file, update.date = TRUE, light = TRUE, system = FALSE) {
   if (update.date || is.null(pgx$date)) pgx$date <- Sys.Date()
-
+  if( is(pgx,"reactivevalues") pgx <- shiny::reactiveValuesToList(pgx)
+  
   if (light) {
     ## ------- make a light version
     pgx$gx.meta$outputs <- NULL
