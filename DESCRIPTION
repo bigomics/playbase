@@ -134,3 +134,4 @@ Remotes:
     url::https://github.com/GfellerLab/SuperCell/archive/HEAD.zip,
     url::https://github.com/linxihui/NNLM/archive/HEAD.zip,
     url::https://github.com/satijalab/azimuth/archive/HEAD.zip,
+    url::https://cran.r-project.org/src/contrib/sf_1.0-17.tar.gz,
