@@ -65,6 +65,7 @@ heatmapWithAnnot <- function(F, anno.type = c("boxplot", "barplot"),
   ht <- ComplexHeatmap::Heatmap(
     t(F),
     name = "logFC",
+    col = circlize::colorRamp2(colors = c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")), breaks = c(-10, 0, 10)),
     top_annotation = ha,
     row_names_gp = grid::gpar(fontsize = row_fontsize),
     column_names_gp = grid::gpar(fontsize = column_fontsize),
@@ -1247,7 +1248,7 @@ ggVolcano <- function(x,
                       title = "Volcano plot",
                       colors = c(
                         up = "#f23451",
-                        notsig = "#707070AA",
+                        notsig = "#8F8F8F",
                         notsel = "#cccccc88",
                         down = "#3181de"
                       ),
@@ -2327,7 +2328,7 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
   r1 <- (fx / max(abs(fx), na.rm = TRUE))
   r1 <- abs(r1)**0.66 * sign(r1)
   suppressWarnings(
-    cc <- gplots::colorpanel(21, "royalblue3", "grey90", "indianred3")
+    cc <- gplots::colorpanel(21, omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))
   )
   irnk <- 1 + round((length(cc) - 1) * (1 + r1) * 0.5)
 
@@ -3259,12 +3260,10 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
 
     ## -------------- set colors
 
-    cpal <- colorspace::diverge_hcl(64, c = 60, l = c(30, 100), power = 1)
-    cpal <- grDevices::colorRampPalette(c("#313695", "#FFFFDF", "#A50026"))(64)
     if (!is.null(col)) {
       cpal <- grDevices::colorRampPalette(col)(64)
     } else {
-      cpal <- grDevices::colorRampPalette(c("#3136B5", "#FFFFDF", "#B50026"))(64)
+      cpal <- grDevices::colorRampPalette(c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")))(64)
     }
     cpal <- sapply(1:length(cpal), function(i) add_opacity(cpal[i], 0.2 + 0.8 * abs(i - 32.5) / 32))
 
@@ -3645,7 +3644,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   if (type == "numeric") {
     z <- as.numeric(var)
     cpal <- rev(viridis::viridis(11))
-    cpal <- rev(RColorBrewer::brewer.pal(11, "RdYlBu")) ## default
+    cpal <- c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))# rev(RColorBrewer::brewer.pal(11, "RdYlBu")) ## default
     if (!is.null(col)) {
       cpal <- col
     }
@@ -4007,7 +4006,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     z <- as.numeric(var)
     z1 <- NULL
     if (is.null(col)) {
-      cpal <- rev(RColorBrewer::brewer.pal(11, "RdYlBu"))
+      cpal <- c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))# rev(RColorBrewer::brewer.pal(11, "RdYlBu"))
     } else {
       cpal <- col
     }
@@ -4537,7 +4536,7 @@ plotlyMA <- function(x, y, names, label.names = names,
                      lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
                      marker.size = 5, label = NULL, label.cex = 1,
                      color_up_down = TRUE,
-                     colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#1f77b4"),
+                     colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#3181de"),
                      marker.type = "scatter", source = "plot1",
                      displayModeBar = TRUE) {
   if (is.null(highlight)) highlight <- names
@@ -4763,7 +4762,7 @@ plotlyVolcano <- function(x,
                           color_up_down = TRUE,
                           colors = c(
                             up = "#f23451", notsig = "#8F8F8F",
-                            down = "#1f77b4", notsel = "#cccccc88"
+                            down = "#3181de", notsel = "#cccccc88"
                           ),
                           marker.type = "scatter",
                           displayModeBar = TRUE,
@@ -5705,7 +5704,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     colorbar_grid = grid_params,
     x = xtips[colnames(x1)],
     y = ytips[rownames(x1)],
-    colors = c("royalblue3", "grey90", "indianred3"),
+    colors = c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")),
     zmid = 0,
     zmin = -zmax,
     zmax = zmax,
