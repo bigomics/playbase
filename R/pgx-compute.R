@@ -854,13 +854,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   # add metabolomics if data.type is metabolomics
   if (pgx$datatype == "metabolomics") {
     dbg("[pgx.add_GMT] Adding metabolomics genesets")
-    metabolic_pathways <- c(playdata::REACTOME_METABOLITES, playdata::WP_METABOLITES)
-    GSETxGENE <- playbase::createSparseGenesetMatrix(
-      metabolic_pathways,
-      all_genes = human_genes,
-      annot = annot,
-      filter_genes = FALSE
-    )
+    G <- Matrix::t(playdata::MSETxMETABOLITE)
   } else {
     dbg("[pgx.add_GMT] Adding transcriptomics/proteomics genesets")
     G <- Matrix::t(playdata::GSETxGENE)
