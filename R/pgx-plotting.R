@@ -3644,7 +3644,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   if (type == "numeric") {
     z <- as.numeric(var)
     cpal <- rev(viridis::viridis(11))
-    cpal <- c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))# rev(RColorBrewer::brewer.pal(11, "RdYlBu")) ## default
+    cpal <- c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")) # rev(RColorBrewer::brewer.pal(11, "RdYlBu")) ## default
     if (!is.null(col)) {
       cpal <- col
     }
@@ -4006,7 +4006,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     z <- as.numeric(var)
     z1 <- NULL
     if (is.null(col)) {
-      cpal <- c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))# rev(RColorBrewer::brewer.pal(11, "RdYlBu"))
+      cpal <- c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")) # rev(RColorBrewer::brewer.pal(11, "RdYlBu"))
     } else {
       cpal <- col
     }
