@@ -1205,6 +1205,8 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
   info <- lapply(info, unique)
   symbol <- info[["SYMBOL"]]
   uniprot <- info[["UNIPROT"]]
+  this.uniprot <- uniprot[which(sapply(uniprot, function(p) grepl(p, feature)))]
+  if (length(this.uniprot) == 0) this.uniprot <- uniprot[1]
 
   if (as.link) {
     gene.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GENE</a>"
@@ -1220,23 +1222,22 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
     genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GeneCards</a>"
     uniprot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UniProtKB</a>"
     genecards.link <- sub("GENE", symbol[1], genecards.link)
-    uniprot.link <- sub("UNIPROT", uniprot[1], uniprot.link)
+    uniprot.link <- sub("UNIPROT", this.uniprot, uniprot.link)
     info[["databases"]] <- paste(c(genecards.link, uniprot.link), collapse = ", ")
   }
 
   if (datatype == "proteomics") {
     ## create link to PhosphoSitePlus
     phosphositeplus.link <- "<a href='https://www.phosphosite.org/simpleSearchSubmitAction.action?searchStr=GENE' target='_blank'>PhosphoSitePlus</a>"
-    phosphositeplus.link <- sub("GENE", symbol, phosphositeplus.link)
+    phosphositeplus.link <- "<a href='https://www.phosphosite.org/uniprotAccAction?id=UNIPROT' target='_blank'>PhosphoSitePlus</a>"
+    ## phosphositeplus.link <- sub("GENE", symbol[1], phosphositeplus.link)
+    phosphositeplus.link <- sub("UNIPROT", this.uniprot, phosphositeplus.link)
     info[["databases"]] <- paste(c(info[["databases"]], phosphositeplus.link), collapse = ", ")
 
-    ## create links to PhosphoELM for proten and gene: db of S/T/Y phosphorylation sites
-    phosphoELM.link1 <- "<a href='http://phospho.elm.eu.org/byAccession/UNIPROT' target='_blank'>PhosphoELM_protein</a>"
-    feature1 <- sub("[-._].*", "", feature) ## is it always uniprot???
-    phosphoELM.link1 <- sub("UNIPROT", feature1, phosphoELM.link1)
-    phosphoELM.link2 <- "<a href='http://phospho.elm.eu.org/bySubstrate/GENE' target='_blank'>PhosphoELM_gene</a>"
-    phosphoELM.link2 <- sub("GENE", symbol, phosphoELM.link2)
-    info[["databases"]] <- paste(c(info[["databases"]], phosphoELM.link1, phosphoELM.link2), collapse = ", ")
+    ## ## create links to PhosphoELM for proten and gene: db of S/T/Y phosphorylation sites
+    ## phosphoELM.link <- "<a href='http://phospho.elm.eu.org/byAccession/UNIPROT' target='_blank'>PhosphoELM</a>"
+    ## phosphoELM.link <- sub("UNIPROT", uniprot, phosphoELM.link)
+    ## info[["databases"]] <- paste(c(info[["databases"]], phosphoELM.link), collapse = ", ")
   }
 
   ## create link to OMIM

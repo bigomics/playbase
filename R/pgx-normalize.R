@@ -144,7 +144,7 @@ logCPM <- function(counts, total = 1e6, prior = 1, log = TRUE) {
   }
 }
 
-NORMALIZATION.METHODS <- c("none", "mean", "scale", "NC", "CPM", "TMM", "RLE", "RLE2", "quantile")
+NORMALIZATION.METHODS <- c("none", "mean.center", "median.center", "sum", "CPM", "TMM", "RLE", "RLE2", "quantile", "maxMedian", "maxSum")
 
 #' @title Normalize count data
 #'
@@ -189,11 +189,14 @@ pgx.countNormalization <- function(x, methods, ref = NULL) {
     if (m == "none") {
       x <- x
     } else if (m %in% c("scale", "mean.center")) {
-      mx <- mean(x, na.rm = TRUE)
-      x <- t(t(x) / (1 + colMeans(x, na.rm = TRUE))) * mx
+      mx <- mean(colMeans(x, na.rm = TRUE))
+      x <- t(t(x) / (1e-8 + colMeans(x, na.rm = TRUE))) * mx
     } else if (m == "median.center") {
       mx <- apply(x, 2, median, na.rm = TRUE)
-      x <- t(t(x) / (1 + mx)) * mean(mx, na.rm = TRUE)
+      x <- t(t(x) / (1e-8 + mx)) * median(mx, na.rm = TRUE)
+    } else if (m == "sum") {
+      sumx <- mean(colSums(x, na.rm = TRUE))
+      x <- t(t(x) / (1e-8 + colSums(x, na.rm = TRUE))) * sumx
     } else if (m == "CPM") {
       x <- logCPM(x, log = FALSE)
     } else if (m == "TMM") {
@@ -462,13 +465,22 @@ maxSumNormalization <- function(counts, toLog = TRUE, prior = 0) {
 }
 
 #' @export
-referenceNormalization <- function(counts, ref, toLog = TRUE, prior = 0) {
+referenceNormalization <- function(counts, ref = 0.01, toLog = TRUE, prior = 0,
+                                   bring.back = TRUE) {
+  if (is.null(ref) || (length(ref) == 1 && is.numeric(ref[1]))) {
+    ## If no reference gene/proteins are given, we take the most
+    ## 'stable' genes, i.e. lowest SD in rank.
+    rnk.sd <- apply(apply(counts, 2, rank, na.last = "keep"), 1, sd, na.rm = TRUE)
+    nref <- ceiling(ref * nrow(counts))
+    ref <- head(names(sort(rnk.sd)), nref)
+  }
   ref <- intersect(ref, rownames(counts))
   if (length(ref) == 0) {
     return(counts)
   }
   mx <- colMeans(counts[ref, , drop = FALSE], na.rm = TRUE)
   counts <- t(t(counts) / mx)
+  if (bring.back) counts <- counts * mean(mx, na.rm = TRUE)
   if (toLog) {
     X <- log2(prior + counts)
   } else {

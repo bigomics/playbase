@@ -32,10 +32,13 @@ pgx.Volcano(
   label = NULL,
   cex.lab = 1,
   ntop = 20,
-  cpal = c("grey60", "red3", "blue3"),
+  colors = c(up = "#f23451", notsig = "#707070AA", notsel = "#cccccc88", down =
+    "#3181de"),
   title = NULL,
   xlim = NULL,
   ylim = NULL,
+  xlab = "effect size (logFC)",
+  ylab = "significance (-log10q)",
   set.par = TRUE,
   plotlib = "base",
   data = FALSE
@@ -49,16 +52,19 @@ ggVolcano(
   facet = NULL,
   highlight = NULL,
   xlab = "effect size (logFC)",
-  ylab = "significance (-log10p)",
+  ylab = "significance (-log10q)",
   lfc = 1,
   psig = 0.05,
   showlegend = TRUE,
-  marker.size = 5,
+  marker.size = 2.5,
   marker.alpha = 0.7,
   label.cex = 4.5,
   axis.text.size = 14,
   label = NULL,
-  colors = c(up = "#f23451", notsig = "#707070", sighigh = "#cccccc", down = "#3181de")
+  title = "Volcano plot",
+  colors = c(up = "#f23451", notsig = "#707070AA", notsel = "#cccccc88", down =
+    "#3181de"),
+  girafe = FALSE
 )
 
 pgx.plotMA(
@@ -70,6 +76,7 @@ pgx.plotMA(
   cex = 1,
   cex.lab = 0.8,
   hilight = NULL,
+  label = NULL,
   ntop = 20,
   plotlib = "base",
   data = FALSE
@@ -81,6 +88,7 @@ pgx.contrastScatter(
   hilight = NULL,
   cex = 1,
   cex.lab = 0.8,
+  label = NULL,
   psig = 0.05,
   fc = 1,
   level = "gene",
@@ -100,6 +108,7 @@ pgx.plotGeneUMAP(
   cex.lab = 0.8,
   cex.legend = 1,
   hilight = NULL,
+  label = NULL,
   title = NULL,
   zfix = FALSE,
   set.par = TRUE,
@@ -142,8 +151,6 @@ pgx.plotGeneUMAP(
 
 \item{ntop}{Number of top genes to label}
 
-\item{cpal}{Color palette. Default c("grey60", "red3").}
-
 \item{title}{Plot title}
 
 \item{plotlib}{Plotting library ("base", "ggplot")}
@@ -155,6 +162,8 @@ pgx.plotGeneUMAP(
 \item{pos}{Dataframe of UMAP coordinates}
 
 \item{zfix}{Fix color scale between genes}
+
+\item{cpal}{Color palette. Default c("grey60", "red3").}
 }
 \value{
 A grid of plots visualizing the specified contrasts is generated.

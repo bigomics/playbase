@@ -1112,12 +1112,13 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
   kk <- c(seq(1, length(rnk) * 0.99, floor(length(rnk) / 20)), length(rnk))
   length(kk)
   i <- 1
+  pal <- grDevices::colorRampPalette(c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")))(32)
   for (i in 1:(length(kk) - 1)) {
     r <- mean(rnk[kk[c(i, i + 1)]], na.rm = TRUE)
     r1 <- (r / max(abs(rnk), na.rm = TRUE))
     r1 <- abs(r1)**0.5 * sign(r1)
     irnk <- floor(31 * (1 + r1) / 2)
-    cc <- gplots::bluered(32)[1 + irnk]
+    cc <- pal[1 + irnk]
     graphics::rect(kk[i], y0 - 1.05 * dy, kk[i + 1], y0 - 0.65 * dy, col = cc, border = NA)
   }
 

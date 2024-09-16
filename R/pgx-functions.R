@@ -266,8 +266,14 @@ strwrap2 <- function(str, n) {
 add_opacity <- function(hexcol, opacity) {
   col1 <- rep(NA, length(hexcol))
   ii <- which(!is.na(hexcol))
+  if (length(ii) == 0) {
+    return(hexcol)
+  }
   rgba <- strsplit(gsub("rgba\\(|\\)", "", plotly::toRGB(hexcol[ii], opacity)), split = ",")
-  rgba <- apply(do.call(rbind, rgba), 2, as.numeric)
+  rgba <- try(apply(do.call(rbind, rgba), 2, as.numeric))
+  if ("try-error" %in% class(rgba)) {
+    return(hexcol)
+  }
   if (length(hexcol) == 1) rgba <- matrix(rgba, nrow = 1)
   col1[ii] <- grDevices::rgb(rgba[, 1] / 255, rgba[, 2] / 255, rgba[, 3] / 255, rgba[, 4])
   col1

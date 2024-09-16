@@ -30,7 +30,9 @@ read.as_matrix <- function(file, skip_row_check = FALSE, row.names = 1) {
   skip.rows <- min(which(cumsum(rowMeans(x0 != "")) > 0)) - 1
 
   ## try to detect decimal separator
+  sep <- detect_delim(file)
   dec <- detect_decimal(file)
+  if (dec == "," && sep == ",") dec <- "." ## exception
 
   ## read delimited table automatically determine separator. allow
   ## duplicated rownames. This implements with faster fread.
@@ -50,13 +52,12 @@ read.as_matrix <- function(file, skip_row_check = FALSE, row.names = 1) {
   ## fill=TRUE will fail. Check header with slow read.csv() and
   ## correct if needed. fread is fast but is not so robust...
   ## detect delimiter/seperator
-  sep <- detect_delim(file)
   hdr <- utils::read.csv(
     file = file, sep = sep, check.names = FALSE, na.strings = NULL,
     header = TRUE, nrows = 1, skip = skip.rows, row.names = NULL
   )
   if (NCOL(x0) > 0 && !all(colnames(x0) == colnames(hdr))) {
-    message("read.as_matrix: warning correcting header")
+    message("[read.as_matrix] correcting header")
     colnames(x0) <- colnames(hdr)
   }
 
@@ -89,8 +90,9 @@ read.as_matrix <- function(file, skip_row_check = FALSE, row.names = 1) {
 
   ## set rownames
   if (!is.null(row.names) && !is.na(row.names) && row.names >= 1) {
+    rownamesx <- x[, row.names]
     x <- x[, -row.names, drop = FALSE]
-    rownames(x) <- x0[[row.names]]
+    rownames(x) <- rownamesx
   }
 
   ## some csv have trailing empty rows/cols at end of table
@@ -127,10 +129,15 @@ detect_delim <- function(file) {
 #' a header and rownames column.
 #'
 detect_decimal <- function(file) {
-  ff <- data.table::fread(file, header = TRUE, colClasses = "character")
-  vals <- as.vector(as.matrix(ff[, -1]))
-  n_commas <- length(grep(",", vals, fixed = TRUE))
-  n_dots <- length(grep(".", vals, fixed = TRUE))
+  f1 <- data.table::fread(file, header = TRUE, nrows = 100)
+  f2 <- data.table::fread(file, header = TRUE, colClasses = "character", nrows = 100)
+  numcols <- which(sapply(f1, class) == "numeric")
+  if (length(numcols) == 0) {
+    return(".")
+  } ## default
+  numvals <- as.vector(as.matrix(f2[, ..numcols]))
+  n_commas <- length(grep(",", numvals, fixed = TRUE))
+  n_dots <- length(grep(".", numvals, fixed = TRUE))
   dec <- c(".", ",")[which.max(c(n_dots, n_commas))]
   dec
 }
@@ -203,7 +210,10 @@ fread.csv <- function(file, check.names = FALSE, row.names = 1, sep = ",",
 #' @export
 read_files <- function(dir = ".", pattern = NULL) {
   ff <- dir(dir, pattern = pattern)
-  file1 <- head(grep("count", ff, value = TRUE), 1)
+  file1 <- head(grep("count|expression|abundance|concentration|intensity",
+    ff,
+    value = TRUE
+  ), 1)
   file2 <- head(grep("sample", ff, value = TRUE), 1)
   file3 <- head(grep("contrast|comparison", ff, value = TRUE), 1)
   counts <- samples <- contrasts <- NULL
@@ -217,7 +227,6 @@ read_files <- function(dir = ".", pattern = NULL) {
     contrasts = contrasts
   )
 }
-
 
 
 #' Read counts data from file
@@ -250,15 +259,16 @@ read_counts <- function(file, first = FALSE, unique = TRUE, paste_char = "_") {
   }
   is_valid <- validate_counts(df)
   if (!is_valid) {
-    message("[read_counts] ERROR: Counts file is not valid.")
-    return(NULL)
+    message("[read_counts] WARNING: Counts file has errors")
+    ## return(NULL)
   }
 
-  ## determine column types
+  ## determine column types (NEED RETHINK!)
   df1 <- type.convert(data.frame(df, check.names = FALSE), as.is = TRUE)
   col.type <- sapply(df1, class)
-  col.type
-  char.cols <- which(col.type == "character")
+  xannot.names <- "gene|symbol|protein|compound|title|description|name|position"
+  is.xannot <- grepl(xannot.names, tolower(colnames(df)))
+  char.cols <- which(col.type == "character" | is.xannot)
   last.charcol <- tail(char.cols, 1)
   last.charcol
 
@@ -276,13 +286,14 @@ read_counts <- function(file, first = FALSE, unique = TRUE, paste_char = "_") {
   ## As expression values we take all columns after the last character
   ## column (if any).
   if (length(last.charcol)) {
+    message("[read_counts] extra annotation columns = ", paste(1:last.charcol, collapse = " "))
     df <- df[, (last.charcol + 1):ncol(df)]
   }
 
   ## convert to numeric if needed (probably yes...)
   is.numeric.matrix <- all(apply(df, 2, is.numeric))
   if (!is.numeric.matrix) {
-    message("warning: converting to numeric values")
+    message("[read_counts] force to numeric values")
     rn <- rownames(df)
     suppressWarnings(df <- apply(df, 2, as.numeric))
     rownames(df) <- rn
@@ -311,8 +322,8 @@ read_samples <- function(file) {
   df <- read.as_matrix(file)
   is_valid <- validate_samples(df)
   if (!is_valid) {
-    message("[read_samples] ERROR: Samples file is not valid.")
-    return(NULL)
+    message("[read_samples] WARNING: Samples file has errors")
+    ## return(NULL)
   }
   df <- as.data.frame(df)
   return(df)
@@ -329,13 +340,11 @@ read_samples <- function(file) {
 #' @export
 read_contrasts <- function(file) {
   df <- read.as_matrix(file)
-
   is_valid <- validate_contrasts(df)
   if (!is_valid) {
-    message("[read_contrasts] ERROR: Contrasts file is not valid.")
-    return(NULL)
+    message("[read_contrasts] WARNING: Contrasts file has errors")
+    ## return(NULL)
   }
-
   df
 }
 
@@ -350,7 +359,7 @@ read_annot <- function(file, unique = TRUE) {
   } else if (is.matrix(file) || is.data.frame(file)) {
     df <- file
   } else {
-    message("[read_annot] ERROR: Annot file is not valid.")
+    message("[read_annot] ERROR: input not valid.")
     return(NULL)
   }
 
@@ -360,8 +369,9 @@ read_annot <- function(file, unique = TRUE) {
   ## determine last character column
   df1 <- type.convert(data.frame(df, check.names = FALSE), as.is = TRUE)
   col.type <- sapply(df1, class)
-  col.type
-  char.cols <- which(col.type == "character")
+  xannot.names <- "gene|symbol|protein|compound|title|description|name|position"
+  is.xannot <- grepl(xannot.names, tolower(colnames(df)))
+  char.cols <- which(col.type == "character" | is.xannot)
   char.cols
   last.charcol <- tail(char.cols, 1)
   last.charcol
@@ -389,6 +399,15 @@ read_annot <- function(file, unique = TRUE) {
   return(df)
 }
 
+getError <- function(e, what = "Description") {
+  ERROR_MSG <- playbase::PGX_CHECKS
+  if (!e %in% ERROR_MSG$error) {
+    return(paste("unknown error", e))
+  }
+  ERROR_MSG[match(e, ERROR_MSG$error), what]
+}
+
+
 #' Validate counts data
 #'
 #' Counts data is valid if:
@@ -400,11 +419,19 @@ read_annot <- function(file, unique = TRUE) {
 #'
 #' @return boolean. true if data is valid
 #' @export
-validate_counts <- function(data) {
-  t1 <- check_duplicate_rows(data)
-  t2 <- check_empty_rows(data)
-  t3 <- check_duplicate_cols(data)
-  return(t2 && t3)
+validate_counts <- function(df) {
+  if (is.character(df) && is.null(dim(df))) {
+    df <- read.as_matrix(df)
+  }
+  chk <- pgx.checkINPUT(df, "COUNTS")
+  ERROR_MSG <- playbase::PGX_CHECKS
+  err <- names(chk$checks)
+  if (length(err)) {
+    msg <- lapply(err, function(e) getError(e))
+    msg <- paste(msg, collapse = "; ")
+    message("WARNING: ", msg)
+  }
+  chk$PASS
 }
 
 #' Validate samples data
@@ -419,12 +446,19 @@ validate_counts <- function(data) {
 #'
 #' @return boolean. true if data is valid
 #' @export
-validate_samples <- function(data) {
-  t1 <- check_duplicate_rows(data)
-  t2 <- check_empty_rows(data)
-  t3 <- check_duplicate_cols(data)
-  t4 <- check_max_samples(data)
-  return(t1 & t2 & t3 & t4)
+validate_samples <- function(df) {
+  if (is.character(df) && is.null(dim(df))) {
+    df <- read.as_matrix(df)
+  }
+  chk <- pgx.checkINPUT(df, "SAMPLES")
+  ERROR_MSG <- playbase::PGX_CHECKS
+  err <- names(chk$checks)
+  if (length(err)) {
+    msg <- lapply(err, function(e) getError(e))
+    msg <- paste(msg, collapse = "; ")
+    message("WARNING: ", msg)
+  }
+  chk$PASS
 }
 
 #' Validate contrasts data
@@ -439,19 +473,28 @@ validate_samples <- function(data) {
 #'
 #' @return boolean. true if data is valid
 #' @export
-validate_contrasts <- function(data) {
-  t1 <- check_duplicate_rows(data)
-  t2 <- check_empty_rows(data)
-  t3 <- check_duplicate_cols(data)
-  vs_names <- colnames(data)[-1]
-  t4 <- all(grepl("_vs_", vs_names))
-  return(t1 & t2 & t3 & t4)
+validate_contrasts <- function(df) {
+  if (is.character(df) && is.null(dim(df))) {
+    df <- read.as_matrix(df)
+  }
+  chk <- pgx.checkINPUT(df, "CONTRASTS")
+  ERROR_MSG <- playbase::PGX_CHECKS
+  err <- names(chk$checks)
+  if (length(err)) {
+    msg <- lapply(err, function(e) getError(e))
+    msg <- paste(msg, collapse = "; ")
+    message("WARNING: ", msg)
+  }
+  chk$PASS
 }
+
+## --------------------------------------------------------------------
+## --------------------------------------------------------------------
+## --------------------------------------------------------------------
 
 
 #' @describeIn check_duplicate_cols check if there is any duplicate row in the input data
-#' @export
-check_duplicate_rows <- function(data) {
+check_duplicate_rows.DEPRECATED <- function(data) {
   rn <- setdiff(data[[1]], c("", "NA", NA))
   t1 <- sum(duplicated(rn)) == 0
   return(t1)
@@ -459,12 +502,10 @@ check_duplicate_rows <- function(data) {
 
 
 #' @describeIn check_duplicate_cols checks if there is any empty row in the data
-#' @export
-check_empty_rows <- function(data) {
+check_empty_rows.DEPRECATED <- function(data) {
   t1 <- nrow(data) > 0
   return(t1)
 }
-
 
 #' @title Input Checks
 #'
@@ -492,16 +533,13 @@ check_empty_rows <- function(data) {
 #' check_duplicate_cols(data)
 #' # Returns FALSE
 #' }
-#' @export
-check_duplicate_cols <- function(data) {
+check_duplicate_cols.DEPRECATED <- function(data) {
   t1 <- sum(duplicated(colnames(data))) == 0
   return(t1)
 }
 
-
 #' @describeIn check_duplicate_cols Checks if the number of sample is below the allowed maximum
-#' @export
-check_max_samples <- function(data, max_samples = 2000) {
+check_max_samples.DEPRECATED <- function(data, max_samples = 2000) {
   MAXSAMPLES <- as.integer(max_samples)
   t1 <- (ncol(data) - 1) <= MAXSAMPLES
   return(t1)

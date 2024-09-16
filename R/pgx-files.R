@@ -18,7 +18,9 @@
 #'
 #' @export
 pgx.load <- function(file, verbose = 0) {
-  local(get(load(file, verbose = verbose)))
+  pgx <- local(get(load(file, verbose = verbose)))
+  pgx$filename <- file
+  pgx
 }
 
 
@@ -52,7 +54,7 @@ ngs.save <- function(ngs, file, update.date = TRUE, light = TRUE, system = FALSE
 #' @export
 pgx.save <- function(pgx, file, update.date = TRUE, light = TRUE, system = FALSE) {
   if (update.date || is.null(pgx$date)) pgx$date <- Sys.Date()
-
+  if (is(pgx, "reactivevalues")) pgx <- shiny::reactiveValuesToList(pgx)
   if (light) {
     ## ------- make a light version
     pgx$gx.meta$outputs <- NULL
@@ -69,6 +71,7 @@ pgx.save <- function(pgx, file, update.date = TRUE, light = TRUE, system = FALSE
   }
   sort(sapply(pgx, utils::object.size)) / 1e9
   sum(sapply(pgx, utils::object.size)) / 1e9
+  pgx$filename <- NULL
 
   cat(">>> saving PGX file to", file, "\n")
   file <- iconv(file, from = "", to = "ASCII//TRANSLIT")
