@@ -888,16 +888,13 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------
 
   message("[pgx.add_GMT] Filtering gene sets on size...")
+  
   gmt.size <- Matrix::colSums(G != 0)
-  size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
-
-
-
-  # if (length(size.ok) < 100) { # This should never be the case since we are adding random genesets if G is too small
-  ## take at least 100 gene sets, adding random selected
-  # jj <- head(unique(c(size.ok, sample(1:ncol(G)))), 100)
-  # G <- G[, jj, drop = FALSE]
-  # }
+  if(pgx$datatype == "metabolomics"){
+    size.ok <- which(gmt.size >= 3 & gmt.size <= 400)
+  } else {
+    size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
+  }
 
   # if we have enough genesets, remove the small ones
   if (length(size.ok) > 100) {
