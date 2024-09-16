@@ -1176,18 +1176,18 @@ combine_feature_names <- function(annot, target) {
 }
 
 #' @export
-getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
+getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link = TRUE) {
   if (is.null(gene) || length(gene) == 0) {
     return(NULL)
   }
   if (is.na(gene) || gene == "") {
     return(NULL)
   }
-
+  
   orgdb <- getOrgDb(organism, use.ah = NULL)
   cols <- c("SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH", "GO")
   cols <- intersect(cols, keytypes(orgdb))
-
+  
   ## get info from different environments
   info <- lapply(cols, function(k) {
     AnnotationDbi::select(
@@ -1198,7 +1198,7 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
     )[[k]]
   })
   names(info) <- cols
-
+  
   info[["ORGANISM"]] <- organism
 
   ## take out duplicates
@@ -1207,7 +1207,7 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
   uniprot <- info[["UNIPROT"]]
   this.uniprot <- uniprot[which(sapply(uniprot, function(p) grepl(p, feature)))]
   if (length(this.uniprot) == 0) this.uniprot <- uniprot[1]
-
+  
   if (as.link) {
     gene.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GENE</a>"
     prot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UNIPROT</a>"
@@ -1216,7 +1216,7 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
     info[["SYMBOL"]] <- paste(gene.link, collapse = ", ")
     info[["UNIPROT"]] <- paste(prot.link, collapse = ", ")
   }
-
+  
   ## create link to external databases: OMIM, GeneCards, Uniprot
   if (as.link) {
     genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GeneCards</a>"
@@ -1225,8 +1225,8 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
     uniprot.link <- sub("UNIPROT", this.uniprot, uniprot.link)
     info[["databases"]] <- paste(c(genecards.link, uniprot.link), collapse = ", ")
   }
-
-  if (datatype == "proteomics") {
+  
+  if (grepl("proteomics", datatype, ignore.case=TRUE)) {
     ## create link to PhosphoSitePlus
     phosphositeplus.link <- "<a href='https://www.phosphosite.org/simpleSearchSubmitAction.action?searchStr=GENE' target='_blank'>PhosphoSitePlus</a>"
     phosphositeplus.link <- "<a href='https://www.phosphosite.org/uniprotAccAction?id=UNIPROT' target='_blank'>PhosphoSitePlus</a>"
@@ -1239,13 +1239,13 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
     ## phosphoELM.link <- sub("UNIPROT", uniprot, phosphoELM.link)
     ## info[["databases"]] <- paste(c(info[["databases"]], phosphoELM.link), collapse = ", ")
   }
-
+  
   ## create link to OMIM
   if (as.link) {
     omim.link <- "<a href='https://www.omim.org/entry/OMIM' target='_blank'>OMIM</a>"
     info[["OMIM"]] <- sapply(info[["OMIM"]], function(x) gsub("OMIM", x, omim.link))
   }
-
+  
   ## create link to KEGG
   kegg.link <- "<a href='https://www.genome.jp/kegg-bin/show_pathway?map=hsaKEGGID&show_description=show' target='_blank'>KEGGNAME (KEGGID)</a>"
   for (i in 1:length(info[["PATH"]])) {
@@ -1260,7 +1260,7 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
       }
     }
   }
-
+  
   ## create link to GO
   if (!is.na(info[["GO"]][1])) {
     ## sometimes GO.db is broken...
@@ -1285,11 +1285,12 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
       info[["GO"]] <- NULL
     }
   }
-
+  
   ## pull summary
   info[["SUMMARY"]] <- "(no info available)"
-  ortholog <- getHumanOrtholog(organism, symbol)$human
-  if (ortholog %in% names(playdata::GENE_SUMMARY)) {
+  ## ortholog <- getHumanOrtholog(organism, symbol)$human
+
+  if (!is.null(ortholog) && ortholog %in% names(playdata::GENE_SUMMARY)) {
     info[["SUMMARY"]] <- playdata::GENE_SUMMARY[ortholog]
     info[["SUMMARY"]] <- gsub("Publication Note.*|##.*", "", info[["SUMMARY"]])
   }
@@ -1304,7 +1305,7 @@ getOrgGeneInfo <- function(organism, gene, feature, datatype, as.link = TRUE) {
     "organism", "gene_symbol", "uniprot", "name", "map_location",
     "OMIM", "pathway", "GO", "summary", "databases"
   )
-
+  
   return(info)
 }
 
