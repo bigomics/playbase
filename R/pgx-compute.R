@@ -943,6 +943,9 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     G <- Matrix::t(G)
   }
 
+  # NEW: convert custom_gmt feature/symbol/human_ortholog to SYMBOL
+  colnames(G) <- playbase::probe2symbol(colnames(G), pgx$genes, "symbol", fill_na = TRUE)
+
   if (!is.null(custom.geneset$gmt)) {
     message("[pgx.add_GMT] Adding custom genesets...")
     ## convert gmt standard to SPARSE matrix: gset in rows, genes in
@@ -961,25 +964,24 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     # custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% pgx$genes$symbol, drop = FALSE]
     ## merge_sparse_matrix removes duplicated genesets
 
-    ai <- 1
-    browser()
+    # ai <- 1
+    # browser()
 
 
-    # align G and custom_gmt to SYMBOL
-    # NEW: convert custom_gmt feature/symbol/human_ortholog to SYMBOL
-
-    colnames(G) <- playbase::probe2symbol(colnames(G), pgx$genes, "symbol", fill_na = TRUE)
+    # G and custom_gmt have to be SYMBOL alligned
 
     # iterate over custom_gmt and convert to symbol, otherwise we will have symbols and features mixed together (whatever was provided in custom GMT)
     colnames(custom_gmt) <- playbase::probe2symbol(colnames(custom_gmt), pgx$genes, "symbol", fill_na = TRUE)
 
     if (nrow(G) > 0) {
       # here we need to make sure that the custom_gmt is aligned with the G matrix, otherwise we will have symbols and features mixed together (whatever was provided in custom GMT)
+
+      # genes must be rows
       G <- playbase::merge_sparse_matrix(
-        m1 = G,
-        m2 = custom_gmt
+        m1 = Matrix::t(G),
+        m2 = Matrix::t(custom_gmt)
       )
-      G <- Matrix::t(G)
+
       remove(custom_gmt)
     } else {
       G <- Matrix::t(custom_gmt)
@@ -1006,8 +1008,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     X_geneset <- X_geneset[, ss, drop = FALSE]
   }
 
-  ai <- 4
-  browser()
+  # ai <- 4
+  # browser()
 
   ## -----------------------------------------------------------
   ## Align the GENESETxGENE matrix with genes in X_geneset
@@ -1028,12 +1030,13 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   G <- G[match(gg, rownames(G)), , drop = FALSE]
   rownames(G) <- rownames(X_geneset) ## original name (e.g. mouse)
 
+
   ## -----------------------------------------------------------
   ## Prioritize gene sets by fast rank-correlation
   ## -----------------------------------------------------------
 
-  ai <- 5
-  browser()
+  # ai <- 5
+  # browser()
 
   if (is.null(max.genesets)) max.genesets <- 20000
   if (max.genesets < 0) max.genesets <- 20000
@@ -1057,6 +1060,9 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       sdx <- matrixStats::rowSds(gsetX, na.rm = TRUE)
     }
 
+    # ai <- 99
+    # browser()
+
     names(sdx) <- colnames(G)
     jj <- Matrix::head(order(-sdx), max.genesets)
     must.include <- "hallmark|kegg|^go|^celltype|^pathway|^custom"
@@ -1065,9 +1071,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     G <- G[, jj, drop = FALSE]
   }
 
-  ai <- 6
-  browser()
-
+  # ai <- 6
+  # browser()
 
   ## -----------------------------------------------------------------------
   ## Clean up and return pgx object
