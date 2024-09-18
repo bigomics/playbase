@@ -1069,10 +1069,22 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------------------
 
 
-  # check G size
+  # check G size an drop genesets based on size
   ai <- 4324324
   browser()
 
+  gmt.size <- Matrix::colSums(G != 0)
+
+  if (pgx$datatype == "metabolomics") {
+    # metabolomics genesets are MUCH smaller than transcriptomics, metabolomics have usually less features, so we need to reduce the min size
+    size.ok <- which(gmt.size >= 3 & gmt.size <= 400)
+  } else {
+    size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
+  }
+
+  G <- G[, size.ok, drop = FALSE]
+
+  # normalize columns (required for some methods downstream)
   G <- playbase::normalize_cols(G)
 
   pgx$GMT <- G
