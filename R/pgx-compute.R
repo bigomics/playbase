@@ -837,16 +837,15 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   message("[pgx.add_GMT] Creating GMT matrix... ")
   # Load geneset matrix
 
-  if (!is.human && !is.null(pgx$genes$human_ortholog) && !all(pgx$genes$human_ortholog == "")) { # case where organism is not human and HAS human orghologs
-    # all annotated non-human organisms should have pgx$genes$human_ortholog declared. If not, it is generalized features (random GMT)
-    human_genes <- ifelse(
-      !is.na(pgx$genes$human_ortholog),
-      pgx$genes$human_ortholog,
-      pgx$genes$symbol
-    )
-  } else { # human genes
-    human_genes <- pgx$genes$symbol
-  }
+
+  ai <- 3213
+  browser()
+
+
+  full_feature_list <- c(pgx$genes$human_ortholog, pgx$genes$symbol, rownames(pgx$genes))
+  full_feature_list <- full_feature_list[!is.na(full_feature_list)]
+  full_feature_list <- full_feature_list[full_feature_list != ""]
+  full_feature_list <- unique(full_feature_list)
 
   # add metabolomics if data.type is metabolomics
   if (pgx$datatype == "metabolomics") {
@@ -857,8 +856,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     G <- Matrix::t(playdata::GSETxGENE)
   }
 
-  G <- G[rownames(G) %in% human_genes, , drop = FALSE]
-
+  G <- G[rownames(G) %in% full_feature_list, , drop = FALSE]
 
   # add random genesets if G is too small
   if (ncol(G) < 100 || nrow(G) < 3) {
@@ -888,6 +886,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
   gmt.size <- Matrix::colSums(G != 0)
   if (pgx$datatype == "metabolomics") {
+    # metabolomics genesets are MUCH smaller than transcriptomics, metabolomics have usually less features, so we need to reduce the min size
     size.ok <- which(gmt.size >= 3 & gmt.size <= 400)
   } else {
     size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
@@ -905,14 +904,18 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## add species GO genesets from AnnotationHub
   dbg("[pgx.add_GMT] Adding species GO for organism", pgx$organism)
   go.genesets <- NULL
-  go.genesets <- tryCatch(
-    {
-      getOrganismGO(pgx$organism)
-    },
-    error = function(e) {
-      message("Error in getOrganismsGO:", e)
-    }
-  )
+
+  # only run if not metaboloimcs
+  if (pgx$datatype != "metabolomics") {
+    go.genesets <- tryCatch(
+      {
+        getOrganismGO(pgx$organism)
+      },
+      error = function(e) {
+        message("Error in getOrganismsGO:", e)
+      }
+    )
+  }
 
   if (!is.null(go.genesets)) {
     dbg("[pgx.add_GMT] got", length(go.genesets), "genesets")
@@ -928,6 +931,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       gmt.all = go.genesets,
       min.geneset.size = 15,
       max.geneset.size = 400,
+      all_genes = full_feature_list,
       min_gene_frequency = 1,
       annot = pgx$genes,
       filter_genes = FALSE
@@ -938,13 +942,10 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       m1 = G,
       m2 = Matrix::t(go.gmt)
     )
-
-    # transpose G as at this stage we still want rownames(G) to be genesets (otherwise entire code will break)
-    G <- Matrix::t(G)
   }
 
   # NEW: convert custom_gmt feature/symbol/human_ortholog to SYMBOL
-  colnames(G) <- playbase::probe2symbol(colnames(G), pgx$genes, "symbol", fill_na = TRUE)
+  rownames(G) <- playbase::probe2symbol(rownames(G), pgx$genes, "symbol", fill_na = TRUE)
 
   if (!is.null(custom.geneset$gmt)) {
     message("[pgx.add_GMT] Adding custom genesets...")
@@ -956,6 +957,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       min.geneset.size = 3,
       max.geneset.size = 9999,
       min_gene_frequency = 1,
+      all_genes = full_feature_list,
       annot = pgx$genes,
       filter_genes = FALSE
     )
@@ -969,29 +971,17 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
 
     # G and custom_gmt have to be SYMBOL alligned
+    if (!is.null(custom_gmt) && ncol(custom_gmt) > 0) { # only run this code if custom_gmt has columns (genes)
 
-    # iterate over custom_gmt and convert to symbol, otherwise we will have symbols and features mixed together (whatever was provided in custom GMT)
-    colnames(custom_gmt) <- playbase::probe2symbol(colnames(custom_gmt), pgx$genes, "symbol", fill_na = TRUE)
+      colnames(custom_gmt) <- playbase::probe2symbol(colnames(custom_gmt), pgx$genes, "symbol", fill_na = TRUE)
 
-    if (nrow(G) > 0) {
-      # here we need to make sure that the custom_gmt is aligned with the G matrix, otherwise we will have symbols and features mixed together (whatever was provided in custom GMT)
-
-      # genes must be rows
       G <- playbase::merge_sparse_matrix(
-        m1 = Matrix::t(G),
+        m1 = G,
         m2 = Matrix::t(custom_gmt)
       )
-
-      remove(custom_gmt)
-    } else {
-      G <- Matrix::t(custom_gmt)
       remove(custom_gmt)
     }
-  } else {
-    # now we need rownames to be genes (not genesets)
-    G <- Matrix::t(G)
   }
-
   ## -----------------------------------------------------------
   ## create the full GENE matrix (always collapsed by gene)
   ## -----------------------------------------------------------
@@ -1077,6 +1067,11 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------------------
   ## Clean up and return pgx object
   ## -----------------------------------------------------------------------
+
+
+  # check G size
+  ai <- 4324324
+  browser()
 
   G <- playbase::normalize_cols(G)
 
