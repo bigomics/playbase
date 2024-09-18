@@ -835,13 +835,10 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## Load Geneset matrix and filter genes by gene or homologous
   ## -----------------------------------------------------------
   message("[pgx.add_GMT] Creating GMT matrix... ")
-  # Load geneset matrix
 
+  # Load geneset matrix from playdata
 
-  ai <- 3213
-  browser()
-
-
+  # create a feature list that will be used to filter and reduce dimensions of G
   full_feature_list <- c(pgx$genes$human_ortholog, pgx$genes$symbol, rownames(pgx$genes))
   full_feature_list <- full_feature_list[!is.na(full_feature_list)]
   full_feature_list <- full_feature_list[full_feature_list != ""]
@@ -862,6 +859,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   if (ncol(G) < 100 || nrow(G) < 3) {
     add.gmt <- NULL
     rr <- sample(3:400, 100)
+
+    # TODO review to make sure we get correct IDS (???). Should we always use symbol here?
     # unclear which condition matches to absense of pgx$genes$human_ortholog, legacy is "", but sometimes I see NULL and NA
     if (is.null(pgx$genes$human_ortholog) || all(is.na(pgx$genes$human_ortholog)) || all(pgx$genes$human_ortholog == "")) {
       gg <- pgx$genes$symbol
@@ -947,10 +946,12 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   # NEW: convert custom_gmt feature/symbol/human_ortholog to SYMBOL
   rownames(G) <- playbase::probe2symbol(rownames(G), pgx$genes, "symbol", fill_na = TRUE)
 
+
+  # TODO filter out / average duplicates that arrise in the conversin (???)
+
   if (!is.null(custom.geneset$gmt)) {
     message("[pgx.add_GMT] Adding custom genesets...")
-    ## convert gmt standard to SPARSE matrix: gset in rows, genes in
-    ## columns.
+    ## convert gmt standard to SPARSE matrix: gset in rows, genes in columns.
 
     custom_gmt <- playbase::createSparseGenesetMatrix(
       gmt.all = custom.geneset$gmt,
@@ -961,14 +962,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       annot = pgx$genes,
       filter_genes = FALSE
     )
-
-    # CRITICAL gmt file should match the rownames of counts. Not a good idea to remove genes not in pgx$genes$symbol at this stage.
-    # custom_gmt <- custom_gmt[, colnames(custom_gmt) %in% pgx$genes$symbol, drop = FALSE]
-    ## merge_sparse_matrix removes duplicated genesets
-
-    # ai <- 1
-    # browser()
-
 
     # G and custom_gmt have to be SYMBOL alligned
     if (!is.null(custom_gmt) && ncol(custom_gmt) > 0) { # only run this code if custom_gmt has columns (genes)
@@ -998,9 +991,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     X_geneset <- X_geneset[, ss, drop = FALSE]
   }
 
-  # ai <- 4
-  # browser()
-
   ## -----------------------------------------------------------
   ## Align the GENESETxGENE matrix with genes in X_geneset
   ## -----------------------------------------------------------
@@ -1010,8 +1000,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   # convert gg to symbol
   ii <- intersect(gg, rownames(G))
   G <- G[ii, , drop = FALSE]
-
-  # TODO not sure what this is doing, of if its necessary anymore...
   xx <- setdiff(gg, rownames(G))
   matX <- Matrix::Matrix(0, nrow = length(xx), ncol = ncol(G), sparse = TRUE)
   rownames(matX) <- xx
@@ -1024,9 +1012,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------
   ## Prioritize gene sets by fast rank-correlation
   ## -----------------------------------------------------------
-
-  # ai <- 5
-  # browser()
 
   if (is.null(max.genesets)) max.genesets <- 20000
   if (max.genesets < 0) max.genesets <- 20000
@@ -1050,9 +1035,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       sdx <- matrixStats::rowSds(gsetX, na.rm = TRUE)
     }
 
-    # ai <- 99
-    # browser()
-
     names(sdx) <- colnames(G)
     jj <- Matrix::head(order(-sdx), max.genesets)
     must.include <- "hallmark|kegg|^go|^celltype|^pathway|^custom"
@@ -1061,17 +1043,12 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     G <- G[, jj, drop = FALSE]
   }
 
-  # ai <- 6
-  # browser()
-
   ## -----------------------------------------------------------------------
   ## Clean up and return pgx object
   ## -----------------------------------------------------------------------
 
 
-  # check G size an drop genesets based on size
-  ai <- 4324324
-  browser()
+  # final check: drop genesets in G based on geneset size
 
   gmt.size <- Matrix::colSums(G != 0)
 
