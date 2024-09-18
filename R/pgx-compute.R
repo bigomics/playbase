@@ -860,21 +860,30 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     add.gmt <- NULL
     rr <- sample(3:400, 100)
 
-    # TODO review to make sure we get correct IDS (???). Should we always use symbol here?
-    # unclear which condition matches to absense of pgx$genes$human_ortholog, legacy is "", but sometimes I see NULL and NA
     if (is.null(pgx$genes$human_ortholog) || all(is.na(pgx$genes$human_ortholog)) || all(pgx$genes$human_ortholog == "")) {
       gg <- pgx$genes$symbol
     } else {
       gg <- pgx$genes$human_ortholog # gmt should always map to human_ortholog
     }
+
     random.gmt <- lapply(rr, function(n) head(sample(gg), min(n, length(gg) / 2)))
     names(random.gmt) <- paste0("TEST:random_geneset.", 1:length(random.gmt))
-    add.gmt <- random.gmt
-    # add to custom genesets
-    custom.geneset$gmt <- c(custom.geneset$gmt, add.gmt)
 
-    random.size <- sapply(add.gmt, length)
-    custom.geneset$info$GSET_SIZE <- c(custom.geneset$info$GSET_SIZE, random.size)
+    add.gmt <- playbase::createSparseGenesetMatrix(
+      gmt.all = random.gmt,
+      min.geneset.size = 3,
+      max.geneset.size = 400,
+      all_genes = full_feature_list,
+      min_gene_frequency = 1,
+      annot = pgx$genes,
+      filter_genes = FALSE
+    )
+
+    # merge add.gmt with G
+    G <- playbase::merge_sparse_matrix(
+      m1 = G,
+      m2 = Matrix::t(add.gmt)
+    )
   }
 
   ## -----------------------------------------------------------
@@ -943,11 +952,12 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     )
   }
 
-  # NEW: convert custom_gmt feature/symbol/human_ortholog to SYMBOL
+  # NEW: convert G feature/symbol/human_ortholog to SYMBOL
+
+  # At this stage we have metabolomics genesets in G
+  # or transcriptomics/proteomics genesets in G combined with random genesets (if necessary) and GO genesets
+
   rownames(G) <- playbase::probe2symbol(rownames(G), pgx$genes, "symbol", fill_na = TRUE)
-
-
-  # TODO filter out / average duplicates that arrise in the conversin (???)
 
   if (!is.null(custom.geneset$gmt)) {
     message("[pgx.add_GMT] Adding custom genesets...")
@@ -964,7 +974,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     )
 
     # G and custom_gmt have to be SYMBOL alligned
-    if (!is.null(custom_gmt) && ncol(custom_gmt) > 0) { # only run this code if custom_gmt has columns (genes)
+    if (!is.null(custom_gmt) && ncol(custom_gmt) > 0) {
+      # only run this code if custom_gmt has columns (genes)
 
       colnames(custom_gmt) <- playbase::probe2symbol(colnames(custom_gmt), pgx$genes, "symbol", fill_na = TRUE)
 
@@ -1057,6 +1068,15 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     size.ok <- which(gmt.size >= 3 & gmt.size <= 400)
   } else {
     size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
+
+    # add all custom genesets to size.ok
+
+    idx_custom_gmt <- grep("CUSTOM", colnames(G))
+    # make sure we dont miss CUSTOM genesets due to size.ok exclusion
+    if (length(idx_custom_gmt) > 0) {
+      names(idx_custom_gmt) <- colnames(G)[idx_custom_gmt]
+      size.ok <- c(size.ok, idx_custom_gmt)
+    }
   }
 
   G <- G[, size.ok, drop = FALSE]
