@@ -1075,10 +1075,9 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     # make sure we dont miss CUSTOM genesets due to size.ok exclusion
     if (length(idx_custom_gmt) > 0) {
       names(idx_custom_gmt) <- colnames(G)[idx_custom_gmt]
-      size.ok <- c(size.ok, idx_custom_gmt)
+      size.ok <- union(size.ok, idx_custom_gmt)
     }
   }
-
   G <- G[, size.ok, drop = FALSE]
 
   # normalize columns (required for some methods downstream)
