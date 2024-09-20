@@ -1209,7 +1209,6 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
 
   ## take out duplicates
   info <- lapply(info, unique)
-  #  symbol <- info[["SYMBOL"]]
   symbol <- info[[keytype]]
   uniprot <- info[["UNIPROT"]]
   this.uniprot <- uniprot[which(sapply(uniprot, function(p) grepl(p, feature)))]
