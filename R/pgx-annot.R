@@ -1292,15 +1292,12 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
         } else {
           info[["GO"]][i] <- go_id
         }
-        
       }
     } else {
       info[["GO"]] <- NULL
     }
   }
 
-
-  
   ## pull summary
   info[["SUMMARY"]] <- "(no info available)"
   ## ortholog <- getHumanOrtholog(organism, symbol)$human
@@ -1310,7 +1307,6 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
     info[["SUMMARY"]] <- gsub("Publication Note.*|##.*", "", info[["SUMMARY"]])
   }
 
-  
   ## rename
   tags <- c(
     "ORGANISM", "SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH",
