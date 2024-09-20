@@ -1263,9 +1263,6 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
       }
     }
   }
-
-  dbg("[getOrgGeneInfo] 3:")
-  dbg("names(info) = ", names(info))
   
   ## create link to GO
   if (!is.na(info[["GO"]][1])) {
@@ -1278,16 +1275,11 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
     if (go.ok) {
       amigo.link <- "<a href='http://amigo.geneontology.org/amigo/term/GOID' target='_blank'>GOTERM (GOID)</a>"
       i <- 1
-      dbg("info[['GO']] = ", info[["GO"]])
       for (i in 1:length(info[["GO"]])) {
         go_id <- info[["GO"]][i]
 
-        dbg("go_id = ", go_id)
-        dbg("class.go_id = ", class(go_id))
         term_id <- AnnotationDbi::mget(go_id, envir = GO.db::GOTERM, ifnotfound = NA)[[1]]
         if( class(term_id) == "GOTerms") {
-          dbg("class.term_id = ", class(term_id))
-          ##dbg("term_id = ", term_id)
           go_term <- AnnotationDbi::Term(term_id)
           if (as.link) {
             info[["GO"]][i] <- gsub("GOTERM", go_term, gsub("GOID", go_id, amigo.link))
@@ -1304,7 +1296,6 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
     }
   }
 
-  dbg("[getOrgGeneInfo] 4:")
 
   
   ## pull summary
@@ -1316,7 +1307,6 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
     info[["SUMMARY"]] <- gsub("Publication Note.*|##.*", "", info[["SUMMARY"]])
   }
 
-  dbg("[getOrgGeneInfo] 5:")
   
   ## rename
   tags <- c(
