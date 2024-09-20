@@ -1188,7 +1188,11 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
   cols <- c("SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH", "GO")
   cols <- intersect(cols, keytypes(orgdb))
 
-  keytype <- "GENENAME"
+  if(!"SYMBOL" %in% cols) {
+      keytype <- detect_probetype(organism, gene)
+    } else {
+      keytype <- "SYMBOL"
+  }
   
   ## get info from different environments
   info <- lapply(cols, function(k) {
