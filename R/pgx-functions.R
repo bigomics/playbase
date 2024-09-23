@@ -1500,8 +1500,10 @@ collapse_by_humansymbol <- function(obj, annot) {
   annot <- cbind(annot, rownames = rownames(annot))
   target <- c("human_ortholog", "symbol", "gene_name", "rownames")
   target <- intersect(target, colnames(annot))
-  target <- target[which(colSums(is.na(annot[, target])) < 1)]
-  target
+  complete_targets <- lapply(target, function(x){
+    sum(is.na(annot[, x]) | annot[, x] %in% c("")) < 1
+  }) |> unlist()
+  target <- target[complete_targets]
   if (length(target) == 0) {
     message("[map_humansymbol] WARNING: could not find symbol mapping column.")
     return(obj)
