@@ -368,7 +368,6 @@ pgx.createPGX <- function(counts,
       message("[createPGX] removing genes without symbol...")
       no.symbol <- (is.na(pgx$genes$symbol) | pgx$genes$symbol %in% c("", "-"))
       pgx$genes <- pgx$genes[which(!no.symbol), ]
-      browser()
     }
 
     if (only.proteincoding) {
