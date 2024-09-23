@@ -104,7 +104,8 @@ read.as_matrix <- function(file, skip_row_check = FALSE, row.names = 1) {
       x <- x[-ii, , drop = FALSE]
     }
     ## some csv have trailing empty columns at end of table
-    empty.col <- (colSums(is.na(x)) == nrow(x))
+    ## detect as empty column, columns with NA and weird characters
+    empty.col <- (colSums(is.na(x) | x %in% c("", "-", ".", "NA", " ")) == nrow(x))
     if (tail(empty.col, 1)) {
       n <- which(!rev(empty.col))[1] - 1
       ii <- (ncol(x) - n + 1):ncol(x)
