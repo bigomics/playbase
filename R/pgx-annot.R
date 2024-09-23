@@ -1188,12 +1188,18 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
   cols <- c("SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH", "GO")
   cols <- intersect(cols, keytypes(orgdb))
 
+  if(!"SYMBOL" %in% cols) {
+      keytype <- detect_probetype(organism, gene)
+    } else {
+      keytype <- "SYMBOL"
+  }
+  
   ## get info from different environments
   info <- lapply(cols, function(k) {
     AnnotationDbi::select(
       orgdb,
       keys = gene,
-      keytype = "SYMBOL",
+      keytype = keytype,
       columns = k
     )[[k]]
   })
@@ -1203,7 +1209,7 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
 
   ## take out duplicates
   info <- lapply(info, unique)
-  symbol <- info[["SYMBOL"]]
+  symbol <- info[[keytype]]
   uniprot <- info[["UNIPROT"]]
   this.uniprot <- uniprot[which(sapply(uniprot, function(p) grepl(p, feature)))]
   if (length(this.uniprot) == 0) this.uniprot <- uniprot[1]
@@ -1260,7 +1266,7 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
       }
     }
   }
-
+  
   ## create link to GO
   if (!is.na(info[["GO"]][1])) {
     ## sometimes GO.db is broken...
@@ -1274,11 +1280,17 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
       i <- 1
       for (i in 1:length(info[["GO"]])) {
         go_id <- info[["GO"]][i]
-        go_term <- AnnotationDbi::Term(AnnotationDbi::mget(go_id, envir = GO.db::GOTERM, ifnotfound = NA)[[1]])
-        if (as.link) {
-          info[["GO"]][i] <- gsub("GOTERM", go_term, gsub("GOID", go_id, amigo.link))
+
+        term_id <- AnnotationDbi::mget(go_id, envir = GO.db::GOTERM, ifnotfound = NA)[[1]]
+        if( class(term_id) == "GOTerms") {
+          go_term <- AnnotationDbi::Term(term_id)
+          if (as.link) {
+            info[["GO"]][i] <- gsub("GOTERM", go_term, gsub("GOID", go_id, amigo.link))
+          } else {
+            info[["GO"]][i] <- go_term
+          }
         } else {
-          info[["GO"]][i] <- go_term
+          info[["GO"]][i] <- go_id
         }
       }
     } else {

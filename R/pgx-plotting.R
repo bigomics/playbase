@@ -974,9 +974,11 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
                           up = "#f23451", notsig = "#707070AA",
                           notsel = "#cccccc88", down = "#3181de"
                         ),
+                        filt = NULL,
                         title = NULL, xlim = NULL, ylim = NULL,
                         xlab = "effect size (logFC)",
                         ylab = "significance (-log10q)",
+                        repel = FALSE,
                         set.par = TRUE, plotlib = "base", data = FALSE) {
   if (is.integer(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
   res <- NULL
@@ -990,6 +992,11 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
 
   f <- res$fc[, contrast]
   q <- res$qv[, contrast]
+  if(!is.null(filt)) {
+    sel <- grep(filt, names(f))
+    f <- f[sel]
+    q <- q[sel]
+  }
   sig <- (q <= psig & abs(f) >= fc)
   df <- data.frame(fc = f, y = -log10(q), q = q, sig = sig)
 
@@ -1010,7 +1017,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
     xlim <- c(-1.1, 1.1) * fc.max
   }
   if (is.null(ylim) && !is.null(p.min)) {
-    ylim <- c(0, -log10(p.min))
+    ylim <- c(0, -log10(p.min)) * 1.1
   }
 
   if (data) {
@@ -1034,6 +1041,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       x = df$fc,
       y = df$y,
       names = rownames(df),
+      title = title,
       label.names = rownames(df),
       facet = NULL,
       highlight = hilight,
@@ -1056,6 +1064,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       names = rownames(df),
       label.names = rownames(df),
       group.names = c("group1", "group2"),
+      title = title,
       xlab = xlab,
       ylab = ylab,
       lfc = fc,
@@ -1081,6 +1090,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       label.names = rownames(df),
       highlight = hilight,
       label = label,
+      title = title,
       xlab = xlab,
       ylab = ylab,
       lfc = fc,
@@ -1090,7 +1100,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       cex = 1.2 * cex,
       cex.lab = 1.1 * cex.lab,
       colors = colors,
-      repel = FALSE
+      repel = repel
     )
   } else {
     p <- pgx.scatterPlotXY(
@@ -1239,6 +1249,7 @@ ggVolcano <- function(x,
                       ylab = "significance (-log10q)",
                       lfc = 1,
                       psig = 0.05,
+                      ylim = NULL,
                       showlegend = TRUE,
                       marker.size = 2.5,
                       marker.alpha = 0.7,
@@ -1278,6 +1289,8 @@ ggVolcano <- function(x,
   df$tooltip <- gsub("[\\'\\`-]", "", df$tooltip)
   df$name <- gsub("[\\'\\`-]", "", df$name)
 
+  if(is.null(ylim)) ylim <- max(y, na.rm=TRUE) * 1.1
+  
   plt <- ggplot2::ggplot(df, ggplot2::aes(x = fc, y = y)) +
     ggplot2::geom_point(ggplot2::aes(color = category),
       alpha = marker.alpha, size = marker.size
@@ -1362,8 +1375,9 @@ ggVolcano <- function(x,
     ggplot2::geom_hline(yintercept = -log10(psig), linetype = "dashed", color = "gray") +
     ggplot2::geom_vline(xintercept = c(-lfc, lfc), linetype = "dashed", color = "gray") +
     ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey") +
-    ggplot2::scale_y_continuous(limits = c(0, NA)) +
-    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0, 0))) +
+    ggplot2::scale_y_continuous(limits = c(0, ylim),
+      expand = ggplot2::expansion(mult = c(0, 0))) +
+    ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = c(0.1, 0))) +
     ggplot2::labs(x = xlab, y = ylab) +
     guides(colour = guide_legend(reverse = T)) +
     ggplot2::theme_minimal(base_size = 15) +
@@ -4764,6 +4778,7 @@ plotlyVolcano <- function(x,
                             up = "#f23451", notsig = "#8F8F8F",
                             down = "#3181de", notsel = "#cccccc88"
                           ),
+                          title = "Volcano plot",
                           marker.type = "scatter",
                           displayModeBar = TRUE,
                           source = "plot1") {
