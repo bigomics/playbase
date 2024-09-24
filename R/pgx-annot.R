@@ -119,6 +119,15 @@ getGeneAnnotation <- function(
   return(annot)
 }
 
+getOrthoSpecies <- function(organism) {
+  S <- playbase::SPECIES_TABLE
+  df <- data.frame(rownames(S), S[,c("species", "species_name", "ortho_species")])
+  k <- which.max(colSums( apply(df, 2, tolower) == tolower(organism) ))
+  sel <- match(tolower(organism), tolower(df[,k]))
+  if(length(sel)==0) return(NULL)
+  df[sel,"ortho_species"]
+}
+
 #' Get gene annotation data using AnnotationHub
 #'
 #' Retrieves gene annotation information from AnnotationHub for a set of input
@@ -212,33 +221,52 @@ getGeneAnnotation.ANNOTHUB <- function(
       keytype = probe_type
     )
   ))
-
   # some organisms do not provide symbol but rather gene name (e.g. yeast)
   if (!"SYMBOL" %in% colnames(annot)) {
     annot$SYMBOL <- annot$GENENAME
   }
-
   annot$SYMBOL[is.na(annot$SYMBOL)] <- ""
 
   ## match annotation table to probes
   cat("got", length(unique(annot$SYMBOL)), "unique SYMBOLs...\n")
   annot <- annot[match(probes, annot[, probe_type]), ]
   annot$PROBE <- names(probes) ## original probe names
+  
+  ## --------------------------------------------
+  ## second pass for missing symbols
+  ## --------------------------------------------
+  is.missing <- (is.na(annot$SYMBOL) | annot$SYMBOL == "")
+  if(any(is.missing)) {
+    missing.probes <- probes[which(is.missing)]  ## probes match annot!
+    missing.probe_type <- detect_probetype(organism, missing.probes, orgdb = NULL)
+    missing.probe_type
+    if(!is.null(missing.probe_type)) {
+      suppressMessages(suppressWarnings(
+        missing.annot <- AnnotationDbi::select(orgdb,
+          keys = missing.probes,
+          columns = cols,
+          keytype = missing.probe_type
+        )
+      ))
+      head(missing.annot)
+      missing.key <- missing.annot[,missing.probe_type]
+      ii <- match(missing.probes, missing.key)
+      missing.annot <- missing.annot[ii,]
+      missing.annot$PROBE <- names(probes[match(missing.probes,probes)])
+      missing.annot[,1] <- missing.probes
+      colnames(missing.annot) <- colnames(annot)
+      jj <- which(is.missing)
+      annot[jj,] <- missing.annot
+    }
+  }
 
-  # Dog id should be canis lupus familiaris and not cannis familiaris, as in ah
+  # Dog id should be 'canis lupus familiaris' and not 'canis familiaris', as in ah
   ortho_organism <- NULL
   if (organism == "Canis familiaris") {
     ortho_organism <- "Canis lupus familiaris"
   } else {
-    S <- playbase::SPECIES_TABLE
-    ortho_organism <- S[match(organism, S$species), "ortho_species"]
-    ortho_organism <- try(orthogene::map_species(
-      ortho_organism,
-      method = "gprofiler", verbose = FALSE
-    ))
+    ortho_organism <- getOrthoSpecies(organism) 
   }
-
-  orthogene::map_species(ortho_organism, method = "gprofiler", verbose = FALSE)
 
   ## get human ortholog using 'orthogene'
   cat("\ngetting human orthologs...\n")
@@ -830,16 +858,11 @@ getHumanOrtholog <- function(organism, symbols) {
   ## done. SPECIES_TABLE$species are annothub names,
   ## SPECIES_TABLE$ortho_species are matched orthogene/gprofiler
   ## names.
-  ortho_organism <- organism
-  S <- playbase::SPECIES_TABLE
-  if (organism %in% S$species &&
-    !organism %in% S$ortho_species) {
-    ortho_organism <- S[match(organism, S$species), "ortho_species"]
-  }
-
+  ortho_organism <- getOrthoSpecies(organism)
+  
   orthogenes <- NULL
   ortho.out <- try(orthogene::convert_orthologs(
-    gene_df = unique(symbols[!is.na(symbols)]),
+    gene_df = c("---",unique(symbols[!is.na(symbols)])),
     input_species = ortho_organism,
     output_species = "human",
     non121_strategy = "drop_both_species",
