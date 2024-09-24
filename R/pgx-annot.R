@@ -859,8 +859,6 @@ getHumanOrtholog <- function(organism, symbols) {
   ## SPECIES_TABLE$ortho_species are matched orthogene/gprofiler
   ## names.
   ortho_organism <- getOrthoSpecies(organism)
-  dbg("[getHumanOrtholog] organism = ", organism)
-  dbg("[getHumanOrtholog] ortho_organism = ", ortho_organism)  
   
   orthogenes <- NULL
   ortho.out <- try(orthogene::convert_orthologs(
