@@ -140,6 +140,34 @@ pgx.getContrastMatrix <- function(pgx) {
   ct.matrix
 }
 
+#' @export
+pgx.getTopGenes <- function(pgx, contrast = 1, dir = "up", n = 10, plot = FALSE) {
+  M <- pgx$gx.meta$meta[[contrast]]
+  if (dir == "up") {
+    sel <- head(order(-M$meta.fx), n)
+  }
+  if (dir == "down") {
+    sel <- head(order(M$meta.fx), n)
+  }
+  if (dir == "both") {
+    sel <- c(head(order(-M$meta.fx), n), tail(order(-M$meta.fx), n))
+  }
+  sel <- unique(sel)
+  M <- M[sel, c("meta.fx", "meta.q")]
+  colnames(M) <- sub("meta.fx", "logFC", colnames(M))
+  M <- format(M, digits = 3)
+  aa <- pgx$genes[rownames(M), c("gene_name", "gene_title")]
+  aa <- cbind(aa, M)
+  aa$gene_title <- substring(aa$gene_title, 1, 50)
+  rownames(aa) <- NULL
+  if (plot) {
+    ## Plot your table with table Grob in the library(gridExtra)
+    tab <- gridExtra::tableGrob(aa, rows = NULL)
+    gridExtra::grid.arrange(tab)
+  }
+  aa
+}
+
 #' @describeIn pgx.getMetaMatrix get the top genesets from PGX
 #' @export
 pgx.getTopGeneSets <- function(pgx, n = 10, ng = 100, dir = 0, sym = FALSE, filt = NULL) {
@@ -245,4 +273,20 @@ pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
   gsets <- playbase::getGSETS_playbase(pattern = fam.pattern)
   jj <- which(sapply(gsets, function(x) sum(x %in% xgenes)) >= nmin)
   return(sort(names(gsets)[jj])) ## sort alphabetically
+}
+
+
+#' @export
+pgx.getTopDrugs <- function(pgx, ct, n = 10, dir=1, na.rm=TRUE, db=1) {
+  x <- pgx$drugs[[db]]$X[,ct]
+  q <- pgx$drugs[[db]]$Q[,ct]
+  annot <- pgx$drugs[[db]]$annot[,]
+  annot <- annot[match(names(x),rownames(annot)),]  
+  df <- data.frame( enrichment = x, q.value = q, annot )
+  if(na.rm) df <- df[which(!is.na(df$moa)), ]
+  df <- df[order(-df$enrichment),]
+  if(dir<0) df <- df[order(df$enrichment),]
+  df$drug <- NULL
+  colnames(df) <- sub("moa","mechanism_of_action",colnames(df))
+  head( df, n )
 }
