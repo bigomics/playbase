@@ -21,7 +21,8 @@ plotlyVolcano(
   label.cex = 1,
   max.absy = NULL,
   color_up_down = TRUE,
-  colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#1f77b4", notsel = "#cccccc88"),
+  colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#3181de", notsel = "#cccccc88"),
+  title = "Volcano plot",
   marker.type = "scatter",
   displayModeBar = TRUE,
   source = "plot1"

@@ -8,7 +8,7 @@ detect_probetype(
   organism,
   probes,
   orgdb = NULL,
-  nprobe = 100,
+  nprobe = 1000,
   use.ah = NULL,
   datatype = NULL,
   probe_type = NULL

@@ -4,17 +4,23 @@
 \alias{getGeneAnnotation.ANNOTHUB}
 \title{Get gene annotation data using AnnotationHub}
 \usage{
-getGeneAnnotation.ANNOTHUB(organism, probes, use.ah = NULL, verbose = TRUE)
+getGeneAnnotation.ANNOTHUB(
+  organism,
+  probes,
+  use.ah = NULL,
+  probe_type = NULL,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{organism}{Organism name, e.g. "hsapiens_gene_ensembl".}
 
 \item{probes}{Character vector of gene/transcript identifiers to retrieve annotation for.}
 
-\item{verbose}{Logical indicating whether to print status messages.}
-
 \item{probe_type}{Character specifying the type of input identifiers. If NULL,
 it will be automatically detected. Options are "ensembl_gene_id", "ensembl_transcript_id", etc.}
+
+\item{verbose}{Logical indicating whether to print status messages.}
 }
 \value{
 Data frame with gene annotation data for the input identifiers. Columns are:
