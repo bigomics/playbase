@@ -21,8 +21,8 @@ test_that("Detect _probetype can detect ensembl IDs for human", {
 })
 
 
-#' Test for ngs.getGeneAnnotation
-test_that("ngs.getGeneAnnotation returns annotation for genes", {
+#' Test for getGeneAnnotation
+test_that("getGeneAnnotation returns annotation for genes", {
   # Input data
   probes <- c(
     "ENSG00000230915.1", "ENSG00000275728.1", "ENSG00000277599.1",
@@ -35,7 +35,7 @@ test_that("ngs.getGeneAnnotation returns annotation for genes", {
   )
 
   # Run function <- for reuse
-  result <- playbase::ngs.getGeneAnnotation(
+  result <- playbase::getGeneAnnotation(
     probes = probes,
     organism = "Human"
   )
@@ -46,7 +46,7 @@ test_that("ngs.getGeneAnnotation returns annotation for genes", {
   expect_equal(nrow(result), length(probes))
 
   # Check presence of expected columns
-  expected_cols <- c("gene_name", "gene_title", "gene_biotype", "chr", "pos", "tx_len", "map")
+  expected_cols <- c("feature", "symbol", "human_ortholog", "gene_name", "gene_title")
   expect_true(all(expected_cols %in% colnames(result)))
 
   # Check gene names match
@@ -67,9 +67,9 @@ lapply(csv_files, function(file) {
   probes <- data$feature
 
   # check that results from annotation match csv
-  test_that(paste("ngs.getGeneAnnotation returns correct annotation for", species), {
+  test_that(paste("getGeneAnnotation returns correct annotation for", species), {
     # Run function
-    result <- playbase::ngs.getGeneAnnotation(
+    result <- playbase::getGeneAnnotation(
       probes = probes,
       organism = species
     )
@@ -150,7 +150,7 @@ test_that("probe2symbol returns expected output", {
     "ENSG00000221044.2", "ENSG00000267162.1"
   )
 
-  result <- playbase::ngs.getGeneAnnotation(
+  result <- playbase::getGeneAnnotation(
     probes = probes,
     organism = "Human"
   )
@@ -189,9 +189,9 @@ test_that("detects UNIPROT", {
   expect_true(playbase::detect_probetype(organism = "Human", probes = uniprot_genes) %in% c("UNIPROT", "ACCNUM"))
 })
 
-res_uniprot <- playbase::ngs.getGeneAnnotation(probes = uniprot_genes, organism = "Human", probe_type = "UNIPROT")
+res_uniprot <- playbase::getGeneAnnotation(probes = uniprot_genes, organism = "Human", probe_type = "UNIPROT")
 
-res_accnum <- playbase::ngs.getGeneAnnotation(probes = uniprot_genes, organism = "Human", probe_type = "ACCNUM")
+res_accnum <- playbase::getGeneAnnotation(probes = uniprot_genes, organism = "Human", probe_type = "ACCNUM")
 
 test_that("UNIPROT and ACCNUM annotations are the same", {
   expect_equal(res_uniprot, res_accnum)
