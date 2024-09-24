@@ -20,7 +20,7 @@ plotlyMA(
   label = NULL,
   label.cex = 1,
   color_up_down = TRUE,
-  colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#1f77b4"),
+  colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#3181de"),
   marker.type = "scatter",
   source = "plot1",
   displayModeBar = TRUE

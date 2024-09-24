@@ -160,6 +160,7 @@ getGeneAnnotation.ANNOTHUB <- function(
     organism,
     probes,
     use.ah = NULL,
+    probe_type = NULL,
     verbose = TRUE) {
   if (is.null(organism)) {
     warning("[getGeneAnnotation.ANNOTHUB] Please specify organism")
@@ -188,10 +189,12 @@ getGeneAnnotation.ANNOTHUB <- function(
   ## clean up probe names from suffixes
   probes <- clean_probe_names(probes)
 
-  probe_type <- detect_probetype(organism, probes, orgdb = NULL)
   if (is.null(probe_type)) {
-    message("ERROR: could not determine probe_type ")
-    return(NULL)
+    probe_type <- detect_probetype(organism, probes, orgdb = NULL)
+    if (is.null(probe_type)) {
+      message("ERROR: could not determine probe_type. Please specify. ")
+      return(NULL)
+    }
   }
 
   ## --------------------------------------------
@@ -615,7 +618,7 @@ getOrgDb <- function(organism, use.ah = NULL) {
 #' @title Detect probe type from probe set
 #' @export
 detect_probetype <- function(organism, probes, orgdb = NULL,
-                             nprobe = 100, use.ah = NULL, datatype = NULL,
+                             nprobe = 1000, use.ah = NULL, datatype = NULL,
                              probe_type = NULL) {
   # if probe type is not null, return probetype
   if (tolower(organism) == "human") organism <- "Homo sapiens"
@@ -642,10 +645,10 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
 
   ## get probe types for organism
   keytypes <- c(
-    "SYMBOL", "ENSEMBL", "UNIPROT", "ENTREZID",
+    "SYMBOL", "ENSEMBL", "ACCNUM", "UNIPROT", 
     "GENENAME", "MGI",
     "ENSEMBLTRANS", "ENSEMBLPROT",
-    "ACCNUM", "REFSEQ"
+    "REFSEQ", "ENTREZID"
   )
   keytypes <- intersect(keytypes, keytypes(orgdb))
   key_matches <- rep(0L, length(keytypes))
@@ -689,11 +692,12 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     n1 <- n2 <- 0
     if ("SYMBOL" %in% colnames(probe_matches)) n1 <- sum(!is.na(probe_matches[, "SYMBOL"]))
     if ("GENENAME" %in% colnames(probe_matches)) n2 <- sum(!is.na(probe_matches[, "GENENAME"]))
-    matchratio <- max(n1, n2) / length(probes)
+    matchratio <- max(n1, n2) / (1e-4 + nrow(probe_matches))
     key_matches[key] <- matchratio
 
-    ## stop search prematurely if matchratio > 95%
-    if (matchratio > 0.95) break()
+    ## stop search prematurely if matchratio > 99%
+    if (matchratio > 0.99) break()
+
   }
 
   ## Return top match

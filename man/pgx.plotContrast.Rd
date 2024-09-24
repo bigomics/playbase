@@ -34,11 +34,13 @@ pgx.Volcano(
   ntop = 20,
   colors = c(up = "#f23451", notsig = "#707070AA", notsel = "#cccccc88", down =
     "#3181de"),
+  filt = NULL,
   title = NULL,
   xlim = NULL,
   ylim = NULL,
   xlab = "effect size (logFC)",
   ylab = "significance (-log10q)",
+  repel = FALSE,
   set.par = TRUE,
   plotlib = "base",
   data = FALSE
@@ -55,6 +57,7 @@ ggVolcano(
   ylab = "significance (-log10q)",
   lfc = 1,
   psig = 0.05,
+  ylim = NULL,
   showlegend = TRUE,
   marker.size = 2.5,
   marker.alpha = 0.7,
@@ -62,8 +65,7 @@ ggVolcano(
   axis.text.size = 14,
   label = NULL,
   title = "Volcano plot",
-  colors = c(up = "#f23451", notsig = "#707070AA", notsel = "#cccccc88", down =
-    "#3181de"),
+  colors = c(up = "#f23451", notsig = "#8F8F8F", notsel = "#cccccc88", down = "#3181de"),
   girafe = FALSE
 )
 
