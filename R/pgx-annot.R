@@ -1223,13 +1223,20 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
 
   ## get info from different environments
   info <- lapply(cols, function(k) {
-    AnnotationDbi::select(
-      orgdb,
-      keys = gene,
-      keytype = keytype,
-      columns = k
-    )[[k]]
+    tryCatch({
+      AnnotationDbi::select(
+        orgdb,
+        keys = gene,
+        keytype = keytype,
+        columns = k
+      )[[k]]
+    }, error = function(w) {
+      NULL
+    })
   })
+  if(is.null(unlist(info))){
+    return(NULL)
+  }
   names(info) <- cols
 
   info[["ORGANISM"]] <- organism
