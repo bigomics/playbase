@@ -1500,7 +1500,7 @@ collapse_by_humansymbol <- function(obj, annot) {
   annot <- cbind(annot, rownames = rownames(annot))
   target <- c("human_ortholog", "symbol", "gene_name", "rownames")
   target <- intersect(target, colnames(annot))
-  complete_targets <- lapply(target, function(x){
+  complete_targets <- lapply(target, function(x) {
     sum(is.na(annot[, x]) | annot[, x] %in% c("")) < 1
   }) |> unlist()
   target <- target[complete_targets]

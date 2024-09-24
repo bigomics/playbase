@@ -992,7 +992,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
 
   f <- res$fc[, contrast]
   q <- res$qv[, contrast]
-  if(!is.null(filt)) {
+  if (!is.null(filt)) {
     sel <- grep(filt, names(f))
     f <- f[sel]
     q <- q[sel]
@@ -1289,8 +1289,8 @@ ggVolcano <- function(x,
   df$tooltip <- gsub("[\\'\\`-]", "", df$tooltip)
   df$name <- gsub("[\\'\\`-]", "", df$name)
 
-  if(is.null(ylim)) ylim <- max(y, na.rm=TRUE) * 1.1
-  
+  if (is.null(ylim)) ylim <- max(y, na.rm = TRUE) * 1.1
+
   plt <- ggplot2::ggplot(df, ggplot2::aes(x = fc, y = y)) +
     ggplot2::geom_point(ggplot2::aes(color = category),
       alpha = marker.alpha, size = marker.size
@@ -1375,8 +1375,10 @@ ggVolcano <- function(x,
     ggplot2::geom_hline(yintercept = -log10(psig), linetype = "dashed", color = "gray") +
     ggplot2::geom_vline(xintercept = c(-lfc, lfc), linetype = "dashed", color = "gray") +
     ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey") +
-    ggplot2::scale_y_continuous(limits = c(0, ylim),
-      expand = ggplot2::expansion(mult = c(0, 0))) +
+    ggplot2::scale_y_continuous(
+      limits = c(0, ylim),
+      expand = ggplot2::expansion(mult = c(0, 0))
+    ) +
     ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = c(0.1, 0))) +
     ggplot2::labs(x = xlab, y = ylab) +
     guides(colour = guide_legend(reverse = T)) +
@@ -6211,5 +6213,3 @@ pgx.plotActivation <- function(pgx,
   }
   return(fig)
 }
-
-

@@ -1188,12 +1188,12 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
   cols <- c("SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH", "GO")
   cols <- intersect(cols, keytypes(orgdb))
 
-  if(!"SYMBOL" %in% cols) {
-      keytype <- detect_probetype(organism, gene)
-    } else {
-      keytype <- "SYMBOL"
+  if (!"SYMBOL" %in% cols) {
+    keytype <- detect_probetype(organism, gene)
+  } else {
+    keytype <- "SYMBOL"
   }
-  
+
   ## get info from different environments
   info <- lapply(cols, function(k) {
     AnnotationDbi::select(
@@ -1266,7 +1266,7 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
       }
     }
   }
-  
+
   ## create link to GO
   if (!is.na(info[["GO"]][1])) {
     ## sometimes GO.db is broken...
@@ -1282,7 +1282,7 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
         go_id <- info[["GO"]][i]
 
         term_id <- AnnotationDbi::mget(go_id, envir = GO.db::GOTERM, ifnotfound = NA)[[1]]
-        if( class(term_id) == "GOTerms") {
+        if (class(term_id) == "GOTerms") {
           go_term <- AnnotationDbi::Term(term_id)
           if (as.link) {
             info[["GO"]][i] <- gsub("GOTERM", go_term, gsub("GOID", go_id, amigo.link))

@@ -277,16 +277,16 @@ pgx.getFamilies <- function(pgx, nmin = 10, extended = FALSE) {
 
 
 #' @export
-pgx.getTopDrugs <- function(pgx, ct, n = 10, dir=1, na.rm=TRUE, db=1) {
-  x <- pgx$drugs[[db]]$X[,ct]
-  q <- pgx$drugs[[db]]$Q[,ct]
-  annot <- pgx$drugs[[db]]$annot[,]
-  annot <- annot[match(names(x),rownames(annot)),]  
-  df <- data.frame( enrichment = x, q.value = q, annot )
-  if(na.rm) df <- df[which(!is.na(df$moa)), ]
-  df <- df[order(-df$enrichment),]
-  if(dir<0) df <- df[order(df$enrichment),]
+pgx.getTopDrugs <- function(pgx, ct, n = 10, dir = 1, na.rm = TRUE, db = 1) {
+  x <- pgx$drugs[[db]]$X[, ct]
+  q <- pgx$drugs[[db]]$Q[, ct]
+  annot <- pgx$drugs[[db]]$annot[, ]
+  annot <- annot[match(names(x), rownames(annot)), ]
+  df <- data.frame(enrichment = x, q.value = q, annot)
+  if (na.rm) df <- df[which(!is.na(df$moa)), ]
+  df <- df[order(-df$enrichment), ]
+  if (dir < 0) df <- df[order(df$enrichment), ]
   df$drug <- NULL
-  colnames(df) <- sub("moa","mechanism_of_action",colnames(df))
-  head( df, n )
+  colnames(df) <- sub("moa", "mechanism_of_action", colnames(df))
+  head(df, n)
 }
