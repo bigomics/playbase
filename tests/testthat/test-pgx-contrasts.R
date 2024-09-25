@@ -65,7 +65,7 @@ test_that("contrastAsLabels runs on input contrast", {
   result <- playbase::contrastAsLabels(contrast)
 
   # Check class
-  #expect_s3_class(result, "data.frame")
+  # expect_s3_class(result, "data.frame")
 
   # Check dimensions
   expect_equal(dim(result), dim(contrast))

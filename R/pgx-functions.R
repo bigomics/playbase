@@ -2300,7 +2300,7 @@ make_unique <- function(s, sep = "") {
     newx <- paste0(s[jj], c("", paste0(".", 1:(length(jj) - 1))))
     s[jj] <- newx
   }
-  if(sum(duplicated(s))) s <- make_unique(s)
+  if (sum(duplicated(s))) s <- make_unique(s)
   s
 }
 
