@@ -1203,6 +1203,14 @@ combine_feature_names <- function(annot, target) {
 }
 
 #' @export
+pgx.getGeneInfo <- function(pgx, gene) {
+  feature  <- pgx$genes[match(gene,pgx$genes$symbol),"feature"]
+  ortholog <- pgx$genes[match(gene,pgx$genes$symbol),"human_ortholog"]
+  datatype <- ifelse( is.null(pgx$datatype), "rna-seq", pgx$datatype)
+  getOrgGeneInfo( pgx$organism, gene, feature, ortholog, datatype, as.link = TRUE) 
+}
+
+#' @export
 getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link = TRUE) {
   if (is.null(gene) || length(gene) == 0) {
     return(NULL)
@@ -1221,6 +1229,16 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
     keytype <- "SYMBOL"
   }
 
+  ## return if gene is not known
+  if(!gene %in% keys(orgdb, keytype)) {
+    info <- list()
+    info[["feature"]] <- feature
+    info[["symbol"]] <- gene
+    info[["organism"]] <- organism
+    info[["summary"]] <- "(no info available)"
+    return(info)
+  }
+  
   ## get info from different environments
   info <- lapply(cols, function(k) {
     tryCatch({
@@ -1234,9 +1252,10 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
       NULL
     })
   })
-  if(is.null(unlist(info))){
-    return(NULL)
-  }
+  
+#  if(is.null(unlist(info))){
+#    return(NULL)
+#  }
   names(info) <- cols
 
   info[["ORGANISM"]] <- organism
@@ -1245,15 +1264,22 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
   info <- lapply(info, unique)
   symbol <- info[[keytype]]
   uniprot <- info[["UNIPROT"]]
-  this.uniprot <- uniprot[which(sapply(uniprot, function(p) grepl(p, feature)))]
-  if (length(this.uniprot) == 0) this.uniprot <- uniprot[1]
-
-  if (as.link) {
+  if (length(uniprot) == 0) {
+    this.uniprot <- NULL
+  } else {
+    this.uniprot <- uniprot[which(sapply(uniprot, function(p) grepl(p, feature)))]
+    if (length(this.uniprot) == 0) this.uniprot <- uniprot[1]
+  }
+  
+  if (as.link && length(symbol)) {
     gene.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GENE</a>"
-    prot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UNIPROT</a>"
     gene.link <- sapply(symbol, function(s) gsub("GENE", s, gene.link))
-    prot.link <- sapply(uniprot, function(s) gsub("UNIPROT", s, prot.link))
     info[["SYMBOL"]] <- paste(gene.link, collapse = ", ")
+  }
+
+  if (as.link && length(uniprot)) {
+    prot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UNIPROT</a>"
+    prot.link <- sapply(uniprot, function(s) gsub("UNIPROT", s, prot.link))
     info[["UNIPROT"]] <- paste(prot.link, collapse = ", ")
   }
 
@@ -1261,12 +1287,14 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
   if (as.link) {
     genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GeneCards</a>"
     uniprot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UniProtKB</a>"
-    genecards.link <- sub("GENE", symbol[1], genecards.link)
-    uniprot.link <- sub("UNIPROT", this.uniprot, uniprot.link)
+    genecards.link <- NULL
+    uniprot.link <- NULL
+    if(length(symbol)) genecards.link <- sub("GENE", symbol[1], genecards.link)
+    if(length(this.uniprot)) uniprot.link <- sub("UNIPROT", this.uniprot, uniprot.link)
     info[["databases"]] <- paste(c(genecards.link, uniprot.link), collapse = ", ")
   }
 
-  if (grepl("proteomics", datatype, ignore.case = TRUE)) {
+  if (length(this.uniprot) && grepl("proteomics", datatype, ignore.case = TRUE)) {
     ## create link to PhosphoSitePlus
     phosphositeplus.link <- "<a href='https://www.phosphosite.org/simpleSearchSubmitAction.action?searchStr=GENE' target='_blank'>PhosphoSitePlus</a>"
     phosphositeplus.link <- "<a href='https://www.phosphosite.org/uniprotAccAction?id=UNIPROT' target='_blank'>PhosphoSitePlus</a>"
@@ -1281,28 +1309,30 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
   }
 
   ## create link to OMIM
-  if (as.link) {
+  if (as.link && length(info[["OMIM"]])) {
     omim.link <- "<a href='https://www.omim.org/entry/OMIM' target='_blank'>OMIM</a>"
     info[["OMIM"]] <- sapply(info[["OMIM"]], function(x) gsub("OMIM", x, omim.link))
   }
 
   ## create link to KEGG
-  kegg.link <- "<a href='https://www.genome.jp/kegg-bin/show_pathway?map=hsaKEGGID&show_description=show' target='_blank'>KEGGNAME (KEGGID)</a>"
-  for (i in 1:length(info[["PATH"]])) {
-    kegg.id <- info[["PATH"]][[i]]
-    kegg.id <- setdiff(kegg.id, NA)
-    if (length(kegg.id) > 0) {
-      kegg.name <- AnnotationDbi::mget(kegg.id, envir = KEGG.db::KEGGPATHID2NAME, ifnotfound = NA)[[1]]
-      if (!is.na(kegg.name) && as.link) {
-        info[["PATH"]][[i]] <- gsub("KEGGNAME", kegg.name, gsub("KEGGID", kegg.id, kegg.link))
+  if (as.link && length(info[["PATH"]])) {
+    kegg.link <- "<a href='https://www.genome.jp/kegg-bin/show_pathway?map=hsaKEGGID&show_description=show' target='_blank'>KEGGNAME (KEGGID)</a>"
+    for (i in 1:length(info[["PATH"]])) {
+      kegg.id <- info[["PATH"]][[i]]
+      kegg.id <- setdiff(kegg.id, NA)
+      if (length(kegg.id) > 0) {
+        kegg.name <- AnnotationDbi::mget(kegg.id, envir = KEGG.db::KEGGPATHID2NAME, ifnotfound = NA)[[1]]
+        if (!is.na(kegg.name) && as.link) {
+          info[["PATH"]][[i]] <- gsub("KEGGNAME", kegg.name, gsub("KEGGID", kegg.id, kegg.link))
       } else {
         info[["PATH"]][[i]] <- kegg.name
+      }
       }
     }
   }
 
   ## create link to GO
-  if (!is.na(info[["GO"]][1])) {
+  if (length(info[["GO"]]) && !is.na(info[["GO"]][1])) {
     ## sometimes GO.db is broken...
     suppressWarnings(try.out <- try(AnnotationDbi::Term(AnnotationDbi::mget("GO:0000001",
       envir = GO.db::GOTERM,
@@ -1449,7 +1479,6 @@ detect_species_probetype <- function(
   )
   return(out)
 }
-
 
 #' Annotate phosphosite with residue symbol. Feature names must be of
 #' form 'uniprot_position'.
