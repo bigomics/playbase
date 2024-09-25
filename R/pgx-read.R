@@ -63,7 +63,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE, row.names = 1) {
 
   x <- NULL
   ## drop rows without rownames
-  sel <- which(!as.character(x0[[1]]) %in% c("", " ", "NA", "na", NA))
+  sel <- which(!as.character(x0[[1]]) %in% c("", " ", "NA", "na", "-", NA))
   if (length(sel)) {
     ##
     x <- x0[sel, , drop = FALSE]
@@ -249,7 +249,7 @@ read_files <- function(dir = ".", pattern = NULL) {
 #' counts <- read_counts(playbase::example_file("counts.csv"))
 #' }
 #' @export
-read_counts <- function(file, first = FALSE, unique = TRUE, paste_char = "_") {
+read_counts <- function(file, first = FALSE, unique = FALSE, paste_char = "_") {
   if (is.character(file)) {
     df <- read.as_matrix(file)
   } else if (is.matrix(file) || is.data.frame(file)) {
