@@ -122,7 +122,9 @@ getGeneAnnotation <- function(
 getOrthoSpecies <- function(organism) {
   S <- playbase::SPECIES_TABLE
   df <- data.frame(rownames(S), S[,c("species", "species_name", "ortho_species")])
-  k <- which.max(colSums( apply(df, 2, tolower) == tolower(organism) ))
+  match <- colSums( apply(df, 2, tolower) == tolower(organism), na.rm=TRUE )
+  if(all(match == 0)) return(NULL)
+  k <- which.max(match)
   sel <- match(tolower(organism), tolower(df[,k]))
   if(length(sel)==0) return(NULL)
   df[sel,"ortho_species"]
@@ -195,9 +197,6 @@ getGeneAnnotation.ANNOTHUB <- function(
   probes0 <- probes
   names(probes) <- probes0
 
-  ## clean up probe names from suffixes
-  probes <- clean_probe_names(probes)
-
   if (is.null(probe_type)) {
     probe_type <- detect_probetype(organism, probes, orgdb = NULL)
     if (is.null(probe_type)) {
@@ -206,6 +205,10 @@ getGeneAnnotation.ANNOTHUB <- function(
     }
   }
 
+  ## clean up probe names from suffixes
+  ##probes <- clean_probe_names(probes)
+  probes <- match_probe_names(probes, orgdb, probe_type)
+  
   ## --------------------------------------------
   ## retrieve table
   ## --------------------------------------------
@@ -236,9 +239,10 @@ getGeneAnnotation.ANNOTHUB <- function(
   ## second pass for missing symbols
   ## --------------------------------------------
   is.missing <- (is.na(annot$SYMBOL) | annot$SYMBOL == "")
-  if(any(is.missing)) {
-    missing.probes <- probes[which(is.missing)]  ## probes match annot!
-    missing.probe_type <- detect_probetype(organism, missing.probes, orgdb = NULL)
+  missing.probes <- probes[which(is.missing)]  ## probes match annot!
+  missing.probes <- setdiff(missing.probes, NA)
+  if(length(missing.probes)) {
+    missing.probe_type <- detect_probetype(organism, missing.probes, orgdb = orgdb)
     missing.probe_type
     if(!is.null(missing.probe_type)) {
       suppressMessages(suppressWarnings(
@@ -250,26 +254,16 @@ getGeneAnnotation.ANNOTHUB <- function(
       ))
       head(missing.annot)
       missing.key <- missing.annot[,missing.probe_type]
-      ii <- match(missing.probes, missing.key)
-      missing.annot <- missing.annot[ii,]
-      missing.annot$PROBE <- names(probes[match(missing.probes,probes)])
-      missing.annot[,1] <- missing.probes
+      missing.annot$PROBE <- names(probes[match(missing.key,probes)])      
+      jj <- match( missing.key, probes )
       colnames(missing.annot) <- colnames(annot)
-      jj <- which(is.missing)
       annot[jj,] <- missing.annot
     }
   }
 
-  # Dog id should be 'canis lupus familiaris' and not 'canis familiaris', as in ah
-  ortho_organism <- NULL
-  if (organism == "Canis familiaris") {
-    ortho_organism <- "Canis lupus familiaris"
-  } else {
-    ortho_organism <- getOrthoSpecies(organism) 
-  }
-
   ## get human ortholog using 'orthogene'
   cat("\ngetting human orthologs...\n")
+  ortho_organism <- getOrthoSpecies(organism) 
   annot$ORTHOGENE <- getHumanOrtholog(ortho_organism, annot$SYMBOL)$human
 
   ## Return as standardized data.frame and in the same order as input
@@ -306,7 +300,8 @@ getGeneAnnotation.ANNOTHUB <- function(
     return(NULL)
   }
 
-  ## in case there were duplicated probe names we must make them unique
+  ## in case there were duplicated probe names we _must_ make them
+  ## unique??? IK: really?? or should we remove duplicates?
   rownames(genes) <- make_unique(probes0) ## in pgx-functions.R
 
   return(genes)
@@ -338,6 +333,31 @@ clean_probe_names <- function(probes) {
   names(probes) <- probes0
   probes
 }
+
+#' Match dirty probe names to clean key names
+#'
+#' @export
+match_probe_names <- function(probes, org, probe_type = NULL) {
+  if(is.character(org)) org <- getOrgDb(org)
+  if(is.null(probe_type)) {
+    probe_type <- detect_probetype(organism="custom", probes, orgdb=org)
+  }
+  all.keys <- keys(org, probe_type)
+  tsub <- function(s) gsub("[-:;.]|\\[|\\]",".",s)
+  ii <- match(toupper(tsub(probes)), toupper(tsub(all.keys)))
+  table(is.na(ii))
+  new.probes <- all.keys[ii]
+  if(sum(is.na(new.probes))) {
+    jj <- which(is.na(new.probes))
+    jj.probes <- clean_probe_names(probes[jj])
+    ii <- match(toupper(tsub(jj.probes)), toupper(tsub(all.keys)))    
+    new.probes[jj] <- all.keys[ii]
+  }
+  names(new.probes) <- probes
+  new.probes
+}
+
+
 
 #' Cleanup annotation
 #'
@@ -673,8 +693,8 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
 
   ## get probe types for organism
   keytypes <- c(
-    "SYMBOL", "ENSEMBL", "ACCNUM", "UNIPROT", 
-    "GENENAME", "MGI",
+    "SYMBOL", "ENSEMBL", "ACCNUM", "UNIPROT", "GENENAME",
+    "MGI", "TAIR",  ## organism specific
     "ENSEMBLTRANS", "ENSEMBLPROT",
     "REFSEQ", "ENTREZID"
   )
@@ -905,6 +925,9 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
   }
 
   ## get probe types for organism
+  if (!is.null(keytypes) && keytypes[1]=="*") {
+    keytypes <- keytypes(orgdb)
+  }
   if (is.null(keytypes)) {
     keytypes <- c(
       "SYMBOL", "ENSEMBL", "UNIPROT", "ENTREZID",
@@ -1042,6 +1065,7 @@ getOrganismGO <- function(organism, use.ah = NULL, orgdb = NULL) {
 
   go.gmt <- list()
   AnnotationDbi::keytypes(orgdb)
+  ont_classes <- c("BP", "CC", "MF")
   if (!"GOALL" %in% AnnotationDbi::keytypes(orgdb)) {
     cat("WARNING:: missing GO annotation in database!\n")
   } else {
@@ -1090,19 +1114,20 @@ getGeneAnnotation.ORTHOGENE <- function(
     organism,
     probes,
     verbose = TRUE) {
+
   ## correct organism names different from OrgDb
   if (organism == "Canis familiaris") {
     organism <- "Canis lupus familiaris"
   }
 
   ## map given name to official species name
-  species <- try(orthogene::map_species(organism, method = "gprofiler", verbose = FALSE))
-  species
-  if ("try-error" %in% class(species)) {
-    message("[getGeneAnnotation.ORTHOGENE] *WARNING* could not connect to server")
-    return(NULL)
-  }
-
+  ## species <- try(orthogene::map_species(organism, method = "gprofiler", verbose = FALSE))
+  ## species
+  ## if ("try-error" %in% class(species)) {
+  ##   message("[getGeneAnnotation.ORTHOGENE] *WARNING* could not connect to server")
+  ##   return(NULL)
+  ## }
+  species <- getOrthoSpecies(organism)
   if (is.null(species)) {
     message("ERROR: unknown organism ", organism)
     return(NULL)
