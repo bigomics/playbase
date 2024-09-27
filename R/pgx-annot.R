@@ -1231,10 +1231,10 @@ combine_feature_names <- function(annot, target) {
 
 #' @export
 pgx.getGeneInfo <- function(pgx, gene) {
-  feature  <- pgx$genes[match(gene,pgx$genes$symbol),"feature"]
-  ortholog <- pgx$genes[match(gene,pgx$genes$symbol),"human_ortholog"]
-  datatype <- ifelse( is.null(pgx$datatype), "rna-seq", pgx$datatype)
-  getOrgGeneInfo( pgx$organism, gene, feature, ortholog, datatype, as.link = TRUE) 
+  feature <- pgx$genes[match(gene, pgx$genes$symbol), "feature"]
+  ortholog <- pgx$genes[match(gene, pgx$genes$symbol), "human_ortholog"]
+  datatype <- ifelse(is.null(pgx$datatype), "rna-seq", pgx$datatype)
+  getOrgGeneInfo(pgx$organism, gene, feature, ortholog, datatype, as.link = TRUE)
 }
 
 #' @export
@@ -1257,7 +1257,7 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
   }
 
   ## return if gene is not known
-  if(!gene %in% keys(orgdb, keytype)) {
+  if (!gene %in% keys(orgdb, keytype)) {
     info <- list()
     info[["feature"]] <- feature
     info[["symbol"]] <- gene
@@ -1265,24 +1265,27 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
     info[["summary"]] <- "(no info available)"
     return(info)
   }
-  
+
   ## get info from different environments
   info <- lapply(cols, function(k) {
-    tryCatch({
-      AnnotationDbi::select(
-        orgdb,
-        keys = gene,
-        keytype = keytype,
-        columns = k
-      )[[k]]
-    }, error = function(w) {
-      NULL
-    })
+    tryCatch(
+      {
+        AnnotationDbi::select(
+          orgdb,
+          keys = gene,
+          keytype = keytype,
+          columns = k
+        )[[k]]
+      },
+      error = function(w) {
+        NULL
+      }
+    )
   })
-  
-#  if(is.null(unlist(info))){
-#    return(NULL)
-#  }
+
+  #  if(is.null(unlist(info))){
+  #    return(NULL)
+  #  }
   names(info) <- cols
 
   info[["ORGANISM"]] <- organism
@@ -1297,7 +1300,7 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
     this.uniprot <- uniprot[which(sapply(uniprot, function(p) grepl(p, feature)))]
     if (length(this.uniprot) == 0) this.uniprot <- uniprot[1]
   }
-  
+
   if (as.link && length(symbol)) {
     gene.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GENE</a>"
     gene.link <- sapply(symbol, function(s) gsub("GENE", s, gene.link))
@@ -1316,8 +1319,8 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
     uniprot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UniProtKB</a>"
     genecards.link <- NULL
     uniprot.link <- NULL
-    if(length(symbol)) genecards.link <- sub("GENE", symbol[1], genecards.link)
-    if(length(this.uniprot)) uniprot.link <- sub("UNIPROT", this.uniprot, uniprot.link)
+    if (length(symbol)) genecards.link <- sub("GENE", symbol[1], genecards.link)
+    if (length(this.uniprot)) uniprot.link <- sub("UNIPROT", this.uniprot, uniprot.link)
     info[["databases"]] <- paste(c(genecards.link, uniprot.link), collapse = ", ")
   }
 
@@ -1351,9 +1354,9 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
         kegg.name <- AnnotationDbi::mget(kegg.id, envir = KEGG.db::KEGGPATHID2NAME, ifnotfound = NA)[[1]]
         if (!is.na(kegg.name) && as.link) {
           info[["PATH"]][[i]] <- gsub("KEGGNAME", kegg.name, gsub("KEGGID", kegg.id, kegg.link))
-      } else {
-        info[["PATH"]][[i]] <- kegg.name
-      }
+        } else {
+          info[["PATH"]][[i]] <- kegg.name
+        }
       }
     }
   }

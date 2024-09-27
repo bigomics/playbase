@@ -28,17 +28,17 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
     ## names(fx) <- gsub(".*:| \\(.*", "", names(fx))
   }
 
-  if(dir == "both") {
-    sel1 <- head(order(fx), ntop/2)
-    sel2 <- head(order(-fx), ntop/2)
+  if (dir == "both") {
+    sel1 <- head(order(fx), ntop / 2)
+    sel2 <- head(order(-fx), ntop / 2)
     sel <- c(sel1, sel2)
     fx <- fx[sel]
   }
-  if(dir == "up") {
+  if (dir == "up") {
     sel <- head(order(-fx), ntop)
     fx <- fx[sel]
   }
-  if(dir == "down") {
+  if (dir == "down") {
     sel <- head(order(fx), ntop)
     fx <- fx[sel]
   }
@@ -46,15 +46,15 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   fx[is.na(fx)] <- 0
 
   ## first pass
-  nodes = names(fx)
+  nodes <- names(fx)
   get_edges <- function(nodes, use.corweight) {
     if (level == "gene") {
       data(STRING, package = "PCSF")
       sel <- (STRING$from %in% nodes & STRING$to %in% nodes)
       ee <- STRING[sel, ]
-      if(use.corweight) {
-        R <- cor(t(pgx$X[nodes,]))
-        if(rm.negedge) R[which(R < 0)] <- NA
+      if (use.corweight) {
+        R <- cor(t(pgx$X[nodes, ]))
+        if (rm.negedge) R[which(R < 0)] <- NA
         wt <- (1 - R[cbind(ee$from, ee$to)])
         ee$cost <- ee$cost * wt
       }
@@ -69,10 +69,10 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
         to = rownames(H)[jj[, 2]],
         cost = (1 - H[jj])
       )
-      if(use.corweight) {
+      if (use.corweight) {
         gg <- unique(c(ee$from, ee$to))
-        R <- cor(t(pgx$gsetX[gg,]))
-        if(rm.negedge) R[which(R < 0)] <- NA
+        R <- cor(t(pgx$gsetX[gg, ]))
+        if (rm.negedge) R[which(R < 0)] <- NA
         wt <- (1 - R[cbind(ee$from, ee$to)])
         ee$cost <- ee$cost * wt
       }
@@ -80,26 +80,28 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
     ee
   }
 
-  ee <- get_edges( names(fx), use.corweight = use.corweight)
-  ee <- ee[!is.na(ee$cost),]
-  
+  ee <- get_edges(names(fx), use.corweight = use.corweight)
+  ee <- ee[!is.na(ee$cost), ]
+
   suppressMessages(suppressWarnings(
     ppi <- PCSF::construct_interactome(ee)
   ))
   prize1 <- abs(fx[igraph::V(ppi)$name])
 
   suppressMessages(suppressWarnings(
-    pcsf <- try(PCSF::PCSF(ppi, terminals = prize1, w = 2,
-      b = beta, mu = 5e-04, verbose = 0))
+    pcsf <- try(PCSF::PCSF(ppi,
+      terminals = prize1, w = 2,
+      b = beta, mu = 5e-04, verbose = 0
+    ))
   ))
 
-  if(inherits(pcsf, "try-error")) {
+  if (inherits(pcsf, "try-error")) {
     message("[pgx.computePCSF] WARNING: No solution. Please adjust beta or mu.")
     return(NULL)
   }
 
   igraph::V(pcsf)$foldchange <- fx[igraph::V(pcsf)$name]
-  
+
   ## remove small clusters...
   cmp <- igraph::components(pcsf)
   if (ncomp < 1) {
@@ -131,9 +133,9 @@ plotPCSF <- function(pcsf,
   node_cex1 <- node_cex * pmax(wt, 1)
   node_cex1
   label_cex1 <- label_cex + 1e-8 * abs(fx)
-  
+
   ## set colors as UP/DOWN
-  igraph::V(pcsf)$type <- c("down", "up")[1 + 1 * (sign(fx) > 0)]  
+  igraph::V(pcsf)$type <- c("down", "up")[1 + 1 * (sign(fx) > 0)]
 
   ## set label size
   if (highlightby == "centrality") {
@@ -262,16 +264,17 @@ visplot.PCSF <- function(
 
   if (length(extra_node_colors) > 0) {
     for (i in 1:length(extra_node_colors)) {
-      en = names(extra_node_colors)[i]
-      visNet <- visNet %>% visNetwork::visGroups(groupname = en, 
+      en <- names(extra_node_colors)[i]
+      visNet <- visNet %>% visNetwork::visGroups(
+        groupname = en,
         color = list(
           background = extra_node_colors[[en]],
           border = "lightgrey"
         )
       )
-#      leg.groups[[i]] <- list(label = en, shape = "triangle", 
-#        size = 13, color = list(background = extra_node_colors[[en]], 
-#          border = "grey"), label.cex = 0.8)
+      #      leg.groups[[i]] <- list(label = en, shape = "triangle",
+      #        size = 13, color = list(background = extra_node_colors[[en]],
+      #          border = "grey"), label.cex = 0.8)
     }
   }
 
@@ -348,7 +351,7 @@ pgx.getPCSFcentrality <- function(pgx, contrast, pcsf = NULL, plot = TRUE, n = 1
   ## centrality
   ewt <- 1.0 / igraph::E(pcsf)$weight
   cc <- igraph::page_rank(pcsf, weights = ewt)$vector
-  cc <- cc / mean(cc, na.rm=TRUE) ## normalize
+  cc <- cc / mean(cc, na.rm = TRUE) ## normalize
   tail(sort(cc), 20)
   top.cc <- sort(cc, decreasing = TRUE)
   M <- pgx$gx.meta$meta[[contrast]]
