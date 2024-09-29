@@ -1127,12 +1127,12 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
     remove.failed <- TRUE
   }
 
-  mod <- model.matrix( ~ factor(y))
+  mod <- model.matrix(~ factor(y))
   nlevel <- length(unique(y[!is.na(y)]))
   if (ntop < Inf) {
     X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], ntop) ## faster
   }
-  
+
   if (is.null(methods)) {
     methods <- c(
       "uncorrected", "normalized_to_control",
@@ -1162,10 +1162,10 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
     xlist[["limma"]] <- X
   }
   if ("limma" %in% methods && !is.null(batch)) {
-    cX <- try( limmaCorrect(X, batch, y = y))
-    if("try-error" %in% class(cX)) {
+    cX <- try(limmaCorrect(X, batch, y = y))
+    if ("try-error" %in% class(cX)) {
       ## if fails with model, try without
-      cX <- try( limmaCorrect(X, batch, y = NULL))      
+      cX <- try(limmaCorrect(X, batch, y = NULL))
     }
     xlist[["limma"]] <- cX
   }
@@ -1173,7 +1173,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
     xlist[["limma.no_mod"]] <- X
   }
   if ("limma.no_mod" %in% methods && !is.null(batch)) {
-    cX <- try( limmaCorrect(X, batch, y = NULL))
+    cX <- try(limmaCorrect(X, batch, y = NULL))
     xlist[["limma.no_mod"]] <- cX
   }
 
@@ -1184,15 +1184,15 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   if ("ComBat" %in% methods && !is.null(batch)) {
     if (max(table(batch), na.rm = TRUE) > 1) {
       bX <- try(combatCorrect(X, batch, y = y))
-      if("try-error" %in% class(bX)) {
+      if ("try-error" %in% class(bX)) {
         ## if not successful, try without model
-        bX <- try(combatCorrect(X, batch, y = NULL))        
+        bX <- try(combatCorrect(X, batch, y = NULL))
       }
       xlist[["ComBat"]] <- bX
     }
   }
   if ("ComBat.no_mod" %in% methods && !is.null(batch)) {
-    bX <- try(combatCorrect(X, batch, y = NULL))    
+    bX <- try(combatCorrect(X, batch, y = NULL))
     xlist[["ComBat.no_mod"]] <- bX
   }
   if ("ComBat.no_mod" %in% methods && is.null(batch)) {
@@ -1708,26 +1708,26 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
                                               "ComBat", "limma",
                                               "RUV", "SVA", "NPM"
                                             ),
-                                            batch.pars = '<autodetect>',
-                                            clust.method = "tsne", 
+                                            batch.pars = "<autodetect>",
+                                            clust.method = "tsne",
                                             ntop = 4000, xlist.init = list(),
                                             ref = NULL, evaluate = TRUE) {
   ## methods <- c("uncorrected","ComBat","auto-ComBat","limma","RUV","SVA","NPM")
-  ##ntop = 4000; xlist.init = list(); batch=NULL
+  ## ntop = 4000; xlist.init = list(); batch=NULL
   if (is.null(pheno) && is.null(contrasts)) {
     stop("must give either pheno vector or contrasts matrix")
   }
   pars <- get_model_parameters(X, samples, pheno = pheno, contrasts = contrasts)
-  if(length(batch.pars) && batch.pars[1] %in% c('autodetect','<autodetect>')) {
+  if (length(batch.pars) && batch.pars[1] %in% c("autodetect", "<autodetect>")) {
     batch.pars <- pars$batch.pars
   }
   batch.pars <- intersect(batch.pars, colnames(samples))
   if (!is.null(batch.pars) && length(batch.pars)) {
-    B <- samples[,batch.pars,drop=FALSE]
+    B <- samples[, batch.pars, drop = FALSE]
   } else {
     B <- NULL
   }
-  
+
   nmissing <- sum(is.na(X))
   if (nmissing) message("WARNING: missing values in X. some methods may fail")
 
@@ -1744,7 +1744,7 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
   )
 
   if (length(xlist.init) > 0) xlist <- c(xlist.init, xlist)
-  xlist <- xlist[order(names(xlist))]  
+  xlist <- xlist[order(names(xlist))]
   names(xlist)
 
   ## PCA is faster than UMAP
@@ -1891,16 +1891,16 @@ superBC2 <- function(X, samples, y, batch = NULL,
 }
 
 #' @export
-limmaCorrect <- function(X, B, y = NULL, use.cov = FALSE)  {
+limmaCorrect <- function(X, B, y = NULL, use.cov = FALSE) {
   cX <- X
-  if(!is.null(y) && length(y)) {
+  if (!is.null(y) && length(y)) {
     y[is.na(y)] <- "_"
   }
-  if(is.null(ncol(B))) B <- cbind(B)
-  if(use.cov) {
+  if (is.null(ncol(B))) B <- cbind(B)
+  if (use.cov) {
     modB <- c()
-    for(i in 1:ncol(B)) {
-      b <- B[,i]
+    for (i in 1:ncol(B)) {
+      b <- B[, i]
       b[which(is.na(b))] <- "_"
       b <- as.factor(b)
       contrasts(b) <- contr.sum(levels(b))
@@ -1909,8 +1909,8 @@ limmaCorrect <- function(X, B, y = NULL, use.cov = FALSE)  {
     }
     cX <- limma::removeBatchEffect(cX, covariates = modB, group = y)
   } else {
-    for(i in 1:ncol(B)) {
-      b <- B[,i]
+    for (i in 1:ncol(B)) {
+      b <- B[, i]
       b[is.na(b)] <- "_"
       cX <- limma::removeBatchEffect(cX, batch = b, group = y)
     }
@@ -1919,16 +1919,16 @@ limmaCorrect <- function(X, B, y = NULL, use.cov = FALSE)  {
 }
 
 #' @export
-combatCorrect <- function(X, B, y = NULL)  {
+combatCorrect <- function(X, B, y = NULL) {
   cX <- X
-  if(is.null(ncol(B))) B <- cbind(B)
-  mod = NULL
-  if(!is.null(y) && length(y)) {
+  if (is.null(ncol(B))) B <- cbind(B)
+  mod <- NULL
+  if (!is.null(y) && length(y)) {
     y[is.na(y)] <- "_"
-    mod <- model.matrix(~as.factor(y))
+    mod <- model.matrix(~ as.factor(y))
   }
-  for(i in 1:ncol(B)) {
-    b <- B[,i]
+  for (i in 1:ncol(B)) {
+    b <- B[, i]
     b[is.na(b)] <- "_"
     suppressMessages(
       cX <- sva::ComBat(cX, batch = b, mod = mod)
@@ -2242,7 +2242,7 @@ MNNcorrect <- function(X, batch, controls = NULL) {
 
 #' @export
 normalizeToControls <- function(X, batch, y, controls) {
-  if(!is.null(ncol(batch))) batch <- apply(batch,1,paste,collapse='_')
+  if (!is.null(ncol(batch))) batch <- apply(batch, 1, paste, collapse = "_")
   ii <- which(y %in% controls)
   batch.ctl <- tapply(ii, batch[ii], function(k) rowMeans(X[, k, drop = FALSE], na.rm = TRUE))
   batch.ctl <- do.call(cbind, batch.ctl)

@@ -297,7 +297,7 @@ pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap", "pacmap"), nb = 
     if (!"try-errror" %in% class(pos)) {
       pos <- pos[1:ncol(X), ]
       rownames(pos) <- colnames(X)
-      pgx.scatterPlotXY(pos, var = y, title = m, ...)      
+      pgx.scatterPlotXY(pos, var = y, title = m, ...)
     }
   }
 }
