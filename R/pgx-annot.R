@@ -223,11 +223,14 @@ getGeneAnnotation.ANNOTHUB <- function(
   message("retrieving annotation for ", length(probes), " ", probe_type, " features...")
 
   suppressMessages(suppressWarnings(
-    annot <- AnnotationDbi::select(orgdb,
-      keys = probes, columns = cols,
+    annot <- AnnotationDbi::select(
+      orgdb,
+      keys = probes,
+      columns = cols,
       keytype = probe_type
     )
   ))
+
   # some organisms do not provide symbol but rather gene name (e.g. yeast)
   if (!"SYMBOL" %in% colnames(annot)) {
     annot$SYMBOL <- annot$GENENAME
@@ -246,7 +249,11 @@ getGeneAnnotation.ANNOTHUB <- function(
   missing.probes <- probes[which(is.missing)] ## probes match annot!
   missing.probes <- setdiff(missing.probes, NA)
   if (length(missing.probes)) {
-    missing.probe_type <- detect_probetype(organism, missing.probes, orgdb = orgdb)
+    dbg("[getGeneAnnotation.ANNOTHUB] retrying missing",
+        length(missing.probes),"symbols...")
+    suppressWarnings( suppressMessages(
+      missing.probe_type <- detect_probetype(organism, missing.probes, orgdb = orgdb)
+    ))
     missing.probe_type
     if (!is.null(missing.probe_type)) {
       suppressMessages(suppressWarnings(
@@ -353,14 +360,17 @@ match_probe_names <- function(probes, org, probe_type = NULL) {
   new.probes <- all.keys[ii]
   if (sum(is.na(new.probes))) {
     jj <- which(is.na(new.probes))
+    new.probes[jj] <- probes[jj]    
     jj.probes <- clean_probe_names(probes[jj])
     ii <- match(toupper(tsub(jj.probes)), toupper(tsub(all.keys)))
-    new.probes[jj] <- all.keys[ii]
+    if(any(!is.na(ii))) {
+      k <- which(!is.na(ii))
+      new.probes[jj[k]] <- all.keys[ii[k]]
+    }
   }
   names(new.probes) <- probes
   new.probes
 }
-
 
 
 #' Cleanup annotation
