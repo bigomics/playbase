@@ -297,7 +297,7 @@ pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap", "pacmap"), nb = 
     if (!"try-errror" %in% class(pos)) {
       pos <- pos[1:ncol(X), ]
       rownames(pos) <- colnames(X)
-      pgx.scatterPlotXY(pos, var = y, title = m, ...)
+      pgx.scatterPlotXY(pos, var = y, title = m, ...)      
     }
   }
 }
@@ -1196,6 +1196,7 @@ plot_volcano <- function(x,
     #    xlim = xlim,
     #    ylim = ylim,
     legend = FALSE,
+    color_up_down = TRUE,
     col = colors[c("notsig", "up", "down")],
     na.color = colors["notsel"],
     opacity = 1,
@@ -3102,12 +3103,13 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
                                    zoom = 1, legend = TRUE, bty = "o", legend.ysp = 0.85,
                                    legend.pos = "bottomright", lab.pos = NULL, repel = TRUE,
                                    xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL, dlim = 0.02,
-                                   hilight2 = hilight, hilight.cex = NULL, lab.xpd = TRUE,
-                                   hilight = NULL, hilight.col = NULL, hilight.lwd = 0.2, hilight2.lwd = 0.6,
+                                   hilight = NULL, hilight.cex = NULL, lab.xpd = TRUE,
+                                   hilight.col = NULL, hilight.lwd = 0.2,
+                                   hilight2 = hilight, hilight2.lwd = 0.6,
                                    label.clusters = FALSE, cex.clust = 1.5,
                                    tstep = 0.1, rstep = 0.1, na.color = "#AAAAAA44",
                                    tooltip = NULL, theme = NULL, set.par = TRUE,
-                                   axt = "s", xaxs = TRUE, yaxs = TRUE, color_up_down = TRUE,
+                                   axt = "s", xaxs = TRUE, yaxs = TRUE, color_up_down = FALSE,
                                    labels = NULL, label.type = NULL, opacity = 1) {
   ## automatically set pointsize of dots
   if (is.null(cex)) {
@@ -3202,7 +3204,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     }
 
     ## NA points with light grey
-    pt.col[is.na(pt.col)] <- na.color
+    pt.col[which(is.na(pt.col))] <- na.color
 
     ## also dim not highlighted points
     if (!is.null(hilight) && length(hilight) > 0) {
