@@ -445,8 +445,6 @@ pgx.superBatchCorrect <- function(X, pheno,
   ## matrix B contains the active batch correction vectors
   res <- list(X = cX, Y = pheno, B = B)
 
-  dbg("[pgx.superBatchCorrect] done!\n")
-
   return(res)
 }
 
@@ -1081,10 +1079,6 @@ removeTechnicalEffects <- function(X, samples, y, p.pheno = 0.05, p.pca = 0.5,
   }
   bc$params
 
-  message("[removeTechnicalEffect] params = ", paste(params, collapse = " "))
-  message("[removeTechnicalEffect] length(bc.params) = ", length(bc$params))
-  message("[removeTechnicalEffect] bc.params = ", paste(unlist(bc$params), collapse = " "))
-
   if (!is.null(params)) {
     B <- bc$covariates
     sel <- lapply(params, function(p) grep(paste0("^", p, "[.]"), colnames(B)))
@@ -1133,16 +1127,17 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
     remove.failed <- TRUE
   }
 
-  mod <- model.matrix(~y)
+  mod <- model.matrix( ~ factor(y))
   nlevel <- length(unique(y[!is.na(y)]))
   if (ntop < Inf) {
     X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], ntop) ## faster
   }
-
+  
   if (is.null(methods)) {
     methods <- c(
-      "uncorrected", "normalized_to_control", "ComBat",
-      "limma", "superBC", "PCA", "RUV", "SVA", "NPM", "MNN", "Harmony"
+      "uncorrected", "normalized_to_control",
+      "ComBat", "limma", "ComBat.no_mod", "limma.no_mod",
+      "superBC", "PCA", "RUV", "SVA", "NPM", "MNN", "Harmony"
     )
   }
 
@@ -1163,38 +1158,45 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   }
 
   ## limma -------------------------------------------------------
-  if ("limma" %in% methods) {
-    if (is.null(batch)) {
-      xlist[["limma"]] <- X
-    } else {
-      cX <- try(limma::removeBatchEffect(X,
-        batch = batch, covariates = NULL, mod = mod1
-      ))
-      xlist[["limma"]] <- cX
-      cX <- try(limma::removeBatchEffect(X,
-        batch = batch, covariates = NULL
-      ))
-      xlist[["limma.no_mod"]] <- cX
+  if ("limma" %in% methods && is.null(batch)) {
+    xlist[["limma"]] <- X
+  }
+  if ("limma" %in% methods && !is.null(batch)) {
+    cX <- try( limmaCorrect(X, batch, y = y))
+    if("try-error" %in% class(cX)) {
+      ## if fails with model, try without
+      cX <- try( limmaCorrect(X, batch, y = NULL))      
     }
+    xlist[["limma"]] <- cX
+  }
+  if ("limma.no_mod" %in% methods && is.null(batch)) {
+    xlist[["limma.no_mod"]] <- X
+  }
+  if ("limma.no_mod" %in% methods && !is.null(batch)) {
+    cX <- try( limmaCorrect(X, batch, y = NULL))
+    xlist[["limma.no_mod"]] <- cX
   }
 
   ## ComBat ------------------------------------------------------
-  if ("ComBat" %in% methods) {
-    if (is.null(batch)) {
-      xlist[["ComBat"]] <- X
-    } else {
-      if (max(table(batch), na.rm = TRUE) > 1) {
-        mod1 <- model.matrix(~ factor(y))
-        bX <- try(sva::ComBat(X, batch = batch, mod = mod1, par.prior = TRUE))
-        if (!"try-error" %in% class(bX)) {
-          xlist[["ComBat"]] <- bX
-        }
-        bX <- try(sva::ComBat(X, batch = batch, mod = NULL, par.prior = TRUE))
-        if (!"try-error" %in% class(bX)) {
-          xlist[["ComBat.no_mod"]] <- bX
-        }
+  if ("ComBat" %in% methods && is.null(batch)) {
+    xlist[["ComBat"]] <- X
+  }
+  if ("ComBat" %in% methods && !is.null(batch)) {
+    if (max(table(batch), na.rm = TRUE) > 1) {
+      bX <- try(combatCorrect(X, batch, y = y))
+      if("try-error" %in% class(bX)) {
+        ## if not successful, try without model
+        bX <- try(combatCorrect(X, batch, y = NULL))        
       }
+      xlist[["ComBat"]] <- bX
     }
+  }
+  if ("ComBat.no_mod" %in% methods && !is.null(batch)) {
+    bX <- try(combatCorrect(X, batch, y = NULL))    
+    xlist[["ComBat.no_mod"]] <- bX
+  }
+  if ("ComBat.no_mod" %in% methods && is.null(batch)) {
+    xlist[["ComBat.no_mod"]] <- X
   }
 
   ## superbatchcorrect
@@ -1702,24 +1704,37 @@ get_model_parameters <- function(X, samples, pheno = NULL, contrasts = NULL) {
 #' @export
 compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
                                             methods = c(
-                                              "uncorrected", "ComBat",
-                                              "limma", "RUV", "SVA", "NPM"
+                                              "uncorrected",
+                                              "ComBat", "limma",
+                                              "RUV", "SVA", "NPM"
                                             ),
-                                            clust.method = "tsne",
+                                            batch.pars = '<autodetect>',
+                                            clust.method = "tsne", 
                                             ntop = 4000, xlist.init = list(),
                                             ref = NULL, evaluate = TRUE) {
-  ## methods <- c("uncorrected","ComBat", "limma","RUV","SVA","NPM")
-  ## ntop = 4000; xlist.init = list()
-  batch <- NULL
+  ## methods <- c("uncorrected","ComBat","auto-ComBat","limma","RUV","SVA","NPM")
+  ##ntop = 4000; xlist.init = list(); batch=NULL
+  if (is.null(pheno) && is.null(contrasts)) {
+    stop("must give either pheno vector or contrasts matrix")
+  }
   pars <- get_model_parameters(X, samples, pheno = pheno, contrasts = contrasts)
-
+  if(length(batch.pars) && batch.pars[1] %in% c('autodetect','<autodetect>')) {
+    batch.pars <- pars$batch.pars
+  }
+  batch.pars <- intersect(batch.pars, colnames(samples))
+  if (!is.null(batch.pars) && length(batch.pars)) {
+    B <- samples[,batch.pars,drop=FALSE]
+  } else {
+    B <- NULL
+  }
+  
   nmissing <- sum(is.na(X))
   if (nmissing) message("WARNING: missing values in X. some methods may fail")
 
   message("Running batch-correction methods...")
   xlist <- runBatchCorrectionMethods(
     X = X,
-    batch = pars$batch,
+    batch = B,
     y = pars$pheno,
     controls = NULL,
     methods = methods,
@@ -1727,8 +1742,10 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
     sc = FALSE,
     remove.failed = TRUE
   )
-  names(xlist)
+
   if (length(xlist.init) > 0) xlist <- c(xlist.init, xlist)
+  xlist <- xlist[order(names(xlist))]  
+  names(xlist)
 
   ## PCA is faster than UMAP
   pos <- NULL
@@ -1820,8 +1837,7 @@ superBC2 <- function(X, samples, y, batch = NULL,
     if (!is.null(batch) && m == "batch") {
       message("[superBC2] correcting for: batch")
       if (use.design) {
-        mod1 <- model.matrix(~y)
-        cX <- limma::removeBatchEffect(cX, batch = batch, design = mod1)
+        cX <- limma::removeBatchEffect(cX, batch = batch, design = mod)
       } else {
         cX <- limma::removeBatchEffect(cX, batch = batch)
       }
@@ -1871,6 +1887,53 @@ superBC2 <- function(X, samples, y, batch = NULL,
   }
 
   cX <- cX - rowMeans(cX, na.rm = TRUE) + rowMeans(X, na.rm = TRUE)
+  cX
+}
+
+#' @export
+limmaCorrect <- function(X, B, y = NULL, use.cov = FALSE)  {
+  cX <- X
+  if(!is.null(y) && length(y)) {
+    y[is.na(y)] <- "_"
+  }
+  if(is.null(ncol(B))) B <- cbind(B)
+  if(use.cov) {
+    modB <- c()
+    for(i in 1:ncol(B)) {
+      b <- B[,i]
+      b[which(is.na(b))] <- "_"
+      b <- as.factor(b)
+      contrasts(b) <- contr.sum(levels(b))
+      b <- model.matrix(~b)[, -1, drop = FALSE]
+      modB <- cbind(modB, b)
+    }
+    cX <- limma::removeBatchEffect(cX, covariates = modB, group = y)
+  } else {
+    for(i in 1:ncol(B)) {
+      b <- B[,i]
+      b[is.na(b)] <- "_"
+      cX <- limma::removeBatchEffect(cX, batch = b, group = y)
+    }
+  }
+  cX
+}
+
+#' @export
+combatCorrect <- function(X, B, y = NULL)  {
+  cX <- X
+  if(is.null(ncol(B))) B <- cbind(B)
+  mod = NULL
+  if(!is.null(y) && length(y)) {
+    y[is.na(y)] <- "_"
+    mod <- model.matrix(~as.factor(y))
+  }
+  for(i in 1:ncol(B)) {
+    b <- B[,i]
+    b[is.na(b)] <- "_"
+    suppressMessages(
+      cX <- sva::ComBat(cX, batch = b, mod = mod)
+    )
+  }
   cX
 }
 
@@ -2179,11 +2242,11 @@ MNNcorrect <- function(X, batch, controls = NULL) {
 
 #' @export
 normalizeToControls <- function(X, batch, y, controls) {
+  if(!is.null(ncol(batch))) batch <- apply(batch,1,paste,collapse='_')
   ii <- which(y %in% controls)
   batch.ctl <- tapply(ii, batch[ii], function(k) rowMeans(X[, k, drop = FALSE], na.rm = TRUE))
   batch.ctl <- do.call(cbind, batch.ctl)
   nX <- (X - batch.ctl[, batch]) + rowMeans(X, na.rm = TRUE)
-  ## nX <- limma::normalizeQuantiles(X)
   nX
 }
 
