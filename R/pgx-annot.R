@@ -101,9 +101,9 @@ getGeneAnnotation <- function(
   )
 
   ## fallback with ORTHOGENE
-  missing <- (is.na(annot$symbol) | annot$symbol == '')
+  missing <- (is.na(annot$symbol) | annot$symbol == "")
   if (any(missing)) {
-    info("[getGeneAnnotation] annotating",sum(missing),"missing features with ORTHOGENE")
+    info("[getGeneAnnotation] annotating", sum(missing), "missing features with ORTHOGENE")
     missing.probes <- probes[which(missing)]
     missing.annot <- getGeneAnnotation.ORTHOGENE(
       organism = organism,
@@ -112,9 +112,9 @@ getGeneAnnotation <- function(
     )
 
     ## replace missing entries
-    missing.annot <- missing.annot[,colnames(annot)]
+    missing.annot <- missing.annot[, colnames(annot)]
     jj <- match(missing.probes, probes)
-    annot[jj,] <- missing.annot 
+    annot[jj, ] <- missing.annot
   }
 
   ## clean up
@@ -253,9 +253,11 @@ getGeneAnnotation.ANNOTHUB <- function(
   missing.probes <- probes[which(is.missing)] ## probes match annot!
   missing.probes <- setdiff(missing.probes, NA)
   if (length(missing.probes)) {
-    dbg("[getGeneAnnotation.ANNOTHUB] retrying missing",
-        length(missing.probes),"symbols...")
-    suppressWarnings( suppressMessages(
+    dbg(
+      "[getGeneAnnotation.ANNOTHUB] retrying missing",
+      length(missing.probes), "symbols..."
+    )
+    suppressWarnings(suppressMessages(
       missing.probe_type <- detect_probetype(organism, missing.probes, orgdb = orgdb)
     ))
     missing.probe_type
@@ -364,10 +366,10 @@ match_probe_names <- function(probes, org, probe_type = NULL) {
   new.probes <- all.keys[ii]
   if (sum(is.na(new.probes))) {
     jj <- which(is.na(new.probes))
-    new.probes[jj] <- probes[jj]    
+    new.probes[jj] <- probes[jj]
     jj.probes <- clean_probe_names(probes[jj])
     ii <- match(toupper(tsub(jj.probes)), toupper(tsub(all.keys)))
-    if(any(!is.na(ii))) {
+    if (any(!is.na(ii))) {
       k <- which(!is.na(ii))
       new.probes[jj[k]] <- all.keys[ii[k]]
     }
@@ -1131,7 +1133,6 @@ getGeneAnnotation.ORTHOGENE <- function(
     organism,
     probes,
     verbose = TRUE) {
-  
   ## correct organism names different from OrgDb
   if (organism == "Canis familiaris") {
     organism <- "Canis lupus familiaris"
@@ -1172,8 +1173,8 @@ getGeneAnnotation.ORTHOGENE <- function(
     chr = NA,
     #    pos = NA,
     #    tx_len = NA,
-    #source = gene.out$namespace,
-    source = "gprofiler2",    
+    # source = gene.out$namespace,
+    source = "gprofiler2",
     gene_name = probes
   )
 
