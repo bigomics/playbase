@@ -102,19 +102,25 @@ getGeneAnnotation <- function(
 
   ## fallback with ORTHOGENE
   missing <- (is.na(annot$symbol) | annot$symbol == "")
-  if (any(missing)) {
-    info("[getGeneAnnotation] annotating", sum(missing), "missing features with ORTHOGENE")
-    missing.probes <- probes[which(missing)]
-    missing.annot <- getGeneAnnotation.ORTHOGENE(
+  if (is.null(annot) || any(missing)) {
+    info("[getGeneAnnotation] annotating", sum(missing),
+         "missing features with ORTHOGENE")
+    if(any(missing)) {
+      missing.probes <- probes[which(missing)]
+    } else {
+      missing.probes <- probes
+    }
+    missing.annot <- try(getGeneAnnotation.ORTHOGENE(
       organism = organism,
       probes = missing.probes,
       verbose = verbose
-    )
-
-    ## replace missing entries
-    missing.annot <- missing.annot[, colnames(annot)]
-    jj <- match(missing.probes, probes)
-    annot[jj, ] <- missing.annot
+    ))
+    if(!"try-error" %in% class(missing.annot) && nrow(missing.annot)) {
+      ## replace missing entries
+      missing.annot <- missing.annot[, colnames(annot)]
+      jj <- match(missing.probes, probes)
+      annot[jj, ] <- missing.annot
+    }
   }
 
   ## clean up
@@ -209,7 +215,9 @@ getGeneAnnotation.ANNOTHUB <- function(
     probe_type <- detect_probetype(organism, probes, orgdb = NULL)
     if (is.null(probe_type)) {
       message("ERROR: could not determine probe_type. Please specify. ")
-      return(NULL)
+      annot <- data.frame( feature = probes, symbol = "")
+      annot <- cleanupAnnotation(annot)
+      return(annot)
     }
   }
 
@@ -251,7 +259,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   ## --------------------------------------------
   is.missing <- (is.na(annot$SYMBOL) | annot$SYMBOL == "")
   missing.probes <- probes[which(is.missing)] ## probes match annot!
-  missing.probes <- setdiff(missing.probes, NA)
+  missing.probes <- missing.probes[!is.na(missing.probes)]
   if (length(missing.probes)) {
     dbg(
       "[getGeneAnnotation.ANNOTHUB] retrying missing",
@@ -262,17 +270,18 @@ getGeneAnnotation.ANNOTHUB <- function(
     ))
     missing.probe_type
     if (!is.null(missing.probe_type)) {
+      missing.probes1 <- match_probe_names(missing.probes, orgdb, missing.probe_type)    
       suppressMessages(suppressWarnings(
         missing.annot <- AnnotationDbi::select(orgdb,
-          keys = missing.probes,
+          keys = missing.probes1,
           columns = cols,
           keytype = missing.probe_type
         )
       ))
       head(missing.annot)
       missing.key <- missing.annot[, missing.probe_type]
-      missing.annot$PROBE <- names(probes[match(missing.key, probes)])
-      jj <- match(missing.key, probes)
+      missing.annot$PROBE <- names(missing.probes[match(missing.key, missing.probes1)])
+      jj <- match(missing.annot$PROBE, probes)
       colnames(missing.annot) <- colnames(annot)
       annot[jj, ] <- missing.annot
     }
@@ -328,13 +337,13 @@ getGeneAnnotation.ANNOTHUB <- function(
 #' Cleanup probe names from postfixes or version numbers
 #'
 #' @export
-clean_probe_names <- function(probes) {
+clean_probe_names <- function(probes, sep="._") {
   probes0 <- probes
   probes <- probes[!is.na(probes) & probes != ""]
   probes <- sapply(strsplit(probes, split = ";"), head, 1) ## take first
 
   ## strip away anything after a 'dot' or 'underscore'
-  probes <- sub("[._].*", "", probes)
+  probes <- sub(paste0("[",sep,"].*"), "", probes)
 
   ## is.ensembl <- mean(grepl("^ENS", probes)) > 0.5
   ## if (is.ensembl) {
@@ -367,8 +376,11 @@ match_probe_names <- function(probes, org, probe_type = NULL) {
   if (sum(is.na(new.probes))) {
     jj <- which(is.na(new.probes))
     new.probes[jj] <- probes[jj]
-    jj.probes <- clean_probe_names(probes[jj])
-    ii <- match(toupper(tsub(jj.probes)), toupper(tsub(all.keys)))
+    jj.probes1 <- clean_probe_names(probes[jj],sep="._")
+    jj.probes2 <- clean_probe_names(probes[jj],sep="._-")
+    ii1 <- match(toupper(tsub(jj.probes1)), toupper(tsub(all.keys)))
+    ii2 <- match(toupper(tsub(jj.probes2)), toupper(tsub(all.keys)))
+    ii <- ifelse(!is.na(ii1), ii1, ii2)
     if (any(!is.na(ii))) {
       k <- which(!is.na(ii))
       new.probes[jj[k]] <- all.keys[ii[k]]
@@ -687,7 +699,7 @@ getOrgDb <- function(organism, use.ah = NULL) {
 #' @export
 detect_probetype <- function(organism, probes, orgdb = NULL,
                              nprobe = 1000, use.ah = NULL, datatype = NULL,
-                             probe_type = NULL) {
+                             probe_type = NULL, verbose=TRUE) {
   # if probe type is not null, return probetype
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
@@ -707,7 +719,7 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     orgdb <- getOrgDb(organism, use.ah = use.ah)
   }
   if (is.null(orgdb)) {
-    message("[detect_probetype] ERROR: unsupported organism '", organism, "'\n")
+    if(verbose) message("[detect_probetype] ERROR: unsupported organism '", organism, "'\n")
     return(NULL)
   }
 
@@ -726,7 +738,6 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   probes <- probes[!is.na(probes) & probes != ""]
   probes <- sapply(strsplit(probes, split = ";"), head, 1) ## take first
   probes <- unique(probes)
-  probes <- clean_probe_names(probes)
 
   ## Subset probes if too many
   if (length(probes) > nprobe) {
@@ -734,6 +745,12 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     # get random probes for query
     probes <- sample(probes, nprobe)
   }
+
+  probes0 <- probes
+  ## try different cleaning methods
+  probes  <- clean_probe_names(probes)
+  probes1 <- clean_probe_names(probes,sep="._-")  
+  probesx  <- unique(c(probes0, probes, probes1))
 
   # Iterate over probe types
   key <- keytypes[1]
@@ -747,7 +764,7 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     suppressMessages(suppressWarnings(try(
       probe_matches <- AnnotationDbi::select(
         orgdb,
-        keys = probes,
+        keys = probesx,
         keytype = key,
         columns = key2
       ),
@@ -771,8 +788,10 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   ##  key_matches
   top_match <- NULL
   if (all(key_matches == 0)) {
-    message("head.probes = ", paste(head(probes), collapse = " "))
-    message("WARNING: Probe type not found. Valid probe types: ", paste(keytypes, collapse = " "))
+    if(verbose) {
+      message("head.probes = ", paste(head(probes), collapse = " "))
+      message("WARNING: Probe type not found. Valid probe types: ", paste(keytypes, collapse = " "))
+    }
     return(NULL)
   } else {
     top_match <- names(which.max(key_matches))
@@ -781,102 +800,6 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   return(top_match)
 }
 
-#' @title Get human ortholog from given symbols of organism by using
-#'   orthogene package. This package needs internet connection.
-#'
-getHumanOrtholog.SAVE <- function(organism, symbols) {
-  ## Too complicated this code...
-  ##
-
-  ## test if orthogene server is reachable
-  res <- try(orthogene::map_genes("CDK1", verbose = FALSE))
-  if ("try-error" %in% class(res)) {
-    message("[getHumanOrtholog] failed to contact server")
-    df <- data.frame(symbols, "human" = NA)
-    colnames(df)[1] <- organism
-    rownames(df) <- NULL
-    return(NULL)
-  }
-
-  # Dog id should be 'Canis lupus familiaris' (in orthogene) and not
-  # Canis familiaris (in AH)
-  if (organism == "Canis familiaris") {
-    organism <- "Canis lupus familiaris"
-  }
-
-  clean2 <- function(s) {
-    paste(head(strsplit(s, split = "[ _-]")[[1]], 2), collapse = " ")
-  }
-
-  organism <- gsub("[_]", " ", organism) ## orgDB names have sometimes underscores
-  has.ortho <- !is.null(orthogene::map_species(organism, method = "gprofiler", verbose = FALSE))
-  has.ortho
-
-  ## build clean species list (only 'Genus species')
-  ortho.species <- orthogene::map_species(method = "gprofiler", verbose = FALSE)$scientific_name
-  ortho.clean <- sapply(ortho.species, clean2)
-  organism2 <- clean2(organism)
-  has.clean <- (organism2 %in% ortho.clean)
-  has.clean
-
-  ## build Genus list
-  genus <- strsplit(organism, split = " ")[[1]][1]
-  ortho.genus <- gsub(" .*|\\[|\\]", "", ortho.species)
-  has.genus <- (genus %in% ortho.genus)
-  has.genus
-
-  ## select orthogene method (DB) and best matching species. If a
-  ## species does not match, then we take the first matching species
-  ## with the same Genus that is in the DB.
-  if (any(has.ortho)) {
-    ortho_organism <- orthogene::map_species(organism, method = "gprofiler", verbose = FALSE)
-  } else if (any(has.clean)) {
-    ## if no exact species match, we try a clean2
-    ortho_organism <- head(names(which(ortho.clean == organism2)), 1)
-  } else if (any(has.genus)) {
-    ## if no species match, we take the first Genus hit
-    ortho_organism <- head(names(which(ortho.genus == genus)), 1)
-  } else {
-    ## no match
-    ortho_organism <- NULL
-  }
-
-  human.genes <- playdata::GENE_SYMBOL
-  looks.human <- mean(toupper(symbols) %in% human.genes)
-
-  orthogenes <- NULL
-  if (!is.null(ortho_organism) && ortho_organism == "Homo sapiens") {
-    orthogenes <- symbols
-  } else if (!is.null(ortho_organism)) {
-    ortho.out <- try(orthogene::convert_orthologs(
-      gene_df = unique(symbols[!is.na(symbols)]),
-      input_species = ortho_organism,
-      output_species = "human",
-      non121_strategy = "drop_both_species",
-      method = "gprofiler",
-      verbose = FALSE
-    ))
-    if (!"try-error" %in% class(ortho.out)) {
-      ii <- match(symbols, ortho.out$input_gene)
-      orthogenes <- rownames(ortho.out)[ii]
-    }
-  }
-
-  if (is.null(orthogenes) && looks.human > 0.5) {
-    message("WARNING: symbols look 'human', using capitalized symbols")
-    orthogenes <- toupper(symbols)
-    orthogenes[which(!orthogenes %in% human.genes)] <- NA
-  }
-
-  if (is.null(orthogenes)) {
-    message("WARNING: could not find orthogene for", organism)
-    orthogenes <- rep(NA, length(symbols))
-  }
-
-  df <- data.frame(symbols, "human" = orthogenes)
-  colnames(df)[1] <- organism
-  return(df)
-}
 
 #' @title Get human ortholog from given symbols of organism by using
 #'   orthogene package. This package needs internet connection.
@@ -1162,6 +1085,7 @@ getGeneAnnotation.ORTHOGENE <- function(
   gene.out <- gene.out[match(probes1, gene.out$input), ]
 
   ortholog <- getHumanOrtholog(organism, gene.out$name)$human
+  genebuild <- gprofiler2::get_version_info()$genebuild
 
   df <- data.frame(
     feature = probes,
@@ -1516,7 +1440,8 @@ detect_species_probetype <- function(
       probes = probes,
       use.ah = FALSE,
       datatype = datatype,
-      probe_type = probe_type
+      probe_type = probe_type,
+      verbose = FALSE
     )
   }
   ptype <- unlist(ptype)
