@@ -1587,7 +1587,7 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
                              title = NULL, zfix = FALSE,
                              set.par = TRUE, par.sq = FALSE,
                              level = "gene", plotlib = "ggplot",
-                             data = FALSE) {
+                             data = FALSE, labeltype = shiny::reactive("feature")) {
   if (!is.null(contrast)) {
     if (is.numeric(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
     res <- NULL
@@ -1629,6 +1629,20 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
   if (zfix) {
     zlim <- stats::quantile(F, probs = c(0.002, 0.998), na.rm = TRUE)
     zlim
+  }
+
+  # Rename labels
+  if (!is.null(rownames(F))) {
+    rownames(F) <- make.names(playbase::probe2symbol(rownames(F), pgx$genes, labeltype(), fill_na = TRUE), unique = TRUE)
+  }
+  if (!is.null(rownames(pos))) {
+    rownames(pos) <- make.names(playbase::probe2symbol(rownames(pos), pgx$genes, labeltype(), fill_na = TRUE), unique = TRUE)
+  }
+  if (!is.null(label)) {
+    label <- make.names(playbase::probe2symbol(label, pgx$genes, labeltype(), fill_na = TRUE), unique = TRUE)
+  }
+  if (!is.null(hilight)) {
+    hilight <- make.names(playbase::probe2symbol(hilight, pgx$genes, labeltype(), fill_na = TRUE), unique = TRUE)
   }
 
   plist <- list()
