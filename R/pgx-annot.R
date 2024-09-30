@@ -82,7 +82,6 @@ ngs.getGeneAnnotation <- function(...) {
 getGeneAnnotation <- function(
     organism,
     probes,
-    use = c("annothub", "orthogene"),
     use.ah = NULL,
     verbose = TRUE) {
   annot <- NULL
@@ -92,25 +91,30 @@ getGeneAnnotation <- function(
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
   if (tolower(organism) == "dog") organism <- "Canis familiaris"
 
-  if (is.null(annot) && "annothub" %in% use) {
-    info("[getGeneAnnotation] annotating with ANNOTHUB")
-    annot <- getGeneAnnotation.ANNOTHUB(
-      organism = organism,
-      probes = probes,
-      use.ah = use.ah,
-      verbose = verbose
-    )
-  }
+  ## first annotate with ANNOTHUB
+  info("[getGeneAnnotation] annotating with ANNOTHUB")
+  annot <- getGeneAnnotation.ANNOTHUB(
+    organism = organism,
+    probes = probes,
+    use.ah = use.ah,
+    verbose = verbose
+  )
 
-  ## fallback
-  if (is.null(annot) && "orthogene" %in% use) {
-    info("[getGeneAnnotation] annotating with ORTHOGENE")
-    organism <- sub("Canis familiaris", "Canis lupus familiaris", organism)
-    annot <- getGeneAnnotation.ORTHOGENE(
+  ## fallback with ORTHOGENE
+  missing <- (is.na(annot$symbol) | annot$symbol == '')
+  if (any(missing)) {
+    info("[getGeneAnnotation] annotating",sum(missing),"missing features with ORTHOGENE")
+    missing.probes <- probes[which(missing)]
+    missing.annot <- getGeneAnnotation.ORTHOGENE(
       organism = organism,
-      probes = probes,
+      probes = missing.probes,
       verbose = verbose
     )
+
+    ## replace missing entries
+    missing.annot <- missing.annot[,colnames(annot)]
+    jj <- match(missing.probes, probes)
+    annot[jj,] <- missing.annot 
   }
 
   ## clean up
@@ -1127,6 +1131,7 @@ getGeneAnnotation.ORTHOGENE <- function(
     organism,
     probes,
     verbose = TRUE) {
+  
   ## correct organism names different from OrgDb
   if (organism == "Canis familiaris") {
     organism <- "Canis lupus familiaris"
@@ -1167,7 +1172,8 @@ getGeneAnnotation.ORTHOGENE <- function(
     chr = NA,
     #    pos = NA,
     #    tx_len = NA,
-    source = gene.out$namespace,
+    #source = gene.out$namespace,
+    source = "gprofiler2",    
     gene_name = probes
   )
 
