@@ -2310,26 +2310,28 @@ is_logged <- function(x, verbose = 0) {
   if (any(class(x) == "data.frame")) x <- as.matrix(x)
 
   ## if all values are 'small' it may be log
-  all.lt60 <- all(x < 60, na.rm = TRUE)
-  has.bigx <- any(x > 1000, na.rm = TRUE)
-
+  xmax <- max(x,na.rm=TRUE) 
+  all.lt60 <- xmax <  60
+  has.bigx <- xmax > 1000
+  
   ## if we have negative  values it may be log. The -1 because of
   ## possible RNAseq prior = 1 in log2(x+1)
-  minx.neg <- min(x, na.rm = TRUE) < -1 ##
-  all.pos <- all(x >= 0, na.rm = TRUE) ##
+  xmin <- min(x, na.rm = TRUE) 
+  minx.neg <- xmin < -1 
+  all.pos  <- xmin >= 0
 
   ## check for ratio/fraction data: rows of ratio data matrices (like
   ## TMT) sum to some constant value.
   is.ratio <- FALSE
   if (NCOL(x) > 1 && all.pos) {
-    rowx.mean <- rowMeans(x, na.rm = TRUE)
+    rowx.mean <- Matrix::rowMeans(x, na.rm = TRUE)
     rowx.mean <- rowx.mean[!is.na(rowx.mean)]
     is.ratio <- (sd(rowx.mean) / mean(rowx.mean)) < 0.01
   }
 
   ## check raw count data: if all values are integer
   fraction.diff <- (x - round(x)) / mean(x, na.rm = TRUE)
-  all.integer <- all(fraction.diff < 1e-8)
+  all.integer <- max(fraction.diff, na.rm=TRUE) < 1e-8
   is.counts <- all.pos && all.integer
 
   ## check for low-count single-cell data: they may be all <60
