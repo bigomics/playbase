@@ -271,7 +271,7 @@ pgx.plotEnrichmentDotPlot <- function(pgx, contrast,
 }
 
 #' @export
-pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap", "pacmap"), nb = NULL, ...) {
+pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap"), nb = NULL, ...) {
   ## method=c('tsne','pca','umap','pacmap')
   jj <- head(order(-matrixStats::rowSds(X, na.rm = TRUE)), 1000)
   X1 <- X[jj, ]
