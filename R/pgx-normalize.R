@@ -194,6 +194,9 @@ pgx.countNormalization <- function(x, methods, ref = NULL) {
     } else if (m == "median.center") {
       mx <- apply(x, 2, median, na.rm = TRUE)
       x <- t(t(x) / (1e-8 + mx)) * median(mx, na.rm = TRUE)
+    } else if (m == "median.center.nz") {
+      mx <- apply(x, 2, function(x) median(x[x>0], na.rm = TRUE))
+      x <- t(t(x) / (1e-8 + mx)) * median(mx, na.rm = TRUE)
     } else if (m == "sum") {
       sumx <- mean(colSums(x, na.rm = TRUE))
       x <- t(t(x) / (1e-8 + colSums(x, na.rm = TRUE))) * sumx
