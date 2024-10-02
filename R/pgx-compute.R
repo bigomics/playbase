@@ -950,12 +950,23 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       m1 = G,
       m2 = Matrix::t(go.gmt)
     )
+
+    ## sort by size, then take out duplicated GO sets 
+    jj <- order(-Matrix::colSums(G!=0))
+    G <- G[,jj]
+    go_id <- sub("\\)$","",sub(".*\\(GO_","GO:",colnames(G)))
+    go_dup <- which(grepl("^GO:", go_id) & duplicated(go_id))
+    if(length(go_dup)) {
+      G <- G[,-go_dup]
+    }
+
   }
 
   # NEW: convert G feature/symbol/human_ortholog to SYMBOL
 
-  # At this stage we have metabolomics genesets in G
-  # or transcriptomics/proteomics genesets in G combined with random genesets (if necessary) and GO genesets
+  # At this stage we have metabolomics genesets in G or
+  # transcriptomics/proteomics genesets in G combined with random
+  # genesets (if necessary) and GO genesets
 
   rownames(G) <- playbase::probe2symbol(rownames(G), pgx$genes, "symbol", fill_na = TRUE)
 
@@ -977,7 +988,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     if (!is.null(custom_gmt) && ncol(custom_gmt) > 0) {
       # only run this code if custom_gmt has columns (genes)
 
-      colnames(custom_gmt) <- playbase::probe2symbol(colnames(custom_gmt), pgx$genes, "symbol", fill_na = TRUE)
+      colnames(custom_gmt) <- playbase::probe2symbol(
+        colnames(custom_gmt), pgx$genes, "symbol", fill_na = TRUE)
 
       G <- playbase::merge_sparse_matrix(
         m1 = G,
@@ -989,24 +1001,24 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------
   ## create the full GENE matrix (always collapsed by gene)
   ## -----------------------------------------------------------
-  X_geneset <- pgx$X
+  X <- pgx$X
 
   # we use SYMBOL as rownames
-  if (!all(rownames(X_geneset) %in% pgx$genes$symbol)) {
-    X_geneset <- rename_by(X_geneset, pgx$genes, "symbol", unique = TRUE) ## pgx-functions.R
+  if (!all(rownames(X) %in% pgx$genes$symbol)) {
+    X <- rename_by(X, pgx$genes, "symbol", unique = TRUE) ## pgx-functions.R
   }
 
   ## if reduced samples
   ss <- rownames(pgx$model.parameters$exp.matrix)
   if (!is.null(ss)) {
-    X_geneset <- X_geneset[, ss, drop = FALSE]
+    X <- X[, ss, drop = FALSE]
   }
 
   ## -----------------------------------------------------------
-  ## Align the GENESETxGENE matrix with genes in X_geneset
+  ## Align the GENESETxGENE matrix with genes in X
   ## -----------------------------------------------------------
   message("[pgx.add_GMT] Matching gene set matrix...")
-  gg <- rownames(X_geneset)
+  gg <- rownames(X)
 
   # convert gg to symbol
   ii <- intersect(gg, rownames(G))
@@ -1017,7 +1029,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   colnames(matX) <- colnames(G)
   G <- rbind(G, matX)
   G <- G[match(gg, rownames(G)), , drop = FALSE]
-  rownames(G) <- rownames(X_geneset) ## original name (e.g. mouse)
+  rownames(G) <- rownames(X) ## original name (e.g. mouse)
 
 
   ## -----------------------------------------------------------
@@ -1032,7 +1044,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     ## Reduce gene sets by selecting top varying genesets. We use the
     ## very fast sparse rank-correlation for approximate single sample
     ## geneset activation.
-    cX <- X_geneset - rowMeans(X_geneset, na.rm = TRUE) ## center!
+    cX <- X - rowMeans(X, na.rm = TRUE) ## center!
     cX <- apply(cX, 2, rank)
     gsetX <- qlcMatrix::corSparse(G, cX) ## slow!
     grp <- pgx$model.parameters$group
@@ -1060,7 +1072,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
 
   # final check: drop genesets in G based on geneset size
-
   gmt.size <- Matrix::colSums(G != 0)
 
   if (pgx$datatype == "metabolomics") {
