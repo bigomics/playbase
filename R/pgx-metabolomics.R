@@ -1,5 +1,24 @@
-# convert IDs to CHEBI using base R functions
+##
+## This file is part of the Omics Playground project.
+## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
+##
 
+
+#' detect metabolomics ID type 
+#' @export
+mbx.detect_probetype <- function(probes) {
+  aa <- playdata::METABOLITE_ANNOTATION
+  nmatch <- apply( aa, 2, function(s) sum(probes %in% setdiff(s,NA)))
+  if( max(nmatch)/length(probes) < 0.10) {
+    aa2 <- apply(aa,2,function(s) gsub("[^0-9]","", s))
+    nmatch2 <- apply( aa2, 2, function(s) sum(probes %in% setdiff(s,NA)))  
+    nmatch <- nmatch + nmatch2
+  }
+  if(max(nmatch,na.rm=TRUE)==0) return(NULL)
+  names(which.max(nmatch))
+}
+
+#' convert IDs to CHEBI using base R functions
 #' @export
 convert_probe_to_chebi <- function(probes, probe_type) {
   probe_type_dictionary <- playdata::METABOLITE_ANNOTATION
