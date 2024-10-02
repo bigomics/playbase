@@ -7,7 +7,9 @@
 plotPCSF(
   pcsf,
   highlightby = c("centrality", "prize")[1],
-  plot = c("visnet", "igraph"),
+  plotlib = c("visnet", "igraph")[1],
+  layout = "layout_with_kk",
+  physics = TRUE,
   node_cex = 30,
   label_cex = 30,
   nlabel = -1

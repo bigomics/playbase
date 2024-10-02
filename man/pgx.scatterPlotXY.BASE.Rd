@@ -31,12 +31,12 @@ pgx.scatterPlotXY.BASE(
   xlim = NULL,
   ylim = NULL,
   dlim = 0.02,
-  hilight2 = hilight,
+  hilight = NULL,
   hilight.cex = NULL,
   lab.xpd = TRUE,
-  hilight = NULL,
   hilight.col = NULL,
   hilight.lwd = 0.2,
+  hilight2 = hilight,
   hilight2.lwd = 0.6,
   label.clusters = FALSE,
   cex.clust = 1.5,
@@ -49,7 +49,7 @@ pgx.scatterPlotXY.BASE(
   axt = "s",
   xaxs = TRUE,
   yaxs = TRUE,
-  color_up_down = TRUE,
+  color_up_down = FALSE,
   labels = NULL,
   label.type = NULL,
   opacity = 1
@@ -102,17 +102,17 @@ pgx.scatterPlotXY.BASE(
 
 \item{dlim}{Axis limit expansion fraction.}
 
-\item{hilight2}{Secondary highlight indices.}
+\item{hilight}{Indices to highlight.}
 
 \item{hilight.cex}{Size for highlight points.}
 
 \item{lab.xpd}{Allow labels outside plot area?}
 
-\item{hilight}{Indices to highlight.}
-
 \item{hilight.col}{Color for highlighted points.}
 
 \item{hilight.lwd}{Line width for highlighted points.}
+
+\item{hilight2}{Secondary highlight indices.}
 
 \item{label.clusters}{Label clusters?}
 

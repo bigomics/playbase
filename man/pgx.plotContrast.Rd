@@ -117,7 +117,8 @@ pgx.plotGeneUMAP(
   par.sq = FALSE,
   level = "gene",
   plotlib = "ggplot",
-  data = FALSE
+  data = FALSE,
+  labeltype = shiny::reactive("feature")
 )
 }
 \arguments{
