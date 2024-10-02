@@ -2075,7 +2075,7 @@ pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht = 5, cluster.samples = TRUE
   if (cluster.samples) {
     annotx <- expandAnnotationMatrix(annot.df)
     hc <- fastcluster::hclust(stats::dist(annotx)) ## cluster samples
-    annot.df <- annot.df[hc$order, ]
+    annot.df <- annot.df[hc$order, , drop = FALSE]
   }
 
   npar <- apply(annot.df, 2, function(x) length(setdiff(unique(x), NA)))
