@@ -17,12 +17,21 @@ pgx.checkINPUT <- function(
   check_return <- list()
 
   if (datatype == "COUNTS" || datatype == "EXPRESSION") {
-    # remove special characters before converting to numeric (keep commas, dots) as they define the decimal separator
-    df_clean <- apply(df_clean, 2, function(x) gsub("[^0-9,.]", "", x))
-    # convert matrix from character to numeric, sometimes we receive character matrix from read.csv function
-    df_clean <- apply(df_clean, 2, as.numeric, simplify = TRUE)
-    rownames(df_clean) <- rownames(df)
 
+    df.class <- apply(df_clean, 2, class)
+    if(any(df.class == "character")) {
+
+      # remove special characters before converting to numeric (keep
+      # commas, dots) as they define the decimal separator
+      jj <- which(df.class == "character")
+      df_clean[,jj] <- apply(df_clean[,jj], 2, function(x) gsub("[^0-9,.]", "", x))
+      
+      # convert matrix from character to numeric, sometimes we receive
+      # character matrix from read.csv function
+      df_clean[,jj] <- apply(df_clean[,jj], 2, as.numeric, simplify = TRUE)
+    }
+    
+    rownames(df_clean) <- rownames(df)
     sample_names <- colnames(df_clean)
 
     # check if any value in df had a non-NA value that was converted to NA in df_clean
@@ -34,14 +43,14 @@ pgx.checkINPUT <- function(
 
     # replace infinite values in counts by the maximum value of the feature + 10%
     # check if there are any infinite values
-    ANY_INFINITE <- which(is.infinite(df_clean), arr.ind = TRUE)
+    ##ANY_INFINITE <- which(is.infinite(df_clean), arr.ind = TRUE)
+    ANY_INFINITE <- which(df_clean == Inf | df_clean == -Inf, arr.ind = TRUE)    
 
     if (length(ANY_INFINITE) > 0 && PASS) {
-      df_clean <- apply(df_clean, 1, function(x) {
-        max_val <- max(x, na.rm = TRUE)
-        ifelse(is.infinite(x), max_val * 1.1, x)
-      })
-      check_return$e28 <- paste("gene:", rownames(ANY_INFINITE), " and ", "sample:", colnames(df_clean)[ANY_INFINITE[, 2]])
+      ## replace Inf with NA
+      df_clean[ ANY_INFINITE ] <- NA
+      check_return$e28 <- paste("gene:", rownames(ANY_INFINITE), " and ",
+                                "sample:", colnames(df_clean)[ANY_INFINITE[, 2]])
     }
 
     # check for duplicated colnanes (gives error)
@@ -62,7 +71,7 @@ pgx.checkINPUT <- function(
     }
 
     # check for zero count rows, remove them
-    ANY_ROW_ZERO <- which(rowSums(df_clean, na.rm = TRUE) == 0, )
+    ANY_ROW_ZERO <- which(Matrix::rowSums(df_clean, na.rm = TRUE) == 0, )
 
     if (length(ANY_ROW_ZERO) > 0 && PASS) {
       # get the row names with all zeros
@@ -81,7 +90,7 @@ pgx.checkINPUT <- function(
     }
 
     # check for zero count columns, remove them
-    ANY_COLUMN_ZERO <- which(colSums(df_clean) == 0)
+    ANY_COLUMN_ZERO <- which(Matrix::colSums(df_clean) == 0)
 
     if (length(ANY_COLUMN_ZERO) > 0 && PASS) {
       check_return$e10 <- names(ANY_COLUMN_ZERO)
