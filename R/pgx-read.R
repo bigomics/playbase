@@ -78,13 +78,8 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char=TRUE,
   }
   x <- x0[sel, , drop = FALSE]
 
-  # convert x from data.table to matrix. as.matrix means we do not
-  # have mixed types (such as in dataframes). This is needed as
-  # fread reads numeric as integer64, which is not supported by
-  # matrix at this stage since we handle samples, counts and
-  # contrasts, it is dangerous to force conversion to numeric hence,
-  # the conversion from character to numeric for counts is handled
-  # at pgx.checkINPUT
+  # Convert x from data.table to matrix. With as.char = TRUE,
+  # as.matrix() does not return mixed types (such as in dataframes).
   if(as.char) {
     colnames_x <- colnames(x)[-1]
     x[, c(colnames_x) := lapply(.SD, as.character), .SDcols = colnames_x]
@@ -97,14 +92,20 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char=TRUE,
     x[, c(char.cols) := lapply(.SD, trimws), .SDcols = char.cols]    
   }
 
-  ## set rownames, convert to matrix
+  ## set rownames, convert to matrix.
   if(as.matrix) {
-    x <- as.matrix(x, rownames = row.names)   ## this is slow!!
+    ## this allow duplicated rownames
+    x <- as.matrix(x, rownames = row.names)   ## this can be slow!!
   } else {
-    rownames(x) <- x[[1]]
     if(!is.null(row.names)) {
+      rownamesx <- x[[1]]
       data.table::set(x, j=as.integer(row.names), value=NULL)
-    }
+      ## duplicated rownames not allowed!
+      if(sum(duplicated(rownamesx))>0) {
+        message("warning: duplicated rownames will be made unique")
+      }
+      rownames(x) <- make_unique(rownamesx)
+    } 
   }
 
   ## some csv have trailing empty rows/cols at end of table
