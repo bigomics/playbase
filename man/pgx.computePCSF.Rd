@@ -4,7 +4,17 @@
 \alias{pgx.computePCSF}
 \title{Compute PCSF solution from pgx object}
 \usage{
-pgx.computePCSF(pgx, contrast, level = "gene", ntop = 250, ncomp = 3)
+pgx.computePCSF(
+  pgx,
+  contrast,
+  level = "gene",
+  ntop = 250,
+  ncomp = 3,
+  beta = 1,
+  use.corweight = TRUE,
+  rm.negedge = TRUE,
+  dir = "both"
+)
 }
 \description{
 Compute PCSF solution from pgx object for given contrast.
