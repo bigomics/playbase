@@ -413,10 +413,14 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE
   rvar <- sub("=.*", "", colnames(Rx))
   Rx[is.nan(Rx)] <- 0
   Rx[is.na(Rx)] <- 0
-  R <- tapply(1:nrow(Rx), rvar, function(i) apply(Rx[c(i, i), ], 2, max, na.rm = TRUE))
+  R <- tapply(1:nrow(Rx), rvar, function(i) apply(Rx[c(i, i), , drop = FALSE], 2, max, na.rm = TRUE))
   R <- do.call(rbind, R)
-  R <- tapply(1:ncol(R), rvar, function(i) apply(R[, c(i, i)], 1, max, na.rm = TRUE))
-  R <- do.call(cbind, R)
+  R <- tapply(1:ncol(R), rvar, function(i) apply(R[, c(i, i), drop = FALSE], 1, max, na.rm = TRUE))
+  if (length(R) == 1) {
+    R <- matrix(R)
+  } else {
+    R <- do.call(cbind, R)
+  }
   R <- t(R / sqrt(diag(R))) / sqrt(diag(R))
   R[is.nan(R)] <- NA
 
