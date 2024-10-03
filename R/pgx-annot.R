@@ -698,13 +698,13 @@ getOrgDb <- function(organism, use.ah = NULL) {
 #' @export
 detect_probetype <- function(organism, probes, orgdb = NULL,
                              nprobe = 1000, use.ah = NULL, datatype = NULL,
-                             verbose=TRUE) {
+                             verbose = TRUE) {
 
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
 
-  if (datatype == "metabolomics") {
+  if (!is.null(datatype) && datatype == "metabolomics") {
     probe_type <- mbx.detect_probetype(probes)
     return(probe_type)    
   }
