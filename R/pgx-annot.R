@@ -103,9 +103,11 @@ getGeneAnnotation <- function(
   ## fallback with ORTHOGENE
   missing <- (is.na(annot$symbol) | annot$symbol == "")
   if (is.null(annot) || any(missing)) {
-    info("[getGeneAnnotation] annotating", sum(missing),
-         "missing features with ORTHOGENE")
-    if(any(missing)) {
+    info(
+      "[getGeneAnnotation] annotating", sum(missing),
+      "missing features with ORTHOGENE"
+    )
+    if (any(missing)) {
       missing.probes <- probes[which(missing)]
     } else {
       missing.probes <- probes
@@ -115,7 +117,7 @@ getGeneAnnotation <- function(
       probes = missing.probes,
       verbose = verbose
     ))
-    if(!"try-error" %in% class(missing.annot) && nrow(missing.annot)) {
+    if (!"try-error" %in% class(missing.annot) && nrow(missing.annot)) {
       ## replace missing entries
       missing.annot <- missing.annot[, colnames(annot)]
       jj <- match(missing.probes, probes)
@@ -215,7 +217,7 @@ getGeneAnnotation.ANNOTHUB <- function(
     probe_type <- detect_probetype(organism, probes, orgdb = NULL)
     if (is.null(probe_type)) {
       message("ERROR: could not determine probe_type. Please specify. ")
-      annot <- data.frame( feature = probes, symbol = "")
+      annot <- data.frame(feature = probes, symbol = "")
       annot <- cleanupAnnotation(annot)
       return(annot)
     }
@@ -270,7 +272,7 @@ getGeneAnnotation.ANNOTHUB <- function(
     ))
     missing.probe_type
     if (!is.null(missing.probe_type)) {
-      missing.probes1 <- match_probe_names(missing.probes, orgdb, missing.probe_type)    
+      missing.probes1 <- match_probe_names(missing.probes, orgdb, missing.probe_type)
       suppressMessages(suppressWarnings(
         missing.annot <- AnnotationDbi::select(orgdb,
           keys = missing.probes1,
@@ -337,13 +339,13 @@ getGeneAnnotation.ANNOTHUB <- function(
 #' Cleanup probe names from postfixes or version numbers
 #'
 #' @export
-clean_probe_names <- function(probes, sep="._") {
+clean_probe_names <- function(probes, sep = "._") {
   probes0 <- probes
   probes <- probes[!is.na(probes) & probes != ""]
   probes <- sapply(strsplit(probes, split = ";"), head, 1) ## take first
 
   ## strip away anything after a 'dot' or 'underscore'
-  probes <- sub(paste0("[",sep,"].*"), "", probes)
+  probes <- sub(paste0("[", sep, "].*"), "", probes)
 
   ## is.ensembl <- mean(grepl("^ENS", probes)) > 0.5
   ## if (is.ensembl) {
@@ -376,8 +378,8 @@ match_probe_names <- function(probes, org, probe_type = NULL) {
   if (sum(is.na(new.probes))) {
     jj <- which(is.na(new.probes))
     new.probes[jj] <- probes[jj]
-    jj.probes1 <- clean_probe_names(probes[jj],sep="._")
-    jj.probes2 <- clean_probe_names(probes[jj],sep="._-")
+    jj.probes1 <- clean_probe_names(probes[jj], sep = "._")
+    jj.probes2 <- clean_probe_names(probes[jj], sep = "._-")
     ii1 <- match(toupper(tsub(jj.probes1)), toupper(tsub(all.keys)))
     ii2 <- match(toupper(tsub(jj.probes2)), toupper(tsub(all.keys)))
     ii <- ifelse(!is.na(ii1), ii1, ii2)
@@ -699,14 +701,13 @@ getOrgDb <- function(organism, use.ah = NULL) {
 detect_probetype <- function(organism, probes, orgdb = NULL,
                              nprobe = 1000, use.ah = NULL, datatype = NULL,
                              verbose = TRUE) {
-
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
 
   if (!is.null(datatype) && datatype == "metabolomics") {
     probe_type <- mbx.detect_probetype(probes)
-    return(probe_type)    
+    return(probe_type)
   }
 
   ## get correct OrgDb database for organism
@@ -714,7 +715,7 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     orgdb <- getOrgDb(organism, use.ah = use.ah)
   }
   if (is.null(orgdb)) {
-    if(verbose) message("[detect_probetype] ERROR: unsupported organism '", organism, "'\n")
+    if (verbose) message("[detect_probetype] ERROR: unsupported organism '", organism, "'\n")
     return(NULL)
   }
 
@@ -743,9 +744,9 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
 
   probes0 <- probes
   ## try different cleaning methods
-  probes  <- clean_probe_names(probes)
-  probes1 <- clean_probe_names(probes,sep="._-")  
-  probesx  <- unique(c(probes0, probes, probes1))
+  probes <- clean_probe_names(probes)
+  probes1 <- clean_probe_names(probes, sep = "._-")
+  probesx <- unique(c(probes0, probes, probes1))
 
   # Iterate over probe types
   key <- keytypes[1]
@@ -783,7 +784,7 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   ##  key_matches
   top_match <- NULL
   if (all(key_matches == 0)) {
-    if(verbose) {
+    if (verbose) {
       message("head.probes = ", paste(head(probes), collapse = " "))
       message("WARNING: Probe type not found. Valid probe types: ", paste(keytypes, collapse = " "))
     }
