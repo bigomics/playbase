@@ -4,7 +4,13 @@
 \alias{read.as_matrix}
 \title{Read data file as matrix}
 \usage{
-read.as_matrix(file, skip_row_check = FALSE, row.names = 1)
+read.as_matrix(
+  file,
+  skip_row_check = FALSE,
+  as.char = TRUE,
+  as.matrix = TRUE,
+  row.names = 1
+)
 }
 \arguments{
 \item{file}{Path to input data file}

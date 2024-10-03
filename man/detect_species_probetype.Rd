@@ -8,8 +8,7 @@ list of test_species. Warning. bit slow.}
 detect_species_probetype(
   probes,
   test_species = c("human", "mouse", "rat"),
-  datatype = NULL,
-  probe_type = NULL
+  datatype = NULL
 )
 }
 \description{

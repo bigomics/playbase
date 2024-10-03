@@ -11,7 +11,6 @@ detect_probetype(
   nprobe = 1000,
   use.ah = NULL,
   datatype = NULL,
-  probe_type = NULL,
   verbose = TRUE
 )
 }

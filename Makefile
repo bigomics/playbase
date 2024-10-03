@@ -68,3 +68,7 @@ docker.squash:
 
 docker: docker.os docker.rbase docker.pkg docker.squash
 	@echo "% building playbase docker..."
+
+docker.bash:
+	@echo bash into playbase docker 
+	docker run -it bigomics/playbase /bin/bash
