@@ -4,17 +4,19 @@
 ##
 
 
-#' detect metabolomics ID type 
+#' detect metabolomics ID type
 #' @export
 mx.detect_probetype <- function(probes) {
   aa <- playdata::METABOLITE_ANNOTATION
-  nmatch <- apply( aa, 2, function(s) sum(probes %in% setdiff(s,NA)))
-  if( max(nmatch)/length(probes) < 0.10) {
-    aa2 <- apply(aa,2,function(s) gsub("[^0-9]","", s))
-    nmatch2 <- apply( aa2, 2, function(s) sum(probes %in% setdiff(s,NA)))  
+  nmatch <- apply(aa, 2, function(s) sum(probes %in% setdiff(s, NA)))
+  if (max(nmatch) / length(probes) < 0.10) {
+    aa2 <- apply(aa, 2, function(s) gsub("[^0-9]", "", s))
+    nmatch2 <- apply(aa2, 2, function(s) sum(probes %in% setdiff(s, NA)))
     nmatch <- nmatch + nmatch2
   }
-  if(max(nmatch,na.rm=TRUE)==0) return(NULL)
+  if (max(nmatch, na.rm = TRUE) == 0) {
+    return(NULL)
+  }
   names(which.max(nmatch))
 }
 

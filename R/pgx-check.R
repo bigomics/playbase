@@ -17,20 +17,18 @@ pgx.checkINPUT <- function(
   check_return <- list()
 
   if (datatype == "COUNTS" || datatype == "EXPRESSION") {
-
     df.class <- apply(df_clean, 2, class)
-    if(any(df.class == "character")) {
-
+    if (any(df.class == "character")) {
       # remove special characters before converting to numeric (keep
       # commas, dots) as they define the decimal separator
       jj <- which(df.class == "character")
-      df_clean[,jj] <- apply(df_clean[,jj], 2, function(x) gsub("[^0-9,.]", "", x))
-      
+      df_clean[, jj] <- apply(df_clean[, jj], 2, function(x) gsub("[^0-9,.]", "", x))
+
       # convert matrix from character to numeric, sometimes we receive
       # character matrix from read.csv function
-      df_clean[,jj] <- apply(df_clean[,jj], 2, as.numeric, simplify = TRUE)
+      df_clean[, jj] <- apply(df_clean[, jj], 2, as.numeric, simplify = TRUE)
     }
-    
+
     rownames(df_clean) <- rownames(df)
     sample_names <- colnames(df_clean)
 
@@ -43,14 +41,16 @@ pgx.checkINPUT <- function(
 
     # replace infinite values in counts by the maximum value of the feature + 10%
     # check if there are any infinite values
-    ##ANY_INFINITE <- which(is.infinite(df_clean), arr.ind = TRUE)
-    ANY_INFINITE <- which(df_clean == Inf | df_clean == -Inf, arr.ind = TRUE)    
+    ## ANY_INFINITE <- which(is.infinite(df_clean), arr.ind = TRUE)
+    ANY_INFINITE <- which(df_clean == Inf | df_clean == -Inf, arr.ind = TRUE)
 
     if (length(ANY_INFINITE) > 0 && PASS) {
       ## replace Inf with NA
-      df_clean[ ANY_INFINITE ] <- NA
-      check_return$e28 <- paste("gene:", rownames(ANY_INFINITE), " and ",
-                                "sample:", colnames(df_clean)[ANY_INFINITE[, 2]])
+      df_clean[ANY_INFINITE] <- NA
+      check_return$e28 <- paste(
+        "gene:", rownames(ANY_INFINITE), " and ",
+        "sample:", colnames(df_clean)[ANY_INFINITE[, 2]]
+      )
     }
 
     # check for duplicated colnanes (gives error)
