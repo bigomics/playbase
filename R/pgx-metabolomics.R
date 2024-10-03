@@ -6,7 +6,7 @@
 
 #' detect metabolomics ID type 
 #' @export
-mbx.detect_probetype <- function(probes) {
+mx.detect_probetype <- function(probes) {
   aa <- playdata::METABOLITE_ANNOTATION
   nmatch <- apply( aa, 2, function(s) sum(probes %in% setdiff(s,NA)))
   if( max(nmatch)/length(probes) < 0.10) {
@@ -50,6 +50,29 @@ convert_probe_to_chebi <- function(probes, probe_type) {
     return(NA)
   }
 
+  return(chebi_ids)
+}
+
+#' convert IDs to CHEBI using base R functions
+#' @export
+mx.convert_probe <- function(probes, probe_type=NULL, target_id="ChEBI") {
+  if(is.null(probe_type)) {
+    probe_type <- mx.detect_probetype(probes) 
+  }
+  
+  # check that probetype is valid
+  annot <- playdata::METABOLITE_ANNOTATION
+  valid_probe_types <- colnames(annot)
+  probe_type <- match.arg(probe_type, valid_probe_types)
+
+  # for id that are "", set it to na
+  probes[probes == ""] <- NA
+  if (probe_type == "ChEBI") {
+    # keep only numbers in ids, as chebi ids are numeric
+    probes <- gsub("[^0-9]", "", probes)
+  }
+  matches <- match(probes, annot[,probe_type])
+  chebi_ids <- annot[matches, target_id]
   return(chebi_ids)
 }
 
