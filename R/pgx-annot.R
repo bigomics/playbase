@@ -339,8 +339,11 @@ getGeneAnnotation.ANNOTHUB <- function(
 #' @export
 clean_probe_names <- function(probes, sep="._") {
   probes0 <- probes
-  probes <- probes[!is.na(probes) & probes != ""]
-  probes <- sapply(strsplit(probes, split = ";"), head, 1) ## take first
+  probes[is.na(probes)] <- ""
+  sel <- grep("[;]",probes)
+  if(length(sel)) {
+    probes[sel] <- sapply(strsplit(probes[sel], split = ";"), head, 1) ## take first
+  }
 
   ## strip away anything after a 'dot' or 'underscore'
   probes <- sub(paste0("[",sep,"].*"), "", probes)
@@ -356,7 +359,7 @@ clean_probe_names <- function(probes, sep="._") {
     ## probes <- sub("[.][0-9]+$", "", probes) ## strip phosphosite
     probes <- sub("-[0-9]+", "", probes) ## strip isoform
   }
-  names(probes) <- probes0
+##  names(probes) <- probes0
   probes
 }
 
@@ -705,7 +708,7 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
 
   if (!is.null(datatype) && datatype == "metabolomics") {
-    probe_type <- mbx.detect_probetype(probes)
+    probe_type <- mx.detect_probetype(probes)
     return(probe_type)    
   }
 
@@ -1498,4 +1501,54 @@ annotate_phospho_residue <- function(features, detect.only = FALSE) {
     features <- new.features
   }
   features
+}
+
+
+#' Convert probetype unsing annothub
+#'
+#' @export
+convert_probetype <- function(organism, probes, target_id, from_id=NULL,
+                              datatype = NULL, orgdb = NULL, verbose=TRUE) {
+
+  if (tolower(organism) == "human") organism <- "Homo sapiens"
+  if (tolower(organism) == "mouse") organism <- "Mus musculus"
+  if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
+
+  if (!is.null(datatype) && datatype == "metabolomics") {
+    ##new.probes <- mx.detect_probetype(probes)
+    ##return(new.probes)
+    message("WARNING: metabolomics not yet implemented")
+    return(NULL)
+  }
+
+  ## get correct OrgDb database for organism
+  if (is.null(orgdb)) {
+    orgdb <- getOrgDb(organism)
+  }
+  if (is.null(orgdb)) {
+    if(verbose) message("[convert_probetype] ERROR: unsupported organism '", organism, "'\n")
+    return(NULL)
+  }
+
+  if(!target_id %in% keytypes(orgdb)) {
+    message("[convert_probetype] invalid target probetype")
+    return(NULL)
+  }
+  if(is.null(from_id)) {
+    from_id <- detect_probetype(organism, probes, orgdb = orgdb, datatype=NULL )
+  }
+  from_id
+  message("[convert_probetype] converting from ", from_id, " to ", target_id)
+    
+  suppressMessages(suppressWarnings(try(
+    res <- AnnotationDbi::select(
+      orgdb,
+      keys = probes,
+      keytype = from_id,
+      columns = target_id
+    ),
+    silent = TRUE
+  )))
+  new.probes <- res[match(probes, res[,from_id]),target_id]
+  return(new.probes)
 }
