@@ -57,11 +57,11 @@ convert_probe_to_chebi <- function(probes, probe_type) {
 
 #' convert IDs to CHEBI using base R functions
 #' @export
-mx.convert_probe <- function(probes, probe_type=NULL, target_id="ChEBI") {
-  if(is.null(probe_type)) {
-    probe_type <- mx.detect_probetype(probes) 
+mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ChEBI") {
+  if (is.null(probe_type)) {
+    probe_type <- mx.detect_probetype(probes)
   }
-  
+
   # check that probetype is valid
   annot <- playdata::METABOLITE_ANNOTATION
   valid_probe_types <- colnames(annot)
@@ -73,7 +73,7 @@ mx.convert_probe <- function(probes, probe_type=NULL, target_id="ChEBI") {
     # keep only numbers in ids, as chebi ids are numeric
     probes <- gsub("[^0-9]", "", probes)
   }
-  matches <- match(probes, annot[,probe_type])
+  matches <- match(probes, annot[, probe_type])
   chebi_ids <- annot[matches, target_id]
   return(chebi_ids)
 }
