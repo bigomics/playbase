@@ -100,9 +100,10 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
   FC <- FC[, contrast, drop = FALSE]
 
   if (!obj$organism %in% c("Human", "human")) {
-    human_genes <- ifelse(!is.na(obj$genes$human_ortholog),
+    human_genes <- ifelse(
+      !obj$genes$human_ortholog %in% c("", "-", "NA", NA),
       obj$genes$human_ortholog,
-      obj$genes$symbol
+      toupper(obj$genes$symbol)
     )
     rownames(FC) <- human_genes
   }
@@ -118,8 +119,6 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
 
   ## first level (rank) correlation
   message("Calculating first level rank correlation ...")
-  jj <- match(rownames(FC), rownames(obj$genes)) ## Enable enrichment for proteomics
-  rownames(FC) <- obj$genes$symbol[jj]
   gg <- intersect(rownames(X), rownames(FC))
 
   if (length(gg) < 20) {
