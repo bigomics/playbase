@@ -81,17 +81,19 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   zx.gsva <- zx.ssgsea <- zx.rnkcorr <- NULL
   res.gsva <- res.ssgsea <- res.rnkcorr <- NULL
 
-  G <- G[rownames(X), names(gmt), drop = FALSE]
-
+  ## align. gg are symbols.
+  gg <- setdiff(rownames(X), c("",NA))
+  G <- G[gg, names(gmt), drop = FALSE]
+  X <- X[gg, , drop = FALSE]
+  
   if ("spearman" %in% methods) {
     message("fitting contrasts using spearman/limma... ")
 
     ## single-sample gene set enrichment using (fast) rank correlation
     xx1 <- X - rowMeans(X, na.rm = TRUE) ## center it...
     xx1 <- apply(xx1, 2, rank, na.last = "keep") ## rank correlation (like spearman)
-    jj <- intersect(rownames(G), rownames(xx1))
     tt <- system.time({
-      zx.rnkcorr <- qlcMatrix::corSparse(G[jj, , drop = FALSE], xx1[jj, ]) ## superfast
+      zx.rnkcorr <- qlcMatrix::corSparse(G, xx1) ## superfast
       rownames(zx.rnkcorr) <- colnames(G)
       colnames(zx.rnkcorr) <- colnames(X)
 
