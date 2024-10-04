@@ -855,36 +855,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
   G <- G[rownames(G) %in% full_feature_list, , drop = FALSE]
 
-  # add random genesets if G is too small
-  if (ncol(G) < 100 || nrow(G) < 3) {
-    add.gmt <- NULL
-    rr <- sample(3:400, 100)
-
-    if (is.null(pgx$genes$human_ortholog) || all(is.na(pgx$genes$human_ortholog)) || all(pgx$genes$human_ortholog == "")) {
-      gg <- pgx$genes$symbol
-    } else {
-      gg <- pgx$genes$human_ortholog # gmt should always map to human_ortholog
-    }
-
-    random.gmt <- lapply(rr, function(n) head(sample(gg), min(n, length(gg) / 2)))
-    names(random.gmt) <- paste0("TEST:random_geneset.", 1:length(random.gmt))
-
-    add.gmt <- playbase::createSparseGenesetMatrix(
-      gmt.all = random.gmt,
-      min.geneset.size = 3,
-      max.geneset.size = 400,
-      all_genes = full_feature_list,
-      min_gene_frequency = 1,
-      annot = pgx$genes,
-      filter_genes = FALSE
-    )
-
-    # merge add.gmt with G
-    G <- playbase::merge_sparse_matrix(
-      m1 = G,
-      m2 = Matrix::t(add.gmt)
-    )
-  }
 
   ## -----------------------------------------------------------
   ## Filter gene sets on size
@@ -1080,7 +1050,38 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   }
   G <- G[, size.ok, drop = FALSE]
 
-  # normalize columns (required for some methods downstream)
+  # add random genesets if G is too small
+  if (ncol(G) < 100 || nrow(G) < 3) {
+    add.gmt <- NULL
+    rr <- sample(3:400, 100)
+
+    if (is.null(pgx$genes$human_ortholog) || all(is.na(pgx$genes$human_ortholog)) || all(pgx$genes$human_ortholog == "")) {
+      gg <- pgx$genes$symbol
+    } else {
+      gg <- pgx$genes$human_ortholog # gmt should always map to human_ortholog
+    }
+
+    random.gmt <- lapply(rr, function(n) head(sample(gg), min(n, length(gg) / 2)))
+    names(random.gmt) <- paste0("TEST:random_geneset.", 1:length(random.gmt))
+
+    add.gmt <- playbase::createSparseGenesetMatrix(
+      gmt.all = random.gmt,
+      min.geneset.size = 3,
+      max.geneset.size = 400,
+      all_genes = full_feature_list,
+      min_gene_frequency = 1,
+      annot = pgx$genes,
+      filter_genes = FALSE
+    )
+
+    # merge add.gmt with G
+    G <- playbase::merge_sparse_matrix(
+      m1 = G,
+      m2 = Matrix::t(add.gmt)
+    )
+  }
+
+  # normalize columns (required for some methods downstream)log2foldchange
   G <- playbase::normalize_cols(G)
 
   pgx$GMT <- G
