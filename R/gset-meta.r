@@ -81,8 +81,11 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   zx.gsva <- zx.ssgsea <- zx.rnkcorr <- NULL
   res.gsva <- res.ssgsea <- res.rnkcorr <- NULL
 
-  G <- G[rownames(X), names(gmt), drop = FALSE]
-
+  ## align. gg are symbols.
+  gg <- setdiff(rownames(X), c("",NA))
+  G <- G[gg, names(gmt), drop = FALSE]
+  X <- X[gg, , drop = FALSE]
+  
   if ("spearman" %in% methods) {
     message("fitting contrasts using spearman/limma... ")
 
