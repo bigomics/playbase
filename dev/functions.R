@@ -14,6 +14,9 @@ scan_packages <- function(path='R') {
   ## require statements in the r/R source files.
   renv.out <- renv::dependencies(path = path, root = getwd(), errors = "ignored")
   pkg.used <- sort(unique(renv.out$Package))
+
+  ## manually add some missing packages
+  pkg.used <- c(pkg.used, c("sf"))
   pkg.used <- setdiff(pkg.used, "playbase")
 
   ## Define remote locations or versions
