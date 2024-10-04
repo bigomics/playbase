@@ -89,9 +89,8 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     ## single-sample gene set enrichment using (fast) rank correlation
     xx1 <- X - rowMeans(X, na.rm = TRUE) ## center it...
     xx1 <- apply(xx1, 2, rank, na.last = "keep") ## rank correlation (like spearman)
-    jj <- intersect(rownames(G), rownames(xx1))
     tt <- system.time({
-      zx.rnkcorr <- qlcMatrix::corSparse(G[jj, , drop = FALSE], xx1[jj, ]) ## superfast
+      zx.rnkcorr <- qlcMatrix::corSparse(G, xx1) ## superfast
       rownames(zx.rnkcorr) <- colnames(G)
       colnames(zx.rnkcorr) <- colnames(X)
 
