@@ -21,7 +21,11 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
       stop("[pgx.computePCSF] invalid contrast")
     }
     fx <- F[, contrast]
-    names(fx) <- rownames(F)
+    if (level == "geneset") {
+      names(fx) <- rownames(F)
+    } else {
+      names(fx) <- pgx$genes$human_ortholog
+    }
   }
   if (level == "geneset") {
     fx <- fx[grep("^GOBP:", names(fx))] ## really?
@@ -53,7 +57,8 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
       sel <- (STRING$from %in% nodes & STRING$to %in% nodes)
       ee <- STRING[sel, ]
       if (use.corweight) {
-        R <- cor(t(pgx$X[nodes, ]))
+        X <- rename_by(pgx$X, pgx$genes, "human_ortholog", unique = TRUE)
+        R <- cor(t(X[nodes, , drop = FALSE]))
         if (rm.negedge) R[which(R < 0)] <- NA
         wt <- (1 - R[cbind(ee$from, ee$to)])
         ee$cost <- ee$cost * wt
