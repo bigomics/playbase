@@ -22,7 +22,7 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
     }
     fx <- F[, contrast]
     if (level == "gene") {
-      names(fx) <- pgx$genes[rownames(F),"human_ortholog"]
+      names(fx) <- pgx$genes[rownames(F), "human_ortholog"]
     }
   }
 
@@ -33,10 +33,10 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
 
   if (level == "gene") {
     data(STRING, package = "PCSF")
-    string.genes <- unique(c(STRING$from,STRING$to))
+    string.genes <- unique(c(STRING$from, STRING$to))
     fx <- fx[which(names(fx) %in% string.genes)]
   }
-  
+
   if (dir == "both") {
     sel1 <- head(order(fx), ntop / 2)
     sel2 <- head(order(-fx), ntop / 2)
