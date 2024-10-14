@@ -225,14 +225,11 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
   is.bad <- (is.bad2 | is.bad3)
 
 
-  ## auto-determine which are factors
-  is.factor <- apply(df, 2, is.categorical)
 
   n.unique <- apply(df, 2, function(x) length(unique(setdiff(x, c(NA, "NA", "")))))
   n.notna <- apply(df, 2, function(x) length(x[!is.na(x)]))
-  is.id <- (n.unique > 0.9 * n.notna)
 
-  is.factor2 <- (!is.bad & is.factor & !is.id & n.unique >= min.ncat & n.unique <= max.ncat)
+  is.factor2 <- (!is.bad & n.unique >= min.ncat & n.unique <= max.ncat)
   is.factor2
 
   ## take reduced matrix
@@ -277,8 +274,8 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 #' @export
 getLevels <- function(Y) {
   yy <- Y[, grep("title|name|sample|patient", colnames(Y), invert = TRUE), drop = FALSE] ## NEED RETHINK!!!!
-  is.grpvar <- apply(yy, 2, function(y) max(table(y)) > 1)
-  is.numeric <- apply(yy, 2, function(y) (length(table(y)) / length(y)) > 0.5)
+  is.grpvar <- apply(yy, 2, function(y) length(table(y)) >= 2)
+  is.numeric <- apply(yy, 2, function(y) is.numeric(type.convert(y, as.is = TRUE)))
   is.grpvar <- is.grpvar & !is.numeric
   yy <- yy[, is.grpvar, drop = FALSE]
 
