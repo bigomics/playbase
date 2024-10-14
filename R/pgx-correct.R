@@ -1752,15 +1752,7 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
   t2 <- function(x) as.matrix(t(scale(t(scale(t(x), scale = FALSE)))))
   if (clust.method == "tsne" && nmissing == 0) {
     message("Computing t-SNE clustering...")
-    nb <- max(2, round(min(30, dim(X) / 5)))
-    if (!(3 * nb < nrow(t(X)) - 1)) {
-        if (nrow(t(X)) < 4) {
-            nb <- 0.5
-        } else {
-            ## nb <- floor((nrow(t(X)) - 1) / 3)
-            nb <- nb / 1.5 ## adjust
-        }
-    }
+    nb <- max(1, round(min(30, dim(X) / 5)))
     pos <- lapply(xlist, function(x) {
       Rtsne::Rtsne(t2(x), perplexity = nb, check_duplicates = FALSE)$Y
     })
