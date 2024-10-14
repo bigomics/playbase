@@ -151,6 +151,34 @@ pgx.saveMatrixH5 <- function(X, h5.file, chunk = NULL) {
 }
 
 
+#' @title Read (sub-)matrix from HDF5 file
+#'
+#' @export
+h5.readMatrix <- function(h5.file, rows = NULL, cols = NULL,
+                          matrixid='data/matrix', rowid='data/rownames',
+                          colid='data/colnames' ) {
+  cn <- rhdf5::h5read(h5.file, colid)
+  rn <- rhdf5::h5read(h5.file, rowid)
+  rowidx <- 1:length(rn)
+  colidx <- 1:length(cn)
+  if (!is.null(rows)) {
+    if(all(is.integer(rows))) rows <- rn[rows]
+    rowidx <- match(intersect(rows, rn), rn)
+  }
+  if (!is.null(cols)) {
+    if(all(is.integer(cols))) cols <- cn[cols]
+    colidx <- match(intersect(cols, cn), cn)
+  }
+  nr <- length(rowidx)
+  nc <- length(colidx)
+  message("[sigdb.getConnectivityMatrix] reading large H5 file: ", nr, "x", nc, "")
+  X <- rhdf5::h5read(h5.file, matrixid, index = list(rowidx, colidx))
+  rownames(X) <- rn[rowidx]
+  colnames(X) <- cn[colidx]
+  return(X)
+}
+
+
 #' @title Read PGX Options
 #'
 #' @param file The path to the PGX options file. Default is "./OPTIONS".
