@@ -21,13 +21,22 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
       stop("[pgx.computePCSF] invalid contrast")
     }
     fx <- F[, contrast]
-    names(fx) <- rownames(F)
+    if (level == "gene") {
+      names(fx) <- pgx$genes[rownames(F),"human_ortholog"]
+    }
   }
+
   if (level == "geneset") {
     fx <- fx[grep("^GOBP:", names(fx))] ## really?
     ## names(fx) <- gsub(".*:| \\(.*", "", names(fx))
   }
 
+  if (level == "gene") {
+    data(STRING, package = "PCSF")
+    string.genes <- unique(c(STRING$from,STRING$to))
+    fx <- fx[which(names(fx) %in% string.genes)]
+  }
+  
   if (dir == "both") {
     sel1 <- head(order(fx), ntop / 2)
     sel2 <- head(order(-fx), ntop / 2)
@@ -49,11 +58,12 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   nodes <- names(fx)
   get_edges <- function(nodes, use.corweight) {
     if (level == "gene") {
-      data(STRING, package = "PCSF")
       sel <- (STRING$from %in% nodes & STRING$to %in% nodes)
       ee <- STRING[sel, ]
       if (use.corweight) {
-        R <- cor(t(pgx$X[nodes, ]))
+        X <- rename_by(pgx$X, pgx$genes, "human_ortholog", unique = TRUE)
+        selx <- rownames(X) %in% union(ee$from, ee$to)
+        R <- cor(t(X[selx, , drop = FALSE]))
         if (rm.negedge) R[which(R < 0)] <- NA
         wt <- (1 - R[cbind(ee$from, ee$to)])
         ee$cost <- ee$cost * wt
