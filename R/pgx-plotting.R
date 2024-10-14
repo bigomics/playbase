@@ -5832,10 +5832,14 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
 
   ## ----------- row annotation (i.e. gene groups)
   if (!is.null(idx) && !is.null(row_annot_width) && row_annot_width > 0) {
+    cls <- list("gene.module" = c(omics_pal_d("muted_light")(nlevels(as.factor(idx)))))
+    if (length(cls[[1]]) == 1) {
+      cls[[1]] <- rep(cls[[1]], 2)
+    }
     plt <- iheatmapr::add_row_annotation(
       plt, data.frame("gene.module" = as.factor(idx)),
       size = row_annot_width * ex,
-      colors = list("gene.module" = c(omics_pal_d("muted_light")(nlevels(as.factor(idx))))),
+      colors = cls,
       show_colorbar = show_legend
     )
   }
