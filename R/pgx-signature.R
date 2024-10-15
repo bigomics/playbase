@@ -647,7 +647,8 @@ sigdb.getConnectivityContrasts <- function(sigdb, path = NULL) {
 #' If the sigdb file is not in the working directory, set the \code{path} parameter.
 #'
 #' @export
-sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL, path = NULL) {
+sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL,
+                                        if.tile = TRUE, path = NULL) {
   if (sigdb == "" || is.null(sigdb)) {
     warning("[getConnectivityMatrix] WARNING missing H5 file: sigdb=", sigdb)
     return(NULL)
@@ -660,6 +661,14 @@ sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL, path
     return(NULL)
   }
 
+  if (grepl("h5$", sigdb)) {
+    tile.file <- sub(".h5$",".tile",sigdb)
+    if(if.tile && file.exists(tile.file)) {
+      ## message("[getConnectivityMatrix] TileDB file found")
+      sigdb <- tile.file
+    }
+  }
+  
   if (grepl("csv$", sigdb)) {
     X <- utils::read.csv(sigdb, row.names = 1, check.names = FALSE)
     X <- as.matrix(X)
@@ -671,14 +680,30 @@ sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL, path
     rn <- rhdf5::h5read(sigdb, "data/rownames")
     rowidx <- 1:length(rn)
     colidx <- 1:length(cn)
-    if (!is.null(genes)) rowidx <- match(intersect(genes, rn), rn)
-    if (!is.null(select)) colidx <- match(intersect(select, cn), cn)
     nr <- length(rowidx)
     nc <- length(colidx)
-    dbg("[sigdb.getConnectivityMatrix] reading large H5 file:", nr, "x", nc, "")
+    if (!is.null(genes)) rowidx <- match(intersect(genes, rn), rn)
+    if (!is.null(select)) colidx <- match(intersect(select, cn), cn)
+    message("[sigdb.getConnectivityMatrix] reading H5 file: ",
+      basename(sigdb)," (",nr, " x ", nc, " -> ",
+      length(rowidx), " x ", length(colidx),")")
     X <- rhdf5::h5read(sigdb, "data/matrix", index = list(rowidx, colidx))
     rownames(X) <- rn[rowidx]
     colnames(X) <- cn[colidx]
+  } else if (grepl("tile$", sigdb)) {
+    tx <- TileDBArray::TileDBArray(sigdb)
+    rowidx <- 1:nrow(tx)
+    colidx <- 1:ncol(tx)
+    rn <- rownames(tx)
+    cn <- colnames(tx)
+    nr <- length(rowidx)
+    nc <- length(colidx)
+    if (!is.null(genes))  rowidx <- match(intersect(genes, rn), rn)
+    if (!is.null(select)) colidx <- match(intersect(select, cn), cn)
+    message("[sigdb.getConnectivityMatrix] reading TileDB file: ",
+      basename(sigdb)," (",nr, " x ", nc," -> ",
+      length(rowidx), " x ", length(colidx),")")
+    suppressWarnings( X <- as.matrix(tx[rowidx, colidx]) )
   } else {
     cat("[getConnectivityMatrix] WARNING: could not retrieve matrix\n")
   }
