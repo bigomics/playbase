@@ -155,18 +155,18 @@ pgx.saveMatrixH5 <- function(X, h5.file, chunk = NULL) {
 #'
 #' @export
 h5.readMatrix <- function(h5.file, rows = NULL, cols = NULL,
-                          matrixid='data/matrix', rowid='data/rownames',
-                          colid='data/colnames' ) {
+                          matrixid = "data/matrix", rowid = "data/rownames",
+                          colid = "data/colnames") {
   cn <- rhdf5::h5read(h5.file, colid)
   rn <- rhdf5::h5read(h5.file, rowid)
   rowidx <- 1:length(rn)
   colidx <- 1:length(cn)
   if (!is.null(rows)) {
-    if(all(is.integer(rows))) rows <- rn[rows]
+    if (all(is.integer(rows))) rows <- rn[rows]
     rowidx <- match(intersect(rows, rn), rn)
   }
   if (!is.null(cols)) {
-    if(all(is.integer(cols))) cols <- cn[cols]
+    if (all(is.integer(cols))) cols <- cn[cols]
     colidx <- match(intersect(cols, cn), cn)
   }
   nr <- length(rowidx)
@@ -180,13 +180,13 @@ h5.readMatrix <- function(h5.file, rows = NULL, cols = NULL,
 
 #' @export
 h5.rownames <- function(h5.file, id = NULL) {
-  if(is.null(id)) {
-    tags <- sub('^/','',apply(rhdf5::h5ls(sigdb)[,1:2],1,paste,collapse='/'))
-    ids <- c('data/rownames','meta/genes')
-    id <- intersect(ids,tags)
+  if (is.null(id)) {
+    tags <- sub("^/", "", apply(rhdf5::h5ls(sigdb)[, 1:2], 1, paste, collapse = "/"))
+    ids <- c("data/rownames", "meta/genes")
+    id <- intersect(ids, tags)
   }
-  id  
-  if(is.null(id)) {
+  id
+  if (is.null(id)) {
     warning("could not resolve rownames")
     return(NULL)
   }
@@ -194,14 +194,14 @@ h5.rownames <- function(h5.file, id = NULL) {
 }
 
 #' @export
-h5.colnames <- function(h5.file, id=NULL) {
-  if(is.null(id)) {
-    tags <- sub('^/','',apply(rhdf5::h5ls(sigdb)[,1:2],1,paste,collapse='/'))
-    ids <- c('data/colnames','meta/sampleid','meta/sample')
-    id <- intersect(ids,tags)
+h5.colnames <- function(h5.file, id = NULL) {
+  if (is.null(id)) {
+    tags <- sub("^/", "", apply(rhdf5::h5ls(sigdb)[, 1:2], 1, paste, collapse = "/"))
+    ids <- c("data/colnames", "meta/sampleid", "meta/sample")
+    id <- intersect(ids, tags)
   }
   id
-  if(is.null(id)) {
+  if (is.null(id)) {
     warning("could not resolve colnames")
     return(NULL)
   }
