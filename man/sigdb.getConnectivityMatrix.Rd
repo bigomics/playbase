@@ -7,7 +7,13 @@
 \alias{sigdb.removeDataset}
 \title{Get elements from a sigDB}
 \usage{
-sigdb.getConnectivityMatrix(sigdb, select = NULL, genes = NULL, path = NULL)
+sigdb.getConnectivityMatrix(
+  sigdb,
+  select = NULL,
+  genes = NULL,
+  if.tile = TRUE,
+  path = NULL
+)
 
 sigdb.getEnrichmentMatrix(
   sigdb,
