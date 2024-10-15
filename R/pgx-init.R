@@ -191,6 +191,19 @@ pgx.initialize <- function(pgx) {
   if (is.null(pgx$organism)) {
     pgx$organism <- playbase::pgx.getOrganism(pgx)
   }
+
+  # Check if human ortholog is empty, if it is
+  # 1) run getHumanOrtholog (maybe it failed on pgx.compute bc server was unreachable)
+  # 2) if still empty, grag the symbols toUpper
+  if (all(is.na(pgx$genes$human_ortholog))) {
+    genes_ho <- getHumanOrtholog(pgx$organism, pgx$genes$symbol)$human
+    if (all(is.na(genes_ho))) {
+      pgx$genes$human_ortholog <- toupper(pgx$genes$symbol)
+    } else {
+      pgx$genes$human_ortholog <- genes_ho
+    }
+  }
+
   if (pgx$organism %in% c("Human", "human") | !is.null(pgx$version)) {
     pgx$families <- lapply(playdata::FAMILIES, function(x) {
       intersect(x, genes)

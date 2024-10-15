@@ -157,7 +157,7 @@ pgx.wgcna <- function(
   }
 
   ## Do quick geneset analysis using fisher-test (fastest method)
-  gmt <- getGSETS_playbase(pattern = "HALLMARK|GOBP|^C[1-9]")
+  gmt <- getGSETS_playbase(pattern = "HALLMARK|GOBP|^C[1-9]|GO_BP")
   gse <- NULL
   bg <- rownames(pgx$X)
   bg <- probe2symbol(bg, pgx$genes, query = "human_ortholog")
