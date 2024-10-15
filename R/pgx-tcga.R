@@ -49,26 +49,26 @@ pgx.testTCGAsurvival <- function(sig, matrix_file, ntop = 100, deceased.only = T
   h5.genes <- rhdf5::h5read(matrix_file, "/meta/genes")
   h5.project <- rhdf5::h5read(matrix_file, "/meta/gdc_cases.project.project_id")
   rhdf5::h5ls(matrix_file)
-  
+
   sample_index <- 1:length(h5.samples)
   gene_index <- 1:length(h5.genes)
   gene_index <- which(h5.genes %in% genes)
 
-  tiledb <- sub("[.]h5$",".tile",matrix_file)
+  tiledb <- sub("[.]h5$", ".tile", matrix_file)
   has.tiledb <- dir.exists(tiledb)
   has.tiledb
 
-  if(TRUE && has.tiledb) {
+  if (TRUE && has.tiledb) {
     if (verbose) {
-      message("[pgx.testTCGAsurvival] reading from TileDB ",basename(tiledb))
+      message("[pgx.testTCGAsurvival] reading from TileDB ", basename(tiledb))
     }
-    tiledb.path <- file.path(dirname(matrix_file),basename(tiledb))
+    tiledb.path <- file.path(dirname(matrix_file), basename(tiledb))
     tx <- TileDBArray::TileDBArray(tiledb.path)
     sel.genes <- intersect(h5.genes, rownames(tx))
     sel.samples <- intersect(h5.samples, colnames(tx))
-    suppressWarnings( expression <- as.matrix(tx[sel.genes, sel.samples]) )
+    suppressWarnings(expression <- as.matrix(tx[sel.genes, sel.samples]))
   } else {
-    if (verbose) message("[pgx.testTCGAsurvival] reading from HDF5 ",basename(matrix_file))    
+    if (verbose) message("[pgx.testTCGAsurvival] reading from HDF5 ", basename(matrix_file))
     expression <- rhdf5::h5read(
       matrix_file, "data/expression",
       index = list(gene_index, sample_index)

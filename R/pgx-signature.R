@@ -662,13 +662,13 @@ sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL,
   }
 
   if (grepl("h5$", sigdb)) {
-    tile.file <- sub(".h5$",".tile",sigdb)
-    if(if.tile && file.exists(tile.file)) {
+    tile.file <- sub(".h5$", ".tile", sigdb)
+    if (if.tile && file.exists(tile.file)) {
       ## message("[getConnectivityMatrix] TileDB file found")
       sigdb <- tile.file
     }
   }
-  
+
   if (grepl("csv$", sigdb)) {
     X <- utils::read.csv(sigdb, row.names = 1, check.names = FALSE)
     X <- as.matrix(X)
@@ -684,9 +684,11 @@ sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL,
     nc <- length(colidx)
     if (!is.null(genes)) rowidx <- match(intersect(genes, rn), rn)
     if (!is.null(select)) colidx <- match(intersect(select, cn), cn)
-    message("[sigdb.getConnectivityMatrix] reading H5 file: ",
-      basename(sigdb)," (",nr, " x ", nc, " -> ",
-      length(rowidx), " x ", length(colidx),")")
+    message(
+      "[sigdb.getConnectivityMatrix] reading H5 file: ",
+      basename(sigdb), " (", nr, " x ", nc, " -> ",
+      length(rowidx), " x ", length(colidx), ")"
+    )
     X <- rhdf5::h5read(sigdb, "data/matrix", index = list(rowidx, colidx))
     rownames(X) <- rn[rowidx]
     colnames(X) <- cn[colidx]
@@ -698,12 +700,14 @@ sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL,
     cn <- colnames(tx)
     nr <- length(rowidx)
     nc <- length(colidx)
-    if (!is.null(genes))  rowidx <- match(intersect(genes, rn), rn)
+    if (!is.null(genes)) rowidx <- match(intersect(genes, rn), rn)
     if (!is.null(select)) colidx <- match(intersect(select, cn), cn)
-    message("[sigdb.getConnectivityMatrix] reading TileDB file: ",
-      basename(sigdb)," (",nr, " x ", nc," -> ",
-      length(rowidx), " x ", length(colidx),")")
-    suppressWarnings( X <- as.matrix(tx[rowidx, colidx]) )
+    message(
+      "[sigdb.getConnectivityMatrix] reading TileDB file: ",
+      basename(sigdb), " (", nr, " x ", nc, " -> ",
+      length(rowidx), " x ", length(colidx), ")"
+    )
+    suppressWarnings(X <- as.matrix(tx[rowidx, colidx]))
   } else {
     cat("[getConnectivityMatrix] WARNING: could not retrieve matrix\n")
   }
