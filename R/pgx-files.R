@@ -178,6 +178,36 @@ h5.readMatrix <- function(h5.file, rows = NULL, cols = NULL,
   return(X)
 }
 
+#' @export
+h5.rownames <- function(h5.file, id = NULL) {
+  if(is.null(id)) {
+    tags <- sub('^/','',apply(rhdf5::h5ls(sigdb)[,1:2],1,paste,collapse='/'))
+    ids <- c('data/rownames','meta/genes')
+    id <- intersect(ids,tags)
+  }
+  id  
+  if(is.null(id)) {
+    warning("could not resolve rownames")
+    return(NULL)
+  }
+  rhdf5::h5read(h5.file, id)
+}
+
+#' @export
+h5.colnames <- function(h5.file, id=NULL) {
+  if(is.null(id)) {
+    tags <- sub('^/','',apply(rhdf5::h5ls(sigdb)[,1:2],1,paste,collapse='/'))
+    ids <- c('data/colnames','meta/sampleid','meta/sample')
+    id <- intersect(ids,tags)
+  }
+  id
+  if(is.null(id)) {
+    warning("could not resolve colnames")
+    return(NULL)
+  }
+  rhdf5::h5read(h5.file, id)
+}
+
 
 #' @title Read PGX Options
 #'
