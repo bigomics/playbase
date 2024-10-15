@@ -205,13 +205,11 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
   is.bad <- 0
 
   ## ... exclude sample IDs
-
   is.bad1 <- grepl("^sample$|[_.]id$|patient|donor|individ", tolower(colnames(df)))
 
   ## ... exclude numerical dates/age/year
   is.bad2 <- grepl("ratio|year|month|day|^age$|^efs|^dfs|surv|follow", tolower(colnames(df)))
-
-  is.num <- sapply(df, class) == "numeric"
+  is.num <- sapply(type.convert(df, as.is=TRUE), class) == "numeric"
   is.bad2 <- (is.bad2 & is.num) ## no numeric
 
   ## ... exclude any sample ID coded in columns...
@@ -224,11 +222,8 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 
   is.bad <- (is.bad2 | is.bad3)
 
-
-
   n.unique <- apply(df, 2, function(x) length(unique(setdiff(x, c(NA, "NA", "")))))
   n.notna <- apply(df, 2, function(x) length(x[!is.na(x)]))
-
   is.factor2 <- (!is.bad & n.unique >= min.ncat & n.unique <= max.ncat)
   is.factor2
 
@@ -238,10 +233,7 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
   nchars <- apply(df1, 2, function(x) max(nchar(iconv(x, "latin1", "ASCII", sub = ""))))
   df1 <- df1[, order(nlevel, -nchars), drop = FALSE]
 
-
   if (remove.dup && ncol(df1) > 1) {
-    i <- 1
-    j <- 2
     is.dup <- rep(FALSE, ncol(df1))
     for (i in 1:(ncol(df1) - 1)) {
       is.dup[i] <- FALSE
@@ -278,7 +270,6 @@ getLevels <- function(Y) {
   is.numeric <- apply(yy, 2, function(y) is.numeric(type.convert(y, as.is = TRUE)))
   is.grpvar <- is.grpvar & !is.numeric
   yy <- yy[, is.grpvar, drop = FALSE]
-
 
   levels <- lapply(1:ncol(yy), function(i) unique(paste0(colnames(yy)[i], "=", yy[, i])))
   levels <- sort(unlist(levels))
