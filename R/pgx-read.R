@@ -81,6 +81,9 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
   # Convert x from data.table to matrix. With as.char = TRUE,
   # as.matrix() does not return mixed types (such as in dataframes).
   if (as.char) {
+    ## drop duplicated columns
+    ## otherwise as.char will crash
+    x <- x[,which(duplicated(colnames(x))) := NULL]
     colnames_x <- colnames(x)[-1]
     x[, c(colnames_x) := lapply(.SD, as.character), .SDcols = colnames_x]
   }
