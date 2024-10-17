@@ -1866,7 +1866,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
 
   ## -------------- remove others
   if (showothers == FALSE && any(grepl("other", xgroup))) {
-    jj <- grep("other", xgroup, invert = TRUE)
+    jj <- !xgroup %in% "other"
     xgroup <- factor(xgroup[jj], levels = setdiff(levels(xgroup), "other"))
     gx <- gx[jj]
   }
