@@ -83,7 +83,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
   if (as.char) {
     ## drop duplicated columns
     ## otherwise as.char will crash
-    x <- x[,which(duplicated(colnames(x))) := NULL]
+    x <- x[, which(duplicated(colnames(x))) := NULL]
     colnames_x <- colnames(x)[-1]
     x[, c(colnames_x) := lapply(.SD, as.character), .SDcols = colnames_x]
   }
