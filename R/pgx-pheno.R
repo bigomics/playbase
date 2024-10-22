@@ -209,7 +209,7 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 
   ## ... exclude numerical dates/age/year
   is.bad2 <- grepl("ratio|year|month|day|^age$|^efs|^dfs|surv|follow", tolower(colnames(df)))
-  is.num <- sapply(type.convert(df, as.is=TRUE), class) == "numeric"
+  is.num <- sapply(type.convert(df, as.is = TRUE), class) == "numeric"
   is.bad2 <- (is.bad2 & is.num) ## no numeric
 
   ## ... exclude any sample ID coded in columns...
