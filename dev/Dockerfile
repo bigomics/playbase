@@ -26,6 +26,7 @@ RUN Rscript dev/install_dependencies.R
 
 # reinstall some failed ones
 #RUN R -e "remotes::install_github('bigomics/PCSF')"
+RUN R -e "BiocManager::install('TileDBArray')"
 
 #------------------------------------------------------------
 # Clean up when done.

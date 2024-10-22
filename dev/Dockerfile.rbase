@@ -12,7 +12,7 @@ FROM playbase-os AS playbase-rbase
 RUN apt install -y r-base r-base-dev 
 
 RUN mkdir -p /playbase/dev
-WORKDIR /playground
+WORKDIR /playbase
 COPY dev/Dockerfile* dev/install* dev/Makevars* dev/functions.R \
      /playbase/dev/
 
@@ -43,6 +43,7 @@ RUN rm /root/.R/Makevars
 RUN R -e "BiocManager::install('msa')"
 RUN R -e "BiocManager::install('orthogene')"
 RUN R -e "BiocManager::install('MSnbase')"
+RUN R -e "BiocManager::install('TileDBArray')"
 
 #------------------------------------------------------------
 # Clean up when done.
