@@ -5559,7 +5559,7 @@ iheatmapr.add_col_annotation <- function(p,
       if (!is.null(colors) && colnames(x)[i] %in% names(colors)) {
         tmp_colors <- colors[[colnames(x)[i]]]
       } else {
-        tmp_colors <- pick_continuous_colors(
+        tmp_colors <- iheatmapr:::pick_continuous_colors(
           zmid = 0,
           zmin = min(x[, i], na.rm = TRUE),
           zmax = max(x[, i], na.rm = TRUE), p
