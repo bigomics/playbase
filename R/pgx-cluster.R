@@ -48,8 +48,8 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
     X <- pgx$gsetX
     X <- X[complete.cases(X), , drop = FALSE]
     if (nrow(X) == 0) {
-        message("WARNING:: pgx$gsetX has 0 complete cases. Returning pgx.")
-        return(pgx)
+      message("WARNING:: pgx$gsetX has 0 complete cases. Returning pgx.")
+      return(pgx)
     }
   } else {
     message("WARNING:: could not find matrix X")
