@@ -1840,7 +1840,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
     xgroup <- as.character(xgroup)
 
     levels0 <- group.names
-    if ("other" %in% xgroup) levels0 <- c(levels0, "other")
+    if ("other" %in% xgroup && !"other" %in% levels0) levels0 <- c(levels0, "other")
     xgroup <- factor(xgroup, levels = levels0)
   }
 
