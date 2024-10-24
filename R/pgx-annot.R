@@ -233,6 +233,10 @@ getGeneAnnotation.ANNOTHUB <- function(
   cols <- c("SYMBOL", "GENENAME", "GENETYPE", "MAP")
   cols <- intersect(cols, AnnotationDbi::keytypes(orgdb))
 
+  if(organism == "Mus musculus") {
+      cols <- c(cols, "ENTREZID")
+  }
+  
   cat("get gene annotation columns:", cols, "\n")
   message("retrieving annotation for ", length(probes), " ", probe_type, " features...")
 
@@ -245,6 +249,22 @@ getGeneAnnotation.ANNOTHUB <- function(
     )
   ))
 
+  ## Attempt to retrieve chr map via org.Mm.egCHRLOC
+  if(organism == "Mus musculus") {
+      library(org.Mm.eg.db)
+      chrloc <- org.Mm.egCHRLOC
+      mapped_genes <- as.list(chrloc[mappedkeys(chrloc)])
+      cm <- intersect(as.character(annot$ENTREZID), names(mapped_genes))
+      mapped_genes <- mapped_genes[cm]
+      locs <- unlist(lapply(mapped_genes, function(x) names(x[1])))
+      jj <- match(names(locs), annot$ENTREZID)
+      annot$MAP <- NA
+      annot$MAP[jj] <- unname(locs)
+      cls <- colnames(annot)
+      cls <- cls[which(!cls %in% "ENTREZID")]
+      annot <- annot[, cls, drop = FALSE]
+  }
+  
   # some organisms do not provide symbol but rather gene name (e.g. yeast)
   if (!"SYMBOL" %in% colnames(annot)) {
     annot$SYMBOL <- annot$GENENAME
