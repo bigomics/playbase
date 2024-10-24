@@ -234,7 +234,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   cols <- intersect(cols, AnnotationDbi::keytypes(orgdb))
 
   if(organism == "Mus musculus") {
-      cols <- c(cols, "ENTREZID")
+      cols <- unique(c(cols, "ENTREZID"))
   }
   
   cat("get gene annotation columns:", cols, "\n")
@@ -253,6 +253,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   if(organism == "Mus musculus") {
       library(org.Mm.eg.db)
       chrloc <- org.Mm.egCHRLOC
+
       mapped_genes <- as.list(chrloc[mappedkeys(chrloc)])
       cm <- intersect(as.character(annot$ENTREZID), names(mapped_genes))
       mapped_genes <- mapped_genes[cm]
@@ -260,8 +261,11 @@ getGeneAnnotation.ANNOTHUB <- function(
       jj <- match(names(locs), annot$ENTREZID)
       annot$MAP <- NA
       annot$MAP[jj] <- unname(locs)
-      cls <- colnames(annot)
-      cls <- cls[which(!cls %in% "ENTREZID")]
+      ## chr <- mget( probes, envir=org.Mm.egCHRLOC, ifnotfound=NA )
+      ## chr <- unlist(sapply(chr, function(x) names(x)[1]))
+      ## jj <- match(annot$ENTREZID, names(chr))
+      ## annot$MAP <- chr[jj]      
+      cls <- setdiff(colnames(annot), "ENTREZID")
       annot <- annot[, cls, drop = FALSE]
   }
   
