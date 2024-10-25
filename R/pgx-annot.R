@@ -233,7 +233,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   cols <- c("SYMBOL", "GENENAME", "GENETYPE", "MAP")
   cols <- intersect(cols, AnnotationDbi::keytypes(orgdb))
 
-  if(organism == "Mus musculus") {
+  if (organism %in% c("Mus musculus", "Rattus norvegicus")) {
       cols <- unique(c(cols, "ENTREZID"))
   }
   
@@ -249,11 +249,16 @@ getGeneAnnotation.ANNOTHUB <- function(
     )
   ))
 
-  ## Attempt to retrieve chr map via org.Mm.egCHRLOC
-  if(organism == "Mus musculus") {
-      library(org.Mm.eg.db)
-      chrloc <- org.Mm.egCHRLOC
-
+  ## Attempt to retrieve chr map via org.Mm.egCHRLOC / org.Rn.egCHRLOC.
+  if (organism %in% c("Mus musculus", "Rattus norvegicus")) {
+      if (organism == "Mus musculus") {
+          library(org.Mm.eg.db)
+          chrloc <- org.Mm.egCHRLOC
+      }
+      if (organism == "Rattus norvegicus") {
+          library(org.Rn.eg.db)
+          chrloc <- org.Rn.egCHRLOC
+      }
       mapped_genes <- as.list(chrloc[mappedkeys(chrloc)])
       cm <- intersect(as.character(annot$ENTREZID), names(mapped_genes))
       mapped_genes <- mapped_genes[cm]
@@ -261,10 +266,6 @@ getGeneAnnotation.ANNOTHUB <- function(
       jj <- match(names(locs), annot$ENTREZID)
       annot$MAP <- NA
       annot$MAP[jj] <- unname(locs)
-      ## chr <- mget( probes, envir=org.Mm.egCHRLOC, ifnotfound=NA )
-      ## chr <- unlist(sapply(chr, function(x) names(x)[1]))
-      ## jj <- match(annot$ENTREZID, names(chr))
-      ## annot$MAP <- chr[jj]      
       cls <- setdiff(colnames(annot), "ENTREZID")
       annot <- annot[, cls, drop = FALSE]
   }
