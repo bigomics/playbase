@@ -84,7 +84,7 @@ pgx.wgcna <- function(
   nmissing <- sum(is.na(X))
   if (nmissing > 0) {
     message("Found ", nmissing, " missing values in X. Removing prior to WGCNA.")
-    X <- X[complete.cases(X), ]
+    X <- X[complete.cases(X), , drop = FALSE]
   }
   sdx <- matrixStats::rowSds(X, na.rm = TRUE)
   X <- X[sdx > 0.1 * mean(sdx, na.rm = TRUE), ] ## filter low SD
