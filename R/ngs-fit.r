@@ -84,7 +84,7 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
     limma.mtd <- c("trend.limma", "notrend.limma", "voom.limma")
     edger.mtd <- c("edger.qlf", "edger.lrt")
     deseq2.mtd <- c("deseq2.wald", "deseq2.lrt")
-    allmethods <- c(ttest.mtd, limma.mtd, edgeR.mtd, deseq2.mtd)
+    allmethods <- c(ttest.mtd, limma.mtd, edger.mtd, deseq2.mtd)
     if (methods[1] == "*") methods <- allmethods
     methods <- intersect(methods, allmethods)
 
