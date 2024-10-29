@@ -824,6 +824,27 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   return(top_match)
 }
 
+#' @export
+collapse_by_humansymbol <- function(obj, annot) {
+  annot <- cbind(annot, rownames = rownames(annot))
+  target <- c("human_ortholog", "symbol", "gene_name", "rownames")
+  target <- intersect(target, colnames(annot))
+  complete_targets <- lapply(target, function(x) {
+    sum(is.na(annot[, x]) | annot[, x] %in% c("")) < 1
+  }) |> unlist()
+  target <- target[complete_targets]
+  if (length(target) == 0) {
+    message("[map_humansymbol] WARNING: could not find symbol mapping column.")
+    return(obj)
+  } else {
+    ## call rename_by with target column
+    map.obj <- rename_by(obj, annot_table = annot, new_id = target[1])
+  }
+  if (!is.null(dim(map.obj))) rownames(map.obj) <- toupper(rownames(map.obj))
+  if (is.null(dim(map.obj))) names(map.obj) <- toupper(names(map.obj))
+  map.obj
+}
+
 
 #' @title Get human ortholog from given symbols of organism by using
 #'   orthogene package. This package needs internet connection.
