@@ -6,93 +6,7 @@
 
 #' @export
 ## normalizeData <- function(pgx, do.impute = TRUE, do.regress = TRUE,
-##                           impute.method = "SVD2", scale.method = "cpm") {
-##   which.zero <- which(counts == 0)
-##   which.missing <- which(is.na(counts))
-##   nzero <- sum(length(which.zero))
-##   nmissing <- sum(length(which.missing))
-##   message("[normalizeData] ", nzero, " zero values")
-##   message("[normalizeData] ", nmissing, " missing values")
-
-##   contrasts <- pgx$contrasts
-##   if (is.null(contrasts)) contrasts <- sign(pgx$model.parameters$exp.matrix)
-##   samples <- pgx$samples
-##   counts <- pgx$counts
-
-##   X <- log2(counts + 1)
-
-##   if (do.impute) {
-##     ## remove XXL/Infinite values and set to NA
-##     which.xxl <- c()
-##     which.xxl <- which(is.xxl(X, z = 10))
-##     X[which.xxl] <- NA
-
-##     ## impute missing values
-##     if (any(is.na(counts))) {
-##       nmissing <- sum(is.na(counts))
-##       message("[createPGX] WARNING: data has ", nmissing, " missing values.")
-##       ## counts <- counts.imputeMissing(counts, method = impute.method)
-##       if (impute.method == "SVD2") {
-##         X <- playbase::imputeMissing(X, method = "SVD2")
-##         which.na <- which(is.na(counts), arr.ind = TRUE)
-##         counts[which.na] <- pmax(2**X - 1, 0) ## also update counts??
-##       }
-##       if (impute.method == "NMF") {
-##         which.na <- which(is.na(counts), arr.ind = TRUE)
-##         counts <- nmfImpute(counts, k = 3)
-##         X[which.na] <- log2(counts[which.na] + 1)
-##       }
-##     }
-##   }
-
-##   ## Auto-scaling (scale down huge values, often in proteomics)
-##   ## res <- counts.autoScaling(counts)
-##   ## counts <- res$counts
-##   ## counts_multiplier <- res$counts_multiplier
-##   ## remove(res)
-
-##   ## if (normalize) {
-##   ##   message("[createPGX] NORMALIZING log-expression matrix X...")
-##   ##   X <- playbase::logCPM(pmax(2**X - 1, 0), total = 1e6, prior = 1)
-##   ##   X <- limma::normalizeQuantiles(X) ## in log space
-##   ##   ## X <- 0.1*X + 0.9*limma::normalizeQuantiles(X)   ## 'weighted' to keep randomness...
-##   ## } else {
-##   ##   message("[createPGX] SKIPPING NORMALIZATION!")
-##   ## }
-
-##   message("[normalizeData] Median centering...")
-##   ## eX <- playbase::pgx.countNormalization( eX, methods = "median.center")
-##   mx <- apply(X, 2, median, na.rm = TRUE)
-##   X <- t(t(X) - mx) + mean(mx, na.rm = TRUE)
-
-##   message("[normalizeData] Global scaling")
-##   X <- global_scaling(X, method = scale.method)
-##   hist(X, breaks = 100)
-
-##   ## technical effects correction
-##   message("[normalizeData] Correcting for technical effects...")
-##   pheno <- playbase::contrasts2pheno(contrasts, samples)
-##   X <- playbase::removeTechnicalEffects(
-##     X, samples, pheno,
-##     p.pheno = 0.05, p.pca = 0.5, force = FALSE,
-##     params = c("lib", "mito", "ribo", "cellcycle", "gender"),
-##     nv = 2, k.pca = 10, xrank = NULL
-##   )
-##   hist(X, breaks = 100)
-
-##   ## for quantile normalization we omit the zero value and put back later
-##   message("Quantile normalization...")
-##   jj <- which(X < 0.01)
-##   X[jj] <- NA
-##   X <- limma::normalizeQuantiles(X)
-##   X[jj] <- 0
-
-##   ## add normalized data to pgx object
-##   pgx$X <- X
-##   pgx
-## }
-
-
+##                           impute.method = "SVD2", scale.method = "cpm") {} REMOVED. AZ
 
 ## Normalization methods
 ##
@@ -348,58 +262,7 @@ safe.logCPM <- function(x, t = 0.05, prior = 1, q = NULL) {
 }
 
 ## #' @export
-## global_scaling <- function(X, method, shift = "clip") {
-##   X[is.infinite(X)] <- NA
-
-##   ## ---logMM & logMS created for MPoC
-##   ## ---logCPM conformed to existing deployed master
-##   if (method == "maxMedian") {
-##     X <- maxMedianNormalization(counts = 2**X - 1)
-##   } else if (method == "maxSum") {
-##     X <- maxSumNormalization(counts = 2**X - 1)
-##   } else if (method == "cpm") {
-##     X <- logCPM(counts = 2**X - 1, log = TRUE)
-##     ## median.tc <- median(colSums(2**X, na.rm = TRUE), na.rm = TRUE)
-##     ## a <- log2(median.tc) - log2(1e6)
-##     ## zero.point <- a
-##   } else {
-##     zero.point <- 0
-##     which.zero <- which(X == 0)
-##     if (grepl("^m[0-9]", method)) {
-##       ## median centering
-##       mval <- as.numeric(substring(method, 2, 99))
-##       a <- median(X, na.rm = TRUE) - mval
-##       zero.point <- a
-##     } else if (grepl("^z[0-9]+", method)) {
-##       ## zero at z-distance from median
-##       zdist <- as.numeric(substring(method, 2, 99))
-##       m0 <- mean(apply(X, 2, median, na.rm = TRUE))
-##       s0 <- mean(apply(X, 2, sd, na.rm = TRUE))
-##       zero.point <- m0 - zdist * s0
-##     } else if (grepl("^q[0.][.0-9]+", method)) {
-##       ## direct quantile
-##       probs <- as.numeric(substring(method, 2, 99))
-##       zero.point <- quantile(X, probs = probs, na.rm = TRUE)
-##     } else {
-##       stop("unknown method = ", method)
-##     }
-
-##     message("[normalizeCounts] shifting values to zero: z = ", round(zero.point, 4))
-##     if (shift == "slog") {
-##       ## smooth log-transform. not real zeros
-##       X <- slog(2**X, s = 2**zero.point)
-##     } else if (shift == "clip") {
-##       ## linear shift and clip. Induces real zeros
-##       X <- pmax(X - zero.point, 0)
-##     } else {
-##       stop("unknown shift method")
-##     }
-##     ## put back zeros
-##     X[which.zero] <- 0
-##   }
-
-##   return(X)
-## }
+## global_scaling <- function(X, method, shift = "clip") {} REMOVED. AZ
 
 #' @export
 is.xxl <- function(X, z = 10) {
