@@ -430,20 +430,20 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE
     fisher.P <- NULL
     if (ncol(dd)) {
       fisher.P <- matrix(NA, ncol(dd), ncol(dd))
-      if(nrow(fisher.P) == 1 && ncol(fisher.P) == 1) {
-          tb <- table(dd[, 1], dd[, 1])
-          fisher.P[1, 1] <- stats::fisher.test(tb, simulate.p.value = TRUE)$p.value
+      if (nrow(fisher.P) == 1 && ncol(fisher.P) == 1) {
+        tb <- table(dd[, 1], dd[, 1])
+        fisher.P[1, 1] <- stats::fisher.test(tb, simulate.p.value = TRUE)$p.value
       } else {
-          i <- 1
-          j <- 2
-          for (i in 1:(ncol(dd) - 1)) {
-              kk <- which(!is.na(dd[, i]) & !is.na(dd[, j]))
-              if (length(unique(dd[kk, i])) < 2 || length(unique(dd[kk, j])) < 2) next
-              for (j in (i + 1):ncol(dd)) {
-                  tb <- table(dd[, i], dd[, j])
-                  fisher.P[i, j] <- stats::fisher.test(tb, simulate.p.value = TRUE)$p.value
-              }
+        i <- 1
+        j <- 2
+        for (i in 1:(ncol(dd) - 1)) {
+          kk <- which(!is.na(dd[, i]) & !is.na(dd[, j]))
+          if (length(unique(dd[kk, i])) < 2 || length(unique(dd[kk, j])) < 2) next
+          for (j in (i + 1):ncol(dd)) {
+            tb <- table(dd[, i], dd[, j])
+            fisher.P[i, j] <- stats::fisher.test(tb, simulate.p.value = TRUE)$p.value
           }
+        }
       }
       rownames(fisher.P) <- colnames(dd)
       colnames(fisher.P) <- colnames(dd)

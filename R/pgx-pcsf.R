@@ -22,8 +22,8 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
     }
     fx <- F[, contrast]
     if (level == "gene") {
-      ##names(fx) <- pgx$genes[rownames(F), "human_ortholog"]
-      fx <- collapse_by_humansymbol(fx, pgx$genes)  ## safe
+      ## names(fx) <- pgx$genes[rownames(F), "human_ortholog"]
+      fx <- collapse_by_humansymbol(fx, pgx$genes) ## safe
     }
   }
 
@@ -62,8 +62,8 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
       sel <- (STRING$from %in% nodes & STRING$to %in% nodes)
       ee <- STRING[which(sel), ]
       if (use.corweight) {
-        ##X <- rename_by(pgx$X, pgx$genes, "human_ortholog", unique = TRUE)
-        X <- collapse_by_humansymbol(pgx$X, pgx$genes)  ## safe        
+        ## X <- rename_by(pgx$X, pgx$genes, "human_ortholog", unique = TRUE)
+        X <- collapse_by_humansymbol(pgx$X, pgx$genes) ## safe
         selx <- rownames(X) %in% union(ee$from, ee$to)
         R <- cor(t(X[selx, , drop = FALSE]))
         if (rm.negedge) R[which(R < 0)] <- NA
