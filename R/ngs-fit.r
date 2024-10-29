@@ -134,7 +134,7 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
         mdl <- DF$model[match(test, DF$test)]
         counts1 <- counts
         X1 <- X
-        message("[ngs.fitContrastsWithAllMethods] fitting using " test)
+        message("[ngs.fitContrastsWithAllMethods] fitting using ", test)
 
         ##------------ T-test methods
         if(test %in% ttest.mtd) {
