@@ -172,7 +172,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       if (nmissing > 0) {
         message("Found ", nmissing, " missing values in X. Removing prior to GSVA::ssgsea.")
       }
-      zx.ssgsea <- try(GSVA::gsva(as.matrix(X[complete.cases(X), ]),
+      zx.ssgsea <- try(GSVA::gsva(as.matrix(X[complete.cases(X), , drop = FALSE]),
         gmt[],
         method = "ssgsea",
         parallel.sz = mc.cores,
