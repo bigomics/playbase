@@ -45,7 +45,7 @@ pgxinfo.add <- function(pgxinfo, pgx, remove.old = TRUE) {
   date <- ifelse(is.null(pgx$date), this.date, as.character(pgx$date))
   dataset.name <- pgx$name
 
-  creator <- ifelse("creator" %in% names(pgx), pgx$creator, "")
+  creator <- ifelse(!is.null(pgx$creator), pgx$creator, "")
 
   this.info <- c(
     dataset = dataset.name,
