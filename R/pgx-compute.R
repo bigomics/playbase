@@ -904,22 +904,24 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     # get the length of go.genesets and add to gmt info
     go.size <- sapply(go.genesets, length)
 
-    # convert to sparse matrix
-    go.gmt <- playbase::createSparseGenesetMatrix(
-      gmt.all = go.genesets,
-      min.geneset.size = 15,
-      max.geneset.size = 400,
-      all_genes = full_feature_list,
-      min_gene_frequency = 1,
-      annot = pgx$genes,
-      filter_genes = FALSE
-    )
+    if (length(go.size) > 0) { # if no go genesets pass the min/max filter playbase function crashes
+      # convert to sparse matrix
+      go.gmt <- playbase::createSparseGenesetMatrix(
+        gmt.all = go.genesets,
+        min.geneset.size = 15,
+        max.geneset.size = 400,
+        all_genes = full_feature_list,
+        min_gene_frequency = 1,
+        annot = pgx$genes,
+        filter_genes = FALSE
+      )
 
-    # merge go.gmt with G
-    G <- playbase::merge_sparse_matrix(
-      m1 = G,
-      m2 = Matrix::t(go.gmt)
-    )
+      # merge go.gmt with G
+      G <- playbase::merge_sparse_matrix(
+        m1 = G,
+        m2 = Matrix::t(go.gmt)
+      )
+    }
   }
 
   # NEW: convert G feature/symbol/human_ortholog to SYMBOL
