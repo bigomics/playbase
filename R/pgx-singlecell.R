@@ -469,7 +469,7 @@ pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
     cat("using group detected in meta\n")
     group <- meta[, "group"]
   }
-  
+
   SC <- SuperCell::SCimplify(X,
     gamma = gamma,
     n.var.genes = 1000,
@@ -485,18 +485,18 @@ pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
   csel <- which(sapply(meta, class) %in% c("numeric", "integer"))
   group.mean <- function(x) tapply(x, SC$membership, function(x) mean(x, na.rm = TRUE))
   cmeta <- apply(meta[, csel, drop = FALSE], 2, function(x) group.mean(x))
-  
+
   sc.meta <- data.frame(dmeta)
   if (length(csel) > 0) sc.meta <- cbind(sc.meta, cmeta)
   ii <- setdiff(match(colnames(meta), colnames(sc.meta)), NA)
   sc.meta <- sc.meta[, ii]
-  
+
   ## Compute metacall expression as sum of counts
   sc.counts <- SuperCell::supercell_GE(counts, mode = "sum", groups = SC$membership)
   sc.membership <- paste0("mc", SC$membership)
   colnames(sc.counts) <- paste0("mc", 1:ncol(sc.counts))
   rownames(sc.meta) <- colnames(sc.counts)
-  
+
   list(counts = sc.counts, meta = sc.meta, membership = sc.membership)
 }
 
@@ -629,7 +629,7 @@ pgx.createSeuratObject <- function(counts, samples, sct = TRUE) {
 #' @export
 pgx.runAzimuth <- function(counts, reference = "pbmcref") {
   require(Seurat)
-  options(future.globals.maxSize= 4*1024^3)  ## needed  
+  options(future.globals.maxSize = 4 * 1024^3) ## needed
   obj <- pgx.createSeuratObject(counts, samples = NULL, sct = FALSE)
   obj1 <- Azimuth::RunAzimuth(obj, reference = reference, verbose = FALSE)
   k1 <- !(colnames(obj1@meta.data) %in% colnames(obj@meta.data))
