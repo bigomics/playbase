@@ -9,6 +9,7 @@ pgx.deconvolution(
   ref,
   methods = c("I-NNLS", "CIBERSORT", "DCQ", "DeconRNAseq", "EPIC", "NNLM", "cor",
     "SingleR"),
+  free = TRUE,
   add.unknown = FALSE,
   normalize.mat = TRUE
 )
