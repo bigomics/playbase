@@ -494,6 +494,7 @@ pgx.deconvolution <- function(X, ref,
                                 "I-NNLS", "CIBERSORT", "DCQ", "DeconRNAseq", "EPIC", "NNLM",
                                 "cor", "SingleR"
                               ),
+                              free = TRUE,
                               add.unknown = FALSE, normalize.mat = TRUE) {
   if (max(X, na.rm = TRUE) < 50 || min(X, na.rm = TRUE) < 0) {
     dbg("WARNING:: pgx.deconvolution: is X really counts? (not logarithmic)\n")
@@ -552,28 +553,37 @@ pgx.deconvolution <- function(X, ref,
   }
 
   ## conform??
-
   timings <- list()
   results <- list()
   CIBERSORT.code <- "/opt/CIBERSORT/CIBERSORTmat.R"
-  if ("CIBERSORT" %in% methods && file.exists(CIBERSORT.code)) {
+  has.ciber1 <- file.exists(CIBERSORT.code)
+  has.ciber2 <- ("CIBERSORT" %in% installed.packages()[,"Package"])
+  if (!free && (has.ciber1 || has.ciber2) ) {
     ## CIBERSORT
-    source(CIBERSORT.code)
     ciber.out <- NULL
-    stime <- system.time(
-      # The f CIBERSORT is likely from CIBERSORT package but better confirm
-      try(ciber.out <- CIBERSORT(ref, mat, perm = 0, QN = FALSE))
-    )
+    if(has.ciber1) {
+      source(CIBERSORT.code)
+      stime <- system.time(
+        # The f CIBERSORT is likely from CIBERSORT package but better confirm
+##        try(ciber.out <- CIBERSORT(ref, mat, perm = 0, QN = FALSE))
+      )
+    }
+    if(has.ciber2) {
+      stime <- system.time(
+##        try(ciber.out <- CIBERSORT::cibersort(ref, mat, perm = 0, QN = FALSE))
+      )
+    }
     if (!is.null(ciber.out)) {
       timings[["CIBERSORT"]] <- stime
-      ciber.out <- ciber.out[, !(colnames(ciber.out) %in% c("P-value", "Correlation", "RMSE"))]
+      kk <- intersect(colnames(res),colnames(ciber.out))
+      ciber.out <- ciber.out[, kk]
       results[["CIBERSORT"]] <- ciber.out
     } else {
       dbg("WARNING:: CIBERSORT failed\n")
     }
   }
 
-  if ("EPIC" %in% methods) {
+  if (!free && "EPIC" %in% methods) {
     ## EPIC
     out <- NULL
     gg <- intersect(rownames(ref), rownames(mat))
@@ -599,14 +609,10 @@ pgx.deconvolution <- function(X, ref,
     }
   }
 
-  if (FALSE && "DeconRNAseq" %in% methods) {
-    ## IK17.04.2023 ************ BROKEN *******************
-    ## ---- needs psych & pcaMethods inside namespace----
+  if ("DeconRNAseq" %in% methods) {
     ## DeconRNAseq
-    if ("package:Seurat" %in% search()) detach("package:Seurat", unload = TRUE)
-
-    ## DeconRNASeq need psych and pcaMethods, so we temporarily
-    ## load the library...
+    ## DeconRNASeq need some functions of pcaMethods
+    require(pcaMethods)
     drs <- NULL
     stime <- system.time(suppressMessages(suppressWarnings(
       drs <- try(DeconRNASeq::DeconRNASeq(
@@ -615,8 +621,6 @@ pgx.deconvolution <- function(X, ref,
       )$out.all)
     )))
     ## ... and quickly remove these
-
-
     timings[["DeconRNAseq"]] <- stime
     if (!is.null(drs) && !inherits(drs, "try-error")) {
       rownames(drs) <- colnames(mat)
