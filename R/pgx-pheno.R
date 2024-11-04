@@ -8,6 +8,18 @@
 ##
 
 
+#' @export
+createSampleInfoFromNames <- function(names) {
+  ff <- strsplit( names, split="[_.-]")
+  minlen <- min(sapply(ff,length))
+  ff <- lapply(ff, head, minlen)
+  samples <- do.call( rbind, ff)
+  rownames(samples) <- names
+  colnames(samples) <- paste0("var",1:ncol(samples))
+  samples
+}
+
+
 #' @title Create a Phenotype Matrix
 #'
 #' @description This function creates a phenotype matrix from a PGX object.
@@ -30,10 +42,6 @@ pgx.phenoMatrix <- function(pgx, phenotype) {
   colnames(mm) <- rownames(pgx$samples)
   as.matrix(mm)
 }
-
-
-
-
 
 
 #' @title Check if a Variable is Categorical
