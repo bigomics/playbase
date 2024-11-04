@@ -235,27 +235,27 @@ pgx.scBatchIntegrate <- function(X, batch,
 
   if ("ComBat" %in% method) {
     message("[pgx.scBatchIntegrate] single-cell batch correction using ComBat...")
-
-    ## ComBat correction
     res[["ComBat"]] <- sva::ComBat(X, batch = batch, par.prior = TRUE)
   }
   if ("limma" %in% method) {
     message("[pgx.scBatchIntegrate] single-cell batch correction using LIMMA...")
-
-    ## LIMMA correction
     res[["limma"]] <- limma::removeBatchEffect(X, batch = batch)
   }
   if ("CCA" %in% method) {
     message("[pgx.scBatchIntegrate] single-cell batch correction using CCA (Seurat)...")
-    ## Seurat CCA correction
     counts <- pmax(2**X - 1, 0)
-    try(res[["CCA"]] <- pgx.SeuratBatchIntegrate(counts, batch = batch))
+    CCA <- try(pgx.SeuratBatchIntegrate(counts, batch = batch))    
+    if (!inherits(CCA, "try-error")) {
+      res[["CCA"]] <- CCA
+    }
   }
   if ("MNN" %in% method) {
     message("[pgx.scBatchIntegrate] single-cell batch correction using MNN...")
-    ## MNN correction
-    try(mnn <- batchelor::mnnCorrect(X, batch = batch, cos.norm.in = TRUE, cos.norm.out = FALSE))
-    res[["MNN"]] <- MultiAssayExperiment::assays(mnn)[["corrected"]]
+    ##mnn <- try(batchelor::mnnCorrect(X, batch = batch, cos.norm.in = TRUE, cos.norm.out = FALSE))
+    mnn <- try(batchelor::mnnCorrect(X, batch = batch))
+    if (!inherits(mnn, "try-error")) {
+      res[["MNN"]] <- MultiAssayExperiment::assays(mnn)[["corrected"]]
+    }
   }
   if ("Harmony" %in% method) {
     message("[pgx.scBatchIntegrate] single-cell batch correction using Harmony...")
@@ -277,12 +277,9 @@ pgx.scBatchIntegrate <- function(X, batch,
   }
   if ("liger" %in% method) {
     message("[pgx.scBatchIntegrate] single-cell batch correction using LIGER...")
-
     xlist <- tapply(1:ncol(X), batch, function(i) pmax(2**X[, i] - 1, 0))
     liger <- rliger::createLiger(xlist, take.gene.union = TRUE)
     liger <- rliger::normalize(liger)
-
-
     liger@var.genes <- Matrix::head(rownames(X)[order(-apply(X, 1, stats::sd))], 100)
     liger <- rliger::scaleNotCenter(liger)
     vg <- liger@var.genes
@@ -291,11 +288,7 @@ pgx.scBatchIntegrate <- function(X, batch,
     k <- round(min(30, length(vg) / 3, stats::median(xdim / 2)))
     ## OFTEN GIVES ERROR!!!!!
     liger <- try(rliger::optimizeALS(liger, k = k))
-
-
-    if (inherits(liger, "try-error")) {
-
-    } else {
+    if (!inherits(liger, "try-error")) {
       liger <- rliger::quantile_norm(liger)
       cX <- t(liger@H.norm %*% liger@W)
       cat("[pgx.scBatchIntegrate] WARNING:: LIGER returns smaller matrix")
@@ -307,6 +300,7 @@ pgx.scBatchIntegrate <- function(X, batch,
   }
   return(res)
 }
+
 
 
 #' @title Integrate single-cell data with Seurat
@@ -459,12 +453,15 @@ pgx.read_singlecell_counts <- function(filename) {
   counts
 }
 
-
+#' @title SuperCell down sampling. Uniform down samplsing using gamma = 20.
+#' 
 #' @export
 pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
   ## require(SuperCell)
 
-  X <- log2(1 + edgeR::cpm(counts) / 100)
+  ## supercell uses log2 matrix
+  ##X <- log2(1 + edgeR::cpm(counts) / 100)
+  X <- logCPM(counts, total=1e4)
   if (!is.null(group) && "group" %in% colnames(meta)) {
     cat("using group detected in meta\n")
     group <- meta[, "group"]
@@ -489,7 +486,7 @@ pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
   sc.meta <- data.frame(dmeta)
   if (length(csel) > 0) sc.meta <- cbind(sc.meta, cmeta)
   ii <- setdiff(match(colnames(meta), colnames(sc.meta)), NA)
-  sc.meta <- sc.meta[, ii]
+  sc.meta <- sc.meta[, ii, drop=FALSE]
   
   ## Compute metacall expression as sum of counts
   sc.counts <- SuperCell::supercell_GE(counts, mode = "sum", groups = SC$membership)
@@ -500,8 +497,57 @@ pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
   list(counts = sc.counts, meta = sc.meta, membership = sc.membership)
 }
 
+
+#' @title SuperCell downsampling by group targeting equal sizes per group.
+#' 
 #' @export
-pgx.supercellX <- function(X, meta, group = NULL, gamma = 20) {
+pgx.supercell2 <- function(counts, meta, group, target_n = 20) {
+
+  ## metacell equal across celltype and phenotype
+  g <- group[1]
+  sc.membership <- rep(NA,length(group))
+  sc.counts <- c()
+  sc.meta <- c()
+  for(g in unique(group)) {
+    sel <- which(group == g)
+    k <- max(1, length(sel) / target_n)
+    sc <- pgx.supercell( counts[,sel], samples[sel,], gamma=k)
+    names(sc)
+    colnames(sc$counts) <- paste0(g,".",colnames(sc$counts))
+    rownames(sc$meta) <- colnames(sc$counts)
+    sc$meta$group <- g
+    sc$membership <- paste0(g,".",sc$membership)
+    sc.membership[sel] <- sc$membership
+    sc.counts <- cbind(sc.counts, sc$counts)
+    sc.meta <- rbind(sc.meta, sc$meta)
+  }
+  dim(sc.counts)
+
+  list(counts = sc.counts, meta = sc.meta, membership = sc.membership)  
+}
+
+
+#' @title SuperCell downsampling by group targeting equal sizes per group.
+#' 
+#' @export
+pgx.downsample <- function(counts, meta, group, target_n = 20) {
+  ## metacell equal across celltype and phenotype
+  g <- group[1]
+  sc.membership <- rep(NA,length(group))
+  sc.counts <- c()
+  sc.meta <- c()
+  sel <- tapply( 1:ncol(counts), group, function(ii)
+    head( sample(ii), target_n) )
+  sel <- unlist(sel)
+  sc.counts  <- counts[,sel]
+  sc.meta    <- meta[sel,]
+  sc.meta$group <- group[sel]
+  list(counts = sc.counts, meta = sc.meta, membership=NULL)  
+}
+
+
+#' @export
+pgx.supercellX.DEPRECATED <- function(X, meta, group = NULL, gamma = 20) {
   ## require(SuperCell)
 
   if (!is.null(group) && "group" %in% colnames(meta)) {
@@ -516,6 +562,7 @@ pgx.supercellX <- function(X, meta, group = NULL, gamma = 20) {
     cell.split.condition = group
   )
 
+  meta <- as.data.frame(meta)
   dsel <- which(sapply(meta, class) %in% c("factor", "character", "logical"))
   idx <- SC$membership
   group.argmax <- function(x) tapply(x, idx, function(x) names(which.max(table(x))))
@@ -609,19 +656,73 @@ pgx.supercell_BIG <- function(counts, meta, group = NULL, gamma = 20, batch.size
   list(counts = sc.counts, meta = sc.meta, membership = sc.membership)
 }
 
+pgx.sc_anchors <- function( counts, sc.counts, sc.membership,
+                           sc.group = colnames(sc.counts) ) {
+  
+  ## determine closest sample to metacell reference (aka anchor)
+  sc.ref <- rep(NA,ncol(sc.counts))
+  X1 <- logCPM(counts,1e4)
+  X2 <- as.matrix(logCPM(sc.counts,1e4))
+  i=1
+  for(i in 1:ncol(sc.counts)) {
+    mc <- sc.group[i]
+    sel <- which(sc.membership == mc)
+    x1 <- as.matrix(X1[,sel,drop=FALSE])
+    colnames(x1) <- colnames(X1)[sel]
+    rmax <- which.max(cor(x1, X2[,i])[,1])
+    sc.ref[i] <- colnames(x1)[rmax]
+  }
+  sc.ref
+}
+
 pgx.createSeuratObject <- function(counts, samples, sct = TRUE) {
   obj <- Seurat::CreateSeuratObject(counts = counts, meta.data = samples)
   obj <- Seurat::NormalizeData(obj)
   obj <- Seurat::PercentageFeatureSet(obj, pattern = "^MT-|^Mt-", col.name = "percent.mt")
   obj <- Seurat::PercentageFeatureSet(obj, pattern = "^RP[LS]|^Rp[ls]", col.name = "percent.ribo")
   if (sct) {
-    sct <- Seurat::SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
-    sct <- Seurat::RunPCA(sct, verbose = FALSE)
-    sct <- Seurat::FindNeighbors(sct, dims = 1:30, verbose = FALSE)
-    sct <- Seurat::FindClusters(sct, verbose = FALSE, resolution = 0.8) ## smaller resolution
-    sct <- Seurat::RunUMAP(sct, dims = 1:30, verbose = FALSE)
-    obj <- sct
+    obj <- Seurat::SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
+    obj <- Seurat::RunPCA(obj, verbose = FALSE)
+    obj <- Seurat::FindNeighbors(obj, dims = 1:30, verbose = FALSE)
+    obj <- Seurat::FindClusters(obj, verbose = FALSE, resolution = 0.8) ## smaller resolution
+    obj <- Seurat::RunUMAP(obj, dims = 1:30, verbose = FALSE)
   }
+  obj
+}
+
+pgx.createIntegratedSeuratObject <- function(counts, samples, batch, method="Harmony") {
+  samples$batch <- batch
+  obj <- Seurat::CreateSeuratObject(counts = counts, meta.data = samples)
+  obj <- Seurat::PercentageFeatureSet(obj, pattern = "^MT-|^Mt-", col.name = "percent.mt")
+  obj <- Seurat::PercentageFeatureSet(obj, pattern = "^RP[LS]|^Rp[ls]", col.name = "percent.ribo")
+  obj[["RNA"]] <- split( obj[["RNA"]], f = obj$batch )
+  obj <- Seurat::SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
+  
+  obj <- Seurat::RunPCA(obj, npcs = 30, verbose = FALSE)
+  sel.method <- switch(
+    method,
+    CCA = Seurat::CCAIntegration,
+    RPCA = Seurat::RPCAIntegration,
+    Harmony = Seurat::HarmonyIntegration,
+    JointPCA = Seurat::JointPCAIntegration        
+  )
+  message("[pgx.createIntegratedSeuratObject] normalization method = SCT")
+  message("[pgx.createIntegratedSeuratObject] integration method = ",method)
+  obj <- Seurat::IntegrateLayers(
+    object = obj,
+    method = sel.method,
+    normalization.method = "SCT",
+    new.reduction = "integrated.sct",
+    verbose = FALSE
+  )
+
+  # re-join layers after integration
+  obj[["RNA"]] <- JoinLayers(obj[["RNA"]])
+  # clustering using integrated data
+  obj <- Seurat::FindNeighbors(obj, dims = 1:30, reduction = "integrated.sct", verbose = FALSE)
+  obj <- Seurat::FindClusters(obj, resolution = 1, verbose = FALSE, ) ## smaller resolution
+  obj <- Seurat::RunUMAP(obj, dims=1:30, reduction = "integrated.sct", verbose = FALSE)
+  obj <- Seurat::RunTSNE(obj, dims=1:30, reduction = "integrated.sct", verbose = FALSE)
   obj
 }
 
@@ -631,11 +732,23 @@ pgx.runAzimuth <- function(counts, reference = "pbmcref") {
   require(Seurat)
   options(future.globals.maxSize= 4*1024^3)  ## needed  
   obj <- pgx.createSeuratObject(counts, samples = NULL, sct = FALSE)
-  obj1 <- Azimuth::RunAzimuth(obj, reference = reference, verbose = FALSE)
+  k.weight <- 20
+  k.weight <- round(min(50, ncol(obj)/5))
+  dbg("[pgx.runAzimuth] k.weight = ",k.weight)
+  obj1 <- Azimuth::RunAzimuth(obj, reference = reference,
+                              k.weight = k.weight, 
+                              verbose = FALSE)
   k1 <- !(colnames(obj1@meta.data) %in% colnames(obj@meta.data))
   k2 <- !grepl("score$|refAssay$", colnames(obj1@meta.data))
   meta1 <- obj1@meta.data[, (k1 & k2)]
   return(meta1)
+}
+
+
+#' @export
+pgx.clusterSC <- function(counts, samples) {
+  
+
 }
 
 
