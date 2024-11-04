@@ -10,12 +10,12 @@
 
 #' @export
 createSampleInfoFromNames <- function(names) {
-  ff <- strsplit( names, split="[_.-]")
-  minlen <- min(sapply(ff,length))
+  ff <- strsplit(names, split = "[_.-]")
+  minlen <- min(sapply(ff, length))
   ff <- lapply(ff, head, minlen)
-  samples <- do.call( rbind, ff)
+  samples <- do.call(rbind, ff)
   rownames(samples) <- names
-  colnames(samples) <- paste0("var",1:ncol(samples))
+  colnames(samples) <- paste0("var", 1:ncol(samples))
   samples
 }
 

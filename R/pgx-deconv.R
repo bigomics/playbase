@@ -557,25 +557,25 @@ pgx.deconvolution <- function(X, ref,
   results <- list()
   CIBERSORT.code <- "/opt/CIBERSORT/CIBERSORTmat.R"
   has.ciber1 <- file.exists(CIBERSORT.code)
-  has.ciber2 <- ("CIBERSORT" %in% installed.packages()[,"Package"])
-  if (!free && (has.ciber1 || has.ciber2) ) {
+  has.ciber2 <- ("CIBERSORT" %in% installed.packages()[, "Package"])
+  if (!free && (has.ciber1 || has.ciber2)) {
     ## CIBERSORT
     ciber.out <- NULL
-    if(has.ciber1) {
+    if (has.ciber1) {
       source(CIBERSORT.code)
       stime <- system.time(
         # The f CIBERSORT is likely from CIBERSORT package but better confirm
-##        try(ciber.out <- CIBERSORT(ref, mat, perm = 0, QN = FALSE))
+        ##        try(ciber.out <- CIBERSORT(ref, mat, perm = 0, QN = FALSE))
       )
     }
-    if(has.ciber2) {
+    if (has.ciber2) {
       stime <- system.time(
-##        try(ciber.out <- CIBERSORT::cibersort(ref, mat, perm = 0, QN = FALSE))
+        ##        try(ciber.out <- CIBERSORT::cibersort(ref, mat, perm = 0, QN = FALSE))
       )
     }
     if (!is.null(ciber.out)) {
       timings[["CIBERSORT"]] <- stime
-      kk <- intersect(colnames(res),colnames(ciber.out))
+      kk <- intersect(colnames(res), colnames(ciber.out))
       ciber.out <- ciber.out[, kk]
       results[["CIBERSORT"]] <- ciber.out
     } else {
