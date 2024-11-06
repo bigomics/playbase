@@ -185,7 +185,7 @@ pgx.clusterSamples <- function(pgx, methods = c("pca", "tsne", "umap"),
     message("[pgx.clusterSamples2] skipping tsne2d/tsne3d update...")
   }
 
-  pgx$cluster <- NULL
+##  pgx$cluster <- NULL ##??
   pgx$cluster$pos <- clust.pos
   pgx$cluster$index <- clust.index
 

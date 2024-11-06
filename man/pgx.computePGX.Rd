@@ -11,7 +11,7 @@ pgx.computePGX(
   gset.methods = c("fisher", "gsva", "fgsea"),
   custom.geneset = list(gmt = NULL, info = NULL),
   do.cluster = TRUE,
-  cluster.contrasts = TRUE,
+  cluster.contrasts = FALSE,
   do.clustergenesets = TRUE,
   do.clustergenes = TRUE,
   use.design = TRUE,

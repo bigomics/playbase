@@ -517,7 +517,7 @@ pgx.computePGX <- function(pgx,
                            gset.methods = c("fisher", "gsva", "fgsea"),
                            custom.geneset = list(gmt = NULL, info = NULL),
                            do.cluster = TRUE,
-                           cluster.contrasts = TRUE,
+                           cluster.contrasts = FALSE,
                            do.clustergenesets = TRUE,
                            do.clustergenes = TRUE,
                            use.design = TRUE,
@@ -925,7 +925,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   }
 
   # NEW: convert G feature/symbol/human_ortholog to SYMBOL
-
   # At this stage we have metabolomics genesets in G
   # or transcriptomics/proteomics genesets in G combined with random genesets (if necessary) and GO genesets
 
