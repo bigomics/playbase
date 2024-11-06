@@ -645,7 +645,7 @@ pgx.createSeuratObject <- function(counts, samples, batch, filter=TRUE, method="
   }
 
   if(!is.null(batch)) {
-    obj <- seurat.integrate(obj, batch, sct=TRUE, method = "Harmony") 
+    obj <- seurat.integrate(obj, 'batch', sct=TRUE, method = "Harmony") 
   } else {
     obj <- seurat.preprocess(obj, sct=TRUE)
   }
@@ -670,7 +670,7 @@ seurat.preprocess <- function(obj, sct=TRUE) {
   
   # clustering using integrated data or original pca
   dr <- "pca"
-  nn <- n.neighbors=min(30L,ncol(obj)/5)
+  nn <- min(30L,ncol(obj)/5)
   obj <- Seurat::FindNeighbors(obj, dims=1:npcs, reduction = dr, verbose = FALSE)
   obj <- Seurat::FindClusters(obj, resolution = 1, verbose = FALSE, ) 
   obj <- Seurat::RunUMAP(obj, dims=1:npcs, n.neighbors=nn,
@@ -877,8 +877,10 @@ pgx.createSingleCellPGX <- function(counts, samples, pheno, batch,
   } else {
     message("[pgx.createSingleCellPGX] running Azimuth for celltype ...")
     azm <- pgx.runAzimuth(counts, reference = azimuth.reference)
+    colnames(azm)
     azm <- azm[,grep("predicted",colnames(azm))]
     ntype <- apply(azm, 2, function(a) length(unique(a)))
+    ntype
     ## select smallest level, or highest with at most 10 celltypes
     sel <- ifelse(min(ntype) > 10, which.min(ntype), tail(which(ntype <= 10),1))
     sel
@@ -894,12 +896,13 @@ pgx.createSingleCellPGX <- function(counts, samples, pheno, batch,
       group <- paste0(group,":",samples[,batch])
     }
     table(group)
-    q10 <- quantile(table(group), probs=0.10)
+    q10 <- quantile(table(group), probs=0.25)
     nb <- round( ncol(counts) / 2000 )
-    nb <- round( q10 / 20 )    
+    nb <- ceiling(round( q10 / 20 ))
     nb
     message("[pgx.createSingleCellPGX] running SuperCell. nb = ", nb)    
-    sc <- pgx.supercell(counts, samples, group = group, gamma = nb) 
+    sc <- pgx.supercell(counts, samples, group = group, gamma = nb)
+    message("[pgx.createSingleCellPGX] SuperCell: ", ncol(counts)," -> ",ncol(sc$counts))    
     counts <- sc$counts
     samples <- sc$meta
     sc.membership <- sc$membership
@@ -915,13 +918,13 @@ pgx.createSingleCellPGX <- function(counts, samples, pheno, batch,
     message("[pgx.createSingleCellPGX] Integrating by batch = ", batch)     
     batch.vec <- samples[,batch]
   }
-  obj <- pgx.createSeuratObject(counts, samples, batch.vec,
+  obj <- pgx.createSeuratObject(counts, samples, batch = batch.vec,
                                 filter=TRUE, method="Harmony") 
-
 
   message("[pgx.createSingleCellPGX] Addding Seurat clustering ...")
   r <- "pca"
-  if(!is.null(batch)) r <- "integrated.sct"  
+  names(obj@reductions)
+  if(!is.null(batch)) r <- "integrated.dr"  
   obj <- Seurat::RunTSNE(obj, dims=1:30, reduction = r, verbose = FALSE)
   obj <- Seurat::RunTSNE(obj, dim.embed = 3L, dims=1:30, reduction = r,
                          reduction.name ="tsne.3d", reduction.key ="tsne3d_",
