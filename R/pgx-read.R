@@ -29,6 +29,8 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
   )
   x0[is.na(x0)] <- ""
   skip.rows <- min(which(cumsum(rowMeans(x0 != "")) > 0)) - 1
+  skip.colsN <- min(which(cumsum(rev(colMeans(x0 != ""))) > 0)) - 1
+  keep.cols <- seq_len(ncol(x0) - skip.colsN)
 
   ## try to detect decimal separator
   sep <- detect_delim(file)
@@ -44,6 +46,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
     dec = dec,
     # fill = TRUE, ## fill=TRUE will fail for some datasets
     skip = skip.rows,
+    select = keep.cols,
     blank.lines.skip = TRUE,
     stringsAsFactors = FALSE,
     integer64 = "numeric"
@@ -63,6 +66,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
     file = file, sep = sep, check.names = FALSE, na.strings = NULL,
     header = TRUE, nrows = 1, skip = skip.rows, row.names = NULL
   )
+  hdr <- hdr[, keep.cols]
   if (NCOL(x0) > 0 && !all(colnames(x0) == colnames(hdr))) {
     message("[read.as_matrix] correcting header")
     colnames(x0) <- colnames(hdr)
