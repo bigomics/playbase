@@ -51,6 +51,17 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
     stringsAsFactors = FALSE,
     integer64 = "numeric"
   )
+  # Handle weird case where file contains quotes on each row
+  # e.g. "field1 field2"
+  #      "val1   val2"
+  # where columns are read ok by fread
+  # but first and last column maintain the "
+  first_column <- x0[[1]]  # Extract the first column
+  last_column <- x0[[ncol(x0)]]  # Extract the last column
+  if (all(grepl('^"', first_column)) && all(grepl('"$', last_column))) {
+    x0[[1]] <- gsub('^"', "", first_column)
+    x0[[ncol(x0)]] <- as.numeric(gsub('"$', "", last_column))
+  }
 
   ## see: https://github.com/Rdatatable/data.table/issues/2607
   coln.int64 <- names(which(sapply(x0, bit64::is.integer64)))
@@ -66,10 +77,12 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
     file = file, sep = sep, check.names = FALSE, na.strings = NULL,
     header = TRUE, nrows = 1, skip = skip.rows, row.names = NULL
   )
-  hdr <- hdr[, keep.cols]
-  if (NCOL(x0) > 0 && !all(colnames(x0) == colnames(hdr))) {
-    message("[read.as_matrix] correcting header")
-    colnames(x0) <- colnames(hdr)
+  if (ncol(hdr) > 1) { # In some rare cases, hdr can be read as a single column (wrong), skip correction when that happens
+    hdr <- hdr[, keep.cols]
+    if (NCOL(x0) > 0 && !all(colnames(x0) == colnames(hdr))) {
+      message("[read.as_matrix] correcting header")
+      colnames(x0) <- colnames(hdr)
+    }
   }
 
   ## give first column name
