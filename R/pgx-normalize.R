@@ -175,19 +175,19 @@ NORMALIZATION.METHODS <- c("none", "mean.center", "median.center", "sum", "CPM",
 #' normalized <- pgx.countNormalization(counts, c("TMM", "RLE"))
 #' }
 #' @export
-pgx.countNormalization <- function(x, methods, ref = NULL, rm.zero=FALSE) {
+pgx.countNormalization <- function(x, methods, ref = NULL, rm.zero = FALSE) {
   ## Column-wise normalization (along samples).
   ## x:        counts (linear)
   ## method:   single method
 
   methods <- methods[1]
-  
-  if(rm.zero) {
-    minx <- min(x,na.rm = TRUE)
+
+  if (rm.zero) {
+    minx <- min(x, na.rm = TRUE)
     which.zero <- which(x == minx, arr.ind = TRUE)
     x[which.zero] <- NA
   }
-  
+
   for (m in methods) {
     if (m == "none") {
       x <- x
@@ -230,7 +230,7 @@ pgx.countNormalization <- function(x, methods, ref = NULL, rm.zero=FALSE) {
     }
   }
 
-  if(rm.zero) {
+  if (rm.zero) {
     ## put back zeros as zeros
     x[which.zero] <- minx
   }

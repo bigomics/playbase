@@ -2285,7 +2285,7 @@ make_unique <- function(s, sep = "") {
 }
 
 #' Check if values are logarithm
-#' 
+#'
 #' @export
 is_logged <- function(x, verbose = 0) {
   ## force as matrix
