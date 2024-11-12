@@ -618,12 +618,17 @@ pgx.sc_anchors <- function( counts, sc.counts, sc.membership,
 
 #' @export
 pgx.justSeuratObject <- function(counts, samples) {
+  options(Seurat.object.assay.calcn = TRUE)
+  getOption("Seurat.object.assay.calcn")
   Seurat::CreateSeuratObject(counts = counts, meta.data = samples)
 }
 
 #' @export
 pgx.createSeuratObject <- function(counts, samples, batch, filter=TRUE, method="Harmony") {
 
+  options(Seurat.object.assay.calcn = TRUE)
+  getOption("Seurat.object.assay.calcn")
+        
   if(is.null(samples)) samples <- data.frame(row.names=colnames(counts))
   samples$batch <- batch
   rownames(samples) <- colnames(counts)
@@ -737,7 +742,7 @@ pgx.runAzimuth <- function(counts, reference = NULL) {
   obj <- pgx.justSeuratObject(counts, samples = NULL)
   k.weight <- 20
   ## k.weight <- round(min(50, ncol(obj)/5))
-  k.weight <- round(min(50, ncol(obj)/7))
+  k.weight <- round(min(50, ncol(obj)/9))
   dbg("[pgx.runAzimuth] k.weight = ",k.weight)
   if (is.null(reference)) {
     reference <- "pbmcref"
