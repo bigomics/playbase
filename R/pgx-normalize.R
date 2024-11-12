@@ -180,6 +180,8 @@ pgx.countNormalization <- function(x, methods, ref = NULL, rm.zero = FALSE) {
   ## x:        counts (linear)
   ## method:   single method
 
+  ## NEED RETHINK: would be better to rewrite Normalization in log2-space (IK)
+
   methods <- methods[1]
 
   if (rm.zero) {
@@ -205,6 +207,8 @@ pgx.countNormalization <- function(x, methods, ref = NULL, rm.zero = FALSE) {
       x <- t(t(x) / (1e-8 + colSums(x, na.rm = TRUE))) * sumx
     } else if (m == "CPM") {
       x <- logCPM(x, log = FALSE)
+    } else if (m == "CP10K") {
+      x <- logCPM(x, total=1e4, log = FALSE)
     } else if (m == "TMM") {
       ## normalization on total counts (linear scale)
       x <- normalizeTMM(x, log = FALSE) ## does TMM on counts (edgeR)
