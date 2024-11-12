@@ -1478,12 +1478,12 @@ rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
   # Sum columns of rows with the same gene symbol
   if (is.matrix(counts) | is.data.frame(counts)) {
     rownames(counts) <- symbol
-    counts <- counts[!rownames(counts) %in% c("", "NA"), , drop = FALSE]
+    counts <- counts[!rownames(counts) %in% c("", "NA", NA), , drop = FALSE]
     if (unique) counts <- rowmean(counts, rownames(counts))
     return(counts)
   } else if (is.vector(counts)) {
     names(counts) <- symbol
-    counts <- counts[!names(counts) %in% c("", "NA")]
+    counts <- counts[!names(counts) %in% c("", "NA", NA)]
     if (unique) counts <- tapply(counts, names(counts), mean, na.rm = TRUE)
     return(counts)
   } else {
