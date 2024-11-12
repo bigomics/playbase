@@ -56,8 +56,8 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
   #      "val1   val2"
   # where columns are read ok by fread
   # but first and last column maintain the "
-  first_column <- x0[[1]]  # Extract the first column
-  last_column <- x0[[ncol(x0)]]  # Extract the last column
+  first_column <- x0[[1]] # Extract the first column
+  last_column <- x0[[ncol(x0)]] # Extract the last column
   if (all(grepl('^"', first_column)) && all(grepl('"$', last_column))) {
     x0[[1]] <- gsub('^"', "", first_column)
     x0[[ncol(x0)]] <- as.numeric(gsub('"$', "", last_column))
