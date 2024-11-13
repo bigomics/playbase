@@ -208,7 +208,7 @@ pgx.countNormalization <- function(x, methods, ref = NULL, rm.zero = FALSE) {
     } else if (m == "CPM") {
       x <- logCPM(x, log = FALSE)
     } else if (m == "CP10K") {
-      x <- logCPM(x, total=1e4, log = FALSE)
+      x <- logCPM(x, total = 1e4, log = FALSE)
     } else if (m == "TMM") {
       ## normalization on total counts (linear scale)
       x <- normalizeTMM(x, log = FALSE) ## does TMM on counts (edgeR)
