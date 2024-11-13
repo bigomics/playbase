@@ -114,16 +114,16 @@ pgx.initialize <- function(pgx) {
 
   ## check if 'contrasts' is present in pgx object. Older pgx might not have it.
   if (!"contrasts" %in% names(pgx) && "model.parameters" %in% names(pgx)) {
-    pgx$contrasts <- pgx$model.parameters$contr.matrix
+    pgx$contrasts <- contrastAsLabels(pgx$model.parameters$contr.matrix)
   }
 
   ## check if 'contrasts' is sample-wise and label-format (new format)
   is.numlev <- all(unique(pgx$contrasts) %in% c(NA, "", -1, 0, 1))
   is.samplewise <- all(rownames(pgx$contrasts) == rownames(pgx$samples))
   if ("contrasts" %in% names(pgx) && (!is.samplewise || is.numlev)) {
-    design <- pgx$model.parameters$design
-    expmat <- pgx$model.parameters$exp.matrix
-    contr.mat <- pgx$model.parameters$contr.matrix
+#    design <- pgx$model.parameters$design
+#    expmat <- pgx$model.parameters$exp.matrix
+#    contr.mat <- pgx$model.parameters$contr.matrix
     new.contr <- pgx$contrasts
     is.numlev <- all(unique(new.contr) %in% c(NA, "", -1, 0, 1))
     is.numlev <- is.numlev && (-1 %in% new.contr) ## must have -1 !!
@@ -134,7 +134,8 @@ pgx.initialize <- function(pgx) {
     is.groupwise
     if (is.groupwise) {
       grp <- as.character(pgx$samples$group)
-      new.contr <- new.contr[grp, , drop = FALSE]
+      ii <- match(grp, rownames(new.contr))
+      new.contr <- new.contr[ii, , drop = FALSE]
       rownames(new.contr) <- rownames(pgx$samples)
     }
     pgx$contrasts <- new.contr
