@@ -179,6 +179,20 @@ pgx.createPGX <- function(counts,
                           remove.outliers = TRUE) {
   message("[createPGX] datatype = ", datatype)
 
+  ## if (datatype == "scRNA-seq") {
+
+  ##   pgx <- playbase::pgx.createSingleCellPGX(
+  ##     counts = counts,
+  ##     samples = samples,
+  ##     pheno = ..., #
+  ##     batch = NULL,
+  ##     azimuth.reference = "pbmcref"
+  ##   )
+
+  ##   return(pgx)
+    
+  ## }
+  
   if (!is.null(counts)) {
     message("[createPGX] dim.counts: ", dim(counts)[1], ",", dim(counts)[2])
     message("[createPGX] class.counts: ", class(counts))
