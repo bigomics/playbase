@@ -175,8 +175,10 @@ pgx.createPGX <- function(counts,
                           only.hugo = TRUE,
                           convert.hugo = TRUE,
                           only.proteincoding = TRUE,
-                          remove.xxl = TRUE,
-                          remove.outliers = TRUE) {
+                          remove.xxl = TRUE,  ## DEPRECATED
+                          remove.outliers = TRUE,  ## DEPRECATED
+                          settings = list()
+                          ) {
   message("[createPGX] datatype = ", datatype)
 
   if (!is.null(counts)) {
@@ -295,6 +297,13 @@ pgx.createPGX <- function(counts,
   description <- gsub("[\n]", ". ", description) ## replace newline
   description <- trimws(gsub("[ ]+", " ", description)) ## remove ws
 
+  ## add to setting info
+  settings$filter.genes <- filter.genes
+  settings$only.known   <- only.known
+  settings$only.proteincoding <- only.proteincoding
+  settings$convert.hugo <- convert.hugo
+  settings$custom.geneset <- !is.null(custom.geneset)
+  
   pgx <- list(
     name = name,
     organism = organism,
@@ -310,7 +319,8 @@ pgx.createPGX <- function(counts,
     impX = impX,
     norm_method = norm_method,
     total_counts = Matrix::colSums(counts, na.rm = TRUE),
-    counts_multiplier = counts_multiplier
+    counts_multiplier = counts_multiplier,
+    settings = settings
   )
 
   ## -------------------------------------------------------------------
