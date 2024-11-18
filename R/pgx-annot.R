@@ -266,8 +266,10 @@ getGeneAnnotation.ANNOTHUB <- function(
     jj <- match(names(locs), annot$ENTREZID)
     annot$MAP <- NA
     annot$MAP[jj] <- unname(locs)
-    cls <- setdiff(colnames(annot), "ENTREZID")
-    annot <- annot[, cls, drop = FALSE]
+    if (probe_type != "ENTREZID") {
+      cls <- setdiff(colnames(annot), "ENTREZID")
+      annot <- annot[, cls, drop = FALSE]
+    }
   }
 
   # some organisms do not provide symbol but rather gene name (e.g. yeast)
