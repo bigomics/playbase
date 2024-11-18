@@ -175,10 +175,9 @@ pgx.createPGX <- function(counts,
                           only.hugo = TRUE,
                           convert.hugo = TRUE,
                           only.proteincoding = TRUE,
-                          remove.xxl = TRUE,  ## DEPRECATED
-                          remove.outliers = TRUE,  ## DEPRECATED
-                          settings = list()
-                          ) {
+                          remove.xxl = TRUE, ## DEPRECATED
+                          remove.outliers = TRUE, ## DEPRECATED
+                          settings = list()) {
   message("[createPGX] datatype = ", datatype)
 
   if (!is.null(counts)) {
@@ -299,11 +298,11 @@ pgx.createPGX <- function(counts,
 
   ## add to setting info
   settings$filter.genes <- filter.genes
-  settings$only.known   <- only.known
+  settings$only.known <- only.known
   settings$only.proteincoding <- only.proteincoding
   settings$convert.hugo <- convert.hugo
   settings$custom.geneset <- !is.null(custom.geneset)
-  
+
   pgx <- list(
     name = name,
     organism = organism,
