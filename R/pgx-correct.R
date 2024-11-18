@@ -1612,8 +1612,8 @@ bc.CovariateAnalysisPlot <- function(bc.results, k = 1:3, par = TRUE, col = 1) {
       plot.new()
       abline(h = 0.5, lty = 2)
       abline(v = 0.5, lty = 2)
-      mtext("correlation with PC   →", side = 2, line = 1.3, cex = 0.85)
-      mtext("correlation with phenotype   →", side = 1, line = 1.3, cex = 0.85)
+      mtext("correlation with PC", side = 2, line = 1.3, cex = 0.85)
+      mtext("correlation with phenotype", side = 1, line = 1.3, cex = 0.85)
       ##      axis(side=1, tick='n', cex.axis=0.001)
       ##      axis(side=2, tick='n', cex.axis=0.001)
       text(
