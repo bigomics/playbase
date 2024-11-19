@@ -628,6 +628,7 @@ pgx.createSeuratObject <- function(counts,
                                    samples,
                                    batch,
                                    filter = TRUE,
+                                   preprocess = TRUE,
                                    method = "Harmony") {
 
   options(Seurat.object.assay.calcn = TRUE)
@@ -658,18 +659,24 @@ pgx.createSeuratObject <- function(counts,
     dim(obj)
   }
 
-  if(!is.null(batch)) {
-    obj <- seurat.integrate(obj, 'batch', sct = TRUE, method = "Harmony") 
-  } else {
-    obj <- seurat.preprocess(obj, sct = TRUE)
+  if(preprocess) {
+    message("[pgx.createIntegratedSeuratObject] preprocessing Seurat object")   
+    if(!is.null(batch)) {
+      obj <- seurat.integrate(obj, 'batch', sct = TRUE, method = "Harmony") 
+    } else {
+      obj <- seurat.preprocess(obj, sct = TRUE)
+    }
   }
 
   obj  
+
 }
 
 #' @export
 seurat.preprocess <- function(obj, sct = TRUE, tsne = TRUE, umap = TRUE) {
 
+  options(future.globals.maxSize= 4*1024^4)
+  
   if(sct) {
     message("[seurat.preprocess] normalization method = SCT")
     obj <- Seurat::SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
