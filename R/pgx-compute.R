@@ -160,7 +160,7 @@ pgx.createPGX <- function(counts,
                           max.genesets = 5000,
                           name = "Data set",
                           datatype = "unknown",
-                          azimuth.reference = "pbmcref",
+                          ## azimuth.reference = NULL, ## NEW AZ
                           probe_type = NULL,
                           creator = "unknown",
                           description = "No description provided.",
@@ -188,7 +188,7 @@ pgx.createPGX <- function(counts,
       contrasts = contrasts,
       organism = organism,
       batch = NULL,
-      azimuth.reference = azimuth.reference
+      azimuth_ref = azimuth_ref ## NEW AZ
     )
     return(pgx)
   }

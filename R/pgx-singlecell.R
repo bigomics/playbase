@@ -640,6 +640,7 @@ pgx.createSeuratObject <- function(counts,
 
   ## samples$batch <- batch
   rownames(samples) <- colnames(counts)
+  samples <- as.data.frame(samples)
   samples$nCount_RNA <- Matrix::colSums(counts, na.rm = TRUE)
   samples$nFeature_RNA <- Matrix::colSums(counts>0, na.rm = TRUE)  
   obj <- Seurat::CreateSeuratObject(counts = counts, meta.data = samples)
@@ -1098,13 +1099,11 @@ pgx.createSingleCellPGX <- function(counts,
                                     contrasts,
                                     organism,
                                     batch = NULL, 
-                                    azimuth.reference = "pbmcref") {
-
+                                    azimuth_ref) {
 
   if (!is.null(counts)) {
     message("[createSingleCellPGX] dim.counts: ", dim(counts)[1], ",", dim(counts)[2])
     message("[createSingleCellPGX] class.counts: ", class(counts))
-    nmissing <- sum(is.na(counts))
   } else {
     stop("[createPGX] FATAL: counts must be provided")
   }
