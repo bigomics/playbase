@@ -1115,9 +1115,15 @@ removeTechnicalEffects <- function(X, samples, y, p.pheno = 0.05, p.pca = 0.5,
 
 
 #' @export
-runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
-                                      sc = FALSE, prefix = "",
-                                      methods = NULL, remove.failed = TRUE) {
+runBatchCorrectionMethods <- function(X,
+                                      batch,
+                                      y,
+                                      controls = NULL,
+                                      ntop = 2000,
+                                      sc = FALSE,
+                                      prefix = "",
+                                      methods = NULL,
+                                      remove.failed = TRUE) {
   if (0) {
     controls <- NULL
     ntop <- 2000
@@ -1272,65 +1278,38 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
 runTechCorrectionMethods <- function(X, samples, y, p.pca = 0.5, p.pheno = 0.05, nv = 1,
                                      xrank = NULL, force = FALSE,
                                      remove.failed = TRUE, ntop = Inf) {
-  ##  p.pca = 0.5;p.pheno = 0.05;nv = 2;remove.failed = TRUE;ntop = Inf
+    ##  p.pca = 0.5;p.pheno = 0.05;nv = 2;remove.failed = TRUE;ntop = Inf
 
-  mod <- model.matrix(~y)
-  nlevel <- length(unique(y[!is.na(y)]))
-  X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], ntop) ## faster
+    mod <- model.matrix(~y)
+    nlevel <- length(unique(y[!is.na(y)]))
+    X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], ntop) ## faster
 
-  xlist <- list()
-  xlist[["uncorrected"]] <- X
+    xlist <- list()
+    xlist[["uncorrected"]] <- X
 
-  params <- c("lib", "gender", "mito", "ribo", "cellcycle")
+    params <- c("lib", "gender", "mito", "ribo", "cellcycle", "<all>")
+    i <- 1
+    for(i in 1:length(params)) {
 
-  xlist[["lib"]] <- removeTechnicalEffects(
-    X, samples,
-    y = y, params = c("lib"),
-    p.pheno = p.pheno, p.pca = p.pca, nv = nv,
-    xrank = xrank, force = force
-  )
+        prm <- params[i]
+        if(prm == "<all>") {
+            prm <- params[which(params != "<all>")]
+        }
 
-  xlist[["gender"]] <- removeTechnicalEffects(
-    X, samples,
-    y = y, params = c("gender"),
-    p.pheno = p.pheno, p.pca = p.pca, nv = nv,
-    xrank = xrank, force = force
-  )
+        xlist[[prm]] <- removeTechnicalEffects(
+            X, samples,
+            y = y, params = prm,
+            p.pheno = p.pheno, p.pca = p.pca, nv = nv,
+            xrank = xrank, force = force
+        )        
 
-  xlist[["mito"]] <- removeTechnicalEffects(
-    X, samples,
-    y = y, params = c("mito"),
-    p.pheno = p.pheno, p.pca = p.pca, nv = nv,
-    xrank = xrank, force = force
-  )
+    }
 
-  xlist[["ribo"]] <- removeTechnicalEffects(
-    X, samples,
-    y = y, params = c("ribo"),
-    p.pheno = p.pheno, p.pca = p.pca, nv = nv,
-    xrank = xrank, force = force
-  )
+    if (remove.failed) {
+        xlist <- xlist[!sapply(sapply(xlist, nrow), is.null)]
+    }
 
-  xlist[["cellcycle"]] <- removeTechnicalEffects(
-    X, samples,
-    y = y, params = c("cellcycle"),
-    p.pheno = p.pheno, p.pca = p.pca, nv = nv,
-    xrank = xrank, force = force
-  )
-
-  xlist[["<all>"]] <- removeTechnicalEffects(
-    X, samples,
-    y = y,
-    params = c("lib", "gender", "mito", "ribo", "cellcycle"),
-    p.pheno = p.pheno, p.pca = p.pca, nv = nv,
-    xrank = xrank, force = force
-  )
-
-  if (remove.failed) {
-    xlist <- xlist[!sapply(sapply(xlist, nrow), is.null)]
-  }
-
-  xlist
+    xlist
 }
 
 #' @export
