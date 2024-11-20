@@ -20,6 +20,9 @@ depend:
 install: depend
 	R CMD INSTALL .
 
+
+VERSION = "v3.4.4"
+
 install.rcmd: 
 	Rscript dev/install_playbase.R 'rcmd'
 
