@@ -15,7 +15,7 @@ species$species_name <- sub("Homo sapiens","Human",species$species_name)
 species$species_name <- sub("Mus musculus","Mouse",species$species_name)
 species$species_name <- sub("Rattus norvegicus","Rat",species$species_name)
 
-# remove duplicates
+# remove duplicates, use species_name as rownames
 species <- species[!duplicated(species$species_name),]
 rownames(species) <- species$species_name
 
@@ -28,7 +28,6 @@ pf["ah_id"] <- NA
 pf["taxonomyid"] <- "36329"
 species <- rbind(species, "Plasmodium falciparum" = pf)
 
-
 # intersect with species supported by orthogene. So we have at least
 # organisms that are supported by both.
 M <- orthogene::map_species(method = "gprofiler", verbose = FALSE)
@@ -38,10 +37,11 @@ M <- M[match(both_id,M$taxonomy_id),]
 
 # add orthogene species name for lookup. sometimes different
 species$ortho_species <- M$scientific_name
+species$display_name  <- M$display_name
 
 # Create a new row with "No organism" in all columns
 species <- rbind(species, "No organism" = NA)
-species['No organism',c('species','species_name')] <- 'No organism'
+species['No organism',c('species','species_name','ortho_species','display_name')] <- 'No organism'
 
 # Order table by Human, Mouse and Rat to appear first in species_name
 preferred_order <- c("Human", "Mouse", "Rat", "No organism")
