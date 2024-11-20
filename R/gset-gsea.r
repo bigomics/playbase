@@ -67,7 +67,7 @@ gmt2mat <- function(gmt, max.genes = -1, ntop = -1, sparse = TRUE,
       if (length(ii0) > 0) D[ii0, j] <- +1
     }
   }
-  D <- D[order(-Matrix::rowSums(D != 0)), ]
+  D <- D[order(-Matrix::rowSums(D != 0, na.rm = TRUE)), ]
   D
 }
 
@@ -295,7 +295,7 @@ run.GSEA <- function(X, y, gmt, output.dir = NULL, fdr = 0.25, set.min = 15,
   if (!(permute %in% c("phenotype", "gene_set"))) {
     stop("permute must be phenotype or gene_set")
   }
-  if (min(table(y)) < 7 && permute == "phenotype" && !force.permute) {
+  if (min(table(y), na.rm = TRUE) < 7 && permute == "phenotype" && !force.permute) {
     if (!quiet) cat("WARNING: less than 7 samples. Switching to gene_set permutation\n")
     permute <- "gene_set"
   }
@@ -642,10 +642,10 @@ run.GSEA.preranked <- function(rnk, gmt, output.dir = NULL, fdr = 0.25,
     jj0 <- which(!is.na(res$NES))
     for (j in jj) {
       j1 <- jj0[utils::head(order(abs(res$ES[jj0] - res$ES[j])), 3)]
-      res[j, "NES"] <- mean(res[j1, "NES"])
-      res[j, "NOM p-val"] <- mean(res[j1, "NOM p-val"])
-      res[j, "FDR q-val"] <- mean(res[j1, "FDR q-val"])
-      res[j, "FWER p-val"] <- mean(res[j1, "FWER p-val"])
+      res[j, "NES"] <- mean(res[j1, "NES"], na.rm = TRUE)
+      res[j, "NOM p-val"] <- mean(res[j1, "NOM p-val"], na.rm = TRUE)
+      res[j, "FDR q-val"] <- mean(res[j1, "FDR q-val"], na.rm = TRUE)
+      res[j, "FWER p-val"] <- mean(res[j1, "FWER p-val"], na.rm = TRUE)
     }
   }
 
@@ -1112,12 +1112,13 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
   kk <- c(seq(1, length(rnk) * 0.99, floor(length(rnk) / 20)), length(rnk))
   length(kk)
   i <- 1
+  pal <- grDevices::colorRampPalette(c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")))(32)
   for (i in 1:(length(kk) - 1)) {
-    r <- mean(rnk[kk[c(i, i + 1)]])
+    r <- mean(rnk[kk[c(i, i + 1)]], na.rm = TRUE)
     r1 <- (r / max(abs(rnk), na.rm = TRUE))
     r1 <- abs(r1)**0.5 * sign(r1)
     irnk <- floor(31 * (1 + r1) / 2)
-    cc <- gplots::bluered(32)[1 + irnk]
+    cc <- pal[1 + irnk]
     graphics::rect(kk[i], y0 - 1.05 * dy, kk[i + 1], y0 - 0.65 * dy, col = cc, border = NA)
   }
 
@@ -1129,9 +1130,9 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
   r0 <- cumsum(x0 == 0) / sum(x0 == 0)
   r1 <- cumsum(x0) / (1e-4 + sum(x0))
   rnk.trace <- (r1 - r0)
-  rnk.trace <- rnk.trace / max(abs(rnk.trace)) * 0.9
-  if (max(rnk.trace) >= abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y1)
-  if (max(rnk.trace) < abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y0)
+  rnk.trace <- rnk.trace / max(abs(rnk.trace), na.rm = TRUE) * 0.9
+  if (max(rnk.trace, na.rm = TRUE) >= abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y1)
+  if (max(rnk.trace, na.rm = TRUE) < abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y0)
   if (!decreasing) rnk.trace <- -1 * rnk.trace
   graphics::lines(ii, rnk.trace[ii], col = "green", type = "l", lwd = 2.4)
 
@@ -1386,7 +1387,7 @@ gsea.radarplot <- function(values, names = NULL, mar = c(2, 5, 3, 5) * 2,
   }
   if (!is.null(names)) names(values) <- names
   M <- rbind(pmax(-mx, 0), pmax(mx, 0))
-  M <- pmax(M / max(M), offset)
+  M <- pmax(M / max(M, na.rm = TRUE), offset)
   M <- rbind(M, 1)
   colnames(M) <- names(values)
   rownames(M) <- c("neg", "pos", "unit")

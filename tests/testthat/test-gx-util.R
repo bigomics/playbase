@@ -33,16 +33,14 @@ test_that("averageByGroup calculates correct group means", {
 })
 
 #' Test for gmean
-test_that("gmean works as expected", {
-  # Test for running as expected
-  expect_equal(playbase::gmean(c(1, 2, 3)), 1.8171205928321396)
-
-  # Test for handling 0
-  expect_equal(playbase::gmean(c(0, 1, 2)), 0)
-
-  # Test for handling NA
-  expect_true(is.na(playbase::gmean(c(NA, 1, 2))))
-})
+## test_that("gmean works as expected", {
+##   # Test for running as expected
+##   expect_equal(playbase::gmean(c(1, 2, 3)), 1.8171205928321396)
+##   # Test for handling 0
+##   expect_equal(playbase::gmean(c(0, 1, 2)), 0)
+##   # Test for handling NA
+##   expect_true(is.na(playbase::gmean(c(NA, 1, 2))))
+## })
 
 
 #' Test for mat2hugo

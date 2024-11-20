@@ -10,15 +10,18 @@ pgx.createPGX(
   counts,
   samples,
   contrasts,
-  organism = NULL,
+  organism,
   custom.geneset = NULL,
   annot_table = NULL,
   max.genesets = 5000,
   name = "Data set",
   datatype = "unknown",
+  probe_type = NULL,
   creator = "unknown",
   description = "No description provided.",
   X = NULL,
+  impX = NULL,
+  norm_method = "CPM",
   is.logx = NULL,
   batch.correct = TRUE,
   auto.scale = TRUE,
@@ -29,8 +32,7 @@ pgx.createPGX(
   convert.hugo = TRUE,
   only.proteincoding = TRUE,
   remove.xxl = TRUE,
-  remove.outliers = TRUE,
-  normalize = TRUE
+  remove.outliers = TRUE
 )
 }
 \arguments{

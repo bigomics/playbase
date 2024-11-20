@@ -58,7 +58,7 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
   }
 
   ## detect single sample case
-  is.single <- (max(table(pheno)) == 1)
+  is.single <- (max(table(pheno), na.rm = TRUE) == 1)
   if (is.single) {
     cat("WARNING:: no replicates, duplicating samples...\n")
     X <- cbind(X, X)
@@ -226,7 +226,7 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
     cat("matrix has duplicated rownames. please remove.\n")
   }
   ## detect single sample case
-  is.single <- (max(table(pheno)) == 1)
+  is.single <- (max(table(pheno), na.rm = TRUE) == 1)
   if (is.single) {
     cat("warning: no replicates, no stats. duplicating\n")
     X <- cbind(X, X)
@@ -356,7 +356,7 @@ gx.limmaF <- function(X, pheno, B = NULL, fdr = 0.05, compute.means = TRUE, lfc 
 
   ## compute averages
   avg <- do.call(cbind, tapply(1:ncol(X0), pheno1, function(i) {
-    rowMeans(X0[, i, drop = FALSE])
+    rowMeans(X0[, i, drop = FALSE], na.rm = TRUE)
   }))
 
   if (!"logFC" %in% colnames(top)) {
@@ -558,14 +558,14 @@ gx.limma.paired <- function(X, pheno, pair, fdr = 0.05, lfc = 0.20,
 #' @export
 seq_limma <- function(countdata, y, method = "edgeR") {
   ## https://bioinformatics-core-shared-training.github.io/RNAseq-R/rna-seq-de.nb.html
-  if (min(countdata) < 0 || !all(countdata %% 1 == 0)) {
+  if (min(countdata, na.rm = TRUE) < 0 || !all(countdata %% 1 == 0)) {
     cat("WARNING:: input X should be integer counts! Proceed on own risk\n")
   }
 
   ## Identify genes with at least 0.5 CPM in at least 2 samples
   myCPM <- edgeR::cpm(countdata)
   thresh <- myCPM > 0.5
-  keep <- rowSums(thresh) >= 2
+  keep <- rowSums(thresh, na.rm = TRUE) >= 2
   ## Subset the rows of countdata to keep the more highly expressed genes
   counts.keep <- countdata[keep, ]
 
@@ -605,5 +605,5 @@ seq_limma <- function(countdata, y, method = "edgeR") {
   }
   colnames(xmean) <- paste0("mean.", unique(y))
   Matrix::head(xmean)
-  xmean <- cbind(mean = rowMeans(xmean), xmean)
+  xmean <- cbind(mean = rowMeans(xmean, na.rm = TRUE), xmean)
 }

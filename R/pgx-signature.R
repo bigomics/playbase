@@ -49,7 +49,7 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
     return(NULL)
   }
 
-  dbg("[pgx.computeConnectivityScores] computing connectivity scores for sigdb = ", sigdb)
+  info("[pgx.computeConnectivityScores] computing connectivity for sigdb = ", sigdb)
   meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
 
   if (is.null(contrasts)) {
@@ -63,20 +63,22 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
   for (ct in colnames(F1)) {
     fc <- F1[, ct]
 
-    if (!is.null(pgx$organism)) {
-      if (pgx$organism != "Human") {
-        names(fc) <- pgx$genes[names(fc), "human_ortholog"]
-        fc <- fc[names(fc) != ""]
-      } else {
-        # For human datasets
-        names(fc) <- rownames(meta$fc)
-        names(fc) <- toupper(names(fc)) ## for MOUSE!!
-      }
+    k <- intersect(c("human_ortholog", "symbol", "gene_name"), colnames(pgx$genes))
+    k <- k[which(colMeans(is.na(pgx$genes[, k])) < 1)] ## no all NA columns...
+    k
+    if (length(k) == 0) {
+      ## old-style, if no pgx$gene columns match
+      names(fc) <- toupper(names(fc))
     } else {
-      # For old datasets
-      names(fc) <- rownames(meta$fc)
-      names(fc) <- toupper(names(fc)) ## for MOUSE!!
+      ## use first best mapping column for "human"-like genes
+      names(fc) <- toupper(pgx$genes[names(fc), k[1]])
     }
+
+    ## collapse duplicates by average or max absFC
+    ## fc <- tapply( fc, names(fc), mean, na.rm = TRUE)
+    fc <- tapply(fc, names(fc), function(x) x[which.max(abs(x))])
+    fc[is.na(fc)] <- 0
+
     res <- pgx.correlateSignatureH5(
       fc,
       h5.file = h5.file,
@@ -84,6 +86,7 @@ pgx.computeConnectivityScores <- function(pgx, sigdb, ntop = 200, contrasts = NU
       ntop = ntop,
       nperm = 9999
     )
+
     scores[[ct]] <- res
   }
   if (is.null(names(scores))) names(scores) <- contrasts
@@ -180,7 +183,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
       min.genes = 0, nmin = 0
     )
   })
-  or.max <- max(stats$odd.ratio[!is.infinite(stats$odd.ratio)])
+  or.max <- max(stats$odd.ratio[!is.infinite(stats$odd.ratio)], na.rm = TRUE)
   stats$odd.ratio[is.infinite(stats$odd.ratio)] <- max(99, 2 * or.max)
 
   ## ---------------------------------------------------------------
@@ -644,7 +647,8 @@ sigdb.getConnectivityContrasts <- function(sigdb, path = NULL) {
 #' If the sigdb file is not in the working directory, set the \code{path} parameter.
 #'
 #' @export
-sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL, path = NULL) {
+sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL,
+                                        if.tile = TRUE, path = NULL) {
   if (sigdb == "" || is.null(sigdb)) {
     warning("[getConnectivityMatrix] WARNING missing H5 file: sigdb=", sigdb)
     return(NULL)
@@ -655,6 +659,14 @@ sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL, path
   if (!file.exists(sigdb)) {
     warning("[getConnectivityMatrix] WARNING file ", sigdb, "not found")
     return(NULL)
+  }
+
+  if (grepl("h5$", sigdb)) {
+    tile.file <- sub(".h5$", ".tile", sigdb)
+    if (if.tile && file.exists(tile.file)) {
+      ## message("[getConnectivityMatrix] TileDB file found")
+      sigdb <- tile.file
+    }
   }
 
   if (grepl("csv$", sigdb)) {
@@ -668,14 +680,34 @@ sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL, path
     rn <- rhdf5::h5read(sigdb, "data/rownames")
     rowidx <- 1:length(rn)
     colidx <- 1:length(cn)
-    if (!is.null(genes)) rowidx <- match(intersect(genes, rn), rn)
-    if (!is.null(select)) colidx <- match(intersect(select, cn), cn)
     nr <- length(rowidx)
     nc <- length(colidx)
-    dbg("[sigdb.getConnectivityMatrix] reading large H5 file:", nr, "x", nc, "")
+    if (!is.null(genes)) rowidx <- match(intersect(genes, rn), rn)
+    if (!is.null(select)) colidx <- match(intersect(select, cn), cn)
+    message(
+      "[sigdb.getConnectivityMatrix] reading H5 file: ",
+      basename(sigdb), " (", nr, " x ", nc, " -> ",
+      length(rowidx), " x ", length(colidx), ")"
+    )
     X <- rhdf5::h5read(sigdb, "data/matrix", index = list(rowidx, colidx))
     rownames(X) <- rn[rowidx]
     colnames(X) <- cn[colidx]
+  } else if (grepl("tile$", sigdb)) {
+    tx <- TileDBArray::TileDBArray(sigdb)
+    rowidx <- 1:nrow(tx)
+    colidx <- 1:ncol(tx)
+    rn <- rownames(tx)
+    cn <- colnames(tx)
+    nr <- length(rowidx)
+    nc <- length(colidx)
+    if (!is.null(genes)) rowidx <- match(intersect(genes, rn), rn)
+    if (!is.null(select)) colidx <- match(intersect(select, cn), cn)
+    message(
+      "[sigdb.getConnectivityMatrix] reading TileDB file: ",
+      basename(sigdb), " (", nr, " x ", nc, " -> ",
+      length(rowidx), " x ", length(colidx), ")"
+    )
+    suppressWarnings(X <- as.matrix(tx[rowidx, colidx]))
   } else {
     cat("[getConnectivityMatrix] WARNING: could not retrieve matrix\n")
   }

@@ -4,6 +4,16 @@
 ##
 
 
+#' Fast matrix correlation
+#'
+#' @export
+fastCor <- function(x, y) {
+  scaledx <- scale(x) / sqrt(nrow(x) - 1)
+  scaledy <- scale(y) / sqrt(nrow(y) - 1)
+  t(scaledx) %*% scaledy
+}
+
+
 #' @title Create a Phenotype Matrix
 #'
 #' @description This function creates a phenotype matrix from a PGX object.
@@ -256,8 +266,14 @@ strwrap2 <- function(str, n) {
 add_opacity <- function(hexcol, opacity) {
   col1 <- rep(NA, length(hexcol))
   ii <- which(!is.na(hexcol))
+  if (length(ii) == 0) {
+    return(hexcol)
+  }
   rgba <- strsplit(gsub("rgba\\(|\\)", "", plotly::toRGB(hexcol[ii], opacity)), split = ",")
-  rgba <- apply(do.call(rbind, rgba), 2, as.numeric)
+  rgba <- try(apply(do.call(rbind, rgba), 2, as.numeric))
+  if ("try-error" %in% class(rgba)) {
+    return(hexcol)
+  }
   if (length(hexcol) == 1) rgba <- matrix(rgba, nrow = 1)
   col1[ii] <- grDevices::rgb(rgba[, 1] / 255, rgba[, 2] / 255, rgba[, 3] / 255, rgba[, 4])
   col1
@@ -325,7 +341,7 @@ matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1, reorder = TRUE) {
     1:ncol(X), group,
     function(i) FUN(X[, i, drop = FALSE], na.rm = TRUE)
   ))
-  if (!reorder) mX <- mX[, unique(group), drop = FALSE]
+  if (reorder) mX <- mX[, unique(group), drop = FALSE]
   if (dir == 2) mX <- t(mX)
   mX
 }
@@ -334,11 +350,38 @@ matGroupMeans <- function(X, group, FUN = rowMeans, dir = 1, reorder = TRUE) {
 #' matrix. Faster than matGroupMeans.
 #'
 #' @export
-rowmean <- function(X, group, reorder = TRUE) {
-  sumX <- base::rowsum(X, group, na.rm = TRUE, reorder = reorder)
-  nX <- base::rowsum(1 * (!is.na(X)), group, reorder = reorder)
-  sumX / nX
+rowmean <- function(X, group = rownames(X), reorder = TRUE) {
+  if (is.matrix(X) || any(class(X) %in% c("matrix"))) {
+    sumX <- base::rowsum(X, group, na.rm = TRUE, reorder = reorder)
+    nX <- base::rowsum(1 * (!is.na(X)), group, reorder = reorder)
+    newX <- sumX / nX
+  } else {
+    ## slower but safer. also for sparse matrix.
+    newX <- tapply(1:nrow(X), group, function(i) {
+      Matrix::colMeans(X[i, , drop = FALSE], na.rm = TRUE)
+    })
+    newX <- do.call(rbind, newX)
+    if (reorder) {
+      ii <- match(unique(group), rownames(newX))
+      newX <- newX[ii, , drop = FALSE]
+    }
+  }
+  newX
 }
+
+#' Calculate group-wise row function call FUN from a matrix. Like rowmean
+#' but generalized. NOTE: only with functions from matrixStats.
+#'
+#' @export
+rowFUN <- function(X, group = rownames(X), FUN = matrixStats::colMeans2, reorder = TRUE) {
+  mX <- t(do.call(cbind, tapply(
+    1:nrow(X), group,
+    function(i) FUN(X[i, , drop = FALSE], na.rm = TRUE)
+  )))
+  if (reorder) mX <- mX[unique(group), , drop = FALSE]
+  mX
+}
+
 
 #' @describeIn trimsame0 trimsame is a function that trims common prefixes and/or
 #' suffixes from a character vector by applying trimsame0 forwards and/or backwards.
@@ -692,23 +735,23 @@ is.POSvsNEG <- function(pgx) {
     is.pn <- rep(NA, length(grp1))
     i <- 1
     for (i in 1:length(grp1)) {
-      a1 <- apply(pgx$samples, 1, function(a) mean(grepl(grp1[i], a)))
-      a2 <- apply(pgx$samples, 1, function(a) mean(grepl(grp2[i], a)))
+      a1 <- apply(pgx$samples, 1, function(a) mean(grepl(grp1[i], a), na.rm = TRUE))
+      a2 <- apply(pgx$samples, 1, function(a) mean(grepl(grp2[i], a), na.rm = TRUE))
       j1 <- which(a1 > a2) ## samples with phenotype  more in grp1
       j2 <- which(a2 >= a1) ## samples with phenotype  more in grp2
       s1 <- s2 <- 0
       if (length(j1)) s1 <- rowMeans(expmat[j1, i, drop = FALSE] > 0, na.rm = TRUE)
       if (length(j2)) s2 <- rowMeans(expmat[j2, i, drop = FALSE] > 0, na.rm = TRUE)
-      if (mean(s1) > mean(s2)) is.pn[i] <- TRUE
-      if (mean(s2) > mean(s1)) is.pn[i] <- FALSE
+      if (mean(s1, na.rm = TRUE) > mean(s2, na.rm = TRUE)) is.pn[i] <- TRUE
+      if (mean(s2, na.rm = TRUE) > mean(s1, na.rm = TRUE)) is.pn[i] <- FALSE
     }
 
     is.PosvsNeg1 <- mean(is.pn, na.rm = TRUE) > 0
   }
 
   ## look for keywords
-  grp1.neg2 <- mean(grepl("neg|untr|ref|wt|ctr|control", tolower(grp1)))
-  grp2.neg2 <- mean(grepl("neg|untr|ref|wt|ctr|control", tolower(grp2)))
+  grp1.neg2 <- mean(grepl("neg|untr|ref|wt|ctr|control", tolower(grp1)), na.rm = TRUE)
+  grp2.neg2 <- mean(grepl("neg|untr|ref|wt|ctr|control", tolower(grp2)), na.rm = TRUE)
 
   is.PosvsNeg2 <- NA
   if (grp1.neg2 > 0 || grp2.neg2 > 0) {
@@ -1027,34 +1070,6 @@ selectSamplesFromSelectedLevels <- function(Y, levels) {
 }
 
 
-#' @title Get Gene Information
-#'
-#' @description This function retrieves gene information from the biomaRt package.
-#'
-#' @param eg A character vector of Entrez Gene IDs for which to retrieve information.
-#' @param fields A character vector of fields to retrieve, with default values of
-#' "symbol", "name", "alias", "map_location", and "summary".
-#'
-#' @details The function takes a character vector of Entrez Gene IDs `eg` and a
-#' character vector of fields `fields` as input.
-#' The function uses the `getGene` function from the `biomaRt` package to retrieve
-#' the specified fields for each Entrez Gene ID.
-#' The resulting information is returned as a named list, where each element
-#' corresponds to one of the specified fields and contains a character vector of the retrieved values.
-#'
-#' @return A named list containing the retrieved gene information for each of the specified fields.
-#'
-#' @export
-getMyGeneInfo <- function(eg, fields = c("symbol", "name", "alias", "map_location", "summary")) {
-  info <- lapply(fields, function(f) biomaRt::getGene(eg, fields = f)[[1]])
-  names(info) <- fields
-  info <- lapply(info, function(x) ifelse(length(x) == 3, x[[3]], "(not available)"))
-  info <- sapply(info, paste, collapse = ",")
-
-  return(info)
-}
-
-
 #' Get human gene information from annotation packages
 #'
 #' @param eg Character vector of gene symbols
@@ -1073,9 +1088,48 @@ getMyGeneInfo <- function(eg, fields = c("symbol", "name", "alias", "map_locatio
 #' info <- getHSGeneInfo(genes)
 #' }
 #' @export
-getHSGeneInfo <- function(eg, as.link = TRUE) {
+getHSGeneInfo <- function(gene, as.link = TRUE) {
+  if (is.null(gene) || length(gene) == 0) {
+    return(NULL)
+  }
+  if (is.na(gene) || gene == "") {
+    return(NULL)
+  }
+
+  gene <- toupper(gene)
+  is.symbol <- gene %in% AnnotationDbi::keys(org.Hs.eg.db::org.Hs.egSYMBOL2EG)
+  is.alias <- gene %in% AnnotationDbi::keys(org.Hs.eg.db::org.Hs.egALIAS2EG)
+
+  if (!is.symbol && !is.alias) {
+    return(NULL)
+  }
+  if (is.symbol) {
+    eg <- AnnotationDbi::mget(
+      gene,
+      envir = org.Hs.eg.db::org.Hs.egSYMBOL2EG,
+      ifnotfound = NA
+    )[[1]]
+  } else {
+    eg <- AnnotationDbi::mget(
+      gene,
+      envir = org.Hs.eg.db::org.Hs.egALIAS2EG,
+      ifnotfound = NA
+    )[[1]]
+  }
+
+  if (length(eg) > 0) eg <- eg[[1]]
+  if (length(eg) > 1) eg <- eg[1]
+  if (is.null(eg) || length(eg) == 0 || is.na(eg)) {
+    return(NULL)
+  }
+  getHSGeneInfo.eg(eg, as.link = as.link)
+}
+
+
+getHSGeneInfo.eg <- function(eg, as.link = TRUE) {
   env.list <- c(
-    "symbol" = org.Hs.eg.db::org.Hs.egSYMBOL,
+    "gene_symbol" = org.Hs.eg.db::org.Hs.egSYMBOL,
+    "uniprot" = org.Hs.eg.db::org.Hs.egUNIPROT,
     "name" = org.Hs.eg.db::org.Hs.egGENENAME,
     "map_location" = org.Hs.eg.db::org.Hs.egMAP,
     "OMIM" = org.Hs.eg.db::org.Hs.egOMIM,
@@ -1083,17 +1137,21 @@ getHSGeneInfo <- function(eg, as.link = TRUE) {
     "GO" = org.Hs.eg.db::org.Hs.egGO
   )
 
-  info <- lapply(env.list, function(env) AnnotationDbi::mget(eg, envir = env, ifnotfound = NA)[[1]])
+  ## get info from different environments
+  info <- lapply(env.list, function(env) {
+    AnnotationDbi::mget(eg, envir = env, ifnotfound = NA)[[1]]
+  })
   names(info) <- names(env.list)
-  gene.symbol <- toupper(AnnotationDbi::mget(as.character(eg),
-    envir = org.Hs.eg.db::org.Hs.egSYMBOL
-  ))[1]
-  info[["symbol"]] <- gene.symbol
 
-  ## create link to GeneCards
+  ## create link to external databases: OMIM, GeneCards, Uniprot
   if (as.link) {
-    genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GENE</a>"
-    info[["symbol"]] <- gsub("GENE", info[["symbol"]], genecards.link)
+    genecards.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GeneCards</a>"
+    uniprot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UniProtKB</a>"
+    gene_symbol <- info[["gene_symbol"]]
+    genecards.link <- sub("GENE", gene_symbol, genecards.link)
+    uniprot <- info[["uniprot"]]
+    uniprot.link <- sub("UNIPROT", uniprot, uniprot.link)
+    info[["databases"]] <- paste(c(genecards.link, uniprot.link), collapse = ", ")
   }
 
   ## create link to OMIM
@@ -1294,30 +1352,30 @@ pgx.getGeneSetCollections <- function(gsets = rownames(playdata::GSETxGENE)) {
 
 #' Filter probes from gene expression data
 #'
-#' @param genes Gene expression data.frame with probes as row names.
-#' @param gg Character vector of probes to filter for.
+#' @param annot Gene annotation data.frame with probes as row names.
+#' @param genes Character vector of genes to filter for.
 #'
 #' @return Character vector of matching probe names.
 #'
-#' @details This function filters a gene expression data.frame to return only probes matching the input vector.
-#' It checks the probe name, short probe name, and gene name for matches.
+#' @details This function filters a  data.frame to return only probes matching the input vector.
+#' It checks the rownames, symbol, and ortholog name for matches.
 #'
 #' @examples
 #' \dontrun{
-#' data <- utils::read.csv("expression.csv", row.names = 1)
-#' probes <- c("FOO", "BAR")
-#' matches <- filterProbes(data, probes)
+#' annot <- pgx$genes
+#' genes <- c("FOO", "BAR")
+#' probes <- filterProbes(annot, genes)
 #' }
 #' @export
-filterProbes <- function(genes, gg) {
+filterProbes <- function(annot, genes) {
   ## check probe name, short probe name or gene name for match
-  p0 <- (toupper(sub(".*:", "", rownames(genes))) %in% toupper(gg))
-  p1 <- (toupper(rownames(genes)) %in% toupper(gg))
-  p2 <- (toupper(as.character(genes$gene_name)) %in% toupper(gg))
-  if ("human_ortholog" %in% colnames(genes)) {
-    p3 <- (toupper(as.character(genes$human_ortholog)) %in% toupper(gg))
+  p0 <- (toupper(sub(".*:", "", rownames(annot))) %in% toupper(genes))
+  p1 <- (toupper(rownames(annot)) %in% toupper(genes))
+  p2 <- (toupper(as.character(annot$symbol)) %in% toupper(genes))
+  if ("human_ortholog" %in% colnames(annot)) {
+    p3 <- (toupper(as.character(annot$human_ortholog)) %in% toupper(genes))
   } else {
-    p3 <- rep(FALSE, nrow(genes))
+    p3 <- rep(FALSE, nrow(annot))
   }
 
   # Ensure all p* are valids
@@ -1329,40 +1387,133 @@ filterProbes <- function(genes, gg) {
   if (length(jj) == 0) {
     return(NULL)
   }
-  return(rownames(genes)[jj])
+  return(rownames(annot)[jj])
 }
 
 
-#' Rename rownames of counts matrix by annotation table
+#' Rename rownames of counts matrix by annotation table. Warning this
+#' function does not maintain the original dimensions/length of
+#' object.
 #'
 #' @param counts Numeric matrix of counts, with genes/probes as rownames.
 #' @param annot_table Data frame with rownames matching counts and annotation columns.
-#' @param new_id_col Column name in annot_table containing new identifiers. Default 'symbol'.
+#' @param new_id Column name in annot_table containing new identifiers. Default 'symbol'.
 #'
 #' @return Matrix with rownames changed to values from annot_table.
-#' Duplicate new rownames are summed.
+#' Duplicate new rownames are made unique.
 #'
 #' @details Renames rownames of counts matrix using an annotation data frame.
-#' Looks up the `new_id_col` in the annot_table and replaces counts rownames.
-#' Handles special cases like missing values.
-#' Sums duplicate rows after renaming.
+#' Looks up the `new_id` in the annot_table and replaces counts rownames.
 #'
 #' @export
-rename_by <- function(counts, annot_table, new_id_col = "symbol") {
-  symbol <- annot_table[rownames(counts), new_id_col]
+rename_by2 <- function(counts, annot_table, new_id = "symbol",
+                       na.rm = TRUE, unique = TRUE) {
+  ## add rownames
+  annot_table$rownames <- rownames(annot_table)
+
+  probes <- rownames(counts)
+  probe_match <- apply(annot_table, 2, function(x) sum(probes %in% x))
+  probe_match
+  from_id <- names(which.max(probe_match))
+  from_id
+
+  ## dummy do-noting return
+  if (new_id == from_id) {
+    return(counts)
+  }
+
+  type <- NA
+  if (is.matrix(counts) || is.data.frame(counts) || !is.null(dim(counts))) {
+    type <- "matrix"
+  } else {
+    type <- "vector"
+    counts <- cbind(counts)
+  }
+
+  probes <- rownames(counts)
+  from <- annot_table[, from_id]
+  if (!any(duplicated(from)) || unique) {
+    ii <- match(probes, from)
+    new.name <- annot_table[ii, new_id]
+  } else {
+    to <- lapply(probes, function(p) which(from == p))
+    ii <- lapply(1:length(to), function(i) rep(i, length(to[[i]])))
+    counts <- counts[unlist(ii), ]
+    new.name <- annot_table[unlist(to), new_id]
+  }
+  rownames(counts) <- new.name
+
+  # Sum columns of rows with the same gene symbol
+  if (na.rm) {
+    counts <- counts[!rownames(counts) %in% c("", "NA", NA), , drop = FALSE]
+  }
+  ##  if (unique) rownames(counts) <- make_unique(rownames(counts))
+  if (unique) {
+    counts <- rowmean(counts, rownames(counts))
+  }
+
+  if (type == "vector") {
+    counts <- counts[, 1]
+  }
+  return(counts)
+}
+
+
+#' @export
+rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
+  if (!all(rownames(counts) %in% rownames(annot_table))) {
+    stop("[rename_by] ERROR. rownames(counts) not in rownames(annot_table)")
+  }
+  probes <- rownames(counts)
+  if (is.vector(counts)) {
+    probes <- names(counts)
+  }
+  symbol <- annot_table[probes, new_id]
 
   # Guard agaisn human_hommolog == NA
   if (all(is.na(symbol))) {
-    symbol <- annot_table[rownames(counts), "symbol"]
+    symbol <- annot_table[probes, "symbol"]
   }
 
   # Sum columns of rows with the same gene symbol
   if (is.matrix(counts) | is.data.frame(counts)) {
     rownames(counts) <- symbol
-    return(counts[!rownames(counts) %in% c("", "NA"), , drop = FALSE])
+    counts <- counts[!rownames(counts) %in% c("", "NA", NA), , drop = FALSE]
+    if (unique) counts <- rowmean(counts, rownames(counts))
+    return(counts)
+  } else if (is.vector(counts)) {
+    names(counts) <- symbol
+    counts <- counts[!names(counts) %in% c("", "NA", NA)]
+    if (unique) counts <- tapply(counts, names(counts), mean, na.rm = TRUE)
+    return(counts)
   } else {
-    return(symbol)
+    return(symbol) ## ???? IK
   }
+}
+
+
+#' Collapse object rownames/names to human symbol. Warning this function
+#' does not maintain the original dimensions/length of object.
+#'
+
+#' @export
+map_probes <- function(annot, genes, column = NULL, ignore.case = FALSE) {
+  ## check probe name, short probe name or gene name for match
+  annot <- cbind(annot, rownames(annot))
+  if (ignore.case) {
+    if (is.null(column)) {
+      column <- which.max(apply(annot, 2, function(x) {
+        sum(toupper(genes) %in% toupper(x), na.rm = TRUE)
+      }))
+    }
+    ii <- which(toupper(annot[, column]) %in% toupper(genes))
+  } else {
+    if (is.null(column)) {
+      column <- which.max(apply(annot, 2, function(x) sum(genes %in% x, na.rm = TRUE)))
+    }
+    ii <- which(annot[, column] %in% genes)
+  }
+  rownames(annot)[ii]
 }
 
 
@@ -1489,7 +1640,7 @@ is.Date <- function(x) {
 averageByGroup <- function(mat, group, FUN = mean) {
   out <- do.call(cbind, tapply(
     1:ncol(mat), group,
-    function(i) rowMeans(mat[, i, drop = FALSE])
+    function(i) rowMeans(mat[, i, drop = FALSE], na.rm = TRUE)
   ))
   return(out)
 }
@@ -2098,7 +2249,7 @@ getGSETS_playbase <- function(gsets = NULL, pattern = NULL) {
 #' @export
 normalize_rows <- function(G) {
   # efficient normalization using linear algebra
-  row_sums <- Matrix::rowSums(G)
+  row_sums <- Matrix::rowSums(G, na.rm = TRUE)
   D <- Matrix::Diagonal(x = 1 / row_sums)
   G_scaled <- D %*% G
   rownames(G_scaled) <- rownames(G)
@@ -2118,47 +2269,51 @@ normalize_cols <- function(G) {
 }
 
 #' @export
-make_unique <- function(s) {
-  has.dup <- sum(duplicated(s)) > 0
-  if (!has.dup) {
+make_unique <- function(s, sep = "") {
+  num.dup <- sum(duplicated(s)) > 0
+  if (!num.dup) {
     return(s)
   }
-  n <- 1
-  while (has.dup) {
-    jj <- which(duplicated(s))
-    s[jj] <- paste0(sub("[.][1-9]*", "", s[jj]), ".", n)
-    has.dup <- sum(duplicated(s)) > 0
-    n <- n + 1
+  dups <- unique(s[which(duplicated(s))])
+  for (d in dups) {
+    jj <- which(s == d)
+    newx <- paste0(s[jj], c("", paste0(".", 1:(length(jj) - 1))))
+    s[jj] <- newx
   }
+  if (sum(duplicated(s))) s <- make_unique(s)
   s
 }
 
+#' Check if values are logarithm
+#'
 #' @export
 is_logged <- function(x, verbose = 0) {
   ## force as matrix
   if (any(class(x) == "data.frame")) x <- as.matrix(x)
 
   ## if all values are 'small' it may be log
-  all.lt60 <- all(x < 60, na.rm = TRUE)
-  has.bigx <- any(x > 1000, na.rm = TRUE)
+  xmax <- max(x, na.rm = TRUE)
+  all.lt60 <- xmax < 60
+  has.bigx <- xmax > 1000
 
   ## if we have negative  values it may be log. The -1 because of
   ## possible RNAseq prior = 1 in log2(x+1)
-  minx.neg <- min(x, na.rm = TRUE) < -1 ##
-  all.pos <- all(x >= 0, na.rm = TRUE) ##
+  xmin <- min(x, na.rm = TRUE)
+  minx.neg <- xmin < -1
+  all.pos <- xmin >= 0
 
   ## check for ratio/fraction data: rows of ratio data matrices (like
   ## TMT) sum to some constant value.
   is.ratio <- FALSE
   if (NCOL(x) > 1 && all.pos) {
-    rowx.mean <- rowMeans(x, na.rm = TRUE)
+    rowx.mean <- Matrix::rowMeans(x, na.rm = TRUE)
     rowx.mean <- rowx.mean[!is.na(rowx.mean)]
     is.ratio <- (sd(rowx.mean) / mean(rowx.mean)) < 0.01
   }
 
   ## check raw count data: if all values are integer
   fraction.diff <- (x - round(x)) / mean(x, na.rm = TRUE)
-  all.integer <- all(fraction.diff < 1e-8)
+  all.integer <- max(fraction.diff, na.rm = TRUE) < 1e-8
   is.counts <- all.pos && all.integer
 
   ## check for low-count single-cell data: they may be all <60
@@ -2184,6 +2339,24 @@ is_logged <- function(x, verbose = 0) {
   is.log
 }
 
+#' @export
+first_feature <- function(x) {
+  unname(sapply(strsplit(x, split = "[;,\\|]"), "[[", 1))
+}
+
+#' @export
+abbreviate_pheno <- function(pheno, minlength = 1, abbrev.colnames = FALSE) {
+  new.ct <- abbreviate(as.vector(unlist(pheno)), method = "left", minlength = minlength)
+  lut <- new.ct[!duplicated(new.ct) & !is.na(new.ct)]
+  lut
+  new.pheno <- apply(pheno, 2, function(x) lut[x])
+  new.pheno <- as.data.frame(new.pheno)
+  rownames(new.pheno) <- rownames(pheno)
+  if (abbrev.colnames) {
+    colnames(new.pheno) <- abbreviate(colnames(pheno), minlength = 4)
+  }
+  new.pheno
+}
 
 ## =================================================================================
 ## ========================= END OF FILE ===========================================

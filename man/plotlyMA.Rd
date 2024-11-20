@@ -8,7 +8,7 @@ plotlyMA(
   x,
   y,
   names,
-  source = "plot1",
+  label.names = names,
   group.names = c("group1", "group2"),
   xlab = "average expression (log2.CPM)",
   ylab = "effect size (log2.FC)",
@@ -20,7 +20,9 @@ plotlyMA(
   label = NULL,
   label.cex = 1,
   color_up_down = TRUE,
+  colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#3181de"),
   marker.type = "scatter",
+  source = "plot1",
   displayModeBar = TRUE
 )
 }
@@ -30,8 +32,6 @@ plotlyMA(
 \item{y}{Numeric vector of effect sizes (log2 fold change)}
 
 \item{names}{Vector of gene or feature names}
-
-\item{source}{Character label for plot source. Default "plot1".}
 
 \item{group.names}{Character vector of group names for legend.}
 
@@ -56,6 +56,8 @@ plotlyMA(
 \item{color_up_down}{Color up/down regulated features}
 
 \item{marker.type}{Marker type (scatter, line, etc). Default "scatter".}
+
+\item{source}{Character label for plot source. Default "plot1".}
 
 \item{displayModeBar}{Show plotly modebar? Logical. Default TRUE.}
 }

@@ -370,18 +370,27 @@ compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
     pgx$samples$cell.cycle <- NULL
     pgx$samples$.cell.cycle <- NULL
 
-    counts <- rna.counts
-    # In multi-species now use symbol, and deduplicate in case
-    # use retains feature as "gene_name/rowname"
-    rownames(counts) <- toupper(pgx$genes[rownames(counts), "symbol"])
-    if (any(duplicated(rownames(counts)))) {
-      message("Deduplicate counts for cell cycle and gender inference")
-      counts <- rowsum(counts, rownames(counts))
+    if (!(".cell_cycle" %in% colnames(pgx$samples))) {
+      counts <- rna.counts
+      message("length(unique(rownames(counts))): ", length(unique(rownames(counts))))
+      message("dim(counts): ", dim(counts))
+      ## In multi-species now use symbol, and deduplicate in case
+      ## use retains feature as "gene_name/rowname"
+      rownames(counts) <- toupper(pgx$genes[rownames(counts), "symbol"])
+      counts <- counts[which(!is.na(rownames(counts))), ]
+      if (any(duplicated(rownames(counts)))) {
+        message("Deduplicate counts for cell cycle and gender inference")
+        counts <- playbase::rowmean(counts, group = rownames(counts))
+        counts[which(is.nan(counts))] <- NA
+      }
+      res <- try(pgx.inferCellCyclePhase(counts))
+      if (!inherits(res, "try-error")) {
+        pgx$samples$.cell_cycle <- res
+      }
+    } else {
+      message("cell cycle already estimated. skipping...")
     }
-    res <- try(pgx.inferCellCyclePhase(counts)) ## can give bins error
-    if (!inherits(res, "try-error")) {
-      pgx$samples$.cell_cycle <- res
-    }
+
     if (!(".gender" %in% colnames(pgx$samples))) {
       message("estimating gender...")
       pgx$samples$.gender <- NULL

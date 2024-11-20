@@ -261,7 +261,7 @@ stats.enrichment <- function(F, pattern = "^go|pathway") {
     sel <- grep(pattern, rownames(playdata::GSETxGENE), value = TRUE, ignore.case = TRUE)
     gmt <- gmt[sel, ]
   }
-  gsa <- playbase::gset.rankcor(F, Matrix::t(gmt), compute.p = TRUE)
+  gsa <- gset.rankcor(F, Matrix::t(gmt), compute.p = TRUE)
   names(gsa)
   if (NCOL(F) == 1) {
     gsa <- data.frame(rho = gsa$rho[, 1], p.value = gsa$p.value[, 1], q.value = gsa$q.value[, 1])
@@ -307,11 +307,12 @@ stats.numsig <- function(X, y, lfc = 1, q = 0.05, set.na = NULL,
       value = TRUE, ignore.case = TRUE
     )
     gmt <- playdata::GSETxGENE[sel, ]
+
     if (gs.method == "rankcor") {
-      gsa <- playbase::gset.rankcor(cbind(fc0), Matrix::t(gmt), compute.p = TRUE)
+      gsa <- gset.rankcor(cbind(fc0), Matrix::t(gmt), compute.p = TRUE)
       gsa <- data.frame(rho = gsa$rho[, 1], p.value = gsa$p.value[, 1], q.value = gsa$q.value[, 1])
     } else if (gs.method == "fgsea") {
-      gsets <- playbase::mat2gmt(t(gmt))
+      gsets <- mat2gmt(t(gmt))
       gsa <- fgsea::fgsea(gsets, fc0)
       gsa <- data.frame(rho = gsa$NES, p.value = gsa$pval, q.value = gsa$padj)
     } else {

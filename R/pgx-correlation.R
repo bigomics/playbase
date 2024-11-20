@@ -40,7 +40,7 @@
 #' @export
 pgx.computeGlassoAroundGene <- function(X, gene, nmax = 100) {
   rho <- stats::cor(t(X), t(X[gene, , drop = FALSE]))
-  jj <- Matrix::head(order(-rowMeans(rho**2)), nmax)
+  jj <- Matrix::head(order(-rowMeans(rho**2, na.rm = TRUE)), nmax)
   tX <- t(X[jj, ])
 
   vX <- stats::var(tX)
@@ -118,6 +118,7 @@ pgx.plotPartialCorrelationGraph <- function(res, gene, rho.min = 0.1, nsize = -1
   igraph::E(G)$width <- edge.width * ew**1.5
   igraph::E(G)$color <- c("red", "darkgreen")[1 + 1 * (sign(R[ee]) > 0)]
   igraph::E(G)$color <- c("#FF000033", "#44444433")[1 + 1 * (sign(R[ee]) > 0)]
+  igraph::E(G)$color <- c(paste0(omics_colors("red"), "33"), paste0(omics_colors("brand_blue"), "33"))[1 + 1 * (sign(R[ee]) > 0)]
 
   ## delete weak edges
   G1 <- igraph::delete_edges(G, which(abs(igraph::E(G)$weight) < rho.min))
@@ -197,7 +198,7 @@ PCOR.METHODS <- c(
 #' @export
 pgx.computePartialCorrelationAroundGene <- function(X, gene, method = PCOR.METHODS, nmax = 100, fast = FALSE) {
   rho <- stats::cor(t(X), t(X[gene, , drop = FALSE]))
-  jj <- Matrix::head(order(-rowMeans(rho**2)), nmax)
+  jj <- Matrix::head(order(-rowMeans(rho**2, na.rm = TRUE)), nmax)
   tX <- t(X[jj, ])
   res <- pgx.computePartialCorrelationMatrix(
     tX,
@@ -417,10 +418,11 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE
   R <- tapply(1:nrow(Rx), rvar, function(i) apply(Rx[c(i, i), , drop = FALSE], 2, max, na.rm = TRUE))
   R <- do.call(rbind, R)
   R <- tapply(1:ncol(R), rvar, function(i) apply(R[, c(i, i), drop = FALSE], 1, max, na.rm = TRUE))
-  if (class(R) == "array" && dim(R) == 1) {
-    R <- list(R)
+  if (length(R) == 1) {
+    R <- matrix(R)
+  } else {
+    R <- do.call(cbind, R)
   }
-  R <- do.call(cbind, R)
 
   R <- t(R / sqrt(diag(R))) / sqrt(diag(R))
   R[is.nan(R)] <- NA
@@ -431,14 +433,19 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE
     fisher.P <- NULL
     if (ncol(dd)) {
       fisher.P <- matrix(NA, ncol(dd), ncol(dd))
-      i <- 1
-      j <- 2
-      for (i in 1:(ncol(dd) - 1)) {
-        kk <- which(!is.na(dd[, i]) & !is.na(dd[, j]))
-        if (length(unique(dd[kk, i])) < 2 || length(unique(dd[kk, j])) < 2) next
-        for (j in (i + 1):ncol(dd)) {
-          tb <- table(dd[, i], dd[, j])
-          fisher.P[i, j] <- stats::fisher.test(tb, simulate.p.value = TRUE)$p.value
+      if (nrow(fisher.P) == 1 && ncol(fisher.P) == 1) {
+        tb <- table(dd[, 1], dd[, 1])
+        fisher.P[1, 1] <- stats::fisher.test(tb, simulate.p.value = TRUE)$p.value
+      } else {
+        i <- 1
+        j <- 2
+        for (i in 1:(ncol(dd) - 1)) {
+          kk <- which(!is.na(dd[, i]) & !is.na(dd[, j]))
+          if (length(unique(dd[kk, i])) < 2 || length(unique(dd[kk, j])) < 2) next
+          for (j in (i + 1):ncol(dd)) {
+            tb <- table(dd[, i], dd[, j])
+            fisher.P[i, j] <- stats::fisher.test(tb, simulate.p.value = TRUE)$p.value
+          }
         }
       }
       rownames(fisher.P) <- colnames(dd)
@@ -507,7 +514,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE
     Q <- (Q + t(Q)) / 2
   }
 
-  BLUERED <- grDevices::colorRampPalette(c("blue3", "white", "red3"))
+  BLUERED <- grDevices::colorRampPalette(c(omics_colors("brand_blue"), "white", omics_colors("red")))
 
   if (plot == TRUE) {
     if (compute.pv) {

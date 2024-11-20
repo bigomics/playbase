@@ -65,7 +65,7 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
   pmin <- 1e-99
   if (!is.null(ylim)) pmin <- 10^(-max(ylim, na.rm = TRUE))
   if (is.null(ylim)) ylim <- c(0, max(-log10(pmin + pv)))
-  y <- pmin(-log10(pv), max(ylim))
+  y <- pmin(-log10(pv), max(ylim, na.rm = TRUE))
   nsig <- c("down" = sum(x <= -lfc & pv <= p.sig), "up" = sum(x >= lfc & pv <= p.sig))
 
   ## highlight significant
@@ -275,10 +275,10 @@ gx.volcanoPlot.LIMMA <- function(tab, render = "scatterD3", n = 1000, highlight 
   } else {
     x <- tab$logFC
     if (use.fdr) {
-      pmin <- 0.9 * min(tab$adj.P.Val[which(tab$adj.P.Val > 0)])
+      pmin <- 0.9 * min(tab$adj.P.Val[which(tab$adj.P.Val > 0)], na.rm = TRUE)
       y <- -log10(pmax(tab$adj.P.Val, pmin))
     } else {
-      pmin <- 0.9 * min(tab$P.Value[which(tab$P.Value > 0)])
+      pmin <- 0.9 * min(tab$P.Value[which(tab$P.Value > 0)], na.rm = TRUE)
       y <- -log10(pmax(tab$P.Value, pmin))
     }
     xlab <- "effect size  (logFC)"

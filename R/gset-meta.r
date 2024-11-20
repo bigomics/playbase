@@ -39,7 +39,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   timings <- c()
 
   if (is.null(mc.cores)) {
-    # Multi-thread on gsva makes RAM usage go up (crashing computations) and in most cases it's slower due to overheads
+    ## Multi-thread on gsva makes RAM usage go up (crashing computations) and in most cases it's slower due to overheads
     mc.cores <- 1
   }
   message("using ", mc.cores, " number of cores")
@@ -81,7 +81,10 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   zx.gsva <- zx.ssgsea <- zx.rnkcorr <- NULL
   res.gsva <- res.ssgsea <- res.rnkcorr <- NULL
 
-  G <- G[rownames(X), names(gmt), drop = FALSE]
+  ## align. gg are symbols.
+  gg <- setdiff(rownames(X), c("", NA))
+  G <- G[gg, names(gmt), drop = FALSE]
+  X <- X[gg, , drop = FALSE]
 
   if ("spearman" %in% methods) {
     message("fitting contrasts using spearman/limma... ")
@@ -89,9 +92,8 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     ## single-sample gene set enrichment using (fast) rank correlation
     xx1 <- X - rowMeans(X, na.rm = TRUE) ## center it...
     xx1 <- apply(xx1, 2, rank, na.last = "keep") ## rank correlation (like spearman)
-    jj <- intersect(rownames(G), rownames(xx1))
     tt <- system.time({
-      zx.rnkcorr <- qlcMatrix::corSparse(G[jj, , drop = FALSE], xx1[jj, ]) ## superfast
+      zx.rnkcorr <- qlcMatrix::corSparse(G, xx1) ## superfast
       rownames(zx.rnkcorr) <- colnames(G)
       colnames(zx.rnkcorr) <- colnames(X)
 
@@ -100,7 +102,16 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
       ## additional batch correction and NNM???
       zx.rnkcorr <- my.normalize(zx.rnkcorr)
-      zx.rnkcorr <- zx.rnkcorr[names(gmt), colnames(X), drop = FALSE] ## make sure..
+      cm1 <- intersect(names(gmt), rownames(zx.rnkcorr))
+      cm2 <- intersect(colnames(X), colnames(zx.rnkcorr))
+      zx.rnkcorr <- zx.rnkcorr[cm1, cm2, drop = FALSE] ## make sure..
+      ii <- apply(zx.rnkcorr, 1, function(x) sum(is.na(x)))
+      kk <- any(ii == ncol(zx.rnkcorr))
+      if (kk) {
+        Ex <- which(ii == ncol(zx.rnkcorr))
+        message("Removing ", length(Ex), " full NA rows from zx.rnkcorr.")
+        zx.rnkcorr <- zx.rnkcorr[-Ex, , drop = FALSE]
+      }
 
       ## compute LIMMA
       all.results[["spearman"]] <- playbase::gset.fitContrastsWithLIMMA(
@@ -125,7 +136,10 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       if (new.gsva) {
         zx.gsva <- try({
           bpparam <- BiocParallel::MulticoreParam(mc.cores)
-          GSVA::gsva(GSVA::gsvaParam(as.matrix(X), gmt), BPPARAM = bpparam)
+          ## Some genesets will have size = 1. Set minSize=2 ?? (AZ)
+          GSVA::gsva(GSVA::gsvaParam(exprData = as.matrix(X), geneSets = gmt, minSize = 1),
+            BPPARAM = bpparam
+          )
         })
       } else {
         zx.gsva <- try({
@@ -154,14 +168,21 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   if ("ssgsea" %in% methods) {
     message("fitting contrasts using ssGSEA/limma... ")
     tt <- system.time({
-      zx.ssgsea <- try(GSVA::gsva(as.matrix(X), gmt[],
+      nmissing <- sum(is.na(X))
+      if (nmissing > 0) {
+        message("Found ", nmissing, " missing values in X. Removing prior to GSVA::ssgsea.")
+      }
+      zx.ssgsea <- try(GSVA::gsva(as.matrix(X[complete.cases(X), , drop = FALSE]),
+        gmt[],
         method = "ssgsea",
-        parallel.sz = mc.cores, verbose = FALSE
+        parallel.sz = mc.cores,
+        verbose = FALSE
       ))
       if (!"try-error" %in% class(zx.ssgsea)) {
         zx.ssgsea <- my.normalize(zx.ssgsea)
-        jj <- match(names(gmt), rownames(zx.ssgsea))
-        zx.ssgsea <- zx.ssgsea[jj, colnames(X), drop = FALSE] ## make sure..
+        kk <- intersect(names(gmt), rownames(zx.ssgsea))
+        gmt <- gmt[kk]
+        zx.ssgsea <- zx.ssgsea[kk, colnames(X), drop = FALSE]
         zx.ssgsea[is.na(zx.ssgsea)] <- 0
         all.results[["ssgsea"]] <- playbase::gset.fitContrastsWithLIMMA(
           zx.ssgsea,
@@ -322,9 +343,9 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
     ## fast GSEA
     if ("fgsea" %in% method) {
-      rnk <- rowMeans(xx[, which(yy == 1), drop = FALSE]) - rowMeans(xx[, which(yy == 0), drop = FALSE])
+      rnk <- rowMeans(xx[, which(yy == 1), drop = FALSE], na.rm = TRUE) - rowMeans(xx[, which(yy == 0), drop = FALSE], na.rm = TRUE)
       rnk <- rnk + 1e-8 * stats::rnorm(length(rnk))
-
+      if (any(is.na(rnk))) rnk <- rnk[which(!is.na(rnk))]
       tt <- system.time(
         output <- fgsea::fgseaSimple(gmt, rnk,
           nperm = 10000,
@@ -459,9 +480,12 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   m <- list(gsva = zx.gsva, ssgsea = zx.ssgsea, rnkcorr = zx.rnkcorr)
   m <- m[which(!sapply(m, is.null))]
 
-  ## average expression of geneset members
+  ## average *relative* expression of geneset members. Note: since
+  ## v.3.5.0 we use average relative expression instead of average
+  ## expression.
   ng <- Matrix::colSums(G != 0)
-  meta.matrix <- as.matrix(Matrix::t(G != 0) %*% X) / ng
+  mX <- X - rowMeans(X, na.rm = TRUE) ## see note above
+  meta.matrix <- as.matrix(Matrix::t(G != 0) %*% mX) / ng
 
   m[["meta"]] <- meta.matrix
 
@@ -475,8 +499,11 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   }
 
   res <- list(
-    meta = all.meta, sig.counts = sig.counts, outputs = all.results,
-    matrices = m, timings = timings0
+    meta       = all.meta,
+    sig.counts = sig.counts,
+    outputs    = all.results,
+    matrices   = m,
+    timings    = timings0
   )
 
   return(res)

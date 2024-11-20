@@ -3,6 +3,7 @@
 \name{pgx.plotContrast}
 \alias{pgx.plotContrast}
 \alias{pgx.Volcano}
+\alias{ggVolcano}
 \alias{pgx.plotMA}
 \alias{pgx.contrastScatter}
 \alias{pgx.plotGeneUMAP}
@@ -25,18 +26,47 @@ pgx.Volcano(
   psig = 0.05,
   fc = 1,
   cex = 1,
-  cex.lab = 1,
-  ntop = 20,
   p.min = NULL,
   fc.max = NULL,
   hilight = NULL,
-  cpal = c("grey60", "red3"),
+  label = NULL,
+  cex.lab = 1,
+  ntop = 20,
+  colors = c(up = "#f23451", notsig = "#707070AA", notsel = "#cccccc88", down =
+    "#3181de"),
+  filt = NULL,
   title = NULL,
   xlim = NULL,
   ylim = NULL,
+  xlab = "effect size (logFC)",
+  ylab = "significance (-log10q)",
+  repel = FALSE,
   set.par = TRUE,
   plotlib = "base",
   data = FALSE
+)
+
+ggVolcano(
+  x,
+  y,
+  names,
+  label.names = names,
+  facet = NULL,
+  highlight = NULL,
+  xlab = "effect size (logFC)",
+  ylab = "significance (-log10q)",
+  lfc = 1,
+  psig = 0.05,
+  ylim = NULL,
+  showlegend = TRUE,
+  marker.size = 2.5,
+  marker.alpha = 0.7,
+  label.cex = 4.5,
+  axis.text.size = 14,
+  label = NULL,
+  title = "Volcano plot",
+  colors = c(up = "#f23451", notsig = "#8F8F8F", notsel = "#cccccc88", down = "#3181de"),
+  girafe = FALSE
 )
 
 pgx.plotMA(
@@ -48,6 +78,7 @@ pgx.plotMA(
   cex = 1,
   cex.lab = 0.8,
   hilight = NULL,
+  label = NULL,
   ntop = 20,
   plotlib = "base",
   data = FALSE
@@ -59,6 +90,7 @@ pgx.contrastScatter(
   hilight = NULL,
   cex = 1,
   cex.lab = 0.8,
+  label = NULL,
   psig = 0.05,
   fc = 1,
   level = "gene",
@@ -78,13 +110,15 @@ pgx.plotGeneUMAP(
   cex.lab = 0.8,
   cex.legend = 1,
   hilight = NULL,
+  label = NULL,
   title = NULL,
   zfix = FALSE,
   set.par = TRUE,
   par.sq = FALSE,
   level = "gene",
   plotlib = "ggplot",
-  data = FALSE
+  data = FALSE,
+  labeltype = "feature"
 )
 }
 \arguments{
@@ -110,17 +144,15 @@ pgx.plotGeneUMAP(
 
 \item{cex}{Point size}
 
-\item{cex.lab}{Label size}
-
-\item{ntop}{Number of top genes to label}
-
 \item{p.min}{Minimum p-value for y-axis. Default NULL.}
 
 \item{fc.max}{Maximum fold change for x-axis. Default NULL.}
 
 \item{hilight}{Vector of genes to highlight}
 
-\item{cpal}{Color palette. Default c("grey60", "red3").}
+\item{cex.lab}{Label size}
+
+\item{ntop}{Number of top genes to label}
 
 \item{title}{Plot title}
 
@@ -133,6 +165,8 @@ pgx.plotGeneUMAP(
 \item{pos}{Dataframe of UMAP coordinates}
 
 \item{zfix}{Fix color scale between genes}
+
+\item{cpal}{Color palette. Default c("grey60", "red3").}
 }
 \value{
 A grid of plots visualizing the specified contrasts is generated.
@@ -158,6 +192,8 @@ Additional parameters can be passed to the plotting functions via \code{...}.
 \section{Functions}{
 \itemize{
 \item \code{pgx.Volcano()}: Create a volcano plot from a PGX object
+
+\item \code{ggVolcano()}: Create a volcano plot from a PGX object
 
 \item \code{pgx.plotMA()}: Meta-analysis plots for PGX results
 

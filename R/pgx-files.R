@@ -18,7 +18,9 @@
 #'
 #' @export
 pgx.load <- function(file, verbose = 0) {
-  local(get(load(file, verbose = verbose)))
+  pgx <- local(get(load(file, verbose = verbose)))
+  pgx$filename <- file
+  pgx
 }
 
 
@@ -52,7 +54,7 @@ ngs.save <- function(ngs, file, update.date = TRUE, light = TRUE, system = FALSE
 #' @export
 pgx.save <- function(pgx, file, update.date = TRUE, light = TRUE, system = FALSE) {
   if (update.date || is.null(pgx$date)) pgx$date <- Sys.Date()
-
+  if (is(pgx, "reactivevalues")) pgx <- shiny::reactiveValuesToList(pgx)
   if (light) {
     ## ------- make a light version
     pgx$gx.meta$outputs <- NULL
@@ -69,6 +71,7 @@ pgx.save <- function(pgx, file, update.date = TRUE, light = TRUE, system = FALSE
   }
   sort(sapply(pgx, utils::object.size)) / 1e9
   sum(sapply(pgx, utils::object.size)) / 1e9
+  pgx$filename <- NULL
 
   cat(">>> saving PGX file to", file, "\n")
   file <- iconv(file, from = "", to = "ASCII//TRANSLIT")
@@ -145,6 +148,64 @@ pgx.saveMatrixH5 <- function(X, h5.file, chunk = NULL) {
   rhdf5::h5write(colnames(X), h5.file, "data/colnames")
 
   rhdf5::h5closeAll()
+}
+
+
+#' @title Read (sub-)matrix from HDF5 file
+#'
+#' @export
+h5.readMatrix <- function(h5.file, rows = NULL, cols = NULL,
+                          matrixid = "data/matrix", rowid = "data/rownames",
+                          colid = "data/colnames") {
+  cn <- rhdf5::h5read(h5.file, colid)
+  rn <- rhdf5::h5read(h5.file, rowid)
+  rowidx <- 1:length(rn)
+  colidx <- 1:length(cn)
+  if (!is.null(rows)) {
+    if (all(is.integer(rows))) rows <- rn[rows]
+    rowidx <- match(intersect(rows, rn), rn)
+  }
+  if (!is.null(cols)) {
+    if (all(is.integer(cols))) cols <- cn[cols]
+    colidx <- match(intersect(cols, cn), cn)
+  }
+  nr <- length(rowidx)
+  nc <- length(colidx)
+  message("[sigdb.getConnectivityMatrix] reading large H5 file: ", nr, "x", nc, "")
+  X <- rhdf5::h5read(h5.file, matrixid, index = list(rowidx, colidx))
+  rownames(X) <- rn[rowidx]
+  colnames(X) <- cn[colidx]
+  return(X)
+}
+
+#' @export
+h5.rownames <- function(h5.file, id = NULL) {
+  if (is.null(id)) {
+    tags <- sub("^/", "", apply(rhdf5::h5ls(sigdb)[, 1:2], 1, paste, collapse = "/"))
+    ids <- c("data/rownames", "meta/genes")
+    id <- intersect(ids, tags)
+  }
+  id
+  if (is.null(id)) {
+    warning("could not resolve rownames")
+    return(NULL)
+  }
+  rhdf5::h5read(h5.file, id)
+}
+
+#' @export
+h5.colnames <- function(h5.file, id = NULL) {
+  if (is.null(id)) {
+    tags <- sub("^/", "", apply(rhdf5::h5ls(sigdb)[, 1:2], 1, paste, collapse = "/"))
+    ids <- c("data/colnames", "meta/sampleid", "meta/sample")
+    id <- intersect(ids, tags)
+  }
+  id
+  if (is.null(id)) {
+    warning("could not resolve colnames")
+    return(NULL)
+  }
+  rhdf5::h5read(h5.file, id)
 }
 
 

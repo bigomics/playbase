@@ -4,12 +4,16 @@
 \alias{read_counts}
 \title{Read counts data from file}
 \usage{
-read_counts(file)
+read_counts(file, first = FALSE, unique = FALSE, paste_char = "_")
 }
 \arguments{
 \item{file}{string. path to file}
 
-\item{convert_names}{boolean.}
+\item{first}{boolean. drop multiple feature names (separated by ;)}
+
+\item{unique}{boolean. make duplicated rows unique by pasting a number}
+
+\item{drop_na_rows}{boolean. drop rows without rownames}
 }
 \description{
 Read counts data from file

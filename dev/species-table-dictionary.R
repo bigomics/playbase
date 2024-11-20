@@ -7,37 +7,48 @@
 # Get species from annotation hub/orgdb
 library(data.table)
 
-species <- data.table(playbase::getSpeciesTable())
-
-species$species_name <- species$species
+species <- data.frame(playbase::getSpeciesTable())
 
 # rename Homo sapiens to Human in the species_name column
-species[species_name == "Homo sapiens", species_name := "Human"]
+species$species_name <- species$species
+species$species_name <- sub("Homo sapiens","Human",species$species_name)
+species$species_name <- sub("Mus musculus","Mouse",species$species_name)
+species$species_name <- sub("Rattus norvegicus","Rat",species$species_name)
 
-# rename Mus musculus to mouse
-species[species_name == "Mus musculus", species_name := "Mouse"]
+# remove duplicates, use species_name as rownames
+species <- species[!duplicated(species$species_name),]
+rownames(species) <- species$species_name
 
-# rename Mus musculus to mouse
-species[species_name == "Rattus norvegicus", species_name := "Rat"]
+# add plasmodium by hand (we add the orgdb manually)
+pf <- as.character(species["Human",])
+names(pf) <- colnames(species)
+pf <- gsub("Homo sapiens|Human","Plasmodium falciparum",pf)
+pf <- sub("org.Hs.eg.db.sqlite","org.Pf.plasmo.db",pf)
+pf["ah_id"] <- NA
+pf["taxonomyid"] <- "36329"
+species <- rbind(species, "Plasmodium falciparum" = pf)
 
+# intersect with species supported by orthogene. So we have at least
+# organisms that are supported by both.
+M <- orthogene::map_species(method = "gprofiler", verbose = FALSE)
+both_id <- intersect(species$taxonomyid, M$taxonomy_id)
+species <- species[match(both_id,species$taxonomyid),]
+M <- M[match(both_id,M$taxonomy_id),]
+
+# add orthogene species name for lookup. sometimes different
+species$ortho_species <- M$scientific_name
+species$display_name  <- M$display_name
 
 # Create a new row with "No organism" in all columns
-new_row <- data.table(lapply(species, function(x) "No organism"))
-
-# Add the new row to the species data.table
-species <- rbind(species, data.table(species_name = "No organism", species = "No organism"), fill = TRUE)
+species <- rbind(species, "No organism" = NA)
+species['No organism',c('species','species_name','ortho_species','display_name')] <- 'No organism'
 
 # Order table by Human, Mouse and Rat to appear first in species_name
 preferred_order <- c("Human", "Mouse", "Rat", "No organism")
-species[, species_name := factor(species_name, levels = c(preferred_order, sort(setdiff(unique(species_name), preferred_order))))]
-setorder(species, species_name)
+species <- species[ unique(c(preferred_order, sort(rownames(species)))),]
 
-# remove duplicates
-
-species <- unique(species, by = "species_name", fromLast = FALSE)
-
-
-write.table(species, file = "dev/SPECIES_TABLE_ANNOTHUB.tsv", sep = "\t", quote = FALSE, row.names = FALSE)
+write.table(species, file = "dev/SPECIES_TABLE.tsv", sep = "\t",
+  quote = FALSE, row.names = FALSE)
 
 SPECIES_TABLE <- species
 usethis::use_data(SPECIES_TABLE, overwrite = TRUE)

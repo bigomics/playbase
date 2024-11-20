@@ -65,6 +65,7 @@ heatmapWithAnnot <- function(F, anno.type = c("boxplot", "barplot"),
   ht <- ComplexHeatmap::Heatmap(
     t(F),
     name = "logFC",
+    col = circlize::colorRamp2(colors = c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")), breaks = c(-10, 0, 10)),
     top_annotation = ha,
     row_names_gp = grid::gpar(fontsize = row_fontsize),
     column_names_gp = grid::gpar(fontsize = column_fontsize),
@@ -270,17 +271,19 @@ pgx.plotEnrichmentDotPlot <- function(pgx, contrast,
 }
 
 #' @export
-pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap", "pacmap"), nb = NULL, ...) {
+pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap"), nb = NULL, ...) {
   ## method=c('tsne','pca','umap','pacmap')
-  jj <- head(order(-matrixStats::rowSds(X)), 1000)
+  jj <- head(order(-matrixStats::rowSds(X, na.rm = TRUE)), 1000)
   X1 <- X[jj, ]
   X1 <- X1 - rowMeans(X1, na.rm = TRUE)
+  if (any(is.na(X1))) {
+    X1 <- svdImpute2(X1)
+  }
   if (ncol(X1) < 20) {
     X1 <- cbind(X1, X1, X1)
   }
-  if (is.null(nb)) nb <- ceiling(min(15, dim(X) / 8))
-  message("[pgx.dimPlot] nb = ", nb)
 
+  if (is.null(nb)) nb <- ceiling(min(15, dim(X) / 8))
   for (m in method) {
     if (m == "umap") pos <- try(uwot::umap(t(X1), n_neighbors = max(2, nb)))
     if (m == "tsne") {
@@ -429,10 +432,10 @@ plot_SPLOM <- function(F, F2 = NULL, hilight = NULL, cex = 0.5, cex.axis = 1, ce
   F <- F[gg, , drop = FALSE]
   F2 <- F2[gg, , drop = FALSE]
 
-  x0 <- range(as.vector(apply(F, 2, stats::quantile, probs = c(0.001, 0.999))))
-  x1 <- range(as.vector(apply(F2, 2, stats::quantile, probs = c(0.001, 0.999))))
-  x0 <- range(as.vector(F))
-  x1 <- range(as.vector(F2))
+  x0 <- range(as.vector(apply(F, 2, stats::quantile, probs = c(0.001, 0.999))), na.rm = TRUE)
+  x1 <- range(as.vector(apply(F2, 2, stats::quantile, probs = c(0.001, 0.999))), na.rm = TRUE)
+  x0 <- range(as.vector(F), na.rm = TRUE)
+  x1 <- range(as.vector(F2), na.rm = TRUE)
   x0 <- x0 + c(-1, 1) * diff(x0) * 0.05
   x1 <- x1 + c(-1, 1) * diff(x1) * 0.05
 
@@ -502,7 +505,7 @@ pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast = NULL) {
   X <- list()
   for (i in 1:length(matlist)) {
     X[[i]] <- matlist[[i]] - rowMeans(matlist[[i]])
-    X[[i]] <- X[[i]] / apply(X[[i]], 1, stats::sd)
+    X[[i]] <- X[[i]] / apply(X[[i]], 1, stats::sd, na.rm = TRUE)
   }
 
   ## Counts cross-table between matrices
@@ -511,7 +514,7 @@ pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast = NULL) {
   for (i in 1:(length(X) - 1)) {
     mm <- pmax(X[[i]], 0) %*% t(pmax(X[[i + 1]], 0))
     mm <- mm**4
-    mm <- mm / mean(mm)
+    mm <- mm / mean(mm, na.rm = TRUE)
 
     M[[i]] <- mm
   }
@@ -534,7 +537,7 @@ pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast = NULL) {
       if (cty.mode == 3) node.wt <- abs(outer(fc[[i]], fc[[i + 1]]))
       if (cty.mode == 2) node.wt <- pmax(outer(fc[[i]], fc[[i + 1]]), 0)
       ww <- R[[i]] * node.wt
-      ww <- ww / max(ww) ## normalize??
+      ww <- ww / max(ww, na.rm = TRUE) ## normalize??
       F[[i]] <- ww
     }
   }
@@ -624,11 +627,11 @@ pgx.SankeyFromMRF.PLOTLY <- function(M, R, F, fill = TRUE, labels = NULL) {
   nodes <- data.frame(label = igraph::V(gr)$name, color = col1)
   nodes$info <- paste(igraph::V(gr)$name, unlist(labels)[igraph::V(gr)$name])
   nodes$label <- sub(".*[:]", "", nodes$label)
-  nodes$x <- (vlevel - 1) / max(vlevel - 1)
+  nodes$x <- (vlevel - 1) / max(vlevel - 1, na.rm = TRUE)
 
   if (fill) {
     wt <- igraph::E(gr)$weight
-    ev2 <- 0.05 + 0.55 * (wt / max(wt))
+    ev2 <- 0.05 + 0.55 * (wt / max(wt, na.rm = TRUE))
     col2 <- paste("rgba(80,80,120,", ev2, ")")
   } else {
     col2 <- paste("rgba(80,80,120,0.2)")
@@ -964,10 +967,18 @@ pgx.plotContrast <- function(pgx, contrast = NULL, type = "scatter",
 #'
 #' @export
 pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
-                        psig = 0.05, fc = 1, cex = 1, cex.lab = 1, ntop = 20,
-                        p.min = NULL, fc.max = NULL, hilight = NULL, #
-                        cpal = c("grey60", "red3"), title = NULL,
-                        xlim = NULL, ylim = NULL,
+                        psig = 0.05, fc = 1, cex = 1,
+                        p.min = NULL, fc.max = NULL, hilight = NULL,
+                        label = NULL, cex.lab = 1, ntop = 20,
+                        colors = c(
+                          up = "#f23451", notsig = "#707070AA",
+                          notsel = "#cccccc88", down = "#3181de"
+                        ),
+                        filt = NULL,
+                        title = NULL, xlim = NULL, ylim = NULL,
+                        xlab = "effect size (logFC)",
+                        ylab = "significance (-log10q)",
+                        repel = FALSE,
                         set.par = TRUE, plotlib = "base", data = FALSE) {
   if (is.integer(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
   res <- NULL
@@ -978,59 +989,422 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   } else {
     stop("FATAL:: invalid level=", level)
   }
+
   f <- res$fc[, contrast]
   q <- res$qv[, contrast]
-
-  sig <- (q <= psig & abs(f) >= fc)
-  xy <- cbind(fc = f, y = -log10(q))
-
-  if (is.null(hilight)) {
-    wt <- rowSums(scale(xy, center = FALSE)**2)
-    hilight <- rownames(xy)[order(-wt)]
-    hilight <- intersect(hilight, names(sig[sig == TRUE]))
+  if (!is.null(filt)) {
+    sel <- grep(filt, names(f))
+    f <- f[sel]
+    q <- q[sel]
   }
-  hilight <- Matrix::head(hilight, ntop) ## label
+  sig <- (q <= psig & abs(f) >= fc)
+  df <- data.frame(fc = f, y = -log10(q), q = q, sig = sig)
+
+  hilight0 <- hilight
+  if (FALSE && is.null(hilight)) {
+    hilight <- rownames(res$fc)
+  }
+  if (is.null(label)) {
+    wt <- rowSums(scale(df, center = FALSE)**2, na.rm = TRUE)
+    label <- rownames(df)[order(-wt)]
+    if (!is.null(hilight)) label <- intersect(label, hilight)
+    ## if(!is.null(sig)) label <- intersect(label, names(sig[sig == TRUE]))
+  }
+  label <- Matrix::head(label, ntop) ## label
 
   ## xlim <- ylim <- NULL
   if (is.null(xlim) && !is.null(fc.max)) {
     xlim <- c(-1.1, 1.1) * fc.max
   }
   if (is.null(ylim) && !is.null(p.min)) {
-    ylim <- c(0, -log10(p.min))
+    ylim <- c(0, -log10(p.min)) * 1.1
   }
 
   if (data) {
-    return(xy)
+    return(df)
   }
 
   if (is.null(title)) title <- contrast
-  p <- pgx.scatterPlotXY(
-    xy,
-    var = sig,
-    type = "factor",
-    title = title,
-    xlab = "differential expression (log2FC)",
-    ylab = "significance (-log10q)",
-    hilight = hilight, #
-    cex = cex,
-    cex.lab = cex.lab,
-    cex.title = 1.0,
-    xlim = xlim,
-    ylim = ylim,
-    legend = FALSE,
-    col = cpal,
-    opacity = 1,
-    set.par = set.par,
-    plotlib = plotlib
-  )
-  if (plotlib == "base") {
-    abline(v = 0, lty = 1, lwd = 0.5)
-    abline(h = 0, lty = 1, lwd = 0.5)
-    abline(v = c(-1, 1) * fc, lty = 2, lwd = 0.5)
-    abline(h = -log10(psig), lty = 2, lwd = 0.5)
+
+  ## if(is.null(colors)) {
+  ##   colors = c(
+  ##     up = "#f23451",
+  ##     notsig = "#707070AA",
+  ##     notsel = "#cccccc44",
+  ##     down = "#3181de"
+  ##   )
+  ## }
+
+  p <- NULL
+  if (plotlib == "ggplot") {
+    p <- ggVolcano(
+      x = df$fc,
+      y = df$y,
+      names = rownames(df),
+      title = title,
+      label.names = rownames(df),
+      facet = NULL,
+      highlight = hilight,
+      xlab = xlab,
+      ylab = ylab,
+      lfc = fc,
+      psig = psig,
+      showlegend = TRUE,
+      marker.size = 2 * cex,
+      marker.alpha = 0.7,
+      label.cex = 5 * cex.lab,
+      axis.text.size = 14,
+      label = label,
+      colors = colors
+    )
+  } else if (plotlib == "plotly") {
+    p <- plotlyVolcano(
+      x = df$fc,
+      y = df$y,
+      names = rownames(df),
+      label.names = rownames(df),
+      group.names = c("group1", "group2"),
+      title = title,
+      xlab = xlab,
+      ylab = ylab,
+      lfc = fc,
+      psig = psig,
+      showlegend = TRUE,
+      highlight = hilight,
+      marker.size = 8 * cex,
+      label = label,
+      label.cex = 1.2 * cex.lab,
+      max.absy = NULL,
+      color_up_down = TRUE,
+      colors = colors,
+      marker.type = "scatter",
+      displayModeBar = TRUE,
+      source = "plot1"
+    )
+  } else if (plotlib == "base") {
+    if (is.null(hilight0)) hilight <- NULL
+    plot_volcano(
+      x = df$fc,
+      y = df$q,
+      names = rownames(df),
+      label.names = rownames(df),
+      highlight = hilight,
+      label = label,
+      title = title,
+      xlab = xlab,
+      ylab = ylab,
+      lfc = fc,
+      psig = psig,
+      sig = sig,
+      showlegend = TRUE,
+      cex = 1.2 * cex,
+      cex.lab = 1.1 * cex.lab,
+      colors = colors,
+      repel = repel
+    )
+  } else {
+    p <- pgx.scatterPlotXY(
+      df[, 1:2],
+      var = df$sig,
+      type = "factor",
+      title = title,
+      xlab = xlab,
+      ylab = ylab,
+      hilight = label, #
+      cex = 1.3 * cex,
+      cex.lab = 1.4 * cex.lab,
+      cex.title = 1.0,
+      xlim = xlim,
+      ylim = ylim,
+      legend = FALSE,
+      col = colors,
+      opacity = 1,
+      set.par = set.par,
+      plotlib = plotlib
+    )
+    if (plotlib == "base") {
+      abline(v = 0, lty = 1, lwd = 0.5)
+      abline(h = 0, lty = 1, lwd = 0.5)
+      abline(v = c(-1, 1) * fc, lty = 2, lwd = 0.5)
+      abline(h = -log10(psig), lty = 2, lwd = 0.5)
+    }
   }
 
   p
+}
+
+
+plot_volcano <- function(x,
+                         y,
+                         names,
+                         label.names = names,
+                         facet = NULL,
+                         highlight = NULL,
+                         label = NULL,
+                         ntop = 10,
+                         xlab = "effect size (logFC)",
+                         ylab = "significance (-log10p)",
+                         lfc = 1,
+                         psig = 0.05,
+                         plim = 12,
+                         sig = NULL,
+                         showlegend = TRUE,
+                         cex = 1,
+                         cex.lab = 1,
+                         marker.alpha = 0.7,
+                         axis.text.size = 14,
+                         title = "Volcano plot",
+                         colors = c(
+                           up = "#f23451",
+                           notsig = "#707070AA",
+                           notsel = "#cccccc88",
+                           down = "#3181de"
+                         ),
+                         repel = TRUE,
+                         ...) {
+  if (is.null(sig)) {
+    sig <- (y <= psig & abs(x) >= lfc)
+  }
+  if (FALSE && is.null(highlight)) {
+    highlight <- rownames(df)
+  }
+
+  log10.y <- -log10(y + 10^(-plim))
+  pos <- cbind(x, log10.y)
+  if (!is.null(names)) rownames(pos) <- names
+
+  if (is.null(label)) {
+    wt <- rowSums(scale(pos, center = FALSE)**2, na.rm = TRUE)
+    label <- rownames(pos)[order(-wt)]
+    if (!is.null(highlight)) label <- intersect(label, highlight)
+    ## if(!is.null(sig)) label <- intersect(label, names(sig[sig == TRUE]))
+  }
+  label <- Matrix::head(label, ntop) ## label
+
+  p <- pgx.scatterPlotXY.BASE(
+    pos = pos,
+    var = sig,
+    type = "factor",
+    title = title,
+    xlab = "effect size (log2FC)",
+    ylab = "significance (-log10q)",
+    hilight = highlight, #
+    hilight2 = label, #
+    cex = 1.3 * cex,
+    cex.lab = 1.4 * cex.lab,
+    cex.title = 1.0,
+    #    xlim = xlim,
+    #    ylim = ylim,
+    legend = FALSE,
+    color_up_down = TRUE,
+    col = colors[c("notsig", "up", "down")],
+    na.color = colors["notsel"],
+    opacity = 1,
+    repel = repel,
+    ...
+    #    set.par = set.par
+  )
+
+  abline(v = 0, lty = 1, lwd = 0.5)
+  abline(h = 0, lty = 1, lwd = 0.5)
+  abline(v = c(-1, 1) * lfc[1], lty = 2, lwd = 0.5)
+  abline(h = -log10(psig[1]), lty = 2, lwd = 0.5)
+
+  if (showlegend) {
+    cc <- colors[c("notsig", "up", "down")]
+    legend("topright",
+      legend = c("Not significant", "Up", "Down"),
+      pch = 20, col = cc, pt.cex = 1.5 * cex, bty = "n", border = NA
+    )
+  }
+}
+
+
+
+#' @describeIn pgx.plotContrast Create a volcano plot from a PGX object
+#'
+#' @param pgx A PGX object containing differential expression results.
+#' @param contrast The contrast name to extract results for.
+#' @param level The data level to extract ("gene", "exon", etc). Default "gene".
+#' @param methods The meta-analysis methods to include. Default "meta".
+#' @param psig P-value cutoff for significance. Default 0.05.
+#' @param fc Fold change cutoff. Default 1.
+#' @param cex Point size. Default 1.
+#' @param cex.lab Label size. Default 1.
+#' @param ntop Number of top genes to highlight. Default 20.
+#' @param p.min Minimum p-value for y-axis. Default NULL.
+#' @param fc.max Maximum fold change for x-axis. Default NULL.
+#' @param hilight Vector of genes to highlight. Default NULL.
+#' @param cpal Color palette. Default c("grey60", "red3").
+#' @param title Plot title. Default NULL.
+#' @param plotlib Plotting library to use. Default "base".
+#'
+#' @export
+ggVolcano <- function(x,
+                      y,
+                      names,
+                      label.names = names,
+                      facet = NULL,
+                      highlight = NULL,
+                      xlab = "effect size (logFC)",
+                      ylab = "significance (-log10q)",
+                      lfc = 1,
+                      psig = 0.05,
+                      ylim = NULL,
+                      showlegend = TRUE,
+                      marker.size = 2.5,
+                      marker.alpha = 0.7,
+                      label.cex = 4.5,
+                      axis.text.size = 14,
+                      label = NULL,
+                      title = "Volcano plot",
+                      colors = c(
+                        up = "#f23451",
+                        notsig = "#8F8F8F",
+                        notsel = "#cccccc88",
+                        down = "#3181de"
+                      ),
+                      girafe = FALSE) {
+  if (is.null(highlight)) highlight <- names
+  if (showlegend) {
+    legend <- "right"
+  } else {
+    legend <- "none"
+  }
+  df <- data.frame(
+    fc = x,
+    y = y,
+    name = names,
+    tooltip = label.names
+  )
+  if (!is.null(facet)) {
+    df$facet <- facet
+  }
+  df$category <- ifelse(
+    df$y > -log10(psig) & df$fc > lfc, "Up",
+    ifelse(df$y > -log10(psig) & df$fc < -lfc, "Down", "Not significant")
+  )
+  df$label <- ifelse(names %in% label | label.names %in% label, label.names, NA)
+  df$category[!(names %in% highlight | label.names %in% highlight)] <- "Not selected"
+
+  df$tooltip <- gsub("[\\'\\`-]", "", df$tooltip)
+  df$name <- gsub("[\\'\\`-]", "", df$name)
+
+  if (is.null(ylim)) ylim <- max(y, na.rm = TRUE) * 1.1
+
+  plt <- ggplot2::ggplot(df, ggplot2::aes(x = fc, y = y)) +
+    ggplot2::geom_point(ggplot2::aes(color = category),
+      alpha = marker.alpha, size = marker.size
+    ) +
+    ggplot2::scale_color_manual(values = c(
+      "Down" = colors[["down"]],
+      "Up" = colors[["up"]],
+      "Not significant" = colors[["notsig"]],
+      "Not selected" = colors[["notsel"]]
+    ))
+
+  if (!girafe) {
+    plt <- plt +
+      ggplot2::geom_point(
+        data = df[df$category == "Not selected", ],
+        ggplot2::aes(x = fc, y = y),
+        color = colors[["notsel"]],
+        alpha = marker.alpha,
+        size = marker.size
+      ) +
+      ggplot2::geom_point(
+        data = df[df$category == "Down", ],
+        ggplot2::aes(x = fc, y = y),
+        color = colors[["down"]],
+        alpha = 1,
+        size = marker.size
+      ) +
+      ggplot2::geom_point(
+        data = df[df$category == "Up", ],
+        ggplot2::aes(x = fc, y = y),
+        color = colors[["up"]],
+        alpha = 1,
+        size = marker.size
+      ) +
+      ggplot2::geom_point(
+        data = df[df$category == "Not significant", ],
+        ggplot2::aes(x = fc, y = y),
+        color = colors[["notsig"]],
+        alpha = 1,
+        size = marker.size
+      )
+  }
+  if (girafe) {
+    plt <- plt +
+      ggiraph::geom_point_interactive(
+        data = df[df$category == "Not selected", ],
+        ggplot2::aes(x = fc, y = y, tooltip = tooltip, data_id = name),
+        color = colors[["notsel"]],
+        alpha = marker.alpha,
+        size = marker.size
+      ) +
+      ggiraph::geom_point_interactive(
+        data = df[df$category == "Down", ],
+        ggplot2::aes(x = fc, y = y, tooltip = tooltip, data_id = name),
+        color = colors[["down"]],
+        alpha = 1,
+        size = marker.size
+      ) +
+      ggiraph::geom_point_interactive(
+        data = df[df$category == "Up", ],
+        ggplot2::aes(x = fc, y = y, tooltip = tooltip, data_id = name),
+        color = colors[["up"]],
+        alpha = 1,
+        size = marker.size
+      ) +
+      ggiraph::geom_point_interactive(
+        data = df[df$category == "Not significant", ],
+        ggplot2::aes(x = fc, y = y, tooltip = tooltip, data_id = name),
+        color = colors[["notsig"]],
+        alpha = 1,
+        size = marker.size
+      )
+  }
+
+  plt <- plt +
+    ggrepel::geom_label_repel(
+      ggplot2::aes(label = label, color = category),
+      size = label.cex, family = "lato", box.padding = 0.1, max.overlaps = 20, show.legend = FALSE
+    )
+
+  plt <- plt +
+    ggplot2::geom_hline(yintercept = -log10(psig), linetype = "dashed", color = "gray") +
+    ggplot2::geom_vline(xintercept = c(-lfc, lfc), linetype = "dashed", color = "gray") +
+    ggplot2::geom_vline(xintercept = 0, linetype = "solid", color = "darkgrey") +
+    ggplot2::scale_y_continuous(
+      limits = c(0, ylim),
+      expand = ggplot2::expansion(mult = c(0, 0))
+    ) +
+    ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = c(0.1, 0))) +
+    ggplot2::labs(x = xlab, y = ylab) +
+    guides(colour = guide_legend(reverse = T)) +
+    ggplot2::theme_minimal(base_size = 15) +
+    ggplot2::ggtitle(title) +
+    ggplot2::theme(
+      legend.position = legend,
+      legend.justification = "top",
+      legend.title = ggplot2::element_blank(),
+      panel.grid = ggplot2::element_blank(),
+      axis.line.x = ggplot2::element_line(color = "darkgrey"),
+      axis.title = ggplot2::element_text(face = "plain", size = axis.text.size, family = "lato"),
+      axis.text = ggplot2::element_text(family = "lato"),
+      plot.margin = ggplot2::margin(l = 9, b = 3, t = 9, r = 9)
+    )
+  if (!is.null(facet)) {
+    ncol_row <- ceiling(sqrt(length(unique(facet))))
+    plt <- plt +
+      ggplot2::facet_wrap(facet ~ ., nrow = ncol_row, ncol = ncol_row)
+  }
+
+  if (girafe) {
+    plt <- ggiraph::girafe(ggobj = plt, pointsize = 12, width_svg = NULL, height_svg = NULL)
+  }
+  return(plt)
 }
 
 
@@ -1047,8 +1421,8 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
 #' @param plotlib Plotting library to use
 #' @export
 pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
-                       cex = 1, cex.lab = 0.8, hilight = NULL, ntop = 20,
-                       plotlib = "base", data = FALSE) {
+                       cex = 1, cex.lab = 0.8, hilight = NULL, label = NULL,
+                       ntop = 20, plotlib = "base", data = FALSE) {
   if (is.integer(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
 
   if (level == "gene") {
@@ -1068,22 +1442,22 @@ pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
   }
 
   sig <- (q <= psig & abs(f) >= fc)
-  xy <- cbind(x = m, y = f)
+  df <- cbind(x = m, y = f)
   # <- gg
   cpal <- c("grey60", "red3")
   if (is.null(hilight)) {
-    wt <- rowSums(scale(cbind(xy, m), center = FALSE)**2)
-    hilight <- rownames(xy)[order(-wt)]
+    wt <- rowSums(scale(cbind(df, m), center = FALSE)**2, na.rm = TRUE)
+    hilight <- rownames(df)[order(-wt)]
     hilight <- intersect(hilight, names(sig[sig == TRUE]))
   }
   hilight <- Matrix::head(hilight, ntop)
 
   if (data) {
-    return(xy)
+    return(df)
   }
 
   p <- pgx.scatterPlotXY(
-    xy,
+    df,
     var = sig, type = "factor", title = contrast,
     xlab = "average expression  (log2)",
     ylab = "differential expression  (log2FC)",
@@ -1112,7 +1486,7 @@ pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
 #'
 #' @export
 pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
-                                cex = 1, cex.lab = 0.8,
+                                cex = 1, cex.lab = 0.8, label = NULL,
                                 psig = 0.05, fc = 1, level = "gene",
                                 ntop = 20, dir = 0, plotlib = "base",
                                 data = FALSE) {
@@ -1147,7 +1521,10 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
   xlab <- paste("expression", grp0, "  (logCPM)")
   ylab <- paste("expression", grp1, "  (logCPM)")
 
-  if (is.null(hilight)) {
+  if (is.null(hilight)) hilight <- names(fx)
+  hilight <- intersect(hilight, names(fx))
+
+  if (is.null(label)) {
     top.gg <- c(
       Matrix::head(names(sort(fx)), ntop / 2),
       Matrix::tail(names(sort(fx)), ntop / 2)
@@ -1158,13 +1535,12 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
     if (dir < 0) {
       top.gg <- Matrix::head(names(sort(fx)), ntop)
     }
-    hilight <- top.gg
+    label <- top.gg
   }
-  hilight <- Matrix::head(hilight, ntop)
+  label <- Matrix::head(label, ntop)
 
   sig <- 1 * (q < psig & abs(fx) > fc)
   names(sig) <- gg
-
 
   tt <- contrast
 
@@ -1176,7 +1552,9 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
     xy,
     var = sig, type = "factor", title = tt,
     xlab = xlab, ylab = ylab,
-    hilight = hilight, cex = 0.9 * cex,
+    hilight = hilight,
+    hilight2 = label,
+    cex = 0.9 * cex,
     cex.lab = cex.lab, cex.title = 1.0,
     legend = FALSE, col = c("grey70", "red3"), opacity = 1,
     plotlib = plotlib
@@ -1203,12 +1581,13 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
 #'
 #' @export
 pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
-                             pos = NULL, ntop = 20, cex = 1, cex.lab = 0.8,
-                             cex.legend = 1,
-                             hilight = NULL, title = NULL, zfix = FALSE,
+                             pos = NULL, ntop = 20, cex = 1,
+                             cex.lab = 0.8, cex.legend = 1,
+                             hilight = NULL, label = NULL,
+                             title = NULL, zfix = FALSE,
                              set.par = TRUE, par.sq = FALSE,
                              level = "gene", plotlib = "ggplot",
-                             data = FALSE) {
+                             data = FALSE, labeltype = "feature") {
   if (!is.null(contrast)) {
     if (is.numeric(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
     res <- NULL
@@ -1226,18 +1605,17 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
     F <- cbind(value)
   }
 
-  if (!is.null(pos)) {
-    xy <- pos
-  } else if ("cluster.genes" %in% names(pgx)) {
-    xy <- pgx$cluster.genes$pos[["umap2d"]]
-  } else {
+  if (is.null(pos) && "cluster.genes" %in% names(pgx)) {
+    pos <- pgx$cluster.genes$pos[["umap2d"]]
+  } else if (is.null(pos) && !"cluster.genes" %in% names(pgx)) {
     message("[WARNING] no cluster.genes in object. please supply positions")
     return(NULL)
   }
 
-  F <- F[match(rownames(xy), rownames(F)), , drop = FALSE]
-
-  rownames(F) <- rownames(xy)
+  pos <- pos[which(rowMeans(is.na(pos)) == 0), , drop = FALSE]
+  cm <- intersect(rownames(pos), rownames(F))
+  F <- F[cm, , drop = FALSE]
+  pos <- pos[cm, ]
 
   if (set.par) {
     nc <- ceiling(sqrt(ncol(F)))
@@ -1249,9 +1627,22 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
   ## z-scale
   zlim <- NULL
   if (zfix) {
-    zlim <- stats::quantile(F, probs = c(0.01, 0.99), na.rm = TRUE)
     zlim <- stats::quantile(F, probs = c(0.002, 0.998), na.rm = TRUE)
     zlim
+  }
+
+  # Rename labels
+  if (!is.null(rownames(F))) {
+    rownames(F) <- make.names(playbase::probe2symbol(rownames(F), pgx$genes, labeltype, fill_na = TRUE), unique = TRUE)
+  }
+  if (!is.null(rownames(pos))) {
+    rownames(pos) <- make.names(playbase::probe2symbol(rownames(pos), pgx$genes, labeltype, fill_na = TRUE), unique = TRUE)
+  }
+  if (!is.null(label)) {
+    label <- make.names(playbase::probe2symbol(label, pgx$genes, labeltype, fill_na = TRUE), unique = TRUE)
+  }
+  if (!is.null(hilight)) {
+    hilight <- make.names(playbase::probe2symbol(hilight, pgx$genes, labeltype, fill_na = TRUE), unique = TRUE)
   }
 
   plist <- list()
@@ -1262,28 +1653,41 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
 
     f1 <- F[, i]
 
-    hilight1 <- hilight
-    if (is.null(hilight)) {
-      hilight1 <- names(sort(-abs(f1)))
+    this.hilight <- hilight
+    if (is.null(this.hilight)) {
+      this.hilight <- names(sort(-abs(f1)))
     }
-    hilight1 <- Matrix::head(hilight1, ntop) ## label
-    opacity <- ifelse(length(hilight1) > 0, 0.66, 1)
+    this.hilight <- intersect(this.hilight, rownames(F))
+    this.label <- label
+    if (is.null(this.label)) {
+      this.label <- Matrix::head(this.hilight, ntop) ## label
+    }
+    this.label <- intersect(this.label, rownames(F))
+    opacity <- ifelse(length(this.hilight) > 0, 0.66, 1)
 
     if (data) {
       return(
-        cbind(xy, f1)
+        cbind(pos, f1)
       )
     }
 
     p1 <- pgx.scatterPlotXY(
-      xy,
-      var = f1, type = "numeric",
+      pos,
+      var = f1,
+      type = "numeric",
       xlab = "UMAP-x  (genes)",
       ylab = "UMAP-y  (genes)",
-      hilight = hilight1,
-      zlim = zlim, zsym = TRUE, softmax = 1,
-      cex = cex, cex.lab = cex.lab,
-      title = title1, cex.title = 1.0,
+      hilight = this.hilight,
+      hilight2 = this.label,
+      hilight.lwd = 0.0,
+      hilight2.lwd = 0.8,
+      zlim = zlim,
+      zsym = TRUE,
+      softmax = 1,
+      cex = cex,
+      cex.lab = cex.lab,
+      title = title1,
+      cex.title = 1.0,
       cex.legend = cex.legend,
       legend = TRUE,
       opacity = 0.5,
@@ -1345,7 +1749,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
                                max.points = 200, group.names = NULL,
                                main = NULL, xlab = NULL, ylab = NULL, names = TRUE,
                                plotly.annotations = NULL,
-                               plotly.margin = NULL,
+                               plotly.margin = NULL, verbose = 0,
                                plotlib = "base") {
   if (is.null(probe)) {
     return(NULL)
@@ -1370,12 +1774,12 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   comp
 
   if (!is.null(group.names)) {
-    message("[pgx.plotExpression] using group names from argument")
+    if (verbose) message("[pgx.plotExpression] using group names from argument")
   }
 
   ## if a named contrast table is available it is safer
   if (is.null(group.names) && "contrasts" %in% names(pgx)) {
-    message("[pgx.plotExpression] parsing group names from pgx$contrast labels")
+    if (verbose) message("[pgx.plotExpression] parsing group names from contrast labels")
     contr.labels <- pgx$contrasts[, comp]
     contr.idx <- expmat[, comp]
     group1 <- names(which.max(table(contr.labels[contr.idx > 0])))
@@ -1386,7 +1790,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
 
   ## Otherwise we guess from the contrast title but this is dangerous
   if (is.null(group.names) && grepl("_vs_|_VS_", comp)) {
-    message("[pgx.plotExpression] parsing group names contrast name (warning!)")
+    if (verbose) message("[pgx.plotExpression] parsing group names contrast name (warning!)")
     comp1 <- sub(".*:", "", comp) ## remove prefix
     group.names <- strsplit(comp1, split = "_vs_|_VS_")[[1]]
     group.names <- rev(group.names) ## first is main group
@@ -1406,7 +1810,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   ## label rotation
   if (is.null(srt)) {
     srt <- 0
-    if (max(nchar(group.names)) >= 7) srt <- 45
+    if (max(nchar(group.names), na.rm = TRUE) >= 7) srt <- 45
   }
 
   ## create groups
@@ -1436,7 +1840,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
     xgroup <- as.character(xgroup)
 
     levels0 <- group.names
-    if ("other" %in% xgroup) levels0 <- c(levels0, "other")
+    if ("other" %in% xgroup && !"other" %in% levels0) levels0 <- c(levels0, "other")
     xgroup <- factor(xgroup, levels = levels0)
   }
 
@@ -1453,7 +1857,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   if (level == "geneset") {
     gx <- pgx$gsetX[probe, rownames(pgx$samples)]
   } else {
-    gx <- pgx$X[rownames(pgx$X) == probe, rownames(pgx$samples)]
+    gx <- pgx$X[which(rownames(pgx$X) == probe), rownames(pgx$samples)]
   }
 
   if (!logscale) {
@@ -1462,7 +1866,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
 
   ## -------------- remove others
   if (showothers == FALSE && any(grepl("other", xgroup))) {
-    jj <- grep("other", xgroup, invert = TRUE)
+    jj <- !xgroup %in% "other"
     xgroup <- factor(xgroup[jj], levels = setdiff(levels(xgroup), "other"))
     gx <- gx[jj]
   }
@@ -1474,8 +1878,8 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
     ## NOT GROUPED BARPLOTS
     nx <- length(gx)
     if (is.null(ylab)) {
-      ylab <- "expression (log2CPM)"
-      if (!logscale) ylab <- "expression (CPM)"
+      ylab <- "Expression (log2)"
+      if (!logscale) ylab <- "Expression"
     }
     klr <- grp.klr[as.character(xgroup)]
     klr[is.na(klr)] <- "#e5e5e5"
@@ -1502,8 +1906,8 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
     } else {
       ## plot using base graphics
       gx.min <- 0
-      if (min(gx) < 0) gx.min <- min(gx)
-      ylim <- c(gx.min, 1.3 * max(gx))
+      if (min(gx, na.rm = TRUE) < 0) gx.min <- min(gx, na.rm = TRUE)
+      ylim <- c(gx.min, 1.3 * max(gx, na.rm = TRUE))
       bx <- graphics::barplot(gx[],
         col = klr[], ylim = ylim,
         ## offset = 0, ylim=c(gx.min,max(gx)),
@@ -1513,8 +1917,8 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
   } else {
     ## GROUPED PLOTS
     if (is.null(ylab)) {
-      ylab <- "expression (log2CPM)"
-      if (!logscale) ylab <- "expression (CPM)"
+      ylab <- "Expression (log2)"
+      if (!logscale) ylab <- "Expression"
     }
     bee.cex <- c(0.3, 0.1, 0.05)[cut(length(gx), c(0, 100, 500, 99999))]
 
@@ -1619,7 +2023,8 @@ pgx.plotPhenotypeMatrix <- function(annot) {
     iheatmapr::add_col_annotation(
       annotation = annotF[, ],
       size = col_annot_height,
-      buffer = 0.005, side = "bottom",
+      buffer = 0.005,
+      side = "bottom",
       colors = colors0
     )
   colcex <- 1
@@ -1785,7 +2190,7 @@ pgx.splitHeatmap <- function(ngs, splitx = NULL, top.mode = "specific",
     X1 <- X0[jj, ]
     idx <- paste0("M", as.vector(mapply(rep, 1:ncol(grpX), ntop1)))
   } else {
-    X1 <- Matrix::head(X0[order(-apply(X0, 1, stats::sd)), ], ntop)
+    X1 <- Matrix::head(X0[order(-apply(X0, 1, stats::sd, na.rm = TRUE)), ], ntop)
     hc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(t(X1), use = "pairwise")), method = "ward.D2")
     idx <- paste0("S", stats::cutree(hc, 5))
   }
@@ -1897,7 +2302,7 @@ plotly2ggplot <- function(plot, width = NULL, height = NULL, scale = 1, hjust = 
 #' @export
 gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen = 0.25,
                           ylab = NULL, yth = 1, tooltips = NULL, cex.text = 1, cex.title = 1.4,
-                          cbar.width = 32) {
+                          cex.axis = 1, cbar.width = 32) {
   if (is.null(xlab)) {
     xlab <- "Rank in ordered dataset"
   }
@@ -1911,9 +2316,6 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
   ## compute running metrix
   fc <- sort(fc, decreasing = TRUE)
 
-
-
-
   ## weighted cumulative random walk
   x0 <- 1 * (names(fc) %in% gset)
   x0 <- x0 * abs(fc)
@@ -1923,21 +2325,23 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
   r1 <- cumsum(x0) / (1e-4 + sum(x0))
 
   rnk.trace <- (r1 - r0)
-  rnk.trace <- rnk.trace / max(abs(rnk.trace)) * 0.8
+  rnk.trace <- rnk.trace / max(abs(rnk.trace), na.rm = TRUE) * 0.8
 
-  qq <- range(fc)
+  qq <- range(fc, na.rm = TRUE)
   y1 <- qq[2]
   y0 <- 0.8 * qq[1]
   dy <- ticklen * (y1 - y0)
-  if (max(rnk.trace) >= abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y1)
-  if (max(rnk.trace) < abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y0)
+  if (max(rnk.trace, na.rm = TRUE) >= abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y1)
+  if (max(rnk.trace, na.rm = TRUE) < abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y0)
 
   cc <- sign(fc) * rank(abs(fc))
   df <- data.frame(x = rank(-fc), y = fc, trace = rnk.trace, cc = cc)
 
   ## downsample
   ii <- which(rownames(df) %in% gset)
-  ii <- unique(c(ii, seq(1, nrow(df), round(nrow(df) / 1000))))
+  unknown_parameter <- round(nrow(df) / 1000)
+  if (unknown_parameter == 0) unknown_parameter <- round(nrow(df) / 10)
+  ii <- unique(c(ii, seq(1, nrow(df), unknown_parameter)))
   df <- df[ii, ]
   df <- df[order(-df$y), ]
 
@@ -1955,7 +2359,7 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
   r1 <- (fx / max(abs(fx), na.rm = TRUE))
   r1 <- abs(r1)**0.66 * sign(r1)
   suppressWarnings(
-    cc <- gplots::colorpanel(21, "royalblue3", "grey90", "indianred3")
+    cc <- gplots::colorpanel(21, omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))
   )
   irnk <- 1 + round((length(cc) - 1) * (1 + r1) * 0.5)
 
@@ -1969,7 +2373,12 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
     tooltips2 <- paste0("<b>", tooltips2, "</b><br>", tooltips[sel.tt])
   }
 
-  ii <- seq(1, nrow(df), round(nrow(df) / 200))
+  unknown_parameter <- round(nrow(df) / 200)
+
+  if (unknown_parameter == 0) unknown_parameter <- round(nrow(df) / 5)
+
+  ii <- seq(1, nrow(df), unknown_parameter)
+
   fig <- plotly::plot_ly() %>%
     plotly::add_trace(
       ## -------- grey ordered line
@@ -2058,8 +2467,19 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
     plotly::layout(
       font = list(size = 12 * cex.text),
       title = list(text = main, y = 0.99, font = list(size = 12 * cex.title)),
-      xaxis = list(title = xlab, gridwidth = 0.3),
-      yaxis = list(title = ylab, gridwidth = 0.3, range = c(y0 - 1.1 * dy, y1))
+      xaxis = list(
+        title = xlab,
+        gridwidth = 0.3,
+        tickfont = list(size = 9 * cex.axis),
+        titlefont = list(size = 11 * cex.axis)
+      ),
+      yaxis = list(
+        title = ylab,
+        gridwidth = 0.3,
+        range = c(y0 - 1.1 * dy, y1),
+        tickfont = list(size = 9 * cex.axis),
+        titlefont = list(size = 11 * cex.axis)
+      )
     ) %>%
     plotly::config(toImageButtonOptions = list(format = "svg")) %>%
     plotly::hide_legend()
@@ -2099,9 +2519,6 @@ ggenplot <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ylab = NULL) {
   ## compute running metrix
   fc <- sort(fc, decreasing = TRUE)
 
-
-
-
   ## weighted cumulative random walk
   x0 <- 1 * (names(fc) %in% gset)
   x0 <- x0 * abs(fc)
@@ -2111,14 +2528,14 @@ ggenplot <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ylab = NULL) {
   r1 <- cumsum(x0) / (1e-4 + sum(x0))
 
   rnk.trace <- (r1 - r0)
-  rnk.trace <- rnk.trace / max(abs(rnk.trace)) * 0.8
+  rnk.trace <- rnk.trace / max(abs(rnk.trace), na.rm = TRUE) * 0.8
 
-  qq <- range(fc)
+  qq <- range(fc, na.rm = TRUE)
   y1 <- qq[2]
   y0 <- qq[1]
   dy <- 0.2 * (y1 - y0)
-  if (max(rnk.trace) >= abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y1)
-  if (max(rnk.trace) < abs(min(rnk.trace))) rnk.trace <- rnk.trace * abs(y0)
+  if (max(rnk.trace, na.rm = TRUE) >= abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y1)
+  if (max(rnk.trace, na.rm = TRUE) < abs(min(rnk.trace, na.rm = TRUE))) rnk.trace <- rnk.trace * abs(y0)
 
   cc <- sign(fc) * rank(abs(fc))
   df <- data.frame(rank = rank(-fc), fc = fc, run = rnk.trace, cc)
@@ -2126,7 +2543,7 @@ ggenplot <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ylab = NULL) {
 
 
   cpal <- colorspace::diverge_hcl(64, c = 60, l = c(30, 100), power = 1)
-  ii <- 1 + 32 + range(round(32 * (fc / max(abs(fc)))))
+  ii <- 1 + 32 + range(round(32 * (fc / max(abs(fc), na.rm = TRUE))), na.rm = TRUE)
   cpal <- colorspace::diverge_hcl(65)[ii[1]:ii[2]]
 
   cex.title <- 1
@@ -2210,7 +2627,7 @@ plot_ggscatterFILL <- function(x, y = NULL, col = NULL, shape = NULL,
   if (!is.null(col)) {
     cpal <- rev(RColorBrewer::brewer.pal(11, "RdYlBu"))
 
-    zr <- range(col)
+    zr <- range(col, na.rm = TRUE)
     zz <- round(c(zr[1], zr[2]), digits = 2)
     cgamma <- seq(0, 1, 1 / (length(cpal) - 1))**(1 / gamma)
     p <- p +
@@ -2556,7 +2973,7 @@ pgx.violinPlot <- function(x, y, group = NULL, xlab = "", ylab = "",
   fig <- NULL
   if (plotlib == "base") {
     if (is.null(maxbee)) maxbee <- 100 * length(setdiff(unique(y), NA))
-    if (jitter > 0) x <- x + jitter * diff(range(x)) * stats::rnorm(length(x))
+    if (jitter > 0) x <- x + jitter * diff(range(x, na.rm = TRUE)) * stats::rnorm(length(x))
 
 
     vioplot::vioplot(x ~ y,
@@ -2571,7 +2988,7 @@ pgx.violinPlot <- function(x, y, group = NULL, xlab = "", ylab = "",
     yy <- sort(unique(y))
     graphics::text(
       x = 1:length(yy),
-      y = graphics::par("usr")[3] - 0.03 * diff(range(x)),
+      y = graphics::par("usr")[3] - 0.03 * diff(range(x, na.rm = TRUE)),
       labels = yy,
       xpd = NA,
       srt = srt,
@@ -2700,12 +3117,13 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
                                    zoom = 1, legend = TRUE, bty = "o", legend.ysp = 0.85,
                                    legend.pos = "bottomright", lab.pos = NULL, repel = TRUE,
                                    xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL, dlim = 0.02,
-                                   hilight2 = hilight, hilight.cex = NULL, lab.xpd = TRUE,
-                                   hilight = NULL, hilight.col = NULL, hilight.lwd = 0.8,
+                                   hilight = NULL, hilight.cex = NULL, lab.xpd = TRUE,
+                                   hilight.col = NULL, hilight.lwd = 0.2,
+                                   hilight2 = hilight, hilight2.lwd = 0.6,
                                    label.clusters = FALSE, cex.clust = 1.5,
-                                   tstep = 0.1, rstep = 0.1, na.color = "#AAAAAA55",
+                                   tstep = 0.1, rstep = 0.1, na.color = "#AAAAAA44",
                                    tooltip = NULL, theme = NULL, set.par = TRUE,
-                                   axt = "s", xaxs = TRUE, yaxs = TRUE,
+                                   axt = "s", xaxs = TRUE, yaxs = TRUE, color_up_down = FALSE,
                                    labels = NULL, label.type = NULL, opacity = 1) {
   ## automatically set pointsize of dots
   if (is.null(cex)) {
@@ -2725,7 +3143,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     names(var) <- rownames(pos)
   }
   if (is.null(type)) {
-    type <- c("numeric", "factor")[1 + class(var) %in% c("factor", "character")]
+    type <- c("numeric", "factor")[1 + class(var) %in% c("factor", "character", "logical")]
   }
   if (is.null(colnames(pos))) {
     colnames(pos) <- c("x", "y")
@@ -2736,20 +3154,20 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
   if (!is.null(xlim)) {
     xlim0 <- xlim
   } else {
-    xlim0 <- range(pos[, 1])
+    xlim0 <- range(pos[, 1], na.rm = TRUE)
     if (zoom != 1) {
-      cx <- mean(range(pos[, 1]))
-      dx <- diff(range(pos[, 1]))
+      cx <- mean(range(pos[, 1], na.rm = TRUE))
+      dx <- diff(range(pos[, 1], na.rm = TRUE))
       xlim0 <- cx + 0.5 * c(-1, 1.05) * dx / zoom
     }
   }
   if (!is.null(ylim)) {
     ylim0 <- ylim
   } else {
-    ylim0 <- range(pos[, 2])
+    ylim0 <- range(pos[, 2], na.rm = TRUE)
     if (zoom != 1) {
-      cy <- mean(range(pos[, 2]))
-      dy <- diff(range(pos[, 2]))
+      cy <- mean(range(pos[, 2], na.rm = TRUE))
+      dy <- diff(range(pos[, 2], na.rm = TRUE))
       ylim0 <- cy + 0.5 * c(-1, 1.05) * dy / zoom
     }
   }
@@ -2780,22 +3198,34 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     z1 <- factor(var)
     nz <- length(levels(z1))
     if (is.null(col) && nz > 2) {
-      col1 <- c(
+      col <- c(
         RColorBrewer::brewer.pal(8, "Set1"),
         RColorBrewer::brewer.pal(8, "Set2"),
         RColorBrewer::brewer.pal(12, "Set3")
       ) # omics_pal_d("dark")(8))
     } else if (is.null(col) && nz == 2) {
-      col1 <- rev(grDevices::grey.colors(2, end = 0.8))
-      col1 <- c("#888888AA", "#AA0000FF") ## grey/red
+      col <- rev(grDevices::grey.colors(2, end = 0.8))
+      col <- c("#888888AA", "#AA0000FF", "#0000AAFF") ## grey/red
     } else if (is.null(col) && nz == 1) {
-      col1 <- c("#22222255")
-    } else {
-      col1 <- col
+      col <- c("#22222255")
     }
-    col1 <- Matrix::head(rep(col1, 99), nz)
+    col1 <- head(rep(col, 99), nz)
+
     pt.col <- col1[z1]
-    pt.col[is.na(pt.col)] <- na.color
+    if (color_up_down && nz == 2 && length(col) == 3) {
+      sel <- which(as.integer(z1) == 2 & pos[, 1] < 0)
+      pt.col[sel] <- col[3]
+    }
+
+    ## NA points with light grey
+    pt.col[which(is.na(pt.col))] <- na.color
+
+    ## also dim not highlighted points
+    if (!is.null(hilight) && length(hilight) > 0) {
+      jj <- which(!rownames(pos) %in% hilight)
+      if (length(jj)) pt.col[jj] <- na.color
+    }
+
     pt.col0 <- pt.col
     if (opacity < 1) {
       pt.col <- add_opacity(pt.col, opacity)
@@ -2820,7 +3250,6 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     if (label.clusters) {
       mpos <- apply(pos, 2, function(x) tapply(x, z1, stats::median))
       mlab <- rownames(mpos)
-
       graphics::text(mpos, labels = mlab, cex = cex.clust, lheight = 0.8)
     }
 
@@ -2829,7 +3258,9 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     if (legend.pos != "none" && legend && nlev < 30) {
       cex1 <- ifelse(length(levels(z1)) >= 8, 0.85, 1)
       cex1 <- ifelse(length(levels(z1)) >= 15, 0.75, cex1)
-      graphics::legend(legend.pos, levels(z1),
+      graphics::legend(
+        legend.pos,
+        legend = levels(z1),
         bty = bty, fill = col1,
         ## cex=cex1, y.intersp=0.75, x.intersp=0.7
         cex = 0.85 * cex1 * cex.legend,
@@ -2853,7 +3284,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
     }
 
     ## z1 is normalized [0;1] for coloring
-    z1 <- (z - min(zlim)) / diff(zlim)
+    z1 <- (z - min(zlim, na.rm = TRUE)) / diff(zlim)
     z1 <- pmin(pmax(z1, 0), 1) ## clip
     if (softmax) {
       z1 <- 0.5 * (tanh(4 * (z1 - 0.5)) + 1)
@@ -2861,12 +3292,10 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
 
     ## -------------- set colors
 
-    cpal <- colorspace::diverge_hcl(64, c = 60, l = c(30, 100), power = 1)
-    cpal <- grDevices::colorRampPalette(c("#313695", "#FFFFDF", "#A50026"))(64)
     if (!is.null(col)) {
       cpal <- grDevices::colorRampPalette(col)(64)
     } else {
-      cpal <- grDevices::colorRampPalette(c("#3136B5", "#FFFFDF", "#B50026"))(64)
+      cpal <- grDevices::colorRampPalette(c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")))(64)
     }
     cpal <- sapply(1:length(cpal), function(i) add_opacity(cpal[i], 0.2 + 0.8 * abs(i - 32.5) / 32))
 
@@ -2879,6 +3308,12 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
       cpal <- add_opacity(cpal, opacity**0.33)
     }
     pt.col[is.na(pt.col)] <- na.color ## missing values color
+
+    ## dim not highlighted points
+    if (!is.null(hilight) && length(hilight) > 0) {
+      jj <- which(!rownames(pos) %in% hilight)
+      if (length(jj)) pt.col[jj] <- na.color
+    }
 
     jj <- 1:nrow(pos)
     jj <- order(abs(z), na.last = FALSE) ## higher values last??
@@ -2908,29 +3343,31 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
         y.intersp = 0.18, x.intersp = 0.5, border = NA, bty = bty,
         inset = c(0.01, 0.02),
         fill = rev(cpal[seq(from = 1, to = length(cpal), length.out = 11)]),
-        legend = c(zr[2], rep(NA, 9), zr[1]),
+        legend = c(zr[2], rep(NA, 9), zr[1])
       )
     }
   }
 
+  ## hightlight points in hilight with a border
+  hcex <- 0.9 * hilight.cex
+  if (length(hcex) > 1) hcex <- hcex[jj]
   if (!is.null(hilight) && length(hilight) > 0) {
     jj <- which(rownames(pos) %in% hilight)
     if (length(jj)) {
       hcol1 <- hilight.col
       if (is.null(hcol1)) hcol1 <- pt.col0[jj]
-      hcex <- hilight.cex
-      if (length(hcex) > 1) hcex <- hcex[jj]
       graphics::points(pos[jj, , drop = FALSE], pch = 20, col = hcol1, cex = 1.05 * hcex)
-      graphics::points(pos[jj, , drop = FALSE], pch = 1, lwd = hilight.lwd, cex = 0.85 * hcex)
+      graphics::points(pos[jj, , drop = FALSE], pch = 1, lwd = hilight.lwd, cex = 0.8 * hcex)
     }
   }
 
+  ## labels points in hilight2 (should be renamed...IK
   if (!is.null(hilight2) && length(hilight2) > 0) {
     jj <- which(rownames(pos) %in% hilight2)
     if (length(jj)) {
       if (length(cex.lab) == 1) cex.lab <- rep(cex.lab, nrow(pos))
       df <- data.frame(x = pos[jj, 1], y = pos[jj, 2], z = labels[jj], cex = cex.lab[jj])
-      if (is.null(lab.pos)) {
+      if (repel) {
         ## repelling text using wordcloud package
         df2 <- rbind(df, df)
         df2$z[1:nrow(df)] <- "x"
@@ -2952,11 +3389,16 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
           lab.pos <- data.frame(x = pos[jj, 1], y = pos[jj, 2])
         }
         rownames(lab.pos) <- rownames(pos)[jj]
+        graphics::points(df$x, df$y, pch = 1, lwd = hilight2.lwd, cex = 0.8 * hcex)
+        graphics::segments(df$x, df$y, lab.pos$x, lab.pos$y, col = "#222222AA", lwd = 0.85)
+        graphics::text(lab.pos$x, lab.pos$y, labels = df$z, cex = 0.7 * df$cex)
       } else {
-        lab.pos <- lab.pos[match(rownames(df), rownames(lab.pos)), ]
+        boxes <- sapply(0.8 * nchar(df$z), function(n) paste(rep("\U2588", n), collapse = ""))
+        cex1 <- 0.7 * df$cex
+        graphics::points(df$x, df$y, pch = 1, lwd = hilight2.lwd, cex = 0.8 * hcex)
+        graphics::text(df$x, df$y, labels = boxes, col = "#FFFFFFAA", cex = 1.15 * cex1, pos = 3, offset = 0.5)
+        graphics::text(df$x, df$y, labels = df$z, cex = cex1, pos = 3, offset = 0.45)
       }
-      graphics::segments(df$x, df$y, lab.pos$x, lab.pos$y, col = "#222222AA", lwd = 0.85)
-      graphics::text(lab.pos$x, lab.pos$y, labels = df$z, cex = 0.7 * df$cex)
     }
   }
 
@@ -3030,10 +3472,12 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
                                      cex.lab = 0.8, cex.title = 1.2, cex.clust = 1.5,
                                      cex.legend = 1, cex.axis = 1, gridcolor = NULL, bgcolor = NULL,
                                      zoom = 1, legend = TRUE, bty = "n", hilight = NULL,
-                                     zlim = NULL, zlog = FALSE, softmax = FALSE, zsym = FALSE,
-                                     xlab = NULL, ylab = NULL, cmin = 0, cmax = 1, xlim = NULL, ylim = NULL,
-                                     hilight2 = hilight, hilight.col = "black",
-                                     hilight.lwd = 0.8, hilight.cex = NULL, na.color = "#AAAAAA55",
+                                     zlim = NULL, cmin = NULL, cmax = NULL,
+                                     zlog = FALSE, softmax = FALSE, zsym = FALSE,
+                                     xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL,
+                                     hilight2 = hilight, hilight.col = NULL,
+                                     hilight.lwd = 0.3, hilight2.lwd = 1, hilight.cex = NULL,
+                                     na.color = "#AAAAAA55",
                                      opacity = 1, label.clusters = FALSE, labels = NULL,
                                      legend.ysp = 0.85, legend.pos = "bottomright",
                                      tooltip = NULL, theme = NULL, set.par = TRUE,
@@ -3059,6 +3503,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   if (is.null(colnames(pos))) {
     colnames(pos) <- c("x", "y")
   }
+  if (is.null(zlim) && !is.null(cmin) && !is.null(cmax)) zlim <- c(cmin, cmax)
 
   ## automatically set pointsize of dots
   if (is.null(cex)) {
@@ -3071,13 +3516,13 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   }
 
   ## normalize pos
-  if (is.null(xlim)) xlim <- range(pos[, 1])
-  if (is.null(ylim)) ylim <- range(pos[, 2])
+  if (is.null(xlim)) xlim <- range(pos[, 1], na.rm = TRUE)
+  if (is.null(ylim)) ylim <- range(pos[, 2], na.rm = TRUE)
   if (zoom != 1) {
-    cx <- mean(range(pos[, 1]))
-    cy <- mean(range(pos[, 2]))
-    dx <- diff(range(pos[, 1]))
-    dy <- diff(range(pos[, 2]))
+    cx <- mean(range(pos[, 1], na.rm = TRUE), na.rm = TRUE)
+    cy <- mean(range(pos[, 2], na.rm = TRUE), na.rm = TRUE)
+    dx <- diff(range(pos[, 1], na.rm = TRUE))
+    dy <- diff(range(pos[, 2], na.rm = TRUE))
     xlim <- cx + 0.5 * c(-1, 1.05) * dx / zoom
     ylim <- cy + 0.5 * c(-1, 1.05) * dy / zoom
   }
@@ -3137,7 +3582,6 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       col1 <- add_opacity(col1, opacity**0.33)
     }
 
-
     tt <- ifelse(!is.null(title), title, "var")
     tt <- "value"
     tooltip <- rownames(pos)
@@ -3146,8 +3590,11 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     if (!is.null(labels) && length(labels) == nrow(pos)) label1 <- labels
 
     df <- data.frame(
-      x = pos[, 1], y = pos[, 2], name = rownames(pos),
-      text = tooltip, label = label1
+      x = pos[, 1],
+      y = pos[, 2],
+      name = rownames(pos),
+      text = tooltip,
+      label = label1
     )
     jj <- order(-table(pt.col)[pt.col]) ## plot less frequent points last...
     df <- df[jj, ]
@@ -3229,7 +3676,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   if (type == "numeric") {
     z <- as.numeric(var)
     cpal <- rev(viridis::viridis(11))
-    cpal <- rev(RColorBrewer::brewer.pal(11, "RdYlBu")) ## default
+    cpal <- c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")) # rev(RColorBrewer::brewer.pal(11, "RdYlBu")) ## default
     if (!is.null(col)) {
       cpal <- col
     }
@@ -3237,36 +3684,50 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       cpal <- add_opacity(cpal, opacity**0.33)
     }
 
-
     tt <- ifelse(!is.null(title), title, "var")
     tt <- "value"
     tooltip <- paste(rownames(pos), "<br>", tt, "=", round(z, digits = 4))
     label1 <- rownames(pos)
     if (!is.null(labels) && length(labels) == nrow(pos)) label1 <- labels
+
     df <- data.frame(
-      x = pos[, 1], y = pos[, 2], name = rownames(pos),
-      variable = z, text = tooltip, label = label1
+      x = pos[, 1],
+      y = pos[, 2],
+      name = rownames(pos),
+      variable = z,
+      text = tooltip,
+      label = label1
     )
     jj <- order(abs(z), na.last = FALSE)
     df <- df[jj, ] ## strongest last??
     cex1 <- ifelse(length(cex) > 1, cex[jj], cex)
 
     ## determine range for colorbar
-    zr <- range(z)
+    zr <- range(z, na.rm = TRUE)
     if (zsym && min(zr, na.rm = TRUE) < 0) zr <- c(-1, 1) * max(abs(zr), na.rm = TRUE)
     zz <- round(c(zr[1], zr[2]), digits = 2)
-    variable <- NULL
-    plt <- ggplot2::ggplot(df, ggplot2::aes(x, y, fill = variable)) +
+    ##    variable <- NULL
+    if (is.null(zlim)) {
+      cmin0 <- min(z, na.rm = TRUE)
+      cmax0 <- max(z, na.rm = TRUE)
+    } else {
+      cmin0 <- zlim[1]
+      cmax0 <- zlim[2]
+    }
+
+    plt <- ggplot2::ggplot(
+      df, ggplot2::aes(x, y, fill = variable)
+    ) +
       ggplot2::geom_point(
         shape = 21,
         alpha = opacity,
-        size = 1.8 * cex1,
+        size = 2.0 * cex1,
         color = "#444444",
         stroke = 0.2
       ) +
       ggplot2::scale_fill_gradientn(
         colors = cpal,
-        limits = c(cmin, cmax),
+        limits = c(cmin0, cmax0),
         guide = guide,
         breaks = zz,
         labels = c(zz[1], zz[2]),
@@ -3297,7 +3758,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     } else {
       plt <- plt + theme(legend.position = "none")
     }
-  }
+  } ## end-of-is-numerice
 
   if (!is.null(hilight)) {
     ## this hilights some points (with color and size)  at certain positions
@@ -3307,7 +3768,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       ggplot2::geom_point(
         data = df[sel, ],
         mapping = ggplot2::aes(x, y),
-        size = 2.0 * hilight.cex,
+        size = 2.1 * hilight.cex,
         shape = 21,
         stroke = 0.5 * hilight.lwd,
         fill = hilight.col,
@@ -3316,23 +3777,32 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   }
 
   if (!is.null(hilight2)) {
-    ## this put text labels at certain positions
+    ## this put text labels at certain positions with geom_text_repel(
     if (label.type == "text") labelFUN <- ggrepel::geom_text_repel
     if (label.type == "box") labelFUN <- ggrepel::geom_label_repel
-    ## geom_text_repel(
-    plt <- plt + labelFUN(
-      data = subset(df, name %in% hilight2),
-      ggplot2::aes(label = label),
-      size = 3.0 * cex.lab,
-      color = "black",
-      label.size = 0.08,
-      max.overlaps = 99,
-      fill = scales::alpha(c("white"), 0.6),
-      segment.color = "grey20",
-      segment.size = 0.5,
-      box.padding = grid::unit(0.25, "lines"),
-      point.padding = grid::unit(0.2, "lines")
-    )
+    plt <- plt +
+      ggplot2::geom_point(
+        data = subset(df, name %in% hilight2),
+        ## mapping = ggplot2::aes(x, y),
+        size = 2.1 * hilight.cex,
+        shape = 21,
+        stroke = 0.5 * hilight2.lwd,
+        fill = hilight.col,
+        color = "grey20"
+      ) +
+      labelFUN(
+        data = subset(df, name %in% hilight2),
+        ggplot2::aes(label = label),
+        size = 5.0 * cex.lab,
+        color = "black",
+        ## label.size = 0.08,
+        max.overlaps = 99,
+        ## fill = scales::alpha(c("white"), 0.6),
+        segment.color = "grey20",
+        segment.size = 0.5,
+        box.padding = grid::unit(0.25, "lines"),
+        point.padding = grid::unit(0.2, "lines")
+      )
   }
 
 
@@ -3446,11 +3916,12 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
                                      cex.clust = 1.5, cex.legend = 1, cex.axis = 1,
                                      xlab = NULL, ylab = NULL, xlim = NULL, ylim = NULL,
                                      axis = TRUE, zoom = 1, legend = TRUE, bty = "n",
-                                     hilight = NULL, hilight2 = hilight, hilight.col = NULL,
-                                     hilight.cex = NULL, hilight.lwd = 0.8, opc.low = 1,
+                                     hilight = NULL, hilight2 = hilight, labels = rownames(pos),
+                                     hilight.col = NULL, hilight.cex = NULL,
+                                     hilight.lwd = 0.4, hilight2.lwd = 0.8,
                                      zlim = NULL, zlog = FALSE, zsym = FALSE, softmax = FALSE,
-                                     opacity = 1, bgcolor = NULL, box = TRUE,
-                                     label.clusters = FALSE, labels = NULL, label.type = NULL,
+                                     opc.low = 1, opacity = 1, bgcolor = NULL, box = TRUE,
+                                     label.clusters = FALSE, label.type = NULL,
                                      tooltip = NULL, theme = NULL, set.par = TRUE,
                                      title = "", title.y = 1, gridcolor = NULL,
                                      source = NULL, key = NULL,
@@ -3484,13 +3955,13 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   if (is.null(hilight.cex)) hilight.cex <- cex
 
   ## normalize pos
-  xlim0 <- range(pos[, 1])
-  ylim0 <- range(pos[, 2])
+  xlim0 <- range(pos[, 1], na.rm = TRUE)
+  ylim0 <- range(pos[, 2], na.rm = TRUE)
   if (zoom != 1) {
-    cx <- mean(range(pos[, 1]))
-    cy <- mean(range(pos[, 2]))
-    dx <- diff(range(pos[, 1]))
-    dy <- diff(range(pos[, 2]))
+    cx <- mean(range(pos[, 1], na.rm = TRUE), na.rm = TRUE)
+    cy <- mean(range(pos[, 2], na.rm = TRUE), na.rm = TRUE)
+    dx <- diff(range(pos[, 1], na.rm = TRUE))
+    dy <- diff(range(pos[, 2], na.rm = TRUE))
     xlim0 <- cx + 0.5 * c(-1, 1.05) * dx / zoom
     ylim0 <- cy + 0.5 * c(-1, 1.05) * dy / zoom
   }
@@ -3500,9 +3971,9 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   if (type == "numeric") var <- round(var, digits = 4)
   hoverinfo <- "text"
   tooltip1 <- paste0(
-    rownames(pos),
-    "<br>value = ", var,
-    "<br>x = ", round(pos[, 1], 2), "; y = ", round(pos[, 2], 2)
+    "<b>", rownames(pos), "</b>",
+    "<br>value: <b>", var,
+    "</b><br>x: <b>", round(pos[, 1], 2), "</b><br>y: <b>", round(pos[, 2], 2), "</b>"
   )
   if (!is.null(tooltip) && length(tooltip) == length(var)) {
     tooltip1 <- paste0(tooltip1, "<br>", tooltip)
@@ -3512,11 +3983,11 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     hoverinfo <- "none"
   }
 
-  label1 <- rownames(pos)
-  if (!is.null(labels) && labels[1] != FALSE) label1 <- labels
-  label1 <- gsub("[)(]", "", label1) ## HTML labels do not like it...
-  label1 <- gsub("[_]", " ", label1) ## HTML labels do not like it...
-  label1 <- sapply(label1, function(s) paste(strwrap(s, 50), collapse = "<br>"))
+  if (is.null(labels)) {
+    label1 <- rownames(pos)
+  } else {
+    label1 <- labels
+  }
 
   plt <- NULL
   ## Plot the discrete variables
@@ -3559,7 +4030,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
 
     ## plot less frequent points first... (NEED RETHINK)
     jj <- order(-table(z1)[z1])
-    df <- df[jj, ]
+    df <- df[jj, , drop = FALSE]
   }
 
   ## Plot the continous variables
@@ -3567,7 +4038,7 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
     z <- as.numeric(var)
     z1 <- NULL
     if (is.null(col)) {
-      cpal <- rev(RColorBrewer::brewer.pal(11, "RdYlBu"))
+      cpal <- c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")) # rev(RColorBrewer::brewer.pal(11, "RdYlBu"))
     } else {
       cpal <- col
     }
@@ -3697,6 +4168,29 @@ pgx.scatterPlotXY.PLOTLY <- function(pos,
   if (!is.null(hilight2)) {
     jj <- which(rownames(df) %in% hilight2)
     plt <- plt %>%
+      plotly::add_markers(
+        data = df[jj, ],
+        x = ~x,
+        y = ~y,
+        color = ~value,
+        colors = cpal,
+        key = ~name,
+        mode = "markers",
+        type = "scattergl", #
+        ## text = ~text,
+        ## hoverinfo = hoverinfo,
+        marker = list(
+          ## color = col1,
+          opacity = 1,
+          size = 5 * hilight.cex,
+          showlegend = FALSE,
+          showscale = FALSE,
+          line = list(
+            color = "#000000",
+            width = 1.0 * hilight2.lwd
+          )
+        )
+      ) %>%
       plotly::add_annotations(
         data = df[jj, , drop = FALSE],
         x = ~x,
@@ -3888,6 +4382,8 @@ pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, na.co
                                  zoom = 1, legend = TRUE, bty = "n", hilight = NULL,
                                  zlim = NULL, zlog = FALSE, softmax = FALSE,
                                  xlab = NULL, ylab = NULL, hilight2 = hilight,
+                                 hilight.lwd = 0, hilight2.lwd = 0, zsym = TRUE,
+                                 xlim = NULL, ylim = NULL,
                                  opacity = 1, label.clusters = FALSE, labels = NULL,
                                  legend.ysp = 0.85, legend.pos = "bottomright",
                                  tooltip = NULL, theme = NULL, set.par = TRUE,
@@ -3902,20 +4398,31 @@ pgx.scatterPlotXY.D3 <- function(pos, var = NULL, type = NULL, col = NULL, na.co
     ylab <- colnames(pos)[2]
   }
   x <- y <- z <- NULL # Init vars to prevent warning
-  df <- data.frame(x = pos[, 1], y = pos[, 2], z = var, names = rownames(pos))
+  df <- data.frame(
+    x = pos[, 1],
+    y = pos[, 2],
+    z = var,
+    names = rownames(pos)
+  )
   if (!is.null(var)) {
     plt <- scatterD3::scatterD3(
-      data = df, x = x, y = y,
+      data = df,
+      x = x,
+      y = y,
       col_var = z,
-      xlab = xlab, ylab = ylab,
+      xlab = xlab,
+      ylab = ylab,
       point_size = 32 * cex,
       legend_width = 70,
       col_lab = "value"
     )
   } else {
     plt <- scatterD3::scatterD3(
-      data = df, x = x, y = y, #
-      xlab = xlab, ylab = ylab,
+      data = df,
+      x = x,
+      y = y, #
+      xlab = xlab,
+      ylab = ylab,
       point_size = 32 * cex,
       col_lab = "value"
     )
@@ -3971,7 +4478,8 @@ pgx.stackedBarplot <- function(x,
     y = ~Effect,
     type = "bar",
     name = ~variable,
-    color = ~variable
+    color = ~variable,
+    hovertemplate = "<b>%{x}</b><br>%{fullData.name}: <b>%{y}</b><br><extra></extra>"
   ) %>%
     plotly::layout(
       showlegend = showlegend,
@@ -4053,18 +4561,23 @@ darkmode <- function(p, dim = 2) {
 #' @return A plotly interactive MA plot object.
 #'
 #' @export
-plotlyMA <- function(x, y, names, source = "plot1",
+plotlyMA <- function(x, y, names, label.names = names,
                      group.names = c("group1", "group2"),
                      xlab = "average expression (log2.CPM)",
                      ylab = "effect size (log2.FC)",
                      lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
-                     marker.size = 5, label = NULL, label.cex = 1, color_up_down = TRUE,
-                     marker.type = "scatter", displayModeBar = TRUE) {
+                     marker.size = 5, label = NULL, label.cex = 1,
+                     color_up_down = TRUE,
+                     colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#3181de"),
+                     marker.type = "scatter", source = "plot1",
+                     displayModeBar = TRUE) {
   if (is.null(highlight)) highlight <- names
-  i0 <- which(!names %in% highlight)
-  i1 <- which(names %in% highlight)
+  i0 <- which(!names %in% highlight & !label.names %in% highlight)
+  i1 <- which(names %in% highlight | label.names %in% highlight)
 
-  p <- plotly::plot_ly()
+  p <- plotly::plot_ly(
+    hovertemplate = "<b>%{text}</b><br><b>Average expression</b>: %{x:.2f}<br><b>Effect size</b>: %{y:.2f}<extra></extra>"
+  )
 
   p <- p %>%
     plotly::event_register("plotly_hover") %>%
@@ -4099,7 +4612,7 @@ plotlyMA <- function(x, y, names, source = "plot1",
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = "#f23451"
+            color = colors["up"]
           ),
           showlegend = showlegend
         )
@@ -4112,7 +4625,7 @@ plotlyMA <- function(x, y, names, source = "plot1",
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = "#1f77b4"
+            color = colors["down"]
           ),
           showlegend = showlegend
         )
@@ -4126,7 +4639,7 @@ plotlyMA <- function(x, y, names, source = "plot1",
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = "#1f77b4"
+            color = colors["notsig"]
           ),
           showlegend = showlegend
         )
@@ -4134,11 +4647,11 @@ plotlyMA <- function(x, y, names, source = "plot1",
   }
 
   if (!is.null(label) && length(label) > 0) {
-    i2 <- which(names %in% label)
+    i2 <- which(names %in% label | label.names %in% label)
     if (color_up_down) {
       upreg <- y[i2] > 0
       dwreg <- y[i2] < 0
-      annot_text <- names[i2][upreg]
+      annot_text <- label.names[i2][upreg]
       if (length(annot_text) == 0) annot_text <- ""
       p <- p %>%
         plotly::add_annotations(
@@ -4147,14 +4660,14 @@ plotlyMA <- function(x, y, names, source = "plot1",
           text = annot_text,
           font = list(
             size = 12 * label.cex,
-            color = "#f23451"
+            color = colors["up"]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
           yshift = 2,
           textposition = "top"
         )
-      annot_text <- names[i2][dwreg]
+      annot_text <- label.names[i2][dwreg]
       if (length(annot_text) == 0) annot_text <- ""
       p <- p %>%
         plotly::add_annotations(
@@ -4163,7 +4676,7 @@ plotlyMA <- function(x, y, names, source = "plot1",
           text = annot_text,
           font = list(
             size = 12 * label.cex,
-            color = "#1f77b4"
+            color = colors["down"]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4175,10 +4688,10 @@ plotlyMA <- function(x, y, names, source = "plot1",
         plotly::add_annotations(
           x = x[i2],
           y = y[i2],
-          text = names[i2],
+          text = label.names[i2],
           font = list(
             size = 12 * label.cex,
-            color = "#1f77b4"
+            color = colors["notsig"]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4188,8 +4701,8 @@ plotlyMA <- function(x, y, names, source = "plot1",
     }
   }
 
-  x1 <- 1.05 * max(x)
-  yy <- 1.05 * max(abs(y))
+  x1 <- 1.05 * max(x, na.rm = TRUE)
+  yy <- 1.05 * max(abs(y), na.rm = TRUE)
   abline1 <- list(
     type = "line", y0 = -lfc, y1 = -lfc, x0 = 0, x1 = x1,
     line = list(dash = "dot", width = 1, color = "grey")
@@ -4199,7 +4712,7 @@ plotlyMA <- function(x, y, names, source = "plot1",
     line = list(dash = "dot", width = 1, color = "grey")
   )
 
-  xrange <- c(0, 1) * max(abs(x)) * 1.05
+  xrange <- c(0, 1) * max(abs(x), na.rm = TRUE) * 1.05
   xrange <- range(x, na.rm = TRUE)
   yrange <- c(-1, 1) * max(abs(y), na.rm = TRUE) * 1.05
   xaxis <- list(title = xlab, range = xrange, gridwidth = 0.2, showgrid = FALSE)
@@ -4263,19 +4776,49 @@ plotlyMA <- function(x, y, names, source = "plot1",
 #' @return A plotly interactive volcano plot object.
 #'
 #' @export
-plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1", "group2"),
-                          xlab = "effect size (logFC)", ylab = "significance (-log10p)",
-                          lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
-                          marker.size = 5, label = NULL, label.cex = 1, color_up_down = TRUE,
-                          marker.type = "scatter", displayModeBar = TRUE, max.absy = NULL) {
+plotlyVolcano <- function(x,
+                          y,
+                          names,
+                          label.names = names,
+                          group.names = c("group1", "group2"),
+                          xlab = "effect size (logFC)",
+                          ylab = "significance (-log10p)",
+                          lfc = 1,
+                          psig = 0.05,
+                          showlegend = TRUE,
+                          highlight = NULL,
+                          marker.size = 5,
+                          label = NULL,
+                          label.cex = 1,
+                          max.absy = NULL,
+                          color_up_down = TRUE,
+                          colors = c(
+                            up = "#f23451", notsig = "#8F8F8F",
+                            down = "#3181de", notsel = "#cccccc88"
+                          ),
+                          title = "Volcano plot",
+                          marker.type = "scatter",
+                          displayModeBar = TRUE,
+                          source = "plot1") {
   if (is.null(highlight)) highlight <- names
-  i0 <- which(!names %in% highlight)
-  i1 <- which(names %in% highlight)
-  p <- plotly::plot_ly(source = source)
+
+  i0 <- which(!names %in% highlight & !label.names %in% highlight)
+  i1 <- which(names %in% highlight | label.names %in% highlight)
+
+  # Detect wich i1 genes are under the thresholds
+  notsig.genes <- which(y <= -log10(psig) | abs(x) < lfc)
+  ib <- intersect(notsig.genes, i1)
+  i1 <- setdiff(i1, ib)
+
+  p <- plotly::plot_ly(
+    source = source,
+    hovertemplate = "<b>%{text}</b><br><b>Effect size</b>: %{x:.2f}<br><b>Significance</b>: %{y:.2f}<extra></extra>"
+  )
   p <- p %>%
     plotly::event_register("plotly_hover") %>%
     plotly::event_register("plotly_selected")
 
+  ## not in highlight, not selected
   if (length(i0)) {
     p <- p %>%
       plotly::add_trace(
@@ -4286,12 +4829,14 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         mode = "markers",
         marker = list(
           size = marker.size,
-          color = "#cccccc"
+          color = colors["notsel"]
         ),
-        showlegend = showlegend
+        showlegend = FALSE
       )
   }
 
+
+  ## highlighted, selected
   if (length(i1)) {
     if (color_up_down) {
       upreg <- x[i1] > 0
@@ -4305,9 +4850,10 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = "#f23451"
+            color = colors["up"]
           ),
-          showlegend = showlegend
+          showlegend = showlegend,
+          name = "Up"
         )
       p <- p %>%
         plotly::add_trace(
@@ -4318,9 +4864,10 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = "#1f77b4"
+            color = colors["down"]
           ),
-          showlegend = showlegend
+          showlegend = showlegend,
+          name = "Down"
         )
     } else {
       p <- p %>%
@@ -4332,19 +4879,40 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = "#1f77b4"
+            color = "black"
           ),
           showlegend = showlegend
         )
     }
   }
 
+  ## highlighted but not significant
+  if (length(ib)) {
+    p <- p %>%
+      plotly::add_trace(
+        x = x[ib],
+        y = y[ib],
+        text = names[ib],
+        type = marker.type,
+        mode = "markers",
+        marker = list(
+          size = marker.size,
+          color = colors["notsig"]
+        ),
+        showlegend = showlegend,
+        name = "Not significant"
+      )
+  }
+
+  ## label those points that are in 'label' vector. It should match
+  ## either the names or label.names
   if (!is.null(label) && length(label) > 0) {
-    i2 <- which(names %in% label)
+    i2 <- which(names %in% label | label.names %in% label)
+    i2 <- i2[!i2 %in% ib]
     upreg <- x[i2] > 0
     dwreg <- x[i2] < 0
-    if (color_up_down) {
-      annot_text <- names[i2][upreg]
+    if (TRUE && color_up_down) {
+      annot_text <- label.names[i2][upreg]
       if (length(annot_text) == 0) annot_text <- ""
       p <- p %>%
         plotly::add_annotations(
@@ -4353,14 +4921,14 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           text = annot_text,
           font = list(
             size = 12 * label.cex,
-            color = "#f23451"
+            color = colors["up"]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
           yshift = 2,
           textposition = "top"
         )
-      annot_text <- names[i2][dwreg]
+      annot_text <- label.names[i2][dwreg]
       if (length(annot_text) == 0) annot_text <- ""
       p <- p %>%
         plotly::add_annotations(
@@ -4369,7 +4937,7 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           text = annot_text,
           font = list(
             size = 12 * label.cex,
-            color = "#1f77b4"
+            color = colors["down"]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4381,10 +4949,10 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
         plotly::add_annotations(
           x = x[i2],
           y = y[i2],
-          text = names[i2],
+          text = label.names[i2],
           font = list(
             size = 12 * label.cex,
-            color = "#1f77b4"
+            color = "black"
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4392,10 +4960,28 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
           textposition = "top"
         )
     }
-  }
+    idl <- which(names[ib] %in% label)
+    if (length(idl)) {
+      p <- p %>%
+        plotly::add_annotations(
+          x = x[ib][idl],
+          y = y[ib][idl],
+          text = label.names[ib][idl],
+          font = list(
+            size = 12 * label.cex,
+            color = colors["notsig"]
+          ),
+          showarrow = FALSE,
+          yanchor = "bottom",
+          yshift = 2,
+          textposition = "top"
+        )
+    }
+  } ## end of if-label
 
+  ## draw vertical logFC threshold lines at specified logFC
   y0 <- -log10(psig)
-  y1 <- 1.05 * max(y, na.rm = TRUE)
+  y1 <- 0.95 * max(y, na.rm = TRUE)
   xx <- 1.05 * max(abs(x), na.rm = TRUE)
   abline1 <- list(
     type = "line", x0 = -lfc, x1 = -lfc, y0 = 0, y1 = y1,
@@ -4405,17 +4991,23 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
     type = "line", x0 = +lfc, x1 = +lfc, y0 = 0, y1 = y1,
     line = list(dash = "dot", width = 1, color = "grey")
   )
+  ## draw horizontal significance lines at p=0.05
   abline3 <- list(
     type = "line", x0 = -xx, x1 = +xx, y0 = y0, y1 = y0,
     line = list(dash = "dot", width = 1, color = "grey")
   )
-  max.absx <- max(max(abs(x), na.rm = TRUE), lfc * 1.2, na.rm = TRUE)
+  if (lfc == 0) {
+    significance.lines <- list(abline3)
+  } else {
+    significance.lines <- list(abline1, abline2, abline3)
+  }
 
+  ## calculate explicit ranges for x and y so we can add some padding.
+  max.absx <- max(max(abs(x), na.rm = TRUE), lfc * 1.2, na.rm = TRUE)
   if (is.null(max.absy)) {
     max.absy <- max(max(abs(y), na.rm = TRUE), y0 * 1.2, na.rm = TRUE)
   }
   xrange <- c(-1, 1) * max.absx * 1.05
-
   if (min(x, na.rm = TRUE) >= 0) xrange <- c(0, 1) * max.absx * 1.05
   yrange <- c(0, 1) * max.absy * 1.05
   xaxis <- list(title = xlab, range = xrange, showgrid = FALSE)
@@ -4423,13 +5015,13 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
 
   p <- p %>%
     plotly::layout(
-      shapes = list(abline1, abline2, abline3),
-      xaxis = xaxis, yaxis = yaxis,
+      shapes = significance.lines,
+      xaxis = xaxis,
+      yaxis = yaxis,
       showlegend = showlegend,
       hovermode = "closest",
       dragmode = "select"
     ) %>%
-    plotly_modal_default() %>%
     plotly::layout(
       margin = list(l = 0, b = 1, t = 10, r = 10),
       font = list(size = 12),
@@ -4445,15 +5037,13 @@ plotlyVolcano <- function(x, y, names, source = "plot1", group.names = c("group1
 #' @export
 plotlyVolcano_multi <- function(FC,
                                 Q,
-                                names = NULL,
                                 by_sig = TRUE,
                                 fdr = 0.05,
                                 lfc = 0,
-                                gset = NULL,
                                 label = NULL,
                                 share_axis = FALSE,
-                                title_y = "significance (-log10q)",
-                                title_x = "effect size (log2FC)",
+                                title_y = "ylab",
+                                title_x = "xlab",
                                 cex = 3, ## marker size
                                 label.cex = 1, ## label size
                                 yrange = 0.5,
@@ -4467,15 +5057,17 @@ plotlyVolcano_multi <- function(FC,
                                 layout_args = list(),
                                 highlight = NULL,
                                 ...) {
+  dots <- list(...)
+
   ## Get tables and genes
   fc <- as.matrix(FC)
   qv <- as.matrix(Q)
-  if (is.null(names)) {
-    all_genes <- rownames(FC)
-  } else {
-    all_genes <- names
-  }
   titles <- colnames(fc)
+
+  all_genes <- rownames(FC)
+  all_labels <- all_genes
+  if ("names" %in% names(dots)) all_genes <- dots$names
+  if ("label.names" %in% names(dots)) all_labels <- dots$label.names
 
   # Prepare collection list
   nplots <- min(24, length(titles))
@@ -4487,21 +5079,27 @@ plotlyVolcano_multi <- function(FC,
     title_i <- titles[i]
 
     # Set marker colour group
+    hi.genes <- NULL
     if (by_sig) {
       is.sig <- (qval <= fdr & abs(fx) >= lfc)
-      sig.genes <- all_genes[is.sig]
-    } else if (!is.null(gset)) {
-      sig.genes <- all_genes[all_genes %in% gset]
-    } else {
-      sig.genes <- highlight
+      hi.genes <- all_genes[is.sig]
+    }
+    if (!is.null(highlight)) {
+      hi.genes1 <- all_genes[all_genes %in% highlight | all_labels %in% highlight]
+      if (!is.null(hi.genes)) {
+        hi.genes <- intersect(hi.genes, hi.genes1)
+      } else {
+        hi.genes <- hi.genes1
+      }
     }
 
     # Take -log and add 1e-12 to remove 0, and avoid Infs
     qval <- -log10(qval + 1e-12)
 
     # Set labels
-    if (!is.null(label) && is.matrix(label)) {
-      label <- label[, i]
+    sub.label <- label
+    if (!is.null(label) && is.list(label)) {
+      sub.label <- label[[i]]
     }
 
     # Set title
@@ -4515,11 +5113,10 @@ plotlyVolcano_multi <- function(FC,
     sub_plots[[i]] <- plotlyVolcano(
       x = fx,
       y = qval,
-      names = all_genes,
+      label = sub.label,
       marker.type = "scattergl",
       marker.size = cex,
-      highlight = sig.genes,
-      label = label,
+      highlight = hi.genes,
       label.cex = label.cex,
       group.names = c("group1", "group0"),
       psig = fdr,
@@ -4531,8 +5128,9 @@ plotlyVolcano_multi <- function(FC,
     ) %>%
       plotly::add_annotations(
         text = paste("<b>", title_i, "</b>"),
-        font = list(size = 16),
+        font = list(size = 15),
         showarrow = FALSE,
+        bgcolor = "white",
         xanchor = "centre",
         yanchor = "bottom",
         x = 0,
@@ -4553,26 +5151,41 @@ plotlyVolcano_multi <- function(FC,
   }
   suppressWarnings(
     all_plts <- plotly::subplot(sub_plots,
-      nrows = n_rows, margin = interplot_margin,
-      titleY = FALSE, titleX = FALSE, shareX = shareX, shareY = shareY
+      nrows = n_rows,
+      margin = interplot_margin,
+      titleY = FALSE,
+      titleX = FALSE,
+      shareX = shareX,
+      shareY = shareY
     ) %>%
       # Add common axis titles
       plotly::layout(
         annotations = modifyList(list(
           list(
-            x = title_y_offset, y = 0.5, text = title_y,
+            x = title_y_offset,
+            y = 0.5,
+            text = title_y,
             font = list(size = 13),
             textangle = 270,
-            showarrow = FALSE, xref = "paper", yref = "paper"
+            showarrow = FALSE,
+            xref = "paper",
+            yref = "paper"
           ),
           list(
-            x = 0.5, y = title_x_offset, text = title_x,
+            x = 0.5,
+            y = title_x_offset,
+            text = title_x,
             font = list(size = 13),
-            showarrow = FALSE, xref = "paper", yref = "paper"
+            showarrow = FALSE,
+            xref = "paper",
+            yref = "paper"
           )
         ), annotation_args),
         margin = modifyList(
-          list(l = margin_l, b = margin_b),
+          list(
+            l = margin_l,
+            b = margin_b
+          ),
           layout_args
         )
       )
@@ -4748,11 +5361,11 @@ plotlyCytoplot <- function(pgx,
   xlab1 <- paste(gene1, lab.unit, collapse = "  ")
   ylab1 <- paste(gene2, lab.unit, collapse = "  ")
   xaxis <- list(
-    title = xlab1, range = range(x1), gridwidth = 0.2, showgrid = TRUE, showline = TRUE,
+    title = xlab1, range = range(x1, na.rm = TRUE), gridwidth = 0.2, showgrid = TRUE, showline = TRUE,
     zerolinewidth = 0, zerolinecolor = "#fff", autorange = TRUE
   )
   yaxis <- list(
-    title = ylab1, range = range(x2), gridwidth = 0.2, showgrid = TRUE, showline = TRUE,
+    title = ylab1, range = range(x2, na.rm = TRUE), gridwidth = 0.2, showgrid = TRUE, showline = TRUE,
     zerolinewidth = 0, zerolinecolor = "#fff", autorange = TRUE
   )
 
@@ -4946,10 +5559,10 @@ iheatmapr.add_col_annotation <- function(p,
       if (!is.null(colors) && colnames(x)[i] %in% names(colors)) {
         tmp_colors <- colors[[colnames(x)[i]]]
       } else {
-        tmp_colors <- pick_continuous_colors(
+        tmp_colors <- iheatmapr:::pick_continuous_colors(
           zmid = 0,
-          zmin = min(x[, i]),
-          zmax = max(x[, i]), p
+          zmin = min(x[, i], na.rm = TRUE),
+          zmax = max(x[, i], na.rm = TRUE), p
         )
       }
       p <- iheatmapr::add_col_signal(p,
@@ -4974,7 +5587,7 @@ iheatmapr.add_col_annotation <- function(p,
 }
 
 
-#' Split heatmap from matrix
+#' Split heatmap from matrix using iHeatmapR
 #'
 #' @param X Numeric data matrix
 #' @param annot Data frame with row and column annotations
@@ -4985,7 +5598,7 @@ iheatmapr.add_col_annotation <- function(p,
 #' @param row_clust Cluster rows? Default is TRUE.
 #' @param row_annot_width Width for row annotations. Default is 0.03.
 #' @param scale Scaling for data. Default is "row.center".
-#' @param colors Vector of colors to use. Default is RColorBrewer Set1.
+#' @param colors Vector of colors to use for annotation. Default is RColorBrewer Set1.
 #' @param lmar Label margin parameter. Default is 60.
 #' @param rowcex Row text size scaling. Default is 1.
 #' @param colcex Column text size scaling. Default is 1.
@@ -5003,7 +5616,7 @@ iheatmapr.add_col_annotation <- function(p,
 pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NULL,
                                        xtips = NULL, ytips = NULL, row_clust = TRUE,
                                        row_annot_width = 0.03, scale = "row.center",
-                                       colors = NULL, lmar = 60,
+                                       colors = NULL, lmar = 60, na_text = NULL,
                                        rowcex = 1, colcex = 1, show_legend = TRUE,
                                        return_x_matrix = FALSE) {
   ## constants
@@ -5041,7 +5654,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   ## ------ split Y-axis (genes) by factor
   hc.order <- function(x) {
     suppressWarnings(dd <- stats::as.dist(1 - stats::cor(t(x), use = "pairwise")))
-    if (sum(is.na(dd))) dd[is.na(dd)] <- 1
+    if (sum(is.na(dd))) dd[is.na(dd) | is.nan(dd)] <- 1
     hc <- fastcluster::hclust(dd, method = "ward.D2")
     rownames(x)[hc$order]
   }
@@ -5056,7 +5669,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     kk <- unlist(kk)
     kk <- kk[1:(length(kk) - 1)] ## remove trailing spacer
     idx <- idx[1:(length(idx) - 1)]
-    X <- rbind(X, "   " = 0)[kk, ]
+    X <- rbind(X, "   " = NA)[kk, ]
 
     ## invert
     X <- X[nrow(X):1, ]
@@ -5116,7 +5729,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   )
 
   x1 <- xx[[1]]
-
+  zmax <- max(abs(X), na.rm = TRUE)
 
   plt <- iheatmapr::main_heatmap(
     x1,
@@ -5124,6 +5737,10 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     colorbar_grid = grid_params,
     x = xtips[colnames(x1)],
     y = ytips[rownames(x1)],
+    colors = c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")),
+    zmid = 0,
+    zmin = -zmax,
+    zmax = zmax,
     tooltip = tooltip,
     layout = list(margin = mar)
   )
@@ -5162,8 +5779,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     i <- 2
     for (i in 2:length(xx)) {
       x1 <- xx[[i]]
-
-
       hc <- NULL
       if (NCOL(x1) > 1) {
         hc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(x1, use = "pairwise")))
@@ -5175,6 +5790,10 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
           name = "expression",
           x = xtips[colnames(x1)],
           y = ytips[rownames(x1)],
+          colors = c("royalblue3", "#EEEEE4", "indianred3"),
+          zmid = 0,
+          zmin = -zmax,
+          zmax = zmax,
           tooltip = tooltip,
           size = sizes[i],
           buffer = 0.007 * ex
@@ -5213,10 +5832,14 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
 
   ## ----------- row annotation (i.e. gene groups)
   if (!is.null(idx) && !is.null(row_annot_width) && row_annot_width > 0) {
+    cls <- list("gene.module" = c(omics_pal_d("muted_light")(nlevels(as.factor(idx)))))
+    if (length(cls[[1]]) == 1) {
+      cls[[1]] <- rep(cls[[1]], 2)
+    }
     plt <- iheatmapr::add_row_annotation(
       plt, data.frame("gene.module" = as.factor(idx)),
       size = row_annot_width * ex,
-      colors = list("gene.module" = c(omics_pal_d("muted_light")(nlevels(as.factor(idx))))),
+      colors = cls,
       show_colorbar = show_legend
     )
   }
@@ -5229,7 +5852,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     gnames <- shortstring(gnames, 25) ## shorten
     gnames <- sub("   ", "-", gnames)
 
-    maxlen <- max(sapply(gnames, nchar))
+    maxlen <- max(sapply(gnames, nchar), na.rm = TRUE)
     w <- ifelse(maxlen >= 20, 0.45, 0.20)
     s1 <- ifelse(maxlen >= 20, 9, 11) * rowcex
     plt <- iheatmapr::add_row_labels(
@@ -5237,6 +5860,12 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
       side = "right", ticktext = gnames,
       size = w * ex, font = list(size = s1)
     )
+  }
+
+  if (0) {
+    ## ---------- Always convert to plotly??? (new)
+    plt <- plt %>% iheatmapr::to_plotly_list()
+    plt <- plotly::as_widget(plt)
   }
 
   if (return_x_matrix) {
@@ -5248,6 +5877,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     return(plt)
   }
 }
+
 
 
 #' Box plot using plotly
@@ -5364,7 +5994,7 @@ pgx.barplot.PLOTLY <- function(
         data[y],
         list(data[[x]]),
         function(val) {
-          c(mean = mean(val), sd = stats::sd(val))
+          c(mean = mean(val, na.rm = TRUE), sd = stats::sd(val, na.rm = TRUE))
         }
       )
     )
@@ -5419,8 +6049,8 @@ pgx.barplot.PLOTLY <- function(
       hoverinfo = hoverinfo,
       hovertemplate = paste0(
         "<b>%{hovertext}</b><br>",
-        "%{yaxis.title.text}: %{y:", hoverformat, "}<br>",
-        "<extra></extra>", x
+        "<b>%{yaxis.title.text}:</b> %{y:", hoverformat, "}<br>",
+        "<extra></extra>"
       ),
       showlegend = show_legend
     )
@@ -5466,16 +6096,25 @@ pgx.barplot.PLOTLY <- function(
   return(p)
 }
 
-
 #' @export
-pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
-                               plotlib = "base", filter = NULL,
-                               cexCol = 1.4, cexRow = 1,
-                               normalize = FALSE, rotate = FALSE,
-                               maxterm = 40, maxfc = 100,
+pgx.plotActivation <- function(pgx,
+                               features = NULL,
+                               contrasts = NULL,
+                               what = "geneset",
+                               matrix = NULL,
+                               plotlib = "base",
+                               filter = NULL,
+                               cexCol = 1.4,
+                               cexRow = 1,
+                               normalize = FALSE,
+                               rotate = FALSE,
+                               maxterm = 40,
+                               maxfc = 100,
                                mar = c(15, 30),
-                               tl.cex = 0.85, row.nchar = 60,
-                               colorbar = FALSE) {
+                               tl.cex = 0.85,
+                               row.nchar = 60,
+                               showscale = TRUE,
+                               cexBar = 0.66) {
   if (what == "geneset") {
     score <- pgx.getMetaMatrix(pgx, level = "geneset")$fc
   }
@@ -5484,6 +6123,10 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   }
   if (what == "drugs") {
     score <- pgx$drugs[[1]]$X
+  }
+  if (what == "matrix") {
+    if (is.null(matrix)) stop("must provide matrix")
+    score <- matrix
   }
   dim(score)
 
@@ -5501,8 +6144,16 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
     }
   }
 
+  if (!is.null(features)) {
+    features <- intersect(features, rownames(score))
+    score <- score[features, , drop = FALSE]
+  }
+
   ## max number terms
-  score <- score[head(order(-rowSums(score**2, na.rm = TRUE)), maxterm), , drop = FALSE]
+  score <- score[order(-rowSums(score**2, na.rm = TRUE)), , drop = FALSE]
+
+  ## max number terms
+  score <- head(score, maxterm)
 
   ## max comparisons/FC
   score <- score[, head(order(-colSums(score**2, na.rm = TRUE)), maxfc), drop = FALSE]
@@ -5512,13 +6163,8 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   ## normalize colums
   if (normalize) {
     ## column scale???
-    score <- t(t(score) / (1e-8 + sqrt(colMeans(score**2, na.rm = TRUE))))
+    score <- t(t(score) / (1e-8 + apply(abs(score), 2, max, na.rm = TRUE)))
   }
-  score <- score / max(abs(score), na.rm = TRUE) ## global normalize
-  score <- sign(score) * abs(score)**0.5 ## fudging for better colors???
-
-  message("dim.score = ", paste(dim(score), collapse = "x"))
-  message("NCOL.score = ", NCOL(score))
 
   if (NCOL(score) == 1) {
     score <- score[order(-score[, 1]), 1, drop = FALSE]
@@ -5546,6 +6192,9 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   if (rotate) score <- t(score)
 
   bluered.pal <- colorRamp(colors = c("royalblue3", "#ebeffa", "white", "#faeeee", "indianred3"))
+  bluered.pal <- colorRamp(colors = c("royalblue3", "grey90", "indianred3"))
+  bluered.pal <- colorRamp(playbase::omics_pal_c("blue_red_grey", reverse = TRUE)(30))
+
   score <- score[nrow(score):1, , drop = FALSE]
   x_axis <- colnames(score)
   y_axis <- rownames(score)
@@ -5566,45 +6215,56 @@ pgx.plotActivation <- function(pgx, contrasts = NULL, what = "geneset",
   }
   if (plotlib == "plotly") {
     fig <- plotly::plot_ly(
-      x = x_axis, y = y_axis,
-      z = score, type = "heatmap",
+      x = x_axis,
+      y = y_axis,
+      z = score,
+      zauto = FALSE,
+      zmin = -max(abs(score)),
+      zmax = +max(abs(score)),
+      type = "heatmap",
       colors = bluered.pal,
-      showscale = colorbar
-    )
+      showscale = showscale
+    ) %>%
+      plotly::colorbar(
+        len = 0.5 * cexBar,
+        thickness = 30 * cexBar
+      )
   }
   return(fig)
 }
 
 
 #' @export
-pgx.topTable <- function(pgx, contrast = 1, level = "gene", dir = "up", n = 10, plot = FALSE) {
-  if (level == "gene") {
-    M <- pgx$gx.meta$meta[[contrast]]
+visPrint <- function(visnet, file, width = 3000, height = 3000, delay = 0, zoom = 1) {
+  is.pdf <- grepl("pdf$", file)
+  if (is.pdf) {
+    width <- width * 600
+    height <- height * 600
   }
-  if (level == "geneset") {
-    M <- pgx$gset.meta$meta[[contrast]]
+  vis2 <- htmlwidgets::createWidget(
+    name = "visNetwork",
+    x = visnet$x,
+    width = width, height = height,
+    package = "visNetwork"
+  )
+  tmp.html <- paste0(tempfile(), "-visnet.html")
+  tmp.png <- paste0(tempfile(), "-webshot.png")
+  visNetwork::visSave(vis2, file = tmp.html)
+  webshot2::webshot(
+    url = tmp.html,
+    file = tmp.png,
+    selector = "#htmlwidget_container",
+    delay = delay,
+    zoom = zoom,
+    cliprect = "viewport",
+    vwidth = width,
+    vheight = height
+  )
+  if (is.pdf) {
+    cmd <- paste("convert", tmp.png, "-density 600", file)
+    system(cmd)
+  } else {
+    file.copy(tmp.png, file, overwrite = TRUE)
   }
-  if (dir == "up") {
-    sel <- head(order(-M$meta.fx), n)
-  }
-  if (dir == "down") {
-    sel <- head(order(M$meta.fx), n)
-  }
-  if (dir == "both") {
-    sel <- c(head(order(-M$meta.fx), n), tail(order(-M$meta.fx), n))
-  }
-  sel <- unique(sel)
-  M <- M[sel, c("meta.fx", "meta.q")]
-  colnames(M) <- sub("meta.fx", "logFC", colnames(M))
-  M <- format(M, digits = 3)
-  aa <- pgx$genes[rownames(M), c("gene_name", "gene_title")]
-  aa <- cbind(aa, M)
-  aa$gene_title <- substring(aa$gene_title, 1, 50)
-  rownames(aa) <- NULL
-  if (plot) {
-    ## Plot your table with table Grob in the library(gridExtra)
-    tab <- gridExtra::tableGrob(aa, rows = NULL)
-    gridExtra::grid.arrange(tab)
-  }
-  aa
+  unlink(tmp.html)
 }

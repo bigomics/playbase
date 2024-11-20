@@ -181,7 +181,7 @@ pgx.poolCells <- function(counts, ncells, groups = NULL, stats = "sum",
   }
   if (stats == "sum") {
     pool.counts <- tapply(1:ncol(counts), cluster.id, function(ii) {
-      Matrix::rowSums(counts[, ii, drop = FALSE])
+      Matrix::rowSums(counts[, ii, drop = FALSE], na.rm = TRUE)
     })
   }
   pool.counts <- do.call(cbind, pool.counts)
@@ -465,7 +465,7 @@ pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
   ## require(SuperCell)
 
   X <- log2(1 + edgeR::cpm(counts) / 100)
-  if (is.null(group) && "group" %in% colnames(meta)) {
+  if (!is.null(group) && "group" %in% colnames(meta)) {
     cat("using group detected in meta\n")
     group <- meta[, "group"]
   }
@@ -477,11 +477,11 @@ pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
     cell.split.condition = group
   )
 
+  meta <- as.data.frame(meta)
   dsel <- which(sapply(meta, class) %in% c("factor", "character", "logical"))
   group.argmax <- function(x) tapply(x, SC$membership, function(x) names(which.max(table(x))))
   dmeta <- apply(meta[, dsel, drop = FALSE], 2, function(x) as.character(group.argmax(x)))
   rownames(dmeta) <- sort(unique(SC$membership))
-
   csel <- which(sapply(meta, class) %in% c("numeric", "integer"))
   group.mean <- function(x) tapply(x, SC$membership, function(x) mean(x, na.rm = TRUE))
   cmeta <- apply(meta[, csel, drop = FALSE], 2, function(x) group.mean(x))
@@ -504,7 +504,7 @@ pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
 pgx.supercellX <- function(X, meta, group = NULL, gamma = 20) {
   ## require(SuperCell)
 
-  if (is.null(group) && "group" %in% colnames(meta)) {
+  if (!is.null(group) && "group" %in% colnames(meta)) {
     cat("using group detected in meta\n")
     group <- meta[, "group"]
   }
@@ -625,12 +625,17 @@ pgx.createSeuratObject <- function(counts, samples, sct = TRUE) {
   obj
 }
 
+
+#' @export
 pgx.runAzimuth <- function(counts, reference = "pbmcref") {
+  require(Seurat)
+  options(future.globals.maxSize = 4 * 1024^3) ## needed
   obj <- pgx.createSeuratObject(counts, samples = NULL, sct = FALSE)
   obj1 <- Azimuth::RunAzimuth(obj, reference = reference, verbose = FALSE)
   k1 <- !(colnames(obj1@meta.data) %in% colnames(obj@meta.data))
   k2 <- !grepl("score$|refAssay$", colnames(obj1@meta.data))
-  obj1@meta.data[, (k1 & k2)]
+  meta1 <- obj1@meta.data[, (k1 & k2)]
+  return(meta1)
 }
 
 

@@ -21,8 +21,8 @@ contrasts2pheno <- function(contrasts, samples) {
   M[is.na(M)] <- "_"
   pheno <- paste0("p", apply(M, 1, paste0, collapse = ""))
   ## check if pheno equals one of canonical phenotypes
-  col1 <- apply(samples, 2, function(x) all(colSums(table(x, pheno) != 0) == 1))
-  row1 <- apply(samples, 2, function(x) all(rowSums(table(x, pheno) != 0) == 1))
+  col1 <- apply(samples, 2, function(x) all(colSums(table(x, pheno) != 0, na.rm = TRUE) == 1))
+  row1 <- apply(samples, 2, function(x) all(rowSums(table(x, pheno) != 0, na.rm = TRUE) == 1))
   if (any(col1 & row1)) {
     sel <- names(which(col1 & row1))[1]
     pheno <- samples[, sel]
@@ -725,6 +725,9 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
     x
   }
 
+  ## any data.frame to matrix
+  contr.matrix <- as.matrix(contr.matrix)
+
   # convert values <0 to -1 and values >0 to 1 (for old design matrix with float values)
   # sign function will fail when non-numeric values are present, use try catch to preserve input
   contr.matrix <- tryCatch(sign(contr.matrix), error = function(e) contr.matrix)
@@ -734,9 +737,10 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
   is.num <- is.num && all(c(-1, 1) %in% contr.matrix) ## must have at least -1 and 1!!
   if (!is.num) {
     ## message("[contrastAsLabels] already as label!")
+    contr.matrix[which(contr.matrix == "")] <- NA
     return(contr.matrix)
   }
-  K <- data.frame(contr.matrix[, 0])
+  K <- contr.matrix[, 0]
   i <- 1
   for (i in 1:ncol(contr.matrix)) {
     contr <- as.numeric(contr.matrix[, i])
@@ -744,6 +748,7 @@ contrastAsLabels <- function(contr.matrix, as.factor = FALSE) {
     k1 <- contrastAsLabels.col(contr, contr.name)
     K <- cbind(K, k1)
   }
+  K[which(K == "")] <- NA
   colnames(K) <- colnames(contr.matrix)
   rownames(K) <- rownames(contr.matrix)
   return(K)
@@ -830,19 +835,18 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
   if (is.null(colnames(contrasts))) {
     stop("contrasts must have column names")
   }
-
+  contrasts <- type.convert(contrasts, as.is = TRUE)
   is.numeric.matrix <- inherits(contrasts, "matrix") &&
     all(apply(contrasts, 2, class) %in% c("integer", "numeric"))
   is.numeric.df <- inherits(contrasts, "data.frame") &&
     all(apply(contrasts, 2, class) %in% c("integer", "numeric"))
   is.numeric.contrast <- is.numeric.matrix | is.numeric.df
-  #  num.values <- c(-1, 0, 1, NA, "NA", "na", "", " ")
-  #  is.numeric.contrast <- all(as.vector(unlist(contrasts)) %in% num.values)
-  is.numeric.contrast
-
   if (is.numeric.contrast) {
-    contrasts[contrasts %in% c(NA, "NA", "na", "")] <- 0
-    contrasts <- sign(contrasts)
+    has.negpos <- any(contrasts < 0) && any(contrasts > 0)
+    if (has.negpos) {
+      contrasts[contrasts %in% c(NA, "NA", "na", "")] <- 0
+      contrasts <- sign(contrasts)
+    }
   }
 
   ## first match of group (or condition) in colum names, regard as group column

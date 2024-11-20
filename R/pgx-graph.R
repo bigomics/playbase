@@ -578,9 +578,9 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
 }
 
 
-## ===================================================================================
-## ================================ GO graph functions ===============================
-## ===================================================================================
+## ================================================================================
+## ============================= GO graph functions ===============================
+## ================================================================================
 
 
 #' Compute Core GO Graph
@@ -618,7 +618,6 @@ pgx.computeCoreGOgraph <- function(pgx, fdr = 0.05) {
   subgraphs <- list()
 
   i <- 1
-  comparison <- comparisons[1]
   for (i in 1:length(comparisons)) {
     subgraphs[[i]] <- pgx.getSigGO(
       pgx,
@@ -687,8 +686,6 @@ getGOgraph <- function() {
   terms <- AnnotationDbi::toTable(GO.db::GOTERM)[, 2:5]
   terms <- terms[!duplicated(terms[, 1]), ]
   rownames(terms) <- terms[, 1]
-
-
   BP <- AnnotationDbi::toTable(GO.db::GOBPPARENTS)
   MF <- AnnotationDbi::toTable(GO.db::GOMFPARENTS)
   CC <- AnnotationDbi::toTable(GO.db::GOCCPARENTS)
@@ -697,7 +694,6 @@ getGOgraph <- function() {
   go_graph <- igraph::graph_from_data_frame(all.parents, vertices = terms)
   return(go_graph)
 }
-
 
 #' @title Get Significant GO Terms
 #'
@@ -723,8 +719,6 @@ getGOgraph <- function() {
 #'
 #' @export
 pgx.getSigGO <- function(pgx, comparison, methods = NULL, fdr = 0.20, nterms = 500, ntop = 100) {
-  ## methods = NULL;fdr = 0.20;nterms = 500;ntop = 100
-
   mx <- pgx$gset.meta$meta[[comparison]]
   jj <- grep("^GO", rownames(mx))
 
@@ -760,7 +754,6 @@ pgx.getSigGO <- function(pgx, comparison, methods = NULL, fdr = 0.20, nterms = 5
   colnames(vinfo) <- c("geneset", "score", "fc", "pv", "qv") ## need
   rownames(vinfo) <- rownames(mx)
   remove(fc)
-  dim(vinfo)
 
   terms <- AnnotationDbi::toTable(GO.db::GOTERM)[, 2:5]
   colnames(terms)[1] <- "go_id"
@@ -827,9 +820,327 @@ pgx.getSigGO <- function(pgx, comparison, methods = NULL, fdr = 0.20, nterms = 5
   return(sub1)
 }
 
-## ===================================================================================
-## ============================= other graph functions ===============================
-## ===================================================================================
+
+IGRAPH.LAYOUTS <- c("fr", "kk", "gem", "drl", "lgl", "sugiyama", "mds", "nicely", "star", "tree", "components")
+IGRAPH.LAYOUTS1 <- c("fr", "drl", "sugiyama", "nicely")
+plot_igraph <- function(G, layout = IGRAPH.LAYOUTS[1], ...) {
+  pos <- NULL
+  for (y in layout) {
+    pos <- NULL
+    if (y == "fr") pos <- layout_with_fr(G)
+    if (y == "kk") pos <- layout_with_kk(G)
+    ##    if(y == "gem") pos <- layout_with_gem(G)
+    if (y == "drl") pos <- layout_with_drl(G)
+    if (y == "lgl") pos <- layout_with_lgl(G)
+    if (y == "sugiyama") pos <- layout_with_sugiyama(G, vgap = 0.1)$layout
+    if (y == "mds") pos <- layout_with_mds(G)
+    if (y == "nicely") pos <- layout_nicely(G)
+    if (y == "star") pos <- layout_as_star(G)
+    if (y == "tree") pos <- layout_as_tree(G)
+    if (y == "components") pos <- layout_components(G)
+    if (!is.null(pos)) {
+      plot(G,
+        layout = pos, main = toupper(y),
+        vertex.size = 1, # vertex.label = V(G)$Term,
+        edge.arrow.width = 0.1,
+        ...
+      )
+    }
+  }
+}
+
+get_children <- function(G, v) {
+  childs <- neighbors(G, v, mode = "in")
+  if (length(childs) == 0) {
+    return(v)
+  }
+  childs <- V(G)$name[childs]
+  vv <- lapply(childs, function(v) get_children(G = G, v))
+  vv <- unique(c(v, unlist(vv)))
+  return(vv)
+}
+
+get_children2 <- function(G, v) {
+  nnb <- sapply(V(G), function(v) neighbors(G, v, mode = "in"))
+  leafs <- names(which(sapply(nnb, length) == 0))
+  vv <- unlist(all_shortest_paths(G, v, leafs, mode = "in")$vpaths)
+  vv <- V(G)$name[unique(vv)]
+  vv <- unique(c(v, vv))
+  return(vv)
+}
+
+plotGOgraph <- function(G = NULL, score = NULL, ontology = NULL,
+                        max.level = NULL, vis.physics = TRUE,
+                        node.size = 8, hierarchical = FALSE,
+                        rm.root = FALSE, ntop = NULL,
+                        ncomp = 7,
+                        plotlib = "igraph.clust") {
+  if (is.null(G)) {
+    G <- playbase::getGOgraph()
+  }
+
+  if (!is.null(ontology)) {
+    G <- subgraph(G, V(G)$Ontology %in% ontology)
+  }
+
+  all.roots <- names(which(degree(G, V(G), mode = "out") == 0))[1]
+  message("roots: ", all.roots)
+  root <- head(all.roots, 1)
+  message("root: ", root, " = ", V(G)[root]$Term)
+
+  ## MST to root
+  sp <- all_shortest_paths(G, root, V(G), mod = "in")
+  all.sp_edges <- unique(unlist(sp$epaths))
+  G <- delete_edges(G, which(!E(G) %in% all.sp_edges))
+
+  ## compute distance to root (=level)
+  go.level <- distances(G, v = root)[1, ]
+  V(G)$level <- go.level
+
+  if (0) {
+    ee <- get.edges(G, E(G))
+    ee <- cbind(V(G)$name[ee[, 1]], V(G)$name[ee[, 2]])
+    wt <- gsetR[cbind(match(ee[, 1], rownames(gsetR)), match(ee[, 2], rownames(gsetR)))]
+    wt <- pmax(wt, 001)
+    wt[is.na(wt)] <- 0.001
+    E(G)$weight <- wt
+  }
+
+  if (!is.null(max.level)) {
+    G <- subgraph(G, which(go.level[V(G)$name] <= max.level))
+  }
+
+  ## prune to include all F nodes and connecting
+  if (!is.null(score)) {
+    ff <- intersect(V(G)$name, names(score))
+    if (!is.null(ntop)) {
+      ## ff <- ff[which(go.level[ff] == max.level)]
+      score1 <- score[ff]
+      score1 <- head(score1[order(-abs(score1))], ntop)
+      ff <- names(score1)
+    }
+    sp <- all_shortest_paths(G, from = root, to = ff, mode = "in")
+    sp.nodes <- unique(unlist(sp$vpaths))
+    G <- subgraph(G, V(G)$name[sp.nodes])
+    V(G)$score <- score[match(V(G)$name, names(score))]
+  }
+  V(G)$score[is.na(V(G)$score)] <- 0
+
+  ## turn to mst
+  G <- mst(G)
+
+  if (rm.root) {
+    G <- subgraph(G, V(G)$name != root)
+  }
+
+  ## detect clusters
+  clust <- cluster_fast_greedy(as.undirected(G))
+  V(G)$cluster <- clust$membership
+
+  ## remove singleton, largest components
+  comp.score <- tapply(V(G)$name, clust$membership, function(v) {
+    sqrt(mean(V(G)[v]$score**2))
+  })
+  top.comp <- head(order(-comp.score), ncomp)
+  clust$top <- top.comp
+
+  ## convert to Visnetwork structure
+  gr <- visNetwork::toVisNetworkData(G)
+  head(gr$nodes)
+  head(gr$edges)
+  table(gr$nodes$Ontology)
+
+  ## set node colors
+  bluered.pal <- colorRamp(playbase::omics_pal_c("blue_red_grey", reverse = TRUE)(30))
+  fc <- score[match(V(G)$name, names(score))]
+  nfc <- 0.5 + 0.5 * (fc / max(abs(fc), na.rm = TRUE))
+  vcol <- bluered.pal(nfc) / 255
+  vcol[is.na(vcol)] <- 1
+  vcol <- rgb(vcol[, 1], vcol[, 2], vcol[, 3])
+  gr$nodes$color <- vcol
+
+  ## set node label and tooltip
+  gr$nodes$label <- as.character(gr$nodes$Term)
+  tt <- paste0(
+    "<b>", gr$nodes$Term, " (", gr$nodes$Ontology,
+    ", L", gr$node$level, ")</b>: ",
+    gr$nodes$Definition
+  )
+  gr$nodes$title <- sapply(tt, function(s) paste(strwrap(s, 60), collapse = "<br>"))
+
+  ## set label size proportional to node degree
+  node.degree <- page_rank(G)$vector * abs(V(G)$score)
+  clust.hubs <- tapply(V(G)$name, clust$membership, function(v) {
+    names(which.max(node.degree[v]))
+  })
+  hubs <- clust.hubs[clust$top]
+  gr$nodes$label[which(!gr$nodes$id %in% hubs)] <- ""
+  label.cex <- (node.degree / max(node.degree, na.rm = TRUE))
+  gr$nodes$font.size <- 100 * label.cex**0.3
+  ## gr$nodes$font.size <- 250 * abs(nfc-0.5)**0.8
+  ## gr$nodes$font.size <- 120 * (node.cex)**1
+
+  ## set node size proportional to score
+  node.score <- abs(V(G)$score)
+  node.cex <- (node.score / max(node.score, na.rm = TRUE))
+  gr$nodes$size <- node.size * 5 * (0.1 + node.cex**0.5)
+
+  ## edge width proportional to weight (i.e. correlation)
+  rr <- 1
+  if (!is.null(gr$edges$rho)) rr <- gr$edges$rho**2
+  rr[is.na(rr)] <- 0
+  gr$edges$width <- 10 * pmax(rr, 0.1)**2
+  ##  gr$edges$length <- 1500 * (1 + (1 - rr)**0.8)
+
+  ## layout
+  pos <- 80 * layout_with_fr(G)
+  # pos <- 5 * layout_with_drl(G)
+  if (hierarchical) {
+    pos <- 10 * layout_with_sugiyama(G, vgap = 100)$layout
+  }
+  gr$nodes$x <- pos[, 1]
+  gr$nodes$y <- pos[, 2]
+
+  plt <- NULL
+  if (plotlib %in% c("vis", "visnet", "visnetwork")) {
+    plt <- visNetwork::visNetwork(
+      gr$nodes, gr$edges,
+      width = "100%", height = 1000
+    ) %>%
+      visNetwork::visNodes(
+        ## font = list(size = 100),
+        scaling = list(min = 1, max = 20)
+      ) %>%
+      visEdges(
+        smooth = FALSE,
+        scaling = list(min = 1, max = 20)
+        ## width = gr$edges$width
+      ) %>%
+      ##  visIgraphLayout() %>%
+      ##  visHierarchicalLayout(direction = "UD") %>%
+      visLayout(improvedLayout = TRUE, hierarchical = hierarchical) %>%
+      visPhysics(enabled = vis.physics, stabilization = FALSE) %>%
+      visNetwork::visOptions(highlightNearest = list(enabled = T, degree = 1, hover = TRUE))
+  }
+
+  if (plotlib == "igraph") {
+    plot(G,
+      layout = pos,
+      vertex.size = node.size * (gr$nodes$size / max(gr$nodes$size, na.rm = TRUE))**0.5,
+      vertex.label = gr$nodes$label,
+      vertex.label.family = "sans",
+      vertex.label.cex = 2 * (gr$nodes$font.size / max(gr$nodes$font.size, na.rm = TRUE)),
+      vertex.color = gr$nodes$color,
+      edge.width = 1 + 0.5 * gr$edges$width,
+      edge.arrow.size = 0.01
+    )
+    title(ontology, line = -3, cex.main = 2.4)
+    G$layout <- pos
+    plt <- G
+  }
+
+  if (plotlib == "igraph.clust") {
+    ngrp <- length(unique(clust$membership))
+    mark.col <- rainbow(ngrp, alpha = 0.08)
+    mark.col[setdiff(1:ngrp, clust$top)] <- "#FFFFFF00"
+    ## mark.col[1:4] <- "#FFFFFF00"
+    plot(clust, G,
+      layout = pos,
+      mark.col = mark.col,
+      mark.border = NA,
+      vertex.size = node.size * (gr$nodes$size / max(gr$nodes$size, na.rm = TRUE))**0.5,
+      vertex.label = gr$nodes$label,
+      vertex.label.family = "sans",
+      vertex.label.cex = 2 * (gr$nodes$font.size / max(gr$nodes$font.size, na.rm = TRUE)),
+      vertex.color = gr$nodes$color,
+      col = gr$nodes$color,
+      edge.width = 1 + 0.5 * gr$edges$width,
+      edge.arrow.size = 0.01
+    )
+    title(ontology, line = -3, cex.main = 2.4)
+    G$layout <- pos
+    plt <- G
+  }
+
+  if (plotlib %in% c("igraph", "igraph.clust")) {
+    return(invisible(plt))
+  }
+  plt
+}
+
+pgx.plotGOgraphs <- function(pgx, contrast) {
+  GMT <- playdata::GSETxGENE
+  gg <- intersect(rownames(pgx$X), colnames(GMT))
+  sel <- grep("^GO", rownames(GMT))
+  GO <- GMT[sel, gg]
+
+  ## compute geneset expression
+  F <- pgx.getMetaMatrix(pgx, level = "gene")$fc
+  S <- gset.rankcor(F[gg, ], GO)$rho
+  X <- pgx$X - rowMeans(pgx$X)
+  gsetX <- gset.rankcor(X, GO)$rho
+
+  gsetR <- cor(t(gsetX))
+  S0 <- S
+  go.id <- sub("[)]$", "", gsub(".*[(]GO_", "GO:", rownames(S)))
+  rownames(S) <- go.id
+  rownames(gsetR) <- colnames(gsetR) <- go.id
+  dim(S)
+
+  ## prune to include all S nodes and connecting
+  full.G <- getGOgraph()
+  ee <- get.edges(full.G, E(full.G))
+  ee <- cbind(V(full.G)$name[ee[, 1]], V(full.G)$name[ee[, 2]])
+  wt <- gsetR[cbind(match(ee[, 1], rownames(gsetR)), match(ee[, 2], rownames(gsetR)))]
+  wt <- wt**2
+  wt[is.na(wt)] <- 0.001
+  E(full.G)$rho <- wt
+
+  ## contrast=1
+  score <- S[, contrast]
+  score1 <- score[match(V(full.G)$name, names(score))]
+  score1[is.na(score1)] <- 0.01
+  ## pr.score <- page_rank(full.G, personalized=score1**2)$vector
+  pr.score <- page_rank(reverse_edges(full.G), personalized = score1**2)$vector
+  table(pr.score == 0)
+  pr.score <- pr.score * score1
+  ## pr.score <- pr.score * sign(score1)
+  pr.score <- pr.score[abs(pr.score) > 0]
+
+  ## par(mfrow=c(1,3), mar=c(1,1,0,1)*2)
+  plotGOgraph(
+    G = full.G, ontology = "BP", score = pr.score, max.level = 99,
+    node.size = 10, ntop = 60
+  )
+  plotGOgraph(
+    G = full.G, ontology = "MF", score = pr.score, max.level = 99,
+    node.size = 10, ntop = 80
+  )
+  plotGOgraph(
+    G = full.G, ontology = "CC", score = pr.score, max.level = 99,
+    node.size = 10, ntop = 80
+  )
+}
+
+go.heatmap <- function(pgx) {
+  goX <- pgx$gsetX[grep("^GO", rownames(pgx$gsetX)), ]
+  goX <- goX[order(-apply(goX, 1, sd)), ]
+  onto <- sub(":.*", "", rownames(goX))
+  ii <- unlist(tapply(1:nrow(goX), onto, head, 20))
+  table(onto[ii])
+  gx.splitmap(goX[ii, ],
+    split = onto[ii],
+    nmax = 60, mar = c(15, 55), ## keysize=0.3, key=FALSE,
+    rownames_width = 160, rowlab.maxlen = 100, show_rownames = 100,
+    scale = "row", dist.method = "euclidean", cexRow = 1.8, cexCol = 1.8
+  )
+}
+
+
+
+## ===============================================================================
+## ========================= other graph functions ===============================
+## ===============================================================================
 
 
 #' Hierarchical Clustering of Graph

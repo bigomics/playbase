@@ -5,7 +5,7 @@
 \title{Calculate group-wise row means (like base::rowsum) from a
 matrix. Faster than matGroupMeans.}
 \usage{
-rowmean(X, group, reorder = TRUE)
+rowmean(X, group = rownames(X), reorder = TRUE)
 }
 \description{
 Calculate group-wise row means (like base::rowsum) from a

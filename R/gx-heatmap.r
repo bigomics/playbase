@@ -30,14 +30,14 @@
 #' }
 #' @export
 gx.markermap <- function(X, splitx, n = 5, ...) {
-  F1 <- tapply(1:ncol(X), splitx, function(i) rowMeans(X[, i, drop = FALSE]))
+  F1 <- tapply(1:ncol(X), splitx, function(i) rowMeans(X[, i, drop = FALSE], na.rm = TRUE))
   F1 <- do.call(cbind, F1)
-  F1 <- F1 - rowMeans(F1)
+  F1 <- F1 - rowMeans(F1, na.rm = TRUE)
   topg <- apply(F1, 2, function(x) Matrix::head(order(-x), n))
   topg <- apply(topg, 2, function(i) rownames(F1)[i])
   gg <- as.vector(topg)
   gg.idx <- as.vector(sapply(colnames(topg), rep, n))
-  playbase::gx.splitmap(X[gg, ], splitx = splitx, split = gg.idx, ...)
+  gx.splitmap(X[gg, ], splitx = splitx, split = gg.idx, ...)
 }
 
 
@@ -64,13 +64,13 @@ gx.markermap <- function(X, splitx, n = 5, ...) {
 #' @export
 gx.PCAheatmap <- function(X, nv = 5, ngenes = 10, ...) {
   if (inherits(X, "list") && "X" %in% names(X)) {
-    X <- X$X - rowMeans(X$X)
+    X <- X$X - rowMeans(X$X, na.rm = TRUE)
   }
   X <- X - rowMeans(X, na.rm = TRUE)
   res <- irlba::irlba(X, nv = nv)
   gg <- apply(res$u, 2, function(x) Matrix::head(rownames(X)[order(-abs(x))], ngenes))
   sx <- paste0("PC.", as.vector(sapply(1:nv, rep, 10)))
-  playbase::gx.splitmap(X[gg, ], split = sx, ...)
+  gx.splitmap(X[gg, ], split = sx, ...)
 }
 
 
@@ -94,13 +94,13 @@ gx.PCAheatmap <- function(X, nv = 5, ngenes = 10, ...) {
 #' @export
 gx.PCAcomponents <- function(X, nv = 20, ngenes) {
   if (inherits(X, "list") && "X" %in% names(X)) X <- X$X
-  res <- irlba::irlba(X - rowMeans(X), nv = nv)
+  res <- irlba::irlba(X - rowMeans(X, na.rm = TRUE), nv = nv)
   for (i in 1:nv) {
     gg <- Matrix::head(rownames(X)[order(-abs(res$u[, i]))], ngenes)
     X1 <- X[gg, ]
-    X1 <- (X1 - rowMeans(X1)) / (1e-4 + apply(X1, 1, stats::sd)) ## scale??
+    X1 <- (X1 - rowMeans(X1, na.rm = TRUE)) / (1e-4 + apply(X1, 1, stats::sd, na.rm = TRUE)) ## scale??
     colnames(X1) <- NULL
-    playbase::gx.imagemap(X1, main = paste0("PC", i), cex = 0.8)
+    gx.imagemap(X1, main = paste0("PC", i), cex = 0.8)
   }
 }
 
@@ -158,7 +158,8 @@ gx.imagemap <- function(X, main = "", cex = 1, cex.main = 1.8, clust = TRUE) {
 }
 
 
-#' Create a split heatmap of gene expression data
+#' Create a split heatmap of gene expression data using
+#' ComplexHeatmap.
 #'
 #' Visualize a gene expression matrix as a heatmap, with samples split into groups.
 #'
@@ -218,7 +219,7 @@ gx.imagemap <- function(X, main = "", cex = 1, cex.main = 1.8, clust = TRUE) {
 #' colnames(gx) <- sample(letters, 10)
 #' # Create a grouping variable
 #'
-#' p <- playbase::gx.splitmap(
+#' p <- gx.splitmap(
 #'   gx,
 #'   scale = "row",
 #'   cluster_rows = FALSE,
@@ -250,6 +251,8 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         denoise = 0,
                         cexRow = 1,
                         cexCol = 1,
+                        na_col = "green",
+                        na_text = NULL,
                         mar = c(5, 5, 5, 5),
                         rownames_width = 25,
                         rowlab.maxlen = 20,
@@ -274,7 +277,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   }
   ## give unique name if duplicated
   if (sum(duplicated(rownames(gx))) > 0) {
-    rownames(gx) <- playbase::tagDuplicates(rownames(gx))
+    rownames(gx) <- tagDuplicates(rownames(gx))
     if (!is.null(row.annot)) rownames(row.annot) <- rownames(gx)
   }
   if (!is.null(split) && length(split) == 1 && split == 1) split <- NULL
@@ -300,7 +303,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   }
   if ("row" %in% scale || "both" %in% scale) {
     gx <- gx - rowMeans(gx, na.rm = TRUE)
-    gx <- gx / (1e-4 + apply(gx, 1, stats::sd, na.rm = TRUE)) ## small EPS maintains SD order!
+    gx <- gx / (1e-4 + matrixStats::rowSds(gx, na.rm = TRUE)) ## small EPS maintains SD order!
   }
   if ("col.center" %in% scale) {
     gx <- t(t(gx) - colMeans(gx, na.rm = TRUE))
@@ -539,13 +542,13 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       zz <- c(zlim[1], zmean, zlim[2])
       if (zlim[1] < 0) zz <- c(zlim[1], 0, zlim[2])
     }
-    col_scale <- circlize::colorRamp2(zz, c("royalblue3", "grey90", "indianred3"))
+    col_scale <- circlize::colorRamp2(zz, c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")))
   } else if (symm.scale) {
     colmax <- 1
     colmax <- max(abs(gx[, ]), na.rm = TRUE)
     col_scale <- circlize::colorRamp2(
       c(-colmax, 0, colmax),
-      c("royalblue3", "grey90", "indianred3")
+      c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))
     )
   } else {
     colmin <- min(gx[, ], na.rm = TRUE)
@@ -553,7 +556,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     colmean <- mean(gx[, ], na.rm = TRUE)
     col_scale <- circlize::colorRamp2(
       c(colmin, colmean, colmax),
-      c("royalblue3", "grey90", "indianred3")
+      c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))
     )
   }
 
@@ -561,12 +564,17 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   grp.order <- 1:ngrp
   if (!is.null(order.groups) && ngrp > 1 && order.groups[1] == "clust") {
     ## Reorder cluster indices based on similarity clustering
-    mx <- do.call(cbind, lapply(grp, function(i) rowMeans(gx[, i, drop = FALSE])))
+    mx <- do.call(cbind, lapply(grp, function(i) rowMeans(gx[, i, drop = FALSE], na.rm = TRUE)))
     mx <- t(scale(t(mx)))
     grp.order <- fastcluster::hclust(stats::dist(t(mx)))$order
   }
   if (!is.null(order.groups) && ngrp > 1 && length(order.groups) == ngrp) {
     grp.order <- match(order.groups, names(grp))
+  }
+
+  # Get plot data (for csv downloads)
+  if (data) {
+    return(gx)
   }
 
   ## ------------- draw heatmap
@@ -594,15 +602,15 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       )
     }
 
-    ## Here NA goes wrong... distance calc should be done manually
-    gx0[is.na(gx0)] <- mean(gx0, na.rm = TRUE) ## TEMPORARY HACK!!
-
-    # Get plot data (for csv downloads)
-    if (data) {
-      return(gx0)
+    cell_fun <- NULL
+    if (!is.null(na_text)) {
+      cell_fun <- function(j, i, x, y, width, height, fill) {
+        grid::grid.text(ifelse(is.na(gx0[i, j]), na_text, ""), x, y)
+      }
     }
 
-    hmap <- hmap + ComplexHeatmap::Heatmap(gx0,
+    hmap <- hmap + ComplexHeatmap::Heatmap(
+      gx0,
       col = col_scale, ## from input
       cluster_rows = cluster_rows,
       cluster_columns = cluster_columns,
@@ -622,7 +630,9 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       show_row_names = FALSE,
       show_column_names = FALSE,
       bottom_annotation = gx0.colnames,
-      column_names_gp = grid::gpar(fontsize = 11 * cexCol)
+      column_names_gp = grid::gpar(fontsize = 11 * cexCol),
+      na_col = na_col,
+      cell_fun = cell_fun
     )
   }
 
@@ -738,7 +748,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
 #' gx <- matrix(rnorm(250)^2, nrow = 25, ncol = 10)
 #' rownames(gx) <- sample(LETTERS, 25)
 #' colnames(gx) <- sample(letters, 10)
-#' p <- playbase::gx.heatmap(gx)
+#' p <- gx.heatmap(gx)
 #' }
 #' @export
 gx.heatmap <- function(gx, values = NULL,
@@ -766,12 +776,12 @@ gx.heatmap <- function(gx, values = NULL,
   ## scaling options
   if ("col" %in% scale || "both" %in% scale) {
     tgx <- t(gx) - colMeans(gx, na.rm = TRUE)
-    gx <- t(tgx / (1e-4 + apply(gx, 2, stats::sd))) ## small eps maintains SD order!
+    gx <- t(tgx / (1e-4 + apply(gx, 2, stats::sd, na.rm = TRUE))) ## small eps maintains SD order!
     remove(tgx)
   }
   if ("row" %in% scale || "both" %in% scale) {
     gx <- gx - rowMeans(gx, na.rm = TRUE)
-    gx <- gx / (1e-4 + apply(gx, 1, stats::sd)) ## small eps maintains SD order!
+    gx <- gx / (1e-4 + apply(gx, 1, stats::sd, na.rm = TRUE)) ## small eps maintains SD order!
   }
   if ("col.center" %in% scale) {
     gx <- t(t(gx) - colMeans(gx, na.rm = TRUE))
@@ -1086,8 +1096,8 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
     d2 <- stats::as.dist(stats::cor(x, use = "pairwise"))
     d1[is.na(d1)] <- mean(d1, na.rm = TRUE)
     d2[is.na(d2)] <- mean(d2, na.rm = TRUE)
-    d1 <- (max(d1) - d1)**(p / 2)
-    d2 <- (max(d2) - d2)**(p / 2)
+    d1 <- (max(d1, na.rm = TRUE) - d1)**(p / 2)
+    d2 <- (max(d2, na.rm = TRUE) - d2)**(p / 2)
     h1 <- fastcluster::hclust(d1, method = "ward.D2")
     h2 <- fastcluster::hclust(d2, method = "ward.D2")
   } else if (method == "minkowski") {
@@ -1262,7 +1272,7 @@ frozenmap <- function(x, m = 8, n = 8, ...) {
 
   cx <- x.downsample(x, n = m)
   cx <- t(x.downsample(t(cx), n = n))
-  res <- playbase::gx.heatmap(cx, ...)
+  res <- gx.heatmap(cx, ...)
   cx <- cx[res$row.clust$order, res$col.clust$order]
   invisible(cx)
 }
@@ -1461,7 +1471,7 @@ heatmap.3 <- function(x,
   }
 
   x <- as.matrix(x)
-  scale01 <- function(x, low = min(x), high = max(x)) {
+  scale01 <- function(x, low = min(x, na.rm = TRUE), high = max(x, na.rm = TRUE)) {
     x <- (x - low) / (high - low)
     x
   }
@@ -1654,8 +1664,8 @@ heatmap.3 <- function(x,
   if (inherits(col, "function")) {
     col <- col(ncol)
   }
-  min.breaks <- min(breaks)
-  max.breaks <- max(breaks)
+  min.breaks <- min(breaks, na.rm = TRUE)
+  max.breaks <- max(breaks, na.rm = TRUE)
   x[x < min.breaks] <- min.breaks
   x[x > max.breaks] <- max.breaks
   if (missing(lhei) || is.null(lhei)) {
@@ -1797,8 +1807,8 @@ heatmap.3 <- function(x,
   if (!missing(rowsep)) {
     for (rsep in rowsep) graphics::rect(xleft = 0, ybottom = (ncol(x) + 1 - rsep) - 0.5, xright = nrow(x) + 1, ytop = (ncol(x) + 1 - rsep) - 0.5 - sepwidth[2], lty = 1, lwd = 1, col = sepcolor, border = sepcolor)
   }
-  min.scale <- min(breaks)
-  max.scale <- max(breaks)
+  min.scale <- min(breaks, na.rm = TRUE)
+  max.scale <- max(breaks, na.rm = TRUE)
   x.scaled <- scale01(t(x), min.scale, max.scale)
   if (trace %in% c("both", "column")) {
     retval$vline <- vline
@@ -1881,15 +1891,15 @@ heatmap.3 <- function(x,
     }
     if (density.info == "density") {
       dens <- stats::density(x, adjust = densadj, na.rm = TRUE)
-      omit <- dens$x < min(breaks) | dens$x > max(breaks)
+      omit <- dens$x < min(breaks, na.rm = TRUE) | dens$x > max(breaks, na.rm = TRUE)
       dens$x <- dens$x[-omit]
       dens$y <- dens$y[-omit]
       dens$x <- scale01(dens$x, min.raw, max.raw)
-      graphics::lines(dens$x, dens$y / max(dens$y) * 0.95,
+      graphics::lines(dens$x, dens$y / max(dens$y, na.rm = TRUE) * 0.95,
         col = denscol,
         lwd = 1
       )
-      graphics::axis(2, at = pretty(dens$y) / max(dens$y) * 0.95, pretty(dens$y))
+      graphics::axis(2, at = pretty(dens$y) / max(dens$y, na.rm = TRUE) * 0.95, pretty(dens$y))
       graphics::title("Color Key\nand Density Plot")
       graphics::par(cex = 0.5)
       graphics::mtext(side = 2, "Density", line = 2)
@@ -1897,11 +1907,11 @@ heatmap.3 <- function(x,
       h <- graphics::hist(x, plot = FALSE, breaks = breaks)
       hx <- scale01(breaks, min.raw, max.raw)
       hy <- c(h$counts, h$counts[length(h$counts)])
-      graphics::lines(hx, hy / max(hy) * 0.95,
+      graphics::lines(hx, hy / max(hy, na.rm = TRUE) * 0.95,
         lwd = 1, type = "s",
         col = denscol
       )
-      graphics::axis(2, at = pretty(hy) / max(hy) * 0.95, pretty(hy))
+      graphics::axis(2, at = pretty(hy) / max(hy, na.rm = TRUE) * 0.95, pretty(hy))
       graphics::title("Color Key\nand Histogram")
       graphics::par(cex = 0.5)
       graphics::mtext(side = 2, "Count", line = 2)

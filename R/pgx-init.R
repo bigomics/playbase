@@ -114,16 +114,16 @@ pgx.initialize <- function(pgx) {
 
   ## check if 'contrasts' is present in pgx object. Older pgx might not have it.
   if (!"contrasts" %in% names(pgx) && "model.parameters" %in% names(pgx)) {
-    pgx$contrasts <- pgx$model.parameters$contr.matrix
+    pgx$contrasts <- contrastAsLabels(pgx$model.parameters$contr.matrix)
   }
 
   ## check if 'contrasts' is sample-wise and label-format (new format)
   is.numlev <- all(unique(pgx$contrasts) %in% c(NA, "", -1, 0, 1))
   is.samplewise <- all(rownames(pgx$contrasts) == rownames(pgx$samples))
   if ("contrasts" %in% names(pgx) && (!is.samplewise || is.numlev)) {
-    design <- pgx$model.parameters$design
-    expmat <- pgx$model.parameters$exp.matrix
-    contr.mat <- pgx$model.parameters$contr.matrix
+    #    design <- pgx$model.parameters$design
+    #    expmat <- pgx$model.parameters$exp.matrix
+    #    contr.mat <- pgx$model.parameters$contr.matrix
     new.contr <- pgx$contrasts
     is.numlev <- all(unique(new.contr) %in% c(NA, "", -1, 0, 1))
     is.numlev <- is.numlev && (-1 %in% new.contr) ## must have -1 !!
@@ -134,7 +134,8 @@ pgx.initialize <- function(pgx) {
     is.groupwise
     if (is.groupwise) {
       grp <- as.character(pgx$samples$group)
-      new.contr <- new.contr[grp, , drop = FALSE]
+      ii <- match(grp, rownames(new.contr))
+      new.contr <- new.contr[ii, , drop = FALSE]
       rownames(new.contr) <- rownames(pgx$samples)
     }
     pgx$contrasts <- new.contr
@@ -191,6 +192,19 @@ pgx.initialize <- function(pgx) {
   if (is.null(pgx$organism)) {
     pgx$organism <- playbase::pgx.getOrganism(pgx)
   }
+
+  # Check if human ortholog is empty, if it is
+  # 1) run getHumanOrtholog (maybe it failed on pgx.compute bc server was unreachable)
+  # 2) if still empty, grag the symbols toUpper
+  if (all(is.na(pgx$genes$human_ortholog))) {
+    genes_ho <- getHumanOrtholog(pgx$organism, pgx$genes$symbol)$human
+    if (all(is.na(genes_ho))) {
+      pgx$genes$human_ortholog <- toupper(pgx$genes$symbol)
+    } else {
+      pgx$genes$human_ortholog <- genes_ho
+    }
+  }
+
   if (pgx$organism %in% c("Human", "human") | !is.null(pgx$version)) {
     pgx$families <- lapply(playdata::FAMILIES, function(x) {
       intersect(x, genes)
@@ -205,7 +219,7 @@ pgx.initialize <- function(pgx) {
   famsize <- sapply(pgx$families, length)
   pgx$families <- pgx$families[which(famsize >= 10)]
 
-  all.genes <- sort(unique(pgx$genes$gene_name))
+  all.genes <- sort(unique(pgx$genes$symbol))
   pgx$families[["<all>"]] <- all.genes
 
   ## -----------------------------------------------------------------------------
@@ -223,6 +237,7 @@ pgx.initialize <- function(pgx) {
       if (!all(names(fc) %in% pgx$genes$symbol)) {
         names(fc) <- pgx$genes$symbol[match(names(fc), rownames(pgx$genes), nomatch = 0)]
         fc <- fc[names(fc) != ""]
+        fc <- fc[!is.na(names(fc))]
       }
       G1 <- Matrix::t(pgx$GMT[names(fc), rownames(gs)])
       mx <- (G1 %*% fc)[, 1]

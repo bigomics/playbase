@@ -45,7 +45,7 @@ pgxinfo.add <- function(pgxinfo, pgx, remove.old = TRUE) {
   date <- ifelse(is.null(pgx$date), this.date, as.character(pgx$date))
   dataset.name <- pgx$name
 
-  creator <- ifelse("creator" %in% names(pgx), pgx$creator, "")
+  creator <- ifelse(!is.null(pgx$creator), pgx$creator, "")
 
   this.info <- c(
     dataset = dataset.name,
@@ -621,9 +621,10 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     pgx <- NULL
     for (pgxfile in pgx.missing) {
       cat(".")
+
+      ## load the PGX file
       pgxfile1 <- file.path(pgx.dir, pgxfile)
       pgxfile1 <- paste0(sub("[.]pgx$", "", pgxfile1), ".pgx")
-
       pgx <- try(local(get(load(pgxfile1, verbose = 0)))) ## override any name
 
       if (inherits(pgx, "try-error")) {
@@ -641,8 +642,9 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
       ## ---------------------------------------------
       if (pgxfile %in% fc.missing) {
         meta <- pgx.getMetaFoldChangeMatrix(pgx, what = "meta")
-        rownames(meta$fc) <- toupper(rownames(meta$fc)) ## human genes
-        missing.FC[[pgxfile]] <- meta$fc
+        ## rownames(meta$fc) <- toupper(rownames(meta$fc)) ## human genes
+        F <- collapse_by_humansymbol(meta$fc, pgx$genes)
+        missing.FC[[pgxfile]] <- F
         pgxfc.changed <- TRUE
       }
 

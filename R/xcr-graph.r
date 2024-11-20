@@ -183,7 +183,7 @@ itercluster_louvain <- function(g, n = 3) {
   idx <- rep(1, length(igraph::V(g)))
   K <- c()
   for (i in 1:n) {
-    k <- max(idx)
+    k <- max(idx, na.rm = TRUE)
     newidx <- idx
     for (i in 1:k) {
       ii <- which(idx == i)

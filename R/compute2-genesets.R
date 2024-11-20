@@ -58,20 +58,22 @@ compute_testGenesets <- function(pgx,
   ## -----------------------------------------------------------
   ## Collapse X by gene
   ## -----------------------------------------------------------
-  dbg("creating GENE matrix by SYMBOL...")
+  dbg("creating temporary GENE matrix by SYMBOL...")
+
   X <- pgx$X
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
-    X <- rename_by(X, pgx$genes, "symbol")
-    X <- X[!rownames(X) == "", , drop = FALSE]
-    if (any(duplicated(rownames(X)))) {
-      X <- log2(rowsum(2**X, rownames(X)))
-    }
+    X <- rename_by(X, pgx$genes, "symbol", unique = TRUE)
   }
 
   ## -----------------------------------------------------------
   ## Run methods
   ## -----------------------------------------------------------
   message(">>> Testing gene sets with methods:", test.methods, "\n")
+
+  if (length(intersect(rownames(X), rownames(G))) == 0) {
+    message("[compute_testGenesets] ERROR : matrix X and G do not overlap")
+    return(pgx)
+  }
 
   Y <- pgx$samples
   gc()
@@ -262,31 +264,33 @@ createSparseGenesetMatrix <- function(
 #'
 #' @export
 merge_sparse_matrix <- function(m1, m2) {
-  num_rows1 <- nrow(m1)
-  num_rows2 <- nrow(m2)
+  # Get the union of row names (genes) from both matrices
   gene_vector <- unique(c(rownames(m1), rownames(m2)))
 
-  if (num_rows1 < length(gene_vector)) {
-    num_missing_rows <- length(gene_vector) - num_rows1
-    zero_rows <- Matrix::Matrix(0, nrow = num_missing_rows, ncol = ncol(m1), sparse = TRUE)
-    genes_missing_in_m1 <- setdiff(gene_vector, rownames(m1))
-    rownames(zero_rows) <- genes_missing_in_m1
-    m1 <- rbind(m1, zero_rows)
-    m1 <- m1[gene_vector, ]
+  # Ensure m1 has all genes
+  if (!all(gene_vector %in% rownames(m1))) {
+    missing_genes_m1 <- setdiff(gene_vector, rownames(m1))
+    zero_rows_m1 <- Matrix::Matrix(0, nrow = length(missing_genes_m1), ncol = ncol(m1), sparse = TRUE)
+    rownames(zero_rows_m1) <- missing_genes_m1
+    m1 <- rbind(m1, zero_rows_m1)
   }
 
-  if (num_rows2 < length(gene_vector)) {
-    num_missing_rows <- length(gene_vector) - num_rows2
-    zero_rows <- Matrix::Matrix(0, nrow = num_missing_rows, ncol = ncol(m2), sparse = TRUE)
-    genes_missing_in_m2 <- setdiff(gene_vector, rownames(m2))
-    rownames(zero_rows) <- genes_missing_in_m2
-    m2 <- rbind(m2, zero_rows)
-    m2 <- m2[gene_vector, ]
+  # Ensure m2 has all genes
+  if (!all(gene_vector %in% rownames(m2))) {
+    missing_genes_m2 <- setdiff(gene_vector, rownames(m2))
+    zero_rows_m2 <- Matrix::Matrix(0, nrow = length(missing_genes_m2), ncol = ncol(m2), sparse = TRUE)
+    rownames(zero_rows_m2) <- missing_genes_m2
+    m2 <- rbind(m2, zero_rows_m2)
   }
 
-  combined_gmt <- Matrix::cbind2(m1, m2)
+  # Reorder rows to match gene_vector
+  m1 <- m1[gene_vector, , drop = FALSE]
+  m2 <- m2[gene_vector, , drop = FALSE]
 
-  # if duplicated genesets, then keep only largest one
+  # Combine the matrices column-wise
+  combined_gmt <- cbind(m1, m2)
+
+  # If duplicated genesets, then keep only the largest one
   combined_gmt <- combined_gmt[, order(-Matrix::colSums(combined_gmt != 0))]
   combined_gmt <- combined_gmt[, !duplicated(colnames(combined_gmt))]
 

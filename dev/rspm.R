@@ -1,0 +1,11 @@
+# R options for docker building
+options(Ncpus = 8L)
+options(timeout = 99999)  ## download time.out
+
+# Configure BioCManager to use Posit Package Manager:
+options(BioC_mirror = "https://packagemanager.posit.co/bioconductor")
+options(BIOCONDUCTOR_CONFIG_FILE = "https://packagemanager.posit.co/bioconductor/config.yaml")
+
+# Configure a CRAN snapshot compatible with Bioconductor 3.18:
+##options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/noble/2024-05-01"))
+options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/noble/latest"))

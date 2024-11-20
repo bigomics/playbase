@@ -14,13 +14,14 @@ visplot.PCSF(
   Terminal_node_color = "lightgreen",
   Terminal_node_legend = "Terminal",
   Steiner_node_legend = "Steiner",
-  layout = "layout_with_fr",
+  layout = "layout_with_kk",
   physics = TRUE,
   layoutMatrix = NULL,
   width = 1800,
   height = 1800,
   invert.weight = FALSE,
   extra_node_colors = list(),
+  edge_color = "lightgrey",
   ...
 )
 }

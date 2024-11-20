@@ -251,7 +251,7 @@ svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
     X[ind.missing] <- imx[ind.missing]
     count <- count + 1
     if (count > 0) {
-      error <- sqrt(sum((Xold - X)^2) / sum(Xold^2))
+      error <- sqrt(sum((Xold - X)^2, na.rm = TRUE) / sum(Xold^2, na.rm = TRUE))
       if (verbose) {
         cat(count, ": change in estimate: ", error, "\n")
       }

@@ -52,7 +52,7 @@ omics_colors <- function(...) {
     ## grey shades
     `super_dark_grey` = "#3b4252", ## BS color (dark)
     `mid_grey`        = "#d8d8d8",
-    `grey`            = "#eeeeee"
+    `grey`            = "#f8f8f8"
   )
 
   cols <- c(...)
