@@ -674,7 +674,7 @@ pgx.createSeuratObject <- function(counts,
 }
 
 #' @export
-seurat.preprocess <- function(obj, sct = TRUE, tsne = TRUE, umap = TRUE) {
+seurat.preprocess <- function(obj, sct = FALSE, tsne = TRUE, umap = TRUE) {
 
   options(future.globals.maxSize= 4*1024^4)
   
