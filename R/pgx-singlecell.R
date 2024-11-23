@@ -627,6 +627,7 @@ pgx.justSeuratObject <- function(counts, samples) {
 pgx.createSeuratObject <- function(counts,
                                    samples,
                                    batch,
+                                   cellcyclescores = TRUE,
                                    filter = TRUE,
                                    preprocess = TRUE,
                                    method = "Harmony") {
@@ -647,7 +648,18 @@ pgx.createSeuratObject <- function(counts,
   obj <- Seurat::PercentageFeatureSet(obj, pattern = "^MT-|^Mt-", col.name = "percent.mt")
   obj <- Seurat::PercentageFeatureSet(obj, pattern = "^RP[LS]|^Rp[ls]", col.name = "percent.ribo")
   obj <- Seurat::PercentageFeatureSet(obj, pattern = "^HB|^Hb", col.name = "percent.hb")
- 
+
+  if (cellcyclescores) {
+    ## CellCycleScoring needs normalized data
+    counts <- obj@assays$RNA$counts
+    totcounts <- Matrix::colSums(counts, na.rm = TRUE)
+    cpm <- sweep(counts, 2, totcounts, FUN = "/") * 1e4
+    obj@assays$RNA$data <- log1p(cpm)    
+    g2m.ff <- Seurat::cc.genes$g2m.genes
+    s.ff <- Seurat::cc.genes$s.genes
+    obj <- Seurat::CellCycleScoring(obj, g2m.features = g2m.ff, s.features = s.ff)
+  }
+  
   if(filter) {
     ## Filter on number of counts/features and mitochondrial gene content.
     message("[pgx.createIntegratedSeuratObject] filtering cells")    
