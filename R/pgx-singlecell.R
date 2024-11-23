@@ -686,7 +686,7 @@ seurat.preprocess <- function(obj,
     obj <- Seurat::SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
   } else {
     # pre-process dataset (without integration)
-    ## obj <- Seurat::NormalizeData(obj)
+    ## obj <- Seurat::NormalizeData(obj) ## causes "integer overflow issue"
     counts <- obj@assays$RNA$counts
     totcounts <- Matrix::colSums(counts, na.rm = TRUE)
     cpm <- sweep(counts, 2, totcounts, FUN = "/") * 1e4
