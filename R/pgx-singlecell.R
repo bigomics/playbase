@@ -674,7 +674,10 @@ pgx.createSeuratObject <- function(counts,
 }
 
 #' @export
-seurat.preprocess <- function(obj, sct = FALSE, tsne = TRUE, umap = TRUE) {
+seurat.preprocess <- function(obj,
+                              sct = FALSE,
+                              tsne = TRUE,
+                              umap = TRUE) {
 
   options(future.globals.maxSize= 4*1024^4)
   
@@ -683,9 +686,14 @@ seurat.preprocess <- function(obj, sct = FALSE, tsne = TRUE, umap = TRUE) {
     obj <- Seurat::SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
   } else {
     # pre-process dataset (without integration)
-    obj <- Seurat::NormalizeData(obj)
+    ## obj <- Seurat::NormalizeData(obj)
+    counts <- obj@assays$RNA$counts
+    totcounts <- Matrix::colSums(counts, na.rm = TRUE)
+    cpm <- sweep(counts, 2, totcounts, FUN = "/") * 1e4
+    obj@assays$RNA$data <- log1p(cpm) 
     obj <- Seurat::FindVariableFeatures(obj)
     obj <- Seurat::ScaleData(obj)
+    message("[seurat.preprocess] norm, findVarFeatures and scaling completed.")
   }
   
   message("[seurat.preprocess] running PCA")
@@ -697,7 +705,7 @@ seurat.preprocess <- function(obj, sct = FALSE, tsne = TRUE, umap = TRUE) {
   nn <- min(30L, ncol(obj)/5)
   message("[seurat.preprocess] running FindNeighbors & Clusters")
   obj <- Seurat::FindNeighbors(obj, dims=1:npcs, reduction = dr, verbose = FALSE)
-  obj <- Seurat::FindClusters(obj, resolution = 1, verbose = FALSE, ) 
+  obj <- Seurat::FindClusters(obj, resolution = 1, verbose = FALSE) 
 
   if (tsne) {
     message("[seurat.preprocess] running tSNE")
