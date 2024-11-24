@@ -782,28 +782,34 @@ seurat.integrate <- function(obj, batch, sct = TRUE, method = "Harmony") {
 
 
 #' @export
-pgx.runAzimuth <- function(counts, reference = NULL) {
+pgx.runAzimuth <- function(counts, k.weight = NULL, reference = NULL) {
   require(Seurat)
   ## options(future.globals.maxSize= 4*1024^3)  ## needed  
   options(future.globals.maxSize= 4*1024^4) 
   obj <- pgx.justSeuratObject(counts, samples = NULL)
-  k.weight <- 20
-  ## k.weight <- round(min(50, ncol(obj)/5))
-  k.weight <- round(min(50, ncol(obj)/10))
+  if (is.null(k.weight)) {
+    k.weight <- 20
+    ## k.weight <- round(min(50, ncol(obj)/10))
+  }
   dbg("[pgx.runAzimuth] k.weight = ", k.weight)
   if (is.null(reference)) {
     reference <- "pbmcref"
   }
-  obj1 <- Azimuth::RunAzimuth(
+  obj1 <- try(Azimuth::RunAzimuth(
     obj,
     reference = reference,
     k.weight = k.weight, 
     verbose = FALSE
-  )
-  k1 <- !(colnames(obj1@meta.data) %in% colnames(obj@meta.data))
-  k2 <- !grepl("score$|refAssay$", colnames(obj1@meta.data))
-  meta1 <- obj1@meta.data[, (k1 & k2)]
-  return(meta1)
+  ))
+  if(!"try-error" %in% class(obj1)) {
+    k1 <- !(colnames(obj1@meta.data) %in% colnames(obj@meta.data))
+    k2 <- !grepl("score$|refAssay$", colnames(obj1@meta.data))
+    meta1 <- obj1@meta.data[, (k1 & k2)]
+    return(meta1)
+  } else {
+    dbg("[pgx.runAzimuth] Azimuth failed: ref.atlas might be incorrect.")
+    return(NULL)
+  }
 }
 
 
