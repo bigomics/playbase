@@ -44,7 +44,7 @@ gx.splitmap(
   zlim = NULL,
   show_rownames = nmax,
   lab.len = 80,
-  key.offset = c(0.05, 1.01),
+  key.offset = c(0.05, 0.99),
   show_colnames = NULL,
   use.nclust = FALSE,
   data = FALSE

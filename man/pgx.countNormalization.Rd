@@ -4,7 +4,7 @@
 \alias{pgx.countNormalization}
 \title{Normalize count data}
 \usage{
-pgx.countNormalization(x, methods, ref = NULL)
+pgx.countNormalization(x, methods, ref = NULL, rm.zero = FALSE)
 }
 \arguments{
 \item{x}{Matrix of count data, with genes in rows and samples in columns.}

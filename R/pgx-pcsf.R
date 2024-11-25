@@ -11,8 +11,11 @@
 #' @export
 pgx.computePCSF <- function(pgx, contrast, level = "gene",
                             ntop = 250, ncomp = 3, beta = 1,
-                            use.corweight = TRUE, rm.negedge = TRUE,
-                            dir = "both") {
+                            rm.negedge = TRUE,
+                            use.corweight = TRUE,
+                            dir = "both", ppi = "STRING",
+                            gset.rho=0.8, gset.filter = NULL ) {
+
   F <- pgx.getMetaMatrix(pgx, level = level)$fc
   if (is.null(contrast)) {
     fx <- rowMeans(F**2, na.rm = TRUE)**0.5
@@ -21,27 +24,79 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
       stop("[pgx.computePCSF] invalid contrast")
     }
     fx <- F[, contrast]
-    if (level == "gene") {
-      ## names(fx) <- pgx$genes[rownames(F), "human_ortholog"]
-      fx <- collapse_by_humansymbol(fx, pgx$genes) ## safe
+  }
+
+
+  if (level == "gene") {
+    ## names(fx) <- pgx$genes[rownames(F), "human_ortholog"]
+    fx <- collapse_by_humansymbol(fx, pgx$genes) ## safe
+  }
+  if (level == "geneset") {
+    if(!is.null(gset.filter)) {
+      fx <- fx[grep( gset.filter, names(fx))]
+    }
+  }
+  
+  if (level == "gene") {
+    if(!is.data.frame(ppi) && is.character(ppi) && ppi[1] == "STRING") {
+      message("using STRING PPI...")
+      data(STRING, package = "PCSF")
+      PPI <- STRING
+    } else if(FALSE && !is.data.frame(ppi) && is.character(ppi) && ppi[1] == "GRAPHITE") {
+      message("using GRAPHITE PPI...")
+      ##ppi <- playdata::GRAPHITE_PPI      
+    } else if(is.data.frame(ppi) && ncol(ppi)==3) {
+      message("using provide PPI...")
+      PPI <- ppi
+    } else {
+      stop("invalid PPI")
     }
   }
 
   if (level == "geneset") {
-    fx <- fx[grep("^GOBP:", names(fx))] ## really?
-    ## names(fx) <- gsub(".*:| \\(.*", "", names(fx))
+    aa <- intersect(names(fx), colnames(pgx$GMT))
+    G <- pgx$GMT[ ,aa]
+    ##H <- cor(as.matrix(G))
+    H <- qlcMatrix::corSparse(G)
+    dim(H)
+    diag(H) <- 0
+    jj <- which(H > gset.rho, arr.ind = TRUE)
+    PPI <- data.frame(
+      from = colnames(G)[jj[, 1]],
+      to = colnames(G)[jj[, 2]],
+      cost = pmax(1 - H[jj],0)
+    )
   }
 
+  ## data matrix
   if (level == "gene") {
-    data(STRING, package = "PCSF")
-    string.genes <- unique(c(STRING$from, STRING$to))
-    fx <- fx[which(names(fx) %in% string.genes)]
+    X <- pgx$X
   }
+  if (level == "geneset") {
+    X <- pgx$gsetX
+  }
+
+  pcsf <- computePCSF(
+    X, fx, ppi = PPI,
+    ntop = ntop, ncomp = ncomp, beta = beta,
+    rm.negedge = rm.negedge,
+    dir = dir)
+  
+  return(pcsf)
+}
+
+computePCSF <- function(X, fx, ppi, ntop = 250, ncomp = 3, beta = 1,
+                        rm.negedge = TRUE,
+                        dir = "both") {
+
+  
+  ppi.genes <- unique(c(ppi$from, ppi$to))
+  fx <- fx[which(names(fx) %in% ppi.genes)]
 
   if (dir == "both") {
     sel1 <- head(order(fx), ntop / 2)
     sel2 <- head(order(-fx), ntop / 2)
-    sel <- c(sel1, sel2)
+    sel <- unique(c(sel1, sel2))
     fx <- fx[sel]
   }
   if (dir == "up") {
@@ -57,51 +112,29 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
 
   ## first pass
   nodes <- names(fx)
-  get_edges <- function(nodes, use.corweight) {
-    if (level == "gene") {
-      sel <- (STRING$from %in% nodes & STRING$to %in% nodes)
-      ee <- STRING[which(sel), ]
-      if (use.corweight) {
-        ## X <- rename_by(pgx$X, pgx$genes, "human_ortholog", unique = TRUE)
-        X <- collapse_by_humansymbol(pgx$X, pgx$genes) ## safe
-        selx <- rownames(X) %in% union(ee$from, ee$to)
-        R <- cor(t(X[selx, , drop = FALSE]))
-        if (rm.negedge) R[which(R < 0)] <- NA
-        wt <- (1 - R[cbind(ee$from, ee$to)])
-        ee$cost <- ee$cost * wt
-      }
-    }
-    if (level == "geneset") {
-      G <- pgx$GMT[, nodes]
-      H <- cor(as.matrix(G))
-      diag(H) <- 0
-      jj <- which(abs(H) > 0.5, arr.ind = TRUE)
-      ee <- data.frame(
-        from = rownames(H)[jj[, 1]],
-        to = rownames(H)[jj[, 2]],
-        cost = (1 - H[jj])
-      )
-      if (use.corweight) {
-        gg <- unique(c(ee$from, ee$to))
-        R <- cor(t(pgx$gsetX[gg, ]))
-        if (rm.negedge) R[which(R < 0)] <- NA
-        wt <- (1 - R[cbind(ee$from, ee$to)])
-        ee$cost <- ee$cost * wt
-      }
-    }
+  get_edges <- function(nodes) {
+    sel <- (ppi$from %in% nodes & ppi$to %in% nodes)
+    ee <- ppi[which(sel), ]
+    selx <- rownames(X) %in% union(ee$from, ee$to)
+    table(selx)
+    R <- cor(t(X[selx, , drop = FALSE]), use="pairwise")
+    if (rm.negedge) R[which(R < 0)] <- NA
+    wt <- (1 - R[cbind(ee$from, ee$to)])
+    ee$cost <- ee$cost * wt
     ee
   }
 
-  ee <- get_edges(names(fx), use.corweight = use.corweight)
+  ee <- get_edges(names(fx))
   ee <- ee[!is.na(ee$cost), ]
-
+  dim(ee)
+  
   suppressMessages(suppressWarnings(
-    ppi <- PCSF::construct_interactome(ee)
+    xppi <- PCSF::construct_interactome(ee)
   ))
-  prize1 <- abs(fx[igraph::V(ppi)$name])
+  prize1 <- abs(fx[igraph::V(xppi)$name])
 
   suppressMessages(suppressWarnings(
-    pcsf <- try(PCSF::PCSF(ppi,
+    pcsf <- try(PCSF::PCSF(xppi,
       terminals = prize1, w = 2,
       b = beta, mu = 5e-04, verbose = 0
     ))
@@ -122,8 +155,8 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
     sel.kk <- head(order(-cmp$csize), ncomp)
   }
   pcsf <- igraph::subgraph(pcsf, cmp$membership %in% sel.kk)
-  class(pcsf) <- c("PCSF", "igraph")
 
+  class(pcsf) <- c("PCSF", "igraph")
   return(pcsf)
 }
 

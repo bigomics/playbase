@@ -32,7 +32,8 @@ pgx.createPGX(
   convert.hugo = TRUE,
   only.proteincoding = TRUE,
   remove.xxl = TRUE,
-  remove.outliers = TRUE
+  remove.outliers = TRUE,
+  settings = list()
 )
 }
 \arguments{

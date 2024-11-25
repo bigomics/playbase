@@ -4,9 +4,6 @@
 ##
 
 
-method <- "edgeR"
-method <- "ttest"
-method <- "DESeq2"
 pgx.testGenes <- function(pgx, method = "ttest") {
   message("pgx.testGenes: method = ", method)
   Y <- pgx$contrasts
@@ -198,7 +195,6 @@ stats.edgeR <- function(counts, y, ref = NULL, add.avg = TRUE, test = "QLF", ...
   top
 }
 
-res <- "notact"
 stats.DESeq2 <- function(counts, y, ref = NULL, test = "Wald", add.avg = TRUE, ...) {
   if (length(unique(y[!is.na(y)])) > 2) stop("only 2 levels allowed")
   fy <- factor(as.character(y))

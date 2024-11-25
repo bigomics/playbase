@@ -266,10 +266,8 @@ getGeneAnnotation.ANNOTHUB <- function(
     jj <- match(names(locs), annot$ENTREZID)
     annot$MAP <- NA
     annot$MAP[jj] <- unname(locs)
-    if (probe_type != "ENTREZID") {
-      cls <- setdiff(colnames(annot), "ENTREZID")
-      annot <- annot[, cls, drop = FALSE]
-    }
+    cls <- setdiff(colnames(annot), "ENTREZID")
+    annot <- annot[, cls, drop = FALSE]
   }
 
   # some organisms do not provide symbol but rather gene name (e.g. yeast)
@@ -1025,6 +1023,12 @@ getSpeciesTable <- function(ah = NULL) {
     "ah_id", "species", "description", "rdatadateadded", "rdataclass",
     "title", "taxonomyid", "coordinate_1_based", "preparerclass", "sourceurl",
     "dataprovider", "genome", "maintainer", "tags", "sourcetype"
+  )
+  variables <- c(
+    "ah_id", "species", "description", "rdatadateadded", "rdataclass",
+    "title", "taxonomyid", ## "coordinate_1_based", "preparerclass", "sourceurl",
+    ## "dataprovider", "genome", "maintainer", "tags",
+    "sourcetype"
   )
 
   # Iterate through each variable and store it as a table

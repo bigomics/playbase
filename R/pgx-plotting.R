@@ -6268,3 +6268,85 @@ visPrint <- function(visnet, file, width = 3000, height = 3000, delay = 0, zoom 
   }
   unlink(tmp.html)
 }
+
+#'
+#' @export
+ggLollipopPlot <- function( values, sizes=NULL, xlab="value" ) {
+  df <- data.frame( x = names(values), y = values, size = 1 )
+  if(!is.null(sizes)) df$size <- sizes
+  ggplot(df, aes(x = reorder(x, +y), y = y)) +
+    geom_segment(aes(x = reorder(x, +y),
+      xend = reorder(x, +y),
+      y = 0, yend = y),
+      color = "gray",
+      lwd = 1.3, show.legend = FALSE) +
+    geom_point( mapping = aes(size = size), pch = 21, bg = 4,
+      col = 1, show.legend = FALSE) +
+    xlab("") +
+    ylab(xlab) +
+    coord_flip() +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(size=14),
+      axis.text.y = element_text(size=14)
+    )  
+}
+
+
+#' @export
+plotlyLasagna <- function(df, znames=NULL) {
+
+  zz <- sort(unique(df$z))
+  min.x <- min(df$x, na.rm=TRUE)
+  max.x <- max(df$x, na.rm=TRUE)
+  min.y <- min(df$y, na.rm=TRUE)
+  max.y <- max(df$y, na.rm=TRUE)
+  
+  fig <- plotly::plot_ly()
+  z=1
+  for(z in zz) {
+    sel <- which( df$z == z )
+    df1 <- df[sel,]
+    mx <- c( min.x, min.x, max.x, max.x)
+    my <- c( min.y, max.y, min.y, max.y)
+    mz <- rep(z, 4)
+
+    fig <- fig %>%
+      plotly::add_mesh(x = mx, y = my, z = mz,
+        color = "grey", opacity = 0.2)
+
+    fig <- fig %>%
+      plotly::add_trace(
+        data = df1, x = ~x, y = ~y, z = z,
+        mode = "markers", type = "scatter3d",
+        showlegend = FALSE,
+        marker = list(size = 3)
+      )
+    
+    ztext <- z
+    if(!is.null(znames) && (is.integer(z) || z %in% names(znames))) {
+      ztext <- znames[z]
+    }
+    
+    fig <- fig %>%
+      plotly::add_trace(x = min.x, y = max.y, z = z, 
+        type = "scatter3d", mode = "text",
+        text = ztext,
+        textfont = list(size = 20),
+        showlegend = FALSE,
+        inherit=FALSE)
+    
+  }
+  fig
+  fig <- fig %>%
+    plotly::layout(
+      scene = list(
+        xaxis = list(title = ""),
+        yaxis = list(title = ""),
+        zaxis = list(title = "", showticklabels=FALSE, tickfont = list(size=0)),
+        aspectmode = "cube",
+        showlegend = FALSE
+      )
+    )
+  fig
+}
