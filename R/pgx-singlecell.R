@@ -1124,9 +1124,11 @@ pgx.createSingleCellPGX <- function(counts,
                                     samples,
                                     contrasts,
                                     organism,
+                                    scrnaseq_pheno,
                                     batch = NULL, 
-                                    azimuth_ref) {
-
+                                    azimuth_ref,
+                                    sc_pheno) {
+  
   if (!is.null(counts)) {
     message("[createSingleCellPGX] dim.counts: ", dim(counts)[1], ",", dim(counts)[2])
     message("[createSingleCellPGX] class.counts: ", class(counts))
@@ -1146,34 +1148,32 @@ pgx.createSingleCellPGX <- function(counts,
     stop("[createSingleCellPGX] FATAL: organism must be provided")
   }
 
-  ## Infer pheno from sample file for now
-  kk <- c(
-     "nCount_RNA", "nFeature_RNA", "percent.mt",
-     "percent.ribo", "percent.hb", "nCount_SCT",
-     "nFeature_SCT", "SCT_snn_res.1", "seurat_clusters",
-     "downsample.group", "celltype", "celltype.azm",
-     "cell_type", "cell.type", "CellType",
-     "Cell_Type", "Cell.Type"
-  ) 
-  pheno0 <- colnames(samples)[! colnames(samples) %in% kk]
-  pheno <- pheno0[! pheno0 %in% "orig.ident"]
-  if (! pheno %in% colnames(samples)) {
-    stop("[createSingleCellPGX] FATAL: pheno must be present in the samples matrix.")
-  } else if (is.null(pheno)) {
-    stop("[createSingleCellPGX] FATAL: Unable to detect phenotype of interest.")
+  if (is.null(azimuth_ref)) {
+    azimuth_ref <- "pbmcref"
+    message("[createSingleCellPGX] Ref. atlas for azimuth not specified. Default to pbmcref.")
   } else {
-    message("[createSingleCellPGX] Phenotype: ", paste0(pheno, collapse=", "))
+    message("[createSingleCellPGX]----------------Azimuth ref:", azimuth_ref)
   }
-  
-  cl <- c("celltype", "cell_type", "CELLTYPE", "CELL_TYPE", "CellType", "cell.type")
+
+  if (is.null(sc_pheno)) {
+    stop("[createSingleCellPGX] FATAL: phenotype of interest must be provided")
+  } else {
+    pheno <- sc_pheno
+    if (!pheno %in% colnames(samples)) {
+      stop("[createSingleCellPGX] FATAL: phenotype of interest not found in sample file.")
+    }
+  }
+
+  cl <- c("celltype", "cell_type", "cell.type", "CELLTYPE", "CELL_TYPE", "CellType")
+  cl <- unique(c(cl, toupper(cl), tolower(cl)))
   kk <- intersect(cl, colnames(samples))
   if (length(kk)>0) {
     message("[pgx.createSingleCellPGX] using 'celltype' column from sample info")
     colnames(samples)[match(kk, colnames(samples))] <- "celltype"
   } else {
     message("[pgx.createSingleCellPGX] Inferring cell types with Azimuth.")
-    message("[pgx.createSingleCellPGX] Using ", azimuth.reference, " as reference atlas.")
-    azm <- pgx.runAzimuth(counts, reference = azimuth.reference)
+    message("[pgx.createSingleCellPGX] Using ", azimuth_ref, " as reference atlas.")
+    azm <- pgx.runAzimuth(counts, reference = azimuth_ref)
     azm <- azm[, grep("predicted",colnames(azm))]
     ntype <- apply(azm, 2, function(a) length(unique(a)))
     sel <- ifelse(min(ntype) > 10, which.min(ntype), tail(which(ntype <= 10),1))
@@ -1258,9 +1258,10 @@ pgx.createSingleCellPGX <- function(counts,
     max.genesets = 5000,
     name = "Data set",
     datatype = "scRNAseq", ## hack from scRNA-seq.
+    azimuth_ref = azimuth_ref, ## NEW AZ
     probe_type = NULL,
     creator = "unknown",
-    description = "No description provided.",
+    description = paste0(azimuth_ref, "_scRNAseq_dataset"), ## "No description provided.",
     X = X,
     impX = NULL,
     norm_method = "CPM",

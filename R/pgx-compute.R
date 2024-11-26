@@ -160,7 +160,8 @@ pgx.createPGX <- function(counts,
                           max.genesets = 5000,
                           name = "Data set",
                           datatype = "unknown",
-                          ## azimuth.reference = NULL, ## NEW AZ
+                          azimuth_ref = "pbmcref", ## NEW AZ
+                          sc_pheno = "pheno", ## NEW AZ
                           probe_type = NULL,
                           creator = "unknown",
                           description = "No description provided.",
@@ -180,7 +181,10 @@ pgx.createPGX <- function(counts,
                           remove.outliers = TRUE) {
 
   message("[createPGX] datatype = ", datatype)
-  
+  message("[createPGX]-----------------MNT1")
+  message("[createPGX] sc_pheno:", sc_pheno)
+  message("[createPGX]-----------------MNT2")
+
   if (datatype == "scRNA-seq") {
     pgx <- playbase::pgx.createSingleCellPGX(
       counts = counts,
@@ -188,7 +192,8 @@ pgx.createPGX <- function(counts,
       contrasts = contrasts,
       organism = organism,
       batch = NULL,
-      azimuth_ref = azimuth_ref ## NEW AZ
+      azimuth_ref = azimuth_ref, ## NEW AZ
+      sc_pheno = sc_pheno ## NEW AZ
     )
     return(pgx)
   }
@@ -402,7 +407,7 @@ pgx.createPGX <- function(counts,
   ## if feature/rownames are not symbol, we paste symbol to row name.
   rows_not_symbol <- mean(rownames(pgx$genes) == pgx$genes$symbol, na.rm = TRUE) < 0.2
   if (convert.hugo && rows_not_symbol) {
-    dbg("[createPGX] creating compound rownames FEATURE_SYMBOL")
+    message("[createPGX] creating compound rownames FEATURE_SYMBOL")
     new.rownames <- combine_feature_names(
       pgx$genes,
       target = c("rownames", "_", "symbol")
@@ -415,43 +420,6 @@ pgx.createPGX <- function(counts,
       rownames(pgx$impX) <- new.rownames
     }
   }
-
-  ## if (FALSE && convert.hugo) {
-  ##   dbg("[createPGX] collapsing probes by SYMBOL")
-  ##   pgx$genes <- pgx$genes[rownames(pgx$counts), ]
-
-  ##   ## Average duplicated rows if any
-  ##   ## group <- rownames(pgx$counts)
-  ##   group <- pgx$genes$symbol
-  ##   group <- paste0(rownames(pgx$genes), "_", pgx$genes$symbol)
-
-  ##   pgx$counts <- playbase::rowmean(pgx$counts, group = group, reorder = TRUE)
-  ##   pgx$counts <- pgx$counts[rownames(pgx$counts) != "", , drop = FALSE]
-  ##   pgx$X <- playbase::rowmean(pgx$X, group = group, reorder = TRUE)
-  ##   pgx$X <- pgx$X[rownames(pgx$counts), , drop = FALSE]
-  ##   if (!is.null(pgx$impX)) {
-  ##     pgx$impX <- playbase::rowmean(pgx$impX, group = group, reorder = TRUE)
-  ##     pgx$impX <- pgx$impX[rownames(pgx$counts), , drop = FALSE]
-  ##   }
-
-  ##   ## Collapse features as a comma-separated elements
-  ##   group[is.na(group)] <- "" ## avoids warning
-  ##   agg_features <- aggregate(
-  ##     feature ~ group,
-  ##     data = pgx$genes,
-  ##     function(x) paste(unique(x), collapse = "; ")
-  ##   )
-  ##   agg_features <- agg_features[agg_features$group != "", , drop = FALSE]
-
-  ##   ## Merge by symbol, replace features by collapsed features
-  ##   pgx$genes <- pgx$genes[match(rownames(pgx$counts), group), ]
-  ##   rownames(pgx$genes) <- rownames(pgx$counts)
-  ##   jj <- match(rownames(pgx$counts), agg_features$group)
-  ##   pgx$genes$feature <- agg_features[jj, "feature"]
-
-  ##   ## Rename gene_name with new rownames (gene symbol)
-  ##   pgx$genes$gene_name <- rownames(pgx$counts)
-  ## }
 
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
@@ -847,10 +815,10 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
   # add metabolomics if data.type is metabolomics
   if (pgx$datatype == "metabolomics") {
-    dbg("[pgx.add_GMT] Adding metabolomics genesets")
+    message("[pgx.add_GMT] Adding metabolomics genesets")
     G <- Matrix::t(playdata::MSETxMETABOLITE)
   } else {
-    dbg("[pgx.add_GMT] Adding transcriptomics/proteomics genesets")
+    message("[pgx.add_GMT] Adding transcriptomics/proteomics genesets")
     G <- Matrix::t(playdata::GSETxGENE)
   }
 
@@ -881,7 +849,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------
 
   ## add species GO genesets from AnnotationHub
-  dbg("[pgx.add_GMT] Adding species GO for organism", pgx$organism)
+  message("[pgx.add_GMT] Adding species GO for organism", pgx$organism)
   go.genesets <- NULL
 
   # only run if not metaboloimcs
@@ -897,7 +865,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   }
 
   if (!is.null(go.genesets)) {
-    dbg("[pgx.add_GMT] got", length(go.genesets), "genesets")
+    message("[pgx.add_GMT] got", length(go.genesets), "genesets")
     go.size <- sapply(go.genesets, length)
     size.ok <- which(go.size >= 15 & go.size <= 400)
     go.genesets <- go.genesets[size.ok]
