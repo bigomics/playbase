@@ -256,7 +256,7 @@ test_that("read.as_matrix reads file as matrix", {
   )
   colnames(expected) <- c(1, 2, 3)
   # Test function
-  result <- playbase::read.as_matrix(tmp)
+  result <- playbase::read.as_matrix(tmp, as.char = FALSE)
 
   # Check class
   expect_equal(class(result), c("matrix", "array"))

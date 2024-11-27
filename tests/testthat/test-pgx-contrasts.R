@@ -53,7 +53,6 @@ test_that("contrastAsLabels runs on ct", {
   # Generate the expected labels
   char_labels <- strsplit(string, "_vs_")[[1]]
   expected <- ifelse(ct$exp.matrix[, 1] == 1, char_labels[1], char_labels[2])
-  names(expected) <- NULL
   expect_equal(ctx[, 1], expected)
 })
 
