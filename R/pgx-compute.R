@@ -181,9 +181,6 @@ pgx.createPGX <- function(counts,
                           remove.outliers = TRUE) {
 
   message("[createPGX] datatype = ", datatype)
-  message("[createPGX]-----------------MNT1")
-  message("[createPGX] sc_pheno:", sc_pheno)
-  message("[createPGX]-----------------MNT2")
 
   if (datatype == "scRNA-seq") {
     pgx <- playbase::pgx.createSingleCellPGX(
