@@ -372,8 +372,8 @@ compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
 
     if (!(".cell_cycle" %in% colnames(pgx$samples))) {
       counts <- rna.counts
-      message("length(unique(rownames(counts))): ", length(unique(rownames(counts))))
-      message("dim(counts): ", dim(counts))
+      ## message("length(unique(rownames(counts))): ", length(unique(rownames(counts))))
+      ## message("dim(counts): ", dim(counts))
       ## In multi-species now use symbol, and deduplicate in case
       ## use retains feature as "gene_name/rowname"
       rownames(counts) <- toupper(pgx$genes[rownames(counts), "symbol"])

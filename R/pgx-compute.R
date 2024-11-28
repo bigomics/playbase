@@ -532,7 +532,6 @@ pgx.computePGX <- function(pgx,
   sel <- Matrix::colSums(contr.matrix == -1) > 0 & Matrix::colSums(contr.matrix == 1) > 0
   contr.matrix <- contr.matrix[, sel, drop = FALSE]
 
-
   ## -------------------------------------------------------------------
   ## Clustering
   ## -------------------------------------------------------------------
@@ -541,6 +540,10 @@ pgx.computePGX <- function(pgx,
   if (do.cluster || cluster.contrasts) {
     message("[pgx.computePGX] clustering samples...")
     mm <- c("pca", "tsne", "umap")
+    if(pgx$datatype == "scRNAseq") {
+      mm <- c("pca", "umap")
+    }
+    message("[pgx.computePGX] Calculating ", paste0(mm, collapse=", "))
     pgx <- playbase::pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
 
     ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
