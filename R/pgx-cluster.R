@@ -476,27 +476,29 @@ pgx.clusterMatrix <- function(X,
 
   ## Further pre-reduce dimensions using SVD
   res.svd <- NULL
-  if (reduce.pca > 0) {
-    reduce.pca <- max(3, min(c(reduce.pca, dim(X) - 1)))
-    message("Reducing to ", reduce.pca, " PCA dimensions...")
-    cnx <- colnames(X)
-    suppressMessages(suppressWarnings(
-      res.svd <- irlba::irlba(X, nv = reduce.pca)
-    ))
-    X <- t(res.svd$v) * res.svd$d**svd.gamma ## really weight with D??
-    colnames(X) <- cnx
-  }
+  ## if (reduce.pca > 0) {
+  ##   reduce.pca <- max(3, min(c(reduce.pca, dim(X) - 1)))
+  ##   message("Reducing to ", reduce.pca, " PCA dimensions...")
+  ##   cnx <- colnames(X)
+  ##   suppressMessages(suppressWarnings(
+  ##     res.svd <- irlba::irlba(X, nv = reduce.pca)
+  ##   ))
+  ##   X <- t(res.svd$v) * res.svd$d ** svd.gamma ## really weight with D??
+  ##   colnames(X) <- cnx
+  ## }
 
+  dims <- ifelse(datatype == "scRNAseq", c(2), c(2,3)) ## AZ
   all.pos <- list()
-
+    
   if ("pca" %in% methods) {
-    message("calculating PCA 2D/3D...")
+    message("calculating PCA...")
     if (is.null(res.svd)) {
       suppressMessages(suppressWarnings(
         res.svd <- irlba::irlba(X, nv = 3)
       ))
     }
     if(2 %in% dims) {
+      message("PCA 2D...")
       pos <- res.svd$v[, 1:2]
       rownames(pos) <- colnames(X)
       pos <- pos[1:dimx[2], ] ## if augmented
@@ -504,6 +506,7 @@ pgx.clusterMatrix <- function(X,
       all.pos[["pca2d"]] <- pos
     }
     if(3 %in% dims) {
+      message("PCA 3D...")
       pos <- res.svd$v[, 1:3]
       rownames(pos) <- colnames(X)
       pos <- pos[1:dimx[2], ] ## if augmented
@@ -544,7 +547,8 @@ pgx.clusterMatrix <- function(X,
     message("calculating UMAP 2D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
-      pos <- uwot::tumap(t(X),
+      pos <- uwot::tumap(
+        t(X),
         n_components = 2,
         n_neighbors = nb,
         local_connectivity = ceiling(nb / 15)
@@ -565,7 +569,8 @@ pgx.clusterMatrix <- function(X,
     message("calculating UMAP 3D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
-      pos <- uwot::tumap(t(X),
+      pos <- uwot::tumap(
+        t(X),
         n_components = 3,
         n_neighbors = nb,
         local_connectivity = ceiling(nb / 15)
@@ -818,7 +823,7 @@ pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix 
                                     gamma = 1, small.zero = 0.01) {
   ## find clusters from t-SNE positions
   idx <- NULL
-  message("Finding clusters using Louvain...\n")
+  message("\nFinding clusters using Louvain...")
 
   if (graph.method == "dist") {
     dist <- stats::as.dist(stats::dist(scale(X)))
@@ -850,7 +855,7 @@ pgx.findLouvainClusters <- function(X, graph.method = "dist", level = 1, prefix 
   idx <- factor(idx, levels = names(sort(-table(idx))))
   levels(idx) <- paste0(prefix, 1:length(levels(idx)))
   idx <- as.character(idx)
-  message("Found ", length(unique(idx)), " clusters...")
+  message("Found ", length(unique(idx)), " clusters...\n")
   return(idx)
 }
 

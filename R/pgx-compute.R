@@ -446,6 +446,8 @@ pgx.createPGX <- function(counts,
   message("[createPGX] pgx$counts has ", sum(is.na(pgx$counts)), " missing values")
   message("[createPGX] pgx$X has ", sum(is.na(pgx$X)), " missing values")
 
+  rm(counts, X, impX, samples, contrasts)
+
   message("\n\n")
   message("[pgx.createPGX]======================================")
   message("[pgx.createPGX]======== pgx.createPGX: DONE! ========")
