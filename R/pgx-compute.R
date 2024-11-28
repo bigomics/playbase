@@ -180,6 +180,13 @@ pgx.createPGX <- function(counts,
                           remove.xxl = TRUE,
                           remove.outliers = TRUE) {
 
+  message("[pgx.createPGX]===========================================")
+  message("[pgx.createPGX]=========== pgx.createPGX =================")
+  message("[pgx.createPGX]===========================================")
+  message("\n")
+  message("[pgx.createPGX] Starting pgx.createPGX")
+  message("\n")  
+
   message("[createPGX] datatype = ", datatype)
 
   if (datatype == "scRNA-seq") {
@@ -433,11 +440,17 @@ pgx.createPGX <- function(counts,
     pgx <- pgx.add_GMT(pgx = pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
   }
 
-  message("[createPGX] done! PGX being returned")
-  message("[createPGX] dim.pgx$counts: ", dim(pgx$counts)[1], ",", dim(pgx$counts)[2])
-  message("[createPGX] dim.pgx$X: ", dim(pgx$X)[1], ",", dim(pgx$X)[2])
+  message("[pgx.createPGX] dim(pgx$counts): ", paste0(dim(pgx$counts), collapse=","))
+  message("[pgx.createPGX] dim(pgx$X): ", paste0(dim(pgx$X), collapse=","))
+  message("[pgx.createPGX] dim(pgx$samples): ", paste0(dim(pgx$samples), collapse=","))
   message("[createPGX] pgx$counts has ", sum(is.na(pgx$counts)), " missing values")
   message("[createPGX] pgx$X has ", sum(is.na(pgx$X)), " missing values")
+
+  message("\n\n")
+  message("[pgx.createPGX]======================================")
+  message("[pgx.createPGX]======== pgx.createPGX: DONE! ========")
+  message("[pgx.createPGX]======================================")
+  message("\n\n")
 
   return(pgx)
 }
@@ -496,8 +509,14 @@ pgx.computePGX <- function(pgx,
                            libx.dir = NULL,
                            progress = NULL,
                            user_input_dir = getwd()) {
-  message("[pgx.computePGX] Starting pgx.computePGX")
 
+  message("[pgx.computePGX]===========================================")
+  message("[pgx.computePGX]========== pgx.computePGX =================")
+  message("[pgx.computePGX]===========================================")
+  message("\n")
+  message("[pgx.computePGX] Starting pgx.computePGX")
+  message("\n")
+  
   if (!"contrasts" %in% names(pgx)) {
     stop("[pgx.computePGX] FATAL:: no contrasts in object")
   }
@@ -645,7 +664,11 @@ pgx.computePGX <- function(pgx,
     user_input_dir = user_input_dir
   )
 
-  message("[pgx.computePGX] done!")
+  message("\n\n")
+  message("[pgx.computePGX]=======================================")
+  message("[pgx.computePGX]======== pgx.computePGX: DONE! ========")
+  message("[pgx.computePGX]=======================================")
+  message("\n\n")
 
   return(pgx)
 }

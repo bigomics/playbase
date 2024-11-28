@@ -702,7 +702,7 @@ seurat.preprocess <- function(obj,
     counts <- obj@assays$RNA$counts
     totcounts <- Matrix::colSums(counts, na.rm = TRUE)
     cpm <- sweep(counts, 2, totcounts, FUN = "/") * 1e4
-    obj@assays$RNA$data <- log1p(cpm) 
+    obj@assays$RNA$data <- log1p(cpm)
     obj <- Seurat::FindVariableFeatures(obj)
     obj <- Seurat::ScaleData(obj)
     message("[seurat.preprocess] norm, findVarFeatures and scaling completed.")
@@ -1128,7 +1128,11 @@ pgx.createSingleCellPGX <- function(counts,
                                     batch = NULL, 
                                     azimuth_ref,
                                     sc_pheno) {
-  
+
+  message("[pgx.createSingleCellPGX]==========================================")
+  message("[pgx.createSingleCellPGX]======= pgx.createSingleCellPGX ==========")
+  message("[pgx.createSingleCellPGX]==========================================")
+
   if (!is.null(counts)) {
     message("[createSingleCellPGX] dim.counts: ", dim(counts)[1], ",", dim(counts)[2])
     message("[createSingleCellPGX] class.counts: ", class(counts))
@@ -1150,9 +1154,9 @@ pgx.createSingleCellPGX <- function(counts,
 
   if (is.null(azimuth_ref)) {
     azimuth_ref <- "pbmcref"
-    message("[createSingleCellPGX] Ref. atlas for azimuth not specified. Default to pbmcref.")
+    message("[createSingleCellPGX] Ref. atlas for Azimuth not specified. Default to pbmcref.")
   } else {
-    message("[createSingleCellPGX]----------------Azimuth ref:", azimuth_ref)
+    message("[createSingleCellPGX] Azimuth ref. atlas: ", azimuth_ref)
   }
 
   if (is.null(sc_pheno)) {
@@ -1163,7 +1167,7 @@ pgx.createSingleCellPGX <- function(counts,
       stop("[createSingleCellPGX] FATAL: phenotype of interest not found in sample file.")
     }
   }
-
+  
   cl <- c("celltype", "cell_type", "cell.type", "CELLTYPE", "CELL_TYPE", "CellType")
   cl <- unique(c(cl, toupper(cl), tolower(cl)))
   kk <- intersect(cl, colnames(samples))
@@ -1181,7 +1185,7 @@ pgx.createSingleCellPGX <- function(counts,
   }
 
   sc.membership <- NULL
-  if(ncol(counts) > 2000) {
+  if(ncol(counts) > 2000000000) {
     group <- paste0(samples[, "celltype"], ":", samples[, pheno])
     if(!is.null(batch)) {
       group <- paste0(group, ":", samples[, batch])
@@ -1189,9 +1193,11 @@ pgx.createSingleCellPGX <- function(counts,
     q10 <- quantile(table(group), probs=0.25)
     nb <- round( ncol(counts) / 2000 )
     ## nb <- ceiling(round( q10 / 20 ))
+    message("[pgx.createSingleCellPGX]=======================================")
     message("[pgx.createSingleCellPGX] running SuperCell. nb = ", nb)    
     sc <- pgx.supercell(counts, samples, group = group, gamma = nb)
-    message("[pgx.createSingleCellPGX] SuperCell: ", ncol(counts), " -> ", ncol(sc$counts))
+    message("[pgx.createSingleCellPGX] SuperCell done: ", ncol(counts), " -> ", ncol(sc$counts))
+    message("[pgx.createSingleCellPGX]=======================================")
     counts <- sc$counts
     samples <- sc$meta
     sc.membership <- sc$membership
@@ -1215,9 +1221,7 @@ pgx.createSingleCellPGX <- function(counts,
 
   message("[pgx.createSingleCellPGX] Perform Seurat PCA, t-SNE, UMAP.")
   r <- "pca"
-  if (!is.null(batch)) {
-    r <- "integrated.dr"
-  }
+  if (!is.null(batch)) { r <- "integrated.dr" }
   obj <- Seurat::RunTSNE(obj, dims=1:30, reduction = r, verbose = FALSE)
   obj <- Seurat::RunTSNE(obj, dim.embed = 3L, dims=1:30,
     reduction = r, reduction.name ="tsne.3d",
@@ -1225,15 +1229,23 @@ pgx.createSingleCellPGX <- function(counts,
   obj <- Seurat::RunUMAP(obj, n.components = 3L, dims=1:30,
     reduction = r, reduction.name ="umap.3d",
     reduction.key = "umap3d_",  verbose = FALSE)
-
   ##  names(obj@reductions)
 
+  message("[pgx.createSingleCellPGX] dim(seurat counts): ", paste0(dim(obj@assays$RNA$counts), collapse=","))
+  message("[pgx.createSingleCellPGX] dim(seurat X): ", paste0(dim(obj@assays$RNA$data), collapse=","))
+  message("[pgx.createSingleCellPGX] dim(meta.data): ", paste0(dim(obj@meta.data), collapse=","))
+  
   ## create balanced down-sampled object. We target about n=20 cells
   ## per statistical condition, per celltype.
-  message("[pgx.createSingleCellPGX] Down-sampling Seurat object ...")  
-  group <- paste0(obj@meta.data$celltype, ":", obj@meta.data[, pheno])
-  sub <- seurat.downsample(obj, target_g = 20, group = group) 
-    
+  downsample = FALSE
+  if (downsample) {
+    message("[pgx.createSingleCellPGX] Down-sampling Seurat object ...")  
+    group <- paste0(obj@meta.data$celltype, ":", obj@meta.data[, pheno])
+    sub <- seurat.downsample(obj, target_g = 20, group = group)
+  } else {
+    sub <- obj
+  }
+  
   ## results for pgxCreate
   message("[pgx.createSingleCellPGX] Creating PGX object ...")
   counts = sub[['RNA']]$counts
@@ -1247,7 +1259,11 @@ pgx.createSingleCellPGX <- function(counts,
 
   ## single-cell specific normalization (10k)
   X <- playbase::logCPM(counts, total = 1e4, prior = 1)
-  
+
+  message("[pgx.createSingleCellPGX] dim(counts): ", paste0(dim(counts), collapse=","))
+  message("[pgx.createSingleCellPGX] dim(X): ", paste0(dim(X), collapse=","))
+  message("[pgx.createSingleCellPGX] dim(samples): ", paste0(dim(samples), collapse=","))
+
   pgx <- pgx.createPGX(
     counts = counts,
     samples = samples,
@@ -1278,8 +1294,9 @@ pgx.createSingleCellPGX <- function(counts,
     remove.outliers = TRUE
   ) 
 
-  dim(counts)
-  dim(pgx$X)
+  message("[pgx.createSingleCellPGX] dim(pgx$counts): ", paste0(dim(pgx$counts), collapse=","))
+  message("[pgx.createSingleCellPGX] dim(pgx$X): ", paste0(dim(pgx$X), collapse=","))
+  message("[pgx.createSingleCellPGX] dim(pgx$samples): ", paste0(dim(pgx$samples), collapse=","))
 
   ## We take the clusterings from Seurat because these are
   ## 'integrated' (batch corrected).
@@ -1305,8 +1322,12 @@ pgx.createSingleCellPGX <- function(counts,
   pgx$cluster$pos.full <- cluster.full
   dim(pgx$cluster$pos[[1]])
   dim(pgx$cluster$pos.full[[1]])
-  
-  message("\n\n [pgx.createSingleCellPGX] done! \n\n")  
+
+  message("\n\n")
+  message("[pgx.createSingleCellPGX]==========================================")
+  message("[pgx.createSingleCellPGX]===== pgx.createSingleCellPGX: DONE! =====")
+  message("[pgx.createSingleCellPGX]==========================================")
+  message("\n\n")
   return(pgx)
 
 }
