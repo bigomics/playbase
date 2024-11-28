@@ -546,15 +546,17 @@ pgx.computePGX <- function(pgx,
       mm <- c("pca", "umap")
     }
     message("[pgx.computePGX] Calculating ", paste0(mm, collapse=", "))
-    pgx <- playbase::pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
+    pgx <- playbase::pgx.clusterSamples2(pgx, methods = mm, dims = c(2, 3), perplexity = NULL, X = NULL)
 
     ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
     posx <- cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]])
     posx <- scale(posx)
-    idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
+    idx <- playbase::pgx.findLouvainClusters(posx, datatype = pgx$datatype, level = 1,
+      prefix = "c", small.zero = 0.0)
     if (length(unique(idx)) == 1) {
       ## try again with finer settings if single cluster...
-      idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
+      idx <- pgx.findLouvainClusters(posx, datatype = pgx$datatype, level = 2,
+        prefix = "c", small.zero = 0.01)
     }
     pgx$samples$cluster <- idx
   }
