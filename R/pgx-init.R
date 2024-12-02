@@ -140,6 +140,10 @@ pgx.initialize <- function(pgx) {
     }
     pgx$contrasts <- new.contr
   }
+  # If contrasts is present and numeric, got to run contrastAsLabels
+  if (is.numeric(pgx$contrasts)) {
+    pgx$contrasts <- contrastAsLabels(pgx$contrasts)
+  }
 
 
   ## ----------------------------------------------------------------
