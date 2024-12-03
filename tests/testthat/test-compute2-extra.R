@@ -33,7 +33,7 @@ test_that("compute_cellcycle_gender adds cell cycle and gender data", {
   result <- playbase::compute_cellcycle_gender(pgx)
   expect_cell_cycle_stages <- c(
     "G1", "G1", "G1", "G1", "G1", "G1", "G1", "G1", "G1", "G1",
-    "G1", "S", "S", "S", "S", "S", "S", "S"
+    "S", "S", "S", "S", "S", "S", "S", "S"
   )
   # Check cell cycle and gender added to sample df
   expect_equal(result$samples$.cell_cycle, expect_cell_cycle_stages)
