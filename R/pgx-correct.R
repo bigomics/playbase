@@ -1398,6 +1398,7 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
       if (clust == "tsne") {
         nb <- max(0.33, min(30, round(ncol(xlist[[1]]) / 5)))
         ## CLUSTFUN <- function(x) uwot::tumap(scale(t(x), scale = FALSE), n_neighbors = nb)
+        if (ncol(xlist[[1]]) <= 6) { nb <- 0.5 }
         CLUSTFUN <- function(x) {
           Rtsne::Rtsne(scale(t(x)),
             check_duplicates = FALSE,
@@ -1753,6 +1754,7 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
   if (clust.method == "tsne" && nmissing == 0) {
     message("Computing t-SNE clustering...")
     nb <- max(0.33, round(min(30, dim(X) / 5)))
+    if (ncol(X) <= 6) { nb <- 0.5 }
     pos <- lapply(xlist, function(x) {
       Rtsne::Rtsne(t2(x), perplexity = nb, check_duplicates = FALSE)$Y
     })
