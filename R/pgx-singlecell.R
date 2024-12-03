@@ -1126,8 +1126,9 @@ pgx.createSingleCellPGX <- function(counts,
                                     organism,
                                     scrnaseq_pheno,
                                     batch = NULL, 
-                                    azimuth_ref,
-                                    sc_pheno) {
+                                    azimuth_ref
+                                    ## sc_pheno
+                                    ) {
 
   message("[pgx.createSingleCellPGX]==========================================")
   message("[pgx.createSingleCellPGX]======= pgx.createSingleCellPGX ==========")
@@ -1159,15 +1160,16 @@ pgx.createSingleCellPGX <- function(counts,
     message("[createSingleCellPGX] Azimuth ref. atlas: ", azimuth_ref)
   }
 
-  if (is.null(sc_pheno)) {
-    stop("[createSingleCellPGX] FATAL: phenotype of interest must be provided")
-  } else {
-    pheno <- sc_pheno
-    if (!pheno %in% colnames(samples)) {
-      stop("[createSingleCellPGX] FATAL: phenotype of interest not found in sample file.")
-    }
-  }
-  
+  write.csv("~/Desktop/contrasts.csv")
+  ## if (is.null(sc_pheno)) {
+  ##   stop("[createSingleCellPGX] FATAL: phenotype of interest must be provided")
+  ## } else {
+  ##   pheno <- sc_pheno
+  ##   if (!pheno %in% colnames(samples)) {
+  ##     stop("[createSingleCellPGX] FATAL: phenotype of interest not found in sample file.")
+  ##   }
+  ## }
+
   cl <- c("celltype", "cell_type", "cell.type", "CELLTYPE", "CELL_TYPE", "CellType")
   cl <- unique(c(cl, toupper(cl), tolower(cl)))
   kk <- intersect(cl, colnames(samples))
@@ -1186,7 +1188,9 @@ pgx.createSingleCellPGX <- function(counts,
 
   sc.membership <- NULL
   if(ncol(counts) > 2000000000) {
-    group <- paste0(samples[, "celltype"], ":", samples[, pheno])
+    ct <- samples[,"celltype"]
+    group <- paste0(ct,":",apply(contrasts, 1, paste, collapse='_'))
+    ##  group <- paste0(samples[, "celltype"], ":", samples[, pheno])
     if(!is.null(batch)) {
       group <- paste0(group, ":", samples[, batch])
     }
