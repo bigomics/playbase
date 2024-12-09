@@ -936,187 +936,187 @@ transferLabels <- function(ref.mat, query.mat, labels) {
 }
 
 
-pgx.createSingleCellPGX_DEPRECATED <- function(counts,
-                                               samples,
-                                               pheno,
-                                               batch, 
-                                               azimuth.reference = "pbmcref") {
+## pgx.createSingleCellPGX_DEPRECATED <- function(counts,
+##                                                samples,
+##                                                pheno,
+##                                                batch, 
+##                                                azimuth.reference = "pbmcref") {
 
-  ## if 'celltype' is not in samples then we do Azimuth
-  if("celltype" %in% colnames(samples)) {
-    message("[pgx.createSingleCellPGX] using 'celltype' column from sample info")
-  } else {
-    message("[pgx.createSingleCellPGX] running Azimuth for celltype ...")
-    azm <- pgx.runAzimuth(counts, reference = azimuth.reference)
-    colnames(azm)
-    azm <- azm[,grep("predicted",colnames(azm))]
-    ntype <- apply(azm, 2, function(a) length(unique(a)))
-    ntype
-    ## select smallest level, or highest with at most 10 celltypes
-    sel <- ifelse(min(ntype) > 10, which.min(ntype), tail(which(ntype <= 10),1))
-    sel
-    samples$celltype <- azm[,sel]
-    table(samples$celltype)
-  }
+##   ## if 'celltype' is not in samples then we do Azimuth
+##   if("celltype" %in% colnames(samples)) {
+##     message("[pgx.createSingleCellPGX] using 'celltype' column from sample info")
+##   } else {
+##     message("[pgx.createSingleCellPGX] running Azimuth for celltype ...")
+##     azm <- pgx.runAzimuth(counts, reference = azimuth.reference)
+##     colnames(azm)
+##     azm <- azm[,grep("predicted",colnames(azm))]
+##     ntype <- apply(azm, 2, function(a) length(unique(a)))
+##     ntype
+##     ## select smallest level, or highest with at most 10 celltypes
+##     sel <- ifelse(min(ntype) > 10, which.min(ntype), tail(which(ntype <= 10),1))
+##     sel
+##     samples$celltype <- azm[,sel]
+##     table(samples$celltype)
+##   }
 
-  dim(counts)
-  sc.membership <- NULL
-  if(ncol(counts) > 2000) {
-    group <- paste0(samples[,"celltype"],":",samples[,pheno])
-    if(!is.null(batch)) {
-      group <- paste0(group,":",samples[,batch])
-    }
-    table(group)
-    q10 <- quantile(table(group), probs=0.25)
-    nb <- round( ncol(counts) / 2000 )
-    nb <- ceiling(round( q10 / 20 ))
-    nb
-    message("[pgx.createSingleCellPGX] running SuperCell. nb = ", nb)    
-    sc <- pgx.supercell(counts, samples, group = group, gamma = nb)
-    message("[pgx.createSingleCellPGX] SuperCell: ", ncol(counts)," -> ",ncol(sc$counts))    
-    counts <- sc$counts
-    samples <- sc$meta
-    sc.membership <- sc$membership
-    dim(counts)
-    remove(sc)
-  }
+##   dim(counts)
+##   sc.membership <- NULL
+##   if(ncol(counts) > 2000) {
+##     group <- paste0(samples[,"celltype"],":",samples[,pheno])
+##     if(!is.null(batch)) {
+##       group <- paste0(group,":",samples[,batch])
+##     }
+##     table(group)
+##     q10 <- quantile(table(group), probs=0.25)
+##     nb <- round( ncol(counts) / 2000 )
+##     nb <- ceiling(round( q10 / 20 ))
+##     nb
+##     message("[pgx.createSingleCellPGX] running SuperCell. nb = ", nb)    
+##     sc <- pgx.supercell(counts, samples, group = group, gamma = nb)
+##     message("[pgx.createSingleCellPGX] SuperCell: ", ncol(counts)," -> ",ncol(sc$counts))    
+##     counts <- sc$counts
+##     samples <- sc$meta
+##     sc.membership <- sc$membership
+##     dim(counts)
+##     remove(sc)
+##   }
 
-  ## Create full Seurat object. Optionally integrate by batch.
-  table(samples$celltype)
-  batch.vec <- NULL
-  message("[pgx.createSingleCellPGX] Creating Seurat object ...")
-  if(!is.null(batch)) {
-    message("[pgx.createSingleCellPGX] Integrating by batch = ", batch)     
-    batch.vec <- samples[,batch]
-  }
-  obj <- pgx.createSeuratObject(counts, samples, batch = batch.vec,
-                                filter=TRUE, method="Harmony") 
+##   ## Create full Seurat object. Optionally integrate by batch.
+##   table(samples$celltype)
+##   batch.vec <- NULL
+##   message("[pgx.createSingleCellPGX] Creating Seurat object ...")
+##   if(!is.null(batch)) {
+##     message("[pgx.createSingleCellPGX] Integrating by batch = ", batch)     
+##     batch.vec <- samples[,batch]
+##   }
+##   obj <- pgx.createSeuratObject(counts, samples, batch = batch.vec,
+##                                 filter=TRUE, method="Harmony") 
 
-  message("[pgx.createSingleCellPGX] Addding Seurat clustering ...")
-  r <- "pca"
-  names(obj@reductions)
-  if(!is.null(batch)) r <- "integrated.dr"  
-  obj <- Seurat::RunTSNE(obj, dims=1:30, reduction = r, verbose = FALSE)
-  obj <- Seurat::RunTSNE(obj, dim.embed = 3L, dims=1:30, reduction = r,
-                         reduction.name ="tsne.3d", reduction.key ="tsne3d_",
-                         verbose = FALSE)
-  obj <- Seurat::RunUMAP(obj, n.components = 3L, dims=1:30, reduction = r,
-                         reduction.name ="umap.3d", reduction.key = "umap3d_", 
-                         verbose = FALSE)
-  names(obj@reductions)
+##   message("[pgx.createSingleCellPGX] Addding Seurat clustering ...")
+##   r <- "pca"
+##   names(obj@reductions)
+##   if(!is.null(batch)) r <- "integrated.dr"  
+##   obj <- Seurat::RunTSNE(obj, dims=1:30, reduction = r, verbose = FALSE)
+##   obj <- Seurat::RunTSNE(obj, dim.embed = 3L, dims=1:30, reduction = r,
+##                          reduction.name ="tsne.3d", reduction.key ="tsne3d_",
+##                          verbose = FALSE)
+##   obj <- Seurat::RunUMAP(obj, n.components = 3L, dims=1:30, reduction = r,
+##                          reduction.name ="umap.3d", reduction.key = "umap3d_", 
+##                          verbose = FALSE)
+##   names(obj@reductions)
 
-  ## create balanced down-sampled object. We target about n=20 cells
-  ## per statistical condition, per celltype.
-  message("[pgx.createSingleCellPGX] Down-sampling Seurat object ...")  
-  meta <- obj@meta.data
-  group <- paste0(meta$celltype, ":", meta[,pheno])
-  table(group)
-  length(table(group))
-  sub <- seurat.downsample(obj, target_g = 20, group = group) 
-  dim(sub)
-  table(sub$downsample.group)
-  dim(sub)
+##   ## create balanced down-sampled object. We target about n=20 cells
+##   ## per statistical condition, per celltype.
+##   message("[pgx.createSingleCellPGX] Down-sampling Seurat object ...")  
+##   meta <- obj@meta.data
+##   group <- paste0(meta$celltype, ":", meta[,pheno])
+##   table(group)
+##   length(table(group))
+##   sub <- seurat.downsample(obj, target_g = 20, group = group) 
+##   dim(sub)
+##   table(sub$downsample.group)
+##   dim(sub)
     
-  do.plot = FALSE
-  if(do.plot) {
+##   do.plot = FALSE
+##   if(do.plot) {
 
-    Seurat::DimPlot(obj, group.by = c("celltype",pheno))
-    Seurat::DimPlot(sub, group.by = c("celltype",pheno))  
-    names(sub@reductions)
+##     Seurat::DimPlot(obj, group.by = c("celltype",pheno))
+##     Seurat::DimPlot(sub, group.by = c("celltype",pheno))  
+##     names(sub@reductions)
 
-    ## 2D plot
-    dim(pos.full)
-    pos.full <- obj@reductions[['tsne']]@cell.embeddings
-    pos.sub  <- sub@reductions[['tsne']]@cell.embeddings      
-    plot(pos.full, pch=20, cex=0.5, col='grey90')
-    cc <- factor(sub$celltype)
-    points(pos.sub, pch=20, cex=0.8, col=cc)  
+##     ## 2D plot
+##     dim(pos.full)
+##     pos.full <- obj@reductions[['tsne']]@cell.embeddings
+##     pos.sub  <- sub@reductions[['tsne']]@cell.embeddings      
+##     plot(pos.full, pch=20, cex=0.5, col='grey90')
+##     cc <- factor(sub$celltype)
+##     points(pos.sub, pch=20, cex=0.8, col=cc)  
     
-    ## 3D plot
-    pos3d <- obj@reductions[['tsne.3d']]@cell.embeddings
-    dim(pos3d)
-    pos3d <- uscale(pos3d)  
-    colnames(pos3d) <- c("x","y","z")
-    pos3d <- data.frame(pos3d)
-    pos3d$celltype <- obj@meta.data$celltype
-    pos3d$pheno <- obj@meta.data[,pheno]
-    fig <- plotly::plot_ly(pos3d, x = ~x, y = ~y, z = ~z, color = ~celltype)
-    fig %>% plotly::add_markers( marker = list(size=3) )
-  }
+##     ## 3D plot
+##     pos3d <- obj@reductions[['tsne.3d']]@cell.embeddings
+##     dim(pos3d)
+##     pos3d <- uscale(pos3d)  
+##     colnames(pos3d) <- c("x","y","z")
+##     pos3d <- data.frame(pos3d)
+##     pos3d$celltype <- obj@meta.data$celltype
+##     pos3d$pheno <- obj@meta.data[,pheno]
+##     fig <- plotly::plot_ly(pos3d, x = ~x, y = ~y, z = ~z, color = ~celltype)
+##     fig %>% plotly::add_markers( marker = list(size=3) )
+##   }
 
-  ## results for pgxCreate
-  message("[pgx.createSingleCellPGX] Creating PGX object ...")
-  counts = sub[['RNA']]$counts
-  samples = sub@meta.data
-  df <- samples[,c(pheno,"celltype")]
-  contrasts <- pgx.makeAutoContrastsStratified(
-    df, strata.var = "celltype", mingrp = 3, max.level = 99,
-    ref = NULL, slen = 20, fix.degenerate = FALSE, skip.hidden = TRUE) 
-  colnames(contrasts) <- sub(".*@","",colnames(contrasts))
-  colnames(contrasts) <- gsub("[ ]","_",colnames(contrasts))
+##   ## results for pgxCreate
+##   message("[pgx.createSingleCellPGX] Creating PGX object ...")
+##   counts = sub[['RNA']]$counts
+##   samples = sub@meta.data
+##   df <- samples[,c(pheno,"celltype")]
+##   contrasts <- pgx.makeAutoContrastsStratified(
+##     df, strata.var = "celltype", mingrp = 3, max.level = 99,
+##     ref = NULL, slen = 20, fix.degenerate = FALSE, skip.hidden = TRUE) 
+##   colnames(contrasts) <- sub(".*@","",colnames(contrasts))
+##   colnames(contrasts) <- gsub("[ ]","_",colnames(contrasts))
 
-  ## single-cell specific normalization (10k)
-  X <- logCPM( counts, total = 1e4, prior=1 )
+##   ## single-cell specific normalization (10k)
+##   X <- logCPM( counts, total = 1e4, prior=1 )
   
-  pgx <- pgx.createPGX(
-    counts,
-    samples,
-    contrasts,
-    organism = "Human",
-    custom.geneset = NULL,
-    annot_table = NULL,
-    max.genesets = 5000,
-    name = "Data set",
-    datatype = "scRNA-seq",
-    probe_type = NULL,
-    creator = "unknown",
-    description = "No description provided.",
-    X = X,
-    impX = NULL,
-    norm_method = "CPM",
-    is.logx = FALSE,
-    batch.correct = FALSE,
-    auto.scale = TRUE,
-    filter.genes = TRUE,
-    prune.samples = FALSE,
-    only.known = TRUE,
-    only.hugo = TRUE,
-    convert.hugo = TRUE,
-    only.proteincoding = TRUE,
-    remove.xxl = TRUE,
-    remove.outliers = TRUE) 
+##   pgx <- pgx.createPGX(
+##     counts,
+##     samples,
+##     contrasts,
+##     organism = "Human",
+##     custom.geneset = NULL,
+##     annot_table = NULL,
+##     max.genesets = 5000,
+##     name = "Data set",
+##     datatype = "scRNA-seq",
+##     probe_type = NULL,
+##     creator = "unknown",
+##     description = "No description provided.",
+##     X = X,
+##     impX = NULL,
+##     norm_method = "CPM",
+##     is.logx = FALSE,
+##     batch.correct = FALSE,
+##     auto.scale = TRUE,
+##     filter.genes = TRUE,
+##     prune.samples = FALSE,
+##     only.known = TRUE,
+##     only.hugo = TRUE,
+##     convert.hugo = TRUE,
+##     only.proteincoding = TRUE,
+##     remove.xxl = TRUE,
+##     remove.outliers = TRUE) 
 
-  dim(counts)
-  dim(pgx$X)
+##   dim(counts)
+##   dim(pgx$X)
 
-  ## We take the clusterings from Seurat because these are
-  ## 'integrated' (batch corrected).
-  cluster = list(
-    pca2d = sub@reductions[['pca']]@cell.embeddings[,1:2],
-    pca3d = sub@reductions[['pca']]@cell.embeddings[,1:3],
-    tsne2d = sub@reductions[['tsne']]@cell.embeddings,
-    tsne3d = sub@reductions[['tsne.3d']]@cell.embeddings,
-    umap2d = sub@reductions[['umap']]@cell.embeddings,
-    umap3d = sub@reductions[['umap.3d']]@cell.embeddings            
-  )
+##   ## We take the clusterings from Seurat because these are
+##   ## 'integrated' (batch corrected).
+##   cluster = list(
+##     pca2d = sub@reductions[['pca']]@cell.embeddings[,1:2],
+##     pca3d = sub@reductions[['pca']]@cell.embeddings[,1:3],
+##     tsne2d = sub@reductions[['tsne']]@cell.embeddings,
+##     tsne3d = sub@reductions[['tsne.3d']]@cell.embeddings,
+##     umap2d = sub@reductions[['umap']]@cell.embeddings,
+##     umap3d = sub@reductions[['umap.3d']]@cell.embeddings            
+##   )
 
-  cluster.full = list(
-    pca2d = obj@reductions[['pca']]@cell.embeddings[,1:2],
-    pca3d = obj@reductions[['pca']]@cell.embeddings[,1:3],
-    tsne2d = obj@reductions[['tsne']]@cell.embeddings,
-    tsne3d = obj@reductions[['tsne.3d']]@cell.embeddings,
-    umap2d = obj@reductions[['umap']]@cell.embeddings,
-    umap3d = obj@reductions[['umap.3d']]@cell.embeddings            
-  )
+##   cluster.full = list(
+##     pca2d = obj@reductions[['pca']]@cell.embeddings[,1:2],
+##     pca3d = obj@reductions[['pca']]@cell.embeddings[,1:3],
+##     tsne2d = obj@reductions[['tsne']]@cell.embeddings,
+##     tsne3d = obj@reductions[['tsne.3d']]@cell.embeddings,
+##     umap2d = obj@reductions[['umap']]@cell.embeddings,
+##     umap3d = obj@reductions[['umap.3d']]@cell.embeddings            
+##   )
 
-  pgx$cluster$pos <- cluster
-  pgx$cluster$pos.full <- cluster.full    ## 'full' set
-  dim(pgx$cluster$pos[[1]])
-  dim(pgx$cluster$pos.full[[1]])
+##   pgx$cluster$pos <- cluster
+##   pgx$cluster$pos.full <- cluster.full    ## 'full' set
+##   dim(pgx$cluster$pos[[1]])
+##   dim(pgx$cluster$pos.full[[1]])
   
-  message("[pgx.createSingleCellPGX] done!")  
-  return(pgx)
-}
+##   message("[pgx.createSingleCellPGX] done!")  
+##   return(pgx)
+## }
 
 
 #' @export
@@ -1160,7 +1160,7 @@ pgx.createSingleCellPGX <- function(counts,
     message("[createSingleCellPGX] Azimuth ref. atlas: ", azimuth_ref)
   }
 
-  write.csv("~/Desktop/contrasts.csv")
+  ## write.csv("~/Desktop/contrasts.csv")
   ## if (is.null(sc_pheno)) {
   ##   stop("[createSingleCellPGX] FATAL: phenotype of interest must be provided")
   ## } else {
@@ -1187,9 +1187,9 @@ pgx.createSingleCellPGX <- function(counts,
   }
 
   sc.membership <- NULL
-  if(ncol(counts) > 2000000000) {
+  if(ncol(counts) > 1e200) {
     ct <- samples[,"celltype"]
-    group <- paste0(ct,":",apply(contrasts, 1, paste, collapse='_'))
+    group <- paste0(ct, ":", apply(contrasts, 1, paste, collapse='_'))
     ##  group <- paste0(samples[, "celltype"], ":", samples[, pheno])
     if(!is.null(batch)) {
       group <- paste0(group, ":", samples[, batch])
@@ -1235,9 +1235,9 @@ pgx.createSingleCellPGX <- function(counts,
     reduction.key = "umap3d_",  verbose = FALSE)
   ##  names(obj@reductions)
 
-  message("[pgx.createSingleCellPGX] dim(seurat counts): ", paste0(dim(obj@assays$RNA$counts), collapse=","))
-  message("[pgx.createSingleCellPGX] dim(seurat X): ", paste0(dim(obj@assays$RNA$data), collapse=","))
-  message("[pgx.createSingleCellPGX] dim(meta.data): ", paste0(dim(obj@meta.data), collapse=","))
+  message("[pgx.createSingleCellPGX] dim(seurat counts): ", paste0(dim(obj@assays$RNA$counts), collapse=", "))
+  message("[pgx.createSingleCellPGX] dim(seurat X): ", paste0(dim(obj@assays$RNA$data), collapse=", "))
+  message("[pgx.createSingleCellPGX] dim(meta.data): ", paste0(dim(obj@meta.data), collapse=", "))
   
   ## create balanced down-sampled object. We target about n=20 cells
   ## per statistical condition, per celltype.
@@ -1254,7 +1254,9 @@ pgx.createSingleCellPGX <- function(counts,
   message("[pgx.createSingleCellPGX] Creating PGX object ...")
   counts = sub[['RNA']]$counts
   samples = sub@meta.data
-  df <- samples[,c(pheno,"celltype")]
+  pheno <- "stim" ############# TEMP AZ
+  df <- samples[, c(pheno, "celltype")] ## ????
+  ## df <- samples[, c(group, "celltype")]
   contrasts <- pgx.makeAutoContrastsStratified(
     df, strata.var = "celltype", mingrp = 3, max.level = 99,
     ref = NULL, slen = 20, fix.degenerate = FALSE, skip.hidden = TRUE) 

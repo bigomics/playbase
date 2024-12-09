@@ -59,7 +59,8 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
                                            conform.output = TRUE, do.filter = TRUE,
                                            remove.batch = TRUE,
                                            methods = c(
-                                             "ttest", "ttest.welch", "voom.limma", "trend.limma", "notrend.limma",
+                                             "ttest", "ttest.welch",  "wilcoxon.ranksum",
+                                             "voom.limma", "trend.limma", "notrend.limma",
                                              "deseq2.wald", "deseq2.lrt", "edger.qlf", "edger.lrt"
                                            ),
                                            correct.AveExpr = TRUE, custom = NULL, custom.name = NULL) {
@@ -67,30 +68,23 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
   ## Run all tests on raw counts
   ## --------------------------------------------------------------
 
-  ## Do not test features with full missingness.
-  ## Put them back in the TopTable
-  counts0 <- counts
-  nas <- apply(counts, 1, function(x) sum(is.na(x)))
-  Ex <- names(nas)[which(nas == ncol(counts))]
-  keep <- names(nas)[which(nas != ncol(counts))]
-  if (length(Ex) > 0) counts <- counts[keep, ]
+  ## Don't test fully missing features. Put them back in toptable.
+  counts <- counts[which(rowMeans(is.na(counts)) < 1), ]
 
   if (!is.null(X)) {
-    X0 <- X
-    nas <- apply(X, 1, function(x) sum(is.na(x)))
-    Ex <- names(nas)[which(nas == ncol(X))]
-    keep <- names(nas)[which(nas != ncol(X))]
-    if (length(Ex) > 0) X <- X[keep, ]
+    X <- X[which(rowMeans(is.na(X)) < 1), ]
   }
 
   if (methods[1] == "*") {
     methods <- c(
-      "ttest", "ttest.welch", "voom.limma", "trend.limma", "notrend.limma",
+      "ttest", "ttest.welch", "wilcoxon.ranksum",
+      "voom.limma", "trend.limma", "notrend.limma",
       "deseq2.wald", "deseq2.lrt", "edger.qlf", "edger.lrt"
     )
   }
   methods <- intersect(methods, c(
-    "ttest", "ttest.welch", "voom.limma", "trend.limma", "notrend.limma",
+    "ttest", "ttest.welch", "wilcoxon.ranksum",
+    "voom.limma", "trend.limma", "notrend.limma",
     "deseq2.wald", "deseq2.lrt", "edger.qlf", "edger.lrt"
   ))
 
@@ -164,6 +158,16 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
         conform.output = conform.output
       )
     )
+  }
+
+  ## ---------- Wilcoxon test (scRNA-seq) -----------
+  if ("wilcoxon.ranksum" %in% methods) {
+     message("[ngs.fitContrastsWithAllMethods] scRNA-seq: fitting using Wilcoxon rank sum test")
+     timings[["wilcoxon.ranksum"]] <- system.time(
+       outputs[["wilcoxon.ranksum"]] <- ngs.fitContrastsWithWILCOXON(
+         X, contr.matrix, design, conform.output = conform.output
+       )
+     )
   }
 
   ## ---------------- LIMMA methods -------------------
@@ -441,6 +445,7 @@ ngs.fitContrastsWithTTEST <- function(X, contr.matrix, design, method = "welch",
                                       conform.output = 0) {
   tables <- list()
   i <- 1
+  
   exp.matrix <- contr.matrix
   if (!is.null(design)) exp.matrix <- (design %*% contr.matrix)
   for (i in 1:ncol(exp.matrix)) {
@@ -471,6 +476,60 @@ ngs.fitContrastsWithTTEST <- function(X, contr.matrix, design, method = "welch",
   return(res)
 }
 
+#' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using Wilcoxon rank sum (scRNAseq)
+#' @export
+ngs.fitContrastsWithWILCOXON <- function(X, contr.matrix, design, conform.output = 0) {
+
+  tables <- list()
+  i <- 1
+
+  exp.matrix <- contr.matrix
+  if (!is.null(design)) {
+    exp.matrix <- (design %*% contr.matrix)
+  }
+
+  i <- 1
+  for (i in 1:ncol(exp.matrix)) {
+
+    j1 <- which(exp.matrix[, i] > 0)
+    j0 <- which(exp.matrix[, i] < 0)
+    suppressWarnings(rt <- matrixTests::row_wilcoxon_twosample(
+      X[, j1, drop = FALSE],
+      X[, j0, drop = FALSE]
+    ))
+
+    rt$mean.x <- rowMeans(X[, j1, drop = FALSE], na.rm = TRUE)
+    rt$mean.y <- rowMeans(X[, j0, drop = FALSE], na.rm = TRUE)
+    rt$mean.diff <- rt$mean.x - rt$mean.y
+
+    varx1 <- apply(X[, j1, drop = FALSE], 1, function(x) var(x)/length(x))
+    varx0 <- apply(X[, j0, drop = FALSE], 1, function(x) var(x)/length(x))
+    rt$stderr <- sqrt(varx1 + varx0)
+
+    kk <- c("mean.x", "mean.y", "mean.diff", "stderr", "df", "statistic", "pvalue")
+    kk <- intersect(kk, colnames(rt))
+    rt <- rt[, kk, drop = FALSE]
+    rt$qvalue <- stats::p.adjust(rt[, "pvalue"], method = "BH")
+    rt$mean.value <- (rt[, "mean.x"] + rt[, "mean.y"]) / 2
+    tables[[i]] <- rt
+
+  }
+
+  names(tables) <- colnames(contr.matrix)
+  if (conform.output == TRUE) {
+    i <- 1
+    for (i in 1:length(tables)) {
+      k1 <- c("mean.diff", "mean.value", "statistic", "pvalue", "qvalue", "mean.y", "mean.x")
+      k2 <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
+      tables[[i]] <- tables[[i]][, k1]
+      colnames(tables[[i]]) <- k2
+    }
+  }
+
+  res <- list(tables = tables)
+  return(res)
+
+}
 
 #' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using LIMMA differential expression analysis on count data.
 #' @export
