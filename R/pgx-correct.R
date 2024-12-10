@@ -1973,7 +1973,9 @@ svaCorrect <- function(X, y) {
   #  pp <- paste0(model.par, collapse = "+")
   #  lm.expr <- paste0("lm(t(X) ~ ", pp, ", data=pheno)")
   X.r <- t(stats::resid(lm(t(X) ~ y)))
-  n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
+  ##n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
+  n.sv <- isva::EstDimRMT(X.r, FALSE)$dim 
+  n.sv
   ## top 1000 genes only (faster)
   X1 <- Matrix::head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], 1000)
   ## add a little bit of noise to avoid singular error
@@ -2082,10 +2084,11 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
   if (any(is.na(X))) {
     stop("[ruvCorrect] cannot handle missing values in X.")
   }
-
+  sdx <- matrixStats::rowSds(X,na.rm=TRUE)
+  
   ## F-test using limma just variables
   if (!is.null(y) && length(controls) == 1 && is.numeric(controls[1])) {
-    ii <- which(!duplicated(rownames(X)))
+    ii <- which(!duplicated(rownames(X)) & sdx > 0)
     jj <- which(!is.na(y))
     F <- gx.limmaF(X[ii, jj], y[jj], lfc = 0, fdr = 1, method = 1, sort.by = "none", compute.means = FALSE, verbose = 0)
     nc <- pmax(nrow(X) * as.numeric(controls), 1)
