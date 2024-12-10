@@ -1160,31 +1160,21 @@ pgx.createSingleCellPGX <- function(counts,
     message("[createSingleCellPGX] Azimuth ref. atlas: ", azimuth_ref)
   }
 
-  ## write.csv("~/Desktop/contrasts.csv")
-  ## if (is.null(sc_pheno)) {
-  ##   stop("[createSingleCellPGX] FATAL: phenotype of interest must be provided")
-  ## } else {
-  ##   pheno <- sc_pheno
-  ##   if (!pheno %in% colnames(samples)) {
-  ##     stop("[createSingleCellPGX] FATAL: phenotype of interest not found in sample file.")
-  ##   }
+  ## cl <- c("celltype", "cell_type", "cell.type", "CELLTYPE", "CELL_TYPE", "CellType")
+  ## cl <- unique(c(cl, toupper(cl), tolower(cl)))
+  ## kk <- intersect(cl, colnames(samples))
+  ## if (length(kk)>0) {
+  ##  message("[pgx.createSingleCellPGX] using 'celltype' column from sample info")
+  ##  colnames(samples)[match(kk, colnames(samples))] <- "celltype"
+  ##} else {
+  message("[pgx.createSingleCellPGX] Inferring cell types with Azimuth.")
+  message("[pgx.createSingleCellPGX] Using ", azimuth_ref, " as reference atlas.")
+  azm <- pgx.runAzimuth(counts, reference = azimuth_ref)
+  azm <- azm[, grep("predicted",colnames(azm))]
+  ntype <- apply(azm, 2, function(a) length(unique(a)))
+  sel <- ifelse(min(ntype) > 10, which.min(ntype), tail(which(ntype <= 10),1))
+  samples$celltype <- azm[, sel]
   ## }
-
-  cl <- c("celltype", "cell_type", "cell.type", "CELLTYPE", "CELL_TYPE", "CellType")
-  cl <- unique(c(cl, toupper(cl), tolower(cl)))
-  kk <- intersect(cl, colnames(samples))
-  if (length(kk)>0) {
-    message("[pgx.createSingleCellPGX] using 'celltype' column from sample info")
-    colnames(samples)[match(kk, colnames(samples))] <- "celltype"
-  } else {
-    message("[pgx.createSingleCellPGX] Inferring cell types with Azimuth.")
-    message("[pgx.createSingleCellPGX] Using ", azimuth_ref, " as reference atlas.")
-    azm <- pgx.runAzimuth(counts, reference = azimuth_ref)
-    azm <- azm[, grep("predicted",colnames(azm))]
-    ntype <- apply(azm, 2, function(a) length(unique(a)))
-    sel <- ifelse(min(ntype) > 10, which.min(ntype), tail(which(ntype <= 10),1))
-    samples$celltype <- azm[, sel]
-  }
 
   sc.membership <- NULL
   if(ncol(counts) > 1e200) {
@@ -1266,9 +1256,9 @@ pgx.createSingleCellPGX <- function(counts,
   ## single-cell specific normalization (10k)
   X <- playbase::logCPM(counts, total = 1e4, prior = 1)
 
-  message("[pgx.createSingleCellPGX] dim(counts): ", paste0(dim(counts), collapse=","))
-  message("[pgx.createSingleCellPGX] dim(X): ", paste0(dim(X), collapse=","))
-  message("[pgx.createSingleCellPGX] dim(samples): ", paste0(dim(samples), collapse=","))
+  message("[pgx.createSingleCellPGX] dim(counts): ", paste0(dim(counts), collapse=", "))
+  message("[pgx.createSingleCellPGX] dim(X): ", paste0(dim(X), collapse=", "))
+  message("[pgx.createSingleCellPGX] dim(samples): ", paste0(dim(samples), collapse=", "))
 
   pgx <- pgx.createPGX(
     counts = counts,
