@@ -1919,9 +1919,20 @@ limmaCorrect <- function(X, B, y = NULL, use.cov = FALSE) {
 }
 
 #' @export
-combatCorrect <- function(X, B, y = NULL) {
+combatCorrect <- function(X, B, y = NULL, auto.detect = FALSE) {
   cX <- X
   if (is.null(ncol(B))) B <- cbind(B)
+  if(!is.null(y) && auto.detect) {
+    pars <- get_model_parameters(X, B, pheno = y, contrasts = NULL)
+    batch.pars <- pars$batch.pars
+    batch.pars <- intersect(batch.pars, colnames(B))
+    if (!is.null(batch.pars) && length(batch.pars)) {
+      B <- B[, batch.pars, drop = FALSE]
+    } else {
+      B <- NULL
+    }
+  }
+
   mod <- NULL
   if (!is.null(y) && length(y)) {
     y[is.na(y)] <- "_"
