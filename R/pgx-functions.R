@@ -2359,9 +2359,9 @@ abbreviate_pheno <- function(pheno, minlength = 1, abbrev.colnames = FALSE) {
 }
 
 #' @export
-colorscale <- function(x) {
+colorscale <- function(x, gamma=1) {
   colorsx <- gplots::colorpanel(255,low="blue3",mid="grey80",high="red3")
-  x <- (x / max(abs(x)))
+  x <- (x / max(abs(x)))**gamma
   colorsx[128+ceiling(x*127)]
 }
 

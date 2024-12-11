@@ -1083,6 +1083,7 @@ getOrganismGO <- function(organism, use.ah = NULL, orgdb = NULL) {
 
       ## get GO title
       sets <- sets[which(names(sets) %in% keys(GO.db::GOTERM))]
+      sets <- lapply(sets, function(s) unique(s))
       go <- sapply(GO.db::GOTERM[names(sets)], Term)
       new_names <- paste0("GO_", k, ":", go, " (", sub("GO:", "GO_", names(sets)), ")")
       names(sets) <- new_names
@@ -1603,4 +1604,54 @@ convert_probetype <- function(organism, probes, target_id, from_id = NULL,
   )))
   new.probes <- res[match(probes, res[, from_id]), target_id]
   return(new.probes)
+}
+
+
+#' Convert multi-omics probetype. Probe names *must  be prefixed with
+#' data type unless classical transcriptomics/proteomics.
+#'
+#' @export
+getProbeAnnotation <- function(organism, probes) {
+  
+  if(sum(grepl("[:]",probes))) {
+    prefix <- sub(":.*","",probes)
+  } else {
+    prefix <- rep("gx",length(probes))
+  }
+  table(prefix)
+  is.gx <- grepl("ensembl|symbol|hugo|gene|uniprot|^prot|^gx|^px",tolower(prefix))
+  is.mx <- grepl("chebi|hmdb|kegg|pubchem|^mx|metabo",tolower(prefix))
+  dtype <- c(NA,'gx','mx')[ 1 + 1*is.gx + 2*is.mx ] 
+  table(dtype)
+
+  annot <- list()
+  if("gx" %in% dtype) {
+    ii <- which(dtype %in% c('gx','px'))
+    pp <- sub(".*:","",probes[ii])
+    aa <- getGeneAnnotation(organism, pp)
+    head(aa)
+    aa$data_type <- 'gx'    
+    rownames(aa) <- probes[ii]
+    aa$feature <- probes[ii]
+    annot[['gx']] <- aa
+  }
+  if("mx" %in% dtype) {
+    ii <- which(dtype == 'mx')
+    pp <- sub(".*:","",probes[ii])
+    aa <- getMetaboliteAnnotation(pp)
+    head(aa)
+    aa$data_type <- 'mx'
+    rownames(aa) <- probes[ii]
+    aa$feature <- probes[ii]
+    annot[['mx']] <- aa
+  }
+  names(annot) <- NULL
+  cols <- Reduce( intersect, lapply(annot,colnames))
+  annot <- lapply(annot, function(a) a[,cols])
+  annot <- do.call( rbind, annot )
+  annot <- annot[match(probes, annot$feature),]
+  rownames(annot) <- probes
+  head(annot)
+  tail(annot)  
+  annot
 }

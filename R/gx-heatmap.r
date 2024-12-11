@@ -124,13 +124,17 @@ gx.PCAcomponents <- function(X, nv = 20, ngenes) {
 #' }
 #'
 #' @export
-gx.imagemap <- function(X, main = "", cex = 1, cex.main = 1.8, clust = TRUE) {
+gx.imagemap <- function(X, main = "", cex = 1, cex.main = 1.8,
+                        clust = TRUE, col = NULL) {
   if (clust) {
     ii <- fastcluster::hclust(stats::dist(X))$order
     jj <- fastcluster::hclust(stats::dist(t(X)))$order
     X <- X[ii, jj]
   }
-  Matrix::image(1:ncol(X), 1:nrow(X), t(X),
+  if(is.null(col)) col <- heat.colors(64)
+  graphics::image(
+    1:ncol(X), 1:nrow(X), t(X),
+    col = col,
     xaxt = "n", yaxt = "n",
     xlab = "", ylab = ""
   )

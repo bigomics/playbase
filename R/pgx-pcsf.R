@@ -171,7 +171,8 @@ plotPCSF <- function(pcsf,
                      highlightby = c("centrality", "prize")[1],
                      plotlib = c("visnet", "igraph")[1],
                      layout = "layout_with_kk", physics = TRUE,
-                     node_cex = 30, label_cex = 30, nlabel = -1) {
+                     node_cex = 30, label_cex = 30, nlabel = -1,
+                     edge_width = 5 ) {
   ## set node size
   fx <- igraph::V(pcsf)$foldchange
   wt <- abs(fx / mean(abs(fx), na.rm = TRUE))**0.7
@@ -211,7 +212,7 @@ plotPCSF <- function(pcsf,
       node_size = node_cex1,
       node_label_cex = label_cex1,
       invert.weight = TRUE,
-      edge_width = 5,
+      edge_width = edge_width,
       Steiner_node_color = "lightblue",
       Terminal_node_color = "lightgreen",
       extra_node_colors = list(

@@ -201,7 +201,7 @@ svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
   if (is.null(nv)) {
     nv <- max(1, round(mean(is.na(X)) * min(dim(X))))
   }
-  nv <- min(nv, dim(X) - 1)
+  nv <- min(nv, round(min(dim(X))/3))
   message("setting nv = ", nv)
 
   if (is.character(init) && grepl("%", init)) {
