@@ -178,6 +178,7 @@ pgx.createPGX <- function(counts,
                           remove.xxl = TRUE, ## DEPRECATED
                           remove.outliers = TRUE, ## DEPRECATED
                           settings = list()) {
+
   message("[createPGX] datatype = ", datatype)
 
   if (!is.null(counts)) {
@@ -471,18 +472,18 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Add GMT
   ## -------------------------------------------------------------------
-  ## If no organism, no custom annotation table and no custom geneset, then create empty GMT
-  if (pgx$organism == "No organism" && is.null(annot_table) && is.null(custom.geneset)) {
+  ## If no organism, no custom annotation table and no custom geneset,
+  ## then create empty GMT
+  no3 <- pgx$organism == "No organism" && is.null(annot_table) &&
+         is.null(custom.geneset) 
+  if ( no3 || pgx$datatype == "unknown" ) {
+    message("[createPGX] WARNING: empty GMT matrix. No gene sets. " )    
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
-  } else {
-    pgx <- pgx.add_GMT(pgx = pgx, custom.geneset = custom.geneset, max.genesets = max.genesets)
+  } else {    
+    pgx <- pgx.add_GMT(pgx = pgx, custom.geneset = custom.geneset,
+                       max.genesets = max.genesets)
+    message("[createPGX] dim(GMT) =  ",dim(pgx$GMT)[1],"x",dim(pgx$GMT)[2])
   }
-
-  message("[createPGX] done! PGX being returned")
-  message("[createPGX] dim.pgx$counts: ", dim(pgx$counts)[1], ",", dim(pgx$counts)[2])
-  message("[createPGX] dim.pgx$X: ", dim(pgx$X)[1], ",", dim(pgx$X)[2])
-  message("[createPGX] pgx$counts has ", sum(is.na(pgx$counts)), " missing values")
-  message("[createPGX] pgx$X has ", sum(is.na(pgx$X)), " missing values")
 
   return(pgx)
 }
@@ -558,7 +559,6 @@ pgx.computePGX <- function(pgx,
   sel <- Matrix::colSums(contr.matrix == -1) > 0 & Matrix::colSums(contr.matrix == 1) > 0
   contr.matrix <- contr.matrix[, sel, drop = FALSE]
 
-
   ## -------------------------------------------------------------------
   ## Clustering
   ## -------------------------------------------------------------------
@@ -601,7 +601,8 @@ pgx.computePGX <- function(pgx,
   ## Cluster by genes
   if (do.clustergenes) {
     message("[pgx.computePGX] clustering genes...")
-    pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), X = pgx$impX, level = "gene")
+    pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3),
+                                      X = pgx$impX, level = "gene")
   }
 
   ## -----------------------------------------------------------------------------
@@ -653,7 +654,6 @@ pgx.computePGX <- function(pgx,
     use.design = use.design,
     prune.samples = prune.samples
   )
-
 
   ## ------------------ gene set tests -----------------------
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
@@ -833,15 +833,12 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
 
 
 pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
+
   if (!"symbol" %in% colnames(pgx$genes)) {
     message( paste("[pgx.add_GMT] ERROR: could not find 'symbol' column.",
                    "Is this an old gene annotation?"))
     return(pgx)
   }
-
-#  is.human <- (tolower(pgx$organism) %in% c("human", "homo sapiens"))
-#  is.mouse <- (tolower(pgx$organism) %in% c("mouse", "mus musculus"))
-#  is.rat <- (tolower(pgx$organism) %in% c("rat", "rattus norvegicus"))
 
   ## -----------------------------------------------------------
   ## Load Geneset matrix and filter genes by gene or homologous
@@ -998,14 +995,14 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     gg <- rownames(gX)
     ii <- intersect(gg, rownames(G))
     G <- G[ii, , drop = FALSE]
-    gX <- gX[ii, , drop = FALSE]
-    ## xx <- setdiff(gg, rownames(G))
-    ## matX <- Matrix::Matrix(0, nrow = length(xx), ncol = ncol(G), sparse = TRUE)
-    ## rownames(matX) <- xx
-    ## colnames(matX) <- colnames(G)
-    ## G <- rbind(G, matX)
-    ## G <- G[match(gg, rownames(G)), , drop = FALSE]
-    ## rownames(G) <- rownames(gX) ## must be symbol
+    ##gX <- gX[ii, , drop = FALSE]
+    xx <- setdiff(gg, rownames(G))
+    matX <- Matrix::Matrix(0, nrow = length(xx), ncol = ncol(G), sparse = TRUE)
+    rownames(matX) <- xx
+    colnames(matX) <- colnames(G)
+    G <- rbind(G, matX)
+    G <- G[match(gg, rownames(G)), , drop = FALSE]
+    rownames(G) <- rownames(gX) ## must be symbol
   
     ## Prioritize gene sets by fast rank-correlation
     message("[pgx.add_GMT] Reducing gene set matrix... ")
