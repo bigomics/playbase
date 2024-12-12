@@ -83,6 +83,7 @@ pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
       jj <- grep("\\[gx\\]|\\[mrna\\]", rownames(FC))
       FC <- FC[jj, , drop = FALSE]
     }
+    rownames(FC) <- playbase::probe2symbol(rownames(FC), obj$genes)
     rownames(FC) <- toupper(sub(".*:|.*\\]", "", rownames(FC)))
 
     FC <- FC[order(-rowMeans(FC**2, na.rm = TRUE)), , drop = FALSE]
