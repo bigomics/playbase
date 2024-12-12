@@ -974,7 +974,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
                           up = "#f23451", notsig = "#707070AA",
                           notsel = "#cccccc88", down = "#3181de"
                         ),
-                        filt = NULL,
+                        filt = NULL, datatype = NULL,
                         title = NULL, xlim = NULL, ylim = NULL,
                         xlab = "effect size (logFC)",
                         ylab = "significance (-log10q)",
@@ -990,6 +990,17 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
     stop("FATAL:: invalid level=", level)
   }
 
+  ## Label or hilight gene sets
+  gsets <- colnames(pgx$GMT)
+  if(!is.null(hilight) && any(hilight %in% gsets)) {
+    G1 <- pgx$GMT[,which(gsets %in% hilight),drop=FALSE]
+    hilight <- names(which(Matrix::rowSums(G1!=0)>0))
+  }
+  if(!is.null(label) && any(label %in% gsets)) {
+    G1 <- pgx$GMT[,which(gsets %in% label),drop=FALSE]
+    label <- names(which(Matrix::rowSums(G1!=0)>0))
+  }
+
   f <- res$fc[, contrast]
   q <- res$qv[, contrast]
   if (!is.null(filt)) {
@@ -1000,18 +1011,29 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   sig <- (q <= psig & abs(f) >= fc)
   df <- data.frame(fc = f, y = -log10(q), q = q, sig = sig)
 
+  if(!is.null(datatype)) {
+    dt <- sub(":.*","",rownames(df))
+    df <- df[ dt %in% datatype,]
+  }
+      
   hilight0 <- hilight
   if (FALSE && is.null(hilight)) {
     hilight <- rownames(res$fc)
   }
+
   if (is.null(label)) {
-    wt <- rowSums(scale(df, center = FALSE)**2, na.rm = TRUE)
-    label <- rownames(df)[order(-wt)]
+    label <- rownames(df)
     if (!is.null(hilight)) label <- intersect(label, hilight)
     ## if(!is.null(sig)) label <- intersect(label, names(sig[sig == TRUE]))
   }
-  label <- Matrix::head(label, ntop) ## label
 
+  if(!is.null(label))  label <- map_probes(pgx$genes, label)
+  if(!is.null(hilight))  hilight <- map_probes(pgx$genes, hilight)  
+
+  wt <- rowSums(scale(df[,c("fc","y")], center = FALSE)**2, na.rm = TRUE)
+  label <- label[order(-wt[label])]
+  label <- Matrix::head(label, ntop) ## label
+  
   ## xlim <- ylim <- NULL
   if (is.null(xlim) && !is.null(fc.max)) {
     xlim <- c(-1.1, 1.1) * fc.max
@@ -1090,6 +1112,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       label.names = rownames(df),
       highlight = hilight,
       label = label,
+      ntop = 9999,  ## done earlier
       title = title,
       xlab = xlab,
       ylab = ylab,
@@ -1212,7 +1235,7 @@ plot_volcano <- function(x,
 
   if (showlegend) {
     cc <- colors[c("notsig", "up", "down")]
-    legend("topright",
+    legend("bottomleft",
       legend = c("Not significant", "Up", "Down"),
       pch = 20, col = cc, pt.cex = 1.5 * cex, bty = "n", border = NA
     )
