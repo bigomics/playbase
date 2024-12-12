@@ -178,7 +178,7 @@ pgx.createPGX <- function(counts,
                           remove.xxl = TRUE, ## DEPRECATED
                           remove.outliers = TRUE, ## DEPRECATED
                           settings = list()) {
-
+  
   message("[createPGX] datatype = ", datatype)
 
   if (!is.null(counts)) {
@@ -196,6 +196,7 @@ pgx.createPGX <- function(counts,
     if (min.nz < 1e-4) {
       info("[createPGX] WARNING : small non-zero values detected. check prior.")
     }
+    message("[createPGX] creating X as log2(counts+p) with p=",prior)
     X <- log2(counts + prior)
   }
 
@@ -233,7 +234,7 @@ pgx.createPGX <- function(counts,
   if (is.null(contrasts)) contrasts <- samples[, 0]
 
   ## convert old-style contrast matrix to sample-wise labeled contrasts
-  contrasts <- playbase::contrasts.convertToLabelMatrix(contrasts, samples)
+  contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
 
   ## prune unused samples
   contrasts[contrasts %in% c("", " ", "NA")] <- NA
@@ -384,6 +385,7 @@ pgx.createPGX <- function(counts,
     if (only.proteincoding) {
       message("[createPGX] removing Rik/ORF/LOC genes...")
       is.unknown <- grepl("^rik|^loc|^orf", tolower(pgx$genes$symbol))
+      is.unknown <- is.unknown & !is.na(pgx$genes$symbol)
       pgx$genes <- pgx$genes[which(!is.unknown), ]
     }
 
@@ -436,12 +438,12 @@ pgx.createPGX <- function(counts,
     group <- pgx$genes$symbol
     group <- paste0(rownames(pgx$genes), "_", pgx$genes$symbol)
 
-    pgx$counts <- playbase::rowmean(pgx$counts, group = group, reorder = TRUE)
+    pgx$counts <- rowmean(pgx$counts, group = group, reorder = TRUE)
     pgx$counts <- pgx$counts[rownames(pgx$counts) != "", , drop = FALSE]
-    pgx$X <- playbase::rowmean(pgx$X, group = group, reorder = TRUE)
+    pgx$X <- rowmean(pgx$X, group = group, reorder = TRUE)
     pgx$X <- pgx$X[rownames(pgx$counts), , drop = FALSE]
     if (!is.null(pgx$impX)) {
-      pgx$impX <- playbase::rowmean(pgx$impX, group = group, reorder = TRUE)
+      pgx$impX <- rowmean(pgx$impX, group = group, reorder = TRUE)
       pgx$impX <- pgx$impX[rownames(pgx$counts), , drop = FALSE]
     }
 
@@ -485,6 +487,12 @@ pgx.createPGX <- function(counts,
     message("[createPGX] dim(GMT) =  ",dim(pgx$GMT)[1],"x",dim(pgx$GMT)[2])
   }
 
+  ## -------------------------------------------------------------------
+  ## object checks
+  ## -------------------------------------------------------------------
+  pgx$samples <- pgx$samples[,colMeans(is.na(pgx$samples))<1,drop=FALSE]
+
+  
   return(pgx)
 }
 
@@ -551,8 +559,8 @@ pgx.computePGX <- function(pgx,
     stop("[pgx.computePGX] FATAL:: all contrast names must include _vs_")
   }
 
-  contr.matrix <- playbase::contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
-  contr.matrix <- playbase::makeContrastsFromLabelMatrix(contr.matrix)
+  contr.matrix <- contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
+  contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
   contr.matrix <- sign(contr.matrix) ## sign is fine
 
   ## select valid contrasts
@@ -567,12 +575,12 @@ pgx.computePGX <- function(pgx,
   if (do.cluster || cluster.contrasts) {
     message("[pgx.computePGX] clustering samples...")
     mm <- c("pca", "tsne", "umap")
-    pgx <- playbase::pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
+    pgx <- pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
 
     ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
     posx <- cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]])
     posx <- scale(posx)
-    idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
+    idx <- pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
     if (length(unique(idx)) == 1) {
       ## try again with finer settings if single cluster...
       idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
@@ -588,8 +596,8 @@ pgx.computePGX <- function(pgx,
     if (length(unique(Y[, 1])) < 2) {
       message("[pgx.computePGX] warning: only one cluster.")
     } else {
-      ct <- playbase::makeDirectContrasts(Y, ref = "others")
-      ctx <- playbase::contrastAsLabels(ct$exp.matrix)
+      ct <- makeDirectContrasts(Y, ref = "others")
+      ctx <- contrastAsLabels(ct$exp.matrix)
       if (ncol(pgx$contrasts) == 0) {
         pgx$contrasts <- ctx
       } else {
@@ -601,7 +609,7 @@ pgx.computePGX <- function(pgx,
   ## Cluster by genes
   if (do.clustergenes) {
     message("[pgx.computePGX] clustering genes...")
-    pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3),
+    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3),
                                       X = pgx$impX, level = "gene")
   }
 
@@ -648,7 +656,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
 
   message("[pgx.computePGX] testing genes...")
-  pgx <- playbase::compute_testGenes(pgx, contr.matrix,
+  pgx <- compute_testGenes(pgx, contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
     use.design = use.design,
@@ -670,7 +678,7 @@ pgx.computePGX <- function(pgx,
     ## Cluster by genes
     if (do.clustergenesets) {
       message("[pgx.computePGX] clustering genesets...")
-      pgx <- playbase::pgx.clusterGenes(pgx,
+      pgx <- pgx.clusterGenes(pgx,
         methods = "umap",
         dims = c(2, 3), X = NULL, level = "geneset"
       )
@@ -683,7 +691,7 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
   message("[pgx.computePGX] computing extra modules...")
 
-  pgx <- playbase::compute_extra(pgx,
+  pgx <- compute_extra(pgx,
     extra = extra.methods,
     pgx.dir = pgx.dir,
     libx.dir = libx.dir,
@@ -718,7 +726,7 @@ counts.removeSampleOutliers <- function(counts) {
 counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
   ## remove extra-large and infinite values
   ## X <- log2(1 + counts)
-  X <- playbase::logCPM(counts)
+  X <- logCPM(counts)
   which.xxl <- which(is.xxl(X), arr.ind = TRUE)
   nxxl <- nrow(which.xxl)
   if (nxxl > 0) {
@@ -733,7 +741,7 @@ counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
 counts.imputeMissing <- function(counts, method = "SVD2") {
   X <- log2(1 + counts)
   table(is.na(X))
-  impX <- playbase::imputeMissing(X, method = method)
+  impX <- imputeMissing(X, method = method)
   pmax(2**impX - 1, 0)
 }
 
@@ -782,7 +790,7 @@ counts.mergeDuplicateFeatures <- function(counts, is.counts = TRUE) {
   if (ndup > 0) {
     if (!is.counts) counts <- 2**counts
     message("[mergeDuplicateFeatures] ", ndup, " duplicated rownames: averaging rows (in counts).")
-    counts <- playbase::rowmean(counts, group = rownames(counts), reorder = TRUE)
+    counts <- rowmean(counts, group = rownames(counts), reorder = TRUE)
     counts[which(is.nan(counts))] <- NA
     if (!is.counts) counts <- log2(counts)
   }
@@ -847,17 +855,33 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
   # Load geneset matrix from playdata. add metabolomics if data.type
   # is metabolomics
-  if (pgx$datatype %in% c("metabolomics","multi-omics")) {
-    dbg("[pgx.add_GMT] Adding metabolomics genesets")
+  symbol <- pgx$genes$symbol
+  has.mx <- mean(symbol %in% rownames(METABOLITE_ANNOTATION)) > 0.20
+  has.px <- mean(symbol %in% colnames(GSETxGENE)) > 0.20
+  has.mx
+  has.px
+  G <- NULL
+
+  ## add metabolomic gene sets   
+  if (has.mx) {
+    info("[pgx.add_GMT] Adding metabolomics genesets")
     G <- Matrix::t(playdata::MSETxMETABOLITE)
     rownames(G) <- sub(".*:","",rownames(G)) ## TEMPORARY!!!
-  } else {
-    dbg("[pgx.add_GMT] Adding transcriptomics/proteomics genesets")
-    G <- Matrix::t(playdata::GSETxGENE)
+  }
+ 
+   ## add SYMBOL (classic) gene sets 
+  if (has.px) {
+    info("[pgx.add_GMT] Adding transcriptomics/proteomics genesets")
+    if(!is.null(G)) {
+      G <- merge_sparse_matrix(G, Matrix::t(playdata::GSETxGENE))
+    } else {
+      G <- Matrix::t(playdata::GSETxGENE)
+    }
   }
 
   # create a feature list that will be used to filter and reduce dimensions of G
-  full_feature_list <- c(pgx$genes$human_ortholog, pgx$genes$symbol, rownames(pgx$genes))
+  full_feature_list <- c(pgx$genes$human_ortholog, pgx$genes$symbol,
+                         rownames(pgx$genes))
   full_feature_list <- full_feature_list[!is.na(full_feature_list)]
   full_feature_list <- full_feature_list[full_feature_list != ""]
   full_feature_list <- unique(full_feature_list)
@@ -915,7 +939,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     if (length(go.size) > 0) {
       # if no go genesets pass the min/max filter playbase function
       # crashes convert to sparse matrix
-      go.gmt <- playbase::createSparseGenesetMatrix(
+      go.gmt <- createSparseGenesetMatrix(
         gmt.all = go.genesets,
         min.geneset.size = 15,
         max.geneset.size = 400,
@@ -926,7 +950,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       )
 
       # merge go.gmt with G
-      G <- playbase::merge_sparse_matrix(
+      G <- merge_sparse_matrix(
         m1 = G,
         m2 = Matrix::t(go.gmt)
       )
@@ -937,13 +961,13 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   # stage we have metabolomics genesets in G or
   # transcriptomics/proteomics genesets in G combined with random
   # genesets (if necessary) and GO genesets
-  rownames(G) <- playbase::probe2symbol(rownames(G), pgx$genes, "symbol", fill_na = TRUE)
+  rownames(G) <- probe2symbol(rownames(G), pgx$genes, "symbol", fill_na = TRUE)
 
   if (!is.null(custom.geneset$gmt)) {
     message("[pgx.add_GMT] Adding custom genesets...")
     ## convert gmt standard to SPARSE matrix: gset in rows, genes in columns.
 
-    custom_gmt <- playbase::createSparseGenesetMatrix(
+    custom_gmt <- createSparseGenesetMatrix(
       gmt.all = custom.geneset$gmt,
       min.geneset.size = 3,
       max.geneset.size = 9999,
@@ -956,10 +980,10 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     # G and custom_gmt have to be SYMBOL alligned
     if (!is.null(custom_gmt) && ncol(custom_gmt) > 0) {
       # only run this code if custom_gmt has columns (genes)
-      colnames(custom_gmt) <- playbase::probe2symbol(
+      colnames(custom_gmt) <- probe2symbol(
         colnames(custom_gmt), pgx$genes, "symbol", fill_na = TRUE)
 
-      G <- playbase::merge_sparse_matrix(
+      G <- merge_sparse_matrix(
         m1 = G,
         m2 = Matrix::t(custom_gmt)
       )
@@ -1070,7 +1094,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     random.gmt <- lapply(rr, function(n) head(sample(gg), min(n, length(gg) / 2)))
     names(random.gmt) <- paste0("TEST:random_geneset.", 1:length(random.gmt))
 
-    add.gmt <- playbase::createSparseGenesetMatrix(
+    add.gmt <- createSparseGenesetMatrix(
       gmt.all = random.gmt,
       min.geneset.size = 3,
       max.geneset.size = 400,
@@ -1081,14 +1105,14 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     )
 
     # merge add.gmt with G
-    G <- playbase::merge_sparse_matrix(
+    G <- merge_sparse_matrix(
       m1 = G,
       m2 = Matrix::t(add.gmt)
     )
   }
 
   # normalize columns (required for some methods downstream)log2foldchange
-  G <- playbase::normalize_cols(G)
+  G <- normalize_cols(G)
 
   pgx$GMT <- G
   pgx$custom.geneset <- custom.geneset
@@ -1097,6 +1121,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   gc()
   return(pgx)
 }
+
 
 
 ## ----------------------------------------------------------------------
