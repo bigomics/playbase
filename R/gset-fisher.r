@@ -190,8 +190,15 @@ gset.fisher <- function(genes, genesets, background = NULL,
     ii <- which((a + c) > 0)
     d1 <- d + 1 * (d == 0) ## hack to avoid crash...
     b1 <- b + 1 * (b == 0) ## hack to avoid crash...
-    pv1 <- corpora::fisher.pval(a[ii], (a + b1)[ii], c[ii], (c + d1)[ii], alternative = "greater")
-    pv[ii] <- pv1
+    pv1 <- try(
+      corpora::fisher.pval(a[ii], (a + b1)[ii], c[ii], (c + d1)[ii], alternative = "greater"), silent = TRUE
+    )
+    if (class(pv1) != "try-error") {
+      pv[ii] <- pv1
+    } else {
+      message("[playbase::gset.fisher] fast.fisher failed. Testing with standard fisher.")
+      method <- "fisher"
+    }
   } else if (method == "fisher") {
     if (mc) {
       pv <- unlist(lapply(genesets, test.fisher))
