@@ -239,12 +239,13 @@ pgx.initialize <- function(pgx) {
       names(fc) <- rownames(pgx$gx.meta$meta[[i]])
       # If use does not collapse by gene
       if (!all(names(fc) %in% pgx$genes$symbol)) {
-        names(fc) <- pgx$genes$symbol[match(names(fc), rownames(pgx$genes), nomatch = 0)]
+        names(fc) <- probe2symbol(names(fc), pgx$genes, "symbol", fill_na = TRUE)
         fc <- fc[names(fc) != ""]
         fc <- fc[!is.na(names(fc))]
       }
-      G1 <- Matrix::t(pgx$GMT[names(fc), rownames(gs)])
-      mx <- (G1 %*% fc)[, 1]
+      gg <- intersect(names(fc), rownames(pgx$GMT))
+      G1 <- Matrix::t(pgx$GMT[gg, rownames(gs)])
+      mx <- (G1 %*% fc[gg])[, 1]
       pgx$gset.meta$meta[[i]]$meta.fx <- mx
     }
   } else {
