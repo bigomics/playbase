@@ -396,7 +396,7 @@ expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = 
   y.isnum <- (y.class %in% c("numeric", "integer"))
   kk <- which(y.isnum | (!y.isnum & nlevel > 1 & nratio < 0.66))
   if (length(kk) == 0) {
-    kk <- which(y.isnum | (!y.isnum & nlevel > 1 ))
+    kk <- which(y.isnum | (!y.isnum & nlevel > 1))
   }
   if (length(kk) == 0) {
     return(NULL)
