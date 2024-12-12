@@ -70,6 +70,7 @@ pgx.clusterGenes <- function(pgx, methods = c("pca", "tsne", "umap"), dims = c(2
     t(X),
     methods = methods,
     dims = dims,
+    datatype = pgx$datatype,
     perplexity = perplexity,
     center.features = FALSE,
     scale.features = FALSE,
@@ -484,7 +485,7 @@ pgx.clusterMatrix <- function(X,
     colnames(X) <- cnx
   }
 
-  dims <- ifelse(datatype == "scRNAseq", c(2), c(2,3))
+  dims <- ifelse(datatype %in% c("scRNAseq","scRNA-seq"), c(2), c(2,3))
   all.pos <- list()
     
   if ("pca" %in% methods) {
