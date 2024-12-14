@@ -178,7 +178,8 @@ pgx.createPGX <- function(counts,
                           convert.hugo = TRUE,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE,
-                          remove.outliers = TRUE) {
+                          remove.outliers = TRUE,
+                          sc_settings = list()) { ## NEW AZ
 
   message("[pgx.createPGX]===========================================")
   message("[pgx.createPGX]=========== pgx.createPGX =================")
@@ -318,6 +319,15 @@ pgx.createPGX <- function(counts,
   description <- gsub("[\n]", ". ", description) ## replace newline
   description <- trimws(gsub("[ ]+", " ", description)) ## remove ws
 
+  ##----------NEW AZ
+  ## add to setting info
+  sc_settings$filter.genes <- filter.genes
+  sc_settings$only.known <- only.known
+  sc_settings$only.proteincoding <- only.proteincoding
+  sc_settings$convert.hugo <- convert.hugo
+  sc_settings$custom.geneset <- !is.null(custom.geneset)
+  ##----------NEW AZ
+  
   pgx <- list(
     name = name,
     organism = organism,
@@ -333,7 +343,8 @@ pgx.createPGX <- function(counts,
     impX = impX,
     norm_method = norm_method,
     total_counts = Matrix::colSums(counts, na.rm = TRUE),
-    counts_multiplier = counts_multiplier
+    counts_multiplier = counts_multiplier,
+    sc_settings = sc_settings ## NEW AZ
   )
 
   ## -------------------------------------------------------------------
