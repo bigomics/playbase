@@ -308,7 +308,7 @@ read_counts <- function(file, first = FALSE, unique = FALSE, paste_char = "_") {
   ## determine column types (NEED RETHINK!)
   df1 <- type.convert(data.frame(head(df, 20), check.names = FALSE), as.is = TRUE)
   col.type <- sapply(df1, class)
-  xannot.names <- "gene|symbol|protein|compound|title|description|name|position"
+  xannot.names <- "gene|^id$$|metabolite|compound|position|phospo.*site" ## possible numeric annotations
   is.xannot <- grepl(xannot.names, tolower(colnames(df)))
   char.cols <- which(col.type == "character" | is.xannot)
   last.charcol <- tail(char.cols, 1)
@@ -435,7 +435,6 @@ read_annot <- function(file, unique = TRUE) {
   ## have equal or more than two columns. First column are rownames.
   if (length(char.cols) && last.charcol >= 2) {
     df <- df[, 1:last.charcol, drop = FALSE]
-    df <- data.frame(df, check.names = FALSE)
   } else {
     df <- NULL
   }
