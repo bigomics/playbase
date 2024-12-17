@@ -17,7 +17,7 @@
 #' @export
 compute_extra <- function(pgx, extra = c(
                             "meta.go", "infer", "deconv", "drugs", ## "graph",
-                            "connectivity", "wordcloud", "wgcna"
+                            "connectivity", "wordcloud", "wgcna", "mofa"
                           ), sigdb = NULL, pgx.dir = "./data", libx.dir = "./libx",
                           user_input_dir = getwd()) {
   timings <- c()
@@ -251,6 +251,32 @@ compute_extra <- function(pgx, extra = c(
     timings <- rbind(timings, c("wgcna", tt))
   }
 
+  if ("mofa" %in% extra) {
+    message(">>> Computing MOFA...")
+    tt <- system.time({
+      tryCatch(
+        {
+          ##pgx$wgcna <- pgx.wgcna(pgx)
+          pgx$mofa <- pgx.compute_mofa(
+            pgx,
+            kernel = "MOFA",
+            ntop = 1000,
+            numfactors = 10,
+            add_gsets = TRUE
+          )
+        },
+        error = function(e) {
+          write(as.character(e), file = paste0(user_input_dir, "/ERROR_MOFA"))
+          return(NULL)
+        }
+      )
+    })
+    timings <- rbind(timings, c("wgcna", tt))
+  }
+  
+
+
+  
   ## ------------------------------------------------------
   ## pretty collapse all timings
   ## ------------------------------------------------------
