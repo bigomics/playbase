@@ -4,7 +4,7 @@
 \alias{wikipathview}
 \title{Download and color nodes in WikiPathways SVGs}
 \usage{
-wikipathview(wp, val)
+wikipathview(wp, val, as.img = FALSE)
 }
 \arguments{
 \item{wp}{A character string specifying the WikiPathways pathway ID.}

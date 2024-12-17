@@ -12,7 +12,8 @@ plotPCSF(
   physics = TRUE,
   node_cex = 30,
   label_cex = 30,
-  nlabel = -1
+  nlabel = -1,
+  edge_width = 5
 )
 }
 \description{

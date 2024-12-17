@@ -664,9 +664,12 @@ wrapHyperLink <- function(s, gs) {
 reverse.AvsB <- function(comp) {
   reverse.AvsB.1 <- function(comp) {
     prefix <- postfix <- ""
-    if (any(grepl("[:]", comp))) prefix <- sub(":.*", "", comp)
+    if (any(grepl("[:]", comp))) {
+      after1 <- sub(".*:", "", comp)
+      prefix <- sub(paste0(":",after1),"", comp, fixed=TRUE)
+    }
     if (any(grepl("[@]", comp))) postfix <- sub(".*@", "", comp)
-    comp0 <- gsub(".:|@.*", "", comp)
+    comp0 <- gsub(".*:|@.*", "", comp)
     ab <- paste(rev(strsplit(comp0, split = "_vs_|_VS_")[[1]]), collapse = "_vs_")
     gsub("^:|@$", "", paste0(prefix, ":", ab, "@", postfix))
   }

@@ -738,6 +738,18 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     return(probe_type)
   }
 
+  if (!is.null(datatype) && datatype == "multi-omics") {
+    mx.probes <- sub("^mx:","",grep("^mx:", probes, value=TRUE))
+    px.probes <- sub("^px:","",grep("^px:", probes, value=TRUE))
+    gx.probes <- sub("^gx:","",grep("^gx:", probes, value=TRUE))    
+    gx.probe_types=px.probe_types=mx.probe_types=NULL
+    if(length(gx.probes)) gx.probe_types <- detect_probetype(organism, gx.probes)
+    if(length(px.probes)) px.probe_types <- detect_probetype(organism, px.probes)    
+    if(length(mx.probes)) mx.probe_types <- mx.detect_probetype(mx.probes)    
+    probe_type <- c(gx=gx.probe_types, px=px.probe_types, mx=mx.probe_types)
+    return(probe_type)
+  }
+
   ## get correct OrgDb database for organism
   if (is.null(orgdb)) {
     orgdb <- getOrgDb(organism, use.ah = use.ah)
@@ -1483,8 +1495,10 @@ detect_species_probetype <- function(
     probes,
     test_species = c("human", "mouse", "rat"),
     datatype = NULL) {
+
   probes <- unique(clean_probe_names(probes))
   ptype <- list()
+  s="human"
   for (s in test_species) {
     ptype[[s]] <- detect_probetype(
       organism = s,
@@ -1495,10 +1509,12 @@ detect_species_probetype <- function(
     )
   }
   ptype <- unlist(ptype)
-  out <- list(
-    species = names(ptype),
-    probetype = ptype
-  )
+  species <- sub("[.].*","",names(ptype))  ## remove datatype postfix
+  out <- tapply( ptype, species, c)
+  ## out <- list(
+  ##   species = species,
+  ##   probetype = as.character(ptype)
+  ## )
   return(out)
 }
 
@@ -1614,26 +1630,41 @@ convert_probetype <- function(organism, probes, target_id, from_id = NULL,
 getProbeAnnotation <- function(organism, probes) {
   
   if(sum(grepl("[:]",probes))) {
-    prefix <- sub(":.*","",probes)
+    dtype <- sub(":.*","",probes)
   } else {
-    prefix <- rep("gx",length(probes))
+    ## no colon in names
+
+    ptype <- detect_probetype(organism, probes)
+    mtype <- mx.detect_probetype(probes)    
+
+
+    gx.types <- c(
+      "SYMBOL", "ENSEMBL", "ACCNUM", "GENENAME",
+      "MGI", "TAIR",  "ENSEMBLTRANS", "REFSEQ", "ENTREZID"
+    )
+    px.types <- c("UNIPROT", "ENSEMBLPROT")
+    dx <- ifelse(ptype %in% px.types, "px", "gx")
+    dtype <- rep(dx,length(probes))
   }
-  table(prefix)
-  is.gx <- grepl("ensembl|symbol|hugo|gene|uniprot|^prot|^gx|^px",tolower(prefix))
-  is.mx <- grepl("chebi|hmdb|kegg|pubchem|^mx|metabo",tolower(prefix))
-  dtype <- c(NA,'gx','mx')[ 1 + 1*is.gx + 2*is.mx ] 
+  table(dtype)
+  dtype <- tolower(dtype)
+  dtype <- sub(paste0("ensembl|symbol|hugo|gene|hgnc",".*"),"gx",dtype)
+  dtype <- sub(paste0("uniprot|protein",".*"),"px",dtype)
+  dtype <- sub(paste0("chebi|hmdb|kegg|pubchem",".*"),"mx",dtype)  
   table(dtype)
 
+  ## populate with defaults
+  symbol <- toupper(sub(".*:","",probes))
   annot <- list()
-  if("gx" %in% dtype) {
+  if(any(dtype %in% c('gx','px'))) {
     ii <- which(dtype %in% c('gx','px'))
     pp <- sub(".*:","",probes[ii])
     aa <- getGeneAnnotation(organism, pp)
     head(aa)
-    aa$data_type <- 'gx'    
+    aa$data_type <- sub(":.*","",probes[ii])
     rownames(aa) <- probes[ii]
     aa$feature <- probes[ii]
-    annot[['gx']] <- aa
+    annot <- c(annot, list(aa))
   }
   if("mx" %in% dtype) {
     ii <- which(dtype == 'mx')
@@ -1643,14 +1674,22 @@ getProbeAnnotation <- function(organism, probes) {
     aa$data_type <- 'mx'
     rownames(aa) <- probes[ii]
     aa$feature <- probes[ii]
-    annot[['mx']] <- aa
+    annot <- c(annot, list(aa))
   }
-  names(annot) <- NULL
+
   cols <- Reduce( intersect, lapply(annot,colnames))
   annot <- lapply(annot, function(a) a[,cols])
   annot <- do.call( rbind, annot )
   annot <- annot[match(probes, annot$feature),]
   rownames(annot) <- probes
+  head(annot)
+
+  ## fill NA
+  annot$feature <- ifelse(is.na(annot$feature), probes, annot$feature)
+  annot$symbol <- ifelse(is.na(annot$symbol), symbol, annot$symbol)
+  annot$gene_name <- ifelse(is.na(annot$gene_name), probes, annot$gene_name)
+  annot$data_type <- ifelse(is.na(annot$data_type), dtype, annot$data_type)    
+
   head(annot)
   tail(annot)  
   annot

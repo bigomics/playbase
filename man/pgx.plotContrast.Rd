@@ -35,12 +35,14 @@ pgx.Volcano(
   colors = c(up = "#f23451", notsig = "#707070AA", notsel = "#cccccc88", down =
     "#3181de"),
   filt = NULL,
+  datatype = NULL,
   title = NULL,
   xlim = NULL,
   ylim = NULL,
   xlab = "effect size (logFC)",
   ylab = "significance (-log10q)",
   repel = FALSE,
+  labeltype = NULL,
   set.par = TRUE,
   plotlib = "base",
   data = FALSE

@@ -978,7 +978,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
                         title = NULL, xlim = NULL, ylim = NULL,
                         xlab = "effect size (logFC)",
                         ylab = "significance (-log10q)",
-                        repel = FALSE,
+                        repel = FALSE, labeltype = NULL,
                         set.par = TRUE, plotlib = "base", data = FALSE) {
   if (is.integer(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
   res <- NULL
@@ -1033,13 +1033,15 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   wt <- rowSums(scale(df[,c("fc","y")], center = FALSE)**2, na.rm = TRUE)
   label <- label[order(-wt[label])]
   label <- Matrix::head(label, ntop) ## label
-  
-  ## xlim <- ylim <- NULL
+
+  if(is.null(fc.max)) fc.max <- max(abs(df$fc),na.rm=TRUE)
   if (is.null(xlim) && !is.null(fc.max)) {
     xlim <- c(-1.1, 1.1) * fc.max
   }
+
+  if(is.null(p.min)) p.min <- max(min(q,na.rm=TRUE),10^-99)
   if (is.null(ylim) && !is.null(p.min)) {
-    ylim <- c(0, -log10(p.min)) * 1.1
+    ylim <- c(0, -log10(p.min)) * 1.05
   }
 
   if (data) {
@@ -1057,6 +1059,12 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   ##   )
   ## }
 
+  label.names = rownames(df)
+  if( !is.null(labeltype) && labeltype %in% colnames(pgx$genes)) {
+    ii <- match(rownames(df), rownames(pgx$genes))
+    label.names <- pgx$genes[ii, labeltype]
+  }
+  
   p <- NULL
   if (plotlib == "ggplot") {
     p <- ggVolcano(
@@ -1064,7 +1072,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       y = df$y,
       names = rownames(df),
       title = title,
-      label.names = rownames(df),
+      label.names = label.names,
       facet = NULL,
       highlight = hilight,
       xlab = xlab,
@@ -1084,7 +1092,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       x = df$fc,
       y = df$y,
       names = rownames(df),
-      label.names = rownames(df),
+      label.names = label.names,
       group.names = c("group1", "group2"),
       title = title,
       xlab = xlab,
@@ -1109,13 +1117,15 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       x = df$fc,
       y = df$q,
       names = rownames(df),
-      label.names = rownames(df),
+      label.names = label.names,
       highlight = hilight,
       label = label,
       ntop = 9999,  ## done earlier
       title = title,
       xlab = xlab,
       ylab = ylab,
+      xlim = xlim,
+      ylim = ylim,
       lfc = fc,
       psig = psig,
       sig = sig,
@@ -1174,6 +1184,8 @@ plot_volcano <- function(x,
                          showlegend = TRUE,
                          cex = 1,
                          cex.lab = 1,
+                         xlim = NULL,
+                         ylim = NULL,
                          marker.alpha = 0.7,
                          axis.text.size = 14,
                          title = "Volcano plot",
@@ -1202,13 +1214,14 @@ plot_volcano <- function(x,
     if (!is.null(highlight)) label <- intersect(label, highlight)
     ## if(!is.null(sig)) label <- intersect(label, names(sig[sig == TRUE]))
   }
-  label <- Matrix::head(label, ntop) ## label
+  label <- head(label, ntop) ## label
 
   p <- pgx.scatterPlotXY.BASE(
     pos = pos,
     var = sig,
     type = "factor",
     title = title,
+    labels = label.names,
     xlab = "effect size (log2FC)",
     ylab = "significance (-log10q)",
     hilight = highlight, #
@@ -1216,8 +1229,8 @@ plot_volcano <- function(x,
     cex = 1.3 * cex,
     cex.lab = 1.4 * cex.lab,
     cex.title = 1.0,
-    #    xlim = xlim,
-    #    ylim = ylim,
+    xlim = xlim,
+    ylim = ylim,
     legend = FALSE,
     color_up_down = TRUE,
     col = colors[c("notsig", "up", "down")],
@@ -1237,7 +1250,9 @@ plot_volcano <- function(x,
     cc <- colors[c("notsig", "up", "down")]
     legend("bottomleft",
       legend = c("Not significant", "Up", "Down"),
-      pch = 20, col = cc, pt.cex = 1.5 * cex, bty = "n", border = NA
+      pch = 20, col = cc,
+      pt.cex = 1.5 * cex, cex = 0.9, 
+      bg = "#FFFFFF99", bty = "o", border = NA
     )
   }
 }

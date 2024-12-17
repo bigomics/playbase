@@ -7,7 +7,8 @@
 #' detect metabolomics ID type
 #' @export
 mx.detect_probetype <- function(probes) {
-  aa <- playdata::METABOLITE_ANNOTATION
+  aa <- playdata::METABOLITE_ANNOTATION[,-1]
+  probes <- gsub(".*:|[.].*","",probes)
   nmatch <- apply(aa, 2, function(s) sum(probes %in% setdiff(s, NA)))
   if (max(nmatch) / length(probes) < 0.10) {
     aa2 <- apply(aa, 2, function(s) gsub("[^0-9]", "", s))
@@ -79,15 +80,20 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ChEBI") {
 }
 
 #' @export
-getMetaboliteAnnotation <- function(probes, probe_type = "ChEBI") {
+getMetaboliteAnnotation <- function(probes, probe_type = NULL) {
+  if(is.null(probe_type)) {
+    probe_type <- mx.detect_probetype(probes) 
+  }
+  if(is.null(probe_type)) {
+    message("ERROR. must provide probe_type")
+    return(NULL)
+  }
+  message("[getMetaboliteAnnotation] probe_type = ", probe_type)
+  
   # get annotation for probes
-
   probes_chebi <- playbase::convert_probe_to_chebi(probes, probe_type)
-
   metabolite_metadata <- playdata::METABOLITE_METADATA
-
   match_ids <- match(probes_chebi, metabolite_metadata$ID)
-
   metabolite_metadata <- metabolite_metadata[match_ids, ]
 
   df <- data.frame(

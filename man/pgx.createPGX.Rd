@@ -29,7 +29,7 @@ pgx.createPGX(
   prune.samples = FALSE,
   only.known = TRUE,
   only.hugo = TRUE,
-  convert.hugo = TRUE,
+  convert.hugo = FALSE,
   only.proteincoding = TRUE,
   remove.xxl = TRUE,
   remove.outliers = TRUE,
