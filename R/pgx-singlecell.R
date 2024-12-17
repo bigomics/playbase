@@ -1177,7 +1177,7 @@ pgx.createSingleCellPGX <- function(counts,
   ## }
 
   sc.membership <- NULL
-  if(ncol(counts) > 1e200) {
+  if(ncol(counts) > 1e200) { ## 15K , 20K
     ct <- samples[,"celltype"]
     group <- paste0(ct, ":", apply(contrasts, 1, paste, collapse='_'))
     ##  group <- paste0(samples[, "celltype"], ":", samples[, pheno])
@@ -1231,7 +1231,7 @@ pgx.createSingleCellPGX <- function(counts,
   
   ## create balanced down-sampled object. We target about n=20 cells
   ## per statistical condition, per celltype.
-  downsample = FALSE
+  downsample = FALSE ## RETHINK
   if (downsample) {
     message("[pgx.createSingleCellPGX] Down-sampling Seurat object ...")  
     group <- paste0(obj@meta.data$celltype, ":", obj@meta.data[, pheno])
@@ -1244,9 +1244,19 @@ pgx.createSingleCellPGX <- function(counts,
   message("[pgx.createSingleCellPGX] Creating PGX object ...")
   counts = sub[['RNA']]$counts
   samples = sub@meta.data
+
   pheno <- "stim" ############# TEMP AZ
   df <- samples[, c(pheno, "celltype")] ## ????
   ## df <- samples[, c(group, "celltype")]
+
+  ## i = 1
+  ## for(i in 1:ncol(contrasts)) {
+  ##  unique(contrasts[, i])
+  ##  .....
+  ## }
+  ## ct <- samples[, "celltype"]
+  ## group <- paste0(ct, ":", apply(contrasts, 1, paste, collapse='_'))
+  
   contrasts <- pgx.makeAutoContrastsStratified(
     df, strata.var = "celltype", mingrp = 3, max.level = 99,
     ref = NULL, slen = 20, fix.degenerate = FALSE, skip.hidden = TRUE) 
