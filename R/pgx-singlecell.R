@@ -639,9 +639,9 @@ pgx.createSeuratObject <- function(counts,
     samples <- data.frame(row.names = colnames(counts))
   }
 
-  ## samples$batch <- batch
-  rownames(samples) <- colnames(counts)
   samples <- as.data.frame(samples)
+  rownames(samples) <- colnames(counts)
+  if(!is.null(batch)) samples$batch <- batch
   samples$nCount_RNA <- Matrix::colSums(counts, na.rm = TRUE)
   samples$nFeature_RNA <- Matrix::colSums(counts>0, na.rm = TRUE)  
   obj <- Seurat::CreateSeuratObject(counts = counts, meta.data = samples)
@@ -674,6 +674,7 @@ pgx.createSeuratObject <- function(counts,
 
   if(preprocess) {
     message("[pgx.createIntegratedSeuratObject] preprocessing Seurat object")   
+    has.batch <- "batch" %in% tolower(colnames(obj@meta.data))
     if(!is.null(batch)) {
       obj <- seurat.integrate(obj, 'batch', sct = TRUE, method = "Harmony") 
     } else {
@@ -1124,9 +1125,9 @@ pgx.createSingleCellPGX <- function(counts,
                                     samples,
                                     contrasts,
                                     organism,
-                                    scrnaseq_pheno,
-                                    batch = NULL, 
-                                    azimuth_ref
+                                    azimuth_ref,
+                                    ## scrnaseq_pheno,
+                                    batch = NULL
                                     ## sc_pheno
                                     ) {
 
@@ -1176,9 +1177,13 @@ pgx.createSingleCellPGX <- function(counts,
   samples$celltype <- azm[, sel]
   ## }
 
+  ## because the samples get downsamples, also the sample and
+  ## contrasts matrices get downsampled (by majority label).
+  samplesx <- cbind( samples, contrasts )
+  
   sc.membership <- NULL
-  if(ncol(counts) > 1e200) { ## 15K , 20K
-    ct <- samples[,"celltype"]
+  if(ncol(counts) > 2000) { ## 15K , 20K
+    ct <- samplesx[,"celltype"]
     group <- paste0(ct, ":", apply(contrasts, 1, paste, collapse='_'))
     ##  group <- paste0(samples[, "celltype"], ":", samples[, pheno])
     if(!is.null(batch)) {
@@ -1189,11 +1194,11 @@ pgx.createSingleCellPGX <- function(counts,
     ## nb <- ceiling(round( q10 / 20 ))
     message("[pgx.createSingleCellPGX]=======================================")
     message("[pgx.createSingleCellPGX] running SuperCell. nb = ", nb)    
-    sc <- pgx.supercell(counts, samples, group = group, gamma = nb)
+    sc <- pgx.supercell(counts, samplesx, group = group, gamma = nb)
     message("[pgx.createSingleCellPGX] SuperCell done: ", ncol(counts), " -> ", ncol(sc$counts))
     message("[pgx.createSingleCellPGX]=======================================")
     counts <- sc$counts
-    samples <- sc$meta
+    samplesx <- sc$meta
     sc.membership <- sc$membership
     remove(sc)
   }
@@ -1203,11 +1208,13 @@ pgx.createSingleCellPGX <- function(counts,
   message("[pgx.createSingleCellPGX] Creating Seurat object ...")
   if (!is.null(batch)) {
     message("[pgx.createSingleCellPGX] Integrating by batch = ", batch)     
-    batch.vec <- samples[, batch, drop = FALSE]
+    batch.vec <- as.vector(unlist(samplesx[,batch]))
+    table(batch.vec)
   }
+
   obj <- pgx.createSeuratObject(
     counts,
-    samples,
+    samplesx,
     batch = batch.vec,
     filter = TRUE,
     method = "Harmony"
@@ -1234,7 +1241,9 @@ pgx.createSingleCellPGX <- function(counts,
   downsample = FALSE ## RETHINK
   if (downsample) {
     message("[pgx.createSingleCellPGX] Down-sampling Seurat object ...")  
-    group <- paste0(obj@meta.data$celltype, ":", obj@meta.data[, pheno])
+    meta.ct <- obj@meta.data[,colnames(contrasts)]
+    group <- paste0(obj@meta.data$celltype, ":", meta.ct)
+    table(group)
     sub <- seurat.downsample(obj, target_g = 20, group = group)
   } else {
     sub <- obj
@@ -1242,38 +1251,28 @@ pgx.createSingleCellPGX <- function(counts,
   
   ## results for pgxCreate
   message("[pgx.createSingleCellPGX] Creating PGX object ...")
-  counts = sub[['RNA']]$counts
-  samples = sub@meta.data
-
-  pheno <- "stim" ############# TEMP AZ
-  df <- samples[, c(pheno, "celltype")] ## ????
-  ## df <- samples[, c(group, "celltype")]
-
-  ## i = 1
-  ## for(i in 1:ncol(contrasts)) {
-  ##  unique(contrasts[, i])
-  ##  .....
-  ## }
-  ## ct <- samples[, "celltype"]
-  ## group <- paste0(ct, ":", apply(contrasts, 1, paste, collapse='_'))
+  counts2 = sub[['RNA']]$counts
+  kk <- setdiff(colnames(sub@meta.data),colnames(contrasts))
+  samples2 = sub@meta.data[,kk]
   
-  contrasts <- pgx.makeAutoContrastsStratified(
-    df, strata.var = "celltype", mingrp = 3, max.level = 99,
-    ref = NULL, slen = 20, fix.degenerate = FALSE, skip.hidden = TRUE) 
-  colnames(contrasts) <- sub(".*@","",colnames(contrasts))
-  colnames(contrasts) <- gsub("[ ]","_",colnames(contrasts))
+  ## stratify contrast matrix by celltype
+  contrasts2 = sub@meta.data[,colnames(contrasts)]
+  contrasts2 <- stratifyContrasts( contrasts2, samples2$celltype )
+  colnames(contrasts2) <- sub(".*@","",colnames(contrasts2))
+  colnames(contrasts2) <- gsub("[ ]","_",colnames(contrasts2))
 
   ## single-cell specific normalization (10k)
-  X <- playbase::logCPM(counts, total = 1e4, prior = 1)
+  X <- playbase::logCPM(counts2, total = 1e4, prior = 1)
 
-  message("[pgx.createSingleCellPGX] dim(counts): ", paste0(dim(counts), collapse=", "))
-  message("[pgx.createSingleCellPGX] dim(X): ", paste0(dim(X), collapse=", "))
-  message("[pgx.createSingleCellPGX] dim(samples): ", paste0(dim(samples), collapse=", "))
+  message("[pgx.createSingleCellPGX] dim(counts): ", paste0(dim(counts2), collapse=" x "))
+  message("[pgx.createSingleCellPGX] dim(X): ", paste0(dim(X), collapse=" x "))
+  message("[pgx.createSingleCellPGX] dim(samples): ", paste0(dim(samples2), collapse=" x "))
+  message("[pgx.createSingleCellPGX] dim(contrasts): ", paste0(dim(contrasts2), collapse=" x "))  
 
   pgx <- pgx.createPGX(
-    counts = counts,
-    samples = samples,
-    contrasts = contrasts,
+    counts = counts2,
+    samples = samples2,
+    contrasts = contrasts2,
     organism = organism,
     custom.geneset = NULL,
     annot_table = NULL,

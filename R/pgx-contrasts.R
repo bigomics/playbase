@@ -353,9 +353,6 @@ makeFullContrasts <- function(labels, by.sample = FALSE) {
 }
 
 
-
-
-
 #' Automatically generate contrasts within strata
 #'
 #' @param df Data frame with sample metadata
@@ -431,6 +428,44 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, max.leve
   rownames(ct.all) <- rownames(df)
   ct.all[is.na(ct.all)] <- 0
 
+  return(ct.all)
+}
+
+
+#' Stratify contrasts matrix within strata variable
+#'
+#' @export
+stratifyContrasts <- function(contrasts, strata, mingrp=2) {
+#  strata=samples$celltype
+#  dim(contrasts)
+  strata.levels <- sort(unique(strata))
+  s <- strata.levels[1]
+  ct.all <- NULL
+  for (s in strata.levels) {
+    sel <- which(strata == s)
+    if (length(sel) < mingrp) next
+    ct1 <- contrasts[sel, , drop = FALSE]
+    colnames(ct1) <- paste0(s, ":", colnames(ct1))
+    ss = rownames(contrasts)[sel]
+    if (is.null(ct.all)) {
+      ct.all <- data.frame(sample = ss, ct1, check.names = FALSE)
+    } else {
+      df2 <- data.frame(sample = ss, ct1, check.names = FALSE)
+      ct.all <- dplyr::full_join(ct.all, df2, by = "sample")
+    }
+  }
+
+  if (is.null(ct.all)) {
+    message("[stratifyContrasts] WARNING : no valid contrasts")
+    return(NULL)
+  }
+
+  ## sample-wise contrasts
+  rownames(ct.all) <- ct.all[, "sample"]
+  ct.all <- as.matrix(ct.all[, -1, drop = FALSE]) ## drop sample column
+  ct.all <- ct.all[match(rownames(contrasts), rownames(ct.all)), , drop = FALSE]
+  rownames(ct.all) <- rownames(contrasts)
+  ct.all[is.na(ct.all)] <- ''
   return(ct.all)
 }
 
