@@ -546,7 +546,8 @@ pgx.computePGX <- function(pgx,
                            prune.samples = FALSE,
                            extra.methods = c(
                              "meta.go", "infer", "deconv", "drugs",
-                             "connectivity", "wordcloud", "wgcna"
+                             "connectivity", "wordcloud", "wgcna",
+                             "mofa"
                            )[c(1, 2)],
                            pgx.dir = NULL,
                            libx.dir = NULL,
