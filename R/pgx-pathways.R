@@ -51,26 +51,26 @@ getReactomeSVG <- function(wp, val=NULL, as.img=FALSE) {
 
 #' Download and color nodes in PathBank SVGs
 #'
-#' Downloads a PathBank SVG file, modifies its XML structure to color pathway nodes 
+#' Downloads a PathBank SVG file, modifies its XML structure to color pathway nodes
 #' according to input values, and returns the path to the modified file.
 #'
 #' @param pb A character string specifying the PathBank pathway ID.
-#' @param val A named numeric vector where names correspond to pathway element IDs, 
-#'            and values represent the level of regulation (e.g., fold-change or intensity). 
-#'            Positive values indicate up-regulation, while negative values indicate down-regulation. 
+#' @param val A named numeric vector where names correspond to pathway element IDs,
+#'            and values represent the level of regulation (e.g., fold-change or intensity).
+#'            Positive values indicate up-regulation, while negative values indicate down-regulation.
 #'
-#' @return A character string representing the path to the modified SVG file, 
+#' @return A character string representing the path to the modified SVG file,
 #'         or `NULL` if the download fails.
 #'
 #' @details
-#' The function downloads the SVG representation of a PathBank pathway, modifies its 
+#' The function downloads the SVG representation of a PathBank pathway, modifies its
 #' XML content to color pathway nodes based on the provided `val` parameter:
 #' - **Positive values**: Nodes are colored red, with the intensity increasing as the value grows.
 #' - **Negative values**: Nodes are colored blue, with the intensity increasing as the absolute value grows.
 #'
 #' Opacity is determined by the square root of the absolute value, scaled and capped at a maximum of 1.
 #'
-#' Nodes with IDs matching the names in `val` are colored accordingly. Nodes without matching IDs 
+#' Nodes with IDs matching the names in `val` are colored accordingly. Nodes without matching IDs
 #' or `val` values are left unchanged.
 #'
 #' @examples
@@ -105,10 +105,17 @@ pathbankview <- function(pb, val, as.img=FALSE) {
   writeLines(lines, destfile)
 
   # Load the SVG
-  doc <- tryCatch({
-    read_xml(destfile)
-  }, error = function(w) {NULL})
-  if (is.null(doc)) return(NULL)
+  doc <- tryCatch(
+    {
+      read_xml(destfile)
+    },
+    error = function(w) {
+      NULL
+    }
+  )
+  if (is.null(doc)) {
+    return(NULL)
+  }
 
   label_nodes <- xml_find_all(doc, ".//text")
   labels <- xml2::xml_text(label_nodes)
@@ -162,26 +169,26 @@ pathbankview <- function(pb, val, as.img=FALSE) {
 
 #' Download and color nodes in WikiPathways SVGs
 #'
-#' Downloads a WikiPathways SVG file, modifies its XML structure to color pathway nodes 
+#' Downloads a WikiPathways SVG file, modifies its XML structure to color pathway nodes
 #' according to regulation values, and returns the path to the modified file.
 #'
 #' @param wp A character string specifying the WikiPathways pathway ID.
-#' @param val A named numeric vector where names correspond to pathway element IDs, 
-#'            and values represent the level of regulation (e.g., fold-change or intensity). 
-#'            Positive values indicate up-regulation, while negative values indicate down-regulation. 
+#' @param val A named numeric vector where names correspond to pathway element IDs,
+#'            and values represent the level of regulation (e.g., fold-change or intensity).
+#'            Positive values indicate up-regulation, while negative values indicate down-regulation.
 #'
-#' @return A character string representing the path to the modified SVG file, 
+#' @return A character string representing the path to the modified SVG file,
 #'         or `NULL` if the download fails.
 #'
 #' @details
-#' The function downloads the SVG representation of a WikiPathways pathway, modifies its 
+#' The function downloads the SVG representation of a WikiPathways pathway, modifies its
 #' XML content to color pathway nodes based on the provided `val` parameter:
 #' - **Positive values**: Nodes are colored red, with the intensity increasing as the value grows.
 #' - **Negative values**: Nodes are colored blue, with the intensity increasing as the absolute value grows.
 #'
 #' Opacity is determined by the square root of the absolute value, scaled and capped at a maximum of 1.
 #'
-#' Nodes with IDs matching the names in `val` are colored accordingly. Nodes without matching IDs 
+#' Nodes with IDs matching the names in `val` are colored accordingly. Nodes without matching IDs
 #' or `val` values are left unchanged.
 #' @examples
 #' \dontrun{
@@ -236,10 +243,17 @@ wikipathview <- function(wp, val, as.img=FALSE) {
   writeLines(lines, destfile)
 
   # Load the SVG
-  doc <- tryCatch({
-    read_xml(destfile)
-  }, error = function(w) {NULL})
-  if (is.null(doc)) return(NULL)
+  doc <- tryCatch(
+    {
+      read_xml(destfile)
+    },
+    error = function(w) {
+      NULL
+    }
+  )
+  if (is.null(doc)) {
+    return(NULL)
+  }
 
   # Find all 'text' elements
   label_nodes <- xml_find_all(doc, ".//text")

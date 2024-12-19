@@ -191,7 +191,8 @@ gset.fisher <- function(genes, genesets, background = NULL,
     d1 <- d + 1 * (d == 0) ## hack to avoid crash...
     b1 <- b + 1 * (b == 0) ## hack to avoid crash...
     pv1 <- try(
-      corpora::fisher.pval(a[ii], (a + b1)[ii], c[ii], (c + d1)[ii], alternative = "greater"), silent = TRUE
+      corpora::fisher.pval(a[ii], (a + b1)[ii], c[ii], (c + d1)[ii], alternative = "greater"),
+      silent = TRUE
     )
     if (class(pv1) != "try-error") {
       pv[ii] <- pv1

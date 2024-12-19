@@ -182,10 +182,12 @@ pgx.createPGX <- function(counts,
   message("[createPGX] datatype = ", datatype)
 
   if (!is.null(counts)) {
-    message("[createPGX] dim.counts: ", dim(counts)[1], ",", dim(counts)[2])
+    message("[createPGX] dim.counts: ", dim(counts)[1], " x ", dim(counts)[2])
     message("[createPGX] class.counts: ", class(counts))
     nmissing <- sum(is.na(counts))
     message("[createPGX] counts has ", nmissing, " missing values")
+    ndups <- sum(duplicated(rownames(counts)))
+    message("[createPGX] counts has ", ndups, " duplicated rows")
   } else {
     stop("[createPGX] FATAL: counts must be provided")
   }
@@ -202,10 +204,27 @@ pgx.createPGX <- function(counts,
 
   if (!is.null(X)) {
     message("[createPGX] class.X: ", class(X))
-    message("[createPGX] dim.X: ", dim(X)[1], ", ", dim(X)[2])
+    message("[createPGX] dim.X: ", dim(X)[1], " x ", dim(X)[2])
     message("[createPGX] Normalization method:", norm_method)
     nmissing <- sum(is.na(X))
     message("[createPGX] X has ", nmissing, " missing values")
+    ndups <- sum(duplicated(rownames(X)))
+    message("[createPGX] counts has ", ndups, " duplicated rows")    
+  }
+
+  if (!is.null(annot_table)) {
+    message("[createPGX] class(annot_table) = ", class(annot_table))
+    message("[createPGX] dim(annot_table) = ", dim(annot_table)[1], " x ", dim(annot_table)[2])
+    ndiff <- sum(rownames(annot_table) != rownames(counts))
+    message("[createPGX] WARNING: annot_table has ",ndiff," different rownames as counts")    
+    ndups <- sum(duplicated(rownames(annot_table)))
+    message("[createPGX] annot_table has ", ndups, " duplicated rows")    
+    if(nrow(annot_table) != nrow(counts)) {
+      message("[createPGX] WARNING: annot_table has different nrows. forcing dimensions.")
+      ii <- match(rownames(counts), rownames(annot_table))
+      annot_table <- annot_table[ii,]
+      rownames(annot_table) <- rownames(counts)
+    }
   }
 
   if (!is.null(impX)) {
@@ -266,6 +285,8 @@ pgx.createPGX <- function(counts,
   ## conform all matrices
   ## -------------------------------------------------------------------
   message("[createPGX] conforming matrices...")
+
+  ## align samples
   kk <- intersect(colnames(counts), rownames(samples))
   kk <- intersect(kk, colnames(X))
   if (!is.null(impX)) {
@@ -282,19 +303,25 @@ pgx.createPGX <- function(counts,
     contrasts <- contrasts[kk, , drop = FALSE]
   }
 
+  ## make duplicated rownames unique (new default since v3.5.1)
+  ndup <- sum(duplicated(rownames(counts)))
+  if(ndup>0) {
+    info("[createPGX] duplicated rownames detected. making unique.")    
+    rownames(counts) <- playbase::make_unique(rownames(counts))
+    rownames(X) <- rownames(counts)    
+    if(!is.null(impX)) rownames(impX) <- rownames(counts)    
+    if(!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
+  }
+
   ## Special case for PTM phospho-proteomics
   is.phospho <- annotate_phospho_residue(rownames(counts), detect.only = TRUE)
   if (datatype == "proteomics" && is.phospho) {
     info("[createPGX] annotating rownames with phospho residue...")
     newnames <- annotate_phospho_residue(rownames(counts))
-    names(newnames) <- rownames(counts)
     rownames(counts) <- newnames
     rownames(X) <- newnames
     if (!is.null(impX)) rownames(impX) <- newnames
-    if (!is.null(annot_table)) {
-      ## if nrow(annot_table) is not nrow(counts)
-      rownames(annot_table) <- newnames[rownames(annot_table)]
-    }
+    if (!is.null(annot_table)) rownames(annot_table) <- newnames
   }
 
   ## -------------------------------------------------------------------

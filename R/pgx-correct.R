@@ -1398,7 +1398,9 @@ bc.evaluateResults <- function(xlist, pheno, lfc = 0.2, q = 0.2, pos = NULL,
       if (clust == "tsne") {
         nb <- max(0.33, min(30, round(ncol(xlist[[1]]) / 5)))
         ## CLUSTFUN <- function(x) uwot::tumap(scale(t(x), scale = FALSE), n_neighbors = nb)
-        if (ncol(xlist[[1]]) <= 6) { nb <- 0.5 }
+        if (ncol(xlist[[1]]) <= 6) {
+          nb <- 0.5
+        }
         CLUSTFUN <- function(x) {
           Rtsne::Rtsne(scale(t(x)),
             check_duplicates = FALSE,
@@ -1754,7 +1756,9 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
   if (clust.method == "tsne" && nmissing == 0) {
     message("Computing t-SNE clustering...")
     nb <- max(0.33, round(min(30, dim(X) / 5)))
-    if (ncol(X) <= 6) { nb <- 0.5 }
+    if (ncol(X) <= 6) {
+      nb <- 0.5
+    }
     pos <- lapply(xlist, function(x) {
       Rtsne::Rtsne(t2(x), perplexity = nb, check_duplicates = FALSE)$Y
     })
@@ -1975,8 +1979,8 @@ svaCorrect <- function(X, y) {
   #  pp <- paste0(model.par, collapse = "+")
   #  lm.expr <- paste0("lm(t(X) ~ ", pp, ", data=pheno)")
   X.r <- t(stats::resid(lm(t(X) ~ y)))
-  ##n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
-  n.sv <- isva::EstDimRMT(X.r, FALSE)$dim 
+  ## n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
+  n.sv <- isva::EstDimRMT(X.r, FALSE)$dim
   n.sv
   ## top 1000 genes only (faster)
   X1 <- Matrix::head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], 1000)
@@ -2086,8 +2090,8 @@ ruvCorrect <- function(X, y, k = NULL, type = c("III", "g"), controls = 0.10) {
   if (any(is.na(X))) {
     stop("[ruvCorrect] cannot handle missing values in X.")
   }
-  sdx <- matrixStats::rowSds(X,na.rm=TRUE)
-  
+  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+
   ## F-test using limma just variables
   if (!is.null(y) && length(controls) == 1 && is.numeric(controls[1])) {
     ii <- which(!duplicated(rownames(X)) & sdx > 0)

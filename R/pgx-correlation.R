@@ -400,7 +400,6 @@ pgx.computePartialCorrelationMatrix <- function(tX, method = PCOR.METHODS, fast 
 #'
 #' @export
 pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE) {
-
   cl <- sapply(df, class)
   nlev <- apply(df, 2, function(x) length(unique(x[!is.na(x)])))
   cvar <- which(cl %in% c("numeric", "integer") & nlev >= 2)
@@ -451,7 +450,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE
       rownames(fisher.P) <- colnames(dd)
       colnames(fisher.P) <- colnames(dd)
     }
-    
+
     ## discrete vs continuous -> ANOVA or Kruskal-Wallace
     kruskal.P <- NULL
     if (ncol(dc) > 0) {
@@ -466,7 +465,7 @@ pgx.testPhenoCorrelation <- function(df, plot = TRUE, cex = 1, compute.pv = TRUE
       rownames(kruskal.P) <- colnames(dd)
       colnames(kruskal.P) <- colnames(dc)
     }
-    
+
     ## continuous vs continuous -> correlation test
     cor.P <- NULL
     if (ncol(dc) > 1) {
