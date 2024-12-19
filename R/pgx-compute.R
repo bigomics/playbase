@@ -1021,20 +1021,24 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       colnames(custom_gmt) <- probe2symbol(
         colnames(custom_gmt), pgx$genes, "symbol", fill_na = TRUE)
 
-      G <- merge_sparse_matrix(
-        m1 = G,
-        m2 = Matrix::t(custom_gmt)
-      )
+      if(is.null(G)) {
+        G <- Matrix::t(custom_gmt)
+      } else {
+        G <- merge_sparse_matrix(
+          m1 = G,
+          m2 = Matrix::t(custom_gmt)
+        )
+      }
       remove(custom_gmt)
     }
   }
 
-  ## return if G is NULL
-  if(is.null(G)) {
-    message("[pgx.add_GMT] WARNING. no gene sets. GMT is NULL.")
-    pgx$GMT <- NULL
-    return(pgx)
-  }
+  ## ## return if G is NULL
+  ## if(is.null(G)) {
+  ##   message("[pgx.add_GMT] WARNING. no gene sets. GMT is NULL.")
+  ##   pgx$GMT <- NULL
+  ##   return(pgx)
+  ## }
   
   ## -----------------------------------------------------------
   ##  Prioritize gene sets by fast rank-correlation
@@ -1045,7 +1049,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
   if (is.null(max.genesets)) max.genesets <- 20000
   if (max.genesets < 0) max.genesets <- 20000
-  if (max.genesets > 0) {
+  if (!is.null(G) && ncol(G) > max.genesets) {
 
     message("[pgx.add_GMT] Matching gene set matrix...")  
     # we use SYMBOL as rownames
@@ -1098,6 +1102,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     jj <- unique(c(jj, grep(must.include, colnames(G), ignore.case = TRUE)))
     jj <- jj[order(colnames(G)[jj])] ## sort alphabetically
     G <- G[, jj, drop = FALSE]
+    rm(gsetX.bygroup, gsetX)    
   }
 
   ## -----------------------------------------------------------------------
@@ -1105,28 +1110,29 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------------------
 
   # final check: drop genesets in G based on geneset size
-  gmt.size <- Matrix::colSums(G != 0)
-
-  if (pgx$datatype == "metabolomics") {
-    # metabolomics genesets are MUCH smaller than transcriptomics,
-    # metabolomics have usually less features, so we need to reduce
-    # the min size
-    size.ok <- which(gmt.size >= 3 & gmt.size <= 400)
-  } else {
-    size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
-
-    # add all custom genesets to size.ok
-    idx_custom_gmt <- grep("CUSTOM", colnames(G))
-    # make sure we dont miss CUSTOM genesets due to size.ok exclusion
-    if (length(idx_custom_gmt) > 0) {
-      names(idx_custom_gmt) <- colnames(G)[idx_custom_gmt]
-      size.ok <- union(size.ok, idx_custom_gmt)
+  if(!is.null(G)) {
+    gmt.size <- Matrix::colSums(G != 0)
+    if (pgx$datatype == "metabolomics") {
+      # metabolomics genesets are MUCH smaller than transcriptomics,
+      # metabolomics have usually less features, so we need to reduce
+      # the min size
+      size.ok <- which(gmt.size >= 3 & gmt.size <= 400)
+    } else {
+      size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
+      
+      # add all custom genesets to size.ok
+      idx_custom_gmt <- grep("CUSTOM", colnames(G))
+      # make sure we dont miss CUSTOM genesets due to size.ok exclusion
+      if (length(idx_custom_gmt) > 0) {
+        names(idx_custom_gmt) <- colnames(G)[idx_custom_gmt]
+        size.ok <- union(size.ok, idx_custom_gmt)
+      }
     }
+    G <- G[, size.ok, drop = FALSE]
   }
-  G <- G[, size.ok, drop = FALSE]
-
+    
   # add random genesets if G is too small
-  if (ncol(G) < 100 || nrow(G) < 3) {
+  if (is.null(G) || ncol(G) < 100 || nrow(G) < 3) {
     add.gmt <- NULL
     rr <- sample(3:400, 100)
 
@@ -1150,10 +1156,14 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     )
 
     # merge add.gmt with G
-    G <- merge_sparse_matrix(
-      m1 = G,
-      m2 = Matrix::t(add.gmt)
-    )
+    if(is.null(G)) {
+      G = Matrix::t(add.gmt)
+    } else {
+      G <- merge_sparse_matrix(
+        m1 = G,
+        m2 = Matrix::t(add.gmt)
+      )
+    }
   }
 
   # normalize columns (required for some methods downstream)log2foldchange
@@ -1162,7 +1172,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   pgx$GMT <- G
   pgx$custom.geneset <- custom.geneset
   message(glue::glue("[pgx.add_GMT] Final GMT: {nrow(G)} x {ncol(G)}"))
-  rm(gsetX.bygroup, gsetX, G)
+  rm(G)
   gc()
   return(pgx)
 }
