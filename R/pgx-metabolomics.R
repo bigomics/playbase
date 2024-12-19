@@ -7,62 +7,69 @@
 #' detect metabolomics ID type
 #' @export
 mx.detect_probetype <- function(probes) {
-  aa <- playdata::METABOLITE_ANNOTATION[,-1]
-  probes <- gsub(".*:|[.].*","",probes)
-  nmatch <- apply(aa, 2, function(s) sum(probes %in% setdiff(s, NA)))
+  aa <- playdata::METABOLITE_ANNOTATION
+  probes <- setdiff(probes,NA)
+  nmatch <- apply(aa, 2, function(s) sum(probes %in% s))
   if (max(nmatch) / length(probes) < 0.10) {
+    ## if no match we try stripping of non-numerical prefixes
     aa2 <- apply(aa, 2, function(s) gsub("[^0-9]", "", s))
     nmatch2 <- apply(aa2, 2, function(s) sum(probes %in% setdiff(s, NA)))
     nmatch <- nmatch + nmatch2
   }
-  if (max(nmatch, na.rm = TRUE) == 0) {
+  if (max(nmatch, na.rm = TRUE) / length(probes) < 0.01) {
+    message("[mx.detect_probetype] WARNING. could not detect probetype")
     return(NULL)
   }
   names(which.max(nmatch))
 }
 
-#' convert IDs to CHEBI using base R functions
+#' convert IDs to CHEBI using base R functions (DEPRECATED)
+#' 
 #' @export
-convert_probe_to_chebi <- function(probes, probe_type) {
-  probe_type_dictionary <- playdata::METABOLITE_ANNOTATION
-  valid_probe_types <- colnames(probe_type_dictionary)
+convert_probe_to_chebi <- function(probes, probe_type=NULL) {
 
+  annot <- playdata::METABOLITE_ANNOTATION
+  valid_probe_types <- colnames(annot)
   # for id that are "", set it to na
   probes[probes == ""] <- NA
 
   # check that probetype is valid
+  if(is.null(probe_type)) {
+    probes0 <- setdiff(probes,NA)
+    nmatch <- apply(annot, 2, function(a) mean(probes0 %in% a))
+    if(max(nmatch,na.rm=TRUE) > 0) {
+      probe_type <- names(which.max(nmatch))
+    }
+    probe_type
+  }
   probe_type <- match.arg(probe_type, valid_probe_types)
 
   if (probe_type == "ChEBI") {
     # keep only numbers in ids, as chebi ids are numeric
     chebi_ids <- gsub("[^0-9]", "", probes)
     # check that ChEBI ids are in the dictionary (for better results always use ChEBI own ids (ID col) not MetaboAnalyst derived)
-    chebi_ids <- ifelse(chebi_ids %in% probe_type_dictionary$ID, chebi_ids, NA)
-  } else if (probe_type == "HMDB") {
-    # use match
-    matches <- match(probes, probe_type_dictionary$HMDB)
-    chebi_ids <- probe_type_dictionary[matches, "ChEBI"]
-
-    # return NA for unmatched IDs
-    return(chebi_ids)
-  } else if (probe_type == "KEGG") {
-    # use match
-    matches <- match(probes, probe_type_dictionary$KEGG)
-    chebi_ids <- probe_type_dictionary[matches, "ChEBI"]
+    chebi_ids <- ifelse(chebi_ids %in% annot$ID, chebi_ids, NA)
+  } else if (probe_type %in% valid_probe_types) {
+    matches <- match(probes, annot[,probe_type])
+    chebi_ids <- annot[matches, "ChEBI"]
   } else {
-    return(NA)
+    chebi_ids <- rep(NA,length(probes))
   }
 
   return(chebi_ids)
 }
 
-#' convert IDs to CHEBI using base R functions
+#' convert IDs to CHEBI using internal playdata annotation table
+#' 
 #' @export
 mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ChEBI") {
   if (is.null(probe_type)) {
     probe_type <- mx.detect_probetype(probes)
   }
-
+  if(is.null(probe_type)) {
+    message("WARNING: could not determine probe_type")
+    return(NULL)
+  }
   # check that probetype is valid
   annot <- playdata::METABOLITE_ANNOTATION
   valid_probe_types <- colnames(annot)
@@ -80,36 +87,85 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ChEBI") {
 }
 
 #' @export
-getMetaboliteAnnotation <- function(probes, probe_type = NULL) {
-  if(is.null(probe_type)) {
-    probe_type <- mx.detect_probetype(probes) 
-  }
-  if(is.null(probe_type)) {
-    message("ERROR. must provide probe_type")
-    return(NULL)
-  }
-  message("[getMetaboliteAnnotation] probe_type = ", probe_type)
-  
-  # get annotation for probes
-  probes_chebi <- playbase::convert_probe_to_chebi(probes, probe_type)
-  metabolite_metadata <- playdata::METABOLITE_METADATA
-  match_ids <- match(probes_chebi, metabolite_metadata$ID)
-  metabolite_metadata <- metabolite_metadata[match_ids, ]
+getMetaboliteAnnotation <- function(probes, probe_type = NULL,
+                                    db = c("refmet","playdata") ) {
+  ##probes = c("Ceramide","d18:0/26:2","citrate","Trilauroyl-glycerol","PE(aa-40:4)","HMDB00201","C00099","Octenoyl-L-carnitine")
 
+  has.prefix <- all(grepl("[a-z]+:",tolower(probes)))
+  has.prefix
+  if(has.prefix) {
+    probes <- sub(".*:","",probes)
+  }
+  
+  COLS <- c("ID", "feature","name","super_class","main_class",
+            "sub_class","formula","exactmass", "chebi_id", "pubchem_cid",
+            "hmdb_id", "lipidmaps_id","kegg_id", "refmet_id", "inchi_key",
+            "definition","source")
+
+  metadata <- data.frame(matrix(NA, nrow=length(probes), ncol=length(COLS)))
+  colnames(metadata) <- COLS
+  rownames(metadata) <- probes
+  metadata$feature <- probes
+
+  ## First pass using RefMet. RefMet also handles metabolite/lipid
+  ## long names, so this is convenient.
+  if( curl::has_internet() && "refmet" %in% db) {
+    message("annotating with RefMet API server...")
+    ##res <- mx.getRefMet(probes)
+    res <- RefMet::refmet_map_df(probes)  ## request on API server
+    res$definition <- '-'
+    res$ID <- res$ChEBI_ID
+    res$source <- "RefMet:API"
+    cols <- c("ID","Input.name","Standardized.name","Super.class","Main.class",
+              "Sub.class","Formula","Exact.mass", "ChEBI_ID", "PubChem_CID",
+              "HMDB_ID", "LM_ID","KEGG_ID", "RefMet_ID", "INCHI_KEY",
+              "definition","source")
+    res <- res[,cols]
+    colnames(res) <- COLS
+    ## only fill missing entries
+    jj <- which( res != '-' & !is.na(res) & is.na(metadata), arr.ind=TRUE)
+    metadata[jj] <- res[jj]
+  }
+
+  if("playdata" %in% db ) {
+    # get annotation for probes
+    ##probes_chebi <- convert_probe_to_chebi(probes, probe_type)
+    message("annotating with METABOLITE_METADATA...")
+    chebi_id <- mx.convert_probe(probes)
+    if(!all(is.na(chebi_id))) {
+      mm <- playdata::METABOLITE_METADATA
+      match_ids <- match(chebi_id, mm$ID)
+      mm <- mm[match_ids, ]      
+      colnames(mm) <- sub("DEFINITION","definition",colnames(mm))
+      colnames(mm) <- sub("NAME","name",colnames(mm))      
+      mm$feature <- probes
+      rownames(mm) <- probes
+      mm$ID <- chebi_id
+      mm$source <- "ChEBI+RefMet"      
+      mm <- mm[,COLS]
+      ## only fill missing entries
+      dim(mm)
+      jj <- which( !is.na(mm) & is.na(metadata), arr.ind=TRUE)
+      if(length(jj)) metadata[jj] <- mm[jj]      
+    }
+  }
+
+  rownames(metadata) <- NULL
+  chebi_id <- metadata$ID
+  
   df <- data.frame(
     feature = probes,
-    symbol = probes_chebi,
-    human_ortholog = probes_chebi,
-    gene_title = metabolite_metadata$NAME,
-    gene_biotype = NA,
-    map = NA,
-    chr = NA,
-    pos = NA,
-    tx_len = NA,
-    source = "MetaboAnalyst",
-    gene_name = probes_chebi
+    symbol = chebi_id,
+    human_ortholog = chebi_id,
+    gene_title = metadata$name,
+    source = metadata$source,
+    gene_name = chebi_id
   )
+
+  kk <- setdiff(colnames(metadata),c(colnames(df),"name","ID"))
+  df <- cbind( df, metadata[,kk])   
   rownames(df) <- probes
 
   return(df)
 }
+

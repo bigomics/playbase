@@ -1632,12 +1632,9 @@ getProbeAnnotation <- function(organism, probes) {
   if(sum(grepl("[:]",probes))) {
     dtype <- sub(":.*","",probes)
   } else {
-    ## no colon in names
-
+    ## no colon in names. try to guess by matching.
     ptype <- detect_probetype(organism, probes)
     mtype <- mx.detect_probetype(probes)    
-
-
     gx.types <- c(
       "SYMBOL", "ENSEMBL", "ACCNUM", "GENENAME",
       "MGI", "TAIR",  "ENSEMBLTRANS", "REFSEQ", "ENTREZID"

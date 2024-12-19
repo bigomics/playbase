@@ -2,10 +2,10 @@
 % Please edit documentation in R/pgx-metabolomics.R
 \name{mx.convert_probe}
 \alias{mx.convert_probe}
-\title{convert IDs to CHEBI using base R functions}
+\title{convert IDs to CHEBI using internal playdata annotation table}
 \usage{
 mx.convert_probe(probes, probe_type = NULL, target_id = "ChEBI")
 }
 \description{
-convert IDs to CHEBI using base R functions
+convert IDs to CHEBI using internal playdata annotation table
 }
