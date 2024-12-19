@@ -6,21 +6,21 @@
 
 #' detect metabolomics ID type
 #' @export
-mx.detect_probetype <- function(probes) {
+mx.detect_probetype <- function(probes, min.match=0.05) {
   aa <- playdata::METABOLITE_ANNOTATION
-  probes <- setdiff(probes,NA)
-  nmatch <- apply(aa, 2, function(s) sum(probes %in% s))
-  if (max(nmatch) / length(probes) < 0.10) {
+  probes <- setdiff(probes,c("","-",NA))
+  match <- apply(aa, 2, function(s) mean(probes %in% s))
+  if (max(match) < min.match) {
     ## if no match we try stripping of non-numerical prefixes
-    aa2 <- apply(aa, 2, function(s) gsub("[^0-9]", "", s))
-    nmatch2 <- apply(aa2, 2, function(s) sum(probes %in% setdiff(s, NA)))
-    nmatch <- nmatch + nmatch2
+    probes1 <- gsub("[^0-9]", "", probes)
+    match2 <- apply(aa, 2, function(s) mean(probes1 %in% s))
+    match <- match + match2
   }
-  if (max(nmatch, na.rm = TRUE) / length(probes) < 0.01) {
+  if (max(match, na.rm = TRUE) < min.match) {
     message("[mx.detect_probetype] WARNING. could not detect probetype")
     return(NULL)
   }
-  names(which.max(nmatch))
+  names(which.max(match))
 }
 
 #' convert IDs to CHEBI using base R functions (DEPRECATED)
@@ -87,7 +87,7 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ChEBI") {
 }
 
 #' @export
-getMetaboliteAnnotation <- function(probes, probe_type = NULL,
+getMetaboliteAnnotation <- function(probes, probe_type = NULL, id=FALSE,
                                     db = c("refmet","playdata") ) {
   ##probes = c("Ceramide","d18:0/26:2","citrate","Trilauroyl-glycerol","PE(aa-40:4)","HMDB00201","C00099","Octenoyl-L-carnitine")
 
@@ -96,15 +96,26 @@ getMetaboliteAnnotation <- function(probes, probe_type = NULL,
   if(has.prefix) {
     probes <- sub(".*:","",probes)
   }
+
+  if(sum(duplicated(probes))) {
+    message("WARNING duplicated probes. result will not match length")
+  }
+  if(any(is.na(probes))) {
+    message("WARNING NA probes. result will not match length")
+  }
+  probes <- probes[!duplicated(probes) & !is.na(probes)]
+  
+  colnames(playdata::METABOLITE_METADATA)
   
   COLS <- c("ID", "feature","name","super_class","main_class",
-            "sub_class","formula","exactmass", "chebi_id", "pubchem_cid",
-            "hmdb_id", "lipidmaps_id","kegg_id", "refmet_id", "inchi_key",
-            "definition","source")
+            "sub_class","formula","exactmass",
+#            "chebi_id", "pubchem_cid",
+#            "hmdb_id", "lipidmaps_id","kegg_id", "refmet_id",
+            "inchi_key", "definition","source")
 
   metadata <- data.frame(matrix(NA, nrow=length(probes), ncol=length(COLS)))
   colnames(metadata) <- COLS
-  rownames(metadata) <- probes
+##  rownames(metadata) <- probes
   metadata$feature <- probes
 
   ## First pass using RefMet. RefMet also handles metabolite/lipid
@@ -112,19 +123,20 @@ getMetaboliteAnnotation <- function(probes, probe_type = NULL,
   if( curl::has_internet() && "refmet" %in% db) {
     message("annotating with RefMet API server...")
     ##res <- mx.getRefMet(probes)
-    res <- RefMet::refmet_map_df(probes)  ## request on API server
+    ii <- which(!probes %in% c('',NA,'-'))
+    res <- RefMet::refmet_map_df(probes[ii])  ## request on API server
     res$definition <- '-'
     res$ID <- res$ChEBI_ID
     res$source <- "RefMet:API"
     cols <- c("ID","Input.name","Standardized.name","Super.class","Main.class",
-              "Sub.class","Formula","Exact.mass", "ChEBI_ID", "PubChem_CID",
-              "HMDB_ID", "LM_ID","KEGG_ID", "RefMet_ID", "INCHI_KEY",
-              "definition","source")
+              "Sub.class","Formula","Exact.mass",
+              ##"ChEBI_ID", "PubChem_CID", "HMDB_ID", "LM_ID","KEGG_ID", "RefMet_ID",
+              "INCHI_KEY", "definition","source")
     res <- res[,cols]
     colnames(res) <- COLS
     ## only fill missing entries
-    jj <- which( res != '-' & !is.na(res) & is.na(metadata), arr.ind=TRUE)
-    metadata[jj] <- res[jj]
+    jj <- which( res != '-' & !is.na(res) & is.na(metadata[ii,]), arr.ind=TRUE)
+    metadata[ii,][jj] <- res[jj]
   }
 
   if("playdata" %in% db ) {
@@ -134,19 +146,19 @@ getMetaboliteAnnotation <- function(probes, probe_type = NULL,
     chebi_id <- mx.convert_probe(probes)
     if(!all(is.na(chebi_id))) {
       mm <- playdata::METABOLITE_METADATA
-      match_ids <- match(chebi_id, mm$ID)
+      ii <- which(!chebi_id %in% c('',NA,'-'))
+      match_ids <- match(chebi_id[ii], mm$ID)
       mm <- mm[match_ids, ]      
       colnames(mm) <- sub("DEFINITION","definition",colnames(mm))
       colnames(mm) <- sub("NAME","name",colnames(mm))      
-      mm$feature <- probes
-      rownames(mm) <- probes
-      mm$ID <- chebi_id
+      mm$feature <- probes[ii]
+      ##rownames(mm) <- probes[ii]
+      mm$ID <- chebi_id[ii]
       mm$source <- "ChEBI+RefMet"      
       mm <- mm[,COLS]
       ## only fill missing entries
-      dim(mm)
-      jj <- which( !is.na(mm) & is.na(metadata), arr.ind=TRUE)
-      if(length(jj)) metadata[jj] <- mm[jj]      
+      jj <- which( !is.na(mm) & is.na(metadata[ii,,drop=FALSE]), arr.ind=TRUE)
+      if(length(jj)) metadata[ii,][jj] <- mm[jj]      
     }
   }
 
@@ -164,8 +176,15 @@ getMetaboliteAnnotation <- function(probes, probe_type = NULL,
 
   kk <- setdiff(colnames(metadata),c(colnames(df),"name","ID"))
   df <- cbind( df, metadata[,kk])   
-  rownames(df) <- probes
 
+  if(id) {
+    annot_table <- playdata::METABOLITE_ANNOTATION
+    ii <- match( chebi_id, annot_table$ID )
+    kk <- setdiff(colnames(annot_table), c("ID","NAME"))
+    df <- cbind( df, annot_table[ii,kk] )   
+  }
+
+  rownames(df) <- probes 
   return(df)
 }
 
