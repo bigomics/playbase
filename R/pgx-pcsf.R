@@ -436,17 +436,19 @@ pgx.getPCSFcentrality <- function(pgx, contrast, pcsf = NULL, plot = TRUE, n = 1
   ewt <- 1.0 / igraph::E(pcsf)$weight
   cc <- igraph::page_rank(pcsf, weights = ewt)$vector
   cc <- cc / mean(cc, na.rm = TRUE) ## normalize
-  tail(sort(cc), 20)
-  top.cc <- sort(cc, decreasing = TRUE)
-  M <- pgx$gx.meta$meta[[contrast]]
-  sel <- intersect(names(top.cc), rownames(M))
-  sel <- head(sel, n)
-  fc <- M[sel, c("meta.fx")]
-  M <- data.frame(centrality = top.cc[sel], logFC = fc)
+#  tail(sort(cc), 20)
+#  top.cc <- sort(cc, decreasing = TRUE)
+#  M <- pgx$gx.meta$meta[[contrast]]
+#  sel <- intersect(names(top.cc), rownames(M))
+#  sel <- head(sel, n)
+#  fc <- M[sel, c("meta.fx")]
+  fc <- V(pcsf)$foldchange
+  M <- data.frame(centrality = cc, logFC = fc)
   M <- round(M, digits = 4)
-  aa <- pgx$genes[rownames(M), c("gene_name", "gene_title")]
+  ii <- match( rownames(M), pgx$genes$symbol )
+  aa <- pgx$genes[ii, c("symbol", "gene_title")]
   aa <- cbind(aa, M)
-  aa$gene_title <- substring(aa$gene_title, 1, 50)
+  aa$gene_title <- stringr::str_trunc(aa$gene_title, 40)
   rownames(aa) <- NULL
 
   if (plot) {
