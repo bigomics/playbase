@@ -443,14 +443,16 @@ pgx.getPCSFcentrality <- function(pgx, contrast, pcsf = NULL, plot = TRUE, n = 1
 #  sel <- head(sel, n)
 #  fc <- M[sel, c("meta.fx")]
   fc <- V(pcsf)$foldchange
+  ##score <- abs(cc * fc)
   M <- data.frame(centrality = cc, logFC = fc)
-  M <- round(M, digits = 4)
+  M <- round(M, digits = 2)
   ii <- match( rownames(M), pgx$genes$symbol )
   aa <- pgx$genes[ii, c("symbol", "gene_title")]
   aa <- cbind(aa, M)
-  aa$gene_title <- stringr::str_trunc(aa$gene_title, 40)
+  aa$gene_title <- stringr::str_trunc(aa$gene_title, 50)
   rownames(aa) <- NULL
-
+  aa <- aa[order(-aa$centrality),]
+  
   if (plot) {
     ## Plot your table with table Grob in the library(gridExtra)
     tab <- gridExtra::tableGrob(aa, rows = NULL)
