@@ -526,7 +526,8 @@ mofa.compute_enrichment <- function(ww, ww.types=NULL, filter=NULL,
     s[is.na(s)] <- 0  ## really??
     scores[[i]] <- s**2
   }
-  multi.score <- sqrt( Reduce("+", x=scores) / nt )  
+  ##multi.score <- sqrt( Reduce("+", x=scores) / nt )
+  multi.score <- abs(Reduce("*", x=scores))^(1/(2*nt))  
   table(is.na(multi.score))
   
   enr <- list()

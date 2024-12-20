@@ -11,11 +11,10 @@
 #' @export
 pgx.computePCSF <- function(pgx, contrast, level = "gene",
                             ntop = 250, ncomp = 3, beta = 1,
-                            rm.negedge = TRUE,
-                            use.corweight = TRUE,
-                            dir = "both", ppi = "STRING",
+                            rm.negedge = TRUE, use.corweight = TRUE,
+                            dir = "both", ppi = c("STRING","GRAPHITE"),
                             gset.rho=0.8, gset.filter = NULL ) {
-
+  
   F <- pgx.getMetaMatrix(pgx, level = level)$fc
   if (is.null(contrast)) {
     fx <- rowMeans(F**2, na.rm = TRUE)**0.5
@@ -25,7 +24,6 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
     }
     fx <- F[, contrast]
   }
-
 
   if (level == "gene") {
     ## names(fx) <- pgx$genes[rownames(F), "human_ortholog"]
@@ -38,19 +36,23 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   }
   
   if (level == "gene") {
-    if(!is.data.frame(ppi) && is.character(ppi) && ppi[1] == "STRING") {
-      message("using STRING PPI...")
-      data(STRING, package = "PCSF")
-      PPI <- STRING
-    } else if(FALSE && !is.data.frame(ppi) && is.character(ppi) && ppi[1] == "GRAPHITE") {
-      message("using GRAPHITE PPI...")
-      ##ppi <- playdata::GRAPHITE_PPI      
-    } else if(is.data.frame(ppi) && ncol(ppi)==3) {
-      message("using provide PPI...")
+    if( is.data.frame(ppi) || is.matrix(ppi)) {
       PPI <- ppi
+    } else if(all(is.character(ppi))) {
+      PPI <- c()
+      if("STRING" %in% ppi) {
+        message("adding STRING PPI...")
+        data(STRING, package = "PCSF")
+        PPI <- rbind(PPI, STRING)
+      }
+      if("GRAPHITE" %in% ppi) {
+        message("adding GRAPHITE PPI...")
+        PPI <- rbind(PPI, playdata::GRAPHITE_PPI)
+      }
     } else {
       stop("invalid PPI")
     }
+    PPI$cost <- 0.10 ### ???
   }
 
   if (level == "geneset") {
@@ -71,13 +73,33 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   ## data matrix
   if (level == "gene") {
     X <- pgx$X
+    X <- collapse_by_humansymbol(X, pgx$genes) ## safe    
   }
   if (level == "geneset") {
     X <- pgx$gsetX
   }
 
+  ## just to be sure
+  pp <- intersect(rownames(X),names(fx))
+  X <- X[pp,]
+  fx <- fx[pp]
+
+  ## for metabolite set name as labels
+  as.name = TRUE
+  labels <- pp
+  if(as.name) {
+    ii <- match(pp, playdata::METABOLITE_METADATA$ID)
+    jj <- which(!is.na(ii))
+    mx.name <- playdata::METABOLITE_METADATA$name[ii[jj]]
+    labels[jj] <- paste0("[",mx.name,"]")
+  }
+  
+  ## all X and fx in symbol (HGNC or ChEBI) so we can strip of prefix
+  ## in PPI
+  PPI[,1:2] <- apply(PPI[,1:2], 2, function(x) sub(".*:","",x))
+  
   pcsf <- computePCSF(
-    X, fx, ppi = PPI,
+    X, fx, ppi = PPI, labels=labels,
     ntop = ntop, ncomp = ncomp, beta = beta,
     rm.negedge = rm.negedge,
     dir = dir)
@@ -85,11 +107,10 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   return(pcsf)
 }
 
-computePCSF <- function(X, fx, ppi, ntop = 250, ncomp = 3, beta = 1,
-                        rm.negedge = TRUE,
-                        dir = "both") {
+computePCSF <- function(X, fx, ppi, labels=NULL, ntop = 250, ncomp = 3,
+                        beta = 1, rm.negedge = TRUE, dir = "both") {
 
-  
+  if(!is.null(labels)) names(labels) <- rownames(X)
   ppi.genes <- unique(c(ppi$from, ppi$to))
   fx <- fx[which(names(fx) %in% ppi.genes)]
 
@@ -146,7 +167,13 @@ computePCSF <- function(X, fx, ppi, ntop = 250, ncomp = 3, beta = 1,
   }
 
   igraph::V(pcsf)$foldchange <- fx[igraph::V(pcsf)$name]
-
+  if(!is.null(labels)) {
+    igraph::V(pcsf)$label <- labels[igraph::V(pcsf)$name]
+  }
+  dtype <- c("gx","mx")[1+grepl("^[0-9]+$",igraph::V(pcsf)$name)]
+  table(dtype)
+  igraph::V(pcsf)$type <- dtype
+  
   ## remove small clusters...
   cmp <- igraph::components(pcsf)
   if (ncomp < 1) {
@@ -181,8 +208,18 @@ plotPCSF <- function(pcsf,
   label_cex1 <- label_cex + 1e-8 * abs(fx)
 
   ## set colors as UP/DOWN
-  igraph::V(pcsf)$type <- c("down", "up")[1 + 1 * (sign(fx) > 0)]
-
+  up_down <- c("down", "up")[1 + 1 * (sign(fx) > 0)]
+  dtype <- igraph::V(pcsf)$type
+  ntypes <- length(unique(dtype))
+  igraph::V(pcsf)$group <- paste0(dtype,"_",up_down)
+  bluered <- playdata::BLUERED(7)
+  extra_node_colors <- rep(c(bluered[2],bluered[6]),ntypes)
+  names(extra_node_colors) <- sort(unique(igraph::V(pcsf)$group))
+  shapes <- head(rep(c("dot","square","triangle","star",
+                       "diamond","triangleDown","hexagon"),99),ntypes)
+  extra_node_shapes <- as.vector(mapply(rep, shapes, 2))
+  names(extra_node_shapes) <- sort(unique(igraph::V(pcsf)$group))
+    
   ## set label size
   if (highlightby == "centrality") {
     wt <- igraph::E(pcsf)$weight
@@ -195,7 +232,9 @@ plotPCSF <- function(pcsf,
     label_cex1 <- label_cex * (1 + 3 * (fx1 / max(fx1, na.rm = TRUE))**3)
   }
 
-  igraph::V(pcsf)$label <- igraph::V(pcsf)$name
+  if(is.null(igraph::V(pcsf)$label)) {
+    igraph::V(pcsf)$label <- igraph::V(pcsf)$name
+  }
   if (nlabel > 0) {
     top.cex <- head(order(-label_cex1), nlabel)
     bottom.cex <- setdiff(1:length(label_cex1), top.cex)
@@ -205,7 +244,6 @@ plotPCSF <- function(pcsf,
   out <- NULL
   if (plotlib == "visnet") {
     library(igraph)
-    bluered <- playdata::BLUERED(7)
     out <- visplot.PCSF(
       pcsf,
       style = 1,
@@ -215,10 +253,8 @@ plotPCSF <- function(pcsf,
       edge_width = edge_width,
       Steiner_node_color = "lightblue",
       Terminal_node_color = "lightgreen",
-      extra_node_colors = list(
-        "down" = bluered[2],
-        "up" = bluered[6]
-      ),
+      extra_node_colors = extra_node_colors,
+      extra_node_shapes = extra_node_shapes,
       edge_color = "lightgrey",
       width = "100%", height = 900,
       layout = layout,
@@ -248,7 +284,8 @@ visplot.PCSF <- function(
     Terminal_node_legend = "Terminal", Steiner_node_legend = "Steiner",
     layout = "layout_with_kk", physics = TRUE, layoutMatrix = NULL,
     width = 1800, height = 1800, invert.weight = FALSE,
-    extra_node_colors = list(), edge_color = "lightgrey", ...) {
+    extra_node_colors = list(), extra_node_shapes = list(),
+    edge_color = "lightgrey", ...) {
   if (missing(net)) {
     stop("Need to specify the subnetwork obtained from the PCSF algorithm.")
   }
@@ -286,7 +323,7 @@ visplot.PCSF <- function(
     name = igraph::V(net)$name
   )
   nodes$label <- igraph::V(net)$label
-  nodes$group <- igraph::V(net)$type
+  nodes$group <- igraph::V(net)$group
   nodes$size <- adjusted_prize
   nodes$title <- nodes$name
   nodes$label.cex <- node_label_cex
@@ -316,7 +353,8 @@ visplot.PCSF <- function(
         color = list(
           background = extra_node_colors[[en]],
           border = "lightgrey"
-        )
+        ),
+        shape = extra_node_shapes[[en]]
       )
       #      leg.groups[[i]] <- list(label = en, shape = "triangle",
       #        size = 13, color = list(background = extra_node_colors[[en]],
