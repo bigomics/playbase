@@ -524,9 +524,9 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## object checks
   ## -------------------------------------------------------------------
-  pgx$samples <- pgx$samples[,colMeans(is.na(pgx$samples))<1,drop=FALSE]
-
-  
+  if(ncol(pgx$samples)>1) {
+    pgx$samples <- pgx$samples[,colMeans(is.na(pgx$samples))<1,drop=FALSE]
+  }
   return(pgx)
 }
 
