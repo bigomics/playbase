@@ -9,13 +9,20 @@
 
 
 #' @export
-createSampleInfoFromNames <- function(names) {
+createSampleInfoFromNames <- function(names, varnames=NULL) {
+  ## trailing numbers are indices
+  names0 <- names
+  names <- gsub("([0-9]+$)","-\\1",names)  
   ff <- strsplit(names, split = "[_.-]")
   minlen <- min(sapply(ff, length))
   ff <- lapply(ff, head, minlen)
   samples <- do.call(rbind, ff)
-  rownames(samples) <- names
-  colnames(samples) <- paste0("var", 1:ncol(samples))
+  rownames(samples) <- names0
+  if(!is.null(varnames)) {
+    colnames(samples) <- head( c(varnames,rep("",99)), ncol(samples))
+  } else {
+    colnames(samples) <- paste0("var", 1:ncol(samples))
+  }
   samples
 }
 
