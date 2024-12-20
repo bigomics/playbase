@@ -1161,13 +1161,6 @@ pgx.createSingleCellPGX <- function(counts,
     message("[createSingleCellPGX] Azimuth ref. atlas: ", azimuth_ref)
   }
 
-  ## cl <- c("celltype", "cell_type", "cell.type", "CELLTYPE", "CELL_TYPE", "CellType")
-  ## cl <- unique(c(cl, toupper(cl), tolower(cl)))
-  ## kk <- intersect(cl, colnames(samples))
-  ## if (length(kk)>0) {
-  ##  message("[pgx.createSingleCellPGX] using 'celltype' column from sample info")
-  ##  colnames(samples)[match(kk, colnames(samples))] <- "celltype"
-  ##} else {
   message("[pgx.createSingleCellPGX] Inferring cell types with Azimuth.")
   message("[pgx.createSingleCellPGX] Using ", azimuth_ref, " as reference atlas.")
   azm <- pgx.runAzimuth(counts, reference = azimuth_ref)
@@ -1175,15 +1168,14 @@ pgx.createSingleCellPGX <- function(counts,
   ntype <- apply(azm, 2, function(a) length(unique(a)))
   sel <- ifelse(min(ntype) > 10, which.min(ntype), tail(which(ntype <= 10),1))
   samples$celltype <- azm[, sel]
-  ## }
-
+  
   ## because the samples get downsamples, also the sample and
   ## contrasts matrices get downsampled (by majority label).
   samplesx <- cbind( samples, contrasts )
   
   sc.membership <- NULL
   if(ncol(counts) > 2000) { ## 15K , 20K
-    ct <- samplesx[,"celltype"]
+    ct <- samplesx[, "celltype"]
     group <- paste0(ct, ":", apply(contrasts, 1, paste, collapse='_'))
     ##  group <- paste0(samples[, "celltype"], ":", samples[, pheno])
     if(!is.null(batch)) {
@@ -1223,14 +1215,18 @@ pgx.createSingleCellPGX <- function(counts,
   message("[pgx.createSingleCellPGX] Perform Seurat PCA, t-SNE, UMAP.")
   r <- "pca"
   if (!is.null(batch)) { r <- "integrated.dr" }
+
   obj <- Seurat::RunTSNE(obj, dims=1:30, reduction = r, verbose = FALSE)
+
   obj <- Seurat::RunTSNE(obj, dim.embed = 3L, dims=1:30,
     reduction = r, reduction.name ="tsne.3d",
     reduction.key ="tsne3d_", verbose = FALSE)
+
   obj <- Seurat::RunUMAP(obj, n.components = 3L, dims=1:30,
     reduction = r, reduction.name ="umap.3d",
     reduction.key = "umap3d_",  verbose = FALSE)
   ##  names(obj@reductions)
+  message("[pgx.createSingleCellPGX] PCA, t-SNE, UMAP completed.")
 
   message("[pgx.createSingleCellPGX] dim(seurat counts): ", paste0(dim(obj@assays$RNA$counts), collapse=", "))
   message("[pgx.createSingleCellPGX] dim(seurat X): ", paste0(dim(obj@assays$RNA$data), collapse=", "))
@@ -1238,28 +1234,28 @@ pgx.createSingleCellPGX <- function(counts,
   
   ## create balanced down-sampled object. We target about n=20 cells
   ## per statistical condition, per celltype.
-  downsample = FALSE ## RETHINK
-  if (downsample) {
-    message("[pgx.createSingleCellPGX] Down-sampling Seurat object ...")  
-    meta.ct <- obj@meta.data[,colnames(contrasts)]
-    group <- paste0(obj@meta.data$celltype, ":", meta.ct)
-    table(group)
-    sub <- seurat.downsample(obj, target_g = 20, group = group)
-  } else {
-    sub <- obj
-  }
+  ## downsample = FALSE
+  ## if (downsample) {
+  ##   message("[pgx.createSingleCellPGX] Down-sampling Seurat object ...")  
+  ##   meta.ct <- obj@meta.data[,colnames(contrasts)]
+  ##   group <- paste0(obj@meta.data$celltype, ":", meta.ct)
+  ##   table(group)
+  ##   sub <- seurat.downsample(obj, target_g = 20, group = group)
+  ## } else {
+  ##   sub <- obj
+  ## }
   
-  ## results for pgxCreate
+  ## results for pgx.createPGX
   message("[pgx.createSingleCellPGX] Creating PGX object ...")
   counts2 = sub[['RNA']]$counts
-  kk <- setdiff(colnames(sub@meta.data),colnames(contrasts))
-  samples2 = sub@meta.data[,kk]
+  kk <- setdiff(colnames(sub@meta.data), colnames(contrasts))
+  samples2 = sub@meta.data[, kk]
   
   ## stratify contrast matrix by celltype
-  contrasts2 = sub@meta.data[,colnames(contrasts)]
-  contrasts2 <- stratifyContrasts( contrasts2, samples2$celltype )
-  colnames(contrasts2) <- sub(".*@","",colnames(contrasts2))
-  colnames(contrasts2) <- gsub("[ ]","_",colnames(contrasts2))
+  contrasts2 = sub@meta.data[, colnames(contrasts)]
+  contrasts2 <- stratifyContrasts(contrasts2, samples2$celltype)
+  colnames(contrasts2) <- sub(".*@", "", colnames(contrasts2))
+  colnames(contrasts2) <- gsub("[ ]", "_", colnames(contrasts2))
 
   ## single-cell specific normalization (10k)
   X <- playbase::logCPM(counts2, total = 1e4, prior = 1)
@@ -1297,17 +1293,17 @@ pgx.createSingleCellPGX <- function(counts,
     only.proteincoding = TRUE,
     remove.xxl = TRUE,
     remove.outliers = TRUE
-  ) 
+  )
 
-  message("[pgx.createSingleCellPGX] dim(pgx$counts): ", paste0(dim(pgx$counts), collapse=","))
-  message("[pgx.createSingleCellPGX] dim(pgx$X): ", paste0(dim(pgx$X), collapse=","))
-  message("[pgx.createSingleCellPGX] dim(pgx$samples): ", paste0(dim(pgx$samples), collapse=","))
+  message("[pgx.createSingleCellPGX] dim(pgx$counts): ", paste0(dim(pgx$counts), collapse = " x "))
+  message("[pgx.createSingleCellPGX] dim(pgx$X): ", paste0(dim(pgx$X), collapse = " x "))
+  message("[pgx.createSingleCellPGX] dim(pgx$samples): ", paste0(dim(pgx$samples), collapse = " x "))
 
   ## We take the clusterings from Seurat because these are
   ## 'integrated' (batch corrected).
   cluster = list(
-    pca2d = sub@reductions[['pca']]@cell.embeddings[,1:2],
-    pca3d = sub@reductions[['pca']]@cell.embeddings[,1:3],
+    pca2d = sub@reductions[['pca']]@cell.embeddings[, 1:2],
+    pca3d = sub@reductions[['pca']]@cell.embeddings[, 1:3],
     tsne2d = sub@reductions[['tsne']]@cell.embeddings,
     tsne3d = sub@reductions[['tsne.3d']]@cell.embeddings,
     umap2d = sub@reductions[['umap']]@cell.embeddings,
@@ -1315,8 +1311,8 @@ pgx.createSingleCellPGX <- function(counts,
   )
 
   cluster.full = list(
-    pca2d = obj@reductions[['pca']]@cell.embeddings[,1:2],
-    pca3d = obj@reductions[['pca']]@cell.embeddings[,1:3],
+    pca2d = obj@reductions[['pca']]@cell.embeddings[, 1:2],
+    pca3d = obj@reductions[['pca']]@cell.embeddings[, 1:3],
     tsne2d = obj@reductions[['tsne']]@cell.embeddings,
     tsne3d = obj@reductions[['tsne.3d']]@cell.embeddings,
     umap2d = obj@reductions[['umap']]@cell.embeddings,
@@ -1333,12 +1329,10 @@ pgx.createSingleCellPGX <- function(counts,
   message("[pgx.createSingleCellPGX]===== pgx.createSingleCellPGX: DONE! =====")
   message("[pgx.createSingleCellPGX]==========================================")
   message("\n\n")
+
   return(pgx)
 
 }
-
-
-
 ## =====================================================================================
 ## =========================== END OF FILE =============================================
 ## =====================================================================================
