@@ -12,7 +12,8 @@ mx.detect_probetype <- function(probes, min.match=0.05) {
   match <- apply(aa, 2, function(s) mean(probes %in% s))
   if (max(match) < min.match) {
     ## if no match we try stripping of non-numerical prefixes
-    probes1 <- gsub("[^0-9]", "", probes)
+    ##probes1 <- gsub("[^0-9]", "", probes)
+    probes1 <- gsub("^[a-zA-Z :_]+", "", probes)
     match2 <- apply(aa, 2, function(s) mean(probes1 %in% s))
     match <- match + match2
   }
