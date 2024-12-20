@@ -985,10 +985,14 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
         )
         
         # merge go.gmt with G
-        G <- merge_sparse_matrix(
-          m1 = G,
-          m2 = Matrix::t(go.gmt)
-        )
+        if(is.null(G)) {
+          G <- Matrix::t(go.gmt)
+        } else {
+          G <- merge_sparse_matrix(
+            m1 = G,
+            m2 = Matrix::t(go.gmt)
+          )
+        }
       }
     } ## end-if go.genesets
   } ## end-if !metabolics
