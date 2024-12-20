@@ -37,7 +37,7 @@ pgx.wgcna <- function(
     cutheight = 0.15,
     deepsplit = 4,
     networktype = "signed",
-    tomtype = "signed Nowick",                          
+    tomtype = "signed",                          
     ngenes = 1000) {
   ## if we dont source WGCNA, blockwiseModules does not work..
   require(WGCNA)
@@ -108,6 +108,7 @@ pgx.wgcna <- function(
       net = res$net,
       gse = gse,
       clust = clust,
+      power = power,
       me.genes = res$me.genes,
       me.colors = res$me.colors
     )
@@ -122,7 +123,7 @@ wgcna.compute <- function(X, samples,
                           cutheight = 0.15,
                           deepsplit = 4,
                           networktype = "signed",
-                          tomtype = "signed Nowick",                          
+                          tomtype = "signed",                          
                           ngenes = 1000) {
 
   ##minmodsize = 30;power = 6;cutheight = 0.25;deepsplit = 2;ngenes = 1000;
@@ -210,6 +211,7 @@ wgcna.compute <- function(X, samples,
       datTraits = datTraits,
       TOM = TOM,
       net = net,
+      power = power,
       me.genes = me.genes,
       me.colors = me.colors
   )
@@ -221,19 +223,23 @@ wgcna.compute <- function(X, samples,
 #'
 #'
 #' @export
-replotTOMfromResults <- function(results, power, networktype="unsigned",
-                                 tomtype="signed") {
+plotTOMfromResults <- function(results, power=NULL, networktype="signed",
+                               tomtype="signed", nSelect=1000) {
 
   datExpr <- results$datExpr
   MEs <- results$net$MEs
   moduleColors <- labels2rainbow(results$net)
+  if(is.null(power) && !is.null(results$power)) {
+    power <- results$power
+  }
+  if(is.null(power)) power <- 6
   
   ## Calculate topological overlap anew: this could be done
   ## more efficiently by saving the TOM calculated during
   ## module detection, but let us do it again here.
   TOM <- TOMsimilarityFromExpr(
     datExpr,
-    power = as.numeric(power),
+    power = power,
     networkType = networktype, 
     TOMType = tomtype,
     verbose = 0
@@ -241,8 +247,8 @@ replotTOMfromResults <- function(results, power, networktype="unsigned",
   dissTOM <- 1 - TOM
   rownames(dissTOM) <- colnames(dissTOM) <- colnames(datExpr)
   
-  nSelect <- 999999
-  nSelect <- 800
+  #nSelect <- 999999
+  #nSelect <- 800
   ## For reproducibility, we set the random seed
   set.seed(10)
   select <- head(1:ncol(dissTOM), nSelect)
@@ -252,6 +258,7 @@ replotTOMfromResults <- function(results, power, networktype="unsigned",
   #
   selectTree <- hclust(as.dist(selectTOM), method = "average")
   selectColors <- moduleColors[select]
+
   ## Taking the dissimilarity to a power, say 10, makes the plot
   ## more informative by effectively changing the color palette;
   ## setting the diagonal to NA also improves the clarity of the
@@ -298,6 +305,57 @@ replotTOMfromResults <- function(results, power, networktype="unsigned",
 
 }
 
+
+#'
+#'
+#' @export
+plotDendroFromResults <- function(results, power=NULL, networktype="signed",
+                                  tomtype="signed", nSelect=1000) {
+
+  datExpr <- results$datExpr
+  MEs <- results$net$MEs
+  moduleColors <- labels2rainbow(results$net)
+  if(is.null(power) && !is.null(results$power)) {
+    power <- results$power
+  }
+  if(is.null(power)) power <- 6
+  
+  ## Calculate topological overlap anew: this could be done
+  ## more efficiently by saving the TOM calculated during
+  ## module detection, but let us do it again here.
+  TOM <- TOMsimilarityFromExpr(
+    datExpr,
+    power = as.numeric(power),
+    networkType = networktype, 
+    TOMType = tomtype,
+    verbose = 0
+  )
+  dissTOM <- 1 - TOM
+  rownames(dissTOM) <- colnames(dissTOM) <- colnames(datExpr)
+  
+  ##nSelect <- 999999
+  ##nSelect <- 800
+  ## For reproducibility, we set the random seed
+  set.seed(10)
+  select <- head(1:ncol(dissTOM), nSelect)
+  selectTOM <- dissTOM[select, select]
+  ## There’s no simple way of restricting a clustering tree
+  ## to a subset of genes, so we must re-cluster.
+  #
+  selectTree <- hclust(as.dist(selectTOM), method = "average")
+  selectColors <- moduleColors[select]
+
+  ## Convert labels to colors for plotting
+  ## Plot the dendrogram and the module colors underneath
+  plotDendroAndColors(
+    dendro = selectTree,
+    colors = selectColors,
+    dendroLabels = FALSE, hang = 0.03,
+    addGuide = FALSE, guideHang = 0.05,
+    marAll = c(0.2, 5, 0.4, 0.2),
+    main = NULL
+  )
+}
 
 
 #' @title Map module colors to rainbow palette
