@@ -893,8 +893,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   symbol <- pgx$genes$symbol
   sum.mx <- sum(symbol %in% rownames(playdata::METABOLITE_ANNOTATION),na.rm=TRUE)
   sum.px <- sum(symbol %in% colnames(playdata::GSETxGENE),na.rm=TRUE) 
-  dbg("[pgx.add_GMT] sum.mx = ", sum.mx)
-  dbg("[pgx.add_GMT] sum.px = ", sum.px)  
+  dbg("[pgx.add_GMT] 1: sum.mx = ", sum.mx)
+  dbg("[pgx.add_GMT] 1: sum.px = ", sum.px)  
   
   has.mx <- sum.mx >= 10
   has.px <- sum.px >= 10
@@ -925,8 +925,12 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   full_feature_list <- full_feature_list[!is.na(full_feature_list)]
   full_feature_list <- full_feature_list[full_feature_list != ""]
   full_feature_list <- unique(full_feature_list)
+
   G <- G[rownames(G) %in% full_feature_list, , drop = FALSE]
-  G <- G[, Matrix::colSums(G!=0) > 0]
+  G <- G[, Matrix::colSums(G!=0) > 0, drop=FALSE]
+
+  dbg("[pgx.add_GMT] 2: is.null.G = ", is.null(G))
+  dbg("[pgx.add_GMT] 2: dim.G = ", dim(G))  
 
   if(nrow(G)==0 || ncol(G)==0 ) G <- NULL
   
