@@ -206,8 +206,6 @@ pgx.createPGX <- function(counts,
     message("[createPGX] class.X: ", class(X))
     message("[createPGX] dim.X: ", dim(X)[1], " x ", dim(X)[2])
     message("[createPGX] Normalization method:", norm_method)
-    nmissing <- sum(is.na(X))
-    message("[createPGX] X has ", nmissing, " missing values")
     ndups <- sum(duplicated(rownames(X)))
     message("[createPGX] counts has ", ndups, " duplicated rows")    
   }
@@ -227,8 +225,15 @@ pgx.createPGX <- function(counts,
     }
   }
 
-  if (!is.null(impX)) {
-    message("[createPGX] dim.impX: impX matrix also provided.")
+  if(sum(is.na(X)) > 0) {
+    nmissing <- sum(is.na(X))
+    message("[createPGX] X has ", nmissing, " missing values")
+    if (!is.null(impX)) {
+      message("[createPGX] impX matrix also provided.")
+    } else {
+      message("[createPGX] creating impX matrix")
+      impX <- svdImpute2(X)
+    }
     message("[createPGX] dim.impX: ", dim(impX)[1], ", ", dim(impX)[2])
   }
 
