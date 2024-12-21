@@ -43,6 +43,8 @@ pgx.wgcna <- function(
   require(WGCNA)
 
   # minmodsize=30;power=6;cutheight=0.25;deepsplit=2;ngenes=1000
+  if(is.null(networktype)) networktype <- "signed"
+  if(is.null(tomtype)) tomtype <- "signed"  
   
   res <- wgcna.compute(
     X = pgx$X,
@@ -109,6 +111,8 @@ pgx.wgcna <- function(
       gse = gse,
       clust = clust,
       power = power,
+      networktype = networktype,
+      tomtype = tomtype,
       me.genes = res$me.genes,
       me.colors = res$me.colors
     )
