@@ -294,8 +294,12 @@ pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap"), nb = NULL, ...)
     }
     if (m == "pca") pos <- try(irlba::irlba(X1, nv = 2, nu = 0)$v)
     if (m == "pacmap") pos <- try(pacmap(t(X1)))
-    if (!"try-errror" %in% class(pos)) {
-      pos <- X1[1:ncol(X), ]
+    if ("try-errror" %in% class(pos)) {
+      pos <- matrix(0, nrow=ncol(X), ncol=2)
+      rownames(pos) <- colnames(X)
+      pgx.scatterPlotXY(pos, var = y, title = m, ...)
+    } else {
+      pos <- pos[1:ncol(X), ]
       rownames(pos) <- colnames(X)
       pgx.scatterPlotXY(pos, var = y, title = m, ...)
     }
