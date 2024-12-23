@@ -1321,6 +1321,7 @@ mofa.exampledata <- function(dataset="geiger", ntop=2000,
     dim(omx$pheno)
     samples <- omx$pheno[kk,]
 
+    omx.tissue = "skin"
     if(!is.null(omx.tissue)) {
       sel <- grep(omx.tissue,samples$tissue)
       samples <- samples[sel,]
@@ -1333,17 +1334,11 @@ mofa.exampledata <- function(dataset="geiger", ntop=2000,
     dd <- grep("BRD",dd,value=1,invert=TRUE)
     samples <- samples[,dd]
     colnames(samples) <- sub("@","_",colnames(samples))
-    sel <- head(order(-colSums(!is.na(samples))),10)
+    sel <- 1:ncol(samples)
+    #sel <- grep("FENIB|PLX4720|LGX818",colnames(samples))
+    #sel <- head(order(-colSums(!is.na(samples))),10)
     contrasts <- samples[,sel]
     colnames(contrasts) <- paste0(colnames(contrasts),":1_vs_0")
-  }
-
-  if(dataset == "tf") {
-    pgx <- playdata::GEIGER_PGX
-    X <- pgx$X
-    data <- mofa.splitByGeneRole(pgx$X) 
-    samples <- pgx$samples
-    contrasts <- pgx$contrasts
   }
 
   if(dataset == "tf") {
