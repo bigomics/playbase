@@ -207,20 +207,20 @@ pgx.createPGX <- function(counts,
     message("[createPGX] dim.X: ", dim(X)[1], " x ", dim(X)[2])
     message("[createPGX] Normalization method:", norm_method)
     ndups <- sum(duplicated(rownames(X)))
-    message("[createPGX] counts has ", ndups, " duplicated rows")    
+    message("[createPGX] counts has ", ndups, " duplicated rows")
   }
 
   if (!is.null(annot_table)) {
     message("[createPGX] class(annot_table) = ", class(annot_table))
     message("[createPGX] dim(annot_table) = ", dim(annot_table)[1], " x ", dim(annot_table)[2])
     ndiff <- sum(rownames(annot_table) != rownames(counts))
-    message("[createPGX] WARNING: annot_table has ",ndiff," different rownames as counts")    
+    message("[createPGX] WARNING: annot_table has ", ndiff, " different rownames as counts")
     ndups <- sum(duplicated(rownames(annot_table)))
-    message("[createPGX] annot_table has ", ndups, " duplicated rows")    
-    if(nrow(annot_table) != nrow(counts)) {
+    message("[createPGX] annot_table has ", ndups, " duplicated rows")
+    if (nrow(annot_table) != nrow(counts)) {
       message("[createPGX] WARNING: annot_table has different nrows. forcing dimensions.")
       ii <- match(rownames(counts), rownames(annot_table))
-      annot_table <- annot_table[ii,]
+      annot_table <- annot_table[ii, ]
       rownames(annot_table) <- rownames(counts)
     }
   }
@@ -310,12 +310,12 @@ pgx.createPGX <- function(counts,
 
   ## make duplicated rownames unique (new default since v3.5.1)
   ndup <- sum(duplicated(rownames(counts)))
-  if(ndup>0) {
-    info("[createPGX] duplicated rownames detected. making unique.")    
+  if (ndup > 0) {
+    info("[createPGX] duplicated rownames detected. making unique.")
     rownames(counts) <- playbase::make_unique(rownames(counts))
-    rownames(X) <- rownames(counts)    
-    if(!is.null(impX)) rownames(impX) <- rownames(counts)    
-    if(!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
+    rownames(X) <- rownames(counts)
+    if (!is.null(impX)) rownames(impX) <- rownames(counts)
+    if (!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
   }
 
   ## Special case for PTM phospho-proteomics
