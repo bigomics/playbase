@@ -294,8 +294,12 @@ pgx.dimPlot <- function(X, y, method = c("tsne", "pca", "umap"), nb = NULL, ...)
     }
     if (m == "pca") pos <- try(irlba::irlba(X1, nv = 2, nu = 0)$v)
     if (m == "pacmap") pos <- try(pacmap(t(X1)))
-    if (!"try-errror" %in% class(pos)) {
-      pos <- X1[1:ncol(X), ]
+    if ("try-errror" %in% class(pos)) {
+      pos <- matrix(0, nrow=ncol(X), ncol=2)
+      rownames(pos) <- colnames(X)
+      pgx.scatterPlotXY(pos, var = y, title = m, ...)
+    } else {
+      pos <- pos[1:ncol(X), ]
       rownames(pos) <- colnames(X)
       pgx.scatterPlotXY(pos, var = y, title = m, ...)
     }
@@ -5691,6 +5695,9 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
 
   ## ------ split Y-axis (genes) by factor
   hc.order <- function(x) {
+    if (nrow(x) == 1) {
+      return(rownames(x))
+    }
     suppressWarnings(dd <- stats::as.dist(1 - stats::cor(t(x), use = "pairwise")))
     if (sum(is.na(dd))) dd[is.na(dd) | is.nan(dd)] <- 1
     hc <- fastcluster::hclust(dd, method = "ward.D2")
@@ -5698,7 +5705,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   }
   if (!is.null(idx)) {
     if (row_clust) {
-      kk <- tapply(rownames(X), idx, function(k) c(hc.order(X[k, ]), "   "))
+      kk <- tapply(rownames(X), idx, function(k) c(hc.order(X[k, , drop = FALSE]), "   "))
     } else {
       kk <- tapply(rownames(X), idx, function(k) c(k, "   "))
     }
@@ -5714,7 +5721,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     idx <- rev(idx)
   } else {
     if (row_clust) {
-      kk <- hc.order(X[, ])
+      kk <- hc.order(X[, , drop = FALSE])
       X <- X[kk, ]
     }
   }
