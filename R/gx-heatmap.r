@@ -141,11 +141,11 @@ gx.imagemap <- function(X, main = "", cex = 1, cex.main = 1.8,
   if (cex > 0) {
     graphics::mtext(colnames(X),
       side = 1, at = 1:ncol(X), las = 3,
-      cex = 0.75 * cex, line = 0.5
+      cex = 0.8 * cex, line = 0.5
     )
     graphics::mtext(rownames(X),
       side = 4, at = 1:nrow(X), las = 1,
-      cex = 0.85 * cex, line = 0.5
+      cex = 0.8 * cex, line = 0.5
     )
   }
   if (cex < 0) {
