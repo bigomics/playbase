@@ -842,7 +842,7 @@ contrasts.convertToLabelMatrix <- function(contrasts, samples) {
     all(apply(contrasts, 2, class) %in% c("integer", "numeric"))
   is.numeric.contrast <- is.numeric.matrix | is.numeric.df
   if (is.numeric.contrast) {
-    has.negpos <- any(contrasts < 0, na.rm=TRUE) && any(contrasts > 0, na.rm=TRUE)
+    has.negpos <- any(contrasts < 0, na.rm = TRUE) && any(contrasts > 0, na.rm = TRUE)
     if (has.negpos) {
       contrasts[contrasts %in% c(NA, "NA", "na", "")] <- 0
       contrasts <- sign(contrasts)
