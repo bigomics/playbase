@@ -663,8 +663,9 @@ pgx.createSeuratObject <- function(counts,
   if(filter) {
     ## Filter on number of counts/features and mitochondrial gene content.
     message("[pgx.createIntegratedSeuratObject] filtering cells")    
-    qN <- quantile( obj$nCount_RNA, probs = c(0.01,0.99))
-    qF <- quantile( obj$nFeature_RNA, probs = c(0.01,0.99))
+    probs <- c(0.01, 0.99)
+    qN <- quantile(obj$nCount_RNA, probs = probs)
+    qF <- quantile(obj$nFeature_RNA, probs = probs)
     obj <- subset(obj, subset =
                          nCount_RNA > qN[1] & nCount_RNA < qN[2] &                       
                          nFeature_RNA > qF[1] & nFeature_RNA < qF[2] &
@@ -721,14 +722,14 @@ seurat.preprocess <- function(obj,
   obj <- Seurat::FindClusters(obj, resolution = 1, verbose = FALSE) 
 
   if (tsne) {
-    message("[seurat.preprocess] running tSNE")
+    message("[seurat.preprocess] running 2D tSNE")
     obj <- Seurat::RunTSNE(obj, dims=1:npcs, reduction = dr, verbose = FALSE)
   }
 
   if (umap) {
-    message("[seurat.preprocess] running UMAP")
-    obj <- Seurat::RunUMAP(obj, dims = 1:npcs, n.neighbors = nn,
-      reduction = dr, verbose = FALSE)
+    message("[seurat.preprocess] running 2D UMAP")
+    obj <- Seurat::RunUMAP(obj, dims = 1:npcs,
+      n.neighbors = nn, reduction = dr, verbose = FALSE)
   }
   obj
 }
@@ -792,7 +793,8 @@ pgx.runAzimuth <- function(counts, k.weight = NULL, reference = NULL) {
     k.weight <- 20
     ## k.weight <- round(min(50, ncol(obj)/10))
   }
-  dbg("[pgx.runAzimuth] k.weight = ", k.weight)
+  ## dbg("[pgx.runAzimuth] k.weight = ", k.weight)
+  message("[pgx.runAzimuth] k.weight = ", k.weight)
   if (is.null(reference)) {
     reference <- "pbmcref"
   }
@@ -1174,9 +1176,9 @@ pgx.createSingleCellPGX <- function(counts,
   samplesx <- cbind( samples, contrasts )
   
   sc.membership <- NULL
-  if(ncol(counts) > 2000) { ## 15K , 20K
+  if(ncol(counts) > 10000) { ## 15K , 20K
     ct <- samplesx[, "celltype"]
-    group <- paste0(ct, ":", apply(contrasts, 1, paste, collapse='_'))
+    group <- paste0(ct, ":", apply(contrasts, 1, paste, collapse = '_'))
     ##  group <- paste0(samples[, "celltype"], ":", samples[, pheno])
     if(!is.null(batch)) {
       group <- paste0(group, ":", samples[, batch])
@@ -1205,17 +1207,20 @@ pgx.createSingleCellPGX <- function(counts,
   }
 
   obj <- pgx.createSeuratObject(
-    counts,
-    samplesx,
+    counts = counts,
+    samplesx = samplesx,
     batch = batch.vec,
+    cellcyclescores = TRUE,
     filter = TRUE,
+    preprocess = TRUE,
     method = "Harmony"
   ) 
 
-  message("[pgx.createSingleCellPGX] Perform Seurat PCA, t-SNE, UMAP.")
+  message("[pgx.createSingleCellPGX] Perform Seurat 3D t-SNE & UMAP.")
   r <- "pca"
   if (!is.null(batch)) { r <- "integrated.dr" }
 
+  ## But was TSNE and UMAP already done seurat.preprocess??
   obj <- Seurat::RunTSNE(obj, dims=1:30, reduction = r, verbose = FALSE)
 
   obj <- Seurat::RunTSNE(obj, dim.embed = 3L, dims=1:30,
@@ -1225,8 +1230,9 @@ pgx.createSingleCellPGX <- function(counts,
   obj <- Seurat::RunUMAP(obj, n.components = 3L, dims=1:30,
     reduction = r, reduction.name ="umap.3d",
     reduction.key = "umap3d_",  verbose = FALSE)
+
   ##  names(obj@reductions)
-  message("[pgx.createSingleCellPGX] PCA, t-SNE, UMAP completed.")
+  message("[pgx.createSingleCellPGX] 3D t-SNE & UMAP completed.")
 
   message("[pgx.createSingleCellPGX] dim(seurat counts): ", paste0(dim(obj@assays$RNA$counts), collapse=", "))
   message("[pgx.createSingleCellPGX] dim(seurat X): ", paste0(dim(obj@assays$RNA$data), collapse=", "))
@@ -1234,25 +1240,25 @@ pgx.createSingleCellPGX <- function(counts,
   
   ## create balanced down-sampled object. We target about n=20 cells
   ## per statistical condition, per celltype.
-  ## downsample = FALSE
-  ## if (downsample) {
-  ##   message("[pgx.createSingleCellPGX] Down-sampling Seurat object ...")  
-  ##   meta.ct <- obj@meta.data[,colnames(contrasts)]
-  ##   group <- paste0(obj@meta.data$celltype, ":", meta.ct)
-  ##   table(group)
-  ##   sub <- seurat.downsample(obj, target_g = 20, group = group)
-  ## } else {
-  ##   sub <- obj
-  ## }
+  downsample = FALSE
+  if (downsample) {
+    message("[pgx.createSingleCellPGX] Down-sampling Seurat object ...")  
+    meta.ct <- obj@meta.data[,colnames(contrasts)]
+    group <- paste0(obj@meta.data$celltype, ":", meta.ct)
+    table(group)
+    sub <- seurat.downsample(obj, target_g = 20, group = group)
+  } else {
+    sub <- obj
+  }
   
   ## results for pgx.createPGX
   message("[pgx.createSingleCellPGX] Creating PGX object ...")
-  counts2 = sub[['RNA']]$counts
+  counts2 <- sub[['RNA']]$counts
   kk <- setdiff(colnames(sub@meta.data), colnames(contrasts))
-  samples2 = sub@meta.data[, kk]
+  samples2 <- sub@meta.data[, kk]
   
   ## stratify contrast matrix by celltype
-  contrasts2 = sub@meta.data[, colnames(contrasts)]
+  contrasts2 <- sub@meta.data[, colnames(contrasts), drop = FALSE]
   contrasts2 <- stratifyContrasts(contrasts2, samples2$celltype)
   colnames(contrasts2) <- sub(".*@", "", colnames(contrasts2))
   colnames(contrasts2) <- gsub("[ ]", "_", colnames(contrasts2))
@@ -1260,10 +1266,10 @@ pgx.createSingleCellPGX <- function(counts,
   ## single-cell specific normalization (10k)
   X <- playbase::logCPM(counts2, total = 1e4, prior = 1)
 
-  message("[pgx.createSingleCellPGX] dim(counts): ", paste0(dim(counts2), collapse=" x "))
-  message("[pgx.createSingleCellPGX] dim(X): ", paste0(dim(X), collapse=" x "))
-  message("[pgx.createSingleCellPGX] dim(samples): ", paste0(dim(samples2), collapse=" x "))
-  message("[pgx.createSingleCellPGX] dim(contrasts): ", paste0(dim(contrasts2), collapse=" x "))  
+  message("[pgx.createSingleCellPGX] dim(counts): ", paste0(dim(counts2), collapse =" x "))
+  message("[pgx.createSingleCellPGX] dim(X): ", paste0(dim(X), collapse =" x "))
+  message("[pgx.createSingleCellPGX] dim(samples): ", paste0(dim(samples2), collapse =" x "))
+  message("[pgx.createSingleCellPGX] dim(contrasts): ", paste0(dim(contrasts2), collapse =" x "))  
 
   pgx <- pgx.createPGX(
     counts = counts2,
