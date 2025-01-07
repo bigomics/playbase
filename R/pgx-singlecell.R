@@ -664,6 +664,7 @@ pgx.createSeuratObject <- function(counts,
   if(filter) {
     ## Filter on number of counts/features, mitochondrial, hb gene content.
     message("[pgx.createSeuratObject] Filtering cells")
+    ncells0 <- ncol(obj) 
     if(length(sc_compute_settings)>0) {
       message("[pgx.createSeuratObject] Filtering based on user-defined criteria:")
       sc_params <- names(sc_compute_settings)
@@ -690,7 +691,8 @@ pgx.createSeuratObject <- function(counts,
       }
       obj <- subset(obj, subset =
                            nFeature_RNA > nfeat_thr[1] & nFeature_RNA < nfeat_thr[2] &
-                           percent.mt < mt_thr & percent.hb <- hb_thr)
+                           percent.mt < mt_thr &
+                           percent.hb < hb_thr)
     } else {
       probs <- c(0.01, 0.99)
       qN <- quantile(obj$nCount_RNA, probs = probs)
@@ -701,6 +703,8 @@ pgx.createSeuratObject <- function(counts,
                            percent.mt < 5)
     }
     dim(obj)
+    ncells1 <- ncol(obj)
+    message("[pgx.createSeuratObject] Filtering cells: ", ncells0, " --> ", ncells1) 
   }
   
   if(preprocess) {
@@ -1195,7 +1199,7 @@ pgx.createSingleCellPGX <- function(counts,
 
   if(!is.null(sc_compute_settings) && length(sc_compute_settings)>0) {
     sc_params <- names(sc_compute_settings)
-    message("[createSingleCellPGX] sc parameters: ", paste0(sc_params, collapse = ", "))
+    message("[createSingleCellPGX] sc filter parameters: ", paste0(sc_params, collapse = ", "))
   } else {
     sc_compute_settings <- list()
   }
