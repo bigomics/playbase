@@ -370,14 +370,11 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     timings <- c()
     k <- 1
     ncontrasts <- ncol(contr.matrix)
-    message("-----------MNT0: ", paste0(colnames(contr.matrix), collapse=", "))
     for (k in 1:ncontrasts) {
-      message("-----------MNT1: ", k, ": ", colnames(contr.matrix)[k])
       res <- fitThisContrastWithMethod(method = method, k)
       results[[k]] <- res$results[[1]]
       timings <- rbind(timings, res$timings)
       names(results)[k] <- colnames(contr.matrix)[k]
-      message("-----------MNT2: ", k, ": ", colnames(contr.matrix)[k], ". DONE")
     }
     return(list(results = results, timings = timings))
   }
