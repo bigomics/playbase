@@ -210,15 +210,17 @@ plotPCSF <- function(pcsf,
   ## set colors as UP/DOWN
   up_down <- c("down", "up")[1 + 1 * (sign(fx) > 0)]
   dtype <- igraph::V(pcsf)$type
-  ntypes <- length(unique(dtype))
   igraph::V(pcsf)$group <- paste0(dtype,"_",up_down)
   bluered <- playdata::BLUERED(7)
-  extra_node_colors <- rep(c(bluered[2],bluered[6]),ntypes)
-  names(extra_node_colors) <- sort(unique(igraph::V(pcsf)$group))
-  shapes <- head(rep(c("dot","square","triangle","star",
-                       "diamond","triangleDown","hexagon"),99),ntypes)
-  extra_node_shapes <- as.vector(mapply(rep, shapes, 2))
-  names(extra_node_shapes) <- sort(unique(igraph::V(pcsf)$group))
+  groups <- sort(setdiff( igraph::V(pcsf)$group, c(NA)))
+  ngroups <- length(groups)
+  extra_node_colors <- c(bluered[2],bluered[6])[ 1 + grepl("_up$",groups)]
+  names(extra_node_colors) <- groups
+
+  shapes <- head(rep(c("dot","triangle","star","diamond","square",
+                       "triangleDown","hexagon"),99),ngroups)
+  extra_node_shapes <- shapes[ factor(sub("_down|_up","",groups)) ]
+  names(extra_node_shapes) <- groups
     
   ## set label size
   if (highlightby == "centrality") {
@@ -230,6 +232,13 @@ plotPCSF <- function(pcsf,
   if (highlightby == "prize") {
     fx1 <- abs(fx)
     label_cex1 <- label_cex * (1 + 3 * (fx1 / max(fx1, na.rm = TRUE))**3)
+  }
+  if (highlightby == "centrality.prize") {
+    wt <- igraph::E(pcsf)$weight
+    ewt <- 1.0 / (0.01 * mean(wt, na.rm = TRUE) + wt) ##
+    bc <- igraph::page_rank(pcsf, weights = ewt)$vector
+    bc <- bc * abs(fx)
+    label_cex1 <- label_cex * (1 + 3 * (bc / max(bc, na.rm = TRUE))**3)
   }
 
   if(is.null(igraph::V(pcsf)$label)) {
@@ -284,7 +293,7 @@ visplot.PCSF <- function(
     Terminal_node_legend = "Terminal", Steiner_node_legend = "Steiner",
     layout = "layout_with_kk", physics = TRUE, layoutMatrix = NULL,
     width = 1800, height = 1800, invert.weight = FALSE,
-    extra_node_colors = list(), extra_node_shapes = list(),
+    extra_node_colors = c(), extra_node_shapes = c(),
     edge_color = "lightgrey", ...) {
   if (missing(net)) {
     stop("Need to specify the subnetwork obtained from the PCSF algorithm.")
@@ -328,7 +337,7 @@ visplot.PCSF <- function(
   nodes$title <- nodes$name
   nodes$label.cex <- node_label_cex
   nodes$font.size <- node_label_cex
-
+  
   edges <- data.frame(igraph::ends(net, es = igraph::E(net)), adjusted_weight)
   names(edges) <- c("from", "to", "value")
   edges$from <- match(edges$from, nodes$name)
@@ -344,22 +353,24 @@ visplot.PCSF <- function(
       color = edge_color,
       scaling = list(min = 6, max = edge_width * 6)
     )
-
+  
   if (length(extra_node_colors) > 0) {
+    
     for (i in 1:length(extra_node_colors)) {
       en <- names(extra_node_colors)[i]
       visNet <- visNet %>% visNetwork::visGroups(
         groupname = en,
         color = list(
-          background = extra_node_colors[[en]],
+          background = as.character(extra_node_colors[en]),
           border = "lightgrey"
         ),
-        shape = extra_node_shapes[[en]]
+        shape = as.character(extra_node_shapes[en])
       )
       #      leg.groups[[i]] <- list(label = en, shape = "triangle",
       #        size = 13, color = list(background = extra_node_colors[[en]],
       #          border = "grey"), label.cex = 0.8)
     }
+
   }
 
   if (layout != "hierarchical") {
@@ -374,10 +385,10 @@ visplot.PCSF <- function(
     visNet <- visNet %>% visNetwork::visHierarchicalLayout(direction = "UD")
   }
 
-  visNet <- visNet %>%
-    visNetwork::visPhysics(enabled = physics) %>%
-    visNetwork::visOptions(highlightNearest = list(enabled = TRUE, degree = 2)) %>%
-    visNetwork::visLegend(width = 0.05, useGroups = TRUE, position = "right")
+#  visNet <- visNet %>%
+#    visNetwork::visPhysics(enabled = physics) %>%
+#    visNetwork::visOptions(highlightNearest = list(enabled = TRUE, degree = 2)) %>%
+#    visNetwork::visLegend(width = 0.05, useGroups = TRUE, position = "right")
 
   visNet
 }

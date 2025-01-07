@@ -930,6 +930,10 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   G <- G[, Matrix::colSums(G!=0) > 0, drop=FALSE]
 
   if(nrow(G)==0 || ncol(G)==0 ) G <- NULL
+
+  if(!is.null(G)) {
+    dbg("[pgx.add_GMT] Default GSET matrix: ", dim(G))
+  }
   
   ## -----------------------------------------------------------
   ## Filter gene sets on size

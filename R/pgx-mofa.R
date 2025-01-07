@@ -71,7 +71,7 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
   
   ## pre-compute cluster positions
   xx <- mofa.split_data(lasagna$X)
-  xx <- xx[names(xdata)]
+  xx <- xx[names(xdata)]   ## remove SOURCE/SINK
    
   message("computing cluster positions (samples)...")
   res$posx <- mofa.compute_clusters(xx, along="samples")
@@ -97,7 +97,9 @@ mofa.compute <- function(xdata,
                          max_iter = 1000,
                          gpu_mode = FALSE,
                          compute.clusters = TRUE,
-                         num_factors = 10) {
+                         num_factors = 10,
+                         num_factor_features = 100
+                         ) {
   
 
   if(!is.null(ntop) && ntop>0) {
@@ -318,7 +320,7 @@ mofa.compute <- function(xdata,
       features = model$subgraphs
     )
   } else {
-    graphs <- mofa.factor_graphs(F, W, X, y=pheno, n=20)
+    graphs <- mofa.factor_graphs(F, W, X, y=pheno, n=num_factor_features)
   }
 
   num.contrasts <- sign(makeContrastsFromLabelMatrix(contrasts))
@@ -551,6 +553,11 @@ mofa.compute_enrichment <- function(ww, ww.types=NULL, filter=NULL,
 
 #' @export
 mofa.split_data <- function(X) {
+
+  if(!all(grepl("[:]|SOURCE|SINK",rownames(X)))) {
+    ## if no prefix, then single-omics. Assume gene expression.
+    rownames(X) <- paste0("gx:",rownames(X))
+  }
   dtype <- sub(":.*","",rownames(X))
   xx <- tapply(1:nrow(X), dtype, function(i) X[i,,drop=FALSE] )
   xx <- mofa.strip_prefix(xx)
@@ -586,6 +593,27 @@ mofa.strip_prefix <- function(xx) {
     } else {
       rownames(xx[[i]]) <- sub(dt,"",rownames(xx[[i]]))
     }
+  }
+  xx
+}
+
+#' @export
+
+#' @export
+mofa.augment <- function(xx, n, z=1) {
+  sdxx <- sapply( xx, function(x) mean( matrixStats::rowSds(x)))
+  ## enlarge
+  for(i in 1:length(xx)) {
+    rn <- rownames(xx[[i]])
+    cn <- colnames(xx[[i]])    
+    xx[[i]] <- matrix( xx[[i]], nrow(xx[[i]]), n * ncol(xx[[i]]) )  
+    rownames(xx[[i]]) <- rn
+    colnames(xx[[i]]) <- rep(cn, n)
+  }
+  ## add noise
+  for(i in 1:length(xx)) {
+    rxx <- matrix( rnorm(length(xx[[i]])), nrow(xx[[i]]), ncol(xx[[i]]) )
+    xx[[i]] <- xx[[i]] + z * sdxx[[i]] * rxx
   }
   xx
 }
@@ -1018,7 +1046,7 @@ mofa.plotVar <- function(mofa, comp=1:2, style="correlation",
 }
 
 #' @export
-mofa.factor_graphs <- function(F, W, X, y, n=10,
+mofa.factor_graphs <- function(F, W, X, y, n=100,
                                ewidth=1, vsize=1) {
   
   ## cluster-reduced graph
@@ -1321,7 +1349,6 @@ mofa.exampledata <- function(dataset="geiger", ntop=2000,
     dim(omx$pheno)
     samples <- omx$pheno[kk,]
 
-    omx.tissue = "skin"
     if(!is.null(omx.tissue)) {
       sel <- grep(omx.tissue,samples$tissue)
       samples <- samples[sel,]
@@ -1334,11 +1361,10 @@ mofa.exampledata <- function(dataset="geiger", ntop=2000,
     dd <- grep("BRD",dd,value=1,invert=TRUE)
     samples <- samples[,dd]
     colnames(samples) <- sub("@","_",colnames(samples))
-    sel <- 1:ncol(samples)
-    #sel <- grep("FENIB|PLX4720|LGX818",colnames(samples))
-    #sel <- head(order(-colSums(!is.na(samples))),10)
-    contrasts <- samples[,sel]
-    colnames(contrasts) <- paste0(colnames(contrasts),":1_vs_0")
+
+    contrasts <- samples
+    contrasts <- apply(contrasts,2,function(x) c("R","S")[1+x]) 
+    colnames(contrasts) <- paste0(colnames(contrasts),":S_vs_R")
   }
 
   if(dataset == "tf") {
