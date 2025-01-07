@@ -638,13 +638,6 @@ pgx.computePGX <- function(pgx,
 
   message("[pgx.computePGX] testing genes...")
 
-  LL <- list(
-    pgx = pgx, contr.matrix = contr.matrix,
-    max.genes=max.genes, gx.methods=gx.methods,
-    use.design=use.design, prune.samples=prune.samples
-  )
-  saveRDS(LL, "~/Desktop/LL.RDS")
-  
   pgx <- playbase::compute_testGenes(pgx, contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
