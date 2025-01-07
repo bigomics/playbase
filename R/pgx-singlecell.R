@@ -629,7 +629,8 @@ pgx.createSeuratObject <- function(counts,
                                    batch,
                                    cellcyclescores = TRUE,
                                    filter = TRUE,
-                                   preprocess = TRUE,
+                                   sc_compute_settings = list(),
+                                   preprocess = TRUE,                                   
                                    method = "Harmony") {
 
   options(Seurat.object.assay.calcn = TRUE)
@@ -661,18 +662,27 @@ pgx.createSeuratObject <- function(counts,
   }
   
   if(filter) {
-    ## Filter on number of counts/features and mitochondrial gene content.
-    message("[pgx.createIntegratedSeuratObject] filtering cells")    
-    probs <- c(0.01, 0.99)
-    qN <- quantile(obj$nCount_RNA, probs = probs)
-    qF <- quantile(obj$nFeature_RNA, probs = probs)
-    obj <- subset(obj, subset =
-                         nCount_RNA > qN[1] & nCount_RNA < qN[2] &                       
-                         nFeature_RNA > qF[1] & nFeature_RNA < qF[2] &
-                         percent.mt < 5)
+    ## Filter on number of counts/features, mitochondrial, hb gene content.
+    message("[pgx.createSeuratObject] filtering cells based on these criteria:")
+    if(length(sc_compute_settings)>0) {
+      sc_params <- names(sc_compute_settings)
+      message("[pgx.createSeuratObject] ", paste0(sc_params, collapse = ", "))
+      i <- 1
+      for(i in 1:length(sc_params)) {
+        message("[pgx.createSeuratObject] ", sc_params[i], ":", sc_compute_settings[[i]])
+      }
+    } else {
+      probs <- c(0.01, 0.99)
+      qN <- quantile(obj$nCount_RNA, probs = probs)
+      qF <- quantile(obj$nFeature_RNA, probs = probs)
+      obj <- subset(obj, subset =
+                           nCount_RNA > qN[1] & nCount_RNA < qN[2] &                       
+                           nFeature_RNA > qF[1] & nFeature_RNA < qF[2] &
+                           percent.mt < 5)
+    }
     dim(obj)
   }
-
+  
   if(preprocess) {
     message("[pgx.createIntegratedSeuratObject] preprocessing Seurat object")   
     has.batch <- "batch" %in% tolower(colnames(obj@meta.data))
@@ -1129,8 +1139,8 @@ pgx.createSingleCellPGX <- function(counts,
                                     organism,
                                     azimuth_ref,
                                     ## scrnaseq_pheno,
-                                    batch = NULL
-                                    ## sc_pheno
+                                    batch = NULL,
+                                    sc_compute_settings
                                     ) {
 
   message("[pgx.createSingleCellPGX]==========================================")
@@ -1163,6 +1173,15 @@ pgx.createSingleCellPGX <- function(counts,
     message("[createSingleCellPGX] Azimuth ref. atlas: ", azimuth_ref)
   }
 
+  if(!is.null(sc_compute_settings) && length(sc_compute_settings)>0) {
+    message("[createSingleCellPGX] sc parameters: ", names(sc_compute_settings))
+    message("[createSingleCellPGX] sc parameter 1: ", sc_compute_settings[[1]])
+    message("[createSingleCellPGX] sc parameter 2: ", sc_compute_settings[[2]])
+    message("[createSingleCellPGX] sc parameter 3: ", sc_compute_settings[[3]])
+  } else {
+    sc_compute_settings <- list()
+  }
+
   message("[pgx.createSingleCellPGX] Inferring cell types with Azimuth.")
   message("[pgx.createSingleCellPGX] Using ", azimuth_ref, " as reference atlas.")
   azm <- pgx.runAzimuth(counts, reference = azimuth_ref)
@@ -1177,6 +1196,7 @@ pgx.createSingleCellPGX <- function(counts,
   
   sc.membership <- NULL
   if(ncol(counts) > 10000) { ## 15K , 20K
+    message("[pgx.createSingleCellPGX] >10K cells: computing metacells with SuperCell")
     ct <- samplesx[, "celltype"]
     group <- paste0(ct, ":", apply(contrasts, 1, paste, collapse = '_'))
     ##  group <- paste0(samples[, "celltype"], ":", samples[, pheno])
@@ -1208,10 +1228,11 @@ pgx.createSingleCellPGX <- function(counts,
 
   obj <- pgx.createSeuratObject(
     counts = counts,
-    samplesx = samplesx,
+    samples = samplesx,
     batch = batch.vec,
     cellcyclescores = TRUE,
     filter = TRUE,
+    sc_compute_settings = sc_compute_settings,
     preprocess = TRUE,
     method = "Harmony"
   ) 
@@ -1298,15 +1319,16 @@ pgx.createSingleCellPGX <- function(counts,
     convert.hugo = TRUE,
     only.proteincoding = TRUE,
     remove.xxl = TRUE,
-    remove.outliers = TRUE
+    remove.outliers = TRUE,
+    sc_compute_settings = sc_compute_settings
   )
 
   message("[pgx.createSingleCellPGX] dim(pgx$counts): ", paste0(dim(pgx$counts), collapse = " x "))
   message("[pgx.createSingleCellPGX] dim(pgx$X): ", paste0(dim(pgx$X), collapse = " x "))
   message("[pgx.createSingleCellPGX] dim(pgx$samples): ", paste0(dim(pgx$samples), collapse = " x "))
 
-  ## We take the clusterings from Seurat because these are
-  ## 'integrated' (batch corrected).
+  ## We take the clusterings from Seurat because
+  ## these are 'integrated' (batch corrected).
   cluster = list(
     pca2d = sub@reductions[['pca']]@cell.embeddings[, 1:2],
     pca3d = sub@reductions[['pca']]@cell.embeddings[, 1:3],

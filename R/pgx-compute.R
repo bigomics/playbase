@@ -179,15 +179,15 @@ pgx.createPGX <- function(counts,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE,
                           remove.outliers = TRUE,
-                          sc_settings = list()) { ## NEW AZ
-
+                          sc_compute_settings = list()) { ## NEW AZ
+  
   message("[pgx.createPGX]===========================================")
   message("[pgx.createPGX]=========== pgx.createPGX =================")
   message("[pgx.createPGX]===========================================")
   message("\n")
   message("[pgx.createPGX] Starting pgx.createPGX")
   message("\n")  
-
+  
   message("[createPGX] datatype = ", datatype)
 
   if (datatype == "scRNA-seq") {
@@ -196,9 +196,10 @@ pgx.createPGX <- function(counts,
       samples = samples,
       contrasts = contrasts,
       organism = organism,
+      azimuth_ref = azimuth_ref, ## NEW AZ
       batch = NULL,
-      azimuth_ref = azimuth_ref ## NEW AZ
-      ## sc_pheno = sc_pheno ## NEW AZ
+      ## sc_pheno = sc_pheno ## NEW AZ 
+      sc_compute_settings = sc_compute_settings ## NEW AZ
     )
     return(pgx)
   }
@@ -321,11 +322,11 @@ pgx.createPGX <- function(counts,
 
   ##----------NEW AZ
   ## add to setting info
-  sc_settings$filter.genes <- filter.genes
-  sc_settings$only.known <- only.known
-  sc_settings$only.proteincoding <- only.proteincoding
-  sc_settings$convert.hugo <- convert.hugo
-  sc_settings$custom.geneset <- !is.null(custom.geneset)
+  ##sc_settings$filter.genes <- filter.genes
+  ##sc_settings$only.known <- only.known
+  ##sc_settings$only.proteincoding <- only.proteincoding
+  ##sc_settings$convert.hugo <- convert.hugo
+  ##sc_settings$custom.geneset <- !is.null(custom.geneset)
   ##----------NEW AZ
   
   pgx <- list(
@@ -344,7 +345,7 @@ pgx.createPGX <- function(counts,
     norm_method = norm_method,
     total_counts = Matrix::colSums(counts, na.rm = TRUE),
     counts_multiplier = counts_multiplier,
-    sc_settings = sc_settings ## NEW AZ
+    sc_compute_settings = sc_compute_settings ## NEW AZ
   )
 
   ## -------------------------------------------------------------------
@@ -636,13 +637,20 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
 
   message("[pgx.computePGX] testing genes...")
+
+  LL <- list(
+    pgx = pgx, contr.matrix = contr.matrix,
+    max.genes=max.genes, gx.methods=gx.methods,
+    use.design=use.design, prune.samples=prune.samples
+  )
+  saveRDS(LL, "~/Desktop/LL.RDS")
+  
   pgx <- playbase::compute_testGenes(pgx, contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
     use.design = use.design,
     prune.samples = prune.samples
   )
-
 
   ## ------------------ gene set tests -----------------------
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
