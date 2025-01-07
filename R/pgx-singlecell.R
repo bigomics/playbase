@@ -665,7 +665,7 @@ pgx.createSeuratObject <- function(counts,
     ## Filter on number of counts/features, mitochondrial, hb gene content.
     message("[pgx.createSeuratObject] Filtering cells")
     if(length(sc_compute_settings)>0) {
-      message("[pgx.createSeuratObject] Filtering baed on user-defined criteria:")
+      message("[pgx.createSeuratObject] Filtering based on user-defined criteria:")
       sc_params <- names(sc_compute_settings)
       message("[pgx.createSeuratObject] ", paste0(sc_params, collapse = ", "))
       i <- 1
