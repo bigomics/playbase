@@ -663,14 +663,34 @@ pgx.createSeuratObject <- function(counts,
   
   if(filter) {
     ## Filter on number of counts/features, mitochondrial, hb gene content.
-    message("[pgx.createSeuratObject] filtering cells based on these criteria:")
+    message("[pgx.createSeuratObject] Filtering cells")
     if(length(sc_compute_settings)>0) {
+      message("[pgx.createSeuratObject] Filtering baed on user-defined criteria:")
       sc_params <- names(sc_compute_settings)
       message("[pgx.createSeuratObject] ", paste0(sc_params, collapse = ", "))
       i <- 1
       for(i in 1:length(sc_params)) {
-        message("[pgx.createSeuratObject] ", sc_params[i], ":", sc_compute_settings[[i]])
+        vv <- paste0(sc_compute_settings[[i]], ",")
+        message("[pgx.createSeuratObject] ", sc_params[i], ": ", vv)
       }
+      if("nfeature_threshold" %in% sc_params) {
+        nfeat_thr <- sc_compute_settings[["nfeature_threshold"]]
+      } else {
+        nfeat_thr <- c(0, 1e200)
+      }
+      if("mt_threshold" %in% sc_params) {
+        mt_thr <- sc_compute_settings[["mt_threshold"]]
+      } else {
+        mt_thr <- 100
+      }
+      if("hb_threshold" %in% sc_params) {
+        hb_thr <- sc_compute_settings[["hb_threshold"]]
+      } else {
+        hb_thr <- 100
+      }
+      obj <- subset(obj, subset =
+                           nFeature_RNA > nfeat_thr[1] & nFeature_RNA < nfeat_thr[2] &
+                           percent.mt < mt_thr & percent.hb <- hb_thr)
     } else {
       probs <- c(0.01, 0.99)
       qN <- quantile(obj$nCount_RNA, probs = probs)
@@ -1140,7 +1160,7 @@ pgx.createSingleCellPGX <- function(counts,
                                     azimuth_ref,
                                     ## scrnaseq_pheno,
                                     batch = NULL,
-                                    sc_compute_settings
+                                    sc_compute_settings = list()
                                     ) {
 
   message("[pgx.createSingleCellPGX]==========================================")
@@ -1174,10 +1194,8 @@ pgx.createSingleCellPGX <- function(counts,
   }
 
   if(!is.null(sc_compute_settings) && length(sc_compute_settings)>0) {
-    message("[createSingleCellPGX] sc parameters: ", names(sc_compute_settings))
-    message("[createSingleCellPGX] sc parameter 1: ", sc_compute_settings[[1]])
-    message("[createSingleCellPGX] sc parameter 2: ", sc_compute_settings[[2]])
-    message("[createSingleCellPGX] sc parameter 3: ", sc_compute_settings[[3]])
+    sc_params <- names(sc_compute_settings)
+    message("[createSingleCellPGX] sc parameters: ", paste0(sc_params, collapse = ", "))
   } else {
     sc_compute_settings <- list()
   }
