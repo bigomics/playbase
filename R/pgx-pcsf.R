@@ -88,10 +88,8 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   as.name = TRUE
   labels <- pp
   if(as.name) {
-    ii <- match(pp, playdata::METABOLITE_METADATA$ID)
-    jj <- which(!is.na(ii))
-    mx.name <- playdata::METABOLITE_METADATA$name[ii[jj]]
-    labels[jj] <- paste0("[",mx.name,"]")
+    mx.name <- pgx$genes[pp,"gene_title"]
+    labels <- paste0("[",mx.name,"]")
   }
   
   ## all X and fx in symbol (HGNC or ChEBI) so we can strip of prefix
