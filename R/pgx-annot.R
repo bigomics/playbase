@@ -1422,31 +1422,30 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
 
 #' @export
 getMetaboliteInfo <- function(organism = "Human", chebi) {
+  
   if (is.null(chebi) || length(chebi) == 0) {
     return(NULL)
   }
   if (is.na(chebi) || chebi == "") {
     return(NULL)
   }
-  info <- list()
 
   metabolite_metadata <- playdata::METABOLITE_METADATA
-  orgdb <- playdata::METABOLITE_ANNOTATION
+  annot <- playdata::METABOLITE_ANNOTATION
 
-  info[["name"]] <- metabolite_metadata[metabolite_metadata$ID == chebi, "NAME"]
-  info[["summary"]] <- metabolite_metadata[metabolite_metadata$ID == chebi, "DEFINITION"]
-  info[["organism"]] <- organism
-
-
+  inf <- list()
+  inf[["name"]] <- metabolite_metadata[metabolite_metadata$ID == chebi, "name"]
+  inf[["summary"]] <- metabolite_metadata[metabolite_metadata$ID == chebi, "definition"]
+  inf[["organism"]] <- organism
+  
   # remove summary if it is null
-  if (info[["summary"]] == "null") info[["summary"]] <- "Summary not available for this metabolite."
-  if (is.null(info[["summary"]])) info[["summary"]] <- "Summary not available for this metabolite."
-
+  if (is.null(inf[["summary"]])) inf[["summary"]] <- "Summary not available for this metabolite."
+  if (inf[["summary"]] == "null") inf[["summary"]] <- "Summary not available for this metabolite."
 
   # get annotation for a given chebi id
-  annotation <- orgdb[orgdb$ID == chebi, ]
-
-  # remove NA columns from anntoation
+  annotation <- annot[annot$ID == chebi, ]
+  
+  # remove NA columns from annotation
   annotation <- annotation[, colSums(is.na(annotation)) < nrow(annotation)]
   cols <- colnames(annotation)[-1] ## exclude chebi IDS as we already have it
 
@@ -1458,33 +1457,32 @@ getMetaboliteInfo <- function(organism = "Human", chebi) {
     if (k == "KEGG") link <- glue::glue("<a href='https://www.kegg.jp/dbget-bin/www_bget?{matched_id}' target='_blank'>{matched_id}</a>")
     if (k == "PubChem") link <- glue::glue("<a href='https://pubchem.ncbi.nlm.nih.gov/compound/{matched_id}' target='_blank'>{matched_id}</a>")
     if (k == "ChEBI") link <- glue::glue("<a href='https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:{matched_id}' target='_blank'>{matched_id}</a>")
-    if (k == "METLIN") link <- matched_id # METLIN is offline at the time of this request, needs to be updated
-    if (k == "SMILES") link <- matched_id
+    if (k == "PATHBANK") link <- glue::glue("<a href='https://moldb.wishartlab.com/molecules/{matched_id}/curation.html' target='_blank'>{matched_id}</a>")    
+#    if (k == "METLIN") link <- matched_id # METLIN is offline at the time of this request, needs to be updated
+#    if (k == "SMILES") link <- matched_id
     return(link)
   })
 
   # merge all info
   names(res) <- cols
-  info <- c(info, res)
+  inf <- c(inf, res)
 
-  ## create link to external databases
-
-  # these libraries are not always available for a given chebi id
+  ## create link to external databases: these libraries are not always
+  ## available for a given chebi id
   hmdb.link <- NULL
   kegg.link <- NULL
   pubchem.link <- NULL
-  if (!is.null(info[["HMDB"]])) hmdb.link <- glue::glue("<a href='https://hmdb.ca/metabolites/{annotation[,'HMDB']}' target='_blank'>HMDB</a>")
-  if (!is.null(info[["KEGG"]])) kegg.link <- glue::glue("<a href='https://www.kegg.jp/dbget-bin/www_bget?{annotation[,'KEGG']}' target='_blank'>KEGG</a>")
-  if (!is.null(info[["PubChem"]])) pubchem.link <- glue::glue("<a href='https://pubchem.ncbi.nlm.nih.gov/compound/{annotation[,'PubChem']}' target='_blank'>PubChem</a>")
-
+  if (!is.null(inf[["HMDB"]])) hmdb.link <- glue::glue("<a href='https://hmdb.ca/metabolites/{annotation[,'HMDB']}' target='_blank'>HMDB</a>")
+  if (!is.null(inf[["KEGG"]])) kegg.link <- glue::glue("<a href='https://www.kegg.jp/dbget-bin/www_bget?{annotation[,'KEGG']}' target='_blank'>KEGG</a>")
+  if (!is.null(inf[["PubChem"]])) pubchem.link <- glue::glue("<a href='https://pubchem.ncbi.nlm.nih.gov/compound/{annotation[,'PubChem']}' target='_blank'>PubChem</a>")
 
   # these libraries are always available
   chebi.link <- glue::glue("<a href='https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:{chebi}' target='_blank'>ChEBI</a>")
   reactome.link <- glue::glue("<a href='https://reactome.org/content/query?q=chebi%3A{chebi}' target='_blank'>Reactome</a>")
 
-  info[["databases"]] <- paste(c(hmdb.link, kegg.link, reactome.link, pubchem.link, chebi.link), collapse = ", ")
+  inf[["databases"]] <- paste(c(hmdb.link, kegg.link, reactome.link, pubchem.link, chebi.link), collapse = ", ")
 
-  return(info)
+  return(inf)
 }
 
 #' Automatically detects species by trying to detect probetype from
