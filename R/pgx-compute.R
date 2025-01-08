@@ -891,15 +891,22 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   # Load geneset matrix from playdata. add metabolomics if data.type
   # is metabolomics
   symbol <- pgx$genes$symbol
-  sum.mx <- sum(symbol %in% rownames(playdata::METABOLITE_ANNOTATION),na.rm=TRUE)
-  sum.px <- sum(symbol %in% colnames(playdata::GSETxGENE),na.rm=TRUE) 
-  dbg("[pgx.add_GMT] 1: sum.mx = ", sum.mx)
-  dbg("[pgx.add_GMT] 1: sum.px = ", sum.px)  
+  dbg("[pgx.add_GMT] 1: head(symbol) = ", head(symbol))
+  dbg("[pgx.add_GMT] 1: length(symbol) = ", length(symbol))
+
+  metabolites <- grep("CHEBI",colnames(playdata::MSETxMETABOLITE),value=TRUE)
+  metabolites <- gsub("CHEBI:","",metabolites)
+
+  dbg("[pgx.add_GMT] 1: head(metabolites) = ", head(metabolites))
+  dbg("[pgx.add_GMT] 1: length(metabolites) = ", length(metabolites))
   
+  sum.mx <- sum(symbol %in% metabolites,na.rm=TRUE)
+  sum.px <- sum(symbol %in% colnames(playdata::GSETxGENE),na.rm=TRUE) 
+
+  dbg("[pgx.add_GMT] 1: sum.mx = ", sum.mx)
+  dbg("[pgx.add_GMT] 1: sum.px = ", sum.px)    
   has.mx <- sum.mx >= 10
   has.px <- sum.px >= 10
-  has.mx
-  has.px
   G <- NULL
 
   ## add metabolomic gene sets   
@@ -924,13 +931,14 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
                          rownames(pgx$genes))
   full_feature_list <- full_feature_list[!is.na(full_feature_list)]
   full_feature_list <- full_feature_list[full_feature_list != ""]
-  full_feature_list <- unique(full_feature_list)
+  full_feature_list <- unique(full_feature_list)    
 
-  G <- G[rownames(G) %in% full_feature_list, , drop = FALSE]
-  G <- G[, Matrix::colSums(G!=0) > 0, drop=FALSE]
-
-  if(nrow(G)==0 || ncol(G)==0 ) G <- NULL
-
+  if(!is.null(G)) {
+    G <- G[rownames(G) %in% full_feature_list, , drop = FALSE]
+    G <- G[, Matrix::colSums(G!=0) > 0, drop=FALSE]
+    if(nrow(G)==0 || ncol(G)==0 ) G <- NULL
+  }
+  
   if(!is.null(G)) {
     dbg("[pgx.add_GMT] Default GSET matrix: ", dim(G))
   }
