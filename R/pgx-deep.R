@@ -101,6 +101,11 @@ MultiOmicsSAE <- R6::R6Class(
       self$Y <- lapply(Y, factor)
       self$labels <- lapply(self$Y, levels)
 
+      if( device == "gpu" && !torch::cuda_is_available()) {
+        message("Cuda not available. Switching to cpu.")        
+        device <- "cpu"
+      }
+      
       if( model == "MT" ) {
         message("creating MultiBlockMultiTargetSAE")
         self$model <- MultiBlockMultiTargetSAE_module(
@@ -125,7 +130,6 @@ MultiOmicsSAE <- R6::R6Class(
       } else {
         stop("unknown model")
       }
-
 
       ## 
       if(device=="gpu") self$to_device("gpu")
@@ -513,7 +517,7 @@ MultiBlockMultiTargetSAE_module <- torch::nn_module(
       pdim <-   ## last dim from integration layers
       dims <- c(integration_dim, num_layers[[3]], ydim)
       dims <- round(ifelse( dims < 1, dims * integration_dim, dims))
-      dims <- pmax(dims, ydim)
+      ## if(length(dims)>1) dims[-1] <- pmax(dims[-1], ydim)  ## really?
       nlayers <- length(dims)
       mods <- list()
       for(i in 1:(nlayers-1)) {
