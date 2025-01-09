@@ -6,10 +6,12 @@
 \usage{
 pgx.wgcna(
   pgx,
-  minmodsize = 30,
+  minmodsize = 20,
   power = 6,
-  cutheight = 0.25,
-  deepsplit = 2,
+  cutheight = 0.15,
+  deepsplit = 4,
+  networktype = "signed",
+  tomtype = "signed Nowick",
   ngenes = 1000
 )
 }
