@@ -1162,7 +1162,6 @@ pgx.createSingleCellPGX <- function(counts,
                                     contrasts,
                                     organism,
                                     azimuth_ref,
-                                    ## scrnaseq_pheno,
                                     batch = NULL,
                                     sc_compute_settings = list()
                                     ) {
@@ -1197,9 +1196,9 @@ pgx.createSingleCellPGX <- function(counts,
     message("[createSingleCellPGX] Azimuth ref. atlas: ", azimuth_ref)
   }
 
+  sc_params <- names(sc_compute_settings)
   if(!is.null(sc_compute_settings) && length(sc_compute_settings)>0) {
-    sc_params <- names(sc_compute_settings)
-    message("[createSingleCellPGX] sc filter parameters: ", paste0(sc_params, collapse = ", "))
+    message("[createSingleCellPGX] scRNAseq parameters: ", paste0(sc_params, collapse = ", "))
   } else {
     sc_compute_settings <- list()
   }
@@ -1215,9 +1214,10 @@ pgx.createSingleCellPGX <- function(counts,
   ## because the samples get downsamples, also the sample and
   ## contrasts matrices get downsampled (by majority label).
   samplesx <- cbind( samples, contrasts )
-  
+
   sc.membership <- NULL
-  if(ncol(counts) > 10000) { ## 15K , 20K
+  do.supercells <- ("Compute supercells" %in% sc_params)
+  if (do.supercells || ncol(counts) > 10000) {  
     message("[pgx.createSingleCellPGX] >10K cells: computing metacells with SuperCell")
     ct <- samplesx[, "celltype"]
     group <- paste0(ct, ":", apply(contrasts, 1, paste, collapse = '_'))
