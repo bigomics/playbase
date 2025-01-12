@@ -1218,7 +1218,12 @@ pgx.createSingleCellPGX <- function(counts,
   sc.membership <- NULL
   do.supercells <- ("Compute supercells" %in% sc_params)
   if (do.supercells || ncol(counts) > 10000) {  
-    message("[pgx.createSingleCellPGX] >10K cells: computing metacells with SuperCell")
+    if (do.supercells) {
+      message("[pgx.createSingleCellPGX] User choice: computing supercells with SuperCell")
+    }
+    if (ncol(counts) >10000) {
+      message("[pgx.createSingleCellPGX] >10K cells: computing supercells with SuperCell")
+    }
     ct <- samplesx[, "celltype"]
     group <- paste0(ct, ":", apply(contrasts, 1, paste, collapse = '_'))
     ##  group <- paste0(samples[, "celltype"], ":", samples[, pheno])
@@ -1324,10 +1329,10 @@ pgx.createSingleCellPGX <- function(counts,
     max.genesets = 5000,
     name = "Data set",
     datatype = "scRNAseq", ## hack from scRNA-seq.
-    azimuth_ref = azimuth_ref, ## NEW AZ
+    azimuth_ref = azimuth_ref,
     probe_type = NULL,
     creator = "unknown",
-    description = paste0(azimuth_ref, "_scRNAseq_dataset"), ## "No description provided.",
+    description = "No description provided.",
     X = X,
     impX = NULL,
     norm_method = "CPM",
@@ -1341,8 +1346,8 @@ pgx.createSingleCellPGX <- function(counts,
     convert.hugo = TRUE,
     only.proteincoding = TRUE,
     remove.xxl = TRUE,
-    remove.outliers = TRUE,
-    sc_compute_settings = sc_compute_settings
+    remove.outliers = TRUE
+    ## sc_compute_settings = sc_compute_settings ## already used. no needed anymore here? 
   )
 
   message("[pgx.createSingleCellPGX] dim(pgx$counts): ", paste0(dim(pgx$counts), collapse = " x "))
