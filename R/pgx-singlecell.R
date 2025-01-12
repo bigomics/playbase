@@ -661,11 +661,10 @@ pgx.createSeuratObject <- function(counts,
     obj <- Seurat::CellCycleScoring(obj, g2m.features = g2m.ff, s.features = s.ff)
   }
   
-  if(filter) {
-    ## Filter on number of counts/features, mitochondrial, hb gene content.
+  if (filter) {
     message("[pgx.createSeuratObject] Filtering cells")
-    ncells0 <- ncol(obj) 
-    if(length(sc_compute_settings)>0) {
+    ncells0 <- ncol(obj)
+    if (length(sc_compute_settings) > 0) {
       message("[pgx.createSeuratObject] Filtering based on user-defined criteria:")
       sc_params <- names(sc_compute_settings)
       message("[pgx.createSeuratObject] ", paste0(sc_params, collapse = ", "))
@@ -1216,7 +1215,10 @@ pgx.createSingleCellPGX <- function(counts,
   samplesx <- cbind( samples, contrasts )
 
   sc.membership <- NULL
-  do.supercells <- ("Compute supercells" %in% sc_params)
+  do.supercells <- ("Compute supercells" %in% sc_params) ## CHANGE TO "compute_supercells=TRUE"
+  if (!do.supercells) {
+    message("[pgx.createSingleCellPGX] User choice: do not compute supercells.")
+  }
   if (do.supercells || ncol(counts) > 10000) {  
     if (do.supercells) {
       message("[pgx.createSingleCellPGX] User choice: computing supercells with SuperCell")
