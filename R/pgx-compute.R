@@ -160,7 +160,7 @@ pgx.createPGX <- function(counts,
                           max.genesets = 5000,
                           name = "Data set",
                           datatype = "unknown",
-                          azimuth_ref = "pbmcref", ## NEW AZ
+                          azimuth_ref = "pbmcref",
                           probe_type = NULL,
                           creator = "unknown",
                           description = "No description provided.",
@@ -178,7 +178,7 @@ pgx.createPGX <- function(counts,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE,
                           remove.outliers = TRUE,
-                          sc_compute_settings = list()) { ## NEW AZ
+                          sc_compute_settings = list()) {
   
   message("[pgx.createPGX]===========================================")
   message("[pgx.createPGX]=========== pgx.createPGX =================")
@@ -195,9 +195,9 @@ pgx.createPGX <- function(counts,
       samples = samples,
       contrasts = contrasts,
       organism = organism,
-      azimuth_ref = azimuth_ref, ## NEW AZ
+      azimuth_ref = azimuth_ref,
       batch = NULL,
-      sc_compute_settings = sc_compute_settings ## NEW AZ
+      sc_compute_settings = sc_compute_settings
     )
     return(pgx)
   }
@@ -318,15 +318,6 @@ pgx.createPGX <- function(counts,
   description <- gsub("[\n]", ". ", description) ## replace newline
   description <- trimws(gsub("[ ]+", " ", description)) ## remove ws
 
-  ##----------NEW AZ
-  ## add to setting info
-  ##sc_settings$filter.genes <- filter.genes
-  ##sc_settings$only.known <- only.known
-  ##sc_settings$only.proteincoding <- only.proteincoding
-  ##sc_settings$convert.hugo <- convert.hugo
-  ##sc_settings$custom.geneset <- !is.null(custom.geneset)
-  ##----------NEW AZ
-  
   pgx <- list(
     name = name,
     organism = organism,
@@ -343,7 +334,7 @@ pgx.createPGX <- function(counts,
     norm_method = norm_method,
     total_counts = Matrix::colSums(counts, na.rm = TRUE),
     counts_multiplier = counts_multiplier,
-    sc_compute_settings = sc_compute_settings ## NEW AZ
+    sc_compute_settings = sc_compute_settings
   )
 
   ## -------------------------------------------------------------------
