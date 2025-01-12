@@ -92,10 +92,10 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
 #' 
 #'
 #' @export
-getMetaboliteAnnotation <- function(probes, probe_type = NULL, add_id=FALSE,
+getMetaboliteAnnotation <- function(probes, add_id=FALSE, probe_type = NULL, 
                                     db = c("refmet","playdata","annothub") ) {
-  ##probes = c("Ceramide","d18:0/26:2","citrate","Trilauroyl-glycerol","PE(aa-40:4)","HMDB00201","C00099","Octenoyl-L-carnitine")
-
+  ##add_id=TRUE;db=c("refmet","playdata","annothub") 
+  
   ## strip multi-omics prefix
   has.prefix <- all(grepl("[a-z]+:",tolower(probes)))
   has.prefix
@@ -235,14 +235,14 @@ getMetaboliteAnnotation <- function(probes, probe_type = NULL, add_id=FALSE,
     ii <- match( id, annot_table$ID )
     kk <- setdiff(colnames(annot_table), c("ID","NAME"))
     id_table <- annot_table[ii,kk]
-    colnames(id_table) <- paste0(sub("_ID","",colnames(id_table),"_ID"))
+    colnames(id_table) <- paste0(sub("_ID","",colnames(id_table)),"_ID")
     df <- cbind( df, id_table )   
   }
 
-  rownames(df) <- probes 
+  probes[is.na(probes)] <- "NA"
+  rownames(df) <- make_unique(as.character(probes))
   return(df)
 }
-
 
 
 #' Given a ChEBI id this provides information about the metabolite

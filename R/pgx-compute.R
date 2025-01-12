@@ -373,7 +373,7 @@ pgx.createPGX <- function(counts,
 
   message("[createPGX] annotating genes")
   if (datatype == "metabolomics") {
-    pgx$genes <- getMetaboliteAnnotation(rownames(counts), probe_type)
+    pgx$genes <- getMetaboliteAnnotation(rownames(counts), add_id = TRUE, probe_type=probe_type)
   } else if (datatype == "multi-omics") {
     pgx$genes <- getProbeAnnotation(organism, rownames(counts))
   } else {
@@ -913,7 +913,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   if (has.mx) {
     info("[pgx.add_GMT] Retrieving metabolomics genesets")
     G <- Matrix::t(playdata::MSETxMETABOLITE)
-    rownames(G) <- sub(".*:","",rownames(G)) ## TEMPORARY!!!
+    ## strip any prefix. works because SYMBOL and CHEBI do not overlap
+    rownames(G) <- sub(".*:","",rownames(G)) 
   }
  
    ## add SYMBOL (classic) gene sets 

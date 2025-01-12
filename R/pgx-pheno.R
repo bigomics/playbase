@@ -216,7 +216,7 @@ pgx.getNumericalPhenotypes <- function(df) {
 #' A character vector of categorical phenotype column names
 #'
 #' @export
-pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove.dup = FALSE) {
+pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove.dup = FALSE, remove.dot=TRUE) {
   is.bad <- 0
 
   ## ... exclude sample IDs
@@ -258,7 +258,12 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
     }
     df1 <- df1[, which(!is.dup), drop = FALSE]
   }
-  return(colnames(df1))
+
+  vars <- colnames(df1)
+  if(remove.dot) {
+    vars <- grep("^[.]", vars, value=TRUE, invert=TRUE)
+  }
+  return(vars)
 }
 
 
