@@ -161,7 +161,6 @@ pgx.createPGX <- function(counts,
                           name = "Data set",
                           datatype = "unknown",
                           azimuth_ref = "pbmcref", ## NEW AZ
-                          ## sc_pheno = "pheno", ## NEW AZ
                           probe_type = NULL,
                           creator = "unknown",
                           description = "No description provided.",
@@ -198,7 +197,6 @@ pgx.createPGX <- function(counts,
       organism = organism,
       azimuth_ref = azimuth_ref, ## NEW AZ
       batch = NULL,
-      ## sc_pheno = sc_pheno ## NEW AZ 
       sc_compute_settings = sc_compute_settings ## NEW AZ
     )
     return(pgx)
