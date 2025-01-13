@@ -624,9 +624,22 @@ getCustomAnnotation <- function(probes, custom_annot = NULL) {
 #' }
 #' @import data.table
 #' @export
-probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE) {
+probe2symbol <- function(probes, annot_table, query = "symbol",
+                         key = NULL, fill_na = FALSE) {
+
   # Prepare inputs
-  query_col <- annot_table[probes, query]
+  annot_table <- cbind( rownames = rownames(annot_table), annot_table )
+  probes1 <- setdiff(probes, c(NA,""))
+  if(is.null(key) || !key %in% colnames(annot_table)) {
+    key <- which.max(apply(annot_table, 2, function(a) sum(probes1 %in% a)))
+  }
+  if(is.null(key)) {
+    stop("[probe2symbol] FATAL. could not get key column.")
+  }
+  
+  # match query
+  ii <- match( probes, annot_table[,key] )
+  query_col <- annot_table[ii, query]
 
   # Deal with NA
   if (fill_na) {
