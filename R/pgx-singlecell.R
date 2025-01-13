@@ -1219,11 +1219,11 @@ pgx.createSingleCellPGX <- function(counts,
   sc.membership <- NULL
   
   do.supercells <- sc_compute_settings$compute_supercells
-  if (!isTRUE(do.supercells)) {
+  if (!any(do.supercells)) {
     message("[pgx.createSingleCellPGX] User choice: do not compute supercells.")
   }
-  if (do.supercells || ncol(counts) > 10000) {  
-    if (do.supercells) {
+  if (any(do.supercells) || ncol(counts) > 10000) {  
+    if (any(do.supercells)) {
       message("[pgx.createSingleCellPGX] User choice: computing supercells with SuperCell")
     }
     if (ncol(counts) >10000) {
