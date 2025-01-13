@@ -891,14 +891,9 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   # Load geneset matrix from playdata. add metabolomics if data.type
   # is metabolomics
   symbol <- pgx$genes$symbol
-  dbg("[pgx.add_GMT] 1: head(symbol) = ", head(symbol))
-  dbg("[pgx.add_GMT] 1: length(symbol) = ", length(symbol))
 
   metabolites <- grep("CHEBI",colnames(playdata::MSETxMETABOLITE),value=TRUE)
   metabolites <- gsub("CHEBI:","",metabolites)
-
-  dbg("[pgx.add_GMT] 1: head(metabolites) = ", head(metabolites))
-  dbg("[pgx.add_GMT] 1: length(metabolites) = ", length(metabolites))
   
   sum.mx <- sum(symbol %in% metabolites,na.rm=TRUE)
   sum.px <- sum(symbol %in% colnames(playdata::GSETxGENE),na.rm=TRUE) 
@@ -941,6 +936,10 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   }
   
   if(!is.null(G)) {
+    # Internal GSET/MSET matrices are in human ortholog (SYMBOL or
+    # ChEBI) and we must convert to species specific 'symbol'.
+    rownames(G) <- probe2symbol(rownames(G), pgx$genes,
+                                query = "symbol", fill_na = TRUE)
     dbg("[pgx.add_GMT] Default GSET matrix: ", dim(G))
   }
   
@@ -1016,13 +1015,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     } ## end-if go.genesets
   } ## end-if !metabolics
 
-  # NEW: convert G feature/symbol/human_ortholog to SYMBOL. At this
-  # stage we have metabolomics genesets in G or
-  # transcriptomics/proteomics genesets in G combined with random
-  # genesets (if necessary) and GO genesets
-  if(!is.null(G)) {
-    rownames(G) <- probe2symbol(rownames(G), pgx$genes, "symbol", fill_na = TRUE)
-  }
 
   if (!is.null(custom.geneset$gmt)) {
     message("[pgx.add_GMT] Adding custom genesets...")

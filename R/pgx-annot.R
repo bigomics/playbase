@@ -623,8 +623,14 @@ getCustomAnnotation <- function(probes, custom_annot = NULL) {
 #' @import data.table
 #' @export
 probe2symbol <- function(probes, annot_table, query = "symbol", fill_na = FALSE) {
+
   # Prepare inputs
-  query_col <- annot_table[probes, query]
+  annot_table <- cbind( rownames = rownames(annot_table), annot_table )
+  key <- which.max(apply(annot_table, 2, function(a) sum(probes %in% a)))
+  
+  # match query
+  ii <- match( probes, annot_table[,key] )
+  query_col <- annot_table[ii, query]
 
   # Deal with NA
   if (fill_na) {
@@ -733,6 +739,11 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
 
+  if(is.null(datatype) && all(grepl("[:]",probes))) {
+    dbg("[detect_probetype] datatype is multi-omics")
+    datatype <- "multi-omics"
+  }
+  
   if (!is.null(datatype) && datatype == "metabolomics") {
     probe_type <- mx.detect_probetype(probes)
     return(probe_type)
@@ -742,11 +753,13 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     mx.probes <- sub("^mx:","",grep("^mx:", probes, value=TRUE))
     px.probes <- sub("^px:","",grep("^px:", probes, value=TRUE))
     gx.probes <- sub("^gx:","",grep("^gx:", probes, value=TRUE))    
-    gx.probe_types=px.probe_types=mx.probe_types=NULL
+    gx.probe_types=px.probe_types=mx.probe_types=NA
     if(length(gx.probes)) gx.probe_types <- detect_probetype(organism, gx.probes)
     if(length(px.probes)) px.probe_types <- detect_probetype(organism, px.probes)    
     if(length(mx.probes)) mx.probe_types <- mx.detect_probetype(mx.probes)    
     probe_type <- c(gx=gx.probe_types, px=px.probe_types, mx=mx.probe_types)
+    dtypes <- sort(unique(sub(":.*","",probes)))
+    probe_type <- probe_type[dtypes]
     return(probe_type)
   }
 
@@ -1562,7 +1575,7 @@ convert_probetype <- function(organism, probes, target_id, from_id = NULL,
 #' @export
 getProbeAnnotation <- function(organism, probes) {
   
-  if(sum(grepl("[:]",probes))) {
+  if(all(grepl("^[A-Za-z]+:",probes))) {
     dtype <- sub(":.*","",probes)
   } else {
     ## no colon in names. try to guess by matching.
@@ -1578,17 +1591,17 @@ getProbeAnnotation <- function(organism, probes) {
   }
   table(dtype)
   dtype <- tolower(dtype)
-  dtype <- sub(paste0("ensembl|symbol|hugo|gene|hgnc",".*"),"gx",dtype)
-  dtype <- sub(paste0("uniprot|protein",".*"),"px",dtype)
-  dtype <- sub(paste0("chebi|hmdb|kegg|pubchem",".*"),"mx",dtype)  
+  dtype <- ifelse(grepl("ensembl|symbol|hugo|gene|hgnc",dtype),"gx",dtype)
+  dtype <- ifelse(grepl("uniprot|protein",dtype),"px",dtype)
+  dtype <- ifelse(grepl("chebi|hmdb|kegg|pubchem",dtype),"mx",dtype)  
   table(dtype)
 
   ## populate with defaults
-  symbol <- toupper(sub(".*:","",probes))
+  symbol <- toupper(sub("^[a-zA-Z]+:","",probes))
   annot <- list()
   if(any(dtype %in% c('gx','px'))) {
     ii <- which(dtype %in% c('gx','px'))
-    pp <- sub(".*:","",probes[ii])
+    pp <- sub("^[a-zA-Z]+:","",probes[ii])
     aa <- getGeneAnnotation(organism, pp)
     head(aa)
     aa$data_type <- sub(":.*","",probes[ii])
@@ -1598,7 +1611,7 @@ getProbeAnnotation <- function(organism, probes) {
   }
   if("mx" %in% dtype) {
     ii <- which(dtype == 'mx')
-    pp <- sub(".*:","",probes[ii])
+    pp <- sub("^[a-zA-Z]+:","",probes[ii])
     aa <- getMetaboliteAnnotation(pp)
     head(aa)
     aa$data_type <- 'mx'
@@ -1620,7 +1633,5 @@ getProbeAnnotation <- function(organism, probes) {
   annot$gene_name <- ifelse(is.na(annot$gene_name), probes, annot$gene_name)
   annot$data_type <- ifelse(is.na(annot$data_type), dtype, annot$data_type)    
 
-  head(annot)
-  tail(annot)  
-  annot
+  return(annot)
 }

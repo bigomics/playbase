@@ -14,13 +14,13 @@ mx.detect_probetype <- function(probes, min.match=0.05) {
   if (max(match) < min.match) {
     ## if no match we try stripping of non-numerical prefixes
     ##probes1 <- gsub("[^0-9]", "", probes)
-    probes1 <- gsub("^[a-zA-Z :_]+", "", probes)
+    probes1 <- gsub("^[a-zA-Z:]+", "", probes)
     match2 <- apply(aa, 2, function(s) mean(probes1 %in% s))
     match <- match + match2
   }
   if (max(match, na.rm = TRUE) < min.match) {
     message("[mx.detect_probetype] WARNING. could not detect probetype")
-    return(NULL)
+    return(NA)
   }
   names(which.max(match))
 }
@@ -69,7 +69,7 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
   if (is.null(probe_type)) {
     probe_type <- mx.detect_probetype(probes)
   }
-  if(is.null(probe_type)) {
+  if(is.null(probe_type) || is.na(probe_type)) {
     message("WARNING: could not determine probe_type")
     return(rep(NA,length(probes)))
   }
@@ -97,10 +97,10 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE, probe_type = NULL,
   ##add_id=TRUE;db=c("refmet","playdata","annothub") 
   
   ## strip multi-omics prefix
-  has.prefix <- all(grepl("[a-z]+:",tolower(probes)))
+  has.prefix <- all(grepl("^[A-Za-z]+:",tolower(probes)))
   has.prefix
   if(has.prefix) {
-    probes <- sub(".*:","",probes)
+    probes <- sub("^[A-Za-z]+:","",probes)
   }
 
   if(sum(duplicated(probes))) {
@@ -116,7 +116,8 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE, probe_type = NULL,
   COLS <- c("ID", "feature","name",
     "super_class","main_class", "sub_class","formula","exactmass",
     ## "chebi_id","pubchem_id","hmdb_id","kegg_id","lipidmaps_id","refmet_id",
-    "inchi_key", "definition","source")
+    # "inchi_key",
+    "definition","source")
 
   metadata <- data.frame(matrix(NA, nrow=length(probes), ncol=length(COLS)))
   colnames(metadata) <- COLS
@@ -142,7 +143,8 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE, probe_type = NULL,
         cols <- c("ID","Input.name","Standardized.name","Super.class","Main.class",
           "Sub.class","Formula","Exact.mass",
           ## "ChEBI_ID", "PubChem_CID", "HMDB_ID", "KEGG_ID", "LM_ID", "RefMet_ID",
-          "INCHI_KEY", "definition","source")
+          #"INCHI_KEY",
+          "definition","source")
         res <- res[,cols]
         colnames(res) <- COLS
         ## only fill missing entries
@@ -195,7 +197,7 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE, probe_type = NULL,
         res$Sub.class <- "-"
         res$Formula <- "-"
         res$Exact.mass <- "-"
-        res$INCHI_KEY <- "-"
+        #res$INCHI_KEY <- "-"
         res$definition <- "-"            
         res$lipidmaps <- "-"
         res$refmet <- "-"
@@ -203,7 +205,8 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE, probe_type = NULL,
         cols <- c("ID","feature","Name","Super.class","Main.class",
           "Sub.class","Formula","Exact.mass", 
           ## "ChEBI","CID","HMDB","KEGG","lipidmaps","refmet",
-          "INCHI_KEY", "definition", "source")
+          ##"INCHI_KEY",
+          "definition", "source")
         res <- res[,cols]
         colnames(res) <- COLS
         ## only fill missing entries
@@ -216,11 +219,12 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE, probe_type = NULL,
 
   rownames(metadata) <- NULL
   id <- metadata$ID
+  hmdb <- mx.convert_probe(id, probe_type="ChEBI", target_id="HMDB")
   
   df <- data.frame(
     feature = probes,
     symbol = id,
-    human_ortholog = id,
+    human_ortholog = id,  ## or use HMDB???
     gene_title = metadata$name,
     source = metadata$source,
     gene_name = id

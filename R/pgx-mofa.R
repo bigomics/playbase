@@ -105,7 +105,7 @@ mofa.compute <- function(xdata,
   
 
   if(!is.null(ntop) && ntop>0) {
-    dbg("[mofa.compute] reducing data blocks: ntop = ", ntop)
+    info("[mofa.compute] reducing data blocks: ntop = ", ntop)
     ## fast prioritization of features using SD or rho (correlation
     ## with contrasts).
     i = 1
@@ -489,7 +489,8 @@ mofa.compute_enrichment <- function(ww, ww.types=NULL, filter=NULL,
       if(is.null(G)) {
         G <- Matrix::t(playdata::GSETxGENE)
       } else {
-        G <- merge_sparse_matrix(G, Matrix::t(playdata::GSETxGENE))      }
+        G <- merge_sparse_matrix(G, Matrix::t(playdata::GSETxGENE))
+      }
     }
   }
   rownames(G) <- sub(".*:","",rownames(G))  
@@ -536,7 +537,7 @@ mofa.compute_enrichment <- function(ww, ww.types=NULL, filter=NULL,
   P <- sapply( p.value, as.vector)
   P[is.na(P)] <- 0.999
   P <- pmin(pmax(P,1e-99),0.999999)
-  multi.p <- apply(P, 1, function(x) metap::sumz(x)$p)
+  multi.p <- apply(P, 1, function(x) metap::sumz(x)$p)  ## slow.... 
   nr <- nrow(p.value[[1]])
   nc <- ncol(p.value[[1]])
   dimnames <- dimnames(p.value[[1]])
@@ -558,14 +559,17 @@ mofa.compute_enrichment <- function(ww, ww.types=NULL, filter=NULL,
   for(i in 1:ncol(multi.rho)) {
     df.rho  = sapply(rho, function(x) x[,i])
     df.pval = sapply(p.value, function(x) x[,i])
+    df.multi = data.frame(
+      score = multi.score[,i],
+      rho = multi.rho[,i],
+      sign = multi.equal_sign[,i],
+      p = multi.p[,i],
+      q = multi.q[,i]
+    )      
     df <- data.frame(
-      multi.score = multi.score[,i],
-      multi.rho = multi.rho[,i],
-      multi.sign = multi.equal_sign[,i],
-      multi.p = multi.p[,i],
-      multi.q = multi.q[,i],
-      rho  = df.rho,
-      pval = df.pval
+      multi = I(df.multi),
+      rho  = I(df.rho),
+      pval = I(df.pval)
     )
     #df <- df[!is.na(df$multi.rho),,drop=FALSE]
     ct <- colnames(multi.rho)[i]
@@ -573,8 +577,9 @@ mofa.compute_enrichment <- function(ww, ww.types=NULL, filter=NULL,
   }
 
   if(!is.null(ntop) && ntop > 0) {
+    i=1
     for(i in 1:length(enr)) {
-      ii <- order(-abs(enr[[i]]$multi.score))
+      ii <- order(-abs(enr[[i]]$multi$score))
       enr[[i]] <- head( enr[[i]][ii,], ntop )
     }
   }
@@ -616,15 +621,27 @@ mofa.prefix <- function(xx) {
   xx
 }
 
+#' @export
 mofa.strip_prefix <- function(xx) {
-  i=1
-  for(i in 1:length(xx)) {
-    dt <- paste0("^",names(xx)[i],":")
-    if(is.null(dim(xx[[i]]))) {
-      names(xx[[i]]) <- sub(dt,"",names(xx[[i]]))
-    } else {
-      rownames(xx[[i]]) <- sub(dt,"",rownames(xx[[i]]))
+  if(class(xx) == "character") {
+    xx <- sub("[A-Za-z]+:","",xx)
+    return(xx)
+  }
+  if(class(xx) == "matrix") {
+    rownames(xx) <- sub("[A-Za-z]+:","", rownames(xx))
+    return(xx)
+  }
+  if(class(xx) == "list") {
+    i=1
+    for(i in 1:length(xx)) {
+      dt <- paste0("^",names(xx)[i],":")
+      if(is.null(dim(xx[[i]]))) {
+        names(xx[[i]]) <- sub(dt,"",names(xx[[i]]))
+      } else {
+        rownames(xx[[i]]) <- sub(dt,"",rownames(xx[[i]]))
+      }
     }
+    return(xx)
   }
   xx
 }
@@ -938,8 +955,13 @@ mofa.plot_enrichment <- function(gsea, type="barplot",
     S <- S[which(!duplicated(sname)),,drop=FALSE]
   }
 
-  S <- S[order(-abs(S$multi.score)),,drop=FALSE]
-  topS <- abs(S[,grep("^rho",colnames(S)),drop=FALSE])
+  if("multi.score" %in% names(S)) {
+    S <- S[order(-abs(S$multi.score)),,drop=FALSE]
+    topS <- abs(S[,grep("^rho",colnames(S)),drop=FALSE])
+  } else if("multi" %in% names(S)) {
+    S <- S[order(-abs(S$multi$score)),,drop=FALSE]
+    topS <- abs(S[["rho"]])
+  }
   topS <- head(topS, ntop)
   topS <- topS[nrow(topS):1,,drop=FALSE]
   plot <- NULL
@@ -954,7 +976,7 @@ mofa.plot_enrichment <- function(gsea, type="barplot",
     } else {
       par(par)
     }
-    barplot( t(topS), horiz=TRUE, las=1, xlab="cumulative abs.enrichment")
+    barplot( t(topS), horiz=TRUE, las=1, xlab="cumulative abs.enrichment (rho)")
     cc <- grey.colors(ncol(topS))
     legend("bottomright", legend=colnames(topS),
            fill=cc, inset=c(0.0,0.02), bg='white',
@@ -975,24 +997,29 @@ mofa.plot_enrichment <- function(gsea, type="barplot",
 
 #' 
 #' @export
-mofa.plot_multigsea <- function(gsea, type1, type2, k=1,
+mofa.plot_multigsea <- function(gsea, type1, type2, k=1, size.par="q",
                                 main=NULL, hilight=NULL) {
   ##gsea=res$gsea;type1="px";type2="mx"
-  ## using pre-computed GSEA
-
-  s1 <- gsea[[k]]$score[,type1]
-  s2 <- gsea[[k]]$score[,type2]
-  qq <- gsea[[k]]$pval[,c(type1, type2)]
-  qq[is.na(qq)] <- 1
-  ##qcomb <- apply(qq,1, function(pp) metap::meanz(pp)$p)
-  qcomb <- apply(qq,1,max)
+  ## using pre-computed GSEA  
+  s1 <- gsea[[k]]$rho[,type1]
+  s2 <- gsea[[k]]$rho[,type2]
+  #qq <- gsea[[k]]$pval[,c(type1, type2)]
+  #qq[is.na(qq)] <- 1
+  #qcomb <- apply(qq,1,max)
+  if(size.par=="q") {
+    qcomb <- gsea[[k]]$multi$q  ## meta q-value
+  } else {
+    qcomb <- gsea[[k]]$multi$p  ## meta q-value
+  }
+  
   s1 <- s1 + 1e-2*rnorm(length(s1))
   s2 <- s2 + 1e-2*rnorm(length(s2))
-  cex1 <- (1-qcomb)**2
-  col1 <- ifelse( is.null(hilight), "black", "grey60")
-  plot( s1, s2, cex = 1.5*cex1, col=col1,
-       xlab = paste(type1, "enrichment  [NES*(1-p)]"),
-       ylab = paste(type2, "enrichment  [NES*(1-p)]")
+
+  cex1 <- 0.1 + (1-qcomb)**2
+  col0 <- ifelse( is.null(hilight), "black", "grey60")
+  plot( s1, s2, cex = 1.4*cex1, col=col0,
+       xlab = paste(type1, "enrichment (rho)"),
+       ylab = paste(type2, "enrichment (rho)")
   )
   if(is.null(title)) {
     title <- paste("multiGSEA:", toupper(type1), "vs.",
@@ -1013,7 +1040,7 @@ mofa.plot_multigsea <- function(gsea, type1, type2, k=1,
     if(length(sel)) {
       sel <- match(sel, kk)
       points( s1[sel], s2[sel], pch=20, col="red2",
-             lwd=2, cex=1.4*cex1[sel] )
+             lwd=2, cex=1.5*cex1[sel] )
     }
   }
 }
@@ -1155,9 +1182,7 @@ mofa.plot_centrality <- function(res, k, y, show_types=NULL,
   
   if(!is.null(show_types) && length(show_types)) {
     dt <- sub(":.*","",rownames(xx))
-    dbg("[mofa.plot_centrality_vs] 1b: unique(dt) = ",unique(dt) )
     sel <- which(dt %in% show_types)
-    dbg("[mofa.plot_centrality_vs] 1b: lenght(sel) = ",length(sel) )    
     xx <- xx[sel,, drop=FALSE]
   }
   
@@ -1407,7 +1432,6 @@ mofa.exampledata <- function(dataset="geiger", ntop=2000,
   }
 
   if(is.null(data)) stop("could not get dataset")
-  dbg("[mofa.exampledata] names(data) = ", names(data))
   
   ## strip prefix, convert to ASCII
   for(i in 1:length(data)) {
