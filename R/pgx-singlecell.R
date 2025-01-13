@@ -1169,8 +1169,6 @@ pgx.createSingleCellPGX <- function(counts,
   message("[pgx.createSingleCellPGX]======= pgx.createSingleCellPGX ==========")
   message("[pgx.createSingleCellPGX]==========================================")
 
-  saveRDS(sc_compute_settings, "~/Desktop/LL.RDS")
-
   if (!is.null(counts)) {
     message("[createSingleCellPGX] dim.counts: ", dim(counts)[1], ",", dim(counts)[2])
     message("[createSingleCellPGX] class.counts: ", class(counts))
