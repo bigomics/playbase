@@ -514,8 +514,16 @@ pgx.clusterMatrix <- function(X,
   if ("tsne" %in% methods && 2 %in% dims) {
     message("calculating t-SNE 2D...")
     perplexity <- pmax(min(ncol(X) / 4, perplexity), 2)
+    if (nrow(X) > 5000) {
+      sdtop <- 1000
+      sdx <- apply(X, 1, stats::sd)
+      ii <- Matrix::head(order(-sdx), sdtop)
+      X1 <- X[ii, , drop = FALSE]
+    } else {
+      X1 <- X
+    }
     res1 <- Rtsne::Rtsne(
-      t(X), dims = 2,
+      t(X1), dims = 2,
       is_distance = FALSE, check_duplicates = FALSE,
       perplexity = perplexity, num_threads = 1) ## multi-threads may have MEM problems
     pos <- res1$Y
@@ -529,8 +537,16 @@ pgx.clusterMatrix <- function(X,
   if ("tsne" %in% methods && 3 %in% dims) {
     message("calculating t-SNE 3D...")
     perplexity <- pmax(min(dimx[2] / 4, perplexity), 2)
+    if (nrow(X) > 5000) {
+      sdtop <- 1000
+      sdx <- apply(X, 1, stats::sd)
+      ii <- Matrix::head(order(-sdx), sdtop)
+      X1 <- X[ii, , drop = FALSE]
+    } else {
+      X1 <- X
+    }
     pos <- Rtsne::Rtsne(
-      t(X), dims = 3,
+      t(X1), dims = 3,
       is_distance = FALSE, check_duplicates = FALSE,
       perplexity = perplexity, num_threads = 1)$Y
     rownames(pos) <- colnames(X)
