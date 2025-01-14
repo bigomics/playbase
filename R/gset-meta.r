@@ -529,7 +529,11 @@ gset.fitContrastsWithLIMMA <- function(gsetX, contr.matrix, design,
     message("fitting gset.LIMMA contrasts with design matrix... ")
     vfit <- limma::lmFit(gsetX, design)
     vfit <- limma::contrasts.fit(vfit, contrasts = contr.matrix)
-    efit <- limma::eBayes(vfit, trend = trend, robust = TRUE)
+    ## efit <- limma::eBayes(vfit, trend = trend, robust = TRUE)
+    efit <- try({ limma::eBayes(vfit, trend = trend, robust = TRUE) })
+    if ("try-error" %in% class(efit)) {
+      efit <- limma::eBayes(vfit, trend = trend, robust = FALSE)
+    }
 
     tables <- list()
     i <- 1
