@@ -365,7 +365,7 @@ pgx.createPGX <- function(counts,
   if (filter.genes) {
     nexpr <- apply(pgx$counts, 1, function(x) sum(x) == 0)
     nexpr <- length(which(nexpr))
-    message("[createPGX] filtering out ", nexpr, " not-expressed genes...")
+    message("[createPGX] Filtering out ", nexpr, " not-expressed genes...")
     pgx <- pgx.filterZeroCounts(pgx)
     ii <- match(rownames(pgx$counts), rownames(pgx$genes))
     pgx$genes <- pgx$genes[ii, , drop = FALSE]
@@ -377,13 +377,13 @@ pgx.createPGX <- function(counts,
   do.filter <- (only.known || only.proteincoding)
   if (do.filter) {
     if (only.known) {
-      message("[createPGX] removing genes without symbol...")
+      message("[createPGX] Removing genes without symbol...")
       no.symbol <- (is.na(pgx$genes$symbol) | pgx$genes$symbol %in% c("", "-"))
       pgx$genes <- pgx$genes[which(!no.symbol), ]
     }
 
     if (only.proteincoding) {
-      message("[createPGX] removing Rik/ORF/LOC genes...")
+      message("[createPGX] Removing Rik/ORF/LOC genes...")
       is.unknown <- grepl("^rik|^loc|^orf", tolower(pgx$genes$symbol))
       pgx$genes <- pgx$genes[which(!is.unknown), ]
     }
@@ -890,7 +890,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   }
 
   if (!is.null(go.genesets)) {
-    message("[pgx.add_GMT] got", length(go.genesets), "genesets")
+    message("[pgx.add_GMT] got ", length(go.genesets), " genesets")
     go.size <- sapply(go.genesets, length)
     size.ok <- which(go.size >= 15 & go.size <= 400)
     go.genesets <- go.genesets[size.ok]
@@ -998,9 +998,22 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     ## Reduce gene sets by selecting top varying genesets. We use the
     ## very fast sparse rank-correlation for approximate single sample
     ## geneset activation.
-    cX <- X_geneset - rowMeans(X_geneset, na.rm = TRUE) ## center!
-    cX <- apply(cX, 2, rank)
-    gsetX <- qlcMatrix::corSparse(G, cX) ## slow!
+    cX <- X_geneset - rowMeans(X_geneset, na.rm = TRUE)
+    cX <- t(matrixStats::colRanks(cX))
+    if (ncol(cX) <= 5000) {
+      gsetX <- qlcMatrix::corSparse(G, cX)
+    } else { ## split into chuncks. faster & needs less memory.
+      index <- unique(c(seq(1, ncol(cX), by = round(ncol(cX)/10, 0)), ncol(cX)))
+      i <- 1; LL.cor <- list()
+      for(i in 1:(length(index)-1)) {
+        if (index[i] == 1) jj <- 1 : index[i+1]
+        if (index[i] > 1) jj <- (index[i]+1) : index[i+1]
+        LL.cor[[i]] <- qlcMatrix::corSparse(G, cX[, jj])
+      }
+      gsetX <- do.call(cbind, LL.cor)
+      rm(index, LL.cor)
+    }
+
     grp <- pgx$model.parameters$group
     gsetX.bygroup <- NULL
     ## If groups/conditions are present we calculate the SD by group
