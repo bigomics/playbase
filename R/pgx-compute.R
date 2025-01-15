@@ -893,8 +893,10 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
   # Convert G feature/symbol/human_ortholog to SYMBOL
   rownames(G) <- probe2symbol(
-    rownames(G), pgx$genes, key = "human_ortholog",
-    query = "symbol", fill_na = TRUE)
+    rownames(G), pgx$genes,
+    key = "human_ortholog",
+    query = "symbol", fill_na = TRUE
+  )
 
 
   ## -----------------------------------------------------------
