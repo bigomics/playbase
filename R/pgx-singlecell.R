@@ -743,24 +743,24 @@ seurat.preprocess <- function(obj,
     message("[seurat.preprocess] norm, findVarFeatures and scaling completed.")
   }
   
-  message("[seurat.preprocess] running PCA")
+  message("[seurat.preprocess] Performing Seurat PCA")
   npcs <- min(30, ncol(obj)/2)
   obj <- Seurat::RunPCA(obj, npcs = npcs, verbose = FALSE)
   
   # clustering using integrated data or original pca
   dr <- "pca"
   nn <- min(30L, ncol(obj)/5)
-  message("[seurat.preprocess] running FindNeighbors & Clusters")
+  message("[seurat.preprocess] Performing Seurat FindNeighbors & Clusters")
   obj <- Seurat::FindNeighbors(obj, dims=1:npcs, reduction = dr, verbose = FALSE)
   obj <- Seurat::FindClusters(obj, resolution = 1, verbose = FALSE) 
 
   if (tsne) {
-    message("[seurat.preprocess] running 2D tSNE")
+    message("[seurat.preprocess] Performing Seurat 2D tSNE")
     obj <- Seurat::RunTSNE(obj, dims=1:npcs, reduction = dr, verbose = FALSE)
   }
 
   if (umap) {
-    message("[seurat.preprocess] running 2D UMAP")
+    message("[seurat.preprocess] Performing Seurat 2D UMAP")
     obj <- Seurat::RunUMAP(obj, dims = 1:npcs,
       n.neighbors = nn, reduction = dr, verbose = FALSE)
   }
@@ -782,7 +782,7 @@ seurat.integrate <- function(obj, batch, sct = TRUE, method = "Harmony") {
     obj <- Seurat::ScaleData(obj)
   }
   
-  message("[seurat.integrate] running PCA")  
+  message("[seurat.integrate] Performing Seurat PCA")  
   obj <- Seurat::RunPCA(obj, npcs = 30, verbose = FALSE)
 
   sel.method <- Seurat::HarmonyIntegration
@@ -1267,17 +1267,18 @@ pgx.createSingleCellPGX <- function(counts,
     method = "Harmony"
   ) 
 
-  message("[pgx.createSingleCellPGX] Perform Seurat 3D t-SNE & UMAP.")
   r <- "pca"
   if (!is.null(batch)) { r <- "integrated.dr" }
 
   ## But was TSNE and UMAP already done seurat.preprocess??
   obj <- Seurat::RunTSNE(obj, dims=1:30, reduction = r, verbose = FALSE)
 
+  message("[pgx.createSingleCellPGX] Performing Seurat 3D t-SNE")
   obj <- Seurat::RunTSNE(obj, dim.embed = 3L, dims=1:30,
     reduction = r, reduction.name ="tsne.3d",
     reduction.key ="tsne3d_", verbose = FALSE)
 
+  message("[pgx.createSingleCellPGX] Performing Seurat 3D UMAP")
   obj <- Seurat::RunUMAP(obj, n.components = 3L, dims=1:30,
     reduction = r, reduction.name ="umap.3d",
     reduction.key = "umap3d_",  verbose = FALSE)
