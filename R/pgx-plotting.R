@@ -1500,16 +1500,16 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
   ii <- which(ct < 0)
   jj <- which(ct > 0)
   if (level == "gene") {
-    x0 <- rowMeans(pgx$X[, ii, drop = FALSE])
-    x1 <- rowMeans(pgx$X[, jj, drop = FALSE])
+    x0 <- rowMeans(pgx$X[, ii, drop = FALSE], na.rm = TRUE)
+    x1 <- rowMeans(pgx$X[, jj, drop = FALSE], na.rm = TRUE)
     xy <- cbind(x0, x1)
     gg <- rownames(pgx$gx.meta$meta[[contrast]])
     fx <- pgx$gx.meta$meta[[contrast]]$meta.fx
     q <- pgx$gx.meta$meta[[contrast]]$meta.q
     names(fx) <- names(q) <- gg
   } else if (level == "gene") {
-    x0 <- rowMeans(pgx$gsetX[, ii, drop = FALSE])
-    x1 <- rowMeans(pgx$gsetX[, jj, drop = FALSE])
+    x0 <- rowMeans(pgx$gsetX[, ii, drop = FALSE], na.rm = TRUE)
+    x1 <- rowMeans(pgx$gsetX[, jj, drop = FALSE], na.rm = TRUE)
     xy <- cbind(x0, x1)
     gg <- rownames(pgx$gset.meta$meta[[contrast]])
     fx <- pgx$gset.meta$meta[[contrast]]$meta.fx
