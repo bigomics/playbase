@@ -256,13 +256,12 @@ compute_extra <- function(pgx, extra = c(
     tt <- system.time({
       tryCatch(
         {
-          ##pgx$wgcna <- pgx.wgcna(pgx)
           pgx$mofa <- pgx.compute_mofa(
             pgx,
             kernel = "MOFA",
             ntop = 1000,
             numfactors = 10,
-            add_gsets = TRUE
+            add_gsets = FALSE
           )
         },
         error = function(e) {
@@ -271,10 +270,8 @@ compute_extra <- function(pgx, extra = c(
         }
       )
     })
-    timings <- rbind(timings, c("wgcna", tt))
+    timings <- rbind(timings, c("mofa", tt))
   }
-  
-
 
   
   ## ------------------------------------------------------
