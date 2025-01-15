@@ -372,13 +372,7 @@ pgx.createPGX <- function(counts,
   pgx$probe_type <- probe_type
 
   message("[createPGX] annotating genes")
-  if (datatype == "metabolomics") {
-    pgx$genes <- getMetaboliteAnnotation(rownames(counts), add_id = TRUE, probe_type=probe_type)
-  } else if (datatype == "multi-omics") {
-    pgx$genes <- getProbeAnnotation(organism, rownames(counts))
-  } else {
-    pgx <- pgx.addGeneAnnotation(pgx, organism = organism, annot_table = annot_table)
-  }
+  pgx <- pgx.addGeneAnnotation(pgx, annot_table = annot_table)
   
   if (is.null(pgx$genes)) {
     stop("[createPGX] FATAL: Could not build gene annotation")
@@ -890,14 +884,14 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
   # Load geneset matrix from playdata. add metabolomics if data.type
   # is metabolomics
-  symbol <- pgx$genes$symbol
+  symbol <- pgx$genes$human_ortholog
+  if(is.null(symbol)) symbol <- toupper(pgx$genes$symbol)
 
   metabolites <- grep("CHEBI",colnames(playdata::MSETxMETABOLITE),value=TRUE)
   metabolites <- gsub("CHEBI:","",metabolites)
   
   sum.mx <- sum(symbol %in% metabolites,na.rm=TRUE)
   sum.px <- sum(symbol %in% colnames(playdata::GSETxGENE),na.rm=TRUE) 
-
   dbg("[pgx.add_GMT] 1: sum.mx = ", sum.mx)
   dbg("[pgx.add_GMT] 1: sum.px = ", sum.px)    
   has.mx <- sum.mx >= 10
