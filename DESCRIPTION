@@ -133,6 +133,7 @@ Imports:
     WGCNA,
     wordcloud,
     xgboost,
+    torch,
 Remotes:
     url::https://bioconductor.org/packages/3.11/data/annotation/src/contrib/KEGG.db_3.2.4.tar.gz,
     url::https://bioconductor.org/packages/3.14/data/annotation/src/contrib/org.Pf.plasmo.db_3.14.0.tar.gz,
