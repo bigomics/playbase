@@ -702,7 +702,7 @@ pgx.createSeuratObject <- function(counts,
     if(!is.null(batch)) {
       obj <- seurat.integrate(obj, 'batch', sct = TRUE, method = "Harmony") 
     } else {
-      obj <- seurat.preprocess(obj, sct = TRUE)
+      obj <- seurat.preprocess(obj, sc_compute_settings, sct = TRUE)
     }
   }
 
@@ -717,9 +717,9 @@ seurat.preprocess <- function(obj,
                               tsne = TRUE,
                               umap = TRUE) {
 
-  options(future.globals.maxSize= 4*1024^4)
+  options(future.globals.maxSize = 4*1024^4)
 
-  vars.to.regress <- c()
+  vars.to.regress <- NULL
   if (sc_compute_settings[["regress_mt"]]) {
     vars.to.regress <- c(vars.to.regress, "percent.mt")
   }
@@ -735,23 +735,20 @@ seurat.preprocess <- function(obj,
   
   if(sct) {
     message("[seurat.preprocess] Performing Seurat SCT normalization")
-    obj <- Seurat::SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
+    obj <- Seurat::SCTransform(obj, method = "glmGamPoi",
+      vars.to.regress = vars.to.regress, verbose = FALSE)
   } else {
     message("[seurat.preprocess] Performing Seurat standard Normalization, findVarFeatures, scaling")
-    ## no "integration"
-    ## obj <- Seurat::NormalizeData(obj) causes "integer overflow issue"
+    ## obj <- Seurat::NormalizeData(obj) causes "integer overflow" issue
     counts <- obj@assays$RNA$counts
     totcounts <- Matrix::colSums(counts, na.rm = TRUE)
     cpm <- sweep(counts, 2, totcounts, FUN = "/") * 1e4
     obj@assays$RNA$data <- log1p(cpm)
     obj <- Seurat::FindVariableFeatures(obj)
-    if (length(vars.to.regress) > 0) {
-      covs <- paste0(vars.to.regress, collapse = "; ")
-      message("[seurat.preprocess] The following covariate will be regressed out: ", covs)
-      obj <- Seurat::ScaleData(obj, vars.to.regress = vars.to.regress)
-    } else {
-      obj <- Seurat::ScaleData(obj)
+    if (!is.null(vars.to.regress)) {
+      message("[seurat.preprocess] Regressing out ", paste0(vars.to.regress, collapse = "; "))
     }
+    obj <- Seurat::ScaleData(obj, vars.to.regress = vars.to.regress)
   }
 
   message("[seurat.preprocess] Performing Seurat PCA")
@@ -952,17 +949,15 @@ seurat.transferLabels <- function(ref, query, labels, sct=TRUE) {
 #' Transfer labels from reference to query (matrices)  
 #'
 transferLabels <- function(ref.mat, query.mat, labels) {
-
-  ref.meta <- data.frame(label=labels)
+  ref.meta <- data.frame(label = labels)
   rownames(ref.meta) <- colnames(ref.mat)
-  ref   <-  pgx.justSeuratObject(ref.mat, samples=ref.meta)
+  ref   <-  pgx.justSeuratObject(ref.mat, samples = ref.meta)
   query <-  pgx.justSeuratObject(query.mat, samples=NULL)
   sct=FALSE
-  ref <- seurat.preprocess(ref, sct=sct)
-  query <- seurat.preprocess(query, sct=sct)  
-  tf <- seurat.transferLabels(ref, query, ref$label, sct=sct)
+  ref <- seurat.preprocess(ref, sct = sct)
+  query <- seurat.preprocess(query, sct = sct)  
+  tf <- seurat.transferLabels(ref, query, ref$label, sct = sct)
   names(tf)
-  
   do.plot=FALSE
   if(do.plot) {
     names(tf$ref@reductions)
@@ -970,18 +965,12 @@ transferLabels <- function(ref.mat, query.mat, labels) {
     ref.pos <- tf$ref@reductions[['umap']]@cell.embeddings
     query.pos <- tf$query@reductions[['ref.umap']]@cell.embeddings
     query.pos2 <- tf$query@reductions[['umap']]@cell.embeddings  
-
     par(mfrow=c(2,2))
     plot(ref.pos, col = factor(tf$ref$label), main="REFERENCE")
-    plot(query.pos, col = factor(tf$query$predicted.label), main="TRANSFERRED (ref.umap)")
-    plot(query.pos2, col = factor(tf$query$predicted.label), main="TRANSFERRED (umap)")
+    plot(query.pos, col = factor(tf$query$predicted.label), main = "TRANSFERRED (ref.umap)")
+    plot(query.pos2, col = factor(tf$query$predicted.label), main = "TRANSFERRED (umap)")
   }
-   
-  list(
-    ref = tf$ref,
-    query = tf$query,
-    predicted = tf$predicted
-  )
+  list(ref = tf$ref, query = tf$query, predicted = tf$predicted)
 }
 
 
@@ -1181,8 +1170,6 @@ pgx.createSingleCellPGX <- function(counts,
   message("[pgx.createSingleCellPGX]==========================================")
   message("[pgx.createSingleCellPGX]======= pgx.createSingleCellPGX ==========")
   message("[pgx.createSingleCellPGX]==========================================")
-  
-  saveRDS(sc_compute_settings, "~/Desktop/LL1.RDS")
   
   if (!is.null(counts)) {
     message("[createSingleCellPGX] dim.counts: ", dim(counts)[1], ",", dim(counts)[2])
