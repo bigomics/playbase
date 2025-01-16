@@ -515,8 +515,8 @@ pgx.clusterMatrix <- function(X,
     message("calculating t-SNE 2D...")
     perplexity <- pmax(min(ncol(X) / 4, perplexity), 2)
     if (nrow(X) > 5000) {
-      sdtop <- 500
-      sdx <- apply(X, 1, stats::sd)
+      sdtop <- 1000
+      sdx <- matrixStats::rowSds(X, na.rm = TRUE)
       ii <- Matrix::head(order(-sdx), sdtop)
       X1 <- X[ii, , drop = FALSE]
     } else {
@@ -538,8 +538,8 @@ pgx.clusterMatrix <- function(X,
     message("calculating t-SNE 3D...")
     perplexity <- pmax(min(dimx[2] / 4, perplexity), 2)
     if (nrow(X) > 5000) {
-      sdtop <- 500
-      sdx <- apply(X, 1, stats::sd)
+      sdtop <- 1000
+      sdx <- matrixStats::rowSds(X, na.rm = TRUE)
       ii <- Matrix::head(order(-sdx), sdtop)
       X1 <- X[ii, , drop = FALSE]
     } else {

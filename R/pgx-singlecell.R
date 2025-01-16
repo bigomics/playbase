@@ -1172,8 +1172,6 @@ pgx.createSingleCellPGX <- function(counts,
   message("[pgx.createSingleCellPGX]==========================================")
   message("[pgx.createSingleCellPGX]======= pgx.createSingleCellPGX ==========")
   message("[pgx.createSingleCellPGX]==========================================")
-
-  saveRDS(sc_compute_settings, "~/Desktop/LL1.RDS")
   
   if (!is.null(counts)) {
     message("[createSingleCellPGX] dim.counts: ", dim(counts)[1], ",", dim(counts)[2])
@@ -1222,7 +1220,6 @@ pgx.createSingleCellPGX <- function(counts,
 
   sc.membership <- NULL
   do.supercells <- sc_compute_settings[["compute_supercells"]]
-
 
   if (length(do.supercells) == 0) do.supercells = FALSE
   if (!do.supercells) {
@@ -1320,8 +1317,6 @@ pgx.createSingleCellPGX <- function(counts,
   counts2 <- sub[['RNA']]$counts
   kk <- setdiff(colnames(sub@meta.data), colnames(contrasts))
   samples2 <- sub@meta.data[, kk]
-
-  saveRDS(list(sub=sub, contrasts=contrasts), "~/Desktop/LL2.RDS")
   
   ## stratify contrast matrix by celltype
   contrasts2 <- sub@meta.data[, colnames(contrasts), drop = FALSE]
