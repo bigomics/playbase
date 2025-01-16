@@ -1170,6 +1170,8 @@ pgx.createSingleCellPGX <- function(counts,
   message("[pgx.createSingleCellPGX]==========================================")
   message("[pgx.createSingleCellPGX]======= pgx.createSingleCellPGX ==========")
   message("[pgx.createSingleCellPGX]==========================================")
+
+  saveRDS(sc_compute_settings, "~/Desktop/LL1.RDS")
   
   if (!is.null(counts)) {
     message("[createSingleCellPGX] dim.counts: ", dim(counts)[1], ",", dim(counts)[2])
@@ -1217,13 +1219,12 @@ pgx.createSingleCellPGX <- function(counts,
   samplesx <- cbind( samples, contrasts )
 
   sc.membership <- NULL
-  
   do.supercells <- sc_compute_settings$compute_supercells
-  if (!any(do.supercells)) {
+  if (!do.supercells) {
     message("[pgx.createSingleCellPGX] User choice: do not compute supercells.")
   }
-  if (any(do.supercells) || ncol(counts) > 10000) {  
-    if (any(do.supercells)) {
+  if (do.supercells || ncol(counts) > 10000) {  
+    if (do.supercells) {
       message("[pgx.createSingleCellPGX] User choice: computing supercells with SuperCell")
     }
     if (ncol(counts) >10000) {
