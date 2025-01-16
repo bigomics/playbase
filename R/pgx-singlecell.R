@@ -1221,7 +1221,10 @@ pgx.createSingleCellPGX <- function(counts,
   samplesx <- cbind( samples, contrasts )
 
   sc.membership <- NULL
-  do.supercells <- sc_compute_settings$compute_supercells
+  do.supercells <- sc_compute_settings[["compute_supercells"]]
+
+
+  if (length(do.supercells) == 0) do.supercells = FALSE
   if (!do.supercells) {
     message("[pgx.createSingleCellPGX] User choice: do not compute supercells.")
   }
@@ -1239,7 +1242,12 @@ pgx.createSingleCellPGX <- function(counts,
       group <- paste0(group, ":", samples[, batch])
     }
     q10 <- quantile(table(group), probs=0.25)
-    nb <- round( ncol(counts) / 2000 )
+    if (ncol(counts) > 2000) {
+      nb <- round( ncol(counts) / 2000 )
+    } else {
+      d <- round(ncol(counts)/8, 1)
+      nb <- round( ncol(counts) / d) ## temporary...
+    }
     ## nb <- ceiling(round( q10 / 20 ))
     message("[pgx.createSingleCellPGX]=======================================")
     message("[pgx.createSingleCellPGX] running SuperCell. nb = ", nb)    
@@ -1290,7 +1298,6 @@ pgx.createSingleCellPGX <- function(counts,
 
   ##  names(obj@reductions)
   message("[pgx.createSingleCellPGX] 3D t-SNE & UMAP completed.")
-
   message("[pgx.createSingleCellPGX] dim(seurat counts): ", paste0(dim(obj@assays$RNA$counts), collapse=", "))
   message("[pgx.createSingleCellPGX] dim(seurat X): ", paste0(dim(obj@assays$RNA$data), collapse=", "))
   message("[pgx.createSingleCellPGX] dim(meta.data): ", paste0(dim(obj@meta.data), collapse=", "))
@@ -1313,6 +1320,8 @@ pgx.createSingleCellPGX <- function(counts,
   counts2 <- sub[['RNA']]$counts
   kk <- setdiff(colnames(sub@meta.data), colnames(contrasts))
   samples2 <- sub@meta.data[, kk]
+
+  saveRDS(list(sub=sub, contrasts=contrasts), "~/Desktop/LL2.RDS")
   
   ## stratify contrast matrix by celltype
   contrasts2 <- sub@meta.data[, colnames(contrasts), drop = FALSE]
