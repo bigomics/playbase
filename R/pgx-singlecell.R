@@ -650,64 +650,54 @@ pgx.createSeuratObject <- function(counts,
   obj <- Seurat::PercentageFeatureSet(obj, pattern = "^RP[LS]|^Rp[ls]", col.name = "percent.ribo")
   obj <- Seurat::PercentageFeatureSet(obj, pattern = "^HB|^Hb", col.name = "percent.hb")
 
-  if (cellcyclescores) {
-    ## CellCycleScoring needs normalized data
+  if (cellcyclescores) { ## needs normalized data
     counts <- obj@assays$RNA$counts
     totcounts <- Matrix::colSums(counts, na.rm = TRUE)
     cpm <- sweep(counts, 2, totcounts, FUN = "/") * 1e4
     obj@assays$RNA$data <- log1p(cpm)    
     g2m.ff <- Seurat::cc.genes$g2m.genes
     s.ff <- Seurat::cc.genes$s.genes
-    obj <- Seurat::CellCycleScoring(obj, g2m.features = g2m.ff, s.features = s.ff)
+    obj <- Seurat::CellCycleScoring(obj, s.features = s.ff, g2m.features = g2m.ff)
   }
   
   if (filter) {
     message("[pgx.createSeuratObject] Filtering cells")
+    sc_params <- names(sc_compute_settings)
+    
+    f1 <- "nfeature_threshold" %in% sc_params
+    nfeat_thr = c(0, 1e200)
+    if (f1) { nfeat_thr = sc_compute_settings[["nfeature_threshold"]] }
+
+    f2 <- "mt_threshold" %in% sc_params
+    mt_thr = 100
+    if (f2) { mt_thr = sc_compute_settings[["mt_threshold"]] }
+
+    f3 <- "hb_threshold" %in% sc_params
+    hb_thr = 100
+    if (f3) { hb_thr = sc_compute_settings[["hb_threshold"]] }
+
     ncells0 <- ncol(obj)
-    if (length(sc_compute_settings) > 0) {
-      message("[pgx.createSeuratObject] Filtering based on user-defined criteria:")
-      sc_params <- names(sc_compute_settings)
-      message("[pgx.createSeuratObject] ", paste0(sc_params, collapse = ", "))
-      i <- 1
-      for(i in 1:length(sc_params)) {
-        vv <- paste0(sc_compute_settings[[i]], ",")
-        message("[pgx.createSeuratObject] ", sc_params[i], ": ", vv)
-      }
-      if("nfeature_threshold" %in% sc_params) {
-        nfeat_thr <- sc_compute_settings[["nfeature_threshold"]]
-      } else {
-        nfeat_thr <- c(0, 1e200)
-      }
-      if("mt_threshold" %in% sc_params) {
-        mt_thr <- sc_compute_settings[["mt_threshold"]]
-      } else {
-        mt_thr <- 100
-      }
-      if("hb_threshold" %in% sc_params) {
-        hb_thr <- sc_compute_settings[["hb_threshold"]]
-      } else {
-        hb_thr <- 100
-      }
-      obj <- subset(obj, subset =
-                           nFeature_RNA > nfeat_thr[1] & nFeature_RNA < nfeat_thr[2] &
-                           percent.mt < mt_thr &
-                           percent.hb < hb_thr)
-    } else {
-      probs <- c(0.01, 0.99)
-      qN <- quantile(obj$nCount_RNA, probs = probs)
-      qF <- quantile(obj$nFeature_RNA, probs = probs)
-      obj <- subset(obj, subset =
-                           nCount_RNA > qN[1] & nCount_RNA < qN[2] &                       
-                           nFeature_RNA > qF[1] & nFeature_RNA < qF[2] &
-                           percent.mt < 5)
-    }
-    dim(obj)
+    obj <- subset(obj, subset =
+                         nFeature_RNA > nfeat_thr[1] &
+                         nFeature_RNA < nfeat_thr[2] &
+                         percent.mt < mt_thr &
+                         percent.hb < hb_thr)
+
+    ## IK's used cutoffs
+    ## probs <- c(0.01, 0.99)
+    ## qN <- quantile(obj$nCount_RNA, probs = probs)
+    ## qF <- quantile(obj$nFeature_RNA, probs = probs)
+    ## obj <- subset(obj, subset =
+    ##                      nCount_RNA > qN[1] & nCount_RNA < qN[2] &                       
+    ##                      nFeature_RNA > qF[1] & nFeature_RNA < qF[2] &
+    ##                      percent.mt < 5)
+
     ncells1 <- ncol(obj)
     message("[pgx.createSeuratObject] Filtering cells: ", ncells0, " --> ", ncells1) 
   }
   
   if(preprocess) {
-    message("[pgx.createIntegratedSeuratObject] preprocessing Seurat object")   
+    message("[pgx.createIntegratedSeuratObject] Preprocessing Seurat object")   
     has.batch <- "batch" %in% tolower(colnames(obj@meta.data))
     if(!is.null(batch)) {
       obj <- seurat.integrate(obj, 'batch', sct = TRUE, method = "Harmony") 
@@ -716,33 +706,54 @@ pgx.createSeuratObject <- function(counts,
     }
   }
 
-  obj  
+  return(obj)
 
 }
 
 #' @export
 seurat.preprocess <- function(obj,
+                              sc_compute_settings = list(),
                               sct = FALSE,
                               tsne = TRUE,
                               umap = TRUE) {
 
   options(future.globals.maxSize= 4*1024^4)
+
+  vars.to.regress <- c()
+  if (sc_compute_settings[["regress_mt"]]) {
+    vars.to.regress <- c(vars.to.regress, "percent.mt")
+  }
+  if (sc_compute_settings[["regress_hb"]]) {
+    vars.to.regress <- c(vars.to.regress, "percent.hb")
+  }
+  if (sc_compute_settings[["regress_ribo"]]) {
+    vars.to.regress <- c(vars.to.regress, "percent.ribo")
+  }
+  if (sc_compute_settings[["regress_ccs"]]) {
+    vars.to.regress <- c(vars.to.regress, "S.Score", "G2M.Score")
+  }
   
   if(sct) {
-    message("[seurat.preprocess] normalization method = SCT")
+    message("[seurat.preprocess] Performing Seurat SCT normalization")
     obj <- Seurat::SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
   } else {
-    # pre-process dataset (without integration)
-    ## obj <- Seurat::NormalizeData(obj) ## causes "integer overflow issue"
+    message("[seurat.preprocess] Performing Seurat standard Normalization, findVarFeatures, scaling")
+    ## no "integration"
+    ## obj <- Seurat::NormalizeData(obj) causes "integer overflow issue"
     counts <- obj@assays$RNA$counts
     totcounts <- Matrix::colSums(counts, na.rm = TRUE)
     cpm <- sweep(counts, 2, totcounts, FUN = "/") * 1e4
     obj@assays$RNA$data <- log1p(cpm)
     obj <- Seurat::FindVariableFeatures(obj)
-    obj <- Seurat::ScaleData(obj)
-    message("[seurat.preprocess] norm, findVarFeatures and scaling completed.")
+    if (length(vars.to.regress) > 0) {
+      covs <- paste0(vars.to.regress, collapse = "; ")
+      message("[seurat.preprocess] The following covariate will be regressed out: ", covs)
+      obj <- Seurat::ScaleData(obj, vars.to.regress = vars.to.regress)
+    } else {
+      obj <- Seurat::ScaleData(obj)
+    }
   }
-  
+
   message("[seurat.preprocess] Performing Seurat PCA")
   npcs <- min(30, ncol(obj)/2)
   obj <- Seurat::RunPCA(obj, npcs = npcs, verbose = FALSE)
@@ -764,7 +775,9 @@ seurat.preprocess <- function(obj,
     obj <- Seurat::RunUMAP(obj, dims = 1:npcs,
       n.neighbors = nn, reduction = dr, verbose = FALSE)
   }
-  obj
+
+  return(obj)
+
 }
 
 #' @export
@@ -1168,7 +1181,9 @@ pgx.createSingleCellPGX <- function(counts,
   message("[pgx.createSingleCellPGX]==========================================")
   message("[pgx.createSingleCellPGX]======= pgx.createSingleCellPGX ==========")
   message("[pgx.createSingleCellPGX]==========================================")
-
+  
+  saveRDS(sc_compute_settings, "~/Desktop/LL1.RDS")
+  
   if (!is.null(counts)) {
     message("[createSingleCellPGX] dim.counts: ", dim(counts)[1], ",", dim(counts)[2])
     message("[createSingleCellPGX] class.counts: ", class(counts))
@@ -1351,7 +1366,6 @@ pgx.createSingleCellPGX <- function(counts,
     only.proteincoding = TRUE,
     remove.xxl = TRUE,
     remove.outliers = TRUE
-    ## sc_compute_settings = sc_compute_settings ## already used. no needed anymore here? 
   )
 
   message("[pgx.createSingleCellPGX] dim(pgx$counts): ", paste0(dim(pgx$counts), collapse = " x "))
