@@ -664,16 +664,16 @@ pgx.createSeuratObject <- function(counts,
     message("[pgx.createSeuratObject] Filtering cells")
     sc_params <- names(sc_compute_settings)
     
-    f1 <- "nfeature_threshold" %in% sc_params
     nfeat_thr = c(0, 1e200)
+    f1 <- "nfeature_threshold" %in% sc_params
     if (f1) { nfeat_thr = sc_compute_settings[["nfeature_threshold"]] }
 
-    f2 <- "mt_threshold" %in% sc_params
     mt_thr = 100
+    f2 <- "mt_threshold" %in% sc_params
     if (f2) { mt_thr = sc_compute_settings[["mt_threshold"]] }
 
-    f3 <- "hb_threshold" %in% sc_params
     hb_thr = 100
+    f3 <- "hb_threshold" %in% sc_params
     if (f3) { hb_thr = sc_compute_settings[["hb_threshold"]] }
 
     ncells0 <- ncol(obj)
@@ -720,19 +720,21 @@ seurat.preprocess <- function(obj,
   options(future.globals.maxSize = 4*1024^4)
 
   vars.to.regress <- NULL
-  if (sc_compute_settings[["regress_mt"]]) {
-    vars.to.regress <- c(vars.to.regress, "percent.mt")
-  }
-  if (sc_compute_settings[["regress_hb"]]) {
-    vars.to.regress <- c(vars.to.regress, "percent.hb")
-  }
-  if (sc_compute_settings[["regress_ribo"]]) {
-    vars.to.regress <- c(vars.to.regress, "percent.ribo")
-  }
-  if (sc_compute_settings[["regress_ccs"]]) {
-    vars.to.regress <- c(vars.to.regress, "S.Score", "G2M.Score")
-  }
-  
+  if (length(sc_compute_settings)) {
+    if (sc_compute_settings[["regress_mt"]]) {
+      vars.to.regress <- c(vars.to.regress, "percent.mt")
+    }
+    if (sc_compute_settings[["regress_hb"]]) {
+      vars.to.regress <- c(vars.to.regress, "percent.hb")
+    }
+    if (sc_compute_settings[["regress_ribo"]]) {
+      vars.to.regress <- c(vars.to.regress, "percent.ribo")
+    }
+    if (sc_compute_settings[["regress_ccs"]]) {
+      vars.to.regress <- c(vars.to.regress, "S.Score", "G2M.Score")
+    }
+  }  
+
   if(sct) {
     message("[seurat.preprocess] Performing Seurat SCT normalization")
     obj <- Seurat::SCTransform(obj, method = "glmGamPoi",
