@@ -134,7 +134,7 @@ wgcna.compute <- function(X, samples,
 
   nmissing <- sum(is.na(X))
   if (nmissing > 0) {
-    message("Found ", nmissing, " missing values in X. Removing prior to WGCNA.")
+    message("Found ", nmissing, " missing values in X. Imputing prior to WGCNA.")
     ##X <- X[complete.cases(X), , drop = FALSE]
     X <- svdImpute2(X)
   }
@@ -233,8 +233,8 @@ wgcna.compute <- function(X, samples,
 #'
 #'
 #' @export
-plotTOMfromResults <- function(results, power=NULL, networktype="signed",
-                               tomtype="signed", nSelect=1000) {
+wgcna.plotTOMfromResults <- function(results, power=NULL, networktype="signed",
+                                     tomtype="signed", nSelect=1000) {
 
   datExpr <- results$datExpr
   MEs <- results$net$MEs
@@ -319,8 +319,8 @@ plotTOMfromResults <- function(results, power=NULL, networktype="signed",
 #'
 #'
 #' @export
-plotDendroFromResults <- function(results, power=NULL, networktype="signed",
-                                  tomtype="signed", nSelect=1000) {
+wgcna.plotDendroFromResults <- function(results, power=NULL, networktype="signed",
+                                        tomtype="signed", nSelect=1000) {
 
   datExpr <- results$datExpr
   MEs <- results$net$MEs
@@ -406,3 +406,37 @@ labels2rainbow <- function(net) {
   return(new.col)
 }
 
+
+#' @export
+wgcna.plotModuleTraitHeatmap <- function(results) {
+  
+  ## Define numbers of genes and samples
+  nGenes = ncol(results$datExpr);
+  nSamples = nrow(results$datExpr);
+  ## Recalculate MEs with color labels
+  moduleColors <- results$net$colors
+  MEs0 = moduleEigengenes(results$datExpr, moduleColors)$eigengenes
+  MEs = orderMEs(MEs0)
+  moduleTraitCor = cor(MEs, results$datTraits, use = "pairwise.complete");
+  moduleTraitPvalue = corPvalueStudent(moduleTraitCor, nSamples);
+  
+  sizeGrWindow(10,6)
+  ## Will display correlations and their p-values
+  textMatrix =  paste(signif(moduleTraitCor, 2), "\n(",
+                      signif(moduleTraitPvalue, 1), ")", sep = "");
+  dim(textMatrix) = dim(moduleTraitCor)
+  par(mar = c(6, 8.5, 3, 3));
+  ## Display the correlation values within a heatmap plot
+  labeledHeatmap(Matrix = moduleTraitCor,
+                 xLabels = names(results$datTraits),
+                 yLabels = names(MEs),
+                 ySymbols = names(MEs),
+                 colorLabels = FALSE,
+                 colors = greenWhiteRed(50),
+                 textMatrix = textMatrix,
+                 setStdMargins = FALSE,
+                 cex.text = 0.5,
+                 zlim = c(-1,1),
+                 main = paste("Module-trait relationships"))
+
+}
