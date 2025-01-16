@@ -4,7 +4,7 @@
 #'
 #' @export
 pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
-                             ntop=1000, add_gsets=TRUE ) {
+                             ntop=1000, add_gsets=FALSE ) {
 
   has.prefix <- (mean(grepl(":",rownames(pgx$X))) > 0.8)
   is.multiomics <- ( pgx$datatype == "multi-omics" && has.prefix)
@@ -22,20 +22,11 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
   
   ## add geneset layers if asked
   if(add_gsets) {
-    gsetX <- mofa.add_genesets(xdata, GMT=pgx$GMT)
-    xdata <- c( xdata, gsetX)
+    message("[compute.multi_omics] adding geneset matrix")
+    xdata <- c( xdata, list( gset = pgx$gsetX ) )
   }
   lapply(xdata, dim)
   
-  ## samples = pgx$samples
-  ## contrasts = pgx$contrasts    
-  ## pheno = NULL
-  ## kernel = kernel,
-  ## scale_views = TRUE 
-  ## ntop = 1000
-  ## max_iter = 200
-  ## num_factors = numfactors
-
   discretized_samples <- pgx.discretizePhenotypeMatrix(pgx$samples)
   
   for(i in 1:length(xdata)) {
@@ -49,7 +40,8 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
   res <- mofa.compute(
     xdata,
     samples = discretized_samples,
-    contrasts = pgx$contrasts,    
+    contrasts = pgx$contrasts,
+    annot = pgx$genes,
     pheno = NULL,
     GMT = pgx$GMT,
     kernel = kernel,
@@ -68,7 +60,7 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
     contrasts = pgx$contrasts
   )
   lasagna <- lasagna.create_model(
-    las.data, pheno="contrasts", ntop=1000, nc=20,
+    las.data, pheno="contrasts", ntop = ntop, nc=20,
     use.graphite = FALSE)
   
   ## pre-compute cluster positions
@@ -76,11 +68,9 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
   xx <- xx[names(xdata)]   ## remove SOURCE/SINK
    
   message("computing cluster positions (samples)...")
-  res$posx <- mofa.compute_clusters(xx, along="samples")
-  
+  res$posx <- mofa.compute_clusters(xx, along="samples")  
   message("computing cluster positions (features)...")
   res$posf <- mofa.compute_clusters(xx, along="features")
-
   res$lasagna <- lasagna
   
   return(res)
@@ -91,6 +81,7 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
 mofa.compute <- function(xdata,
                          samples,
                          contrasts,
+                         annot,
                          kernel = "mofa",
                          pheno = NULL,
                          GMT = NULL,
@@ -147,7 +138,6 @@ mofa.compute <- function(xdata,
   ## done in creating genesets...)
   for(i in 1:length(xdata)) {
     d <- rownames(xdata[[i]])
-    ##rownames(xdata[[i]]) <- stringi::stri_trans_general(d, "latin-ascii")
     rownames(xdata[[i]]) <- iconv(d,to="ascii//TRANSLIT")
   }
 
@@ -170,8 +160,6 @@ mofa.compute <- function(xdata,
   kernel <- tolower(kernel)
 
   if( kernel == "mofa") {
-    ##num_factors = 10; max_iter = 1000
-    xdata <- mofa.prefix(xdata)  ## MOFA needs prefix
     obj <- MOFA2::create_mofa(xdata, groups=NULL)
     MOFA2::samples_metadata(obj) <- data.frame( sample=rownames(samples), samples )
     
@@ -201,7 +189,7 @@ mofa.compute <- function(xdata,
     ##  suppressMessages(suppressWarnings(
     model <- MOFA2::run_mofa(obj, outfile=outfile, save_data=TRUE,
                              use_basilisk=FALSE)
-
+    
     ##model <- load_model(outfile, remove_inactive_factors = FALSE)
     model <- MOFA2::impute(model)
     factors <- MOFA2::get_factors(model, factors = "all")
@@ -274,6 +262,11 @@ mofa.compute <- function(xdata,
   xx <- tapply(1:nrow(X),dt,function(i) X[i,,drop=FALSE] )
   ww <- ww[names(xdata)]
   xx <- xx[names(xdata)]
+
+  ww_bysymbol <- ww
+  if(!is.null(annot)) {
+    ww_bysymbol <- lapply( ww_bysymbol, function(w) rename_by(w, annot, "symbol"))
+  }
   ww <- mofa.strip_prefix(ww)
   xx <- mofa.strip_prefix(xx)  
   
@@ -295,7 +288,7 @@ mofa.compute <- function(xdata,
   colnames(Z) <- colnames(W)
 
   message("computing factor enrichment...")
-  gsea <- mofa.compute_enrichment(ww, G=GMT, ntop=1000) 
+  gsea <- mofa.compute_enrichment(ww_bysymbol, G=GMT, ntop=1000) 
 
   ## compute enrichment for all contrasts
   message("computing phenotype enrichment...")
@@ -303,7 +296,6 @@ mofa.compute <- function(xdata,
   ff <- NULL
   if(!is.null(contrasts)) {
     contrasts <- contrasts[rownames(samples),,drop=FALSE]
-
     mfc <- list()
     ct=colnames(contrasts)[1]
     for(ct in colnames(contrasts)) {
@@ -319,7 +311,14 @@ mofa.compute <- function(xdata,
         for(j in 1:length(ff)) ff[[j]] <- cbind(ff[[j]], mfc[[i]][[j]])
       }
     }
-    fc.gsea <- mofa.compute_enrichment(ff, G=GMT, ntop=1000)
+
+    ## enrichment need rownames as symbol (as in GMT)
+    ff_bysymbol <- ff
+    if(!is.null(annot)) {
+      ff_bysymbol <- mofa.prefix(ff_bysymbol)
+      ff_bysymbol <- lapply( ff_bysymbol, function(f) rename_by(f, annot, "symbol"))
+    }
+    fc.gsea <- mofa.compute_enrichment(ff_bysymbol, G=GMT, ntop=1000)
   }
   
   ## create graphs
@@ -375,7 +374,8 @@ mofa.add_genesets <- function(xdata, GMT=NULL, datatypes=NULL) {
     datatypes <- intersect(c("gx","px","mx"), names(xdata))
   }
   if(length(datatypes)==0) {
-    stop("must provide datatypes")
+    message("WARNING. No valid datatypes")
+    return(xdata)
   }
 
   if(is.null(GMT)) {
@@ -391,9 +391,9 @@ mofa.add_genesets <- function(xdata, GMT=NULL, datatypes=NULL) {
   
   if(is.null(GMT)) {
     message("ERROR: could not determing GMT. Please provide.")
-    return(NULL)
+    return(xdata)
   }
-
+  
   ## convert non-ascii characters....
   ##rownames(GMT) <- iconv(rownames(GMT), "latin1", "ASCII", sub="")
   rownames(GMT) <- stringi::stri_trans_general(rownames(GMT), "latin-ascii")
@@ -417,10 +417,10 @@ mofa.add_genesets <- function(xdata, GMT=NULL, datatypes=NULL) {
   ## make sure they align. Only intersection????
 #  kk <- Reduce(intersect, lapply(gsetX, rownames))
 #  gsetX <- lapply( gsetX, function(m) m[kk,])
-  
   names(gsetX) <- paste0("gset.",names(gsetX))  
   gsetX
 }
+
 
 #' Compute clusters for MOFA factors.
 #' 
@@ -631,7 +631,7 @@ mofa.strip_prefix <- function(xx) {
     rownames(xx) <- sub("[A-Za-z]+:","", rownames(xx))
     return(xx)
   }
-  if(class(xx) == "list") {
+  if(class(xx) %in% c("list","array") || is.list(xx)) {
     i=1
     for(i in 1:length(xx)) {
       dt <- paste0("^",names(xx)[i],":")
@@ -645,8 +645,6 @@ mofa.strip_prefix <- function(xx) {
   }
   xx
 }
-
-#' @export
 
 #' @export
 mofa.augment <- function(xx, n, z=1) {
