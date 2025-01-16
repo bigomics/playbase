@@ -10,14 +10,9 @@
 mx.detect_probetype <- function(probes, min.match=0.05) {
   aa <- playdata::METABOLITE_ID
   probes <- setdiff(probes,c("","-",NA))
+  probes <- gsub("^[a-zA-Z]+:|[_.-].*","",probes)  ## strip any pre and postfix
+  probes <- gsub("chebi:|chebi","",probes,ignore.case=TRUE)
   match <- apply(aa, 2, function(s) mean(probes %in% s))
-  if (max(match) < min.match) {
-    ## if no match we try stripping of non-numerical prefixes
-    ##probes1 <- gsub("[^0-9]", "", probes)
-    probes1 <- gsub("^[a-zA-Z:]+", "", probes)
-    match2 <- apply(aa, 2, function(s) mean(probes1 %in% s))
-    match <- match + match2
-  }
   if (max(match, na.rm = TRUE) < min.match) {
     message("[mx.detect_probetype] WARNING. could not detect probetype")
     return(NA)
@@ -34,7 +29,8 @@ convert_probe_to_chebi <- function(probes, probe_type=NULL) {
   valid_probe_types <- colnames(annot)
   # for id that are "", set it to na
   probes[probes == ""] <- NA
-
+  probes <- gsub(".*:|[_.-].*","",probes)  ## strip any pre/postfix
+  
   # check that probetype is valid
   if(is.null(probe_type)) {
     probes0 <- setdiff(probes,NA)
@@ -66,6 +62,14 @@ convert_probe_to_chebi <- function(probes, probe_type=NULL) {
 #' 
 #' @export
 mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
+
+  # for id that are "", set it to na
+  probes[probes == ""] <- NA
+  probes <- sub("[_.-].*","",probes)  ## strip any postfix
+  if (!is.null(probe_type) && probe_type == "ChEBI") {
+    # keep only numbers in ids, as chebi ids are numeric
+    probes <- gsub("[^0-9]", "", probes)
+  }
   if (is.null(probe_type)) {
     probe_type <- mx.detect_probetype(probes)
   }
@@ -77,13 +81,11 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
   annot <- playdata::METABOLITE_ID
   valid_probe_types <- colnames(annot)
   probe_type <- match.arg(probe_type, valid_probe_types)
-
-  # for id that are "", set it to na
-  probes[probes == ""] <- NA
   if (probe_type == "ChEBI") {
     # keep only numbers in ids, as chebi ids are numeric
     probes <- gsub("[^0-9]", "", probes)
   }
+
   matches <- match(probes, annot[, probe_type])
   ids <- annot[matches, target_id]
   return(ids)
