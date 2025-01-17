@@ -98,7 +98,8 @@ gx.PCAcomponents <- function(X, nv = 20, ngenes) {
   for (i in 1:nv) {
     gg <- Matrix::head(rownames(X)[order(-abs(res$u[, i]))], ngenes)
     X1 <- X[gg, ]
-    X1 <- (X1 - rowMeans(X1, na.rm = TRUE)) / (1e-4 + apply(X1, 1, stats::sd, na.rm = TRUE)) ## scale??
+    ## X1 <- (X1 - rowMeans(X1, na.rm = TRUE)) / (1e-4 + apply(X1, 1, stats::sd, na.rm = TRUE)) ## scale??
+    X1 <- (X1 - rowMeans(X1, na.rm = TRUE)) / (1e-4 + matrixStats::rowSds(X1, na.rm = TRUE))
     colnames(X1) <- NULL
     gx.imagemap(X1, main = paste0("PC", i), cex = 0.8)
   }
@@ -316,7 +317,8 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   }
   if ("row.bmc" %in% scale && !is.null(splitx)) {
     if (inherits(splitx, "numeric") && length(splitx) == 1) {
-      ii <- Matrix::head(order(-apply(gx, 1, stats::sd, na.rm = TRUE)), 1000) ## NEED RETHINK!
+      ## ii <- Matrix::head(order(-apply(gx, 1, stats::sd, na.rm = TRUE)), 1000) ## NEED RETHINK!
+      ii <- Matrix::head(order(-matrixStats::rowSds(gx, na.rm = TRUE)), 1000)
       hc <- cor.hclust(gx[ii, ])
       splitx <- paste0("cluster", stats::cutree(hc, splitx))
       names(splitx) <- colnames(gx)
@@ -344,7 +346,8 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   jj1 <- 1:nrow(gx)
   jj2 <- 1:ncol(gx)
   if (!is.null(nmax) && nmax < nrow(gx) && nmax > 0) {
-    jj1 <- Matrix::head(order(-apply(gx, 1, stats::sd, na.rm = TRUE)), nmax)
+    ## jj1 <- Matrix::head(order(-apply(gx, 1, stats::sd, na.rm = TRUE)), nmax)
+    jj1 <- Matrix::head(order(-matrixStats::rowSds(gx, na.rm = TRUE)), nmax)
   }
   if (!is.null(cmax) && cmax < ncol(gx) && cmax > 0) {
     jj2 <- Matrix::head(order(-apply(gx, 2, stats::sd, na.rm = TRUE)), cmax)
@@ -531,7 +534,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   if (softmax) {
     gx <- tanh(0.5 * gx / stats::sd(gx, na.rm = TRUE))
   }
-
+  
   ## ------------- colorscale options
   col_scale <- NULL
   if (!is.null(zlim)) {
@@ -645,11 +648,13 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       nshow <- show_rownames / length(unique(split.idx))
       nshow <- max(nshow, 10)
       subidx <- tapply(1:length(split.idx), split.idx, function(ii) {
-        ii[utils::head(order(-apply(gx[ii, , drop = FALSE], 1, stats::sd, na.rm = TRUE)), nshow)]
+        ## ii[utils::head(order(-apply(gx[ii, , drop = FALSE], 1, stats::sd, na.rm = TRUE)), nshow)]
+        ii[utils::head(order(-matrixStats::rowSds(gx[ii, , drop = FALSE], na.rm = TRUE)), nshow)]
       })
       subset <- unlist(subidx)
     } else {
-      subset <- Matrix::head(order(-apply(gx, 1, stats::sd, na.rm = TRUE)), show_rownames)
+      ## subset <- Matrix::head(order(-apply(gx, 1, stats::sd, na.rm = TRUE)), show_rownames)
+      subset <- Matrix::head(order(-matrixStats::rowSds(gx, na.rm = TRUE)), show_rownames)
     }
     lab <- rownames(gx)[subset]
     lab <- substring(lab, 1, lab.len)
@@ -781,7 +786,8 @@ gx.heatmap <- function(gx, values = NULL,
   }
   if ("row" %in% scale || "both" %in% scale) {
     gx <- gx - rowMeans(gx, na.rm = TRUE)
-    gx <- gx / (1e-4 + apply(gx, 1, stats::sd, na.rm = TRUE)) ## small eps maintains SD order!
+    ## gx <- gx / (1e-4 + apply(gx, 1, stats::sd, na.rm = TRUE)) ## small eps maintains SD order!
+    gx <- gx / (1e-4 + matrixStats::rowSds(gx, na.rm = TRUE))
   }
   if ("col.center" %in% scale) {
     gx <- t(t(gx) - colMeans(gx, na.rm = TRUE))
@@ -796,7 +802,8 @@ gx.heatmap <- function(gx, values = NULL,
   jj1 <- 1:nrow(gx)
   jj2 <- 1:ncol(gx)
   if (!is.null(nmax) && nmax < nrow(gx) && nmax > 0) {
-    jj1 <- Matrix::head(order(-apply(gx, 1, stats::sd, na.rm = TRUE)), nmax)
+    ## jj1 <- Matrix::head(order(-apply(gx, 1, stats::sd, na.rm = TRUE)), nmax)
+    jj1 <- Matrix::head(order(-matrixStats::rowSds(gx, na.rm = TRUE)), nmax)
   }
   if (!is.null(cmax) && cmax < ncol(gx) && cmax > 0) {
     jj2 <- Matrix::head(order(-apply(gx, 2, stats::sd, na.rm = TRUE)), cmax)
@@ -1168,8 +1175,10 @@ clustermap <- function(x, nc = 6, nr = 6, na = 4, q = 0.80, p = 2,
     col.annot0 <- col.annot
     col.annot <- order.annot(col.annot, kx, c1, n = nca)
     ax <- kxmap(col.annot, 1:nrow(col.annot), c2, q = q)
+    ## col.annot <- (col.annot - rowMeans(col.annot, na.rm = TRUE)) /
+    ##  (1e-8 + apply(col.annot, 1, stats::sd, na.rm = TRUE))
     col.annot <- (col.annot - rowMeans(col.annot, na.rm = TRUE)) /
-      (1e-8 + apply(col.annot, 1, stats::sd, na.rm = TRUE))
+      (1e-8 + matrixStats::rowSds(col.annot, na.rm = TRUE))
     d3 <- stats::dist(col.annot)
     d3 <- stats::as.dist(1 - stats::cor(t(col.annot), use = "pairwise"))
     d3[is.na(d3)] <- mean(d3, na.rm = TRUE) ## impute missing...
@@ -1256,7 +1265,8 @@ frozenmap <- function(x, m = 8, n = 8, ...) {
     idx <- stats::cutree(h, k = n)
     ordx <- -apply(h$merge, 1, min)
     ordx <- ordx[ordx > 0]
-    sdx <- apply(x, 1, stats::sd, na.rm = TRUE)
+    ## sdx <- apply(x, 1, stats::sd, na.rm = TRUE)
+    sdx <- matrixStats::rowSds(x, na.rm = TRUE)
     midx <- function(j) j[which.min(match(j, ordx))]
     maxsd <- function(j) j[which.max(sdx[j])]
     maxsd2 <- function(j, k) Matrix::head(j[order(-sdx[j])], k)
@@ -1634,7 +1644,8 @@ heatmap.3 <- function(x,
   if (scale == "row") {
     retval$rowMeans <- rm <- rowMeans(x, na.rm = na.rm)
     x <- sweep(x, 1, rm)
-    retval$rowSDs <- sx <- apply(x, 1, stats::sd, na.rm = na.rm)
+    ## retval$rowSDs <- sx <- apply(x, 1, stats::sd, na.rm = na.rm)
+    retval$rowSDs <- sx <- matrixStats::rowSds(x, na.rm = na.rm)
     x <- sweep(x, 1, sx, "/")
   } else if (scale == "column") {
     retval$colMeans <- rm <- colMeans(x, na.rm = na.rm)

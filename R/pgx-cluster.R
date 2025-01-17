@@ -308,7 +308,8 @@ pgx.FindClusters <- function(X, method = c("kmeans", "hclust", "louvain", "meta"
   }
 
   ## reduce dimensions
-  X <- Matrix::head(X[order(apply(X, 1, stats::sd, na.rm = TRUE)), ], top.sd)
+  ## X <- Matrix::head(X[order(apply(X, 1, stats::sd, na.rm = TRUE)), ], top.sd)
+  X <- Matrix::head(X[order(matrixStats::rowSds(X, na.rm = TRUE)), ], top.sd)
   X <- t(scale(t(X))) ## scale features??
   if (nrow(X) > npca) {
     npca <- min(npca, dim(X) - 1)
