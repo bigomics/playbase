@@ -305,7 +305,8 @@ pgx.survivalVariableImportance <- function(X, time, status,
 
   imp <- list()
   xnames <- rownames(X)
-  sdx <- apply(X, 1, stats::sd, na.rm = TRUE)
+  ## sdx <- apply(X, 1, stats::sd, na.rm = TRUE)
+  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
   if (nrow(X) == 1) X <- rbind(X, X)
 
   if (!inherits(status, "logical") && all(status %in% c(0, 1, NA))) {

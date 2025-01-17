@@ -1549,7 +1549,8 @@ map_probes <- function(annot, genes, column = NULL, ignore.case = FALSE) {
 #' }
 #' @export
 computeFeatureScore <- function(X, Y, features) {
-  sdx <- apply(X, 1, stats::sd)
+  ## sdx <- apply(X, 1, stats::sd)
+  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
   names(sdx) <- rownames(X)
   S <- matrix(NA, nrow = length(features), ncol = ncol(Y))
   rownames(S) <- names(features)
