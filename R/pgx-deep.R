@@ -363,7 +363,7 @@ MultiOmicsSAE <- R6::R6Class(
       encoder.dims <- mapply( c, input.dims, encoder.dims, SIMPLIFY=FALSE)
       decoder.dims <- lapply( self$model$decoder, function(e) getdims(e))
       concat_dim <- sum(sapply(encoder.dims,tail,1))
-      integrator.dims <- c(concat_dim, getdims( self$model$integrator ))
+      integrator.dims <- unlist(c(concat_dim, getdims( self$model$integrator )))
       predictor.dims <- lapply( self$model$predictor, function(e) getdims(e))
       list(
         encoder = encoder.dims,
@@ -1139,7 +1139,7 @@ arch = [
     to <- str_at( c(0,0, (nview-1)*22/2))
     glue::glue("    
     # Combine layer
-    to_Sum('sum1', offset='(16,0,0)', to='{to}', radius=2.5, opacity=0.6),
+    to_Sum('sum1', offset='(14,0,0)', to='{to}', radius=2.5, opacity=0.6),
     to_Conv('label2', '', '', offset='(15.2,0,0)', to='{to}', height=0, depth=0, width=0, caption='MERGE'),
 ", .trim = FALSE)
   }
@@ -1150,7 +1150,7 @@ arch = [
     txt = "    # Dense MLP layer\n"
     for(i in 1:nlayer) {
       if(i==1) {
-        txt = paste0(txt, "    to_Conv('dense1', '{dims[1]}', '', offset='(2,0,0)', to='(sum1-east)', height=10, depth={w[1]}, width=2, caption='integrator'),\n")
+        txt = paste0(txt, "    to_Conv('dense1', '{dims[1]}', '', offset='(4,0,0)', to='(sum1-east)', height=10, depth={w[1]}, width=2, caption='integrator'),\n")
         txt = paste0(txt, "    to_connection('sum1', 'dense",i,"'),\n")
       } else {
         txt = paste0(txt, "    to_Conv('dense",i,"', '{dims[",i,"]}', '', offset='(2,0,0)', to='(dense",i-1,"-east)', height=10, depth={w[",i,"]}, width=2, caption=''),\n")
@@ -1167,16 +1167,23 @@ arch = [
     w <- round((dims / dims[1])**0.5 * 15)
     txt = "    # Predictor layer {name}\n"
     for(i in 1:nlayer) {
-      if(i==1) {
-        txt = paste0(txt, "    to_Conv('{pred[1]}', '{dims[1]}', '', offset='(2,0,0)', to='(dense",lastdense,"-east)', height=10, depth={w[1]}, width=2, caption='predictor'),\n")
+      if(i==1 && i!=nlayer) {
+        txt = paste0(txt, "    to_Conv('{pred[1]}', '{dims[1]}', '', offset='(3,0,0)', to='(dense",lastdense,"-east)', height=10, depth={w[1]}, width=2, caption='predictor'),\n")
         txt = paste0(txt, "    to_connection('dense",lastdense,"', '{pred[1]}'),\n")
       } else {
-        if(i==nlayer) {
+        if(i==nlayer && i!=1) {
           txt = paste0(txt, "    to_ConvSoftMax( name='{pred[",i,"]}', s_filer = '{dims[",i,"]}', offset='(2,0,0)', to='({pred[",i-1,"]}-east)', width=2, height=10, depth={w[",i,"]}, caption='{caption}'),\n")
+        } else if(i==nlayer && i==1) {
+          txt = paste0(txt, "    to_ConvSoftMax( name='{pred[",i,"]}', s_filer = '{dims[",i,"]}', offset='(2,0,0)', to='(dense",lastdense,"-east)', width=2, height=10, depth={w[",i,"]}, caption='{caption}'),\n")
         } else {
           txt = paste0(txt, "    to_Conv('{pred[",i,"]}', '{dims[",i,"]}', '', offset='{offset}', to='({pred[",i-1,"]}-east)', height=10, depth={w[",i,"]}, width=2, caption=''),\n")
         }
-        txt = paste0(txt, "    to_connection( '{pred[",i-1,"]}', '{pred[",i,"]}'),\n")        
+        ## add arrows
+        if(i!=1) {
+          txt = paste0(txt, "    to_connection( '{pred[",i-1,"]}', '{pred[",i,"]}'),\n")
+        } else {
+          txt = paste0(txt, "    to_connection( 'dense",lastdense,"', '{pred[",i,"]}'),\n")
+        }
       }
     }
     glue::glue(txt, .trim = FALSE)
@@ -1235,7 +1242,7 @@ if __name__ == '__main__':
   lastdense <- length(net_dims$integrator)
   i=1
   for(i in 1:ntargets) {
-    offset <- c(3, 0, 8 * ((i-1) - (ntargets-1)/2))
+    offset <- c(2, 0, 8 * ((i-1) - (ntargets-1)/2))
     dims <- net_dims[['predictor']][[i]]
     #caption <- paste0("predictor~",toupper(targets[i]))
     caption <- paste0("",toupper(targets[i]))

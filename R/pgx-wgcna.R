@@ -209,10 +209,27 @@ wgcna.compute <- function(X, samples,
   )
   rownames(TOM) <- colnames(TOM) <- colnames(datExpr)
 
+  ## compute module eigenvectors (loading matrix)
+  MVs <- list()
+  for(clr in unique(net$colors)) {
+    ii <- which(net$colors == clr)
+    mX <- datExpr[,ii]
+    mX <- scale(mX)  ## NOTE: seems WGCNA is using full scaling
+    ##mX <- scale(mX, scale=FALSE)  ## better????  
+    sv1 <- irlba::irlba(mX, nv=1, nu=1)
+    ##plot(sv1$u, net$MEs[[paste0("ME",clr)]])
+    ##plot(rowMeans(mX), net$MEs[[paste0("ME",clr)]])
+    sv <- rep(0, ncol(datExpr))
+    sv[ii] <- sv1$v[,1] * sv1$d[1]
+    MVs[[paste0("ME",clr)]] <- sv
+  }
+  MVs <- as.matrix(do.call(cbind, MVs[names(net$MEs)]))
+  rownames(MVs) <- colnames(datExpr)
+
   ## create loading matrix W
-  W <- sapply( me.genes, function(gg) 1*(colnames(datExpr) %in% gg))
-  rownames(W) <- colnames(datExpr)
-  W <- W * colMeans(datExpr)
+#  W <- sapply( me.genes, function(gg) 1*(colnames(datExpr) %in% gg))
+#  rownames(W) <- colnames(datExpr)
+#  W <- W * colMeans(datExpr)
   
   ## construct results object
   results <- list(
@@ -223,7 +240,7 @@ wgcna.compute <- function(X, samples,
       power = power,
       me.genes = me.genes,
       me.colors = me.colors,
-      W = W
+      W = MVs
   )
 
   return(results)
@@ -233,8 +250,8 @@ wgcna.compute <- function(X, samples,
 #'
 #'
 #' @export
-wgcna.plotTOMfromResults <- function(results, power=NULL, networktype="signed",
-                                     tomtype="signed", nSelect=1000) {
+wgcna.plotTOM <- function(results, power=NULL, networktype="signed",
+                          tomtype="signed", nSelect=1000) {
 
   datExpr <- results$datExpr
   MEs <- results$net$MEs
@@ -319,8 +336,8 @@ wgcna.plotTOMfromResults <- function(results, power=NULL, networktype="signed",
 #'
 #'
 #' @export
-wgcna.plotDendroFromResults <- function(results, power=NULL, networktype="signed",
-                                        tomtype="signed", nSelect=1000) {
+wgcna.plotDendroAndColors <- function(results, power=NULL, networktype="signed",
+                                      tomtype="signed", nSelect=1000) {
 
   datExpr <- results$datExpr
   MEs <- results$net$MEs
@@ -432,7 +449,7 @@ wgcna.plotModuleTraitHeatmap <- function(results) {
                  yLabels = names(MEs),
                  ySymbols = names(MEs),
                  colorLabels = FALSE,
-                 colors = greenWhiteRed(50),
+                 colors = blueWhiteRed(50),
                  textMatrix = textMatrix,
                  setStdMargins = FALSE,
                  cex.text = 0.5,

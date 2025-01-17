@@ -13,7 +13,8 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
                             ntop = 250, ncomp = 3, beta = 1,
                             rm.negedge = TRUE, use.corweight = TRUE,
                             dir = "both", ppi = c("STRING","GRAPHITE"),
-                            gset.rho=0.8, gset.filter = NULL ) {
+                            gset.rho=0.8, gset.filter = NULL,
+                            as.name = NULL ) {
   
   F <- pgx.getMetaMatrix(pgx, level = level)$fc
   if (is.null(contrast)) {
@@ -73,23 +74,33 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   ## data matrix
   if (level == "gene") {
     X <- pgx$X
-    X <- collapse_by_humansymbol(X, pgx$genes) ## safe    
+    X <- collapse_by_humansymbol(X, pgx$genes) ## safe
   }
   if (level == "geneset") {
     X <- pgx$gsetX
   }
 
   ## just to be sure
-  pp <- intersect(rownames(X),names(fx))
-  X <- X[pp,]
-  fx <- fx[pp]
-
-  ## for metabolite set name as labels
-  as.name = TRUE
-  labels <- pp
-  if(as.name) {
-    mx.name <- pgx$genes[pp,"gene_title"]
-    labels <- paste0("[",mx.name,"]")
+  gg <- intersect(rownames(X),names(fx))
+  X <- X[gg,]
+  fx <- fx[gg]
+  labels <- gg
+  
+  ## If multi-omics for metabolite set name as labels
+  if(!is.null(as.name) && length(as.name) && as.name[1]!= FALSE) {
+    dt <- pgx$genes$data_type
+    if(is.null(dt)) dt <- "gx"
+    if(is.logical(as.name)) as.name <- unique(dt)
+    if( any(dt %in% as.name)) {
+      match.col <- which.max(apply(pgx$genes, 2, function(a) sum(gg %in% a)))
+      ii <- match(labels, pgx$genes[,match.col])
+      mx.name <- pgx$genes[ii,"gene_title"]
+      dt <- pgx$genes[ii,"data_type"]
+      jj <- which( dt %in% as.name )
+      if(length(jj)) {
+        labels[jj] <- paste0("[",mx.name[jj],"]")
+      }
+    }
   }
   
   ## all X and fx in symbol (HGNC or ChEBI) so we can strip of prefix

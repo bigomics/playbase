@@ -241,13 +241,13 @@ mofa.compute <- function(xdata,
   } else if( kernel == "wgcna") {
     model <- wgcna.compute(
       X, samples,
-      minmodsize = 20,
-      power = 6,
+      minmodsize = 10,
+      power = 10,
       cutheight = 0.15,
       deepsplit = 4,
       networktype = "signed",
       tomtype = "signed",                          
-      ngenes = 1000) 
+      ngenes = ntop ) 
     W <- model$W          ## loadings
     F <- as.matrix(model$net$MEs)  ## factors (coefficients)
   } else {
@@ -1013,6 +1013,7 @@ mofa.plot_multigsea <- function(gsea, type1, type2, k=1, size.par="q",
   s1 <- s1 + 1e-2*rnorm(length(s1))
   s2 <- s2 + 1e-2*rnorm(length(s2))
 
+  ## point size
   cex1 <- 0.1 + (1-qcomb)**2
   col0 <- ifelse( is.null(hilight), "black", "grey60")
   plot( s1, s2, cex = 1.4*cex1, col=col0,
@@ -1166,7 +1167,7 @@ mofa.factor_graphs <- function(F, W, X, y, n=100,
 }
 
 #' @export
-mofa.plot_centrality <- function(res, k, y, show_types=NULL,
+mofa.plot_centrality <- function(res, k, y, show_types=NULL, transpose=FALSE,
                                  main="centrality vs. foldchange") {
   
   gr <- res$graph$features[[k]]
@@ -1200,12 +1201,21 @@ mofa.plot_centrality <- function(res, k, y, show_types=NULL,
   rx <- rx[gg]
   ry <- ctx[gg]
   dx <- 0.06*c(-1,1) * diff(range(rx))
-  plot(rx, ry,
-       pch = 20, cex=1,
-       ylim = c(0,1.05*max(ry)),
-       xlim = range(rx) + dx,
-       ylab = "centrality  (page_rank)",
-       xlab = paste0("logFC  (",test.type,")"))
+  if(transpose) {
+    plot(ry, rx,
+      pch = 20, cex=1,
+      xlim = c(0,1.05*max(ry)),
+      ylim = range(rx) + dx,
+      xlab = "centrality  (page_rank)",
+      ylab = paste0("logFC  (",test.type,")"))
+  } else {
+    plot(rx, ry,
+      pch = 20, cex=1,
+      ylim = c(0,1.05*max(ry)),
+      xlim = range(rx) + dx,
+      ylab = "centrality  (page_rank)",
+      xlab = paste0("logFC  (",test.type,")"))
+  }
   title(main)
   abline(h=0, v=0, lty=2)
   text(rx, ry, gg, pos=3, offset=0.3)
@@ -2028,7 +2038,7 @@ lasagna.solve_SP <- function(obj, pheno, rm.neg=TRUE, vtop=200) {
   wt <- igraph::E(gr)$weight
   max.wt <- max(wt,na.rm=TRUE)
   ##wt <- (max.wt - wt)**1
-  ##wt <- (max.wt / pmax(wt, 1e-2) - 1)**1
+7  ##wt <- (max.wt / pmax(wt, 1e-2) - 1)**1
   wt <- -log(wt + 1e-4)
 
   ## resctrict search to top logFC nodes
@@ -2070,13 +2080,13 @@ lasagna.solve_SP <- function(obj, pheno, rm.neg=TRUE, vtop=200) {
   names(sp.score) <- v.nodes
 
   vv <- lapply(vv, function(v) setdiff(v, c("SOURCE","SINK")))  
-  table(sapply(vv, length))
+  vv <- vv[!duplicated(names(vv))]  
   vv <- vv[sapply(vv, length)>0]
   spath <- sapply(vv, paste, collapse="->")
   V <- data.frame(do.call(rbind, vv))
-
+  
   ##  V$path <- spath
-  rownames(V) <- names(vv)
+  rownames(V) <- make_unique(names(vv))
   vtype <- sub(":.*","",V[1,])
   colnames(V) <- vtype
   head(V)
