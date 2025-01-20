@@ -4,7 +4,7 @@
 \alias{makeContrastFromSamples}
 \title{Create a labeled contrast matrix from samples dataframe.}
 \usage{
-makeContrastFromSamples(samples)
+makeContrastFromSamples(samples, ref = NULL)
 }
 \description{
 Create a labeled contrast matrix from samples dataframe.

@@ -9,27 +9,27 @@ wikipathview(wp, val, as.img = FALSE)
 \arguments{
 \item{wp}{A character string specifying the WikiPathways pathway ID.}
 
-\item{val}{A named numeric vector where names correspond to pathway element IDs, 
-and values represent the level of regulation (e.g., fold-change or intensity). 
+\item{val}{A named numeric vector where names correspond to pathway element IDs,
+and values represent the level of regulation (e.g., fold-change or intensity).
 Positive values indicate up-regulation, while negative values indicate down-regulation.}
 }
 \value{
-A character string representing the path to the modified SVG file, 
+A character string representing the path to the modified SVG file,
         or `NULL` if the download fails.
 }
 \description{
-Downloads a WikiPathways SVG file, modifies its XML structure to color pathway nodes 
+Downloads a WikiPathways SVG file, modifies its XML structure to color pathway nodes
 according to regulation values, and returns the path to the modified file.
 }
 \details{
-The function downloads the SVG representation of a WikiPathways pathway, modifies its 
+The function downloads the SVG representation of a WikiPathways pathway, modifies its
 XML content to color pathway nodes based on the provided `val` parameter:
 - **Positive values**: Nodes are colored red, with the intensity increasing as the value grows.
 - **Negative values**: Nodes are colored blue, with the intensity increasing as the absolute value grows.
 
 Opacity is determined by the square root of the absolute value, scaled and capped at a maximum of 1.
 
-Nodes with IDs matching the names in `val` are colored accordingly. Nodes without matching IDs 
+Nodes with IDs matching the names in `val` are colored accordingly. Nodes without matching IDs
 or `val` values are left unchanged.
 }
 \examples{

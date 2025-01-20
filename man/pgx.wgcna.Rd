@@ -11,7 +11,8 @@ pgx.wgcna(
   cutheight = 0.15,
   deepsplit = 4,
   networktype = "signed",
-  tomtype = "signed Nowick",
+  tomtype = "signed",
+  numericlabels = TRUE,
   ngenes = 1000
 )
 }

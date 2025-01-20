@@ -14,9 +14,10 @@ pgx.computePCSF(
   rm.negedge = TRUE,
   use.corweight = TRUE,
   dir = "both",
-  ppi = "STRING",
+  ppi = c("STRING", "GRAPHITE"),
   gset.rho = 0.8,
-  gset.filter = NULL
+  gset.filter = NULL,
+  as.name = NULL
 )
 }
 \description{

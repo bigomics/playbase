@@ -2,10 +2,10 @@
 % Please edit documentation in R/pgx-metabolomics.R
 \name{convert_probe_to_chebi}
 \alias{convert_probe_to_chebi}
-\title{convert IDs to CHEBI using base R functions (DEPRECATED)}
+\title{Convert IDs to CHEBI using base R functions (DEPRECATED)}
 \usage{
 convert_probe_to_chebi(probes, probe_type = NULL)
 }
 \description{
-convert IDs to CHEBI using base R functions (DEPRECATED)
+Convert IDs to CHEBI using base R functions (DEPRECATED)
 }

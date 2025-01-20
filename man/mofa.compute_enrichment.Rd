@@ -9,7 +9,7 @@ mofa.compute_enrichment(
   ww.types = NULL,
   filter = NULL,
   G = NULL,
-  ntop = NULL
+  ntop = 1000
 )
 }
 \description{
