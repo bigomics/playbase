@@ -715,7 +715,8 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     }
 
     ## restrict to 20000 genes
-    allfc.sd <- apply(allFC, 1, stats::sd, na.rm = TRUE)
+    ## allfc.sd <- apply(allFC, 1, stats::sd, na.rm = TRUE)
+    allfc.sd <- matrixStats::rowSds(allFC, na.rm = TRUE)
     allfc.nna <- rowMeans(!is.na(allFC))
     jj <- Matrix::head(order(-allfc.sd * allfc.nna), 20000)
     allFC <- allFC[jj, , drop = FALSE]

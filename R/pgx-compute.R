@@ -1054,7 +1054,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     if (!is.null(grp)) {
       gsetX.bygroup <- tapply(1:ncol(gsetX), grp, function(i) rowMeans(gsetX[, i, drop = FALSE], na.rm = TRUE))
       gsetX.bygroup <- do.call(cbind, gsetX.bygroup)
-      sdx <- apply(gsetX.bygroup, 1, stats::sd, na.rm = TRUE)
+      ## sdx <- apply(gsetX.bygroup, 1, stats::sd, na.rm = TRUE)
+      sdx <- matrixStats::rowSds(gsetX.bygroup, na.rm = TRUE)
     } else {
       sdx <- matrixStats::rowSds(gsetX, na.rm = TRUE)
     }
