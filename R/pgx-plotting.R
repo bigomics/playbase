@@ -1335,7 +1335,8 @@ ggVolcano <- function(x,
   if (is.null(ylim)) ylim <- max(y, na.rm = TRUE) * 1.1
 
   plt <- ggplot2::ggplot(df, ggplot2::aes(x = fc, y = y)) +
-    ggplot2::geom_point(ggplot2::aes(color = category),
+    ggplot2::geom_point(
+      ggplot2::aes(color = category),
       alpha = marker.alpha, size = marker.size
     ) +
     ggplot2::scale_color_manual(values = c(
@@ -3524,7 +3525,8 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
                                      legend.ysp = 0.85, legend.pos = "bottomright",
                                      tooltip = NULL, theme = NULL, set.par = TRUE,
                                      label.type = c("text", "box"), base_size = 11,
-                                     title = NULL, barscale = 0.8, axis = TRUE, box = TRUE, guide = "legend") {
+                                     title = NULL, barscale = 0.8, axis = TRUE, box = TRUE,
+                                     guide = "legend", girafe = FALSE) {
   if (!is.null(var) && !is.null(ncol(var))) {
     var <- var[, 1]
   }
@@ -3546,7 +3548,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     colnames(pos) <- c("x", "y")
   }
   if (is.null(zlim) && !is.null(cmin) && !is.null(cmax)) zlim <- c(cmin, cmax)
-
+  
   ## automatically set pointsize of dots
   if (is.null(cex)) {
     nr <- nrow(pos)
@@ -3557,6 +3559,12 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     hilight.cex <- cex
   }
 
+  if(0 && girafe) {
+    cex.lab <- 0.9 * cex.lab
+    cex.axis <- 0.9 * cex.axis
+    cex <- 0.9 * cex
+  }
+  
   ## normalize pos
   if (is.null(xlim)) xlim <- range(pos[, 1], na.rm = TRUE)
   if (is.null(ylim)) ylim <- range(pos[, 2], na.rm = TRUE)
@@ -3596,6 +3604,14 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   if (is.null(xlab)) xlab <- colnames(pos)[1]
   if (is.null(ylab)) ylab <- colnames(pos)[2]
 
+  if(girafe) {
+    GEOM_POINT <- ggiraph::geom_point_interactive
+  } else {
+    GEOM_POINT <- ggplot2::geom_point
+  }
+
+  dbg("[pgx.scatterPlotXY.GGPLOT] type = ", type)
+  
   plt <- NULL
   ## Plot the discrete variables
   if (type == "factor") {
@@ -3642,9 +3658,13 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     df <- df[jj, ]
     pt.col <- pt.col[jj]
     cex1 <- ifelse(length(cex) > 1, cex[jj], cex)
-    x <- y <- NULL
-    plt <- ggplot2::ggplot(df, ggplot2::aes(x, y), legend = legend) +
-      ggplot2::geom_point(
+    x <- y <- NULL    
+    plt <- ggplot2::ggplot(
+      data = df,
+      ggplot2::aes(x = x, y = y, tooltip = text, data_id = name),
+      legend = legend
+    ) +
+      GEOM_POINT(      
         shape = 21,
         alpha = opacity,
         size = 1.8 * cex1,
@@ -3758,9 +3778,10 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     }
 
     plt <- ggplot2::ggplot(
-      df, ggplot2::aes(x, y, fill = variable)
+      df,
+      ggplot2::aes(x = x, y = y, fill = variable, tooltip = text, data_id = name),      
     ) +
-      ggplot2::geom_point(
+      GEOM_POINT(
         shape = 21,
         alpha = opacity,
         size = 2.0 * cex1,
@@ -3807,7 +3828,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     sel <- which(df$name %in% hilight)
     if (is.null(hilight.col)) hilight.col <- "transparent"
     plt <- plt +
-      ggplot2::geom_point(
+      GEOM_POINT(
         data = df[sel, ],
         mapping = ggplot2::aes(x, y),
         size = 2.1 * hilight.cex,
@@ -3823,9 +3844,8 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     if (label.type == "text") labelFUN <- ggrepel::geom_text_repel
     if (label.type == "box") labelFUN <- ggrepel::geom_label_repel
     plt <- plt +
-      ggplot2::geom_point(
+      GEOM_POINT(
         data = subset(df, name %in% hilight2),
-        ## mapping = ggplot2::aes(x, y),
         size = 2.1 * hilight.cex,
         shape = 21,
         stroke = 0.5 * hilight2.lwd,
@@ -3837,9 +3857,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
         ggplot2::aes(label = label),
         size = 5.0 * cex.lab,
         color = "black",
-        ## label.size = 0.08,
         max.overlaps = 99,
-        ## fill = scales::alpha(c("white"), 0.6),
         segment.color = "grey20",
         segment.size = 0.5,
         box.padding = grid::unit(0.25, "lines"),
@@ -3883,11 +3901,11 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     ggplot2::xlab(xlab) + ggplot2::ylab(ylab) + ggplot2::ggtitle(title) +
     ggplot2::theme(
       plot.title = ggplot2::element_text(size = 22 * cex.title, hjust = 0, vjust = -1),
-      axis.text.x = ggplot2::element_text(size = 18 * cex.axis),
-      axis.text.y = ggplot2::element_text(size = 18 * cex.axis),
-      axis.title.x = ggplot2::element_text(size = 22 * cex.axis, vjust = +2),
-      axis.title.y = ggplot2::element_text(size = 22 * cex.axis, vjust = +0),
-      plot.margin = ggplot2::margin(1, 1, 1, 1, "mm") ## ??
+      axis.text.x = ggplot2::element_text(size = 12 * cex.axis),
+      axis.text.y = ggplot2::element_text(size = 12 * cex.axis),
+      axis.title.x = ggplot2::element_text(size = 18 * cex.axis, vjust = -3),
+      axis.title.y = ggplot2::element_text(size = 18 * cex.axis, vjust = +5),
+      plot.margin = ggplot2::margin(1, 1, 10, 10, "mm") ## ??
     )
 
   if (axis == FALSE) {
@@ -3902,6 +3920,9 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
       )
   }
 
+  if (girafe) {
+    plt <- ggiraph::girafe(ggobj = plt, pointsize = 10, width_svg = NULL, height_svg = NULL)
+  }
   plt
 }
 
