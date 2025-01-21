@@ -90,7 +90,8 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
   gset <- gset[gg, ]
 
   if (use.rank) {
-    rnk1 <- apply(rnk1, 2, base::rank, na.last = "keep")
+  ##  rnk1 <- apply(rnk1, 2, base::rank, na.last = "keep", ties.method="random")
+    rnk1 <- t(matrixStats::colRanks(rnk1, na.last="keep", ties.method="random"))  
   }
 
   ## two cases: (1) in case no missing values, just use corSparse on

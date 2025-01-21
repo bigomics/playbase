@@ -37,6 +37,8 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
   
   ## MOFA computation
   message("computing MOFA ...")              
+  ##samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes
+
   res <- mofa.compute(
     xdata,
     samples = discretized_samples,
@@ -461,9 +463,9 @@ mofa.compute_enrichment <- function(ww, ww.types=NULL, filter=NULL,
                                     G=NULL,  ntop=1000) {
 
   ##ww.types=filter=G=ntop=NULL
-  ## no genesets
-  ww <- ww[grep("^gset",names(ww),invert=TRUE)]
   names(ww)
+  allowed_types <- c("mx","px","gx","me")
+  ww <- ww[ names(ww) %in% allowed_types ]
   
   ## determine type
   if(is.null(ww.types)) {
@@ -511,10 +513,12 @@ mofa.compute_enrichment <- function(ww, ww.types=NULL, filter=NULL,
     w1 <- ww[[i]]
     nc <- sum(rownames(w1) %in% gg)
     if(nc>0) {
-#      pp <- intersect(rownames(w1),rownames(G))
-      f1 <- gset.rankcor(w1, G, compute.p=TRUE)
+      pp <- intersect(rownames(w1),rownames(G))
+      f1 <- gset.rankcor(w1[pp,], G[pp,], compute.p=TRUE)
       dt <- names(ww)[i]
-      gsea[[dt]] <- f1
+      if(!all(is.na(f1$rho)) && !all(f1$rho==0)) {
+        gsea[[dt]] <- f1
+      }
     }
   }
   names(gsea)
@@ -531,8 +535,14 @@ mofa.compute_enrichment <- function(ww, ww.types=NULL, filter=NULL,
   
   ## As multi-omics score we take the absolute geometric average
   nt <- length(rho)
-  multi.rho <- abs(Reduce("*", x=rho))^(1/nt)
-
+  multi.rho <- log(pmax(abs(rho[[1]]),0.01))
+  if(nt > 1) {
+    for(i in 2:nt) {
+      multi.rho <- multi.rho + log(pmax(abs(rho[[i]]),0.01))
+    }
+  }
+  multi.rho <- exp(multi.rho / nt)
+  
   ## As multi-omics p.value we use Stouffer's method
   P <- sapply( p.value, as.vector)
   P[is.na(P)] <- 0.999
@@ -565,11 +575,14 @@ mofa.compute_enrichment <- function(ww, ww.types=NULL, filter=NULL,
       sign = multi.equal_sign[,i],
       p = multi.p[,i],
       q = multi.q[,i]
-    )      
+    )
+    colnames(df.multi) <- paste0("multi.",colnames(df.multi))
+    colnames(df.rho) <- paste0("rho.",colnames(df.rho))
+    colnames(df.pval) <- paste0("pval.",colnames(df.pval))    
     df <- data.frame(
-      multi = I(df.multi),
-      rho  = I(df.rho),
-      pval = I(df.pval)
+      df.multi,
+      df.rho,
+      df.pval
     )
     #df <- df[!is.na(df$multi.rho),,drop=FALSE]
     ct <- colnames(multi.rho)[i]
@@ -579,12 +592,38 @@ mofa.compute_enrichment <- function(ww, ww.types=NULL, filter=NULL,
   if(!is.null(ntop) && ntop > 0) {
     i=1
     for(i in 1:length(enr)) {
-      ii <- order(-abs(enr[[i]]$multi$score))
+      ii <- order(-abs(enr[[i]]$multi.score))
       enr[[i]] <- head( enr[[i]][ii,], ntop )
     }
   }
   
   return(enr)
+}
+
+#' @export
+mofa.enrichment_table <- function(gsea, pheno, datatypes=NULL, full=TRUE) {
+  k <- pheno
+  G <- gsea[[k]]
+  if(is.null(datatypes)) {
+    datatypes <- sub("^rho.","",grep("^rho",colnames(G),value=TRUE))
+  }
+  S <- G[,paste0("rho.",datatypes),drop=FALSE]
+  P <- G[,paste0("pval.",datatypes),drop=FALSE]
+  multi.score <- gsea[[k]]$multi.score
+  multi <- G[,grep("multi.",colnames(G)),drop=FALSE]
+  snames <- stringr::str_trunc(rownames(S),72)      
+  sign <- paste0( c("-","+")[1+(sign(S[,1])==1)],
+                 c("-","+")[1+(sign(S[,2])==1)] )
+  if(full) {
+    df <- data.frame( pathway = snames, multi, S, P)
+    rownames(df) <- rownames(S)
+    df <- df[order(-multi$multi.score),]
+  } else {
+    df <- data.frame( pathway = snames, multi.score, S)
+    rownames(df) <- rownames(S)
+    df <- df[order(-multi.score),]
+  }
+  df
 }
 
 
@@ -707,7 +746,7 @@ mofa.plot_weights <- function(weights, k, ntop=10, cex.names=0.9,
       abline(v=0)
       mtext(paste0("sorted features (N=",length(w1),")"), side=2)
     }
-    title(toupper(v), cex.main=1.2)
+    title(toupper(v), cex.main=1.1)
   }
 }
 
@@ -992,22 +1031,21 @@ mofa.plot_enrichment <- function(gsea, type="barplot",
 }
 
 
-
 #' 
 #' @export
 mofa.plot_multigsea <- function(gsea, type1, type2, k=1, size.par="q",
                                 main=NULL, hilight=NULL) {
   ##gsea=res$gsea;type1="px";type2="mx"
   ## using pre-computed GSEA  
-  s1 <- gsea[[k]]$rho[,type1]
-  s2 <- gsea[[k]]$rho[,type2]
-  #qq <- gsea[[k]]$pval[,c(type1, type2)]
-  #qq[is.na(qq)] <- 1
-  #qcomb <- apply(qq,1,max)
+  R <- gsea[[k]]
+  R <- R[, grep("^rho",colnames(R))]
+  colnames(R) <- sub("^rho.", "",colnames(R))
+  s1 <- R[,type1]
+  s2 <- R[,type2]
   if(size.par=="q") {
-    qcomb <- gsea[[k]]$multi$q  ## meta q-value
+    qcomb <- gsea[[k]]$multi.q  ## meta q-value
   } else {
-    qcomb <- gsea[[k]]$multi$p  ## meta q-value
+    qcomb <- gsea[[k]]$multi.p  ## meta q-value
   }
   
   s1 <- s1 + 1e-2*rnorm(length(s1))
@@ -1167,39 +1205,33 @@ mofa.factor_graphs <- function(F, W, X, y, n=100,
 }
 
 #' @export
-mofa.plot_centrality <- function(res, k, y, show_types=NULL, transpose=FALSE,
-                                 main="centrality vs. foldchange") {
-  
+mofa.plot_centrality <- function(res, k, show_types=NULL, transpose=FALSE,
+                                 main="centrality vs. factor weight",
+                                 justdata=FALSE) {
+
+  ## compute centrality
   gr <- res$graph$features[[k]]
   gg <- igraph::V(gr)$name
   gr <- igraph::mst(gr, weight=1/igraph::E(gr)$weight)
   ctx <- igraph::page_rank(gr)$vector
   names(ctx) <- gg
-
-  gg <- intersect(gg, rownames(res$X))
-  xx <- res$X[gg,]
   
-  if(!is.null(show_types) && length(show_types)) {
-    dt <- sub(":.*","",rownames(xx))
-    sel <- which(dt %in% show_types)
-    xx <- xx[sel,, drop=FALSE]
+  rx <- res$W[,k]
+  names(rx) <- rownames(res$W)
+  
+  gg <- intersect(names(ctx), names(rx))
+  if(!is.null(show_types)) {
+    dt <- sub(":.*","",gg)
+    gg <- gg[which(dt %in% show_types)]
   }
-  
-  nlev <- length(unique(y[!is.na(y)]))
-  test.type <- "" 
-  if(nlev==2) {
-    lm <- gx.limma(xx, y, fdr=1,lfc=0)
-    test.type <- "limma" 
-  } else { 
-    lm <- gx.limmaF(xx, y, fdr=1,lfc=0)
-    test.type <- "limmaF" 
-  }
-  
-  rx <- lm$logFC
-  names(rx) <- rownames(lm)
-  gg <- rownames(xx)
   rx <- rx[gg]
   ry <- ctx[gg]
+
+  if(justdata) {
+    df <- data.frame( feature=names(rx), weight=rx, centrality=ry)
+    return(df)
+  }
+
   dx <- 0.06*c(-1,1) * diff(range(rx))
   if(transpose) {
     plot(ry, rx,
@@ -1214,11 +1246,16 @@ mofa.plot_centrality <- function(res, k, y, show_types=NULL, transpose=FALSE,
       ylim = c(0,1.05*max(ry)),
       xlim = range(rx) + dx,
       ylab = "centrality  (page_rank)",
-      xlab = paste0("logFC  (",test.type,")"))
+      xlab = "factor weight"
+    )
   }
   title(main)
   abline(h=0, v=0, lty=2)
-  text(rx, ry, gg, pos=3, offset=0.3)
+  nrx <- rx / mean(abs(rx))
+  nry <- ry / mean(abs(ry))
+  ii <- head(order(-(nrx**2+nry**2)),40)
+  text(rx[ii], ry[ii], gg[ii], cex=0.85, pos=3, offset=0.3)
+
 }
 
 #' @export

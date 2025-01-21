@@ -120,7 +120,8 @@ wgcna.compute <- function(X, samples,
                           networktype = "signed",
                           tomtype = "signed",                          
                           ngenes = 1000,
-                          numericlabels = TRUE
+                          numericlabels = TRUE,
+                          prefix = "ME"
                           ) {
 
   ##minmodsize=20;power=6;cutheight=0.15;deepsplit=2;ngenes=1000;networktype="signed";tomtype = "signed"
@@ -179,9 +180,11 @@ wgcna.compute <- function(X, samples,
   )
   cor <- stats::cor
 
+##  prefix="ME"
   table(net$colors)
-  net$labels <- paste0("ME",net$colors)
-  
+  names(net$MEs) <- sub("^ME",prefix,names(net$MEs))
+  net$labels <- paste0(prefix,net$colors)
+
   ## clean up traits matrix
   datTraits <- samples
   ## no dates please...
@@ -203,7 +206,7 @@ wgcna.compute <- function(X, samples,
 
   ## list of genes in modules
   me.genes <- tapply(names(net$colors), net$colors, list)
-  names(me.genes) <- paste0("ME", names(me.genes))
+  names(me.genes) <- paste0(prefix, names(me.genes))
   me.genes <- me.genes[names(net$MEs)]
 
   ## get colors of eigengene modules  
@@ -230,11 +233,9 @@ wgcna.compute <- function(X, samples,
     mX <- scale(mX)  ## NOTE: seems WGCNA is using full scaling
     ##mX <- scale(mX, scale=FALSE)  ## better????  
     sv1 <- irlba::irlba(mX, nv=1, nu=1)
-    ##plot(sv1$u, net$MEs[[paste0("ME",clr)]])
-    ##plot(rowMeans(mX), net$MEs[[paste0("ME",clr)]])
     sv <- rep(0, ncol(datExpr))
     sv[ii] <- sv1$v[,1] * sv1$d[1]
-    MVs[[paste0("ME",clr)]] <- sv
+    MVs[[paste0(prefix,clr)]] <- sv
   }
   MVs <- as.matrix(do.call(cbind, MVs[names(net$MEs)]))
   rownames(MVs) <- colnames(datExpr)
@@ -265,15 +266,15 @@ wgcna.geneStats <- function(net, datExpr, datTraits, TOM) {
 
   ## Recalculate MEs with color labels
   moduleTraitCor = cor(net$MEs, datTraits, use = "pairwise.complete");
-  moduleTraitPvalue = corPvalueStudent(moduleTraitCor, nSamples);
+  moduleTraitPvalue = WGCNA::corPvalueStudent(moduleTraitCor, nSamples);
 
   ## Module membership correlation (with p-values)
   moduleMembership = cor(datExpr, net$MEs, use = "p");
-  MMPvalue = corPvalueStudent(as.matrix(moduleMembership), nSamples);
+  MMPvalue = WGCNA::corPvalueStudent(as.matrix(moduleMembership), nSamples);
   
   ## Gene-trait significance (trait correlation) (with p-values)
   traitSignificance = cor(datExpr, datTraits, use = "p");
-  GSPvalue = corPvalueStudent(as.matrix(traitSignificance), nSamples);
+  GSPvalue = WGCNA::corPvalueStudent(as.matrix(traitSignificance), nSamples);
 
   ## Fold-change
   lm <- lapply(datTraits, function(y) gx.limma( t(datExpr), y, lfc=0, fdr=1,
@@ -510,17 +511,15 @@ wgcna.labels2colors <- function(colors, ...) {
   return(colors)
 }
 
+
 #' @export
 wgcna.plotModuleTraitHeatmap <- function(res, setpar=TRUE, cluster=FALSE,
-                                         main = NULL, justdata=FALSE ) {
+                                         main = NULL, justdata=FALSE,
+                                         pstar = TRUE) {
   
   ## Define numbers of genes and samples
   nGenes = ncol(res$datExpr);
   nSamples = nrow(res$datExpr);
-  ## Recalculate MEs with color labels
-  moduleColors <- res$net$colors
-  #MEs0 = moduleEigengenes(res$datExpr, moduleColors)$eigengenes
-  MEs = res$net$MEs
   if("stats" %in% names(res)) {
     moduleTraitCor = res$stats$moduleTraitCor
     moduleTraitPvalue <- res$stats$moduleTraitPvalue
@@ -532,18 +531,24 @@ wgcna.plotModuleTraitHeatmap <- function(res, setpar=TRUE, cluster=FALSE,
   if(cluster) {
     ii <- hclust(dist(moduleTraitCor))$order
     jj <- hclust(dist(t(moduleTraitCor)))$order
-    moduleTraitCor <- moduleTraitCor[ii,jj]    
   } else {
     ii <- rev(order(rownames(moduleTraitCor)))
     jj <- order(colnames(moduleTraitCor))  
-    moduleTraitCor <- moduleTraitCor[ii,jj]
   }
+  moduleTraitCor <- moduleTraitCor[ii,jj]
+  moduleTraitPvalue <- moduleTraitPvalue[ii,jj]    
 
   if(justdata) return(moduleTraitCor)
   
   ## Will display correlations and their p-values
-  textMatrix =  paste(signif(moduleTraitCor, 2), "\n(",
-                      signif(moduleTraitPvalue, 1), ")", sep = "");
+  if(pstar) {
+    textPv = cut(moduleTraitPvalue, breaks=c(-1,0.001,0.01,0.05,99),
+                 labels = c("★★★","★★","★",""))
+  } else {
+    textPv = paste0("(",signif(moduleTraitPvalue, 1), ")")
+  }
+  
+  textMatrix = paste0(signif(moduleTraitCor, 2), "\n", textPv)
   dim(textMatrix) = dim(moduleTraitCor)
   if(setpar) par(mar = c(8, 8, 3, 3));
   if(is.null(main)) main <- "Module-trait relationships"
@@ -559,9 +564,8 @@ wgcna.plotModuleTraitHeatmap <- function(res, setpar=TRUE, cluster=FALSE,
                         cex.text = 0.7,
                         zlim = c(-1,1),
                         main = main)
-
+  
 }
-
 
 #' Plot membership correlation vs gene signficance (correlation with
 #' trait) to discover biomarkers/driver genes.
@@ -819,6 +823,53 @@ wgcna.plotSampleDendroAndColors <- function(res,
     marAll = c(0.2, 7, 1.5, 0.5),
     main = main
   )
+}
+
+
+#' @export
+wgcna.plotLabeledCorrelationHeatmap <- function(R, nSamples, setpar=TRUE, cluster=FALSE,
+                                                main = NULL, justdata=FALSE,
+                                                pstar = TRUE) {
+  
+  ## Define numbers of genes and samples
+  Pvalue = corPvalueStudent(R, nSamples);
+  if(cluster) {
+    ii <- hclust(dist(R))$order
+    jj <- hclust(dist(t(R)))$order
+  } else {
+    ii <- rev(order(rownames(R)))
+    jj <- order(colnames(R))  
+  }
+  R <- R[ii,jj]
+  Pvalue <- Pvalue[ii,jj]    
+
+  if(justdata) return(R)
+  
+  ## Will display correlations and their p-values
+  if(pstar) {
+    textPv = cut(Pvalue, breaks=c(-1,0.001,0.01,0.05,99),
+                 labels = c("★★★","★★","★",""))
+  } else {
+    textPv = paste0("(",signif(Pvalue, 1), ")")
+  }
+  
+  textMatrix = paste0(signif(R, 2), "\n", textPv)
+  dim(textMatrix) = dim(R)
+  if(setpar) par(mar = c(8, 8, 3, 3));
+  if(is.null(main)) main <- "Correlation heatmap"
+  ## Display the correlation values within a heatmap plot
+  WGCNA::labeledHeatmap(Matrix = R,
+                        xLabels = colnames(R),
+                        yLabels = rownames(R),
+                        xSymbols = colnames(R),
+                        ySymbols = rownames(R),                        
+                        colorLabels = FALSE,
+                        colors = blueWhiteRed(50),
+                        textMatrix = textMatrix,
+                        setStdMargins = FALSE,
+                        cex.text = 0.7,
+                        zlim = c(-1,1),
+                        main = main)
 
 }
 
