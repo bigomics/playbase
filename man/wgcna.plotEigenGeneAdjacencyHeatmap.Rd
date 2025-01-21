@@ -10,7 +10,8 @@ wgcna.plotEigenGeneAdjacencyHeatmap(
   res,
   add_traits = TRUE,
   marx = 1,
-  main = NULL
+  main = NULL,
+  justdata = FALSE
 )
 }
 \description{

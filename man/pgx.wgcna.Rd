@@ -9,7 +9,7 @@ pgx.wgcna(
   minmodsize = 20,
   power = 6,
   cutheight = 0.15,
-  deepsplit = 4,
+  deepsplit = 2,
   networktype = "signed",
   tomtype = "signed",
   numericlabels = TRUE,
