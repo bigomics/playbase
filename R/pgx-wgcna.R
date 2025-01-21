@@ -41,10 +41,7 @@ pgx.wgcna <- function(
     numericlabels = TRUE,
     ngenes = 1000) {
 
-  ## if we dont source WGCNA, blockwiseModules does not work..
-  ##require(WGCNA)
-
-  #minmodsize=10;power=NULL;cutheight=0.25;deepsplit=2;ngenes=1000;networktype="signed";tomtype="signed";numericlabels=FALSE
+  ##minmodsize=10;power=NULL;cutheight=0.25;deepsplit=2;ngenes=1000;networktype="signed";tomtype="signed";numericlabels=FALSE
   
   res <- wgcna.compute(
     X = pgx$X,
@@ -53,7 +50,7 @@ pgx.wgcna <- function(
     power = power,             # default: 6
     cutheight = cutheight,     # default: 0.15
     deepsplit = deepsplit,     # default: 2
-    networktype = networktype, # default: unsigned 
+    networktype = networktype, # default: unsigned (but signed is better...)
     tomtype = tomtype,         # default: signed                  
     numericlabels = numericlabels,
     ngenes = ngenes)
@@ -72,34 +69,7 @@ pgx.wgcna <- function(
   ##----------------------------------------------------
   ## Do quick geneset analysis 
   ##----------------------------------------------------
-  sel <- grep("PATHWAY|HALLMARK|^GO|^C[1-9]",colnames(pgx$GMT))
-  bg <- toupper(rownames(pgx$X))
-  gmt1 <- mat2gmt(pgx$GMT[,sel])
-  gmt1.size <- sapply(gmt1, length)
-  gmt1 <- gmt1[gmt1.size >= 10]
-
-  ## Perform fisher-test (fastest method)
-  i <- 1
-  gse <- NULL
-  me.genes <- res$me.genes
-  for (i in 1:length(me.genes)) {
-    ## gg <- toupper(me.genes[[i]])
-    symbol.col <- intersect(c("symbol","gene_name"),colnames(pgx$genes))[1]
-    gg <- probe2symbol(me.genes[[i]], pgx$genes, query = symbol.col)
-    rr <- try(gset.fisher(gg, gmt1, background = bg, fdr = 1, min.genes = 10))
-    if (!"try-error" %in% class(rr)) {
-      rr <- cbind(module = names(me.genes)[i], geneset = rownames(rr), rr)
-      rr <- rr[order(rr$p.value), , drop = FALSE]
-      if (is.null(gse)) {
-        gse <- rr
-      } else {
-        gse <- rbind(gse, rr)
-      }
-    }
-    rownames(gse) <- NULL
-  }
-
-  dbg("[pgx.wgcna] dim.gse = ", dim(gse))
+  gse <- wgcna.compute_enrichment(res, pgx, method="fisher") 
   
   ## add to results object
   res$gse <- gse
@@ -240,7 +210,7 @@ wgcna.compute <- function(X, samples,
   MVs <- as.matrix(do.call(cbind, MVs[names(net$MEs)]))
   rownames(MVs) <- colnames(datExpr)
 
-  stats <- wgcna.geneStats(net, datExpr, datTraits, TOM=TOM) 
+  stats <- wgcna.compute_geneStats(net, datExpr, datTraits, TOM=TOM) 
   
   ## construct results object
   results <- list(
@@ -258,7 +228,7 @@ wgcna.compute <- function(X, samples,
   return(results)
 }
 
-wgcna.geneStats <- function(net, datExpr, datTraits, TOM) {
+wgcna.compute_geneStats <- function(net, datExpr, datTraits, TOM) {
   
   ## Define numbers of genes and samples
   nGenes = ncol(datExpr);
@@ -321,6 +291,69 @@ wgcna.geneStats <- function(net, datExpr, datTraits, TOM) {
 
   return(stats)
 }
+
+wgcna.compute_enrichment <- function(res, pgx, method="fisher") {
+
+  ##----------------------------------------------------
+  ## Do quick geneset analysis 
+  ##----------------------------------------------------
+  sel <- grep("PATHWAY|HALLMARK|^GO|^C[1-9]",colnames(pgx$GMT))
+  symbol.col <- intersect(c("symbol","gene_name"),colnames(pgx$genes))[1]
+  bg <- probe2symbol(rownames(pgx$X), pgx$genes, query = symbol.col)  
+  bg <- intersect(bg, rownames(pgx$GMT))
+  G1 <- pgx$GMT[bg,sel]
+  G1 <- G1[, which(Matrix::colSums(G1!=0) >= 10)]
+  gmt1 <- mat2gmt(G1)
+  dim(G1)
+  length(gmt1)
+  gsetX <- pgx$gsetX[colnames(G1),]
+  dim(gsetX)
+  
+  if(method == "rankcor") {
+    ## Perform rankcor
+    ME <- as.matrix(res$net$MEs)
+    rc <- gset.rankcor(ME, gsetX, compute.p=TRUE)
+    head(rc$rho)
+    gse <- reshape2::melt(rc$rho)
+    gs.p <- reshape2::melt(rc$p.value)
+    gs.q <- reshape2::melt(rc$q.value)
+    colnames(gse) <- c("geneset","module","rho")
+    gse$p.value <- gs.p$value
+    gse$q.value <- gs.q$value
+    gse$score <- gse$rho * -log10(gse$p.value)
+    head(gse)
+  }
+
+  if(method == "fisher") {
+    ## Perform fisher-test (fastest method)
+    i=1
+    gse <- NULL
+    me.genes <- res$me.genes
+    for (i in 1:length(me.genes)) {
+      ## gg <- toupper(me.genes[[i]])
+      gg <- probe2symbol(me.genes[[i]], pgx$genes, query = symbol.col)
+      rr <- try(gset.fisher(gg, gmt1, background = bg, fdr = 1, min.genes = 10))
+      if (!"try-error" %in% class(rr)) {
+        rr <- cbind(module = names(me.genes)[i], geneset = rownames(rr), rr)
+        rr <- rr[order(rr$p.value), , drop = FALSE]
+        if (is.null(gse)) {
+          gse <- rr
+        } else {
+          gse <- rbind(gse, rr)
+        }
+      }
+      rownames(gse) <- NULL
+    }
+    ## handle infinite
+    gse$odd.ratio[is.infinite(gse$odd.ratio)] <- 99
+    gse$score <- gse$odd.ratio * -log10(gse$p.value)
+  }
+  
+  dbg("[pgx.wgcna] dim.gse = ", dim(gse))
+  gse.list <- tapply( 1:nrow(gse), gse$module, function(ii) gse[ii,] )  
+  return(gse.list)
+}
+
 
 #'
 #'
