@@ -177,7 +177,7 @@ pgx.createPGX <- function(counts,
                           convert.hugo = TRUE,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE,
-                          remove.outliers = TRUE,
+                          remove.outliers = TRUE, ## IS THIS USED???
                           sc_compute_settings = list()) {
   
   message("[pgx.createPGX]===========================================")
@@ -455,7 +455,7 @@ pgx.createPGX <- function(counts,
   message("[pgx.createPGX]======================================")
   message("\n\n")
 
-  saveRDS(pgx, "~/Desktop/LL1.RDS")
+  saveRDS(pgx, "~/Desktop/MNT/LL1.RDS")
 
   
   return(pgx)
@@ -562,7 +562,7 @@ pgx.computePGX <- function(pgx,
     pgx$samples$cluster <- idx
   }
 
-  saveRDS(pgx, "~/Desktop/LL2.RDS")
+  saveRDS(pgx, "~/Desktop/MNT/LL2.RDS")
 
   ## Make contrasts by cluster
   if (cluster.contrasts) {
@@ -588,7 +588,7 @@ pgx.computePGX <- function(pgx,
     pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), X = pgx$impX, level = "gene")
   }
 
-  saveRDS(pgx, "~/Desktop/LL3.RDS")
+  saveRDS(pgx, "~/Desktop/MNT/LL3.RDS")
 
   ## -----------------------------------------------------------------------------
   ## Filter genes (previously in compute_testGenesSingleOmics). NEED
@@ -614,6 +614,7 @@ pgx.computePGX <- function(pgx,
     pgx$impX <- pgx$impX[gg, ]
   }
 
+  saveRDS(pgx, "~/Desktop/MNT/LL4.RDS")
   ## ======================================================================
   ## ================= Run tests ==========================================
   ## ======================================================================
@@ -640,7 +641,7 @@ pgx.computePGX <- function(pgx,
     use.design = use.design,
     prune.samples = prune.samples
   )
-
+  saveRDS(pgx, "~/Desktop/MNT/LL5.RDS")
   ## ------------------ gene set tests -----------------------
   if (!is.null(progress)) progress$inc(0.2, detail = "testing gene sets")
 
@@ -652,7 +653,7 @@ pgx.computePGX <- function(pgx,
       custom.geneset = custom.geneset,
       test.methods = gset.methods
     )
-
+    saveRDS(pgx, "~/Desktop/MNT/LL6.RDS")
     ## Cluster by genes
     if (do.clustergenesets) {
       message("[pgx.computePGX] clustering genesets...")
@@ -664,7 +665,7 @@ pgx.computePGX <- function(pgx,
   } else {
     message("[pgx.computePGX] Skipping genesets test")
   }
-
+  saveRDS(pgx, "~/Desktop/MNT/LL7.RDS")
   ## ------------------ extra analyses ---------------------
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
   message("[pgx.computePGX] computing extra modules...")
@@ -681,7 +682,7 @@ pgx.computePGX <- function(pgx,
   message("[pgx.computePGX]======== pgx.computePGX: DONE! ========")
   message("[pgx.computePGX]=======================================")
   message("\n\n")
-
+  saveRDS(pgx, "~/Desktop/MNT/LL8.RDS")
   return(pgx)
 }
 
