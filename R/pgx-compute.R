@@ -637,12 +637,7 @@ pgx.computePGX <- function(pgx,
   ## Cluster by genes
   if (do.clustergenes) {
     message("[pgx.computePGX] clustering genes...")
-<<<<<<< HEAD
-    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3),
-                                      X = pgx$impX, level = "gene")
-=======
     pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), X = pgx$impX, level = "gene")
->>>>>>> main
   }
 
   ## -----------------------------------------------------------------------------
@@ -919,24 +914,12 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     }
   }
 
-<<<<<<< HEAD
   # create a feature list that will be used to filter and reduce dimensions of G
   full_feature_list <- c(pgx$genes$human_ortholog, pgx$genes$symbol,
                          rownames(pgx$genes))
   full_feature_list <- full_feature_list[!is.na(full_feature_list)]
   full_feature_list <- full_feature_list[full_feature_list != ""]
   full_feature_list <- unique(full_feature_list)    
-=======
-  G <- G[rownames(G) %in% full_feature_list, , drop = FALSE]
-
-  # Convert G feature/symbol/human_ortholog to SYMBOL
-  rownames(G) <- probe2symbol(
-    rownames(G), pgx$genes,
-    key = "human_ortholog",
-    query = "symbol", fill_na = TRUE
-  )
-
->>>>>>> main
 
   if(!is.null(G)) {
     G <- G[rownames(G) %in% full_feature_list, , drop = FALSE]
@@ -1024,37 +1007,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     } ## end-if go.genesets
   } ## end-if !metabolics
 
-<<<<<<< HEAD
-=======
-    # get the length of go.genesets and add to gmt info
-    go.size <- sapply(go.genesets, length)
-
-    if (length(go.size) > 0) { # if no go genesets pass the min/max filter playbase function crashes
-      # convert to sparse matrix
-      go.gmt <- createSparseGenesetMatrix(
-        gmt.all = go.genesets,
-        min.geneset.size = 15,
-        max.geneset.size = 400,
-        all_genes = full_feature_list,
-        min_gene_frequency = 1,
-        annot = pgx$genes,
-        filter_genes = FALSE
-      )
-
-      # merge go.gmt with G
-      G <- merge_sparse_matrix(
-        m1 = G,
-        m2 = Matrix::t(go.gmt)
-      )
-    }
-  }
-
-
-  # At this stage we have metabolomics genesets in G or
-  # transcriptomics/proteomics genesets in G combined with random
-  # genesets (if necessary) and GO genesets
->>>>>>> main
-
   if (!is.null(custom.geneset$gmt)) {
     message("[pgx.add_GMT] Adding custom genesets...")
     ## convert gmt standard to SPARSE matrix: gset in rows, genes in columns.
@@ -1074,8 +1026,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       # only run this code if custom_gmt has columns (genes)
       colnames(custom_gmt) <- probe2symbol(
         colnames(custom_gmt), pgx$genes, "symbol", fill_na = TRUE)
-
-<<<<<<< HEAD
       if(is.null(G)) {
         G <- Matrix::t(custom_gmt)
       } else {
@@ -1084,14 +1034,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
           m2 = Matrix::t(custom_gmt)
         )
       }
-=======
-      colnames(custom_gmt) <- probe2symbol(colnames(custom_gmt), pgx$genes, "symbol", fill_na = TRUE)
-
-      G <- merge_sparse_matrix(
-        m1 = G,
-        m2 = Matrix::t(custom_gmt)
-      )
->>>>>>> main
       remove(custom_gmt)
     }
   }
@@ -1220,7 +1162,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     )
 
     # merge add.gmt with G
-<<<<<<< HEAD
     if(is.null(G)) {
       G = Matrix::t(add.gmt)
     } else {
@@ -1229,12 +1170,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
         m2 = Matrix::t(add.gmt)
       )
     }
-=======
-    G <- merge_sparse_matrix(
-      m1 = G,
-      m2 = Matrix::t(add.gmt)
-    )
->>>>>>> main
   }
 
   # normalize columns (required for some methods downstream)log2foldchange
