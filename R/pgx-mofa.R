@@ -1,6 +1,6 @@
 ##reticulate::use_miniconda("r-reticulate")
 
-#' 
+#' Main function to call MOFA analysis on pgx object. 
 #'
 #' @export
 pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
@@ -8,13 +8,15 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
 
   has.prefix <- (mean(grepl(":",rownames(pgx$X))) > 0.8)
   is.multiomics <- ( pgx$datatype == "multi-omics" && has.prefix)
+
+  X <- rename_by( pgx$X, pgx$genes, "symbol")
   xdata <- NULL
   if(is.multiomics) {
     message("[compute.multi_omics] splitting by omics-type ")
-    xdata <- mofa.split_data(pgx$X)
+    xdata <- mofa.split_data(X)
   } else {
     message("[compute.multi_omics] splitting by gene role")
-    xdata <- mofa.splitByGeneRole(pgx$X)
+    xdata <- mofa.splitByGeneRole(X)
   }
 
   numfactors <- min( numfactors, min(dim(xdata[[1]])) )
@@ -37,9 +39,9 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
   
   ## MOFA computation
   message("computing MOFA ...")              
-  ##samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes
 
-  res <- mofa.compute(
+  #samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa;ntop=10000;numfactor=10"
+  mofa <- mofa.compute(
     xdata,
     samples = discretized_samples,
     contrasts = pgx$contrasts,
@@ -50,9 +52,15 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
     scale_views = TRUE, 
     ntop = ntop,
     max_iter = 200,
-    num_factors = numfactors) 
-
-  names(res)
+    numfactors = numfactors) 
+  
+  mofa$gset.mofa <- mofa.compute_geneset_mofa(
+    mofa,
+    kernel = kernel,
+    factorname = "Module",
+    GMT = pgx$GMT,
+    numfactors = 12
+  )
   
   ## LASAGNA computation
   message("computing LASAGNA model...")            
@@ -70,12 +78,49 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
   xx <- xx[names(xdata)]   ## remove SOURCE/SINK
    
   message("computing cluster positions (samples)...")
-  res$posx <- mofa.compute_clusters(xx, along="samples")  
+  mofa$posx <- mofa.compute_clusters(xx, along="samples")  
   message("computing cluster positions (features)...")
-  res$posf <- mofa.compute_clusters(xx, along="features")
-  res$lasagna <- lasagna
+  mofa$posf <- mofa.compute_clusters(xx, along="features")
+  mofa$lasagna <- lasagna
   
-  return(res)
+  return(mofa)
+}
+
+
+#' Compute enrichment for MOFA factors.
+#' 
+#' @export
+mofa.compute_geneset_mofa <- function(mofa,
+                                      kernel = "mofa",
+                                      GMT = NULL,
+                                      numfactors = 20,
+                                      factorname = "Module") {
+
+##  kernel="mofa";numfactors=20
+
+  ## create geneset for all relevant datatypes
+  gsetX <- mofa.add_genesets(mofa$xx, GMT=GMT) 
+
+  ## compute MOFA in geneset space
+  mindimx <- min(dim(gsetX[[1]]))
+  numfactors <- min(numfactors, mindimx)
+
+  gset.mofa <- mofa.compute(
+    xdata = gsetX,
+    samples = mofa$samples,
+    contrasts = mofa$contrasts,
+    factorname = factorname,
+    annot = NULL,
+    pheno = NULL,
+    kernel = kernel,
+    scale_views = TRUE,
+    gpu_mode = FALSE,
+    ntop = 5000,
+    max_iter = 200,
+    compute.enrichment = FALSE,  ## no!
+    numfactors = numfactors) 
+  
+  return(gset.mofa)
 }
 
 
@@ -85,6 +130,7 @@ mofa.compute <- function(xdata,
                          contrasts,
                          annot,
                          kernel = "mofa",
+                         factorname = NULL,
                          pheno = NULL,
                          GMT = NULL,
                          scale_views = TRUE,
@@ -92,11 +138,11 @@ mofa.compute <- function(xdata,
                          max_iter = 1000,
                          gpu_mode = FALSE,
                          compute.clusters = TRUE,
-                         num_factors = 10,
+                         compute.enrichment = TRUE,
+                         numfactors = 10,
                          num_factor_features = 100
                          ) {
   
-
   if(!is.null(ntop) && ntop>0) {
     info("[mofa.compute] reducing data blocks: ntop = ", ntop)
     ## fast prioritization of features using SD or rho (correlation
@@ -170,7 +216,7 @@ mofa.compute <- function(xdata,
     data_opts
     
     model_opts <- MOFA2::get_default_model_options(obj)
-    model_opts$num_factors <- num_factors
+    model_opts$num_factors <- numfactors
     ##model_opts$likelihoods <- c("gaussian","gaussian","gaussian","bernoulli")
     
     train_opts <- MOFA2::get_default_training_options(obj)
@@ -187,10 +233,10 @@ mofa.compute <- function(xdata,
     
     ## where to save??? Do we need to save???
     outfile = file.path(tempdir(),"mofa-model.hdf5")
-    ##outfile = file.path(getwd(),"mofa-model.hdf5")
-    ##  suppressMessages(suppressWarnings(
-    model <- MOFA2::run_mofa(obj, outfile=outfile, save_data=TRUE,
-                             use_basilisk=FALSE)
+    suppressMessages(suppressWarnings(
+      model <- MOFA2::run_mofa(obj, outfile=outfile, save_data=TRUE,
+                               use_basilisk=FALSE)
+    ))
     
     ##model <- load_model(outfile, remove_inactive_factors = FALSE)
     model <- MOFA2::impute(model)
@@ -198,9 +244,11 @@ mofa.compute <- function(xdata,
     weights <- MOFA2::get_weights(model, views = "all", factors = "all")
     W <- do.call(rbind, weights)
     F <- do.call(rbind, factors)
-
+    dim(W)
+    dim(F)
+    
   } else if( tolower(kernel) %in% c("pca","svd")) {
-    model <- irlba::irlba( X, nv=num_factors, maxit=max_iter, work=100)
+    model <- irlba::irlba( X, nv=numfactors, maxit=max_iter, work=100)
     W <- model$u 
     F <- model$v %*% diag(model$d)
     rownames(W) <- rownames(X)
@@ -221,7 +269,7 @@ mofa.compute <- function(xdata,
       X <- X[,sel,drop=FALSE]
       samples <- samples[sel,]
     }
-    mix <- mixomics.compute_diablo(xx, y=pheno, ncomp=num_factors) 
+    mix <- mixomics.compute_diablo(xx, y=pheno, ncomp=numfactors) 
     W <- mix$loadings
     F <- mix$scores
     model <- mix
@@ -233,13 +281,13 @@ mofa.compute <- function(xdata,
       colData = samples )
     model <- nipalsMCIA::nipals_multiblock(
       data_blocks_mae,
-      num_PCs = num_factors,
+      num_PCs = numfactors,
       plot="none")
     F <- model@global_scores
     W <- model@global_loadings
     dim(F)
-    colnames(W) <- paste0("factor",1:ncol(W))
-    colnames(F) <- paste0("factor",1:ncol(F))
+    colnames(W) <- paste0("Factor",1:ncol(W))
+    colnames(F) <- paste0("Factor",1:ncol(F))
   } else if( kernel == "wgcna") {
     model <- wgcna.compute(
       X, samples,
@@ -256,6 +304,11 @@ mofa.compute <- function(xdata,
     message("[mofa.compute] invalid kernel")
     return(NULL)
   }
+
+  if(!is.null(factorname)) {
+    colnames(W) <- paste0(factorname,1:ncol(W))
+    colnames(F) <- paste0(factorname,1:ncol(F))    
+  }
   
   W <- W[rownames(X),]
   F <- F[colnames(X),]  
@@ -265,9 +318,9 @@ mofa.compute <- function(xdata,
   ww <- ww[names(xdata)]
   xx <- xx[names(xdata)]
 
-  ww_bysymbol <- ww
+  ww_bysymbol <- mofa.strip_prefix(ww)
   if(!is.null(annot)) {
-    ww_bysymbol <- lapply( ww_bysymbol, function(w) rename_by(w, annot, "symbol"))
+    ww_bysymbol <- lapply( ww_bysymbol, function(w) rename_by2(w, annot, "symbol"))
   }
   ww <- mofa.strip_prefix(ww)
   xx <- mofa.strip_prefix(xx)  
@@ -280,58 +333,56 @@ mofa.compute <- function(xdata,
   colnames(V) <- colnames(W)
 
   ## Covariate x Factor correlation
-  M <- samples
-  M$sample <- NULL
-  M$group <- NULL
-  M <- expandPhenoMatrix(M, drop.ref=FALSE)
-  M <- as.matrix(M)
-  Z <- cor(M, F, use="pairwise")
+  Y <- samples
+  Y$sample <- NULL
+  Y$group <- NULL
+  Y <- expandPhenoMatrix(Y, drop.ref=FALSE)
+  Y <- as.matrix(Y)
+  Z <- cor(Y, F, use="pairwise")
   Z[is.na(Z)] <- 0
   colnames(Z) <- colnames(W)
 
-  message("computing factor enrichment...")
-  gsea <- mofa.compute_enrichment(ww_bysymbol, G=GMT, ntop=1000) 
-
-  ## compute enrichment for all contrasts
-  message("computing phenotype enrichment...")
+  gsea <- NULL
   fc.gsea <- NULL
   ff <- NULL
-  if(!is.null(contrasts)) {
-    contrasts <- contrasts[rownames(samples),,drop=FALSE]
-    mfc <- list()
-    ct=colnames(contrasts)[1]
-    for(ct in colnames(contrasts)) {
-      y <- contrasts[,ct]
-      dx <- lapply(xx, function(x) gx.limma(x, y, lfc=0, fdr=1))
-      mfc[[ct]] <- lapply( dx, function(d) matrix(d$logFC, ncol=1,
-        dimnames=list(rownames(d),ct)))
-    }
-    
-    ff <- mfc[[1]]
-    if(length(mfc)>1) {
-      for(i in 2:length(mfc)) {
-        for(j in 1:length(ff)) ff[[j]] <- cbind(ff[[j]], mfc[[i]][[j]])
-      }
-    }
 
-    ## enrichment need rownames as symbol (as in GMT)
-    ff_bysymbol <- ff
-    if(!is.null(annot)) {
-      ff_bysymbol <- mofa.prefix(ff_bysymbol)
-      ff_bysymbol <- lapply( ff_bysymbol, function(f) rename_by(f, annot, "symbol"))
+  if(compute.enrichment) {
+    message("computing factor enrichment...")
+    gsea <- mofa.compute_enrichment(ww_bysymbol, G=GMT, ntop=1000) 
+    
+    ## compute enrichment for all contrasts
+    message("computing phenotype enrichment...")
+    if(!is.null(contrasts)) {
+      contrasts <- contrasts[rownames(samples),,drop=FALSE]
+      mfc <- list()
+      ct=colnames(contrasts)[1]
+      for(ct in colnames(contrasts)) {
+        y <- contrasts[,ct]
+        dx <- lapply(xx, function(x) gx.limma(x, y, lfc=0, fdr=1))
+        mfc[[ct]] <- lapply( dx, function(d) matrix(d$logFC, ncol=1,
+                                                    dimnames=list(rownames(d),ct)))
+      }      
+
+      ff <- mfc[[1]]
+      if(length(mfc)>1) {
+        for(i in 2:length(mfc)) {
+          for(j in 1:length(ff)) ff[[j]] <- cbind(ff[[j]], mfc[[i]][[j]])
+        }
+      }
+      
+      ## make sure ff is symbol. Enrichment need rownames as symbol
+      ## (as in GMT)
+      ff_bysymbol <- ff
+      if(!is.null(annot)) {
+        ##ff_bysymbol <- mofa.prefix(ff_bysymbol)
+        ff_bysymbol <- lapply( ff_bysymbol, function(f) rename_by2(f, annot, "symbol"))
+      }
+      fc.gsea <- mofa.compute_enrichment(ff_bysymbol, G=GMT, ntop=1000)
     }
-    fc.gsea <- mofa.compute_enrichment(ff_bysymbol, G=GMT, ntop=1000)
   }
   
   ## create graphs
-  if( kernel == "wmfcna") {
-    graphs <- list(
-      factors = model$graph,
-      features = model$subgraphs
-    )
-  } else {
-    graphs <- mofa.factor_graphs(F, W, X, y=pheno, n=num_factor_features)
-  }
+  graphs <- mofa.factor_graphs(F, W, X, y=pheno, n=num_factor_features)
 
   num.contrasts <- sign(makeContrastsFromLabelMatrix(contrasts))
   
@@ -339,8 +390,8 @@ mofa.compute <- function(xdata,
     model = model,
     samples = samples,
     contrasts = contrasts,
-    num.contrasts = num.contrasts,
     pheno = pheno,
+    K = num.contrasts,
     F = F,
     W = W,
     V = V,
@@ -349,7 +400,7 @@ mofa.compute <- function(xdata,
     xx = xx,
     ww = ww,
     fc = ff,
-    M = M,
+    Y = Y,
     gsea = gsea,
     fc.gsea = fc.gsea,
     graphs = graphs
@@ -417,8 +468,6 @@ mofa.add_genesets <- function(xdata, GMT=NULL, datatypes=NULL) {
   lapply(gsetX,dim)
   
   ## make sure they align. Only intersection????
-#  kk <- Reduce(intersect, lapply(gsetX, rownames))
-#  gsetX <- lapply( gsetX, function(m) m[kk,])
   names(gsetX) <- paste0("gset.",names(gsetX))  
   gsetX
 }
@@ -498,6 +547,12 @@ mofa.compute_enrichment <- function(ww, ww.types=NULL, filter=NULL,
   rownames(G) <- sub(".*:","",rownames(G))  
   dim(G)
 
+  ## filter gene sets
+  if(!is.null(filter)) {
+    sel <- grep(filter, colnames(G))
+    G <- G[,sel]
+  }
+  
   ## Perform geneset enrichment with fast rank-correlation. We could
   ## do with fGSEA instead but it is much slower.
   ww <- mofa.strip_prefix(ww)
@@ -592,7 +647,10 @@ mofa.compute_enrichment <- function(ww, ww.types=NULL, filter=NULL,
   if(!is.null(ntop) && ntop > 0) {
     i=1
     for(i in 1:length(enr)) {
-      ii <- order(-abs(enr[[i]]$multi.score))
+      mscore <- enr[[i]]$multi.score
+      rho.col <- grep("^rho[.]",colnames(enr[[i]]))[1]
+      msign  <- sign(enr[[i]][,rho.col])
+      ii <- order(-mscore*msign)
       enr[[i]] <- head( enr[[i]][ii,], ntop )
     }
   }
@@ -817,63 +875,72 @@ mofa.plot_loading_heatmap <- function(mofa, k=NULL, ntop=50,
   
 }
 
+#'
+#'
+#'
 #' @export
-mofa.plot_factor_trait <- function(mofa, Y=NULL,
-                                   main="Factor-Trait heatmap",
-                                   type = c("wgcna","splitmap"),
-                                   par = TRUE, cex_text=NULL,
-                                   cluster = TRUE,
-                                   ...) {
+mofa.plot_factor_trait_correlation <- function(mofa, 
+                                               main = "Factor-Trait correlation",
+                                               type = c("wgcna","splitmap"),
+                                               par = TRUE, cex_text=NULL,
+                                               collapse = FALSE,
+                                               cluster = TRUE,
+                                               ...) {
 
   ##type = c("wgcna","splitmap")
   type <- type[1]
-  F <- mofa$F
-  if(is.null(Y)) {
-    Y <- expandPhenoMatrix(mofa$samples, drop.ref=FALSE)
+
+  ## Covariate x Factor correlation
+  Z <- mofa$Z
+  if(collapse) {
+    rownames(Z) <- sub("=.*","",rownames(Z))
+    Z <- rowmean(Z**2)**0.5
   }
-  R <- cor(Y, F, use="pairwise")
+
+  if(nrow(Z)==1)  {
+    Z <- rbind(Z," "=Z[1,])  ## hack for single row...
+  }
 
   if(cluster) {
-    ii <- hclust(dist(R))$order
-    jj <- hclust(dist(t(R)))$order
-    R <- R[ii,jj]
+    ii <- hclust(dist(Z))$order
+    jj <- hclust(dist(t(Z)))$order
+    Z <- Z[ii,jj]
   }
   
   if(type=="splitmap") {
     gx.splitmap(
-      t(R), nmax=50, scale='none', main=main,
+      t(Z), nmax=50, scale='none', main=main,
       col.annot = mofa$samples, split=1,
       show_legend=FALSE, show_key=FALSE,
       ...)
   }
   
-  if(type=="wgcna") {
+  if(type == "wgcna") {
     ##par(mfrow=c(1,1))
     if(par) par(mar=c(6,5,2,1))    
-    ftext <- round(t(R), digits=2)
+    ftext <- round(t(Z), digits=2)
     if(is.null(cex_text)) {
-      cex.text = min(0.8, max(0.3, 6/ncol(R)))
+      cex.text = min(0.8, max(0.3, 6/ncol(Z)))
     } else {
       cex.text = cex_text
     }
     
     WGCNA::labeledHeatmap(
-      Matrix = t(R),
-      xLabels = rownames(R), 
-      yLabels = colnames(R), 
+      Matrix = t(Z),
+      xLabels = rownames(Z), 
+      yLabels = colnames(Z), 
       textMatrix = ftext,
       cex.text = cex.text,
-      # cex.lab = 1, 
-      #  ySymbols = colnames(res$F),
       colorLabels = TRUE, 
       colors = WGCNA::blueWhiteRed(50), 
       setStdMargins = FALSE, 
       zlim = c(-1,1),
       main = main,
-      #...
+      ...
     )
   }  
 }
+
 
 #' @export
 mofa.plot_factor_correlation <- function(mofa, 
@@ -919,32 +986,6 @@ mofa.plot_factor_boxplots <- function(mofa, k=1, pheno=NULL,
     }
   }
   
-}
-
-
-#' Covariate x Factor correlation plot. Shows how factors are
-#' correlated with response covariates.
-#'
-#' @export
-mofa.plot_covariate_correlation <- function(mofa, collapse=FALSE,
-                                            mar = c(5,10), nmax = 60, 
-                                            ...) {
-
-  ## Covariate x Factor correlation
-  Z <- mofa$Z
-  if(collapse) {
-    rownames(Z) <- sub("=.*","",rownames(Z))
-    Z <- rowmean(Z**2)**0.5
-  }
-
-  if(nrow(Z)==1)  {
-    Z <- rbind(Z," "=Z[1,])  ## hack for single row...
-  }
-
-  gx.heatmap(
-    Z, scale='none', mar = mar, nmax = nmax, 
-    key=FALSE, keysize=0.8, cexCol=1, cexRow=1,
-    ... )
 }
 
 
@@ -1141,8 +1182,9 @@ mofa.plotVar <- function(mofa, comp=1:2, style="correlation",
 }
 
 #' @export
-mofa.factor_graphs <- function(F, W, X, y, n=100,
-                               ewidth=1, vsize=1) {
+mofa.factor_graphs <- function(F, W, X, y, n=100, ewidth=1, vsize=1) {
+
+  ## n=100;ewidth=1;vsize=1
   
   ## cluster-reduced graph
   create_graph <- function(gx, y, min.cor) {
@@ -1174,7 +1216,7 @@ mofa.factor_graphs <- function(F, W, X, y, n=100,
     igraph::E(gr)$width <- 3 * ewidth * abs(igraph::E(gr)$weight)**2
     gr
   }
-  
+
   meGraph <- create_graph(t(F), y, min.cor=0.33 )
   me.size <- rowSums(abs(t(W)) > 0.5*apply(abs(W),2,max))  
   igraph::V(meGraph)$size <-  25*vsize*(me.size/max(me.size))**0.5
@@ -1196,12 +1238,11 @@ mofa.factor_graphs <- function(F, W, X, y, n=100,
     }
   }
   names(subgraphs) <- colnames(W)
-
-  
   list(
     factors = meGraph,
     features = subgraphs
   )  
+
 }
 
 #' @export
