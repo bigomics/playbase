@@ -12,17 +12,17 @@ detectOutlierSamples <- function(X, plot = TRUE, par = NULL) {
   distX <- as.matrix(dist(t(X)))
 
   ## z-score based on correlation
-  cor.min <- apply(abs(corX), 1, min, na.rm = TRUE)
-  cor.max <- apply(abs(corX), 1, max, na.rm = TRUE)
+  ##cor.min
+  ##cor.max <- apply(abs(corX), 1, max, na.rm = TRUE)
   cor.median <- apply(abs(corX), 1, median, na.rm = TRUE)
-  cor.q10 <- apply(abs(corX), 1, quantile, probs = 0.1, na.rm = TRUE)
+  ##cor.q10 <- apply(abs(corX), 1, quantile, probs = 0.1, na.rm = TRUE)
   x1 <- (cor.median - mean(cor.median, na.rm = TRUE))
   z1 <- abs(x1 - median(x1, na.rm = TRUE)) / mad(x1, na.rm = TRUE)
 
   ## z-score based on euclidean distance
   dist.max <- apply(distX, 1, max, na.rm = TRUE)
-  dist.median <- apply(distX, 1, median, na.rm = TRUE)
-  dist.q90 <- apply(distX, 1, quantile, probs = 0.9, na.rm = TRUE)
+  ##dist.median <- apply(distX, 1, median, na.rm = TRUE)
+  ##dist.q90 <- apply(distX, 1, quantile, probs = 0.9, na.rm = TRUE)
   dist.q10 <- apply(distX, 1, quantile, probs = 0.1, na.rm = TRUE)
   dist.r <- dist.q10 / dist.max
   z2 <- abs(dist.r - median(dist.r, na.rm = TRUE)) / mad(dist.r, na.rm = TRUE)
@@ -39,12 +39,8 @@ detectOutlierSamples <- function(X, plot = TRUE, par = NULL) {
   zz2 <- exp(rowMeans(log(Z + z0), na.rm = TRUE)) - z0
 
   res <- list(z.outlier = zz, z.outlier2 = zz2, Z = Z)
-
-  if (plot) {
-    plotOutlierScores(res, par = par)
-  }
-
-  res
+  if (plot) plotOutlierScores(res, par = par) 
+  return(res)
 }
 
 #' @export
