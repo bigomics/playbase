@@ -509,7 +509,8 @@ pgx.SankeyFromMatrixList.PLOTLY <- function(matlist, contrast = NULL) {
   X <- list()
   for (i in 1:length(matlist)) {
     X[[i]] <- matlist[[i]] - rowMeans(matlist[[i]])
-    X[[i]] <- X[[i]] / apply(X[[i]], 1, stats::sd, na.rm = TRUE)
+    ## X[[i]] <- X[[i]] / apply(X[[i]], 1, stats::sd, na.rm = TRUE)
+    X[[i]] <- X[[i]] / matrixStats::rowSds(X[[i]], na.rm = TRUE)
   }
 
   ## Counts cross-table between matrices
@@ -1539,16 +1540,16 @@ pgx.contrastScatter <- function(pgx, contrast, hilight = NULL,
   ii <- which(ct < 0)
   jj <- which(ct > 0)
   if (level == "gene") {
-    x0 <- rowMeans(pgx$X[, ii, drop = FALSE])
-    x1 <- rowMeans(pgx$X[, jj, drop = FALSE])
+    x0 <- rowMeans(pgx$X[, ii, drop = FALSE], na.rm = TRUE)
+    x1 <- rowMeans(pgx$X[, jj, drop = FALSE], na.rm = TRUE)
     xy <- cbind(x0, x1)
     gg <- rownames(pgx$gx.meta$meta[[contrast]])
     fx <- pgx$gx.meta$meta[[contrast]]$meta.fx
     q <- pgx$gx.meta$meta[[contrast]]$meta.q
     names(fx) <- names(q) <- gg
   } else if (level == "gene") {
-    x0 <- rowMeans(pgx$gsetX[, ii, drop = FALSE])
-    x1 <- rowMeans(pgx$gsetX[, jj, drop = FALSE])
+    x0 <- rowMeans(pgx$gsetX[, ii, drop = FALSE], na.rm = TRUE)
+    x1 <- rowMeans(pgx$gsetX[, jj, drop = FALSE], na.rm = TRUE)
     xy <- cbind(x0, x1)
     gg <- rownames(pgx$gset.meta$meta[[contrast]])
     fx <- pgx$gset.meta$meta[[contrast]]$meta.fx
@@ -2233,7 +2234,8 @@ pgx.splitHeatmap <- function(ngs, splitx = NULL, top.mode = "specific",
     X1 <- X0[jj, ]
     idx <- paste0("M", as.vector(mapply(rep, 1:ncol(grpX), ntop1)))
   } else {
-    X1 <- Matrix::head(X0[order(-apply(X0, 1, stats::sd, na.rm = TRUE)), ], ntop)
+    ## X1 <- Matrix::head(X0[order(-apply(X0, 1, stats::sd, na.rm = TRUE)), ], ntop)
+    X1 <- Matrix::head(X0[order(-matrixStats::rowSds(X0, na.rm = TRUE)), ], ntop)
     hc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(t(X1), use = "pairwise")), method = "ward.D2")
     idx <- paste0("S", stats::cutree(hc, 5))
   }

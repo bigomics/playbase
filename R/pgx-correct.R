@@ -339,14 +339,17 @@ pgx.superBatchCorrect <- function(X, pheno,
         X.r <- t(stats::resid(eval(parse(text = lm.expr))))
         n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
 
-        cX1 <- Matrix::head(cX[order(-apply(cX, 1, stats::sd, na.rm = TRUE)), ], 1000) ## top 1000 genes only (faster)
+        ## cX1 <- Matrix::head(cX[order(-apply(cX, 1, stats::sd, na.rm = TRUE)), ], 1000) ## top 1000 genes only (faster)
+        cX1 <- Matrix::head(cX[order(-matrixStats::rowSds(cX, na.rm = TRUE)), ], 1000)
         sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = n.sv)$sv)
 
         if (any(class(sv) == "try-error")) {
           ## try again with little bit of noise...
-          a <- 0.01 * mean(apply(cX, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
+          ## a <- 0.01 * mean(apply(cX, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
+          a <- 0.01 * mean(matrixStats::rowSds(cX, na.rm = TRUE), na.rm = TRUE)
           cX1 <- cX + a * matrix(stats::rnorm(length(cX)), nrow(cX), ncol(cX))
-          cX1 <- Matrix::head(cX1[order(-apply(cX1, 1, stats::sd, na.rm = TRUE)), ], 1000) ## top 1000 genes only (faster)
+          ## cX1 <- Matrix::head(cX1[order(-apply(cX1, 1, stats::sd, na.rm = TRUE)), ], 1000) ## top 1000 genes only (faster)
+          cX1 <- Matrix::head(cX1[order(-matrixStats::rowSds(cX1, na.rm = TRUE)), ], 1000)
           sv <- try(sva::sva(cX1, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1))$sv)
         }
         if (!any(class(sv) == "try-error")) {
@@ -413,7 +416,8 @@ pgx.superBatchCorrect <- function(X, pheno,
         nremoved <- 0
         pX <- NULL
         while (length(ii) > 0 && niter < max.iter) {
-          xx <- Matrix::head(cX[order(-apply(cX, 1, stats::sd, na.rm = TRUE)), ], hc.top)
+          ## xx <- Matrix::head(cX[order(-apply(cX, 1, stats::sd, na.rm = TRUE)), ], hc.top)
+          xx <- Matrix::head(cX[order(-matrixStats::rowSds(cX, na.rm = TRUE)), ], hc.top)
           hc <- stats::cutree(fastcluster::hclust(stats::dist(t(xx)), method = "ward.D2"), 2)
           hc.rho <- stats::cor(hc, mod1)
           hc.rho <- apply(abs(hc.rho), 1, max)
@@ -842,7 +846,8 @@ pgx.computeTechnicalEffects <- function(X, is.count = FALSE, nmin = 3, nv = 1) {
   rb.genes
 
   if (length(mt.genes) >= nmin) {
-    mt.genes <- mt.genes[order(-apply(X[mt.genes, , drop = FALSE], 1, stats::sd, na.rm = TRUE))]
+    ## mt.genes <- mt.genes[order(-apply(X[mt.genes, , drop = FALSE], 1, stats::sd, na.rm = TRUE))]
+    mt.genes <- mt.genes[order(-matrixStats::rowSds(X[mt.genes, , drop = FALSE], na.rm = TRUE))]
     mt.genes <- head(mt.genes, 20)
     mito <- Matrix::colMeans(X[mt.genes, , drop = FALSE], na.rm = TRUE)
     pct.mito <- Matrix::colSums(counts[mt.genes, , drop = FALSE], na.rm = TRUE) / libsize
@@ -856,7 +861,8 @@ pgx.computeTechnicalEffects <- function(X, is.count = FALSE, nmin = 3, nv = 1) {
   }
 
   if (length(rb.genes) >= nmin) {
-    rb.genes <- rb.genes[order(-apply(X[rb.genes, , drop = FALSE], 1, stats::sd, na.rm = TRUE))]
+    ## rb.genes <- rb.genes[order(-apply(X[rb.genes, , drop = FALSE], 1, stats::sd, na.rm = TRUE))]
+    rb.genes <- rb.genes[order(-matrixStats::rowSds(X[rb.genes, , drop = FALSE], na.rm = TRUE))]
     rb.genes <- head(rb.genes, 20)
     ribo <- Matrix::colMeans(X[rb.genes, , drop = FALSE], na.rm = TRUE)
     pct.ribo <- Matrix::colSums(counts[rb.genes, , drop = FALSE], na.rm = TRUE) / libsize
@@ -1985,7 +1991,8 @@ svaCorrect <- function(X, y) {
   ## top 1000 genes only (faster)
   X1 <- Matrix::head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], 1000)
   ## add a little bit of noise to avoid singular error
-  a <- 0.01 * mean(apply(X1, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
+  ## a <- 0.01 * mean(apply(X1, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
+  a <- 0.01 * mean(matrixStats::rowSds(X1, na.rm = TRUE), na.rm = TRUE)
   X1 <- X1 + a * matrix(stats::rnorm(length(X1)), nrow(X1), ncol(X1))
   sv <- try(sva::sva(X1, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1))$sv)
   class(sv)
@@ -2039,7 +2046,8 @@ fsvaCorrect <- function(X, y) {
   ## top 1000 genes only (faster)
   X1a <- Matrix::head(X1[order(-matrixStats::rowSds(X1, na.rm = TRUE)), ], 1000)
   ## add a little bit of noise to avoid singular error
-  a <- 0.01 * mean(apply(X1a, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
+  ## a <- 0.01 * mean(apply(X1a, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
+  a <- 0.01 * mean(matrixStats::rowSds(X1a, na.rm = TRUE), na.rm = TRUE)
   X1a <- X1a + a * matrix(stats::rnorm(length(X1a)), nrow(X1a), ncol(X1a))
   sv <- try(sva::sva(X1a, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1)))
 
@@ -2068,7 +2076,8 @@ fsvaCorrect <- function(X, y) {
     mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
 
     XXa <- Matrix::head(XX[order(-matrixStats::rowSds(XX, na.rm = TRUE)), ], 1000)
-    a <- 0.01 * mean(apply(XXa, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
+    ## a <- 0.01 * mean(apply(XXa, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
+    a <- 0.01 * mean(matrixStats::rowSds(XXa, na.rm = TRUE), na.rm = TRUE)
     XXa <- XXa + a * matrix(stats::rnorm(length(XXa)), nrow(XXa), ncol(XXa))
     sv <- try(sva::sva(XXa, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1))$sv)
     cX <- limma::removeBatchEffect(XX, covariates = sv, design = mod1x)
@@ -2414,7 +2423,8 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   dX <- X
 
   ## reduce for speed
-  sdx <- apply(dX, 1, stats::sd, na.rm = TRUE)
+  ## sdx <- apply(dX, 1, stats::sd, na.rm = TRUE)
+  sdx <- matrixStats::rowSds(dX, na.rm = TRUE)
   ii <- Matrix::head(order(-sdx), sdtop)
   dX <- dX[ii, ]
 
@@ -2515,7 +2525,8 @@ nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
   dX <- X
 
   ## reduce for speed
-  sdx <- apply(dX, 1, stats::sd, na.rm = TRUE)
+  ## sdx <- apply(dX, 1, stats::sd, na.rm = TRUE)
+  sdx <- matrixStats::rowSds(dX, na.rm = TRUE)
   ii <- Matrix::head(order(-sdx), sdtop)
   dX <- dX[ii, ]
   if (center.x) {
