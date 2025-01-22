@@ -514,41 +514,59 @@ pgx.clusterMatrix <- function(X,
   if ("tsne" %in% methods && 2 %in% dims) {
     message("calculating t-SNE 2D...")
     perplexity <- pmax(min(ncol(X) / 4, perplexity), 2)
-    if (nrow(X) > 5000) {
-      sdtop <- 1000
-      sdx <- matrixStats::rowSds(X, na.rm = TRUE)
-      ii <- Matrix::head(order(-sdx), sdtop)
-      X1 <- X[ii, , drop = FALSE]
-    } else {
-      X1 <- X
-    }
+    ## if (ncol(X) > 5000) { ## Faster
+    ##   message("using Seurat...")
+    ##   sampl <- data.frame(row.names = colnames(X))
+    ##   SO <- playbase::pgx.justSeuratObject(counts=X, samples=sampl)
+    ##   SO@assays$RNA$data <- SO@assays$RNA$counts
+    ##   SO <- Seurat::FindVariableFeatures(SO, verbose = FALSE)
+    ##   SO <- Seurat::ScaleData(SO, do.scale=FALSE, do.center=FALSE, verbose=FALSE)
+    ##   SO <- RunPCA(SO, verbose = FALSE)
+    ##   SO <- RunTSNE(SO, perplexity = perplexity, verbose = FALSE)
+    ##   pos <- Embeddings(SO[["tsne"]])
+    ##   rm(SO, sampl)
+    ##   message("using Seurat....DONE")
+    ## } else {      
+    ##   message("using standard...")
+    sdtop <- nrow(X)
+    partial_pca <- FALSE
+    if (nrow(X) > 1000) sdtop <- 1000
+    if (ncol(X) > 5000) partial_pca <- TRUE
+    sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+    ii <- Matrix::head(order(-sdx), sdtop)
+    X1 <- X[ii, , drop = FALSE]
     res1 <- Rtsne::Rtsne(
-      t(X1), dims = 2,
-      is_distance = FALSE, check_duplicates = FALSE,
-      perplexity = perplexity, num_threads = 2) ## multi-threads may have MEM problems
+      t(X1),
+      dims = 2,
+      is_distance = FALSE,
+      ## partial_pca = partial_pca,
+      check_duplicates = FALSE,
+      perplexity = perplexity,
+      num_threads = 2 ## multi-threads may have MEM problems
+    )
     pos <- res1$Y
+    ## rm(res1, X1)
+    ## message("using standard....DONE")
+    ## }
     rownames(pos) <- colnames(X)
     pos <- pos[1:dimx[2], ] ## if augmented
     colnames(pos) <- paste0("tSNE-", c("x", "y"))
-    all.pos[["tsne2d"]] <- pos
-    remove(res1)
+    all.pos[["tsne2d"]] <- pos     
   }
 
   if ("tsne" %in% methods && 3 %in% dims) {
     message("calculating t-SNE 3D...")
     perplexity <- pmax(min(dimx[2] / 4, perplexity), 2)
-    if (nrow(X) > 5000) {
-      sdtop <- 1000
-      sdx <- matrixStats::rowSds(X, na.rm = TRUE)
-      ii <- Matrix::head(order(-sdx), sdtop)
-      X1 <- X[ii, , drop = FALSE]
-    } else {
-      X1 <- X
-    }
-    pos <- Rtsne::Rtsne(
-      t(X1), dims = 3,
-      is_distance = FALSE, check_duplicates = FALSE,
-      perplexity = perplexity, num_threads = 2)$Y
+    if (nrow(X) > 1000) sdtop=1000 else sdtop=nrow(X)
+    sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+    ii <- Matrix::head(order(-sdx), sdtop)
+    X1 <- X[ii, , drop = FALSE]
+    pos <- Rtsne::Rtsne(t(X1),
+      dims = 3,
+      is_distance = FALSE,
+      check_duplicates = FALSE,
+      perplexity = perplexity,
+      num_threads = 2)$Y
     rownames(pos) <- colnames(X)
     pos <- pos[1:dimx[2], ] ## if augmented
     colnames(pos) <- paste0("tSNE-", c("x", "y", "z"))

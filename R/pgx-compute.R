@@ -455,6 +455,9 @@ pgx.createPGX <- function(counts,
   message("[pgx.createPGX]======================================")
   message("\n\n")
 
+  saveRDS(pgx, "~/Desktop/LL1.RDS")
+
+  
   return(pgx)
 }
 
@@ -559,6 +562,8 @@ pgx.computePGX <- function(pgx,
     pgx$samples$cluster <- idx
   }
 
+  saveRDS(pgx, "~/Desktop/LL2.RDS")
+
   ## Make contrasts by cluster
   if (cluster.contrasts) {
     ## Add cluster contrasts
@@ -576,12 +581,14 @@ pgx.computePGX <- function(pgx,
       }
     }
   }
-
+  
   ## Cluster by genes
   if (do.clustergenes) {
     message("[pgx.computePGX] clustering genes...")
     pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), X = pgx$impX, level = "gene")
   }
+
+  saveRDS(pgx, "~/Desktop/LL3.RDS")
 
   ## -----------------------------------------------------------------------------
   ## Filter genes (previously in compute_testGenesSingleOmics). NEED
