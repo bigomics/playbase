@@ -661,39 +661,52 @@ pgx.createSeuratObject <- function(counts,
   }
   
   if (filter) {
+
     message("[pgx.createSeuratObject] Filtering cells")
-    sc_params <- names(sc_compute_settings)
+
+    active_filters <- NULL
+    cc <- unlist(lapply(sc_compute_settings, function(x) isTRUE(x)))
+
+    if (any(cc)) {
+      active_filters <- names(cc)[which(cc)]
+
+      i = 1
+      for(i in 1:length(active_filters)) {
+        message("[pgx.createSeuratObject] User-selected filter: ", active_filters[i])
+      }
+      
+      nfeat_thr = c(0, 1e200)
+      f1 <- "nfeature_threshold" %in% active_filters
+      if (f1) { nfeat_thr = sc_compute_settings[["nfeature_threshold"]] }
+      
+      mt_thr = 100
+      f2 <- "mt_threshold" %in% active_filters
+      if (f2) { mt_thr = sc_compute_settings[["mt_threshold"]] }
+
+      hb_thr = 100
+      f3 <- "hb_threshold" %in% active_filters
+      if (f3) { hb_thr = sc_compute_settings[["hb_threshold"]] }
+      
+      ncells0 <- ncol(obj)
+      obj <- subset(obj, subset =
+                           nFeature_RNA > nfeat_thr[1] &
+                           nFeature_RNA < nfeat_thr[2] &
+                           percent.mt < mt_thr &
+                           percent.hb < hb_thr)
+
+      ## probs <- c(0.01, 0.99)
+      ## qN <- quantile(obj$nCount_RNA, probs = probs)
+      ## qF <- quantile(obj$nFeature_RNA, probs = probs)
+      ## obj <- subset(obj, subset =
+      ##                      nCount_RNA > qN[1] & nCount_RNA < qN[2] &                       
+      ##                      nFeature_RNA > qF[1] & nFeature_RNA < qF[2] &
+      ##                      percent.mt < 5)
+    } else {
+      message("[pgx.createSeuratObject]: No user-selected filters")
+      ncells1 <- ncol(obj)
+      message("[pgx.createSeuratObject] Filtering cells: ", ncells0, " --> ", ncells1) 
+    }
     
-    nfeat_thr = c(0, 1e200)
-    f1 <- "nfeature_threshold" %in% sc_params
-    if (f1) { nfeat_thr = sc_compute_settings[["nfeature_threshold"]] }
-
-    mt_thr = 100
-    f2 <- "mt_threshold" %in% sc_params
-    if (f2) { mt_thr = sc_compute_settings[["mt_threshold"]] }
-
-    hb_thr = 100
-    f3 <- "hb_threshold" %in% sc_params
-    if (f3) { hb_thr = sc_compute_settings[["hb_threshold"]] }
-
-    ncells0 <- ncol(obj)
-    obj <- subset(obj, subset =
-                         nFeature_RNA > nfeat_thr[1] &
-                         nFeature_RNA < nfeat_thr[2] &
-                         percent.mt < mt_thr &
-                         percent.hb < hb_thr)
-
-    ## IK's used cutoffs
-    ## probs <- c(0.01, 0.99)
-    ## qN <- quantile(obj$nCount_RNA, probs = probs)
-    ## qF <- quantile(obj$nFeature_RNA, probs = probs)
-    ## obj <- subset(obj, subset =
-    ##                      nCount_RNA > qN[1] & nCount_RNA < qN[2] &                       
-    ##                      nFeature_RNA > qF[1] & nFeature_RNA < qF[2] &
-    ##                      percent.mt < 5)
-
-    ncells1 <- ncol(obj)
-    message("[pgx.createSeuratObject] Filtering cells: ", ncells0, " --> ", ncells1) 
   }
   
   if(preprocess) {
@@ -1220,8 +1233,6 @@ pgx.createSingleCellPGX <- function(counts,
 
   sc.membership <- NULL
   do.supercells <- sc_compute_settings[["compute_supercells"]]
-
-  if (length(do.supercells) == 0) do.supercells = FALSE
   if (!do.supercells) {
     message("[pgx.createSingleCellPGX] User choice: do not compute supercells.")
   }
