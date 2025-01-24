@@ -434,14 +434,16 @@ pgx.clusterMatrix <- function(X,
 
   if (!is.null(datatype)) {
     message("[pgx.clusterMatrix] Running on ", datatype, " data.")
-    if (datatype %in% c("scRNAseq","scRNA-seq")) {  
-      reduce.sd = 500
-      reduce.pca = 30
-    }
-  }  
+    ##if (datatype %in% c("scRNAseq","scRNA-seq")) {  
+    reduce.sd = 500
+    reduce.pca = 30
+    ## reduce.sd = reduce.sd
+    ## reduce.pca = reduce.pca
+    ##}
+  }
   message("[pgx.clusterMatrix] reduce.sd = ", reduce.sd)
   message("[pgx.clusterMatrix] reduce.pca = ", reduce.pca)
-
+  
   ## Reduce dimensions by SD
   dimx <- dim(X) ## original dimensions
   namesx <- colnames(X)
@@ -552,6 +554,7 @@ pgx.clusterMatrix <- function(X,
 
   if ("tsne" %in% methods && 3 %in% dims) {
     message("[pgx.clusterMatrix] Calculating t-SNE 3D...")
+    message("[pgx.clusterMatrix] Perplexity = ", perplexity)
     perplexity <- pmax(min(dimx[2] / 4, perplexity), 2)
     if (nrow(X) > 1000) sdtop=1000 else sdtop=nrow(X)
     sdx <- matrixStats::rowSds(X, na.rm = TRUE)
@@ -573,6 +576,17 @@ pgx.clusterMatrix <- function(X,
     message("[pgx.clusterMatrix] Calculating UMAP 2D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
+      message("[pgx.clusterMatrix] N. of neighbours = ", nb)
+      if (any(rowSums(X, na.rm = TRUE) == 0)) {
+        stop("[pgx.clusterMatrix] No fully missing features allowed")
+      }
+      if (datatype %in% c("scRNAseq","scRNA-seq")) {
+        message("[pgx.clusterMatrix] scRNA-seq UMAP: z-score calculation...")
+        X <- apply(X, 1, function(x) mean(x, na.rm = TRUE) / sd(x, na.rm = TRUE))
+      }
+      if (datatype %in% c("scRNAseq","scRNA-seq")) {
+        X <- X[rowSums(X, na.rm = TRUE) > 0, ]
+      }
       pos <- uwot::tumap(
         t(X),
         n_components = 2,
