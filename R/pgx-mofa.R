@@ -1,22 +1,21 @@
-##reticulate::use_miniconda("r-reticulate")
 
 #' Main function to call MOFA analysis on pgx object. 
 #'
 #' @export
 pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
-                             ntop=1000, add_gsets=FALSE ) {
+                             ntop = 2000, gset.ntop = 2000,
+                             add_gsets=FALSE ) {
 
   has.prefix <- (mean(grepl(":",rownames(pgx$X))) > 0.8)
   is.multiomics <- ( pgx$datatype == "multi-omics" && has.prefix)
 
-  X <- rename_by( pgx$X, pgx$genes, "symbol")
   xdata <- NULL
   if(is.multiomics) {
     message("[compute.multi_omics] splitting by omics-type ")
-    xdata <- mofa.split_data(X)
+    xdata <- mofa.split_data(pgx$X)
   } else {
     message("[compute.multi_omics] splitting by gene role")
-    xdata <- mofa.splitByGeneRole(X)
+    xdata <- mofa.splitByGeneRole(pgx$X)
   }
 
   numfactors <- min( numfactors, min(dim(xdata[[1]])) )
@@ -40,7 +39,7 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
   ## MOFA computation
   message("computing MOFA ...")              
 
-  #samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa;ntop=10000;numfactor=10"
+  #samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa";ntop=2000;numfactors=10
   mofa <- mofa.compute(
     xdata,
     samples = discretized_samples,
@@ -51,14 +50,17 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
     kernel = kernel,
     scale_views = TRUE, 
     ntop = ntop,
+    gset.ntop = gset.ntop,
     max_iter = 200,
     numfactors = numfactors) 
   
   mofa$gset.mofa <- mofa.compute_geneset_mofa(
     mofa,
     kernel = kernel,
+    annot = pgx$genes,
     factorname = "Module",
     GMT = pgx$GMT,
+    ntop = gset.ntop,
     numfactors = 12
   )
   
@@ -82,6 +84,16 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
   message("computing cluster positions (features)...")
   mofa$posf <- mofa.compute_clusters(xx, along="features")
   mofa$lasagna <- lasagna
+
+  ## compute multi-gsea
+  mofa$mgsea <- mgsea.compute_enrichment(
+    xdata,
+    contrasts = pgx$contrasts,
+    annot = pgx$genes,
+    filter=NULL,
+    G = pgx$GMT,
+    ntop = gset.ntop
+  ) 
   
   return(mofa)
 }
@@ -91,16 +103,25 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
 #' 
 #' @export
 mofa.compute_geneset_mofa <- function(mofa,
+                                      annot = NULL,
                                       kernel = "mofa",
                                       GMT = NULL,
                                       numfactors = 20,
+                                      ntop = 2000,
                                       factorname = "Module") {
 
 ##  kernel="mofa";numfactors=20
 
   ## create geneset for all relevant datatypes
-  gsetX <- mofa.add_genesets(mofa$xx, GMT=GMT) 
-
+  if(is.null(GMT) && !is.null(annot)) {
+    xx <- lapply( mofa.prefix(mofa$xx), function(x)
+      rename_by2(x, annot, "symbol"))
+    gsetX <- mofa.add_genesets(mofa$xx, GMT=NULL)
+  } else {
+    gsetX <- mofa.add_genesets(mofa$xx, GMT=GMT)
+  }
+  gsetX <- gsetX[sapply(gsetX,nrow) > 0]
+  
   ## compute MOFA in geneset space
   mindimx <- min(dim(gsetX[[1]]))
   numfactors <- min(numfactors, mindimx)
@@ -115,7 +136,7 @@ mofa.compute_geneset_mofa <- function(mofa,
     kernel = kernel,
     scale_views = TRUE,
     gpu_mode = FALSE,
-    ntop = 5000,
+    ntop = ntop,
     max_iter = 200,
     compute.enrichment = FALSE,  ## no!
     numfactors = numfactors) 
@@ -135,6 +156,7 @@ mofa.compute <- function(xdata,
                          GMT = NULL,
                          scale_views = TRUE,
                          ntop = 2000,
+                         gset.ntop = 2000,
                          max_iter = 1000,
                          gpu_mode = FALSE,
                          compute.clusters = TRUE,
@@ -318,8 +340,9 @@ mofa.compute <- function(xdata,
   ww <- ww[names(xdata)]
   xx <- xx[names(xdata)]
 
-  ww_bysymbol <- mofa.strip_prefix(ww)
+  ww_bysymbol <- ww
   if(!is.null(annot)) {
+    ww_bysymbol <- mofa.prefix(ww)
     ww_bysymbol <- lapply( ww_bysymbol, function(w) rename_by2(w, annot, "symbol"))
   }
   ww <- mofa.strip_prefix(ww)
@@ -343,42 +366,11 @@ mofa.compute <- function(xdata,
   colnames(Z) <- colnames(W)
 
   gsea <- NULL
-  fc.gsea <- NULL
-  ff <- NULL
 
   if(compute.enrichment) {
     message("computing factor enrichment...")
-    gsea <- mofa.compute_enrichment(ww_bysymbol, G=GMT, ntop=1000) 
-    
-    ## compute enrichment for all contrasts
-    message("computing phenotype enrichment...")
-    if(!is.null(contrasts)) {
-      contrasts <- contrasts[rownames(samples),,drop=FALSE]
-      mfc <- list()
-      ct=colnames(contrasts)[1]
-      for(ct in colnames(contrasts)) {
-        y <- contrasts[,ct]
-        dx <- lapply(xx, function(x) gx.limma(x, y, lfc=0, fdr=1))
-        mfc[[ct]] <- lapply( dx, function(d) matrix(d$logFC, ncol=1,
-                                                    dimnames=list(rownames(d),ct)))
-      }      
-
-      ff <- mfc[[1]]
-      if(length(mfc)>1) {
-        for(i in 2:length(mfc)) {
-          for(j in 1:length(ff)) ff[[j]] <- cbind(ff[[j]], mfc[[i]][[j]])
-        }
-      }
-      
-      ## make sure ff is symbol. Enrichment need rownames as symbol
-      ## (as in GMT)
-      ff_bysymbol <- ff
-      if(!is.null(annot)) {
-        ##ff_bysymbol <- mofa.prefix(ff_bysymbol)
-        ff_bysymbol <- lapply( ff_bysymbol, function(f) rename_by2(f, annot, "symbol"))
-      }
-      fc.gsea <- mofa.compute_enrichment(ff_bysymbol, G=GMT, ntop=1000)
-    }
+    symbolW <- do.call( rbind, mofa.prefix(ww_bysymbol))
+    gsea <- mofa.compute_enrichment(symbolW, G=GMT, ntop=gset.ntop) 
   }
   
   ## create graphs
@@ -399,15 +391,15 @@ mofa.compute <- function(xdata,
     Z = Z,
     xx = xx,
     ww = ww,
-    fc = ff,
     Y = Y,
     gsea = gsea,
-    fc.gsea = fc.gsea,
     graphs = graphs
   )
   
   res
 }
+
+
 
 #' @export
 mofa.scale_views <- function(xdata) {
@@ -508,155 +500,114 @@ mofa.compute_clusters <- function(xx, matF=NULL, along="samples") {
 #' Compute enrichment for MOFA factors.
 #' 
 #' @export
-mofa.compute_enrichment <- function(ww, ww.types=NULL, filter=NULL,
-                                    G=NULL,  ntop=1000) {
+mofa.compute_enrichment <- function(W, G=NULL, filter=NULL, ntop=1000) {
 
-  ##ww.types=filter=G=ntop=NULL
-  names(ww)
-  allowed_types <- c("mx","px","gx","me")
-  ww <- ww[ names(ww) %in% allowed_types ]
-  
-  ## determine type
-  if(is.null(ww.types)) {
-    ww.types <- ifelse( grepl("^mx|^metabo",names(ww),ignore.case=TRUE),
-                       "ChEBI", "SYMBOL" )
-  }
-  ww.types
-
-  ## If available please use internal pgx$GMT.
-  has.mx <- any(ww.types == "ChEBI")
-  has.px <- any(ww.types == "SYMBOL") 
   if(is.null(G)) {
-    G <- NULL
-    ## add metabolomic gene sets   
-    if (has.mx) {
-      info("[pgx.add_GMT] Adding metabolomics genesets")
-      G <- Matrix::t(playdata::MSETxMETABOLITE)
-      rownames(G) <- sub(".*:","",rownames(G)) ## TEMPORARY!!!
-    }
-    ## add SYMBOL (classic) gene sets 
-    if (has.px) {
-      info("[pgx.add_GMT] Adding transcriptomics/proteomics genesets")
-      if(is.null(G)) {
-        G <- Matrix::t(playdata::GSETxGENE)
-      } else {
-        G <- merge_sparse_matrix(G, Matrix::t(playdata::GSETxGENE))
-      }
+    info("[pgx.add_GMT] Adding metabolomics genesets")
+    G1 <- Matrix::t(playdata::MSETxMETABOLITE)
+    info("[pgx.add_GMT] Adding transcriptomics/proteomics genesets")
+    G2 <- Matrix::t(playdata::GSETxGENE)
+    rownames(G2) <- paste0("SYMBOL:",rownames(G2))
+    G <- merge_sparse_matrix(G1, G2)
+  } else {
+    has.colons <- all(grepl(":",rownames(G)))
+    has.colons
+    if(!has.colons) {
+      dbg("[mofa.compute_enrichment] prefix G with symbol type")
+      rownames(G) <- sub(".*:","",rownames(G))
+      jj <- grep("^[A-Za-z]+",rownames(G),ignore.case=TRUE)
+      if(length(ii)>0) rownames(G)[jj] <- paste0("SYMBOL:",rownames(G)[jj])
+      ii <- grep("^[0-9]+",rownames(G),ignore.case=TRUE)
+      if(length(ii)>0) rownames(G)[ii] <- paste0("CHEBI:",rownames(G)[ii])
     }
   }
-  rownames(G) <- sub(".*:","",rownames(G))  
-  dim(G)
 
   ## filter gene sets
   if(!is.null(filter)) {
     sel <- grep(filter, colnames(G))
     G <- G[,sel]
   }
+
+  ## detect datatypes. associate with symbols
+  dtypes <- unique(sub(":.*","",rownames(W)))
+  dbg("[mofa.compute_enrichment] dtypes = ", dtypes)
+  dtype2gtype <- c("gx"="SYMBOL","px"="SYMBOL",
+                   "me"="SYMBOL", "mx"="CHEBI")
+  dtypes <- intersect( dtypes, names(dtype2gtype))
+  dbg("[mofa.compute_enrichment] dtypes = ", dtypes)
+  dtypes
+  
+  ## build full gene set sparse matrix
+  GMT <- G[0,]
+  dt=dtypes[1]
+  for(dt in dtypes) {
+    gt <- dtype2gtype[dt]
+    ii <- grep(gt, rownames(G))
+    G1 <- G[ii,]
+    rownames(G1) <- sub(gt,dt,rownames(G1))
+    GMT <- rbind(GMT, G1)
+  }
+  table(sub(":.*","",rownames(GMT)))
+  
+  pp <- intersect(rownames(W), rownames(GMT))
+  W <- W[pp,]
+  sel <- which( Matrix::colSums(GMT[pp,]!=0) >= 3)
+  GMT1 <- GMT[pp,sel]
+  dim(GMT1)
   
   ## Perform geneset enrichment with fast rank-correlation. We could
   ## do with fGSEA instead but it is much slower.
-  ww <- mofa.strip_prefix(ww)
-  wnames <- unlist(lapply(ww, rownames))
-  pp <- intersect(wnames,rownames(G))  
-  G <- G[pp,]
-  G <- G[, Matrix::colSums(G!=0)>=3]
-  dim(G)
-  gg <- rownames(G)  
+  info("[pgx.add_GMT] Performing rankcor")
+  normW <- apply(W, 2, function(x) normalize_multirank(x) )
+  names(normW) <- rownames(W)
+  rnk <- gset.rankcor(normW, GMT1, compute.p=TRUE)
+  topsel <- apply(abs(rnk$rho), 2, function(r) head(order(-r), ntop))
+  topsel <- head( unique(as.vector(t(topsel))), ntop )
+  length(topsel)
+  topsets <- rownames(rnk$rho)[topsel]
+
+  ## prioritize top genesets to accelerate GSEA
+  rnk <- lapply( rnk, function(x) x[topsets,])
+  topGMT <- GMT1[,topsets]
+  gmt <- mat2gmt(topGMT)
+  length(gmt)
+  info("[pgx.add_GMT] Performing fGSEA...")  
   gsea <- list()
-  i=1
-  for(i in 1:length(ww)) {
-    w1 <- ww[[i]]
-    nc <- sum(rownames(w1) %in% gg)
-    if(nc>0) {
-      pp <- intersect(rownames(w1),rownames(G))
-      f1 <- gset.rankcor(w1[pp,], G[pp,], compute.p=TRUE)
-      dt <- names(ww)[i]
-      if(!all(is.na(f1$rho)) && !all(f1$rho==0)) {
-        gsea[[dt]] <- f1
-      }
-    }
+  k=colnames(W)[1]
+  for(k in colnames(W)) {
+    w <- W[,k]
+    w <- normalize_multirank(w)
+    enr <- fgsea::fgsea( gmt, stats=w)
+    enr <- data.frame(enr)
+    rownames(enr) <- enr$pathway
+    gsea[[k]] <- enr
   }
-  names(gsea)
+  gsea <- lapply(gsea, function(x) x[rownames(gsea[[1]]),])
 
-  ## extract rho, pval and qval
-  rho <- lapply( gsea, function(x) x$rho )
-  p.value <- lapply( gsea, function(x) x$p.value )
-
-  ## correct missing values
+  dim(topGMT)
+  dtype <- sub(":.*","",rownames(topGMT))
+  size <- tapply( 1:nrow(topGMT), dtype, function(ii) Matrix::colSums(topGMT[ii,]!=0))
+  size <- do.call( cbind, size)
+  size <- size[ rownames(gsea[[1]]),]
   for(i in 1:length(gsea)) {
-    rho[[i]][which(is.na(rho[[i]]))] <- 0
-    p.value[[i]][which(is.na(p.value[[i]]))] <- 0.9999
-  }
-  
-  ## As multi-omics score we take the absolute geometric average
-  nt <- length(rho)
-  multi.rho <- log(pmax(abs(rho[[1]]),0.01))
-  if(nt > 1) {
-    for(i in 2:nt) {
-      multi.rho <- multi.rho + log(pmax(abs(rho[[i]]),0.01))
-    }
-  }
-  multi.rho <- exp(multi.rho / nt)
-  
-  ## As multi-omics p.value we use Stouffer's method
-  P <- sapply( p.value, as.vector)
-  P[is.na(P)] <- 0.999
-  P <- pmin(pmax(P,1e-99),0.999999)
-  multi.p <- apply(P, 1, function(x) metap::sumz(x)$p)  ## slow.... 
-  nr <- nrow(p.value[[1]])
-  nc <- ncol(p.value[[1]])
-  dimnames <- dimnames(p.value[[1]])
-  multi.p <- matrix(multi.p, nrow=nr, ncol=nc, dimnames = dimnames)
-  multi.q <- apply(multi.p,2, p.adjust)
-  dim(multi.p)
-
-  ## determine is sign/direction is all same
-  S <- sapply( rho, as.vector)
-  multi.equal_sign <- matrixStats::rowSds(sign(S), na.rm=TRUE) < 1e-8
-  multi.equal_sign <- matrix(multi.equal_sign, nrow=nr, ncol=nc,
-                             dimnames = dimnames)    
-
-  ## define a integrated score
-  multi.score <- multi.rho * -log(multi.p) * multi.equal_sign
-  
-  ## Create nice dataframe
-  enr <- list()
-  for(i in 1:ncol(multi.rho)) {
-    df.rho  = sapply(rho, function(x) x[,i])
-    df.pval = sapply(p.value, function(x) x[,i])
-    df.multi = data.frame(
-      score = multi.score[,i],
-      rho = multi.rho[,i],
-      sign = multi.equal_sign[,i],
-      p = multi.p[,i],
-      q = multi.q[,i]
-    )
-    colnames(df.multi) <- paste0("multi.",colnames(df.multi))
-    colnames(df.rho) <- paste0("rho.",colnames(df.rho))
-    colnames(df.pval) <- paste0("pval.",colnames(df.pval))    
-    df <- data.frame(
-      df.multi,
-      df.rho,
-      df.pval
-    )
-    #df <- df[!is.na(df$multi.rho),,drop=FALSE]
-    ct <- colnames(multi.rho)[i]
-    enr[[ct]] <- df
+    gsea[[i]]$size <- size
+    gsea[[i]] <- gsea[[i]][,c("pathway","NES","pval","padj","size","leadingEdge")]
+    gsea[[i]] <- data.frame( lapply(gsea[[i]],as.matrix), check.names=FALSE)
   }
 
-  if(!is.null(ntop) && ntop > 0) {
-    i=1
-    for(i in 1:length(enr)) {
-      mscore <- enr[[i]]$multi.score
-      rho.col <- grep("^rho[.]",colnames(enr[[i]]))[1]
-      msign  <- sign(enr[[i]][,rho.col])
-      ii <- order(-mscore*msign)
-      enr[[i]] <- head( enr[[i]][ii,], ntop )
-    }
-  }
   
-  return(enr)
+  ## extract rho, pval and qval
+  rho  <- sapply( gsea, function(x) x$NES )
+  pval <- sapply( gsea, function(x) x$pval )
+  padj <- sapply( gsea, function(x) x$padj )  
+  rownames(rho) <- rownames(gsea[[1]])
+  rownames(pval) <- rownames(gsea[[1]])
+  rownames(padj) <- rownames(gsea[[1]])    
+    
+  list(table = gsea, NES = rho, pval = pval, padj = padj)
 }
+
+
 
 #' @export
 mofa.enrichment_table <- function(gsea, pheno, datatypes=NULL, full=TRUE) {
@@ -814,7 +765,8 @@ mofa.plot_loading_heatmap <- function(mofa, k=NULL, ntop=50,
                                       annot = c("scores","pheno")[1],
                                       split = TRUE, maxchar=999,
                                       show_types = NULL,
-                                      ... ) {
+                                      mar = c(8,12), annot.ht = 1,
+                                      cexRow = 0.9) {
 
   if(!is.null(k)) {
     xx <- mofa.prefix(mofa$ww)
@@ -856,8 +808,8 @@ mofa.plot_loading_heatmap <- function(mofa, k=NULL, ntop=50,
   if(type == "heatmap") {
     par(mar=c(0,0,0,0))
     gx.heatmap( topX, mar=c(8,10), key=FALSE, keysize=1,
-               ##cexRow = 1, col.annot = aa )
-               cexRow = 1, col.annot = aa, ... )    
+               cexRow = cexRow, col.annot = aa,
+               annot.ht = annot.ht)
   } else if(type == "splitmap") {
     dx <- sub(":.*","",rownames(topX))
     if(!split) dx <- NULL
@@ -865,7 +817,7 @@ mofa.plot_loading_heatmap <- function(mofa, k=NULL, ntop=50,
                 split=dx, na_col = "white", softmax=TRUE,
                 rowlab.maxlen = 80, rownames_width = 140,
                 show_legend=FALSE, show_key = FALSE,
-                col.annot = aa, ... )
+                col.annot = aa, annot.ht = 4*annot.ht )
   } else if(type == "graph") {
     
   } else {
@@ -885,6 +837,7 @@ mofa.plot_factor_trait_correlation <- function(mofa,
                                                par = TRUE, cex_text=NULL,
                                                collapse = FALSE,
                                                cluster = TRUE,
+                                               features = NULL,
                                                ...) {
 
   ##type = c("wgcna","splitmap")
@@ -892,6 +845,12 @@ mofa.plot_factor_trait_correlation <- function(mofa,
 
   ## Covariate x Factor correlation
   Z <- mofa$Z
+
+  if(!is.null(features)) {
+    sel <- intersect(features,rownames(mofa$W))
+    Z <- rbind( Z, mofa$W[sel, ,drop=FALSE] )
+  }
+
   if(collapse) {
     rownames(Z) <- sub("=.*","",rownames(Z))
     Z <- rowmean(Z**2)**0.5
@@ -911,8 +870,7 @@ mofa.plot_factor_trait_correlation <- function(mofa,
     gx.splitmap(
       t(Z), nmax=50, scale='none', main=main,
       col.annot = mofa$samples, split=1,
-      show_legend=FALSE, show_key=FALSE,
-      ...)
+      show_legend=FALSE, show_key=FALSE)
   }
   
   if(type == "wgcna") {
@@ -935,14 +893,13 @@ mofa.plot_factor_trait_correlation <- function(mofa,
       colors = WGCNA::blueWhiteRed(50), 
       setStdMargins = FALSE, 
       zlim = c(-1,1),
-      main = main,
-      ...
+      main = main
     )
   }  
 }
+  
 
-
-#' @export
+  #' @export
 mofa.plot_factor_correlation <- function(mofa, 
                                          main="Factor correlation heatmap",
                                          marx = 1,
@@ -958,16 +915,18 @@ mofa.plot_factor_correlation <- function(mofa,
 #' @export
 mofa.plot_factor_boxplots <- function(mofa, k=1, pheno=NULL,
                                       by="condition", par=TRUE) {
+  samples <- mofa$samples
   
   if(by == "condition") {
     ## boxplots
     if(par) par(mfrow=c(2,2), mar=c(5,5,3,2))
+    j=1
+    if(is.integer(k)) k <- colnames(mofa$F)[k]
     for(j in 1:ncol(samples)) {
       cond <- colnames(samples)[j]
       y <- factor(samples[,j])
       f1 <- mofa$F[,k]
-      fn <- colnames(mofa$F)[k]
-      tt <- paste(fn,"by", colnames(samples)[j])
+      tt <- paste(k,"by", colnames(samples)[j])
       boxplot( f1 ~ y, main = tt, xlab = cond,
               ylab = paste(fn,"score"))
     }
@@ -980,9 +939,8 @@ mofa.plot_factor_boxplots <- function(mofa, k=1, pheno=NULL,
     for(k in 1:min(12,ncol(mofa$F))) {
       y <- factor(samples[,pheno])
       f1 <- mofa$F[,k]
-      tt <- paste0("Factor",k)
-      boxplot( f1 ~ y, main=tt,
-              xlab = pheno, ylab="Score")
+      tt <- colnames(mofa$F)[k]
+      boxplot( f1 ~ y, main = tt, xlab = pheno, ylab="Score")
     }
   }
   
@@ -1015,6 +973,7 @@ mofa.plot_enrichment <- function(gsea, type="barplot",
                                  remove.dup = TRUE, ntop=20,
                                  filter = NULL, select = NULL,
                                  strip.names = FALSE, par = NULL,
+                                 sort = TRUE,
                                  title = "multi-omics enrichment"){
   ##k=1;ntop=20
   S <- gsea
@@ -1032,20 +991,14 @@ mofa.plot_enrichment <- function(gsea, type="barplot",
     sname <- gsub(".*:| \\(.*","",rownames(S))
     S <- S[which(!duplicated(sname)),,drop=FALSE]
   }
-
-  if("multi.score" %in% names(S)) {
-    S <- S[order(-abs(S$multi.score)),,drop=FALSE]
-    topS <- abs(S[,grep("^rho",colnames(S)),drop=FALSE])
-  } else if("multi" %in% names(S)) {
-    S <- S[order(-abs(S$multi$score)),,drop=FALSE]
-    topS <- abs(S[["rho"]])
-  }
-  topS <- head(topS, ntop)
-  topS <- topS[nrow(topS):1,,drop=FALSE]
+  S <- head(S, ntop)
+  topS <- S$NES
+  names(topS) <- S$pathway
   plot <- NULL
   if(strip.names) {
-    rownames(topS) <- gsub(" \\(.*","",rownames(topS))
+    names(topS) <- gsub(" \\(.*","",names(topS))
   }
+  if(sort) topS <- sort(topS)
   
   if(type=='barplot') {
     if(is.null(par)) {
@@ -1054,74 +1007,17 @@ mofa.plot_enrichment <- function(gsea, type="barplot",
     } else {
       par(par)
     }
-    barplot( t(topS), horiz=TRUE, las=1, xlab="cumulative abs.enrichment (rho)")
-    cc <- grey.colors(ncol(topS))
-    legend("bottomright", legend=colnames(topS),
-           fill=cc, inset=c(0.0,0.02), bg='white',
-           y.intersp = 0.8, cex=0.85)
+    barplot( rev(topS), horiz=TRUE, las=1, xlab="enrichment (NES)")
     title( title, outer=TRUE, cex.main=1.4, line=-1.2)
   }
 
   if(type=='lollipop') {
     ## need double lolliplot lines for multi-omics
-    top.nes <- rowSums(topS)
-    names(top.nes) <- rownames(topS)
-    plot <- ggLollipopPlot( top.nes, xlab="enrichment (NES)" )
+    plot <- ggLollipopPlot( topS, xlab="enrichment (NES)" )
   }
   plot
 }
 
-
-#' 
-#' @export
-mofa.plot_multigsea <- function(gsea, type1, type2, k=1, size.par="q",
-                                main=NULL, hilight=NULL) {
-  ##gsea=res$gsea;type1="px";type2="mx"
-  ## using pre-computed GSEA  
-  R <- gsea[[k]]
-  R <- R[, grep("^rho",colnames(R))]
-  colnames(R) <- sub("^rho.", "",colnames(R))
-  s1 <- R[,type1]
-  s2 <- R[,type2]
-  if(size.par=="q") {
-    qcomb <- gsea[[k]]$multi.q  ## meta q-value
-  } else {
-    qcomb <- gsea[[k]]$multi.p  ## meta q-value
-  }
-  
-  s1 <- s1 + 1e-2*rnorm(length(s1))
-  s2 <- s2 + 1e-2*rnorm(length(s2))
-
-  ## point size
-  cex1 <- 0.1 + (1-qcomb)**2
-  col0 <- ifelse( is.null(hilight), "black", "grey60")
-  plot( s1, s2, cex = 1.4*cex1, col=col0,
-       xlab = paste(type1, "enrichment (rho)"),
-       ylab = paste(type2, "enrichment (rho)")
-  )
-  if(is.null(title)) {
-    title <- paste("multiGSEA:", toupper(type1), "vs.",
-      toupper(type2) )
-  } else {
-    title <- main
-  }
-  title(title, cex.main=1.3)
-  
-  abline(h=0, v=0, lty=3)
-  kk <- rownames(gsea[[k]])
-  if(!is.null(hilight) && length(hilight)>0 ) {
-    if( length(intersect(hilight,kk))) {
-      sel <- intersect(hilight,kk)
-    } else {
-      sel <- grep(hilight, kk, value=TRUE)
-    }
-    if(length(sel)) {
-      sel <- match(sel, kk)
-      points( s1[sel], s2[sel], pch=20, col="red2",
-             lwd=2, cex=1.5*cex1[sel] )
-    }
-  }
-}
 
 mofa.plotVar <- function(mofa, comp=1:2, style="correlation",
                          textlabel=TRUE) {
@@ -1530,6 +1426,323 @@ mofa.exampledata <- function(dataset="geiger", ntop=2000,
   data <- lapply(data, function(d) d[rowMeans(d**2,na.rm=TRUE)>0,])
   
   list( X = data, samples = samples, contrasts=contrasts )
+}
+
+
+#' Normalize a rank vector for each datatype to [-1;1]. This is useful
+#' for doing integrated GSEA on multi-omics data.
+#'
+#' @export
+normalize_multirank <- function(rnk) {
+  dtypes <- sub(":.*","",names(rnk))
+  nrnk <- rnk
+  for(dt in unique(dtypes)) {
+    ii <- which(dtypes == dt)
+    nrnk[ii] <- ifelse( rnk[ii] < 0, rnk[ii] / max(-rnk[ii], na.rm=TRUE),
+      rnk[ii] / max(rnk[ii], na.rm=TRUE) )
+  }
+  nrnk
+}
+
+
+##======================================================================
+##======================== MULTI-GSEA ==================================
+##======================================================================
+
+
+#' Compute multi-enrichment for contrasts
+#' 
+#' @export
+mgsea.compute_enrichment <- function(xdata, contrasts,
+                                     annot, filter=NULL,                                     
+                                     G=NULL,  ntop=1000) {
+  
+  ## compute enrichment for all contrasts
+  message("computing phenotype enrichment...")
+  contrasts <- contrasts[colnames(xdata[[1]]),,drop=FALSE]
+  mfc <- list()
+  ct=colnames(contrasts)[1]
+  for(ct in colnames(contrasts)) {
+    y <- contrasts[,ct]
+    dx <- lapply(xdata, function(x) gx.limma(x, y, lfc=0, fdr=1))
+    mfc[[ct]] <- lapply( dx, function(d) matrix(d$logFC, ncol=1,
+                                                dimnames=list(rownames(d),ct)))
+  }      
+  
+  F <- mfc[[1]]
+  if(length(mfc)>1) {
+    for(i in 2:length(mfc)) {
+      for(j in 1:length(F)) F[[j]] <- cbind(F[[j]], mfc[[i]][[j]])
+    }
+  }
+        
+  ##ww.types=filter=G=ntop=NULL
+  names(F)
+  allowed_types <- c("mx","px","gx","me")
+  F <- F[ names(F) %in% allowed_types ]
+
+  ## make sure F is symbol. Enrichment need rownames as symbol
+  ## (as in GMT)
+  F_bysymbol <- F
+  if(!is.null(annot)) {
+    F_bysymbol <- mofa.prefix(F_bysymbol)
+    F_bysymbol <- lapply( F_bysymbol, function(f) rename_by2(f, annot, "symbol"))
+  }
+  
+  ## determine type
+  F.types <- ifelse( grepl("^mx|^metabo",names(F),ignore.case=TRUE),
+                    "ChEBI", "SYMBOL" )
+  F.types
+
+  ## If available please use internal pgx$GMT.
+  has.mx <- any(F.types == "ChEBI")
+  has.px <- any(F.types == "SYMBOL") 
+  if(is.null(G)) {
+    G <- NULL
+    ## add metabolomic gene sets   
+    if (has.mx) {
+      info("[pgx.add_GMT] Adding metabolomics genesets")
+      G <- Matrix::t(playdata::MSETxMETABOLITE)
+      rownames(G) <- sub(".*:","",rownames(G)) ## TEMPORARY!!!
+    }
+    ## add SYMBOL (classic) gene sets 
+    if (has.px) {
+      info("[pgx.add_GMT] Adding transcriptomics/proteomics genesets")
+      if(is.null(G)) {
+        G <- Matrix::t(playdata::GSETxGENE)
+      } else {
+        G <- merge_sparse_matrix(G, Matrix::t(playdata::GSETxGENE))
+      }
+    }
+  }
+  rownames(G) <- sub(".*:","",rownames(G))  
+  dim(G)
+
+  ## filter gene sets
+  if(!is.null(filter)) {
+    sel <- grep(filter, colnames(G))
+    G <- G[,sel]
+  }
+  
+  ## Perform geneset enrichment with fast rank-correlation. We could
+  ## do with fGSEA instead but it is much slower.
+  F <- mofa.strip_prefix(F)
+  wnames <- unlist(lapply(F, rownames))
+  pp <- intersect(wnames,rownames(G))  
+  G <- G[pp,]
+  G <- G[, Matrix::colSums(G!=0)>=3]
+  dim(G)
+  gg <- rownames(G)  
+  gsea <- list()
+  i=1
+  for(i in 1:length(F)) {
+    w1 <- F[[i]]
+    nc <- sum(rownames(w1) %in% gg)
+    if(nc>0) {
+      pp <- intersect(rownames(w1),rownames(G))
+      f1 <- gset.rankcor(w1[pp,,drop=FALSE], G[pp,], compute.p=TRUE)
+      dt <- names(F)[i]
+      if(!all(is.na(f1$rho)) && !all(f1$rho==0)) {
+        gsea[[dt]] <- f1
+      }
+    }
+  }
+  names(gsea)
+
+  ## extract rho, pval and qval
+  rho <- lapply( gsea, function(x) x$rho )
+  p.value <- lapply( gsea, function(x) x$p.value )
+
+  ## correct missing values
+  for(i in 1:length(gsea)) {
+    rho[[i]][which(is.na(rho[[i]]))] <- 0
+    p.value[[i]][which(is.na(p.value[[i]]))] <- 0.9999
+  }
+  
+  ## As multi-omics score we take the absolute geometric average
+  nt <- length(rho)
+  multi.rho <- log(pmax(abs(rho[[1]]),0.01))
+  if(nt > 1) {
+    for(i in 2:nt) {
+      multi.rho <- multi.rho + log(pmax(abs(rho[[i]]),0.01))
+    }
+  }
+  multi.rho <- exp(multi.rho / nt)
+  
+  ## As multi-omics p.value we use Stouffer's method
+  P <- sapply( p.value, as.vector)
+  P[is.na(P)] <- 0.999
+  P <- pmin(pmax(P,1e-99),0.999999)
+  multi.p <- apply(P, 1, function(x) metap::sumz(x)$p)  ## slow.... 
+  nr <- nrow(p.value[[1]])
+  nc <- ncol(p.value[[1]])
+  dimnames <- dimnames(p.value[[1]])
+  multi.p <- matrix(multi.p, nrow=nr, ncol=nc, dimnames = dimnames)
+  multi.q <- apply(multi.p,2, p.adjust)
+  dim(multi.p)
+
+  ## determine is sign/direction is all same
+  S <- sapply( rho, as.vector)
+  multi.equal_sign <- matrixStats::rowSds(sign(S), na.rm=TRUE) < 1e-8
+  multi.equal_sign <- matrix(multi.equal_sign, nrow=nr, ncol=nc,
+                             dimnames = dimnames)    
+
+  ## define a integrated score
+  multi.score <- multi.rho * -log(multi.p) * multi.equal_sign
+  
+  ## Create nice dataframe
+  enr <- list()
+  for(i in 1:ncol(multi.rho)) {
+    df.rho  = sapply(rho, function(x) x[,i])
+    df.pval = sapply(p.value, function(x) x[,i])
+    df.multi = data.frame(
+      score = multi.score[,i],
+      rho = multi.rho[,i],
+      sign = multi.equal_sign[,i],
+      p = multi.p[,i],
+      q = multi.q[,i]
+    )
+    colnames(df.multi) <- paste0("multi.",colnames(df.multi))
+    colnames(df.rho) <- paste0("rho.",colnames(df.rho))
+    colnames(df.pval) <- paste0("pval.",colnames(df.pval))    
+    df <- data.frame(
+      df.multi,
+      df.rho,
+      df.pval
+    )
+    #df <- df[!is.na(df$multi.rho),,drop=FALSE]
+    ct <- colnames(multi.rho)[i]
+    enr[[ct]] <- df
+  }
+
+  if(!is.null(ntop) && ntop > 0) {
+    i=1
+    for(i in 1:length(enr)) {
+      mscore <- enr[[i]]$multi.score
+      rho.col <- grep("^rho[.]",colnames(enr[[i]]))[1]
+      msign  <- sign(enr[[i]][,rho.col])
+      ii <- order(-mscore*msign)
+      enr[[i]] <- head( enr[[i]][ii,], ntop )
+    }
+  }
+  
+  return(enr)
+}
+
+
+#' 
+#' @export
+mgsea.plot_enrichment_scatter <- function(gsea, type1, type2, size.par="p",
+                                          main=NULL, hilight=NULL) {
+  ##gsea=res$gsea;type1="px";type2="mx"
+  ## using pre-computed GSEA  
+  R <- gsea
+  R <- R[, grep("^rho",colnames(R))]
+  colnames(R) <- sub("^rho.", "",colnames(R))
+  s1 <- R[,type1]
+  s2 <- R[,type2]
+  if(size.par=="q") {
+    qcomb <- gsea$multi.q  ## meta q-value
+  } else {
+    qcomb <- gsea$multi.p  ## meta q-value
+  }
+  
+  s1 <- s1 + 1e-2*rnorm(length(s1))
+  s2 <- s2 + 1e-2*rnorm(length(s2))
+
+  ## point size
+  cex1 <- 0.1 + (1-qcomb)**2
+  col0 <- ifelse( is.null(hilight), "black", "grey60")
+  plot( s1, s2, cex = 1.4*cex1, col=col0,
+       xlab = paste(type1, "enrichment (rho)"),
+       ylab = paste(type2, "enrichment (rho)")
+  )
+  if(is.null(title)) {
+    title <- paste("multiGSEA:", toupper(type1), "vs.", toupper(type2) )
+  } else {
+    title <- main
+  }
+  title(title, cex.main=1.3)
+  
+  abline(h=0, v=0, lty=3)
+  kk <- rownames(gsea)
+  if(!is.null(hilight) && length(hilight)>0 ) {
+    if( length(intersect(hilight,kk))) {
+      sel <- intersect(hilight,kk)
+    } else {
+      sel <- grep(hilight, kk, value=TRUE)
+    }
+    if(length(sel)) {
+      sel <- match(sel, kk)
+      points( s1[sel], s2[sel], pch=20, col="red2",
+             lwd=2, cex=1.5*cex1[sel] )
+    }
+  }
+}
+
+
+#' @export
+mgsea.plot_enrichment_barplot <- function(gsea, type="barplot",
+                                          remove.dup = TRUE,
+                                          ntop=20,
+                                          filter = NULL,
+                                          select = NULL,
+                                          strip.names = FALSE,
+                                          par = NULL,
+                                          title = "multi-omics enrichment"){
+  ##k=1;ntop=20
+  S <- gsea
+  if(nrow(S)==0) return(NULL)
+
+  if(!is.null(select) && length(select)>0) {
+    S <- S[select,,drop=FALSE]
+  }
+  
+  if(!is.null(filter)) {
+    S <- S[grep(filter,rownames(S)),,drop=FALSE]
+  }
+  
+  if(remove.dup) {
+    sname <- gsub(".*:| \\(.*","",rownames(S))
+    S <- S[which(!duplicated(sname)),,drop=FALSE]
+  }
+
+  if("multi.score" %in% names(S)) {
+    S <- S[order(-abs(S$multi.score)),,drop=FALSE]
+    topS <- abs(S[,grep("^rho",colnames(S)),drop=FALSE])
+  } else if("multi" %in% names(S)) {
+    S <- S[order(-abs(S$multi$score)),,drop=FALSE]
+    topS <- abs(S[["rho"]])
+  }
+  topS <- head(topS, ntop)
+  topS <- topS[nrow(topS):1,,drop=FALSE]
+  plot <- NULL
+  if(strip.names) {
+    rownames(topS) <- gsub(" \\(.*","",rownames(topS))
+  }
+  
+  if(type=='barplot') {
+    if(is.null(par)) {
+      par(mfrow=c(1,2), mar=c(4,10,4,2))
+      plot.new()
+    } else {
+      par(par)
+    }
+    barplot( t(topS), horiz=TRUE, las=1, xlab="cumulative abs.enrichment (rho)")
+    cc <- grey.colors(ncol(topS))
+    legend("bottomright", legend=colnames(topS),
+           fill=cc, inset=c(0.0,0.02), bg='white',
+           y.intersp = 0.8, cex=0.85)
+    title( title, outer=TRUE, cex.main=1.4, line=-1.2)
+  }
+
+  if(type=='lollipop') {
+    ## need double lolliplot lines for multi-omics
+    top.nes <- rowSums(topS)
+    names(top.nes) <- rownames(topS)
+    plot <- ggLollipopPlot( top.nes, xlab="enrichment (NES)" )
+  }
+  plot
 }
 
 

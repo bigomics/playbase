@@ -259,7 +259,8 @@ compute_extra <- function(pgx, extra = c(
           pgx$mofa <- pgx.compute_mofa(
             pgx,
             kernel = "MOFA",
-            ntop = 1000,
+            ntop = 2000,
+            gset.ntop = 4000,
             numfactors = 10,
             add_gsets = FALSE
           )

@@ -1417,6 +1417,11 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   probes <- rownames(counts)
   probe_match <- apply(annot_table, 2, function(x) sum(probes %in% x))
   probe_match
+
+  if(max(probe_match)==0) {
+    return(counts)
+  }
+  
   from_id <- names(which.max(probe_match))
   from_id
 
