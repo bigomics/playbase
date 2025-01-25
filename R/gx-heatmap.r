@@ -484,8 +484,8 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     for (i in 1:ngrp) {
       jj <- grp[[i]]
       ap <- list(
-        title_gp = grid::gpar(fontsize = 3.5 * annot.ht * annot.cex),
-        labels_gp = grid::gpar(fontsize = 3.1 * annot.ht * annot.cex),
+        title_gp = grid::gpar(fontsize = 3.3 * annot.ht * annot.cex),
+        labels_gp = grid::gpar(fontsize = 2.9 * annot.ht * annot.cex),
         grid_width = grid::unit(1 * annot.ht, "mm"),
         grid_height = grid::unit(1 * annot.ht, "mm")
       )
@@ -497,7 +497,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
         simple_anno_size = grid::unit(0.85 * annot.ht * annot.cex, "mm"), ## BioC 3.8!!
         show_annotation_name = (i == ngrp),
         show_legend = show_legend & (npar <= 20),
-        annotation_name_gp = grid::gpar(fontsize = 3.1 * annot.ht * annot.cex),
+        annotation_name_gp = grid::gpar(fontsize = 2.9 * annot.ht * annot.cex),
         annotation_legend_param = aa
       )
     }
