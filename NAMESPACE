@@ -194,8 +194,13 @@ export(maxMedianNormalization)
 export(maxSumNormalization)
 export(merge_sparse_matrix)
 export(mgsea.compute_enrichment)
+<<<<<<< HEAD
 export(mgsea.plot_barplot)
 export(mgsea.plot_scatter)
+=======
+export(mgsea.plot_enrichment_barplot)
+export(mgsea.plot_enrichment_scatter)
+>>>>>>> 2395886fd6a4a2c3a29a16072ee9553ff540b764
 export(mixHivePlot)
 export(mixomics.compute_diablo)
 export(mixomics.plot)
