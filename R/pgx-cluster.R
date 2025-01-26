@@ -384,9 +384,9 @@ pgx.clusterMatrix <- function(X,
   cluster.by <- intersect(cluster.by, c("genes", "samples"))
   if (length(cluster.by) == 0) cluster.by <- "samples"
 
-  if (!is.null(datatype)) {
-    message("[pgx.clusterMatrix] Running on ", datatype, " data.")
-  }
+  message("[pgx.clusterMatrix] Running on ", datatype, " data")
+  message("[pgx.clusterMatrix] Clustering: ", cluster.by)
+  message("[pgx.clusterMatrix] Methods: ", methods)
 
   #if (datatype %in% c("scRNAseq","scRNA-seq")) {  
   #reduce.sd=50; reduce.pca=30
@@ -423,10 +423,13 @@ pgx.clusterMatrix <- function(X,
   X <- X + 1e-3 * matrix(stats::rnorm(length(X)), nrow(X), ncol(X))
 
   ## Further pre-reduce dimensions using SVD
+  ## AZ: for now skip when clustering scRNA-seq features. need thinking.
   res.svd <- NULL
-  c1 <- !datatype %in% c("scRNAseq", "scRNA-seq")
-  c2 <- cluster.by != "genes"
-  if (c1 && c2) {
+  cc = FALSE
+  if (!is.null(datatype) & !is.null(cluster.by)) {
+    cc <- (datatype %in% c("scRNAseq", "scRNA-seq")) & (cluster.by=="genes")
+  }
+  if (!cc) {
     if (reduce.pca > 0) {
       reduce.pca <- max(3, min(c(reduce.pca, dim(X) - 1)))
       message("[pgx.clusterMatrix] Reducing to ", reduce.pca, " PCA dimensions...")
@@ -467,9 +470,9 @@ pgx.clusterMatrix <- function(X,
     message("[pgx.clusterMatrix] Calculating t-SNE 2D...")
     perplexity <- pmax(min(ncol(X) / 4, perplexity), 2)
     sdtop <- nrow(X)
-    partial_pca <- FALSE
+    ##partial_pca <- FALSE
     if (nrow(X) > 1000) sdtop <- 1000
-    if (ncol(X) > 5000) partial_pca <- TRUE
+    ##if (ncol(X) > 5000) partial_pca <- TRUE
     sdx <- matrixStats::rowSds(X, na.rm = TRUE)
     ii <- Matrix::head(order(-sdx), sdtop)
     X1 <- X[ii, , drop = FALSE]
@@ -497,7 +500,8 @@ pgx.clusterMatrix <- function(X,
     sdx <- matrixStats::rowSds(X, na.rm = TRUE)
     ii <- Matrix::head(order(-sdx), sdtop)
     X1 <- X[ii, , drop = FALSE]
-    pos <- Rtsne::Rtsne(t(X1),
+    pos <- Rtsne::Rtsne(
+      t(X1),
       dims = 3,
       is_distance = FALSE,
       check_duplicates = FALSE,
@@ -511,9 +515,11 @@ pgx.clusterMatrix <- function(X,
 
   if ("umap" %in% methods && 2 %in% dims) {
     message("[pgx.clusterMatrix] Calculating UMAP 2D...")
-    c1 <- datatype %in% c("scRNAseq", "scRNA-seq")
-    c2 <- cluster.by == "genes"
-    if(c1 && c2) {
+    cc = FALSE
+    if (!is.null(datatype) & !is.null(cluster.by)) {
+      cc <- (datatype %in% c("scRNAseq", "scRNA-seq")) & (cluster.by=="genes")
+    }
+    if (cc) {
       #saveRDS(list(X=X, reduce.pca=reduce.pca), "~/Desktop/MNT/LL-fixumap1.RDS") ## AZ
       sampl <- data.frame(row.names = colnames(X))
       SO <- playbase::pgx.justSeuratObject(counts = X, samples = sampl)
@@ -532,9 +538,9 @@ pgx.clusterMatrix <- function(X,
       if (umap.pkg == "uwot") {
         nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
         message("[pgx.clusterMatrix] N. of neighbours = ", nb)
-        if (any(rowSums(X, na.rm = TRUE) == 0)) {
-          stop("[pgx.clusterMatrix] No fully missing features allowed")
-        }
+        ##if (any(rowSums(X, na.rm = TRUE) == 0)) {
+        ## stop("[pgx.clusterMatrix] full NA not allowed")
+        ##}
         pos <- uwot::tumap(
           t(X),
           n_components = 2,
