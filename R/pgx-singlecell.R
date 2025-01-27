@@ -659,9 +659,11 @@ pgx.createSeuratObject <- function(counts,
     s.ff <- Seurat::cc.genes$s.genes
     obj <- Seurat::CellCycleScoring(obj, s.features = s.ff, g2m.features = g2m.ff)
   }
-  
-  if (filter) {
 
+  ncells0 <- ncol(obj)
+
+  if (filter) {
+    
     message("[pgx.createSeuratObject] Filtering cells")
 
     active_filters <- NULL
@@ -687,13 +689,11 @@ pgx.createSeuratObject <- function(counts,
       f3 <- "hb_threshold" %in% active_filters
       if (f3) { hb_thr = sc_compute_settings[["hb_threshold"]] }
       
-      ncells0 <- ncol(obj)
       obj <- subset(obj, subset =
                            nFeature_RNA > nfeat_thr[1] &
                            nFeature_RNA < nfeat_thr[2] &
                            percent.mt < mt_thr &
                            percent.hb < hb_thr)
-
       ## probs <- c(0.01, 0.99)
       ## qN <- quantile(obj$nCount_RNA, probs = probs)
       ## qF <- quantile(obj$nFeature_RNA, probs = probs)
@@ -701,6 +701,8 @@ pgx.createSeuratObject <- function(counts,
       ##                      nCount_RNA > qN[1] & nCount_RNA < qN[2] &                       
       ##                      nFeature_RNA > qF[1] & nFeature_RNA < qF[2] &
       ##                      percent.mt < 5)
+      ncells1 <- ncol(obj)
+      message("[pgx.createSeuratObject] Filtering cells: ", ncells0, " --> ", ncells1) 
     } else {
       message("[pgx.createSeuratObject]: No user-selected filters")
       ncells1 <- ncol(obj)
