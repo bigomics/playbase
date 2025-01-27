@@ -28,27 +28,8 @@ compute_extra <- function(pgx, extra = c(
   if (!is.null(pgx.dir) && !dir.exists(pgx.dir)) pgx.dir <- NULL
   if (!is.null(libx.dir) && !dir.exists(libx.dir)) libx.dir <- NULL
 
-  ## detect if it is single or multi-omics
-  # TEMPORARY ONLY SINGLE OMICS
-  single.omics <- TRUE
-  if (single.omics) {
-    message(">>> computing extra for SINGLE-OMICS")
-    rna.counts <- pgx$counts
-  } else {
-    message(">>> computing extra for MULTI-OMICS")
-    data.type <- gsub("\\[|\\].*", "", rownames(pgx$counts))
-    jj <- which(data.type %in% c("gx", "mrna"))
-    if (length(jj) == 0) {
-      stop("FATAL. could not find gx/mrna values.")
-    }
-    rna.counts <- pgx$counts[jj, ]
-    is.logged <- (min(rna.counts, na.rm = TRUE) < 0 ||
-      max(rna.counts, na.rm = TRUE) < 50)
-    if (is.logged) {
-      message("expression data seems log. undoing logarithm")
-      rna.counts <- 2**rna.counts
-    }
-  }
+  rna.counts <- pgx$counts
+
   # If working on non-human species, use homologs
   if (!all(is.na(pgx$genes$human_ortholog))) {
     rownames(rna.counts) <- probe2symbol(rownames(rna.counts), pgx$genes, query = "human_ortholog")
