@@ -585,7 +585,13 @@ pgx.computePGX <- function(pgx,
   ## Cluster by genes
   if (do.clustergenes) {
     message("[pgx.computePGX] clustering genes...")
-    pgx <- playbase::pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), X = pgx$impX, level = "gene")
+    pgx <- playbase::pgx.clusterGenes(
+      pgx,
+      methods = "umap",
+      dims = c(2, 3),
+      X = pgx$impX,
+      level = "gene"
+    )
   }
 
   saveRDS(pgx, "~/Desktop/MNT/LL3.RDS")
@@ -635,7 +641,9 @@ pgx.computePGX <- function(pgx,
 
   message("[pgx.computePGX] testing genes...")
 
-  pgx <- playbase::compute_testGenes(pgx, contr.matrix,
+  pgx <- playbase::compute_testGenes(
+    pgx,
+    contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
     use.design = use.design,
@@ -657,9 +665,12 @@ pgx.computePGX <- function(pgx,
     ## Cluster by genes
     if (do.clustergenesets) {
       message("[pgx.computePGX] clustering genesets...")
-      pgx <- playbase::pgx.clusterGenes(pgx,
+      pgx <- playbase::pgx.clusterGenes(
+        pgx,
         methods = "umap",
-        dims = c(2, 3), X = NULL, level = "geneset"
+        dims = c(2, 3),
+        X = NULL,
+        level = "geneset"
       )
     }
   } else {
@@ -670,7 +681,8 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
   message("[pgx.computePGX] computing extra modules...")
 
-  pgx <- playbase::compute_extra(pgx,
+  pgx <- playbase::compute_extra(
+    pgx,
     extra = extra.methods,
     pgx.dir = pgx.dir,
     libx.dir = libx.dir,
