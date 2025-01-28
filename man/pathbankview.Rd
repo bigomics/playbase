@@ -4,7 +4,7 @@
 \alias{pathbankview}
 \title{Download and color nodes in PathBank SVGs}
 \usage{
-pathbankview(pb, val, as.img = FALSE)
+pathbankview(pb, val, as.img = FALSE, large_font = TRUE)
 }
 \arguments{
 \item{pb}{A character string specifying the PathBank pathway ID.}

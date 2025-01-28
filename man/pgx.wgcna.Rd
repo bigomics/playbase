@@ -12,7 +12,7 @@ pgx.wgcna(
   deepsplit = 2,
   networktype = "signed",
   tomtype = "signed",
-  numericlabels = TRUE,
+  numericlabels = FALSE,
   ngenes = 1000
 )
 }
