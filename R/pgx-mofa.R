@@ -257,7 +257,7 @@ mofa.compute <- function(xdata,
     outfile = file.path(tempdir(),"mofa-model.hdf5")
     suppressMessages(suppressWarnings(
       model <- MOFA2::run_mofa(obj, outfile=outfile, save_data=TRUE,
-                               use_basilisk=FALSE)
+                               use_basilisk=TRUE)
     ))
     
     ##model <- load_model(outfile, remove_inactive_factors = FALSE)
