@@ -793,7 +793,7 @@ mofa.plot_heatmap <- function(mofa, k=NULL, ntop=50,
     for(i in 1:length(xx)) {
       namesx <- mofa.strip_prefix(rownames(xx[[i]]))
       ii <- which(namesx %in% features2)
-      xx[[i]] <- xx[[i]][ii,]
+      xx[[i]] <- xx[[i]][ii,,drop=FALSE]
     }
   }
 
@@ -1049,7 +1049,7 @@ mofa.plotVar <- function(mofa, comp=1:2, style="correlation",
       w <- mofa$ww[[i]][,comp]
       f <- mofa$F[,comp]
       sel <- which(rowSums(abs(w))>0)  ## only non-zero variables
-      rho <- cor( t(x[sel,]), f)
+      rho <- cor( t(x[sel,,drop=FALSE]), f)
       if(i == 1) {
         plot( rho[,1], rho[,2], pch=19, col=1+i,
              xlab = colnames(rho)[1],
@@ -1310,7 +1310,7 @@ mofa.splitByGeneRole <- function(X) {
     ##tf = X[rownames(X) %in% tf,],
     tf = X[rownames(X) %in% intersect(kin.targets,tf),],            
     ## mir = X[rownames(X) %in% mir,],
-    gx = X[gg,]
+    gx = X[gg,,drop=FALSE]
   )
   return(data)
 }
@@ -1325,14 +1325,14 @@ mofa.exampledata <- function(dataset="geiger", ntop=2000,
     dir = "~/Playground/opg-exampledata/metabolomics-kegg"
     counts  <- read_counts(file.path(dir, "multiomics-counts.csv"))
     samples <- read_samples(file.path(dir, "multiomics-samples.csv"))
-    X <- logCPM(counts)
+    ##X <- logCPM(counts)
+    mindet <- min(counts[counts>0])
+    X <- log2(counts + mindet)
     X <- X + 1e-3*matrix(rnorm(length(X)),nrow(X),ncol(X))
-    X <- head( X[order(-apply(X,1,sd)),], 1000)
     ##X <- t(scale(t(X)))
-    dim(X)
     data <- list(
-      px = X[grep("px:",rownames(X)),],
-      mx = X[grep("mx:",rownames(X)),]
+      px = X[grep("px:",rownames(X)),,drop=FALSE],
+      mx = X[grep("mx:",rownames(X)),,drop=FALSE]
     )
     samples <- samples
     contrasts <- as.matrix(samples[,"activated",drop=FALSE])
@@ -1404,7 +1404,7 @@ mofa.exampledata <- function(dataset="geiger", ntop=2000,
       rownames(data[[i]]) <- paste0(names(data)[i],":",rownames(data[[i]]))
     }
     dim(omx$pheno)
-    samples <- omx$pheno[kk,]
+    samples <- omx$pheno[kk,,drop=FALSE]
 
     if(!is.null(omx.tissue)) {
       sel <- grep(omx.tissue,samples$tissue)
@@ -1443,6 +1443,9 @@ mofa.exampledata <- function(dataset="geiger", ntop=2000,
   ## filter out and reduce
   data <- lapply(data, function(d) d[rowMeans(is.na(d))<0.5,])
   data <- lapply(data, function(d) d[rowMeans(d**2,na.rm=TRUE)>0,])
+  if(ntop>0) {
+    data <- lapply(data, function(x) head( x[order(-apply(x,1,sd)),], ntop))
+  }
   
   list( X = data, samples = samples, contrasts=contrasts )
 }
@@ -1461,6 +1464,25 @@ normalize_multirank <- function(rnk) {
       rnk[ii] / max(rnk[ii], na.rm=TRUE) )
   }
   nrnk
+}
+
+#' Normalize a rank vector for each datatype to [-1;1]. This is useful
+#' for doing integrated GSEA on multi-omics data.
+#'
+#' @export
+normalize_multifc <- function(fc, by=c("sd","mad")[1]) {
+  dtypes <- sub(":.*","",names(fc))
+  nfc <- fc
+  for(dt in unique(dtypes)) {
+    ii <- which(dtypes == dt)
+    if(by == "mad") {
+      sdx <- mad(fc[ii], na.rm=TRUE)
+    } else {
+      sdx <- sd(fc[ii], na.rm=TRUE)
+    }
+    nfc[ii] <- fc[ii] / sdx
+  }
+  nfc
 }
 
 

@@ -642,7 +642,7 @@ SimpleSAE_module <- torch::nn_module(
 #'
 #' @export
 deep.plotBiomarkerHeatmap <- function(net, datatypes=NULL, balanced=TRUE,
-                                      ntop=50, ...) {
+                                      annot = NULL, ntop=50, ...) {
   grad <- net$get_gradients()
 
   if(!is.null(datatypes)) {
@@ -675,6 +675,9 @@ deep.plotBiomarkerHeatmap <- function(net, datatypes=NULL, balanced=TRUE,
   colnames(X) <- make_unique(colnames(X))
   Y <- data.frame(net$Y)
   rownames(Y) <- colnames(X)
+  if(!is.null(annot)) {
+    Y <- cbind(Y, t(annot))
+  }
   #gx.heatmap( X[sel,], col.annot = Y, mar=c(8,10), keysize=0.9)
   gx.splitmap( X[sel,], col.annot = Y, split=1, mar=c(2,6),
               show_key=TRUE, annot.cex=1.2, ... )  
@@ -797,7 +800,7 @@ deep.plotMultiOmicsGradients <- function(grad, n=20, cex.names=1,
   if(par) {
     ngroup <- ncol(grad[[1]])
     nview <- length(grad)  
-    par(mfrow=c(ngroup,nview), mar=c(10,4,0.5,2))
+    par(mfrow=c(ngroup,nview), mar=c(10,4,1.5,2))
   }
   for(k in 1:ncol(grad[[1]])) {
     for(i in 1:length(grad)) {
@@ -812,7 +815,7 @@ deep.plotMultiOmicsGradients <- function(grad, n=20, cex.names=1,
       barplot(sort(gr), ylab="gradient", las=3, cex.names=cex.names)
       title( paste0("phenotype=", colnames(grad[[1]])[k],
                     "; datatype=", names(grad)[i]),
-            line=-0.5, cex.main=1)
+            line=-0.5, cex.main=1.15)
     }
   }
 }

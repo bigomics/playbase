@@ -155,8 +155,10 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
   top <- top[rownames(X0), ]
 
   ## only significant
-  top <- top[which(top$adj.P.Val <= fdr & abs(top$logFC) >= lfc), ]
-  if (verbose > 0) cat("found", nrow(top), "significant at fdr=", fdr, "and minimal FC=", lfc, "\n")
+  if(!is.null(fdr) && !is.null(lfc)) {
+    top <- top[which(top$adj.P.Val <= fdr & abs(top$logFC) >= lfc), ]
+    if (verbose > 0) cat("found", nrow(top), "significant at fdr=", fdr, "and minimal FC=", lfc, "\n")
+  }
 
   if (compute.means && nrow(top) > 0) {
     avg <- t(apply(

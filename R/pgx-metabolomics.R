@@ -321,3 +321,45 @@ getMetaboliteInfo <- function(organism = "Human", id) {
 
   return(inf)
 }
+
+
+#' @export
+extend_metabolite_sets <- function(M) {
+
+  ppi <- playdata::GRAPHITE_PPI
+  ppi[,1] <- ifelse( grepl("CHEBI",ppi[,1]), ppi[,1], paste0("SYMBOL:",ppi[,1]))
+  ppi[,2] <- ifelse( grepl("CHEBI",ppi[,2]), ppi[,2], paste0("SYMBOL:",ppi[,2]))
+  sel <- which( grepl("CHEBI",ppi[,1]) & grepl("CHEBI",ppi[,2]) & ppi[,3] <= 0.33 )
+  gr <- igraph::graph_from_edgelist(as.matrix(ppi[sel,1:2]) )
+  ppi_mat <- as.matrix(gr)
+  table(colnames(M) %in% rownames(ppi_mat))
+  table(rownames(ppi_mat) %in% colnames(M))
+
+  ## build neigborhood matrix for metabolites
+  idx <- Matrix::which( M!=0, arr.ind=TRUE)
+  x <- M[idx]
+  features <- unique(c(colnames(M),rownames(ppi_mat)))
+  dims <-  c(nrow(M), length(features))
+  dimnames <- list( rownames(M), features )
+  M2 <- Matrix::sparseMatrix(idx[,1], idx[,2], x=x,
+                             dims=dims, dimnames=dimnames)
+  
+  ppi0 <- rbind("na"=0, cbind("na"=0, ppi_mat))
+  ii <- match(colnames(M2),rownames(ppi0))
+  ii[is.na(ii)] <- 1
+  B <- ppi0[ii,ii]
+  diag(B) <- 1
+  colnames(B)=rownames(B)=colnames(M2)
+  ## propagate neighbor
+  extM <- M2 %*% B
+  extM <- 1*(extM != 0)
+  extM
+
+  ## row merge with original
+  rownames(extM) <- paste(rownames(extM), "(extended)")
+  rn <- unique(c(rownames(M), rownames(extM)))
+  extM <- Matrix::t(merge_sparse_matrix( Matrix::t(M), Matrix::t(extM)))
+  extM <- extM[match( rn, rownames(extM)),]
+  
+  return(extM)
+}

@@ -614,10 +614,12 @@ pgx.computePGX <- function(pgx,
       idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
     }
     pgx$samples$cluster <- idx  ## really add??
+
   }
 
   ## Make contrasts by cluster
   if (cluster.contrasts) {
+
     ## Add cluster contrasts
     message("[pgx.computePGX] adding cluster contrasts...")
     Y <- pgx$samples[, "cluster", drop = FALSE]

@@ -26,6 +26,14 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
     fx <- F[, contrast]
   }
 
+  ## for multi-omics we must re-normalize by type otherwise FC can be
+  ## quite different between datatypes.
+  has.colons <- all(grepl(":",names(fx)))
+  is.multiomics <- (pgx$datatype == "multi-omics") || has.colons
+  if(is.multiomics) {
+    fx <- normalize_multifc(fx, by="mad")
+  }
+
   if (level == "gene") {
     ## names(fx) <- pgx$genes[rownames(F), "human_ortholog"]
     fx <- collapse_by_humansymbol(fx, pgx$genes) ## safe

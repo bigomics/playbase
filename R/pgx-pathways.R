@@ -26,7 +26,6 @@ getPathwayImage <- function(wp, val, sbgn.dir=NULL, as.img=FALSE) {
 }
 
 
-
 #' @export
 getReactomeSVG <- function(wp, val=NULL, as.img=FALSE) {
   require(xml2)
@@ -34,7 +33,12 @@ getReactomeSVG <- function(wp, val=NULL, as.img=FALSE) {
   ##wp="R-HSA-449147"  
   url <- paste0("https://reactome.org/ContentService/exporter/diagram/", wp,".svg")
   destfile <- tempfile(fileext = ".svg")
-  down <- download.file(url, destfile)
+  down <- tryCatch({
+    download.file(url, destfile)
+  },
+  error = function(w) {
+    return(NULL)
+  })
   
   if(as.img) {
     destfile <- list(
@@ -84,13 +88,22 @@ getReactomeSVG <- function(wp, val=NULL, as.img=FALSE) {
 #' }
 #'
 #' @export
-pathbankview <- function(pb, val, as.img=FALSE) {
+pathbankview <- function(pb, val, as.img=FALSE, large_font=TRUE) {
   require(xml2)
 
-  url <- paste0("https://www.pathbank.org/view/", pb, "/download?type=simple_vector_image")
+  if(large_font) {
+    url <- paste0("https://www.pathbank.org/view/", pb, "/download?type=simple_large_font_vector_image")
+  } else {
+    url <- paste0("https://www.pathbank.org/view/", pb, "/download?type=simple_vector_image")
+  }
   destfile <- tempfile(fileext = ".svg")
-  down <- download.file(url, destfile)
-
+  down <- tryCatch({
+    download.file(url, destfile)
+  },
+  error = function(w) {
+    return(NULL)
+  })
+  
   # Read the file line by line
   lines <- readLines(destfile)
 
