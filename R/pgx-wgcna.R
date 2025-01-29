@@ -239,9 +239,6 @@ wgcna.compute_geneStats <- function(net, datExpr, datTraits, TOM) {
   ## Define numbers of genes and samples
   nGenes = ncol(datExpr);
   nSamples = nrow(datExpr);  
-
-  dbg("[wgcna.compute_geneStats] dim(datExpr) = ". dim(datExpr))
-  dbg("[wgcna.compute_geneStats] dim(datTraits) = ". dim(datTraits))
   
   ## Recalculate MEs with color labels
   moduleTraitCor = cor(net$MEs, datTraits, use = "pairwise.complete");
