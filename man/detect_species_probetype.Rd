@@ -7,8 +7,9 @@ list of test_species. Warning. bit slow.}
 \usage{
 detect_species_probetype(
   probes,
-  test_species = c("human", "mouse", "rat"),
-  datatype = NULL
+  test_species = c("Human", "Mouse", "Rat"),
+  datatype = NULL,
+  annot.cols = NULL
 )
 }
 \description{
