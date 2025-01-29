@@ -42,10 +42,14 @@ pgx.wgcna <- function(
     ngenes = 1000) {
 
   ##minmodsize=10;power=NULL;cutheight=0.25;deepsplit=2;ngenes=1000;networktype="signed";tomtype="signed";numericlabels=FALSE
+
+  samples <- pgx$samples
+  ## no dot pheno
+  samples <- samples[, grep("^[.]",colnames(samples),invert=TRUE),drop=FALSE]  
   
   res <- wgcna.compute(
     X = pgx$X,
-    samples = pgx$samples,
+    samples = samples,
     minmodsize = minmodsize,   # default: min(20,...)
     power = power,             # default: 6
     cutheight = cutheight,     # default: 0.15
@@ -236,6 +240,9 @@ wgcna.compute_geneStats <- function(net, datExpr, datTraits, TOM) {
   nGenes = ncol(datExpr);
   nSamples = nrow(datExpr);  
 
+  dbg("[wgcna.compute_geneStats] dim(datExpr) = ". dim(datExpr))
+  dbg("[wgcna.compute_geneStats] dim(datTraits) = ". dim(datTraits))
+  
   ## Recalculate MEs with color labels
   moduleTraitCor = cor(net$MEs, datTraits, use = "pairwise.complete");
   moduleTraitPvalue = WGCNA::corPvalueStudent(moduleTraitCor, nSamples);

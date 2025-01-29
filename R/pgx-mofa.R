@@ -17,6 +17,7 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
     message("[compute.multi_omics] splitting by gene role")
     xdata <- mofa.splitByGeneRole(pgx$X)
   }
+  names(xdata)
 
   numfactors <- min( numfactors, min(dim(xdata[[1]])) )
   numfactors
@@ -27,8 +28,13 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
     xdata <- c( xdata, list( gset = pgx$gsetX ) )
   }
   lapply(xdata, dim)
-  
-  discretized_samples <- pgx.discretizePhenotypeMatrix(pgx$samples)
+
+  ## cleanup samples
+  samples <- pgx$samples
+  samples$cluster <- NULL 
+  samples$sample <- NULL
+  samples <- samples[,grep("^[.].*|^cluster",colnames(samples),invert=TRUE),drop=FALSE]
+  discretized_samples <- pgx.discretizePhenotypeMatrix(samples)
   
   for(i in 1:length(xdata)) {
     d <- rownames(xdata[[i]])
@@ -231,7 +237,10 @@ mofa.compute <- function(xdata,
 
   if( kernel == "mofa") {
     obj <- MOFA2::create_mofa(xdata, groups=NULL)
-    MOFA2::samples_metadata(obj) <- data.frame( sample=rownames(samples), samples )
+    ## 'group' is used by MOFA
+    colnames(samples) <- sub("group","group ",colnames(samples))
+    MOFA2::samples_metadata(obj) <- data.frame( sample=rownames(samples),
+      samples, check.names=FALSE)
     
     data_opts <- MOFA2::get_default_data_options(obj)
     data_opts$scale_views <- FALSE
@@ -257,7 +266,7 @@ mofa.compute <- function(xdata,
     outfile = file.path(tempdir(),"mofa-model.hdf5")
     suppressMessages(suppressWarnings(
       model <- MOFA2::run_mofa(obj, outfile=outfile, save_data=TRUE,
-                               use_basilisk=FALSE)
+                               use_basilisk=TRUE)
     ))
     
     ##model <- load_model(outfile, remove_inactive_factors = FALSE)
@@ -509,6 +518,8 @@ mofa.compute_clusters <- function(xx, matF=NULL, along="samples") {
 #' @export
 mofa.compute_enrichment <- function(W, G=NULL, filter=NULL, ntop=1000) {
 
+  dbg("[mofa.compute_enrichment] 0: dim(W) = ", dim(W))
+  
   if(is.null(G)) {
     info("[pgx.add_GMT] Adding metabolomics genesets")
     G1 <- Matrix::t(playdata::MSETxMETABOLITE)
@@ -550,7 +561,7 @@ mofa.compute_enrichment <- function(W, G=NULL, filter=NULL, ntop=1000) {
   for(dt in dtypes) {
     gt <- dtype2gtype[dt]
     ii <- grep(gt, rownames(G))
-    G1 <- G[ii,]
+    G1 <- G[ii, ,drop=FALSE]
     rownames(G1) <- sub(gt,dt,rownames(G1))
     GMT <- rbind(GMT, G1)
   }
@@ -601,7 +612,6 @@ mofa.compute_enrichment <- function(W, G=NULL, filter=NULL, ntop=1000) {
     gsea[[i]] <- gsea[[i]][,c("pathway","NES","pval","padj","size","leadingEdge")]
     gsea[[i]] <- data.frame( lapply(gsea[[i]],as.matrix), check.names=FALSE)
   }
-
   
   ## extract rho, pval and qval
   rho  <- sapply( gsea, function(x) x$NES )
@@ -616,12 +626,19 @@ mofa.compute_enrichment <- function(W, G=NULL, filter=NULL, ntop=1000) {
 
 
 #' @export
-mofa.enrichment_table <- function(gsea, pheno, datatypes=NULL, full=TRUE) {
+mofa.enrichment_table.OLD <- function(gsea, pheno, datatypes=NULL, full=TRUE) {
   k <- pheno
   G <- gsea[[k]]
+
+  dbg("[mofa.enrichment_table] k = ", k)
+  dbg("[mofa.enrichment_table] colnames(G) = ", colnames(G))
+
   if(is.null(datatypes)) {
     datatypes <- sub("^rho.","",grep("^rho",colnames(G),value=TRUE))
   }
+
+  dbg("[mofa.enrichment_table] datatypes = ", datatypes)
+  
   N=S=P=G[,0]
   has.num <- any(grepl("num",colnames(G)))
   has.rho <- any(grepl("rho",colnames(G)))
@@ -1548,7 +1565,6 @@ mgsea.compute_enrichment <- function(F, annot, filter=NULL,
       }
     }
   }
-  rownames(G) <- sub(".*:","",rownames(G))  
   dim(G)
 
   ## filter gene sets
@@ -1559,6 +1575,7 @@ mgsea.compute_enrichment <- function(F, annot, filter=NULL,
   
   ## Perform geneset enrichment with fast rank-correlation. We could
   ## do with fGSEA instead but it is much slower.
+  rownames(G) <- sub(".*:","",rownames(G))  
   F <- mofa.strip_prefix(F)
   wnames <- unlist(lapply(F, rownames))
   pp <- intersect(wnames,rownames(G))  
@@ -1606,7 +1623,11 @@ mgsea.compute_enrichment <- function(F, annot, filter=NULL,
   P <- sapply( p.value, as.vector)
   P[is.na(P)] <- 0.999
   P <- pmin(pmax(P,1e-99),0.999999)
-  multi.p <- apply(P, 1, function(x) metap::sumz(x)$p)  ## slow.... 
+  if(ncol(P)>1) {
+    multi.p <- apply(P, 1, function(x) metap::sumz(x)$p)  ## slow....
+  } else {
+    multi.p <- P[,1]
+  }
   nr <- nrow(p.value[[1]])
   nc <- ncol(p.value[[1]])
   dimnames <- dimnames(p.value[[1]])
@@ -1616,12 +1637,15 @@ mgsea.compute_enrichment <- function(F, annot, filter=NULL,
 
   ## determine is sign/direction is all same
   S <- sapply( rho, as.vector)
-  multi.equal_sign <- matrixStats::rowSds(sign(S), na.rm=TRUE) < 1e-8
-  multi.equal_sign <- matrix(multi.equal_sign, nrow=nr, ncol=nc,
-                             dimnames = dimnames)    
+  multi.sign <- matrix(1, nr, nc)
+  if(ncol(S)>1) {
+    multi.sign <- matrixStats::rowSds(sign(S), na.rm=TRUE) < 1e-8
+    multi.sign <- matrix(multi.sign, nrow=nr, ncol=nc,
+      dimnames = dimnames)
+  }
 
   ## define a integrated score
-  multi.score <- multi.rho * -log(multi.p) * multi.equal_sign
+  multi.score <- multi.rho * -log(multi.p) * multi.sign
 
   ## add some stats
   gsets <- rownames(rho[[1]])
@@ -1638,16 +1662,17 @@ mgsea.compute_enrichment <- function(F, annot, filter=NULL,
     df.multi = data.frame(
       score = multi.score[,i],
       rho = multi.rho[,i],
-      sign = multi.equal_sign[,i],
+      sign = multi.sign[,i],
       p = multi.p[,i],
       q = multi.q[,i]
     )
     colnames(df.multi) <- paste0("multi.",colnames(df.multi))
     colnames(df.rho) <- paste0("rho.",colnames(df.rho))
-    colnames(df.pval) <- paste0("pval.",colnames(df.pval))    
+    colnames(df.pval) <- paste0("pval.",colnames(df.pval))
+    colnames(sizes) <- paste0("num.",colnames(sizes))    
     df <- data.frame(
       df.multi,
-      num = sizes,
+      sizes,
       df.rho,
       df.pval
     )
@@ -1676,9 +1701,10 @@ mgsea.compute_enrichment <- function(F, annot, filter=NULL,
 mgsea.plot_scatter <- function(gsea, type1, type2, size.par="p",
                                main=NULL, hilight=NULL) {
   ##gsea=res$gsea;type1="px";type2="mx"
+  
   ## using pre-computed GSEA  
   R <- gsea
-  R <- R[, grep("^rho",colnames(R))]
+  R <- R[, grep("^rho",colnames(R)), drop=FALSE]
   colnames(R) <- sub("^rho.", "",colnames(R))
   s1 <- R[,type1]
   s2 <- R[,type2]
