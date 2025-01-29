@@ -159,7 +159,7 @@ pgx.createPGX <- function(counts,
                           annot_table = NULL,
                           max.genesets = 5000,
                           name = "Data set",
-                          datatype = "unknown",
+                          datatype = "RNA-seq",
                           probe_type = NULL,
                           creator = "unknown",
                           description = "No description provided.",
@@ -606,6 +606,21 @@ pgx.computePGX <- function(pgx,
     pgx <- pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
 
     ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
+    ## posx <- cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]])
+    ## posx <- scale(posx)
+    ## idx <- pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
+    ## if (length(unique(idx)) == 1) {
+    ##   ## try again with finer settings if single cluster...
+    ##   idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
+    ## }
+    ## pgx$samples$cluster <- idx  ## really add??
+
+  }
+
+  ## Make contrasts by cluster
+  if (cluster.contrasts) {
+
+    ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
     posx <- cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]])
     posx <- scale(posx)
     idx <- pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
@@ -613,16 +628,12 @@ pgx.computePGX <- function(pgx,
       ## try again with finer settings if single cluster...
       idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
     }
-    pgx$samples$cluster <- idx  ## really add??
+    pgx$samples$.cluster <- idx  ## really add??
 
-  }
-
-  ## Make contrasts by cluster
-  if (cluster.contrasts) {
-
+    
     ## Add cluster contrasts
     message("[pgx.computePGX] adding cluster contrasts...")
-    Y <- pgx$samples[, "cluster", drop = FALSE]
+    Y <- pgx$samples[, ".cluster", drop = FALSE]
     if (length(unique(Y[, 1])) < 2) {
       message("[pgx.computePGX] warning: only one cluster.")
     } else {

@@ -42,10 +42,13 @@ pgx.wgcna <- function(
     ngenes = 1000) {
 
   ##minmodsize=10;power=NULL;cutheight=0.25;deepsplit=2;ngenes=1000;networktype="signed";tomtype="signed";numericlabels=FALSE
+
+  samples <- pgx$samples
+  samples <- samples[, grep("^[.]",colnames(samples)),drop=FALSE]  ## no dot pheno
   
   res <- wgcna.compute(
     X = pgx$X,
-    samples = pgx$samples,
+    samples = samples,
     minmodsize = minmodsize,   # default: min(20,...)
     power = power,             # default: 6
     cutheight = cutheight,     # default: 0.15
