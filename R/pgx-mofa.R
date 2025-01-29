@@ -257,7 +257,7 @@ mofa.compute <- function(xdata,
     outfile = file.path(tempdir(),"mofa-model.hdf5")
     suppressMessages(suppressWarnings(
       model <- MOFA2::run_mofa(obj, outfile=outfile, save_data=TRUE,
-                               use_basilisk=TRUE)
+                               use_basilisk=FALSE)
     ))
     
     ##model <- load_model(outfile, remove_inactive_factors = FALSE)
@@ -400,6 +400,13 @@ mofa.compute <- function(xdata,
 }
 
 
+#' @export
+mofa.topsd <- function(xdata, ntop) {
+  lapply(xdata, function(x) {
+    sdx <- matrixStats::rowSds(x,na.rm=TRUE)
+    head(x[order(-sdx),],ntop)
+  })
+}
 
 #' @export
 mofa.scale_views <- function(xdata) {

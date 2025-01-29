@@ -918,22 +918,19 @@ notWGCNA.compute <- function(X, Y, samples, ntop, nx, ny,
   hy <- hclust(dist(Y))
   idx <- cutree(hx, nx)
   idy <- cutree(hy, ny)
-
+  idx <- paste0(xlabel,".",idx)
+  idy <- paste0(ylabel,".",idy)  
+  
   mX <- rowmean( X, idx )
   mY <- rowmean( Y, idy )
-  rownames(mX) <- paste0(xlabel,": module",1:nrow(mX))
-  rownames(mY) <- paste0(ylabel,": module",1:nrow(mY))
 
   Z <- expandPhenoMatrix(samples, drop.ref=FALSE)
   P <- cor(t(mX), Z)
   Q <- cor(t(mY), Z)
   R <- cor(t(mX), t(mY))
-
-  if(plot) {
-    gx.heatmap(P, mar=c(10,10), scale="none", keysize=0.8, cexRow=0.8)
-    gx.heatmap(Q, mar=c(10,10), scale="none", keysize=0.8, cexRow=0.8)
-    gx.heatmap(R, mar=c(10,10), scale="none", keysize=0.8, cexRow=0.8)
-  }
+    
+  xgenes <- tapply(1:nrow(X), idx, function(i) rownames(X)[i])
+  ygenes <- tapply(1:nrow(Y), idy, function(i) rownames(Y)[i])
   
   res <- list(
     mX = mX,
@@ -941,27 +938,15 @@ notWGCNA.compute <- function(X, Y, samples, ntop, nx, ny,
     Z = Z,
     P = P,
     Q = Q,    
-    R = R
+    R = R,
+    xgenes = xgenes,
+    ygenes = ygenes
   )
   return(res)
 }
 
-pheno="activated=act"
-pheno="activated=notact"
 notWGCNA.condition_on_phenotype <- function(res, pheno, k=2) {
-
   p.wt <- ((1 + res$P[,pheno])/2)**k
   q.wt <- ((1 + res$Q[,pheno])/2)**k
-  wR <- outer(p.wt, q.wt)**k
-  
-  if(plot) {
-    gx.heatmap(res$P, mar=c(10,10), scale="none", keysize=0.8, cexRow=0.8)
-    gx.heatmap(res$Q, mar=c(10,10), scale="none", keysize=0.8, cexRow=0.8)    
-    gx.heatmap(res$R, mar=c(10,10), scale="none", keysize=0.8, cexRow=0.8)    
-    
-    gx.heatmap(wR, mar=c(10,10), scale="none", keysize=0.8, cexRow=0.8,
-               dist.method="euclidean")    
-  }
-
-  wR
+  outer(p.wt, q.wt)**k 
 }

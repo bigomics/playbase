@@ -887,11 +887,14 @@ getHumanOrtholog <- function(organism, symbols) {
   ## test if orthogene server is reachable
   res <- try(orthogene::map_genes("CDK1", verbose = FALSE))
   if ("try-error" %in% class(res)) {
-    message("[getHumanOrtholog] failed to contact server")
-    df <- data.frame(symbols, "human" = NA)
-    colnames(df)[1] <- organism
+    message("[getHumanOrtholog] WARNING:: failed to contact server")
+    ## as fallback we return the capitalized symbols. Maybe implement
+    ## a BioMart engine here.
+    orthogenes <- toupper(gsub(".*:","",symbols))
+    df <- data.frame(symbols,  orthogenes)
+    colnames(df) <- c(organism, "human")
     rownames(df) <- NULL
-    return(NULL)
+    return(df)
   }
 
   ## map to correct orthogene species name, if not
@@ -920,8 +923,8 @@ getHumanOrtholog <- function(organism, symbols) {
     orthogenes <- rep(NA, length(symbols))
   }
 
-  df <- data.frame(symbols, "human" = orthogenes)
-  colnames(df)[1] <- organism
+  df <- data.frame(symbols, orthogenes)
+  colnames(df) <- c( organism, "human")
   return(df)
 }
 
@@ -1161,28 +1164,27 @@ getGeneAnnotation.ORTHOGENE <- function(
 
   probes1 <- clean_probe_names(probes)
 
-  gene.out <- orthogene::map_genes(
+  gene.out <- try(orthogene::map_genes(
     genes = probes1,
     species = species,
     verbose = FALSE
-  )
-  head(gene.out)
-  gene.out <- gene.out[match(probes1, gene.out$input), ]
+  ))
 
-  ortholog <- getHumanOrtholog(organism, gene.out$name)$human
-  genebuild <- gprofiler2::get_version_info()$genebuild
-
+  ortholog <- toupper(probes1)
+  genebuild <- "-"
+  
+  if(!inherits(gene.out,"try-error")) {
+    gene.out <- gene.out[match(probes1, gene.out$input), ]
+    ortholog <- getHumanOrtholog(organism, gene.out$name)$human
+    genebuild <- gprofiler2::get_version_info()$genebuild
+  }
+  
   df <- data.frame(
     feature = probes,
     symbol = gene.out$name,
     human_ortholog = ortholog,
     gene_title = sub(" \\[.*", "", gene.out$description),
-    #    gene_biotype = NA,
-    #    map = NA,
     chr = NA,
-    #    pos = NA,
-    #    tx_len = NA,
-    # source = gene.out$namespace,
     source = "gprofiler2",
     gene_name = probes
   )
@@ -1702,6 +1704,7 @@ getMultiProbeAnnotation <- function(organism, probes) {
   
   ## populate with defaults
   symbol <- toupper(sub("^[a-zA-Z]+:","",probes))
+
   annot <- list()
   if(any(dtype %in% c('gx','px'))) {
     ii <- which(dtype %in% c('gx','px'))
@@ -1742,8 +1745,10 @@ getMultiProbeAnnotation <- function(organism, probes) {
   head(annot)
 
   ## fill NA
+  annot$human_ortholog[which(annot$human_ortholog=="")] <- NA
   annot$feature <- ifelse(is.na(annot$feature), probes, annot$feature)
   annot$symbol <- ifelse(is.na(annot$symbol), symbol, annot$symbol)
+  annot$human_ortholog <- ifelse(is.na(annot$human_ortholog), symbol, annot$human_ortholog)  
   annot$gene_name <- ifelse(is.na(annot$gene_name), probes, annot$gene_name)
   annot$data_type <- ifelse(is.na(annot$data_type), dtype, annot$data_type)    
 
