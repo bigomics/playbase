@@ -866,44 +866,99 @@ collapse_by_humansymbol <- function(obj, annot) {
 #' @export
 getHumanOrtholog <- function(organism, symbols) {
   ## test if orthogene server is reachable
-  res <- try(orthogene::map_genes("CDK1", verbose = FALSE))
-  if ("try-error" %in% class(res)) {
-    message("[getHumanOrtholog] failed to contact server")
-    df <- data.frame(symbols, "human" = NA)
+  res.orthogene <- try(orthogene::map_genes("CDK1", verbose = FALSE))
+  if ("try-error" %in% class(res.orthogene)) {
+    ## test if biomart is reachable
+    message("[getHumanOrtholog] orthogene::map_genes failed. Trying biomart...")
+    require(biomaRt)
+    D <- listDatasets(useEnsembl(biomart = "genes"))
+    s1 <- tolower(strsplit(organism, "")[[1]][1])
+    s2 <- tolower(strsplit(organism, " ")[[1]][2])
+    organism0 <- paste0(s1,s2)
+    hh <- grep(organism0, D$dataset)
+    if (any(hh)) {
+      human_mart <- biomaRt::useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl")
+      organism_mart <- biomaRt::useEnsembl(biomart = "genes", dataset = D$dataset[hh])
+      if (organism == "Mus musculus") {
+        attrs <- c("ensembl_gene_id", "mgi_symbol")
+        flt <- "mgi_symbol"
+      } else {
+        attrs <- c("ensembl_gene_id", "external_gene_name")
+        flt <- "external_gene_name"
+      }
+      res.biomart <- try(biomaRt::getLDS(
+        attributes = attrs,
+        filters = flt,
+        values = "Xist",
+        mart = organism_mart,
+        attributesL = c("ensembl_gene_id", "hgnc_symbol"),
+        martL = human_mart
+      ))
+      if ("try-error" %in% class(res.biomart)) {
+        message("[getHumanOrtholog] biomart::getLDS failed to contact server or use mirror")
+        df <- data.frame(symbols, "human" = NA)
+        orthogene <- toupper(sub(".*:", "", symbols))
+        df <- data.frame(symbols, "human" = orthogene)
+        colnames(df)[1] <- organism
+        rownames(df) <- NULL
+        return(df)
+      }
+    } else {
+      message("[getHumanOrtholog] could not retrieve ", organism, " on biomart.")
+      df <- data.frame(symbols, "human" = NA)
+      orthogene <- toupper(sub(".*:", "", symbols))
+      df <- data.frame(symbols, "human" = orthogene)
+      colnames(df)[1] <- organism
+      rownames(df) <- NULL
+      return(df)
+    }
+  }
+
+  if (!"try-error" %in% class(res.orthogene)) {
+    ## map to correct orthogene species name, if not
+    ## done. SPECIES_TABLE$species are annothub names,
+    ## SPECIES_TABLE$ortho_species are matched orthogene/gprofiler
+    ## names.
+    ortho_organism <- getOrthoSpecies(organism)
+    orthogenes <- NULL
+
+    ortho.out <- try(orthogene::convert_orthologs(
+      gene_df = c("---", unique(symbols[!is.na(symbols)])),
+      input_species = ortho_organism,
+      output_species = "human",
+      non121_strategy = "drop_both_species",
+      method = "gprofiler",
+      verbose = FALSE
+    ))
+
+    if (!"try-error" %in% class(ortho.out)) {
+      ii <- match(symbols, ortho.out$input_gene)
+      orthogenes <- rownames(ortho.out)[ii]
+    }
+
+    if (is.null(orthogenes)) {
+      message("WARNING: could not find orthogene for ", organism)
+      orthogenes <- rep(NA, length(symbols))
+    }
+
+    df <- data.frame(symbols, "human" = orthogenes)
     colnames(df)[1] <- organism
-    rownames(df) <- NULL
-    return(NULL)
+    return(df)
+
+  } else if (!"try-error" %in% class(res.biomart)) {
+    orhogenes <- biomaRt::getLDS(
+      attributes = attrs,
+      filters = flt,
+      values = symbols,
+      mart = organism_mart,
+      attributesL = c("ensembl_gene_id", "hgnc_symbol"),
+      martL = human_mart
+    )
+    df <- data.frame(symbols, "human" = orthogenes)
+    colnames(df)[1] <- organism
+    return(df)
   }
 
-  ## map to correct orthogene species name, if not
-  ## done. SPECIES_TABLE$species are annothub names,
-  ## SPECIES_TABLE$ortho_species are matched orthogene/gprofiler
-  ## names.
-  ortho_organism <- getOrthoSpecies(organism)
-
-  orthogenes <- NULL
-  ortho.out <- try(orthogene::convert_orthologs(
-    gene_df = c("---", unique(symbols[!is.na(symbols)])),
-    input_species = ortho_organism,
-    output_species = "human",
-    non121_strategy = "drop_both_species",
-    method = "gprofiler",
-    verbose = FALSE
-  ))
-
-  if (!"try-error" %in% class(ortho.out)) {
-    ii <- match(symbols, ortho.out$input_gene)
-    orthogenes <- rownames(ortho.out)[ii]
-  }
-
-  if (is.null(orthogenes)) {
-    message("WARNING: could not find orthogene for ", organism)
-    orthogenes <- rep(NA, length(symbols))
-  }
-
-  df <- data.frame(symbols, "human" = orthogenes)
-  colnames(df)[1] <- organism
-  return(df)
 }
 
 
