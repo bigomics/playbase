@@ -975,7 +975,7 @@ getHumanOrtholog <- function(organism, symbols) {
       output_species = "human",
       method = orthogeneMethod,
       non121_strategy = "drop_both_species",
-      verbose = FALSE
+`      verbose = FALSE
     ))
 
     if (!"try-error" %in% class(ortho.out)) {
