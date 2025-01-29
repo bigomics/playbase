@@ -924,11 +924,25 @@ getHumanOrtholog.biomart <- function(organism, symbols) {
 #' @export
 getHumanOrtholog <- function(organism, symbols) {
   ## test if orthogene server is reachable
-  res.orthogene <- try(orthogene::map_genes("CDK1", verbose = FALSE))
-  if ("try-error" %in% class(res.orthogene)) {
+  ##res.orthogene <- try(orthogene::map_genes("CDK1", verbose = FALSE))
+  ortho_organism <- getOrthoSpecies(organism)
+  mm <- c("gprofiler", "homologene", "babelgene")  ## mapping methods
+  LL <- list()
+  i <- 1
+  for(i in 1:length(mm)) {
+    LL[[mm[i]]] <- try(orthogene::convert_orthologs(
+      gene_df = c("---", "CDK1"),
+      input_species = ortho_organism,
+      method = mm[i],
+      verbose = FALSE
+    ))
+  }
+  orthogeneMethod <- NULL
+  methods <- unlist(lapply(LL, class))
+  if (unique(methods) == "try-error") {
+    message("[getHumanOrtholog] orthogene::convert_orthologs: all mapping methods failed. Trying biomart...")
     ## test if biomart is reachable
-    message("[getHumanOrtholog] orthogene::map_genes failed. Trying biomart...")
-    res.biomart <- try(getHumanOrtholog.biomart(organism, symbols)) 
+    res.biomart <- try(getHumanOrtholog.biomart(organism, symbols))
     if ("try-error" %in% class(res.biomart)) {
       message("[getHumanOrtholog] biomart failed.")
       df <- data.frame(symbols, "human" = NA)
@@ -938,9 +952,16 @@ getHumanOrtholog <- function(organism, symbols) {
       rownames(df) <- NULL
       return(df)
     }
+  } else {
+    methods <- methods[which(methods != "try-error")]
+    if("gprofiler" %in% names(methods)) { 
+      orthogeneMethod <- "gprofiler" ## preferred
+    } else {
+      orthogeneMethod <- names(methods)[1]
+    }
   }
 
-  if (!"try-error" %in% class(res.orthogene)) {
+  if (!is.null(orthogeneMethod)) {
     ## map to correct orthogene species name, if not
     ## done. SPECIES_TABLE$species are annothub names,
     ## SPECIES_TABLE$ortho_species are matched orthogene/gprofiler
@@ -952,8 +973,8 @@ getHumanOrtholog <- function(organism, symbols) {
       gene_df = c("---", unique(symbols[!is.na(symbols)])),
       input_species = ortho_organism,
       output_species = "human",
+      method = orthogeneMethod,
       non121_strategy = "drop_both_species",
-      method = "gprofiler",
       verbose = FALSE
     ))
 
