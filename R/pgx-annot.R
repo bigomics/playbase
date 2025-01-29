@@ -894,8 +894,8 @@ getHumanOrtholog.biomart <- function(organism, symbols) {
     ))
     if ("try-error" %in% class(res.biomart)) {
       message("[getHumanOrtholog] biomart::getLDS failed to contact server or use mirror")
-      #orthogens <- NULL
-      #return(orthogenes)
+      orthogens <- NULL
+      return(orthogenes)
     } else {
       orthogenes <- try(biomaRt::getLDS(
         attributes = attrs,
@@ -907,6 +907,8 @@ getHumanOrtholog.biomart <- function(organism, symbols) {
       ))
       if ("try-error" %in% class(res.biomart)) {
         message("[getHumanOrtholog] biomart::getLDS failed")
+        orthogens <- NULL
+        return(orthogenes)
       } else {
         return(orthogenes)
       }
@@ -970,14 +972,7 @@ getHumanOrtholog <- function(organism, symbols) {
     return(df)
 
   } else if (!"try-error" %in% class(res.biomart)) {
-    orthogenes <- biomaRt::getLDS(
-      attributes = attrs,
-      filters = flt,
-      values = symbols,
-      mart = organism_mart,
-      attributesL = c("ensembl_gene_id", "hgnc_symbol"),
-      martL = human_mart
-    )
+    orthogenes <- getHumanOrtholog.biomart(organism, symbols)
     df <- data.frame(symbols, "human" = orthogenes)
     colnames(df)[1] <- organism
     return(df)
