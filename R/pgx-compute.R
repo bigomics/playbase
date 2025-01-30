@@ -900,7 +900,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   if(length(ortho.col)==0) {
     symbol <- toupper(pgx$genes$symbol)
   } else {
-    symbol <- pgx$genes[,ortho.log[1]]
+    symbol <- pgx$genes[,ortho.col[1]]
   }
   
   metabolites <- grep("CHEBI",colnames(playdata::MSETxMETABOLITE),value=TRUE)

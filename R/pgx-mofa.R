@@ -1525,7 +1525,9 @@ mgsea.compute_enrichment <- function(F, annot, filter=NULL,
   message("computing phenotype enrichment...")
         
   ##ww.types=filter=G=ntop=NULL
-  if(inherits(F, "matrix")) F <- mofa.split_data(F)
+  is.multi <- all(grepl(":",rownames(F)))
+  if(inherits(F, "matrix") && is.multi) F <- mofa.split_data(F)
+  if(inherits(F, "matrix") && !is.multi) F <- list(gx = F)
   names(F)
   allowed_types <- c("mx","px","gx","me")
   F <- F[ names(F) %in% allowed_types ]
