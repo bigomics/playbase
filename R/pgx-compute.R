@@ -895,9 +895,14 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
   # Load geneset matrix from playdata. add metabolomics if data.type
   # is metabolomics
-  symbol <- pgx$genes$human_ortholog
-  if(is.null(symbol)) symbol <- toupper(pgx$genes$symbol)
-
+  target <- c("human_ortholog", "symbol", "gene_name", "rownames")
+  ortho.col <- intersect(target, colnames(pgx$genes))
+  if(length(ortho.col)==0) {
+    symbol <- toupper(pgx$genes$symbol)
+  } else {
+    symbol <- pgx$genes[,ortho.log[1]]
+  }
+  
   metabolites <- grep("CHEBI",colnames(playdata::MSETxMETABOLITE),value=TRUE)
   metabolites <- gsub("CHEBI:","",metabolites)
   

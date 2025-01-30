@@ -30,7 +30,9 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   ## quite different between datatypes.
   has.colons <- all(grepl(":",names(fx)))
   is.multiomics <- (pgx$datatype == "multi-omics") || has.colons
+  is.multiomics
   if(is.multiomics) {
+    dbg("[pgx.computePCSF] normalizing foldchange values...")
     fx <- normalize_multifc(fx, by="mad")
   }
 
