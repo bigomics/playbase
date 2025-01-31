@@ -79,7 +79,7 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
   )
   lasagna <- lasagna.create_model(
     las.data, pheno="contrasts", ntop = ntop, nc=20,
-    use.graphite = FALSE)
+    annot = pgx$genes, use.graphite = FALSE)
   
   ## pre-compute cluster positions
   xx <- mofa.split_data(lasagna$X)
@@ -238,9 +238,11 @@ mofa.compute <- function(xdata,
   if( kernel == "mofa") {
     obj <- MOFA2::create_mofa(xdata, groups=NULL)
     ## 'group' is used by MOFA
-    colnames(samples) <- sub("group","group ",colnames(samples))
-    MOFA2::samples_metadata(obj) <- data.frame( sample=rownames(samples),
-      samples, check.names=FALSE)
+    samples1 <- samples
+    samples1$group <- NULL
+    MOFA2::samples_metadata(obj) <- data.frame(
+      sample = rownames(samples1),
+      samples1, check.names=FALSE)
     
     data_opts <- MOFA2::get_default_data_options(obj)
     data_opts$scale_views <- FALSE
@@ -266,7 +268,7 @@ mofa.compute <- function(xdata,
     outfile = file.path(tempdir(),"mofa-model.hdf5")
     suppressMessages(suppressWarnings(
       model <- MOFA2::run_mofa(obj, outfile=outfile, save_data=TRUE,
-                               use_basilisk=TRUE)
+                               use_basilisk=FALSE)
     ))
     
     ##model <- load_model(outfile, remove_inactive_factors = FALSE)
@@ -300,7 +302,8 @@ mofa.compute <- function(xdata,
       X <- X[,sel,drop=FALSE]
       samples <- samples[sel,]
     }
-    mix <- mixomics.compute_diablo(xx, y=pheno, ncomp=numfactors) 
+    mix <- mixomics.compute_diablo(xx, y=pheno, ncomp=numfactors,
+      nfeat=num_factor_features) 
     W <- mix$loadings
     F <- mix$scores
     model <- mix
@@ -323,19 +326,19 @@ mofa.compute <- function(xdata,
     model <- wgcna.compute(
       X, samples,
       minmodsize = 10,
-      power = 10,
+      power = 6,
       cutheight = 0.15,
-      deepsplit = 4,
+      deepsplit = 2,
       networktype = "signed",
       tomtype = "signed",                          
-      ngenes = ntop ) 
+      ngenes = -1 ) 
     W <- model$W          ## loadings
     F <- as.matrix(model$net$MEs)  ## factors (coefficients)
   } else {
     message("[mofa.compute] invalid kernel")
     return(NULL)
   }
-
+  
   if(!is.null(factorname)) {
     colnames(W) <- paste0(factorname,1:ncol(W))
     colnames(F) <- paste0(factorname,1:ncol(F))    
@@ -343,7 +346,7 @@ mofa.compute <- function(xdata,
   
   W <- W[rownames(X),]
   F <- F[colnames(X),]  
-  dt <- sub(":.*","",rownames(X))
+  dt <- sub(":.*","",rownames(W))
   ww <- tapply(1:nrow(W),dt,function(i) W[i,,drop=FALSE] )
   xx <- tapply(1:nrow(X),dt,function(i) X[i,,drop=FALSE] )
   ww <- ww[names(xdata)]
@@ -458,13 +461,13 @@ mofa.add_genesets <- function(xdata, GMT=NULL, datatypes=NULL) {
   ## convert non-ascii characters....
   ##rownames(GMT) <- iconv(rownames(GMT), "latin1", "ASCII", sub="")
   rownames(GMT) <- stringi::stri_trans_general(rownames(GMT), "latin-ascii")
-  colnames(GMT) <- sub(".*:","",colnames(GMT))
+  colnames(GMT) <- mofa.strip_prefix(colnames(GMT))
   
   gsetX <- list()
   dt=datatypes[1]
   for(dt in datatypes) {
     rX <- xdata[[dt]] - rowMeans(xdata[[dt]], na.rm=TRUE)
-    rownames(rX) <- sub(".*:","",rownames(rX))
+    rownames(rX) <- mofa.strip_prefix(rownames(rX))
     sel <- intersect(rownames(rX), colnames(GMT))
     G <- GMT[,sel,drop=FALSE]
     rX <- rX[sel,,drop=FALSE]
@@ -517,8 +520,6 @@ mofa.compute_clusters <- function(xx, matF=NULL, along="samples") {
 #' 
 #' @export
 mofa.compute_enrichment <- function(W, G=NULL, filter=NULL, ntop=1000) {
-
-  dbg("[mofa.compute_enrichment] 0: dim(W) = ", dim(W))
   
   if(is.null(G)) {
     info("[pgx.add_GMT] Adding metabolomics genesets")
@@ -531,8 +532,7 @@ mofa.compute_enrichment <- function(W, G=NULL, filter=NULL, ntop=1000) {
     has.colons <- all(grepl(":",rownames(G)))
     has.colons
     if(!has.colons) {
-      dbg("[mofa.compute_enrichment] prefix G with symbol type")
-      rownames(G) <- sub(".*:","",rownames(G))
+      rownames(G) <- mofa.strip_prefix(rownames(G))
       jj <- grep("^[A-Za-z]+",rownames(G),ignore.case=TRUE)
       if(length(jj)>0) rownames(G)[jj] <- paste0("SYMBOL:",rownames(G)[jj])
       ii <- grep("^[0-9]+",rownames(G),ignore.case=TRUE)
@@ -552,7 +552,6 @@ mofa.compute_enrichment <- function(W, G=NULL, filter=NULL, ntop=1000) {
   dtype2gtype <- c("gx"="SYMBOL","px"="SYMBOL",
                    "me"="SYMBOL", "mx"="CHEBI")
   dtypes <- intersect( dtypes, names(dtype2gtype))
-  dbg("[mofa.compute_enrichment] dtypes = ", dtypes)
   dtypes
   
   ## build full gene set sparse matrix
@@ -577,6 +576,7 @@ mofa.compute_enrichment <- function(W, G=NULL, filter=NULL, ntop=1000) {
   ## do with fGSEA instead but it is much slower.
   info("[pgx.add_GMT] Performing rankcor")
   normW <- apply(W, 2, function(x) normalize_multirank(x) )
+  normW[is.na(normW)] <- mean(normW,na.rm=TRUE)
   names(normW) <- rownames(W)
   rnk <- gset.rankcor(normW, GMT1, compute.p=TRUE)
   topsel <- apply(abs(rnk$rho), 2, function(r) head(order(-r), ntop))
@@ -594,6 +594,7 @@ mofa.compute_enrichment <- function(W, G=NULL, filter=NULL, ntop=1000) {
   k=colnames(W)[1]
   for(k in colnames(W)) {
     w <- W[,k]
+    w <- w + 1e-4*rnorm(length(w))
     w <- normalize_multirank(w)
     enr <- fgsea::fgsea( gmt, stats=w)
     enr <- data.frame(enr)
@@ -623,45 +624,6 @@ mofa.compute_enrichment <- function(W, G=NULL, filter=NULL, ntop=1000) {
     
   list(table = gsea, NES = rho, pval = pval, padj = padj)
 }
-
-
-#' @export
-mofa.enrichment_table.OLD <- function(gsea, pheno, datatypes=NULL, full=TRUE) {
-  k <- pheno
-  G <- gsea[[k]]
-
-  dbg("[mofa.enrichment_table] k = ", k)
-  dbg("[mofa.enrichment_table] colnames(G) = ", colnames(G))
-
-  if(is.null(datatypes)) {
-    datatypes <- sub("^rho.","",grep("^rho",colnames(G),value=TRUE))
-  }
-
-  dbg("[mofa.enrichment_table] datatypes = ", datatypes)
-  
-  N=S=P=G[,0]
-  has.num <- any(grepl("num",colnames(G)))
-  has.rho <- any(grepl("rho",colnames(G)))
-  has.pval <- any(grepl("pval",colnames(G)))    
-  if(has.num) N <- G[,paste0("num.",datatypes),drop=FALSE]
-  if(has.rho) S <- G[,paste0("rho.",datatypes),drop=FALSE]  
-  if(has.rho) P <- G[,paste0("pval.",datatypes),drop=FALSE]
-  multi.score <- G$multi.score
-  multi <- G[,grep("multi.",colnames(G)),drop=FALSE]
-  snames <- stringr::str_trunc(rownames(S),72)      
-  sign <- paste0( c("-","+")[1+(sign(S[,1])==1)],
-                 c("-","+")[1+(sign(S[,2])==1)] )
-  if(full) {
-    df <- data.frame( pathway = snames, multi, N, S, P)
-    rownames(df) <- rownames(S)
-  } else {
-    df <- data.frame( pathway = snames, multi.score, S)
-    rownames(df) <- rownames(S)
-  }
-  df <- df[order(-df$multi.score),]
-  df
-}
-
 
 #' @export
 mofa.split_data <- function(X) {
@@ -694,6 +656,11 @@ mofa.prefix <- function(xx) {
     }
   }
   xx
+}
+
+#' @export
+mofa.get_prefix <- function(x) {
+  sub(":.*","",x)
 }
 
 #' @export
@@ -794,6 +761,7 @@ mofa.plot_heatmap <- function(mofa, k=NULL, ntop=50,
                               split = TRUE, maxchar=999,
                               show_types = NULL,
                               mar = c(8,12), annot.ht = 1,
+                              show_legend = TRUE,
                               cexRow = 0.9) {
 
   if(!is.null(k)) {
@@ -850,17 +818,26 @@ mofa.plot_heatmap <- function(mofa, k=NULL, ntop=50,
   
   if(type == "heatmap") {
     par(mar=c(0,0,0,0))
-    gx.heatmap( topX, mar=c(8,10), key=FALSE, keysize=1,
-               cexRow = cexRow, col.annot = aa,
+    gx.heatmap( topX,
+               mar=c(8,10),
+               key=FALSE,
+               keysize=1,
+               cexRow = cexRow,
+               col.annot = aa,
                annot.ht = 0.88*annot.ht)
   } else if(type == "splitmap") {
     dx <- sub(":.*","",rownames(topX))
     if(!split) dx <- NULL
     gx.splitmap( topX, 
-                split=dx, na_col = "white", softmax=TRUE,
-                rowlab.maxlen = 80, rownames_width = 140,
-                show_legend=FALSE, show_key = FALSE,
-                col.annot = aa, annot.ht = 3.6*annot.ht )
+                split=dx,
+                na_col = "white",
+                softmax=TRUE,
+                rowlab.maxlen = 80,
+                rownames_width = 140,
+                show_legend = show_legend,
+                show_key = FALSE,
+                col.annot = aa,
+                annot.ht = 3.6*annot.ht )
   } else if(type == "graph") {
     
   } else {
@@ -994,7 +971,7 @@ mofa.combine_layers <- function(xx, weights=1) {
   k=1
   if(length(weights)==1) weights <- rep(weights,length(xx))  
   for(i in 1:length(xx)) {
-    rownames(xx[[i]]) <- sub(".*:","",rownames(xx[[i]])) ## strip
+    rownames(xx[[i]]) <- mofa.strip_prefix(rownames(xx[[i]])) ## strip
   }
   kk <- Reduce(intersect, lapply(xx, colnames))
   gg <- Reduce(intersect, lapply(xx, rownames))    
@@ -1577,7 +1554,7 @@ mgsea.compute_enrichment <- function(F, annot, filter=NULL,
   
   ## Perform geneset enrichment with fast rank-correlation. We could
   ## do with fGSEA instead but it is much slower.
-  rownames(G) <- sub(".*:","",rownames(G))  
+  rownames(G) <- mofa.strip_prefix(rownames(G))  
   F <- mofa.strip_prefix(F)
   wnames <- unlist(lapply(F, rownames))
   pp <- intersect(wnames,rownames(G))  
@@ -1823,7 +1800,7 @@ mgsea.plot_barplot <- function(gsea,
 ## mixOmics related compute and plot functions
 
 #' @export
-mixomics.compute_diablo <- function(xdata, y, ncomp=5) {
+mixomics.compute_diablo <- function(xdata, y, ncomp=5, nfeat = 20) {
 
   # for square matrix filled with 0.1s
   design = matrix(0.1, ncol = length(xdata), nrow = length(xdata), 
@@ -1834,9 +1811,6 @@ mixomics.compute_diablo <- function(xdata, y, ncomp=5) {
   xx <- mofa.prefix(xx)
   xx <- lapply( xx, t)
   Y <- y
-
-  ## ncomp <- 5  
-  nfeat <- 20
 
   keepX = lapply(names(xx), function(dt) rep(nfeat,ncomp))
   names(keepX) <- names(xx) 
@@ -2242,7 +2216,7 @@ plotly_lasagna <- function(posx, vars=NULL, num_edges=20) {
 #' 
 #' @export
 lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=-1,
-                                 use.gmt=TRUE, use.graphite=TRUE) {
+                                 annot=NULL, use.gmt=TRUE, use.graphite=TRUE) {
 
   names(data)
   if(pheno == "pheno") {
@@ -2343,10 +2317,12 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=-1,
     R, diag=FALSE, weighted=TRUE, mode="undirected")
 
   ii <- grep("^mx:", igraph::V(gr)$name)
-  if(length(ii)) {
+  if(length(ii) && !is.null(annot)) {
     message(paste("translating metabolite ID to names"))
     mx.id <- sub("mx:","", igraph::V(gr)$name[ii])
-    mx.annot <- getMetaboliteAnnotation(mx.id)
+    mm <- match(igraph::V(gr)$name, rownames(annot))
+    mx.annot <- annot[mm,]
+    mx.id <- mx.annot$symbol
     mx.names <- paste0("mx:",mx.annot$gene_title," (",mx.id,")")
     igraph::V(gr)$name[ii] <- mx.names
     rownames(X)[ii] <- mx.names    

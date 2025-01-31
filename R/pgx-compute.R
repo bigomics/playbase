@@ -1108,6 +1108,14 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     cX <- gX - rowMeans(gX, na.rm = TRUE) ## center!
     cX <- apply(cX, 2, rank)
     gsetX <- qlcMatrix::corSparse(G, cX) ## slow!
+    rownames(gsetX) <- colnames(G)
+    colnames(gsetX) <- colnames(gX)    
+    if(0) {
+      y <- pgx$model.parameters$group[colnames(gX)]
+      res <- gx.limmaF(gsetX, y, lfc=0, fdr=1, sort.by='none')
+      res <- res[rownames(gsetX),]
+    }
+
     grp <- pgx$model.parameters$group
     gsetX.bygroup <- NULL
     ## If groups/conditions are present we calculate the SD by group
@@ -1119,7 +1127,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     } else {
       sdx <- matrixStats::rowSds(gsetX, na.rm = TRUE)
     }
-
     names(sdx) <- colnames(G)
     jj <- Matrix::head(order(-sdx), max.genesets)
     must.include <- "hallmark|kegg|^go|^celltype|^pathway|^custom"
@@ -1136,21 +1143,24 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   # final check: drop genesets in G based on geneset size
   if(!is.null(G)) {
     gmt.size <- Matrix::colSums(G != 0)
-    if (pgx$datatype == "metabolomics") {
+    has.metabolites <- sum(grepl("^[0-9]+",rownames(G)))>=10
+    has.metabolites
+    ##if (pgx$datatype %in% c("metabolomics","multi-omics")) {
+    if (has.metabolites) {
       # metabolomics genesets are MUCH smaller than transcriptomics,
       # metabolomics have usually less features, so we need to reduce
       # the min size
       size.ok <- which(gmt.size >= 3 & gmt.size <= 400)
     } else {
-      size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
-      
-      # add all custom genesets to size.ok
-      idx_custom_gmt <- grep("CUSTOM", colnames(G))
-      # make sure we dont miss CUSTOM genesets due to size.ok exclusion
-      if (length(idx_custom_gmt) > 0) {
-        names(idx_custom_gmt) <- colnames(G)[idx_custom_gmt]
-        size.ok <- union(size.ok, idx_custom_gmt)
-      }
+      size.ok <- which(gmt.size >= 10 & gmt.size <= 400)
+    }
+
+    # add all custom genesets to size.ok
+    idx_custom_gmt <- grep("CUSTOM", colnames(G))
+    # make sure we dont miss CUSTOM genesets due to size.ok exclusion
+    if (length(idx_custom_gmt) > 0) {
+      names(idx_custom_gmt) <- colnames(G)[idx_custom_gmt]
+      size.ok <- union(size.ok, idx_custom_gmt)
     }
     G <- G[, size.ok, drop = FALSE]
   }
