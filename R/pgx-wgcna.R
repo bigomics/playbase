@@ -4,7 +4,6 @@
 ##
 ##
 
-
 #' @title Map module colors to rainbow palette
 #'
 #' @description
@@ -69,18 +68,53 @@ labels2rainbow <- function(net) {
 #' including module assignments, colors, and summary statistics.
 #'
 #' @export
-pgx.wgcna <- function(
-    pgx,
-    minmodsize = 30,
-    power = 6,
-    cutheight = 0.25,
-    deepsplit = 2,
-    ngenes = 1000) {
+pgx.wgcna <- function(pgx,
+                      minmodsize = 30,
+                      power = 6,
+                      cutheight = 0.25,
+                      deepsplit = 2,
+                      ngenes = 1000) {
+
   ## if we dont source WGCNA, blockwiseModules does not work..
   require(WGCNA)
+  
+  ##-------------------------------
+  ## WGCNA does not work very well with scRNAseq due to sparsity.
+  ## To bypass the issue, hdWGCNA compute metacells to bypass the problem.
+  ## Here i compute metacells too using Supercell
 
+  X <- NULL
+  samples <- NULL
+  if (pgx$datatype %in% c("scRNAseq", "scRNA-seq")) {
+    message("[playbase::pgx.wgcna] WGCNA: scRNAseq. Computing supercells with SuperCell.")
+    counts <- pgx$counts
+    group <- pgx$samples[, "celltype"]
+    q10 <- quantile(table(group), probs=0.25)
+    if (ncol(counts) > 2000) {
+      nb <- round( ncol(counts) / 2000 )
+    } else {
+      d <- round(ncol(counts)/8, 1)
+      nb <- round( ncol(counts) / d) ## temporary...
+    }
+    message("[pgx.createSingleCellPGX]=======================================")
+    message("[pgx.createSingleCellPGX] running SuperCell. nb = ", nb)    
+    sc <- pgx.supercell(counts, pgx$samples, group = group, gamma = nb)
+    message("[pgx.createSingleCellPGX] SuperCell done: ", ncol(counts), " -> ", ncol(sc$counts))
+    message("[pgx.createSingleCellPGX]=======================================")
+    X <- playbase::logCPM(sc$counts, total = 1e6, prior = 1)
+    samples <- sc$meta
+    remove(counts, group, sc); gc()
+  }
+
+  if (is.null(X)) {
+    X <- as.matrix(pgx$X)
+  }
+
+  if (is.null(samples)) {
+    samples <- pgx$samples
+  }
+  
   ## get topSD matrix
-  X <- as.matrix(pgx$X)
   nmissing <- sum(is.na(X))
   if (nmissing > 0) {
     message("Found ", nmissing, " missing values in X. Removing prior to WGCNA.")
@@ -106,9 +140,12 @@ pgx.wgcna <- function(
     net <- WGCNA::blockwiseModules(
       datExpr,
       power = p,
-      TOMType = "unsigned", minModuleSize = minmodsize,
-      reassignThreshold = 0, mergeCutHeight = cutheight,
-      numericLabels = TRUE, pamRespectsDendro = FALSE,
+      TOMType = "unsigned",
+      minModuleSize = minmodsize,
+      reassignThreshold = 0,
+      mergeCutHeight = cutheight,
+      numericLabels = TRUE,
+      pamRespectsDendro = FALSE,
       deepSplit = deepsplit,
       ## saveTOMs = TRUE, saveTOMFileBase = "WCNA.tom",
       verbose = 3
@@ -119,7 +156,9 @@ pgx.wgcna <- function(
   table(net$colors)
 
   ## clean up traits matrix
-  datTraits <- pgx$samples
+  ## datTraits <- pgx$samples
+  datTraits <- samples
+
   ## no dates please...
   isdate <- apply(datTraits, 2, is.Date)
   datTraits <- datTraits[, !isdate, drop = FALSE]
