@@ -125,9 +125,13 @@ pgx.wgcna <- function(pgx,
   datExpr <- t(X)
 
   ## adapt for small datasets
+  #minmodsize <- 30
+  #minmodsize <- min(minmodsize, nrow(X) / 10)
+  #minmodsize
+
   minmodsize <- 30
   minmodsize <- min(minmodsize, nrow(X) / 10)
-  minmodsize
+  minmodsizes <- c(minmodsize, round(minmodsize/1.5), round(minmodsize/2))
 
   ## we iterate over smaller power, until we get some clusters
   message("[playbase::pgx.wgcna] Computing WGCNA blockwiseModules...")
@@ -135,23 +139,28 @@ pgx.wgcna <- function(pgx,
   i <- 1
   while (ncolors == 1 && i < 100) {
     p <- 1 + (power - 1) / i
-    net <- WGCNA::blockwiseModules(
-      datExpr,
-      power = p,
-      TOMType = "unsigned",
-      minModuleSize = minmodsize,
-      reassignThreshold = 0,
-      mergeCutHeight = cutheight,
-      numericLabels = TRUE,
-      pamRespectsDendro = FALSE,
-      deepSplit = deepsplit,
-      ## saveTOMs = TRUE, saveTOMFileBase = "WCNA.tom",
-      verbose = 3
-    )
+    m <- 1
+    for(m in 1:length(minmodsizes)) {
+      net <- try(WGCNA::blockwiseModules(
+        datExpr,
+        power = p,
+        TOMType = "unsigned",
+        minModuleSize = minmodsizes[m],
+        reassignThreshold = 0,
+        mergeCutHeight = cutheight,
+        numericLabels = TRUE,
+        pamRespectsDendro = FALSE,
+        deepSplit = deepsplit,
+        verbose = 3
+      ))
+      c1 <- length(unique(net$colors)) == 1
+      c2 <- length(unique(net$unmergedColors)) == 1
+      if(c1 | c2) { next } else { break }
+    }
     ncolors <- length(table(net$colors))
     i <- i + 1
   }
-  table(net$colors)
+  #table(net$colors)
 
   ## clean up traits matrix
   ## datTraits <- pgx$samples
@@ -189,7 +198,6 @@ pgx.wgcna <- function(pgx,
   X1 <- t(scale(datExpr))
   dissTOM <- 1 - WGCNA::TOMsimilarityFromExpr(datExpr, power = power)
   rownames(dissTOM) <- colnames(dissTOM) <- colnames(datExpr)
-  saveRDS(dissTOM, "~/Desktop/MNT/dissTOM.RDS")
   clust <- pgx.clusterBigMatrix(dissTOM, methods = c("umap", "tsne", "pca"), dims = c(2))
   if ("cluster.genes" %in% names(pgx)) {
     clust[["pca2d"]] <- pgx$cluster.genes$pos[["pca2d"]][colnames(datExpr), ]
