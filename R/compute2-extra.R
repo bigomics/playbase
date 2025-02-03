@@ -268,7 +268,6 @@ compute_extra <- function(pgx, extra = c(
   ## ------------------------------------------------------
   ## pretty collapse all timings
   ## ------------------------------------------------------
-  #
   timings <- as.matrix(timings)
   rownames(timings) <- timings[, 1]
   timings0 <- apply(as.matrix(timings[, -1, drop = FALSE]), 2, as.numeric)
