@@ -24,10 +24,24 @@ compute_extra <- function(pgx, extra = c(
 
   if (length(extra) == 0) {
     return(pgx)
+  } else {
+    ss <- paste0(extra, collapse="; ")
+    message("[pgx.computePGX: compute_extra] Extra modules: ", ss)
   }
+    
   if (!is.null(pgx.dir) && !dir.exists(pgx.dir)) pgx.dir <- NULL
-  if (!is.null(libx.dir) && !dir.exists(libx.dir)) libx.dir <- NULL
-
+  ## if (!is.null(libx.dir) && !dir.exists(libx.dir)) libx.dir <- NULL
+  if (!is.null(libx.dir)) {
+    if (!dir.exists(libx.dir)) {
+      libx.dir <- "~/libx"
+      if (!dir.exists(libx.dir)) {
+        libx.dir <- NULL
+      }
+    }
+  }
+  message("[pgx.computePGX: compute_extra] pgx.dir = ", pgx.dir)
+  message("[pgx.computePGX: compute_extra] libx.dir = ", libx.dir)
+  
   ## detect if it is single or multi-omics
   # TEMPORARY ONLY SINGLE OMICS
   single.omics <- TRUE
