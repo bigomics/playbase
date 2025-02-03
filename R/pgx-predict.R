@@ -175,6 +175,15 @@ pgx.compute_importance <- function(pgx, contrast, level="genes",
   ##progress$inc(2 / 10, detail = "done")
   y <- y[rownames(tx)]
   colnames(tx) <- orig.names[colnames(tx)]
+
+  ## reduce R and y (from augmented set)
+  kk <- names(y0)
+  dbg("[pgx.compute_importance] kk = ", kk)
+  dbg("[pgx.compute_importance] colnames.tx = ", head(rownames(tx)))
+  dbg("[pgx.compute_importance] names.y = ", head(names(y)))
+  tx <- tx[match(kk,rownames(tx)),]
+  y <- y[match(kk,names(y))]
+
   res <- list(R = R, y = y, X = t(tx), rf = rf)
 
   return(res)
