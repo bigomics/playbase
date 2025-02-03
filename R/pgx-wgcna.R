@@ -166,7 +166,8 @@ wgcna.compute <- function(X, samples,
   datTraits <- datTraits[, !isdate, drop = FALSE]
 
   ## Expand multi-class discrete phenotypes into binary vectors
-  tr.class <- sapply(utils::type.convert(datTraits, as.is = TRUE), class)
+  datTraits <- utils::type.convert(datTraits, as.is = TRUE)
+  tr.class <- sapply(datTraits, class)
   sel1 <- which(tr.class %in% c("factor", "character"))
   sel2 <- which(tr.class %in% c("integer", "numeric"))
   tr1 <- datTraits[, 0]
@@ -175,7 +176,7 @@ wgcna.compute <- function(X, samples,
     if (is.null(tr1)) tr1 <- datTraits[, 0]
   }
   ## keeping numeric phenotypes
-  tr2 <- datTraits[, sel2, drop = FALSE]
+  tr2 <- datTraits[, sel2, drop = FALSE]  
   datTraits <- cbind(tr1, tr2)
 
   ## list of genes in modules

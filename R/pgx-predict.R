@@ -8,6 +8,178 @@
 ## Variable importance functions
 ## ----------------------------------------------------------------------
 
+#' Main compute driver function 
+#'
+#' @export
+pgx.compute_importance <- function(pgx, contrast, level="genes",
+                                   filter_features = NULL,
+                                   select_features = NULL,
+                                   select_samples = NULL,
+                                   nfeatures=60, do.survival=FALSE) {
+
+  ct <- contrast
+  ft <- ifelse(is.null(filter_features), "<all>", filter_features)
+  sel <- select_features
+  
+  if (!(ct %in% colnames(pgx$samples))) {
+    message("ERROR. contrasts not in pgx$samples")
+    return(NULL)
+  }
+
+  ## WARNING. this converts any phenotype to discrete
+  y0 <- as.character(pgx$samples[, ct])  
+  names(y0) <- rownames(pgx$samples)
+
+  if(!is.null(select_samples)) {
+    y0 <- y0[names(y0) %in% select_samples]
+  }
+  y <- y0[!is.na(y0)]
+  
+  ## augment to at least 100 samples per level :)
+  ii <- tapply(1:length(y), y, function(ii)
+    sample(c(ii, ii), size = 100, replace = TRUE))
+  y <- y[unlist(ii)]
+  
+  ## -------------------------------------------
+  ## select features
+  ## -------------------------------------------
+  if (FALSE && level == "geneset") {
+    X <- pgx$gsetX[, names(y)]
+    if (any(is.na(X))) {
+      X <- X[complete.cases(X), , drop = FALSE]
+    }
+  } else {
+    X <- pgx$X[, names(y)]
+    if (any(is.na(X))) {
+      X <- pgx$impX[, names(y)]
+    }
+  }
+  X0 <- X
+  
+  ## ----------- filter with selected features
+  info("[pgx.compute_importance] Filtering features...")
+  
+  is.family <- (ft %in% c(names(pgx$families), names(playdata::iGSETS)))
+  if (ft == "<custom>" && !is.null(sel) && length(sel) > 0) {
+    ## ------------- filter with user selection
+    if (sel[1] != "") {
+      pp <- rownames(X)[which(toupper(rownames(X)) %in% toupper(sel))]
+      X <- X[pp, , drop = FALSE]
+    }
+  } else if (is.family) {
+    pp <- rownames(X)
+    if (ft %in% names(pgx$families)) {
+      gg <- pgx$families[[ft]]
+      pp <- playbase::filterProbes(pgx$genes, gg)
+    } else if (ft %in% names(playdata::iGSETS)) {
+      gg <- unlist(playdata::getGSETS(ft))
+      pp <- playbase::filterProbes(pgx$genes, gg)
+    }
+    pp <- intersect(pp, rownames(X))
+    X <- X[pp, , drop = FALSE]
+  }
+  
+  ## ----------- restrict to top SD -----------
+  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+  X <- head(X[order(-sdx), , drop = FALSE], 10 * nfeatures) ## top 100
+
+  ## add some noise
+  sdx0 <- matrixStats::rowSds(X, na.rm = TRUE)
+  sdx1 <- 0.5 * sdx0 + 0.5 * mean(sdx0, na.rm = TRUE)
+  X <- X + 0.25 * sdx1 * matrix(rnorm(length(X)), nrow(X), ncol(X)) 
+
+  ## -------------------------------------------
+  ## compute importance values
+  ## -------------------------------------------
+  if (do.survival) {
+    time <- abs(y)
+    status <- (y > 0) ## dead is positive time
+    methods <- c("glmnet", "randomforest", "xgboost", "pls")
+    P <- playbase::pgx.survivalVariableImportance(
+      X,
+      time = time,
+      status = status,
+      methods = methods
+    )
+  } else {
+    methods <- c("glmnet", "randomforest", "xgboost", "splsda", "correlation", "ftest")
+    X1 <- X
+    y1 <- y
+    names(y1) <- colnames(X1) <- paste0("x", 1:ncol(X))
+    res <- playbase::pgx.variableImportance(
+      X1, y1,
+      methods = methods,
+      reduce = 1000,
+      resample = 0,
+      scale = FALSE,
+      add.noise = 0
+    )
+    P <- res$importance
+  }
+  P <- abs(P) ## sometimes negative according to sign
+  
+  P[is.na(P)] <- 0
+  P[is.nan(P)] <- 0
+  P <- t(t(P) / (1e-3 + apply(P, 2, max, na.rm = TRUE)))
+  P <- P[order(-rowSums(P, na.rm = TRUE)), , drop = FALSE]
+  
+  R <- P
+  if (nrow(R) > 1) {
+    R <- (apply(P, 2, rank) / nrow(P))**4
+    R <- R[order(-rowSums(R, na.rm = TRUE)), , drop = FALSE]
+  }
+  
+  ## ------------------------------
+  ## create partition tree
+  ## ------------------------------
+  
+  R <- R[order(-rowSums(R, na.rm = TRUE)), , drop = FALSE]
+  sel <- head(rownames(R), 100)
+  sel <- intersect(sel, rownames(X))
+  sel <- head(rownames(R), nfeatures) ## top50 features
+  tx <- t(X[sel, , drop = FALSE])
+  
+  ## formula wants clean names, so save original names
+  colnames(tx) <- gsub("[: +-.,]", "_", colnames(tx))
+  colnames(tx) <- gsub("[')(]", "", colnames(tx))
+  colnames(tx) <- gsub("\\[|\\]", "", colnames(tx))
+  orig.names <- sel
+  names(orig.names) <- colnames(tx)
+  jj <- names(y)
+  
+  if (do.survival) {
+    time <- abs(y)
+    status <- (y > 0) ## dead if positive time
+    df <- data.frame(time = time + 0.001, status = status, tx)
+    rf <- rpart::rpart(survival::Surv(time, status) ~ ., data = df)
+  } else {
+    df <- data.frame(y = y, tx)
+    rf <- rpart::rpart(y ~ ., data = df)
+  }
+  table(rf$where)
+  rf$cptable
+  rf$orig.names <- orig.names
+  
+  rf.nsplit <- rf$cptable[, "nsplit"]
+  if (grepl("survival", ct)) {
+    MAXSPLIT <- 4 ## maximum five groups....
+  } else {
+    MAXSPLIT <- 1.5 * length(unique(y)) ## maximum N+1 groups
+  }
+  if (max(rf.nsplit) > MAXSPLIT) {
+    cp.idx <- max(which(rf.nsplit <= MAXSPLIT))
+    cp0 <- rf$cptable[cp.idx, "CP"]
+    rf <- rpart::prune(rf, cp = cp0)
+  }
+  
+  ##progress$inc(2 / 10, detail = "done")
+  y <- y[rownames(tx)]
+  colnames(tx) <- orig.names[colnames(tx)]
+  res <- list(R = R, y = y, X = t(tx), rf = rf)
+
+  return(res)
+}
+
 
 #' @title Variable importance for survival models
 #'
@@ -414,27 +586,17 @@ plotImportance <- function(P, p.sign = NULL, top = 50, runtime = NULL) {
 
 
 #' @export
-plotDecisionTreeFromImportance <- function(X, P, maxfeatures = 100, add.splits = 0) {
-  P <- abs(P) ## sometimes negative according to sign
+plotDecisionTreeFromImportance <- function(imp, add.splits = 0,
+                                           type=c("fancy","simple","extended")) {
 
-  P[is.na(P)] <- 0
-  P[is.nan(P)] <- 0
-  P <- t(t(P) / (1e-3 + apply(P, 2, max, na.rm = TRUE)))
-  P <- P[order(-rowSums(P, na.rm = TRUE)), , drop = FALSE]
-
-  R <- P
-  if (nrow(R) > 1) {
-    R <- (apply(P, 2, rank) / nrow(P))**4
-    R <- R[order(-rowSums(R, na.rm = TRUE)), , drop = FALSE]
-  }
-
+  kk <- which(!duplicated(names(imp$y)))
+  y <- imp$y[kk]
+  sel <- intersect(rownames(imp$X), rownames(imp$R))
+  tx <- t(imp$X[sel, kk,  drop = FALSE])
+  
   ## ------------------------------
   ## create partition tree
-  ## ------------------------------
-
-  R <- R[order(-rowSums(R, na.rm = TRUE)), , drop = FALSE]
-  sel <- head(rownames(R), maxfeatures) ## top50 features
-  tx <- t(X[sel, , drop = FALSE])
+  ## ------------------------------  
 
   ## formula wants clean names, so save original names
   colnames(tx) <- gsub("[: +-.,]", "_", colnames(tx))
@@ -442,7 +604,6 @@ plotDecisionTreeFromImportance <- function(X, P, maxfeatures = 100, add.splits =
   colnames(tx) <- gsub("\\[|\\]", "", colnames(tx))
   orig.names <- sel
   names(orig.names) <- colnames(tx)
-  jj <- names(y)
 
   do.survival <- FALSE
   if (do.survival) {
@@ -452,17 +613,16 @@ plotDecisionTreeFromImportance <- function(X, P, maxfeatures = 100, add.splits =
     rf <- rpart::rpart(survival::Surv(time, status) ~ ., data = df)
   } else {
     df <- data.frame(y = y, tx)
-    rf <- rpart::rpart(y ~ ., data = df)
+    ##rf <- rpart::rpart(y ~ ., data = df)
+    rf = rpart::rpart(y ~., data=df, method="class",
+      control = rpart::rpart.control(minsplit=2, maxdepth=10))
   }
   table(rf$where)
   rf$cptable
   rf$orig.names <- orig.names
 
+  ## prune the tree
   rf.nsplit <- rf$cptable[, "nsplit"]
-  #  if (grepl("survival", ct)) {
-  #    MAXSPLIT <- 4 ## maximum five groups....
-  #  } else {
-  ## MAXSPLIT <- ceiling(1.5 * length(unique(y))) ## maximum N+1 groups
   MAXSPLIT <- length(unique(y)) + 1 + add.splits ## maximum N+1 groups
   #  }
   if (max(rf.nsplit) > MAXSPLIT) {
@@ -474,18 +634,21 @@ plotDecisionTreeFromImportance <- function(X, P, maxfeatures = 100, add.splits =
   is.surv <- grepl("Surv", rf$call)[2]
   is.surv
   if (is.surv) {
-    rf <- partykit::as.party(rf)
-    partykit::plot.party(rf)
+    pkrf <- partykit::as.party(rf)
+    partykit::plot.party(pkrf)
   } else {
-    ## rpart.plot::rpart.plot(rf)
-    rf <- partykit::as.party(rf)
-    is.multinomial <- length(table(y)) > 2
-    if (is.multinomial) {
-      ## plot(rf, type="extended")
-      plot(rf, type = "simple")
+    if(type == "fancy") {
+      ## rattle::fancyRpartPlot(rf, caption = NULL, type=4)
+      rpart.plot::rpart.plot(rf)
+    } else if (type %in% c("simple","extended")){
+      pk <- partykit::as.party(rf)
+      plot(pk, type = type)
     } else {
-      plot(rf, type = "simple")
+      message("[plotDecisionTreeFromImportance] ERROR. unknown type: ", type)
+      return(NULL)
     }
+
+
   }
 }
 

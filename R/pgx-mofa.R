@@ -69,6 +69,17 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
     ntop = gset.ntop,
     numfactors = 12
   )
+
+  if(TRUE) {
+    all.kernels <- c("mofa","pca","nmf","nmf2","mcia","diablo","wgcna","rgcca","RGCCA.rgcca","RGCCA.rgccda")
+    #all.kernels <- c("mofa","pca","nmf","nmf2","mcia","wgcna","diablo","rgcca")
+    mofa$kernels <- mofa.compute_kernels(
+      xdata,
+      discretized_samples,
+      pgx$contrasts,
+      numfactors = numfactors,
+      kernels = all.kernels)
+  }
   
   ## LASAGNA computation
   message("computing LASAGNA model...")            
@@ -165,10 +176,10 @@ mofa.compute <- function(xdata,
                          gset.ntop = 2000,
                          max_iter = 1000,
                          gpu_mode = FALSE,
-                         compute.clusters = TRUE,
                          compute.enrichment = TRUE,
+                         compute.graphs = TRUE,
                          numfactors = 10,
-                         num_factor_features = 100
+                         numfeatures = 100
                          ) {
   
   if(!is.null(ntop) && ntop>0) {
@@ -196,6 +207,9 @@ mofa.compute <- function(xdata,
     xdata[which(nna>0)] <- lapply( xdata[which(nna>0)], svdImpute2)
     ## X <- svdImpute2(X)
   }
+
+  ## no dups
+  xdata <- lapply(xdata, function(x) x[!duplicated(rownames(x)),])
   
   ## Scale datatypes blocks? This is generally a good thing to do
   ## because the different datatypes may have different SD
@@ -223,7 +237,8 @@ mofa.compute <- function(xdata,
   X <- X - rowMeans(X,na.rm=TRUE)
   dim(X)
 
-  ## create pheno from contrasts if missing
+  ## create phenotype levels from contrasts if missing. Note: this
+  ## takes all contrasts in account, not a single comparison
   if(is.null(pheno)) {
     message("[mofa.compute] creating pheno from contrasts")
     ct <- contrasts
@@ -236,6 +251,7 @@ mofa.compute <- function(xdata,
   kernel <- tolower(kernel)
 
   if( kernel == "mofa") {
+    message("[mofa.compute] computing MOFA factorization")
     obj <- MOFA2::create_mofa(xdata, groups=NULL)
     ## 'group' is used by MOFA
     samples1 <- samples
@@ -281,6 +297,7 @@ mofa.compute <- function(xdata,
     dim(F)
     
   } else if( tolower(kernel) %in% c("pca","svd")) {
+    message("[mofa.compute] computing PCA factorization")    
     model <- irlba::irlba( X, nv=numfactors, maxit=max_iter, work=100)
     W <- model$u 
     F <- model$v %*% diag(model$d)
@@ -288,7 +305,28 @@ mofa.compute <- function(xdata,
     rownames(F) <- colnames(X)
     colnames(W) <- paste0("PC",1:ncol(W))
     colnames(F) <- paste0("PC",1:ncol(F))
-  } else if( kernel == "diablo") {
+  } else if( tolower(kernel) %in% c("nmf","nmf2")) {
+    message("[mofa.compute] computing NMF factorization")
+    if(kernel == "nmf2") {
+      model <- mofa.intNMF( xdata, k=numfactors, method="RcppML",
+                           separate.sign = TRUE,
+                           shift = FALSE, scale = TRUE,
+                           exponentiate = FALSE)
+    } else {
+      model <- mofa.intNMF( xdata, k=numfactors, method="RcppML",
+                           separate.sign = FALSE,
+                           shift = TRUE, scale = TRUE,
+                           exponentiate = FALSE)
+    }
+    W <- do.call(rbind, model$W)
+    F <- t(model$H)
+    rownames(W) <- rownames(X)
+    rownames(F) <- colnames(X)
+    colnames(W) <- paste0("NMF",1:ncol(W))
+    colnames(F) <- paste0("NMF",1:ncol(F))
+  } else if( kernel %in% c("diablo","splsda","rgcca","sgcca","sgccda",
+                           "rgcca.rgcca","rgcca.rgccda","rgcca.mcoa")) {
+    message(paste("[mofa.compute] computing",toupper(kernel),"factorization"))
     dtx <- sub(":.*","",rownames(X))
     xx <- tapply( 1:nrow(X), dtx, function(i) X[i,,drop=FALSE])
     if(is.null(pheno)) {
@@ -302,12 +340,14 @@ mofa.compute <- function(xdata,
       X <- X[,sel,drop=FALSE]
       samples <- samples[sel,]
     }
-    mix <- mixomics.compute_diablo(xx, y=pheno, ncomp=numfactors,
-      nfeat=num_factor_features) 
+    message("[mofa.compute] numfeatures = ", numfeatures)
+    mix <- mixomics.compute_diablo(
+      xx, y=pheno, method=kernel, ncomp=numfactors, nfeat=numfeatures) 
     W <- mix$loadings
     F <- mix$scores
-    model <- mix
+    model <- mix$res
   } else if( kernel == "mcia") {
+    message("[mofa.compute] computing MCIA factorization")
     data_blocks <- lapply(xdata, t)
     data_blocks_mae <- nipalsMCIA::simple_mae(
       data_blocks,
@@ -323,6 +363,7 @@ mofa.compute <- function(xdata,
     colnames(W) <- paste0("Factor",1:ncol(W))
     colnames(F) <- paste0("Factor",1:ncol(F))
   } else if( kernel == "wgcna") {
+    message("[mofa.compute] computing WGCNA factorization")    
     model <- wgcna.compute(
       X, samples,
       minmodsize = 10,
@@ -332,10 +373,15 @@ mofa.compute <- function(xdata,
       networktype = "signed",
       tomtype = "signed",                          
       ngenes = -1 ) 
-    W <- model$W          ## loadings
-    F <- as.matrix(model$net$MEs)  ## factors (coefficients)
+
+    F <- as.matrix(model$net$MEs)  ## factors (coefficients)    
+    ## we replace loading with feature-module (aka module-membership)
+    ## correlation. the origonal loading (W) is not continuous.
+    ## W <- model$W          ## loadings (but not continuous)
+    W <- cor(model$datExpr, F)
+
   } else {
-    message("[mofa.compute] invalid kernel")
+    message("[mofa.compute] FATAL invalid kernel:", kernel)
     return(NULL)
   }
   
@@ -385,8 +431,10 @@ mofa.compute <- function(xdata,
   }
   
   ## create graphs
-  graphs <- mofa.factor_graphs(F, W, X, y=pheno, n=num_factor_features)
-
+  graphs <- NULL
+  if(compute.graphs) {  
+    graphs <- mofa.factor_graphs(F, W, X, y=pheno, n=numfeatures)
+  }
   num.contrasts <- sign(makeContrastsFromLabelMatrix(contrasts))
   
   res <- list(
@@ -411,25 +459,6 @@ mofa.compute <- function(xdata,
   res
 }
 
-
-#' @export
-mofa.topsd <- function(xdata, ntop) {
-  lapply(xdata, function(x) {
-    sdx <- matrixStats::rowSds(x,na.rm=TRUE)
-    head(x[order(-sdx),],ntop)
-  })
-}
-
-#' @export
-mofa.scale_views <- function(xdata) {
-  xdata <- lapply(xdata, function(d) d - rowMeans(d,na.rm=TRUE))
-  dt.sd <- sapply(xdata, function(d) mean(matrixStats::rowSds(d,na.rm=TRUE),
-                                          na.rm=TRUE))
-  dt.sd
-  xdata <- lapply(names(xdata), function(d) xdata[[d]] / (1e-9+dt.sd[d]) )
-  names(xdata) <- names(dt.sd)
-  xdata
-}
 
 #' @export
 mofa.add_genesets <- function(xdata, GMT=NULL, datatypes=NULL) {
@@ -625,6 +654,116 @@ mofa.compute_enrichment <- function(W, G=NULL, filter=NULL, ntop=1000) {
   list(table = gsea, NES = rho, pval = pval, padj = padj)
 }
 
+
+#'
+#'
+#' @export
+mofa.compute_kernels <- function(xdata, samples, contrasts, numfactors = 10,
+                                 kernels = c("mofa","pca","nmf","nmf2","mcia","wgcna","diablo","rgcca","rgcca,rgcca","rgcca.rgccda","rgcca.mcoa")) {
+
+  meta.res <- list()
+  for(kernel in kernels) {
+    cat("[mofa.compute_kernels] computing for kernel",toupper(kernel),"\n")
+    meta.res[[kernel]] <- mofa.compute(
+      xdata,
+      samples,
+      contrasts = contrasts,
+      GMT = NULL,
+      annot = NULL,
+      pheno = NULL,
+      kernel = kernel,
+      scale_views = TRUE,
+      gpu_mode = FALSE,
+      ntop = 2000,
+      max_iter = 200,
+      numfactors = numfactors,
+      numfeatures = 30,
+      compute.enrichment = FALSE,
+      compute.graphs = FALSE
+    ) 
+  }
+  meta.res <- lapply(meta.res, function(r) r[c("W","F","Z")])
+  return(meta.res)
+}
+
+#'
+#'
+#' @export
+mofa.plot_variable_importance <- function(meta.res, pheno, sd.wt=NULL,
+                                          justdata=FALSE) {
+
+  #pheno="condition=Her2"
+  if(!is.null(pheno)) {
+    zz <- lapply( meta.res, function(r) r$Z[pheno,] )
+  } else {
+    message("ERRO: must provide pheno")
+    return(NULL)
+  }
+     
+  topk <- sapply(zz, function(z) names(which.max(abs(z))))
+  topk
+  topsign <- sapply(names(zz), function(i) sign(zz[[i]][topk[i]]))
+  names(topsign) <- names(zz)
+  topsign
+  
+  topw <- sapply(names(topk), function(i) topsign[i]*meta.res[[i]]$W[,topk[i]])
+  if(!is.null(sd.wt)) {
+    ## SD weighting if provided
+    topw <- topw * sd.wt[rownames(topw)]
+  }
+  toprnk <- apply( -topw, 2, rank)                             
+  topw.order <- order(rowMeans(toprnk))
+  topw <- topw[ topw.order,]
+  R <- toprnk[ topw.order,]
+  head(R)
+  R <- (nrow(R) - R) / nrow(R)
+
+  if(justdata) {
+    return(R)
+  }
+  
+  par(mfrow=c(1,1), mar=c(9,4,4,2))
+  barplot( t(head(R,50)),las=3, cex.names=0.85,
+          ylab="cumulative ranking", main="variable importance")
+  legend("topright", legend=rev(colnames(R)), inset=c(0,-0.1), xpd=TRUE,
+         fill=rev(grey.colors(ncol(R))), cex=0.75, y.intersp=0.75)
+  
+}
+
+
+#' @export
+mofa.plot_all_factortraits <- function(meta.res) {
+  nr <- ceiling(sqrt(length(meta.res)))
+  nc <- ceiling(length(meta.res)/nr)
+  par(mfrow=c(nr,nc), mar=c(6,1,2,10))
+  for(i in 1:length(meta.res)) {
+    gx.imagemap(abs(meta.res[[i]]$Z), main=names(meta.res)[i])
+  }
+}
+
+##-------------------------------------------------------------
+##------------------ HELPER FUNCTIONS -------------------------
+##-------------------------------------------------------------
+
+#' @export
+mofa.topsd <- function(xdata, ntop) {
+  lapply(xdata, function(x) {
+    sdx <- matrixStats::rowSds(x,na.rm=TRUE)
+    head(x[order(-sdx),],ntop)
+  })
+}
+
+#' @export
+mofa.scale_views <- function(xdata) {
+  xdata <- lapply(xdata, function(d) d - rowMeans(d,na.rm=TRUE))
+  dt.sd <- sapply(xdata, function(d) mean(matrixStats::rowSds(d,na.rm=TRUE),
+                                          na.rm=TRUE))
+  dt.sd
+  xdata <- lapply(names(xdata), function(d) xdata[[d]] / (1e-9+dt.sd[d]) )
+  names(xdata) <- names(dt.sd)
+  xdata
+}
+
 #' @export
 mofa.split_data <- function(X) {
 
@@ -718,6 +857,11 @@ mofa.correlate_covariate <- function(res, Y) {
     rr = rr
   )
 }
+
+
+##-------------------------------------------------------------
+##-----------------PLOTTING FUNCTIONS -------------------------
+##-------------------------------------------------------------
 
 #' @export
 mofa.plot_weights <- function(weights, k, ntop=10, cex.names=0.9,
@@ -963,7 +1107,6 @@ mofa.plot_factor_boxplots <- function(mofa, k=1, pheno=NULL,
       boxplot( f1 ~ y, main = tt, xlab = pheno, ylab="Score")
     }
   }
-  
 }
 
 
@@ -1693,8 +1836,8 @@ mgsea.plot_scatter <- function(gsea, type1, type2, size.par="p",
     qcomb <- gsea$multi.p  ## meta q-value
   }
   
-  s1 <- s1 + 1e-2*rnorm(length(s1))
-  s2 <- s2 + 1e-2*rnorm(length(s2))
+  s1 <- s1 + 2e-3*rnorm(length(s1))
+  s2 <- s2 + 2e-3*rnorm(length(s2))
 
   ## point size
   cex1 <- 0.1 + (1-qcomb)**2
@@ -1793,6 +1936,38 @@ mgsea.plot_barplot <- function(gsea,
 }
 
 
+#' Plots from results from compute.mofa()
+#'
+#' @export
+mofa.plot_biplot <- function(r, pheno, nfeat=5, comp=c(1,2),
+                             arrow = TRUE, cex=1 ) {
+  names(r)
+  pheno <- factor(pheno)
+  col <- 1+as.integer(pheno)
+  ff <- scale(r$F[,comp],center=FALSE)
+  plot( ff, col=col, pch=19, cex=0.8*cex )
+  tt <- paste0(pheno,'_',rownames(r$F))
+  tt <- rownames(r$F)
+  text( ff, tt, col=col, cex=0.8*cex, pos=3)
+  legend("topright", legend=levels(pheno), fill=2:7,
+         cex=0.8, y.intersp=0.7)
+  
+  if(arrow) {
+    R <- cor(t(r$W), t(r$Z))
+    dim(R)
+    head(R)
+    top <- tail(names(sort(abs(R[,2]))), nfeat)
+    R[top,]
+    ww <- r$W[,comp]
+    ww <- scale(ww, center=FALSE)
+    ww[top,]
+    aa <- 1.0 * abs(ww[top,])**0.5 * sign(ww[top,])
+    arrows( 0,0, aa[,1], aa[,2], length=0.1, lwd=1.6)
+    text( 1.1*aa[,1], 1.1*aa[,2], labels=rownames(aa), cex=0.8)
+  }  
+}
+
+
 ##======================================================================
 ##========================== MIXOMICS ==================================
 ##======================================================================
@@ -1800,36 +1975,117 @@ mgsea.plot_barplot <- function(gsea,
 ## mixOmics related compute and plot functions
 
 #' @export
-mixomics.compute_diablo <- function(xdata, y, ncomp=5, nfeat = 20) {
+mixomics.compute_diablo <- function(xdata, y, ncomp=5, nfeat = 20,
+                                    method = c("diablo","rgcca","sgcca",
+                                               "sgccda","rgcca.rgcca",
+                                               "rgcca.rgccda","rgcca.mcoa")
+                                    ) {
 
-  # for square matrix filled with 0.1s
-  design = matrix(0.1, ncol = length(xdata), nrow = length(xdata), 
-                  dimnames = list(names(xdata), names(xdata)))
-  diag(design) = 0 # set diagonal to 0s
-  
   xx <- xdata
   xx <- mofa.prefix(xx)
-  xx <- lapply( xx, t)
-  Y <- y
+  xx <- lapply(xx, t)
+  method <- tolower(method[1])
+  
+  ## number of features must be smaller than smallest dim
+  minx <- min(sapply(xx, function(x) min(dim(x))))
+  nfeat <- min(nfeat, minx)
 
+  ## full design as default
+  design <- (1 - diag(length(xx)))
+  design 
+
+  dbg("[mixomics.compute_diablo] nfeat = ", nfeat)
   keepX = lapply(names(xx), function(dt) rep(nfeat,ncomp))
   names(keepX) <- names(xx) 
 
-  model <- mixOmics::block.splsda(
-    X = xx,
-    Y = Y,
-    keepX = keepX,
-    ncomp = ncomp,
-    design = design) 
-  #model = mixOmics::mixOmics(X, Y.factor, ncomp = 2, keepX = c(20, 20))
+  if(method %in% c("splsda","diablo")) {
+    res <- mixOmics::block.splsda(
+      X = xx,
+      Y = y,
+      keepX = keepX,
+      ncomp = ncomp,
+      design = design
+    ) 
+  } else if (method == "rgcca") {
+    res <- mixOmics::wrapper.rgcca(
+      X = xx,
+      design = design,
+      ncomp = ncomp,
+      keepX = keepX
+    )
+  } else if (method == "rgcca.rgcca") {
+    res <- RGCCA::rgcca(
+      blocks = xx,
+      method = "rgcca",
+      connection = design,  ## full connect
+      tau = rep(1, length(xx)),
+      ncomp = rep(ncomp, length(xx)),
+      superblock = TRUE,
+      verbose = FALSE
+    )
+    ## need res$loadings, res$X
+    for(i in 1:length(res$a)) colnames(res$a[[i]]) <- paste0("comp",1:ncomp)
+    res$loadings <- res$a[names(xx)]
+  } else if (method == "rgcca.rgccda") {
+    xx2 <- c( response = data.frame(y), xx )
+    res <- RGCCA::rgcca(
+      blocks = xx2,
+      response = 1,
+      method = "rgcca",
+      connection = design,  ## full connect
+      tau = rep(1, length(xx2)),
+      ncomp = ncomp,
+      superblock = TRUE,
+      verbose = FALSE
+    )
+    ## need res$loadings, res$X
+    for(i in 1:length(res$a)) colnames(res$a[[i]]) <- paste0("comp",1:ncomp)
+    res$loadings <- res$a[names(xx)]
+  } else if (method == "rgcca.mcoa") {
+    res <- RGCCA::rgcca(
+      blocks = xx,
+      method = "mcoa",
+      connection = design,  ## full connect
+      tau = rep(1, length(xx)),
+      ncomp = ncomp,
+      superblock = TRUE,
+      verbose = FALSE
+    )
+    ## need res$loadings, res$X
+    for(i in 1:length(res$a)) colnames(res$a[[i]]) <- paste0("comp",1:ncomp)
+    res$loadings <- res$a[names(xx)]
+  } else if (method == "sgcca") {
+    res <- mixOmics::wrapper.sgcca(
+      X = xx,
+      design = design,
+      ncomp = ncomp,
+      keepX = keepX
+    )
+  } else if (method == "sgccda") {
+    res <- mixOmics::wrapper.sgccda(
+      X = xx,
+      Y = y,
+      design = design,
+      ncomp = ncomp,
+      keepX = keepX
+    )
+  } else {
+    stop("[mixomics.compute_diablo] FATAL: invalid method", method)
+  }
 
+  ## extract weight/loading matrix
   dt <- names(xx)
-  F <- model$variates$Y
-  ww <- model$loadings[dt]
+  ww <- res$loadings[dt]
   W <- do.call(rbind, ww)
 
+  ## extract factor matrix. NEED RETHINK!!!! instead of cor(X,W) we
+  ## should actually solve W.F=X for F. 
+  ##X <- do.call(rbind, lapply(res$X,t))
+  X <- t(do.call(cbind, xx))
+  F <- cor(X, W)   ## factors on phenotype???
+    
   list(
-    model = model,
+    res = res,
     scores = F,
     loadings = W
   )
@@ -2012,7 +2268,7 @@ snf.plot_clustering <- function(snf, y=NULL, par=TRUE, ...) {
 #' @export
 snf.plot_graph <- function(snf, min.rho=0.5, plot=TRUE,
                            val=NULL, label=NULL,
-                           vlabcex = 1,
+                           vlabcex = 1, q.edge = 0.85,
                            ...) {
   
   A <- snf$affinityMatrix
@@ -2030,6 +2286,7 @@ snf.plot_graph <- function(snf, min.rho=0.5, plot=TRUE,
     names(label) <- rownames(W)
   }
   ee <- which(W > min.rho, arr.ind=TRUE)
+  #ee <- which(W > 0, arr.ind=TRUE)
   ee <- ee[ which(ee[,2] > ee[,1]), ]
   af <- unlist(lapply(A, function(a) a[ee] ))
   af <- af / max(af,na.rm=TRUE)
@@ -2053,6 +2310,12 @@ snf.plot_graph <- function(snf, min.rho=0.5, plot=TRUE,
     igraph::V(gr)$label <- label[igraph::V(gr)$name]
   }
 
+  length(igraph::E(gr))
+  ewt <- igraph::E(gr)$weight
+  summary(ewt)
+  qq <- quantile(ewt, probs=q.edge)[1]  ## edge threshold
+  gr <- igraph::delete_edges(gr, igraph::E(gr)[which(ewt < qq)])
+
   vcolors <- rev(rainbow(8))
   if(is.null(val)) {
     val <- factor(snf$cluster)
@@ -2069,11 +2332,9 @@ snf.plot_graph <- function(snf, min.rho=0.5, plot=TRUE,
          vertex.label = igraph::V(gr)$label,
          vertex.label.family = "sans",
          vertex.label.cex = 1.2*vlabcex,
-         # vertex.label.color = igraph::V(gr)$color,
          edge.width = 6 * igraph::E(gr)$weight,
          edge.color = igraph::E(gr)$color,    
-         ...
-         )
+         ... )
     legend("bottomright", legend=dtypes, fill=colors,
            cex=0.9, y.intersp=0.85 )
   } else {
@@ -2543,6 +2804,171 @@ lasagna.plot_SP <- function(sp, ntop=200, hilight=NULL, labcex=1,
   fig
 }
 
+
+##======================================================================
+##======================================================================
+##======================================================================
+
+#'
+#' @export
+nonnegative_transform <- function(x, 
+                                  separate.sign=FALSE,
+                                  shift = TRUE, scale = TRUE,
+                                  exponentiate=FALSE) {
+  ## break positive and negative separately
+  if(separate.sign) {
+    x <- (x - rowMeans(x)) ## / matrixStats::rowSds(xx)
+    x <- rbind(pmax(x,0), pmax(-x,0))
+  }
+  
+  ## (see IntNMF example) Make all data positive by shifting to positive direction.
+  ## Also rescale the datasets so that they are comparable.
+  if(shift) {
+    #if (!all(dat1>=0)) dat1 <- pmax(dat1 + abs(min(dat1)), .Machine$double.eps)
+    #dat1 <- dat1 / max(dat1)
+    qmin <- quantile(x, probs=c(0.01))[1]  
+    if (qmin < 0) x <- pmax(x + abs(qmin), .Machine$double.eps)
+  }
+  
+  ## (see IntNMF example) Make all data positive by shifting to positive direction.
+  ## Also rescale the datasets so that they are comparable.
+  if(scale) {
+    qmax <- quantile(x, probs=c(0.99))[1]
+    x <- x / qmax
+  }
+
+  ## do exponential transform. As NMF does multiplicative optimization,
+  ## exponential values should work better
+  if(exponentiate) {
+    x <- pmax(exp(x-min(x))-1,0)
+  }
+
+  x
+}
+
+
+#' Integrated NMF.
+#' 
+#' @export
+mofa.intNMF <- function (datasets, k=NULL, method="RcppML",
+                         opt.method="RcppML", maxiter=200,
+                         separate.sign = FALSE,
+                         shift = TRUE, scale = TRUE,
+                         exponentiate = FALSE)
+{
+  ##method=opt.method=opt.method="RcppML"
+  #shift.pos=TRUE;scale=TRUE;separate.sign=TRUE;take.exponent=FALSE
+  
+  method <- tolower(method)
+  opt.method <- tolower(opt.method)
+  
+  ## transform to non-negative
+  datasets <- lapply( datasets, function(x) {
+    nonnegative_transform(
+      x, 
+      separate.sign = separate.sign,
+      shift = shift, scale = scale,
+      exponentiate = exponentiate)
+  })
+
+  
+  lapply(datasets,min)
+  lapply(datasets,dim)
+  
+  # Find optimum number of clusters for the data
+  cophcor <- NULL
+  if( is.null(k)) {
+    message("[mofa.intNMF] optimizing k... ")
+    if(opt.method == "intnmf") {
+      tdata <- lapply(datasets,t)
+      opt.k <- IntNMF::nmf.opt.k(
+        dat = tdata,
+        n.runs = 5,
+        n.fold = 5,
+        k.range = 2:7,
+        result = TRUE,
+        make.plot = FALSE,
+        progress = FALSE
+      )
+      cophcor <- rowMeans(opt.k)
+      k <- names(which.max(cophcor))
+      k <- as.integer(sub("^k","",k))
+    } else if( opt.method == "rcppml") {
+      cophenetic_coeff <- function(W, xdist) {
+        cl <- paste0("C",max.col(W))
+        K <- 1 - cor(t(model.matrix( ~0 + cl)))
+        cor(as.vector(K), as.vector(as.matrix(xdist)))
+      }
+      X <- do.call(rbind, datasets)
+      xdist <- dist(t(X))
+      cophcor <- c()
+      k=2
+      for(k in 2:20) {
+        model <- RcppML::nmf(t(X), k = k, verbose=0)
+        id <- paste0("k=",k)
+        cophcor[id] <- cophenetic_coeff(model$w, xdist)
+      }
+      k <- names(which.max(cophcor))
+      k <- as.integer(sub("k=","",k))
+    } else {
+      stop("[mofa.intNMF] invalid method", method)
+    }
+    message("[mofa.intNMF] optimal k = ", k)
+  }
+
+  
+  # Find clustering assignment for the samples
+  res <- list()
+  if( method == "intnmf") {
+    fit <- nmf.mnnals(
+      dat = lapply(datasets, t),
+      k = k,
+      maxiter = maxiter,
+      st.count = 20,
+      n.ini = 15,
+      ini.nndsvd = TRUE,
+      seed = TRUE)
+    names(fit)
+    res$H <- t(fit$W)
+    res$W <- lapply(fit$H, t) 
+    names(res$W) <- names(datasets)
+    res$clusters <- fit$clusters
+
+  } else if( method == "rcppml") {
+    np <- sapply(datasets, nrow)
+    X <- do.call(rbind, datasets)
+    fit <- RcppML::nmf(X, k = k, maxit=maxiter, verbose=0)
+    wt <- rowSums(fit$h**2)**0.5
+    res$H <- fit$h / wt
+    res$W <- fit$w %*% diag(fit$d * wt) 
+    res$W <- tapply(1:nrow(res$W), rep(1:length(np),np), function(i) res$W[i,])
+  } else {
+    stop("[mofa.intNMF] invalid method", method)
+  }
+  
+  if(separate.sign) {
+    for(i in 1:length(datasets))  {
+      n <- nrow(res$W[[i]])/2
+      wpos <- res$W[[i]][1:n,,drop=FALSE]
+      wneg <- res$W[[i]][(n+1):(2*n),,drop=FALSE]      
+      res$W[[i]] <- wpos - wneg
+    }
+  }
+
+  for(i in 1:length(datasets))  {
+    n <- nrow(res$W[[i]])
+    rownames(res$W[[i]]) <- colnames(datasets[[i]])[1:n]
+    colnames(res$W[[i]]) <- paste0("NMF",1:k)
+  }
+  rownames(res$H) <- paste0("NMF",1:k)
+  colnames(res$H) <- colnames(datasets[[1]])
+  names(res$W) <- names(datasets)
+
+  res$clusters <- max.col(t(res$H))  
+  res$cophcor <- cophcor
+
+  return(res)
+}
 
 
 ##======================================================================

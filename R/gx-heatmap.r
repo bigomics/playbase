@@ -586,10 +586,13 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
 
   ## ------------- draw heatmap
 
+  ## global row clustering
+  row_dend <- as.dendrogram(hclust(dist(gx)))
+  
   hmap <- NULL
   for (i in grp.order) {
     jj <- grp[[i]]
-
+    
     coldistfun1 <- function(x) stats::dist(x)
     rowdistfun1 <- function(x, y) 1 - stats::cor(x, y)
     gx0 <- gx[, jj, drop = FALSE]
@@ -619,7 +622,8 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     hmap <- hmap + ComplexHeatmap::Heatmap(
       gx0,
       col = col_scale, ## from input
-      cluster_rows = cluster_rows,
+      #cluster_rows = cluster_rows,
+      cluster_rows = row_dend,
       cluster_columns = cluster_columns,
       clustering_distance_rows = dist.method,
       clustering_distance_columns = col.dist.method,

@@ -1266,7 +1266,7 @@ if __name__ == '__main__':
   logfile <- sub("[.]py$",".log",pyfile)  
   pdffile <- sub("[.]py$",".pdf",pyfile)
   svgfile <- sub("[.]py$",".svg",pyfile)    
-  cmd <- glue::glue("cd /opt/PlotNeuralNet/pyexamples/ && python {pyfile} && pdflatex {texfile} && pdf2svg {pdffile} {svgfile}")
+  cmd <- glue::glue("cd /opt/PlotNeuralNet/pyexamples/ && python {pyfile} && pdflatex -interaction=batchmode {texfile} && pdf2svg {pdffile} {svgfile}")
   suppressMessages( system(cmd, ignore.stdout=TRUE, ignore.stderr=TRUE,
                            intern=FALSE, show.output.on.console = FALSE) )
   
