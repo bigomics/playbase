@@ -99,13 +99,15 @@ pgx.wgcna <- function(pgx,
     message("[pgx.createSingleCellPGX]=======================================")
     message("[pgx.createSingleCellPGX] running SuperCell. nb = ", nb)    
     sc <- pgx.supercell(counts, pgx$samples, group = group, gamma = nb)
-    message("[pgx.createSingleCellPGX] SuperCell done: ", ncol(counts), " -> ", ncol(sc$counts))
+    message("[pgx.createSingleCellPGX] SuperCell done: ", ncol(counts), " ->", ncol(sc$counts))
     message("[pgx.createSingleCellPGX]=======================================")
+    message("[pgx.createSingleCellPGX] Normalizing supercell matrix (logCPM)")
     X <- playbase::logCPM(sc$counts, total = 1e6, prior = 1)
+    X <- as.matrix(X)
     samples <- sc$meta
     remove(counts, group, sc); gc()
   }
-
+  
   if (is.null(X)) X <- as.matrix(pgx$X)
   if (is.null(samples)) samples <- pgx$samples
   
