@@ -585,9 +585,14 @@ pgx.computePGX <- function(pgx,
   ## Cluster by genes
   if (do.clustergenes) {
     message("[pgx.computePGX] clustering genes...")
+    if (pgx$datatype == "scRNAseq") {
+      mm <- c("pca", "tsne", "umap")
+    } else {
+      mm <- "umap"
+    }
     pgx <- playbase::pgx.clusterGenes(
       pgx,
-      methods = "umap",
+      methods = mm,
       dims = c(2, 3),
       X = pgx$impX,
       level = "gene"
@@ -662,6 +667,7 @@ pgx.computePGX <- function(pgx,
       test.methods = gset.methods
     )
     saveRDS(pgx, "~/Desktop/MNT/LL6.RDS")
+
     ## Cluster by genes
     if (do.clustergenesets) {
       message("[pgx.computePGX] clustering genesets...")
