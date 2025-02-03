@@ -106,13 +106,8 @@ pgx.wgcna <- function(pgx,
     remove(counts, group, sc); gc()
   }
 
-  if (is.null(X)) {
-    X <- as.matrix(pgx$X)
-  }
-
-  if (is.null(samples)) {
-    samples <- pgx$samples
-  }
+  if (is.null(X)) X <- as.matrix(pgx$X)
+  if (is.null(samples)) samples <- pgx$samples
   
   ## get topSD matrix
   nmissing <- sum(is.na(X))
@@ -121,9 +116,9 @@ pgx.wgcna <- function(pgx,
     X <- X[complete.cases(X), , drop = FALSE]
   }
   sdx <- matrixStats::rowSds(X, na.rm = TRUE)
-  X <- X[sdx > 0.1 * mean(sdx, na.rm = TRUE), ] ## filter low SD
-  X <- X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ]
-  X <- X[!duplicated(rownames(X)), ]
+  X <- X[sdx > 0.1 * mean(sdx, na.rm = TRUE), , drop = FALSE] ## filter low SD
+  X <- X[order(-matrixStats::rowSds(X, na.rm = TRUE)), , drop = FALSE]
+  X <- X[!duplicated(rownames(X)), , drop = FALSE]
   X <- utils::head(X, ngenes)
   datExpr <- t(X)
 
@@ -133,6 +128,7 @@ pgx.wgcna <- function(pgx,
   minmodsize
 
   ## we iterate over smaller power, until we get some clusters
+  message("[playbase::pgx.wgcna] Computing WGCNA blockwiseModules...")
   ncolors <- 1
   i <- 1
   while (ncolors == 1 && i < 100) {
@@ -186,16 +182,21 @@ pgx.wgcna <- function(pgx,
   me.colors <- me.colors[names(me.genes)]
 
   ## compute clustering based on TOM matrix
+  message("[playbase::pgx.wgcna] Computing clustering based on TOM matrix...")
   X1 <- t(datExpr)
   X1 <- t(scale(datExpr))
   dissTOM <- 1 - WGCNA::TOMsimilarityFromExpr(datExpr, power = power)
   rownames(dissTOM) <- colnames(dissTOM) <- colnames(datExpr)
+  saveRDS(dissTOM, "~/Desktop/MNT/dissTOM.RDS")
   clust <- pgx.clusterBigMatrix(dissTOM, methods = c("umap", "tsne", "pca"), dims = c(2))
   if ("cluster.genes" %in% names(pgx)) {
+    clust[["pca2d"]] <- pgx$cluster.genes$pos[["pca2d"]][colnames(datExpr), ]
     clust[["umap2d"]] <- pgx$cluster.genes$pos[["umap2d"]][colnames(datExpr), ]
+    clust[["tsne2d"]] <- pgx$cluster.genes$pos[["tsne2d"]][colnames(datExpr), ]
   }
 
   ## Do quick geneset analysis using fisher-test (fastest method)
+  message("[playbase::pgx.wgcna] WGCNA gene set analysis using Fisher...")
   gmt <- getGSETS_playbase(pattern = "HALLMARK|GOBP|^C[1-9]|GO_BP")
   gse <- NULL
   bg <- rownames(pgx$X)
@@ -226,6 +227,7 @@ pgx.wgcna <- function(pgx,
   rownames(gse) <- NULL
 
   ## construct results object
+  message("[playbase::pgx.wgcna] WGCNA completed. Returning object.")
   return(
     list(
       datExpr = datExpr,
