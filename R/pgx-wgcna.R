@@ -85,8 +85,10 @@ pgx.wgcna <- function(pgx,
 
   X <- NULL
   samples <- NULL
-  if (pgx$datatype %in% c("scRNAseq", "scRNA-seq")) {
-    message("[playbase::pgx.wgcna] WGCNA: scRNAseq. Computing supercells with SuperCell.")
+  c1 <- pgx$datatype %in% c("scRNAseq", "scRNA-seq")
+  c2 <- ncol(pgx$X) > 2000
+  if (c1 & c2) {
+    message("[playbase::pgx.wgcna] WGCNA: scRNAseq. >2K cells. Computing supercells with SuperCell.")
     counts <- pgx$counts
     group <- pgx$samples[, "celltype"]
     q10 <- quantile(table(group), probs=0.25)
