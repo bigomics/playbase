@@ -1167,7 +1167,7 @@ mofa.plot_factor_corheatmap <- function(mofa,
   lablength <- max(nchar(rownames(R)))
   gx.heatmap(
     R, nmax=50, scale='none', main=main, sym=TRUE,
-    key=FALSE, keysize=0.8, mar=c(1,1)*(2 + marx*lablength),
+    key=FALSE, keysize=0.8, mar=c(0.8,1)*(2 + marx*lablength),
     ...)
 }
 
