@@ -238,7 +238,7 @@ MultiOmicsSAE <- R6::R6Class(
     },
     
     get_gradients = function(sd_weight = NULL) {
-      self$get_gradients.autograd(sd_weight = sd_weight)
+      self$get_gradients.autograd(sd_weight = sd_weight)      
     },
     
     get_gradients.delta = function(sd_weight = NULL) {

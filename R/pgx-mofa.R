@@ -71,8 +71,8 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=8,
   )
 
   if(TRUE) {
-    all.kernels <- c("mofa","pca","nmf","nmf2","mcia","diablo","wgcna","rgcca",
-                     "rgcca.rgcca","rgcca.rgccda")
+    all.kernels <- c("mofa","pca","nmf","nmf2","mcia","diablo","wgcna",
+                     "rgcca","rgcca.rgcca","rgcca.rgccda","rgcca.mcoa")
     #all.kernels <- c("mofa","pca","nmf","nmf2","mcia","wgcna","diablo","rgcca")
     mofa$factorizations <- mofa.compute_factorizations(
       xdata,
@@ -665,7 +665,7 @@ pgx.compute_mofa_importance <- function(pgx, pheno,
                                                     "wgcna","diablo","rgcca",
                                                     "rgcca.rgcca","rgcca.rgccda",
                                                     "rgcca.mcoa")) {
-  if(!"factorizations" %in% names(pgx)) {
+  if(!"factorizations" %in% names(pgx$mofa)) {
     message("WARNING: no factorizatons in pgx. Computing factorizations...")
     xdata <- mofa.split_data(pgx$X)
     names(xdata)
@@ -678,7 +678,7 @@ pgx.compute_mofa_importance <- function(pgx, pheno,
       numfactors = numfactors,
       kernels = kernels) 
   } else {
-    meta.res <- pgx$factorizations
+    meta.res <- pgx$mofa$factorizations
   }
   sdx <- NULL
   if(use.sdwt) {
@@ -2426,7 +2426,7 @@ snf.plot_graph <- function(snf, min.rho=0.5, plot=TRUE,
          vertex.size = 0,         
          vertex.label = igraph::V(gr)$label,
          vertex.label.family = "sans",
-         vertex.label.cex = 1.2*vlabcex,
+         vertex.label.cex = 1.15*vlabcex,
          edge.width = 6 * igraph::E(gr)$weight,
          edge.color = igraph::E(gr)$color,    
          ... )
@@ -2438,18 +2438,21 @@ snf.plot_graph <- function(snf, min.rho=0.5, plot=TRUE,
 }
 
 #' @export
-snf.heatmap <- function(snf, X, samples, nmax=50) {
+snf.heatmap <- function(snf, X, samples, nmax=50, do.split=TRUE, legend=TRUE) {
 
   rX <- X[order(-apply(X,1,sd)),]
   dt <- sub(":.*","",rownames(X))
   n <- nmax / length(unique(dt))
   sel <- tapply(rownames(X),dt,function(a) head(a,n))
   sel <- unlist(sel)
-  dt <- sub(":.*","",sel)
+  dt <- NULL
+  if(do.split) dt <- sub(":.*","",sel)
   gx.splitmap( rX[sel,], splitx=snf$cluster,
-              split = dt, nmax=160, cexRow=0.8, 
+              split = dt,
+              nmax=160, cexRow=0.8, 
               col.annot = samples,
               dist.method = "euclidean",
+              show_legend = legend,
               softmax=TRUE, show_key=FALSE)
 
 }
