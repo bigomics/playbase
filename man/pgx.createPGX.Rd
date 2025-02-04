@@ -15,7 +15,7 @@ pgx.createPGX(
   annot_table = NULL,
   max.genesets = 5000,
   name = "Data set",
-  datatype = "unknown",
+  datatype = "RNA-seq",
   probe_type = NULL,
   creator = "unknown",
   description = "No description provided.",

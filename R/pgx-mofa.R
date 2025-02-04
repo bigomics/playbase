@@ -2,7 +2,7 @@
 #' Main function to call MOFA analysis on pgx object. 
 #'
 #' @export
-pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
+pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=8,
                              ntop = 2000, gset.ntop = 2000,
                              add_gsets=FALSE ) {
 
@@ -45,7 +45,7 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
   ## MOFA computation
   message("computing MOFA ...")              
 
-  #samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa";ntop=2000;numfactors=10
+  #samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa";ntop=2000;numfactors=8
   mofa <- mofa.compute(
     xdata,
     samples = discretized_samples,
@@ -71,9 +71,10 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=10,
   )
 
   if(TRUE) {
-    all.kernels <- c("mofa","pca","nmf","nmf2","mcia","diablo","wgcna","rgcca","RGCCA.rgcca","RGCCA.rgccda")
+    all.kernels <- c("mofa","pca","nmf","nmf2","mcia","diablo","wgcna","rgcca",
+                     "rgcca.rgcca","rgcca.rgccda")
     #all.kernels <- c("mofa","pca","nmf","nmf2","mcia","wgcna","diablo","rgcca")
-    mofa$kernels <- mofa.compute_kernels(
+    mofa$factorizations <- mofa.compute_factorizations(
       xdata,
       discretized_samples,
       pgx$contrasts,
@@ -123,7 +124,7 @@ mofa.compute_geneset_mofa <- function(mofa,
                                       annot = NULL,
                                       kernel = "mofa",
                                       GMT = NULL,
-                                      numfactors = 20,
+                                      numfactors = 12,
                                       ntop = 2000,
                                       factorname = "Module") {
 
@@ -178,7 +179,7 @@ mofa.compute <- function(xdata,
                          gpu_mode = FALSE,
                          compute.enrichment = TRUE,
                          compute.graphs = TRUE,
-                         numfactors = 10,
+                         numfactors = 8,
                          numfeatures = 100
                          ) {
   
@@ -658,12 +659,55 @@ mofa.compute_enrichment <- function(W, G=NULL, filter=NULL, ntop=1000) {
 #'
 #'
 #' @export
-mofa.compute_kernels <- function(xdata, samples, contrasts, numfactors = 10,
-                                 kernels = c("mofa","pca","nmf","nmf2","mcia","wgcna","diablo","rgcca","rgcca,rgcca","rgcca.rgccda","rgcca.mcoa")) {
+pgx.compute_mofa_importance <- function(pgx, pheno,
+                                        numfactors = 8, use.sdwt = TRUE,
+                                        kernels = c("mofa","pca","nmf","nmf2","mcia",
+                                                    "wgcna","diablo","rgcca",
+                                                    "rgcca.rgcca","rgcca.rgccda",
+                                                    "rgcca.mcoa")) {
+  if(!"factorizations" %in% names(pgx)) {
+    message("WARNING: no factorizatons in pgx. Computing factorizations...")
+    xdata <- mofa.split_data(pgx$X)
+    names(xdata)
+    samples <- pgx$samples
+    contrasts <- pgx$contrasts
+    meta.res <- mofa.compute_factorizations(
+      xdata,
+      samples,
+      contrasts,
+      numfactors = numfactors,
+      kernels = kernels) 
+  } else {
+    meta.res <- pgx$factorizations
+  }
+  sdx <- NULL
+  if(use.sdwt) {
+    sdx <- matrixStats::rowSds(pgx$X)  ## important
+    sdx <- sdx**0.5 ## moderate weight
+  }
+  res <- mofa.compute_meta_importance(
+    meta.res, pheno, sd.wt = sdx,  plot = FALSE)
 
+  return(res)
+}
+
+
+#'
+#'
+#' @export
+mofa.compute_factorizations <- function(xdata,
+                                        samples,
+                                        contrasts,
+                                        numfactors = 8,
+                                        kernels =
+                                          c("mofa","pca","nmf","nmf2",
+                                            "mcia","wgcna","diablo","rgcca",
+                                            "rgcca.rgcca","rgcca.rgccda",
+                                            "rgcca.mcoa")) {
+  
   meta.res <- list()
   for(kernel in kernels) {
-    cat("[mofa.compute_kernels] computing for kernel",toupper(kernel),"\n")
+    cat("[mofa.compute_factorizations] computing for kernel",toupper(kernel),"\n")
     meta.res[[kernel]] <- mofa.compute(
       xdata,
       samples,
@@ -686,48 +730,99 @@ mofa.compute_kernels <- function(xdata, samples, contrasts, numfactors = 10,
   return(meta.res)
 }
 
+
 #'
 #'
 #' @export
-mofa.plot_variable_importance <- function(meta.res, pheno, sd.wt=NULL,
-                                          justdata=FALSE) {
+mofa.plot_meta_importance <- function(meta.res, pheno, sd.wt=NULL,
+                                      power=6, plot=FALSE) {
+  mofa.compute_meta_importance(
+    meta.res = meta.res,
+    pheno = pheno,
+    sd.wt = sd.wt,
+    power = power,
+    plot = TRUE) 
+}
+
+
+#'
+#'
+#' @export
+mofa.compute_meta_importance <- function(meta.res, pheno, sd.wt=NULL,
+                                           power = 6, plot=FALSE) {
 
   #pheno="condition=Her2"
-  if(!is.null(pheno)) {
-    zz <- lapply( meta.res, function(r) r$Z[pheno,] )
-  } else {
-    message("ERRO: must provide pheno")
+  if(is.null(pheno)) {
+    message("ERROR: must provide pheno")
     return(NULL)
   }
-     
-  topk <- sapply(zz, function(z) names(which.max(abs(z))))
-  topk
-  topsign <- sapply(names(zz), function(i) sign(zz[[i]][topk[i]]))
-  names(topsign) <- names(zz)
-  topsign
-  
-  topw <- sapply(names(topk), function(i) topsign[i]*meta.res[[i]]$W[,topk[i]])
-  if(!is.null(sd.wt)) {
-    ## SD weighting if provided
-    topw <- topw * sd.wt[rownames(topw)]
-  }
-  toprnk <- apply( -topw, 2, rank)                             
-  topw.order <- order(rowMeans(toprnk))
-  topw <- topw[ topw.order,]
-  R <- toprnk[ topw.order,]
-  head(R)
-  R <- (nrow(R) - R) / nrow(R)
 
-  if(justdata) {
-    return(R)
+  zpheno <- rownames(meta.res[[1]]$Z)
+  zpheno
+  
+  if(0) {
+    meta.res[[1]]$Z
+    pheno <- zpheno[2]
+    pheno <- zpheno[1:2]    
+    pheno
+  }
+
+  if(!grepl("=",pheno)) {
+    zpheno <- rownames(meta.res[[1]]$Z)
+    pheno <- grep(pheno, zpheno, value=TRUE)
+  }
+
+  pheno <- intersect(pheno, zpheno)
+  if(length(pheno)==0) {
+    message("ERROR: could not match pheno")
+    return(NULL)
   }
   
-  par(mfrow=c(1,1), mar=c(9,4,4,2))
-  barplot( t(head(R,50)),las=3, cex.names=0.85,
-          ylab="cumulative ranking", main="variable importance")
-  legend("topright", legend=rev(colnames(R)), inset=c(0,-0.1), xpd=TRUE,
-         fill=rev(grey.colors(ncol(R))), cex=0.75, y.intersp=0.75)
+  if(length(pheno) == 1) {
+    zz <- lapply( meta.res, function(r) r$Z[pheno[1],] )
+    topk <- sapply(zz, function(z) names(which.max(abs(z))))
+    topk
+    topsign <- sapply(names(zz), function(i) sign(zz[[i]][topk[i]]))
+    names(topsign) <- names(zz)
+    topsign
+    ww <- lapply(meta.res, function(res) res$W)
+    B <- sapply(names(topk), function(i) topsign[i]*ww[[i]][,topk[i]])
+    if(!is.null(sd.wt)) B <- B * sd.wt[rownames(B)]      
+  } else {
+    bb <- list()
+    i=1
+    for(i in 1:length(meta.res)) {
+      Z <- meta.res[[i]]$Z[pheno,]
+      Z <- tanh(Z/sd(Z)) 
+      W <- meta.res[[i]]$W
+      if(!is.null(sd.wt)) W <- W * sd.wt[rownames(W)]      
+      K <- (W %*% t(Z))
+      ## this is heuristic to equalize contribution of columns
+      R <- apply(K, 2, function(x) sign(x)*rank(abs(x))/length(x))
+      wt <- apply(abs(R),1,max)
+      bb[[i]] <- wt
+    }
+    names(bb) <- names(meta.res)
+    B <- do.call(cbind, bb)
+  }
   
+  ## Convert to weighted elevated rank. Highest rank is more
+  ## important.
+  R <- (apply(B, 2, rank) / nrow(B))**power
+  R <- R[order(-rowMeans(R)),]
+  head(R)
+
+  ## return R matrix if not plotting
+  if(plot==FALSE)  return(R)
+
+  par(mfrow=c(1,1), mar=c(12,4.5,2,0))
+  barplot( t(head(R,60)), las=3,
+          ylab="cumulative ranking", main="variable importance")          
+  legend( "topright", legend = rev(colnames(R)),
+         fill=rev(grey.colors(ncol(R))),
+         cex=0.8, y.intersp=0.8, bg='white',
+         inset=c(0.035,0))
+
 }
 
 

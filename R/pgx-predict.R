@@ -8,26 +8,37 @@
 ## Variable importance functions
 ## ----------------------------------------------------------------------
 
-#' Main compute driver function 
+#' Main compute driver function. Compute variable importance for one
+#' specific contrast.
 #'
 #' @export
-pgx.compute_importance <- function(pgx, contrast, level="genes",
+pgx.compute_importance <- function(pgx, pheno, level="genes",
                                    filter_features = NULL,
                                    select_features = NULL,
                                    select_samples = NULL,
-                                   nfeatures=60, do.survival=FALSE) {
+                                   nfeatures = 60,
+                                   multiomics = NULL,
+                                   do.survival=FALSE) {
 
-  ct <- contrast
+  if(0) {
+    level="genes"
+    filter_features = NULL
+    select_features = NULL
+    select_samples = NULL
+    nfeatures = 60
+    multiomics = NULL
+  }
+  
   ft <- ifelse(is.null(filter_features), "<all>", filter_features)
   sel <- select_features
   
-  if (!(ct %in% colnames(pgx$samples))) {
-    message("ERROR. contrasts not in pgx$samples")
+  if (!(pheno %in% colnames(pgx$samples))) {
+    message("ERROR. pheno not in pgx$samples")
     return(NULL)
   }
 
   ## WARNING. this converts any phenotype to discrete
-  y0 <- as.character(pgx$samples[, ct])  
+  y0 <- as.character(pgx$samples[, pheno])  
   names(y0) <- rownames(pgx$samples)
 
   if(!is.null(select_samples)) {
@@ -41,7 +52,7 @@ pgx.compute_importance <- function(pgx, contrast, level="genes",
   y <- y[unlist(ii)]
   
   ## -------------------------------------------
-  ## select features
+  ## select features (augment if needed)
   ## -------------------------------------------
   if (FALSE && level == "geneset") {
     X <- pgx$gsetX[, names(y)]
@@ -95,6 +106,7 @@ pgx.compute_importance <- function(pgx, contrast, level="genes",
     time <- abs(y)
     status <- (y > 0) ## dead is positive time
     methods <- c("glmnet", "randomforest", "xgboost", "pls")
+    message("Computing single-omics variable importance (surival)...")
     P <- playbase::pgx.survivalVariableImportance(
       X,
       time = time,
@@ -102,89 +114,74 @@ pgx.compute_importance <- function(pgx, contrast, level="genes",
       methods = methods
     )
   } else {
-    methods <- c("glmnet", "randomforest", "xgboost", "splsda", "correlation", "ftest")
-    X1 <- X
-    y1 <- y
-    names(y1) <- colnames(X1) <- paste0("x", 1:ncol(X))
-    res <- playbase::pgx.variableImportance(
-      X1, y1,
-      methods = methods,
-      reduce = 1000,
-      resample = 0,
-      scale = FALSE,
-      add.noise = 0
-    )
-    P <- res$importance
+    ## determine is dataset is multi-omics
+    has.colons <- all(grepl("[:]",rownames(pgx$X)))
+    has.colons
+    if(is.null(multiomics)) multiomics <- (pgx$datatype == "multi-omics" || has.colons)
+    if(multiomics && !has.colons) {
+      message("WARNING. multi-omics specified but no colons in features. doing mono-omics.")
+      multiomics <- FALSE
+    }
+
+    if(multiomics) {
+      ## compute variable importance for MULTI-OMICS. We need not to
+      ## use the augmented data.
+      kernels = c("mofa","pca","nmf","nmf2","mcia","wgcna","diablo","rgcca",
+                  "rgcca,rgcca","rgcca.rgccda", "rgcca.mcoa")
+      message("Computing multi-omics variable importance...")      
+      P <- pgx.compute_mofa_importance(
+        pgx, pheno, numfactors = 8, use.sdwt = TRUE, kernels=kernels)
+      dim(P)
+      X <- pgx$X
+      y <- pgx$samples[,pheno]
+      names(y) <- rownames(pgx$samples)
+    } else {
+      ## compute variable importance for SINGLE-OMICS. We use the
+      ## augmented data.
+      methods <- c("glmnet", "randomforest", "xgboost", "splsda",
+                   "correlation", "ftest")
+      X1 <- X
+      y1 <- y
+      names(y1) <- colnames(X1) <- paste0("x", 1:ncol(X))
+      message("Computing single-omics variable importance...")            
+      res <- playbase::pgx.variableImportance(
+        X1, y1,
+        methods = methods,
+        reduce = 1000,
+        resample = 0,
+        scale = FALSE,
+        add.noise = 0
+      )
+      remove(X1,y1)
+      P <- res$importance
+    }
   }
-  P <- abs(P) ## sometimes negative according to sign
-  
+
+  ## normalize importance measures
+  P <- abs(P) ## sometimes negative according to sign  
   P[is.na(P)] <- 0
   P[is.nan(P)] <- 0
-  P <- t(t(P) / (1e-3 + apply(P, 2, max, na.rm = TRUE)))
-  P <- P[order(-rowSums(P, na.rm = TRUE)), , drop = FALSE]
-  
+
+  ## Convert to elevated rank. take top features
   R <- P
   if (nrow(R) > 1) {
-    R <- (apply(P, 2, rank) / nrow(P))**4
+    R <- (apply(P, 2, rank) / nrow(P))**4  ## exponent???
     R <- R[order(-rowSums(R, na.rm = TRUE)), , drop = FALSE]
   }
-  
-  ## ------------------------------
-  ## create partition tree
-  ## ------------------------------
-  
-  R <- R[order(-rowSums(R, na.rm = TRUE)), , drop = FALSE]
-  sel <- head(rownames(R), 100)
-  sel <- intersect(sel, rownames(X))
-  sel <- head(rownames(R), nfeatures) ## top50 features
-  tx <- t(X[sel, , drop = FALSE])
-  
-  ## formula wants clean names, so save original names
-  colnames(tx) <- gsub("[: +-.,]", "_", colnames(tx))
-  colnames(tx) <- gsub("[')(]", "", colnames(tx))
-  colnames(tx) <- gsub("\\[|\\]", "", colnames(tx))
-  orig.names <- sel
-  names(orig.names) <- colnames(tx)
-  jj <- names(y)
-  
-  if (do.survival) {
-    time <- abs(y)
-    status <- (y > 0) ## dead if positive time
-    df <- data.frame(time = time + 0.001, status = status, tx)
-    rf <- rpart::rpart(survival::Surv(time, status) ~ ., data = df)
-  } else {
-    df <- data.frame(y = y, tx)
-    rf <- rpart::rpart(y ~ ., data = df)
-  }
-  table(rf$where)
-  rf$cptable
-  rf$orig.names <- orig.names
-  
-  rf.nsplit <- rf$cptable[, "nsplit"]
-  if (grepl("survival", ct)) {
-    MAXSPLIT <- 4 ## maximum five groups....
-  } else {
-    MAXSPLIT <- 1.5 * length(unique(y)) ## maximum N+1 groups
-  }
-  if (max(rf.nsplit) > MAXSPLIT) {
-    cp.idx <- max(which(rf.nsplit <= MAXSPLIT))
-    cp0 <- rf$cptable[cp.idx, "CP"]
-    rf <- rpart::prune(rf, cp = cp0)
-  }
-  
-  ##progress$inc(2 / 10, detail = "done")
-  y <- y[rownames(tx)]
-  colnames(tx) <- orig.names[colnames(tx)]
+  sel <- head(rownames(R), nfeatures) ## top features
+  R <- R[sel,, drop = FALSE]
+  X <- X[sel, , drop = FALSE]
 
   ## reduce R and y (from augmented set)
-  kk <- names(y0)
-  dbg("[pgx.compute_importance] kk = ", kk)
-  dbg("[pgx.compute_importance] colnames.tx = ", head(rownames(tx)))
-  dbg("[pgx.compute_importance] names.y = ", head(names(y)))
-  tx <- tx[match(kk,rownames(tx)),]
-  y <- y[match(kk,names(y))]
+  kk <- names(y)[which(!duplicated(names(y)))]
+  X <- X[,kk,drop=FALSE]
+  y <- y[kk]
 
-  res <- list(R = R, y = y, X = t(tx), rf = rf)
+  ## make partition tree
+  rf <- makePartitionTree(X, y, add.splits = 0) 
+  
+  ##rf = NULL
+  res <- list(R = R, y = y, X = X, rf = rf)
 
   return(res)
 }
@@ -329,8 +326,12 @@ pgx.multiclassVariableImportance <- function(X, y, methods) {
   res$importance
 }
 
-#' @describeIn pgx.survivalVariableImportance Calculates variable importance scores for predictors of a multiclass response using various methods.
-#' @param y Multiclass factor response variable. Contains the class labels for each sample
+#' @describeIn pgx.survivalVariableImportance Calculates variable
+#'   importance scores for predictors of a multiclass response using
+#'   various methods.
+#'
+#' @param y Multiclass factor response variable. Contains the class
+#'   labels for each sample
 #' @export
 pgx.variableImportance <- function(X, y,
                                    methods = c(
@@ -338,7 +339,8 @@ pgx.variableImportance <- function(X, y,
                                      "xgboost", "splsda", "correlation", "ftest",
                                      "boruta", CARET.METHODS
                                    )[1:6],
-                                   scale = TRUE, reduce = 1000, resample = 0, add.noise = 0) {
+                                   scale = TRUE, reduce = 1000, resample = 0,
+                                   add.noise = 0) {
   ## variables
   imp <- list()
   runtime <- list()
@@ -594,26 +596,14 @@ plotImportance <- function(P, p.sign = NULL, top = 50, runtime = NULL) {
 }
 
 
-#' @export
-plotDecisionTreeFromImportance <- function(imp, add.splits = 0,
-                                           type=c("fancy","simple","extended")) {
-
-  kk <- which(!duplicated(names(imp$y)))
-  y <- imp$y[kk]
-  sel <- intersect(rownames(imp$X), rownames(imp$R))
-  tx <- t(imp$X[sel, kk,  drop = FALSE])
-  
-  ## ------------------------------
-  ## create partition tree
-  ## ------------------------------  
-
+makePartitionTree <- function(X, y, add.splits = 0) {
   ## formula wants clean names, so save original names
+  tx <- t(X)
   colnames(tx) <- gsub("[: +-.,]", "_", colnames(tx))
   colnames(tx) <- gsub("[')(]", "", colnames(tx))
   colnames(tx) <- gsub("\\[|\\]", "", colnames(tx))
-  orig.names <- sel
-  names(orig.names) <- colnames(tx)
 
+  ## create partition tree
   do.survival <- FALSE
   if (do.survival) {
     time <- abs(y)
@@ -624,22 +614,41 @@ plotDecisionTreeFromImportance <- function(imp, add.splits = 0,
     df <- data.frame(y = y, tx)
     ##rf <- rpart::rpart(y ~ ., data = df)
     rf = rpart::rpart(y ~., data=df, method="class",
-      control = rpart::rpart.control(minsplit=2, maxdepth=10))
+                      control = rpart::rpart.control(minsplit=2, maxdepth=10))
   }
-  table(rf$where)
-  rf$cptable
-  rf$orig.names <- orig.names
-
+  rf$orig.names <- rownames(X)
+  names(rf$orig.names) <- colnames(tx)
+  
   ## prune the tree
   rf.nsplit <- rf$cptable[, "nsplit"]
   MAXSPLIT <- length(unique(y)) + 1 + add.splits ## maximum N+1 groups
-  #  }
   if (max(rf.nsplit) > MAXSPLIT) {
     cp.idx <- max(which(rf.nsplit <= MAXSPLIT))
     cp0 <- rf$cptable[cp.idx, "CP"]
     rf <- rpart::prune(rf, cp = cp0)
   }
+  rf
+}
 
+
+#' @export
+plotDecisionTreeFromImportance <- function(imp, add.splits = 0, rf=NULL,
+                                           type=c("fancy","simple","extended")) {
+
+  if(is.null(imp) && is.null(rf)) {
+    message("ERROR: must provide imp or rf")
+    return(NULL)
+  }
+  
+  if(is.null(rf) && !is.null(imp)) {
+    kk <- which(!duplicated(names(imp$y)))
+    y <- imp$y[kk]
+    sel <- intersect(rownames(imp$X), rownames(imp$R))
+    X <- imp$X[sel, kk,  drop = FALSE]
+    rf <- makePartitionTree(X, y, add.splits = add.splits) 
+  } ## end-if-null rf
+
+  ## plot the tree
   is.surv <- grepl("Surv", rf$call)[2]
   is.surv
   if (is.surv) {
@@ -656,15 +665,12 @@ plotDecisionTreeFromImportance <- function(imp, add.splits = 0,
       message("[plotDecisionTreeFromImportance] ERROR. unknown type: ", type)
       return(NULL)
     }
-
-
   }
+  
 }
 
 
 
-
-
-## =====================================================================================
-## =========================== END OF FILE =============================================
-## =====================================================================================
+## ===============================================================================
+## ===================== END OF FILE =============================================
+## ===============================================================================

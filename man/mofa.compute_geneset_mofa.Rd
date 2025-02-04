@@ -9,7 +9,7 @@ mofa.compute_geneset_mofa(
   annot = NULL,
   kernel = "mofa",
   GMT = NULL,
-  numfactors = 20,
+  numfactors = 12,
   ntop = 2000,
   factorname = "Module"
 )

@@ -409,6 +409,10 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   if (do.split && length(split) > 1) {
     split.idx <- split[jj1]
   }
+  if (do.split && length(split)==1 && split[1]==1) {
+    do.split <- FALSE
+    split.idx <- NULL
+  }
 
   if (!is.null(row.annot)) {
     cat(
@@ -586,8 +590,10 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
 
   ## ------------- draw heatmap
 
-  ## global row clustering
-  row_dend <- as.dendrogram(hclust(dist(gx)))
+  ## global row clustering if no split
+  if(cluster_rows && !do.split) {
+    cluster_rows <- as.dendrogram(hclust(dist(gx)))
+  } 
   
   hmap <- NULL
   for (i in grp.order) {
@@ -622,8 +628,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     hmap <- hmap + ComplexHeatmap::Heatmap(
       gx0,
       col = col_scale, ## from input
-      #cluster_rows = cluster_rows,
-      cluster_rows = row_dend,
+      cluster_rows = cluster_rows,
       cluster_columns = cluster_columns,
       clustering_distance_rows = dist.method,
       clustering_distance_columns = col.dist.method,

@@ -7,7 +7,7 @@
 pgx.compute_mofa(
   pgx,
   kernel = "MOFA",
-  numfactors = 10,
+  numfactors = 8,
   ntop = 2000,
   gset.ntop = 2000,
   add_gsets = FALSE
