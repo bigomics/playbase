@@ -685,8 +685,10 @@ pgx.computePGX <- function(pgx,
   saveRDS(pgx, "~/Desktop/MNT/LL7.RDS")
   ## ------------------ extra analyses ---------------------
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
-  message("[pgx.computePGX] computing extra modules...")
-
+  if (length(extra.methods) > 0) {
+    extra.mm <- paste0(extra.methods, collapse="; ")
+    message("[pgx.computePGX] computing extra modules: ", extra.mm)
+  }  
   pgx <- playbase::compute_extra(
     pgx,
     extra = extra.methods,
