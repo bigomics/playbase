@@ -6,6 +6,10 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=8,
                              ntop = 2000, gset.ntop = 2000,
                              add_gsets=FALSE ) {
 
+  if(0) {
+    numfactors=8;ntop = 2000;gset.ntop = 2000;add_gsets=FALSE
+  }
+  
   has.prefix <- (mean(grepl(":",rownames(pgx$X))) > 0.8)
   is.multiomics <- ( pgx$datatype == "multi-omics" && has.prefix)
 
@@ -43,9 +47,10 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=8,
   }
   
   ## MOFA computation
-  message("computing MOFA ...")              
+  message("computing MOFA ...")
+  dbg("[pgx.compute_mofa] numfactors =", numfactors)              
 
-  #samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa";ntop=2000;numfactors=8
+  ##samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa";ntop=2000;numfactors=8
   mofa <- mofa.compute(
     xdata,
     samples = discretized_samples,
@@ -62,9 +67,9 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=8,
   
   mofa$gset.mofa <- mofa.compute_geneset_mofa(
     mofa,
+    GMT = pgx$GMT,
     kernel = kernel,
     annot = pgx$genes,
-    GMT = pgx$GMT,
     factorname = "Module",
     ntop = gset.ntop,
     numfactors = 12
@@ -103,7 +108,7 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=8,
   mofa$posf <- mofa.compute_clusters(xx, along="features")
   mofa$lasagna <- lasagna
 
-  ## compute multi-gsea
+  ## compute multi-gsea enrichment
   F <- pgx.getMetaMatrix(pgx)$fc
   mofa$mgsea <- mgsea.compute_enrichment(
     F,
@@ -116,51 +121,6 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=8,
   return(mofa)
 }
 
-
-#' Compute enrichment for MOFA factors.
-#' 
-#' @export
-mofa.compute_geneset_mofa <- function(mofa,
-                                      annot = NULL,
-                                      kernel = "mofa",
-                                      GMT = NULL,
-                                      numfactors = 12,
-                                      ntop = 2000,
-                                      factorname = "Module") {
-
-  ##  kernel="mofa";numfactors=20
-
-  ## create geneset for all relevant datatypes
-  if(is.null(GMT) && !is.null(annot)) {
-    xx <- lapply( mofa.prefix(mofa$xx), function(x)
-      rename_by2(x, annot, "symbol"))
-    gsetX <- mofa.add_genesets(mofa$xx, GMT=NULL)
-  } else {
-    gsetX <- mofa.add_genesets(mofa$xx, GMT=GMT)
-  }
-  gsetX <- gsetX[sapply(gsetX,nrow) > 0]
-  
-  ## compute MOFA in geneset space
-  mindimx <- min(dim(gsetX[[1]]))
-  numfactors <- min(numfactors, mindimx)
-
-  gset.mofa <- mofa.compute(
-    xdata = gsetX,
-    samples = mofa$samples,
-    contrasts = mofa$contrasts,
-    factorname = factorname,
-    annot = NULL,
-    pheno = NULL,
-    kernel = kernel,
-    scale_views = TRUE,
-    gpu_mode = FALSE,
-    ntop = ntop,
-    max_iter = 200,
-    compute.enrichment = FALSE,  ## no!
-    numfactors = numfactors) 
-  
-  return(gset.mofa)
-}
 
 
 #' @export
@@ -251,6 +211,8 @@ mofa.compute <- function(xdata,
   model <- NULL
   kernel <- tolower(kernel)
 
+  numfactors <- min(numfactors, ncol(X)-1)
+  
   if( kernel == "mofa") {
     message("[mofa.compute] computing MOFA factorization")
     obj <- MOFA2::create_mofa(xdata, groups=NULL)
@@ -288,7 +250,7 @@ mofa.compute <- function(xdata,
                                use_basilisk=FALSE)
     ))
     
-    ##model <- load_model(outfile, remove_inactive_factors = FALSE)
+    model <- MOFA2::load_model(outfile, remove_inactive_factors = FALSE)
     model <- MOFA2::impute(model)
     factors <- MOFA2::get_factors(model, factors = "all")
     weights <- MOFA2::get_weights(model, views = "all", factors = "all")
@@ -391,8 +353,8 @@ mofa.compute <- function(xdata,
     colnames(F) <- paste0(factorname,1:ncol(F))    
   }
   
-  W <- W[rownames(X),]
-  F <- F[colnames(X),]  
+  W <- W[rownames(X),,drop=FALSE]
+  F <- F[colnames(X),,drop=FALSE]  
   dt <- sub(":.*","",rownames(W))
   ww <- tapply(1:nrow(W),dt,function(i) W[i,,drop=FALSE] )
   xx <- tapply(1:nrow(X),dt,function(i) X[i,,drop=FALSE] )
@@ -461,6 +423,59 @@ mofa.compute <- function(xdata,
 }
 
 
+#' Compute enrichment for MOFA factors.
+#' 
+#' @export
+mofa.compute_geneset_mofa <- function(mofa,
+                                      GMT = NULL,
+                                      annot = NULL,
+                                      kernel = "mofa",
+                                      numfactors = 12,
+                                      ntop = 2000,
+                                      factorname = "Module") {
+
+  ##  kernel="mofa";numfactors=20
+  
+  ## create geneset for all relevant datatypes
+  if(is.null(GMT) && !is.null(annot)) {
+    xx <- lapply( mofa.prefix(mofa$xx), function(x)
+      collapse_by_humansymbol(x, annot))
+    gsetX <- mofa.add_genesets(xx, GMT=NULL)
+  } else {
+    xx <- lapply( mofa.prefix(mofa$xx), function(x)
+      rename_by2(x, annot, "symbol"))
+    gsetX <- mofa.add_genesets(xx, GMT=GMT)
+  }
+  gsetX <- gsetX[sapply(gsetX,nrow) > 0]
+
+  if(length(gsetX)==0) {
+    message("[mofa.compute_geneset_mofa] ERROR! Could not create geneset matrix!")
+    return(NULL)
+  }
+  
+  ## compute MOFA in geneset space
+  mindimx <- min(dim(gsetX[[1]]))
+  numfactors <- min(numfactors, mindimx)
+
+  gset.mofa <- mofa.compute(
+    xdata = gsetX,
+    samples = mofa$samples,
+    contrasts = mofa$contrasts,
+    factorname = factorname,
+    annot = NULL,
+    pheno = NULL,
+    kernel = kernel,
+    scale_views = TRUE,
+    gpu_mode = FALSE,
+    ntop = ntop,
+    max_iter = 200,
+    compute.enrichment = FALSE,  ## no!
+    numfactors = numfactors) 
+  
+  return(gset.mofa)
+}
+
+
 #' @export
 mofa.add_genesets <- function(xdata, GMT=NULL, datatypes=NULL) {
   names(xdata)
@@ -499,6 +514,7 @@ mofa.add_genesets <- function(xdata, GMT=NULL, datatypes=NULL) {
     rX <- xdata[[dt]] - rowMeans(xdata[[dt]], na.rm=TRUE)
     rownames(rX) <- mofa.strip_prefix(rownames(rX))
     sel <- intersect(rownames(rX), colnames(GMT))
+
     G <- GMT[,sel,drop=FALSE]
     rX <- rX[sel,,drop=FALSE]
     rho <- gset.rankcor(rX, G)$rho
@@ -524,7 +540,7 @@ mofa.compute_clusters <- function(xx, matF=NULL, along="samples") {
     sxx <- lapply(xx, function(d) {d=t(scale(t(d),scale=FALSE));d[is.na(d)]=0;d})
     if(!is.null(matF)) sxx$MOFA <- t(matF)
     sxx <- lapply(sxx, function(d) d[matrixStats::rowSds(d,na.rm=TRUE)>0.01,])
-    nb <- round(min(15,ncol(xx[[1]])/4))
+    nb <- max(round(min(15,ncol(xx[[1]])/4)),2)
     posx <- lapply(sxx, function(x) uwot::umap(t(x),n_neighbors=nb))
     for(i in 1:length(posx)) rownames(posx[[i]]) <- colnames(sxx[[i]])
   }
@@ -534,7 +550,7 @@ mofa.compute_clusters <- function(xx, matF=NULL, along="samples") {
     sxx <- lapply(xx, function(d) {d=t(scale(t(d),scale=FALSE));d[is.na(d)]=0;d})
     posx <- list()
     for(i in 1:length(sxx)) {
-      nb <- min(15,nrow(sxx[[i]])/4)
+      nb <- max(min(15,nrow(sxx[[i]])/4),2)
       posx[[i]] <- uwot::umap(sxx[[i]],n_neighbors=nb)
       rownames(posx[[i]]) <- rownames(sxx[[i]])
     }
@@ -1749,10 +1765,11 @@ mgsea.compute_enrichment <- function(F, annot, filter=NULL,
 
   ## make sure F is symbol. Enrichment need rownames as symbol
   ## (as in GMT)
-  F_bysymbol <- F
   if(!is.null(annot)) {
-    F_bysymbol <- mofa.prefix(F_bysymbol)
-    F_bysymbol <- lapply( F_bysymbol, function(f) rename_by2(f, annot, "symbol"))
+    F <- mofa.prefix(F)
+    F <- lapply( F, function(f) rename_by2(f, annot, "symbol"))
+  } else {
+    ## should check if by symbol!!!!
   }
   
   ## determine type
@@ -1793,11 +1810,11 @@ mgsea.compute_enrichment <- function(F, annot, filter=NULL,
   ## Perform geneset enrichment with fast rank-correlation. We could
   ## do with fGSEA instead but it is much slower.
   rownames(G) <- mofa.strip_prefix(rownames(G))  
-  F <- mofa.strip_prefix(F)
+  F  <- mofa.strip_prefix(F)
   wnames <- unlist(lapply(F, rownames))
   pp <- intersect(wnames,rownames(G))  
-  G <- G[pp,]
-  G <- G[, Matrix::colSums(G!=0)>=3]
+  G <- G[pp,,drop=FALSE]
+  G <- G[, Matrix::colSums(G!=0)>=3, drop=FALSE]
   dim(G)
   gg <- rownames(G)  
   gsea <- list()
