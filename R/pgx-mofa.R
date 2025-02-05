@@ -101,12 +101,13 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=8,
   ## pre-compute cluster positions
   xx <- mofa.split_data(lasagna$X)
   xx <- xx[names(xdata)]   ## remove SOURCE/SINK
-   
+    
   message("computing cluster positions (samples)...")
   mofa$posx <- mofa.compute_clusters(xx, along="samples")  
   message("computing cluster positions (features)...")
   mofa$posf <- mofa.compute_clusters(xx, along="features")
   mofa$lasagna <- lasagna
+  mofa$snf <- playbase::snf.cluster(mofa$xx, pheno=NULL, plot=FALSE) 
 
   ## compute multi-gsea enrichment
   F <- pgx.getMetaMatrix(pgx)$fc
@@ -983,7 +984,7 @@ mofa.plot_weights <- function(weights, k, ntop=10, cex.names=0.9,
   v = names(wt)[1]
   for(v in names(wt)) {
     w1 <- wt[[v]]
-    names(w1) <- gsub(".*:| \\(SMP.*","",names(w1))
+    names(w1) <- gsub("[a-zA-Z]+:| \\(SMP.*","",names(w1))
     w1 <- w1[order(-abs(w1))]
     w1 <- w1[!duplicated(names(w1))]
     names(w1) <- stringr::str_trunc(names(w1),maxchar)
@@ -1019,21 +1020,31 @@ mofa.plot_heatmap <- function(mofa, k=NULL, ntop=50,
                               show_legend = TRUE,
                               cexRow = 0.9) {
 
+
+  dbg("[mofa.plot_heatmap] 0: k =", k)
+  
   if(!is.null(k)) {
     xx <- mofa.prefix(mofa$ww)
   } else {
     xx <- mofa.prefix(mofa$xx)
   }
+
+  dbg("[mofa.plot_heatmap] 0: show_types = ", show_types)
+  dbg("[mofa.plot_heatmap] 0: names(xx) = ", names(xx))
   
   if(!is.null(show_types)) {
     xx <- xx[intersect(show_types,names(xx))]
   }
 
+  dbg("[mofa.plot_heatmap] 1:")
+  
   if(is.null(features) && !is.null(pathway) && !is.null(mofa$GMT)) {
     if(pathway %in% colnames(mofa$GMT)) {
       features <- names(which(mofa$GMT[, pathway]!=0))
     }
   }
+
+  dbg("[mofa.plot_heatmap] 2:")
   
   if(!is.null(features)) {
     features2 <- mofa.strip_prefix(features)
@@ -1044,6 +1055,8 @@ mofa.plot_heatmap <- function(mofa, k=NULL, ntop=50,
     }
   }
 
+  dbg("[mofa.plot_heatmap] 3:")
+  
   ntop1 <- ntop / length(xx)
   if(!is.null(k)) {
     top <- lapply(xx, function(w) {
@@ -1062,6 +1075,8 @@ mofa.plot_heatmap <- function(mofa, k=NULL, ntop=50,
   topX <- mofa$X[top,,drop=FALSE]
   rownames(topX) <- stringr::str_trunc(rownames(topX),maxchar)
 
+  dbg("[mofa.plot_heatmap] 4:")
+  
   if(annot=="scores") {
     aa <- data.frame(mofa$F)
   }
@@ -1070,6 +1085,7 @@ mofa.plot_heatmap <- function(mofa, k=NULL, ntop=50,
   }
   rownames(aa) <- colnames(topX)
 
+  dbg("[mofa.plot_heatmap] 5:")  
   
   if(type == "heatmap") {
     par(mar=c(0,0,0,0))
@@ -1083,8 +1099,13 @@ mofa.plot_heatmap <- function(mofa, k=NULL, ntop=50,
   } else if(type == "splitmap") {
     dx <- sub(":.*","",rownames(topX))
     if(!split) dx <- NULL
+
+    dbg("[mofa.plot_heatmap] 6: dim(topX) = ", dim(topX))
+    dbg("[mofa.plot_heatmap] 6: table(dx) = ", table(dx))
+    dbg("[mofa.plot_heatmap] 6: dim(aa) = ", dim(aa))
+    
     gx.splitmap( topX, 
-                split=dx,
+                split = dx,
                 na_col = "white",
                 softmax=TRUE,
                 rowlab.maxlen = 80,
@@ -1262,7 +1283,7 @@ mofa.plot_enrichment <- function(gsea, type="barplot",
   }
   
   if(remove.dup) {
-    sname <- gsub(".*:| \\(.*","",rownames(S))
+    sname <- gsub("[a-zA-Z]+:| \\(.*","",rownames(S))
     S <- S[which(!duplicated(sname)),,drop=FALSE]
   }
   S <- head(S, ntop)
@@ -1546,16 +1567,16 @@ mofa.splitByGeneRole <- function(X) {
   G <- playdata::GSETxGENE
   lig <- grep("^LIG", rownames(G), value=TRUE)
   lig.targets <- names(which(Matrix::colSums(G[lig,])>0))
-  lig <- unique(gsub(".*:|[ ].*","",lig))    
+  lig <- unique(gsub("^[a-zA_Z]+:|[ ].*","",lig))    
   kin <- grep("^KINASE_", rownames(G), value=TRUE)
   kin.targets <- names(which(Matrix::colSums(G[kin,])>0))
-  kin <- unique(gsub(".*:|[ ].*","",kin))
+  kin <- unique(gsub("^[a-zA_Z]+:|[ ].*","",kin))
   tf <- grep("^TF_", rownames(G), value=TRUE)
   tf.targets <- names(which(Matrix::colSums(G[tf,])>0))
-  tf <- unique(gsub(".*:|[ ].*","",tf))
+  tf <- unique(gsub("^[a-zA_Z]+:|[ ].*","",tf))
   mir <- grep("^MIR_", rownames(G), value=TRUE)
   mir.targets <- names(which(Matrix::colSums(G[mir,])>0))
-  mir <- unique(gsub(".*:|[ ].*","",mir))
+  mir <- unique(gsub("^[a-zA_Z]+:|[ ].*","",mir))
   mir <- toupper(sub("-","",gsub("^hsa-|^mmu-|-5p$|-3p$","",mir)))
   
   dim(X)
@@ -1691,7 +1712,7 @@ mofa.exampledata <- function(dataset="geiger", ntop=2000,
   
   ## strip prefix, convert to ASCII
   for(i in 1:length(data)) {
-    rownames(data[[i]]) <- sub(".*:","",rownames(data[[i]]))
+    rownames(data[[i]]) <- sub("^[a-zA_Z]+:","",rownames(data[[i]]))
     rownames(data[[i]]) <- iconv(rownames(data[[i]]), "latin1", "ASCII", sub="")
   }
 
@@ -1787,7 +1808,7 @@ mgsea.compute_enrichment <- function(F, annot, filter=NULL,
     if (has.mx) {
       info("[mgsea.compute_enrichment] Adding metabolomics genesets")
       G <- Matrix::t(playdata::MSETxMETABOLITE)
-      rownames(G) <- sub(".*:","",rownames(G)) ## TEMPORARY!!!
+      rownames(G) <- sub("^[a-zA_Z]+:","",rownames(G)) ## TEMPORARY!!!
     }
     ## add SYMBOL (classic) gene sets 
     if (has.px) {
@@ -2005,7 +2026,7 @@ mgsea.plot_barplot <- function(gsea,
   }
   
   if(remove.dup) {
-    sname <- gsub(".*:| \\(.*","",rownames(S))
+    sname <- gsub("^[a-zA_Z]+:| \\(.*","",rownames(S))
     S <- S[which(!duplicated(sname)),,drop=FALSE]
   }
 
@@ -2284,9 +2305,13 @@ mixomics.predict <- function(model, newdata) {
 #' @export
 snf.cluster <- function( xx, pheno=NULL, plot=TRUE ) {
 
-  has.missing <- sapply(xx, function(x) sum(is.na(x))>0)
-  has.missing
-  xx <- lapply( xx, function(x) svdImpute2(x))
+  has.na <- any(sapply(xx, function(x) sum(is.na(x))>0))
+  has.inf <- any(sapply(xx, function(x) sum(is.infinite(x))>0))
+  has.missing <- has.na || has.inf
+  message("clusterSNF: has.missing = ", has.missing)
+  if(has.missing) {
+    xx <- lapply( xx, function(x) svdImpute2(x, infinite.na=TRUE))
+  }
   
   Data <- lapply(xx, t)
   Dist <- list()
@@ -2299,10 +2324,15 @@ snf.cluster <- function( xx, pheno=NULL, plot=TRUE ) {
   
   ## next, construct similarity graphs
   ## First, set all the parameters:
-  K = min(ncol(xx[[1]])/4, 15);         # number of neighbors, usually (10~30)
+  K = max(min(ncol(xx[[1]])/4, 15),2);  # number of neighbors, usually (10~30)
   alpha = 0.5;                          # hyperparameter, usually (0.3~0.8)
+
   message("clusterSNF: K = ", K)
-  message("clusterSNF: alpha = ", alpha)  
+  message("clusterSNF: alpha = ", alpha)
+  message("clusterSNF: length(Dist) = ", length(Dist))
+  message("clusterSNF: names(Dist) = ", names(Dist))
+  message("clusterSNF: dim(Dist[[1]]) = ", paste(dim(Dist[[1]]),collapse="x"))
+  
   Wlist = lapply( Dist, function(d) SNFtool::affinityMatrix(d, K=K, alpha))
     
   ## next, we fuse all the graphs
@@ -2316,8 +2346,9 @@ snf.cluster <- function( xx, pheno=NULL, plot=TRUE ) {
   Data2 <- c(Dist, list(SNF=W))
   lapply(Data2,dim)
   ##posx <- lapply( Data2, function(x) Rtsne::Rtsne(t(x), is_distance=TRUE, perplexity=15)$Y)
+  k = max(min(ncol(xx[[1]])/4, 15),1);  # number of neighbors
   posx <- lapply( Data2, function(x)
-    Rtsne::Rtsne(t(x), perplexity=K, check_duplicates=FALSE)$Y)
+    Rtsne::Rtsne(t(x), perplexity=k, check_duplicates=FALSE)$Y)
   ##posx <- lapply( Data2, function(x) uwot::umap(t(x), n_neighbors=15))
   for(i in 1:length(posx)) rownames(posx[[i]]) <- colnames(xx[[1]])
   rownames(W) = colnames(W) = rownames(posx[[1]])
@@ -2908,7 +2939,7 @@ lasagna.plot_SP <- function(sp, ntop=200, hilight=NULL, labcex=1,
         cc <- c("white","yellow")[1 + 1*(pp == hi)]
         tt <- sub(":.*","",pp)
         pp <- pp[which(!duplicated(tt))]
-        pp <- gsub(".*:|\\(.*","",pp)
+        pp <- gsub("^[a-zA_Z]+:|\\(.*","",pp)
         pp <- stringr::str_wrap(pp,15)
         fig <- fig + ggplot2::annotate("label", x=tx, y=ty, label=pp,
           fill=cc, size = (14*labcex/ ggplot2::.pt))
