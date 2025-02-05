@@ -1447,7 +1447,7 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
 #' list of test_species. Warning. bit slow.
 #'
 #' @export
-detect_species_probetype <- function(
+check_species_probetype <- function(
     probes,
     test_species = c("Human", "Mouse", "Rat"),
     datatype = NULL, annot.cols = NULL) {
@@ -1460,32 +1460,46 @@ detect_species_probetype <- function(
   
   probes <- unique(clean_probe_names(probes))
   ## report possible probetype per organism
+  ptype <- vector("list",length(test_species))
+  names(ptype) <- test_species
   ptype <- list()
-  s="Human"
-  for (s in test_species) {
-    ptype[[s]] <- detect_probetype(
-      organism = s,
-      probes = probes,
-      use.ah = FALSE,
-      datatype = datatype,
-      verbose = FALSE
-    )
-  }
-  ptype <- ptype[!sapply(ptype, function(p) all(is.na(p)))]
-
-  dbg("[detect_species_probetype] length(ptype) = ",length(ptype))
-  
   if(datatype == "metabolomics") {
-    mx.ids <- toupper(colnames(playdata::METABOLITE_ID)[-1])
-    has.id <- any(toupper(annot.cols) %in% mx.ids)
-    dbg("[detect_species_probetype] has.id = ",has.id)    
-    if(length(ptype)==0 && has.id) {
-      ids <- intersect(toupper(annot.cols), mx.ids)
-      dbg("[detect_species_probetype] ids = ",ids)
-      ptype[["Human"]] <- ids
+    mx.type <- NA
+    if(!is.null(annot.cols)) {
+      mx.ids <- toupper(colnames(playdata::METABOLITE_ID)[-1])
+      mx.ids <- c(mx.ids, paste0(mx.ids,"_ID"))
+      has.id <- any(toupper(annot.cols) %in% mx.ids)
+      dbg("[check_species_probetype] annot.cols has.id = ",has.id)    
+      if(has.id) {
+        ids <- intersect(toupper(annot.cols), mx.ids)
+        dbg("[check_species_probetype] ids = ",ids)
+        mx.type <- ids[1]
+      }
+    }
+    if(all(is.na(mx.type))) {
+      db <- mx.check_mapping( probes, check.first=TRUE)
+      table(db)
+      if(!all(is.na(db))) {
+        mx.type <- names(which.max(table(db[!is.na(db)])))
+      }
+    }
+    for(s in test_species) ptype[[s]] <- mx.type
+  } else {
+    s="Human"
+    for (s in test_species) {
+      ptype[[s]] <- detect_probetype(
+        organism = s,
+        probes = probes,
+        use.ah = FALSE,
+        datatype = datatype,
+        verbose = FALSE
+      )
     }
   }
-  
+
+  ## remove NA
+  ptype <- ptype[!sapply(ptype, function(p) all(is.na(p)))]
+  dbg("[check_species_probetype] length(ptype) = ",length(ptype))
   return(ptype)
 }
 
@@ -1555,10 +1569,8 @@ convert_probetype <- function(organism, probes, target_id, from_id = NULL,
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
 
   if (!is.null(datatype) && datatype == "metabolomics") {
-    ## new.probes <- mx.detect_probetype(probes)
-    ## return(new.probes)
-    message("WARNING: metabolomics not yet implemented")
-    return(NULL)
+    new.probes <- mx.convert_probe(probes, target_id = target_id)
+    return(new.probes)
   }
 
   ## get correct OrgDb database for organism
@@ -1610,39 +1622,19 @@ getProbeAnnotation <- function(organism, probes, datatype, annot_table = NULL) {
     dbg("[getProbeAnnotation] annotating for unknown datatype with custom annotation")
     genes <- getCustomAnnotation( probes, annot_table )
   } else if (datatype == "metabolomics") {
+
     dbg("[getProbeAnnotation] annotating for metabolomics")
-    mx.type <- mx.detect_probetype(probes)
-    MX <- playdata::METABOLITE_ID
-    mx.ids <- toupper(setdiff(colnames(MX), "ID"))
-    annot.cols <- toupper(colnames(annot_table))
-    has.id <- !is.null(annot_table) && any(annot.cols %in% mx.ids)
-    
-    dbg("[getProbeAnnotation] mx.ids = ", mx.ids)
-    dbg("[getProbeAnnotation] annot.cols = ", annot.cols)
-    dbg("[getProbeAnnotation] is.null(annot_table) = ", is.null(annot_table))
-    dbg("[getProbeAnnotation] dim(annot_table) = ", dim(annot_table))
-    dbg("[getProbeAnnotation] has.id = ", has.id)
-    dbg("[getProbeAnnotation] mx.type = ", mx.type)
-    dbg("[getProbeAnnotation] length(mx.type) = ", length(mx.type))
-    
-    if(!is.na(mx.type)) {
+    mx.check <- mx.check_mapping(
+      probes, all.db=c("playdata","annothub","refmet"), check.first = TRUE)
+    mx.check <- mean(!is.na(mx.check)) > 0.01
+    mx.check
+    if(mx.check) {
       ## Directly annotate if probes are recognized
-      genes <- getMetaboliteAnnotation( probes, add_id = TRUE, probe_type = NULL)
-    } else if(is.na(mx.type) && has.id) {
-      ## if the user supplied annotation has one of the recognized
-      ## metabolomic ID's we can use that for annotation
-      id.match <- apply(annot_table, 2, function(a)
-        max(apply(MX,2,function(m) sum(a %in% m))))
-      id.col <- which.max(id.match)
-      dbg("[getProbeAnnotation] lookup using id.col =",colnames(annot_table)[id.col])
-      xprobes <- annot_table[,id.col]
-      genes <- getMetaboliteAnnotation( xprobes, add_id = TRUE, probe_type = NULL)
-      genes <- genes[match(xprobes, rownames(genes)),]
-      genes$feature <- probes
-      rownames(genes) <- probes
+      genes <- getMetaboliteAnnotation(
+        probes, add_id = TRUE, probe_type = NULL, annot_table = annot_table )
     } else {
       ## Fallback on custom
-      dbg("[getProbeAnnotation] WARNING: not able to annotate metabolomic probes. fallback to custom (empty) annotation.")
+      dbg("[getProbeAnnotation] WARNING: not able to map metabolomicx probes. fallback to custom (empty) annotation.")
       genes <- getCustomAnnotation( probes, custom_annot = annot_table )
     }
   } else if (datatype == "multi-omics") {

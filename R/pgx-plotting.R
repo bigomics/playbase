@@ -5916,9 +5916,9 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   if (rowcex > 0) {
     gnames <- rownames(X)
     gnames <- gsub("[&].*[;]", "", gnames) ## HTML special garbage...
-    gnames <- gsub("^.*:", "", gnames) ## strip prefix
-    gnames <- shortstring(gnames, 25) ## shorten
-    gnames <- sub("   ", "-", gnames)
+    #gnames <- gsub("^.*:", "", gnames) ## strip prefix
+    gnames <- shortstring(gnames, 40) ## shorten
+    gnames <- sub("   ", "-", gnames) ## divider
 
     maxlen <- max(sapply(gnames, nchar), na.rm = TRUE)
     w <- ifelse(maxlen >= 20, 0.45, 0.20)
