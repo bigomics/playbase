@@ -1410,7 +1410,7 @@ filterProbes <- function(annot, genes) {
 #'
 #' @export
 rename_by2 <- function(counts, annot_table, new_id = "symbol",
-                       na.rm = TRUE, unique = TRUE) {
+                       na.rm = TRUE, unique = TRUE, keep.prefix=FALSE) {
   ## add rownames
   annot_table$rownames <- rownames(annot_table)
 
@@ -1442,12 +1442,24 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   from <- annot_table[, from_id]
   if (!any(duplicated(from)) || unique) {
     ii <- match(probes, from)
-    new.name <- annot_table[ii, new_id]
+    if(keep.prefix) {
+      dt <- mofa.get_prefix(probes)
+      new.name <- annot_table[ii, new_id]
+      new.name <- paste0(dt,":",new.name)
+    } else {
+      new.name <- annot_table[ii, new_id]
+    }
   } else {
     to <- lapply(probes, function(p) which(from == p))
     ii <- lapply(1:length(to), function(i) rep(i, length(to[[i]])))
     counts <- counts[unlist(ii), ]
-    new.name <- annot_table[unlist(to), new_id]
+    if(keep.prefix) {
+      dt <- mofa.get_prefix(unlist(to))
+      new.name <- annot_table[unlist(to), new_id]      
+      new.name <- paste0(dt,":",new.name)
+    } else {
+      new.name <- annot_table[unlist(to), new_id]
+    }
   }
   rownames(counts) <- new.name
 

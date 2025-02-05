@@ -911,7 +911,7 @@ mofa.prefix <- function(xx) {
 
 #' @export
 mofa.get_prefix <- function(x) {
-  sub(":.*","",x)
+  ifelse(grepl(":",x), sub(":.*","",x), "")
 }
 
 #' @export
@@ -1010,8 +1010,10 @@ mofa.plot_weights <- function(weights, k, ntop=10, cex.names=0.9,
 }
 
 #' @export
-mofa.plot_heatmap <- function(mofa, k=NULL, ntop=50,
-                              features = NULL, pathway=NULL,
+mofa.plot_heatmap <- function(mofa,
+                              gene_table = NULL,
+                              k=NULL, ntop=50,
+                              features = NULL, 
                               type = c("heatmap","splitmap")[1],
                               annot = c("scores","pheno")[1],
                               split = TRUE, maxchar=999,
@@ -1020,44 +1022,28 @@ mofa.plot_heatmap <- function(mofa, k=NULL, ntop=50,
                               show_legend = TRUE,
                               cexRow = 0.9) {
 
-
-  dbg("[mofa.plot_heatmap] 0: k =", k)
   
   if(!is.null(k)) {
     xx <- mofa.prefix(mofa$ww)
   } else {
     xx <- mofa.prefix(mofa$xx)
   }
-
-  dbg("[mofa.plot_heatmap] 0: show_types = ", show_types)
-  dbg("[mofa.plot_heatmap] 0: names(xx) = ", names(xx))
   
   if(!is.null(show_types)) {
     xx <- xx[intersect(show_types,names(xx))]
   }
 
-  dbg("[mofa.plot_heatmap] 1:")
-  
-  if(is.null(features) && !is.null(pathway) && !is.null(mofa$GMT)) {
-    if(pathway %in% colnames(mofa$GMT)) {
-      features <- names(which(mofa$GMT[, pathway]!=0))
-    }
-  }
-
-  dbg("[mofa.plot_heatmap] 2:")
-  
   if(!is.null(features)) {
     features2 <- mofa.strip_prefix(features)
     for(i in 1:length(xx)) {
       namesx <- mofa.strip_prefix(rownames(xx[[i]]))
-      ii <- which(namesx %in% features2)
+      ii <- which(namesx %in% features2)      
       xx[[i]] <- xx[[i]][ii,,drop=FALSE]
     }
   }
 
-  dbg("[mofa.plot_heatmap] 3:")
-  
   ntop1 <- ntop / length(xx)
+  
   if(!is.null(k)) {
     top <- lapply(xx, function(w) {
       w1 <- w[,k];
@@ -1075,8 +1061,6 @@ mofa.plot_heatmap <- function(mofa, k=NULL, ntop=50,
   topX <- mofa$X[top,,drop=FALSE]
   rownames(topX) <- stringr::str_trunc(rownames(topX),maxchar)
 
-  dbg("[mofa.plot_heatmap] 4:")
-  
   if(annot=="scores") {
     aa <- data.frame(mofa$F)
   }
@@ -1085,7 +1069,9 @@ mofa.plot_heatmap <- function(mofa, k=NULL, ntop=50,
   }
   rownames(aa) <- colnames(topX)
 
-  dbg("[mofa.plot_heatmap] 5:")  
+  if(!is.null(gene_table)) {
+    topX <- rename_by2(topX, gene_table, "symbol", keep.prefix=TRUE)
+  }
   
   if(type == "heatmap") {
     par(mar=c(0,0,0,0))
@@ -1097,10 +1083,11 @@ mofa.plot_heatmap <- function(mofa, k=NULL, ntop=50,
                col.annot = aa,
                annot.ht = 0.88*annot.ht)
   } else if(type == "splitmap") {
+
     dx <- sub(":.*","",rownames(topX))
     if(!split) dx <- NULL
 
-    dbg("[mofa.plot_heatmap] 6: dim(topX) = ", dim(topX))
+    dbg("[mofa.plot_heatmap] 6: rownames(topX) = ", head(rownames(topX)))
     dbg("[mofa.plot_heatmap] 6: table(dx) = ", table(dx))
     dbg("[mofa.plot_heatmap] 6: dim(aa) = ", dim(aa))
     
