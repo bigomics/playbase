@@ -676,7 +676,8 @@ deep.plotBiomarkerHeatmap <- function(net, datatypes=NULL, balanced=TRUE,
   Y <- data.frame(net$Y)
   rownames(Y) <- colnames(X)
   if(!is.null(annot)) {
-    Y <- cbind(Y, t(annot))
+    kk <- setdiff(colnames(annot),colnames(Y))
+    Y <- cbind(Y, annot[,kk,drop=FALSE])
   }
   #gx.heatmap( X[sel,], col.annot = Y, mar=c(8,10), keysize=0.9)
   gx.splitmap( X[sel,], col.annot = Y, split=1, mar=c(2,6),
