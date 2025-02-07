@@ -1462,7 +1462,6 @@ check_species_probetype <- function(
   ## report possible probetype per organism
   ptype <- vector("list",length(test_species))
   names(ptype) <- test_species
-  ptype <- list()
   if(datatype == "metabolomics") {
     mx.type <- NA
     if(!is.null(annot.cols)) {

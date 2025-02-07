@@ -34,8 +34,8 @@ gx.splitmap(
   na_col = "green",
   na_text = NULL,
   mar = c(5, 5, 5, 5),
-  rownames_width = 25,
   rowlab.maxlen = 20,
+  rownames_width = rowlab.maxlen + 10,
   title_cex = 1.2,
   column_title_rot = 0,
   column_names_rot = 90,
@@ -101,9 +101,9 @@ gx.splitmap(
 
 \item{mar}{value}
 
-\item{rownames_width}{value}
-
 \item{rowlab.maxlen}{value}
+
+\item{rownames_width}{value}
 
 \item{title_cex}{value}
 

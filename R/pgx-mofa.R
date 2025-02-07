@@ -4,7 +4,8 @@
 #' @export
 pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=8,
                              ntop = 2000, gset.ntop = 2000,
-                             add_gsets=FALSE ) {
+                             add_gsets = FALSE,
+                             factorizations = TRUE ) {
 
   if(0) {
     numfactors=8;ntop = 2000;gset.ntop = 2000;add_gsets=FALSE
@@ -65,20 +66,11 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=8,
     max_iter = 200,
     numfactors = numfactors) 
   
-  mofa$gset.mofa <- mofa.compute_geneset_mofa(
-    mofa,
-    GMT = pgx$GMT,
-    kernel = kernel,
-    annot = pgx$genes,
-    factorname = "Module",
-    ntop = gset.ntop,
-    numfactors = 12
-  )
 
-  if(TRUE) {
-    all.kernels <- c("mofa","pca","nmf","nmf2","mcia","diablo","wgcna",
+  if(factorizations) {
+    all.kernels <- c("mofa","pca","nmf","nmf2","mcia","diablo",## "wgcna",
                      "rgcca","rgcca.rgcca","rgcca.rgccda","rgcca.mcoa")
-    #all.kernels <- c("mofa","pca","nmf","nmf2","mcia","wgcna","diablo","rgcca")
+    #all.kernels <- c("mofa","pca","nmf","nmf2","mcia","wgcna","diablo","rgcca"
     mofa$factorizations <- mofa.compute_factorizations(
       xdata,
       discretized_samples,
@@ -128,11 +120,11 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=8,
 mofa.compute <- function(xdata,
                          samples,
                          contrasts,
-                         annot,
+                         pheno = NULL,
                          kernel = "mofa",
                          factorname = NULL,
-                         pheno = NULL,
                          GMT = NULL,
+                         annot = NULL,
                          scale_views = TRUE,
                          ntop = 2000,
                          gset.ntop = 2000,
@@ -424,59 +416,8 @@ mofa.compute <- function(xdata,
 }
 
 
-#' Compute enrichment for MOFA factors.
-#' 
-#' @export
-mofa.compute_geneset_mofa <- function(mofa,
-                                      GMT = NULL,
-                                      annot = NULL,
-                                      kernel = "mofa",
-                                      numfactors = 12,
-                                      ntop = 2000,
-                                      factorname = "Module") {
-
-  ##  kernel="mofa";numfactors=20
-  
-  ## create geneset for all relevant datatypes
-  if(is.null(GMT) && !is.null(annot)) {
-    xx <- lapply( mofa.prefix(mofa$xx), function(x)
-      collapse_by_humansymbol(x, annot))
-    gsetX <- mofa.add_genesets(xx, GMT=NULL)
-  } else {
-    xx <- lapply( mofa.prefix(mofa$xx), function(x)
-      rename_by2(x, annot, "symbol"))
-    gsetX <- mofa.add_genesets(xx, GMT=GMT)
-  }
-  gsetX <- gsetX[sapply(gsetX,nrow) > 0]
-
-  if(length(gsetX)==0) {
-    message("[mofa.compute_geneset_mofa] ERROR! Could not create geneset matrix!")
-    return(NULL)
-  }
-  
-  ## compute MOFA in geneset space
-  mindimx <- min(dim(gsetX[[1]]))
-  numfactors <- min(numfactors, mindimx)
-
-  gset.mofa <- mofa.compute(
-    xdata = gsetX,
-    samples = mofa$samples,
-    contrasts = mofa$contrasts,
-    factorname = factorname,
-    annot = NULL,
-    pheno = NULL,
-    kernel = kernel,
-    scale_views = TRUE,
-    gpu_mode = FALSE,
-    ntop = ntop,
-    max_iter = 200,
-    compute.enrichment = FALSE,  ## no!
-    numfactors = numfactors) 
-  
-  return(gset.mofa)
-}
-
-
+#'
+#'
 #' @export
 mofa.add_genesets <- function(xdata, GMT=NULL, datatypes=NULL) {
   names(xdata)
@@ -1020,6 +961,7 @@ mofa.plot_heatmap <- function(mofa,
                               show_types = NULL,
                               mar = c(8,12), annot.ht = 1,
                               show_legend = TRUE,
+                              show_colnames = TRUE,
                               cexRow = 0.9) {
 
   
@@ -1081,15 +1023,12 @@ mofa.plot_heatmap <- function(mofa,
                keysize=1,
                cexRow = cexRow,
                col.annot = aa,
+               show_colnames = show_colnames,
                annot.ht = 0.88*annot.ht)
   } else if(type == "splitmap") {
 
     dx <- sub(":.*","",rownames(topX))
     if(!split) dx <- NULL
-
-    dbg("[mofa.plot_heatmap] 6: rownames(topX) = ", head(rownames(topX)))
-    dbg("[mofa.plot_heatmap] 6: table(dx) = ", table(dx))
-    dbg("[mofa.plot_heatmap] 6: dim(aa) = ", dim(aa))
     
     gx.splitmap( topX, 
                 split = dx,
@@ -1100,6 +1039,7 @@ mofa.plot_heatmap <- function(mofa,
                 show_legend = show_legend,
                 show_key = FALSE,
                 col.annot = aa,
+                show_colnames = show_colnames,
                 annot.ht = 3.6*annot.ht )
   } else if(type == "graph") {
     
@@ -2714,7 +2654,7 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=-1,
   if(length(ii) && !is.null(annot)) {
     message(paste("translating metabolite ID to names"))
     mx.id <- sub("mx:","", igraph::V(gr)$name[ii])
-    mm <- match(igraph::V(gr)$name, rownames(annot))
+    mm <- match(igraph::V(gr)$name[ii], rownames(annot))
     mx.annot <- annot[mm,]
     mx.id <- mx.annot$symbol
     mx.names <- paste0("mx:",mx.annot$gene_title," (",mx.id,")")

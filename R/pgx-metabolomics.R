@@ -11,7 +11,6 @@
 mx.check_mapping <- function(probes,
                              all.db=c("playdata","annothub","refmet"),
                              check.first = TRUE) {
-
   ## this goes through all databases and checks if there is a match
   src <- rep("", length(probes))
   for(db in all.db) {
@@ -30,7 +29,7 @@ mx.check_mapping <- function(probes,
   }
   src
   src <- sub("^[+]","",src)
-  src[src==''] <- NA
+  src[which(src=='')] <- NA
   src
 }
 
@@ -44,8 +43,15 @@ mx.detect_probetype <- function(probes, min.match=0.05) {
   probes <- gsub("chebi:|chebi","",probes,ignore.case=TRUE)
   match <- apply(aa, 2, function(s) mean(probes %in% s))
   if (max(match, na.rm = TRUE) < min.match) {
-    message("[mx.detect_probetype] WARNING. could not detect probetype")
-    return(NA)
+    ## try online
+    map <- mx.check_mapping(probes, all.db="refmet",check.first = TRUE)
+    if(mean(!is.na(map)) > 0.2) {
+      map.db <- names(which.max(table(map[!is.na(map)])))
+      return(map.db)
+    } else {
+      message("[mx.detect_probetype] WARNING. could not detect probetype")
+      return(NA)
+    }
   }
   names(which.max(match)) 
 }
@@ -96,7 +102,7 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
 
   # for id that are "", set it to na
   probes[probes == ""] <- NA
-  probes <- sub("[_.-].*","",probes)  ## strip any postfix
+  probes <- sub("[ _.-].*","",probes)  ## strip any postfix
   if (!is.null(probe_type) && probe_type == "ChEBI") {
     # keep only numbers in ids, as chebi ids are numeric
     probes <- gsub("[^0-9]", "", probes)
@@ -110,18 +116,18 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
   }
   # check that probetype is valid
   annot <- playdata::METABOLITE_ID
-  valid_probe_types <- colnames(annot)
-  probe_type <- match.arg(probe_type, valid_probe_types)
   if (probe_type == "ChEBI") {
     # keep only numbers in ids, as chebi ids are numeric
     probes <- gsub("[^0-9]", "", probes)
   }
-
+  if (probe_type == "RefMet") {
+    res <- RefMet::refmet_map_df(probes)  ## request on API server
+    probes <- res$ChEBI_ID
+    probe_type <- "ChEBI"
+  }
   ii <- match(probes, annot[, probe_type])
   ids <- annot[ii, target_id]
-
   ## jj <- which(is.na(ii))
-    
   return(ids)
 }
 
@@ -132,7 +138,6 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE, probe_type = NULL,
                                     db = c("refmet","playdata","annothub"),
                                     annot_table = NULL ) {
   ##add_id=TRUE;db=c("refmet","playdata","annothub") 
-
   orig.probes <- probes
 
   ## strip multi-omics prefix
@@ -175,8 +180,6 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE, probe_type = NULL,
   colnames(playdata::METABOLITE_METADATA)  
   COLS <- c("ID", "feature","name",
     "super_class","main_class", "sub_class","formula","exactmass",
-    ## "chebi_id","pubchem_id","hmdb_id","kegg_id","lipidmaps_id","refmet_id",
-    # "inchi_key",
     "definition","source")
 
   metadata <- data.frame(matrix(NA, nrow=length(probes), ncol=length(COLS)))
@@ -193,7 +196,7 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE, probe_type = NULL,
     ## RefMet also handles metabolite/lipid long names, so this is
     ## convenient
     if( d == "refmet" && curl::has_internet() && no.name) {
-      message("[getMetaboliteAnnotation] annotating with RefMet server...")
+     message("[getMetaboliteAnnotation] annotating with RefMet server...")
       ii <- which(!is.na(probes) & is.na(metadata$name) )
       if(length(ii)) {
         probes1 <- probes[ii]

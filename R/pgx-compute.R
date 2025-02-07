@@ -433,8 +433,10 @@ pgx.createPGX <- function(counts,
   rows_not_symbol <- mean(pp == pgx$genes$symbol, na.rm = TRUE) < 0.2
   if (convert.hugo && rows_not_symbol) {
     dbg("[createPGX] creating compound rownames FEATURE_SYMBOL")
-    #new.names <- combine_feature_names(pgx$genes, target = c("rownames", "_", "symbol"))
-    new.names <- combine_feature_names(pgx$genes, target=c("rownames"," (","symbol",")"))    
+    feature_is_symbol <- (sub("^[a-zA-Z]+:","",rownames(pgx$genes)) == pgx$genes$symbol)    
+    new.names <- combine_feature_names(pgx$genes, target = c("rownames", "_", "symbol"))
+    #new.names <- combine_feature_names(pgx$genes, target=c("rownames"," (","symbol",")"))    
+    new.names <- ifelse( feature_is_symbol, rownames(pgx$genes), new.names)
     rownames(pgx$genes) <- new.names
     pgx$genes$gene_name <- new.names ## gene_name should also be renamed??
     pgx$genes$feature <- new.names ## feature should also be renamed??

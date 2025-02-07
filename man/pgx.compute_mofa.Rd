@@ -10,7 +10,8 @@ pgx.compute_mofa(
   numfactors = 8,
   ntop = 2000,
   gset.ntop = 2000,
-  add_gsets = FALSE
+  add_gsets = FALSE,
+  factorizations = TRUE
 )
 }
 \description{

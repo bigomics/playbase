@@ -6,7 +6,14 @@
 function does not maintain the original dimensions/length of
 object.}
 \usage{
-rename_by2(counts, annot_table, new_id = "symbol", na.rm = TRUE, unique = TRUE)
+rename_by2(
+  counts,
+  annot_table,
+  new_id = "symbol",
+  na.rm = TRUE,
+  unique = TRUE,
+  keep.prefix = FALSE
+)
 }
 \arguments{
 \item{counts}{Numeric matrix of counts, with genes/probes as rownames.}
