@@ -74,9 +74,18 @@ gset.cor <- function(rnk, gset, compute.p = FALSE) {
 #' }
 #' @export
 gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
-  if (!any(class(gset) %in% c("Matrix", "dgCMatrix", "matrix", "array"))) {
-    stop("gset must be a matrix")
+
+  if(ncol(gset)==0 || NCOL(rnk)==0) {
+    if(ncol(gset)==0) message("ERROR. gset has zero columns")
+    if(NCOL(rnk)==0) message("ERROR. rnk has zero columns")
+    return(NULL)
   }
+  
+#  if (!any(class(gset) %in% c("Matrix", "dgCMatrix", "lgCMatrix", "matrix", "array"))) {
+#    stop("gset must be a matrix")
+#  }
+  if (!inherits(gset, "Matrix"))  stop("gset must be a matrix")
+  
   is.vec <- (NCOL(rnk) == 1 && !any(class(rnk) %in% c("matrix", "Matrix")))
   if (is.vec && is.null(names(rnk))) stop("rank vector must be named")
   if (!is.vec && is.null(rownames(rnk))) stop("rank matrix must have rownames")
@@ -85,15 +94,15 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
   n2 <- sum(rownames(rnk) %in% rownames(gset), na.rm = TRUE)
   if (n1 > n2) gset <- Matrix::t(gset)
 
-  gg <- intersect(rownames(gset), rownames(rnk))
-  rnk1 <- rnk[gg, , drop = FALSE]
-  gset <- gset[gg, ]
+  gg <- intersect(rownames(gset), rownames(rnk))  
+  rnk1 <- rnk[gg, ,drop=FALSE]
+  gset <- gset[gg, ,drop=FALSE]
 
   if (use.rank) {
   ##  rnk1 <- apply(rnk1, 2, base::rank, na.last = "keep", ties.method="random")
     rnk1 <- t(matrixStats::colRanks(rnk1, na.last="keep", ties.method="random"))  
   }
-
+  
   ## two cases: (1) in case no missing values, just use corSparse on
   ## whole matrix. (2) in case the rnk matrix has missing values, we
   ## must proceed 1-column at time and do reduced corSparse on
@@ -106,24 +115,45 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
       y <- y[!is.na(y)]
       gg <- intersect(rownames(X), names(y))
       y <- rank(y, na.last = "keep")
-      qlcMatrix::corSparse(X[gg, ], cbind(y[gg]))
+      qlcMatrix::corSparse(X[gg,,drop=FALSE], cbind(y[gg]))
     }
     rho1 <- lapply(1:ncol(rnk1), function(i) rankcorSparse.vec(gset, rnk1[, i]))
     rho1 <- do.call(cbind, rho1)
   }
+
   rownames(rho1) <- colnames(gset)
   colnames(rho1) <- colnames(rnk1)
   rho1[is.nan(rho1)] <- NA ## ??
 
   ## compute p-value
   .cor.pvalue <- function(x, n) 2 * stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
-  if (compute.p) {
+  if (compute.p) {    
     pv <- apply(rho1, 2, function(x) .cor.pvalue(x, n = nrow(rnk1)))
-    pv[is.nan(pv)] <- NA ## ??
+    pv[is.nan(pv)] <- NA ## ??    
     qv <- apply(pv, 2, stats::p.adjust, method = "fdr")
     df <- list(rho = rho1, p.value = pv, q.value = qv)
   } else {
     df <- list(rho = rho1, p.value = NA, q.value = NA)
   }
   df
+}
+
+
+#' Compute geneset expression as the average log-ration of genes in
+#' the geneset. Requires log-expression matrix X and (sparse) geneset
+#' matrix matG.
+#'
+#' @export
+gset.averageCLR <- function(X, matG, compute.p = FALSE, use.rank = TRUE,
+                            center = TRUE) {
+  if(center) X <- X - rowMeans(X, na.rm=TRUE)
+  gg <- intersect(rownames(X), rownames(matG))
+  if(length(gg) ==0) {
+    message("[gset.averageCLR] WARNING. features of gene matrix X do not overlap with geneset matrix.")
+  }
+  X <- X[gg,,drop=FALSE]
+  matG <- matG[gg,,drop=FALSE]
+  ngenes <- Matrix::colSums(matG != 0)
+  gsetX <- (Matrix::t(matG != 0) %*% X) / pmax(ngenes, 1e-3)
+  gsetX
 }

@@ -173,7 +173,6 @@ mofa.compute <- function(xdata,
     xdata <- lapply(xdata, function(d) d - rowMeans(d,na.rm=TRUE))
     dt.sd <- sapply(xdata, function(d) mean(matrixStats::rowSds(d,na.rm=TRUE),
                                             na.rm=TRUE))
-    dt.sd
     xdata <- lapply(names(xdata), function(d) xdata[[d]] / (1e-4 + dt.sd[d]) )
     names(xdata) <- names(dt.sd)
   }
@@ -249,8 +248,6 @@ mofa.compute <- function(xdata,
     weights <- MOFA2::get_weights(model, views = "all", factors = "all")
     W <- do.call(rbind, weights)
     F <- do.call(rbind, factors)
-    dim(W)
-    dim(F)
     
   } else if( tolower(kernel) %in% c("pca","svd")) {
     message("[mofa.compute] computing PCA factorization")    
@@ -383,6 +380,16 @@ mofa.compute <- function(xdata,
   if(compute.enrichment) {
     message("computing factor enrichment...")
     symbolW <- do.call( rbind, mofa.prefix(ww_bysymbol))
+
+    if(mean(rownames(symbolW) %in% rownames(GMT)) < 0.10) {
+      message("WARNING! less than 10% of your features map to symbols. Please check or add a gene annotation table.")
+    }
+    
+    dbg("[mofa.compute] dim.GMT = ", dim(GMT))
+    dbg("[mofa.compute] dim.symbolW = ", dim(symbolW))
+    dbg("[mofa.compute] rownames.symbolW = ", head(rownames(symbolW)))
+    dbg("[mofa.compute] rownames.GMT = ", head(rownames(GMT)))    
+    
     gsea <- mofa.compute_enrichment(symbolW, G=GMT, ntop=gset.ntop) 
   }
   
@@ -412,7 +419,7 @@ mofa.compute <- function(xdata,
     graphs = graphs
   )
   
-  res
+  return(res)
 }
 
 
@@ -520,14 +527,17 @@ mofa.compute_enrichment <- function(W, G=NULL, filter=NULL, ntop=1000) {
     has.colons <- all(grepl(":",rownames(G)))
     has.colons
     if(!has.colons) {
+      ## defaults prefix. If starts with letter SYMBOL, if all numbers CHEBI
       rownames(G) <- mofa.strip_prefix(rownames(G))
-      jj <- grep("^[A-Za-z]+",rownames(G),ignore.case=TRUE)
-      if(length(jj)>0) rownames(G)[jj] <- paste0("SYMBOL:",rownames(G)[jj])
-      ii <- grep("^[0-9]+",rownames(G),ignore.case=TRUE)
+      ii <- grep("^[0-9]+$",rownames(G),ignore.case=TRUE)
       if(length(ii)>0) rownames(G)[ii] <- paste0("CHEBI:",rownames(G)[ii])
+      jj <- setdiff(1:nrow(G), ii)
+      if(length(jj)>0) rownames(G)[jj] <- paste0("SYMBOL:",rownames(G)[jj])
     }
   }
 
+  dbg("[mofa.compute_enrichment] dim.G = ", dim(G))
+  
   ## filter gene sets
   if(!is.null(filter)) {
     sel <- grep(filter, colnames(G))
@@ -553,12 +563,22 @@ mofa.compute_enrichment <- function(W, G=NULL, filter=NULL, ntop=1000) {
     GMT <- rbind(GMT, G1)
   }
   table(sub(":.*","",rownames(GMT)))
+
+  dbg("[mofa.compute_enrichment] dim.GMT = ", dim(GMT))
+  dbg("[mofa.compute_enrichment] rownames.GMT = ", head(rownames(GMT)))
+  dbg("[mofa.compute_enrichment] rownames.W = ", head(rownames(W)))  
   
   pp <- intersect(rownames(W), rownames(GMT))
   W <- W[pp,]
   sel <- which( Matrix::colSums(GMT[pp,]!=0) >= 3)
+
+  dbg("[mofa.compute_enrichment] lenght(pp) = ", length(pp))  
+  dbg("[mofa.compute_enrichment] lenght(sel) = ", length(sel))
+
   GMT1 <- GMT[pp,sel]
   dim(GMT1)
+
+  dbg("[mofa.compute_enrichment] dim.GMT1 = ", dim(GMT1))
   
   ## Perform geneset enrichment with fast rank-correlation. We could
   ## do with fGSEA instead but it is much slower.
@@ -818,7 +838,7 @@ mofa.scale_views <- function(xdata) {
 }
 
 #' @export
-mofa.split_data <- function(X) {
+mofa.split_data <- function(X, keep.prefix=FALSE) {
 
   if(!all(grepl("[:]|SOURCE|SINK",rownames(X)))) {
     ## if no prefix, then single-omics. Assume gene expression.
@@ -826,7 +846,9 @@ mofa.split_data <- function(X) {
   }
   dtype <- sub(":.*","",rownames(X))
   xx <- tapply(1:nrow(X), dtype, function(i) X[i,,drop=FALSE] )
-  xx <- mofa.strip_prefix(xx)
+  if(!keep.prefix) {
+    xx <- mofa.strip_prefix(xx)
+  }
   xx
 }
 
