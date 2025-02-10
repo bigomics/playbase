@@ -534,7 +534,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   if (softmax) {
     gx <- tanh(0.5 * gx / stats::sd(gx, na.rm = TRUE))
   }
-  
+
   ## ------------- colorscale options
   col_scale <- NULL
   if (!is.null(zlim)) {
