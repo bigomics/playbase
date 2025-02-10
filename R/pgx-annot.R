@@ -870,7 +870,7 @@ getHumanOrtholog.biomart <- function(organism, symbols) {
   require(biomaRt)
   s1 <- tolower(strsplit(organism, "")[[1]][1])
   s2 <- tolower(strsplit(organism, " ")[[1]][2])
-  organism0 <- paste0(s1,s2)
+  organism0 <- paste0(s1, s2)
   D <- listDatasets(useEnsembl(biomart = "genes"))
   hh <- grep(organism0, D$dataset)
   if (any(hh)) {
@@ -924,12 +924,12 @@ getHumanOrtholog.biomart <- function(organism, symbols) {
 #' @export
 getHumanOrtholog <- function(organism, symbols) {
   ## test if orthogene server is reachable
-  ##res.orthogene <- try(orthogene::map_genes("CDK1", verbose = FALSE))
+  ## res.orthogene <- try(orthogene::map_genes("CDK1", verbose = FALSE))
   ortho_organism <- getOrthoSpecies(organism)
-  mm <- c("gprofiler", "homologene", "babelgene")  ## mapping methods
+  mm <- c("gprofiler", "homologene", "babelgene") ## mapping methods
   LL <- list()
   i <- 1
-  for(i in 1:length(mm)) {
+  for (i in 1:length(mm)) {
     LL[[mm[i]]] <- try(orthogene::convert_orthologs(
       gene_df = c("---", "CDK1"),
       input_species = ortho_organism,
@@ -954,7 +954,7 @@ getHumanOrtholog <- function(organism, symbols) {
     }
   } else {
     methods <- methods[which(methods != "try-error")]
-    if("gprofiler" %in% names(methods)) { 
+    if ("gprofiler" %in% names(methods)) {
       orthogeneMethod <- "gprofiler" ## preferred
     } else {
       orthogeneMethod <- names(methods)[1]
@@ -991,14 +991,12 @@ getHumanOrtholog <- function(organism, symbols) {
     df <- data.frame(symbols, "human" = orthogenes)
     colnames(df)[1] <- organism
     return(df)
-
   } else if (!"try-error" %in% class(res.biomart)) {
     orthogenes <- getHumanOrtholog.biomart(organism, symbols)
     df <- data.frame(symbols, "human" = orthogenes)
     colnames(df)[1] <- organism
     return(df)
   }
-
 }
 
 
