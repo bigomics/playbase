@@ -380,16 +380,6 @@ pgx.createPGX <- function(counts,
     message("[createPGX] filtering out not-expressed genes (zero counts)...")
     pgx <- pgx.filterZeroCounts(pgx)
 
-    ## prefiltering for low-expressed genes (recommended for edgeR and
-    ## DEseq2). Require at least in 2 or 1% of total. Specify the
-    ## PRIOR CPM amount to regularize the counts and filter genes
-    ## AZ (16.6.24): it crashes in presence of NAs
-    ## NEED RETHINK - add datatype as argument.
-    ## IK: let's remove
-    if (FALSE && datatype != "proteomics") {
-      message("[createPGX] filtering out lowly expressed genes (zero counts)...")
-      pgx <- pgx.filterLowExpressed(pgx, prior.cpm = 1)
-    }
     ## Conform gene table
     ii <- match(rownames(pgx$counts), rownames(pgx$genes))
     pgx$genes <- pgx$genes[ii, , drop = FALSE]
@@ -449,43 +439,6 @@ pgx.createPGX <- function(counts,
     if (!is.null(pgx$impX)) {
       rownames(pgx$impX) <- new.rownames
     }
-  }
-
-  if (FALSE && convert.hugo) {
-    dbg("[createPGX] collapsing probes by SYMBOL")
-    pgx$genes <- pgx$genes[rownames(pgx$counts), ]
-
-    ## Average duplicated rows if any
-    ## group <- rownames(pgx$counts)
-    group <- pgx$genes$symbol
-    group <- paste0(rownames(pgx$genes), "_", pgx$genes$symbol)
-
-    pgx$counts <- rowmean(pgx$counts, group = group, reorder = TRUE)
-    pgx$counts <- pgx$counts[rownames(pgx$counts) != "", , drop = FALSE]
-    pgx$X <- rowmean(pgx$X, group = group, reorder = TRUE)
-    pgx$X <- pgx$X[rownames(pgx$counts), , drop = FALSE]
-    if (!is.null(pgx$impX)) {
-      pgx$impX <- rowmean(pgx$impX, group = group, reorder = TRUE)
-      pgx$impX <- pgx$impX[rownames(pgx$counts), , drop = FALSE]
-    }
-
-    ## Collapse features as a comma-separated elements
-    group[is.na(group)] <- "" ## avoids warning
-    agg_features <- aggregate(
-      feature ~ group,
-      data = pgx$genes,
-      function(x) paste(unique(x), collapse = "; ")
-    )
-    agg_features <- agg_features[agg_features$group != "", , drop = FALSE]
-
-    ## Merge by symbol, replace features by collapsed features
-    pgx$genes <- pgx$genes[match(rownames(pgx$counts), group), ]
-    rownames(pgx$genes) <- rownames(pgx$counts)
-    jj <- match(rownames(pgx$counts), agg_features$group)
-    pgx$genes$feature <- agg_features[jj, "feature"]
-
-    ## Rename gene_name with new rownames (gene symbol)
-    pgx$genes$gene_name <- rownames(pgx$counts)
   }
 
   ## -------------------------------------------------------------------
