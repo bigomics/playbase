@@ -202,6 +202,9 @@ gx.imagemap <- function(X, main = "", cex = 1, cex.main = 1.8, clust = TRUE) {
 #' @param key.offset value
 #' @param show_colnames value
 #' @param use.nclust value
+#' @param color_low value
+#' @param color_mid value
+#' @param color_high value
 #'
 #' @return A heatmap grob object
 #'
@@ -268,7 +271,10 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         key.offset = c(0.05, 1.01),
                         show_colnames = NULL,
                         use.nclust = FALSE,
-                        data = FALSE) {
+                        data = FALSE,
+                        color_low = "#3181de",
+                        color_mid = "#eeeeee",
+                        color_high = "#f23451") {
   ComplexHeatmap::ht_global_opt(fast_hclust = TRUE)
   graphics::par(xpd = FALSE)
 
@@ -545,13 +551,13 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       zz <- c(zlim[1], zmean, zlim[2])
       if (zlim[1] < 0) zz <- c(zlim[1], 0, zlim[2])
     }
-    col_scale <- circlize::colorRamp2(zz, c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")))
+    col_scale <- circlize::colorRamp2(zz, c(color_low, color_mid, color_high))
   } else if (symm.scale) {
     colmax <- 1
     colmax <- max(abs(gx[, ]), na.rm = TRUE)
     col_scale <- circlize::colorRamp2(
       c(-colmax, 0, colmax),
-      c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))
+      c(color_low, color_mid, color_high)
     )
   } else {
     colmin <- min(gx[, ], na.rm = TRUE)
@@ -559,7 +565,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     colmean <- mean(gx[, ], na.rm = TRUE)
     col_scale <- circlize::colorRamp2(
       c(colmin, colmean, colmax),
-      c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red"))
+      c(color_low, color_mid, color_high)
     )
   }
 
