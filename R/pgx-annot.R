@@ -1709,6 +1709,8 @@ getMultiProbeAnnotation <- function(organism, probes) {
   }
   if("mx" %in% dtype) {
     ii <- which(dtype == 'mx')
+    hh <- grep("mx:NA$", probes[ii])
+    if (any(hh)) ii <- ii[-hh]      
     pp <- sub("^[a-zA-Z]+:","",probes[ii])
     aa <- getMetaboliteAnnotation(pp)
     head(aa)
