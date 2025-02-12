@@ -2410,7 +2410,7 @@ bbknn <- function(data_matrix, batch, pca = TRUE, compute_pca = "python", nPcs =
 #'
 #' @export
 nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TRUE,
-                       knn = 1, sdtop = 2000, return.B = FALSE,
+                       knn = 2, sdtop = 2000, return.B = FALSE,
                        use.design = TRUE, use.cov = FALSE) {
   ## Nearest-neighbour matching for batch correction. This
   ## implementation creates a fully paired dataset with nearest
@@ -2418,6 +2418,8 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
 
   ## use.design=TRUE;dist.method="cor";center.x=TRUE;center.m=TRUE;sdtop=1000;knn=2
 
+  knn <- ifelse(ncol(X) <= 3, 1, knn)
+  
   ## compute distance matrix for NNM-pairing
   y1 <- paste0("y=", y)
   dX <- X
