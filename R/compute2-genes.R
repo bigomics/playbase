@@ -201,7 +201,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     paste(methods, collapse = " ")
   )
   PRIOR.CPM <- 1
-
+  
   ## Run all test methods
   message("[compute_testGenesSingleOmics] 12 : start fitting... ")
   gx.meta <- playbase::ngs.fitContrastsWithAllMethods(

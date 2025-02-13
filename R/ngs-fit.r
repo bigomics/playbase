@@ -69,20 +69,10 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
 
   ## Do not test features with full missingness.
   ## Put them back in the TopTable
-  ## counts0 <- counts
-  ## nas <- apply(counts, 1, function(x) sum(is.na(x)))
-  ## Ex <- names(nas)[which(nas == ncol(counts))]
-  ## keep <- names(nas)[which(nas != ncol(counts))]
-  ## if (length(Ex) > 0) counts <- counts[keep, ]
   counts <- counts[which(rowMeans(is.na(counts)) < 1), ]
 
   if (!is.null(X)) {
     X <- X[which(rowMeans(is.na(X)) < 1), ]
-    ## X0 <- X
-    ## nas <- apply(X, 1, function(x) sum(is.na(x)))
-    ## Ex <- names(nas)[which(nas == ncol(X))]
-    ## keep <- names(nas)[which(nas != ncol(X))]
-    ## if (length(Ex) > 0) X <- X[keep, ]
   }
 
   if (methods[1] == "*") {
