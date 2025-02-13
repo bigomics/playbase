@@ -110,7 +110,6 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=8,
     filter = NULL,
     ntop = gset.ntop
   ) 
-  saveRDS(mofa, )
   return(mofa)
 }
 
