@@ -110,7 +110,7 @@ pgx.compute_mofa <- function(pgx, kernel="MOFA", numfactors=8,
     filter = NULL,
     ntop = gset.ntop
   ) 
-  
+  saveRDS(mofa, )
   return(mofa)
 }
 
@@ -2273,8 +2273,9 @@ snf.cluster <- function( xx, pheno=NULL, plot=TRUE ) {
   
   ## next, construct similarity graphs
   ## First, set all the parameters:
-  K = max(min(ncol(xx[[1]])/4, 15),2);  # number of neighbors, usually (10~30)
-  alpha = 0.5;                          # hyperparameter, usually (0.3~0.8)
+  ## K = max(min(ncol(xx[[1]])/4, 15),2);  
+  K = max(min(ncol(xx[[1]]), 15),2);  # number of neighbors, usually (10~30)
+  alpha = 0.5;                        # hyperparameter, usually (0.3~0.8)
 
   message("clusterSNF: K = ", K)
   message("clusterSNF: alpha = ", alpha)
