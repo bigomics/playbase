@@ -5121,6 +5121,7 @@ plotlyVolcano_multi <- function(FC,
                                 annotation_args = list(),
                                 layout_args = list(),
                                 highlight = NULL,
+                                pval_cap = 1e-12,
                                 ...) {
   dots <- list(...)
 
@@ -5159,7 +5160,7 @@ plotlyVolcano_multi <- function(FC,
     }
 
     # Take -log and add 1e-12 to remove 0, and avoid Infs
-    qval <- -log10(qval + 1e-12)
+    qval <- -log10(qval + pval_cap)
 
     # Set labels
     sub.label <- label
@@ -5169,7 +5170,7 @@ plotlyVolcano_multi <- function(FC,
 
     # Set title
     if (share_axis) {
-      title_loc <- -log10(min(qv + 1e-12, na.rm = TRUE))
+      title_loc <- -log10(min(qv + pval_cap, na.rm = TRUE))
       title_loc <- title_loc + title_loc * (yrange / 20)
     } else {
       title_loc <- max(qval, na.rm = TRUE) + max(qval, na.rm = TRUE) * (yrange / 20)
