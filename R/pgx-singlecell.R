@@ -461,7 +461,6 @@ pgx.supercell <- function(counts,
                           group = NULL,
                           gamma = 20,
                           log.transform = TRUE) {
-  ## require(SuperCell)
 
   if (log.transform) { ## supercell uses log2 matrix
     X <- logCPM(counts, total=1e4)
@@ -477,7 +476,6 @@ pgx.supercell <- function(counts,
   SC <- SuperCell::SCimplify(X,
     gamma = gamma,
     n.var.genes = 1000,
-    ## cell.annotation = group,
     cell.split.condition = group
   )
   message("[pgx.supercell] SuperCell::SCimplify completed")
