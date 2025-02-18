@@ -456,14 +456,21 @@ pgx.read_singlecell_counts <- function(filename) {
 #' @title SuperCell down sampling. Uniform down samplsing using gamma = 20.
 #' 
 #' @export
-pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
+pgx.supercell <- function(counts,
+                          meta,
+                          group = NULL,
+                          gamma = 20,
+                          log.transform = TRUE) {
   ## require(SuperCell)
 
-  ## supercell uses log2 matrix
-  ##X <- log2(1 + edgeR::cpm(counts) / 100)
-  X <- logCPM(counts, total=1e4)
+  if (log.transform) { ## supercell uses log2 matrix
+    X <- logCPM(counts, total=1e4)
+  } else {
+    X <- counts
+  }
+
   if (!is.null(group) && "group" %in% colnames(meta)) {
-    cat("using group detected in meta\n")
+    message("using group detected in meta\n")
     group <- meta[, "group"]
   }
   
@@ -473,7 +480,8 @@ pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
     ## cell.annotation = group,
     cell.split.condition = group
   )
-
+  message("[pgx.supercell] SuperCell::SCimplify completed")
+  
   meta <- as.data.frame(meta)
   dsel <- which(sapply(meta, class) %in% c("factor", "character", "logical"))
   group.argmax <- function(x) tapply(x, SC$membership, function(x) names(which.max(table(x))))
@@ -489,7 +497,9 @@ pgx.supercell <- function(counts, meta, group = NULL, gamma = 20) {
   sc.meta <- sc.meta[, ii, drop=FALSE]
   
   ## Compute metacall expression as sum of counts
+  counts <- as.matrix(counts)
   sc.counts <- SuperCell::supercell_GE(counts, mode = "sum", groups = SC$membership)
+  message("[pgx.supercell] SuperCell::supercell_GE completed")
   sc.membership <- paste0("mc", SC$membership)
   colnames(sc.counts) <- paste0("mc", 1:ncol(sc.counts))
   rownames(sc.meta) <- colnames(sc.counts)
