@@ -166,6 +166,13 @@ pgx.checkINPUT <- function(
 
       if (!all_numeric && PASS) {
         ## only run if we have characters in matrix
+        escape_special <- function(x) { # Special characters that grep considers operators
+          special_chars <- c(".", "\\", "|", "(", ")", "[", "]", "{", "}", "^", "$", "*", "+", "?")
+          gsub("([\\.^$*+?(){}|\\[\\]])", "\\\\\\1", x, perl = TRUE)
+        }
+
+        numerators <- sapply(numerators, escape_special)
+        denominators <- sapply(denominators, escape_special)
 
         COLUMN_IN_GROUPS <- sapply(1:length(denominators), function(i) {
           vv <- setdiff(df_clean[, i], c(NA, "", " ", "NA"))

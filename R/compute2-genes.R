@@ -19,9 +19,12 @@
 #' @param remove.outputs A logical value indicating whether to remove intermediate outputs.
 #' @return An updated object with gene test results.
 #' @export
-compute_testGenes <- function(pgx, contr.matrix, max.features = 1000,
+compute_testGenes <- function(pgx,
+                              contr.matrix,
+                              max.features = 1000,
                               test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
-                              use.design = TRUE, prune.samples = FALSE,
+                              use.design = FALSE,
+                              prune.samples = TRUE,
                               remove.outputs = TRUE) {
   # TEMPORARY ONLY SINGLE OMICS
   single.omics <- TRUE
@@ -69,9 +72,13 @@ compute_testGenes <- function(pgx, contr.matrix, max.features = 1000,
 #' @param test.methods The test methods to use for gene testing.
 #' @return An updated object with gene test results for single-omics data.
 #' @export
-compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
-                                         filter.low = TRUE, remove.outputs = TRUE,
-                                         use.design = TRUE, prune.samples = FALSE,
+compute_testGenesSingleOmics <- function(pgx,
+                                         contr.matrix,
+                                         max.features = 1000,
+                                         filter.low = TRUE,
+                                         remove.outputs = TRUE,
+                                         use.design = FALSE,
+                                         prune.samples = TRUE,
                                          test.methods = c("trend.limma", "deseq2.wald", "edger.qlf")) {
   ## -----------------------------------------------------------------------------
   ## Check parameters, decide group level
@@ -94,7 +101,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
     stat.group <- playbase::pgx.getConditions(contr.matrix, nmax = 0) ## !!!
     names(stat.group) <- rownames(contr.matrix)
     nlev <- length(unique(stat.group))
-
     if (nlev >= nrow(contr.matrix)) {
       message("[compute_testGenesSingleOmics] cannot use groups, switching to no design")
       use.design <- FALSE
@@ -133,7 +139,6 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
   ## -----------------------------------------------------------------------------
   ## create design matrix from defined contrasts (group or clusters)
   ## -----------------------------------------------------------------------------
-
   no.design <- all(stat.group %in% rownames(pgx$samples)) ## sample-wise design
   design <- NULL
 
@@ -147,9 +152,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
 
     ## GROUP DESIGN
     notk <- which(!stat.group %in% rownames(contr.matrix))
-    if (length(notk)) {
-      stat.group[notk] <- "_"
-    }
+    if (length(notk)) stat.group[notk] <- "_"
     design <- stats::model.matrix(~ 0 + stat.group) ## clean design no batch effects...
     colnames(design) <- sub("^stat.group", "", colnames(design))
     if (is.null(names(stat.group))) {
@@ -263,7 +266,7 @@ compute_testGenesSingleOmics <- function(pgx, contr.matrix, max.features = 1000,
 #' @export
 compute_testGenesMultiOmics <- function(pgx, contr.matrix, max.features = 1000,
                                         test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
-                                        use.design = TRUE, prune.samples = FALSE,
+                                        use.design = FALSE, prune.samples = TRUE,
                                         remove.outputs = TRUE) {
   pgx$gx.meta <- NULL
   pgx$model.parameters <- NULL

@@ -54,15 +54,25 @@
 #' # TODO
 #' }
 #' @export
-ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, contr.matrix, genes = NULL,
-                                           prior.cpm = 1, cpm.scale = 1e6, prune.samples = FALSE,
-                                           conform.output = TRUE, do.filter = TRUE,
+ngs.fitContrastsWithAllMethods <- function(counts,
+                                           X = NULL,
+                                           samples,
+                                           design,
+                                           contr.matrix,
+                                           genes = NULL,
+                                           prior.cpm = 1,
+                                           cpm.scale = 1e6,
+                                           prune.samples = TRUE, ##FALSE,
+                                           conform.output = TRUE,
+                                           do.filter = TRUE,
                                            remove.batch = TRUE,
                                            methods = c(
                                              "ttest", "ttest.welch", "voom.limma", "trend.limma", "notrend.limma",
                                              "deseq2.wald", "deseq2.lrt", "edger.qlf", "edger.lrt"
                                            ),
-                                           correct.AveExpr = TRUE, custom = NULL, custom.name = NULL) {
+                                           correct.AveExpr = TRUE,
+                                           custom = NULL,
+                                           custom.name = NULL) {
   ## --------------------------------------------------------------
   ## Run all tests on raw counts
   ## --------------------------------------------------------------
@@ -110,8 +120,6 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
   ## get main grouping variable for modeling
   ## ------------------------------------------------------------------
   group <- NULL
-  ## if(all(rownames(contr.matrix) %in% samples$group)) {
-  ## }
   if (!is.null(design)) {
     group <- colnames(design)[max.col(design)]
     if (nrow(design) == ncol(design) &&
