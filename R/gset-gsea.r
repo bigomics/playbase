@@ -1081,8 +1081,8 @@ getGseaOutput <- function(path = "../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut
 #' @export
 #' @return plot
 gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
-                        decreasing = TRUE, cex = 1, cex.main = 0.9, len.main = 40,
-                        lab.line = c(0.8, 2), cex.lab = 0.8, main.line = 0.3,
+                        decreasing = TRUE, cex = 1, cex.main = 0.95, len.main = 40,
+                        lab.line = c(0.8, 2), cex.lab = 0.85, main.line = 0.3,
                         xlab = "Rank in ordered dataset", res = 1200,
                         ylab = "Rank metric") {
   if (!is.null(names)) names(rnk) <- names
@@ -1106,9 +1106,16 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
 
   ## gene set barcode
   jj <- match(gset, names(rnk))
-  w1 <- ifelse(length(jj) < 100, 0.6, 0.3)
+  jj <- jj[!is.na(jj)]
+  w1 <- ifelse(length(jj) < 100, 0.7, 0.4)
   w1 <- ifelse(length(jj) < 50, 1, w1)
-  graphics::arrows(jj, (y0 - dy), jj, y0, col = "grey10", lwd = w1 * cex, length = 0)
+  col1 <- "grey10"
+  if(all(grepl("[:]",gset))) {
+    dtype <- sub(":.*","",names(rnk))
+    ntype <- length(unique(dtype))
+    col1  <- rainbow(ntype)[factor(dtype[jj])]
+  }
+  graphics::arrows(jj, (y0 - dy), jj, y0, col = col1, lwd = w1 * cex, length = 0)
 
   ## red/blue bar at bottom
   kk <- c(seq(1, length(rnk) * 0.99, floor(length(rnk) / 20)), length(rnk))

@@ -125,24 +125,28 @@ gx.PCAcomponents <- function(X, nv = 20, ngenes) {
 #' }
 #'
 #' @export
-gx.imagemap <- function(X, main = "", cex = 1, cex.main = 1.8, clust = TRUE) {
+gx.imagemap <- function(X, main = "", cex = 1, cex.main = 1.8,
+                        clust = TRUE, col = NULL) {
   if (clust) {
     ii <- fastcluster::hclust(stats::dist(X))$order
     jj <- fastcluster::hclust(stats::dist(t(X)))$order
     X <- X[ii, jj]
   }
-  Matrix::image(1:ncol(X), 1:nrow(X), t(X),
+  if(is.null(col)) col <- heat.colors(64)
+  graphics::image(
+    1:ncol(X), 1:nrow(X), t(X),
+    col = col,
     xaxt = "n", yaxt = "n",
     xlab = "", ylab = ""
   )
   if (cex > 0) {
     graphics::mtext(colnames(X),
       side = 1, at = 1:ncol(X), las = 3,
-      cex = 0.75 * cex, line = 0.5
+      cex = 0.8 * cex, line = 0.5
     )
     graphics::mtext(rownames(X),
       side = 4, at = 1:nrow(X), las = 1,
-      cex = 0.85 * cex, line = 0.5
+      cex = 0.8 * cex, line = 0.5
     )
   }
   if (cex < 0) {
@@ -258,8 +262,8 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         na_col = "green",
                         na_text = NULL,
                         mar = c(5, 5, 5, 5),
-                        rownames_width = 25,
                         rowlab.maxlen = 20,
+                        rownames_width = rowlab.maxlen+10,
                         title_cex = 1.2,
                         column_title_rot = 0,
                         column_names_rot = 90,
@@ -268,7 +272,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         zlim = NULL,
                         show_rownames = nmax,
                         lab.len = 80,
-                        key.offset = c(0.05, 1.01),
+                        key.offset = c(0.05, 0.99),
                         show_colnames = NULL,
                         use.nclust = FALSE,
                         data = FALSE,
@@ -411,6 +415,10 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   if (do.split && length(split) > 1) {
     split.idx <- split[jj1]
   }
+  if (do.split && length(split)==1 && split[1]==1) {
+    do.split <- FALSE
+    split.idx <- NULL
+  }
 
   if (!is.null(row.annot)) {
     cat(
@@ -486,8 +494,8 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     for (i in 1:ngrp) {
       jj <- grp[[i]]
       ap <- list(
-        title_gp = grid::gpar(fontsize = 3.5 * annot.ht * annot.cex),
-        labels_gp = grid::gpar(fontsize = 3.1 * annot.ht * annot.cex),
+        title_gp = grid::gpar(fontsize = 3.3 * annot.ht * annot.cex),
+        labels_gp = grid::gpar(fontsize = 2.9 * annot.ht * annot.cex),
         grid_width = grid::unit(1 * annot.ht, "mm"),
         grid_height = grid::unit(1 * annot.ht, "mm")
       )
@@ -499,7 +507,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
         simple_anno_size = grid::unit(0.85 * annot.ht * annot.cex, "mm"), ## BioC 3.8!!
         show_annotation_name = (i == ngrp),
         show_legend = show_legend & (npar <= 20),
-        annotation_name_gp = grid::gpar(fontsize = 3.1 * annot.ht * annot.cex),
+        annotation_name_gp = grid::gpar(fontsize = 2.9 * annot.ht * annot.cex),
         annotation_legend_param = aa
       )
     }
@@ -588,10 +596,15 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
 
   ## ------------- draw heatmap
 
+  ## global row clustering if no split
+  if(cluster_rows && !do.split) {
+    cluster_rows <- as.dendrogram(hclust(dist(gx)))
+  } 
+  
   hmap <- NULL
   for (i in grp.order) {
     jj <- grp[[i]]
-
+    
     coldistfun1 <- function(x) stats::dist(x)
     rowdistfun1 <- function(x, y) 1 - stats::cor(x, y)
     gx0 <- gx[, jj, drop = FALSE]

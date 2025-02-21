@@ -150,3 +150,241 @@ omx.makeHivePlotData_ <- function(res, rho.min = 0.15, cxi = 0.11, use.alpha = T
   class(hpd) <- "HivePlotData"
   return(hpd)
 }
+
+
+#' #' @title Create a hive plot visualization for an NGS object
+#' #'
+#' #' @description
+#' #' Creates a hive plot to visualize associations between omics datasets
+#' #' in an NGS object.
+#' #'
+#' #' @param ngs An NGS object containing multiple omics datasets.
+#' #' @param pheno The phenotype data column name.
+#' #' @param level The omics data level (1, 2, 3).
+#' #' @param ntop Number of top features to include.
+#' #' @param main Plot title.
+#' #' @param axis.lab Axis labels c("GX", "CN", "ME").
+#' #' @param bkgnd Background color.
+#' #' @param rx Hive plot x-radius.
+#' #' @param cex Text size factor.
+#' #' @param slen Feature name substring length.
+#' #'
+#' #' @details
+#' #' This function takes an NGS object containing gene expression (GX), copy number (CN),
+#' #' and methylation (ME) data. It calculates correlation statistics between features in
+#' #' each dataset vs. the phenotype. It selects the top \code{ntop} features and creates
+#' #' a hive plot visualization, with hubs representing GX/CN/ME and edges representing
+#' #' correlations between features across datasets related to the phenotype.
+#' #'
+#' #' The plot is customizable via parameters like \code{main}, \code{bkgnd}, \code{cex}, etc.
+#' #'
+#' #' @return
+#' #' A hive plot grob object is returned, no value.
+#' #'
+#' #' @export
+#' ngs.hiveplot <- function(ngs, pheno, level = 1, ntop = 400, main = "", axis.lab = c("GX", "CN", "ME"),
+#'                          bkgnd = "white", rx = 2.2, cex = 1, slen = -1) {
+#'   res <- omx$zstats[[level]]
+#'   res <- cbind(res, omx$stats[[pheno]][[level]])
+#'   res <- res[!grepl("^PHENO", rownames(res)), ]
+#'   rownames(res) <- gsub("^.*:", "", rownames(res)) ## strip prefix
+#'   if (slen > 0) rownames(res) <- substr(rownames(res), 1, slen)
+#'   ann.cex <- cex * 0.7
+#'
+#'   hpd <- omx.makeHivePlotData_(res,
+#'     rho.min = 0.15, ntop = ntop, rx = rx,
+#'     cxi = (0.05 + ann.cex / 7)
+#'   )
+#'   write.csv(hpd$nodes.ann, file = "/tmp/annode.csv", row.names = FALSE)
+#'   grid::grid.newpage()
+#'   axlab.col <- ifelse(bkgnd == "black", "grey90", "grey15")
+#'   HiveR::plotHive(hpd,
+#'     np = FALSE, ch = 1.4, bkgnd = bkgnd,
+#'     axLabs = c(paste0(main, "\n", axis.lab[1]), axis.lab[2], axis.lab[3]),
+#'     axLab.pos = c(0.4, 0.33, 0.33),
+#'     axLab.gpar = grid::gpar(col = axlab.col, cex = cex * 1.3),
+#'     anNodes = "/tmp/annode.csv",
+#'     anNode.gpar = grid::gpar(cex = 0.7 * cex, col = axlab.col, lwd = 0.50)
+#'   )
+#' }
+
+
+
+#' @title Create Hive Plot for mixed network
+#'
+#' @param res Input data
+#' @param ngs NGS object containing expression data
+#' @param ct Contrast name or column in \code{ngs$samples} to use for node coloring
+#' @param showloops Whether to show looping edges
+#' @param numlab Number of node labels to show
+#' @param cex Label size scaling factor
+#'
+#' @return Hive plot object
+#'
+#' @description Creates a Hive Plot to visualize a mixed gene-gene set network.
+#'
+#' @details  It extracts the network graph and formats it into a Hive Plot layout.
+#'
+#' Node importance scores are extracted from the NGS object based on the specified \code{ct} contrast.
+#' These scores are used to determine node sizes in the plot.
+#'
+#' The number of node labels can be reduced by setting \code{numlab} to avoid overplotting.
+#'
+#' @export
+mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
+  cat("<mixHivePlot> called\n")
+  if (is.null(showloops)) showloops <- FALSE
+
+  gr <- res$graph
+
+  ## -------------------------------------------------------------
+  ## Prepare the HivePlot data
+  ## -------------------------------------------------------------
+  df <- data.frame(res$edges)
+  hpd <- edge2HPD(df, axis.cols = rep("grey", 3))
+
+  hpd$edges$looping <- res$edges$looping
+  hpd$edges$weight <- res$edges$importance
+  loop.nodes <- unique(
+    c(
+      as.character(res$edges$from)[res$edges$looping],
+      as.character(res$edges$to)[res$edges$looping]
+    )
+  )
+  hpd$nodes$looping <- hpd$nodes$lab %in% loop.nodes
+  hpd <- mineHPD(hpd, option = "rad <- tot.edge.count")
+  hpd$nodes$degree <- hpd$nodes$radius
+  hpd$edges$from <- hpd$nodes$lab[hpd$edges$id1]
+  hpd$edges$to <- hpd$nodes$lab[hpd$edges$id2]
+
+  if (is.null(ct) || is.null(ngs)) {
+    fx <- tapply(igraph::V(gr)$importance, sub(".*:", "", igraph::V(gr)$name), max)
+  } else if (ct %in% names(ngs$gx.meta$meta)) {
+    ## use fold change as radial layout
+    fc <- ngs$gx.meta$meta[[ct]]$meta.fx
+    names(fc) <- rownames(ngs$gx.meta$meta[[ct]])
+    gs <- ngs$gset.meta$meta[[ct]]$meta.fx
+    names(gs) <- rownames(ngs$gset.meta$meta[[ct]])
+    fc <- fc / max(abs(fc), na.rm = TRUE)
+    gs <- gs / max(abs(gs), na.rm = TRUE)
+    fx <- c(fc, gs)
+  } else if (ct %in% colnames(ngs$samples)) {
+    group <- ngs$samples[, ct]
+
+    design <- stats::model.matrix(~ 0 + group)
+    colnames(design) <- sub("group", "", colnames(design))
+    fit <- limma::eBayes(limma::lmFit(ngs$X, design))
+    stat <- limma::topTable(fit, number = Inf)
+    fx <- stat$F
+    names(fx) <- rownames(ngs$X)
+  } else {
+    stop("FATAL:: mixHivePlot: unknown contrast/conditions=", ct, "\n")
+  }
+
+  fx <- fx / max(abs(fx), na.rm = TRUE)
+  g <- sub("[1-9]:", "", hpd$nodes$lab)
+  hpd$nodes$radius <- rank(fx[g], na.last = "keep")
+  hpd$nodes$radius <- 100 * hpd$nodes$radius / max(hpd$nodes$radius, na.rm = TRUE)
+
+  maxgrp <- unlist(lapply(res$W, function(w) max.col(w)))
+
+  names(maxgrp) <- as.vector(sapply(res$W, rownames))
+
+  ## use importance as node size
+  importance <- igraph::V(gr)$importance
+  names(importance) <- igraph::V(gr)$name
+
+  hpd$nodes$size <- abs(importance[hpd$nodes$lab])
+  hpd$nodes$size <- 1.6 * (hpd$nodes$size / max(hpd$nodes$size))**0.5
+  hpd$nodes$axis <- as.integer(sub(":.*", "", hpd$nodes$lab))
+  hpd$nodes$color <- c("red3", "blue2")[1 + 1 * (fx[g] > 0)]
+  wt1 <- hpd$edges$weight ## edge.importance
+  wt1 <- rank(abs(wt1), na.last = "keep") * sign(wt1)
+  hpd$edges$weight <- 3 * abs(wt1 / max(abs(wt1)))**2
+  hpd$edges$color <- psych::alpha("grey70", 0.3)
+
+  jj <- which(hpd$edges$looping)
+  if (showloops && length(jj)) {
+    hpd$edges[jj, ]
+    hpd$edges$color <- psych::alpha("grey70", 0.2)
+    hpd$edges$color[jj] <- psych::alpha("red3", 0.3)
+  }
+
+  axis.names <- names(res$X)
+  makeAcronym <- function(x) {
+    x <- gsub("[)(]", "", x)
+    sapply(strsplit(x, split = "[_ -]"), function(s) {
+      if (length(s) == 1) {
+        return(substring(s, 1, 2))
+      }
+      toupper(paste(substring(s, 1, 1), collapse = ""))
+    })
+  }
+  axis.names <- sapply(names(res$X), makeAcronym) ## see pgx-functions
+
+  ## -------------------------------------------------------------
+  ## Finally do the plotting
+  ## -------------------------------------------------------------
+  hpd$nodes$size <- cex * hpd$nodes$size
+  hpd$edges$weight <- cex * hpd$edges$weight
+  mr <- max(hpd$nodes$radius)
+  plotHive(hpd,
+    ch = 5, bkgnd = "white",
+    axLabs = axis.names,
+    axLab.pos = c(1, 1.2, 1.2) * 0.15 * mr, #
+
+    axLab.gpar = grid::gpar(
+      col = "black", fontsize = 18 * cex,
+      lwd = 4, fontface = "bold"
+    )
+  )
+
+  tt <- paste("edge.width = edge.importance",
+    "node.size = variable importance",
+    "axis = fold-change or F-stat",
+    sep = "\n"
+  )
+  grid::grid.text(tt,
+    x = 0.2 * mr, y = -1.0 * mr, default.units = "native",
+    just = "left", gp = grid::gpar(fontsize = 9, col = "black")
+  )
+
+  ## axis 1
+  rot.xy <- function(x, y, deg) {
+    a <- deg * pi / 180
+    rx <- cos(a) * x - sin(a) * y
+    ry <- sin(a) * x + cos(a) * y
+    cbind(rx, ry)
+  }
+  rot <- c(0, 120, 240)
+  mr <- max(hpd$nodes$radius)
+  yoff <- c(0, -0, +0)
+
+  k <- 1
+  for (k in 1:3) {
+    kk <- which(hpd$nodes$axis == k)
+    if (showloops) {
+      kk <- which(hpd$nodes$axis == k & hpd$nodes$looping)
+    }
+    jj <- Matrix::head(kk[order(-hpd$nodes$size[kk])], numlab) ## number of labels
+    rr <- hpd$nodes$radius
+    rx <- rot.xy(0, rr[jj] + 5, rot[k])
+
+
+    lab <- sub(".*:", "", hpd$nodes$lab[jj])
+    ##    pt <- maptools::pointLabel(rx[, 1], rx[, 2], labels = lab, cex = cex * 2, doPlot = FALSE)
+    ##    px <- cbind(pt$x, pt$y)
+    px <- cbind(rx[, 1], rx[, 2])
+    px[, 1] <- px[, 1] + 4
+    grid::grid.text(lab,
+      ## x = 10 + rx[,1], y = rx[,2],
+      x = px[, 1], y = px[, 2],
+      default.units = "native", just = "left",
+      gp = grid::gpar(fontsize = 12 * cex, col = "black")
+    )
+
+    grid::grid.segments(rx[, 1], rx[, 2], px[, 1] - 1, px[, 2],
+      default.units = "native"
+    )
+  }
+}

@@ -17,7 +17,7 @@
 #' @export
 compute_extra <- function(pgx, extra = c(
                             "meta.go", "infer", "deconv", "drugs", ## "graph",
-                            "connectivity", "wordcloud", "wgcna"
+                            "connectivity", "wordcloud", "wgcna", "mofa"
                           ), sigdb = NULL, pgx.dir = "./data", libx.dir = "./libx",
                           user_input_dir = getwd()) {
   timings <- c()
@@ -28,27 +28,8 @@ compute_extra <- function(pgx, extra = c(
   if (!is.null(pgx.dir) && !dir.exists(pgx.dir)) pgx.dir <- NULL
   if (!is.null(libx.dir) && !dir.exists(libx.dir)) libx.dir <- NULL
 
-  ## detect if it is single or multi-omics
-  # TEMPORARY ONLY SINGLE OMICS
-  single.omics <- TRUE
-  if (single.omics) {
-    message(">>> computing extra for SINGLE-OMICS")
-    rna.counts <- pgx$counts
-  } else {
-    message(">>> computing extra for MULTI-OMICS")
-    data.type <- gsub("\\[|\\].*", "", rownames(pgx$counts))
-    jj <- which(data.type %in% c("gx", "mrna"))
-    if (length(jj) == 0) {
-      stop("FATAL. could not find gx/mrna values.")
-    }
-    rna.counts <- pgx$counts[jj, ]
-    is.logged <- (min(rna.counts, na.rm = TRUE) < 0 ||
-      max(rna.counts, na.rm = TRUE) < 50)
-    if (is.logged) {
-      message("expression data seems log. undoing logarithm")
-      rna.counts <- 2**rna.counts
-    }
-  }
+  rna.counts <- pgx$counts
+
   # If working on non-human species, use homologs
   if (!all(is.na(pgx$genes$human_ortholog))) {
     rownames(rna.counts) <- probe2symbol(rownames(rna.counts), pgx$genes, query = "human_ortholog")
@@ -251,6 +232,30 @@ compute_extra <- function(pgx, extra = c(
     timings <- rbind(timings, c("wgcna", tt))
   }
 
+  if ("mofa" %in% extra) {
+    message(">>> Computing MOFA...")
+    tt <- system.time({
+      tryCatch(
+        {
+          pgx$mofa <- pgx.compute_mofa(
+            pgx,
+            kernel = "MOFA",
+            ntop = 2000,
+            gset.ntop = 2000,
+            numfactors = 10,
+            add_gsets = FALSE
+          )
+        },
+        error = function(e) {
+          write(as.character(e), file = paste0(user_input_dir, "/ERROR_MOFA"))
+          return(NULL)
+        }
+      )
+    })
+    timings <- rbind(timings, c("mofa", tt))
+  }
+
+  
   ## ------------------------------------------------------
   ## pretty collapse all timings
   ## ------------------------------------------------------
@@ -361,9 +366,9 @@ compute_deconvolution <- function(pgx, rna.counts = pgx$counts, full = FALSE) {
 #' @export
 compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
   if (!is.null(pgx$organism)) {
-    is.human <- (pgx$organism == "Human")
+    is.human <- (tolower(pgx$organism) == "human")
   } else {
-    is.human <- (pgx.getOrganism(pgx) == "human")
+    is.human <- (tolower(pgx.getOrganism(pgx)) == "human")
   }
   if (is.human) {
     message("estimating cell cycle (using Seurat)...")

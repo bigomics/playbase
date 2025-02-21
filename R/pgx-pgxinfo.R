@@ -212,7 +212,6 @@ pgxinfo.write <- function(pgxinfo, pgx.dir, info.file = "datasets-info.csv") {
   pgxinfo$description <- trimws(gsub("[ ]+", " ", pgxinfo$description)) ## remove ws
 
   file1 <- file.path(pgx.dir, info.file)
-  dbg("[pgxinfo.write] writing pgx-info file: ", file1)
   utils::write.csv(pgxinfo, file = file1)
 }
 
@@ -390,8 +389,6 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   ## subroutines
   ## ----------------------------------------------------------------------
   updateTSNE <- function(tsne.file, sigdb.file, allFC) {
-    dbg("[pgxinfo.updateDatasetFolder:updateTSNE] tsne.file =", tsne.file)
-    dbg("[pgxinfo.updateDatasetFolder:updateTSNE] sigdb.file =", sigdb.file)
 
     h5 <- rhdf5::h5ls(sigdb.file)
     has.tsne2d <- ("tsne2d" %in% h5$name)
@@ -528,11 +525,6 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     fc.missing <- union(fc.missing, new.pgx)
     info.missing <- union(info.missing, new.pgx)
   }
-
-  dbg("[pgxinfo.updateDatasetFolder] pgx.missing = ", pgx.missing)
-  dbg("[pgxinfo.updateDatasetFolder] pgx.delete = ", pgx.delete)
-  dbg("[pgxinfo.updateDatasetFolder] h5.missing = ", h5.missing)
-  dbg("[pgxinfo.updateDatasetFolder] h5.delete = ", h5.delete)
 
   ## nothing to do???
   if (length(pgx.missing) == 0 && length(pgx.delete) == 0 && length(h5.missing) == 0 &&

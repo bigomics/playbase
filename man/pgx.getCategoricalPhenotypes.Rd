@@ -8,14 +8,16 @@ pgx.getCategoricalPhenotypes(
   df,
   min.ncat = 2,
   max.ncat = 20,
-  remove.dup = FALSE
+  remove.dup = FALSE,
+  remove.dot = TRUE
 )
 
 pgx.getCategoricalPhenotypes(
   df,
   min.ncat = 2,
   max.ncat = 20,
-  remove.dup = FALSE
+  remove.dup = FALSE,
+  remove.dot = TRUE
 )
 }
 \arguments{

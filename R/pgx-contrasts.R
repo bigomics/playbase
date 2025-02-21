@@ -930,3 +930,16 @@ pgx.addPCcontrasts <- function(counts, k = 3) {
   colnames(pc3.bin) <- paste0("PC", 1:k)
   pc3.bin
 }
+
+
+#' Create a labeled contrast matrix from samples dataframe.
+#'
+#'
+#' @export
+makeContrastFromSamples <- function(samples, ref=NULL) {
+  ct <- pgx.makeAutoContrasts(
+    samples, mingrp = 2, slen = 20, ref = ref, max.level = 99,
+    fix.degenerate = FALSE, skip.hidden = TRUE) 
+  mat <- contrasts.convertToLabelMatrix(ct$exp.matrix, samples)
+  mat
+}

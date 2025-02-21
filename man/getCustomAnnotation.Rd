@@ -4,7 +4,7 @@
 \alias{getCustomAnnotation}
 \title{Custom Gene Annotation}
 \usage{
-getCustomAnnotation(probes, custom_annot = NULL)
+getCustomAnnotation(probes, custom_annot)
 }
 \arguments{
 \item{custom_annot}{data.frame with custom annotation data. If provided,

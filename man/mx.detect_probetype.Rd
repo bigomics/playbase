@@ -2,10 +2,10 @@
 % Please edit documentation in R/pgx-metabolomics.R
 \name{mx.detect_probetype}
 \alias{mx.detect_probetype}
-\title{detect metabolomics ID type}
+\title{Detect metabolomics ID type.}
 \usage{
-mx.detect_probetype(probes)
+mx.detect_probetype(probes, min.match = 0.05)
 }
 \description{
-detect metabolomics ID type
+Detect metabolomics ID type.
 }

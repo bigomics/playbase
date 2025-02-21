@@ -32,7 +32,8 @@ pgx.variableImportance(
 
 \item{methods}{Methods for computing variable importance. Options are "glmnet", "randomforest", "boruta", "xgboost", "pls".}
 
-\item{y}{Multiclass factor response variable. Contains the class labels for each sample}
+\item{y}{Multiclass factor response variable. Contains the class
+labels for each sample}
 }
 \value{
 Named list with variable importance scores by method.
@@ -58,6 +59,8 @@ These scores can be used to select important predictors for survival modeling.
 }
 \section{Functions}{
 \itemize{
-\item \code{pgx.variableImportance()}: Calculates variable importance scores for predictors of a multiclass response using various methods.
+\item \code{pgx.variableImportance()}: Calculates variable
+importance scores for predictors of a multiclass response using
+various methods.
 
 }}

@@ -664,9 +664,12 @@ wrapHyperLink <- function(s, gs) {
 reverse.AvsB <- function(comp) {
   reverse.AvsB.1 <- function(comp) {
     prefix <- postfix <- ""
-    if (any(grepl("[:]", comp))) prefix <- sub(":.*", "", comp)
+    if (any(grepl("[:]", comp))) {
+      after1 <- sub(".*:", "", comp)
+      prefix <- sub(paste0(":",after1),"", comp, fixed=TRUE)
+    }
     if (any(grepl("[@]", comp))) postfix <- sub(".*@", "", comp)
-    comp0 <- gsub(".:|@.*", "", comp)
+    comp0 <- gsub(".*:|@.*", "", comp)
     ab <- paste(rev(strsplit(comp0, split = "_vs_|_VS_")[[1]]), collapse = "_vs_")
     gsub("^:|@$", "", paste0(prefix, ":", ab, "@", postfix))
   }
@@ -1407,13 +1410,18 @@ filterProbes <- function(annot, genes) {
 #'
 #' @export
 rename_by2 <- function(counts, annot_table, new_id = "symbol",
-                       na.rm = TRUE, unique = TRUE) {
+                       na.rm = TRUE, unique = TRUE, keep.prefix=FALSE) {
   ## add rownames
   annot_table$rownames <- rownames(annot_table)
 
   probes <- rownames(counts)
   probe_match <- apply(annot_table, 2, function(x) sum(probes %in% x))
   probe_match
+
+  if(max(probe_match)==0) {
+    return(counts)
+  }
+  
   from_id <- names(which.max(probe_match))
   from_id
 
@@ -1434,12 +1442,24 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   from <- annot_table[, from_id]
   if (!any(duplicated(from)) || unique) {
     ii <- match(probes, from)
-    new.name <- annot_table[ii, new_id]
+    if(keep.prefix) {
+      dt <- mofa.get_prefix(probes)
+      new.name <- annot_table[ii, new_id]
+      new.name <- paste0(dt,":",new.name)
+    } else {
+      new.name <- annot_table[ii, new_id]
+    }
   } else {
     to <- lapply(probes, function(p) which(from == p))
     ii <- lapply(1:length(to), function(i) rep(i, length(to[[i]])))
     counts <- counts[unlist(ii), ]
-    new.name <- annot_table[unlist(to), new_id]
+    if(keep.prefix) {
+      dt <- mofa.get_prefix(unlist(to))
+      new.name <- annot_table[unlist(to), new_id]      
+      new.name <- paste0(dt,":",new.name)
+    } else {
+      new.name <- annot_table[unlist(to), new_id]
+    }
   }
   rownames(counts) <- new.name
 
@@ -2359,6 +2379,15 @@ abbreviate_pheno <- function(pheno, minlength = 1, abbrev.colnames = FALSE) {
   new.pheno
 }
 
-## =================================================================================
-## ========================= END OF FILE ===========================================
-## =================================================================================
+#' @export
+colorscale <- function(x, gamma=1) {
+  colorsx <- gplots::colorpanel(255,low="blue3",mid="grey80",high="red3")
+  x <- (x / max(abs(x)))**gamma
+  colorsx[128+ceiling(x*127)]
+}
+
+
+
+## ==========================================================================
+## ==================== END OF FILE =========================================
+## ==========================================================================
