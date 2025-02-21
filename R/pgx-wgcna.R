@@ -92,14 +92,16 @@ pgx.wgcna <- function(
 
 
 #' @export
-wgcna.compute <- function(X, samples,
+wgcna.compute <- function(X,
+                          samples,
                           minmodsize = 20,
                           power = 6,
                           cutheight = 0.15,
                           deepsplit = 2,
                           networktype = "signed",
-                          tomtype = "signed",                          
-                          ngenes = 2000,  ## number of features by SD
+                          tomtype = "signed",
+                          reassignThreshold = 1e-6,
+                          ngenes = 2000,
                           numericlabels = TRUE,
                           prefix = "ME"
                           ) {
@@ -151,7 +153,7 @@ wgcna.compute <- function(X, samples,
     networkType = networktype,
     TOMType = tomtype,
     minModuleSize = minmodsize,
-    # reassignThreshold = 0,
+    reassignThreshold = reassignThreshold,
     mergeCutHeight = cutheight,
     numericLabels = numericlabels, ## numeric or 'color' labels
     deepSplit = deepsplit,
