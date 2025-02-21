@@ -7,7 +7,7 @@ without traits. This can show how traits cluster together with the
 eigengenes.}
 \usage{
 wgcna.plotEigenGeneAdjacencyHeatmap(
-  res,
+  wgcna,
   add_traits = TRUE,
   marx = 1,
   main = NULL,

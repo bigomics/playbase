@@ -4,7 +4,7 @@
 \alias{wgcna.plotModuleSignificance}
 \title{Plot Multi-dimensional scaling (MDS) of centered data matrix.}
 \usage{
-wgcna.plotModuleSignificance(res, trait, main = NULL, abs = FALSE)
+wgcna.plotModuleSignificance(wgcna, trait, main = NULL, abs = FALSE)
 }
 \description{
 Plot Multi-dimensional scaling (MDS) of centered data matrix.

@@ -5,7 +5,14 @@
 \title{Plot membership correlation vs gene signficance (correlation with
 trait) to discover biomarkers/driver genes.}
 \usage{
-wgcna.plotMMvsGS(res, module, trait, abs = TRUE, par = TRUE, plotlib = "base")
+wgcna.plotMMvsGS(
+  wgcna,
+  module,
+  trait,
+  abs = TRUE,
+  par = TRUE,
+  plotlib = "base"
+)
 }
 \description{
 Plot membership correlation vs gene signficance (correlation with

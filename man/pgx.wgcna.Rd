@@ -13,7 +13,8 @@ pgx.wgcna(
   networktype = "signed",
   tomtype = "signed",
   numericlabels = FALSE,
-  ngenes = 1000
+  ngenes = 2000,
+  gse.filter = "PATHWAY|HALLMARK|^GO|^C[1-9]"
 )
 }
 \arguments{
