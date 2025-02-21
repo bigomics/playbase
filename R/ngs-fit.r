@@ -54,35 +54,35 @@
 #' # TODO
 #' }
 #' @export
-ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, contr.matrix, genes = NULL,
-                                           prior.cpm = 1, cpm.scale = 1e6, prune.samples = FALSE,
-                                           conform.output = TRUE, do.filter = TRUE,
+ngs.fitContrastsWithAllMethods <- function(counts,
+                                           X = NULL,
+                                           samples,
+                                           design,
+                                           contr.matrix,
+                                           genes = NULL,
+                                           prior.cpm = 1,
+                                           cpm.scale = 1e6,
+                                           prune.samples = TRUE, ##FALSE,
+                                           conform.output = TRUE,
+                                           do.filter = TRUE,
                                            remove.batch = TRUE,
                                            methods = c(
                                              "ttest", "ttest.welch", "voom.limma", "trend.limma", "notrend.limma",
                                              "deseq2.wald", "deseq2.lrt", "edger.qlf", "edger.lrt"
                                            ),
-                                           correct.AveExpr = TRUE, custom = NULL, custom.name = NULL) {
+                                           correct.AveExpr = TRUE,
+                                           custom = NULL,
+                                           custom.name = NULL) {
   ## --------------------------------------------------------------
   ## Run all tests on raw counts
   ## --------------------------------------------------------------
 
   ## Do not test features with full missingness.
   ## Put them back in the TopTable
-  ## counts0 <- counts
-  ## nas <- apply(counts, 1, function(x) sum(is.na(x)))
-  ## Ex <- names(nas)[which(nas == ncol(counts))]
-  ## keep <- names(nas)[which(nas != ncol(counts))]
-  ## if (length(Ex) > 0) counts <- counts[keep, ]
   counts <- counts[which(rowMeans(is.na(counts)) < 1), ]
 
   if (!is.null(X)) {
     X <- X[which(rowMeans(is.na(X)) < 1), ]
-    ## X0 <- X
-    ## nas <- apply(X, 1, function(x) sum(is.na(x)))
-    ## Ex <- names(nas)[which(nas == ncol(X))]
-    ## keep <- names(nas)[which(nas != ncol(X))]
-    ## if (length(Ex) > 0) X <- X[keep, ]
   }
 
   if (methods[1] == "*") {
@@ -120,8 +120,6 @@ ngs.fitContrastsWithAllMethods <- function(counts, X = NULL, samples, design, co
   ## get main grouping variable for modeling
   ## ------------------------------------------------------------------
   group <- NULL
-  ## if(all(rownames(contr.matrix) %in% samples$group)) {
-  ## }
   if (!is.null(design)) {
     group <- colnames(design)[max.col(design)]
     if (nrow(design) == ncol(design) &&

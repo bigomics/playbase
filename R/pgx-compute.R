@@ -95,8 +95,8 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
     do.clustergenes = TRUE,
     do.clustergenesets = TRUE,
     do.cluster = TRUE,
-    use.design = TRUE,
-    prune.samples = FALSE,
+    use.design = FALSE, ##TRUE,
+    prune.samples = TRUE, ##FALSE,
     pgx.dir = pgx.dir,
     libx.dir = libx.dir,
     progress = NULL
@@ -476,8 +476,8 @@ pgx.createPGX <- function(counts,
 #' @param do.cluster Logical indicating whether to run sample clustering. Default is TRUE.
 #' @param do.clustergenesets Logical indicating whether to cluster gene sets.
 #' @param do.clustergenes Logical indicating whether to cluster genes. Default is TRUE.
-#' @param use.design Whether to use model design matrix for testing. Default is TRUE.
-#' @param prune.samples Whether to remove samples without valid contrasts. Default is FALSE.
+#' @param use.design Whether to use model design matrix for testing. Default is FALSE.
+#' @param prune.samples Whether to remove samples without valid contrasts. Default is TRUE.
 #' @param extra.methods Additional analysis methods to run. Default is c("meta.go", "infer", "deconv", "drugs", "wordcloud", "wgcna")[c(1, 2)].
 #' @param libx.dir Directory containing custom analysis modules.
 #' @param progress A progress object for tracking status.
@@ -509,8 +509,8 @@ pgx.computePGX <- function(pgx,
                            cluster.contrasts = TRUE,
                            do.clustergenesets = TRUE,
                            do.clustergenes = TRUE,
-                           use.design = TRUE,
-                           prune.samples = FALSE,
+                           use.design = FALSE, ##TRUE,
+                           prune.samples = TRUE, ##FALSE,
                            extra.methods = c(
                              "meta.go", "infer", "deconv", "drugs",
                              "connectivity", "wordcloud", "wgcna"
