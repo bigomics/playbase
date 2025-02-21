@@ -4,6 +4,23 @@
 ##
 
 
+
+#' Calculate signed ranks. Rank on absolute value and add sign.
+#'
+#' @export
+signedRank <- function(x) {
+  sign(x) * rank(abs(x), na.last="keep", ties.method="random") / length(x)
+}
+
+#' Calculate columnwise signed ranks for matrices. Rank on absolute
+#' value and add sign. Values are rescaled to [-1,1].
+#'
+#' @export
+colSignedRanks <- function(x) {
+  sign(x) * t(matrixStats::colRanks(abs(x), na.last="keep",
+                                    ties.method="random")) / nrow(x)
+}
+
 #' @title Calculate cosine similarity
 #'
 #' @param X Numeric matrix
@@ -29,9 +46,9 @@
 #' @export
 tcosine_similarity <- function(X, Y = NULL, method = NULL) {
   if (!is.null(Y)) {
-    return(cosine_similarity(t(X), Y = t(Y), method = method))
+    return(cosine_similarity(Matrix::t(X), Y = Matrix::t(Y), method = method))
   }
-  return(cosine_similarity(t(X), Y = NULL, method = method))
+  return(cosine_similarity(Matrix::t(X), Y = NULL, method = method))
 }
 
 
