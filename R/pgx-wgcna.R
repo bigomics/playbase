@@ -90,7 +90,6 @@ pgx.wgcna <- function(
   return(res)
 }
 
-
 #' @export
 wgcna.compute <- function(X,
                           samples,

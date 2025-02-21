@@ -6340,24 +6340,28 @@ visPrint <- function(visnet, file, width = 3000, height = 3000, delay = 0, zoom 
 
 #'
 #' @export
-ggLollipopPlot <- function( values, sizes=NULL, xlab="value" ) {
+ggLollipopPlot <- function( values, sizes=NULL, xlab="value",
+                           cex.text=1) {
   df <- data.frame( x = names(values), y = values, size = 1 )
   if(!is.null(sizes)) df$size <- sizes
-  ggplot(df, aes(x = reorder(x, +y), y = y)) +
-    geom_segment(aes(x = reorder(x, +y),
-      xend = reorder(x, +y),
-      y = 0, yend = y),
+  ggplot2::ggplot(df, ggplot2::aes(x = reorder(x, +y), y = y)) +
+    ggplot2::geom_segment(
+      ggplot2::aes(
+        x = reorder(x, +y),
+        xend = reorder(x, +y),
+        y = 0, yend = y),
       color = "gray",
       lwd = 1.3, show.legend = FALSE) +
-    geom_point( mapping = aes(size = size), pch = 21, bg = 4,
-      col = 1, show.legend = FALSE) +
-    xlab("") +
-    ylab(xlab) +
-    coord_flip() +
-    theme_minimal() +
-    theme(
-      axis.text.x = element_text(size=14),
-      axis.text.y = element_text(size=14)
+    ggplot2::geom_point(
+      mapping = ggplot2::aes(size = size),
+      pch = 21, bg = 4, col = 1, show.legend = FALSE) +
+    ggplot2::xlab("") +
+    ggplot2::ylab(xlab) +
+    ggplot2::coord_flip() +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(
+      axis.text.x = ggplot2::element_text(size=14*cex.text),
+      axis.text.y = ggplot2::element_text(size=14*cex.text)
     )  
 }
 
