@@ -443,8 +443,9 @@ pgx.createPGX <- function(counts,
   pp <- sub(".*:|","",rownames(pgx$genes))
   rows_not_symbol <- mean(pp == pgx$genes$symbol, na.rm = TRUE) < 0.2
   if (convert.hugo && rows_not_symbol) {
-    dbg("[createPGX] creating compound rownames FEATURE_SYMBOL")
-    feature_is_symbol <- (sub("^[a-zA-Z]+:","",rownames(pgx$genes)) == pgx$genes$symbol)    
+    symbol <- pgx$genes$symbol
+    symbol[is.na(symbol)] <- ""
+    feature_is_symbol <- (sub("^[a-zA-Z]+:","",rownames(pgx$genes)) == symbol)    
     new.names <- combine_feature_names(pgx$genes, target = c("rownames", "_", "symbol"))
     new.names <- ifelse( feature_is_symbol, rownames(pgx$genes), new.names)
     new.names <- make_unique(new.names)
@@ -461,6 +462,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
+  dbg("[createPGX] infer cell cycle")
   pgx <- compute_cellcycle_gender(pgx, pgx$counts)
 
   ## -------------------------------------------------------------------

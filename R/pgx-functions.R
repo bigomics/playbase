@@ -2290,10 +2290,15 @@ normalize_cols <- function(G) {
 }
 
 #' @export
-make_unique <- function(s, sep = "") {
-  num.dup <- sum(duplicated(s)) > 0
+make_unique <- function(s, sep = "", iter=10*length(s)) {
+  s[is.na(s)] <- "NA"
+  num.dup <- sum(duplicated(s),na.rm=TRUE) > 0
   if (!num.dup) {
     return(s)
+  }
+  if(iter<0) {
+    ## this is to prevent recursion hell
+    stop("[make_unique] FATAL. too many recursions.")
   }
   dups <- unique(s[which(duplicated(s))])
   for (d in dups) {
@@ -2301,7 +2306,8 @@ make_unique <- function(s, sep = "") {
     newx <- paste0(s[jj], c("", paste0(".", 1:(length(jj) - 1))))
     s[jj] <- newx
   }
-  if (sum(duplicated(s))) s <- make_unique(s)
+  ## here we recurse. this is dangerous if not controlled.
+  if (sum(duplicated(s))) s <- make_unique(s, iter=iter-1)
   s
 }
 
