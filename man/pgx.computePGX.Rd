@@ -14,8 +14,8 @@ pgx.computePGX(
   cluster.contrasts = TRUE,
   do.clustergenesets = TRUE,
   do.clustergenes = TRUE,
-  use.design = TRUE,
-  prune.samples = FALSE,
+  use.design = FALSE,
+  prune.samples = TRUE,
   extra.methods = c("meta.go", "infer", "deconv", "drugs", "connectivity", "wordcloud",
     "wgcna", "mofa")[c(1, 2)],
   pgx.dir = NULL,
@@ -39,9 +39,9 @@ pgx.computePGX(
 
 \item{do.clustergenes}{Logical indicating whether to cluster genes. Default is TRUE.}
 
-\item{use.design}{Whether to use model design matrix for testing. Default is TRUE.}
+\item{use.design}{Whether to use model design matrix for testing. Default is FALSE.}
 
-\item{prune.samples}{Whether to remove samples without valid contrasts. Default is FALSE.}
+\item{prune.samples}{Whether to remove samples without valid contrasts. Default is TRUE.}
 
 \item{extra.methods}{Additional analysis methods to run. Default is c("meta.go", "infer", "deconv", "drugs", "wordcloud", "wgcna")[c(1, 2)].}
 

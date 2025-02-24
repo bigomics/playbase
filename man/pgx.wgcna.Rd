@@ -7,14 +7,15 @@
 pgx.wgcna(
   pgx,
   minmodsize = 20,
-  power = 6,
+  power = 12,
   cutheight = 0.15,
   deepsplit = 2,
+  minKME = 0.3,
   networktype = "signed",
   tomtype = "signed",
   numericlabels = FALSE,
   ngenes = 2000,
-  gse.filter = "PATHWAY|HALLMARK|^GO|^C[1-9]"
+  gset.filter = "PATHWAY|HALLMARK|^GO|^C[1-9]"
 )
 }
 \arguments{

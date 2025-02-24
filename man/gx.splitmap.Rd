@@ -47,7 +47,10 @@ gx.splitmap(
   key.offset = c(0.05, 0.99),
   show_colnames = NULL,
   use.nclust = FALSE,
-  data = FALSE
+  data = FALSE,
+  color_low = "#3181de",
+  color_mid = "#eeeeee",
+  color_high = "#f23451"
 )
 }
 \arguments{
@@ -126,6 +129,12 @@ gx.splitmap(
 \item{show_colnames}{value}
 
 \item{use.nclust}{value}
+
+\item{color_low}{value}
+
+\item{color_mid}{value}
+
+\item{color_high}{value}
 }
 \value{
 A heatmap grob object
