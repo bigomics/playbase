@@ -309,7 +309,7 @@ pgx.createPGX <- function(counts,
     contrasts <- contrasts[kk, , drop = FALSE]
   }
 
-  ## make duplicated rownames unique (new default since v3.5.1)
+  ## make duplicated rownames unique (NOTE!!! new default since v3.5.1)
   ndup <- sum(duplicated(rownames(counts)))
   if (ndup > 0) {
     info("[createPGX] duplicated rownames detected. making unique.")
@@ -319,7 +319,7 @@ pgx.createPGX <- function(counts,
     if (!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
   }
   
-  ## Special case for PTM phospho-proteomics
+  ## Special case for PTM phospho-proteomics.
   is.phospho <- annotate_phospho_residue(rownames(counts), detect.only = TRUE)
   if (datatype == "proteomics" && is.phospho) {
     info("[createPGX] annotating rownames with phospho residue...")
