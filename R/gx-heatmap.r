@@ -287,29 +287,19 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     show_colnames <- ifelse(ncol(gx) > 100, FALSE, TRUE)
   }
   ## give unique name if duplicated
-  dbg("[gx.splitmap] 0:")
   message("[gx.splitmap] 0: is.null(gx) = ", is.null(gx))
 
-  dbg("[gx.splitmap] 0: dim(gx) = ", dim(gx))
   ndup <- sum(duplicated(rownames(gx)))
-  dbg("[gx.splitmap] ndup = ", ndup)
-  dbg("[gx.splitmap] 1:")
-  
   if (ndup > 0) {
-    dbg("[gx.splitmap] sum.isna.rownamesgx = ", sum(is.na(rownames(gx))))
     rownames(gx) <- tagDuplicates(rownames(gx))
     if (!is.null(row.annot)) rownames(row.annot) <- rownames(gx)
   }
 
-  dbg("[gx.splitmap] 2:")
-  
   if (!is.null(split) && length(split) == 1 && split == 1) split <- NULL
   if (!is.null(splitx) && length(splitx) == 1 && splitx == 1) splitx <- NULL
   if (is.null(main)) main <- "  "
   if (length(mar) == 1) mar <- rep(mar[1], 4) ## old style
   if (length(mar) == 2) mar <- c(mar[1], 5, 5, mar[2]) ## old style
-
-  dbg("[gx.splitmap] 3:")
   
   cor.hclust <- function(x) {
     corx <- stats::cor(x, use = "pairwise")
@@ -320,8 +310,6 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   ## -------------------------------------------------------------
   ## scaling options
   ## -------------------------------------------------------------
-  dbg("[gx.splitmap] 4:")
-  
   if ("col" %in% scale || "both" %in% scale) {
     tgx <- t(gx) - colMeans(gx, na.rm = TRUE)
     gx <- t(tgx / (1e-4 + apply(gx, 2, stats::sd, na.rm = TRUE))) ## small EPS maintains SD order!
@@ -363,8 +351,6 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   ## Take top SD features
   ## -------------------------------------------------------------
   ##
-  dbg("[gx.splitmap] 5:")
-  
   if (!is.null(splitx) && length(splitx) == ncol(gx)) {
     names(splitx) <- colnames(gx)
   }
@@ -417,8 +403,6 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   ## --------------------------------------------
   ## split rows
   ## --------------------------------------------
-  dbg("[gx.splitmap] 6:")
-  
   do.split <- !is.null(split)
   split.idx <- NULL
   if (do.split && inherits(split, "numeric") && length(split) == 1) {
@@ -473,8 +457,6 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     col.annot <- col.annot[jj, ]
   }
 
-  dbg("[gx.splitmap] 8:")
-  
   ## -------------------------------------------------------------------------------
   ## column  HeatmapAnnotation objects
   ## -------------------------------------------------------------------------------
@@ -531,8 +513,6 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     }
   }
 
-  dbg("[gx.splitmap] 9:")
-  
   ## row annotation bars
   row.ha <- NULL
   if (!is.null(row.annot)) {
@@ -561,7 +541,6 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     )
   }
 
-  dbg("[gx.splitmap] 10:")  
   ## -------------------------------------------------------------
   ## Plotting methods
   ## -------------------------------------------------------------
@@ -610,8 +589,6 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     grp.order <- match(order.groups, names(grp))
   }
 
-  dbg("[gx.splitmap] 10:")
-  
   # Get plot data (for csv downloads)
   if (data) {
     return(gx)
@@ -624,8 +601,6 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     cluster_rows <- as.dendrogram(hclust(dist(gx)))
   } 
 
-  dbg("[gx.splitmap] 11:")
-  
   hmap <- NULL
   for (i in grp.order) {
     jj <- grp[[i]]
@@ -682,8 +657,6 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       cell_fun = cell_fun
     )
   }
-
-  dbg("[gx.splitmap] 12:")
   
   rownames.ha <- NULL
   if (FALSE && show_rownames < nrow(gx) && show_rownames > 0) {
@@ -714,8 +687,6 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     )
   }
 
-  dbg("[gx.splitmap] 13:")
-  
   if (1 && is.null(rownames.ha) && show_rownames > 0) {
     ## empty matrix just for rownames on the far right
     empty.mat <- matrix(nrow = nrow(gx), ncol = 0)
@@ -735,8 +706,6 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     )
   }
 
-  dbg("[gx.splitmap] 14:")
-  
   if (!is.null(row.ha)) {
     hmap <- hmap + row.ha
   }
@@ -760,8 +729,6 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     ComplexHeatmap::draw(lgd, x = grid::unit(key.offset[1], "npc"), y = grid::unit(key.offset[2], "npc"), just = c("left", "top"))
   }
 
-  dbg("[gx.splitmap] exit:")
-  
   # Return TRUE so that unit test is possible  
   return(TRUE)
 }
