@@ -462,7 +462,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
-  dbg("[createPGX] infer cell cycle")
+  info("[createPGX] infer cell cycle")
   pgx <- compute_cellcycle_gender(pgx, pgx$counts)
 
   ## -------------------------------------------------------------------
@@ -946,7 +946,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   if (pgx$datatype != "metabolomics") {
     ## add species GO genesets from AnnotationHub
     go.genesets <- NULL
-    dbg("[pgx.add_GMT] Adding species GO for organism", pgx$organism)
+    info("[pgx.add_GMT] Adding species GO for organism", pgx$organism)
     go.genesets <- tryCatch(
       {
         getOrganismGO(pgx$organism)
