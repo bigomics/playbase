@@ -752,7 +752,7 @@ wgcna.plotDendroAndColors <- function(wgcna, main=NULL, unmerged=FALSE) {
   
   if(is.null(main)) main <- "Gene dendrogram and module colors"
   ## Plot the dendrogram and the module colors underneath
-  plotDendroAndColors(
+  WGCNA::plotDendroAndColors(
     dendro = geneTree,
     colors = colors,
     groupLabels = groupLabels,
@@ -1193,3 +1193,53 @@ wgcna.plotLabeledCorrelationHeatmap <- function(R, nSamples, setpar = TRUE,
 
 }
 
+
+#' Plot module hub genes as graph in circle layout. This shows the
+#' main connectivity structure for the modules. It can be used for
+#' (edge) preservation analysis for comparing different group of
+#' samples..
+#'
+#' @export
+wgcna.plotModuleHubGenes <- function(wgcna, modules=NULL,
+                                     alpha=0.5, setpar = TRUE) {
+  
+  if(is.null(modules)) {
+    modules <- colnames(wgcna$stats$moduleMembership)
+  }
+  modules <- intersect(modules, colnames(wgcna$stats$moduleMembership))
+  if(length(modules)==0) {
+    message("ERROR. no valid modules")
+    return(NULL)
+  }
+  
+  if(setpar) {
+    nr <- floor(length(modules)**0.5)
+    nc <- ceiling(length(modules)/nr)
+    nr
+    nc
+    par(mfrow=c(nr,nc), mar=c(0,1,2.5,1))
+  }
+  for(k in modules) {
+    mm <- wgcna$stats$moduleMembership[,k]
+    mm.score <- head(sort(mm,decreasing=TRUE),30)
+    topgenes <- names(mm.score)
+    A <- cor(wgcna$datExpr[,topgenes])
+    diag(A) <- NA
+    A <- (A - min(A,na.rm=TRUE)) / (max(A,na.rm=TRUE) - min(A,na.rm=TRUE))
+    gr <- igraph::graph_from_adjacency_matrix(
+      A, mode="undirected",weighted=TRUE,diag=FALSE)  
+    norm.mm.score <- (mm.score - min(mm.score)) / (max(mm.score) - min(mm.score)) 
+    clr <- sub("ME","",k)
+    if(!is.na(as.integer(clr))) clr <- as.integer(clr)
+    if(clr=="black") clr <- "grey40"
+    plot(gr, layout = igraph::layout_in_circle,
+         edge.width = 6 * igraph::E(gr)$weight**8,       
+         vertex.size = 5 + 15*norm.mm.score,
+         vertex.color = adjustcolor(clr, alpha.f=alpha),
+         vertex.frame.color = clr
+         )
+    title(paste("Module",k),line=0.33)
+  }
+  
+
+}
