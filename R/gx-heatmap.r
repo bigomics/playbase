@@ -282,13 +282,10 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   ComplexHeatmap::ht_global_opt(fast_hclust = TRUE)
   graphics::par(xpd = FALSE)
 
-  if (verbose > 1) cat("input.dim.gx=", dim(gx), "\n")
   if (is.null(show_colnames)) {
     show_colnames <- ifelse(ncol(gx) > 100, FALSE, TRUE)
   }
   ## give unique name if duplicated
-  message("[gx.splitmap] 0: is.null(gx) = ", is.null(gx))
-
   ndup <- sum(duplicated(rownames(gx)))
   if (ndup > 0) {
     rownames(gx) <- tagDuplicates(rownames(gx))

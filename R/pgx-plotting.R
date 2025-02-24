@@ -3622,8 +3622,6 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     GEOM_POINT <- ggplot2::geom_point
   }
 
-  dbg("[pgx.scatterPlotXY.GGPLOT] type = ", type)
-  
   plt <- NULL
   ## Plot the discrete variables
   if (type == "factor") {
