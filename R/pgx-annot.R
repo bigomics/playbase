@@ -624,7 +624,7 @@ getCustomAnnotation <- function(probes, custom_annot) {
 #' }
 #' @import data.table
 #' @export
-probe2symbol <- function(probes, annot_table, query = "symbol",
+probe2symbol <- function(probes, annot_table, query = c("symbol","gene_name"),
                          key = NULL, fill_na = FALSE) {
   # Prepare inputs
   annot_table <- cbind(rownames = rownames(annot_table), annot_table)
@@ -638,7 +638,11 @@ probe2symbol <- function(probes, annot_table, query = "symbol",
 
   # match query
   ii <- match(probes, annot_table[, key])
-  query_col <- annot_table[ii, query]
+  query <- intersect(query,colnames(annot_table))
+  if(length(query)==0) {
+    stop("ERROR. no symbol column.")
+  }
+  query_col <- annot_table[ii, query[1]]
 
   # Deal with NA
   if (fill_na) {
