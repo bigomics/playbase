@@ -972,7 +972,7 @@ pgx.plotContrast <- function(pgx, contrast = NULL, type = "scatter",
 #'
 #' @export
 pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
-                        psig = 0.05, fc = 1, cex = 1,
+                        psig = 0.05, fc = 1, cex = 1, sig.par=c("q","p")[1],
                         p.min = NULL, fc.max = NULL, hilight = NULL,
                         label = NULL, cex.lab = 1, ntop = 20,
                         colors = c(
@@ -982,7 +982,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
                         filt = NULL, datatype = NULL,
                         title = NULL, xlim = NULL, ylim = NULL,
                         xlab = "effect size (logFC)",
-                        ylab = "significance (-log10q)",
+                        ylab = NULL,
                         repel = FALSE, labeltype = NULL,
                         set.par = TRUE, plotlib = "base", data = FALSE) {
   if (is.integer(contrast)) contrast <- names(pgx$gx.meta$meta)[contrast]
@@ -994,7 +994,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   } else {
     stop("FATAL:: invalid level=", level)
   }
-
+  
   ## Label or hilight gene sets
   gsets <- colnames(pgx$GMT)
   if(!is.null(hilight) && any(hilight %in% gsets)) {
@@ -1007,12 +1007,20 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   }
 
   f <- res$fc[, contrast]
-  q <- res$qv[, contrast]
+  if(sig.par=="p" && "pv" %in% names(res)) {
+    q <- res$pv[, contrast]  ## should be p-value!!
+    if(is.null(ylab)) ylab <- "significance (-log10p)"
+  } else {
+    q <- res$qv[, contrast]
+    if(is.null(ylab)) ylab <- "significance (-log10q)"    
+  }
+  
   if (!is.null(filt)) {
     sel <- grep(filt, names(f))
     f <- f[sel]
     q <- q[sel]
   }
+  
   sig <- (q <= psig & abs(f) >= fc)
   df <- data.frame(fc = f, y = -log10(q), q = q, sig = sig)
 
@@ -1138,6 +1146,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       cex = 1.2 * cex,
       cex.lab = 1.1 * cex.lab,
       colors = colors,
+      set.par = set.par,      
       repel = repel
     )
   } else {
@@ -1194,6 +1203,7 @@ plot_volcano <- function(x,
                          marker.alpha = 0.7,
                          axis.text.size = 14,
                          title = "Volcano plot",
+                         set.par = TRUE,                         
                          colors = c(
                            up = "#f23451",
                            notsig = "#707070AA",
@@ -1227,8 +1237,8 @@ plot_volcano <- function(x,
     type = "factor",
     title = title,
     labels = label.names,
-    xlab = "effect size (log2FC)",
-    ylab = "significance (-log10q)",
+    xlab = xlab,
+    ylab = ylab,
     hilight = highlight, #
     hilight2 = label, #
     cex = 1.3 * cex,
@@ -1242,8 +1252,8 @@ plot_volcano <- function(x,
     na.color = colors["notsel"],
     opacity = 1,
     repel = repel,
+    set.par = set.par,
     ...
-    #    set.par = set.par
   )
 
   abline(v = 0, lty = 1, lwd = 0.5)
