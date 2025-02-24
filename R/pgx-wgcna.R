@@ -518,7 +518,10 @@ wgcna.compute_enrichment <- function(wgcna, pgx,
 wgcna.runConsensusWGCNA <- function( exprList,
                                     datTraits,
                                     power = 12,
-                                    minKME = 0.8 ) {
+                                    minKME = 0.8,
+                                    mergeCutHeight = 0.25,
+                                    deepSplit = 2
+                                    ) {
 
   ##exprList <- list(Set1 = V1, Set2 = V2)
   multiExpr = WGCNA::list2multiData(lapply(exprList,Matrix::t))
@@ -553,8 +556,8 @@ wgcna.runConsensusWGCNA <- function( exprList,
     networkType = "signed",
     TOMType = "signed",
     minModuleSize = 20,
-    deepSplit = 2,
-    mergeCutHeight = 0.25, 
+    deepSplit = deepSplit,
+    mergeCutHeight = mergeCutHeight, 
     numericLabels = FALSE,
     minKMEtoStay = minKME,
     saveTOMs = FALSE,
