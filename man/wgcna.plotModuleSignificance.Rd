@@ -2,10 +2,10 @@
 % Please edit documentation in R/pgx-wgcna.R
 \name{wgcna.plotModuleSignificance}
 \alias{wgcna.plotModuleSignificance}
-\title{Plot Multi-dimensional scaling (MDS) of centered data matrix.}
+\title{Plot module significance.}
 \usage{
 wgcna.plotModuleSignificance(wgcna, trait, main = NULL, abs = FALSE)
 }
 \description{
-Plot Multi-dimensional scaling (MDS) of centered data matrix.
+Plot module significance.
 }

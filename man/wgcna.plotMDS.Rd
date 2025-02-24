@@ -5,11 +5,7 @@
 \title{Plot Multi-dimensional scaling (MDS) of centered data matrix.}
 \usage{
 wgcna.plotMDS(wgcna, main = NULL, scale = FALSE)
-
-wgcna.plotMDS(wgcna, main = NULL, scale = FALSE)
 }
 \description{
 Plot Multi-dimensional scaling (MDS) of centered data matrix.
-
-Plot UMAP from wgcna results
 }

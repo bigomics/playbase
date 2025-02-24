@@ -33,6 +33,7 @@ pgx.createPGX(
   only.proteincoding = TRUE,
   remove.xxl = TRUE,
   remove.outliers = TRUE,
+  add.gmt = TRUE,
   settings = list()
 )
 }
