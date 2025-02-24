@@ -177,6 +177,7 @@ pgx.createPGX <- function(counts,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE, ## DEPRECATED
                           remove.outliers = TRUE, ## DEPRECATED
+                          add.gmt = TRUE,
                           settings = list()) {
   
   message("[createPGX] datatype = ", datatype)
@@ -317,18 +318,29 @@ pgx.createPGX <- function(counts,
     if (!is.null(impX)) rownames(impX) <- rownames(counts)
     if (!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
   }
-
+  
   ## Special case for PTM phospho-proteomics
   is.phospho <- annotate_phospho_residue(rownames(counts), detect.only = TRUE)
   if (datatype == "proteomics" && is.phospho) {
     info("[createPGX] annotating rownames with phospho residue...")
-    newnames <- annotate_phospho_residue(rownames(counts))
+    newnames <- annotate_phospho_residue(rownames(counts))    
+    newnames <- make_unique(newnames)
     rownames(counts) <- newnames
     rownames(X) <- newnames
     if (!is.null(impX)) rownames(impX) <- newnames
-    if (!is.null(annot_table)) rownames(annot_table) <- newnames
+    if (!is.null(annot_table)) {
+      rownames(annot_table) <- newnames
+      pos.col <- grep("site|position|phosho",colnames(annot_table),ignore.case=TRUE) 
+      phosphosite <- sub(".*_|[.].*","",newnames)
+      if(length(pos.col)) {
+        i <- pos.col[1]
+        annot_table[,i] <- phosphosite
+      } else {
+        annot_table$site_position <- phosphosite
+      }
+    }
   }
-
+  
   ## -------------------------------------------------------------------
   ## create pgx object
   ## -------------------------------------------------------------------
@@ -400,6 +412,7 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   do.filter <- (only.known || only.proteincoding)
   if (do.filter) {
+    
     if (only.known) {
       message("[createPGX] removing genes without symbol...")
       no.symbol <- (is.na(pgx$genes$symbol) | pgx$genes$symbol %in% c("", "-"))
@@ -414,12 +427,10 @@ pgx.createPGX <- function(counts,
     }
 
     ## conform
-    keep <- match(rownames(pgx$genes), rownames(pgx$counts))
+    keep <- rownames(pgx$genes)
     pgx$counts <- pgx$counts[keep, , drop = FALSE]
-    keep <- match(rownames(pgx$genes), rownames(pgx$X))
     pgx$X <- pgx$X[keep, , drop = FALSE]
     if (!is.null(pgx$impX)) {
-      keep <- match(rownames(pgx$genes), rownames(pgx$impX))
       pgx$impX <- pgx$impX[keep, , drop = FALSE]
     }
   }
@@ -435,8 +446,8 @@ pgx.createPGX <- function(counts,
     dbg("[createPGX] creating compound rownames FEATURE_SYMBOL")
     feature_is_symbol <- (sub("^[a-zA-Z]+:","",rownames(pgx$genes)) == pgx$genes$symbol)    
     new.names <- combine_feature_names(pgx$genes, target = c("rownames", "_", "symbol"))
-    #new.names <- combine_feature_names(pgx$genes, target=c("rownames"," (","symbol",")"))    
     new.names <- ifelse( feature_is_symbol, rownames(pgx$genes), new.names)
+    new.names <- make_unique(new.names)
     rownames(pgx$genes) <- new.names
     pgx$genes$gene_name <- new.names ## gene_name should also be renamed??
     pgx$genes$feature <- new.names ## feature should also be renamed??
@@ -459,7 +470,7 @@ pgx.createPGX <- function(counts,
   ## then create empty GMT
   no3 <- pgx$organism == "No organism" && is.null(annot_table) &&
          is.null(custom.geneset) 
-  if ( no3 || pgx$datatype == "unknown" ) {
+  if ( no3 || pgx$datatype == "unknown" || !add.gmt) {
     message("[createPGX] WARNING: empty GMT matrix. No gene sets. " )    
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
   } else {    

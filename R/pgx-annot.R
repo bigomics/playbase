@@ -1596,34 +1596,29 @@ check_species_probetype <- function(
 }
 
 #' Annotate phosphosite with residue symbol. Feature names must be of
-#' form 'uniprot_position'.
+#' form 'uniprot_position'. NOTE!!! Annotation is currently done here
+#' in feature name but it would be 'better' to add phosphosite
+#' modification type in the pgx$genes general annotation table.
 #'
 #' @export
 annotate_phospho_residue <- function(features, detect.only = FALSE) {
-  valid_name <- mean(grepl("[_.][1-9].*", features), na.rm = TRUE) > 0.9
-  uniprot <- sub("[_.][1-9].*", "", features)
-  positions <- strsplit(sub(".*[_.]", "", features), split = "[;/,]")
+  valid_name <- mean(grepl("[_][1-9]+", features), na.rm = TRUE) > 0.9
+  valid_name
+  uniprot <- sub("[_].*", "", features)
+  positions <- gsub(".*[_]|[.].*", "", features)
+  positions <- strsplit(positions, split = "[;/,]")  
 
   P <- playdata::PHOSPHOSITE
   prot.match <- mean(uniprot %in% P$UniProt, na.rm = TRUE)
   pos.match <- mean(positions %in% P$Position, na.rm = TRUE)
   is_phospho <- (valid_name && prot.match > 0.50 && pos.match > 0.50)
+  is_phospho
 
   if (detect.only) {
     return(is_phospho)
   }
 
   if (is_phospho) {
-    ## determine separators
-    sep1.match <- sapply(c("_", "."), function(s) {
-      sum(grepl(s, features, fixed = TRUE), na.rm = TRUE)
-    })
-    sep1 <- names(which.max(sep1.match))
-    sel <- grep("[;/,]", features)
-    sep2.match <- sapply(c(";", "/", ","), function(s) {
-      sum(grepl(s, features[sel], fixed = TRUE), na.rm = TRUE)
-    })
-    sep2 <- names(which.max(sep2.match))
     P <- P[which(P$UniProt %in% uniprot), ]
     dim(P)
     P.id <- paste0(P$UniProt, "_", P$Position)
@@ -1640,6 +1635,19 @@ annotate_phospho_residue <- function(features, detect.only = FALSE) {
       tt
     })
 
+    ## determine separators for paste: sep1 for main position
+    ## separator. sep2 for entries with multiple positions.
+    sep1.match <- sapply(c("_", "."), function(s) {
+      sum(grepl(s, features, fixed = TRUE), na.rm = TRUE)
+    })
+    sep1 <- names(which.max(sep1.match))
+    sel <- grep("[;/,]", features)
+    sep2.match <- sapply(c(";", "/", ","), function(s) {
+      sum(grepl(s, features[sel], fixed = TRUE), na.rm = TRUE)
+    })
+    sep2 <- names(which.max(sep2.match))
+
+    ## insert modification type in front of position
     new.features <- sapply(1:length(features), function(i) {
       tt <- type[[i]]
       pp <- paste(paste0(tt, positions[[i]]), collapse = sep2)
