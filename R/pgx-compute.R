@@ -572,17 +572,6 @@ pgx.computePGX <- function(pgx,
     message("[pgx.computePGX] clustering samples...")
     mm <- c("pca", "tsne", "umap")
     pgx <- pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
-
-    ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
-    ## posx <- cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]])
-    ## posx <- scale(posx)
-    ## idx <- pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.zero = 0.0)
-    ## if (length(unique(idx)) == 1) {
-    ##   ## try again with finer settings if single cluster...
-    ##   idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
-    ## }
-    ## pgx$samples$cluster <- idx  ## really add??
-
   }
 
   ## Make contrasts by cluster
@@ -630,7 +619,6 @@ pgx.computePGX <- function(pgx,
     message("shrinking data matrices: n= ", max.genes)
     logcpm <- logCPM(pgx$counts, total = NULL)
     sdx <- matrixStats::rowSds(logcpm, na.rm = TRUE)
-    ## sdx <- apply(logcpm, 1, stats::sd, na.rm = TRUE)
     jj <- Matrix::head(order(-sdx), max.genes) ## how many genes?
     jj0 <- setdiff(seq_len(nrow(pgx$counts)), jj)
     pgx$filtered[["low.variance"]] <- paste(rownames(pgx$counts)[jj0], collapse = ";")
