@@ -293,19 +293,44 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   if (!is.null(custom)) {
     message("[ngs.fitContrastsWithAllMethods] adding custom results table")
     if (is.null(custom.name)) custom.name <- "custom"
-    if (!all(c("tables", "expr") %in% names(custom))) {
-      stop("custom must have 'tables' and 'expr'")
+    if (length(outputs) == 0) {
+      compare_output <- ngs.fitContrastsWithTTEST(
+        X, contr.matrix, design,
+        method = "equalvar",
+        conform.output = conform.output
+      )
+    } else {
+      compare_output <- outputs[[1]]
     }
-    need.tests <- names(outputs[[1]]$tables)
-
-    if (!all(need.tests %in% names(custom$tables))) {
-      stop("custom must include tables: ", paste(need.tests, collapse = " "))
+    test_names <- unique(sub("\\..*", "", colnames(custom)))
+    test_names <- test_names[match(names(compare_output$tables), test_names)]
+    custom_tables <- list()
+    for(test in test_names) {
+      logFC_col <- paste0(test, ".logFC")
+      pval_col <- paste0(test, ".P.Value")
+      adjp_col <- paste0(test, ".adj.P.Val")
+      test_df <- data.frame(
+        logFC = custom[, logFC_col],
+        P.Value = custom[, pval_col],
+        adj.P.Val = custom[, adjp_col]
+      )
+      rownames(test_df) <- rownames(custom)
+      custom_tables[[test]] <- test_df
     }
-    need.cols <- c("external_gene_name", "AveExpr", "adj.P.Val", "P.Value", "logFC")
-    if (!all(need.cols %in% names(custom$tables[[1]]))) {
-      stop("custom tables must include columns: ", paste(need.cols, collapse = " "))
+    custom <- custom_tables
+    missing_rows <- rownames(compare_output$tables[[1]])[which(!rownames(compare_output$tables[[1]]) %in% rownames(custom[[1]]))]
+    if (length(missing_rows) > 0) {
+      missing_data <- matrix(NA,
+                            nrow = length(missing_rows),
+                            ncol = ncol(custom[[1]]),
+                            dimnames = list(missing_rows, colnames(custom[[1]])))
+      for (test in names(custom)) {
+        custom[[test]] <- rbind(custom[[test]], missing_data)
+        custom[[test]] <- custom[[test]][rownames(compare_output$tables[[1]]), ]
+      }
     }
-    outputs[[custom.name]] <- custom
+    outputs[[custom.name]]$tables <- custom
+    timings[["custom"]] <- system.time(0)
   }
 
   ## ----------------------------------------------------------------------

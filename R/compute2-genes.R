@@ -23,6 +23,7 @@ compute_testGenes <- function(pgx,
                               contr.matrix,
                               max.features = 1000,
                               test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
+                              custom_fc = NULL,
                               use.design = FALSE,
                               prune.samples = TRUE,
                               remove.outputs = TRUE) {
@@ -38,6 +39,7 @@ compute_testGenes <- function(pgx,
       contr.matrix = contr.matrix,
       max.features = max.features,
       test.methods = test.methods,
+      custom_fc = custom_fc,
       use.design = use.design,
       prune.samples = prune.samples,
       remove.outputs = remove.outputs
@@ -77,6 +79,7 @@ compute_testGenesSingleOmics <- function(pgx,
                                          max.features = 1000,
                                          filter.low = TRUE,
                                          remove.outputs = TRUE,
+                                         custom_fc = NULL,
                                          use.design = FALSE,
                                          prune.samples = TRUE,
                                          test.methods = c("trend.limma", "deseq2.wald", "edger.qlf")) {
@@ -221,7 +224,7 @@ compute_testGenesSingleOmics <- function(pgx,
     conform.output = TRUE,
     do.filter = FALSE,
     correct.AveExpr = TRUE,
-    custom = NULL, custom.name = NULL
+    custom = custom_fc, custom.name = NULL
   )
 
   message("[compute_testGenesSingleOmics] 13 : fitting done!")
