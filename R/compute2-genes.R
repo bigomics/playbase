@@ -267,9 +267,12 @@ compute_testGenesSingleOmics <- function(pgx,
 #' @return The updated \code{pgx} object with computed test genes.
 #'
 #' @export
-compute_testGenesMultiOmics <- function(pgx, contr.matrix, max.features = 1000,
+compute_testGenesMultiOmics <- function(pgx,
+                                        contr.matrix,
+                                        max.features = 1000,
                                         test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
-                                        use.design = FALSE, prune.samples = TRUE,
+                                        use.design = FALSE,
+                                        prune.samples = TRUE,
                                         remove.outputs = TRUE) {
   pgx$gx.meta <- NULL
   pgx$model.parameters <- NULL
@@ -300,9 +303,7 @@ compute_testGenesMultiOmics <- function(pgx, contr.matrix, max.features = 1000,
       max(pgx1$counts, na.rm = TRUE) >= 50) {
       type <- "counts"
     }
-    dt
-    type
-
+    
     ## do test
     pgx1 <- compute_testGenesSingleOmics(
       pgx = pgx1,
