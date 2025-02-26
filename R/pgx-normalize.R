@@ -258,7 +258,7 @@ pgx.countNormalization <- function(x, methods, ref = NULL, rm.zero = FALSE) {
 #' Normalized, log2-transformed matrix.
 #'
 #' @export
-pgx.countNormalization.beta <- function(x, method = "CPM", ref = NULL, prior = 1) {
+pgx.countNormalization.beta <- function(X, method = "CPM", ref = NULL, prior = 1) {
   ## Column-wise normalization (along samples).
   ## x:      log2-transformed counts + prior
   ## method: single method
