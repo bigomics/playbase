@@ -191,9 +191,11 @@ imputeMissing <- function(X,
 #' @export
 svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
                        maxSteps = 100, fill.empty = "median",
-                       randomize.init = FALSE, verbose = FALSE) {
+                       infinite.na = FALSE, randomize.init = FALSE,
+                       verbose = FALSE) {
   ## nv=3;threshold=0.001;init=NULL;maxSteps=100;fill.empty="median";verbose=FALSE
 
+  if(infinite.na) X[is.infinite(X)] <- NA
   ind.missing <- which(is.na(X), arr.ind = TRUE)
   empty.rows <- which(rowMeans(is.na(X)) == 1)
   empty.cols <- which(colMeans(is.na(X)) == 1)
@@ -201,8 +203,7 @@ svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
   if (is.null(nv)) {
     nv <- max(1, round(mean(is.na(X)) * min(dim(X))))
   }
-  nv <- min(nv, dim(X) - 1)
-  message("setting nv = ", nv)
+  nv <- min(nv, round(min(dim(X))/3))
 
   if (is.character(init) && grepl("%", init)) {
     q <- as.numeric(sub("%", "", init))

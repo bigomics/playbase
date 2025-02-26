@@ -170,19 +170,21 @@ pgx.initialize <- function(pgx) {
     colnames(pgx$samples),
     invert = TRUE, value = TRUE
   )
-  pgx$Y <- pgx$samples[colnames(pgx$X), kk, drop = FALSE]
-  pgx$Y <- utils::type.convert(pgx$Y, as.is = TRUE) ## autoconvert to datatypes
 
   ## *****************************************************************
   ## ******************NEED RETHINK***********************************
   ## *****************************************************************
-  ## ONLY categorical variables for the moment!!!
+
+  ## IK: ONLY categorical variables for the moment!!! pgx$Y is somehow
+  ## DEPRECATED. Better use pgx$samples directly. Idea was to
+  ## 'cleanup' the samples matrix from numerical and id columns.
+  pgx$Y <- pgx$samples[colnames(pgx$X), kk, drop = FALSE]
+  pgx$Y <- utils::type.convert(pgx$Y, as.is = TRUE) ## autoconvert to datatypes
   ny1 <- nrow(pgx$Y) - 1
   k1 <- pgx.getCategoricalPhenotypes(pgx$Y, min.ncat = 2, max.ncat = ny1) ## exclude
   k2 <- grep("OS.survival|cluster|condition|group", colnames(pgx$Y), value = TRUE) ## must include
   kk <- sort(unique(c(k1, k2)))
   pgx$Y <- pgx$Y[, kk, drop = FALSE]
-
 
   ## -----------------------------------------------------------------------------
   ## intersect and filter gene families (convert species to human gene sets)

@@ -69,7 +69,8 @@ pgx.getModelGroups <- function(pgx) {
 #' @export
 pgx.getMetaMatrix <- function(pgx, methods = "meta", level = "gene") {
   fc0 <- NULL
-  qv0 <- NULL
+  pv0 <- NULL
+  qv0 <- NULL  
   if (level == "gene") {
     all.methods <- colnames(unclass(pgx$gx.meta$meta[[1]]$fc))
     all.methods
@@ -82,11 +83,17 @@ pgx.getMetaMatrix <- function(pgx, methods = "meta", level = "gene") {
       qv0 <- sapply(pgx$gx.meta$meta, function(x) {
         apply(unclass(x$q)[, methods, drop = FALSE], 1, max)
       })
+      pv0 <- sapply(pgx$gx.meta$meta, function(x) {
+        apply(unclass(x$p)[, methods, drop = FALSE], 1, max)
+      })
       rownames(fc0) <- rownames(qv0) <- rownames(pgx$gx.meta$meta[[1]])
+      rownames(pv0) <- rownames(pgx$gx.meta$meta[[1]])      
     } else if (methods[1] == "meta") {
       fc0 <- sapply(pgx$gx.meta$meta, function(x) x$meta.fx)
       qv0 <- sapply(pgx$gx.meta$meta, function(x) x$meta.q)
+      pv0 <- sapply(pgx$gx.meta$meta, function(x) x$meta.p)      
       rownames(fc0) <- rownames(qv0) <- rownames(pgx$gx.meta$meta[[1]])
+      rownames(pv0) <- rownames(pgx$gx.meta$meta[[1]])            
     } else {
       cat("WARNING:: pgx.getMetaFoldChangeMatrix: unknown method")
       return(NULL)
@@ -102,17 +109,23 @@ pgx.getMetaMatrix <- function(pgx, methods = "meta", level = "gene") {
       qv0 <- sapply(pgx$gset.meta$meta, function(x) {
         apply(unclass(x$q)[, methods, drop = FALSE], 1, max)
       })
+      pv0 <- sapply(pgx$gset.meta$meta, function(x) {
+        apply(unclass(x$p)[, methods, drop = FALSE], 1, max)
+      })
       rownames(fc0) <- rownames(qv0) <- rownames(pgx$gset.meta$meta[[1]])
+      rownames(pv0) <- rownames(pgx$gset.meta$meta[[1]])
     } else if (methods[1] == "meta") {
       fc0 <- sapply(pgx$gset.meta$meta, function(x) x$meta.fx)
       qv0 <- sapply(pgx$gset.meta$meta, function(x) x$meta.q)
+      pv0 <- sapply(pgx$gset.meta$meta, function(x) x$meta.p)      
       rownames(fc0) <- rownames(qv0) <- rownames(pgx$gset.meta$meta[[1]])
+      rownames(pv0) <- rownames(pgx$gset.meta$meta[[1]])
     } else {
       cat("WARNING:: pgx.getMetaFoldChangeMatrix: unknown method")
       return(NULL)
     }
   }
-  res <- list(fc = fc0, qv = qv0)
+  res <- list(fc = fc0, qv = qv0, pv = pv0)
   return(res)
 }
 

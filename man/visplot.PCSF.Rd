@@ -20,7 +20,8 @@ visplot.PCSF(
   width = 1800,
   height = 1800,
   invert.weight = FALSE,
-  extra_node_colors = list(),
+  extra_node_colors = c(),
+  extra_node_shapes = c(),
   edge_color = "lightgrey",
   ...
 )

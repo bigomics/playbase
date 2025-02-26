@@ -26,43 +26,43 @@
 #' pgx <- pgx.addGeneAnnotation(pgx, "Human")
 #' }
 #' @export
-pgx.addGeneAnnotation <- function(pgx, organism = NULL, annot_table = NULL) {
+pgx.addGeneAnnotation <- function(pgx, annot_table = NULL) {
   # Safety checks
   stopifnot(is.list(pgx))
   probes <- rownames(pgx$counts)
+  datatype <- pgx$datatype
+  organism <- pgx$organism
 
-  if (is.null(organism) && !is.null(pgx$organism)) {
-    organism <- pgx$organism
-  }
-
-  if (is.null(organism)) {
-    stop("could not determine organism. please specify")
-  }
-
-  if (organism == "No organism") {
-    # annotation table is mandatory for 'No organism' (until server side
-    # can handle missing genesets)
-    genes <- getCustomAnnotation(
-      probes = probes,
-      custom_annot = annot_table
-    )
-  }
-
-  if (organism != "No organism") {
-    # Get gene table
-    genes <- getGeneAnnotation(
-      organism = organism,
-      probes = probes
-    )
-  }
-
-  ## if annot_table is provided we override our annotation and append
-  ## extra columns
-  if (!is.null(annot_table)) {
-    genes <- genes[, setdiff(colnames(genes), colnames(annot_table))]
-    annot_table <- annot_table[match(rownames(genes), rownames(annot_table)), ]
-    genes <- cbind(genes, annot_table)
-  }
+  genes <- getProbeAnnotation(organism, probes, datatype,
+    annot_table = annot_table)
+  
+  ## annot.unknown <- organism %in% c("No organism","unknown") ||
+  ##   datatype %in% c("custom","unknown")
+  ## if (annot.unknown) {
+  ##   # annotation table is mandatory for 'No organism' (until server side
+  ##   # can handle missing genesets)
+  ##   genes <- getCustomAnnotation(
+  ##     probes = probes, custom_annot = annot_table )
+  ## } else {
+  ##   if (datatype == "metabolomics") {
+  ##     genes <- getMetaboliteAnnotation(
+  ##       probes, add_id = TRUE, probe_type = NULL)
+  ##   } else if (datatype == "multi-omics") {
+  ##     genes <- getProbeAnnotation(organism, probes)
+  ##   } else {
+  ##     # Get gene table
+  ##     genes <- getGeneAnnotation(
+  ##       organism = organism, probes = probes )
+  ##   }
+  ## }
+  ## ## if annot_table is provided we override our annotation and append
+  ## ## extra columns
+  ## if (!is.null(annot_table)) {
+  ##   kk <- unique(c(colnames(genes),colnames(annot_table)))
+  ##   genes <- genes[, setdiff(colnames(genes), colnames(annot_table)), drop=FALSE]
+  ##   annot_table <- annot_table[match(rownames(genes), rownames(annot_table)), ]
+  ##   genes <- cbind(genes, annot_table)[,kk]
+  ## }
 
   ## cleanup entries and reorder columns
   genes <- cleanupAnnotation(genes)
@@ -91,6 +91,11 @@ getGeneAnnotation <- function(
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
   if (tolower(organism) == "dog") organism <- "Canis familiaris"
 
+  if(mean(grepl("[:]",probes)) > 0.98) {
+    message("[getGeneAnnotation] WARNING. stripping prefix... Is this multi-omics??")
+    probes <- sub("^[a-zA-Z]+:","",probes)
+  }
+  
   ## first annotate with ANNOTHUB
   info("[getGeneAnnotation] annotating with ANNOTHUB")
   annot <- getGeneAnnotation.ANNOTHUB(
@@ -215,7 +220,8 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   if (is.null(probe_type)) {
     probe_type <- detect_probetype(organism, probes, orgdb = NULL)
-    if (is.null(probe_type)) {
+    probe_type
+    if (is.null(probe_type) || is.na(probe_type) ) {
       message("ERROR: could not determine probe_type. Please specify. ")
       annot <- data.frame(feature = probes, symbol = "")
       annot <- cleanupAnnotation(annot)
@@ -266,10 +272,8 @@ getGeneAnnotation.ANNOTHUB <- function(
     jj <- match(names(locs), annot$ENTREZID)
     annot$MAP <- NA
     annot$MAP[jj] <- unname(locs)
-    if (probe_type != "ENTREZID") {
-      cls <- setdiff(colnames(annot), "ENTREZID")
-      annot <- annot[, cls, drop = FALSE]
-    }
+    cls <- setdiff(colnames(annot), "ENTREZID")
+    annot <- annot[, cls, drop = FALSE]
   }
 
   # some organisms do not provide symbol but rather gene name (e.g. yeast)
@@ -298,7 +302,7 @@ getGeneAnnotation.ANNOTHUB <- function(
       missing.probe_type <- detect_probetype(organism, missing.probes, orgdb = orgdb)
     ))
     missing.probe_type
-    if (!is.null(missing.probe_type)) {
+    if (!is.null(missing.probe_type) && !is.na(missing.probe_type) ) {
       missing.probes1 <- match_probe_names(missing.probes, orgdb, missing.probe_type)
       suppressMessages(suppressWarnings(
         missing.annot <- AnnotationDbi::select(orgdb,
@@ -507,36 +511,39 @@ cleanupAnnotation <- function(genes) {
 #' pgx <- getCustomAnnotation(counts, custom_annot)
 #' }
 #' @export
-getCustomAnnotation <- function(probes, custom_annot = NULL) {
+getCustomAnnotation <- function(probes, custom_annot) {
   message("[getCustomAnnotation] Adding custom annotation table...")
   # If the user has provided a custom gene table, check it and use it
+  custom_annot <- data.frame(custom_annot, check.names=FALSE)
 
+  if(!"feature" %in% colnames(custom_annot) && !is.null(rownames(custom_annot))) {
+    custom_annot$feature <- rownames(custom_annot)
+  }
   num_annot <- sum(probes %in% custom_annot$feature)
 
   annot_map <- list(
     "human_ortholog" = "",
     "gene_title" = "unknown",
-    #    "gene_biotype" = "unknown",
     "chr" = "unknown",
-    #    "pos" = 0,
-    #    "tx_len" = 0,
-    #    "map" = "1",
     "source" = "custom"
   )
 
-  required_cols <- c(
-    "feature",
-    "symbol",
-    "gene_name"
-  )
+  required_cols <- c("feature", "symbol", "gene_name")
+  if(!"symbol" %in% colnames(custom_annot)) {
+    custom_annot$symbol <- custom_annot$feature
+  }
+  if(!"gene_name" %in% colnames(custom_annot)) {
+    custom_annot$gene_name <- custom_annot$feature
+  }
 
   # this will be used at the end to order df columns
   table_col_order <- c(required_cols, names(annot_map))
 
   # legacy code but maybe this could be removed in the future...
-  required_in_annot <- all(required_cols %in% colnames(custom_annot))
+  #required_in_annot <- all(required_cols %in% colnames(custom_annot))
 
-  if (!is.null(custom_annot) && num_annot > 1 && required_in_annot) {
+  ##  if (!is.null(custom_annot) && num_annot > 1 && required_in_annot) {
+  if (!is.null(custom_annot) && num_annot > 1) {  
     # remove all NA columns, otherwise the for loop below will not work
     custom_annot <- custom_annot[, !apply(custom_annot, 2, function(x) all(is.na(x)))]
 
@@ -549,7 +556,6 @@ getCustomAnnotation <- function(probes, custom_annot = NULL) {
     custom_annot <- custom_annot[match(probes, custom_annot$feature), ]
 
     # if row was missing from annotation table (NA from match call above), input NA based on probes
-
     rownames(custom_annot) <- probes
 
     custom_annot$feature <- ifelse(is.na(custom_annot$feature), rownames(custom_annot), custom_annot$feature)
@@ -557,15 +563,13 @@ getCustomAnnotation <- function(probes, custom_annot = NULL) {
     custom_annot$gene_name <- ifelse(is.na(custom_annot$gene_name), rownames(custom_annot), custom_annot$gene_name)
 
     # Fill NA values with corresponding values from annot_map
-
     res <- lapply(names(annot_map), function(x) {
       ifelse(is.na(custom_annot[[x]]), annot_map[[x]], custom_annot[[x]])
     })
 
     names(res) <- names(annot_map)
-
     res <- as.data.frame(res)
-
+    res$source <- ifelse( res$source == "custom", "custom", paste0("custom+",res$source))
     custom_annot[, names(annot_map)] <- res[, names(annot_map)]
   } else {
     # Create custom gene table from probe names
@@ -576,11 +580,7 @@ getCustomAnnotation <- function(probes, custom_annot = NULL) {
       gene_name = probes,
       human_ortholog = "",
       gene_title = "unknown",
-      #      gene_biotype = "unknown",
       chr = "unknown",
-      #      pos = 0,
-      #      tx_len = 0,
-      #      map = "1",
       source = "custom"
     )
     rownames(custom_annot) <- probes
@@ -624,7 +624,7 @@ getCustomAnnotation <- function(probes, custom_annot = NULL) {
 #' }
 #' @import data.table
 #' @export
-probe2symbol <- function(probes, annot_table, query = "symbol",
+probe2symbol <- function(probes, annot_table, query = c("symbol","gene_name"),
                          key = NULL, fill_na = FALSE) {
   # Prepare inputs
   annot_table <- cbind(rownames = rownames(annot_table), annot_table)
@@ -638,7 +638,11 @@ probe2symbol <- function(probes, annot_table, query = "symbol",
 
   # match query
   ii <- match(probes, annot_table[, key])
-  query_col <- annot_table[ii, query]
+  query <- intersect(query,colnames(annot_table))
+  if(length(query)==0) {
+    stop("ERROR. no symbol column.")
+  }
+  query_col <- annot_table[ii, query[1]]
 
   # Deal with NA
   if (fill_na) {
@@ -747,8 +751,27 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
 
+  if(is.null(datatype) && all(grepl("[:]",probes))) {
+    dbg("[detect_probetype] datatype is multi-omics")
+    datatype <- "multi-omics"
+  }
+  
   if (!is.null(datatype) && datatype == "metabolomics") {
     probe_type <- mx.detect_probetype(probes)
+    return(probe_type)
+  }
+
+  if (!is.null(datatype) && datatype == "multi-omics") {
+    mx.probes <- sub("^mx:","",grep("^mx:", probes, value=TRUE))
+    px.probes <- sub("^px:","",grep("^px:", probes, value=TRUE))
+    gx.probes <- sub("^gx:","",grep("^gx:", probes, value=TRUE))    
+    gx.probe_types=px.probe_types=mx.probe_types=NA
+    if(length(gx.probes)) gx.probe_types <- detect_probetype(organism, gx.probes)
+    if(length(px.probes)) px.probe_types <- detect_probetype(organism, px.probes)    
+    if(length(mx.probes)) mx.probe_types <- mx.detect_probetype(mx.probes)    
+    probe_type <- c(gx=gx.probe_types, px=px.probe_types, mx=mx.probe_types)
+    dtypes <- sort(unique(sub(":.*","",probes)))
+    probe_type <- probe_type[dtypes]
     return(probe_type)
   }
 
@@ -830,7 +853,7 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
       message("head.probes = ", paste(head(probes), collapse = " "))
       message("WARNING: Probe type not found. Valid probe types: ", paste(keytypes, collapse = " "))
     }
-    return(NULL)
+    return(NA)
   } else {
     top_match <- names(which.max(key_matches))
   }
@@ -924,7 +947,6 @@ getHumanOrtholog.biomart <- function(organism, symbols) {
 #' @export
 getHumanOrtholog <- function(organism, symbols) {
   ## test if orthogene server is reachable
-  ## res.orthogene <- try(orthogene::map_genes("CDK1", verbose = FALSE))
   ortho_organism <- getOrthoSpecies(organism)
   mm <- c("gprofiler", "homologene", "babelgene") ## mapping methods
   LL <- list()
@@ -1131,6 +1153,12 @@ getSpeciesTable <- function(ah = NULL) {
     "title", "taxonomyid", "coordinate_1_based", "preparerclass", "sourceurl",
     "dataprovider", "genome", "maintainer", "tags", "sourcetype"
   )
+  variables <- c(
+    "ah_id", "species", "description", "rdatadateadded", "rdataclass",
+    "title", "taxonomyid", ## "coordinate_1_based", "preparerclass", "sourceurl",
+    ## "dataprovider", "genome", "maintainer", "tags",
+    "sourcetype"
+  )
 
   # Iterate through each variable and store it as a table
   tables <- lapply(variables, function(var) {
@@ -1184,6 +1212,7 @@ getOrganismGO <- function(organism, use.ah = NULL, orgdb = NULL) {
 
       ## get GO title
       sets <- sets[which(names(sets) %in% keys(GO.db::GOTERM))]
+      sets <- lapply(sets, function(s) unique(s))
       go <- sapply(GO.db::GOTERM[names(sets)], Term)
       new_names <- paste0("GO_", k, ":", go, " (", sub("GO:", "GO_", names(sets)), ")")
       names(sets) <- new_names
@@ -1228,28 +1257,27 @@ getGeneAnnotation.ORTHOGENE <- function(
 
   probes1 <- clean_probe_names(probes)
 
-  gene.out <- orthogene::map_genes(
+  gene.out <- try(orthogene::map_genes(
     genes = probes1,
     species = species,
     verbose = FALSE
-  )
-  head(gene.out)
-  gene.out <- gene.out[match(probes1, gene.out$input), ]
+  ))
 
-  ortholog <- getHumanOrtholog(organism, gene.out$name)$human
-  genebuild <- gprofiler2::get_version_info()$genebuild
-
+  ortholog <- toupper(probes1)
+  genebuild <- "-"
+  
+  if(!inherits(gene.out,"try-error")) {
+    gene.out <- gene.out[match(probes1, gene.out$input), ]
+    ortholog <- getHumanOrtholog(organism, gene.out$name)$human
+    genebuild <- gprofiler2::get_version_info()$genebuild
+  }
+  
   df <- data.frame(
     feature = probes,
     symbol = gene.out$name,
     human_ortholog = ortholog,
     gene_title = sub(" \\[.*", "", gene.out$description),
-    #    gene_biotype = NA,
-    #    map = NA,
     chr = NA,
-    #    pos = NA,
-    #    tx_len = NA,
-    # source = gene.out$namespace,
     source = "gprofiler2",
     gene_name = probes
   )
@@ -1508,129 +1536,89 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
   return(info)
 }
 
-#' @export
-getMetaboliteInfo <- function(organism = "Human", chebi) {
-  if (is.null(chebi) || length(chebi) == 0) {
-    return(NULL)
-  }
-  if (is.na(chebi) || chebi == "") {
-    return(NULL)
-  }
-  info <- list()
-
-  metabolite_metadata <- playdata::METABOLITE_METADATA
-  orgdb <- playdata::METABOLITE_ANNOTATION
-
-  info[["name"]] <- metabolite_metadata[metabolite_metadata$ID == chebi, "NAME"]
-  info[["summary"]] <- metabolite_metadata[metabolite_metadata$ID == chebi, "DEFINITION"]
-  info[["organism"]] <- organism
-
-
-  # remove summary if it is null
-  if (info[["summary"]] == "null") info[["summary"]] <- "Summary not available for this metabolite."
-  if (is.null(info[["summary"]])) info[["summary"]] <- "Summary not available for this metabolite."
-
-
-  # get annotation for a given chebi id
-  annotation <- orgdb[orgdb$ID == chebi, ]
-
-  # remove NA columns from anntoation
-  annotation <- annotation[, colSums(is.na(annotation)) < nrow(annotation)]
-  cols <- colnames(annotation)[-1] ## exclude chebi IDS as we already have it
-
-  ## get info from different environments
-  res <- lapply(cols, function(k) {
-    link <- NULL
-    matched_id <- annotation[annotation$ID == chebi, k]
-    if (k == "HMDB") link <- glue::glue("<a href='https://hmdb.ca/metabolites/{matched_id}' target='_blank'>{matched_id}</a>")
-    if (k == "KEGG") link <- glue::glue("<a href='https://www.kegg.jp/dbget-bin/www_bget?{matched_id}' target='_blank'>{matched_id}</a>")
-    if (k == "PubChem") link <- glue::glue("<a href='https://pubchem.ncbi.nlm.nih.gov/compound/{matched_id}' target='_blank'>{matched_id}</a>")
-    if (k == "ChEBI") link <- glue::glue("<a href='https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:{matched_id}' target='_blank'>{matched_id}</a>")
-    if (k == "METLIN") link <- matched_id # METLIN is offline at the time of this request, needs to be updated
-    if (k == "SMILES") link <- matched_id
-    return(link)
-  })
-
-  # merge all info
-  names(res) <- cols
-  info <- c(info, res)
-
-  ## create link to external databases
-
-  # these libraries are not always available for a given chebi id
-  hmdb.link <- NULL
-  kegg.link <- NULL
-  pubchem.link <- NULL
-  if (!is.null(info[["HMDB"]])) hmdb.link <- glue::glue("<a href='https://hmdb.ca/metabolites/{annotation[,'HMDB']}' target='_blank'>HMDB</a>")
-  if (!is.null(info[["KEGG"]])) kegg.link <- glue::glue("<a href='https://www.kegg.jp/dbget-bin/www_bget?{annotation[,'KEGG']}' target='_blank'>KEGG</a>")
-  if (!is.null(info[["PubChem"]])) pubchem.link <- glue::glue("<a href='https://pubchem.ncbi.nlm.nih.gov/compound/{annotation[,'PubChem']}' target='_blank'>PubChem</a>")
-
-
-  # these libraries are always available
-  chebi.link <- glue::glue("<a href='https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:{chebi}' target='_blank'>ChEBI</a>")
-  reactome.link <- glue::glue("<a href='https://reactome.org/content/query?q=chebi%3A{chebi}' target='_blank'>Reactome</a>")
-
-  info[["databases"]] <- paste(c(hmdb.link, kegg.link, reactome.link, pubchem.link, chebi.link), collapse = ", ")
-
-  return(info)
-}
-
 #' Automatically detects species by trying to detect probetype from
 #' list of test_species. Warning. bit slow.
 #'
 #' @export
-detect_species_probetype <- function(
+check_species_probetype <- function(
     probes,
-    test_species = c("human", "mouse", "rat"),
-    datatype = NULL) {
-  probes <- unique(clean_probe_names(probes))
-  ptype <- list()
-  for (s in test_species) {
-    ptype[[s]] <- detect_probetype(
-      organism = s,
-      probes = probes,
-      use.ah = FALSE,
-      datatype = datatype,
-      verbose = FALSE
-    )
+    test_species = c("Human", "Mouse", "Rat"),
+    datatype = NULL, annot.cols = NULL) {
+
+  if(!is.null(datatype) && datatype == "custom") {
+    out <- rep("custom", length(test_species))
+    names(out) <- test_species
+    return(as.list(out))
   }
-  ptype <- unlist(ptype)
-  out <- list(
-    species = names(ptype),
-    probetype = ptype
-  )
-  return(out)
+  
+  probes <- unique(clean_probe_names(probes))
+  ## report possible probetype per organism
+  ptype <- vector("list",length(test_species))
+  names(ptype) <- test_species
+  if(datatype == "metabolomics") {
+    mx.type <- NA
+    if(!is.null(annot.cols)) {
+      mx.ids <- toupper(colnames(playdata::METABOLITE_ID)[-1])
+      mx.ids <- c(mx.ids, paste0(mx.ids,"_ID"))
+      has.id <- any(toupper(annot.cols) %in% mx.ids)
+      dbg("[check_species_probetype] annot.cols has.id = ",has.id)    
+      if(has.id) {
+        ids <- intersect(toupper(annot.cols), mx.ids)
+        dbg("[check_species_probetype] ids = ",ids)
+        mx.type <- ids[1]
+      }
+    }
+    if(all(is.na(mx.type))) {
+      db <- mx.check_mapping( probes, check.first=TRUE)
+      table(db)
+      if(!all(is.na(db))) {
+        mx.type <- names(which.max(table(db[!is.na(db)])))
+      }
+    }
+    for(s in test_species) ptype[[s]] <- mx.type
+  } else {
+    s="Human"
+    for (s in test_species) {
+      ptype[[s]] <- detect_probetype(
+        organism = s,
+        probes = probes,
+        use.ah = FALSE,
+        datatype = datatype,
+        verbose = FALSE
+      )
+    }
+  }
+
+  ## remove NA
+  ptype <- ptype[!sapply(ptype, function(p) all(is.na(p)))]
+  dbg("[check_species_probetype] length(ptype) = ",length(ptype))
+  return(ptype)
 }
 
 #' Annotate phosphosite with residue symbol. Feature names must be of
-#' form 'uniprot_position'.
+#' form 'uniprot_position'. NOTE!!! Annotation is currently done here
+#' in feature name but it would be 'better' to add phosphosite
+#' modification type in the pgx$genes general annotation table.
 #'
 #' @export
 annotate_phospho_residue <- function(features, detect.only = FALSE) {
-  valid_name <- mean(grepl("[_.][1-9].*", features), na.rm = TRUE) > 0.9
-  uniprot <- sub("[_.][1-9].*", "", features)
-  positions <- strsplit(sub(".*[_.]", "", features), split = "[;/,]")
+  valid_name <- mean(grepl("[_][1-9]+", features), na.rm = TRUE) > 0.9
+  valid_name
+  uniprot <- sub("[_].*", "", features)
+  positions <- gsub(".*[_]|[.].*", "", features)
+  positions <- strsplit(positions, split = "[;/,]")  
 
   P <- playdata::PHOSPHOSITE
   prot.match <- mean(uniprot %in% P$UniProt, na.rm = TRUE)
   pos.match <- mean(positions %in% P$Position, na.rm = TRUE)
   is_phospho <- (valid_name && prot.match > 0.50 && pos.match > 0.50)
+  is_phospho
 
   if (detect.only) {
     return(is_phospho)
   }
 
   if (is_phospho) {
-    ## determine separators
-    sep1.match <- sapply(c("_", "."), function(s) {
-      sum(grepl(s, features, fixed = TRUE), na.rm = TRUE)
-    })
-    sep1 <- names(which.max(sep1.match))
-    sel <- grep("[;/,]", features)
-    sep2.match <- sapply(c(";", "/", ","), function(s) {
-      sum(grepl(s, features[sel], fixed = TRUE), na.rm = TRUE)
-    })
-    sep2 <- names(which.max(sep2.match))
     P <- P[which(P$UniProt %in% uniprot), ]
     dim(P)
     P.id <- paste0(P$UniProt, "_", P$Position)
@@ -1647,6 +1635,19 @@ annotate_phospho_residue <- function(features, detect.only = FALSE) {
       tt
     })
 
+    ## determine separators for paste: sep1 for main position
+    ## separator. sep2 for entries with multiple positions.
+    sep1.match <- sapply(c("_", "."), function(s) {
+      sum(grepl(s, features, fixed = TRUE), na.rm = TRUE)
+    })
+    sep1 <- names(which.max(sep1.match))
+    sel <- grep("[;/,]", features)
+    sep2.match <- sapply(c(";", "/", ","), function(s) {
+      sum(grepl(s, features[sel], fixed = TRUE), na.rm = TRUE)
+    })
+    sep2 <- names(which.max(sep2.match))
+
+    ## insert modification type in front of position
     new.features <- sapply(1:length(features), function(i) {
       tt <- type[[i]]
       pp <- paste(paste0(tt, positions[[i]]), collapse = sep2)
@@ -1668,10 +1669,8 @@ convert_probetype <- function(organism, probes, target_id, from_id = NULL,
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
 
   if (!is.null(datatype) && datatype == "metabolomics") {
-    ## new.probes <- mx.detect_probetype(probes)
-    ## return(new.probes)
-    message("WARNING: metabolomics not yet implemented")
-    return(NULL)
+    new.probes <- mx.convert_probe(probes, target_id = target_id)
+    return(new.probes)
   }
 
   ## get correct OrgDb database for organism
@@ -1704,4 +1703,148 @@ convert_probetype <- function(organism, probes, target_id, from_id = NULL,
   )))
   new.probes <- res[match(probes, res[, from_id]), target_id]
   return(new.probes)
+}
+
+
+#' Convert multi-omics probetype. Probe names *must  be prefixed with
+#' data type unless classical transcriptomics/proteomics.
+#'
+#' @export
+getProbeAnnotation <- function(organism, probes, datatype, annot_table = NULL) {
+
+  annot.unknown <- organism %in% c("No organism","unknown") ||
+    datatype %in% c("custom","unknown")
+  
+  genes <- NULL
+  if (annot.unknown) {
+    # annotation table is mandatory for 'No organism' (until server side
+    # can handle missing genesets)
+    dbg("[getProbeAnnotation] annotating for unknown datatype with custom annotation")
+    genes <- getCustomAnnotation( probes, annot_table )
+  } else if (datatype == "metabolomics") {
+
+    dbg("[getProbeAnnotation] annotating for metabolomics")
+    mx.check <- mx.check_mapping(
+      probes, all.db=c("playdata","annothub","refmet"), check.first = TRUE)
+    mx.check <- mean(!is.na(mx.check)) > 0.01
+    mx.check
+    if(mx.check) {
+      ## Directly annotate if probes are recognized
+      genes <- getMetaboliteAnnotation(
+        probes, add_id = TRUE, probe_type = NULL, annot_table = annot_table )
+    } else {
+      ## Fallback on custom
+      dbg("[getProbeAnnotation] WARNING: not able to map metabolomicx probes. fallback to custom (empty) annotation.")
+      genes <- getCustomAnnotation( probes, custom_annot = annot_table )
+    }
+  } else if (datatype == "multi-omics") {
+    dbg("[getProbeAnnotation] annotating for multi-omics")
+    genes <- getMultiProbeAnnotation(organism, probes)
+  } else {
+    dbg("[getProbeAnnotation] annotating for transcriptomics")
+    genes <- getGeneAnnotation( organism = organism, probes = probes )
+  }
+  
+  ## if annot_table is provided we override our annotation and append
+  ## extra columns
+  if (!is.null(annot_table)) {
+    kk <- unique(c(colnames(genes),colnames(annot_table)))
+    genes <- genes[, setdiff(colnames(genes), colnames(annot_table)), drop=FALSE]
+    annot_table <- annot_table[match(rownames(genes), rownames(annot_table)), ]
+    genes <- cbind(genes, annot_table)[,kk]
+  }
+
+  genes
+}
+
+#' Convert multi-omics probetype. Probe names *must  be prefixed with
+#' data type unless classical transcriptomics/proteomics.
+#'
+getMultiProbeAnnotation <- function(organism, probes) {
+  
+  if(all(grepl("^[A-Za-z]+:",probes))) {
+    dtype <- sub(":.*","",probes)
+  } else {
+    ## no colon in names it is single type probes. try to guess by
+    ## matching.
+    ptype <- detect_probetype(organism, probes)
+    mtype <- mx.detect_probetype(probes)    
+    dbg("[getMultiProbeAnnotation] ptype =",ptype)
+    dbg("[getMultiProbeAnnotation] mtype =",mtype)
+    gx.types <- c(
+      "SYMBOL", "ENSEMBL", "ACCNUM", "GENENAME",
+      "MGI", "TAIR",  "ENSEMBLTRANS", "REFSEQ", "ENTREZID"
+    )
+    px.types <- c("UNIPROT", "ENSEMBLPROT")
+    if(!is.na(ptype)) {
+      dx <- ifelse(ptype %in% px.types, "px", "gx")
+    } else if(!is.na(mtype)) {
+      dx <- mtype
+    } else {
+      dx <- "custom"
+    }
+    info("[getMultiProbeAnnotation] detected as:",dx)
+    dtype <- rep(dx,length(probes))
+  }
+  table(dtype)
+  dtype <- tolower(dtype)
+  dtype <- ifelse(grepl("ensembl|symbol|hugo|gene|hgnc",dtype),"gx",dtype)
+  dtype <- ifelse(grepl("uniprot|protein",dtype),"px",dtype)
+  dtype <- ifelse(grepl("chebi|hmdb|kegg|pubchem",dtype),"mx",dtype)  
+  table(dtype)
+  dbg("[getMultiProbeAnnotation] dtypes =", unique(dtype))
+  
+  ## populate with defaults
+  symbol <- toupper(sub("^[a-zA-Z]+:","",probes))
+
+  annot <- list()
+  if(any(dtype %in% c('gx','px'))) {
+    ii <- which(dtype %in% c('gx','px'))
+    pp <- sub("^[a-zA-Z]+:","",probes[ii])
+    aa <- getGeneAnnotation(organism, pp)
+    head(aa)
+    aa$data_type <- sub(":.*","",probes[ii])
+    rownames(aa) <- probes[ii]
+    aa$feature <- probes[ii]
+    annot <- c(annot, list(aa))
+  }
+  if("mx" %in% dtype) {
+    ii <- which(dtype == 'mx')
+    hh <- grep("mx:NA$", probes[ii])
+    if (any(hh)) ii <- ii[-hh]      
+    pp <- sub("^[a-zA-Z]+:","",probes[ii])
+    aa <- getMetaboliteAnnotation(pp)
+    head(aa)
+    aa$data_type <- 'mx'
+    rownames(aa) <- probes[ii]
+    aa$feature <- probes[ii]
+    annot <- c(annot, list(aa))
+  }
+  if("custom" %in% dtype) {
+    ii <- which(dtype == 'custom')
+    pp <- sub("^[a-zA-Z]+:","",probes[ii])
+    aa <- getCustomAnnotation(pp, custom_annot=NULL)
+    head(aa)
+    aa$data_type <- 'custom'
+    rownames(aa) <- probes[ii]
+    aa$feature <- probes[ii]
+    annot <- c(annot, list(aa))
+  }
+
+  cols <- Reduce( intersect, lapply(annot,colnames))
+  annot <- lapply(annot, function(a) a[,cols])
+  annot <- do.call( rbind, annot )
+  annot <- annot[match(probes, annot$feature),]
+  rownames(annot) <- probes
+  head(annot)
+
+  ## fill NA
+  annot$human_ortholog[which(annot$human_ortholog=="")] <- NA
+  annot$feature <- ifelse(is.na(annot$feature), probes, annot$feature)
+  annot$symbol <- ifelse(is.na(annot$symbol), symbol, annot$symbol)
+  annot$human_ortholog <- ifelse(is.na(annot$human_ortholog), symbol, annot$human_ortholog)  
+  annot$gene_name <- ifelse(is.na(annot$gene_name), probes, annot$gene_name)
+  annot$data_type <- ifelse(is.na(annot$data_type), dtype, annot$data_type)    
+
+  return(annot)
 }

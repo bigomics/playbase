@@ -101,7 +101,6 @@ pgx.plotPartialCorrelationGraph <- function(res, gene, rho.min = 0.1, nsize = -1
   rownames(R) <- colnames(R) <- nn
   rownames(P) <- colnames(P) <- nn
 
-
   G <- igraph::graph_from_adjacency_matrix(
     abs(P),
     mode = "undirected", diag = FALSE, weighted = TRUE

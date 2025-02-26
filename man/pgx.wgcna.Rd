@@ -6,11 +6,16 @@
 \usage{
 pgx.wgcna(
   pgx,
-  minmodsize = 30,
-  power = 6,
-  cutheight = 0.25,
+  minmodsize = 20,
+  power = 12,
+  cutheight = 0.15,
   deepsplit = 2,
-  ngenes = 1000
+  minKME = 0.3,
+  networktype = "signed",
+  tomtype = "signed",
+  numericlabels = FALSE,
+  ngenes = 2000,
+  gset.filter = "PATHWAY|HALLMARK|^GO|^C[1-9]"
 )
 }
 \arguments{

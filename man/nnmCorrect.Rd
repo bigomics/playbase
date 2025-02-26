@@ -10,11 +10,11 @@ nnmCorrect(
   dist.method = "cor",
   center.x = TRUE,
   center.m = TRUE,
-  knn = 1,
+  knn = 2,
   sdtop = 2000,
   return.B = FALSE,
   use.design = TRUE,
-  use.cov = FALSE
+  use.covariates = FALSE
 )
 }
 \arguments{

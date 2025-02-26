@@ -3,11 +3,15 @@
 \name{annotate_phospho_residue}
 \alias{annotate_phospho_residue}
 \title{Annotate phosphosite with residue symbol. Feature names must be of
-form 'uniprot_position'.}
+form 'uniprot_position'. NOTE!!! Annotation is currently done here
+in feature name but it would be 'better' to add phosphosite
+modification type in the pgx$genes general annotation table.}
 \usage{
 annotate_phospho_residue(features, detect.only = FALSE)
 }
 \description{
 Annotate phosphosite with residue symbol. Feature names must be of
-form 'uniprot_position'.
+form 'uniprot_position'. NOTE!!! Annotation is currently done here
+in feature name but it would be 'better' to add phosphosite
+modification type in the pgx$genes general annotation table.
 }

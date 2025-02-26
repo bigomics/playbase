@@ -148,6 +148,9 @@ pgx.clusterSamples <- function(pgx, methods = c("pca", "tsne", "umap"),
                                X = NULL, umap.pkg = "uwot", replace.orig = TRUE) {
   if (!is.null(X)) {
     message("using provided X matrix...")
+  } else if (!is.null(pgx$impX)) {
+    message("using pgx$impX matrix...")
+    X <- pgx$impX
   } else if (!is.null(pgx$X)) {
     message("using pgx$X matrix...")
     X <- pgx$X
@@ -157,7 +160,10 @@ pgx.clusterSamples <- function(pgx, methods = c("pca", "tsne", "umap"),
   }
 
   if (any(is.na(X))) {
-    X <- X[complete.cases(X), , drop = FALSE]
+    ## NEED RETHINK: We should use impX here if available. Some
+    ## datasets have missing values on all rows!!!
+    ## X <- X[complete.cases(X), , drop = FALSE]
+    X <- svdImpute2(X)  ## IK
   }
 
   clust.pos <- pgx.clusterBigMatrix(

@@ -34,8 +34,8 @@ gx.splitmap(
   na_col = "green",
   na_text = NULL,
   mar = c(5, 5, 5, 5),
-  rownames_width = 25,
   rowlab.maxlen = 20,
+  rownames_width = rowlab.maxlen + 10,
   title_cex = 1.2,
   column_title_rot = 0,
   column_names_rot = 90,
@@ -44,10 +44,13 @@ gx.splitmap(
   zlim = NULL,
   show_rownames = nmax,
   lab.len = 80,
-  key.offset = c(0.05, 1.01),
+  key.offset = c(0.05, 0.99),
   show_colnames = NULL,
   use.nclust = FALSE,
-  data = FALSE
+  data = FALSE,
+  color_low = "#3181de",
+  color_mid = "#eeeeee",
+  color_high = "#f23451"
 )
 }
 \arguments{
@@ -101,9 +104,9 @@ gx.splitmap(
 
 \item{mar}{value}
 
-\item{rownames_width}{value}
-
 \item{rowlab.maxlen}{value}
+
+\item{rownames_width}{value}
 
 \item{title_cex}{value}
 
@@ -126,6 +129,12 @@ gx.splitmap(
 \item{show_colnames}{value}
 
 \item{use.nclust}{value}
+
+\item{color_low}{value}
+
+\item{color_mid}{value}
+
+\item{color_high}{value}
 }
 \value{
 A heatmap grob object

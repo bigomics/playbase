@@ -258,9 +258,9 @@ read_files <- function(dir = ".", pattern = NULL) {
   file2 <- head(grep("sample", ff, value = TRUE), 1)
   file3 <- head(grep("contrast|comparison", ff, value = TRUE), 1)
   counts <- samples <- contrasts <- NULL
-  if (length(file1)) counts <- read_counts(file.path(dir, file1))
-  if (length(file2)) samples <- read_samples(file.path(dir, file2))
-  if (length(file3)) contrasts <- read_contrasts(file.path(dir, file3))
+  if (length(file1)) counts <- read_counts(file.path(dir,file1))
+  if (length(file2)) samples <- read_samples(file.path(dir,file2))
+  if (length(file3)) contrasts <- read_contrasts(file.path(dir,file3))
 
   list(
     counts = counts,

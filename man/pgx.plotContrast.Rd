@@ -26,6 +26,7 @@ pgx.Volcano(
   psig = 0.05,
   fc = 1,
   cex = 1,
+  sig.par = c("q", "p")[1],
   p.min = NULL,
   fc.max = NULL,
   hilight = NULL,
@@ -35,12 +36,14 @@ pgx.Volcano(
   colors = c(up = "#f23451", notsig = "#707070AA", notsel = "#cccccc88", down =
     "#3181de"),
   filt = NULL,
+  datatype = NULL,
   title = NULL,
   xlim = NULL,
   ylim = NULL,
   xlab = "effect size (logFC)",
-  ylab = "significance (-log10q)",
+  ylab = NULL,
   repel = FALSE,
+  labeltype = NULL,
   set.par = TRUE,
   plotlib = "base",
   data = FALSE

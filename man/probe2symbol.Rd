@@ -4,7 +4,13 @@
 \alias{probe2symbol}
 \title{Map probe identifiers to gene symbols}
 \usage{
-probe2symbol(probes, annot_table, query = "symbol", fill_na = FALSE)
+probe2symbol(
+  probes,
+  annot_table,
+  query = c("symbol", "gene_name"),
+  key = NULL,
+  fill_na = FALSE
+)
 }
 \arguments{
 \item{probes}{Character vector of probe IDs to convert.}

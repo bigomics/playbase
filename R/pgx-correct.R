@@ -1903,13 +1903,27 @@ superBC2 <- function(X, samples, y, batch = NULL,
 }
 
 #' @export
-limmaCorrect <- function(X, B, y = NULL, use.cov = FALSE) {
+limmaCorrect <- function(X, B, y = NULL, use.covariates = FALSE,
+                         auto.detect = FALSE) {
   cX <- X
   if (!is.null(y) && length(y)) {
     y[is.na(y)] <- "_"
   }
   if (is.null(ncol(B))) B <- cbind(B)
-  if (use.cov) {
+  if(!is.null(y) && auto.detect) {
+    pars <- get_model_parameters(X, B, pheno = y, contrasts = NULL)
+    batch.pars <- pars$batch.pars
+    batch.pars <- intersect(batch.pars, colnames(B))
+    if (!is.null(batch.pars) && length(batch.pars)) {
+      message("auto-correcting for: ", paste(batch.pars,collapse=" "))
+      B <- B[, batch.pars, drop = FALSE]
+    } else {
+      B <- NULL
+    }
+  }
+  if(is.null(B)) return(X)
+
+  if (use.covariates) {
     modB <- c()
     for (i in 1:ncol(B)) {
       b <- B[, i]
@@ -1931,9 +1945,22 @@ limmaCorrect <- function(X, B, y = NULL, use.cov = FALSE) {
 }
 
 #' @export
-combatCorrect <- function(X, B, y = NULL) {
+combatCorrect <- function(X, B, y = NULL, auto.detect = FALSE) {
   cX <- X
   if (is.null(ncol(B))) B <- cbind(B)
+  if(!is.null(y) && auto.detect) {
+    pars <- get_model_parameters(X, B, pheno = y, contrasts = NULL)
+    batch.pars <- pars$batch.pars
+    batch.pars <- intersect(batch.pars, colnames(B))
+    if (!is.null(batch.pars) && length(batch.pars)) {
+      message("auto-correcting for: ", paste(batch.pars,collapse=" "))
+      B <- B[, batch.pars, drop = FALSE]
+    } else {
+      B <- NULL
+    }
+  }
+  if(is.null(B)) return(X)
+  
   mod <- NULL
   if (!is.null(y) && length(y)) {
     y[is.na(y)] <- "_"
@@ -2399,14 +2426,16 @@ bbknn <- function(data_matrix, batch, pca = TRUE, compute_pca = "python", nPcs =
 #'
 #' @export
 nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TRUE,
-                       knn = 1, sdtop = 2000, return.B = FALSE,
-                       use.design = TRUE, use.cov = FALSE) {
+                       knn = 2, sdtop = 2000, return.B = FALSE,
+                       use.design = TRUE, use.covariates = FALSE) {
   ## Nearest-neighbour matching for batch correction. This
   ## implementation creates a fully paired dataset with nearest
   ## matching neighbours when pairs are missing.
 
   ## use.design=TRUE;dist.method="cor";center.x=TRUE;center.m=TRUE;sdtop=1000;knn=2
 
+  knn <- ifelse(ncol(X) <= 3, 1, knn)
+  
   ## compute distance matrix for NNM-pairing
   y1 <- paste0("y=", y)
   dX <- X
@@ -2464,21 +2493,21 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
 
   ## remove pairing effect
   message("[nnmCorrect] correcting for pairing effects...")
-  if (use.cov == FALSE) {
-    design <- stats::model.matrix(~full.y)
-    if (!use.design) design <- matrix(1, ncol(full.X), 1)
-    full.X <- limma::removeBatchEffect(
-      full.X,
-      batch = full.pairs,
-      design = design
-    )
-  } else {
+  if (use.covariates) {
     V <- model.matrix(~ 0 + full.pairs)
     design <- stats::model.matrix(~full.y)
     if (!use.design) design <- matrix(1, ncol(full.X), 1)
     full.X <- limma::removeBatchEffect(
       full.X,
       covariates = scale(V),
+      design = design
+    )
+  } else {
+    design <- stats::model.matrix(~full.y)
+    if (!use.design) design <- matrix(1, ncol(full.X), 1)
+    full.X <- limma::removeBatchEffect(
+      full.X,
+      batch = full.pairs,
       design = design
     )
   }

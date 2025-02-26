@@ -293,19 +293,44 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   if (!is.null(custom)) {
     message("[ngs.fitContrastsWithAllMethods] adding custom results table")
     if (is.null(custom.name)) custom.name <- "custom"
-    if (!all(c("tables", "expr") %in% names(custom))) {
-      stop("custom must have 'tables' and 'expr'")
+    if (length(outputs) == 0) {
+      compare_output <- ngs.fitContrastsWithTTEST(
+        X, contr.matrix, design,
+        method = "equalvar",
+        conform.output = conform.output
+      )
+    } else {
+      compare_output <- outputs[[1]]
     }
-    need.tests <- names(outputs[[1]]$tables)
-
-    if (!all(need.tests %in% names(custom$tables))) {
-      stop("custom must include tables: ", paste(need.tests, collapse = " "))
+    test_names <- unique(sub("\\..*", "", colnames(custom)))
+    test_names <- test_names[match(names(compare_output$tables), test_names)]
+    custom_tables <- list()
+    for(test in test_names) {
+      logFC_col <- paste0(test, ".logFC")
+      pval_col <- paste0(test, ".P.Value")
+      adjp_col <- paste0(test, ".adj.P.Val")
+      test_df <- data.frame(
+        logFC = custom[, logFC_col],
+        P.Value = custom[, pval_col],
+        adj.P.Val = custom[, adjp_col]
+      )
+      rownames(test_df) <- rownames(custom)
+      custom_tables[[test]] <- test_df
     }
-    need.cols <- c("external_gene_name", "AveExpr", "adj.P.Val", "P.Value", "logFC")
-    if (!all(need.cols %in% names(custom$tables[[1]]))) {
-      stop("custom tables must include columns: ", paste(need.cols, collapse = " "))
+    custom <- custom_tables
+    missing_rows <- rownames(compare_output$tables[[1]])[which(!rownames(compare_output$tables[[1]]) %in% rownames(custom[[1]]))]
+    if (length(missing_rows) > 0) {
+      missing_data <- matrix(NA,
+                            nrow = length(missing_rows),
+                            ncol = ncol(custom[[1]]),
+                            dimnames = list(missing_rows, colnames(custom[[1]])))
+      for (test in names(custom)) {
+        custom[[test]] <- rbind(custom[[test]], missing_data)
+        custom[[test]] <- custom[[test]][rownames(compare_output$tables[[1]]), ]
+      }
     }
-    outputs[[custom.name]] <- custom
+    outputs[[custom.name]]$tables <- custom
+    timings[["custom"]] <- system.time(0)
   }
 
   ## ----------------------------------------------------------------------
@@ -477,7 +502,9 @@ ngs.fitContrastsWithAllMethods <- function(counts,
 
 #' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using t-test
 #' @export
-ngs.fitContrastsWithTTEST <- function(X, contr.matrix, design, method = "welch",
+ngs.fitContrastsWithTTEST <- function(X,
+                                      contr.matrix,
+                                      design, method = "welch",
                                       conform.output = 0) {
   tables <- list()
   i <- 1
@@ -514,17 +541,21 @@ ngs.fitContrastsWithTTEST <- function(X, contr.matrix, design, method = "welch",
 
 #' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using LIMMA differential expression analysis on count data.
 #' @export
-ngs.fitContrastsWithLIMMA <- function(X, contr.matrix, design, method = c("voom", "limma"),
-                                      trend = TRUE, robust = TRUE, prune.samples = FALSE,
-                                      conform.output = FALSE, plot = FALSE) {
+ngs.fitContrastsWithLIMMA <- function(X,
+                                      contr.matrix,
+                                      design,
+                                      method = c("voom", "limma"),
+                                      trend = TRUE,
+                                      robust = TRUE,
+                                      prune.samples = FALSE,
+                                      conform.output = FALSE,
+                                      plot = FALSE) {
   ## Do not test features with full missingness.
   ## Put them back in the TopTable
-  X0 <- X
-  nas <- apply(X, 1, function(x) sum(is.na(x)))
-  Ex <- names(nas)[which(nas == ncol(X))]
-  keep <- names(nas)[which(nas != ncol(X))]
-  if (length(Ex) > 0) X <- X[keep, ]
-
+  if (!is.null(X)) {
+    X <- X[which(rowMeans(is.na(X)) < 1), ]
+  }
+  
   design
   method <- method[1]
 
@@ -622,9 +653,16 @@ ngs.fitContrastsWithLIMMA <- function(X, contr.matrix, design, method = c("voom"
 
 #' @describeIn ngs.fitContrastsWithAllMethods Fit contrasts with EdgeR
 #' @export
-ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
-                                      method = c("qlf", "lrt"), prune.samples = FALSE, X = NULL,
-                                      conform.output = FALSE, robust = TRUE, plot = TRUE) {
+ngs.fitContrastsWithEDGER <- function(counts,
+                                      group,
+                                      contr.matrix,
+                                      design,
+                                      method = c("qlf", "lrt"),
+                                      prune.samples = FALSE,
+                                      X = NULL,
+                                      conform.output = FALSE,
+                                      robust = TRUE,
+                                      plot = TRUE) {
   method <- method[1]
 
   exp0 <- contr.matrix
@@ -729,8 +767,13 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
 
 #' @describeIn ngs.fitContrastsWithAllMethods contrasts with EdgeR without a design
 #' @export
-.ngs.fitContrastsWithEDGER.nodesign <- function(dge, contr.matrix, method = c("qlf", "lrt"), X = NULL,
-                                                conform.output = FALSE, robust = TRUE, plot = TRUE) {
+.ngs.fitContrastsWithEDGER.nodesign <- function(dge,
+                                                contr.matrix,
+                                                method = c("qlf", "lrt"),
+                                                X = NULL,
+                                                conform.output = FALSE,
+                                                robust = TRUE,
+                                                plot = TRUE) {
   ## With no design matrix, we must do EdgeR per contrast
   ## one-by-one. Warning this can become very slow.
 
@@ -803,9 +846,14 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
 
 #' @describeIn ngs.fitContrastsWithAllMethods Fit contrasts with EdgeR without a design matrix
 #' @export
-.ngs.fitContrastsWithEDGER.nodesign.pruned <- function(counts, contr.matrix, group = NULL,
-                                                       method = c("qlf", "lrt"), X = NULL,
-                                                       conform.output = FALSE, robust = TRUE, plot = TRUE) {
+.ngs.fitContrastsWithEDGER.nodesign.pruned <- function(counts,
+                                                       contr.matrix,
+                                                       group = NULL,
+                                                       method = c("qlf", "lrt"),
+                                                       X = NULL,
+                                                       conform.output = FALSE,
+                                                       robust = TRUE,
+                                                       plot = TRUE) {
   ## With no design matrix, we must do EdgeR per contrast
   ## one-by-one. Warning this can become very slow.
 
@@ -815,8 +863,6 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
   i <- 1
   for (i in 1:NCOL(contr.matrix)) {
     kk <- which(!is.na(contr.matrix[, i]) & contr.matrix[, i] != 0)
-
-
     counts1 <- counts[, kk, drop = FALSE]
     X1 <- NULL
     if (!is.null(X)) {
@@ -892,8 +938,14 @@ ngs.fitContrastsWithEDGER <- function(counts, group, contr.matrix, design,
 #' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using DESeq2 differential expression
 #' analysis on count data
 #' @export
-ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
-                                        X = NULL, genes = NULL, test = "Wald", prune.samples = FALSE,
+ngs.fitConstrastsWithDESEQ2 <- function(counts,
+                                        group,
+                                        contr.matrix,
+                                        design,
+                                        X = NULL,
+                                        genes = NULL,
+                                        test = "Wald",
+                                        prune.samples = FALSE,
                                         conform.output = FALSE) {
   exp0 <- contr.matrix
   if (!is.null(design)) exp0 <- design %*% contr.matrix
@@ -961,11 +1013,9 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
   }
 
   ## we add the gene annotation here (not standard...)
-  #
   if (!is.null(genes)) SummarizedExperiment::rowData(dds)$genes <- genes ## does this work??
 
   ## logCPM for calculating means
-  #
   if (is.null(X)) X <- edgeR::cpm(counts, log = TRUE)
   dim(X)
   exp.matrix <- contr.matrix
@@ -1014,14 +1064,16 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts, group, contr.matrix, design,
 
 #' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using DESeq2 differential expression
 #' @export
-.ngs.fitConstrastsWithDESEQ2.nodesign <- function(counts, contr.matrix, test = "Wald",
+.ngs.fitConstrastsWithDESEQ2.nodesign <- function(counts,
+                                                  contr.matrix,
+                                                  test = "Wald",
                                                   prune.samples = FALSE,
-                                                  conform.output = FALSE, X = NULL) {
+                                                  conform.output = FALSE,
+                                                  X = NULL) {
   counts <- round(counts)
-  #
-  if (is.null(X)) {
-    X <- edgeR::cpm(counts, log = TRUE)
-  }
+  
+  if (is.null(X)) X <- edgeR::cpm(counts, log = TRUE)
+
   if (nrow(contr.matrix) != ncol(X)) {
     stop("ngs.fitConstrastsWithDESEQ2.nodesign:: contrast matrix must be by sample")
   }

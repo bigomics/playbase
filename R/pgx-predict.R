@@ -3,271 +3,188 @@
 ## Copyright (c) 2018-2023 BigOmics Analytics SA. All rights reserved.
 ##
 
-## ----------------------------------------------------------------------
-## mixOmics related functions
-## ----------------------------------------------------------------------
-
-
-#' @title Create Hive Plot for mixed network
-#'
-#' @param res Input data
-#' @param ngs NGS object containing expression data
-#' @param ct Contrast name or column in \code{ngs$samples} to use for node coloring
-#' @param showloops Whether to show looping edges
-#' @param numlab Number of node labels to show
-#' @param cex Label size scaling factor
-#'
-#' @return Hive plot object
-#'
-#' @description Creates a Hive Plot to visualize a mixed gene-gene set network.
-#'
-#' @details  It extracts the network graph and formats it into a Hive Plot layout.
-#'
-#' Node importance scores are extracted from the NGS object based on the specified \code{ct} contrast.
-#' These scores are used to determine node sizes in the plot.
-#'
-#' The number of node labels can be reduced by setting \code{numlab} to avoid overplotting.
-#'
-#' @export
-mixHivePlot <- function(res, ngs, ct, showloops = FALSE, numlab = 6, cex = 1) {
-  cat("<mixHivePlot> called\n")
-  if (is.null(showloops)) showloops <- FALSE
-
-  gr <- res$graph
-
-  ## -------------------------------------------------------------
-  ## Prepare the HivePlot data
-  ## -------------------------------------------------------------
-  df <- data.frame(res$edges)
-  hpd <- edge2HPD(df, axis.cols = rep("grey", 3))
-
-  hpd$edges$looping <- res$edges$looping
-  hpd$edges$weight <- res$edges$importance
-  loop.nodes <- unique(
-    c(
-      as.character(res$edges$from)[res$edges$looping],
-      as.character(res$edges$to)[res$edges$looping]
-    )
-  )
-  hpd$nodes$looping <- hpd$nodes$lab %in% loop.nodes
-  hpd <- mineHPD(hpd, option = "rad <- tot.edge.count")
-  hpd$nodes$degree <- hpd$nodes$radius
-  hpd$edges$from <- hpd$nodes$lab[hpd$edges$id1]
-  hpd$edges$to <- hpd$nodes$lab[hpd$edges$id2]
-
-  if (is.null(ct) || is.null(ngs)) {
-    fx <- tapply(igraph::V(gr)$importance, sub(".*:", "", igraph::V(gr)$name), max)
-  } else if (ct %in% names(ngs$gx.meta$meta)) {
-    ## use fold change as radial layout
-    fc <- ngs$gx.meta$meta[[ct]]$meta.fx
-    names(fc) <- rownames(ngs$gx.meta$meta[[ct]])
-    gs <- ngs$gset.meta$meta[[ct]]$meta.fx
-    names(gs) <- rownames(ngs$gset.meta$meta[[ct]])
-    fc <- fc / max(abs(fc), na.rm = TRUE)
-    gs <- gs / max(abs(gs), na.rm = TRUE)
-    fx <- c(fc, gs)
-  } else if (ct %in% colnames(ngs$samples)) {
-    group <- ngs$samples[, ct]
-
-    design <- stats::model.matrix(~ 0 + group)
-    colnames(design) <- sub("group", "", colnames(design))
-    fit <- limma::eBayes(limma::lmFit(ngs$X, design))
-    stat <- limma::topTable(fit, number = Inf)
-    fx <- stat$F
-    names(fx) <- rownames(ngs$X)
-  } else {
-    stop("FATAL:: mixHivePlot: unknown contrast/conditions=", ct, "\n")
-  }
-
-  fx <- fx / max(abs(fx), na.rm = TRUE)
-  g <- sub("[1-9]:", "", hpd$nodes$lab)
-  hpd$nodes$radius <- rank(fx[g], na.last = "keep")
-  hpd$nodes$radius <- 100 * hpd$nodes$radius / max(hpd$nodes$radius, na.rm = TRUE)
-
-  maxgrp <- unlist(lapply(res$W, function(w) max.col(w)))
-
-  names(maxgrp) <- as.vector(sapply(res$W, rownames))
-
-  ## use importance as node size
-  importance <- igraph::V(gr)$importance
-  names(importance) <- igraph::V(gr)$name
-
-  hpd$nodes$size <- abs(importance[hpd$nodes$lab])
-  hpd$nodes$size <- 1.6 * (hpd$nodes$size / max(hpd$nodes$size))**0.5
-  hpd$nodes$axis <- as.integer(sub(":.*", "", hpd$nodes$lab))
-  hpd$nodes$color <- c("red3", "blue2")[1 + 1 * (fx[g] > 0)]
-  wt1 <- hpd$edges$weight ## edge.importance
-  wt1 <- rank(abs(wt1), na.last = "keep") * sign(wt1)
-  hpd$edges$weight <- 3 * abs(wt1 / max(abs(wt1)))**2
-  hpd$edges$color <- psych::alpha("grey70", 0.3)
-
-  jj <- which(hpd$edges$looping)
-  if (showloops && length(jj)) {
-    hpd$edges[jj, ]
-    hpd$edges$color <- psych::alpha("grey70", 0.2)
-    hpd$edges$color[jj] <- psych::alpha("red3", 0.3)
-  }
-
-  axis.names <- names(res$X)
-  makeAcronym <- function(x) {
-    x <- gsub("[)(]", "", x)
-    sapply(strsplit(x, split = "[_ -]"), function(s) {
-      if (length(s) == 1) {
-        return(substring(s, 1, 2))
-      }
-      toupper(paste(substring(s, 1, 1), collapse = ""))
-    })
-  }
-  axis.names <- sapply(names(res$X), makeAcronym) ## see pgx-functions
-
-  ## -------------------------------------------------------------
-  ## Finally do the plotting
-  ## -------------------------------------------------------------
-  hpd$nodes$size <- cex * hpd$nodes$size
-  hpd$edges$weight <- cex * hpd$edges$weight
-  mr <- max(hpd$nodes$radius)
-  plotHive(hpd,
-    ch = 5, bkgnd = "white",
-    axLabs = axis.names,
-    axLab.pos = c(1, 1.2, 1.2) * 0.15 * mr, #
-
-    axLab.gpar = grid::gpar(
-      col = "black", fontsize = 18 * cex,
-      lwd = 4, fontface = "bold"
-    )
-  )
-
-  tt <- paste("edge.width = edge.importance",
-    "node.size = variable importance",
-    "axis = fold-change or F-stat",
-    sep = "\n"
-  )
-  grid::grid.text(tt,
-    x = 0.2 * mr, y = -1.0 * mr, default.units = "native",
-    just = "left", gp = grid::gpar(fontsize = 9, col = "black")
-  )
-
-  ## axis 1
-  rot.xy <- function(x, y, deg) {
-    a <- deg * pi / 180
-    rx <- cos(a) * x - sin(a) * y
-    ry <- sin(a) * x + cos(a) * y
-    cbind(rx, ry)
-  }
-  rot <- c(0, 120, 240)
-  mr <- max(hpd$nodes$radius)
-  yoff <- c(0, -0, +0)
-
-  k <- 1
-  for (k in 1:3) {
-    kk <- which(hpd$nodes$axis == k)
-    if (showloops) {
-      kk <- which(hpd$nodes$axis == k & hpd$nodes$looping)
-    }
-    jj <- Matrix::head(kk[order(-hpd$nodes$size[kk])], numlab) ## number of labels
-    rr <- hpd$nodes$radius
-    rx <- rot.xy(0, rr[jj] + 5, rot[k])
-
-
-    lab <- sub(".*:", "", hpd$nodes$lab[jj])
-    ##    pt <- maptools::pointLabel(rx[, 1], rx[, 2], labels = lab, cex = cex * 2, doPlot = FALSE)
-    ##    px <- cbind(pt$x, pt$y)
-    px <- cbind(rx[, 1], rx[, 2])
-    px[, 1] <- px[, 1] + 4
-    grid::grid.text(lab,
-      ## x = 10 + rx[,1], y = rx[,2],
-      x = px[, 1], y = px[, 2],
-      default.units = "native", just = "left",
-      gp = grid::gpar(fontsize = 12 * cex, col = "black")
-    )
-
-    grid::grid.segments(rx[, 1], rx[, 2], px[, 1] - 1, px[, 2],
-      default.units = "native"
-    )
-  }
-}
-
-#' @describeIn mixHivePlot function generates a hive plot visualization of variable loadings
-#' from a lmer model result object.
-#' @export
-mixPlotLoadings <- function(res, showloops = FALSE, cex = 1) {
-  cat("<mixPlotLoadings> called\n")
-  levels <- levels(res$Y)
-  ny <- length(levels)
-  klrpal <- c("blue2", "orange2")
-  klrpal <- rep(RColorBrewer::brewer.pal(n = 8, "Set2"), 10)[1:ny]
-
-  names(klrpal) <- levels
-
-  plotly::layout(matrix(1:6, 1, 6), widths = c(1, 0.5, 1, 0.5, 1, 0.5))
-  k <- 1
-  for (k in 1:3) {
-    W <- res$W[[k]]
-    graphics::par(mar = c(5, 8 * cex, 4, 0), mgp = c(2.2, 0.8, 0))
-    graphics::barplot(t(W),
-      horiz = TRUE, las = 1,
-      border = NA, col = klrpal,
-      names.arg = sub(".*:", "", rownames(W)),
-      xlim = c(0, 1.1) * max(rowSums(W, na.rm = TRUE)),
-      cex.axis = 1 * cex, cex.names = 1.1 * cex,
-      cex.lab = 1 * cex, xlab = "importance"
-    )
-    graphics::title(names(res$loadings)[k],
-      cex.main = 1.3 * cex,
-      adj = 0.33, xpd = NA
-    )
-    graphics::legend("topright",
-      legend = names(klrpal),
-      cex = 1.1 * cex, pch = 15, col = klrpal, #
-      y.intersp = 0.85, inset = c(0.15, 0.03)
-    )
-
-    if (k < 99) {
-      ## add correlation lines
-      graphics::par(mar = c(5, 0, 4, 0))
-
-      plot(0,
-        type = "n", xlim = c(0, 1), ylim = c(0, nrow(W)),
-        xaxt = "n", yaxt = "n", bty = "n", xlab = ""
-      )
-
-      g1 <- rownames(res$W[[k]])
-      g2 <- rownames(res$W[[ifelse(k < 3, k + 1, 1)]])
-
-      sel <- which(res$edges[, "from"] %in% c(g1, g2) &
-        res$edges[, "to"] %in% c(g1, g2))
-      sel
-      ee <- res$edges[sel, ]
-      ii <- apply(ee[, 1:2], 1, function(e) which(e %in% g1))
-      jj <- apply(ee[, 1:2], 1, function(e) which(e %in% g2))
-      ee$from <- res$edges[sel, ][cbind(1:nrow(ee), ii)]
-      ee$to <- res$edges[sel, ][cbind(1:nrow(ee), jj)]
-
-
-      lwd <- ee$importance
-
-      lwd <- rank(abs(lwd), na.last = "keep")**1.5
-      lwd <- 3.0 * cex * (lwd / max(lwd))
-      lty <- 1 + 1 * (sign(ee$rho) < 0)
-      xy <- cbind(match(ee$from, g1), match(ee$to, g2))
-      xy[, 2] <- (xy[, 2] - 0.5) / length(g2) * length(g1)
-      klr <- rep(psych::alpha("grey70", 0.3), nrow(ee))
-      if (showloops) {
-        klr <- rep(psych::alpha("grey70", 0.2), nrow(ee))
-        klr[which(ee$looping)] <- psych::alpha("red3", 0.3)
-      }
-      graphics::segments(0, xy[, 1] - 0.5, 1, xy[, 2], lwd = lwd, col = klr, lty = lty)
-      rr <- paste(round(range(abs(ee$rho)), 2), collapse = ",")
-
-      graphics::title(sub = paste0("[", rr, "]"), line = -1.2, cex.sub = cex)
-    }
-  }
-}
-
 
 ## ----------------------------------------------------------------------
 ## Variable importance functions
 ## ----------------------------------------------------------------------
+
+#' Main compute driver function. Compute variable importance for one
+#' specific contrast.
+#'
+#' @export
+pgx.compute_importance <- function(pgx, pheno, level="genes",
+                                   filter_features = NULL,
+                                   select_features = NULL,
+                                   select_samples = NULL,
+                                   nfeatures = 60,
+                                   multiomics = NULL,
+                                   do.survival=FALSE) {
+
+  if(0) {
+    level="genes"
+    filter_features = NULL
+    select_features = NULL
+    select_samples = NULL
+    nfeatures = 60
+    multiomics = NULL
+  }
+  
+  ft <- ifelse(is.null(filter_features), "<all>", filter_features)
+  sel <- select_features
+  
+  if (!(pheno %in% colnames(pgx$samples))) {
+    message("ERROR. pheno not in pgx$samples")
+    return(NULL)
+  }
+
+  ## WARNING. this converts any phenotype to discrete
+  y0 <- as.character(pgx$samples[, pheno])  
+  names(y0) <- rownames(pgx$samples)
+
+  if(!is.null(select_samples)) {
+    y0 <- y0[names(y0) %in% select_samples]
+  }
+  y <- y0[!is.na(y0)]
+  
+  ## augment to at least 100 samples per level :)
+  ii <- tapply(1:length(y), y, function(ii)
+    sample(c(ii, ii), size = 100, replace = TRUE))
+  y <- y[unlist(ii)]
+  
+  ## -------------------------------------------
+  ## select features (augment if needed)
+  ## -------------------------------------------
+  if (FALSE && level == "geneset") {
+    X <- pgx$gsetX[, names(y)]
+    if (any(is.na(X))) {
+      X <- X[complete.cases(X), , drop = FALSE]
+    }
+  } else {
+    X <- pgx$X[, names(y)]
+    if (any(is.na(X))) {
+      X <- pgx$impX[, names(y)]
+    }
+  }
+  X0 <- X
+  
+  ## ----------- filter with selected features
+  info("[pgx.compute_importance] Filtering features...")
+  
+  is.family <- (ft %in% c(names(pgx$families), names(playdata::iGSETS)))
+  if (ft == "<custom>" && !is.null(sel) && length(sel) > 0) {
+    ## ------------- filter with user selection
+    if (sel[1] != "") {
+      pp <- rownames(X)[which(toupper(rownames(X)) %in% toupper(sel))]
+      X <- X[pp, , drop = FALSE]
+    }
+  } else if (is.family) {
+    pp <- rownames(X)
+    if (ft %in% names(pgx$families)) {
+      gg <- pgx$families[[ft]]
+      pp <- playbase::filterProbes(pgx$genes, gg)
+    } else if (ft %in% names(playdata::iGSETS)) {
+      gg <- unlist(playdata::getGSETS(ft))
+      pp <- playbase::filterProbes(pgx$genes, gg)
+    }
+    pp <- intersect(pp, rownames(X))
+    X <- X[pp, , drop = FALSE]
+  }
+  
+  ## ----------- restrict to top SD -----------
+  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+  X <- head(X[order(-sdx), , drop = FALSE], 10 * nfeatures) ## top 100
+
+  ## add some noise
+  sdx0 <- matrixStats::rowSds(X, na.rm = TRUE)
+  sdx1 <- 0.5 * sdx0 + 0.5 * mean(sdx0, na.rm = TRUE)
+  X <- X + 0.25 * sdx1 * matrix(rnorm(length(X)), nrow(X), ncol(X)) 
+
+  ## -------------------------------------------
+  ## compute importance values
+  ## -------------------------------------------
+  if (do.survival) {
+    time <- abs(y)
+    status <- (y > 0) ## dead is positive time
+    methods <- c("glmnet", "randomforest", "xgboost", "pls")
+    message("Computing single-omics variable importance (surival)...")
+    P <- playbase::pgx.survivalVariableImportance(
+      X,
+      time = time,
+      status = status,
+      methods = methods
+    )
+  } else {
+    ## determine is dataset is multi-omics
+    has.colons <- all(grepl("[:]",rownames(pgx$X)))
+    has.colons
+    if(is.null(multiomics)) multiomics <- (pgx$datatype == "multi-omics" || has.colons)
+    if(multiomics && !has.colons) {
+      message("WARNING. multi-omics specified but no colons in features. doing mono-omics.")
+      multiomics <- FALSE
+    }
+
+    if(multiomics) {
+      ## compute variable importance for MULTI-OMICS. We need not to
+      ## use the augmented data.
+      kernels = c("mofa","pca","nmf","nmf2","mcia","wgcna","diablo","rgcca",
+                  "rgcca,rgcca","rgcca.rgccda", "rgcca.mcoa")
+      message("Computing multi-omics variable importance...")      
+      P <- pgx.compute_mofa_importance(
+        pgx, pheno, numfactors = 8, use.sdwt = TRUE, kernels=kernels)
+      dim(P)
+      X <- pgx$X
+      y <- pgx$samples[,pheno]
+      names(y) <- rownames(pgx$samples)
+    } else {
+      ## compute variable importance for SINGLE-OMICS. We use the
+      ## augmented data.
+      methods <- c("glmnet", "randomforest", "xgboost", "splsda",
+                   "correlation", "ftest")
+      X1 <- X
+      y1 <- y
+      names(y1) <- colnames(X1) <- paste0("x", 1:ncol(X))
+      message("Computing single-omics variable importance...")            
+      res <- playbase::pgx.variableImportance(
+        X1, y1,
+        methods = methods,
+        reduce = 1000,
+        resample = 0,
+        scale = FALSE,
+        add.noise = 0
+      )
+      remove(X1,y1)
+      P <- res$importance
+    }
+  }
+
+  ## normalize importance measures
+  P <- abs(P) ## sometimes negative according to sign  
+  P[is.na(P)] <- 0
+  P[is.nan(P)] <- 0
+
+  ## Convert to elevated rank. take top features
+  R <- P
+  if (nrow(R) > 1) {
+    R <- (apply(P, 2, rank) / nrow(P))**4  ## exponent???
+    R <- R[order(-rowSums(R, na.rm = TRUE)), , drop = FALSE]
+  }
+  sel <- head(rownames(R), nfeatures) ## top features
+  R <- R[sel,, drop = FALSE]
+  X <- X[sel, , drop = FALSE]
+
+  ## reduce R and y (from augmented set)
+  kk <- names(y)[which(!duplicated(names(y)))]
+  X <- X[,kk,drop=FALSE]
+  y <- y[kk]
+
+  ## make partition tree
+  rf <- makePartitionTree(X, y, add.splits = 0) 
+  
+  ##rf = NULL
+  res <- list(R = R, y = y, X = X, rf = rf)
+
+  return(res)
+}
 
 
 #' @title Variable importance for survival models
@@ -409,8 +326,12 @@ pgx.multiclassVariableImportance <- function(X, y, methods) {
   res$importance
 }
 
-#' @describeIn pgx.survivalVariableImportance Calculates variable importance scores for predictors of a multiclass response using various methods.
-#' @param y Multiclass factor response variable. Contains the class labels for each sample
+#' @describeIn pgx.survivalVariableImportance Calculates variable
+#'   importance scores for predictors of a multiclass response using
+#'   various methods.
+#'
+#' @param y Multiclass factor response variable. Contains the class
+#'   labels for each sample
 #' @export
 pgx.variableImportance <- function(X, y,
                                    methods = c(
@@ -418,7 +339,8 @@ pgx.variableImportance <- function(X, y,
                                      "xgboost", "splsda", "correlation", "ftest",
                                      "boruta", CARET.METHODS
                                    )[1:6],
-                                   scale = TRUE, reduce = 1000, resample = 0, add.noise = 0) {
+                                   scale = TRUE, reduce = 1000, resample = 0,
+                                   add.noise = 0) {
   ## variables
   imp <- list()
   runtime <- list()
@@ -674,37 +596,14 @@ plotImportance <- function(P, p.sign = NULL, top = 50, runtime = NULL) {
 }
 
 
-#' @export
-plotDecisionTreeFromImportance <- function(X, P, maxfeatures = 100, add.splits = 0) {
-  P <- abs(P) ## sometimes negative according to sign
-
-  P[is.na(P)] <- 0
-  P[is.nan(P)] <- 0
-  P <- t(t(P) / (1e-3 + apply(P, 2, max, na.rm = TRUE)))
-  P <- P[order(-rowSums(P, na.rm = TRUE)), , drop = FALSE]
-
-  R <- P
-  if (nrow(R) > 1) {
-    R <- (apply(P, 2, rank) / nrow(P))**4
-    R <- R[order(-rowSums(R, na.rm = TRUE)), , drop = FALSE]
-  }
-
-  ## ------------------------------
-  ## create partition tree
-  ## ------------------------------
-
-  R <- R[order(-rowSums(R, na.rm = TRUE)), , drop = FALSE]
-  sel <- head(rownames(R), maxfeatures) ## top50 features
-  tx <- t(X[sel, , drop = FALSE])
-
+makePartitionTree <- function(X, y, add.splits = 0) {
   ## formula wants clean names, so save original names
+  tx <- t(X)
   colnames(tx) <- gsub("[: +-.,]", "_", colnames(tx))
   colnames(tx) <- gsub("[')(]", "", colnames(tx))
   colnames(tx) <- gsub("\\[|\\]", "", colnames(tx))
-  orig.names <- sel
-  names(orig.names) <- colnames(tx)
-  jj <- names(y)
 
+  ## create partition tree
   do.survival <- FALSE
   if (do.survival) {
     time <- abs(y)
@@ -713,47 +612,65 @@ plotDecisionTreeFromImportance <- function(X, P, maxfeatures = 100, add.splits =
     rf <- rpart::rpart(survival::Surv(time, status) ~ ., data = df)
   } else {
     df <- data.frame(y = y, tx)
-    rf <- rpart::rpart(y ~ ., data = df)
+    ##rf <- rpart::rpart(y ~ ., data = df)
+    rf = rpart::rpart(y ~., data=df, method="class",
+                      control = rpart::rpart.control(minsplit=2, maxdepth=10))
   }
-  table(rf$where)
-  rf$cptable
-  rf$orig.names <- orig.names
-
+  rf$orig.names <- rownames(X)
+  names(rf$orig.names) <- colnames(tx)
+  
+  ## prune the tree
   rf.nsplit <- rf$cptable[, "nsplit"]
-  #  if (grepl("survival", ct)) {
-  #    MAXSPLIT <- 4 ## maximum five groups....
-  #  } else {
-  ## MAXSPLIT <- ceiling(1.5 * length(unique(y))) ## maximum N+1 groups
   MAXSPLIT <- length(unique(y)) + 1 + add.splits ## maximum N+1 groups
-  #  }
   if (max(rf.nsplit) > MAXSPLIT) {
     cp.idx <- max(which(rf.nsplit <= MAXSPLIT))
     cp0 <- rf$cptable[cp.idx, "CP"]
     rf <- rpart::prune(rf, cp = cp0)
   }
+  rf
+}
 
+
+#' @export
+plotDecisionTreeFromImportance <- function(imp, add.splits = 0, rf=NULL,
+                                           type=c("fancy","simple","extended")) {
+
+  if(is.null(imp) && is.null(rf)) {
+    message("ERROR: must provide imp or rf")
+    return(NULL)
+  }
+  
+  if(is.null(rf) && !is.null(imp)) {
+    kk <- which(!duplicated(names(imp$y)))
+    y <- imp$y[kk]
+    sel <- intersect(rownames(imp$X), rownames(imp$R))
+    X <- imp$X[sel, kk,  drop = FALSE]
+    rf <- makePartitionTree(X, y, add.splits = add.splits) 
+  } ## end-if-null rf
+
+  ## plot the tree
   is.surv <- grepl("Surv", rf$call)[2]
   is.surv
   if (is.surv) {
-    rf <- partykit::as.party(rf)
-    partykit::plot.party(rf)
+    pkrf <- partykit::as.party(rf)
+    partykit::plot.party(pkrf)
   } else {
-    ## rpart.plot::rpart.plot(rf)
-    rf <- partykit::as.party(rf)
-    is.multinomial <- length(table(y)) > 2
-    if (is.multinomial) {
-      ## plot(rf, type="extended")
-      plot(rf, type = "simple")
+    if(type == "fancy") {
+      ## rattle::fancyRpartPlot(rf, caption = NULL, type=4)
+      rpart.plot::rpart.plot(rf)
+    } else if (type %in% c("simple","extended")){
+      pk <- partykit::as.party(rf)
+      plot(pk, type = type)
     } else {
-      plot(rf, type = "simple")
+      message("[plotDecisionTreeFromImportance] ERROR. unknown type: ", type)
+      return(NULL)
     }
   }
+  
 }
 
 
 
-
-
-## =====================================================================================
-## =========================== END OF FILE =============================================
-## =====================================================================================
+## ===============================================================================
+## ===================== END OF FILE =============================================
+## ===============================================================================

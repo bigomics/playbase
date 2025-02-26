@@ -20,7 +20,7 @@ ngs.fitContrastsWithAllMethods(
   genes = NULL,
   prior.cpm = 1,
   cpm.scale = 1e+06,
-  prune.samples = FALSE,
+  prune.samples = TRUE,
   conform.output = TRUE,
   do.filter = TRUE,
   remove.batch = TRUE,

@@ -214,3 +214,19 @@ pgx.plotWordCloud <- function(pgx, contrast) {
     )
   ))
 }
+
+
+
+word.gsea <- function(terms) {
+  term.words <- strsplit(terms,split="[: _-]")
+  words <- unique(unlist(term.words))
+  term.rep <- mapply(rep, terms, sapply(term.words,length))
+  term.rep <- unlist(term.rep,use.names=FALSE)
+  word.gmt <- tapply(term.rep, unlist(term.words), list)
+  rnk <- length(terms):1
+  names(rnk) <- terms
+  res <- fgsea::fgsea(word.gmt, rnk)
+  res <- res[order(res$pval),]
+  head(res)
+  
+}

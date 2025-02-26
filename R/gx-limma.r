@@ -95,11 +95,15 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
   ref <- toupper(ref)
 
   is.ref <- (toupper(pheno0) %in% toupper(ref))
+  is.ref2 <- grepl(paste(paste0("^",ref),collapse="|"),pheno0,ignore.case=TRUE)  
+  if(!any(is.ref) && !all(is.ref2)) {
+    is.ref <- is.ref2
+  }
   ref.detected <- (sum(is.ref) > 0 && sum(!is.ref) > 0)
   ref.detected
 
   if (ref.detected) {
-    pheno.ref <- unique(pheno0[which(toupper(pheno0) %in% toupper(ref))])
+    pheno.ref <- unique(pheno0[is.ref])
     if (verbose > 0) cat("setting reference to y=", pheno.ref, "\n")
     levels <- c(pheno.ref, sort(setdiff(unique(pheno0), pheno.ref)))
   } else {
@@ -151,8 +155,10 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
   top <- top[rownames(X0), ]
 
   ## only significant
-  top <- top[which(top$adj.P.Val <= fdr & abs(top$logFC) >= lfc), ]
-  if (verbose > 0) cat("found", nrow(top), "significant at fdr=", fdr, "and minimal FC=", lfc, "\n")
+  if(!is.null(fdr) && !is.null(lfc)) {
+    top <- top[which(top$adj.P.Val <= fdr & abs(top$logFC) >= lfc), ]
+    if (verbose > 0) cat("found", nrow(top), "significant at fdr=", fdr, "and minimal FC=", lfc, "\n")
+  }
 
   if (compute.means && nrow(top) > 0) {
     avg <- t(apply(

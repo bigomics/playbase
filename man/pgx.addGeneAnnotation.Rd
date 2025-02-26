@@ -4,14 +4,14 @@
 \alias{pgx.addGeneAnnotation}
 \title{Retrieve gene annotation table}
 \usage{
-pgx.addGeneAnnotation(pgx, organism = NULL, annot_table = NULL)
+pgx.addGeneAnnotation(pgx, annot_table = NULL)
 }
 \arguments{
 \item{pgx}{PGX object with a counts table.}
 
-\item{organism}{Char. Organism name. For more info see \code{\link{playbase::SPECIES_TABLE}}.}
-
 \item{annot_table}{Custom annotation table. See \code{\link{playbase::pgx.custom_annotation}}.}
+
+\item{organism}{Char. Organism name. For more info see \code{\link{playbase::SPECIES_TABLE}}.}
 }
 \value{
 Updated PGX object with gene annotation table

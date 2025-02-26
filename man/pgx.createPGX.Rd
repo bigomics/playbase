@@ -15,7 +15,7 @@ pgx.createPGX(
   annot_table = NULL,
   max.genesets = 5000,
   name = "Data set",
-  datatype = "unknown",
+  datatype = "RNA-seq",
   probe_type = NULL,
   creator = "unknown",
   description = "No description provided.",
@@ -29,10 +29,12 @@ pgx.createPGX(
   prune.samples = FALSE,
   only.known = TRUE,
   only.hugo = TRUE,
-  convert.hugo = TRUE,
+  convert.hugo = FALSE,
   only.proteincoding = TRUE,
   remove.xxl = TRUE,
-  remove.outliers = TRUE
+  remove.outliers = TRUE,
+  add.gmt = TRUE,
+  settings = list()
 )
 }
 \arguments{
