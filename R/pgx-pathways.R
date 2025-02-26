@@ -136,22 +136,38 @@ pathbankview <- function(pb, val, as.img=FALSE, large_font=TRUE) {
   # Find nodes
   g_nodes <- xml_find_all(doc, ".//g")
   g_nodes_labels <- xml_attr(g_nodes, "data-element-id")
+  g_nodes_types <- xml_attr(g_nodes, "data-element-type")
 
-  # Find the 'rect' childs nodes of the g_nodes
-  rect_nodes <- xml_find_first(g_nodes, ".//circle")
+  # Find the 'rect' and 'circle' childs nodes of the g_nodes
+  circle_nodes <- xml_find_first(g_nodes, ".//circle")
+  tspan_nodes <- xml_find_first(g_nodes, ".//tspan")[which(g_nodes_types == "protein")]
+  tspan_label <- xml_text(tspan_nodes)
+  rect_nodes <- xml_find_first(xml2::xml_parent(xml2::xml_parent(tspan_nodes)), ".//rect")
 
   if (!is.null(val)) {
     if (sum(names(val) %in% g_nodes_labels) > 0) {
+      # Circles (metabolites)
       found_indexes <- which(g_nodes_labels %in% names(val))
       g_nodes_labels <- g_nodes_labels[found_indexes]
-      rect_nodes <- rect_nodes[found_indexes]
-      val <- val[g_nodes_labels]
-      rr <- as.character(round(66 * pmin(1, abs(val / 2.0))**0.5))
+      circle_nodes <- circle_nodes[found_indexes]
+      val_circle <- val[g_nodes_labels]
+      rr <- as.character(round(66 * pmin(1, abs(val_circle / 2.0))**0.5))
       rr <- stringr::str_pad(rr, width = 2, pad = "0")
-      colors <- ifelse(val > 0, paste0("#ff0000", rr), paste0("#0055ff", rr))
+      colors <- ifelse(val_circle > 0, paste0("#ff0000", rr), paste0("#0055ff", rr))
+      xml_attr(circle_nodes, "fill") <- colors
+      # Rects (proteins)
+      found_indexes <- which(paste0("px:", tspan_label) %in% names(val))
+      tspan_label <- tspan_label[found_indexes]
+      rect_nodes <- rect_nodes[found_indexes]
+      val_rect <- val[paste0("px:", tspan_label)]
+      rr <- as.character(round(66 * pmin(1, abs(val_rect / 2.0))**0.5))
+      rr <- stringr::str_pad(rr, width = 2, pad = "0")
+      colors <- ifelse(val_rect > 0, paste0("#ff0000", rr), paste0("#0055ff", rr))
       xml_attr(rect_nodes, "fill") <- colors
     }
   }
+
+  # rect_nodes <- xml_find_first(g_nodes, ".//circle")
 
   write_xml(doc, destfile)
 
