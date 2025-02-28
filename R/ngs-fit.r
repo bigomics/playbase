@@ -40,7 +40,8 @@
 #' @param correct.AveExpr Whether to correct for average expression. Default is TRUE.
 #' @param custom Custom differential expression method. Default is NULL.
 #' @param custom.name Name for custom method. Default is NULL.
-#' @param time time character vector to be passed for time series analysis. Default is NULL.
+#' @param timeseries.methods Stat methods for time series DGE analysis. Default NULL.
+#' @param time time character vector to be passed for time series analysis. Default NULL.
 #'
 #' @details This function provides a convenient wrapper to run multiple differential expression methods on the same data.
 #' It runs the methods specified in \code{methods} on the provided count data and design.
@@ -74,6 +75,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
                                            correct.AveExpr = TRUE,
                                            custom = NULL,
                                            custom.name = NULL,
+                                           timeseries.methods = NULL,
                                            time = NULL) {
   ## --------------------------------------------------------------
   ## Run all tests on raw counts
@@ -178,7 +180,8 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         X, contr.matrix, design,
         method = "limma", trend = TRUE,
         prune.samples = prune.samples,
-        conform.output = conform.output, plot = FALSE, time = time
+        conform.output = conform.output, plot = FALSE,
+        timeseries.methods = timeseries.methods, time = time
       )
     )
     timings[["trend.limma"]] <- round(as.numeric(tt), digits = 4)
@@ -190,7 +193,8 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         X, contr.matrix, design,
         method = "limma", trend = FALSE,
         prune.samples = prune.samples,
-        conform.output = conform.output, plot = FALSE, time = time
+        conform.output = conform.output, plot = FALSE,
+        timeseries.methods = timeseries.methods, time = time
       )
     )
   }
@@ -207,7 +211,8 @@ ngs.fitContrastsWithAllMethods <- function(counts,
           X, contr.matrix, design,
           method = "voom",
           prune.samples = prune.samples,
-          conform.output = conform.output, plot = FALSE, time = time
+          conform.output = conform.output, plot = FALSE,
+          timeseries.methods = timeseries.methods, time = time
         )
       )
     }
@@ -431,15 +436,19 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   sig.up <- lapply(1:ntest, function(i) {
     do.call(rbind, lapply(outputs, function(x) x$sig.counts[["up"]][i, ]))
   })
+
   sig.down <- lapply(1:ntest, function(i) {
     do.call(rbind, lapply(outputs, function(x) x$sig.counts[["down"]][i, ]))
   })
+
   sig.notsig <- lapply(1:ntest, function(i) {
     do.call(rbind, lapply(outputs, function(x) x$sig.counts[["notsig"]][i, ]))
   })
+
   sig.both <- lapply(1:ntest, function(i) {
     do.call(rbind, lapply(outputs, function(x) x$sig.counts[["both"]][i, ]))
   })
+
   names(P) <- names(Q) <- names(logFC) <- names(aveExpr) <- tests
   names(sig.up) <- names(sig.down) <- names(sig.both) <- names(sig.notsig) <- tests
   sig.counts <- list(up = sig.up, down = sig.down, both = sig.both, notsig = sig.notsig)
@@ -464,7 +473,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     pv <- pmax(pv, 1e-99)
     pv[is.na(pv)] <- 1
     qv[is.na(qv)] <- 1
-
 
     ## !!!!!!!!!!!!!!!!!!!!!!!! NEED RETHINK !!!!!!!!!!!!!!!!!!!!!!!!
     meta.p <- apply(pv, 1, function(p) exp(mean(log(p), na.rm = TRUE))) ## geometric mean
@@ -551,6 +559,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
                                       prune.samples = FALSE,
                                       conform.output = FALSE,
                                       plot = FALSE,
+                                      timeseries.methods = NULL,
                                       time = NULL) {
 
   LL <- list(X=X, contr.matrix=contr.matrix, design=design, method=method) 
@@ -616,7 +625,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
       y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
       X1 <- X[, kk, drop = FALSE]
 
-      if (!time.series) {
+      if (is.null(time)) {
         ##----------------NO DESIGN: NO time-series analysis
         design1 <- stats::model.matrix(~ 0 + y)
         if (method == "voom") {
@@ -635,8 +644,8 @@ ngs.fitContrastsWithLIMMA <- function(X,
         top <- limma::topTable(efit, coef = 1, sort.by = "none", number = Inf, adjust.method = "BH")
       } else {
         ##----------------NO DESIGN: time-series analysis
-        if (is.null(time))
-          stop("[ngs.fitContrastsWithLIMMA.timeseries] Variable 'time' is null.")
+        if (is.null(timeseries.methods))
+          stop("[ngs.fitContrastsWithLIMMA.timeseries] No methods for time series specified. Exiting time series.")
         top <- ngs.fitContrastsWithLIMMA.timeseries(X1, y, time, trend = TRUE)
       }
       
@@ -731,8 +740,11 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
       g=1
       for(g in 1:length(index)) {
         hh <- grep(index[g], colnames(top))
-        top0[, index[g]] <- apply(top[, hh], 1, function(x) max(abs(x), na.rm = TRUE))
-      }
+        if (!index[g] %in% c("P.Value", "adj.P.Val")) {
+          top0[, index[g]] <- apply(top[, hh], 1, function(x) max(abs(x), na.rm = TRUE))
+        } else {
+          top0[, index[g]] <- apply(top[, hh], 1, function(x) min(x, na.rm = TRUE))
+        }
       top <- top0
       rm(top0)
     }
