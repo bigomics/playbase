@@ -138,39 +138,58 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   nmissing <- sum(is.na(X))
 
   ## ---------------- t-Test methods -------------------
-  if ("ttest" %in% methods) {
-    message("[ngs.fitContrastsWithAllMethods] fitting using Student's t-test")
-    timings[["ttest"]] <- system.time(
-      outputs[["ttest"]] <- ngs.fitContrastsWithTTEST(
-        X, contr.matrix, design,
-        method = "equalvar",
-        conform.output = conform.output
+  ttest.mtds <- c("ttest", "ttest.rank", "ttest.welch")
+  test.mdls <- c("equalvar", "equalvar", "welch")
+  cm.mtds <- intersect(methods, ttest.mtds)
+  if (length(cm.mtds) > 0) {
+    i <- 1 
+    for(i in 1:length(cm.mtds)) {
+      X1 <- X
+      if (cm.mtds[i] == "ttest.rank")
+        X1 <- scale(apply(X1, 2, rank, na.last = "keep"))
+      mdl <- test.mdls[match(cm.mtds[i], ttest.mtds)]
+      message("[ngs.fitContrastsWithAllMethods] fitting using ", cm.mtds[i])
+      timings[[cm.mtds[i]]] <- system.time(
+        outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithTTEST(
+          X1, contr.matrix, design, method = mdl,
+          conform.output = conform.output
+        )
       )
-    )
+    }
   }
-
-  if ("ttest.rank" %in% methods) {
-    message("[ngs.fitContrastsWithAllMethods] fitting using t-test on ranks")
-    rX <- scale(apply(X, 2, rank, na.last = "keep"))
-    timings[["ttest.rank"]] <- system.time(
-      outputs[["ttest.rank"]] <- ngs.fitContrastsWithTTEST(
-        rX, contr.matrix, design,
-        method = "equalvar",
-        conform.output = conform.output
-      )
-    )
-  }
-
-  if ("ttest.welch" %in% methods) {
-    message("[ngs.fitContrastsWithAllMethods] fitting using Welch t-test")
-    timings[["ttest.welch"]] <- system.time(
-      outputs[["ttest.welch"]] <- ngs.fitContrastsWithTTEST(
-        X, contr.matrix, design,
-        method = "welch",
-        conform.output = conform.output
-      )
-    )
-  }
+  ## if ("ttest" %in% methods) {
+  ##   message("[ngs.fitContrastsWithAllMethods] fitting using Student's t-test")
+  ##   timings[["ttest"]] <- system.time(
+  ##     outputs[["ttest"]] <- ngs.fitContrastsWithTTEST(
+  ##       X, contr.matrix, design,
+  ##       method = "equalvar",
+  ##       conform.output = conform.output
+  ##     )
+  ##   )
+  ## }
+  ##--------------------------------
+  ## if ("ttest.rank" %in% methods) {
+  ##   message("[ngs.fitContrastsWithAllMethods] fitting using t-test on ranks")
+  ##   rX <- scale(apply(X, 2, rank, na.last = "keep"))
+  ##   timings[["ttest.rank"]] <- system.time(
+  ##     outputs[["ttest.rank"]] <- ngs.fitContrastsWithTTEST(
+  ##       rX, contr.matrix, design,
+  ##       method = "equalvar",
+  ##       conform.output = conform.output
+  ##     )
+  ##   )
+  ## }
+  ##--------------------------------
+  ## if ("ttest.welch" %in% methods) {
+  ##   message("[ngs.fitContrastsWithAllMethods] fitting using Welch t-test")
+  ##   timings[["ttest.welch"]] <- system.time(
+  ##     outputs[["ttest.welch"]] <- ngs.fitContrastsWithTTEST(
+  ##       X, contr.matrix, design,
+  ##       method = "welch",
+  ##       conform.output = conform.output
+  ##     )
+  ##   )
+  ## }
 
   ## ---------------- LIMMA methods -------------------
   if ("trend.limma" %in% methods) {
