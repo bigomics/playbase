@@ -27,7 +27,9 @@
 #' mypgx <- pgx.createFromFiles(counts, samples, contrasts)
 #' }
 #' @export
-pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL,
+pgx.createFromFiles <- function(counts.file,
+                                samples.file,
+                                contrasts.file = NULL,
                                 gxmethods = "trend.limma,edger.qlf,deseq2.wald",
                                 gsetmethods = "fisher,gsva,fgsea",
                                 extra = "meta.go,deconv,infer,drugs,wordcloud",
@@ -83,7 +85,6 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
     max.genesets = 10000
   )
 
-
   ## start computing PGX object
   pgx <- pgx.computePGX(
     pgx,
@@ -97,6 +98,7 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
     do.cluster = TRUE,
     use.design = FALSE, ##TRUE,
     prune.samples = TRUE, ##FALSE,
+    time.series = FALSE,
     pgx.dir = pgx.dir,
     libx.dir = libx.dir,
     progress = NULL
@@ -503,6 +505,7 @@ pgx.createPGX <- function(counts,
 #' @param do.clustergenes Logical indicating whether to cluster genes. Default is TRUE.
 #' @param use.design Whether to use model design matrix for testing. Default is FALSE.
 #' @param prune.samples Whether to remove samples without valid contrasts. Default is TRUE.
+#' @param time.series Logical whether perform time series analysis. Default FALSE
 #' @param extra.methods Additional analysis methods to run. Default is c("meta.go", "infer", "deconv", "drugs", "wordcloud", "wgcna")[c(1, 2)].
 #' @param libx.dir Directory containing custom analysis modules.
 #' @param progress A progress object for tracking status.
@@ -537,6 +540,7 @@ pgx.computePGX <- function(pgx,
                            do.clustergenes = TRUE,
                            use.design = FALSE, ##TRUE,
                            prune.samples = TRUE, ##FALSE,
+                           time.series = FALSE,
                            extra.methods = c(
                              "meta.go", "infer", "deconv", "drugs",
                              "connectivity", "wordcloud", "wgcna",
@@ -546,6 +550,7 @@ pgx.computePGX <- function(pgx,
                            libx.dir = NULL,
                            progress = NULL,
                            user_input_dir = getwd()) {
+
   message("[pgx.computePGX] Starting pgx.computePGX")
 
   if (!"contrasts" %in% names(pgx)) {
@@ -651,12 +656,15 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
 
   message("[pgx.computePGX] testing genes...")
-  pgx <- compute_testGenes(pgx, contr.matrix,
+  pgx <- compute_testGenes(
+    pgx,
+    contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
     custom_fc = custom_fc,
     use.design = use.design,
-    prune.samples = prune.samples
+    prune.samples = prune.samples,
+    time.series = time.series
   )
 
   ## ------------------ gene set tests -----------------------

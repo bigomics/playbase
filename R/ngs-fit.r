@@ -40,6 +40,7 @@
 #' @param correct.AveExpr Whether to correct for average expression. Default is TRUE.
 #' @param custom Custom differential expression method. Default is NULL.
 #' @param custom.name Name for custom method. Default is NULL.
+#' @param time time character vector to be passed for time series analysis. Default is NULL.
 #'
 #' @details This function provides a convenient wrapper to run multiple differential expression methods on the same data.
 #' It runs the methods specified in \code{methods} on the provided count data and design.
@@ -72,7 +73,8 @@ ngs.fitContrastsWithAllMethods <- function(counts,
                                            ),
                                            correct.AveExpr = TRUE,
                                            custom = NULL,
-                                           custom.name = NULL) {
+                                           custom.name = NULL,
+                                           time = NULL) {
   ## --------------------------------------------------------------
   ## Run all tests on raw counts
   ## --------------------------------------------------------------
@@ -81,9 +83,8 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   ## Put them back in the TopTable
   counts <- counts[which(rowMeans(is.na(counts)) < 1), ]
 
-  if (!is.null(X)) {
+  if (!is.null(X))
     X <- X[which(rowMeans(is.na(X)) < 1), ]
-  }
 
   if (methods[1] == "*") {
     methods <- c(
@@ -177,7 +178,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         X, contr.matrix, design,
         method = "limma", trend = TRUE,
         prune.samples = prune.samples,
-        conform.output = conform.output, plot = FALSE
+        conform.output = conform.output, plot = FALSE, time = time
       )
     )
     timings[["trend.limma"]] <- round(as.numeric(tt), digits = 4)
@@ -189,7 +190,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         X, contr.matrix, design,
         method = "limma", trend = FALSE,
         prune.samples = prune.samples,
-        conform.output = conform.output, plot = FALSE
+        conform.output = conform.output, plot = FALSE, time = time
       )
     )
   }
@@ -206,7 +207,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
           X, contr.matrix, design,
           method = "voom",
           prune.samples = prune.samples,
-          conform.output = conform.output, plot = FALSE
+          conform.output = conform.output, plot = FALSE, time = time
         )
       )
     }
@@ -539,7 +540,7 @@ ngs.fitContrastsWithTTEST <- function(X,
 }
 
 
-#' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using LIMMA differential expression analysis on count data.
+#' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using LIMMA diff. expr. analysis.
 #' @export
 ngs.fitContrastsWithLIMMA <- function(X,
                                       contr.matrix,
@@ -549,12 +550,15 @@ ngs.fitContrastsWithLIMMA <- function(X,
                                       robust = TRUE,
                                       prune.samples = FALSE,
                                       conform.output = FALSE,
-                                      plot = FALSE) {
+                                      plot = FALSE,
+                                      time = NULL) {
+
+  LL <- list(X=X, contr.matrix=contr.matrix, design=design, method=method) 
+  saveRDS(LL, "~/Desktop/MNT/LL00.RDS")
+  
   ## Do not test features with full missingness.
   ## Put them back in the TopTable
-  if (!is.null(X)) {
-    X <- X[which(rowMeans(is.na(X)) < 1), ]
-  }
+  if (!is.null(X)) X <- X[which(rowMeans(is.na(X)) < 1), ]
   
   design
   method <- method[1]
@@ -562,7 +566,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
   if (!is.null(design)) {
     ## With no design (grouping) we perform LIMMA not on the
     ## entire contrast matrix but per contrast one-by-one.
-
+    ##------------------USE DESIGN
     message("[ngs.fitContrastsWithLIMMA] fitting LIMMA contrasts using design matrix")
     exp0 <- design %*% contr.matrix
     kk <- rownames(exp0)
@@ -598,46 +602,57 @@ ngs.fitContrastsWithLIMMA <- function(X,
     }
     names(tables) <- colnames(contr1)
   } else {
+    ##------------------NO DESIGN
     message("[ngs.fitContrastsWithLIMMA] fitting LIMMA contrasts *without* design")
     tables <- list()
     exp0 <- contr.matrix ## sample-wise contrasts...
     i <- 1
     for (i in 1:ncol(exp0)) {
+
       kk <- 1:nrow(exp0)
-      if (prune.samples) {
+      if (prune.samples)
         kk <- which(!is.na(exp0[, i]) & exp0[, i] != 0)
-      }
       ct <- exp0[kk, i]
       y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
-      design1 <- stats::model.matrix(~ 0 + y)
       X1 <- X[, kk, drop = FALSE]
-      if (method == "voom") {
-        v <- limma::voom(2**X1, design1, plot = FALSE)
-        suppressMessages(vfit <- limma::lmFit(v, design1))
-        trend <- FALSE ## no need
+
+      if (!time.series) {
+        ##----------------NO DESIGN: NO time-series analysis
+        design1 <- stats::model.matrix(~ 0 + y)
+        if (method == "voom") {
+          v <- limma::voom(2 ** X1, design1, plot = FALSE)
+          suppressMessages(vfit <- limma::lmFit(v, design1))
+          trend <- FALSE
+        } else {
+          suppressMessages(vfit <- limma::lmFit(X1, design1))
+        }
+        contr1 <- matrix(c(-1, 0, 1), nrow = 3)
+        rownames(contr1) <- c("yneg", "yo", "ypos")
+        colnames(contr1) <- "pos_vs_neg"
+        contr1 <- contr1[colnames(vfit), , drop = FALSE]
+        vfit <- limma::contrasts.fit(vfit, contrasts = contr1)
+        efit <- limma::eBayes(vfit, trend = trend, robust = robust)
+        top <- limma::topTable(efit, coef = 1, sort.by = "none", number = Inf, adjust.method = "BH")
       } else {
-        suppressMessages(vfit <- limma::lmFit(X1, design1))
+        ##----------------NO DESIGN: time-series analysis
+        if (is.null(time))
+          stop("[ngs.fitContrastsWithLIMMA.timeseries] Variable 'time' is null.")
+        top <- ngs.fitContrastsWithLIMMA.timeseries(X1, y, time, trend = TRUE)
       }
-      contr1 <- matrix(c(-1, 0, 1), nrow = 3)
-      rownames(contr1) <- c("yneg", "yo", "ypos")
-      colnames(contr1) <- "pos_vs_neg"
-      contr1 <- contr1[colnames(vfit), , drop = FALSE]
-      vfit <- limma::contrasts.fit(vfit, contrasts = contr1)
-      efit <- limma::eBayes(vfit, trend = trend, robust = robust)
-      top <- limma::topTable(efit, coef = 1, sort.by = "none", number = Inf, adjust.method = "BH")
-      Matrix::head(top)
+      
       j1 <- which(ct > 0)
       j0 <- which(ct < 0)
       mean1 <- rowMeans(X1[, j1, drop = FALSE], na.rm = TRUE)
       mean0 <- rowMeans(X1[, j0, drop = FALSE], na.rm = TRUE)
       top <- top[rownames(X1), ]
-      top <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
-      Matrix::head(top, 10)
-      tables[[i]] <- top
-    }
-    names(tables) <- colnames(exp0)
-  }
+      tables[[i]] <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
 
+    }
+
+    names(tables) <- colnames(exp0)
+
+  }
+  
   if (conform.output == TRUE) {
     for (i in 1:length(tables)) {
       k1 <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
@@ -646,10 +661,90 @@ ngs.fitContrastsWithLIMMA <- function(X,
       colnames(tables[[i]]) <- k2
     }
   }
-  res <- list(tables = tables)
-  return(res)
+
+  return(list(tables = tables))
+  
 }
 
+
+#' @describeIn ngs.fitContrastsWithLIMMA Fits contrasts using LIMMA with no design. For time-series analysis.
+#' @export
+ngs.fitContrastsWithLIMMA.timeseries <- function(X,
+                                                 y,
+                                                 time,
+                                                 trend = TRUE
+                                                 ) {
+
+  message("[ngs.fitContrastsWithLIMMA.timeseries] no design, time-series analysis: using spline")
+  library(splines)
+
+  if (!all(colnames(X) %in% names(time))) {
+    stop("[ngs.fitContrastsWithLIMMA.timeseries] X and time contain different set of samples")
+  }
+  jj <- match(colnames(X), names(time))
+  time <- as.character(unname(time[jj]))
+
+  design <- stats::model.matrix(~ 0 + y + y:time)
+  ndf <- length(unique(time)) - 1
+  num.time <- as.numeric(gsub("\\D", "", time))
+  time.spline <- try(ns(num.time, df = ndf), silent = TRUE)
+  if ("try-error" %in% class(time.spline))
+    time.spline <- ns(num.time)
+
+  group <- factor(y)
+  design <- model.matrix(~ group * time.spline)
+  fit <- limma::lmFit(X, design)
+  fit <- limma::eBayes(fit, trend = trend)
+
+  coefs <- apply(fit$t, 2, function(x) sum(is.na(x)))
+  est.coefs <- names(coefs[coefs != nrow(fit$t)])
+  est.coefs <- est.coefs[grep("^time.spline*", est.coefs)]
+
+  if (length(est.coefs)) {
+    sel <- match(est.coefs, names(coefs))
+    message("[ngs.fitContrastsWithLIMMA.time-series], est.coefs: ", paste0(est.coefs, collapse="; "))
+    top <- try(
+      limma::topTable(fit, coef = sel, sort.by = "none", number = Inf, adjust.method = "BH"),
+      silent = TRUE
+    )
+    ## efit <- limma::eBayes(vfit, trend = TRUE, robust = robust)
+    ## not-estimable (NA) coefs caused by highly unbalanced phenotypes in a time point.
+    ## coefs <- apply(efit$t, 2, function(x) sum(is.na(x)))
+    ## est.coefs <- names(coefs[coefs != nrow(efit$t)])
+    ## est.coefs <- est.coefs[grep(":", est.coefs)]
+    ## sel <- match(est.coefs, names(coefs))
+    ## top <- limma::topTable(efit, coef = sel, sort.by = "none", number = Inf, adjust.method = "BH")
+    ## head(top)
+    cc <- "try-error" %in% class(top)
+    if (cc) {
+      s=1; SEL=list()
+      for(s in 1:length(sel)) {
+        SEL[[s]] <- limma::topTable(fit, coef = sel[s], sort.by = "none", number = Inf, adjust.method = "BH")
+      } 
+      names(SEL) <- names(coefs)[sel]
+      top <- do.call(cbind, SEL)
+      #index <- rep(colnames(SEL[[1]]), length(SEL))
+      #tapply(top1, rownames(top1), function(t) tapply(t, index, function(s) max(s, na.rm=TRUE)))
+      index <- unique(colnames(SEL[[1]]))
+      top0 <- top[, 1:length(index)]
+      colnames(top0) <- index
+      g=1
+      for(g in 1:length(index)) {
+        hh <- grep(index[g], colnames(top))
+        top0[, index[g]] <- apply(top[, hh], 1, function(x) max(abs(x), na.rm = TRUE))
+      }
+      top <- top0
+      rm(top0)
+    }
+  } else {
+    top <- data.frame(matrix(NA, nrow=nrow(X), ncol=7))
+    rownames(top) <- rownames(X)
+    colnames(top) <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
+  }
+
+  return(top)
+
+}
 
 #' @describeIn ngs.fitContrastsWithAllMethods Fit contrasts with EdgeR
 #' @export

@@ -26,7 +26,8 @@ compute_testGenes <- function(pgx,
                               custom_fc = NULL,
                               use.design = FALSE,
                               prune.samples = TRUE,
-                              remove.outputs = TRUE) {
+                              remove.outputs = TRUE,
+                              time.series = FALSE) {
   # TEMPORARY ONLY SINGLE OMICS
   single.omics <- TRUE
   data.types <- unique(gsub("\\[|\\].*", "", rownames(pgx$counts)))
@@ -42,7 +43,8 @@ compute_testGenes <- function(pgx,
       custom_fc = custom_fc,
       use.design = use.design,
       prune.samples = prune.samples,
-      remove.outputs = remove.outputs
+      remove.outputs = remove.outputs,
+      time.series = time.series
     )
   } else {
     ## multi-omics, missing values allowed
@@ -72,6 +74,7 @@ compute_testGenes <- function(pgx,
 #' @param use.design A logical value indicating whether to use the design matrix in the analysis.
 #' @param prune.samples A logical value indicating whether to prune samples with missing data.
 #' @param test.methods The test methods to use for gene testing.
+#' @param time.series logical whether user selected time-series. Requires 'time' variable in pgx$samples. Default=FALSE
 #' @return An updated object with gene test results for single-omics data.
 #' @export
 compute_testGenesSingleOmics <- function(pgx,
@@ -82,7 +85,8 @@ compute_testGenesSingleOmics <- function(pgx,
                                          custom_fc = NULL,
                                          use.design = FALSE,
                                          prune.samples = TRUE,
-                                         test.methods = c("trend.limma", "deseq2.wald", "edger.qlf")) {
+                                         test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
+                                         time.series = FALSE) {
   ## -----------------------------------------------------------------------------
   ## Check parameters, decide group level
   ## -----------------------------------------------------------------------------
@@ -199,6 +203,19 @@ compute_testGenesSingleOmics <- function(pgx,
   X <- pgx$X[gg, ss, drop = FALSE]
 
   ## -----------------------------------------------------------------------------
+  ## Time series: determine variable 'time'
+  ## -----------------------------------------------------------------------------
+  time <- NULL
+  if (time.series) {
+    sel <- grep("time", colnames(pgx$samples))
+    if (length(sel) == 0) {
+      stop("[compute_testGenesSingleOmics] Cannot locate 'time' column in pgx.samples. Skipping time-series analysis.")
+     }
+    time <- as.character(pgx$samples[, sel[1]])
+    names(time) <- rownames(pgx$samples)
+  }
+     
+  ## -----------------------------------------------------------------------------
   ## Do the fitting
   ## -----------------------------------------------------------------------------
   methods <- test.methods
@@ -224,7 +241,9 @@ compute_testGenesSingleOmics <- function(pgx,
     conform.output = TRUE,
     do.filter = FALSE,
     correct.AveExpr = TRUE,
-    custom = custom_fc, custom.name = NULL
+    custom = custom_fc,
+    custom.name = NULL,
+    time = time
   )
 
   message("[compute_testGenesSingleOmics] 13 : fitting done!")
@@ -242,9 +261,7 @@ compute_testGenesSingleOmics <- function(pgx,
   pgx$gx.meta <- gx.meta
 
   ## remove large outputs.
-  if (remove.outputs) {
-    pgx$gx.meta$outputs <- NULL
-  }
+  if (remove.outputs) pgx$gx.meta$outputs <- NULL
 
   message("[compute_testGenesSingleOmics] done!")
 
