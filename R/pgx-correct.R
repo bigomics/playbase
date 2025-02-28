@@ -2709,7 +2709,7 @@ gx.nnmcorrect2 <- function(...) nnmCorrect2(..., return.B = TRUE)
 #' matrix X.
 #'
 #' @export
-estimateBatchCorrectionVectors <- function(cX, X, k=NULL, threshold=0.95) {
+estimateBatchCorrectionVectors <- function(cX, X, k=NULL, threshold=0.8) {
   res <- svd(X - cX)
   cumcv <- (cumsum(res$d**2) / sum(res$d**2))
   cumcv
