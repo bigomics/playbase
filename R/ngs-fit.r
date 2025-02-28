@@ -797,6 +797,7 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
         } else {
           top0[, index[g]] <- apply(top[, hh], 1, function(x) min(x, na.rm = TRUE))
         }
+      }
       top <- top0
       rm(top0)
     }
@@ -805,9 +806,9 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
     rownames(top) <- rownames(X)
     colnames(top) <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
   }
-
+  
   return(top)
-
+  
 }
 
 #' @describeIn ngs.fitContrastsWithAllMethods Fit contrasts with EdgeR
@@ -1315,9 +1316,21 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
       colnames(tables[[i]]) <- k2
     }
   }
-
+  
   res <- list(tables = tables)
   return(res)
+}
+
+##
+#' @describeIn ngs.fitContrastsWithLIMMA Fits contrasts using LIMMA with no design. For time-series analysis.
+#' #' @export
+ngs.fitContrastsWithLIMMA.timeseries <- function(X,
+                                                 y,
+                                                 time,
+                                                 trend = TRUE
+                                                 ) {
+  
+
 }
 
 
