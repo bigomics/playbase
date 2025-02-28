@@ -217,6 +217,19 @@ ngs.fitContrastsWithAllMethods <- function(counts,
       }
     }
   }
+  cc1 <- !is.null(timeseries.methods)
+  cc2 <- "limma.spline" %in% timeseries.methods
+  cc3 <- !is.null(time)
+  if(cc1 && cc2 && cc3) {
+    message("[ngs.fitContrastsWithAllMethods] Time series: fitting using limma spline.")
+    X1 <- X
+    timings[["limma.spline"]] <- system.time(
+      outputs[["limma.spline"]] <- ngs.fitContrastsWithLIMMA(
+        X1, contr.matrix, design, method = "limma", time = time,
+        prune.samples = prune.samples, conform.output = conform.output
+      )
+    )
+  }
   ## if ("trend.limma" %in% methods) {
   ##   message("[ngs.fitContrastsWithAllMethods] fitting using LIMMA trend")
   ##   tt <- system.time(
@@ -602,7 +615,6 @@ ngs.fitContrastsWithLIMMA <- function(X,
                                       prune.samples = FALSE,
                                       conform.output = FALSE,
                                       plot = FALSE,
-                                      timeseries.methods = NULL,
                                       time = NULL) {
 
   LL <- list(X=X, contr.matrix=contr.matrix, design=design, method=method) 
@@ -611,8 +623,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
   ## Do not test features with full missingness.
   ## Put them back in the TopTable
   if (!is.null(X)) X <- X[which(rowMeans(is.na(X)) < 1), ]
-  
-  design
+
   method <- method[1]
 
   if (!is.null(design)) {
@@ -687,8 +698,6 @@ ngs.fitContrastsWithLIMMA <- function(X,
         top <- limma::topTable(efit, coef = 1, sort.by = "none", number = Inf, adjust.method = "BH")
       } else {
         ##----------------NO DESIGN: time-series analysis
-        if (is.null(timeseries.methods))
-          stop("[ngs.fitContrastsWithLIMMA.timeseries] No methods for time series specified. Exiting time series.")
         top <- ngs.fitContrastsWithLIMMA.timeseries(X1, y, time, trend = TRUE)
       }
       
