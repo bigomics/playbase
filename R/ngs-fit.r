@@ -139,16 +139,16 @@ ngs.fitContrastsWithAllMethods <- function(counts,
 
   ## ---------------- t-Test methods -------------------
   ttest.mtds <- c("ttest", "ttest.rank", "ttest.welch")
-  test.mdls <- c("equalvar", "equalvar", "welch")
+  ttest.mdls <- c("equalvar", "equalvar", "welch")
   cm.mtds <- intersect(methods, ttest.mtds)
   if (length(cm.mtds) > 0) {
     i <- 1 
     for(i in 1:length(cm.mtds)) {
+      message("[ngs.fitContrastsWithAllMethods] fitting using ", cm.mtds[i])
       X1 <- X
       if (cm.mtds[i] == "ttest.rank")
         X1 <- scale(apply(X1, 2, rank, na.last = "keep"))
-      mdl <- test.mdls[match(cm.mtds[i], ttest.mtds)]
-      message("[ngs.fitContrastsWithAllMethods] fitting using ", cm.mtds[i])
+      mdl <- ttest.mdls[match(cm.mtds[i], ttest.mtds)]
       timings[[cm.mtds[i]]] <- system.time(
         outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithTTEST(
           X1, contr.matrix, design, method = mdl,
@@ -192,50 +192,74 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   ## }
 
   ## ---------------- LIMMA methods -------------------
-  if ("trend.limma" %in% methods) {
-    message("[ngs.fitContrastsWithAllMethods] fitting using LIMMA trend")
-    tt <- system.time(
-      outputs[["trend.limma"]] <- ngs.fitContrastsWithLIMMA(
-        X, contr.matrix, design,
-        method = "limma", trend = TRUE,
-        prune.samples = prune.samples,
-        conform.output = conform.output, plot = FALSE,
-        timeseries.methods = timeseries.methods, time = time
-      )
-    )
-    timings[["trend.limma"]] <- round(as.numeric(tt), digits = 4)
-  }
-  if (TRUE && "notrend.limma" %in% methods) {
-    message("[ngs.fitContrastsWithAllMethods] fitting using LIMMA no-trend")
-    timings[["notrend.limma"]] <- system.time(
-      outputs[["notrend.limma"]] <- ngs.fitContrastsWithLIMMA(
-        X, contr.matrix, design,
-        method = "limma", trend = FALSE,
-        prune.samples = prune.samples,
-        conform.output = conform.output, plot = FALSE,
-        timeseries.methods = timeseries.methods, time = time
-      )
-    )
-  }
-  if ("voom.limma" %in% methods) {
-    if (nmissing > 0) {
-      message("[ngs.fitContrastsWithAllMethods] Detected missing values (NAs) in the data.
-                                                  Cannot perform DGE testing with voom/LIMMA.
-                                                  Skipping. If you wish to use voom/LIMMA,
-                                                  please impute the data earlier in the platform.")
-    } else {
-      message("[ngs.fitContrastsWithAllMethods] fitting using voom/LIMMA ")
-      timings[["voom.limma"]] <- system.time(
-        outputs[["voom.limma"]] <- ngs.fitContrastsWithLIMMA(
-          X, contr.matrix, design,
-          method = "voom",
-          prune.samples = prune.samples,
-          conform.output = conform.output, plot = FALSE,
-          timeseries.methods = timeseries.methods, time = time
+  limma.mtds <- c("trend.limma", "notrend.limma", "voom.limma")
+  limma.mdls <- c("limma", "limma", "voom")
+  cm.mtds <- intersect(methods, limma.mtds)
+  if (length(cm.mtds) > 0) {
+    i <- 1 
+    for(i in 1:length(cm.mtds)) {
+      message("[ngs.fitContrastsWithAllMethods] fitting using ", cm.mtds[i])
+      if (cm.mtds[i] == "voom.limma" && nmissing > 0) {
+        message("[ngs.fitContrastsWithAllMethods] Missing values detected. Cannot perform voom.limma")
+        next;
+      } else {
+        X1 <- X
+        mdl <- limma.mdls[match(cm.mtds[i], limma.mtds)]
+        trend <- ifelse(grepl("notrend|voom", cm.mtds[i]), FALSE, TRUE)
+        tt <- system.time(
+          outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithLIMMA(
+            X1, contr.matrix, design, method = mdl,
+            trend = trend, prune.samples = prune.samples,
+            conform.output = conform.output, plot = FALSE
+          )
         )
-      )
+        timings[[cm.mtds[i]]] <- round(as.numeric(tt), digits = 4)
+      }
     }
   }
+  ## if ("trend.limma" %in% methods) {
+  ##   message("[ngs.fitContrastsWithAllMethods] fitting using LIMMA trend")
+  ##   tt <- system.time(
+  ##     outputs[["trend.limma"]] <- ngs.fitContrastsWithLIMMA(
+  ##       X, contr.matrix, design,
+  ##       method = "limma", trend = TRUE,
+  ##       prune.samples = prune.samples,
+  ##       conform.output = conform.output, plot = FALSE
+  ##     )
+  ##   )
+  ##   timings[["trend.limma"]] <- round(as.numeric(tt), digits = 4)
+  ## }
+  ##----------------------------------------
+  ## if (TRUE && "notrend.limma" %in% methods) {
+  ##   message("[ngs.fitContrastsWithAllMethods] fitting using LIMMA no-trend")
+  ##   timings[["notrend.limma"]] <- system.time(
+  ##     outputs[["notrend.limma"]] <- ngs.fitContrastsWithLIMMA(
+  ##       X, contr.matrix, design,
+  ##       method = "limma", trend = FALSE,
+  ##       prune.samples = prune.samples,
+  ##       conform.output = conform.output, plot = FALSE
+  ##     )
+  ##   )
+  ## }
+  ##----------------------------------------
+  ## if ("voom.limma" %in% methods) {
+  ##   if (nmissing > 0) {
+  ##     message("[ngs.fitContrastsWithAllMethods] Detected missing values (NAs) in the data.
+  ##                                                 Cannot perform DGE testing with voom/LIMMA.
+  ##                                                 Skipping. If you wish to use voom/LIMMA,
+  ##                                                 please impute the data earlier in the platform.")
+  ##   } else {
+  ##     message("[ngs.fitContrastsWithAllMethods] fitting using voom/LIMMA ")
+  ##     timings[["voom.limma"]] <- system.time(
+  ##       outputs[["voom.limma"]] <- ngs.fitContrastsWithLIMMA(
+  ##         X, contr.matrix, design,
+  ##         method = "voom",
+  ##         prune.samples = prune.samples,
+  ##         conform.output = conform.output, plot = FALSE
+  ##       )
+  ##     )
+  ##   }
+  ## }
 
   ## ---------------- EdgeR methods -------------------
   if ("edger.qlf" %in% methods) {
