@@ -10,6 +10,7 @@ pgx.computePGX(
   gx.methods = c("trend.limma", "edger.qlf", "deseq2.wald"),
   gset.methods = c("fisher", "gsva", "fgsea"),
   custom.geneset = list(gmt = NULL, info = NULL),
+  custom_fc = NULL,
   do.cluster = TRUE,
   cluster.contrasts = TRUE,
   do.clustergenesets = TRUE,

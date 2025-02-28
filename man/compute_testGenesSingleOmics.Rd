@@ -10,6 +10,7 @@ compute_testGenesSingleOmics(
   max.features = 1000,
   filter.low = TRUE,
   remove.outputs = TRUE,
+  custom_fc = NULL,
   use.design = FALSE,
   prune.samples = TRUE,
   test.methods = c("trend.limma", "deseq2.wald", "edger.qlf")
