@@ -240,6 +240,9 @@ wgcna.compute <- function(X,
   ## compute gene statistics
   stats <- wgcna.compute_geneStats(net, datExpr, datTraits, TOM=TOM) 
   
+  ## module-traits matrix
+  modTraits <- cor(net$MEs, datTraits, use="pairwise")
+
   ## construct results object
   results <- list(
       datExpr = datExpr,
@@ -250,6 +253,7 @@ wgcna.compute <- function(X,
       me.genes = me.genes,
       me.colors = me.colors,
       W = MVs,
+      modTraits = modTraits,
       stats = stats
   )
 
@@ -328,7 +332,7 @@ wgcna.compute_geneStats <- function(net, datExpr, datTraits, TOM) {
 ##----------------------------------------------------
 wgcna.compute_enrichment <- function(wgcna, pgx,
                                      method = c("fisher","gsetcor","mmcor","wcor"),
-                                     ntop = 1000,
+                                     ntop = 200,
                                      annot = NULL, GMT = NULL,
                                      filter = "^PATHWAY|^HALLMARK|^GO|^C[1-9]") {
   
@@ -337,10 +341,12 @@ wgcna.compute_enrichment <- function(wgcna, pgx,
   symbol.col <- NULL
   ##annot=NULL;GMT=NULL
   if(!is.null(pgx)) {
-    annot <- pgx$genes
     GMT <- pgx$GMT
-    symbol.col <- intersect(c("symbol","gene_name"),colnames(annot))[1]
     gsetX <- pgx$gsetX
+    annot <- pgx$genes
+    if(!is.null(annot)) {
+      symbol.col <- intersect(c("symbol","gene_name"),colnames(annot))[1]
+    }
   }
 
   if(is.null(GMT)) {
@@ -353,10 +359,16 @@ wgcna.compute_enrichment <- function(wgcna, pgx,
   }
   if(!is.null(annot)) {
     geneX <- rename_by(geneX, annot, symbol.col)  
+  } else {
+    rownames(geneX) <- gsub(".*:|[_ -].*","",rownames(geneX))
   }
   
   bg <- rownames(geneX)
   bg <- intersect(bg, rownames(GMT))
+  if(length(bg)==0) {
+    message("FATAL. no overlapping genes")
+    return(NULL)
+  }
   G1 <- GMT[bg,, drop=FALSE]
   if(!is.null(filter)) {
     sel <- grep(filter,colnames(G1))
@@ -479,6 +491,8 @@ wgcna.compute_enrichment <- function(wgcna, pgx,
     gg <- wgcna$me.genes[[k]]
     if(!is.null(annot)) {
       gg <- probe2symbol(gg, annot, query = symbol.col)
+    } else {
+      gg <- gsub(".*:","",gg)
     }
     set.genes <- lapply( gmt[gset], function(s) intersect(s, gg))
     n0 <- sapply(gmt[gset], length)
@@ -490,20 +504,25 @@ wgcna.compute_enrichment <- function(wgcna, pgx,
   }
 
   ## compute gene enrichment
-  message("[wgcna.compute_enrichment] computing gene enrichment...")
   gene.list <- list()
-  k = names(gse.list)[1]
-  for(k in names(gse.list)) {
-    me <- gse.list[[k]]
-    rnk <- me$score
-    names(rnk) <- rownames(me)
-    me.genes <- strsplit(me$genes,split='\\|')
-    me.names <- unlist(mapply(rep, rownames(me), sapply(me.genes,length)))
-    me.gmt <- tapply(me.names, unlist(me.genes), list)
-    res <- fgsea::fgsea(me.gmt, rnk)
-    res <- res[order(-res$NES),]
-    gene.list[[k]] <- head(res,100)
-  }
+  ## message("[wgcna.compute_enrichment] computing gene enrichment...")
+  ## k = names(gse.list)[1]
+  ## for(k in names(gse.list)) {
+  ##   me <- gse.list[[k]]
+  ##   rnk <- me$score
+  ##   names(rnk) <- rownames(me)
+  ##   me.genes <- strsplit(me$genes,split='\\|')
+  ##   num.genes <- sapply(me.genes,length)
+  ##   if(any(num.genes>0)) {
+  ##     ii <- which(num.genes>0)
+  ##     me.names <- unlist(mapply(rep, rownames(me)[ii], num.genes[ii]))
+  ##     me.genes <- me.genes[ii]
+  ##     me.gmt <- tapply(me.names, unlist(me.genes), list)
+  ##     res <- fgsea::fgsea(me.gmt, rnk)
+  ##     res <- res[order(-res$NES),]
+  ##     gene.list[[k]] <- head(res,100)
+  ##   }
+  ## }
   
   res <- list(
     gsets = gse.list,
@@ -519,8 +538,8 @@ wgcna.runConsensusWGCNA <- function( exprList,
                                     datTraits,
                                     power = 12,
                                     minKME = 0.8,
-                                    mergeCutHeight = 0.25,
-                                    deepSplit = 2
+                                    cutheight = 0.15,
+                                    deepsplit = 2
                                     ) {
 
   ##exprList <- list(Set1 = V1, Set2 = V2)
@@ -538,8 +557,8 @@ wgcna.runConsensusWGCNA <- function( exprList,
       networkType = "signed",
       TOMType = "signed",
       minModuleSize = 20,
-      deepSplit = 2,
-      mergeCutHeight = 0.25, 
+      deepSplit = deepsplit,
+      mergeCutHeight = cutheight, 
       numericLabels = FALSE,
       minKMEtoStay = minKME,
       saveTOMs = FALSE,
@@ -556,8 +575,8 @@ wgcna.runConsensusWGCNA <- function( exprList,
     networkType = "signed",
     TOMType = "signed",
     minModuleSize = 20,
-    deepSplit = deepSplit,
-    mergeCutHeight = mergeCutHeight, 
+    deepSplit = deepsplit,
+    mergeCutHeight = cutheight, 
     numericLabels = FALSE,
     minKMEtoStay = minKME,
     saveTOMs = FALSE,
@@ -735,22 +754,27 @@ wgcna.plotTOM <- function(wgcna, justdata=FALSE) {
 
 }
 
-
 #'
 #'
 #' @export
-wgcna.plotDendroAndColors <- function(wgcna, main=NULL, unmerged=FALSE) {
-
-  colors <- wgcna.labels2colors(wgcna$net$colors)
+wgcna.plotDendroAndColors <- function(wgcna, main=NULL, unmerged=FALSE,
+                                      block=1) {
+  ii <- which(wgcna$net$blocks == block & wgcna$net$goodGenes==TRUE)
+  colors <- wgcna.labels2colors(wgcna$net$colors)[ii]
   groupLabels <- "Module colors"
-  geneTree = wgcna$net$dendrograms[[1]]
+  if(length(wgcna$net$dendrograms)>1) {
+    message("warning: this wgcna has multiple blocks")
+  }
+  geneTree = wgcna$net$dendrograms[[block]]
   if(unmerged) {
-    colors <- cbind(colors,
-      wgcna.labels2colors(wgcna$net$unmergedColors))
-      groupLabels <- c( "Merged colors", "Unmerged colors")
+    colors <- cbind(
+      colors,
+      wgcna.labels2colors(wgcna$net$unmergedColors)[ii])
+    groupLabels <- c( "Merged colors", "Unmerged colors")
   }
   
   if(is.null(main)) main <- "Gene dendrogram and module colors"
+
   ## Plot the dendrogram and the module colors underneath
   WGCNA::plotDendroAndColors(
     dendro = geneTree,

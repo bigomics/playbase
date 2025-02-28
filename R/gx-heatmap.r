@@ -250,6 +250,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         sort_columns = NULL,
                         col.annot = NULL,
                         row.annot = NULL,
+                        row.annot.colors = NULL,
                         annot.ht = 3,
                         annot.cex = 1,
                         nmax = 1000,
@@ -271,6 +272,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         show_key = TRUE,
                         zlim = NULL,
                         show_rownames = nmax,
+                        show_row_legend = FALSE,
                         lab.len = 80,
                         key.offset = c(0.05, 0.99),
                         show_colnames = NULL,
@@ -278,7 +280,8 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         data = FALSE,
                         color_low = "#3181de",
                         color_mid = "#eeeeee",
-                        color_high = "#f23451") {
+                        color_high = "#f23451"
+                        ) {
   ComplexHeatmap::ht_global_opt(fast_hclust = TRUE)
   graphics::par(xpd = FALSE)
 
@@ -510,7 +513,9 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     }
   }
 
+  ## ----------------------------------
   ## row annotation bars
+  ## ----------------------------------
   row.ha <- NULL
   if (!is.null(row.annot)) {
     npar <- apply(row.annot, 2, function(x) length(setdiff(x, c(NA, "NA"))))
@@ -519,22 +524,36 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     for (i in 1:length(npar)) {
       prm <- colnames(row.annot)[i]
       x <- row.annot[, i]
-      klrs <- rev(grDevices::grey.colors(npar[i], start = 0.3, end = 0.8))
-      if (npar[i] == 1) klrs <- "#E6E6E6"
-      if (npar[i] > 0) klrs <- omics_pal_d("muted_light")(npar)[1:npar[i]]
-      names(klrs) <- sort(setdiff(unique(x), NA))
-      if (any(is.na(x))) klrs <- c(klrs, "NA" = "grey90")
+      if(!is.null(row.annot.colors)) {
+        klrs <- row.annot.colors
+      } else {
+        klrs <- rev(grDevices::grey.colors(npar[i], start = 0.3, end = 0.8))
+        if (npar[i] == 1) klrs <- "#E6E6E6"
+        if (npar[i] > 0) klrs <- omics_pal_d("muted_light")(npar)[1:npar[i]]
+        names(klrs) <- sort(setdiff(unique(x), NA))
+        if (any(is.na(x))) klrs <- c(klrs, "NA" = "grey90")
+      }
       row.colors[[prm]] <- klrs
     }
 
+    ap <- list(
+      title_gp = grid::gpar(fontsize = 3.3 * annot.ht * annot.cex),
+      labels_gp = grid::gpar(fontsize = 2.9 * annot.ht * annot.cex),
+      grid_width = grid::unit(1 * annot.ht, "mm"),
+      grid_height = grid::unit(1 * annot.ht, "mm")
+    )
+    aa <- rep(list(ap), ncol(row.annot))
+    names(aa) <- colnames(row.annot)
     row.ha <- ComplexHeatmap::rowAnnotation(
       df = row.annot,
       col = row.colors,
       show_annotation_name = show_colnames,
-      show_legend = FALSE,
-      annotation_name_gp = grid::gpar(fontsize = 3.3 * annot.ht * annot.cex),
+      #show_legend = FALSE,
+      show_legend = show_row_legend,
       simple_anno_size = grid::unit(annot.ht, "mm"), ## BioC 3.8!!
-      width = grid::unit(annot.ht * ncol(row.annot), "mm")
+      width = grid::unit(annot.ht * ncol(row.annot), "mm"),
+      annotation_name_gp = grid::gpar(fontsize = 2.9 * annot.ht * annot.cex),
+      annotation_legend_param = aa
     )
   }
 
@@ -774,7 +793,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
 #' @export
 gx.heatmap <- function(gx, values = NULL,
                        clust.method = "ward.D2",
-                       dist.method = "pearson",
+                       dist.method = "pearson",  ## better change to euclidean??
                        col.dist.method = "euclidean",
                        plot.method = "heatmap.2",
                        col = grDevices::colorRampPalette(c("royalblue3", "grey90", "indianred3"))(64),

@@ -9,6 +9,7 @@ compute_testGenes(
   contr.matrix,
   max.features = 1000,
   test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
+  custom_fc = NULL,
   use.design = FALSE,
   prune.samples = TRUE,
   remove.outputs = TRUE
