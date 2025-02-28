@@ -2717,7 +2717,7 @@ estimateBatchCorrectionVectors <- function(cX, X, k=NULL, threshold=0.95) {
     k <- min(which(cumcv >= threshold))
   }
   ## return batch vectors
-  res$V[,1:k,drop=FALSE)
+  res$V[,1:k,drop=FALSE]
 }
 
 
