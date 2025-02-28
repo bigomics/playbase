@@ -818,7 +818,7 @@ mofa.plot_all_factortraits <- function(meta.res) {
 ##-------------------------------------------------------------
 
 #' @export
-mofa.topsd <- function(xdata, ntop) {
+mofa.topSD <- function(xdata, ntop) {
   lapply(xdata, function(x) {
     sdx <- matrixStats::rowSds(x,na.rm=TRUE)
     head(x[order(-sdx),],ntop)

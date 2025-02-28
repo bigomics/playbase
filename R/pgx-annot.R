@@ -91,6 +91,9 @@ getGeneAnnotation <- function(
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
   if (tolower(organism) == "dog") organism <- "Canis familiaris"
 
+  probes <- trimws(probes)
+  probes[probes==""] <- NA
+  
   if(mean(grepl("[:]",probes)) > 0.98) {
     message("[getGeneAnnotation] WARNING. stripping prefix... Is this multi-omics??")
     probes <- sub("^[a-zA-Z]+:","",probes)
@@ -219,7 +222,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   names(probes) <- probes0
 
   if (is.null(probe_type)) {
-    probe_type <- detect_probetype(organism, probes, orgdb = NULL)
+    probe_type <- detect_probetype(organism, probes, orgdb = orgdb)
     probe_type
     if (is.null(probe_type) || is.na(probe_type) ) {
       message("ERROR: could not determine probe_type. Please specify. ")
@@ -370,7 +373,7 @@ getGeneAnnotation.ANNOTHUB <- function(
 #' Cleanup probe names from postfixes or version numbers
 #'
 #' @export
-clean_probe_names <- function(probes, sep = "._") {
+clean_probe_names <- function(probes, sep = ".-") {
   probes0 <- probes
   probes[is.na(probes)] <- ""
   sel <- grep("[;]", probes)
@@ -412,11 +415,8 @@ match_probe_names <- function(probes, org, probe_type = NULL) {
   if (sum(is.na(new.probes))) {
     jj <- which(is.na(new.probes))
     new.probes[jj] <- probes[jj]
-    jj.probes1 <- clean_probe_names(probes[jj], sep = "._")
-    jj.probes2 <- clean_probe_names(probes[jj], sep = "._-")
-    ii1 <- match(toupper(tsub(jj.probes1)), toupper(tsub(all.keys)))
-    ii2 <- match(toupper(tsub(jj.probes2)), toupper(tsub(all.keys)))
-    ii <- ifelse(!is.na(ii1), ii1, ii2)
+    jj.probes <- clean_probe_names(probes[jj], sep = ".-")
+    ii <- match(toupper(tsub(jj.probes)), toupper(tsub(all.keys)))
     if (any(!is.na(ii))) {
       k <- which(!is.na(ii))
       new.probes[jj[k]] <- all.keys[ii[k]]
@@ -806,12 +806,12 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     # get random probes for query
     probes <- sample(probes, nprobe)
   }
-
+  
+  ## try different cleaning methods. NEED RETHINK!!!! refseq has
+  ## underscore!
   probes0 <- probes
-  ## try different cleaning methods
-  probes <- clean_probe_names(probes)
-  probes1 <- clean_probe_names(probes, sep = "._-")
-  probesx <- unique(c(probes0, probes, probes1))
+  probes1 <- clean_probe_names(probes)
+  probesx <- unique(c(probes0, probes1))
 
   # Iterate over probe types
   key <- keytypes[1]
@@ -844,7 +844,8 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     ## stop search prematurely if matchratio > 99%
     if (matchratio > 0.99) break()
   }
-
+  key_matches <- round(key_matches, 4)
+  
   ## Return top match
   ##  key_matches
   top_match <- NULL
@@ -855,6 +856,9 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     }
     return(NA)
   } else {
+    if (max(key_matches,na.rm=TRUE) < 0.50) {
+      message("WARNING: Low matching ratio. Max match = ", max(key_matches,na.rm=TRUE))
+    }
     top_match <- names(which.max(key_matches))
   }
 

@@ -860,8 +860,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   }
   
   metabolites <- grep("CHEBI",colnames(playdata::MSETxMETABOLITE),value=TRUE)
-  metabolites <- gsub("CHEBI:","",metabolites)
-  
+  metabolites <- gsub("CHEBI:","",metabolites)  
   sum.mx <- sum(symbol %in% metabolites,na.rm=TRUE)
   sum.px <- sum(symbol %in% colnames(playdata::GSETxGENE),na.rm=TRUE) 
   dbg("[pgx.add_GMT] 1: sum.mx = ", sum.mx)

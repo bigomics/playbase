@@ -1978,7 +1978,7 @@ combatCorrect <- function(X, B, y = NULL, auto.detect = FALSE) {
 
 
 #' @export
-svaCorrect <- function(X, y) {
+svaCorrect <- function(X, y, n.sv=NULL, nsd=1000, return.sv=FALSE) {
   ##
   ## This is a combination of methods from SVA and SmartSVA
   ## because of speed.
@@ -1997,22 +1997,28 @@ svaCorrect <- function(X, y) {
   mod1x <- model.matrix(~ 1 + y)
   mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
 
-  ## fast method using SmartSVA
-  #  pp <- paste0(model.par, collapse = "+")
-  #  lm.expr <- paste0("lm(t(X) ~ ", pp, ", data=pheno)")
-  X.r <- t(stats::resid(lm(t(X) ~ y)))
-  ## n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
-  n.sv <- isva::EstDimRMT(X.r, FALSE)$dim
-  n.sv
+  if(is.null(n.sv)) {
+    ## fast method using SmartSVA
+    #  pp <- paste0(model.par, collapse = "+")
+    #  lm.expr <- paste0("lm(t(X) ~ ", pp, ", data=pheno)")
+    X.r <- t(stats::resid(lm(t(X) ~ y)))  
+    ## n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
+    n.sv <- isva::EstDimRMT(X.r, FALSE)$dim
+    n.sv <- pmax(n.sv - 1,1)
+  }
+
   ## top 1000 genes only (faster)
-  X1 <- Matrix::head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], 1000)
+  X1 <- X
+  if(!is.null(nsd) && nsd > 0) {
+    X1 <- Matrix::head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], 1000)
+  }
   ## add a little bit of noise to avoid singular error
   ## a <- 0.01 * mean(apply(X1, 1, stats::sd, na.rm = TRUE), na.rm = TRUE)
-  a <- 0.01 * mean(matrixStats::rowSds(X1, na.rm = TRUE), na.rm = TRUE)
+  a <- 0.001 * mean(matrixStats::rowSds(X1, na.rm = TRUE), na.rm = TRUE)
   X1 <- X1 + a * matrix(stats::rnorm(length(X1)), nrow(X1), ncol(X1))
-  sv <- try(sva::sva(X1, mod1x, mod0 = mod0x, n.sv = pmax(n.sv - 1, 1))$sv)
+  sv <- try(sva::sva(X1, mod1x, mod0 = mod0x, n.sv = n.sv)$sv)
   class(sv)
-
+    
   if (!any(class(sv) == "try-error")) {
     message("[svaCorrect] Performing SVA correction...")
     rownames(sv) <- colnames(X)
@@ -2020,8 +2026,13 @@ svaCorrect <- function(X, y) {
     X <- limma::removeBatchEffect(X, covariates = sv, design = mod1x)
   } else {
     message("[svaCorrect] WARNING could not get covariates. no correction.")
+    sv <- NULL
   }
   X <- X[, 1:dimx] ## reduce to original dim
+  if(return.sv) {
+    if(!is.null(sv)) sv <- sv[1:dimx,]
+    return(list(X=X,sv=sv))
+  }
   X
 }
 
