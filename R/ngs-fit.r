@@ -314,44 +314,67 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   }
 
   ## ---------------- DESEQ2 methods -------------------
-  if ("deseq2.wald" %in% methods) {
-    if (nmissing > 0) {
-      message("[ngs.fitContrastsWithAllMethods] Detected missing values (NAs) in the data.
-                                                  Cannot perform DGE testing with DESeq2 Wald test.
-                                                  Skipping. If you wish to use DESeq2 Wald test,
-                                                  please impute the data earlier in the platform.")
-    } else {
-      message("[ngs.fitContrastsWithAllMethods] fitting using DESeq2 (Wald test)")
-      timings[["deseq2.wald"]] <- system.time(
-        outputs[["deseq2.wald"]] <- ngs.fitConstrastsWithDESEQ2(
-          counts, group, contr.matrix, design,
-          X = X, genes = genes,
-          test = "Wald", prune.samples = prune.samples,
-          conform.output = conform.output
+  deseq2.mtds <- c("deseq2.wald", "deseq2.lrt")
+  deseq2.mdls <- c("Wald", "LRT")
+  cm.mtds <- intersect(methods, deseq2.mtds)
+  if (length(cm.mtds) > 0) {
+    i <- 1 
+    for(i in 1:length(cm.mtds)) {
+      message("[ngs.fitContrastsWithAllMethods] fitting using ", cm.mtds[i])
+      if (nmissing > 0) {
+        message("[ngs.fitContrastsWithAllMethods] Missing values detected. Cannot perform ", cm.mtds[i])
+        next;
+      } else {
+        mdl <- deseq2.mdls[match(cm.mtds[i], deseq2.mtds)]
+        timings[[cm.mtds[i]]] <- system.time(
+          outputs[[cm.mtds[i]]] <- ngs.fitConstrastsWithDESEQ2(
+            counts, group, contr.matrix, design,
+            X = X, genes = genes, test = mdl,
+            prune.samples = prune.samples,
+            conform.output = conform.output
+          )
         )
-      )
+      }
     }
   }
-
-  if ("deseq2.lrt" %in% methods) {
-    if (nmissing > 0) {
-      message("[ngs.fitContrastsWithAllMethods] Detected missing values (NAs) in the data.
-                                                  Cannot perform DGE testing with DESeq2 LRT.
-                                                  Skipping. If you wish to use DESeq2 LRT,
-                                                  please impute the data earlier in the platform.")
-    } else {
-      message("[ngs.fitContrastsWithAllMethods] fitting using DESeq2 (LRT test)")
-      timings[["deseq2.lrt"]] <- system.time(
-        outputs[["deseq2.lrt"]] <- ngs.fitConstrastsWithDESEQ2(
-          counts, group, contr.matrix, design,
-          X = X, genes = genes,
-          test = "LRT", prune.samples = prune.samples,
-          conform.output = conform.output
-        )
-      )
-    }
-  }
-
+  ## if ("deseq2.wald" %in% methods) {
+  ##   if (nmissing > 0) {
+  ##     message("[ngs.fitContrastsWithAllMethods] Detected missing values (NAs) in the data.
+  ##                                                 Cannot perform DGE testing with DESeq2 Wald test.
+  ##                                                 Skipping. If you wish to use DESeq2 Wald test,
+  ##                                                 please impute the data earlier in the platform.")
+  ##   } else {
+  ##     message("[ngs.fitContrastsWithAllMethods] fitting using DESeq2 (Wald test)")
+  ##     timings[["deseq2.wald"]] <- system.time(
+  ##       outputs[["deseq2.wald"]] <- ngs.fitConstrastsWithDESEQ2(
+  ##         counts, group, contr.matrix, design,
+  ##         X = X, genes = genes,
+  ##         test = "Wald", prune.samples = prune.samples,
+  ##         conform.output = conform.output
+  ##       )
+  ##     )
+  ##   }
+  ## }
+  ##----------------------------------
+  ## if ("deseq2.lrt" %in% methods) {
+  ##   if (nmissing > 0) {
+  ##     message("[ngs.fitContrastsWithAllMethods] Detected missing values (NAs) in the data.
+  ##                                                 Cannot perform DGE testing with DESeq2 LRT.
+  ##                                                 Skipping. If you wish to use DESeq2 LRT,
+  ##                                                 please impute the data earlier in the platform.")
+  ##   } else {
+  ##     message("[ngs.fitContrastsWithAllMethods] fitting using DESeq2 (LRT test)")
+  ##     timings[["deseq2.lrt"]] <- system.time(
+  ##       outputs[["deseq2.lrt"]] <- ngs.fitConstrastsWithDESEQ2(
+  ##         counts, group, contr.matrix, design,
+  ##         X = X, genes = genes,
+  ##         test = "LRT", prune.samples = prune.samples,
+  ##         conform.output = conform.output
+  ##       )
+  ##     )
+  ##   }
+  ## }
+  
   if (!is.null(custom)) {
     message("[ngs.fitContrastsWithAllMethods] adding custom results table")
     if (is.null(custom.name)) custom.name <- "custom"
@@ -383,9 +406,9 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     missing_rows <- rownames(compare_output$tables[[1]])[which(!rownames(compare_output$tables[[1]]) %in% rownames(custom[[1]]))]
     if (length(missing_rows) > 0) {
       missing_data <- matrix(NA,
-                            nrow = length(missing_rows),
-                            ncol = ncol(custom[[1]]),
-                            dimnames = list(missing_rows, colnames(custom[[1]])))
+        nrow = length(missing_rows),
+        ncol = ncol(custom[[1]]),
+        dimnames = list(missing_rows, colnames(custom[[1]])))
       for (test in names(custom)) {
         custom[[test]] <- rbind(custom[[test]], missing_data)
         custom[[test]] <- custom[[test]][rownames(compare_output$tables[[1]]), ]
@@ -1321,16 +1344,25 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
   return(res)
 }
 
-##
-#' @describeIn ngs.fitContrastsWithLIMMA Fits contrasts using LIMMA with no design. For time-series analysis.
-#' #' @export
-ngs.fitContrastsWithLIMMA.timeseries <- function(X,
-                                                 y,
-                                                 time,
-                                                 trend = TRUE
-                                                 ) {
-  
+#' @describeIn ngs.fitContrastsWithAllMethods Fits time series contrasts using DESeq2 with interaction term.
+#' @export
+.ngs.fitConstrastsWithDESEQ2.timeseries <- function(counts,
+                                                    contr.matrix,
+                                                    test = "Wald",
+                                                    prune.samples = FALSE,
+                                                    conform.output = FALSE,
+                                                    X = NULL,
+                                                    time = time) {
 
+
+  dds <- DESeqDataSet(RSE, ~ strain + minute + strain:minute)
+  dds <- DESeq(dds, test = "LRT", reduced = ~ strain + minute)
+  res <- results(dds)
+  res$symbol <- mcols(dds)$symbol
+  head(res)
+  resD <- as.data.frame(res)
+  dim(resD); head(resD)
+  
 }
 
 
