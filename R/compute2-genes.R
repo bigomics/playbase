@@ -87,7 +87,7 @@ compute_testGenesSingleOmics <- function(pgx,
                                          use.design = FALSE,
                                          prune.samples = TRUE,
                                          test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
-                                         timeseries.methods = FALSE) {
+                                         timeseries.methods = NULL) {
   ## -----------------------------------------------------------------------------
   ## Check parameters, decide group level
   ## -----------------------------------------------------------------------------
