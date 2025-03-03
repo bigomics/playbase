@@ -98,7 +98,7 @@ pgx.createFromFiles <- function(counts.file,
     do.cluster = TRUE,
     use.design = FALSE, ##TRUE,
     prune.samples = TRUE, ##FALSE,
-    timeseries.methods = FALSE,
+    timeseries.methods = NULL,
     pgx.dir = pgx.dir,
     libx.dir = libx.dir,
     progress = NULL
@@ -505,7 +505,7 @@ pgx.createPGX <- function(counts,
 #' @param do.clustergenes Logical indicating whether to cluster genes. Default is TRUE.
 #' @param use.design Whether to use model design matrix for testing. Default is FALSE.
 #' @param prune.samples Whether to remove samples without valid contrasts. Default is TRUE.
-#' @param timeseries.methods Logical whether perform time series analysis. Default NULL
+#' @param timeseries.methods Methods to use for time series analysis. Default NULL
 #' @param extra.methods Additional analysis methods to run. Default is c("meta.go", "infer", "deconv", "drugs", "wordcloud", "wgcna")[c(1, 2)].
 #' @param libx.dir Directory containing custom analysis modules.
 #' @param progress A progress object for tracking status.
@@ -540,7 +540,7 @@ pgx.computePGX <- function(pgx,
                            do.clustergenes = TRUE,
                            use.design = FALSE, ##TRUE,
                            prune.samples = TRUE, ##FALSE,
-                           timeseries.methods = FALSE,
+                           timeseries.methods = NULL,
                            extra.methods = c(
                              "meta.go", "infer", "deconv", "drugs",
                              "connectivity", "wordcloud", "wgcna",
