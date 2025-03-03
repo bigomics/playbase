@@ -196,41 +196,28 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   }
   
   ## ---------------- EdgeR methods -------------------
-  if ("edger.qlf" %in% methods) {
-    if (nmissing > 0) {
-      message("[ngs.fitContrastsWithAllMethods] Detected missing values (NAs) in the data.
-                                                  Cannot perform DGE testing with edgeR using QL F-test.
-                                                  Skipping. If you wish to use edgeR with QL F-test,
-                                                  please impute the data earlier in the platform.")
-    } else {
-      message("[ngs.fitContrastsWithAllMethods] fitting edgeR using QL F-test ")
-      timings[["edger.qlf"]] <- system.time(
-        outputs[["edger.qlf"]] <- ngs.fitContrastsWithEDGER(
-          counts, group, contr.matrix, design,
-          method = "qlf", X = X,
-          prune.samples = prune.samples,
-          conform.output = conform.output, plot = FALSE
+  edger.mtds <- c("edger.qlf", "edger.lrt")
+  edger.mdls <- c("qlf", "lrt")
+  cm.mtds <- intersect(methods, edger.mtds)
+  if (length(cm.mtds) > 0) {
+    i <- 1
+    for(i in 1:length(cm.mtds)) {
+      message("[ngs.fitContrastsWithAllMethods] fitting using ", cm.mtds[i])
+      if (nmissing > 0) {
+        message("[ngs.fitContrastsWithAllMethods] Missing values detected. Cannot perform edgeR QL-F test or LRT.")
+        next;
+      } else {
+        X1 <- X
+        mdl <- edger.mdls[match(cm.mtds[i], edger.mtds)]
+        timings[[cm.mtds[i]]] <- system.time(
+          outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithEDGER(
+            counts, group, contr.matrix, design,
+            method = mdl, X = X1,
+            prune.samples = prune.samples,
+            conform.output = conform.output, plot = FALSE
+          )
         )
-      )
-    }
-  }
-
-  if ("edger.lrt" %in% methods) {
-    if (nmissing > 0) {
-      message("[ngs.fitContrastsWithAllMethods] Detected missing values (NAs) in the data.
-                                                  Cannot perform DGE testing with edgeR using LRT.
-                                                  Skipping. If you wish to use edgeR with LRT,
-                                                  please impute the data earlier in the platform.")
-    } else {
-      message("[ngs.fitContrastsWithAllMethods] fitting edgeR using LRT")
-      timings[["edger.lrt"]] <- system.time(
-        outputs[["edger.lrt"]] <- ngs.fitContrastsWithEDGER(
-          counts, group, contr.matrix, design,
-          method = "lrt", X = X,
-          prune.samples = prune.samples,
-          conform.output = conform.output, plot = FALSE
-        )
-      )
+      }
     }
   }
 
