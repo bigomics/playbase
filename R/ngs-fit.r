@@ -64,7 +64,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
                                            genes = NULL,
                                            prior.cpm = 1,
                                            cpm.scale = 1e6,
-                                           prune.samples = TRUE, ##FALSE,
+                                           prune.samples = TRUE,
                                            conform.output = TRUE,
                                            do.filter = TRUE,
                                            remove.batch = TRUE,
@@ -335,6 +335,24 @@ ngs.fitContrastsWithAllMethods <- function(counts,
           )
         )
       }
+    }
+  }
+  cc1 <- !is.null(timeseries.methods)
+  cc2 <- "deseq2.interaction" %in% timeseries.methods
+  cc3 <- !is.null(time)
+  if(cc1 && cc2 && cc3) {
+    message("[ngs.fitContrastsWithAllMethods] Time series: fitting using deseq2 with interaction term.")
+    if (nmissing > 0) {
+      message("[ngs.fitContrastsWithAllMethods] Missing values detected. Cannot perform deseq2.")
+    } else {
+      timings[["deseq2.interaction"]] <- system.time(
+        outputs[["deseq2.interaction"]] <- ngs.fitConstrastsWithDESEQ2(
+          counts, group, contr.matrix, design,
+          X = X, genes = genes, test = mdl,
+          prune.samples = prune.samples, time = time,
+          conform.output = conform.output
+        )
+      )
     }
   }
   ## if ("deseq2.wald" %in% methods) {
@@ -766,15 +784,15 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
     stop("[ngs.fitContrastsWithLIMMA.timeseries] X and time contain different set of samples")
   }
   jj <- match(colnames(X), names(time))
-  time <- as.character(unname(time[jj]))
+  time0 <- as.character(unname(time[jj]))
 
-  design <- stats::model.matrix(~ 0 + y + y:time)
-  ndf <- length(unique(time)) - 1
-  num.time <- as.numeric(gsub("\\D", "", time))
+  #design <- stats::model.matrix(~ 0 + y + y:time)
+  ndf <- length(unique(time0)) - 1
+  num.time <- as.numeric(gsub("\\D", "", time0))
   time.spline <- try(ns(num.time, df = ndf), silent = TRUE)
-  if ("try-error" %in% class(time.spline))
+  if ("try-error" %in% class(time.spline)) {
     time.spline <- ns(num.time)
-
+  }
   group <- factor(y)
   design <- model.matrix(~ group * time.spline)
   fit <- limma::lmFit(X, design)
@@ -1129,7 +1147,9 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
                                         genes = NULL,
                                         test = "Wald",
                                         prune.samples = FALSE,
-                                        conform.output = FALSE) {
+                                        conform.output = FALSE,
+                                        time = time) {
+
   exp0 <- contr.matrix
   if (!is.null(design)) exp0 <- design %*% contr.matrix
 
@@ -1145,7 +1165,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
   if (is.null(design)) {
     message("[ngs.fitContrastsWithDESEQ2] fitting DESEQ2  *without* design")
     out <- .ngs.fitConstrastsWithDESEQ2.nodesign(
-      counts = counts, contr.matrix = contr.matrix, test = test,
+      counts = counts, contr.matrix = contr.matrix, test = test, time = time,
       prune.samples = prune.samples, conform.output = conform.output
     )
     return(out)
@@ -1252,39 +1272,55 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
                                                   test = "Wald",
                                                   prune.samples = FALSE,
                                                   conform.output = FALSE,
-                                                  X = NULL) {
+                                                  X = NULL,
+                                                  time = NULL) {
   counts <- round(counts)
   
   if (is.null(X)) X <- edgeR::cpm(counts, log = TRUE)
 
-  if (nrow(contr.matrix) != ncol(X)) {
-    stop("ngs.fitConstrastsWithDESEQ2.nodesign:: contrast matrix must be by sample")
-  }
+  if (nrow(contr.matrix) != ncol(X))
+    stop("[ngs.fitConstrastsWithDESEQ2.nodesign]: contrast matrix must be by sample")
 
   exp.matrix <- contr.matrix
 
   tables <- list()
   i <- 1
   for (i in 1:ncol(exp.matrix)) {
-    ## manual design matrix (CHECK THIS!!!)
+
     kk <- 1:nrow(exp.matrix)
-    if (prune.samples) {
-      ## prune unused samples if requested
+    if (prune.samples)
       kk <- which(!is.na(exp.matrix[, i]) & exp.matrix[, i] != 0)
-    }
     ct <- exp.matrix[kk, i]
     y <- factor(c("neg", "zero", "pos")[2 + sign(ct)], levels = c("neg", "zero", "pos"))
-    #
-    ## sample-wise model matrix (does this work???)
-    #
-    design.formula <- stats::formula("~ 0+y")
     counts1 <- counts[, kk, drop = FALSE]
-    #
+
+    design.formula <- stats::formula("~ 0 + y")
+    colData <- data.frame(y)
+
+    if (!is.null(time)) {
+      if (!all(colnames(counts) %in% names(time))) {
+        stop("[ngs.fitConstrastsWithDESEQ2.nodesign] X and time contain different set of samples")
+      }
+      jj <- match(colnames(counts), names(time))
+      time0 <- as.character(unname(time[jj]))
+      factor.time <- factor(as.numeric(gsub("\\D", "", time0)))
+      message("[ngs.fitConstrastsWithDESEQ2.nodesign]: time-series with interaction term: DESeq2 LRT")
+      design.formula <- design.formula <- stats::formula("~ y + time + y:time")
+      colData <- cbind(colData, time=factor.time)
+    }
+
     colnames(counts1) <- NULL
-    dds <- DESeq2::DESeqDataSetFromMatrix(
-      countData = counts1, design = design.formula, colData = data.frame(y)
+    dds <- try(
+      DESeq2::DESeqDataSetFromMatrix(
+        countData = counts1, design = design.formula, colData = colData)
     )
-    #
+    if ("try-error" %in% class(dds)) {
+      message("[ngs.fitConstrastsWithDESEQ2.nodesign]: model matrix not full rank for ",
+        colnames(exp.matrix)[i], ". Skipping contrast")
+      design.formula <- design.formula <- stats::formula("~ 0 + time")
+      colData <- data.frame(factor.time)
+    }
+    
     fitType <- "mean"
     suppressWarnings({
       if (test == "LRT") {
@@ -1343,28 +1379,6 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
   res <- list(tables = tables)
   return(res)
 }
-
-#' @describeIn ngs.fitContrastsWithAllMethods Fits time series contrasts using DESeq2 with interaction term.
-#' @export
-.ngs.fitConstrastsWithDESEQ2.timeseries <- function(counts,
-                                                    contr.matrix,
-                                                    test = "Wald",
-                                                    prune.samples = FALSE,
-                                                    conform.output = FALSE,
-                                                    X = NULL,
-                                                    time = time) {
-
-
-  dds <- DESeqDataSet(RSE, ~ strain + minute + strain:minute)
-  dds <- DESeq(dds, test = "LRT", reduced = ~ strain + minute)
-  res <- results(dds)
-  res$symbol <- mcols(dds)$symbol
-  head(res)
-  resD <- as.data.frame(res)
-  dim(resD); head(resD)
-  
-}
-
 
 ## =====================================================================================
 ## =========================== END OF FILE =============================================
