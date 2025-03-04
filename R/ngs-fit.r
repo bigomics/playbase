@@ -587,7 +587,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
         message("[ngs.fitContrastsWithLIMMA] fitting LIMMA contrasts for time series *without* design")
         top <- ngs.fitContrastsWithLIMMA.timeseries(X1, y, time, trend = TRUE)
       }
-  
+      
       j1 <- which(ct > 0)
       j0 <- which(ct < 0)
       mean1 <- rowMeans(X1[, j1, drop = FALSE], na.rm = TRUE)
@@ -617,12 +617,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
 
 #' @describeIn ngs.fitContrastsWithLIMMA Fits contrasts using LIMMA with no design. For time-series analysis.
 #' @export
-ngs.fitContrastsWithLIMMA.timeseries <- function(X,
-                                                 y,
-                                                 time,
-                                                 trend = TRUE
-                                                 ) {
-
+ngs.fitContrastsWithLIMMA.timeseries <- function(X, y, time, trend = TRUE) {
   message("[ngs.fitContrastsWithLIMMA.timeseries] fitting LUMMA with no design; time-series analysis using spline.")
   library(splines)
 
@@ -635,19 +630,19 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
   ndf <- length(unique(time0)) - 1
   num.time <- as.numeric(gsub("\\D", "", time0))
   time.spline <- try(ns(num.time, df = ndf), silent = TRUE)
-  cc1 <- "try-error" %in% class(time.spline)
-  if (cc1) time.spline <- ns(num.time)
+  chk1 <- "try-error" %in% class(time.spline)
+  if (chk1) time.spline <- ns(num.time)
 
   group <- factor(y)
   #design <- stats::model.matrix(~ 0 + y + y:time)
   design <- model.matrix(~ group * time.spline)
   fit <- limma::lmFit(X, design)
   fit <- limma::eBayes(fit, trend = trend)
-
+  
   coefs <- apply(fit$t, 2, function(x) sum(is.na(x)))
   est.coefs <- names(coefs[coefs != nrow(fit$t)])
   est.coefs <- est.coefs[grep("^time.spline*", est.coefs)]
-
+  
   if (length(est.coefs)) {
     sel <- match(est.coefs, names(coefs))
     message("[ngs.fitContrastsWithLIMMA.time-series], est.coefs: ", paste0(est.coefs, collapse="; "))
@@ -655,16 +650,19 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
       limma::topTable(fit, coef = sel, sort.by = "none", number = Inf, adjust.method = "BH"),
       silent = TRUE
     )
+
+    ## ---------------------
     ## efit <- limma::eBayes(vfit, trend = TRUE, robust = robust)
-    ## not-estimable (NA) coefs caused by highly unbalanced phenotypes in a time point.
+    ## NA coefs caused by highly unbalanced phenotypes in a time point.
     ## coefs <- apply(efit$t, 2, function(x) sum(is.na(x)))
     ## est.coefs <- names(coefs[coefs != nrow(efit$t)])
     ## est.coefs <- est.coefs[grep(":", est.coefs)]
     ## sel <- match(est.coefs, names(coefs))
     ## top <- limma::topTable(efit, coef = sel, sort.by = "none", number = Inf, adjust.method = "BH")
-    ## head(top)
-    cc1 <- "try-error" %in% class(top)
-    if (cc1) {
+    ## ----------------------
+
+    chk1 <- "try-error" %in% class(top)
+    if (chk1) {
       s=1; SEL=list()
       for(s in 1:length(sel)) {
         SEL[[s]] <- limma::topTable(fit, coef = sel[s], sort.by = "none", number = Inf, adjust.method = "BH")
@@ -684,14 +682,16 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
         hh <- grep(index[g], colnames(top))
         top0[, index[g]] <- apply(top[, hh], 1, FUN.x, stat = index[g])
       }
-      ##if (!index[g] %in% c("P.Value", "adj.P.Val")) {
-      ##    top0[, index[g]] <- apply(top[, hh], 1, function(x) max(abs(x), na.rm = TRUE))
-      ##  } else {
-      ##    top0[, index[g]] <- apply(top[, hh], 1, function(x) min(x, na.rm = TRUE))
-      ## }
-      ## }
       top <- top0
       rm(top0)
+    } else {
+      sel <- grep("^time.spline*", colnames(top))
+      logFC <- apply(top[, sel], 1, function(x) max(abs(x), na.rm = TRUE))
+      top <- cbind("logFC" = logFC, top[, -sel])
+      k1 <- c("logFC", "AveExpr", "F", "P.Value", "adj.P.Val")
+      k2 <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val") ## hack. "F" or "t" are 'statistic' later in code.
+      top <- top[, k1]
+      colnames(top) <- k2
     }
   } else {
     top <- data.frame(matrix(NA, nrow=nrow(X), ncol=7))
@@ -1134,13 +1134,13 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
 
   exp.matrix <- contr.matrix
 
-  tables <- list()
-  i <- 1
+  i=1; tables=list()
   for (i in 1:ncol(exp.matrix)) {
 
     kk <- 1:nrow(exp.matrix)
     if (prune.samples)
       kk <- which(!is.na(exp.matrix[, i]) & exp.matrix[, i] != 0)
+
     ct <- exp.matrix[kk, i]
     y <- factor(c("neg", "zero", "pos")[2 + sign(ct)], levels = c("neg", "zero", "pos"))
     counts1 <- counts[, kk, drop = FALSE]
@@ -1165,12 +1165,14 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
       DESeq2::DESeqDataSetFromMatrix(
         countData = counts1, design = design.formula, colData = colData)
     )
-    if ("try-error" %in% class(dds)) {
-      message("[ngs.fitConstrastsWithDESEQ2.nodesign]: model matrix not full rank for ",
-        colnames(exp.matrix)[i], ". Skipping contrast")
-      design.formula <- design.formula <- stats::formula("~ 0 + time")
-      colData <- data.frame(factor.time)
-    }
+
+    ##---------------NEEDS WORK.
+    ## if ("try-error" %in% class(dds)) {
+    ##   message("[ngs.fitConstrastsWithDESEQ2.nodesign]: model matrix not full rank for ",
+    ##     colnames(exp.matrix)[i], ". Skipping contrast")
+    ##   design.formula <- design.formula <- stats::formula("~ 0 + time")
+    ##   colData <- data.frame(factor.time)
+    ## }
     
     fitType <- "mean"
     suppressWarnings({
