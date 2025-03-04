@@ -40,7 +40,7 @@
 #' @param correct.AveExpr Whether to correct for average expression. Default is TRUE.
 #' @param custom Custom differential expression method. Default is NULL.
 #' @param custom.name Name for custom method. Default is NULL.
-#' @param timeseries.methods Stat methods for time series DGE analysis. Default NULL.
+#' @param timeseries.methods Methods for time series analysis. Must be trend.limma and/or deseq2.lrt. Default NULL.
 #' @param time time character vector to be passed for time series analysis. Default NULL.
 #'
 #' @details This function provides a convenient wrapper to run multiple differential expression methods on the same data.
