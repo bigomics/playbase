@@ -629,9 +629,9 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X, y, time, trend = TRUE) {
   
   ndf <- length(unique(time0)) - 1
   num.time <- as.numeric(gsub("\\D", "", time0))
-  time.spline <- try(ns(num.time, df = ndf), silent = TRUE)
+  time.spline <- try(splines::ns(num.time, df = ndf), silent = TRUE)
   chk1 <- "try-error" %in% class(time.spline)
-  if (chk1) time.spline <- ns(num.time)
+  if (chk1) time.spline <- splines::ns(num.time)
 
   group <- factor(y)
   #design <- stats::model.matrix(~ 0 + y + y:time)
