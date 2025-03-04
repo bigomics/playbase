@@ -14,6 +14,7 @@ pgx.clusterGenes(
   rank.tf = FALSE,
   center.rows = TRUE,
   scale.rows = FALSE,
+  find.clusters = FALSE,
   X = NULL,
   umap.pkg = "uwot"
 )

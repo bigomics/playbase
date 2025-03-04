@@ -8,7 +8,8 @@ pgx.findLouvainClusters(
   X,
   graph.method = "dist",
   level = 1,
-  prefix = "c",
+  prefix = "C",
+  knn = 100,
   gamma = 1,
   small.zero = 0.01
 )

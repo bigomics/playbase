@@ -8,7 +8,8 @@ pgx.FindClusters(
   X,
   method = c("kmeans", "hclust", "louvain", "meta"),
   top.sd = 1000,
-  npca = 50
+  npca = 50,
+  scale = TRUE
 )
 }
 \arguments{
