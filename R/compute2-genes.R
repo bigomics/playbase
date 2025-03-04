@@ -208,7 +208,8 @@ compute_testGenesSingleOmics <- function(pgx,
   ## -----------------------------------------------------------------------------
   time <- NULL
   if (!is.null(timeseries.methods)) {
-    sel <- grep("time", colnames(pgx$samples))
+    ss <- "minute|hour|day|week|month|year|time"
+    sel <- grep(ss, colnames(pgx$samples))
     if (length(sel) == 0) {
       stop("[compute_testGenesSingleOmics] Cannot locate 'time' column in pgx.samples. Skipping time-series analysis.")
      }
@@ -225,7 +226,7 @@ compute_testGenesSingleOmics <- function(pgx,
   
   ## Run all test methods
   message("[compute_testGenesSingleOmics] 12 : start fitting... ")
-  gx.meta <- playbase::ngs.fitContrastsWithAllMethods(
+  gx.meta <- ngs.fitContrastsWithAllMethods(
     counts = counts,
     X = X,
     samples = samples,
