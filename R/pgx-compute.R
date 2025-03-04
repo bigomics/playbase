@@ -606,7 +606,9 @@ pgx.computePGX <- function(pgx,
   ## Cluster by genes
   if (do.clustergenes) {
     message("[pgx.computePGX] clustering genes...")
-    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), X = pgx$impX, level = "gene")
+    pgx <- pgx.clusterGenes(
+      pgx, methods = "umap", dims = c(2, 3),
+      X = pgx$impX, level = "gene")
   }
 
   ## -----------------------------------------------------------------------------

@@ -106,7 +106,9 @@ wgcna.compute <- function(X,
                           reassignThreshold = 1e-6,
                           ngenes = 2000,
                           numericlabels = FALSE,
-                          prefix = "ME"
+                          maxBlockSize = 5000,
+                          prefix = "ME",
+                          verbose = 0
                           ) {
 
   #minmodsize=20;power=12;cutheight=0.15;deepsplit=2;ngenes=2000;networktype="signed";tomtype="signed";numericlabels=FALSE;prefix="ME";minKME=0.3;reassignThreshold=1e-6
@@ -139,7 +141,7 @@ wgcna.compute <- function(X,
       datExpr,
       powerVector = powers,
       networkType = networktype,
-      verbose = 0
+      verbose = verbose
     )
     power <- sft$powerEstimate
     if(is.na(power)) power <- 20
@@ -168,7 +170,8 @@ wgcna.compute <- function(X,
     minKMEtoStay = minKME,
     numericLabels = numericlabels, ## numeric or 'color' labels
     deepSplit = deepsplit,
-    verbose = 0
+    maxBlockSize = maxBlockSize,
+    verbose = verbose
   )
   cor <- stats::cor
 
@@ -219,7 +222,7 @@ wgcna.compute <- function(X,
     power = power,
     TOMType = tomtype,
     networkType = networktype,
-    verbose = 0
+    verbose = verbose
   )
   rownames(TOM) <- colnames(TOM) <- colnames(datExpr)
 
@@ -243,6 +246,9 @@ wgcna.compute <- function(X,
   ## module-traits matrix
   modTraits <- cor(net$MEs, datTraits, use="pairwise")
 
+  ## merge dendrograms
+  net$merged_dendro <- wgcna.merge_block_dendrograms(net, TOM)   
+  
   ## construct results object
   results <- list(
       datExpr = datExpr,
@@ -539,7 +545,8 @@ wgcna.runConsensusWGCNA <- function( exprList,
                                     power = 12,
                                     minKME = 0.8,
                                     cutheight = 0.15,
-                                    deepsplit = 2
+                                    deepsplit = 2,
+                                    maxBlockSize = 5000
                                     ) {
 
   ##exprList <- list(Set1 = V1, Set2 = V2)
@@ -552,7 +559,6 @@ wgcna.runConsensusWGCNA <- function( exprList,
     message("[wgcna.runConsensusWGCNA] computing WGCNA for ", k)
     net.list[[k]] = WGCNA::blockwiseModules(
       datExpr = multiExpr[[k]]$data,
-      maxBlockSize = 5000,
       power = power,
       networkType = "signed",
       TOMType = "signed",
@@ -562,6 +568,7 @@ wgcna.runConsensusWGCNA <- function( exprList,
       numericLabels = FALSE,
       minKMEtoStay = minKME,
       saveTOMs = FALSE,
+      maxBlockSize = maxBlockSize,      
       verbose = 0
     )
   }
@@ -570,7 +577,6 @@ wgcna.runConsensusWGCNA <- function( exprList,
   message("[wgcna.runConsensusWGCNA] computing consensus modules...")
   cons = WGCNA::blockwiseConsensusModules(
     multiExpr[],
-    maxBlockSize = 5000,
     power = power, 
     networkType = "signed",
     TOMType = "signed",
@@ -579,25 +585,28 @@ wgcna.runConsensusWGCNA <- function( exprList,
     mergeCutHeight = cutheight, 
     numericLabels = FALSE,
     minKMEtoStay = minKME,
+    maxBlockSize = maxBlockSize,
     saveTOMs = FALSE,
     verbose = 1
   )
 
-  ii <- which(cons$goodGenes)
+  ## create and match colors
   colors <- sapply(net.list, function(net) net$colors)
-  colors <- cbind( Consensus=cons$colors, colors )[ii,]
+  c0 <- cons$colors
+  matched.colors <- apply(colors, 2, function(k) WGCNA::matchLabels(k,c0))
+  colors <- cbind(Consensus=c0, matched.colors)
   
-  if(0) {
-    dendro = cons$dendrograms[[1]];
-    plotDendroAndColors(
-      dendro,
-      colors = colors,
-      c("Consensus", names(net.list)),
-      dendroLabels = FALSE, hang = 0.03,
-      addGuide = TRUE, guideHang = 0.05,
-      main = "Consensus gene dendrogram and module colors")
+  ## add labels to dendrogram
+  for(i in 1:length(cons$dendrograms)) {
+    ii <- which(cons$goodGenes & cons$blocks==i)
+    xnames <- names(cons$colors)
+    cons$dendrograms[[i]]$labels <- xnames[ii]
   }
-
+  
+  ## merge dendrograms
+  multiX <- Matrix::t(do.call(rbind,lapply(exprList,function(x)scale(t(x)))))
+  cons$merged_dendro <- wgcna.merge_block_dendrograms(cons, multiX)   
+  
   ## create module-trait matrices for each set
   Z.list <- list()
   k=1
@@ -629,7 +638,7 @@ wgcna.runConsensusWGCNA <- function( exprList,
   res <- list(
     cons = cons,
     consZ = consZ,
-    dendro = cons$dendrograms[[1]],    
+    dendro = cons$merged_dendro,    
     colors = colors,
     zlist = Z.list,
     ydim = ydim
@@ -690,6 +699,44 @@ wgcna.getGeneStats <- function(wgcna, module, trait, plot=TRUE,
   }
 
   df
+}
+
+wgcna.merge_block_dendrograms <- function(net, X) {
+  hc = net$dendrograms
+  length(hc)
+  if(length(hc)==1) {
+    return(net$dendrograms[[1]])
+  }
+  ## merge block dendrogram
+  mx <- list()
+  for(b in 1:length(net$dendrogram)) {
+    ii <- which(net$goodGenes & net$blocks==b)
+    mx[[b]] <- colMeans(X[ii,])
+    hc[[b]]$labels <- rownames(X)[ii]
+  }
+  M <- do.call(rbind, mx)
+  hclust_p = hclust(dist(M),method="average")
+  dend_p = as.dendrogram(hclust_p)
+  dend.list = lapply(hc, as.dendrogram)
+  if(0) {
+    merged_dendro = ComplexHeatmap::merge_dendrogram(dend_p, dend.list)
+  } else {
+    mrg <- hclust_p$merge
+    merged_branch <- list()
+    k=1
+    for(k in 1:nrow(mrg)) {
+      i <- mrg[k,1]
+      j <- mrg[k,2]
+      if(i<0) d1 <- dend.list[[-i]]
+      if(i>0) d1 <- merged_branch[[i]]      
+      if(j<0) d2 <- dend.list[[-j]]
+      if(j>0) d2 <- merged_branch[[j]]      
+      merged_branch[[k]] <- merge(d1,d2)
+    }
+    merged_dendro <- merged_branch[[k]]
+  }
+  merged_hclust <- as.hclust(merged_dendro)
+  merged_hclust
 }
 
 ##=========================================================================
@@ -757,20 +804,34 @@ wgcna.plotTOM <- function(wgcna, justdata=FALSE) {
 #'
 #'
 #' @export
-wgcna.plotDendroAndColors <- function(wgcna, main=NULL, unmerged=FALSE,
-                                      block=1) {
-  ii <- which(wgcna$net$blocks == block & wgcna$net$goodGenes==TRUE)
-  colors <- wgcna.labels2colors(wgcna$net$colors)[ii]
-  groupLabels <- "Module colors"
+wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=NULL, extra.colors=NULL) {
+
   if(length(wgcna$net$dendrograms)>1) {
     message("warning: this wgcna has multiple blocks")
   }
-  geneTree = wgcna$net$dendrograms[[block]]
-  if(unmerged) {
-    colors <- cbind(
-      colors,
-      wgcna.labels2colors(wgcna$net$unmergedColors)[ii])
-    groupLabels <- c( "Merged colors", "Unmerged colors")
+
+  if(is.null(block) && "merged_dendro" %in% names(wgcna$net)) {
+    geneTree <- wgcna$net$merged_dendro
+  } else {
+    if(is.null(block)) block <- 1
+    geneTree <- wgcna$net$dendrograms[[block]]
+  }
+  colors <- wgcna.labels2colors(wgcna$net$colors)
+  gg <- geneTree$labels
+  if(is.null(gg) && !is.null(block)) {
+    ii <- which(wgcna$net$blocks == block & wgcna$net$goodGenes==TRUE)
+    gg <- names(wgcna$net$color)[ii]
+  }
+  if(is.null(gg) && is.null(block)) {
+    ii <- which(wgcna$net$goodGenes==TRUE)
+    gg <- names(wgcna$net$color)[ii]
+  }
+  colors <- colors[gg]
+  groupLabels <- "Module colors"
+  if(!is.null(extra.colors)) {
+    jj <- match(gg, rownames(extra.colors))
+    colors <- cbind(colors, extra.colors[jj,])
+    groupLabels <- c("Module colors",colnames(extra.colors))
   }
   
   if(is.null(main)) main <- "Gene dendrogram and module colors"
@@ -1264,6 +1325,65 @@ wgcna.plotModuleHubGenes <- function(wgcna, modules=NULL,
          )
     title(paste("Module",k),line=0.33)
   }
-  
-
 }
+
+#' Filter color vector by minimum KME and mergeCutHeight. Set color of
+#' features with KME smaller than minKME to grey (or 0) group. Merge
+#' similar modules with (module) correlation larger than
+#' (1-mergeCutHeight) together.
+#'
+#' @export
+wgcna.filterColors <- function(X, colors, minKME=0.3, mergeCutHeight=0.15,
+                               minmodsize = 20 ) {
+  X <- t(scale(t(X)))
+  vv <- tapply(1:nrow(X), colors, function(i) svd(X[i,],nv=1)$v[,1])
+  new.colors <- colors
+  if(minKME > 0) {
+    i=1
+    for(i in 1:length(vv)) {
+      ii <- which(colors == names(vv)[i])
+      r <- cor(t(X[ii,]), vv[[i]])[,1]
+      max(r)
+      jj <- ii[which(abs(r) < minKME)]
+      if(length(jj)) {
+        new.colors[jj] <- NA
+      }
+    }  
+    if(is.numeric(colors)) {
+      new.colors[is.na(new.colors)] <- 0
+    } else {
+      new.colors[is.na(new.colors)] <- "grey"
+    }
+  }
+
+  ## merge groups
+  if(mergeCutHeight > 0) {
+    mx <- rowmean(X, new.colors)
+    rr <- cor(t(mx))
+    diag(rr) <- 0
+    merge.idx <- which(rr > (1 - mergeCutHeight), arr.ind=TRUE)
+    if(nrow(merge.idx)>0) {
+      i=1
+      for(i in 1:nrow(merge.idx)) {
+        aa <- rownames(rr)[merge.idx[i,]]
+        jj <- which(new.colors  %in% aa)
+        max.color <- names(which.max(table(new.colors[jj])))
+        new.colors[jj] <- max.color
+      }
+    }
+  }
+
+  ## remove small groups
+  modsize <- table(new.colors)
+  modsize
+  if( min(modsize) < minmodsize ) {
+    small.mod <- names(which(modsize < minmodsize))
+    sel <- which( new.colors %in% small.mod)
+    new.colors[sel] <- NA
+  }
+
+  grey.val <- ifelse(is.numeric(colors),0,"grey")
+  new.colors[is.na(new.colors)] <- grey.val
+  new.colors
+}
+
