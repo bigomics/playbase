@@ -685,6 +685,9 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
                                                  time,
                                                  trend = TRUE) {
 
+  LL <- list(X=X, y=y, time=time)
+  saveRDS(LL, "~/Desktop/MNT/MNTKK.RDS")
+
   message("[ngs.fitContrastsWithLIMMA.timeseries] fitting LIMMA with no design; time-series analysis using spline.")
 
   library(splines)
@@ -747,8 +750,8 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
       top0 <- top[, 1:length(index)]
       colnames(top0) <- index
       FUN.x <- function(x, stat) {
-        cc1 <- stat %in% c("P.Value", "adj.P.Val")
-        xx <- ifelse(cc1, min(x, na.rm=TRUE), max(abs(x), na.rm=TRUE))
+        chk0 <- stat %in% c("P.Value", "adj.P.Val")
+        xx <- ifelse(chk0, min(x, na.rm=TRUE), x[which.max(abs(x))])
         return(xx)
       }
       g=1
