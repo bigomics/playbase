@@ -470,9 +470,11 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## If no organism, no custom annotation table and no custom geneset,
   ## then create empty GMT
-  no3 <- pgx$organism == "No organism" && is.null(annot_table) &&
+  unknown.organism <- (pgx$organism %in% c("No organism","custom","unkown"))
+  unknown.datatype <- (pgx$datatype %in% c("custom","unkown"))  
+  no3 <- unknown.organism && is.null(annot_table) &&
          is.null(custom.geneset) 
-  if ( no3 || pgx$datatype == "unknown" || !add.gmt) {
+  if ( no3 || unknown.datatype || !add.gmt) {
     message("[createPGX] WARNING: empty GMT matrix. No gene sets. " )    
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
   } else {    
@@ -606,7 +608,9 @@ pgx.computePGX <- function(pgx,
   ## Cluster by genes
   if (do.clustergenes) {
     message("[pgx.computePGX] clustering genes...")
-    pgx <- pgx.clusterGenes(pgx, methods = "umap", dims = c(2, 3), X = pgx$impX, level = "gene")
+    pgx <- pgx.clusterGenes(
+      pgx, methods = "umap", dims = c(2, 3),
+      X = pgx$impX, level = "gene")
   }
 
   ## -----------------------------------------------------------------------------
@@ -907,31 +911,15 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
                                 query = "symbol", fill_na = TRUE)
     dbg("[pgx.add_GMT] Default GSET matrix: ", dim(G))
   }
-  
+    
   ## -----------------------------------------------------------
-  ## Filter gene sets on size
-  ## -----------------------------------------------------------
-
-  ## message("[pgx.add_GMT] Filtering gene sets on size...")
-  ## gmt.size <- Matrix::colSums(G != 0)
-  ## if (pgx$datatype == "metabolomics") {
-  ##   # metabolomics genesets are MUCH smaller than transcriptomics,
-  ##   # metabolomics have usually less features, so we need to reduce
-  ##   # the min size
-  ##   size.ok <- which(gmt.size >= 3 & gmt.size <= 400)
-  ## } else {
-  ##   size.ok <- which(gmt.size >= 15 & gmt.size <= 400)
-  ## }
-  ## # if we have enough genesets, remove the small ones
-  ## if (length(size.ok) > 100) {
-  ##   G <- G[, size.ok, drop = FALSE]
-  ## }
-  
-  ## -----------------------------------------------------------
-  ## Add custom gene sets if provided
+  ## Add organism specific GO gene sets
   ## -----------------------------------------------------------
 
-  # only run if not metaboloimcs
+  # only run if not metabolomics
+  org.supported <- (pgx$organism %in% playbase::SPECIES_TABLE$species_name)
+  info("[pgx.add_GMT] organism.supported = ", org.supported)
+  
   if (pgx$datatype != "metabolomics") {
     ## add species GO genesets from AnnotationHub
     go.genesets <- NULL
@@ -980,6 +968,10 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     } ## end-if go.genesets
   } ## end-if !metabolics
 
+  ## -----------------------------------------------------------
+  ## Add custom gene sets if provided
+  ## -----------------------------------------------------------
+  
   if (!is.null(custom.geneset$gmt)) {
     message("[pgx.add_GMT] Adding custom genesets...")
     ## convert gmt standard to SPARSE matrix: gset in rows, genes in columns.
