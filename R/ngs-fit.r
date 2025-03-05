@@ -763,7 +763,7 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
       rm(top0)
     } else {
       sel <- grep("time.spline*", colnames(top))
-      logFC <- apply(top[, sel], 1, function(x) max(abs(x), na.rm = TRUE))
+      logFC <- apply(top[, sel], 1, function(x) x[which.max(abs(x))])
       top <- cbind("logFC" = logFC, top[, -sel])
       k1 <- c("logFC", "AveExpr", "F", "P.Value", "adj.P.Val")
       k2 <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val") ## hack. "F"|"t" are 'statistic' later in code.
