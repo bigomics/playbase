@@ -241,6 +241,55 @@ pgx.countNormalization <- function(x, methods, ref = NULL, rm.zero = FALSE) {
   return(x)
 }
 
+#' @title Normalize expression data
+#'
+#' @description
+#' Normalizes a matrix of RNA-seq/proteomics data using different methods. Uses log2 data.
+#'
+#' @param x Matrix of log2-transformed data, with genes in rows and samples in columns.
+#' @param method Normalization method(s) to use. 
+#' @param ref Reference for referenceNormalization
+#' @param prior Offset added in X prior to log2
+#' 
+#' @details
+#' This function normalizes a log2-transformed data matrix using different normalization methods:
+#'
+#' @return
+#' Normalized, log2-transformed matrix.
+#'
+#' @export
+pgx.countNormalization.beta <- function(X, method = "CPM", ref = NULL, prior = 1) {
+  ## Column-wise normalization (along samples).
+  ## x:      log2-transformed counts + prior
+  ## method: single method
+  ## prior:  prior used for log2-transformation. 
+
+  m <- method
+  methods <- c("CPM", "quantile", "CPM+quantile", "maxMedian", "maxSum", "reference")
+  if(!m %in% methods) {
+    stop("[pgx.countNormalization.beta]: unknown mormalization method")  
+  }
+
+  counts <- 2 ** X - prior
+
+  if (m == "CPM") {
+    X <- logCPM(counts = counts, total = 1e+06, prior = prior, log = TRUE)
+  } else if (m == "quantile") {
+    X <- log2(limma::normalizeQuantiles(counts) + prior)
+  } else if (m == "CPM+quantile") {
+    X <- logCPM(counts = counts, total = 1e+06, prior = prior, log = TRUE)
+    X <- limma::normalizeQuantiles(X)
+  } else if (m == "maxMedian") {
+    X <- maxMedianNormalization(counts = counts, prior = prior, toLog = TRUE)
+  } else if (m == "maxSum") {
+    X <- maxSumNormalization(counts = counts, prior = prior, toLog = TRUE)
+  } else if (m == "reference") {
+    X <- referenceNormalization(counts = counts, ref = ref, prior = prior, toLog = TRUE)
+  }
+  return(X)
+
+}
+
 
 #' @export
 edgeR.normalizeCounts <- function(M, method = c("TMM", "TMMwsp", "RLE", "upperquartile", "none")) {
