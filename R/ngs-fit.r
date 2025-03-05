@@ -290,6 +290,9 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     timings[["custom"]] <- system.time(0)
   }
 
+  LL <- list(X=X, contr.matrix=contr.matrix, outputs=outputs)
+  saveRDS(LL, "~/Desktop/MNT/OO.RDS")
+
   ## ----------------------------------------------------------------------
   ## "corrections" ...
   ## ----------------------------------------------------------------------
@@ -331,7 +334,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         }
       }
     }
-
     ## i <- j <- 1
     ## for (i in 1:length(outputs)) {
     ##  for (j in 1:length(outputs[[i]]$tables)) {
@@ -342,6 +344,24 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     ## }
 
   }
+
+  ##-----------------------------------------------------------------------
+  ## Put "IA:*" contrasts as last columns in outputs limma/DeSeq2/EdgeR
+  ##-----------------------------------------------------------------------
+  if (!is.null(time)) {
+    i <- 1
+    for (i in 1:length(outputs)) {
+      contr.names <- names(outputs[[i]]$tables)
+      chk1 <- grep("^IA:*", contr.names)
+      if (any(chk1)) {
+        ss <- unique(c(contr.names[-chk1], contr.names[chk1]))
+        jj <- match(ss, names(outputs[[i]]$tables))
+        outputs[[i]]$tables <- outputs[[i]]$tables[jj]
+        names(outputs[[i]]$tables) <- ss 
+      }
+    }
+  }  
+
   ## ----------------------------------------------------------------------
   ## add some statistics
   ## ----------------------------------------------------------------------
@@ -389,7 +409,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     
     outputs[[i]] <- res
   }
- 
+  
   ## --------------------------------------------------------------
   ## Reshape matrices by comparison
   ## --------------------------------------------------------------
@@ -470,9 +490,13 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   colnames(timings0) <- c("user.self", "sys.self", "elapsed", "user.child", "sys.child")
 
   res <- list(
-    outputs = outputs, meta = all.meta, sig.counts = sig.counts,
-    timings = timings0, X = X
+    outputs = outputs,
+    meta = all.meta,
+    sig.counts = sig.counts,
+    timings = timings0,
+    X = X
   )
+
   return(res)
 }
 
@@ -739,12 +763,11 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
       logFC <- apply(top[, sel], 1, function(x) max(abs(x), na.rm = TRUE))
       top <- cbind("logFC" = logFC, top[, -sel])
       k1 <- c("logFC", "AveExpr", "F", "P.Value", "adj.P.Val")
-      k2 <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val") ## hack. "F" or "t" are 'statistic' later in code.
+      k2 <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val") ## hack. "F"|"t" are 'statistic' later in code.
       top <- top[, k1]
       colnames(top) <- k2
     }
   } else {
-    ##-------------I think we should not have NA values so often
     top <- data.frame(matrix(NA, nrow=nrow(X), ncol=5))
     rownames(top) <- rownames(X)
     colnames(top) <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val")
