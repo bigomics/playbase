@@ -86,8 +86,7 @@ getProbeAnnotation <- function(organism, probes, datatype, probetype="",
         probes, add_id = TRUE, probe_type = NULL, annot_table = annot_table )
     } else {
       ## Fallback on custom
-      dbg("[getProbeAnnotation] WARNING: not able to map metabolomicx probes. fallback to custom (empty) annotation.")
-      genes <- getCustomAnnotation( probes, custom_annot = annot_table )
+      dbg("[getProbeAnnotation] WARNING: not able to map metabolomics probes")
     }
   } else if (datatype == "multi-omics") {
     dbg("[getProbeAnnotation] annotating for multi-omics")
@@ -97,19 +96,27 @@ getProbeAnnotation <- function(organism, probes, datatype, probetype="",
     genes <- getGeneAnnotation( organism = organism, probes = probes )
   }
   
+  ## final fallback is genes==NULL
+  if(is.null(genes)) {
+    dbg("[getProbeAnnotation] WARNING: fallback to UNKNOWN probes")
+    genes <- getCustomAnnotation( probes, custom_annot = NULL )
+  }
+
   ## if annot_table is provided we override our annotation and append
   ## extra columns
-  if (!is.null(annot_table)) {
+  if (!is.null(genes) && !is.null(annot_table)) {
     dbg("[getProbeAnnotation] merging custom annotation table")
     kk <- unique(c(colnames(genes),colnames(annot_table)))
     genes <- genes[, setdiff(colnames(genes), colnames(annot_table)), drop=FALSE]
     annot_table <- annot_table[match(rownames(genes), rownames(annot_table)), ]
     genes <- cbind(genes, annot_table)[,kk]
   }
-
+  
   genes
 }
 
+#' Get gene annotation data using annothub or orthogene.
+#'
 #' @export
 getGeneAnnotation <- function(
     organism,
@@ -139,28 +146,35 @@ getGeneAnnotation <- function(
     use.ah = use.ah,
     verbose = verbose
   )
-
+  
   ## fallback with ORTHOGENE
+  if(is.null(annot)) {
+    dbg("[getGeneAnnotation] fallback to ORTHOGENE ")  
+    annot <- try(getGeneAnnotation.ORTHOGENE(
+      organism = organism,
+      probes = probes,
+      verbose = verbose
+    ))
+    dbg("[getGeneAnnotation] ORTHOGENE: class.annot= ", class(annot))      
+    if("try-error" %in% class(annot)) {
+      annot <- NULL
+    }
+  }
+  
   missing <- annot$symbol %in% c(NA,"")
-  if (is.null(annot) || any(missing)) {
+  if (!is.null(annot) && any(missing)) {
     info(
       "[getGeneAnnotation] annotating", sum(missing),
       "missing features with ORTHOGENE"
     )
-    if (any(missing)) {
-      missing.probes <- probes[which(missing)]
-    } else {
-      missing.probes <- probes
-    }
+    missing.probes <- probes[which(missing)]
     missing.annot <- try(getGeneAnnotation.ORTHOGENE(
       organism = organism,
       probes = missing.probes,
       verbose = verbose
     ))
-    
-    if (!is.null(missing.annot) &&
-          !"try-error" %in% class(missing.annot) &&
-           nrow(missing.annot)) {
+    if (!is.null(missing.annot) && !"try-error" %in% class(missing.annot) &&
+          nrow(missing.annot)) {
       ## replace missing entries
       missing.annot <- missing.annot[, colnames(annot)]
       jj <- match(missing.probes, probes)
@@ -169,31 +183,13 @@ getGeneAnnotation <- function(
   }
 
   ## clean up
-  annot <- cleanupAnnotation(annot)
+  if(!is.null(annot)) {
+    annot <- cleanupAnnotation(annot)
+  }
 
   return(annot)
 }
 
-getOrthoSpecies <- function(organism, use=c("table","map")[1]) {
-  if(use == "map") {
-    species <- try(orthogene::map_species(organism, method = "gprofiler", verbose = FALSE))
-  }
-  if(use == "table") {  
-    S <- playbase::SPECIES_TABLE
-    df <- data.frame(rownames(S), S[, c("species", "species_name", "ortho_species")])
-    match <- colSums(apply(df, 2, tolower) == tolower(organism), na.rm = TRUE)
-    if (all(match == 0)) {
-      return(NULL)
-    }
-    k <- which.max(match)
-    sel <- match(tolower(organism), tolower(df[, k]))
-    if (length(sel) == 0) {
-      return(NULL)
-    }
-    species <- df[sel, "ortho_species"]
-  }
-  species
-}
 
 #' Get gene annotation data using AnnotationHub
 #'
@@ -244,7 +240,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   }
 
   if (verbose) {
-    message("[getGeneAnnotationy] Retrieving gene annotation...")
+    message("[getGeneAnnotation.ANNOTHUB] Retrieving gene annotation...")
   }
 
   if (tolower(organism) == "human") organism <- "Homo sapiens"
@@ -256,6 +252,11 @@ getGeneAnnotation.ANNOTHUB <- function(
   ## get correct OrgDb database for this organism
   orgdb <- getOrgDb(organism, use.ah = use.ah)
 
+  if(is.null(orgdb)) {
+    message("[getGeneAnnotation.ANNOTHUB] ERROR: orgdb == NULL: ", is.null(orgdb) )
+    return(NULL)
+  }
+  
   if (is.null(probes)) {
     probes <- AnnotationDbi::keys(orgdb)
   }
@@ -410,6 +411,26 @@ getGeneAnnotation.ANNOTHUB <- function(
   return(genes)
 }
 
+getOrthoSpecies <- function(organism, use=c("table","map")[1]) {
+  if(use == "map") {
+    species <- try(orthogene::map_species(organism, method = "gprofiler", verbose = FALSE))
+  }
+  if(use == "table") {  
+    S <- playbase::SPECIES_TABLE
+    df <- data.frame(rownames(S), S[, c("species", "species_name", "ortho_species")])
+    match <- colSums(apply(df, 2, tolower) == tolower(organism), na.rm = TRUE)
+    if (all(match == 0)) {
+      return(NULL)
+    }
+    k <- which.max(match)
+    sel <- match(tolower(organism), tolower(df[, k]))
+    if (length(sel) == 0) {
+      return(NULL)
+    }
+    species <- df[sel, "ortho_species"]
+  }
+  species
+}
 
 #' Cleanup probe names from postfixes or version numbers
 #'
@@ -471,6 +492,11 @@ match_probe_names <- function(probes, org, probe_type = NULL) {
 #' Cleanup annotation
 #'
 cleanupAnnotation <- function(genes) {
+
+  if(is.null(genes)) {
+    return(NULL)
+  }
+  
   ## add missing columns if needed, then reorder
   columns <- c(
     "feature", "symbol", "human_ortholog", "gene_title", ## "gene_biotype",
@@ -500,7 +526,7 @@ cleanupAnnotation <- function(genes) {
   if (is.null(genes$human_ortholog)) {
     genes$human_ortholog <- NA
   }
-
+  
   ## reorder
   ordered.cols <- c(columns, setdiff(colnames(genes), columns))
   genes <- genes[, ordered.cols]
@@ -508,7 +534,7 @@ cleanupAnnotation <- function(genes) {
   ## Attempt: remove "pos", "tx_len"
   ##  keep <- colnames(genes)[!colnames(genes) %in% c("pos", "tx_len")]
   ##  genes <- genes[, keep]
-
+  
   genes
 }
 
