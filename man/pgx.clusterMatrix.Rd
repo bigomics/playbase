@@ -14,7 +14,6 @@ pgx.clusterMatrix(
   center.features = TRUE,
   scale.features = FALSE,
   find.clusters = FALSE,
-  svd.gamma = 1,
   umap.pkg = "uwot"
 )
 }
@@ -36,8 +35,6 @@ pgx.clusterMatrix(
 \item{scale.features}{Scale the rows before clustering?}
 
 \item{find.clusters}{Detect optimal number of clusters?}
-
-\item{svd.gamma}{Gamma parameter for randomized SVD}
 
 \item{umap.pkg}{UMAP package to use (umap or uwot)}
 }

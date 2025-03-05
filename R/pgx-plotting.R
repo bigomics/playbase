@@ -6443,9 +6443,6 @@ plotTimeSeries.modules <- function(time, xx, modules, main="") {
   }
   df <- data.frame( modules=modules, mX, check.names=FALSE)
   dim(df)
-
-  ##install.packages("GGally")
-  ##library(GGally)
   kpal <- sort(unique(as.character(df$modules)))
   kpal <- adjustcolor(kpal, alpha.f=0.33, 0.9, 0.9, 0.9)
   GGally::ggparcoord(
