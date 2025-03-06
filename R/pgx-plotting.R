@@ -6373,7 +6373,6 @@ ggLollipopPlot <- function( values, sizes=NULL, xlab="value",
     )  
 }
 
-
 #' @export
 plotlyLasagna <- function(df, znames=NULL) {
 
@@ -6436,26 +6435,44 @@ plotlyLasagna <- function(df, znames=NULL) {
 #' Plots time series facetted by module/colors. X is an expression
 #' matrix. Time is a vector of times for each sample. 
 #' 
-plotTimeSeries.modules <- function(time, xx, modules, main="") {
+#' @export
+plotTimeSeries.modules <- function(time, xx, modules, main="", legend=TRUE) {
   mX <- t(rowmean(scale(t(xx)), time))
+  is.color <- mean(modules %in% WGCNA::standardColors(435)) > 0.8
+  is.color
   if(is.numeric(modules)) {
-    modules <- WGCNA::standardColors(435)[rank(modules)]
+    colors <- WGCNA::standardColors(435)[rank(modules)]
+  } else if(is.color) {
+    colors <- modules
+  } else {
+    colors <- WGCNA::standardColors(435)[as.integer(factor(modules))]
   }
-  df <- data.frame( modules=modules, mX, check.names=FALSE)
+  df <- data.frame( modules=modules, colors=colors, mX, check.names=FALSE)
   dim(df)
-  kpal <- sort(unique(as.character(df$modules)))
+  kpal <- sort(unique(as.character(df$colors)))
   kpal <- adjustcolor(kpal, alpha.f=0.33, 0.9, 0.9, 0.9)
-  GGally::ggparcoord(
+
+  gg <- GGally::ggparcoord(
     data = df, 
-    columns = c(2:ncol(df)), 
+    columns = c(3:ncol(df)), 
     groupColumn = 1,
-    title = main) +
-    ggplot2::scale_color_manual(values=kpal) +
+    title = main) + 
+    ggplot2::geom_line(color="grey") +
+    ## ggplot2::scale_color_manual(values=kpal) +
     ggplot2::xlab("time") + ggplot2::ylab("expression") +
-    ggplot2::stat_summary( ggplot2::aes(group=modules), color="black", fun.y=mean, geom="smooth") +
-    ggplot2::facet_wrap(~modules)
+    ggplot2::stat_summary(ggplot2::aes(group=colors),
+      fun=mean, geom="smooth", se=FALSE, size=1.3) +
+    ggplot2::facet_wrap(~modules) 
+  
+  if(legend==FALSE) {
+    gg <- gg + ggplot2::theme(legend.position="none")
+  }
+  return(gg)
 }
 
+
+#'
+#' @export
 plotTimeSeries.groups <- function(time, y, group=NULL, main="", lwd=3) {
   if(is.null(group)) group <- rep(1,length(time))
   groups <- sort(unique(group))
@@ -6482,6 +6499,9 @@ plotTimeSeries.groups <- function(time, y, group=NULL, main="", lwd=3) {
   }
 }
 
+
+#'
+#' @export
 plotTimeSeries.modules_groups <- function(time, X, modules, group) {
   mx.list <- list()
   g=group[1]

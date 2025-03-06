@@ -134,7 +134,7 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
 #' 
 #'
 #' @export
-getMetaboliteAnnotation <- function(probes, add_id=FALSE, probe_type = NULL, 
+getMetaboliteAnnotation <- function(probes, add_id=FALSE, 
                                     db = c("refmet","playdata","annothub"),
                                     annot_table = NULL ) {
   ##add_id=TRUE;db=c("refmet","playdata","annothub") 
@@ -196,7 +196,7 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE, probe_type = NULL,
     ## RefMet also handles metabolite/lipid long names, so this is
     ## convenient
     if( d == "refmet" && curl::has_internet() && no.name) {
-     message("[getMetaboliteAnnotation] annotating with RefMet server...")
+      message("[getMetaboliteAnnotation] annotating with RefMet server...")
       ii <- which(!is.na(probes) & is.na(metadata$name) )
       if(length(ii)) {
         probes1 <- probes[ii]
@@ -292,11 +292,15 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE, probe_type = NULL,
 
   ## add ID table 
   if(add_id) {
-    annot_table <- playdata::METABOLITE_ID
-    ii <- match( id, annot_table$ID )
-    kk <- setdiff(colnames(annot_table), c("ID","NAME"))
-    id_table <- annot_table[ii,kk]
+    id_table <- playdata::METABOLITE_ID
+    ii <- match( df$symbol, id_table$ID )
+    kk <- setdiff(colnames(id_table), c("ID","NAME"))
+    id_table <- id_table[ii,kk]
     colnames(id_table) <- paste0(sub("_ID","",colnames(id_table)),"_ID")
+    if("ChEBI_ID" %in% colnames(id_table)) {
+      ## fill missing ChEBI entries with internal CHEBI id (in symbol column)
+      id_table$ChEBI_ID <- ifelse(is.na(id_table$ChEBI_ID), df$symbol, id_table$ChEBI_ID)
+    }
     df <- cbind( df, id_table )   
   }
 

@@ -1334,10 +1334,13 @@ wgcna.plotModuleHubGenes <- function(wgcna, modules=NULL,
 #'
 #' @export
 wgcna.filterColors <- function(X, colors, minKME=0.3, mergeCutHeight=0.15,
-                               minmodsize = 20 ) {
+                               minmodsize = 20, ntop=-1 ) {
   X <- t(scale(t(X)))
   vv <- tapply(1:nrow(X), colors, function(i) svd(X[i,],nv=1)$v[,1])
+  kme <- rep(NA,nrow(X))
+  names(kme) <- rownames(X)
   new.colors <- colors
+  names(new.colors) <- names(colors) <- rownames(X)
   if(minKME > 0) {
     i=1
     for(i in 1:length(vv)) {
@@ -1348,6 +1351,7 @@ wgcna.filterColors <- function(X, colors, minKME=0.3, mergeCutHeight=0.15,
       if(length(jj)) {
         new.colors[jj] <- NA
       }
+      kme[ii] <- r
     }  
     if(is.numeric(colors)) {
       new.colors[is.na(new.colors)] <- 0
@@ -1382,8 +1386,19 @@ wgcna.filterColors <- function(X, colors, minKME=0.3, mergeCutHeight=0.15,
     new.colors[sel] <- NA
   }
 
+  if(ntop>0) {
+    keep <- tapply( names(kme), new.colors, function(i) head(names(sort(-kme[i])),ntop) )
+    keep <- unlist(keep)
+    not.keep <- setdiff(names(kme), keep)
+    dbg("[wgcna.filterColors] len.keep = ", length(keep))
+    dbg("[wgcna.filterColors] len.notkeep = ", length(not.keep))
+    if(length(not.keep)) new.colors[not.keep] <- NA
+    dbg("[wgcna.filterColors] sum.isna.newcolors = ", sum(is.na(new.colors)))
+  }
+  
   grey.val <- ifelse(is.numeric(colors),0,"grey")
-  new.colors[is.na(new.colors)] <- grey.val
-  new.colors
+  new.colors[which(is.na(new.colors))] <- grey.val
+
+  return(new.colors)
 }
 

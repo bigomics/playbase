@@ -67,6 +67,7 @@ getProbeAnnotation <- function(organism, probes, datatype, probetype="",
   unknown.datatype <- (datatype %in% c("custom","unkown"))
   unknown.probetype <- (probetype %in% c("custom","unkown"))  
   annot.unknown <- unknown.organism || unknown.datatype || unknown.probetype
+  annot.unknown
   
   genes <- NULL
   if (annot.unknown) {
@@ -83,7 +84,7 @@ getProbeAnnotation <- function(organism, probes, datatype, probetype="",
     if(mx.check) {
       ## Directly annotate if probes are recognized
       genes <- getMetaboliteAnnotation(
-        probes, add_id = TRUE, probe_type = NULL, annot_table = annot_table )
+        probes, add_id = TRUE, annot_table = annot_table )
     } else {
       ## Fallback on custom
       dbg("[getProbeAnnotation] WARNING: not able to map metabolomics probes")

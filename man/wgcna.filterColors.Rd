@@ -12,7 +12,8 @@ wgcna.filterColors(
   colors,
   minKME = 0.3,
   mergeCutHeight = 0.15,
-  minmodsize = 20
+  minmodsize = 20,
+  ntop = -1
 )
 }
 \description{
