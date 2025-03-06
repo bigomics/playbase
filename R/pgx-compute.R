@@ -183,7 +183,7 @@ pgx.createPGX <- function(counts,
                           settings = list()) {
   
   message("[createPGX] datatype = ", datatype)
-
+  
   if (!is.null(counts)) {
     message("[createPGX] dim.counts: ", dim(counts)[1], " x ", dim(counts)[2])
     message("[createPGX] class.counts: ", class(counts))
@@ -664,7 +664,8 @@ pgx.computePGX <- function(pgx,
     custom_fc = custom_fc,
     use.design = use.design,
     prune.samples = prune.samples,
-    timeseries.methods = timeseries.methods
+    timeseries.methods = timeseries.methods,
+    remove.outputs = FALSE
   )
 
   ## ------------------ gene set tests -----------------------
