@@ -366,6 +366,10 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   ## add some statistics
   ## ----------------------------------------------------------------------
   message("[ngs.fitContrastsWithAllMethods] calculating statistics...")
+
+  nc.tests <- c("ttest", "ttest.welch", "voom.limma", "notrend.limma", "edger.qlf", "deseq2.wald")
+  all.contrs <- unname(unlist(sapply(outputs, function(x) names(x[[1]]))))
+
   i <- 1
   for (i in 1:length(outputs)) {
     res <- outputs[[i]]
@@ -378,7 +382,23 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     #colnames(M) <- colnames(logFC) <- colnames(P) <- colnames(Q) <- colnames(contr.matrix)
     rownames(M) <- rownames(logFC) <- rownames(P) <- rownames(Q) <- rownames(res$tables[[1]])
     rownames(M0) <- rownames(M1) <- rownames(res$tables[[1]])
-      
+
+    if (!is.null(time) && (names(outputs)[i] %in% nc.tests)) {
+      current.contrs <- colnames(M)
+      new.contrs <- setdiff(all.contrs, current.contrs)
+      if (length(new.contrs) > 0) {
+        ct.null <- matrix(NA, nrow=nrow(M), ncol=length(new.contrs))
+        rownames(ct.null) <- rownames(M)
+        colnames(ct.null) <- new.contrs
+        M <- cbind(M, ct.null)
+        M0 <- cbind(M0, ct.null)
+        M1 <- cbind(M1, ct.null)
+        Q <- cbind(Q, ct.null)
+        P <- cbind(P, ct.null)
+        logFC <- cbind(logFC, ct.null)
+      }
+    }
+
     ## count significant terms
     qvalues <- c(1e-16, 10**seq(-8, -2, 2), 0.05, 0.1, 0.2, 0.5, 1)
     lfc <- 1
@@ -397,6 +417,13 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     colnames(sig.both) <- colnames(sig.notsig) <- qvalues
     colnames(sig.up) <- colnames(sig.down) <- qvalues
 
+    if (!is.null(time) && (names(outputs)[i] %in% nc.tests)) {
+      sig.both[new.contrs, ] <- NA
+      sig.notsig[new.contrs, ] <- NA
+      sig.up[new.contrs, ] <- NA
+      sig.down[new.contrs, ] <- NA
+    }
+
     res$sig.counts <- list(both = sig.both, up = sig.up, down = sig.down, notsig = sig.notsig)
 
     ## need this? takes space!!!
@@ -409,7 +436,39 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     
     outputs[[i]] <- res
   }
-  
+
+  ## --------------------------------------------------------------
+  ## Conform matrices across DGE methods
+  ## --------------------------------------------------------------
+  ## ## Expand columns of outputs for any contrasts not compatible with a DGE method.
+  ## if (!is.null(time)) {
+  ##   message("[ngs.fitContrastsWithAllMethods] conforming DGE matrices...")
+  ##   contr.names <- unlist(sapply(outputs, function(x) names(x[[1]])))
+  ##   contr.names <- unique(contr.names)
+  ##   chk1 <- grep("^IA:*", contr.names)
+  ##   nc.tests <- c("ttest", "ttest.welch", "voom.limma", "notrend.limma", "edger.qlf", "deseq2.wald")
+  ##   cm <- intersect(names(outputs), nc.tests)
+  ##   chk2 <- length(cm) > 0
+  ##   if (any(chk1) && chk2) {
+  ##     ia.contrs <- contr.names[grep("^IA:*",contr.names)] 
+  ##     i = 1
+  ##     for(i in 1:length(ia.contrs)) {
+  ##       j <- 1
+  ##       for(j in 1:length(cm)) {
+  ##         chk0 <- !ia.contrs[i] %in% colnames(outputs[[cm[j]]][["p.value"]])
+  ##         if (chk0) {
+  ##           vars <- c("p.value", "q.value", "logFC", "aveExpr", "aveExpr0", "aveExpr1")
+  ##           v=1
+  ##           for(v in 1:length(vars)) {
+  ##             outputs[[cm[j]]][[vars[v]]] <- cbind(outputs[[cm[j]]][[vars[v]]], "contr"=NA)
+  ##             colnames(outputs[[cm[j]]][[vars[v]]])[ncol(outputs[[cm[j]]][[vars[v]]])] <- ia.contrs[i]
+  ##           }
+  ##         }
+  ##       }
+  ##     }
+  ##   }
+  ## }
+
   ## --------------------------------------------------------------
   ## Reshape matrices by comparison
   ## --------------------------------------------------------------
