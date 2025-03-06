@@ -246,7 +246,9 @@ compute_testGenesSingleOmics <- function(pgx,
     time = time
   )
 
-  message("[compute_testGenesSingleOmics] 13 : fitting done!")
+  saveRDS(gx.meta, "~/Desktop/MNT/gx.meta.RDS")
+  
+  message("[compute_testGenesSingleOmics]: fitting completed!")
 
   ## --------------------------------------------------------------------------------
   ## set default matrices
@@ -261,6 +263,7 @@ compute_testGenesSingleOmics <- function(pgx,
   pgx$gx.meta <- gx.meta
 
   ## remove large outputs.
+  remove.outputs = FALSE
   if (remove.outputs) pgx$gx.meta$outputs <- NULL
 
   message("[compute_testGenesSingleOmics] done!")
