@@ -16,8 +16,7 @@
 #' @param test.methods The test methods to use for gene testing.
 #' @param use.design A logical value indicating whether to use the design matrix in the analysis.
 #' @param prune.samples A logical value indicating whether to prune samples with missing data.
-#' @param remove.outputs A logical value indicating whether to remove intermediate outputs.
-#' @param timeseries.methods Stat methods for time series DGE analysis. Default NULL
+#' @param remove.outputs A logical value indicating whether to remove intermediate outputs. 
 #' @return An updated object with gene test results.
 #' @export
 compute_testGenes <- function(pgx,
@@ -28,7 +27,7 @@ compute_testGenes <- function(pgx,
                               use.design = FALSE,
                               prune.samples = TRUE,
                               remove.outputs = TRUE,
-                              timeseries.methods = NULL) {
+                              timeseries = FALSE) {
   # TEMPORARY ONLY SINGLE OMICS
   single.omics <- TRUE
   data.types <- unique(gsub("\\[|\\].*", "", rownames(pgx$counts)))
@@ -45,7 +44,7 @@ compute_testGenes <- function(pgx,
       use.design = use.design,
       prune.samples = prune.samples,
       remove.outputs = remove.outputs,
-      timeseries.methods = timeseries.methods
+      timeseries = timeseries
     )
   } else {
     ## multi-omics, missing values allowed
@@ -75,7 +74,6 @@ compute_testGenes <- function(pgx,
 #' @param use.design A logical value indicating whether to use the design matrix in the analysis.
 #' @param prune.samples A logical value indicating whether to prune samples with missing data.
 #' @param test.methods The test methods to use for gene testing.
-#' @param timeseries.methods Stat methods for time series DGE analysis. Default NULL
 #' @return An updated object with gene test results for single-omics data.
 #' @export
 compute_testGenesSingleOmics <- function(pgx,
@@ -87,7 +85,7 @@ compute_testGenesSingleOmics <- function(pgx,
                                          use.design = FALSE,
                                          prune.samples = TRUE,
                                          test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
-                                         timeseries.methods = NULL) {
+                                         timeseries = FALSE) {
   ## -----------------------------------------------------------------------------
   ## Check parameters, decide group level
   ## -----------------------------------------------------------------------------
@@ -206,16 +204,16 @@ compute_testGenesSingleOmics <- function(pgx,
   ## -----------------------------------------------------------------------------
   ## Time series: determine variable 'time'
   ## -----------------------------------------------------------------------------
-  time <- NULL
-  if (!is.null(timeseries.methods)) {
+  if (timeseries) {
     ss <- "minute|hour|day|week|month|year|time"
     sel <- grep(ss, colnames(pgx$samples))
     if (length(sel) == 0) {
       message("[compute_testGenesSingleOmics] None of the following columns have been detected in pgx$samples: ",
         paste0(ss, collapse = ", "), ". Skipping time series analysis.")
-     } else {
-       time <- as.character(pgx$samples[, sel[1]])
-       names(time) <- rownames(pgx$samples)
+      timeseries <- NULL
+    } else {
+       timeseries <- as.character(pgx$samples[, sel[1]])
+       names(timeseries) <- rownames(pgx$samples)
      }
   }
      
@@ -244,8 +242,7 @@ compute_testGenesSingleOmics <- function(pgx,
     correct.AveExpr = TRUE,
     custom = custom_fc,
     custom.name = NULL,
-    timeseries.methods = timeseries.methods,
-    time = time
+    timeseries = timeseries
   )
 
   #saveRDS(gx.meta, "~/Desktop/MNT/gx.meta.RDS")
