@@ -215,13 +215,15 @@ compute_testGenesSingleOmics <- function(pgx,
        timeseries <- as.character(pgx$samples[, sel[1]])
        names(timeseries) <- rownames(pgx$samples)
      }
+  } else {
+    timeseries <- NULL
   }
      
   ## -----------------------------------------------------------------------------
   ## Do the fitting
   ## -----------------------------------------------------------------------------
   methods <- test.methods
-  message("Testing differential expresssion using: ", paste(methods, collapse = ", "))
+  message("Testing differential expresssion methods: ", paste(methods, collapse = ", "))
   PRIOR.CPM <- 1
   
   ## Run all test methods

@@ -76,9 +76,11 @@ ngs.fitContrastsWithAllMethods <- function(counts,
                                            custom.name = NULL,
                                            timeseries = NULL) {
 
-
-  LL <- list(counts=counts, X=X, samples=samples, design=design, contr.matrix=contr.matrix)
-  saveRDS(LL, "~/Desktop/MNT/MNT1.RDS")
+  
+  LL <- list(
+    counts=counts, X=X, samples=samples, design=design,
+    contr.matrix=contr.matrix, timeseries=timeseries
+  ); saveRDS(LL, "~/Desktop/MNT/MNT1.RDS")
 
   ## --------------------------------------------------------------
   ## Run all tests on raw counts
@@ -110,7 +112,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   ## ------------------------------------------------------------------
   ## Check timeseries methods
   ## ------------------------------------------------------------------
-  message("------------MNT1: ", paste0(methods, sep="; "))
   if (!is.null(timeseries)) {
     ts.mm <- c("trend.limma", "deseq2.lrt", "edger.lrt")
     cm <- intersect(methods, ts.mm)
@@ -118,6 +119,8 @@ ngs.fitContrastsWithAllMethods <- function(counts,
       message("[ngs.fitContrastsWithAllMethods] For time series analysis, gx.methods must be one of ",
         paste0(ts.mm, collapse="; "), " Skipping time series analysis.")
       timeseries <- NULL
+    } else {
+      methods <- cm
     }
   }
   
@@ -220,7 +223,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         next;
       } else {
         if(!is.null(timeseries) && cm.mtds[i] == "deseq2.lrt") {
-          message("[ngs.fitContrastsWithAllMethods] Time series: fitting using DESeq2 LRT with interaction term (intr).")
+          message("[ngs.fitContrastsWithAllMethods] Time series: fitting using DESeq2 LRT with interaction term.")
           time_var <- timeseries
         } else {
           time_var <- NULL
@@ -318,6 +321,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   ## ----------------------------------------------------------------------
   ## "corrections" ...
   ## ----------------------------------------------------------------------
+  correct.AveExpr = FALSE
   if (correct.AveExpr) {
     
     message("[ngs.fitContrastsWithAllMethods] correcting AveExpr values...")
@@ -337,33 +341,33 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     avg.1 <- sapply(samples1, function(s) rowMeans(X[, s, drop = FALSE], na.rm = TRUE))
     avg.0 <- sapply(samples0, function(s) rowMeans(X[, s, drop = FALSE], na.rm = TRUE))
 
-    ## i <- j <- 1
-    ## i=1
-    ## for (i in 1:length(outputs)) {
-    ##   for (j in 1:length(outputs[[i]]$tables)) {
-    ##     contr.name <- names(outputs[[i]]$tables)[j]
-    ##     chk1 <- grepl("^IA:*", contr.name)
-    ##     if (!chk1) {
-    ##       outputs[[i]]$tables[[j]]$AveExpr <- avgX[, j] ## ????
-    ##       outputs[[i]]$tables[[j]]$AveExpr1 <- avg.1[, contr.name]
-    ##       outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, contr.name]
-    ##     } else {
-    ##       sel <- grep(gsub("^IA:", "", contr.name), colnames(exp.matrix))
-    ##       outputs[[i]]$tables[[j]]$AveExpr <- NA # ??
-    ##       outputs[[i]]$tables[[j]]$AveExpr1 <- avg.1[, sel]
-    ##       outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, sel]
-    ##     }
-    ##   }
-    ## }
-
     i <- j <- 1
+    i=1
     for (i in 1:length(outputs)) {
-     for (j in 1:length(outputs[[i]]$tables)) {
-       outputs[[i]]$tables[[j]]$AveExpr <- avgX[, j]
-       outputs[[i]]$tables[[j]]$AveExpr1 <- avg.1[, j]
-       outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, j]
-     }
+      for (j in 1:length(outputs[[i]]$tables)) {
+        contr.name <- names(outputs[[i]]$tables)[j]
+        chk1 <- grepl("^IA:*", contr.name)
+        if (!chk1) {
+          outputs[[i]]$tables[[j]]$AveExpr <- avgX[, j] ## ????
+          outputs[[i]]$tables[[j]]$AveExpr1 <- avg.1[, contr.name]
+          outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, contr.name]
+        } else {
+          sel <- grep(gsub("^IA:", "", contr.name), colnames(exp.matrix))
+          outputs[[i]]$tables[[j]]$AveExpr <- NA # ??
+          outputs[[i]]$tables[[j]]$AveExpr1 <- avg.1[, sel]
+          outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, sel]
+        }
+      }
     }
+
+    ## i <- j <- 1
+    ## for (i in 1:length(outputs)) {
+    ##  for (j in 1:length(outputs[[i]]$tables)) {
+    ##    outputs[[i]]$tables[[j]]$AveExpr <- avgX[, j]
+    ##    outputs[[i]]$tables[[j]]$AveExpr1 <- avg.1[, j]
+    ##    outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, j]
+    ##  }
+    ## }
 
   }
 
@@ -1274,6 +1278,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
                                                   X = NULL,
                                                   time = NULL) {
 
+  message("[---------.ngs.fitConstrastsWithDESEQ2.nodesign-1-----------")
   counts <- round(counts)
   if (is.null(X)) X <- edgeR::cpm(counts, log = TRUE)
 
@@ -1337,6 +1342,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
     if (conform.output) resx$log2FoldChange <- (resx$AveExpr1 - resx$AveExpr0) ## recompute
     tables[[i]] <- data.frame(resx)
     names(tables)[i] <- colnames(exp.matrix)[i]
+    message("-------------ct: ", colnames(exp.matrix)[i], "---done")
   }
   
   ## add timeseries DGE tables if time not NULL
@@ -1345,13 +1351,12 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
     i=1
     for (i in 1:ncol(exp.matrix)) {
       kk <- 1:nrow(exp.matrix)
-      if (prune.samples)
-        kk <- which(!is.na(exp.matrix[, i]) & exp.matrix[, i] != 0)
+      if (prune.samples) kk <- which(!is.na(exp.matrix[, i]) & exp.matrix[, i] != 0)
       ct <- exp.matrix[kk, i]
       y <- factor(c("neg", "zero", "pos")[2 + sign(ct)], levels = c("neg", "zero", "pos"))
       counts1 <- counts[, kk, drop = FALSE]
-      colData <- data.frame(y, row.names = colnames(counts1))
-      resx <- .ngs.fitConstrastsWithDESEQ2.nodesign.timeseries(counts1, colData, time)
+      saveRDS(list(counts1, y, time=time), "~/Desktop/MNT/PP.RDS")
+      resx <- .ngs.fitConstrastsWithDESEQ2.nodesign.timeseries(counts1, y, time)
       rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
       X1 <- X[, kk, drop = FALSE]
       pos.samples <- which(exp.matrix[kk, i] > 0)
@@ -1363,7 +1368,8 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
       ## Keep DESeq2 log2FC from LRT.
       ## if (conform.output) resx$log2FoldChange <- (resx$AveExpr1 - resx$AveExpr0)
       tables[[ll + i]] <- data.frame(resx)
-      names(tables)[ll + i] <- paste0("IA:", colnames(exp0)[i], sep = "")
+      names(tables)[ll + i] <- paste0("IA:", colnames(exp.matrix)[i], sep = "")
+      message("-------------ct: ", colnames(exp.matrix)[i], "---done")
     }
   }
 
@@ -1384,19 +1390,22 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
 #' @describeIn ngs.fitContrastsWithAllMethods Fits time-series contrasts using DESeq2 LRT
 #' @export
 .ngs.fitConstrastsWithDESEQ2.nodesign.timeseries <- function(counts,
-                                                             colData,
+                                                             y,
                                                              time) {
 
+  message("[---------.ngs.fitConstrastsWithDESEQ2.nodesign-1---TIMES--------")
   message("[ngs.fitConstrastsWithDESEQ2.nodesign]: DESeq2 LRT time series analysis with interaction term")
 
-  if (!all(colnames(counts) %in% names(time))) {
+  if (!all(colnames(counts) %in% names(time)))
     stop("[ngs.fitConstrastsWithDESEQ2.nodesign] and time contain different set of samples")
-  }
-
+  
   jj <- match(colnames(counts), names(time))
-  time0 <- as.character(unname(time[jj]))
-  factor.time <- factor(as.numeric(gsub("\\D", "", time0)))
-  colData <- cbind(colData, time = factor.time)
+  time0 <- as.character(time[jj])
+  time0 <- gsub("\\D", "", unname(time0))
+  y <- as.character(y)
+  colData <- data.frame(y = y, time = time0)
+  colData$y <- as.factor(colData$y)
+  colData$time <- as.factor(colData$time)
   
   ## Q: does the condition induces a change in gene expression at
   ## any time point after the reference level time point (time 0)?
