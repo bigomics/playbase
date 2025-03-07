@@ -353,9 +353,6 @@ makeFullContrasts <- function(labels, by.sample = FALSE) {
 }
 
 
-
-
-
 #' Automatically generate contrasts within strata
 #'
 #' @param df Data frame with sample metadata

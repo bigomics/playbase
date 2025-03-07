@@ -6436,33 +6436,72 @@ plotlyLasagna <- function(df, znames=NULL) {
 #' matrix. Time is a vector of times for each sample. 
 #' 
 #' @export
-plotTimeSeries.modules <- function(time, xx, modules, main="", legend=TRUE) {
+plotTimeSeries.modules <- function(time, xx, modules, main="",
+                                   plottype="parcoord", legend=TRUE) {
+
   mX <- t(rowmean(scale(t(xx)), time))
+  mx.time <- as.numeric(gsub("[_-].*|[^0-9]","",colnames(mX)))
+  mx.time[is.na(mx.time)] <- 0
+  mX <- mX[,order(mx.time)]
+
+  dbg("[plotTimeSeries.modules] modules = ", head(modules))
+  dbg("[plotTimeSeries.modules] dim.mX = ", dim(mX))  
+  
   is.color <- mean(modules %in% WGCNA::standardColors(435)) > 0.8
   is.color
   if(is.numeric(modules)) {
+    dbg("[plotTimeSeries.modules] modules is numeric")
     colors <- WGCNA::standardColors(435)[rank(modules)]
   } else if(is.color) {
+    dbg("[plotTimeSeries.modules] modules is a color")    
     colors <- modules
   } else {
+    dbg("[plotTimeSeries.modules] modules is factor")    
     colors <- WGCNA::standardColors(435)[as.integer(factor(modules))]
   }
-  df <- data.frame( modules=modules, colors=colors, mX, check.names=FALSE)
-  dim(df)
-  kpal <- sort(unique(as.character(df$colors)))
+
+  dbg("[plotTimeSeries.modules] colors = ", head(colors))    
+
+  kpal <- sort(unique(as.character(colors)))
   kpal <- adjustcolor(kpal, alpha.f=0.33, 0.9, 0.9, 0.9)
 
-  gg <- GGally::ggparcoord(
-    data = df, 
-    columns = c(3:ncol(df)), 
-    groupColumn = 1,
-    title = main) + 
-    ggplot2::geom_line(color="grey") +
+  df <- data.frame( modules=modules, colors=colors,
+    mX, check.names=FALSE)
+
+  dbg("[plotTimeSeries.modules] plottype = ", plottype)
+  
+  if(plottype == "parcoord") {
+    
+    gg <- GGally::ggparcoord(
+      data = df, 
+      columns = c(3:ncol(df)), 
+      groupColumn = 1,
+      title = main)
+    gg <- gg +
+      ggplot2::geom_line(color = adjustcolor("grey",alpha.f=0.95)) 
+
+  } else {
+
+    mx.df <- reshape2::melt(df)
+    mx.df$time <- as.vector(mapply(rep, mx.time, nrow(mX)))
+    head(mx.df)
+    gg <- ggplot2::ggplot(
+      mx.df, ggplot2::aes(x=time, y=value, color=modules)) +
+    ##  ggplot2::geom_line(color = adjustcolor("grey",alpha.f=0.95)) 
+      ggplot2::geom_point(size=0.6)
+    gg
+  }
+
+  gg <- gg + 
+    ##ggplot2::geom_line(color = adjustcolor("grey",alpha.f=0.95)) +
     ## ggplot2::scale_color_manual(values=kpal) +
     ggplot2::xlab("time") + ggplot2::ylab("expression") +
     ggplot2::stat_summary(ggplot2::aes(group=colors),
       fun=mean, geom="smooth", se=FALSE, size=1.3) +
     ggplot2::facet_wrap(~modules) 
+  gg  
+
+  dbg("[plotTimeSeries.modules] legend = ", legend)  
   
   if(legend==FALSE) {
     gg <- gg + ggplot2::theme(legend.position="none")
@@ -6473,29 +6512,49 @@ plotTimeSeries.modules <- function(time, xx, modules, main="", legend=TRUE) {
 
 #'
 #' @export
-plotTimeSeries.groups <- function(time, y, group=NULL, main="", lwd=3) {
+plotTimeSeries.groups <- function(time, y, group=NULL, main="",
+                                  lwd=3, xlab="time", time.factor=TRUE) {
   if(is.null(group)) group <- rep(1,length(time))
   groups <- sort(unique(group))
   ngroup <-length(groups)
+
+  time[grepl("ctrl|co|control|bl",time,ignore.case=TRUE)] <- "0"
+  ctime <- as.numeric(gsub("[-_].*|[^0-9]","",time))
+  xlim <- range(ctime)
+  if(time.factor) {
+    ctime <- factor(ctime, levels=sort(unique(ctime)))
+    ntime <- length(unique(ctime))
+    xlim <- c(0,ntime)
+  }
+  ntime <- length(unique(ctime))
+  
   i=1
   for(i in 1:ngroup) {
-    j <- which( group == groups[i])
-    x1 <- time[j]
+    j <- which(group == groups[i])
+    x1 <- ctime[j]
     y1 <- y[j]
     klr <- 1+i
     klr1 <- adjustcolor(klr,alpha.f=0.5)
     klr2 <- adjustcolor(klr,red.f=0.9,green.f=0.9,blue.f=0.9) 
-    boxplot( y1 ~ x1, col=klr1, boxwex=0.15, add=i>1,
-            xlab = "time", ylab="expression",
-            ylim=range(y))
-    xy <- tapply(y1, x1, mean)
-    df <- length(xy)*5
-    lines(spline(1:6,xy,n=df),col=klr,lwd=lwd)
-    points(x1,y1,col=klr2,cex=2,pch=20) 
+    x1pos <- sort(unique(x1))
+    if(time.factor) x1pos <- 1:ntime
+    boxplot( y1 ~ x1, col=klr1, boxwex=0.25,
+      add=i>1, at = x1pos,
+      xlab = xlab, ylab="expression",
+      xlim=xlim, ylim=range(y))
+    if(length(unique(x1))>1) {
+      sy <- tapply(y1, x1, median, na.rm=TRUE)
+      nk <- length(sy)*0.8
+      sx <- as.numeric(names(sy))
+      if(time.factor) sx <- factor(sx, levels=levels(ctime))
+      lines(spline(sx,sy,n=nk),col=klr,lwd=3)
+    }
+    points(x1,y1,col=klr2,cex=1.8,pch=20) 
   }
+
   title(main=main)
   if(ngroup>1) {
-    legend("topright",legend=groups,fill=2:99,y.intersp=0.8,cex=0.9)
+    legend("bottomright",legend=groups,fill=2:99,y.intersp=0.8,cex=0.9)
   }
 }
 
@@ -6508,7 +6567,7 @@ plotTimeSeries.modules_groups <- function(time, X, modules, group) {
   for(g in unique(group)) {
     ii <- which(group == g)
     mX <- t(rowmean(scale(t(X[,ii])), time[ii]))
-    mx.list[[g]] <- data.frame(module=colors, group=g, mX, check.names=FALSE)
+    mx.list[[g]] <- data.frame(module=modules, group=g, mX, check.names=FALSE)
   }
   df <- do.call(rbind, mx.list)
   tt <- paste0(df$module,"_",df$group)
@@ -6516,12 +6575,12 @@ plotTimeSeries.modules_groups <- function(time, X, modules, group) {
   df2 <- data.frame( do.call(rbind,strsplit(rownames(df.avg),split="_")),
                     df.avg, check.names=FALSE )
   colnames(df2)[1:2] <- c("module","group")
-  table(df2$module, df2$group)
 
   mlabs <- sort(unique(df2$module))
   mlabs <- paste0(mlabs," (n=",table(df$module)[mlabs],")")
   names(mlabs) <- 1:length(mlabs)
   labeller <- ggplot2::labeller(module = mlabs)
+
   GGally::ggparcoord(
     data = df2,
     columns = c(3:ncol(df2)), 
@@ -6529,4 +6588,5 @@ plotTimeSeries.modules_groups <- function(time, X, modules, group) {
     ggplot2::geom_line( ggplot2::aes(group=group), size=1) +
     ggplot2::labs(title="WGCNA modules", subtitle="Average expression in groups") + 
     ggplot2::facet_wrap(~module, labeller = labeller)
+
 }

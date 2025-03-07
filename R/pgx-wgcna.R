@@ -1335,29 +1335,47 @@ wgcna.plotModuleHubGenes <- function(wgcna, modules=NULL,
 #' @export
 wgcna.filterColors <- function(X, colors, minKME=0.3, mergeCutHeight=0.15,
                                minmodsize = 20, ntop=-1 ) {
-  X <- t(scale(t(X)))
-  vv <- tapply(1:nrow(X), colors, function(i) svd(X[i,],nv=1)$v[,1])
+  ##minKME=0.3;mergeCutHeight=0.15;minmodsize=20;ntop=-1
+  
+  sX <- X + 1e-8*matrix(rnorm(length(X)),nrow(X),ncol(X))
+  sX <- t(scale(t(sX)))
+
+  ## get singular vectors and correct sign
+  vv <- tapply(1:nrow(sX), colors, function(i) svd(sX[i,],nv=1)$v[,1])
+  mm <- tapply(1:nrow(sX), colors, function(i) colMeans(sX[i,]))
+  vv.sign <- mapply( function(a,b) sign(cor(a,b)), mm, vv)
+  vv <- mapply( function(a,b) a*b, vv, vv.sign, SIMPLIFY=FALSE)
+  
   kme <- rep(NA,nrow(X))
   names(kme) <- rownames(X)
+  names(colors) <- rownames(X)
+
+  grey.val <- NULL
+  is.color <- mean(colors %in% WGCNA::standardColors(435)) > 0.8  
+  if(is.numeric(colors)) {
+    colors <- as.integer(colors)
+    grey.val <- 0
+  } else {
+    colors <- as.character(colors)
+    grey.val <- "---"
+    if(is.color) grey.val <- "grey"
+  }
+  names(colors) <- rownames(X)  
   new.colors <- colors
-  names(new.colors) <- names(colors) <- rownames(X)
+  
   if(minKME > 0) {
     i=1
     for(i in 1:length(vv)) {
       ii <- which(colors == names(vv)[i])
       r <- cor(t(X[ii,]), vv[[i]])[,1]
       max(r)
-      jj <- ii[which(abs(r) < minKME)]
+      jj <- ii[which(r < minKME)]
       if(length(jj)) {
         new.colors[jj] <- NA
       }
       kme[ii] <- r
     }  
-    if(is.numeric(colors)) {
-      new.colors[is.na(new.colors)] <- 0
-    } else {
-      new.colors[is.na(new.colors)] <- "grey"
-    }
+    new.colors[is.na(new.colors)] <- grey.val
   }
 
   ## merge groups
@@ -1396,9 +1414,9 @@ wgcna.filterColors <- function(X, colors, minKME=0.3, mergeCutHeight=0.15,
     dbg("[wgcna.filterColors] sum.isna.newcolors = ", sum(is.na(new.colors)))
   }
   
-  grey.val <- ifelse(is.numeric(colors),0,"grey")
   new.colors[which(is.na(new.colors))] <- grey.val
-
+  ##if(!is.numeric(colors)) new.colors <- factor(new.colors)
+  
   return(new.colors)
 }
 

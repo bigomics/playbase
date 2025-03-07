@@ -195,11 +195,11 @@ pgx.createPGX <- function(counts,
 
   if (is.null(X)) {
     min.nz <- min(counts[counts > 0], na.rm = TRUE)
-    prior <- ifelse(norm_method == "CPM", 1, 1e-4)
-    if (min.nz < 1e-4) {
-      info("[createPGX] WARNING : small non-zero values detected. check prior.")
-    }
-    message("[createPGX] creating X as log2(counts+p) with p=",prior)
+    prior <- ifelse(norm_method == "CPM", 1, min.nz)
+#    if (min.nz < 1e-4) {
+#      info("[createPGX] WARNING : small non-zero values detected. check prior.")
+#    }
+    message("[createPGX] creating X as log2(counts+p) with prior = ", prior)
     X <- log2(counts + prior)
   }
 
@@ -739,10 +739,10 @@ counts.removeXXLvalues <- function(counts, xxl.val = NA, zsd = 10) {
 }
 
 counts.imputeMissing <- function(counts, method = "SVD2") {
-  X <- log2(1 + counts)
-  table(is.na(X))
+  epsx <- min(counts[counts>0],na.rm=TRUE)
+  X <- log2(epsx + counts)
   impX <- imputeMissing(X, method = method)
-  pmax(2**impX - 1, 0)
+  pmax(2**impX - epsx, 0)
 }
 
 counts.autoScaling <- function(counts) {
@@ -756,6 +756,7 @@ counts.autoScaling <- function(counts) {
   totcounts <- Matrix::colSums(counts, na.rm = TRUE)
   totratio <- log10(max(1 + totcounts, na.rm = TRUE) / min(1 + totcounts, na.rm = TRUE))
   totratio
+
   if (totratio > 6) {
     message("[createPGX:autoscale] WARNING: too large total counts ratio. forcing normalization.")
     meancounts <- exp(mean(log(1 + totcounts), na.rm = TRUE))

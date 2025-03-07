@@ -252,7 +252,6 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   ## get correct OrgDb database for this organism
   orgdb <- getOrgDb(organism, use.ah = use.ah)
-
   if(is.null(orgdb)) {
     message("[getGeneAnnotation.ANNOTHUB] ERROR: orgdb == NULL: ", is.null(orgdb) )
     return(NULL)
@@ -467,6 +466,10 @@ clean_probe_names <- function(probes, sep = ".-") {
 #' @export
 match_probe_names <- function(probes, org, probe_type = NULL) {
   if (is.character(org)) org <- getOrgDb(org)
+  if (is.null(orgdb)) {
+    message("[match_probe_names] ERROR could not get orgdb!" )
+    return(NULL)
+  }
   if (is.null(probe_type)) {
     probe_type <- detect_probetype(organism = "custom", probes, orgdb = org)
   }
@@ -798,6 +801,7 @@ getOrgDb <- function(organism, use.ah = NULL) {
   organism
   orgdb <- .getOrgDb(organism, use.ah = use.ah)
   if (is.null(orgdb)) {
+    message("[getOrgDb] ERROR: could not get orgdb")    
     return(NULL)
   }
 
@@ -866,7 +870,7 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     "ENSEMBLTRANS", "ENSEMBLPROT",
     "REFSEQ", "ENTREZID"
   )
-  keytypes <- intersect(keytypes, keytypes(orgdb))
+  keytypes <- intersect(keytypes, AnnotationDbi::keytypes(orgdb))
   key_matches <- rep(0L, length(keytypes))
   names(key_matches) <- keytypes
 
@@ -1115,13 +1119,13 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
   ## get correct OrgDb database for organism
   orgdb <- getOrgDb(organism, use.ah = use.ah)
   if (is.null(orgdb)) {
-    message("ERROR: unsupported organism '", organism, "'\n")
+    message("[showProbeTypes] ERROR: unsupported organism '", organism, "'\n")
     return(NULL)
   }
 
   ## get probe types for organism
   if (!is.null(keytypes) && keytypes[1] == "*") {
-    keytypes <- keytypes(orgdb)
+    keytypes <- AnnotationDbi::keytypes(orgdb)
   }
   if (is.null(keytypes)) {
     keytypes <- c(
@@ -1132,7 +1136,7 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
     )
   }
   keytypes0 <- keytypes
-  keytypes <- intersect(keytypes, keytypes(orgdb))
+  keytypes <- intersect(keytypes, AnnotationDbi::keytypes(orgdb))
   keytypes
 
   if (length(keytypes) == 0) {
@@ -1453,8 +1457,12 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
   }
 
   orgdb <- getOrgDb(organism, use.ah = NULL)
+  if (is.null(orgdb)) {
+    message("[getOrgGeneInfo] WARNING could not get orgdb!" )
+    return(NULL)
+  }
   cols <- c("SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH", "GO")
-  cols <- intersect(cols, keytypes(orgdb))
+  cols <- intersect(cols, AnnotationDbi::keytypes(orgdb))
 
   if (!"SYMBOL" %in% cols) {
     keytype <- detect_probetype(organism, gene)
@@ -1767,7 +1775,7 @@ convert_probetype <- function(organism, probes, target_id, from_id = NULL,
     return(NULL)
   }
 
-  if (!target_id %in% keytypes(orgdb)) {
+  if (!target_id %in% AnnotationDbi::keytypes(orgdb)) {
     message("[convert_probetype] invalid target probetype")
     return(NULL)
   }
