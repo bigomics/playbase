@@ -665,7 +665,7 @@ pgx.computePGX <- function(pgx,
     use.design = use.design,
     prune.samples = prune.samples,
     timeseries.methods = timeseries.methods,
-    remove.outputs = FALSE
+    remove.outputs = TRUE
   )
 
   ## ------------------ gene set tests -----------------------
