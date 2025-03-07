@@ -328,11 +328,10 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   if (correct.AveExpr) {
     
     message("[ngs.fitContrastsWithAllMethods] correcting AveExpr values...")
-    message("[ngs.fitContrastsWithAllMethods] dim.X: ", dim(X)[1], ",", dim(X)[2])
+    #message("[ngs.fitContrastsWithAllMethods] dim.X: ", dim(X)[1], ",", dim(X)[2])
 
-    ## Some methods like edgeR and Deseq2 compute some weird
-    ## normalized expression matrix. We need to "correct" for
-    ## those.
+    ## EdgeR and Deseq2 compute weird normalized expr. matrix.
+    ## We need to "correct" for those.
 
     exp.matrix <- contr.matrix
 
@@ -767,7 +766,7 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
                                                  trend = TRUE) {
 
   library(splines)
-  message("[ngs.fitContrastsWithLIMMA.timeseries] fitting LIMMA with no design; time-series analysis using spline.")
+  message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting LIMMA with no design; time series analysis (spline).")
 
   if (!all(colnames(X) %in% names(time)))
     stop("[ngs.fitContrastsWithLIMMA.timeseries] X and time contain different set of samples.")
@@ -799,7 +798,7 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
   
   if (length(est.coefs)) {
     sel <- match(est.coefs, names(coefs))
-    message("[ngs.fitContrastsWithLIMMA.time-series], est.coefs: ", paste0(est.coefs, collapse="; "))
+    #message("[ngs.fitContrastsWithLIMMA.time-series], est.coefs: \n", paste0(est.coefs, collapse="; "))
     top <- try(
       limma::topTable(fit, coef = sel, sort.by = "none", number = Inf, adjust.method = "BH"),
       silent = TRUE
