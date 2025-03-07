@@ -211,10 +211,12 @@ compute_testGenesSingleOmics <- function(pgx,
     ss <- "minute|hour|day|week|month|year|time"
     sel <- grep(ss, colnames(pgx$samples))
     if (length(sel) == 0) {
-      stop("[compute_testGenesSingleOmics] Cannot locate 'time' column in pgx.samples. Skipping time-series analysis.")
+      message("[compute_testGenesSingleOmics] None of the following columns have been detected in pgx$samples: ",
+        paste0(ss, collapse = ", "), ". Skipping time series analysis.")
+     } else {
+       time <- as.character(pgx$samples[, sel[1]])
+       names(time) <- rownames(pgx$samples)
      }
-    time <- as.character(pgx$samples[, sel[1]])
-    names(time) <- rownames(pgx$samples)
   }
      
   ## -----------------------------------------------------------------------------
@@ -246,7 +248,7 @@ compute_testGenesSingleOmics <- function(pgx,
     time = time
   )
 
-  saveRDS(gx.meta, "~/Desktop/MNT/gx.meta.RDS")
+  #saveRDS(gx.meta, "~/Desktop/MNT/gx.meta.RDS")
   
   message("[compute_testGenesSingleOmics]: fitting completed!")
 
@@ -263,7 +265,7 @@ compute_testGenesSingleOmics <- function(pgx,
   pgx$gx.meta <- gx.meta
 
   ## remove large outputs.
-  remove.outputs = FALSE
+  #remove.outputs = FALSE
   if (remove.outputs) pgx$gx.meta$outputs <- NULL
 
   message("[compute_testGenesSingleOmics] done!")
