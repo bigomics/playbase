@@ -315,9 +315,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     timings[["custom"]] <- system.time(0)
   }
 
-  LL <- list(X=X, contr.matrix=contr.matrix, outputs=outputs)
-  saveRDS(LL, "~/Desktop/MNT/OO.RDS")
-
   ## ----------------------------------------------------------------------
   ## "corrections" ...
   ## ----------------------------------------------------------------------
@@ -330,6 +327,20 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     ## We need to "correct" for those.
 
     exp.matrix <- contr.matrix
+
+    ##---not needed if contr.matrix expanded in origin 
+    all.contrs <- unlist(sapply(outputs, function(x) names(x[[1]])))
+    if (class(all.contrs)[1] %in% c("matrix", "array")) all.contrs <- all.contrs[,1]
+    new.contrs <- setdiff(all.contrs, colnames(exp.matrix))
+    if (length(new.contrs)) {
+      i=1
+      for(i in 1:length(new.contrs)) {
+        contr0 <- strsplit(new.contrs[i], ":")[[1]][2]
+        jj <- match(contr0, colnames(exp.matrix))
+        exp.matrix <- cbind(exp.matrix, x=exp.matrix[,jj])
+        colnames(exp.matrix)[ncol(exp.matrix)] <- new.contrs[i]
+      }
+    }
 
     if (!is.null(design)) exp.matrix <- (design %*% contr.matrix)
     samplesX <- lapply(apply(exp.matrix != 0, 2, which,  simplify = FALSE), function(i) rownames(exp.matrix)[i])
@@ -394,6 +405,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
 
   nc.tests <- c("ttest", "ttest.welch", "voom.limma", "notrend.limma", "edger.qlf", "deseq2.wald")
   all.contrs <- unlist(sapply(outputs, function(x) names(x[[1]])))
+  if (class(all.contrs)[1] %in% c("matrix", "array")) all.contrs <- all.contrs[, 1]
   all.contrs <- unique(unname(all.contrs))
   
   i <- 1
@@ -1277,7 +1289,6 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
                                                   X = NULL,
                                                   time = NULL) {
 
-  message("[---------.ngs.fitConstrastsWithDESEQ2.nodesign-1-----------")
   counts <- round(counts)
   if (is.null(X)) X <- edgeR::cpm(counts, log = TRUE)
 
@@ -1354,7 +1365,8 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
       ct <- exp.matrix[kk, i]
       y <- factor(c("neg", "zero", "pos")[2 + sign(ct)], levels = c("neg", "zero", "pos"))
       counts1 <- counts[, kk, drop = FALSE]
-      saveRDS(list(counts1, y, time=time), "~/Desktop/MNT/PP.RDS")
+      saveRDS(list(counts1, y, time=time, ct=colnames(exp.matrix)[i]), "~/Desktop/MNT/PP.RDS")
+      message("-------------ct: ", colnames(exp.matrix)[i], " (timeseries) --done")
       resx <- .ngs.fitConstrastsWithDESEQ2.nodesign.timeseries(counts1, y, time)
       rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
       X1 <- X[, kk, drop = FALSE]
@@ -1368,7 +1380,6 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
       ## if (conform.output) resx$log2FoldChange <- (resx$AveExpr1 - resx$AveExpr0)
       tables[[ll + i]] <- data.frame(resx)
       names(tables)[ll + i] <- paste0("IA:", colnames(exp.matrix)[i], sep = "")
-      message("-------------ct: ", colnames(exp.matrix)[i], "---done")
     }
   }
 
@@ -1392,12 +1403,11 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
                                                              y,
                                                              time) {
 
-  message("[---------.ngs.fitConstrastsWithDESEQ2.nodesign-1---TIMES--------")
   message("[ngs.fitConstrastsWithDESEQ2.nodesign]: DESeq2 LRT time series analysis with interaction term")
 
   if (!all(colnames(counts) %in% names(time)))
     stop("[ngs.fitConstrastsWithDESEQ2.nodesign] and time contain different set of samples")
-  
+
   jj <- match(colnames(counts), names(time))
   time0 <- as.character(time[jj])
   time0 <- gsub("\\D", "", unname(time0))

@@ -271,6 +271,7 @@ pgx.createPGX <- function(counts,
 
   ## convert old-style contrast matrix to sample-wise labeled contrasts
   contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
+  saveRDS(list(contrasts=contrasts), "~/Desktop/MNT/MNT000.RDS")
 
   ## prune unused samples
   contrasts[contrasts %in% c("", " ", "NA")] <- NA
@@ -553,6 +554,9 @@ pgx.computePGX <- function(pgx,
 
   message("[pgx.computePGX] Starting pgx.computePGX")
 
+  LL <- list(pgx=pgx)
+  saveRDS(LL, "~/Desktop/MNT/MNT1-compute.RDS")
+
   if (!"contrasts" %in% names(pgx)) {
     stop("[pgx.computePGX] FATAL:: no contrasts in object")
   }
@@ -563,7 +567,7 @@ pgx.computePGX <- function(pgx,
   contr.matrix <- contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
   contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
   contr.matrix <- sign(contr.matrix) ## sign is fine
-
+  
   ## select valid contrasts
   sel <- Matrix::colSums(contr.matrix == -1) > 0 & Matrix::colSums(contr.matrix == 1) > 0
   contr.matrix <- contr.matrix[, sel, drop = FALSE]

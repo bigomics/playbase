@@ -86,6 +86,10 @@ compute_testGenesSingleOmics <- function(pgx,
                                          prune.samples = TRUE,
                                          test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
                                          timeseries = FALSE) {
+
+  LL <- list(pgx=pgx, contr.matrix=contr.matrix, timeseries=timeseries)
+  saveRDS(LL, "~/Desktop/MNT/MNT0.RDS")
+
   ## -----------------------------------------------------------------------------
   ## Check parameters, decide group level
   ## -----------------------------------------------------------------------------
