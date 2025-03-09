@@ -269,6 +269,18 @@ pgx.createPGX <- function(counts,
   X <- as.matrix(X)
   if (is.null(contrasts)) contrasts <- samples[, 0]
 
+  ## -------------------------------------------------------------------
+  ## Expand contrast matrix if timeseries is ON
+  ## ------------------------------------------------------------------
+  timeseries=TRUE;
+  if (timeseries) {
+    nn <- ncol(contrasts)
+    ts.ct <- paste0("IA:", colnames(contrasts))
+    contrasts <- cbind(contrasts, contrasts)
+    colnames(contrasts)[(nn+1):ncol(contrasts)] <- ts.ct 
+  }
+  saveRDS(list(contrasts=contrasts), "~/Desktop/MNT/contrasts2.RDS")
+  
   ## convert old-style contrast matrix to sample-wise labeled contrasts
   contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
 

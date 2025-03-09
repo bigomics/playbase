@@ -421,22 +421,22 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     rownames(M) <- rownames(logFC) <- rownames(P) <- rownames(Q) <- rownames(res$tables[[1]])
     rownames(M0) <- rownames(M1) <- rownames(res$tables[[1]])
 
-    ## NEEDED ??????
-    if (!is.null(timeseries) && (names(outputs)[i] %in% nc.tests)) {
-      current.contrs <- colnames(M)
-      new.contrs <- setdiff(all.contrs, current.contrs)
-      if (length(new.contrs) > 0) {
-        ct.null <- matrix(NA, nrow=nrow(M), ncol=length(new.contrs))
-        rownames(ct.null) <- rownames(M)
-        colnames(ct.null) <- new.contrs
-        M <- cbind(M, ct.null)
-        M0 <- cbind(M0, ct.null)
-        M1 <- cbind(M1, ct.null)
-        Q <- cbind(Q, ct.null)
-        P <- cbind(P, ct.null)
-        logFC <- cbind(logFC, ct.null)
-      }
-    }
+    ## ## NEEDED ??????
+    ## if (!is.null(timeseries) && (names(outputs)[i] %in% nc.tests)) {
+    ##   current.contrs <- colnames(M)
+    ##   new.contrs <- setdiff(all.contrs, current.contrs)
+    ##   if (length(new.contrs) > 0) {
+    ##     ct.null <- matrix(NA, nrow=nrow(M), ncol=length(new.contrs))
+    ##     rownames(ct.null) <- rownames(M)
+    ##     colnames(ct.null) <- new.contrs
+    ##     M <- cbind(M, ct.null)
+    ##     M0 <- cbind(M0, ct.null)
+    ##     M1 <- cbind(M1, ct.null)
+    ##     Q <- cbind(Q, ct.null)
+    ##     P <- cbind(P, ct.null)
+    ##     logFC <- cbind(logFC, ct.null)
+    ##   }
+    ## }
 
     ## count significant terms
     qvalues <- c(1e-16, 10**seq(-8, -2, 2), 0.05, 0.1, 0.2, 0.5, 1)
@@ -475,28 +475,27 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     
     outputs[[i]] <- res
   }
-
   
   ## --------------------------------------------------------------
   ## Conform DGE tables across methods
   ## --------------------------------------------------------------
-  message("[ngs.fitContrastsWithAllMethods] Conforming DGE tables across methods ...")
-  i <- 1
-  for(i in 1:length(outputs)) {
-    if (!is.null(timeseries) && (names(outputs)[i] %in% nc.tests)) {
-      current.contrs <- names(outputs[[i]][["tables"]])
-      new.contrs <- setdiff(all.contrs, current.contrs)
-      if (length(new.contrs) > 0) {
-        j = 1
-        for (j in 1:length(new.contrs)) {
-          top.null <- matrix(NA, nrow=nrow(outputs[[1]][["p.value"]]), ncol=7)
-          rownames(top.null) <- rownames(outputs[[1]][["p.value"]])
-          colnames(top.null) <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
-          outputs[[i]][["tables"]][[new.contrs[j]]] <- top.null
-        }
-      }
-    }
-  }
+  ## message("[ngs.fitContrastsWithAllMethods] Conforming DGE tables across methods ...")
+  ## i <- 1
+  ## for(i in 1:length(outputs)) {
+  ##   if (!is.null(timeseries) && (names(outputs)[i] %in% nc.tests)) {
+  ##     current.contrs <- names(outputs[[i]][["tables"]])
+  ##     new.contrs <- setdiff(all.contrs, current.contrs)
+  ##     if (length(new.contrs) > 0) {
+  ##       j = 1
+  ##       for (j in 1:length(new.contrs)) {
+  ##         top.null <- matrix(NA, nrow=nrow(outputs[[1]][["p.value"]]), ncol=7)
+  ##         rownames(top.null) <- rownames(outputs[[1]][["p.value"]])
+  ##         colnames(top.null) <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
+  ##         outputs[[i]][["tables"]][[new.contrs[j]]] <- top.null
+  ##       }
+  ##     }
+  ##   }
+  ## }
 
   ## --------------------------------------------------------------
   ## Reshape matrices by comparison
@@ -690,9 +689,11 @@ ngs.fitContrastsWithLIMMA <- function(X,
     }
     
   } else {
-
+    
     message("[ngs.fitContrastsWithLIMMA] Fitting LIMMA contrasts *without* design")
     exp0 <- contr.matrix ## sample-wise contrasts...
+    sel <- colnames(exp0)[!grepl("^IA:*", colnames(exp0))]
+    exp0 <- exp0[, sel, drop = FALSE]
     i=1; tables=list()
     for (i in 1:ncol(exp0)) {
       kk <- 1:nrow(exp0)
@@ -729,8 +730,8 @@ ngs.fitContrastsWithLIMMA <- function(X,
     if (!is.null(timeseries)) {
       message("[ngs.fitContrastsWithLIMMA] Fitting LIMMA contrasts for time series *without* design")
       exp0 <- contr.matrix
-      sel <- grep(":", colnames(exp0))
-      if (length(sel)) exp0 <- exp0[, -sel, drop = FALSE]
+      sel <- colnames(exp0)[grepl("^IA:*", colnames(exp0))]
+      exp0 <- exp0[, sel, drop = FALSE]
       ll <- length(tables)
       i=1
       for (i in 1:ncol(exp0)) {
@@ -747,7 +748,8 @@ ngs.fitContrastsWithLIMMA <- function(X,
         mean0 <- rowMeans(X1[, j0, drop = FALSE], na.rm = TRUE)
         top <- top[rownames(X1), , drop = FALSE]
         tables[[ll + i]] <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
-        names(tables)[ll + i] <- paste0("IA:", colnames(exp0)[i], sep = "")
+        names(tables)[ll + i] <- colnames(exp0)[i]
+        #names(tables)[ll + i] <- paste0("IA:", colnames(exp0)[i], sep = "")
       }
     }
 
@@ -1294,12 +1296,14 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
 
   if (nrow(contr.matrix) != ncol(X))
     stop("ngs.fitConstrastsWithDESEQ2.nodesign:: contrast matrix must be by sample")
-
+  
   exp.matrix <- contr.matrix
-
+  sel <- colnames(exp.matrix)[!grepl("^IA:*", colnames(exp.matrix))]
+  exp.matrix <- exp.matrix[, sel, drop = FALSE]
   i <- 1
   tables <- list()
   for (i in 1:ncol(exp.matrix)) {
+
     ## manual design matrix (CHECK THIS!!!)
     kk <- 1:nrow(exp.matrix)
     if (prune.samples) kk <- which(!is.na(exp.matrix[, i]) & exp.matrix[, i] != 0)
@@ -1355,9 +1359,12 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
     message("-------------ct: ", colnames(exp.matrix)[i], "---done")
   }
   
-  ## add timeseries DGE tables if time not NULL
-  ll <- length(tables)
+  ## Timeseries analysis
   if (!is.null(time)) {
+    ll <- length(tables)
+    exp.matrix <- contr.matrix
+    sel <- colnames(exp.matrix)[grepl("^IA:*", colnames(exp.matrix))]
+    exp.matrix <- exp.matrix[, sel, drop = FALSE]
     i=1
     for (i in 1:ncol(exp.matrix)) {
       kk <- 1:nrow(exp.matrix)
@@ -1378,7 +1385,8 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
       ## Keep DESeq2 log2FC from LRT.
       ## if (conform.output) resx$log2FoldChange <- (resx$AveExpr1 - resx$AveExpr0)
       tables[[ll + i]] <- data.frame(resx)
-      names(tables)[ll + i] <- paste0("IA:", colnames(exp.matrix)[i], sep = "")
+      names(tables)[ll + i] <- colnames(exp.matrix)[i]
+      #names(tables)[ll + i] <- paste0("IA:", colnames(exp.matrix)[i], sep = "")
     }
   }
 
