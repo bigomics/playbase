@@ -1365,8 +1365,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
       ct <- exp.matrix[kk, i]
       y <- factor(c("neg", "zero", "pos")[2 + sign(ct)], levels = c("neg", "zero", "pos"))
       counts1 <- counts[, kk, drop = FALSE]
-      saveRDS(list(counts1, y, time=time, ct=colnames(exp.matrix)[i]), "~/Desktop/MNT/PP.RDS")
-      message("-------------ct: ", colnames(exp.matrix)[i], " (timeseries) --done")
+      message("----ct: ", colnames(exp.matrix)[i], " (timeseries) --done")
       resx <- .ngs.fitConstrastsWithDESEQ2.nodesign.timeseries(counts1, y, time)
       rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
       X1 <- X[, kk, drop = FALSE]

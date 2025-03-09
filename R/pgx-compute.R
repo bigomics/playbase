@@ -271,7 +271,6 @@ pgx.createPGX <- function(counts,
 
   ## convert old-style contrast matrix to sample-wise labeled contrasts
   contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
-  saveRDS(list(contrasts=contrasts), "~/Desktop/MNT/MNT000.RDS")
 
   ## prune unused samples
   contrasts[contrasts %in% c("", " ", "NA")] <- NA
@@ -554,9 +553,6 @@ pgx.computePGX <- function(pgx,
 
   message("[pgx.computePGX] Starting pgx.computePGX")
 
-  LL <- list(pgx=pgx)
-  saveRDS(LL, "~/Desktop/MNT/MNT1-compute.RDS")
-
   if (!"contrasts" %in% names(pgx)) {
     stop("[pgx.computePGX] FATAL:: no contrasts in object")
   }
@@ -564,6 +560,15 @@ pgx.computePGX <- function(pgx,
     stop("[pgx.computePGX] FATAL:: all contrast names must include _vs_")
   }
 
+  ## use.design=FALSE (now default): we test each contrast separately.
+  ## If re-running pgx.computePGX on its own (without re-running pgx.createPGX),
+  ## all existing contrasts are tested (including .cluster:c*_vs_others).
+  ## Avoiding this for now.
+  kk <- grep(".cluster", colnames(pgx$samples))
+  if (any(kk)) pgx$samples <- pgx$samples[, -kk, drop = FALSE]
+  kk <- grep(".cluster:c*", colnames(pgx$contrasts))
+  if (any(kk)) pgx$contrasts <- pgx$contrasts[, -kk, drop = FALSE]
+  
   contr.matrix <- contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
   contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
   contr.matrix <- sign(contr.matrix) ## sign is fine

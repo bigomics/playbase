@@ -87,9 +87,6 @@ compute_testGenesSingleOmics <- function(pgx,
                                          test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
                                          timeseries = FALSE) {
 
-  LL <- list(pgx=pgx, contr.matrix=contr.matrix, timeseries=timeseries)
-  saveRDS(LL, "~/Desktop/MNT/MNT0.RDS")
-
   ## -----------------------------------------------------------------------------
   ## Check parameters, decide group level
   ## -----------------------------------------------------------------------------
@@ -251,8 +248,6 @@ compute_testGenesSingleOmics <- function(pgx,
     timeseries = timeseries
   )
 
-  #saveRDS(gx.meta, "~/Desktop/MNT/gx.meta.RDS")
-  
   message("[compute_testGenesSingleOmics]: fitting completed!")
 
   ## --------------------------------------------------------------------------------
