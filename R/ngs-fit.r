@@ -321,53 +321,52 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   ## ----------------------------------------------------------------------
   ## "corrections" ...
   ## ----------------------------------------------------------------------
-  correct.AveExpr = FALSE
+  correct.AveExpr = TRUE
   if (correct.AveExpr) {
     
     message("[ngs.fitContrastsWithAllMethods] correcting AveExpr values...")
-    #message("[ngs.fitContrastsWithAllMethods] dim.X: ", dim(X)[1], ",", dim(X)[2])
-
+    
     ## EdgeR and Deseq2 compute weird normalized expr. matrix.
     ## We need to "correct" for those.
 
     exp.matrix <- contr.matrix
 
     if (!is.null(design)) exp.matrix <- (design %*% contr.matrix)
-    samplesX <- lapply(apply(exp.matrix != 0, 2, which), function(i) rownames(exp.matrix)[i])
-    samples1 <- lapply(apply(exp.matrix > 0, 2, which), function(i) rownames(exp.matrix)[i])
-    samples0 <- lapply(apply(exp.matrix < 0, 2, which), function(i) rownames(exp.matrix)[i])
+    samplesX <- lapply(apply(exp.matrix != 0, 2, which,  simplify = FALSE), function(i) rownames(exp.matrix)[i])
+    samples1 <- lapply(apply(exp.matrix > 0, 2, which, simplify = FALSE), function(i) rownames(exp.matrix)[i])
+    samples0 <- lapply(apply(exp.matrix < 0, 2, which, simplify = FALSE), function(i) rownames(exp.matrix)[i])
 
     avgX <- sapply(samplesX, function(s) rowMeans(X[, s, drop = FALSE], na.rm = TRUE))
     avg.1 <- sapply(samples1, function(s) rowMeans(X[, s, drop = FALSE], na.rm = TRUE))
     avg.0 <- sapply(samples0, function(s) rowMeans(X[, s, drop = FALSE], na.rm = TRUE))
 
-    i <- j <- 1
-    i=1
-    for (i in 1:length(outputs)) {
-      for (j in 1:length(outputs[[i]]$tables)) {
-        contr.name <- names(outputs[[i]]$tables)[j]
-        chk1 <- grepl("^IA:*", contr.name)
-        if (!chk1) {
-          outputs[[i]]$tables[[j]]$AveExpr <- avgX[, j] ## ????
-          outputs[[i]]$tables[[j]]$AveExpr1 <- avg.1[, contr.name]
-          outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, contr.name]
-        } else {
-          sel <- grep(gsub("^IA:", "", contr.name), colnames(exp.matrix))
-          outputs[[i]]$tables[[j]]$AveExpr <- NA # ??
-          outputs[[i]]$tables[[j]]$AveExpr1 <- avg.1[, sel]
-          outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, sel]
-        }
-      }
-    }
-
     ## i <- j <- 1
+    ## i=1
     ## for (i in 1:length(outputs)) {
-    ##  for (j in 1:length(outputs[[i]]$tables)) {
-    ##    outputs[[i]]$tables[[j]]$AveExpr <- avgX[, j]
-    ##    outputs[[i]]$tables[[j]]$AveExpr1 <- avg.1[, j]
-    ##    outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, j]
-    ##  }
+    ##   for (j in 1:length(outputs[[i]]$tables)) {
+    ##     contr.name <- names(outputs[[i]]$tables)[j]
+    ##     chk1 <- grepl("^IA:*", contr.name)
+    ##     if (!chk1) {
+    ##       outputs[[i]]$tables[[j]]$AveExpr <- avgX[, j] ## ????
+    ##       outputs[[i]]$tables[[j]]$AveExpr1 <- avg.1[, contr.name]
+    ##       outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, contr.name]
+    ##     } else {
+    ##       sel <- grep(gsub("^IA:", "", contr.name), colnames(exp.matrix))
+    ##       outputs[[i]]$tables[[j]]$AveExpr <- NA # ??
+    ##       outputs[[i]]$tables[[j]]$AveExpr1 <- avg.1[, sel]
+    ##       outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, sel]
+    ##     }
+    ##   }
     ## }
+
+    i <- j <- 1
+    for (i in 1:length(outputs)) {
+     for (j in 1:length(outputs[[i]]$tables)) {
+       outputs[[i]]$tables[[j]]$AveExpr <- avgX[, j]
+       outputs[[i]]$tables[[j]]$AveExpr1 <- avg.1[, j]
+       outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, j]
+     }
+    }
 
   }
 
