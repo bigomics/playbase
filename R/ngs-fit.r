@@ -62,7 +62,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
                                            genes = NULL,
                                            prior.cpm = 1,
                                            cpm.scale = 1e6,
-                                           prune.samples = TRUE, ##FALSE,
+                                           prune.samples = TRUE, ## FALSE,
                                            conform.output = TRUE,
                                            do.filter = TRUE,
                                            remove.batch = TRUE,
@@ -305,7 +305,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     test_names <- unique(sub("\\..*", "", colnames(custom)))
     test_names <- test_names[match(names(compare_output$tables), test_names)]
     custom_tables <- list()
-    for(test in test_names) {
+    for (test in test_names) {
       logFC_col <- paste0(test, ".logFC")
       pval_col <- paste0(test, ".P.Value")
       adjp_col <- paste0(test, ".adj.P.Val")
@@ -321,9 +321,10 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     missing_rows <- rownames(compare_output$tables[[1]])[which(!rownames(compare_output$tables[[1]]) %in% rownames(custom[[1]]))]
     if (length(missing_rows) > 0) {
       missing_data <- matrix(NA,
-                            nrow = length(missing_rows),
-                            ncol = ncol(custom[[1]]),
-                            dimnames = list(missing_rows, colnames(custom[[1]])))
+        nrow = length(missing_rows),
+        ncol = ncol(custom[[1]]),
+        dimnames = list(missing_rows, colnames(custom[[1]]))
+      )
       for (test in names(custom)) {
         custom[[test]] <- rbind(custom[[test]], missing_data)
         custom[[test]] <- custom[[test]][rownames(compare_output$tables[[1]]), ]
@@ -555,7 +556,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
   if (!is.null(X)) {
     X <- X[which(rowMeans(is.na(X)) < 1), ]
   }
-  
+
   design
   method <- method[1]
 
@@ -1071,7 +1072,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
                                                   conform.output = FALSE,
                                                   X = NULL) {
   counts <- round(counts)
-  
+
   if (is.null(X)) X <- edgeR::cpm(counts, log = TRUE)
 
   if (nrow(contr.matrix) != ncol(X)) {

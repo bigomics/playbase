@@ -95,8 +95,8 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
   ref <- toupper(ref)
 
   is.ref <- (toupper(pheno0) %in% toupper(ref))
-  is.ref2 <- grepl(paste(paste0("^",ref),collapse="|"),pheno0,ignore.case=TRUE)  
-  if(!any(is.ref) && !all(is.ref2)) {
+  is.ref2 <- grepl(paste(paste0("^", ref), collapse = "|"), pheno0, ignore.case = TRUE)
+  if (!any(is.ref) && !all(is.ref2)) {
     is.ref <- is.ref2
   }
   ref.detected <- (sum(is.ref) > 0 && sum(!is.ref) > 0)
@@ -155,7 +155,7 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
   top <- top[rownames(X0), ]
 
   ## only significant
-  if(!is.null(fdr) && !is.null(lfc)) {
+  if (!is.null(fdr) && !is.null(lfc)) {
     top <- top[which(top$adj.P.Val <= fdr & abs(top$logFC) >= lfc), ]
     if (verbose > 0) cat("found", nrow(top), "significant at fdr=", fdr, "and minimal FC=", lfc, "\n")
   }

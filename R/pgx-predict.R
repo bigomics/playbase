@@ -12,45 +12,45 @@
 #' specific contrast.
 #'
 #' @export
-pgx.compute_importance <- function(pgx, pheno, level="genes",
+pgx.compute_importance <- function(pgx, pheno, level = "genes",
                                    filter_features = NULL,
                                    select_features = NULL,
                                    select_samples = NULL,
                                    nfeatures = 60,
                                    multiomics = NULL,
-                                   do.survival=FALSE) {
-
-  if(0) {
-    level="genes"
-    filter_features = NULL
-    select_features = NULL
-    select_samples = NULL
-    nfeatures = 60
-    multiomics = NULL
+                                   do.survival = FALSE) {
+  if (0) {
+    level <- "genes"
+    filter_features <- NULL
+    select_features <- NULL
+    select_samples <- NULL
+    nfeatures <- 60
+    multiomics <- NULL
   }
-  
+
   ft <- ifelse(is.null(filter_features), "<all>", filter_features)
   sel <- select_features
-  
+
   if (!(pheno %in% colnames(pgx$samples))) {
     message("ERROR. pheno not in pgx$samples")
     return(NULL)
   }
 
   ## WARNING. this converts any phenotype to discrete
-  y0 <- as.character(pgx$samples[, pheno])  
+  y0 <- as.character(pgx$samples[, pheno])
   names(y0) <- rownames(pgx$samples)
 
-  if(!is.null(select_samples)) {
+  if (!is.null(select_samples)) {
     y0 <- y0[names(y0) %in% select_samples]
   }
   y <- y0[!is.na(y0)]
-  
+
   ## augment to at least 100 samples per level :)
-  ii <- tapply(1:length(y), y, function(ii)
-    sample(c(ii, ii), size = 100, replace = TRUE))
+  ii <- tapply(1:length(y), y, function(ii) {
+    sample(c(ii, ii), size = 100, replace = TRUE)
+  })
   y <- y[unlist(ii)]
-  
+
   ## -------------------------------------------
   ## select features (augment if needed)
   ## -------------------------------------------
@@ -66,10 +66,10 @@ pgx.compute_importance <- function(pgx, pheno, level="genes",
     }
   }
   X0 <- X
-  
+
   ## ----------- filter with selected features
   info("[pgx.compute_importance] Filtering features...")
-  
+
   is.family <- (ft %in% c(names(pgx$families), names(playdata::iGSETS)))
   if (ft == "<custom>" && !is.null(sel) && length(sel) > 0) {
     ## ------------- filter with user selection
@@ -89,7 +89,7 @@ pgx.compute_importance <- function(pgx, pheno, level="genes",
     pp <- intersect(pp, rownames(X))
     X <- X[pp, , drop = FALSE]
   }
-  
+
   ## ----------- restrict to top SD -----------
   sdx <- matrixStats::rowSds(X, na.rm = TRUE)
   X <- head(X[order(-sdx), , drop = FALSE], 10 * nfeatures) ## top 100
@@ -97,7 +97,7 @@ pgx.compute_importance <- function(pgx, pheno, level="genes",
   ## add some noise
   sdx0 <- matrixStats::rowSds(X, na.rm = TRUE)
   sdx1 <- 0.5 * sdx0 + 0.5 * mean(sdx0, na.rm = TRUE)
-  X <- X + 0.25 * sdx1 * matrix(rnorm(length(X)), nrow(X), ncol(X)) 
+  X <- X + 0.25 * sdx1 * matrix(rnorm(length(X)), nrow(X), ncol(X))
 
   ## -------------------------------------------
   ## compute importance values
@@ -115,35 +115,41 @@ pgx.compute_importance <- function(pgx, pheno, level="genes",
     )
   } else {
     ## determine is dataset is multi-omics
-    has.colons <- all(grepl("[:]",rownames(pgx$X)))
+    has.colons <- all(grepl("[:]", rownames(pgx$X)))
     has.colons
-    if(is.null(multiomics)) multiomics <- (pgx$datatype == "multi-omics" || has.colons)
-    if(multiomics && !has.colons) {
+    if (is.null(multiomics)) multiomics <- (pgx$datatype == "multi-omics" || has.colons)
+    if (multiomics && !has.colons) {
       message("WARNING. multi-omics specified but no colons in features. doing mono-omics.")
       multiomics <- FALSE
     }
 
-    if(multiomics) {
+    if (multiomics) {
       ## compute variable importance for MULTI-OMICS. We need not to
       ## use the augmented data.
-      kernels = c("mofa","pca","nmf","nmf2","mcia","wgcna","diablo","rgcca",
-                  "rgcca,rgcca","rgcca.rgccda", "rgcca.mcoa")
-      message("Computing multi-omics variable importance...")      
+      kernels <- c(
+        "mofa", "pca", "nmf", "nmf2", "mcia", "wgcna", "diablo", "rgcca",
+        "rgcca,rgcca", "rgcca.rgccda", "rgcca.mcoa"
+      )
+      message("Computing multi-omics variable importance...")
       P <- pgx.compute_mofa_importance(
-        pgx, pheno, numfactors = 8, use.sdwt = TRUE, kernels=kernels)
+        pgx, pheno,
+        numfactors = 8, use.sdwt = TRUE, kernels = kernels
+      )
       dim(P)
       X <- pgx$X
-      y <- pgx$samples[,pheno]
+      y <- pgx$samples[, pheno]
       names(y) <- rownames(pgx$samples)
     } else {
       ## compute variable importance for SINGLE-OMICS. We use the
       ## augmented data.
-      methods <- c("glmnet", "randomforest", "xgboost", "splsda",
-                   "correlation", "ftest")
+      methods <- c(
+        "glmnet", "randomforest", "xgboost", "splsda",
+        "correlation", "ftest"
+      )
       X1 <- X
       y1 <- y
       names(y1) <- colnames(X1) <- paste0("x", 1:ncol(X))
-      message("Computing single-omics variable importance...")            
+      message("Computing single-omics variable importance...")
       res <- playbase::pgx.variableImportance(
         X1, y1,
         methods = methods,
@@ -152,35 +158,35 @@ pgx.compute_importance <- function(pgx, pheno, level="genes",
         scale = FALSE,
         add.noise = 0
       )
-      remove(X1,y1)
+      remove(X1, y1)
       P <- res$importance
     }
   }
 
   ## normalize importance measures
-  P <- abs(P) ## sometimes negative according to sign  
+  P <- abs(P) ## sometimes negative according to sign
   P[is.na(P)] <- 0
   P[is.nan(P)] <- 0
 
   ## Convert to elevated rank. take top features
   R <- P
   if (nrow(R) > 1) {
-    R <- (apply(P, 2, rank) / nrow(P))**4  ## exponent???
+    R <- (apply(P, 2, rank) / nrow(P))**4 ## exponent???
     R <- R[order(-rowSums(R, na.rm = TRUE)), , drop = FALSE]
   }
   sel <- head(rownames(R), nfeatures) ## top features
-  R <- R[sel,, drop = FALSE]
+  R <- R[sel, , drop = FALSE]
   X <- X[sel, , drop = FALSE]
 
   ## reduce R and y (from augmented set)
   kk <- names(y)[which(!duplicated(names(y)))]
-  X <- X[,kk,drop=FALSE]
+  X <- X[, kk, drop = FALSE]
   y <- y[kk]
 
   ## make partition tree
-  rf <- makePartitionTree(X, y, add.splits = 0) 
-  
-  ##rf = NULL
+  rf <- makePartitionTree(X, y, add.splits = 0)
+
+  ## rf = NULL
   res <- list(R = R, y = y, X = X, rf = rf)
 
   return(res)
@@ -612,13 +618,15 @@ makePartitionTree <- function(X, y, add.splits = 0) {
     rf <- rpart::rpart(survival::Surv(time, status) ~ ., data = df)
   } else {
     df <- data.frame(y = y, tx)
-    ##rf <- rpart::rpart(y ~ ., data = df)
-    rf = rpart::rpart(y ~., data=df, method="class",
-                      control = rpart::rpart.control(minsplit=2, maxdepth=10))
+    ## rf <- rpart::rpart(y ~ ., data = df)
+    rf <- rpart::rpart(y ~ .,
+      data = df, method = "class",
+      control = rpart::rpart.control(minsplit = 2, maxdepth = 10)
+    )
   }
   rf$orig.names <- rownames(X)
   names(rf$orig.names) <- colnames(tx)
-  
+
   ## prune the tree
   rf.nsplit <- rf$cptable[, "nsplit"]
   MAXSPLIT <- length(unique(y)) + 1 + add.splits ## maximum N+1 groups
@@ -632,20 +640,19 @@ makePartitionTree <- function(X, y, add.splits = 0) {
 
 
 #' @export
-plotDecisionTreeFromImportance <- function(imp, add.splits = 0, rf=NULL,
-                                           type=c("fancy","simple","extended")) {
-
-  if(is.null(imp) && is.null(rf)) {
+plotDecisionTreeFromImportance <- function(imp, add.splits = 0, rf = NULL,
+                                           type = c("fancy", "simple", "extended")) {
+  if (is.null(imp) && is.null(rf)) {
     message("ERROR: must provide imp or rf")
     return(NULL)
   }
-  
-  if(is.null(rf) && !is.null(imp)) {
+
+  if (is.null(rf) && !is.null(imp)) {
     kk <- which(!duplicated(names(imp$y)))
     y <- imp$y[kk]
     sel <- intersect(rownames(imp$X), rownames(imp$R))
-    X <- imp$X[sel, kk,  drop = FALSE]
-    rf <- makePartitionTree(X, y, add.splits = add.splits) 
+    X <- imp$X[sel, kk, drop = FALSE]
+    rf <- makePartitionTree(X, y, add.splits = add.splits)
   } ## end-if-null rf
 
   ## plot the tree
@@ -655,10 +662,10 @@ plotDecisionTreeFromImportance <- function(imp, add.splits = 0, rf=NULL,
     pkrf <- partykit::as.party(rf)
     partykit::plot.party(pkrf)
   } else {
-    if(type == "fancy") {
+    if (type == "fancy") {
       ## rattle::fancyRpartPlot(rf, caption = NULL, type=4)
       rpart.plot::rpart.plot(rf)
-    } else if (type %in% c("simple","extended")){
+    } else if (type %in% c("simple", "extended")) {
       pk <- partykit::as.party(rf)
       plot(pk, type = type)
     } else {
@@ -666,7 +673,6 @@ plotDecisionTreeFromImportance <- function(imp, add.splits = 0, rf=NULL,
       return(NULL)
     }
   }
-  
 }
 
 

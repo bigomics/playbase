@@ -2,19 +2,18 @@
 #'
 #'
 #' @export
-getPathwayImage <- function(wp, val, sbgn.dir=NULL, as.img=FALSE) {
-  
+getPathwayImage <- function(wp, val, sbgn.dir = NULL, as.img = FALSE) {
   img <- NULL
-  if(grepl("WP",wp)) img <- wikipathview(wp, val=val)
-  if(grepl("SMP",wp)) img <- pathbankview(wp, val=val)
-  if(grepl("R-HSA",wp)) img <- getReactomeSVG(wp, val=val)
-##  if(grepl("R-HSA",wp)) img <- getReactomeSVG.SBGN(wp, val=val, sbgn.dir=sbgn.dir)
+  if (grepl("WP", wp)) img <- wikipathview(wp, val = val)
+  if (grepl("SMP", wp)) img <- pathbankview(wp, val = val)
+  if (grepl("R-HSA", wp)) img <- getReactomeSVG(wp, val = val)
+  ##  if(grepl("R-HSA",wp)) img <- getReactomeSVG.SBGN(wp, val=val, sbgn.dir=sbgn.dir)
 
   if (is.null(img)) {
     return(NULL)
   }
 
-  if(as.img) {
+  if (as.img) {
     img <- list(
       src = normalizePath(img),
       contentType = "image/svg+xml",
@@ -27,20 +26,22 @@ getPathwayImage <- function(wp, val, sbgn.dir=NULL, as.img=FALSE) {
 
 
 #' @export
-getReactomeSVG <- function(wp, val=NULL, as.img=FALSE) {
+getReactomeSVG <- function(wp, val = NULL, as.img = FALSE) {
   require(xml2)
 
-  ##wp="R-HSA-449147"  
-  url <- paste0("https://reactome.org/ContentService/exporter/diagram/", wp,".svg")
+  ## wp="R-HSA-449147"
+  url <- paste0("https://reactome.org/ContentService/exporter/diagram/", wp, ".svg")
   destfile <- tempfile(fileext = ".svg")
-  down <- tryCatch({
-    download.file(url, destfile)
-  },
-  error = function(w) {
-    return(NULL)
-  })
-  
-  if(as.img) {
+  down <- tryCatch(
+    {
+      download.file(url, destfile)
+    },
+    error = function(w) {
+      return(NULL)
+    }
+  )
+
+  if (as.img) {
     destfile <- list(
       src = normalizePath(destfile),
       contentType = "image/svg+xml",
@@ -48,7 +49,7 @@ getReactomeSVG <- function(wp, val=NULL, as.img=FALSE) {
       alt = paste("Reactome pathway downloaded from", url)
     )
   }
-  
+
   return(destfile)
 }
 
@@ -88,22 +89,24 @@ getReactomeSVG <- function(wp, val=NULL, as.img=FALSE) {
 #' }
 #'
 #' @export
-pathbankview <- function(pb, val, as.img=FALSE, large_font=TRUE) {
+pathbankview <- function(pb, val, as.img = FALSE, large_font = TRUE) {
   require(xml2)
 
-  if(large_font) {
+  if (large_font) {
     url <- paste0("https://www.pathbank.org/view/", pb, "/download?type=simple_large_font_vector_image")
   } else {
     url <- paste0("https://www.pathbank.org/view/", pb, "/download?type=simple_vector_image")
   }
   destfile <- tempfile(fileext = ".svg")
-  down <- tryCatch({
-    download.file(url, destfile)
-  },
-  error = function(w) {
-    return(NULL)
-  })
-  
+  down <- tryCatch(
+    {
+      download.file(url, destfile)
+    },
+    error = function(w) {
+      return(NULL)
+    }
+  )
+
   # Read the file line by line
   lines <- readLines(destfile)
 
@@ -168,7 +171,7 @@ pathbankview <- function(pb, val, as.img=FALSE, large_font=TRUE) {
   # Write the lines back to the file
   writeLines(lines, destfile)
 
-  if(as.img) {
+  if (as.img) {
     destfile <- list(
       src = normalizePath(destfile),
       contentType = "image/svg+xml",
@@ -214,7 +217,7 @@ pathbankview <- function(pb, val, as.img=FALSE, large_font=TRUE) {
 #' }
 #'
 #' @export
-wikipathview <- function(wp, val, as.img=FALSE) {
+wikipathview <- function(wp, val, as.img = FALSE) {
   require(xml2)
 
   isClassic <- FALSE
@@ -335,7 +338,7 @@ wikipathview <- function(wp, val, as.img=FALSE) {
   # Write the lines back to the file
   writeLines(lines, destfile)
 
-  if(as.img) {
+  if (as.img) {
     destfile <- list(
       src = normalizePath(destfile),
       contentType = "image/svg+xml",
@@ -343,7 +346,7 @@ wikipathview <- function(wp, val, as.img=FALSE) {
       alt = "wikipathway SVG"
     )
   }
-  
+
   return(destfile)
 }
 
@@ -353,14 +356,14 @@ wikipathview <- function(wp, val, as.img=FALSE) {
 #'
 #'
 #' @export
-getReactomeSVG.SBGN <- function(pathway.id, val, sbgn.dir, as.img=FALSE) {
+getReactomeSVG.SBGN <- function(pathway.id, val, sbgn.dir, as.img = FALSE) {
   suppressMessages(require(SBGNview)) ## slow!! but needed!!!
 
   dbg("[getReactomeSVG] pathway.id = ", pathway.id)
-  
+
   ## this is a trick. the original object in SBGNview.data was 700MB!!
-#  sbgn.dir <- pgx.system.file("sbgn/", package = "pathway")
-#  sbgn.dir <- normalizePath(sbgn.dir) ## absolute path
+  #  sbgn.dir <- pgx.system.file("sbgn/", package = "pathway")
+  #  sbgn.dir <- normalizePath(sbgn.dir) ## absolute path
   sbgn.xmls <- dir(sbgn.dir, ".sbgn")
   names(sbgn.xmls) <- sbgn.xmls
 
@@ -369,61 +372,61 @@ getReactomeSVG.SBGN <- function(pathway.id, val, sbgn.dir, as.img=FALSE) {
   curwd <- getwd()
   tmpdir <- tempdir()
   setwd(tmpdir)
-  
+
   obj <- tryCatch(
-  {
-    SBGNview::SBGNview(
-      gene.data = val,
-      gene.id.type = "SYMBOL",
-      sbgn.dir = sbgn.dir,
-      input.sbgn = pathway.id,
-      output.file = "reactome",
-      output.formats = c("svg")
-    )
-  },
-  error = function(w) {
-    SBGNview::SBGNview(
-      gene.data = NULL,
-      gene.id.type = "SYMBOL",
-      sbgn.dir = sbgn.dir,
-      input.sbgn = pathway.id,
-      output.file = "reactome",
-      output.formats = c("svg")
-    )
-  }
+    {
+      SBGNview::SBGNview(
+        gene.data = val,
+        gene.id.type = "SYMBOL",
+        sbgn.dir = sbgn.dir,
+        input.sbgn = pathway.id,
+        output.file = "reactome",
+        output.formats = c("svg")
+      )
+    },
+    error = function(w) {
+      SBGNview::SBGNview(
+        gene.data = NULL,
+        gene.id.type = "SYMBOL",
+        sbgn.dir = sbgn.dir,
+        input.sbgn = pathway.id,
+        output.file = "reactome",
+        output.formats = c("svg")
+      )
+    }
   )
   if (class(obj) == "SBGNview") {
     try(print(obj))
   }
   Sys.sleep(0.2) ## wait for graph
-  
+
   ## back to previous working folder
   setwd(curwd)
-  
-#  imgfile <- "/tmp/hsa00010.png"
-#  imgfile <- file.path(tmpdir, paste0("reactome_", pathway.id, ".png"))
+
+  #  imgfile <- "/tmp/hsa00010.png"
+  #  imgfile <- file.path(tmpdir, paste0("reactome_", pathway.id, ".png"))
   svgfile <- file.path(tmpdir, paste0("reactome_", pathway.id, ".svg"))
-  
+
   file.exists(svgfile)
   if (!file.exists(svgfile)) {
     return(NULL.IMG)
   }
-  
+
   ## ## parse image dimensions from file
   ## img.dim <- NULL
   ## if (grepl("png|PNG", imgfile)) img.dim <- dim(png::readPNG(imgfile))[1:2]
   ## if (grepl("jpg|JPG", imgfile)) img.dim <- dim(jpeg::readJPEG(imgfile))[1:2]
   ## img.dim
-  
-  if(as.img) {
+
+  if (as.img) {
     imgfile <- list(
-      ##src = imgfile,
+      ## src = imgfile,
       src = svgfile,
       contentType = "image/svg+xml",
       ## width = img.dim[2], height = img.dim[1], ## actual size
       alt = "reactome pathway (SVG)"
     )
   }
-  
-  imgfile 
+
+  imgfile
 }

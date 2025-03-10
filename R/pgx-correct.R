@@ -1910,18 +1910,20 @@ limmaCorrect <- function(X, B, y = NULL, use.covariates = FALSE,
     y[is.na(y)] <- "_"
   }
   if (is.null(ncol(B))) B <- cbind(B)
-  if(!is.null(y) && auto.detect) {
+  if (!is.null(y) && auto.detect) {
     pars <- get_model_parameters(X, B, pheno = y, contrasts = NULL)
     batch.pars <- pars$batch.pars
     batch.pars <- intersect(batch.pars, colnames(B))
     if (!is.null(batch.pars) && length(batch.pars)) {
-      message("auto-correcting for: ", paste(batch.pars,collapse=" "))
+      message("auto-correcting for: ", paste(batch.pars, collapse = " "))
       B <- B[, batch.pars, drop = FALSE]
     } else {
       B <- NULL
     }
   }
-  if(is.null(B)) return(X)
+  if (is.null(B)) {
+    return(X)
+  }
 
   if (use.covariates) {
     modB <- c()
@@ -1948,19 +1950,21 @@ limmaCorrect <- function(X, B, y = NULL, use.covariates = FALSE,
 combatCorrect <- function(X, B, y = NULL, auto.detect = FALSE) {
   cX <- X
   if (is.null(ncol(B))) B <- cbind(B)
-  if(!is.null(y) && auto.detect) {
+  if (!is.null(y) && auto.detect) {
     pars <- get_model_parameters(X, B, pheno = y, contrasts = NULL)
     batch.pars <- pars$batch.pars
     batch.pars <- intersect(batch.pars, colnames(B))
     if (!is.null(batch.pars) && length(batch.pars)) {
-      message("auto-correcting for: ", paste(batch.pars,collapse=" "))
+      message("auto-correcting for: ", paste(batch.pars, collapse = " "))
       B <- B[, batch.pars, drop = FALSE]
     } else {
       B <- NULL
     }
   }
-  if(is.null(B)) return(X)
-  
+  if (is.null(B)) {
+    return(X)
+  }
+
   mod <- NULL
   if (!is.null(y) && length(y)) {
     y[is.na(y)] <- "_"
@@ -2435,7 +2439,7 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   ## use.design=TRUE;dist.method="cor";center.x=TRUE;center.m=TRUE;sdtop=1000;knn=2
 
   knn <- ifelse(ncol(X) <= 3, 1, knn)
-  
+
   ## compute distance matrix for NNM-pairing
   y1 <- paste0("y=", y)
   dX <- X

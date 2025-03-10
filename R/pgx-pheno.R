@@ -9,17 +9,17 @@
 
 
 #' @export
-createSampleInfoFromNames <- function(names, varnames=NULL) {
+createSampleInfoFromNames <- function(names, varnames = NULL) {
   ## trailing numbers are indices
   names0 <- names
-  names <- gsub("([0-9]+$)","-\\1",names)  
+  names <- gsub("([0-9]+$)", "-\\1", names)
   ff <- strsplit(names, split = "[_.-]")
   minlen <- min(sapply(ff, length))
   ff <- lapply(ff, head, minlen)
   samples <- do.call(rbind, ff)
   rownames(samples) <- names0
-  if(!is.null(varnames)) {
-    colnames(samples) <- head( c(varnames,rep("",99)), ncol(samples))
+  if (!is.null(varnames)) {
+    colnames(samples) <- head(c(varnames, rep("", 99)), ncol(samples))
   } else {
     colnames(samples) <- paste0("var", 1:ncol(samples))
   }
@@ -216,7 +216,7 @@ pgx.getNumericalPhenotypes <- function(df) {
 #' A character vector of categorical phenotype column names
 #'
 #' @export
-pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove.dup = FALSE, remove.dot=TRUE) {
+pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove.dup = FALSE, remove.dot = TRUE) {
   is.bad <- 0
 
   ## ... exclude sample IDs
@@ -260,8 +260,8 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
   }
 
   vars <- colnames(df1)
-  if(remove.dot) {
-    vars <- grep("^[.]", vars, value=TRUE, invert=TRUE)
+  if (remove.dot) {
+    vars <- grep("^[.]", vars, value = TRUE, invert = TRUE)
   }
   return(vars)
 }

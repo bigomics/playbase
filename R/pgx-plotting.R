@@ -972,7 +972,7 @@ pgx.plotContrast <- function(pgx, contrast = NULL, type = "scatter",
 #'
 #' @export
 pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
-                        psig = 0.05, fc = 1, cex = 1, sig.par=c("q","p")[1],
+                        psig = 0.05, fc = 1, cex = 1, sig.par = c("q", "p")[1],
                         p.min = NULL, fc.max = NULL, hilight = NULL,
                         label = NULL, cex.lab = 1, ntop = 20,
                         colors = c(
@@ -994,41 +994,41 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   } else {
     stop("FATAL:: invalid level=", level)
   }
-  
+
   ## Label or hilight gene sets
   gsets <- colnames(pgx$GMT)
-  if(!is.null(hilight) && any(hilight %in% gsets)) {
-    G1 <- pgx$GMT[,which(gsets %in% hilight),drop=FALSE]
-    hilight <- names(which(Matrix::rowSums(G1!=0)>0))
+  if (!is.null(hilight) && any(hilight %in% gsets)) {
+    G1 <- pgx$GMT[, which(gsets %in% hilight), drop = FALSE]
+    hilight <- names(which(Matrix::rowSums(G1 != 0) > 0))
   }
-  if(!is.null(label) && any(label %in% gsets)) {
-    G1 <- pgx$GMT[,which(gsets %in% label),drop=FALSE]
-    label <- names(which(Matrix::rowSums(G1!=0)>0))
+  if (!is.null(label) && any(label %in% gsets)) {
+    G1 <- pgx$GMT[, which(gsets %in% label), drop = FALSE]
+    label <- names(which(Matrix::rowSums(G1 != 0) > 0))
   }
 
   f <- res$fc[, contrast]
-  if(sig.par=="p" && "pv" %in% names(res)) {
-    q <- res$pv[, contrast]  ## should be p-value!!
-    if(is.null(ylab)) ylab <- "significance (-log10p)"
+  if (sig.par == "p" && "pv" %in% names(res)) {
+    q <- res$pv[, contrast] ## should be p-value!!
+    if (is.null(ylab)) ylab <- "significance (-log10p)"
   } else {
     q <- res$qv[, contrast]
-    if(is.null(ylab)) ylab <- "significance (-log10q)"    
+    if (is.null(ylab)) ylab <- "significance (-log10q)"
   }
-  
+
   if (!is.null(filt)) {
     sel <- grep(filt, names(f))
     f <- f[sel]
     q <- q[sel]
   }
-  
+
   sig <- (q <= psig & abs(f) >= fc)
   df <- data.frame(fc = f, y = -log10(q), q = q, sig = sig)
 
-  if(!is.null(datatype)) {
-    dt <- sub(":.*","",rownames(df))
-    df <- df[ dt %in% datatype,]
+  if (!is.null(datatype)) {
+    dt <- sub(":.*", "", rownames(df))
+    df <- df[dt %in% datatype, ]
   }
-      
+
   hilight0 <- hilight
   if (FALSE && is.null(hilight)) {
     hilight <- rownames(res$fc)
@@ -1040,19 +1040,19 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
     ## if(!is.null(sig)) label <- intersect(label, names(sig[sig == TRUE]))
   }
 
-  if(!is.null(label))  label <- map_probes(pgx$genes, label)
-  if(!is.null(hilight))  hilight <- map_probes(pgx$genes, hilight)  
+  if (!is.null(label)) label <- map_probes(pgx$genes, label)
+  if (!is.null(hilight)) hilight <- map_probes(pgx$genes, hilight)
 
-  wt <- rowSums(scale(df[,c("fc","y")], center = FALSE)**2, na.rm = TRUE)
+  wt <- rowSums(scale(df[, c("fc", "y")], center = FALSE)**2, na.rm = TRUE)
   label <- label[order(-wt[label])]
   label <- Matrix::head(label, ntop) ## label
 
-  if(is.null(fc.max)) fc.max <- max(abs(df$fc),na.rm=TRUE)
+  if (is.null(fc.max)) fc.max <- max(abs(df$fc), na.rm = TRUE)
   if (is.null(xlim) && !is.null(fc.max)) {
     xlim <- c(-1.1, 1.1) * fc.max
   }
 
-  if(is.null(p.min)) p.min <- max(min(q,na.rm=TRUE),10^-99)
+  if (is.null(p.min)) p.min <- max(min(q, na.rm = TRUE), 10^-99)
   if (is.null(ylim) && !is.null(p.min)) {
     ylim <- c(0, -log10(p.min)) * 1.05
   }
@@ -1072,12 +1072,12 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
   ##   )
   ## }
 
-  label.names = rownames(df)
-  if( !is.null(labeltype) && labeltype %in% colnames(pgx$genes)) {
+  label.names <- rownames(df)
+  if (!is.null(labeltype) && labeltype %in% colnames(pgx$genes)) {
     ii <- match(rownames(df), rownames(pgx$genes))
     label.names <- pgx$genes[ii, labeltype]
   }
-  
+
   p <- NULL
   if (plotlib == "ggplot") {
     p <- ggVolcano(
@@ -1133,7 +1133,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       label.names = label.names,
       highlight = hilight,
       label = label,
-      ntop = 9999,  ## done earlier
+      ntop = 9999, ## done earlier
       title = title,
       xlab = xlab,
       ylab = ylab,
@@ -1146,7 +1146,7 @@ pgx.Volcano <- function(pgx, contrast, level = "gene", methods = "meta",
       cex = 1.2 * cex,
       cex.lab = 1.1 * cex.lab,
       colors = colors,
-      set.par = set.par,      
+      set.par = set.par,
       repel = repel
     )
   } else {
@@ -1203,7 +1203,7 @@ plot_volcano <- function(x,
                          marker.alpha = 0.7,
                          axis.text.size = 14,
                          title = "Volcano plot",
-                         set.par = TRUE,                         
+                         set.par = TRUE,
                          colors = c(
                            up = "#f23451",
                            notsig = "#707070AA",
@@ -1266,7 +1266,7 @@ plot_volcano <- function(x,
     legend("bottomleft",
       legend = c("Not significant", "Up", "Down"),
       pch = 20, col = cc,
-      pt.cex = 1.5 * cex, cex = 0.9, 
+      pt.cex = 1.5 * cex, cex = 0.9,
       bg = "#FFFFFF99", bty = "o", border = NA
     )
   }
@@ -3560,7 +3560,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     colnames(pos) <- c("x", "y")
   }
   if (is.null(zlim) && !is.null(cmin) && !is.null(cmax)) zlim <- c(cmin, cmax)
-  
+
   ## automatically set pointsize of dots
   if (is.null(cex)) {
     nr <- nrow(pos)
@@ -3571,12 +3571,12 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     hilight.cex <- cex
   }
 
-  if(0 && girafe) {
+  if (0 && girafe) {
     cex.lab <- 0.9 * cex.lab
     cex.axis <- 0.9 * cex.axis
     cex <- 0.9 * cex
   }
-  
+
   ## normalize pos
   if (is.null(xlim)) xlim <- range(pos[, 1], na.rm = TRUE)
   if (is.null(ylim)) ylim <- range(pos[, 2], na.rm = TRUE)
@@ -3616,7 +3616,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
   if (is.null(xlab)) xlab <- colnames(pos)[1]
   if (is.null(ylab)) ylab <- colnames(pos)[2]
 
-  if(girafe) {
+  if (girafe) {
     GEOM_POINT <- ggiraph::geom_point_interactive
   } else {
     GEOM_POINT <- ggplot2::geom_point
@@ -3668,13 +3668,13 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
     df <- df[jj, ]
     pt.col <- pt.col[jj]
     cex1 <- ifelse(length(cex) > 1, cex[jj], cex)
-    x <- y <- NULL    
+    x <- y <- NULL
     plt <- ggplot2::ggplot(
       data = df,
       ggplot2::aes(x = x, y = y, tooltip = text, data_id = name),
       legend = legend
     ) +
-      GEOM_POINT(      
+      GEOM_POINT(
         shape = 21,
         alpha = opacity,
         size = 1.8 * cex1,
@@ -3789,7 +3789,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
 
     plt <- ggplot2::ggplot(
       df,
-      ggplot2::aes(x = x, y = y, fill = variable, tooltip = text, data_id = name),      
+      ggplot2::aes(x = x, y = y, fill = variable, tooltip = text, data_id = name),
     ) +
       GEOM_POINT(
         shape = 21,
@@ -5925,7 +5925,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   if (rowcex > 0) {
     gnames <- rownames(X)
     gnames <- gsub("[&].*[;]", "", gnames) ## HTML special garbage...
-    #gnames <- gsub("^.*:", "", gnames) ## strip prefix
+    # gnames <- gsub("^.*:", "", gnames) ## strip prefix
     gnames <- shortstring(gnames, 40) ## shorten
     gnames <- sub("   ", "-", gnames) ## divider
 
@@ -6348,53 +6348,57 @@ visPrint <- function(visnet, file, width = 3000, height = 3000, delay = 0, zoom 
 
 #'
 #' @export
-ggLollipopPlot <- function( values, sizes=NULL, xlab="value",
-                           cex.text=1) {
-  df <- data.frame( x = names(values), y = values, size = 1 )
-  if(!is.null(sizes)) df$size <- sizes
+ggLollipopPlot <- function(values, sizes = NULL, xlab = "value",
+                           cex.text = 1) {
+  df <- data.frame(x = names(values), y = values, size = 1)
+  if (!is.null(sizes)) df$size <- sizes
   ggplot2::ggplot(df, ggplot2::aes(x = reorder(x, +y), y = y)) +
     ggplot2::geom_segment(
       ggplot2::aes(
         x = reorder(x, +y),
         xend = reorder(x, +y),
-        y = 0, yend = y),
+        y = 0, yend = y
+      ),
       color = "gray",
-      lwd = 1.3, show.legend = FALSE) +
+      lwd = 1.3, show.legend = FALSE
+    ) +
     ggplot2::geom_point(
       mapping = ggplot2::aes(size = size),
-      pch = 21, bg = 4, col = 1, show.legend = FALSE) +
+      pch = 21, bg = 4, col = 1, show.legend = FALSE
+    ) +
     ggplot2::xlab("") +
     ggplot2::ylab(xlab) +
     ggplot2::coord_flip() +
     ggplot2::theme_minimal() +
     ggplot2::theme(
-      axis.text.x = ggplot2::element_text(size=14*cex.text),
-      axis.text.y = ggplot2::element_text(size=14*cex.text)
-    )  
+      axis.text.x = ggplot2::element_text(size = 14 * cex.text),
+      axis.text.y = ggplot2::element_text(size = 14 * cex.text)
+    )
 }
 
 
 #' @export
-plotlyLasagna <- function(df, znames=NULL) {
-
+plotlyLasagna <- function(df, znames = NULL) {
   zz <- sort(unique(df$z))
-  min.x <- min(df$x, na.rm=TRUE)
-  max.x <- max(df$x, na.rm=TRUE)
-  min.y <- min(df$y, na.rm=TRUE)
-  max.y <- max(df$y, na.rm=TRUE)
-  
+  min.x <- min(df$x, na.rm = TRUE)
+  max.x <- max(df$x, na.rm = TRUE)
+  min.y <- min(df$y, na.rm = TRUE)
+  max.y <- max(df$y, na.rm = TRUE)
+
   fig <- plotly::plot_ly()
-  z=1
-  for(z in zz) {
-    sel <- which( df$z == z )
-    df1 <- df[sel,]
-    mx <- c( min.x, min.x, max.x, max.x)
-    my <- c( min.y, max.y, min.y, max.y)
+  z <- 1
+  for (z in zz) {
+    sel <- which(df$z == z)
+    df1 <- df[sel, ]
+    mx <- c(min.x, min.x, max.x, max.x)
+    my <- c(min.y, max.y, min.y, max.y)
     mz <- rep(z, 4)
 
     fig <- fig %>%
-      plotly::add_mesh(x = mx, y = my, z = mz,
-        color = "grey", opacity = 0.2)
+      plotly::add_mesh(
+        x = mx, y = my, z = mz,
+        color = "grey", opacity = 0.2
+      )
 
     fig <- fig %>%
       plotly::add_trace(
@@ -6403,20 +6407,21 @@ plotlyLasagna <- function(df, znames=NULL) {
         showlegend = FALSE,
         marker = list(size = 3)
       )
-    
+
     ztext <- z
-    if(!is.null(znames) && (is.integer(z) || z %in% names(znames))) {
+    if (!is.null(znames) && (is.integer(z) || z %in% names(znames))) {
       ztext <- znames[z]
     }
-    
+
     fig <- fig %>%
-      plotly::add_trace(x = min.x, y = max.y, z = z, 
+      plotly::add_trace(
+        x = min.x, y = max.y, z = z,
         type = "scatter3d", mode = "text",
         text = ztext,
         textfont = list(size = 20),
         showlegend = FALSE,
-        inherit=FALSE)
-    
+        inherit = FALSE
+      )
   }
   fig
   fig <- fig %>%
@@ -6424,7 +6429,7 @@ plotlyLasagna <- function(df, znames=NULL) {
       scene = list(
         xaxis = list(title = ""),
         yaxis = list(title = ""),
-        zaxis = list(title = "", showticklabels=FALSE, tickfont = list(size=0)),
+        zaxis = list(title = "", showticklabels = FALSE, tickfont = list(size = 0)),
         aspectmode = "cube",
         showlegend = FALSE
       )

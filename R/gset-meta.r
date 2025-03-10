@@ -83,7 +83,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
   ## align. gg are symbols.
   gg <- setdiff(rownames(X), c("", NA))
-  gg <- intersect(rownames(G),rownames(X))
+  gg <- intersect(rownames(G), rownames(X))
   G <- G[gg, names(gmt), drop = FALSE]
   X <- X[gg, , drop = FALSE]
 

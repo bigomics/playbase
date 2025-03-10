@@ -247,10 +247,10 @@ pgx.countNormalization <- function(x, methods, ref = NULL, rm.zero = FALSE) {
 #' Normalizes a matrix of RNA-seq/proteomics data using different methods. Uses log2 data.
 #'
 #' @param x Matrix of log2-transformed data, with genes in rows and samples in columns.
-#' @param method Normalization method(s) to use. 
+#' @param method Normalization method(s) to use.
 #' @param ref Reference for referenceNormalization
 #' @param prior Offset added in X prior to log2
-#' 
+#'
 #' @details
 #' This function normalizes a log2-transformed data matrix using different normalization methods:
 #'
@@ -262,15 +262,15 @@ pgx.countNormalization.beta <- function(X, method = "CPM", ref = NULL, prior = 1
   ## Column-wise normalization (along samples).
   ## x:      log2-transformed counts + prior
   ## method: single method
-  ## prior:  prior used for log2-transformation. 
+  ## prior:  prior used for log2-transformation.
 
   m <- method
   methods <- c("CPM", "quantile", "CPM+quantile", "maxMedian", "maxSum", "reference")
-  if(!m %in% methods) {
-    stop("[pgx.countNormalization.beta]: unknown mormalization method")  
+  if (!m %in% methods) {
+    stop("[pgx.countNormalization.beta]: unknown mormalization method")
   }
 
-  counts <- 2 ** X - prior
+  counts <- 2**X - prior
 
   if (m == "CPM") {
     X <- logCPM(counts = counts, total = 1e+06, prior = prior, log = TRUE)
@@ -287,7 +287,6 @@ pgx.countNormalization.beta <- function(X, method = "CPM", ref = NULL, prior = 1
     X <- referenceNormalization(counts = counts, ref = ref, prior = prior, toLog = TRUE)
   }
   return(X)
-
 }
 
 

@@ -1110,10 +1110,10 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
   w1 <- ifelse(length(jj) < 100, 0.7, 0.4)
   w1 <- ifelse(length(jj) < 50, 1, w1)
   col1 <- "grey10"
-  if(all(grepl("[:]",gset))) {
-    dtype <- sub(":.*","",names(rnk))
+  if (all(grepl("[:]", gset))) {
+    dtype <- sub(":.*", "", names(rnk))
     ntype <- length(unique(dtype))
-    col1  <- rainbow(ntype)[factor(dtype[jj])]
+    col1 <- rainbow(ntype)[factor(dtype[jj])]
   }
   graphics::arrows(jj, (y0 - dy), jj, y0, col = col1, lwd = w1 * cex, length = 0)
 
