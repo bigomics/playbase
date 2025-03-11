@@ -98,7 +98,6 @@ pgx.createFromFiles <- function(counts.file,
     do.cluster = TRUE,
     use.design = FALSE, ##TRUE,
     prune.samples = TRUE, ##FALSE,
-    timeseries = FALSE,
     pgx.dir = pgx.dir,
     libx.dir = libx.dir,
     progress = NULL
@@ -180,7 +179,7 @@ pgx.createPGX <- function(counts,
                           remove.xxl = TRUE, ## DEPRECATED
                           remove.outliers = TRUE, ## DEPRECATED
                           add.gmt = TRUE,
-                          #timeseries = FALSE,
+                          timeseries = FALSE,
                           settings = list()) {
   
   message("[createPGX] datatype = ", datatype)
@@ -270,17 +269,16 @@ pgx.createPGX <- function(counts,
   X <- as.matrix(X)
   if (is.null(contrasts)) contrasts <- samples[, 0]
 
-  ## -------------------------------------------------------------------
-  ## Expand contrast matrix if timeseries is ON
   ## ------------------------------------------------------------------
-  timeseries=TRUE;
+  ## Time series: expand contrast matrix
+  ## ------------------------------------------------------------------
   if (timeseries) {
     nn <- ncol(contrasts)
     ts.ct <- paste0("IA:", colnames(contrasts))
     contrasts <- cbind(contrasts, contrasts)
     colnames(contrasts)[(nn+1):ncol(contrasts)] <- ts.ct 
+    rm(nn, ts.ct)
   }
-  saveRDS(list(contrasts=contrasts), "~/Desktop/MNT/contrasts2.RDS")
   
   ## convert old-style contrast matrix to sample-wise labeled contrasts
   contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
@@ -389,6 +387,7 @@ pgx.createPGX <- function(counts,
     norm_method = norm_method,
     total_counts = Matrix::colSums(counts, na.rm = TRUE),
     counts_multiplier = counts_multiplier,
+    timeseries = timeseries,
     settings = settings
   )
 
@@ -553,7 +552,6 @@ pgx.computePGX <- function(pgx,
                            do.clustergenes = TRUE,
                            use.design = FALSE, ##TRUE,
                            prune.samples = TRUE, ##FALSE,
-                           timeseries = FALSE,
                            extra.methods = c(
                              "meta.go", "infer", "deconv", "drugs",
                              "connectivity", "wordcloud", "wgcna",
@@ -576,7 +574,7 @@ pgx.computePGX <- function(pgx,
   ## use.design=FALSE (now default): we test each contrast separately.
   ## If re-running pgx.computePGX on its own (without re-running pgx.createPGX),
   ## all existing contrasts are tested (including .cluster:c*_vs_others).
-  ## Avoiding this for now.
+  ## Avoiding this.
   kk <- grep(".cluster", colnames(pgx$samples))
   if (any(kk)) pgx$samples <- pgx$samples[, -kk, drop = FALSE]
   kk <- grep(".cluster:c*", colnames(pgx$contrasts))
@@ -686,7 +684,7 @@ pgx.computePGX <- function(pgx,
     custom_fc = custom_fc,
     use.design = use.design,
     prune.samples = prune.samples,
-    timeseries = timeseries,
+    timeseries = pgx$timeseries,
     remove.outputs = TRUE
   )
 
