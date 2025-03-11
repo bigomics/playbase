@@ -273,7 +273,7 @@ getGeneAnnotation.ANNOTHUB <- function(
       return(annot)
     }
   }
-
+  
   ## clean up probe names from suffixes
   ## probes <- clean_probe_names(probes)
   probes <- match_probe_names(probes, orgdb, probe_type)
@@ -464,16 +464,16 @@ clean_probe_names <- function(probes, sep = ".-") {
 #' Match dirty probe names to clean key names
 #'
 #' @export
-match_probe_names <- function(probes, org, probe_type = NULL) {
-  if (is.character(org)) org <- getOrgDb(org)
+match_probe_names <- function(probes, orgdb, probe_type = NULL) {
+  if (is.character(orgdb)) orgdb <- getOrgDb(orgdb)
   if (is.null(orgdb)) {
     message("[match_probe_names] ERROR could not get orgdb!" )
     return(NULL)
   }
   if (is.null(probe_type)) {
-    probe_type <- detect_probetype(organism = "custom", probes, orgdb = org)
+    probe_type <- detect_probetype(organism = "custom", probes, orgdb = orgdb)
   }
-  all.keys <- keys(org, probe_type)
+  all.keys <- keys(orgdb, probe_type)
   tsub <- function(s) gsub("[-:;.]|\\[|\\]", ".", s)
   ii <- match(toupper(tsub(probes)), toupper(tsub(all.keys)))
   table(is.na(ii))
