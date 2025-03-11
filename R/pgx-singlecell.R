@@ -4,6 +4,24 @@
 ##
 
 
+#'
+#' @export
+pgx.createSeuratObject <- function(counts, samples, sct = TRUE) {
+  obj <- Seurat::CreateSeuratObject(counts = counts, meta.data = samples)
+  obj <- Seurat::NormalizeData(obj)
+  obj <- Seurat::PercentageFeatureSet(obj, pattern = "^MT-|^Mt-", col.name = "percent.mt")
+  obj <- Seurat::PercentageFeatureSet(obj, pattern = "^RP[LS]|^Rp[ls]", col.name = "percent.ribo")
+  if (sct) {
+    sct <- Seurat::SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
+    sct <- Seurat::RunPCA(sct, verbose = FALSE)
+    sct <- Seurat::FindNeighbors(sct, dims = 1:30, verbose = FALSE)
+    sct <- Seurat::FindClusters(sct, verbose = FALSE, resolution = 0.8) ## smaller resolution
+    sct <- Seurat::RunUMAP(sct, dims = 1:30, verbose = FALSE)
+    obj <- sct
+  }
+  obj
+}
+
 #' @title Convert Seurat to PGX
 #'
 #' @param obj Seurat object to convert
@@ -608,23 +626,6 @@ pgx.supercell_BIG <- function(counts, meta, group = NULL, gamma = 20, batch.size
 
   list(counts = sc.counts, meta = sc.meta, membership = sc.membership)
 }
-
-pgx.createSeuratObject <- function(counts, samples, sct = TRUE) {
-  obj <- Seurat::CreateSeuratObject(counts = counts, meta.data = samples)
-  obj <- Seurat::NormalizeData(obj)
-  obj <- Seurat::PercentageFeatureSet(obj, pattern = "^MT-|^Mt-", col.name = "percent.mt")
-  obj <- Seurat::PercentageFeatureSet(obj, pattern = "^RP[LS]|^Rp[ls]", col.name = "percent.ribo")
-  if (sct) {
-    sct <- Seurat::SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
-    sct <- Seurat::RunPCA(sct, verbose = FALSE)
-    sct <- Seurat::FindNeighbors(sct, dims = 1:30, verbose = FALSE)
-    sct <- Seurat::FindClusters(sct, verbose = FALSE, resolution = 0.8) ## smaller resolution
-    sct <- Seurat::RunUMAP(sct, dims = 1:30, verbose = FALSE)
-    obj <- sct
-  }
-  obj
-}
-
 
 #' @export
 pgx.runAzimuth <- function(counts, reference = "pbmcref") {

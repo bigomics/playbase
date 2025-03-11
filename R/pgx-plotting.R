@@ -6443,9 +6443,6 @@ plotTimeSeries.modules <- function(time, xx, modules, main="",
   mx.time <- as.numeric(gsub("[_-].*|[^0-9]","",colnames(mX)))
   mx.time[is.na(mx.time)] <- 0
   mX <- mX[,order(mx.time)]
-
-  dbg("[plotTimeSeries.modules] modules = ", head(modules))
-  dbg("[plotTimeSeries.modules] dim.mX = ", dim(mX))  
   
   is.color <- mean(modules %in% WGCNA::standardColors(435)) > 0.8
   is.color
@@ -6460,18 +6457,13 @@ plotTimeSeries.modules <- function(time, xx, modules, main="",
     colors <- WGCNA::standardColors(435)[as.integer(factor(modules))]
   }
 
-  dbg("[plotTimeSeries.modules] colors = ", head(colors))    
-
   kpal <- sort(unique(as.character(colors)))
   kpal <- adjustcolor(kpal, alpha.f=0.33, 0.9, 0.9, 0.9)
 
   df <- data.frame( modules=modules, colors=colors,
     mX, check.names=FALSE)
-
-  dbg("[plotTimeSeries.modules] plottype = ", plottype)
   
   if(plottype == "parcoord") {
-    
     gg <- GGally::ggparcoord(
       data = df, 
       columns = c(3:ncol(df)), 
@@ -6479,19 +6471,16 @@ plotTimeSeries.modules <- function(time, xx, modules, main="",
       title = main)
     gg <- gg +
       ggplot2::geom_line(color = adjustcolor("grey",alpha.f=0.95)) 
-
   } else {
-
     mx.df <- reshape2::melt(df)
     mx.df$time <- as.vector(mapply(rep, mx.time, nrow(mX)))
     head(mx.df)
     gg <- ggplot2::ggplot(
       mx.df, ggplot2::aes(x=time, y=value, color=modules)) +
-    ##  ggplot2::geom_line(color = adjustcolor("grey",alpha.f=0.95)) 
+      ##  ggplot2::geom_line(color = adjustcolor("grey",alpha.f=0.95)) 
       ggplot2::geom_point(size=0.6)
     gg
   }
-
   gg <- gg + 
     ##ggplot2::geom_line(color = adjustcolor("grey",alpha.f=0.95)) +
     ## ggplot2::scale_color_manual(values=kpal) +
@@ -6500,8 +6489,6 @@ plotTimeSeries.modules <- function(time, xx, modules, main="",
       fun=mean, geom="smooth", se=FALSE, size=1.3) +
     ggplot2::facet_wrap(~modules) 
   gg  
-
-  dbg("[plotTimeSeries.modules] legend = ", legend)  
   
   if(legend==FALSE) {
     gg <- gg + ggplot2::theme(legend.position="none")

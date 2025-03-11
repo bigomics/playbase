@@ -263,15 +263,12 @@ pgx.countNormalization.beta <- function(X, method = "CPM", ref = NULL, prior = 1
   ## x:      log2-transformed counts + prior
   ## method: single method
   ## prior:  prior used for log2-transformation. 
-
   m <- method
   methods <- c("CPM", "quantile", "CPM+quantile", "maxMedian", "maxSum", "reference")
   if(!m %in% methods) {
     stop("[pgx.countNormalization.beta]: unknown mormalization method")  
   }
-
   counts <- 2 ** X - prior
-
   if (m == "CPM") {
     X <- logCPM(counts = counts, total = 1e+06, prior = prior, log = TRUE)
   } else if (m == "quantile") {

@@ -5,7 +5,14 @@
 \title{Plots time series facetted by module/colors. X is an expression
 matrix. Time is a vector of times for each sample.}
 \usage{
-plotTimeSeries.modules(time, xx, modules, main = "", legend = TRUE)
+plotTimeSeries.modules(
+  time,
+  xx,
+  modules,
+  main = "",
+  plottype = "parcoord",
+  legend = TRUE
+)
 }
 \description{
 Plots time series facetted by module/colors. X is an expression

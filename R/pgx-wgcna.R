@@ -64,7 +64,7 @@ pgx.wgcna <- function(
     ngenes = ngenes)
 
   ##---------------------------------------------------
-  ## compute clustering based on TOM matrix
+  ## compute dimensionality reductions using TOM matrix
   ##---------------------------------------------------
   dissTOM <- 1 - wgcna$TOM
   rownames(dissTOM) <- colnames(dissTOM) <- colnames(wgcna$datExpr)
@@ -575,7 +575,7 @@ wgcna.runConsensusWGCNA <- function( exprList,
 
   # now we run automatic consensus module detection 
   message("[wgcna.runConsensusWGCNA] computing consensus modules...")
-  cons = WGCNA::blockwiseConsensusModules(
+  net = WGCNA::blockwiseConsensusModules(
     multiExpr[],
     power = power, 
     networkType = "signed",
@@ -592,26 +592,26 @@ wgcna.runConsensusWGCNA <- function( exprList,
 
   ## create and match colors
   colors <- sapply(net.list, function(net) net$colors)
-  c0 <- cons$colors
+  c0 <- net$colors
   matched.colors <- apply(colors, 2, function(k) WGCNA::matchLabels(k,c0))
   colors <- cbind(Consensus=c0, matched.colors)
   
   ## add labels to dendrogram
-  for(i in 1:length(cons$dendrograms)) {
-    ii <- which(cons$goodGenes & cons$blocks==i)
-    xnames <- names(cons$colors)
-    cons$dendrograms[[i]]$labels <- xnames[ii]
+  for(i in 1:length(net$dendrograms)) {
+    ii <- which(net$goodGenes & net$blocks==i)
+    xnames <- names(net$colors)
+    net$dendrograms[[i]]$labels <- xnames[ii]
   }
   
   ## merge dendrograms
   multiX <- Matrix::t(do.call(rbind,lapply(exprList,function(x)scale(t(x)))))
-  cons$merged_dendro <- wgcna.merge_block_dendrograms(cons, multiX)   
+  net$merged_dendro <- wgcna.merge_block_dendrograms(net, multiX)   
   
   ## create module-trait matrices for each set
   Z.list <- list()
   k=1
-  for(k in names(cons$multiME)) {
-    M <- (cons$multiME[[k]][[1]])
+  for(k in names(net$multiME)) {
+    M <- (net$multiME[[k]][[1]])
     Z.list[[k]] <- cor(M, datTraits[rownames(M),], use="pairwise")
   }
   z.check <- sapply(Z.list, function(z) colSums(z!=0,na.rm=TRUE)>0)
@@ -636,8 +636,8 @@ wgcna.runConsensusWGCNA <- function( exprList,
   ydim <- sapply(exprList,ncol)
   
   res <- list(
-    cons = cons,
-    consZ = consZ,
+    net = net,
+    modTraits = consZ,
     dendro = cons$merged_dendro,    
     colors = colors,
     zlist = Z.list,
