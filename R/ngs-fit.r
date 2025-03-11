@@ -200,7 +200,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
           outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithLIMMA(
             X1, contr.matrix, design, method = mdl,
             trend = trend, prune.samples = prune.samples,
-            conform.output = conform.output, plot = FALSE, time = time_var
+            conform.output = conform.output, plot = FALSE, timeseries = time_var
           )
         )
         timings[[cm.mtds[i]]] <- round(as.numeric(tt), digits = 4)
@@ -233,7 +233,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
             counts, group, contr.matrix, design,
             X = X1, genes = genes, test = mdl,
             prune.samples = prune.samples,
-            conform.output = conform.output, time = time_var
+            conform.output = conform.output, timeseries = time_var
           )
         )
       }
@@ -262,10 +262,9 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         }
         timings[[cm.mtds[i]]] <- system.time(
           outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithEDGER(
-            counts, group, contr.matrix, design,
-            method = mdl, X = X1,
-            prune.samples = prune.samples,
-            conform.output = conform.output, plot = FALSE
+            counts, group, contr.matrix, design, method = mdl,
+            X = X1, prune.samples = prune.samples,
+            conform.output = conform.output, plot = FALSE, timeseries = time_var
           )
         )
       }
@@ -586,7 +585,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   )
 
   return(res)
-
+  
 }
 
 ## --------------------------------------------------------------------------------------------
@@ -779,7 +778,7 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
 
   library(splines)
   message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting LIMMA with no design; time series analysis (spline).")
-
+  
   if (!all(colnames(X) %in% names(timeseries)))
     stop("[ngs.fitContrastsWithLIMMA.timeseries] X and time contain different set of samples.")
 
@@ -798,9 +797,10 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
   chk1 <- "try-error" %in% class(time.spline)
   if (chk1) time.spline <- splines::ns(num.time)
     
-  group <- factor(y)
+  y <- factor(y)
   #design <- stats::model.matrix(~ 0 + y + y:time)
-  design <- model.matrix(~ group * time.spline)
+  #design <- model.matrix(~ group + time.spline + group:time.spline)
+  design <- model.matrix(~ y * time.spline)
   fit <- limma::lmFit(X, design)
   fit <- limma::eBayes(fit, trend = trend)
   
@@ -878,7 +878,8 @@ ngs.fitContrastsWithEDGER <- function(counts,
                                       X = NULL,
                                       conform.output = FALSE,
                                       robust = TRUE,
-                                      plot = TRUE) {
+                                      plot = TRUE,
+                                      timeseries = NULL) {
   method <- method[1]
 
   exp0 <- contr.matrix
@@ -901,18 +902,20 @@ ngs.fitContrastsWithEDGER <- function(counts,
     message("[ngs.fitContrastsWithEDGER] fitting EDGER contrasts *without* design, no pruning ")
     res <- .ngs.fitContrastsWithEDGER.nodesign(
       dge = dge, contr.matrix = contr.matrix, method = method,
-      conform.output = conform.output, robust = robust, plot = plot
+      conform.output = conform.output, robust = robust, plot = plot, timeseries = NULL
     )
     return(res)
   }
+
   if (is.null(design) && prune.samples) {
     message("[ngs.fitContrastsWithEDGER] fitting EDGER contrasts *without* design, with pruning")
     res <- .ngs.fitContrastsWithEDGER.nodesign.pruned(
       counts = counts, contr.matrix = contr.matrix, method = method, group = group,
-      conform.output = conform.output, robust = robust, plot = plot
+      conform.output = conform.output, robust = robust, plot = plot, timeseries = NULL
     )
     return(res)
   }
+  
   message("[ngs.fitContrastsWithEDGER] fitting EDGER contrasts using design matrix")
 
   dge_locfit <- try(dge <- edgeR::estimateDisp(dge, design = design, robust = robust), silent = TRUE)
@@ -989,7 +992,9 @@ ngs.fitContrastsWithEDGER <- function(counts,
                                                 X = NULL,
                                                 conform.output = FALSE,
                                                 robust = TRUE,
-                                                plot = TRUE) {
+                                                plot = TRUE,
+                                                timeseries = NULL) {
+
   ## With no design matrix, we must do EdgeR per contrast
   ## one-by-one. Warning this can become very slow.
 
@@ -1014,6 +1019,8 @@ ngs.fitContrastsWithEDGER <- function(counts,
     y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
     design1 <- stats::model.matrix(~ 0 + y)
 
+    ##if (!is.null(timeseries)) design1 <- stats::model.matrix(~ 0 + y + y:timeseries)
+    
     if (method == "qlf") {
       fit <- edgeR::glmQLFit(dge, design1, robust = robust)
       ctx <- contr0[colnames(stats::coef(fit)), ]
@@ -1069,7 +1076,8 @@ ngs.fitContrastsWithEDGER <- function(counts,
                                                        X = NULL,
                                                        conform.output = FALSE,
                                                        robust = TRUE,
-                                                       plot = TRUE) {
+                                                       plot = TRUE,
+                                                       timeseries = NULL) {
 
   ## With no design matrix, we must do EdgeR per contrast
   ## one-by-one. Warning this can become very slow.
@@ -1150,6 +1158,45 @@ ngs.fitContrastsWithEDGER <- function(counts,
   res <- list(tables = tables)
   return(res)
 }
+
+## #' @describeIn ngs.fitContrastsWithAllMethods Fits time-series contrasts using edgeR LRT
+## #' @export
+## .ngs.fitConstrastsWithEDGER.nodesign.timeseries <- function(counts,
+##                                                             y,
+##                                                             time) {
+  
+##   message("[.ngs.fitConstrastsWithEDGER.nodesign.timeseries]: EdgeR LRT time series analysis with interaction term")
+
+##   if (!all(colnames(counts) %in% names(time)))
+##     stop("[.ngs.fitConstrastsWithEDGER.nodesign.timeseries]: counts and time contain different set of samples")
+
+##   jj <- match(colnames(counts), names(time))
+##   time0 <- as.character(time[jj])
+##   time0 <- gsub("\\D", "", unname(time0))
+##   y <- as.character(y)
+##   colData <- data.frame(y = y, time = time0)
+##   colData$y <- as.factor(colData$y)
+##   colData$time <- as.factor(colData$time)
+  
+##   ## Q: does the condition induces a change in gene expression at
+##   ## any time point after the reference level time point (time 0)?
+##   ## https://support.bioconductor.org/p/62684/
+##   ## Features showing a consistent difference from time 0 onward will not have a small p value.
+##   ## This is imporant because differences between groups at time 0 should be controlled for,
+##   ## e.g. random differences between the individuals chosen for each treatment group which
+##   ## are observable before the treatment takes effect.
+##   design.formula <- stats::formula("~ y + time + y:time")
+##   dds <- DESeq2::DESeqDataSetFromMatrix(
+##     countData = counts,
+##     design = design.formula,
+##     colData = colData
+##   )
+##   dds <- DESeq2::DESeq(dds, test = "LRT", reduced = ~ y + time)
+##   resx <- DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE)
+
+##   return(resx)
+
+## }
 
 
 #' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using DESeq2 differential expression
@@ -1414,14 +1461,23 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
 
   if (!all(colnames(counts) %in% names(time)))
     stop("[ngs.fitConstrastsWithDESEQ2.nodesign] and time contain different set of samples")
-
+  
   jj <- match(colnames(counts), names(time))
   time0 <- as.character(time[jj])
   time0 <- gsub("\\D", "", unname(time0))
-  y <- as.character(y)
+  time0 <- as.numeric(time0) ## should be factor. need to modify spline in DESEq2.
+  y <- as.factor(as.character(y))
   colData <- data.frame(y = y, time = time0)
-  colData$y <- as.factor(colData$y)
-  colData$time <- as.factor(colData$time)
+
+  #ndf <- length(unique(colData$time)) - 1
+  dds <- DESeqDataSetFromMatrix(
+    counts,
+    design = ~ y * splines::ns(time),
+    colData = colData
+  )
+  dds <- DESeq(dds, test = "LRT", reduced = ~ y)
+  #dds <- DESeq(dds, test = "LRT", reduced = ~1)
+  resx <- DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE)
   
   ## Q: does the condition induces a change in gene expression at
   ## any time point after the reference level time point (time 0)?
@@ -1430,14 +1486,14 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
   ## This is imporant because differences between groups at time 0 should be controlled for,
   ## e.g. random differences between the individuals chosen for each treatment group which
   ## are observable before the treatment takes effect.
-  design.formula <- stats::formula("~ y + time + y:time")
-  dds <- DESeq2::DESeqDataSetFromMatrix(
-    countData = counts,
-    design = design.formula,
-    colData = colData
-  )
-  dds <- DESeq2::DESeq(dds, test = "LRT", reduced = ~ y + time)
-  resx <- DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE)
+  #design.formula <- stats::formula("~ y + time + y:time")
+  #dds <- DESeq2::DESeqDataSetFromMatrix(
+  #  countData = counts,
+  #  design = design.formula,
+  #  colData = colData
+  #)
+  #dds <- DESeq2::DESeq(dds, test = "LRT", reduced = ~ y + time)
+  #resx <- DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE)
 
   return(resx)
 

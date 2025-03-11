@@ -180,6 +180,7 @@ pgx.createPGX <- function(counts,
                           remove.xxl = TRUE, ## DEPRECATED
                           remove.outliers = TRUE, ## DEPRECATED
                           add.gmt = TRUE,
+                          #timeseries = FALSE,
                           settings = list()) {
   
   message("[createPGX] datatype = ", datatype)
