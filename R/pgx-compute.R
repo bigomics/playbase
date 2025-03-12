@@ -170,6 +170,7 @@ pgx.createPGX <- function(counts,
                           batch.correct = TRUE,
                           auto.scale = TRUE,
                           filter.genes = TRUE,
+                          exclude.genes = NULL,                          
                           prune.samples = FALSE,
                           only.known = TRUE,
                           only.hugo = TRUE,  ## depracated
@@ -353,6 +354,7 @@ pgx.createPGX <- function(counts,
 
   ## add to setting info
   settings$filter.genes <- filter.genes
+  settings$exclude.genes <- exclude.genes
   settings$only.known <- only.known
   settings$only.proteincoding <- only.proteincoding
   settings$convert.hugo <- convert.hugo
@@ -388,11 +390,14 @@ pgx.createPGX <- function(counts,
   if (is.null(pgx$genes)) {
     stop("[createPGX] FATAL: Could not build gene annotation")
   }
-
+  if(!"symbol" %in% colnames(pgx$genes) && "gene_name" %in% colnames(pgx$genes)) {
+    pgx$genes$symbol <- pgx$genes$gene_name
+  }
+  
   if (all(is.na(pgx$genes$symbol))) {
     pgx$genes$symbol <- gsub(".*:|[.].*","",rownames(pgx$genes))
-  }
-
+  }  
+  
   ## -------------------------------------------------------------------
   ## Filter out not-expressed
   ## -------------------------------------------------------------------
@@ -410,7 +415,8 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Filter genes?
   ## -------------------------------------------------------------------
-  do.filter <- (only.known || only.proteincoding)
+  if(exclude.genes=='') exclude.genes <- NULL
+  do.filter <- (only.known || only.proteincoding || !is.null(exclude.genes))
   if (do.filter) {
     
     if (only.known) {
@@ -426,6 +432,17 @@ pgx.createPGX <- function(counts,
       pgx$genes <- pgx$genes[which(!is.unknown), ]
     }
 
+    if (!is.null(exclude.genes)) {
+      ##exclude.genes="RIK ORF LOC"
+      message("[createPGX] excluding genes: ", exclude.genes)
+      exstr <- strsplit(tolower(exclude.genes), split="[ ,]")[[1]]
+      exexpr <- paste(c(paste0("^",exstr),paste0(exstr,"$")),collapse="|")
+      exgene <- grepl(exexpr, tolower(pgx$genes$symbol))
+      if(sum(exgene)) {
+        pgx$genes <- pgx$genes[which(!exgene), ]
+      }
+    }
+    
     ## conform
     keep <- rownames(pgx$genes)
     pgx$counts <- pgx$counts[keep, , drop = FALSE]
