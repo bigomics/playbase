@@ -884,7 +884,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
   dge <- edgeR::DGEList(round(counts), group = NULL) ## we like integer counts...
   dge$samples$group <- group
   dge <- edgeR::calcNormFactors(dge, method = "TMM")
-
+  
   if (is.null(design) && !prune.samples) {
     message("[ngs.fitContrastsWithEDGER] fitting EDGER contrasts *without* design, no pruning ")
     res <- .ngs.fitContrastsWithEDGER.nodesign(
@@ -893,8 +893,10 @@ ngs.fitContrastsWithEDGER <- function(counts,
     )
     return(res)
   }
-
+  
   if (is.null(design) && prune.samples) {
+    L <- list(counts = counts, contr.matrix = contr.matrix, method = method, group = group)
+    saveRDS(L, "~/Desktop/edger.RDS")
     message("[ngs.fitContrastsWithEDGER] fitting EDGER contrasts *without* design, with pruning")
     res <- .ngs.fitContrastsWithEDGER.nodesign.pruned(
       counts = counts, contr.matrix = contr.matrix, method = method, group = group,
