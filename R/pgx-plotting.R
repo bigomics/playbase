@@ -4532,7 +4532,7 @@ pgx.stackedBarplot <- function(x,
                                xlab = NULL,
                                horiz = FALSE) {
   x_plot <- cbind(data.frame(groups = rownames(x)), x)
-  x_plot <- data.table::melt(x_plot, id.vars = "groups", value.name = "Effect")
+  x_plot <- reshape2::melt(x_plot, id.vars = "groups", value.name = "Effect")
 
   if (horiz == FALSE) {
     x_plot$groups <- factor(x_plot$groups, levels = rownames(x))
