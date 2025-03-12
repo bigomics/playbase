@@ -776,8 +776,6 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
                                                  timeseries,
                                                  trend = TRUE) {
 
-  saveRDS(list(X=X, y=y, timeseries=timeseries), "~/Desktop/RR.RDS")
-
   library(splines)
   message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting LIMMA with no design; time series analysis (spline).")
   
@@ -817,8 +815,6 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
     if (chk || nrow(top) == 0) next else break;
    
   }
-
-  saveRDS(list(top=top, est.coefs=est.coefs, coefs=coefs), "~/Desktop/top.RDS")
 
   chk <- "try-error" %in% class(top)
   if (chk) {
