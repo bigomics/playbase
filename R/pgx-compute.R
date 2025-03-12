@@ -415,7 +415,6 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Filter genes?
   ## -------------------------------------------------------------------
-  if(exclude.genes=='') exclude.genes <- NULL
   do.filter <- (only.known || only.proteincoding || !is.null(exclude.genes))
   if (do.filter) {
     
