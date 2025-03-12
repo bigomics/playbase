@@ -310,7 +310,13 @@ pgx.createPGX <- function(counts,
     contrasts <- contrasts[kk, , drop = FALSE]
   }
 
-  ## make duplicated rownames unique (NOTE!!! new default since v3.5.1)
+  ## 1. Clean up inline duplicated features: eg: feature1;feature1;..
+  probes <- rownames(counts)
+  dedup_probes <- clean_dups_inline_probenames(probes)
+  rownames(counts) <- rownames(X) <- dedup_probes
+  if (!is.null(impX)) rownames(impX) <- dedup_probes
+
+  ## 2. Make duplicated rownames unique (NOTE!!! new default since v3.5.1)
   ndup <- sum(duplicated(rownames(counts)))
   if (ndup > 0) {
     info("[createPGX] duplicated rownames detected. making unique.")
