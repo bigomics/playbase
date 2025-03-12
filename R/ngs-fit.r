@@ -776,6 +776,8 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
                                                  timeseries,
                                                  trend = TRUE) {
 
+  saveRDS(list(X=X, y=y, timeseries=timeseries), "~/Desktop/RR.RDS")
+
   library(splines)
   message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting LIMMA with no design; time series analysis (spline).")
   
@@ -785,87 +787,76 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
   jj <- match(colnames(X), names(timeseries))
   time0 <- as.character(unname(timeseries[jj]))
   num.time <- as.numeric(gsub("\\D", "", time0))
-
-  ## Here we need to iterate across ndf
-  #idx <- 1:length(unique(time0))
-  #i <- 1
-  #for(i in 1:length(idx)) {
-
-  ndf <- length(unique(time0)) - 1
-  #ndf <- length(unique(time0)) - idx[i]
-  time.spline <- try(splines::ns(num.time, df = ndf), silent = TRUE)
-  chk1 <- "try-error" %in% class(time.spline)
-  if (chk1) time.spline <- splines::ns(num.time)
-    
   y <- factor(y)
-  #design <- stats::model.matrix(~ 0 + y + y:time)
-  #design <- model.matrix(~ group + time.spline + group:time.spline)
-  design <- model.matrix(~ y * time.spline)
-  fit <- limma::lmFit(X, design)
-  fit <- limma::eBayes(fit, trend = trend)
+
+  ## Pick 1st highest degree of freedom value that works
+  idx <- 1:length(unique(time))
+  i = 1
+  for(i in 1:length(idx)) {
+
+    ndf <- length(unique(time)) - idx[i]
+    time.spline <- try(splines::ns(num.time, df = ndf), silent = TRUE)
+    chk <- "try-error" %in% class(time.spline)
+    if (chk) next;
+
+    #design <- stats::model.matrix(~ 0 + y + y:time)
+    #design <- model.matrix(~ group + time.spline + group:time.spline)
+    design <- model.matrix(~ y * time.spline)
+    fit <- limma::lmFit(X, design)
+    fit <- limma::eBayes(fit, trend = trend)
   
-  coefs <- apply(fit$t, 2, function(x) sum(is.na(x)))
-  est.coefs <- names(coefs[coefs != nrow(fit$t)])
-  est.coefs <- est.coefs[grep(":time.spline*", est.coefs)]
-  
-  if (length(est.coefs)) {
+    coefs <- apply(fit$t, 2, function(x) sum(is.na(x)))
+    est.coefs <- names(coefs[coefs != nrow(fit$t)])
+    est.coefs <- est.coefs[grep(":time.spline*", est.coefs)]
     sel <- match(est.coefs, names(coefs))
-    #message("[ngs.fitContrastsWithLIMMA.time-series], est.coefs: \n", paste0(est.coefs, collapse="; "))
     top <- try(
       limma::topTable(fit, coef = sel, sort.by = "none", number = Inf, adjust.method = "BH"),
       silent = TRUE
     )
-    ## ---------------------
-    ## efit <- limma::eBayes(vfit, trend = TRUE, robust = robust)
-    ## NA coefs caused by highly unbalanced phenotypes in a time point.
-    ## coefs <- apply(efit$t, 2, function(x) sum(is.na(x)))
-    ## est.coefs <- names(coefs[coefs != nrow(efit$t)])
-    ## est.coefs <- est.coefs[grep(":", est.coefs)]
-    ## sel <- match(est.coefs, names(coefs))
-    ## top <- limma::topTable(efit, coef = sel, sort.by = "none", number = Inf, adjust.method = "BH")
-    ## ----------------------
+    chk <- "try-error" %in% class(top)
+    if (chk || nrow(top) == 0) next else break;
+   
+  }
 
-    chk1 <- "try-error" %in% class(top)
-    if (chk1) {
-      s=1; SEL=list()
-      for(s in 1:length(sel)) {
-        SEL[[s]] <- limma::topTable(fit, coef = sel[s], sort.by = "none", number = Inf, adjust.method = "BH")
-      }
-      names(SEL) <- names(coefs)[sel]
-      top <- do.call(cbind, SEL)
-      index <- unique(colnames(SEL[[1]]))
-      top0 <- top[, 1:length(index)]
-      colnames(top0) <- index
-      FUN.x <- function(x, stat) {
-        chk0 <- stat %in% c("P.Value", "adj.P.Val")
-        xx <- ifelse(chk0, min(x, na.rm=TRUE), x[which.max(abs(x))])
-        return(xx)
-      }
-      g=1
-      for(g in 1:length(index)) {
-        hh <- grep(index[g], colnames(top))
-        top0[, index[g]] <- apply(top[, hh], 1, FUN.x, stat = index[g])
-      }
-      top <- top0
-      rm(top0)
-    } else {
-      sel <- grep("time.spline*", colnames(top))
-      logFC <- apply(top[, sel], 1, function(x) x[which.max(abs(x))])
-      top <- cbind("logFC" = logFC, top[, -sel])
-      k1 <- c("logFC", "AveExpr", "F", "P.Value", "adj.P.Val")
-      k2 <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val") ## hack. "F"|"t" are 'statistic' later in code.
-      top <- top[, k1]
-      colnames(top) <- k2
-    }
-  } else {
+  saveRDS(list(top=top, est.coefs=est.coefs, coefs=coefs), "~/Desktop/top.RDS")
+
+  chk <- "try-error" %in% class(top)
+  if (chk) {
     top <- data.frame(matrix(NA, nrow=nrow(X), ncol=5))
     rownames(top) <- rownames(X)
     colnames(top) <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val")
+  } else {
+    top0 <- data.frame(logFC=NA, AveExpr=top$AveExpr, t=NA,
+      P.Value=top$P.Value, adj.P.Val=top$adj.P.Val, row.names=rownames(top0))
+    i=1; SEL=list()
+    for (i in 1:length(est.coefs)) {
+      sel <- match(est.coefs[i], names(coefs))
+      SEL[[est.coefs[i]]] <- limma::topTable(fit, coef = sel, sort.by = "none", number = Inf, adjust.method = "BH")
+    }
+    #FUN.x <- function(x, stat) {
+    #  chk0 <- stat %in% c("P.Value", "adj.P.Val")
+    #  xx <- ifelse(chk0, min(x, na.rm=TRUE), x[which.max(abs(x))])
+    #  return(xx)
+    #}
+    top <- do.call(cbind, SEL)
+    index <- c("logFC", "t")
+    i=1
+    for (i in 1:length(index)) {
+      idx <- paste0(names(SEL), ".", index[i])
+      sel <- match(idx, colnames(top))
+      top0[, index[i]] <- apply(top[, sel], 1, function(x) x[which.max(abs(x))])
+    }
+    top <- top0
+    rm(top0)
+    ## kk <- c("logFC", "AveExpr", "F", "P.Value", "adj.P.Val")
+    kk <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val")
+    top <- top[, kk, drop = FALSE]
   }
 
   return(top)
 
 }
+
 
 #' @describeIn ngs.fitContrastsWithAllMethods Fit contrasts with EdgeR
 #' @export
