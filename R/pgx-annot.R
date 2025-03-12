@@ -436,19 +436,9 @@ getOrthoSpecies <- function(organism, use=c("table","map")[1]) {
 #' Clean up inline duplicated features: eg: feature1;feature1;....
 #'
 #' @export
-clean_dups_inline_probenames <- function(probes) { ##, sep = c(";", ".", "_")) {
-  #if (!all(sep %in% c(";", ".", "_")))
-  #  stop("[clean_dups_inline_probenames] Unrecognized probe names separator")
+clean_dups_inline_probenames <- function(probes) {
   probes[is.na(probes)] <- ""
   probes <- sapply(strsplit(probes,split="[;,._]"),function(s) paste(unique(s),collapse=";"))
-  ##hh <- grep(sep[1], probes)
-  ##if (any(hh)) {
-  #split_probes <- sapply(probes, function(x) strsplit(x, paste0("[", sep[1], "]")))
-  #unique_probes <- unlisti(unname(lapply(split_probes, function(x) paste0(unique(x[x!=""]), collapse=sep[1]))))
-  #if (length(unique_probes) != length(probes)) {
-  #    stop("[clean_dups_inline_probenames] Probes length differ.")
-  #  }
-  #}
   return (probes)
 }
 
