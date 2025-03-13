@@ -310,7 +310,13 @@ pgx.createPGX <- function(counts,
     contrasts <- contrasts[kk, , drop = FALSE]
   }
 
-  ## make duplicated rownames unique (NOTE!!! new default since v3.5.1)
+  ## 1. Clean up inline duplicated features: eg: feature1;feature1;..
+  probes <- rownames(counts)
+  dedup_probes <- clean_dups_inline_probenames(probes)
+  rownames(counts) <- rownames(X) <- dedup_probes
+  if (!is.null(impX)) rownames(impX) <- dedup_probes
+
+  ## 2. Make duplicated rownames unique (NOTE!!! new default since v3.5.1)
   ndup <- sum(duplicated(rownames(counts)))
   if (ndup > 0) {
     info("[createPGX] duplicated rownames detected. making unique.")
@@ -415,7 +421,6 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## Filter genes?
   ## -------------------------------------------------------------------
-  if(exclude.genes=='') exclude.genes <- NULL
   do.filter <- (only.known || only.proteincoding || !is.null(exclude.genes))
   if (do.filter) {
     
@@ -554,8 +559,8 @@ pgx.computePGX <- function(pgx,
                            cluster.contrasts = TRUE,
                            do.clustergenesets = TRUE,
                            do.clustergenes = TRUE,
-                           use.design = FALSE, ##TRUE,
-                           prune.samples = TRUE, ##FALSE,
+                           use.design = FALSE,
+                           prune.samples = TRUE,
                            extra.methods = c(
                              "meta.go", "infer", "deconv", "drugs",
                              "connectivity", "wordcloud", "wgcna",

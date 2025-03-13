@@ -432,6 +432,16 @@ getOrthoSpecies <- function(organism, use=c("table","map")[1]) {
   species
 }
 
+
+#' Clean up inline duplicated features: eg: feature1;feature1;....
+#'
+#' @export
+clean_dups_inline_probenames <- function(probes) {
+  probes[is.na(probes)] <- ""
+  probes <- sapply(strsplit(probes,split="[;,._]"),function(s) paste(unique(s),collapse=";"))
+  return (probes)
+}
+
 #' Cleanup probe names from postfixes or version numbers
 #'
 #' @export
