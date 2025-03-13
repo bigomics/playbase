@@ -4,6 +4,8 @@
 ##
 
 
+#' All-in-one normalization function.
+#'
 #' @export
 normalizeData <- function(pgx, do.impute = TRUE, do.regress = TRUE,
                           impute.method = "SVD2", scale.method = "cpm") {
@@ -92,57 +94,6 @@ normalizeData <- function(pgx, do.impute = TRUE, do.regress = TRUE,
   pgx
 }
 
-
-
-## Normalization methods
-##
-##
-
-#' Log-counts-per-million transformation
-#'
-#' @param counts Numeric matrix of read counts, with genes in rows and samples in columns.
-#' @param total Total count to scale to. Default is 1e6.
-#' @param prior Pseudocount to add prior to log transform. Default is 1.
-#'
-#' @return Matrix of log-transformed values.
-#'
-#' @details Transforms a matrix of read counts to log-counts-per-million (logCPM).
-#' Adds a pseudocount \code{prior} (default 1) before taking the log transform.
-#' Values are scaled to \code{total} counts (default 1e6).
-#'
-#' This stabilizes variance and normalizes for sequencing depth.
-#'
-#' @examples
-#' \dontrun{
-#' counts <- matrix(rnbinom(100 * 10, mu = 100, size = 1), 100, 10)
-#' logcpm <- logCPM(counts)
-#' }
-#' @export
-logCPM <- function(counts, total = 1e6, prior = 1, log = TRUE) {
-  ## Transform to logCPM (log count-per-million) if total counts is
-  ## larger than 1e6, otherwise scale to previous avarage total count.
-  ##
-  ##
-  if (is.null(total)) {
-    total0 <- mean(Matrix::colSums(counts, na.rm = TRUE)) ## previous sum
-    total <- ifelse(total0 < 1e6, total0, 1e6)
-    message("[logCPM] setting column sums to = ", round(total, 2))
-  }
-  if (any(class(counts) == "dgCMatrix")) {
-    ## fast/sparse calculate CPM
-    cpm <- counts
-    cpm[is.na(cpm)] <- 0 ## OK??
-    cpm@x <- total * cpm@x / rep.int(Matrix::colSums(cpm), diff(cpm@p)) ## fast divide by columns sum
-    if (log) cpm@x <- log2(prior + cpm@x)
-    return(cpm)
-  } else {
-    totcounts <- Matrix::colSums(counts, na.rm = TRUE)
-    ## cpm <- t(t(counts) / totcounts * total)
-    cpm <- sweep(counts, 2, totcounts, FUN = "/") * total
-    if (log) cpm <- log2(prior + cpm)
-    return(cpm)
-  }
-}
 
 NORMALIZATION.METHODS <- c("none", "mean.center", "median.center", "sum", "CPM", "TMM", "RLE", "RLE2", "quantile", "maxMedian", "maxSum")
 
@@ -284,7 +235,94 @@ pgx.countNormalization.beta <- function(X, method = "CPM", ref = NULL, prior = 1
     X <- referenceNormalization(counts = counts, ref = ref, prior = prior, toLog = TRUE)
   }
   return(X)
+}
 
+#'
+#' @export
+normalizeMultiOmics <- function(X, method = "median") {
+
+  if(!(method %in% c("median","combat"))) {
+    message("[normalizeMultiOmics] WARNING. skipping normalization. unknown method: ",method)
+    return(X)
+  }
+  
+  ntype = NA
+  if(!all(grepl(":",rownames(X)))) {
+    message("[normalizeMultiOmics] WARNING. not multi-omics data.")
+    dtype <- rep("gx",nrow(X))
+    ntype = 1
+  } else {
+    dtype <- mofa.get_prefix(rownames(X))
+    ntype <- length(unique(dtype))
+  }
+  
+  if(ntype==1 || method == "median") {
+    mean.median <- mean(matrixStats::colMedians(X, na.rm=TRUE))
+    for(dt in unique(dtype)) {
+      ii <- which( dtype == dt)
+      mx <- matrixStats::colMedians(X[ii,], na.rm=TRUE)
+      X[ii,] <- t(t(X[ii,]) - mx) + mean.median
+    }
+  }
+
+  if(ntype>1 && method == "combat") {
+    X <- t(sva::ComBat( t(X), batch = dtype ))
+  }
+  
+  return(X)
+}
+
+
+
+##====================================================================
+## Normalization methods
+##====================================================================
+
+
+#' Log-counts-per-million transformation
+#'
+#' @param counts Numeric matrix of read counts, with genes in rows and samples in columns.
+#' @param total Total count to scale to. Default is 1e6.
+#' @param prior Pseudocount to add prior to log transform. Default is 1.
+#'
+#' @return Matrix of log-transformed values.
+#'
+#' @details Transforms a matrix of read counts to log-counts-per-million (logCPM).
+#' Adds a pseudocount \code{prior} (default 1) before taking the log transform.
+#' Values are scaled to \code{total} counts (default 1e6).
+#'
+#' This stabilizes variance and normalizes for sequencing depth.
+#'
+#' @examples
+#' \dontrun{
+#' counts <- matrix(rnbinom(100 * 10, mu = 100, size = 1), 100, 10)
+#' logcpm <- logCPM(counts)
+#' }
+#' @export
+logCPM <- function(counts, total = 1e6, prior = 1, log = TRUE) {
+  ## Transform to logCPM (log count-per-million) if total counts is
+  ## larger than 1e6, otherwise scale to previous avarage total count.
+  ##
+  ##
+  if (is.null(total)) {
+    total0 <- mean(Matrix::colSums(counts, na.rm = TRUE)) ## previous sum
+    total <- ifelse(total0 < 1e6, total0, 1e6)
+    message("[logCPM] setting column sums to = ", round(total, 2))
+  }
+  if (any(class(counts) == "dgCMatrix")) {
+    ## fast/sparse calculate CPM
+    cpm <- counts
+    cpm[is.na(cpm)] <- 0 ## OK??
+    cpm@x <- total * cpm@x / rep.int(Matrix::colSums(cpm), diff(cpm@p)) ## fast divide by columns sum
+    if (log) cpm@x <- log2(prior + cpm@x)
+    return(cpm)
+  } else {
+    totcounts <- Matrix::colSums(counts, na.rm = TRUE)
+    ## cpm <- t(t(counts) / totcounts * total)
+    cpm <- sweep(counts, 2, totcounts, FUN = "/") * total
+    if (log) cpm <- log2(prior + cpm)
+    return(cpm)
+  }
 }
 
 

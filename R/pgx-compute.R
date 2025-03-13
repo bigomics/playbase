@@ -225,11 +225,11 @@ pgx.createPGX <- function(counts,
 
   if (is.null(X)) {
     min.nz <- min(counts[counts > 0], na.rm = TRUE)
-    prior <- ifelse(norm_method == "CPM", 1, min.nz)
+    prior <- ifelse( grepl("CPM|TMM|TPM",norm_method), 1, min.nz)
 #    if (min.nz < 1e-4) {
 #      info("[createPGX] WARNING : small non-zero values detected. check prior.")
 #    }
-    message("[createPGX] creating X as log2(counts+p) with prior = ", prior)
+    message("[createPGX] creating X as log2(counts+p) with p = ", prior)
     X <- log2(counts + prior)
   }
 
