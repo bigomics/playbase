@@ -95,8 +95,8 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
     do.clustergenes = TRUE,
     do.clustergenesets = TRUE,
     do.cluster = TRUE,
-    use.design = FALSE, ##TRUE,
-    prune.samples = TRUE, ##FALSE,
+    use.design = FALSE, ## TRUE,
+    prune.samples = TRUE, ## FALSE,
     pgx.dir = pgx.dir,
     libx.dir = libx.dir,
     progress = NULL
@@ -173,14 +173,13 @@ pgx.createPGX <- function(counts,
                           exclude.genes = NULL,                          
                           prune.samples = FALSE,
                           only.known = TRUE,
-                          only.hugo = TRUE,  ## depracated
+                          only.hugo = TRUE, ## depracated
                           convert.hugo = FALSE,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE, ## DEPRECATED
                           remove.outliers = TRUE, ## DEPRECATED
                           add.gmt = TRUE,
                           settings = list()) {
-  
   message("[createPGX] datatype = ", datatype)
   if(0) {
     organism = "Human"
@@ -226,9 +225,6 @@ pgx.createPGX <- function(counts,
   if (is.null(X)) {
     min.nz <- min(counts[counts > 0], na.rm = TRUE)
     prior <- ifelse( grepl("CPM|TMM|TPM",norm_method), 1, min.nz)
-#    if (min.nz < 1e-4) {
-#      info("[createPGX] WARNING : small non-zero values detected. check prior.")
-#    }
     message("[createPGX] creating X as log2(counts+p) with p = ", prior)
     X <- log2(counts + prior)
   }
@@ -256,7 +252,7 @@ pgx.createPGX <- function(counts,
     }
   }
 
-  if(sum(is.na(X)) > 0) {
+  if (sum(is.na(X)) > 0) {
     nmissing <- sum(is.na(X))
     message("[createPGX] X has ", nmissing, " missing values")
     if (!is.null(impX)) {
@@ -282,9 +278,9 @@ pgx.createPGX <- function(counts,
 
   if (datatype == "multi-omics") {
     ## check if features have datatype prefixes
-    has.colons <- mean(grepl("[:]", rownames(counts)),na.rm=TRUE) > 0.9
+    has.colons <- mean(grepl("[:]", rownames(counts)), na.rm = TRUE) > 0.9
     has.colons
-    if(!has.colons) {
+    if (!has.colons) {
       stop("[createPGX] FATAL: features must have prefix for multi-omics")
     }
   }
@@ -354,29 +350,29 @@ pgx.createPGX <- function(counts,
     if (!is.null(impX)) rownames(impX) <- rownames(counts)
     if (!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
   }
-  
+
   ## Special case for PTM phospho-proteomics.
   is.phospho <- annotate_phospho_residue(rownames(counts), detect.only = TRUE)
   if (datatype == "proteomics" && is.phospho) {
     info("[createPGX] annotating rownames with phospho residue...")
-    newnames <- annotate_phospho_residue(rownames(counts))    
+    newnames <- annotate_phospho_residue(rownames(counts))
     newnames <- make_unique(newnames)
     rownames(counts) <- newnames
     rownames(X) <- newnames
     if (!is.null(impX)) rownames(impX) <- newnames
     if (!is.null(annot_table)) {
       rownames(annot_table) <- newnames
-      pos.col <- grep("site|position|phosho",colnames(annot_table),ignore.case=TRUE) 
-      phosphosite <- sub(".*_|[.].*","",newnames)
-      if(length(pos.col)) {
+      pos.col <- grep("site|position|phosho", colnames(annot_table), ignore.case = TRUE)
+      phosphosite <- sub(".*_|[.].*", "", newnames)
+      if (length(pos.col)) {
         i <- pos.col[1]
-        annot_table[,i] <- phosphosite
+        annot_table[, i] <- phosphosite
       } else {
         annot_table$site_position <- phosphosite
       }
     }
   }
-  
+
   ## -------------------------------------------------------------------
   ## create pgx object
   ## -------------------------------------------------------------------
@@ -433,7 +429,7 @@ pgx.createPGX <- function(counts,
     dbg("[createPGX] WARNING! all symbol NA. copying rownames as symbol")
     pgx$genes$symbol <- gsub(".*:|[.].*","",rownames(pgx$genes))
   }  
-  
+
   ## -------------------------------------------------------------------
   ## Filter out not-expressed
   ## -------------------------------------------------------------------
@@ -453,7 +449,6 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   do.filter <- (only.known || only.proteincoding || !is.null(exclude.genes))
   if (do.filter) {
-    
     if (only.known) {
       message("[createPGX] removing genes without symbol...")
       no.symbol <- (is.na(pgx$genes$symbol) | pgx$genes$symbol %in% c("", "-"))
@@ -492,14 +487,14 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
 
   ## if feature/rownames are not symbol, we paste symbol to row name.
-  pp <- sub(".*:|","",rownames(pgx$genes))
+  pp <- sub(".*:|", "", rownames(pgx$genes))
   rows_not_symbol <- mean(pp == pgx$genes$symbol, na.rm = TRUE) < 0.2
   if (convert.hugo && rows_not_symbol) {
     symbol <- pgx$genes$symbol
     symbol[is.na(symbol)] <- ""
-    feature_is_symbol <- (sub("^[a-zA-Z]+:","",rownames(pgx$genes)) == symbol)    
+    feature_is_symbol <- (sub("^[a-zA-Z]+:", "", rownames(pgx$genes)) == symbol)
     new.names <- combine_feature_names(pgx$genes, target = c("rownames", "_", "symbol"))
-    new.names <- ifelse( feature_is_symbol, rownames(pgx$genes), new.names)
+    new.names <- ifelse(feature_is_symbol, rownames(pgx$genes), new.names)
     new.names <- make_unique(new.names)
     rownames(pgx$genes) <- new.names
     pgx$genes$gene_name <- new.names ## gene_name should also be renamed??
@@ -529,17 +524,19 @@ pgx.createPGX <- function(counts,
   if ( no3 || unknown.datatype || !add.gmt) {
     message("[createPGX] WARNING: empty GMT matrix. No gene sets. " )    
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
-  } else {    
-    pgx <- pgx.add_GMT(pgx = pgx, custom.geneset = custom.geneset,
-                       max.genesets = max.genesets)
-    message("[createPGX] dim(GMT) =  ",dim(pgx$GMT)[1],"x",dim(pgx$GMT)[2])
+  } else {
+    pgx <- pgx.add_GMT(
+      pgx = pgx, custom.geneset = custom.geneset,
+      max.genesets = max.genesets
+    )
+    message("[createPGX] dim(GMT) =  ", dim(pgx$GMT)[1], "x", dim(pgx$GMT)[2])
   }
 
   ## -------------------------------------------------------------------
   ## object checks
   ## -------------------------------------------------------------------
-  if(ncol(pgx$samples)>1) {
-    pgx$samples <- pgx$samples[,colMeans(is.na(pgx$samples))<1,drop=FALSE]
+  if (ncol(pgx$samples) > 1) {
+    pgx$samples <- pgx$samples[, colMeans(is.na(pgx$samples)) < 1, drop = FALSE]
   }
   return(pgx)
 }
@@ -630,7 +627,6 @@ pgx.computePGX <- function(pgx,
 
   ## Make contrasts by cluster
   if (cluster.contrasts) {
-
     ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
     posx <- cbind(pgx$cluster$pos[["umap2d"]], pgx$cluster$pos[["tsne2d"]])
     posx <- scale(posx)
@@ -639,8 +635,8 @@ pgx.computePGX <- function(pgx,
       ## try again with finer settings if single cluster...
       idx <- pgx.findLouvainClusters(posx, level = 2, prefix = "c", small.zero = 0.01)
     }
-    pgx$samples$.cluster <- idx  ## really add??
-    
+    pgx$samples$.cluster <- idx ## really add??
+
     ## Add cluster contrasts
     message("[pgx.computePGX] adding cluster contrasts...")
     Y <- pgx$samples[, ".cluster", drop = FALSE]
@@ -894,12 +890,16 @@ pgx.filterLowExpressed <- function(pgx, prior.cpm = 1) {
 
 
 pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
-
   if (!"symbol" %in% colnames(pgx$genes)) {
-    message( paste("[pgx.add_GMT] ERROR: could not find 'symbol' column.",
-                   "Is this an old gene annotation?"))
+    message(paste(
+      "[pgx.add_GMT] ERROR: could not find 'symbol' column.",
+      "Is this an old gene annotation?"
+    ))
     return(pgx)
   }
+
+  org.supported <- (pgx$organism %in% playbase::SPECIES_TABLE$species_name)
+  dbg("[pgx.add_GMT] organism.supported = ", org.supported)
 
   ## -----------------------------------------------------------
   ## Load Geneset matrix and filter genes by gene or homologous
@@ -910,10 +910,10 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   # is metabolomics
   target <- c("human_ortholog", "symbol", "gene_name", "rownames")
   ortho.col <- intersect(target, colnames(pgx$genes))
-  if(length(ortho.col)==0) {
+  if (length(ortho.col) == 0) {
     symbol <- toupper(pgx$genes$symbol)
   } else {
-    symbol <- pgx$genes[,ortho.col[1]]
+    symbol <- pgx$genes[, ortho.col[1]]
   }
   
   metabolites <- grep("CHEBI",colnames(playdata::MSETxMETABOLITE),value=TRUE)
@@ -921,23 +921,23 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   sum.mx <- sum(symbol %in% metabolites,na.rm=TRUE)
   sum.px <- sum(symbol %in% colnames(playdata::GSETxGENE),na.rm=TRUE) 
   dbg("[pgx.add_GMT] 1: sum.mx = ", sum.mx)
-  dbg("[pgx.add_GMT] 1: sum.px = ", sum.px)    
+  dbg("[pgx.add_GMT] 1: sum.px = ", sum.px)
   has.mx <- sum.mx >= 10
   has.px <- sum.px >= 10
   G <- NULL
 
-  ## add metabolomic gene sets   
+  ## add metabolomic gene sets
   if (has.mx) {
     info("[pgx.add_GMT] Retrieving metabolomics genesets")
     G <- Matrix::t(playdata::MSETxMETABOLITE)
     ## strip any prefix. works because SYMBOL and CHEBI do not overlap
-    rownames(G) <- sub(".*:","",rownames(G)) 
+    rownames(G) <- sub(".*:", "", rownames(G))
   }
- 
-   ## add SYMBOL (classic) gene sets 
+
+  ## add SYMBOL (classic) gene sets
   if (has.px) {
     info("[pgx.add_GMT] Retrieving transcriptomics/proteomics genesets")
-    if(!is.null(G)) {
+    if (!is.null(G)) {
       G <- merge_sparse_matrix(G, Matrix::t(playdata::GSETxGENE))
     } else {
       G <- Matrix::t(playdata::GSETxGENE)
@@ -945,34 +945,35 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   }
 
   # create a feature list that will be used to filter and reduce dimensions of G
-  full_feature_list <- c(pgx$genes$human_ortholog, pgx$genes$symbol,
-                         rownames(pgx$genes))
+  full_feature_list <- c(
+    pgx$genes$human_ortholog, pgx$genes$symbol,
+    rownames(pgx$genes)
+  )
   full_feature_list <- full_feature_list[!is.na(full_feature_list)]
   full_feature_list <- full_feature_list[full_feature_list != ""]
-  full_feature_list <- unique(full_feature_list)    
+  full_feature_list <- unique(full_feature_list)
 
-  if(!is.null(G)) {
+  if (!is.null(G)) {
     G <- G[rownames(G) %in% full_feature_list, , drop = FALSE]
-    G <- G[, Matrix::colSums(G!=0) > 0, drop=FALSE]
-    if(nrow(G)==0 || ncol(G)==0 ) G <- NULL
+    G <- G[, Matrix::colSums(G != 0) > 0, drop = FALSE]
+    if (nrow(G) == 0 || ncol(G) == 0) G <- NULL
   }
-  
-  if(!is.null(G)) {
+
+  if (!is.null(G)) {
     # Internal GSET/MSET matrices are in human ortholog (SYMBOL or
     # ChEBI) and we must convert to species specific 'symbol'.
     rownames(G) <- probe2symbol(rownames(G), pgx$genes,
-                                query = "symbol", fill_na = TRUE)
+      query = "symbol", fill_na = TRUE
+    )
     dbg("[pgx.add_GMT] Default GSET matrix: ", dim(G))
   }
-    
+
   ## -----------------------------------------------------------
   ## Add organism specific GO gene sets
   ## -----------------------------------------------------------
 
+
   # only run if not metabolomics
-  org.supported <- (pgx$organism %in% playbase::SPECIES_TABLE$species_name)
-  info("[pgx.add_GMT] organism.supported = ", org.supported)
-  
   if (pgx$datatype != "metabolomics") {
     ## add species GO genesets from AnnotationHub
     go.genesets <- NULL
@@ -991,10 +992,10 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       go.size <- sapply(go.genesets, length)
       size.ok <- which(go.size >= 15 & go.size <= 400)
       go.genesets <- go.genesets[size.ok]
-      
+
       # get the length of go.genesets and add to gmt info
       go.size <- sapply(go.genesets, length)
-      
+
       if (length(go.size) > 0) {
         # if no go genesets pass the min/max filter playbase function
         # crashes convert to sparse matrix
@@ -1007,9 +1008,9 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
           annot = pgx$genes,
           filter_genes = FALSE
         )
-        
+
         # merge go.gmt with G
-        if(is.null(G)) {
+        if (is.null(G)) {
           G <- Matrix::t(go.gmt)
         } else {
           G <- merge_sparse_matrix(
@@ -1043,8 +1044,10 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     if (!is.null(custom_gmt) && ncol(custom_gmt) > 0) {
       # only run this code if custom_gmt has columns (genes)
       colnames(custom_gmt) <- probe2symbol(
-        colnames(custom_gmt), pgx$genes, "symbol", fill_na = TRUE)
-      if(is.null(G)) {
+        colnames(custom_gmt), pgx$genes, "symbol",
+        fill_na = TRUE
+      )
+      if (is.null(G)) {
         G <- Matrix::t(custom_gmt)
       } else {
         G <- merge_sparse_matrix(
@@ -1062,7 +1065,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ##   pgx$GMT <- NULL
   ##   return(pgx)
   ## }
-  
+
   ## -----------------------------------------------------------
   ##  Prioritize gene sets by fast rank-correlation
   ## -----------------------------------------------------------
@@ -1073,25 +1076,24 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   if (is.null(max.genesets)) max.genesets <- 20000
   if (max.genesets < 0) max.genesets <- 20000
   if (!is.null(G) && ncol(G) > max.genesets) {
-
-    message("[pgx.add_GMT] Matching gene set matrix...")  
+    message("[pgx.add_GMT] Matching gene set matrix...")
     # we use SYMBOL as rownames
     gX <- pgx$X
     if (!all(rownames(gX) %in% pgx$genes$symbol)) {
-      gX <- rename_by(gX, pgx$genes, "symbol", unique = TRUE) 
+      gX <- rename_by(gX, pgx$genes, "symbol", unique = TRUE)
     }
-    
+
     ## if reduced samples
     ss <- rownames(pgx$model.parameters$exp.matrix)
     if (!is.null(ss)) {
       gX <- gX[, ss, drop = FALSE]
     }
-    
-    ## Align the GENESETxGENE matrix with genes in X_geneset  
+
+    ## Align the GENESETxGENE matrix with genes in X_geneset
     gg <- rownames(gX)
     ii <- intersect(gg, rownames(G))
     G <- G[ii, , drop = FALSE]
-    ##gX <- gX[ii, , drop = FALSE]
+    ## gX <- gX[ii, , drop = FALSE]
     xx <- setdiff(gg, rownames(G))
     matX <- Matrix::Matrix(0, nrow = length(xx), ncol = ncol(G), sparse = TRUE)
     rownames(matX) <- xx
@@ -1099,7 +1101,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     G <- rbind(G, matX)
     G <- G[match(gg, rownames(G)), , drop = FALSE]
     rownames(G) <- rownames(gX) ## must be symbol
-  
+
     ## Prioritize gene sets by fast rank-correlation
     message("[pgx.add_GMT] Reducing gene set matrix... ")
     ## Reduce gene sets by selecting top varying genesets. We use the
@@ -1109,11 +1111,11 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     cX <- apply(cX, 2, rank)
     gsetX <- qlcMatrix::corSparse(G, cX) ## slow!
     rownames(gsetX) <- colnames(G)
-    colnames(gsetX) <- colnames(gX)    
-    if(0) {
+    colnames(gsetX) <- colnames(gX)
+    if (0) {
       y <- pgx$model.parameters$group[colnames(gX)]
-      res <- gx.limmaF(gsetX, y, lfc=0, fdr=1, sort.by='none')
-      res <- res[rownames(gsetX),]
+      res <- gx.limmaF(gsetX, y, lfc = 0, fdr = 1, sort.by = "none")
+      res <- res[rownames(gsetX), ]
     }
 
     grp <- pgx$model.parameters$group
@@ -1133,7 +1135,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     jj <- unique(c(jj, grep(must.include, colnames(G), ignore.case = TRUE)))
     jj <- jj[order(colnames(G)[jj])] ## sort alphabetically
     G <- G[, jj, drop = FALSE]
-    rm(gsetX.bygroup, gsetX)    
+    rm(gsetX.bygroup, gsetX)
   }
 
   ## -----------------------------------------------------------------------
@@ -1141,11 +1143,11 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------------------
 
   # final check: drop genesets in G based on geneset size
-  if(!is.null(G)) {
+  if (!is.null(G)) {
     gmt.size <- Matrix::colSums(G != 0)
-    has.metabolites <- sum(grepl("^[0-9]+",rownames(G)))>=10
+    has.metabolites <- sum(grepl("^[0-9]+", rownames(G))) >= 10
     has.metabolites
-    ##if (pgx$datatype %in% c("metabolomics","multi-omics")) {
+    ## if (pgx$datatype %in% c("metabolomics","multi-omics")) {
     if (has.metabolites) {
       # metabolomics genesets are MUCH smaller than transcriptomics,
       # metabolomics have usually less features, so we need to reduce
@@ -1164,7 +1166,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     }
     G <- G[, size.ok, drop = FALSE]
   }
-    
+
   # add random genesets if G is too small
   if (is.null(G) || ncol(G) < 100 || nrow(G) < 3) {
     add.gmt <- NULL
@@ -1190,8 +1192,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     )
 
     # merge add.gmt with G
-    if(is.null(G)) {
-      G = Matrix::t(add.gmt)
+    if (is.null(G)) {
+      G <- Matrix::t(add.gmt)
     } else {
       G <- merge_sparse_matrix(
         m1 = G,

@@ -9,7 +9,7 @@
 #'
 #' @export
 signedRank <- function(x) {
-  sign(x) * rank(abs(x), na.last="keep", ties.method="random") / length(x)
+  sign(x) * rank(abs(x), na.last = "keep", ties.method = "random") / length(x)
 }
 
 #' Calculate columnwise signed ranks for matrices. Rank on absolute
@@ -17,8 +17,10 @@ signedRank <- function(x) {
 #'
 #' @export
 colSignedRanks <- function(x) {
-  sign(x) * t(matrixStats::colRanks(abs(x), na.last="keep",
-                                    ties.method="random")) / nrow(x)
+  sign(x) * t(matrixStats::colRanks(abs(x),
+    na.last = "keep",
+    ties.method = "random"
+  )) / nrow(x)
 }
 
 #' @title Calculate cosine similarity

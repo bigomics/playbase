@@ -207,7 +207,7 @@ compute_testGenesSingleOmics <- function(pgx,
     paste(methods, collapse = " ")
   )
   PRIOR.CPM <- 1
-  
+
   ## Run all test methods
   message("[compute_testGenesSingleOmics] 12 : start fitting... ")
   gx.meta <- playbase::ngs.fitContrastsWithAllMethods(
@@ -303,7 +303,7 @@ compute_testGenesMultiOmics <- function(pgx,
       max(pgx1$counts, na.rm = TRUE) >= 50) {
       type <- "counts"
     }
-    
+
     ## do test
     pgx1 <- compute_testGenesSingleOmics(
       pgx = pgx1,

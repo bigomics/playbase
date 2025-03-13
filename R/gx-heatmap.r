@@ -132,7 +132,7 @@ gx.imagemap <- function(X, main = "", cex = 1, cex.main = 1.8,
     jj <- fastcluster::hclust(stats::dist(t(X)))$order
     X <- X[ii, jj]
   }
-  if(is.null(col)) col <- heat.colors(64)
+  if (is.null(col)) col <- heat.colors(64)
   graphics::image(
     1:ncol(X), 1:nrow(X), t(X),
     col = col,
@@ -264,7 +264,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         na_text = NULL,
                         mar = c(5, 5, 5, 5),
                         rowlab.maxlen = 20,
-                        rownames_width = rowlab.maxlen+10,
+                        rownames_width = rowlab.maxlen + 10,
                         title_cex = 1.2,
                         column_title_rot = 0,
                         column_names_rot = 90,
@@ -300,7 +300,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   if (is.null(main)) main <- "  "
   if (length(mar) == 1) mar <- rep(mar[1], 4) ## old style
   if (length(mar) == 2) mar <- c(mar[1], 5, 5, mar[2]) ## old style
-  
+
   cor.hclust <- function(x) {
     corx <- stats::cor(x, use = "pairwise")
     corx[is.na(corx)] <- 0
@@ -416,7 +416,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   if (do.split && length(split) > 1) {
     split.idx <- split[jj1]
   }
-  if (do.split && length(split)==1 && split[1]==1) {
+  if (do.split && length(split) == 1 && split[1] == 1) {
     do.split <- FALSE
     split.idx <- NULL
   }
@@ -613,14 +613,14 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   ## ------------- draw heatmap
 
   ## global row clustering if no split
-  if(cluster_rows && !do.split) {
+  if (cluster_rows && !do.split) {
     cluster_rows <- as.dendrogram(hclust(dist(gx)))
-  } 
+  }
 
   hmap <- NULL
   for (i in grp.order) {
     jj <- grp[[i]]
-    
+
     coldistfun1 <- function(x) stats::dist(x)
     rowdistfun1 <- function(x, y) 1 - stats::cor(x, y)
     gx0 <- gx[, jj, drop = FALSE]
@@ -673,7 +673,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       cell_fun = cell_fun
     )
   }
-  
+
   rownames.ha <- NULL
   if (FALSE && show_rownames < nrow(gx) && show_rownames > 0) {
     ## Show rownames with linked lines
@@ -745,7 +745,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     ComplexHeatmap::draw(lgd, x = grid::unit(key.offset[1], "npc"), y = grid::unit(key.offset[2], "npc"), just = c("left", "top"))
   }
 
-  # Return TRUE so that unit test is possible  
+  # Return TRUE so that unit test is possible
   return(TRUE)
 }
 

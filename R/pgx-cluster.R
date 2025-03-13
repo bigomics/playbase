@@ -177,7 +177,7 @@ pgx.clusterSamples <- function(pgx, methods = c("pca", "tsne", "umap"),
     ## NEED RETHINK: We should use impX here if available. Some
     ## datasets have missing values on all rows!!!
     ## X <- X[complete.cases(X), , drop = FALSE]
-    X <- svdImpute2(X)  ## IK
+    X <- svdImpute2(X) ## IK
   }
 
   clust.pos <- pgx.clusterBigMatrix(

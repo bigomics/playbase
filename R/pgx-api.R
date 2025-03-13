@@ -70,7 +70,7 @@ pgx.getModelGroups <- function(pgx) {
 pgx.getMetaMatrix <- function(pgx, methods = "meta", level = "gene") {
   fc0 <- NULL
   pv0 <- NULL
-  qv0 <- NULL  
+  qv0 <- NULL
   if (level == "gene") {
     all.methods <- colnames(unclass(pgx$gx.meta$meta[[1]]$fc))
     all.methods
@@ -87,13 +87,13 @@ pgx.getMetaMatrix <- function(pgx, methods = "meta", level = "gene") {
         apply(unclass(x$p)[, methods, drop = FALSE], 1, max)
       })
       rownames(fc0) <- rownames(qv0) <- rownames(pgx$gx.meta$meta[[1]])
-      rownames(pv0) <- rownames(pgx$gx.meta$meta[[1]])      
+      rownames(pv0) <- rownames(pgx$gx.meta$meta[[1]])
     } else if (methods[1] == "meta") {
       fc0 <- sapply(pgx$gx.meta$meta, function(x) x$meta.fx)
       qv0 <- sapply(pgx$gx.meta$meta, function(x) x$meta.q)
-      pv0 <- sapply(pgx$gx.meta$meta, function(x) x$meta.p)      
+      pv0 <- sapply(pgx$gx.meta$meta, function(x) x$meta.p)
       rownames(fc0) <- rownames(qv0) <- rownames(pgx$gx.meta$meta[[1]])
-      rownames(pv0) <- rownames(pgx$gx.meta$meta[[1]])            
+      rownames(pv0) <- rownames(pgx$gx.meta$meta[[1]])
     } else {
       cat("WARNING:: pgx.getMetaFoldChangeMatrix: unknown method")
       return(NULL)
@@ -117,7 +117,7 @@ pgx.getMetaMatrix <- function(pgx, methods = "meta", level = "gene") {
     } else if (methods[1] == "meta") {
       fc0 <- sapply(pgx$gset.meta$meta, function(x) x$meta.fx)
       qv0 <- sapply(pgx$gset.meta$meta, function(x) x$meta.q)
-      pv0 <- sapply(pgx$gset.meta$meta, function(x) x$meta.p)      
+      pv0 <- sapply(pgx$gset.meta$meta, function(x) x$meta.p)
       rownames(fc0) <- rownames(qv0) <- rownames(pgx$gset.meta$meta[[1]])
       rownames(pv0) <- rownames(pgx$gset.meta$meta[[1]])
     } else {

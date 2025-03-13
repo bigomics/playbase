@@ -389,7 +389,6 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
   ## subroutines
   ## ----------------------------------------------------------------------
   updateTSNE <- function(tsne.file, sigdb.file, allFC) {
-
     h5 <- rhdf5::h5ls(sigdb.file)
     has.tsne2d <- ("tsne2d" %in% h5$name)
     if (has.tsne2d) {

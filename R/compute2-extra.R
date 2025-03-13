@@ -255,7 +255,7 @@ compute_extra <- function(pgx, extra = c(
     timings <- rbind(timings, c("mofa", tt))
   }
 
-  
+
   ## ------------------------------------------------------
   ## pretty collapse all timings
   ## ------------------------------------------------------
