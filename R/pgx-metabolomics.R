@@ -4,6 +4,15 @@
 ##
 
 
+
+#' Check if RefMet server is alive
+#' 
+mx.ping_refmet <- function() {
+  out <- try(RefMet::refmet_metadata("Tyrosine"))
+  if("try-error" %in% class(out)) message("[mx.ping_refmet] WARNING! RefMet server is down")
+  !("try-error" %in% class(out))
+}
+
 #' Check metabolite mapping in databases. For each probe return
 #' matched database or NA if not found.
 #' 
@@ -13,6 +22,11 @@ mx.check_mapping <- function(probes,
                              check.first = TRUE) {
   ## this goes through all databases and checks if there is a match
   src <- rep("", length(probes))
+  refmet.alive <- mx.ping_refmet()
+  if(!refmet.alive && "refmet" %in% all.db) {
+    message("WARNING: RefMet server is not alive")
+    all.db <- setdiff(all.db,"refmet")
+  }
   for(db in all.db) {
     message("trying db: ", db)
     if(check.first) {
@@ -28,7 +42,7 @@ mx.check_mapping <- function(probes,
     }
   }
   src
-  src <- sub("^[+]","",src)
+  src <- sub("^[+]","",src) ## remove plus sign at beginning
   src[which(src=='')] <- NA
   src
 }
@@ -36,26 +50,32 @@ mx.check_mapping <- function(probes,
 #' Detect metabolomics ID type.
 #' 
 #' @export
-mx.detect_probetype <- function(probes, min.match=0.05) {
+mx.detect_probetype <- function(probes, min.match=0.2) {
   aa <- playdata::METABOLITE_ID
   probes <- setdiff(probes,c("","-",NA))
   probes <- gsub("^[a-zA-Z]+:|[_.-].*","",probes)  ## strip any pre and postfix
   probes <- gsub("chebi:|chebi","",probes,ignore.case=TRUE)
   match <- apply(aa, 2, function(s) mean(probes %in% s))
-  if (max(match, na.rm = TRUE) < min.match) {
-    ## try online
+  match
+  if (max(match, na.rm = TRUE) > min.match) {
+    ptype <- names(which.max(match))
+    return(ptype)
+  }
+
+  ## otherwise check RefMet
+  refmet.alive <- mx.ping_refmet()
+  if(refmet.alive) {
     map <- mx.check_mapping(probes, all.db="refmet",check.first = TRUE)
-    if(mean(!is.na(map)) > 0.2) {
-      map.db <- names(which.max(table(map[!is.na(map)])))
-      return(map.db)
-    } else {
-      message("[mx.detect_probetype] WARNING. could not detect probetype")
-      return(NA)
+    table(map)
+    if(mean(!is.na(map)) > min.match) {
+      ptype <- names(which.max(table(map[!is.na(map)])))
+      return(ptype)
     }
   }
-  names(which.max(match)) 
-}
 
+  message("[mx.detect_probetype] WARNING. could not detect probetype")
+  return(NA)
+}
 
 #' Convert IDs to CHEBI using base R functions (DEPRECATED)
 #' 
@@ -102,7 +122,7 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
 
   # for id that are "", set it to na
   probes[probes == ""] <- NA
-  probes <- sub("[ _.-].*","",probes)  ## strip any postfix
+  ## probes <- sub("[ _.-].*","",probes)  ## strip any postfix??? Not good for lipid names
   if (!is.null(probe_type) && probe_type == "ChEBI") {
     # keep only numbers in ids, as chebi ids are numeric
     probes <- gsub("[^0-9]", "", probes)
@@ -111,7 +131,7 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
     probe_type <- mx.detect_probetype(probes)
   }
   if(is.null(probe_type) || is.na(probe_type)) {
-    message("WARNING: could not determine probe_type")
+    message("WARNING: could not determine probe_type. Check your names.")
     return(rep(NA,length(probes)))
   }
   # check that probetype is valid
@@ -121,9 +141,20 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
     probes <- gsub("[^0-9]", "", probes)
   }
   if (probe_type == "RefMet") {
+    ## if probe_type is 'long name' we convert first to ChEBI using
+    ## the RefMet server, if the server is alive.
+    refmet.alive <- mx.ping_refmet()
+    if(!refmet.alive) {
+      message("WARNING: RefMet server is down. Cannot do conversion.")
+      return(rep(NA,length(probes)))      
+    }
     res <- RefMet::refmet_map_df(probes)  ## request on API server
     probes <- res$ChEBI_ID
     probe_type <- "ChEBI"
+  }
+  if(!probe_type %in% colnames(annot)) {
+    message("FATAL ERROR: probetype not in annot. probetype=",probe_type)
+    return(NULL)
   }
   ii <- match(probes, annot[, probe_type])
   ids <- annot[ii, target_id]
@@ -196,22 +227,27 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
     ## RefMet also handles metabolite/lipid long names, so this is
     ## convenient
     if( d == "refmet" && curl::has_internet() && no.name) {
-      message("[getMetaboliteAnnotation] annotating with RefMet server...")
-      ii <- which(!is.na(probes) & is.na(metadata$name) )
-      if(length(ii)) {
-        probes1 <- probes[ii]
-        res <- RefMet::refmet_map_df(probes1)  ## request on API server
-        res$definition <- '-'   ## fill it??
-        res$ID <- res$ChEBI_ID
-        res$source <- ifelse(res$RefMet_ID!='-', "RefMet", NA)
-        cols <- c("ID","Input.name","Standardized.name","Super.class","Main.class",
-          "Sub.class","Formula","Exact.mass",
-          "definition","source")
-        res <- res[,cols]
-        colnames(res) <- COLS
-        ## only fill missing entries
-        jj <- which( res != '-' & !is.na(res) & is.na(metadata[ii,]), arr.ind=TRUE)
-        if(length(jj)) metadata[ii,][jj] <- res[jj]
+      refmet.alive <- mx.ping_refmet()
+      if(!refmet.alive && "refmet" %in% db) {
+        message("WARNING: RefMet server is not alive. Skipping RefMet lookup")
+      } else {
+        message("[getMetaboliteAnnotation] annotating with RefMet server...")
+        ii <- which(!is.na(probes) & is.na(metadata$name) )
+        if(length(ii)) {
+          probes1 <- probes[ii]
+          res <- RefMet::refmet_map_df(probes1)  ## request on API server
+          res$definition <- '-'   ## fill it??
+          res$ID <- res$ChEBI_ID
+          res$source <- ifelse(res$RefMet_ID!='-', "RefMet", NA)
+          cols <- c("ID","Input.name","Standardized.name","Super.class","Main.class",
+            "Sub.class","Formula","Exact.mass",
+            "definition","source")
+          res <- res[,cols]
+          colnames(res) <- COLS
+          ## only fill missing entries
+          jj <- which( res != '-' & !is.na(res) & is.na(metadata[ii,]), arr.ind=TRUE)
+          if(length(jj)) metadata[ii,][jj] <- res[jj]
+        }
       }
     }
 
