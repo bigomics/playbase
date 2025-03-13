@@ -361,15 +361,6 @@ getGeneAnnotation.ANNOTHUB <- function(
       missing.annot$PROBE <- names(missing.probes[match(missing.key, missing.probes1)])
       jj <- match(missing.annot$PROBE, probes)
 
-      ## Align annot and missing.annot
-      ms <- setdiff(colnames(annot), colnames(missing.annot))
-      if (length(ms)) {
-        df <- matrix(NA, nrow=nrow(missing.annot), ncol=length(ms))
-        colnames(df) <- ms
-        df <- data.frame(df, row.names=rownames(missing.annot))
-        missing.annot <- cbind(missing.annot, df)
-        rm(df)
-      }
       kk <- match(colnames(annot), colnames(missing.annot))
       missing.annot <- missing.annot[, kk, drop = FALSE]
       colnames(missing.annot) <- colnames(annot)
