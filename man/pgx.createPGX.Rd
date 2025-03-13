@@ -26,6 +26,7 @@ pgx.createPGX(
   batch.correct = TRUE,
   auto.scale = TRUE,
   filter.genes = TRUE,
+  exclude.genes = NULL,
   prune.samples = FALSE,
   only.known = TRUE,
   only.hugo = TRUE,

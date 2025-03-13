@@ -4,7 +4,7 @@
 \alias{match_probe_names}
 \title{Match dirty probe names to clean key names}
 \usage{
-match_probe_names(probes, org, probe_type = NULL)
+match_probe_names(probes, orgdb, probe_type = NULL)
 }
 \description{
 Match dirty probe names to clean key names

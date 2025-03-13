@@ -4,7 +4,7 @@
 \alias{mx.detect_probetype}
 \title{Detect metabolomics ID type.}
 \usage{
-mx.detect_probetype(probes, min.match = 0.05)
+mx.detect_probetype(probes, min.match = 0.2)
 }
 \description{
 Detect metabolomics ID type.
