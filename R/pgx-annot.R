@@ -267,7 +267,8 @@ getGeneAnnotation.ANNOTHUB <- function(
     probe_type <- detect_probetype(organism, probes, orgdb = orgdb)
     probe_type
     if (is.null(probe_type) || is.na(probe_type) ) {
-      message("ERROR: could not determine probe_type. Please specify. ")
+      message("ERROR: could not determine probe_type.")
+      message("WARNING!!! returning empty annotation.")
       annot <- data.frame(feature = probes, symbol = "")
       annot <- cleanupAnnotation(annot)
       return(annot)
@@ -902,15 +903,26 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   probes1 <- clean_probe_names(probes)
   probesx <- unique(c(probes0, probes1))
 
+  ## Get all organism symbols
+  org_annot <- AnnotationDbi::select(
+    orgdb,
+    keys = keys(orgdb),
+    keytype = "ENTREZID",
+    columns = intersect(c("SYMBOL","GENENAME"),keytypes)
+  )
+  org_symbols <- NULL
+  org_genenames <- NULL
+  if("SYMBOL" %in% colnames(org_annot)) org_symbols <- setdiff(org_annot[,"SYMBOL"],c("",NA))
+  if("GENENAME" %in% colnames(org_annot)) org_genenames <- setdiff(org_annot[,"GENENAME"],c("",NA))
+  
   # Iterate over probe types
   key <- keytypes[1]
   for (key in keytypes) {
-    probe_matches <- data.frame(NULL)
 
+    probe_matches <- data.frame(NULL)
     # add symbol and genename on top of key as they will be used to
     # count the real number of probe matches
-    key2 <- c(key, c("SYMBOL", "GENENAME"))
-    key2 <- intersect(key2, keytypes)
+    key2 <- intersect(c(key, "SYMBOL", "GENENAME"), keytypes)
     suppressMessages(suppressWarnings(try(
       probe_matches <- AnnotationDbi::select(
         orgdb,
@@ -921,19 +933,34 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
       silent = TRUE
     )))
 
-    # set empty character to NA, as we only count not-NA to define probe type
-    probe_matches[probe_matches == ""] <- NA
-    # check which probe types (genename, symbol) return the most matches
-    n1 <- n2 <- 0
-    if ("SYMBOL" %in% colnames(probe_matches)) n1 <- sum(!is.na(probe_matches[, "SYMBOL"]))
-    if ("GENENAME" %in% colnames(probe_matches)) n2 <- sum(!is.na(probe_matches[, "GENENAME"]))
-    matchratio <- max(n1, n2) / (1e-4 + nrow(probe_matches))
-    key_matches[key] <- matchratio
-
-    ## stop search prematurely if matchratio > 99%
-    if (matchratio > 0.99) break()
+    if(nrow(probe_matches) && ncol(probe_matches)) {
+    
+      ## extra check: if key is SYMBOL or GENENAME first column can be
+      ## wrongly set as the key.
+      if("SYMBOL" %in% colnames(probe_matches) && !is.null(org_symbols)) {
+        not.symbol <- !(probe_matches[,"SYMBOL"] %in% org_symbols)
+        probe_matches[,"SYMBOL"][not.symbol] <- NA
+      }
+      if("GENENAME" %in% colnames(probe_matches) && !is.null(org_genenames)) {
+        not.gene <- !(probe_matches[,"GENENAME"] %in% org_genenames)
+        probe_matches[,"GENENAME"][not.gene] <- NA
+      }
+      
+      # set empty character to NA, as we only count not-NA to define probe type
+      probe_matches[probe_matches == ""] <- NA
+      # check which probe types (genename, symbol) return the most matches
+      n1 <- n2 <- 0
+      if ("SYMBOL" %in% colnames(probe_matches)) n1 <- sum(!is.na(probe_matches[, "SYMBOL"]))
+      if ("GENENAME" %in% colnames(probe_matches)) n2 <- sum(!is.na(probe_matches[, "GENENAME"]))
+      matchratio <- max(n1, n2) / (1e-4 + nrow(probe_matches))
+      key_matches[key] <- matchratio
+      
+      ## stop search prematurely if matchratio > 99%
+      if (matchratio > 0.99) break()
+    }    
   }
   key_matches <- round(key_matches, 4)
+  key_matches
   
   ## Return top match
   ##  key_matches

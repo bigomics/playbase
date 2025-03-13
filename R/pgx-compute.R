@@ -182,7 +182,36 @@ pgx.createPGX <- function(counts,
                           settings = list()) {
   
   message("[createPGX] datatype = ", datatype)
-
+  if(0) {
+    organism = "Human"
+    custom.geneset = NULL
+    annot_table = NULL
+    max.genesets = 5000
+    name = "Data set"
+    datatype = "RNA-seq"
+    datatype = "proteomics"
+    probe_type = NULL
+    creator = "unknown"
+    description = "No description provided."
+    X = NULL
+    impX = NULL
+    norm_method = "CPM"
+    is.logx = NULL
+    batch.correct = TRUE
+    auto.scale = TRUE
+    filter.genes = TRUE
+    exclude.genes = NULL                          
+    prune.samples = FALSE
+    only.known = TRUE
+    only.hugo = TRUE  ## depracated
+    convert.hugo = FALSE
+    only.proteincoding = TRUE
+    remove.xxl = TRUE ## DEPRECATED
+    remove.outliers = TRUE ## DEPRECATED
+    add.gmt = TRUE
+    settings = list()
+  }
+  
   if (!is.null(counts)) {
     message("[createPGX] dim.counts: ", dim(counts)[1], " x ", dim(counts)[2])
     message("[createPGX] class.counts: ", class(counts))
@@ -310,12 +339,12 @@ pgx.createPGX <- function(counts,
     contrasts <- contrasts[kk, , drop = FALSE]
   }
 
-  ## 1. Clean up inline duplicated features: eg: feature1;feature1;..
-  probes <- rownames(counts)
-  dedup_probes <- clean_dups_inline_probenames(probes)
-  rownames(counts) <- rownames(X) <- dedup_probes
-  if (!is.null(impX)) rownames(impX) <- dedup_probes
-
+  ## ## ## 1. Clean up inline duplicated features: eg: feature1;feature1;..
+  ## probes <- rownames(counts)
+  ## dedup_probes <- clean_dups_inline_probenames(probes)
+  ## rownames(counts) <- rownames(X) <- dedup_probes
+  ## if (!is.null(impX)) rownames(impX) <- dedup_probes
+  
   ## 2. Make duplicated rownames unique (NOTE!!! new default since v3.5.1)
   ndup <- sum(duplicated(rownames(counts)))
   if (ndup > 0) {
@@ -397,10 +426,11 @@ pgx.createPGX <- function(counts,
     stop("[createPGX] FATAL: Could not build gene annotation")
   }
   if(!"symbol" %in% colnames(pgx$genes) && "gene_name" %in% colnames(pgx$genes)) {
+    dbg("[createPGX] WARNING! no symbol column. copying deprecated gene_name column as symbol")
     pgx$genes$symbol <- pgx$genes$gene_name
-  }
-  
+  }  
   if (all(is.na(pgx$genes$symbol))) {
+    dbg("[createPGX] WARNING! all symbol NA. copying rownames as symbol")
     pgx$genes$symbol <- gsub(".*:|[.].*","",rownames(pgx$genes))
   }  
   
