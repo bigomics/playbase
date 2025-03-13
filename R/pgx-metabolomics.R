@@ -228,7 +228,6 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
 
     ## RefMet also handles metabolite/lipid long names, so this is
     ## convenient
-<<<<<<< HEAD
     if( d == "refmet" && curl::has_internet() && no.name) {
       refmet.alive <- mx.ping_refmet()
       if(!refmet.alive && "refmet" %in% db) {
@@ -251,27 +250,6 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
           jj <- which( res != '-' & !is.na(res) & is.na(metadata[ii,]), arr.ind=TRUE)
           if(length(jj)) metadata[ii,][jj] <- res[jj]
         }
-=======
-    if (d == "refmet" && curl::has_internet() && no.name) {
-      message("[getMetaboliteAnnotation] annotating with RefMet server...")
-      ii <- which(!is.na(probes) & is.na(metadata$name))
-      if (length(ii)) {
-        probes1 <- probes[ii]
-        res <- RefMet::refmet_map_df(probes1) ## request on API server
-        res$definition <- "-" ## fill it??
-        res$ID <- res$ChEBI_ID
-        res$source <- ifelse(res$RefMet_ID != "-", "RefMet", NA)
-        cols <- c(
-          "ID", "Input.name", "Standardized.name", "Super.class", "Main.class",
-          "Sub.class", "Formula", "Exact.mass",
-          "definition", "source"
-        )
-        res <- res[, cols]
-        colnames(res) <- COLS
-        ## only fill missing entries
-        jj <- which(res != "-" & !is.na(res) & is.na(metadata[ii, ]), arr.ind = TRUE)
-        if (length(jj)) metadata[ii, ][jj] <- res[jj]
->>>>>>> main
       }
     }
 
@@ -348,7 +326,6 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
   )
   rownames(df) <- as.character(probes)
 
-<<<<<<< HEAD
   ## add ID table 
   if(add_id) {
     id_table <- playdata::METABOLITE_ID
@@ -361,19 +338,6 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
       id_table$ChEBI_ID <- ifelse(is.na(id_table$ChEBI_ID), df$symbol, id_table$ChEBI_ID)
     }
     df <- cbind( df, id_table )   
-=======
-  kk <- setdiff(colnames(metadata), c(colnames(df), "name", "ID"))
-  df <- cbind(df, metadata[, kk])
-
-  ## add ID table
-  if (add_id) {
-    annot_table <- playdata::METABOLITE_ID
-    ii <- match(id, annot_table$ID)
-    kk <- setdiff(colnames(annot_table), c("ID", "NAME"))
-    id_table <- annot_table[ii, kk]
-    colnames(id_table) <- paste0(sub("_ID", "", colnames(id_table)), "_ID")
-    df <- cbind(df, id_table)
->>>>>>> main
   }
 
   if (has.id) {
