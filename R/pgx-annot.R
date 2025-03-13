@@ -358,7 +358,7 @@ getGeneAnnotation.ANNOTHUB <- function(
         )
       ))
       head(missing.annot)
-      missing.key <- missing.annot[, missing.probe_type]
+      missing.key <- missing.annot[, missing.probe_type, drop = FALSE]
       missing.annot$PROBE <- names(missing.probes[match(missing.key, missing.probes1)])
       jj <- match(missing.annot$PROBE, probes)
       colnames(missing.annot) <- colnames(annot)
