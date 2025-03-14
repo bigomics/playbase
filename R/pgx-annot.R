@@ -981,7 +981,7 @@ getHumanOrtholog <- function(organism, symbols) {
   ## test if orthogene server is reachable
   ortho_organism <- getOrthoSpecies(organism)
   mm <- c("gprofiler", "homologene", "babelgene") ## mapping methods
-  method.ok <- c()
+  methods.ok <- c()
   i=1
   for (i in 1:length(mm)) {
     res <- try(orthogene::convert_orthologs(
@@ -991,9 +991,9 @@ getHumanOrtholog <- function(organism, symbols) {
       method = mm[i],
       verbose = FALSE
     ), silent = TRUE)
-    method.ok[i] <- (!"try-error" %in% class(res) &&
-                       inherits(res,"data.frame") &&
-                       nrow(res)>0)
+    methods.ok[i] <- (!"try-error" %in% class(res) &&
+                        inherits(res,"data.frame") &&
+                        nrow(res)>0)
   }
   orthogeneMethod <- NULL
   if (all(methods.ok == FALSE)) {
