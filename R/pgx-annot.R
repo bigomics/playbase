@@ -981,19 +981,22 @@ getHumanOrtholog <- function(organism, symbols) {
   ## test if orthogene server is reachable
   ortho_organism <- getOrthoSpecies(organism)
   mm <- c("gprofiler", "homologene", "babelgene") ## mapping methods
-  LL <- list()
-  i <- 1
+  method.ok <- c()
+  i=1
   for (i in 1:length(mm)) {
-    LL[[mm[i]]] <- try(orthogene::convert_orthologs(
+    res <- try(orthogene::convert_orthologs(
       gene_df = c("---", "CDK1"),
       input_species = ortho_organism,
+      ##input_species = "XXX",
       method = mm[i],
       verbose = FALSE
     ), silent = TRUE)
+    method.ok[i] <- (!"try-error" %in% class(res) &&
+                       inherits(res,"data.frame") &&
+                       nrow(res)>0)
   }
   orthogeneMethod <- NULL
-  methods <- unlist(lapply(LL, class))
-  if (all(unique(methods) %in% "try-error")) {
+  if (all(methods.ok == FALSE)) {
     message("[getHumanOrtholog] orthogene::convert_orthologs: all mapping methods failed. Trying biomart...")
     ## test if biomart is reachable
     res.biomart <- try(getHumanOrtholog.biomart(organism, symbols))
