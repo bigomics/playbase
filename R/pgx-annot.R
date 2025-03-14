@@ -987,7 +987,6 @@ getHumanOrtholog <- function(organism, symbols) {
     res <- try(orthogene::convert_orthologs(
       gene_df = c("---", "CDK1"),
       input_species = ortho_organism,
-      ##input_species = "XXX",
       method = mm[i],
       verbose = FALSE
     ), silent = TRUE)
@@ -995,6 +994,7 @@ getHumanOrtholog <- function(organism, symbols) {
                         inherits(res,"data.frame") &&
                         nrow(res)>0)
   }
+  names(methods.ok) <- mm
   orthogeneMethod <- NULL
   if (all(methods.ok == FALSE)) {
     message("[getHumanOrtholog] orthogene::convert_orthologs: all mapping methods failed. Trying biomart...")
@@ -1010,14 +1010,10 @@ getHumanOrtholog <- function(organism, symbols) {
       return(df)
     }
   } else {
-    methods <- methods[which(methods != "try-error")]
-    if ("gprofiler" %in% names(methods)) {
-      orthogeneMethod <- "gprofiler" ## preferred
-    } else {
-      orthogeneMethod <- names(methods)[1]
-    }
+    methods.ok <- methods.ok[which(methods.ok)]
+    orthogeneMethod <- names(methods.ok)[1]
   }
-
+  
   if (!is.null(orthogeneMethod)) {
     ## map to correct orthogene species name, if not
     ## done. SPECIES_TABLE$species are annothub names,
