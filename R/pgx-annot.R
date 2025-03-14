@@ -323,9 +323,13 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   ## get human ortholog using 'orthogene'
   cat("\ngetting human orthologs...\n")
+  dbg("-----------MNT1")
   ortho_organism <- getOrthoSpecies(organism)
+  dbg("-----------MNT2")
+  saveRDS(list(ortho_organism, annot$SYMBOL), "~/Desktop/MNT1.RDS")
   annot$ORTHOGENE <- getHumanOrtholog(ortho_organism, annot$SYMBOL)$human
-
+  dbg("-----------MNT3")
+  
   ## Return as standardized data.frame and in the same order as input
   ## probes.
   pkgname <- orgdb$packageName
@@ -989,11 +993,11 @@ getHumanOrtholog <- function(organism, symbols) {
       input_species = ortho_organism,
       method = mm[i],
       verbose = FALSE
-    ))
+    ), silent = TRUE)
   }
   orthogeneMethod <- NULL
   methods <- unlist(lapply(LL, class))
-  if (unique(methods) == "try-error") {
+  if (all(unique(methods) %in% "try-error")) {
     message("[getHumanOrtholog] orthogene::convert_orthologs: all mapping methods failed. Trying biomart...")
     ## test if biomart is reachable
     res.biomart <- try(getHumanOrtholog.biomart(organism, symbols))
