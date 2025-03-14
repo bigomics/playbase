@@ -2392,7 +2392,14 @@ colorscale <- function(x, gamma = 1) {
   colorsx[128 + ceiling(x * 127)]
 }
 
-
+#' matches pattern and returns matched substring
+#'
+#' @export
+substrmatch <- function(pattern, x) {
+  matches <- regexpr(pattern, x)
+  substr(x, matches, matches + attr(matches, "match.length") - 1)
+}
+  
 
 ## ==========================================================================
 ## ==================== END OF FILE =========================================
