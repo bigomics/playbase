@@ -323,12 +323,8 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   ## get human ortholog using 'orthogene'
   cat("\ngetting human orthologs...\n")
-  dbg("-----------MNT1")
   ortho_organism <- getOrthoSpecies(organism)
-  dbg("-----------MNT2")
-  saveRDS(list(ortho_organism, annot$SYMBOL), "~/Desktop/MNT1.RDS")
   annot$ORTHOGENE <- getHumanOrtholog(ortho_organism, annot$SYMBOL)$human
-  dbg("-----------MNT3")
   
   ## Return as standardized data.frame and in the same order as input
   ## probes.
