@@ -110,10 +110,10 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
 
   ## compute multi-gsea enrichment
   F <- pgx.getMetaMatrix(pgx)$fc
+  F <- rename_by2(F, pgx$genes, "symbol", keep.prefix=TRUE)
   mofa$mgsea <- mgsea.compute_enrichment(
     F,
     G = pgx$GMT,
-    annot = pgx$genes,
     filter = NULL,
     ntop = gset.ntop
   )
@@ -399,16 +399,9 @@ mofa.compute <- function(xdata,
   if (compute.enrichment) {
     message("computing factor enrichment...")
     symbolW <- do.call(rbind, mofa.prefix(ww_bysymbol))
-
     if (mean(rownames(symbolW) %in% rownames(GMT)) < 0.10) {
       message("WARNING! less than 10% of your features map to symbols. Please check or add a gene annotation table.")
     }
-
-    dbg("[mofa.compute] dim.GMT = ", dim(GMT))
-    dbg("[mofa.compute] dim.symbolW = ", dim(symbolW))
-    dbg("[mofa.compute] rownames.symbolW = ", head(rownames(symbolW)))
-    dbg("[mofa.compute] rownames.GMT = ", head(rownames(GMT)))
-
     gsea <- mofa.compute_enrichment(symbolW, G = GMT, ntop = gset.ntop)
   }
 
@@ -456,21 +449,11 @@ mofa.add_genesets <- function(xdata, GMT = NULL, datatypes = NULL) {
   }
 
   if (is.null(GMT)) {
-    message("combining GSETxGENE and PATHBANK genesets...")
-    stdGMT <- playdata::GSETxGENE
-    colnames(stdGMT) <- paste0("SYMBOL:", colnames(stdGMT))
-    pathbankGMT <- playdata::MSETxMETABOLITE
-    GMT <- merge_sparse_matrix(pathbankGMT, stdGMT[, ])
-    dim(GMT)
-  } else {
-    GMT <- Matrix::t(GMT) ## genesets on rows
-  }
-
-  if (is.null(GMT)) {
     message("ERROR: could not determing GMT. Please provide.")
     return(xdata)
   }
-
+  GMT <- Matrix::t(GMT) ## genesets on rows
+  
   ## convert non-ascii characters....
   ## rownames(GMT) <- iconv(rownames(GMT), "latin1", "ASCII", sub="")
   rownames(GMT) <- stringi::stri_trans_general(rownames(GMT), "latin-ascii")
@@ -541,10 +524,10 @@ mofa.compute_clusters <- function(xx, matF = NULL, along = "samples") {
 #'
 #' @export
 mofa.compute_enrichment <- function(W, G = NULL, filter = NULL, ntop = 1000) {
+
   if (is.null(G)) {
-    info("[pgx.add_GMT] Adding metabolomics genesets")
+    info("[mofa.compute_enrichment] WARNING: Adding genesets. Using GMT recommended")
     G1 <- Matrix::t(playdata::MSETxMETABOLITE)
-    info("[pgx.add_GMT] Adding transcriptomics/proteomics genesets")
     G2 <- Matrix::t(playdata::GSETxGENE)
     rownames(G2) <- paste0("SYMBOL:", rownames(G2))
     G <- merge_sparse_matrix(G1, G2)
@@ -561,8 +544,6 @@ mofa.compute_enrichment <- function(W, G = NULL, filter = NULL, ntop = 1000) {
     }
   }
 
-  dbg("[mofa.compute_enrichment] dim.G = ", dim(G))
-
   ## filter gene sets
   if (!is.null(filter)) {
     sel <- grep(filter, colnames(G))
@@ -571,7 +552,6 @@ mofa.compute_enrichment <- function(W, G = NULL, filter = NULL, ntop = 1000) {
 
   ## detect datatypes. associate with symbols
   dtypes <- unique(sub(":.*", "", rownames(W)))
-  dbg("[mofa.compute_enrichment] dtypes = ", dtypes)
   dtype2gtype <- c(
     "gx" = "SYMBOL", "px" = "SYMBOL",
     "me" = "SYMBOL", "mx" = "CHEBI"
@@ -591,21 +571,12 @@ mofa.compute_enrichment <- function(W, G = NULL, filter = NULL, ntop = 1000) {
   }
   table(sub(":.*", "", rownames(GMT)))
 
-  dbg("[mofa.compute_enrichment] dim.GMT = ", dim(GMT))
-  dbg("[mofa.compute_enrichment] rownames.GMT = ", head(rownames(GMT)))
-  dbg("[mofa.compute_enrichment] rownames.W = ", head(rownames(W)))
-
   pp <- intersect(rownames(W), rownames(GMT))
   W <- W[pp, ]
   sel <- which(Matrix::colSums(GMT[pp, ] != 0) >= 3)
 
-  dbg("[mofa.compute_enrichment] lenght(pp) = ", length(pp))
-  dbg("[mofa.compute_enrichment] lenght(sel) = ", length(sel))
-
   GMT1 <- GMT[pp, sel]
   dim(GMT1)
-
-  dbg("[mofa.compute_enrichment] dim.GMT1 = ", dim(GMT1))
 
   ## Perform geneset enrichment with fast rank-correlation. We could
   ## do with fGSEA instead but it is much slower.
@@ -1771,27 +1742,18 @@ normalize_multifc <- function(fc, by = c("sd", "mad")[1]) {
 #' Compute multi-enrichment for contrasts
 #'
 #' @export
-mgsea.compute_enrichment <- function(F, annot, filter = NULL,
-                                     G = NULL, ntop = 1000) {
+mgsea.compute_enrichment <- function(F, G, filter = NULL,
+                                     ntop = 1000) {
   ## compute enrichment for all contrasts
   message("computing phenotype enrichment...")
 
   ## ww.types=filter=G=ntop=NULL
   is.multi <- all(grepl(":", rownames(F)))
-  if (inherits(F, "matrix") && is.multi) F <- mofa.split_data(F)
+  if (inherits(F, "matrix") && is.multi)  F <- mofa.split_data(F)
   if (inherits(F, "matrix") && !is.multi) F <- list(gx = F)
   names(F)
   allowed_types <- c("mx", "px", "gx", "me")
   F <- F[names(F) %in% allowed_types]
-
-  ## make sure F is symbol. Enrichment need rownames as symbol
-  ## (as in GMT)
-  if (!is.null(annot)) {
-    F <- mofa.prefix(F)
-    F <- lapply(F, function(f) rename_by2(f, annot, "symbol"))
-  } else {
-    ## should check if by symbol!!!!
-  }
 
   ## determine type
   F.types <- ifelse(grepl("^mx|^metabo", names(F), ignore.case = TRUE),
@@ -1803,25 +1765,9 @@ mgsea.compute_enrichment <- function(F, annot, filter = NULL,
   has.mx <- any(F.types == "ChEBI")
   has.px <- any(F.types == "SYMBOL")
   if (is.null(G)) {
-    info("[mgsea.compute_enrichment] WARNING. No GMT matrix provided. Not recommended. Please use GMT from pgx object.")
-    G <- NULL
-    ## add metabolomic gene sets
-    if (has.mx) {
-      info("[mgsea.compute_enrichment] Adding metabolomics genesets")
-      G <- Matrix::t(playdata::MSETxMETABOLITE)
-      rownames(G) <- sub("^[a-zA_Z]+:", "", rownames(G)) ## TEMPORARY!!!
-    }
-    ## add SYMBOL (classic) gene sets
-    if (has.px) {
-      info("[mgsea.compute_enrichment] Adding transcriptomics/proteomics genesets")
-      if (is.null(G)) {
-        G <- Matrix::t(playdata::GSETxGENE)
-      } else {
-        G <- merge_sparse_matrix(G, Matrix::t(playdata::GSETxGENE))
-      }
-    }
+    info("[mgsea.compute_enrichment] WARNING. No GMT matrix provided. Please provide GMT.")
+    return(NULL)
   }
-  dim(G)
 
   ## filter gene sets
   if (!is.null(filter)) {

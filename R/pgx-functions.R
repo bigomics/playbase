@@ -4,6 +4,83 @@
 ##
 
 
+
+
+#' Default merge by columns (cbind) with shared features on
+#' rows. Features are union of input matrices.
+#'
+#' @export
+merge_sparse_matrix <- function(m1, m2, margin=NULL, verbose=1) {
+  cbind_sparse_matrix(m1=m1, m2=m2)
+}
+
+#' Merge Sparse Matrix
+#'
+#' Merges two sparse matrices by combining column-wise (aka cbind) but
+#' ensuring the same gene order. Union of features (gene/proteins) are
+#' on rows (i.e. rownames are features names). Commonly needed for
+#' merging multiple pgx$GMT matrices (gene on rows). 
+#'
+#' @param m1 The first sparse matrix.
+#' @param m2 The second sparse matrix.
+#'
+#' @return A merged sparse matrix with combined columns and shared
+#'   features on rows
+#' 
+#' @export
+cbind_sparse_matrix <- function(m1, m2) {
+
+  # Get the union of row names (genes) from both matrices
+  gene_vector <- unique(c(rownames(m1), rownames(m2)))
+
+  # Ensure m1 has all genes
+  if (!all(gene_vector %in% rownames(m1))) {
+    missing_genes_m1 <- setdiff(gene_vector, rownames(m1))
+    zero_rows_m1 <- Matrix::Matrix(0, nrow = length(missing_genes_m1), ncol = ncol(m1), sparse = TRUE)
+    rownames(zero_rows_m1) <- missing_genes_m1
+    m1 <- rbind(m1, zero_rows_m1)
+  }
+
+  # Ensure m2 has all genes
+  if (!all(gene_vector %in% rownames(m2))) {
+    missing_genes_m2 <- setdiff(gene_vector, rownames(m2))
+    zero_rows_m2 <- Matrix::Matrix(0, nrow = length(missing_genes_m2), ncol = ncol(m2), sparse = TRUE)
+    rownames(zero_rows_m2) <- missing_genes_m2
+    m2 <- rbind(m2, zero_rows_m2)
+  }
+
+  # Reorder rows to match gene_vector
+  m1 <- m1[gene_vector, , drop = FALSE]
+  m2 <- m2[gene_vector, , drop = FALSE]
+
+  # Combine the matrices column-wise
+  combined_gmt <- cbind(m1, m2)
+
+  # If duplicated genesets, then keep only the largest one
+  combined_gmt <- combined_gmt[, order(-Matrix::colSums(combined_gmt != 0))]
+  combined_gmt <- combined_gmt[, !duplicated(colnames(combined_gmt))]
+
+  return(combined_gmt)
+}
+
+#' Merge Sparse Matrix
+#'
+#' Merges two sparse matrices by combining row-wise (aka rbind) but
+#' ensuring the same gene order. Union of features (gene/proteins) are
+#' on columns (i.e. column ames are features names). This is commonly
+#' done for merging GSETxGENE and MSETxMETABOLITE matrices.
+#'
+#' @param m1 The first sparse matrix.
+#' @param m2 The second sparse matrix.
+#'
+#' @return A merged sparse matrix with combined rows and shared
+#'   features in columns
+#'
+#' @export
+rbind_sparse_matrix <- function(m1, m2) {
+  Matrix::t(cbind_sparse_matrix( m1=Matrix::t(m1), m2=Matrix::t(m2) ))
+}
+
 #' Fast matrix correlation
 #'
 #' @export
