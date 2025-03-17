@@ -39,9 +39,8 @@ pgx.checkINPUT <- function(
       check_return$e27 <- paste("gene:", rownames(ANY_NON_NUMERIC), " and ", "sample:", colnames(df_clean)[ANY_NON_NUMERIC[, 2]])
     }
 
-    # replace infinite values in counts by the maximum value of the feature + 10%
-    # check if there are any infinite values
-    ## ANY_INFINITE <- which(is.infinite(df_clean), arr.ind = TRUE)
+    # check if there are any infinite values. replace infinite values
+    # in counts by NA.
     ANY_INFINITE <- which(df_clean == Inf | df_clean == -Inf, arr.ind = TRUE)
 
     if (length(ANY_INFINITE) > 0 && PASS) {
