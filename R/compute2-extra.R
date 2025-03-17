@@ -443,9 +443,8 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
   for (i in seq_along(ref.db)) {
     f <- names(ref.db)[i]
     message("[compute_drugActivityEnrichment] computing activity CMAP for ", f)
-
     X <- ref.db[[i]]
-    drug_test_genes <- rownames(X)
+    l1000genes <- rownames(X)
     if (!pgx$organism %in% c("Human", "human")) {
       rowid <- data.table::chmatch(rownames(X), pgx$genes$human_ortholog, nomatch = NA)
       rownames(X) <- pgx$genes$human_ortholog[rowid]
@@ -456,8 +455,9 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
     ndrugs <- length(table(xdrugs))
     is.drug <- grepl("activity|drug|ChemPert", f, ignore.case = TRUE)
 
+    out1 <- NULL
     out1 <- pgx.computeDrugEnrichment(
-      obj = pgx,
+      pgx = pgx,
       X = X,
       xdrugs = xdrugs,
       methods = c("GSEA", "cor"),
@@ -534,7 +534,9 @@ compute_drugSensitivityEnrichment <- function(pgx, libx.dir = NULL) {
     xdrugs <- gsub("[@_].*$", "", colnames(X))
 
     out1 <- pgx.computeDrugEnrichment(
-      pgx, X, xdrugs,
+      pgx = pgx,
+      X = X,
+      xdrugs = xdrugs,
       methods = c("GSEA", "cor"),
       nmin = 10,
       nprune = 1000,
