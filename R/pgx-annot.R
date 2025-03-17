@@ -141,22 +141,21 @@ getGeneAnnotation <- function(
 
   ## first annotate with ANNOTHUB
   info("[getGeneAnnotation] annotating with ANNOTHUB")
-  annot <- getGeneAnnotation.ANNOTHUB(
+  annot <- try(getGeneAnnotation.ANNOTHUB(
     organism = organism,
     probes = probes,
     use.ah = use.ah,
     verbose = verbose
-  )
+  ))
   
   ## fallback with ORTHOGENE
-  if(is.null(annot)) {
+  if(is.null(annot) || "try-error" %in% class(annot)) {
     dbg("[getGeneAnnotation] fallback to ORTHOGENE ")  
     annot <- try(getGeneAnnotation.ORTHOGENE(
       organism = organism,
       probes = probes,
       verbose = verbose
     ))
-    dbg("[getGeneAnnotation] ORTHOGENE: class.annot= ", class(annot))      
     if("try-error" %in% class(annot)) {
       annot <- NULL
     }
@@ -358,7 +357,7 @@ getGeneAnnotation.ANNOTHUB <- function(
         )
       ))
       head(missing.annot)
-      missing.key <- missing.annot[, missing.probe_type, drop = FALSE]
+      missing.key <- missing.annot[, missing.probe_type]
       missing.annot$PROBE <- names(missing.probes[match(missing.key, missing.probes1)])
       jj <- match(missing.annot$PROBE, probes)
       colnames(missing.annot) <- colnames(annot)
@@ -1137,6 +1136,7 @@ getHumanOrtholog <- function(organism, symbols) {
     return(df)
   }
 }
+
 
 #' @title Show some probe types for selected organism
 #'
