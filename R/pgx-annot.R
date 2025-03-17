@@ -325,7 +325,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   cat("\ngetting human orthologs...\n")
   ortho_organism <- getOrthoSpecies(organism)
   annot$ORTHOGENE <- getHumanOrtholog(ortho_organism, annot$SYMBOL)$human
-  
+
   ## Return as standardized data.frame and in the same order as input
   ## probes.
   pkgname <- orgdb$packageName
@@ -752,26 +752,26 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
 
-  if(is.null(datatype) && all(grepl("[:]",probes))) {
+  if (is.null(datatype) && all(grepl("[:]", probes))) {
     dbg("[detect_probetype] datatype is multi-omics")
     datatype <- "multi-omics"
   }
-  
+
   if (!is.null(datatype) && datatype == "metabolomics") {
     probe_type <- mx.detect_probetype(probes)
     return(probe_type)
   }
 
   if (!is.null(datatype) && datatype == "multi-omics") {
-    mx.probes <- sub("^mx:","",grep("^mx:", probes, value=TRUE))
-    px.probes <- sub("^px:","",grep("^px:", probes, value=TRUE))
-    gx.probes <- sub("^gx:","",grep("^gx:", probes, value=TRUE))    
-    gx.probe_types=px.probe_types=mx.probe_types=NA
-    if(length(gx.probes)) gx.probe_types <- detect_probetype(organism, gx.probes)
-    if(length(px.probes)) px.probe_types <- detect_probetype(organism, px.probes)    
-    if(length(mx.probes)) mx.probe_types <- mx.detect_probetype(mx.probes)    
-    probe_type <- c(gx=gx.probe_types, px=px.probe_types, mx=mx.probe_types)
-    dtypes <- sort(unique(sub(":.*","",probes)))
+    mx.probes <- sub("^mx:", "", grep("^mx:", probes, value = TRUE))
+    px.probes <- sub("^px:", "", grep("^px:", probes, value = TRUE))
+    gx.probes <- sub("^gx:", "", grep("^gx:", probes, value = TRUE))
+    gx.probe_types <- px.probe_types <- mx.probe_types <- NA
+    if (length(gx.probes)) gx.probe_types <- detect_probetype(organism, gx.probes)
+    if (length(px.probes)) px.probe_types <- detect_probetype(organism, px.probes)
+    if (length(mx.probes)) mx.probe_types <- mx.detect_probetype(mx.probes)
+    probe_type <- c(gx = gx.probe_types, px = px.probe_types, mx = mx.probe_types)
+    dtypes <- sort(unique(sub(":.*", "", probes)))
     probe_type <- probe_type[dtypes]
     return(probe_type)
   }
@@ -807,7 +807,7 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     # get random probes for query
     probes <- sample(probes, nprobe)
   }
-  
+
   ## try different cleaning methods. NEED RETHINK!!!! refseq has
   ## underscore!
   probes0 <- probes
@@ -819,17 +819,16 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     orgdb,
     keys = keys(orgdb, "ENTREZID"),
     keytype = "ENTREZID",
-    columns = intersect(c("SYMBOL","GENENAME"),keytypes)
+    columns = intersect(c("SYMBOL", "GENENAME"), keytypes)
   )
   org_symbols <- NULL
   org_genenames <- NULL
-  if("SYMBOL" %in% colnames(org_annot)) org_symbols <- setdiff(org_annot[,"SYMBOL"],c("",NA))
-  if("GENENAME" %in% colnames(org_annot)) org_genenames <- setdiff(org_annot[,"GENENAME"],c("",NA))
-  
+  if ("SYMBOL" %in% colnames(org_annot)) org_symbols <- setdiff(org_annot[, "SYMBOL"], c("", NA))
+  if ("GENENAME" %in% colnames(org_annot)) org_genenames <- setdiff(org_annot[, "GENENAME"], c("", NA))
+
   # Iterate over probe types
   key <- keytypes[1]
   for (key in keytypes) {
-
     probe_matches <- data.frame(NULL)
     # add symbol and genename on top of key as they will be used to
     # count the real number of probe matches
@@ -845,19 +844,18 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
       silent = TRUE
     )))
 
-    if(nrow(probe_matches) && ncol(probe_matches)) {
-    
+    if (nrow(probe_matches) && ncol(probe_matches)) {
       ## extra check: if key is SYMBOL or GENENAME first column can be
       ## wrongly set as the key.
-      if("SYMBOL" %in% colnames(probe_matches) && !is.null(org_symbols)) {
-        not.symbol <- !(probe_matches[,"SYMBOL"] %in% org_symbols)
-        probe_matches[,"SYMBOL"][not.symbol] <- NA
+      if ("SYMBOL" %in% colnames(probe_matches) && !is.null(org_symbols)) {
+        not.symbol <- !(probe_matches[, "SYMBOL"] %in% org_symbols)
+        probe_matches[, "SYMBOL"][not.symbol] <- NA
       }
-      if("GENENAME" %in% colnames(probe_matches) && !is.null(org_genenames)) {
-        not.gene <- !(probe_matches[,"GENENAME"] %in% org_genenames)
-        probe_matches[,"GENENAME"][not.gene] <- NA
+      if ("GENENAME" %in% colnames(probe_matches) && !is.null(org_genenames)) {
+        not.gene <- !(probe_matches[, "GENENAME"] %in% org_genenames)
+        probe_matches[, "GENENAME"][not.gene] <- NA
       }
-      
+
       # set empty character to NA, as we only count not-NA to define probe type
       probe_matches[probe_matches == ""] <- NA
       # check which probe types (genename, symbol) return the most matches
@@ -866,14 +864,14 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
       if ("GENENAME" %in% colnames(probe_matches)) n2 <- sum(!is.na(probe_matches[, "GENENAME"]))
       matchratio <- max(n1, n2) / (1e-4 + nrow(probe_matches))
       key_matches[key] <- matchratio
-      
+
       ## stop search prematurely if matchratio > 99%
       if (matchratio > 0.99) break()
-    }    
+    }
   }
   key_matches <- round(key_matches, 4)
   key_matches
-  
+
   ## Return top match
   ##  key_matches
   top_match <- NULL
@@ -884,8 +882,8 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     }
     return(NA)
   } else {
-    if (max(key_matches,na.rm=TRUE) < 0.50) {
-      message("WARNING: Low matching ratio. Max match = ", max(key_matches,na.rm=TRUE))
+    if (max(key_matches, na.rm = TRUE) < 0.50) {
+      message("WARNING: Low matching ratio. Max match = ", max(key_matches, na.rm = TRUE))
     }
     top_match <- names(which.max(key_matches))
   }
@@ -982,7 +980,7 @@ getHumanOrtholog <- function(organism, symbols) {
   ortho_organism <- getOrthoSpecies(organism)
   mm <- c("gprofiler", "homologene", "babelgene") ## mapping methods
   methods.ok <- c()
-  i=1
+  i <- 1
   for (i in 1:length(mm)) {
     res <- try(orthogene::convert_orthologs(
       gene_df = c("---", "CDK1"),
@@ -991,8 +989,8 @@ getHumanOrtholog <- function(organism, symbols) {
       verbose = FALSE
     ), silent = TRUE)
     methods.ok[i] <- (!"try-error" %in% class(res) &&
-                        inherits(res,"data.frame") &&
-                        nrow(res)>0)
+      inherits(res, "data.frame") &&
+      nrow(res) > 0)
   }
   names(methods.ok) <- mm
   orthogeneMethod <- NULL
@@ -1013,7 +1011,7 @@ getHumanOrtholog <- function(organism, symbols) {
     methods.ok <- methods.ok[which(methods.ok)]
     orthogeneMethod <- names(methods.ok)[1]
   }
-  
+
   if (!is.null(orthogeneMethod)) {
     ## map to correct orthogene species name, if not
     ## done. SPECIES_TABLE$species are annothub names,
