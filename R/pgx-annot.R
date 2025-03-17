@@ -817,7 +817,7 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   ## Get all organism symbols
   org_annot <- AnnotationDbi::select(
     orgdb,
-    keys = keys(orgdb),
+    keys = keys(orgdb, "ENTREZID"),
     keytype = "ENTREZID",
     columns = intersect(c("SYMBOL","GENENAME"),keytypes)
   )
