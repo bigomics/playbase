@@ -5,7 +5,7 @@
 \title{Compute drug enrichment from expression data}
 \usage{
 pgx.computeDrugEnrichment(
-  obj,
+  pgx,
   X,
   xdrugs,
   drug_info = NULL,
