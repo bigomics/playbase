@@ -444,7 +444,6 @@ compute_drugActivityEnrichment <- function(pgx, libx.dir = NULL) {
     f <- names(ref.db)[i]
     message("[compute_drugActivityEnrichment] computing activity CMAP for ", f)
     X <- ref.db[[i]]
-    l1000genes <- rownames(X)
     if (!pgx$organism %in% c("Human", "human")) {
       rowid <- data.table::chmatch(rownames(X), pgx$genes$human_ortholog, nomatch = NA)
       rownames(X) <- pgx$genes$human_ortholog[rowid]
