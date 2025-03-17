@@ -1045,7 +1045,7 @@ getHumanOrtholog.biomart <- function(organism, symbols) {
     ))
     if ("try-error" %in% class(res.biomart)) {
       message("[getHumanOrtholog] biomart::getLDS failed to contact server or use mirror")
-      orthogens <- NULL
+      orthogenes <- NULL
       return(orthogenes)
     } else {
       orthogenes <- try(biomaRt::getLDS(
@@ -1058,7 +1058,7 @@ getHumanOrtholog.biomart <- function(organism, symbols) {
       ))
       if ("try-error" %in% class(res.biomart)) {
         message("[getHumanOrtholog] biomart::getLDS failed")
-        orthogens <- NULL
+        orthogenes <- NULL
         return(orthogenes)
       } else {
         return(orthogenes)
