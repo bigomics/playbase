@@ -4,7 +4,7 @@
 \alias{mgsea.compute_enrichment}
 \title{Compute multi-enrichment for contrasts}
 \usage{
-mgsea.compute_enrichment(F, annot, filter = NULL, G = NULL, ntop = 1000)
+mgsea.compute_enrichment(F, G, filter = NULL, ntop = 1000)
 }
 \description{
 Compute multi-enrichment for contrasts

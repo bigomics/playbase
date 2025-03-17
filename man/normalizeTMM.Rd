@@ -4,7 +4,12 @@
 \alias{normalizeTMM}
 \title{Normalize counts with TMM method}
 \usage{
-normalizeTMM(counts, log = FALSE, method = "TMM")
+normalizeTMM(
+  counts,
+  log = FALSE,
+  prior = 1,
+  method = c("TMM", "TMMwsp", "RLE", "upperquartile", "none")[1]
+)
 }
 \arguments{
 \item{counts}{Count matrix with genes in rows and samples in columns}
