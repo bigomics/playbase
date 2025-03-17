@@ -63,71 +63,51 @@ pgx.createComboDrugAnnot <- function(combo, annot0) {
 #' containing the enrichment results for each drug.
 #'
 #' @export
-pgx.computeDrugEnrichment <- function(obj, X, xdrugs, drug_info = NULL,
+pgx.computeDrugEnrichment <- function(pgx, X, xdrugs, drug_info = NULL,
                                       methods = c("GSEA", "cor"),
                                       nmin = 15, nprune = 250, contrast = NULL) {
-  ## 'obj'   : can be ngs object or fold-change matrix
+  ## 'pgx'   : can be ngs object or fold-change matrix
   ## X       : drugs profiles (may have multiple for one drug)
   ## xdrugs  : drug associated with profile
+
+  if(!all(c("gx.meta","genes") %in% names(pgx))) {
+    stop("[pgx.computeDrugEnrichment] FATAL. not a pgx object")
+  }
 
   if (is.null(X)) {
     X <- playdata::L1000_ACTIVITYS_N20D1011
     dim(X)
   }
-
-  if ("gx.meta" %in% names(obj)) {
-    FC <- pgx.getMetaMatrix(obj)$fc
-    ## check if multi-omics
-    is.multiomics <- any(grepl("\\[gx\\]|\\[mrna\\]", rownames(FC)))
-    if (is.multiomics) {
-      jj <- grep("\\[gx\\]|\\[mrna\\]", rownames(FC))
-      FC <- FC[jj, , drop = FALSE]
-    }
-    rownames(FC) <- playbase::probe2symbol(rownames(FC), obj$genes)
-    rownames(FC) <- toupper(sub(".*:|.*\\]", "", rownames(FC)))
-
-    FC <- FC[order(-rowMeans(FC**2, na.rm = TRUE)), , drop = FALSE]
-    FC <- FC[!duplicated(rownames(FC)), , drop = FALSE]
-  } else {
-    ## it is a matrix
-    FC <- obj
-  }
-
+  
+  FC <- pgx.getMetaMatrix(pgx)$fc
+  FC <- FC[!duplicated(rownames(FC)), , drop = FALSE]
+  FC <- collapse_by_humansymbol(FC, annot = pgx$genes)
+  
   if (is.null(contrast)) {
     contrast <- colnames(FC)
   }
   contrast <- intersect(contrast, colnames(FC))
-
   FC <- FC[, contrast, drop = FALSE]
-
-  if (!obj$organism %in% c("Human", "human")) {
-    human_genes <- ifelse(
-      !obj$genes$human_ortholog %in% c("", "-", "NA", NA),
-      obj$genes$human_ortholog,
-      toupper(obj$genes$symbol)
-    )
-    rownames(FC) <- human_genes
+  
+  ## test for overlap
+  gg <- intersect(rownames(X), rownames(FC))
+  if (length(gg) < 20) {
+    message("WARNING::: pgx.computeDrugEnrichment : not enough common genes!!")
+    return(NULL)
   }
 
   ## create drug meta sets
   meta.gmt <- tapply(colnames(X), xdrugs, list)
   meta.gmt <- meta.gmt[which(sapply(meta.gmt, length) >= nmin)]
-
   if (length(meta.gmt) == 0) {
     message("WARNING::: pgx.computeDrugEnrichment : no valid genesets!!")
     return(NULL)
   }
 
-  ## first level (rank) correlation
+  ## gene set enrichment by rank correlation. If X is sparse we can
+  ## use the faster corSparse().
   message("Calculating first level rank correlation ...")
-  gg <- intersect(rownames(X), rownames(FC))
-
-  if (length(gg) < 20) {
-    message("WARNING::: pgx.computeDrugEnrichment : not enough common genes!!")
-    return(NULL)
-  }
   if (any(class(X) == "dgCMatrix")) {
-    ## gene set enrichment by rank correlation
     fx <- apply(FC[gg, , drop = FALSE], 2, rank)
     R1 <- qlcMatrix::corSparse(X[gg, ], fx)
   } else {
