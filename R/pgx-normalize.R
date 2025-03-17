@@ -209,13 +209,14 @@ pgx.countNormalization <- function(x, methods, ref = NULL, rm.zero = FALSE) {
 #' Normalized, log2-transformed matrix.
 #'
 #' @export
-pgx.countNormalization.beta <- function(X, method = "CPM", ref = NULL, prior = 1) {
+normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {  
   ## Column-wise normalization (along samples).
   ## x:      log2-transformed counts + prior
   ## method: single method
   ## prior:  prior used for log2-transformation. 
   m <- method
-  methods <- c("CPM", "quantile", "CPM+quantile", "maxMedian", "maxSum", "reference")
+  methods <- c("CPM", "quantile", "CPM+quantile","TMM",
+    "maxMedian", "maxSum", "reference")
   if (!m %in% methods) {
     stop("[pgx.countNormalization.beta]: unknown mormalization method")
   }
@@ -223,16 +224,22 @@ pgx.countNormalization.beta <- function(X, method = "CPM", ref = NULL, prior = 1
   if (m == "CPM") {
     X <- logCPM(counts = counts, total = 1e+06, prior = prior, log = TRUE)
   } else if (m == "quantile") {
-    X <- log2(limma::normalizeQuantiles(counts) + prior)
+    X <- limma::normalizeQuantiles(X)
   } else if (m == "CPM+quantile") {
     X <- logCPM(counts = counts, total = 1e+06, prior = prior, log = TRUE)
     X <- limma::normalizeQuantiles(X)
+  } else if (m == "TMM") {
+    tmm <- normalizeTMM(counts, log = FALSE, method = "TMM") 
+    X <- log2(tmm + prior)  ## we do log separate, not by TMM because prior 
   } else if (m == "maxMedian") {
-    X <- maxMedianNormalization(counts = counts, prior = prior, toLog = TRUE)
+    #X <- maxMedianNormalization(counts = counts, prior = prior, toLog = TRUE)
+    X <- maxMedianNormalization.logX(X) 
   } else if (m == "maxSum") {
-    X <- maxSumNormalization(counts = counts, prior = prior, toLog = TRUE)
+    # X <- maxSumNormalization(counts = counts, prior = prior, toLog = TRUE)
+    X <- maxSumNormalization.logX(X) 
   } else if (m == "reference") {
-    X <- referenceNormalization(counts = counts, ref = ref, prior = prior, toLog = TRUE)
+    # X <- referenceNormalization(counts = counts, ref = ref, prior = prior, toLog = TRUE)
+    X <- referenceNormalization.logX(X, ref = ref)
   }
   return(X)
 }
@@ -325,9 +332,8 @@ logCPM <- function(counts, total = 1e6, prior = 1, log = TRUE) {
   }
 }
 
-
 #' @export
-edgeR.normalizeCounts <- function(M, method = c("TMM", "TMMwsp", "RLE", "upperquartile", "none")) {
+edgeR.normalizeCounts.DEPRECATED <- function(M, method = c("TMM", "TMMwsp", "RLE", "upperquartile", "none")) {
   method <- method[1]
   dge <- edgeR::DGEList(M)
   dge <- edgeR::calcNormFactors(dge, method = method)
@@ -361,10 +367,12 @@ edgeR.normalizeCounts <- function(M, method = c("TMM", "TMMwsp", "RLE", "upperqu
 #' norm_counts <- normalizeTMM(counts)
 #' }
 #' @export
-normalizeTMM <- function(counts, log = FALSE, method = "TMM") {
+normalizeTMM <- function(counts, log = FALSE, prior = 1,
+                         method = c("TMM", "TMMwsp", "RLE", "upperquartile", "none")[1]) {
+  method <- method[1]
   dge <- edgeR::DGEList(as.matrix(counts), group = NULL)
   dge <- edgeR::calcNormFactors(dge, method = method)
-  edgeR::cpm(dge, log = log)
+  edgeR::cpm(dge, log = log, prior.count = prior)
 }
 
 
@@ -532,6 +540,12 @@ maxMedianNormalization <- function(counts, toLog = TRUE, prior = 0) {
   return(X)
 }
 
+maxMedianNormalization.logX <- function(X) {
+  mx <- matrixStats::colMedians(X, na.rm = TRUE)
+  X <- t(t(X) - mx) + max(mx, na.rm = TRUE)
+  return(X)
+}
+
 #' Normalization for TMT and Silac data: maxSumNormalization
 #'
 #' @description This function normalizes TMT and Silac data using max sum of intensities
@@ -560,6 +574,22 @@ maxSumNormalization <- function(counts, toLog = TRUE, prior = 0) {
   return(X)
 }
 
+maxSumNormalization.logX <- function(X) {
+  X1 <- X
+  X1[is.infinite(X1)] <- NA
+  mx <- log2(matrixStats::colSums2(2**X1, na.rm = TRUE))
+  X <- t(t(X) - mx) + max(mx, na.rm = TRUE)
+  return(X)
+}
+
+normalizeMeans.logX <- function(X) {
+  X1 <- X
+  X1[is.infinite(X1)] <- NA
+  mx <- colMeans(X1, na.rm = TRUE)
+  X <- t(t(X) - mx) + max(mx, na.rm = TRUE)
+  return(X)
+}
+
 #' @export
 referenceNormalization <- function(counts, ref = 0.01, toLog = TRUE, prior = 0,
                                    bring.back = TRUE) {
@@ -582,5 +612,23 @@ referenceNormalization <- function(counts, ref = 0.01, toLog = TRUE, prior = 0,
   } else {
     X <- counts
   }
+  return(X)
+}
+
+referenceNormalization.logX <- function(X, ref = 0.01, bring.back = TRUE) {
+  if (is.null(ref) || (length(ref) == 1 && is.numeric(ref[1]))) {
+    ## If no reference gene/proteins are given, we take the most
+    ## 'stable' genes, i.e. lowest SD in rank.
+    rnk.sd <- apply(apply(X, 2, rank, na.last = "keep"), 1, sd, na.rm = TRUE)
+    nref <- ceiling(ref * nrow(X))
+    ref <- head(names(sort(rnk.sd)), nref)
+  }
+  ref <- intersect(ref, rownames(X))
+  if (length(ref) == 0) {
+    return(X)
+  }
+  mx <- colMeans(X[ref, , drop = FALSE], na.rm = TRUE)
+  X <- t(t(X) - mx)
+  if (bring.back) X <- X + mean(mx, na.rm = TRUE)
   return(X)
 }
