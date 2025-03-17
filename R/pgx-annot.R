@@ -325,7 +325,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   cat("\ngetting human orthologs...\n")
   ortho_organism <- getOrthoSpecies(organism)
   annot$ORTHOGENE <- getHumanOrtholog(ortho_organism, annot$SYMBOL)$human
-
+  
   ## Return as standardized data.frame and in the same order as input
   ## probes.
   pkgname <- orgdb$packageName
@@ -981,19 +981,22 @@ getHumanOrtholog <- function(organism, symbols) {
   ## test if orthogene server is reachable
   ortho_organism <- getOrthoSpecies(organism)
   mm <- c("gprofiler", "homologene", "babelgene") ## mapping methods
-  LL <- list()
-  i <- 1
+  methods.ok <- c()
+  i=1
   for (i in 1:length(mm)) {
-    LL[[mm[i]]] <- try(orthogene::convert_orthologs(
+    res <- try(orthogene::convert_orthologs(
       gene_df = c("---", "CDK1"),
       input_species = ortho_organism,
       method = mm[i],
       verbose = FALSE
-    ))
+    ), silent = TRUE)
+    methods.ok[i] <- (!"try-error" %in% class(res) &&
+                        inherits(res,"data.frame") &&
+                        nrow(res)>0)
   }
+  names(methods.ok) <- mm
   orthogeneMethod <- NULL
-  methods <- unlist(lapply(LL, class))
-  if (unique(methods) == "try-error") {
+  if (all(methods.ok == FALSE)) {
     message("[getHumanOrtholog] orthogene::convert_orthologs: all mapping methods failed. Trying biomart...")
     ## test if biomart is reachable
     res.biomart <- try(getHumanOrtholog.biomart(organism, symbols))
@@ -1007,14 +1010,10 @@ getHumanOrtholog <- function(organism, symbols) {
       return(df)
     }
   } else {
-    methods <- methods[which(methods != "try-error")]
-    if ("gprofiler" %in% names(methods)) {
-      orthogeneMethod <- "gprofiler" ## preferred
-    } else {
-      orthogeneMethod <- names(methods)[1]
-    }
+    methods.ok <- methods.ok[which(methods.ok)]
+    orthogeneMethod <- names(methods.ok)[1]
   }
-
+  
   if (!is.null(orthogeneMethod)) {
     ## map to correct orthogene species name, if not
     ## done. SPECIES_TABLE$species are annothub names,
