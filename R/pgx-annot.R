@@ -259,6 +259,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   if (is.null(probes)) {
     probes <- AnnotationDbi::keys(orgdb)
   }
+  ## Backup probes as probes0, give names of probes the original name.
   probes0 <- probes
   names(probes) <- probes0
 
@@ -332,9 +333,10 @@ getGeneAnnotation.ANNOTHUB <- function(
   annot <- annot[match(probes, annot[, probe_type]), ]
   annot$PROBE <- names(probes) ## original probe names
 
-  ## --------------------------------------------
-  ## second pass for missing symbols
-  ## --------------------------------------------
+  ## ---------------------------------------------------------------------------------
+  ## Second pass for missing symbols. Still trying annothub but
+  ## missing symbols may map to different keytype.
+  ## ------------------------------------------------------------------------------------
   is.missing <- (is.na(annot$SYMBOL) | annot$SYMBOL == "")
   missing.probes <- probes[which(is.missing)] ## probes match annot!
   missing.probes <- missing.probes[!is.na(missing.probes)]
@@ -359,8 +361,17 @@ getGeneAnnotation.ANNOTHUB <- function(
       head(missing.annot)
       missing.key <- missing.annot[, missing.probe_type]
       missing.annot$PROBE <- names(missing.probes[match(missing.key, missing.probes1)])
+
+      # some organisms do not provide SYMBOL but rather GENENAME (e.g. yeast)
+      if (!"SYMBOL" %in% colnames(missing.annot)) {
+        missing.annot$SYMBOL <- missing.annot$GENENAME
+      }
+      for(k in setdiff(colnames(annot),colnames(missing.annot))) {
+        missing.annot[[k]] <- NA
+      }
+      kk <- match(colnames(annot),colnames(missing.annot))
+      missing.annot <- missing.annot[,kk]
       jj <- match(missing.annot$PROBE, probes)
-      colnames(missing.annot) <- colnames(annot)
       annot[jj, ] <- missing.annot
     }
   }
