@@ -90,7 +90,6 @@ pgx.computeDrugEnrichment <- function(pgx, X, xdrugs, drug_info = NULL,
   FC <- FC[, contrast, drop = FALSE]
   
   ## test for overlap
-  message("Calculating first level rank correlation ...")
   gg <- intersect(rownames(X), rownames(FC))
   if (length(gg) < 20) {
     message("WARNING::: pgx.computeDrugEnrichment : not enough common genes!!")
@@ -107,6 +106,7 @@ pgx.computeDrugEnrichment <- function(pgx, X, xdrugs, drug_info = NULL,
 
   ## gene set enrichment by rank correlation. If X is sparse we can
   ## use the faster corSparse().
+  message("Calculating first level rank correlation ...")
   if (any(class(X) == "dgCMatrix")) {
     fx <- apply(FC[gg, , drop = FALSE], 2, rank)
     R1 <- qlcMatrix::corSparse(X[gg, ], fx)
