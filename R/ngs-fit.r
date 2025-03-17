@@ -80,7 +80,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   ## Do not test features with full missingness.
   ## Put them back in the TopTable
   counts <- counts[which(rowMeans(is.na(counts)) < 1), ]
-
   if (!is.null(X)) {
     X <- X[which(rowMeans(is.na(X)) < 1), ]
   }
@@ -104,9 +103,10 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     design <- NULL
   }
 
-  ## ------------------------------------------------------------------
-  ## define transformation methods: log2CPM for counts
-  ## ------------------------------------------------------------------
+  ## sanity check: counts must be positive
+  counts <- pmax(counts, 0)
+  
+  ## define default transformation: log2CPM  (REALLY????)
   if (is.null(X)) {
     message("[ngs.fitContrastsWithAllMethods] prior CPM counts =", prior.cpm)
     message("[ngs.fitContrastsWithAllMethods] CPM scale =", cpm.scale)
