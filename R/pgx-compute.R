@@ -430,6 +430,14 @@ pgx.createPGX <- function(counts,
     pgx$genes$symbol <- gsub(".*:|[.].*","",rownames(pgx$genes))
   }  
 
+  mean.nz <- function(x) round(100*mean(!is.na(x) & x!=""),3)
+  sum.nz <- function(x) sum(!is.na(x) & x!="")
+  dbg("[pgx.createPGX] num symbols = ",sum.nz(pgx$genes$symbol))
+  dbg("[pgx.createPGX] ratio symbols = ",mean.nz(pgx$genes$symbol),"%")
+  dbg("[pgx.createPGX] num human_ortholog = ",sum.nz(pgx$genes$human_ortholog))
+  dbg("[pgx.createPGX] ratio human_ortholog = ",mean.nz(pgx$genes$human_ortholog),"%")
+
+  
   ## -------------------------------------------------------------------
   ## Filter out not-expressed
   ## -------------------------------------------------------------------
@@ -489,6 +497,12 @@ pgx.createPGX <- function(counts,
   ## if feature/rownames are not symbol, we paste symbol to row name.
   pp <- sub(".*:|", "", rownames(pgx$genes))
   rows_not_symbol <- mean(pp == pgx$genes$symbol, na.rm = TRUE) < 0.2
+
+  dbg("[pgx.createPGX] dim(pgx$genes) = ",dim(pgx$genes))
+  dbg("[pgx.createPGX] length(pp) = ",length(pp))
+  dbg("[pgx.createPGX] convert.hugo = ",convert.hugo)
+  dbg("[pgx.createPGX] rows_not_symbol = ",rows_not_symbol)
+
   if (convert.hugo && rows_not_symbol) {
     symbol <- pgx$genes$symbol
     symbol[is.na(symbol)] <- ""

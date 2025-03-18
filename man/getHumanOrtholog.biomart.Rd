@@ -7,7 +7,7 @@
 This is an alternative to orthogene::map_genes failure.
 Unfortunately, biomart is *much* less reliable than orthogene (often down).}
 \usage{
-getHumanOrtholog.biomart(organism, symbols)
+getHumanOrtholog.biomart(organism, symbols, verbose = 1)
 }
 \description{
 Get human ortholog from given symbols of organism by using
