@@ -15,6 +15,8 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
                             dir = "both", ppi = c("STRING", "GRAPHITE"),
                             gset.rho = 0.8, gset.filter = NULL,
                             as.name = NULL) {
+
+  ## get foldchange matrix
   F <- pgx.getMetaMatrix(pgx, level = level)$fc
   if (is.null(contrast)) {
     fx <- rowMeans(F**2, na.rm = TRUE)**0.5
@@ -35,10 +37,20 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
     fx <- normalize_multifc(fx, by = "mad")
   }
 
+  ## We need to harmonize organism symbol with the PPI database that
+  ## is based on human ortholog. What node symbol/names do we use in
+  ## the PCSF??
   if (level == "gene") {
     ## names(fx) <- pgx$genes[rownames(F), "human_ortholog"]
-    fx <- collapse_by_humansymbol(fx, pgx$genes) ## safe
+    dbg("[pgx.computePCSF] colnames.pgx.genes=", colnames(pgx$genes))
+    dbg("[pgx.computePCSF] len.fx=", length(fx))
+    dbg("[pgx.computePCSF] names.fx=", head(names(fx)))    
+    fx <- rename_by(fx, pgx$genes, "symbol") 
+    ##fx <- collapse_by_humansymbol(fx, pgx$genes)
+    dbg("[pgx.computePCSF] len.fx=", length(fx))
+    dbg("[pgx.computePCSF] names.fx=", head(names(fx)))
   }
+
   if (level == "geneset") {
     if (!is.null(gset.filter)) {
       fx <- fx[grep(gset.filter, names(fx))]
@@ -82,18 +94,25 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
 
   ## data matrix
   if (level == "gene") {
-    X <- pgx$X
-    X <- collapse_by_humansymbol(X, pgx$genes) ## safe
+    dbg("[pgx.computePCSF] dim.pgx$X =", dim(pgx$X))
+    dbg("[pgx.computePCSF] dim.pgx$genes =", dim(pgx$genes))
+    ##X <- collapse_by_humansymbol(pgx$X, pgx$genes) ## safe
+    X <- rename_by(pgx$X, pgx$genes, "symbol") ## safe
   }
   if (level == "geneset") {
     X <- pgx$gsetX
   }
 
+  dbg("[pgx.computePCSF] dim.X=", dim(X))
+  
   ## just to be sure
   gg <- intersect(rownames(X), names(fx))
   X <- X[gg, ]
   fx <- fx[gg]
   labels <- gg
+
+  dbg("[pgx.computePCSF] dim.X=", dim(X))
+  dbg("[pgx.computePCSF] len.fx=", length(fx))
   
   ## If multi-omics for metabolite set name as labels
   if (!is.null(as.name) && length(as.name) && as.name[1] != FALSE) {
@@ -116,6 +135,16 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   ## in PPI
   PPI[, 1:2] <- apply(PPI[, 1:2], 2, function(x) sub(".*:", "", x))
 
+  ## convert PPI human symbol to organism symbol
+  ii <- match(PPI[,1], pgx$genes$human_ortholog)
+  jj <- match(PPI[,2], pgx$genes$human_ortholog)
+  PPI[,1] <- pgx$genes$symbol[ii]
+  PPI[,2] <- pgx$genes$symbol[jj]
+  kk <- which(!is.na(PPI[,1]) & !is.na(PPI[,2]))
+  PPI <- PPI[kk,]
+  dim(PPI)
+  head(PPI)
+  
   pcsf <- computePCSF(
     X, fx,
     ppi = PPI, labels = labels,
@@ -476,21 +505,16 @@ pgx.getPCSFcentrality <- function(pgx, contrast, pcsf = NULL, plot = TRUE, n = 1
   ewt <- 1.0 / igraph::E(pcsf)$weight
   cc <- igraph::page_rank(pcsf, weights = ewt)$vector
   cc <- cc / mean(cc, na.rm = TRUE) ## normalize
-  #  tail(sort(cc), 20)
-  #  top.cc <- sort(cc, decreasing = TRUE)
-  #  M <- pgx$gx.meta$meta[[contrast]]
-  #  sel <- intersect(names(top.cc), rownames(M))
-  #  sel <- head(sel, n)
-  #  fc <- M[sel, c("meta.fx")]
-  fc <- V(pcsf)$foldchange
-  ## score <- abs(cc * fc)
+  fc <- igraph::V(pcsf)$foldchange
   M <- data.frame(centrality = cc, logFC = fc)
   M <- round(M, digits = 2)
-  ii <- match(rownames(M), pgx$genes$symbol)
-  aa <- pgx$genes[ii, c("symbol", "gene_title")]
+  match.col <- which.max(apply(pgx$genes, 2, function(a) sum(rownames(M) %in% a)))
+  ii <- match(rownames(M), pgx$genes[,match.col])  
+  aa <- pgx$genes[ii, c("feature", "symbol", "human_ortholog", "gene_title")]
   aa <- cbind(aa, M)
+  rownames(aa) <- rownames(M)
   aa$gene_title <- stringr::str_trunc(aa$gene_title, 50)
-  rownames(aa) <- NULL
+  ##rownames(aa) <- NULL
   aa <- aa[order(-aa$centrality), ]
 
   if (plot) {
