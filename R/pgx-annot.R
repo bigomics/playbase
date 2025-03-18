@@ -717,7 +717,7 @@ getHumanOrtholog <- function(organism, symbols,
       method = ortho.methods[i],
       non121_strategy = "drop_both_species",
       verbose = FALSE
-    ))
+    ), silent=TRUE)
     class(ortho.out)
     results.ok <- (!"try-error" %in% class(ortho.out) &&
                      inherits(ortho.out, "data.frame") &&
@@ -748,7 +748,7 @@ getHumanOrtholog <- function(organism, symbols,
     if(verbose>0) message("[getHumanOrtholog] Trying biomart...")
     ## test if biomart is reachable
     ii <- which(is.na(symbols))
-    res.biomart <- try(getHumanOrtholog.biomartIK(organism, symbols[ii]))
+    res.biomart <- try(getHumanOrtholog.biomart(organism, symbols[ii]), silent=TRUE)
     class(res.biomart)
     if (!"try-error" %in% class(res.biomart)) {
       jj <- which(is.na(res.biomart))
@@ -903,7 +903,7 @@ getHumanOrtholog.biomart <- function(organism, symbols, verbose=1) {
     mart = organism_mart,
     attributesL = c("ensembl_gene_id", "hgnc_symbol"),
     martL = human_mart
-  ))
+  ), silent=TRUE)
   class(res.biomart)
   if ("try-error" %in% class(res.biomart)) {
     message("[getHumanOrtholog] ERROR: biomart::getLDS failed to contact server")
@@ -918,7 +918,7 @@ getHumanOrtholog.biomart <- function(organism, symbols, verbose=1) {
     mart = organism_mart,
     attributesL = c("ensembl_gene_id", "hgnc_symbol"),
     martL = human_mart
-  ))
+  ), silent=TRUE)
   class(orthogenes)
   
   if ("try-error" %in% class(res.biomart)) {
@@ -1549,7 +1549,7 @@ getGeneAnnotation.ORTHOGENE <- function(
     genes = probes1,
     species = species,
     verbose = FALSE
-  ))
+  ), silent=TRUE)
 
   ortholog <- toupper(probes1)
   genebuild <- "-"
