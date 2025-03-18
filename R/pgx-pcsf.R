@@ -130,7 +130,17 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
 computePCSF <- function(X, fx, ppi, labels = NULL, ntop = 250, ncomp = 3,
                         beta = 1, rm.negedge = TRUE, dir = "both") {
   if (!is.null(labels)) names(labels) <- rownames(X)
+
   ppi.genes <- unique(c(ppi$from, ppi$to))  
+  ppi.ratio <- mean(names(fx) %in% ppi.genes)
+  ppi.num <- sum(names(fx) %in% ppi.genes)
+  if(ppi.ratio < 0.10 || ppi.num < 10) {
+    if(ppi.ratio < 0.10) message("[computePCSF] WARNING: less than 10% genes are in PPI. ")
+    if(ppi.num < 10) message("[computePCSF] WARNING: less than 10 genes are in PPI. ")
+    message("[computePCSF] ERROR: Exiting. ")
+    return(NULL)    
+  }
+  
   fx <- fx[which(names(fx) %in% ppi.genes)]
   
   if (dir == "both" && length(fx)>ntop) {
