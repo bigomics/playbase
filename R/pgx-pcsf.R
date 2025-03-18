@@ -94,7 +94,7 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   X <- X[gg, ]
   fx <- fx[gg]
   labels <- gg
-
+  
   ## If multi-omics for metabolite set name as labels
   if (!is.null(as.name) && length(as.name) && as.name[1] != FALSE) {
     dt <- pgx$genes$data_type
@@ -130,20 +130,20 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
 computePCSF <- function(X, fx, ppi, labels = NULL, ntop = 250, ncomp = 3,
                         beta = 1, rm.negedge = TRUE, dir = "both") {
   if (!is.null(labels)) names(labels) <- rownames(X)
-  ppi.genes <- unique(c(ppi$from, ppi$to))
+  ppi.genes <- unique(c(ppi$from, ppi$to))  
   fx <- fx[which(names(fx) %in% ppi.genes)]
-
-  if (dir == "both") {
+  
+  if (dir == "both" && length(fx)>ntop) {
     sel1 <- head(order(fx), ntop / 2)
     sel2 <- head(order(-fx), ntop / 2)
     sel <- unique(c(sel1, sel2))
     fx <- fx[sel]
   }
-  if (dir == "up") {
+  if (dir == "up" && length(fx)>ntop) {
     sel <- head(order(-fx), ntop)
     fx <- fx[sel]
   }
-  if (dir == "down") {
+  if (dir == "down" && length(fx)>ntop) {
     sel <- head(order(fx), ntop)
     fx <- fx[sel]
   }
