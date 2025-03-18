@@ -42,13 +42,7 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   ## the PCSF??
   if (level == "gene") {
     ## names(fx) <- pgx$genes[rownames(F), "human_ortholog"]
-    dbg("[pgx.computePCSF] colnames.pgx.genes=", colnames(pgx$genes))
-    dbg("[pgx.computePCSF] len.fx=", length(fx))
-    dbg("[pgx.computePCSF] names.fx=", head(names(fx)))    
     fx <- rename_by(fx, pgx$genes, "symbol") 
-    ##fx <- collapse_by_humansymbol(fx, pgx$genes)
-    dbg("[pgx.computePCSF] len.fx=", length(fx))
-    dbg("[pgx.computePCSF] names.fx=", head(names(fx)))
   }
 
   if (level == "geneset") {
@@ -94,25 +88,17 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
 
   ## data matrix
   if (level == "gene") {
-    dbg("[pgx.computePCSF] dim.pgx$X =", dim(pgx$X))
-    dbg("[pgx.computePCSF] dim.pgx$genes =", dim(pgx$genes))
-    ##X <- collapse_by_humansymbol(pgx$X, pgx$genes) ## safe
     X <- rename_by(pgx$X, pgx$genes, "symbol") ## safe
   }
   if (level == "geneset") {
     X <- pgx$gsetX
   }
-
-  dbg("[pgx.computePCSF] dim.X=", dim(X))
   
   ## just to be sure
   gg <- intersect(rownames(X), names(fx))
   X <- X[gg, ]
   fx <- fx[gg]
   labels <- gg
-
-  dbg("[pgx.computePCSF] dim.X=", dim(X))
-  dbg("[pgx.computePCSF] len.fx=", length(fx))
   
   ## If multi-omics for metabolite set name as labels
   if (!is.null(as.name) && length(as.name) && as.name[1] != FALSE) {
@@ -142,9 +128,8 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   PPI[,2] <- pgx$genes$symbol[jj]
   kk <- which(!is.na(PPI[,1]) & !is.na(PPI[,2]))
   PPI <- PPI[kk,]
-  dim(PPI)
-  head(PPI)
-  
+
+  ## compute PCSF
   pcsf <- computePCSF(
     X, fx,
     ppi = PPI, labels = labels,
