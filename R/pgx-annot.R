@@ -233,6 +233,7 @@ getGeneAnnotation.ANNOTHUB <- function(
     probes,
     use.ah = NULL,
     probe_type = NULL,
+    second.pass = TRUE,
     verbose = TRUE) {
   if (is.null(organism)) {
     warning("[getGeneAnnotation.ANNOTHUB] Please specify organism")
@@ -335,14 +336,15 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   ## ---------------------------------------------------------------------------------
   ## Second pass for missing symbols. Still trying annothub but
-  ## missing symbols may map to different keytype.
+  ## missing symbols may map to different keytype. NEED RETHINK:
+  ## REALLY NEEDED???
   ## ------------------------------------------------------------------------------------
   is.missing <- (is.na(annot$SYMBOL) | annot$SYMBOL == "")
   missing.probes <- probes[which(is.missing)] ## probes match annot!
-  missing.probes <- missing.probes[!is.na(missing.probes)]
-  if (length(missing.probes)) {
+  missing.probes <- missing.probes[!is.na(missing.probes)]  
+  if (second.pass && length(missing.probes)) {
     dbg(
-      "[getGeneAnnotation.ANNOTHUB] retrying missing",
+      "[getGeneAnnotation.ANNOTHUB] second pass: retrying missing",
       length(missing.probes), "symbols..."
     )
     suppressWarnings(suppressMessages(
@@ -377,7 +379,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   }
 
   ## get human ortholog using 'orthogene'
-  cat("\ngetting human orthologs...\n")
+  message("[getGeneAnnotation.ANNOTHUB] getting human orthologs...")
   ortho_organism <- getOrthoSpecies(organism, use="map")
   annot$ORTHOGENE <- getHumanOrtholog(ortho_organism, annot$SYMBOL)$human
 
@@ -1288,17 +1290,21 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   return(top_match)
 }
 
+#' Rename features names of object to available human symbol by
+#' human_ortholog or other 'human-like' uppercased annotation
+#' columns. WARNING: does not necessarily keep original length.
+#'
 #' @export
 collapse_by_humansymbol <- function(obj, annot) {
   annot <- cbind(annot, rownames = rownames(annot))
   target <- c("human_ortholog", "symbol", "gene_name", "rownames")
   target <- intersect(target, colnames(annot))
-  complete_targets <- lapply(target, function(x) {
-    sum(is.na(annot[, x]) | annot[, x] %in% c("")) < 1
-  }) |> unlist()
-  target <- target[complete_targets]
+#  complete_targets <- lapply(target, function(x) {
+#    sum(is.na(annot[, x]) | annot[, x] %in% c("")) < 1
+#  }) |> unlist()
+#  target <- target[complete_targets]
   if (length(target) == 0) {
-    message("[map_humansymbol] WARNING: could not find symbol mapping column.")
+    message("[collapse_by_humansymbol] WARNING: could not find symbol mapping column.")
     return(obj)
   } else {
     ## call rename_by with target column
