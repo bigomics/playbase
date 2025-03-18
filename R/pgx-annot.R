@@ -173,11 +173,13 @@ getGeneAnnotation <- function(
       probes = missing.probes,
       verbose = verbose
     ))
-    if (!is.null(missing.annot) && !"try-error" %in% class(missing.annot) &&
+    if (!is.null(missing.annot) &&
+          !"try-error" %in% class(missing.annot) &&
           nrow(missing.annot)) {
-      ## replace missing entries
-      missing.annot <- missing.annot[, colnames(annot)]
-      jj <- match(missing.probes, probes)
+      ## replace missing entries (some still missing)
+      sel <- which( !is.na(missing.annot$symbol) & missing.annot$symbol!="")
+      missing.annot <- missing.annot[sel, colnames(annot)]
+      jj <- match(missing.annot$features, probes)
       annot[jj, ] <- missing.annot
     }
   }
@@ -352,6 +354,7 @@ getGeneAnnotation.ANNOTHUB <- function(
     ))
     missing.probe_type
     if (!is.null(missing.probe_type) && !is.na(missing.probe_type)) {
+      dbg("[getGeneAnnotation.ANNOTHUB] missing.probe_type = ", missing.probe_type)
       missing.probes1 <- match_probe_names(missing.probes, orgdb, missing.probe_type)
       suppressMessages(suppressWarnings(
         missing.annot <- AnnotationDbi::select(orgdb,
@@ -360,7 +363,6 @@ getGeneAnnotation.ANNOTHUB <- function(
           keytype = missing.probe_type
         )
       ))
-      head(missing.annot)
       missing.key <- missing.annot[, missing.probe_type]
       missing.annot$PROBE <- names(missing.probes[match(missing.key, missing.probes1)])
 
@@ -372,7 +374,7 @@ getGeneAnnotation.ANNOTHUB <- function(
         missing.annot[[k]] <- NA
       }
       kk <- match(colnames(annot),colnames(missing.annot))
-      missing.annot <- missing.annot[,kk]
+      missing.annot <- missing.annot[,kk,drop=FALSE]
       jj <- match(missing.annot$PROBE, probes)
       annot[jj, ] <- missing.annot
     }
@@ -420,7 +422,6 @@ getGeneAnnotation.ANNOTHUB <- function(
   ## in case there were duplicated probe names we _must_ make them
   ## unique??? IK: really?? or should we remove duplicates?
   rownames(genes) <- make_unique(probes0) ## in pgx-functions.R
-
   return(genes)
 }
 
@@ -468,7 +469,6 @@ clean_probe_names <- function(probes, sep = ".-") {
 
   ## strip away anything after a 'dot' or 'underscore'
   probes <- sub(paste0("[", sep, "].*"), "", probes)
-
   ## is.ensembl <- mean(grepl("^ENS", probes)) > 0.5
   ## if (is.ensembl) {
   ##   probes <- sub("[.][0-9]+$", "", probes) ## strip version number
@@ -777,77 +777,6 @@ getHumanOrtholog <- function(organism, symbols,
   return(df)
 }
 
-## getHumanOrtholog.SAVE <- function(organism, symbols) {
-##   ## test if orthogene server is reachable. We test CDK1 for Homo
-##   ## sapiens.
-##   ortho_organism <- getOrthoSpecies(organism)
-##   mm <- c("gprofiler", "homologene", "babelgene") ## mapping methods
-##   methods.ok <- c()
-##   i=1
-##   for (i in 1:length(mm)) {
-##     res <- try(orthogene::convert_orthologs(
-##       gene_df = c("---", "CDK1"),
-##       input_species = "Homo sapiens",
-##       method = mm[i],
-##       verbose = FALSE
-##     ), silent = TRUE)
-##     methods.ok[i] <- (!"try-error" %in% class(res) &&
-##       inherits(res, "data.frame") &&
-##       nrow(res) > 0)
-##   }
-##   names(methods.ok) <- mm
-##   orthogeneMethod <- NULL
-##   if (all(methods.ok == FALSE)) {
-##     message("[getHumanOrtholog] orthogene::convert_orthologs: all mapping methods failed. Trying biomart...")
-##     ## test if biomart is reachable
-##     res.biomart <- try(getHumanOrtholog.biomart(organism, symbols))
-##     if ("try-error" %in% class(res.biomart)) {
-##       message("[getHumanOrtholog] biomart failed.")
-##       df <- data.frame(symbols, "human" = NA)
-##       orthogenes <- toupper(sub(".*:", "", symbols))
-##       df <- data.frame(symbols, "human" = orthogenes)
-##       colnames(df)[1] <- organism
-##       rownames(df) <- NULL
-##       return(df)
-##     }
-##   } else {
-##     methods.ok <- methods.ok[which(methods.ok)]
-##     orthogeneMethod <- names(methods.ok)[1]
-##   }
-##   if (!is.null(orthogeneMethod)) {
-##     ## map to correct orthogene species name, if not
-##     ## done. SPECIES_TABLE$species are annothub names,
-##     ## SPECIES_TABLE$ortho_species are matched orthogene/gprofiler
-##     ## names.
-##     ortho_organism <- getOrthoSpecies(organism)
-##     orthogenes <- NULL
-##     ortho.out <- try(orthogene::convert_orthologs(
-##       gene_df = c("---", unique(symbols[!is.na(symbols)])),
-##       input_species = ortho_organism,
-##       output_species = "human",
-##       method = orthogeneMethod,
-##       non121_strategy = "drop_both_species",
-##       verbose = FALSE
-##     ))
-##     if (!"try-error" %in% class(ortho.out)) {
-##       ii <- match(symbols, ortho.out$input_gene)
-##       orthogenes <- rownames(ortho.out)[ii]
-##     }
-##     if (is.null(orthogenes)) {
-##       message("WARNING: could not find orthogene for ", organism)
-##       orthogenes <- rep(NA, length(symbols))
-##     }
-##     df <- data.frame(symbols, "human" = orthogenes)
-##     colnames(df)[1] <- organism
-##     return(df)
-##   } else if (!"try-error" %in% class(res.biomart)) {
-##     orthogenes <- getHumanOrtholog.biomart(organism, symbols)
-##     df <- data.frame(symbols, "human" = orthogenes)
-##     colnames(df)[1] <- organism
-##     return(df)
-##   }
-## }
-
 #' @title Get human ortholog from given symbols of organism by using
 #'   biomart package. This package needs internet connection.
 #' This is an alternative to orthogene::map_genes failure.
@@ -936,60 +865,6 @@ getHumanOrtholog.biomart <- function(organism, symbols, verbose=1) {
   ## succesful
   return(orthogenes)
 }
-
-## getHumanOrtholog.biomart <- function(organism, symbols) {
-##   message("[getHumanOrtholog.biomart] Mapping ", organism, " genes with biomart.")
-##   require(biomaRt)
-##   s1 <- tolower(strsplit(organism, "")[[1]][1])
-##   s2 <- tolower(strsplit(organism, " ")[[1]][2])
-##   organism0 <- paste0(s1, s2)
-##   D <- listDatasets(useEnsembl(biomart = "genes"))
-##   hh <- grep(organism0, D$dataset)
-##   if (any(hh)) {
-##     organism_mart <- biomaRt::useEnsembl(biomart = "genes", dataset = D$dataset[hh])
-##     human_mart <- biomaRt::useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl")
-##     if (organism == "Mus musculus") {
-##       attrs <- c("ensembl_gene_id", "mgi_symbol")
-##       flt <- "mgi_symbol"
-##     } else {
-##       attrs <- c("ensembl_gene_id", "external_gene_name")
-##       flt <- "external_gene_name"
-##     }
-##     message("[getHumanOrtholog.biomart] Testing if biomart is reachable...")
-##     res.biomart <- try(biomaRt::getLDS(
-##       attributes = attrs,
-##       filters = flt,
-##       values = "Xist",
-##       mart = organism_mart,
-##       attributesL = c("ensembl_gene_id", "hgnc_symbol"),
-##       martL = human_mart
-##     ))
-##     if ("try-error" %in% class(res.biomart)) {
-##       message("[getHumanOrtholog] biomart::getLDS failed to contact server or use mirror")
-##       orthogenes <- NULL
-##       return(orthogenes)
-##     } else {
-##       orthogenes <- try(biomaRt::getLDS(
-##         attributes = attrs,
-##         filters = flt,
-##         values = symbols,
-##         mart = organism_mart,
-##         attributesL = c("ensembl_gene_id", "hgnc_symbol"),
-##         martL = human_mart
-##       ))
-##       if ("try-error" %in% class(res.biomart)) {
-##         message("[getHumanOrtholog] biomart::getLDS failed")
-##         orthogenes <- NULL
-##         return(orthogenes)
-##       } else {
-##         return(orthogenes)
-##       }
-##     }
-##   } else {
-##     stop(paste0(organism, " not found in biomart databases. Exiting with error."))
-##   }
-## }
-
 
 
 ## ================================================================================
@@ -1563,12 +1438,10 @@ getGeneAnnotation.ORTHOGENE <- function(
   ), silent=TRUE)
 
   ortholog <- toupper(probes1)
-  genebuild <- "-"
 
   if (!inherits(gene.out, "try-error")) {
     gene.out <- gene.out[match(probes1, gene.out$input), ]
     ortholog <- getHumanOrtholog(organism, gene.out$name)$human
-    genebuild <- gprofiler2::get_version_info()$genebuild
   }
 
   df <- data.frame(
