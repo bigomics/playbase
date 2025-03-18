@@ -760,6 +760,11 @@ getHumanOrtholog <- function(organism, symbols,
     if(verbose>0) message("[getHumanOrtholog] skipping biomart...")
   }
 
+  ## Map any missing symbols that look like human genes
+  human.genes <- playdata::GENE_SYMBOL
+  ii <- which(is.na(orthogenes) & toupper(symbols) %in% human.genes)
+  orthogenes[ii] <- toupper(symbols[ii])
+
   mean.mapped <- round( 100*mean(!is.na(orthogenes)), digits=4)  
   if(verbose>0) message("[getHumanOrtholog] total ratio mapped  = ", mean.mapped,"%")
   
