@@ -662,7 +662,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
 wgcna.getGeneStats <- function(wgcna, module, trait, plot = TRUE,
                                showallmodules = TRUE, col = NULL,
                                main = NULL) {
-  # module="MEblue";trait="activated=act"
+  
   p1 <- c("moduleMembership", "MMPvalue")
   p2 <- c("traitSignificance", "GSPvalue", "foldChange", "foldChangePvalue")
   p3 <- c("geneCentrality")
@@ -670,12 +670,14 @@ wgcna.getGeneStats <- function(wgcna, module, trait, plot = TRUE,
   df <- wgcna$stats[[p1[1]]][, 0] ## empty data.frame
   rownames(df) <- colnames(wgcna$datExpr)
 
-  if (!is.null(module)) {
+  mm.cols <- colnames(wgcna$stats[[p1[1]]])
+  if (!is.null(module) && module %in% mm.cols) {
     A1 <- sapply(wgcna$stats[p1], function(x) x[, module])
     df <- cbind(df, A1)
   }
-  
-  if (!is.null(trait)) {
+
+  tt.cols <- colnames(wgcna$stats[[p2[1]]])  
+  if (!is.null(trait) && trait %in% tt.cols) {
     A2 <- sapply(wgcna$stats[p2], function(x) x[, trait])
     df <- cbind(df, A2)
   }
