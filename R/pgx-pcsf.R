@@ -498,8 +498,6 @@ pgx.getPCSFcentrality <- function(pgx, contrast, pcsf = NULL, plot = TRUE, n = 1
   aa <- pgx$genes[ii, c("feature", "symbol", "human_ortholog", "gene_title")]
   aa <- cbind(aa, M)
   rownames(aa) <- rownames(M)
-  aa$gene_title <- stringr::str_trunc(aa$gene_title, 50)
-  ##rownames(aa) <- NULL
   aa <- aa[order(-aa$centrality), ]
 
   if (plot) {

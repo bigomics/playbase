@@ -669,22 +669,25 @@ wgcna.getGeneStats <- function(wgcna, module, trait, plot = TRUE,
   nrow <- ncol(wgcna$datExpr)
   df <- wgcna$stats[[p1[1]]][, 0] ## empty data.frame
   rownames(df) <- colnames(wgcna$datExpr)
+
   if (!is.null(module)) {
     A1 <- sapply(wgcna$stats[p1], function(x) x[, module])
     df <- cbind(df, A1)
   }
+  
   if (!is.null(trait)) {
     A2 <- sapply(wgcna$stats[p2], function(x) x[, trait])
     df <- cbind(df, A2)
   }
+  
   A3 <- wgcna$stats[[p3]]
   df <- cbind(df, centrality = A3)
-
+  
   sel <- c("moduleMembership", "traitSignificance", "foldChange", "centrality")
   sel <- intersect(sel, colnames(df))
   df1 <- pmax(as.matrix(df[, sel]), 1e-8)
   score <- exp(rowMeans(log(df1)))
-
+  
   labels <- wgcna$net$labels
   df <- data.frame(module = labels, score = score, df)
   df <- df[order(-df$score), ]
@@ -692,7 +695,7 @@ wgcna.getGeneStats <- function(wgcna, module, trait, plot = TRUE,
     sel <- which(df$module == module)
     df <- df[sel, , drop = FALSE]
   }
-
+  
   if (plot) {
     cols <- c("moduleMembership", "traitSignificance", "foldChange", "centrality")
     cols <- intersect(cols, colnames(df))

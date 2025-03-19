@@ -9,6 +9,7 @@ getGeneAnnotation.ANNOTHUB(
   probes,
   use.ah = NULL,
   probe_type = NULL,
+  second.pass = TRUE,
   verbose = TRUE
 )
 }

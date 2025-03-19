@@ -934,7 +934,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## add metabolomic gene sets
   if (has.mx) {
     info("[pgx.add_GMT] Retrieving metabolomics genesets")
-    G <- Matrix::t(playdata::MSETxMETABOLITE)
+    ##G <- Matrix::t(playdata::MSETxMETABOLITE)
+    G <- Matrix::t(playdata::XSETxMETABOLITE)
     ## strip any prefix. works because SYMBOL and CHEBI do not overlap
     rownames(G) <- sub(".*:", "", rownames(G))
   }
