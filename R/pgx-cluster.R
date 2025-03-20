@@ -645,7 +645,6 @@ pgx.findLouvainClusters <- function(X,
     adjmatrix <- 1.0 / dist**gamma
     adjmatrix1 <- as.matrix(adjmatrix)
     gr <- igraph::graph_from_adjacency_matrix(adjmatrix1, diag = FALSE, mode = "undirected")
->>>>>>> singlecell-new-upload
   } else if (graph.method == "snn") {
     suppressMessages(suppressWarnings(gr <- scran::buildSNNGraph(t(X), d = knn)))
   } else if (graph.method == "knn") {
