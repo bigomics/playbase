@@ -7,7 +7,7 @@ using internal annotation databases METABOLITE_METADATA and
 METABOLITE_ID. Also provides links to external metabolite
 databases.}
 \usage{
-getMetaboliteInfo(organism = "Human", id)
+getMetaboliteInfo(organism = "Human", id, info = NULL)
 }
 \description{
 Given a ChEBI id this provides information about the metabolite
