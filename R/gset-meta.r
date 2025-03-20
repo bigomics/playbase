@@ -204,6 +204,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
   k <- 1
   fitThisContrastWithMethod <- function(method, k) {
+
     jj <- which(exp.matrix[, k] != 0)
     yy <- 1 * (exp.matrix[jj, k] > 0)
     xx <- X[, jj]
@@ -262,44 +263,42 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     ## ----------------------------------------------------
 
     LIMMA.TREND <- TRUE
-    if (FALSE && "ssgsea" %in% method) {
-      zx <- zx.ssgsea[, colnames(xx)]
-      gs <- intersect(names(gmt), rownames(zx))
-      tt <- system.time(
-        output <- playbase::gx.limma(zx[gs, ], yy, fdr = 1, lfc = 0, ref = ref, trend = LIMMA.TREND, verbose = 0) ## ssgsea
-      )
-      timings <- rbind(timings, c("ssgsea", tt))
+    ## if (FALSE && "ssgsea" %in% method) {
+    ##   zx <- zx.ssgsea[, colnames(xx)]
+    ##   gs <- intersect(names(gmt), rownames(zx))
+    ##   tt <- system.time(
+    ##     output <- playbase::gx.limma(zx[gs, ], yy, fdr = 1, lfc = 0, ref = ref, trend = LIMMA.TREND, verbose = 0) ## ssgsea
+    ##   )
+    ##   timings <- rbind(timings, c("ssgsea", tt))
+    ##   output <- output[match(names(gmt), rownames(output)), ]
+    ##   rownames(output) <- names(gmt)
+    ##   output <- output[, c("logFC", "P.Value", "adj.P.Val", "0", "1")]
+    ##   colnames(output) <- c("score", "p.value", "q.value", "AveExpr0", "AveExpr1")
+    ##   res[["ssgsea"]] <- output
+    ## }
 
-      output <- output[match(names(gmt), rownames(output)), ]
-      rownames(output) <- names(gmt)
-      output <- output[, c("logFC", "P.Value", "adj.P.Val", "0", "1")]
-      colnames(output) <- c("score", "p.value", "q.value", "AveExpr0", "AveExpr1")
-      res[["ssgsea"]] <- output
-    }
-
-    if (FALSE && "gsva" %in% method) {
-      zx <- zx.gsva[, colnames(xx)]
-      gs <- intersect(names(gmt), rownames(zx))
-      tt <- system.time({
-        output <- playbase::gx.limma(zx[gs, ], yy,
-          fdr = 1, lfc = 0, ref = ref,
-          trend = LIMMA.TREND, verbose = 0
-        ) ## ssgsea
-      })
-      timings <- rbind(timings, c("gsva", tt))
-      output <- output[match(names(gmt), rownames(output)), ]
-      rownames(output) <- names(gmt)
-      output <- output[, c("logFC", "P.Value", "adj.P.Val", "0", "1")]
-      colnames(output) <- c("score", "p.value", "q.value", "AveExpr0", "AveExpr1")
-      res[["gsva"]] <- output
-    }
+    ## if (FALSE && "gsva" %in% method) {
+    ##   zx <- zx.gsva[, colnames(xx)]
+    ##   gs <- intersect(names(gmt), rownames(zx))
+    ##   tt <- system.time({
+    ##     output <- playbase::gx.limma(zx[gs, ], yy,
+    ##       fdr = 1, lfc = 0, ref = ref,
+    ##       trend = LIMMA.TREND, verbose = 0
+    ##     ) ## ssgsea
+    ##   })
+    ##   timings <- rbind(timings, c("gsva", tt))
+    ##   output <- output[match(names(gmt), rownames(output)), ]
+    ##   rownames(output) <- names(gmt)
+    ##   output <- output[, c("logFC", "P.Value", "adj.P.Val", "0", "1")]
+    ##   colnames(output) <- c("score", "p.value", "q.value", "AveExpr0", "AveExpr1")
+    ##   res[["gsva"]] <- output
+    ## }
 
     if ("spearman" %in% method && !is.null(zx.rnkcorr)) {
       tt <- system.time(
         output <- playbase::gx.limma(zx.rnkcorr[, ], yy, fdr = 1, lfc = 0, ref = ref, trend = LIMMA.TREND, verbose = 0) ## ssgsea
       )
       timings <- rbind(timings, c("spearman", tt))
-
 
       output <- output[match(names(gmt), rownames(output)), ]
       rownames(output) <- names(gmt)
@@ -327,6 +326,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       colnames(output) <- c("score", "p.value", "q.value", "NGenes", "Direction")
       res[["camera"]] <- output
     }
+    
     if ("fry" %in% method) {
       cdesign <- cbind(Intercept = 1, Group = yy)
       tt <- system.time(
@@ -348,10 +348,8 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       rnk <- rnk + 1e-8 * stats::rnorm(length(rnk))
       if (any(is.na(rnk))) rnk <- rnk[which(!is.na(rnk))]
       tt <- system.time(
-        output <- fgsea::fgseaSimple(gmt, rnk,
-          nperm = 10000,
-          minSize = 1, maxSize = 9999, nproc = 1
-        ) ## nproc0 fails!!!
+        output <- fgsea::fgseaSimple(gmt, rnk, nperm = 10000,
+          minSize = 1, maxSize = 9999, nproc = 1) ## nproc0 fails!!!
       )
       timings <- rbind(timings, c("fgsea", tt))
       output <- as.data.frame(output)
@@ -364,8 +362,8 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
     res2 <- list(results = res, timings = timings)
     return(res2)
-  }
 
+  }
 
   fitContrastsWithMethod <- function(method) {
     message("fitting contrasts using ", method, "...")

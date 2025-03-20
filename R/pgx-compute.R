@@ -159,7 +159,8 @@ pgx.createPGX <- function(counts,
                           annot_table = NULL,
                           max.genesets = 5000,
                           name = "Data set",
-                          datatype = "RNA-seq",
+                          datatype = "RNA-seq", #"unknown"
+                          azimuth_ref = "pbmcref",
                           probe_type = NULL,
                           creator = "unknown",
                           description = "No description provided.",
@@ -173,42 +174,32 @@ pgx.createPGX <- function(counts,
                           exclude.genes = NULL,                          
                           prune.samples = FALSE,
                           only.known = TRUE,
-                          only.hugo = TRUE, ## depracated
+                          only.hugo = TRUE, ## DEPRECATED
                           convert.hugo = FALSE,
                           only.proteincoding = TRUE,
                           remove.xxl = TRUE, ## DEPRECATED
                           remove.outliers = TRUE, ## DEPRECATED
                           add.gmt = TRUE,
-                          settings = list()) {
-  message("[createPGX] datatype = ", datatype)
-  if(0) {
-    organism = "Human"
-    custom.geneset = NULL
-    annot_table = NULL
-    max.genesets = 5000
-    name = "Data set"
-    datatype = "RNA-seq"
-    datatype = "proteomics"
-    probe_type = NULL
-    creator = "unknown"
-    description = "No description provided."
-    X = NULL
-    impX = NULL
-    norm_method = "CPM"
-    is.logx = NULL
-    batch.correct = TRUE
-    auto.scale = TRUE
-    filter.genes = TRUE
-    exclude.genes = NULL                          
-    prune.samples = FALSE
-    only.known = TRUE
-    only.hugo = TRUE  ## depracated
-    convert.hugo = FALSE
-    only.proteincoding = TRUE
-    remove.xxl = TRUE ## DEPRECATED
-    remove.outliers = TRUE ## DEPRECATED
-    add.gmt = TRUE
-    settings = list()
+                          settings = list(),
+                          sc_compute_settings = list()) {
+
+  message("[pgx.createPGX]===========================================")
+  message("[pgx.createPGX]=========== pgx.createPGX =================")
+  message("[pgx.createPGX]===========================================")
+  message("\n")
+  message("[pgx.createPGX] datatype = ", datatype, "\n")
+
+  if (datatype == "scRNA-seq") {
+    pgx <- playbase::pgx.createSingleCellPGX(
+      counts = counts,
+      samples = samples,
+      contrasts = contrasts,
+      organism = organism,
+      azimuth_ref = azimuth_ref,
+      batch = NULL,
+      sc_compute_settings = sc_compute_settings
+    )
+    return(pgx)
   }
   
   if (!is.null(counts)) {
@@ -335,11 +326,10 @@ pgx.createPGX <- function(counts,
     contrasts <- contrasts[kk, , drop = FALSE]
   }
 
-  ## ## ## 1. Clean up inline duplicated features: eg: feature1;feature1;..
-  ## probes <- rownames(counts)
-  ## dedup_probes <- clean_dups_inline_probenames(probes)
-  ## rownames(counts) <- rownames(X) <- dedup_probes
-  ## if (!is.null(impX)) rownames(impX) <- dedup_probes
+  ## 1. Clean up inline duplicated features: eg: feature1;feature1;..
+  # dedup_probes <- clean_dups_inline_probenames(rownames(counts))
+  # rownames(counts) <- rownames(X) <- dedup_probes
+  # if (!is.null(impX)) rownames(impX) <- dedup_probes
   
   ## 2. Make duplicated rownames unique (NOTE!!! new default since v3.5.1)
   ndup <- sum(duplicated(rownames(counts)))
@@ -407,7 +397,8 @@ pgx.createPGX <- function(counts,
     norm_method = norm_method,
     total_counts = Matrix::colSums(counts, na.rm = TRUE),
     counts_multiplier = counts_multiplier,
-    settings = settings
+    settings = settings,
+    sc_compute_settings = sc_compute_settings
   )
 
   ## -------------------------------------------------------------------
@@ -436,29 +427,26 @@ pgx.createPGX <- function(counts,
   ## Filter out not-expressed
   ## -------------------------------------------------------------------
   if (filter.genes) {
-    ## There is second filter in the statistics computation. This
-    ## first filter is primarily to reduce the counts table.
-    message("[createPGX] filtering out not-expressed genes (zero counts)...")
+    nexpr <- sum(rowSums(pgx$counts, na.rm = TRUE) == 0)
+    message("[createPGX] Filtering out ", nexpr, " not-expressed genes...")
     pgx <- pgx.filterZeroCounts(pgx)
-
-    ## Conform gene table
     ii <- match(rownames(pgx$counts), rownames(pgx$genes))
     pgx$genes <- pgx$genes[ii, , drop = FALSE]
   }
   
   ## -------------------------------------------------------------------
-  ## Filter genes?
+  ## Filter genes
   ## -------------------------------------------------------------------
   do.filter <- (only.known || only.proteincoding || !is.null(exclude.genes))
   if (do.filter) {
     if (only.known) {
-      message("[createPGX] removing genes without symbol...")
+      message("[createPGX] Removing genes without symbol...")
       no.symbol <- (is.na(pgx$genes$symbol) | pgx$genes$symbol %in% c("", "-"))
       pgx$genes <- pgx$genes[which(!no.symbol), ]
     }
 
     if (only.proteincoding) {
-      message("[createPGX] removing Rik/ORF/LOC genes...")
+      message("[createPGX] Removing Rik/ORF/LOC genes...")
       is.unknown <- grepl("^rik|^loc|^orf", tolower(pgx$genes$symbol))
       is.unknown <- is.unknown & !is.na(pgx$genes$symbol)
       pgx$genes <- pgx$genes[which(!is.unknown), ]
@@ -487,7 +475,6 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   ## collapse probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------
-
   ## if feature/rownames are not symbol, we paste symbol to row name.
   pp <- sub("^[a-zA-Z]+:", "", rownames(pgx$genes))
   mean_feature_is_symbol <- mean(pp == pgx$genes$symbol, na.rm = TRUE) 
@@ -506,9 +493,7 @@ pgx.createPGX <- function(counts,
     pgx$genes$feature <- new.names ## feature should also be renamed??
     rownames(pgx$counts) <- new.names
     rownames(pgx$X) <- new.names
-    if (!is.null(pgx$impX)) {
-      rownames(pgx$impX) <- new.names
-    }
+    if (!is.null(pgx$impX)) rownames(pgx$impX) <- new.names
   }
 
   ## -------------------------------------------------------------------
@@ -524,8 +509,7 @@ pgx.createPGX <- function(counts,
   ## then create empty GMT
   unknown.organism <- (pgx$organism %in% c("No organism","custom","unkown"))
   unknown.datatype <- (pgx$datatype %in% c("custom","unkown"))  
-  no3 <- unknown.organism && is.null(annot_table) &&
-         is.null(custom.geneset) 
+  no3 <- unknown.organism && is.null(annot_table) && is.null(custom.geneset) 
   if ( no3 || unknown.datatype || !add.gmt) {
     message("[createPGX] WARNING: empty GMT matrix. No gene sets. " )    
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
@@ -543,7 +527,23 @@ pgx.createPGX <- function(counts,
   if (ncol(pgx$samples) > 1) {
     pgx$samples <- pgx$samples[, colMeans(is.na(pgx$samples)) < 1, drop = FALSE]
   }
+
+  message("[pgx.createPGX] dim(pgx$counts): ", paste0(dim(pgx$counts), collapse=","))
+  message("[pgx.createPGX] dim(pgx$X): ", paste0(dim(pgx$X), collapse=","))
+  message("[pgx.createPGX] dim(pgx$samples): ", paste0(dim(pgx$samples), collapse=","))
+  message("[createPGX] pgx$counts has ", sum(is.na(pgx$counts)), " missing values")
+  message("[createPGX] pgx$X has ", sum(is.na(pgx$X)), " missing values")
+
+  rm(counts, X, impX, samples, contrasts)
+
+  message("\n\n")
+  message("[pgx.createPGX]======================================")
+  message("[pgx.createPGX]======== pgx.createPGX: DONE! ========")
+  message("[pgx.createPGX]======================================")
+  message("\n\n")
+
   return(pgx)
+
 }
 
 
@@ -602,8 +602,14 @@ pgx.computePGX <- function(pgx,
                            libx.dir = NULL,
                            progress = NULL,
                            user_input_dir = getwd()) {
-  message("[pgx.computePGX] Starting pgx.computePGX")
 
+  message("[pgx.computePGX]===========================================")
+  message("[pgx.computePGX]========== pgx.computePGX =================")
+  message("[pgx.computePGX]===========================================")
+  message("\n")
+  message("[pgx.computePGX] Starting pgx.computePGX")
+  message("\n")
+  
   if (!"contrasts" %in% names(pgx)) {
     stop("[pgx.computePGX] FATAL:: no contrasts in object")
   }
@@ -629,6 +635,8 @@ pgx.computePGX <- function(pgx,
     mm <- c("pca", "tsne", "umap")
     pgx <- pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
   }
+
+  saveRDS(pgx, "~/Desktop/MNT/LL2.RDS")
 
   ## Make contrasts by cluster
   if (cluster.contrasts) {
@@ -657,13 +665,13 @@ pgx.computePGX <- function(pgx,
       }
     }
   }
-
+  
   ## Cluster by genes
   if (do.clustergenes) {
     message("[pgx.computePGX] clustering genes...")
-    pgx <- pgx.clusterGenes(
-      pgx, methods = "umap", dims = c(2, 3),
-      X = pgx$impX, level = "gene")
+    mm <- "umap"
+    if (pgx$datatype == "scRNAseq") mm <- c("pca", "tsne", "umap")
+    pgx <- pgx.clusterGenes(pgx, methods = mm, X = pgx$impX, level = "gene")
   }
 
   ## -----------------------------------------------------------------------------
@@ -708,7 +716,9 @@ pgx.computePGX <- function(pgx,
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
 
   message("[pgx.computePGX] testing genes...")
-  pgx <- compute_testGenes(pgx, contr.matrix,
+  pgx <- compute_testGenes(
+    pgx,
+    contr.matrix,
     max.features = max.genes,
     test.methods = gx.methods,
     custom_fc = custom_fc,
@@ -731,10 +741,7 @@ pgx.computePGX <- function(pgx,
     ## Cluster by genes
     if (do.clustergenesets) {
       message("[pgx.computePGX] clustering genesets...")
-      pgx <- pgx.clusterGenes(pgx,
-        methods = "umap",
-        dims = c(2, 3), X = NULL, level = "geneset"
-      )
+      pgx <- pgx.clusterGenes(pgx, methods = "umap", X = NULL, level = "geneset")
     }
   } else {
     message("[pgx.computePGX] Skipping genesets test")
@@ -742,17 +749,21 @@ pgx.computePGX <- function(pgx,
 
   ## ------------------ extra analyses ---------------------
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
-  message("[pgx.computePGX] computing extra modules...")
-
-  pgx <- compute_extra(pgx,
+  message("[pgx.computePGX] computing extra modules: ", paste0(extra.methods, collapse="; "))
+  pgx <- playbase::compute_extra(
+    pgx,
     extra = extra.methods,
     pgx.dir = pgx.dir,
     libx.dir = libx.dir,
     user_input_dir = user_input_dir
   )
 
-  message("[pgx.computePGX] done!")
-
+  message("\n\n")
+  message("[pgx.computePGX]=======================================")
+  message("[pgx.computePGX]======== pgx.computePGX: DONE! ========")
+  message("[pgx.computePGX]=======================================")
+  message("\n\n")
+  saveRDS(pgx, "~/Desktop/MNT/LL8.RDS")
   return(pgx)
 }
 
@@ -958,7 +969,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   full_feature_list <- full_feature_list[!is.na(full_feature_list)]
   full_feature_list <- full_feature_list[full_feature_list != ""]
   full_feature_list <- unique(full_feature_list)
-
+  
   if (!is.null(G)) {
     G <- G[rownames(G) %in% full_feature_list, , drop = FALSE]
     G <- G[, Matrix::colSums(G != 0) > 0, drop = FALSE]
@@ -977,7 +988,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## -----------------------------------------------------------
   ## Add organism specific GO gene sets
   ## -----------------------------------------------------------
-
 
   # only run if not metabolomics
   if (pgx$datatype != "metabolomics") {
@@ -1065,13 +1075,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     }
   }
 
-  ## ## return if G is NULL
-  ## if(is.null(G)) {
-  ##   message("[pgx.add_GMT] WARNING. no gene sets. GMT is NULL.")
-  ##   pgx$GMT <- NULL
-  ##   return(pgx)
-  ## }
-
   ## -----------------------------------------------------------
   ##  Prioritize gene sets by fast rank-correlation
   ## -----------------------------------------------------------
@@ -1114,14 +1117,29 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     ## very fast sparse rank-correlation for approximate single sample
     ## geneset activation.
     cX <- gX - rowMeans(gX, na.rm = TRUE) ## center!
-    cX <- apply(cX, 2, rank)
-    gsetX <- qlcMatrix::corSparse(G, cX) ## slow!
-    rownames(gsetX) <- colnames(G)
-    colnames(gsetX) <- colnames(gX)
+    cX <- t(matrixStats::colRanks(cX))
+    #cX <- apply(cX, 2, rank)
+    #gsetX <- qlcMatrix::corSparse(G, cX) ## slow!
+    #rownames(gsetX) <- colnames(G)
+    #colnames(gsetX) <- colnames(gX)
     if (0) {
       y <- pgx$model.parameters$group[colnames(gX)]
       res <- gx.limmaF(gsetX, y, lfc = 0, fdr = 1, sort.by = "none")
       res <- res[rownames(gsetX), ]
+    }
+    #cX <- X_geneset - rowMeans(X_geneset, na.rm = TRUE)
+    if (ncol(cX) <= 5000) {
+      gsetX <- qlcMatrix::corSparse(G, cX)
+    } else { ## split into chuncks. faster & needs less memory.
+      index <- unique(c(seq(1, ncol(cX), by = round(ncol(cX)/10, 0)), ncol(cX)))
+      i=1; LL.cor=list()
+      for(i in 1:(length(index)-1)) {
+        if (index[i] == 1) jj <- 1 : index[i+1]
+        if (index[i] > 1) jj <- (index[i]+1) : index[i+1]
+        LL.cor[[i]] <- qlcMatrix::corSparse(G, cX[, jj, drop = FALSE])
+      }
+      gsetX <- do.call(cbind, LL.cor)
+      rm(index, LL.cor)
     }
 
     grp <- pgx$model.parameters$group
@@ -1215,8 +1233,10 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   pgx$custom.geneset <- custom.geneset
   message(glue::glue("[pgx.add_GMT] Final GMT: {nrow(G)} x {ncol(G)}"))
   rm(G)
+
   gc()
   return(pgx)
+
 }
 
 
