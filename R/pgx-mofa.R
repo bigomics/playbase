@@ -523,25 +523,22 @@ mofa.compute_clusters <- function(xx, matF = NULL, along = "samples") {
 #' Compute enrichment for MOFA factors.
 #'
 #' @export
-mofa.compute_enrichment <- function(W, G = NULL, filter = NULL, ntop = 1000) {
+mofa.compute_enrichment <- function(W, G, filter = NULL, ntop = 1000) {
 
   if (is.null(G)) {
-    info("[mofa.compute_enrichment] WARNING: Adding genesets. Using GMT recommended")
-    G1 <- Matrix::t(playdata::MSETxMETABOLITE)
-    G2 <- Matrix::t(playdata::GSETxGENE)
-    rownames(G2) <- paste0("SYMBOL:", rownames(G2))
-    G <- merge_sparse_matrix(G1, G2)
-  } else {
-    has.colons <- all(grepl(":", rownames(G)))
-    has.colons
-    if (!has.colons) {
-      ## defaults prefix. If starts with letter SYMBOL, if all numbers CHEBI
-      rownames(G) <- mofa.strip_prefix(rownames(G))
-      ii <- grep("^[0-9]+$", rownames(G), ignore.case = TRUE)
-      if (length(ii) > 0) rownames(G)[ii] <- paste0("CHEBI:", rownames(G)[ii])
-      jj <- setdiff(1:nrow(G), ii)
-      if (length(jj) > 0) rownames(G)[jj] <- paste0("SYMBOL:", rownames(G)[jj])
-    }
+    message("[mofa.compute_enrichment] ERROR: must provide GMT matrix (genes on rows)")
+    return(NULL)
+  }
+  
+  has.colons <- all(grepl(":", rownames(G)))
+  has.colons
+  if (!has.colons) {
+    ## defaults prefix. If starts with letter SYMBOL, if all numbers CHEBI
+    rownames(G) <- mofa.strip_prefix(rownames(G))
+    ii <- grep("^[0-9]+$", rownames(G), ignore.case = TRUE)
+    if (length(ii) > 0) rownames(G)[ii] <- paste0("CHEBI:", rownames(G)[ii])
+    jj <- setdiff(1:nrow(G), ii)
+    if (length(jj) > 0) rownames(G)[jj] <- paste0("SYMBOL:", rownames(G)[jj])
   }
 
   ## filter gene sets

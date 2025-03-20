@@ -426,13 +426,14 @@ getMetaboliteInfo <- function(organism = "Human", id) {
 #'
 #'
 #' @export
-extend_metabolite_sets <- function(M, add=TRUE, postfix="(extended)") {
+extend_metabolite_sets <- function(M, ppi, add=TRUE, postfix="(extended)",
+                                   maxcost=0.33) {
 
   ## get metabolite-metabolite edges from GRAPHITE
-  ppi <- playdata::GRAPHITE_PPI
+  ##ppi <- playdata::GRAPHITE_PPI
   ppi[, 1] <- ifelse(grepl("CHEBI", ppi[, 1]), ppi[, 1], paste0("SYMBOL:", ppi[, 1]))
   ppi[, 2] <- ifelse(grepl("CHEBI", ppi[, 2]), ppi[, 2], paste0("SYMBOL:", ppi[, 2]))
-  sel <- which(grepl("CHEBI", ppi[, 1]) & grepl("CHEBI", ppi[, 2]) & ppi[, 3] <= 0.33)
+  sel <- which(grepl("CHEBI", ppi[, 1]) & grepl("CHEBI", ppi[, 2]) & ppi[, 3] <= maxcost)
   gr <- igraph::graph_from_edgelist(as.matrix(ppi[sel, 1:2]), directed=FALSE)
   MMI <- as.matrix(gr)
   table(colnames(M) %in% rownames(MMI))
@@ -474,13 +475,12 @@ extend_metabolite_sets <- function(M, add=TRUE, postfix="(extended)") {
 
 #'
 #' @export
-extend_metabolite_sets2 <- function(M, add=TRUE, postfix="(extended)") {
+extend_metabolite_sets2 <- function(M, ppi, add=TRUE, postfix="(extended)", maxcost=0.33) {
 
   ## get metabolite-metabolite edges from GRAPHITE
-  ppi <- playdata::GRAPHITE_PPI
   ppi[, 1] <- ifelse(grepl("CHEBI", ppi[, 1]), ppi[, 1], paste0("SYMBOL:", ppi[, 1]))
   ppi[, 2] <- ifelse(grepl("CHEBI", ppi[, 2]), ppi[, 2], paste0("SYMBOL:", ppi[, 2]))
-  sel <- which( (grepl("CHEBI", ppi[, 1]) | grepl("CHEBI", ppi[, 2])) & ppi[, 3] <= 0.33)
+  sel <- which( (grepl("CHEBI", ppi[, 1]) | grepl("CHEBI", ppi[, 2])) & ppi[, 3] <= maxcost)
   gr <- igraph::graph_from_edgelist(as.matrix(ppi[sel, 1:2]), directed=FALSE)
   PMI <- as.matrix(gr)
 

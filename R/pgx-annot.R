@@ -159,29 +159,31 @@ getGeneAnnotation <- function(
     if("try-error" %in% class(annot)) {
       annot <- NULL
     }
-  }
-  
-  missing <- annot$symbol %in% c(NA,"")
-  if (!is.null(annot) && any(missing)) {
-    info(
-      "[getGeneAnnotation] annotating", sum(missing),
-      "missing features with ORTHOGENE"
-    )
-    missing.probes <- probes[which(missing)]
-    missing.annot <- try(getGeneAnnotation.ORTHOGENE(
-      organism = organism,
-      probes = missing.probes,
-      verbose = verbose
-    ))
-    if (!is.null(missing.annot) && !"try-error" %in% class(missing.annot) &&
-          nrow(missing.annot)) {
-      ## replace missing entries
-      missing.annot <- missing.annot[, colnames(annot)]
-      jj <- match(missing.probes, probes)
-      annot[jj, ] <- missing.annot
+  } else {
+    missing <- (annot$symbol %in% c(NA,""))
+    if (any(missing)) {
+      info(
+        "[getGeneAnnotation] annotating", sum(missing),
+        "missing features with ORTHOGENE"
+      )
+      missing.probes <- probes[which(missing)]
+      missing.annot <- try(getGeneAnnotation.ORTHOGENE(
+        organism = organism,
+        probes = missing.probes,
+        verbose = verbose
+      ))
+      if (!is.null(missing.annot) &&
+            !"try-error" %in% class(missing.annot) &&
+             nrow(missing.annot)) {
+        ## replace missing entries (some still missing)
+        sel <- which( !is.na(missing.annot$symbol) & missing.annot$symbol!="")
+        missing.annot <- missing.annot[sel, colnames(annot)]
+        jj <- match(missing.annot$features, probes)
+        annot[jj, ] <- missing.annot
+      }
     }
   }
-
+  
   ## clean up
   if(!is.null(annot)) {
     annot <- cleanupAnnotation(annot)
@@ -233,6 +235,7 @@ getGeneAnnotation.ANNOTHUB <- function(
     probes,
     use.ah = NULL,
     probe_type = NULL,
+    second.pass = TRUE,
     verbose = TRUE) {
   if (is.null(organism)) {
     warning("[getGeneAnnotation.ANNOTHUB] Please specify organism")
@@ -282,15 +285,17 @@ getGeneAnnotation.ANNOTHUB <- function(
   ## --------------------------------------------
   ## retrieve table
   ## --------------------------------------------
-  cols <- c("SYMBOL", "GENENAME", "GENETYPE", "MAP")
+  cols <- c("SYMBOL", "GENENAME", "GENETYPE", "MAP", "ALIAS")
+  #cols <- c("SYMBOL", "GENENAME", "GENETYPE", "MAP")  
   cols <- intersect(cols, AnnotationDbi::keytypes(orgdb))
 
   if (organism %in% c("Mus musculus", "Rattus norvegicus")) {
     cols <- unique(c(cols, "ENTREZID"))
   }
 
-  cat("get gene annotation columns:", cols, "\n")
-  message("retrieving annotation for ", length(probes), " ", probe_type, " features...")
+  dbg("[getGeneAnnotation.ANNOTHUB] annotation columns:", cols)
+  dbg("[getGeneAnnotation.ANNOTHUB] probe_type =  ", probe_type)
+  dbg("[getGeneAnnotation.ANNOTHUB] retrieving annotation for ",length(probes),"features.")  
 
   suppressMessages(suppressWarnings(
     annot <- AnnotationDbi::select(
@@ -301,6 +306,14 @@ getGeneAnnotation.ANNOTHUB <- function(
     )
   ))
 
+  # some organisms do not provide symbol but rather gene name (e.g. yeast)
+  if (!"SYMBOL" %in% colnames(annot)) {
+    annot$SYMBOL <- annot$GENENAME
+    annot$GENENAME <- annot$ALIAS
+  }
+  annot$ALIAS <- NULL
+  annot$SYMBOL[is.na(annot$SYMBOL)] <- ""
+  
   ## Attempt to retrieve chr map via org.Mm.egCHRLOC / org.Rn.egCHRLOC.
   if (organism %in% c("Mus musculus", "Rattus norvegicus")) {
     if (organism == "Mus musculus") {
@@ -321,35 +334,33 @@ getGeneAnnotation.ANNOTHUB <- function(
     cls <- setdiff(colnames(annot), "ENTREZID")
     annot <- annot[, cls, drop = FALSE]
   }
-
-  # some organisms do not provide symbol but rather gene name (e.g. yeast)
-  if (!"SYMBOL" %in% colnames(annot)) {
-    annot$SYMBOL <- annot$GENENAME
-  }
-  annot$SYMBOL[is.na(annot$SYMBOL)] <- ""
-
+  
   ## match annotation table to probes
-  cat("got", length(unique(annot$SYMBOL)), "unique SYMBOLs...\n")
+  message("got", length(unique(annot$SYMBOL)), "unique SYMBOLs")
   annot <- annot[match(probes, annot[, probe_type]), ]
   annot$PROBE <- names(probes) ## original probe names
-
+  
   ## ---------------------------------------------------------------------------------
   ## Second pass for missing symbols. Still trying annothub but
-  ## missing symbols may map to different keytype.
+  ## missing symbols may map to different keytype. NEED RETHINK:
+  ## DO WE REALLY NEED THIS???
   ## ------------------------------------------------------------------------------------
   is.missing <- (is.na(annot$SYMBOL) | annot$SYMBOL == "")
   missing.probes <- probes[which(is.missing)] ## probes match annot!
-  missing.probes <- missing.probes[!is.na(missing.probes)]
-  if (length(missing.probes)) {
-    dbg(
-      "[getGeneAnnotation.ANNOTHUB] retrying missing",
-      length(missing.probes), "symbols..."
-    )
+  missing.probes <- missing.probes[!is.na(missing.probes)]  
+
+  if (second.pass && length(missing.probes)) {
+    dbg("[getGeneAnnotation.ANNOTHUB] second pass: retrying missing",
+        length(missing.probes), "symbols...")
     suppressWarnings(suppressMessages(
       missing.probe_type <- detect_probetype(organism, missing.probes, orgdb = orgdb)
     ))
-    missing.probe_type
-    if (!is.null(missing.probe_type) && !is.na(missing.probe_type)) {
+    dbg("[getGeneAnnotation.ANNOTHUB] missing.probe_type=", missing.probe_type)
+    ## only do second try if missing.probetype is different
+    if (!is.null(missing.probe_type) && !is.na(missing.probe_type)
+        && missing.probe_type != probe_type
+        ) {
+      
       missing.probes1 <- match_probe_names(missing.probes, orgdb, missing.probe_type)
       suppressMessages(suppressWarnings(
         missing.annot <- AnnotationDbi::select(orgdb,
@@ -358,26 +369,28 @@ getGeneAnnotation.ANNOTHUB <- function(
           keytype = missing.probe_type
         )
       ))
-      head(missing.annot)
       missing.key <- missing.annot[, missing.probe_type]
       missing.annot$PROBE <- names(missing.probes[match(missing.key, missing.probes1)])
-
+      
       # some organisms do not provide SYMBOL but rather GENENAME (e.g. yeast)
       if (!"SYMBOL" %in% colnames(missing.annot)) {
         missing.annot$SYMBOL <- missing.annot$GENENAME
+        missing.annot$GENENAME <- missing.annot$ALIAS
       }
+      
       for(k in setdiff(colnames(annot),colnames(missing.annot))) {
         missing.annot[[k]] <- NA
       }
       kk <- match(colnames(annot),colnames(missing.annot))
-      missing.annot <- missing.annot[,kk]
+      missing.annot <- missing.annot[,kk,drop=FALSE]
       jj <- match(missing.annot$PROBE, probes)
-      annot[jj, ] <- missing.annot
+      ii <- which(!is.na(jj))
+      annot[jj[ii], ] <- missing.annot[ii,]
     }
   }
 
   ## get human ortholog using 'orthogene'
-  cat("\ngetting human orthologs...\n")
+  message("[getGeneAnnotation.ANNOTHUB] getting human orthologs...")
   ortho_organism <- getOrthoSpecies(organism, use="map")
   annot$ORTHOGENE <- getHumanOrtholog(ortho_organism, annot$SYMBOL)$human
 
@@ -386,15 +399,17 @@ getGeneAnnotation.ANNOTHUB <- function(
   pkgname <- orgdb$packageName
   if (length(pkgname) == 0) pkgname <- "OrgDb"
   annot$SOURCE <- pkgname[1]
-
+  
   annot.cols <- c(
     "PROBE", "SYMBOL", "ORTHOGENE", "GENENAME",
-    ##  "GENETYPE", "MAP", "CHR", "POS", "TXLEN", "SOURCE"
+    ## "GENETYPE", "MAP", "CHR", "POS", "TXLEN", "SOURCE"
     "MAP", "SOURCE"
   )
   missing.cols <- setdiff(annot.cols, colnames(annot))
   missing.cols
-  genes <- annot
+
+  ## create genes data.frame
+  genes <- annot 
   for (a in missing.cols) genes[[a]] <- NA
   genes <- genes[, annot.cols]
   new.names <- c(
@@ -403,13 +418,11 @@ getGeneAnnotation.ANNOTHUB <- function(
     "chr", "source"
   )
   colnames(genes) <- new.names
-  genes <- as.data.frame(genes)
-
+  genes <- as.data.frame(genes)  
   if (!all(probes0 %in% genes$feature)) {
     message("WARNING: not all probes could be annotated")
   }
   genes <- genes[match(probes0, genes$feature), , drop = FALSE]
-
   if (is.null(genes)) {
     warning("[getGeneAnnotation] ERROR : could not create gene annotation")
     return(NULL)
@@ -418,7 +431,6 @@ getGeneAnnotation.ANNOTHUB <- function(
   ## in case there were duplicated probe names we _must_ make them
   ## unique??? IK: really?? or should we remove duplicates?
   rownames(genes) <- make_unique(probes0) ## in pgx-functions.R
-
   return(genes)
 }
 
@@ -466,7 +478,6 @@ clean_probe_names <- function(probes, sep = ".-") {
 
   ## strip away anything after a 'dot' or 'underscore'
   probes <- sub(paste0("[", sep, "].*"), "", probes)
-
   ## is.ensembl <- mean(grepl("^ENS", probes)) > 0.5
   ## if (is.ensembl) {
   ##   probes <- sub("[.][0-9]+$", "", probes) ## strip version number
@@ -687,6 +698,181 @@ getCustomAnnotation <- function(probes, custom_annot) {
   custom_annot <- cleanupAnnotation(custom_annot)
 
   return(custom_annot)
+}
+
+## ================================================================================
+## ================== GET ORTHOLOG FUNCTIONS ======================================
+## ================================================================================
+
+#' @title Get human ortholog from given symbols of organism by using
+#'   orthogene package. This package needs internet connection.
+#'
+#' @export
+getHumanOrtholog <- function(organism, symbols,
+                             ortho.methods=c("homologene", "gprofiler", "babelgene"),
+                             verbose=1) {
+
+  orthogenes <- rep(NA, length(symbols))
+  orthosource <- rep(NA, length(symbols))    
+  
+  ## Try mapping with orthogene's databases 
+  ##ortho.methods <- c("gprofiler", "homologene", "babelgene") ## mapping methods
+  ortho_organism <- getOrthoSpecies(organism)
+  ortho.found <- FALSE
+  i=1
+  while(i <= length(ortho.methods) && !ortho.found) {
+    ortho.out <- try(orthogene::convert_orthologs(
+      gene_df = c("---", unique(symbols[!is.na(symbols)])),
+      input_species = ortho_organism,
+      output_species = "human",
+      method = ortho.methods[i],
+      non121_strategy = "drop_both_species",
+      verbose = FALSE
+    ), silent=TRUE)
+    class(ortho.out)
+    results.ok <- (!"try-error" %in% class(ortho.out) &&
+                     inherits(ortho.out, "data.frame") &&
+                     nrow(ortho.out) > 0)
+    results.ok
+    if (results.ok) {
+      ii <- which(is.na(orthogenes))
+      ##ii <- head(which(is.na(orthogenes)),10)      
+      jj <- match(symbols[ii], ortho.out$input_gene)
+      kk <- ii[which(!is.na(jj))]
+      jj <- jj[which(!is.na(jj))]
+      if(verbose>0) message("[getHumanOrtholog] mapping ",length(kk)," symbols with ", ortho.methods[i])
+      orthogenes[kk] <- rownames(ortho.out)[jj]
+      orthosource[kk] <- ortho.methods[i]
+    } else {
+      if(verbose>0) message("[getHumanOrtholog] failed lookup: ", ortho.methods[i])
+    }
+    ortho.found <- all(!is.na(orthogenes))
+    i <- i + 1
+  }
+
+  table(is.na(orthogenes))
+  mean.mapped <- round( 100*mean(!is.na(orthogenes)), digits=4)
+  orthogene.failed <- (mean.mapped < 10.0)
+  orthogene.failed
+  if (orthogene.failed) {
+    if(verbose>0) message("[getHumanOrtholog] ratio mapped using orthogene = ", mean.mapped,"%")
+    if(verbose>0) message("[getHumanOrtholog] Trying biomart...")
+    ## test if biomart is reachable
+    ii <- which(is.na(symbols))
+    res.biomart <- try(getHumanOrtholog.biomart(organism, symbols[ii]), silent=TRUE)
+    class(res.biomart)
+    if (!"try-error" %in% class(res.biomart)) {
+      jj <- which(is.na(res.biomart))
+      ii <- ii[jj]
+      orthogenes[ii] <- res.biomart[jj]
+      orthosource[ii] <- 'biomart'
+    }
+  } else {
+    if(verbose>0) message("[getHumanOrtholog] skipping biomart...")
+  }
+
+  ## Map any missing symbols that look like human genes
+  human.genes <- playdata::GENE_SYMBOL
+  ii <- which(is.na(orthogenes) & toupper(symbols) %in% human.genes)
+  orthogenes[ii] <- toupper(symbols[ii])
+
+  mean.mapped <- round( 100*mean(!is.na(orthogenes)), digits=4)  
+  if(verbose>0) message("[getHumanOrtholog] total ratio mapped  = ", mean.mapped,"%")
+  
+  ## return dataframe. First column organism symbols, second column
+  ## human ortholog. NA if missing.
+  df <- data.frame(symbols, "human"=orthogenes, source=orthosource)
+  colnames(df)[1] <- organism
+  return(df)
+}
+
+#' @title Get human ortholog from given symbols of organism by using
+#'   biomart package. This package needs internet connection.
+#' This is an alternative to orthogene::map_genes failure.
+#' Unfortunately, biomart is *much* less reliable than orthogene (often down).
+#'
+#' @export
+getHumanOrtholog.biomart <- function(organism, symbols, verbose=1) {
+
+  if (tolower(organism) == "human") organism <- "Homo sapiens"
+  if (tolower(organism) == "mouse") organism <- "Mus musculus"
+  if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
+  if (tolower(organism) %in% c("dog","canis familiaris")) organism <- "Canis LFamiliaris"  
+
+  if(verbose>0) message("[getHumanOrtholog.biomart] Mapping ", organism, " genes with biomart.")
+  require(biomaRt)
+  s1 <- tolower(substring(organism,1,1))
+  s2 <- tolower(strsplit(organism, " ")[[1]][2])
+  organism0 <- paste0(s1, s2)
+  organism0
+  if(verbose>0) message("[getHumanOrtholog.biomart] Searching biomart for '", organism0,"'")
+  dd <- listDatasets(useEnsembl(biomart = "genes"))
+  hh <- grep(organism0, dd$dataset)
+  hh
+  if(length(hh)==0) {
+    message("ERROR: ",paste0(organism, " not found in biomart databases. Exiting."))
+    return(NULL)
+  }
+
+  dataset <- dd$dataset[hh]
+  if(verbose>0) message("[getHumanOrtholog.biomart] found matching dataset '", dataset,"'")
+  organism_mart <- NULL
+  human_mart <- NULL    
+  organism_mart <- biomaRt::useEnsembl(biomart = "genes", dataset = dataset)
+  human_mart <- biomaRt::useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl")
+  mart1.ok <- (!is.null(organism_mart) && !"try-error" %in% class(organism_mart) &&
+                 class(organism_mart) == "Mart")
+  mart2.ok <- (!is.null(human_mart) && !"try-error" %in% class(human_mart) &&
+                 class(human_mart) == "Mart")
+  if(verbose>0) dbg("[getHumanOrtholog.biomart] organism mart OK -> ", mart1.ok)
+  if(verbose>0) dbg("[getHumanOrtholog.biomart] human mart OK -> ", mart2.ok)    
+  if(!(mart1.ok && mart2.ok)) {
+    message("[getHumanOrtholog.biomart] ERROR: Could not create Marts...")
+    return(NULL)
+  }
+
+  if (organism == "Mus musculus") {
+    attrs <- c("ensembl_gene_id", "mgi_symbol")
+    flt <- "mgi_symbol"
+  } else {
+    attrs <- c("ensembl_gene_id", "external_gene_name")
+    flt <- "external_gene_name"
+  }
+  if(verbose>0) message("[getHumanOrtholog.biomart] Testing if biomart is reachable...")
+  nz.symbols <- symbols[!is.na(symbols) & symbols!='']
+  res.biomart <- try(biomaRt::getLDS(
+    attributes = attrs,
+    filters = flt,
+    # values = "Xist",
+    values = head(nz.symbols),
+    mart = organism_mart,
+    attributesL = c("ensembl_gene_id", "hgnc_symbol"),
+    martL = human_mart
+  ), silent=TRUE)
+  class(res.biomart)
+  if ("try-error" %in% class(res.biomart)) {
+    message("[getHumanOrtholog] ERROR: biomart::getLDS failed to contact server")
+    return(NULL)
+  }
+
+  ## Full query
+  orthogenes <- try(biomaRt::getLDS(
+    attributes = attrs,
+    filters = flt,
+    values = symbols,
+    mart = organism_mart,
+    attributesL = c("ensembl_gene_id", "hgnc_symbol"),
+    martL = human_mart
+  ), silent=TRUE)
+  class(orthogenes)
+  
+  if ("try-error" %in% class(res.biomart)) {
+    message("[getHumanOrtholog] ERROR: full biomart::getLDS query failed")
+    return(NULL)
+  }
+
+  ## succesful
+  return(orthogenes)
 }
 
 
@@ -988,17 +1174,21 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   return(top_match)
 }
 
+#' Rename features names of object to available human symbol by
+#' human_ortholog or other 'human-like' uppercased annotation
+#' columns. WARNING: does not necessarily keep original length.
+#'
 #' @export
 collapse_by_humansymbol <- function(obj, annot) {
   annot <- cbind(annot, rownames = rownames(annot))
   target <- c("human_ortholog", "symbol", "gene_name", "rownames")
   target <- intersect(target, colnames(annot))
-  complete_targets <- lapply(target, function(x) {
-    sum(is.na(annot[, x]) | annot[, x] %in% c("")) < 1
-  }) |> unlist()
-  target <- target[complete_targets]
+#  complete_targets <- lapply(target, function(x) {
+#    sum(is.na(annot[, x]) | annot[, x] %in% c("")) < 1
+#  }) |> unlist()
+#  target <- target[complete_targets]
   if (length(target) == 0) {
-    message("[map_humansymbol] WARNING: could not find symbol mapping column.")
+    message("[collapse_by_humansymbol] WARNING: could not find symbol mapping column.")
     return(obj)
   } else {
     ## call rename_by with target column
@@ -1008,146 +1198,6 @@ collapse_by_humansymbol <- function(obj, annot) {
   if (is.null(dim(map.obj))) names(map.obj) <- toupper(names(map.obj))
   map.obj
 }
-
-
-#' @title Get human ortholog from given symbols of organism by using
-#'   biomart package. This package needs internet connection.
-#' This is an alternative to orthogene::map_genes failure.
-#' Unfortunately, biomart is *much* less reliable than orthogene (often down).
-#'
-#' @export
-getHumanOrtholog.biomart <- function(organism, symbols) {
-  message("[getHumanOrtholog.biomart] Mapping ", organism, " genes with biomart.")
-  require(biomaRt)
-  s1 <- tolower(strsplit(organism, "")[[1]][1])
-  s2 <- tolower(strsplit(organism, " ")[[1]][2])
-  organism0 <- paste0(s1, s2)
-  D <- listDatasets(useEnsembl(biomart = "genes"))
-  hh <- grep(organism0, D$dataset)
-  if (any(hh)) {
-    organism_mart <- biomaRt::useEnsembl(biomart = "genes", dataset = D$dataset[hh])
-    human_mart <- biomaRt::useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl")
-    if (organism == "Mus musculus") {
-      attrs <- c("ensembl_gene_id", "mgi_symbol")
-      flt <- "mgi_symbol"
-    } else {
-      attrs <- c("ensembl_gene_id", "external_gene_name")
-      flt <- "external_gene_name"
-    }
-    message("[getHumanOrtholog.biomart] Testing if biomart is reachable...")
-    res.biomart <- try(biomaRt::getLDS(
-      attributes = attrs,
-      filters = flt,
-      values = "Xist",
-      mart = organism_mart,
-      attributesL = c("ensembl_gene_id", "hgnc_symbol"),
-      martL = human_mart
-    ))
-    if ("try-error" %in% class(res.biomart)) {
-      message("[getHumanOrtholog] biomart::getLDS failed to contact server or use mirror")
-      orthogenes <- NULL
-      return(orthogenes)
-    } else {
-      orthogenes <- try(biomaRt::getLDS(
-        attributes = attrs,
-        filters = flt,
-        values = symbols,
-        mart = organism_mart,
-        attributesL = c("ensembl_gene_id", "hgnc_symbol"),
-        martL = human_mart
-      ))
-      if ("try-error" %in% class(res.biomart)) {
-        message("[getHumanOrtholog] biomart::getLDS failed")
-        orthogenes <- NULL
-        return(orthogenes)
-      } else {
-        return(orthogenes)
-      }
-    }
-  } else {
-    stop(paste0(organism, " not found in biomart databases. Exiting with error."))
-  }
-}
-
-#' @title Get human ortholog from given symbols of organism by using
-#'   orthogene package. This package needs internet connection.
-#'
-#' @export
-getHumanOrtholog <- function(organism, symbols) {
-  ## test if orthogene server is reachable
-  ortho_organism <- getOrthoSpecies(organism)
-  mm <- c("gprofiler", "homologene", "babelgene") ## mapping methods
-  methods.ok <- c()
-  i <- 1
-  for (i in 1:length(mm)) {
-    res <- try(orthogene::convert_orthologs(
-      gene_df = c("---", "CDK1"),
-      input_species = ortho_organism,
-      method = mm[i],
-      verbose = FALSE
-    ), silent = TRUE)
-    methods.ok[i] <- (!"try-error" %in% class(res) &&
-      inherits(res, "data.frame") &&
-      nrow(res) > 0)
-  }
-  names(methods.ok) <- mm
-  orthogeneMethod <- NULL
-  if (all(methods.ok == FALSE)) {
-    message("[getHumanOrtholog] orthogene::convert_orthologs: all mapping methods failed. Trying biomart...")
-    ## test if biomart is reachable
-    res.biomart <- try(getHumanOrtholog.biomart(organism, symbols))
-    if ("try-error" %in% class(res.biomart)) {
-      message("[getHumanOrtholog] biomart failed.")
-      df <- data.frame(symbols, "human" = NA)
-      orthogenes <- toupper(sub(".*:", "", symbols))
-      df <- data.frame(symbols, "human" = orthogenes)
-      colnames(df)[1] <- organism
-      rownames(df) <- NULL
-      return(df)
-    }
-  } else {
-    methods.ok <- methods.ok[which(methods.ok)]
-    orthogeneMethod <- names(methods.ok)[1]
-  }
-
-  if (!is.null(orthogeneMethod)) {
-    ## map to correct orthogene species name, if not
-    ## done. SPECIES_TABLE$species are annothub names,
-    ## SPECIES_TABLE$ortho_species are matched orthogene/gprofiler
-    ## names.
-    ortho_organism <- getOrthoSpecies(organism)
-    orthogenes <- NULL
-
-    ortho.out <- try(orthogene::convert_orthologs(
-      gene_df = c("---", unique(symbols[!is.na(symbols)])),
-      input_species = ortho_organism,
-      output_species = "human",
-      method = orthogeneMethod,
-      non121_strategy = "drop_both_species",
-      verbose = FALSE
-    ))
-
-    if (!"try-error" %in% class(ortho.out)) {
-      ii <- match(symbols, ortho.out$input_gene)
-      orthogenes <- rownames(ortho.out)[ii]
-    }
-
-    if (is.null(orthogenes)) {
-      message("WARNING: could not find orthogene for ", organism)
-      orthogenes <- rep(NA, length(symbols))
-    }
-
-    df <- data.frame(symbols, "human" = orthogenes)
-    colnames(df)[1] <- organism
-    return(df)
-  } else if (!"try-error" %in% class(res.biomart)) {
-    orthogenes <- getHumanOrtholog.biomart(organism, symbols)
-    df <- data.frame(symbols, "human" = orthogenes)
-    colnames(df)[1] <- organism
-    return(df)
-  }
-}
-
 
 #' @title Show some probe types for selected organism
 #'
@@ -1174,7 +1224,7 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
   if (is.null(keytypes)) {
     keytypes <- c(
       "SYMBOL", "ENSEMBL", "UNIPROT", "ENTREZID",
-      "GENENAME", "MGI",
+      "GENENAME", "MGI", "TAIR",
       "ENSEMBLTRANS", "ENSEMBLPROT",
       "ACCNUM", "REFSEQ"
     )
@@ -1320,10 +1370,10 @@ getOrganismGO <- function(organism, use.ah = NULL, orgdb = NULL) {
   AnnotationDbi::keytypes(orgdb)
   ont_classes <- c("BP", "CC", "MF")
   if (!"GOALL" %in% AnnotationDbi::keytypes(orgdb)) {
-    cat("WARNING:: missing GO annotation in database!\n")
+    message("WARNING:: missing GO annotation in database!\n")
   } else {
     ## create GO annotets
-    cat("\nCreating GO annotation from AnnotationHub...\n")
+    message("Creating GO annotation from AnnotationHub...")
     ont_classes <- c("BP", "CC", "MF")
     k <- "BP"
     for (k in ont_classes) {
@@ -1394,15 +1444,13 @@ getGeneAnnotation.ORTHOGENE <- function(
     genes = probes1,
     species = species,
     verbose = FALSE
-  ))
+  ), silent=TRUE)
 
   ortholog <- toupper(probes1)
-  genebuild <- "-"
 
   if (!inherits(gene.out, "try-error")) {
     gene.out <- gene.out[match(probes1, gene.out$input), ]
     ortholog <- getHumanOrtholog(organism, gene.out$name)$human
-    genebuild <- gprofiler2::get_version_info()$genebuild
   }
 
   df <- data.frame(
@@ -1698,10 +1746,8 @@ check_species_probetype <- function(
       mx.ids <- toupper(colnames(playdata::METABOLITE_ID)[-1])
       mx.ids <- c(mx.ids, paste0(mx.ids, "_ID"))
       has.id <- any(toupper(annot.cols) %in% mx.ids)
-      dbg("[check_species_probetype] annot.cols has.id = ", has.id)
       if (has.id) {
         ids <- intersect(toupper(annot.cols), mx.ids)
-        dbg("[check_species_probetype] ids = ", ids)
         mx.type <- ids[1]
       }
     }
@@ -1728,7 +1774,6 @@ check_species_probetype <- function(
 
   ## remove NA
   ptype <- ptype[!sapply(ptype, function(p) all(is.na(p)))]
-  dbg("[check_species_probetype] length(ptype) = ", length(ptype))
   return(ptype)
 }
 

@@ -5,7 +5,12 @@
 \title{Get human ortholog from given symbols of organism by using
   orthogene package. This package needs internet connection.}
 \usage{
-getHumanOrtholog(organism, symbols)
+getHumanOrtholog(
+  organism,
+  symbols,
+  ortho.methods = c("homologene", "gprofiler", "babelgene"),
+  verbose = 1
+)
 }
 \description{
 Get human ortholog from given symbols of organism by using

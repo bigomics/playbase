@@ -406,21 +406,23 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   pgx$genes <- NULL
   pgx$probe_type <- probe_type
-
+  
   message("[createPGX] annotating genes")
   pgx <- pgx.addGeneAnnotation(pgx, annot_table = annot_table)
+
   if (is.null(pgx$genes)) {
     stop("[createPGX] FATAL: Could not build gene annotation")
   }
   if(!"symbol" %in% colnames(pgx$genes) && "gene_name" %in% colnames(pgx$genes)) {
     dbg("[createPGX] WARNING! no symbol column. copying deprecated gene_name column as symbol")
     pgx$genes$symbol <- pgx$genes$gene_name
-  }  
+  }
+  
   if (all(is.na(pgx$genes$symbol))) {
     dbg("[createPGX] WARNING! all symbol NA. copying rownames as symbol")
     pgx$genes$symbol <- gsub(".*:|[.].*","",rownames(pgx$genes))
   }  
-
+    
   ## -------------------------------------------------------------------
   ## Filter out not-expressed
   ## -------------------------------------------------------------------
@@ -431,7 +433,7 @@ pgx.createPGX <- function(counts,
     ii <- match(rownames(pgx$counts), rownames(pgx$genes))
     pgx$genes <- pgx$genes[ii, , drop = FALSE]
   }
-
+  
   ## -------------------------------------------------------------------
   ## Filter genes
   ## -------------------------------------------------------------------
@@ -474,15 +476,18 @@ pgx.createPGX <- function(counts,
   ## collapse probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------
   ## if feature/rownames are not symbol, we paste symbol to row name.
-  pp <- sub(".*:|", "", rownames(pgx$genes))
-  rows_not_symbol <- mean(pp == pgx$genes$symbol, na.rm = TRUE) < 0.2
-  if (convert.hugo && rows_not_symbol) {
+  pp <- sub("^[a-zA-Z]+:", "", rownames(pgx$genes))
+  mean_feature_is_symbol <- mean(pp == pgx$genes$symbol, na.rm = TRUE) 
+
+  if (convert.hugo && mean_feature_is_symbol < 0.10) {
     symbol <- pgx$genes$symbol
     symbol[is.na(symbol)] <- ""
     feature_is_symbol <- (sub("^[a-zA-Z]+:", "", rownames(pgx$genes)) == symbol)
+    
     new.names <- combine_feature_names(pgx$genes, target = c("rownames", "_", "symbol"))
     new.names <- ifelse(feature_is_symbol, rownames(pgx$genes), new.names)
     new.names <- make_unique(new.names)
+    
     rownames(pgx$genes) <- new.names
     pgx$genes$gene_name <- new.names ## gene_name should also be renamed??
     pgx$genes$feature <- new.names ## feature should also be renamed??
@@ -940,7 +945,8 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   ## add metabolomic gene sets
   if (has.mx) {
     info("[pgx.add_GMT] Retrieving metabolomics genesets")
-    G <- Matrix::t(playdata::MSETxMETABOLITE)
+    ##G <- Matrix::t(playdata::MSETxMETABOLITE)
+    G <- Matrix::t(playdata::XSETxMETABOLITE)
     ## strip any prefix. works because SYMBOL and CHEBI do not overlap
     rownames(G) <- sub(".*:", "", rownames(G))
   }
