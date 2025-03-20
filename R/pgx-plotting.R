@@ -2132,7 +2132,8 @@ pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht = 5, cluster.samples = TRUE
     annot.df <- annot.df[hc$order, , drop = FALSE]
   }
 
-  npar <- apply(annot.df, 2, function(x) length(setdiff(unique(x), NA)))
+  ##npar <- apply(annot.df, 2, function(x) length(setdiff(unique(x), NA))) ## can get wrong.
+  npar <- sapply(annot.df, function(x) length(setdiff(unique(x), NA)))
   isnum <- c(rep(1, ncol(annot.fvar)), rep(0, ncol(annot.cvar)))
   is.binary <- apply(annot.df, 2, function(x) length(setdiff(unique(x), NA)) == 2)
   is.binary <- apply(annot.df, 2, function(x) all(x %in% c(0, 1, NA, TRUE, FALSE, "T", "F", "NA")))
@@ -2144,8 +2145,6 @@ pgx.plotPhenotypeMatrix0 <- function(annot, annot.ht = 5, cluster.samples = TRUE
     klrs <- rev(grDevices::grey.colors(npar[i], start = 0.4, end = 0.85)) ## continous scale
     if (npar[i] == 1) klrs <- "#d8d8d8"
     if (npar[i] > 3 && !isnum[i]) klrs <- rep(RColorBrewer::brewer.pal(8, "Set2"), 99)[1:npar[i]]
-
-
     names(klrs) <- sort(unique(annot.df[, i]))
     klrs <- klrs[!is.na(names(klrs))]
     ann.colors[[prm]] <- klrs

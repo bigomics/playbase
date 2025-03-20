@@ -24,12 +24,26 @@ compute_extra <- function(pgx, extra = c(
 
   if (length(extra) == 0) {
     return(pgx)
+  } else {
+    ss <- paste0(extra, collapse="; ")
+    message("[pgx.computePGX: compute_extra] Extra modules: ", ss)
   }
+    
   if (!is.null(pgx.dir) && !dir.exists(pgx.dir)) pgx.dir <- NULL
-  if (!is.null(libx.dir) && !dir.exists(libx.dir)) libx.dir <- NULL
-
+  ## if (!is.null(libx.dir) && !dir.exists(libx.dir)) libx.dir <- NULL
+  if (!is.null(libx.dir)) {
+    if (!dir.exists(libx.dir)) {
+      libx.dir <- "~/libx"
+      if (!dir.exists(libx.dir)) {
+        libx.dir <- NULL
+      }
+    }
+  }
+  message("[pgx.computePGX: compute_extra] pgx.dir = ", pgx.dir)
+  message("[pgx.computePGX: compute_extra] libx.dir = ", libx.dir)
+  
   rna.counts <- pgx$counts
-
+  
   # If working on non-human species, use homologs
   if (!all(is.na(pgx$genes$human_ortholog))) {
     rownames(rna.counts) <- probe2symbol(rownames(rna.counts), pgx$genes, query = "human_ortholog")
@@ -259,7 +273,6 @@ compute_extra <- function(pgx, extra = c(
   ## ------------------------------------------------------
   ## pretty collapse all timings
   ## ------------------------------------------------------
-  #
   timings <- as.matrix(timings)
   rownames(timings) <- timings[, 1]
   timings0 <- apply(as.matrix(timings[, -1, drop = FALSE]), 2, as.numeric)
@@ -377,8 +390,8 @@ compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
 
     if (!(".cell_cycle" %in% colnames(pgx$samples))) {
       counts <- rna.counts
-      message("length(unique(rownames(counts))): ", length(unique(rownames(counts))))
-      message("dim(counts): ", dim(counts))
+      ## message("length(unique(rownames(counts))): ", length(unique(rownames(counts))))
+      ## message("dim(counts): ", dim(counts))
       ## In multi-species now use symbol, and deduplicate in case
       ## use retains feature as "gene_name/rowname"
       rownames(counts) <- toupper(pgx$genes[rownames(counts), "symbol"])
