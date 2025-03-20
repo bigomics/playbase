@@ -192,7 +192,6 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
         max(apply(MX, 2, function(m) sum(a %in% m)))
       })
       id.col <- which.max(id.match)
-      dbg("[getProbeAnnotation] cross lookup using id.col =", colnames(annot_table)[id.col])
       probes <- annot_table[, id.col]
     }
   }
@@ -358,7 +357,70 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
 #' databases.
 #'
 #' @export
-getMetaboliteInfo <- function(organism = "Human", id) {
+getMetaboliteInfo <- function(organism = "Human", id, info = NULL) {
+  if (is.null(id) || length(id) == 0) {
+    return(NULL)
+  }
+  if (is.na(id) || id == "") {
+    return(NULL)
+  }
+  if (!id %in% playdata::METABOLITE_ID$ID) {
+    message("[getMetaboliteInfo] unknown metabolite ID = ",id)
+    return(NULL)
+  }
+
+  ## add metadata from tables. Append to info if provided.
+  idx <- playdata::METABOLITE_ID[playdata::METABOLITE_ID$ID == id,]
+  metadata <- playdata::METABOLITE_METADATA[playdata::METABOLITE_METADATA$ID == id,]
+  if(is.null(info)) info <- list()
+  info <- c(info, metadata, idx)
+  info <- info[!duplicated(names(info))]
+  info <- info[!sapply(info,function(s) all(is.na(s)))]
+
+  ## substitute some names
+  names(info) <- sub("definition","summary",names(info))
+
+  # remove summary if it is null
+  if (is.null(info[["summary"]])) info[["summary"]] <- "Summary not available for this metabolite."
+  if (info[["summary"]] == "null") info[["summary"]] <- "Summary not available for this metabolite."
+
+  ## create links to external databases: these libraries are not
+  ## always available for a given chebi id
+  hmdb.link <- NULL
+  kegg.link <- NULL
+  pubchem.link <- NULL
+  pathbank.link <- NULL
+  refmet.link <- NULL
+  lipidmaps.link <- NULL
+  if (!is.null(info$HMDB)) hmdb.link <- glue::glue("<a href='https://hmdb.ca/metabolites/{info$HMDB}' target='_blank'>HMDB</a>")
+  if (!is.null(info$KEGG)) kegg.link <- glue::glue("<a href='https://www.kegg.jp/dbget-bin/www_bget?{info$KEGG}' target='_blank'>KEGG</a>")
+  if (!is.null(info$PubChem)) pubchem.link <- glue::glue("<a href='https://pubchem.ncbi.nlm.nih.gov/compound/{info$PubChem}' target='_blank'>PubChem</a>")
+  if (!is.null(info$PATHBANK)) pathbank.link <- glue::glue("<a href='https://moldb.wishartlab.com/molecules/{info$PATHBANK}/curation.html' target='_blank'>Pathbank</a>")
+  if (!is.null(info$REFMET)) refmet.link <- glue::glue("<a href='https://www.metabolomicsworkbench.org/databases/refmet/refmet_details.php?REFMET_ID={info$REFMET}' target='_blank'>RefMet</a>")
+  if (!is.null(info$LIPIDMAPS)) lipidmaps.link <- glue::glue("<a href='https://dev.lipidmaps.org/databases/lmissd/{info$LIPIDMAPS}' target='_blank'>LipidMaps</a>")
+
+  # these libraries are always available
+  chebi <- info$ID
+  chebi.link <- glue::glue("<a href='https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:{chebi}' target='_blank'>ChEBI</a>")
+  reactome.link <- glue::glue("<a href='https://reactome.org/content/query?q=chebi%3A{chebi}' target='_blank'>Reactome</a>")
+
+  ## collapse all links into 'databases' and remove individual entries
+  info[["databases"]] <- paste(c(hmdb.link, chebi.link, kegg.link, reactome.link, pubchem.link,
+    pathbank.link, refmet.link, lipidmaps.link), collapse = ", ")
+  id.cols <- colnames(playdata::METABOLITE_ID)
+  id.cols <- c(id.cols, grep("_ID",names(info),value=TRUE))
+  info <- info[setdiff(names(info),id.cols)]
+  
+  return(info)
+}
+
+#' Given a ChEBI id this provides information about the metabolite
+#' using internal annotation databases METABOLITE_METADATA and
+#' METABOLITE_ID. Also provides links to external metabolite
+#' databases.
+#'
+#' @export
+getMetaboliteInfo.SAVE <- function(organism = "Human", id) {
   if (is.null(id) || length(id) == 0) {
     return(NULL)
   }
@@ -411,7 +473,7 @@ getMetaboliteInfo <- function(organism = "Human", id) {
   if (!is.null(inf[["HMDB"]])) hmdb.link <- glue::glue("<a href='https://hmdb.ca/metabolites/{annotation[,'HMDB']}' target='_blank'>HMDB</a>")
   if (!is.null(inf[["KEGG"]])) kegg.link <- glue::glue("<a href='https://www.kegg.jp/dbget-bin/www_bget?{annotation[,'KEGG']}' target='_blank'>KEGG</a>")
   if (!is.null(inf[["PubChem"]])) pubchem.link <- glue::glue("<a href='https://pubchem.ncbi.nlm.nih.gov/compound/{annotation[,'PubChem']}' target='_blank'>PubChem</a>")
-
+  
   # these libraries are always available
   chebi <- annotation[annotation$ID == id, "ChEBI"]
   chebi.link <- glue::glue("<a href='https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:{chebi}' target='_blank'>ChEBI</a>")
