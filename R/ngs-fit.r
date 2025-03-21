@@ -76,12 +76,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
                                            custom.name = NULL,
                                            timeseries = NULL) {
 
-  
-  LL <- list(
-    counts=counts, X=X, samples=samples, design=design,
-    contr.matrix=contr.matrix, timeseries=timeseries
-  ); saveRDS(LL, "~/Desktop/MNT/MNT1.RDS")
-
   ## --------------------------------------------------------------
   ## Run all tests on raw counts
   ## --------------------------------------------------------------
@@ -381,7 +375,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   }
 
   ##-----------------------------------------------------------------------
-  ## Put "IA:*" contrasts as last columns in outputs limma/DeSeq2/EdgeR
+  ## Put "IA:*" contrasts as last columns in outputs limma/DeSeq2/EdgeR. NEEDED??
   ##-----------------------------------------------------------------------
   if (!is.null(timeseries)) {
     i <- 1
@@ -691,8 +685,8 @@ ngs.fitContrastsWithLIMMA <- function(X,
     
     message("[ngs.fitContrastsWithLIMMA] Fitting LIMMA contrasts *without* design")
     exp0 <- contr.matrix ## sample-wise contrasts...
-    sel <- colnames(exp0)[!grepl("^IA:*", colnames(exp0))]
-    exp0 <- exp0[, sel, drop = FALSE]
+    #sel <- colnames(exp0)[!grepl("^IA:*", colnames(exp0))]
+    #exp0 <- exp0[, sel, drop = FALSE]
     i=1; tables=list()
     for (i in 1:ncol(exp0)) {
       kk <- 1:nrow(exp0)
@@ -701,21 +695,25 @@ ngs.fitContrastsWithLIMMA <- function(X,
       ct <- exp0[kk, i]
       y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
       X1 <- X[, kk, drop = FALSE]
-      design1 <- stats::model.matrix(~ 0 + y)
-      if (method == "voom") {
-        v <- limma::voom(2 ** X1, design1, plot = FALSE)
-        suppressMessages(vfit <- limma::lmFit(v, design1))
-        trend <- FALSE
+      if (grepl("^IA:*", colnames(exp0)[i])) {
+        top <- ngs.fitContrastsWithLIMMA.timeseries(X1, y, timeseries, trend = TRUE) 
       } else {
-        suppressMessages(vfit <- limma::lmFit(X1, design1))
+        design1 <- stats::model.matrix(~ 0 + y)
+        if (method == "voom") {
+          v <- limma::voom(2 ** X1, design1, plot = FALSE)
+          suppressMessages(vfit <- limma::lmFit(v, design1))
+          trend <- FALSE
+        } else {
+          suppressMessages(vfit <- limma::lmFit(X1, design1))
+        }
+        contr1 <- matrix(c(-1, 0, 1), nrow = 3)
+        rownames(contr1) <- c("yneg", "yo", "ypos")
+        colnames(contr1) <- "pos_vs_neg"
+        contr1 <- contr1[colnames(vfit), , drop = FALSE]
+        vfit <- limma::contrasts.fit(vfit, contrasts = contr1)
+        efit <- limma::eBayes(vfit, trend = trend, robust = robust)
+        top <- limma::topTable(efit, coef = 1, sort.by = "none", number = Inf, adjust.method = "BH")
       }
-      contr1 <- matrix(c(-1, 0, 1), nrow = 3)
-      rownames(contr1) <- c("yneg", "yo", "ypos")
-      colnames(contr1) <- "pos_vs_neg"
-      contr1 <- contr1[colnames(vfit), , drop = FALSE]
-      vfit <- limma::contrasts.fit(vfit, contrasts = contr1)
-      efit <- limma::eBayes(vfit, trend = trend, robust = robust)
-      top <- limma::topTable(efit, coef = 1, sort.by = "none", number = Inf, adjust.method = "BH")
       j1 <- which(ct > 0)
       j0 <- which(ct < 0)
       mean1 <- rowMeans(X1[, j1, drop = FALSE], na.rm = TRUE)
@@ -726,31 +724,31 @@ ngs.fitContrastsWithLIMMA <- function(X,
     }
 
     ## add timeseries DGE tables if time not NULL
-    if (!is.null(timeseries)) {
-      message("[ngs.fitContrastsWithLIMMA] Fitting LIMMA contrasts for time series *without* design")
-      exp0 <- contr.matrix
-      sel <- colnames(exp0)[grepl("^IA:*", colnames(exp0))]
-      exp0 <- exp0[, sel, drop = FALSE]
-      ll <- length(tables)
-      i=1
-      for (i in 1:ncol(exp0)) {
-        kk <- 1:nrow(exp0)
-        if (prune.samples)
-          kk <- which(!is.na(exp0[, i]) & exp0[, i] != 0)
-        ct <- exp0[kk, i]
-        y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
-        X1 <- X[, kk, drop = FALSE]
-        top <- ngs.fitContrastsWithLIMMA.timeseries(X1, y, timeseries, trend = TRUE)
-        j1 <- which(ct > 0)
-        j0 <- which(ct < 0)
-        mean1 <- rowMeans(X1[, j1, drop = FALSE], na.rm = TRUE)
-        mean0 <- rowMeans(X1[, j0, drop = FALSE], na.rm = TRUE)
-        top <- top[rownames(X1), , drop = FALSE]
-        tables[[ll + i]] <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
-        names(tables)[ll + i] <- colnames(exp0)[i]
-        #names(tables)[ll + i] <- paste0("IA:", colnames(exp0)[i], sep = "")
-      }
-    }
+    ## if (!is.null(timeseries)) {
+    ##   message("[ngs.fitContrastsWithLIMMA] Fitting LIMMA contrasts for time series *without* design")
+    ##   exp0 <- contr.matrix
+    ##   sel <- colnames(exp0)[grepl("^IA:*", colnames(exp0))]
+    ##   exp0 <- exp0[, sel, drop = FALSE]
+    ##   ll <- length(tables)
+    ##   i=1
+    ##   for (i in 1:ncol(exp0)) {
+    ##     kk <- 1:nrow(exp0)
+    ##     if (prune.samples)
+    ##       kk <- which(!is.na(exp0[, i]) & exp0[, i] != 0)
+    ##     ct <- exp0[kk, i]
+    ##     y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
+    ##     X1 <- X[, kk, drop = FALSE]
+    ##     top <- ngs.fitContrastsWithLIMMA.timeseries(X1, y, timeseries, trend = TRUE)
+    ##     j1 <- which(ct > 0)
+    ##     j0 <- which(ct < 0)
+    ##     mean1 <- rowMeans(X1[, j1, drop = FALSE], na.rm = TRUE)
+    ##     mean0 <- rowMeans(X1[, j0, drop = FALSE], na.rm = TRUE)
+    ##     top <- top[rownames(X1), , drop = FALSE]
+    ##     tables[[ll + i]] <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
+    ##     names(tables)[ll + i] <- colnames(exp0)[i]
+    ##     #names(tables)[ll + i] <- paste0("IA:", colnames(exp0)[i], sep = "")
+    ##   }
+    ## }
 
   }
   
@@ -813,17 +811,16 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
     )
     chk <- "try-error" %in% class(top)
     if (chk || nrow(top) == 0) next else break;
-   
+  
   }
 
-  chk <- "try-error" %in% class(top)
-  if (chk) {
+  if ("try-error" %in% class(top)) {
     top <- data.frame(matrix(NA, nrow=nrow(X), ncol=5))
     rownames(top) <- rownames(X)
     colnames(top) <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val")
   } else {
     top0 <- data.frame(logFC=NA, AveExpr=top$AveExpr, t=NA,
-      P.Value=top$P.Value, adj.P.Val=top$adj.P.Val, row.names=rownames(top0))
+      P.Value=top$P.Value, adj.P.Val=top$adj.P.Val, row.names=rownames(top))
     i=1; SEL=list()
     for (i in 1:length(est.coefs)) {
       sel <- match(est.coefs[i], names(coefs))
@@ -896,7 +893,6 @@ ngs.fitContrastsWithEDGER <- function(counts,
   
   if (is.null(design) && prune.samples) {
     L <- list(counts = counts, contr.matrix = contr.matrix, method = method, group = group)
-    saveRDS(L, "~/Desktop/edger.RDS")
     message("[ngs.fitContrastsWithEDGER] fitting EDGER contrasts *without* design, with pruning")
     res <- .ngs.fitContrastsWithEDGER.nodesign.pruned(
       counts = counts, contr.matrix = contr.matrix, method = method, group = group,
@@ -1217,7 +1213,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
   if (is.null(design)) {
     message("[ngs.fitContrastsWithDESEQ2] fitting DESEQ2  *without* design")
     out <- .ngs.fitConstrastsWithDESEQ2.nodesign(
-      counts = counts, contr.matrix = contr.matrix, test = test, time = timeseries,
+      counts = counts, contr.matrix = contr.matrix, test = test, timeseries = timeseries,
       prune.samples = prune.samples, conform.output = conform.output
     )
     return(out)
@@ -1325,7 +1321,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
                                                   prune.samples = FALSE,
                                                   conform.output = FALSE,
                                                   X = NULL,
-                                                  time = NULL) {
+                                                  timeseries = NULL) {
 
   counts <- round(counts)
   if (is.null(X)) X <- edgeR::cpm(counts, log = TRUE)
@@ -1334,98 +1330,108 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
     stop("ngs.fitConstrastsWithDESEQ2.nodesign:: contrast matrix must be by sample")
   
   exp.matrix <- contr.matrix
-  sel <- colnames(exp.matrix)[!grepl("^IA:*", colnames(exp.matrix))]
-  exp.matrix <- exp.matrix[, sel, drop = FALSE]
-  i <- 1
-  tables <- list()
+  #sel <- colnames(exp.matrix)[!grepl("^IA:*", colnames(exp.matrix))]
+  #exp.matrix <- exp.matrix[, sel, drop = FALSE]
+  i=1; tables=list()
   for (i in 1:ncol(exp.matrix)) {
-
     ## manual design matrix (CHECK THIS!!!)
     kk <- 1:nrow(exp.matrix)
-    if (prune.samples) kk <- which(!is.na(exp.matrix[, i]) & exp.matrix[, i] != 0)
+    if (prune.samples)
+      kk <- which(!is.na(exp.matrix[, i]) & exp.matrix[, i] != 0)
     ct <- exp.matrix[kk, i]
     y <- factor(c("neg", "zero", "pos")[2 + sign(ct)], levels = c("neg", "zero", "pos"))
     counts1 <- counts[, kk, drop = FALSE]
-    colData <- data.frame(y, row.names = colnames(counts1))
-    ## sample-wise model matrix (does this work???)
-    colnames(counts1) <- NULL
-    design.formula <- stats::formula("~ 0 + y")
-    dds <- DESeq2::DESeqDataSetFromMatrix(
-      countData = counts1, design = design.formula, colData = colData
-    )
-    fitType <- "mean"
-    suppressWarnings({
-      if (test == "LRT") {
-        dds <- try(DESeq2::DESeq(dds, fitType = fitType, test = "LRT", reduced = ~1))
+
+    if (grepl("^IA:*", colnames(exp.matrix)[i])) {
+      resx <- .ngs.fitConstrastsWithDESEQ2.nodesign.timeseries(counts1, y, timeseries)
+      rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
+    } else {
+      colData <- data.frame(y, row.names = colnames(counts1))
+      ## sample-wise model matrix (does this work???)
+      colnames(counts1) <- NULL
+      design.formula <- stats::formula("~ 0 + y")
+      dds <- DESeq2::DESeqDataSetFromMatrix(
+        countData = counts1, design = design.formula, colData = colData
+      )
+      fitType <- "mean"
+      suppressWarnings({
+        if (test == "LRT") {
+          dds <- try(DESeq2::DESeq(dds, fitType = fitType, test = "LRT", reduced = ~1))
         } else {
           dds <- try(DESeq2::DESeq(dds, fitType = fitType, test = "Wald"))
         }
-    })
-    ## sometime DESEQ2 fails
-    if ("try-error" %in% class(dds)) {
-      message("[.ngs.fitConstrastsWithDESEQ2.nodesign] retrying DESEQ2 with gene-wise estimates...")
-      dds <- DESeq2::DESeqDataSetFromMatrix(
-        countData = counts1, design = design.formula, colData = data.frame(y)
-      )
-      dds <- DESeq2::estimateSizeFactors(dds)
-      dds <- DESeq2::estimateDispersionsGeneEst(dds)
-      DESeq2::dispersions(dds) <- GenomicRanges::mcols(dds)$dispGeneEst
-      suppressWarnings({
-        if (test == "LRT") {
-          dds <- try(DESeq2::nbinomLRT(dds))
-        } else {
-          dds <- try(DESeq2::nbinomWaldTest(dds))
-        }
       })
+      ## sometime DESEQ2 fails
+      if ("try-error" %in% class(dds)) {
+        message("[.ngs.fitConstrastsWithDESEQ2.nodesign] retrying DESEQ2 with gene-wise estimates...")
+        dds <- DESeq2::DESeqDataSetFromMatrix(
+          countData = counts1, design = design.formula, colData = data.frame(y)
+        )
+        dds <- DESeq2::estimateSizeFactors(dds)
+        dds <- DESeq2::estimateDispersionsGeneEst(dds)
+        DESeq2::dispersions(dds) <- GenomicRanges::mcols(dds)$dispGeneEst
+        suppressWarnings({
+          if (test == "LRT") {
+            dds <- try(DESeq2::nbinomLRT(dds))
+          } else {
+            dds <- try(DESeq2::nbinomWaldTest(dds))
+          }
+        })
+      }
+      ## DESeq2::resultsNames(dds)
+      ctx <- c("yneg" = -1, "yzero" = 0, "ypos" = 1)[DESeq2::resultsNames(dds)]
+      resx <- DESeq2::results(dds, contrast = ctx, cooksCutoff = FALSE, independentFiltering = FALSE)
+      ## we add the gene annotation here (not standard...)
+      rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
     }
-    ## DESeq2::resultsNames(dds)
-    ctx <- c("yneg" = -1, "yzero" = 0, "ypos" = 1)[DESeq2::resultsNames(dds)]
-    resx <- DESeq2::results(dds, contrast = ctx, cooksCutoff = FALSE, independentFiltering = FALSE)
-    ## we add the gene annotation here (not standard...)
-    rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
     X1 <- X[, kk, drop = FALSE]
     pos.samples <- which(exp.matrix[kk, i] > 0)
     neg.samples <- which(exp.matrix[kk, i] < 0)
     resx$AveExpr1 <- rowMeans(X1[, pos.samples, drop = FALSE], na.rm = TRUE)
     resx$AveExpr0 <- rowMeans(X1[, neg.samples, drop = FALSE], na.rm = TRUE)
     resx$log2BaseMean <- log2(0.0001 + resx$baseMean)
-    if (conform.output) resx$log2FoldChange <- (resx$AveExpr1 - resx$AveExpr0) ## recompute
+    if (conform.output) {
+      ## For time-series we keep DESeq2 log2FC from LRT.
+      if (!grepl("^IA:*", colnames(exp.matrix)[i])) {
+        resx$log2FoldChange <- (resx$AveExpr1 - resx$AveExpr0) ## recompute
+      }
+    }
     tables[[i]] <- data.frame(resx)
     names(tables)[i] <- colnames(exp.matrix)[i]
     message("-------------ct: ", colnames(exp.matrix)[i], "---done")
   }
   
   ## Timeseries analysis
-  if (!is.null(time)) {
-    ll <- length(tables)
-    exp.matrix <- contr.matrix
-    sel <- colnames(exp.matrix)[grepl("^IA:*", colnames(exp.matrix))]
-    exp.matrix <- exp.matrix[, sel, drop = FALSE]
-    i=1
-    for (i in 1:ncol(exp.matrix)) {
-      kk <- 1:nrow(exp.matrix)
-      if (prune.samples) kk <- which(!is.na(exp.matrix[, i]) & exp.matrix[, i] != 0)
-      ct <- exp.matrix[kk, i]
-      y <- factor(c("neg", "zero", "pos")[2 + sign(ct)], levels = c("neg", "zero", "pos"))
-      counts1 <- counts[, kk, drop = FALSE]
-      message("----ct: ", colnames(exp.matrix)[i], " (timeseries) --done")
-      resx <- .ngs.fitConstrastsWithDESEQ2.nodesign.timeseries(counts1, y, time)
-      rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
-      X1 <- X[, kk, drop = FALSE]
-      pos.samples <- which(exp.matrix[kk, i] > 0)
-      neg.samples <- which(exp.matrix[kk, i] < 0)
-      ## Keep average by y (else we could average across all time points as per LRT).
-      resx$AveExpr1 <- rowMeans(X1[, pos.samples, drop = FALSE], na.rm = TRUE)
-      resx$AveExpr0 <- rowMeans(X1[, neg.samples, drop = FALSE], na.rm = TRUE)
-      resx$log2BaseMean <- log2(0.0001 + resx$baseMean)
-      ## Keep DESeq2 log2FC from LRT.
-      ## if (conform.output) resx$log2FoldChange <- (resx$AveExpr1 - resx$AveExpr0)
-      tables[[ll + i]] <- data.frame(resx)
-      names(tables)[ll + i] <- colnames(exp.matrix)[i]
-      #names(tables)[ll + i] <- paste0("IA:", colnames(exp.matrix)[i], sep = "")
-    }
-  }
-
+  ## if (!is.null(timeseries)) {
+  ##   ll <- length(tables)
+  ##   exp.matrix <- contr.matrix
+  ##   sel <- colnames(exp.matrix)[grepl("^IA:*", colnames(exp.matrix))]
+  ##   exp.matrix <- exp.matrix[, sel, drop = FALSE]
+  ##   i=1
+  ##   for (i in 1:ncol(exp.matrix)) {
+  ##     kk <- 1:nrow(exp.matrix)
+  ##     if (prune.samples) kk <- which(!is.na(exp.matrix[, i]) & exp.matrix[, i] != 0)
+  ##     ct <- exp.matrix[kk, i]
+  ##     y <- factor(c("neg", "zero", "pos")[2 + sign(ct)], levels = c("neg", "zero", "pos"))
+  ##     counts1 <- counts[, kk, drop = FALSE]
+  ##     message("----ct: ", colnames(exp.matrix)[i], " (timeseries) --done")
+  ##     resx <- .ngs.fitConstrastsWithDESEQ2.nodesign.timeseries(counts1, y, timeseries)
+  ##     rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
+  ##     X1 <- X[, kk, drop = FALSE]
+  ##     pos.samples <- which(exp.matrix[kk, i] > 0)
+  ##     neg.samples <- which(exp.matrix[kk, i] < 0)
+  ##     ## Keep average by y (else we could average across all time points as per LRT).
+  ##     resx$AveExpr1 <- rowMeans(X1[, pos.samples, drop = FALSE], na.rm = TRUE)
+  ##     resx$AveExpr0 <- rowMeans(X1[, neg.samples, drop = FALSE], na.rm = TRUE)
+  ##     resx$log2BaseMean <- log2(0.0001 + resx$baseMean)
+  ##     ## Keep DESeq2 log2FC from LRT.
+  ##     ## if (conform.output) resx$log2FoldChange <- (resx$AveExpr1 - resx$AveExpr0)
+  ##     tables[[ll + i]] <- data.frame(resx)
+  ##     names(tables)[ll + i] <- colnames(exp.matrix)[i]
+  ##     #names(tables)[ll + i] <- paste0("IA:", colnames(exp.matrix)[i], sep = "")
+  ##   }
+  ## }
+  
   if (conform.output) {
     i <- 1
     for (i in 1:length(tables)) {
@@ -1444,15 +1450,15 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
 #' @export
 .ngs.fitConstrastsWithDESEQ2.nodesign.timeseries <- function(counts,
                                                              y,
-                                                             time) {
+                                                             timeseries) {
 
   message("[ngs.fitConstrastsWithDESEQ2.nodesign]: DESeq2 LRT time series analysis with interaction term")
 
-  if (!all(colnames(counts) %in% names(time)))
+  if (!all(colnames(counts) %in% names(timeseries)))
     stop("[ngs.fitConstrastsWithDESEQ2.nodesign] and time contain different set of samples")
   
-  jj <- match(colnames(counts), names(time))
-  time0 <- as.character(time[jj])
+  jj <- match(colnames(counts), names(timeseries))
+  time0 <- as.character(timeseries[jj])
   time0 <- gsub("\\D", "", unname(time0))
   time0 <- as.numeric(time0) ## should be factor. need to modify spline in DESEq2.
   y <- as.factor(as.character(y))
