@@ -636,8 +636,6 @@ pgx.computePGX <- function(pgx,
     pgx <- pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
   }
 
-  saveRDS(pgx, "~/Desktop/MNT/LL2.RDS")
-
   ## Make contrasts by cluster
   if (cluster.contrasts) {
     ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
@@ -763,7 +761,6 @@ pgx.computePGX <- function(pgx,
   message("[pgx.computePGX]======== pgx.computePGX: DONE! ========")
   message("[pgx.computePGX]=======================================")
   message("\n\n")
-  saveRDS(pgx, "~/Desktop/MNT/LL8.RDS")
   return(pgx)
 }
 

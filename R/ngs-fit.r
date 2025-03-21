@@ -80,9 +80,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
 
   ## Don't test fully missing features. Put them back in toptable.
   counts <- counts[which(rowMeans(is.na(counts)) < 1), ]
-  if (!is.null(X)) {
-    X <- X[which(rowMeans(is.na(X)) < 1), ]
-  }
+  if (!is.null(X)) X <- X[which(rowMeans(is.na(X)) < 1), ]
 
   if (methods[1] == "*") {
     methods <- c(
