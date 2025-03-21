@@ -181,7 +181,8 @@ pgx.createPGX <- function(counts,
                           remove.outliers = TRUE, ## DEPRECATED
                           add.gmt = TRUE,
                           settings = list(),
-                          sc_compute_settings = list()) {
+                          sc_compute_settings = list()
+                          ) {
 
   message("[pgx.createPGX]===========================================")
   message("[pgx.createPGX]=========== pgx.createPGX =================")
@@ -635,8 +636,6 @@ pgx.computePGX <- function(pgx,
     mm <- c("pca", "tsne", "umap")
     pgx <- pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
   }
-
-  saveRDS(pgx, "~/Desktop/MNT/LL2.RDS")
 
   ## Make contrasts by cluster
   if (cluster.contrasts) {

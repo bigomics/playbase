@@ -76,7 +76,6 @@ pgx.clusterGenes <- function(pgx,
     cluster.by = "genes",
     methods = methods,
     dims = dims,
-    datatype = pgx$datatype,
     perplexity = perplexity,
     center.features = FALSE,
     scale.features = FALSE,
@@ -202,7 +201,6 @@ pgx.clusterSamples <- function(pgx,
     methods = methods,
     dims = dims,
     perplexity = perplexity,
-    datatype = pgx$datatype,
     center.features = center.rows,
     scale.features = scale.rows,
     reduce.sd = reduce.sd,
@@ -397,6 +395,8 @@ pgx.clusterMatrix <- function(X,
   cluster.by <- intersect(cluster.by, c("genes", "samples"))
   if (length(cluster.by) == 0) cluster.by <- "samples"
 
+  ## IK: please remove any datatype checks below
+  datatype="----"
   message("[pgx.clusterMatrix] Running on ", datatype, " data")
   message("[pgx.clusterMatrix] Clustering: ", cluster.by)
   message("[pgx.clusterMatrix] Methods: ", paste0(methods, collapse=", "))
@@ -593,7 +593,6 @@ pgx.clusterMatrix <- function(X,
     message("*** DEPRECATED *** please call seperately")
     message("[pgx.clusterMatrix] Calculating Louvain memberships (from reduced X)...")
     idx <- pgx.findLouvainClusters(t(X), level = 1, prefix = "C", small.zero = 0.01)
-    #idx <- pgx.findLouvainClusters(t(X), datatype = datatype, level = 1, prefix = "C", small.zero = 0.01)
     all.pos$membership <- idx[1:dimx[2]]
   }
 
@@ -627,7 +626,6 @@ pgx.clusterBigMatrix <- function(...) pgx.clusterMatrix(...)
 #'
 #' @export
 pgx.findLouvainClusters <- function(X,
-                                    datatype = NULL,
                                     graph.method = "dist",
                                     level = 1,
                                     prefix = "C",
@@ -637,7 +635,6 @@ pgx.findLouvainClusters <- function(X,
 
   ## find clusters from t-SNE positions
   idx <- NULL
-  graph.method <- ifelse(datatype == "scRNAseq", "snn", "dist")
   message("\nFinding clusters using Louvain. graph.method:" , graph.method)
   
   if (graph.method == "dist") {
