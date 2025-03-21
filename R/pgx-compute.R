@@ -762,7 +762,6 @@ pgx.computePGX <- function(pgx,
   message("[pgx.computePGX]======== pgx.computePGX: DONE! ========")
   message("[pgx.computePGX]=======================================")
   message("\n\n")
-  saveRDS(pgx, "~/Desktop/MNT/LL8.RDS")
   return(pgx)
 }
 

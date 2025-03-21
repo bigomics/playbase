@@ -221,7 +221,7 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
   methods <- c("CPM", "quantile", "CPM+quantile","TMM",
     "maxMedian", "maxSum", "reference")
   if (!m %in% methods) {
-    stop("[pgx.countNormalization.beta]: unknown mormalization method")
+    stop("[normalizeExpression]: unknown mormalization method")
   }
   counts <- 2 ** X - prior
   if (m == "CPM") {

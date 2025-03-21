@@ -69,6 +69,8 @@ pgx.clusterGenes <- function(pgx,
   if (scale.rows) { X <- X / (1e-6 + matrixStats::rowSds(X, na.rm = TRUE)) }
   if (rank.tf) { X <- scale(apply(X, 2, rank)) }
 
+  dims <- ifelse(ncol(X) > 2000, c(2), c(2,3))
+  
   ## Do dimensionality reduction
   message("[pgx.clusterGenes] computing dimensionality reductions...")
   clust <- pgx.clusterBigMatrix(
@@ -96,8 +98,7 @@ pgx.clusterGenes <- function(pgx,
     dim(posx)
     clust.index <- pgx.findLouvainClusters(
       posx, graph.method="knn", knn=200, level=1,
-      prefix="M", small.zero=0.01
-    )
+      prefix="M", small.zero=0.01)
     names(clust.index) <- rownames(posx)    
   }
   
@@ -395,9 +396,6 @@ pgx.clusterMatrix <- function(X,
   cluster.by <- intersect(cluster.by, c("genes", "samples"))
   if (length(cluster.by) == 0) cluster.by <- "samples"
 
-  ## IK: please remove any datatype checks below
-  datatype="----"
-  message("[pgx.clusterMatrix] Running on ", datatype, " data")
   message("[pgx.clusterMatrix] Clustering: ", cluster.by)
   message("[pgx.clusterMatrix] Methods: ", paste0(methods, collapse=", "))
   message("[pgx.clusterMatrix] reduce.sd = ", reduce.sd)
@@ -432,9 +430,6 @@ pgx.clusterMatrix <- function(X,
   X <- X + 1e-3 * matrix(stats::rnorm(length(X)), nrow(X), ncol(X))
 
   ## Further pre-reduce dimensions using SVD
-  ## AZ: I skipped if clustering scRNA-seq features..
-  # cc <- (datatype %in% c("scRNAseq", "scRNA-seq")) & (cluster.by=="genes")
-  # if (!cc && reduce.pca > 0) {
   res.svd <- NULL
   if (reduce.pca > 0) {
     reduce.pca <- max(3, min(c(reduce.pca, dim(X) - 1)))
@@ -444,9 +439,7 @@ pgx.clusterMatrix <- function(X,
     X <- t(res.svd$v) * res.svd$d ## really weight with D??
     colnames(X) <- cnx
   }
-  #}
 
-  dims <- ifelse(datatype %in% c("scRNAseq","scRNA-seq"), c(2), c(2,3))
   all.pos <- list()
     
   if ("pca" %in% methods) {
@@ -520,51 +513,71 @@ pgx.clusterMatrix <- function(X,
   }
 
   if ("umap" %in% methods && 2 %in% dims) {
-    message("[pgx.clusterMatrix] Calculating UMAP 2D...")
-    cc = FALSE
-    if (!is.null(datatype) & !is.null(cluster.by)) {
-      cc <- (datatype %in% c("scRNAseq", "scRNA-seq")) & (cluster.by=="genes")
-    }
-    if (cc) {
-      #saveRDS(list(X=X, reduce.pca=reduce.pca), "~/Desktop/MNT/LL-fixumap1.RDS") ## AZ
-      sampl <- data.frame(row.names = colnames(X))
-      SO <- playbase::pgx.justSeuratObject(counts = X, samples = sampl)
-      SO@assays$RNA$data <- SO@assays$RNA$counts
-      SO <- Seurat::FindVariableFeatures(SO, verbose = FALSE)
-      SO <- Seurat::ScaleData(SO, do.scale = FALSE, do.center = FALSE, verbose = FALSE)
-      SO <- RunPCA(SO, verbose = FALSE)
-      SO <- RunUMAP(SO, dims = 1:reduce.pca)
-      pos <- Embeddings(SO[["umap"]])
-      rownames(pos) <- colnames(X)
-      pos <- pos[1:dimx[2], ] ## if augmented
-      colnames(pos) <- paste0("UMAP-", c("x", "y"))
-      all.pos[["umap2d"]] <- pos
-      rm(SO, sampl)
+    message("calculating UMAP 2D...")
+    if (umap.pkg == "uwot") {
+      nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
+      pos <- uwot::tumap(t(X),
+        n_components = 2,
+        n_neighbors = nb,
+        local_connectivity = ceiling(nb / 15)
+      )
     } else {
-      if (umap.pkg == "uwot") {
-        nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
-        message("[pgx.clusterMatrix] N. of neighbours = ", nb)
-        ##if (any(rowSums(X, na.rm = TRUE) == 0)) {
-        ## stop("[pgx.clusterMatrix] full NA not allowed")
-        ##}
-        pos <- uwot::tumap(
-          t(X),
-          n_components = 2,
-          n_neighbors = nb,
-          local_connectivity = ceiling(nb / 15)
-        )
-      } else {
-        custom.config <- umap.defaults
-        custom.config$n_components <- 2
-        custom.config$n_neighbors <- pmax(min(dimx[2] / 4, perplexity), 2)
-        pos <- umap::umap(t(X), custom.config)$layout
-      }
-      rownames(pos) <- colnames(X)
-      pos <- pos[1:dimx[2], ] ## if augmented
-      colnames(pos) <- paste0("UMAP-", c("x", "y"))
-      all.pos[["umap2d"]] <- pos
+      custom.config <- umap.defaults
+      custom.config$n_components <- 2
+      custom.config$n_neighbors <- pmax(min(dimx[2] / 4, perplexity), 2)
+      pos <- umap::umap(t(X), custom.config)$layout
     }
+    rownames(pos) <- colnames(X)
+    pos <- pos[1:dimx[2], ] ## if augmented
+    colnames(pos) <- paste0("UMAP-", c("x", "y"))
+    all.pos[["umap2d"]] <- pos
   }
+
+  ## if ("umap" %in% methods && 2 %in% dims) {
+  ##   message("[pgx.clusterMatrix] Calculating UMAP 2D...")
+  ##   cc = FALSE
+  ##   if (!is.null(datatype) & !is.null(cluster.by)) {
+  ##     cc <- (datatype %in% c("scRNAseq", "scRNA-seq")) && (cluster.by=="genes")
+  ##   }
+  ##   if (cc) {
+  ##     sampl <- data.frame(row.names = colnames(X))
+  ##     SO <- playbase::pgx.justSeuratObject(counts = X, samples = sampl)
+  ##     SO@assays$RNA$data <- SO@assays$RNA$counts
+  ##     SO <- Seurat::FindVariableFeatures(SO, verbose = FALSE)
+  ##     SO <- Seurat::ScaleData(SO, do.scale = FALSE, do.center = FALSE, verbose = FALSE)
+  ##     SO <- RunPCA(SO, verbose = FALSE)
+  ##     SO <- RunUMAP(SO, dims = 1:reduce.pca)
+  ##     pos <- Embeddings(SO[["umap"]])
+  ##     rownames(pos) <- colnames(X)
+  ##     pos <- pos[1:dimx[2], ] ## if augmented
+  ##     colnames(pos) <- paste0("UMAP-", c("x", "y"))
+  ##     all.pos[["umap2d"]] <- pos
+  ##     rm(SO, sampl)
+  ##   } else {
+  ##     if (umap.pkg == "uwot") {
+  ##       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
+  ##       message("[pgx.clusterMatrix] N. of neighbours = ", nb)
+  ##       ##if (any(rowSums(X, na.rm = TRUE) == 0)) {
+  ##       ## stop("[pgx.clusterMatrix] full NA not allowed")
+  ##       ##}
+  ##       pos <- uwot::tumap(
+  ##         t(X),
+  ##         n_components = 2,
+  ##         n_neighbors = nb,
+  ##         local_connectivity = ceiling(nb / 15)
+  ##       )
+  ##     } else {
+  ##       custom.config <- umap.defaults
+  ##       custom.config$n_components <- 2
+  ##       custom.config$n_neighbors <- pmax(min(dimx[2] / 4, perplexity), 2)
+  ##       pos <- umap::umap(t(X), custom.config)$layout
+  ##     }
+  ##     rownames(pos) <- colnames(X)
+  ##     pos <- pos[1:dimx[2], ] ## if augmented
+  ##     colnames(pos) <- paste0("UMAP-", c("x", "y"))
+  ##     all.pos[["umap2d"]] <- pos
+  ##   }
+  ## }
 
   if ("umap" %in% methods && 3 %in% dims) {
     message("[pgx.clusterMatrix] Calculating UMAP 3D...")
@@ -626,7 +639,7 @@ pgx.clusterBigMatrix <- function(...) pgx.clusterMatrix(...)
 #'
 #' @export
 pgx.findLouvainClusters <- function(X,
-                                    graph.method = "dist",
+                                    graph.method = NULL,
                                     level = 1,
                                     prefix = "C",
                                     knn = 100,
@@ -635,13 +648,16 @@ pgx.findLouvainClusters <- function(X,
 
   ## find clusters from t-SNE positions
   idx <- NULL
-  message("\nFinding clusters using Louvain. graph.method:" , graph.method)
+
+  if(is.null(graph.method)) {
+    graph.method <- ifelse(ncol(X)>2000, "snn", "dist")
+  }
+  message("[pgx.findLouvainClusters]: graph.method:", graph.method)
   
   if (graph.method == "dist") {
-    dist <- stats::as.dist(stats::dist(scale(X))) ## really slow large matrices (eg single cells)
-    adjmatrix <- 1.0 / dist**gamma
-    adjmatrix1 <- as.matrix(adjmatrix)
-    gr <- igraph::graph_from_adjacency_matrix(adjmatrix1, diag = FALSE, mode = "undirected")
+    dist <- stats::as.dist(stats::dist(scale(X))) ## slow for large matrices (scRNA-seq)
+    adjmatrix <- as.matrix(1.0 / dist**gamma)
+    gr <- igraph::graph_from_adjacency_matrix(adjmatrix, diag = FALSE, mode = "undirected")
   } else if (graph.method == "snn") {
     suppressMessages(suppressWarnings(gr <- scran::buildSNNGraph(t(X), d = knn)))
   } else if (graph.method == "knn") {

@@ -162,9 +162,7 @@ wgcna.compute <- function(X,
   ## WGCNA does not work very well with scRNAseq due to sparsity.
   ## To bypass the issue, hdWGCNA computes metacells.
   ## Here we compute metacells too using Supercell,
-  chk1 <- datatype %in% c("scRNAseq", "scRNA-seq")
-  chk2 <- ncol(X) > 2000
-  if (chk1 & chk2) {
+  if (datatype == "scRNAseq") {
     message("[wgcna.compute] WGCNA: scRNAseq. >2K cells. Computing supercells with SuperCell.")
     counts <- 2**X - 1
     group <- samples[, "celltype"]
