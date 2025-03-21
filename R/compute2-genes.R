@@ -16,7 +16,7 @@
 #' @param test.methods The test methods to use for gene testing.
 #' @param use.design A logical value indicating whether to use the design matrix in the analysis.
 #' @param prune.samples A logical value indicating whether to prune samples with missing data.
-#' @param remove.outputs A logical value indicating whether to remove intermediate outputs.
+#' @param remove.outputs A logical value indicating whether to remove intermediate outputs. 
 #' @return An updated object with gene test results.
 #' @export
 compute_testGenes <- function(pgx,
@@ -26,7 +26,8 @@ compute_testGenes <- function(pgx,
                               custom_fc = NULL,
                               use.design = FALSE,
                               prune.samples = TRUE,
-                              remove.outputs = TRUE) {
+                              remove.outputs = TRUE,
+                              timeseries = FALSE) {
   # TEMPORARY ONLY SINGLE OMICS
   single.omics <- TRUE
   data.types <- unique(gsub("\\[|\\].*", "", rownames(pgx$counts)))
@@ -42,7 +43,8 @@ compute_testGenes <- function(pgx,
       custom_fc = custom_fc,
       use.design = use.design,
       prune.samples = prune.samples,
-      remove.outputs = remove.outputs
+      remove.outputs = remove.outputs,
+      timeseries = timeseries
     )
   } else {
     ## multi-omics, missing values allowed
@@ -82,7 +84,9 @@ compute_testGenesSingleOmics <- function(pgx,
                                          custom_fc = NULL,
                                          use.design = FALSE,
                                          prune.samples = TRUE,
-                                         test.methods = c("trend.limma", "deseq2.wald", "edger.qlf")) {
+                                         test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
+                                         timeseries = FALSE) {
+
   ## -----------------------------------------------------------------------------
   ## Check parameters, decide group level
   ## -----------------------------------------------------------------------------
@@ -199,18 +203,33 @@ compute_testGenesSingleOmics <- function(pgx,
   X <- pgx$X[gg, ss, drop = FALSE]
 
   ## -----------------------------------------------------------------------------
+  ## Time series: determine variable 'time'
+  ## -----------------------------------------------------------------------------
+  if (timeseries) {
+    ss <- "minute|hour|day|week|month|year|time"
+    sel <- grep(ss, colnames(pgx$samples))
+    if (length(sel) == 0) {
+      message("[compute_testGenesSingleOmics] None of the following columns have been detected in pgx$samples: ",
+        paste0(ss, collapse = ", "), ". Skipping time series analysis.")
+      timeseries <- NULL
+    } else {
+       timeseries <- as.character(pgx$samples[, sel[1]])
+       names(timeseries) <- rownames(pgx$samples)
+     }
+  } else {
+    timeseries <- NULL
+  }
+     
+  ## -----------------------------------------------------------------------------
   ## Do the fitting
   ## -----------------------------------------------------------------------------
   methods <- test.methods
-  message(
-    ">>> Testing differential expressed genes (DEG) with methods: ",
-    paste(methods, collapse = " ")
-  )
+  message("Testing differential expresssion methods: ", paste(methods, collapse = ", "))
   PRIOR.CPM <- 1
 
   ## Run all test methods
   message("[compute_testGenesSingleOmics] 12 : start fitting... ")
-  gx.meta <- playbase::ngs.fitContrastsWithAllMethods(
+  gx.meta <- ngs.fitContrastsWithAllMethods(
     counts = counts,
     X = X,
     samples = samples,
@@ -224,10 +243,12 @@ compute_testGenesSingleOmics <- function(pgx,
     conform.output = TRUE,
     do.filter = FALSE,
     correct.AveExpr = TRUE,
-    custom = custom_fc, custom.name = NULL
+    custom = custom_fc,
+    custom.name = NULL,
+    timeseries = timeseries
   )
 
-  message("[compute_testGenesSingleOmics] 13 : fitting done!")
+  message("[compute_testGenesSingleOmics]: fitting completed!")
 
   ## --------------------------------------------------------------------------------
   ## set default matrices
@@ -242,9 +263,8 @@ compute_testGenesSingleOmics <- function(pgx,
   pgx$gx.meta <- gx.meta
 
   ## remove large outputs.
-  if (remove.outputs) {
-    pgx$gx.meta$outputs <- NULL
-  }
+  #remove.outputs = FALSE
+  if (remove.outputs) pgx$gx.meta$outputs <- NULL
 
   message("[compute_testGenesSingleOmics] done!")
 

@@ -27,7 +27,9 @@
 #' mypgx <- pgx.createFromFiles(counts, samples, contrasts)
 #' }
 #' @export
-pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL,
+pgx.createFromFiles <- function(counts.file,
+                                samples.file,
+                                contrasts.file = NULL,
                                 gxmethods = "trend.limma,edger.qlf,deseq2.wald",
                                 gsetmethods = "fisher,gsva,fgsea",
                                 extra = "meta.go,deconv,infer,drugs,wordcloud",
@@ -82,7 +84,6 @@ pgx.createFromFiles <- function(counts.file, samples.file, contrasts.file = NULL
     only.proteincoding = TRUE,
     max.genesets = 10000
   )
-
 
   ## start computing PGX object
   pgx <- pgx.computePGX(
@@ -180,6 +181,7 @@ pgx.createPGX <- function(counts,
                           remove.xxl = TRUE, ## DEPRECATED
                           remove.outliers = TRUE, ## DEPRECATED
                           add.gmt = TRUE,
+                          timeseries = FALSE,
                           settings = list(),
                           sc_compute_settings = list()
                           ) {
@@ -285,6 +287,17 @@ pgx.createPGX <- function(counts,
   X <- as.matrix(X)
   if (is.null(contrasts)) contrasts <- samples[, 0]
 
+  ## ------------------------------------------------------------------
+  ## Time series: expand contrast matrix
+  ## ------------------------------------------------------------------
+  if (timeseries) {
+    nn <- ncol(contrasts)
+    ts.ct <- paste0("IA:", colnames(contrasts))
+    contrasts <- cbind(contrasts, contrasts)
+    colnames(contrasts)[(nn+1):ncol(contrasts)] <- ts.ct 
+    rm(nn, ts.ct)
+  }
+  
   ## convert old-style contrast matrix to sample-wise labeled contrasts
   contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
 
@@ -398,6 +411,7 @@ pgx.createPGX <- function(counts,
     norm_method = norm_method,
     total_counts = Matrix::colSums(counts, na.rm = TRUE),
     counts_multiplier = counts_multiplier,
+    timeseries = timeseries,
     settings = settings,
     sc_compute_settings = sc_compute_settings
   )
@@ -560,6 +574,7 @@ pgx.createPGX <- function(counts,
 #' @param do.clustergenes Logical indicating whether to cluster genes. Default is TRUE.
 #' @param use.design Whether to use model design matrix for testing. Default is FALSE.
 #' @param prune.samples Whether to remove samples without valid contrasts. Default is TRUE.
+#' @param time Whether perform time series analysis or not. Default FALSE
 #' @param extra.methods Additional analysis methods to run. Default is c("meta.go", "infer", "deconv", "drugs", "wordcloud", "wgcna")[c(1, 2)].
 #' @param libx.dir Directory containing custom analysis modules.
 #' @param progress A progress object for tracking status.
@@ -604,6 +619,8 @@ pgx.computePGX <- function(pgx,
                            progress = NULL,
                            user_input_dir = getwd()) {
 
+  message("[pgx.computePGX] Starting pgx.computePGX")
+
   message("[pgx.computePGX]===========================================")
   message("[pgx.computePGX]========== pgx.computePGX =================")
   message("[pgx.computePGX]===========================================")
@@ -618,10 +635,19 @@ pgx.computePGX <- function(pgx,
     stop("[pgx.computePGX] FATAL:: all contrast names must include _vs_")
   }
 
+  ## use.design=FALSE (now default): we test each contrast separately.
+  ## If re-running pgx.computePGX on its own (without re-running pgx.createPGX),
+  ## all existing contrasts are tested (including .cluster:c*_vs_others).
+  ## Avoiding this.
+  kk <- grep(".cluster", colnames(pgx$samples))
+  if (any(kk)) pgx$samples <- pgx$samples[, -kk, drop = FALSE]
+  kk <- grep(".cluster:c*", colnames(pgx$contrasts))
+  if (any(kk)) pgx$contrasts <- pgx$contrasts[, -kk, drop = FALSE]
+  
   contr.matrix <- contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
   contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
   contr.matrix <- sign(contr.matrix) ## sign is fine
-
+  
   ## select valid contrasts
   sel <- Matrix::colSums(contr.matrix == -1) > 0 & Matrix::colSums(contr.matrix == 1) > 0
   contr.matrix <- contr.matrix[, sel, drop = FALSE]
@@ -722,7 +748,9 @@ pgx.computePGX <- function(pgx,
     test.methods = gx.methods,
     custom_fc = custom_fc,
     use.design = use.design,
-    prune.samples = prune.samples
+    prune.samples = prune.samples,
+    timeseries = pgx$timeseries,
+    remove.outputs = TRUE
   )
 
   ## ------------------ gene set tests -----------------------
