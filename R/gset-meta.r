@@ -204,7 +204,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
   k <- 1
   fitThisContrastWithMethod <- function(method, k) {
-
     jj <- which(exp.matrix[, k] != 0)
     yy <- 1 * (exp.matrix[jj, k] > 0)
     xx <- X[, jj]
@@ -221,11 +220,20 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       lfc05 <- 0.0
       fdr <- 0.05 ## NEW thresholds (since oct2021)
       suppressWarnings(suppressMessages(
-        limma0 <- playbase::gx.limma(xx, yy,
+        limma0 <- try(playbase::gx.limma(xx, yy,
           fdr = 1.0, lfc = 0,
           ref = ref, trend = TRUE, verbose = 0
-        ) ## trend true for NGS
+        ), silent = TRUE) ## trend true for NGS
       ))
+      if ("try-error" %in% class(limma0)) {
+        suppressWarnings(suppressMessages(
+          limma0 <- playbase::gx.limma(xx, yy,
+            fdr = 1.0, lfc = 0,
+            ref = ref, trend = FALSE, verbose = 0
+          )
+        ))
+      }
+     
       which.up <- which(limma0[, "adj.P.Val"] <= fdr & limma0[, "logFC"] > lfc05)
       which.dn <- which(limma0[, "adj.P.Val"] <= fdr & limma0[, "logFC"] < -lfc05)
       genes.up <- rownames(limma0)[which.up]
