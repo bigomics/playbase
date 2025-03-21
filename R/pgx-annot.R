@@ -2137,9 +2137,7 @@ convert_probetype <- function(organism, probes, target_id, from_id = NULL,
   return(new.probes)
 }
 
-
-
-#' Convert multi-omics probetype. Probe names *must  be prefixed with
+#' Annotate multi-omics probetype. Probe names *must  be prefixed with
 #' data type unless classical transcriptomics/proteomics.
 #'
 getMultiOmicsProbeAnnotation <- function(organism, probes) {
@@ -2151,8 +2149,8 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
     ## matching.
     ptype <- detect_probetype(organism, probes)
     mtype <- mx.detect_probetype(probes)
-    dbg("[getMultiProbeAnnotation] ptype =", ptype)
-    dbg("[getMultiProbeAnnotation] mtype =", mtype)
+    dbg("[getMultiOmicsProbeAnnotation] ptype =", ptype)
+    dbg("[getMultiOmicsProbeAnnotation] mtype =", mtype)
     gx.types <- c(
       "SYMBOL", "ENSEMBL", "ACCNUM", "GENENAME",
       "MGI", "TAIR", "ENSEMBLTRANS", "REFSEQ", "ENTREZID"
@@ -2165,7 +2163,7 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
     } else {
       dx <- "custom"
     }
-    info("[getMultiProbeAnnotation] detected as:", dx)
+    info("[getMultiOmicsProbeAnnotation] detected as:", dx)
     dtype <- rep(dx, length(probes))
   }
   table(dtype)
@@ -2174,7 +2172,7 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
   dtype <- ifelse(grepl("uniprot|protein", dtype), "px", dtype)
   dtype <- ifelse(grepl("chebi|hmdb|kegg|pubchem", dtype), "mx", dtype)
   table(dtype)
-  dbg("[getMultiProbeAnnotation] dtypes =", unique(dtype))
+  dbg("[getMultiOmicsProbeAnnotation] dtypes =", unique(dtype))
 
   ## populate with defaults
   symbol <- toupper(sub("^[a-zA-Z]+:", "", probes))
@@ -2228,5 +2226,16 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
   annot$gene_name <- ifelse(is.na(annot$gene_name), probes, annot$gene_name)
   annot$data_type <- ifelse(is.na(annot$data_type), dtype, annot$data_type)
 
+  return(annot)
+}
+
+#' Annotate multi-species probetype. Probe names *must  be prefixed with
+#' data type unless classical transcriptomics/proteomics.
+#'
+getMultiSpeciesProbeAnnotation <- function(probes, organisms, probetype,
+                                           datatype = "rna-seq") {  
+  
+  ## FILL ME!!!
+  annot <- data.frame()
   return(annot)
 }
