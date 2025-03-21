@@ -232,7 +232,8 @@ pgx.initialize <- function(pgx) {
   ## Recompute geneset meta.fx as average fold-change of genes
   ## -----------------------------------------------------------------------------
 
-  if (pgx$organism != "No organism" || nrow(pgx$GMT) > 0) {
+  ##  if (pgx$organism != "No organism" || nrow(pgx$GMT) > 0) {
+  if (!is.null(pgx$gset.meta) && nrow(pgx$GMT) > 0) {
     message("[pgx.initialize] Recomputing geneset fold-changes")
     nc <- length(pgx$gset.meta$meta)
     for (i in 1:nc) {
