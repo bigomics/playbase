@@ -3,6 +3,7 @@
 \name{ngs.fitContrastsWithAllMethods}
 \alias{ngs.fitContrastsWithAllMethods}
 \alias{ngs.fitContrastsWithTTEST}
+\alias{ngs.fitContrastsWithWILCOXON}
 \alias{ngs.fitContrastsWithLIMMA}
 \alias{ngs.fitContrastsWithEDGER}
 \alias{.ngs.fitContrastsWithEDGER.nodesign}
@@ -24,8 +25,8 @@ ngs.fitContrastsWithAllMethods(
   conform.output = TRUE,
   do.filter = TRUE,
   remove.batch = TRUE,
-  methods = c("ttest", "ttest.welch", "voom.limma", "trend.limma", "notrend.limma",
-    "deseq2.wald", "deseq2.lrt", "edger.qlf", "edger.lrt"),
+  methods = c("ttest", "ttest.welch", "wilcoxon.ranksum", "voom.limma", "trend.limma",
+    "notrend.limma", "deseq2.wald", "deseq2.lrt", "edger.qlf", "edger.lrt"),
   correct.AveExpr = TRUE,
   custom = NULL,
   custom.name = NULL
@@ -38,6 +39,8 @@ ngs.fitContrastsWithTTEST(
   method = "welch",
   conform.output = 0
 )
+
+ngs.fitContrastsWithWILCOXON(X, contr.matrix, design, conform.output = 0)
 
 ngs.fitContrastsWithLIMMA(
   X,
@@ -167,6 +170,8 @@ Custom methods can also be added.
 \section{Functions}{
 \itemize{
 \item \code{ngs.fitContrastsWithTTEST()}: Fits contrasts using t-test
+
+\item \code{ngs.fitContrastsWithWILCOXON()}: Fits contrasts using Wilcoxon rank sum (scRNAseq)
 
 \item \code{ngs.fitContrastsWithLIMMA()}: Fits contrasts using LIMMA differential expression analysis on count data.
 
