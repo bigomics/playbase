@@ -181,7 +181,8 @@ pgx.createPGX <- function(counts,
                           remove.outliers = TRUE, ## DEPRECATED
                           add.gmt = TRUE,
                           settings = list(),
-                          sc_compute_settings = list()) {
+                          sc_compute_settings = list()
+                          ) {
 
   message("[pgx.createPGX]===========================================")
   message("[pgx.createPGX]=========== pgx.createPGX =================")

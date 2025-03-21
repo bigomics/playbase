@@ -639,7 +639,7 @@ pgx.clusterBigMatrix <- function(...) pgx.clusterMatrix(...)
 #'
 #' @export
 pgx.findLouvainClusters <- function(X,
-                                    graph.method = "dist",
+                                    graph.method = NULL,
                                     level = 1,
                                     prefix = "C",
                                     knn = 100,
@@ -648,8 +648,11 @@ pgx.findLouvainClusters <- function(X,
 
   ## find clusters from t-SNE positions
   idx <- NULL
-  graph.method <- ifelse(ncol(X)>2000, "snn", "dist")
-  message("[pgx.findLouvainClusters]: Finding clusters using Louvain. graph.method:", graph.method)
+
+  if(is.null(graph.method)) {
+    graph.method <- ifelse(ncol(X)>2000, "snn", "dist")
+  }
+  message("[pgx.findLouvainClusters]: graph.method:", graph.method)
   
   if (graph.method == "dist") {
     dist <- stats::as.dist(stats::dist(scale(X))) ## slow for large matrices (scRNA-seq)
