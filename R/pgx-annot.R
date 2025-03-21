@@ -63,7 +63,7 @@ getProbeAnnotation <- function(organism, probes, datatype, probetype="",
   if(is.null(datatype)) datatype <- "unknown"  
   if(is.null(probetype)) probetype <- "unknown"
 
-  unknown.organism <- (organism %in% c("No organism","custom","unkown"))
+  unknown.organism <- (tolower(organism) %in% c("no organism","custom","unkown"))
   unknown.datatype <- (datatype %in% c("custom","unkown"))
   unknown.probetype <- (probetype %in% c("custom","unkown"))  
   annot.unknown <- unknown.organism || unknown.datatype || unknown.probetype
@@ -1308,15 +1308,15 @@ collapse_by_humansymbol <- function(obj, annot) {
   annot <- cbind(annot, rownames = rownames(annot))
   target <- c("human_ortholog", "symbol", "gene_name", "rownames")
   target <- intersect(target, colnames(annot))
-#  complete_targets <- lapply(target, function(x) {
-#    sum(is.na(annot[, x]) | annot[, x] %in% c("")) < 1
-#  }) |> unlist()
-#  target <- target[complete_targets]
   if (length(target) == 0) {
     message("[collapse_by_humansymbol] WARNING: could not find symbol mapping column.")
     return(obj)
   } else {
     ## call rename_by with target column
+    k <- target[1]
+    sel.na <- which(annot[,k] %in% c(NA,"","-","---","NA"))
+    annot[sel.na,k] <- '---'
+    annot[,k] <- toupper(annot[,k])  ## all uppercase??
     map.obj <- rename_by(obj, annot_table = annot, new_id = target[1])
   }
   if (!is.null(dim(map.obj))) rownames(map.obj) <- toupper(rownames(map.obj))
@@ -1965,7 +1965,6 @@ info.add_hyperlinks <- function(info, feature, datatype,
 }
 
 
-
 #' Automatically detects species by trying to detect probetype from
 #' list of test_species. Warning. bit slow.
 #'
@@ -1974,8 +1973,15 @@ check_species_probetype <- function(
     probes,
     test_species = c("Human", "Mouse", "Rat"),
     datatype = NULL, annot.cols = NULL) {
-  
-  if(!is.null(datatype) && datatype %in% c("custom","unknown","")) {
+
+  ## No check if custom
+  custom_datatype <- !is.null(datatype) && tolower(datatype) %in% c("custom","unknown","")
+  custom_organism <- any(tolower(test_species) %in% c("custom","unknown","no organism"))
+
+  dbg("[check_species_probetype] custom_datatype = ",custom_datatype)
+  dbg("[check_species_probetype] custom_organism = ",custom_organism)
+
+  if(custom_datatype || custom_organism) {
     out <- rep("custom", length(test_species))
     names(out) <- test_species
     return(as.list(out))
