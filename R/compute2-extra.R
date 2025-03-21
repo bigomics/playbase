@@ -34,7 +34,7 @@ compute_extra <- function(pgx, extra = c(
 
   message("[pgx.computePGX: compute_extra] pgx.dir = ", pgx.dir)
   message("[pgx.computePGX: compute_extra] libx.dir = ", libx.dir)
-  
+
   rna.counts <- pgx$counts
   
   # If working on non-human species, use homologs
@@ -56,7 +56,7 @@ compute_extra <- function(pgx, extra = c(
     timings <- rbind(timings, c("meta.go", tt))
     message("<<< done!")
   }
-
+  
   if ("deconv" %in% extra) {
     message(">>> computing deconvolution")
     tt <- system.time({
@@ -262,7 +262,6 @@ compute_extra <- function(pgx, extra = c(
     timings <- rbind(timings, c("mofa", tt))
   }
 
-
   ## ------------------------------------------------------
   ## pretty collapse all timings
   ## ------------------------------------------------------
@@ -287,7 +286,7 @@ compute_extra <- function(pgx, extra = c(
 
   pgx$timings <- rbind(pgx$timings, timings0)
   message("<<< done!")
-
+  
   return(pgx)
 }
 
