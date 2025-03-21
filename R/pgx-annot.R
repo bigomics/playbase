@@ -730,10 +730,9 @@ getCustomAnnotation <- function(probes, custom_annot) {
   return(custom_annot)
 }
 
-#' Like getCustomAnnotation() but allow custom column names mapping to
-#' feature, symbol and title. Also simplified implementation. Should
-#' eventually replace getCustomAnnotation().
-#'
+#' Like getCustomAnnotation() but allows custom column names mapping
+#' to feature, symbol and title. Also simplified
+#' implementation. Should eventually replace getCustomAnnotation().
 #' 
 #' @export
 getCustomAnnotation2 <- function(probes, custom_annot, feature.col='feature',
