@@ -1409,13 +1409,11 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
 #'
 #' @export
 pgx.getGeneSetCollections <- function(gsets = rownames(playdata::GSETxGENE)) {
-  ## -----------------------------------------------------------------------------
-  ## Gene set collections
-  ## -----------------------------------------------------------------------------
-
+  ## determine main collections from gene set prefixes
+  if(is.null(gsets) || length(gsets)==0 ) {
+    return(list())
+  }
   collections <- list()
-
-  ## ----------- add main collections from gene set prefixes
   gsets.db <- sub("_.*", "", gsets)
   gsets.db <- sub(":.*", "", gsets.db)
   gsets.groups <- tapply(gsets, gsets.db, list)
