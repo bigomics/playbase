@@ -74,7 +74,7 @@ getProbeAnnotation <- function(organism, probes, datatype, probetype="",
     # annotation table is mandatory for 'No organism' (until server side
     # can handle missing genesets)
     info("[getProbeAnnotation] annotating for unknown datatype with custom annotation")
-    genes <- getCustomAnnotation( probes, annot_table )
+    genes <- getCustomAnnotation2( probes, annot_table )
   } else if (datatype == "metabolomics") {
     dbg("[getProbeAnnotation] annotating for metabolomics")
     mx.check <- mx.check_mapping(
@@ -605,6 +605,7 @@ cleanupAnnotation <- function(genes) {
 
 
 
+
 #' @title Custom Gene Annotation
 #'
 #' @description Adds custom gene annotation table to a pgx object
@@ -728,6 +729,101 @@ getCustomAnnotation <- function(probes, custom_annot) {
 
   return(custom_annot)
 }
+
+#' Like getCustomAnnotation() but allow custom column names mapping to
+#' feature, symbol and title. Also simplified implementation. Should
+#' eventually replace getCustomAnnotation().
+#'
+#' 
+#' @export
+getCustomAnnotation2 <- function(probes, custom_annot, feature.col='feature',
+                                 symbol.col='symbol', gene_title.col='gene_title',
+                                 extra.columns = TRUE) {
+
+  message("[getCustomAnnotation2] Adding custom annotation table...")
+  # Create custom gene table from probe names
+  message("[getCustomAnnotation2] Creating annotation table from probe names...")
+  annot <- data.frame(
+    feature = probes,
+    symbol = probes,
+    gene_name = probes,
+    human_ortholog = "",
+    gene_title = "unknown",
+    ## chr = NA,
+    source = "custom"
+  )
+  rownames(annot) <- probes
+  required.columns <- colnames(annot)
+  
+  # If the user has provided a custom gene table, check it and use it
+  if(!is.null(custom_annot)) {
+
+    custom_annot <- data.frame(custom_annot, check.names=FALSE)
+
+    if(!feature.col %in% colnames(custom_annot)) {
+      feature.col <- head(grep("feature|probe|initial|input",
+        colnames(custom_annot), ignore.case=TRUE, value=TRUE),1)
+      if(length(feature.col)==0) feature.col <- colnames(custom_annot)[1]
+    }
+    if(!symbol.col %in% colnames(custom_annot)) {
+      symbol.col <- head(grep("symbol|name|gene|protein|alias",
+        setdiff(colnames(custom_annot),feature.col),
+        ignore.case=TRUE, value=TRUE),1)
+      if(length(symbol.col)==0) symbol.col <- NA
+    }
+    if(!gene_title.col %in% colnames(custom_annot)) {
+      gene_title.col <- head(grep("title|description|name",
+        setdiff(colnames(custom_annot),c(feature.col,symbol.col)),
+        ignore.case=TRUE, value=TRUE),1)
+      if(length(gene_title.col)==0) gene_title.col <- NA
+    }
+    dbg("[getCustomAnnotation2] feature.col = ", feature.col)
+    dbg("[getCustomAnnotation2] symbol.col = ", symbol.col)
+    dbg("[getCustomAnnotation2] title.col = ", gene_title.col)
+
+    features <- custom_annot[,feature.col]
+    custom_annot <- custom_annot[match(probes, features),]
+
+    # Rename columns
+    newcols <- c("feature" = feature.col, "symbol" = symbol.col,
+                 "gene_title" = gene_title.col)
+    newcols <- newcols[which(newcols != names(newcols))]
+    newcols <- newcols[which(newcols %in% colnames(custom_annot))]
+    if(length(newcols)) {
+      custom_annot <- dplyr::rename(custom_annot, all_of(newcols))
+    }
+    
+    if("feature" %in% colnames(custom_annot)) {
+      annot$feature <- custom_annot[,"feature"]
+    }
+    if("symbol" %in% colnames(custom_annot)) {
+      annot$symbol  <- custom_annot[,"symbol"]
+    }
+    if("gene_title" %in% colnames(custom_annot)) {    
+      annot$gene_title <- custom_annot[,"gene_title"]
+    }
+
+    ##  if (!is.null(custom_annot) && num_annot > 1 && required_in_annot) {
+    # remove all NA columns, otherwise the for loop below will not work
+    custom_annot <- custom_annot[, colMeans(is.na(custom_annot))!=1, drop=FALSE]
+
+    # identify missing columns and fill them with annot_map
+    missing_cols <- setdiff( colnames(custom_annot), colnames(annot))
+    missing_cols <- setdiff(missing_cols, c(NA))
+    annot <- cbind(annot, custom_annot[,missing_cols,drop=FALSE])
+  }
+
+  if(!extra.columns) {
+    sel <- (colnames(annot) %in% required.columns)
+    annot <- annot[,sel]
+  }
+  
+  message("[getCustomAnnotation2] Cleaning custom annotation table...")
+  annot <- cleanupAnnotation(annot)
+  return(annot)
+}
+
+
 
 ## ================================================================================
 ## ================== GET ORTHOLOG FUNCTIONS ======================================
