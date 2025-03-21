@@ -16,6 +16,7 @@ pgx.createPGX(
   max.genesets = 5000,
   name = "Data set",
   datatype = "RNA-seq",
+  azimuth_ref = "pbmcref",
   probe_type = NULL,
   creator = "unknown",
   description = "No description provided.",
@@ -35,7 +36,8 @@ pgx.createPGX(
   remove.xxl = TRUE,
   remove.outliers = TRUE,
   add.gmt = TRUE,
-  settings = list()
+  settings = list(),
+  sc_compute_settings = list()
 )
 }
 \arguments{

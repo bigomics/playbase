@@ -6,6 +6,7 @@
 \usage{
 pgx.findLouvainClusters(
   X,
+  datatype = NULL,
   graph.method = "dist",
   level = 1,
   prefix = "C",
