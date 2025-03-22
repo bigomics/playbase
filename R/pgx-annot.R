@@ -737,6 +737,7 @@ getCustomAnnotation <- function(probes, custom_annot) {
 #' @export
 getCustomAnnotation2 <- function(probes, custom_annot, feature.col='feature',
                                  symbol.col='symbol', gene_title.col='gene_title',
+                                 ortholog.col='human_ortholog',
                                  extra.columns = TRUE) {
 
   message("[getCustomAnnotation2] Adding custom annotation table...")
@@ -746,7 +747,7 @@ getCustomAnnotation2 <- function(probes, custom_annot, feature.col='feature',
     feature = probes,
     symbol = probes,
     gene_name = probes,
-    human_ortholog = "",
+    human_ortholog = NA,
     gene_title = "unknown",
     ## chr = NA,
     source = "custom"
@@ -760,9 +761,15 @@ getCustomAnnotation2 <- function(probes, custom_annot, feature.col='feature',
     custom_annot <- data.frame(custom_annot, check.names=FALSE)
 
     if(!feature.col %in% colnames(custom_annot)) {
-      feature.col <- head(grep("feature|probe|initial|input",
-        colnames(custom_annot), ignore.case=TRUE, value=TRUE),1)
-      if(length(feature.col)==0) feature.col <- colnames(custom_annot)[1]
+#      feature.col <- head(grep("feature|probe|initial|input",
+#        colnames(custom_annot), ignore.case=TRUE, value=TRUE),1)
+      fsum <- apply(custom_annot,2,function(a) mean(probes %in% a,na.rm=TRUE))
+      feature.col <- NULL
+      if(max(fsum)>0.5) feature.col <- names(which.max(fsum))
+      if(length(feature.col)==0) {
+        custom_annot$feature <- probes
+        feature.col <- "feature"
+      }
     }
     if(!symbol.col %in% colnames(custom_annot)) {
       symbol.col <- head(grep("symbol|name|gene|protein|alias",
@@ -776,16 +783,24 @@ getCustomAnnotation2 <- function(probes, custom_annot, feature.col='feature',
         ignore.case=TRUE, value=TRUE),1)
       if(length(gene_title.col)==0) gene_title.col <- NA
     }
+    if(!ortholog.col %in% colnames(custom_annot)) {
+      ortholog.col <- head(grep("ortholog|human|hgnc",
+        setdiff(colnames(custom_annot),c(feature.col,symbol.col)),
+        ignore.case=TRUE, value=TRUE),1)
+      if(length(ortholog.col)==0) ortholog.col <- NA
+    }
     dbg("[getCustomAnnotation2] feature.col = ", feature.col)
     dbg("[getCustomAnnotation2] symbol.col = ", symbol.col)
     dbg("[getCustomAnnotation2] title.col = ", gene_title.col)
+    dbg("[getCustomAnnotation2] ortholog.col = ", ortholog.col)    
 
     features <- custom_annot[,feature.col]
     custom_annot <- custom_annot[match(probes, features),]
 
     # Rename columns
     newcols <- c("feature" = feature.col, "symbol" = symbol.col,
-                 "gene_title" = gene_title.col)
+                 "gene_title" = gene_title.col,
+                 "human_ortholog" = ortholog.col)
     newcols <- newcols[which(newcols != names(newcols))]
     newcols <- newcols[which(newcols %in% colnames(custom_annot))]
     if(length(newcols)) {
