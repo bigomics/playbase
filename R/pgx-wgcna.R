@@ -4,44 +4,6 @@
 ##
 ##
 
-#' @title Map module colors to rainbow palette
-#'
-#' @description
-#' Maps the module colors from a WGCNA network to a rainbow palette.
-#'
-#' @param net A WGCNA network object.
-#'
-#' @details
-#' This function takes a WGCNA network object and maps the module colors
-#' to a rainbow palette based on the modules' hierarchical clustering order.
-#'
-#' It extracts the hierarchical clustering dendrogram order, gets the number
-#' of unique module colors, ranks the module color means based on the
-#' dendrogram order, and assigns rainbow colors accordingly.
-#'
-#' This allows easier visualization and interpretation of modules in the
-#' standard rainbow palette order.
-#'
-#' @return
-#' A named character vector mapping the original module colors to rainbow colors.
-#'
-#' @export
-labels2rainbow <- function(net) {
-  hc <- net$dendrograms[[1]]
-  nc <- length(unique(net$colors))
-  n <- length(net$colors)
-  ii <- rep(NA, n)
-  ii[net$goodGenes] <- hc$order
-  col1 <- WGCNA::labels2colors(net$colors)
-  col.rnk <- rank(tapply(1:n, col1[ii], mean))
-  new.col <- grDevices::rainbow(nc)[col.rnk]
-  names(new.col) <- names(col.rnk)
-  new.col["grey"] <- "#AAAAAA"
-  new.col <- new.col[col1]
-  names(new.col) <- net$colors
-  return(new.col)
-}
-
 
 #' @title WGCNA network construction and module detection
 #'
@@ -82,7 +44,7 @@ pgx.wgcna <- function(
     gset.filter = "PATHWAY|HALLMARK|^GO|^C[1-9]"
     ) {
 
-  ##minmodsize=10;power=NULL;cutheight=0.25;deepsplit=2;ngenes=2000;networktype="signed";tomtype="signed";numericlabels=FALSE;ngenes=2000;gset.filter=NULL
+  ##minmodsize=10;power=NULL;cutheight=0.15;deepsplit=2;ngenes=4000;networktype="signed";tomtype="signed";numericlabels=FALSE;ngenes=2000;gset.filter=NULL;minKME=0.8
 
   samples <- pgx$samples
   ## no dot pheno
@@ -450,7 +412,7 @@ wgcna.compute_enrichment <- function(wgcna, pgx,
   G1 <- GMT[bg,, drop=FALSE]
   if(!is.null(filter)) {
     sel <- grep(filter,colnames(G1))
-    G1 <- G1[,sel, drop=FALSE]
+    if(length(sel)) G1 <- G1[,sel, drop=FALSE]
   }
   G1 <- G1[, which(Matrix::colSums(G1 != 0) >= 4), drop = FALSE]
   gmt <- mat2gmt(G1)
@@ -1418,112 +1380,135 @@ wgcna.plotModuleHubGenes <- function(wgcna, modules = NULL,
   }
 }
 
-## #' Filter color vector by minimum KME and mergeCutHeight. Set color of
-## #' features with KME smaller than minKME to grey (or 0) group. Merge
-## #' similar modules with (module) correlation larger than
-## #' (1-mergeCutHeight) together.
-## #'
-## #' @export
-## wgcna.filterColors <- function(X, colors, minKME=0.3, mergeCutHeight=0.15,
-##                                minmodsize = 20, ntop=-1 ) {
-##   ##minKME=0.3;mergeCutHeight=0.15;minmodsize=20;ntop=-1
-  
-##   sX <- X + 1e-8*matrix(rnorm(length(X)),nrow(X),ncol(X))
-##   sX <- t(scale(t(sX)))
+#' @title Map module colors to rainbow palette
+#'
+#' @description
+#' Maps the module colors from a WGCNA network to a rainbow palette.
+#'
+#' @param net A WGCNA network object.
+#'
+#' @details
+#' This function takes a WGCNA network object and maps the module colors
+#' to a rainbow palette based on the modules' hierarchical clustering order.
+#'
+#' It extracts the hierarchical clustering dendrogram order, gets the number
+#' of unique module colors, ranks the module color means based on the
+#' dendrogram order, and assigns rainbow colors accordingly.
+#'
+#' This allows easier visualization and interpretation of modules in the
+#' standard rainbow palette order.
+#'
+#' @return
+#' A named character vector mapping the original module colors to rainbow colors.
+#'
+#' @export
+labels2rainbow <- function(net) {
+  hc <- net$dendrograms[[1]]
+  nc <- length(unique(net$colors))
+  n <- length(net$colors)
+  ii <- rep(NA, n)
+  ii[net$goodGenes] <- hc$order
+  col1 <- WGCNA::labels2colors(net$colors)
+  col.rnk <- rank(tapply(1:n, col1[ii], mean))
+  new.col <- grDevices::rainbow(nc)[col.rnk]
+  names(new.col) <- names(col.rnk)
+  new.col["grey"] <- "#AAAAAA"
+  new.col <- new.col[col1]
+  names(new.col) <- net$colors
+  return(new.col)
+}
 
-##   ## get singular vectors and correct sign
-##   vv <- tapply(1:nrow(sX), colors, function(i) svd(sX[i,],nv=1)$v[,1])
-##   mm <- tapply(1:nrow(sX), colors, function(i) colMeans(sX[i,]))
-##   vv.sign <- mapply( function(a,b) sign(cor(a,b)), mm, vv)
-##   vv <- mapply( function(a,b) a*b, vv, vv.sign, SIMPLIFY=FALSE)
-  
-##   kme <- rep(NA,nrow(X))
-##   names(kme) <- rownames(X)
-##   names(colors) <- rownames(X)
 
-##   grey.val <- NULL
-##   is.color <- mean(colors %in% WGCNA::standardColors(435)) > 0.8  
-##   if(is.numeric(colors)) {
-##     colors <- as.integer(colors)
-##     grey.val <- 0
-##   } else {
-##     colors <- as.character(colors)
-##     grey.val <- "---"
-##     if(is.color) grey.val <- "grey"
-##   }
-##   names(colors) <- rownames(X)  
-##   new.colors <- colors
-  
-##   if(minKME > 0) {
-##     i=1
-##     for(i in 1:length(vv)) {
-##       ii <- which(colors == names(vv)[i])
-##       r <- cor(t(X[ii,]), vv[[i]])[,1]
-##       max(r)
-##       jj <- ii[which(r < minKME)]
-##       if(length(jj)) {
-##         new.colors[jj] <- NA
-##       }
-##       kme[ii] <- r
-##     }  
-##     new.colors[is.na(new.colors)] <- grey.val
-##   }
+#' Filter color vector by minimum KME and mergeCutHeight. Set color of
+#' features with KME smaller than minKME to grey (or 0) group. Merge
+#' similar modules with (module) correlation larger than
+#' (1-mergeCutHeight) together.
+#'
+#' @export
+wgcna.filterColors <- function(X, colors, minKME=0.3, mergeCutHeight=0.15,
+                               minmodsize = 20, ntop=-1 ) {
+  ##minKME=0.3;mergeCutHeight=0.15;minmodsize=20;ntop=-1
 
-##   ## merge groups
-##   if(mergeCutHeight > 0) {
-##     mx <- rowmean(X, new.colors)
-##     rr <- cor(t(mx))
-##     diag(rr) <- 0
-##     merge.idx <- which(rr > (1 - mergeCutHeight), arr.ind=TRUE)
-##     if(nrow(merge.idx)>0) {
-##       i=1
-##       for(i in 1:nrow(merge.idx)) {
-##         aa <- rownames(rr)[merge.idx[i,]]
-##         jj <- which(new.colors  %in% aa)
-##         max.color <- names(which.max(table(new.colors[jj])))
-##         new.colors[jj] <- max.color
-##       }
-##     }
-##   }
+  sX <- X + 1e-8*matrix(rnorm(length(X)),nrow(X),ncol(X))
+  sX <- t(scale(t(sX)))
 
-## <<<<<<< HEAD
-##   ## remove small groups
-##   modsize <- table(new.colors)
-##   modsize
-##   if( min(modsize) < minmodsize ) {
-##     small.mod <- names(which(modsize < minmodsize))
-##     sel <- which( new.colors %in% small.mod)
-##     new.colors[sel] <- NA
-##   }
+  ## get singular vectors and correct sign
+  vv <- tapply(1:nrow(sX), colors, function(i) svd(sX[i,],nv=1)$v[,1])
+  mm <- tapply(1:nrow(sX), colors, function(i) colMeans(sX[i,]))
+  vv.sign <- mapply( function(a,b) sign(cor(a,b)), mm, vv)
+  vv <- mapply( function(a,b) a*b, vv, vv.sign, SIMPLIFY=FALSE)
 
-##   if(ntop>0) {
-##     keep <- tapply( names(kme), new.colors, function(i) head(names(sort(-kme[i])),ntop) )
-##     keep <- unlist(keep)
-##     not.keep <- setdiff(names(kme), keep)
-##     dbg("[wgcna.filterColors] len.keep = ", length(keep))
-##     dbg("[wgcna.filterColors] len.notkeep = ", length(not.keep))
-##     if(length(not.keep)) new.colors[not.keep] <- NA
-##     dbg("[wgcna.filterColors] sum.isna.newcolors = ", sum(is.na(new.colors)))
-##   }
-  
-##   new.colors[which(is.na(new.colors))] <- grey.val
-##   ##if(!is.numeric(colors)) new.colors <- factor(new.colors)
-  
-##   return(new.colors)
-## =======
-##   ## construct results object
-##   message("[playbase::pgx.wgcna] WGCNA completed. Returning object.")
-##   return(
-##     list(
-##       datExpr = datExpr,
-##       datTraits = datTraits,
-##       net = net,
-##       gse = gse,
-##       clust = clust,
-##       me.genes = me.genes,
-##       me.colors = me.colors
-##     )
-##   )
-## >>>>>>> singlecell-new-upload
-## }
+  kme <- rep(NA,nrow(X))
+  names(kme) <- rownames(X)
+  names(colors) <- rownames(X)
+
+  grey.val <- NULL
+  is.color <- mean(colors %in% WGCNA::standardColors(435)) > 0.8  
+  if(is.numeric(colors)) {
+    colors <- as.integer(colors)
+    grey.val <- 0
+  } else {
+    colors <- as.character(colors)
+    grey.val <- "---"
+    if(is.color) grey.val <- "grey"
+  }
+  names(colors) <- rownames(X)  
+  new.colors <- colors
+
+  if(minKME > 0) {
+    i=1
+    for(i in 1:length(vv)) {
+      ii <- which(colors == names(vv)[i])
+      r <- cor(t(X[ii,]), vv[[i]])[,1]
+      max(r)
+      jj <- ii[which(r < minKME)]
+      if(length(jj)) {
+        new.colors[jj] <- NA
+      }
+      kme[ii] <- r
+    }  
+    new.colors[is.na(new.colors)] <- grey.val
+  }
+
+  ## merge groups
+  if(mergeCutHeight > 0) {
+    mx <- rowmean(X, new.colors)
+    rr <- cor(t(mx))
+    diag(rr) <- 0
+    merge.idx <- which(rr > (1 - mergeCutHeight), arr.ind=TRUE)
+    if(nrow(merge.idx)>0) {
+      i=1
+      for(i in 1:nrow(merge.idx)) {
+        aa <- rownames(rr)[merge.idx[i,]]
+        jj <- which(new.colors  %in% aa)
+        max.color <- names(which.max(table(new.colors[jj])))
+        new.colors[jj] <- max.color
+      }
+    }
+  }
+
+  ## remove small groups
+  modsize <- table(new.colors)
+  modsize
+  if( min(modsize) < minmodsize ) {
+    small.mod <- names(which(modsize < minmodsize))
+    sel <- which( new.colors %in% small.mod)
+    new.colors[sel] <- NA
+  }
+
+  if(ntop>0) {
+    keep <- tapply( names(kme), new.colors, function(i) head(names(sort(-kme[i])),ntop) )
+    keep <- unlist(keep)
+    not.keep <- setdiff(names(kme), keep)
+    dbg("[wgcna.filterColors] len.keep = ", length(keep))
+    dbg("[wgcna.filterColors] len.notkeep = ", length(not.keep))
+    if(length(not.keep)) new.colors[not.keep] <- NA
+    dbg("[wgcna.filterColors] sum.isna.newcolors = ", sum(is.na(new.colors)))
+  }
+
+  new.colors[which(is.na(new.colors))] <- grey.val
+  ##if(!is.numeric(colors)) new.colors <- factor(new.colors)
+
+  return(new.colors)
+}
 
