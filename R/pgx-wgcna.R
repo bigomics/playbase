@@ -50,10 +50,31 @@ pgx.wgcna <- function(
   ## no dot pheno
   samples <- samples[, grep("^[.]", colnames(samples), invert = TRUE), drop = FALSE]
 
+  ## WGCNA does not work very well with scRNAseq due to sparsity.
+  ## To bypass the issue, hdWGCNA computes metacells.
+  ## Here we compute metacells too using Supercell,
+  if (!is.null(pgx$datatype) && tolower(pgx$datatype) %in% c("scrnaseq","scrna-seq")) {
+    message("[wgcna.compute] WGCNA: scRNAseq. >2K cells. Computing supercells with SuperCell.")
+    counts <- 2**X - 1
+    group <- samples[, "celltype"]
+    q10 <- quantile(table(group), probs=0.25)
+    nb <- round(ncol(counts)/2000)
+    message("[pgx.createSingleCellPGX]=======================================")
+    message("[pgx.createSingleCellPGX] running SuperCell. nb = ", nb)    
+    sc <- pgx.supercell(counts, samples, group = group, gamma = nb)
+    message("[pgx.createSingleCellPGX] SuperCell done: ", ncol(counts), " ->", ncol(sc$counts))
+    message("[pgx.createSingleCellPGX]=======================================")
+    message("[pgx.createSingleCellPGX] Normalizing supercell matrix (logCPM)")
+    X <- logCPM(sc$counts, total = 1e4, prior = 1)
+    X <- as.matrix(scX)
+    samples <- sc$meta
+    remove(counts, group, sc)
+    gc()
+  }
+
   wgcna <- wgcna.compute(
     X = pgx$X,
     samples = samples,
-    datatype = pgx$datatype,
     minmodsize = minmodsize, # default: min(20,...)
     power = power, # default: 12 (for signed)
     cutheight = cutheight, # default: 0.15
@@ -99,7 +120,6 @@ pgx.wgcna <- function(
 #' @export
 wgcna.compute <- function(X,
                           samples,
-                          datatype = "RNA-seq",
                           minmodsize = 20,
                           power = 12,
                           cutheight = 0.15,
@@ -121,28 +141,6 @@ wgcna.compute <- function(X,
 
   require(WGCNA)
   
-  ## WGCNA does not work very well with scRNAseq due to sparsity.
-  ## To bypass the issue, hdWGCNA computes metacells.
-  ## Here we compute metacells too using Supercell,
-  if (datatype == "scRNAseq") {
-    message("[wgcna.compute] WGCNA: scRNAseq. >2K cells. Computing supercells with SuperCell.")
-    counts <- 2**X - 1
-    group <- samples[, "celltype"]
-    q10 <- quantile(table(group), probs=0.25)
-    nb <- round(ncol(counts)/2000)
-    message("[pgx.createSingleCellPGX]=======================================")
-    message("[pgx.createSingleCellPGX] running SuperCell. nb = ", nb)    
-    sc <- pgx.supercell(counts, samples, group = group, gamma = nb)
-    message("[pgx.createSingleCellPGX] SuperCell done: ", ncol(counts), " ->", ncol(sc$counts))
-    message("[pgx.createSingleCellPGX]=======================================")
-    message("[pgx.createSingleCellPGX] Normalizing supercell matrix (logCPM)")
-    X <- logCPM(sc$counts, total = 1e4, prior = 1)
-    X <- as.matrix(scX)
-    samples <- sc$meta
-    remove(counts, group, sc)
-    gc()
-  }
-
   nmissing <- sum(is.na(X))
   if (nmissing > 0) {
     message("Found ", nmissing, " missing values in X. Imputing prior to WGCNA.")
