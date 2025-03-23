@@ -2525,10 +2525,10 @@ snf.plot_graph <- function(snf, min.rho = 0.5, plot = TRUE,
     as.matrix(df[, 1:2]),
     directed = FALSE
   )
-
-  colors <- paste0(rainbow(length(A)), "55")
-  colors <- head(rep(paste0(palette()[-1], "66"), 99), length(A))
-
+  
+  colors <- head(rep(palette()[-1], 99), length(A))
+  colors <- adjustcolor(colors, alpha.f=0.5)
+  
   igraph::V(gr)$name
   igraph::E(gr)$type <- df$type
   igraph::E(gr)$weight <- (1 * df$affinity)**1.1
