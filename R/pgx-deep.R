@@ -757,6 +757,16 @@ deep.plotAutoEncoderReconstructions <- function(net, dtypes = NULL,
 #' @export
 deep.plotRedux <- function(net, pheno = NULL, method = "tsne", views = NULL, par = TRUE, cex = 1) {
   redux <- net$get_redux(xx = NULL)
+  if(any(sapply(redux,ncol)<2)) {
+    sel <- which(sapply(redux,ncol)<3)
+    message("[deep.plotRedux] warning: augmenting ",
+            paste(names(sel),collapse=" "))
+    for(j in sel) {
+      Rj <- do.call(cbind,rep(list(redux[[j]]),3))
+      Rj <- Rj + 1e-3*sd(Rj)*matrix(rnorm(length(Rj)),nrow(Rj),ncol(Rj))
+      redux[[j]] <- cbind(redux[[j]], Rj)
+    }
+  }
   if (method == "tsne") {
     px <- min(30, nrow(redux[[1]]) / 4)
     redux <- lapply(redux, function(r) {
