@@ -263,11 +263,10 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         message("[ngs.fitContrastsWithAllMethods] Missing values detected. Cannot perform edgeR QL-F test or LRT.")
         next;
       } else {
+        time_var <- NULL
         if(!is.null(timeseries) && cm.mtds[i] == "edger.lrt") {
-          message("[ngs.fitContrastsWithAllMethods] Time series: fitting using EdgeR LRT with interaction term (intr).")
+          message("[ngs.fitContrastsWithAllMethods] Time series: fitting using EdgeR LRT with interaction term.")
           time_var <- timeseries
-        } else {
-          time_var <- NULL
         }
         timings[[cm.mtds[i]]] <- system.time(
           outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithEDGER(
@@ -962,7 +961,6 @@ ngs.fitContrastsWithEDGER <- function(counts,
   }
   
   if (is.null(design) && prune.samples) {
-    L <- list(counts = counts, contr.matrix = contr.matrix, method = method, group = group)
     message("[ngs.fitContrastsWithEDGER] fitting EDGER contrasts *without* design, with pruning")
     res <- .ngs.fitContrastsWithEDGER.nodesign.pruned(
       counts = counts, contr.matrix = contr.matrix, method = method, group = group,
