@@ -550,7 +550,7 @@ mofa.compute_enrichment <- function(W, GMT, filter = NULL, ntop = 1000) {
     sel <- grep(filter, colnames(GMT))
     GMT <- GMY[, sel]
   }
-  rownames(GMT) <- sub("[a-zA-Z]+:","",rownames(GMT)) ## strip prefix
+  rownames(GMT) <- mofa.strip_prefix(rownames(GMT)) ## strip prefix
   
   ## build full geneset sparse matrix. We create an augmented GMT
   ## matrix that covers all datatypes.
@@ -559,8 +559,8 @@ mofa.compute_enrichment <- function(W, GMT, filter = NULL, ntop = 1000) {
   dt <- dtype[1]
   unique(dtype)
   for (dt in unique(dtype)) {
-    ii <- which( dtype == dt )
-    pp <- sub("[a-zA-Z]+:","",rownames(W)[ii]) ## strip prefix
+    ii <- which(dtype == dt)
+    pp <- mofa.strip_prefix(rownames(W)[ii]) ## strip prefix
     names(pp) <- rownames(W)[ii]
     pp <- pp[which(pp %in% rownames(GMT))]
     if(length(pp)>0) {
@@ -1016,11 +1016,11 @@ mofa.get_prefix <- function(x) {
 #' @export
 mofa.strip_prefix <- function(xx) {
   if (class(xx) == "character") {
-    xx <- sub("[A-Za-z]+:", "", xx)
+    xx <- sub("[A-Za-z0-9]+:", "", xx)
     return(xx)
   }
   if (class(xx) == "matrix") {
-    rownames(xx) <- sub("[A-Za-z]+:", "", rownames(xx))
+    rownames(xx) <- sub("[A-Za-z0-9]+:", "", rownames(xx))
     return(xx)
   }
   if (class(xx) %in% c("list", "array") || is.list(xx)) {
@@ -1083,7 +1083,8 @@ mofa.plot_weights <- function(weights, k, ntop = 10, cex.names = 0.9,
   v <- names(wt)[1]
   for (v in names(wt)) {
     w1 <- wt[[v]]
-    names(w1) <- gsub("[a-zA-Z]+:| \\(SMP.*", "", names(w1))
+    names(w1) <- mofa.strip_prefix(names(w1))
+    names(w1) <- gsub(" \\(SMP.*", "", names(w1))    
     w1 <- w1[order(-abs(w1))]
     w1 <- w1[!duplicated(names(w1))]
     names(w1) <- stringr::str_trunc(names(w1), maxchar)
@@ -1376,7 +1377,8 @@ mofa.plot_enrichment <- function(gsea, type = "barplot",
   }
 
   if (remove.dup) {
-    sname <- gsub("[a-zA-Z]+:| \\(.*", "", rownames(S))
+    sname <- mofa.strip_prefix(rownames(S))
+    sname <- gsub(" \\(.*", "", sname)
     S <- S[which(!duplicated(sname)), , drop = FALSE]
   }
   S <- head(S, ntop)

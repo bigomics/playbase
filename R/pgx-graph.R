@@ -488,9 +488,9 @@ pgx.plotDualProjection <- function(gr, gene = NULL, geneset = NULL,
   tsne_genes <- gr$layout[which(vtype == "gene"), ]
   tsne_gsets <- gr$layout[which(vtype == "geneset"), ]
 
-  uscale <- function(x) (x - min(x)) / (max(x) - min(x)) - 0.5
-  pos1 <- apply(tsne_gsets[, 1:2], 2, uscale)
-  pos2 <- apply(tsne_genes[, 1:2], 2, uscale)
+  .uscale <- function(x) (x - min(x)) / (max(x) - min(x)) - 0.5
+  pos1 <- apply(tsne_gsets[, 1:2], 2, .uscale)
+  pos2 <- apply(tsne_genes[, 1:2], 2, .uscale)
   pos1 <- t(t(pos1) + c(+0.6, 0))
   pos2 <- t(t(pos2) + c(-0.6, 0))
 
