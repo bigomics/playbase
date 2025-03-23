@@ -42,7 +42,7 @@ MultiOmicsSAE <- R6::R6Class(
                           sd_weight = TRUE, device = "cpu") {
       if (!is.null(ntop) && ntop > 0) {
         message("reducing to maximum ", ntop, " features")
-        X <- lapply(X, function(x) head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)), ], ntop))
+        X <- lapply(X, function(x) head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)),,drop=FALSE ], ntop))
       }
 
       if (any(sapply(X, function(x) sum(is.na(x))) > 0)) {
@@ -84,8 +84,8 @@ MultiOmicsSAE <- R6::R6Class(
         r <- (1 - validation_ratio)
         xdim <- ncol(X[[1]])
         ii <- sample(1:xdim, r * xdim)
-        self$x_train <- lapply(X, function(x) t(x[, ii]))
-        self$x_test <- lapply(X, function(x) t(x[, -ii]))
+        self$x_train <- lapply(X, function(x) t(x[, ii, drop=FALSE]))
+        self$x_test <- lapply(X, function(x) t(x[, -ii, drop=FALSE]))
         self$y_train <- lapply(Y, function(y) torch::torch_tensor(y[ii]))
         self$y_test <- lapply(Y, function(y) torch::torch_tensor(y[-ii]))
       } else {
@@ -415,10 +415,12 @@ MultiBlockMultiTargetSAE_module <- torch::nn_module(
     for (k in names(xx)) {
       xdim <- ncol(xx[[k]])
       mods <- list()
-      dims <- c(xdim, num_layers[[1]])
+      dims <- num_layers[[1]]
       dims <- round(ifelse(dims < 1, dims * xdim, dims))
-      latent_dim <- tail(dims, 1)
-      dims <- pmax(dims, latent_dim)
+      dims <- pmax(dims, tail(dims, 1)) ## always larger than bottlenect
+      dims <- pmin(dims, ceiling(xdim/2))  ## always smaller than input (??)
+      dims <- c(xdim, dims)
+      dims
       nlayers <- length(dims)
       for (i in 1:(nlayers - 1)) {
         mods <- add_input_mods(mods, dims[i], use_bn, dropout, add_noise)
@@ -548,7 +550,6 @@ MultiBlockMultiTargetSAE_module <- torch::nn_module(
     )
   }
 )
-
 
 # Very simple model of supervised multi-view auto-encoder. Kept for
 # illustration and baseline benchmarking.
