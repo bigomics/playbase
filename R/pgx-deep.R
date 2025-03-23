@@ -235,7 +235,6 @@ MultiOmicsSAE <- R6::R6Class(
       self$get_gradients.autograd(sd_weight = sd_weight)
     },
     get_gradients.delta = function(sd_weight = NULL) {
-      message("[MultiOmicsSAE] calculating gradients (using delta)")
       sdx <- self$sdx
       x_train <- self$x_train
       y_train <- self$y_train
@@ -272,7 +271,6 @@ MultiOmicsSAE <- R6::R6Class(
       return(grad)
     },
     get_gradients.autograd = function(sd_weight = NULL) {
-      message("[MultiOmicsSAE] calculating gradients (using autograd)")
       sdx <- self$sdx
       x_train <- self$x_train
       y_train <- self$y_train
@@ -650,8 +648,9 @@ deep.plotBiomarkerHeatmap <- function(net, datatypes = NULL, balanced = TRUE,
     }
     ## now we have ranking per datatype across multiple phenotypes
     rnk2 <- lapply(rnk, function(r) rownames(r)[order(rowMeans(r))])
-    nn <- ntop / length(rnk2)
-    sel <- unique(unlist(lapply(rnk2, head, nn)))
+    rnk2 <- lapply(rnk2, function(x) head(rep(x,ntop),ntop))
+    rnk2 <- do.call(rbind,rnk2)    
+    sel  <- head(unique(as.vector(rnk2)),ntop)   
   } else {
     ## not balancing between datatypes. just largest gradient.
     mgrad <- lapply(grad, function(gr) mofa.merge_data(gr))
