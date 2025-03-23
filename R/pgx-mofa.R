@@ -66,6 +66,7 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
     numfactors = numfactors
   )
 
+  
   if (factorizations) {
     all.kernels <- c(
       "mofa", "pca", "nmf", "nmf2", "mcia", "diablo", ## "wgcna",
@@ -79,6 +80,7 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
       numfactors = numfactors,
       kernels = all.kernels
     )
+    names(mofa$factorizations)
   }
 
   ## LASAGNA computation
@@ -98,15 +100,20 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
 
   ## compute multi-gsea enrichment
   if(compute.enrichment) {
-    message("[pgx.compute_mofa] computing multiGSEA enrichment...")
-    F <- pgx.getMetaMatrix(pgx)$fc
-    F <- rename_by2(F, pgx$genes, "symbol", keep.prefix=TRUE)
-    mofa$mgsea <- mgsea.compute_enrichment(
-      F,
-      G = pgx$GMT,
-      filter = NULL,
-      ntop = gset.ntop
-    )
+    has.fc <- !is.null(pgx$gx.meta)
+    if(!has.fc) {
+      message("WARNING: pgx has no gx.meta results. skipping multiGSEA.")
+    } else {
+      message("[pgx.compute_mofa] computing multiGSEA enrichment...")    
+      F <- pgx.getMetaMatrix(pgx)$fc
+      F <- rename_by2(F, pgx$genes, "symbol", keep.prefix=TRUE)
+      mofa$mgsea <- mgsea.compute_enrichment(
+        F,
+        G = pgx$GMT,
+        filter = NULL,
+        ntop = gset.ntop
+      )
+    }
   }
 
   ## pre-compute cluster positions
@@ -263,6 +270,7 @@ mofa.compute <- function(xdata,
     weights <- MOFA2::get_weights(model, views = "all", factors = "all")
     W <- do.call(rbind, weights)
     F <- do.call(rbind, factors)
+
   } else if (tolower(kernel) %in% c("pca", "svd")) {
     message("[mofa.compute] computing PCA factorization")
     model <- irlba::irlba(X, nv = numfactors, maxit = max_iter, work = 100)
@@ -272,6 +280,7 @@ mofa.compute <- function(xdata,
     rownames(F) <- colnames(X)
     colnames(W) <- paste0("PC", 1:ncol(W))
     colnames(F) <- paste0("PC", 1:ncol(F))
+
   } else if (tolower(kernel) %in% c("nmf", "nmf2")) {
     message("[mofa.compute] computing NMF factorization")
     if (kernel == "nmf2") {
@@ -295,6 +304,7 @@ mofa.compute <- function(xdata,
     rownames(F) <- colnames(X)
     colnames(W) <- paste0("NMF", 1:ncol(W))
     colnames(F) <- paste0("NMF", 1:ncol(F))
+
   } else if (kernel %in% c(
     "diablo", "splsda", "rgcca", "sgcca", "sgccda",
     "rgcca.rgcca", "rgcca.rgccda", "rgcca.mcoa"
@@ -321,6 +331,7 @@ mofa.compute <- function(xdata,
     W <- mix$loadings
     F <- mix$scores
     model <- mix$res
+
   } else if (kernel == "mcia") {
     message("[mofa.compute] computing MCIA factorization")
     data_blocks <- lapply(xdata, t)
@@ -339,6 +350,7 @@ mofa.compute <- function(xdata,
     dim(F)
     colnames(W) <- paste0("Factor", 1:ncol(W))
     colnames(F) <- paste0("Factor", 1:ncol(F))
+
   } else if (kernel == "wgcna") {
     message("[mofa.compute] computing WGCNA factorization")
     model <- wgcna.compute(
@@ -357,6 +369,7 @@ mofa.compute <- function(xdata,
     ## correlation. the origonal loading (W) is not continuous.
     ## W <- model$W          ## loadings (but not continuous)
     W <- cor(model$datExpr, F)
+
   } else {
     message("[mofa.compute] FATAL invalid kernel:", kernel)
     return(NULL)
@@ -369,19 +382,8 @@ mofa.compute <- function(xdata,
 
   W <- W[rownames(X), , drop = FALSE]
   F <- F[colnames(X), , drop = FALSE]
-  dt <- sub(":.*", "", rownames(W))
-  ww <- tapply(1:nrow(W), dt, function(i) W[i, , drop = FALSE])
-  xx <- tapply(1:nrow(X), dt, function(i) X[i, , drop = FALSE])
-  ww <- ww[names(xdata)]
-  xx <- xx[names(xdata)]
-  
-  ww_bysymbol <- ww
-  if (!is.null(annot)) {
-    ww_bysymbol <- mofa.prefix(ww)
-    ww_bysymbol <- lapply(ww_bysymbol, function(w) rename_by2(w, annot, "symbol"))
-  }
-  ww <- mofa.strip_prefix(ww)
-  xx <- mofa.strip_prefix(xx)
+  ww <- mofa.split_data(W)
+  xx <- mofa.split_data(X)
 
   ## variance explained
   w.ssq <- sapply(ww, function(w) colSums(w**2))
@@ -403,10 +405,13 @@ mofa.compute <- function(xdata,
   gsea <- NULL
   if (compute.enrichment && !is.null(GMT)) {
     message("computing factor enrichment...")
-    symbolW <- do.call(rbind, mofa.prefix(ww_bysymbol))
-    if (mean(rownames(symbolW) %in% rownames(GMT)) < 0.10) {
-      message("WARNING! less than 10% of your features map to symbols. Please check or add a gene annotation table.")
+    ww_bysymbol <- ww
+    if (!is.null(annot)) {
+      ww_bysymbol <- mofa.prefix(ww)
+      ww_bysymbol <- lapply(ww_bysymbol, function(w)
+        rename_by2(w, annot, "symbol", keep.prefix=FALSE))
     }
+    symbolW <- do.call(rbind, mofa.prefix(ww_bysymbol))  ## prefixed??
     gsea <- mofa.compute_enrichment(symbolW, G = GMT, ntop = gset.ntop)
   }
 
@@ -533,7 +538,104 @@ mofa.compute_clusters <- function(xx, along = "samples", method="umap") {
 #' Compute enrichment for MOFA factors.
 #'
 #' @export
-mofa.compute_enrichment <- function(W, G, filter = NULL, ntop = 1000) {
+mofa.compute_enrichment <- function(W, GMT, filter = NULL, ntop = 1000) {
+
+  if (is.null(GMT)) {
+    message("[mofa.compute_enrichment] ERROR: must provide GMT matrix (genes on rows)")
+    return(NULL)
+  }
+
+  ## filter gene sets
+  if (!is.null(filter)) {
+    sel <- grep(filter, colnames(GMT))
+    GMT <- GMY[, sel]
+  }
+  rownames(GMT) <- sub("[a-zA-Z]+:","",rownames(GMT)) ## strip prefix
+  
+  ## build full geneset sparse matrix. We create an augmented GMT
+  ## matrix that covers all datatypes.
+  G0 <- GMT[0, ]
+  dtype <- sub(":.*", "", rownames(W))
+  dt <- dtype[1]
+  unique(dtype)
+  for (dt in unique(dtype)) {
+    ii <- which( dtype == dt )
+    pp <- sub("[a-zA-Z]+:","",rownames(W)[ii]) ## strip prefix
+    names(pp) <- rownames(W)[ii]
+    pp <- pp[which(pp %in% rownames(GMT))]
+    if(length(pp)>0) {
+      G1 <- GMT[pp, , drop = FALSE]
+      rownames(G1) <- names(pp)
+      G0 <- rbind(G0, G1)
+    }
+  }
+  table(sub(":.*", "", rownames(G0)))
+
+  # align and filter
+  pp <- intersect(rownames(W), rownames(G0))
+  W <- W[pp, ]
+  sel <- which(Matrix::colSums(G0[pp, ] != 0) >= 3)
+  GMT1 <- G0[pp, sel]
+  dim(GMT1)
+  
+  # Normalize with multirank for each datatype
+  normW <- apply(W, 2, function(x) normalize_multirank(x))
+  normW[is.na(normW)] <- mean(normW, na.rm = TRUE)
+  
+  ## Perform geneset enrichment with fast rank-correlation. We could
+  ## do with fGSEA instead but it is much slower.
+  info("[pgx.add_GMT] Performing rankcor")
+  gse <- gset.rankcor(normW, GMT1, compute.p = TRUE)
+
+  # Select top genesets by ranking each factor
+  topsel <- apply(abs(gse$rho), 2, function(r) head(order(-r), ntop))
+  topsel <- head(unique(as.vector(t(topsel))), ntop)
+  length(topsel)
+  topsets <- rownames(gse$rho)[topsel]
+
+  ## prioritize top genesets to accelerate GSEA
+  topGMT <- GMT1[, topsets]
+  gmt <- mat2gmt(topGMT)
+  length(gmt)
+  info("[pgx.add_GMT] Performing fGSEA...")
+  gsea <- list()
+  k <- colnames(W)[1]
+  for (k in colnames(W)) {
+    w <- W[, k]
+    w <- w + 1e-4 * rnorm(length(w))
+    w <- normalize_multirank(w)
+    enr <- fgsea::fgsea(gmt, stats = w)
+    enr <- data.frame(enr)
+    rownames(enr) <- enr$pathway
+    gsea[[k]] <- enr
+  }
+  # alignr esults
+  gsea <- lapply(gsea, function(x) x[rownames(gsea[[1]]), ])
+
+  ## make table
+  dim(topGMT)
+  dtype <- sub(":.*", "", rownames(topGMT))
+  sizes <- tapply(1:nrow(topGMT), dtype, function(ii) Matrix::colSums(topGMT[ii,,drop=FALSE] != 0))
+  sizes <- do.call(cbind, sizes)
+  sizes <- sizes[rownames(gsea[[1]]), ]
+  for (i in 1:length(gsea)) {
+    gsea[[i]]$size <- sizes
+    gsea[[i]] <- gsea[[i]][, c("pathway", "NES", "pval", "padj", "size", "leadingEdge")]
+    gsea[[i]] <- data.frame(lapply(gsea[[i]], as.matrix), check.names = FALSE)
+  }
+
+  ## extract rho, pval and qval
+  rho <- sapply(gsea, function(x) x$NES)
+  pval <- sapply(gsea, function(x) x$pval)
+  padj <- sapply(gsea, function(x) x$padj)
+  rownames(rho) <- rownames(gsea[[1]])
+  rownames(pval) <- rownames(gsea[[1]])
+  rownames(padj) <- rownames(gsea[[1]])
+
+  list(table = gsea, NES = rho, pval = pval, padj = padj)
+}
+
+mofa.compute_enrichment.SAVE <- function(W, G, filter = NULL, ntop = 1000) {
 
   if (is.null(G)) {
     message("[mofa.compute_enrichment] ERROR: must provide GMT matrix (genes on rows)")
