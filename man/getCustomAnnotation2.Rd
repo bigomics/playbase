@@ -2,9 +2,9 @@
 % Please edit documentation in R/pgx-annot.R
 \name{getCustomAnnotation2}
 \alias{getCustomAnnotation2}
-\title{Like getCustomAnnotation() but allow custom column names mapping to
-feature, symbol and title. Also simplified implementation. Should
-eventually replace getCustomAnnotation().}
+\title{Like getCustomAnnotation() but allows custom column names mapping
+to feature, symbol and title. Also simplified
+implementation. Should eventually replace getCustomAnnotation().}
 \usage{
 getCustomAnnotation2(
   probes,
@@ -12,11 +12,12 @@ getCustomAnnotation2(
   feature.col = "feature",
   symbol.col = "symbol",
   gene_title.col = "gene_title",
+  ortholog.col = "human_ortholog",
   extra.columns = TRUE
 )
 }
 \description{
-Like getCustomAnnotation() but allow custom column names mapping to
-feature, symbol and title. Also simplified implementation. Should
-eventually replace getCustomAnnotation().
+Like getCustomAnnotation() but allows custom column names mapping
+to feature, symbol and title. Also simplified
+implementation. Should eventually replace getCustomAnnotation().
 }

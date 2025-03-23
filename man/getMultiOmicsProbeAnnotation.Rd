@@ -2,12 +2,12 @@
 % Please edit documentation in R/pgx-annot.R
 \name{getMultiOmicsProbeAnnotation}
 \alias{getMultiOmicsProbeAnnotation}
-\title{Convert multi-omics probetype. Probe names *must  be prefixed with
+\title{Annotate multi-omics probetype. Probe names *must  be prefixed with
 data type unless classical transcriptomics/proteomics.}
 \usage{
 getMultiOmicsProbeAnnotation(organism, probes)
 }
 \description{
-Convert multi-omics probetype. Probe names *must  be prefixed with
+Annotate multi-omics probetype. Probe names *must  be prefixed with
 data type unless classical transcriptomics/proteomics.
 }

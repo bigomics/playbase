@@ -4,7 +4,7 @@
 \alias{mofa.compute_clusters}
 \title{Compute clusters for MOFA factors.}
 \usage{
-mofa.compute_clusters(xx, matF = NULL, along = "samples")
+mofa.compute_clusters(xx, along = "samples", method = "umap")
 }
 \description{
 Compute clusters for MOFA factors.

@@ -11,7 +11,9 @@ pgx.compute_mofa(
   ntop = 2000,
   gset.ntop = 2000,
   add_gsets = FALSE,
-  factorizations = TRUE
+  factorizations = TRUE,
+  compute.enrichment = TRUE,
+  compute.lasagna = TRUE
 )
 }
 \description{

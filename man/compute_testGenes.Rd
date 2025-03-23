@@ -12,7 +12,8 @@ compute_testGenes(
   custom_fc = NULL,
   use.design = FALSE,
   prune.samples = TRUE,
-  remove.outputs = TRUE
+  remove.outputs = TRUE,
+  timeseries = FALSE
 )
 }
 \arguments{

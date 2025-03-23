@@ -4,7 +4,7 @@
 \alias{mofa.compute_enrichment}
 \title{Compute enrichment for MOFA factors.}
 \usage{
-mofa.compute_enrichment(W, G, filter = NULL, ntop = 1000)
+mofa.compute_enrichment(W, GMT, filter = NULL, ntop = 1000)
 }
 \description{
 Compute enrichment for MOFA factors.
