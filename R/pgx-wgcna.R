@@ -136,7 +136,7 @@ wgcna.compute <- function(X,
     message("[pgx.createSingleCellPGX] SuperCell done: ", ncol(counts), " ->", ncol(sc$counts))
     message("[pgx.createSingleCellPGX]=======================================")
     message("[pgx.createSingleCellPGX] Normalizing supercell matrix (logCPM)")
-    X <- playbase::logCPM(sc$counts, total = 1e4, prior = 1)
+    X <- logCPM(sc$counts, total = 1e4, prior = 1)
     X <- as.matrix(scX)
     samples <- sc$meta
     remove(counts, group, sc)
