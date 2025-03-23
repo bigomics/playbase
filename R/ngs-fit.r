@@ -112,7 +112,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   ## Check timeseries methods
   ## ------------------------------------------------------------------
   if (!is.null(timeseries)) {
-    ts.mm <- c("trend.limma", "deseq2.lrt", "edger.lrt")
+    ts.mm <- c("trend.limma", "deseq2.lrt", "edger.lrt", "edger.qlf")
     cm <- intersect(methods, ts.mm)
     if (length(cm) == 0) {
       message("[ngs.fitContrastsWithAllMethods] For time series analysis, gx.methods must be one of ",
@@ -263,11 +263,10 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         message("[ngs.fitContrastsWithAllMethods] Missing values detected. Cannot perform edgeR QL-F test or LRT.")
         next;
       } else {
-        if(!is.null(timeseries) && cm.mtds[i] == "edger.lrt") {
-          message("[ngs.fitContrastsWithAllMethods] Time series: fitting using EdgeR LRT with interaction term (intr).")
+        time_var <- NULL
+        if(!is.null(timeseries)) {
+          message(paste0("[ngs.fitContrastsWithAllMethods] Time series: fitting using EdgeR ", cm.mtds[i], " with spline."))
           time_var <- timeseries
-        } else {
-          time_var <- NULL
         }
         timings[[cm.mtds[i]]] <- system.time(
           outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithEDGER(
@@ -845,10 +844,10 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
                                                  trend = TRUE) {
 
   library(splines)
-  message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting LIMMA with no design; time series analysis (spline).")
+  message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting LIMMA with no design; time series analysis with spline.")
   
   if (!all(colnames(X) %in% names(timeseries)))
-    stop("[ngs.fitContrastsWithLIMMA.timeseries] X and time contain different set of samples.")
+    stop("[ngs.fitContrastsWithLIMMA.timeseries] X and timeseries vector contain different set of samples.")
 
   jj <- match(colnames(X), names(timeseries))
   time0 <- as.character(unname(timeseries[jj]))
@@ -856,14 +855,13 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
   y <- factor(y)
 
   ## Pick 1st highest degree of freedom value that works
-  idx <- 1:length(unique(time))
+  idx <- 1:length(unique(num.time))
   i = 1
   for(i in 1:length(idx)) {
 
-    ndf <- length(unique(time)) - idx[i]
+    ndf <- length(unique(num.time)) - idx[i]
     time.spline <- try(splines::ns(num.time, df = ndf), silent = TRUE)
-    chk <- "try-error" %in% class(time.spline)
-    if (chk) next;
+    if ("try-error" %in% class(time.spline)) next;
 
     #design <- stats::model.matrix(~ 0 + y + y:time)
     #design <- model.matrix(~ group + time.spline + group:time.spline)
@@ -952,7 +950,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
   dge$samples$group <- group
   dge <- edgeR::calcNormFactors(dge, method = "TMM")
   
-  if (is.null(design) && !prune.samples) {
+  if (is.null(design) && !prune.samples) { ## This will never run
     message("[ngs.fitContrastsWithEDGER] fitting EDGER contrasts *without* design, no pruning ")
     res <- .ngs.fitContrastsWithEDGER.nodesign(
       dge = dge, contr.matrix = contr.matrix, method = method,
@@ -962,11 +960,10 @@ ngs.fitContrastsWithEDGER <- function(counts,
   }
   
   if (is.null(design) && prune.samples) {
-    L <- list(counts = counts, contr.matrix = contr.matrix, method = method, group = group)
     message("[ngs.fitContrastsWithEDGER] fitting EDGER contrasts *without* design, with pruning")
     res <- .ngs.fitContrastsWithEDGER.nodesign.pruned(
       counts = counts, contr.matrix = contr.matrix, method = method, group = group,
-      conform.output = conform.output, robust = robust, plot = plot, timeseries = NULL
+      conform.output = conform.output, robust = robust, plot = plot, timeseries = timeseries
     )
     return(res)
   }
@@ -1139,12 +1136,12 @@ ngs.fitContrastsWithEDGER <- function(counts,
 
   method <- method[1]
 
-  tables <- list()
-  i <- 1
+  i=1; tables=list()
   for (i in 1:NCOL(contr.matrix)) {
+
     kk <- which(!is.na(contr.matrix[, i]) & contr.matrix[, i] != 0)
     counts1 <- counts[, kk, drop = FALSE]
-    X1 <- NULL
+    #X1 <- NULL
     if (!is.null(X)) {
       X1 <- X[, kk, drop = FALSE]
     } else {
@@ -1152,36 +1149,51 @@ ngs.fitContrastsWithEDGER <- function(counts,
     }
     group1 <- group
     if (!is.null(group)) group1 <- group[kk]
-    dge1 <- edgeR::DGEList(round(counts1), group = NULL) ## we like integer counts...
-    dge1$samples$group <- group1
-    dge1 <- edgeR::calcNormFactors(dge1, method = "TMM")
-    dge.disp <- edgeR::estimateDisp(dge1$counts, design = NULL, robust = robust)
-
-    dge1$common.dispersion <- dge.disp$common.dispersion
-    dge1$trended.dispersion <- dge.disp$trended.dispersion
-    dge1$tagwise.dispersion <- dge.disp$tagwise.dispersion
-
-    M <- matrix(c(-1, 0, 1), nrow = 3)
-    rownames(M) <- c("yneg", "yo", "ypos")
-    colnames(M) <- "pos_vs_neg"
 
     ct <- contr.matrix[kk, i]
     y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
-    design1 <- stats::model.matrix(~ 0 + y)
 
-    if (method == "qlf") {
-      fit <- edgeR::glmQLFit(dge1, design1, robust = robust)
-      ctx <- M[colnames(stats::coef(fit)), ]
-      res <- edgeR::glmQLFTest(fit, contrast = ctx)
-    } else if (method == "lrt") {
-      fit <- edgeR::glmFit(dge1, design1, robust = robust)
-      ctx <- M[colnames(stats::coef(fit)), ]
-      res <- edgeR::glmLRT(fit, contrast = ctx)
+    dge1 <- edgeR::DGEList(round(counts1), group = NULL)
+    dge1$samples$group <- group1
+    dge1 <- edgeR::calcNormFactors(dge1, method = "TMM")
+    
+    if (grepl("^IA:*", colnames(contr.matrix)[i])) {
+      top <- .ngs.fitContrastsWithEDGER.nodesign.timeseries(
+        dge = dge1,
+        counts = counts1,
+        X = X1,
+        y = y,
+        method = method,
+        timeseries = timeseries,
+        robust = robust
+      )
     } else {
-      stop("unknown method: ", method)
+      dge.disp <- edgeR::estimateDisp(dge1$counts, design = NULL, robust = robust)
+      dge1$common.dispersion <- dge.disp$common.dispersion
+      dge1$trended.dispersion <- dge.disp$trended.dispersion
+      dge1$tagwise.dispersion <- dge.disp$tagwise.dispersion
+
+      M <- matrix(c(-1, 0, 1), nrow = 3)
+      rownames(M) <- c("yneg", "yo", "ypos")
+      colnames(M) <- "pos_vs_neg"
+
+      design1 <- stats::model.matrix(~ 0 + y)
+
+      if (method == "qlf") {
+        fit <- edgeR::glmQLFit(dge1, design1, robust = robust)
+        ctx <- M[colnames(stats::coef(fit)), ]
+        res <- edgeR::glmQLFTest(fit, contrast = ctx)
+      } else if (method == "lrt") {
+        fit <- edgeR::glmFit(dge1, design1, robust = robust)
+        ctx <- M[colnames(stats::coef(fit)), ]
+        res <- edgeR::glmLRT(fit, contrast = ctx)
+      } else {
+        stop("unknown method: ", method)
+      }
+      top <- edgeR::topTags(res, n = 1e9)$table
+      top <- data.frame(top[rownames(X1), ])
     }
-    top <- edgeR::topTags(res, n = 1e9)$table
-    top <- data.frame(top[rownames(X1), ])
+
     contr1 <- contr.matrix[kk, i]
     j1 <- which(contr1 > 0)
     j0 <- which(contr1 < 0)
@@ -1192,8 +1204,8 @@ ngs.fitContrastsWithEDGER <- function(counts,
     top <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
     Matrix::head(top)
     tables[[i]] <- top
+    names(tables)[i] <- colnames(contr.matrix)[i]
   }
-  names(tables) <- colnames(contr.matrix)
 
   if (conform.output == TRUE) {
     i <- 1
@@ -1210,49 +1222,59 @@ ngs.fitContrastsWithEDGER <- function(counts,
       colnames(tables[[i]]) <- k2
     }
   }
+
   res <- list(tables = tables)
   return(res)
+
 }
 
-## #' @describeIn ngs.fitContrastsWithAllMethods Fits time-series contrasts using edgeR LRT
+## #' @describeIn ngs.fitContrastsWithAllMethods Fits time-series contrasts using edgeR QLF or LRT
 ## #' @export
-## .ngs.fitConstrastsWithEDGER.nodesign.timeseries <- function(counts,
-##                                                             y,
-##                                                             time) {
-  
-##   message("[.ngs.fitConstrastsWithEDGER.nodesign.timeseries]: EdgeR LRT time series analysis with interaction term")
+.ngs.fitContrastsWithEDGER.nodesign.timeseries <- function(dge,
+                                                           counts,
+                                                           X,
+                                                           y,
+                                                           method,
+                                                           timeseries,
+                                                           robust = TRUE) {
 
-##   if (!all(colnames(counts) %in% names(time)))
-##     stop("[.ngs.fitConstrastsWithEDGER.nodesign.timeseries]: counts and time contain different set of samples")
+  require(splines)
+  if (!all.equal(colnames(counts), names(timeseries)))
+    message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Counts and timeseries vector contain different set of samples")
 
-##   jj <- match(colnames(counts), names(time))
-##   time0 <- as.character(time[jj])
-##   time0 <- gsub("\\D", "", unname(time0))
-##   y <- as.character(y)
-##   colData <- data.frame(y = y, time = time0)
-##   colData$y <- as.factor(colData$y)
-##   colData$time <- as.factor(colData$time)
-  
-##   ## Q: does the condition induces a change in gene expression at
-##   ## any time point after the reference level time point (time 0)?
-##   ## https://support.bioconductor.org/p/62684/
-##   ## Features showing a consistent difference from time 0 onward will not have a small p value.
-##   ## This is imporant because differences between groups at time 0 should be controlled for,
-##   ## e.g. random differences between the individuals chosen for each treatment group which
-##   ## are observable before the treatment takes effect.
-##   design.formula <- stats::formula("~ y + time + y:time")
-##   dds <- DESeq2::DESeqDataSetFromMatrix(
-##     countData = counts,
-##     design = design.formula,
-##     colData = colData
-##   )
-##   dds <- DESeq2::DESeq(dds, test = "LRT", reduced = ~ y + time)
-##   resx <- DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE)
+  jj <- match(colnames(counts), names(timeseries))
+  time0 <- as.character(timeseries[jj])
+  time0 <- gsub("\\D", "", unname(time0))
+  time0 <- as.numeric(time0)
+  y <- as.factor(as.character(y))
+  ndf=5 ## iterate for loop like in limma?
+  design <- stats::model.matrix(~ 0 + y * splines::ns(time0, df=ndf))
 
-##   return(resx)
+  dge.disp <- edgeR::estimateDisp(dge$counts, design = design, robust = robust)
+  dge$common.dispersion <- dge.disp$common.dispersion
+  dge$trended.dispersion <- dge.disp$trended.dispersion
+  dge$tagwise.dispersion <- dge.disp$tagwise.dispersion
 
-## }
+  sel <- grep("ypos:splines::ns*", colnames(design))
 
+  if (method == "qlf") {
+    fit <- edgeR::glmQLFit(dge, design, robust = robust)
+    #colnames(stats::coef(fit))[sel]
+    res <- edgeR::glmQLFTest(fit, coef = sel)
+  } else if (method == "lrt") {
+    fit <- edgeR::glmFit(dge, design, robust = robust)
+    res <- edgeR::glmLRT(fit, coef = sel)
+  } else {
+    stop("[.ngs.fitContrastsWithEDGER.nodesign.timeseries] unknown method: ", method)
+  }
+  top <- edgeR::topTags(res, n = 1e9)$table
+  top <- data.frame(top[rownames(X), ])
+  sel <- grep("logFC.*", colnames(top))
+  logFC <- as.numeric(apply(top[, sel, drop = FALSE], 1, function(x) x[which.max(abs(x))]))
+  top <- cbind(logFC = logFC, top[, -sel, drop = FALSE])
+  return(top)
+
+}
 
 #' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using DESeq2 differential expression
 #' analysis on count data
