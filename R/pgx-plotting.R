@@ -361,7 +361,7 @@ pgx.scatterPlot <- function(pgx, samples = NULL, pheno = NULL,
   if (!is.null(contrast)) {
     ct.matrix <- pgx$contrasts
     if (is.null(ct.matrix)) ct.matrix <- pgx$model.parameters$exp.matrix
-    ct.matrix <- playbase::contrastAsLabels(ct.matrix)
+    ct.matrix <- contrastAsLabels(ct.matrix)
     var <- ct.matrix[rownames(pos), contrast]
     title <- contrast
     vartype <- "factor"
@@ -1687,16 +1687,16 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
 
   # Rename labels
   if (!is.null(rownames(F))) {
-    rownames(F) <- make.names(playbase::probe2symbol(rownames(F), pgx$genes, labeltype, fill_na = TRUE), unique = TRUE)
+    rownames(F) <- make.names(probe2symbol(rownames(F), pgx$genes, labeltype, fill_na = TRUE), unique = TRUE)
   }
   if (!is.null(rownames(pos))) {
-    rownames(pos) <- make.names(playbase::probe2symbol(rownames(pos), pgx$genes, labeltype, fill_na = TRUE), unique = TRUE)
+    rownames(pos) <- make.names(probe2symbol(rownames(pos), pgx$genes, labeltype, fill_na = TRUE), unique = TRUE)
   }
   if (!is.null(label)) {
-    label <- make.names(playbase::probe2symbol(label, pgx$genes, labeltype, fill_na = TRUE), unique = TRUE)
+    label <- make.names(probe2symbol(label, pgx$genes, labeltype, fill_na = TRUE), unique = TRUE)
   }
   if (!is.null(hilight)) {
-    hilight <- make.names(playbase::probe2symbol(hilight, pgx$genes, labeltype, fill_na = TRUE), unique = TRUE)
+    hilight <- make.names(probe2symbol(hilight, pgx$genes, labeltype, fill_na = TRUE), unique = TRUE)
   }
 
   plist <- list()
@@ -1939,7 +1939,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
     klr[is.na(klr)] <- "#e5e5e5"
 
     if (plotlib == "plotly") {
-      fig <- playbase::pgx.barplot.PLOTLY(
+      fig <- pgx.barplot.PLOTLY(
         data = data.frame(
           gx = gx,
           xgroup = factor(names(gx), levels = names(gx))
@@ -1984,7 +1984,7 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
 
     if (plotlib == "plotly") {
       ## plot using plotly
-      fig <- playbase::pgx.barplot.PLOTLY(
+      fig <- pgx.barplot.PLOTLY(
         data = data.frame(
           gx = gx,
           xgroup = xgroup
@@ -6269,7 +6269,7 @@ pgx.plotActivation <- function(pgx,
 
   bluered.pal <- colorRamp(colors = c("royalblue3", "#ebeffa", "white", "#faeeee", "indianred3"))
   bluered.pal <- colorRamp(colors = c("royalblue3", "grey90", "indianred3"))
-  bluered.pal <- colorRamp(playbase::omics_pal_c("blue_red_grey", reverse = TRUE)(30))
+  bluered.pal <- colorRamp(omics_pal_c("blue_red_grey", reverse = TRUE)(30))
 
   score <- score[nrow(score):1, , drop = FALSE]
   x_axis <- colnames(score)

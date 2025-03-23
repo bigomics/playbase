@@ -87,12 +87,16 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   G <- G[gg, names(gmt), drop = FALSE]
   X <- X[gg, , drop = FALSE]
 
+  ## --------------------------------------------------------------
+  ## Fit single-sample methods: GSVA, ssGSEA, spearman
+  ## --------------------------------------------------------------
+
   if ("spearman" %in% methods) {
     message("fitting contrasts using spearman/limma... ")
-
     ## single-sample gene set enrichment using (fast) rank correlation
     xx1 <- X - rowMeans(X, na.rm = TRUE) ## center it...
     xx1 <- apply(xx1, 2, rank, na.last = "keep") ## rank correlation (like spearman)
+    ## NOTE IK: 3.2025 should we use averageCLR????
     tt <- system.time({
       zx.rnkcorr <- qlcMatrix::corSparse(G, xx1) ## superfast
       rownames(zx.rnkcorr) <- colnames(G)
@@ -115,7 +119,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       }
 
       ## compute LIMMA
-      all.results[["spearman"]] <- playbase::gset.fitContrastsWithLIMMA(
+      all.results[["spearman"]] <- gset.fitContrastsWithLIMMA(
         zx.rnkcorr,
         contr.matrix,
         design = design,
@@ -154,7 +158,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
         zx.gsva <- zx.gsva[jj, colnames(X), drop = FALSE] ## make sure..
         zx.gsva[is.na(zx.gsva)] <- 0
         zx.gsva <- zx.gsva[!is.na(rownames(zx.gsva)), ] # Remove NA rows that GSVA may produce
-        all.results[["gsva"]] <- playbase::gset.fitContrastsWithLIMMA(
+        all.results[["gsva"]] <- gset.fitContrastsWithLIMMA(
           zx.gsva,
           contr.matrix,
           design = design,
@@ -185,7 +189,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
         gmt <- gmt[kk]
         zx.ssgsea <- zx.ssgsea[kk, colnames(X), drop = FALSE]
         zx.ssgsea[is.na(zx.ssgsea)] <- 0
-        all.results[["ssgsea"]] <- playbase::gset.fitContrastsWithLIMMA(
+        all.results[["ssgsea"]] <- gset.fitContrastsWithLIMMA(
           zx.ssgsea,
           contr.matrix,
           design,
@@ -220,14 +224,14 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       lfc05 <- 0.0
       fdr <- 0.05 ## NEW thresholds (since oct2021)
       suppressWarnings(suppressMessages(
-        limma0 <- try(playbase::gx.limma(xx, yy,
+        limma0 <- try(gx.limma(xx, yy,
           fdr = 1.0, lfc = 0,
           ref = ref, trend = TRUE, verbose = 0
         ), silent = TRUE) ## trend true for NGS
       ))
       if ("try-error" %in% class(limma0)) {
         suppressWarnings(suppressMessages(
-          limma0 <- playbase::gx.limma(xx, yy,
+          limma0 <- gx.limma(xx, yy,
             fdr = 1.0, lfc = 0,
             ref = ref, trend = FALSE, verbose = 0
           )
@@ -250,7 +254,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       }
 
       tt <- system.time({
-        output <- playbase::gset.fisher2(genes.up, genes.dn,
+        output <- gset.fisher2(genes.up, genes.dn,
           genesets = gmt, fdr = 1.0,
           background = rownames(X), check.background = FALSE,
           min.genes = 0, max.genes = 99999,
@@ -264,55 +268,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       output <- output[, c("sign", "p.value", "q.value", "odd.ratio", "overlap")]
       colnames(output) <- c("score", "p.value", "q.value", "odd.ratio", "overlap")
       res[["fisher"]] <- output
-    }
-
-    ## ----------------------------------------------------
-    ## GSVA-limma
-    ## ----------------------------------------------------
-
-    LIMMA.TREND <- TRUE
-    ## if (FALSE && "ssgsea" %in% method) {
-    ##   zx <- zx.ssgsea[, colnames(xx)]
-    ##   gs <- intersect(names(gmt), rownames(zx))
-    ##   tt <- system.time(
-    ##     output <- playbase::gx.limma(zx[gs, ], yy, fdr = 1, lfc = 0, ref = ref, trend = LIMMA.TREND, verbose = 0) ## ssgsea
-    ##   )
-    ##   timings <- rbind(timings, c("ssgsea", tt))
-    ##   output <- output[match(names(gmt), rownames(output)), ]
-    ##   rownames(output) <- names(gmt)
-    ##   output <- output[, c("logFC", "P.Value", "adj.P.Val", "0", "1")]
-    ##   colnames(output) <- c("score", "p.value", "q.value", "AveExpr0", "AveExpr1")
-    ##   res[["ssgsea"]] <- output
-    ## }
-
-    ## if (FALSE && "gsva" %in% method) {
-    ##   zx <- zx.gsva[, colnames(xx)]
-    ##   gs <- intersect(names(gmt), rownames(zx))
-    ##   tt <- system.time({
-    ##     output <- playbase::gx.limma(zx[gs, ], yy,
-    ##       fdr = 1, lfc = 0, ref = ref,
-    ##       trend = LIMMA.TREND, verbose = 0
-    ##     ) ## ssgsea
-    ##   })
-    ##   timings <- rbind(timings, c("gsva", tt))
-    ##   output <- output[match(names(gmt), rownames(output)), ]
-    ##   rownames(output) <- names(gmt)
-    ##   output <- output[, c("logFC", "P.Value", "adj.P.Val", "0", "1")]
-    ##   colnames(output) <- c("score", "p.value", "q.value", "AveExpr0", "AveExpr1")
-    ##   res[["gsva"]] <- output
-    ## }
-
-    if ("spearman" %in% method && !is.null(zx.rnkcorr)) {
-      tt <- system.time(
-        output <- playbase::gx.limma(zx.rnkcorr[, ], yy, fdr = 1, lfc = 0, ref = ref, trend = LIMMA.TREND, verbose = 0) ## ssgsea
-      )
-      timings <- rbind(timings, c("spearman", tt))
-
-      output <- output[match(names(gmt), rownames(output)), ]
-      rownames(output) <- names(gmt)
-      output <- output[, c("logFC", "P.Value", "adj.P.Val", "0", "1")]
-      colnames(output) <- c("score", "p.value", "q.value", "AveExpr0", "AveExpr1")
-      res[["spearman"]] <- output
     }
 
     ## ----------------------------------------------------

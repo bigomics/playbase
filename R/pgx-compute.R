@@ -193,7 +193,7 @@ pgx.createPGX <- function(counts,
   message("[pgx.createPGX] datatype = ", datatype, "\n")
 
   if (datatype == "scRNA-seq") {
-    pgx <- playbase::pgx.createSingleCellPGX(
+    pgx <- pgx.createSingleCellPGX(
       counts = counts,
       samples = samples,
       contrasts = contrasts,
@@ -660,7 +660,7 @@ pgx.computePGX <- function(pgx,
   if (do.cluster || cluster.contrasts) {
     message("[pgx.computePGX] clustering samples...")
     mm <- c("pca", "tsne", "umap")
-    pgx <- pgx.clusterSamples2(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
+    pgx <- pgx.clusterSamples(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
   }
 
   ## Make contrasts by cluster
@@ -777,7 +777,7 @@ pgx.computePGX <- function(pgx,
   ## ------------------ extra analyses ---------------------
   if (!is.null(progress)) progress$inc(0.3, detail = "extra modules")
   message("[pgx.computePGX] computing extra modules: ", paste0(extra.methods, collapse="; "))
-  pgx <- playbase::compute_extra(
+  pgx <- compute_extra(
     pgx,
     extra = extra.methods,
     pgx.dir = pgx.dir,

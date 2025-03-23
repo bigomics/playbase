@@ -390,7 +390,7 @@ compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
       counts <- counts[which(!is.na(rownames(counts))), ]
       if (any(duplicated(rownames(counts)))) {
         message("Deduplicate counts for cell cycle and gender inference")
-        counts <- playbase::rowmean(counts, group = rownames(counts))
+        counts <- rowmean(counts, group = rownames(counts))
         counts[which(is.nan(counts))] <- NA
       }
       res <- try(pgx.inferCellCyclePhase(counts))

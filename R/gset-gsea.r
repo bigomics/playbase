@@ -1148,7 +1148,7 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
   if (is.null(main)) main <- "Enrichment plot"
   tt.main <- as.character(main)
   if (nchar(tt.main) > len.main) {
-    tt.main < playbase::breakstring(tt.main, len.main) ## pgx-funtions.R
+    tt.main < breakstring(tt.main, len.main) ## pgx-funtions.R
   }
   graphics::title(main = tt.main, cex.main = cex.main, line = main.line)
 }

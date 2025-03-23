@@ -876,7 +876,7 @@ plotGOgraph <- function(G = NULL, score = NULL, ontology = NULL,
                         ncomp = 7,
                         plotlib = "igraph.clust") {
   if (is.null(G)) {
-    G <- playbase::getGOgraph()
+    G <- getGOgraph()
   }
 
   if (!is.null(ontology)) {
@@ -951,7 +951,7 @@ plotGOgraph <- function(G = NULL, score = NULL, ontology = NULL,
   table(gr$nodes$Ontology)
 
   ## set node colors
-  bluered.pal <- colorRamp(playbase::omics_pal_c("blue_red_grey", reverse = TRUE)(30))
+  bluered.pal <- colorRamp(omics_pal_c("blue_red_grey", reverse = TRUE)(30))
   fc <- score[match(V(G)$name, names(score))]
   nfc <- 0.5 + 0.5 * (fc / max(abs(fc), na.rm = TRUE))
   vcol <- bluered.pal(nfc) / 255

@@ -1663,10 +1663,10 @@ get_model_parameters <- function(X, samples, pheno = NULL, contrasts = NULL) {
     stop("must give either pheno vector or contrasts matrix")
   }
   if (!is.null(contrasts)) {
-    pheno <- playbase::contrasts2pheno(contrasts, samples)
+    pheno <- contrasts2pheno(contrasts, samples)
   }
 
-  bc <- playbase::detectBatchEffects(X, samples, pheno,
+  bc <- detectBatchEffects(X, samples, pheno,
     params = "statistical",
     k.pca = 10, p.pca = 0.5, p.pheno = 0.05, xrank = 10
   )
@@ -1783,7 +1783,7 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
 
   if (evaluate) {
     ## compare results using scoring
-    res <- playbase::bc.evaluateResults(
+    res <- bc.evaluateResults(
       xlist,
       pheno = pars$pheno,
       lfc = 0.2,

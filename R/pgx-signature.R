@@ -178,7 +178,7 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
   top.fc <- unique(c(top.up, top.dn))
   bg <- intersect(names(fc), rn)
   system.time({
-    stats <- playbase::gset.fisher(top.fc, gmt,
+    stats <- gset.fisher(top.fc, gmt,
       background = bg, fdr = 1,
       min.genes = 0, nmin = 0
     )
@@ -218,8 +218,8 @@ pgx.correlateSignatureH5 <- function(fc, h5.file, nsig = 100, ntop = 200, nperm 
     bg <- intersect(names(fc), rn)
     gmt100.up <- unlist(apply(sig100.up[, sel], 2, list), recursive = FALSE)
     gmt100.dn <- unlist(apply(sig100.dn[, sel], 2, list), recursive = FALSE)
-    G1 <- playbase::gmt2mat(gmt100.up, bg = bg)
-    G2 <- playbase::gmt2mat(gmt100.dn, bg = bg)
+    G1 <- gmt2mat(gmt100.up, bg = bg)
+    G2 <- gmt2mat(gmt100.dn, bg = bg)
     G1 <- G1[match(bg, rownames(G1)), ]
     G2 <- G2[match(bg, rownames(G2)), colnames(G1)]
     G <- G1 - G2
