@@ -56,9 +56,8 @@ pgx.wgcna <- function(
   ## Here we compute metacells too using Supercell,
   if (!is.null(pgx$datatype) && tolower(pgx$datatype) %in% c("scrnaseq","scrna-seq")) {
     message("[wgcna.compute] WGCNA: scRNAseq. >2K cells. Computing supercells with SuperCell.")
-    counts <- 2**X - 1
+    counts <- pmax(2**X - 1,0)
     group <- samples[, "celltype"]
-    q10 <- quantile(table(group), probs=0.25)
     nb <- round(ncol(counts)/2000)
     message("[pgx.wgcna] running SuperCell. nb = ", nb)    
     sc <- pgx.supercell(counts, samples, group = group, gamma = nb)
