@@ -358,25 +358,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     avg.1 <- sapply(samples1, function(s) rowMeans(X[, s, drop = FALSE], na.rm = TRUE))
     avg.0 <- sapply(samples0, function(s) rowMeans(X[, s, drop = FALSE], na.rm = TRUE))
 
-    ## i <- j <- 1
-    ## i=1
-    ## for (i in 1:length(outputs)) {
-    ##   for (j in 1:length(outputs[[i]]$tables)) {
-    ##     contr.name <- names(outputs[[i]]$tables)[j]
-    ##     chk1 <- grepl("^IA:*", contr.name)
-    ##     if (!chk1) {
-    ##       outputs[[i]]$tables[[j]]$AveExpr <- avgX[, j] ## ????
-    ##       outputs[[i]]$tables[[j]]$AveExpr1 <- avg.1[, contr.name]
-    ##       outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, contr.name]
-    ##     } else {
-    ##       sel <- grep(gsub("^IA:", "", contr.name), colnames(exp.matrix))
-    ##       outputs[[i]]$tables[[j]]$AveExpr <- NA # ??
-    ##       outputs[[i]]$tables[[j]]$AveExpr1 <- avg.1[, sel]
-    ##       outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, sel]
-    ##     }
-    ##   }
-    ## }
-
     i <- j <- 1
     for (i in 1:length(outputs)) {
      for (j in 1:length(outputs[[i]]$tables)) {
@@ -428,23 +409,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     rownames(M) <- rownames(logFC) <- rownames(P) <- rownames(Q) <- rownames(res$tables[[1]])
     rownames(M0) <- rownames(M1) <- rownames(res$tables[[1]])
 
-    ## ## NEEDED ??????
-    ## if (!is.null(timeseries) && (names(outputs)[i] %in% nc.tests)) {
-    ##   current.contrs <- colnames(M)
-    ##   new.contrs <- setdiff(all.contrs, current.contrs)
-    ##   if (length(new.contrs) > 0) {
-    ##     ct.null <- matrix(NA, nrow=nrow(M), ncol=length(new.contrs))
-    ##     rownames(ct.null) <- rownames(M)
-    ##     colnames(ct.null) <- new.contrs
-    ##     M <- cbind(M, ct.null)
-    ##     M0 <- cbind(M0, ct.null)
-    ##     M1 <- cbind(M1, ct.null)
-    ##     Q <- cbind(Q, ct.null)
-    ##     P <- cbind(P, ct.null)
-    ##     logFC <- cbind(logFC, ct.null)
-    ##   }
-    ## }
-
     ## count significant terms
     qvalues <- c(1e-16, 10**seq(-8, -2, 2), 0.05, 0.1, 0.2, 0.5, 1)
     lfc <- 1
@@ -483,27 +447,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     outputs[[i]] <- res
   }
   
-  ## --------------------------------------------------------------
-  ## Conform DGE tables across methods
-  ## --------------------------------------------------------------
-  ## message("[ngs.fitContrastsWithAllMethods] Conforming DGE tables across methods ...")
-  ## i <- 1
-  ## for(i in 1:length(outputs)) {
-  ##   if (!is.null(timeseries) && (names(outputs)[i] %in% nc.tests)) {
-  ##     current.contrs <- names(outputs[[i]][["tables"]])
-  ##     new.contrs <- setdiff(all.contrs, current.contrs)
-  ##     if (length(new.contrs) > 0) {
-  ##       j = 1
-  ##       for (j in 1:length(new.contrs)) {
-  ##         top.null <- matrix(NA, nrow=nrow(outputs[[1]][["p.value"]]), ncol=7)
-  ##         rownames(top.null) <- rownames(outputs[[1]][["p.value"]])
-  ##         colnames(top.null) <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
-  ##         outputs[[i]][["tables"]][[new.contrs[j]]] <- top.null
-  ##       }
-  ##     }
-  ##   }
-  ## }
-
   ## --------------------------------------------------------------
   ## Reshape matrices by comparison
   ## --------------------------------------------------------------
@@ -764,8 +707,8 @@ ngs.fitContrastsWithLIMMA <- function(X,
       ct <- exp0[kk, i]
       y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
       X1 <- X[, kk, drop = FALSE]
-      if (grepl("^IA:*", colnames(exp0)[i])) {
-        top <- ngs.fitContrastsWithLIMMA.timeseries(X1, y, timeseries, trend = TRUE) 
+      if (grepl("^IA:*", colnames(exp0)[i]) && !is.null(timeseries)) {
+        top <- ngs.fitContrastsWithLIMMA.timeseries(X1, y, timeseries, trend = trend) 
       } else {
         design1 <- stats::model.matrix(~ 0 + y)
         if (method == "voom") {
@@ -1054,51 +997,62 @@ ngs.fitContrastsWithEDGER <- function(counts,
   method <- method[1]
 
   if (is.null(X)) X <- edgeR::cpm(dge$counts, log = TRUE)
-  dge <- edgeR::estimateDisp(dge, design = NULL, robust = robust)
-  dge.disp <- edgeR::estimateDisp(dge$counts, design = NULL, robust = robust)
-  dge$common.dispersion <- dge.disp$common.dispersion
-  dge$trended.dispersion <- dge.disp$trended.dispersion
-  dge$tagwise.dispersion <- dge.disp$tagwise.dispersion
+  dge1 <- dge
+  dge1 <- edgeR::estimateDisp(dge1, design = NULL, robust = robust)
+  dge1.disp <- edgeR::estimateDisp(dge1$counts, design = NULL, robust = robust)
+  dge1$common.dispersion <- dge1.disp$common.dispersion
+  dge1$trended.dispersion <- dge1.disp$trended.dispersion
+  dge1$tagwise.dispersion <- dge1.disp$tagwise.dispersion
 
   contr0 <- matrix(c(-1, 0, 1), nrow = 3)
   rownames(contr0) <- c("yneg", "yo", "ypos")
   colnames(contr0) <- "pos_vs_neg"
 
-  tables <- list()
-  i <- 1
+  i=1; tables=list()
   for (i in 1:ncol(contr.matrix)) {
+
     ct <- contr.matrix[, i]
     y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
-    design1 <- stats::model.matrix(~ 0 + y)
 
-    ##if (!is.null(timeseries)) design1 <- stats::model.matrix(~ 0 + y + y:timeseries)
-    
-    if (method == "qlf") {
-      fit <- edgeR::glmQLFit(dge, design1, robust = robust)
-      ctx <- contr0[colnames(stats::coef(fit)), ]
-      res <- edgeR::glmQLFTest(fit, contrast = ctx)
-    } else if (method == "lrt") {
-      fit <- edgeR::glmFit(dge, design1, robust = robust)
-      ctx <- contr0[colnames(stats::coef(fit)), ]
-      res <- edgeR::glmLRT(fit, contrast = ctx)
+    if (grepl("^IA:*", colnames(contr.matrix)[i]) && !is.null(timeseries)) {
+      top <- .ngs.fitContrastsWithEDGER.nodesign.timeseries(
+        dge = dge,
+        counts = as.matrix(dge$counts),
+        X = X,
+        y = y,
+        method = method,
+        timeseries = timeseries,
+        robust = robust
+      )
     } else {
-      stop("unknown method: ", method)
+      design1 <- stats::model.matrix(~ 0 + y)
+      if (method == "qlf") {
+        fit <- edgeR::glmQLFit(dge1, design1, robust = robust)
+        ctx <- contr0[colnames(stats::coef(fit)), ]
+        res <- edgeR::glmQLFTest(fit, contrast = ctx)
+      } else if (method == "lrt") {
+        fit <- edgeR::glmFit(dge1, design1, robust = robust)
+        ctx <- contr0[colnames(stats::coef(fit)), ]
+        res <- edgeR::glmLRT(fit, contrast = ctx)
+      } else {
+        stop("unknown method: ", method)
+      }
+      top <- edgeR::topTags(res, n = 1e9)$table
+      top <- data.frame(top[rownames(X), ])
     }
-    top <- edgeR::topTags(res, n = 1e9)$table
-    top <- data.frame(top[rownames(X), ])
+
     j1 <- which(contr.matrix[, i] > 0)
     j0 <- which(contr.matrix[, i] < 0)
     mean1 <- rowMeans(X[, j1, drop = FALSE], na.rm = TRUE)
     mean0 <- rowMeans(X[, j0, drop = FALSE], na.rm = TRUE)
     ## logFC of edgeR is not really reliable..
     if (conform.output) top$logFC <- (mean1 - mean0)
-
     top <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
     Matrix::head(top)
     tables[[i]] <- top
+    names(tables)[i] <- colnames(contr.matrix)[i]
   }
-  names(tables) <- colnames(contr.matrix)
-
+  
   if (conform.output == TRUE) {
     i <- 1
     for (i in 1:length(tables)) {
@@ -1157,7 +1111,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
     dge1$samples$group <- group1
     dge1 <- edgeR::calcNormFactors(dge1, method = "TMM")
     
-    if (grepl("^IA:*", colnames(contr.matrix)[i])) {
+    if (grepl("^IA:*", colnames(contr.matrix)[i]) && !is.null(timeseries)) {
       top <- .ngs.fitContrastsWithEDGER.nodesign.timeseries(
         dge = dge1,
         counts = counts1,
@@ -1247,33 +1201,46 @@ ngs.fitContrastsWithEDGER <- function(counts,
   time0 <- gsub("\\D", "", unname(time0))
   time0 <- as.numeric(time0)
   y <- as.factor(as.character(y))
-  ndf=5 ## iterate for loop like in limma?
-  design <- stats::model.matrix(~ 0 + y * splines::ns(time0, df=ndf))
 
-  dge.disp <- edgeR::estimateDisp(dge$counts, design = design, robust = robust)
-  dge$common.dispersion <- dge.disp$common.dispersion
-  dge$trended.dispersion <- dge.disp$trended.dispersion
-  dge$tagwise.dispersion <- dge.disp$tagwise.dispersion
+  ## Iterate across df. Pick first valid run.
+  idx <- 1:length(unique(time0))
+  i = 1
+  for(i in 1:length(idx)) {
 
-  sel <- grep("ypos:splines::ns*", colnames(design))
+    ndf <- length(unique(time0)) - idx[i]
+    design <- try(stats::model.matrix(~ 0 + y * splines::ns(time0, df=ndf)), silent = TRUE)
+    if ("try-error" %in% class(design)) next;
+    message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
 
-  if (method == "qlf") {
-    fit <- edgeR::glmQLFit(dge, design, robust = robust)
-    #colnames(stats::coef(fit))[sel]
-    res <- edgeR::glmQLFTest(fit, coef = sel)
-  } else if (method == "lrt") {
-    fit <- edgeR::glmFit(dge, design, robust = robust)
-    res <- edgeR::glmLRT(fit, coef = sel)
-  } else {
-    stop("[.ngs.fitContrastsWithEDGER.nodesign.timeseries] unknown method: ", method)
+    dge.disp <- edgeR::estimateDisp(dge$counts, design = design, robust = robust)
+    dge$common.dispersion <- dge.disp$common.dispersion
+    dge$trended.dispersion <- dge.disp$trended.dispersion
+    dge$tagwise.dispersion <- dge.disp$tagwise.dispersion
+
+    sel <- grep("ypos:splines::ns*", colnames(design))
+
+    if (method == "qlf") {
+      fit <- edgeR::glmQLFit(dge, design, robust = robust)
+      #colnames(stats::coef(fit))[sel]
+      res <- try(edgeR::glmQLFTest(fit, coef = sel), silent = TRUE)
+      if ("try-error" %in% class(res)) next else break;
+    } else if (method == "lrt") {
+      fit <- edgeR::glmFit(dge, design, robust = robust)
+      res <- try(edgeR::glmLRT(fit, coef = sel), silent = TRUE)
+      if ("try-error" %in% class(res)) next else break;
+    } else {
+      stop("[.ngs.fitContrastsWithEDGER.nodesign.timeseries] unknown method: ", method)
+    }
   }
+
   top <- edgeR::topTags(res, n = 1e9)$table
   top <- data.frame(top[rownames(X), ])
   sel <- grep("logFC.*", colnames(top))
   logFC <- as.numeric(apply(top[, sel, drop = FALSE], 1, function(x) x[which.max(abs(x))]))
   top <- cbind(logFC = logFC, top[, -sel, drop = FALSE])
+  
   return(top)
-
+  
 }
 
 #' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using DESeq2 differential expression
@@ -1434,7 +1401,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
     y <- factor(c("neg", "zero", "pos")[2 + sign(ct)], levels = c("neg", "zero", "pos"))
     counts1 <- counts[, kk, drop = FALSE]
 
-    if (grepl("^IA:*", colnames(exp.matrix)[i])) {
+    if (grepl("^IA:*", colnames(exp.matrix)[i]) && !is.null(timeseries)) {
       resx <- .ngs.fitConstrastsWithDESEQ2.nodesign.timeseries(counts1, y, timeseries)
       rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
     } else {
