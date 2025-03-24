@@ -49,7 +49,8 @@ pgx.wgcna <- function(
   samples <- pgx$samples
   ## no dot pheno
   samples <- samples[, grep("^[.]", colnames(samples), invert = TRUE), drop = FALSE]
-
+  X <- pgx$X
+  
   ## WGCNA does not work very well with scRNAseq due to sparsity.
   ## To bypass the issue, hdWGCNA computes metacells.
   ## Here we compute metacells too using Supercell,
@@ -59,12 +60,10 @@ pgx.wgcna <- function(
     group <- samples[, "celltype"]
     q10 <- quantile(table(group), probs=0.25)
     nb <- round(ncol(counts)/2000)
-    message("[pgx.createSingleCellPGX]=======================================")
-    message("[pgx.createSingleCellPGX] running SuperCell. nb = ", nb)    
+    message("[pgx.wgcna] running SuperCell. nb = ", nb)    
     sc <- pgx.supercell(counts, samples, group = group, gamma = nb)
-    message("[pgx.createSingleCellPGX] SuperCell done: ", ncol(counts), " ->", ncol(sc$counts))
-    message("[pgx.createSingleCellPGX]=======================================")
-    message("[pgx.createSingleCellPGX] Normalizing supercell matrix (logCPM)")
+    message("[pgx.wgcna] SuperCell done: ", ncol(counts), " ->", ncol(sc$counts))
+    message("[pgx.wgcna] Normalizing supercell matrix (logCPM)")
     X <- logCPM(sc$counts, total = 1e4, prior = 1)
     X <- as.matrix(scX)
     samples <- sc$meta
@@ -73,7 +72,7 @@ pgx.wgcna <- function(
   }
 
   wgcna <- wgcna.compute(
-    X = pgx$X,
+    X = X,
     samples = samples,
     minmodsize = minmodsize, # default: min(20,...)
     power = power, # default: 12 (for signed)
