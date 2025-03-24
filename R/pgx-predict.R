@@ -81,10 +81,10 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     pp <- rownames(X)
     if (ft %in% names(pgx$families)) {
       gg <- pgx$families[[ft]]
-      pp <- playbase::filterProbes(pgx$genes, gg)
+      pp <- filterProbes(pgx$genes, gg)
     } else if (ft %in% names(playdata::iGSETS)) {
       gg <- unlist(playdata::getGSETS(ft))
-      pp <- playbase::filterProbes(pgx$genes, gg)
+      pp <- filterProbes(pgx$genes, gg)
     }
     pp <- intersect(pp, rownames(X))
     X <- X[pp, , drop = FALSE]
@@ -107,7 +107,7 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     status <- (y > 0) ## dead is positive time
     methods <- c("glmnet", "randomforest", "xgboost", "pls")
     message("Computing single-omics variable importance (surival)...")
-    P <- playbase::pgx.survivalVariableImportance(
+    P <- pgx.survivalVariableImportance(
       X,
       time = time,
       status = status,
@@ -150,7 +150,7 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
       y1 <- y
       names(y1) <- colnames(X1) <- paste0("x", 1:ncol(X))
       message("Computing single-omics variable importance...")
-      res <- playbase::pgx.variableImportance(
+      res <- pgx.variableImportance(
         X1, y1,
         methods = methods,
         reduce = 1000,
@@ -406,7 +406,7 @@ pgx.variableImportance <- function(X, y,
 
   if ("ftest" %in% methods) {
     runtime[["ftest"]] <- system.time({
-      res <- playbase::gx.limmaF(X, y, lfc = 0, fdr = 1)
+      res <- gx.limmaF(X, y, lfc = 0, fdr = 1)
     })
     imp1 <- -log10(res[rownames(X), "P.Value"])
     names(imp1) <- rownames(X)
@@ -586,7 +586,7 @@ plotImportance <- function(P, p.sign = NULL, top = 50, runtime = NULL) {
   legend("bottomright", legend = colnames(P1), fill = grey.colors(ncol(P1)))
 
   par(mar = c(8, 4, 4, 15))
-  playbase::gx.imagemap(scale(P1, center = FALSE))
+  gx.imagemap(scale(P1, center = FALSE))
 
   if (!is.null(runtime)) {
     par(mar = c(5, 15, 4, 4))

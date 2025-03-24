@@ -6,7 +6,6 @@
 \usage{
 pgx.clusterMatrix(
   X,
-  cluster.by = c("genes", "samples"),
   methods = c("pca", "tsne", "umap"),
   dims = c(2, 3),
   perplexity = 30,
@@ -15,13 +14,12 @@ pgx.clusterMatrix(
   center.features = TRUE,
   scale.features = FALSE,
   find.clusters = FALSE,
-  umap.pkg = "uwot"
+  umap.pkg = "uwot",
+  verbose = 1
 )
 }
 \arguments{
 \item{X}{Numeric matrix of data to cluster}
-
-\item{cluster.by}{Character vector specifying whether clustering "genes" or "samples"}
 
 \item{methods}{Character vector of methods to use (pca, tsne, umap)}
 

@@ -328,11 +328,15 @@ tagged.hamming <- function(aa, bb, align = TRUE) {
 #' }
 #' @export
 uscale <- function(x, symm = FALSE) {
-  uscale.func <- function(x) (x - min(x)) / (max(x) - min(x))
-  if (NCOL(x) == 1) {
-    y <- uscale.func(x)
-  } else {
+  uscale.func <- function(x) (x - min(x)) / (max(x) - min(x) + 1e-99)
+  if (is.matrix(x)) {
     y <- apply(x, 2, uscale.func)
+    if(nrow(x)==1) {
+      y <- matrix(y,nrow=1)
+      dimnames(y) <- dimnames(x)
+    }
+  } else {
+    y <- uscale.func(x)
   }
   y[is.na(y)] <- NA
   if (symm) y <- (y - 0.5) * 2

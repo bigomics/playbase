@@ -105,7 +105,7 @@ compute_testGenesSingleOmics <- function(pgx,
   stat.group <- NULL
   if (use.design) {
     message("[compute_testGenesSingleOmics] detecting stat groups...")
-    stat.group <- playbase::pgx.getConditions(contr.matrix, nmax = 0) ## !!!
+    stat.group <- pgx.getConditions(contr.matrix, nmax = 0) ## !!!
     names(stat.group) <- rownames(contr.matrix)
     nlev <- length(unique(stat.group))
     if (nlev >= nrow(contr.matrix)) {

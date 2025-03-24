@@ -10,6 +10,7 @@
 \alias{.ngs.fitContrastsWithEDGER.nodesign.pruned}
 \alias{ngs.fitConstrastsWithDESEQ2}
 \alias{.ngs.fitConstrastsWithDESEQ2.nodesign}
+\alias{.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries}
 \title{ngs.fitContrastsWithAllMethods}
 \usage{
 ngs.fitContrastsWithAllMethods(
@@ -29,7 +30,8 @@ ngs.fitContrastsWithAllMethods(
     "notrend.limma", "deseq2.wald", "deseq2.lrt", "edger.qlf", "edger.lrt"),
   correct.AveExpr = TRUE,
   custom = NULL,
-  custom.name = NULL
+  custom.name = NULL,
+  timeseries = NULL
 )
 
 ngs.fitContrastsWithTTEST(
@@ -51,7 +53,8 @@ ngs.fitContrastsWithLIMMA(
   robust = TRUE,
   prune.samples = FALSE,
   conform.output = FALSE,
-  plot = FALSE
+  plot = FALSE,
+  timeseries = NULL
 )
 
 ngs.fitContrastsWithEDGER(
@@ -64,7 +67,8 @@ ngs.fitContrastsWithEDGER(
   X = NULL,
   conform.output = FALSE,
   robust = TRUE,
-  plot = TRUE
+  plot = TRUE,
+  timeseries = NULL
 )
 
 .ngs.fitContrastsWithEDGER.nodesign(
@@ -74,7 +78,8 @@ ngs.fitContrastsWithEDGER(
   X = NULL,
   conform.output = FALSE,
   robust = TRUE,
-  plot = TRUE
+  plot = TRUE,
+  timeseries = NULL
 )
 
 .ngs.fitContrastsWithEDGER.nodesign.pruned(
@@ -85,7 +90,8 @@ ngs.fitContrastsWithEDGER(
   X = NULL,
   conform.output = FALSE,
   robust = TRUE,
-  plot = TRUE
+  plot = TRUE,
+  timeseries = NULL
 )
 
 ngs.fitConstrastsWithDESEQ2(
@@ -97,7 +103,8 @@ ngs.fitConstrastsWithDESEQ2(
   genes = NULL,
   test = "Wald",
   prune.samples = FALSE,
-  conform.output = FALSE
+  conform.output = FALSE,
+  timeseries = NULL
 )
 
 .ngs.fitConstrastsWithDESEQ2.nodesign(
@@ -106,8 +113,11 @@ ngs.fitConstrastsWithDESEQ2(
   test = "Wald",
   prune.samples = FALSE,
   conform.output = FALSE,
-  X = NULL
+  X = NULL,
+  timeseries = NULL
 )
+
+.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries(counts, y, timeseries)
 }
 \arguments{
 \item{counts}{A matrix of counts, with genes in rows and samples in columns.}
@@ -152,6 +162,8 @@ ngs.fitConstrastsWithDESEQ2(
 \item{custom}{Custom differential expression method. Default is NULL.}
 
 \item{custom.name}{Name for custom method. Default is NULL.}
+
+\item{time}{time character vector to be passed for time series analysis. Default NULL.}
 }
 \value{
 A list with results from each differential expression method.
@@ -173,7 +185,7 @@ Custom methods can also be added.
 
 \item \code{ngs.fitContrastsWithWILCOXON()}: Fits contrasts using Wilcoxon rank sum (scRNAseq)
 
-\item \code{ngs.fitContrastsWithLIMMA()}: Fits contrasts using LIMMA differential expression analysis on count data.
+\item \code{ngs.fitContrastsWithLIMMA()}: Fits contrasts using LIMMA diff. expr. analysis.
 
 \item \code{ngs.fitContrastsWithEDGER()}: Fit contrasts with EdgeR
 
@@ -185,6 +197,8 @@ Custom methods can also be added.
 analysis on count data
 
 \item \code{.ngs.fitConstrastsWithDESEQ2.nodesign()}: Fits contrasts using DESeq2 differential expression
+
+\item \code{.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries()}: Fits time-series contrasts using DESeq2 LRT
 
 }}
 \examples{

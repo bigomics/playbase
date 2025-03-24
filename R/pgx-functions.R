@@ -1093,7 +1093,7 @@ pgx.getOrganism <- function(pgx, capitalise = FALSE) {
 #' @export
 getLevels <- function(Y) {
   yy <- Y[, grep("title|name|sample|patient", colnames(Y), invert = TRUE), drop = FALSE] ## NEED RETHINK!!!!
-  is.grpvar <- apply(yy, 2, function(y) max(table(y)) > 1)
+  is.grpvar <- apply(yy, 2, function(y) max(table(y)) > 1,na.rm=TRUE)
   is.numeric <- apply(yy, 2, function(y) (length(table(y)) / length(y)) > 0.5)
   is.grpvar <- is.grpvar & !is.numeric
   yy <- yy[, is.grpvar, drop = FALSE]
@@ -1493,7 +1493,7 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   probe_match <- apply(annot_table, 2, function(x) sum(probes %in% x))
   probe_match
 
-  if (max(probe_match) == 0) {
+  if (max(probe_match,na.rm=TRUE) == 0) {
     return(counts)
   }
 
@@ -2463,7 +2463,7 @@ abbreviate_pheno <- function(pheno, minlength = 1, abbrev.colnames = FALSE) {
 #' @export
 colorscale <- function(x, gamma = 1) {
   colorsx <- gplots::colorpanel(255, low = "blue3", mid = "grey80", high = "red3")
-  x <- (x / max(abs(x)))**gamma
+  x <- (x / max(abs(x),na.rm=TRUE))**gamma
   colorsx[128 + ceiling(x * 127)]
 }
 

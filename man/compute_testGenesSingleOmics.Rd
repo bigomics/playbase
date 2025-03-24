@@ -13,7 +13,8 @@ compute_testGenesSingleOmics(
   custom_fc = NULL,
   use.design = FALSE,
   prune.samples = TRUE,
-  test.methods = c("trend.limma", "deseq2.wald", "edger.qlf")
+  test.methods = c("trend.limma", "deseq2.wald", "edger.qlf"),
+  timeseries = FALSE
 )
 }
 \arguments{

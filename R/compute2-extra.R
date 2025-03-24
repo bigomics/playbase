@@ -48,6 +48,7 @@ compute_extra <- function(pgx, extra = c(
       pgx$meta.go <- tryCatch(
         pgx.computeCoreGOgraph(pgx, fdr = 0.20),
         error = function(e) {
+          message("[ERROR_METAGO] FATAL: ",as.character(e))          
           write(as.character(e), file = paste0(user_input_dir, "/ERROR_METAGO"))
           return(NULL)
         }
@@ -69,6 +70,7 @@ compute_extra <- function(pgx, extra = c(
           )
         },
         error = function(e) {
+          message("[ERROR_DECONVOLUTIION] FATAL: ",as.character(e))                    
           write(as.character(e), file = paste0(user_input_dir, "/ERROR_DECONVOLUTIION"))
           return(pgx)
         }
@@ -84,6 +86,7 @@ compute_extra <- function(pgx, extra = c(
       pgx <- tryCatch(
         compute_cellcycle_gender(pgx, rna.counts = rna.counts),
         error = function(e) {
+          message("[ERROR_INFERENCE] FATAL: ",as.character(e))
           write(as.character(e), file = paste0(user_input_dir, "/ERROR_INFERENCE"))
           return(pgx)
         }
@@ -103,6 +106,7 @@ compute_extra <- function(pgx, extra = c(
           compute_drugActivityEnrichment(pgx, libx.dir = libx.dir)
         },
         error = function(e) {
+          message("[ERROR_DRUG_ACTIVITY] FATAL: ",as.character(e))          
           write(as.character(e), file = paste0(user_input_dir, "/ERROR_DRUG_ACTIVITY"))
           return(pgx)
         }
@@ -118,6 +122,7 @@ compute_extra <- function(pgx, extra = c(
             compute_drugSensitivityEnrichment(pgx, libx.dir)
           },
           error = function(e) {
+            message("[ERROR_DRUG_SENSITIVITY] FATAL: ",as.character(e))
             write(as.character(e), file = paste0(user_input_dir, "/ERROR_DRUG_SENSITIVITY"))
             return(pgx)
           }
@@ -138,6 +143,7 @@ compute_extra <- function(pgx, extra = c(
           compute_omicsGraphs(pgx)
         },
         error = function(e) {
+          message("[ERROR_GRAPH] FATAL: ",as.character(e))
           write(as.character(e), file = paste0(user_input_dir, "/ERROR_GRAPH"))
           return(pgx)
         }
@@ -152,6 +158,7 @@ compute_extra <- function(pgx, extra = c(
     tt <- system.time({
       res <- tryCatch(pgx.calculateWordCloud(pgx, progress = NULL, pg.unit = 1),
         error = function(e) {
+          message("[ERROR_WORDCLOUD] FATAL: ",as.character(e))
           write(as.character(e), file = paste0(user_input_dir, "/ERROR_WORDCLOUD"))
           return(NULL)
         }
@@ -205,6 +212,7 @@ compute_extra <- function(pgx, extra = c(
                 )
               },
               error = function(e) {
+                message("[ERROR_CONNECTIVITY] FATAL: ",as.character(e))
                 write(as.character(e), file = paste0(user_input_dir, "/ERROR_CONNECTIVITY"))
                 return(NULL)
               }
@@ -231,6 +239,7 @@ compute_extra <- function(pgx, extra = c(
           pgx$wgcna <- pgx.wgcna(pgx)
         },
         error = function(e) {
+          message("[ERROR_WGCNA] FATAL: ",as.character(e))                    
           write(as.character(e), file = paste0(user_input_dir, "/ERROR_WGCNA"))
           return(NULL)
         }
@@ -254,6 +263,7 @@ compute_extra <- function(pgx, extra = c(
           )
         },
         error = function(e) {
+          message("[ERROR_MOFA] FATAL: ",as.character(e))          
           write(as.character(e), file = paste0(user_input_dir, "/ERROR_MOFA"))
           return(NULL)
         }
@@ -390,7 +400,7 @@ compute_cellcycle_gender <- function(pgx, rna.counts = pgx$counts) {
       counts <- counts[which(!is.na(rownames(counts))), ]
       if (any(duplicated(rownames(counts)))) {
         message("Deduplicate counts for cell cycle and gender inference")
-        counts <- playbase::rowmean(counts, group = rownames(counts))
+        counts <- rowmean(counts, group = rownames(counts))
         counts[which(is.nan(counts))] <- NA
       }
       res <- try(pgx.inferCellCyclePhase(counts))

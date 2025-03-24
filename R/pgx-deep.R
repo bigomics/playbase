@@ -42,7 +42,7 @@ MultiOmicsSAE <- R6::R6Class(
                           sd_weight = TRUE, device = "cpu") {
       if (!is.null(ntop) && ntop > 0) {
         message("reducing to maximum ", ntop, " features")
-        X <- lapply(X, function(x) head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)), ], ntop))
+        X <- lapply(X, function(x) head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)),,drop=FALSE ], ntop))
       }
 
       if (any(sapply(X, function(x) sum(is.na(x))) > 0)) {
@@ -84,8 +84,8 @@ MultiOmicsSAE <- R6::R6Class(
         r <- (1 - validation_ratio)
         xdim <- ncol(X[[1]])
         ii <- sample(1:xdim, r * xdim)
-        self$x_train <- lapply(X, function(x) t(x[, ii]))
-        self$x_test <- lapply(X, function(x) t(x[, -ii]))
+        self$x_train <- lapply(X, function(x) t(x[, ii, drop=FALSE]))
+        self$x_test <- lapply(X, function(x) t(x[, -ii, drop=FALSE]))
         self$y_train <- lapply(Y, function(y) torch::torch_tensor(y[ii]))
         self$y_test <- lapply(Y, function(y) torch::torch_tensor(y[-ii]))
       } else {
@@ -235,7 +235,6 @@ MultiOmicsSAE <- R6::R6Class(
       self$get_gradients.autograd(sd_weight = sd_weight)
     },
     get_gradients.delta = function(sd_weight = NULL) {
-      message("[MultiOmicsSAE] calculating gradients (using delta)")
       sdx <- self$sdx
       x_train <- self$x_train
       y_train <- self$y_train
@@ -272,7 +271,6 @@ MultiOmicsSAE <- R6::R6Class(
       return(grad)
     },
     get_gradients.autograd = function(sd_weight = NULL) {
-      message("[MultiOmicsSAE] calculating gradients (using autograd)")
       sdx <- self$sdx
       x_train <- self$x_train
       y_train <- self$y_train
@@ -415,10 +413,11 @@ MultiBlockMultiTargetSAE_module <- torch::nn_module(
     for (k in names(xx)) {
       xdim <- ncol(xx[[k]])
       mods <- list()
-      dims <- c(xdim, num_layers[[1]])
+      dims <- num_layers[[1]]
       dims <- round(ifelse(dims < 1, dims * xdim, dims))
-      latent_dim <- tail(dims, 1)
-      dims <- pmax(dims, latent_dim)
+      dims <- pmax(dims, tail(dims, 1)) ## always larger than bottlenect
+      dims <- pmin(dims, ceiling(xdim/2))  ## always smaller than input (??)
+      dims <- c(xdim, dims)
       nlayers <- length(dims)
       for (i in 1:(nlayers - 1)) {
         mods <- add_input_mods(mods, dims[i], use_bn, dropout, add_noise)
@@ -549,7 +548,6 @@ MultiBlockMultiTargetSAE_module <- torch::nn_module(
   }
 )
 
-
 # Very simple model of supervised multi-view auto-encoder. Kept for
 # illustration and baseline benchmarking.
 #
@@ -649,8 +647,9 @@ deep.plotBiomarkerHeatmap <- function(net, datatypes = NULL, balanced = TRUE,
     }
     ## now we have ranking per datatype across multiple phenotypes
     rnk2 <- lapply(rnk, function(r) rownames(r)[order(rowMeans(r))])
-    nn <- ntop / length(rnk2)
-    sel <- unique(unlist(lapply(rnk2, head, nn)))
+    rnk2 <- lapply(rnk2, function(x) head(rep(x,ntop),ntop))
+    rnk2 <- do.call(rbind,rnk2)    
+    sel  <- head(unique(as.vector(rnk2)),ntop)   
   } else {
     ## not balancing between datatypes. just largest gradient.
     mgrad <- lapply(grad, function(gr) mofa.merge_data(gr))
@@ -756,6 +755,16 @@ deep.plotAutoEncoderReconstructions <- function(net, dtypes = NULL,
 #' @export
 deep.plotRedux <- function(net, pheno = NULL, method = "tsne", views = NULL, par = TRUE, cex = 1) {
   redux <- net$get_redux(xx = NULL)
+  if(any(sapply(redux,ncol)<2)) {
+    sel <- which(sapply(redux,ncol)<3)
+    message("[deep.plotRedux] warning: augmenting ",
+            paste(names(sel),collapse=" "))
+    for(j in sel) {
+      Rj <- do.call(cbind,rep(list(redux[[j]]),3))
+      Rj <- Rj + 1e-3*sd(Rj)*matrix(rnorm(length(Rj)),nrow(Rj),ncol(Rj))
+      redux[[j]] <- cbind(redux[[j]], Rj)
+    }
+  }
   if (method == "tsne") {
     px <- min(30, nrow(redux[[1]]) / 4)
     redux <- lapply(redux, function(r) {
@@ -890,206 +899,17 @@ deep.plotGradientVSFoldchange <- function(grad, fc, data = FALSE, par = TRUE) {
   }
 }
 
-
-
-#'
-#'
-deep.plotNeuralNet.OLD <- function(net, latent_dim = c(100, 20), outfile = NULL) {
-  if (!dir.exists("/opt/PlotNeuralNet")) {
-    message("ERROR: please install PlotNeuralNet in /opt")
-    return(NULL)
-  }
-
-  if (!is.null(outfile)) {
-    if (!grepl("svg$", outfile)) {
-      message("ERROR: output file must be SVG")
-      return(NULL)
-    }
-  }
-
-  header_src <- glue::glue("
-import sys
-sys.path.append('../')
-from pycore.tikzeng import *
-
-# defined your arch
-arch = [
-    to_head( '..' ),
-    to_cor(),
-    to_begin(),
-", .trim = FALSE)
-
-  str_at <- function(at) paste0("(", at[1], ",", at[2], ",", at[3], ")")
-  input_src <- function(name, at, image, caption) {
-    to1 <- str_at(c(at[1] - 2.5, at[2], at[3]))
-    to2 <- str_at(at)
-    glue::glue("
-    # input {name}
-    to_input( '../images/heatmap.png', to='{to1}', width=9.5, height=2.2 ),
-    to_Conv('{name}', '', '', offset='(-4,0,6.5)', to='{to2}', height=0, depth=0, width=0, caption='{caption}'),
-", .trim = FALSE)
-  }
-  autoencoder_src <- function(name, caption, at, dims) {
-    to <- str_at(at)
-    enc1 <- paste0("enc", name, "1")
-    enc2 <- paste0("enc", name, "2")
-    btn <- paste0("btn", name)
-    dec1 <- paste0("dec", name, "1")
-    dec2 <- paste0("dec", name, "2")
-
-    glue::glue("
-    # Auto-encoder {name}
-    to_Conv('{enc1}', '{dims[1]}', '', offset='(0,0,0)', to='{to}', height=10, depth=45, width=2),
-    to_Conv('{enc2}', '{dims[2]}', '', offset='(2,0,0)', to='({enc1}-east)', height=10, depth=20, width=2, caption='{caption}'),
-    to_Pool('{btn}', offset='(2,0,0)', to='({enc2}-east)', height=10, depth=10, width=2),
-    to_Conv('{dec1}', '{dims[2]}', '', offset='(2,0,0)', to='({btn}-east)', height=10, depth=20, width=2),
-    to_Conv('{dec2}', '{dims[1]}', '', offset='(2.5,0,0)', to='({dec1}-east)', height=10, depth=45, width=2),
-    to_connection('{enc1}', '{enc2}'),
-    to_connection('{enc2}', '{btn}'),
-    to_connection('{btn}', '{dec1}'),
-    to_connection('{dec1}', '{dec2}'),
-    to_skip( of='{btn}', to='sum1', pos=1.4),
-", .trim = FALSE)
-  }
-  sum_src <- function() {
-    nview <- length(views)
-    to <- str_at(c(0, 0, (nview - 1) * 22 / 2))
-    glue::glue("
-    # Combine layer
-    to_Sum('sum1', offset='(16,0,0)', to='{to}', radius=2.5, opacity=0.6),
-    to_Conv('label2', '', '', offset='(15.2,0,0)', to='{to}', height=0, depth=0, width=0, caption='MERGE'),
-", .trim = FALSE)
-  }
-  dense_src <- function(dims = c(100, 20)) {
-    glue::glue("
-    # Dense MLP layer
-    to_Conv('dense1', '{dims[1]}', '', offset='(2,0,0)', to='(sum1-east)', height=10, depth=35, width=2, caption='integrator'),
-    to_Conv('dense2', '{dims[2]}', '', offset='(2,0,0)', to='(dense1-east)', height=10, depth=20, width=2, caption=''),
-    to_connection( 'sum1', 'dense1'),
-    to_connection( 'dense1', 'dense2'),
-", .trim = FALSE)
-  }
-  predictor_src <- function(name, ydim, dims = 20, caption, offset) {
-    offset <- str_at(offset)
-    pred1 <- paste0("pred-", name, "-1")
-    soft1 <- paste0("soft-", name, "-1")
-    glue::glue("
-    # Prediction layer
-    to_Conv('{pred1}', '{dims[1]}', '', offset='{offset}', to='(dense2-east)', height=10, depth=10, width=2, caption='predictor'),
-    to_ConvSoftMax( name='{soft1}', s_filer = '{ydim}', offset='(2,0,0)', to='({pred1}-east)', width=2, height=10, depth=10, caption='{caption}'),
-    to_connection( 'dense2', '{pred1}'),
-    to_connection( '{pred1}', '{soft1}'),
-", .trim = FALSE)
-  }
-  end_src <- function(nview) {
-    zoff <- (nview - 1) * 22
-    glue::glue("
-    ## margins
-    to_Conv('empty1', '', '', offset='(0,0,0)', to='(-7,0,{zoff})', height=0, depth=0, width=0),
-    to_Conv('empty2', '', '', offset='(14,0,0)', to='(dense1-east)', height=0, depth=0, width=0),
-    to_end()
-    ]
-
-def main():
-    namefile = str(sys.argv[0]).split('.')[0]
-    to_generate(arch, namefile + '.tex' )
-
-if __name__ == '__main__':
-    main()
-", .trim = FALSE)
-  }
-
-
-  ## build code text
-  ltx <- header_src
-  views <- rev(names(net$X))
-  nview <- length(views)
-  redux <- net$get_redux()
-  rdim <- ncol(redux[[1]]) ## bottleneck dimension
-  targets <- names(net$Y)
-  ntargets <- length(targets)
-  for (i in 1:length(views)) {
-    at <- c(0, 0, (i - 1) * 22)
-    caption <- toupper(views[i])
-    if (max(nchar(views)) < 10) caption <- paste("datatype:~", caption)
-    ltx1 <- input_src(paste0("input", views[i]), at, "", caption = caption)
-    ltx <- paste(ltx, ltx1)
-  }
-  ltx <- paste(ltx, sum_src())
-  for (i in 1:length(views)) {
-    at <- c(0, 0, (i - 1) * 22)
-    xdim <- nrow(net$X[[views[i]]])
-    dims <- c(xdim, latent_dim)
-    caption <- paste0("autoencoder~", toupper(views[i]))
-    ltx1 <- autoencoder_src(views[i], at = at, caption = caption, dims = dims)
-    ltx <- paste(ltx, ltx1)
-  }
-  ## merge dot and layer
-  mdim <- nview * rdim
-  ltx <- paste(ltx, dense_src(dims = c(mdim, mdim / 2)))
-  ## predictors
-  ntargets <- length(targets)
-  i <- 1
-  for (i in 1:ntargets) {
-    offset <- c(3, 0, 8 * ((i - 1) - (ntargets - 1) / 2))
-    ydim <- length(unique(net$Y[[targets[i]]]))
-    dims <- c(10, ydim)
-    # caption <- paste0("predictor~",toupper(targets[i]))
-    caption <- paste0("", toupper(targets[i]))
-    ltx1 <- predictor_src(
-      name = targets[i], ydim = ydim, dims = dims,
-      caption = caption, offset = offset
-    )
-    ltx <- paste(ltx, ltx1)
-  }
-  ltx <- paste(ltx, end_src(nview = nview))
-
-
-  ## create PDF using PlotNeuralNet
-  pyfile <- tempfile(fileext = ".py", tmpdir = "/opt/PlotNeuralNet/pyexamples")
-  ## pyfile="/opt/PlotNeuralNet/pyexamples/model2.py"
-  write(ltx, file = pyfile)
-  texfile <- sub("[.]py$", ".tex", pyfile)
-  auxfile <- sub("[.]py$", ".aux", pyfile)
-  logfile <- sub("[.]py$", ".log", pyfile)
-  pdffile <- sub("[.]py$", ".pdf", pyfile)
-  svgfile <- sub("[.]py$", ".svg", pyfile)
-  cmd <- glue::glue("cd /opt/PlotNeuralNet/pyexamples/ && python {pyfile} && pdflatex {texfile} && pdf2svg {pdffile} {svgfile}")
-  suppressMessages(system(cmd,
-    ignore.stdout = TRUE, ignore.stderr = TRUE,
-    intern = FALSE, show.output.on.console = FALSE
-  ))
-
-  if (file.exists(auxfile)) unlink(auxfile)
-  if (file.exists(logfile)) unlink(logfile)
-  if (file.exists(texfile)) unlink(texfile)
-  if (file.exists(pyfile)) unlink(pyfile)
-  if (file.exists(pdffile)) unlink(pdffile)
-
-  if (file.exists(svgfile)) {
-    if (is.null(outfile)) {
-      outfile <- tempfile(fileext = ".svg")
-    }
-    file.rename(svgfile, outfile)
-    return(outfile)
-  } else {
-    return(NULL)
-  }
-}
-
-
-
 #'
 #'
 #' @export
-deep.plotNeuralNet <- function(net, outfile = NULL) {
+deep.plotNeuralNet <- function(net, svgfile = NULL, rm.files=TRUE) {
   if (!dir.exists("/opt/PlotNeuralNet")) {
     message("ERROR: please install PlotNeuralNet in /opt")
     return(NULL)
   }
 
-  if (!is.null(outfile)) {
-    if (!grepl("svg$", outfile)) {
+  if (!is.null(svgfile)) {
+    if (!grepl("svg$", svgfile)) {
       message("ERROR: output file must be SVG")
       return(NULL)
     }
@@ -1273,26 +1093,46 @@ if __name__ == '__main__':
   logfile <- sub("[.]py$", ".log", pyfile)
   pdffile <- sub("[.]py$", ".pdf", pyfile)
   svgfile <- sub("[.]py$", ".svg", pyfile)
-  cmd <- glue::glue("cd /opt/PlotNeuralNet/pyexamples/ && python {pyfile} && pdflatex -interaction=batchmode {texfile} && pdf2svg {pdffile} {svgfile}")
+  svgfile <- paste0("/tmp/",basename(svgfile)) ## write to /tmp
+
+  message("[deep.plotNeuralNet] texfile = ",texfile)
+  message("[deep.plotNeuralNet] svgfile = ",svgfile)
+  
+  cmd <- glue::glue("cd /opt/PlotNeuralNet/pyexamples/ && python {pyfile}")
+  suppressMessages(system(cmd,
+    ignore.stdout = TRUE, ignore.stderr = TRUE,
+    intern = FALSE, show.output.on.console = FALSE
+  ))
+  cmd <- glue::glue("cd /opt/PlotNeuralNet/pyexamples/ && pdflatex -interaction=batchmode {texfile}")
+  suppressMessages(system(cmd,
+    ignore.stdout = TRUE, ignore.stderr = TRUE,
+    intern = FALSE, show.output.on.console = FALSE
+  ))
+  cmd <- glue::glue("pdf2svg {pdffile} {svgfile}")
   suppressMessages(system(cmd,
     ignore.stdout = TRUE, ignore.stderr = TRUE,
     intern = FALSE, show.output.on.console = FALSE
   ))
 
-  if (file.exists(auxfile)) unlink(auxfile)
-  if (file.exists(logfile)) unlink(logfile)
-  if (file.exists(texfile)) unlink(texfile)
-  if (file.exists(pyfile)) unlink(pyfile)
-  if (file.exists(pdffile)) unlink(pdffile)
-
+  if (!file.exists(texfile)) {
+    message("[deep.plotNeuralNet] WARNING. failed to create TeX file ",texfile)
+  }
+  if (!file.exists(pdffile)) {
+    message("[deep.plotNeuralNet] WARNING. failed to create PDF file ",pdffile)
+  }
+  
+  if(rm.files) {
+    if (file.exists(auxfile)) unlink(auxfile)
+    if (file.exists(logfile)) unlink(logfile)
+    if (file.exists(texfile)) unlink(texfile)
+    if (file.exists(pyfile))  unlink(pyfile)
+    if (file.exists(pdffile)) unlink(pdffile)
+  }
+  
   if (file.exists(svgfile)) {
-    if (is.null(outfile)) {
-      outfile <- tempfile(fileext = ".svg")
-    }
-    file.copy(svgfile, outfile)
-    file.rename(svgfile, outfile)
-    return(outfile)
+    return(svgfile)
   } else {
+    message("[deep.plotNeuralNet] WARNING. failed to create SVG file ",svgfile)
     return(NULL)
   }
 }

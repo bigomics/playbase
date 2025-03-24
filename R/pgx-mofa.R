@@ -4,13 +4,10 @@
 pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
                              ntop = 2000, gset.ntop = 2000,
                              add_gsets = FALSE,
-                             factorizations = TRUE) {
-  if (0) {
-    numfactors <- 8
-    ntop <- 2000
-    gset.ntop <- 2000
-    add_gsets <- FALSE
-  }
+                             factorizations = TRUE,
+                             compute.enrichment = TRUE,
+                             compute.lasagna = TRUE
+                             ) {
 
   has.prefix <- (mean(grepl(":", rownames(pgx$X))) > 0.8)
   is.multiomics <- (pgx$datatype == "multi-omics" && has.prefix)
@@ -52,7 +49,7 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
   message("computing MOFA ...")
   dbg("[pgx.compute_mofa] numfactors =", numfactors)
 
-  ## samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa";ntop=2000;numfactors=8
+  ## samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa";ntop=2000;numfactors=8;gpu_mode=FALSE;max_iter=1000
   mofa <- mofa.compute(
     xdata,
     samples = discretized_samples,
@@ -60,6 +57,7 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
     annot = pgx$genes,
     pheno = NULL,
     GMT = pgx$GMT,
+    compute.enrichment = compute.enrichment,
     kernel = kernel,
     scale_views = TRUE,
     ntop = ntop,
@@ -68,13 +66,13 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
     numfactors = numfactors
   )
 
-
+  
   if (factorizations) {
     all.kernels <- c(
       "mofa", "pca", "nmf", "nmf2", "mcia", "diablo", ## "wgcna",
       "rgcca", "rgcca.rgcca", "rgcca.rgccda", "rgcca.mcoa"
     )
-    # all.kernels <- c("mofa","pca","nmf","nmf2","mcia","wgcna","diablo","rgcca"
+    ##all.kernels <- c("mofa","pca")
     mofa$factorizations <- mofa.compute_factorizations(
       xdata,
       discretized_samples,
@@ -82,41 +80,53 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
       numfactors = numfactors,
       kernels = all.kernels
     )
+    names(mofa$factorizations)
   }
 
   ## LASAGNA computation
-  message("computing LASAGNA model...")
-  las.data <- list(
-    X = xdata,
-    samples = pgx$samples,
-    contrasts = pgx$contrasts
-  )
-  lasagna <- lasagna.create_model(
-    las.data,
-    pheno = "contrasts", ntop = ntop, nc = 20,
-    annot = pgx$genes, use.graphite = FALSE
-  )
-
-  ## pre-compute cluster positions
-  xx <- mofa.split_data(lasagna$X)
-  xx <- xx[names(xdata)] ## remove SOURCE/SINK
-
-  message("computing cluster positions (samples)...")
-  mofa$posx <- mofa.compute_clusters(xx, along = "samples")
-  message("computing cluster positions (features)...")
-  mofa$posf <- mofa.compute_clusters(xx, along = "features")
-  mofa$lasagna <- lasagna
-  mofa$snf <- playbase::snf.cluster(mofa$xx, pheno = NULL, plot = FALSE)
+  if(compute.lasagna) {
+    message("[pgx.compute_mofa] computing LASAGNA...")
+    las.data <- list(
+      X = xdata,
+      samples = pgx$samples,
+      contrasts = pgx$contrasts
+    )
+    mofa$lasagna <- lasagna.create_model(
+      las.data,
+      pheno = "contrasts", ntop = ntop, nc = 20,
+      annot = pgx$genes, use.graphite = FALSE
+    )
+  }
 
   ## compute multi-gsea enrichment
-  F <- pgx.getMetaMatrix(pgx)$fc
-  F <- rename_by2(F, pgx$genes, "symbol", keep.prefix=TRUE)
-  mofa$mgsea <- mgsea.compute_enrichment(
-    F,
-    G = pgx$GMT,
-    filter = NULL,
-    ntop = gset.ntop
-  )
+  if(compute.enrichment) {
+    has.fc <- !is.null(pgx$gx.meta)
+    if(!has.fc) {
+      message("WARNING: pgx has no gx.meta results. skipping multiGSEA.")
+    } else {
+      message("[pgx.compute_mofa] computing multiGSEA enrichment...")    
+      F <- pgx.getMetaMatrix(pgx)$fc
+      F <- rename_by2(F, pgx$genes, "symbol", keep.prefix=TRUE)
+      mofa$mgsea <- mgsea.compute_enrichment(
+        F,
+        G = pgx$GMT,
+        filter = NULL,
+        ntop = gset.ntop
+      )
+    }
+  }
+
+  ## pre-compute cluster positions
+  message("computing SNF...")
+  mofa$snf <- snf.cluster(mofa$xx, pheno = NULL, plot = FALSE)
+  message("computing cluster positions (samples)...")  
+  mofa$posx <- mofa$snf$posx
+  #mofa$posx <- mofa.compute_clusters(mofa$xx, along = "samples", method='umap')
+  #mofa$posx <- mofa.compute_clusters(mofa$xx, along = "samples", method='tsne')  
+  message("computing cluster positions (features)...")
+  mofa$posf <- mofa.compute_clusters(mofa$xx, along = "features", method='umap')
+  ##mofa$posf <- mofa.compute_clusters(mofa$xx, along = "features", method='tsne')  
+  
   return(mofa)
 }
 
@@ -140,6 +150,7 @@ mofa.compute <- function(xdata,
                          compute.graphs = TRUE,
                          numfactors = 8,
                          numfeatures = 100) {
+
   if (!is.null(ntop) && ntop > 0) {
     info("[mofa.compute] reducing data blocks: ntop = ", ntop)
     ## fast prioritization of features using SD or rho (correlation
@@ -167,8 +178,8 @@ mofa.compute <- function(xdata,
   }
 
   ## no dups
-  xdata <- lapply(xdata, function(x) x[!duplicated(rownames(x)), ])
-
+  xdata <- lapply(xdata, function(x) x[!duplicated(rownames(x)), ,drop=FALSE ])  
+  
   ## Scale datatypes blocks? This is generally a good thing to do
   ## because the different datatypes may have different SD
   ## distributions.
@@ -243,7 +254,9 @@ mofa.compute <- function(xdata,
       training_options = train_opts
     )
 
-    ## where to save??? Do we need to save???
+    ## where to save??? Do we really need to save&reload??? Note: For
+    ## some reason we need to save and reload the model. Please
+    ## test. This should not be needed.
     outfile <- file.path(tempdir(), "mofa-model.hdf5")
     suppressMessages(suppressWarnings(
       model <- MOFA2::run_mofa(obj,
@@ -251,13 +264,13 @@ mofa.compute <- function(xdata,
         use_basilisk = TRUE
       )
     ))
-
     model <- MOFA2::load_model(outfile, remove_inactive_factors = FALSE)
     model <- MOFA2::impute(model)
     factors <- MOFA2::get_factors(model, factors = "all")
     weights <- MOFA2::get_weights(model, views = "all", factors = "all")
     W <- do.call(rbind, weights)
     F <- do.call(rbind, factors)
+
   } else if (tolower(kernel) %in% c("pca", "svd")) {
     message("[mofa.compute] computing PCA factorization")
     model <- irlba::irlba(X, nv = numfactors, maxit = max_iter, work = 100)
@@ -267,6 +280,7 @@ mofa.compute <- function(xdata,
     rownames(F) <- colnames(X)
     colnames(W) <- paste0("PC", 1:ncol(W))
     colnames(F) <- paste0("PC", 1:ncol(F))
+
   } else if (tolower(kernel) %in% c("nmf", "nmf2")) {
     message("[mofa.compute] computing NMF factorization")
     if (kernel == "nmf2") {
@@ -290,6 +304,7 @@ mofa.compute <- function(xdata,
     rownames(F) <- colnames(X)
     colnames(W) <- paste0("NMF", 1:ncol(W))
     colnames(F) <- paste0("NMF", 1:ncol(F))
+
   } else if (kernel %in% c(
     "diablo", "splsda", "rgcca", "sgcca", "sgccda",
     "rgcca.rgcca", "rgcca.rgccda", "rgcca.mcoa"
@@ -316,6 +331,7 @@ mofa.compute <- function(xdata,
     W <- mix$loadings
     F <- mix$scores
     model <- mix$res
+
   } else if (kernel == "mcia") {
     message("[mofa.compute] computing MCIA factorization")
     data_blocks <- lapply(xdata, t)
@@ -334,6 +350,7 @@ mofa.compute <- function(xdata,
     dim(F)
     colnames(W) <- paste0("Factor", 1:ncol(W))
     colnames(F) <- paste0("Factor", 1:ncol(F))
+
   } else if (kernel == "wgcna") {
     message("[mofa.compute] computing WGCNA factorization")
     model <- wgcna.compute(
@@ -352,6 +369,7 @@ mofa.compute <- function(xdata,
     ## correlation. the origonal loading (W) is not continuous.
     ## W <- model$W          ## loadings (but not continuous)
     W <- cor(model$datExpr, F)
+
   } else {
     message("[mofa.compute] FATAL invalid kernel:", kernel)
     return(NULL)
@@ -364,19 +382,8 @@ mofa.compute <- function(xdata,
 
   W <- W[rownames(X), , drop = FALSE]
   F <- F[colnames(X), , drop = FALSE]
-  dt <- sub(":.*", "", rownames(W))
-  ww <- tapply(1:nrow(W), dt, function(i) W[i, , drop = FALSE])
-  xx <- tapply(1:nrow(X), dt, function(i) X[i, , drop = FALSE])
-  ww <- ww[names(xdata)]
-  xx <- xx[names(xdata)]
-
-  ww_bysymbol <- ww
-  if (!is.null(annot)) {
-    ww_bysymbol <- mofa.prefix(ww)
-    ww_bysymbol <- lapply(ww_bysymbol, function(w) rename_by2(w, annot, "symbol"))
-  }
-  ww <- mofa.strip_prefix(ww)
-  xx <- mofa.strip_prefix(xx)
+  ww <- mofa.split_data(W)
+  xx <- mofa.split_data(X)
 
   ## variance explained
   w.ssq <- sapply(ww, function(w) colSums(w**2))
@@ -396,12 +403,15 @@ mofa.compute <- function(xdata,
   colnames(Z) <- colnames(W)
 
   gsea <- NULL
-  if (compute.enrichment) {
+  if (compute.enrichment && !is.null(GMT)) {
     message("computing factor enrichment...")
-    symbolW <- do.call(rbind, mofa.prefix(ww_bysymbol))
-    if (mean(rownames(symbolW) %in% rownames(GMT)) < 0.10) {
-      message("WARNING! less than 10% of your features map to symbols. Please check or add a gene annotation table.")
+    ww_bysymbol <- ww
+    if (!is.null(annot)) {
+      ww_bysymbol <- mofa.prefix(ww)
+      ww_bysymbol <- lapply(ww_bysymbol, function(w)
+        rename_by2(w, annot, "symbol", keep.prefix=FALSE))
     }
+    symbolW <- do.call(rbind, mofa.prefix(ww_bysymbol))  ## prefixed??
     gsea <- mofa.compute_enrichment(symbolW, G = GMT, ntop = gset.ntop)
   }
 
@@ -484,38 +494,43 @@ mofa.add_genesets <- function(xdata, GMT = NULL, datatypes = NULL) {
 #' Compute clusters for MOFA factors.
 #'
 #' @export
-mofa.compute_clusters <- function(xx, matF = NULL, along = "samples") {
+mofa.compute_clusters <- function(xx, along = "samples", method="umap") {
+
+  ## always scale features
+  sxx <- lapply(xx, function(d) {
+    d <- t(scale(t(d), scale = FALSE))
+    d[is.na(d)] <- 0
+    d
+  })
+  sxx <- lapply(sxx, function(d)
+    d[matrixStats::rowSds(d, na.rm = TRUE) > 0.01,,drop=FALSE])
+
   if (along == "samples") {
     ## cluster samples
-    sxx <- lapply(xx, function(d) {
-      d <- t(scale(t(d), scale = FALSE))
-      d[is.na(d)] <- 0
-      d
-    })
-    if (!is.null(matF)) sxx$MOFA <- t(matF)
-    sxx <- lapply(sxx, function(d) d[matrixStats::rowSds(d, na.rm = TRUE) > 0.01, ])
-    nb <- max(round(min(15, ncol(xx[[1]]) / 4)), 2)
-    posx <- lapply(sxx, function(x) uwot::umap(t(x), n_neighbors = nb))
-    for (i in 1:length(posx)) rownames(posx[[i]]) <- colnames(sxx[[i]])
+    posx <- list()
+    i=1
+    for(i in 1:length(sxx)) {
+      posx[[i]] <- pgx.clusterMatrix(
+        sxx[[i]],
+        methods = method,
+        dims = 2,
+        verbose = 0)[[1]]
+    }
   }
 
   if (along == "features") {
     ## cluster features
-    sxx <- lapply(xx, function(d) {
-      d <- t(scale(t(d), scale = FALSE))
-      d[is.na(d)] <- 0
-      d
-    })
     posx <- list()
     for (i in 1:length(sxx)) {
-      nb <- max(min(15, nrow(sxx[[i]]) / 4), 2)
-      posx[[i]] <- uwot::umap(sxx[[i]], n_neighbors = nb)
-      rownames(posx[[i]]) <- rownames(sxx[[i]])
+      posx[[i]] <- pgx.clusterMatrix(
+        t(sxx[[i]]),
+        methods = method,
+        dims = 2,
+        verbose = 0)[[1]]
     }
-    names(posx) <- names(sxx)
   }
-
-  posx <- lapply(posx, playbase::uscale)
+  names(posx) <- names(sxx)
+  posx <- lapply(posx, uscale)
   return(posx)
 }
 
@@ -523,13 +538,117 @@ mofa.compute_clusters <- function(xx, matF = NULL, along = "samples") {
 #' Compute enrichment for MOFA factors.
 #'
 #' @export
-mofa.compute_enrichment <- function(W, G, filter = NULL, ntop = 1000) {
+mofa.compute_enrichment <- function(W, GMT, filter = NULL, ntop = 1000) {
+
+  if (is.null(GMT)) {
+    message("[mofa.compute_enrichment] ERROR: must provide GMT matrix (genes on rows)")
+    return(NULL)
+  }
+
+  ## filter gene sets
+  if (!is.null(filter)) {
+    sel <- grep(filter, colnames(GMT))
+    GMT <- GMY[, sel]
+  }
+  rownames(GMT) <- mofa.strip_prefix(rownames(GMT)) ## strip prefix
+  
+  ## build full geneset sparse matrix. We create an augmented GMT
+  ## matrix that covers all datatypes.
+  G0 <- GMT[0, ]
+  dtype <- sub(":.*", "", rownames(W))
+  dt <- dtype[1]
+  unique(dtype)
+  for (dt in unique(dtype)) {
+    ii <- which(dtype == dt)
+    pp <- mofa.strip_prefix(rownames(W)[ii]) ## strip prefix
+    names(pp) <- rownames(W)[ii]
+    pp <- pp[which(pp %in% rownames(GMT))]
+    if(length(pp)>0) {
+      G1 <- GMT[pp, , drop = FALSE]
+      rownames(G1) <- names(pp)
+      G0 <- rbind(G0, G1)
+    }
+  }
+  table(sub(":.*", "", rownames(G0)))
+
+  # align and filter
+  pp <- intersect(rownames(W), rownames(G0))
+  W <- W[pp, ]
+  sel <- which(Matrix::colSums(G0[pp, ] != 0) >= 3)
+  GMT1 <- G0[pp, sel]
+  dim(GMT1)
+  
+  # Normalize with multirank for each datatype
+  normW <- apply(W, 2, function(x) normalize_multirank(x))
+  normW[is.na(normW)] <- mean(normW, na.rm = TRUE)
+  
+  ## Perform geneset enrichment with fast rank-correlation. We could
+  ## do with fGSEA instead but it is much slower.
+  info("[pgx.add_GMT] Performing rankcor")
+  gse <- gset.rankcor(normW, GMT1, compute.p = TRUE)
+
+  # Select top genesets by ranking each factor
+  topsel <- apply(abs(gse$rho), 2, function(r) head(order(-r), ntop))
+  topsel <- head(unique(as.vector(t(topsel))), ntop)
+  length(topsel)
+  topsets <- rownames(gse$rho)[topsel]
+
+  ## prioritize top genesets to accelerate GSEA
+  topGMT <- GMT1[, topsets]
+  gmt <- mat2gmt(topGMT)
+  length(gmt)
+  info("[pgx.add_GMT] Performing fGSEA...")
+  gsea <- list()
+  k <- colnames(W)[1]
+  for (k in colnames(W)) {
+    w <- W[, k]
+    w <- w + 1e-4 * rnorm(length(w))
+    w <- normalize_multirank(w)
+    enr <- fgsea::fgsea(gmt, stats = w)
+    enr <- data.frame(enr)
+    rownames(enr) <- enr$pathway
+    gsea[[k]] <- enr
+  }
+  # alignr esults
+  gsea <- lapply(gsea, function(x) x[rownames(gsea[[1]]), ])
+
+  ## make table
+  dim(topGMT)
+  dtype <- sub(":.*", "", rownames(topGMT))
+  sizes <- tapply(1:nrow(topGMT), dtype, function(ii) Matrix::colSums(topGMT[ii,,drop=FALSE] != 0))
+  sizes <- do.call(cbind, sizes)
+  sizes <- sizes[rownames(gsea[[1]]), ]
+  for (i in 1:length(gsea)) {
+    gsea[[i]]$size <- sizes
+    gsea[[i]] <- gsea[[i]][, c("pathway", "NES", "pval", "padj", "size", "leadingEdge")]
+    gsea[[i]] <- data.frame(lapply(gsea[[i]], as.matrix), check.names = FALSE)
+  }
+
+  ## extract rho, pval and qval
+  rho <- sapply(gsea, function(x) x$NES)
+  pval <- sapply(gsea, function(x) x$pval)
+  padj <- sapply(gsea, function(x) x$padj)
+  rownames(rho) <- rownames(gsea[[1]])
+  rownames(pval) <- rownames(gsea[[1]])
+  rownames(padj) <- rownames(gsea[[1]])
+
+  list(table = gsea, NES = rho, pval = pval, padj = padj)
+}
+
+mofa.compute_enrichment.SAVE <- function(W, G, filter = NULL, ntop = 1000) {
 
   if (is.null(G)) {
     message("[mofa.compute_enrichment] ERROR: must provide GMT matrix (genes on rows)")
     return(NULL)
   }
+
+  ## filter gene sets
+  if (!is.null(filter)) {
+    sel <- grep(filter, colnames(G))
+    G <- G[, sel]
+  }
   
+  ## check if geneset matrix has datatype prefix
   has.colons <- all(grepl(":", rownames(G)))
   has.colons
   if (!has.colons) {
@@ -541,12 +660,6 @@ mofa.compute_enrichment <- function(W, G, filter = NULL, ntop = 1000) {
     if (length(jj) > 0) rownames(G)[jj] <- paste0("SYMBOL:", rownames(G)[jj])
   }
 
-  ## filter gene sets
-  if (!is.null(filter)) {
-    sel <- grep(filter, colnames(G))
-    G <- G[, sel]
-  }
-
   ## detect datatypes. associate with symbols
   dtypes <- unique(sub(":.*", "", rownames(W)))
   dtype2gtype <- c(
@@ -556,7 +669,8 @@ mofa.compute_enrichment <- function(W, G, filter = NULL, ntop = 1000) {
   dtypes <- intersect(dtypes, names(dtype2gtype))
   dtypes
 
-  ## build full gene set sparse matrix
+  ## build full geneset sparse matrix. We create an augmented GMT
+  ## matrix that covers all datatypes.
   GMT <- G[0, ]
   dt <- dtypes[1]
   for (dt in dtypes) {
@@ -656,6 +770,10 @@ pgx.compute_mofa_importance <- function(pgx, pheno,
   } else {
     meta.res <- pgx$mofa$factorizations
   }
+  if(is.null(meta.res)) {
+    message("[pgx.compute_mofa_importance] ERROR. factorizations is NULL")
+    return(NULL)
+  }
   sdx <- NULL
   if (use.sdwt) {
     sdx <- matrixStats::rowSds(pgx$X) ## important
@@ -684,29 +802,39 @@ mofa.compute_factorizations <- function(xdata,
                                             "rgcca.rgcca", "rgcca.rgccda",
                                             "rgcca.mcoa"
                                           )) {
-  meta.res <- list()
+  all.res <- list()
   for (kernel in kernels) {
     cat("[mofa.compute_factorizations] computing for kernel", toupper(kernel), "\n")
-    meta.res[[kernel]] <- mofa.compute(
-      xdata,
-      samples,
-      contrasts = contrasts,
-      GMT = NULL,
-      annot = NULL,
-      pheno = NULL,
-      kernel = kernel,
-      scale_views = TRUE,
-      gpu_mode = FALSE,
-      ntop = 2000,
-      max_iter = 200,
-      numfactors = numfactors,
-      numfeatures = 30,
-      compute.enrichment = FALSE,
-      compute.graphs = FALSE
+    ## Some methods can fail, so wrap in try
+    all.res[[kernel]] <- try(
+      mofa.compute(
+        xdata,
+        samples,
+        contrasts = contrasts,
+        GMT = NULL,
+        annot = NULL,
+        pheno = NULL,
+        kernel = kernel,
+        scale_views = TRUE,
+        gpu_mode = FALSE,
+        ntop = 2000,
+        max_iter = 200,
+        numfactors = numfactors,
+        numfeatures = 30,
+        compute.enrichment = FALSE,
+        compute.graphs = FALSE
+      ), silent = TRUE
     )
   }
-  meta.res <- lapply(meta.res, function(r) r[c("W", "F", "Z")])
-  return(meta.res)
+  names(all.res)
+  sapply(all.res,inherits,"try-error")
+  all.res <- all.res[ which(!sapply(all.res,inherits,"try-error"))]
+  if(length(all.res)==0) {
+    message("[mofa.compute_factorizations] FATAL. no valid results.")
+    return(NULL)
+  }
+  all.res <- lapply(all.res, function(r) r[c("W", "F", "Z")])
+  return(all.res)
 }
 
 
@@ -888,11 +1016,11 @@ mofa.get_prefix <- function(x) {
 #' @export
 mofa.strip_prefix <- function(xx) {
   if (class(xx) == "character") {
-    xx <- sub("[A-Za-z]+:", "", xx)
+    xx <- sub("[A-Za-z0-9]+:", "", xx)
     return(xx)
   }
   if (class(xx) == "matrix") {
-    rownames(xx) <- sub("[A-Za-z]+:", "", rownames(xx))
+    rownames(xx) <- sub("[A-Za-z0-9]+:", "", rownames(xx))
     return(xx)
   }
   if (class(xx) %in% c("list", "array") || is.list(xx)) {
@@ -955,7 +1083,8 @@ mofa.plot_weights <- function(weights, k, ntop = 10, cex.names = 0.9,
   v <- names(wt)[1]
   for (v in names(wt)) {
     w1 <- wt[[v]]
-    names(w1) <- gsub("[a-zA-Z]+:| \\(SMP.*", "", names(w1))
+    names(w1) <- mofa.strip_prefix(names(w1))
+    names(w1) <- gsub(" \\(SMP.*", "", names(w1))    
     w1 <- w1[order(-abs(w1))]
     w1 <- w1[!duplicated(names(w1))]
     names(w1) <- stringr::str_trunc(names(w1), maxchar)
@@ -1248,7 +1377,8 @@ mofa.plot_enrichment <- function(gsea, type = "barplot",
   }
 
   if (remove.dup) {
-    sname <- gsub("[a-zA-Z]+:| \\(.*", "", rownames(S))
+    sname <- mofa.strip_prefix(rownames(S))
+    sname <- gsub(" \\(.*", "", sname)
     S <- S[which(!duplicated(sname)), , drop = FALSE]
   }
   S <- head(S, ntop)
@@ -1368,7 +1498,7 @@ mofa.factor_graphs <- function(F, W, X, y, n = 100, ewidth = 1, vsize = 1) {
       if (length(unique(y[ii])) == 2) {
         val <- cor(t(gx[, ii, drop = FALSE]), as.integer(y[ii]))[, 1]
       } else if (length(unique(y[ii])) > 2) {
-        res <- gx.limmaF(gx[, ii, drop = FALSE], y[ii], fdr = 1, lfc = 0)
+        res <- gx.limmaF(gx[, ii, drop = FALSE], y[ii], fdr = 1, lfc = 0, verbose=0)
         val <- res$logFC
       } else {
         val <- NULL
@@ -1479,7 +1609,7 @@ mofa.plot_module <- function(graph, mst = TRUE, nlabel = 10, rm.single = FALSE,
   igraph::V(graph)$type <- 1
   igraph::V(graph)$foldchange <- 1
   ew <- igraph::E(graph)$width
-  igraph::E(graph)$width <- 10 * playbase::uscale(ew)**2
+  igraph::E(graph)$width <- 10 * uscale(ew)**2
 
   if (plotlib == "igraph") {
     plot(graph)
@@ -1741,36 +1871,24 @@ normalize_multifc <- function(fc, by = c("sd", "mad")[1]) {
 #' @export
 mgsea.compute_enrichment <- function(F, G, filter = NULL,
                                      ntop = 1000) {
-  ## compute enrichment for all contrasts
-  message("computing phenotype enrichment...")
+
+
+  if (is.null(G)) {
+    info("[mgsea.compute_enrichment] WARNING. Please provide GMT.")
+    return(NULL)
+  }
+
+  ## filter gene sets. geneset in columns.
+  if (!is.null(filter)) {
+    sel <- grep(filter, colnames(G))
+    G <- G[, sel]
+  }
 
   ## ww.types=filter=G=ntop=NULL
   is.multi <- all(grepl(":", rownames(F)))
   if (inherits(F, "matrix") && is.multi)  F <- mofa.split_data(F)
   if (inherits(F, "matrix") && !is.multi) F <- list(gx = F)
   names(F)
-  allowed_types <- c("mx", "px", "gx", "me")
-  F <- F[names(F) %in% allowed_types]
-
-  ## determine type
-  F.types <- ifelse(grepl("^mx|^metabo", names(F), ignore.case = TRUE),
-    "ChEBI", "SYMBOL"
-  )
-  F.types
-
-  ## If available please use internal pgx$GMT.
-  has.mx <- any(F.types == "ChEBI")
-  has.px <- any(F.types == "SYMBOL")
-  if (is.null(G)) {
-    info("[mgsea.compute_enrichment] WARNING. No GMT matrix provided. Please provide GMT.")
-    return(NULL)
-  }
-
-  ## filter gene sets
-  if (!is.null(filter)) {
-    sel <- grep(filter, colnames(G))
-    G <- G[, sel]
-  }
 
   ## Perform geneset enrichment with fast rank-correlation. We could
   ## do with fGSEA instead but it is much slower.
@@ -1780,16 +1898,14 @@ mgsea.compute_enrichment <- function(F, G, filter = NULL,
   pp <- intersect(wnames, rownames(G))
   G <- G[pp, , drop = FALSE]
   G <- G[, Matrix::colSums(G != 0) >= 3, drop = FALSE]
-  dim(G)
   gg <- rownames(G)
   gsea <- list()
   i <- 1
   for (i in 1:length(F)) {
     w1 <- F[[i]]
-    nc <- sum(rownames(w1) %in% gg)
-    if (nc > 0) {
-      pp <- intersect(rownames(w1), rownames(G))
-      f1 <- gset.rankcor(w1[pp, , drop = FALSE], G[pp, ], compute.p = TRUE)
+    pp <- intersect(rownames(w1), gg)
+    if (length(pp) >= 10) {
+      f1 <- gset.rankcor(w1[pp, , drop = FALSE], G[pp,,drop=FALSE], compute.p = TRUE)
       dt <- names(F)[i]
       if (!all(is.na(f1$rho)) && !all(f1$rho == 0)) {
         gsea[[dt]] <- f1
@@ -2411,10 +2527,10 @@ snf.plot_graph <- function(snf, min.rho = 0.5, plot = TRUE,
     as.matrix(df[, 1:2]),
     directed = FALSE
   )
-
-  colors <- paste0(rainbow(length(A)), "55")
-  colors <- head(rep(paste0(palette()[-1], "66"), 99), length(A))
-
+  
+  colors <- head(rep(palette()[-1], 99), length(A))
+  colors <- adjustcolor(colors, alpha.f=0.5)
+  
   igraph::V(gr)$name
   igraph::E(gr)$type <- df$type
   igraph::E(gr)$weight <- (1 * df$affinity)**1.1

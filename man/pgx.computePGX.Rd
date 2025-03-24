@@ -49,6 +49,8 @@ pgx.computePGX(
 \item{libx.dir}{Directory containing custom analysis modules.}
 
 \item{progress}{A progress object for tracking status.}
+
+\item{time}{Whether perform time series analysis or not. Default FALSE}
 }
 \value{
 An updated pgx object containing analysis results.

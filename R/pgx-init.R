@@ -196,7 +196,7 @@ pgx.initialize <- function(pgx) {
   )
 
   if (is.null(pgx$organism)) {
-    pgx$organism <- playbase::pgx.getOrganism(pgx)
+    pgx$organism <- pgx.getOrganism(pgx)
   }
 
   # Check if human ortholog is empty, if it is
