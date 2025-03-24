@@ -792,6 +792,7 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
   if (!all(colnames(X) %in% names(timeseries)))
     stop("[ngs.fitContrastsWithLIMMA.timeseries] X and timeseries vector contain different set of samples.")
 
+  ## For highly sparse time points, should we merge time points??? eg. IBD/UC data (GSE73661)
   jj <- match(colnames(X), names(timeseries))
   time0 <- as.character(unname(timeseries[jj]))
   num.time <- as.numeric(gsub("\\D", "", time0))
@@ -1211,12 +1212,15 @@ ngs.fitContrastsWithEDGER <- function(counts,
     if ("try-error" %in% class(design)) next;
     message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
 
-    dge.disp <- edgeR::estimateDisp(dge$counts, design = design, robust = robust)
+    ## For highly sparse time points, should we merge time points??? eg. IBD/UC data (GSE73661)
+    dge.disp <- try(edgeR::estimateDisp(dge$counts, design = design, robust = robust), silent = TRUE)
+    if ("try-error" %in% class(dge.disp)) next;
+    
     dge$common.dispersion <- dge.disp$common.dispersion
     dge$trended.dispersion <- dge.disp$trended.dispersion
     dge$tagwise.dispersion <- dge.disp$tagwise.dispersion
 
-    sel <- grep("ypos:splines::ns*", colnames(design))
+    sel <- grep("*:splines::ns*", colnames(design))
 
     if (method == "qlf") {
       fit <- edgeR::glmQLFit(dge, design, robust = robust)
@@ -1514,7 +1518,8 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
 
   if (!all(colnames(counts) %in% names(timeseries)))
     stop("[ngs.fitConstrastsWithDESEQ2.nodesign] and time contain different set of samples")
-  
+
+  ## For highly sparse time points, should we merge time points??? eg. IBD/UC data (GSE73661)
   jj <- match(colnames(counts), names(timeseries))
   time0 <- as.character(timeseries[jj])
   time0 <- gsub("\\D", "", unname(time0))
