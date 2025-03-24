@@ -820,8 +820,7 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
       limma::topTable(fit, coef = sel, sort.by = "none", number = Inf, adjust.method = "BH"),
       silent = TRUE
     )
-    chk <- "try-error" %in% class(top)
-    if (chk || nrow(top) == 0) next else break;
+    if ("try-error" %in% class(top) || nrow(top) == 0) next else break;
   
   }
 
@@ -848,7 +847,7 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
     for (i in 1:length(index)) {
       idx <- paste0(names(SEL), ".", index[i])
       sel <- match(idx, colnames(top))
-      top0[, index[i]] <- apply(top[, sel], 1, function(x) x[which.max(abs(x))])
+      top0[, index[i]] <- apply(top[, sel, drop = FALSE], 1, function(x) x[which.max(abs(x))])
     }
     top <- top0
     rm(top0)
