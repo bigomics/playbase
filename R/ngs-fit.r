@@ -708,7 +708,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
       y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
       X1 <- X[, kk, drop = FALSE]
       if (grepl("^IA:*", colnames(exp0)[i]) && !is.null(timeseries)) {
-        top <- ngs.fitContrastsWithLIMMA.timeseries(X1, y, timeseries, trend = TRUE) 
+        top <- ngs.fitContrastsWithLIMMA.timeseries(X1, y, timeseries, trend = trend) 
       } else {
         design1 <- stats::model.matrix(~ 0 + y)
         if (method == "voom") {
