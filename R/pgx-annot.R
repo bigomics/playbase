@@ -497,29 +497,15 @@ clean_dups_inline_probenames <- function(probes) {
 #' Cleanup probe names from postfixes or version numbers
 #'
 #' @export
-clean_probe_names <- function(probes, sep = ".-") {
-  probes0 <- probes
-  probes[is.na(probes)] <- ""
-  sel <- grep("[;]", probes)
-  if (length(sel)) {
-    probes[sel] <- sapply(strsplit(probes[sel], split = ";"), head, 1) ## take first
-  }
-
+clean_probe_names <- function(probes, sep = "_.-") {
+  probes0 <- trimws(probes)
+  probes[is.na(probes)] <- ""  
+  ## strip multiple probes  
+  probes <- sub("[;].*","",probes) 
   ## strip away anything after a 'dot' or 'underscore'
   probes <- sub(paste0("[", sep, "].*"), "", probes)
-  ## is.ensembl <- mean(grepl("^ENS", probes)) > 0.5
-  ## if (is.ensembl) {
-  ##   probes <- sub("[.][0-9]+$", "", probes) ## strip version number
-  ## }
 
-  ## If UNIPROT we also strip isoform extension (orgDb does not like it)
-  is.uniprot <- mean(grepl("^[QP][0-9]*", probes)) > 0.8
-  if (is.uniprot) {
-    ## probes <- sub("[.][0-9]+$", "", probes) ## strip phosphosite
-    probes <- sub("-[0-9]+", "", probes) ## strip isoform
-  }
-  ##  names(probes) <- probes0
-  probes
+  return(probes)
 }
 
 #' Match dirty probe names to clean key names
