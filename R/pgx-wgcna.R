@@ -41,10 +41,11 @@ pgx.wgcna <- function(
     tomtype = "signed",
     numericlabels = FALSE,
     ngenes = 4000,
+    maxBlockSize = 5000,
     gset.filter = "PATHWAY|HALLMARK|^GO|^C[1-9]"
     ) {
 
-  ##minmodsize=10;power=NULL;cutheight=0.15;deepsplit=2;ngenes=4000;networktype="signed";tomtype="signed";numericlabels=FALSE;ngenes=2000;gset.filter=NULL;minKME=0.8
+  ##minmodsize=10;power=NULL;cutheight=0.15;deepsplit=2;ngenes=4000;networktype="signed";tomtype="signed";numericlabels=FALSE;ngenes=2000;gset.filter=NULL;minKME=0.8;maxBlockSize=5000
 
   samples <- pgx$samples
   ## no dot pheno
@@ -70,6 +71,7 @@ pgx.wgcna <- function(
     gc()
   }
 
+  message("[pgx.wgcna] start wgcna.compute...")
   wgcna <- wgcna.compute(
     X = X,
     samples = samples,
@@ -81,20 +83,26 @@ pgx.wgcna <- function(
     networktype = networktype, # default: unsigned (but signed is better...)
     tomtype = tomtype, # default: signed
     numericlabels = numericlabels,
+    maxBlockSize = maxBlockSize,
     ngenes = ngenes
   )
-
+  message("[pgx.wgcna] finished computing wgcna.compute")
+  
   ##---------------------------------------------------
   ## compute dimensionality reductions using TOM matrix
   ##---------------------------------------------------
-  dissTOM <- 1 - wgcna$TOM
+  wTOM <- NULL
+  if("TOM" %in% names(wgcna)) wTOM <- wgcna$TOM
+  if(is.null(wTOM) && "TOM.sv" %in% names(wgcna)) wTOM  <- wgcna$TOM.sv %*% t(wgcna$TOM.sv)
+  dissTOM <- 1 - wTOM
   rownames(dissTOM) <- colnames(dissTOM) <- colnames(wgcna$datExpr)
   clust <- pgx.clusterBigMatrix(dissTOM, methods = c("umap", "tsne", "pca"), dims = c(2))
   if ("cluster.genes" %in% names(pgx)) {
     posx <- pgx$cluster.genes$pos[["umap2d"]]
     clust[["umap2d"]] <- posx[colnames(wgcna$datExpr), ]
   }
-
+  remove(dissTOM)
+  
   ## ----------------------------------------------------
   ## Do geneset analysis
   ## ----------------------------------------------------
@@ -133,9 +141,7 @@ wgcna.compute <- function(X,
                           verbose = 0
                           ) {
 
-  #minmodsize=20;power=12;cutheight=0.15;deepsplit=2;ngenes=2000;
-  #networktype="signed";tomtype="signed";numericlabels=FALSE;
-  #prefix="ME";minKME=0.3;reassignThreshold=1e-6
+  ##minmodsize=20;power=12;cutheight=0.15;deepsplit=2;ngenes=2000;networktype="signed";tomtype="signed";numericlabels=FALSE;prefix="ME";minKME=0.3;reassignThreshold=1e-6;maxBlockSize=5000
 
   require(WGCNA)
   
@@ -176,14 +182,14 @@ wgcna.compute <- function(X,
   ## adapt for small datasets (also done in WGCNA package)
   minmodsize <- min(minmodsize, ncol(datExpr) / 2)
 
-  message("[wgcna.compute] computing blockwise Modules...")
   message("[wgcna.compute] minmodsize = ", minmodsize)
   message("[wgcna.compute] number of features = ", nrow(X))
   message("[wgcna.compute] minKME = ", minKME)
   message("[wgcna.compute] power = ", power)
   message("[wgcna.compute] mergeCutHeight = ", cutheight)
 
-  WGCNA::enableWGCNAThreads()
+  message("[wgcna.compute] computing blockwise Modules...")
+  ##WGCNA::enableWGCNAThreads()
   cor <- WGCNA::cor ## needed...
   net <- WGCNA::blockwiseModules(
     datExpr,
@@ -200,7 +206,8 @@ wgcna.compute <- function(X,
     verbose = verbose
   )
   cor <- stats::cor
-
+  message("[wgcna.compute] finished blockwise Modules...")
+    
   ##  prefix="ME"
   table(net$colors)
   names(net$MEs) <- sub("^ME", prefix, names(net$MEs))
@@ -241,6 +248,7 @@ wgcna.compute <- function(X,
   me.colors <- me.colors[names(net$MEs)]
 
   ## compute clustering based on TOM matrix
+  message("[wgcna.compute] computing TOM matrix...")
   TOM <- NULL
   TOM <- WGCNA::TOMsimilarityFromExpr(
     datExpr,
@@ -249,9 +257,15 @@ wgcna.compute <- function(X,
     networkType = networktype,
     verbose = verbose
   )
-  rownames(TOM) <- colnames(TOM) <- colnames(datExpr)
 
+  ## instead of the huge TOM matrix we save a smaller SVD.
+  rownames(TOM) <- colnames(TOM) <- colnames(datExpr)
+  sv <- irlba::irlba(TOM, nv = min(40,dim(X)))
+  TOM.sv <- sv$v %*% diag(sqrt(sv$d))
+  rownames(TOM.sv) <- colnames(datExpr)
+  
   ## compute module eigenvectors (loading matrix)
+  message("[wgcna.compute] computing module eigenvectors...")
   MVs <- list()
   for (clr in unique(net$colors)) {
     ii <- which(net$colors == clr)
@@ -266,6 +280,7 @@ wgcna.compute <- function(X,
   rownames(MVs) <- colnames(datExpr)
 
   ## compute gene statistics
+  message("[wgcna.compute] computing gene statistics...")
   stats <- wgcna.compute_geneStats(net, datExpr, datTraits, TOM=TOM) 
   
   ## module-traits matrix
@@ -278,7 +293,8 @@ wgcna.compute <- function(X,
   results <- list(
       datExpr = datExpr,
       datTraits = datTraits,
-      TOM = TOM,  ## this can be BIG!!! 
+      ##TOM = TOM,  ## this can be BIG!!!
+      TOM.sv = TOM.sv,  ## smaller singular vectors
       net = net,
       power = power,
       me.genes = me.genes,
@@ -781,18 +797,35 @@ wgcna.merge_block_dendrograms <- function(net, X) {
 #'
 #'
 #' @export
-wgcna.plotTOM <- function(wgcna, justdata = FALSE) {
+wgcna.plotTOM <- function(wgcna, justdata = FALSE, block=NULL) {
+
   datExpr <- wgcna$datExpr
   MEs <- wgcna$net$MEs
-  moduleColors <- wgcna.labels2colors(wgcna$net$colors)
 
   ## Topological overlap dissimilarity matrix
-  dissTOM <- 1 - wgcna$TOM
+  wTOM <- NULL
+  if("TOM" %in% names(wgcna)) wTOM <- wgcna$TOM
+  if(is.null(wTOM) && "TOM.sv" %in% names(wgcna)) {
+    wTOM  <- wgcna$TOM.sv %*% t(wgcna$TOM.sv)
+  }
+  dissTOM <- 1 - wTOM
   rownames(dissTOM) <- colnames(dissTOM) <- colnames(datExpr)
 
   ## clustering wgcnaults
-  geneTree <- wgcna$net$dendrograms[[1]]
-
+  ##geneTree <- wgcna$net$dendrograms[[1]]
+  if(is.null(block) || "merged_dendro" %in% names(wgcna$net)) {
+    geneTree <- wgcna$net$merged_dendro
+    gg <- wgcna$net$merged_dendro$labels
+    dissTOM <- dissTOM[gg,gg]
+    moduleColors <- wgcna.labels2colors(wgcna$net$colors[gg])
+  } else {
+    geneTree <- wgcna$net$dendrograms[[block]]
+    ii <- which(wgcna$net$blocks == block & wgcna$net$goodGenes==TRUE)
+    gg <- names(wgcna$net$color)[ii]
+    dissTOM <- dissTOM[gg,gg]
+    moduleColors <- wgcna.labels2colors(wgcna$net$colors[gg])
+  }
+  
   ## Taking the dissimilarity to a power, say 10, makes the plot
   ## more informative by effectively changing the color palette;
   ## setting the diagonal to NA also improves the clarity of the
