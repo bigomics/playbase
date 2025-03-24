@@ -278,7 +278,7 @@ wgcna.compute <- function(X,
   results <- list(
       datExpr = datExpr,
       datTraits = datTraits,
-      TOM = TOM,
+      TOM = TOM,  ## this can be BIG!!! 
       net = net,
       power = power,
       me.genes = me.genes,

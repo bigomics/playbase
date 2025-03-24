@@ -418,7 +418,6 @@ MultiBlockMultiTargetSAE_module <- torch::nn_module(
       dims <- pmax(dims, tail(dims, 1)) ## always larger than bottlenect
       dims <- pmin(dims, ceiling(xdim/2))  ## always smaller than input (??)
       dims <- c(xdim, dims)
-      dims
       nlayers <- length(dims)
       for (i in 1:(nlayers - 1)) {
         mods <- add_input_mods(mods, dims[i], use_bn, dropout, add_noise)
