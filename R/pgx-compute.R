@@ -96,8 +96,8 @@ pgx.createFromFiles <- function(counts.file,
     do.clustergenes = TRUE,
     do.clustergenesets = TRUE,
     do.cluster = TRUE,
-    use.design = FALSE, ## TRUE,
-    prune.samples = TRUE, ## FALSE,
+    use.design = FALSE,
+    prune.samples = TRUE,
     pgx.dir = pgx.dir,
     libx.dir = libx.dir,
     progress = NULL
@@ -618,8 +618,6 @@ pgx.computePGX <- function(pgx,
                            libx.dir = NULL,
                            progress = NULL,
                            user_input_dir = getwd()) {
-
-  message("[pgx.computePGX] Starting pgx.computePGX")
 
   message("[pgx.computePGX]===========================================")
   message("[pgx.computePGX]========== pgx.computePGX =================")
