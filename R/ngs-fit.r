@@ -358,25 +358,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     avg.1 <- sapply(samples1, function(s) rowMeans(X[, s, drop = FALSE], na.rm = TRUE))
     avg.0 <- sapply(samples0, function(s) rowMeans(X[, s, drop = FALSE], na.rm = TRUE))
 
-    ## i <- j <- 1
-    ## i=1
-    ## for (i in 1:length(outputs)) {
-    ##   for (j in 1:length(outputs[[i]]$tables)) {
-    ##     contr.name <- names(outputs[[i]]$tables)[j]
-    ##     chk1 <- grepl("^IA:*", contr.name)
-    ##     if (!chk1) {
-    ##       outputs[[i]]$tables[[j]]$AveExpr <- avgX[, j] ## ????
-    ##       outputs[[i]]$tables[[j]]$AveExpr1 <- avg.1[, contr.name]
-    ##       outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, contr.name]
-    ##     } else {
-    ##       sel <- grep(gsub("^IA:", "", contr.name), colnames(exp.matrix))
-    ##       outputs[[i]]$tables[[j]]$AveExpr <- NA # ??
-    ##       outputs[[i]]$tables[[j]]$AveExpr1 <- avg.1[, sel]
-    ##       outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, sel]
-    ##     }
-    ##   }
-    ## }
-
     i <- j <- 1
     for (i in 1:length(outputs)) {
      for (j in 1:length(outputs[[i]]$tables)) {
@@ -428,23 +409,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     rownames(M) <- rownames(logFC) <- rownames(P) <- rownames(Q) <- rownames(res$tables[[1]])
     rownames(M0) <- rownames(M1) <- rownames(res$tables[[1]])
 
-    ## ## NEEDED ??????
-    ## if (!is.null(timeseries) && (names(outputs)[i] %in% nc.tests)) {
-    ##   current.contrs <- colnames(M)
-    ##   new.contrs <- setdiff(all.contrs, current.contrs)
-    ##   if (length(new.contrs) > 0) {
-    ##     ct.null <- matrix(NA, nrow=nrow(M), ncol=length(new.contrs))
-    ##     rownames(ct.null) <- rownames(M)
-    ##     colnames(ct.null) <- new.contrs
-    ##     M <- cbind(M, ct.null)
-    ##     M0 <- cbind(M0, ct.null)
-    ##     M1 <- cbind(M1, ct.null)
-    ##     Q <- cbind(Q, ct.null)
-    ##     P <- cbind(P, ct.null)
-    ##     logFC <- cbind(logFC, ct.null)
-    ##   }
-    ## }
-
     ## count significant terms
     qvalues <- c(1e-16, 10**seq(-8, -2, 2), 0.05, 0.1, 0.2, 0.5, 1)
     lfc <- 1
@@ -483,27 +447,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     outputs[[i]] <- res
   }
   
-  ## --------------------------------------------------------------
-  ## Conform DGE tables across methods
-  ## --------------------------------------------------------------
-  ## message("[ngs.fitContrastsWithAllMethods] Conforming DGE tables across methods ...")
-  ## i <- 1
-  ## for(i in 1:length(outputs)) {
-  ##   if (!is.null(timeseries) && (names(outputs)[i] %in% nc.tests)) {
-  ##     current.contrs <- names(outputs[[i]][["tables"]])
-  ##     new.contrs <- setdiff(all.contrs, current.contrs)
-  ##     if (length(new.contrs) > 0) {
-  ##       j = 1
-  ##       for (j in 1:length(new.contrs)) {
-  ##         top.null <- matrix(NA, nrow=nrow(outputs[[1]][["p.value"]]), ncol=7)
-  ##         rownames(top.null) <- rownames(outputs[[1]][["p.value"]])
-  ##         colnames(top.null) <- c("logFC", "AveExpr", "statistic", "P.Value", "adj.P.Val", "AveExpr0", "AveExpr1")
-  ##         outputs[[i]][["tables"]][[new.contrs[j]]] <- top.null
-  ##       }
-  ##     }
-  ##   }
-  ## }
-
   ## --------------------------------------------------------------
   ## Reshape matrices by comparison
   ## --------------------------------------------------------------
