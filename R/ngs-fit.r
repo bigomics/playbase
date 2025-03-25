@@ -171,7 +171,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     }
   }
   
-  ## ---------- Wilcoxon test (scRNA-seq) -----------
+  ## ---------- Wilcoxon test -----------
   if ("wilcoxon.ranksum" %in% methods) {
      message("[ngs.fitContrastsWithAllMethods] scRNA-seq: fitting using Wilcoxon rank sum test")
      timings[["wilcoxon.ranksum"]] <- system.time(

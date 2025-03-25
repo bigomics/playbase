@@ -302,7 +302,7 @@ pgx.createPGX <- function(counts,
     } else {
       message(paste0("[createPGX] None of the following variables found in sample file: ",
         paste0(time.var, collapse=","), ". Skipping time series analysis."))
-      timeseries = FALSE;
+      timeseries = FALSE
     }
   }
   
@@ -419,7 +419,6 @@ pgx.createPGX <- function(counts,
     norm_method = norm_method,
     total_counts = Matrix::colSums(counts, na.rm = TRUE),
     counts_multiplier = counts_multiplier,
-    #timeseries = timeseries,
     settings = settings,
     sc_compute_settings = sc_compute_settings
   )
