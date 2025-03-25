@@ -893,10 +893,7 @@ deep.plotGradientVSFoldchange <- function(grad, fc, data = FALSE, par = TRUE) {
       xlab <- "logFC"
       plot(f, g, xlab = xlab, ylab = "network gradient")
       abline(h = 0, v = 0, lty = 2)
-      title(paste0(
-        "phenotype=", colnames(grad[[k]])[i],
-        "; datatype=", k
-      ))
+      title(paste0(colnames(grad[[k]])[i],"@", k))
       sel <- unique(c(head(order(-f), 5), head(order(-g), 5)))
       text(f[sel], g[sel], labels = names(f)[sel], col = "red", pos = 2)
       sel <- unique(c(head(order(f), 5), head(order(g), 5)))
@@ -909,6 +906,7 @@ deep.plotGradientVSFoldchange <- function(grad, fc, data = FALSE, par = TRUE) {
 #'
 #' @export
 deep.plotNeuralNet <- function(net, svgfile = NULL, rm.files=TRUE) {
+  
   if (!dir.exists("/opt/PlotNeuralNet")) {
     message("ERROR: please install PlotNeuralNet in /opt")
     return(NULL)
