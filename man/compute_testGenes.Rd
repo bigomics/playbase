@@ -37,6 +37,4 @@ An updated object with gene test results.
 \description{
 This function computes gene tests based on the input data and contrast matrix.
 It performs different test methods depending on whether the data is single-omics or multi-omics.
-For single-omics data or when there is only one data type, it uses the \code{compute_testGenesSingleOmics} function.
-For multi-omics data with the possibility of missing values, it uses the \code{compute_testGenesMultiOmics} function.
 }

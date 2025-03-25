@@ -12,7 +12,7 @@ pgx.computePGX(
   custom.geneset = list(gmt = NULL, info = NULL),
   custom_fc = NULL,
   do.cluster = TRUE,
-  cluster.contrasts = TRUE,
+  cluster.contrasts = FALSE,
   do.clustergenesets = TRUE,
   do.clustergenes = TRUE,
   use.design = FALSE,
