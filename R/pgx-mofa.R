@@ -1541,6 +1541,7 @@ mofa.factor_graphs <- function(F, W, X, y, n = 100, ewidth = 1, vsize = 1) {
 #' @export
 mofa.plot_centrality <- function(res, k, show_types = NULL, transpose = FALSE,
                                  main = "centrality vs. factor weight",
+                                 labels = NULL,
                                  justdata = FALSE) {
   ## compute centrality
   gr <- res$graph$features[[k]]
@@ -1585,10 +1586,17 @@ mofa.plot_centrality <- function(res, k, show_types = NULL, transpose = FALSE,
   }
   title(main)
   abline(h = 0, v = 0, lty = 2)
+
+  ## add labels
   nrx <- rx / mean(abs(rx))
   nry <- ry / mean(abs(ry))
   ii <- head(order(-(nrx**2 + nry**2)), 40)
+  if(!is.null(labels)) {
+    gg <-  labels[gg]
+  }
   text(rx[ii], ry[ii], gg[ii], cex = 0.85, pos = 3, offset = 0.3)
+
+
 }
 
 #' @export

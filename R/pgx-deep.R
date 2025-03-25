@@ -626,7 +626,7 @@ SimpleSAE_module <- torch::nn_module(
 #'
 #' @export
 deep.plotBiomarkerHeatmap <- function(net, datatypes = NULL, balanced = TRUE,
-                                      annot = NULL, ntop = 50, ...) {
+                                      annot = NULL, labels=NULL, ntop = 50, ...) {
   grad <- net$get_gradients()
 
   if (!is.null(datatypes)) {
@@ -658,14 +658,20 @@ deep.plotBiomarkerHeatmap <- function(net, datatypes = NULL, balanced = TRUE,
   }
   X <- do.call(rbind, mofa.prefix(net$X))
   colnames(X) <- make_unique(colnames(X))
+  X <- X[sel, ]
+
   Y <- data.frame(net$Y)
   rownames(Y) <- colnames(X)
   if (!is.null(annot)) {
     kk <- setdiff(colnames(annot), colnames(Y))
     Y <- cbind(Y, annot[, kk, drop = FALSE])
   }
-  # gx.heatmap( X[sel,], col.annot = Y, mar=c(8,10), keysize=0.9)
-  gx.splitmap(X[sel, ],
+  
+  if(!is.null(labels)) {
+    rownames(X) <- labels[match(rownames(X),names(labels))]
+  }
+
+  gx.splitmap(X,
     col.annot = Y, split = 1, mar = c(2, 6),
     show_key = TRUE, annot.cex = 1.2, ...
   )
