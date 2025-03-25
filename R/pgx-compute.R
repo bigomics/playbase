@@ -291,11 +291,19 @@ pgx.createPGX <- function(counts,
   ## Time series: expand contrast matrix
   ## ------------------------------------------------------------------
   if (timeseries) {
-    nn <- ncol(contrasts)
-    ts.ct <- paste0("IA:", colnames(contrasts))
-    contrasts <- cbind(contrasts, contrasts)
-    colnames(contrasts)[(nn+1):ncol(contrasts)] <- ts.ct 
-    rm(nn, ts.ct)
+    time.var <- c("minute", "hour", "day", "week", "month", "year", "time")
+    kk <- intersect(time.var, colnames(samples))
+    if (length(kk)) {
+      nn <- ncol(contrasts)
+      ts.ct <- paste0("IA:", colnames(contrasts))
+      contrasts <- cbind(contrasts, contrasts)
+      colnames(contrasts)[(nn+1):ncol(contrasts)] <- ts.ct 
+      rm(nn, ts.ct)
+    } else {
+      message(paste0("[createPGX] None of the following variables found in sample file: ",
+        paste0(time.var, collapse=","), ". Skipping time series analysis."))
+      timeseries = FALSE;
+    }
   }
   
   ## convert old-style contrast matrix to sample-wise labeled contrasts
@@ -411,7 +419,7 @@ pgx.createPGX <- function(counts,
     norm_method = norm_method,
     total_counts = Matrix::colSums(counts, na.rm = TRUE),
     counts_multiplier = counts_multiplier,
-    timeseries = timeseries,
+    #timeseries = timeseries,
     settings = settings,
     sc_compute_settings = sc_compute_settings
   )
@@ -632,7 +640,6 @@ pgx.computePGX <- function(pgx,
   if (!all(grepl("_vs_", colnames(pgx$contrasts)))) {
     stop("[pgx.computePGX] FATAL:: all contrast names must include _vs_")
   }
-
   
   ## use.design=FALSE (now default): we test each contrast separately.
   ## If re-running pgx.computePGX on its own (without re-running pgx.createPGX),
@@ -745,6 +752,8 @@ pgx.computePGX <- function(pgx,
   ## ------------------ gene level tests ---------------------
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
 
+
+  timeseries <- any(grepl("IA:*", colnames(pgx$contrasts)))
   
   message("[pgx.computePGX] testing genes...")
   pgx <- compute_testGenes(
@@ -755,7 +764,7 @@ pgx.computePGX <- function(pgx,
     custom_fc = custom_fc,
     use.design = use.design,
     prune.samples = prune.samples,
-    timeseries = pgx$timeseries,
+    timeseries = timeseries,
     remove.outputs = TRUE
   )
 
