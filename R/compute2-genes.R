@@ -153,16 +153,10 @@ compute_testGenes <- function(pgx,
   ## Time series: determine variable 'time'
   ## -----------------------------------------------------------------------------
   if (timeseries) {
-    ss <- "minute|hour|day|week|month|year|time"
-    sel <- grep(ss, colnames(pgx$samples))
-    if (length(sel) == 0) {
-      message("[compute_testGenes] None of the following columns have been detected in pgx$samples: ",
-        paste0(ss, collapse = ", "), ". Skipping time series analysis.")
-      timeseries <- NULL
-    } else {
-       timeseries <- as.character(pgx$samples[, sel[1]])
-       names(timeseries) <- rownames(pgx$samples)
-     }
+    time.var <- "minute|hour|day|week|month|year|time"
+    sel <- grep(time.var, colnames(pgx$samples))
+    timeseries <- as.character(pgx$samples[, sel[1]])
+    names(timeseries) <- rownames(pgx$samples)
   } else {
     timeseries <- NULL
   }
