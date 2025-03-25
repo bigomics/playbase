@@ -77,10 +77,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
                                            custom.name = NULL,
                                            timeseries = NULL) {
 
-  ## --------------------------------------------------------------
-  ## Run all tests on raw counts
-  ## --------------------------------------------------------------
-
+  
   ## Don't test fully missing features. Put them back in toptable.
   counts <- counts[which(rowMeans(is.na(counts)) < 1), ]
   if (!is.null(X)) X <- X[which(rowMeans(is.na(X)) < 1), ]
@@ -173,7 +170,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
       )
     }
   }
-
+  
   ## ---------- Wilcoxon test (scRNA-seq) -----------
   if ("wilcoxon.ranksum" %in% methods) {
      message("[ngs.fitContrastsWithAllMethods] scRNA-seq: fitting using Wilcoxon rank sum test")
@@ -183,7 +180,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
        )
      )
   }
-
+  
   ## ---------------- LIMMA methods -------------------
   limma.mtds <- c("trend.limma", "notrend.limma", "voom.limma")
   limma.mdls <- c("limma", "limma", "voom")
@@ -205,6 +202,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         } else {
           time_var = NULL
         }
+      
         tt <- system.time(
           outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithLIMMA(
             X1, contr.matrix, design, method = mdl,
@@ -216,7 +214,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
       }
     }
   }
-
+  
   ## ---------------- DESEQ2 methods -------------------
   deseq2.mtds <- c("deseq2.wald", "deseq2.lrt")
   deseq2.mdls <- c("Wald", "LRT")
@@ -278,7 +276,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
       }
     }
   }
-
+  
   if (!is.null(custom)) {
     message("[ngs.fitContrastsWithAllMethods] adding custom results table")
     if (is.null(custom.name)) custom.name <- "custom"
@@ -321,7 +319,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     outputs[[custom.name]]$tables <- custom
     timings[["custom"]] <- system.time(0)
   }
-
+  
   ## ----------------------------------------------------------------------
   ## "corrections" ...
   ## ----------------------------------------------------------------------
@@ -366,9 +364,8 @@ ngs.fitContrastsWithAllMethods <- function(counts,
        outputs[[i]]$tables[[j]]$AveExpr0 <- avg.0[, j]
      }
     }
-
   }
-
+  
   ##-----------------------------------------------------------------------
   ## Put "IA:*" contrasts as last columns in outputs limma/DeSeq2/EdgeR. NEEDED??
   ##-----------------------------------------------------------------------
@@ -654,8 +651,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
   ## No design (no grouping): perform LIMMA per contrast one-by-one.
 
   ## Do not test full NA features. Put them back in topTable.
-  if (!is.null(X)) X <- X[which(rowMeans(is.na(X)) < 1), ]
-
+  if (!is.null(X)) X <- X[which(rowMeans(is.na(X)) < 1), ]  
   method <- method[1]
 
   if (!is.null(design)) {
@@ -697,8 +693,6 @@ ngs.fitContrastsWithLIMMA <- function(X,
     
     message("[ngs.fitContrastsWithLIMMA] Fitting LIMMA contrasts *without* design")
     exp0 <- contr.matrix ## sample-wise contrasts...
-    #sel <- colnames(exp0)[!grepl("^IA:*", colnames(exp0))]
-    #exp0 <- exp0[, sel, drop = FALSE]
     i=1; tables=list()
     for (i in 1:ncol(exp0)) {
       kk <- 1:nrow(exp0)

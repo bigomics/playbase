@@ -604,7 +604,7 @@ pgx.computePGX <- function(pgx,
                            custom.geneset = list(gmt = NULL, info = NULL),
                            custom_fc = NULL,
                            do.cluster = TRUE,
-                           cluster.contrasts = TRUE,
+                           cluster.contrasts = FALSE,
                            do.clustergenesets = TRUE,
                            do.clustergenes = TRUE,
                            use.design = FALSE,
@@ -633,6 +633,7 @@ pgx.computePGX <- function(pgx,
     stop("[pgx.computePGX] FATAL:: all contrast names must include _vs_")
   }
 
+  
   ## use.design=FALSE (now default): we test each contrast separately.
   ## If re-running pgx.computePGX on its own (without re-running pgx.createPGX),
   ## all existing contrasts are tested (including .cluster:c*_vs_others).
@@ -645,11 +646,17 @@ pgx.computePGX <- function(pgx,
   contr.matrix <- contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
   contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
   contr.matrix <- sign(contr.matrix) ## sign is fine
+
+  ## sanity check
+  if(NCOL(contr.matrix)==0) {
+    message("[pgx.computePGX] WARNING: FATAL ERROR. zero contrasts")
+    return(pgx)
+  }
   
   ## select valid contrasts
   sel <- Matrix::colSums(contr.matrix == -1) > 0 & Matrix::colSums(contr.matrix == 1) > 0
   contr.matrix <- contr.matrix[, sel, drop = FALSE]
-
+  
   ## -------------------------------------------------------------------
   ## Clustering
   ## -------------------------------------------------------------------
@@ -660,7 +667,7 @@ pgx.computePGX <- function(pgx,
     mm <- c("pca", "tsne", "umap")
     pgx <- pgx.clusterSamples(pgx, dims = c(2, 3), perplexity = NULL, X = NULL, methods = mm)
   }
-
+  
   ## Make contrasts by cluster
   if (cluster.contrasts) {
     ## NEED RETHINK: for the moment we use combination of t-SNE/UMAP
@@ -696,7 +703,7 @@ pgx.computePGX <- function(pgx,
     if (pgx$datatype == "scRNAseq") mm <- c("pca", "tsne", "umap")
     pgx <- pgx.clusterGenes(pgx, methods = mm, X = pgx$impX, level = "gene")
   }
-
+  
   ## -----------------------------------------------------------------------------
   ## Filter genes (previously in compute_testGenesSingleOmics). NEED
   ## RETHINK?? MOVE TO PGXCREATE??
@@ -738,6 +745,7 @@ pgx.computePGX <- function(pgx,
   ## ------------------ gene level tests ---------------------
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
 
+  
   message("[pgx.computePGX] testing genes...")
   pgx <- compute_testGenes(
     pgx,
@@ -783,11 +791,7 @@ pgx.computePGX <- function(pgx,
     user_input_dir = user_input_dir
   )
 
-  message("\n\n")
-  message("[pgx.computePGX]=======================================")
-  message("[pgx.computePGX]======== pgx.computePGX: DONE! ========")
-  message("[pgx.computePGX]=======================================")
-  message("\n\n")
+  info("[pgx.computePGX] DONE")
   return(pgx)
 }
 
@@ -1142,16 +1146,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     ## geneset activation.
     cX <- gX - rowMeans(gX, na.rm = TRUE) ## center!
     cX <- t(matrixStats::colRanks(cX))
-    #cX <- apply(cX, 2, rank)
-    #gsetX <- qlcMatrix::corSparse(G, cX) ## slow!
-    #rownames(gsetX) <- colnames(G)
-    #colnames(gsetX) <- colnames(gX)
-    if (0) {
-      y <- pgx$model.parameters$group[colnames(gX)]
-      res <- gx.limmaF(gsetX, y, lfc = 0, fdr = 1, sort.by = "none")
-      res <- res[rownames(gsetX), ]
-    }
-    #cX <- X_geneset - rowMeans(X_geneset, na.rm = TRUE)
     if (ncol(cX) <= 5000) {
       gsetX <- qlcMatrix::corSparse(G, cX)
     } else { ## split into chuncks. faster & needs less memory.
@@ -1165,7 +1159,6 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
       gsetX <- do.call(cbind, LL.cor)
       rm(index, LL.cor)
     }
-
     grp <- pgx$model.parameters$group
     gsetX.bygroup <- NULL
     ## If groups/conditions are present we calculate the SD by group
