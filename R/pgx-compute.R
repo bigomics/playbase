@@ -639,16 +639,7 @@ pgx.computePGX <- function(pgx,
   if (!all(grepl("_vs_", colnames(pgx$contrasts)))) {
     stop("[pgx.computePGX] FATAL:: all contrast names must include _vs_")
   }
-  
-  ## use.design=FALSE (now default): we test each contrast separately.
-  ## If re-running pgx.computePGX on its own (without re-running pgx.createPGX),
-  ## all existing contrasts are tested (including .cluster:c*_vs_others).
-  ## Avoiding this.
-  kk <- grep(".cluster", colnames(pgx$samples))
-  if (any(kk)) pgx$samples <- pgx$samples[, -kk, drop = FALSE]
-  kk <- grep(".cluster:c*", colnames(pgx$contrasts))
-  if (any(kk)) pgx$contrasts <- pgx$contrasts[, -kk, drop = FALSE]
-  
+    
   contr.matrix <- contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
   contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
   contr.matrix <- sign(contr.matrix) ## sign is fine
