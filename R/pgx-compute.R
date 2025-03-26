@@ -639,13 +639,30 @@ pgx.computePGX <- function(pgx,
   if (!all(grepl("_vs_", colnames(pgx$contrasts)))) {
     stop("[pgx.computePGX] FATAL:: all contrast names must include _vs_")
   }
-    
+
+  ## -----------------------------------------------------------------------------
+  ## Time series: check methods
+  ## -----------------------------------------------------------------------------
+  timeseries <- any(grepl("IA:*", colnames(pgx$contrasts)))
+  if (timeseries) {
+    ts.mm <- c("trend.limma", "deseq2.lrt", "edger.lrt", "edger.qlf")
+    cm <- intersect(gx.methods, ts.mm)
+    if (length(cm) == 0) {
+      message("[ngs.fitContrastsWithAllMethods] For time series analysis, gx.methods must be one of ",
+        paste0(ts.mm, collapse="; "), " Skipping time series analysis.")
+      hh <- grep("IA:*", colnames(pgx$contrasts))
+      pgx$contrasts <- pgx$contrasts[, -hh, drop = FALSE]
+    } else {
+      gx.methods <- cm
+    }
+  }
+  
   contr.matrix <- contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
   contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
   contr.matrix <- sign(contr.matrix) ## sign is fine
 
   ## sanity check
-  if(NCOL(contr.matrix)==0) {
+  if (NCOL(contr.matrix) == 0) {
     message("[pgx.computePGX] WARNING: FATAL ERROR. zero contrasts")
     return(pgx)
   }
@@ -657,7 +674,6 @@ pgx.computePGX <- function(pgx,
   ## -------------------------------------------------------------------
   ## Clustering
   ## -------------------------------------------------------------------
-
   ## Cluster by sample
   if (do.cluster || cluster.contrasts) {
     message("[pgx.computePGX] clustering samples...")
@@ -741,7 +757,6 @@ pgx.computePGX <- function(pgx,
 
   ## ------------------ gene level tests ---------------------
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
-
 
   timeseries <- any(grepl("IA:*", colnames(pgx$contrasts)))
   

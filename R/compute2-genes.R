@@ -184,7 +184,6 @@ compute_testGenes <- function(pgx,
   ## --------------------------------------------------------------------------------
   ## set default matrices
   ## --------------------------------------------------------------------------------
-
   rownames(gx.meta$timings) <- paste0("[test.genes]", rownames(gx.meta$timings))
   pgx$timings <- rbind(pgx$timings, gx.meta$timings)
   gx.meta$timings <- NULL

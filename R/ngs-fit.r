@@ -106,25 +106,15 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   counts <- pmax(counts, 0)
 
   ## -----------------------------------------------------------------------------
-  ## Time series: determine variable 'time' && check methods
+  ## Time series: determine variable 'time'
   ## -----------------------------------------------------------------------------  
   if (timeseries) {
     time.var <- "minute|hour|day|week|month|year|time"
     sel <- grep(time.var, colnames(samples))
     timeseries <- as.character(samples[, sel[1]])
     names(timeseries) <- rownames(samples)
-    ts.mm <- c("trend.limma", "deseq2.lrt", "edger.lrt", "edger.qlf")
-    cm <- intersect(methods, ts.mm)
-    if (length(cm) == 0) {
-      message("[ngs.fitContrastsWithAllMethods] For time series analysis, gx.methods must be one of ",
-        paste0(ts.mm, collapse="; "), " Skipping time series analysis.")
-      hh <- grep("IA:*", colnames(contr.matrix))
-      if (length(hh)) contr.matrix <- contr.matrix[, -hh, drop = FALSE]
-      ## also REMOVE @IA from pgx$contrasts! to do.
-      timeseries <- NULL
-    } else {
-        methods <- cm
-    }
+  } else {
+    timeseries <- NULL
   }
   
   ## ------------------------------------------------------------------
