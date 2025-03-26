@@ -224,7 +224,6 @@ pgx.createPGX <- function(counts,
   }
 
   if (!is.null(X)) {
-    message("[createPGX] class.X: ", class(X))
     message("[createPGX] dim.X: ", dim(X)[1], " x ", dim(X)[2])
     message("[createPGX] Normalization method:", norm_method)
     ndups <- sum(duplicated(rownames(X)))
@@ -347,13 +346,8 @@ pgx.createPGX <- function(counts,
   if (all(kk %in% rownames(contrasts))) {
     contrasts <- contrasts[kk, , drop = FALSE]
   }
-
-  ## 1. Clean up inline duplicated features: eg: feature1;feature1;..
-  # dedup_probes <- clean_dups_inline_probenames(rownames(counts))
-  # rownames(counts) <- rownames(X) <- dedup_probes
-  # if (!is.null(impX)) rownames(impX) <- dedup_probes
   
-  ## 2. Make duplicated rownames unique (NOTE!!! new default since v3.5.1)
+  ## 1. Make duplicated rownames unique (NOTE!!! new default since v3.5.1)
   ndup <- sum(duplicated(rownames(counts)))
   if (ndup > 0) {
     info("[createPGX] duplicated rownames detected. making unique.")
@@ -532,12 +526,13 @@ pgx.createPGX <- function(counts,
   unknown.organism <- (pgx$organism %in% c("No organism","custom","unkown"))
   unknown.datatype <- (pgx$datatype %in% c("custom","unkown"))  
   no3 <- unknown.organism && is.null(annot_table) && is.null(custom.geneset) 
-  if ( no3 || unknown.datatype || !add.gmt) {
+  if (no3 || unknown.datatype || !add.gmt) {
     message("[createPGX] WARNING: empty GMT matrix. No gene sets. " )    
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
   } else {
     pgx <- pgx.add_GMT(
-      pgx = pgx, custom.geneset = custom.geneset,
+      pgx = pgx,
+      custom.geneset = custom.geneset,
       max.genesets = max.genesets
     )
     message("[createPGX] dim(GMT) =  ", dim(pgx$GMT)[1], "x", dim(pgx$GMT)[2])
@@ -550,10 +545,8 @@ pgx.createPGX <- function(counts,
     pgx$samples <- pgx$samples[, colMeans(is.na(pgx$samples)) < 1, drop = FALSE]
   }
 
-  message("[pgx.createPGX] dim(pgx$counts): ", paste0(dim(pgx$counts), collapse=","))
   message("[pgx.createPGX] dim(pgx$X): ", paste0(dim(pgx$X), collapse=","))
   message("[pgx.createPGX] dim(pgx$samples): ", paste0(dim(pgx$samples), collapse=","))
-  message("[createPGX] pgx$counts has ", sum(is.na(pgx$counts)), " missing values")
   message("[createPGX] pgx$X has ", sum(is.na(pgx$X)), " missing values")
 
   rm(counts, X, impX, samples, contrasts)
