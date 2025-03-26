@@ -86,14 +86,14 @@ pgx.wgcna <- function(
     maxBlockSize = maxBlockSize,
     ngenes = ngenes
   )
-  message("[pgx.wgcna] finished computing wgcna.compute")
+  message("[pgx.wgcna] finished computing wgcna.compute!")
   
   ##---------------------------------------------------
   ## compute dimensionality reductions using TOM matrix
   ##---------------------------------------------------
   wTOM <- NULL
   if("TOM" %in% names(wgcna)) wTOM <- wgcna$TOM
-  if(is.null(wTOM) && "TOM.sv" %in% names(wgcna)) wTOM  <- wgcna$TOM.sv %*% t(wgcna$TOM.sv)
+  if(is.null(wTOM) && "svTOM" %in% names(wgcna)) wTOM  <- wgcna$svTOM %*% t(wgcna$svTOM)
   dissTOM <- 1 - wTOM
   rownames(dissTOM) <- colnames(dissTOM) <- colnames(wgcna$datExpr)
   clust <- pgx.clusterBigMatrix(dissTOM, methods = c("umap", "tsne", "pca"), dims = c(2))
@@ -136,8 +136,10 @@ wgcna.compute <- function(X,
                           reassignThreshold = 1e-6,
                           ngenes = 2000,
                           numericlabels = FALSE,
-                          maxBlockSize = 5000,
+                          maxBlockSize = 8000,
+                          merge.dendro = TRUE,
                           prefix = "ME",
+                          sv.dim = 80,
                           verbose = 0
                           ) {
 
@@ -259,10 +261,11 @@ wgcna.compute <- function(X,
   )
 
   ## instead of the huge TOM matrix we save a smaller SVD.
+  message("[wgcna.compute] reducing TOM. sv.dim = ", sv.dim)
   rownames(TOM) <- colnames(TOM) <- colnames(datExpr)
-  sv <- irlba::irlba(TOM, nv = min(40,dim(X)))
-  TOM.sv <- sv$v %*% diag(sqrt(sv$d))
-  rownames(TOM.sv) <- colnames(datExpr)
+  sv <- irlba::irlba(TOM, nv = min(sv.dim,dim(X)))
+  svTOM <- sv$v %*% diag(sqrt(sv$d))
+  rownames(svTOM) <- colnames(datExpr)
   
   ## compute module eigenvectors (loading matrix)
   message("[wgcna.compute] computing module eigenvectors...")
@@ -284,17 +287,27 @@ wgcna.compute <- function(X,
   stats <- wgcna.compute_geneStats(net, datExpr, datTraits, TOM=TOM) 
   
   ## module-traits matrix
+  message("[wgcna.compute] computing module-traits matrix...")
   modTraits <- cor(net$MEs, datTraits, use="pairwise")
-
+  
   ## merge dendrograms
-  net$merged_dendro <- wgcna.merge_block_dendrograms(net, TOM)   
+  if(merge.dendro) {
+    message("[wgcna.compute] merge_block_dendrograms...")  
+    merged <- try(wgcna.merge_block_dendrograms(net, TOM))
+    if(!inherits(merged,"try-error")) {
+      net$merged_dendro <- merged
+    } else {
+      net$merged_dendro <- NULL
+    }
+  }
+  remove(TOM)
   
   ## construct results object
   results <- list(
       datExpr = datExpr,
       datTraits = datTraits,
-      ##TOM = TOM,  ## this can be BIG!!!
-      TOM.sv = TOM.sv,  ## smaller singular vectors
+      ## TOM = TOM,  ## this can be BIG!!!
+      svTOM = svTOM,  ## smaller singular vectors
       net = net,
       power = power,
       me.genes = me.genes,
@@ -650,10 +663,17 @@ wgcna.runConsensusWGCNA <- function(exprList,
   }
   
   ## merge dendrograms
+  message("[wgcna.compute] merge_block_dendrograms...")  
   multiX <- Matrix::t(do.call(rbind,lapply(exprList,function(x)scale(t(x)))))
-  net$merged_dendro <- wgcna.merge_block_dendrograms(net, multiX)   
+  merged <- try(wgcna.merge_block_dendrograms(net, multiX))
+  if(!inherits(merged,"try-error")) {
+    net$merged_dendro <- merged
+  } else {
+    net$merged_dendro <- NULL
+  }
   
   ## create module-trait matrices for each set
+  message("[wgcna.compute] computing module-traits matrices...")
   Z.list <- list()
   k=1
   for(k in names(net$multiME)) {
@@ -667,6 +687,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
   Z.list
 
   ## create consensus module-trait matrix
+  message("[wgcna.compute] computing consensus module-traits matrix...")
   mdim <- sapply(exprList, ncol)
   pv <- mapply(function(z, n) corPvalueStudent(z, n), Z.list, mdim, SIMPLIFY = FALSE)
   all.sig <- Reduce("*", lapply(pv, function(p) 1 * (p < 0.05)))
@@ -684,7 +705,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
   res <- list(
     net = net,
     modTraits = consZ,
-    dendro = cons$merged_dendro,    
+    dendro = net$merged_dendro,    
     colors = colors,
     zlist = Z.list,
     ydim = ydim
@@ -752,27 +773,34 @@ wgcna.getGeneStats <- function(wgcna, module, trait, plot = TRUE,
   df
 }
 
-wgcna.merge_block_dendrograms <- function(net, X) {
+wgcna.merge_block_dendrograms <- function(net, X, method=1) {
+  ## This function is fragile: it can give a C stack limit error. In
+  ## case that happens you can increase the stack limit by running on
+  ## the cmd line: >>> ulimit -s unlimited
+  ## 
   hc = net$dendrograms
-  length(hc)
-  if(length(hc)==1) {
-    return(net$dendrograms[[1]])
-  }
+  
   ## merge block dendrogram
   mx <- list()
-  for(b in 1:length(net$dendrogram)) {
+  for(b in 1:length(net$dendrograms)) {
     ii <- which(net$goodGenes & net$blocks==b)
     mx[[b]] <- colMeans(X[ii,])
     hc[[b]]$labels <- rownames(X)[ii]
   }
+
+  if(length(hc)==1) {
+    return(hc[[1]])
+  }
+  
   M <- do.call(rbind, mx)
   hclust_p = hclust(dist(M),method="average")
   dend_p = as.dendrogram(hclust_p)
   dend.list = lapply(hc, as.dendrogram)
-  if(0) {
-    merged_dendro = ComplexHeatmap::merge_dendrogram(dend_p, dend.list)
+  
+  if(method==1) {
+    merged = ComplexHeatmap::merge_dendrogram(dend_p, dend.list)
   } else {
-    mrg <- hclust_p$merge
+    mrg <- hclust_p$merge    
     merged_branch <- list()
     k=1
     for(k in 1:nrow(mrg)) {
@@ -781,12 +809,13 @@ wgcna.merge_block_dendrograms <- function(net, X) {
       if(i<0) d1 <- dend.list[[-i]]
       if(i>0) d1 <- merged_branch[[i]]      
       if(j<0) d2 <- dend.list[[-j]]
-      if(j>0) d2 <- merged_branch[[j]]      
-      merged_branch[[k]] <- merge(d1,d2)
+      if(j>0) d2 <- merged_branch[[j]]
+      merged_branch[[k]] <- merge(d1,d2)  ## actual merge
     }
-    merged_dendro <- merged_branch[[k]]
+    merged <- merged_branch[[k]]
   }
-  merged_hclust <- as.hclust(merged_dendro)
+  
+  merged_hclust <- as.hclust(merged)
   merged_hclust
 }
 
@@ -797,76 +826,94 @@ wgcna.merge_block_dendrograms <- function(net, X) {
 #'
 #'
 #' @export
-wgcna.plotTOM <- function(wgcna, justdata = FALSE, block=NULL) {
+wgcna.plotTOM <- function(wgcna, justdata = FALSE, block=NULL,
+                          legend=TRUE, downsample=NULL) {
 
   datExpr <- wgcna$datExpr
-  MEs <- wgcna$net$MEs
-
-  ## Topological overlap dissimilarity matrix
-  wTOM <- NULL
-  if("TOM" %in% names(wgcna)) wTOM <- wgcna$TOM
-  if(is.null(wTOM) && "TOM.sv" %in% names(wgcna)) {
-    wTOM  <- wgcna$TOM.sv %*% t(wgcna$TOM.sv)
+  wTOM <- NULL  
+  if(!is.null(wgcna$TOM)) {
+    wTOM <- wgcna$TOM
+  }
+  ## if SV of TOM is stored, reconstruct TOM
+  if(is.null(wTOM) && !is.null(wgcna$svTOM)) {
+    wTOM  <- wgcna$svTOM %*% t(wgcna$svTOM)
+  }
+  if(is.null(wTOM)) {
+    message("[wgcna.plotTOM] ERROR. no TOM matrix")
+    return(NULL)
   }
   dissTOM <- 1 - wTOM
   rownames(dissTOM) <- colnames(dissTOM) <- colnames(datExpr)
-
+  
   ## clustering wgcnaults
-  ##geneTree <- wgcna$net$dendrograms[[1]]
-  if(is.null(block) || "merged_dendro" %in% names(wgcna$net)) {
+  moduleColors <- NULL
+  if(is.null(block) && "merged_dendro" %in% names(wgcna$net)) {
     geneTree <- wgcna$net$merged_dendro
-    gg <- wgcna$net$merged_dendro$labels
-    dissTOM <- dissTOM[gg,gg]
-    moduleColors <- wgcna.labels2colors(wgcna$net$colors[gg])
-  } else {
+    gg <- geneTree$labels    
+    if(length(gg)>0) {
+      dissTOM <- dissTOM[gg,gg]
+      moduleColors <- wgcna.labels2colors(wgcna$net$colors[gg])
+    }
+  }
+
+  if(is.null(moduleColors)) {
+    if(is.null(block)) block <- 1
     geneTree <- wgcna$net$dendrograms[[block]]
     ii <- which(wgcna$net$blocks == block & wgcna$net$goodGenes==TRUE)
     gg <- names(wgcna$net$color)[ii]
     dissTOM <- dissTOM[gg,gg]
     moduleColors <- wgcna.labels2colors(wgcna$net$colors[gg])
   }
-  
-  ## Taking the dissimilarity to a power, say 10, makes the plot
-  ## more informative by effectively changing the color palette;
-  ## setting the diagonal to NA also improves the clarity of the
-  ## plot
-  plotDiss <- dissTOM^7
-  diag(plotDiss) <- NA
-  myheatcol <- gplots::colorpanel(250, "red", "orange", "lemonchiffon")
-  myheatcol <- gplots::colorpanel(250, "lemonchiffon", "orange", "red")
 
   if (justdata) {
-    return(plotDiss)
+    return(dissTOM)
   }
-
-  par(oma = c(2, 0, 0, 0))
-  plotly::layout(
-    matrix(c(
-      0, 0, 5, 0,
-      0, 0, 2, 0,
-      4, 1, 3, 6
-    ), nr = 3, byrow = TRUE),
-    widths = c(2.3, 0.5, 10, 3),
-    heights = c(2.3, 0.5, 10)
-  )
-
-  WGCNA::TOMplot(
-    plotDiss,
-    geneTree,
-    moduleColors,
-    # col = myheatcol,
-    setLayout = FALSE,
-    main = NULL
-  )
-
-  ## add color legend
-  frame()
-  legend(
-    -0.1, 1,
-    fill = wgcna$me.colors,
-    legend = names(wgcna$me.colors),
-    cex = 1.2, bty = "n", x.intersp = 0.5
-  )
+ 
+  if(!is.null(downsample) && ncol(dissTOM)>downsample) {
+    ii <- seq(1,ncol(dissTOM),length.out=downsample)
+    dissTOM <- dissTOM[ii,ii]
+    moduleColors <- moduleColors[ii]
+    geneTree <- fastcluster::hclust(as.dist(dissTOM),
+                                    method = "average")
+  }
+  
+  if(legend) {
+    par(oma = c(1,0,0,0), mar=c(0,0,0,0))
+    plotly::layout(
+      matrix(c(
+        0, 0, 5, 0,
+        0, 0, 2, 0,
+        4, 1, 3, 6
+      ), nr = 3, byrow = TRUE),
+      widths = c(2.3, 0.5, 10, 3),
+      heights = c(2.3, 0.5, 10)
+    )
+    WGCNA::TOMplot(
+      dissTOM^7,
+      geneTree,
+      moduleColors,
+      setLayout = FALSE,
+      main = NULL
+    )
+    
+    ## add color legend
+    frame()
+    legend(
+      -0.1, 1,
+      fill = wgcna$me.colors,
+      legend = names(wgcna$me.colors),
+      cex = 1.2, bty = "n", x.intersp = 0.5
+    )
+  } else {
+    WGCNA::TOMplot(
+      dissTOM^7,
+      geneTree,
+      moduleColors,
+      setLayout = TRUE,
+      main = NULL
+    )
+  }
+  
 }
 
 #'
@@ -1529,10 +1576,7 @@ wgcna.filterColors <- function(X, colors, minKME=0.3, mergeCutHeight=0.15,
     keep <- tapply( names(kme), new.colors, function(i) head(names(sort(-kme[i])),ntop) )
     keep <- unlist(keep)
     not.keep <- setdiff(names(kme), keep)
-    dbg("[wgcna.filterColors] len.keep = ", length(keep))
-    dbg("[wgcna.filterColors] len.notkeep = ", length(not.keep))
     if(length(not.keep)) new.colors[not.keep] <- NA
-    dbg("[wgcna.filterColors] sum.isna.newcolors = ", sum(is.na(new.colors)))
   }
 
   new.colors[which(is.na(new.colors))] <- grey.val
