@@ -826,10 +826,7 @@ deep.plotMultiOmicsGradients <- function(grad, n = 20, cex.names = 1,
 
       barplot(sort(gr), ylab = "gradient", las = 3, cex.names = cex.names)
       title(
-        paste0(
-          "phenotype=", colnames(grad[[1]])[k],
-          "; datatype=", names(grad)[i]
-        ),
+        paste0(colnames(grad[[1]])[k],"@", names(grad)[i]),
         line = -0.5, cex.main = 1.15
       )
     }
