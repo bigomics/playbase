@@ -224,7 +224,6 @@ pgx.createPGX <- function(counts,
   }
 
   if (!is.null(X)) {
-    message("[createPGX] class.X: ", class(X))
     message("[createPGX] dim.X: ", dim(X)[1], " x ", dim(X)[2])
     message("[createPGX] Normalization method:", norm_method)
     ndups <- sum(duplicated(rownames(X)))
@@ -347,13 +346,8 @@ pgx.createPGX <- function(counts,
   if (all(kk %in% rownames(contrasts))) {
     contrasts <- contrasts[kk, , drop = FALSE]
   }
-
-  ## 1. Clean up inline duplicated features: eg: feature1;feature1;..
-  # dedup_probes <- clean_dups_inline_probenames(rownames(counts))
-  # rownames(counts) <- rownames(X) <- dedup_probes
-  # if (!is.null(impX)) rownames(impX) <- dedup_probes
   
-  ## 2. Make duplicated rownames unique (NOTE!!! new default since v3.5.1)
+  ## 1. Make duplicated rownames unique (NOTE!!! new default since v3.5.1)
   ndup <- sum(duplicated(rownames(counts)))
   if (ndup > 0) {
     info("[createPGX] duplicated rownames detected. making unique.")
@@ -532,12 +526,13 @@ pgx.createPGX <- function(counts,
   unknown.organism <- (pgx$organism %in% c("No organism","custom","unkown"))
   unknown.datatype <- (pgx$datatype %in% c("custom","unkown"))  
   no3 <- unknown.organism && is.null(annot_table) && is.null(custom.geneset) 
-  if ( no3 || unknown.datatype || !add.gmt) {
+  if (no3 || unknown.datatype || !add.gmt) {
     message("[createPGX] WARNING: empty GMT matrix. No gene sets. " )    
     pgx$GMT <- Matrix::Matrix(0, nrow = 0, ncol = 0, sparse = TRUE)
   } else {
     pgx <- pgx.add_GMT(
-      pgx = pgx, custom.geneset = custom.geneset,
+      pgx = pgx,
+      custom.geneset = custom.geneset,
       max.genesets = max.genesets
     )
     message("[createPGX] dim(GMT) =  ", dim(pgx$GMT)[1], "x", dim(pgx$GMT)[2])
@@ -550,10 +545,8 @@ pgx.createPGX <- function(counts,
     pgx$samples <- pgx$samples[, colMeans(is.na(pgx$samples)) < 1, drop = FALSE]
   }
 
-  message("[pgx.createPGX] dim(pgx$counts): ", paste0(dim(pgx$counts), collapse=","))
   message("[pgx.createPGX] dim(pgx$X): ", paste0(dim(pgx$X), collapse=","))
   message("[pgx.createPGX] dim(pgx$samples): ", paste0(dim(pgx$samples), collapse=","))
-  message("[createPGX] pgx$counts has ", sum(is.na(pgx$counts)), " missing values")
   message("[createPGX] pgx$X has ", sum(is.na(pgx$X)), " missing values")
 
   rm(counts, X, impX, samples, contrasts)
@@ -639,22 +632,30 @@ pgx.computePGX <- function(pgx,
   if (!all(grepl("_vs_", colnames(pgx$contrasts)))) {
     stop("[pgx.computePGX] FATAL:: all contrast names must include _vs_")
   }
-  
-  ## use.design=FALSE (now default): we test each contrast separately.
-  ## If re-running pgx.computePGX on its own (without re-running pgx.createPGX),
-  ## all existing contrasts are tested (including .cluster:c*_vs_others).
-  ## Avoiding this.
-  kk <- grep(".cluster", colnames(pgx$samples))
-  if (any(kk)) pgx$samples <- pgx$samples[, -kk, drop = FALSE]
-  kk <- grep(".cluster:c*", colnames(pgx$contrasts))
-  if (any(kk)) pgx$contrasts <- pgx$contrasts[, -kk, drop = FALSE]
+
+  ## -----------------------------------------------------------------------------
+  ## Time series: check methods
+  ## -----------------------------------------------------------------------------
+  timeseries <- any(grepl("IA:*", colnames(pgx$contrasts)))
+  if (timeseries) {
+    ts.mm <- c("trend.limma", "deseq2.lrt", "edger.lrt", "edger.qlf")
+    cm <- intersect(gx.methods, ts.mm)
+    if (length(cm) == 0) {
+      message("[ngs.fitContrastsWithAllMethods] For time series analysis, gx.methods must be one of ",
+        paste0(ts.mm, collapse="; "), " Skipping time series analysis.")
+      hh <- grep("IA:*", colnames(pgx$contrasts))
+      pgx$contrasts <- pgx$contrasts[, -hh, drop = FALSE]
+    } else {
+      gx.methods <- cm
+    }
+  }
   
   contr.matrix <- contrasts.convertToLabelMatrix(pgx$contrasts, pgx$samples)
   contr.matrix <- makeContrastsFromLabelMatrix(contr.matrix)
   contr.matrix <- sign(contr.matrix) ## sign is fine
 
   ## sanity check
-  if(NCOL(contr.matrix)==0) {
+  if (NCOL(contr.matrix) == 0) {
     message("[pgx.computePGX] WARNING: FATAL ERROR. zero contrasts")
     return(pgx)
   }
@@ -666,7 +667,6 @@ pgx.computePGX <- function(pgx,
   ## -------------------------------------------------------------------
   ## Clustering
   ## -------------------------------------------------------------------
-
   ## Cluster by sample
   if (do.cluster || cluster.contrasts) {
     message("[pgx.computePGX] clustering samples...")
@@ -750,7 +750,6 @@ pgx.computePGX <- function(pgx,
 
   ## ------------------ gene level tests ---------------------
   if (!is.null(progress)) progress$inc(0.1, detail = "testing genes")
-
 
   timeseries <- any(grepl("IA:*", colnames(pgx$contrasts)))
   
