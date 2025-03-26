@@ -729,7 +729,6 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
   if (!all(colnames(X) %in% names(timeseries)))
     stop("[ngs.fitContrastsWithLIMMA.timeseries] X and timeseries vector contain different set of samples.")
 
-  ## For highly sparse time points, should we merge time points??? eg. IBD/UC data (GSE73661)
   jj <- match(colnames(X), names(timeseries))
   time0 <- as.character(unname(timeseries[jj]))
   num.time <- as.numeric(gsub("\\D", "", time0))
@@ -1149,7 +1148,6 @@ ngs.fitContrastsWithEDGER <- function(counts,
     if ("try-error" %in% class(design)) next;
     message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
 
-    ## For highly sparse time points, should we merge time points??? eg. IBD/UC data (GSE73661)
     dge.disp <- try(edgeR::estimateDisp(dge$counts, design = design, robust = robust), silent = TRUE)
     if ("try-error" %in% class(dge.disp)) next;
     
@@ -1456,7 +1454,6 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
   if (!all(colnames(counts) %in% names(timeseries)))
     stop("[ngs.fitConstrastsWithDESEQ2.nodesign] and time contain different set of samples")
 
-  ## For highly sparse time points, should we merge time points??? eg. IBD/UC data (GSE73661)
   jj <- match(colnames(counts), names(timeseries))
   time0 <- as.character(timeseries[jj])
   time0 <- gsub("\\D", "", unname(time0))
@@ -1470,8 +1467,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
     design = ~ y * splines::ns(time),
     colData = colData
   )
-  dds <- DESeq2::DESeq(dds, test = "LRT", reduced = ~ y)
-  #dds <- DESeq2::DESeq(dds, test = "LRT", reduced = ~1)
+  dds <- DESeq2::DESeq(dds, test = "LRT", reduced = ~ y) ## reduced = ~1
   resx <- DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE)
   
   ## Q: does the condition induces a change in gene expression at
