@@ -114,11 +114,15 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     if (length(cm) == 0) {
       message("[ngs.fitContrastsWithAllMethods] For time series analysis, gx.methods must be one of ",
         paste0(ts.mm, collapse="; "), " Skipping time series analysis.")
+      hh <- grep("IA:*", colnames(contr.matrix))
+      if (length(hh)) contr.matrix <- contr.matrix[, -hh, drop = FALSE]
       timeseries <- NULL
     } else {
       methods <- cm
     }
   }
+  ## TO DO: --------------REMOVE @IA FROM pgx$contrasts if timeseries is OFF. 
+
   
   ## ------------------------------------------------------------------
   ## define transformation methods: log2CPM for counts
@@ -333,20 +337,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
 
     exp.matrix <- contr.matrix
 
-    ##---not needed if contr.matrix expanded in origin 
-    all.contrs <- unlist(sapply(outputs, function(x) names(x[[1]])))
-    if (class(all.contrs)[1] %in% c("matrix", "array")) all.contrs <- all.contrs[,1]
-    new.contrs <- setdiff(all.contrs, colnames(exp.matrix))
-    if (length(new.contrs)) {
-      i=1
-      for(i in 1:length(new.contrs)) {
-        contr0 <- strsplit(new.contrs[i], ":")[[1]][2]
-        jj <- match(contr0, colnames(exp.matrix))
-        exp.matrix <- cbind(exp.matrix, x=exp.matrix[,jj])
-        colnames(exp.matrix)[ncol(exp.matrix)] <- new.contrs[i]
-      }
-    }
-
     if (!is.null(design)) exp.matrix <- (design %*% contr.matrix)
     samplesX <- lapply(apply(exp.matrix != 0, 2, which,  simplify = FALSE), function(i) rownames(exp.matrix)[i])
     samples1 <- lapply(apply(exp.matrix > 0, 2, which, simplify = FALSE), function(i) rownames(exp.matrix)[i])
@@ -369,30 +359,25 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   ##-----------------------------------------------------------------------
   ## Put "IA:*" contrasts as last columns in outputs limma/DeSeq2/EdgeR. NEEDED??
   ##-----------------------------------------------------------------------
-  if (!is.null(timeseries)) {
-    i <- 1
-    for (i in 1:length(outputs)) {
-      contr.names <- names(outputs[[i]]$tables)
-      chk1 <- grep("^IA:*", contr.names)
-      if (any(chk1)) {
-        ss <- unique(c(contr.names[-chk1], contr.names[chk1]))
-        jj <- match(ss, names(outputs[[i]]$tables))
-        outputs[[i]]$tables <- outputs[[i]]$tables[jj]
-        names(outputs[[i]]$tables) <- ss 
-      }
-    }
-  }  
+  ## if (!is.null(timeseries)) {
+  ##   i <- 1
+  ##   for (i in 1:length(outputs)) {
+  ##     contr.names <- names(outputs[[i]]$tables)
+  ##     chk1 <- grep("^IA:*", contr.names)
+  ##     if (any(chk1)) {
+  ##       ss <- unique(c(contr.names[-chk1], contr.names[chk1]))
+  ##       jj <- match(ss, names(outputs[[i]]$tables))
+  ##       outputs[[i]]$tables <- outputs[[i]]$tables[jj]
+  ##       names(outputs[[i]]$tables) <- ss 
+  ##     }
+  ##   }
+  ## }  
 
   ## ----------------------------------------------------------------------
   ## add some statistics
   ## ----------------------------------------------------------------------
   message("[ngs.fitContrastsWithAllMethods] calculating statistics...")
 
-  nc.tests <- c("ttest", "ttest.welch", "voom.limma", "notrend.limma", "edger.qlf", "deseq2.wald")
-  all.contrs <- unlist(sapply(outputs, function(x) names(x[[1]])))
-  if (class(all.contrs)[1] %in% c("matrix", "array")) all.contrs <- all.contrs[, 1]
-  all.contrs <- unique(unname(all.contrs))
-  
   i <- 1
   for (i in 1:length(outputs)) {
     res <- outputs[[i]]
@@ -423,13 +408,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     }
     colnames(sig.both) <- colnames(sig.notsig) <- qvalues
     colnames(sig.up) <- colnames(sig.down) <- qvalues
-
-    if (!is.null(timeseries) && (names(outputs)[i] %in% nc.tests)) {
-      sig.both[new.contrs, ] <- NA
-      sig.notsig[new.contrs, ] <- NA
-      sig.up[new.contrs, ] <- NA
-      sig.down[new.contrs, ] <- NA
-    }
 
     res$sig.counts <- list(both = sig.both, up = sig.up, down = sig.down, notsig = sig.notsig)
 
@@ -531,7 +509,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     timings = timings0,
     X = X
   )
-
   return(res)
   
 }
@@ -728,33 +705,6 @@ ngs.fitContrastsWithLIMMA <- function(X,
       tables[[i]] <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
       names(tables)[i] <- colnames(exp0)[i]
     }
-
-    ## add timeseries DGE tables if time not NULL
-    ## if (!is.null(timeseries)) {
-    ##   message("[ngs.fitContrastsWithLIMMA] Fitting LIMMA contrasts for time series *without* design")
-    ##   exp0 <- contr.matrix
-    ##   sel <- colnames(exp0)[grepl("^IA:*", colnames(exp0))]
-    ##   exp0 <- exp0[, sel, drop = FALSE]
-    ##   ll <- length(tables)
-    ##   i=1
-    ##   for (i in 1:ncol(exp0)) {
-    ##     kk <- 1:nrow(exp0)
-    ##     if (prune.samples)
-    ##       kk <- which(!is.na(exp0[, i]) & exp0[, i] != 0)
-    ##     ct <- exp0[kk, i]
-    ##     y <- factor(c("neg", "o", "pos")[2 + sign(ct)])
-    ##     X1 <- X[, kk, drop = FALSE]
-    ##     top <- ngs.fitContrastsWithLIMMA.timeseries(X1, y, timeseries, trend = TRUE)
-    ##     j1 <- which(ct > 0)
-    ##     j0 <- which(ct < 0)
-    ##     mean1 <- rowMeans(X1[, j1, drop = FALSE], na.rm = TRUE)
-    ##     mean0 <- rowMeans(X1[, j0, drop = FALSE], na.rm = TRUE)
-    ##     top <- top[rownames(X1), , drop = FALSE]
-    ##     tables[[ll + i]] <- cbind(top, "AveExpr0" = mean0, "AveExpr1" = mean1)
-    ##     names(tables)[ll + i] <- colnames(exp0)[i]
-    ##     #names(tables)[ll + i] <- paste0("IA:", colnames(exp0)[i], sep = "")
-    ##   }
-    ## }
 
   }
   
@@ -1522,13 +1472,13 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
   colData <- data.frame(y = y, time = time0)
 
   #ndf <- length(unique(colData$time)) - 1
-  dds <- DESeqDataSetFromMatrix(
+  dds <- DESeq2::DESeqDataSetFromMatrix(
     counts,
     design = ~ y * splines::ns(time),
     colData = colData
   )
-  dds <- DESeq(dds, test = "LRT", reduced = ~ y)
-  #dds <- DESeq(dds, test = "LRT", reduced = ~1)
+  dds <- DESeq2::DESeq(dds, test = "LRT", reduced = ~ y)
+  #dds <- DESeq2::DESeq(dds, test = "LRT", reduced = ~1)
   resx <- DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE)
   
   ## Q: does the condition induces a change in gene expression at
