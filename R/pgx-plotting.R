@@ -6581,3 +6581,92 @@ plotTimeSeries.modules_groups <- function(time, X, modules, group) {
     ggplot2::facet_wrap(~module, labeller = labeller)
 
 }
+
+
+
+#'
+#' @export
+plotBipartiteGraph <- function(R1, y, min.rho=0.8, ntop=25,
+                               labels=NULL, cex.label=1) {
+
+  idx <- which(abs(R1) > min.rho, arr.ind=TRUE)
+  ee <- cbind(rownames(R1)[idx[,1]], colnames(R1)[idx[,2]])
+  gr <- igraph::graph_from_edgelist(ee, directed=FALSE)
+  igraph::E(gr)$weight <- abs(R1[idx]) - min(abs(R1[idx]))
+  igraph::E(gr)$sign <- sign(R1[idx])
+
+  ## limit number per group
+  igraph::V(gr)$group <- c("from","to")[1+1*(igraph::V(gr)$name %in% colnames(R1))]
+  sel <- tapply(igraph::V(gr)$name, igraph::V(gr)$group,
+    function(i) head(names(sort(-abs(y[i]))),ntop))
+  sel <- unique(unlist(sel))
+  gr <- igraph::subgraph(gr, sel)
+  
+  avg <- c(rowMeans(R1**2),colMeans(R1**2))
+  x <- 0.2*(-1 + 2*(igraph::V(gr)$name %in% colnames(R1)))
+  y <- y[igraph::V(gr)$name] / max(abs(y))
+  my_layout <- cbind(x=x, y=y)
+  for(i in unique(my_layout)[,1]) {
+    ii <- which(my_layout[,1]==i)
+    my_layout[ii,2] <- rank(my_layout[ii,2]) / length(ii)
+  }
+  
+  ew <- (igraph::E(gr)$weight / max(igraph::E(gr)$weight))**4
+  vx <- avg[igraph::V(gr)$name] 
+  vx <- log(1000*igraph::page.rank(gr)$vector)
+  #vx   <-  abs(y)
+  vx <- (0.1+abs(vx)/max(abs(vx)))**1
+  vcol <- c("blue2","red2")[ 1+1*(y > 0)]
+    
+  ##  ecol <- c("black","grey50")[ 1+1*(E(gr)$sign>0)]
+  ecol <- c("red2","black")[ 1+1*(igraph::E(gr)$sign>0)]  
+  ecol <- adjustcolor(ecol,0.2)
+  table(ecol)
+  
+  igraph::V(gr)$label <- ""
+  
+  plot(
+    gr,
+    # layout=layout_with_kk,
+    layout = my_layout,  
+    edge.width = 5*ew**1,
+    edge.color = ecol,
+    vertex.label.color = "black",
+    vertex.label.dist = 0,  
+    vertex.label.degree = 0,
+    vertex.label.size = 0.001,  
+    vertex.size = 3.5*vx,
+    vertex.color = vcol,  
+    xlim = c(-1,1),
+    ylim = c(0,1.1),  
+    rescale = FALSE
+  )
+
+  x <- my_layout[,1]
+  x1 <- min(x)
+  x2 <- max(x)  
+  grp1 <- paste(sort(unique(sub(":.*","",rownames(R1)))),collapse="/")
+  grp2 <- paste(sort(unique(sub(":.*","",colnames(R1)))),collapse="/")  
+  text( x1, 1.07, grp1, font=2, cex=1.2)
+  text( x2, 1.07, grp2, font=2, cex=1.2)
+
+  ## plot labels 
+  if(!is.null(labels)) {
+    labels <- labels[rownames(my_layout)]
+  } else {
+    labels <- rownames(my_layout)
+  }
+  text( my_layout[,1], my_layout[,2],
+       labels, cex=cex.label,
+       pos = c(2,4)[1+1*(x>0)], adj=1, offset=5.5)
+
+  ## plot logFC
+  text( x1, -0.01, "log2FC", cex=0.9, font=2, 
+    pos = c(2,4)[1+1*(x>0)], adj=1, offset=2)
+  text( x2, -0.01, "log2FC", cex=0.9, font=2, 
+    pos = c(2,4)[1+1*(x>0)], adj=1, offset=2)
+  text( my_layout[,1], my_layout[,2], cex=0.8,
+       round(y[rownames(my_layout)],2),
+       pos = c(2,4)[1+1*(x>0)], adj=1, offset=2)
+
+}
