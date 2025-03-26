@@ -75,9 +75,9 @@ ngs.fitContrastsWithAllMethods <- function(counts,
                                            correct.AveExpr = TRUE,
                                            custom = NULL,
                                            custom.name = NULL,
-                                           timeseries = NULL) {
+                                           timeseries = FALSE
+                                           ) {
 
-  
   ## Don't test fully missing features. Put them back in toptable.
   counts <- counts[which(rowMeans(is.na(counts)) < 1), ]
   if (!is.null(X)) X <- X[which(rowMeans(is.na(X)) < 1), ]
@@ -104,11 +104,15 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   }
 
   counts <- pmax(counts, 0)
-  
-  ## ------------------------------------------------------------------
-  ## Check timeseries methods
-  ## ------------------------------------------------------------------
-  if (!is.null(timeseries)) {
+
+  ## -----------------------------------------------------------------------------
+  ## Time series: determine variable 'time' && check methods
+  ## -----------------------------------------------------------------------------  
+  if (timeseries) {
+    time.var <- "minute|hour|day|week|month|year|time"
+    sel <- grep(time.var, colnames(samples))
+    timeseries <- as.character(samples[, sel[1]])
+    names(timeseries) <- rownames(samples)
     ts.mm <- c("trend.limma", "deseq2.lrt", "edger.lrt", "edger.qlf")
     cm <- intersect(methods, ts.mm)
     if (length(cm) == 0) {
@@ -116,13 +120,12 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         paste0(ts.mm, collapse="; "), " Skipping time series analysis.")
       hh <- grep("IA:*", colnames(contr.matrix))
       if (length(hh)) contr.matrix <- contr.matrix[, -hh, drop = FALSE]
+      ## also REMOVE @IA from pgx$contrasts! to do.
       timeseries <- NULL
     } else {
-      methods <- cm
+        methods <- cm
     }
   }
-  ## TO DO: --------------REMOVE @IA FROM pgx$contrasts if timeseries is OFF. 
-
   
   ## ------------------------------------------------------------------
   ## define transformation methods: log2CPM for counts

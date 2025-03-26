@@ -25,7 +25,9 @@ compute_testGenes <- function(pgx,
                               use.design = FALSE,
                               prune.samples = TRUE,
                               remove.outputs = TRUE,
-                              timeseries = FALSE) {
+                              timeseries = FALSE
+                              ) {
+
   message("[compute_testGenes] detecting stat groups...")
   
   ## -----------------------------------------------------------------------------
@@ -34,6 +36,7 @@ compute_testGenes <- function(pgx,
   if (!("counts" %in% names(pgx))) {
     stop("[compute_testGenes] FATAL: cannot find counts in pgx object")
   }
+
   if (!("X" %in% names(pgx))) {
     stop("[compute_testGenes] FATAL: cannot find normalized expression X in pgx object")
   }
@@ -48,7 +51,6 @@ compute_testGenes <- function(pgx,
     stop("[compute_testGenes] FATAL: zero contrasts")
   }
 
-  
   stat.group <- NULL
   if (use.design) {
     message("[compute_testGenes] detecting stat groups...")
@@ -148,18 +150,6 @@ compute_testGenes <- function(pgx,
   counts <- pgx$counts[gg, ss, drop = FALSE]
   samples <- pgx$samples[ss, ]
   X <- pgx$X[gg, ss, drop = FALSE]
-
-  ## -----------------------------------------------------------------------------
-  ## Time series: determine variable 'time'
-  ## -----------------------------------------------------------------------------
-  if (timeseries) {
-    time.var <- "minute|hour|day|week|month|year|time"
-    sel <- grep(time.var, colnames(pgx$samples))
-    timeseries <- as.character(pgx$samples[, sel[1]])
-    names(timeseries) <- rownames(pgx$samples)
-  } else {
-    timeseries <- NULL
-  }
      
   ## -----------------------------------------------------------------------------
   ## Do the fitting
