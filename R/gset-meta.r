@@ -95,10 +95,10 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     message("fitting contrasts using spearman/limma... ")
     ## single-sample gene set enrichment using (fast) rank correlation
     xx1 <- X - rowMeans(X, na.rm = TRUE) ## center it...
-    xx1 <- apply(xx1, 2, rank, na.last = "keep") ## rank correlation (like spearman)
+    xx1 <- matrixStats::colRanks(xx1) ## rank correlation (like spearman)
     ## NOTE IK: 3.2025 should we use averageCLR????
     tt <- system.time({
-      zx.rnkcorr <- qlcMatrix::corSparse(G, xx1) ## superfast
+      zx.rnkcorr <- cor_sparse_matrix(G, xx1)
       rownames(zx.rnkcorr) <- colnames(G)
       colnames(zx.rnkcorr) <- colnames(X)
 
