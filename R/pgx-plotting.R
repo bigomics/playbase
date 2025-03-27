@@ -6680,7 +6680,7 @@ plotBipartiteGraph <- function(R, y, min.rho=0.8, ntop=25,
 #' @export
 plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
                                   min.rho=0.8, ntop=25, yheight=2,
-                                  labels=NULL, cex.label=1,
+                                  labels=NULL, cex.label=1, vx.cex=1,
                                   xpos=NULL, xlim=NULL,
                                   edge.alpha=0.33) {
 
@@ -6791,7 +6791,7 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
     vertex.label.dist = 0,  
     vertex.label.degree = 0,
     vertex.label.size = 0.001,  
-    vertex.size = 7*vx,
+    vertex.size = 6*vx*vx.cex,
     vertex.color = vcol,  
     xlim = xlim,
     ylim = range(my_layout[,2]) + c(-0.03,0.08)*yheight,
@@ -6804,17 +6804,17 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
   ## titles
   for(i in 1:length(groups)) {
     grp1 <- groups[i]
-    text(xpos[i], max(y), grp1, font=2, cex=1.2, pos=3, adj=0, offset=1.2)
+    text(xpos[i], max(y), grp1, font=2, cex=1.25, pos=3, adj=0, offset=1.3)
   }
 
   ## plot logFC
   xt <- min(xpos) + 0.66*diff(range(xpos))
   for(i in 1:length(groups)) {
     tpos <- c(2,4)[1+1*(xpos[i]>xt)]
-    text( xpos[i], -0.03, "log2FC", cex=0.8, font=2, pos=tpos,
-         adj=1, offset=1.2)
+    text( xpos[i], -0.02, "log2FC", cex=0.9*cex.label, font=2, pos=tpos,
+         adj=1, offset=1)
   }
-  text( x, y, cex=0.75, round( f[rownames(my_layout)],2),
+  text( x, y, cex=0.85*cex.label, round( f[rownames(my_layout)],2),
        pos = c(2,4)[1+1*(x>xt)], adj=1, offset=1.2)
 
   ## plot labels 
@@ -6823,7 +6823,6 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
   } else {
     labels <- rownames(my_layout)
   }
-  cex.label=0.8
   text(x, y, labels, cex=cex.label, pos=c(2,4)[1+1*(x>xt)],
        adj=1, offset=3.5)
 

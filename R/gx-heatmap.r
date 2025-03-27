@@ -127,7 +127,7 @@ gx.PCAcomponents <- function(X, nv = 20, ngenes) {
 #' @export
 gx.imagemap <- function(X, main = "", cex = 1, cex.main = 1.8,
                         clust = TRUE, col = NULL) {
-  if (clust) {
+  if (clust && min(dim(X))>=3) {
     ii <- fastcluster::hclust(stats::dist(X))$order
     jj <- fastcluster::hclust(stats::dist(t(X)))$order
     X <- X[ii, jj]
