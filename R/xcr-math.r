@@ -390,6 +390,31 @@ rowsduplicated.dgCMatrix <- function(M) {
   rowMeans(apply(M %*% matrix(rnorm(2*ncol(M)),ncol=2),2,duplicated))==1
 }
 
+
+#' Calculate sparse correlation matrix handling missing values
+#'
+#' @param G Sparse matrix containing gene sets
+#' @param mat Matrix of values
+#' @return Correlation matrix between G and mat
+#' @details If mat has no missing values, calculates correlation directly using corSparse.
+#' Otherwise computes column-wise correlations only using non-missing values.
+#' @export
+cor_sparse_matrix <- function(G, mat) {
+  if (sum(is.na(mat)) == 0) {
+    cor_matrix <- qlcMatrix::corSparse(G, mat)
+  } else {
+    message("matrix has missing values: computing column-wise reduced cor")
+    corSparse.vec <- function(X, y) {
+      y <- y[!is.na(y)]
+      gg <- intersect(rownames(X), names(y))
+      qlcMatrix::corSparse(X[gg, , drop = FALSE], cbind(y[gg]))
+    }
+    cor_matrix <- lapply(1:ncol(mat), function(i) corSparse.vec(G, mat[, i]))
+    cor_matrix <- do.call(cbind, cor_matrix)
+  }
+  return(cor_matrix)
+}
+
 ## ===================================================================================
 ## ============================== END OF FILE ========================================
 ## ===================================================================================

@@ -1220,11 +1220,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
     add.gmt <- NULL
     rr <- sample(3:400, 100)
 
-    if (is.null(pgx$genes$human_ortholog) || all(is.na(pgx$genes$human_ortholog)) || all(pgx$genes$human_ortholog == "")) {
-      gg <- pgx$genes$symbol
-    } else {
-      gg <- pgx$genes$human_ortholog # gmt should always map to human_ortholog
-    }
+    gg <- pgx$genes$symbol
 
     random.gmt <- lapply(rr, function(n) head(sample(gg), min(n, length(gg) / 2)))
     names(random.gmt) <- paste0("TEST:random_geneset.", 1:length(random.gmt))

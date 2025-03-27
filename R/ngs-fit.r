@@ -553,17 +553,12 @@ ngs.fitContrastsWithTTEST <- function(X,
 #' @export
 ngs.fitContrastsWithWILCOXON <- function(X, contr.matrix, design, conform.output = 0) {
 
-  tables <- list()
-  i <- 1
-
   exp.matrix <- contr.matrix
-  if (!is.null(design)) {
-    exp.matrix <- (design %*% contr.matrix)
-  }
+  if (!is.null(design)) exp.matrix <- (design %*% contr.matrix)
 
-  i <- 1
+  i=1; tables=list()
   for (i in 1:ncol(exp.matrix)) {
-
+    
     j1 <- which(exp.matrix[, i] > 0)
     j0 <- which(exp.matrix[, i] < 0)
     suppressWarnings(rt <- matrixTests::row_wilcoxon_twosample(
@@ -687,7 +682,10 @@ ngs.fitContrastsWithLIMMA <- function(X,
         colnames(contr1) <- "pos_vs_neg"
         contr1 <- contr1[colnames(vfit), , drop = FALSE]
         vfit <- limma::contrasts.fit(vfit, contrasts = contr1)
-        efit <- limma::eBayes(vfit, trend = trend, robust = robust)
+        efit <- try(limma::eBayes(vfit, trend = trend, robust = robust), silent = TRUE)
+        if ("try-error" %in% class(efit)) {
+          efit <- limma::eBayes(vfit, trend = FALSE, robust = FALSE)
+        }
         top <- limma::topTable(efit, coef = 1, sort.by = "none", number = Inf, adjust.method = "BH")
       }
       j1 <- which(ct > 0)

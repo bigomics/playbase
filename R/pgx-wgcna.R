@@ -64,8 +64,7 @@ pgx.wgcna <- function(
     sc <- pgx.supercell(counts, samples, group = group, gamma = nb)
     message("[pgx.wgcna] SuperCell done: ", ncol(counts), " ->", ncol(sc$counts))
     message("[pgx.wgcna] Normalizing supercell matrix (logCPM)")
-    X <- logCPM(sc$counts, total = 1e4, prior = 1)
-    X <- as.matrix(scX)
+    X <- as.matrix(logCPM(sc$counts, total = 1e4, prior = 1))
     samples <- sc$meta
     remove(counts, group, sc)
     gc()
