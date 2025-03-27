@@ -6583,27 +6583,31 @@ plotTimeSeries.modules_groups <- function(time, X, modules, group) {
 }
 
 
-
 #'
 #' @export
-plotBipartiteGraph <- function(R1, y, min.rho=0.8, ntop=25,
+plotBipartiteGraph <- function(R, y, min.rho=0.8, ntop=25,
                                labels=NULL, cex.label=1) {
 
-  idx <- which(abs(R1) > min.rho, arr.ind=TRUE)
-  ee <- cbind(rownames(R1)[idx[,1]], colnames(R1)[idx[,2]])
+  if(!is.matrix(R) || is.null(dim(R))) {
+    message("[plotBipartiteGraph] ERROR. R must be a matrix.")
+    return(NULL)
+  }
+  
+  idx <- which(abs(R) > min.rho, arr.ind=TRUE)
+  ee <- cbind(rownames(R)[idx[,1]], colnames(R)[idx[,2]])
   gr <- igraph::graph_from_edgelist(ee, directed=FALSE)
-  igraph::E(gr)$weight <- abs(R1[idx]) - min(abs(R1[idx]))
-  igraph::E(gr)$sign <- sign(R1[idx])
+  igraph::E(gr)$weight <- abs(R[idx]) - min(abs(R[idx]))
+  igraph::E(gr)$sign <- sign(R[idx])
 
   ## limit number per group
-  igraph::V(gr)$group <- c("from","to")[1+1*(igraph::V(gr)$name %in% colnames(R1))]
+  igraph::V(gr)$group <- c("from","to")[1+1*(igraph::V(gr)$name %in% colnames(R))]
   sel <- tapply(igraph::V(gr)$name, igraph::V(gr)$group,
     function(i) head(names(sort(-abs(y[i]))),ntop))
   sel <- unique(unlist(sel))
   gr <- igraph::subgraph(gr, sel)
   
-  avg <- c(rowMeans(R1**2),colMeans(R1**2))
-  x <- 0.2*(-1 + 2*(igraph::V(gr)$name %in% colnames(R1)))
+  avg <- c(rowMeans(R**2),colMeans(R**2))
+  x <- 0.2*(-1 + 2*(igraph::V(gr)$name %in% colnames(R)))
   y <- y[igraph::V(gr)$name] / max(abs(y))
   my_layout <- cbind(x=x, y=y)
   for(i in unique(my_layout)[,1]) {
@@ -6619,8 +6623,9 @@ plotBipartiteGraph <- function(R1, y, min.rho=0.8, ntop=25,
   vcol <- c("blue2","red2")[ 1+1*(y > 0)]
     
   ##  ecol <- c("black","grey50")[ 1+1*(E(gr)$sign>0)]
-  ecol <- c("red2","black")[ 1+1*(igraph::E(gr)$sign>0)]  
-  ecol <- adjustcolor(ecol,0.2)
+  ecol <- c("black","red2")[ 1+1*(igraph::E(gr)$sign>0)]
+  ecol <- c("darkorange3","magenta4")[ 1+1*(igraph::E(gr)$sign>0)]    
+  ecol <- adjustcolor(ecol,0.5)
   table(ecol)
   
   igraph::V(gr)$label <- ""
@@ -6641,14 +6646,16 @@ plotBipartiteGraph <- function(R1, y, min.rho=0.8, ntop=25,
     ylim = c(0,1.1),  
     rescale = FALSE
   )
-
+  
   x <- my_layout[,1]
+  y <- my_layout[,2]  
+
   x1 <- min(x)
   x2 <- max(x)  
-  grp1 <- paste(sort(unique(sub(":.*","",rownames(R1)))),collapse="/")
-  grp2 <- paste(sort(unique(sub(":.*","",colnames(R1)))),collapse="/")  
-  text( x1, 1.07, grp1, font=2, cex=1.2)
-  text( x2, 1.07, grp2, font=2, cex=1.2)
+  grp1 <- paste(sort(unique(sub(":.*","",rownames(R)))),collapse="/")
+  grp2 <- paste(sort(unique(sub(":.*","",colnames(R)))),collapse="/")  
+  text( x1, 1.05, grp1, font=2, cex=1.2, pos=2, adj=1, offset=5.5)
+  text( x2, 1.05, grp2, font=2, cex=1.2, pos=4, adj=1, offset=5.5)
 
   ## plot labels 
   if(!is.null(labels)) {
@@ -6656,17 +6663,168 @@ plotBipartiteGraph <- function(R1, y, min.rho=0.8, ntop=25,
   } else {
     labels <- rownames(my_layout)
   }
-  text( my_layout[,1], my_layout[,2],
-       labels, cex=cex.label,
+  text( x, y,labels, cex=cex.label,
        pos = c(2,4)[1+1*(x>0)], adj=1, offset=5.5)
 
   ## plot logFC
-  text( x1, -0.01, "log2FC", cex=0.9, font=2, 
-    pos = c(2,4)[1+1*(x>0)], adj=1, offset=2)
-  text( x2, -0.01, "log2FC", cex=0.9, font=2, 
-    pos = c(2,4)[1+1*(x>0)], adj=1, offset=2)
+  text( x1, -0.01, "log2FC", cex=0.9, font=2, pos=2, adj=1, offset=2)
+  text( x2, -0.01, "log2FC", cex=0.9, font=2, pos=4, adj=1, offset=2)
   text( my_layout[,1], my_layout[,2], cex=0.8,
        round(y[rownames(my_layout)],2),
        pos = c(2,4)[1+1*(x>0)], adj=1, offset=2)
+
+}
+
+
+#'
+#' @export
+plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
+                                  min.rho=0.8, ntop=25, yheight=2,
+                                  labels=NULL, cex.label=1,
+                                  xpos=NULL, xlim=NULL,
+                                  edge.alpha=0.33) {
+
+  if(is.null(groups)) {
+    groups <- sort(unique(group))
+  }
+  if(0) {
+    groups <- c("CAEEL","9BILA","ORYSJ")
+    groups <- c("9BILA","ORYSJ")    
+
+    X <- pgx$X
+    f <- pgx.getMetaMatrix(pgx)$fc[,1]
+    group <- mofa.get_prefix(rownames(X))
+    table(group)
+    labels <- pgx$genes[,"gene_title"]
+    names(labels) <- pgx$genes[,"feature"]    
+  }
+  
+  ii <- which(group %in% groups)
+  X <- X[ii,,drop=FALSE]
+  f <- f[ii]  
+  group <- group[ii]
+  
+  R <- list()
+  for(k in 1:(length(groups)-1)) {
+    ii <- which( group == groups[k] )
+    jj <- which( group == groups[k+1] )    
+    R[[k]] <- cor(t(X[ii,,drop=FALSE]), t(X[jj,,drop=FALSE]),use="pairwise")
+  }
+
+  gr <- list()
+  k=1
+  for(k in 1:length(R)) {
+    R1 <- R[[k]]
+    idx <- which(abs(R1) > min.rho, arr.ind=TRUE)
+    ee <- cbind(rownames(R1)[idx[,1]], colnames(R1)[idx[,2]])
+    g <- igraph::graph_from_edgelist(ee, directed=FALSE)
+    igraph::E(g)$weight <- abs(R1[idx]) 
+    igraph::E(g)$sign <- sign(R1[idx])
+    if(length(igraph::V(g))>0) gr[[k]] <- g
+  }
+  gr <- gr[!sapply(gr,is.null)]
+
+  if(length(gr)==0) {
+    message("[plotMultiPartiteGraph] ERROR. empty graph.")
+    return(NULL)
+  }
+
+  gr <- do.call(igraph::union, gr)
+  gr
+  
+  if(length(groups)>2) {
+    ee <- igraph::edge_attr(gr)
+    ee <- do.call(cbind, ee)
+    igraph::E(gr)$weight <- rowMeans(ee[,grep("weight",colnames(ee))],na.rm=TRUE)
+    igraph::E(gr)$sign   <- rowMeans(ee[,grep("sign",colnames(ee))],na.rm=TRUE)
+  }
+    
+  ## limit number per group
+  igraph::V(gr)$group <- mofa.get_prefix(igraph::V(gr)$name)
+  table(igraph::V(gr)$group)
+  groups <- intersect(groups, unique(igraph::V(gr)$group))
+  groups
+  
+  sel <- tapply(igraph::V(gr)$name, igraph::V(gr)$group,
+                function(i) head(names(sort(-abs(f[i]))),ntop))
+  sel <- unique(unlist(sel))
+  gr <- igraph::subgraph(gr, sel)
+  gr
+
+  ## layout
+  if(is.null(xpos))
+    xpos <- c(1:length(groups))
+  x <- xpos[match(igraph::V(gr)$group, groups)]
+  y <- f[igraph::V(gr)$name] / max(abs(f))
+  my_layout <- cbind(x=x, y=y)
+  for(i in unique(my_layout)[,1]) {
+    ii <- which(my_layout[,1]==i)
+    my_layout[ii,2] <- rank(my_layout[ii,2]) / length(ii)
+  }
+  my_layout[,2] <- yheight*my_layout[,2]
+    
+  ew <- (igraph::E(gr)$weight / max(igraph::E(gr)$weight))**4
+  vx <- log(1000*igraph::page.rank(gr)$vector)
+  #vx   <-  abs(y)
+  vx <- (0.1+abs(vx)/max(abs(vx)))**1
+  f <- f[igraph::V(gr)$name]
+  vcol <- c("blue2","red2")[ 1+1*(f > 0)]
+    
+  ecol <- c("black","red2")[ 1+1*(igraph::E(gr)$sign>0)]
+  ecol <- c("darkorange3","magenta4")[ 1+1*(igraph::E(gr)$sign>0)]    
+  ecol <- adjustcolor(ecol, edge.alpha)
+  table(ecol)
+  
+  igraph::V(gr)$label <- ""
+  if(is.null(xlim)) {
+    xlim <- range(my_layout[,1])
+    xlim <- xlim + c(-1.5,1.5)*mean(diff(xpos))
+  }
+  
+  plot(
+    gr,
+    # layout=layout_with_kk,
+    layout = my_layout,  
+    edge.width = 4*ew**1,
+    edge.color = ecol,
+    vertex.label.color = "black",
+    vertex.label.dist = 0,  
+    vertex.label.degree = 0,
+    vertex.label.size = 0.001,  
+    vertex.size = 7*vx,
+    vertex.color = vcol,  
+    xlim = xlim,
+    ylim = range(my_layout[,2]) + c(-0.03,0.08)*yheight,
+    rescale = FALSE
+  )
+  
+  x <- my_layout[,1]
+  y <- my_layout[,2]  
+
+  ## titles
+  for(i in 1:length(groups)) {
+    grp1 <- groups[i]
+    text(xpos[i], max(y), grp1, font=2, cex=1.2, pos=3, adj=0, offset=1.2)
+  }
+
+  ## plot logFC
+  xt <- min(xpos) + 0.66*diff(range(xpos))
+  for(i in 1:length(groups)) {
+    tpos <- c(2,4)[1+1*(xpos[i]>xt)]
+    text( xpos[i], -0.03, "log2FC", cex=0.8, font=2, pos=tpos,
+         adj=1, offset=1.2)
+  }
+  text( x, y, cex=0.75, round( f[rownames(my_layout)],2),
+       pos = c(2,4)[1+1*(x>xt)], adj=1, offset=1.2)
+
+  ## plot labels 
+  if(!is.null(labels)) {
+    labels <- labels[rownames(my_layout)]
+  } else {
+    labels <- rownames(my_layout)
+  }
+  cex.label=0.8
+  text(x, y, labels, cex=cex.label, pos=c(2,4)[1+1*(x>xt)],
+       adj=1, offset=3.5)
 
 }
