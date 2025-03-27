@@ -106,7 +106,7 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
   ## whole matrix. (2) in case the rnk matrix has missing values, we
   ## must proceed 1-column at time and do reduced corSparse on
   ## intersection of genes.
-  rho1 <- sparse_cor_matrix(gset, rnk1)
+  rho1 <- cor_sparse_matrix(gset, rnk1)
 
   rownames(rho1) <- colnames(gset)
   colnames(rho1) <- colnames(rnk1)
