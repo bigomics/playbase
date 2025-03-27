@@ -1010,6 +1010,9 @@ mofa.prefix <- function(xx) {
 
 #' @export
 mofa.get_prefix <- function(x) {
+  if (class(x) %in% c("matrix","data.frame") || !is.null(dim(x))) {
+    x <- rownames(x)
+  }
   ifelse(grepl(":", x), sub(":.*", "", x), "")
 }
 
