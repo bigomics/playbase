@@ -1039,6 +1039,8 @@ if __name__ == '__main__':
   ## get dimensions
   net_dims <- net$get_dims()
   views <- rev(names(net$X))
+  views <- iconv(views, "latin1", "ASCII", sub = "")
+  views <- gsub("[_\\$ ]","",views) ## latex special chars
   nview <- length(views)
 
   ## create input image if not given
@@ -1065,6 +1067,9 @@ if __name__ == '__main__':
   redux <- net$get_redux()
   rdim <- ncol(redux[[1]]) ## bottleneck dimension
   targets <- names(net$Y)
+  targets <- iconv(targets, "latin1", "ASCII", sub = "")
+  targets <- gsub("[_\\$ ]","",targets) ## latex special chars
+  
   ntargets <- length(targets)
   for (i in 1:length(views)) {
     at <- c(0, 0, (i - 1) * 22)
