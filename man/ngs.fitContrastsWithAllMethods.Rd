@@ -31,7 +31,7 @@ ngs.fitContrastsWithAllMethods(
   correct.AveExpr = TRUE,
   custom = NULL,
   custom.name = NULL,
-  timeseries = NULL
+  timeseries = FALSE
 )
 
 ngs.fitContrastsWithTTEST(
