@@ -1132,13 +1132,13 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
     methods <- NULL
     remove.failed <- TRUE
   }
-
+  
   mod <- model.matrix(~ factor(y))
   nlevel <- length(unique(y[!is.na(y)]))
   if (ntop < Inf) {
     X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], ntop) ## faster
   }
-
+  
   if (is.null(methods)) {
     methods <- c(
       "uncorrected", "normalized_to_control",
@@ -1146,7 +1146,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
       "superBC", "PCA", "RUV", "SVA", "NPM", "MNN", "Harmony"
     )
   }
-
+  
   xlist <- list()
 
   if ("uncorrected" %in% methods) {
@@ -1230,7 +1230,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   if ("SVA" %in% methods) {
     xlist[["SVA"]] <- try(svaCorrect(X, y))
   }
-
+  
   if ("NPM" %in% methods) {
     ## xlist[["NNM"]] <- gx.nnmcorrect(X, y)$X
     xlist[["NPM"]] <- nnmCorrect(X, y, use.design = TRUE)
@@ -1262,14 +1262,14 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
       }
     }
   }
-
+  
   if (remove.failed) {
     is.error <- sapply(xlist, function(x) ("try-error" %in% class(x)))
     is.nullrow <- sapply(sapply(xlist, nrow), is.null)
     is.xnull <- sapply(xlist, is.null)
     xlist <- xlist[which(!is.xnull & !is.nullrow & !is.error)]
   }
-
+  
   names(xlist) <- paste0(prefix, names(xlist))
   xlist
 }
@@ -1662,6 +1662,9 @@ get_model_parameters <- function(X, samples, pheno = NULL, contrasts = NULL) {
   if (is.null(pheno) && is.null(contrasts)) {
     stop("must give either pheno vector or contrasts matrix")
   }
+
+  ## if a contrasts is given, create a virtual phenotype that spans
+  ## all comparison groups.
   if (!is.null(contrasts)) {
     pheno <- contrasts2pheno(contrasts, samples)
   }
@@ -1670,10 +1673,10 @@ get_model_parameters <- function(X, samples, pheno = NULL, contrasts = NULL) {
     params = "statistical",
     k.pca = 10, p.pca = 0.5, p.pheno = 0.05, xrank = 10
   )
-
   bc$p.values
 
-  ## pheno.pars <- names(which(bc$p.values[,'p.pheno'] < 1e-20))
+  ## Check for any parameter that is highly correlated with the
+  ## 'phenotype' as defined by the contrasts.
   p.pheno <- bc$p.values[, "p.pheno"]
   if (nrow(bc$p.values) == 1) names(p.pheno)[1] <- rownames(bc$p.values)
   p.pheno
@@ -1691,14 +1694,25 @@ get_model_parameters <- function(X, samples, pheno = NULL, contrasts = NULL) {
     if (length(batch.pars2)) batch.pars <- c(batch.pars, batch.pars2)
     batch.pars <- sort(unique(batch.pars))
   }
+  batch.pars
 
+  ## we need to use the discretized phenotype matrix because we do not
+  ## want create continuous levels.
+  dsamples <- expandPhenoMatrix(samples)
+  dsamples.pars <- sub("=.*","",colnames(dsamples))
+  
   batch.vec <- NULL
   if (length(batch.pars)) {
-    batch.vec <- apply(samples[, batch.pars, drop = FALSE], 1, paste, collapse = "_")
+    ##batch.vec <- apply(samples[, batch.pars, drop = FALSE], 1, paste, collapse = "_")
+    sel <- which(dsamples.pars %in% batch.pars)
+    pheno.vec <- apply(dsamples[, sel, drop = FALSE], 1, paste, collapse = "_")
   }
+
   pheno.vec <- NULL
   if (length(pheno.pars)) {
-    pheno.vec <- apply(samples[, pheno.pars, drop = FALSE], 1, paste, collapse = "_")
+    ##pheno.vec <- apply(samples[, pheno.pars, drop = FALSE], 1, paste, collapse = "_")
+    sel <- which(dsamples.pars %in% pheno.pars)
+    pheno.vec <- apply(dsamples[, sel, drop = FALSE], 1, paste, collapse = "_")
   }
 
   list(
@@ -2456,7 +2470,6 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   dX <- X
 
   ## reduce for speed
-  ## sdx <- apply(dX, 1, stats::sd, na.rm = TRUE)
   sdx <- matrixStats::rowSds(dX, na.rm = TRUE)
   ii <- Matrix::head(order(-sdx), sdtop)
   dX <- dX[ii, ]
@@ -2472,29 +2485,35 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   }
 
   if (dist.method == "cor") {
-    message("[nnmCorrect] computing correlation matrix D...")
     ## D <- 1 - crossprod(scale(dX)) / (nrow(dX) - 1) ## faster
     D <- 1 - cor(dX)
   } else {
-    message("[nnmCorrect] computing distance matrix D...\n")
     D <- as.matrix(stats::dist(t(dX)))
   }
   ## remove(dX)
   D[is.na(D)] <- 0 ## might have NA
-
+  
   ## find neighbours
+  B <- matrix(0,0,0)
   if (knn > 1) {
     message(paste0("[nnmCorrect] finding ", knn, "-nearest neighbours..."))
     bb <- apply(D, 1, function(r) tapply(r, y1, function(s) head(names(sort(s)), knn)))
     B <- do.call(rbind, lapply(bb, function(x) unlist(x)))
     colnames(B) <- unlist(mapply(rep, names(bb[[1]]), sapply(bb[[1]], length)), use.names = FALSE)
-  } else {
+  }
+  if(knn==1 || nrow(B)!=ncol(X) ) {
     message("[nnmCorrect] finding nearest neighbours...")
     B <- t(apply(D, 1, function(r) tapply(r, y1, function(s) names(which.min(s)))))
   }
-  rownames(B) <- colnames(X)
+
+  ## sanity check. bail out
+  if(nrow(B)!=ncol(X)) {
+    message("[nnmCorrect] WARNING. FATAL ERROR. returning uncorrected X.")
+    return(X)
+  }
 
   ## ensure sample is always present in own group
+  rownames(B) <- colnames(X)
   idx <- cbind(1:nrow(B), match(y1, colnames(B)))
   B[idx] <- rownames(B)
   ##  B <- cbind(rownames(B), B)

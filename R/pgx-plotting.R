@@ -6681,24 +6681,12 @@ plotBipartiteGraph <- function(R, y, min.rho=0.8, ntop=25,
 plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
                                   min.rho=0.8, ntop=25, yheight=2,
                                   labels=NULL, cex.label=1, vx.cex=1,
-                                  xpos=NULL, xlim=NULL,
+                                  xpos=NULL, xlim=NULL, justgraph=FALSE,
                                   edge.alpha=0.33) {
-
+  
   if(is.null(groups)) {
     groups <- sort(unique(group))
-  }
-  if(0) {
-    groups <- c("CAEEL","9BILA","ORYSJ")
-    groups <- c("9BILA","ORYSJ")    
-
-    X <- pgx$X
-    f <- pgx.getMetaMatrix(pgx)$fc[,1]
-    group <- mofa.get_prefix(rownames(X))
-    table(group)
-    labels <- pgx$genes[,"gene_title"]
-    names(labels) <- pgx$genes[,"feature"]    
-  }
-  
+  }  
   ii <- which(group %in% groups)
   X <- X[ii,,drop=FALSE]
   f <- f[ii]  
@@ -6730,7 +6718,6 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
   }
 
   gr <- do.call(igraph::union, gr)
-  gr
   
   if(length(groups)>2) {
     ee <- igraph::edge_attr(gr)
@@ -6751,6 +6738,17 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
   gr <- igraph::subgraph(gr, sel)
   gr
 
+  ## plot labels 
+  if(!is.null(labels)) {
+    igraph::V(gr)$label <- labels[igraph::V(gr)$name]
+  } else {
+    igraph::V(gr)$label <- igraph::V(gr)$name
+  }
+  
+  if(justgraph) {
+    return(gr)
+  }
+  
   ## layout
   if(is.null(xpos))
     xpos <- c(1:length(groups))
@@ -6826,4 +6824,21 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
   text(x, y, labels, cex=cex.label, pos=c(2,4)[1+1*(x>xt)],
        adj=1, offset=3.5)
 
+  ## return graph
+  invisible(gr)
+}
+
+
+#' @export
+plotAdjacencyMatrixFromGraph <- function(graph, nmax=40, binary=FALSE,
+                                         ...) {
+  igraph::E(graph)$rho <- igraph::E(graph)$weight * igraph::E(graph)$sign
+  adjmat <- igraph::as_adjacency_matrix(graph, attr = "rho")
+  ii <- head(order(-Matrix::colSums(adjmat**2)),nmax)
+  adjmat2 <- as.matrix(adjmat[ii,ii])
+  if(binary) adjmat2 <- sign(adjmat2)
+  gx.heatmap(adjmat2,
+    ##key=FALSE, keysize=0.8, 
+    scale=FALSE, col=rev(grey.colors(64)),
+    sym=TRUE, ... )
 }
