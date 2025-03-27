@@ -403,7 +403,7 @@ cor_sparse_matrix <- function(G, mat) {
   if (sum(is.na(mat)) == 0) {
     cor_matrix <- qlcMatrix::corSparse(G, mat)
   } else {
-    message("rank matrix has missing values: computing column-wise reduced rankcor")
+    message("matrix has missing values: computing column-wise reduced cor")
     corSparse.vec <- function(X, y) {
       y <- y[!is.na(y)]
       gg <- intersect(rownames(X), names(y))
