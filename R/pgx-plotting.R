@@ -3537,7 +3537,7 @@ pgx.scatterPlotXY.GGPLOT <- function(pos, var = NULL, type = NULL, col = NULL, c
                                      tooltip = NULL, theme = NULL, set.par = TRUE,
                                      label.type = c("text", "box"), base_size = 11,
                                      title = NULL, barscale = 0.8, axis = TRUE, box = TRUE,
-                                     guide = "legend", girafe = FALSE) {
+                                     guide = "legend", girafe = FALSE, ...) {
   if (!is.null(var) && !is.null(ncol(var))) {
     var <- var[, 1]
   }
