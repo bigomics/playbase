@@ -902,7 +902,7 @@ deep.plotGradientVSFoldchange <- function(grad, fc, data = FALSE, par = TRUE) {
 #'
 #'
 #' @export
-deep.plotNeuralNet <- function(net, svgfile = NULL, rm.files=TRUE) {
+deep.plotNeuralNet <- function(net, svgfile = NULL, rm.files=TRUE, image=NULL) {
   
   if (!dir.exists("/opt/PlotNeuralNet")) {
     message("ERROR: please install PlotNeuralNet in /opt")
@@ -934,7 +934,7 @@ arch = [
     to2 <- str_at(at)
     glue::glue("
     # input {name}
-    to_input( '../images/heatmap.png', to='{to1}', width=9.5, height=2.2 ),
+    to_input( '{image}', to='{to1}', width=9.5, height=2.2 ),
     to_Conv('{name}', '', '', offset='(-4,0,6.5)', to='{to2}', height=0, depth=0, width=0, caption='{caption}'),
 ", .trim = FALSE)
   }
@@ -1038,11 +1038,30 @@ if __name__ == '__main__':
 
   ## get dimensions
   net_dims <- net$get_dims()
-
-  ## build code text
-  ltx <- header_src
   views <- rev(names(net$X))
   nview <- length(views)
+
+  ## create input image if not given
+  if(is.null(image) || !file.exists(image)) {
+    image <- c()
+    for(i in 1:nview) {
+      image[[i]] = paste0("/tmp/inputimage",i,".png")
+      x1 <- net$X[[i]]
+      x1 <- head(x1[order(-matrixStats::rowSds(x1,na.rm=TRUE)),,drop=FALSE],100)
+      x1 <- head(t(rowscale(x1)),100)
+      x1 <- 1*(x1 > mean(x1,na.rm=TRUE))
+      png(image[[i]],width=950,height=220)
+      par(mar=c(0,0,0,0))
+      gx.imagemap(x1, cex=0, col=grey.colors(64))
+      dev.off()
+    }
+  }
+  if(length(image) < nview) {
+    image <- head(rep(image,nview),nview)
+  }
+  
+  ## build code text
+  ltx <- header_src
   redux <- net$get_redux()
   rdim <- ncol(redux[[1]]) ## bottleneck dimension
   targets <- names(net$Y)
@@ -1051,7 +1070,7 @@ if __name__ == '__main__':
     at <- c(0, 0, (i - 1) * 22)
     caption <- toupper(views[i])
     if (max(nchar(views)) < 10) caption <- paste("datatype:~", caption)
-    ltx1 <- input_src(paste0("input", views[i]), at, "", caption = caption)
+    ltx1 <- input_src(paste0("input", views[i]), at, image[[i]], caption = caption)
     ltx <- paste(ltx, ltx1)
   }
   ltx <- paste(ltx, merge_src())
@@ -1089,6 +1108,11 @@ if __name__ == '__main__':
   pyfile <- tempfile(fileext = ".py", tmpdir = "/opt/PlotNeuralNet/pyexamples")
   ## pyfile="/opt/PlotNeuralNet/pyexamples/model2.py"
   write(ltx, file = pyfile)
+
+  if (!file.exists(pyfile)) {
+    message("[deep.plotNeuralNet] WARNING. failed to create Python file ",pyfile)
+  }
+
   texfile <- sub("[.]py$", ".tex", pyfile)
   auxfile <- sub("[.]py$", ".aux", pyfile)
   logfile <- sub("[.]py$", ".log", pyfile)
@@ -1098,29 +1122,40 @@ if __name__ == '__main__':
 
   message("[deep.plotNeuralNet] texfile = ",texfile)
   message("[deep.plotNeuralNet] svgfile = ",svgfile)
-  
-  cmd <- glue::glue("cd /opt/PlotNeuralNet/pyexamples/ && python {pyfile}")
-  suppressMessages(system(cmd,
-    ignore.stdout = TRUE, ignore.stderr = TRUE,
-    intern = FALSE, show.output.on.console = FALSE
-  ))
-  cmd <- glue::glue("cd /opt/PlotNeuralNet/pyexamples/ && pdflatex -interaction=batchmode {texfile}")
-  suppressMessages(system(cmd,
-    ignore.stdout = TRUE, ignore.stderr = TRUE,
-    intern = FALSE, show.output.on.console = FALSE
-  ))
-  cmd <- glue::glue("pdf2svg {pdffile} {svgfile}")
-  suppressMessages(system(cmd,
-    ignore.stdout = TRUE, ignore.stderr = TRUE,
-    intern = FALSE, show.output.on.console = FALSE
-  ))
 
-  if (!file.exists(texfile)) {
-    message("[deep.plotNeuralNet] WARNING. failed to create TeX file ",texfile)
+  if (file.exists(pyfile)) {
+    cmd <- glue::glue("cd /opt/PlotNeuralNet/pyexamples/ && python {pyfile}")
+    suppressMessages(system(cmd,
+      ignore.stdout = TRUE, ignore.stderr = TRUE,
+      intern = FALSE, show.output.on.console = FALSE
+    ))
+    if (!file.exists(texfile)) {
+      message("[deep.plotNeuralNet] WARNING. failed to create TeX file ",texfile)
+    }
   }
-  if (!file.exists(pdffile)) {
-    message("[deep.plotNeuralNet] WARNING. failed to create PDF file ",pdffile)
+
+  if (file.exists(texfile)) {
+    cmd <- glue::glue("cd /opt/PlotNeuralNet/pyexamples/ && pdflatex -interaction=batchmode {texfile}")
+    suppressMessages(system(cmd,
+      ignore.stdout = TRUE, ignore.stderr = TRUE,
+      intern = FALSE, show.output.on.console = FALSE
+    ))
+    if (!file.exists(pdffile)) {
+      message("[deep.plotNeuralNet] WARNING. failed to create PDF file ",pdffile)
+    }
   }
+
+  if (file.exists(pdffile)) {
+    cmd <- glue::glue("pdf2svg {pdffile} {svgfile}")
+    suppressMessages(system(cmd,
+      ignore.stdout = TRUE, ignore.stderr = TRUE,
+      intern = FALSE, show.output.on.console = FALSE
+    ))
+    if (!file.exists(svgfile)) {
+      message("[deep.plotNeuralNet] WARNING. failed to create SVG file ",svgfile)
+    }
+  }
+
   
   if(rm.files) {
     if (file.exists(auxfile)) unlink(auxfile)
