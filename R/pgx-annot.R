@@ -472,7 +472,10 @@ gene2uniprot <- function(genes, organism) {
   if(is.null(out) || "try-error" %in% class(out)) return(NULL)
   res <- tapply(out$target, out$input, function(s)
     paste(setdiff(unique(s),c(NA,"")),collapse=';'))
-  res[genes]
+  ii <- match(genes, names(res))
+  ## seems input is uppercase!
+  ii <- ifelse(is.na(ii), match(toupper(genes),toupper(names(res))), ii)
+  res[ii]
 }
 
 #' @export
@@ -1672,30 +1675,30 @@ pgx.getFeatureInfo <- function(pgx, feature) {
   if (is.na(feature) || feature == "") {
     return(NULL)
   }
-
+  
   annot <- as.list( pgx$genes[feature,] )
   names(annot) <- sub("uniprot","protein",names(annot))
   annot$gene_name <- NULL
   annot$chr <- NULL
   annot$pos <- NULL
-  annot$tx_len <- NULL      
+  annot$tx_len <- NULL
 
   datatype <- pgx$datatype
   if(pgx$datatype == "multi-omics") {
     ##dtype <- c("mx"="metabolomics","px"="proteomics","gx"="transcriptomics")
     datatype <- ifelse(grepl("^mx:|metabolomics",feature), "metabolomics", datatype)
   }
-
+  
   if(!"protein" %in% names(annot) && datatype!="metabolomics") {
     annot[["protein"]] <- gene2uniprot(annot$symbol, pgx$organism)
   }
-
+  
   if(annot$human_ortholog %in% names(playdata::GENE_SUMMARY)) {
     annot.summary <- playdata::GENE_SUMMARY[annot$human_ortholog]
     annot.summary <- gsub("Publication Note.*|##.*", "", annot.summary)
     annot[["summary"]] <- annot.summary
   }
-
+  
 ##  annot[["GO"]] <- pgx.get_goterms(pgx, annot$symbol) 
   if(datatype == "metabolomics") {
     annot <- getMetaboliteInfo(
@@ -1705,12 +1708,13 @@ pgx.getFeatureInfo <- function(pgx, feature) {
   } else {
     annot <- info.add_hyperlinks(
       annot, feature, datatype, 
-      nm.symbol='symbol', nm.prot='protein',
+      nm.symbol='symbol',
+      nm.prot='protein',
       nm.ortholog='human_ortholog',
       as.link=TRUE, add.summary=FALSE
     )
   }
-
+  
   if (!is.null(annot)) {
     annot <- annot[!duplicated(names(annot))]
     ## reorder
@@ -1731,12 +1735,6 @@ pgx.getFeatureInfo <- function(pgx, feature) {
     annot$summary <- "(no info available)"
   }
   
-  ## add feature name is not symbol
-  annot$feature <- NULL
-  if (feature != annot$symbol) {
-    annot <- c(feature = feature, annot)
-  }
-
   return(annot)
 
 }
@@ -1846,7 +1844,7 @@ info.add_hyperlinks <- function(info, feature, datatype,
   symbol  <- info[[nm.symbol]]
   ortholog  <- info[[nm.ortholog]]
   uniprot <- info[[nm.prot]]
-
+  
   if (length(uniprot) == 0) {
     this.uniprot <- NULL
   } else if(length(uniprot) == 1 && uniprot[1]=="") {
@@ -1862,13 +1860,13 @@ info.add_hyperlinks <- function(info, feature, datatype,
     gene.link <- sapply(symbol, function(s) gsub("GENE", s, gene.link))
     info[[ nm.symbol ]] <- paste(gene.link, collapse = ", ")
   }
-
+  
   if (as.link && length(ortholog)) {
     gene.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GENE</a>"
     ortho.link <- sapply(ortholog, function(s) gsub("GENE", s, gene.link))
     info[[ nm.ortholog ]] <- paste(ortho.link, collapse = ", ")
   }
-
+  
   if (as.link && length(uniprot)) {
     prot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UNIPROT</a>"
     prot.link <- sapply(uniprot, function(s) gsub("UNIPROT", s, prot.link))
@@ -1885,7 +1883,7 @@ info.add_hyperlinks <- function(info, feature, datatype,
     if(db.links=="") db.links <- NULL
     info[["DATABASES"]] <- db.links
   }
-
+  
   if (length(this.uniprot) && grepl("proteomics", datatype, ignore.case = TRUE)) {
     ## create link to PhosphoSitePlus
     phosphositeplus.link <- "<a href='https://www.phosphosite.org/simpleSearchSubmitAction.action?searchStr=GENE' target='_blank'>PhosphoSitePlus</a>"
@@ -1899,13 +1897,13 @@ info.add_hyperlinks <- function(info, feature, datatype,
     ## phosphoELM.link <- sub("UNIPROT", uniprot, phosphoELM.link)
     ## info[["DATABASES"]] <- paste(c(info[["DATABASES"]], phosphoELM.link), collapse = ", ")
   }
-
+  
   ## create link to OMIM
   if (as.link && length(info[["OMIM"]])) {
     omim.link <- "<a href='https://www.omim.org/entry/OMIM' target='_blank'>OMIM</a>"
     info[["OMIM"]] <- sapply(info[["OMIM"]], function(x) gsub("OMIM", x, omim.link))
   }
-
+  
   ## create link to KEGG
   if (as.link && length(info[["PATH"]])) {
     kegg.link <- "<a href='https://www.genome.jp/kegg-bin/show_pathway?map=hsaKEGGID&show_description=show' target='_blank'>KEGGNAME (KEGGID)</a>"
@@ -1922,7 +1920,7 @@ info.add_hyperlinks <- function(info, feature, datatype,
       }
     }
   }
-
+  
   ## create link to GO
   if (length(info[["GO"]]) && !is.na(info[["GO"]][1])) {
     ## sometimes GO.db is broken...
@@ -1950,7 +1948,7 @@ info.add_hyperlinks <- function(info, feature, datatype,
       info[["GO"]] <- NULL
     }
   }
-
+  
   if(add.summary) {
     ## pull summary
     info[["SUMMARY"]] <- "(no info available)"
@@ -1960,7 +1958,7 @@ info.add_hyperlinks <- function(info, feature, datatype,
       info[["SUMMARY"]] <- gsub("Publication Note.*|##.*", "", info[["SUMMARY"]])
     }
   }
-
+  
   return(info)
 }
 
@@ -1977,9 +1975,6 @@ check_species_probetype <- function(
   ## No check if custom
   custom_datatype <- !is.null(datatype) && tolower(datatype) %in% c("custom","unknown","")
   custom_organism <- any(tolower(test_species) %in% c("custom","unknown","no organism"))
-
-  dbg("[check_species_probetype] custom_datatype = ",custom_datatype)
-  dbg("[check_species_probetype] custom_organism = ",custom_organism)
 
   if(custom_datatype || custom_organism) {
     out <- rep("custom", length(test_species))

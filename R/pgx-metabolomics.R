@@ -264,7 +264,6 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
         mm <- playdata::METABOLITE_METADATA
         mm <- mm[match(id[ii], mm$ID), ]
         mm$feature <- probes[ii]
-        ## rownames(mm) <- probes[ii]
         mm$ID <- id[ii]
         mm$source <- ifelse(id[ii] %in% mm$ID, "ChEBI", NA)
         mm <- mm[, COLS]
@@ -359,14 +358,14 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
 #' @export
 getMetaboliteInfo <- function(organism = "Human", id, info = NULL) {
   if (is.null(id) || length(id) == 0) {
-    return(NULL)
+    return(info)
   }
   if (is.na(id) || id == "") {
-    return(NULL)
+    return(info)
   }
   if (!id %in% playdata::METABOLITE_ID$ID) {
     message("[getMetaboliteInfo] unknown metabolite ID = ",id)
-    return(NULL)
+    return(info)
   }
 
   ## add metadata from tables. Append to info if provided.
@@ -582,13 +581,6 @@ extend_metabolite_sets2 <- function(M, ppi, add=TRUE, postfix="(extended)", maxc
     extM <- Matrix::t(merge_sparse_matrix(Matrix::t(M2), Matrix::t(extM)))
   }
   extM <- extM[order(rownames(extM)),]
-
-  if(0) {
-    head(rownames(extM))
-    head(Matrix::rowSums(extM!=0))
-    names(which(extM[1,]!=0))
-    names(which(extM[2,]!=0))
-  }
   
   return(extM)
 }

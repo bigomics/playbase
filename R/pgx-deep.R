@@ -500,8 +500,7 @@ MultiBlockMultiTargetSAE_module <- torch::nn_module(
     for (m in names(yy)) {
       yval <- as.numeric(yy[[m]])
       ydim <- length(unique(setdiff(yval, NA)))
-      pdim <- ## last dim from integration layers
-        dims <- c(integration_dim, num_layers[[3]], ydim)
+      dims <- c(integration_dim, num_layers[[3]], ydim)
       dims <- round(ifelse(dims < 1, dims * integration_dim, dims))
       ## if(length(dims)>1) dims[-1] <- pmax(dims[-1], ydim)  ## really?
       nlayers <- length(dims)

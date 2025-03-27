@@ -6682,7 +6682,7 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
                                   min.rho=0.8, ntop=25, yheight=2,
                                   labels=NULL, cex.label=1, vx.cex=1,
                                   xpos=NULL, xlim=NULL, justgraph=FALSE,
-                                  edge.alpha=0.33) {
+                                  edge.alpha=0.33, edge.type="both") {
   
   if(is.null(groups)) {
     groups <- sort(unique(group))
@@ -6703,6 +6703,8 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
   k=1
   for(k in 1:length(R)) {
     R1 <- R[[k]]
+    if(grepl("pos",edge.type)) R1 <- pmax(R1,0)
+    if(grepl("neg",edge.type)) R1 <- pmin(R1,0)    
     idx <- which(abs(R1) > min.rho, arr.ind=TRUE)
     ee <- cbind(rownames(R1)[idx[,1]], colnames(R1)[idx[,2]])
     g <- igraph::graph_from_edgelist(ee, directed=FALSE)
