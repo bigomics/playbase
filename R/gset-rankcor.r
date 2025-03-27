@@ -106,19 +106,7 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
   ## whole matrix. (2) in case the rnk matrix has missing values, we
   ## must proceed 1-column at time and do reduced corSparse on
   ## intersection of genes.
-  if (sum(is.na(rnk1)) == 0) {
-    rho1 <- qlcMatrix::corSparse(gset, rnk1)
-  } else {
-    message("rank matrix has missing values: computing column-wise reduced rankcor")
-    rankcorSparse.vec <- function(X, y) {
-      y <- y[!is.na(y)]
-      gg <- intersect(rownames(X), names(y))
-      y <- rank(y, na.last = "keep")
-      qlcMatrix::corSparse(X[gg, , drop = FALSE], cbind(y[gg]))
-    }
-    rho1 <- lapply(1:ncol(rnk1), function(i) rankcorSparse.vec(gset, rnk1[, i]))
-    rho1 <- do.call(cbind, rho1)
-  }
+  rho1 <- sparse_cor_matrix(gset, rnk1)
 
   rownames(rho1) <- colnames(gset)
   colnames(rho1) <- colnames(rnk1)

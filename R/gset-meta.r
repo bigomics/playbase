@@ -98,7 +98,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     xx1 <- apply(xx1, 2, rank, na.last = "keep") ## rank correlation (like spearman)
     ## NOTE IK: 3.2025 should we use averageCLR????
     tt <- system.time({
-      zx.rnkcorr <- qlcMatrix::corSparse(G, xx1) ## superfast
+      zx.rnkcorr <- sparse_cor_matrix(G, xx1)
       rownames(zx.rnkcorr) <- colnames(G)
       colnames(zx.rnkcorr) <- colnames(X)
 
