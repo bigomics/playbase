@@ -36,8 +36,12 @@ pgx.addGeneAnnotation <- function(pgx, annot_table = NULL) {
   probe_type <- pgx$probe_type
   
   genes <- getProbeAnnotation(
-    organism, probes, datatype, probetype = probe_type,    
-    annot_table = annot_table)
+    organism,
+    probes,
+    datatype,
+    probetype = probe_type,    
+    annot_table = annot_table
+  )
 
   ## cleanup entries and reorder columns
   genes <- cleanupAnnotation(genes)
@@ -57,9 +61,13 @@ ngs.getGeneAnnotation <- function(...) {
 #' data type unless classical transcriptomics/proteomics.
 #'
 #' @export
-getProbeAnnotation <- function(organism, probes, datatype, probetype="",
-                               annot_table = NULL) {
-
+getProbeAnnotation <- function(organism,
+                               probes,
+                               datatype,
+                               probetype = "",
+                               annot_table = NULL
+                               ) {
+  
   if(is.null(datatype)) datatype <- "unknown"  
   if(is.null(probetype)) probetype <- "unknown"
 
@@ -68,7 +76,10 @@ getProbeAnnotation <- function(organism, probes, datatype, probetype="",
   unknown.probetype <- (probetype %in% c("custom","unkown"))  
   annot.unknown <- unknown.organism || unknown.datatype || unknown.probetype
   annot.unknown
-  
+
+  probes0 <- probes
+  probes <- make_unique(clean_probe_names(probes0))
+
   genes <- NULL
   if (annot.unknown) {
     # annotation table is mandatory for 'No organism' (until server side
@@ -112,8 +123,12 @@ getProbeAnnotation <- function(organism, probes, datatype, probetype="",
     annot_table <- annot_table[match(rownames(genes), rownames(annot_table)), ]
     genes <- cbind(genes, annot_table)[,kk]
   }
+
+  jj <- match(genes$feature, probes)
+  rownames(genes) <- genes$feature <- probes0[jj]
   
-  genes
+  return(genes)
+
 }
 
 #' Get gene annotation data using annothub or orthogene.
