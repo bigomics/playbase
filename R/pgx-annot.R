@@ -132,7 +132,7 @@ getGeneAnnotation <- function(
   if (tolower(organism) == "dog") organism <- "Canis familiaris"
 
   probes <- trimws(probes)
-  probes[probes==""] <- NA
+  probes[probes==""|is.na(probes)] <- 'NA'
   
   if(mean(grepl("[:]",probes)) > 0.98) {
     message("[getGeneAnnotation] WARNING. stripping prefix... Is this multi-omics??")
@@ -147,40 +147,42 @@ getGeneAnnotation <- function(
     use.ah = use.ah,
     verbose = verbose
   ))
+  if(inherits(annot,"try-error")) annot <- NULL
+  
+  if(!is.null(annot)) {
+    missing <- (annot$symbol %in% c(NA,""))
+  } else {
+    annot <- data.frame(feature=probes, symbol=NA, human_ortholog=NA, gene_title=NA)
+    missing <- rep(TRUE, length(probes))
+  }
   
   ## fallback with ORTHOGENE
-  if(is.null(annot) || "try-error" %in% class(annot)) {
-    dbg("[getGeneAnnotation] fallback to ORTHOGENE ")  
-    annot <- try(getGeneAnnotation.ORTHOGENE(
+  if (any(missing)) {
+    info(
+      "[getGeneAnnotation] annotating", sum(missing),
+      "missing features with ORTHOGENE"
+    )
+    missing.probes <- probes[which(missing)]
+    missing.annot <- try(getGeneAnnotation.ORTHOGENE(
       organism = organism,
-      probes = probes,
+      probes = missing.probes,
       verbose = verbose
     ))
-    if("try-error" %in% class(annot)) {
-      annot <- NULL
-    }
-  } else {
-    missing <- (annot$symbol %in% c(NA,""))
-    if (any(missing)) {
-      info(
-        "[getGeneAnnotation] annotating", sum(missing),
-        "missing features with ORTHOGENE"
-      )
-      missing.probes <- probes[which(missing)]
-      missing.annot <- try(getGeneAnnotation.ORTHOGENE(
-        organism = organism,
-        probes = missing.probes,
-        verbose = verbose
-      ))
-      if (!is.null(missing.annot) &&
-            !"try-error" %in% class(missing.annot) &&
-             nrow(missing.annot)) {
-        ## replace missing entries (some still missing)
-        sel <- which( !is.na(missing.annot$symbol) & missing.annot$symbol!="")
-        missing.annot <- missing.annot[sel, colnames(annot)]
-        jj <- match(missing.annot$features, probes)
-        annot[jj, ] <- missing.annot
+    if (!is.null(missing.annot) &&
+          !"try-error" %in% class(missing.annot) &&
+           nrow(missing.annot)) {
+      ## replace missing entries (some still missing)
+      cols <- unique(c(colnames(annot), colnames(missing.annot)))
+      cols
+      for(k in setdiff(cols,colnames(annot))) {
+        annot[[k]] <- NA
       }
+      annot <- annot[,cols]
+      missing.annot <- missing.annot[,cols]
+      sel <- which(!is.na(missing.annot$symbol) & missing.annot$symbol!="")
+      missing.annot <- missing.annot[sel, ]
+      jj <- match(missing.annot$feature, annot$feature)
+      if(length(jj)>0) annot[jj, ] <- missing.annot
     }
   }
   
