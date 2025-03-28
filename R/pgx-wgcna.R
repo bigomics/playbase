@@ -495,6 +495,10 @@ wgcna.compute_enrichment <- function(wgcna, pgx,
     message("[wgcna.compute_enrichment] calculating geneset correlation...")
     gsetX <- gsetX[colnames(G1), ]
     ME <- as.matrix(wgcna$net$MEs)
+    if (ncol(gsetX) > nrow(ME)) {
+      kk <- sample(colnames(gsetX), nrow(ME))
+      gsetX <- gsetX[, kk, drop = FALSE]
+    }
     rc.rho <- cor(t(gsetX), ME)
     rc.pvalue <- cor.pvalue(rc.rho, n = nrow(ME))
     rho.list[["gsetcor"]] <- rc.rho
