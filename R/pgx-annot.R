@@ -173,7 +173,6 @@ getGeneAnnotation <- function(
            nrow(missing.annot)) {
       ## replace missing entries (some still missing)
       cols <- unique(c(colnames(annot), colnames(missing.annot)))
-      cols
       for(k in setdiff(cols,colnames(annot))) {
         annot[[k]] <- NA
       }
