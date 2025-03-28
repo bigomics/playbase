@@ -405,9 +405,8 @@ cor_sparse_matrix <- function(G, mat) {
   } else {
     message("matrix has missing values: computing column-wise reduced cor")
     corSparse.vec <- function(X, y) {
-      y <- y[!is.na(y)]
-      gg <- intersect(rownames(X), names(y))
-      qlcMatrix::corSparse(X[gg, , drop = FALSE], cbind(y[gg]))
+      jj <- which(!is.na(y))
+      qlcMatrix::corSparse(X[jj, , drop = FALSE], cbind(y[jj]))
     }
     cor_matrix <- lapply(1:ncol(mat), function(i) corSparse.vec(G, mat[, i]))
     cor_matrix <- do.call(cbind, cor_matrix)

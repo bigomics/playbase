@@ -94,8 +94,8 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   if ("spearman" %in% methods) {
     message("fitting contrasts using spearman/limma... ")
     ## single-sample gene set enrichment using (fast) rank correlation
-    xx1 <- X - rowMeans(X, na.rm = TRUE) ## center it...
-    xx1 <- matrixStats::colRanks(xx1) ## rank correlation (like spearman)
+    xx1 <- X - rowMeans(X, na.rm = TRUE)
+    xx1 <- t(matrixStats::colRanks(xx1))
     ## NOTE IK: 3.2025 should we use averageCLR????
     tt <- system.time({
       zx.rnkcorr <- cor_sparse_matrix(G, xx1)
@@ -110,13 +110,9 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       cm1 <- intersect(names(gmt), rownames(zx.rnkcorr))
       cm2 <- intersect(colnames(X), colnames(zx.rnkcorr))
       zx.rnkcorr <- zx.rnkcorr[cm1, cm2, drop = FALSE] ## make sure..
-      ii <- apply(zx.rnkcorr, 1, function(x) sum(is.na(x)))
-      kk <- any(ii == ncol(zx.rnkcorr))
-      if (kk) {
-        Ex <- which(ii == ncol(zx.rnkcorr))
-        message("Removing ", length(Ex), " full NA rows from zx.rnkcorr.")
-        zx.rnkcorr <- zx.rnkcorr[-Ex, , drop = FALSE]
-      }
+      nas <- apply(zx.rnkcorr, 1, function(x) sum(is.na(x)))
+      jj <- which(nas < ncol(zx.rnkcorr))
+      zx.rnkcorr <- zx.rnkcorr[jj, , drop = FALSE]      
 
       ## compute LIMMA
       all.results[["spearman"]] <- gset.fitContrastsWithLIMMA(
