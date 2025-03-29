@@ -1208,8 +1208,12 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
   if (is.null(design)) {
     message("[ngs.fitContrastsWithDESEQ2] fitting DESEQ2  *without* design")
     out <- .ngs.fitConstrastsWithDESEQ2.nodesign(
-      counts = counts, contr.matrix = contr.matrix, test = test, timeseries = timeseries,
-      prune.samples = prune.samples, conform.output = conform.output
+      counts = counts,
+      contr.matrix = contr.matrix,
+      test = test,
+      timeseries = timeseries,
+      prune.samples = prune.samples,
+      conform.output = conform.output
     )
     return(out)
   }
@@ -1220,16 +1224,22 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
 
   rownames.counts <- rownames(counts)
   counts <- round(counts) ## WARNING!!!
+
   if (all(rowSums(counts == 0, na.rm = TRUE) > 0)) {
     ## ERROR: 'every gene contains at least one zero, cannot compute log
     ## geometric means' so we fix it villager-style
     jmax <- which.max(rowSums(counts, na.rm = TRUE))
     counts[jmax, ] <- pmax(counts[jmax, ], 1)
   }
+
   dds <- DESeq2::DESeqDataSetFromMatrix(
-    countData = counts, design = design.formula, colData = data.frame(group)
+    countData = counts,
+    design = design.formula,
+    colData = data.frame(group)
   )
+
   rownames(counts) <- rownames.counts
+
   ## Run DESeq : Modeling counts with generic 'group'
   fitType <- "parametric" ## sometime errors
   #
@@ -1244,7 +1254,9 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
   if ("try-error" %in% class(dds)) {
     message("[.ngs.fitConstrastsWithDESEQ2.nodesign] retrying DESEQ2 with gene-wise estimates...")
     dds <- DESeq2::DESeqDataSetFromMatrix(
-      countData = counts, design = design.formula, colData = data.frame(group)
+      countData = counts,
+      design = design.formula,
+      colData = data.frame(group)
     )
     dds <- DESeq2::estimateSizeFactors(dds)
     dds <- DESeq2::estimateDispersionsGeneEst(dds)
@@ -1263,12 +1275,10 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
 
   ## logCPM for calculating means
   if (is.null(X)) X <- edgeR::cpm(counts, log = TRUE)
-  dim(X)
   exp.matrix <- contr.matrix
   if (!is.null(design)) exp.matrix <- (design %*% contr.matrix)
 
-  tables <- list()
-  i <- 1
+  i=1; tables=list()
   for (i in 1:ncol(contr.matrix)) {
     ## manually specify contrast vector. See also https://support.bioconductor.org/p/69104/
     contr <- contr.matrix[, i]
@@ -1303,8 +1313,10 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
       colnames(tables[[i]]) <- k2
     }
   }
+
   res <- list(tables = tables)
   return(res)
+
 }
 
 
@@ -1325,8 +1337,6 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
     stop("ngs.fitConstrastsWithDESEQ2.nodesign:: contrast matrix must be by sample")
   
   exp.matrix <- contr.matrix
-  #sel <- colnames(exp.matrix)[!grepl("^IA:*", colnames(exp.matrix))]
-  #exp.matrix <- exp.matrix[, sel, drop = FALSE]
   i=1; tables=list()
   for (i in 1:ncol(exp.matrix)) {
     ## manual design matrix (CHECK THIS!!!)
@@ -1338,15 +1348,16 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
     counts1 <- counts[, kk, drop = FALSE]
 
     if (grepl("^IA:*", colnames(exp.matrix)[i]) && !is.null(timeseries)) {
-      resx <- .ngs.fitConstrastsWithDESEQ2.nodesign.timeseries(counts1, y, timeseries)
-      rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
+      resx <- .ngs.fitConstrastsWithDESEQ2.nodesign.timeseries(counts1, y, timeseries, test = test)
     } else {
       colData <- data.frame(y, row.names = colnames(counts1))
       ## sample-wise model matrix (does this work???)
       colnames(counts1) <- NULL
       design.formula <- stats::formula("~ 0 + y")
       dds <- DESeq2::DESeqDataSetFromMatrix(
-        countData = counts1, design = design.formula, colData = colData
+        countData = counts1,
+        design = design.formula,
+        colData = colData
       )
       fitType <- "mean"
       suppressWarnings({
@@ -1360,7 +1371,9 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
       if ("try-error" %in% class(dds)) {
         message("[.ngs.fitConstrastsWithDESEQ2.nodesign] retrying DESEQ2 with gene-wise estimates...")
         dds <- DESeq2::DESeqDataSetFromMatrix(
-          countData = counts1, design = design.formula, colData = data.frame(y)
+          countData = counts1,
+          design = design.formula,
+          colData = data.frame(y)
         )
         dds <- DESeq2::estimateSizeFactors(dds)
         dds <- DESeq2::estimateDispersionsGeneEst(dds)
@@ -1386,47 +1399,15 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
     resx$AveExpr0 <- rowMeans(X1[, neg.samples, drop = FALSE], na.rm = TRUE)
     resx$log2BaseMean <- log2(0.0001 + resx$baseMean)
     if (conform.output) {
-      ## For time-series we keep DESeq2 log2FC from LRT.
+      ## For time-series we keep DESeq2 log2FC from LRT/Wald.
       if (!grepl("^IA:*", colnames(exp.matrix)[i])) {
         resx$log2FoldChange <- (resx$AveExpr1 - resx$AveExpr0) ## recompute
       }
     }
     tables[[i]] <- data.frame(resx)
     names(tables)[i] <- colnames(exp.matrix)[i]
-    message("-------------ct: ", colnames(exp.matrix)[i], "---done")
   }
-  
-  ## Timeseries analysis
-  ## if (!is.null(timeseries)) {
-  ##   ll <- length(tables)
-  ##   exp.matrix <- contr.matrix
-  ##   sel <- colnames(exp.matrix)[grepl("^IA:*", colnames(exp.matrix))]
-  ##   exp.matrix <- exp.matrix[, sel, drop = FALSE]
-  ##   i=1
-  ##   for (i in 1:ncol(exp.matrix)) {
-  ##     kk <- 1:nrow(exp.matrix)
-  ##     if (prune.samples) kk <- which(!is.na(exp.matrix[, i]) & exp.matrix[, i] != 0)
-  ##     ct <- exp.matrix[kk, i]
-  ##     y <- factor(c("neg", "zero", "pos")[2 + sign(ct)], levels = c("neg", "zero", "pos"))
-  ##     counts1 <- counts[, kk, drop = FALSE]
-  ##     message("----ct: ", colnames(exp.matrix)[i], " (timeseries) --done")
-  ##     resx <- .ngs.fitConstrastsWithDESEQ2.nodesign.timeseries(counts1, y, timeseries)
-  ##     rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
-  ##     X1 <- X[, kk, drop = FALSE]
-  ##     pos.samples <- which(exp.matrix[kk, i] > 0)
-  ##     neg.samples <- which(exp.matrix[kk, i] < 0)
-  ##     ## Keep average by y (else we could average across all time points as per LRT).
-  ##     resx$AveExpr1 <- rowMeans(X1[, pos.samples, drop = FALSE], na.rm = TRUE)
-  ##     resx$AveExpr0 <- rowMeans(X1[, neg.samples, drop = FALSE], na.rm = TRUE)
-  ##     resx$log2BaseMean <- log2(0.0001 + resx$baseMean)
-  ##     ## Keep DESeq2 log2FC from LRT.
-  ##     ## if (conform.output) resx$log2FoldChange <- (resx$AveExpr1 - resx$AveExpr0)
-  ##     tables[[ll + i]] <- data.frame(resx)
-  ##     names(tables)[ll + i] <- colnames(exp.matrix)[i]
-  ##     #names(tables)[ll + i] <- paste0("IA:", colnames(exp.matrix)[i], sep = "")
-  ##   }
-  ## }
-  
+    
   if (conform.output) {
     i <- 1
     for (i in 1:length(tables)) {
@@ -1445,7 +1426,8 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
 #' @export
 .ngs.fitConstrastsWithDESEQ2.nodesign.timeseries <- function(counts,
                                                              y,
-                                                             timeseries) {
+                                                             timeseries,
+                                                             test = "LRT") {
 
   message("[ngs.fitConstrastsWithDESEQ2.nodesign]: DESeq2 LRT time series analysis with interaction term")
 
@@ -1455,7 +1437,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
   jj <- match(colnames(counts), names(timeseries))
   time0 <- as.character(timeseries[jj])
   time0 <- gsub("\\D", "", unname(time0))
-  time0 <- as.numeric(time0) ## should be factor. need to modify spline in DESEq2.
+  time0 <- as.numeric(time0) ## should be factor. need to alter it and modify spline in DESEq2.
   y <- as.factor(as.character(y))
   colData <- data.frame(y = y, time = time0)
 
@@ -1465,8 +1447,40 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
     design = ~ y * splines::ns(time),
     colData = colData
   )
-  dds <- DESeq2::DESeq(dds, test = "LRT", reduced = ~ y) ## reduced = ~1
+  if (test == "LRT") {
+    dds <- try(
+      DESeq2::DESeq(dds, fitType = "mean", test = "LRT", reduced = ~ y),
+      silent = TRUE
+    )
+  } else if (test == "Wald") {
+    dds <- try(
+      DESeq2::DESeq(dds, fitType = "mean", test = "Wald"),
+      silent = TRUE
+    )
+  } else {
+    stop("[.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] DESeq2::DESeq test unrecognized")
+  }
+
+  if ("try-error" %in% class(dds)) {
+    dds <- DESeq2::DESeqDataSetFromMatrix(
+      counts,
+      design = ~ y * splines::ns(time),
+      colData = colData
+    )
+    dds <- DESeq2::estimateSizeFactors(dds)
+    dds <- DESeq2::estimateDispersionsGeneEst(dds)
+    DESeq2::dispersions(dds) <- GenomicRanges::mcols(dds)$dispGeneEst
+    if (test == "LRT") {
+      dds <- DESeq2::nbinomLRT(dds, reduced = ~ y)
+    } else if (test == "Wald") {
+      dds <- try(DESeq2::nbinomWaldTest(dds))
+    } else {
+      stop("[.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] DESeq2::DESeq test unrecognized")
+    }
+  }
+
   resx <- DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE)
+  rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
   
   ## Q: does the condition induces a change in gene expression at
   ## any time point after the reference level time point (time 0)?
