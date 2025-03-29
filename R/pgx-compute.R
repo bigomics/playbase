@@ -638,10 +638,10 @@ pgx.computePGX <- function(pgx,
   ## -----------------------------------------------------------------------------
   timeseries <- any(grepl("IA:*", colnames(pgx$contrasts)))
   if (timeseries) {
-    ts.mm <- c("trend.limma", "deseq2.lrt", "edger.lrt", "edger.qlf")
+    ts.mm <- c("trend.limma", "deseq2.lrt", "deseq2.wald", "edger.lrt", "edger.qlf")
     cm <- intersect(gx.methods, ts.mm)
     if (length(cm) == 0) {
-      message("[ngs.fitContrastsWithAllMethods] For time series analysis, gx.methods must be one of ",
+      message("[pgx.computePGX] For time series analysis, gx.methods must be among ",
         paste0(ts.mm, collapse="; "), " Skipping time series analysis.")
       hh <- grep("IA:*", colnames(pgx$contrasts))
       pgx$contrasts <- pgx$contrasts[, -hh, drop = FALSE]

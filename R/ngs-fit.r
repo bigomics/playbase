@@ -226,8 +226,8 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         message("[ngs.fitContrastsWithAllMethods] Missing values detected. Cannot perform ", cm.mtds[i])
         next;
       } else {
-        if(!is.null(timeseries) && cm.mtds[i] == "deseq2.lrt") {
-          message("[ngs.fitContrastsWithAllMethods] Time series: fitting using DESeq2 LRT with interaction term.")
+        if (!is.null(timeseries)) {
+          message("[ngs.fitContrastsWithAllMethods] Time series: fitting using DESeq2 with interaction term.")
           time_var <- timeseries
         } else {
           time_var <- NULL
