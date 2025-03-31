@@ -83,7 +83,7 @@ getProbeAnnotation <- function(organism,
   probes <- trimws(probes)
   probes[probes=="" | is.na(probes)] <- 'NA'
   probes0 <- make_unique(probes)
-  probes <- clean_probe_names(probes0)
+  probes <- make_unique(clean_probe_names(probes0))
 
   genes <- NULL
   if (annot.unknown) {
