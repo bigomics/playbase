@@ -77,8 +77,10 @@ getProbeAnnotation <- function(organism,
   annot.unknown <- unknown.organism || unknown.datatype || unknown.probetype
   annot.unknown
 
-  probes0 <- probes
-  probes <- make_unique(clean_probe_names(probes0))
+  probes <- trimws(probes)
+  probes[probes=="" | is.na(probes)] <- 'NA'
+  probes0 <- make_unique(probes)
+  probes <- clean_probe_names(probes0)
 
   genes <- NULL
   if (annot.unknown) {
@@ -123,9 +125,6 @@ getProbeAnnotation <- function(organism,
     annot_table <- annot_table[match(rownames(genes), rownames(annot_table)), ]
     genes <- cbind(genes, annot_table)[,kk]
   }
-
-  jj <- match(genes$feature, probes)
-  rownames(genes) <- genes$feature <- probes0[jj]
   
   return(genes)
 
