@@ -30,6 +30,8 @@ pgx.addGeneAnnotation <- function(pgx, annot_table = NULL) {
   # Safety checks
   stopifnot(is.list(pgx))
 
+  dbg("[pgx.addGeneAnnotation] *** DEPRECATED ***")
+  
   probes <- rownames(pgx$counts)
   datatype <- pgx$datatype
   organism <- pgx$organism
@@ -77,6 +79,7 @@ getProbeAnnotation <- function(organism,
   annot.unknown <- unknown.organism || unknown.datatype || unknown.probetype
   annot.unknown
 
+  ## clean probe names
   probes <- trimws(probes)
   probes[probes=="" | is.na(probes)] <- 'NA'
   probes0 <- make_unique(probes)
@@ -125,7 +128,13 @@ getProbeAnnotation <- function(organism,
     annot_table <- annot_table[match(rownames(genes), rownames(annot_table)), ]
     genes <- cbind(genes, annot_table)[,kk]
   }
-  
+
+  ## restore original probe names
+  rownames(genes) <- genes$feature <- make.unique(probes0)
+
+  ## cleanup entries and reorder columns
+  genes <- cleanupAnnotation(genes)
+
   return(genes)
 
 }
@@ -1618,7 +1627,8 @@ getGeneAnnotation.ORTHOGENE <- function(
     source = "gprofiler2",
     gene_name = probes
   )
-
+  rownames(df) <- probes
+  
   return(df)
 }
 

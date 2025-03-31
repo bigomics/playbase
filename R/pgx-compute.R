@@ -285,6 +285,16 @@ pgx.createPGX <- function(counts,
   counts <- as.matrix(counts)
   X <- as.matrix(X)
   if (is.null(contrasts)) contrasts <- samples[, 0]
+  
+  ## Make duplicated rownames unique (NOTE!!! new default since v3.5.1)
+  ndup <- sum(duplicated(rownames(counts)))
+  if (ndup > 0) {
+    info("[createPGX] duplicated rownames detected. making unique.")
+    rownames(counts) <- make_unique(rownames(counts))
+    rownames(X) <- rownames(counts)
+    if (!is.null(impX)) rownames(impX) <- rownames(counts)
+    if (!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
+  }
 
   ## ------------------------------------------------------------------
   ## Time series: expand contrast matrix
@@ -347,16 +357,6 @@ pgx.createPGX <- function(counts,
     contrasts <- contrasts[kk, , drop = FALSE]
   }
   
-  ## 1. Make duplicated rownames unique (NOTE!!! new default since v3.5.1)
-  ndup <- sum(duplicated(rownames(counts)))
-  if (ndup > 0) {
-    info("[createPGX] duplicated rownames detected. making unique.")
-    rownames(counts) <- make_unique(rownames(counts))
-    rownames(X) <- rownames(counts)
-    if (!is.null(impX)) rownames(impX) <- rownames(counts)
-    if (!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
-  }
-
   ## Special case for PTM phospho-proteomics.
   is.phospho <- annotate_phospho_residue(rownames(counts), detect.only = TRUE)
   if (datatype == "proteomics" && is.phospho) {
@@ -424,8 +424,15 @@ pgx.createPGX <- function(counts,
   pgx$probe_type <- probe_type
   
   message("[createPGX] annotating genes")
-  pgx <- pgx.addGeneAnnotation(pgx, annot_table = annot_table)
-
+  ## pgx <- pgx.addGeneAnnotation(pgx, annot_table = annot_table)
+  pgx$genes <- getProbeAnnotation(
+    organism = pgx$organism,
+    probes = rownames(pgx$counts),
+    datatype = pgx$datatype,
+    probetype = pgx$probe_type,    
+    annot_table = annot_table
+  )
+  
   if (is.null(pgx$genes)) {
     stop("[createPGX] FATAL: Could not build gene annotation")
   }
@@ -467,7 +474,7 @@ pgx.createPGX <- function(counts,
       is.unknown <- is.unknown & !is.na(pgx$genes$symbol)
       pgx$genes <- pgx$genes[which(!is.unknown), ]
     }
-
+    
     if (!is.null(exclude.genes)) {
       ##exclude.genes="RIK ORF LOC"
       message("[createPGX] excluding genes: ", exclude.genes)
@@ -478,7 +485,7 @@ pgx.createPGX <- function(counts,
         pgx$genes <- pgx$genes[which(!exgene), ]
       }
     }
-    
+
     ## conform
     keep <- rownames(pgx$genes)
     pgx$counts <- pgx$counts[keep, , drop = FALSE]
@@ -486,8 +493,9 @@ pgx.createPGX <- function(counts,
     if (!is.null(pgx$impX)) {
       pgx$impX <- pgx$impX[keep, , drop = FALSE]
     }
+    
   }
-
+  
   ## -------------------------------------------------------------------
   ## collapse probe-IDs to gene symbol and aggregate duplicates
   ## -------------------------------------------------------------------
@@ -511,7 +519,7 @@ pgx.createPGX <- function(counts,
     rownames(pgx$X) <- new.names
     if (!is.null(pgx$impX)) rownames(pgx$impX) <- new.names
   }
-
+  
   ## -------------------------------------------------------------------
   ## Infer cell cycle/gender here (before any batchcorrection)
   ## -------------------------------------------------------------------
