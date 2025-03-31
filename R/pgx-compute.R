@@ -208,8 +208,7 @@ pgx.createPGX <- function(counts,
   if (!is.null(counts)) {
     message("[createPGX] dim.counts: ", dim(counts)[1], " x ", dim(counts)[2])
     message("[createPGX] class.counts: ", class(counts))
-    nmissing <- sum(is.na(counts))
-    message("[createPGX] counts has ", nmissing, " missing values")
+    message("[createPGX] counts has ", sum(is.na(counts)), " missing values")
     ndups <- sum(duplicated(rownames(counts)))
     message("[createPGX] counts has ", ndups, " duplicated rows")
   } else {
@@ -231,8 +230,7 @@ pgx.createPGX <- function(counts,
   }
 
   if (!is.null(annot_table)) {
-    message("[createPGX] class(annot_table) = ", class(annot_table))
-    message("[createPGX] dim(annot_table) = ", dim(annot_table)[1], " x ", dim(annot_table)[2])
+    message("[createPGX] dim(annot_table) = ", nrow(annot_table), " x ", ncol(annot_table))
     ndiff <- sum(rownames(annot_table) != rownames(counts))
     message("[createPGX] WARNING: annot_table has ", ndiff, " different rownames as counts")
     ndups <- sum(duplicated(rownames(annot_table)))
@@ -246,15 +244,14 @@ pgx.createPGX <- function(counts,
   }
 
   if (sum(is.na(X)) > 0) {
-    nmissing <- sum(is.na(X))
-    message("[createPGX] X has ", nmissing, " missing values")
+    message("[createPGX] X has ", sum(is.na(X)), " missing values")
     if (!is.null(impX)) {
       message("[createPGX] impX matrix also provided.")
     } else {
       message("[createPGX] creating impX matrix")
       impX <- svdImpute2(X)
     }
-    message("[createPGX] dim.impX: ", dim(impX)[1], ", ", dim(impX)[2])
+    message("[createPGX] dim.impX: ", nrow(impX), " x ", ncol(impX))
   }
 
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
@@ -300,8 +297,8 @@ pgx.createPGX <- function(counts,
   ## Time series: expand contrast matrix
   ## ------------------------------------------------------------------
   if (timeseries) {
-    time.var <- c("minute", "hour", "day", "week", "month", "year", "time")
-    kk <- intersect(time.var, colnames(samples))
+    time.var <- toupper(c("minute", "hour", "day", "week", "month", "year", "time"))
+    kk <- intersect(time.var, toupper(colnames(samples)))
     if (length(kk)) {
       nn <- ncol(contrasts)
       ts.ct <- paste0("IA:", colnames(contrasts))
