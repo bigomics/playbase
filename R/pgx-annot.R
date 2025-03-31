@@ -331,11 +331,16 @@ getGeneAnnotation.ANNOTHUB <- function(
       keytype = probe_type
     )
   ))
-
+  symbols <- AnnotationDbi::keys(orgdb, keytype="SYMBOL")
+  
   # some organisms do not provide symbol but rather gene name (e.g. yeast)
   if (!"SYMBOL" %in% colnames(annot)) {
     annot$SYMBOL <- annot$GENENAME
     annot$GENENAME <- annot$ALIAS
+  }
+  if ("SYMBOL" %in% colnames(annot)) {
+    not.symbols <- !(annot$SYMBOL %in% symbols)
+    if(length(not.symbols)) annot$SYMBOL[not.symbols] <- NA
   }
   annot$ALIAS <- NULL
   annot$SYMBOL[is.na(annot$SYMBOL)] <- ""
@@ -387,11 +392,11 @@ getGeneAnnotation.ANNOTHUB <- function(
       missing.probe_type <- detect_probetype(organism, missing.probes, orgdb = orgdb)
     ))
     dbg("[getGeneAnnotation.ANNOTHUB] missing.probe_type=", missing.probe_type)
+
     ## only do second try if missing.probetype is different
     if (!is.null(missing.probe_type) && !is.na(missing.probe_type)
         && missing.probe_type != probe_type
-        ) {
-      
+        ) {      
       missing.probes1 <- match_probe_names(missing.probes, orgdb, missing.probe_type)
       suppressMessages(suppressWarnings(
         missing.annot <- AnnotationDbi::select(orgdb,
@@ -412,6 +417,10 @@ getGeneAnnotation.ANNOTHUB <- function(
       if (!"SYMBOL" %in% colnames(missing.annot)) {
         missing.annot$SYMBOL <- missing.annot$GENENAME
         missing.annot$GENENAME <- missing.annot$ALIAS
+      }
+      if ("SYMBOL" %in% colnames(missing.annot)) {
+        not.symbols <- !(missing.annot$SYMBOL %in% symbols)
+        if(length(not.symbols)) missing.annot$SYMBOL[not.symbols] <- NA
       }
       
       for(k in setdiff(colnames(annot),colnames(missing.annot))) {
@@ -1228,7 +1237,7 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   ## get probe types for organism
   keytypes <- c(
     "SYMBOL", "ENSEMBL", "ACCNUM", "UNIPROT", "GENENAME",
-    "MGI", "TAIR", ## organism specific
+    "ALIAS", "MGI", "TAIR", ## organism specific
     "ENSEMBLTRANS", "ENSEMBLPROT",
     "REFSEQ", "ENTREZID"
   )
