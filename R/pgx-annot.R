@@ -147,7 +147,7 @@ getGeneAnnotation <- function(
   if (tolower(organism) == "dog") organism <- "Canis familiaris"
 
   probes <- trimws(probes)
-  probes[probes==""|is.na(probes)] <- 'NA'
+  probes[probes=="" | is.na(probes)] <- 'NA'
   
   if(mean(grepl("[:]",probes)) > 0.98) {
     message("[getGeneAnnotation] WARNING. stripping prefix... Is this multi-omics??")
@@ -279,8 +279,12 @@ getGeneAnnotation.ANNOTHUB <- function(
     probes <- AnnotationDbi::keys(orgdb)
   }
   ## Backup probes as probes0, give names of probes the original name.
-  probes0 <- probes
+  probes[is.na(probes) | probes==""] <- "NA"
+  probes0 <- make.unique(probes)
   names(probes) <- probes0
+
+  ## clean up probe names from suffixes
+  probes <- clean_probe_names(probes)
 
   if (is.null(probe_type)) {
     probe_type <- detect_probetype(organism, probes, orgdb = orgdb)
@@ -294,8 +298,7 @@ getGeneAnnotation.ANNOTHUB <- function(
     }
   }
   
-  ## clean up probe names from suffixes
-  ## probes <- clean_probe_names(probes)
+  ## Match to clean probe names (???)
   probes <- match_probe_names(probes, orgdb, probe_type)
 
   ## --------------------------------------------
@@ -539,6 +542,7 @@ match_probe_names <- function(probes, orgdb, probe_type = NULL) {
   if (is.null(probe_type)) {
     probe_type <- detect_probetype(organism = "custom", probes, orgdb = orgdb)
   }
+  probe.names <- names(probes)
   all.keys <- keys(orgdb, probe_type)
   tsub <- function(s) gsub("[-:;.]|\\[|\\]", ".", s)
   ii <- match(toupper(tsub(probes)), toupper(tsub(all.keys)))
@@ -554,7 +558,7 @@ match_probe_names <- function(probes, orgdb, probe_type = NULL) {
       new.probes[jj[k]] <- all.keys[ii[k]]
     }
   }
-  names(new.probes) <- probes
+  names(new.probes) <- probe.names
   new.probes
 }
 
@@ -1582,8 +1586,10 @@ getGeneAnnotation.ORTHOGENE <- function(
     return(NULL)
   }
   message("[getGeneAnnotation.ORTHOGENE] mapping to species: ", species)
-  
+  probes[is.na(probes) | probes==""] <- "NA"
+  probes <- make.unique(probes)
   probes1 <- clean_probe_names(probes)  ## CHECK dots!!
+
   gene.out <- try(orthogene::map_genes(
     genes = probes1,
     species = species,
