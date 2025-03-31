@@ -6682,7 +6682,8 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
                                   min.rho=0.8, ntop=25, yheight=2,
                                   labels=NULL, cex.label=1, vx.cex=1,
                                   xpos=NULL, xlim=NULL, justgraph=FALSE,
-                                  edge.alpha=0.33, edge.type="both") {
+                                  edge.alpha=0.33, edge.type="both",
+                                  layout=c("parallel","hive")[1]) {
   
   if(is.null(groups)) {
     groups <- sort(unique(group))
@@ -6752,16 +6753,36 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
   }
   
   ## layout
-  if(is.null(xpos))
-    xpos <- c(1:length(groups))
-  x <- xpos[match(igraph::V(gr)$group, groups)]
-  y <- f[igraph::V(gr)$name] / max(abs(f))
-  my_layout <- cbind(x=x, y=y)
-  for(i in unique(my_layout)[,1]) {
-    ii <- which(my_layout[,1]==i)
-    my_layout[ii,2] <- rank(my_layout[ii,2]) / length(ii)
+  if(layout=="parallel") {
+    if(is.null(xpos))
+      xpos <- c(1:length(groups))
+    x <- xpos[match(igraph::V(gr)$group, groups)]
+    y <- f[igraph::V(gr)$name] / max(abs(f))
+    layout.xy <- cbind(x=x, y=y)
+    for(i in unique(layout.xy)[,1]) {
+      ii <- which(layout.xy[,1]==i)
+      layout.xy[ii,2] <- rank(layout.xy[ii,2]) / length(ii)
+    }
+    layout.xy[,2] <- yheight*layout.xy[,2]
   }
-  my_layout[,2] <- yheight*my_layout[,2]
+
+  if(layout=="hive") {
+    ## IN PROGRESS. NOT READY YET.
+    dt <- igraph::V(gr)$group
+    ntype <- length(unique(dt))
+    layout.xy <- matrix(NA, length(dt), 2)
+    for(i in 1:ntype) {
+      ii <- which(dt == unique(dt)[i])
+      vv <- igraph::V(gr)[ii]
+      phi <- pi/2 + i * 2*pi / ntype
+      vf <- f[vv$name]
+      r <- 0.2 + rank(vf)/length(vf)
+      x <- r*cos(phi)
+      y <- r*sin(phi)
+      layout.xy[ii,] <- cbind(x,y)  
+    }
+    rownames(layout.xy) <- igraph::V(gr)$name
+  }
     
   ew <- (igraph::E(gr)$weight / max(igraph::E(gr)$weight))**4
   vx <- log(1000*igraph::page.rank(gr)$vector)
@@ -6777,14 +6798,14 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
   
   igraph::V(gr)$label <- ""
   if(is.null(xlim)) {
-    xlim <- range(my_layout[,1])
+    xlim <- range(layout.xy[,1])
     xlim <- xlim + c(-1.5,1.5)*mean(diff(xpos))
   }
   
   plot(
     gr,
     # layout=layout_with_kk,
-    layout = my_layout,  
+    layout = layout.xy,  
     edge.width = 4*ew**1,
     edge.color = ecol,
     vertex.label.color = "black",
@@ -6794,12 +6815,12 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
     vertex.size = 6*vx*vx.cex,
     vertex.color = vcol,  
     xlim = xlim,
-    ylim = range(my_layout[,2]) + c(-0.03,0.08)*yheight,
+    ylim = range(layout.xy[,2]) + c(-0.03,0.08)*yheight,
     rescale = FALSE
   )
   
-  x <- my_layout[,1]
-  y <- my_layout[,2]  
+  x <- layout.xy[,1]
+  y <- layout.xy[,2]  
 
   ## titles
   for(i in 1:length(groups)) {
@@ -6814,14 +6835,14 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
     text( xpos[i], -0.02, "log2FC", cex=0.9*cex.label, font=2, pos=tpos,
          adj=1, offset=1)
   }
-  text( x, y, cex=0.85*cex.label, round( f[rownames(my_layout)],2),
+  text( x, y, cex=0.85*cex.label, round( f[rownames(layout.xy)],2),
        pos = c(2,4)[1+1*(x>xt)], adj=1, offset=1.2)
 
   ## plot labels 
   if(!is.null(labels)) {
-    labels <- labels[rownames(my_layout)]
+    labels <- labels[rownames(layout.xy)]
   } else {
-    labels <- rownames(my_layout)
+    labels <- rownames(layout.xy)
   }
   text(x, y, labels, cex=cex.label, pos=c(2,4)[1+1*(x>xt)],
        adj=1, offset=3.5)
