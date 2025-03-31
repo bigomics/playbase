@@ -421,7 +421,6 @@ pgx.createPGX <- function(counts,
   pgx$probe_type <- probe_type
   
   message("[createPGX] annotating genes")
-  ## pgx <- pgx.addGeneAnnotation(pgx, annot_table = annot_table)
   pgx$genes <- getProbeAnnotation(
     organism = pgx$organism,
     probes = rownames(pgx$counts),
@@ -484,11 +483,10 @@ pgx.createPGX <- function(counts,
     }
 
     ## conform
-    keep <- rownames(pgx$genes)
-    pgx$counts <- pgx$counts[keep, , drop = FALSE]
-    pgx$X <- pgx$X[keep, , drop = FALSE]
+    pgx$counts <- pgx$counts[rownames(pgx$genes), , drop = FALSE]
+    pgx$X <- pgx$X[rownames(pgx$genes), , drop = FALSE]
     if (!is.null(pgx$impX)) {
-      pgx$impX <- pgx$impX[keep, , drop = FALSE]
+      pgx$impX <- pgx$impX[rownames(pgx$genes), , drop = FALSE]
     }
     
   }
