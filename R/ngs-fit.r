@@ -1429,7 +1429,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
                                                              timeseries,
                                                              test = "LRT") {
 
-  message("[ngs.fitConstrastsWithDESEQ2.nodesign]: DESeq2 LRT time series analysis with interaction term")
+  message("[ngs.fitConstrastsWithDESEQ2.nodesign]: DESeq2 time-series analysis with interaction term")
 
   if (!all(colnames(counts) %in% names(timeseries)))
     stop("[ngs.fitConstrastsWithDESEQ2.nodesign] and time contain different set of samples")
@@ -1439,48 +1439,52 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
   time0 <- as.numeric(gsub("\\D", "", unname(time0)))
   # !!: splines::ns need data in range c(0,60). Else breaks.
   if (max(range(time0)) > 60) time0 <- time0/60
-  time0 <- factor(time0)
-  
+
   y <- as.factor(as.character(y))
-  colData <- data.frame(y = y, time = time0)
+  colData <- data.frame(y = y, time = factor(time0))
 
-  #ndf <- length(unique(colData$time)) - 1
-  dds <- DESeq2::DESeqDataSetFromMatrix(
-    counts,
-    design = ~ y * splines::ns(time),
-    colData = colData
-  )
-  
-  ft <- "mean"
-  if (test == "LRT") {
-    dds <- try(DESeq2::DESeq(dds, fitType = ft, test = "LRT", reduced = ~ y),
-      silent = TRUE)
-  } else if (test == "Wald") {
-    dds <- try(DESeq2::DESeq(dds, fitType = ft, test = "Wald"),
-      silent = TRUE)
-  } else {
-    stop("[.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] DESeq2::DESeq test unrecognized")
-  }
+  ## Iterate across df. Pick first valid run.
+  idx <- 1:length(unique(time0))
+  i=1
+  for(i in 1:length(idx)) {
 
-  ## Sometimes DESeq2 fails for unclear reasons.
-  if ("try-error" %in% class(dds)) {
-    dds <- DESeq2::DESeqDataSetFromMatrix(
-      counts,
-      design = ~ y * splines::ns(time),
-      colData = colData
-    )
-    dds <- DESeq2::estimateSizeFactors(dds)
-    dds <- DESeq2::estimateDispersionsGeneEst(dds)
-    DESeq2::dispersions(dds) <- GenomicRanges::mcols(dds)$dispGeneEst
+    ndf <- length(unique(time0)) - idx[i]
+    sp <- splines::ns(time0, df = ndf)
+    if ("try-error" %in% class(sp)) next;
+    #sp <- splines::ns(time0) default is simple and works reasonably well!
+    design <- try(stats::model.matrix(~ y * sp), silent = TRUE)
+    if ("try-error" %in% class(design)) next
+    red.design <- stats::model.matrix(~ y)
+
+    dds <- DESeq2::DESeqDataSetFromMatrix(counts, design = design, colData = colData)
+
+    ft <- "mean"
     if (test == "LRT") {
-      dds <- DESeq2::nbinomLRT(dds, reduced = ~ y)
+      dds <- try(DESeq2::DESeq(dds, fitType = ft, test = "LRT", reduced = red.design),
+        silent = TRUE)
     } else if (test == "Wald") {
-      dds <- try(DESeq2::nbinomWaldTest(dds))
+      dds <- try(DESeq2::DESeq(dds, fitType = ft, test = "Wald"),
+        silent = TRUE)
     } else {
       stop("[.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] DESeq2::DESeq test unrecognized")
     }
-  }
 
+    if ("try-error" %in% class(dds)) {
+      dds <- DESeq2::DESeqDataSetFromMatrix(counts, design = design, colData = colData)
+      dds <- DESeq2::estimateSizeFactors(dds)
+      dds <- DESeq2::estimateDispersionsGeneEst(dds)
+      DESeq2::dispersions(dds) <- GenomicRanges::mcols(dds)$dispGeneEst
+      if (test == "LRT") {
+        dds <- try(DESeq2::nbinomLRT(dds, reduced = red.design), silent = TRUE)
+      } else if (test == "Wald") {
+        dds <- try(DESeq2::nbinomWaldTest(dds), silent = TRUE)
+      }
+      if ("try-error" %in% class(dds)) next;
+    }
+    message("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
+    break;
+  }
+    
   resx <- DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE)
   rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
   
