@@ -1688,23 +1688,23 @@ check_probetype <- function(organism, probes) {
 #'
 #' export
 combine_feature_names <- function(annot, target) {
-  new.feature <- annot[, 0]
-  for (i in 1:length(target)) {
-    if (target[i] == 0 || target[i] == "rownames") {
-      new.feature <- paste0(new.feature, rownames(annot))
-    } else if (target[i] %in% colnames(annot)) {
-      new.feature <- paste0(new.feature, annot[, target[i]])
+  annot$rownames <- rownames(annot)
+  new.feature <- strsplit(annot[,target[1]],split=';')
+  for (i in 2:length(target)) {
+    if (target[i] %in% colnames(annot)) {
+      new.feature <- mapply(paste0, new.feature, annot[, target[i]])
     } else {
       ## some character
-      new.feature <- paste0(new.feature, target[i])
+      new.feature <- mapply(paste0, new.feature, target[i])      
     }
   }
+  new.feature <- sapply(new.feature, paste0, collapse=";")
   if (sum(duplicated(new.feature)) > 0) {
-    message("[merge feature names] duplicated = ", sum(duplicated(new.feature)))
     new.feature <- make_unique(new.feature)
   }
   new.feature
 }
+
 
 #' @export
 pgx.getFeatureInfo <- function(pgx, feature) {

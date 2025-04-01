@@ -6492,7 +6492,6 @@ plotTimeSeries.modules <- function(time, xx, modules, main="",
     ggplot2::stat_summary(ggplot2::aes(group=colors),
       fun=mean, geom="smooth", se=FALSE, size=1.3) +
     ggplot2::facet_wrap(~modules) 
-  gg  
   
   if(legend==FALSE) {
     gg <- gg + ggplot2::theme(legend.position="none")
@@ -6501,6 +6500,7 @@ plotTimeSeries.modules <- function(time, xx, modules, main="",
 }
 
 
+#'
 #'
 #' @export
 plotTimeSeries.groups <- function(time, y, group=NULL, main="",
