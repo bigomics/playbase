@@ -789,11 +789,12 @@ getCustomAnnotation2 <- function(probes, custom_annot, feature.col='feature',
     custom_annot <- data.frame(custom_annot, check.names=FALSE)
 
     if(!feature.col %in% colnames(custom_annot)) {
-#      feature.col <- head(grep("feature|probe|initial|input",
-#        colnames(custom_annot), ignore.case=TRUE, value=TRUE),1)
+      if(!is.null(rownames(custom_annot))) {
+        custom_annot$rownames <- rownames(custom_annot)
+      }
       fsum <- apply(custom_annot,2,function(a) mean(probes %in% a,na.rm=TRUE))
       feature.col <- NULL
-      if(max(fsum)>0.80) feature.col <- names(which.max(fsum))
+      if(max(fsum)>0.9) feature.col <- names(which.max(fsum))
       if(length(feature.col)==0) {
         custom_annot$feature <- probes
         feature.col <- "feature"
