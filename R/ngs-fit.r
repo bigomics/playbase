@@ -1436,8 +1436,11 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
 
   jj <- match(colnames(counts), names(timeseries))
   time0 <- as.character(timeseries[jj])
-  time0 <- gsub("\\D", "", unname(time0))
-  time0 <- as.numeric(time0) ## should be factor. need to alter it and modify spline in DESEq2.
+  time0 <- as.numeric(gsub("\\D", "", unname(time0)))
+  # !!: splines::ns need data in range c(0,60). Else breaks.
+  if (max(range(time0)) > 60) time0 <- time0/60
+  time0 <- factor(time0)
+  
   y <- as.factor(as.character(y))
   colData <- data.frame(y = y, time = time0)
 
@@ -1447,20 +1450,19 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
     design = ~ y * splines::ns(time),
     colData = colData
   )
+  
+  ft <- "mean"
   if (test == "LRT") {
-    dds <- try(
-      DESeq2::DESeq(dds, fitType = "mean", test = "LRT", reduced = ~ y),
-      silent = TRUE
-    )
+    dds <- try(DESeq2::DESeq(dds, fitType = ft, test = "LRT", reduced = ~ y),
+      silent = TRUE)
   } else if (test == "Wald") {
-    dds <- try(
-      DESeq2::DESeq(dds, fitType = "mean", test = "Wald"),
-      silent = TRUE
-    )
+    dds <- try(DESeq2::DESeq(dds, fitType = ft, test = "Wald"),
+      silent = TRUE)
   } else {
     stop("[.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] DESeq2::DESeq test unrecognized")
   }
 
+  ## Sometimes DESeq2 fails for unclear reasons.
   if ("try-error" %in% class(dds)) {
     dds <- DESeq2::DESeqDataSetFromMatrix(
       counts,
