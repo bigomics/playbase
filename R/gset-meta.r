@@ -23,6 +23,7 @@
 #' @export
 gset.fitContrastsWithAllMethods <- function(gmt,
                                             X,
+                                            impX,
                                             Y,
                                             G,
                                             design,
@@ -86,6 +87,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   gg <- intersect(rownames(G), rownames(X))
   G <- G[gg, names(gmt), drop = FALSE]
   X <- X[gg, , drop = FALSE]
+  impX <- impX[gg, , drop = FALSE]
 
   ## --------------------------------------------------------------
   ## Fit single-sample methods: GSVA, ssGSEA, spearman
@@ -207,6 +209,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     jj <- which(exp.matrix[, k] != 0)
     yy <- 1 * (exp.matrix[jj, k] > 0)
     xx <- X[, jj]
+    xxi <- impX[, jj]
     ref <- 0
     timings <- c()
     res <- list()
@@ -273,7 +276,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       cdesign <- cbind(Intercept = 1, Group = yy)
       tt <- system.time({
         suppressWarnings(suppressMessages(
-          output <- limma::camera(xx, gmt, cdesign, contrast = 2)
+          output <- limma::camera(xxi, gmt, cdesign, contrast = 2)
         ))
       })
       timings <- rbind(timings, c("camera", tt))
@@ -289,7 +292,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     if ("fry" %in% method) {
       cdesign <- cbind(Intercept = 1, Group = yy)
       tt <- system.time(
-        output <- limma::fry(xx, gmt, cdesign, contrast = 2)
+        output <- limma::fry(xxi, gmt, cdesign, contrast = 2)
       )
       timings <- rbind(timings, c("fry", tt))
       ## note: camera does not provide any logFC!!!!
