@@ -52,7 +52,8 @@ pgx.scatterPlotXY.GGPLOT(
   axis = TRUE,
   box = TRUE,
   guide = "legend",
-  girafe = FALSE
+  girafe = FALSE,
+  ...
 )
 }
 \arguments{

@@ -117,7 +117,12 @@ ngs.fitConstrastsWithDESEQ2(
   timeseries = NULL
 )
 
-.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries(counts, y, timeseries)
+.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries(
+  counts,
+  y,
+  timeseries,
+  test = "LRT"
+)
 }
 \arguments{
 \item{counts}{A matrix of counts, with genes in rows and samples in columns.}
