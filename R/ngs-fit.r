@@ -1448,15 +1448,17 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
   i=1
   for(i in 1:length(idx)) {
 
-    ndf <- length(unique(time0)) - idx[i]
-    sp <- splines::ns(time0, df = ndf)
+    #ndf <- length(unique(time0)) - idx[i]
+    #sp <- splines::ns(time0, df = ndf)
     if ("try-error" %in% class(sp)) next;
-    #sp <- splines::ns(time0) default is simple and works reasonably well!
+    sp <- splines::ns(time0) #default is simple and works reasonably well!
     design <- try(stats::model.matrix(~ y * sp), silent = TRUE)
-    if ("try-error" %in% class(design)) next
+    if ("try-error" %in% class(design)) next;
     red.design <- stats::model.matrix(~ y)
 
-    dds <- DESeq2::DESeqDataSetFromMatrix(counts, design = design, colData = colData)
+    dds <- try(DESeq2::DESeqDataSetFromMatrix(counts, design = design, colData = colData),
+      silent = TRUE)
+    if ("try-error" %in% class(dds)) next;
 
     ft <- "mean"
     if (test == "LRT") {
