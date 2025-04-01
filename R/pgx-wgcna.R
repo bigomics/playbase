@@ -499,7 +499,7 @@ wgcna.compute_enrichment <- function(wgcna, pgx,
       kk <- sample(colnames(gsetX), nrow(ME))
       gsetX <- gsetX[, kk, drop = FALSE]
     }
-    rc.rho <- cor(t(gsetX), ME)
+    rc.rho <- cor(t(gsetX), ME, use = "pairwise")
     rc.pvalue <- cor.pvalue(rc.rho, n = nrow(ME))
     rho.list[["gsetcor"]] <- rc.rho
     pval.list[["gsetcor"]] <- rc.pvalue
@@ -509,7 +509,7 @@ wgcna.compute_enrichment <- function(wgcna, pgx,
   ## a gset.rankcor() on the ME correlation.
   if ("mmcor" %in% method) {
     message("[wgcna.compute_enrichment] calculating MM correlation...")
-    mm <- cor(t(geneX), wgcna$net$MEs)
+    mm <- cor(t(geneX), wgcna$net$MEs, use = "pairwise")
     rc <- gset.rankcor(mm, G1, compute.p = TRUE) ## NEEDS CHECK!!!
     rho.list[["mmcor"]] <- rc$rho
     pval.list[["mmcor"]] <- rc$p.value
