@@ -85,12 +85,16 @@ getProbeAnnotation <- function(organism,
   probes0 <- make_unique(probes)
   probes <- make_unique(clean_probe_names(probes0))
 
+  if(!is.null(annot_table)) {
+    rownames(annot_table) <- make_unique(rownames(annot_table))
+  }
+  
   genes <- NULL
   if (annot.unknown) {
     # annotation table is mandatory for 'No organism' (until server side
     # can handle missing genesets)
-    info("[getProbeAnnotation] annotating for unknown datatype with custom annotation")
-    genes <- getCustomAnnotation2( probes, annot_table )
+    info("[getProbeAnnotation] annotating with custom annotation")
+    genes <- getCustomAnnotation2( probes0, annot_table )
   } else if (datatype == "metabolomics") {
     dbg("[getProbeAnnotation] annotating for metabolomics")
     mx.check <- mx.check_mapping(
@@ -116,7 +120,7 @@ getProbeAnnotation <- function(organism,
   ## final fallback is genes==NULL
   if(is.null(genes)) {
     dbg("[getProbeAnnotation] WARNING: fallback to UNKNOWN probes")
-    genes <- getCustomAnnotation( probes, custom_annot = NULL )
+    genes <- getCustomAnnotation( probes0, custom_annot = NULL )
   }
 
   ## if annot_table is provided we override our annotation and append
@@ -126,11 +130,12 @@ getProbeAnnotation <- function(organism,
     kk <- unique(c(colnames(genes),colnames(annot_table)))
     genes <- genes[, setdiff(colnames(genes), colnames(annot_table)), drop=FALSE]
     annot_table <- annot_table[match(rownames(genes), rownames(annot_table)), ]
+    rownames(annot_table) <- rownames(genes)
     genes <- cbind(genes, annot_table)[,kk]
   }
 
   ## restore original probe names
-  rownames(genes) <- genes$feature <- make.unique(probes0)
+  rownames(genes) <- genes$feature <- probes0
 
   ## cleanup entries and reorder columns
   genes <- cleanupAnnotation(genes)
