@@ -6509,13 +6509,17 @@ plotTimeSeries.groups <- function(time, y, group=NULL, main="",
   groups <- sort(unique(group))
   ngroup <-length(groups)
 
+  ## determine is time is continuous or factor
   time[grepl("ctrl|co|control|bl",time,ignore.case=TRUE)] <- "0"
-  ctime <- as.numeric(gsub("[-_].*|[^0-9]","",time))
-  xlim <- range(ctime)
-  if(time.factor) {
-    ctime <- factor(ctime, levels=sort(unique(ctime)))
+  is.number <- all(grepl("[0-9]",time))
+  if(!is.number || time.factor) {
+    ctime <- factor(time, levels=sort(unique(time)))
     ntime <- length(unique(ctime))
-    xlim <- c(0,ntime)
+    xlim <- c(0,ntime) + 0.5
+    time.factor <- TRUE
+  } else {
+    ctime <- as.numeric(gsub("[-_].*|[^0-9]","",time))
+    xlim <- range(ctime)
   }
   ntime <- length(unique(ctime))
   
@@ -6533,13 +6537,20 @@ plotTimeSeries.groups <- function(time, y, group=NULL, main="",
       add=i>1, at = x1pos,
       xlab = xlab, ylab="expression",
       xlim=xlim, ylim=range(y))
+
+    ## add spline
     if(length(unique(x1))>1) {
       sy <- tapply(y1, x1, median, na.rm=TRUE)
-      nk <- length(sy)*0.8
       sx <- as.numeric(names(sy))
       if(time.factor) sx <- factor(sx, levels=levels(ctime))
-      lines(spline(sx,sy,n=nk),col=klr,lwd=3)
+      if(sum(!is.na(sx))) {
+        ii <- which(!is.na(sx) & !is.na(sy))
+        nk <- length(ii)*0.8        
+        lines(spline(sx[ii],sy[ii],n=nk),col=klr,lwd=3)
+      }
     }
+
+    ## add points
     points(x1,y1,col=klr2,cex=1.8,pch=20) 
   }
 
