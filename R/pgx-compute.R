@@ -1227,10 +1227,16 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
 
     random.gmt <- lapply(rr, function(n) head(sample(gg), min(n, length(gg) / 2)))
     names(random.gmt) <- paste0("TEST:random_geneset.", 1:length(random.gmt))
+    # Extreme low feature count control, avoids crash
+    if(all(lapply(random.gmt, length) |> unlist() < 3)) {
+      min.geneset.size <- 1
+    } else {
+      min.geneset.size <- 3
+    }
 
     add.gmt <- createSparseGenesetMatrix(
       gmt.all = random.gmt,
-      min.geneset.size = 3,
+      min.geneset.size = min.geneset.size,
       max.geneset.size = 400,
       all_genes = full_feature_list,
       min_gene_frequency = 1,

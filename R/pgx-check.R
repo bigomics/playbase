@@ -98,6 +98,13 @@ pgx.checkINPUT <- function(
     if (check.log) {
       check_return$e29 <- "Possible log transformed counts detected."
     }
+
+    # check min amount of features
+    n.features <- nrow(df_clean)
+    if(n.features < 3) {
+      check_return$e31 <- "Too few features detected. Minimum is 3."
+      PASS <- FALSE
+    }
   }
 
   if (datatype == "SAMPLES") {
