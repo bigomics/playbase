@@ -175,24 +175,31 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
   has.prefix <- all(grepl("^[A-Za-z]+:", tolower(probes)))
   has.prefix
   if (has.prefix) {
-    probes <- sub("^[A-Za-z]+:", "", probes)
+    probes <- sub("^[A-Za-z0-9]+:", "", probes)
   }
-  names(orig.probes) <- probes
+  probes <- trimws(probes)
+  names(probes) <- orig.probes
 
   ## check for cross annotation table
   has.id <- FALSE
   if (!is.null(annot_table)) {
+    ## this checks for the column in the provided annot_table that
+    ## best matches any column in METABOLITE_ID and takes that column
+    ## as new probe names.
+    annot_table <- annot_table[match(orig.probes,rownames(annot_table)),]
+    rownames(annot_table) <- orig.probes    
     MX <- playdata::METABOLITE_ID
-    mx.ids <- toupper(setdiff(colnames(MX), "ID"))
-    mx.ids <- c(mx.ids, paste0(mx.ids, "_ID"))
-    annot.cols <- toupper(colnames(annot_table))
-    has.id <- !is.null(annot_table) && any(annot.cols %in% mx.ids)
+    id.match <- apply(annot_table, 2, function(a) {
+      max(apply(MX, 2, function(m) mean(a %in% m, na.rm=TRUE)))
+    })
+    has.id <- max(id.match, na.rm=TRUE) > 0.8
     if (has.id) {
-      id.match <- apply(annot_table, 2, function(a) {
-        max(apply(MX, 2, function(m) sum(a %in% m)))
-      })
+      ## If a good cross-lookup ID is found, take that column as new
+      ## probe names.
       id.col <- which.max(id.match)
+      dbg("[getMetaboliteAnnotation] cross-annot column: ",colnames(annot_table)[id.col])
       probes <- annot_table[, id.col]
+      names(probes) <- orig.probes
     }
   }
   has.id

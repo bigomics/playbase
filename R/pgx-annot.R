@@ -59,6 +59,25 @@ ngs.getGeneAnnotation <- function(...) {
   getGeneAnnotation(...)
 }
 
+merge_annot_table <- function(df, annot_table) {
+  kk <- unique(c(colnames(df),colnames(annot_table)))
+  annot_table <- annot_table[match(rownames(df), rownames(annot_table)), ]
+  rownames(annot_table) <- rownames(df)
+  
+  ## merge common columns by filling missing values in annot_table
+  common.cols <- intersect(colnames(df),colnames(annot_table))
+  for(k in common.cols) {
+    a <- annot_table[,k]
+    b <- df[,k]
+    annot_table[,k] <- ifelse( a %in% c(NA,"NA","","-","---"), b, a)
+  }
+  
+  ## merge data.frame, skip common columns
+  df <- df[, setdiff(colnames(df), colnames(annot_table)), drop=FALSE]
+  cbind(df, annot_table)[,kk]
+}
+
+
 #' Convert multi-omics probetype. Probe names *must  be prefixed with
 #' data type unless classical transcriptomics/proteomics.
 #'
@@ -82,9 +101,8 @@ getProbeAnnotation <- function(organism,
   ## clean probe names
   probes <- trimws(probes)
   probes[probes=="" | is.na(probes)] <- 'NA'
-  probes0 <- make_unique(probes)
-  probes <- make_unique(clean_probe_names(probes0))
-
+  probes0 <- make_unique(probes)  ## make unique but do not clean
+#  probes <- make_unique(clean_probe_names(probes0))  ## NEED RETHINK!! really???
   if(!is.null(annot_table)) {
     rownames(annot_table) <- make_unique(rownames(annot_table))
   }
@@ -103,8 +121,8 @@ getProbeAnnotation <- function(organism,
     mx.check
     if(mx.check) {
       ## Directly annotate if probes are recognized
-      genes <- getMetaboliteAnnotation(
-        probes, add_id = TRUE, annot_table = annot_table )
+      ##genes <- getMetaboliteAnnotation(probes, add_id=TRUE, annot_table=annot_table)
+      genes <- getMetaboliteAnnotation(probes, add_id=TRUE, annot_table=NULL)      
     } else {
       ## Fallback on custom
       dbg("[getProbeAnnotation] WARNING: not able to map metabolomics probes")
@@ -127,11 +145,7 @@ getProbeAnnotation <- function(organism,
   ## extra columns
   if (!is.null(genes) && !is.null(annot_table)) {
     dbg("[getProbeAnnotation] merging custom annotation table")
-    kk <- unique(c(colnames(genes),colnames(annot_table)))
-    genes <- genes[, setdiff(colnames(genes), colnames(annot_table)), drop=FALSE]
-    annot_table <- annot_table[match(rownames(genes), rownames(annot_table)), ]
-    rownames(annot_table) <- rownames(genes)
-    genes <- cbind(genes, annot_table)[,kk]
+    genes <- merge_annot_table(genes, annot_table) 
   }
 
   ## restore original probe names
@@ -163,7 +177,7 @@ getGeneAnnotation <- function(
   probes[probes=="" | is.na(probes)] <- 'NA'
   
   if(mean(grepl("[:]",probes)) > 0.98) {
-    message("[getGeneAnnotation] WARNING. stripping prefix... Is this multi-omics??")
+    message("[getGeneAnnotation] WARNING. stripping multi-omics prefix")
     probes <- sub("^[a-zA-Z]+:", "", probes)
   }
 
@@ -538,7 +552,44 @@ clean_dups_inline_probenames <- function(probes) {
   return (probes)
 }
 
-#' Cleanup probe names from postfixes or version numbers
+#' non-greedy removal of numerical postfix. Postfix is defined as (1)
+#' last numerical substring after - (minus), or (2) any substring
+#' after special separators [_.]. 
+#'
+strip_postfix <- function(s) {  
+  stripFUN <- function(s) {  
+    sub(paste0("[._].*$|[-][0-9.]+$"),"",s)
+  }
+  ss <- strsplit(s,split=';')
+  ss <- lapply(ss, function(s) stripFUN(s))
+  sapply(ss, paste, collapse=';')
+}
+
+
+#' non-greedy removal of prefixes. Prefix is defined as any
+#' alphanumerical substring (no spaces, no special chars) before the
+#' matching colon character :.
+#'
+strip_prefix <- function(s) {  
+  stripFUN <- function(s) {  
+    sub("^[0-9a-zA-Z]+:","",s)
+  }
+  ss <- strsplit(s,split=';')
+  ss <- lapply(ss, function(s) stripFUN(s))
+  sapply(ss, paste, collapse=';')
+}
+
+#' Cleanup symbols names from postfixes and prefixes. Take only first
+#' symbol. This is mostly used for symbol lookup tables that need one
+#' clean symbol.
+#'
+#' @export
+clean_symbols <- function(symbols) {
+  strip_prefix(strip_postfix(sub(";.*","",trimws(symbols))))
+}
+
+#' Cleanup probe names from postfixes or version numbers. Retains
+#' prefix needed for multi-omics.
 #'
 #' @export
 clean_probe_names <- function(probes, sep = "_.-") {
@@ -546,9 +597,9 @@ clean_probe_names <- function(probes, sep = "_.-") {
   probes[is.na(probes)] <- ""  
   ## strip multiple probes  
   probes <- sub("[;].*","",probes) 
-  ## strip away anything after a 'dot' or 'underscore'
+  ## strip away anything postfix after a 'dot' or 'underscore'
   probes <- sub(paste0("[", sep, "].*"), "", probes)
-
+  ##probes <- strip_postfix(probes)
   return(probes)
 }
 
@@ -887,6 +938,10 @@ getHumanOrtholog <- function(organism, symbols,
 
   orthogenes <- rep(NA, length(symbols))
   orthosource <- rep(NA, length(symbols))    
+
+  ## clean symbols
+  orig.symbols <- symbols
+  symbols <- clean_symbols(symbols)
   
   ## Try mapping with orthogene's databases 
   ##ortho.methods <- c("gprofiler", "homologene", "babelgene") ## mapping methods
@@ -954,8 +1009,8 @@ getHumanOrtholog <- function(organism, symbols,
   
   ## return dataframe. First column organism symbols, second column
   ## human ortholog. NA if missing.
-  df <- data.frame(symbols, "human"=orthogenes, source=orthosource)
-  colnames(df)[1] <- organism
+  df <- data.frame(input=orig.symbols, symbols, "human"=orthogenes, source=orthosource)
+  colnames(df)[2] <- organism
   return(df)
 }
 

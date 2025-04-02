@@ -498,6 +498,8 @@ pgx.createPGX <- function(counts,
   pp <- sub("^[a-zA-Z]+:", "", rownames(pgx$genes))
   mean_feature_is_symbol <- mean(pp == pgx$genes$symbol, na.rm = TRUE) 
 
+  ## NOTE: this was old chunk to convert rownames to HUGO gene
+  ## symbol. It now serves to append symbol to rownames/feature names.
   if (convert.hugo && mean_feature_is_symbol < 0.10) {
     symbol <- pgx$genes$symbol
     symbol[is.na(symbol)] <- ""
