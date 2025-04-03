@@ -223,6 +223,9 @@ getGeneAnnotation <- function(
       sel <- which(!is.na(missing.annot$symbol) & missing.annot$symbol!="")
       missing.annot <- missing.annot[sel, ]
       jj <- match(missing.annot$feature, annot$feature)
+      na.jj <- which(is.na(jj))
+      jj <- jj[-na.jj]
+      missing.annot <- missing.annot[-na.jj, ]
       if(length(jj)>0) annot[jj, ] <- missing.annot
     }
   }
@@ -1390,6 +1393,17 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     if (verbose) {
       message("head.probes = ", paste(head(probes), collapse = " "))
       message("WARNING: Probe type not found. Valid probe types: ", paste(keytypes, collapse = " "))
+    }
+    # fallback before giving up; try orthogene to see if uniprot is available
+    gp.organism <- orthogene::map_species(species = organism, method = "gprofiler", 
+      output_format = "id", verbose = FALSE)
+    gp.out <- gprofiler2::gconvert(probesx, organism = gp.organism, target="UNIPROT_GN_ACC")
+    if (!is.null(gp.out)) {
+      uniprot <- tapply(gp.out$target, gp.out$input, function(x) paste(x,collapse=";"))
+      uniprot <- as.character(uniprot[match(probes1,names(uniprot))])
+      if (any(is.na(uniprot))) {
+        return("UNIPROT")
+      }
     }
     return(NA)
   } else {
