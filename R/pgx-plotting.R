@@ -6376,52 +6376,112 @@ ggLollipopPlot <- function(values, sizes = NULL, xlab = "value",
 }
 
 #' @export
-plotlyLasagna <- function(df, znames = NULL) {
-  zz <- sort(unique(df$z))
+plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
+  
+  zz <- sort(unique(df$z))  ## z if factor
   min.x <- min(df$x, na.rm = TRUE)
   max.x <- max(df$x, na.rm = TRUE)
   min.y <- min(df$y, na.rm = TRUE)
   max.y <- max(df$y, na.rm = TRUE)
 
+  edgetype1 <- edgetype1 <- NULL
+  if(!is.null(edges)) {
+    edgetype1 <- mofa.get_prefix(edges[,1])
+    edgetype2 <- mofa.get_prefix(edges[,2])
+  }
+  
   fig <- plotly::plot_ly()
-  z <- 1
-  for (z in zz) {
-    sel <- which(df$z == z)
-    df1 <- df[sel, ]
+  k=1
+  for (k in 1:length(zz)) {
+    
+    z <- zz[k]
+    df1 <- df[which(df$z == z), c("x","y","z","color") ]
     mx <- c(min.x, min.x, max.x, max.x)
     my <- c(min.y, max.y, min.y, max.y)
     mz <- rep(z, 4)
 
     fig <- fig %>%
       plotly::add_mesh(
-        x = mx, y = my, z = mz,
-        color = "grey", opacity = 0.2
+        x = mx,
+        y = my,
+        z = mz,
+        color = "grey",
+        opacity = 0.15
       )
 
+    ## Add layer points
     fig <- fig %>%
-      plotly::add_trace(
-        data = df1, x = ~x, y = ~y, z = z,
-        mode = "markers", type = "scatter3d",
-        showlegend = FALSE,
-        marker = list(size = 3)
+      plotly::add_markers(
+        data = df1,
+        x = ~x,
+        y = ~y,
+        z = z,
+        text = ~text,
+        hoverinfo = 'text',
+        marker = list(
+          ##size = 3,
+          size = ~abs(color)*15*cex + 3,
+          color = ~color,
+          line = list(
+            color = "#88888844",
+            width = 0.0
+          ),
+          colorscale = "Bluered",
+          #colorscale = "RdBu",
+          #reversescale = TRUE,
+          showscale = FALSE,
+          showlegend = FALSE
+        ),
+        showlegend = FALSE
       )
-
+    
+    ## Add segments
+    if(k < length(zz) && !is.null(edges)) {
+      sel1 <- which(edgetype1 == zz[k] & edgetype2 == zz[k+1])
+      sel2 <- which(edgetype2 == zz[k] & edgetype1 == zz[k+1])
+      df2 <- df[which(df$z == zz[k+1]), c("x","y","z")]          
+      ee <- edges[unique(c(sel1,sel2)),]
+      idx <- as.vector(t(as.matrix(ee[,1:2])))
+      dfe <- rbind(df1[,c("x","y","z")], df2[,c("x","y","z")])[idx,]      
+      dfe$pair_id <- as.vector(mapply(rep, 1:nrow(ee),2))
+      fig <- fig %>%
+        plotly::add_trace(
+          x = dfe$x,
+          y = dfe$y,
+          z = dfe$z,
+          type = "scatter3d",
+          ##type = "scattergl",
+          mode = "lines",
+          line = list(
+            color = "black",
+            width = 0.5
+          ),
+          split = dfe$pair_id,
+          showlegend = FALSE,
+          inherit = FALSE)
+    }
+    
+    ## Add layer title
     ztext <- z
     if (!is.null(znames) && (is.integer(z) || z %in% names(znames))) {
       ztext <- znames[z]
     }
 
     fig <- fig %>%
-      plotly::add_trace(
-        x = min.x, y = max.y, z = z,
-        type = "scatter3d", mode = "text",
+      plotly::add_text(
+        x = min.x,
+        y = max.y,
+        z = z,
+        ##type = "scatter3d",
+        ##type = "scattergl",
+        mode = "text",
         text = ztext,
         textfont = list(size = 20),
         showlegend = FALSE,
         inherit = FALSE
       )
   }
-  fig
+
   fig <- fig %>%
     plotly::layout(
       scene = list(
@@ -6432,6 +6492,7 @@ plotlyLasagna <- function(df, znames = NULL) {
         showlegend = FALSE
       )
     )
+  
   fig
 }
 

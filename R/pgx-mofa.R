@@ -47,7 +47,6 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
 
   ## MOFA computation
   message("computing MOFA ...")
-  dbg("[pgx.compute_mofa] numfactors =", numfactors)
 
   ## samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa";ntop=2000;numfactors=8;gpu_mode=FALSE;max_iter=1000
   mofa <- mofa.compute(
@@ -2617,10 +2616,6 @@ plot_lasagna <- function(posx, vars = NULL, num_edges = 20) {
     a <- names(posx)[i]
     if (!all(grepl(a, names(vars[[i]])))) {
       rownames(posx[[i]]) <- paste0(a, ":", rownames(posx[[i]]))
-      if (!is.null(vars) && is.list(vars)) {
-        names(vars[[i]]) <- sub(paste0(a, ":"), "", names(vars[[i]]))
-        names(vars[[i]]) <- paste0(a, ":", names(vars[[i]]))
-      }
     }
   }
 
@@ -2687,36 +2682,61 @@ plot_lasagna <- function(posx, vars = NULL, num_edges = 20) {
 #'
 #'
 #' @export
-plotly_lasagna <- function(posx, vars = NULL, num_edges = 20) {
-  for (i in 1:length(posx)) {
-    a <- names(posx)[i]
-    if (!all(grepl(a, names(vars[[i]])))) {
-      rownames(posx[[i]]) <- paste0(a, ":", rownames(posx[[i]]))
-      if (!is.null(vars)) {
-        names(vars[[i]]) <- paste0(a, ":", names(vars[[i]]))
-      }
+plotly_lasagna <- function(pos, vars = NULL, X = NULL,
+                           min.rho = 0.5, num_edges = 40) {
+
+  ## prefix variable if needed
+  pos <- mofa.prefix(pos)
+  pos <- lapply(pos, uscale)
+  
+  ## feature maps across datatypes
+  df <- data.frame()
+  for (i in names(pos)) {
+    df1 <- data.frame(feature=rownames(pos[[i]]), pos[[i]], type = i)
+    df <- rbind(df, df1)
+  }
+  if(is.null(vars)) {
+    vars <- rep(1, nrow(df))
+    names(vars) <- df$feature
+  }
+
+  vars <- vars[df$feature]
+  vars <- vars / max(abs(vars),na.rm=TRUE)
+  df$type <- factor(df$type, levels = names(pos))  ## in order of pos
+  df$color <- as.numeric(vars)
+  df$text <- paste(df$feature,"<br>x=",round(df$color,digits=3))
+  colnames(df) <- c("feature", "x", "y", "z", "color", "text")
+  
+  ## provide some edges
+  E <- NULL
+  if(!is.null(X)) {
+    X <- X[names(vars),]
+    E <- c()
+    i=1
+    for(i in 1:(length(pos)-1)) {
+      ii <- which( df$z == names(pos)[i])
+      jj <- which( df$z == names(pos)[i+1])
+      R <- cor( t(X[ii,]), t(X[jj,]), use="pairwise")
+      idx <- which(abs(R) >= min.rho, arr.ind=TRUE)
+      ee <- data.frame( i=rownames(R)[idx[,1]], j=colnames(R)[idx[,2]], r=R[idx] )
+      sel <- head(order(-abs(ee$r)),num_edges)
+      E <- rbind(E, ee[sel,])
     }
   }
 
-  ## scale each layer
-  posx <- lapply(posx, uscale)
-
-  ## feature maps across datatypes
-  x <- data.frame()
-  for (i in names(posx)) {
-    x <- rbind(x, data.frame(posx[[i]], type = i))
-  }
-  x$type <- factor(x$type, levels = names(posx))
-  colnames(x) <- c("x", "y", "z")
-
+  ## some nicer names
   znames <- c(
+    "ph" = "Phenomics",
+    "gset" = "Biological function",
     "mx" = "Metabolomics",
     "gx" = "Transcriptomics",
+    "tx" = "Transcriptomics",
     "mir" = "micro-RNA",
     "px" = "Proteomics"
   )
 
-  plotlyLasagna(x, znames = znames)
+  fig <- plotlyLasagna(df, znames = znames, edges = E)
+  return(fig)
 }
 
 
