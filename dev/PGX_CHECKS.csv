@@ -29,3 +29,4 @@ e27,COUNTS,Non-numeric values detected in counts file.,warning,Non-numeric value
 e28,COUNTS,Infinite values detected.,warning,Infinite values detected in counts.,"We detected infinite values (Inf) in the counts data, we will replace these values with missing values (NA).",Infinite values detected in counts.
 e29,COUNTS,log transformed counts detected,warning,Log transformed counts detected.,"Counts should be provided as raw intensities, if you data is log-transformed, use expression.csv instead of counts.csv.",log transformed counts detected.
 e30,COUNTS,Invalid probe type,error,Features in counts are not valid.,Please check our documentation to find the valid probe types (feature names).,Invalid probe types.
+e31,COUNTS,Too few features in counts.,error,Too few features in counts.,Minimum number of features is 3.,Too few features in counts.
