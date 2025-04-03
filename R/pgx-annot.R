@@ -1394,7 +1394,7 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
       message("head.probes = ", paste(head(probes), collapse = " "))
       message("WARNING: Probe type not found. Valid probe types: ", paste(keytypes, collapse = " "))
     }
-    # fallback before giving up; try orthogene to see if uniprot is available
+    # fallback before giving up; try gprofiler to see if uniprot is available
     gp.organism <- orthogene::map_species(species = organism, method = "gprofiler", 
       output_format = "id", verbose = FALSE)
     gp.out <- gprofiler2::gconvert(probesx, organism = gp.organism, target="UNIPROT_GN_ACC")
