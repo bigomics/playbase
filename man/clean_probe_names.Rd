@@ -2,10 +2,12 @@
 % Please edit documentation in R/pgx-annot.R
 \name{clean_probe_names}
 \alias{clean_probe_names}
-\title{Cleanup probe names from postfixes or version numbers}
+\title{Cleanup probe names from postfixes or version numbers. Retains
+prefix needed for multi-omics.}
 \usage{
 clean_probe_names(probes, sep = "_.-")
 }
 \description{
-Cleanup probe names from postfixes or version numbers
+Cleanup probe names from postfixes or version numbers. Retains
+prefix needed for multi-omics.
 }
