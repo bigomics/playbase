@@ -64,6 +64,10 @@ compute_testGenesets <- function(pgx,
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
     X <- rename_by(X, pgx$genes, "symbol", unique = TRUE)
   }
+  impX <- pgx$impX
+  if (!all(rownames(impX) %in% pgx$genes$symbol)) {
+    impX <- rename_by(impX, pgx$genes, "symbol", unique = TRUE)
+  }
 
   ## -----------------------------------------------------------
   ## Run methods
@@ -81,6 +85,7 @@ compute_testGenesets <- function(pgx,
   gset.meta <- gset.fitContrastsWithAllMethods(
     gmt = gmt,
     X = X,
+    impX = impX,
     Y = Y,
     G = G,
     design = design,
