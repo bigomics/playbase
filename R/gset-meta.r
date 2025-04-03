@@ -87,7 +87,11 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   gg <- intersect(rownames(G), rownames(X))
   G <- G[gg, names(gmt), drop = FALSE]
   X <- X[gg, , drop = FALSE]
-  impX <- impX[gg, , drop = FALSE]
+  if (!is.null(impX)) {
+    impX <- impX[gg, , drop = FALSE]
+  } else {
+    impX <- X
+  }
 
   ## --------------------------------------------------------------
   ## Fit single-sample methods: GSVA, ssGSEA, spearman
