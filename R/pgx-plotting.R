@@ -6512,13 +6512,10 @@ plotTimeSeries.modules <- function(time, xx, modules, main="",
   is.color <- mean(modules %in% WGCNA::standardColors(435)) > 0.8
   is.color
   if(is.numeric(modules)) {
-    dbg("[plotTimeSeries.modules] modules is numeric")
     colors <- WGCNA::standardColors(435)[rank(modules)]
   } else if(is.color) {
-    dbg("[plotTimeSeries.modules] modules is a color")    
     colors <- modules
   } else {
-    dbg("[plotTimeSeries.modules] modules is factor")    
     colors <- WGCNA::standardColors(435)[as.integer(factor(modules))]
   }
 
@@ -6771,7 +6768,7 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
     jj <- which( group == groups[k+1] )    
     R[[k]] <- cor(t(X[ii,,drop=FALSE]), t(X[jj,,drop=FALSE]),use="pairwise")
   }
-
+  
   gr <- list()
   k=1
   for(k in 1:length(R)) {
@@ -6797,8 +6794,10 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
   if(length(groups)>2) {
     ee <- igraph::edge_attr(gr)
     ee <- do.call(cbind, ee)
-    igraph::E(gr)$weight <- rowMeans(ee[,grep("weight",colnames(ee))],na.rm=TRUE)
-    igraph::E(gr)$sign   <- rowMeans(ee[,grep("sign",colnames(ee))],na.rm=TRUE)
+    ii <- grep("weight",colnames(ee))
+    jj <- grep("sign",colnames(ee))
+    igraph::E(gr)$weight <- rowMeans(ee[,ii,drop=FALSE],na.rm=TRUE)
+    igraph::E(gr)$sign   <- rowMeans(ee[,jj,drop=FALSE],na.rm=TRUE)
   }
     
   ## limit number per group
