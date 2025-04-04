@@ -66,7 +66,9 @@ merge_annot_table <- function(df, df2) {
 #  df2 <- df2[match(rownames(df), rownames(df2)), ]
 #  rownames(df2) <- rownames(df)
   if(nrow(df) != nrow(df2)) stop("df and df2 not same size")
-  
+  if (inherits(df2, "matrix")) {
+    df2 <- as.data.frame(df2)
+  }
   ## add columns by filling missing values in df or df2
   cols <- union(colnames(df),colnames(df2))
   for(k in setdiff(cols,colnames(df))) df[[k]] <- NA
