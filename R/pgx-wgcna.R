@@ -55,8 +55,9 @@ pgx.wgcna <- function(
   ## WGCNA does not work very well with scRNAseq due to sparsity.  To
   ## bypass the issue, hdWGCNA computes metacells.  Here we compute
   ## metacells too using Supercell,
-  is.singlecell <- !is.null(pgx$datatype) && tolower(pgx$datatype) %in% c("scrnaseq","scrna-seq")
-  is.toobig <- ncol(X) > 2000
+  #is.singlecell <- !is.null(pgx$datatype) && tolower(pgx$datatype) %in% c("scrnaseq","scrna-seq")
+  is.singlecell <- !is.null(pgx$datatype) && pgx$datatype == "scRNAseq"
+  is.toobig <- ncol(X) > 1000 ## 2000
   if (is.singlecell && is.toobig) {
     message("[pgx.wgcna] WGCNA: scRNAseq. >2K cells. Computing supercells with SuperCell.")
     counts <- pmax(2**X - 1,0)
