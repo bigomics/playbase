@@ -215,7 +215,7 @@ getGeneAnnotation <- function(
             annot[, col] <- rep(NA, nrow(annot))
           }
         }
-        annot[missing, colnames(curr_annot)] <- curr_annot
+        annot[missing, colnames(curr_annot)] <- curr_annot[missing, ]
         missing <- is.na(annot$symbol) | annot$symbol == ""
       }
     }
