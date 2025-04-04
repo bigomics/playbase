@@ -166,7 +166,7 @@ getGeneAnnotation <- function(
     probes,
     use.ah = NULL,
     verbose = TRUE,
-    methods = c("gprofiler","annothub")
+    methods = c("annothub", "gprofiler")
     ) {
   annot <- NULL
 
@@ -183,54 +183,46 @@ getGeneAnnotation <- function(
     probes <- sub("^[a-zA-Z]+:", "", probes)
   }
 
-  
-  ## first annotate with ANNOTHUB
-  info("[getGeneAnnotation] annotating with ANNOTHUB")
-  annot <- try(getGeneAnnotation.ANNOTHUB(
-    organism = organism,
-    probes = probes,
-    use.ah = use.ah,
-    verbose = verbose
-  ))
-  if(inherits(annot,"try-error")) annot <- NULL
-  
-  if(!is.null(annot)) {
-    missing <- (annot$symbol %in% c(NA,""))
-  } else {
-    annot <- data.frame(feature=probes, symbol=NA, human_ortholog=NA, gene_title=NA)
-    missing <- rep(TRUE, length(probes))
-  }
-  
-  ## fallback with ORTHOGENE
-  if (any(missing)) {
-    info(
-      "[getGeneAnnotation] annotating", sum(missing),
-      "missing features with ORTHOGENE"
-    )
-    missing.probes <- probes[which(missing)]
-    missing.annot <- try(getGeneAnnotation.ORTHOGENE(
-      organism = organism,
-      probes = missing.probes,
-      verbose = verbose
-    ))
-    if (!is.null(missing.annot) &&
-          !"try-error" %in% class(missing.annot) &&
-           nrow(missing.annot)) {
-      ## replace missing entries (some still missing)
-      cols <- unique(c(colnames(annot), colnames(missing.annot)))
-      for(k in setdiff(cols,colnames(annot))) {
-        annot[[k]] <- NA
+  # init empty (all missings)
+  annot <- data.frame(feature=probes, stringsAsFactors=FALSE)
+  missing <- rep(TRUE, length(probes))
+
+  for (method in methods) {
+    if (any(missing)) {
+      # annotation for current method
+      curr_annot <- try(switch(
+        method,
+        "annothub" = getGeneAnnotation.ANNOTHUB(
+          organism = organism,
+          probes = probes,
+          use.ah = use.ah,
+          verbose = verbose
+        ),
+        "gprofiler" = getGeneAnnotation.ORTHOGENE(
+          organism = organism,
+          probes = probes,
+          verbose = verbose
+        ),
+        stop("Unknown method: ", method)
+      ))
+      if (inherits(curr_annot, "try-error")) next
+
+      if (!is.null(curr_annot) && nrow(curr_annot) > 0) {
+        # not all methods have the same columns
+        new_cols <- setdiff(colnames(curr_annot), colnames(annot))
+        if (length(new_cols) > 0) {
+          for (col in new_cols) {
+            annot[, col] <- rep(NA, nrow(annot))
+          }
+        }
+        annot[missing, colnames(curr_annot)] <- curr_annot
+        missing <- is.na(annot$symbol) | annot$symbol == ""
       }
-      annot <- annot[,cols]
-      missing.annot <- missing.annot[,cols]
-      sel <- which(!is.na(missing.annot$symbol) & missing.annot$symbol!="")
-      missing.annot <- missing.annot[sel, ]
-      jj <- match(missing.annot$feature, annot$feature)
-      na.jj <- which(is.na(jj))
-      jj <- jj[-na.jj]
-      missing.annot <- missing.annot[-na.jj, ]
-      if(length(jj)>0) annot[jj, ] <- missing.annot
     }
+  }
+
+  if (all(missing)) { # unsuccessful annotation
+    annot <- NULL
   }
   
   ## clean up
@@ -329,6 +321,11 @@ getGeneAnnotation.ANNOTHUB <- function(
       annot <- cleanupAnnotation(annot)
       return(annot)
     }
+  }
+
+  if (probe_type == "GPROFILER") {
+    dbg("[getGeneAnnotation.ANNOTHUB] probe_type = GPROFILER; skipping annothub")
+    return(NULL)
   }
   
   ## Match to clean probe names (???)
@@ -1397,20 +1394,13 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
       message("head.probes = ", paste(head(probes), collapse = " "))
       message("WARNING: Probe type not found. Valid probe types: ", paste(keytypes, collapse = " "))
     }
-    # fallback before giving up; try gprofiler to see if uniprot is available
+    # fallback before giving up; try gprofiler
     gp.organism <- orthogene::map_species(species = organism, method = "gprofiler", 
       output_format = "id", verbose = FALSE)
     gp.out <- gprofiler2::gconvert(probesx, organism = gp.organism, target="UNIPROT_GN_ACC")
     if (!is.null(gp.out)) {
-      uniprot <- tapply(gp.out$target, gp.out$input, function(x) paste(x,collapse=";"))
-      uniprot <- as.character(uniprot[match(probes1,names(uniprot))])
-      key_matches['GPROFILER'] <- length(unique(gp.out$input))
-      
-#      if (mean(!is.na(uniprot) > 0.1)) {
-#        return("UNIPROT")
-#      }
+      key_matches['GPROFILER'] <- length(unique(gp.out$input)) / length(probesx)
     }
-#    return(NA)
   }
 
 
