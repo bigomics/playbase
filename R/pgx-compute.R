@@ -181,7 +181,7 @@ pgx.createPGX <- function(counts,
                           remove.xxl = TRUE, ## DEPRECATED
                           remove.outliers = TRUE, ## DEPRECATED
                           add.gmt = TRUE,
-                          timeseries = FALSE,
+                          #timeseries = FALSE,
                           settings = list(),
                           sc_compute_settings = list()
                           ) {
@@ -294,23 +294,48 @@ pgx.createPGX <- function(counts,
   }
 
   ## ------------------------------------------------------------------
-  ## Time series: expand contrast matrix
+  ## Time series
+  ## 1. check valid contrasts for time series analysis.
+  ## 2. expand contrast matrix.
   ## ------------------------------------------------------------------
-  if (timeseries) {
-    time.var <- toupper(c("minute", "hour", "day", "week", "month", "year", "time"))
-    kk <- intersect(time.var, toupper(colnames(samples)))
-    if (length(kk)) {
+  timeseries = FALSE
+  time.var <- c("minute", "hour", "day", "week", "month", "year", "time")
+  sel.time <- intersect(time.var, tolower(colnames(samples)))  
+  if (length(sel.time)) {
+    jj <- match(sel.time[1], tolower(colnames(samples)))
+    i=1; valid.ia.ctx=c();
+    for (i in 1:ncol(contrasts)) {
+      tt <- table(data.frame(ctx = contrasts[,i], time = samples[, jj]))
+      zeros.obs <- apply(tt, 1, function(x) sum(x == 0))
+      if (any(zeros.obs >= (ncol(tt)-1))) {
+        next
+      } else {
+        valid.ia.ctx <- c(valid.ia.ctx, colnames(contrasts)[i])
+      }
+    }
+    if (length(valid.ia.ctx)) {
       nn <- ncol(contrasts)
-      ts.ct <- paste0("IA:", colnames(contrasts))
-      contrasts <- cbind(contrasts, contrasts)
-      colnames(contrasts)[(nn+1):ncol(contrasts)] <- ts.ct 
-      rm(nn, ts.ct)
-    } else {
-      message(paste0("[createPGX] None of the following variables found in sample file: ",
-        paste0(time.var, collapse=","), ". Skipping time series analysis."))
-      timeseries = FALSE
+      contrasts <- cbind(contrasts, contrasts[, valid.ia.ctx, drop = FALSE])
+      colnames(contrasts)[(nn+1):ncol(contrasts)]  <- paste0("IA:", valid.ia.ctx)
+      timeseries = TRUE
     }
   }
+
+  ## if (timeseries) {
+  ##   time.var <- toupper(c("minute", "hour", "day", "week", "month", "year", "time"))
+  ##   kk <- intersect(time.var, toupper(colnames(samples)))
+  ##   if (length(kk)) {
+  ##     nn <- ncol(contrasts)
+  ##     ts.ct <- paste0("IA:", colnames(contrasts))
+  ##     contrasts <- cbind(contrasts, contrasts)
+  ##     colnames(contrasts)[(nn+1):ncol(contrasts)] <- ts.ct 
+  ##     rm(nn, ts.ct)
+  ##   } else {
+  ##     message(paste0("[createPGX] None of the following variables found in sample file: ",
+  ##       paste0(time.var, collapse=","), ". Skipping time series analysis."))
+  ##     timeseries = FALSE
+  ##   }
+  ## }
   
   ## convert old-style contrast matrix to sample-wise labeled contrasts
   contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)

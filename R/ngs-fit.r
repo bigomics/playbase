@@ -1127,7 +1127,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
                                                            robust = TRUE) {
 
   require(splines)
-  if (!all.equal(colnames(counts), names(timeseries)))
+  if (!all(colnames(counts) %in% names(timeseries)))
     message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Counts and timeseries vector contain different set of samples")
 
   jj <- match(colnames(counts), names(timeseries))
