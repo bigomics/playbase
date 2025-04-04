@@ -165,7 +165,9 @@ getGeneAnnotation <- function(
     organism,
     probes,
     use.ah = NULL,
-    verbose = TRUE) {
+    verbose = TRUE,
+    methods = c("gprofiler","annothub")
+    ) {
   annot <- NULL
 
   if (tolower(organism) == "human") organism <- "Homo sapiens"
@@ -181,6 +183,7 @@ getGeneAnnotation <- function(
     probes <- sub("^[a-zA-Z]+:", "", probes)
   }
 
+  
   ## first annotate with ANNOTHUB
   info("[getGeneAnnotation] annotating with ANNOTHUB")
   annot <- try(getGeneAnnotation.ANNOTHUB(
@@ -1401,18 +1404,24 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
     if (!is.null(gp.out)) {
       uniprot <- tapply(gp.out$target, gp.out$input, function(x) paste(x,collapse=";"))
       uniprot <- as.character(uniprot[match(probes1,names(uniprot))])
-      if (any(is.na(uniprot))) {
-        return("UNIPROT")
-      }
+      key_matches['GPROFILER'] <- length(unique(gp.out$input))
+      
+#      if (mean(!is.na(uniprot) > 0.1)) {
+#        return("UNIPROT")
+#      }
     }
-    return(NA)
-  } else {
-    if (max(key_matches, na.rm = TRUE) < 0.50) {
-      message("WARNING: Low matching ratio. Max match = ", max(key_matches, na.rm = TRUE))
-    }
-    top_match <- names(which.max(key_matches))
+#    return(NA)
   }
 
+
+  if (max(key_matches, na.rm = TRUE) < 0.01) {
+    message("WARNING: Insufficient matching ratio. Max match = ", max(key_matches, na.rm = TRUE))
+    return(NA)
+  }
+  if (max(key_matches, na.rm = TRUE) < 0.50) {
+    message("WARNING: Low matching ratio. Max match = ", max(key_matches, na.rm = TRUE))
+  }
+  top_match <- names(which.max(key_matches))
   return(top_match)
 }
 
