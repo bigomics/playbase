@@ -167,7 +167,7 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
 #' @export
 getMetaboliteAnnotation <- function(probes, add_id=FALSE, 
                                     db = c("refmet","playdata","annothub"),
-                                    annot_table = NULL ) {
+                                    extra_annot = FALSE, annot_table = NULL ) {
   ##add_id=TRUE;db=c("refmet","playdata","annothub") 
   orig.probes <- probes
 
@@ -330,6 +330,12 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
     gene_name = metadata$ID
   )
   rownames(df) <- as.character(probes)
+
+  if(extra_annot) {
+    extra_cols <- setdiff(colnames(metadata),colnames(df))
+    extra_cols <- setdiff( extra_cols, c("ID","name","source","feature"))
+    df <- cbind(df, metadata[,extra_cols])
+  }
 
   ## add ID table 
   if(add_id) {
