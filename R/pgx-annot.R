@@ -408,11 +408,11 @@ getGeneAnnotation.ANNOTHUB <- function(
   rownames(annot) <- names(probes)
   annot$PROBE <- names(probes) ## original probe names
   
-  ## ---------------------------------------------------------------------------------
+  ## -----------------------------------------------------------------------------
   ## Second pass for missing symbols. Still trying annothub but
   ## missing symbols may map to different keytype. NEED RETHINK:
   ## DO WE REALLY NEED THIS???
-  ## ------------------------------------------------------------------------------------
+  ## -----------------------------------------------------------------------------
   is.missing <- (is.na(annot$SYMBOL) | annot$SYMBOL == "")
   missing.probes <- probes[which(is.missing)] ## probes match annot!
   missing.probes <- missing.probes[!is.na(missing.probes)]  
@@ -426,8 +426,11 @@ getGeneAnnotation.ANNOTHUB <- function(
     dbg("[getGeneAnnotation.ANNOTHUB] missing.probe_type=", missing.probe_type)
 
     ## only do second try if missing.probetype is different
-    if (!is.null(missing.probe_type) && !is.na(missing.probe_type)
-        && missing.probe_type != probe_type
+    
+    if (!is.null(missing.probe_type) &&
+          !is.na(missing.probe_type) &&
+           missing.probe_type != probe_type &&
+           missing.probe_type %in% keytypes(orgdb)
         ) {      
       missing.probes1 <- match_probe_names(missing.probes, orgdb, missing.probe_type)
       suppressMessages(suppressWarnings(
@@ -1720,7 +1723,7 @@ getGeneAnnotation.ORTHOGENE <- function(
       output_format = "id", verbose = FALSE)
     gp.organism
     gp.out <- try(gprofiler2::gconvert(probes1, organism = gp.organism, target="UNIPROT_GN_ACC"))
-    if(!is.null(gp.out) && !inherits("try-error",gp.out)) {
+    if(!is.null(gp.out) && !inherits(gp.out, "try-error")) {
       uniprot <- tapply(gp.out$target, gp.out$input, function(x) paste(x,collapse=";"))
       uniprot <- as.character(uniprot[match(probes1,names(uniprot))])
     } else {
