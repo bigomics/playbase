@@ -4,23 +4,23 @@
 ##
 
 
-#'
-#' @export
-pgx.createSeuratObject <- function(counts, samples, sct = TRUE) {
-  obj <- Seurat::CreateSeuratObject(counts = counts, meta.data = samples)
-  obj <- Seurat::NormalizeData(obj)
-  obj <- Seurat::PercentageFeatureSet(obj, pattern = "^MT-|^Mt-", col.name = "percent.mt")
-  obj <- Seurat::PercentageFeatureSet(obj, pattern = "^RP[LS]|^Rp[ls]", col.name = "percent.ribo")
-  if (sct) {
-    sct <- Seurat::SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
-    sct <- Seurat::RunPCA(sct, verbose = FALSE)
-    sct <- Seurat::FindNeighbors(sct, dims = 1:30, verbose = FALSE)
-    sct <- Seurat::FindClusters(sct, verbose = FALSE, resolution = 0.8) ## smaller resolution
-    sct <- Seurat::RunUMAP(sct, dims = 1:30, verbose = FALSE)
-    obj <- sct
-  }
-  obj
-}
+## #'
+## #' @export
+## pgx.createSeuratObject <- function(counts, samples, sct = TRUE) {
+##   obj <- Seurat::CreateSeuratObject(counts = counts, meta.data = samples)
+##   obj <- Seurat::NormalizeData(obj)
+##   obj <- Seurat::PercentageFeatureSet(obj, pattern = "^MT-|^Mt-", col.name = "percent.mt")
+##   obj <- Seurat::PercentageFeatureSet(obj, pattern = "^RP[LS]|^Rp[ls]", col.name = "percent.ribo")
+##   if (sct) {
+##     sct <- Seurat::SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
+##     sct <- Seurat::RunPCA(sct, verbose = FALSE)
+##     sct <- Seurat::FindNeighbors(sct, dims = 1:30, verbose = FALSE)
+##     sct <- Seurat::FindClusters(sct, verbose = FALSE, resolution = 0.8) ## smaller resolution
+##     sct <- Seurat::RunUMAP(sct, dims = 1:30, verbose = FALSE)
+##     obj <- sct
+##   }
+##   obj
+## }
 
 #' @title Convert Seurat to PGX
 #'
@@ -660,12 +660,13 @@ pgx.createSeuratObject <- function(counts,
                                    preprocess = TRUE,                                   
                                    method = "Harmony") {
 
+  message("[pgx.createSingleCellPGX] Creating Seurat object ...")
+
   options(Seurat.object.assay.calcn = TRUE)
   getOption("Seurat.object.assay.calcn")
         
-  if (is.null(samples)) {
+  if (is.null(samples))
     samples <- data.frame(row.names = colnames(counts))
-  }
 
   samples <- as.data.frame(samples)
   rownames(samples) <- colnames(counts)
@@ -690,32 +691,25 @@ pgx.createSeuratObject <- function(counts,
   ncells0 <- ncol(obj)
 
   if (filter) {
-    
     message("[pgx.createSeuratObject] Filtering cells")
+    flts <- unlist(lapply(sc_compute_settings, function(x) isTRUE(x)))
 
-    active_filters <- NULL
-    cc <- unlist(lapply(sc_compute_settings, function(x) isTRUE(x)))
+    if (any(flts)) {
 
-    if (any(cc)) {
-      active_filters <- names(cc)[which(cc)]
+      flts <- names(flts)[which(flts)]
 
-      i = 1
-      for(i in 1:length(active_filters)) {
-        message("[pgx.createSeuratObject] User-selected filter: ", active_filters[i])
-      }
-      
       nfeat_thr = c(0, 1e200)
-      f1 <- "nfeature_threshold" %in% active_filters
-      if (f1) { nfeat_thr = sc_compute_settings[["nfeature_threshold"]] }
+      if ("nfeature_threshold" %in% flts)
+        nfeat_thr = sc_compute_settings[["nfeature_threshold"]]
       
       mt_thr = 100
-      f2 <- "mt_threshold" %in% active_filters
-      if (f2) { mt_thr = sc_compute_settings[["mt_threshold"]] }
+      if ("mt_threshold" %in% flts)
+        mt_thr = sc_compute_settings[["mt_threshold"]]
 
       hb_thr = 100
-      f3 <- "hb_threshold" %in% active_filters
-      if (f3) { hb_thr = sc_compute_settings[["hb_threshold"]] }
-      
+      if ("hb_threshold" %in% flts)
+        hb_thr = sc_compute_settings[["hb_threshold"]]
+
       obj <- subset(obj, subset =
                            nFeature_RNA > nfeat_thr[1] &
                            nFeature_RNA < nfeat_thr[2] &
@@ -731,17 +725,17 @@ pgx.createSeuratObject <- function(counts,
       ncells1 <- ncol(obj)
       message("[pgx.createSeuratObject] Filtering cells: ", ncells0, " --> ", ncells1) 
     } else {
-      message("[pgx.createSeuratObject]: No user-selected filters")
+      message("[pgx.createSeuratObject]: No user-selected filters.")
       ncells1 <- ncol(obj)
-      message("[pgx.createSeuratObject] Filtering cells: ", ncells0, " --> ", ncells1) 
+      message("[pgx.createSeuratObject] N. of cells: ", ncells0, " --> ", ncells1) 
     }
     
   }
   
-  if(preprocess) {
+  if (preprocess) {
     message("[pgx.createIntegratedSeuratObject] Preprocessing Seurat object")   
     has.batch <- "batch" %in% tolower(colnames(obj@meta.data))
-    if(!is.null(batch)) {
+    if (!is.null(batch)) {
       obj <- seurat.integrate(obj, 'batch', sct = TRUE, method = "Harmony") 
     } else {
       obj <- seurat.preprocess(obj, sc_compute_settings, sct = TRUE)
@@ -1031,69 +1025,63 @@ pgx.createSingleCellPGX <- function(counts,
   message("[pgx.createSingleCellPGX]==========================================")
   message("[pgx.createSingleCellPGX]======= pgx.createSingleCellPGX ==========")
   message("[pgx.createSingleCellPGX]==========================================")
-  
+
   if (!is.null(counts)) {
-    message("[createSingleCellPGX] dim.counts: ", dim(counts)[1], ",", dim(counts)[2])
-    message("[createSingleCellPGX] class.counts: ", class(counts))
+    message("[createSingleCellPGX] dim.counts: ", nrow(counts), ",", ncol(counts))
   } else {
     stop("[createPGX] FATAL: counts must be provided")
   }
 
-  if (is.null(samples)) {
-    stop("[createSingleCellPGX] FATAL: counts must be provided")
-  }
+  if (is.null(samples))
+    stop("[createSingleCellPGX] FATAL: samples must be provided")
   
-  if (!all(colnames(counts) == rownames(samples))) {
+  if (!all(colnames(counts) == rownames(samples)))
     stop("colnames of counts and rownames of samples do not match\n")
-  }
 
-  if (is.null(organism)) {
+  if (is.null(organism))
     stop("[createSingleCellPGX] FATAL: organism must be provided")
-  }
 
   if (is.null(azimuth_ref)) {
     azimuth_ref <- "pbmcref"
-    message("[createSingleCellPGX] Ref. atlas for Azimuth not specified. Default to pbmcref.")
+    message("[createSingleCellPGX] Azimuth ref. atlas not specified. Defaulting to pbmcref.")
   } else {
     message("[createSingleCellPGX] Azimuth ref. atlas: ", azimuth_ref)
   }
 
   sc_params <- names(sc_compute_settings)
   if(!is.null(sc_compute_settings) && length(sc_compute_settings)>0) {
-    message("[createSingleCellPGX] scRNAseq parameters: ", paste0(sc_params, collapse = ", "))
+    info("[createSingleCellPGX] scRNAseq parameters: ", sc_params)
   } else {
     sc_compute_settings <- list()
   }
 
-  message("[pgx.createSingleCellPGX] Using ", azimuth_ref, " as reference atlas.")
+  message("[pgx.createSingleCellPGX] Azimuth reference atlas: ", azimuth_ref)
   azm <- pgx.runAzimuth(counts, reference = azimuth_ref)
-  azm <- azm[, grep("predicted",colnames(azm))]
+  azm <- azm[, grep("predicted", colnames(azm))]
   ntype <- apply(azm, 2, function(a) length(unique(a)))
   sel <- ifelse(min(ntype) > 10, which.min(ntype), tail(which(ntype <= 10),1))
+  samples <- as.data.frame(samples)
   samples$celltype <- azm[, sel]
   
   ## because the samples get downsamples, also the sample and
   ## contrasts matrices get downsampled (by majority label).
-  samplesx <- cbind( samples, contrasts )
+  samplesx <- cbind(samples, contrasts)
 
   sc.membership <- NULL
   do.supercells <- sc_compute_settings[["compute_supercells"]]
-  if (!do.supercells) {
-    message("[pgx.createSingleCellPGX] User choice: do not compute supercells.")
-  }
+
   if (do.supercells || ncol(counts) > 10000) {  
-    if (do.supercells) {
-      message("[pgx.createSingleCellPGX] User choice: computing supercells with SuperCell")
-    }
-    if (ncol(counts) >10000) {
-      message("[pgx.createSingleCellPGX] >10K cells: computing supercells with SuperCell")
-    }
+
+    if (do.supercells)
+      message("[pgx.createSingleCellPGX] User choice: performing SuperCell")
+    if (ncol(counts) > 10000)
+      message("[pgx.createSingleCellPGX] >10K cells: performing SuperCell")
+    
     ct <- samplesx[, "celltype"]
     group <- paste0(ct, ":", apply(contrasts, 1, paste, collapse = '_'))
     ##  group <- paste0(samples[, "celltype"], ":", samples[, pheno])
-    if(!is.null(batch)) {
-      group <- paste0(group, ":", samples[, batch])
-    }
+    if(!is.null(batch)) group <- paste0(group, ":", samples[, batch])
+    
     q10 <- quantile(table(group), probs=0.25)
     if (ncol(counts) > 2000) {
       nb <- round( ncol(counts) / 2000 )
@@ -1109,17 +1097,18 @@ pgx.createSingleCellPGX <- function(counts,
     samplesx <- sc$meta
     sc.membership <- sc$membership
     remove(sc)
+
   }
 
   ## Create full Seurat object. Optionally integrate by batch.
-  batch.vec <- NULL
-  message("[pgx.createSingleCellPGX] Creating Seurat object ...")
+  batch.vec <- NULL  
   if (!is.null(batch)) {
     message("[pgx.createSingleCellPGX] Integrating by batch = ", batch)     
-    batch.vec <- as.vector(unlist(samplesx[,batch]))
-    table(batch.vec)
+    batch.vec <- as.vector(unlist(samplesx[, batch]))
+    #table(batch.vec)
   }
-
+  
+  message("[pgx.createSingleCellPGX] Creating Seurat object ...")
   obj <- pgx.createSeuratObject(
     counts = counts,
     samples = samplesx,
@@ -1134,10 +1123,8 @@ pgx.createSingleCellPGX <- function(counts,
   r <- "pca"
   if (!is.null(batch)) r <- "integrated.dr"
 
-  ## But was TSNE and UMAP already done seurat.preprocess??
+  message("[pgx.createSingleCellPGX] Performing Seurat 2D and 3D t-SNE")
   obj <- Seurat::RunTSNE(obj, dims=1:30, reduction = r, verbose = FALSE)
-
-  message("[pgx.createSingleCellPGX] Performing Seurat 3D t-SNE")
   obj <- Seurat::RunTSNE(obj, dim.embed = 3L, dims=1:30,
     reduction = r, reduction.name ="tsne.3d",
     reduction.key ="tsne3d_", verbose = FALSE)
@@ -1147,18 +1134,19 @@ pgx.createSingleCellPGX <- function(counts,
     reduction = r, reduction.name ="umap.3d",
     reduction.key = "umap3d_",  verbose = FALSE)
   
-  ## create balanced down-sampled object. We target about n=20 cells
-  ## per statistical condition, per celltype.
+  ## Create balanced down-sampled object.
+  ## Target about n=20 cells per statistical condition, per celltype.
   downsample = FALSE
-  if (downsample) {
-    message("[pgx.createSingleCellPGX] Down-sampling Seurat object ...")  
-    meta.ct <- obj@meta.data[,colnames(contrasts)]
-    group <- paste0(obj@meta.data$celltype, ":", meta.ct)
-    table(group)
-    sub <- seurat.downsample(obj, target_g = 20, group = group)
-  } else {
-    sub <- obj
-  }
+  if (!downsample) sub=obj;
+  ## if (downsample) {
+  ##   message("[pgx.createSingleCellPGX] Down-sampling Seurat object ...")  
+  ##   meta.ct <- obj@meta.data[,colnames(contrasts)]
+  ##   group <- paste0(obj@meta.data$celltype, ":", meta.ct)
+  ##   table(group)
+  ##   sub <- seurat.downsample(obj, target_g = 20, group = group)
+  ## } else {
+  ##   sub <- obj
+  ## }
   
   ## results for pgx.createPGX
   message("[pgx.createSingleCellPGX] Creating PGX object ...")
@@ -1216,21 +1204,27 @@ pgx.createSingleCellPGX <- function(counts,
     umap3d = sub@reductions[['umap.3d']]@cell.embeddings            
   )
 
-  cluster.full = list(
-    pca2d = obj@reductions[['pca']]@cell.embeddings[, 1:2],
-    pca3d = obj@reductions[['pca']]@cell.embeddings[, 1:3],
-    tsne2d = obj@reductions[['tsne']]@cell.embeddings,
-    tsne3d = obj@reductions[['tsne.3d']]@cell.embeddings,
-    umap2d = obj@reductions[['umap']]@cell.embeddings,
-    umap3d = obj@reductions[['umap.3d']]@cell.embeddings            
-  )
+  if (!downsample) {
+    cluster.full <- cluster
+  } else {
+    cluster.full = list(
+      pca2d = obj@reductions[['pca']]@cell.embeddings[, 1:2],
+      pca3d = obj@reductions[['pca']]@cell.embeddings[, 1:3],
+      tsne2d = obj@reductions[['tsne']]@cell.embeddings,
+      tsne3d = obj@reductions[['tsne.3d']]@cell.embeddings,
+      umap2d = obj@reductions[['umap']]@cell.embeddings,
+      umap3d = obj@reductions[['umap.3d']]@cell.embeddings            
+    )
+  }
 
   pgx$cluster$pos <- cluster
   pgx$cluster$pos.full <- cluster.full
-  dim(pgx$cluster$pos[[1]])
-  dim(pgx$cluster$pos.full[[1]])
 
-  message("[pgx.createSingleCellPGX]DONE!")
+  message("\n\n")
+  message("[pgx.createSingleCellPGX]============================================")
+  message("[pgx.createSingleCellPGX]======= pgx.createSingleCellPGX: DONE! =====")
+  message("[pgx.createSingleCellPGX]============================================")
+  message("\n\n")
 
   return(pgx)
 
