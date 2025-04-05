@@ -252,15 +252,12 @@ pgx.clusterSamples <- function(pgx,
 #' @export
 pgx.FindClusters <- function(X,
                              method = c("kmeans", "hclust", "louvain", "meta"),
-                             top.sd = 1000,
-                             npca = 50,
+                             top.sd = 1000, npca = 50,
+                             km.sizes = c(2, 3, 4, 5, 7, 10, 15, 20, 25, 50, 100),
                              scale=TRUE) {
 
   message("[pgx.FindClusters] called...")
 
-  km.sizes <- c(2, 3, 4, 5, 7, 10, 15, 20, 25, 50, 100)
-  km.sizes <- km.sizes[km.sizes < ncol(X)]
-  km.sizes
   if (length(method) == 1 && method[1] == "meta") {
     method <- c("kmeans", "hclust", "louvain", "meta")
   }
@@ -280,6 +277,9 @@ pgx.FindClusters <- function(X,
     X <- t(out$v)
   }
 
+  ##km.sizes <- c(2, 3, 4, 5, 7, 10, 15, 20, 25, 50, 100)
+  km.sizes <- km.sizes[which(km.sizes < ncol(X))]
+  
   index <- list()
 
   ## perform K-means
