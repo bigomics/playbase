@@ -181,7 +181,6 @@ pgx.createPGX <- function(counts,
                           remove.xxl = TRUE, ## DEPRECATED
                           remove.outliers = TRUE, ## DEPRECATED
                           add.gmt = TRUE,
-                          #timeseries = FALSE,
                           settings = list(),
                           sc_compute_settings = list()
                           ) {
@@ -320,34 +319,9 @@ pgx.createPGX <- function(counts,
       timeseries = TRUE
     }
   }
-
-  ## if (timeseries) {
-  ##   time.var <- toupper(c("minute", "hour", "day", "week", "month", "year", "time"))
-  ##   kk <- intersect(time.var, toupper(colnames(samples)))
-  ##   if (length(kk)) {
-  ##     nn <- ncol(contrasts)
-  ##     ts.ct <- paste0("IA:", colnames(contrasts))
-  ##     contrasts <- cbind(contrasts, contrasts)
-  ##     colnames(contrasts)[(nn+1):ncol(contrasts)] <- ts.ct 
-  ##     rm(nn, ts.ct)
-  ##   } else {
-  ##     message(paste0("[createPGX] None of the following variables found in sample file: ",
-  ##       paste0(time.var, collapse=","), ". Skipping time series analysis."))
-  ##     timeseries = FALSE
-  ##   }
-  ## }
   
   ## convert old-style contrast matrix to sample-wise labeled contrasts
   contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
-
-  ## prune unused samples
-  contrasts[contrasts %in% c("", " ", "NA")] <- NA
-  used.samples <- names(which(rowSums(!is.na(contrasts)) > 0))
-  if (prune.samples && length(used.samples) < ncol(counts)) {
-    counts <- counts[, used.samples, drop = FALSE]
-    samples <- samples[used.samples, , drop = FALSE]
-    contrasts <- contrasts[used.samples, , drop = FALSE] ## sample-based!!!
-  }
 
   ## -------------------------------------------------------------------
   ## Auto-scaling (scale down huge values, often in proteomics)
@@ -362,6 +336,15 @@ pgx.createPGX <- function(counts,
   ## -------------------------------------------------------------------
   message("[createPGX] conforming matrices...")
 
+  ## prune unused samples
+  contrasts[contrasts %in% c("", " ", "NA")] <- NA
+  used.samples <- names(which(rowSums(!is.na(contrasts)) > 0))
+  if (prune.samples && length(used.samples) < ncol(counts)) {
+    counts <- counts[, used.samples, drop = FALSE]
+    samples <- samples[used.samples, , drop = FALSE]
+    contrasts <- contrasts[used.samples, , drop = FALSE] ## sample-based!!!
+  }
+  
   ## align samples
   kk <- intersect(colnames(counts), rownames(samples))
   kk <- intersect(kk, colnames(X))
@@ -378,8 +361,16 @@ pgx.createPGX <- function(counts,
   if (all(kk %in% rownames(contrasts))) {
     contrasts <- contrasts[kk, , drop = FALSE]
   }
+
+  ## sanity checks
+  if(ncol(X) == 0) {
+    info("[createPGX] FATAL. ncol(X) == 0")
+    return(NULL)
+  }
   
+  ## -------------------------------------------------------------------
   ## Special case for PTM phospho-proteomics.
+  ## -------------------------------------------------------------------
   is.phospho <- annotate_phospho_residue(rownames(counts), detect.only = TRUE)
   if (datatype == "proteomics" && is.phospho) {
     info("[createPGX] annotating rownames with phospho residue...")
@@ -400,7 +391,7 @@ pgx.createPGX <- function(counts,
       }
     }
   }
-
+  
   ## -------------------------------------------------------------------
   ## create pgx object
   ## -------------------------------------------------------------------
@@ -438,7 +429,7 @@ pgx.createPGX <- function(counts,
     settings = settings,
     sc_compute_settings = sc_compute_settings
   )
-
+  
   ## -------------------------------------------------------------------
   ## create gene annotation table
   ## -------------------------------------------------------------------
@@ -512,8 +503,7 @@ pgx.createPGX <- function(counts,
     pgx$X <- pgx$X[rownames(pgx$genes), , drop = FALSE]
     if (!is.null(pgx$impX)) {
       pgx$impX <- pgx$impX[rownames(pgx$genes), , drop = FALSE]
-    }
-    
+    }    
   }
   
   ## -------------------------------------------------------------------
@@ -522,7 +512,7 @@ pgx.createPGX <- function(counts,
   ## if feature/rownames are not symbol, we paste symbol to row name.
   pp <- sub("^[a-zA-Z]+:", "", rownames(pgx$genes))
   mean_feature_is_symbol <- mean(pp == pgx$genes$symbol, na.rm = TRUE) 
-
+  
   ## NOTE: this was old chunk to convert rownames to HUGO gene
   ## symbol. It now serves to append symbol to rownames/feature names.
   if (convert.hugo && mean_feature_is_symbol < 0.10) {
@@ -565,21 +555,20 @@ pgx.createPGX <- function(counts,
       custom.geneset = custom.geneset,
       max.genesets = max.genesets
     )
-    message("[createPGX] dim(GMT) =  ", dim(pgx$GMT)[1], "x", dim(pgx$GMT)[2])
   }
 
   ## -------------------------------------------------------------------
   ## object checks
   ## -------------------------------------------------------------------
   if (ncol(pgx$samples) > 1) {
+    ## drop empty columns??
     pgx$samples <- pgx$samples[, colMeans(is.na(pgx$samples)) < 1, drop = FALSE]
   }
 
-  message("[pgx.createPGX] dim(pgx$X): ", paste0(dim(pgx$X), collapse=","))
-  message("[pgx.createPGX] dim(pgx$samples): ", paste0(dim(pgx$samples), collapse=","))
-  message("[createPGX] pgx$X has ", sum(is.na(pgx$X)), " missing values")
-
   rm(counts, X, impX, samples, contrasts)
+
+  dbg("[pgx.createPGX] x: dim(pgx$X): ", dim(pgx$X))
+  dbg("[pgx.createPGX] x: dim(pgx$samples): ", dim(pgx$samples))
 
   message("\n\n")
   message("[pgx.createPGX]======================================")
