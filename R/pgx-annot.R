@@ -130,8 +130,8 @@ getProbeAnnotation <- function(organism,
     mx.check
     if(mx.check) {
       ## Directly annotate if probes are recognized
-      ##genes <- getMetaboliteAnnotation(probes, add_id=TRUE, annot_table=annot_table)
-      genes <- getMetaboliteAnnotation(probes, add_id=TRUE, annot_table=NULL)      
+      genes <- getMetaboliteAnnotation(probes, add_id=TRUE, extra_annot=TRUE,
+                                       annot_table=NULL)      
     } else {
       ## Fallback on custom
       dbg("[getProbeAnnotation] WARNING: not able to map metabolomics probes")
@@ -940,7 +940,6 @@ getCustomAnnotation2 <- function(probes, custom_annot, feature.col='feature',
   annot <- cleanupAnnotation(annot)
   return(annot)
 }
-
 
 
 ## ================================================================================
