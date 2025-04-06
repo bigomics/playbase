@@ -1423,6 +1423,7 @@ pgx.getGeneSetCollections <- function(gsets = rownames(playdata::GSETxGENE)) {
 }
 
 
+
 ## -----------------------------------------------------------------------------
 ## Generic module functions
 ## -----------------------------------------------------------------------------
@@ -1587,14 +1588,15 @@ rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
 }
 
 
-#' Collapse object rownames/names to human symbol. Warning this function
-#' does not maintain the original dimensions/length of object.
-#'
-
+#' Map any feature identifier to other feature column. Warning does
+#' not retain original match order. Default mapping to rownames.
+#' 
 #' @export
-map_probes <- function(annot, genes, column = NULL, ignore.case = FALSE) {
+map_probes <- function(annot, genes, column = NULL, ignore.case = FALSE,
+                       target = 'rownames') {
   ## check probe name, short probe name or gene name for match
-  annot <- cbind(annot, rownames(annot))
+  annot <- cbind(annot, rownames=rownames(annot))
+  genes <- setdiff( genes, c(NA,"NA","","-","---"))
   if (ignore.case) {
     if (is.null(column)) {
       column <- which.max(apply(annot, 2, function(x) {
@@ -1608,9 +1610,34 @@ map_probes <- function(annot, genes, column = NULL, ignore.case = FALSE) {
     }
     ii <- which(annot[, column] %in% genes)
   }
-  rownames(annot)[ii]
+  annot[ii, target]
 }
 
+#' Map any feature identifier to other feature column. Retain original
+#' match order. Default mapping to rownames.
+#' 
+#' @export
+match_probes <- function(annot, genes, column = NULL, ignore.case = FALSE,
+                         target = 'rownames') {
+  ## check probe name, short probe name or gene name for match
+  annot <- cbind(annot, rownames=rownames(annot))
+  if (ignore.case) {
+    if (is.null(column)) {
+      column <- which.max(apply(annot, 2, function(x) {
+        sum(toupper(genes) %in% toupper(x), na.rm = TRUE)
+      }))
+    }
+    ii <- match(toupper(genes), toupper(annot[, column]))
+  } else {
+    if (is.null(column)) {
+      column <- which.max(apply(annot, 2, function(x) sum(genes %in% x, na.rm = TRUE)))
+    }
+    ii <- match(genes, annot[, column])
+  }
+  jj <- genes %in% c(NA,"NA","","-","---")
+  if(length(jj)) ii[jj] <- NA
+  annot[ii, target]
+}
 
 #' Compute feature scores
 #'
