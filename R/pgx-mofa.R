@@ -788,7 +788,6 @@ pgx.compute_mofa_importance <- function(pgx, pheno,
 
 #'
 #'
-#' @export
 mofa.compute_factorizations <- function(xdata,
                                         samples,
                                         contrasts,
@@ -835,7 +834,6 @@ mofa.compute_factorizations <- function(xdata,
   return(all.res)
 }
 
-
 #'
 #'
 #' @export
@@ -850,10 +848,8 @@ mofa.plot_meta_importance <- function(meta.res, pheno, sd.wt = NULL,
   )
 }
 
-
 #'
 #'
-#' @export
 mofa.compute_meta_importance <- function(meta.res, pheno, sd.wt = NULL,
                                          power = 6, plot = FALSE) {
   # pheno="condition=Her2"
@@ -976,7 +972,7 @@ mofa.scale_views <- function(xdata) {
 mofa.split_data <- function(X, keep.prefix = FALSE) {
   if (!all(grepl("[:]|SOURCE|SINK", rownames(X)))) {
     ## if no prefix, then single-omics. Assume gene expression.
-    rownames(X) <- paste0("gx:", rownames(X))
+    rownames(X) <- paste0("x:", rownames(X))
   }
   dtype <- sub(":.*", "", rownames(X))
   xx <- tapply(1:nrow(X), dtype, function(i) X[i, , drop = FALSE])
