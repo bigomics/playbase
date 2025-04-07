@@ -9,6 +9,7 @@ pgx.FindClusters(
   method = c("kmeans", "hclust", "louvain", "meta"),
   top.sd = 1000,
   npca = 50,
+  km.sizes = c(2, 3, 4, 5, 7, 10, 15, 20, 25, 50, 100),
   scale = TRUE
 )
 }

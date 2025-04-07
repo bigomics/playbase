@@ -7,6 +7,7 @@
 gset.fitContrastsWithAllMethods(
   gmt,
   X,
+  impX,
   Y,
   G,
   design,

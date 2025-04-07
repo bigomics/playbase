@@ -4,7 +4,13 @@
 \alias{getGeneAnnotation}
 \title{Get gene annotation data using annothub or orthogene.}
 \usage{
-getGeneAnnotation(organism, probes, use.ah = NULL, verbose = TRUE)
+getGeneAnnotation(
+  organism,
+  probes,
+  use.ah = NULL,
+  verbose = TRUE,
+  methods = c("annothub", "gprofiler")
+)
 }
 \description{
 Get gene annotation data using annothub or orthogene.

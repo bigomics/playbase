@@ -36,7 +36,6 @@ pgx.createPGX(
   remove.xxl = TRUE,
   remove.outliers = TRUE,
   add.gmt = TRUE,
-  timeseries = FALSE,
   settings = list(),
   sc_compute_settings = list()
 )

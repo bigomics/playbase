@@ -19,6 +19,7 @@ gx.volcanoPlot.LIMMA(
   use.rpkm = FALSE,
   ma.plot = FALSE,
   cex.main = 1.2,
+  cex.wt = 1,
   main = "",
   cex.axis = 1,
   axes = TRUE

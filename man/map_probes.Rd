@@ -2,12 +2,18 @@
 % Please edit documentation in R/pgx-functions.R
 \name{map_probes}
 \alias{map_probes}
-\title{Collapse object rownames/names to human symbol. Warning this function
-does not maintain the original dimensions/length of object.}
+\title{Map any feature identifier to other feature column. Warning does
+not retain original match order. Default mapping to rownames.}
 \usage{
-map_probes(annot, genes, column = NULL, ignore.case = FALSE)
+map_probes(
+  annot,
+  genes,
+  column = NULL,
+  ignore.case = FALSE,
+  target = "rownames"
+)
 }
 \description{
-Collapse object rownames/names to human symbol. Warning this function
-does not maintain the original dimensions/length of object.
+Map any feature identifier to other feature column. Warning does
+not retain original match order. Default mapping to rownames.
 }
