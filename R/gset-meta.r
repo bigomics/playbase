@@ -23,7 +23,6 @@
 #' @export
 gset.fitContrastsWithAllMethods <- function(gmt,
                                             X,
-                                            impX,
                                             Y,
                                             G,
                                             design,
@@ -87,11 +86,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   gg <- intersect(rownames(G), rownames(X))
   G <- G[gg, names(gmt), drop = FALSE]
   X <- X[gg, , drop = FALSE]
-  if (!is.null(impX)) {
-    impX <- impX[gg, , drop = FALSE]
-  } else {
-    impX <- X
-  }
 
   ## --------------------------------------------------------------
   ## Fit single-sample methods: GSVA, ssGSEA, spearman
@@ -179,8 +173,8 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       if (nmissing > 0) {
         message("Found ", nmissing, " missing values in X. Removing prior to GSVA::ssgsea.")
       }
-      zx.ssgsea <- try(GSVA::gsva(as.matrix(X[complete.cases(X), , drop = FALSE]),
-        gmt[],
+      zx.ssgsea <- try(GSVA::gsva(as.matrix(X), # ssgsea does not work with NA values
+        gmt,
         method = "ssgsea",
         parallel.sz = mc.cores,
         verbose = FALSE
@@ -188,7 +182,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       if (!"try-error" %in% class(zx.ssgsea)) {
         zx.ssgsea <- my.normalize(zx.ssgsea)
         kk <- intersect(names(gmt), rownames(zx.ssgsea))
-        gmt <- gmt[kk]
         zx.ssgsea <- zx.ssgsea[kk, colnames(X), drop = FALSE]
         zx.ssgsea[is.na(zx.ssgsea)] <- 0
         all.results[["ssgsea"]] <- gset.fitContrastsWithLIMMA(
@@ -213,7 +206,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     jj <- which(exp.matrix[, k] != 0)
     yy <- 1 * (exp.matrix[jj, k] > 0)
     xx <- X[, jj]
-    xxi <- impX[, jj]
     ref <- 0
     timings <- c()
     res <- list()
@@ -280,7 +272,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       cdesign <- cbind(Intercept = 1, Group = yy)
       tt <- system.time({
         suppressWarnings(suppressMessages(
-          output <- limma::camera(xxi, gmt, cdesign, contrast = 2)
+          output <- limma::camera(xx, gmt, cdesign, contrast = 2)
         ))
       })
       timings <- rbind(timings, c("camera", tt))
@@ -296,7 +288,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     if ("fry" %in% method) {
       cdesign <- cbind(Intercept = 1, Group = yy)
       tt <- system.time(
-        output <- limma::fry(xxi, gmt, cdesign, contrast = 2)
+        output <- limma::fry(xx, gmt, cdesign, contrast = 2)
       )
       timings <- rbind(timings, c("fry", tt))
       ## note: camera does not provide any logFC!!!!
