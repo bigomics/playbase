@@ -30,42 +30,37 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
 
   ft <- ifelse(is.null(filter_features), "<all>", filter_features)
   sel <- select_features
-
+  if(!is.null(sel)) {
+    ft <- "<custom>"
+  }
+  
   if (!(pheno %in% colnames(pgx$samples))) {
     message("ERROR. pheno not in pgx$samples")
     return(NULL)
   }
 
   ## WARNING. this converts any phenotype to discrete
-  y0 <- as.character(pgx$samples[, pheno])
-  names(y0) <- rownames(pgx$samples)
-
+  y <- as.character(pgx$samples[, pheno])
+  names(y) <- rownames(pgx$samples)
   if (!is.null(select_samples)) {
-    y0 <- y0[names(y0) %in% select_samples]
+    y <- y[names(y) %in% select_samples]
   }
-  y <- y0[!is.na(y0)]
-
-  ## augment to at least 100 samples per level :)
-  ii <- tapply(1:length(y), y, function(ii) {
-    sample(c(ii, ii), size = 100, replace = TRUE)
-  })
-  y <- y[unlist(ii)]
-
+  y <- y[!is.na(y)]
+  
   ## -------------------------------------------
-  ## select features (augment if needed)
+  ## select features
   ## -------------------------------------------
   if (FALSE && level == "geneset") {
-    X <- pgx$gsetX[, names(y)]
+    X <- pgx$gsetX  ## NB: this will augment
     if (any(is.na(X))) {
       X <- X[complete.cases(X), , drop = FALSE]
     }
   } else {
-    X <- pgx$X[, names(y)]
+    X <- pgx$X     ## NB: this will augment
     if (any(is.na(X))) {
-      X <- pgx$impX[, names(y)]
+      X <- pgx$impX
     }
   }
-  X0 <- X
 
   ## ----------- filter with selected features
   info("[pgx.compute_importance] Filtering features...")
@@ -79,7 +74,9 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     }
   } else if (is.family) {
     pp <- rownames(X)
-    if (ft %in% names(pgx$families)) {
+    if (ft == '<all>') {
+      pp <- rownames(X)
+    } else if (ft %in% names(pgx$families)) {
       gg <- pgx$families[[ft]]
       pp <- filterProbes(pgx$genes, gg)
     } else if (ft %in% names(playdata::iGSETS)) {
@@ -91,8 +88,28 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
   }
 
   ## ----------- restrict to top SD -----------
-  sdx <- matrixStats::rowSds(X, na.rm = TRUE)
-  X <- head(X[order(-sdx), , drop = FALSE], 10 * nfeatures) ## top 100
+  ## NEED RETHINK for multi-omics!!!
+  if(1) {
+    sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+    X <- head(X[order(-sdx), , drop = FALSE], 10 * nfeatures) ## top 100
+  } else {
+    res <- gx.limmaF(X, y, fdr=1, lfc=0)
+    res <- res[order(res$P.Value),]
+    sel <- head( rownames(res)[order(res$P.Value)], 10 * nfeatures)
+    X <- X[sel, , drop = FALSE]
+  }
+
+  ##----------------------------------------
+  ## augment
+  ##----------------------------------------
+  ## augment to at least 100 samples per level :)
+  ii <- tapply(1:length(y), y, function(ii) {
+    sample(c(ii, ii), size = 100, replace = TRUE)
+  })
+  y <- y[unlist(ii)]
+  
+  ## augment X to length of y
+  X <- X[, names(y)]
 
   ## add some noise
   sdx0 <- matrixStats::rowSds(X, na.rm = TRUE)
@@ -117,7 +134,9 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     ## determine is dataset is multi-omics
     has.colons <- all(grepl("[:]", rownames(pgx$X)))
     has.colons
-    if (is.null(multiomics)) multiomics <- (pgx$datatype == "multi-omics" || has.colons)
+    if (is.null(multiomics)) {
+      multiomics <- (pgx$datatype == "multi-omics" || has.colons)
+    }
     if (multiomics && !has.colons) {
       message("WARNING. multi-omics specified but no colons in features. doing mono-omics.")
       multiomics <- FALSE
