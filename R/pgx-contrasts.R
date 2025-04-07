@@ -70,6 +70,13 @@ pgx.getContrastGroups <- function(pgx, contrast, as.factor = TRUE) {
   return(grp)
 }
 
+pgx.getStatGroups <- function(pgx, contrast=NULL) {
+  exp.matrix <- pgx$model.parameters$exp.matrix
+  if(!is.null(contrast)) exp.matrix <- exp.matrix[,contrast,drop=FALSE]
+  lab.matrix <- contrasts.convertToLabelMatrix(exp.matrix, pgx$samples)
+  grp <- apply(lab.matrix, 1, paste, collapse="_")
+  return(grp)
+}
 
 
 #' Get sample conditions from expression matrix
