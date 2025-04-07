@@ -323,7 +323,6 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   if (is.null(probe_type)) {
     probe_type <- detect_probetype(organism, probes, orgdb = orgdb)
-    probe_type
     if (is.null(probe_type) || is.na(probe_type) ) {
       message("ERROR: could not determine probe_type.")
       message("WARNING. returning empty annotation.")
@@ -374,7 +373,7 @@ getGeneAnnotation.ANNOTHUB <- function(
     not.symbols <- !(annot$SYMBOL %in% symbols)
     if(length(not.symbols)) annot$SYMBOL[not.symbols] <- NA
   }
-  annot$ALIAS <- NULL
+##  annot$ALIAS <- NULL
   annot$SYMBOL[is.na(annot$SYMBOL)] <- ""
   
   ## Attempt to retrieve chr map via org.Mm.egCHRLOC / org.Rn.egCHRLOC.
