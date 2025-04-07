@@ -163,6 +163,11 @@ getProbeAnnotation <- function(organism,
   ## cleanup entries and reorder columns
   genes <- cleanupAnnotation(genes)
 
+  if (all(c("ortholog", "human_ortholog") %in% colnames(genes))) {
+    jj <- which(colnames(genes) == "ortholog")
+    genes <- genes[, -jj, drop = FALSE]
+  }
+  
   return(genes)
 
 }
