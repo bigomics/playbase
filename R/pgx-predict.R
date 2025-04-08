@@ -17,15 +17,16 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
                                    select_features = NULL,
                                    select_samples = NULL,
                                    nfeatures = 60,
-                                   multiomics = NULL,
-                                   do.survival = FALSE) {
+                                   multiomics = 2,
+                                   niter = 1
+                                   ) {
   if (0) {
     level <- "genes"
     filter_features <- NULL
     select_features <- NULL
     select_samples <- NULL
     nfeatures <- 60
-    multiomics <- NULL
+    multiomics <- 2
   }
 
   ft <- ifelse(is.null(filter_features), "<all>", filter_features)
@@ -88,15 +89,12 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
   }
 
   ## ----------- restrict to top SD -----------
-  ## NEED RETHINK for multi-omics!!!
-  if(1) {
+  is.multiomics <- (pgx$datatype == "multi-omics")
+  if(is.multiomics) {
+    X <- mofa.topSD(X, 10 * nfeatures) ## top 100
+  } else {
     sdx <- matrixStats::rowSds(X, na.rm = TRUE)
     X <- head(X[order(-sdx), , drop = FALSE], 10 * nfeatures) ## top 100
-  } else {
-    res <- gx.limmaF(X, y, fdr=1, lfc=0)
-    res <- res[order(res$P.Value),]
-    sel <- head( rownames(res)[order(res$P.Value)], 10 * nfeatures)
-    X <- X[sel, , drop = FALSE]
   }
 
   ##----------------------------------------
@@ -107,81 +105,74 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     sample(c(ii, ii), size = 100, replace = TRUE)
   })
   y <- y[unlist(ii)]
-  
-  ## augment X to length of y
   X <- X[, names(y)]
-
-  ## add some noise
-  sdx0 <- matrixStats::rowSds(X, na.rm = TRUE)
-  sdx1 <- 0.5 * sdx0 + 0.5 * mean(sdx0, na.rm = TRUE)
-  X <- X + 0.25 * sdx1 * matrix(rnorm(length(X)), nrow(X), ncol(X))
 
   ## -------------------------------------------
   ## compute importance values
   ## -------------------------------------------
-  if (do.survival) {
-    time <- abs(y)
-    status <- (y > 0) ## dead is positive time
-    methods <- c("glmnet", "randomforest", "xgboost", "pls")
-    message("Computing single-omics variable importance (surival)...")
-    P <- pgx.survivalVariableImportance(
-      X,
-      time = time,
-      status = status,
-      methods = methods
-    )
-  } else {
-    ## determine is dataset is multi-omics
-    has.colons <- all(grepl("[:]", rownames(pgx$X)))
-    has.colons
-    if (is.null(multiomics)) {
-      multiomics <- (pgx$datatype == "multi-omics" || has.colons)
-    }
-    if (multiomics && !has.colons) {
-      message("WARNING. multi-omics specified but no colons in features. doing mono-omics.")
-      multiomics <- FALSE
-    }
 
-    if (multiomics) {
-      ## compute variable importance for MULTI-OMICS. We need not to
-      ## use the augmented data.
-      kernels <- c(
-        "mofa", "pca", "nmf", "nmf2", "mcia", "wgcna", "diablo", "rgcca",
-        "rgcca,rgcca", "rgcca.rgccda", "rgcca.mcoa"
-      )
-      message("Computing multi-omics variable importance...")
-      P <- pgx.compute_mofa_importance(
-        pgx, pheno,
-        numfactors = 8, use.sdwt = TRUE, kernels = kernels
-      )
-      dim(P)
+  ## determine is dataset is multi-omics
+  has.mofa <- "mofa" %in% names(pgx)
+  is.multiomics <- (pgx$datatype == "multi-omics" && has.mofa)
+  
+  P <- NULL
+  if (is.multiomics && multiomics>0) {
+    ## compute variable importance for MULTI-OMICS. We need not to
+    ## use the augmented data.
+    message("Computing multi-omics MOFA variable importance")    
+    kernels <- c(
+      "mofa", "pca", "nmf", "nmf2", "mcia", "wgcna", "diablo", "rgcca",
+      "rgcca,rgcca", "rgcca.rgccda", "rgcca.mcoa"
+    )
+    P <- pgx.compute_mofa_importance(
+      pgx, pheno, numfactors = 8, use.sdwt = TRUE, kernels = kernels
+    )
+
+    if(multiomics==2) {
+      ## compute variable importance for 2nd pass using top scoring
+      ## from mofa_importance.
+      sel <- head(intersect(rownames(P), rownames(X)), 4*nfeatures) ## TUNE TOP
+      X <- X[sel,]
+    } else {
+      ## Only single pass with MOFA is not using augmented data.
       X <- pgx$X
       y <- pgx$samples[, pheno]
       names(y) <- rownames(pgx$samples)
-    } else {
-      ## compute variable importance for SINGLE-OMICS. We use the
-      ## augmented data.
-      methods <- c(
-        "glmnet", "randomforest", "xgboost", "splsda",
-        "correlation", "ftest"
-      )
-      X1 <- X
-      y1 <- y
+    }
+  }
+
+  if( !is.multiomics || multiomics != 1) {
+    ## compute variable importance using ML methods. We use the
+    ## augmented data.
+
+    ## add some noise
+    sdx0 <- matrixStats::rowSds(X, na.rm = TRUE)
+    sdx1 <- 0.5 * sdx0 + 0.5 * mean(sdx0, na.rm = TRUE)
+    
+    methods <- c("glmnet", "randomforest", "xgboost", "splsda",
+                 "correlation", "ftest")
+    message("Computing ML variable importance...")
+    P <- 0
+    i=1
+    for(i in 1:niter) {
+      X1 <- X + 0.25 * sdx1 * matrix(rnorm(length(X)), nrow(X), ncol(X))
+      y1 <- y 
       names(y1) <- colnames(X1) <- paste0("x", 1:ncol(X))
-      message("Computing single-omics variable importance...")
       res <- pgx.variableImportance(
-        X1, y1,
+        X1,
+        y1,
         methods = methods,
         reduce = 1000,
         resample = 0,
         scale = FALSE,
         add.noise = 0
       )
-      remove(X1, y1)
-      P <- res$importance
+      P <- P + res$importance
     }
+    P <- P / niter
+    remove(X1, y1)
   }
-
+  
   ## normalize importance measures
   P <- abs(P) ## sometimes negative according to sign
   P[is.na(P)] <- 0
