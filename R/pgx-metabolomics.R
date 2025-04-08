@@ -320,14 +320,17 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
     }
   } ## for db
 
+  ## This sets the default data.frame structure for metabolites. Note
+  ## that symbol and ortholog columns are pre-filled with ID.
   rownames(metadata) <- NULL
   df <- data.frame(
     feature = probes,
-    symbol = metadata$ID,
-    human_ortholog = metadata$ID,
+    symbol = metadata$ID,          ## not sure about this... (IK)
+    human_ortholog = metadata$ID,  ## not sure about this... (IK)
     gene_title = metadata$name,
     source = metadata$source,
-    gene_name = metadata$ID
+    gene_name = metadata$ID,
+    data_type = "metabolomics"
   )
   rownames(df) <- as.character(probes)
 

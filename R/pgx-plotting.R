@@ -6504,6 +6504,7 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
 plotTimeSeries.modules <- function(time, xx, modules, main="",
                                    plottype="parcoord", legend=TRUE) {
 
+  ## we plot the centered-scaled z-score
   mX <- t(rowmean(scale(t(xx)), time))
   mx.time <- as.numeric(gsub("[_-].*|[^0-9]","",colnames(mX)))
   mx.time[is.na(mx.time)] <- 0
@@ -6532,20 +6533,17 @@ plotTimeSeries.modules <- function(time, xx, modules, main="",
       groupColumn = 1,
       title = main)
     gg <- gg +
-      ggplot2::geom_line(color = adjustcolor("grey",alpha.f=0.95)) 
+      ggplot2::geom_line(color = adjustcolor("grey",alpha.f=0.5)) 
   } else {
     mx.df <- reshape2::melt(df)
     mx.df$time <- as.vector(mapply(rep, mx.time, nrow(mX)))
     head(mx.df)
     gg <- ggplot2::ggplot(
       mx.df, ggplot2::aes(x=time, y=value, color=modules)) +
-      ##  ggplot2::geom_line(color = adjustcolor("grey",alpha.f=0.95)) 
       ggplot2::geom_point(size=0.6)
     gg
   }
   gg <- gg + 
-    ##ggplot2::geom_line(color = adjustcolor("grey",alpha.f=0.95)) +
-    ## ggplot2::scale_color_manual(values=kpal) +
     ggplot2::xlab("time") + ggplot2::ylab("expression") +
     ggplot2::stat_summary(ggplot2::aes(group=colors),
       fun=mean, geom="smooth", se=FALSE, size=1.3) +

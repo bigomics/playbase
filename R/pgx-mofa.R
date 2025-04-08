@@ -948,10 +948,26 @@ mofa.plot_all_factortraits <- function(meta.res) {
 
 #' @export
 mofa.topSD <- function(xdata, ntop) {
-  lapply(xdata, function(x) {
-    sdx <- matrixStats::rowSds(x, na.rm = TRUE)
-    head(x[order(-sdx), ], ntop)
-  })
+  if(inherits(xdata,"list")) {
+    res <- lapply(xdata, function(x) {
+      sdx <- matrixStats::rowSds(x, na.rm = TRUE)
+      head(x[order(-sdx), ], ntop)
+    })
+  }
+  if(!is.null(dim(xdata))) {
+    if(all(grepl(":",rownames(xdata)))) {
+      xdata <- mofa.split_data(xdata)
+      res <- lapply(xdata, function(x) {
+        sdx <- matrixStats::rowSds(x, na.rm = TRUE)
+        head(x[order(-sdx), ], ntop)
+      })
+      res <- mofa.merge_data(res)
+    } else {
+      sdx <- matrixStats::rowSds(xdata, na.rm = TRUE)
+      res <- head(xdata[order(-sdx), ], ntop)
+    }
+  }
+  return(res)
 }
 
 #' @export

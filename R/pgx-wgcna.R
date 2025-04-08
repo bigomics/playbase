@@ -141,7 +141,7 @@ wgcna.compute <- function(X,
                           networktype = "signed",
                           tomtype = "signed",
                           reassignThreshold = 1e-6,
-                          ngenes = 2000,
+                          ngenes = 4000,
                           numericlabels = FALSE,
                           maxBlockSize = 8000,
                           merge.dendro = TRUE,
@@ -162,11 +162,19 @@ wgcna.compute <- function(X,
 
   X <- X[!duplicated(rownames(X)), ]
 
+  ## restrict number of genes
   if (ngenes > 0 && nrow(X) > ngenes) {
-    sdx <- matrixStats::rowSds(X, na.rm = TRUE)
-    X <- X[sdx > 0.1 * mean(sdx, na.rm = TRUE), ] ## filter low SD??
-    X <- X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ]
-    X <- utils::head(X, ngenes)
+    is.multiomics <- all(grepl(":",rownames(X)))
+    if(is.multiomics) {
+      message("[wgcna.compute] multiomics. topSD = ",ngenes)
+      X <- mofa.topSD(X, ngenes)    
+    } else {
+      message("[wgcna.compute] topSD = ",ngenes)
+      sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+      X <- X[sdx > 0.1 * mean(sdx, na.rm = TRUE), ] ## filter low SD??
+      X <- X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ]
+      X <- utils::head(X, ngenes)
+    }
   }
 
   message("[wgcna.compute] dim(X) = ", paste(dim(X), collapse = " x "))
@@ -1583,6 +1591,7 @@ wgcna.filterColors <- function(X, colors, minKME=0.3, mergeCutHeight=0.15,
     new.colors[sel] <- NA
   }
 
+  ## Filter by KME score
   if(ntop>0) {
     keep <- tapply( names(kme), new.colors, function(i) head(names(sort(-kme[i])),ntop) )
     keep <- unlist(keep)
