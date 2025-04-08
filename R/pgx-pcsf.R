@@ -487,10 +487,11 @@ pgx.getPCSFcentrality <- function(pgx, contrast, pcsf = NULL, plot = TRUE, n = 1
   }
 
   ## centrality
-  ewt <- 1.0 / igraph::E(pcsf)$weight
+  ewt <- 1.0 / (1e-8 + igraph::E(pcsf)$weight)
   cc <- igraph::page_rank(pcsf, weights = ewt)$vector
-  cc <- cc / mean(cc, na.rm = TRUE) ## normalize
+  cc <- cc / (1e-8 + mean(cc, na.rm = TRUE)) ## normalize
   fc <- igraph::V(pcsf)$foldchange
+
   M <- data.frame(centrality = cc, logFC = fc)
   M <- round(M, digits = 2)
   match.col <- which.max(apply(pgx$genes, 2, function(a) sum(rownames(M) %in% a)))
