@@ -689,13 +689,14 @@ cleanupAnnotation <- function(genes) {
   # rename protein-coding to protein_coding to confirm with playbase <= v1.3.2
   ## genes$gene_biotype <- sub("protein-coding", "protein_coding", genes$gene_biotype)
 
-  # replace NA in gene_ortholog by "" to conform with old pgx objects
+  # replace NA in symbol and gene_ortholog by "" to conform with old
+  # pgx objects. For collapsing to symbol this is important.
   genes$human_ortholog[is.na(genes$human_ortholog)] <- ""
+  genes$symbol[is.na(genes$symbol)] <- ""
 
-  # if organism is human, human_ortholog should be NA (matching old playbase annot)
-  if (is.null(genes$human_ortholog)) {
-    genes$human_ortholog <- NA
-  }
+  # if organism is human, human_ortholog should be NA (matching old
+  # playbase annot). NEED RETHINK (this is not very consistent).
+  if (is.null(genes$human_ortholog)) genes$human_ortholog <- NA
   
   ## reorder
   ordered.cols <- c(columns, setdiff(colnames(genes), columns))
