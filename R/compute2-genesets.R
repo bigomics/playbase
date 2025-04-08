@@ -84,7 +84,7 @@ compute_testGenesets <- function(pgx,
 
   gset.meta <- gset.fitContrastsWithAllMethods(
     gmt = gmt,
-    X = impX,
+    X = if (is.null(impX)) X else impX,
     Y = Y,
     G = G,
     design = design,
