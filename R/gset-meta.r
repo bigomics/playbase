@@ -101,11 +101,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       zx.rnkcorr <- cor_sparse_matrix(G, xx1)
       rownames(zx.rnkcorr) <- colnames(G)
       colnames(zx.rnkcorr) <- colnames(X)
-
-      ## row-wise (per feature) scaling is 'good practice', see
-      ## tests comparing rankcor and ssGSEA/gsva
-
-      ## additional batch correction and NNM???
       zx.rnkcorr <- my.normalize(zx.rnkcorr)
       cm1 <- intersect(names(gmt), rownames(zx.rnkcorr))
       cm2 <- intersect(colnames(X), colnames(zx.rnkcorr))
