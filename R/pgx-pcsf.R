@@ -269,9 +269,9 @@ plotPCSF <- function(pcsf,
 
   ## set label size
   if (highlightby == "centrality") {
-    wt <- igraph::E(pcsf)$weight
-    ewt <- 1.0 / (0.01 * mean(wt, na.rm = TRUE) + wt) ##
-    bc <- igraph::page_rank(pcsf, weights = ewt)$vector
+    ewt <- igraph::E(pcsf)$weight
+    wt <- 1.0 / (0.01 * mean(ewt, na.rm = TRUE) + ewt) ##
+    bc <- igraph::page_rank(pcsf, weights = wt)$vector
     label_cex1 <- label_cex * (1 + 3 * (bc / max(bc, na.rm = TRUE))**3)
   }
   if (highlightby == "prize") {
@@ -279,9 +279,9 @@ plotPCSF <- function(pcsf,
     label_cex1 <- label_cex * (1 + 3 * (fx1 / max(fx1, na.rm = TRUE))**3)
   }
   if (highlightby == "centrality.prize") {
-    wt <- igraph::E(pcsf)$weight
-    ewt <- 1.0 / (0.01 * mean(wt, na.rm = TRUE) + wt) ##
-    bc <- igraph::page_rank(pcsf, weights = ewt)$vector
+    ewt <- igraph::E(pcsf)$weight
+    wt <- 1.0 / (0.01 * mean(ewt, na.rm = TRUE) + ewt) ##
+    bc <- igraph::page_rank(pcsf, weights = wt)$vector
     bc <- bc * abs(fx)
     label_cex1 <- label_cex * (1 + 3 * (bc / max(bc, na.rm = TRUE))**3)
   }
@@ -487,8 +487,9 @@ pgx.getPCSFcentrality <- function(pgx, contrast, pcsf = NULL, plot = TRUE, n = 1
   }
 
   ## centrality
-  ewt <- 1.0 / (1e-8 + igraph::E(pcsf)$weight)
-  cc <- igraph::page_rank(pcsf, weights = ewt)$vector
+  ewt <- igraph::E(pcsf)$weight
+  wt <- 1.0 / (0.01 * mean(ewt, na.rm = TRUE) + ewt) ##
+  cc <- igraph::page_rank(pcsf, weights = wt)$vector
   cc <- cc / (1e-8 + mean(cc, na.rm = TRUE)) ## normalize
   fc <- igraph::V(pcsf)$foldchange
 

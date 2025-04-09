@@ -140,7 +140,7 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
       names(y) <- rownames(pgx$samples)
     }
   }
-
+  
   if( !is.multiomics || multiomics != 1) {
     ## compute variable importance using ML methods. We use the
     ## augmented data.
@@ -187,18 +187,18 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
   sel <- head(rownames(R), nfeatures) ## top features
   R <- R[sel, , drop = FALSE]
   X <- X[sel, , drop = FALSE]
-
+  
   ## reduce R and y (from augmented set)
   kk <- names(y)[which(!duplicated(names(y)))]
   X <- X[, kk, drop = FALSE]
   y <- y[kk]
-
+  
   ## make partition tree
   rf <- makePartitionTree(X, y, add.splits = 0)
 
   ## rf = NULL
   res <- list(R = R, y = y, X = X, rf = rf)
-
+  
   return(res)
 }
 
