@@ -23,8 +23,7 @@
 #' @export
 gset.fitContrastsWithAllMethods <- function(gmt,
                                             X,
-                                            impX,
-                                            Y,
+                                            Y,  ## NOT USED???
                                             G,
                                             design,
                                             contr.matrix,
@@ -33,25 +32,25 @@ gset.fitContrastsWithAllMethods <- function(gmt,
                                             mc.cores = NULL,
                                             batch.correct = TRUE) {
   ALL.GENESET.METHODS <- c(
-    "fisher", "ssgsea", "gsva", "spearman", "camera", "fry",
-    "gsea.permPH", "gsea.permGS", "gseaPR", "fgsea"
+    "fisher", "ssgsea", "gsva", "spearman", "camera", "fry", "fgsea"
   )
 
   timings <- c()
 
   if (is.null(mc.cores)) {
-    ## Multi-thread on gsva makes RAM usage go up (crashing computations) and in most cases it's slower due to overheads
+    ## Multi-thread on gsva makes RAM usage go up (crashing
+    ## computations) and in most cases it's slower due to overheads
     mc.cores <- 1
   }
   message("using ", mc.cores, " number of cores")
   message("using ", mc.threads, " number of threads")
 
-  if (methods[1] == "*") {
+  if (is.null(methods) || methods[1] == "*") {
     methods <- ALL.GENESET.METHODS
   }
   methods <- intersect(methods, ALL.GENESET.METHODS)
   message("calculating methods:", paste(methods, collapse = " "))
-
+  
   ## If degenerate set design to NULL
   if (!is.null(design) && ncol(design) >= ncol(X)) {
     ## "no-replicate" design!!!
@@ -70,7 +69,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
   ## some "normalization" for single-sample methods
   my.normalize <- function(zx) {
-    if (nrow(zx) <= 10) {
+    if (nrow(zx) <= 10) { 
       return(zx)
     }
     zx <- scale(limma::normalizeQuantiles(zx))
@@ -87,11 +86,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   gg <- intersect(rownames(G), rownames(X))
   G <- G[gg, names(gmt), drop = FALSE]
   X <- X[gg, , drop = FALSE]
-  if (!is.null(impX)) {
-    impX <- impX[gg, , drop = FALSE]
-  } else {
-    impX <- X
-  }
 
   ## --------------------------------------------------------------
   ## Fit single-sample methods: GSVA, ssGSEA, spearman
@@ -107,11 +101,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       zx.rnkcorr <- cor_sparse_matrix(G, xx1)
       rownames(zx.rnkcorr) <- colnames(G)
       colnames(zx.rnkcorr) <- colnames(X)
-
-      ## row-wise (per feature) scaling is 'good practice', see
-      ## tests comparing rankcor and ssGSEA/gsva
-
-      ## additional batch correction and NNM???
       zx.rnkcorr <- my.normalize(zx.rnkcorr)
       cm1 <- intersect(names(gmt), rownames(zx.rnkcorr))
       cm2 <- intersect(colnames(X), colnames(zx.rnkcorr))
@@ -158,8 +147,8 @@ gset.fitContrastsWithAllMethods <- function(gmt,
         zx.gsva <- my.normalize(zx.gsva)
         jj <- match(names(gmt), rownames(zx.gsva))
         zx.gsva <- zx.gsva[jj, colnames(X), drop = FALSE] ## make sure..
+        rownames(zx.gsva) <- names(gmt)
         zx.gsva[is.na(zx.gsva)] <- 0
-        zx.gsva <- zx.gsva[!is.na(rownames(zx.gsva)), ] # Remove NA rows that GSVA may produce
         all.results[["gsva"]] <- gset.fitContrastsWithLIMMA(
           zx.gsva,
           contr.matrix,
@@ -179,17 +168,17 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       if (nmissing > 0) {
         message("Found ", nmissing, " missing values in X. Removing prior to GSVA::ssgsea.")
       }
-      zx.ssgsea <- try(GSVA::gsva(as.matrix(X[complete.cases(X), , drop = FALSE]),
-        gmt[],
+      zx.ssgsea <- try(GSVA::gsva(as.matrix(X),
+        gmt,
         method = "ssgsea",
         parallel.sz = mc.cores,
         verbose = FALSE
       ))
       if (!"try-error" %in% class(zx.ssgsea)) {
         zx.ssgsea <- my.normalize(zx.ssgsea)
-        kk <- intersect(names(gmt), rownames(zx.ssgsea))
-        gmt <- gmt[kk]
+        kk <- match(names(gmt), rownames(zx.ssgsea))
         zx.ssgsea <- zx.ssgsea[kk, colnames(X), drop = FALSE]
+        rownames(zx.ssgsea) <- names(gmt)
         zx.ssgsea[is.na(zx.ssgsea)] <- 0
         all.results[["ssgsea"]] <- gset.fitContrastsWithLIMMA(
           zx.ssgsea,
@@ -213,7 +202,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     jj <- which(exp.matrix[, k] != 0)
     yy <- 1 * (exp.matrix[jj, k] > 0)
     xx <- X[, jj]
-    xxi <- impX[, jj]
     ref <- 0
     timings <- c()
     res <- list()
@@ -280,7 +268,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       cdesign <- cbind(Intercept = 1, Group = yy)
       tt <- system.time({
         suppressWarnings(suppressMessages(
-          output <- limma::camera(xxi, gmt, cdesign, contrast = 2)
+          output <- limma::camera(xx, gmt, cdesign, contrast = 2)
         ))
       })
       timings <- rbind(timings, c("camera", tt))
@@ -296,7 +284,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
     if ("fry" %in% method) {
       cdesign <- cbind(Intercept = 1, Group = yy)
       tt <- system.time(
-        output <- limma::fry(xxi, gmt, cdesign, contrast = 2)
+        output <- limma::fry(xx, gmt, cdesign, contrast = 2)
       )
       timings <- rbind(timings, c("fry", tt))
       ## note: camera does not provide any logFC!!!!
@@ -362,6 +350,15 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   tests <- names(all.results[[1]])
   ntest <- length(tests)
 
+  # align if needed
+  for(m in 1:length(all.results)) {
+    for(k in 1:length(all.results[[m]])) {
+      ii <- match(names(gmt), rownames(all.results[[m]][[k]]))
+      all.results[[m]][[k]] <- all.results[[m]][[k]][ii,]
+    }
+  }
+  
+  # gather matrices
   P <- lapply(tests, function(k) do.call(cbind, lapply(all.results, function(x) x[[k]][, "p.value"])))
   Q <- lapply(tests, function(k) do.call(cbind, lapply(all.results, function(x) x[[k]][, "q.value"])))
   S <- lapply(tests, function(k) do.call(cbind, lapply(all.results, function(x) x[[k]][, "score"])))
