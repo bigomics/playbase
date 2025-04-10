@@ -52,16 +52,18 @@ pgx.wgcna <- function(
   samples <- samples[, grep("^[.]", colnames(samples), invert = TRUE), drop = FALSE]
   X <- pgx$X
   
-  ## WGCNA does not work very well with scRNAseq due to sparsity.  To
-  ## bypass the issue, hdWGCNA computes metacells.  Here we compute
-  ## metacells too using Supercell,
-  #is.singlecell <- !is.null(pgx$datatype) && tolower(pgx$datatype) %in% c("scrnaseq","scrna-seq")
+  ## WGCNA does not work very well with scRNAseq due to sparsity.
+  ## To bypass the issue, hdWGCNA computes metacells.
+  ## Here we compute supercells too.
   is.singlecell <- !is.null(pgx$datatype) && pgx$datatype == "scRNAseq"
-  is.toobig <- ncol(X) > 1000 ## 2000
+  is.toobig <- ncol(X) > 1000
   if (is.singlecell && is.toobig) {
-    message("[pgx.wgcna] WGCNA: scRNAseq. >2K cells. Computing supercells with SuperCell.")
-    counts <- pmax(2**X - 1,0)
-    group <- samples[, "celltype"]
+    message("[pgx.wgcna] scRNAseq: >1K cells. Computing supercells.")
+    counts <- pmax(2**X - 1, 0)
+    ct <- samples[, "celltype"]
+    group <- paste0(ct, ":", apply(pgx$contrasts, 1, paste, collapse = '_'))
+    if ("batch" %in% colnames(samples))
+      group <- paste0(group, ":", samples[, "batch"])
     nb <- round(ncol(counts)/1000)
     message("[pgx.wgcna] running SuperCell. nb = ", nb)    
     sc <- pgx.supercell(counts, samples, group = group, gamma = nb)
@@ -69,10 +71,10 @@ pgx.wgcna <- function(
     message("[pgx.wgcna] Normalizing supercell matrix (logCPM)")
     X <- as.matrix(logCPM(sc$counts, total = 1e4, prior = 1))
     samples <- sc$meta
-    remove(counts, group, sc)
+    remove(counts, ct, group, nb, sc)
     gc()
   }
-
+  
   if(!is.null(pgx$datatype) &&  pgx$datatype == "multi-omics") {
     message("[pgx.wgcna] Performing multi-omics ComBat on datatype.")
     X <- playbase::normalizeMultiOmics(X, method = "combat")
