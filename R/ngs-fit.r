@@ -109,7 +109,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   ## Time series: determine variable 'time'
   ## -----------------------------------------------------------------------------  
   if (timeseries) {
-    time.var <- toupper("minute|hour|day|week|month|year|time")
+    time.var <- toupper("minute|hour|day|week|month|year|age|time")
     sel <- grep(time.var, toupper(colnames(samples)))
     timeseries <- as.character(samples[, sel[1]])
     names(timeseries) <- rownames(samples)
