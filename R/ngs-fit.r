@@ -1422,6 +1422,18 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
 
 }
 
+## Q: does the condition induces a change in gene expression at
+## any time point after the reference level time point (time 0)?
+## https://support.bioconductor.org/p/62684/
+## Features showing a consistent difference from time 0 onward will not have a small p value.
+## This is imporant because differences between groups at time 0 should be controlled for,
+## e.g. random differences between the individuals chosen for each treatment group which
+## are observable before the treatment takes effect.
+# design.formula <- stats::formula("~ y + time + y:time")
+# dds <- DESeq2::DESeqDataSetFromMatrix(counts, colData, design)
+# dds <- DESeq2::DESeq(dds, test = "LRT", reduced = ~ y + time)
+# resx <- DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE)
+
 #' @describeIn ngs.fitContrastsWithAllMethods Fits time-series contrasts using DESeq2 LRT
 #' @export
 .ngs.fitConstrastsWithDESEQ2.nodesign.timeseries <- function(counts,
@@ -1429,83 +1441,98 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
                                                              timeseries,
                                                              test = "LRT") {
 
-  message("[ngs.fitConstrastsWithDESEQ2.nodesign]: DESeq2 time-series analysis with interaction term")
+  message("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries]: DESeq2 time-series analysis..")
 
   if (!all(colnames(counts) %in% names(timeseries)))
-    stop("[ngs.fitConstrastsWithDESEQ2.nodesign] and time contain different set of samples")
+    stop("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] counts and time contain different set of samples.")
 
+  if (!test %in% c("LRT", "Wald"))
+  stop("[.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] DESeq test unrecognized. Must be LRT or Wald.")
+
+  use.spline <- FALSE
+  
   jj <- match(colnames(counts), names(timeseries))
   time0 <- as.character(timeseries[jj])
-  time0 <- as.numeric(gsub("\\D", "", unname(time0)))
-  # !!: splines::ns need data in range c(0,60). Else breaks.
-  if (max(range(time0)) > 60) time0 <- time0/60
+  time0 <- gsub("\\D", "", unname(time0))
+  if (length(unique(time0)) == 1 && unique(time0)[1] == "") {
+    time0 <- as.character(timeseries[jj])
+    message("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries]: DESeq2 timeseries with interaction term.")
+  } else {
+    use.spline <- TRUE
+    time0 <- as.numeric(time0)
+    # !!: splines::ns need data in range c(0,60). Else breaks.A
+    if (max(range(time0)) > 60) time0 <- time0/60
+    message("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries]: DESeq2 timeseries with interaction term & spline.")
+  }
 
   y <- as.factor(as.character(y))
   colData <- data.frame(y = y, time = factor(time0))
 
-  ## Iterate across df. Pick first valid run.
-  idx <- 1:length(unique(time0))
-  i=1
-  for(i in 1:length(idx)) {
+  if (use.spline) {
 
-    ndf <- length(unique(time0)) - idx[i]
-    sp <- splines::ns(time0, df = ndf)
-    if ("try-error" %in% class(sp)) next;
-    #sp <- splines::ns(time0) #default is simple and works reasonably well!
-    design <- try(stats::model.matrix(~ y * sp), silent = TRUE)
-    if ("try-error" %in% class(design)) next;
-    red.design <- stats::model.matrix(~ y)
+    ## Iterate across df. Pick first valid run.
+    idx <- 1:length(unique(time0))
+    i = 1
+    for(i in 1:length(idx)) {
 
-    dds <- try(DESeq2::DESeqDataSetFromMatrix(counts, design = design, colData = colData),
-      silent = TRUE)
-    if ("try-error" %in% class(dds)) next;
+      ndf <- length(unique(time0)) - idx[i]
+      sp <- splines::ns(time0, df = ndf)
+      if ("try-error" %in% class(sp)) next;
+      # sp <- splines::ns(time0) # default is simple and works reasonably well!
+      design <- try(stats::model.matrix(~ y * sp), silent = TRUE)
+      if ("try-error" %in% class(design)) next;
+      red.design <- stats::model.matrix(~ y)
 
-    ft <- "mean"
-    if (test == "LRT") {
-      dds <- try(DESeq2::DESeq(dds, fitType = ft, test = "LRT", reduced = red.design),
-        silent = TRUE)
-    } else if (test == "Wald") {
-      dds <- try(DESeq2::DESeq(dds, fitType = ft, test = "Wald"),
-        silent = TRUE)
-    } else {
-      stop("[.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] DESeq2::DESeq test unrecognized")
+      dds <- try(DESeq2::DESeqDataSetFromMatrix(counts, colData, design), silent = TRUE)
+      if ("try-error" %in% class(dds)) next;
+
+      if (test == "LRT")
+        dds <- try(DESeq2::DESeq(dds, test = "LRT", fitType = "mean", reduced = red.design), silent = T)
+      if (test == "Wald")
+        dds <- try(DESeq2::DESeq(dds, test = "Wald", fitType = "mean"), silent = T)
+
+      if ("try-error" %in% class(dds)) {
+        dds <- DESeq2::DESeqDataSetFromMatrix(counts, colData, design)
+        dds <- DESeq2::estimateSizeFactors(dds)
+        dds <- DESeq2::estimateDispersionsGeneEst(dds)
+        DESeq2::dispersions(dds) <- GenomicRanges::mcols(dds)$dispGeneEst
+        if (test == "LRT")
+          dds <- try(DESeq2::nbinomLRT(dds, reduced = red.design), silent = TRUE)
+        if (test == "Wald") 
+          dds <- try(DESeq2::nbinomWaldTest(dds), silent = TRUE)
+        if ("try-error" %in% class(dds)) next;
+      }
+      message("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
+      break;
     }
 
+  } else {
+
+    design <- stats::model.matrix(~ y + time0 + y:time0)
+    red.design <- stats::model.matrix(~ y + time0)
+    dds <- try(DESeq2::DESeqDataSetFromMatrix(counts, colData, design), silent = TRUE)
+    if (test == "LRT")
+      dds <- try(DESeq2::DESeq(dds, test = "LRT", fitType = "mean", reduced = red.design), silent = T)
+    if (test == "Wald") 
+      dds <- try(DESeq2::DESeq(dds, test = "Wald", fitType = "mean"), silent = T)  
+
     if ("try-error" %in% class(dds)) {
-      dds <- DESeq2::DESeqDataSetFromMatrix(counts, design = design, colData = colData)
+      dds <- DESeq2::DESeqDataSetFromMatrix(counts, colData, design)
       dds <- DESeq2::estimateSizeFactors(dds)
       dds <- DESeq2::estimateDispersionsGeneEst(dds)
       DESeq2::dispersions(dds) <- GenomicRanges::mcols(dds)$dispGeneEst
-      if (test == "LRT") {
+      if (test == "LRT")
         dds <- try(DESeq2::nbinomLRT(dds, reduced = red.design), silent = TRUE)
-      } else if (test == "Wald") {
+      if (test == "Wald") 
         dds <- try(DESeq2::nbinomWaldTest(dds), silent = TRUE)
-      }
       if ("try-error" %in% class(dds)) next;
     }
-    message("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
-    break;
+
   }
     
   resx <- DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE)
   rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
   
-  ## Q: does the condition induces a change in gene expression at
-  ## any time point after the reference level time point (time 0)?
-  ## https://support.bioconductor.org/p/62684/
-  ## Features showing a consistent difference from time 0 onward will not have a small p value.
-  ## This is imporant because differences between groups at time 0 should be controlled for,
-  ## e.g. random differences between the individuals chosen for each treatment group which
-  ## are observable before the treatment takes effect.
-  #design.formula <- stats::formula("~ y + time + y:time")
-  #dds <- DESeq2::DESeqDataSetFromMatrix(
-  #  countData = counts,
-  #  design = design.formula,
-  #  colData = colData
-  #)
-  #dds <- DESeq2::DESeq(dds, test = "LRT", reduced = ~ y + time)
-  #resx <- DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE)
-
   return(resx)
 
 }
