@@ -1126,49 +1126,82 @@ ngs.fitContrastsWithEDGER <- function(counts,
                                                            timeseries,
                                                            robust = TRUE) {
 
-  require(splines)
+  message("[ngs.fitContrastsWithEDGER.nodesign.timeseries]: EdgeR time-series analysis..")
+
   if (!all(colnames(counts) %in% names(timeseries)))
-    message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Counts and timeseries vector contain different set of samples")
+    message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Counts and timeseries vector contain different set of samples.")
+
+  if (!method %in% c("lrt", "qlf")) ## ?? WHY DESEQ@ names LRTR is capital??
+  stop("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] EdgeR test unrecognized. Must be LRT or QLF.")
+
+  use.spline <- FALSE
 
   jj <- match(colnames(counts), names(timeseries))
   time0 <- as.character(timeseries[jj])
   time0 <- gsub("\\D", "", unname(time0))
-  time0 <- as.numeric(time0)
+  if (length(unique(time0)) == 1 && unique(time0)[1] == "") {
+    message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries]: EdgeR timeseries with interaction term.")
+    time0 <- as.character(timeseries[jj])
+  } else {
+    message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries]: EdgeR timeseries with interaction term & spline.")
+    use.spline <- TRUE
+    require(splines)
+    time0 <- as.numeric(time0)
+  }
+
   y <- as.factor(as.character(y))
 
-  ## Iterate across df. Pick first valid run.
-  idx <- 1:length(unique(time0))
-  i = 1
-  for(i in 1:length(idx)) {
+  if (use.spline) {
 
-    ndf <- length(unique(time0)) - idx[i]
-    design <- try(stats::model.matrix(~ 0 + y * splines::ns(time0, df=ndf)), silent = TRUE)
-    if ("try-error" %in% class(design)) next;
-    message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
+    ## Iterate across df. Pick first valid run.
+    idx <- 1:length(unique(time0))
+    i = 1
+    for(i in 1:length(idx)) {
+      ndf <- length(unique(time0)) - idx[i]
+      design <- try(stats::model.matrix(~ 0 + y * splines::ns(time0, df=ndf)), silent = TRUE)
+      if ("try-error" %in% class(design)) next;
+      message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
 
-    dge.disp <- try(edgeR::estimateDisp(dge$counts, design = design, robust = robust), silent = TRUE)
-    if ("try-error" %in% class(dge.disp)) next;
-    
+      dge.disp <- try(edgeR::estimateDisp(dge$counts, design = design, robust = robust), silent = TRUE)
+      if ("try-error" %in% class(dge.disp)) next;
+      
+      dge$common.dispersion <- dge.disp$common.dispersion
+      dge$trended.dispersion <- dge.disp$trended.dispersion
+      dge$tagwise.dispersion <- dge.disp$tagwise.dispersion
+      sel <- grep("*:splines::ns*", colnames(design))
+      if (method == "qlf") {
+        fit <- edgeR::glmQLFit(dge, design, robust = robust)
+        # colnames(stats::coef(fit))[sel]
+        res <- try(edgeR::glmQLFTest(fit, coef = sel), silent = TRUE)
+        if ("try-error" %in% class(res)) next else break;
+      } else if (method == "lrt") {
+        fit <- edgeR::glmFit(dge, design, robust = robust)
+        res <- try(edgeR::glmLRT(fit, coef = sel), silent = TRUE)
+        if ("try-error" %in% class(res)) next else break;
+      } 
+    }
+
+  } else {
+
+    design <- model.matrix(~ y * time0)
+    dge.disp <- edgeR::estimateDisp(dge$counts, design = design, robust = robust)
     dge$common.dispersion <- dge.disp$common.dispersion
     dge$trended.dispersion <- dge.disp$trended.dispersion
     dge$tagwise.dispersion <- dge.disp$tagwise.dispersion
-
-    sel <- grep("*:splines::ns*", colnames(design))
-
+    # Test interaction terms directly
+    sel <- grep("*:time0*", colnames(design)) ##???? unclear. 
     if (method == "qlf") {
       fit <- edgeR::glmQLFit(dge, design, robust = robust)
-      #colnames(stats::coef(fit))[sel]
-      res <- try(edgeR::glmQLFTest(fit, coef = sel), silent = TRUE)
-      if ("try-error" %in% class(res)) next else break;
+      # colnames(stats::coef(fit))[sel]
+      res <- edgeR::glmQLFTest(fit, coef = sel)
     } else if (method == "lrt") {
       fit <- edgeR::glmFit(dge, design, robust = robust)
-      res <- try(edgeR::glmLRT(fit, coef = sel), silent = TRUE)
-      if ("try-error" %in% class(res)) next else break;
-    } else {
-      stop("[.ngs.fitContrastsWithEDGER.nodesign.timeseries] unknown method: ", method)
+      # colnames(stats::coef(fit))[sel]
+      res <- edgeR::glmLRT(fit, coef = sel)
     }
+    
   }
-
+  
   top <- edgeR::topTags(res, n = 1e9)$table
   top <- data.frame(top[rownames(X), ])
   sel <- grep("logFC.*", colnames(top))
@@ -1459,6 +1492,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
     message("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries]: DESeq2 timeseries with interaction term.")
   } else {
     use.spline <- TRUE
+    require(splines)
     time0 <- as.numeric(time0)
     # !!: splines::ns need data in range c(0,60). Else breaks.A
     if (max(range(time0)) > 60) time0 <- time0/60
