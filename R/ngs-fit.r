@@ -722,75 +722,101 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
                                                  trend = TRUE) {
 
   library(splines)
-  message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting LIMMA with no design; time series analysis with spline.")
+  message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting Limma ith no design; time series analysis...")
   
   if (!all(colnames(X) %in% names(timeseries)))
     stop("[ngs.fitContrastsWithLIMMA.timeseries] X and timeseries vector contain different set of samples.")
 
+  use.spline <- FALSE
+
   jj <- match(colnames(X), names(timeseries))
   time0 <- as.character(unname(timeseries[jj]))
-  num.time <- as.numeric(gsub("\\D", "", time0))
+  time0 <- gsub("\\D", "", time0)
+
+  if (length(unique(time0)) == 1 && unique(time0)[1] == "") {
+    message("[ngs.fitContrastsWithLIMMA.timeseries]: Limma timeseries with interaction term.")
+    time0 <- as.character(unname(timeseries[jj]))
+  } else {
+    message("[ngs.fitContrastsWithLIMMA.timeseries]: Limma timeseries with interaction term & spline.")
+    use.spline <- TRUE
+    require(splines)
+    time0 <- as.numeric(time0)
+  }
+
   y <- factor(y)
 
-  ## Pick 1st highest degree of freedom value that works
-  idx <- 1:length(unique(num.time))
-  i = 1
-  for(i in 1:length(idx)) {
+  if (use.spline) {
 
-    ndf <- length(unique(num.time)) - idx[i]
-    time.spline <- try(splines::ns(num.time, df = ndf), silent = TRUE)
-    if ("try-error" %in% class(time.spline)) next;
+    ## Iterate across df. Pick first valid run.
+    idx <- 1:length(unique(time0))
+    i = 1
+    for(i in 1:length(idx)) {
+      ndf <- length(unique(time0)) - idx[i]
+      time.spline <- try(splines::ns(time0, df = ndf), silent = TRUE)
+      if ("try-error" %in% class(time.spline)) next;
 
-    #design <- stats::model.matrix(~ 0 + y + y:time)
-    #design <- model.matrix(~ group + time.spline + group:time.spline)
-    design <- model.matrix(~ y * time.spline)
+      design <- model.matrix(~ y * time.spline)
+      fit <- limma::lmFit(X, design)
+      fit <- limma::eBayes(fit, trend = trend)
+      
+      coefs <- apply(fit$t, 2, function(x) sum(is.na(x)))
+      est.coefs <- names(coefs[coefs != nrow(fit$t)])
+      est.coefs <- est.coefs[grep(":time.spline*", est.coefs)]
+      sel <- match(est.coefs, names(coefs))
+      top <- try(limma::topTable(fit, coef = sel, sort.by = "none", number = Inf, adjust.method = "BH"),
+        silent = TRUE)
+      if ("try-error" %in% class(top) || nrow(top) == 0) next else break;
+    }
+
+    if ("try-error" %in% class(top)) {
+      top <- data.frame(matrix(NA, nrow=nrow(X), ncol=5))
+      rownames(top) <- rownames(X)
+      colnames(top) <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val")
+    } else {
+      top0 <- data.frame(logFC=NA, AveExpr=top$AveExpr, t=NA,
+        P.Value=top$P.Value, adj.P.Val=top$adj.P.Val, row.names=rownames(top))
+      i=1; SEL=list()
+      for (i in 1:length(est.coefs)) {
+        sel <- match(est.coefs[i], names(coefs))
+        SEL[[est.coefs[i]]] <- limma::topTable(fit, coef = sel, sort.by = "none", number = Inf, adjust.method = "BH")
+      }
+      top <- do.call(cbind, SEL)
+      i=1; index=c("logFC", "t")
+      for (i in 1:length(index)) {
+        idx <- paste0(names(SEL), ".", index[i])
+        sel <- match(idx, colnames(top))
+        top0[, index[i]] <- apply(top[, sel, drop = FALSE], 1, function(x) x[which.max(abs(x))])
+      }
+      top <- top0
+      rm(top0)
+      ## kk <- c("logFC", "AveExpr", "F", "P.Value", "adj.P.Val")
+      kk <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val")
+      top <- top[, kk, drop = FALSE]
+    }
+
+  } else {
+
+    time0 <- as.factor(time0)
+    design <- stats::model.matrix(~ 0 + y + time0 + y:time0)
     fit <- limma::lmFit(X, design)
     fit <- limma::eBayes(fit, trend = trend)
-  
-    coefs <- apply(fit$t, 2, function(x) sum(is.na(x)))
-    est.coefs <- names(coefs[coefs != nrow(fit$t)])
-    est.coefs <- est.coefs[grep(":time.spline*", est.coefs)]
-    sel <- match(est.coefs, names(coefs))
-    top <- try(
-      limma::topTable(fit, coef = sel, sort.by = "none", number = Inf, adjust.method = "BH"),
-      silent = TRUE
-    )
-    if ("try-error" %in% class(top) || nrow(top) == 0) next else break;
-  
-  }
-
-  if ("try-error" %in% class(top)) {
-    top <- data.frame(matrix(NA, nrow=nrow(X), ncol=5))
-    rownames(top) <- rownames(X)
+    sel <- grep("*:time0*", colnames(coef(fit)))
+    top <- limma::topTable(fit, coef = sel, number = nrow(X))
+    hh <- grep(".time0", colnames(top))
+    if (any(hh)) {
+      logFC <- apply(top[, hh, drop = FALSE], 1, function(x) x[which.max(abs(x))])
+      top$logFC <- logFC
+      top <- top[, -hh, drop = FALSE]
+      kk <- c("logFC", "AveExpr", "F", "P.Value", "adj.P.Val")
+      top <- top[, kk, drop = FALSE]
+    } else {
+      kk <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val")
+      top <- top[, kk, drop = FALSE]
+    }
     colnames(top) <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val")
-  } else {
-    top0 <- data.frame(logFC=NA, AveExpr=top$AveExpr, t=NA,
-      P.Value=top$P.Value, adj.P.Val=top$adj.P.Val, row.names=rownames(top))
-    i=1; SEL=list()
-    for (i in 1:length(est.coefs)) {
-      sel <- match(est.coefs[i], names(coefs))
-      SEL[[est.coefs[i]]] <- limma::topTable(fit, coef = sel, sort.by = "none", number = Inf, adjust.method = "BH")
-    }
-    #FUN.x <- function(x, stat) {
-    #  chk0 <- stat %in% c("P.Value", "adj.P.Val")
-    #  xx <- ifelse(chk0, min(x, na.rm=TRUE), x[which.max(abs(x))])
-    #  return(xx)
-    #}
-    top <- do.call(cbind, SEL)
-    index <- c("logFC", "t")
-    i=1
-    for (i in 1:length(index)) {
-      idx <- paste0(names(SEL), ".", index[i])
-      sel <- match(idx, colnames(top))
-      top0[, index[i]] <- apply(top[, sel, drop = FALSE], 1, function(x) x[which.max(abs(x))])
-    }
-    top <- top0
-    rm(top0)
-    ## kk <- c("logFC", "AveExpr", "F", "P.Value", "adj.P.Val")
-    kk <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val")
-    top <- top[, kk, drop = FALSE]
-  }
 
+  }
+  
   return(top)
 
 }
