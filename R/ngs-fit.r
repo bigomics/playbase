@@ -170,7 +170,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   
   ## ---------- Wilcoxon test -----------
   if ("wilcoxon.ranksum" %in% methods) {
-     message("[ngs.fitContrastsWithAllMethods] scRNA-seq: fitting using Wilcoxon rank sum test")
+     message("[ngs.fitContrastsWithAllMethods] Fitting using Wilcoxon rank sum test")
      timings[["wilcoxon.ranksum"]] <- system.time(
        outputs[["wilcoxon.ranksum"]] <- ngs.fitContrastsWithWILCOXON(
          X, contr.matrix, design, conform.output = conform.output
@@ -194,7 +194,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         next;
       } else {
         if (!is.null(timeseries) && cm.mtds[i] == "trend.limma") {
-          message("[ngs.fitContrastsWithAllMethods] Time series: fitting using trend limma with spline")
           time_var <- timeseries
         } else {
           time_var = NULL
@@ -227,7 +226,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         next;
       } else {
         if (!is.null(timeseries)) {
-          message("[ngs.fitContrastsWithAllMethods] Time series: fitting using DESeq2 with interaction term.")
           time_var <- timeseries
         } else {
           time_var <- NULL
@@ -253,14 +251,13 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     for(i in 1:length(cm.mtds)) {
       X1 <- X
       mdl <- edger.mdls[match(cm.mtds[i], edger.mtds)]
-      message("[ngs.fitContrastsWithAllMethods] fitting using ", cm.mtds[i])
+      message("[ngs.fitContrastsWithAllMethods] Fitting using ", cm.mtds[i])
       if (nmissing > 0) {
         message("[ngs.fitContrastsWithAllMethods] Missing values detected. Cannot perform edgeR QL-F test or LRT.")
         next;
       } else {
         time_var <- NULL
         if(!is.null(timeseries)) {
-          message(paste0("[ngs.fitContrastsWithAllMethods] Time series: fitting using EdgeR ", cm.mtds[i], " with spline."))
           time_var <- timeseries
         }
         timings[[cm.mtds[i]]] <- system.time(
@@ -1152,12 +1149,10 @@ ngs.fitContrastsWithEDGER <- function(counts,
                                                            timeseries,
                                                            robust = TRUE) {
 
-  message("[ngs.fitContrastsWithEDGER.nodesign.timeseries]: EdgeR time-series analysis..")
-
   if (!all(colnames(counts) %in% names(timeseries)))
     message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Counts and timeseries vector contain different set of samples.")
 
-  if (!method %in% c("lrt", "qlf")) ## ?? WHY DESEQ@ names LRTR is capital??
+  if (!method %in% c("lrt", "qlf")) 
   stop("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] EdgeR test unrecognized. Must be LRT or QLF.")
 
   use.spline <- FALSE
@@ -1499,8 +1494,6 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
                                                              y,
                                                              timeseries,
                                                              test = "LRT") {
-
-  message("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries]: DESeq2 time-series analysis..")
 
   if (!all(colnames(counts) %in% names(timeseries)))
     stop("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] counts and time contain different set of samples.")
