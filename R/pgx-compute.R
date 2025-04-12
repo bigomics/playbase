@@ -298,7 +298,7 @@ pgx.createPGX <- function(counts,
   ## 2. check valid contrasts for time interaction analysis with spline.
   ## 3. expand contrast matrix.
   ## ---------------------------------------------------------------------
-  contrasts <- contrasts.addTimeInteraction(contrasts,  samples)
+  contrasts <- contrasts.addTimeInteraction(contrasts, samples)
   timeseries <- ifelse(any(grep("^IA:",colnames(contrasts))), TRUE, FALSE)
            
   ## convert old-style contrast matrix to sample-wise labeled contrasts
