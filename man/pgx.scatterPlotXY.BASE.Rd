@@ -50,6 +50,7 @@ pgx.scatterPlotXY.BASE(
   xaxs = TRUE,
   yaxs = TRUE,
   color_up_down = FALSE,
+  up_down_dir = 1,
   labels = NULL,
   label.type = NULL,
   opacity = 1
