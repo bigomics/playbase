@@ -233,7 +233,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
           time_var <- NULL
         }
         timings[[cm.mtds[i]]] <- system.time(
-          outputs[[cm.mtds[i]]] <- ngs.fitConstrastsWithDESEQ2(
+          outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithDESEQ2(
             counts, group, contr.matrix, design,
             X = X1, genes = genes, test = mdl,
             prune.samples = prune.samples,
@@ -684,7 +684,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
         vfit <- limma::contrasts.fit(vfit, contrasts = contr1)
         efit <- try(limma::eBayes(vfit, trend = trend, robust = robust), silent = TRUE)
         if ("try-error" %in% class(efit)) {
-          efit <- limma::eBayes(vfit, trend = FALSE, robust = FALSE)
+          efit <- limma::eBayes(vfit, trend = FALSE, robust = robust)
         }
         top <- limma::topTable(efit, coef = 1, sort.by = "none", number = Inf, adjust.method = "BH")
       }
@@ -1128,7 +1128,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
 
   require(splines)
   if (!all(colnames(counts) %in% names(timeseries)))
-    message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Counts and timeseries vector contain different set of samples")
+    message("[ngs.fitContrastsWithEDGER.nodesign.timeseries] Counts and timeseries vector contain different set of samples")
 
   jj <- match(colnames(counts), names(timeseries))
   time0 <- as.character(timeseries[jj])
@@ -1144,7 +1144,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
     ndf <- length(unique(time0)) - idx[i]
     design <- try(stats::model.matrix(~ 0 + y * splines::ns(time0, df=ndf)), silent = TRUE)
     if ("try-error" %in% class(design)) next;
-    message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
+    message("[ngs.fitContrastsWithEDGER.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
 
     dge.disp <- try(edgeR::estimateDisp(dge$counts, design = design, robust = robust), silent = TRUE)
     if ("try-error" %in% class(dge.disp)) next;
@@ -1182,7 +1182,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
 #' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using DESeq2 differential expression
 #' analysis on count data
 #' @export
-ngs.fitConstrastsWithDESEQ2 <- function(counts,
+ngs.fitContrastsWithDESEQ2 <- function(counts,
                                         group,
                                         contr.matrix,
                                         design,
@@ -1207,7 +1207,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
 
   if (is.null(design)) {
     message("[ngs.fitContrastsWithDESEQ2] fitting DESEQ2  *without* design")
-    out <- .ngs.fitConstrastsWithDESEQ2.nodesign(
+    out <- .ngs.fitContrastsWithDESEQ2.nodesign(
       counts = counts,
       contr.matrix = contr.matrix,
       test = test,
@@ -1252,7 +1252,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
 
   ## sometime DESEQ2 fails and we resort to gene-wise estimates
   if ("try-error" %in% class(dds)) {
-    message("[.ngs.fitConstrastsWithDESEQ2.nodesign] retrying DESEQ2 with gene-wise estimates...")
+    message("[.ngs.fitContrastsWithDESEQ2.nodesign] retrying DESEQ2 with gene-wise estimates...")
     dds <- DESeq2::DESeqDataSetFromMatrix(
       countData = counts,
       design = design.formula,
@@ -1322,7 +1322,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
 
 #' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using DESeq2 differential expression
 #' @export
-.ngs.fitConstrastsWithDESEQ2.nodesign <- function(counts,
+.ngs.fitContrastsWithDESEQ2.nodesign <- function(counts,
                                                   contr.matrix,
                                                   test = "Wald",
                                                   prune.samples = FALSE,
@@ -1334,7 +1334,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
   if (is.null(X)) X <- edgeR::cpm(counts, log = TRUE)
 
   if (nrow(contr.matrix) != ncol(X))
-    stop("ngs.fitConstrastsWithDESEQ2.nodesign:: contrast matrix must be by sample")
+    stop("ngs.fitContrastsWithDESEQ2.nodesign:: contrast matrix must be by sample")
   
   exp.matrix <- contr.matrix
   i=1; tables=list()
@@ -1348,7 +1348,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
     counts1 <- counts[, kk, drop = FALSE]
 
     if (grepl("^IA:*", colnames(exp.matrix)[i]) && !is.null(timeseries)) {
-      resx <- .ngs.fitConstrastsWithDESEQ2.nodesign.timeseries(counts1, y, timeseries, test = test)
+      resx <- .ngs.fitContrastsWithDESEQ2.nodesign.timeseries(counts1, y, timeseries, test = test)
     } else {
       colData <- data.frame(y, row.names = colnames(counts1))
       ## sample-wise model matrix (does this work???)
@@ -1369,7 +1369,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
       })
       ## sometime DESEQ2 fails
       if ("try-error" %in% class(dds)) {
-        message("[.ngs.fitConstrastsWithDESEQ2.nodesign] retrying DESEQ2 with gene-wise estimates...")
+        message("[.ngs.fitContrastsWithDESEQ2.nodesign] retrying DESEQ2 with gene-wise estimates...")
         dds <- DESeq2::DESeqDataSetFromMatrix(
           countData = counts1,
           design = design.formula,
@@ -1424,15 +1424,15 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
 
 #' @describeIn ngs.fitContrastsWithAllMethods Fits time-series contrasts using DESeq2 LRT
 #' @export
-.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries <- function(counts,
+.ngs.fitContrastsWithDESEQ2.nodesign.timeseries <- function(counts,
                                                              y,
                                                              timeseries,
                                                              test = "LRT") {
 
-  message("[ngs.fitConstrastsWithDESEQ2.nodesign]: DESeq2 time-series analysis with interaction term")
+  message("[ngs.fitContrastsWithDESEQ2.nodesign]: DESeq2 time-series analysis with interaction term")
 
   if (!all(colnames(counts) %in% names(timeseries)))
-    stop("[ngs.fitConstrastsWithDESEQ2.nodesign] and time contain different set of samples")
+    stop("[ngs.fitContrastsWithDESEQ2.nodesign] and time contain different set of samples")
 
   jj <- match(colnames(counts), names(timeseries))
   time0 <- as.character(timeseries[jj])
@@ -1468,7 +1468,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
       dds <- try(DESeq2::DESeq(dds, fitType = ft, test = "Wald"),
         silent = TRUE)
     } else {
-      stop("[.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] DESeq2::DESeq test unrecognized")
+      stop("[.ngs.fitContrastsWithDESEQ2.nodesign.timeseries] DESeq2::DESeq test unrecognized")
     }
 
     if ("try-error" %in% class(dds)) {
@@ -1483,7 +1483,7 @@ ngs.fitConstrastsWithDESEQ2 <- function(counts,
       }
       if ("try-error" %in% class(dds)) next;
     }
-    message("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
+    message("[ngs.fitContrastsWithDESEQ2.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
     break;
   }
     
