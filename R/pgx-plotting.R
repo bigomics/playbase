@@ -1525,6 +1525,102 @@ pgx.plotMA <- function(pgx, contrast, level = "gene", psig = 0.05, fc = 1,
 }
 
 
+plot_MA <- function(x,
+                    y,
+                    names,
+                    pval = 0,
+                    label.names = names,
+                    facet = NULL,
+                    highlight = NULL,
+                    label = NULL,
+                    ntop = 10,
+                    xlab = "average expression (log2)",
+                    ylab = "foldchange (log2FC)",
+                    lfc = 1,
+                    psig = 0.05,
+                    plim = 12,
+                    sig = NULL,
+                    showlegend = TRUE,
+                    cex = 1,
+                    cex.lab = 1,
+                    xlim = NULL,
+                    ylim = NULL,
+                    marker.alpha = 0.7,
+                    axis.text.size = 14,
+                    title = "MA plot",
+                    set.par = TRUE,
+                    colors = c(
+                      up = "#f23451",
+                      notsig = "#707070AA",
+                      notsel = "#cccccc88",
+                      down = "#3181de"
+                    ),
+                    repel = TRUE,
+                    ...) {
+  if (is.null(sig)) {
+    sig <- (pval <= psig & abs(y) >= lfc)
+  }
+  if (FALSE && is.null(highlight)) {
+    highlight <- rownames(df)
+  }
+
+  pos <- cbind(x, y)
+  if (!is.null(names)) rownames(pos) <- names
+
+  if (is.null(label)) {
+    wt <- rowSums(scale(pos, center = FALSE)**2, na.rm = TRUE)
+    label <- rownames(pos)[order(-wt)]
+    if (!is.null(highlight)) label <- intersect(label, highlight)
+    ## if(!is.null(sig)) label <- intersect(label, names(sig[sig == TRUE]))
+  }
+  label <- head(label, ntop) ## label
+
+  p <- pgx.scatterPlotXY.BASE(
+    pos = pos,
+    var = sig,
+    type = "factor",
+    title = title,
+    labels = label.names,
+    xlab = xlab,
+    ylab = ylab,
+    hilight = highlight, #
+    hilight2 = label, #
+    cex = 1.3 * cex,
+    cex.lab = 1.4 * cex.lab,
+    cex.title = 1.0,
+    xlim = xlim,
+    ylim = ylim,
+    legend = FALSE,
+    color_up_down = TRUE,
+    up_down_dir = 2,
+    col = colors[c("notsig", "up", "down")],
+    na.color = colors["notsel"],
+    opacity = 1,
+    repel = repel,
+    set.par = set.par,
+    ...
+  )
+
+#  abline(v = 0, lty = 1, lwd = 0.5)
+  abline(h = 0, lty = 1, lwd = 0.5)
+  abline(h = c(-1, 1) * lfc[1], lty = 2, lwd = 0.5)
+#  abline(h = -log10(psig[1]), lty = 2, lwd = 0.5)
+
+  if (showlegend) {
+    cc <- colors[c("notsig", "up", "down")]
+    legend("bottomleft",
+      legend = c("Not significant", "Up", "Down"),
+      pch = 20, col = cc,
+      pt.cex = 1.5 * cex, cex = 0.9,
+      bg = "#FFFFFF99", bty = "o", border = NA
+    )
+  }
+}
+
+
+
+
+
 #' @describeIn pgx.plotContrast Scatter plot of contrast results
 #' @param pgx PGX object with analysis results
 #' @param contrast Contrast name to plot
@@ -3177,7 +3273,8 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
                                    label.clusters = FALSE, cex.clust = 1.5,
                                    tstep = 0.1, rstep = 0.1, na.color = "#AAAAAA44",
                                    tooltip = NULL, theme = NULL, set.par = TRUE,
-                                   axt = "s", xaxs = TRUE, yaxs = TRUE, color_up_down = FALSE,
+                                   axt = "s", xaxs = TRUE, yaxs = TRUE,
+                                   color_up_down = FALSE, up_down_dir = 1,
                                    labels = NULL, label.type = NULL, opacity = 1) {
   ## automatically set pointsize of dots
   if (is.null(cex)) {
@@ -3267,7 +3364,7 @@ pgx.scatterPlotXY.BASE <- function(pos, var = NULL, type = NULL, col = NULL, tit
 
     pt.col <- col1[z1]
     if (color_up_down && nz == 2 && length(col) == 3) {
-      sel <- which(as.integer(z1) == 2 & pos[, 1] < 0)
+      sel <- which(as.integer(z1) == 2 & pos[, up_down_dir] < 0)
       pt.col[sel] <- col[3]
     }
 
@@ -4639,7 +4736,7 @@ plotlyMA <- function(x, y, names, label.names = names,
                      ylab = "effect size (log2.FC)",
                      lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
                      marker.size = 5, label = NULL, label.cex = 1,
-                     color_up_down = TRUE,
+                     color_up_down = TRUE, 
                      colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#3181de"),
                      marker.type = "scatter", source = "plot1",
                      displayModeBar = TRUE) {
@@ -6389,13 +6486,14 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
     edgetype1 <- mofa.get_prefix(edges[,1])
     edgetype2 <- mofa.get_prefix(edges[,2])
   }
-  
+   
   fig <- plotly::plot_ly()
   k=1
   for (k in 1:length(zz)) {
-    
+
     z <- zz[k]
     df1 <- df[which(df$z == z), c("x","y","z","color") ]
+
     mx <- c(min.x, min.x, max.x, max.x)
     my <- c(min.y, max.y, min.y, max.y)
     mz <- rep(z, 4)
@@ -6437,13 +6535,15 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
     
     ## Add segments
     if(k < length(zz) && !is.null(edges)) {
+
       sel1 <- which(edgetype1 == zz[k] & edgetype2 == zz[k+1])
       sel2 <- which(edgetype2 == zz[k] & edgetype1 == zz[k+1])
-      df2 <- df[which(df$z == zz[k+1]), c("x","y","z")]          
+      df2 <- df[which(df$z == zz[k+1]), c("x","y","z")]                
       ee <- edges[unique(c(sel1,sel2)),]
       idx <- as.vector(t(as.matrix(ee[,1:2])))
       dfe <- rbind(df1[,c("x","y","z")], df2[,c("x","y","z")])[idx,]      
       dfe$pair_id <- as.vector(mapply(rep, 1:nrow(ee),2))
+
       fig <- fig %>%
         plotly::add_trace(
           x = dfe$x,
@@ -6460,10 +6560,11 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
           showlegend = FALSE,
           inherit = FALSE)
     }
-    
+
     ## Add layer title
     ztext <- z
     if (!is.null(znames) && (is.integer(z) || z %in% names(znames))) {
+      if(is.factor(z)) z <- as.character(z)
       ztext <- znames[z]
     }
 
