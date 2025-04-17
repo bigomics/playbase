@@ -90,7 +90,7 @@ pgx.checkINPUT <- function(
     if (length(ANY_COLUMN_ZERO) > 0 && PASS) {
       check_return$e10 <- names(ANY_COLUMN_ZERO)
       # remove the column names with all zeros by using check_return$e9
-      df_clean <- df_clean[, !(colnames(df_clean) %in% check_return$e10)]
+      df_clean <- df_clean[, !(colnames(df_clean) %in% check_return$e10), drop = FALSE]
     }
 
     # check if counts are log transformed
