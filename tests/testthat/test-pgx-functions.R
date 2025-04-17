@@ -305,7 +305,7 @@ test_that("tagDuplicates tags duplicates correctly", {
 test_that("reverse.AvsB reverses A vs B contrasts", {
   comps <- c("A_vs_B", "grp1_vs_grp2", "cond1:A_vs_B@time1")
 
-  expected <- c("B_vs_A", "grp2_vs_grp1", "cond1:B_vs_condA@time1")
+  expected <- c("B_vs_A", "grp2_vs_grp1", "cond1:B_vs_A@time1")
 
   result <- playbase::reverse.AvsB(comps)
 

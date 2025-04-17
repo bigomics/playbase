@@ -8,9 +8,9 @@
 \alias{ngs.fitContrastsWithEDGER}
 \alias{.ngs.fitContrastsWithEDGER.nodesign}
 \alias{.ngs.fitContrastsWithEDGER.nodesign.pruned}
-\alias{ngs.fitConstrastsWithDESEQ2}
-\alias{.ngs.fitConstrastsWithDESEQ2.nodesign}
-\alias{.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries}
+\alias{ngs.fitContrastsWithDESEQ2}
+\alias{.ngs.fitContrastsWithDESEQ2.nodesign}
+\alias{.ngs.fitContrastsWithDESEQ2.nodesign.timeseries}
 \title{ngs.fitContrastsWithAllMethods}
 \usage{
 ngs.fitContrastsWithAllMethods(
@@ -94,7 +94,7 @@ ngs.fitContrastsWithEDGER(
   timeseries = NULL
 )
 
-ngs.fitConstrastsWithDESEQ2(
+ngs.fitContrastsWithDESEQ2(
   counts,
   group,
   contr.matrix,
@@ -107,7 +107,7 @@ ngs.fitConstrastsWithDESEQ2(
   timeseries = NULL
 )
 
-.ngs.fitConstrastsWithDESEQ2.nodesign(
+.ngs.fitContrastsWithDESEQ2.nodesign(
   counts,
   contr.matrix,
   test = "Wald",
@@ -117,7 +117,7 @@ ngs.fitConstrastsWithDESEQ2(
   timeseries = NULL
 )
 
-.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries(
+.ngs.fitContrastsWithDESEQ2.nodesign.timeseries(
   counts,
   y,
   timeseries,
@@ -198,12 +198,12 @@ Custom methods can also be added.
 
 \item \code{.ngs.fitContrastsWithEDGER.nodesign.pruned()}: Fit contrasts with EdgeR without a design matrix
 
-\item \code{ngs.fitConstrastsWithDESEQ2()}: Fits contrasts using DESeq2 differential expression
+\item \code{ngs.fitContrastsWithDESEQ2()}: Fits contrasts using DESeq2 differential expression
 analysis on count data
 
-\item \code{.ngs.fitConstrastsWithDESEQ2.nodesign()}: Fits contrasts using DESeq2 differential expression
+\item \code{.ngs.fitContrastsWithDESEQ2.nodesign()}: Fits contrasts using DESeq2 differential expression
 
-\item \code{.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries()}: Fits time-series contrasts using DESeq2 LRT
+\item \code{.ngs.fitContrastsWithDESEQ2.nodesign.timeseries()}: Fits time-series contrasts using DESeq2 LRT
 
 }}
 \examples{

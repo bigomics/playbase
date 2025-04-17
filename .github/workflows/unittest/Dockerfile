@@ -10,9 +10,9 @@
 # Start from lastest base image
 #------------------------------------------------------------
 
-ARG DOCKER_TAG=bigomics/omicsplayground:latest
+ARG DOCKER_TAG=bigomics/omicsplayground:devel
 
-FROM ${DOCKER_TAG}  
+FROM ${DOCKER_TAG}   
 
 #------------------------------------------------------------
 # Set env variables 

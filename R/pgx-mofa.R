@@ -1882,10 +1882,20 @@ normalize_multifc <- function(fc, by = c("sd", "mad")[1]) {
 }
 
 
+
 ## ======================================================================
 ## ======================== MULTI-GSEA ==================================
 ## ======================================================================
 
+#' Test if probes are multi-omics. All probe names should have a
+#' 'colon' (:) and prefixes are alpha-numeric without any spaces or
+#' other characters. This is to avoid colons in unprefixed names (like
+#' sometimes in metabolomics).
+#'
+#' @export
+is.multiomics <- function(probes) {
+  all(grepl("^[a-zA-Z0-9]+:",probes))
+}
 
 #' Compute multi-enrichment for contrasts
 #'
@@ -2219,7 +2229,6 @@ mixomics.compute_diablo <- function(xdata, y, ncomp = 5, nfeat = 20,
   design <- (1 - diag(length(xx)))
   design
 
-  dbg("[mixomics.compute_diablo] nfeat = ", nfeat)
   keepX <- lapply(names(xx), function(dt) rep(nfeat, ncomp))
   names(keepX) <- names(xx)
 
@@ -2730,11 +2739,11 @@ plotly_lasagna <- function(pos, vars = NULL, X = NULL,
       R <- cor( t(X[ii,]), t(X[jj,]), use="pairwise")
       idx <- which(abs(R) >= min.rho, arr.ind=TRUE)
       ee <- data.frame( i=rownames(R)[idx[,1]], j=colnames(R)[idx[,2]], r=R[idx] )
-      sel <- head(order(-abs(ee$r)),num_edges)
+      sel <- head(order(-abs(ee$r)), num_edges)
       E <- rbind(E, ee[sel,])
     }
   }
-
+  
   ## some nicer names
   znames <- c(
     "ph" = "Phenomics",
@@ -3257,6 +3266,7 @@ mofa.intNMF <- function(datasets, k = NULL, method = "RcppML",
 
   return(res)
 }
+
 
 
 ## ======================================================================
