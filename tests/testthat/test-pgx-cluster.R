@@ -19,7 +19,7 @@ ngs <- list(
 #' Test for pgx.clusterSamples2
 #' Run clusters
 clustering_tests <- c("pca", "tsne", "umap")
-ngs <- playbase::pgx.clusterSamples2(
+ngs <- playbase::pgx.clusterSamples(
   ngs,
   dims = c(2),
   perplexity = NULL,
@@ -66,6 +66,6 @@ test_that("pgx.findLouvainClusters runs correctly", {
   expect_equal(length(ngs$cluster.genes), 1)
 
   # Expect dimensions
-  expected_gene_clusts <- paste0("umap", 3, "d")
-  expect_equal(ncol(ngs$cluster.genes$pos[[expected_gene_clusts[1]]]), 3)
+  expected_gene_clusts <- paste0("umap", 2, "d")
+  expect_equal(ncol(ngs$cluster.genes$pos[[expected_gene_clusts[1]]]), 2)
 })
