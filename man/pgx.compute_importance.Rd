@@ -13,8 +13,8 @@ pgx.compute_importance(
   select_features = NULL,
   select_samples = NULL,
   nfeatures = 60,
-  multiomics = NULL,
-  do.survival = FALSE
+  multiomics = 2,
+  niter = 1
 )
 }
 \description{

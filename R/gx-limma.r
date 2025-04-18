@@ -42,11 +42,11 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
                      fdr = 0.05, compute.means = TRUE, lfc = 0.20,
                      max.na = 0.20, sort.by = "FC",
                      ref = c(
-                       "ctrl", "ctr", "control", "dmso", "nt", "0", "0h", "0hr",
+                       "ctrl", "ctr", "control", "ct", "dmso", "nt", "0", "0h", "0hr",
                        "non", "no", "not", "neg", "negative", "ref", "veh", "vehicle",
                        "wt", "wildtype", "untreated", "normal", "false", "healthy"
                      ),
-                     trend = FALSE, method = 1, verbose = 1) {
+                     trend = FALSE, robust = FALSE, method = 1, verbose = 1) {
   if (sum(duplicated(rownames(X))) > 0) {
     cat("WARNING:: matrix has duplicated rownames\n")
   }
@@ -128,7 +128,7 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
       design <- cbind(design, B0[, sel, drop = FALSE])
     }
     fit <- limma::lmFit(X0, design)
-    fit <- limma::eBayes(fit, trend = trend)
+    fit <- limma::eBayes(fit, trend = trend, robust = robust)
     top <- limma::topTable(fit, coef = "main_vs_ref", number = nrow(X0), sort.by = "none")
   } else {
     ## second possible method with explicit contrast matrix
@@ -143,7 +143,7 @@ gx.limma <- function(X, pheno, B = NULL, remove.na = TRUE,
     fit <- limma::lmFit(X0, design)
     contr.matrix <- limma::makeContrasts(main_vs_ref = main - ref, levels = design)
     fit2 <- limma::contrasts.fit(fit, contr.matrix)
-    fit2 <- limma::eBayes(fit2, trend = trend)
+    fit2 <- limma::eBayes(fit2, trend = trend, robust = robust)
     top <- limma::topTable(fit2, coef = "main_vs_ref", number = Inf, sort.by = "none")
   }
 

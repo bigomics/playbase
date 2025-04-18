@@ -174,11 +174,14 @@ normalizeMultiOmics <- function(X, method = "median") {
   }
   
   if(ntype==1 || method == "median") {
-    mean.median <- mean(matrixStats::colMedians(X, na.rm=TRUE))
+    global.median <- median(X[X>min(X,na.rm=TRUE)],na.rm=TRUE)
     for(dt in unique(dtype)) {
       ii <- which( dtype == dt)
-      mx <- matrixStats::colMedians(X[ii,], na.rm=TRUE)
-      X[ii,] <- t(t(X[ii,]) - mx) + mean.median
+      xx <- X[ii,]
+      minx <- min(xx, na.rm=TRUE)  ## baseline. usually zero.
+      xx[which(xx==minx)] <- NA
+      mx <- matrixStats::colMedians(xx, na.rm=TRUE)
+      X[ii,] <- t(t(X[ii,]) - mx) + global.median
     }
   }
 
@@ -324,16 +327,54 @@ normalizeRLE <- function(counts, log = FALSE, use = "deseq2") {
   return(outx)
 }
 
-
-scaled.log1p <- function(counts, q = 0.01) {
+#' Scaled log2(x/s+1) function. A generalization of log2(x+1) where we
+#' allow a scaling factor s. This is also related to log2(x+p) with
+#' custom prior p. However log1s maintains a minimum value of log1s=0
+#' for all values of s.
+#'
+#' @description This function normalizes count data using the scaled
+#'   log1p method.
+#'
+#' @param counts A numeric matrix of count data, where rows represent
+#'   features and columns represent samples.
+#' @param q numeric value corresponding to quantile to be used for
+#'   scaling. Default q=0.20.
+#'
+#' @return A numeric matrix of log-normalized count data.
+#'
+#' @examples
+#' \dontrun{
+#' counts <- matrix(rnbinom(100, mu = 10, size = 1), ncol = 10)
+#' norm_counts <- log1s(counts, q=0.01)
+#' }
+#' @export
+log1s <- function(counts, q = 0.20) {
   min.counts <- min(counts, na.rm = TRUE)
-  ii <- which(counts == min.counts) ## left censored values
   jj <- which(counts > min.counts) ## only non-zero
-  scale <- 1 / quantile(counts[jj], probs = q, na.rm = TRUE)
-  log2(scale * counts + 1)
+  scale <- quantile(counts[jj], probs = q, na.rm = TRUE)
+  log2( counts / scale + 1)
 }
 
-q <- 0.01
+#' Normalize a multi-omics count matrix with log1s per datatype.
+#'
+#' @export
+mofa.log1s <- function(counts, q=0.20) {
+  if(!is.multiomics(rownames(counts))) {
+    X <- log1s(counts=counts, q=q)
+    return(X)
+  }
+  dtype <- mofa.get_prefix(rownames(counts))
+  X <- counts*0
+  for(d in unique(dtype)) {
+    ii <- which( dtype == d)
+    X1 <- counts[ii,]
+    x1.medians <- apply(X1, 2, function(x) median(x[x>0],na.rm=TRUE))
+    X1 <- t(t(X1) / x1.medians)
+    X[ii,] <- log1s(X1, q=q)
+  }
+  X
+}
+
 slog <- function(x, s = 1, q = NULL) {
   if (!is.null(q)) {
     s <- quantile(x[x > 0], probs = q, na.rm = TRUE)[1]

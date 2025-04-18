@@ -1990,7 +1990,7 @@ info.add_hyperlinks <- function(info, feature, datatype,
   
   if (length(uniprot) == 0) {
     this.uniprot <- NULL
-  } else if(length(uniprot) == 1 && uniprot[1]=="") {
+  } else if(length(uniprot) == 1 && uniprot[1]=="" || is.na(uniprot[1])) {
     this.uniprot <- NULL
   } else {
     uniprot <- sort(unique(unlist(strsplit(uniprot, split=';'))))

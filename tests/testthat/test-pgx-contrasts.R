@@ -17,7 +17,7 @@ pgx <- list(
 )
 
 clustering_tests <- c("pca", "tsne", "umap")
-pgx <- playbase::pgx.clusterSamples2(
+pgx <- playbase::pgx.clusterSamples(
   pgx,
   dims = c(2),
   perplexity = NULL,
