@@ -987,3 +987,69 @@ makeContrastFromSamples <- function(samples, ref = NULL) {
   mat <- contrasts.convertToLabelMatrix(ct$exp.matrix, samples)
   mat
 }
+
+#' Autodetect 'time' variable in sample dataframe and expand contrasts matrix with interaction term.
+#'
+#' @title Expand contrast matrix with time-interaction terms 
+#'
+#' @param contrasts Matrix of contrasts
+#' @param samples   Sample information dataframe
+#'
+#' @return Contrast matrix
+#'
+#' @details This function takes the contrast matrix and samples dataframe as input.
+#' It checks if 'time' variable is in samples. It then checks for valid contrasts
+#' in the contrast matrix ie. contrasts suitable for time-interaction testing.
+#' If any suited contrast is detected, the contrast matrix is expanded.
+#' These contrasts will be automatically detected later for DGE testing
+#' where time-interaction (with or without spline) will be performed.
+#' @export
+contrasts.addTimeInteraction <- function(contrasts, samples) {
+
+  if (!all.equal(rownames(contrasts), rownames(samples)))
+    stop("[contrasts.addTimeInteraction] contrasts and samples must be aligned")
+
+  colnames(samples) <- tolower(colnames(samples))
+  time.var <- c("minute", "hour", "day", "week", "month", "year", "time")
+  sel.time <- intersect(time.var, colnames(samples))  
+  jj <- match(sel.time[1], colnames(samples))
+  
+  if (length(sel.time) && length(unique(samples[,jj]))>1) {
+    
+    time <- unname(as.character(samples[,jj]))
+    time <- gsub("\\D", "", time)
+    if (length(unique(time)) == 1 && unique(time)[1] == "") { ## categorical time
+      i=1; valid.ia.ctx=c();
+      for (i in 1:ncol(contrasts)) {
+        tt <- table(data.frame(ctx = contrasts[,i], time = samples[, jj]))
+        zeros.obs <- apply(tt, 1, function(x) sum(x == 0))
+        if (!any(zeros.obs)) {
+          valid.ia.ctx <- c(valid.ia.ctx, colnames(contrasts)[i])
+        }
+      }
+      if (length(valid.ia.ctx)) {
+        nn <- ncol(contrasts)
+        contrasts <- cbind(contrasts, contrasts[, valid.ia.ctx, drop = FALSE])
+        colnames(contrasts)[(nn+1):ncol(contrasts)]  <- paste0("IA:", valid.ia.ctx)
+      }
+    } else {
+      i=1; valid.ia.spline.ctx=c();
+      for (i in 1:ncol(contrasts)) {
+        tt <- table(data.frame(ctx = contrasts[,i], time = samples[, jj]))
+        zeros.obs <- apply(tt, 1, function(x) sum(x == 0))
+        if (!any(zeros.obs >= (ncol(tt)-1))) {
+          valid.ia.spline.ctx <- c(valid.ia.spline.ctx, colnames(contrasts)[i])
+        }
+      }
+      if (length(valid.ia.spline.ctx)) {
+        nn <- ncol(contrasts)
+        contrasts <- cbind(contrasts, contrasts[, valid.ia.spline.ctx, drop = FALSE])
+        colnames(contrasts)[(nn+1):ncol(contrasts)]  <- paste0("IA:", valid.ia.spline.ctx)
+      }
+    }
+
+  }
+
+  return(contrasts)
+
+}

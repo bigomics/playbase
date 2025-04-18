@@ -109,7 +109,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   ## Time series: determine variable 'time'
   ## -----------------------------------------------------------------------------  
   if (timeseries) {
-    time.var <- toupper("minute|hour|day|week|month|year|time")
+    time.var <- toupper("minute|hour|day|week|month|year|age|time")
     sel <- grep(time.var, toupper(colnames(samples)))
     timeseries <- as.character(samples[, sel[1]])
     names(timeseries) <- rownames(samples)
@@ -170,7 +170,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   
   ## ---------- Wilcoxon test -----------
   if ("wilcoxon.ranksum" %in% methods) {
-     message("[ngs.fitContrastsWithAllMethods] scRNA-seq: fitting using Wilcoxon rank sum test")
+     message("[ngs.fitContrastsWithAllMethods] Fitting using Wilcoxon rank sum test")
      timings[["wilcoxon.ranksum"]] <- system.time(
        outputs[["wilcoxon.ranksum"]] <- ngs.fitContrastsWithWILCOXON(
          X, contr.matrix, design, conform.output = conform.output
@@ -194,7 +194,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         next;
       } else {
         if (!is.null(timeseries) && cm.mtds[i] == "trend.limma") {
-          message("[ngs.fitContrastsWithAllMethods] Time series: fitting using trend limma with spline")
           time_var <- timeseries
         } else {
           time_var = NULL
@@ -227,7 +226,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         next;
       } else {
         if (!is.null(timeseries)) {
-          message("[ngs.fitContrastsWithAllMethods] Time series: fitting using DESeq2 with interaction term.")
           time_var <- timeseries
         } else {
           time_var <- NULL
@@ -253,14 +251,13 @@ ngs.fitContrastsWithAllMethods <- function(counts,
     for(i in 1:length(cm.mtds)) {
       X1 <- X
       mdl <- edger.mdls[match(cm.mtds[i], edger.mtds)]
-      message("[ngs.fitContrastsWithAllMethods] fitting using ", cm.mtds[i])
+      message("[ngs.fitContrastsWithAllMethods] Fitting using ", cm.mtds[i])
       if (nmissing > 0) {
         message("[ngs.fitContrastsWithAllMethods] Missing values detected. Cannot perform edgeR QL-F test or LRT.")
         next;
       } else {
         time_var <- NULL
         if(!is.null(timeseries)) {
-          message(paste0("[ngs.fitContrastsWithAllMethods] Time series: fitting using EdgeR ", cm.mtds[i], " with spline."))
           time_var <- timeseries
         }
         timings[[cm.mtds[i]]] <- system.time(
@@ -722,75 +719,101 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
                                                  trend = TRUE) {
 
   library(splines)
-  message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting LIMMA with no design; time series analysis with spline.")
+  message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting Limma ith no design; time series analysis...")
   
   if (!all(colnames(X) %in% names(timeseries)))
     stop("[ngs.fitContrastsWithLIMMA.timeseries] X and timeseries vector contain different set of samples.")
 
+  use.spline <- FALSE
+
   jj <- match(colnames(X), names(timeseries))
   time0 <- as.character(unname(timeseries[jj]))
-  num.time <- as.numeric(gsub("\\D", "", time0))
+  time0 <- gsub("\\D", "", time0)
+
+  if (length(unique(time0)) == 1 && unique(time0)[1] == "") {
+    message("[ngs.fitContrastsWithLIMMA.timeseries]: Limma timeseries with interaction term.")
+    time0 <- as.character(unname(timeseries[jj]))
+  } else {
+    message("[ngs.fitContrastsWithLIMMA.timeseries]: Limma timeseries with interaction term & spline.")
+    use.spline <- TRUE
+    require(splines)
+    time0 <- as.numeric(time0)
+  }
+
   y <- factor(y)
 
-  ## Pick 1st highest degree of freedom value that works
-  idx <- 1:length(unique(num.time))
-  i = 1
-  for(i in 1:length(idx)) {
+  if (use.spline) {
 
-    ndf <- length(unique(num.time)) - idx[i]
-    time.spline <- try(splines::ns(num.time, df = ndf), silent = TRUE)
-    if ("try-error" %in% class(time.spline)) next;
+    ## Iterate across df. Pick first valid run.
+    idx <- 1:length(unique(time0))
+    i = 1
+    for(i in 1:length(idx)) {
+      ndf <- length(unique(time0)) - idx[i]
+      time.spline <- try(splines::ns(time0, df = ndf), silent = TRUE)
+      if ("try-error" %in% class(time.spline)) next;
 
-    #design <- stats::model.matrix(~ 0 + y + y:time)
-    #design <- model.matrix(~ group + time.spline + group:time.spline)
-    design <- model.matrix(~ y * time.spline)
+      design <- model.matrix(~ y * time.spline)
+      fit <- limma::lmFit(X, design)
+      fit <- limma::eBayes(fit, trend = trend)
+      
+      coefs <- apply(fit$t, 2, function(x) sum(is.na(x)))
+      est.coefs <- names(coefs[coefs != nrow(fit$t)])
+      est.coefs <- est.coefs[grep(":time.spline*", est.coefs)]
+      sel <- match(est.coefs, names(coefs))
+      top <- try(limma::topTable(fit, coef = sel, sort.by = "none", number = Inf, adjust.method = "BH"),
+        silent = TRUE)
+      if ("try-error" %in% class(top) || nrow(top) == 0) next else break;
+    }
+
+    if ("try-error" %in% class(top)) {
+      top <- data.frame(matrix(NA, nrow=nrow(X), ncol=5))
+      rownames(top) <- rownames(X)
+      colnames(top) <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val")
+    } else {
+      top0 <- data.frame(logFC=NA, AveExpr=top$AveExpr, t=NA,
+        P.Value=top$P.Value, adj.P.Val=top$adj.P.Val, row.names=rownames(top))
+      i=1; SEL=list()
+      for (i in 1:length(est.coefs)) {
+        sel <- match(est.coefs[i], names(coefs))
+        SEL[[est.coefs[i]]] <- limma::topTable(fit, coef = sel, sort.by = "none", number = Inf, adjust.method = "BH")
+      }
+      top <- do.call(cbind, SEL)
+      i=1; index=c("logFC", "t")
+      for (i in 1:length(index)) {
+        idx <- paste0(names(SEL), ".", index[i])
+        sel <- match(idx, colnames(top))
+        top0[, index[i]] <- apply(top[, sel, drop = FALSE], 1, function(x) x[which.max(abs(x))])
+      }
+      top <- top0
+      rm(top0)
+      ## kk <- c("logFC", "AveExpr", "F", "P.Value", "adj.P.Val")
+      kk <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val")
+      top <- top[, kk, drop = FALSE]
+    }
+
+  } else {
+
+    time0 <- as.factor(time0)
+    design <- stats::model.matrix(~ 0 + y + time0 + y:time0)
     fit <- limma::lmFit(X, design)
     fit <- limma::eBayes(fit, trend = trend)
-  
-    coefs <- apply(fit$t, 2, function(x) sum(is.na(x)))
-    est.coefs <- names(coefs[coefs != nrow(fit$t)])
-    est.coefs <- est.coefs[grep(":time.spline*", est.coefs)]
-    sel <- match(est.coefs, names(coefs))
-    top <- try(
-      limma::topTable(fit, coef = sel, sort.by = "none", number = Inf, adjust.method = "BH"),
-      silent = TRUE
-    )
-    if ("try-error" %in% class(top) || nrow(top) == 0) next else break;
-  
-  }
-
-  if ("try-error" %in% class(top)) {
-    top <- data.frame(matrix(NA, nrow=nrow(X), ncol=5))
-    rownames(top) <- rownames(X)
+    sel <- grep("*:time0*", colnames(coef(fit)))
+    top <- limma::topTable(fit, coef = sel, number = nrow(X))
+    hh <- grep(".time0", colnames(top))
+    if (any(hh)) {
+      logFC <- apply(top[, hh, drop = FALSE], 1, function(x) x[which.max(abs(x))])
+      top$logFC <- logFC
+      top <- top[, -hh, drop = FALSE]
+      kk <- c("logFC", "AveExpr", "F", "P.Value", "adj.P.Val")
+      top <- top[, kk, drop = FALSE]
+    } else {
+      kk <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val")
+      top <- top[, kk, drop = FALSE]
+    }
     colnames(top) <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val")
-  } else {
-    top0 <- data.frame(logFC=NA, AveExpr=top$AveExpr, t=NA,
-      P.Value=top$P.Value, adj.P.Val=top$adj.P.Val, row.names=rownames(top))
-    i=1; SEL=list()
-    for (i in 1:length(est.coefs)) {
-      sel <- match(est.coefs[i], names(coefs))
-      SEL[[est.coefs[i]]] <- limma::topTable(fit, coef = sel, sort.by = "none", number = Inf, adjust.method = "BH")
-    }
-    #FUN.x <- function(x, stat) {
-    #  chk0 <- stat %in% c("P.Value", "adj.P.Val")
-    #  xx <- ifelse(chk0, min(x, na.rm=TRUE), x[which.max(abs(x))])
-    #  return(xx)
-    #}
-    top <- do.call(cbind, SEL)
-    index <- c("logFC", "t")
-    i=1
-    for (i in 1:length(index)) {
-      idx <- paste0(names(SEL), ".", index[i])
-      sel <- match(idx, colnames(top))
-      top0[, index[i]] <- apply(top[, sel, drop = FALSE], 1, function(x) x[which.max(abs(x))])
-    }
-    top <- top0
-    rm(top0)
-    ## kk <- c("logFC", "AveExpr", "F", "P.Value", "adj.P.Val")
-    kk <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val")
-    top <- top[, kk, drop = FALSE]
-  }
 
+  }
+  
   return(top)
 
 }
@@ -1126,49 +1149,80 @@ ngs.fitContrastsWithEDGER <- function(counts,
                                                            timeseries,
                                                            robust = TRUE) {
 
-  require(splines)
   if (!all(colnames(counts) %in% names(timeseries)))
-    message("[ngs.fitContrastsWithEDGER.nodesign.timeseries] Counts and timeseries vector contain different set of samples")
+    message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Counts and timeseries vector contain different set of samples.")
+
+  if (!method %in% c("lrt", "qlf")) 
+  stop("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] EdgeR test unrecognized. Must be LRT or QLF.")
+
+  use.spline <- FALSE
 
   jj <- match(colnames(counts), names(timeseries))
   time0 <- as.character(timeseries[jj])
   time0 <- gsub("\\D", "", unname(time0))
-  time0 <- as.numeric(time0)
+  if (length(unique(time0)) == 1 && unique(time0)[1] == "") {
+    message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries]: EdgeR timeseries with interaction term.")
+    time0 <- as.character(timeseries[jj])
+  } else {
+    message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries]: EdgeR timeseries with interaction term & spline.")
+    use.spline <- TRUE
+    require(splines)
+    time0 <- as.numeric(time0)
+  }
+
   y <- as.factor(as.character(y))
 
-  ## Iterate across df. Pick first valid run.
-  idx <- 1:length(unique(time0))
-  i = 1
-  for(i in 1:length(idx)) {
+  if (use.spline) {
 
-    ndf <- length(unique(time0)) - idx[i]
-    design <- try(stats::model.matrix(~ 0 + y * splines::ns(time0, df=ndf)), silent = TRUE)
-    if ("try-error" %in% class(design)) next;
-    message("[ngs.fitContrastsWithEDGER.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
+    ## Iterate across df. Pick first valid run.
+    idx <- 1:length(unique(time0))
+    i = 1
+    for(i in 1:length(idx)) {
+      ndf <- length(unique(time0)) - idx[i]
+      design <- try(stats::model.matrix(~ 0 + y * splines::ns(time0, df=ndf)), silent = TRUE)
+      if ("try-error" %in% class(design)) next;
+      message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
 
-    dge.disp <- try(edgeR::estimateDisp(dge$counts, design = design, robust = robust), silent = TRUE)
-    if ("try-error" %in% class(dge.disp)) next;
-    
+      dge.disp <- try(edgeR::estimateDisp(dge$counts, design = design, robust = robust), silent = TRUE)
+      if ("try-error" %in% class(dge.disp)) next;
+      
+      dge$common.dispersion <- dge.disp$common.dispersion
+      dge$trended.dispersion <- dge.disp$trended.dispersion
+      dge$tagwise.dispersion <- dge.disp$tagwise.dispersion
+      sel <- grep("*:splines::ns*", colnames(design))
+      if (method == "qlf") {
+        fit <- edgeR::glmQLFit(dge, design, robust = robust)
+        # colnames(stats::coef(fit))[sel]
+        res <- try(edgeR::glmQLFTest(fit, coef = sel), silent = TRUE)
+        if ("try-error" %in% class(res)) next else break;
+      } else if (method == "lrt") {
+        fit <- edgeR::glmFit(dge, design, robust = robust)
+        res <- try(edgeR::glmLRT(fit, coef = sel), silent = TRUE)
+        if ("try-error" %in% class(res)) next else break;
+      } 
+    }
+
+  } else {
+
+    design <- model.matrix(~ y * time0)
+    dge.disp <- edgeR::estimateDisp(dge$counts, design = design, robust = robust)
     dge$common.dispersion <- dge.disp$common.dispersion
     dge$trended.dispersion <- dge.disp$trended.dispersion
     dge$tagwise.dispersion <- dge.disp$tagwise.dispersion
-
-    sel <- grep("*:splines::ns*", colnames(design))
-
+    # Test interaction terms directly
+    sel <- grep("*:time0*", colnames(design)) ##???? unclear. 
     if (method == "qlf") {
       fit <- edgeR::glmQLFit(dge, design, robust = robust)
-      #colnames(stats::coef(fit))[sel]
-      res <- try(edgeR::glmQLFTest(fit, coef = sel), silent = TRUE)
-      if ("try-error" %in% class(res)) next else break;
+      # colnames(stats::coef(fit))[sel]
+      res <- edgeR::glmQLFTest(fit, coef = sel)
     } else if (method == "lrt") {
       fit <- edgeR::glmFit(dge, design, robust = robust)
-      res <- try(edgeR::glmLRT(fit, coef = sel), silent = TRUE)
-      if ("try-error" %in% class(res)) next else break;
-    } else {
-      stop("[.ngs.fitContrastsWithEDGER.nodesign.timeseries] unknown method: ", method)
+      # colnames(stats::coef(fit))[sel]
+      res <- edgeR::glmLRT(fit, coef = sel)
     }
+    
   }
-
+  
   top <- edgeR::topTags(res, n = 1e9)$table
   top <- data.frame(top[rownames(X), ])
   sel <- grep("logFC.*", colnames(top))
@@ -1422,6 +1476,18 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
 
 }
 
+## Q: does the condition induces a change in gene expression at
+## any time point after the reference level time point (time 0)?
+## https://support.bioconductor.org/p/62684/
+## Features showing a consistent difference from time 0 onward will not have a small p value.
+## This is imporant because differences between groups at time 0 should be controlled for,
+## e.g. random differences between the individuals chosen for each treatment group which
+## are observable before the treatment takes effect.
+# design.formula <- stats::formula("~ y + time + y:time")
+# dds <- DESeq2::DESeqDataSetFromMatrix(counts, colData, design)
+# dds <- DESeq2::DESeq(dds, test = "LRT", reduced = ~ y + time)
+# resx <- DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE)
+
 #' @describeIn ngs.fitContrastsWithAllMethods Fits time-series contrasts using DESeq2 LRT
 #' @export
 .ngs.fitContrastsWithDESEQ2.nodesign.timeseries <- function(counts,
@@ -1429,83 +1495,97 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
                                                              timeseries,
                                                              test = "LRT") {
 
-  message("[ngs.fitContrastsWithDESEQ2.nodesign]: DESeq2 time-series analysis with interaction term")
-
   if (!all(colnames(counts) %in% names(timeseries)))
-    stop("[ngs.fitContrastsWithDESEQ2.nodesign] and time contain different set of samples")
+    stop("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] counts and time contain different set of samples.")
 
+  if (!test %in% c("LRT", "Wald"))
+  stop("[.ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] DESeq test unrecognized. Must be LRT or Wald.")
+
+  use.spline <- FALSE
+  
   jj <- match(colnames(counts), names(timeseries))
   time0 <- as.character(timeseries[jj])
-  time0 <- as.numeric(gsub("\\D", "", unname(time0)))
-  # !!: splines::ns need data in range c(0,60). Else breaks.
-  if (max(range(time0)) > 60) time0 <- time0/60
+  time0 <- gsub("\\D", "", unname(time0))
+  if (length(unique(time0)) == 1 && unique(time0)[1] == "") {
+    time0 <- as.character(timeseries[jj])
+    message("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries]: DESeq2 timeseries with interaction term.")
+  } else {
+    use.spline <- TRUE
+    require(splines)
+    time0 <- as.numeric(time0)
+    # !!: splines::ns need data in range c(0,60). Else breaks.A
+    if (max(range(time0)) > 60) time0 <- time0/60
+    message("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries]: DESeq2 timeseries with interaction term & spline.")
+  }
 
   y <- as.factor(as.character(y))
   colData <- data.frame(y = y, time = factor(time0))
 
-  ## Iterate across df. Pick first valid run.
-  idx <- 1:length(unique(time0))
-  i=1
-  for(i in 1:length(idx)) {
+  if (use.spline) {
 
-    ndf <- length(unique(time0)) - idx[i]
-    sp <- splines::ns(time0, df = ndf)
-    if ("try-error" %in% class(sp)) next;
-    #sp <- splines::ns(time0) #default is simple and works reasonably well!
-    design <- try(stats::model.matrix(~ y * sp), silent = TRUE)
-    if ("try-error" %in% class(design)) next;
-    red.design <- stats::model.matrix(~ y)
+    ## Iterate across df. Pick first valid run.
+    idx <- 1:length(unique(time0))
+    i = 1
+    for(i in 1:length(idx)) {
 
-    dds <- try(DESeq2::DESeqDataSetFromMatrix(counts, design = design, colData = colData),
-      silent = TRUE)
-    if ("try-error" %in% class(dds)) next;
+      ndf <- length(unique(time0)) - idx[i]
+      sp <- splines::ns(time0, df = ndf)
+      if ("try-error" %in% class(sp)) next;
+      # sp <- splines::ns(time0) # default is simple and works reasonably well!
+      design <- try(stats::model.matrix(~ y * sp), silent = TRUE)
+      if ("try-error" %in% class(design)) next;
+      red.design <- stats::model.matrix(~ y)
 
-    ft <- "mean"
-    if (test == "LRT") {
-      dds <- try(DESeq2::DESeq(dds, fitType = ft, test = "LRT", reduced = red.design),
-        silent = TRUE)
-    } else if (test == "Wald") {
-      dds <- try(DESeq2::DESeq(dds, fitType = ft, test = "Wald"),
-        silent = TRUE)
-    } else {
-      stop("[.ngs.fitContrastsWithDESEQ2.nodesign.timeseries] DESeq2::DESeq test unrecognized")
+      dds <- try(DESeq2::DESeqDataSetFromMatrix(counts, colData, design), silent = TRUE)
+      if ("try-error" %in% class(dds)) next;
+
+      if (test == "LRT")
+        dds <- try(DESeq2::DESeq(dds, test = "LRT", fitType = "mean", reduced = red.design), silent = T)
+      if (test == "Wald")
+        dds <- try(DESeq2::DESeq(dds, test = "Wald", fitType = "mean"), silent = T)
+
+      if ("try-error" %in% class(dds)) {
+        dds <- DESeq2::DESeqDataSetFromMatrix(counts, colData, design)
+        dds <- DESeq2::estimateSizeFactors(dds)
+        dds <- DESeq2::estimateDispersionsGeneEst(dds)
+        DESeq2::dispersions(dds) <- GenomicRanges::mcols(dds)$dispGeneEst
+        if (test == "LRT")
+          dds <- try(DESeq2::nbinomLRT(dds, reduced = red.design), silent = TRUE)
+        if (test == "Wald") 
+          dds <- try(DESeq2::nbinomWaldTest(dds), silent = TRUE)
+        if ("try-error" %in% class(dds)) next;
+      }
+      message("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
+      break;
     }
 
+  } else {
+
+    design <- stats::model.matrix(~ y + time0 + y:time0)
+    red.design <- stats::model.matrix(~ y + time0)
+    dds <- try(DESeq2::DESeqDataSetFromMatrix(counts, colData, design), silent = TRUE)
+    if (test == "LRT")
+      dds <- try(DESeq2::DESeq(dds, test = "LRT", fitType = "mean", reduced = red.design), silent = T)
+    if (test == "Wald") 
+      dds <- try(DESeq2::DESeq(dds, test = "Wald", fitType = "mean"), silent = T)  
+
     if ("try-error" %in% class(dds)) {
-      dds <- DESeq2::DESeqDataSetFromMatrix(counts, design = design, colData = colData)
+      dds <- DESeq2::DESeqDataSetFromMatrix(counts, colData, design)
       dds <- DESeq2::estimateSizeFactors(dds)
       dds <- DESeq2::estimateDispersionsGeneEst(dds)
       DESeq2::dispersions(dds) <- GenomicRanges::mcols(dds)$dispGeneEst
-      if (test == "LRT") {
+      if (test == "LRT")
         dds <- try(DESeq2::nbinomLRT(dds, reduced = red.design), silent = TRUE)
-      } else if (test == "Wald") {
+      if (test == "Wald") 
         dds <- try(DESeq2::nbinomWaldTest(dds), silent = TRUE)
-      }
       if ("try-error" %in% class(dds)) next;
     }
-    message("[ngs.fitContrastsWithDESEQ2.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
-    break;
+
   }
     
   resx <- DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE)
   rownames(resx) <- rownames(SummarizedExperiment::rowData(dds))
   
-  ## Q: does the condition induces a change in gene expression at
-  ## any time point after the reference level time point (time 0)?
-  ## https://support.bioconductor.org/p/62684/
-  ## Features showing a consistent difference from time 0 onward will not have a small p value.
-  ## This is imporant because differences between groups at time 0 should be controlled for,
-  ## e.g. random differences between the individuals chosen for each treatment group which
-  ## are observable before the treatment takes effect.
-  #design.formula <- stats::formula("~ y + time + y:time")
-  #dds <- DESeq2::DESeqDataSetFromMatrix(
-  #  countData = counts,
-  #  design = design.formula,
-  #  colData = colData
-  #)
-  #dds <- DESeq2::DESeq(dds, test = "LRT", reduced = ~ y + time)
-  #resx <- DESeq2::results(dds, cooksCutoff = FALSE, independentFiltering = FALSE)
-
   return(resx)
 
 }

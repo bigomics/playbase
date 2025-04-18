@@ -292,34 +292,15 @@ pgx.createPGX <- function(counts,
     if (!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
   }
 
-  ## ------------------------------------------------------------------
+  ## ---------------------------------------------------------------------
   ## Time series
-  ## 1. check valid contrasts for time series analysis.
-  ## 2. expand contrast matrix.
-  ## ------------------------------------------------------------------
-  timeseries = FALSE
-  time.var <- c("minute", "hour", "day", "week", "month", "year", "time")
-  sel.time <- intersect(time.var, tolower(colnames(samples)))  
-  if (length(sel.time)) {
-    jj <- match(sel.time[1], tolower(colnames(samples)))
-    i=1; valid.ia.ctx=c();
-    for (i in 1:ncol(contrasts)) {
-      tt <- table(data.frame(ctx = contrasts[,i], time = samples[, jj]))
-      zeros.obs <- apply(tt, 1, function(x) sum(x == 0))
-      if (any(zeros.obs >= (ncol(tt)-1))) {
-        next
-      } else {
-        valid.ia.ctx <- c(valid.ia.ctx, colnames(contrasts)[i])
-      }
-    }
-    if (length(valid.ia.ctx)) {
-      nn <- ncol(contrasts)
-      contrasts <- cbind(contrasts, contrasts[, valid.ia.ctx, drop = FALSE])
-      colnames(contrasts)[(nn+1):ncol(contrasts)]  <- paste0("IA:", valid.ia.ctx)
-      timeseries = TRUE
-    }
-  }
-  
+  ## 1. check if time is categorical or not.
+  ## 2. check valid contrasts for time interaction analysis with spline.
+  ## 3. expand contrast matrix.
+  ## ---------------------------------------------------------------------
+  contrasts <- contrasts.addTimeInteraction(contrasts, samples)
+  timeseries <- ifelse(any(grep("^IA:",colnames(contrasts))), TRUE, FALSE)
+           
   ## convert old-style contrast matrix to sample-wise labeled contrasts
   contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
 
