@@ -681,7 +681,10 @@ ngs.fitContrastsWithLIMMA <- function(X,
         vfit <- limma::contrasts.fit(vfit, contrasts = contr1)
         efit <- try(limma::eBayes(vfit, trend = trend, robust = robust), silent = TRUE)
         if ("try-error" %in% class(efit)) {
-          efit <- limma::eBayes(vfit, trend = FALSE, robust = robust)
+          efit <- try(limma::eBayes(vfit, trend = trend, robust = FALSE), silent = TRUE)
+          if ("try-error" %in% class(efit)) {
+            efit <- limma::eBayes(vfit, trend = FALSE, robust = FALSE)
+          }
         }
         top <- limma::topTable(efit, coef = 1, sort.by = "none", number = Inf, adjust.method = "BH")
       }
