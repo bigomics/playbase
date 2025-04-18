@@ -677,6 +677,9 @@ pgx.createSeuratObject <- function(counts,
   obj <- Seurat::PercentageFeatureSet(obj, pattern = "^MT-|^Mt-", col.name = "percent.mt")
   obj <- Seurat::PercentageFeatureSet(obj, pattern = "^RP[LS]|^Rp[ls]", col.name = "percent.ribo")
   obj <- Seurat::PercentageFeatureSet(obj, pattern = "^HB|^Hb", col.name = "percent.hb")
+  obj@meta.data$percent.mt <- obj@meta.data$percent.mt + 1e-5
+  obj@meta.data$percent.ribo <- obj@meta.data$percent.ribo + 1e-5
+  obj@meta.data$percent.hb <- obj@meta.data$percent.hb + 1e-5
 
   if (cellcyclescores) { ## needs normalized data
     counts <- obj@assays$RNA$counts

@@ -64,7 +64,7 @@ pgx.wgcna <- function(
     group <- paste0(ct, ":", apply(pgx$contrasts, 1, paste, collapse = '_'))
     if ("batch" %in% colnames(samples))
       group <- paste0(group, ":", samples[, "batch"])
-    nb <- round(ncol(counts)/1000)
+    nb <- round(ncol(counts)/500)
     message("[pgx.wgcna] running SuperCell. nb = ", nb)    
     sc <- pgx.supercell(counts, samples, group = group, gamma = nb)
     message("[pgx.wgcna] SuperCell done: ", ncol(counts), " ->", ncol(sc$counts))
@@ -79,7 +79,7 @@ pgx.wgcna <- function(
     message("[pgx.wgcna] Performing multi-omics ComBat on datatype.")
     X <- playbase::normalizeMultiOmics(X, method = "combat")
   }
-  
+
   message("[pgx.wgcna] start wgcna.compute...")
   wgcna <- wgcna.compute(
     X = X,
@@ -236,7 +236,8 @@ wgcna.compute <- function(X,
   datTraits <- data.frame(samples, check.names = FALSE)
   isdate <- apply(datTraits, 2, is.Date)
   datTraits <- datTraits[, !isdate, drop = FALSE]
-
+  ## rm unvarying phenotypes (cause NAs and errors in OPG plots)
+  
   ## Expand multi-class discrete phenotypes into binary vectors
   datTraits <- utils::type.convert(datTraits, as.is = TRUE)
   tr.class <- sapply(datTraits, class)
@@ -1208,14 +1209,19 @@ wgcna.plotEigenGeneAdjacencyHeatmap <- function(wgcna, add_traits = TRUE,
 
 #' @export
 wgcna.plotEigenGeneGraph <- function(wgcna, add_traits = TRUE, main = NULL) {
+
   ## require(igraph)
   net <- wgcna$net
   MET <- net$MEs
+
   if (add_traits) {
     MET <- cbind(MET, wgcna$datTraits)
   }
   if (NCOL(MET) <= 2) MET <- cbind(MET, MET) ## error if ncol(MET)<=2 !!!!
 
+  sdx <- matrixStats::colSds(as.matrix(MET), na.rm = TRUE)
+  if (any(sdx == 0)) MET <- MET + runif(length(MET), 0, 1e-5)
+  
   ## Recalculate MEs with color as labels
   clust <- hclust(dist(t(scale(MET))))
   clust
@@ -1335,6 +1341,9 @@ wgcna.plotSampleDendroAndColors <- function(wgcna,
     MET <- cbind(MET, wgcna$datTraits)
   }
   if (NCOL(MET) <= 2) MET <- cbind(MET, MET) ## error if ncol(MET)<=2 !!!!
+
+  sdx <- matrixStats::colSds(as.matrix(MET), na.rm = TRUE)
+  if (any(sdx == 0)) MET <- MET + runif(length(MET), 0, 1e-5)
 
   ## Recalculate MEs with color as labels
   if (clust.expr) {
