@@ -153,34 +153,64 @@ stats.limma <- function(X, y, ref = NULL, test = c("B", "Treat"), add.avg = TRUE
   top
 }
 
-stats.edgeR <- function(counts, y, ref = NULL, add.avg = TRUE, test = "QLF", ...) {
+stats.edgeR <- function(counts, y, ref = NULL, add.avg = TRUE, test = "QLF",
+                        disp.method="default", norm.method=NULL,
+                        robust=FALSE, ...) {
   if (length(unique(y[!is.na(y)])) > 2) stop("only 2 levels allowed")
-  dge <- edgeR::DGEList(counts)
-  dge <- edgeR::calcNormFactors(dge, method = "TMM")
+  dge <- edgeR::DGEList(counts, group=y)
+  if(!is.null(norm.method)) dge <- edgeR::normLibSizes(dge, method=norm.method)
   fy <- factor(as.character(y))
   if (!is.null(ref)) fy <- relevel(fy, ref = as.character(ref))
   ref <- levels(fy)[1]
   df <- data.frame(y = fy)
-  design <- model.matrix(~y, data = df)
-  dge <- edgeR::estimateDisp(dge, design, robust = TRUE)
-  if (test == "LRT") {
-    fit <- edgeR::glmFit(dge, design, robust = TRUE)
-    ## glm <- edgeR::glmLRT(fit, coef=2)
-    glm <- edgeR::glmLRT(fit, coef = 2, ...)
+  design <- model.matrix( ~y, data = df)
+  if(test == "exact") {
+    if(disp.method=="common") {
+      dge <- edgeR::estimateCommonDisp(dge)
+    } else if(disp.method=="trended") {
+      dge <- edgeR::estimateTrendedDisp(dge)
+    } else if(disp.method=="tagwise") {
+      dge <- edgeR::estimateCommonDisp(dge) 
+      dge <- edgeR::estimateTagwiseDisp(dge)
+    } else if(disp.method=="default") {
+      dge <- edgeR::estimateDisp(dge)
+    }
+  } else {
+    if(disp.method=="common") {
+      dge <- edgeR::estimateGLMCommonDisp(dge, design)
+    } else if(disp.method=="trended") {
+      dge <- edgeR::estimateGLMTrendedDisp(dge, design)
+    } else if(disp.method=="tagwise") {
+      dge <- edgeR::estimateGLMCommonDisp(dge, design)      
+      dge <- edgeR::estimateGLMTagwiseDisp(dge, design)
+    } else if(disp.method=="default") {
+      dge <- edgeR::estimateDisp(dge, design)
+    }
+  }
+
+  if (test == "exact") {
+    res <- edgeR::exactTest(dge)
+  } else if (test == "LRT") {
+    fit <- edgeR::glmFit(dge, design, robust = robust)
+    res <- edgeR::glmLRT(fit, coef = 2, ...)
   } else if (test == "Treat") {
-    fit <- edgeR::glmFit(dge, design, robust = TRUE)
-    glm <- edgeR::glmTreat(fit, lfc = log2(1.2), coef = 2, ...)
+    fit <- edgeR::glmFit(dge, design, robust = robust)
+    res <- edgeR::glmTreat(fit, lfc = log2(1.2), coef = 2, ...)
   } else if (test == "QLF") {
-    fit <- edgeR::glmQLFit(dge, design, robust = TRUE)
-    glm <- edgeR::glmQLFTest(fit, ...)
+    fit <- edgeR::glmQLFit(dge, design, robust = robust)
+    res <- edgeR::glmQLFTest(fit, ...)
   } else {
     stop("[stats.edgeR] unknown test type", test)
   }
-  topgenes <- edgeR::topTags(glm, n = Inf, sort.by = "none")
+
+
+  topgenes <- edgeR::topTags(res, n = Inf, sort.by = "none")
   top <- topgenes$table
   top <- top[rownames(counts), ]
   top <- top[, c("logFC", "logCPM", "PValue", "FDR")]
   colnames(top) <- c("logFC", "mean", "pvalue", "qvalue")
+
+  
   if (add.avg) {
     cpm <- edgeR::cpm(dge, log = TRUE, prior.count = 1)
     avg <- tapply(
@@ -195,7 +225,7 @@ stats.edgeR <- function(counts, y, ref = NULL, add.avg = TRUE, test = "QLF", ...
   top
 }
 
-stats.DESeq2 <- function(counts, y, ref = NULL, test = "Wald", add.avg = TRUE, ...) {
+stats.DESeq2 <- function(counts, y, ref = NULL, test = "Wald", shrink=TRUE, add.avg = TRUE, ...) {
   if (length(unique(y[!is.na(y)])) > 2) stop("only 2 levels allowed")
   fy <- factor(as.character(y))
   if (!is.null(ref)) fy <- relevel(fy, ref = as.character(ref))
@@ -213,20 +243,26 @@ stats.DESeq2 <- function(counts, y, ref = NULL, test = "Wald", add.avg = TRUE, .
   if (test == "Wald") {
     dds <- DESeq2::DESeq(dds, quiet = TRUE, parallel = TRUE)
     ## dds <- DESeq2::DESeq(dds, quiet=TRUE, parallel=TRUE, ...)
-  } else if (test == "LRT") {
+  } else if (test == "glmGamPoi") {
     dds <- DESeq2::DESeq(dds, quiet = TRUE, test = "LRT", reduced = ~1, fitType = "glmGamPoi")
+  } else if (test == "LRT") {
+    dds <- DESeq2::DESeq(dds, quiet = TRUE, test = "LRT", reduced = ~1)
   } else {
     stop("[stats.DESeq2] unknown test type", test)
   }
 
   DESeq2::resultsNames(dds)
-  ## top <- DESeq2::lfcShrink(dds, coef=2, type="normal")  ## recommended with shrinkage
-  top <- DESeq2::results(dds)
+  if(shrink) {
+    top <- DESeq2::lfcShrink(dds, coef=2, type="normal")  ## recommended with shrinkage
+  } else {
+    top <- DESeq2::results(dds)
+  }
   top <- top[rownames(counts), ]
   top$logMean <- log2(1 + top$baseMean)
   top <- top[, c("log2FoldChange", "logMean", "pvalue", "padj")]
   colnames(top) <- c("logFC", "mean", "pvalue", "qvalue")
   top <- top[rownames(counts), ]
+
   if (add.avg) {
     vsd <- DESeq2::vst(dds, blind = FALSE)
     vx <- SummarizedExperiment::assay(vsd)

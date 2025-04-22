@@ -67,6 +67,8 @@ ngs.fitContrastsWithEDGER(
   X = NULL,
   conform.output = FALSE,
   robust = TRUE,
+  calc.tmm = TRUE,
+  recalc.fc = TRUE,
   plot = TRUE,
   timeseries = NULL
 )
@@ -78,6 +80,8 @@ ngs.fitContrastsWithEDGER(
   X = NULL,
   conform.output = FALSE,
   robust = TRUE,
+  calc.tmm = TRUE,
+  recalc.fc = TRUE,
   plot = TRUE,
   timeseries = NULL
 )
@@ -90,6 +94,8 @@ ngs.fitContrastsWithEDGER(
   X = NULL,
   conform.output = FALSE,
   robust = TRUE,
+  calc.tmm = TRUE,
+  recalc.fc = TRUE,
   plot = TRUE,
   timeseries = NULL
 )
@@ -102,6 +108,7 @@ ngs.fitContrastsWithDESEQ2(
   X = NULL,
   genes = NULL,
   test = "Wald",
+  fitType = "mean",
   prune.samples = FALSE,
   conform.output = FALSE,
   timeseries = NULL
@@ -111,6 +118,7 @@ ngs.fitContrastsWithDESEQ2(
   counts,
   contr.matrix,
   test = "Wald",
+  fitType = "mean",
   prune.samples = FALSE,
   conform.output = FALSE,
   X = NULL,
@@ -121,7 +129,9 @@ ngs.fitContrastsWithDESEQ2(
   counts,
   y,
   timeseries,
-  test = "LRT"
+  test = "LRT",
+  fitType = "mean",
+  use.spline = NULL
 )
 }
 \arguments{
