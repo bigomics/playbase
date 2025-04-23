@@ -121,13 +121,11 @@ test_that("wikipath (classic) works correctly", {
   
   # Test 1: Valid WikiPathway ID and coloring node
   test_that("Valid WikiPathway ID with coloring", {
-    retry_test({
-      wp <- "WP4876"
-      val <- c("TRAF3" = 2.0)
-      result <- wikipathview(wp, val)
-      expect_type(result, "character") # Expect a character string (path to SVG)
-      expect_true(file.exists(result)) # Ensure the returned path exists
-    })
+    wp <- "WP4876"
+    val <- c("TRAF3" = 2.0)
+    result <- wikipathview(wp, val)
+    expect_type(result, "character") # Expect a character string (path to SVG)
+    expect_true(file.exists(result)) # Ensure the returned path exists
   })
 
   # Test 2: Valid WikiPathway ID with no matching nodes
