@@ -1,4 +1,10 @@
+is_ci <- function() {
+  Sys.getenv("CI") == "true"
+}
+
 test_that("pathbankview works correctly", {
+  skip_if(is_ci(), "Skipping PathBank tests in CI environment (GitHub Actions randomyl fails to download SVGs)")
+
   # Test 1: Valid PathBank ID and coloring node
   test_that("Valid PathBank ID with coloring", {
     pb <- "SMP0080852"
@@ -54,6 +60,8 @@ test_that("pathbankview works correctly", {
 })
 
 test_that("wikipath (modern) works correctly", {
+  skip_if(is_ci(), "Skipping WikiPathways modern tests in CI environment")
+
   # Test 1: Valid WikiPathway ID and coloring node
   test_that("Valid WikiPathway ID with coloring", {
     wp <- "WP5405"
@@ -109,13 +117,17 @@ test_that("wikipath (modern) works correctly", {
 })
 
 test_that("wikipath (classic) works correctly", {
+  skip_if(is_ci(), "Skipping WikiPathways classic tests in CI environment")
+  
   # Test 1: Valid WikiPathway ID and coloring node
   test_that("Valid WikiPathway ID with coloring", {
-    wp <- "WP4876"
-    val <- c("TRAF3" = 2.0)
-    result <- wikipathview(wp, val)
-    expect_type(result, "character") # Expect a character string (path to SVG)
-    expect_true(file.exists(result)) # Ensure the returned path exists
+    retry_test({
+      wp <- "WP4876"
+      val <- c("TRAF3" = 2.0)
+      result <- wikipathview(wp, val)
+      expect_type(result, "character") # Expect a character string (path to SVG)
+      expect_true(file.exists(result)) # Ensure the returned path exists
+    })
   })
 
   # Test 2: Valid WikiPathway ID with no matching nodes

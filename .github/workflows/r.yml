@@ -10,6 +10,7 @@ name: R Package Check
 
 env:
   GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+  CI: true  # Explicitly set CI=true
 
 on:
   workflow_dispatch:
