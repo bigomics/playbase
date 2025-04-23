@@ -10,6 +10,7 @@
 #' @param discrete Reorder for categorical data to place main color first
 #' @return A set of three colors
 #'
+#' @export
 #' @examples
 #' generate_colors("#2EC09C")
 #' generate_colors("#BE34EF")
