@@ -32,7 +32,12 @@ objects but made for high-frequency scatter data.
 specific cases although it takes more time.
 }
 \examples{
-data(noise_fluct)
+# Generate random noise data
+time <- seq(0, 10, length.out=1000)
+noise_fluct <- data.frame(
+  time = time,
+  f500 = rnorm(1000, mean=0, sd=1)
+)
 plotly_build_light(
   plotly::plot_ly(
     x = noise_fluct$time,
