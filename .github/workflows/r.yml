@@ -12,6 +12,7 @@ env:
   GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "0 0 * * *"
 
