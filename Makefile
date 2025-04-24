@@ -75,3 +75,6 @@ docker: docker.os docker.rbase docker.pkg docker.squash
 docker.bash:
 	@echo bash into playbase docker 
 	docker run -it bigomics/playbase /bin/bash
+
+git.prune.branches:
+	git fetch -p && git branch --merged | grep -v '*' | grep -v 'main' | grep -v 'devel' | xargs git branch -d

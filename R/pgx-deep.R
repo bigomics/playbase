@@ -1121,11 +1121,10 @@ if __name__ == '__main__':
   auxfile <- sub("[.]py$", ".aux", pyfile)
   logfile <- sub("[.]py$", ".log", pyfile)
   pdffile <- sub("[.]py$", ".pdf", pyfile)
-  svgfile <- sub("[.]py$", ".svg", pyfile)
-  svgfile <- paste0("/tmp/",basename(svgfile)) ## write to /tmp
-
-  message("[deep.plotNeuralNet] texfile = ",texfile)
-  message("[deep.plotNeuralNet] svgfile = ",svgfile)
+  if(is.null(svgfile)) {
+    svgfile <- sub("[.]py$", ".svg", pyfile)
+    svgfile <- paste0("/tmp/",basename(svgfile)) ## write to /tmp
+  }
 
   if (file.exists(pyfile)) {
     cmd <- glue::glue("cd /opt/PlotNeuralNet/pyexamples/ && python {pyfile}")
@@ -1135,6 +1134,7 @@ if __name__ == '__main__':
     ))
     if (!file.exists(texfile)) {
       message("[deep.plotNeuralNet] WARNING. failed to create TeX file ",texfile)
+      message("[deep.plotNeuralNet] python cmd = ",cmd)
     }
   }
 
@@ -1144,8 +1144,9 @@ if __name__ == '__main__':
       ignore.stdout = TRUE, ignore.stderr = TRUE,
       intern = FALSE, show.output.on.console = FALSE
     ))
-    if (!file.exists(pdffile)) {
+    if (!file.exists(pdffile)) {      
       message("[deep.plotNeuralNet] WARNING. failed to create PDF file ",pdffile)
+      message("[deep.plotNeuralNet] pdflatex cmd = ",cmd)    
     }
   }
 
@@ -1157,6 +1158,7 @@ if __name__ == '__main__':
     ))
     if (!file.exists(svgfile)) {
       message("[deep.plotNeuralNet] WARNING. failed to create SVG file ",svgfile)
+      message("[deep.plotNeuralNet] pdf2svg cmd = ",cmd)    
     }
   }
 
@@ -1172,7 +1174,6 @@ if __name__ == '__main__':
   if (file.exists(svgfile)) {
     return(svgfile)
   } else {
-    message("[deep.plotNeuralNet] WARNING. failed to create SVG file ",svgfile)
     return(NULL)
   }
 }

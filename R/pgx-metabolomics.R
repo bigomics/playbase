@@ -226,7 +226,6 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
 
   metadata <- data.frame(matrix(NA, nrow = length(probes), ncol = length(COLS)))
   colnames(metadata) <- COLS
-  ##  rownames(metadata) <- probes
   metadata$feature <- probes
 
   d <- db[1]
@@ -362,6 +361,14 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
     df$feature <- orig.probes
     df$gene_name <- orig.probes
     rownames(df) <- orig.probes
+  }
+
+  if (extra_annot && !is.null(annot_table)) {
+    extra_cols <- setdiff(colnames(annot_table),colnames(df))
+    extra_cols <- setdiff( extra_cols, c("ID","name","source","feature"))
+    dbg("[getMetaboliteAnnotation] dim.df=", dim(df))
+    dbg("[getMetaboliteAnnotation] dim.annot_table=", dim(annot_table))
+    df <- cbind(df, annot_table[,extra_cols])
   }
 
   return(df)

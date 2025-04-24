@@ -1490,7 +1490,13 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   ## add rownames
   annot_table$rownames <- rownames(annot_table)
 
-  probes <- rownames(counts)
+  if (is.matrix(counts) || is.data.frame(counts) || !is.null(dim(counts))) {
+    type <- "matrix"
+    probes <- rownames(counts)
+  } else {
+    type <- "vector"
+    probes <- names(counts)
+  }
   probe_match <- apply(annot_table, 2, function(x) sum(probes %in% x))
   probe_match
 
@@ -1506,15 +1512,9 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
     return(counts)
   }
 
-  type <- NA
-  if (is.matrix(counts) || is.data.frame(counts) || !is.null(dim(counts))) {
-    type <- "matrix"
-  } else {
-    type <- "vector"
+  if( type == "vector") {
     counts <- cbind(counts)
   }
-
-  probes <- rownames(counts)
   from <- annot_table[, from_id]
   if (!any(duplicated(from)) || unique) {
     ii <- match(probes, from)
@@ -1528,7 +1528,7 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   } else {
     to <- lapply(probes, function(p) which(from == p))
     ii <- lapply(1:length(to), function(i) rep(i, length(to[[i]])))
-    counts <- counts[unlist(ii), ]
+    counts <- counts[unlist(ii), , drop = FALSE]
     if (keep.prefix) {
       dt <- mofa.get_prefix(unlist(to))
       new.name <- annot_table[unlist(to), new_id]
