@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
 env:
   DOCKER_TAG: bigomics/omicsplayground:devel
-  CI: true  # Explicitly set CI=true
 jobs:
   unittest:
     runs-on: ubuntu-latest
@@ -43,7 +42,7 @@ jobs:
         name: Unittest docker
         id: test-snapshot
         run: |
-          docker run --name run_tests $DOCKER_TAG
+          docker run --name run_tests -e CI=true $DOCKER_TAG
           docker cp run_tests:/test_result.txt .
       
       - 
