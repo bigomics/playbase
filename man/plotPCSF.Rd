@@ -13,6 +13,10 @@ plotPCSF(
   node_cex = 30,
   label_cex = 30,
   nlabel = -1,
+  lab_exp = 3,
+  border_width = 1.5,
+  cut.clusters = FALSE,
+  nlargest = -1,
   edge_width = 5
 )
 }
