@@ -491,8 +491,9 @@ plotPCSF <- function(pcsf,
                      layout = "layout_with_kk", physics = TRUE,
                      node_cex = 30,
                      label_cex = 30, nlabel = -1, lab_exp = 3,
-                     border_width = 1.5, cut.clusters = FALSE,
-                     nlargest = -1, edge_width = 5) {
+                     border_width = 1.5, edge_width = 5,
+                     cut.clusters = FALSE, nlargest = -1
+                     ) {
   ## set node size
   fx <- igraph::V(pcsf)$foldchange
   wt <- abs(fx / mean(abs(fx), na.rm = TRUE))**0.7
@@ -546,9 +547,10 @@ plotPCSF <- function(pcsf,
   }
 
   if(cut.clusters) {
-    ewt <- 1/(1e-8 + igraph::E(pcsf)$weight)**2
+    mwt <- mean(igraph::E(pcsf)$weight,na.rm=TRUE)
+    ewt <- 1/(1e-3*mwt + igraph::E(pcsf)$weight)
     clust <- igraph::cluster_louvain(pcsf, weights=ewt)
-    clust <- igraph::cluster_fast_greedy(pcsf, weights=ewt)
+    ## clust <- igraph::cluster_fast_greedy(pcsf, weights=ewt)
     table(clust$membership)
     ee <- igraph::E(pcsf)[igraph::crossing(clust, pcsf)]
     pcsf <- igraph::delete_edges(pcsf, ee)
@@ -556,19 +558,20 @@ plotPCSF <- function(pcsf,
 
   ## take n-largest components
   if(nlargest > 0) {
-    wc <- igraph::components(pcsf)$membership
-    top.comp <- head(names(sort(table(wc),decreasing=TRUE)),nlargest)
-    sel <- which(wc %in% top.comp)
+    cc <- igraph::components(pcsf)$membership
+    fsq <- tapply( igraph::V(pcsf)$foldchange**2, cc, sum)    
+    top.comp <- head(names(sort(fsq,decreasing=TRUE)),nlargest)
+    sel <- which(cc %in% top.comp)
     pcsf <- igraph::subgraph(pcsf, sel)
     label_cex1 <- label_cex1[sel]
     node_cex1 <- node_cex1[sel]    
   }   
   
   ## this equalizes label size per component
-  wc <- igraph::components(pcsf)$membership
-  comp <- unique(wc)
+  cc <- igraph::components(pcsf)$membership
+  comp <- unique(cc)
   for(k in comp) {
-    ii <- which(wc == k)
+    ii <- which(cc == k)
     #f <- max(label_cex1) / max(label_cex1[ii])
     f <- mean(label_cex1) / mean(label_cex1[ii])    
     label_cex1[ii] <- label_cex1[ii] * f
@@ -577,7 +580,7 @@ plotPCSF <- function(pcsf,
   ## this limits number of labels per component
   if (nlabel > 0) {
     for(k in comp) {
-      ii <- which(wc == k)
+      ii <- which(cc == k)
       top.cex <- ii[head(order(-label_cex1[ii]), nlabel)]
       jj <- setdiff(ii, top.cex)
       igraph::V(pcsf)$label[jj] <- ""
@@ -782,9 +785,10 @@ plotPCSF.IGRAPH <- function(net, fx0 = NULL, label.cex = 1) {
 }
 
 #' @export
-pgx.getPCSFcentrality <- function(pgx, contrast, pcsf = NULL, plot = TRUE, n = 10) {
+pgx.getPCSFcentrality <- function(pgx, contrast, level="gene", pcsf = NULL,
+                                  plot = TRUE, n = 10) {
   if (is.null(pcsf)) {
-    pcsf <- pgx.computePCSF(pgx, contrast, level = "gene", ntop = 250, ncomp = 3)
+    pcsf <- pgx.computePCSF(pgx, contrast, level = level, ntop = 250, ncomp = 3)
   }
 
   ## centrality
@@ -796,9 +800,17 @@ pgx.getPCSFcentrality <- function(pgx, contrast, pcsf = NULL, plot = TRUE, n = 1
 
   M <- data.frame(centrality = cc, logFC = fc)
   M <- round(M, digits = 2)
-  match.col <- which.max(apply(pgx$genes, 2, function(a) sum(rownames(M) %in% a)))
-  ii <- match(rownames(M), pgx$genes[,match.col])  
-  aa <- pgx$genes[ii, c("feature", "symbol", "human_ortholog", "gene_title")]
+
+  aa <- M[,0]
+  if(level == "gene") {
+    ft <- mofa.strip_prefix(rownames(M))
+    match.col <- which.max(apply(pgx$genes, 2, function(a) sum(ft %in% a)))
+    ii <- match(ft, pgx$genes[,match.col])  
+    aa <- pgx$genes[ii, c("feature", "symbol", "human_ortholog", "gene_title")]
+  }
+  if(level == "geneset") {
+    aa <- data.frame( geneset = rownames(M))
+  }
   aa <- cbind(aa, M)
   rownames(aa) <- rownames(M)
   aa <- aa[order(-aa$centrality), ]
