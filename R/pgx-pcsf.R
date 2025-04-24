@@ -11,7 +11,7 @@
 #' @export
 pgx.computePCSF <- function(pgx, contrast, level = "gene",
                             ntop = 250, ncomp = 3, beta = 1,
-                            rm.negedge = TRUE, use.corweight = TRUE,
+                            rm.negedge = TRUE, 
                             dir = "both", ppi = c("STRING", "GRAPHITE"),
                             gset.rho = 0.8, gset.filter = NULL,
                             as.name = NULL) {
@@ -283,8 +283,8 @@ pgx.computePCSF_multiomics <- function(pgx, contrast,
   )
   
   ## Reinstate foldchange to actual foldchange
-  V(pcsf)$foldchange <- fc[V(pcsf)$name]
-  ##V(pcsf)$foldchange <- rho[V(pcsf)$name]
+  igraph::V(pcsf)$foldchange <- fc[igraph::V(pcsf)$name]
+  ##igraph::V(pcsf)$foldchange <- rho[igraph::V(pcsf)$name]
   
   return(pcsf)
 }
@@ -376,8 +376,8 @@ pgx.computePCSF_gset <- function(pgx, contrast,
   )
   
   ## Reinstate foldchange to actual foldchange
-  V(pcsf)$foldchange <- fc[V(pcsf)$name]
-  V(pcsf)$rho <- rho[V(pcsf)$name]
+  igraph::V(pcsf)$foldchange <- fc[igraph::V(pcsf)$name]
+  igraph::V(pcsf)$rho <- rho[igraph::V(pcsf)$name]
   
   return(pcsf)
 }
