@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
 env:
   DOCKER_TAG: bigomics/omicsplayground:devel
+  CI: true  # Explicitly set CI=true
 jobs:
   unittest:
     runs-on: ubuntu-latest
