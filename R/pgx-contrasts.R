@@ -1010,8 +1010,8 @@ contrasts.addTimeInteraction <- function(contrasts, samples) {
     stop("[contrasts.addTimeInteraction] contrasts and samples must be aligned")
   
   colnames(samples) <- tolower(colnames(samples))
-  time.var <- c("minute", "hour", "day", "week", "month", "year", "time", "age")
-  sel.time <- intersect(time.var, colnames(samples)) 
+  time.var <- playbase::get_timevars()
+  sel.time <- grep(time.var, colnames(samples), ignore.case = TRUE)
   jj <- match(sel.time[1], colnames(samples))
   
   if (length(sel.time) && length(unique(samples[,jj]))>1) {

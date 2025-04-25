@@ -109,8 +109,8 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   ## Time series: determine variable 'time'
   ## -----------------------------------------------------------------------------  
   if (timeseries) {
-    time.var <- toupper("minute|hour|day|week|month|year|age|time")
-    sel <- grep(time.var, toupper(colnames(samples)))
+    time.var <- playbase::get_timevars()
+    sel <- grep(time.var, colnames(samples), ignore.case = TRUE)
     timeseries <- as.character(samples[, sel[1]])
     names(timeseries) <- rownames(samples)
   } else {

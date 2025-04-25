@@ -509,7 +509,9 @@ getMetaboliteInfo.SAVE <- function(organism = "Human", id) {
 }
 
 
-#'
+#' Extend metabolite sets in M by adding neighbour-metabolites that
+#' are connected (neighbours) according to given PPI. Only
+#' metabolite-metabolite neighbours are considered.
 #'
 #' @export
 extend_metabolite_sets <- function(M, ppi, add=TRUE, postfix="(extended)",
@@ -559,6 +561,10 @@ extend_metabolite_sets <- function(M, ppi, add=TRUE, postfix="(extended)",
 }
 
 
+#' Extend metabolite sets in M by adding neighbouring-metabolites that
+#' are connected (neighbours) with members in metabolite set according
+#' to given PPI. Any metabolite-metabolite or protein-metabolite
+#' neighbours are considered.
 #'
 #' @export
 extend_metabolite_sets2 <- function(M, ppi, add=TRUE, postfix="(extended)", maxcost=0.33) {

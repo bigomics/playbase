@@ -17,11 +17,13 @@ visplot.PCSF(
   layout = "layout_with_kk",
   physics = TRUE,
   layoutMatrix = NULL,
+  border_width = 1,
   width = 1800,
   height = 1800,
   invert.weight = FALSE,
   extra_node_colors = c(),
   extra_node_shapes = c(),
+  extra_node_borders = c(),
   edge_color = "lightgrey",
   ...
 )
