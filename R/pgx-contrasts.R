@@ -1006,9 +1006,9 @@ makeContrastFromSamples <- function(samples, ref = NULL) {
 #' @export
 contrasts.addTimeInteraction <- function(contrasts, samples) {
 
-  if (!all.equal(rownames(contrasts), rownames(samples)))
+  if (!all(rownames(samples) == rownames(contrasts)))
     stop("[contrasts.addTimeInteraction] contrasts and samples must be aligned")
-
+  
   colnames(samples) <- tolower(colnames(samples))
   time.var <- playbase::get_timevars()
   sel.time <- grep(time.var, colnames(samples), ignore.case = TRUE)

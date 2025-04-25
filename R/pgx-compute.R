@@ -292,6 +292,9 @@ pgx.createPGX <- function(counts,
     if (!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
   }
 
+  ## convert old-style contrast matrix to sample-wise labeled contrasts
+  contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
+
   ## ---------------------------------------------------------------------
   ## Time series
   ## 1. check if time is categorical or not.
@@ -300,10 +303,7 @@ pgx.createPGX <- function(counts,
   ## ---------------------------------------------------------------------
   contrasts <- contrasts.addTimeInteraction(contrasts, samples)
   timeseries <- ifelse(any(grep("^IA:",colnames(contrasts))), TRUE, FALSE)
-           
-  ## convert old-style contrast matrix to sample-wise labeled contrasts
-  contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
-
+  
   ## -------------------------------------------------------------------
   ## Auto-scaling (scale down huge values, often in proteomics)
   ## -------------------------------------------------------------------
