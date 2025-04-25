@@ -1012,7 +1012,7 @@ contrasts.addTimeInteraction <- function(contrasts, samples) {
   colnames(samples) <- tolower(colnames(samples))
   time.var <- playbase::get_timevars()
   sel.time <- grep(time.var, colnames(samples), ignore.case = TRUE)
-  jj <- match(sel.time[1], colnames(samples))
+  jj <- sel.time[1]
   
   if (length(sel.time) && length(unique(samples[,jj]))>1) {
     
