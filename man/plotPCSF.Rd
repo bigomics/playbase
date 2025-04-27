@@ -7,17 +7,20 @@
 plotPCSF(
   pcsf,
   highlightby = c("centrality", "prize")[1],
+  colorby = "foldchange",
   plotlib = c("visnet", "igraph")[1],
-  layout = "layout_with_kk",
+  layout = c("layout_with_kk", "hierarchical")[1],
+  layoutMatrix = NULL,
   physics = TRUE,
-  node_cex = 30,
-  label_cex = 30,
+  node_cex = 1,
+  label_cex = 1,
   nlabel = -1,
   lab_exp = 3,
   border_width = 1.5,
+  edge_width = 5,
+  edge_length = NULL,
   cut.clusters = FALSE,
-  nlargest = -1,
-  edge_width = 5
+  nlargest = -1
 )
 }
 \description{

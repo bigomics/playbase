@@ -4,7 +4,15 @@
 \alias{plotPCSF.IGRAPH}
 \title{Plot static igraph network from PCSF results object}
 \usage{
-plotPCSF.IGRAPH(net, fx0 = NULL, label.cex = 1)
+plotPCSF.IGRAPH(
+  net,
+  fx = NULL,
+  vertex.cex = 1,
+  label.fx = fx,
+  label.cex = 4,
+  layoutMatrix = NULL,
+  ...
+)
 }
 \arguments{
 \item{x}{}

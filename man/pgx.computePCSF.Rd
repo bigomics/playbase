@@ -12,7 +12,6 @@ pgx.computePCSF(
   ncomp = 3,
   beta = 1,
   rm.negedge = TRUE,
-  use.corweight = TRUE,
   dir = "both",
   ppi = c("STRING", "GRAPHITE"),
   gset.rho = 0.8,
