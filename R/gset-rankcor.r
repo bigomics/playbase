@@ -125,6 +125,14 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
   df
 }
 
+#' Compute geneset expression as the average foldchange of genes in
+#' the geneset. Requires FoldChange matrix F and (sparse) geneset
+#' matrix matG.
+#'
+#' @export
+gset.averageFC <- function(F, matG, use.rank = FALSE) {
+  gset.averageCLR(X, matG, center = FALSE, use.rank = use.rank) 
+}
 
 #' Compute geneset expression as the average log-ration of genes in
 #' the geneset. Requires log-expression matrix X and (sparse) geneset

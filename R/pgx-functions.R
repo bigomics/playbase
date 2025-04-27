@@ -1566,9 +1566,12 @@ rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
   }
   symbol <- annot_table[probes, new_id]
 
-  # Guard agaisn human_hommolog == NA
-  if (all(is.na(symbol))) {
-    symbol <- annot_table[probes, "symbol"]
+  # Guard against NA
+  if (is.null(symbol) || all(is.na(symbol))) {
+    gene.col <- head(intersect(c("symbol","gene_name","human_ortholog"),
+      colnames(annot_table)),1)
+    if(length(gene.col)==0) gene.col <- 1
+    symbol <- annot_table[probes, gene.col]
   }
 
   # Sum columns of rows with the same gene symbol

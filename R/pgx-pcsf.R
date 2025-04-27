@@ -16,15 +16,19 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
                             gset.rho = 0.8, gset.filter = NULL,
                             as.name = NULL) {
 
+  if(!"human_ortholog" %in% colnames(pgx$genes)) {
+    message("[pgx.computePCSF] ERROR: annot does not have human_ortholog column")
+    return(NULL)
+  }
+  
   ## get foldchange matrix
   F <- pgx.getMetaMatrix(pgx, level = level)$fc
   if (is.null(contrast)) {
     fx <- rowMeans(F**2, na.rm = TRUE)**0.5
-  } else {
-    if (!contrast %in% colnames(F)) {
-      stop("[pgx.computePCSF] invalid contrast")
-    }
+  } else if (contrast %in% colnames(F)) {
     fx <- F[, contrast]
+  } else {
+    stop("[pgx.computePCSF] invalid contrast")
   }
 
   ## for multi-omics we must re-normalize by type otherwise FC can be
@@ -33,7 +37,7 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   is.multiomics <- (pgx$datatype == "multi-omics") || has.colons
   is.multiomics
   if (is.multiomics) {
-    dbg("[pgx.computePCSF] normalizing multi-omics logFC...")
+    info("[pgx.computePCSF] normalizing multi-omics logFC...")
     fx <- normalize_multifc(fx, by = "mad")
   }
 
@@ -123,8 +127,10 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   ## convert PPI human symbol to organism symbol
   ii <- match(PPI[,1], pgx$genes$human_ortholog)
   jj <- match(PPI[,2], pgx$genes$human_ortholog)
-  PPI[,1] <- pgx$genes$symbol[ii]
-  PPI[,2] <- pgx$genes$symbol[jj]
+  symbol.col <- intersect(c("symbol","gene_name","feature"), colnames(pgx$genes))
+  symbol.col <- head(symbol.col,1)
+  PPI[,1] <- pgx$genes[ii,symbol.col]
+  PPI[,2] <- pgx$genes[jj,symbol.col]
   kk <- which(!is.na(PPI[,1]) & !is.na(PPI[,2]))
   PPI <- PPI[kk,]
 
@@ -301,10 +307,19 @@ pgx.computePCSF_gset <- function(pgx, contrast,
                                  dir = "both") {
 
   ## geneset parameters
-  y <- pgx$model.parameters$exp.matrix[,contrast]
-  ii <- which(!is.na(y) & y!=0)
-  rho <- cor(Matrix::t(pgx$gsetX[,ii]), y[ii])[,1]  
-  fc <- pgx.getMetaMatrix(pgx, level="geneset")$fc[,contrast]
+  if(!is.null(contrast)) {
+    y <- pgx$model.parameters$exp.matrix[,contrast]
+    ii <- which(!is.na(y) & y!=0)
+    rho <- cor(Matrix::t(pgx$gsetX[,ii]), y[ii])[,1]  
+    fc <- pgx.getMetaMatrix(pgx, level="geneset")$fc[,contrast]
+  } else {
+    Y <- pgx$model.parameters$exp.matrix[,]
+    Y[Y==0] <- NA
+    R <- cor(Matrix::t(pgx$gsetX), Y, use="pairwise")
+    F <- pgx.getMetaMatrix(pgx, level="geneset")$fc
+    rho <- sqrt(rowMeans(R**2))
+    fc  <- sqrt(rowMeans(F**2))    
+  }
   X <- pgx$gsetX
 
   ## filter on datatype or geneset collection
@@ -487,20 +502,42 @@ solvePCSF <- function(X, fx, ppi, labels = NULL, ntop = 250, ncomp = 3,
 #' @export
 plotPCSF <- function(pcsf,
                      highlightby = c("centrality", "prize")[1],
+                     colorby = "foldchange",
                      plotlib = c("visnet", "igraph")[1],
-                     layout = "layout_with_kk", physics = TRUE,
-                     node_cex = 30,
-                     label_cex = 30, nlabel = -1, lab_exp = 3,
-                     border_width = 1.5, edge_width = 5,
-                     cut.clusters = FALSE, nlargest = -1
+                     layout = c("layout_with_kk","hierarchical")[1],
+                     layoutMatrix = NULL,
+                     physics = TRUE,
+                     node_cex = 1,
+                     label_cex = 1,
+                     nlabel = -1,
+                     lab_exp = 3,
+                     border_width = 1.5,
+                     edge_width = 5,
+                     edge_length = NULL,
+                     cut.clusters = FALSE,
+                     nlargest = -1
                      ) {
+
   ## set node size
-  fx <- igraph::V(pcsf)$foldchange
+  if(is.character(colorby) && colorby %in% names(igraph::vertex_attr(pcsf))) {
+    fx <- igraph::vertex_attr(pcsf, colorby)
+  } else if(is.numeric(colorby)) {
+    if(length(colorby) != length(igraph::V(pcsf))) {
+      message("[plotPCSF] WARNING. colorby vector is not same length")
+      nv <- length(igraph::V(pcsf))
+      colorby <- head(rep(colorby,nv),nv)
+    }
+    fx <- colorby
+  } else {
+    fx <- igraph::V(pcsf)$foldchange
+  }
+  names(fx) <- igraph::V(pcsf)$name
   wt <- abs(fx / mean(abs(fx), na.rm = TRUE))**0.7
-  node_cex1 <- node_cex * pmax(wt, 1)
+  node_cex1 <- node_cex * pmax(wt, 2)
   label_cex1 <- label_cex + 1e-8 * abs(fx)
 
-  ## set colors as UP/DOWN
+  ## set colors for UP/DOWN. They are set in 'extra_node_colors' in
+  ## the visPlot.  
   up_down <- c("down", "up")[1 + 1 * (sign(fx) > 0)]
   dtype <- igraph::V(pcsf)$type
   igraph::V(pcsf)$group <- paste0(dtype, "_", up_down)
@@ -510,6 +547,7 @@ plotPCSF <- function(pcsf,
   extra_node_colors <- c(bluered[2], bluered[6])[1 + grepl("_up$", groups)]
   names(extra_node_colors) <- groups
 
+  ## set shape for different groups
   shapes <- head(rep(c(
     "dot", "triangle", "star", "diamond", "square",
     "triangleDown", "hexagon"
@@ -519,6 +557,7 @@ plotPCSF <- function(pcsf,
   extra_node_shapes <- shapes[factor(gtype, levels=levels)]
   names(extra_node_shapes) <- groups
 
+  ## set bordercolors for different groups
   border_colors <- c("lightgrey",rep(c("yellow","magenta","cyan","green"),99))
   extra_node_borders <- border_colors[factor(gtype, levels=levels)]
   names(extra_node_borders) <- groups
@@ -587,17 +626,27 @@ plotPCSF <- function(pcsf,
     }
   }
 
+  ## align
+  vv <- igraph::V(pcsf)$name
+  fx <- fx[vv]
+  if(!is.null(layoutMatrix)) layoutMatrix <- layoutMatrix[vv,]
+  
   out <- NULL
   if (plotlib == "visnet") {
-    library(igraph)
+    library(igraph)  ## ??
     class(pcsf) <- c("PCSF", "igraph")    
+    if(!is.null(layoutMatrix)) {
+      layoutMatrix[,2] <- -layoutMatrix[,2]
+    }
+    
     out <- visplot.PCSF(
       pcsf,
       style = 1,
-      node_size = node_cex1,
-      node_label_cex = label_cex1,
+      node_size = 15 * node_cex1,
+      node_label_cex = 40 * label_cex1,
       invert.weight = TRUE,
       edge_width = edge_width,
+      edge_length = edge_length,
       border_width = border_width,
       Steiner_node_color = "lightblue",
       Terminal_node_color = "lightgreen",
@@ -605,14 +654,24 @@ plotPCSF <- function(pcsf,
       extra_node_shapes = extra_node_shapes,
       extra_node_borders = extra_node_borders,
       edge_color = "lightgrey",
-      width = "100%", height = 900,
+      width = "100%",
+      height = 900,
       layout = layout,
+      layoutMatrix = layoutMatrix,
       physics = physics
     )
+
   }
 
   if (plotlib == "igraph") {
-    plotPCSF.IGRAPH(pcsf, fx0 = NULL, label.cex = label_cex1)
+    plotPCSF.IGRAPH(
+      pcsf,
+      fx = fx,
+      label.fx = label_cex1,
+      label.cex = 1.3 * label_cex,
+      vertex.cex = node_cex,
+      layoutMatrix = layoutMatrix
+    )
     out <- NULL
   }
 
@@ -632,10 +691,10 @@ visplot.PCSF <- function(
     Steiner_node_color = "lightblue", Terminal_node_color = "lightgreen",
     Terminal_node_legend = "Terminal", Steiner_node_legend = "Steiner",
     layout = "layout_with_kk", physics = TRUE, layoutMatrix = NULL,
-    border_width = 1,
+    border_width = 1, edge_length = 10, edge_color = "lightgrey", 
     width = 1800, height = 1800, invert.weight = FALSE,
     extra_node_colors = c(), extra_node_shapes = c(), extra_node_borders = c(),
-    edge_color = "lightgrey", ...) {
+    ...) {
   if (missing(net)) {
     stop("Need to specify the subnetwork obtained from the PCSF algorithm.")
   }
@@ -694,6 +753,7 @@ visplot.PCSF <- function(
       borderWidth = border_width
     ) %>%
     visNetwork::visEdges(
+      length = edge_length,
       color = edge_color,
       scaling = list(min = 6, max = edge_width * 6)
     )
@@ -721,6 +781,10 @@ visplot.PCSF <- function(
   }
 
   if (layout != "hierarchical") {
+    if(!is.null(layoutMatrix)) {
+      layout <- "layout.norm"
+      #physics <- FALSE
+    }
     visNet <- visNet %>%
       visNetwork::visIgraphLayout(
         layout = layout,
@@ -748,40 +812,61 @@ visplot.PCSF <- function(
 #' @return NULL
 #' @param x
 #'
-plotPCSF.IGRAPH <- function(net, fx0 = NULL, label.cex = 1) {
-  if (is.null(fx0)) fx0 <- igraph::V(net)$prize
-  ## fx0 <- tanh(1.3 * fx0)
-  fx0 <- fx0 / max(abs(fx0), na.rm = TRUE)
-  label.cex <- label.cex / mean(label.cex, na.rm = TRUE)
-  vertex.label.cex <- 0.8 * label.cex**0.80
-
-  vertex.size <- 1.2 * igraph::V(net)$prize**0.9
-  vertex.color <- "lightblue"
+plotPCSF.IGRAPH <- function(net, fx = NULL, vertex.cex = 1,
+                            label.fx = fx, label.cex = 4,
+                            layoutMatrix = NULL, ...) {
+  if (is.null(fx)) fx <- igraph::V(net)$prize
+  fx <- fx / max(abs(fx), na.rm = TRUE)
+  label.fx <- label.fx / max(label.fx, na.rm = TRUE)
+  vertex.label.cex <- label.cex * (0.2 + label.fx**2)
+  if(label.cex==0) igraph::V(net)$label <- ''
+  
+  #vertex.size <- 1.2 * igraph::V(net)$prize**0.9
+  vertex.size <- 5 * vertex.cex * (0.05 + abs(fx))**0.8
   cpal <- colorRampPalette(c("blue2", "grey90", "red3"))(33)
-  vertex.color <- cpal[1 + 16 + round(16 * fx0)]
+  vertex.color <- cpal[1 + 16 + round(16 * fx)]
   edge.width <- (1 - igraph::E(net)$weight / max(igraph::E(net)$weight, na.rm = TRUE))
 
-  pos <- igraph::layout_with_graphopt(
-    net,
-    niter = 5000,
-    charge = 0.00001,
-    mass = 30,
-    spring.length = 1,
-    spring.constant = 1
-  )
+  if(!is.null(layoutMatrix)) {
+    if(is.null(rownames(layoutMatrix))) {
+      stop("layoutMatrix must have rownames")
+    }
+  }
 
+  if(is.null(layoutMatrix)) {
+    g <- tapply( igraph::V(net), igraph::components(net)$membership,
+      function(v) igraph::subgraph(net,v))
+    g <- igraph::disjoint_union(g)
+    pos <- igraph::layout_(g, igraph::with_kk(weights=NA), igraph::component_wise())
+    rownames(pos) <- igraph::V(g)$name
+    layoutMatrix <- pos[igraph::V(net)$name,]
+  }
+
+  vnames <- igraph::V(net)$name
+  if(!all(vnames %in% rownames(layoutMatrix))) {
+    stop("ERROR: all nodes not in rownames layoutMatrix")
+  }
+  layoutMatrix <- layoutMatrix[igraph::V(net)$name,]
+  
+  ## somehow it is faster to bin label.cex
+  vertex.label.cex <- round(10*vertex.label.cex)*0.1
+  
   vv <- (vertex.size / mean(vertex.size, na.rm = TRUE))**1
   plot(
     net,
     vertex.size = vertex.size,
     vertex.color = vertex.color,
+    vertex.frame.color = "grey50",
+    vertex.frame.width = 0.3,    
     vertex.label.cex = vertex.label.cex,
     vertex.label.dist = 0.3 + 0.7 * vv,
     vertex.label.degree = -0 * pi,
     vertex.label.family = "sans",
-    edge.width = 5 * edge.width,
-    layout = pos
+    edge.width = 2.5 * edge.width,
+    layout = layoutMatrix,
+    ...
   )
+  
 }
 
 #' @export
@@ -822,4 +907,111 @@ pgx.getPCSFcentrality <- function(pgx, contrast, level="gene", pcsf = NULL,
   }
 
   return(aa)
+}
+
+
+#' Cut graph into components using Louvain clustering and calculate
+#' merged layout.
+#'
+#' @export
+pcsf.cut_and_relayout <- function(net, ncomp=-1,
+                                  cluster.method = c("louvain","leiden")[1],
+                                  leiden.resolution = 0.1,
+                                  layout = c("kk","tree","circle","graphopt")[1],
+                                  as_grid = TRUE) {
+  ## we need component-wise layout
+  mwt <- mean(igraph::E(net)$weight,na.rm=TRUE)
+  ewt <- 1/(1e-3*mwt + igraph::E(net)$weight)
+  if(cluster.method == "leiden") {
+    clust <- igraph::cluster_leiden(
+      net, weights=ewt, resolution = leiden.resolution)
+  } else {
+    clust <- igraph::cluster_louvain(net, weights=ewt)
+  }
+  ee <- igraph::E(net)[igraph::crossing(clust, net)]
+  g <- igraph::delete_edges(net, ee)
+  
+  ## calculate component-wise layout
+  g <- tapply( igraph::V(g), igraph::components(g)$membership,
+              function(v) igraph::subgraph(g,v))
+
+  if(ncomp>0) {
+    fx <- V(net)$prize
+    names(fx) <- V(net)$name
+    gx <- sapply(g, function(x) sum(fx[V(x)$name]**2))
+    g <- head( g[order(-gx)], ncomp )
+  }
+  
+  ## create union and layout
+  g <- igraph::disjoint_union(g)
+
+  layout <- layout[1]
+  all.layouts = c("tree","circle","fr","kk","gem","graphopt")
+  if(!layout %in% all.layouts) {
+    layout <- "kk"
+  }
+  
+  FUN <- switch(
+    layout,
+    tree = igraph::as_tree(),
+    circle = igraph::in_circle(),
+    fr = igraph::with_fr(),
+    kk = igraph::with_kk(weights=NA),
+    mds = igraph::with_mds(),
+    gem = igraph::with_gem(),    
+    graphopt = igraph::with_graphopt(),
+    igraph::with_kk(weights=NA)
+  )
+
+  pos <- igraph::layout_(g, FUN, igraph::component_wise())
+  rownames(pos) <- igraph::V(g)$name
+
+  mm <- igraph::components(g)$membership
+  table(mm)
+
+  if(layout=="tree" && as_grid) {
+    dx <- tapply(pos[,1],mm,function(x) diff(range(x)))
+    dy <- tapply(pos[,2],mm,function(y) diff(range(y)))    
+    ydepth <- tapply(pos[,2], mm, function(y) length(unique(y)))
+    ydepth
+    k=1
+    for(k in 1:length(unique(mm))) {
+      ii <- which(mm == k)
+      new_center <- grid.pos[k,]
+      pos.ii <- pos[ii,]
+      pos.ii[,2] <- as.integer(factor(rank(pos.ii[,2])))
+      pos[ii,] <- pos.ii
+    }
+  }
+  
+  if(as_grid) {
+    mm <- igraph::components(g)$membership
+    table(mm)
+    mm.order <- order(table(mm),decreasing=TRUE)
+    ncomp <- length(unique(mm))
+    nx <- ceiling(sqrt(ncomp))
+    grid.pos <- t(sapply(0:(ncomp-1), function(i) c(i%%nx, i%/%nx)))
+    
+    dx <- tapply(1:nrow(pos), mm, function(i) diff(range(pos[i,1])))
+    dy <- tapply(1:nrow(pos), mm, function(i) diff(range(pos[i,2])))    
+    row.dy <- tapply(dy, grid.pos[,2], max)
+    row.dy    
+    row.dy <- row.dy + 0.1*max(row.dy)  ## add gutter      
+    dx <- 1.05 * max(dx)
+    cx <- dx * grid.pos[,1]
+    cy <- c(0,cumsum(row.dy))[1 + grid.pos[,2]]
+
+    grid.pos <- cbind(cx, cy)
+    grid.pos[,2] <- max(grid.pos[,2]) - grid.pos[,2]    
+    k=1
+    for(k in 1:length(unique(mm))) {
+      ii <- which(mm == k)
+      new_center <- grid.pos[k,]
+      #pos.mid <- apply(pos[ii,], 2, function(x) mean(range(x)))
+      pos.mid <- colMeans(pos[ii,])
+      pos[ii,] <- t(t(pos[ii,]) - pos.mid + new_center)
+    }
+  }
+  
+  list(graph=g, layout=pos)
 }
