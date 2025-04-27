@@ -233,24 +233,15 @@ pgx.initialize <- function(pgx) {
   ## Recompute geneset meta.fx as average fold-change of genes
   ## -----------------------------------------------------------------------------
 
-  ##  if (pgx$organism != "No organism" || nrow(pgx$GMT) > 0) {
+  ## Only for compatibility. This should not be needed in newer PGX. 
   if (!is.null(pgx$gset.meta) && nrow(pgx$GMT) > 0) {
     message("[pgx.initialize] Recomputing geneset fold-changes")
     nc <- length(pgx$gset.meta$meta)
+    F <- pgx.getMetaMatrix(pgx)$fc
+    F <- rename_by2(F, pgx$genes, "symbol")
+    gset.fc <- gset.averageFC(F, pgx$GMT)
     for (i in 1:nc) {
-      gs <- pgx$gset.meta$meta[[i]]
-      fc <- pgx$gx.meta$meta[[i]]$meta.fx
-      names(fc) <- rownames(pgx$gx.meta$meta[[i]])
-      # If use does not collapse by gene
-      if (!all(names(fc) %in% pgx$genes$symbol)) {
-        names(fc) <- probe2symbol(names(fc), pgx$genes, "symbol", fill_na = TRUE)
-        fc <- fc[names(fc) != ""]
-        fc <- fc[!is.na(names(fc))]
-      }
-      gg <- intersect(names(fc), rownames(pgx$GMT))
-      G1 <- Matrix::t(pgx$GMT[gg, rownames(gs)])
-      mx <- (G1 %*% fc[gg])[, 1]
-      pgx$gset.meta$meta[[i]]$meta.fx <- mx
+      pgx$gset.meta$meta[[i]]$meta.fx <- gset.fc[,i]
     }
   } else {
     message("[pgx.initialize] No genematrix found")

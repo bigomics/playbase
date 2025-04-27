@@ -131,7 +131,7 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
 #'
 #' @export
 gset.averageFC <- function(F, matG, use.rank = FALSE) {
-  gset.averageCLR(X, matG, center = FALSE, use.rank = use.rank) 
+  gset.averageCLR(F, matG, center = FALSE, use.rank = use.rank) 
 }
 
 #' Compute geneset expression as the average log-ration of genes in
