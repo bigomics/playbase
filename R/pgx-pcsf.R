@@ -22,9 +22,9 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   }
   
   ## get foldchange matrix
-  F <- pgx.getMetaMatrix(pgx, level = level)$fc
+  F <- pgx.getMetaMatrix(pgx, level=level)$fc
   if (is.null(contrast)) {
-    fx <- rowMeans(F**2, na.rm = TRUE)**0.5
+    fx <- sqrt(rowMeans(F**2, na.rm = TRUE))
   } else if (contrast %in% colnames(F)) {
     fx <- F[, contrast]
   } else {
@@ -132,7 +132,7 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   PPI[,1] <- pgx$genes[ii,symbol.col]
   PPI[,2] <- pgx$genes[jj,symbol.col]
   kk <- which(!is.na(PPI[,1]) & !is.na(PPI[,2]))
-  PPI <- PPI[kk,]
+  PPI <- PPI[kk,,drop=FALSE]
 
   ## compute PCSF
   pcsf <- solvePCSF(
@@ -161,11 +161,19 @@ pgx.computePCSF_multiomics <- function(pgx, contrast,
                                        dir = "both", ppi = c("STRING", "GRAPHITE"),
                                        as.name = NULL) {
 
-  # For multi-omics we use correlation instead of fold-change as prize.
-  y <- pgx$model.parameters$exp.matrix[,contrast]
-  ii <- which(!is.na(y) & y!=0)
-  rho <- cor(Matrix::t(pgx$X[,ii]), y[ii])[,1]  
-  fc <- pgx.getMetaMatrix(pgx)$fc[,contrast]
+  if(is.null(contrast)) {
+    Y <- pgx$model.parameters$exp.matrix[,]
+    Y[Y==0] <- NA
+    R <- cor(Matrix::t(pgx$X), Y, use="pairwise")
+    F <- pgx.getMetaMatrix(pgx, level="gene")$fc
+    rho <- sqrt(rowMeans(R**2))
+    fc  <- sqrt(rowMeans(F**2))    
+  } else {
+    y <- pgx$model.parameters$exp.matrix[,contrast]
+    ii <- which(!is.na(y) & y!=0)
+    rho <- cor(Matrix::t(pgx$gsetX[,ii]), y[ii])[,1]  
+    fc <- pgx.getMetaMatrix(pgx, level="gene")$fc[,contrast]
+  }
   X <- pgx$X
 
   ## filter on datatype or geneset collection
@@ -246,14 +254,14 @@ pgx.computePCSF_multiomics <- function(pgx, contrast,
   ## convert PPI human symbol to organism symbol
   ppix[, 1:2] <- apply(ppix[, 1:2], 2, function(x) sub(".*:", "", x))
   sel <- pgx$genes$data_type %in% c("mx","px")
-  annot <- pgx$genes[sel,]
+  annot <- pgx$genes[sel,,drop=FALSE]
   ii <- match(ppix[,1], annot$human_ortholog)
   jj <- match(ppix[,2], annot$human_ortholog)
   dt.symbol <- paste0(annot$data_type,":",annot$symbol)
   ppix[,1] <- dt.symbol[ii]
   ppix[,2] <- dt.symbol[jj]
   kk <- which(!is.na(ppix[,1]) & !is.na(ppix[,2]))
-  ppix <- ppix[kk,]
+  ppix <- ppix[kk,,drop=FALSE]
   dim(ppix)
   head(ppix)
   
@@ -278,7 +286,7 @@ pgx.computePCSF_multiomics <- function(pgx, contrast,
   ## compute PCSF
   pcsf <- solvePCSF(
     X,
-    fx = rho,
+    fx = rho,  ## For muliomics use rho (instead of fc) for prize
     ppi = ppix,
     labels = labels,
     ntop = ntop,
@@ -290,7 +298,6 @@ pgx.computePCSF_multiomics <- function(pgx, contrast,
   
   ## Reinstate foldchange to actual foldchange
   igraph::V(pcsf)$foldchange <- fc[igraph::V(pcsf)$name]
-  ##igraph::V(pcsf)$foldchange <- rho[igraph::V(pcsf)$name]
   
   return(pcsf)
 }
@@ -301,31 +308,25 @@ pgx.computePCSF_multiomics <- function(pgx, contrast,
 #' @export
 pgx.computePCSF_gset <- function(pgx, contrast,
                                  gmt.rho = 0.8, gset.filter = NULL,
-                                 highcor = 0.9, 
-                                 ntop = 250, ncomp = 3, beta = 1,
+                                 highcor = 0.9, ntop = 250,
+                                 ncomp = 3, beta = 1,
                                  rm.negedge = TRUE,
                                  dir = "both") {
 
+  ##gmt.rho=0.8;gset.filter=NULL;highcor=0.9;ntop=250;ncomp=3;beta=1;rm.negedge=TRUE;dir="both"
+  
   ## geneset parameters
-  if(!is.null(contrast)) {
-    y <- pgx$model.parameters$exp.matrix[,contrast]
-    ii <- which(!is.na(y) & y!=0)
-    rho <- cor(Matrix::t(pgx$gsetX[,ii]), y[ii])[,1]  
-    fc <- pgx.getMetaMatrix(pgx, level="geneset")$fc[,contrast]
+  F <- pgx.getMetaMatrix(pgx, level="geneset")$fc
+  if(is.null(contrast)) {
+    fc  <- sqrt(rowMeans(F**2,na.rm=TRUE))    
   } else {
-    Y <- pgx$model.parameters$exp.matrix[,]
-    Y[Y==0] <- NA
-    R <- cor(Matrix::t(pgx$gsetX), Y, use="pairwise")
-    F <- pgx.getMetaMatrix(pgx, level="geneset")$fc
-    rho <- sqrt(rowMeans(R**2))
-    fc  <- sqrt(rowMeans(F**2))    
+    fc <- F[,contrast]
   }
   X <- pgx$gsetX
-
+  
   ## filter on datatype or geneset collection
   if(!is.null(gset.filter)) {
-    sel <- grep(gset.filter, names(rho))
-    rho <- rho[sel]
+    sel <- grep(gset.filter, names(fc))
     fc <- fc[sel]
     X <- X[sel,,drop=FALSE]
   }  
@@ -333,9 +334,7 @@ pgx.computePCSF_gset <- function(pgx, contrast,
   ## take 2*ntop 
   ii <- head(names(sort(-abs(fc))),2*ntop)
   X  <- X[ii,,drop=FALSE]
-  rho  <- rho[ii]
   fc  <- fc[ii]
-  dim(X)
     
   ## align everything just to be sure
   labels <- rownames(X)
@@ -373,9 +372,6 @@ pgx.computePCSF_gset <- function(pgx, contrast,
     ppix <- rbind(ppix, ppi.hce)
   }
   message("PPI number of edges: n=", nrow(ppix))
-
-  fx <- rho
-  ##fx <- fc
   
   ## compute PCSF
   pcsf <- solvePCSF(
@@ -389,10 +385,6 @@ pgx.computePCSF_gset <- function(pgx, contrast,
     rm.negedge = rm.negedge,
     dir = dir
   )
-  
-  ## Reinstate foldchange to actual foldchange
-  igraph::V(pcsf)$foldchange <- fc[igraph::V(pcsf)$name]
-  igraph::V(pcsf)$rho <- rho[igraph::V(pcsf)$name]
   
   return(pcsf)
 }
@@ -519,12 +511,15 @@ plotPCSF <- function(pcsf,
                      ) {
 
   ## set node size
+  fx <- NULL
   if(is.character(colorby) && colorby %in% names(igraph::vertex_attr(pcsf))) {
     fx <- igraph::vertex_attr(pcsf, colorby)
   } else if(is.numeric(colorby)) {
-    if(length(colorby) != length(igraph::V(pcsf))) {
+    nv <- length(igraph::V(pcsf))
+    if(length(colorby) != nv) {
       message("[plotPCSF] WARNING. colorby vector is not same length")
-      nv <- length(igraph::V(pcsf))
+      dbg("[plotPCSF] 1: length(colorby) = ", length(colorby))
+      dbg("[plotPCSF] 1: length(V) = ", nv)
       colorby <- head(rep(colorby,nv),nv)
     }
     fx <- colorby
@@ -532,6 +527,8 @@ plotPCSF <- function(pcsf,
     fx <- igraph::V(pcsf)$foldchange
   }
   names(fx) <- igraph::V(pcsf)$name
+  #igraph::V(pcsf)$prize <- abs(fx)
+
   wt <- abs(fx / mean(abs(fx), na.rm = TRUE))**0.7
   node_cex1 <- node_cex * pmax(wt, 2)
   label_cex1 <- label_cex + 1e-8 * abs(fx)
@@ -541,6 +538,7 @@ plotPCSF <- function(pcsf,
   up_down <- c("down", "up")[1 + 1 * (sign(fx) > 0)]
   dtype <- igraph::V(pcsf)$type
   igraph::V(pcsf)$group <- paste0(dtype, "_", up_down)
+  
   bluered <- playdata::BLUERED(7)
   groups <- sort(setdiff(igraph::V(pcsf)$group, c(NA)))
   ngroups <- length(groups)
@@ -567,18 +565,18 @@ plotPCSF <- function(pcsf,
     ewt <- igraph::E(pcsf)$weight
     wt <- 1.0 / (0.01 * mean(ewt, na.rm = TRUE) + ewt) ##
     bc <- igraph::page_rank(pcsf, weights = wt)$vector
-    label_cex1 <- label_cex * (1 + 3 * (bc / max(bc, na.rm = TRUE))**lab_exp)
+    label_cex1 <- label_cex * (0.3 + 3 * (bc / max(bc, na.rm = TRUE))**lab_exp)
   }
   if (highlightby == "prize") {
     fx1 <- abs(fx)
-    label_cex1 <- label_cex * (1 + 3 * (fx1 / max(fx1, na.rm = TRUE))**lab_exp)
+    label_cex1 <- label_cex * (0.3 + 3 * (fx1 / max(fx1, na.rm = TRUE))**lab_exp)
   }
   if (highlightby %in% c("centrality.prize","prize.centrality")) {
     ewt <- igraph::E(pcsf)$weight
     wt <- 1.0 / (0.01 * mean(ewt, na.rm = TRUE) + ewt) ##
     bc <- igraph::page_rank(pcsf, weights = wt)$vector
     bc <- bc * abs(fx)
-    label_cex1 <- label_cex * (1 + 3 * (bc / max(bc, na.rm = TRUE))**lab_exp)
+    label_cex1 <- label_cex * (0.3 + 3 * (bc / max(bc, na.rm = TRUE))**lab_exp)
   }
 
   if (is.null(igraph::V(pcsf)$label)) {
@@ -628,7 +626,6 @@ plotPCSF <- function(pcsf,
 
   ## align
   vv <- igraph::V(pcsf)$name
-  fx <- fx[vv]
   if(!is.null(layoutMatrix)) layoutMatrix <- layoutMatrix[vv,]
   
   out <- NULL
@@ -664,6 +661,7 @@ plotPCSF <- function(pcsf,
   }
 
   if (plotlib == "igraph") {
+    fx <- fx[vv]
     plotPCSF.IGRAPH(
       pcsf,
       fx = fx,
@@ -822,7 +820,7 @@ plotPCSF.IGRAPH <- function(net, fx = NULL, vertex.cex = 1,
   if(label.cex==0) igraph::V(net)$label <- ''
   
   #vertex.size <- 1.2 * igraph::V(net)$prize**0.9
-  vertex.size <- 5 * vertex.cex * (0.05 + abs(fx))**0.8
+  vertex.size <- 5 * vertex.cex * (0.1 + abs(fx))**0.5
   cpal <- colorRampPalette(c("blue2", "grey90", "red3"))(33)
   vertex.color <- cpal[1 + 16 + round(16 * fx)]
   edge.width <- (1 - igraph::E(net)$weight / max(igraph::E(net)$weight, na.rm = TRUE))
@@ -839,14 +837,14 @@ plotPCSF.IGRAPH <- function(net, fx = NULL, vertex.cex = 1,
     g <- igraph::disjoint_union(g)
     pos <- igraph::layout_(g, igraph::with_kk(weights=NA), igraph::component_wise())
     rownames(pos) <- igraph::V(g)$name
-    layoutMatrix <- pos[igraph::V(net)$name,]
+    layoutMatrix <- pos[igraph::V(net)$name,,drop=FALSE]
   }
 
   vnames <- igraph::V(net)$name
   if(!all(vnames %in% rownames(layoutMatrix))) {
     stop("ERROR: all nodes not in rownames layoutMatrix")
   }
-  layoutMatrix <- layoutMatrix[igraph::V(net)$name,]
+  layoutMatrix <- layoutMatrix[igraph::V(net)$name,,drop=FALSE]
   
   ## somehow it is faster to bin label.cex
   vertex.label.cex <- round(10*vertex.label.cex)*0.1
@@ -977,14 +975,15 @@ pcsf.cut_and_relayout <- function(net, ncomp=-1,
     k=1
     for(k in 1:length(unique(mm))) {
       ii <- which(mm == k)
-      new_center <- grid.pos[k,]
-      pos.ii <- pos[ii,]
+      new_center <- grid.pos[k,,drop=FALSE]
+      pos.ii <- pos[ii,,drop=FALSE]
       pos.ii[,2] <- as.integer(factor(rank(pos.ii[,2])))
       pos[ii,] <- pos.ii
     }
   }
   
   if(as_grid) {
+    ## Layout components on a grid
     mm <- igraph::components(g)$membership
     table(mm)
     mm.order <- order(table(mm),decreasing=TRUE)
@@ -1007,9 +1006,12 @@ pcsf.cut_and_relayout <- function(net, ncomp=-1,
     for(k in 1:length(unique(mm))) {
       ii <- which(mm == k)
       new_center <- grid.pos[k,]
-      #pos.mid <- apply(pos[ii,], 2, function(x) mean(range(x)))
-      pos.mid <- colMeans(pos[ii,])
-      pos[ii,] <- t(t(pos[ii,]) - pos.mid + new_center)
+      if(length(ii)==1) {
+        pos[ii,] <- new_center
+      } else {
+        pos.mid <- colMeans(pos[ii,,drop=FALSE])      
+        pos[ii,] <- t(t(pos[ii,]) - pos.mid + new_center)
+      }
     }
   }
   
