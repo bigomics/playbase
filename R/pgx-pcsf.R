@@ -934,9 +934,9 @@ pcsf.cut_and_relayout <- function(net, ncomp=-1,
               function(v) igraph::subgraph(g,v))
 
   if(ncomp>0) {
-    fx <- V(net)$prize
-    names(fx) <- V(net)$name
-    gx <- sapply(g, function(x) sum(fx[V(x)$name]**2))
+    fx <- igraph::V(net)$prize
+    names(fx) <- igraph::V(net)$name
+    gx <- sapply(g, function(x) sum(fx[igraph::V(x)$name]**2))
     g <- head( g[order(-gx)], ncomp )
   }
   
