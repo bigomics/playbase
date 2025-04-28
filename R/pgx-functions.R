@@ -1515,6 +1515,9 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   if( type == "vector") {
     counts <- cbind(counts)
   }
+
+  keep.prefix <- (keep.prefix && all(grepl(":",probes)))
+  
   from <- annot_table[, from_id]
   if (!any(duplicated(from)) || unique) {
     ii <- match(probes, from)
