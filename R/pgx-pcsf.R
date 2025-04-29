@@ -172,7 +172,7 @@ pgx.computePCSF_multiomics <- function(pgx, contrast,
   } else {
     y <- pgx$model.parameters$exp.matrix[,contrast]
     ii <- which(!is.na(y) & y!=0)
-    rho <- cor(Matrix::t(pgx$gsetX[,ii]), y[ii])[,1]  
+    rho <- cor(Matrix::t(pgx$X[,ii]), y[ii])[,1]  
     fc <- pgx.getMetaMatrix(pgx, level="gene")$fc[,contrast]
   }
   X <- pgx$X
