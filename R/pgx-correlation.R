@@ -38,14 +38,14 @@
 #' matrix (precision matrix), and number of samples used are returned.
 #'
 #' @export
-pgx.computeGlassoAroundGene <- function(X, gene, nmax = 100) {
+pgx.computeGlassoAroundGene <- function(X, gene, lambda=0.01,  nmax = 100) {
   rho <- stats::cor(t(X), t(X[gene, , drop = FALSE]))
   jj <- Matrix::head(order(-rowMeans(rho**2, na.rm = TRUE)), nmax)
   tX <- t(X[jj, ])
 
-  vX <- stats::var(tX)
-  res <- glasso::glasso(vX, 0.1)
-  res$cor <- Matrix::cov2cor(vX)
+  varX <- stats::var(tX, na.rm=TRUE)
+  res <- glasso::glasso(varX, rho=lambda)
+  res$cor <- Matrix::cov2cor(varX)
   res$sampleSize <- nrow(tX)
 
   res$pcor <- -stats::cov2cor(res$wi)
@@ -87,9 +87,10 @@ pgx.computeGlassoAroundGene <- function(X, gene, nmax = 100) {
 #' }
 #'
 #' @export
-pgx.plotPartialCorrelationGraph <- function(res, gene, rho.min = 0.1, nsize = -1, main = "",
+pgx.plotPartialCorrelationGraph <- function(res, gene, nsize = -1, main = "",
                                             vsize = 10, edge.width = 10, label.cex = 0.8,
-                                            radius = -1, plot = TRUE, layout = "fr") {
+                                            rho.min = 0.1, nb = Inf, edge.alpha = 0.4,
+                                            radius = -1, plot = TRUE) {
   ## GLASSO object
   nn <- rownames(res$cor)
   R <- stats::cov2cor(res$w)
@@ -100,7 +101,7 @@ pgx.plotPartialCorrelationGraph <- function(res, gene, rho.min = 0.1, nsize = -1
   utils::tail(sort(abs(P)), 20)
   rownames(R) <- colnames(R) <- nn
   rownames(P) <- colnames(P) <- nn
-
+  
   G <- igraph::graph_from_adjacency_matrix(
     abs(P),
     mode = "undirected", diag = FALSE, weighted = TRUE
@@ -117,46 +118,58 @@ pgx.plotPartialCorrelationGraph <- function(res, gene, rho.min = 0.1, nsize = -1
   igraph::E(G)$width <- edge.width * ew**1.5
   igraph::E(G)$color <- c("red", "darkgreen")[1 + 1 * (sign(R[ee]) > 0)]
   igraph::E(G)$color <- c("#FF000033", "#44444433")[1 + 1 * (sign(R[ee]) > 0)]
-  igraph::E(G)$color <- c(paste0(omics_colors("red"), "33"), paste0(omics_colors("brand_blue"), "33"))[1 + 1 * (sign(R[ee]) > 0)]
 
+  ee.colors <- c(omics_colors("red"), omics_colors("brand_blue"))
+  ee.colors <- adjustcolor(ee.colors, alpha.f = edge.alpha)
+  igraph::E(G)$color <- ee.colors[1 + 1 * (sign(R[ee]) > 0)]
+    
   ## delete weak edges
-  G1 <- igraph::delete_edges(G, which(abs(igraph::E(G)$weight) < rho.min))
-  if (length(igraph::V(G1)) <= 1) {
+  hist(abs(igraph::E(G)$weight),breaks=100)
+  if(rho.min < 1) {
+    rho.min <- min(rho.min, max(abs(igraph::E(G)$weight)))
+    del.edges <- which(abs(igraph::E(G)$weight) < rho.min)
+    G <- igraph::delete_edges(G, del.edges)
+  }
+  
+  if(nb < Inf) {
+    nn <- nb * length(igraph::V(G))  ## approx. number of neighbours
+    sel.edges <- head(order(-abs(igraph::E(G)$weight)), nn)
+    del.edges <- setdiff(1:length(igraph::E(G)), sel.edges)
+    G <- igraph::delete_edges(G, del.edges)
+  }   
+
+  if (length(igraph::V(G)) <= 1) {
     return()
   }
 
   ## delete orphans
-  isolated <- which(igraph::degree(G1) == 0 & igraph::V(G)$name != gene)
-  G1 <- igraph::delete.vertices(G1, isolated)
+  isolated <- which(igraph::degree(G) == 0 & igraph::V(G)$name != gene)
+  G <- igraph::delete_vertices(G, isolated)
 
-  if (length(igraph::V(G1)) <= 1) {
+  if (length(igraph::V(G)) <= 1) {
     return()
   }
 
   ## get only nodes within radius
-  dist <- igraph::distances(G1, v = gene, mode = "all", weights = NA)[1, ]
-  vv <- igraph::V(G1)
+  dist <- igraph::distances(G, v = gene, mode = "all", weights = NA)[1, ]
+  vv <- igraph::V(G)
   if (radius > 0) {
     vv <- names(which(dist <= radius))
   }
-  G1 <- igraph::induced_subgraph(G1, vv)
-
-
-  L1 <- igraph::layout_with_fr(G1)
-
-  if (length(igraph::V(G1)) == 0) {
-    return()
+  G <- igraph::induced_subgraph(G, vv)
+  if (length(igraph::V(G)) == 0) {
+    return(NULL)
   }
 
   if (plot == TRUE) {
     graphics::par(mar = c(1, 1, 1, 1) * 0)
-    plot(G1,
+    plot(G,
       vertex.color = "lightskyblue1",
       vertex.frame.color = "skyblue"
     )
   }
 
-  return(G1)
+  return(G)
 }
 
 
