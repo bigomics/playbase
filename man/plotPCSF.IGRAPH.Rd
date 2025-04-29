@@ -10,6 +10,7 @@ plotPCSF.IGRAPH(
   vertex.cex = 1,
   label.fx = fx,
   label.cex = 4,
+  edge.cex = 1,
   layoutMatrix = NULL,
   ...
 )

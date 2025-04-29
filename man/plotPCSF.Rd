@@ -17,7 +17,7 @@ plotPCSF(
   nlabel = -1,
   lab_exp = 3,
   border_width = 1.5,
-  edge_width = 5,
+  edge_cex = 1,
   edge_length = NULL,
   cut.clusters = FALSE,
   nlargest = -1

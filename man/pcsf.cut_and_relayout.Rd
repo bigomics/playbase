@@ -7,7 +7,9 @@ merged layout.}
 \usage{
 pcsf.cut_and_relayout(
   net,
+  cut = TRUE,
   ncomp = -1,
+  component.wise = TRUE,
   cluster.method = c("louvain", "leiden")[1],
   leiden.resolution = 0.1,
   layout = c("kk", "tree", "circle", "graphopt")[1],
