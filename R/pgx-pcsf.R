@@ -10,7 +10,7 @@
 #'
 #' @export
 pgx.computePCSF <- function(pgx, contrast, level = "gene",
-                            ntop = 250, ncomp = 3, beta = 1,
+                            ntop = 250, ncomp = 3, beta = 1, 
                             rm.negedge = TRUE, 
                             dir = "both", ppi = c("STRING", "GRAPHITE"),
                             gset.rho = 0.8, gset.filter = NULL,
@@ -25,6 +25,7 @@ pgx.computePCSF <- function(pgx, contrast, level = "gene",
   F <- pgx.getMetaMatrix(pgx, level=level)$fc
   if (is.null(contrast)) {
     fx <- sqrt(rowMeans(F**2, na.rm = TRUE))
+    #fx <- sqrt(apply(F**2, 1, max, na.rm = TRUE))    
   } else if (contrast %in% colnames(F)) {
     fx <- F[, contrast]
   } else {
@@ -309,7 +310,7 @@ pgx.computePCSF_multiomics <- function(pgx, contrast,
 pgx.computePCSF_gset <- function(pgx, contrast,
                                  gmt.rho = 0.8, gset.filter = NULL,
                                  highcor = 0.9, ntop = 250,
-                                 ncomp = 3, beta = 1,
+                                 ncomp = 3, beta = 1, 
                                  rm.negedge = TRUE,
                                  dir = "both") {
 
@@ -441,11 +442,13 @@ solvePCSF <- function(X, fx, ppi, labels = NULL, ntop = 250, ncomp = 3,
   ee <- ee[!is.na(ee$cost), ]
   dim(ee)
 
+  # 1. Construct PPI interactome
   suppressMessages(suppressWarnings(
     xppi <- PCSF::construct_interactome(ee)
   ))
   prize1 <- abs(fx[igraph::V(xppi)$name])
 
+  # 2. Solve the PCSF
   suppressMessages(suppressWarnings(
     pcsf <- try(PCSF::PCSF(xppi,
       terminals = prize1, w = 2,
@@ -458,6 +461,7 @@ solvePCSF <- function(X, fx, ppi, labels = NULL, ntop = 250, ncomp = 3,
     return(NULL)
   }
 
+  # set foldchange
   igraph::V(pcsf)$foldchange <- fx[igraph::V(pcsf)$name]
   if (!is.null(labels)) {
     igraph::V(pcsf)$label <- labels[igraph::V(pcsf)$name]
@@ -504,7 +508,7 @@ plotPCSF <- function(pcsf,
                      nlabel = -1,
                      lab_exp = 3,
                      border_width = 1.5,
-                     edge_width = 5,
+                     edge_cex = 1,
                      edge_length = NULL,
                      cut.clusters = FALSE,
                      nlargest = -1
@@ -609,13 +613,15 @@ plotPCSF <- function(pcsf,
   comp <- unique(cc)
   for(k in comp) {
     ii <- which(cc == k)
-    #f <- max(label_cex1) / max(label_cex1[ii])
-    f <- mean(label_cex1) / mean(label_cex1[ii])    
+    #f <- mean(label_cex1) / mean(label_cex1[ii])
+    f <- median(label_cex1) / median(label_cex1[ii])
     label_cex1[ii] <- label_cex1[ii] * f
   }
 
   ## this limits number of labels per component
-  if (nlabel > 0) {
+  if (nlabel == 0) {
+    igraph::V(pcsf)$label <- ""
+  } else if (nlabel > 0) {    
     for(k in comp) {
       ii <- which(cc == k)
       top.cex <- ii[head(order(-label_cex1[ii]), nlabel)]
@@ -642,7 +648,7 @@ plotPCSF <- function(pcsf,
       node_size = 15 * node_cex1,
       node_label_cex = 40 * label_cex1,
       invert.weight = TRUE,
-      edge_width = edge_width,
+      edge_width = 5 * edge_cex,
       edge_length = edge_length,
       border_width = border_width,
       Steiner_node_color = "lightblue",
@@ -668,6 +674,7 @@ plotPCSF <- function(pcsf,
       label.fx = label_cex1,
       label.cex = 1.3 * label_cex,
       vertex.cex = node_cex,
+      edge.cex = edge_cex,
       layoutMatrix = layoutMatrix
     )
     out <- NULL
@@ -812,6 +819,7 @@ visplot.PCSF <- function(
 #'
 plotPCSF.IGRAPH <- function(net, fx = NULL, vertex.cex = 1,
                             label.fx = fx, label.cex = 4,
+                            edge.cex = 1,
                             layoutMatrix = NULL, ...) {
   if (is.null(fx)) fx <- igraph::V(net)$prize
   fx <- fx / max(abs(fx), na.rm = TRUE)
@@ -860,7 +868,7 @@ plotPCSF.IGRAPH <- function(net, fx = NULL, vertex.cex = 1,
     vertex.label.dist = 0.3 + 0.7 * vv,
     vertex.label.degree = -0 * pi,
     vertex.label.family = "sans",
-    edge.width = 2.5 * edge.width,
+    edge.width = 2 * edge.cex * edge.width,
     layout = layoutMatrix,
     ...
   )
@@ -868,10 +876,10 @@ plotPCSF.IGRAPH <- function(net, fx = NULL, vertex.cex = 1,
 }
 
 #' @export
-pgx.getPCSFcentrality <- function(pgx, contrast, level="gene", pcsf = NULL,
+pgx.getPCSFcentrality <- function(pgx, contrast, pcsf, level="gene", 
                                   plot = TRUE, n = 10) {
   if (is.null(pcsf)) {
-    pcsf <- pgx.computePCSF(pgx, contrast, level = level, ntop = 250, ncomp = 3)
+    stop("ERROR. must provide pcsf object")
   }
 
   ## centrality
@@ -912,37 +920,43 @@ pgx.getPCSFcentrality <- function(pgx, contrast, level="gene", pcsf = NULL,
 #' merged layout.
 #'
 #' @export
-pcsf.cut_and_relayout <- function(net, ncomp=-1,
+pcsf.cut_and_relayout <- function(net, cut = TRUE,
+                                  ncomp=-1, component.wise = TRUE,
                                   cluster.method = c("louvain","leiden")[1],
                                   leiden.resolution = 0.1,
                                   layout = c("kk","tree","circle","graphopt")[1],
                                   as_grid = TRUE) {
-  ## we need component-wise layout
-  mwt <- mean(igraph::E(net)$weight,na.rm=TRUE)
-  ewt <- 1/(1e-3*mwt + igraph::E(net)$weight)
-  if(cluster.method == "leiden") {
-    clust <- igraph::cluster_leiden(
-      net, weights=ewt, resolution = leiden.resolution)
+
+  if(cut == FALSE) {
+    g <- net
   } else {
-    clust <- igraph::cluster_louvain(net, weights=ewt)
+    ## we need component-wise layout
+    mwt <- mean(igraph::E(net)$weight,na.rm=TRUE)
+    ewt <- 1/(1e-3*mwt + igraph::E(net)$weight)
+    if(cluster.method == "leiden") {
+      clust <- igraph::cluster_leiden(
+        net, weights=ewt, resolution = leiden.resolution)
+    } else {
+      clust <- igraph::cluster_louvain(net, weights=ewt)
+    }
+    ee <- igraph::E(net)[igraph::crossing(clust, net)]
+    g <- igraph::delete_edges(net, ee)
+    
+    ## calculate component-wise layout
+    g <- tapply( igraph::V(g), igraph::components(g)$membership,
+      function(v) igraph::subgraph(g,v))
+    
+    if(ncomp>0) {
+      fx <- igraph::V(net)$prize
+      names(fx) <- igraph::V(net)$name
+      gx <- sapply(g, function(x) sum(fx[igraph::V(x)$name]**2))
+      g <- head( g[order(-gx)], ncomp )
+    }
+    
+    ## create union and layout
+    g <- igraph::disjoint_union(g)
   }
-  ee <- igraph::E(net)[igraph::crossing(clust, net)]
-  g <- igraph::delete_edges(net, ee)
   
-  ## calculate component-wise layout
-  g <- tapply( igraph::V(g), igraph::components(g)$membership,
-              function(v) igraph::subgraph(g,v))
-
-  if(ncomp>0) {
-    fx <- igraph::V(net)$prize
-    names(fx) <- igraph::V(net)$name
-    gx <- sapply(g, function(x) sum(fx[igraph::V(x)$name]**2))
-    g <- head( g[order(-gx)], ncomp )
-  }
-  
-  ## create union and layout
-  g <- igraph::disjoint_union(g)
-
   layout <- layout[1]
   all.layouts = c("tree","circle","fr","kk","gem","graphopt")
   if(!layout %in% all.layouts) {
@@ -961,35 +975,39 @@ pcsf.cut_and_relayout <- function(net, ncomp=-1,
     igraph::with_kk(weights=NA)
   )
 
-  pos <- igraph::layout_(g, FUN, igraph::component_wise())
+  if(component.wise) {
+    pos <- igraph::layout_(g, FUN, igraph::component_wise())
+  } else {
+    pos <- igraph::layout_(g, FUN)
+  }
   rownames(pos) <- igraph::V(g)$name
 
   mm <- igraph::components(g)$membership
   table(mm)
 
-  if(layout=="tree" && as_grid) {
-    dx <- tapply(pos[,1],mm,function(x) diff(range(x)))
-    dy <- tapply(pos[,2],mm,function(y) diff(range(y)))    
-    ydepth <- tapply(pos[,2], mm, function(y) length(unique(y)))
-    ydepth
-    k=1
-    for(k in 1:length(unique(mm))) {
-      ii <- which(mm == k)
-      new_center <- grid.pos[k,,drop=FALSE]
-      pos.ii <- pos[ii,,drop=FALSE]
-      pos.ii[,2] <- as.integer(factor(rank(pos.ii[,2])))
-      pos[ii,] <- pos.ii
-    }
-  }
-  
-  if(as_grid) {
-    ## Layout components on a grid
+  ## Layout components on a grid
+  if(as_grid) {    
     mm <- igraph::components(g)$membership
     table(mm)
     mm.order <- order(table(mm),decreasing=TRUE)
     ncomp <- length(unique(mm))
     nx <- ceiling(sqrt(ncomp))
     grid.pos <- t(sapply(0:(ncomp-1), function(i) c(i%%nx, i%/%nx)))
+
+    if(layout=="tree") {
+      dx <- tapply(pos[,1],mm,function(x) diff(range(x)))
+      dy <- tapply(pos[,2],mm,function(y) diff(range(y)))    
+      ydepth <- tapply(pos[,2], mm, function(y) length(unique(y)))
+      ydepth
+      k=1
+      for(k in 1:length(unique(mm))) {
+        ii <- which(mm == k)
+        new_center <- grid.pos[k,,drop=FALSE]
+        pos.ii <- pos[ii,,drop=FALSE]
+        pos.ii[,2] <- as.integer(factor(rank(pos.ii[,2])))
+        pos[ii,] <- pos.ii
+      }
+    }
     
     dx <- tapply(1:nrow(pos), mm, function(i) diff(range(pos[i,1])))
     dy <- tapply(1:nrow(pos), mm, function(i) diff(range(pos[i,2])))    
