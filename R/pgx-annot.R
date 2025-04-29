@@ -293,14 +293,14 @@ getGeneAnnotation.ANNOTHUB <- function(
     probe_type = NULL,
     second.pass = TRUE,
     verbose = TRUE) {
+
   if (is.null(organism)) {
     warning("[getGeneAnnotation.ANNOTHUB] Please specify organism")
     return(NULL)
   }
 
-  if (verbose) {
+  if (verbose)
     message("[getGeneAnnotation.ANNOTHUB] Retrieving gene annotation...")
-  }
 
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
@@ -309,15 +309,16 @@ getGeneAnnotation.ANNOTHUB <- function(
   genes <- NULL
 
   ## get correct OrgDb database for this organism
-  orgdb <- getOrgDb(organism, use.ah = use.ah)
+  orgdb <- getOrgDb(organism, use.ah = use.ah)  
   if(is.null(orgdb)) {
     message("[getGeneAnnotation.ANNOTHUB] ERROR: orgdb == NULL: ", is.null(orgdb) )
     return(NULL)
-  }
+  } else {
+    message("[getGeneAnnotation.ANNOTHUB] OrgDb database retrieved...")
+  }  
   
-  if (is.null(probes)) {
-    probes <- AnnotationDbi::keys(orgdb)
-  }
+  if (is.null(probes)) probes <- AnnotationDbi::keys(orgdb)
+
   ## Backup probes as probes0, give names of probes the original name.
   probes[is.na(probes) | probes==""] <- "NA"
   probes0 <- make.unique(probes)
@@ -367,18 +368,23 @@ getGeneAnnotation.ANNOTHUB <- function(
       keytype = probe_type
     )
   ))
-  symbols <- AnnotationDbi::keys(orgdb, keytype="SYMBOL")
-  
+
   # some organisms do not provide symbol but rather gene name (e.g. yeast)
+  if ("SYMBOL" %in% cols) {
+    symbols <- AnnotationDbi::keys(orgdb, keytype="SYMBOL")
+  } else if ("GENENAME" %in% cols) {
+    symbols <- AnnotationDbi::keys(orgdb, keytype="GENENAME")
+  }
+
   if (!"SYMBOL" %in% colnames(annot)) {
     annot$SYMBOL <- annot$GENENAME
     annot$GENENAME <- annot$ALIAS
-  }
-  if ("SYMBOL" %in% colnames(annot)) {
+  } else {
     not.symbols <- !(annot$SYMBOL %in% symbols)
     if(length(not.symbols)) annot$SYMBOL[not.symbols] <- NA
   }
-##  annot$ALIAS <- NULL
+
+  ##  annot$ALIAS <- NULL
   annot$SYMBOL[is.na(annot$SYMBOL)] <- ""
   
   ## Attempt to retrieve chr map via org.Mm.egCHRLOC / org.Rn.egCHRLOC.
