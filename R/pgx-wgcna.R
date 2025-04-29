@@ -357,13 +357,20 @@ wgcna.compute_geneStats <- function(net, datExpr, datTraits, TOM) {
 
   ## Fold-change
   is.binary <- apply(datTraits, 2, function(a) length(unique(a[!is.na(a)])) == 2)
-  Y <- datTraits[, which(is.binary)]
+  binY <- datTraits[, which(is.binary)]
   lm <- lapply(Y, function(y) {
     gx.limma(t(datExpr), y,
       lfc = 0, fdr = 1,
       sort.by = "none", verbose = 0
     )
   })
+  contY <- datTraits[, which(!is.binary)]
+  contlm <- lapply(contY, function(y) {
+    rho <- cor(datExpr, y, use="pairwise")[,1]
+    pvalue <- cor.pvalue(rho, length(y))
+    cbind(rho, pvalue)
+  })
+  
   foldChange <- sapply(lm, function(m) m$logFC)
   foldChangePvalue <- sapply(lm, function(m) m$P.Value)
   rownames(foldChange) <- rownames(lm[[1]])
