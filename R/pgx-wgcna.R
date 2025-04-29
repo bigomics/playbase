@@ -357,24 +357,36 @@ wgcna.compute_geneStats <- function(net, datExpr, datTraits, TOM) {
 
   ## Fold-change
   is.binary <- apply(datTraits, 2, function(a) length(unique(a[!is.na(a)])) == 2)
-  binY <- datTraits[, which(is.binary)]
-  lm <- lapply(Y, function(y) {
+  binY <- datTraits[, which(is.binary), drop = FALSE]
+  lm <- lapply(binY, function(y) {
     gx.limma(t(datExpr), y,
       lfc = 0, fdr = 1,
       sort.by = "none", verbose = 0
     )
   })
-  contY <- datTraits[, which(!is.binary)]
-  contlm <- lapply(contY, function(y) {
-    rho <- cor(datExpr, y, use="pairwise")[,1]
-    pvalue <- cor.pvalue(rho, length(y))
-    cbind(rho, pvalue)
-  })
-  
+
   foldChange <- sapply(lm, function(m) m$logFC)
   foldChangePvalue <- sapply(lm, function(m) m$P.Value)
   rownames(foldChange) <- rownames(lm[[1]])
   rownames(foldChangePvalue) <- rownames(lm[[1]])
+
+  # Continuous traits (not always present)
+  contY <- datTraits[, which(!is.binary), drop = FALSE]
+  if(ncol(contY) > 0) {
+    contlm <- lapply(contY, function(y) {
+      rho <- cor(datExpr, y, use="pairwise")[,1]
+      P.Value <- cor.pvalue(rho, length(y))
+      data.frame(rho, P.Value)
+    })
+    foldChange.cont <- sapply(contlm, function(m) m$rho)
+    foldChangePvalue.cont <- sapply(contlm, function(m) m$P.Value)
+    rownames(foldChange.cont) <- rownames(contlm[[1]])
+    rownames(foldChangePvalue.cont) <- rownames(contlm[[1]])
+
+    # Merge
+    foldChange <- cbind(foldChange, foldChange.cont)
+    foldChangePvalue <- cbind(foldChangePvalue, foldChangePvalue.cont)
+  }
 
   ## Gene Centrality. Compute centrality of gene in Module subgraph
   ## using TOM matrix.
