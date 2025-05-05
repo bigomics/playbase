@@ -7,11 +7,13 @@
 pgx.computePCSF_gset(
   pgx,
   contrast,
+  as_prize = "fc",
+  use_rank = FALSE,
   gmt.rho = 0.8,
   gset.filter = NULL,
   highcor = 0.9,
-  ntop = 250,
-  ncomp = 3,
+  ntop = 500,
+  ncomp = 10,
   beta = 1,
   rm.negedge = TRUE,
   dir = "both"

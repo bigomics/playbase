@@ -6,20 +6,26 @@
 \usage{
 plotPCSF(
   pcsf,
-  highlightby = c("centrality", "prize")[1],
+  sizeby = "prize",
   colorby = "foldchange",
+  highlightby = c("centrality", "prize")[1],
+  labels = NULL,
   plotlib = c("visnet", "igraph")[1],
   layout = c("layout_with_kk", "hierarchical")[1],
   layoutMatrix = NULL,
+  asp = 1,
   physics = TRUE,
   node_cex = 1,
+  node_alpha = 0.8,
   label_cex = 1,
+  label_gamma = 2,
   nlabel = -1,
-  lab_exp = 3,
   border_width = 1.5,
   edge_cex = 1,
   edge_length = NULL,
   cut.clusters = FALSE,
+  cut.layout = "kk",
+  cut.resolution = 0.05,
   nlargest = -1
 )
 }
