@@ -135,7 +135,7 @@ pgx.getGEOcounts <- function(id, archs.h5) {
     expr <- pgx.getGEOcounts.GEOquery(id)
     if (!is.null(expr)) src <- "GEO"
   }
-
+  message("----------------")
   if (is.null(expr)) {
     cat("WARNING:: Could not get GEO expression. please download manually.\n")
     return(NULL)
@@ -201,7 +201,7 @@ pgx.getGEOcounts.archs4 <- function(id, h5.file) {
   idx <- which(sapply(sample.series, function(s) id %in% s))
 
   if (length(idx) == 0) {
-    cat("WARNING: series", id, "not in ARCHS4 matrix file\n")
+    cat("WARNING: series", id, "not in ARCHS4 matrix file\n\n")
     return(NULL)
   }
   X <- rhdf5::h5read(h5.file, "data/expression", index = list(NULL, idx))
@@ -239,7 +239,7 @@ pgx.getGEOcounts.recount <- function(id) {
   project_info$project
 
   if (length(project_info$project) == 0) {
-    cat("could not find", id, "in recount database\n")
+    cat("WARNING: series", id, "not in recount database\n\n")
     return(NULL)
   }
 
@@ -698,8 +698,7 @@ eset.parsePhenoFromTitle <- function(title, split = NULL) {
 #' @description Extracts official gene symbols from feature datatable of a GEO dataset downloaded with GEOquery.
 #' It first looks for a column containing gene symbols by matching against the org.Hs.egSYMBOL database.
 #' If no direct symbol column is found, it looks for an ENTREZ identifier and maps to symbols using org.Hs.egSYMBOL.
-#' Then it looks at REFSEQ identifiers. Then it looks at ENSEMBLE IDs. If no approach works, it tries to
-#' extract symbols from the gene title or description columns.
+#' Then it looks at REFSEQ identifiers. Then it looks at ENSEMBLE IDs. If no approach works, it returns NULL.
 #' @return A character vector of gene symbols, or NULL if symbols could not be extracted.
 #' @export
 pgx.getSymbolFromFeatureData <- function(fdata) {
@@ -758,7 +757,7 @@ pgx.getSymbolFromFeatureData <- function(fdata) {
     }
   }
 
-  ## Otherwise try Ensemble ID
+  ## EnsembleID column
   gene.column <- grep("gene|mrna|transcript", colnames(fdata), ignore.case = TRUE)
   has.ens <- apply(fdata[, gene.column, drop = FALSE], 2, function(s) mean(grepl("ENS", s)))
   if (any(has.ens > 0.3)) {
