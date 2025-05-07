@@ -10,38 +10,34 @@
 
 #' @title pgx.getGEOseries
 #' @description Download and process GEO dataset
-#'
-#' @param id GEO series ID to download
+#' @param id GEO accession
 #' @param archs.h5 Path to ARCHS4 HDF5 file containing GEO data
 #' @param convert.hugo Logical, convert symbols to HUGO if TRUE
-#'
-#' @return List containing processed counts, samples, and genes
-#'
-#' @details This function downloads and processes a GEO dataset specified by the ID.
-#' It first checks if the data is in the ARCHS4 file. If not, it retrieves it from GEO using geoquery.
-#' The data matrices are subset to intersecting samples, converted to HUGO symbols if specified,
-#' and duplicate symbols are summed.
-#'
-#' The result is a list containing the expression matrix, sample metadata, and gene symbols.
-#'
+#' @return List containing processed counts, sample metadata, and genes
+#' @details Downloads GEO accession ID data and conduct basic processing,
+#' including probe/gene conversion and creating autocontrasts [???].
+#' First checks if the data is in ARCHS4. If not, it checks if it is in recount.
+#' If not, it retrieves from GEO. The data matrices are subset to intersecting
+#' samples, converted to HUGO symbols if specified, and duplicate symbols are summed.
 #' @export
-pgx.getGEOseries <- function(id, archs.h5 = "human_matrix.h5", convert.hugo = TRUE) {
-  ## Highly automagic download of GEO datasets from different
-  ## sources with automatic probe/gene conversion and creating
-  ## autocontrasts. The GEO series is first searched in a locally
-  ## stored ARCHS4 H5 file, then if it is available at the recount
-  ## database, if not it is retrieved from GEO using geoquery.
+pgx.getGEOseries <- function(id,
+                             archs.h5 = "human_matrix.h5",
+                             convert.hugo = TRUE
+                             ) {
 
   is.valid.id <- is.GEO.id.valid(id) 
   if (!is.valid.id) stop("[pgx.getGEOseries] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
 
-  ## get data/pheno matrices
-  geo <- pgx.getGEOcounts(id, archs.h5 = archs.h5)
-  counts <- geo$expr
+  ## get counts from archs4 or recount or GEO 
+  counts <- pgx.getGEOcounts(id, archs.h5 = archs.h5)$expr
+  if (is.null(counts)) {
+    message("[pgx.getGEOseries] WARNING:", id, " not found in archs4, recount, GEO. Exiting.\n")
+    return(NULL)
+  }
 
-  ## get sample info
-  meta <- pgx.getGeoMetadata(id)
+  ## get sample metadata
+  meta <- pgx.getGEOmetadata(id)
 
   ## conform matrices
   samples <- intersect(rownames(meta), colnames(counts))
