@@ -9,6 +9,7 @@ pgx.computePCSF_gset(
   contrast,
   as_prize = "fc",
   use_rank = FALSE,
+  use_rank2 = FALSE,
   gmt.rho = 0.8,
   gset.filter = NULL,
   highcor = 0.9,
