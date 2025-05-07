@@ -380,7 +380,7 @@ pgx.getGEOexperimentInfo <- function(id) {
   if (!is.valid.id) stop("[pgx.getGEOexperimentInfo] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
 
-  suppressMessages(gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE)))
+  suppressMessages(gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE), silent = TRUE))
   if (inherits(gse, "try-error")) {
     message("[pgx.getGEOexperimentInfo] Error: GEOquery::getGEO failed to get", id, ".\n")
     return(NULL)
@@ -402,7 +402,9 @@ pgx.getGEOmetadata.fromGSM <- function(id) {
   id <- as.character(id)
 
   message("[pgx.getGEOmetadata.fromGSM] Attempt to download metadata without GSEmatrix...")
-  gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE), silent = TRUE)
+  suppressMessages(
+    gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE), silent = TRUE)
+  )
   if (inherits(gse, "try-error")) {
     message("[pgx.getGEOmetadata.fromGSM] Error: getGEO failed to retrieve metadata for ", id, "\n")
     return(NULL)
@@ -447,7 +449,7 @@ pgx.getGEOmetadata.fromGSM <- function(id) {
     message("[pgx.getGEOmetadata.fromGSM] Success!") 
     return(meta)
   } else {
-    message("[pgx.getGEOmetadata.fromGSM] WARNING: no shared samples between GSM and ch1_info! Exiting.\n")
+    message("[pgx.getGEOmetadata.fromGSM] WARNING: no shared samples between GSM & ch1_info! Exiting.\n")
     return(NULL)
   }
 
@@ -473,7 +475,9 @@ pgx.getGEOmetadata.fromEset <- function(id) {
   id <- as.character(id)
 
   message("[pgx.getGEOmetadata.fromEset] Attempt to download metadata with GSEMatrix...")
-  gse <- try(GEOquery::getGEO(id, GSEMatrix = TRUE, getGPL = FALSE), silent = TRUE)
+  suppressMessages(
+    gse <- try(GEOquery::getGEO(id, GSEMatrix = TRUE, getGPL = FALSE), silent = TRUE)
+  )
   if (inherits(gse, "try-error")) {
     message("[pgx.getGEOmetadata.fromEset] Error: getGEO failed to retrieve metadata for ", id, "\n")
     return(NULL)
@@ -484,6 +488,7 @@ pgx.getGEOmetadata.fromEset <- function(id) {
   meta.list <- lapply(gse, function(x) pgx.getGEOmetadata.fromEset.helper(x))
   meta <- do.call(rbind, meta.list)
   meta <- data.frame(meta, stringsAsFactors = FALSE, check.names = FALSE)
+  message("[pgx.getGEOmetadata.fromEset] Success!")
   rm(meta.list)
 
   return(meta)
