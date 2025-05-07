@@ -267,8 +267,16 @@ pgx.getGEOcounts.recount <- function(id) {
   is.count <- (qx[5] > 100) || (qx[6] - qx[1] > 50 && qx[2] > 0) ||
     (qx[2] > 0 && qx[2] < 1 && qx[4] > 1 && qx[4] < 2) ## from GEO2R script
   if (!is.count) counts <- 2 ** counts
+
+  ## rm missing genes and sum linear intensities
+  jj <- which(!is.na(rownames(counts)) & rownames(counts) != "")
+  counts <- counts[jj, ]
+  counts <- tapply(1:nrow(counts), rownames(counts), function(ii) {
+    Matrix::colSums(counts[ii, , drop = FALSE], na.rm = TRUE)
+  })
+  counts <- do.call(rbind, counts)
   message("[pgx.getGEOcounts.recount] Success!")
-  
+
   return(counts)
 
 }
