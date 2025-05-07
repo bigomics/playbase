@@ -401,7 +401,7 @@ pgx.getGEOmetadata.fromGSM <- function(id) {
   if (!is.valid.id) stop("[pgx.getGEOmetadata.fromGSM] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
 
-  message("[pgx.getGEOmetadata.fromGSM] Attempt to download metadata without GSEmatrix...")
+  message("[pgx.getGEOmetadata.fromGSM] Attempt to download metadata without GSEMatrix...")
   suppressMessages(
     gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE), silent = TRUE)
   )
@@ -449,7 +449,7 @@ pgx.getGEOmetadata.fromGSM <- function(id) {
     message("[pgx.getGEOmetadata.fromGSM] Success!") 
     return(meta)
   } else {
-    message("[pgx.getGEOmetadata.fromGSM] WARNING: no shared samples between GSM & ch1_info! Exiting.\n")
+    message("[pgx.getGEOmetadata.fromGSM] WARNING: no shared samples between GSM & ch1_info. Exiting.\n")
     return(NULL)
   }
 
@@ -526,6 +526,12 @@ pgx.getGEOmetadata.fromEset.helper <- function(eset) {
   if (any(ch1_sel)) {
     ch1_info <- meta0[, ch1_sel, drop = FALSE]
     colnames(ch1_info) <- paste0("characteristics_", 1:ncol(ch1_info))
+    ch1_info <- apply(ch1_info, 2, function(x) sub("^Clinical info: ", "", x))
+    ch_vars <- apply(ch1_info, 2, function(x) return(unique(sub("[:=].*", "", x))))
+    colnames(ch1_info) <- unname(ch_vars)
+    ch1_info <- apply(ch1_info, 2, function(x) sub("[:=].*", "", x))
+
+    
     meta <- cbind(meta, ch1_info)
     meta <- data.frame(meta, stringsAsFactors = FALSE, check.names = FALSE)    
   }
