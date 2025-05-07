@@ -185,40 +185,45 @@ pgx.getGEOmetadata <- function(id) {
 pgx.getGEOcounts.archs4 <- function(id, h5.file) {
 
   is.valid.id <- is.GEO.id.valid(id) 
-  if (!is.valid.id) stop("[pgx.getGEOcounts.archs4] FATAL: ID is invalid. Exiting.")
+  if (!is.valid.id) stop("[pgx.getGEOcounts.archs4] FATAL: ID is invalid. Exiting.\n")
   id <- as.character(id)
 
-  rhdf5::h5ls(h5.file)
+  if (is.null(h5.file) || h5.file == "")
+    stop("[pgx.getGEOcounts.archs4] FATAL: invalid path to h5.file ID. Exiting.\n")
+
   sample.series <- rhdf5::h5read(h5.file, "meta/Sample_series_id")
   sample.series <- strsplit(as.character(sample.series), split = "Xx-xX")
-  
-  gse.series <- sort(unique(unlist(sample.series)))
-  id %in% gse.series
-
   idx <- which(sapply(sample.series, function(s) id %in% s))
-
-  if (length(idx) == 0) {
-    cat("WARNING: series", id, "not in ARCHS4 matrix file\n\n")
+  if (!id %in% sample.series) {
+    message("[pgx.getGEOcounts.archs4] WARNING: series ", id, " not in ARCHS4. Exiting.\n")
     return(NULL)
   }
-  X <- rhdf5::h5read(h5.file, "data/expression", index = list(NULL, idx))
+  message("[pgx.getGEOcounts.archs4] Series ", id, " found in ARCHS4.")
 
+  ## get matrix
+  counts <- rhdf5::h5read(h5.file, "data/expression", index = list(NULL, idx))
   sample.acc <- rhdf5::h5read(h5.file, "meta/Sample_geo_accession")
   gene_name <- rhdf5::h5read(h5.file, "meta/genes")
-  colnames(X) <- sample.acc[idx]
-  rownames(X) <- gene_name
+  colnames(counts) <- sample.acc[idx]
+  rownames(counts) <- gene_name
 
-  ## collapse by symbol
-  jj <- !is.na(gene_name) & gene_name != ""
-  X <- X[jj, ]
+  ## ensure counts
+  qx <- as.numeric(stats::quantile(counts, c(0., 0.25, 0.5, 0.75, 0.99, 1.0), na.rm = T))
+  is.count <- (qx[5] > 100) || (qx[6] - qx[1] > 50 && qx[2] > 0) ||
+    (qx[2] > 0 && qx[2] < 1 && qx[4] > 1 && qx[4] < 2) ## from GEO2R script
+  if (!is.count) counts <- 2 ** counts
+  
+  ## rm missing genes and sum linear intensities
+  jj <- which(!is.na(gene_name) & gene_name != "")
+  counts <- counts[jj, ]
   gene_name <- gene_name[jj]
-  ## sum intensities (linear)
-  X2 <- tapply(1:nrow(X), gene_name, function(ii) {
-    Matrix::colSums(X[ii, , drop = FALSE], na.rm = TRUE) ## not log!!
+  counts <- tapply(1:nrow(counts), gene_name, function(ii) {
+    Matrix::colSums(counts[ii, , drop = FALSE], na.rm = TRUE)
   })
-  X2 <- do.call(rbind, X2)
+  counts <- do.call(rbind, counts)
+  message("[pgx.getGEOcounts.archs4] Success!")
 
-  return(X2)
+  return(counts)
 
 }
 
@@ -234,14 +239,14 @@ pgx.getGEOcounts.recount <- function(id) {
   if (!is.valid.id) stop("[pgx.getGEOcounts.recount] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
 
-  ## Find a project of interest
   project_info <- recount::abstract_search(id)
   pid <- project_info$project
   if (length(pid) == 0) {
-    message("[pgx.getGEOcounts.recount] WARNING: series ", id, " not in recount. \n\n")
+    message("[pgx.getGEOcounts.recount] WARNING: series ", id, " not in recount. Exiting.\n")
     return(NULL)
   }
-
+  message("[pgx.getGEOcounts.recount] Series ", id, " found in recount database.")
+  
   ## Download the gene-level RangedSummarizedExperiment data
   outdir <- file.path(tempdir(), pid)
   cc <- try(recount::download_study(pid, outdir = outdir), silent = TRUE)
@@ -257,6 +262,13 @@ pgx.getGEOcounts.recount <- function(id) {
   rse <- recount::scale_counts(rse_gene)
   counts <- MultiAssayExperiment::assay(rse)
 
+  ## ensure counts
+  qx <- as.numeric(stats::quantile(counts, c(0., 0.25, 0.5, 0.75, 0.99, 1.0), na.rm = T))
+  is.count <- (qx[5] > 100) || (qx[6] - qx[1] > 50 && qx[2] > 0) ||
+    (qx[2] > 0 && qx[2] < 1 && qx[4] > 1 && qx[4] < 2) ## from GEO2R script
+  if (!is.count) counts <- 2 ** counts
+  message("[pgx.getGEOcounts.recount] Success!")
+  
   return(counts)
 
 }
@@ -306,7 +318,7 @@ pgx.getGEOcounts.GEOquery <- function(id) {
     qx <- as.numeric(stats::quantile(ex, c(0., 0.25, 0.5, 0.75, 0.99, 1.0), na.rm = T))
     is.count <- (qx[5] > 100) || (qx[6] - qx[1] > 50 && qx[2] > 0) ||
       (qx[2] > 0 && qx[2] < 1 && qx[4] > 1 && qx[4] < 2) ## from GEO2R script
-    if (!is.count) ex <- 2**ex
+    if (!is.count) ex <- 2 ** ex
 
     ## featuredata
     has.fdata <- !is.null(Biobase::fData(eset)) && NCOL(Biobase::fData(eset)) > 0
