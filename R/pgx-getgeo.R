@@ -41,9 +41,14 @@ pgx.getGEOseries <- function(id,
 
   ## conform matrices
   samples <- intersect(rownames(meta), colnames(counts))
+  if (length(samples) == 0) {
+    message("[pgx.getGEOseries] WARNING: no shared samples between counts and samples. Exiting.\n")
+    return(NULL)
+  }
   meta <- meta[samples, , drop = FALSE]
   counts <- counts[, samples, drop = FALSE]
 
+  ...>
   ## convert to latest official HUGO???
   if (convert.hugo) {
     symbol <- alias2hugo(rownames(counts)) ## auto-detect mouse/human
