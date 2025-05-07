@@ -8,7 +8,6 @@
 ## Query GEO
 ## -------------------------------------------------------------------------------------
 
-
 #' @title pgx.getGEOseries
 #' @description Download and process GEO dataset
 #'
@@ -27,16 +26,15 @@
 #'
 #' @export
 pgx.getGEOseries <- function(id, archs.h5 = "human_matrix.h5", convert.hugo = TRUE) {
-  ##
   ## Highly automagic download of GEO datasets from different
   ## sources with automatic probe/gene conversion and creating
   ## autocontrasts. The GEO series is first searched in a locally
   ## stored ARCHS4 H5 file, then if it is available at the recount
   ## database, if not it is retrieved from GEO using geoquery.
-  ##
-  ## id:      GEO id
-  ## return:  object with counts, samples, genes.
-  ##
+
+  is.valid.id <- is.GEO.id.valid(id) 
+  if (!is.valid.id) stop("[pgx.getGEOseries] FATAL: ID is invalid. Exiting.")
+  id <- as.character(id)
 
   ## get data/pheno matrices
   geo <- pgx.getGEOcounts(id, archs.h5 = archs.h5)
@@ -70,10 +68,8 @@ pgx.getGEOseries <- function(id, archs.h5 = "human_matrix.h5", convert.hugo = TR
   ## get categorical phenotypes
   meta1 <- apply(meta, 2, trimsame)
   rownames(meta1) <- rownames(meta)
-  sampleinfo <- pgx.discretizePhenotypeMatrix(
-    meta1,
-    min.ncat = 2, max.ncat = 20, remove.dup = TRUE
-  )
+  sampleinfo <- pgx.discretizePhenotypeMatrix(meta1, min.ncat = 2,
+    max.ncat = 20, remove.dup = TRUE)
   sampleinfo <- data.frame(sampleinfo, stringsAsFactors = FALSE, check.names = FALSE)
 
   ## automagically create contrast matrix
@@ -83,7 +79,6 @@ pgx.getGEOseries <- function(id, archs.h5 = "human_matrix.h5", convert.hugo = TR
     slen <- 15
     ref <- NA
     ct <- pgx.makeAutoContrasts(sampleinfo, mingrp = 3, slen = 20, ref = NA)
-    is.null(ct)
     if (is.null(ct)) {
       ct <- pgx.makeAutoContrasts(sampleinfo, mingrp = 2, slen = 20, ref = NA)
     }
@@ -107,17 +102,24 @@ pgx.getGEOseries <- function(id, archs.h5 = "human_matrix.h5", convert.hugo = TR
   )
 
   return(out)
+
 }
 
 
-#' @describeIn pgx.getGEOseries Download and process count data from GEO into a PGX object.
-#' It takes a GEO accession as input, downloads the count matrix and sample metadata, processes
-#' it into a PGX object with gene annotation, sample info, and contrasts.
+#' @describeIn pgx.getGEOcounts Download count data from GEO. First check
+#' if the GEO ID is in archs5, then in recount. If not, try to get from GEO. 
+#' @return List of counts matrix and source.
+#' @param id GEO accession ID.
+#' @param archs.h5 Path to archs.h5 dataset.
 #' @export
 pgx.getGEOcounts <- function(id, archs.h5) {
-  expr <- NULL
-  src <- ""
 
+  is.valid.id <- is.GEO.id.valid(id) 
+  if (!is.valid.id) stop("[pgx.getGEOcounts] FATAL: ID is invalid. Exiting.")
+  id <- as.character(id)
+
+  expr=NULL; src=""
+  
   if (!is.null(archs.h5) && is.null(expr)) {
     message("[pgx.getGEOcounts]: pgx.getGEOcounts.archs4....")
     expr <- pgx.getGEOcounts.archs4(id, archs.h5)
@@ -135,7 +137,7 @@ pgx.getGEOcounts <- function(id, archs.h5) {
     expr <- pgx.getGEOcounts.GEOquery(id)
     if (!is.null(expr)) src <- "GEO"
   }
-  message("----------------")
+
   if (is.null(expr)) {
     cat("WARNING:: Could not get GEO expression. please download manually.\n")
     return(NULL)
@@ -145,38 +147,30 @@ pgx.getGEOcounts <- function(id, archs.h5) {
 
 }
 
-#' @describeIn pgx.getGEOseries Download and extract the metadata from a GEO series.
+#' @describeIn pgx.getGEOmetadata Download and extract the metadata from a GEO series.
 #' @export
-pgx.getGeoMetadata <- function(id) {
-  ##
-  ## load series and platform data from GEO
-  ##
+pgx.getGEOmetadata <- function(id) {
 
-  id
+  is.valid.id <- is.GEO.id.valid(id) 
+  if (!is.valid.id) stop("[pgx.getGEOmetadata] FATAL: ID is invalid. Exiting.")
+  id <- as.character(id)
+
   ## First try without downloading the GSEMatrix
-  pheno <- NULL
-  pheno <- pgx.getGeoMetadata.fromGSM(id)
-  is.null(pheno)
-  if (is.null(pheno)) {
-    ## try from Eset
-    pheno <- pgx.getGeoMetadata.fromEset(id)
-  }
-
+  meta <- pgx.getGEOmetadata.fromGSM(id)
+  if (is.null(meta)) meta <- pgx.getGEOmetadata.fromEset(id)
+  
   ## Sometimes the phenotype is coded in the title string
-  has.title <- "title" %in% colnames(pheno)
-  if (has.title && NCOL(pheno) == 0) {
+  if ("title" %in% colnames(pheno) && NCOL(pheno) == 0) {
     px <- title2pheno(pheno$title, split = NULL, trim = TRUE, summarize = TRUE)
-    if (!is.null(px) && NCOL(px) > 0 && is.null(pheno)) {
+    if (!is.null(px) && NCOL(px) > 0 && is.null(pheno))
       pheno <- px
-    }
-    if (!is.null(px) && NCOL(px) > 0 && !is.null(pheno)) {
+    if (!is.null(px) && NCOL(px) > 0 && !is.null(pheno))
       pheno <- cbind(pheno, px)
-    }
   }
-
-  colnames(pheno) <- gsub("[ ]", "_", colnames(pheno)) ## no spaces???
+  colnames(pheno) <- gsub("[ ]", "_", colnames(pheno))
 
   return(pheno)
+
 }
 
 
@@ -184,17 +178,21 @@ pgx.getGeoMetadata <- function(id) {
 ## Query GEO expression
 ## -------------------------------------------------------------------------------------
 
-
 #' @describeIn pgx.getGEOseries Downloads and extracts gene expression count
 #' data from a GEO series stored in an HDF5 file. It searches the HDF5 file
 #' metadata to find samples matching the input GEO series ID, and returns the
 #' count matrix for those samples.
 #' @export
 pgx.getGEOcounts.archs4 <- function(id, h5.file) {
+
+  is.valid.id <- is.GEO.id.valid(id) 
+  if (!is.valid.id) stop("[pgx.getGEOcounts.archs4] FATAL: ID is invalid. Exiting.")
+  id <- as.character(id)
+
   rhdf5::h5ls(h5.file)
   sample.series <- rhdf5::h5read(h5.file, "meta/Sample_series_id")
   sample.series <- strsplit(as.character(sample.series), split = "Xx-xX")
-
+  
   gse.series <- sort(unique(unlist(sample.series)))
   id %in% gse.series
 
@@ -222,40 +220,46 @@ pgx.getGEOcounts.archs4 <- function(id, h5.file) {
   X2 <- do.call(rbind, X2)
 
   return(X2)
+
 }
 
 
-#' @describeIn pgx.getGEOseries Downloads and processes gene-level count data for a GEO
-#' series from the recount database. It takes a GEO accession ID, searches
-#' recount, downloads the RangedSummarizedExperiment object, and returns the count matrix.
+#' @describeIn pgx.getGEOcounts.recount Downloads and processes gene-level count data
+#' for a GEO series from the recount database. It takes a GEO ID, searches recount,
+#' downloads the RangedSummarizedExperiment object, and returns the count matrix.
+#' Vignette recount-quickstart.html
 #' @export
 pgx.getGEOcounts.recount <- function(id) {
-  ## Vignette recount-quickstart.html
-  ## Load library
 
+  is.valid.id <- is.GEO.id.valid(id) 
+  if (!is.valid.id) stop("[pgx.getGEOcounts.recount] FATAL: ID is invalid. Exiting.")
+  id <- as.character(id)
 
   ## Find a project of interest
   project_info <- recount::abstract_search(id)
-  project_info$project
-
-  if (length(project_info$project) == 0) {
-    cat("WARNING: series", id, "not in recount database\n\n")
+  pid <- project_info$project
+  if (length(pid) == 0) {
+    message("[pgx.getGEOcounts.recount] WARNING: series ", id, " not in recount. \n\n")
     return(NULL)
   }
 
   ## Download the gene-level RangedSummarizedExperiment data
-  outdir <- file.path(tempdir(), project_info$project)
-  recount::download_study(project_info$project, outdir = outdir)
+  outdir <- file.path(tempdir(), pid)
+  cc <- try(recount::download_study(pid, outdir = outdir), silent = TRUE)
+  if (inherits(cc, "try-error")) {
+    message("[pgx.getGEOcounts.recount] Error: could not retrieve ", id, ". Exiting.\n")
+    return(NULL)
+  }
 
   ## Load the data
   load(file.path(outdir, "rse_gene.Rdata"))
 
   ## Scale counts by taking into account the total coverage per sample
   rse <- recount::scale_counts(rse_gene)
-
   counts <- MultiAssayExperiment::assay(rse)
 
   return(counts)
+
 }
 
 
@@ -264,13 +268,14 @@ pgx.getGEOcounts.recount <- function(id) {
 #' platform metadata, and probe annotations from GEO into R objects.
 #' @export
 pgx.getGEOcounts.GEOquery <- function(id) {
- 
-  if (is.null(id)) stop("[pgx.getGEOcounts.GEOquery] FATAL: ID is null. Exiting.")
-  ID <- as.character(id)
+  
+  is.valid.id <- is.GEO.id.valid(id) 
+  if (!is.valid.id) stop("[pgx.getGEOcounts.GEOquery] FATAL: ID is invalid. Exiting.")
+  id <- as.character(id)
 
-  gse <- try(GEOquery::getGEO(ID, GSEMatrix = TRUE, getGPL = TRUE))
+  gse <- try(GEOquery::getGEO(id, GSEMatrix = TRUE, getGPL = TRUE), silent = TRUE)
   if (inherits(gse, "try-error")) {
-    message("[pgx.getGEOcounts.GEOquery] Error: getGEO Efailed to retrieve ", ID, "\n")
+    message("[pgx.getGEOcounts.GEOquery] Error: getGEO Efailed to retrieve ", id, "\n")
     return(NULL)
   }
 
@@ -280,7 +285,7 @@ pgx.getGEOcounts.GEOquery <- function(id) {
   if (any(has.expr)) {
     gse <- gse[which(has.expr)]    
   } else {
-    message("[pgx.getGEOcounts.GEOquery] WARNING: no expression data found in ", ID, " from GEO.\n")
+    message("[pgx.getGEOcounts.GEOquery] WARNING: no data found in ", id, " from GEO.\n")
     supp_file <- sapply(gse, function(g) g@experimentData@other$supplementary_file)
     if (class(supp_file) == "character")
       message("Supplementary file available: ", paste(supp_file, collapse = " "), "\n")
@@ -294,7 +299,7 @@ pgx.getGEOcounts.GEOquery <- function(id) {
     eset <- gse[[k]]
     ex <- exprs(eset)
     if (ncol(ex) <= 3) {
-      message("[pgx.getGEOcounts.GEOquery] WARNING: ", ID, " contains <= 3 samples. Skipping.\n")
+      message("[pgx.getGEOcounts.GEOquery] WARNING: ", id, " contains <= 3 samples. Skipping.\n")
       next()
     }
 
@@ -336,6 +341,7 @@ pgx.getGEOcounts.GEOquery <- function(id) {
     })
     ex2 <- do.call(rbind, ex2)
     expr.list[[names(gse)[k]]] <- ex2
+
   }
 
   if (length(expr.list) == 0) return(NULL)
@@ -365,20 +371,36 @@ pgx.getGEOcounts.GEOquery <- function(id) {
 ## -------------------------------------------------------------------------------------
 
 
-#' @describeIn pgx.getGEOseries Retrieves basic experiment metadata for a GEO accession ID using GEOquery.
+#' @describeIn pgx.getGEOexperimentInfo Retrieves GEO accession ID info using GEOquery.
+#' @param id GEO accession ID
 #' @export
-pgx.getGeoExperimentInfo <- function(id) {
-  suppressMessages(gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE)))
-  info <- gse@header
+pgx.getGEOexperimentInfo <- function(id) {
 
-  return(info)
+  is.valid.id <- is.GEO.id.valid(id) 
+  if (!is.valid.id) stop("[pgx.getGEOexperimentInfo] FATAL: ID is invalid. Exiting.")
+  id <- as.character(id)
+
+  suppressMessages(gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE)))
+  if (inherits(gse, "try-error")) {
+    message("[pgx.getGEOexperimentInfo] Error: GEOquery::getGEO failed to get", id, ".\n")
+    return(NULL)
+  }
+
+  return(gse@header)
+
 }
 
 
-#' @describeIn pgx.getGEOseries retrieves sample metadata from a GEO dataset by first downloading the
-#' GSEMatrix and then extracting the phenotype data.
+#' @describeIn pgx.getGEOmetadata.fromEset Retrieves sample metadata from Eset.
+#' It downloads the GSEMatrix using GEOquery and extract sample metadata.
+#' @param id GEO accession ID 
 #' @export
-pgx.getGeoMetadata.fromEset <- function(id) {
+pgx.getGEOmetadata.fromEset <- function(id) {
+
+  is.valid.id <- is.GEO.id.valid(id)
+  if (!is.valid.id) stop("[pgx.getGEOmetadata.fromEset] FATAL: ID is invalid. Exiting.")
+  id <- as.character(id)
+
   ## If not succesful, try with downloading the GSEMatrix
   suppressMessages(gse <- try(GEOquery::getGEO(id, GSEMatrix = TRUE, getGPL = FALSE)))
 
@@ -422,10 +444,11 @@ pgx.getGeoMetadata.fromEset <- function(id) {
 #' from a GEOquery GSEMatrix object.
 #' @param eset Eset object
 #' @export
-pgx.getGeoMetadata.fromEset1 <- function(eset) {
-  ##
-  ## load series and platform data from GEO
-  ##
+pgx.getGEOmetadata.fromEset1 <- function(eset) {
+
+  is.valid.id <- is.GEO.id.valid(id)
+  if (!is.valid.id) stop("[pgx.getGEOmetadata.fromEset1] FATAL: ID is invalid. Exiting.")
+  id <- as.character(id)
 
   ## Get summary
   summary <- experimentData(eset)@abstract
@@ -464,114 +487,116 @@ pgx.getGeoMetadata.fromEset1 <- function(eset) {
 }
 
 
-#' @describeIn pgx.getGEOseries retrieves sample metadata for a GEO sample accession
-#' ID by downloading the full GEO series and extracting the metadata for that sample.
+#' @describeIn pgx.getGeoMetadata.fromGSM Retrieves sample metadata for a GEO accession ID.
+#' Attempts without GSM matrix.
 #' @export
-pgx.getGeoMetadata.fromGSM <- function(id) {
-  ##
-  ## load series and platform data from GEO
-  ##
-  id
-  suppressMessages(gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE)))
+pgx.getGEOmetadata.fromGSM <- function(id) {
 
+  is.valid.id <- is.GEO.id.valid(id)
+  if (!is.valid.id) stop("[pgx.getGEOmetadata.fromGSM] FATAL: ID is invalid. Exiting.")
+  id <- as.character(id)
+
+  message("[pgx.getGEOmetadata.fromGSM] Attempt to download metadata without GSEmatrix...")
+  gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE), silent = TRUE)
   if (inherits(gse, "try-error")) {
-    res <- list(error = "ERROR: GEOquery::getGEO() error")
-    return(res)
-  }
-
-
-  if (length(gse@gsms) == 0) {
-    cat("WARNING:: no GSM information in object\n")
+    message("[pgx.getGEOmetadata.fromGSM] Error: getGEO failed to retrieve metadata for ", id, "\n")
     return(NULL)
   }
 
-  ## Summary and sample names
+  if (length(gse@gsms) == 0) {
+    message("[pgx.getGEOmetadata.fromGSM] WARNING:: no GSM information in object. Exiting. \n")
+    return(NULL)
+  }
+
+  ## Get metadata
   summary <- gse@header$summary
+  gsm.title <- sapply(gse@gsms, function(g) g@header$title)
+  gsm.source <- sapply(gse@gsms, function(g) g@header$source_name_ch1)
+  gsm.gpl <- sapply(gse@gsms, function(g) g@header$platform_id)
   gsm.samples <- gse@header$sample_id
-
-  ## Get sample_info from characteristics (ch1) column
+  meta <- data.frame(
+    GPL = gsm.gpl,
+    GSM = gsm.samples,
+    title = gsm.title,
+    source = gsm.source,
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
   ch1_info <- lapply(gse@gsms, function(g) g@header$characteristics_ch1)
-
-  is.null(ch1_info)
-  if (!is.null(ch1_info)) {
+  cm <- intersect(names(ch1_info), gsm.samples)
+  if (!is.null(ch1_info) && length(cm)) {
+    gsm.samples <- gsm.samples[match(cm, gsm.samples)]
+    ch1_info <- ch1_info[match(cm, names(ch1_info))]
+    meta <- meta[match(cm, meta$GSM), ]
     ch1_info <- lapply(ch1_info, function(x) sub("^Clinical info: ", "", x))
     ch1_vars <- unique(unlist(lapply(ch1_info, function(x) trimws(sub("[:=].*", "", x)))))
     ch1_info <- lapply(ch1_info, function(x) {
       xvar <- trimws(sub("[:=].*", "", x))
       x <- trimws(sub(".*[:=] ", "", x))
-      names(x) <- xvar
-      x <- x[match(ch1_vars, names(x))]
-      x
+      names(x)=xvar; x=x[match(ch1_vars, names(x))]
+      return(x)
     })
     ch1_info <- do.call(rbind, ch1_info)
     colnames(ch1_info) <- ch1_vars
+    meta <- data.frame(cbind(meta, ch1_info), stringsAsFactors = FALSE, check.names = FALSE)
+    message("[pgx.getGEOmetadata.fromGSM] Success!") 
+    return(meta)
+  } else {
+    message("[pgx.getGEOmetadata.fromGSM] WARNING: no shared samples between GSM and ch1_info! Exiting. \n")
+    return(NULL)
   }
 
-  ## We can get more information from title??
-  gsm.title <- sapply(gse@gsms, function(g) g@header$title)
-  gsm.source <- sapply(gse@gsms, function(g) g@header$source_name_ch1)
-  gsm.gpl <- sapply(gse@gsms, function(g) g@header$platform_id)
-  is.underscored <- length(gsm.title) && all(grepl("_", gsm.title))
-  title_info <- NULL
+  #is.underscored <- length(gsm.title) && all(grepl("_", gsm.title))
+  #title_info <- NULL
   ## NEED RETHINK!!!!!!!!!!!!!!!!!!
-  if (FALSE && is.underscored) {
-    title2 <- trimws(gsm.title)
-    title_info <- eset.parsePhenoFromTitle(title2, split = "_")
-  }
+  #if (FALSE && is.underscored) {
+  #  title2 <- trimws(gsm.title)
+  #  title_info <- eset.parsePhenoFromTitle(title2, split = "_")
+  #}
+  #if (!is.null(title_info)) sample_info <- cbind(sample_info, title_info)
 
-  ## All sample_info: from characterisctis_ch1 and title
-  sample_info <- data.frame(
-    GPL = gsm.gpl, GSM = gsm.samples, title = gsm.title,
-    source = gsm.source, stringsAsFactors = FALSE
-  )
-  if (!is.null(ch1_info)) sample_info <- cbind(sample_info, ch1_info)
-  if (!is.null(title_info)) sample_info <- cbind(sample_info, title_info)
-
-  sample_info <- data.frame(sample_info, stringsAsFactors = FALSE, check.names = FALSE)
-
-  return(sample_info)
 }
-
-
 
 
 ## -------------------------------------------------------------------------------------
 ## HELPER functions
 ## -------------------------------------------------------------------------------------
 
-
-#' Extract phenotype data field from ExpressionSet
-#'
-#' @param eset ExpressionSet object
-#' @param field Character string specifying phenotype data field name
-#'
-#' @return Vector of values for the specified field
-#'
-#' @details This function extracts a specific phenotype data field from an ExpressionSet object.
-#' The \code{field} parameter specifies the phenotype data column name to extract.
-#'
-#' The phenotype data pData slot is extracted from the ExpressionSet, and the specified
-#' field is returned as a vector.
-#'
+#' @param id GEO accession ID
+#' @return Boolean
+#' @details Checks whether GEO accession ID is alphanumeric as per convention. 
 #' @export
-eset.getPhenoData <- function(eset, field) {
-  pData(phenoData(eset))[, field]
+is.GEO.id.valid <- function(id) {
+  if (is.null(id) || id == "" || !grepl("[A-Za-z]",id) || !grepl("[0-9]",id)) {
+    return(FALSE)
+  } else {
+    return(TRUE)
+  }
 }
 
 
+#' Extract phenotype data field from ExpressionSet
+#' @param eset ExpressionSet object
+#' @param field Character string specifying phenotype data field name
+#' @return Vector of values for the specified field
+#' @details Extracts a specific phenotype data field from an ExpressionSet object.
+#' The \code{field} parameter specifies the phenotype data column name to extract.
+#' The phenotype data pData slot is extracted from the ExpressionSet; the specified
+#' field is returned as a vector.
+#' @export
+eset.getPhenoData <- function(eset, field) { pData(phenoData(eset))[, field] }
 
 
-#' @describeIn eset.getPhenoData Extracts sample phenotype terms from GEO dataset titles by splitting on a delimiter.
+#' Get pheno from title [??]
 #' @param title character vector with the titles
 #' @param split delimiter character to split on `c(",", ";", "\\|", "_", " ")`.
 #' @param trim trim leading and trailing whitespace from each term
 #' @param summarize summarize the terms by counting the number of occurrences of each term
 #' @export
 title2pheno <- function(title, split = NULL, trim = TRUE, summarize = TRUE) {
-  ## determine the split character
   if (is.null(split)) {
     split.chars <- c(",", ";", "\\|", "_", " ")
-    ss <- c()
+    i=1; ss=c()
     for (i in 1:length(title)) {
       ns <- sapply(split.chars, function(s) sum(gregexpr(s, title[i])[[1]] > 0))
       split0 <- names(ns)[which.max(ns)]
@@ -583,7 +608,6 @@ title2pheno <- function(title, split = NULL, trim = TRUE, summarize = TRUE) {
     }
     split <- names(which.max(table(ss)))
   }
-  split
 
   ## Check if all titles have equal splitted parts (e.g. nicely formatted)
   nsplit <- sapply(title, function(tt) sum(gregexpr(split, tt)[[1]] > 0))
@@ -605,7 +629,6 @@ title2pheno <- function(title, split = NULL, trim = TRUE, summarize = TRUE) {
 
   ## make dataframe
   F1 <- do.call(rbind, ff)
-  F1
   F1[is.na(F1)] <- NA
   rownames(F1) <- NULL
 
@@ -613,13 +636,11 @@ title2pheno <- function(title, split = NULL, trim = TRUE, summarize = TRUE) {
   getmax.term <- function(s) {
     tt <- table(unlist(strsplit(s, split = "[ _]")))
     vip.tt <- grep("hour|repl|hr|time|treat|infec|pati|sampl", names(tt))
-    vip.tt
     if (length(vip.tt)) tt[vip.tt] <- 1.1 * tt[vip.tt] ## boost known keywords
     names(which.max(tt))
   }
   maxterm <- apply(F1, 2, function(s) getmax.term(s))
   maxterm <- paste0("_", maxterm)
-  maxterm
   colnames(F1) <- maxterm
 
   ## trims same words/characters on both ends
@@ -632,10 +653,9 @@ title2pheno <- function(title, split = NULL, trim = TRUE, summarize = TRUE) {
 #' ExpressionSet object by splitting the title on a specified delimiter and guessing column names.
 #' @export
 eset.parsePhenoFromTitle <- function(title, split = NULL) {
-  if (!all(grepl(split, title))) {
-    return(NULL)
-  }
 
+  if (!all(grepl(split, title))) return(NULL)
+  
   tt <- as.character(sapply(as.character(title), function(s) trimws(s)))
   tt <- sapply(tt, function(s) gsub("[ ]*hours|[ ]*hour|[ ]*hrs|[ ]*hr", "h", s)) ## hours
   tt <- sapply(tt, function(s) gsub("([0-9]*)[ _]h", "\\1h", s))
@@ -652,14 +672,12 @@ eset.parsePhenoFromTitle <- function(title, split = NULL) {
   ff <- lapply(ff, function(s) gsub("[ ][ ]*", " ", s)) ## double space
 
   F1 <- do.call(rbind, ff)
-  F1
   F1[is.na(F1)] <- NA
   lapply(apply(F1, 2, table), sort, decreasing = TRUE)
 
   AA <- setdiff(unique(GENETIC_CODE), "*")
 
-  G <- list()
-  i <- 1
+  i=1; G=list()
   for (i in 1:(ncol(F1) - 1)) {
     k <- min(ncol(F1), (i + 1))
     a2 <- factor(as.vector(F1[, i:k]))
@@ -687,9 +705,10 @@ eset.parsePhenoFromTitle <- function(title, split = NULL) {
   G <- do.call(cbind, G)
   G <- G[, colMeans(is.na(G)) < 1, drop = FALSE]
   rownames(G) <- NULL
-
   colnames(G) <- paste0("V", 1:ncol(G))
+
   return(G)
+
 }
 
 
