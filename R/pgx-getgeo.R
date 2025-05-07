@@ -156,21 +156,19 @@ pgx.getGEOmetadata <- function(id) {
   if (!is.valid.id) stop("[pgx.getGEOmetadata] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
 
-  ## First try without downloading the GSEMatrix
-  meta <- pgx.getGEOmetadata.fromGSM(id)
-  if (is.null(meta)) meta <- pgx.getGEOmetadata.fromEset(id)
+  meta <- pgx.getGEOmetadata.fromGSM(id) ## no GSEMatrix 
+  if (is.null(meta)) meta <- pgx.getGEOmetadata.fromEset(id) ## with GSEMatrix
   
   ## Sometimes the phenotype is coded in the title string
-  if ("title" %in% colnames(meta) && NCOL(meta) == 0) {
-    px <- title2pheno(meta$title, split = NULL, trim = TRUE, summarize = TRUE)
-    if (!is.null(px) && NCOL(px) > 0 && is.null(meta))
-      pheno <- px
-    if (!is.null(px) && NCOL(px) > 0 && !is.null(pheno))
-      pheno <- cbind(pheno, px)
-  }
-  colnames(pheno) <- gsub("[ ]", "_", colnames(pheno))
+  #if ("title" %in% colnames(meta) && NCOL(meta) == 0) {
+  #  px <- title2pheno(meta$title, split = NULL, trim = TRUE, summarize = TRUE)
+  #  if (!is.null(px) && NCOL(px) > 0 && is.null(meta))
+  #    pheno <- px
+  #  if (!is.null(px) && NCOL(px) > 0 && !is.null(pheno))
+  #    pheno <- cbind(pheno, px)
+  #}
 
-  return(pheno)
+  return(meta)
 
 }
 
@@ -179,10 +177,10 @@ pgx.getGEOmetadata <- function(id) {
 ## Query GEO expression
 ## -------------------------------------------------------------------------------------
 
-#' @describeIn pgx.getGEOseries Downloads and extracts gene expression count
-#' data from a GEO series stored in an HDF5 file. It searches the HDF5 file
-#' metadata to find samples matching the input GEO series ID, and returns the
-#' count matrix for those samples.
+#' @describeIn pgx.getGEOcounts.archs4 Downloads and extracts gene expression count
+#' data from a GEO series stored in an HDF5 file (if available). It searches the
+#' HDF5 file metadata to find samples matching the input GEO series ID, and returns
+#' the count matrix for those samples.
 #' @export
 pgx.getGEOcounts.archs4 <- function(id, h5.file) {
 
@@ -446,6 +444,8 @@ pgx.getGEOmetadata.fromGSM <- function(id) {
     ch1_info <- do.call(rbind, ch1_info)
     colnames(ch1_info) <- ch1_vars
     meta <- data.frame(cbind(meta, ch1_info), stringsAsFactors = FALSE, check.names = FALSE)
+    colnames(meta) <- gsub("[ ]", "_", colnames(meta))
+
     message("[pgx.getGEOmetadata.fromGSM] Success!") 
     return(meta)
   } else {
@@ -488,6 +488,7 @@ pgx.getGEOmetadata.fromEset <- function(id) {
   meta.list <- lapply(gse, function(x) pgx.getGEOmetadata.fromEset.helper(x))
   meta <- do.call(rbind, meta.list)
   meta <- data.frame(meta, stringsAsFactors = FALSE, check.names = FALSE)
+  colnames(meta) <- gsub("[ ]", "_", colnames(meta))
   message("[pgx.getGEOmetadata.fromEset] Success!")
   rm(meta.list)
 
@@ -529,9 +530,7 @@ pgx.getGEOmetadata.fromEset.helper <- function(eset) {
     ch1_info <- apply(ch1_info, 2, function(x) sub("^Clinical info: ", "", x))
     ch_vars <- apply(ch1_info, 2, function(x) return(unique(sub("[:=].*", "", x))))
     colnames(ch1_info) <- unname(ch_vars)
-    ch1_info <- apply(ch1_info, 2, function(x) sub("[:=].*", "", x))
-
-    
+    ch1_info <- apply(ch1_info, 2, function(x) trimws(sub(".*[:=] ", "", x)))
     meta <- cbind(meta, ch1_info)
     meta <- data.frame(meta, stringsAsFactors = FALSE, check.names = FALSE)    
   }
