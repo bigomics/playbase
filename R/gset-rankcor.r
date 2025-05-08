@@ -98,8 +98,12 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
   gset <- gset[gg, , drop = FALSE]
 
   if (use.rank) {
-    ##  rnk1 <- apply(rnk1, 2, base::rank, na.last = "keep", ties.method="random")
-    rnk1 <- t(matrixStats::colRanks(rnk1, na.last = "keep", ties.method = "random"))
+    if(!inherits(rnk1,"dgCMatrix")) {
+      ## this doesnt work for sparse dgCMatrix
+      rnk1 <- Matrix::t(matrixStats::colRanks(rnk1, na.last = "keep", ties.method = "random"))
+    } else {
+      rnk1 <- apply(rnk1, 2, base::rank, na.last = "keep", ties.method="random")
+    }
   }
 
   ## two cases: (1) in case no missing values, just use corSparse on
@@ -188,7 +192,7 @@ gset.singscore <- function(X, geneSets, center = FALSE, return.score = TRUE) {
   if (center) {
     X <- X - rowMeans(X, na.rm = TRUE)
   }
-  ranked <- singscore::rankGenes(X)
+  ranked <- singscore::rankGenes(as.matrix(X)) ## cannot take sparse
   sing <- singscore::multiScore(ranked, upSetColc = gscolc)
   ## sing has 'Scores' and 'Dispersions'
   if (return.score) {
