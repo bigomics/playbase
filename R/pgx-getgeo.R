@@ -12,17 +12,14 @@
 #' @description Download and process GEO dataset
 #' @param id GEO accession
 #' @param archs.h5 Path to ARCHS4 HDF5 file containing GEO data
-#' @param convert.hugo Logical, convert symbols to HUGO if TRUE
 #' @return List containing processed counts, sample metadata, and genes
-#' @details Downloads GEO accession ID data and conduct basic processing,
-#' including probe/gene conversion and creating autocontrasts [???].
-#' First checks if the data is in ARCHS4. If not, it checks if it is in recount.
-#' If not, it retrieves from GEO. The data matrices are subset to intersecting
-#' samples, converted to HUGO symbols if specified, and duplicate symbols are summed.
+#' @details Downloads GEO accession ID data. First checks if the data is
+#' in ARCHS4. If not, it tries to get from GEO. Ultimately, it checks if
+#' it is in recount. Counts and sample matrices are aligned.
 #' @export
 pgx.getGEOseries <- function(id,
                              archs.h5 = "human_matrix.h5",
-                             convert.hugo = TRUE
+                             get.info = TRUE
                              ) {
 
   is.valid.id <- is.GEO.id.valid(id) 
@@ -30,79 +27,74 @@ pgx.getGEOseries <- function(id,
   id <- as.character(id)
 
   ## get counts from archs4 or recount or GEO 
-  counts <- pgx.getGEOcounts(id, archs.h5 = archs.h5)$expr
+  geo <- pgx.getGEOcounts(id, archs.h5 = archs.h5)
+  source <- geo[["source"]]
+  counts <- geo[["expr"]]
   if (is.null(counts)) {
     message("[pgx.getGEOseries] WARNING:", id, " not found in archs4, recount, GEO. Exiting.\n")
     return(NULL)
   }
 
-  ## get sample metadata
+  ## get metadata
   meta <- pgx.getGEOmetadata(id)
-
+  if (is.null(meta))
+    message("[pgx.getGEOseries] WARNING: sample metadata not retrieved from GEO.")
+  
   ## conform matrices
-  samples <- intersect(rownames(meta), colnames(counts))
-  if (length(samples) == 0) {
-    message("[pgx.getGEOseries] WARNING: no shared samples between counts and samples. Exiting.\n")
-    return(NULL)
-  }
-  meta <- meta[samples, , drop = FALSE]
-  counts <- counts[, samples, drop = FALSE]
-
-  ...>
-  ## convert to latest official HUGO???
-  if (convert.hugo) {
-    symbol <- alias2hugo(rownames(counts)) ## auto-detect mouse/human
-    rownames(counts) <- symbol
+  if (!is.null(meta)) {
+    samples <- intersect(rownames(meta), colnames(counts))
+    if (length(samples) > 0) {
+      meta <- meta[samples, , drop = FALSE]
+      counts <- counts[, samples, drop = FALSE]
+    } else {
+      message("[pgx.getGEOseries] WARNING: no shared samples between counts and metadata.")
+    }
   }
 
-  ## sum up values duplicated symbols
-  ndup <- sum(duplicated(rownames(counts)))
-  if (ndup > 0) {
-    counts1 <- tapply(1:nrow(counts), symbol, function(i) Matrix::colSums(counts[i, , drop = FALSE]))
-    counts <- do.call(rbind, counts1)
-    remove(counts1)
-  }
-
-  ## get annotation
-  genes <- ngs.getGeneAnnotation(rownames(counts))
+  ## get ID experiment info
+  info = NULL
+  if (get.info) info <- pgx.getGeoExperimentInfo(id)
 
   ## get categorical phenotypes
-  meta1 <- apply(meta, 2, trimsame)
-  rownames(meta1) <- rownames(meta)
-  sampleinfo <- pgx.discretizePhenotypeMatrix(meta1, min.ncat = 2,
-    max.ncat = 20, remove.dup = TRUE)
-  sampleinfo <- data.frame(sampleinfo, stringsAsFactors = FALSE, check.names = FALSE)
-
+  #meta1 <- apply(meta, 2, trimsame)
+  #rownames(meta1) <- rownames(meta)
+  #sampleinfo <- pgx.discretizePhenotypeMatrix(meta1, min.ncat = 2,
+  #max.ncat = 20, remove.dup = TRUE)
+  #sampleinfo <- data.frame(sampleinfo, stringsAsFactors = FALSE, check.names = FALSE)
   ## automagically create contrast matrix
-  contrasts <- NULL
-  if (NCOL(sampleinfo) > 0) {
-    mingrp <- 3
-    slen <- 15
-    ref <- NA
-    ct <- pgx.makeAutoContrasts(sampleinfo, mingrp = 3, slen = 20, ref = NA)
-    if (is.null(ct)) {
-      ct <- pgx.makeAutoContrasts(sampleinfo, mingrp = 2, slen = 20, ref = NA)
-    }
-    if (!is.null(ct$exp.matrix)) {
-      contrasts <- ct$exp.matrix
-    } else {
-      contrasts <- ct$design %*% ct$contr.matrix
-    }
-  }
+  #contrasts <- NULL
+  #if (NCOL(sampleinfo) > 0) {
+  #  mingrp <- 3
+  #  slen <- 15
+  #  ref <- NA
+  #  ct <- pgx.makeAutoContrasts(sampleinfo, mingrp = 3, slen = 20, ref = NA)
+  #  if (is.null(ct)) {
+  #    ct <- pgx.makeAutoContrasts(sampleinfo, mingrp = 2, slen = 20, ref = NA)
+  #  }
+  #  if (!is.null(ct$exp.matrix)) {
+  #    contrasts <- ct$exp.matrix
+  #  } else {
+  #    contrasts <- ct$design %*% ct$contr.matrix
+  #  }
+  #}
 
-  info <- pgx.getGeoExperimentInfo(id)
-
-  out <- list(
+  LL <- list(
     counts = counts,
-    genes = genes,
-    samples = sampleinfo,
-    contrasts = contrasts,
-    meta = meta,
+    samples = meta,
     info = info,
-    source = geo$source
+    source = source
   )
-
-  return(out)
+  return(LL)
+  # out <- list(
+  #   counts = counts,
+  #   genes = genes,
+  #   samples = sampleinfo,
+  #   contrasts = contrasts,
+  #   meta = meta,
+  #   info = info,
+  #   source = source
+  # )
+  # return(out)
 
 }
 
@@ -122,21 +114,21 @@ pgx.getGEOcounts <- function(id, archs.h5) {
   expr=NULL; src=""
   
   if (!is.null(archs.h5) && is.null(expr)) {
-    message("[pgx.getGEOcounts]: pgx.getGEOcounts.archs4....")
+    message("[pgx.getGEOcounts]: pgx.getGEOcounts.archs4...")
     expr <- pgx.getGEOcounts.archs4(id, archs.h5)
     if (!is.null(expr)) src <- "ARCHS4"
   }
 
-  if (is.null(expr)) {
-    message("[pgx.getGEOcounts]: pgx.getGEOcounts.recount....")
-    expr <- pgx.getGEOcounts.recount(id)
-    if (!is.null(expr)) src <- "recount"
+    if (is.null(expr)) {
+    message("[pgx.getGEOcounts]: pgx.getGEOcounts.GEOquery...")
+    expr <- pgx.getGEOcounts.GEOquery(id)
+    if (!is.null(expr)) src <- "GEO"
   }
 
   if (is.null(expr)) {
-    message("[pgx.getGEOcounts]: pgx.getGEOcounts.GEOquery....")
-    expr <- pgx.getGEOcounts.GEOquery(id)
-    if (!is.null(expr)) src <- "GEO"
+    message("[pgx.getGEOcounts]: pgx.getGEOcounts.recount...")
+    expr <- pgx.getGEOcounts.recount(id)
+    if (!is.null(expr)) src <- "recount"
   }
 
   if (is.null(expr)) {
@@ -144,7 +136,7 @@ pgx.getGEOcounts <- function(id, archs.h5) {
     return(NULL)
   }
   
-  list(expr = expr, source = src)
+  return(list(expr = expr, source = src))
 
 }
 
@@ -181,7 +173,8 @@ pgx.getGEOmetadata <- function(id) {
 #' @describeIn pgx.getGEOcounts.archs4 Downloads and extracts gene expression count
 #' data from a GEO series stored in an HDF5 file (if available). It searches the
 #' HDF5 file metadata to find samples matching the input GEO series ID, and returns
-#' the count matrix for those samples.
+#' the count matrix for those samples. It detects log2-scale and convert to linear.
+#' It also removes duplicated genes by summing in the linear scale 
 #' @export
 pgx.getGEOcounts.archs4 <- function(id, h5.file) {
 
@@ -232,6 +225,8 @@ pgx.getGEOcounts.archs4 <- function(id, h5.file) {
 #' @describeIn pgx.getGEOcounts.recount Downloads and processes gene-level count data
 #' for a GEO series from the recount database. It takes a GEO ID, searches recount,
 #' downloads the RangedSummarizedExperiment object, and returns the count matrix.
+#' It detects log2-scale and convert to linear. It also removes duplicated genes
+#' by summing in the linear scale.
 #' Vignette recount-quickstart.html
 #' @export
 pgx.getGEOcounts.recount <- function(id) {
@@ -283,9 +278,11 @@ pgx.getGEOcounts.recount <- function(id) {
 }
 
 
-#' @describeIn  pgx.getGEOcounts.GEOquery retrieves expression count data for a
+#' @describeIn pgx.getGEOcounts.GEOquery retrieves expression count data for a
 #' GEO accession ID using the GEOquery package. It downloads the series matrix data,
 #' platform metadata, and probe annotations from GEO into R objects.
+#' It detects log2-scale and convert to linear.
+#' It also removes duplicated genes by summing in the linear scale
 #' @export
 pgx.getGEOcounts.GEOquery <- function(id) {
   
@@ -399,13 +396,15 @@ pgx.getGEOexperimentInfo <- function(id) {
   if (!is.valid.id) stop("[pgx.getGEOexperimentInfo] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
 
-  suppressMessages(gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE), silent = TRUE))
+  suppressMessages(
+    gse <- try(GEOquery::getGEO(id, GSEMatrix = FALSE, getGPL = FALSE), silent = TRUE)
+  )
   if (inherits(gse, "try-error")) {
     message("[pgx.getGEOexperimentInfo] Error: GEOquery::getGEO failed to get", id, ".\n")
     return(NULL)
   }
-
-  return(gse@header)
+  
+  return(gse@header) ## can be a big list!
 
 }
 
@@ -440,7 +439,9 @@ pgx.getGEOmetadata.fromGSM <- function(id) {
   gsm.source <- sapply(gse@gsms, function(g) g@header$source_name_ch1)
   gsm.gpl <- sapply(gse@gsms, function(g) g@header$platform_id)
   gsm.samples <- gse@header$sample_id
+  #geo.accession <- gse@header$geo_accession
   meta <- data.frame(
+    #geo_accession = geo.accession,
     GPL = gsm.gpl,
     GSM = gsm.samples,
     title = gsm.title,
@@ -534,7 +535,7 @@ pgx.getGEOmetadata.fromEset.helper <- function(eset) {
   gsm.samples <- as.character(meta0$geo_accession)
   gsm.title <- as.character(meta0$title)
   gsm.source <- as.character(meta0$source_name_ch1)
-  meta <- data.frame(
+  meta <- data.frame(    
     GPL = gsm.gpl,
     GSM = gsm.samples,
     title = gsm.title,
