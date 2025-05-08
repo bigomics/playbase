@@ -17,6 +17,7 @@ plotPCSF(
   physics = TRUE,
   node_cex = 1,
   node_alpha = 0.8,
+  node_gamma = 1,
   label_cex = 1,
   label_gamma = 2,
   nlabel = -1,
@@ -26,6 +27,7 @@ plotPCSF(
   cut.clusters = FALSE,
   cut.layout = "kk",
   cut.resolution = 0.05,
+  as_grid = TRUE,
   nlargest = -1
 )
 }
