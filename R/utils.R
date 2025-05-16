@@ -219,3 +219,20 @@ rownames.data.table <- function(dt) {
     return(NULL)
   }
 }
+
+#' Double Center and Scale a Matrix
+#'
+#' This function performs double centering and scaling on a matrix by:
+#' 1. Subtracting row means
+#' 2. Subtracting column means
+#' 3. Scaling by column standard deviations
+#'
+#' @param X A numeric matrix to be centered and scaled
+#' @return A transposed matrix that has been double centered and scaled
+#' @export
+double_center_scale_fast <- function(X) {
+  X <- X - matrixStats::rowMeans2(X)
+  X <- sweep(X, 2, matrixStats::colMeans2(X), "-")
+  X <- sweep(X, 2, matrixStats::colSds(X), "/")
+  return(t(X))
+}
