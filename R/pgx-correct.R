@@ -377,6 +377,7 @@ pgx.superBatchCorrect <- function(X, pheno,
         pX <- NULL
         while (length(ii) > 0 && niter < max.iter) {
           nv <- min(10, ncol(cX) - 1)
+          set.seed(1234)
           suppressWarnings(suppressMessages(
             pc <- irlba::irlba(cX, nv = nv)$v
           ))
@@ -589,6 +590,7 @@ pgx.PC_correlation <- function(X, Y, nv = 3, stat = "F",
   X[is.na(X)] <- mean(X, na.rm = TRUE) ## no missing allowed
   nv <- min(nv, dim(X) - 1)
   if (nv < ncol(X) / 2) {
+    set.seed(1234)
     V <- irlba::irlba(X, nv = nv, nu = 0)$v
   } else {
     V <- svd(X, nv = nv, nu = 0)$v
@@ -942,6 +944,7 @@ detectBatchEffects <- function(X, samples, pheno, contrasts = NULL,
     cX <- X - rowMeans(X, na.rm = TRUE)
     k.pca <- ceiling(min(k.pca, dim(cX) - 1))
     if (k.pca < min(dim(cX)) / 3) {
+      set.seed(1234)
       V <- irlba::irlba(cX, nv = k.pca, nu = 0)$v
     } else {
       V <- svd(cX, nv = k.pca, nu = 0)$v
@@ -1784,8 +1787,8 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
     })
   } else {
     message("Computing PCA clustering...")
-    pos <- lapply(xlist, function(x) {
-      irlba::irlba(t2(x), nu = 2, nv = 2)$u[, 1:2]
+    pos <- lapply(xlist, function(x) { 
+      set.seed(1234); irlba::irlba(t2(x), nu = 2, nv = 2)$u[, 1:2]
     })
   }
   for (i in 1:length(pos)) {
@@ -2199,6 +2202,7 @@ pcaCorrect <- function(X, y, k = 10, p.notsig = 0.20) {
   k <- min(k, ncol(X) - 1)
   suppressWarnings(suppressMessages({
     if (k < min(dim(X)) / 3) {
+      set.seed(1234)
       V <- irlba::irlba(X, nv = k, nu = 0)$v
     } else {
       V <- svd(X, nv = k, nu = 0)$v
@@ -2657,6 +2661,7 @@ nnmCorrect2 <- function(X, y, r = 0.35, center.x = TRUE, center.m = TRUE,
     if (r > 0.2) {
       sv <- svd(P1, nu = k, nv = k)
     } else {
+      set.seed(1234)
       sv <- irlba::irlba(P1, nu = k, nv = k)
     }
     P1 <- sv$u
@@ -2792,6 +2797,7 @@ sMNN <- function(X, batch, y, nv = 0.33, nn = 3, return.idx = FALSE) {
   nv <- max(1, min(nv, dim(B) - 1))
   message("[sMNN] nv = ", nv)
   B <- scale(B)
+  set.seed(1234)
   dU <- irlba::irlba(B, nu = nv, nv = nv)$u
   ##  dU <- scale(dU) ## no???
   cX <- t(limma::removeBatchEffect(t(X), covariates = dU))
