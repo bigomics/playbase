@@ -1770,8 +1770,11 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
   )
 
   if (length(xlist.init) > 0) xlist <- c(xlist.init, xlist)
+  common_rows <- Reduce(intersect, lapply(xlist, rownames))
+  xlist <- c(
+    lapply(xlist, function(x) x[common_rows, , drop = FALSE])
+  )
   xlist <- xlist[order(names(xlist))]
-  names(xlist)
 
   ## PCA is faster than UMAP
   pos <- NULL
