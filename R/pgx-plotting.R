@@ -4631,7 +4631,7 @@ pgx.stackedBarplot <- function(x,
   x_plot <- reshape2::melt(x_plot, id.vars = "groups", value.name = "Effect")
 
   if (horiz == FALSE) {
-    x_plot$groups <- factor(x_plot$groups, levels = rownames(x))
+    x_plot$groups <- factor(x_plot$groups, levels = unique(x_plot$groups))
   } else {
     c1 <- which(colnames(x_plot) == "variable")
     c2 <- which(colnames(x_plot) == "Effect")
