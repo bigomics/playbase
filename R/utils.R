@@ -243,10 +243,10 @@ double_center_scale_fast <- function(X) {
 #' @param counts A numeric matrix
 #' @return CV (%) for each row (feature) of the input matrix.
 #' @export
-compute_CV <- function(counts, na.rm = TRUE) {
-  if (playbase::is_logged(counts)) counts = 2**counts - 1
-  sdx <- matrixStats::rowSds(counts, na.rm = na.rm)
-  avg <- abs(matrixStats::rowMeans2(counts, na.rm = na.rm))
+compute_CV <- function(counts) {
+  if (playbase::is_logged(counts)) counts = pmax(2**counts - 1, 0)
+  sdx <- matrixStats::rowSds(counts, na.rm = TRUE)
+  avg <- matrixStats::rowMeans2(counts, na.rm = TRUE)
   cv <- (sdx / avg) * 100
   return(cv)
 }
