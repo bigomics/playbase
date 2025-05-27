@@ -23,7 +23,7 @@ pgx.computePCSF <- function(pgx, contrast, datatypes = NULL,
   }
   
   ## Compute correlation and foldchange (wrt pheno)
-  Y <- pgx$model.parameters$exp.matrix[,]
+  Y <- pgx$model.parameters$exp.matrix
   Y[which(Y==0)] <- NA
   R <- cor(Matrix::t(pgx$X), Y, use="pairwise")
   F <- pgx.getMetaMatrix(pgx, level="gene")$fc
