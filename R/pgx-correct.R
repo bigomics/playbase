@@ -1778,7 +1778,7 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
 
   ## PCA is faster than UMAP
   pos <- NULL
-  t2 <- function(x) as.matrix(t(scale(t(scale(t(x), scale = FALSE)))))
+  t2 <- double_center_scale_fast
   if (clust.method == "tsne" && nmissing == 0) {
     message("Computing t-SNE clustering...")
     nb <- max(0.33, round(min(30, dim(X) / 5)))
