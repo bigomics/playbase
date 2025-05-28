@@ -78,19 +78,8 @@ pgx.getGEOseries <- function(id,
   #  }
   #}
 
-  LL <- list(counts = counts, samples = meta,
-    info = info, source = source)
-  return(LL)
-  # out <- list(
-  #   counts = counts,
-  #   genes = genes,
-  #   samples = sampleinfo,
-  #   contrasts = contrasts,
-  #   meta = meta,
-  #   info = info,
-  #   source = source
-  # )
-  # return(out)
+  return(list(counts = counts, samples = meta,
+    info = info, source = source))
 
 }
 
@@ -154,7 +143,7 @@ pgx.getGEOmetadata <- function(id) {
   #  if (!is.null(px) && NCOL(px) > 0 && is.null(meta))
   #    pheno <- px
   #  if (!is.null(px) && NCOL(px) > 0 && !is.null(pheno))
-  #    pheno <- cbind(pheno, px)
+  #     pheno <- cbind(pheno, px)
   #}
 
   return(meta)
@@ -581,11 +570,10 @@ pgx.getGEOmetadata.fromEset.helper <- function(eset) {
 #' @details Checks whether GEO accession ID is alphanumeric as per convention. 
 #' @export
 is.GEO.id.valid <- function(id) {
-  if (is.null(id) || id == "" || !grepl("[A-Za-z]",id) || !grepl("[0-9]",id)) {
-    return(FALSE)
-  } else {
-    return(TRUE)
-  }
+  is.valid <- TRUE
+  if (is.null(id) || id == "" || !grepl("[A-Za-z]",id) || !grepl("[0-9]",id))
+    is.valid <- FALSE
+  return(is.valid)
 }
 
 
