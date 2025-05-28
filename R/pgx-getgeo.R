@@ -78,12 +78,8 @@ pgx.getGEOseries <- function(id,
   #  }
   #}
 
-  LL <- list(
-    counts = counts,
-    samples = meta,
-    info = info,
-    source = source
-  )
+  LL <- list(counts = counts, samples = meta,
+    info = info, source = source)
   return(LL)
   # out <- list(
   #   counts = counts,
