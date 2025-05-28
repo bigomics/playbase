@@ -22,7 +22,7 @@ pgx.getGEOseries <- function(id,
                              get.info = TRUE
                              ) {
 
-  is.valid.id <- is.GEO.id.valid(id) 
+  is.valid.id <- is.GEO.id.valid(id)
   if (!is.valid.id) stop("[pgx.getGEOseries] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
 
