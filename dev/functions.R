@@ -96,10 +96,11 @@ scan_packages <- function(path='R') {
 
 }
 
-install_newest_orgdb <- function(org="Hs") {
+##org="Hs";version="3.21.0"
+install_newest_orgdb <- function(org="Hs", version="3.19.1") {
   db <- sub("Hs",org,'org.Hs.eg.db')
-  if(require(db) && packageVersion(db) =="3.19.1") return(NULL)  
-  CMD <- "cd /tmp && wget https://bioconductor.org/packages/release/data/annotation/src/contrib/org.Hs.eg.db_3.19.1.tar.gz && tar xvfz org.Hs.eg.db_3.19.1.tar.gz && cd org.Hs.eg.db && sed -i 's/1.65.2/1.60.0/' DESCRIPTION && R CMD INSTALL ."
+  if(require(db) && packageVersion(db) >= version) return(NULL)  
+  CMD <- paste0("cd /tmp && wget https://bioconductor.org/packages/release/data/annotation/src/contrib/org.Hs.eg.db_",version,".tar.gz && tar xvfz org.Hs.eg.db_",version,".tar.gz && cd org.Hs.eg.db && sed -i 's/, AnnotationDbi.*//' DESCRIPTION && R CMD INSTALL .")
   if(org!="Hs") CMD <- gsub("Hs",org,CMD)
   system(CMD)
 }
@@ -137,9 +138,10 @@ install_dependencies <- function(use.remotes=FALSE) {
   }
 
   ## overwrite
-  install_newest_orgdb("Hs")
-  install_newest_orgdb("Mm")
-  install_newest_orgdb("Rn")   
+  ## since 31.5.2025 (IK)
+  install_newest_orgdb("Hs","3.21.0")  
+  install_newest_orgdb("Mm","3.21.0")
+  install_newest_orgdb("Rn","3.21.0")   
 }
 
 install_silent <- function(pkg.list, linkto=NULL, force=FALSE) {
