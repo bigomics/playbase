@@ -219,3 +219,34 @@ rownames.data.table <- function(dt) {
     return(NULL)
   }
 }
+
+#' Double Center and Scale a Matrix
+#'
+#' This function performs double centering and scaling on a matrix by:
+#' 1. Subtracting row means
+#' 2. Subtracting column means
+#' 3. Scaling by column standard deviations
+#'
+#' @param X A numeric matrix to be centered and scaled
+#' @return A transposed matrix that has been double centered and scaled
+#' @export
+double_center_scale_fast <- function(X) {
+  X <- X - matrixStats::rowMeans2(X)
+  X <- sweep(X, 2, matrixStats::colMeans2(X), "-")
+  X <- sweep(X, 2, matrixStats::colSds(X), "/")
+  return(t(X))
+}
+
+#' Compute coefficient of variation (CV, %)
+#' This function computes coefficient of variation (CV) of each row (feature) of data matrix
+#' It does so in the linear space.
+#' @param counts A numeric matrix
+#' @return CV (%) for each row (feature) of the input matrix.
+#' @export
+compute_CV <- function(counts) {
+  if (playbase::is_logged(counts)) counts = pmax(2**counts - 1, 0)
+  sdx <- matrixStats::rowSds(counts, na.rm = TRUE)
+  avg <- matrixStats::rowMeans2(counts, na.rm = TRUE)
+  cv <- (sdx / avg) * 100
+  return(cv)
+}
