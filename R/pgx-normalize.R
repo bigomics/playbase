@@ -583,3 +583,22 @@ referenceNormalization.logX <- function(X, ref = 0.01, bring.back = TRUE) {
   if (bring.back) X <- X + mean(mx, na.rm = TRUE)
   return(X)
 }
+
+# Faster quantile normalization. Adapted from
+# https://www.spsanderson.com/steveondata/posts/2024-03-28/index.html
+fast_qn <- function(.data){
+  .data <- as.matrix(.data)  ## Rfast needs dense matrix
+  data_sort <- Rfast::colSort(.data)
+  row_means <- Rfast::rowmeans(data_sort)  
+  data_sort <- matrix(row_means, 
+                      nrow = nrow(data_sort), 
+                      ncol = ncol(data_sort), 
+                      byrow = FALSE
+                      )
+  index_rank <- t(matrixStats::colRanks(.data, ties.method="average"))
+  normalized_data <- matrix(nrow = nrow(.data), ncol = ncol(.data))
+  for(i in 1:ncol(.data)){
+    normalized_data[,i] <- data_sort[index_rank[,i], i]
+  }
+  return(normalized_data)
+}
