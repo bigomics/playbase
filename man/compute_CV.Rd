@@ -6,7 +6,7 @@
 This function computes coefficient of variation (CV) of each row (feature) of data matrix
 It does so in the linear space.}
 \usage{
-compute_CV(counts, na.rm = TRUE)
+compute_CV(counts)
 }
 \arguments{
 \item{counts}{A numeric matrix}

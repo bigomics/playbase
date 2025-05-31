@@ -42,7 +42,8 @@ scan_packages <- function(path='R') {
   )
 
   force.remotes.url <- c(
-    "rjson" = "url::https://cran.r-project.org/src/contrib/Archive/rjson/rjson_0.2.21.tar.gz"
+    "rjson" = "url::https://cran.r-project.org/src/contrib/Archive/rjson/rjson_0.2.21.tar.gz",
+    "rms" = "url::https://cran.r-project.org/src/contrib/Archive/rms/rms_6.8-0.tar.gz"    
   )
   
   ## commented out entries are now in standard CRAN/cBio repo
@@ -51,25 +52,16 @@ scan_packages <- function(path='R') {
   add_github("bigomics/playbase")
   add_github("bigomics/bigdash")
   add_github("bigomics/bigLoaders")
-  ##add_github("bigomics/fgsea")
   add_github("bigomics/wizardR")
-  ##add_github("bigomics/biomaRt")
   add_github("GfellerLab/EPIC")
   add_github("broadinstitute/infercnv@infercnv-v1.3.3")
   add_github("GfellerLab/SuperCell")
   add_github("linxihui/NNLM")
   add_github("Coolgenome/iTALK")
   add_github("wt2015-github/FastGGM")
-  #add_github("satijalab/azimuth")
-  #add_github("JohnCoene/waiter")
   add_github("JohnCoene/firebase@omics")
   add_github("JohnCoene/bsutils")
-  #add_github("ropensci/iheatmapr")
-  #add_github("rstudio/bslib@v0.6.1")
-  #add_github("rstudio/htmltools")
   add_github("Bioconductor/BiocFileCache")
-  #add_github("cysouw/qlcMatrix")
-  #add_github("cole-trapnell-lab/leidenbase")
   add_github('cole-trapnell-lab/monocle3')
   add_github('bartongroup/Proteus')
   add_github('cran/riverplot')

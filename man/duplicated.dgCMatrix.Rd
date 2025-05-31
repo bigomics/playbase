@@ -2,10 +2,10 @@
 % Please edit documentation in R/xcr-math.r
 \name{duplicated.dgCMatrix}
 \alias{duplicated.dgCMatrix}
-\title{Test}
+\title{Test if rows or columns of sparse matrix are duplicated}
 \usage{
 \method{duplicated}{dgCMatrix}(dgCMat, MARGIN)
 }
 \description{
-Test
+Test if rows or columns of sparse matrix are duplicated
 }
