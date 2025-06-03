@@ -201,14 +201,15 @@ svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
   empty.cols <- which(colMeans(is.na(X)) == 1)
 
   if (is.null(nv)) {
-    nv <- max(1, round(mean(is.na(X)) * min(dim(X))))
+    nv <- max(1, round(mean(is.na(X)) * min(dim(X)))) ## heuristic..
+    message(paste0("setting nv to ", nv))
   }
   nv <- min(nv, round(min(dim(X)) / 3))
 
   if (is.character(init) && grepl("%", init)) {
-    q <- as.numeric(sub("%", "", init))
-    init <- quantile(X[!is.na(X)], probs = q)[1]
-    message(paste0("setting initial values to ", q, "%. init=", init))
+    q <- as.numeric(sub("%", "", init)) 
+    init <- quantile(X[!is.na(X)], probs = q*0.01)[1]
+    message(paste0("setting initial values to ", q, "%. init=", round(init,4)))
   }
 
   if (!is.null(init)) {
