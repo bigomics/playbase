@@ -440,7 +440,7 @@ getGeneAnnotation.ANNOTHUB <- function(
     if (!is.null(missing.probe_type) &&
           !is.na(missing.probe_type) &&
            missing.probe_type != probe_type &&
-           missing.probe_type %in% keytypes(orgdb)
+           missing.probe_type %in% AnnotationDbi::keytypes(orgdb)
         ) {      
       missing.probes1 <- match_probe_names(missing.probes, orgdb, missing.probe_type)
       suppressMessages(suppressWarnings(
@@ -642,7 +642,7 @@ match_probe_names <- function(probes, orgdb, probe_type = NULL) {
     probe_type <- detect_probetype(organism = "custom", probes, orgdb = orgdb)
   }
   ## bail out if not annothub keytypes
-  if(!probe_type %in% keytypes(orgdb)) return(probes)
+  if(!probe_type %in% AnnotationDbi::keytypes(orgdb)) return(probes)
 
   probe.names <- names(probes)
   all.keys <- AnnotationDbi::keys(orgdb, probe_type)
@@ -1642,7 +1642,7 @@ getOrganismGO <- function(organism, use.ah = NULL, orgdb = NULL) {
     ont_classes <- c("BP", "CC", "MF")
     k <- "BP"
     for (k in ont_classes) {
-      gene.column <- intersect( c("SYMBOL","GENENAME","MGI","ALIAS"), columns(orgdb))
+      gene.column <- intersect( c("SYMBOL","GENENAME","MGI","ALIAS"), AnnotationDbi::columns(orgdb))
       gene.column <- head(gene.column,1)
       if(length(gene.column)>0) {
         suppressMessages(suppressWarnings(
