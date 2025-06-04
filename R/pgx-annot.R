@@ -1662,7 +1662,7 @@ getOrganismGO <- function(organism, use.ah = NULL, orgdb = NULL) {
         ## get GO title
         sets <- sets[which(names(sets) %in% AnnotationDbi::keys(GO.db::GOTERM))]
         sets <- lapply(sets, function(s) unique(s))
-        go <- sapply(GO.db::GOTERM[names(sets)], Term)
+        go <- sapply(GO.db::GOTERM[names(sets)], AnnotationDbi::Term)
         new_names <- paste0("GO_", k, ":", go, " (", sub("GO:", "GO_", names(sets)), ")")
         names(sets) <- new_names
         
