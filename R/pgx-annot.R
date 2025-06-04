@@ -390,14 +390,14 @@ getGeneAnnotation.ANNOTHUB <- function(
   ## Attempt to retrieve chr map via org.Mm.egCHRLOC / org.Rn.egCHRLOC.
   if (organism %in% c("Mus musculus", "Rattus norvegicus")) {
     if (organism == "Mus musculus") {
-      library(org.Mm.eg.db)
-      chrloc <- org.Mm.egCHRLOC
+      require(org.Mm.eg.db)
+      chrloc <- org.Mm.eg.db::org.Mm.egCHRLOC
     }
     if (organism == "Rattus norvegicus") {
-      library(org.Rn.eg.db)
-      chrloc <- org.Rn.egCHRLOC
+      require(org.Rn.eg.db)
+      chrloc <- org.Rn.eg.db::org.Rn.egCHRLOC
     }
-    mapped_genes <- as.list(chrloc[mappedkeys(chrloc)])
+    mapped_genes <- as.list(chrloc[AnnotationDbi::mappedkeys(chrloc)])
     cm <- intersect(as.character(annot$ENTREZID), names(mapped_genes))
     mapped_genes <- mapped_genes[cm]
     locs <- unlist(lapply(mapped_genes, function(x) names(x[1])))
