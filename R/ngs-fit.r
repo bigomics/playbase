@@ -145,8 +145,10 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   outputs <- list()
 
   ## Skip tests that do not tolerate NAs. Inform the user.
+  nmissing.counts <- sum(is.na(counts))
   nmissing <- sum(is.na(X))
-
+  if (nmissing.counts>0 & nmissing==0) counts <- pmax(2**X-1,0)
+  
   ## ---------------- t-test methods -------------------
   ttest.mtds <- c("ttest", "ttest.rank", "ttest.welch")
   ttest.mdls <- c("equalvar", "equalvar", "welch")
@@ -198,7 +200,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         } else {
           time_var = NULL
         }
-      
         tt <- system.time(
           outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithLIMMA(
             X1, contr.matrix, design, method = mdl,
@@ -546,7 +547,7 @@ ngs.fitContrastsWithTTEST <- function(X,
   return(res)
 }
 
-#' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using Wilcoxon rank sum (scRNAseq)
+#' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using Wilcoxon Rank Sum test
 #' @export
 ngs.fitContrastsWithWILCOXON <- function(X, contr.matrix, design, conform.output = 0) {
 
@@ -596,8 +597,12 @@ ngs.fitContrastsWithWILCOXON <- function(X, contr.matrix, design, conform.output
 
 }
 
-#' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using LIMMA diff. expr. analysis.
+#' @title ngs.fitContrastsWithLIMMA
+#' @param X log2- and normalized expression matrix
+#' @description ngs.fitContrastsWithAllMethods Fits contrasts using LIMMA
+#' @return limma top tables
 #' @export
+#' @name ngs.fitContrastsWithLIMMA
 ngs.fitContrastsWithLIMMA <- function(X,
                                       contr.matrix,
                                       design,
@@ -723,7 +728,7 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
                                                  use.spline = NULL) {
 
   library(splines)
-  message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting Limma ith no design; time series analysis...")
+  message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting Limma with no design; time series analysis...")
   
   if (!all(colnames(X) %in% names(timeseries)))
     stop("[ngs.fitContrastsWithLIMMA.timeseries] X and timeseries vector contain different set of samples.")
