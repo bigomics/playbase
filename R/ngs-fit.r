@@ -147,6 +147,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   ## Skip tests that do not tolerate NAs. Inform the user.
   nmissing.counts <- sum(is.na(counts))
   nmissing <- sum(is.na(X))
+  if (nmissing.counts>0 & nmissing==0) counts <- pmax(2**X-1,0)
   
   ## ---------------- t-test methods -------------------
   ttest.mtds <- c("ttest", "ttest.rank", "ttest.welch")
