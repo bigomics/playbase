@@ -4959,6 +4959,7 @@ plotlyVolcano <- function(x,
                           marker.size = 5,
                           label = NULL,
                           label.cex = 1,
+                          shape = "circle",
                           max.absy = NULL,
                           color_up_down = TRUE,
                           colors = c(
@@ -4978,7 +4979,7 @@ plotlyVolcano <- function(x,
   notsig.genes <- which(y <= -log10(psig) | abs(x) < lfc)
   ib <- intersect(notsig.genes, i1)
   i1 <- setdiff(i1, ib)
-
+  
   p <- plotly::plot_ly(
     source = source,
     hovertemplate = "<b>%{text}</b><br><b>Effect size</b>: %{x:.2f}<br><b>Significance</b>: %{y:.2f}<extra></extra>"
@@ -4986,7 +4987,7 @@ plotlyVolcano <- function(x,
   p <- p %>%
     plotly::event_register("plotly_hover") %>%
     plotly::event_register("plotly_selected")
-
+  
   ## not in highlight, not selected
   if (length(i0)) {
     p <- p %>%
@@ -4998,12 +4999,12 @@ plotlyVolcano <- function(x,
         mode = "markers",
         marker = list(
           size = marker.size,
-          color = colors["notsel"]
+          color = colors["notsel"],
+          symbol = shape[i0]
         ),
         showlegend = FALSE
       )
   }
-
 
   ## highlighted, selected
   if (length(i1)) {
@@ -5019,7 +5020,8 @@ plotlyVolcano <- function(x,
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = colors["up"]
+            color = colors["up"],
+            symbol = shape[i1][upreg]
           ),
           showlegend = showlegend,
           name = "Up"
@@ -5033,7 +5035,8 @@ plotlyVolcano <- function(x,
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = colors["down"]
+            color = colors["down"],
+            symbol = shape[i1][dwreg]
           ),
           showlegend = showlegend,
           name = "Down"
@@ -5048,7 +5051,8 @@ plotlyVolcano <- function(x,
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = "black"
+            color = "black",
+            symbol = shape[i1]
           ),
           showlegend = showlegend
         )
@@ -5066,7 +5070,8 @@ plotlyVolcano <- function(x,
         mode = "markers",
         marker = list(
           size = marker.size,
-          color = colors["notsig"]
+          color = colors["notsig"],
+          symbol = shape[ib]
         ),
         showlegend = showlegend,
         name = "Not significant"
@@ -5083,6 +5088,8 @@ plotlyVolcano <- function(x,
     if (TRUE && color_up_down) {
       annot_text <- label.names[i2][upreg]
       if (length(annot_text) == 0) annot_text <- ""
+      shape0 <- shape[i2][upreg]
+      if (length(shape0) == 0) shape0 <- "circle"
       p <- p %>%
         plotly::add_annotations(
           x = x[i2][upreg],
@@ -5090,7 +5097,8 @@ plotlyVolcano <- function(x,
           text = annot_text,
           font = list(
             size = 12 * label.cex,
-            color = colors["up"]
+            color = colors["up"],
+            symbol = shape0
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -5099,6 +5107,8 @@ plotlyVolcano <- function(x,
         )
       annot_text <- label.names[i2][dwreg]
       if (length(annot_text) == 0) annot_text <- ""
+      shape0 <- shape[i2][dwreg]
+      if (length(shape0) == 0) shape0 <- "circle"
       p <- p %>%
         plotly::add_annotations(
           x = x[i2][dwreg],
@@ -5106,7 +5116,8 @@ plotlyVolcano <- function(x,
           text = annot_text,
           font = list(
             size = 12 * label.cex,
-            color = colors["down"]
+            color = colors["down"],
+            symbol = shape0
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -5121,7 +5132,8 @@ plotlyVolcano <- function(x,
           text = label.names[i2],
           font = list(
             size = 12 * label.cex,
-            color = "black"
+            color = "black",
+            symbol = shape[i2]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -5138,7 +5150,8 @@ plotlyVolcano <- function(x,
           text = label.names[ib][idl],
           font = list(
             size = 12 * label.cex,
-            color = colors["notsig"]
+            color = colors["notsig"],
+            symbol = shape[ib][idl]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -5160,11 +5173,13 @@ plotlyVolcano <- function(x,
     type = "line", x0 = +lfc, x1 = +lfc, y0 = 0, y1 = y1,
     line = list(dash = "dot", width = 1, color = "grey")
   )
+
   ## draw horizontal significance lines at p=0.05
   abline3 <- list(
     type = "line", x0 = -xx, x1 = +xx, y0 = y0, y1 = y0,
     line = list(dash = "dot", width = 1, color = "grey")
   )
+
   if (lfc == 0) {
     significance.lines <- list(abline3)
   } else {
@@ -5194,9 +5209,7 @@ plotlyVolcano <- function(x,
     plotly::layout(
       margin = list(l = 0, b = 1, t = 10, r = 10),
       font = list(size = 12),
-      legend = list(
-        font = list(size = 12)
-      )
+      legend = list(font = list(size = 12))
     ) %>%
     plotly_build_light(.)
   return(p)

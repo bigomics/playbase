@@ -222,7 +222,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
       X1 <- X
       mdl <- deseq2.mdls[match(cm.mtds[i], deseq2.mtds)]
       message("[ngs.fitContrastsWithAllMethods] Fitting using ", cm.mtds[i])
-      if (nmissing > 0) {
+      if (nmissing.counts > 0) {
         message("[ngs.fitContrastsWithAllMethods] Missing values detected. Cannot perform ", cm.mtds[i])
         next;
       } else {
@@ -253,7 +253,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
       X1 <- X
       mdl <- edger.mdls[match(cm.mtds[i], edger.mtds)]
       message("[ngs.fitContrastsWithAllMethods] Fitting using ", cm.mtds[i])
-      if (nmissing > 0) {
+      if (nmissing.counts > 0) {
         message("[ngs.fitContrastsWithAllMethods] Missing values detected. Cannot perform edgeR QL-F test or LRT.")
         next;
       } else {
