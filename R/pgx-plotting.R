@@ -4723,6 +4723,7 @@ darkmode <- function(p, dim = 2) {
 #' @param marker.size Marker size. Default 5.
 #' @param label Vector of labels for highlighted genes. Default NULL.
 #' @param label.cex Text size for labels. Default 1.
+#' @param shape Shape of points. Default is filled circle.
 #' @param color_up_down Color up/down regulated features
 #' @param marker.type Marker type (scatter, line, etc). Default "scatter".
 #' @param displayModeBar Show plotly modebar? Logical. Default TRUE.
@@ -4730,16 +4731,27 @@ darkmode <- function(p, dim = 2) {
 #' @return A plotly interactive MA plot object.
 #'
 #' @export
-plotlyMA <- function(x, y, names, label.names = names,
+plotlyMA <- function(x,
+                     y,
+                     names,
+                     label.names = names,
                      group.names = c("group1", "group2"),
                      xlab = "average expression (log2.CPM)",
                      ylab = "effect size (log2.FC)",
-                     lfc = 1, psig = 0.05, showlegend = TRUE, highlight = NULL,
-                     marker.size = 5, label = NULL, label.cex = 1,
+                     lfc = 1,
+                     psig = 0.05,
+                     showlegend = TRUE,
+                     highlight = NULL,
+                     marker.size = 5,
+                     label = NULL,
+                     label.cex = 1,
+                     shape = "circle",
                      color_up_down = TRUE, 
                      colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#3181de"),
-                     marker.type = "scatter", source = "plot1",
+                     marker.type = "scatter",
+                     source = "plot1",
                      displayModeBar = TRUE) {
+
   if (is.null(highlight)) highlight <- names
   i0 <- which(!names %in% highlight & !label.names %in% highlight)
   i1 <- which(names %in% highlight | label.names %in% highlight)
@@ -4762,7 +4774,8 @@ plotlyMA <- function(x, y, names, label.names = names,
         mode = "markers",
         marker = list(
           size = marker.size,
-          color = "#ccc"
+          color = "#ccc",
+          symbol = shape[i0]
         ),
         showlegend = showlegend
       )
@@ -4781,7 +4794,8 @@ plotlyMA <- function(x, y, names, label.names = names,
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = colors["up"]
+            color = colors["up"],
+            symbol = shape[i1][upreg]
           ),
           showlegend = showlegend
         )
@@ -4794,7 +4808,8 @@ plotlyMA <- function(x, y, names, label.names = names,
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = colors["down"]
+            color = colors["down"],
+            symbol = shape[i1][dwreg]
           ),
           showlegend = showlegend
         )
@@ -4808,7 +4823,8 @@ plotlyMA <- function(x, y, names, label.names = names,
           mode = "markers",
           marker = list(
             size = marker.size,
-            color = colors["notsig"]
+            color = colors["notsig"],
+            symbol = shape[i1]
           ),
           showlegend = showlegend
         )
@@ -4822,6 +4838,8 @@ plotlyMA <- function(x, y, names, label.names = names,
       dwreg <- y[i2] < 0
       annot_text <- label.names[i2][upreg]
       if (length(annot_text) == 0) annot_text <- ""
+      shape0 <- shape[i2][upreg]
+      if (length(shape0) == 0) shape0 <- "circle"
       p <- p %>%
         plotly::add_annotations(
           x = x[i2][upreg],
@@ -4829,7 +4847,8 @@ plotlyMA <- function(x, y, names, label.names = names,
           text = annot_text,
           font = list(
             size = 12 * label.cex,
-            color = colors["up"]
+            color = colors["up"],
+            symbol = shape0
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4838,6 +4857,8 @@ plotlyMA <- function(x, y, names, label.names = names,
         )
       annot_text <- label.names[i2][dwreg]
       if (length(annot_text) == 0) annot_text <- ""
+      shape0 <- shape[i2][dwreg]
+      if (length(shape0) == 0) shape0 <- "circle"
       p <- p %>%
         plotly::add_annotations(
           x = x[i2][dwreg],
@@ -4845,7 +4866,8 @@ plotlyMA <- function(x, y, names, label.names = names,
           text = annot_text,
           font = list(
             size = 12 * label.cex,
-            color = colors["down"]
+            color = colors["down"],
+            symbol = shape0
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4860,7 +4882,8 @@ plotlyMA <- function(x, y, names, label.names = names,
           text = label.names[i2],
           font = list(
             size = 12 * label.cex,
-            color = colors["notsig"]
+            color = colors["notsig"],
+            symbol = shape[i2]
           ),
           showarrow = FALSE,
           yanchor = "bottom",
@@ -4938,6 +4961,7 @@ plotlyMA <- function(x, y, names, label.names = names,
 #' @param marker.size Marker size. Default 5.
 #' @param label Vector of labels for highlighted genes. Default NULL.
 #' @param label.cex Text size for labels. Default 1.
+#' @param shape Shape of points. Default is filled circle.
 #' @param color_up_down Color up/down regulated features
 #' @param marker.type Marker type (scatter, line, etc). Default "scatter".
 #' @param displayModeBar Show plotly modebar? Logical. Default TRUE.
