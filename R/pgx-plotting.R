@@ -252,7 +252,7 @@ pgx.plotEnrichmentDotPlot <- function(pgx, contrast,
   ## cleaning...
   df$pathway <- sub(".Homo.sapiens", "", df$pathway)
   df$pathway <- substring(df$pathway, 1, 60)
-  df$pathway <- factor(df$pathway, levels = rev(df$pathway))
+  df$pathway <- factor(df$pathway, levels = rev(unique(df$pathway)))
 
 
   ggplot2::ggplot(df, ggplot2::aes(x = fx, y = pathway)) +
