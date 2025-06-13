@@ -241,7 +241,7 @@ pgx.initialize <- function(pgx) {
     F <- rename_by2(F, pgx$genes, "symbol")
     gset.fc <- gset.averageFC(F, pgx$GMT)
     ii <- match(rownames(pgx$gset.meta$meta[[1]]),rownames(gset.fc))
-    gset.fc <- gset.fc[ii,]
+    gset.fc <- gset.fc[ii,,drop=FALSE]
     for (i in 1:nc) {
       pgx$gset.meta$meta[[i]]$meta.fx <- gset.fc[,i]
     }
