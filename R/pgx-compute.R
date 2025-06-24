@@ -210,7 +210,8 @@ pgx.createPGX <- function(counts,
     if (average.duplicated) {
       message("[pgx.createPGX] ", ndup, " duplicated feature(s) detected. Averaging....")
       counts <- playbase::counts.mergeDuplicateFeatures(counts, is.counts = TRUE)
-      X <- playbase::counts.mergeDuplicateFeatures(X, is.counts = FALSE)
+      if(!is.null(X)) X <- playbase::counts.mergeDuplicateFeatures(X, is.counts = FALSE)
+      if(!is.null(impX)) impX <- playbase::counts.mergeDuplicateFeatures(impX, is.counts = FALSE)
     } else {
       message("[pgx.createPGX] ", ndup, " duplicated feature(s) detected. Making unique to keep all...")
       rownames(counts) <- playbase::make_unique(rownames(counts))
