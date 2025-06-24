@@ -62,7 +62,7 @@ ngs.getGeneAnnotation <- function(...) {
 #' Merges any missing annotation in df with non-missing annotation of
 #' annot_table.
 #' 
-merge_annot_table <- function(df, df2) {
+merge_annot_table <- function(df, df2, priority=1) {
 #  df2 <- df2[match(rownames(df), rownames(df2)), ]
 #  rownames(df2) <- rownames(df)
   if(nrow(df) != nrow(df2)) stop("df and df2 not same size")
@@ -78,11 +78,15 @@ merge_annot_table <- function(df, df2) {
   for(k in cols) {
     a <- df[,k]
     b <- df2[,k]
-    na.chars <- c(NA,"NA","","-","---")
-    replace.a <- (a %in% na.chars) & !(b %in% na.chars)
+    na.chars <- c(NA,"NA","","-","---","unknown")
+    if(priority==1) {
+      replace.a <- (a %in% na.chars) & !(b %in% na.chars)
+    } else {
+      replace.a <- !(b %in% na.chars)  ## always replace
+    }
     if(any(replace.a)) df[,k] <- ifelse(replace.a, b, a)
   }
-  
+
   return(df)
 }
 
@@ -150,11 +154,15 @@ getProbeAnnotation <- function(organism,
     genes <- getCustomAnnotation( probes0, custom_annot = NULL )
   }
 
-  ## if annot_table is provided we override our annotation and append
-  ## extra columns
+  ## if annot_table is provided we (priority) override our annotation
+  ## and append any extra columns.
   if (!is.null(genes) && !is.null(annot_table)) {
     dbg("[getProbeAnnotation] merging custom annotation table")
-    genes <- merge_annot_table(genes, annot_table) 
+    colnames(annot_table) <- sub("^ortholog$","human_ortholog",
+      colnames(annot_table),ignore.case=TRUE)
+    colnames(annot_table) <- sub("^Symbol$|^gene$|^gene_name$","symbol",
+      colnames(annot_table),ignore.case=TRUE)
+    genes <- merge_annot_table(genes, annot_table, priority=2) 
   }
 
   ## restore original probe names
@@ -163,10 +171,10 @@ getProbeAnnotation <- function(organism,
   ## cleanup entries and reorder columns
   genes <- cleanupAnnotation(genes)
 
-  if (all(c("ortholog", "human_ortholog") %in% colnames(genes))) {
-    jj <- which(colnames(genes) == "ortholog")
-    genes <- genes[, -jj, drop = FALSE]
-  }
+#  if (all(c("ortholog", "human_ortholog") %in% colnames(genes))) {
+#    jj <- which(colnames(genes) == "ortholog")
+#    genes <- genes[, -jj, drop = FALSE]
+#  }
   
   return(genes)
 
@@ -1742,7 +1750,7 @@ getGeneAnnotation.ORTHOGENE <- function(
 
     df$symbol <- gene.out$name
     df$gene_title <- sub(" \\[.*", "", gene.out$description)
-    df$ortholog <- getHumanOrtholog(organism, gene.out$name)$human
+    df$human_ortholog <- getHumanOrtholog(organism, gene.out$name)$human
     df$uniprot <- uniprot
     df$source <- "gprofiler2"
   }

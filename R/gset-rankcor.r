@@ -98,11 +98,12 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
   gset <- gset[gg, , drop = FALSE]
 
   if (use.rank) {
-    if(!inherits(rnk1,"dgCMatrix")) {
-      ## this doesnt work for sparse dgCMatrix
-      rnk1 <- Matrix::t(matrixStats::colRanks(rnk1, na.last = "keep", ties.method = "random"))
+    if(inherits(rnk1,"dgCMatrix")) {
+      ## for sparse dgCMatrix
+      ##rnk1 <- apply(rnk1, 2, base::rank, na.last = "keep", ties.method="random")
+      rnk1 <- sparseMatrixStats::colRanks(rnk1, na.last = "keep", ties.method = "random", preserveShape = TRUE)
     } else {
-      rnk1 <- apply(rnk1, 2, base::rank, na.last = "keep", ties.method="random")
+      rnk1 <- matrixStats::colRanks(rnk1, na.last = "keep", ties.method = "random", preserveShape = TRUE)
     }
   }
 
@@ -135,8 +136,11 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
 #'
 #' @export
 gset.averageFC <- function(F, matG, use.rank = FALSE) {
-  gset.averageCLR(F, matG, center = FALSE, use.rank = use.rank) 
+  ## no centering
+  res <- gset.averageCLR(F, matG, center = FALSE, use.rank = use.rank)
+  return(res)
 }
+
 
 #' Compute geneset expression as the average log-ration of genes in
 #' the geneset. Requires log-expression matrix X and (sparse) geneset
