@@ -6,9 +6,9 @@
 #' @export
 detectOutlierSamples <- function(X, plot = TRUE, par = NULL) {
   ## correlation and distance
-  X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], 4000)
+  X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], 1000)
   X <- X - median(X, na.rm = TRUE)
-  corX <- cor(X, use = "pairwise")
+  corX <- HiClimR::fastCor(X, optBLAS = TRUE)
   distX <- as.matrix(dist(t(X)))
 
   ## z-score based on correlation

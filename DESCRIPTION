@@ -68,6 +68,7 @@ Imports:
     grimon,
     GSVA,
     harmony,
+    HiClimR,
     htmlwidgets,
     igraph,
     iheatmapr,
