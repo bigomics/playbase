@@ -26,7 +26,8 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 #------------------------------------------------------------
 # Install de-novo bigomics stuff (as R packages)
 #------------------------------------------------------------
-
+# tobe removed once installed on the base image
+RUN R -e 'install.packages("HiClimR")'
 # copy bigomics/playbase code from github checkout
 COPY . /playbase
 
