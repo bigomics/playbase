@@ -286,8 +286,9 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 getLevels <- function(Y) {
   yy <- Y
   is.grpvar <- apply(yy, 2, function(y) length(table(y)) >= 2)
+  is.allunique <- apply(yy, 2, function(y) length(unique(y)) == length(y))
   is.numeric <- apply(yy, 2, function(y) is.numeric(type.convert(y, as.is = TRUE)))
-  is.grpvar <- is.grpvar & !is.numeric
+  is.grpvar <- is.grpvar & !is.numeric & !is.allunique
   yy <- yy[, is.grpvar, drop = FALSE]
 
   levels <- lapply(1:ncol(yy), function(i) unique(paste0(colnames(yy)[i], "=", yy[, i])))
