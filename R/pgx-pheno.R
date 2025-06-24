@@ -276,8 +276,7 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 #'
 #' @details The function takes a data frame `Y` as input and searches for
 #' columns that represent group variables. Group variables are identified as
-#' columns that have a name that does not contain "title", "name", "sample", or
-#' "patient" and have a majority of non-unique values.
+#' columns that have a majority of non-unique values.
 #' Numeric columns are excluded from the search.
 #' The levels of the identified group variables are then extracted and returned as a character vector.
 #'
@@ -285,10 +284,11 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 #'
 #' @export
 getLevels <- function(Y) {
-  yy <- Y[, grep("title|name|sample|patient", colnames(Y), invert = TRUE), drop = FALSE] ## NEED RETHINK!!!!
+  yy <- Y
   is.grpvar <- apply(yy, 2, function(y) length(table(y)) >= 2)
+  is.allunique <- apply(yy, 2, function(y) length(unique(y)) == length(y))
   is.numeric <- apply(yy, 2, function(y) is.numeric(type.convert(y, as.is = TRUE)))
-  is.grpvar <- is.grpvar & !is.numeric
+  is.grpvar <- is.grpvar & !is.numeric & !is.allunique
   yy <- yy[, is.grpvar, drop = FALSE]
 
   levels <- lapply(1:ncol(yy), function(i) unique(paste0(colnames(yy)[i], "=", yy[, i])))
