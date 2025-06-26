@@ -1184,7 +1184,9 @@ pgx.createSingleCellPGX <- function(counts,
     impX = NULL,
     norm_method = "CPM",
     is.logx = FALSE,
-    batch.correct = FALSE,
+    #batch.correct = FALSE,
+    batch.correct.method = "no_batch_correct", ## new
+    batch.pars = "<autodetect>", ## new
     auto.scale = TRUE,
     filter.genes = TRUE,
     prune.samples = FALSE,
