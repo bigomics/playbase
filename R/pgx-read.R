@@ -58,6 +58,10 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
   # but first and last column maintain the "
   first_column <- x0[[1]] # Extract the first column
   last_column <- x0[[ncol(x0)]] # Extract the last column
+#  first_column <- as.character(first_column)
+#  last_column <- as.character(last_column)
+  first_column <- utf8(first_column)
+  last_column <- utf8(last_column)
   if (all(grepl('^"', first_column)) && all(grepl('"$', last_column))) {
     x0[[1]] <- gsub('^"', "", first_column)
     x0[[ncol(x0)]] <- as.numeric(gsub('"$', "", last_column))
@@ -109,6 +113,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
   which.char <- which(sapply(x, class) == "character")
   if (length(which.char)) {
     char.cols <- colnames(x)[which.char]
+    x[, c(char.cols) := lapply(.SD, utf8), .SDcols = char.cols]
     x[, c(char.cols) := lapply(.SD, trimws), .SDcols = char.cols]
   }
 
@@ -153,6 +158,22 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
     }
   }
   return(x)
+}
+
+utf8 <- function(s) {
+  s1 <- tryCatch(
+    iconv(s,"latin1","UTF-8",sub=""),
+    error = function(e) e,
+    warning = function(e) e 
+  )
+  if(!"try-error" %in% class(s1) && !"warning" %in% class(s1)) return(s1)
+  s1 <- tryCatch(
+    stringr::str_conv(s, "UTF-8"),
+    error = function(e) e,
+    warning = function(e) e 
+  )
+  if(!"try-error" %in% class(s1) && !"warning" %in% class(s1)) return(s1)
+  return(s)
 }
 
 #' Detect delimiter of text file from header (or first line)
