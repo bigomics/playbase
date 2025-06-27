@@ -6812,7 +6812,7 @@ plotBipartiteGraph <- function(R, f, min.rho=0.8, ntop=25,
   ## limit number per group
   igraph::V(gr)$group <- c("from","to")[1+1*(igraph::V(gr)$name %in% colnames(R))]
   sel <- tapply(igraph::V(gr)$name, igraph::V(gr)$group,
-    function(i) head(names(sort(-abs(y[i]))),ntop))
+    function(i) head(names(sort(-abs(f[i]))),ntop))
   sel <- unique(unlist(sel))
   gr <- igraph::subgraph(gr, sel)
   
@@ -6892,7 +6892,8 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
                                   min.rho=0.8, ntop=25, yheight=2,
                                   labels=NULL, cex.label=1, vx.cex=1,
                                   xpos=NULL, xlim=NULL, justgraph=FALSE,
-                                  edge.alpha=0.33, edge.type="both",
+                                  edge.cex=1, edge.alpha=0.33,
+                                  edge.type="both", labpos = NULL,
                                   layout=c("parallel","hive")[1]) {
   
   if(is.null(groups)) {
@@ -6961,32 +6962,34 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
   if(justgraph) {
     return(gr)
   }
+
+  group <- igraph::V(gr)$group
   
   ## layout
   if(layout=="parallel") {
     if(is.null(xpos))
       xpos <- c(1:length(groups))
-    x <- xpos[match(igraph::V(gr)$group, groups)]
+    x <- xpos[match(group, groups)]
     y <- f[igraph::V(gr)$name] / max(abs(f))
     layout.xy <- cbind(x=x, y=y)
     for(i in unique(layout.xy)[,1]) {
       ii <- which(layout.xy[,1]==i)
-      layout.xy[ii,2] <- rank(layout.xy[ii,2]) / length(ii)
+      layout.xy[ii,2] <- rank(layout.xy[ii,2], ties.method="random") / length(ii)
+      if(length(ii)==1) layout.xy[ii,2] <- 0.5*layout.xy[ii,2]
     }
     layout.xy[,2] <- yheight*layout.xy[,2]
   }
 
   if(layout=="hive") {
     ## IN PROGRESS. NOT READY YET.
-    dt <- igraph::V(gr)$group
-    ntype <- length(unique(dt))
-    layout.xy <- matrix(NA, length(dt), 2)
+    ntype <- length(unique(group))
+    layout.xy <- matrix(NA, length(group), 2)
     for(i in 1:ntype) {
-      ii <- which(dt == unique(dt)[i])
+      ii <- which(group == unique(group)[i])
       vv <- igraph::V(gr)[ii]
       phi <- pi/2 + i * 2*pi / ntype
       vf <- f[vv$name]
-      r <- 0.2 + rank(vf)/length(vf)
+      r <- 0.2 + rank(vf, ties.method="random")/length(vf)
       x <- r*cos(phi)
       y <- r*sin(phi)
       layout.xy[ii,] <- cbind(x,y)  
@@ -7016,7 +7019,7 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
     gr,
     # layout=layout_with_kk,
     layout = layout.xy,  
-    edge.width = 4*ew**1,
+    edge.width = 5*edge.cex*ew**1,
     edge.color = ecol,
     vertex.label.color = "black",
     vertex.label.dist = 0,  
@@ -7035,18 +7038,28 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
   ## titles
   for(i in 1:length(groups)) {
     grp1 <- groups[i]
-    text(xpos[i], max(y), grp1, font=2, cex=1.25, pos=3, adj=0, offset=1.3)
+    y1 <- y[which(group==grp1)]
+    text(xpos[i], max(y1), grp1, font=2, cex=1.25, pos=3, adj=0, offset=1.3)
   }
 
   ## plot logFC
-  xt <- min(xpos) + 0.66*diff(range(xpos))
+  xt <- min(xpos) + 0.5*diff(range(xpos))
+  if(is.null(labpos)) {
+    labpos <- c(2,4)[1+1*(xpos>xt)]
+  } else {
+    if(length(labpos)==1) labpos <- rep(labpos, length(groups))
+  }  
   for(i in 1:length(groups)) {
-    tpos <- c(2,4)[1+1*(xpos[i]>xt)]
-    text( xpos[i], -0.02, "log2FC", cex=0.9*cex.label, font=2, pos=tpos,
+    #tpos <- c(2,4)[1+1*(xpos[i]>xt)]
+    tpos <- labpos[i]
+    if(groups[i]=="PHENO") next
+    text( xpos[i], -0.02, "log2FC", cex=1.0*cex.label, font=2, pos=tpos,
          adj=1, offset=1)
   }
+
+  labposx <- labpos[match(group, groups)]
   text( x, y, cex=0.85*cex.label, round( f[rownames(layout.xy)],2),
-       pos = c(2,4)[1+1*(x>xt)], adj=1, offset=1.2)
+       pos = labposx, adj=1, offset=1.2)
 
   ## plot labels 
   if(!is.null(labels)) {
@@ -7054,8 +7067,7 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
   } else {
     labels <- rownames(layout.xy)
   }
-  text(x, y, labels, cex=cex.label, pos=c(2,4)[1+1*(x>xt)],
-       adj=1, offset=3.5)
+  text(x, y, labels, cex=cex.label, pos=labposx, adj=1, offset=3.5)
 
   ## return graph
   invisible(gr)
@@ -7133,7 +7145,7 @@ plotHivePlot <- function(X, f, group, groups=NULL,
     layout.xy <- cbind(x=x, y=y)
     for(i in unique(layout.xy)[,1]) {
       ii <- which(layout.xy[,1]==i)
-      layout.xy[ii,2] <- rank(layout.xy[ii,2]) / length(ii)
+      layout.xy[ii,2] <- rank(layout.xy[ii,2], ties.method="random") / length(ii)
     }
     layout.xy[,2] <- yheight*layout.xy[,2]
   }
@@ -7149,7 +7161,7 @@ plotHivePlot <- function(X, f, group, groups=NULL,
       vv <- igraph::V(gr)[ii]
       phi <- pi/2 + i * 2*pi / ntype
       vf <- f[vv$name]
-      r <- 0.15 + rank(vf)/length(vf)
+      r <- 0.15 + rank(vf, ties.method="random")/length(vf)
       x <- r*cos(phi)
       y <- r*sin(phi)
       layout.xy[ii,] <- cbind(x,y)
