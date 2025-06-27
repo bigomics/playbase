@@ -525,7 +525,7 @@ pgx.makeAutoContrasts <- function(df, mingrp = 3, slen = 20, ref = NULL, max.lev
     ## otherwise create A-vs-others.
     if (is.null(ref1)) ref1 <- NA
     x <- as.character(x)
-    x <- iconv(x, "latin1", "ASCII", sub = "")
+    x <- base::enc2utf8(x)
     nx <- table(x)
     too.small <- names(which(nx < mingrp))
     if (length(too.small)) x[which(x %in% too.small)] <- NA

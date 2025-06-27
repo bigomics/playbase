@@ -58,6 +58,8 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
   # but first and last column maintain the "
   first_column <- x0[[1]] # Extract the first column
   last_column <- x0[[ncol(x0)]] # Extract the last column
+  first_column <- iconv2utf8(first_column)
+  last_column <- iconv2utf8(last_column)
   if (all(grepl('^"', first_column)) && all(grepl('"$', last_column))) {
     x0[[1]] <- gsub('^"', "", first_column)
     x0[[ncol(x0)]] <- as.numeric(gsub('"$', "", last_column))
@@ -109,6 +111,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
   which.char <- which(sapply(x, class) == "character")
   if (length(which.char)) {
     char.cols <- colnames(x)[which.char]
+    x[, c(char.cols) := lapply(.SD, iconv2utf8), .SDcols = char.cols]
     x[, c(char.cols) := lapply(.SD, trimws), .SDcols = char.cols]
   }
 
@@ -154,6 +157,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
   }
   return(x)
 }
+
 
 #' Detect delimiter of text file from header (or first line)
 #'

@@ -152,12 +152,19 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
     probes <- res$ChEBI_ID
     probe_type <- "ChEBI"
   }
-  if(!probe_type %in% colnames(annot)) {
+  if(is.null(probe_type) || !probe_type %in% colnames(annot)) {
     message("FATAL ERROR: probetype not in annot. probetype=",probe_type)
     return(NULL)
   }
-  ii <- match(probes, annot[, probe_type])
-  ids <- annot[ii, target_id]
+
+  both.chebi <- (probe_type == "ChEBI" && target_id == "ID")
+  both.hmdb <- (probe_type == "HMDB" && target_id == "HMDB")
+  if( both.chebi || both.hmdb ) {
+    ids <- probes
+  } else {
+    ii <- match(probes, annot[, probe_type])
+    ids <- annot[ii, target_id]
+  }
   # Make sure NA are maintained (if there are NAs on annot, they get matched to random IDs sometimes) XEM
   na.probes <- is.na(probes)
   ids[na.probes] <- NA
@@ -341,7 +348,7 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
     df <- cbind(df, metadata[,extra_cols])
   }
 
-  ## add ID table 
+  ## add ID table. Need rethink METABOLITE_ID is not always complete.
   if(add_id) {
     id_table <- playdata::METABOLITE_ID
     ii <- match( df$symbol, id_table$ID )
