@@ -394,10 +394,10 @@ read_Olink_NPX <- function(NPX_data) {
   require(OlinkAnalyze)
 
   NPX <- try(OlinkAnalyze::read_NPX(NPX_data), silent = TRUE)
-  if (!inherits(NPX, "try-error"))  {
+  if (!inherits(NPX, "try-error")) {
     NPX <- as.data.frame(NPX)
   } else {
-    dbg("[read_Olink_NPX] The uploaded Olink NPX file is not be in standard Olink format. Please correct")
+    dbg("[read_Olink_NPX]. Uploaded proteomics data file is not Olink or does not adhere with standard Olink NPX format.")
     return(NULL)
   }
 
@@ -445,11 +445,13 @@ read_Olink_NPX <- function(NPX_data) {
 #' @export
 read_Olink_samples <- function(NPX_data) {
 
+  require(OlinkAnalyze)
+
   NPX <- try(OlinkAnalyze::read_NPX(NPX_data), silent = TRUE)
   if (!inherits(NPX, "try-error")) {
     NPX <- as.data.frame(NPX)
   } else {
-    dbg("[read_Olink_NPX] The uploaded Olink NPX file is not be in standard Olink format. Please correct")
+    dbg("[read_Olink_NPX]. Uploaded proteomics data file is not Olink or does not adhere with standard Olink NPX format.")
     return(NULL)
   }
 
@@ -477,7 +479,7 @@ read_Olink_samples <- function(NPX_data) {
       jj <- match(rownames(samples)[i], NPX[,hh[1]])
       jx <- match(colnames(samples)[t], colnames(NPX))
       if(!any(jj) | !any(jx)) next
-      samples[i,t] <- meta.data[jj, jx]
+      samples[i,t] <- NPX[jj, jx]
     }
   }
   samples <- samples[,-hh[1]]
