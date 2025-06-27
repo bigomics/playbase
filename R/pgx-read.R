@@ -158,7 +158,6 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
   return(x)
 }
 
-
 #' Detect delimiter of text file from header (or first line)
 #'
 detect_delim <- function(file) {
