@@ -1075,34 +1075,27 @@ pgx.getOrganism <- function(pgx, capitalise = FALSE) {
 }
 
 
-#' @title Get Levels of Group Variables
-#'
-#' @description This function retrieves the levels of group variables in a data frame.
-#'
-#' @param Y A data frame containing the data to be analyzed.
-#'
-#' @details The function takes a data frame `Y` as input and searches for
-#' columns that represent group variables. Group variables are identified as
-#' columns that have a name that does not contain "title", "name", "sample", or
-#' "patient" and have a majority of non-unique values.
-#' Numeric columns are excluded from the search.
-#' The levels of the identified group variables are then extracted and returned as a character vector.
-#'
-#' @return A character vector representing the levels of the group variables in the input data frame.
-#'
-#' @export
-getLevels <- function(Y) {
-  yy <- Y[, grep("title|name|sample|patient", colnames(Y), invert = TRUE), drop = FALSE] ## NEED RETHINK!!!!
-  is.grpvar <- apply(yy, 2, function(y) max(table(y)) > 1,na.rm=TRUE)
-  is.numeric <- apply(yy, 2, function(y) (length(table(y)) / length(y)) > 0.5)
-  is.grpvar <- is.grpvar & !is.numeric
-  yy <- yy[, is.grpvar, drop = FALSE]
-
-
-  levels <- lapply(1:ncol(yy), function(i) unique(paste0(colnames(yy)[i], "=", yy[, i])))
-  levels <- sort(unlist(levels))
-  return(levels)
-}
+## #' @title Get Levels of Group Variables
+## #' @description This function retrieves the levels of group variables in a data frame.
+## #' @param Y A data frame containing the data to be analyzed.
+## #' @details The function takes a data frame `Y` as input and searches for
+## #' columns that represent group variables. Group variables are identified as
+## #' columns that have a name that does not contain "title", "name", "sample", or
+## #' "patient" and have a majority of non-unique values.
+## #' Numeric columns are excluded from the search.
+## #' The levels of the identified group variables are then extracted and returned as a character vector.
+## #' @return A character vector representing the levels of the group variables in the input data frame.
+## #' @export
+## getLevels <- function(Y) {
+##   yy <- Y[, grep("title|name|sample|patient", colnames(Y), invert = TRUE), drop = FALSE] ## NEED RETHINK!!!!
+##   is.grpvar <- apply(yy, 2, function(y) max(table(y)) > 1,na.rm=TRUE)
+##   is.numeric <- apply(yy, 2, function(y) (length(table(y)) / length(y)) > 0.5)
+##   is.grpvar <- is.grpvar & !is.numeric
+##   yy <- yy[, is.grpvar, drop = FALSE]
+##   levels <- lapply(1:ncol(yy), function(i) unique(paste0(colnames(yy)[i], "=", yy[, i])))
+##   levels <- sort(unlist(levels))
+##   return(levels)
+## }
 
 
 #' @title Select samples from selected levels
