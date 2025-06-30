@@ -5,7 +5,7 @@
 \title{Merges any missing annotation in df with non-missing annotation of
 annot_table.}
 \usage{
-merge_annot_table(df, df2)
+merge_annot_table(df, df2, priority = 1)
 }
 \description{
 Merges any missing annotation in df with non-missing annotation of

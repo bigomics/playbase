@@ -4,7 +4,6 @@
 \alias{ngs.fitContrastsWithAllMethods}
 \alias{ngs.fitContrastsWithTTEST}
 \alias{ngs.fitContrastsWithWILCOXON}
-\alias{ngs.fitContrastsWithLIMMA}
 \alias{ngs.fitContrastsWithEDGER}
 \alias{.ngs.fitContrastsWithEDGER.nodesign}
 \alias{.ngs.fitContrastsWithEDGER.nodesign.pruned}
@@ -43,19 +42,6 @@ ngs.fitContrastsWithTTEST(
 )
 
 ngs.fitContrastsWithWILCOXON(X, contr.matrix, design, conform.output = 0)
-
-ngs.fitContrastsWithLIMMA(
-  X,
-  contr.matrix,
-  design,
-  method = c("voom", "limma"),
-  trend = TRUE,
-  robust = TRUE,
-  prune.samples = FALSE,
-  conform.output = FALSE,
-  plot = FALSE,
-  timeseries = NULL
-)
 
 ngs.fitContrastsWithEDGER(
   counts,
@@ -198,9 +184,7 @@ Custom methods can also be added.
 \itemize{
 \item \code{ngs.fitContrastsWithTTEST()}: Fits contrasts using t-test
 
-\item \code{ngs.fitContrastsWithWILCOXON()}: Fits contrasts using Wilcoxon rank sum (scRNAseq)
-
-\item \code{ngs.fitContrastsWithLIMMA()}: Fits contrasts using LIMMA diff. expr. analysis.
+\item \code{ngs.fitContrastsWithWILCOXON()}: Fits contrasts using Wilcoxon Rank Sum test
 
 \item \code{ngs.fitContrastsWithEDGER()}: Fit contrasts with EdgeR
 

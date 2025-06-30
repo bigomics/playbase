@@ -24,12 +24,14 @@ pgx.createPGX(
   impX = NULL,
   norm_method = "CPM",
   is.logx = NULL,
-  batch.correct = TRUE,
+  batch.correct.method = "no_batch_correct",
+  batch.pars = "<autodetect>",
   auto.scale = TRUE,
   filter.genes = TRUE,
   exclude.genes = NULL,
   prune.samples = FALSE,
   only.known = TRUE,
+  average.duplicated = FALSE,
   only.hugo = TRUE,
   convert.hugo = FALSE,
   only.proteincoding = TRUE,
@@ -58,7 +60,9 @@ for the gene annotation table and the probe to symbol conversion.}
 
 \item{is.logx}{Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.}
 
-\item{batch.correct}{Logical indicating whether to perform batch correction. Default is TRUE.}
+\item{batch.correct.method}{BC method. Default is "no_batch_correct" (meaning no batch correction).}
+
+\item{batch.pars}{BC variable. Default "autodetect" as per QC/BC tab in upload.}
 
 \item{auto.scale}{Logical indicating whether to automatically scale/center genes. Default is TRUE.}
 
@@ -67,6 +71,8 @@ for the gene annotation table and the probe to symbol conversion.}
 \item{prune.samples}{Logical indicating whether to remove samples without contrasts. Default is FALSE.}
 
 \item{only.known}{Logical indicating whether to keep only known genes. Default is TRUE.}
+
+\item{average.duplicated}{Logical whether average duplicated features (if any). Default FALSE (thus keep all by making unique).}
 
 \item{only.hugo}{Logical indicating whether to convert symbols to HUGO names. Default is TRUE.}
 
