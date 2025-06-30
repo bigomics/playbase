@@ -168,6 +168,7 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
   # Make sure NA are maintained (if there are NAs on annot, they get matched to random IDs sometimes) XEM
   na.probes <- is.na(probes)
   ids[na.probes] <- NA
+  ids[ids==""] <- NA
   return(ids)
 }
 
