@@ -41,8 +41,7 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
 
   for (i in 1:length(xdata)) {
     d <- rownames(xdata[[i]])
-    ## rownames(xdata[[i]]) <- stringi::stri_trans_general(d, "latin-ascii")
-    rownames(xdata[[i]]) <- iconv(d, to = "ascii//TRANSLIT")
+    rownames(xdata[[i]]) <- iconv2utf8(d)
   }
 
   ## MOFA computation
@@ -197,7 +196,7 @@ mofa.compute <- function(xdata,
   ## done in creating genesets...)
   for (i in 1:length(xdata)) {
     d <- rownames(xdata[[i]])
-    rownames(xdata[[i]]) <- iconv(d, to = "ascii//TRANSLIT")
+    rownames(xdata[[i]]) <- iconv2utf8(d)
   }
 
   ## add prefix???
@@ -463,8 +462,7 @@ mofa.add_genesets <- function(xdata, GMT = NULL, datatypes = NULL) {
   GMT <- Matrix::t(GMT) ## genesets on rows
   
   ## convert non-ascii characters....
-  ## rownames(GMT) <- iconv(rownames(GMT), "latin1", "ASCII", sub="")
-  rownames(GMT) <- stringi::stri_trans_general(rownames(GMT), "latin-ascii")
+  rownames(GMT) <- iconv2utf8(rownames(GMT))
   colnames(GMT) <- mofa.strip_prefix(colnames(GMT))
 
   gsetX <- list()
@@ -1832,7 +1830,7 @@ mofa.exampledata <- function(dataset = "geiger", ntop = 2000,
   ## strip prefix, convert to ASCII
   for (i in 1:length(data)) {
     rownames(data[[i]]) <- sub("^[a-zA_Z]+:", "", rownames(data[[i]]))
-    rownames(data[[i]]) <- iconv(rownames(data[[i]]), "latin1", "ASCII", sub = "")
+    rownames(data[[i]]) <- iconv2utf8(rownames(data[[i]]))
   }
 
   ## filter out and reduce

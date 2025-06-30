@@ -2037,7 +2037,7 @@ shortstring <- function(s, n, dots = 1) {
 #' }
 #' @export
 shortstring0 <- function(s, n, dots = 1) {
-  s0 <- iconv(as.character(s), to = "UTF-8")
+  s0 <- base::enc2utf8(as.character(s))
   s0 <- gsub("[&].*[;]", "", s0) ## HTML special garbage...
   jj <- which(nchar(s0) > n)
   if (length(jj) == 0) {

@@ -168,6 +168,7 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
   # Make sure NA are maintained (if there are NAs on annot, they get matched to random IDs sometimes) XEM
   na.probes <- is.na(probes)
   ids[na.probes] <- NA
+  ids[ids==""] <- NA
   return(ids)
 }
 
@@ -348,7 +349,7 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
     df <- cbind(df, metadata[,extra_cols])
   }
 
-  ## add ID table. Need rethink METABOLITE_ID is not always complete!
+  ## add ID table. Need rethink METABOLITE_ID is not always complete.
   if(add_id) {
     id_table <- playdata::METABOLITE_ID
     ii <- match( df$symbol, id_table$ID )

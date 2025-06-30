@@ -250,3 +250,11 @@ compute_CV <- function(counts) {
   cv <- (sdx / avg) * 100
   return(cv)
 }
+
+iconv2utf8 <- function(s) {
+  iconv(s, to = "UTF-8//TRANSLIT", sub="")
+}
+
+iconv2ascii <- function(s) {
+  iconv(s, to = "ascii//TRANSLIT", sub="")
+}
