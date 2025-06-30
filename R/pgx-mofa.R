@@ -2747,7 +2747,7 @@ lasagna.create_model <- function(data, pheno = "pheno", ntop = 1000, nc = -1,
 
   ## add graph attributes
   igraph::V(gr)$layer <- sub(":.*","",igraph::V(gr)$name)
-  ee <- igraph::get.edgelist(gr)
+  ee <- igraph::as_edgelist(gr)
   etype <- apply(ee, 2, function(e) sub(":.*","",e))
   igraph::E(gr)$layer <- ""  
   for(k in 1:(length(layers)-1)) {
@@ -2780,7 +2780,7 @@ sp_edge_weight <- function(gr, layers) {
   layers <- unique(c("SOURCE",layers,"SINK"))
   wt <- abs(igraph::E(gr)$weight)
   wt[is.na(wt)] <- 0
-  ee <- igraph::get.edgelist(gr)
+  ee <- igraph::as_edgelist(gr)
   v1 <- ee[,1]
   v2 <- ee[,2]
   l1 <- match(igraph::V(gr)[v1]$layer, layers)
@@ -2794,13 +2794,14 @@ sp_edge_weight <- function(gr, layers) {
     from = "SINK", to = p2, weights = 1/wt, output = "epath"
   )
   sp <- mapply(c, s1$epath, s2$epath)
-  sp.score <- sapply(sp, function(e) exp(mean(log(wt[e]))))
+  ##sp.score <- sapply(sp, function(e) exp(mean(log(wt[e]))))
+  sp.score <- sapply(sp, function(e) min(wt[e],na.rm=TRUE))
   max(sp.score)
   min(sp.score)  
   sp.score
 }
 
-lasagna.set_weights <- function(obj, pheno, max_edges=100,
+lasagna.set_weights <- function(obj, pheno, max_edges=100, value.type="rho",
                                 min_rho=0, prune=TRUE, sp.weight=FALSE) {
 
   if(!pheno %in% colnames(obj$Y)) stop("pheno not in Y")
@@ -2810,20 +2811,36 @@ lasagna.set_weights <- function(obj, pheno, max_edges=100,
 
   graph <- obj$graph
   X <- obj$X
-  R <- cor(t(X), obj$Y)
-  vars <- R[,pheno]
+  y <- obj$Y[,pheno]
+  ii <- grep("PHENO",rownames(X))
+  if(length(ii)) X[ii,][which(X[ii,]==0)] <- NA
+  y[y==0] <- NA
+  rho <- cor(t(X), y, use="pairwise")[,1]
+  i0 <- which(sign(y)==-1)
+  i1 <- which(sign(y)==+1)
+  fc <- rowMeans(X[,i1],na.rm=TRUE) - rowMeans(X[,i0],na.rm=TRUE)
+  rho[is.na(rho)] <- 0
+
+  ## for PHENO nodes 'foldchange' does not make sense. replace with rho.
+  ii <- grep("PHENO",names(fc))
+  if(length(ii)) fc[ii] <- rho[ii]
   
   ## set node values
-  vars <- vars[igraph::V(graph)$name]
-  V(graph)$value <- vars
+  if(value.type == "rho") {
+    igraph::V(graph)$value <- rho
+  } else {
+    igraph::V(graph)$value <- fc
+  }
   
   ## set edge weights
-  ee <- igraph::get.edgelist(graph)
-  ff <- abs(vars[ee[,1]])^0.5 * abs(vars[ee[,2]])^0.5
-  E(graph)$weight <- igraph::E(graph)$rho * ff
+  ee <- igraph::as_edgelist(graph)
+  ff <- igraph::V(graph)$value
+  names(ff) <- igraph::V(graph)$name
+  ww <- abs(ff[ee[,1]] * ff[ee[,2]])^0.5
+  E(graph)$weight <- igraph::E(graph)$rho * ww
   
   ## set SINK/SOURCE edges to 1
-  if(any(grepl("SINK|SOURCE",names(vars)))) {
+  if(any(grepl("SINK|SOURCE",igraph::V(graph)$name))) {
     E(graph)[.to("SINK")]$weight <- 1
     E(graph)[.from("SOURCE")]$weight <- 1    
   }
@@ -2930,7 +2947,7 @@ plot_lasagna <- function(posx, vars = NULL, num_edges = 20) {
 #'
 #'
 #' @export
-plotly_lasagna <- function(pos, vars = NULL, X = NULL, edges = NULL,
+plotly_lasagna <- function(pos, vars = NULL, edges = NULL, znames=NULL,
                            min.rho = 0.5, num_edges = 40) {
 
   ## prefix variable if needed
@@ -2956,34 +2973,39 @@ plotly_lasagna <- function(pos, vars = NULL, X = NULL, edges = NULL,
   colnames(df) <- c("feature", "x", "y", "z", "color", "text")
   
   ## provide some edges
-  if(!is.null(X) && is.null(edges)) {
-    X <- X[names(vars),]
-    edges <- c()
+  if(!is.null(edges) && min.rho>0) {
+    edges <- edges[abs(edges[,3])>0,]
+  }
+  if(!is.null(edges) && num_edges>0) {
     i=1
     for(i in 1:(length(pos)-1)) {
-      ii <- which(df$z == names(pos)[i])
-      jj <- which(df$z == names(pos)[i+1])
-      R <- cor( t(X[ii,]), t(X[jj,]), use="pairwise")
-      idx <- which(abs(R) >= min.rho, arr.ind=TRUE)
-      ee <- data.frame( i=rownames(R)[idx[,1]], j=colnames(R)[idx[,2]], r=R[idx] )
-      sel <- head(order(-abs(ee$r)), num_edges)
-      edges <- rbind(edges, ee[sel,])
+      v1 <- rownames(pos[[i]])
+      v2 <- rownames(pos[[i+1]])
+      jj <- which((edges[,1] %in% v1) & (edges[,2] %in% v2))
+      sel <- head(jj[ order(-abs(edges[jj,3])) ], num_edges)
+      jj <- setdiff(jj, sel)
+      edges[jj,3] <- 0
     }
-  }
-  if(!is.null(edges)) {
-    edges <- edges[abs(edges[,3])>0,]
+    edges <- edges[ edges[,3]!=0, ]
   }
   
   ## some nicer names
-  znames <- c(
-    "ph" = "Phenomics",
-    "gset" = "Biological function",
-    "mx" = "Metabolomics",
-    "gx" = "Transcriptomics",
-    "tx" = "Transcriptomics",
-    "mir" = "micro-RNA",
-    "px" = "Proteomics"
-  )
+  if(is.null(znames)) {
+    znames <- c(
+      "PHENO" = "Phenotype",
+      "ph" = "Phenotype",
+      "gset" = "Pathway",
+      "mx" = "Metabolomics",
+      "gx" = "Transcriptomics",
+      "tx" = "Transcriptomics",
+      "mir" = "micro-RNA",
+      "px" = "Proteomics",
+      "dr" = "Drug response",
+      "me" = "Methylation",
+      "mt" = "Mutation",
+      "mu" = "Mutation"
+    )
+  }
 
   fig <- plotlyLasagna(df, znames = znames, edges = edges)
   return(fig)

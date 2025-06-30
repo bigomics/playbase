@@ -589,7 +589,7 @@ pgx.SankeyFromMRF.PLOTLY <- function(M, R, F, fill = TRUE, labels = NULL) {
   i <- 1
   for (i in 1:length(M)) {
     gr <- rho2graph(M[[i]], min.rho = 0)
-    ee <- igraph::get.edgelist(gr)
+    ee <- igraph::as_edgelist(gr)
     pct <- M[[i]] / sum(M[[i]], na.rm = TRUE) * 100
     igraph::E(gr)$count <- pct[ee]
     igraph::E(gr)$rho <- R[[i]][ee]
@@ -6589,6 +6589,7 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
         idx <- as.vector(t(as.matrix(ee[,1:2])))
         dfe <- rbind(df1[,c("x","y","z")], df2[,c("x","y","z")])[idx,]      
         dfe$pair_id <- as.vector(mapply(rep, 1:nrow(ee),2))
+        dfe$col <- c("darkorange3","magenta4")[1+(ee[,3]>0)]
         
         fig <- fig %>%
           plotly::add_trace(
@@ -6599,7 +6600,8 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
             #type = "scattergl",
             mode = "lines",
             line = list(
-              color = "black",
+              #color = "black",
+              color = dfe$col,
               width = 0.5
             ),
             split = dfe$pair_id,
@@ -6704,7 +6706,8 @@ plotTimeSeries.modules <- function(time, xx, modules, main="",
 }
 
 
-#'
+#' Plots time series facetted by module/colors with groups. X is an
+#' expression matrix. Time is a vector of times for each sample.
 #'
 #' @export
 plotTimeSeries.groups <- function(time, y, group=NULL, main="",
@@ -6930,6 +6933,7 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
       y <- r*sin(phi)
       layout.xy[ii,] <- cbind(x,y)  
     }
+    yheight <- 0
     rownames(layout.xy) <- igraph::V(gr)$name
   }
     
@@ -7009,48 +7013,42 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
   invisible(gr)
 }
 
-#'
+#' Plot multi-partite graph as parallel plot with base plot. 
+#' 
 #' @export
-plotMultiPartiteGraph2 <- function(graph, layers=NULL, fc="value", 
-                                   min.rho=0.5, ntop=25, yheight=2,
+plotMultiPartiteGraph2 <- function(graph, layers=NULL, 
+                                   min.rho=0.5, ntop=25, 
                                    labels=NULL, cex.label=1, vx.cex=1,
                                    xpos=NULL, xlim=NULL, justgraph=FALSE,
                                    edge.cex=1, edge.alpha=0.33,
-                                   normalize.edges = FALSE,
+                                   normalize.edges = FALSE, yheight=2,
                                    edge.type="both", labpos = NULL,
+                                   value.name = "logFC", strip.prefix = FALSE,
                                    layout=c("parallel","hive")[1]) {
   
   if(0) {
-    min.rho=0.5; ntop=25; yheight=2;
+    layers=NULL
+    min.rho=0.5; ntop=25; nc=3; yheight=2;
     labels=NULL; cex.label=1; vx.cex=1;
     xpos=NULL; xlim=NULL; justgraph=FALSE;
-    edge.cex=1; edge.alpha=0.33;
+    edge.cex=1; edge.alpha=0.33; fc="value"; 
     edge.type="both"; labpos = NULL;
-    layout=c("parallel","hive")[1]
+    layout=c("parallel","hive")[1];
+    normalize.edges = FALSE
+    value.name="rho"
+    strip.prefix=FALSE
   }
 
   if(is.null(layers)) layers <- unique(igraph::V(graph)$layer)
   layers <- setdiff(layers, c("SOURCE","SINK"))
   graph <- igraph::subgraph(graph, igraph::V(graph)$layer %in% layers)
-
-  if(is.null(igraph::E(graph)$sign)) {
-    igraph::E(graph)$sign <- sign(igraph::E(graph)$weight)
-  }
-
-  aa <- names(igraph::vertex_attr(graph))
-  if(is.null(fc)) {
-    stop("fc must be a vector or vertex attribute")
-  }
-  if(is.character(fc) && length(fc)==1 && !fc[1] %in% aa) {
-    stop("fc must be a vector or vertex attribute")
-  }
-  if(is.character(fc) && length(fc)==1 && fc[1] %in% aa) {
-    fc <- igraph::vertex_attr(graph, fc)
-    names(fc) <- igraph::V(graph)$name
-  }
+  if(length(labpos)<length(layers)) labpos <- head(rep(labpos,99),length(layers))
   
-  if(is.null(names(fc))) stop("fc must have names")
-  fc <- fc[igraph::V(graph)$name]
+  if(!"value" %in% names(igraph::vertex_attr(graph))) {
+    stop("vertex must have 'value' attribute")
+  }
+  fc <- igraph::V(graph)$value
+  names(fc) <- igraph::V(graph)$name
   
   ## select ntop features
   if(!is.null(ntop) && ntop>0) {
@@ -7064,7 +7062,7 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL, fc="value",
   if(normalize.edges) {
     for(e in unique(igraph::E(graph)$layer)) {
       ii <- which(igraph::E(graph)$layer == e)
-      max.wt <- max(abs(igraph::E(graph)$weight[ii]))
+      max.wt <- max(abs(igraph::E(graph)$weight[ii]),na.rm=TRUE)
       igraph::E(graph)$weight[ii] <- igraph::E(graph)$weight[ii] / max.wt
     }
   }
@@ -7088,6 +7086,8 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL, fc="value",
     x <- xpos[match(group, layers)]
     y <- fc[igraph::V(graph)$name] 
     layout.xy <- cbind(x=x, y=y)
+    dbg("dpos = ",diff(range(xpos)))
+    if(yheight < 1) yheight <- yheight * diff(range(xpos))
     for(i in unique(layout.xy)[,1]) {
       ii <- which(layout.xy[,1]==i)
       layout.xy[ii,2] <- rank(layout.xy[ii,2], ties.method="random") / length(ii)
@@ -7110,6 +7110,7 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL, fc="value",
       y <- r*sin(phi)
       layout.xy[ii,] <- cbind(x,y)  
     }
+    yheight <- 0
     rownames(layout.xy) <- igraph::V(graph)$name
   }
 
@@ -7167,7 +7168,7 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL, fc="value",
     #tpos <- c(2,4)[1+1*(xpos[i]>xt)]
     tpos <- labpos[i]
     if(layers[i]=="PHENO") next
-    text( xpos[i], -0.02, "log2FC", cex=1.0*cex.label, font=2, pos=tpos,
+    text( xpos[i], -0.02, value.name, cex=1.0*cex.label, font=2, pos=tpos,
          adj=1, offset=1)
   }
   labposx <- labpos[match(group, layers)]
@@ -7180,6 +7181,7 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL, fc="value",
   } else {
     labels <- rownames(layout.xy)
   }
+  if(strip.prefix) labels <- sub(".*:","",labels)
   text(x, y, labels, cex=cex.label, pos=labposx, adj=1, offset=2.8)
 
 }

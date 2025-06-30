@@ -19,6 +19,7 @@ plotlyVolcano(
   marker.size = 5,
   label = NULL,
   label.cex = 1,
+  shape = "circle",
   max.absy = NULL,
   color_up_down = TRUE,
   colors = c(up = "#f23451", notsig = "#8F8F8F", down = "#3181de", notsel = "#cccccc88"),
@@ -54,6 +55,8 @@ plotlyVolcano(
 \item{label}{Vector of labels for highlighted genes. Default NULL.}
 
 \item{label.cex}{Text size for labels. Default 1.}
+
+\item{shape}{Shape of points. Default is filled circle.}
 
 \item{color_up_down}{Color up/down regulated features}
 
