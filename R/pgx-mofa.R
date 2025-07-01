@@ -1273,7 +1273,7 @@ mofa.plot_factor_trait_correlation <- function(mofa,
     ftext <- NULL
     if (textMatrix) ftext <- round(t(Z), digits = 2)
     if (is.null(cex_text)) {
-      cex.text <- min(0.8, max(0.3, 20 / nrow(Z)))
+      cex.text <- min(0.8, max(0.4, 20 / nrow(Z)))
       if (nrow(Z)>40) cex.text <- 0.3
     } else {
       cex.text <- cex_text
