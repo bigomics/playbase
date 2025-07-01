@@ -1228,12 +1228,13 @@ mofa.plot_heatmap <- function(mofa,
 mofa.plot_factor_trait_correlation <- function(mofa,
                                                main = "Factor-Trait correlation",
                                                type = c("wgcna", "splitmap"),
-                                               par = TRUE, cex_text = NULL,
+                                               par = TRUE,
+                                               textMatrix = FALSE,
+                                               cex_text = NULL,
                                                collapse = FALSE,
                                                cluster = TRUE,
                                                features = NULL,
                                                ...) {
-  ## type = c("wgcna","splitmap")
   type <- type[1]
 
   ## Covariate x Factor correlation
@@ -1246,12 +1247,10 @@ mofa.plot_factor_trait_correlation <- function(mofa,
 
   if (collapse) {
     rownames(Z) <- sub("=.*", "", rownames(Z))
-    Z <- rowmean(Z**2)**0.5
+    Z <- rowmean(Z**2) ** 0.5
   }
 
-  if (nrow(Z) == 1) {
-    Z <- rbind(Z, " " = Z[1, ]) ## hack for single row...
-  }
+  if (nrow(Z) == 1) Z <- rbind(Z, " " = Z[1, ]) ## single row...
 
   if (cluster) {
     ii <- hclust(dist(Z))$order
@@ -1261,29 +1260,32 @@ mofa.plot_factor_trait_correlation <- function(mofa,
 
   if (type == "splitmap") {
     gx.splitmap(
-      t(Z),
-      nmax = 50, scale = "none", main = main,
+      t(Z), nmax = 50, scale = "none", main = main,
       col.annot = mofa$samples, split = 1,
       show_legend = FALSE, show_key = FALSE
     )
   }
 
   if (type == "wgcna") {
-    ## par(mfrow=c(1,1))
     if (par) par(mar = c(6, 5, 2, 1))
-    ftext <- round(t(Z), digits = 2)
+    ftext <- NULL
+    if (textMatrix) ftext <- round(t(Z), digits = 2)
     if (is.null(cex_text)) {
-      cex.text <- min(0.8, max(0.3, 6 / ncol(Z)))
+      cex.text <- min(0.8, max(0.4, 20 / nrow(Z)))
+      if (nrow(Z)>40) cex.text <- 0.3
     } else {
       cex.text <- cex_text
     }
 
+    cex.lab.x <- max(0.8, min(1.2, 5/nrow(Z)))
+    
     WGCNA::labeledHeatmap(
       Matrix = t(Z),
       xLabels = rownames(Z),
       yLabels = colnames(Z),
       textMatrix = ftext,
       cex.text = cex.text,
+      cex.lab.x = cex.lab.x,
       colorLabels = TRUE,
       colors = WGCNA::blueWhiteRed(50),
       setStdMargins = FALSE,
