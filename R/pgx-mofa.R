@@ -48,6 +48,7 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
   message("computing MOFA ...")
 
   ## samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa";ntop=2000;numfactors=8;gpu_mode=FALSE;max_iter=1000
+  mofa <- list()
   mofa <- mofa.compute(
     xdata,
     samples = discretized_samples,
@@ -2416,7 +2417,6 @@ snf.cluster <- function(xx, pheno = NULL, plot = TRUE) {
   has.na <- any(sapply(xx, function(x) sum(is.na(x)) > 0))
   has.inf <- any(sapply(xx, function(x) sum(is.infinite(x)) > 0))
   has.missing <- has.na || has.inf
-  message("clusterSNF: has.missing = ", has.missing)
   if (has.missing) {
     xx <- lapply(xx, function(x) svdImpute2(x, infinite.na = TRUE))
   }
@@ -2435,13 +2435,7 @@ snf.cluster <- function(xx, pheno = NULL, plot = TRUE) {
   ## K = max(min(ncol(xx[[1]])/4, 15),2);
   K <- max(min(ncol(xx[[1]])-1, 10), 2) # number of neighbors, usually (10~30)
   alpha <- 0.5 # hyperparameter, usually (0.3~0.8)
-
-  message("clusterSNF: K = ", K)
-  message("clusterSNF: alpha = ", alpha)
-  message("clusterSNF: length(Dist) = ", length(Dist))
-  message("clusterSNF: names(Dist) = ", names(Dist))
-  message("clusterSNF: dim(Dist[[1]]) = ", paste(dim(Dist[[1]]), collapse = "x"))
-
+  
   Wlist <- lapply(Dist, function(d) SNFtool::affinityMatrix(d, K = K, alpha))
 
   ## next, we fuse all the graphs
@@ -2632,11 +2626,14 @@ snf.heatmap <- function(snf, X, samples, nmax = 50, do.split = TRUE, legend = TR
 lasagna.create_model <- function(data, pheno = "pheno", ntop = 1000, nc = -1,
                                  annot = NULL, use.gmt = TRUE, use.graphite = TRUE,
                                  add.sink=FALSE) {
-  names(data)
   if (pheno == "pheno") {
     Y <- expandPhenoMatrix(data$samples, drop.ref = FALSE)
   } else {
     Y <- makeContrastsFromLabelMatrix(data$contrasts)
+    if(any(grepl("^IA:",colnames(Y)))) {
+      ## drop interaction terms
+      Y <- Y[,grep("^IA:",colnames(Y),invert=TRUE),drop=FALSE]
+    }
     revY <- -Y
     colnames(revY) <- reverse.AvsB(colnames(Y))
     Y <- cbind(Y, revY)
@@ -2670,10 +2667,10 @@ lasagna.create_model <- function(data, pheno = "pheno", ntop = 1000, nc = -1,
     xtypes
     has.mx <- ("mx" %in% xtypes)
     has.px <- any(c("gx", "px") %in% xtypes)
-    if (has.mx && has.px) {
+    GRAPHITE_PPI <- try(playdata::GRAPHITE_PPI,silent=TRUE)
+    has.ppi <- !("try-error" %in% class(GRAPHITE_PPI))
+    if (has.mx && has.px && has.ppi) {
       message("using GRAPHITE PPI structure for pruning metabolite interactions")
-      load("~/Playground/public-db/pathbank.org/GRAPHITE_PPI.rda", verbose = TRUE)
-      head(GRAPHITE_PPI)
       GRAPHITE_PPI[, 1] <- paste0("px:", GRAPHITE_PPI[, 1])
       GRAPHITE_PPI[, 2] <- paste0("px:", GRAPHITE_PPI[, 2])
       GRAPHITE_PPI[, 1] <- sub("px:CHEBI:", "mx:", GRAPHITE_PPI[, 1])
@@ -2785,6 +2782,7 @@ sp_edge_weight <- function(gr, layers) {
   l2 <- match(igraph::V(gr)[v2]$layer, layers)  
   p1 <- ifelse(l1 < l2, v1, v2)
   p2 <- ifelse(l1 < l2, v2, v1)    
+  wt <- wt + 1e-8
   s1 <- igraph::shortest_paths(gr,
     from = "SOURCE", to = p1, weights = 1/wt, output = "epath"
   )
@@ -2794,16 +2792,16 @@ sp_edge_weight <- function(gr, layers) {
   sp <- mapply(c, s1$epath, s2$epath)
   ##sp.score <- sapply(sp, function(e) exp(mean(log(wt[e]))))
   sp.score <- sapply(sp, function(e) min(wt[e],na.rm=TRUE))
-  max(sp.score)
-  min(sp.score)  
   sp.score
 }
 
+#' @export
 lasagna.set_weights <- function(obj, pheno, max_edges=100, value.type="rho",
-                                min_rho=0, prune=TRUE, sp.weight=FALSE) {
+                                min_rho=0, prune=TRUE, fc.weights=TRUE,
+                                sp.weight=FALSE) {
 
   if(!pheno %in% colnames(obj$Y)) stop("pheno not in Y")
-  if(!"rho" %in% names(edge_attr(obj$graph))) {
+  if(!"rho" %in% names(igraph::edge_attr(obj$graph))) {
     stop("graph edges should have rho attribute")
   }
 
@@ -2829,39 +2827,53 @@ lasagna.set_weights <- function(obj, pheno, max_edges=100, value.type="rho",
   } else {
     igraph::V(graph)$value <- fc
   }
+  graph$value.type <- value.type
   
   ## set edge weights
-  ee <- igraph::as_edgelist(graph)
-  ff <- igraph::V(graph)$value
-  names(ff) <- igraph::V(graph)$name
-  ww <- abs(ff[ee[,1]] * ff[ee[,2]])^0.5
-  E(graph)$weight <- igraph::E(graph)$rho * ww
+  ww <- 1
+  weight.type <- "rho"
+  if(fc.weights) {
+    ee <- igraph::as_edgelist(graph)
+    ff <- igraph::V(graph)$value
+    names(ff) <- igraph::V(graph)$name
+    ww <- abs(ff[ee[,1]] * ff[ee[,2]])^0.5
+    weight.type <- paste0(weight.type,"*vv")
+  }
+  igraph::E(graph)$weight <- igraph::E(graph)$rho * ww
   
   ## set SINK/SOURCE edges to 1
   if(any(grepl("SINK|SOURCE",igraph::V(graph)$name))) {
-    E(graph)[.to("SINK")]$weight <- 1
-    E(graph)[.from("SOURCE")]$weight <- 1    
+    igraph::E(graph)[.to("SINK")]$weight <- 1
+    igraph::E(graph)[.from("SOURCE")]$weight <- 1    
   }
 
   if(sp.weight) {
     ##gr=graph;layers=obj$layers
+    dbg("[lasagna.set_weights] apply SP weighting")
     sp.wt <- sp_edge_weight(graph, obj$layers)
     sp.wt <- (sp.wt / max(sp.wt))**2
-    E(graph)$weight <- igraph::E(graph)$weight * sp.wt
+    igraph::E(graph)$weight <- igraph::E(graph)$weight * sp.wt
+    weight.type <- paste0(weight.type,"*sp")
   }
+  graph$weight.type <- weight.type
   
   ## take subgraph
   if(min_rho > 0) {
-    dsel <- which(abs(E(graph)$weight) < min_rho)
+    dsel <- which(abs(igraph::E(graph)$weight) < min_rho)
     igraph::E(graph)$weight[dsel] <- 0
   }
   if(max_edges > 0) {
-    esel <- tapply(1:length(E(graph)), E(graph)$layer,
-      function(ii) head(ii[order(-abs(E(graph)$weight[ii]))], max_edges))
-    dsel <- setdiff(1:length(E(graph)), unlist(esel))
+    ewt <- igraph::E(graph)$weight
+    esel <- tapply(1:length(igraph::E(graph)), igraph::E(graph)$layer,
+      function(ii) head(ii[order(-abs(ewt[ii]))], max_edges))
+    dsel <- setdiff(1:length(igraph::E(graph)), unlist(esel))
     igraph::E(graph)$weight[dsel] <- 0
   }
 
+  ## delete zero edges
+  graph <- igraph::delete_edges(graph, which(igraph::E(graph)$weight==0))
+
+  ## prune vertices if asked
   if(prune) {
     ewt <- igraph::E(graph)$weight
     graph <- igraph::subgraph_from_edges(graph, which(abs(ewt) > 0))
@@ -3005,6 +3017,8 @@ plotly_lasagna <- function(pos, vars = NULL, edges = NULL, znames=NULL,
     )
   }
 
+  dbg("[plotly_lasagna] dim.edges=", dim(edges))
+  
   fig <- plotlyLasagna(df, znames = znames, edges = edges)
   return(fig)
 }

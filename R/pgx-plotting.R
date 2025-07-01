@@ -7020,10 +7020,10 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
                                    min.rho=0.5, ntop=25, 
                                    labels=NULL, cex.label=1, vx.cex=1,
                                    xpos=NULL, xlim=NULL, justgraph=FALSE,
-                                   edge.cex=1, edge.alpha=0.33,
+                                   edge.cex=1, edge.alpha=0.33, xdist=1,
                                    normalize.edges = FALSE, yheight=2,
                                    edge.type="both", labpos = NULL,
-                                   value.name = "logFC", strip.prefix = FALSE,
+                                   value.name = NULL, strip.prefix = FALSE,
                                    layout=c("parallel","hive")[1]) {
   
   if(0) {
@@ -7056,13 +7056,13 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
       function(i) head(i[order(-abs(fc[i]))],ntop))
     ii <- unlist(ii[names(ii) %in% layers])
     fc <- fc[ii]
-    graph <- igraph::subgraph(graph, V(graph)[ii])
+    graph <- igraph::subgraph(graph, igraph::V(graph)[ii])
   }
 
   if(normalize.edges) {
     for(e in unique(igraph::E(graph)$layer)) {
       ii <- which(igraph::E(graph)$layer == e)
-      max.wt <- max(abs(igraph::E(graph)$weight[ii]),na.rm=TRUE)
+      max.wt <- max(abs(igraph::E(graph)$weight[ii]),na.rm=TRUE) + 1e-3
       igraph::E(graph)$weight[ii] <- igraph::E(graph)$weight[ii] / max.wt
     }
   }
@@ -7074,19 +7074,18 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
 
   if(edge.type!="both") {
     ewt <- igraph::E(graph)$weight
-    if(edge.type=="pos") igraph::E(graph)$weight[ewt<0] <- 0
-    if(edge.type=="ned") igraph::E(graph)$weight[ewt>0] <- 0    
+    if(grepl("pos",edge.type)) igraph::E(graph)$weight[ewt<0] <- 0
+    if(grepl("neg",edge.type)) igraph::E(graph)$weight[ewt>0] <- 0    
   }
+  graph <- igraph::delete_edges(graph, which(igraph::E(graph)$weight==0))
   
   ## layout
   group <- igraph::V(graph)$layer
   if(layout=="parallel") {
-    if(is.null(xpos))
-      xpos <- c(1:length(layers))
+    if(is.null(xpos)) xpos <- c(0:(length(layers)-1))*xdist
     x <- xpos[match(group, layers)]
     y <- fc[igraph::V(graph)$name] 
     layout.xy <- cbind(x=x, y=y)
-    dbg("dpos = ",diff(range(xpos)))
     if(yheight < 1) yheight <- yheight * diff(range(xpos))
     for(i in unique(layout.xy)[,1]) {
       ii <- which(layout.xy[,1]==i)
@@ -7115,15 +7114,17 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   }
 
   vv <- igraph::V(graph)$name
-  ew <- (igraph::E(graph)$weight / max(igraph::E(graph)$weight))**4
-  vx <- log(1000*igraph::page.rank(graph)$vector)
+  ewt <- abs(igraph::E(graph)$weight)
+  max.wt <- max(ewt,na.rm=TRUE) + 1e-3
+  ew <- (ewt / max.wt)**4
+
+  vx <- log(1000*igraph::page.rank(graph, weights=ewt)$vector)
   #vx   <-  abs(y)
   vx <- (0.1+abs(vx)/max(abs(vx)))**1
   vcol <- c("blue2","red2")[ 1+1*(fc[vv] > 0)]
     
-  ecol <- c("darkorange3","magenta4")[ 1+1*(igraph::E(graph)$weight>0)]    
+  ecol <- c("darkorange3","magenta4")[ 1+1*(igraph::E(graph)$weight>=0)]    
   ecol <- adjustcolor(ecol, edge.alpha)
-  table(ecol)
   
   igraph::V(graph)$label <- ""
   if(is.null(xlim)) {
@@ -7162,10 +7163,14 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   if(is.null(labpos)) {
     labpos <- c(2,4)[1+1*(xpos>xt)]
   } else {
-    if(length(labpos)==1) labpos <- rep(labpos, length(layers))
-  }  
+    labpos <- head(rep(labpos,99),length(layers))
+  }
+
+  if(is.null(value.name) && !is.null(graph$value.type)) {
+    value.name <- graph$value.type
+  }
+  if(is.null(value.name)) value.name <- "value"  
   for(i in 1:length(layers)) {
-    #tpos <- c(2,4)[1+1*(xpos[i]>xt)]
     tpos <- labpos[i]
     if(layers[i]=="PHENO") next
     text( xpos[i], -0.02, value.name, cex=1.0*cex.label, font=2, pos=tpos,
@@ -7175,13 +7180,18 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   text( x, y, cex=0.85*cex.label, round( fc[rownames(layout.xy)],2),
        pos = labposx, adj=1, offset=1.0)
 
-  ## plot labels 
+  ## plot labels
   if(!is.null(labels)) {
     labels <- labels[rownames(layout.xy)]
+    sel.na <- which(is.na(labels))
+    labels[sel.na] <- rownames(layout.xy)[sel.na]
   } else {
     labels <- rownames(layout.xy)
   }
-  if(strip.prefix) labels <- sub(".*:","",labels)
+  if(strip.prefix) {
+    labels <- sub(".*:","",labels)
+  }
+  labels <- gsub("^NA \\(","(",labels)
   text(x, y, labels, cex=cex.label, pos=labposx, adj=1, offset=2.8)
 
 }
