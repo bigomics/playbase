@@ -2845,8 +2845,6 @@ lasagna.set_weights <- function(obj, pheno, max_edges=100, value.type="rho",
   }
 
   if(sp.weight) {
-    ##gr=graph;layers=obj$layers
-    dbg("[lasagna.set_weights] apply SP weighting")
     sp.wt <- sp_edge_weight(graph, obj$layers)
     sp.wt <- (sp.wt / max(sp.wt))**2
     igraph::E(graph)$weight <- igraph::E(graph)$weight * sp.wt
@@ -3013,8 +3011,6 @@ plotly_lasagna <- function(pos, vars = NULL, edges = NULL, znames=NULL,
       "mu" = "Mutation"
     )
   }
-
-  dbg("[plotly_lasagna] dim.edges=", dim(edges))
   
   fig <- plotlyLasagna(df, znames = znames, edges = edges)
   return(fig)
