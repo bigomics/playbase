@@ -887,6 +887,7 @@ counts.imputeMissing <- function(counts, method = "SVD2") {
   pmax(2**impX - epsx, 0)
 }
 
+#' @export
 counts.autoScaling <- function(counts) {
   message("[createPGX] scaling counts...")
   counts_multiplier <- 1
