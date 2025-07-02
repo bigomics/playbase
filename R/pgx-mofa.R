@@ -2188,8 +2188,6 @@ mofa.plot_biplot <- function(r, pheno, nfeat = 5, comp = c(1, 2),
 
   if (arrow) {
     R <- cor(t(r$W), t(r$Z))
-    dim(R)
-    head(R)
     top <- tail(names(sort(abs(R[, 2]))), nfeat)
     R[top, ]
     ww <- r$W[, comp]
@@ -2657,7 +2655,6 @@ lasagna.create_model <- function(data, pheno = "pheno", ntop = 1000, nc = -1,
   ## Needs optimization using SPARSE matrix.
   suppressWarnings( R <- cor(t(X), use = "pairwise") )
   R[is.na(R)] <- 0.01
-  dbg(" dim(R) =",dim(R))
   ii <- grep("SINK|SOURCE",rownames(R))
   if(length(ii)) R[ii,ii] <- 1
   
