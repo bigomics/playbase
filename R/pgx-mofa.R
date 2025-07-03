@@ -2623,9 +2623,10 @@ snf.heatmap <- function(snf, X, samples, nmax = 50, do.split = TRUE, legend = TR
 
 #'
 #' @export
-lasagna.create_model <- function(data, pheno = "pheno", ntop = 1000, nc = -1,
-                                 annot = NULL, use.gmt = TRUE, use.graphite = TRUE,
-                                 add.sink=FALSE) {
+lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
+                                 annot=NULL, use.gmt=TRUE, use.graphite=TRUE,
+                                 add.sink=FALSE, intra=TRUE, fully_connect=FALSE
+                                 ) {
   if (pheno == "pheno") {
     Y <- expandPhenoMatrix(data$samples, drop.ref = FALSE)
   } else {
@@ -2651,7 +2652,9 @@ lasagna.create_model <- function(data, pheno = "pheno", ntop = 1000, nc = -1,
   remove(xx)
 
   ## add SOURCE/SINK
-  if(add.sink) X <- rbind(X, "SOURCE" = 1, "SINK" = 1)
+  if(add.sink) {
+    X <- rbind(X, "SOURCE" = 1, "SINK" = 1)
+  }
 
   ## Compute BIG correlation matrix. WARNING can become huge! NOTE:
   ## Needs optimization using SPARSE matrix.
@@ -2690,30 +2693,36 @@ lasagna.create_model <- function(data, pheno = "pheno", ntop = 1000, nc = -1,
     }
   }
 
-  ## mask for interlayer connections???
-  if (0) {
-  }
-
-  ## mask for GSETS/pathways ???
+  ## mask for GSETS/pathways connections???
   if (use.gmt) {
   }
 
-  ## mask for layer interaction
+  ## define layers
   dt <- sub(":.*", "", rownames(R))
   table(dt)
   names(data$X)
   layers <- names(data$X)
   if(add.sink) layers <- c("SOURCE", layers, "SINK")
-  layer_mask <- as.matrix(R) * 0
-  for (i in 1:(length(layers) - 1)) {
-    ii <- which(dt == layers[i])
-    jj <- which(dt == layers[i + 1])
-    layer_mask[ii, jj] <- 1
-    layer_mask[jj, ii] <- 1
-  }
-  R <- R * layer_mask
 
-  ## Reduce connections
+  ## mask for inter-layer connections
+  if(!fully_connect) {
+    layer_mask <- as.matrix(R) * 0
+    for (i in 1:(length(layers) - 1)) {
+      ii <- which(dt == layers[i])
+      jj <- which(dt == layers[i + 1])
+      layer_mask[ii, jj] <- 1
+      layer_mask[jj, ii] <- 1
+    }
+    if(intra) {
+      for (i in 1:length(layers)) {
+      ii <- which(dt == layers[i])
+      layer_mask[ii, ii] <- 1
+      }
+    }
+    R <- R * layer_mask
+  }
+  
+  ## Reduce inter-connections
   if (!is.null(nc) && nc > 0) {
     message(paste("reducing edges to maximum", nc, "connections"))
     ## NEED CHECK!!! SOMETHING WRONG.
@@ -2730,6 +2739,16 @@ lasagna.create_model <- function(data, pheno = "pheno", ntop = 1000, nc = -1,
       reduce_mask[ii, jj] <- rr
       reduce_mask[jj, ii] <- t(rr)
     }
+    if(intra) {
+      for (i in 1:length(xtypes)) {
+        ii <- which(dt == xtypes[i])
+        R1 <- R[ii, ii, drop = FALSE]
+        rii <- apply(abs(R1), 1, function(r) tail(sort(r), nc)[1])
+        rjj <- apply(abs(R1), 2, function(r) tail(sort(r), nc)[1])
+        rr <- abs(R1) >= rii | t(t(abs(R1)) >= rjj)
+        reduce_mask[ii, ii] <- rr
+      }
+    }
     R <- R * reduce_mask
   }
 
@@ -2738,30 +2757,23 @@ lasagna.create_model <- function(data, pheno = "pheno", ntop = 1000, nc = -1,
     R, diag = FALSE, weighted = TRUE, mode = "undirected"
   )
   igraph::E(gr)$rho <- igraph::E(gr)$weight ## copy
+  gr$layers <- layers
 
-  ## add graph attributes
+  ## add edge connection type as attribute
   igraph::V(gr)$layer <- sub(":.*","",igraph::V(gr)$name)
   ee <- igraph::as_edgelist(gr)
   etype <- apply(ee, 2, function(e) sub(":.*","",e))
-  igraph::E(gr)$layer <- ""  
-  for(k in 1:(length(layers)-1)) {
-    jj <- etype[,1] == layers[k] & etype[,2] == layers[k+1] 
-    igraph::E(gr)$layer[jj] <- paste0(layers[k],"->",layers[k+1])
-  }
-  
-  ## translate metabolic names??
-  ## ii <- grepl("^mx:", igraph::V(gr)$name)
-  ## if (length(ii) && !is.null(annot)) {
-  ##   message(paste("translating metabolite ID to names"))
-  ##   mx.id <- sub("mx:", "", igraph::V(gr)$name[ii])
-  ##   mm <- match(igraph::V(gr)$name[ii], rownames(annot))
-  ##   mx.annot <- annot[mm, ]
-  ##   mx.id <- mx.annot$symbol
-  ##   mx.names <- paste0("mx:", mx.annot$gene_title, " (", mx.id, ")")
-  ##   igraph::V(gr)$name[ii] <- mx.names
-  ##   rownames(X)[ii] <- mx.names
-  ## }
-
+  etype.idx <- apply(etype, 2, match, gr$layers)
+  rev.etype <- etype.idx[,2] < etype.idx[,1]
+  etype1 <- ifelse(rev.etype, etype.idx[,2], etype.idx[,1])
+  etype2 <- ifelse(rev.etype, etype.idx[,1], etype.idx[,2])
+  etype1 <- gr$layers[etype1]
+  etype2 <- gr$layers[etype2]
+  igraph::E(gr)$connection_type <- paste0(etype1,"->",etype2)
+  ii <- which(etype1==etype2)
+  if(length(ii)) igraph::E(gr)$connection_type[ii] <- etype1[ii]
+  table(igraph::E(gr)$connection_type)
+    
   list(
     graph = gr,
     X = X,
@@ -2861,7 +2873,7 @@ lasagna.set_weights <- function(obj, pheno, max_edges=100, value.type="rho",
   }
   if(max_edges > 0) {
     ewt <- igraph::E(graph)$weight
-    esel <- tapply(1:length(igraph::E(graph)), igraph::E(graph)$layer,
+    esel <- tapply(1:length(igraph::E(graph)), igraph::E(graph)$connection_type,
       function(ii) head(ii[order(-abs(ewt[ii]))], max_edges))
     dsel <- setdiff(1:length(igraph::E(graph)), unlist(esel))
     igraph::E(graph)$weight[dsel] <- 0
@@ -3007,6 +3019,8 @@ plotly_lasagna <- function(pos, vars = NULL, edges = NULL, znames=NULL,
       "tx" = "Transcriptomics",
       "mir" = "micro-RNA",
       "px" = "Proteomics",
+      "hx" = "Histone",
+      "hptm" = "hPTM",
       "dr" = "Drug response",
       "me" = "Methylation",
       "mt" = "Mutation",

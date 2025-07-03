@@ -7022,7 +7022,8 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
                                    xpos=NULL, xlim=NULL, justgraph=FALSE,
                                    edge.cex=1, edge.alpha=0.33, xdist=1,
                                    normalize.edges = FALSE, yheight=2,
-                                   edge.type="both", labpos = NULL,
+                                   edge.sign="both", edge.type="both",
+                                   labpos = NULL,
                                    value.name = NULL, strip.prefix = FALSE,
                                    layout=c("parallel","hive")[1]) {
   
@@ -7060,8 +7061,8 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   }
 
   if(normalize.edges) {
-    for(e in unique(igraph::E(graph)$layer)) {
-      ii <- which(igraph::E(graph)$layer == e)
+    for(e in unique(igraph::E(graph)$connection_type)) {
+      ii <- which(igraph::E(graph)$connection_type == e)
       max.wt <- max(abs(igraph::E(graph)$weight[ii]),na.rm=TRUE) + 1e-3
       igraph::E(graph)$weight[ii] <- igraph::E(graph)$weight[ii] / max.wt
     }
@@ -7072,10 +7073,15 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
     if(length(ii)) igraph::E(graph)$weight[ii] <- 0
   }
 
-  if(edge.type!="both") {
+  if(edge.sign!="both") {
     ewt <- igraph::E(graph)$weight
-    if(grepl("pos",edge.type)) igraph::E(graph)$weight[ewt<0] <- 0
-    if(grepl("neg",edge.type)) igraph::E(graph)$weight[ewt>0] <- 0    
+    if(grepl("pos",edge.sign)) igraph::E(graph)$weight[ewt<0] <- 0
+    if(grepl("neg",edge.sign)) igraph::E(graph)$weight[ewt>0] <- 0    
+  }
+  if(edge.type!="both") {
+    ic <- grepl("->",igraph::E(graph)$connection_type)
+    if(grepl("intra",edge.type)) igraph::E(graph)$weight[ic] <- 0
+    if(grepl("inter",edge.type)) igraph::E(graph)$weight[!ic] <- 0    
   }
   graph <- igraph::delete_edges(graph, which(igraph::E(graph)$weight==0))
   
@@ -7116,7 +7122,7 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   vv <- igraph::V(graph)$name
   ewt <- abs(igraph::E(graph)$weight)
   max.wt <- max(ewt,na.rm=TRUE) + 1e-3
-  ew <- (ewt / max.wt)**4
+  ew <- (ewt / max.wt)**2
 
   vx <- log(1000*igraph::page.rank(graph, weights=ewt)$vector)
   #vx   <-  abs(y)
@@ -7125,6 +7131,8 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
     
   ecol <- c("darkorange3","magenta4")[ 1+1*(igraph::E(graph)$weight>=0)]    
   ecol <- adjustcolor(ecol, edge.alpha)
+  ecurv <- c(-0.25,0)[1 + 1*grepl("->",igraph::E(graph)$connection_type)]
+  #ecurv <- c(TRUE,FALSE)[1 + 1*grepl("->",igraph::E(graph)$connection_type)]
   
   igraph::V(graph)$label <- ""
   if(is.null(xlim)) {
@@ -7135,14 +7143,15 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   plot(
     graph,
     layout = layout.xy,  
-    edge.width = 5*edge.cex*ew**1,
-    edge.color = ecol,
     vertex.label.color = "black",
     vertex.label.dist = 0,  
     vertex.label.degree = 0,
     vertex.label.size = 0.001,  
     vertex.size = 6*vx*vx.cex,
     vertex.color = vcol,  
+    edge.width = 5*edge.cex*ew**1,
+    edge.color = ecol,
+    edge.curved = ecurv,
     xlim = xlim,
     ylim = range(layout.xy[,2]) + c(-0.03,0.08)*yheight,
     rescale = FALSE
@@ -7203,7 +7212,7 @@ plotHivePlot <- function(X, f, group, groups=NULL,
                          min.rho=0.8, ntop=25, 
                          labels=NULL, cex.label=1, vx.cex=1,
                          justgraph=FALSE,
-                         edge.alpha=0.33, edge.type="both",
+                         edge.alpha=0.33, edge.sign="both",
                          edge.cex=1, radius = 1,
                          layout=c("hive","circos")[1]) {
   
@@ -7231,8 +7240,8 @@ plotHivePlot <- function(X, f, group, groups=NULL,
   }
 
   ## treshold edges
-  if(grepl("pos",edge.type)) R <- pmax(R,0)
-  if(grepl("neg",edge.type)) R <- pmin(R,0)    
+  if(grepl("pos",edge.sign)) R <- pmax(R,0)
+  if(grepl("neg",edge.sign)) R <- pmin(R,0)    
 
   ## create graph
   idx <- which(abs(R) > min.rho, arr.ind=TRUE)
