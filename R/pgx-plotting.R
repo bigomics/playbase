@@ -7023,8 +7023,8 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
                                    edge.cex=1, edge.alpha=0.33, xdist=1,
                                    normalize.edges = FALSE, yheight=2,
                                    edge.sign="both", edge.type="both",
-                                   labpos = NULL,
-                                   value.name = NULL, strip.prefix = FALSE,
+                                   labpos = NULL, value.name = NULL,
+                                   strip.prefix = FALSE, prune = FALSE,
                                    layout=c("parallel","hive")[1]) {
   
   if(0) {
@@ -7084,6 +7084,10 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
     if(grepl("inter",edge.type)) igraph::E(graph)$weight[!ic] <- 0    
   }
   graph <- igraph::delete_edges(graph, which(igraph::E(graph)$weight==0))
+
+  if(prune) {
+    graph <- igraph::subgraph_from_edges(graph, igraph::E(graph))
+  }
   
   ## layout
   group <- igraph::V(graph)$layer
