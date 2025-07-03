@@ -20,6 +20,7 @@ plotMultiPartiteGraph2(
   xdist = 1,
   normalize.edges = FALSE,
   yheight = 2,
+  edge.sign = "both",
   edge.type = "both",
   labpos = NULL,
   value.name = NULL,

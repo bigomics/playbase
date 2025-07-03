@@ -7191,9 +7191,9 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
 
   ## plot labels
   if(!is.null(labels)) {
-    labels <- labels[rownames(layout.xy)]
-    sel.na <- which(is.na(labels))
-    labels[sel.na] <- rownames(layout.xy)[sel.na]
+    if(is.null(names(labels))) message("WARNING: labels must have names!")
+    vv <- rownames(layout.xy)
+    labels <- ifelse(vv %in% names(labels), labels[vv], vv)
   } else {
     labels <- rownames(layout.xy)
   }

@@ -46,7 +46,6 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
 
   ## MOFA computation
   message("computing MOFA ...")
-
   ## samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa";ntop=2000;numfactors=8;gpu_mode=FALSE;max_iter=1000
   mofa <- list()
   mofa <- mofa.compute(

@@ -232,7 +232,7 @@ compute_extra <- function(pgx, extra = c(
   }
 
   if ("wgcna" %in% extra) {
-    message(">>> Computing wgcna...")
+    message(">>> Computing WGCNA...")
     tt <- system.time({
       tryCatch(
         {
