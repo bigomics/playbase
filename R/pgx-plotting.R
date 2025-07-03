@@ -589,7 +589,7 @@ pgx.SankeyFromMRF.PLOTLY <- function(M, R, F, fill = TRUE, labels = NULL) {
   i <- 1
   for (i in 1:length(M)) {
     gr <- rho2graph(M[[i]], min.rho = 0)
-    ee <- igraph::get.edgelist(gr)
+    ee <- igraph::as_edgelist(gr)
     pct <- M[[i]] / sum(M[[i]], na.rm = TRUE) * 100
     igraph::E(gr)$count <- pct[ee]
     igraph::E(gr)$rho <- R[[i]][ee]
@@ -6558,6 +6558,7 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
         z = z,
         text = ~text,
         hoverinfo = 'text',
+        type = "scattergl",
         marker = list(
           ##size = 3,
           size = ~abs(color)*15*cex + 3,
@@ -6581,26 +6582,32 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
       sel1 <- which(edgetype1 == zz[k] & edgetype2 == zz[k+1])
       sel2 <- which(edgetype2 == zz[k] & edgetype1 == zz[k+1])
       df2 <- df[which(df$z == zz[k+1]), c("x","y","z")]                
-      ee <- edges[unique(c(sel1,sel2)),]
-      idx <- as.vector(t(as.matrix(ee[,1:2])))
-      dfe <- rbind(df1[,c("x","y","z")], df2[,c("x","y","z")])[idx,]      
-      dfe$pair_id <- as.vector(mapply(rep, 1:nrow(ee),2))
+      sel <- unique(c(sel1,sel2))
 
-      fig <- fig %>%
-        plotly::add_trace(
-          x = dfe$x,
-          y = dfe$y,
-          z = dfe$z,
-          type = "scatter3d",
-          ##type = "scattergl",
-          mode = "lines",
-          line = list(
-            color = "black",
-            width = 0.5
-          ),
-          split = dfe$pair_id,
-          showlegend = FALSE,
-          inherit = FALSE)
+      if(length(sel)) {
+        ee <- edges[sel,]
+        idx <- as.vector(t(as.matrix(ee[,1:2])))
+        dfe <- rbind(df1[,c("x","y","z")], df2[,c("x","y","z")])[idx,]      
+        dfe$pair_id <- as.vector(mapply(rep, 1:nrow(ee),2))
+        dfe$col <- c("darkorange3","magenta4")[1+(ee[,3]>0)]
+        
+        fig <- fig %>%
+          plotly::add_trace(
+            x = dfe$x,
+            y = dfe$y,
+            z = dfe$z,
+            #type = "scatter3d",
+            #type = "scattergl",
+            mode = "lines",
+            line = list(
+              #color = "black",
+              color = dfe$col,
+              width = 0.5
+            ),
+            split = dfe$pair_id,
+            showlegend = FALSE,
+            inherit = FALSE)
+      }
     }
 
     ## Add layer title
@@ -6699,7 +6706,8 @@ plotTimeSeries.modules <- function(time, xx, modules, main="",
 }
 
 
-#'
+#' Plots time series facetted by module/colors with groups. X is an
+#' expression matrix. Time is a vector of times for each sample.
 #'
 #' @export
 plotTimeSeries.groups <- function(time, y, group=NULL, main="",
@@ -6795,106 +6803,26 @@ plotTimeSeries.modules_groups <- function(time, X, modules, group) {
 
 #'
 #' @export
-plotBipartiteGraph <- function(R, f, min.rho=0.8, ntop=25,
-                               labels=NULL, cex.label=1) {
-
-  if(!is.matrix(R) || is.null(dim(R))) {
-    message("[plotBipartiteGraph] ERROR. R must be a matrix.")
-    return(NULL)
-  }
-  
-  idx <- which(abs(R) > min.rho, arr.ind=TRUE)
-  ee <- cbind(rownames(R)[idx[,1]], colnames(R)[idx[,2]])
-  gr <- igraph::graph_from_edgelist(ee, directed=FALSE)
-  igraph::E(gr)$weight <- abs(R[idx]) - min(abs(R[idx]))
-  igraph::E(gr)$sign <- sign(R[idx])
-
-  ## limit number per group
-  igraph::V(gr)$group <- c("from","to")[1+1*(igraph::V(gr)$name %in% colnames(R))]
-  sel <- tapply(igraph::V(gr)$name, igraph::V(gr)$group,
-    function(i) head(names(sort(-abs(f[i]))),ntop))
-  sel <- unique(unlist(sel))
-  gr <- igraph::subgraph(gr, sel)
-  
-  avg <- c(rowMeans(R**2),colMeans(R**2))
-  x <- 0.2*(-1 + 2*(igraph::V(gr)$name %in% colnames(R)))
-  f <- f[igraph::V(gr)$name]
-  my_layout <- cbind(x=x, y=f)
-  for(i in unique(my_layout)[,1]) {
-    ii <- which(my_layout[,1]==i)
-    my_layout[ii,2] <- rank(my_layout[ii,2]) / length(ii)
-  }
-  
-  ew <- (igraph::E(gr)$weight / max(igraph::E(gr)$weight))**4
-  vx <- avg[igraph::V(gr)$name] 
-  vx <- log(1000*igraph::page.rank(gr)$vector)
-  vx <- (0.1+abs(vx)/max(abs(vx)))**1
-  vcol <- c("blue2","red2")[ 1+1*(f > 0)]
-    
-  ##  ecol <- c("black","grey50")[ 1+1*(E(gr)$sign>0)]
-  ecol <- c("black","red2")[ 1+1*(igraph::E(gr)$sign>0)]
-  ecol <- c("darkorange3","magenta4")[ 1+1*(igraph::E(gr)$sign>0)]    
-  ecol <- adjustcolor(ecol,0.5)
-  table(ecol)
-  
-  igraph::V(gr)$label <- ""
-  
-  plot(
-    gr,
-    # layout=layout_with_kk,
-    layout = my_layout,  
-    edge.width = 5*ew**1,
-    edge.color = ecol,
-    vertex.label.color = "black",
-    vertex.label.dist = 0,  
-    vertex.label.degree = 0,
-    vertex.label.size = 0.001,  
-    vertex.size = 3.5*vx,
-    vertex.color = vcol,  
-    xlim = c(-1,1),
-    ylim = c(0,1.1),  
-    rescale = FALSE
-  )
-  
-  x <- my_layout[,1]
-  y <- my_layout[,2]  
-
-  ## group labels
-  x1 <- min(x)
-  x2 <- max(x)  
-  grp1 <- paste(sort(unique(sub(":.*","",rownames(R)))),collapse="/")
-  grp2 <- paste(sort(unique(sub(":.*","",colnames(R)))),collapse="/")  
-  text( x1, 1.05, grp1, font=2, cex=1.2, pos=2, adj=1, offset=5.5)
-  text( x2, 1.05, grp2, font=2, cex=1.2, pos=4, adj=1, offset=5.5)
-
-  ## plot feature labels 
-  if(!is.null(labels)) {
-    labels <- labels[rownames(my_layout)]
-  } else {
-    labels <- rownames(my_layout)
-  }
-  text( x, y,labels, cex=cex.label,
-       pos = c(2,4)[1+1*(x>0)], adj=1, offset=5.5)
-
-  ## plot logFC
-  text( x1, -0.01, "log2FC", cex=0.9, font=2, pos=2, adj=1, offset=2)
-  text( x2, -0.01, "log2FC", cex=0.9, font=2, pos=4, adj=1, offset=2)
-  text( my_layout[,1], my_layout[,2], cex=0.8,
-       round(f[rownames(my_layout)],2),
-       pos = c(2,4)[1+1*(x>0)], adj=1, offset=2)
-
-}
-
-
-#'
-#' @export
 plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
-                                  min.rho=0.8, ntop=25, yheight=2,
+                                  min.rho=0.5, ntop=25, yheight=2,
                                   labels=NULL, cex.label=1, vx.cex=1,
                                   xpos=NULL, xlim=NULL, justgraph=FALSE,
                                   edge.cex=1, edge.alpha=0.33,
                                   edge.type="both", labpos = NULL,
+                                  normalize.edges = FALSE, fc.weight = 0,
                                   layout=c("parallel","hive")[1]) {
+
+  if(0) {
+    groups=NULL;
+    min.rho=0.5; ntop=25; yheight=2;
+    labels=NULL; cex.label=1; vx.cex=1;
+    xpos=NULL; xlim=NULL; justgraph=FALSE;
+    edge.cex=1; edge.alpha=0.33;
+    edge.type="both"; labpos = NULL;
+    normalize.edges = FALSE; fc.weight = 0;
+    layout=c("parallel","hive")[1]
+  }
+
   
   if(is.null(groups)) {
     groups <- sort(unique(group))
@@ -6908,7 +6836,15 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
   for(k in 1:(length(groups)-1)) {
     ii <- which( group == groups[k] )
     jj <- which( group == groups[k+1] )    
-    R[[k]] <- cor(t(X[ii,,drop=FALSE]), t(X[jj,,drop=FALSE]),use="pairwise")
+    rho <- cor(t(X[ii,,drop=FALSE]), t(X[jj,,drop=FALSE]),use="pairwise")
+    if(fc.weight>0) {
+      w1 <- abs(f[ii]) / max(abs(f[ii]))**fc.weight
+      w2 <- abs(f[jj]) / max(abs(f[jj]))**fc.weight      
+      rho <- diag(w1) %*% rho %*% diag(w2)
+      rownames(rho) <- rownames(X)[ii]
+      colnames(rho) <- rownames(X)[jj]      
+    }
+    R[[k]] <- rho
   }
   
   gr <- list()
@@ -6922,6 +6858,9 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
     g <- igraph::graph_from_edgelist(ee, directed=FALSE)
     igraph::E(g)$weight <- abs(R1[idx]) 
     igraph::E(g)$sign <- sign(R1[idx])
+    if(normalize.edges) {
+      igraph::E(g)$weight <- igraph::E(g)$weight / max(igraph::E(g)$weight)
+    }
     if(length(igraph::V(g))>0) gr[[k]] <- g
   }
   gr <- gr[!sapply(gr,is.null)]
@@ -6994,6 +6933,7 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
       y <- r*sin(phi)
       layout.xy[ii,] <- cbind(x,y)  
     }
+    yheight <- 0
     rownames(layout.xy) <- igraph::V(gr)$name
   }
     
@@ -7073,6 +7013,198 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
   invisible(gr)
 }
 
+#' Plot multi-partite graph as parallel plot with base plot. 
+#' 
+#' @export
+plotMultiPartiteGraph2 <- function(graph, layers=NULL, 
+                                   min.rho=0.5, ntop=25, 
+                                   labels=NULL, cex.label=1, vx.cex=1,
+                                   xpos=NULL, xlim=NULL, justgraph=FALSE,
+                                   edge.cex=1, edge.alpha=0.33, xdist=1,
+                                   normalize.edges = FALSE, yheight=2,
+                                   edge.sign="both", edge.type="both",
+                                   labpos = NULL,
+                                   value.name = NULL, strip.prefix = FALSE,
+                                   layout=c("parallel","hive")[1]) {
+  
+  if(0) {
+    layers=NULL
+    min.rho=0.5; ntop=25; nc=3; yheight=2;
+    labels=NULL; cex.label=1; vx.cex=1;
+    xpos=NULL; xlim=NULL; justgraph=FALSE;
+    edge.cex=1; edge.alpha=0.33; fc="value"; 
+    edge.type="both"; labpos = NULL;
+    layout=c("parallel","hive")[1];
+    normalize.edges = FALSE
+    value.name="rho"
+    strip.prefix=FALSE
+  }
+
+  if(is.null(layers)) layers <- unique(igraph::V(graph)$layer)
+  layers <- setdiff(layers, c("SOURCE","SINK"))
+  graph <- igraph::subgraph(graph, igraph::V(graph)$layer %in% layers)
+  if(length(labpos)<length(layers)) labpos <- head(rep(labpos,99),length(layers))
+  
+  if(!"value" %in% names(igraph::vertex_attr(graph))) {
+    stop("vertex must have 'value' attribute")
+  }
+  fc <- igraph::V(graph)$value
+  names(fc) <- igraph::V(graph)$name
+  
+  ## select ntop features
+  if(!is.null(ntop) && ntop>0) {
+    ii <- tapply(1:length(fc), igraph::V(graph)$layer,
+      function(i) head(i[order(-abs(fc[i]))],ntop))
+    ii <- unlist(ii[names(ii) %in% layers])
+    fc <- fc[ii]
+    graph <- igraph::subgraph(graph, igraph::V(graph)[ii])
+  }
+
+  if(normalize.edges) {
+    for(e in unique(igraph::E(graph)$connection_type)) {
+      ii <- which(igraph::E(graph)$connection_type == e)
+      max.wt <- max(abs(igraph::E(graph)$weight[ii]),na.rm=TRUE) + 1e-3
+      igraph::E(graph)$weight[ii] <- igraph::E(graph)$weight[ii] / max.wt
+    }
+  }
+
+  if(min.rho>0) {
+    ii <- which(abs(igraph::E(graph)$weight) < min.rho)
+    if(length(ii)) igraph::E(graph)$weight[ii] <- 0
+  }
+
+  if(edge.sign!="both") {
+    ewt <- igraph::E(graph)$weight
+    if(grepl("pos",edge.sign)) igraph::E(graph)$weight[ewt<0] <- 0
+    if(grepl("neg",edge.sign)) igraph::E(graph)$weight[ewt>0] <- 0    
+  }
+  if(edge.type!="both") {
+    ic <- grepl("->",igraph::E(graph)$connection_type)
+    if(grepl("intra",edge.type)) igraph::E(graph)$weight[ic] <- 0
+    if(grepl("inter",edge.type)) igraph::E(graph)$weight[!ic] <- 0    
+  }
+  graph <- igraph::delete_edges(graph, which(igraph::E(graph)$weight==0))
+  
+  ## layout
+  group <- igraph::V(graph)$layer
+  if(layout=="parallel") {
+    if(is.null(xpos)) xpos <- c(0:(length(layers)-1))*xdist
+    x <- xpos[match(group, layers)]
+    y <- fc[igraph::V(graph)$name] 
+    layout.xy <- cbind(x=x, y=y)
+    if(yheight < 1) yheight <- yheight * diff(range(xpos))
+    for(i in unique(layout.xy)[,1]) {
+      ii <- which(layout.xy[,1]==i)
+      layout.xy[ii,2] <- rank(layout.xy[ii,2], ties.method="random") / length(ii)
+      if(length(ii)==1) layout.xy[ii,2] <- 0.5*layout.xy[ii,2]
+    }
+    layout.xy[,2] <- yheight*layout.xy[,2]
+  }
+
+  if(layout=="hive") {
+    ## IN PROGRESS. NOT READY YET.
+    ntype <- length(layers)
+    layout.xy <- matrix(NA, length(group), 2)
+    for(i in 1:ntype) {
+      ii <- which(group == layers[i])
+      vv <- igraph::V(graph)[ii]
+      phi <- pi/2 + i * 2*pi / ntype
+      vf <- fc[vv$name]
+      r <- 0.2 + rank(vf, ties.method="random")/length(vf)
+      x <- r*cos(phi)
+      y <- r*sin(phi)
+      layout.xy[ii,] <- cbind(x,y)  
+    }
+    yheight <- 0
+    rownames(layout.xy) <- igraph::V(graph)$name
+  }
+
+  vv <- igraph::V(graph)$name
+  ewt <- abs(igraph::E(graph)$weight)
+  max.wt <- max(ewt,na.rm=TRUE) + 1e-3
+  ew <- (ewt / max.wt)**2
+
+  vx <- log(1000*igraph::page.rank(graph, weights=ewt)$vector)
+  #vx   <-  abs(y)
+  vx <- (0.1+abs(vx)/max(abs(vx)))**1
+  vcol <- c("blue2","red2")[ 1+1*(fc[vv] > 0)]
+    
+  ecol <- c("darkorange3","magenta4")[ 1+1*(igraph::E(graph)$weight>=0)]    
+  ecol <- adjustcolor(ecol, edge.alpha)
+  ecurv <- c(-0.25,0)[1 + 1*grepl("->",igraph::E(graph)$connection_type)]
+  #ecurv <- c(TRUE,FALSE)[1 + 1*grepl("->",igraph::E(graph)$connection_type)]
+  
+  igraph::V(graph)$label <- ""
+  if(is.null(xlim)) {
+    xlim <- range(layout.xy[,1])
+    xlim <- xlim + c(-1.5,1.5)*mean(diff(xpos))
+  }
+  
+  plot(
+    graph,
+    layout = layout.xy,  
+    vertex.label.color = "black",
+    vertex.label.dist = 0,  
+    vertex.label.degree = 0,
+    vertex.label.size = 0.001,  
+    vertex.size = 6*vx*vx.cex,
+    vertex.color = vcol,  
+    edge.width = 5*edge.cex*ew**1,
+    edge.color = ecol,
+    edge.curved = ecurv,
+    xlim = xlim,
+    ylim = range(layout.xy[,2]) + c(-0.03,0.08)*yheight,
+    rescale = FALSE
+  )
+  
+  x <- layout.xy[,1]
+  y <- layout.xy[,2]  
+
+  ## titles
+  for(i in 1:length(layers)) {
+    grp1 <- layers[i]
+    y1 <- y[which(group==grp1)]
+    text(xpos[i], max(y1), grp1, font=2, cex=1.25, pos=3, adj=0, offset=1.3)
+  }
+
+  ## plot logFC
+  xt <- min(xpos) + 0.5*diff(range(xpos))
+  if(is.null(labpos)) {
+    labpos <- c(2,4)[1+1*(xpos>xt)]
+  } else {
+    labpos <- head(rep(labpos,99),length(layers))
+  }
+
+  if(is.null(value.name) && !is.null(graph$value.type)) {
+    value.name <- graph$value.type
+  }
+  if(is.null(value.name)) value.name <- "value"  
+  for(i in 1:length(layers)) {
+    tpos <- labpos[i]
+    if(layers[i]=="PHENO") next
+    text( xpos[i], -0.02, value.name, cex=1.0*cex.label, font=2, pos=tpos,
+         adj=1, offset=1)
+  }
+  labposx <- labpos[match(group, layers)]
+  text( x, y, cex=0.85*cex.label, round( fc[rownames(layout.xy)],2),
+       pos = labposx, adj=1, offset=1.0)
+
+  ## plot labels
+  if(!is.null(labels)) {
+    labels <- labels[rownames(layout.xy)]
+    sel.na <- which(is.na(labels))
+    labels[sel.na] <- rownames(layout.xy)[sel.na]
+  } else {
+    labels <- rownames(layout.xy)
+  }
+  if(strip.prefix) {
+    labels <- sub(".*:","",labels)
+  }
+  labels <- gsub("^NA \\(","(",labels)
+  text(x, y, labels, cex=cex.label, pos=labposx, adj=1, offset=2.8)
+
+}
+
 
 #'
 #' @export
@@ -7080,8 +7212,8 @@ plotHivePlot <- function(X, f, group, groups=NULL,
                          min.rho=0.8, ntop=25, 
                          labels=NULL, cex.label=1, vx.cex=1,
                          justgraph=FALSE,
-                         edge.alpha=0.33, edge.type="both",
-                         radius = 1,
+                         edge.alpha=0.33, edge.sign="both",
+                         edge.cex=1, radius = 1,
                          layout=c("hive","circos")[1]) {
   
   if(is.null(groups)) {
@@ -7108,15 +7240,14 @@ plotHivePlot <- function(X, f, group, groups=NULL,
   }
 
   ## treshold edges
-  if(grepl("pos",edge.type)) R <- pmax(R,0)
-  if(grepl("neg",edge.type)) R <- pmin(R,0)    
+  if(grepl("pos",edge.sign)) R <- pmax(R,0)
+  if(grepl("neg",edge.sign)) R <- pmin(R,0)    
 
   ## create graph
   idx <- which(abs(R) > min.rho, arr.ind=TRUE)
   ee <- cbind(rownames(R)[idx[,1]], colnames(R)[idx[,2]])
   gr <- igraph::graph_from_edgelist(ee, directed=FALSE)
   igraph::E(gr)$weight <- abs(R[idx]) 
-  igraph::E(gr)$sign <- sign(R[idx])
   igraph::V(gr)$group <- group[igraph::V(gr)$name]
   
   if(length(gr)==0) {
@@ -7194,9 +7325,9 @@ plotHivePlot <- function(X, f, group, groups=NULL,
   vcol <- c("blue2","red2")[ 1+1*(f > 0)]    
 
   ## set edge properties
-  ew <- (igraph::E(gr)$weight / max(igraph::E(gr)$weight))**4
-  ecol <- c("black","red2")[ 1+1*(igraph::E(gr)$sign>0)]
-  ecol <- c("darkorange3","magenta4")[ 1+1*(igraph::E(gr)$sign>0)]    
+  ew <- (abs(igraph::E(gr)$weight) / max(abs(igraph::E(gr)$weight)))**4
+  ecol <- c("black","red2")[ 1+1*(igraph::E(gr)$weight>0)]
+  ecol <- c("darkorange3","magenta4")[ 1+1*(igraph::E(gr)$weight>0)]    
   ecol <- adjustcolor(ecol, edge.alpha)
 
   igraph::V(gr)$label <- ""
@@ -7218,7 +7349,7 @@ plotHivePlot <- function(X, f, group, groups=NULL,
     gr,
     # layout=layout_with_kk,
     layout = layout.xy,  
-    edge.width = 4*ew**1,
+    edge.width = 5 * edge.cex * ew^1.1,
     edge.color = ecol,
     vertex.label.color = "black",
     vertex.label.dist = 0,  
@@ -7261,7 +7392,8 @@ plotHivePlot <- function(X, f, group, groups=NULL,
 #' @export
 plotAdjacencyMatrixFromGraph <- function(graph, nmax=40, binary=FALSE,
                                          ...) {
-  igraph::E(graph)$rho <- igraph::E(graph)$weight * igraph::E(graph)$sign
+  ##igraph::E(graph)$rho <- igraph::E(graph)$weight * igraph::E(graph)$sign
+  if(!"rho" %in% names(igraph::edge_attr(graph))) stop("edges must have rho attribute")
   adjmat <- igraph::as_adjacency_matrix(graph, attr = "rho")
   ii <- head(order(-Matrix::colSums(adjmat**2)),nmax)
   adjmat2 <- as.matrix(adjmat[ii,ii])
