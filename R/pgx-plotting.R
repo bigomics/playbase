@@ -7198,7 +7198,7 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
     labels <- rownames(layout.xy)
   }
   if(strip.prefix) {
-    labels <- sub(".*:","",labels)
+    labels <- mofa.strip_prefix(labels)
   }
   labels <- gsub("^NA \\(","(",labels)
   text(x, y, labels, cex=cex.label, pos=labposx, adj=1, offset=2.8)
