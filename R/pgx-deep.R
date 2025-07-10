@@ -988,6 +988,37 @@ arch = [
     glue::glue(txt, .trim = FALSE)
   }
 
+  predictor_src.BAK <- function(name, dims, caption, offset, lastdense) {
+    offset <- str_at(offset)
+    nlayer <- length(dims)
+    pred <- paste0(name, "pred", 1:nlayer)
+    w <- round((dims / dims[1])**0.5 * 15)
+    txt <- "    # Predictor layer {name}\n"
+    for (i in 1:nlayer) {
+      if (i == 1 && i != nlayer) {
+        txt <- paste0(txt, "    to_Conv('{pred[1]}', '{dims[1]}', '', offset='(3,0,0)', to='(dense",
+          lastdense, "-east)', height=10, depth={w[1]}, width=2, caption='predictor'),\n")
+        txt <- paste0(txt, "    to_connection('dense", lastdense, "', '{pred[1]}'),\n")
+      } else {
+        if (i == nlayer && i != 1) {
+          txt <- paste0(txt, "    to_ConvSoftMax( name='{pred[", i, "]}', s_filer = '{dims[", i, "]}', offset='(2,0,0)', to='({pred[", i - 1, "]}-east)', width=2, height=10, depth={w[", i, "]}, caption='{caption}'),\n")
+        } else if (i == nlayer && i == 1) {
+          txt <- paste0(txt, "    to_ConvSoftMax( name='{pred[", i, "]}', s_filer = '{dims[", i, "]}', offset='(2,0,0)', to='(dense", lastdense, "-east)', width=2, height=10, depth={w[", i, "]}, caption='{caption}'),\n")
+        } else {
+          txt <- paste0(txt, "    to_Conv('{pred[", i, "]}', '{dims[", i, "]}', '', offset='{offset}', to='({pred[",
+            i - 1, "]}-east)', height=10, depth={w[", i, "]}, width=2, caption=''),\n")
+        }
+        ## add arrows
+        if (i != 1) {
+          txt <- paste0(txt, "    to_connection( '{pred[", i - 1, "]}', '{pred[", i, "]}'),\n")
+        } else {
+          txt <- paste0(txt, "    to_connection( 'dense", lastdense, "', '{pred[", i, "]}'),\n")
+        }
+      }
+    }
+    glue::glue(txt, .trim = FALSE)
+  }
+
   predictor_src <- function(name, dims, caption, offset, lastdense) {
     offset <- str_at(offset)
     nlayer <- length(dims)
@@ -996,7 +1027,8 @@ arch = [
     txt <- "    # Predictor layer {name}\n"
     for (i in 1:nlayer) {
       if (i == 1 && i != nlayer) {
-        txt <- paste0(txt, "    to_Conv('{pred[1]}', '{dims[1]}', '', offset='(3,0,0)', to='(dense", lastdense, "-east)', height=10, depth={w[1]}, width=2, caption='predictor'),\n")
+        txt <- paste0(txt, "    to_Conv('{pred[1]}', '{dims[1]}', '', offset='{offset}', to='(dense",
+          lastdense, "-east)', height=10, depth={w[1]}, width=2, caption='predictor'),\n")
         txt <- paste0(txt, "    to_connection('dense", lastdense, "', '{pred[1]}'),\n")
       } else {
         if (i == nlayer && i != 1) {
@@ -1004,7 +1036,8 @@ arch = [
         } else if (i == nlayer && i == 1) {
           txt <- paste0(txt, "    to_ConvSoftMax( name='{pred[", i, "]}', s_filer = '{dims[", i, "]}', offset='(2,0,0)', to='(dense", lastdense, "-east)', width=2, height=10, depth={w[", i, "]}, caption='{caption}'),\n")
         } else {
-          txt <- paste0(txt, "    to_Conv('{pred[", i, "]}', '{dims[", i, "]}', '', offset='{offset}', to='({pred[", i - 1, "]}-east)', height=10, depth={w[", i, "]}, width=2, caption=''),\n")
+          txt <- paste0(txt, "    to_Conv('{pred[", i, "]}', '{dims[", i, "]}', '', offset='(2,0,0)', to='({pred[",
+            i - 1, "]}-east)', height=10, depth={w[", i, "]}, width=2, caption=''),\n")
         }
         ## add arrows
         if (i != 1) {
@@ -1092,7 +1125,7 @@ if __name__ == '__main__':
   ## predictors
   ntargets <- length(targets)
   lastdense <- length(net_dims$integrator)
-  i <- 1
+  i=1
   for (i in 1:ntargets) {
     offset <- c(2, 0, 8 * ((i - 1) - (ntargets - 1) / 2))
     dims <- net_dims[["predictor"]][[i]]
