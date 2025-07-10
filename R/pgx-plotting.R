@@ -6528,13 +6528,14 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
     edgetype1 <- mofa.get_prefix(edges[,1])
     edgetype2 <- mofa.get_prefix(edges[,2])
   }
-   
+  if(is.null(df$text)) df$text <- rownames(df)
+  
   fig <- plotly::plot_ly()
   k=1
   for (k in 1:length(zz)) {
 
     z <- zz[k]
-    df1 <- df[which(df$z == z), c("x","y","z","color") ]
+    df1 <- df[which(df$z == z), c("x","y","z","color","text") ]
 
     mx <- c(min.x, min.x, max.x, max.x)
     my <- c(min.y, max.y, min.y, max.y)
@@ -6545,6 +6546,7 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
         x = mx,
         y = my,
         z = mz,
+        hoverinfo = 'none',
         color = "grey",
         opacity = 0.15
       )
@@ -6558,9 +6560,9 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
         z = z,
         text = ~text,
         hoverinfo = 'text',
+        hovertemplate = "%{text}",
         type = "scattergl",
         marker = list(
-          ##size = 3,
           size = ~abs(color)*15*cex + 3,
           color = ~color,
           line = list(
@@ -6568,8 +6570,6 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
             width = 0.0
           ),
           colorscale = "Bluered",
-          #colorscale = "RdBu",
-          #reversescale = TRUE,
           showscale = FALSE,
           showlegend = FALSE
         ),
@@ -6596,8 +6596,8 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
             x = dfe$x,
             y = dfe$y,
             z = dfe$z,
-            #type = "scatter3d",
-            #type = "scattergl",
+            type = "scatter3d",
+            #type = "scattergl",  ## does not work...
             mode = "lines",
             line = list(
               #color = "black",
@@ -7043,7 +7043,9 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   if(is.null(layers)) layers <- unique(igraph::V(graph)$layer)
   layers <- setdiff(layers, c("SOURCE","SINK"))
   graph <- igraph::subgraph(graph, igraph::V(graph)$layer %in% layers)
-  if(length(labpos)<length(layers)) labpos <- head(rep(labpos,99),length(layers))
+  if(!is.null(labpos) && length(labpos)<length(layers)) {
+    labpos <- head(rep(labpos,99),length(layers))
+  }
   
   if(!"value" %in% names(igraph::vertex_attr(graph))) {
     stop("vertex must have 'value' attribute")
@@ -7092,7 +7094,8 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   ## layout
   group <- igraph::V(graph)$layer
   if(layout=="parallel") {
-    if(is.null(xpos)) xpos <- c(0:(length(layers)-1))*xdist
+    if(is.null(xpos)) xpos <- c(0:(length(layers)-1))
+    xpos <- xpos * xdist
     x <- xpos[match(group, layers)]
     y <- fc[igraph::V(graph)$name] 
     layout.xy <- cbind(x=x, y=y)
