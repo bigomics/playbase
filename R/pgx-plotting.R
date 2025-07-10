@@ -7024,7 +7024,8 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
                                    normalize.edges = FALSE, yheight=2,
                                    edge.sign="both", edge.type="both",
                                    labpos = NULL, value.name = NULL,
-                                   strip.prefix = FALSE, prune = FALSE,
+                                   strip.prefix = FALSE, strip.prefix2 = FALSE,
+                                   prune = FALSE,
                                    layout=c("parallel","hive")[1]) {
   
   if(0) {
@@ -7092,11 +7093,11 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   }
   
   ## layout
-  group <- igraph::V(graph)$layer
+  vlayer <- igraph::V(graph)$layer
   if(layout=="parallel") {
     if(is.null(xpos)) xpos <- c(0:(length(layers)-1))
     xpos <- xpos * xdist
-    x <- xpos[match(group, layers)]
+    x <- xpos[match(vlayer, layers)]
     y <- fc[igraph::V(graph)$name] 
     layout.xy <- cbind(x=x, y=y)
     if(yheight < 1) yheight <- yheight * diff(range(xpos))
@@ -7111,9 +7112,9 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   if(layout=="hive") {
     ## IN PROGRESS. NOT READY YET.
     ntype <- length(layers)
-    layout.xy <- matrix(NA, length(group), 2)
+    layout.xy <- matrix(NA, length(vlayer), 2)
     for(i in 1:ntype) {
-      ii <- which(group == layers[i])
+      ii <- which(vlayer == layers[i])
       vv <- igraph::V(graph)[ii]
       phi <- pi/2 + i * 2*pi / ntype
       vf <- fc[vv$name]
@@ -7170,7 +7171,7 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   ## titles
   for(i in 1:length(layers)) {
     grp1 <- layers[i]
-    y1 <- y[which(group==grp1)]
+    y1 <- y[which(vlayer==grp1)]
     text(xpos[i], max(y1), grp1, font=2, cex=1.25, pos=3, adj=0, offset=1.3)
   }
 
@@ -7192,7 +7193,7 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
     text( xpos[i], -0.02, value.name, cex=1.0*cex.label, font=2, pos=tpos,
          adj=1, offset=1)
   }
-  labposx <- labpos[match(group, layers)]
+  labposx <- labpos[match(vlayer, layers)]
   text( x, y, cex=0.85*cex.label, round( fc[rownames(layout.xy)],2),
        pos = labposx, adj=1, offset=1.0)
 
@@ -7206,6 +7207,9 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   }
   if(strip.prefix) {
     labels <- mofa.strip_prefix(labels)
+  }
+  if(strip.prefix2) {
+    labels <- sub(".*:","",labels)
   }
   labels <- gsub("^NA \\(","(",labels)
   text(x, y, labels, cex=cex.label, pos=labposx, adj=1, offset=2.8)

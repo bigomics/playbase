@@ -14,11 +14,11 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
 
   xdata <- NULL
   if (is.multiomics) {
-    message("[compute.multi_omics] splitting by omics-type ")
+    message("[pgx.compute_mofa] splitting by omics-type ")
     xdata <- mofa.split_data(pgx$X)
   } else {
-    message("[compute.multi_omics] splitting by gene role")
-    xdata <- mofa.splitByGeneRole(pgx$X)
+    message("[pgx.compute_mofa] warning. single omics")
+    xdata <- list(gx = pgx$X)
   }
   names(xdata)
 
@@ -30,7 +30,6 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
     message("[compute.multi_omics] adding geneset matrix")
     xdata <- c(xdata, list(gset = pgx$gsetX))
   }
-  lapply(xdata, dim)
 
   ## cleanup samples
   samples <- pgx$samples
@@ -624,113 +623,6 @@ mofa.compute_enrichment <- function(W, GMT, filter = NULL, ntop = 1000) {
   sizes <- sizes[rownames(gsea[[1]]), ]
   for (i in 1:length(gsea)) {
     gsea[[i]]$size <- sizes
-    gsea[[i]] <- gsea[[i]][, c("pathway", "NES", "pval", "padj", "size", "leadingEdge")]
-    gsea[[i]] <- data.frame(lapply(gsea[[i]], as.matrix), check.names = FALSE)
-  }
-
-  ## extract rho, pval and qval
-  rho <- sapply(gsea, function(x) x$NES)
-  pval <- sapply(gsea, function(x) x$pval)
-  padj <- sapply(gsea, function(x) x$padj)
-  rownames(rho) <- rownames(gsea[[1]])
-  rownames(pval) <- rownames(gsea[[1]])
-  rownames(padj) <- rownames(gsea[[1]])
-
-  list(table = gsea, NES = rho, pval = pval, padj = padj)
-}
-
-mofa.compute_enrichment.SAVE <- function(W, G, filter = NULL, ntop = 1000) {
-
-  if (is.null(G)) {
-    message("[mofa.compute_enrichment] ERROR: must provide GMT matrix (genes on rows)")
-    return(NULL)
-  }
-
-  ## filter gene sets
-  if (!is.null(filter)) {
-    sel <- grep(filter, colnames(G))
-    G <- G[, sel]
-  }
-  
-  ## check if geneset matrix has datatype prefix
-  has.colons <- all(grepl(":", rownames(G)))
-  has.colons
-  if (!has.colons) {
-    ## defaults prefix. If starts with letter SYMBOL, if all numbers CHEBI
-    rownames(G) <- mofa.strip_prefix(rownames(G))
-    ii <- grep("^[0-9]+$", rownames(G), ignore.case = TRUE)
-    if (length(ii) > 0) rownames(G)[ii] <- paste0("CHEBI:", rownames(G)[ii])
-    jj <- setdiff(1:nrow(G), ii)
-    if (length(jj) > 0) rownames(G)[jj] <- paste0("SYMBOL:", rownames(G)[jj])
-  }
-
-  ## detect datatypes. associate with symbols
-  dtypes <- unique(sub(":.*", "", rownames(W)))
-  dtype2gtype <- c(
-    "gx" = "SYMBOL", "px" = "SYMBOL",
-    "me" = "SYMBOL", "mx" = "CHEBI"
-  )
-  dtypes <- intersect(dtypes, names(dtype2gtype))
-  dtypes
-
-  ## build full geneset sparse matrix. We create an augmented GMT
-  ## matrix that covers all datatypes.
-  GMT <- G[0, ]
-  dt <- dtypes[1]
-  for (dt in dtypes) {
-    gt <- dtype2gtype[dt]
-    ii <- grep(gt, rownames(G))
-    G1 <- G[ii, , drop = FALSE]
-    rownames(G1) <- sub(gt, dt, rownames(G1))
-    GMT <- rbind(GMT, G1)
-  }
-  table(sub(":.*", "", rownames(GMT)))
-
-  pp <- intersect(rownames(W), rownames(GMT))
-  W <- W[pp, ]
-  sel <- which(Matrix::colSums(GMT[pp, ] != 0) >= 3)
-
-  GMT1 <- GMT[pp, sel]
-  dim(GMT1)
-
-  ## Perform geneset enrichment with fast rank-correlation. We could
-  ## do with fGSEA instead but it is much slower.
-  info("[pgx.add_GMT] Performing rankcor")
-  normW <- apply(W, 2, function(x) normalize_multirank(x))
-  normW[is.na(normW)] <- mean(normW, na.rm = TRUE)
-  names(normW) <- rownames(W)
-  rnk <- gset.rankcor(normW, GMT1, compute.p = TRUE)
-  topsel <- apply(abs(rnk$rho), 2, function(r) head(order(-r), ntop))
-  topsel <- head(unique(as.vector(t(topsel))), ntop)
-  length(topsel)
-  topsets <- rownames(rnk$rho)[topsel]
-
-  ## prioritize top genesets to accelerate GSEA
-  rnk <- lapply(rnk, function(x) x[topsets, ])
-  topGMT <- GMT1[, topsets]
-  gmt <- mat2gmt(topGMT)
-  length(gmt)
-  info("[pgx.add_GMT] Performing fGSEA...")
-  gsea <- list()
-  k <- colnames(W)[1]
-  for (k in colnames(W)) {
-    w <- W[, k]
-    w <- w + 1e-4 * rnorm(length(w))
-    w <- normalize_multirank(w)
-    enr <- fgsea::fgsea(gmt, stats = w)
-    enr <- data.frame(enr)
-    rownames(enr) <- enr$pathway
-    gsea[[k]] <- enr
-  }
-  gsea <- lapply(gsea, function(x) x[rownames(gsea[[1]]), ])
-
-  dim(topGMT)
-  dtype <- sub(":.*", "", rownames(topGMT))
-  size <- tapply(1:nrow(topGMT), dtype, function(ii) Matrix::colSums(topGMT[ii, ] != 0))
-  size <- do.call(cbind, size)
-  size <- size[rownames(gsea[[1]]), ]
-  for (i in 1:length(gsea)) {
-    gsea[[i]]$size <- size
     gsea[[i]] <- gsea[[i]][, c("pathway", "NES", "pval", "padj", "size", "leadingEdge")]
     gsea[[i]] <- data.frame(lapply(gsea[[i]], as.matrix), check.names = FALSE)
   }
@@ -2631,10 +2523,74 @@ snf.heatmap <- function(snf, X, samples, nmax = 50, do.split = TRUE, legend = TR
 
 #'
 #' @export
+lasagna.create_from_pgx <- function(pgx, xdata =NULL, layers = NULL,
+                                    add_gsets=FALSE, gsetX=NULL, gset_filter=NULL,
+                                    pheno="pheno", ntop=1000, nc=20,
+                                    annot=NULL, use.gmt=TRUE, use.graphite=TRUE,
+                                    add.sink=FALSE, intra=TRUE, fully_connect=FALSE,
+                                    add.revpheno = TRUE
+                                    ) {
+
+  if(is.null(xdata)) {
+    xdata <- mofa.split_data(pgx$X)
+    if(add_gsets) {
+      message("[lasagna.create_from_pgx] adding geneset matrix")
+      if(is.null(gsetX)) {
+        gsetX <- pgx$gsetX
+      }
+      if(!is.null(gset_filter)) {
+        sel <- grep(gset_filter,rownames(gsetX))
+        if(length(sel)==0) {
+          message("[lasagna.create_from_pgx] gset_filter is empty")          
+        } else {
+          gsetX <- gsetX[sel,]
+        }
+      }
+      xdata <- c(xdata, list(gset = gsetX))
+      if(!is.null(layers)) layers <- unique(c(layers,"gset"))
+    }
+  }
+
+  for (i in 1:length(xdata)) {
+    d <- rownames(xdata[[i]])
+    rownames(xdata[[i]]) <- iconv2utf8(d)
+  }
+  names(xdata) <- tolower(names(xdata))
+
+  if(is.null(layers)) {
+    layers <- c("hx","mir","gx","px","mx","gset")
+    layers <- unique(layers, names(xdata))
+  }
+  
+  if(!is.null(layers)) {
+    layers <- intersect(layers, names(xdata))
+    xdata <- xdata[layers]
+  }
+  
+  lasagna.data <- list(
+    X = xdata,
+    samples = pgx$samples,
+    contrasts = pgx$contrasts
+  )
+  
+  model <- lasagna.create_model(
+    lasagna.data, pheno=pheno, ntop=ntop, nc=nc,
+    annot=annot, use.gmt=use.gmt, use.graphite=use.graphite,
+    add.sink=add.sink, intra=intra, fully_connect=fully_connect,
+    add.revpheno = add.revpheno
+  ) 
+
+  return(model)
+}
+
+
+
+#'
+#' @export
 lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
                                  annot=NULL, use.gmt=TRUE, use.graphite=TRUE,
                                  add.sink=FALSE, intra=TRUE, fully_connect=FALSE,
-                                 add.revpheno = TRUE, add.gsets = FALSE
+                                 add.revpheno = TRUE
                                  ) {
   if (pheno == "pheno") {
     Y <- expandPhenoMatrix(data$samples, drop.ref = FALSE)
@@ -2651,7 +2607,6 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
     }
   }
   data$X[['PHENO']] <- t(Y)
-  names(data)
   
   ## restrict number of features (by SD) if requested.
   xx <- data$X
@@ -2926,6 +2881,7 @@ lasagna.plot3D <- function(graph, pos) {
 lasagna.prune_graph <- function(graph, ntop=100, layers=NULL,
                                 normalize.edges=FALSE, min.rho=0.3,
                                 edge.sign="both", edge.type="both",
+                                filter = NULL,
                                 prune=TRUE ) {
   
   if(is.null(layers)) layers <- unique(igraph::V(graph)$layer)
@@ -2935,10 +2891,21 @@ lasagna.prune_graph <- function(graph, ntop=100, layers=NULL,
   if(!"value" %in% names(igraph::vertex_attr(graph))) {
     stop("vertex must have 'value' attribute")
   }
-  fc <- igraph::V(graph)$value
-  names(fc) <- igraph::V(graph)$name
+
+  if(!is.null(filter)) {
+    if(class(filter)!="list") stop("filter must be a named list")
+    if(is.null(names(filter))) stop("filter must be a named list")
+    for(k in names(filter)) {
+      vv <- igraph::V(graph)$name
+      filt <- filter[[k]]
+      vids <- igraph::V(graph)$layer != k | grepl(filt,vv,ignore.case=TRUE)
+      graph <- igraph::subgraph(graph, which(vids))
+    }
+  }
   
   ## select ntop features
+  fc <- igraph::V(graph)$value
+  names(fc) <- igraph::V(graph)$name
   if(!is.null(ntop) && ntop>0) {
     ii <- tapply(1:length(fc), igraph::V(graph)$layer,
       function(i) head(i[order(-abs(fc[i]))],ntop))
@@ -3038,7 +3005,7 @@ lasagna.plot_visgraph <- function(graph, layers=NULL, ntop=100, min_rho=0.3,
     igraph::V(sub)$value[sel] <- igraph::V(sub)$value[sel] * cex
   }
   
-  igraph::E(sub)$width <- ecex*20*abs(igraph::E(sub)$weight)**1.2
+  igraph::E(sub)$width <- ecex*15*abs(igraph::E(sub)$weight)**1.2
   igraph::E(sub)$color <- c("orange","grey")[1+1*(igraph::E(sub)$weight>0)]
   
   if(mst) {
