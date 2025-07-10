@@ -1640,7 +1640,6 @@ getOrganismGO <- function(organism, use.ah = NULL, orgdb = NULL) {
   }
   
   go.gmt <- list()
-  AnnotationDbi::keytypes(orgdb)
   ont_classes <- c("BP", "CC", "MF")
   if (!"GOALL" %in% AnnotationDbi::keytypes(orgdb)) {
     message("WARNING:: missing GO annotation in database!\n")
