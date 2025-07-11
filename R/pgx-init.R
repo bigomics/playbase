@@ -326,6 +326,12 @@ pgx.initialize <- function(pgx) {
     pgx$drugs$combo <- NULL
   }
 
+  ## ----------------------------------------------------------------
+  ## Must haves
+  ## ----------------------------------------------------------------
+  if(is.null(pgx$creator)) pgx$creator <- "unknown"
+  if(is.null(pgx$datatype)) pgx$datatype <- "unknown"
+  
   ## -----------------------------------------------------------------------------
   ## remove large deprecated outputs from objects
   ## -----------------------------------------------------------------------------
