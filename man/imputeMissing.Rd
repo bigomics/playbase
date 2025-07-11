@@ -10,6 +10,7 @@ imputeMissing(
     "MLE", "MinDet", "MinProb", "min", "zero", "nbavg", "rowmeans")[1:3],
   rf.ntree = 100,
   nv = 5,
+  keep.limits = FALSE,
   plot = FALSE
 )
 }

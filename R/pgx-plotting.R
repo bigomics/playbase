@@ -6528,13 +6528,14 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
     edgetype1 <- mofa.get_prefix(edges[,1])
     edgetype2 <- mofa.get_prefix(edges[,2])
   }
-   
+  if(is.null(df$text)) df$text <- rownames(df)
+  
   fig <- plotly::plot_ly()
   k=1
   for (k in 1:length(zz)) {
 
     z <- zz[k]
-    df1 <- df[which(df$z == z), c("x","y","z","color") ]
+    df1 <- df[which(df$z == z), c("x","y","z","color","text") ]
 
     mx <- c(min.x, min.x, max.x, max.x)
     my <- c(min.y, max.y, min.y, max.y)
@@ -6545,6 +6546,7 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
         x = mx,
         y = my,
         z = mz,
+        hoverinfo = 'none',
         color = "grey",
         opacity = 0.15
       )
@@ -6558,9 +6560,9 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
         z = z,
         text = ~text,
         hoverinfo = 'text',
+        hovertemplate = "%{text}",
         type = "scattergl",
         marker = list(
-          ##size = 3,
           size = ~abs(color)*15*cex + 3,
           color = ~color,
           line = list(
@@ -6568,8 +6570,6 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
             width = 0.0
           ),
           colorscale = "Bluered",
-          #colorscale = "RdBu",
-          #reversescale = TRUE,
           showscale = FALSE,
           showlegend = FALSE
         ),
@@ -6596,8 +6596,8 @@ plotlyLasagna <- function(df, znames = NULL, cex=1, edges=NULL) {
             x = dfe$x,
             y = dfe$y,
             z = dfe$z,
-            #type = "scatter3d",
-            #type = "scattergl",
+            type = "scatter3d",
+            #type = "scattergl",  ## does not work...
             mode = "lines",
             line = list(
               #color = "black",
@@ -7024,7 +7024,8 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
                                    normalize.edges = FALSE, yheight=2,
                                    edge.sign="both", edge.type="both",
                                    labpos = NULL, value.name = NULL,
-                                   strip.prefix = FALSE, prune = FALSE,
+                                   strip.prefix = FALSE, strip.prefix2 = FALSE,
+                                   prune = FALSE,
                                    layout=c("parallel","hive")[1]) {
   
   if(0) {
@@ -7043,7 +7044,9 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   if(is.null(layers)) layers <- unique(igraph::V(graph)$layer)
   layers <- setdiff(layers, c("SOURCE","SINK"))
   graph <- igraph::subgraph(graph, igraph::V(graph)$layer %in% layers)
-  if(length(labpos)<length(layers)) labpos <- head(rep(labpos,99),length(layers))
+  if(!is.null(labpos) && length(labpos)<length(layers)) {
+    labpos <- head(rep(labpos,99),length(layers))
+  }
   
   if(!"value" %in% names(igraph::vertex_attr(graph))) {
     stop("vertex must have 'value' attribute")
@@ -7090,10 +7093,11 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   }
   
   ## layout
-  group <- igraph::V(graph)$layer
+  vlayer <- igraph::V(graph)$layer
   if(layout=="parallel") {
-    if(is.null(xpos)) xpos <- c(0:(length(layers)-1))*xdist
-    x <- xpos[match(group, layers)]
+    if(is.null(xpos)) xpos <- c(0:(length(layers)-1))
+    xpos <- xpos * xdist
+    x <- xpos[match(vlayer, layers)]
     y <- fc[igraph::V(graph)$name] 
     layout.xy <- cbind(x=x, y=y)
     if(yheight < 1) yheight <- yheight * diff(range(xpos))
@@ -7108,9 +7112,9 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   if(layout=="hive") {
     ## IN PROGRESS. NOT READY YET.
     ntype <- length(layers)
-    layout.xy <- matrix(NA, length(group), 2)
+    layout.xy <- matrix(NA, length(vlayer), 2)
     for(i in 1:ntype) {
-      ii <- which(group == layers[i])
+      ii <- which(vlayer == layers[i])
       vv <- igraph::V(graph)[ii]
       phi <- pi/2 + i * 2*pi / ntype
       vf <- fc[vv$name]
@@ -7167,7 +7171,7 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   ## titles
   for(i in 1:length(layers)) {
     grp1 <- layers[i]
-    y1 <- y[which(group==grp1)]
+    y1 <- y[which(vlayer==grp1)]
     text(xpos[i], max(y1), grp1, font=2, cex=1.25, pos=3, adj=0, offset=1.3)
   }
 
@@ -7189,7 +7193,7 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
     text( xpos[i], -0.02, value.name, cex=1.0*cex.label, font=2, pos=tpos,
          adj=1, offset=1)
   }
-  labposx <- labpos[match(group, layers)]
+  labposx <- labpos[match(vlayer, layers)]
   text( x, y, cex=0.85*cex.label, round( fc[rownames(layout.xy)],2),
        pos = labposx, adj=1, offset=1.0)
 
@@ -7203,6 +7207,9 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   }
   if(strip.prefix) {
     labels <- mofa.strip_prefix(labels)
+  }
+  if(strip.prefix2) {
+    labels <- sub(".*:","",labels)
   }
   labels <- gsub("^NA \\(","(",labels)
   text(x, y, labels, cex=cex.label, pos=labposx, adj=1, offset=2.8)
