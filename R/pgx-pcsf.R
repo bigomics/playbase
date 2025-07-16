@@ -446,7 +446,8 @@ plotPCSF <- function(pcsf,
                      cut.layout = "kk",
                      cut.resolution = 0.05,
                      as_grid = TRUE,
-                     nlargest = -1
+                     nlargest = -1,
+                     hilight_single = NULL
                      ) {
 
 
@@ -500,7 +501,24 @@ plotPCSF <- function(pcsf,
   border_colors <- c("lightgrey",rep(c("yellow","magenta","cyan","green"),99))
   extra_node_borders <- border_colors[factor(gtype, levels=levels)]
   names(extra_node_borders) <- groups
-  
+
+  if (!is.null(hilight_single)) {
+   node_idx <- which(igraph::V(pcsf)$name == hilight_single)
+   if (length(node_idx) > 0) {
+       node_idx <- node_idx[1]
+       original_group <- igraph::V(pcsf)$group[node_idx]
+       hilight_group <- paste0(original_group, "_hilight")
+       igraph::V(pcsf)$group[node_idx] <- hilight_group
+       extra_node_colors[hilight_group] <- "#00FF00"
+       if (!is.null(extra_node_shapes[original_group])) {
+           extra_node_shapes[hilight_group] <- extra_node_shapes[original_group]
+       }
+       if (!is.null(extra_node_borders[original_group])) {
+           extra_node_borders[hilight_group] <- extra_node_borders[original_group]
+       }
+   }
+  }
+    
   ## set label and label sizes
   if (!is.null(labels)) {
     if(!is.null(names(labels))) labels <- labels[igraph::V(pcsf)$name]
@@ -571,6 +589,15 @@ plotPCSF <- function(pcsf,
       top.cex <- ii[head(order(-label_cex1[ii]), nlabel)]
       jj <- setdiff(ii, top.cex)
       igraph::V(pcsf)$label[jj] <- ""
+    }
+  }
+  if (!is.null(hilight_single)) {
+    node_idx <- which(igraph::V(pcsf)$name == hilight_single)
+    if (length(node_idx) > 0) {
+        igraph::V(pcsf)$label[node_idx] <- igraph::V(pcsf)$name[node_idx]
+        if (hilight_single %in% names(label_cex1)) {
+          label_cex1[hilight_single] <- max(label_cex1, na.rm = TRUE) * 1.5
+        }
     }
   }
 
