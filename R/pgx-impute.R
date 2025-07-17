@@ -40,7 +40,7 @@ imputeMissing <- function(X,
 
   ## ------------ Perseus like --------------
   if ("Perseus" %in% method) {
-    impX <- perseusImpute(X, shift = 1.8, width = 0.3, method = "sample", seed = NULL)
+    impX[["Perseus"]] <- perseusImpute(X, shift = 1.8, width = 0.3, method = "sample", seed = NULL)
   }
   
   ## ------------ msImpute --------------
