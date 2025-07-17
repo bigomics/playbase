@@ -21,7 +21,7 @@ imputeMissing <- function(X,
                           method = c(
                             "LLS", "bpca", "msImpute", "SVD", "SVD2", "NMF", "RF",
                             "knn", "QRILC", "MLE", "MinDet", "MinProb",
-                            "min", "zero", "nbavg", "rowmeans"
+                            "min", "zero", "nbavg", "rowmeans", "Perseus"
                           )[1:3], 
                           rf.ntree = 100, nv = 5, keep.limits = FALSE, plot = FALSE) {
   impX <- list()
@@ -38,6 +38,11 @@ imputeMissing <- function(X,
     impX[["rowmeans"]] <- cx
   }
 
+  ## ------------ Perseus like --------------
+  if ("Perseus" %in% method) {
+    impX <- perseusImpute(X, shift = 1.8, width = 0.3, method = "sample", seed = NULL)
+  }
+  
   ## ------------ msImpute --------------
   if ("msImpute" %in% method) {
     sel <- which(rowSums(!is.na(X)) >= 4)
@@ -108,7 +113,6 @@ imputeMissing <- function(X,
   }
 
   ## ------------ MSnbase --------------
-
   msn.impute <- function(X, method) {
     cx <- X * NA
     sel <- 1:nrow(X)
@@ -330,6 +334,52 @@ BPCAimpute <- function(X, k = 2) {
   impX <- X
   impX[ii, ] <- obsX
   impX
+}
+
+#' @title Perseus-style imputation
+#' @description Imputes missing values using Perseus-style imputation
+#' @export
+perseusImpute <- function(X,
+                          shift = 1.8,
+                          width = 0.3,
+                          method = c("sample", "global"),
+                          seed = NULL) {
+
+  if (sum(is.na(X)) == 0) return(X)
+
+  method = method[1]
+  if (!method %in% c("sample", "global"))
+    stop("[playbase::imputeMissing perseusImpute: method must be 'sample' or 'global']")
+
+  impX <- X
+  if (!is.null(seed)) set.seed(seed)
+
+  min.pos <- min(impX, na.rm = TRUE)
+  
+  if (method == "sample") {    
+    mu0 <- colMeans(impX, na.rm = TRUE)
+    sdx0 <- matrixStats::colSds(impX, na.rm = TRUE)
+    mu <- mu0 - shift * sdx0
+    sdx <- width * sdx0
+    na.samples <- apply(impX, 2, function(x) sum(is.na(x)))
+    na.samples <- names(na.samples[which(na.samples>0)])
+    mu <- unname(mu[match(na.samples, names(mu))])
+    sdx <- unname(sdx[match(na.samples, names(sdx))])
+    i=1
+    for(i in 1:length(na.samples)) {
+      nas <- which(is.na(impX[, na.samples[i]]))
+      impX[nas, na.samples[i]] <- pmax(rnorm(length(nas), mean = mu[i], sd = sdx[i]), min.pos)
+    }
+  } else if (method == "global") {
+    mu0 <- mean(as.numeric(impX), na.rm = TRUE)
+    sdx0 <- sd(as.numeric(impX), na.rm = TRUE)    
+    mu <- mu0 - shift * sdx0
+    sdx <- width * sdx0
+    impX[which(is.na(impX))] <- pmax(rnorm(sum(is.na(impX)), mean = mu, sd = sdx), min.pos)
+  }
+  
+  return(impX)
+
 }
 
 
