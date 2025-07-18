@@ -336,8 +336,21 @@ BPCAimpute <- function(X, k = 2) {
   impX
 }
 
+
+## https://www.biorxiv.org/content/10.1101/2020.08.12.248963v1.full
+## Perseus, by default, impute for each sample separately.
+
+
+
 #' @title Perseus-style imputation
-#' @description Imputes missing values using Perseus-style imputation
+#' @description Imputes missing values using Perseus-style imputation.
+#' Draw from a narrow Gaussian distribution, which is down-shifted toward
+#' lower intensities to simulate values below the detection limit.
+#' Default Perseus parameters are width=0.3 and down shift = 1.8 (log2 scale)
+#' from the mean of the observed data distribution. This is commonly used in
+#' proteomics where missing values often reflect low abundance. By imputing
+#' from a left-shifted distribution (mu-shift*sigma), the function reflects
+#' the assumption that missing values tend to be lower than observed ones.
 #' @export
 perseusImpute <- function(X,
                           shift = 1.8,
@@ -350,6 +363,8 @@ perseusImpute <- function(X,
   method = method[1]
   if (!method %in% c("sample", "global"))
     stop("[playbase::imputeMissing perseusImpute: method must be 'sample' or 'global']")
+
+  message("[perseusImpute: Performing Perseus-style imputation")
 
   impX <- X
   if (!is.null(seed)) set.seed(seed)
