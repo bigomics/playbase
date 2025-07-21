@@ -2089,7 +2089,7 @@ pgx.plotExpression <- function(pgx,
 
       data <- data.frame(gx = gx, xgroup = xgroup)
       pct.NA <- NULL
-      if (grouped) {
+      if (grouped && probe %in% rownames(pgx$counts)) {
         grs <- unique(as.character(data$xgroup))
         i=1; pct.NA=c()
         for(i in 1:length(grs)) {
