@@ -1893,21 +1893,30 @@ pgx.plotGeneUMAP <- function(pgx, contrast = NULL, value = NULL,
 #' show sample names, set axis labels, etc.
 #'
 #' @export
-pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
-                               level = "gene", grouped = FALSE, srt = NULL, cex = 1,
-                               collapse.others = TRUE, showothers = TRUE,
-                               max.points = 200, group.names = NULL,
-                               main = NULL, xlab = NULL, ylab = NULL, names = TRUE,
+pgx.plotExpression <- function(pgx,
+                               probe,
+                               comp,
+                               logscale = TRUE,
+                               level = "gene",
+                               grouped = FALSE,
+                               srt = NULL,
+                               cex = 1,
+                               collapse.others = TRUE,
+                               showothers = TRUE,
+                               max.points = 200,
+                               group.names = NULL,
+                               main = NULL,
+                               xlab = NULL,
+                               ylab = NULL,
+                               names = TRUE,
                                plotly.annotations = NULL,
-                               plotly.margin = NULL, verbose = 0,
+                               plotly.margin = NULL,
+                               verbose = 0,
                                plotlib = "base") {
-  if (is.null(probe)) {
-    return(NULL)
-  }
-  if (is.na(probe)) {
-    return(NULL)
-  }
 
+  if (is.null(probe)) return(NULL)
+  if (is.na(probe)) return(NULL)
+  
   if (level == "geneset" && !probe %in% rownames(pgx$gsetX)) {
     graphics::frame() ## emtpy image
     return(NULL)
@@ -1988,7 +1997,6 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
 
   if (inherits(xgroup, "character")) {
     xgroup <- as.character(xgroup)
-
     levels0 <- group.names
     if ("other" %in% xgroup && !"other" %in% levels0) levels0 <- c(levels0, "other")
     xgroup <- factor(xgroup, levels = levels0)
@@ -2077,14 +2085,23 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
     grp.klr1[is.na(grp.klr1)] <- "e5e5e5"
     names(grp.klr1) <- as.character(xlevels)
 
-
     if (plotlib == "plotly") {
-      ## plot using plotly
+
+      data <- data.frame(gx = gx, xgroup = xgroup)
+      pct.NA <- NULL
+      if (grouped) {
+        grs <- unique(as.character(data$xgroup))
+        i=1; pct.NA=c()
+        for(i in 1:length(grs)) {
+          samples <- rownames(data)[which(as.character(data$xgroup) == grs[i])]
+          pct.na0 <- round(rowMeans(is.na(pgx$counts[probe, samples, drop = FALSE])) * 100, 1)
+          pct.NA <- c(pct.NA, unname(pct.na0))
+        }
+        names(pct.NA) <- grs
+      }
+
       fig <- pgx.barplot.PLOTLY(
-        data = data.frame(
-          gx = gx,
-          xgroup = xgroup
-        ),
+        data = data,
         x = "xgroup",
         y = "gx",
         grouped = TRUE,
@@ -2093,7 +2110,8 @@ pgx.plotExpression <- function(pgx, probe, comp, logscale = TRUE,
         yaxistitle = ylab,
         xaxistitle = xlab,
         annotations = plotly.annotations,
-        margin = plotly.margin
+        margin = plotly.margin,
+        pct.NA = pct.NA
       )
       return(fig)
     } else {
@@ -6196,10 +6214,13 @@ pgx.barplot.PLOTLY <- function(
     font_family = "Lato",
     margin = list(l = 0, r = 0, b = 0, t = 0),
     grouped = TRUE, # true will calculate mean +/- (sd) across groups
-    annotations = NULL) {
+    annotations = NULL,
+    pct.NA = NULL
+    ) {
+  
   if (is.null(x)) x <- 1
   if (is.null(y)) y <- 2
-
+  
   # calculate error bars
   # calculate summary statistics for groups
   if (grouped) {
@@ -6221,11 +6242,7 @@ pgx.barplot.PLOTLY <- function(
 
   error_y <- NULL
   if (grouped) {
-    error_y <- list(
-      array = data[["sd"]],
-      thickness = 1,
-      color = "#000000"
-    )
+    error_y <- list(array = data[["sd"]], thickness = 1, color = "#000000")
   }
 
   data[["short.x"]] <- data[[x]]
@@ -6247,9 +6264,15 @@ pgx.barplot.PLOTLY <- function(
     fillcolor <- rep(fillcolor, length(y))
   }
 
-
   p <- plotly::plot_ly()
   show_legend <- ifelse(length(y) > 1, TRUE, FALSE)
+
+  data$pct.missingness <- NULL
+  if (grouped && !is.null(pct.NA)) {
+    jj <- match(names(pct.NA), unique(data$xgroup))
+    data$pct.missingness <- unname(pct.NA[jj])
+  }
+  
   for (i in y) {
     p <- p %>% plotly::add_trace(
       type = "bar",
@@ -6262,11 +6285,21 @@ pgx.barplot.PLOTLY <- function(
       textposition = "none",
       cliponaxis = FALSE,
       hoverinfo = hoverinfo,
-      hovertemplate = paste0(
-        "<b>%{hovertext}</b><br>",
-        "<b>%{yaxis.title.text}:</b> %{y:", hoverformat, "}<br>",
-        "<extra></extra>"
-      ),
+      text = if (is.null(data$pct.missingness)) NULL else data$pct.missingness,
+      hovertemplate = if (is.null(data$pct.missingness)) {
+        paste0(
+          "<b>%{hovertext}</b><br>",
+          "<b>%{yaxis.title.text}:</b> %{y:", hoverformat, "}<br>",
+          "<extra></extra>"
+        )
+      } else {
+        paste0(
+          "<b>%{hovertext}</b><br>",
+          "<b>%{yaxis.title.text}:</b> %{y:", hoverformat, "}<br>",
+          "<b>Pct.missingness:</b> %{text}<br>",
+          "<extra></extra>"
+        )
+      },
       showlegend = show_legend
     )
   }
