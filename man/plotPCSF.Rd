@@ -28,7 +28,8 @@ plotPCSF(
   cut.layout = "kk",
   cut.resolution = 0.05,
   as_grid = TRUE,
-  nlargest = -1
+  nlargest = -1,
+  hilight_single = NULL
 )
 }
 \description{
