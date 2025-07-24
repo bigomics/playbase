@@ -25,6 +25,7 @@ plotMultiPartiteGraph2(
   labpos = NULL,
   value.name = NULL,
   strip.prefix = FALSE,
+  strip.prefix2 = FALSE,
   prune = FALSE,
   layout = c("parallel", "hive")[1]
 )
