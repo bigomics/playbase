@@ -1071,7 +1071,7 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
 
   ## get probe types for organism
   if (!is.null(keytypes) && keytypes[1] == "*") {
-    keytypes <- keytypes(orgdb)
+    keytypes <- AnnotationDbi::keytypes(orgdb)
   }
   if (is.null(keytypes)) {
     keytypes <- c(
@@ -1082,7 +1082,7 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
     )
   }
   keytypes0 <- keytypes
-  keytypes <- intersect(keytypes, keytypes(orgdb))
+  keytypes <- intersect(keytypes, AnnotationDbi::keytypes(orgdb))
   keytypes
 
   if (length(keytypes) == 0) {
@@ -1398,7 +1398,7 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
 
   orgdb <- getOrgDb(organism, use.ah = NULL)
   cols <- c("SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH", "GO")
-  cols <- intersect(cols, keytypes(orgdb))
+  cols <- intersect(cols, AnnotationDbi::keytypes(orgdb))
 
   if (!"SYMBOL" %in% cols) {
     keytype <- detect_probetype(organism, gene)
@@ -1710,7 +1710,7 @@ convert_probetype <- function(organism, probes, target_id, from_id = NULL,
     return(NULL)
   }
 
-  if (!target_id %in% keytypes(orgdb)) {
+  if (!target_id %in% AnnotationDbi::keytypes(orgdb)) {
     message("[convert_probetype] invalid target probetype")
     return(NULL)
   }
