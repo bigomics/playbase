@@ -391,8 +391,6 @@ read_contrasts <- function(file) {
 #' @export
 read_Olink_NPX <- function(NPX_data) {
 
-  require(OlinkAnalyze)
-
   NPX <- try(OlinkAnalyze::read_NPX(NPX_data), silent = TRUE)
   if (!inherits(NPX, "try-error")) {
     NPX <- as.data.frame(NPX)
@@ -444,8 +442,6 @@ read_Olink_NPX <- function(NPX_data) {
 #' @return dataframe with the metadata
 #' @export
 read_Olink_samples <- function(NPX_data) {
-
-  require(OlinkAnalyze)
 
   NPX <- try(OlinkAnalyze::read_NPX(NPX_data), silent = TRUE)
   if (!inherits(NPX, "try-error")) {
