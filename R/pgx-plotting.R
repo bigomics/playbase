@@ -2495,7 +2495,9 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
   rnk.trace <- (r1 - r0)
   rnk.trace <- rnk.trace / max(abs(rnk.trace), na.rm = TRUE) * 0.8
 
-  qq <- range(fc, na.rm = TRUE)
+  ## we use min-max (instead of quantiles) so all gene labels are visible
+  ## qq <- stats::quantile(fc, probs = c(0.01, 0.99), na.rm = TRUE)  ## !
+  qq <- range(fc, na.rm = TRUE)  ## min-max: all gene labels visible
   y1 <- qq[2]
   y0 <- 0.8 * qq[1]
   dy <- ticklen * (y1 - y0)
