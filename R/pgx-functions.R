@@ -1076,33 +1076,26 @@ pgx.getOrganism <- function(pgx, capitalise = FALSE) {
 
 
 ## #' @title Get Levels of Group Variables
-## #'
 ## #' @description This function retrieves the levels of group variables in a data frame.
-## #'
 ## #' @param Y A data frame containing the data to be analyzed.
-## #'
 ## #' @details The function takes a data frame `Y` as input and searches for
 ## #' columns that represent group variables. Group variables are identified as
 ## #' columns that have a name that does not contain "title", "name", "sample", or
 ## #' "patient" and have a majority of non-unique values.
 ## #' Numeric columns are excluded from the search.
 ## #' The levels of the identified group variables are then extracted and returned as a character vector.
-## #'
 ## #' @return A character vector representing the levels of the group variables in the input data frame.
-## #'
 ## #' @export
-## #getLevels <- function(Y) {
-## #  yy <- Y[, grep("title|name|sample|patient", colnames(Y), invert = TRUE), drop = FALSE] ## NEED RETHINK!!!!
-## #  is.grpvar <- apply(yy, 2, function(y) max(table(y)) > 1,na.rm=TRUE)
-## #  is.numeric <- apply(yy, 2, function(y) (length(table(y)) / length(y)) > 0.5)
-## #  is.grpvar <- is.grpvar & !is.numeric
-## #  yy <- yy[, is.grpvar, drop = FALSE]
-## #
-## #
-## #  levels <- lapply(1:ncol(yy), function(i) unique(paste0(colnames(yy)[i], "=", yy[, i])))
-## #  levels <- sort(unlist(levels))
-## #  return(levels)
-## #}
+## getLevels <- function(Y) {
+##   yy <- Y[, grep("title|name|sample|patient", colnames(Y), invert = TRUE), drop = FALSE] ## NEED RETHINK!!!!
+##   is.grpvar <- apply(yy, 2, function(y) max(table(y)) > 1,na.rm=TRUE)
+##   is.numeric <- apply(yy, 2, function(y) (length(table(y)) / length(y)) > 0.5)
+##   is.grpvar <- is.grpvar & !is.numeric
+##   yy <- yy[, is.grpvar, drop = FALSE]
+##   levels <- lapply(1:ncol(yy), function(i) unique(paste0(colnames(yy)[i], "=", yy[, i])))
+##   levels <- sort(unlist(levels))
+##   return(levels)
+## }
 
 
 #' @title Select samples from selected levels
@@ -2044,7 +2037,7 @@ shortstring <- function(s, n, dots = 1) {
 #' }
 #' @export
 shortstring0 <- function(s, n, dots = 1) {
-  s0 <- iconv(as.character(s), to = "UTF-8")
+  s0 <- iconv(as.character(s), to = "UTF-8", sub = "")
   s0 <- gsub("[&].*[;]", "", s0) ## HTML special garbage...
   jj <- which(nchar(s0) > n)
   if (length(jj) == 0) {
@@ -2398,7 +2391,15 @@ normalize_cols <- function(G) {
 }
 
 #' @export
-make_unique <- function(s, sep = "", iter = 10 * length(s)) {
+make_unique <- function(s, sep=".") {
+  s[is.na(s)] <- "NA"
+  make.unique(s, sep=sep)
+}
+
+#' add empty white spaces after name to make unique.
+#'
+#' @export
+make_unique_ws <- function(s, sep = "", iter = 10 * length(s)) {
   s[is.na(s)] <- "NA"
   num.dup <- sum(duplicated(s), na.rm = TRUE) > 0
   if (!num.dup) {
@@ -2411,7 +2412,8 @@ make_unique <- function(s, sep = "", iter = 10 * length(s)) {
   dups <- unique(s[which(duplicated(s))])
   for (d in dups) {
     jj <- which(s == d)
-    newx <- paste0(s[jj], c("", paste0(".", 1:(length(jj) - 1))))
+    ww <- sapply(1:length(jj),function(i) paste(rep(" ",i-1),collapse=""))
+    newx <- paste0(s[jj], ww)     ## add empty white spaces
     s[jj] <- newx
   }
   ## here we recurse. this is dangerous if not controlled.

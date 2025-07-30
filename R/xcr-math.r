@@ -486,7 +486,10 @@ matrix_twosample_ttest <- function(X, G) {
 #' method. Much faster than doing metap::sumlog() and metap::sumz()
 #'
 #' @export
-matrix_combine_p <- function(plist, method='fisher') {
+matrix_metap <- function(plist, method='stouffer') {
+  if(inherits(plist,"matrix")) {
+    plist <- as.list(data.frame(plist))
+  }
   if(method %in% c("fisher","sumlog")) {
     chisq <- (-2) * Reduce('+', lapply(plist,log))
     df <- 2 * length(plist)

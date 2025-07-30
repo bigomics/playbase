@@ -58,6 +58,8 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
   # but first and last column maintain the "
   first_column <- x0[[1]] # Extract the first column
   last_column <- x0[[ncol(x0)]] # Extract the last column
+  first_column <- iconv2utf8(first_column)
+  last_column <- iconv2utf8(last_column)
   if (all(grepl('^"', first_column)) && all(grepl('"$', last_column))) {
     x0[[1]] <- gsub('^"', "", first_column)
     x0[[ncol(x0)]] <- as.numeric(gsub('"$', "", last_column))
@@ -109,6 +111,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
   which.char <- which(sapply(x, class) == "character")
   if (length(which.char)) {
     char.cols <- colnames(x)[which.char]
+    x[, c(char.cols) := lapply(.SD, iconv2utf8), .SDcols = char.cols]
     x[, c(char.cols) := lapply(.SD, trimws), .SDcols = char.cols]
   }
 
@@ -627,56 +630,3 @@ validate_contrasts <- function(df) {
 ## --------------------------------------------------------------------
 ## --------------------------------------------------------------------
 ## --------------------------------------------------------------------
-
-
-## #' @describeIn check_duplicate_cols check if there is any duplicate row in the input data
-## check_duplicate_rows.DEPRECATED <- function(data) {
-##   rn <- setdiff(data[[1]], c("", "NA", NA))
-##   t1 <- sum(duplicated(rn)) == 0
-##   return(t1)
-## }
-
-
-## #' @describeIn check_duplicate_cols checks if there is any empty row in the data
-## check_empty_rows.DEPRECATED <- function(data) {
-##   t1 <- nrow(data) > 0
-##   return(t1)
-## }
-
-## #' @title Input Checks
-## #'
-## #' @param data A data frame or matrix.
-## #'
-## #' @return Logical indicating output of the checks.
-## #'
-## #' @description Checks if a data frame or matrix contains duplicate column names.
-## #'
-## #' @details This function takes a data frame or matrix \code{data} as input and checks if it contains any duplicate column names.
-## #' It compares the column names against each other to look for duplicates.
-## #'
-## #' The output is a logical value indicating whether any duplicate names were found.
-## #' \code{TRUE} means duplicate names were detected, \code{FALSE} means no duplicates.
-## #'
-## #' This can be used to validate data before further analysis, to ensure no columns are duplicated.
-## #'
-## #' @examples
-## #' \dontrun{
-## #' data <- data.frame(A = 1:3, B = 4:6, A = 7:9)
-## #' check_duplicate_cols(data)
-## #' # Returns TRUE
-## #'
-## #' data <- data.frame(A = 1:3, B = 4:6, C = 7:9)
-## #' check_duplicate_cols(data)
-## #' # Returns FALSE
-## #' }
-## check_duplicate_cols.DEPRECATED <- function(data) {
-##   t1 <- sum(duplicated(colnames(data))) == 0
-##   return(t1)
-## }
-
-## #' @describeIn check_duplicate_cols Checks if the number of sample is below the allowed maximum
-## check_max_samples.DEPRECATED <- function(data, max_samples = 2000) {
-##   MAXSAMPLES <- as.integer(max_samples)
-##   t1 <- (ncol(data) - 1) <= MAXSAMPLES
-##   return(t1)
-## }

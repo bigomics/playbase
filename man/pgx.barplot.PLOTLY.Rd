@@ -23,7 +23,8 @@ pgx.barplot.PLOTLY(
   font_family = "Lato",
   margin = list(l = 0, r = 0, b = 0, t = 0),
   grouped = TRUE,
-  annotations = NULL
+  annotations = NULL,
+  pct.NA = NULL
 )
 }
 \arguments{

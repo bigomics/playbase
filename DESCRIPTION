@@ -72,6 +72,7 @@ Imports:
     htmlwidgets,
     igraph,
     iheatmapr,
+    imputeLCMD,
     IntNMF,
     irlba,
     isva,

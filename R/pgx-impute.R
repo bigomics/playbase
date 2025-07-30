@@ -21,9 +21,9 @@ imputeMissing <- function(X,
                           method = c(
                             "LLS", "bpca", "msImpute", "SVD", "SVD2", "NMF", "RF",
                             "knn", "QRILC", "MLE", "MinDet", "MinProb",
-                            "min", "zero", "nbavg", "rowmeans"
-                          )[1:3],
-                          rf.ntree = 100, nv = 5, plot = FALSE) {
+                            "min", "zero", "nbavg", "rowmeans", "Perseus"
+                          )[1:3], 
+                          rf.ntree = 100, nv = 5, keep.limits = FALSE, plot = FALSE) {
   impX <- list()
 
   ## ------------ simple rowmeans -----------
@@ -38,6 +38,11 @@ imputeMissing <- function(X,
     impX[["rowmeans"]] <- cx
   }
 
+  ## ------------ Perseus like --------------
+  if ("Perseus" %in% method) {
+    impX[["Perseus"]] <- perseusImpute(X, shift = 1.8, width = 0.3, method = "sample", seed = NULL)
+  }
+  
   ## ------------ msImpute --------------
   if ("msImpute" %in% method) {
     sel <- which(rowSums(!is.na(X)) >= 4)
@@ -82,7 +87,7 @@ imputeMissing <- function(X,
   }
 
   if ("SVD2" %in% method) {
-    impX[["SVD2"]] <- svdImpute2(X, nv = nv)
+    impX[["SVD2"]] <- svdImpute2(X, nv = nv, init="5%")
   }
 
   if ("NMF" %in% method) {
@@ -108,7 +113,6 @@ imputeMissing <- function(X,
   }
 
   ## ------------ MSnbase --------------
-
   msn.impute <- function(X, method) {
     cx <- X * NA
     sel <- 1:nrow(X)
@@ -145,6 +149,13 @@ imputeMissing <- function(X,
     return(NULL)
   }
 
+  ## constrain limits??
+  if(keep.limits) {
+    minx <- min(X, na.rm=TRUE)
+    maxx <- max(X, na.rm=TRUE)
+    impX <- lapply(impX, function(x) pmin(pmax(x,minx), maxx))
+  }
+  
   metaX <- NULL
   if (length(impX) > 1) {
     ## ------------ meta --------------
@@ -323,6 +334,67 @@ BPCAimpute <- function(X, k = 2) {
   impX <- X
   impX[ii, ] <- obsX
   impX
+}
+
+
+## https://www.biorxiv.org/content/10.1101/2020.08.12.248963v1.full
+## Perseus, by default, impute for each sample separately.
+
+
+
+#' @title Perseus-style imputation
+#' @description Imputes missing values using Perseus-style imputation.
+#' Draw from a narrow Gaussian distribution, which is down-shifted toward
+#' lower intensities to simulate values below the detection limit.
+#' Default Perseus parameters are width=0.3 and down shift = 1.8 (log2 scale)
+#' from the mean of the observed data distribution. This is commonly used in
+#' proteomics where missing values often reflect low abundance. By imputing
+#' from a left-shifted distribution (mu-shift*sigma), the function reflects
+#' the assumption that missing values tend to be lower than observed ones.
+#' @export
+perseusImpute <- function(X,
+                          shift = 1.8,
+                          width = 0.3,
+                          method = c("sample", "global"),
+                          seed = NULL) {
+
+  if (sum(is.na(X)) == 0) return(X)
+
+  method = method[1]
+  if (!method %in% c("sample", "global"))
+    stop("[playbase::imputeMissing perseusImpute: method must be 'sample' or 'global']")
+
+  message("[perseusImpute: Performing Perseus-style imputation")
+
+  impX <- X
+  if (!is.null(seed)) set.seed(seed)
+
+  min.pos <- min(impX, na.rm = TRUE)
+  
+  if (method == "sample") {    
+    mu0 <- colMeans(impX, na.rm = TRUE)
+    sdx0 <- matrixStats::colSds(impX, na.rm = TRUE)
+    mu <- mu0 - shift * sdx0
+    sdx <- width * sdx0
+    na.samples <- apply(impX, 2, function(x) sum(is.na(x)))
+    na.samples <- names(na.samples[which(na.samples>0)])
+    mu <- unname(mu[match(na.samples, names(mu))])
+    sdx <- unname(sdx[match(na.samples, names(sdx))])
+    i=1
+    for(i in 1:length(na.samples)) {
+      nas <- which(is.na(impX[, na.samples[i]]))
+      impX[nas, na.samples[i]] <- pmax(rnorm(length(nas), mean = mu[i], sd = sdx[i]), min.pos)
+    }
+  } else if (method == "global") {
+    mu0 <- mean(as.numeric(impX), na.rm = TRUE)
+    sdx0 <- sd(as.numeric(impX), na.rm = TRUE)    
+    mu <- mu0 - shift * sdx0
+    sdx <- width * sdx0
+    impX[which(is.na(impX))] <- pmax(rnorm(sum(is.na(impX)), mean = mu, sd = sdx), min.pos)
+  }
+  
+  return(impX)
+
 }
 
 
