@@ -94,6 +94,7 @@ Imports:
     MSnbase,
     MultiAssayExperiment,
     nipalsMCIA,
+    OlinkAnalyze,
     org.Hs.eg.db,
     org.Mm.eg.db,
     org.Rn.eg.db,
