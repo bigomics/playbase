@@ -2391,7 +2391,15 @@ normalize_cols <- function(G) {
 }
 
 #' @export
-make_unique <- function(s, sep = "", iter = 10 * length(s)) {
+make_unique <- function(s, sep=".") {
+  s[is.na(s)] <- "NA"
+  make.unique(s, sep=sep)
+}
+
+#' add empty white spaces after name to make unique.
+#'
+#' @export
+make_unique_ws <- function(s, sep = "", iter = 10 * length(s)) {
   s[is.na(s)] <- "NA"
   num.dup <- sum(duplicated(s), na.rm = TRUE) > 0
   if (!num.dup) {
@@ -2404,7 +2412,8 @@ make_unique <- function(s, sep = "", iter = 10 * length(s)) {
   dups <- unique(s[which(duplicated(s))])
   for (d in dups) {
     jj <- which(s == d)
-    newx <- paste0(s[jj], c("", paste0(".", 1:(length(jj) - 1))))
+    ww <- sapply(1:length(jj),function(i) paste(rep(" ",i-1),collapse=""))
+    newx <- paste0(s[jj], ww)     ## add empty white spaces
     s[jj] <- newx
   }
   ## here we recurse. this is dangerous if not controlled.

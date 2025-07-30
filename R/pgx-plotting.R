@@ -2469,8 +2469,8 @@ plotly2ggplot <- function(plot, width = NULL, height = NULL, scale = 1, hjust = 
 #'
 #' @export
 gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen = 0.25,
-                          ylab = NULL, yth = 1, tooltips = NULL, cex.text = 1, cex.title = 1.4,
-                          cex.axis = 1, cbar.width = 32) {
+                          ylab = NULL, yth = 1, yq=0, tooltips = NULL, cex.text = 1,
+                          cex.title = 1.4, cex.axis = 1, cbar.width = 32) {
   if (is.null(xlab)) {
     xlab <- "Rank in ordered dataset"
   }
@@ -2495,9 +2495,9 @@ gsea.enplotly <- function(fc, gset, cex = 1, main = NULL, xlab = NULL, ticklen =
   rnk.trace <- (r1 - r0)
   rnk.trace <- rnk.trace / max(abs(rnk.trace), na.rm = TRUE) * 0.8
 
-  ## we use min-max (instead of quantiles) so all gene labels are visible
-  ## qq <- stats::quantile(fc, probs = c(0.01, 0.99), na.rm = TRUE)  ## !
-  qq <- range(fc, na.rm = TRUE)  ## min-max: all gene labels visible
+  ## Set y-range of rank metric. yq=0 for full range. yq=0.01 for 1% quantile.
+  qq <- stats::quantile(fc, probs = c(yq, 1-yq), na.rm = TRUE)  
+  ##qq <- range(fc, na.rm = TRUE)  ## min-max: all gene labels visible
   y1 <- qq[2]
   y0 <- 0.8 * qq[1]
   dy <- ticklen * (y1 - y0)
@@ -5856,6 +5856,11 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   if (!is.null(idx)) idx <- as.character(idx)
   if (!is.null(splitx)) splitx <- as.character(splitx)
 
+  ## important
+  if(any(duplicated(rownames(X)))) {
+    rownames(X) <- make_unique_ws(rownames(X))
+  }
+  
   ## --------- defaults
   if (is.null(xtips)) xtips <- colnames(X)
   if (is.null(ytips)) ytips <- rownames(X)
@@ -5884,14 +5889,15 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   }
 
   ## ------ split Y-axis (genes) by factor
-  hc.order <- function(x) {
+  hc.order <- function(x, as.index=FALSE) {
     if (nrow(x) == 1) {
       return(rownames(x))
     }
     suppressWarnings(dd <- stats::as.dist(1 - stats::cor(t(x), use = "pairwise")))
     if (sum(is.na(dd))) dd[is.na(dd) | is.nan(dd)] <- 1
     hc <- fastcluster::hclust(dd, method = "ward.D2")
-    rownames(x)[hc$order]
+    if(as.index) return(hc$order)
+    rownames(x)[hc$order]  ## watch out for duplicates!
   }
   if (!is.null(idx)) {
     if (row_clust) {
@@ -5911,7 +5917,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     idx <- rev(idx)
   } else {
     if (row_clust) {
-      kk <- hc.order(X[, , drop = FALSE])
+      kk <- hc.order(X[, , drop = FALSE], as.index=TRUE)
       X <- X[kk, ]
     }
   }
