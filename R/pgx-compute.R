@@ -381,10 +381,15 @@ pgx.createPGX <- function(counts,
   settings$convert.hugo <- convert.hugo
   settings$custom.geneset <- !is.null(custom.geneset)
 
+  ## add versions info
+  versions <- list()
+  versions$playbase_version <- packageVersion("playbase")
+  versions$playdata_version <- packageVersion("playdata")
+
   pgx <- list(
     name = name,
     organism = organism,
-    version = packageVersion("playbase"),
+    version = packageVersion("playbase"), # useless, just keep for back compatibility
     date = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
     creator = creator,
     datatype = datatype,
@@ -398,6 +403,7 @@ pgx.createPGX <- function(counts,
     total_counts = Matrix::colSums(counts, na.rm = TRUE),
     counts_multiplier = counts_multiplier,
     settings = settings,
+    versions = versions,
     sc_compute_settings = sc_compute_settings
   )
   
