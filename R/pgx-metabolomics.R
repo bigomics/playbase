@@ -241,6 +241,7 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
     no.name <- any(is.na(metadata$name))
     no.name
 
+    ## ----------------- RefMET -------------------------
     ## RefMet also handles metabolite/lipid long names, so this is
     ## convenient
     if( d == "refmet" && curl::has_internet() && no.name) {
@@ -256,9 +257,10 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
           res$definition <- '-'   ## fill it??
           res$ID <- res$ChEBI_ID
           res$source <- ifelse(res$RefMet_ID!='-', "RefMet", NA)
-          cols <- c("ID","Input.name","Standardized.name","Super.class","Main.class",
-            "Sub.class","Formula","Exact.mass",
-            "definition","source")
+          res$Title <- paste0(res$Standardized.name," (",res$Main.class,"/",res$Sub.class,") {",res$Formula,"}")
+          res$Title <- sub("^-.*","-",res$Title)
+          #cols <- c("ID","Input.name","Standardized.name","Super.class","Main.class","Sub.class","Formula","Exact.mass","definition","source")
+          cols <- c("ID","Input.name","Title","Super.class","Main.class","Sub.class","Formula","Exact.mass","definition","source")          
           res <- res[,cols]
           colnames(res) <- COLS
           ## only fill missing entries
@@ -268,6 +270,7 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
       }
     }
 
+    ## ----------------- internal playdata  -------------------------
     ## this uses internal datatable. maybe we can get rid of it in
     ## future and use only online annotation.
     if (d == "playdata" && no.name) {
@@ -289,6 +292,7 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
       }
     }
 
+    ## ----------------- metaboliteIDmapping  -------------------------
     ## this uses metaboliteIDmapping through AnnotHub. The first time
     ## retrieval of the database can take some time for caching. Needs
     ## internet for first time download.
@@ -329,6 +333,17 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
     }
   } ## for db
 
+
+  ## Fill empty symbols with something. Many lipids are not mapped to
+  ## our standard ChEBI id.
+  fill_no_symbol = TRUE
+  if(fill_no_symbol) {
+    ii <- which(is.na(metadata$ID) & !metadata$formula %in% c(NA,"-"))
+    if(length(ii))  metadata$ID[ii] <- paste0("{",metadata$formula[ii],"}")
+    ii <- which(is.na(metadata$ID) & !is.na(metadata$feature))
+    if(length(ii))  metadata$ID[ii] <- paste0("{",metadata$feature[ii],"}")
+  }
+  
   ## This sets the default data.frame structure for metabolites. Note
   ## that symbol and ortholog columns are pre-filled with ID.
   rownames(metadata) <- NULL
