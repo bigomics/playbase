@@ -2407,7 +2407,7 @@ make_unique_ws <- function(s, sep = "", iter = 10 * length(s)) {
   }
   if (iter < 0) {
     ## this is to prevent recursion hell
-    stop("[make_unique] FATAL. too many recursions.")
+    stop("[make_unique_ws] FATAL. too many recursions.")
   }
   dups <- unique(s[which(duplicated(s))])
   for (d in dups) {
@@ -2417,7 +2417,7 @@ make_unique_ws <- function(s, sep = "", iter = 10 * length(s)) {
     s[jj] <- newx
   }
   ## here we recurse. this is dangerous if not controlled.
-  if (sum(duplicated(s))) s <- make_unique(s, iter = iter - 1)
+  if (sum(duplicated(s))) s <- make_unique_ws(s, iter = iter - 1)
   s
 }
 
