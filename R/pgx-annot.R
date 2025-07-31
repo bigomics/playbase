@@ -266,7 +266,7 @@ getGeneAnnotation.ANNOTHUB <- function(
       library(org.Rn.eg.db)
       chrloc <- org.Rn.egCHRLOC
     }
-    mapped_genes <- as.list(chrloc[mappedkeys(chrloc)])
+    mapped_genes <- as.list(chrloc[ AnnotationDbi::mappedkeys(chrloc)])
     cm <- intersect(as.character(annot$ENTREZID), names(mapped_genes))
     mapped_genes <- mapped_genes[cm]
     locs <- unlist(lapply(mapped_genes, function(x) names(x[1])))
@@ -405,7 +405,7 @@ match_probe_names <- function(probes, org, probe_type = NULL) {
   if (is.null(probe_type)) {
     probe_type <- detect_probetype(organism = "custom", probes, orgdb = org)
   }
-  all.keys <- keys(org, probe_type)
+  all.keys <- AnnotationDbi::keys(org, probe_type)
   tsub <- function(s) gsub("[-:;.]|\\[|\\]", ".", s)
   ii <- match(toupper(tsub(probes)), toupper(tsub(all.keys)))
   table(is.na(ii))
@@ -817,7 +817,7 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
   ## Get all organism symbols
   org_annot <- AnnotationDbi::select(
     orgdb,
-    keys = keys(orgdb, "ENTREZID"),
+    keys = AnnotationDbi::keys(orgdb, "ENTREZID"),
     keytype = "ENTREZID",
     columns = intersect(c("SYMBOL", "GENENAME"), keytypes)
   )
@@ -1071,7 +1071,7 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
 
   ## get probe types for organism
   if (!is.null(keytypes) && keytypes[1] == "*") {
-    keytypes <- keytypes(orgdb)
+    keytypes <- AnnotationDbi::keytypes(orgdb)
   }
   if (is.null(keytypes)) {
     keytypes <- c(
@@ -1082,7 +1082,7 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
     )
   }
   keytypes0 <- keytypes
-  keytypes <- intersect(keytypes, keytypes(orgdb))
+  keytypes <- intersect(keytypes, AnnotationDbi::keytypes(orgdb))
   keytypes
 
   if (length(keytypes) == 0) {
@@ -1093,11 +1093,11 @@ showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
   ## example probes
   keytype0 <- "ENTREZID"
   suppressMessages(suppressWarnings(
-    probes <- try(head(keys(orgdb, keytype = keytype0), n))
+    probes <- try(head(AnnotationDbi::keys(orgdb, keytype = keytype0), n))
   ))
   if ("try-error" %in% class(probes)) {
     keytype0 <- setdiff(keytypes, "ENTREZID")[1]
-    probes <- try(head(keys(orgdb, keytype = keytype0), n))
+    probes <- try(head(AnnotationDbi::keys(orgdb, keytype = keytype0), n))
   }
   keytype0
 
@@ -1240,7 +1240,7 @@ getOrganismGO <- function(organism, use.ah = NULL, orgdb = NULL) {
       ))
 
       ## get GO title
-      sets <- sets[which(names(sets) %in% keys(GO.db::GOTERM))]
+      sets <- sets[which(names(sets) %in% AnnotationDbi::keys(GO.db::GOTERM))]
       sets <- lapply(sets, function(s) unique(s))
       go <- sapply(GO.db::GOTERM[names(sets)], Term)
       new_names <- paste0("GO_", k, ":", go, " (", sub("GO:", "GO_", names(sets)), ")")
@@ -1398,7 +1398,7 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
 
   orgdb <- getOrgDb(organism, use.ah = NULL)
   cols <- c("SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH", "GO")
-  cols <- intersect(cols, keytypes(orgdb))
+  cols <- intersect(cols, AnnotationDbi::keytypes(orgdb))
 
   if (!"SYMBOL" %in% cols) {
     keytype <- detect_probetype(organism, gene)
@@ -1407,7 +1407,7 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype, as.link 
   }
 
   ## return if gene is not known
-  if (!gene %in% keys(orgdb, keytype)) {
+  if (!gene %in% AnnotationDbi::keys(orgdb, keytype)) {
     info <- list()
     info[["feature"]] <- feature
     info[["symbol"]] <- gene
@@ -1710,7 +1710,7 @@ convert_probetype <- function(organism, probes, target_id, from_id = NULL,
     return(NULL)
   }
 
-  if (!target_id %in% keytypes(orgdb)) {
+  if (!target_id %in% AnnotationDbi::keytypes(orgdb)) {
     message("[convert_probetype] invalid target probetype")
     return(NULL)
   }
