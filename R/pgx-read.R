@@ -367,12 +367,8 @@ read_counts <- function(file, first = FALSE, unique = FALSE, paste_char = "_") {
 read_samples <- function(file) {
   df <- read.as_matrix(file)
   is_valid <- validate_samples(df)
-  if (!is_valid) {
-    message("[read_samples] WARNING: Samples file has errors")
-    ## return(NULL)
-  }
-  df <- as.data.frame(df)
-  return(df)
+  if (!is_valid) message("[read_samples] WARNING: Samples file has errors")
+  return(as.data.frame(df))
 }
 
 #' Read contrasts data from file
@@ -387,12 +383,110 @@ read_samples <- function(file) {
 read_contrasts <- function(file) {
   df <- read.as_matrix(file)
   is_valid <- validate_contrasts(df)
-  if (!is_valid) {
-    message("[read_contrasts] WARNING: Contrasts file has errors")
-    ## return(NULL)
-  }
-  df
+  if (!is_valid) message("[read_contrasts] WARNING: Contrasts file has errors")
+  return(df)
 }
+
+
+#' Read Olink NPX data and create a counts matrix
+#' @param NPX_data Path to input Olink NPX data file. Must be standard Olink NPX format as per OlinkAnalyze R package.
+#' @return data matrix (features on rows; samples on columns)
+#' @export
+read_Olink_NPX <- function(NPX_data) {
+
+  NPX <- try(OlinkAnalyze::read_NPX(NPX_data), silent = TRUE)
+  if (!inherits(NPX, "try-error")) {
+    NPX <- as.data.frame(NPX)
+  } else {
+    dbg("[read_Olink_NPX]. Uploaded proteomics data file is not Olink or does not adhere with standard Olink NPX format.")
+    return(NULL)
+  }
+
+  hh1 <- grep("NPX", colnames(NPX), ignore.case = TRUE)
+  if (any(hh1)) {
+    npx.id <- colnames(NPX)[hh1[1]]
+  } else {
+    dbg("[read_Olink_NPX] The uploaded Olink NPX file does not contain the variable NPX")
+    return(NULL)
+  }
+
+  feature.id <- NULL
+  hh <- grepl("uniprot", tolower(colnames(NPX)))
+  if (any(hh)) feature.id <- colnames(NPX)[hh][1]
+  if (is.null(feature.id)) {
+    hh <- grepl("assay$", tolower(colnames(NPX)))
+    if (any(hh)) feature.id <- colnames(NPX)[hh][1]
+  }
+  if (is.null(feature.id)) {
+    dbg("[read_Olink_NPX] The uploaded Olink NPX file does not contain the variables Uniprot or Assay")
+    return(NULL)
+  }
+
+  sample.id <- NULL
+  hh <- grepl("sampleid", tolower(colnames(NPX)))
+  if (any(hh)) sample.id <- colnames(NPX)[hh][1]
+  if (is.null(sample.id)) {
+    dbg("[read_Olink_NPX] The uploaded Olink NPX file does not contain the variable SampleID")
+    return(NULL)
+  }
+  
+  # Convert to matrix
+  fm <- as.formula(paste0(feature.id, "~", sample.id))
+  counts.df <- reshape2::dcast(NPX, fm, value.var = npx.id, fun.aggregate = mean)
+  counts <- as.matrix(counts.df[sapply(counts.df, is.numeric)])
+  rownames(counts) <- counts.df[, feature.id]
+
+  return(counts)
+  
+}
+
+#' Read Olink NPX data and automatically create samples dataframe
+#' @param NPX_data Path to input Olink NPX data file. Must be standard Olink NPX format as per OlinkAnalyze R package.
+#' @return dataframe with the metadata
+#' @export
+read_Olink_samples <- function(NPX_data) {
+
+  NPX <- try(OlinkAnalyze::read_NPX(NPX_data), silent = TRUE)
+  if (!inherits(NPX, "try-error")) {
+    NPX <- as.data.frame(NPX)
+  } else {
+    dbg("[read_Olink_NPX]. Uploaded proteomics data file is not Olink or does not adhere with standard Olink NPX format.")
+    return(NULL)
+  }
+
+  samples.id <- NULL
+  hh <- grep("SampleID", colnames(NPX), ignore.case = TRUE)
+  if (any(hh)) samples.id <- unique(NPX[, hh[1]])
+  if (is.null(samples.id)) {
+    dbg("[read_Olink_NPX] The uploaded Olink NPX file does not contain the variable SampleID")
+    return(NULL)
+  }
+  
+  #https://cran.r-project.org/web/packages/OlinkAnalyze/vignettes/Vignett.html
+  exclude.vars <- ""
+  hh <- grepl("uniprot|olinkid|assay|npx|freq|lod", tolower(colnames(NPX)))
+  if (any(hh)) exclude.vars <- colnames(NPX)[hh]
+  samples <- matrix(NA, nrow = length(samples.id), ncol = sum(!hh))
+  samples <- data.frame(samples, row.names = samples.id)
+  colnames(samples) <- colnames(NPX)[!hh]
+  
+  hh <- grep("SampleID", colnames(NPX), ignore.case = TRUE)
+  i=1
+  for(i in 1:nrow(samples)) {
+    t=1
+    for(t in 1:ncol(samples)) {
+      jj <- match(rownames(samples)[i], NPX[,hh[1]])
+      jx <- match(colnames(samples)[t], colnames(NPX))
+      if(!any(jj) | !any(jx)) next
+      samples[i,t] <- NPX[jj, jx]
+    }
+  }
+  samples <- samples[,-hh[1]]
+
+  return(samples)
+  
+}
+
 
 #' Read gene/probe annotation file
 #'
