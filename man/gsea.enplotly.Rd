@@ -13,6 +13,7 @@ gsea.enplotly(
   ticklen = 0.25,
   ylab = NULL,
   yth = 1,
+  yq = 0,
   tooltips = NULL,
   cex.text = 1,
   cex.title = 1.4,
