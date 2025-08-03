@@ -5850,6 +5850,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
                                        row_annot_width = 0.03, scale = "row.center",
                                        colors = NULL, lmar = 60, na_text = NULL,
                                        rowcex = 1, colcex = 1, show_legend = TRUE,
+                                       zlim = NULL, symm = NULL,
                                        return_x_matrix = FALSE) {
   ## constants
   col_annot_height <- 0.021
@@ -5888,6 +5889,13 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     }
   }
 
+  col_clust <- TRUE
+  if(is.null(symm)) symm <- all(rownames(X)==colnames(X))
+  if(symm) {
+    idx <- splitx
+    col_clust <- FALSE
+  }
+  
   ## ------ split Y-axis (genes) by factor
   hc.order <- function(x, as.index=FALSE) {
     if (nrow(x) == 1) {
@@ -5905,21 +5913,26 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     } else {
       kk <- tapply(rownames(X), idx, function(k) c(k, "   "))
     }
-    idx <- tapply(idx, idx, function(k) c(k, NA))
+    idx <- tapply(idx, idx, function(k) c(k, NA)) ## add spacer
     idx <- as.vector(unlist(idx))
     kk <- unlist(kk)
     kk <- kk[1:(length(kk) - 1)] ## remove trailing spacer
     idx <- idx[1:(length(idx) - 1)]
-    X <- rbind(X, "   " = NA)[kk, ]
-
-    ## invert
-    X <- X[nrow(X):1, ]
-    idx <- rev(idx)
+    X <- rbind(X, "   " = NA)[kk, ]    
+#    X <- X[nrow(X):1, ] ## reverse??
+#    idx <- rev(idx)
   } else {
     if (row_clust) {
       kk <- hc.order(X[, , drop = FALSE], as.index=TRUE)
       X <- X[kk, ]
     }
+  }
+
+  if(symm) {
+    X1 <- X[rownames(X) %in% colnames(X),]
+    kk <- match(rownames(X1), colnames(X))
+    splitx <- splitx[kk]
+    X <- X[,kk]
   }
 
   ## ------ split X-axis by some group factor
@@ -5958,7 +5971,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
   mar <- list(l = lmar, r = 0, b = 5, t = 0, pad = 3)
   ex <- ncol(X) / ncol(xx[[1]]) ## expansion factor
   hc <- NULL
-  if (NCOL(xx[[1]]) > 1) {
+  if (NCOL(xx[[1]]) > 1 && col_clust) {
     hc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(xx[[1]], use = "pairwise")))
   }
   dd <- 0.08 * ex ## left dendrogram width
@@ -5969,9 +5982,24 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     prepend_value = "Value: "
   )
 
-  x1 <- xx[[1]]
-  zmax <- max(abs(X), na.rm = TRUE)
+  if(is.null(zlim)) {
+    if(min(X, na.rm=TRUE) < 0) {
+      zmax <- max(abs(X), na.rm = TRUE)
+      zlim <- c(-1,1) * zmax
+    } else {
+      minx <- min(X, na.rm = TRUE)
+      maxx <- max(X, na.rm = TRUE)      
+      zlim <- c(minx, maxx)
+    }
+  }
 
+  if(min(X, na.rm=TRUE) < 0) {
+    zmid <- 0
+  } else {
+    zmid <- mean(zlim)
+  }
+  
+  x1 <- xx[[1]]
   plt <- iheatmapr::main_heatmap(
     x1,
     name = "expression",
@@ -5979,15 +6007,15 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     x = xtips[colnames(x1)],
     y = ytips[rownames(x1)],
     colors = c(omics_colors("brand_blue"), omics_colors("grey"), omics_colors("red")),
-    zmid = 0,
-    zmin = -zmax,
-    zmax = zmax,
+    zmid = zmid,
+    zmin = zlim[1],
+    zmax = zlim[2],
     tooltip = tooltip,
     layout = list(margin = mar)
   )
 
   if (!is.null(hc)) {
-    plt <- plt %>% iheatmapr::add_col_dendro(hc, size = 0.06)
+    plt <- plt %>% iheatmapr::add_col_dendro(hc, size = 0.08)
   }
 
   if (length(xx) > 1) {
@@ -6021,8 +6049,8 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     for (i in 2:length(xx)) {
       x1 <- xx[[i]]
       hc <- NULL
-      if (NCOL(x1) > 1) {
-        hc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(x1, use = "pairwise")))
+      if (NCOL(x1) > 1 && col_clust) {
+        hc <- fastcluster::hclust(stats::as.dist(1 - stats::cor(x1, use="pairwise")))
       }
 
       plt <- plt %>%
@@ -6032,9 +6060,9 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
           x = xtips[colnames(x1)],
           y = ytips[rownames(x1)],
           colors = c("royalblue3", "#EEEEE4", "indianred3"),
-          zmid = 0,
-          zmin = -zmax,
-          zmax = zmax,
+          zmid = zmid,
+          zmin = zlim[1],
+          zmax = zlim[2],
           tooltip = tooltip,
           size = sizes[i],
           buffer = 0.007 * ex
@@ -6042,8 +6070,7 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
 
       if (!is.null(hc)) {
         plt <- plt %>%
-          iheatmapr::add_col_dendro(hc, size = 0.06)
-        ## add_col_clustering() %>%
+          iheatmapr::add_col_dendro(hc, size = 0.08)
       }
 
       if (!is.null(annot)) {
