@@ -257,10 +257,7 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
           res$definition <- '-'   ## fill it??
           res$ID <- res$ChEBI_ID
           res$source <- ifelse(res$RefMet_ID!='-', "RefMet", NA)
-          res$Title <- paste0(res$Standardized.name," (",res$Main.class,"/",res$Sub.class,") {",res$Formula,"}")
-          res$Title <- sub("^-.*","-",res$Title)
-          #cols <- c("ID","Input.name","Standardized.name","Super.class","Main.class","Sub.class","Formula","Exact.mass","definition","source")
-          cols <- c("ID","Input.name","Title","Super.class","Main.class","Sub.class","Formula","Exact.mass","definition","source")          
+          cols <- c("ID","Input.name","Standardized.name","Super.class","Main.class","Sub.class","Formula","Exact.mass","definition","source")
           res <- res[,cols]
           colnames(res) <- COLS
           ## only fill missing entries
@@ -338,10 +335,19 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
   ## our standard ChEBI id.
   fill_no_symbol = TRUE
   if(fill_no_symbol) {
-    ii <- which(is.na(metadata$ID) & !metadata$formula %in% c(NA,"-"))
-    if(length(ii))  metadata$ID[ii] <- paste0("{",metadata$formula[ii],"}")
-    ii <- which(is.na(metadata$ID) & !is.na(metadata$feature))
+    ii <- which(is.na(metadata$ID))
     if(length(ii))  metadata$ID[ii] <- paste0("{",metadata$feature[ii],"}")
+    ii <- which(is.na(metadata$name) | metadata$name=="-")
+    if(length(ii))  metadata$name[ii] <- metadata$feature[ii]
+  }
+
+  ## Let's annotate the title with more info
+  add_lipid_details=TRUE
+  if(add_lipid_details) {
+    details <- paste0("(",metadata$main_class,"/",metadata$sub_class,";",
+      metadata$formula,")")
+    ii <- which(!is.na(metadata$main_class) & metadata$main_class!="-")
+    metadata$name[ii] <- paste(metadata$name, details)[ii]
   }
   
   ## This sets the default data.frame structure for metabolites. Note
@@ -373,7 +379,8 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
     colnames(id_table) <- paste0(sub("_ID","",colnames(id_table)),"_ID")
     if("ChEBI_ID" %in% colnames(id_table)) {
       ## fill missing ChEBI entries with internal CHEBI id (in symbol column)
-      id_table$ChEBI_ID <- ifelse(is.na(id_table$ChEBI_ID), df$symbol, id_table$ChEBI_ID)
+      ii <- is.na(id_table$ChEBI_ID) & !is.na(df$symbol) & !grepl("^[{]",df$symbol)
+      id_table$ChEBI_ID[ii] <- df$symbol[ii]
     }
     df <- cbind( df, id_table )   
   }
@@ -389,8 +396,6 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
   if (extra_annot && !is.null(annot_table)) {
     extra_cols <- setdiff(colnames(annot_table),colnames(df))
     extra_cols <- setdiff( extra_cols, c("ID","name","source","feature"))
-    dbg("[getMetaboliteAnnotation] dim.df=", dim(df))
-    dbg("[getMetaboliteAnnotation] dim.annot_table=", dim(annot_table))
     df <- cbind(df, annot_table[,extra_cols])
   }
 
@@ -637,4 +642,38 @@ extend_metabolite_sets2 <- function(M, ppi, add=TRUE, postfix="(extended)", maxc
   extM <- extM[order(rownames(extM)),]
   
   return(extM)
+}
+
+#' This adds some 'gene sets' based on the species class of the lipids
+#' according to the annotation table.
+#'
+#' @export
+pgx.get_lipidomics_sets <- function(pgx, as_matrix=TRUE) {
+
+  if (!"symbol" %in% colnames(pgx$genes)) {
+    message(paste(
+      "[pgx.add_lipidomics_sets] WARNING: could not find 'main_class' column.",
+    ))
+    return(pgx)
+  }
+
+  ## -----------------------------------------------------------
+  ## Load Geneset matrix and filter genes by gene or homologous
+  ## -----------------------------------------------------------
+  message("[pgx.add_lipidomics_sets] Creating GMT matrix... ")
+  gmt.main_class <- tapply(pgx$genes$symbol, pgx$genes$main_class, c)
+  gmt.sub_class <- tapply(pgx$genes$symbol, pgx$genes$sub_class, c)
+
+  names(gmt.main_class) <- paste0("LIPID_CLASS:",names(gmt.main_class))
+  names(gmt.sub_class) <- paste0("LIPID_SUBCLASS:",names(gmt.sub_class))
+  gmt <- c(gmt.main_class, gmt.sub_class)
+  
+  if(!as_matrix) {
+    return(gmt)
+  }
+  
+  G <- gmt2mat(gmt, bg=pgx$genes$symbol)
+  # normalize columns (required for some methods downstream)log2foldchange
+  G <- normalize_cols(G) ## ??? 
+  return(G)
 }
