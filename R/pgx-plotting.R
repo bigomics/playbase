@@ -5919,8 +5919,6 @@ pgx.splitHeatmapFromMatrix <- function(X, annot = NULL, idx = NULL, splitx = NUL
     kk <- kk[1:(length(kk) - 1)] ## remove trailing spacer
     idx <- idx[1:(length(idx) - 1)]
     X <- rbind(X, "   " = NA)[kk, ]    
-#    X <- X[nrow(X):1, ] ## reverse??
-#    idx <- rev(idx)
   } else {
     if (row_clust) {
       kk <- hc.order(X[, , drop = FALSE], as.index=TRUE)
