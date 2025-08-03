@@ -25,8 +25,9 @@ pgx.getGEOseries <- function(id,
   is.valid.id <- is.GEO.id.valid(id)
   if (!is.valid.id) stop("[pgx.getGEOseries] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
-
+  
   ## get counts from archs4 or recount or GEO 
+  archs.h5 <- NULL
   geo <- pgx.getGEOcounts(id, archs.h5 = archs.h5)
   source <- geo[["source"]]
   counts <- geo[["expr"]]
@@ -104,16 +105,16 @@ pgx.getGEOcounts <- function(id, archs.h5) {
     if (!is.null(expr)) src <- "ARCHS4"
   }
 
-    if (is.null(expr)) {
-    message("[pgx.getGEOcounts]: pgx.getGEOcounts.GEOquery...")
-    expr <- pgx.getGEOcounts.GEOquery(id)
-    if (!is.null(expr)) src <- "GEO"
-  }
-
   if (is.null(expr)) {
     message("[pgx.getGEOcounts]: pgx.getGEOcounts.recount...")
     expr <- pgx.getGEOcounts.recount(id)
     if (!is.null(expr)) src <- "recount"
+  }
+
+  if (is.null(expr)) {
+    message("[pgx.getGEOcounts]: pgx.getGEOcounts.GEOquery...")
+    expr <- pgx.getGEOcounts.GEOquery(id)
+    if (!is.null(expr)) src <- "GEO"
   }
 
   if (is.null(expr)) {
@@ -164,7 +165,7 @@ pgx.getGEOmetadata <- function(id) {
 pgx.getGEOcounts.archs4 <- function(id, h5.file) {
 
   is.valid.id <- is.GEO.id.valid(id) 
-  if (!is.valid.id) stop("[pgx.getGEOcounts.archs4] FATAL: ID is invalid. Exiting.\n")
+  if (!is.valid.id) message("[pgx.getGEOcounts.archs4] Dataset ID is invalid. Please use a valid ID.")
   id <- as.character(id)
 
   if (is.null(h5.file) || h5.file == "")
