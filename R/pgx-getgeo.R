@@ -26,7 +26,7 @@ pgx.getGEOseries <- function(id,
   if (!is.valid.id) stop("[pgx.getGEOseries] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
   
-  ## get counts from archs4 or recount or GEO 
+  ## get counts from recount or GEO 
   archs.h5 <- NULL
   geo <- pgx.getGEOcounts(id, archs.h5 = archs.h5)
   source <- geo[["source"]]
@@ -106,16 +106,17 @@ pgx.getGEOcounts <- function(id, archs.h5) {
   }
 
   if (is.null(expr)) {
+    message("[pgx.getGEOcounts]: pgx.getGEOcounts.GEOquery...")
+    expr <- pgx.getGEOcounts.GEOquery(id)
+    if (!is.null(expr)) src <- "GEO"
+  }
+
+  if (is.null(expr)) {
     message("[pgx.getGEOcounts]: pgx.getGEOcounts.recount...")
     expr <- pgx.getGEOcounts.recount(id)
     if (!is.null(expr)) src <- "recount"
   }
 
-  if (is.null(expr)) {
-    message("[pgx.getGEOcounts]: pgx.getGEOcounts.GEOquery...")
-    expr <- pgx.getGEOcounts.GEOquery(id)
-    if (!is.null(expr)) src <- "GEO"
-  }
 
   if (is.null(expr)) {
     cat("WARNING:: Could not get GEO expression. please download manually.\n")
@@ -278,7 +279,7 @@ pgx.getGEOcounts.GEOquery <- function(id) {
 
   gse <- try(GEOquery::getGEO(id, GSEMatrix = TRUE, getGPL = TRUE), silent = TRUE)
   if (inherits(gse, "try-error")) {
-    message("[pgx.getGEOcounts.GEOquery] Error: getGEO Efailed to retrieve ", id, "\n")
+    message("[pgx.getGEOcounts.GEOquery] Error: getGEO failed to retrieve ", id, "\n")
     return(NULL)
   }
 
