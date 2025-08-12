@@ -1072,13 +1072,15 @@ pgx.createSingleCellPGX <- function(counts,
 
   sc.membership <- NULL
   do.supercells <- sc_compute_settings[["compute_supercells"]]
+  supercell_threshold <- sc_compute_settings[["supercell_threshold"]]
+  if (is.null(supercell_threshold)) supercell_threshold <- 10000
 
-  if (do.supercells || ncol(counts) > 10000) {  
+  if (do.supercells || ncol(counts) > supercell_threshold) {
 
     if (do.supercells)
       message("[pgx.createSingleCellPGX] User choice: performing SuperCell")
-    if (ncol(counts) > 10000)
-      message("[pgx.createSingleCellPGX] >10K cells: performing SuperCell")
+    if (ncol(counts) > supercell_threshold)
+      message(paste0("[pgx.createSingleCellPGX] >", supercell_threshold, " cells: performing SuperCell"))
     
     ct <- samplesx[, "celltype"]
     group <- paste0(ct, ":", apply(contrasts, 1, paste, collapse = '_'))
