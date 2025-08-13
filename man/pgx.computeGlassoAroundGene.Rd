@@ -4,7 +4,7 @@
 \alias{pgx.computeGlassoAroundGene}
 \title{Compute partial correlations around a gene}
 \usage{
-pgx.computeGlassoAroundGene(X, gene, nmax = 100)
+pgx.computeGlassoAroundGene(X, gene, lambda = 0.01, nmax = 100)
 }
 \arguments{
 \item{X}{Expression matrix, genes in rows and samples in columns.}

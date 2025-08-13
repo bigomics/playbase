@@ -4,7 +4,6 @@
 ##
 
 
-
 #' Calculate signed ranks. Rank on absolute value and add sign.
 #'
 #' @export
@@ -17,10 +16,20 @@ signedRank <- function(x) {
 #'
 #' @export
 colSignedRanks <- function(x) {
-  sign(x) * t(matrixStats::colRanks(abs(x),
-    na.last = "keep",
-    ties.method = "random"
-  )) / nrow(x)
+  if(inherits(x,"dgCMatrix")) {
+    rx <- sign(x) * Matrix::t(sparseMatrixStats::colRanks(
+      abs(x),
+      na.last = "keep",
+      ties.method = "average"
+    )) / nrow(x)
+  } else {
+    rx <- sign(x) * Matrix::t(matrixStats::colRanks(
+      abs(x),
+      na.last = "keep",
+      ties.method = "average"
+    )) / nrow(x)
+  }
+  return(rx)
 }
 
 #' @title Calculate cosine similarity
@@ -65,10 +74,12 @@ cosine_similarity <- function(X, Y = NULL, method = NULL) {
     zX <- X[, ii]
     zX[is.na(zX)] <- 0
     s1 <- crossprod(!is.na(X[, ii]), zX**2)
-    ss <- (s1 * t(s1))**0.5
+    ss <- (s1 * Matrix::t(s1))**0.5
     M <- crossprod(zX) / (ss + 1e-20)
     S <- matrix(NA, nrow = ncol(X), ncol = ncol(X))
     S[ii, ii] <- as.matrix(M)
+    colnames(S) <- colnames(X)
+    rownames(S) <- colnames(X)
     return(S)
   } else {
     Y <- methods::as(Y, "dgCMatrix")
@@ -78,12 +89,14 @@ cosine_similarity <- function(X, Y = NULL, method = NULL) {
     zX[is.na(zX)] <- 0
     zY <- Y[, jj]
     zY[is.na(zY)] <- 0
-    s1 <- crossprod(!is.na(X[, ii]), zY**2)
-    s2 <- crossprod(!is.na(Y[, jj]), zX**2)
-    ss <- (s1 * t(s2))**0.5
-    M <- crossprod(zX, zY) / (ss + 1e-20)
+    s1 <- Matrix::crossprod(!is.na(X[, ii]), zY**2)
+    s2 <- Matrix::crossprod(!is.na(Y[, jj]), zX**2)
+    ss <- (s1 * Matrix::t(s2))**0.5
+    M <- Matrix::crossprod(zX, zY) / (ss + 1e-20)
     S <- matrix(NA, nrow = ncol(X), ncol = ncol(Y))
     S[ii, jj] <- as.matrix(M)
+    rownames(S) <- colnames(X)
+    colnames(S) <- colnames(Y)
     return(S)
   }
 }
@@ -193,7 +206,7 @@ length_encode <- function(x, r = 0.1, a = 0.25) {
   colnames(M) <- NULL
   rownames(M) <- NULL
   if (r == 0) {
-    S <- cosine_similarity(t(M))
+    S <- cosine_similarity(Matrix::t(M))
     return(S)
   }
   n <- ceiling(r / dx)
@@ -291,10 +304,10 @@ tagged.hamming <- function(aa, bb, align = TRUE) {
   if (length(aa) == 1 && length(bb) > 1) aa <- rep(aa, length(bb))
   if (length(bb) == 1 && length(aa) > 1) bb <- rep(bb, length(aa))
   D <- lapply(1:length(aa), function(i) tag.hamming0(aa[i], bb[i]))
-  D <- t(sapply(D, function(e) e[match(all.tags, names(e))]))
+  D <- Matrix::t(sapply(D, function(e) e[match(all.tags, names(e))]))
 
   if (length(all.tags) == 1) {
-    D <- t(D)
+    D <- Matrix::t(D)
     rownames(D) <- NULL
   }
   colnames(D) <- all.tags
@@ -344,7 +357,7 @@ uscale <- function(x, symm = FALSE) {
 }
 
 
-#' Test
+#' Test if rows or columns of sparse matrix are duplicated
 #'
 #' @export
 duplicated.dgCMatrix <- function (dgCMat, MARGIN) {
@@ -413,6 +426,86 @@ cor_sparse_matrix <- function(G, mat) {
   }
   return(cor_matrix)
 }
+
+#' Fast one sample t-test for matrix object F (e.g. foldchanges) and
+#' grouping matrix G (e.g. gene sets).
+#'
+#' @export
+matrix_onesample_ttest <- function(F, G) {  
+  sumG <- Matrix::colSums(G!=0)
+  sum_sq  <- Matrix::crossprod(G!=0, F^2) 
+  meanx <- Matrix::crossprod(G!=0, F) / (1e-8 + sumG)
+  sdx   <-  sqrt( (sum_sq - meanx^2 * sumG) / (sumG - 1))
+  f_stats <- meanx
+  t_stats <- meanx / (1e-8 + sdx) * sqrt(sumG)
+  p_stats <- apply( abs(t_stats), 2, function(tv)
+    2*pt(tv,df=pmax(sumG-1,1),lower.tail=FALSE))
+  list(mean = as.matrix(f_stats), t = as.matrix(t_stats), p = p_stats)  
+}
+
+#' Fast one sample t-test for matrix object X (e.g. expression) and
+#' grouping matrix G (e.g. gene sets).
+#'
+#' @export
+matrix_twosample_ttest <- function(X, G) {
+  message("WARNING: WIP. PLEASE CHECK THIS FUNCTION.")
+  if(is.vector(X)) X <- cbind(X)
+  if(nrow(X)!=nrow(G)) stop("dimension mismatch")
+  ## see e.g. https://people.umass.edu/bwdillon/.../TwoSampleT-Test.html
+  sum1 <- Matrix::colSums(G!=0)
+  # sum0 <- Matrix::colSums(G==0)  
+  sum0 <- nrow(G) - sum1
+
+  X2 <- X^2
+  sum.X2 <- Matrix::colSums(X2)
+  ssq1 <- Matrix::crossprod(G!=0, X2)     
+  #ssq0 <- Matrix::crossprod(G==0, X2)
+  ssq0 <- sweep(-ssq1, 2, sum.X2, '+') # faster
+
+  sum.X <- Matrix::colSums(X)
+  mean1 <- Matrix::crossprod(G!=0, X) 
+  #mean0 <- Matrix::crossprod(G==0, X) 
+  mean0 <- sweep(-mean1, 2, sum.X, '+') 
+  mean1 <- mean1 / (1e-8 + sum1)
+  mean0 <- mean0 / (1e-8 + sum0)    
+  
+  var0 <-  (ssq0 - mean0^2 * sum0) / (sum0 - 1)
+  var1 <-  (ssq1 - mean1^2 * sum1) / (sum1 - 1)  
+  varsum <- ( var0 / sum0 + var1 / sum1 )
+  dof <- varsum^2 / ( var0 / sum0 * (sum0-1) + var1 / sum1 * (sum1 - 1) )
+  ## NEED CHECKING!!!!
+  f_stats <- mean1 - mean0
+  t_stats <- f_stats / sqrt(varsum)
+  p_stats <- sapply( 1:NCOL(X), function(i)
+    2 * pt( abs(t_stats[,i]), df = pmax(dof[,i],1), lower.tail=FALSE))
+  res <- list(diff = as.matrix(f_stats), t = as.matrix(t_stats), p = p_stats)
+  res
+}
+
+#' Matrix version for combining p-values using fisher or stouffer
+#' method. Much faster than doing metap::sumlog() and metap::sumz()
+#'
+#' @export
+matrix_metap <- function(plist, method='stouffer') {
+  if(inherits(plist,"matrix")) {
+    plist <- as.list(data.frame(plist))
+  }
+  if(method %in% c("fisher","sumlog")) {
+    chisq <- (-2) * Reduce('+', lapply(plist,log))
+    df <- 2 * length(plist)
+    pv <- pchisq(chisq, df, lower.tail=FALSE)
+  } else if(method %in% c("stouffer","sumz")) {
+    np <- length(plist)
+    zz <- lapply(plist, qnorm, lower.tail=FALSE) 
+    zz <- Reduce('+', zz) / sqrt(np)
+    pv <- pnorm(zz, lower.tail=FALSE)
+  } else {
+    stop("Invalid method: ",method)
+  }
+  dimnames(pv) <- dimnames(plist[[1]])
+  return(pv)
+}
+
 
 ## ===================================================================================
 ## ============================== END OF FILE ========================================

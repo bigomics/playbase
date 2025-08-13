@@ -181,8 +181,8 @@ pgx.initialize <- function(pgx) {
   pgx$Y <- pgx$samples[colnames(pgx$X), kk, drop = FALSE]
   pgx$Y <- utils::type.convert(pgx$Y, as.is = TRUE) ## autoconvert to datatypes
   ny1 <- nrow(pgx$Y) - 1
-  k1 <- pgx.getCategoricalPhenotypes(pgx$Y, min.ncat = 2, max.ncat = ny1) ## exclude
-  k2 <- grep("OS.survival|cluster|condition|group", colnames(pgx$Y), value = TRUE) ## must include
+  k1 <- pgx.getCategoricalPhenotypes(pgx$Y, min.ncat = 2, max.ncat = max(ny1, 2)) ## exclude
+  k2 <- grep("OS.survival|cluster|condition|group", colnames(pgx$Y), value = TRUE, ignore.case = TRUE) ## must include
   kk <- sort(unique(c(k1, k2)))
   pgx$Y <- pgx$Y[, kk, drop = FALSE]
 
@@ -240,6 +240,8 @@ pgx.initialize <- function(pgx) {
     F <- pgx.getMetaMatrix(pgx)$fc
     F <- rename_by2(F, pgx$genes, "symbol")
     gset.fc <- gset.averageFC(F, pgx$GMT)
+    ii <- match(rownames(pgx$gset.meta$meta[[1]]),rownames(gset.fc))
+    gset.fc <- gset.fc[ii,,drop=FALSE]
     for (i in 1:nc) {
       pgx$gset.meta$meta[[i]]$meta.fx <- gset.fc[,i]
     }
@@ -324,6 +326,12 @@ pgx.initialize <- function(pgx) {
     pgx$drugs$combo <- NULL
   }
 
+  ## ----------------------------------------------------------------
+  ## Must haves
+  ## ----------------------------------------------------------------
+  if(is.null(pgx$creator)) pgx$creator <- "unknown"
+  if(is.null(pgx$datatype)) pgx$datatype <- "unknown"
+  
   ## -----------------------------------------------------------------------------
   ## remove large deprecated outputs from objects
   ## -----------------------------------------------------------------------------

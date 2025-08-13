@@ -15,7 +15,7 @@ gx.heatmap(
   softmax = FALSE,
   scale = "row",
   verbose = 1,
-  symm = FALSE,
+  symm = NULL,
   col.annot = NULL,
   row.annot = NULL,
   annot.ht = 1,

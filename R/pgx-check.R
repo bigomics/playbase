@@ -77,7 +77,7 @@ pgx.checkINPUT <- function(
       zero.rows <- names(ANY_ROW_ZERO)
 
       # remove the rownames with all zeros
-      df_clean <- df_clean[!(rownames(df_clean) %in% zero.rows), , drop = FALSE]
+      #df_clean <- df_clean[!(rownames(df_clean) %in% zero.rows), , drop = FALSE]
 
       nzerorows <- length(ANY_ROW_ZERO)
       err.mesg <- zero.rows

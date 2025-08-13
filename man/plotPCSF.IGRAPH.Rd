@@ -8,6 +8,8 @@ plotPCSF.IGRAPH(
   net,
   fx = NULL,
   vertex.cex = 1,
+  color.fx = fx,
+  vertex.alpha = 1,
   label.fx = fx,
   label.cex = 4,
   edge.cex = 1,

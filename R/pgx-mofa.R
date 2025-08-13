@@ -14,11 +14,11 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
 
   xdata <- NULL
   if (is.multiomics) {
-    message("[compute.multi_omics] splitting by omics-type ")
+    message("[pgx.compute_mofa] splitting by omics-type ")
     xdata <- mofa.split_data(pgx$X)
   } else {
-    message("[compute.multi_omics] splitting by gene role")
-    xdata <- mofa.splitByGeneRole(pgx$X)
+    message("[pgx.compute_mofa] warning. single omics")
+    xdata <- list(gx = pgx$X)
   }
   names(xdata)
 
@@ -30,7 +30,6 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
     message("[compute.multi_omics] adding geneset matrix")
     xdata <- c(xdata, list(gset = pgx$gsetX))
   }
-  lapply(xdata, dim)
 
   ## cleanup samples
   samples <- pgx$samples
@@ -41,14 +40,13 @@ pgx.compute_mofa <- function(pgx, kernel = "MOFA", numfactors = 8,
 
   for (i in 1:length(xdata)) {
     d <- rownames(xdata[[i]])
-    ## rownames(xdata[[i]]) <- stringi::stri_trans_general(d, "latin-ascii")
-    rownames(xdata[[i]]) <- iconv(d, to = "ascii//TRANSLIT")
+    rownames(xdata[[i]]) <- iconv2utf8(d)
   }
 
   ## MOFA computation
   message("computing MOFA ...")
-
   ## samples=discretized_samples;contrasts=pgx$contrasts;annot=pgx$genes;GMT=pgx$GMT;kernel="mofa";ntop=2000;numfactors=8;gpu_mode=FALSE;max_iter=1000
+  mofa <- list()
   mofa <- mofa.compute(
     xdata,
     samples = discretized_samples,
@@ -197,7 +195,7 @@ mofa.compute <- function(xdata,
   ## done in creating genesets...)
   for (i in 1:length(xdata)) {
     d <- rownames(xdata[[i]])
-    rownames(xdata[[i]]) <- iconv(d, to = "ascii//TRANSLIT")
+    rownames(xdata[[i]]) <- iconv2utf8(d)
   }
 
   ## add prefix???
@@ -446,8 +444,8 @@ mofa.compute <- function(xdata,
 #'
 #'
 #' @export
-mofa.add_genesets <- function(xdata, GMT = NULL, datatypes = NULL) {
-  names(xdata)
+mofa.add_genesets <- function(xdata, GMT = NULL, datatypes = NULL, ntop=5000) {
+
   if (is.null(datatypes)) {
     datatypes <- intersect(c("gx", "px", "mx"), names(xdata))
   }
@@ -463,8 +461,7 @@ mofa.add_genesets <- function(xdata, GMT = NULL, datatypes = NULL) {
   GMT <- Matrix::t(GMT) ## genesets on rows
   
   ## convert non-ascii characters....
-  ## rownames(GMT) <- iconv(rownames(GMT), "latin1", "ASCII", sub="")
-  rownames(GMT) <- stringi::stri_trans_general(rownames(GMT), "latin-ascii")
+  rownames(GMT) <- iconv2utf8(rownames(GMT))
   colnames(GMT) <- mofa.strip_prefix(colnames(GMT))
 
   gsetX <- list()
@@ -473,15 +470,23 @@ mofa.add_genesets <- function(xdata, GMT = NULL, datatypes = NULL) {
     rX <- xdata[[dt]] - rowMeans(xdata[[dt]], na.rm = TRUE)
     rownames(rX) <- mofa.strip_prefix(rownames(rX))
     sel <- intersect(rownames(rX), colnames(GMT))
-
-    G <- GMT[, sel, drop = FALSE]
-    rX <- rX[sel, , drop = FALSE]
-    rho <- gset.rankcor(rX, G)$rho
-    ii <- as.vector(which(rowMeans(is.na(rho)) < 1))
-    rho <- rho[ii, , drop = FALSE]
-    gsetX[[dt]] <- rho
+    if(length(sel)>10) {
+      G <- GMT[, sel, drop = FALSE]
+      rX <- rX[sel, , drop = FALSE]
+      ##rho <- gset.rankcor(rX, G)$rho
+      rho <- gset.averageCLR(rX, Matrix::t(G))
+      ii <- as.vector(which(rowMeans(is.na(rho)) < 0.10))
+      rho <- rho[ii, , drop = FALSE]
+      gsetX[[dt]] <- rho
+    }
   }
-  lapply(gsetX, dim)
+
+  if(ntop>0) {
+    for(i in 1:length(gsetX)) {
+      sel <- head(order(-matrixStats::rowSds(gsetX[[i]])),ntop)
+      gsetX[[i]] <- gsetX[[i]][sel,]
+    }
+  }
 
   ## make sure they align. Only intersection????
   names(gsetX) <- paste0("gset.", names(gsetX))
@@ -618,113 +623,6 @@ mofa.compute_enrichment <- function(W, GMT, filter = NULL, ntop = 1000) {
   sizes <- sizes[rownames(gsea[[1]]), ]
   for (i in 1:length(gsea)) {
     gsea[[i]]$size <- sizes
-    gsea[[i]] <- gsea[[i]][, c("pathway", "NES", "pval", "padj", "size", "leadingEdge")]
-    gsea[[i]] <- data.frame(lapply(gsea[[i]], as.matrix), check.names = FALSE)
-  }
-
-  ## extract rho, pval and qval
-  rho <- sapply(gsea, function(x) x$NES)
-  pval <- sapply(gsea, function(x) x$pval)
-  padj <- sapply(gsea, function(x) x$padj)
-  rownames(rho) <- rownames(gsea[[1]])
-  rownames(pval) <- rownames(gsea[[1]])
-  rownames(padj) <- rownames(gsea[[1]])
-
-  list(table = gsea, NES = rho, pval = pval, padj = padj)
-}
-
-mofa.compute_enrichment.SAVE <- function(W, G, filter = NULL, ntop = 1000) {
-
-  if (is.null(G)) {
-    message("[mofa.compute_enrichment] ERROR: must provide GMT matrix (genes on rows)")
-    return(NULL)
-  }
-
-  ## filter gene sets
-  if (!is.null(filter)) {
-    sel <- grep(filter, colnames(G))
-    G <- G[, sel]
-  }
-  
-  ## check if geneset matrix has datatype prefix
-  has.colons <- all(grepl(":", rownames(G)))
-  has.colons
-  if (!has.colons) {
-    ## defaults prefix. If starts with letter SYMBOL, if all numbers CHEBI
-    rownames(G) <- mofa.strip_prefix(rownames(G))
-    ii <- grep("^[0-9]+$", rownames(G), ignore.case = TRUE)
-    if (length(ii) > 0) rownames(G)[ii] <- paste0("CHEBI:", rownames(G)[ii])
-    jj <- setdiff(1:nrow(G), ii)
-    if (length(jj) > 0) rownames(G)[jj] <- paste0("SYMBOL:", rownames(G)[jj])
-  }
-
-  ## detect datatypes. associate with symbols
-  dtypes <- unique(sub(":.*", "", rownames(W)))
-  dtype2gtype <- c(
-    "gx" = "SYMBOL", "px" = "SYMBOL",
-    "me" = "SYMBOL", "mx" = "CHEBI"
-  )
-  dtypes <- intersect(dtypes, names(dtype2gtype))
-  dtypes
-
-  ## build full geneset sparse matrix. We create an augmented GMT
-  ## matrix that covers all datatypes.
-  GMT <- G[0, ]
-  dt <- dtypes[1]
-  for (dt in dtypes) {
-    gt <- dtype2gtype[dt]
-    ii <- grep(gt, rownames(G))
-    G1 <- G[ii, , drop = FALSE]
-    rownames(G1) <- sub(gt, dt, rownames(G1))
-    GMT <- rbind(GMT, G1)
-  }
-  table(sub(":.*", "", rownames(GMT)))
-
-  pp <- intersect(rownames(W), rownames(GMT))
-  W <- W[pp, ]
-  sel <- which(Matrix::colSums(GMT[pp, ] != 0) >= 3)
-
-  GMT1 <- GMT[pp, sel]
-  dim(GMT1)
-
-  ## Perform geneset enrichment with fast rank-correlation. We could
-  ## do with fGSEA instead but it is much slower.
-  info("[pgx.add_GMT] Performing rankcor")
-  normW <- apply(W, 2, function(x) normalize_multirank(x))
-  normW[is.na(normW)] <- mean(normW, na.rm = TRUE)
-  names(normW) <- rownames(W)
-  rnk <- gset.rankcor(normW, GMT1, compute.p = TRUE)
-  topsel <- apply(abs(rnk$rho), 2, function(r) head(order(-r), ntop))
-  topsel <- head(unique(as.vector(t(topsel))), ntop)
-  length(topsel)
-  topsets <- rownames(rnk$rho)[topsel]
-
-  ## prioritize top genesets to accelerate GSEA
-  rnk <- lapply(rnk, function(x) x[topsets, ])
-  topGMT <- GMT1[, topsets]
-  gmt <- mat2gmt(topGMT)
-  length(gmt)
-  info("[pgx.add_GMT] Performing fGSEA...")
-  gsea <- list()
-  k <- colnames(W)[1]
-  for (k in colnames(W)) {
-    w <- W[, k]
-    w <- w + 1e-4 * rnorm(length(w))
-    w <- normalize_multirank(w)
-    enr <- fgsea::fgsea(gmt, stats = w)
-    enr <- data.frame(enr)
-    rownames(enr) <- enr$pathway
-    gsea[[k]] <- enr
-  }
-  gsea <- lapply(gsea, function(x) x[rownames(gsea[[1]]), ])
-
-  dim(topGMT)
-  dtype <- sub(":.*", "", rownames(topGMT))
-  size <- tapply(1:nrow(topGMT), dtype, function(ii) Matrix::colSums(topGMT[ii, ] != 0))
-  size <- do.call(cbind, size)
-  size <- size[rownames(gsea[[1]]), ]
-  for (i in 1:length(gsea)) {
-    gsea[[i]]$size <- size
     gsea[[i]] <- gsea[[i]][, c("pathway", "NES", "pval", "padj", "size", "leadingEdge")]
     gsea[[i]] <- data.frame(lapply(gsea[[i]], as.matrix), check.names = FALSE)
   }
@@ -1186,7 +1084,7 @@ mofa.plot_heatmap <- function(mofa,
   rownames(aa) <- colnames(topX)
 
   if (!is.null(gene_table)) {
-    topX <- rename_by2(topX, gene_table, "symbol", keep.prefix = TRUE)
+    rownames(topX) <- probe2symbol(rownames(topX), gene_table, "gene_name", fill_na = TRUE)
   }
 
   if (type == "heatmap") {
@@ -1230,12 +1128,13 @@ mofa.plot_heatmap <- function(mofa,
 mofa.plot_factor_trait_correlation <- function(mofa,
                                                main = "Factor-Trait correlation",
                                                type = c("wgcna", "splitmap"),
-                                               par = TRUE, cex_text = NULL,
+                                               par = TRUE,
+                                               textMatrix = FALSE,
+                                               cex_text = NULL,
                                                collapse = FALSE,
                                                cluster = TRUE,
                                                features = NULL,
                                                ...) {
-  ## type = c("wgcna","splitmap")
   type <- type[1]
 
   ## Covariate x Factor correlation
@@ -1248,12 +1147,10 @@ mofa.plot_factor_trait_correlation <- function(mofa,
 
   if (collapse) {
     rownames(Z) <- sub("=.*", "", rownames(Z))
-    Z <- rowmean(Z**2)**0.5
+    Z <- rowmean(Z**2) ** 0.5
   }
 
-  if (nrow(Z) == 1) {
-    Z <- rbind(Z, " " = Z[1, ]) ## hack for single row...
-  }
+  if (nrow(Z) == 1) Z <- rbind(Z, " " = Z[1, ]) ## single row...
 
   if (cluster) {
     ii <- hclust(dist(Z))$order
@@ -1263,29 +1160,32 @@ mofa.plot_factor_trait_correlation <- function(mofa,
 
   if (type == "splitmap") {
     gx.splitmap(
-      t(Z),
-      nmax = 50, scale = "none", main = main,
+      t(Z), nmax = 50, scale = "none", main = main,
       col.annot = mofa$samples, split = 1,
       show_legend = FALSE, show_key = FALSE
     )
   }
 
   if (type == "wgcna") {
-    ## par(mfrow=c(1,1))
     if (par) par(mar = c(6, 5, 2, 1))
-    ftext <- round(t(Z), digits = 2)
+    ftext <- NULL
+    if (textMatrix) ftext <- round(t(Z), digits = 2)
     if (is.null(cex_text)) {
-      cex.text <- min(0.8, max(0.3, 6 / ncol(Z)))
+      cex.text <- min(0.8, max(0.4, 20 / nrow(Z)))
+      if (nrow(Z)>40) cex.text <- 0.3
     } else {
       cex.text <- cex_text
     }
 
+    cex.lab.x <- max(0.8, min(1.2, 5/nrow(Z)))
+    
     WGCNA::labeledHeatmap(
       Matrix = t(Z),
       xLabels = rownames(Z),
       yLabels = colnames(Z),
       textMatrix = ftext,
       cex.text = cex.text,
+      cex.lab.x = cex.lab.x,
       colorLabels = TRUE,
       colors = WGCNA::blueWhiteRed(50),
       setStdMargins = FALSE,
@@ -1643,8 +1543,9 @@ mofa.plot_module <- function(graph, mst = TRUE, nlabel = 10, rm.single = FALSE,
       highlightby = highlightby,
       nlabel = nlabel,
       edge_cex = cex,
-      node_cex = max(10, 30 * cex),
-      label_cex = 25 * cex,
+      node_cex = max(1, 3 * cex),
+      label_cex = 1.0 * cex,
+      label_gamma = 1.0,
       layout = "layout_with_kk",
       physics = physics,
       plotlib = "visnet"
@@ -1832,7 +1733,7 @@ mofa.exampledata <- function(dataset = "geiger", ntop = 2000,
   ## strip prefix, convert to ASCII
   for (i in 1:length(data)) {
     rownames(data[[i]]) <- sub("^[a-zA_Z]+:", "", rownames(data[[i]]))
-    rownames(data[[i]]) <- iconv(rownames(data[[i]]), "latin1", "ASCII", sub = "")
+    rownames(data[[i]]) <- iconv2utf8(rownames(data[[i]]))
   }
 
   ## filter out and reduce
@@ -2189,8 +2090,6 @@ mofa.plot_biplot <- function(r, pheno, nfeat = 5, comp = c(1, 2),
 
   if (arrow) {
     R <- cor(t(r$W), t(r$Z))
-    dim(R)
-    head(R)
     top <- tail(names(sort(abs(R[, 2]))), nfeat)
     R[top, ]
     ww <- r$W[, comp]
@@ -2418,7 +2317,6 @@ snf.cluster <- function(xx, pheno = NULL, plot = TRUE) {
   has.na <- any(sapply(xx, function(x) sum(is.na(x)) > 0))
   has.inf <- any(sapply(xx, function(x) sum(is.infinite(x)) > 0))
   has.missing <- has.na || has.inf
-  message("clusterSNF: has.missing = ", has.missing)
   if (has.missing) {
     xx <- lapply(xx, function(x) svdImpute2(x, infinite.na = TRUE))
   }
@@ -2437,13 +2335,7 @@ snf.cluster <- function(xx, pheno = NULL, plot = TRUE) {
   ## K = max(min(ncol(xx[[1]])/4, 15),2);
   K <- max(min(ncol(xx[[1]])-1, 10), 2) # number of neighbors, usually (10~30)
   alpha <- 0.5 # hyperparameter, usually (0.3~0.8)
-
-  message("clusterSNF: K = ", K)
-  message("clusterSNF: alpha = ", alpha)
-  message("clusterSNF: length(Dist) = ", length(Dist))
-  message("clusterSNF: names(Dist) = ", names(Dist))
-  message("clusterSNF: dim(Dist[[1]]) = ", paste(dim(Dist[[1]]), collapse = "x"))
-
+  
   Wlist <- lapply(Dist, function(d) SNFtool::affinityMatrix(d, K = K, alpha))
 
   ## next, we fuse all the graphs
@@ -2629,9 +2521,519 @@ snf.heatmap <- function(snf, X, samples, nmax = 50, do.split = TRUE, legend = TR
 ## ====================== LASAGNA =======================================
 ## ======================================================================
 
+#'
+#' @export
+lasagna.create_from_pgx <- function(pgx, xdata =NULL, layers = NULL,
+                                    add_gsets=FALSE, gsetX=NULL, gset_filter=NULL,
+                                    pheno="pheno", ntop=1000, nc=20,
+                                    annot=NULL, use.gmt=TRUE, use.graphite=TRUE,
+                                    add.sink=FALSE, intra=TRUE, fully_connect=FALSE,
+                                    add.revpheno = TRUE
+                                    ) {
+
+  if(is.null(xdata)) {
+    xdata <- mofa.split_data(pgx$X)
+    if(add_gsets) {
+      message("[lasagna.create_from_pgx] adding geneset matrix")
+      if(is.null(gsetX)) {
+        gsetX <- pgx$gsetX
+      }
+      if(!is.null(gset_filter)) {
+        sel <- grep(gset_filter,rownames(gsetX))
+        if(length(sel)==0) {
+          message("[lasagna.create_from_pgx] gset_filter is empty")          
+        } else {
+          gsetX <- gsetX[sel,]
+        }
+      }
+      xdata <- c(xdata, list(gset = gsetX))
+      if(!is.null(layers)) layers <- unique(c(layers,"gset"))
+    }
+  }
+
+  for (i in 1:length(xdata)) {
+    d <- rownames(xdata[[i]])
+    rownames(xdata[[i]]) <- iconv2utf8(d)
+  }
+  names(xdata) <- tolower(names(xdata))
+
+  if(is.null(layers)) {
+    layers <- c("hx","mir","gx","px","mx","gset")
+    layers <- unique(layers, names(xdata))
+  }
+  
+  if(!is.null(layers)) {
+    layers <- intersect(layers, names(xdata))
+    xdata <- xdata[layers]
+  }
+  
+  lasagna.data <- list(
+    X = xdata,
+    samples = pgx$samples,
+    contrasts = pgx$contrasts
+  )
+  
+  model <- lasagna.create_model(
+    lasagna.data, pheno=pheno, ntop=ntop, nc=nc,
+    annot=annot, use.gmt=use.gmt, use.graphite=use.graphite,
+    add.sink=add.sink, intra=intra, fully_connect=fully_connect,
+    add.revpheno = add.revpheno
+  ) 
+
+  return(model)
+}
+
+
+
+#'
+#' @export
+lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
+                                 annot=NULL, use.gmt=TRUE, use.graphite=TRUE,
+                                 add.sink=FALSE, intra=TRUE, fully_connect=FALSE,
+                                 add.revpheno = TRUE
+                                 ) {
+  if (pheno == "pheno") {
+    Y <- expandPhenoMatrix(data$samples, drop.ref = FALSE)
+  } else {
+    Y <- makeContrastsFromLabelMatrix(data$contrasts)
+    if(any(grepl("^IA:",colnames(Y)))) {
+      ## drop interaction terms
+      Y <- Y[,grep("^IA:",colnames(Y),invert=TRUE),drop=FALSE]
+    }
+    if(add.revpheno) {
+      revY <- -Y
+      colnames(revY) <- reverse.AvsB(colnames(Y))
+      Y <- cbind(Y, revY)
+    }
+  }
+  data$X[['PHENO']] <- t(Y)
+  
+  ## restrict number of features (by SD) if requested.
+  xx <- data$X
+  if (!is.null(ntop) && ntop > 0) {
+    xx <- lapply(xx, function(x) head(x[order(-apply(x, 1, sd)), , drop = FALSE], ntop))
+  }
+  xx <- mofa.prefix(xx)
+  X <- do.call(rbind, xx)
+  remove(xx)
+
+  ## add SOURCE/SINK
+  if(add.sink) {
+    X <- rbind(X, "SOURCE" = 1, "SINK" = 1)
+  }
+
+  ## Compute BIG correlation matrix. WARNING can become huge! NOTE:
+  ## Needs optimization using SPARSE matrix.
+  suppressWarnings( R <- cor(t(X), use = "pairwise") )
+  R[is.na(R)] <- 0.01
+  ii <- grep("SINK|SOURCE",rownames(R))
+  if(length(ii)) R[ii,ii] <- 1
+  
+  ## mask for proteomic <> metabolics PPI
+  if (use.graphite) {
+    xtypes <- setdiff(names(data$X), "PHENO")
+    xtypes
+    has.mx <- ("mx" %in% xtypes)
+    has.px <- any(c("gx", "px") %in% xtypes)
+    GRAPHITE_PPI <- try(playdata::GRAPHITE_PPI,silent=TRUE)
+    has.ppi <- !("try-error" %in% class(GRAPHITE_PPI))
+    if (has.mx && has.px && has.ppi) {
+      message("using GRAPHITE PPI structure for pruning metabolite interactions")
+      GRAPHITE_PPI[, 1] <- paste0("px:", GRAPHITE_PPI[, 1])
+      GRAPHITE_PPI[, 2] <- paste0("px:", GRAPHITE_PPI[, 2])
+      GRAPHITE_PPI[, 1] <- sub("px:CHEBI:", "mx:", GRAPHITE_PPI[, 1])
+      GRAPHITE_PPI[, 2] <- sub("px:CHEBI:", "mx:", GRAPHITE_PPI[, 2])
+      gr <- igraph::graph_from_edgelist(as.matrix(GRAPHITE_PPI[, 1:2]), directed = "FALSE")
+      A <- igraph::as_adjacency_matrix(igraph::simplify(gr))
+      dt <- sub(":.*", "", rownames(R))
+      i1 <- which(dt %in% c("gx", "px"))
+      i2 <- which(dt == "mx")
+      a1 <- match(rownames(R)[i1], rownames(A))
+      a2 <- match(rownames(R)[i2], rownames(A))
+      i1 <- i1[!is.na(a1)]
+      a1 <- a1[!is.na(a1)]
+      i2 <- i2[!is.na(a2)]
+      a2 <- a2[!is.na(a2)]
+      R[i1, i2] <- R[i1, i2] * as.matrix(A[a1, a2])
+      R[i2, i1] <- R[i2, i1] * as.matrix(A[a2, a1])
+    }
+  }
+
+  ## mask for GSETS/pathways connections???
+  if (use.gmt) {
+  }
+
+  ## define layers
+  dt <- sub(":.*", "", rownames(R))
+  table(dt)
+  names(data$X)
+  layers <- names(data$X)
+  if(add.sink) layers <- c("SOURCE", layers, "SINK")
+
+  ## mask for inter-layer connections
+  if(!fully_connect) {
+    layer_mask <- as.matrix(R) * 0
+    for (i in 1:(length(layers) - 1)) {
+      ii <- which(dt == layers[i])
+      jj <- which(dt == layers[i + 1])
+      layer_mask[ii, jj] <- 1
+      layer_mask[jj, ii] <- 1
+    }
+    if(intra) {
+      for (i in 1:length(layers)) {
+      ii <- which(dt == layers[i])
+      layer_mask[ii, ii] <- 1
+      }
+    }
+    R <- R * layer_mask
+  }
+  
+  ## Reduce inter-connections
+  if (!is.null(nc) && nc > 0) {
+    message(paste("reducing edges to maximum", nc, "connections"))
+    ## NEED CHECK!!! SOMETHING WRONG.
+    xtypes <- setdiff(layers, c("PHENO","SOURCE","SINK"))
+    reduce_mask <- matrix(1, nrow(R), ncol(R))
+    i <- 1
+    for (i in 1:(length(xtypes) - 1)) {
+      ii <- which(dt == xtypes[i])
+      jj <- which(dt == xtypes[i + 1])
+      R1 <- R[ii, jj, drop = FALSE]
+      rii <- apply(abs(R1), 1, function(r) tail(sort(r), nc)[1])
+      rjj <- apply(abs(R1), 2, function(r) tail(sort(r), nc)[1])
+      rr <- abs(R1) >= rii | t(t(abs(R1)) >= rjj)
+      reduce_mask[ii, jj] <- rr
+      reduce_mask[jj, ii] <- t(rr)
+    }
+    if(intra) {
+      for (i in 1:length(xtypes)) {
+        ii <- which(dt == xtypes[i])
+        R1 <- R[ii, ii, drop = FALSE]
+        rii <- apply(abs(R1), 1, function(r) tail(sort(r), nc)[1])
+        rjj <- apply(abs(R1), 2, function(r) tail(sort(r), nc)[1])
+        rr <- abs(R1) >= rii | t(t(abs(R1)) >= rjj)
+        reduce_mask[ii, ii] <- rr
+      }
+    }
+    R <- R * reduce_mask
+  }
+
+  ## create graph
+  gr <- igraph::graph_from_adjacency_matrix(
+    R, diag = FALSE, weighted = TRUE, mode = "undirected"
+  )
+  igraph::E(gr)$rho <- igraph::E(gr)$weight ## copy
+  gr$layers <- layers
+
+  ## add edge connection type as attribute
+  igraph::V(gr)$layer <- sub(":.*","",igraph::V(gr)$name)
+  ee <- igraph::as_edgelist(gr)
+  etype <- apply(ee, 2, function(e) sub(":.*","",e))
+  etype.idx <- apply(etype, 2, match, gr$layers)
+  rev.etype <- etype.idx[,2] < etype.idx[,1]
+  etype1 <- ifelse(rev.etype, etype.idx[,2], etype.idx[,1])
+  etype2 <- ifelse(rev.etype, etype.idx[,1], etype.idx[,2])
+  etype1 <- gr$layers[etype1]
+  etype2 <- gr$layers[etype2]
+  igraph::E(gr)$connection_type <- paste0(etype1,"->",etype2)
+  ii <- which(etype1==etype2)
+  if(length(ii)) igraph::E(gr)$connection_type[ii] <- etype1[ii]
+  table(igraph::E(gr)$connection_type)
+    
+  list(
+    graph = gr,
+    X = X,
+    Y = Y,
+    layers = layers
+  )
+}
+
+sp_edge_weight <- function(gr, layers) {
+  layers <- unique(c("SOURCE",layers,"SINK"))
+  wt <- abs(igraph::E(gr)$weight)
+  wt[is.na(wt)] <- 0
+  ee <- igraph::as_edgelist(gr)
+  v1 <- ee[,1]
+  v2 <- ee[,2]
+  l1 <- match(igraph::V(gr)[v1]$layer, layers)
+  l2 <- match(igraph::V(gr)[v2]$layer, layers)  
+  p1 <- ifelse(l1 < l2, v1, v2)
+  p2 <- ifelse(l1 < l2, v2, v1)    
+  wt <- wt + 1e-8
+  s1 <- igraph::shortest_paths(gr,
+    from = "SOURCE", to = p1, weights = 1/wt, output = "epath"
+  )
+  s2 <- igraph::shortest_paths(gr,
+    from = "SINK", to = p2, weights = 1/wt, output = "epath"
+  )
+  sp <- mapply(c, s1$epath, s2$epath)
+  ##sp.score <- sapply(sp, function(e) exp(mean(log(wt[e]))))
+  sp.score <- sapply(sp, function(e) min(wt[e],na.rm=TRUE))
+  sp.score
+}
 
 #' @export
-plot_lasagna <- function(posx, vars = NULL, num_edges = 20) {
+lasagna.solve <- function(obj, pheno, max_edges=100, value.type="rho",
+                          min_rho=0, prune=TRUE, fc.weights=TRUE,
+                          sp.weight=FALSE) {
+
+  if(!pheno %in% colnames(obj$Y)) {
+    dbg("[lasagna.solve] pheno = ",pheno)
+    dbg("[lasagna.solve] colnames(obj$Y) = ",colnames(obj$Y))
+    stop("pheno not in Y")
+  }
+  if(!"rho" %in% names(igraph::edge_attr(obj$graph))) {
+    stop("graph edges should have rho attribute")
+  }
+
+  graph <- obj$graph
+  X <- obj$X
+  y <- obj$Y[,pheno]
+  ii <- grep("PHENO",rownames(X))
+  if(length(ii)) X[ii,][which(X[ii,]==0)] <- NA
+  y[y==0] <- NA
+  rho <- cor(t(X), y, use="pairwise")[,1]
+  i0 <- which(sign(y)==-1)
+  i1 <- which(sign(y)==+1)
+  fc <- rowMeans(X[,i1],na.rm=TRUE) - rowMeans(X[,i0],na.rm=TRUE)
+  rho[is.na(rho)] <- 0
+
+  ## for PHENO nodes 'foldchange' does not make sense. replace with rho.
+  ii <- grep("PHENO",names(fc))
+  if(length(ii)) fc[ii] <- rho[ii]
+  
+  ## set node values
+  if(value.type == "rho") {
+    igraph::V(graph)$value <- rho
+  } else {
+    igraph::V(graph)$value <- fc
+  }
+  graph$value.type <- value.type
+  
+  ## set edge weights
+  ww <- 1
+  weight.type <- "rho"
+  if(fc.weights) {
+    ee <- igraph::as_edgelist(graph)
+    ff <- igraph::V(graph)$value
+    names(ff) <- igraph::V(graph)$name
+    ww <- abs(ff[ee[,1]] * ff[ee[,2]])^0.5
+    weight.type <- paste0(weight.type,"*vv")
+  }
+  igraph::E(graph)$weight <- igraph::E(graph)$rho * ww
+  
+  ## set SINK/SOURCE edges to 1
+  if(any(grepl("SINK|SOURCE",igraph::V(graph)$name))) {
+    igraph::E(graph)[.to("SINK")]$weight <- 1
+    igraph::E(graph)[.from("SOURCE")]$weight <- 1    
+  }
+
+  if(sp.weight) {
+    sp.wt <- sp_edge_weight(graph, obj$layers)
+    sp.wt <- (sp.wt / max(sp.wt))**2
+    igraph::E(graph)$weight <- igraph::E(graph)$weight * sp.wt
+    weight.type <- paste0(weight.type,"*sp")
+  }
+  graph$weight.type <- weight.type
+  
+  ## take subgraph
+  if(min_rho > 0) {
+    dsel <- which(abs(igraph::E(graph)$weight) < min_rho)
+    igraph::E(graph)$weight[dsel] <- 0
+  }
+  if(max_edges > 0) {
+    ewt <- igraph::E(graph)$weight
+    esel <- tapply(1:length(igraph::E(graph)), igraph::E(graph)$connection_type,
+      function(ii) head(ii[order(-abs(ewt[ii]))], max_edges))
+    dsel <- setdiff(1:length(igraph::E(graph)), unlist(esel))
+    igraph::E(graph)$weight[dsel] <- 0
+  }
+
+  ## delete zero edges
+  graph <- igraph::delete_edges(graph, which(igraph::E(graph)$weight==0))
+
+  ## prune vertices if asked
+  if(prune) {
+    ewt <- igraph::E(graph)$weight
+    graph <- igraph::subgraph_from_edges(graph, which(abs(ewt) > 0))
+  }
+  
+  return(graph)
+}
+
+
+#' @export
+lasagna.plot3D <- function(graph, pos) {
+  edges <- data.frame(igraph::get.edgelist(graph), weight=E(graph)$weight)
+  vars <- V(graph)$value
+  names(vars) <- V(graph)$name
+  plotly_lasagna(
+    pos = poss,
+    vars = vars,
+    #edges = edges,
+    min.rho = 0.01,
+    num_edges = 40
+    # znames = znames
+  )
+}
+
+#' @export
+lasagna.prune_graph <- function(graph, ntop=100, layers=NULL,
+                                normalize.edges=FALSE, min.rho=0.3,
+                                edge.sign="both", edge.type="both",
+                                filter = NULL,
+                                prune=TRUE ) {
+  
+  if(is.null(layers)) layers <- unique(igraph::V(graph)$layer)
+  layers <- setdiff(layers, c("SOURCE","SINK"))
+  graph <- igraph::subgraph(graph, igraph::V(graph)$layer %in% layers)
+  
+  if(!"value" %in% names(igraph::vertex_attr(graph))) {
+    stop("vertex must have 'value' attribute")
+  }
+
+  if(!is.null(filter)) {
+    if(class(filter)!="list") stop("filter must be a named list")
+    if(is.null(names(filter))) stop("filter must be a named list")
+    for(k in names(filter)) {
+      vv <- igraph::V(graph)$name
+      filt <- filter[[k]]
+      vids <- igraph::V(graph)$layer != k | grepl(filt,vv,ignore.case=TRUE)
+      graph <- igraph::subgraph(graph, which(vids))
+    }
+  }
+  
+  ## select ntop features
+  fc <- igraph::V(graph)$value
+  names(fc) <- igraph::V(graph)$name
+  if(!is.null(ntop) && ntop>0) {
+    ii <- tapply(1:length(fc), igraph::V(graph)$layer,
+      function(i) head(i[order(-abs(fc[i]))],ntop))
+    ii <- unlist(ii[names(ii) %in% layers])
+    fc <- fc[ii]
+    graph <- igraph::subgraph(graph, igraph::V(graph)[ii])
+  }
+
+  if(normalize.edges) {
+    for(e in unique(igraph::E(graph)$connection_type)) {
+      ii <- which(igraph::E(graph)$connection_type == e)
+      max.wt <- max(abs(igraph::E(graph)$weight[ii]),na.rm=TRUE) + 1e-3
+      igraph::E(graph)$weight[ii] <- igraph::E(graph)$weight[ii] / max.wt
+    }
+  }
+
+  if(min.rho>0) {
+    ii <- which(abs(igraph::E(graph)$weight) < min.rho)
+    if(length(ii)) igraph::E(graph)$weight[ii] <- 0
+  }
+
+  if(edge.sign!="both") {
+    ewt <- igraph::E(graph)$weight
+    if(grepl("pos",edge.sign)) igraph::E(graph)$weight[ewt<0] <- 0
+    if(grepl("neg",edge.sign)) igraph::E(graph)$weight[ewt>0] <- 0    
+  }
+  if(edge.type!="both") {
+    ic <- grepl("->",igraph::E(graph)$connection_type)
+    if(grepl("intra",edge.type)) igraph::E(graph)$weight[ic] <- 0
+    if(grepl("inter",edge.type)) igraph::E(graph)$weight[!ic] <- 0    
+  }
+  graph <- igraph::delete_edges(graph, which(igraph::E(graph)$weight==0))
+
+  if(prune) {
+    graph <- igraph::subgraph_from_edges(graph, igraph::E(graph))
+  }
+return(graph)
+}
+
+
+#' @export
+lasagna.plot3D <- function(graph, pos, draw_edges=TRUE,
+                           min_rho=0.1, num_edges=40, znames=NULL) {
+
+  edges <- NULL
+  if(draw_edges) {
+    edges <- data.frame(igraph::get.edgelist(graph), weight=E(graph)$weight)
+  }
+  vars <- V(graph)$value
+  names(vars) <- V(graph)$name
+
+  plt <- plotly_lasagna(
+    pos = pos,
+    vars = vars,
+    edges = edges,
+    min.rho = min_rho,
+    num_edges = num_edges,
+    znames = znames
+  )
+
+  return(plt)
+}
+
+
+#'
+#' @export
+lasagna.plot_visgraph <- function(graph, layers=NULL, ntop=100, min_rho=0.3,
+                                  mst=FALSE, vcex=1, ecex=1, physics=TRUE) {
+  if(is.null(layers))
+    layers <- graph$layers
+  sub <- igraph::subgraph(graph, igraph::V(graph)$layer %in% layers )
+
+  if(ntop>0) {
+    vsel <- head(order(-abs(igraph::V(sub)$value)),ntop)
+    ## vsel <- c(vsel, grep("SOURCE|SINK",V(graph)$name))
+    sub <- igraph::subgraph(sub, vsel)
+  }
+  if(min_rho>0) {
+    sub <- igraph::subgraph_from_edges(sub,
+      which(abs(igraph::E(sub)$weight) > min_rho))
+  }
+
+  vtype <- sub(":.*","",igraph::V(sub)$name)
+  table(vtype)
+  ntypes <- length(unique(vtype))
+  igraph::V(sub)$color <- rainbow(ntypes)[as.factor(vtype)]
+    
+  vtype <- c("down","up")[1 + 1*(igraph::V(sub)$value>0)]
+  igraph::V(sub)$shape <- c("triangleDown","triangle")[as.factor(vtype)]
+  igraph::V(sub)$value <- 2*abs(igraph::V(sub)$value)**2  ## 'value' is size?
+  igraph::V(sub)$label.cex <- 0.6
+
+  ## make special nodes as large as largest size
+  sel <- which(igraph::V(graph)$layer %in% c("SOURCE","SINK","PHENO"))
+  if(length(sel)) {
+    cex <- max(abs(igraph::V(sub)$value)) / max(abs(igraph::V(sub)$value[sel]))
+    igraph::V(sub)$value[sel] <- igraph::V(sub)$value[sel] * cex
+  }
+  
+  igraph::E(sub)$width <- ecex*15*abs(igraph::E(sub)$weight)**1.2
+  igraph::E(sub)$color <- c("orange","grey")[1+1*(igraph::E(sub)$weight>0)]
+  
+  if(mst) {
+    ewt <- abs(igraph::E(sub)$weight) + 1e-8
+    sub <- igraph::mst(sub, weights= 1/ewt)
+  }
+    
+  data <- visNetwork::toVisNetworkData(sub)
+
+  visNetwork::visNetwork(
+    nodes = data$nodes,
+    edges = data$edges,
+    height="800px", width="100%") %>%
+    visNetwork::visPhysics(
+      enable = physics,
+      barnesHut = list(
+        springLength = 50
+#        centralGravity = 200
+      )
+    ) 
+
+}
+
+
+#' Plot lasagna model specified with 3D positions in posx using Grimon.
+#'
+#' @export
+plot_grimon <- function(posx, vars = NULL, num_edges = 20) {
   for (i in 1:length(posx)) {
     a <- names(posx)[i]
     if (!all(grepl(a, names(vars[[i]])))) {
@@ -2702,9 +3104,9 @@ plot_lasagna <- function(posx, vars = NULL, num_edges = 20) {
 #'
 #'
 #' @export
-plotly_lasagna <- function(pos, vars = NULL, X = NULL,
+plotly_lasagna <- function(pos, vars = NULL, edges = NULL, znames=NULL,
                            min.rho = 0.5, num_edges = 40) {
-
+  
   ## prefix variable if needed
   pos <- mofa.prefix(pos)
   pos <- lapply(pos, uscale)
@@ -2712,9 +3114,11 @@ plotly_lasagna <- function(pos, vars = NULL, X = NULL,
   ## feature maps across datatypes
   df <- data.frame()
   for (i in names(pos)) {
-    df1 <- data.frame(feature=rownames(pos[[i]]), pos[[i]], type = i)
+    colnames(pos[[i]]) <- c("x","y")
+    df1 <- data.frame(feature=rownames(pos[[i]]), pos[[i]], z = i)
     df <- rbind(df, df1)
   }
+
   if(is.null(vars)) {
     vars <- rep(1, nrow(df))
     names(vars) <- df$feature
@@ -2722,384 +3126,52 @@ plotly_lasagna <- function(pos, vars = NULL, X = NULL,
 
   vars <- vars[df$feature]
   vars <- vars / max(abs(vars),na.rm=TRUE)
-  df$type <- factor(df$type, levels = names(pos))  ## in order of pos
+  df$z <- factor(df$z, levels = names(pos))  ## in order of pos
   df$color <- as.numeric(vars)
-  df$text <- paste(df$feature,"<br>x=",round(df$color,digits=3))
+  df$text <- paste(df$feature,"<br>value:",round(df$color,digits=3))
   colnames(df) <- c("feature", "x", "y", "z", "color", "text")
   
   ## provide some edges
-  E <- NULL
-  if(!is.null(X)) {
-    X <- X[names(vars),]
-    E <- c()
+  if(!is.null(edges) && min.rho>0) {
+    edges <- edges[abs(edges[,3])>0,]
+  }
+  if(!is.null(edges) && num_edges>0) {
     i=1
     for(i in 1:(length(pos)-1)) {
-      ii <- which( df$z == names(pos)[i])
-      jj <- which( df$z == names(pos)[i+1])
-      R <- cor( t(X[ii,]), t(X[jj,]), use="pairwise")
-      idx <- which(abs(R) >= min.rho, arr.ind=TRUE)
-      ee <- data.frame( i=rownames(R)[idx[,1]], j=colnames(R)[idx[,2]], r=R[idx] )
-      sel <- head(order(-abs(ee$r)), num_edges)
-      E <- rbind(E, ee[sel,])
+      v1 <- rownames(pos[[i]])
+      v2 <- rownames(pos[[i+1]])
+      jj <- which((edges[,1] %in% v1) & (edges[,2] %in% v2))
+      sel <- head(jj[ order(-abs(edges[jj,3])) ], num_edges)
+      jj <- setdiff(jj, sel)
+      edges[jj,3] <- 0
     }
+    edges <- edges[ edges[,3]!=0, ]
   }
   
   ## some nicer names
-  znames <- c(
-    "ph" = "Phenomics",
-    "gset" = "Biological function",
-    "mx" = "Metabolomics",
-    "gx" = "Transcriptomics",
-    "tx" = "Transcriptomics",
-    "mir" = "micro-RNA",
-    "px" = "Proteomics"
-  )
-
-  fig <- plotlyLasagna(df, znames = znames, edges = E)
+  if(is.null(znames)) {
+    znames <- c(
+      "PHENO" = "Phenotype",
+      "ph" = "Phenotype",
+      "gset" = "Pathway",
+      "mx" = "Metabolomics",
+      "gx" = "Transcriptomics",
+      "tx" = "Transcriptomics",
+      "mir" = "micro-RNA",
+      "px" = "Proteomics",
+      "hx" = "Histone",
+      "hptm" = "hPTM",
+      "dr" = "Drug response",
+      "me" = "Methylation",
+      "mt" = "Mutation",
+      "mu" = "Mutation"
+    )
+  }
+  
+  fig <- plotlyLasagna(df, znames = znames, edges = edges)
   return(fig)
 }
 
-
-#'
-#' @export
-lasagna.create_model <- function(data, pheno = "pheno", ntop = 1000, nc = -1,
-                                 annot = NULL, use.gmt = TRUE, use.graphite = TRUE) {
-  names(data)
-  if (pheno == "pheno") {
-    Y <- expandPhenoMatrix(data$samples, drop.ref = FALSE)
-  } else {
-    Y <- makeContrastsFromLabelMatrix(data$contrasts)
-    revY <- -Y
-    colnames(revY) <- reverse.AvsB(colnames(Y))
-    Y <- cbind(Y, revY)
-  }
-  data$X$PHENO <- t(Y)
-  names(data)
-
-  xx <- data$X
-  if (!is.null(ntop) && ntop > 0) {
-    xx <- lapply(xx, function(x) head(x[order(-apply(x, 1, sd)), , drop = FALSE], ntop))
-  }
-  xx <- mofa.prefix(xx)
-  X <- do.call(rbind, xx)
-  remove(xx)
-
-  ## add SOURCE/SINK
-  X <- rbind(X, SOURCE = 1, SINK = 1)
-  suppressWarnings(R <- cor(t(X), use = "pairwise"))
-  R[is.na(R)] <- 0.01
-
-  ## mask for metabolics PPI
-  if (use.graphite) {
-    xtypes <- setdiff(names(data$X), "PHENO")
-    xtypes
-    has.mx <- ("mx" %in% xtypes)
-    has.px <- any(c("gx", "px") %in% xtypes)
-    if (has.mx && has.px) {
-      message("using GRAPHITE PPI structure")
-      load("~/Playground/public-db/pathbank.org/GRAPHITE_PPI.rda", verbose = TRUE)
-      head(GRAPHITE_PPI)
-      GRAPHITE_PPI[, 1] <- paste0("px:", GRAPHITE_PPI[, 1])
-      GRAPHITE_PPI[, 2] <- paste0("px:", GRAPHITE_PPI[, 2])
-      GRAPHITE_PPI[, 1] <- sub("px:CHEBI:", "mx:", GRAPHITE_PPI[, 1])
-      GRAPHITE_PPI[, 2] <- sub("px:CHEBI:", "mx:", GRAPHITE_PPI[, 2])
-      gr <- igraph::graph_from_edgelist(as.matrix(GRAPHITE_PPI[, 1:2]), directed = "FALSE")
-      A <- igraph::as_adjacency_matrix(igraph::simplify(gr))
-      dt <- sub(":.*", "", rownames(R))
-      i1 <- which(dt %in% c("gx", "px"))
-      i2 <- which(dt == "mx")
-      a1 <- match(rownames(R)[i1], rownames(A))
-      a2 <- match(rownames(R)[i2], rownames(A))
-      i1 <- i1[!is.na(a1)]
-      a1 <- a1[!is.na(a1)]
-      i2 <- i2[!is.na(a2)]
-      a2 <- a2[!is.na(a2)]
-      R[i1, i2] <- R[i1, i2] * as.matrix(A[a1, a2])
-      R[i2, i1] <- R[i2, i1] * as.matrix(A[a2, a1])
-    }
-  }
-
-  ## mask for GSETS/pathways ???
-  if (use.gmt) {
-
-  }
-
-  ## mask for layer interaction
-  dt <- sub(":.*", "", rownames(R))
-  table(dt)
-  names(data$X)
-  layers <- c("SOURCE", names(data$X), "SINK")
-  layer_mask <- as.matrix(R) * 0
-  for (i in 1:(length(layers) - 1)) {
-    ii <- which(dt == layers[i])
-    jj <- which(dt == layers[i + 1])
-    layer_mask[ii, jj] <- 1
-    layer_mask[jj, ii] <- 1
-  }
-  R <- R * layer_mask
-
-  ## Reduce connections
-  if (!is.null(nc) && nc > 0) {
-    message(paste("reducing edges to maximum", nc, "connections"))
-    ## NEED CHECK!!! SOMETHING WRONG.
-    xtypes <- setdiff(names(data$X), "PHENO")
-    reduce_mask <- matrix(1, nrow(R), ncol(R))
-    i <- 1
-    for (i in 1:(length(xtypes) - 1)) {
-      ii <- which(dt == xtypes[i])
-      jj <- which(dt == xtypes[i + 1])
-      R1 <- R[ii, jj, drop = FALSE]
-      rii <- apply(abs(R1), 1, function(r) tail(sort(r), nc)[1])
-      rjj <- apply(abs(R1), 2, function(r) tail(sort(r), nc)[1])
-      rr <- abs(R1) >= rii | t(t(abs(R1)) >= rjj)
-      reduce_mask[ii, jj] <- rr
-      reduce_mask[jj, ii] <- t(rr)
-    }
-    R <- R * reduce_mask
-  }
-
-  ## create graph
-  gr <- igraph::graph_from_adjacency_matrix(
-    R,
-    diag = FALSE, weighted = TRUE, mode = "undirected"
-  )
-
-  ii <- grep("^mx:", igraph::V(gr)$name)
-  if (length(ii) && !is.null(annot)) {
-    message(paste("translating metabolite ID to names"))
-    mx.id <- sub("mx:", "", igraph::V(gr)$name[ii])
-    mm <- match(igraph::V(gr)$name[ii], rownames(annot))
-    mx.annot <- annot[mm, ]
-    mx.id <- mx.annot$symbol
-    mx.names <- paste0("mx:", mx.annot$gene_title, " (", mx.id, ")")
-    igraph::V(gr)$name[ii] <- mx.names
-    rownames(X)[ii] <- mx.names
-  }
-
-  ## R1 <- igraph::as_adjacency_matrix(gr, attr='weight')
-  list(
-    graph = gr,
-    X = X,
-    Y = Y,
-    layers = layers
-  )
-}
-
-
-#'
-#' @export
-lasagna.solve_SP <- function(obj, pheno, rm.neg = TRUE, vtop = 200) {
-  ## condition with phenotype correlation
-  PHENO <- paste0("PHENO:", pheno)
-  if (is.character(pheno) && PHENO[1] %in% rownames(obj$X)) {
-    pheno <- obj$X[PHENO, ]
-  }
-  suppressWarnings(rho <- cor(t(obj$X), pheno)[, 1])
-  rho[is.na(rho)] <- 0.1 ## ???
-  names(rho) <- rownames(obj$X)
-
-  tail(sort(rho))
-  head(sort(rho))
-  F <- outer(rho, rho)
-  F <- sqrt(abs(F))
-  dim(F)
-
-  ## weight edges with foldchange on nodes
-  gr <- obj$graph
-  R <- igraph::as_adjacency_matrix(gr, attr = "weight")
-  F <- F[rownames(R), colnames(R)]
-  R <- R * F
-  gr <- igraph::graph_from_adjacency_matrix(
-    R,
-    diag = FALSE, weighted = TRUE, mode = "undirected"
-  )
-  gr <- igraph::simplify(gr)
-
-  if (rm.neg) {
-    message("removing negative edges")
-    gr <- igraph::delete_edges(gr, edges = which(igraph::E(gr)$weight <= 0))
-  }
-
-  ## compute all(?) shortest paths
-  wt <- igraph::E(gr)$weight
-  max.wt <- max(wt, na.rm = TRUE)
-  ## wt <- (max.wt - wt)**1
-  7 ## wt <- (max.wt / pmax(wt, 1e-2) - 1)**1
-  wt <- -log(wt + 1e-4)
-
-  ## resctrict search to top logFC nodes
-  v.nodes <- igraph::V(gr)
-  if (vtop > 0) {
-    v.names <- igraph::V(gr)$name
-    v.types <- sub(":.*", "", v.names)
-    vtop.nodes <- tapply(v.names, v.types, function(v) {
-      head(names(sort(-abs(rho[v]))), vtop)
-    })
-    v.nodes <- unlist(vtop.nodes)
-  }
-
-  suppressWarnings({
-    s1 <- igraph::shortest_paths(gr,
-      from = "SOURCE", to = v.nodes, weights = wt,
-      output = "both"
-    )
-    s2 <- igraph::shortest_paths(gr,
-      from = "SINK", to = v.nodes, weights = wt,
-      output = "both"
-    )
-  })
-
-  p1 <- sapply(s1$epath, function(e) sum(wt[e]))
-  p2 <- sapply(s2$epath, function(e) sum(wt[e]))
-  sp.score <- p1 + p2
-  names(sp.score) <- v.nodes
-
-  v1 <- lapply(s1$vpath, function(i) igraph::V(gr)$name[i])
-  v2 <- lapply(s2$vpath, function(i) rev(igraph::V(gr)$name[i]))
-  vv <- mapply(union, v1, v2, SIMPLIFY = FALSE)
-  names(vv) <- v.nodes
-
-  ## check paths: this correct the shortest path
-  splen <- sapply(vv, length)
-  table(splen)
-  splen0 <- min(splen[splen > 0])
-  ii <- which(splen > splen0)
-  if (length(ii)) {
-    rmdupv <- function(v) v[!duplicated(sub(":.*", "", v))]
-    vv[ii] <- lapply(vv[ii], function(v) rmdupv(v))
-  }
-  names(sp.score) <- v.nodes
-
-  vv <- lapply(vv, function(v) setdiff(v, c("SOURCE", "SINK")))
-  vv <- vv[!duplicated(names(vv))]
-  vv <- vv[sapply(vv, length) > 0]
-  spath <- sapply(vv, paste, collapse = "->")
-  V <- data.frame(do.call(rbind, vv))
-
-  ##  V$path <- spath
-  rownames(V) <- make_unique(names(vv))
-  vtype <- sub(":.*", "", V[1, ])
-  colnames(V) <- vtype
-  head(V)
-
-  S <- apply(V, 2, function(v) rho[v])
-  rownames(S) <- rownames(V)
-  sp.score <- sp.score[rownames(S)]
-
-  min.sp <- min(sp.score, na.rm = TRUE)
-  sp.score <- exp(-2 * sp.score / min.sp)
-
-  rho <- rho[rownames(S)]
-  sp.score <- sp.score * sign(rho)
-
-  sp <- data.frame(
-    score = sp.score,
-    rho = S,
-    path = spath
-  )
-  rownames(sp) <- rownames(V)
-
-  sp <- sp[grep("SOURCE|SINK", rownames(sp), invert = TRUE), , drop = FALSE]
-  sp <- sp[order(-sp$score), ]
-  sp
-}
-
-#'
-#' @export
-lasagna.plot_SP <- function(sp, ntop = 200, hilight = NULL, labcex = 1,
-                            colorby = "pheno", plotlib = "ggplot") {
-  if (!is.null(ntop) && ntop > 0) {
-    sp <- sp[order(-sp$score), ]
-    sp <- head(sp, ntop)
-  }
-  fig <- NULL
-
-  if (plotlib == "plotly") {
-    dimensions <- list()
-    this.layer <- "mx"
-    rho.layers <- grep("rho", colnames(sp), value = TRUE)
-    for (var in rho.layers) {
-      dd <- list(
-        range = c(-1, 1),
-        label = var,
-        values = sp[, var]
-      )
-      dimensions <- c(dimensions, list(dd))
-    }
-
-    if (colorby == "pheno") {
-      line <- list(
-        color = ~rho.PHENO,
-        colorscale = "RdBu",
-        showscale = TRUE, cmin = -1, cmax = 1
-      )
-    }
-    if (colorby == "score") {
-      line <- list(
-        color = ~score,
-        colorscale = "RdBu",
-        showscale = TRUE,
-        cmin = min(sp$score, na.rm = TRUE),
-        cmax = min(sp$score, na.rm = TRUE)
-      )
-    }
-
-    fig <- sp %>% plotly::plot_ly(
-      type = "parcoords",
-      line = line,
-      dimensions = dimensions
-    )
-  }
-
-  if (plotlib == "ggplot") {
-    ## data <- iris
-    rho.cols <- grep("rho", colnames(sp))
-    rho.cols
-    S <- sp[, rho.cols]
-    sp$alpha <- 0.2
-    if (!is.null(hilight)) {
-      sp$alpha <- c(0.04, 1)[1 + 1 * (rownames(sp) %in% hilight)]
-    }
-
-    fig <- GGally::ggparcoord(
-      sp,
-      scale = "globalminmax",
-      columns = rho.cols,
-      groupColumn = "score",
-      # order = "anyClass",
-      showPoints = TRUE,
-      title = "LASAGNA Parallel Coordinates Plot"
-    ) + geom_line(
-      linewidth = 1,
-      aes(linewidth = alpha, alpha = alpha)
-    ) +
-      scale_colour_gradient2() +
-      scale_alpha(guide = "none") +
-      labs(x = "", y = "correlation   (rho)")
-    fig
-
-    if (!is.null(hilight)) {
-      i <- 10
-      for (hi in hilight) {
-        i <- match(hi, rownames(S))
-        tx <- colnames(S)
-        ty <- as.matrix(S)[i, ]
-        pp <- strsplit(sp$path[i], split = "->")[[1]]
-        cc <- c("white", "yellow")[1 + 1 * (pp == hi)]
-        tt <- sub(":.*", "", pp)
-        pp <- pp[which(!duplicated(tt))]
-        pp <- gsub("^[a-zA_Z]+:|\\(.*", "", pp)
-        pp <- stringr::str_wrap(pp, 15)
-        fig <- fig + ggplot2::annotate("label",
-          x = tx, y = ty, label = pp,
-          fill = cc, size = (14 * labcex / ggplot2::.pt)
-        )
-      }
-    }
-  }
-
-  fig
-}
 
 
 ## ======================================================================
@@ -3266,8 +3338,6 @@ mofa.intNMF <- function(datasets, k = NULL, method = "RcppML",
 
   return(res)
 }
-
-
 
 ## ======================================================================
 ## ======================================================================

@@ -659,7 +659,7 @@ deep.plotBiomarkerHeatmap <- function(net, datatypes = NULL, balanced = TRUE,
   colnames(X) <- make_unique(colnames(X))
   X <- X[sel, ]
 
-  Y <- data.frame(net$Y)
+  Y <- data.frame(net$Y, check.names=FALSE)
   rownames(Y) <- colnames(X)
   if (!is.null(annot)) {
     kk <- setdiff(colnames(annot), colnames(Y))
@@ -996,15 +996,18 @@ arch = [
     txt <- "    # Predictor layer {name}\n"
     for (i in 1:nlayer) {
       if (i == 1 && i != nlayer) {
-        txt <- paste0(txt, "    to_Conv('{pred[1]}', '{dims[1]}', '', offset='(3,0,0)', to='(dense", lastdense, "-east)', height=10, depth={w[1]}, width=2, caption='predictor'),\n")
+        txt <- paste0(txt, "    to_Conv('{pred[1]}', '{dims[1]}', '', offset='{offset}', to='(dense",
+          lastdense, "-east)', height=10, depth={w[1]}, width=2, caption='predictor'),\n")
         txt <- paste0(txt, "    to_connection('dense", lastdense, "', '{pred[1]}'),\n")
       } else {
         if (i == nlayer && i != 1) {
           txt <- paste0(txt, "    to_ConvSoftMax( name='{pred[", i, "]}', s_filer = '{dims[", i, "]}', offset='(2,0,0)', to='({pred[", i - 1, "]}-east)', width=2, height=10, depth={w[", i, "]}, caption='{caption}'),\n")
         } else if (i == nlayer && i == 1) {
-          txt <- paste0(txt, "    to_ConvSoftMax( name='{pred[", i, "]}', s_filer = '{dims[", i, "]}', offset='(2,0,0)', to='(dense", lastdense, "-east)', width=2, height=10, depth={w[", i, "]}, caption='{caption}'),\n")
+          #txt <- paste0(txt, "    to_ConvSoftMax( name='{pred[", i, "]}', s_filer = '{dims[", i, "]}', offset='(2,0,0)', to='(dense", lastdense, "-east)', width=2, height=10, depth={w[", i, "]}, caption='{caption}'),\n")
+          txt <- paste0(txt, "    to_ConvSoftMax( name='{pred[", i, "]}', s_filer = '{dims[", i, "]}', offset='{offset}', to='(dense", lastdense, "-east)', width=2, height=10, depth={w[", i, "]}, caption='{caption}'),\n")          
         } else {
-          txt <- paste0(txt, "    to_Conv('{pred[", i, "]}', '{dims[", i, "]}', '', offset='{offset}', to='({pred[", i - 1, "]}-east)', height=10, depth={w[", i, "]}, width=2, caption=''),\n")
+          txt <- paste0(txt, "    to_Conv('{pred[", i, "]}', '{dims[", i, "]}', '', offset='(2,0,0)', to='({pred[",
+            i - 1, "]}-east)', height=10, depth={w[", i, "]}, width=2, caption=''),\n")
         }
         ## add arrows
         if (i != 1) {
@@ -1092,9 +1095,9 @@ if __name__ == '__main__':
   ## predictors
   ntargets <- length(targets)
   lastdense <- length(net_dims$integrator)
-  i <- 1
+  i=1
   for (i in 1:ntargets) {
-    offset <- c(2, 0, 8 * ((i - 1) - (ntargets - 1) / 2))
+    offset <- c(3, 0, 8 * ((i - 1) - (ntargets - 1) / 2))
     dims <- net_dims[["predictor"]][[i]]
     # caption <- paste0("predictor~",toupper(targets[i]))
     caption <- paste0("", toupper(targets[i]))

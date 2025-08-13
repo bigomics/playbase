@@ -145,8 +145,10 @@ ngs.fitContrastsWithAllMethods <- function(counts,
   outputs <- list()
 
   ## Skip tests that do not tolerate NAs. Inform the user.
+  nmissing.counts <- sum(is.na(counts))
   nmissing <- sum(is.na(X))
-
+  if (nmissing.counts>0 & nmissing==0) counts <- pmax(2**X-1,0)
+  
   ## ---------------- t-test methods -------------------
   ttest.mtds <- c("ttest", "ttest.rank", "ttest.welch")
   ttest.mdls <- c("equalvar", "equalvar", "welch")
@@ -198,7 +200,6 @@ ngs.fitContrastsWithAllMethods <- function(counts,
         } else {
           time_var = NULL
         }
-      
         tt <- system.time(
           outputs[[cm.mtds[i]]] <- ngs.fitContrastsWithLIMMA(
             X1, contr.matrix, design, method = mdl,
@@ -221,7 +222,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
       X1 <- X
       mdl <- deseq2.mdls[match(cm.mtds[i], deseq2.mtds)]
       message("[ngs.fitContrastsWithAllMethods] Fitting using ", cm.mtds[i])
-      if (nmissing > 0) {
+      if (nmissing.counts > 0) {
         message("[ngs.fitContrastsWithAllMethods] Missing values detected. Cannot perform ", cm.mtds[i])
         next;
       } else {
@@ -252,7 +253,7 @@ ngs.fitContrastsWithAllMethods <- function(counts,
       X1 <- X
       mdl <- edger.mdls[match(cm.mtds[i], edger.mtds)]
       message("[ngs.fitContrastsWithAllMethods] Fitting using ", cm.mtds[i])
-      if (nmissing > 0) {
+      if (nmissing.counts > 0) {
         message("[ngs.fitContrastsWithAllMethods] Missing values detected. Cannot perform edgeR QL-F test or LRT.")
         next;
       } else {
@@ -546,7 +547,7 @@ ngs.fitContrastsWithTTEST <- function(X,
   return(res)
 }
 
-#' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using Wilcoxon rank sum (scRNAseq)
+#' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using Wilcoxon Rank Sum test
 #' @export
 ngs.fitContrastsWithWILCOXON <- function(X, contr.matrix, design, conform.output = 0) {
 
@@ -596,8 +597,12 @@ ngs.fitContrastsWithWILCOXON <- function(X, contr.matrix, design, conform.output
 
 }
 
-#' @describeIn ngs.fitContrastsWithAllMethods Fits contrasts using LIMMA diff. expr. analysis.
+#' @title ngs.fitContrastsWithLIMMA
+#' @param X log2- and normalized expression matrix
+#' @description ngs.fitContrastsWithAllMethods Fits contrasts using LIMMA
+#' @return limma top tables
 #' @export
+#' @name ngs.fitContrastsWithLIMMA
 ngs.fitContrastsWithLIMMA <- function(X,
                                       contr.matrix,
                                       design,
@@ -723,7 +728,7 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
                                                  use.spline = NULL) {
 
   library(splines)
-  message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting Limma ith no design; time series analysis...")
+  message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting Limma with no design; time series analysis...")
   
   if (!all(colnames(X) %in% names(timeseries)))
     stop("[ngs.fitContrastsWithLIMMA.timeseries] X and timeseries vector contain different set of samples.")
@@ -840,6 +845,10 @@ ngs.fitContrastsWithEDGER <- function(counts,
                                       timeseries = NULL) {
   method <- method[1]
 
+  ## ps: EdgeR/Deseq2 tests will not be available for proteomics data.
+  ## Therefore, this autoscaling will very rarely be run.
+  counts <- playbase::counts.autoScaling(counts)$counts
+  
   exp0 <- contr.matrix
   if (!is.null(design)) exp0 <- design %*% contr.matrix
 
@@ -1048,11 +1057,12 @@ ngs.fitContrastsWithEDGER <- function(counts,
                                                        plot = TRUE,
                                                        timeseries = NULL) {
 
-  ## With no design matrix, we must EdgeR per contrast
-  ## one-by-one. Warning this can become very slow.
-
   method <- method[1]
 
+  ## ps: EdgeR/Deseq2 tests will not be available for proteomics data.
+  ## Therefore, this autoscaling will very rarely be run.
+  counts <- playbase::counts.autoScaling(counts)$counts
+  
   i=1; tables=list()
   for (i in 1:NCOL(contr.matrix)) {
 
@@ -1190,7 +1200,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
         fit <- edgeR::glmFit(dge, design, robust = robust)
         res <- try(edgeR::glmLRT(fit, coef = sel), silent = TRUE)
         if ("try-error" %in% class(res)) next else break;
-      } 
+      }
     }
 
   } else {
@@ -1234,6 +1244,10 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
                                        prune.samples = FALSE,
                                        conform.output = FALSE,
                                        timeseries = NULL) {
+
+  ## ps: EdgeR/Deseq2 tests will not be available for proteomics data.
+  ## Therefore, this autoscaling will very rarely be run.
+  counts <- playbase::counts.autoScaling(counts)$counts
 
   exp0 <- contr.matrix
   if (!is.null(design)) exp0 <- design %*% contr.matrix
@@ -1377,6 +1391,11 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
                                                  X = NULL,
                                                  timeseries = NULL) {
 
+
+  ## ps: EdgeR/Deseq2 tests will not be available for proteomics data.
+  ## Therefore, this autoscaling will very rarely be run.
+  counts <- playbase::counts.autoScaling(counts)$counts
+
   counts <- round(counts)
   if (is.null(X)) X <- edgeR::cpm(counts, log = TRUE)
 
@@ -1495,6 +1514,10 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
                                                             fitType = "mean",
                                                             use.spline = NULL
                                                             ) {
+
+  ## ps: EdgeR/Deseq2 tests will not be available for proteomics data.
+  ## Therefore, this autoscaling will very rarely be run.
+  counts <- playbase::counts.autoScaling(counts)$counts
 
   if (!all(colnames(counts) %in% names(timeseries)))
     stop("[ngs.fitConstrastsWithDESEQ2.nodesign.timeseries] counts and time contain different set of samples.")

@@ -41,33 +41,28 @@ gmt2mat <- function(gmt, max.genes = -1, ntop = -1, sparse = TRUE,
   if (max.genes < 0) max.genes <- length(bg)
   gg <- bg
   gg <- Matrix::head(bg, n = max.genes)
-  gmt <- lapply(gmt, function(s) intersect(gg, s))
+  ##gmt <- lapply(gmt, function(s) intersect(gg, s))
   kk <- unique(names(gmt))
   if (sparse) {
     D <- Matrix::Matrix(0, nrow = length(gg), ncol = length(kk), sparse = TRUE)
   } else {
     D <- matrix(0, nrow = length(gg), ncol = length(kk))
   }
-
   rownames(D) <- gg
   colnames(D) <- kk
-  j <- 1
   if (use.multicore) {
-    idx <- lapply(gmt, function(s) match(s, gg))
-    idx[sapply(idx, length) == 0] <- 0
-    idx <- sapply(1:length(idx), function(i) rbind(idx[[i]], i))
-    idx <- matrix(unlist(idx[]), byrow = TRUE, ncol = 2)
-    idx <- idx[!is.na(idx[, 1]), ]
-    idx <- idx[idx[, 1] > 0, ]
-    D[idx] <- 1
+    idx <- parallel::mclapply(gmt, function(s) match(s, gg))
   } else {
-    for (j in 1:ncol(D)) {
-      k0 <- match(kk[j], names(gmt))
-      ii0 <- which(gg %in% gmt[[k0]])
-      if (length(ii0) > 0) D[ii0, j] <- +1
-    }
+    idx <- lapply(gmt, function(s) match(s, gg))
   }
-  D <- D[order(-Matrix::rowSums(D != 0, na.rm = TRUE)), ]
+  idx <- lapply(idx, function(x) x[!is.na(x)])
+  idx[sapply(idx, length) == 0] <- 0
+  idx <- sapply(1:length(idx), function(i) rbind(idx[[i]], i))
+  idx <- matrix(unlist(idx[]), byrow = TRUE, ncol = 2)
+  idx <- idx[!is.na(idx[, 1]), ]
+  idx <- idx[idx[, 1] > 0, ]
+  D[idx] <- 1
+  D <- D[order(-Matrix::rowSums(D != 0, na.rm = TRUE)), ,drop=FALSE]
   D
 }
 

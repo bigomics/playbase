@@ -7,16 +7,18 @@
 pgx.computePCSF(
   pgx,
   contrast,
-  level = "gene",
+  datatypes = NULL,
+  as_prize = "fc",
+  use_rank = FALSE,
+  use_rank2 = FALSE,
   ntop = 250,
   ncomp = 3,
   beta = 1,
   rm.negedge = TRUE,
+  highcor = 0.8,
   dir = "both",
-  ppi = c("STRING", "GRAPHITE"),
-  gset.rho = 0.8,
-  gset.filter = NULL,
-  as.name = NULL
+  level = "gene",
+  ppi = c("STRING", "GRAPHITE")
 )
 }
 \description{

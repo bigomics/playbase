@@ -7,21 +7,20 @@
 pgx.plotPartialCorrelationGraph(
   res,
   gene,
-  rho.min = 0.1,
   nsize = -1,
   main = "",
   vsize = 10,
   edge.width = 10,
   label.cex = 0.8,
+  rho.min = 0.1,
+  nb = Inf,
+  edge.alpha = 0.4,
   radius = -1,
-  plot = TRUE,
-  layout = "fr"
+  plot = TRUE
 )
 }
 \arguments{
 \item{gene}{Character string specifying the gene name to compute partial correlation around.}
-
-\item{rho.min}{Numeric threshold for including genes in partial correlation graph.}
 
 \item{nsize}{Integer specifying number of top correlated genes to include.}
 
@@ -29,7 +28,7 @@ pgx.plotPartialCorrelationGraph(
 
 \item{edge.width}{Numeric line width for graph edges.}
 
-\item{layout}{Layout algorithm for graph. Options are "fr", "kk", "lgl", etc.}
+\item{rho.min}{Numeric threshold for including genes in partial correlation graph.}
 
 \item{pgx}{pgx object}
 
@@ -37,6 +36,8 @@ pgx.plotPartialCorrelationGraph(
 
 \item{what}{Character vector specifying which plots to generate. Options are
 "cor", "pcor", "graph".}
+
+\item{layout}{Layout algorithm for graph. Options are "fr", "kk", "lgl", etc.}
 }
 \value{
 List with components:

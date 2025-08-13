@@ -58,6 +58,8 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
   # but first and last column maintain the "
   first_column <- x0[[1]] # Extract the first column
   last_column <- x0[[ncol(x0)]] # Extract the last column
+  first_column <- iconv2utf8(first_column)
+  last_column <- iconv2utf8(last_column)
   if (all(grepl('^"', first_column)) && all(grepl('"$', last_column))) {
     x0[[1]] <- gsub('^"', "", first_column)
     x0[[ncol(x0)]] <- as.numeric(gsub('"$', "", last_column))
@@ -109,6 +111,7 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
   which.char <- which(sapply(x, class) == "character")
   if (length(which.char)) {
     char.cols <- colnames(x)[which.char]
+    x[, c(char.cols) := lapply(.SD, iconv2utf8), .SDcols = char.cols]
     x[, c(char.cols) := lapply(.SD, trimws), .SDcols = char.cols]
   }
 
@@ -364,12 +367,8 @@ read_counts <- function(file, first = FALSE, unique = FALSE, paste_char = "_") {
 read_samples <- function(file) {
   df <- read.as_matrix(file)
   is_valid <- validate_samples(df)
-  if (!is_valid) {
-    message("[read_samples] WARNING: Samples file has errors")
-    ## return(NULL)
-  }
-  df <- as.data.frame(df)
-  return(df)
+  if (!is_valid) message("[read_samples] WARNING: Samples file has errors")
+  return(as.data.frame(df))
 }
 
 #' Read contrasts data from file
@@ -384,12 +383,110 @@ read_samples <- function(file) {
 read_contrasts <- function(file) {
   df <- read.as_matrix(file)
   is_valid <- validate_contrasts(df)
-  if (!is_valid) {
-    message("[read_contrasts] WARNING: Contrasts file has errors")
-    ## return(NULL)
-  }
-  df
+  if (!is_valid) message("[read_contrasts] WARNING: Contrasts file has errors")
+  return(df)
 }
+
+
+#' Read Olink NPX data and create a counts matrix
+#' @param NPX_data Path to input Olink NPX data file. Must be standard Olink NPX format as per OlinkAnalyze R package.
+#' @return data matrix (features on rows; samples on columns)
+#' @export
+read_Olink_NPX <- function(NPX_data) {
+
+  NPX <- try(OlinkAnalyze::read_NPX(NPX_data), silent = TRUE)
+  if (!inherits(NPX, "try-error")) {
+    NPX <- as.data.frame(NPX)
+  } else {
+    dbg("[read_Olink_NPX]. Uploaded proteomics data file is not Olink or does not adhere with standard Olink NPX format.")
+    return(NULL)
+  }
+
+  hh1 <- grep("NPX", colnames(NPX), ignore.case = TRUE)
+  if (any(hh1)) {
+    npx.id <- colnames(NPX)[hh1[1]]
+  } else {
+    dbg("[read_Olink_NPX] The uploaded Olink NPX file does not contain the variable NPX")
+    return(NULL)
+  }
+
+  feature.id <- NULL
+  hh <- grepl("uniprot", tolower(colnames(NPX)))
+  if (any(hh)) feature.id <- colnames(NPX)[hh][1]
+  if (is.null(feature.id)) {
+    hh <- grepl("assay$", tolower(colnames(NPX)))
+    if (any(hh)) feature.id <- colnames(NPX)[hh][1]
+  }
+  if (is.null(feature.id)) {
+    dbg("[read_Olink_NPX] The uploaded Olink NPX file does not contain the variables Uniprot or Assay")
+    return(NULL)
+  }
+
+  sample.id <- NULL
+  hh <- grepl("sampleid", tolower(colnames(NPX)))
+  if (any(hh)) sample.id <- colnames(NPX)[hh][1]
+  if (is.null(sample.id)) {
+    dbg("[read_Olink_NPX] The uploaded Olink NPX file does not contain the variable SampleID")
+    return(NULL)
+  }
+  
+  # Convert to matrix
+  fm <- as.formula(paste0(feature.id, "~", sample.id))
+  counts.df <- reshape2::dcast(NPX, fm, value.var = npx.id, fun.aggregate = mean)
+  counts <- as.matrix(counts.df[sapply(counts.df, is.numeric)])
+  rownames(counts) <- counts.df[, feature.id]
+
+  return(counts)
+  
+}
+
+#' Read Olink NPX data and automatically create samples dataframe
+#' @param NPX_data Path to input Olink NPX data file. Must be standard Olink NPX format as per OlinkAnalyze R package.
+#' @return dataframe with the metadata
+#' @export
+read_Olink_samples <- function(NPX_data) {
+
+  NPX <- try(OlinkAnalyze::read_NPX(NPX_data), silent = TRUE)
+  if (!inherits(NPX, "try-error")) {
+    NPX <- as.data.frame(NPX)
+  } else {
+    dbg("[read_Olink_NPX]. Uploaded proteomics data file is not Olink or does not adhere with standard Olink NPX format.")
+    return(NULL)
+  }
+
+  samples.id <- NULL
+  hh <- grep("SampleID", colnames(NPX), ignore.case = TRUE)
+  if (any(hh)) samples.id <- unique(NPX[, hh[1]])
+  if (is.null(samples.id)) {
+    dbg("[read_Olink_NPX] The uploaded Olink NPX file does not contain the variable SampleID")
+    return(NULL)
+  }
+  
+  #https://cran.r-project.org/web/packages/OlinkAnalyze/vignettes/Vignett.html
+  exclude.vars <- ""
+  hh <- grepl("uniprot|olinkid|assay|npx|freq|lod", tolower(colnames(NPX)))
+  if (any(hh)) exclude.vars <- colnames(NPX)[hh]
+  samples <- matrix(NA, nrow = length(samples.id), ncol = sum(!hh))
+  samples <- data.frame(samples, row.names = samples.id)
+  colnames(samples) <- colnames(NPX)[!hh]
+  
+  hh <- grep("SampleID", colnames(NPX), ignore.case = TRUE)
+  i=1
+  for(i in 1:nrow(samples)) {
+    t=1
+    for(t in 1:ncol(samples)) {
+      jj <- match(rownames(samples)[i], NPX[,hh[1]])
+      jx <- match(colnames(samples)[t], colnames(NPX))
+      if(!any(jj) | !any(jx)) next
+      samples[i,t] <- NPX[jj, jx]
+    }
+  }
+  samples <- samples[,-hh[1]]
+
+  return(samples)
+  
+}
+
 
 #' Read gene/probe annotation file
 #'
@@ -533,56 +630,3 @@ validate_contrasts <- function(df) {
 ## --------------------------------------------------------------------
 ## --------------------------------------------------------------------
 ## --------------------------------------------------------------------
-
-
-## #' @describeIn check_duplicate_cols check if there is any duplicate row in the input data
-## check_duplicate_rows.DEPRECATED <- function(data) {
-##   rn <- setdiff(data[[1]], c("", "NA", NA))
-##   t1 <- sum(duplicated(rn)) == 0
-##   return(t1)
-## }
-
-
-## #' @describeIn check_duplicate_cols checks if there is any empty row in the data
-## check_empty_rows.DEPRECATED <- function(data) {
-##   t1 <- nrow(data) > 0
-##   return(t1)
-## }
-
-## #' @title Input Checks
-## #'
-## #' @param data A data frame or matrix.
-## #'
-## #' @return Logical indicating output of the checks.
-## #'
-## #' @description Checks if a data frame or matrix contains duplicate column names.
-## #'
-## #' @details This function takes a data frame or matrix \code{data} as input and checks if it contains any duplicate column names.
-## #' It compares the column names against each other to look for duplicates.
-## #'
-## #' The output is a logical value indicating whether any duplicate names were found.
-## #' \code{TRUE} means duplicate names were detected, \code{FALSE} means no duplicates.
-## #'
-## #' This can be used to validate data before further analysis, to ensure no columns are duplicated.
-## #'
-## #' @examples
-## #' \dontrun{
-## #' data <- data.frame(A = 1:3, B = 4:6, A = 7:9)
-## #' check_duplicate_cols(data)
-## #' # Returns TRUE
-## #'
-## #' data <- data.frame(A = 1:3, B = 4:6, C = 7:9)
-## #' check_duplicate_cols(data)
-## #' # Returns FALSE
-## #' }
-## check_duplicate_cols.DEPRECATED <- function(data) {
-##   t1 <- sum(duplicated(colnames(data))) == 0
-##   return(t1)
-## }
-
-## #' @describeIn check_duplicate_cols Checks if the number of sample is below the allowed maximum
-## check_max_samples.DEPRECATED <- function(data, max_samples = 2000) {
-##   MAXSAMPLES <- as.integer(max_samples)
-##   t1 <- (ncol(data) - 1) <= MAXSAMPLES
-##   return(t1)
-## }

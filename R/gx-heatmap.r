@@ -797,8 +797,7 @@ gx.heatmap <- function(gx, values = NULL,
                        col.dist.method = "euclidean",
                        plot.method = "heatmap.2",
                        col = grDevices::colorRampPalette(c("royalblue3", "grey90", "indianred3"))(64),
-                       softmax = FALSE,
-                       scale = "row", verbose = 1, symm = FALSE,
+                       softmax = FALSE, scale = "row", verbose = 1, symm = NULL,
                        col.annot = NULL, row.annot = NULL, annot.ht = 1, annot.cex = 1,
                        nmax = 1000, cmax = NULL, show_colnames = TRUE,
                        indent.names = FALSE,
@@ -806,7 +805,8 @@ gx.heatmap <- function(gx, values = NULL,
   graphics::par(xpd = FALSE)
 
   if (verbose > 1) cat("input.dim.gx=", dim(gx), "\n")
-
+  if(is.null(symm)) symm <- all(rownames(gx)==colnames(gx))
+  
   ## -------------------------------------------------------------
   ## scaling options
   ## -------------------------------------------------------------

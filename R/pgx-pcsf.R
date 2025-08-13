@@ -9,274 +9,149 @@
 #' Compute PCSF solution from pgx object for given contrast.
 #'
 #' @export
-pgx.computePCSF <- function(pgx, contrast, level = "gene",
-                            ntop = 250, ncomp = 3, beta = 1, 
-                            rm.negedge = TRUE, 
-                            dir = "both", ppi = c("STRING", "GRAPHITE"),
-                            gset.rho = 0.8, gset.filter = NULL,
-                            as.name = NULL) {
+pgx.computePCSF <- function(pgx, contrast, datatypes = NULL,
+                            as_prize = "fc", use_rank = FALSE,
+                            use_rank2 = FALSE,                            
+                            ntop = 250, ncomp = 3, beta = 1,
+                            rm.negedge = TRUE, highcor = 0.8, 
+                            dir = "both", level="gene",
+                            ppi = c("STRING", "GRAPHITE")
+                            ) {
 
-  if(!"human_ortholog" %in% colnames(pgx$genes)) {
-    message("[pgx.computePCSF] ERROR: annot does not have human_ortholog column")
-    return(NULL)
+  if(level!="gene") {
+    message("[pgx.computePCSF] WARNING. 'level' is deprecated. Please use pgx.computePCSF_gset for geneset level PCSF.")
   }
   
-  ## get foldchange matrix
-  F <- pgx.getMetaMatrix(pgx, level=level)$fc
+  ## Compute correlation and foldchange (wrt pheno)
+  Y <- pgx$model.parameters$exp.matrix
+  Y[which(Y==0)] <- NA
+  R <- cor(Matrix::t(pgx$X), Y, use="pairwise")
+  F <- pgx.getMetaMatrix(pgx, level="gene")$fc
+  X <- pgx$X
+  
+  ## determine prize
+  if(as_prize == "rho") {
+    message("using rho as prize")
+    Z <- R
+  } else if(as_prize %in% c("rho.fc","fc.rho")) {
+    message("using rho.fc as prize")
+    Z <- sqrt(abs(R*F))*(sign(R)==sign(F))*sign(F)
+  } else {
+    ## foldchange as prize
+    message("using fc as prize")    
+    Z <- F
+  }
+
+  zx=NULL
   if (is.null(contrast)) {
-    fx <- sqrt(rowMeans(F**2, na.rm = TRUE))
-    #fx <- sqrt(apply(F**2, 1, max, na.rm = TRUE))    
-  } else if (contrast %in% colnames(F)) {
-    fx <- F[, contrast]
+    zx <- sqrt(rowMeans(Z**2, na.rm = TRUE))
+  } else if (contrast %in% colnames(Z)) {
+    zx <- Z[,contrast]
   } else {
     stop("[pgx.computePCSF] invalid contrast")
   }
-
-  ## for multi-omics we must re-normalize by type otherwise FC can be
-  ## quite different between datatypes.
-  has.colons <- all(grepl(":", names(fx)))
-  is.multiomics <- (pgx$datatype == "multi-omics") || has.colons
-  is.multiomics
-  if (is.multiomics) {
-    info("[pgx.computePCSF] normalizing multi-omics logFC...")
-    fx <- normalize_multifc(fx, by = "mad")
+  
+  if(use_rank) {
+    zx <- signedRank(zx)
   }
-
-  ## We need to harmonize organism symbol with the PPI database that
-  ## is based on human ortholog. What node symbol/names do we use in
-  ## the PCSF??
-  if (level == "gene") {
-    fx <- rename_by(fx, pgx$genes, "symbol") 
-  }
-
-  if (level == "geneset") {
-    if (!is.null(gset.filter)) {
-      fx <- fx[grep(gset.filter, names(fx))]
+  
+  ## align just to be sure
+  gg <- intersect(rownames(X), names(zx))
+  X <- X[gg,,drop=FALSE ]
+  F <- F[gg,,drop=FALSE ]
+  R <- R[gg,,drop=FALSE ]
+  zx <- zx[gg]
+  labels <- gg
+  names(labels) <- gg
+  
+  ## filter on datatype or geneset collection
+  if(!is.null(datatypes)) {
+    dt <- mofa.get_prefix(rownames(X))
+    datatypes <- intersect(datatypes, unique(dt))
+    if(length(datatypes)==0) {
+      message("[pgx.computePCSF2] ERROR. no valid datatypes")
+      return(NULL)
     }
   }
 
-  if (level == "gene") {
-    if (is.data.frame(ppi) || is.matrix(ppi)) {
-      PPI <- ppi
-    } else if (all(is.character(ppi))) {
-      PPI <- c()
+  ## take top features by datatype
+  if(!is.null(datatypes)) {
+    dt <- mofa.get_prefix(names(zx))    
+    ii <- tapply(zx, dt, function(x) head(names(sort(-abs(x))),2*ntop))
+    ii <- unlist(ii[datatypes])
+  } else {
+    ii <- head(names(sort(-abs(zx))),2*ntop)
+  }
+  X <- X[ii,,drop=FALSE ]
+  F <- F[ii,,drop=FALSE ]
+  R <- R[ii,,drop=FALSE ]
+  zx <- zx[ii]
+  labels <- labels[ii]
+
+  if(use_rank2) {
+    zx <- signedRank(zx)
+  }
+  
+  ##-----------------------------------
+  ## Setup PPI
+  ##-----------------------------------
+  ppix <- c()
+  if(is.null(ppi)) {
+    message("skipping PPI edges")
+  }
+  if(!is.null(ppi)) {
+    ppi.ismatrix <- is.data.frame(ppi) || is.matrix(ppi)
+    ppi.ismatrix
+    if (ppi.ismatrix) {
+      ppix <- ppi
+    } else if(all(is.character(ppi))) {
       if ("STRING" %in% ppi) {
         message("adding STRING PPI...")
-        data(STRING, package = "PCSF")
-        PPI <- rbind(PPI, STRING)
+        ppix <- rbind(ppix, PCSF::STRING)
       }
       if ("GRAPHITE" %in% ppi) {
         message("adding GRAPHITE PPI...")
-        PPI <- rbind(PPI, playdata::GRAPHITE_PPI)
+        ppix <- rbind(ppix, playdata::GRAPHITE_PPI)
       }
     } else {
       stop("invalid PPI")
     }
-    PPI$cost <- 0.10 ### ???
-  }
-
-  if (level == "geneset") {
-    aa <- intersect(names(fx), colnames(pgx$GMT))
-    G <- pgx$GMT[, aa]
-    ## H <- cor(as.matrix(G))
-    H <- qlcMatrix::corSparse(G)
-    dim(H)
-    diag(H) <- 0
-    jj <- which(H > gset.rho, arr.ind = TRUE)
-    PPI <- data.frame(
-      from = colnames(G)[jj[, 1]],
-      to = colnames(G)[jj[, 2]],
-      cost = pmax(1 - H[jj], 0)
-    )
-  }
-
-  ## data matrix
-  if (level == "gene") {
-    X <- rename_by(pgx$X, pgx$genes, "symbol") ## safe
-  }
-  if (level == "geneset") {
-    X <- pgx$gsetX
-  }
-  
-  ## just to be sure
-  gg <- intersect(rownames(X), names(fx))
-  X <- X[gg, ]
-  fx <- fx[gg]
-  labels <- gg
-  
-  ## If multi-omics for metabolite set name as labels
-  if (!is.null(as.name) && length(as.name) && as.name[1] != FALSE) {
-    dt <- pgx$genes$data_type
-    if (is.null(dt)) dt <- "gx"
-    if (is.logical(as.name)) as.name <- unique(dt)
-    if (any(dt %in% as.name)) {
-      match.col <- which.max(apply(pgx$genes, 2, function(a) sum(gg %in% a)))
-      ii <- match(labels, pgx$genes[, match.col])
-      mx.name <- pgx$genes[ii, "gene_title"]
-      dt <- pgx$genes[ii, "data_type"]
-      jj <- which(dt %in% as.name)
-      if (length(jj)) {
-        labels[jj] <- paste0("[", mx.name[jj], "]")
-      }
-    }
-  }
-
-  ## all X and fx in symbol (HGNC or ChEBI) so we can strip of prefix
-  ## in PPI
-  PPI[, 1:2] <- apply(PPI[, 1:2], 2, function(x) sub(".*:", "", x))
-
-  ## convert PPI human symbol to organism symbol
-  ii <- match(PPI[,1], pgx$genes$human_ortholog)
-  jj <- match(PPI[,2], pgx$genes$human_ortholog)
-  symbol.col <- intersect(c("symbol","gene_name","feature"), colnames(pgx$genes))
-  symbol.col <- head(symbol.col,1)
-  PPI[,1] <- pgx$genes[ii,symbol.col]
-  PPI[,2] <- pgx$genes[jj,symbol.col]
-  kk <- which(!is.na(PPI[,1]) & !is.na(PPI[,2]))
-  PPI <- PPI[kk,,drop=FALSE]
-
-  ## compute PCSF
-  pcsf <- solvePCSF(
-    X, fx,
-    ppi = PPI,
-    labels = labels,
-    ntop = ntop,
-    ncomp = ncomp,
-    beta = beta,
-    rm.negedge = rm.negedge,
-    dir = dir
-  )
-
-  return(pcsf)
-}
-
-
-#' @title Compute PCSF solution from pgx object for MULTI-OMICS
-#'   (datatype prefixed) data.
-#'
-#' @export
-pgx.computePCSF_multiomics <- function(pgx, contrast,
-                                       datatypes = NULL,
-                                       ntop = 250, ncomp = 3, beta = 1,
-                                       rm.negedge = TRUE, highcor = 0.8, 
-                                       dir = "both", ppi = c("STRING", "GRAPHITE"),
-                                       as.name = NULL) {
-
-  if(is.null(contrast)) {
-    Y <- pgx$model.parameters$exp.matrix[,]
-    Y[Y==0] <- NA
-    R <- cor(Matrix::t(pgx$X), Y, use="pairwise")
-    F <- pgx.getMetaMatrix(pgx, level="gene")$fc
-    rho <- sqrt(rowMeans(R**2))
-    fc  <- sqrt(rowMeans(F**2))    
-  } else {
-    y <- pgx$model.parameters$exp.matrix[,contrast]
-    ii <- which(!is.na(y) & y!=0)
-    rho <- cor(Matrix::t(pgx$X[,ii]), y[ii])[,1]  
-    fc <- pgx.getMetaMatrix(pgx, level="gene")$fc[,contrast]
-  }
-  X <- pgx$X
-
-  ## filter on datatype or geneset collection
-  dt <- mofa.get_prefix(names(rho))
-  table(dt)
-  if(is.null(datatypes)) {
-    datatypes <- unique(dt)
-  }
-  datatypes <- intersect(datatypes, unique(dt))
-
-  if(length(datatypes)==0) {
-    message("[pgx.computePCSF2] ERROR. no valid datatypes")
-    return(NULL)
-  }
-  
-  ## take 2*ntop 
-  ii <- tapply(rho, dt, function(x) head(names(sort(-abs(x))),2*ntop))
-  ii <- unlist(ii[datatypes])
-  X  <- X[ii,,drop=FALSE]
-  rho  <- rho[ii]
-  fc  <- fc[ii]
-  dim(X)
-  
-  ## We need to harmonize organism symbol with the PPI database that
-  ## is based on human ortholog. What node symbol/names do we use in
-  ## the PCSF??
-  rho <- rename_by2(rho, pgx$genes, "symbol", keep.prefix=TRUE) 
-  X   <- rename_by2(X,  pgx$genes, "symbol", keep.prefix=TRUE)
-  fc  <- rename_by2(fc,  pgx$genes, "symbol", keep.prefix=TRUE) 
-  
-  ## align everything just to be sure
-  gg <- intersect(rownames(X), names(rho))
-  length(gg)
-  X <- X[gg, ]
-  rho <- rho[gg]
-  fc <- fc[gg]
-  labels <- gg
     
-  ## Convert feature labels to gene_title if requested.
-  if (!is.null(as.name) && length(as.name) && as.name[1] != FALSE) {
-    dt <- pgx$genes$data_type
-    if (is.null(dt)) dt <- "gx"
-    if (is.logical(as.name)) as.name <- unique(dt)
-    if (any(dt %in% as.name)) {
-      labels0 <- mofa.strip_prefix(labels)
-      ii <- match(labels0, pgx$genes[, "symbol"])
-      mx.name <- pgx$genes$gene_title[ii]
-      dt <- pgx$genes[ii, "data_type"]
-      jj <- which(dt %in% as.name)
-      if (length(jj)>0) {
-        labels[jj] <- paste0(dt,":[", mx.name, "]")[jj]
-        ##labels[jj] <- paste0("[", mx.name, "]")[jj]
-      }
-    }
-  }
+    ## For now, we can strip prefixes in PPI
+    ppix[, 1:2] <- apply(ppix[, 1:2], 2, function(x) sub(".*:", "", x))
+    ppix.features <- unique(c(ppix[,1],ppix[,2]))
 
-  ## Setup PPI
-  ppi.ismatrix <- is.data.frame(ppi) || is.matrix(ppi)
-  ppi.ismatrix
-  if (ppi.ismatrix) {
-    ppix <- ppi
-  } else if(all(is.character(ppi))) {
-    ppix <- c()
-    if ("STRING" %in% ppi) {
-      message("adding STRING PPI...")
-      data(STRING, package = "PCSF")
-      ppix <- rbind(ppix, STRING)
+    ## convert PPI human symbol to organism symbol
+    annot <- pgx$genes
+    if(!is.null(datatypes) && !is.null(annot$data_type)) {
+      sel <- which(annot$data_type %in% datatypes)
+      annot <- annot[sel,,drop=FALSE]
     }
-    if ("GRAPHITE" %in% ppi) {
-      message("adding GRAPHITE PPI...")
-      ppix <- rbind(ppix, playdata::GRAPHITE_PPI)
-    }
-  } else {
-    stop("invalid PPI")
+    nn.match <- apply(annot, 2, function(a) sum(ppix.features %in% a))
+    nn.match
+    match.col <- names(which.max(nn.match))
+    ii <- match(ppix[,1], annot[,match.col])
+    jj <- match(ppix[,2], annot[,match.col])
+    ppix[,1] <- rownames(annot)[ii]
+    ppix[,2] <- rownames(annot)[jj]
+    kk <- which(!is.na(ppix[,1]) & !is.na(ppix[,2]))
+    ppix <- ppix[kk,,drop=FALSE]
+    dim(ppix)
+
+    ## take all edges. disregard cost.
+    ppix$cost <- 0.01 ### ???
   }
-  ppix$cost <- 0.10 ### ???
-  
-  ## convert PPI human symbol to organism symbol
-  ppix[, 1:2] <- apply(ppix[, 1:2], 2, function(x) sub(".*:", "", x))
-  sel <- pgx$genes$data_type %in% c("mx","px")
-  annot <- pgx$genes[sel,,drop=FALSE]
-  ii <- match(ppix[,1], annot$human_ortholog)
-  jj <- match(ppix[,2], annot$human_ortholog)
-  dt.symbol <- paste0(annot$data_type,":",annot$symbol)
-  ppix[,1] <- dt.symbol[ii]
-  ppix[,2] <- dt.symbol[jj]
-  kk <- which(!is.na(ppix[,1]) & !is.na(ppix[,2]))
-  ppix <- ppix[kk,,drop=FALSE]
-  dim(ppix)
-  head(ppix)
   
   ## Add high-correlation edges
-  if( !is.null(highcor) ) {
-    dim(X)
-    R <- cor(t(X), use = "pairwise")
-    diag(R) <- 0
-    hce <- which( abs(R) > highcor, arr.ind=TRUE)
+  if( !is.null(highcor) && highcor <= 1) {
+    corX <- cor(t(X), use = "pairwise")
+    diag(corX) <- 0
+    hce <- which( abs(corX) > highcor, arr.ind=TRUE)
     if(nrow(hce)>0) {
       message("adding ",nrow(hce)," very-high-correlation edges rho>", highcor)
       hce.ppi <- data.frame(
-        from = rownames(R)[hce[,1]],
-        to = rownames(R)[hce[,2]],
+        from = rownames(corX)[hce[,1]],
+        to = rownames(corX)[hce[,2]],
         cost = 0.1
       )
       ppix <- rbind(ppix, hce.ppi)
@@ -287,7 +162,7 @@ pgx.computePCSF_multiomics <- function(pgx, contrast,
   ## compute PCSF
   pcsf <- solvePCSF(
     X,
-    fx = rho,  ## For muliomics use rho (instead of fc) for prize
+    fx = zx,  
     ppi = ppix,
     labels = labels,
     ntop = ntop,
@@ -298,7 +173,17 @@ pgx.computePCSF_multiomics <- function(pgx, contrast,
   )
   
   ## Reinstate foldchange to actual foldchange
-  igraph::V(pcsf)$foldchange <- fc[igraph::V(pcsf)$name]
+  ## save fc & rho
+  vname <- igraph::V(pcsf)$name
+  if(!is.null(contrast)) {
+    igraph::V(pcsf)$rho <- R[vname,contrast]
+    igraph::V(pcsf)$foldchange <- F[vname,contrast]
+  } else {
+    rx <- sqrt(rowMeans(R[,]**2, na.rm=TRUE))
+    fx <- sqrt(rowMeans(F[,]**2, na.rm=TRUE))
+    igraph::V(pcsf)$rho <- rx[vname]
+    igraph::V(pcsf)$foldchange <- fx[vname]
+  }
   
   return(pcsf)
 }
@@ -308,40 +193,74 @@ pgx.computePCSF_multiomics <- function(pgx, contrast,
 #'
 #' @export
 pgx.computePCSF_gset <- function(pgx, contrast,
+                                 as_prize = "fc", use_rank = FALSE,
+                                 use_rank2 = FALSE,
                                  gmt.rho = 0.8, gset.filter = NULL,
-                                 highcor = 0.9, ntop = 250,
-                                 ncomp = 3, beta = 1, 
+                                 highcor = 0.9, ntop = 500,
+                                 ncomp = 10, beta = 1, 
                                  rm.negedge = TRUE,
                                  dir = "both") {
 
   ##gmt.rho=0.8;gset.filter=NULL;highcor=0.9;ntop=250;ncomp=3;beta=1;rm.negedge=TRUE;dir="both"
   
-  ## geneset parameters
+  ## Compute correlation and foldchange (wrt pheno)
+  Y <- pgx$model.parameters$exp.matrix
+  Y[which(Y==0)] <- NA
+  R <- cor(Matrix::t(pgx$gsetX), Y, use="pairwise")
   F <- pgx.getMetaMatrix(pgx, level="geneset")$fc
-  if(is.null(contrast)) {
-    fc  <- sqrt(rowMeans(F**2,na.rm=TRUE))    
-  } else {
-    fc <- F[,contrast]
-  }
   X <- pgx$gsetX
+  
+  ## determine prize
+  if(as_prize == "rho") {
+    message("using rho as prize")
+    Z <- R
+  } else if(as_prize == "rho.fc") {
+    message("using rho.fc as prize")
+    Z <- sqrt(abs(R*F))*(sign(R)==sign(F))*sign(F)
+  } else {
+    ## foldchange as prize
+    message("using fc as prize")    
+    Z <- F
+  }
+
+  zx=NULL
+  if (is.null(contrast)) {
+    zx <- sqrt(rowMeans(Z**2, na.rm = TRUE))
+  } else if (contrast %in% colnames(Z)) {
+    zx <- Z[,contrast]
+  } else {
+    stop("[pgx.computePCSF] invalid contrast")
+  }
+  
+  if(use_rank) {
+    zx <- signedRank(zx)
+  }
+
+  ## align just to be sure
+  gg <- intersect(rownames(X), names(zx))
+  X <- X[gg,,drop=FALSE ]
+  F <- F[gg,,drop=FALSE ]
+  R <- R[gg,,drop=FALSE ]
+  zx <- zx[gg]
   
   ## filter on datatype or geneset collection
   if(!is.null(gset.filter)) {
-    sel <- grep(gset.filter, names(fc))
-    fc <- fc[sel]
-    X <- X[sel,,drop=FALSE]
+    sel <- grep(gset.filter, names(zx))
+    zx <- zx[sel]
   }  
-
   ## take 2*ntop 
-  ii <- head(names(sort(-abs(fc))),2*ntop)
-  X  <- X[ii,,drop=FALSE]
-  fc  <- fc[ii]
-    
-  ## align everything just to be sure
-  labels <- rownames(X)
+  ii <- head(names(sort(-abs(zx))),2*ntop)
+  X <- X[ii,,drop=FALSE ]
+  F <- F[ii,,drop=FALSE ]
+  R <- R[ii,,drop=FALSE ]
+  zx <- zx[ii]
 
+  if(use_rank2) {
+    zx <- signedRank(zx)
+  }
+  
   ## Construct base PPI using GMT overlap
-  aa <- intersect(names(fc), colnames(pgx$GMT))
+  aa <- intersect(names(zx), colnames(pgx$GMT))
   G <- (pgx$GMT[, aa] != 0)
   H <- qlcMatrix::corSparse(G)
   dim(H)
@@ -359,15 +278,14 @@ pgx.computePCSF_gset <- function(pgx, contrast,
   
   ## Add high-correlation edges
   dim(X)
-  ## R <- qlcMatrix::corSparse(t(X))
-  R <- cor(t(X), use = "pairwise")
-  diag(R) <- 0
-  hce <- which(abs(R) > highcor, arr.ind=TRUE)
+  corX <- cor(t(X), use = "pairwise")
+  diag(corX) <- 0
+  hce <- which(abs(corX) > highcor, arr.ind=TRUE)
   if(nrow(hce) > 0) {
     message("adding ",nrow(hce)," very-high-correlation edges rho>", highcor)
     ppi.hce <- data.frame(
-      from = rownames(R)[hce[,1]],
-      to = rownames(R)[hce[,2]],
+      from = rownames(corX)[hce[,1]],
+      to = rownames(corX)[hce[,2]],
       cost = 0.1
     )
     ppix <- rbind(ppix, ppi.hce)
@@ -377,9 +295,8 @@ pgx.computePCSF_gset <- function(pgx, contrast,
   ## compute PCSF
   pcsf <- solvePCSF(
     X,
-    fx = fc,
+    fx = zx,
     ppi = ppix,
-    labels = labels,
     ntop = ntop,
     ncomp = ncomp,
     beta = beta,
@@ -387,6 +304,19 @@ pgx.computePCSF_gset <- function(pgx, contrast,
     dir = dir
   )
   
+  ## Reinstate foldchange to actual foldchange
+  ## save fc & rho
+  vname <- igraph::V(pcsf)$name
+  if(!is.null(contrast)) {
+    igraph::V(pcsf)$rho <- R[vname,contrast]
+    igraph::V(pcsf)$foldchange <- F[vname,contrast]
+  } else {
+    rx <- sqrt(rowMeans(R[,]**2, na.rm=TRUE))
+    fx <- sqrt(rowMeans(F[,]**2, na.rm=TRUE))
+    igraph::V(pcsf)$rho <- rx[vname]
+    igraph::V(pcsf)$foldchange <- fx[vname]
+  }
+
   return(pcsf)
 }
 
@@ -404,7 +334,6 @@ solvePCSF <- function(X, fx, ppi, labels = NULL, ntop = 250, ncomp = 3,
     message("[solvePCSF] ERROR: Exiting. ")
     return(NULL)    
   }
-  
   fx <- fx[which(names(fx) %in% ppi.genes)]
   
   if (dir == "both" && length(fx)>ntop) {
@@ -421,7 +350,6 @@ solvePCSF <- function(X, fx, ppi, labels = NULL, ntop = 250, ncomp = 3,
     sel <- head(order(fx), ntop)
     fx <- fx[sel]
   }
-
   fx[is.na(fx)] <- 0
 
   ## first pass
@@ -437,18 +365,17 @@ solvePCSF <- function(X, fx, ppi, labels = NULL, ntop = 250, ncomp = 3,
     ee$cost <- ee$cost * wt
     ee
   }
-
   ee <- get_edges(names(fx))
   ee <- ee[!is.na(ee$cost), ]
-  dim(ee)
-
+  
   # 1. Construct PPI interactome
-  suppressMessages(suppressWarnings(
-    xppi <- PCSF::construct_interactome(ee)
-  ))
-  prize1 <- abs(fx[igraph::V(xppi)$name])
+  ##suppressMessages(suppressWarnings(xppi <- PCSF::construct_interactome(ee)))
+  xppi <- igraph::graph_from_edgelist(as.matrix(ee[,1:2]), directed=FALSE)
+  igraph::E(xppi)$weight <- as.numeric(ee[,3])
+  xppi <- igraph::simplify(xppi, edge.attr.comb = "min") ## important!!!
 
   # 2. Solve the PCSF
+  prize1 <- abs(fx[igraph::V(xppi)$name])
   suppressMessages(suppressWarnings(
     pcsf <- try(PCSF::PCSF(xppi,
       terminals = prize1, w = 2,
@@ -497,53 +424,64 @@ solvePCSF <- function(X, fx, ppi, labels = NULL, ntop = 250, ncomp = 3,
 #'
 #' @export
 plotPCSF <- function(pcsf,
-                     highlightby = c("centrality", "prize")[1],
+                     sizeby = "prize",
                      colorby = "foldchange",
+                     highlightby = c("centrality", "prize")[1],
+                     labels = NULL,
                      plotlib = c("visnet", "igraph")[1],
                      layout = c("layout_with_kk","hierarchical")[1],
                      layoutMatrix = NULL,
+                     asp = 1,
                      physics = TRUE,
                      node_cex = 1,
+                     node_alpha = 0.8,
+                     node_gamma = 1,
                      label_cex = 1,
+                     label_gamma = 2,                     
                      nlabel = -1,
-                     lab_exp = 3,
                      border_width = 1.5,
                      edge_cex = 1,
                      edge_length = NULL,
                      cut.clusters = FALSE,
-                     nlargest = -1
+                     cut.layout = "kk",
+                     cut.resolution = 0.05,
+                     as_grid = TRUE,
+                     nlargest = -1,
+                     hilight_single = NULL
                      ) {
 
-  ## set node size
+
+  ## determine node size vector
   fx <- NULL
-  if(is.character(colorby) && colorby %in% names(igraph::vertex_attr(pcsf))) {
-    fx <- igraph::vertex_attr(pcsf, colorby)
-  } else if(is.numeric(colorby)) {
-    nv <- length(igraph::V(pcsf))
-    if(length(colorby) != nv) {
-      message("[plotPCSF] WARNING. colorby vector is not same length")
-      dbg("[plotPCSF] 1: length(colorby) = ", length(colorby))
-      dbg("[plotPCSF] 1: length(V) = ", nv)
-      colorby <- head(rep(colorby,nv),nv)
-    }
-    fx <- colorby
+  if(is.character(sizeby) && sizeby %in% names(igraph::vertex_attr(pcsf))) {
+    fx <- igraph::vertex_attr(pcsf, sizeby)
+  } else if(is.numeric(sizeby)) {
+    fx <- sizeby
   } else {
     fx <- igraph::V(pcsf)$foldchange
   }
   names(fx) <- igraph::V(pcsf)$name
-  #igraph::V(pcsf)$prize <- abs(fx)
+  wt <- abs(fx / mean(abs(fx), na.rm = TRUE))
+  node_cex1 <- node_cex * (0.1 + wt)**node_gamma
+  
+  ## determine color vector
+  color.fx <- NULL
+  if(is.character(colorby) && colorby %in% names(igraph::vertex_attr(pcsf))) {
+    color.fx <- igraph::vertex_attr(pcsf, colorby)
+  } else if(is.numeric(colorby)) {
+    color.fx <- colorby
+  } else {
+    color.fx <- igraph::V(pcsf)$foldchange
+  }
+  names(color.fx) <- igraph::V(pcsf)$name
 
-  wt <- abs(fx / mean(abs(fx), na.rm = TRUE))**0.7
-  node_cex1 <- node_cex * pmax(wt, 2)
-  label_cex1 <- label_cex + 1e-8 * abs(fx)
-
-  ## set colors for UP/DOWN. They are set in 'extra_node_colors' in
-  ## the visPlot.  
-  up_down <- c("down", "up")[1 + 1 * (sign(fx) > 0)]
+  ## set colors for UP/DOWN. For VisNetwork they are set in
+  ## 'extra_node_colors' in the visPlot.
+  up_down <- c("down", "up")[1 + 1 * (sign(color.fx) > 0)]
   dtype <- igraph::V(pcsf)$type
   igraph::V(pcsf)$group <- paste0(dtype, "_", up_down)
-  
   bluered <- playdata::BLUERED(7)
+  bluered <- adjustcolor(bluered, alpha.f = node_alpha)
   groups <- sort(setdiff(igraph::V(pcsf)$group, c(NA)))
   ngroups <- length(groups)
   extra_node_colors <- c(bluered[2], bluered[6])[1 + grepl("_up$", groups)]
@@ -563,49 +501,73 @@ plotPCSF <- function(pcsf,
   border_colors <- c("lightgrey",rep(c("yellow","magenta","cyan","green"),99))
   extra_node_borders <- border_colors[factor(gtype, levels=levels)]
   names(extra_node_borders) <- groups
-  
-  ## set label size
+
+  if (!is.null(hilight_single)) {
+   node_idx <- which(igraph::V(pcsf)$name == hilight_single)
+   if (length(node_idx) > 0) {
+       node_idx <- node_idx[1]
+       original_group <- igraph::V(pcsf)$group[node_idx]
+       hilight_group <- paste0(original_group, "_hilight")
+       igraph::V(pcsf)$group[node_idx] <- hilight_group
+       extra_node_colors[hilight_group] <- "#00FF00"
+       if (!is.null(extra_node_shapes[original_group])) {
+           extra_node_shapes[hilight_group] <- extra_node_shapes[original_group]
+       }
+       if (!is.null(extra_node_borders[original_group])) {
+           extra_node_borders[hilight_group] <- extra_node_borders[original_group]
+       }
+   }
+  }
+    
+  ## set label and label sizes
+  if (!is.null(labels)) {
+    if(!is.null(names(labels))) labels <- labels[igraph::V(pcsf)$name]
+    igraph::V(pcsf)$label <- labels
+  } else {
+    igraph::V(pcsf)$label <- igraph::V(pcsf)$name
+  }
+  label_cex1 <- label_cex + 1e-8 * abs(fx)  
   if (highlightby == "centrality") {
     ewt <- igraph::E(pcsf)$weight
     wt <- 1.0 / (0.01 * mean(ewt, na.rm = TRUE) + ewt) ##
-    bc <- igraph::page_rank(pcsf, weights = wt)$vector
-    label_cex1 <- label_cex * (0.3 + 3 * (bc / max(bc, na.rm = TRUE))**lab_exp)
+    bc <- (igraph::page_rank(pcsf, weights = wt)$vector)**0.8
+    label_cex1 <- label_cex * (0.2 + 3 * (bc / max(bc, na.rm = TRUE))**label_gamma)
   }
   if (highlightby == "prize") {
     fx1 <- abs(fx)
-    label_cex1 <- label_cex * (0.3 + 3 * (fx1 / max(fx1, na.rm = TRUE))**lab_exp)
+    label_cex1 <- label_cex * (0.2 + 3 * (fx1 / max(fx1, na.rm = TRUE))**label_gamma)
   }
   if (highlightby %in% c("centrality.prize","prize.centrality")) {
     ewt <- igraph::E(pcsf)$weight
     wt <- 1.0 / (0.01 * mean(ewt, na.rm = TRUE) + ewt) ##
-    bc <- igraph::page_rank(pcsf, weights = wt)$vector
+    bc <- (igraph::page_rank(pcsf, weights = wt)$vector)**0.8
     bc <- bc * abs(fx)
-    label_cex1 <- label_cex * (0.3 + 3 * (bc / max(bc, na.rm = TRUE))**lab_exp)
+    label_cex1 <- label_cex * (0.2 + 3 * (bc / max(bc, na.rm = TRUE))**label_gamma)
   }
+  names(label_cex1) <- igraph::V(pcsf)$name
 
-  if (is.null(igraph::V(pcsf)$label)) {
-    igraph::V(pcsf)$label <- igraph::V(pcsf)$name
-  }
-
-  if(cut.clusters) {
-    mwt <- mean(igraph::E(pcsf)$weight,na.rm=TRUE)
-    ewt <- 1/(1e-3*mwt + igraph::E(pcsf)$weight)
-    clust <- igraph::cluster_louvain(pcsf, weights=ewt)
-    ## clust <- igraph::cluster_fast_greedy(pcsf, weights=ewt)
-    table(clust$membership)
-    ee <- igraph::E(pcsf)[igraph::crossing(clust, pcsf)]
-    pcsf <- igraph::delete_edges(pcsf, ee)
-  }
+  if(is.null(layoutMatrix)) {
+    res <- pcsf.cut_and_relayout(
+      pcsf,
+      cut = cut.clusters,
+      ncomp = nlargest,
+      component.wise = cut.clusters,
+      cluster.method = "leiden",
+      leiden.resolution = cut.resolution,
+      layout = cut.layout,
+      as_grid = as_grid
+    )
+    pcsf <- res$graph
+    layoutMatrix <- res$layout
+  } 
 
   ## take n-largest components
-  if(nlargest > 0) {
+  if(0 && nlargest > 0) {
     cc <- igraph::components(pcsf)$membership
     fsq <- tapply( igraph::V(pcsf)$foldchange**2, cc, sum)    
     top.comp <- head(names(sort(fsq,decreasing=TRUE)),nlargest)
     sel <- which(cc %in% top.comp)
     pcsf <- igraph::subgraph(pcsf, sel)
-    label_cex1 <- label_cex1[sel]
-    node_cex1 <- node_cex1[sel]    
   }   
   
   ## this equalizes label size per component
@@ -614,7 +576,7 @@ plotPCSF <- function(pcsf,
   for(k in comp) {
     ii <- which(cc == k)
     #f <- mean(label_cex1) / mean(label_cex1[ii])
-    f <- median(label_cex1) / median(label_cex1[ii])
+    f <-  median(label_cex1) / median(label_cex1[ii])
     label_cex1[ii] <- label_cex1[ii] * f
   }
 
@@ -629,10 +591,23 @@ plotPCSF <- function(pcsf,
       igraph::V(pcsf)$label[jj] <- ""
     }
   }
+  if (!is.null(hilight_single)) {
+    node_idx <- which(igraph::V(pcsf)$name == hilight_single)
+    if (length(node_idx) > 0) {
+        igraph::V(pcsf)$label[node_idx] <- igraph::V(pcsf)$name[node_idx]
+        if (hilight_single %in% names(label_cex1)) {
+          label_cex1[hilight_single] <- max(label_cex1, na.rm = TRUE) * 1.5
+        }
+    }
+  }
 
   ## align
   vv <- igraph::V(pcsf)$name
-  if(!is.null(layoutMatrix)) layoutMatrix <- layoutMatrix[vv,]
+  if(!is.null(layoutMatrix)) layoutMatrix <- layoutMatrix[vv,,drop=FALSE]
+  fx <- fx[vv]
+  color.fx <- color.fx[vv]
+  node_cex1 <- node_cex1[vv]
+  label_cex1 <- label_cex1[vv]
   
   out <- NULL
   if (plotlib == "visnet") {
@@ -641,11 +616,11 @@ plotPCSF <- function(pcsf,
     if(!is.null(layoutMatrix)) {
       layoutMatrix[,2] <- -layoutMatrix[,2]
     }
-    
     out <- visplot.PCSF(
       pcsf,
       style = 1,
-      node_size = 15 * node_cex1,
+      #node_size = 10 + 2 * node_cex1,
+      node_size = pmax(4*node_cex1, 10),      
       node_label_cex = 40 * label_cex1,
       invert.weight = TRUE,
       edge_width = 5 * edge_cex,
@@ -667,15 +642,17 @@ plotPCSF <- function(pcsf,
   }
 
   if (plotlib == "igraph") {
-    fx <- fx[vv]
     plotPCSF.IGRAPH(
       pcsf,
-      fx = fx,
+      fx = fx,  ## size
+      color.fx = color.fx,
       label.fx = label_cex1,
       label.cex = 1.3 * label_cex,
       vertex.cex = node_cex,
-      edge.cex = edge_cex,
-      layoutMatrix = layoutMatrix
+      vertex.alpha = node_alpha,
+      edge.cex = 1 * edge_cex,
+      layoutMatrix = layoutMatrix,
+      asp = asp
     )
     out <- NULL
   }
@@ -818,20 +795,25 @@ visplot.PCSF <- function(
 #' @param x
 #'
 plotPCSF.IGRAPH <- function(net, fx = NULL, vertex.cex = 1,
+                            color.fx = fx, vertex.alpha = 1,
                             label.fx = fx, label.cex = 4,
-                            edge.cex = 1,
+                            edge.cex = 1, 
                             layoutMatrix = NULL, ...) {
+
   if (is.null(fx)) fx <- igraph::V(net)$prize
   fx <- fx / max(abs(fx), na.rm = TRUE)
+  vertex.size <- 5 * vertex.cex * (0.1 + abs(fx))**0.5
+
+  color.fx <- color.fx / max(abs(color.fx),na.rm=TRUE)
+  cpal <- colorRampPalette(c("blue2", "grey90", "red3"))(33)
+  cpal <- adjustcolor(cpal, alpha.f = vertex.alpha)
+  vertex.color <- cpal[1 + 16 + round(16 * color.fx)]
+
   label.fx <- label.fx / max(label.fx, na.rm = TRUE)
   vertex.label.cex <- label.cex * (0.2 + label.fx**2)
-  if(label.cex==0) igraph::V(net)$label <- ''
-  
-  #vertex.size <- 1.2 * igraph::V(net)$prize**0.9
-  vertex.size <- 5 * vertex.cex * (0.1 + abs(fx))**0.5
-  cpal <- colorRampPalette(c("blue2", "grey90", "red3"))(33)
-  vertex.color <- cpal[1 + 16 + round(16 * fx)]
-  edge.width <- (1 - igraph::E(net)$weight / max(igraph::E(net)$weight, na.rm = TRUE))
+  if(label.cex==0) igraph::V(net)$label <- ''  
+  ## somehow it is faster to bin label.cex
+  vertex.label.cex <- round(10*vertex.label.cex)*0.1
 
   if(!is.null(layoutMatrix)) {
     if(is.null(rownames(layoutMatrix))) {
@@ -848,15 +830,15 @@ plotPCSF.IGRAPH <- function(net, fx = NULL, vertex.cex = 1,
     layoutMatrix <- pos[igraph::V(net)$name,,drop=FALSE]
   }
 
+  ## convert cost to width: zero cost -> max width
+  edge.width <- (1 - igraph::E(net)$weight / max(igraph::E(net)$weight, na.rm = TRUE))
+
   vnames <- igraph::V(net)$name
   if(!all(vnames %in% rownames(layoutMatrix))) {
     stop("ERROR: all nodes not in rownames layoutMatrix")
   }
-  layoutMatrix <- layoutMatrix[igraph::V(net)$name,,drop=FALSE]
-  
-  ## somehow it is faster to bin label.cex
-  vertex.label.cex <- round(10*vertex.label.cex)*0.1
-  
+  layoutMatrix <- layoutMatrix[vnames,,drop=FALSE]
+    
   vv <- (vertex.size / mean(vertex.size, na.rm = TRUE))**1
   plot(
     net,
@@ -891,12 +873,17 @@ pgx.getPCSFcentrality <- function(pgx, contrast, pcsf, level="gene",
 
   M <- data.frame(centrality = cc, logFC = fc)
   M <- round(M, digits = 2)
-
+  rownames(M) <- igraph::V(pcsf)$name
+  
   aa <- M[,0]
   if(level == "gene") {
-    ft <- mofa.strip_prefix(rownames(M))
-    match.col <- which.max(apply(pgx$genes, 2, function(a) sum(ft %in% a)))
-    ii <- match(ft, pgx$genes[,match.col])  
+    ft <- rownames(M)
+    match.sum <- apply(pgx$genes, 2, function(a) sum(ft %in% a))
+    if(all(match.sum==0)) {
+      ft <- mofa.strip_prefix(rownames(M))
+      match.sum <- apply(pgx$genes, 2, function(a) sum(ft %in% a))
+    }
+    ii <- match(ft, pgx$genes[,which.max(match.sum)])  
     aa <- pgx$genes[ii, c("feature", "symbol", "human_ortholog", "gene_title")]
   }
   if(level == "geneset") {
@@ -957,7 +944,7 @@ pcsf.cut_and_relayout <- function(net, cut = TRUE,
     g <- igraph::disjoint_union(g)
   }
   
-  layout <- layout[1]
+  layout <- head(layout,1)
   all.layouts = c("tree","circle","fr","kk","gem","graphopt")
   if(!layout %in% all.layouts) {
     layout <- "kk"
@@ -967,7 +954,7 @@ pcsf.cut_and_relayout <- function(net, cut = TRUE,
     layout,
     tree = igraph::as_tree(),
     circle = igraph::in_circle(),
-    fr = igraph::with_fr(),
+    fr = igraph::with_fr(weights=NA),
     kk = igraph::with_kk(weights=NA),
     mds = igraph::with_mds(),
     gem = igraph::with_gem(),    
@@ -982,18 +969,13 @@ pcsf.cut_and_relayout <- function(net, cut = TRUE,
   }
   rownames(pos) <- igraph::V(g)$name
 
-  mm <- igraph::components(g)$membership
-  table(mm)
-
   ## Layout components on a grid
-  if(as_grid) {    
+  if(as_grid) {
     mm <- igraph::components(g)$membership
-    table(mm)
     mm.order <- order(table(mm),decreasing=TRUE)
     ncomp <- length(unique(mm))
     nx <- ceiling(sqrt(ncomp))
     grid.pos <- t(sapply(0:(ncomp-1), function(i) c(i%%nx, i%/%nx)))
-
     if(layout=="tree") {
       dx <- tapply(pos[,1],mm,function(x) diff(range(x)))
       dy <- tapply(pos[,2],mm,function(y) diff(range(y)))    

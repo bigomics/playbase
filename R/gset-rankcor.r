@@ -98,8 +98,13 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
   gset <- gset[gg, , drop = FALSE]
 
   if (use.rank) {
-    ##  rnk1 <- apply(rnk1, 2, base::rank, na.last = "keep", ties.method="random")
-    rnk1 <- t(matrixStats::colRanks(rnk1, na.last = "keep", ties.method = "random"))
+    if(inherits(rnk1,"dgCMatrix")) {
+      ## for sparse dgCMatrix
+      ##rnk1 <- apply(rnk1, 2, base::rank, na.last = "keep", ties.method="random")
+      rnk1 <- sparseMatrixStats::colRanks(rnk1, na.last = "keep", ties.method = "random", preserveShape = TRUE)
+    } else {
+      rnk1 <- matrixStats::colRanks(rnk1, na.last = "keep", ties.method = "random", preserveShape = TRUE)
+    }
   }
 
   ## two cases: (1) in case no missing values, just use corSparse on
@@ -131,8 +136,11 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
 #'
 #' @export
 gset.averageFC <- function(F, matG, use.rank = FALSE) {
-  gset.averageCLR(F, matG, center = FALSE, use.rank = use.rank) 
+  ## no centering
+  res <- gset.averageCLR(F, matG, center = FALSE, use.rank = use.rank)
+  return(res)
 }
+
 
 #' Compute geneset expression as the average log-ration of genes in
 #' the geneset. Requires log-expression matrix X and (sparse) geneset
@@ -141,40 +149,23 @@ gset.averageFC <- function(F, matG, use.rank = FALSE) {
 #' @export
 gset.averageCLR <- function(X, matG, center = TRUE, use.rank = FALSE) {
   if (NCOL(X) == 1) X <- cbind(X)
-  if (center && NCOL(X) > 1) X <- X - rowMeans(X, na.rm = TRUE)
-  if (use.rank) X <- colSignedRanks(X) ## playbase
   gg <- intersect(rownames(X), rownames(matG))
   if (length(gg) == 0) {
-    message("[gset.averageCLR] WARNING. features of gene matrix X do not overlap with geneset matrix.")
+    message("[gset.averageCLR] ERROR. no overlapping features")
+    return(NULL)
   }
   X <- X[gg, , drop = FALSE]
   matG <- matG[gg, , drop = FALSE]
-  ngenes <- Matrix::colSums(matG != 0)
-  gsetX <- (Matrix::t(matG != 0) %*% X) / pmax(ngenes, 1e-3)
+  if (use.rank) {
+    ## not recommended for sparse matrix. will render dense.
+    X <- colSignedRanks(X) ## playbase
+  }
+  sumG <- 1e-8 + Matrix::colSums(matG != 0, na.rm = TRUE)
+  nG <- Matrix::colScale(1 * (matG != 0), 1 / sumG)
+  gsetX <- Matrix::t(nG) %*% X 
+  if(center) gsetX <- gsetX - Matrix::rowMeans(gsetX, na.rm = TRUE)
   as.matrix(gsetX)
 }
-
-#' Fast version of average CLR for sparse matrices.
-#'
-#' @export
-avgCLR_sparse <- function(X, matG) {
-  sumG <- 1e-8 + Matrix::colSums(matG != 0, na.rm = TRUE)
-  nG <- Matrix::colScale(1 * (matG != 0), 1 / sumG)
-  mx <- Matrix::rowMeans(X, na.rm = TRUE)
-  Matrix::t(nG) %*% X - Matrix::colSums(nG * mx)
-}
-
-#' Fast version of average ranked-CLR for sparse matrices.
-#'
-#' @export
-avgRCLR_sparse <- function(X, matG) {
-  sumG <- 1e-8 + Matrix::colSums(matG != 0, na.rm = TRUE)
-  nG <- Matrix::colScale(1 * (matG != 0), 1 / sumG)
-  ## ????
-  mx <- Matrix::rowMeans(X, na.rm = TRUE)
-  Matrix::t(nG) %*% X - Matrix::colSums(nG * mx)
-}
-
 
 
 #' Single sample genesets expression scores. See Foroutan 2018. This
@@ -188,7 +179,7 @@ gset.singscore <- function(X, geneSets, center = FALSE, return.score = TRUE) {
   if (center) {
     X <- X - rowMeans(X, na.rm = TRUE)
   }
-  ranked <- singscore::rankGenes(X)
+  ranked <- singscore::rankGenes(as.matrix(X)) ## cannot take sparse
   sing <- singscore::multiScore(ranked, upSetColc = gscolc)
   ## sing has 'Scores' and 'Dispersions'
   if (return.score) {
@@ -213,4 +204,49 @@ gset.gsva <- function(X, geneSets, method = "gsva") {
   )
   es <- GSVA::gsva(gsvapar, verbose = FALSE)
   return(es)
+}
+
+
+#' Statistical testing of differentially enrichment
+#'
+#' This function performs statistical testing for differential
+#' enrichment using plaid
+#'
+#' @param fc Vector of logFC values
+#' @param G Sparse matrix of gene sets. Non-zero entry indicates
+#'   gene/feature is part of gene sets. Features on rows, gene sets on
+#'   columns.
+#' 
+gset.ttest <- function(fc, G, sort.by="pvalue") {
+  if(is.null(names(fc))) stop("fc must have names")  
+  if(is.list(G)) {
+    message("[gset.ttest] converting gmt to sparse matrix...")
+    G <- gmt2mat(G)
+  } else {
+    ## message("[fc_ttest] sparse matrix provided")
+  }
+  gg <- intersect(rownames(G),names(fc))
+  if(length(gg)==0) {
+    message("[gset.ttest] Error. No overlapping features")
+    return(NULL)
+  }  
+  fc <- fc[gg]
+  G <- G[gg,]  
+
+  mt <- matrix_onesample_ttest(fc, G)
+  pv <- mt$p[,1]
+  df <- mt$mean[,1]
+  qv <- p.adjust(pv, method="fdr")
+  gsetFC <- gset.averageCLR(fc, matG, center = FALSE, use.rank = FALSE)[,1]
+  
+  res <- cbind(
+    gsetFC = gsetFC,
+    pvalue = pv,
+    qvalue = qv    
+  )
+  if(!is.null(sort.by) && sort.by %in% colnames(res)) {
+    sort.sign <- ifelse(sort.by=="gsetFC",-1,+1)
+    res <- res[order(sort.sign*res[,sort.by]),]
+  }
+  res
 }

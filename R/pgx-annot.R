@@ -62,7 +62,7 @@ ngs.getGeneAnnotation <- function(...) {
 #' Merges any missing annotation in df with non-missing annotation of
 #' annot_table.
 #' 
-merge_annot_table <- function(df, df2) {
+merge_annot_table <- function(df, df2, priority=1) {
 #  df2 <- df2[match(rownames(df), rownames(df2)), ]
 #  rownames(df2) <- rownames(df)
   if(nrow(df) != nrow(df2)) stop("df and df2 not same size")
@@ -78,11 +78,15 @@ merge_annot_table <- function(df, df2) {
   for(k in cols) {
     a <- df[,k]
     b <- df2[,k]
-    na.chars <- c(NA,"NA","","-","---")
-    replace.a <- (a %in% na.chars) & !(b %in% na.chars)
+    na.chars <- c(NA,"NA","","-","---","unknown")
+    if(priority==1) {
+      replace.a <- (a %in% na.chars) & !(b %in% na.chars)
+    } else {
+      replace.a <- !(b %in% na.chars)  ## always replace
+    }
     if(any(replace.a)) df[,k] <- ifelse(replace.a, b, a)
   }
-  
+
   return(df)
 }
 
@@ -150,11 +154,15 @@ getProbeAnnotation <- function(organism,
     genes <- getCustomAnnotation( probes0, custom_annot = NULL )
   }
 
-  ## if annot_table is provided we override our annotation and append
-  ## extra columns
+  ## if annot_table is provided we (priority) override our annotation
+  ## and append any extra columns.
   if (!is.null(genes) && !is.null(annot_table)) {
     dbg("[getProbeAnnotation] merging custom annotation table")
-    genes <- merge_annot_table(genes, annot_table) 
+    colnames(annot_table) <- sub("^ortholog$","human_ortholog",
+      colnames(annot_table),ignore.case=TRUE)
+    colnames(annot_table) <- sub("^Symbol$|^gene$|^gene_name$","symbol",
+      colnames(annot_table),ignore.case=TRUE)
+    genes <- merge_annot_table(genes, annot_table, priority=2) 
   }
 
   ## restore original probe names
@@ -163,10 +171,10 @@ getProbeAnnotation <- function(organism,
   ## cleanup entries and reorder columns
   genes <- cleanupAnnotation(genes)
 
-  if (all(c("ortholog", "human_ortholog") %in% colnames(genes))) {
-    jj <- which(colnames(genes) == "ortholog")
-    genes <- genes[, -jj, drop = FALSE]
-  }
+#  if (all(c("ortholog", "human_ortholog") %in% colnames(genes))) {
+#    jj <- which(colnames(genes) == "ortholog")
+#    genes <- genes[, -jj, drop = FALSE]
+#  }
   
   return(genes)
 
@@ -390,14 +398,14 @@ getGeneAnnotation.ANNOTHUB <- function(
   ## Attempt to retrieve chr map via org.Mm.egCHRLOC / org.Rn.egCHRLOC.
   if (organism %in% c("Mus musculus", "Rattus norvegicus")) {
     if (organism == "Mus musculus") {
-      library(org.Mm.eg.db)
-      chrloc <- org.Mm.egCHRLOC
+      require(org.Mm.eg.db)
+      chrloc <- org.Mm.eg.db::org.Mm.egCHRLOC
     }
     if (organism == "Rattus norvegicus") {
-      library(org.Rn.eg.db)
-      chrloc <- org.Rn.egCHRLOC
+      require(org.Rn.eg.db)
+      chrloc <- org.Rn.eg.db::org.Rn.egCHRLOC
     }
-    mapped_genes <- as.list(chrloc[mappedkeys(chrloc)])
+    mapped_genes <- as.list(chrloc[AnnotationDbi::mappedkeys(chrloc)])
     cm <- intersect(as.character(annot$ENTREZID), names(mapped_genes))
     mapped_genes <- mapped_genes[cm]
     locs <- unlist(lapply(mapped_genes, function(x) names(x[1])))
@@ -440,7 +448,7 @@ getGeneAnnotation.ANNOTHUB <- function(
     if (!is.null(missing.probe_type) &&
           !is.na(missing.probe_type) &&
            missing.probe_type != probe_type &&
-           missing.probe_type %in% keytypes(orgdb)
+           missing.probe_type %in% AnnotationDbi::keytypes(orgdb)
         ) {      
       missing.probes1 <- match_probe_names(missing.probes, orgdb, missing.probe_type)
       suppressMessages(suppressWarnings(
@@ -569,14 +577,14 @@ uniprot2gene <- function(uniprots, organism) {
   res[uniprots]
 }
 
-#' Clean up inline duplicated features: eg: feature1;feature1;....
-#'
-#' @export
-clean_dups_inline_probenames <- function(probes) {
-  probes[is.na(probes)] <- ""
-  probes <- sapply(strsplit(probes,split="[;,._]"),function(s) paste(unique(s),collapse=";"))
-  return (probes)
-}
+## #' Clean up inline duplicated features: eg: feature1;feature1;....
+## #'
+## #' @export
+## clean_dups_inline_probenames <- function(probes) {
+##   probes[is.na(probes)] <- ""
+##   probes <- sapply(strsplit(probes,split="[;,._]"),function(s) paste(unique(s),collapse=";"))
+##   return (probes)
+## }
 
 #' non-greedy removal of numerical postfix. Postfix is defined as (1)
 #' last numerical substring after - (minus), or (2) any substring
@@ -642,7 +650,7 @@ match_probe_names <- function(probes, orgdb, probe_type = NULL) {
     probe_type <- detect_probetype(organism = "custom", probes, orgdb = orgdb)
   }
   ## bail out if not annothub keytypes
-  if(!probe_type %in% keytypes(orgdb)) return(probes)
+  if(!probe_type %in% AnnotationDbi::keytypes(orgdb)) return(probes)
 
   probe.names <- names(probes)
   all.keys <- AnnotationDbi::keys(orgdb, probe_type)
@@ -1464,83 +1472,83 @@ collapse_by_humansymbol <- function(obj, annot) {
   map.obj
 }
 
-#' @title Show some probe types for selected organism
-#'
-#' @export
-showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
-  if (tolower(organism) == "human") organism <- "Homo sapiens"
-  if (tolower(organism) == "mouse") organism <- "Mus musculus"
-  if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
-  organism
+## #' @title Show some probe types for selected organism
+## #'
+## #' @export
+## showProbeTypes <- function(organism, keytypes = NULL, use.ah = NULL, n = 10) {
+##   if (tolower(organism) == "human") organism <- "Homo sapiens"
+##   if (tolower(organism) == "mouse") organism <- "Mus musculus"
+##   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
+##   organism
 
-  message(paste("retrieving probe types for", organism, "..."))
+##   message(paste("retrieving probe types for", organism, "..."))
 
-  ## get correct OrgDb database for organism
-  orgdb <- getOrgDb(organism, use.ah = use.ah)
-  if (is.null(orgdb)) {
-    message("[showProbeTypes] ERROR: unsupported organism '", organism, "'\n")
-    return(NULL)
-  }
+##   ## get correct OrgDb database for organism
+##   orgdb <- getOrgDb(organism, use.ah = use.ah)
+##   if (is.null(orgdb)) {
+##     message("[showProbeTypes] ERROR: unsupported organism '", organism, "'\n")
+##     return(NULL)
+##   }
 
-  ## get probe types for organism
-  if (!is.null(keytypes) && keytypes[1] == "*") {
-    keytypes <- AnnotationDbi::keytypes(orgdb)
-  }
-  if (is.null(keytypes)) {
-    keytypes <- c(
-      "SYMBOL", "ENSEMBL", "UNIPROT", "ENTREZID",
-      "GENENAME", "MGI", "TAIR",
-      "ENSEMBLTRANS", "ENSEMBLPROT",
-      "ACCNUM", "REFSEQ"
-    )
-  }
-  keytypes0 <- keytypes
-  keytypes <- intersect(keytypes, AnnotationDbi::keytypes(orgdb))
-  keytypes
+##   ## get probe types for organism
+##   if (!is.null(keytypes) && keytypes[1] == "*") {
+##     keytypes <- AnnotationDbi::keytypes(orgdb)
+##   }
+##   if (is.null(keytypes)) {
+##     keytypes <- c(
+##       "SYMBOL", "ENSEMBL", "UNIPROT", "ENTREZID",
+##       "GENENAME", "MGI", "TAIR",
+##       "ENSEMBLTRANS", "ENSEMBLPROT",
+##       "ACCNUM", "REFSEQ"
+##     )
+##   }
+##   keytypes0 <- keytypes
+##   keytypes <- intersect(keytypes, AnnotationDbi::keytypes(orgdb))
+##   keytypes
 
-  if (length(keytypes) == 0) {
-    message("ERROR: no valid keytypes in: ", keytypes0)
-    return(NULL)
-  }
+##   if (length(keytypes) == 0) {
+##     message("ERROR: no valid keytypes in: ", keytypes0)
+##     return(NULL)
+##   }
 
-  ## example probes
-  keytype0 <- "ENTREZID"
-  suppressMessages(suppressWarnings(
-    probes <- try(head(AnnotationDbi::keys(orgdb, keytype = keytype0), n))
-  ))
-  if ("try-error" %in% class(probes)) {
-    keytype0 <- setdiff(keytypes, "ENTREZID")[1]
-    probes <- try(head(AnnotationDbi::keys(orgdb, keytype = keytype0), n))
-  }
-  keytype0
+##   ## example probes
+##   keytype0 <- "ENTREZID"
+##   suppressMessages(suppressWarnings(
+##     probes <- try(head(AnnotationDbi::keys(orgdb, keytype = keytype0), n))
+##   ))
+##   if ("try-error" %in% class(probes)) {
+##     keytype0 <- setdiff(keytypes, "ENTREZID")[1]
+##     probes <- try(head(AnnotationDbi::keys(orgdb, keytype = keytype0), n))
+##   }
+##   keytype0
 
-  ## Iterate over probe types
-  key_matches <- list()
-  key <- keytypes[1]
-  for (key in keytypes) {
-    ## add symbol and genename on top of key as they will be used to
-    ## count the real number of probe matches
-    probe_matches <- try(
-      suppressMessages(suppressWarnings(
-        AnnotationDbi::select(
-          orgdb,
-          keys = probes,
-          keytype = keytype0,
-          columns = key
-        )
-      )),
-      silent = TRUE
-    )
-    if (!"try-error" %in% class(probe_matches)) {
-      ## set empty character to NA, as we only count not-NA to define probe type
-      types <- probe_matches[, key]
-      types <- setdiff(types, c("", NA))
-      key_matches[[key]] <- head(types, n)
-    }
-  }
+##   ## Iterate over probe types
+##   key_matches <- list()
+##   key <- keytypes[1]
+##   for (key in keytypes) {
+##     ## add symbol and genename on top of key as they will be used to
+##     ## count the real number of probe matches
+##     probe_matches <- try(
+##       suppressMessages(suppressWarnings(
+##         AnnotationDbi::select(
+##           orgdb,
+##           keys = probes,
+##           keytype = keytype0,
+##           columns = key
+##         )
+##       )),
+##       silent = TRUE
+##     )
+##     if (!"try-error" %in% class(probe_matches)) {
+##       ## set empty character to NA, as we only count not-NA to define probe type
+##       types <- probe_matches[, key]
+##       types <- setdiff(types, c("", NA))
+##       key_matches[[key]] <- head(types, n)
+##     }
+##   }
 
-  return(key_matches)
-}
+##   return(key_matches)
+## }
 
 
 #' @title Get all species in AnnotationHub/OrgDB
@@ -1632,7 +1640,6 @@ getOrganismGO <- function(organism, use.ah = NULL, orgdb = NULL) {
   }
   
   go.gmt <- list()
-  AnnotationDbi::keytypes(orgdb)
   ont_classes <- c("BP", "CC", "MF")
   if (!"GOALL" %in% AnnotationDbi::keytypes(orgdb)) {
     message("WARNING:: missing GO annotation in database!\n")
@@ -1642,7 +1649,7 @@ getOrganismGO <- function(organism, use.ah = NULL, orgdb = NULL) {
     ont_classes <- c("BP", "CC", "MF")
     k <- "BP"
     for (k in ont_classes) {
-      gene.column <- intersect( c("SYMBOL","GENENAME","MGI","ALIAS"), columns(orgdb))
+      gene.column <- intersect( c("SYMBOL","GENENAME","MGI","ALIAS"), AnnotationDbi::columns(orgdb))
       gene.column <- head(gene.column,1)
       if(length(gene.column)>0) {
         suppressMessages(suppressWarnings(
@@ -1662,7 +1669,7 @@ getOrganismGO <- function(organism, use.ah = NULL, orgdb = NULL) {
         ## get GO title
         sets <- sets[which(names(sets) %in% AnnotationDbi::keys(GO.db::GOTERM))]
         sets <- lapply(sets, function(s) unique(s))
-        go <- sapply(GO.db::GOTERM[names(sets)], Term)
+        go <- sapply(GO.db::GOTERM[names(sets)], AnnotationDbi::Term)
         new_names <- paste0("GO_", k, ":", go, " (", sub("GO:", "GO_", names(sets)), ")")
         names(sets) <- new_names
         
@@ -1742,7 +1749,7 @@ getGeneAnnotation.ORTHOGENE <- function(
 
     df$symbol <- gene.out$name
     df$gene_title <- sub(" \\[.*", "", gene.out$description)
-    df$ortholog <- getHumanOrtholog(organism, gene.out$name)$human
+    df$human_ortholog <- getHumanOrtholog(organism, gene.out$name)$human
     df$uniprot <- uniprot
     df$source <- "gprofiler2"
   }
