@@ -10,18 +10,19 @@
 
 #' @title pgx.getGEOseries
 #' @description Download and process GEO dataset
-#' @param id GEO accession
+#' @param accession GEO accession
 #' @param archs.h5 Path to ARCHS4 HDF5 file containing GEO data
 #' @return List containing processed counts, sample metadata, and genes
 #' @details Downloads GEO accession ID data. First checks if the data is
 #' in ARCHS4. If not, it tries to get from GEO. Ultimately, it checks if
 #' it is in recount. Counts and sample matrices are aligned.
 #' @export
-pgx.getGEOseries <- function(id,
+pgx.getGEOseries <- function(accession,
                              archs.h5 = "human_matrix.h5",
                              get.info = TRUE
                              ) {
 
+  id <- accession
   is.valid.id <- is.GEO.id.valid(id)
   if (!is.valid.id) stop("[pgx.getGEOseries] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
@@ -32,7 +33,7 @@ pgx.getGEOseries <- function(id,
   source <- geo[["source"]]
   counts <- geo[["expr"]]
   if (is.null(counts)) {
-    message("[pgx.getGEOseries] WARNING:", id, " not found in GEO, recount, ArrayExpress. Exiting.\n")
+    message("[pgx.getGEOseries] WARNING:", id, " not found in GEO, recount, ArrayExpress.\n")
     return(NULL)
   }
 
@@ -100,38 +101,43 @@ pgx.getGEOcounts <- function(id, archs.h5) {
   if (!is.valid.id) stop("[pgx.getGEOcounts] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
 
-  expr=NULL; src=""
+  expr = NULL; meta = NULL; source = "";
   
   if (!is.null(archs.h5) && is.null(expr)) {
     message("[pgx.getGEOcounts]: pgx.getGEOcounts.archs4...")
     expr <- pgx.getGEOcounts.archs4(id, archs.h5)
-    if (!is.null(expr)) src <- "ARCHS4"
+    if (!is.null(expr)) source <- "ARCHS4"
   }
 
   if (is.null(expr)) {
     message("[pgx.getGEOcounts]: pgx.getGEOcounts.GEOquery...")
     expr <- pgx.getGEOcounts.GEOquery(accession = id)
-    if (!is.null(expr)) src <- "GEO"
+    if (!is.null(expr)) source <- "GEO"
   }
 
   if (is.null(expr)) {
     message("[pgx.getGEOcounts]: pgx.getGEOcounts.recount...")
     expr <- pgx.getGEOcounts.recount(accession = id)
-    if (!is.null(expr)) src <- "recount"
+    if (!is.null(expr)) source <- "recount"
   }
 
   if (is.null(expr)) {
     message("[pgx.getGEOcounts]: pgx.getGEOcounts.arrayexpress...")
-    expr <- pgx.getArrayExpress.data(accession = id)
-    if (!is.null(expr)) src <- "ArrayExpress"
+    ae.data <- pgx.getArrayExpress.data(accession = id)
+    if (!is.null(ae.data)) {
+      expr <- ae.data[["expr"]]
+      meta <- ae.data[["samples"]]
+      source <- "ArrayExpress"
+    }
   }
 
   if (is.null(expr)) {
     cat("WARNING:: Could not retrieve dataset. Please download manually.\n")
     return(NULL)
   }
-  
-  return(list(expr = expr, source = src))
+
+  LL <- list(expr = expr, samples = meta, source = source)
+  return(LL)
 
 }
 
@@ -224,8 +230,9 @@ pgx.getGEOcounts.archs4 <- function(id, h5.file) {
 #' by summing in the linear scale.
 #' Vignette recount-quickstart.html
 #' @export
-pgx.getGEOcounts.recount <- function(accession = id) {
+pgx.getGEOcounts.recount <- function(accession) {
 
+  id <- accession
   is.valid.id <- is.GEO.id.valid(id) 
   if (!is.valid.id) stop("[pgx.getGEOcounts.recount] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
@@ -279,15 +286,16 @@ pgx.getGEOcounts.recount <- function(accession = id) {
 #' It detects log2-scale and convert to linear.
 #' It also removes duplicated genes by summing in the linear scale
 #' @export
-pgx.getGEOcounts.GEOquery <- function(accession = id) {
-  
+pgx.getGEOcounts.GEOquery <- function(accession) {
+
+  id <- accession
   is.valid.id <- is.GEO.id.valid(id) 
   if (!is.valid.id) stop("[pgx.getGEOcounts.GEOquery] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
 
   gse <- try(GEOquery::getGEO(id, GSEMatrix = TRUE, getGPL = TRUE), silent = TRUE)
   if (inherits(gse, "try-error")) {
-    message("[pgx.getGEOcounts.GEOquery] Error: getGEO failed to retrieve ", id, "\n")
+    message("[pgx.getGEOcounts.GEOquery] getGEO failed to retrieve ", id, "\n")
     return(NULL)
   }
 
@@ -382,17 +390,18 @@ pgx.getGEOcounts.GEOquery <- function(accession = id) {
 #' accession ID using the arrayExpress R package. It downloads the counts and
 #' metadata. It detects log2-scale and convert to linear.
 #' @export
-pgx.getArrayExpress.data <- function(accession = ID) {
+pgx.getArrayExpress.data <- function(accession) {
 
-  valid.ID <- is.GEO.id.valid(ID)
+  id <- accession
+  valid.ID <- is.GEO.id.valid(id)
   if(!valid.ID) {
     message("[pgx.getArrayExpress.data]: No valid ArrayExpress accession ID")
     return(NULL)
   }
 
-  ae.data <- try(ArrayExpress::ArrayExpress(accession = ID), silent = TRUE)
+  ae.data <- try(ArrayExpress::ArrayExpress(id), silent = TRUE)
   if (inherits(ae.data, "try-error")) {
-    message("[pgx.getArrayExpress.data] Error: could not retrieve ", ID, " from ArrayExpress. Exiting.\n")
+    message("[pgx.getArrayExpress.data] Could not retrieve ", id, " from ArrayExpress\n")
     return(NULL)
   }
 
@@ -637,7 +646,8 @@ pgx.getGEOmetadata.fromEset.helper <- function(eset) {
 #' @return Boolean
 #' @details Checks whether GEO accession ID is alphanumeric as per convention. 
 #' @export
-is.GEO.id.valid <- function(id) {
+is.GEO.id.valid <- function(accession) {
+  id <- accession
   is.valid <- TRUE
   if (is.null(id) || id == "" || !grepl("[A-Za-z]",id) || !grepl("[0-9]",id))
     is.valid <- FALSE
