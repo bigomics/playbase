@@ -32,15 +32,18 @@ pgx.getGEOseries <- function(id,
   source <- geo[["source"]]
   counts <- geo[["expr"]]
   if (is.null(counts)) {
-    message("[pgx.getGEOseries] WARNING:", id, " not found in archs4, recount, GEO. Exiting.\n")
+    message("[pgx.getGEOseries] WARNING:", id, " not found in GEO, recount, ArrayExpress. Exiting.\n")
     return(NULL)
   }
 
-  ## get metadata
-  meta <- pgx.getGEOmetadata(id)
-  if (is.null(meta))
-    message("[pgx.getGEOseries] WARNING: sample metadata not retrieved from GEO.")
-  
+  meta <- NULL
+  if (source == "ArrayExpress") {
+    meta <- geo[["samples"]]
+  } else {
+    meta <- pgx.getGEOmetadata(id)
+  }
+  if (is.null(meta)) message("[pgx.getGEOseries] WARNING: Metadata not retrieved.")
+
   ## conform matrices
   if (!is.null(meta)) {
     samples <- intersect(rownames(meta), colnames(counts))
@@ -48,7 +51,7 @@ pgx.getGEOseries <- function(id,
       meta <- meta[samples, , drop = FALSE]
       counts <- counts[, samples, drop = FALSE]
     } else {
-      message("[pgx.getGEOseries] WARNING: no shared samples between counts and metadata.")
+      message("[pgx.getGEOseries] WARNING: No shared samples between counts and metadata.")
     }
   }
 
@@ -79,8 +82,8 @@ pgx.getGEOseries <- function(id,
   #  }
   #}
 
-  return(list(counts = counts, samples = meta,
-    info = info, source = source))
+  LL <- list(counts = counts, samples = meta, info = info, source = source)
+  return(LL)
 
 }
 
@@ -107,19 +110,24 @@ pgx.getGEOcounts <- function(id, archs.h5) {
 
   if (is.null(expr)) {
     message("[pgx.getGEOcounts]: pgx.getGEOcounts.GEOquery...")
-    expr <- pgx.getGEOcounts.GEOquery(id)
+    expr <- pgx.getGEOcounts.GEOquery(accession = id)
     if (!is.null(expr)) src <- "GEO"
   }
 
   if (is.null(expr)) {
     message("[pgx.getGEOcounts]: pgx.getGEOcounts.recount...")
-    expr <- pgx.getGEOcounts.recount(id)
+    expr <- pgx.getGEOcounts.recount(accession = id)
     if (!is.null(expr)) src <- "recount"
   }
 
+  if (is.null(expr)) {
+    message("[pgx.getGEOcounts]: pgx.getGEOcounts.arrayexpress...")
+    expr <- pgx.getArrayExpress.data(accession = id)
+    if (!is.null(expr)) src <- "ArrayExpress"
+  }
 
   if (is.null(expr)) {
-    cat("WARNING:: Could not get GEO expression. please download manually.\n")
+    cat("WARNING:: Could not retrieve dataset. Please download manually.\n")
     return(NULL)
   }
   
@@ -216,7 +224,7 @@ pgx.getGEOcounts.archs4 <- function(id, h5.file) {
 #' by summing in the linear scale.
 #' Vignette recount-quickstart.html
 #' @export
-pgx.getGEOcounts.recount <- function(id) {
+pgx.getGEOcounts.recount <- function(accession = id) {
 
   is.valid.id <- is.GEO.id.valid(id) 
   if (!is.valid.id) stop("[pgx.getGEOcounts.recount] FATAL: ID is invalid. Exiting.")
@@ -271,7 +279,7 @@ pgx.getGEOcounts.recount <- function(id) {
 #' It detects log2-scale and convert to linear.
 #' It also removes duplicated genes by summing in the linear scale
 #' @export
-pgx.getGEOcounts.GEOquery <- function(id) {
+pgx.getGEOcounts.GEOquery <- function(accession = id) {
   
   is.valid.id <- is.GEO.id.valid(id) 
   if (!is.valid.id) stop("[pgx.getGEOcounts.GEOquery] FATAL: ID is invalid. Exiting.")
@@ -369,6 +377,64 @@ pgx.getGEOcounts.GEOquery <- function(id) {
 
 }
 
+
+#' @describeIn pgx.getArrayExpress.data retrieves expression count data for a
+#' accession ID using the arrayExpress R package. It downloads the counts and
+#' metadata. It detects log2-scale and convert to linear.
+#' @export
+pgx.getArrayExpress.data <- function(accession = ID) {
+
+  valid.ID <- is.GEO.id.valid(ID)
+  if(!valid.ID) {
+    message("[pgx.getArrayExpress.data]: No valid ArrayExpress accession ID")
+    return(NULL)
+  }
+
+  ae.data <- try(ArrayExpress::ArrayExpress(accession = ID), silent = TRUE)
+  if (inherits(ae.data, "try-error")) {
+    message("[pgx.getArrayExpress.data] Error: could not retrieve ", ID, " from ArrayExpress. Exiting.\n")
+    return(NULL)
+  }
+
+  counts <- Biobase::exprs(ae.data)
+  meta <- Biobase::pData(ae.data)
+
+  features <- rownames(Biobase::fData(ae.data))
+  if (length(features) == nrow(counts)) rownames(counts) <- features
+
+  ## has.fdata <- !is.null(Biobase::fData(eset)) && NCOL(Biobase::fData(eset)) > 0
+  ## if (has.fdata) {
+  ##   fdata <- Biobase::fData(eset)
+  ## } else {
+  ##   gpl.annot <- GEOquery::getGEO(eset@annotation)
+  ##   fdata <- GEOquery::Table(gpl.annot)
+  ## }
+  ## if ("ID" %in% colnames(fdata)) {
+  ##   cm <- intersect(rownames(ex), as.character(fdata$ID))
+  ##   jj <- match(cm, as.character(fdata$ID))
+  ##   fdata <- fdata[jj, , drop = FALSE]
+  ##   rownames(fdata) <- cm
+  ##   fdata <- fdata[, colnames(fdata) != "ID"]
+  ##   ex <- ex[cm, , drop = FALSE]
+  ## } else {
+  ##   cm <- intersect(rownames(ex), rownames(fdata))
+  ##   fdata <- fdata[cm, , drop = FALSE]
+  ##   ex <- ex[cm, , drop = FALSE]
+  ## }
+  
+  ## perform linear transformation if appropriate
+  qq <- c(0., 0.25, 0.5, 0.75, 0.99, 1.0)
+  qx <- as.numeric(stats::quantile(counts, qq, na.rm = T))
+  is.count <- (qx[5] > 100) || (qx[6] - qx[1] > 50 && qx[2] > 0) ||
+    (qx[2] > 0 && qx[2] < 1 && qx[4] > 1 && qx[4] < 2)
+  if (!is.count) counts <- 2 ** counts
+
+  LL <- list(expr = counts, samples = meta, source = "ArrayExpress")
+  rm(ae.data, counts, features, meta, qq, qx)
+
+  return(LL)
+
+}
 
 ## -------------------------------------------------------------------------------------
 ## Query GEO metadata
@@ -577,7 +643,6 @@ is.GEO.id.valid <- function(id) {
     is.valid <- FALSE
   return(is.valid)
 }
-
 
 #' Extract phenotype data field from ExpressionSet
 #' @param eset ExpressionSet object
