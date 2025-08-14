@@ -708,6 +708,7 @@ sigdb.getConnectivityMatrix <- function(sigdb, select = NULL, genes = NULL,
       length(rowidx), " x ", length(colidx), ")"
     )
     suppressWarnings(X <- as.matrix(tx[rowidx, colidx]))
+    X[X == -999] <- NA
   } else {
     cat("[getConnectivityMatrix] WARNING: could not retrieve matrix\n")
   }
