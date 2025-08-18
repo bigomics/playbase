@@ -48,11 +48,25 @@ pgx.getGEOseries <- function(accession,
   ## conform matrices
   if (!is.null(meta)) {
     samples <- intersect(rownames(meta), colnames(counts))
-    if (length(samples) > 0) {
+    if (length(samples) == 0) {
+      i=1
+      for(i in 1:ncol(counts)) {
+        hh1 <- grep(colnames(counts)[i], meta)
+        if (length(hh1) == 0) next
+        hh2 <- grep(colnames(counts)[i], meta[, hh1])
+        if (length(hh2) == 0) next
+        colnames(counts)[i] <- rownames(meta)[hh2]
+      }
+      samples <- intersect(rownames(meta), colnames(counts))
+      if (length(samples) == 0) {
+        message("[pgx.getGEOseries] WARNING: No shared samples between counts and metadata.")
+      } else {
+        meta <- meta[samples, , drop = FALSE]
+        counts <- counts[, samples, drop = FALSE]
+      }
+    } else {
       meta <- meta[samples, , drop = FALSE]
       counts <- counts[, samples, drop = FALSE]
-    } else {
-      message("[pgx.getGEOseries] WARNING: No shared samples between counts and metadata.")
     }
   }
 
@@ -315,26 +329,27 @@ pgx.getGEOcounts.GEOquery <- function(accession) {
       csvfile <- which(lapply(sfiles, function(x) grep(".csv", x)) > 0)
       tarfile <- which(lapply(sfiles, function(x) grep(".tar", x)) > 0) ## TO DO....
       if (any(csvfile)) {
-        local_file <- strsplit(sfiles[csvfile], "/")[[1]]
-        local_file <- local_file[length(local_file)]
-        url <- sfiles[csvfile]
-        destfile <- paste0("~/", local_file)
-        dd <- try(download.file(url = url, destfile = destfile, mode = "wb"), silent = TRUE)
+        file.ext <- tools::file_ext(sfiles[csvfile])
+        ext <- ".csv"
+        if (tools::file_ext(sfiles[csvfile]) == "gz") ext <- ".csv.gz"
+        destfile <- tempfile(fileext = ext)
+        dd <- try(download.file(url = sfiles[csvfile], destfile = destfile), silent = TRUE)
         if (inherits(dd, "try-error")) {
           message("[pgx.getGEOcounts.GEOquery] 1st attempt in downloading supp file failed. Trying again.\n")
-          dd <- try(download.file(url = url, destfile = destfile, mode = "wb"), silent = TRUE)
+          dd <- try(download.file(url = sfiles[csvfile], destfile = destfile), silent = TRUE)
           if (inherits(dd, "try-error")) {
             message("[pgx.getGEOcounts.GEOquery] Error in downloading supp file: ", url, ". Exiting \n")
             return(NULL)
           }
         }
-        is.compressed <- length(grep("*.gz", local_file)) > 0
-        local_file1 <- NULL
-        if (is.compressed) local_file1 <- sub(".gz", "", local_file)
-        cc1 <- base::file.exists(paste0("~/", local_file1))
-        if (!cc1) R.utils::gunzip(paste0("~/", local_file), remove = TRUE)
-        counts <- playbase::read_counts(paste0("~/", local_file1))        
-        base::file.remove(paste0("~/", local_file1))
+        file <- destfile
+        if (ext == ".csv.gz") {
+          R.utils::gunzip(destfile, remove = TRUE)
+          file <- gsub(".gz", "", destfile) 
+        }
+        counts <- playbase::read_counts(file)
+        dim(counts); counts[1:4, 1:4]
+        base::file.remove(file)
         return(counts)
       }
     } else {
