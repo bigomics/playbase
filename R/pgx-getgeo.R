@@ -95,8 +95,9 @@ pgx.getGEOseries <- function(accession,
 #' @param id GEO accession ID.
 #' @param archs.h5 Path to archs.h5 dataset.
 #' @export
-pgx.getGEOcounts <- function(id, archs.h5) {
+pgx.getGEOcounts <- function(accession, archs.h5) {
 
+  id <- accession
   is.valid.id <- is.GEO.id.valid(id) 
   if (!is.valid.id) stop("[pgx.getGEOcounts] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
@@ -144,8 +145,9 @@ pgx.getGEOcounts <- function(id, archs.h5) {
 #' @describeIn pgx.getGEOmetadata Download and extract the metadata from a GEO ID.
 #' It attemtps without GSEMatrix first, and then with GSEMatrix.
 #' @export
-pgx.getGEOmetadata <- function(id) {
+pgx.getGEOmetadata <- function(accession) {
 
+  id <- accession
   is.valid.id <- is.GEO.id.valid(id) 
   if (!is.valid.id) stop("[pgx.getGEOmetadata] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
@@ -299,17 +301,46 @@ pgx.getGEOcounts.GEOquery <- function(accession) {
     return(NULL)
   }
 
-  require(Biobase)
+  supp_file <- NULL
   has.expr <- sapply(gse, function(x) nrow(Biobase::exprs(x)) > 0)
-  
   if (any(has.expr)) {
     gse <- gse[which(has.expr)]    
   } else {
     message("[pgx.getGEOcounts.GEOquery] WARNING: no data found in ", id, " from GEO.\n")
     supp_file <- sapply(gse, function(g) g@experimentData@other$supplementary_file)
-    if (class(supp_file) == "character")
-      message("Supplementary file available: ", paste(supp_file, collapse = " "), "\n")
-    return(NULL)
+    supp_file <- unname(supp_file[[1]])
+    if (!is.null(supp_file)) {
+      hh <- grep("\n", supp_file)
+      if (length(hh)>0) sfiles <- strsplit(supp_file, "\n")[[1]]
+      csvfile <- which(lapply(sfiles, function(x) grep(".csv", x)) > 0)
+      tarfile <- which(lapply(sfiles, function(x) grep(".tar", x)) > 0) ## TO DO....
+      if (any(csvfile)) {
+        local_file <- strsplit(sfiles[csvfile], "/")[[1]]
+        local_file <- local_file[length(local_file)]
+        url <- sfiles[csvfile]
+        destfile <- paste0("~/", local_file)
+        dd <- try(download.file(url = url, destfile = destfile, mode = "wb"), silent = TRUE)
+        if (inherits(dd, "try-error")) {
+          message("[pgx.getGEOcounts.GEOquery] 1st attempt in downloading supp file failed. Trying again.\n")
+          dd <- try(download.file(url = url, destfile = destfile, mode = "wb"), silent = TRUE)
+          if (inherits(dd, "try-error")) {
+            message("[pgx.getGEOcounts.GEOquery] Error in downloading supp file: ", url, ". Exiting \n")
+            return(NULL)
+          }
+        }
+        is.compressed <- length(grep("*.gz", local_file)) > 0
+        local_file1 <- NULL
+        if (is.compressed) local_file1 <- sub(".gz", "", local_file)
+        cc1 <- base::file.exists(paste0("~/", local_file1))
+        if (!cc1) R.utils::gunzip(paste0("~/", local_file), remove = TRUE)
+        counts <- playbase::read_counts(paste0("~/", local_file1))        
+        base::file.remove(paste0("~/", local_file1))
+        return(counts)
+      }
+    } else {
+      message("[pgx.getGEOcounts.GEOquery] getGEO failed to retrieve ", id, "\n")
+      return(NULL)
+    }
   }
 
   ## select preferred platform is multiple exists
