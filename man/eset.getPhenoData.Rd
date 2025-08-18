@@ -2,13 +2,10 @@
 % Please edit documentation in R/pgx-getgeo.R
 \name{eset.getPhenoData}
 \alias{eset.getPhenoData}
-\alias{title2pheno}
 \alias{eset.parsePhenoFromTitle}
 \title{Extract phenotype data field from ExpressionSet}
 \usage{
 eset.getPhenoData(eset, field)
-
-title2pheno(title, split = NULL, trim = TRUE, summarize = TRUE)
 
 eset.parsePhenoFromTitle(title, split = NULL)
 }
@@ -16,14 +13,6 @@ eset.parsePhenoFromTitle(title, split = NULL)
 \item{eset}{ExpressionSet object}
 
 \item{field}{Character string specifying phenotype data field name}
-
-\item{title}{character vector with the titles}
-
-\item{split}{delimiter character to split on `c(",", ";", "\\|", "_", " ")`.}
-
-\item{trim}{trim leading and trailing whitespace from each term}
-
-\item{summarize}{summarize the terms by counting the number of occurrences of each term}
 }
 \value{
 Vector of values for the specified field
@@ -32,16 +21,13 @@ Vector of values for the specified field
 Extract phenotype data field from ExpressionSet
 }
 \details{
-This function extracts a specific phenotype data field from an ExpressionSet object.
+Extracts a specific phenotype data field from an ExpressionSet object.
 The \code{field} parameter specifies the phenotype data column name to extract.
-
-The phenotype data pData slot is extracted from the ExpressionSet, and the specified
+The phenotype data pData slot is extracted from the ExpressionSet; the specified
 field is returned as a vector.
 }
 \section{Functions}{
 \itemize{
-\item \code{title2pheno()}: Extracts sample phenotype terms from GEO dataset titles by splitting on a delimiter.
-
 \item \code{eset.parsePhenoFromTitle()}: Phenotype data from the title of an
 ExpressionSet object by splitting the title on a specified delimiter and guessing column names.
 
