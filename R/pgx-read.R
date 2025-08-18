@@ -184,10 +184,7 @@ detect_delim <- function(file, delims = c(",", "\t", " ", "|", ":", ";")) {
     }
   }
   if (top_idx == 0) {
-    stop(glue::glue('
-        Could not guess the delimiter.\n
-        {silver("Use `vroom(delim =)` to specify one explicitly.")}
-        '), call. = FALSE)
+    return(",") # default to comma
   }
 
   delims[[top_idx]]
