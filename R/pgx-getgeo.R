@@ -55,7 +55,7 @@ pgx.getGEOseries <- function(accession,
         if (length(hh1) == 0) next
         hh2 <- grep(colnames(counts)[i], meta[, hh1])
         if (length(hh2) == 0) next
-        colnames(counts)[i] <- rownames(meta)[hh2]
+        colnames(counts)[i] <- unique(rownames(meta)[hh2])[1]
       }
       samples <- intersect(rownames(meta), colnames(counts))
       if (length(samples) == 0) {
