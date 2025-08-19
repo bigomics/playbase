@@ -363,7 +363,7 @@ pgx.getGEOcounts.GEOquery <- function(accession) {
   for (k in 1:length(gse)) {
 
     eset <- gse[[k]]
-    ex <- exprs(eset)
+    ex <- Biobase::exprs(eset)
     if (ncol(ex) <= 3) {
       message("[pgx.getGEOcounts.GEOquery] WARNING: ", id, " contains <= 3 samples. Skipping.\n")
       next()
@@ -435,6 +435,8 @@ pgx.getGEOcounts.GEOquery <- function(accession) {
 #' @describeIn pgx.getArrayExpress.data retrieves expression count data for a
 #' accession ID using the arrayExpress R package. It downloads the counts and
 #' metadata. It detects log2-scale and convert to linear.
+#' \name {pgx.getArrayExpress.data}
+#' \title {Get ArrayExpress Data}
 #' @export
 pgx.getArrayExpress.data <- function(accession) {
 
