@@ -2319,7 +2319,7 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
   dtype <- tolower(dtype)
   dtype <- ifelse(grepl("ensembl|symbol|hugo|gene|hgnc", dtype), "gx", dtype)
   dtype <- ifelse(grepl("uniprot|protein", dtype), "px", dtype)
-  dtype <- ifelse(grepl("chebi|hmdb|kegg|pubchem|lipid", dtype), "mx", dtype)
+  dtype <- ifelse(grepl("chebi|hmdb|kegg|pubchem|lipid|refmet", dtype), "mx", dtype)
   table(dtype)
   dbg("[getMultiOmicsProbeAnnotation] dtypes =", unique(dtype))
 

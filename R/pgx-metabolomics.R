@@ -176,12 +176,12 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
 #' @export
 getMetaboliteAnnotation <- function(probes,
                                     db = c("lipids","refmet","playdata","annothub"),
-                                    extra_annot = FALSE,
+                                    extra_annot = TRUE,
                                     annot_table = NULL,
-                                    prefix.symbol = FALSE,
-                                    add_title_details = FALSE) {
+                                    prefix.symbol = FALSE
+                                    ) {
 
-  #extra_annot=FALSE;annot_table=NULL;prefix.symbol=FALSE;add_title_details=FALSE;  
+  ##extra_annot=FALSE;annot_table=NULL;prefix.symbol=FALSE;
 
   orig.probes <- probes
 
@@ -223,7 +223,8 @@ getMetaboliteAnnotation <- function(probes,
     message("WARNING duplicated probes. result will not match length")
     probes <- probes[!duplicated(probes)]
   }
-  probes[probes %in% c("", "-", "NA")] <- NA
+
+  probes[probes %in% c("", "-", "NA",NA)] <- '-'
   if (any(is.na(probes))) {
     message("WARNING NA probes. result will not match length")
     probes <- probes[!is.na(probes)]
@@ -373,7 +374,6 @@ getMetaboliteAnnotation <- function(probes,
     }
 
   } ## end of for db
-
   
   ## Harmonize lipid class names. Different databases have different
   ## namings.
@@ -398,6 +398,8 @@ getMetaboliteAnnotation <- function(probes,
   )
   rownames(df) <- as.character(probes)
 
+  dim(df)
+  
   if(extra_annot) {
     extra_cols <- setdiff(colnames(metadata),colnames(df))
     extra_cols <- setdiff(extra_cols, c("symbol","name","source","feature"))
@@ -407,7 +409,11 @@ getMetaboliteAnnotation <- function(probes,
 
   ## add ID reference table. Need rethink METABOLITE_ID is not always
   ## complete.
-  idtable <- mx.get_metabolite_mapping(probes, method=c("refmet","playdata","annhub")) 
+  message("Creating ID conversion (mapping) table...")
+  idtable <- mx.get_metabolite_mapping(
+    probes,
+    method=c("refmet","playdata","annhub")
+  ) 
   df <- cbind(df, idtable)   
 
   ## For metabolomics we use any 'best' ID as symbol. Not only CHEBI
@@ -436,16 +442,24 @@ getMetaboliteAnnotation <- function(probes,
 
   ## Replace/add title and definition if we have more info in our
   ## METABOLITE_METADATA.
+  message("Adding extra names and definitions...")
   M <- playdata::METABOLITE_METADATA
   chebi_id <- trimws(df$CHEBI_ID)
   M <- M[match(chebi_id,M$ID),]
   ii <- which(!is.na(M$name))
+  same.name <- which(df$gene_title[ii] == M$name[ii])
+  if(length(same.name)) {
+    ## if names are same, discard first
+    jj <- ii[same.name]
+    df$gene_title[jj] <- '-'
+  }
   df$gene_title[ii] <- ifelse(
     df$gene_title[ii] %in% c(NA,'NA','','-'),
     M$name[ii],
     paste(df$gene_title[ii], M$name[ii], sep=" | ")
   )
-  df$gene_title[df$gene_title %in% c(NA,'NA','','-')] <- '-'
+  jj <- which(df$gene_title %in% c(NA,'NA','','-'))  
+  if(length(jj)) df$gene_title[jj] <- '-'
   
   ii <- which(!is.na(M$definition))
   df$definition[ii] <- ifelse(
@@ -453,11 +467,11 @@ getMetaboliteAnnotation <- function(probes,
     M$definition[ii],
     paste(df$definition[ii], M$definition[ii], sep=". ")
   )
-  df$definition[df$definition %in% c(NA,'NA','','-')] <- '-'
+  jj <- which(df$definition %in% c(NA,'NA','','-'))
+  if(length(jj)) df$definition[jj] <- '-'
   
   ## Let's annotate the title with extra info
-  add_title_details=TRUE
-  if(add_title_details) {
+  if(extra_annot) {
     details <- paste0("(class=",df$sub_class,
       ";formula=",trimws(df$formula),";mass=",df$exactmass, ")")
     df$definition <- paste(df$definition, details)
@@ -483,7 +497,10 @@ getMetaboliteAnnotation <- function(probes,
   }
 
   ## conform empty cells
-  df[df %in% c(NA,'NA','','-') ] <- '-'
+  for(k in colnames(df)) {
+    jj <- which(df[[k]] %in% c(NA,'NA','','-'))
+    if(length(jj)) df[[k]][jj] <- '-'
+  }
 
   ## cleanup
   char.cols <- which(sapply(df,class) == "character")
@@ -1123,6 +1140,10 @@ map2symbol <- function(M, annot, target.symbol=NULL) {
   names(idx) <- id
   jj <- match(idx, symbol.map[,1])
   ii <- which(!is.na(jj))
+  if(length(ii)==0) {
+    message("WARNING: no synonyms match input probes")
+    return(NULL)
+  }
   M1 <- M[ii,]
   matched.symbol <- symbol.map[jj[ii],2]
   rownames(M1) <- matched.symbol
@@ -1150,19 +1171,21 @@ mx.create_metabolite_sets <- function(annot, gmin=0, metmin=5,
   orig.symbol <- annot$symbol
   ANNOT_SYMBOL <- mx.prefix_id(annot$symbol)
   names(orig.symbol) <- ANNOT_SYMBOL
-    
+
+  ## This uses the genesets/pathways from playdata::MSETxMETABOLITE
+  ## these were compiled using the graphite R package.
   if(TRUE) {
     M <- Matrix::t(playdata::MSETxMETABOLITE)
     M1 <- map2symbol(M, annot, target.symbol=ANNOT_SYMBOL) 
-    gmt1 <- mat2gmt(M1)
-    names(gmt1) <- sub("^METABOLITE:","METABOLITE_PATHWAY:",names(gmt1))
-    if(length(gmt1)) {
+    if(!is.null(M1) && nrow(M1) && ncol(M1) ) {
+      gmt1 <- mat2gmt(M1)
+      names(gmt1) <- sub("^METABOLITE:","METABOLITE_PATHWAY:",names(gmt1))
       message("[create_metabolite_sets] adding ",length(gmt1)," sets from MSETxMETABOLITE")
       gmt <- c(gmt, gmt1)
     }
   }
     
-  ## Create gene sets from metabolite class
+  ## Create class sets from metabolite class annotation.
   if (any(grepl("_class",colnames(annot)))) {
     classes <- grep("_class",colnames(annot),value=TRUE)
     classes
@@ -1184,7 +1207,9 @@ mx.create_metabolite_sets <- function(annot, gmin=0, metmin=5,
     }
   }
 
-  ## Create genesets using RaMP
+  ## Create class/pathway/ontology sets using RaMP. Some sets are
+  ## probably duplicated from MSETxMETABOLITE as graphite also
+  ## includes reactome/wiki metabolic pathways.
   gmt2 <- ramp.get_metabolite_sets(
     id = ANNOT_SYMBOL,
     db = c("pathway","onto","class"),
