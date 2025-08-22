@@ -91,34 +91,39 @@ merge_annot_table <- function(df, df2, priority=1) {
 }
 
 
-#' Convert multi-omics probetype. Probe names *must  be prefixed with
-#' data type unless classical transcriptomics/proteomics.
+#' Get probetype annotation for organism and datatype. For multi-omics
+#' probe names must be prefixed with data type.
 #'
 #' @export
 getProbeAnnotation <- function(organism,
                                probes,
                                datatype,
-                               probetype = "",
+                               #probetype = "",
+                               probetype = NULL,
                                annot_table = NULL
                                ) {
+
+  ##probetype = NULL;annot_table=NULL
   
   if(is.null(datatype)) datatype <- "unknown"  
-  if(is.null(probetype)) probetype <- "unknown"
+  if(is.null(probetype) || probetype=="") probetype <- "unknown"
 
   unknown.organism <- (tolower(organism) %in% c("no organism","custom","unkown"))
   unknown.datatype <- (datatype %in% c("custom","unkown"))
-  unknown.probetype <- (probetype %in% c("custom","unkown"))  
+  unknown.probetype <- (probetype %in% c("custom","unkown",""))  
   annot.unknown <- unknown.organism || unknown.datatype || unknown.probetype
   annot.unknown
-
+  
   ## clean probe names
   probes <- trimws(probes)
   probes[probes=="" | is.na(probes)] <- 'NA'
   probes0 <- make_unique(probes)  ## make unique but do not clean
-#  probes <- make_unique(clean_probe_names(probes0))  ## NEED RETHINK!! really???
   if(!is.null(annot_table)) {
     rownames(annot_table) <- make_unique(rownames(annot_table))
   }
+
+  dbg("[getProbeAnnotation] organism = ", organism)
+  dbg("[getProbeAnnotation] annotating ", length(probes)," probes")
   
   genes <- NULL
   if (annot.unknown) {
@@ -126,20 +131,10 @@ getProbeAnnotation <- function(organism,
     # can handle missing genesets)
     info("[getProbeAnnotation] annotating with custom annotation")
     genes <- getCustomAnnotation2( probes0, annot_table )
-  } else if (datatype == "metabolomics") {
-    dbg("[getProbeAnnotation] annotating for metabolomics")
-    mx.check <- mx.check_mapping(
-      probes, all.db=c("playdata","annothub","refmet"), check.first = TRUE)
-    mx.check <- mean(!is.na(mx.check)) > 0.01
-    mx.check
-    if(mx.check) {
-      ## Directly annotate if probes are recognized
-      genes <- getMetaboliteAnnotation(probes, add_id=TRUE, extra_annot=TRUE,
-                                       annot_table=NULL)      
-    } else {
-      ## Fallback on custom
-      dbg("[getProbeAnnotation] WARNING: not able to map metabolomics probes")
-    }
+  } else if (datatype %in% c("metabolomics","lipidomics")) {
+    genes <- getMetaboliteAnnotation(probes, extra_annot=TRUE,
+      annot_table=NULL)
+    if(!is.null(genes)) genes$data_type <- datatype
   } else if (datatype == "multi-omics") {
     dbg("[getProbeAnnotation] annotating for multi-omics")
     genes <- getMultiOmicsProbeAnnotation(organism, probes)
@@ -153,7 +148,7 @@ getProbeAnnotation <- function(organism,
     dbg("[getProbeAnnotation] WARNING: fallback to UNKNOWN probes")
     genes <- getCustomAnnotation( probes0, custom_annot = NULL )
   }
-
+  
   ## if annot_table is provided we (priority) override our annotation
   ## and append any extra columns.
   if (!is.null(genes) && !is.null(annot_table)) {
@@ -165,16 +160,14 @@ getProbeAnnotation <- function(organism,
     genes <- merge_annot_table(genes, annot_table, priority=2) 
   }
 
+  ## ensure full dimensions
+  genes <- genes[match(probes, genes$feature),]
+
   ## restore original probe names
-  rownames(genes) <- genes$feature <- probes0
+  rownames(genes) <- probes0
 
   ## cleanup entries and reorder columns
   genes <- cleanupAnnotation(genes)
-
-#  if (all(c("ortholog", "human_ortholog") %in% colnames(genes))) {
-#    jj <- which(colnames(genes) == "ortholog")
-#    genes <- genes[, -jj, drop = FALSE]
-#  }
   
   return(genes)
 
@@ -700,6 +693,12 @@ cleanupAnnotation <- function(genes) {
   # add space after ; to conform with playbase <= 1.3.2
   genes$gene_title <- gsub(";[ ]*", "; ", genes$gene_title)
 
+  # trim whitespace
+  char.cols <- which(sapply(genes,class) == "character")
+  for(k in char.cols) {
+    genes[[k]] <- trimws(genes[[k]])
+  }
+  
   # rename protein-coding to protein_coding to confirm with playbase <= v1.3.2
   ## genes$gene_biotype <- sub("protein-coding", "protein_coding", genes$gene_biotype)
 
@@ -722,8 +721,6 @@ cleanupAnnotation <- function(genes) {
   
   genes
 }
-
-
 
 
 #' @title Custom Gene Annotation
@@ -2322,7 +2319,7 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
   dtype <- tolower(dtype)
   dtype <- ifelse(grepl("ensembl|symbol|hugo|gene|hgnc", dtype), "gx", dtype)
   dtype <- ifelse(grepl("uniprot|protein", dtype), "px", dtype)
-  dtype <- ifelse(grepl("chebi|hmdb|kegg|pubchem", dtype), "mx", dtype)
+  dtype <- ifelse(grepl("chebi|hmdb|kegg|pubchem|lipid", dtype), "mx", dtype)
   table(dtype)
   dbg("[getMultiOmicsProbeAnnotation] dtypes =", unique(dtype))
 
