@@ -2,18 +2,18 @@
 % Please edit documentation in R/pgx-annot.R
 \name{getProbeAnnotation}
 \alias{getProbeAnnotation}
-\title{Convert multi-omics probetype. Probe names *must  be prefixed with
-data type unless classical transcriptomics/proteomics.}
+\title{Get probetype annotation for organism and datatype. For multi-omics
+probe names must be prefixed with data type.}
 \usage{
 getProbeAnnotation(
   organism,
   probes,
   datatype,
-  probetype = "",
+  probetype = NULL,
   annot_table = NULL
 )
 }
 \description{
-Convert multi-omics probetype. Probe names *must  be prefixed with
-data type unless classical transcriptomics/proteomics.
+Get probetype annotation for organism and datatype. For multi-omics
+probe names must be prefixed with data type.
 }
