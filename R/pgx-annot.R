@@ -2315,16 +2315,19 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
     info("[getMultiOmicsProbeAnnotation] detected as:", dx)
     dtype <- rep(dx, length(probes))
   }
+
   table(dtype)
   dtype <- tolower(dtype)
   dtype <- ifelse(grepl("ensembl|symbol|hugo|gene|hgnc", dtype), "gx", dtype)
   dtype <- ifelse(grepl("uniprot|protein", dtype), "px", dtype)
   dtype <- ifelse(grepl("chebi|hmdb|kegg|pubchem|lipid|refmet", dtype), "mx", dtype)
   table(dtype)
-  dbg("[getMultiOmicsProbeAnnotation] dtypes =", unique(dtype))
+  dtype[!dtype %in% c("gx","px","mx")] <- "custom"
+  table(dtype)
+  dbg("[getMultiOmicsProbeAnnotation] dtypes = ", unique(dtype))
 
   ## populate with defaults
-  symbol <- toupper(sub("^[a-zA-Z]+:", "", probes))
+  symbol <- sub("^[a-zA-Z]+:", "", probes)
 
   annot <- list()
   if (any(dtype %in% c("gx", "px"))) {
@@ -2335,19 +2338,18 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
     aa$data_type <- sub(":.*", "", probes[ii])
     rownames(aa) <- probes[ii]
     aa$feature <- probes[ii]
-    annot <- c(annot, list(aa))
+    annot[['gx']] <- aa
   }
   if ("mx" %in% dtype) {
     ii <- which(dtype == "mx")
-    hh <- grep("mx:NA$", probes[ii])
-    if (any(hh)) ii <- ii[-hh]
+    #hh <- grep("^[a-zA-Z]+:NA$", probes[ii])
+    #if (length(hh)) ii <- ii[-hh]
     pp <- sub("^[a-zA-Z]+:", "", probes[ii])
     aa <- getMetaboliteAnnotation(pp)
-    head(aa)
     aa$data_type <- "mx"
     rownames(aa) <- probes[ii]
     aa$feature <- probes[ii]
-    annot <- c(annot, list(aa))
+    annot[['mx']] <- aa
   }
   if ("custom" %in% dtype) {
     ii <- which(dtype == "custom")
@@ -2357,20 +2359,29 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
     aa$data_type <- "custom"
     rownames(aa) <- probes[ii]
     aa$feature <- probes[ii]
-    annot <- c(annot, list(aa))
+    annot[['custom']] <- aa
   }
 
-  cols <- Reduce(intersect, lapply(annot, colnames))
+  ## Merge all annotation tables
+  names(annot)
+  ##cols <- Reduce(intersect, lapply(annot, colnames))
+  cols <- Reduce(union, lapply(annot, colnames))  
+  k=1
+  for(k in 1:length(annot)) {
+    missing.cols <- setdiff(cols, colnames(annot[[k]]))
+    for(m in missing.cols) annot[[k]][[m]] <- '-'
+  }
   annot <- lapply(annot, function(a) a[, cols])
   annot <- do.call(rbind, annot)
   annot <- annot[match(probes, annot$feature), ]
-  rownames(annot) <- probes
+  rownames(annot) <- make_unique(probes)
   head(annot)
 
   ## fill NA
+  symbolx <- paste0("{",symbol,"}")
   annot$human_ortholog[which(annot$human_ortholog == "")] <- NA
   annot$feature <- ifelse(is.na(annot$feature), probes, annot$feature)
-  annot$symbol <- ifelse(is.na(annot$symbol), symbol, annot$symbol)
+  annot$symbol <- ifelse(is.na(annot$symbol), symbolx, annot$symbol)
   annot$human_ortholog <- ifelse(is.na(annot$human_ortholog), symbol, annot$human_ortholog)
   annot$gene_name <- ifelse(is.na(annot$gene_name), probes, annot$gene_name)
   annot$data_type <- ifelse(is.na(annot$data_type), dtype, annot$data_type)

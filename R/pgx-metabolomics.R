@@ -181,19 +181,11 @@ getMetaboliteAnnotation <- function(probes,
                                     prefix.symbol = FALSE
                                     ) {
 
-  ##extra_annot=FALSE;annot_table=NULL;prefix.symbol=FALSE;
+  #extra_annot=FALSE;annot_table=NULL;prefix.symbol=FALSE;
 
+  ## save original probes
   orig.probes <- probes
-
-  ## strip multi-omics or datatype prefix
-  has.prefix <- all(grepl("^[A-Za-z_]+:", tolower(probes)))
-  has.prefix
-  if (has.prefix) {
-    probes <- sub("^[A-Za-z_]+:", "", probes)
-  }
-  probes <- trimws(probes)
-  names(probes) <- orig.probes
-
+  
   ## check for cross annotation table
   has.id <- FALSE
   if (!is.null(annot_table)) {
@@ -201,7 +193,7 @@ getMetaboliteAnnotation <- function(probes,
     ## best matches any column in METABOLITE_ID and takes that column
     ## as new probe names.
     annot_table <- annot_table[match(orig.probes,rownames(annot_table)),]
-    rownames(annot_table) <- orig.probes    
+    #rownames(annot_table) <- orig.probes    
     MX <- playdata::METABOLITE_ID
     id.match <- apply(annot_table, 2, function(a) {
       max(apply(MX, 2, function(m) mean(a %in% m, na.rm=TRUE)))
@@ -213,24 +205,29 @@ getMetaboliteAnnotation <- function(probes,
       id.col <- which.max(id.match)
       dbg("[getMetaboliteAnnotation] cross-annot column: ",colnames(annot_table)[id.col])
       probes <- annot_table[, id.col]
-      names(probes) <- orig.probes
     }
   }
-  has.id
 
+  ## strip multi-omics or datatype prefix
+  probes <- trimws(probes)
+  has.prefix <- all(grepl("^[A-Za-z]+:", probes))
+  has.prefix
+  if (has.prefix) {
+    probes <- sub("^[A-Za-z]+:", "", probes)
+  }
+  probes <- trimws(probes)
+  probes[probes %in% c("","-","NA",NA)] <- '-'
+  ##names(probes) <- orig.probes
+  names(orig.probes) <- probes
+
+  ## check for duplicated probes
   sum(duplicated(probes))
   if (sum(duplicated(probes))) {
-    message("WARNING duplicated probes. result will not match length")
+    message("WARNING duplicated probes. result may not match length")
     probes <- probes[!duplicated(probes)]
   }
 
-  probes[probes %in% c("", "-", "NA",NA)] <- '-'
-  if (any(is.na(probes))) {
-    message("WARNING NA probes. result will not match length")
-    probes <- probes[!is.na(probes)]
-  }
-
-  colnames(playdata::METABOLITE_METADATA)
+  #colnames(playdata::METABOLITE_METADATA)
   COLS <- c(
     "feature", "symbol", "name",
     "super_class", "main_class", "sub_class", "formula", "exactmass",
@@ -372,7 +369,6 @@ getMetaboliteAnnotation <- function(probes,
         }
       }
     }
-
   } ## end of for db
   
   ## Harmonize lipid class names. Different databases have different
@@ -397,8 +393,6 @@ getMetaboliteAnnotation <- function(probes,
     data_type = "metabolomics"
   )
   rownames(df) <- as.character(probes)
-
-  dim(df)
   
   if(extra_annot) {
     extra_cols <- setdiff(colnames(metadata),colnames(df))
@@ -481,14 +475,11 @@ getMetaboliteAnnotation <- function(probes,
   df$input_ID <- NULL
   df$mapping_ID <- NULL    
   
-  ## If an explicit ID was given in annot_table, we need to use that
-  if (has.id) {
-    ii <- match(orig.probes, names(probes))
-    df <- df[ii, ]
-    df$feature <- orig.probes
-    df$gene_name <- orig.probes
-    rownames(df) <- make_unique(orig.probes)
-  }
+  ## match original probe names
+  df <- df[ match(names(orig.probes), df$feature), ]
+  df$feature <- orig.probes
+  df$gene_name <- orig.probes
+  rownames(df) <- make_unique(orig.probes)
 
   if (extra_annot && !is.null(annot_table)) {
     extra_cols <- setdiff(colnames(annot_table),colnames(df))
