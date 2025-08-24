@@ -84,7 +84,7 @@ gmt2mat <- function(gmt, max.genes = -1, ntop = -1, sparse = TRUE,
 #'
 mat2gmt <- function(mat) {
   idx <- Matrix::which(mat != 0, arr.ind = TRUE)
-  gmt <- tapply(rownames(idx), idx[, 2], list)
+  gmt <- tapply(as.character(rownames(idx)), idx[, 2], list)
   names(gmt) <- colnames(mat)[as.integer(names(gmt))]
   gmt
 }
@@ -1078,8 +1078,10 @@ getGseaOutput <- function(path = "../analysis_v1b/output_GSEA/Th17_mut_2h_VS_mut
 gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
                         decreasing = TRUE, cex = 1, cex.main = 0.95, len.main = 40,
                         lab.line = c(0.8, 2), cex.lab = 0.85, main.line = 0.3,
+                        multiomics = FALSE,
                         xlab = "Rank in ordered dataset", res = 1200,
                         ylab = "Rank metric") {
+
   if (!is.null(names)) names(rnk) <- names
   rnk <- rnk[!is.na(rnk)]
   rnk <- rnk[order(rnk + 1e-8 * stats::rnorm(length(rnk)), decreasing = decreasing)]
@@ -1105,7 +1107,7 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
   w1 <- ifelse(length(jj) < 100, 0.7, 0.4)
   w1 <- ifelse(length(jj) < 50, 1, w1)
   col1 <- "grey10"
-  if (all(grepl("[:]", gset))) {
+  if (multiomics) {
     dtype <- sub(":.*", "", names(rnk))
     ntype <- length(unique(dtype))
     col1 <- rainbow(ntype)[factor(dtype[jj])]
