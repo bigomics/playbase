@@ -4,7 +4,7 @@
 \alias{detect_delim}
 \title{Detect delimiter of text file from header (or first line)}
 \usage{
-detect_delim(file)
+detect_delim(file, delims = c(",", "\\t", " ", "|", ":", ";"))
 }
 \description{
 Detect delimiter of text file from header (or first line)
