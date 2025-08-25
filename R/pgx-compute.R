@@ -287,7 +287,8 @@ pgx.createPGX <- function(counts,
 
   ## convert old-style contrast matrix to sample-wise labeled contrasts
   contrasts <- contrasts.convertToLabelMatrix(contrasts, samples)
-
+  contrasts <- fixContrastMatrix(contrasts)
+  
   ## ---------------------------------------------------------------------
   ## Time series
   ## 1. check if time is categorical or not.
