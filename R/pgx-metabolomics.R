@@ -441,7 +441,7 @@ getMetaboliteAnnotation <- function(probes,
   chebi_id <- trimws(df$CHEBI_ID)
   M <- M[match(chebi_id,M$ID),]
   ii <- which(!is.na(M$name))
-  same.name <- which(df$gene_title[ii] == M$name[ii])
+  same.name <- which(tolower(df$gene_title[ii]) == tolower(M$name[ii]))
   if(length(same.name)) {
     ## if names are same, discard first
     jj <- ii[same.name]
@@ -452,8 +452,12 @@ getMetaboliteAnnotation <- function(probes,
     M$name[ii],
     paste(df$gene_title[ii], M$name[ii], sep=" | ")
   )
+  ## we fill empty titles with the symbol
   jj <- which(df$gene_title %in% c(NA,'NA','','-'))  
-  if(length(jj)) df$gene_title[jj] <- '-'
+  if(length(jj)) {
+    ##df$gene_title[jj] <- '-'
+    df$gene_title[jj] <- gsub("^\\{|\\}$","",df$symbol[jj]) ## remove brackets
+  }
   
   ii <- which(!is.na(M$definition))
   df$definition[ii] <- ifelse(
