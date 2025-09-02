@@ -2,91 +2,23 @@
 % Please edit documentation in R/pgx-getgeo.R
 \name{pgx.getGEOseries}
 \alias{pgx.getGEOseries}
-\alias{pgx.getGEOcounts}
-\alias{pgx.getGeoMetadata}
-\alias{pgx.getGEOcounts.archs4}
-\alias{pgx.getGEOcounts.recount}
-\alias{pgx.getGEOcounts.GEOquery}
-\alias{pgx.getGeoExperimentInfo}
-\alias{pgx.getGeoMetadata.fromEset}
-\alias{pgx.getGeoMetadata.fromEset1}
-\alias{pgx.getGeoMetadata.fromGSM}
 \title{pgx.getGEOseries}
 \usage{
-pgx.getGEOseries(id, archs.h5 = "human_matrix.h5", convert.hugo = TRUE)
-
-pgx.getGEOcounts(id, archs.h5)
-
-pgx.getGeoMetadata(id)
-
-pgx.getGEOcounts.archs4(id, h5.file)
-
-pgx.getGEOcounts.recount(id)
-
-pgx.getGEOcounts.GEOquery(id)
-
-pgx.getGeoExperimentInfo(id)
-
-pgx.getGeoMetadata.fromEset(id)
-
-pgx.getGeoMetadata.fromEset1(eset)
-
-pgx.getGeoMetadata.fromGSM(id)
+pgx.getGEOseries(accession, archs.h5 = "human_matrix.h5", get.info = TRUE)
 }
 \arguments{
-\item{id}{GEO series ID to download}
+\item{accession}{GEO accession}
 
 \item{archs.h5}{Path to ARCHS4 HDF5 file containing GEO data}
-
-\item{convert.hugo}{Logical, convert symbols to HUGO if TRUE}
-
-\item{eset}{Eset object}
 }
 \value{
-List containing processed counts, samples, and genes
+List containing processed counts, sample metadata, and genes
 }
 \description{
 Download and process GEO dataset
 }
 \details{
-This function downloads and processes a GEO dataset specified by the ID.
-It first checks if the data is in the ARCHS4 file. If not, it retrieves it from GEO using geoquery.
-The data matrices are subset to intersecting samples, converted to HUGO symbols if specified,
-and duplicate symbols are summed.
-
-The result is a list containing the expression matrix, sample metadata, and gene symbols.
+Downloads GEO accession ID data. First checks if the data is
+in ARCHS4. If not, it tries to get from GEO. Ultimately, it checks if
+it is in recount. Counts and sample matrices are aligned.
 }
-\section{Functions}{
-\itemize{
-\item \code{pgx.getGEOcounts()}: Download and process count data from GEO into a PGX object.
-It takes a GEO accession as input, downloads the count matrix and sample metadata, processes
-it into a PGX object with gene annotation, sample info, and contrasts.
-
-\item \code{pgx.getGeoMetadata()}: Download and extract the metadata from a GEO series.
-
-\item \code{pgx.getGEOcounts.archs4()}: Downloads and extracts gene expression count
-data from a GEO series stored in an HDF5 file. It searches the HDF5 file
-metadata to find samples matching the input GEO series ID, and returns the
-count matrix for those samples.
-
-\item \code{pgx.getGEOcounts.recount()}: Downloads and processes gene-level count data for a GEO
-series from the recount database. It takes a GEO accession ID, searches
-recount, downloads the RangedSummarizedExperiment object, and returns the count matrix.
-
-\item \code{pgx.getGEOcounts.GEOquery()}: Retrieves gene expression count data for a
-specified GEO accession ID using the GEOquery package. It downloads the
-series matrix data, platform metadata, and probe annotations from GEO into
-R objects.
-
-\item \code{pgx.getGeoExperimentInfo()}: Retrieves basic experiment metadata for a GEO accession ID using GEOquery.
-
-\item \code{pgx.getGeoMetadata.fromEset()}: retrieves sample metadata from a GEO dataset by first downloading the
-GSEMatrix and then extracting the phenotype data.
-
-\item \code{pgx.getGeoMetadata.fromEset1()}: helper function that extracts the phenotype data
-from a GEOquery GSEMatrix object.
-
-\item \code{pgx.getGeoMetadata.fromGSM()}: retrieves sample metadata for a GEO sample accession
-ID by downloading the full GEO series and extracting the metadata for that sample.
-
-}}
