@@ -7004,7 +7004,7 @@ plotMultiPartiteGraph <- function(X, f, group, groups=NULL,
   }
     
   ew <- (igraph::E(gr)$weight / max(igraph::E(gr)$weight))**4
-  vx <- log(1000*igraph::page.rank(gr)$vector)
+  vx <- log(1000*igraph::page_rank(gr)$vector)
   #vx   <-  abs(y)
   vx <- (0.1+abs(vx)/max(abs(vx)))**1
   f <- f[igraph::V(gr)$name]
@@ -7198,7 +7198,7 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   max.wt <- max(ewt,na.rm=TRUE) + 1e-3
   ew <- (ewt / max.wt)**2
 
-  vx <- log(1000*igraph::page.rank(graph, weights=ewt)$vector)
+  vx <- log(1000*igraph::page_rank(graph, weights=ewt)$vector)
   #vx   <-  abs(y)
   vx <- (0.1+abs(vx)/max(abs(vx)))**1
   vcol <- c("blue2","red2")[ 1+1*(fc[vv] > 0)]
