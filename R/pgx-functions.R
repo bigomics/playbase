@@ -1482,6 +1482,7 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
                        na.rm = TRUE, unique = TRUE, keep.prefix = FALSE) {
   ## add rownames
   annot_table$rownames <- rownames(annot_table)
+  annot_table$rownames2 <- sub("^[A-Za-z]+:","",rownames(annot_table)) ## strip prefix
 
   if (is.matrix(counts) || is.data.frame(counts) || !is.null(dim(counts))) {
     type <- "matrix"
