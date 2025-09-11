@@ -21,29 +21,29 @@ pgx.getGEOseries <- function(accession,
                              archs.h5 = "human_matrix.h5",
                              get.info = TRUE
                              ) {
-
+  
   id <- accession
   is.valid.id <- is.GEO.id.valid(id)
   if (!is.valid.id) stop("[pgx.getGEOseries] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
-  
-  ## get counts from recount or GEO 
-  archs.h5 <- NULL
+
+  meta <- NULL; archs.h5 <- NULL
   geo <- pgx.getGEOcounts(id, archs.h5 = archs.h5)
   source <- geo[["source"]]
   counts <- geo[["expr"]]
+  meta <- geo[["samples"]]
   if (is.null(counts)) {
     message("[pgx.getGEOseries] WARNING:", id, " not found in GEO, recount, ArrayExpress.\n")
     return(NULL)
   }
 
-  meta <- NULL
-  if (source == "ArrayExpress") {
-    meta <- geo[["samples"]]
-  } else {
-    meta <- pgx.getGEOmetadata(id)
-  }
+  if (is.null(meta)) meta <- pgx.getGEOmetadata(id)
   if (is.null(meta)) message("[pgx.getGEOseries] WARNING: Metadata not retrieved.")
+  #if (source == "ArrayExpress") {
+  #  meta <- geo[["samples"]]
+  #} else {
+  #  meta <- pgx.getGEOmetadata(id)
+  #}
 
   ## conform matrices
   if (!is.null(meta)) {
@@ -119,15 +119,19 @@ pgx.getGEOcounts <- function(accession, archs.h5) {
   expr = NULL; meta = NULL; source = "";
   
   if (!is.null(archs.h5) && is.null(expr)) {
-    message("[pgx.getGEOcounts]: pgx.getGEOcounts.archs4...")
-    expr <- pgx.getGEOcounts.archs4(id, archs.h5)
-    if (!is.null(expr)) source <- "ARCHS4"
+     message("[pgx.getGEOcounts]: pgx.getGEOcounts.archs4...")
+     expr <- pgx.getGEOcounts.archs4(id, archs.h5)
+     if (!is.null(expr)) source <- "ARCHS4"
   }
-
+  
   if (is.null(expr)) {
     message("[pgx.getGEOcounts]: pgx.getGEOcounts.GEOquery...")
-    expr <- pgx.getGEOcounts.GEOquery(accession = id)
-    if (!is.null(expr)) source <- "GEO"
+    geo <- pgx.getGEOcounts.GEOquery(accession = id)
+    if (!is.null(geo)) {
+      expr <- geo[["expr"]]
+      meta <- geo[["meta"]]
+      source <- "GEO"
+    }
   }
 
   if (is.null(expr)) {
@@ -309,10 +313,58 @@ pgx.getGEOcounts.GEOquery <- function(accession) {
   if (!is.valid.id) stop("[pgx.getGEOcounts.GEOquery] FATAL: ID is invalid. Exiting.")
   id <- as.character(id)
 
-  gse <- try(GEOquery::getGEO(id, GSEMatrix = TRUE, getGPL = TRUE), silent = TRUE)
-  if (inherits(gse, "try-error")) {
-    message("[pgx.getGEOcounts.GEOquery] getGEO failed to retrieve ", id, "\n")
-    return(NULL)
+  meta <- NULL
+
+  gse <- try(GEOquery::getGEO(GEO = id, GSEMatrix = TRUE, getGPL = TRUE), silent = TRUE)
+  has.expr <- FALSE
+  if (!inherits(gse, "try-error"))
+    has.expr <- sapply(gse, function(x) nrow(Biobase::exprs(x)) > 0)
+
+  if (inherits(gse, "try-error") | !any(has.expr)) {
+
+    gse <- try(GEOquery::getRNASeqData(accession = id), silent = TRUE)
+    if (inherits(gse, "try-error")) {
+      message("[pgx.getGEOcounts.GEOquery] getGEO failed to retrieve ", id, "\n")
+      return(NULL)
+    }
+
+    if (class(gse) %in% "SummarizedExperiment") {
+
+      counts <- try(SummarizedExperiment::assay(gse), silent = TRUE)
+      meta <- try(as.data.frame(SummarizedExperiment::colData(gse)), silent = TRUE)
+      if (inherits(counts, "try-error")) {
+        message("[pgx.getGEOcounts.GEOquery] getGEO failed to retrieve ", id, "\n")
+        return(NULL)
+      }
+
+      features <- try(as.data.frame(SummarizedExperiment::rowData(gse)), silent = TRUE)
+      if (!inherits(features, "try-error")) {
+        jj <- which(!is.na(rownames(features)) & rownames(features) != "")
+        features <- features[jj, , drop = FALSE]
+        cm <- intersect(rownames(features), rownames(counts))
+        if (length(cm) > 0) {
+          features <- features[cm, , drop = FALSE]
+          counts <- counts [cm, , drop = FALSE]
+        }     
+        hh1 <- grepl("symbol", colnames(features), ignore.case = TRUE)
+        hh2 <- grepl("Ensembl", colnames(features), ignore.case = TRUE)
+        ff <- NULL
+        if (any(hh1)) ff <- features[, hh1]
+        if (!any(hh1) && any(hh2)) ff <- features[, hh2]
+        if (!is.null(ff)) {
+          jj <- which(is.na(ff) | ff == "")
+          if (length(jj) >0 ) ff[jj, hh] <- rownames(features)[jj]
+          rownames(counts) <- as.character(ff)
+        }
+        rm(ff, features); gc()
+      }
+
+      LL <- list(expr = counts, meta = meta)
+      rm(counts, meta); gc()
+      return(LL)
+      
+    }
+    
   }
 
   supp_file <- NULL
@@ -348,7 +400,6 @@ pgx.getGEOcounts.GEOquery <- function(accession) {
           file <- gsub(".gz", "", destfile) 
         }
         counts <- playbase::read_counts(file)
-        dim(counts); counts[1:4, 1:4]
         base::file.remove(file)
         return(counts)
       }
@@ -427,7 +478,10 @@ pgx.getGEOcounts.GEOquery <- function(accession) {
     expr <- expr.list[[1]]
   }
 
-  return(expr) ## linear intensities
+  LL <- list(expr = expr, meta = meta)
+  rm(expr, meta); gc()
+  return(LL)
+  #return(expr) ## linear intensities
 
 }
 
