@@ -41,7 +41,7 @@ gmt2mat <- function(gmt, max.genes = -1, ntop = -1, sparse = TRUE,
   if (max.genes < 0) max.genes <- length(bg)
   gg <- bg
   gg <- Matrix::head(bg, n = max.genes)
-  ##gmt <- lapply(gmt, function(s) intersect(gg, s))
+  ## gmt <- lapply(gmt, function(s) intersect(gg, s))
   kk <- unique(names(gmt))
   if (sparse) {
     D <- Matrix::Matrix(0, nrow = length(gg), ncol = length(kk), sparse = TRUE)
@@ -62,7 +62,7 @@ gmt2mat <- function(gmt, max.genes = -1, ntop = -1, sparse = TRUE,
   idx <- idx[!is.na(idx[, 1]), ]
   idx <- idx[idx[, 1] > 0, ]
   D[idx] <- 1
-  D <- D[order(-Matrix::rowSums(D != 0, na.rm = TRUE)), ,drop=FALSE]
+  D <- D[order(-Matrix::rowSums(D != 0, na.rm = TRUE)), , drop = FALSE]
   D
 }
 
@@ -1081,7 +1081,6 @@ gsea.enplot <- function(rnk, gset, names = NULL, main = NULL,
                         multiomics = FALSE,
                         xlab = "Rank in ordered dataset", res = 1200,
                         ylab = "Rank metric") {
-
   if (!is.null(names)) names(rnk) <- names
   rnk <- rnk[!is.na(rnk)]
   rnk <- rnk[order(rnk + 1e-8 * stats::rnorm(length(rnk)), decreasing = decreasing)]

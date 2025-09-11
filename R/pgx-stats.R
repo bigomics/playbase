@@ -154,36 +154,36 @@ stats.limma <- function(X, y, ref = NULL, test = c("B", "Treat"), add.avg = TRUE
 }
 
 stats.edgeR <- function(counts, y, ref = NULL, add.avg = TRUE, test = "QLF",
-                        disp.method="default", norm.method=NULL,
-                        robust=FALSE, ...) {
+                        disp.method = "default", norm.method = NULL,
+                        robust = FALSE, ...) {
   if (length(unique(y[!is.na(y)])) > 2) stop("only 2 levels allowed")
-  dge <- edgeR::DGEList(counts, group=y)
-  if(!is.null(norm.method)) dge <- edgeR::normLibSizes(dge, method=norm.method)
+  dge <- edgeR::DGEList(counts, group = y)
+  if (!is.null(norm.method)) dge <- edgeR::normLibSizes(dge, method = norm.method)
   fy <- factor(as.character(y))
   if (!is.null(ref)) fy <- relevel(fy, ref = as.character(ref))
   ref <- levels(fy)[1]
   df <- data.frame(y = fy)
-  design <- model.matrix( ~y, data = df)
-  if(test == "exact") {
-    if(disp.method=="common") {
+  design <- model.matrix(~y, data = df)
+  if (test == "exact") {
+    if (disp.method == "common") {
       dge <- edgeR::estimateCommonDisp(dge)
-    } else if(disp.method=="trended") {
+    } else if (disp.method == "trended") {
       dge <- edgeR::estimateTrendedDisp(dge)
-    } else if(disp.method=="tagwise") {
-      dge <- edgeR::estimateCommonDisp(dge) 
+    } else if (disp.method == "tagwise") {
+      dge <- edgeR::estimateCommonDisp(dge)
       dge <- edgeR::estimateTagwiseDisp(dge)
-    } else if(disp.method=="default") {
+    } else if (disp.method == "default") {
       dge <- edgeR::estimateDisp(dge)
     }
   } else {
-    if(disp.method=="common") {
+    if (disp.method == "common") {
       dge <- edgeR::estimateGLMCommonDisp(dge, design)
-    } else if(disp.method=="trended") {
+    } else if (disp.method == "trended") {
       dge <- edgeR::estimateGLMTrendedDisp(dge, design)
-    } else if(disp.method=="tagwise") {
-      dge <- edgeR::estimateGLMCommonDisp(dge, design)      
+    } else if (disp.method == "tagwise") {
+      dge <- edgeR::estimateGLMCommonDisp(dge, design)
       dge <- edgeR::estimateGLMTagwiseDisp(dge, design)
-    } else if(disp.method=="default") {
+    } else if (disp.method == "default") {
       dge <- edgeR::estimateDisp(dge, design)
     }
   }
@@ -210,7 +210,7 @@ stats.edgeR <- function(counts, y, ref = NULL, add.avg = TRUE, test = "QLF",
   top <- top[, c("logFC", "logCPM", "PValue", "FDR")]
   colnames(top) <- c("logFC", "mean", "pvalue", "qvalue")
 
-  
+
   if (add.avg) {
     cpm <- edgeR::cpm(dge, log = TRUE, prior.count = 1)
     avg <- tapply(
@@ -225,7 +225,7 @@ stats.edgeR <- function(counts, y, ref = NULL, add.avg = TRUE, test = "QLF",
   top
 }
 
-stats.DESeq2 <- function(counts, y, ref = NULL, test = "Wald", shrink=TRUE, add.avg = TRUE, ...) {
+stats.DESeq2 <- function(counts, y, ref = NULL, test = "Wald", shrink = TRUE, add.avg = TRUE, ...) {
   if (length(unique(y[!is.na(y)])) > 2) stop("only 2 levels allowed")
   fy <- factor(as.character(y))
   if (!is.null(ref)) fy <- relevel(fy, ref = as.character(ref))
@@ -252,8 +252,8 @@ stats.DESeq2 <- function(counts, y, ref = NULL, test = "Wald", shrink=TRUE, add.
   }
 
   DESeq2::resultsNames(dds)
-  if(shrink) {
-    top <- DESeq2::lfcShrink(dds, coef=2, type="normal")  ## recommended with shrinkage
+  if (shrink) {
+    top <- DESeq2::lfcShrink(dds, coef = 2, type = "normal") ## recommended with shrinkage
   } else {
     top <- DESeq2::results(dds)
   }

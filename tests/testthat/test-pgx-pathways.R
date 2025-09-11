@@ -118,7 +118,7 @@ test_that("wikipath (modern) works correctly", {
 
 test_that("wikipath (classic) works correctly", {
   skip_if(is_ci(), "Skipping WikiPathways classic tests in CI environment")
-  
+
   # Test 1: Valid WikiPathway ID and coloring node
   test_that("Valid WikiPathway ID with coloring", {
     wp <- "WP4876"

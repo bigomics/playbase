@@ -6,10 +6,10 @@
 
 
 #' Check if RefMet server is alive
-#' 
+#'
 mx.ping_refmet <- function() {
   out <- try(RefMet::refmet_metadata("Tyrosine"))
-  if("try-error" %in% class(out)) message("[mx.ping_refmet] WARNING! RefMet server is down")
+  if ("try-error" %in% class(out)) message("[mx.ping_refmet] WARNING! RefMet server is down")
   !("try-error" %in% class(out))
 }
 
@@ -23,12 +23,12 @@ mx.check_mapping <- function(probes,
   ## this goes through all databases and checks if there is a match
   src <- rep("", length(probes))
   refmet.alive <- mx.ping_refmet()
-  if(!refmet.alive && "refmet" %in% all.db) {
+  if (!refmet.alive && "refmet" %in% all.db) {
     message("WARNING: RefMet server is not alive")
-    all.db <- setdiff(all.db,"refmet")
+    all.db <- setdiff(all.db, "refmet")
   }
-  
-  for(db in all.db) {
+
+  for (db in all.db) {
     message("trying db: ", db)
     if (check.first) {
       jj <- which(src == "")
@@ -43,8 +43,8 @@ mx.check_mapping <- function(probes,
     }
   }
   src
-  src <- sub("^[+]","",src) ## remove plus sign at beginning
-  src[which(src=='')] <- NA
+  src <- sub("^[+]", "", src) ## remove plus sign at beginning
+  src[which(src == "")] <- NA
   src
 }
 
@@ -52,7 +52,7 @@ mx.check_mapping <- function(probes,
 #'
 #' @export
 
-mx.detect_probetype <- function(probes, min.match=0.2) {
+mx.detect_probetype <- function(probes, min.match = 0.2) {
   aa <- playdata::METABOLITE_ID
   probes <- setdiff(probes, c("", "-", NA))
   probes <- gsub("^[a-zA-Z]+:|[_.-].*", "", probes) ## strip any pre and postfix
@@ -66,10 +66,10 @@ mx.detect_probetype <- function(probes, min.match=0.2) {
 
   ## otherwise check RefMet
   refmet.alive <- mx.ping_refmet()
-  if(refmet.alive) {
-    map <- mx.check_mapping(probes, all.db="refmet",check.first = TRUE)
+  if (refmet.alive) {
+    map <- mx.check_mapping(probes, all.db = "refmet", check.first = TRUE)
     table(map)
-    if(mean(!is.na(map)) > min.match) {
+    if (mean(!is.na(map)) > min.match) {
       ptype <- names(which.max(table(map[!is.na(map)])))
       return(ptype)
     }
@@ -130,9 +130,9 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
   if (is.null(probe_type)) {
     probe_type <- mx.detect_probetype(probes)
   }
-  if(is.null(probe_type) || is.na(probe_type)) {
+  if (is.null(probe_type) || is.na(probe_type)) {
     message("WARNING: could not determine probe_type. Check your names.")
-    return(rep(NA,length(probes)))
+    return(rep(NA, length(probes)))
   }
   # check that probetype is valid
   annot <- playdata::METABOLITE_ID
@@ -144,22 +144,22 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
     ## if probe_type is 'long name' we convert first to ChEBI using
     ## the RefMet server, if the server is alive.
     refmet.alive <- mx.ping_refmet()
-    if(!refmet.alive) {
+    if (!refmet.alive) {
       message("WARNING: RefMet server is down. Cannot do conversion.")
-      return(rep(NA,length(probes)))      
+      return(rep(NA, length(probes)))
     }
-    res <- RefMet::refmet_map_df(probes)  ## request on API server
+    res <- RefMet::refmet_map_df(probes) ## request on API server
     probes <- res$ChEBI_ID
     probe_type <- "ChEBI"
   }
-  if(is.null(probe_type) || !probe_type %in% colnames(annot)) {
-    message("FATAL ERROR: probetype not in annot. probetype=",probe_type)
+  if (is.null(probe_type) || !probe_type %in% colnames(annot)) {
+    message("FATAL ERROR: probetype not in annot. probetype=", probe_type)
     return(NULL)
   }
 
   both.chebi <- (probe_type == "ChEBI" && target_id == "ID")
   both.hmdb <- (probe_type == "HMDB" && target_id == "HMDB")
-  if( both.chebi || both.hmdb ) {
+  if (both.chebi || both.hmdb) {
     ids <- probes
   } else {
     ii <- match(probes, annot[, probe_type])
@@ -168,17 +168,17 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
   # Make sure NA are maintained (if there are NAs on annot, they get matched to random IDs sometimes) XEM
   na.probes <- is.na(probes)
   ids[na.probes] <- NA
-  ids[ids==""] <- NA
+  ids[ids == ""] <- NA
   return(ids)
 }
 
 #'
 #'
 #' @export
-getMetaboliteAnnotation <- function(probes, add_id=FALSE, 
-                                    db = c("refmet","playdata","annothub"),
-                                    extra_annot = FALSE, annot_table = NULL ) {
-  ##add_id=TRUE;db=c("refmet","playdata","annothub") 
+getMetaboliteAnnotation <- function(probes, add_id = FALSE,
+                                    db = c("refmet", "playdata", "annothub"),
+                                    extra_annot = FALSE, annot_table = NULL) {
+  ## add_id=TRUE;db=c("refmet","playdata","annothub")
   orig.probes <- probes
 
   ## strip multi-omics prefix
@@ -196,18 +196,18 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
     ## this checks for the column in the provided annot_table that
     ## best matches any column in METABOLITE_ID and takes that column
     ## as new probe names.
-    annot_table <- annot_table[match(orig.probes,rownames(annot_table)),]
-    rownames(annot_table) <- orig.probes    
+    annot_table <- annot_table[match(orig.probes, rownames(annot_table)), ]
+    rownames(annot_table) <- orig.probes
     MX <- playdata::METABOLITE_ID
     id.match <- apply(annot_table, 2, function(a) {
-      max(apply(MX, 2, function(m) mean(a %in% m, na.rm=TRUE)))
+      max(apply(MX, 2, function(m) mean(a %in% m, na.rm = TRUE)))
     })
-    has.id <- max(id.match, na.rm=TRUE) > 0.8
+    has.id <- max(id.match, na.rm = TRUE) > 0.8
     if (has.id) {
       ## If a good cross-lookup ID is found, take that column as new
       ## probe names.
       id.col <- which.max(id.match)
-      dbg("[getMetaboliteAnnotation] cross-annot column: ",colnames(annot_table)[id.col])
+      dbg("[getMetaboliteAnnotation] cross-annot column: ", colnames(annot_table)[id.col])
       probes <- annot_table[, id.col]
       names(probes) <- orig.probes
     }
@@ -243,27 +243,29 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
 
     ## RefMet also handles metabolite/lipid long names, so this is
     ## convenient
-    if( d == "refmet" && curl::has_internet() && no.name) {
+    if (d == "refmet" && curl::has_internet() && no.name) {
       refmet.alive <- mx.ping_refmet()
-      if(!refmet.alive && "refmet" %in% db) {
+      if (!refmet.alive && "refmet" %in% db) {
         message("WARNING: RefMet server is not alive. Skipping RefMet lookup")
       } else {
         message("[getMetaboliteAnnotation] annotating with RefMet server...")
-        ii <- which(!is.na(probes) & is.na(metadata$name) )
-        if(length(ii)) {
+        ii <- which(!is.na(probes) & is.na(metadata$name))
+        if (length(ii)) {
           probes1 <- probes[ii]
-          res <- RefMet::refmet_map_df(probes1)  ## request on API server
-          res$definition <- '-'   ## fill it??
+          res <- RefMet::refmet_map_df(probes1) ## request on API server
+          res$definition <- "-" ## fill it??
           res$ID <- res$ChEBI_ID
-          res$source <- ifelse(res$RefMet_ID!='-', "RefMet", NA)
-          cols <- c("ID","Input.name","Standardized.name","Super.class","Main.class",
-            "Sub.class","Formula","Exact.mass",
-            "definition","source")
-          res <- res[,cols]
+          res$source <- ifelse(res$RefMet_ID != "-", "RefMet", NA)
+          cols <- c(
+            "ID", "Input.name", "Standardized.name", "Super.class", "Main.class",
+            "Sub.class", "Formula", "Exact.mass",
+            "definition", "source"
+          )
+          res <- res[, cols]
           colnames(res) <- COLS
           ## only fill missing entries
-          jj <- which( res != '-' & !is.na(res) & is.na(metadata[ii,]), arr.ind=TRUE)
-          if(length(jj)) metadata[ii,][jj] <- res[jj]
+          jj <- which(res != "-" & !is.na(res) & is.na(metadata[ii, ]), arr.ind = TRUE)
+          if (length(jj)) metadata[ii, ][jj] <- res[jj]
         }
       }
     }
@@ -334,8 +336,8 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
   rownames(metadata) <- NULL
   df <- data.frame(
     feature = probes,
-    symbol = metadata$ID,          ## not sure about this... (IK)
-    human_ortholog = metadata$ID,  ## not sure about this... (IK)
+    symbol = metadata$ID, ## not sure about this... (IK)
+    human_ortholog = metadata$ID, ## not sure about this... (IK)
     gene_title = metadata$name,
     source = metadata$source,
     gene_name = metadata$ID,
@@ -343,24 +345,24 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
   )
   rownames(df) <- as.character(probes)
 
-  if(extra_annot) {
-    extra_cols <- setdiff(colnames(metadata),colnames(df))
-    extra_cols <- setdiff( extra_cols, c("ID","name","source","feature"))
-    df <- cbind(df, metadata[,extra_cols])
+  if (extra_annot) {
+    extra_cols <- setdiff(colnames(metadata), colnames(df))
+    extra_cols <- setdiff(extra_cols, c("ID", "name", "source", "feature"))
+    df <- cbind(df, metadata[, extra_cols])
   }
 
   ## add ID table. Need rethink METABOLITE_ID is not always complete.
-  if(add_id) {
+  if (add_id) {
     id_table <- playdata::METABOLITE_ID
-    ii <- match( df$symbol, id_table$ID )
-    kk <- setdiff(colnames(id_table), c("ID","NAME"))
-    id_table <- id_table[ii,kk]
-    colnames(id_table) <- paste0(sub("_ID","",colnames(id_table)),"_ID")
-    if("ChEBI_ID" %in% colnames(id_table)) {
+    ii <- match(df$symbol, id_table$ID)
+    kk <- setdiff(colnames(id_table), c("ID", "NAME"))
+    id_table <- id_table[ii, kk]
+    colnames(id_table) <- paste0(sub("_ID", "", colnames(id_table)), "_ID")
+    if ("ChEBI_ID" %in% colnames(id_table)) {
       ## fill missing ChEBI entries with internal CHEBI id (in symbol column)
       id_table$ChEBI_ID <- ifelse(is.na(id_table$ChEBI_ID), df$symbol, id_table$ChEBI_ID)
     }
-    df <- cbind( df, id_table )   
+    df <- cbind(df, id_table)
   }
 
   if (has.id) {
@@ -372,11 +374,11 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
   }
 
   if (extra_annot && !is.null(annot_table)) {
-    extra_cols <- setdiff(colnames(annot_table),colnames(df))
-    extra_cols <- setdiff( extra_cols, c("ID","name","source","feature"))
+    extra_cols <- setdiff(colnames(annot_table), colnames(df))
+    extra_cols <- setdiff(extra_cols, c("ID", "name", "source", "feature"))
     dbg("[getMetaboliteAnnotation] dim.df=", dim(df))
     dbg("[getMetaboliteAnnotation] dim.annot_table=", dim(annot_table))
-    df <- cbind(df, annot_table[,extra_cols])
+    df <- cbind(df, annot_table[, extra_cols])
   }
 
   return(df)
@@ -397,20 +399,20 @@ getMetaboliteInfo <- function(organism = "Human", id, info = NULL) {
     return(info)
   }
   if (!id %in% playdata::METABOLITE_ID$ID) {
-    message("[getMetaboliteInfo] unknown metabolite ID = ",id)
+    message("[getMetaboliteInfo] unknown metabolite ID = ", id)
     return(info)
   }
 
   ## add metadata from tables. Append to info if provided.
-  idx <- playdata::METABOLITE_ID[playdata::METABOLITE_ID$ID == id,]
-  metadata <- playdata::METABOLITE_METADATA[playdata::METABOLITE_METADATA$ID == id,]
-  if(is.null(info)) info <- list()
+  idx <- playdata::METABOLITE_ID[playdata::METABOLITE_ID$ID == id, ]
+  metadata <- playdata::METABOLITE_METADATA[playdata::METABOLITE_METADATA$ID == id, ]
+  if (is.null(info)) info <- list()
   info <- c(info, metadata, idx)
   info <- info[!duplicated(names(info))]
-  info <- info[!sapply(info,function(s) all(is.na(s)))]
+  info <- info[!sapply(info, function(s) all(is.na(s)))]
 
   ## substitute some names
-  names(info) <- sub("definition","summary",names(info))
+  names(info) <- sub("definition", "summary", names(info))
 
   # remove summary if it is null
   if (is.null(info[["summary"]])) info[["summary"]] <- "Summary not available for this metabolite."
@@ -437,12 +439,14 @@ getMetaboliteInfo <- function(organism = "Human", id, info = NULL) {
   reactome.link <- glue::glue("<a href='https://reactome.org/content/query?q=chebi%3A{chebi}' target='_blank'>Reactome</a>")
 
   ## collapse all links into 'databases' and remove individual entries
-  info[["databases"]] <- paste(c(hmdb.link, chebi.link, kegg.link, reactome.link, pubchem.link,
-    pathbank.link, refmet.link, lipidmaps.link), collapse = ", ")
+  info[["databases"]] <- paste(c(
+    hmdb.link, chebi.link, kegg.link, reactome.link, pubchem.link,
+    pathbank.link, refmet.link, lipidmaps.link
+  ), collapse = ", ")
   id.cols <- colnames(playdata::METABOLITE_ID)
-  id.cols <- c(id.cols, grep("_ID",names(info),value=TRUE))
-  info <- info[setdiff(names(info),id.cols)]
-  
+  id.cols <- c(id.cols, grep("_ID", names(info), value = TRUE))
+  info <- info[setdiff(names(info), id.cols)]
+
   return(info)
 }
 
@@ -505,7 +509,7 @@ getMetaboliteInfo.SAVE <- function(organism = "Human", id) {
   if (!is.null(inf[["HMDB"]])) hmdb.link <- glue::glue("<a href='https://hmdb.ca/metabolites/{annotation[,'HMDB']}' target='_blank'>HMDB</a>")
   if (!is.null(inf[["KEGG"]])) kegg.link <- glue::glue("<a href='https://www.kegg.jp/dbget-bin/www_bget?{annotation[,'KEGG']}' target='_blank'>KEGG</a>")
   if (!is.null(inf[["PubChem"]])) pubchem.link <- glue::glue("<a href='https://pubchem.ncbi.nlm.nih.gov/compound/{annotation[,'PubChem']}' target='_blank'>PubChem</a>")
-  
+
   # these libraries are always available
   chebi <- annotation[annotation$ID == id, "ChEBI"]
   chebi.link <- glue::glue("<a href='https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:{chebi}' target='_blank'>ChEBI</a>")
@@ -522,15 +526,14 @@ getMetaboliteInfo.SAVE <- function(organism = "Human", id) {
 #' metabolite-metabolite neighbours are considered.
 #'
 #' @export
-extend_metabolite_sets <- function(M, ppi, add=TRUE, postfix="(extended)",
-                                   maxcost=0.33) {
-
+extend_metabolite_sets <- function(M, ppi, add = TRUE, postfix = "(extended)",
+                                   maxcost = 0.33) {
   ## get metabolite-metabolite edges from GRAPHITE
-  ##ppi <- playdata::GRAPHITE_PPI
+  ## ppi <- playdata::GRAPHITE_PPI
   ppi[, 1] <- ifelse(grepl("CHEBI", ppi[, 1]), ppi[, 1], paste0("SYMBOL:", ppi[, 1]))
   ppi[, 2] <- ifelse(grepl("CHEBI", ppi[, 2]), ppi[, 2], paste0("SYMBOL:", ppi[, 2]))
   sel <- which(grepl("CHEBI", ppi[, 1]) & grepl("CHEBI", ppi[, 2]) & ppi[, 3] <= maxcost)
-  gr <- igraph::graph_from_edgelist(as.matrix(ppi[sel, 1:2]), directed=FALSE)
+  gr <- igraph::graph_from_edgelist(as.matrix(ppi[sel, 1:2]), directed = FALSE)
   MMI <- as.matrix(gr)
   table(colnames(M) %in% rownames(MMI))
   table(rownames(MMI) %in% colnames(M))
@@ -561,10 +564,10 @@ extend_metabolite_sets <- function(M, ppi, add=TRUE, postfix="(extended)",
 
   ## row merge extended gene sets with original
   rownames(extM) <- paste(rownames(extM), postfix)
-  if(add==TRUE) {
+  if (add == TRUE) {
     extM <- Matrix::t(merge_sparse_matrix(Matrix::t(M), Matrix::t(extM)))
   }
-  extM <- extM[order(rownames(extM)),]
+  extM <- extM[order(rownames(extM)), ]
   return(extM)
 }
 
@@ -575,13 +578,12 @@ extend_metabolite_sets <- function(M, ppi, add=TRUE, postfix="(extended)",
 #' neighbours are considered.
 #'
 #' @export
-extend_metabolite_sets2 <- function(M, ppi, add=TRUE, postfix="(extended)", maxcost=0.33) {
-
+extend_metabolite_sets2 <- function(M, ppi, add = TRUE, postfix = "(extended)", maxcost = 0.33) {
   ## get metabolite-metabolite edges from GRAPHITE
   ppi[, 1] <- ifelse(grepl("CHEBI", ppi[, 1]), ppi[, 1], paste0("SYMBOL:", ppi[, 1]))
   ppi[, 2] <- ifelse(grepl("CHEBI", ppi[, 2]), ppi[, 2], paste0("SYMBOL:", ppi[, 2]))
-  sel <- which( (grepl("CHEBI", ppi[, 1]) | grepl("CHEBI", ppi[, 2])) & ppi[, 3] <= maxcost)
-  gr <- igraph::graph_from_edgelist(as.matrix(ppi[sel, 1:2]), directed=FALSE)
+  sel <- which((grepl("CHEBI", ppi[, 1]) | grepl("CHEBI", ppi[, 2])) & ppi[, 3] <= maxcost)
+  gr <- igraph::graph_from_edgelist(as.matrix(ppi[sel, 1:2]), directed = FALSE)
   PMI <- as.matrix(gr)
 
   ## build extended sparse matrix
@@ -598,8 +600,8 @@ extend_metabolite_sets2 <- function(M, ppi, add=TRUE, postfix="(extended)", maxc
   ## PMI neigborhood matrix. match with extended matrix M2
   mmi0 <- rbind("na" = 0, cbind("na" = 0, PMI))
   ii <- match(colnames(M2), rownames(mmi0))
-  ii[is.na(ii)] <- 1  ## no matches will map to row/col 1 (all zero)
-  B <- mmi0[ii, ii]   ## B is now aligned to M2
+  ii[is.na(ii)] <- 1 ## no matches will map to row/col 1 (all zero)
+  B <- mmi0[ii, ii] ## B is now aligned to M2
   diag(B) <- 1
   colnames(B) <- rownames(B) <- colnames(M2)
 
@@ -610,16 +612,16 @@ extend_metabolite_sets2 <- function(M, ppi, add=TRUE, postfix="(extended)", maxc
 
   ## do not allow gene-gene neigbors. Add extended metabolites to
   ## original matrix M2
-  ii <- grepl("SYMBOL",colnames(extM))
-  extM[,ii] <- 0
+  ii <- grepl("SYMBOL", colnames(extM))
+  extM[, ii] <- 0
   extM <- 1 * ((M2 + extM) != 0)
-  
+
   ## row merge extended gene sets with original
   rownames(extM) <- paste(rownames(extM), postfix)
-  if(add==TRUE) {
+  if (add == TRUE) {
     extM <- Matrix::t(merge_sparse_matrix(Matrix::t(M2), Matrix::t(extM)))
   }
-  extM <- extM[order(rownames(extM)),]
-  
+  extM <- extM[order(rownames(extM)), ]
+
   return(extM)
 }

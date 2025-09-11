@@ -248,7 +248,7 @@ gx.volcanoPlot.XY <- function(x, pv, gene, ma_plot = FALSE, ma = NULL, p.sig = 0
 #'
 gx.volcanoPlot.LIMMA <- function(tab, render = "scatterD3", n = 1000, highlight = NULL, p.sig = 0.05,
                                  cex = 1, lab.cex = 1, nlab = 15, xlim = NULL, ylim = NULL, use.fdr = FALSE,
-                                 use.rpkm = FALSE, ma.plot = FALSE, cex.main = 1.2, cex.wt=1,
+                                 use.rpkm = FALSE, ma.plot = FALSE, cex.main = 1.2, cex.wt = 1,
                                  main = "", cex.axis = 1, axes = TRUE) {
   tab <- tab[order(tab$P.Value), ]
   gene <- as.character(tab[, grep("^gene$|^external_gene_name$", colnames(tab))])
