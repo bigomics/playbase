@@ -1143,6 +1143,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
                                                            timeseries,
                                                            use.spline = NULL,
                                                            robust = TRUE) {
+
   if (!all(colnames(counts) %in% names(timeseries))) {
     message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Counts and timeseries vector contain different set of samples.")
   }
@@ -1178,7 +1179,6 @@ ngs.fitContrastsWithEDGER <- function(counts,
       design <- try(stats::model.matrix(~ 0 + y * splines::ns(time0, df = ndf)), silent = TRUE)
       if ("try-error" %in% class(design)) next
       message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Using splines with ", ndf, " degrees of freedom.")
-
       dge <- try(edgeR::estimateDisp(dge, design = design, robust = robust), silent = TRUE)
       if ("try-error" %in% class(dge)) next
       sel <- grep("*:splines::ns*", colnames(design))
@@ -1196,7 +1196,6 @@ ngs.fitContrastsWithEDGER <- function(counts,
   } else {
     design <- model.matrix(~ y * time0)
     dge <- edgeR::estimateDisp(dge, design = design, robust = robust)
-    if ("try-error" %in% class(dge)) next
     # Test interaction terms directly
     sel <- grep("*:time0*", colnames(design)) ## ???? unclear.
     if (method == "qlf") {
