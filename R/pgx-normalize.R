@@ -119,18 +119,20 @@ pgx.countNormalization <- function(x, methods, ref = NULL, rm.zero = FALSE) {
 #' Normalized, log2-transformed matrix.
 #'
 #' @export
-normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {  
+normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
   ## Column-wise normalization (along samples).
   ## x:      log2-transformed counts + prior
   ## method: single method
-  ## prior:  prior used for log2-transformation. 
+  ## prior:  prior used for log2-transformation.
   m <- method
-  methods <- c("CPM", "quantile", "CPM+quantile","TMM",
-    "maxMedian", "maxSum", "reference")
+  methods <- c(
+    "CPM", "quantile", "CPM+quantile", "TMM",
+    "maxMedian", "maxSum", "reference"
+  )
   if (!m %in% methods) {
     stop("[normalizeExpression]: unknown mormalization method")
   }
-  counts <- 2 ** X - prior
+  counts <- 2**X - prior
   if (m == "CPM") {
     X <- logCPM(counts = counts, total = 1e+06, prior = prior, log = TRUE)
   } else if (m == "quantile") {
@@ -139,14 +141,14 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
     X <- logCPM(counts = counts, total = 1e+06, prior = prior, log = TRUE)
     X <- limma::normalizeQuantiles(X)
   } else if (m == "TMM") {
-    tmm <- normalizeTMM(counts, log = FALSE, method = "TMM") 
-    X <- log2(tmm + prior)  ## we do log separate, not by TMM because prior 
+    tmm <- normalizeTMM(counts, log = FALSE, method = "TMM")
+    X <- log2(tmm + prior) ## we do log separate, not by TMM because prior
   } else if (m == "maxMedian") {
-    #X <- maxMedianNormalization(counts = counts, prior = prior, toLog = TRUE)
-    X <- maxMedianNormalization.logX(X) 
+    # X <- maxMedianNormalization(counts = counts, prior = prior, toLog = TRUE)
+    X <- maxMedianNormalization.logX(X)
   } else if (m == "maxSum") {
     # X <- maxSumNormalization(counts = counts, prior = prior, toLog = TRUE)
-    X <- maxSumNormalization.logX(X) 
+    X <- maxSumNormalization.logX(X)
   } else if (m == "reference") {
     # X <- referenceNormalization(counts = counts, ref = ref, prior = prior, toLog = TRUE)
     X <- referenceNormalization.logX(X, ref = ref)
@@ -157,46 +159,45 @@ normalizeExpression <- function(X, method = "CPM", ref = NULL, prior = 1) {
 #'
 #' @export
 normalizeMultiOmics <- function(X, method = "median") {
-
-  if(!(method %in% c("median","combat"))) {
-    message("[normalizeMultiOmics] WARNING. skipping normalization. unknown method: ",method)
+  if (!(method %in% c("median", "combat"))) {
+    message("[normalizeMultiOmics] WARNING. skipping normalization. unknown method: ", method)
     return(X)
   }
-  
-  ntype = NA
-  if(!all(grepl(":",rownames(X)))) {
+
+  ntype <- NA
+  if (!all(grepl(":", rownames(X)))) {
     message("[normalizeMultiOmics] WARNING. not multi-omics data.")
-    dtype <- rep("gx",nrow(X))
-    ntype = 1
+    dtype <- rep("gx", nrow(X))
+    ntype <- 1
   } else {
     dtype <- mofa.get_prefix(rownames(X))
     ntype <- length(unique(dtype))
   }
-  
-  if(ntype==1 || method == "median") {
-    global.median <- median(X[X>min(X,na.rm=TRUE)],na.rm=TRUE)
-    for(dt in unique(dtype)) {
-      ii <- which( dtype == dt)
-      xx <- X[ii,]
-      minx <- min(xx, na.rm=TRUE)  ## baseline. usually zero.
-      xx[which(xx==minx)] <- NA
-      mx <- matrixStats::colMedians(xx, na.rm=TRUE)
-      X[ii,] <- t(t(X[ii,]) - mx) + global.median
+
+  if (ntype == 1 || method == "median") {
+    global.median <- median(X[X > min(X, na.rm = TRUE)], na.rm = TRUE)
+    for (dt in unique(dtype)) {
+      ii <- which(dtype == dt)
+      xx <- X[ii, ]
+      minx <- min(xx, na.rm = TRUE) ## baseline. usually zero.
+      xx[which(xx == minx)] <- NA
+      mx <- matrixStats::colMedians(xx, na.rm = TRUE)
+      X[ii, ] <- t(t(X[ii, ]) - mx) + global.median
     }
   }
 
-  if(ntype>1 && method == "combat") {
-    X <- t(sva::ComBat( t(X), batch = dtype ))
+  if (ntype > 1 && method == "combat") {
+    X <- t(sva::ComBat(t(X), batch = dtype))
   }
-  
+
   return(X)
 }
 
 
 
-##====================================================================
+## ====================================================================
 ## Normalization methods
-##====================================================================
+## ====================================================================
 
 
 #' Log-counts-per-million transformation
@@ -345,32 +346,32 @@ normalizeRLE <- function(counts, log = FALSE, use = "deseq2") {
 #' @examples
 #' \dontrun{
 #' counts <- matrix(rnbinom(100, mu = 10, size = 1), ncol = 10)
-#' norm_counts <- log1s(counts, q=0.01)
+#' norm_counts <- log1s(counts, q = 0.01)
 #' }
 #' @export
 log1s <- function(counts, q = 0.20) {
   min.counts <- min(counts, na.rm = TRUE)
   jj <- which(counts > min.counts) ## only non-zero
   scale <- quantile(counts[jj], probs = q, na.rm = TRUE)
-  log2( counts / scale + 1)
+  log2(counts / scale + 1)
 }
 
 #' Normalize a multi-omics count matrix with log1s per datatype.
 #'
 #' @export
-mofa.log1s <- function(counts, q=0.20) {
-  if(!is.multiomics(rownames(counts))) {
-    X <- log1s(counts=counts, q=q)
+mofa.log1s <- function(counts, q = 0.20) {
+  if (!is.multiomics(rownames(counts))) {
+    X <- log1s(counts = counts, q = q)
     return(X)
   }
   dtype <- mofa.get_prefix(rownames(counts))
-  X <- counts*0
-  for(d in unique(dtype)) {
-    ii <- which( dtype == d)
-    X1 <- counts[ii,]
-    x1.medians <- apply(X1, 2, function(x) median(x[x>0],na.rm=TRUE))
+  X <- counts * 0
+  for (d in unique(dtype)) {
+    ii <- which(dtype == d)
+    X1 <- counts[ii, ]
+    x1.medians <- apply(X1, 2, function(x) median(x[x > 0], na.rm = TRUE))
     X1 <- t(t(X1) / x1.medians)
-    X[ii,] <- log1s(X1, q=q)
+    X[ii, ] <- log1s(X1, q = q)
   }
   X
 }
@@ -586,19 +587,19 @@ referenceNormalization.logX <- function(X, ref = 0.01, bring.back = TRUE) {
 
 # Faster quantile normalization. Adapted from
 # https://www.spsanderson.com/steveondata/posts/2024-03-28/index.html
-fast_qn <- function(.data){
-  .data <- as.matrix(.data)  ## Rfast needs dense matrix
+fast_qn <- function(.data) {
+  .data <- as.matrix(.data) ## Rfast needs dense matrix
   data_sort <- Rfast::colSort(.data)
-  row_means <- Rfast::rowmeans(data_sort)  
-  data_sort <- matrix(row_means, 
-                      nrow = nrow(data_sort), 
-                      ncol = ncol(data_sort), 
-                      byrow = FALSE
-                      )
-  index_rank <- t(matrixStats::colRanks(.data, ties.method="average"))
+  row_means <- Rfast::rowmeans(data_sort)
+  data_sort <- matrix(row_means,
+    nrow = nrow(data_sort),
+    ncol = ncol(data_sort),
+    byrow = FALSE
+  )
+  index_rank <- t(matrixStats::colRanks(.data, ties.method = "average"))
   normalized_data <- matrix(nrow = nrow(.data), ncol = ncol(.data))
-  for(i in 1:ncol(.data)){
-    normalized_data[,i] <- data_sort[index_rank[,i], i]
+  for (i in 1:ncol(.data)) {
+    normalized_data[, i] <- data_sort[index_rank[, i], i]
   }
   return(normalized_data)
 }

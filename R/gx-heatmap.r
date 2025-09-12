@@ -127,7 +127,7 @@ gx.PCAcomponents <- function(X, nv = 20, ngenes) {
 #' @export
 gx.imagemap <- function(X, main = "", cex = 1, cex.main = 1.8,
                         clust = TRUE, col = NULL) {
-  if (clust && min(dim(X))>=3) {
+  if (clust && min(dim(X)) >= 3) {
     ii <- fastcluster::hclust(stats::dist(X))$order
     jj <- fastcluster::hclust(stats::dist(t(X)))$order
     X <- X[ii, jj]
@@ -280,8 +280,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
                         data = FALSE,
                         color_low = "#3181de",
                         color_mid = "#eeeeee",
-                        color_high = "#f23451"
-                        ) {
+                        color_high = "#f23451") {
   ComplexHeatmap::ht_global_opt(fast_hclust = TRUE)
   graphics::par(xpd = FALSE)
 
@@ -524,7 +523,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
     for (i in 1:length(npar)) {
       prm <- colnames(row.annot)[i]
       x <- row.annot[, i]
-      if(!is.null(row.annot.colors)) {
+      if (!is.null(row.annot.colors)) {
         klrs <- row.annot.colors
       } else {
         klrs <- rev(grDevices::grey.colors(npar[i], start = 0.3, end = 0.8))
@@ -548,7 +547,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
       df = row.annot,
       col = row.colors,
       show_annotation_name = show_colnames,
-      #show_legend = FALSE,
+      # show_legend = FALSE,
       show_legend = show_row_legend,
       simple_anno_size = grid::unit(annot.ht, "mm"), ## BioC 3.8!!
       width = grid::unit(annot.ht * ncol(row.annot), "mm"),
@@ -793,7 +792,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
 #' @export
 gx.heatmap <- function(gx, values = NULL,
                        clust.method = "ward.D2",
-                       dist.method = "pearson",  ## better change to euclidean??
+                       dist.method = "pearson", ## better change to euclidean??
                        col.dist.method = "euclidean",
                        plot.method = "heatmap.2",
                        col = grDevices::colorRampPalette(c("royalblue3", "grey90", "indianred3"))(64),
@@ -805,8 +804,8 @@ gx.heatmap <- function(gx, values = NULL,
   graphics::par(xpd = FALSE)
 
   if (verbose > 1) cat("input.dim.gx=", dim(gx), "\n")
-  if(is.null(symm)) symm <- all(rownames(gx)==colnames(gx))
-  
+  if (is.null(symm)) symm <- all(rownames(gx) == colnames(gx))
+
   ## -------------------------------------------------------------
   ## scaling options
   ## -------------------------------------------------------------

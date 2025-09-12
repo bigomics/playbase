@@ -10,8 +10,8 @@
 #' rows. Features are union of input matrices.
 #'
 #' @export
-merge_sparse_matrix <- function(m1, m2, margin=NULL, verbose=1) {
-  cbind_sparse_matrix(m1=m1, m2=m2)
+merge_sparse_matrix <- function(m1, m2, margin = NULL, verbose = 1) {
+  cbind_sparse_matrix(m1 = m1, m2 = m2)
 }
 
 #' Merge Sparse Matrix
@@ -19,17 +19,16 @@ merge_sparse_matrix <- function(m1, m2, margin=NULL, verbose=1) {
 #' Merges two sparse matrices by combining column-wise (aka cbind) but
 #' ensuring the same gene order. Union of features (gene/proteins) are
 #' on rows (i.e. rownames are features names). Commonly needed for
-#' merging multiple pgx$GMT matrices (gene on rows). 
+#' merging multiple pgx$GMT matrices (gene on rows).
 #'
 #' @param m1 The first sparse matrix.
 #' @param m2 The second sparse matrix.
 #'
 #' @return A merged sparse matrix with combined columns and shared
 #'   features on rows
-#' 
+#'
 #' @export
 cbind_sparse_matrix <- function(m1, m2) {
-
   # Get the union of row names (genes) from both matrices
   gene_vector <- unique(c(rownames(m1), rownames(m2)))
 
@@ -78,7 +77,7 @@ cbind_sparse_matrix <- function(m1, m2) {
 #'
 #' @export
 rbind_sparse_matrix <- function(m1, m2) {
-  Matrix::t(cbind_sparse_matrix( m1=Matrix::t(m1), m2=Matrix::t(m2) ))
+  Matrix::t(cbind_sparse_matrix(m1 = Matrix::t(m1), m2 = Matrix::t(m2)))
 }
 
 #' Fast matrix correlation
@@ -1403,7 +1402,7 @@ pgx.getGeneFamilies <- function(genes, min.size = 10, max.size = 500) {
 #' @export
 pgx.getGeneSetCollections <- function(gsets = rownames(playdata::GSETxGENE)) {
   ## determine main collections from gene set prefixes
-  if(is.null(gsets) || length(gsets)==0 ) {
+  if (is.null(gsets) || length(gsets) == 0) {
     return(list())
   }
   collections <- list()
@@ -1482,7 +1481,7 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
                        na.rm = TRUE, unique = TRUE, keep.prefix = FALSE) {
   ## add rownames
   annot_table$rownames <- rownames(annot_table)
-  annot_table$rownames2 <- sub("^[A-Za-z]+:","",rownames(annot_table)) ## strip prefix
+  annot_table$rownames2 <- sub("^[A-Za-z]+:", "", rownames(annot_table)) ## strip prefix
 
   if (is.matrix(counts) || is.data.frame(counts) || !is.null(dim(counts))) {
     type <- "matrix"
@@ -1494,7 +1493,7 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   probe_match <- apply(annot_table, 2, function(x) sum(probes %in% x))
   probe_match
 
-  if (max(probe_match,na.rm=TRUE) == 0) {
+  if (max(probe_match, na.rm = TRUE) == 0) {
     return(counts)
   }
 
@@ -1506,12 +1505,12 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
     return(counts)
   }
 
-  if( type == "vector") {
+  if (type == "vector") {
     counts <- cbind(counts)
   }
 
-  keep.prefix <- (keep.prefix && all(grepl(":",probes)))
-  
+  keep.prefix <- (keep.prefix && all(grepl(":", probes)))
+
   from <- annot_table[, from_id]
   if (!any(duplicated(from)) || unique) {
     ii <- match(probes, from)
@@ -1565,9 +1564,11 @@ rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
 
   # Guard against NA
   if (is.null(symbol) || all(is.na(symbol))) {
-    gene.col <- head(intersect(c("symbol","gene_name","human_ortholog"),
-      colnames(annot_table)),1)
-    if(length(gene.col)==0) gene.col <- 1
+    gene.col <- head(intersect(
+      c("symbol", "gene_name", "human_ortholog"),
+      colnames(annot_table)
+    ), 1)
+    if (length(gene.col) == 0) gene.col <- 1
     symbol <- annot_table[probes, gene.col]
   }
 
@@ -1590,13 +1591,13 @@ rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
 
 #' Map any feature identifier to other feature column. Warning does
 #' not retain original match order. Default mapping to rownames.
-#' 
+#'
 #' @export
 map_probes <- function(annot, genes, column = NULL, ignore.case = FALSE,
-                       target = 'rownames') {
+                       target = "rownames") {
   ## check probe name, short probe name or gene name for match
-  annot <- cbind(annot, rownames=rownames(annot))
-  genes <- setdiff( genes, c(NA,"NA","","-","---"))
+  annot <- cbind(annot, rownames = rownames(annot))
+  genes <- setdiff(genes, c(NA, "NA", "", "-", "---"))
   if (ignore.case) {
     if (is.null(column)) {
       column <- which.max(apply(annot, 2, function(x) {
@@ -1615,12 +1616,12 @@ map_probes <- function(annot, genes, column = NULL, ignore.case = FALSE,
 
 #' Map any feature identifier to other feature column. Retain original
 #' match order. Default mapping to rownames.
-#' 
+#'
 #' @export
 match_probes <- function(annot, genes, column = NULL, ignore.case = FALSE,
-                         target = 'rownames') {
+                         target = "rownames") {
   ## check probe name, short probe name or gene name for match
-  annot <- cbind(annot, rownames=rownames(annot))
+  annot <- cbind(annot, rownames = rownames(annot))
   if (ignore.case) {
     if (is.null(column)) {
       column <- which.max(apply(annot, 2, function(x) {
@@ -1634,8 +1635,8 @@ match_probes <- function(annot, genes, column = NULL, ignore.case = FALSE,
     }
     ii <- match(genes, annot[, column])
   }
-  jj <- genes %in% c(NA,"NA","","-","---")
-  if(length(jj)) ii[jj] <- NA
+  jj <- genes %in% c(NA, "NA", "", "-", "---")
+  if (length(jj)) ii[jj] <- NA
   annot[ii, target]
 }
 
@@ -2392,9 +2393,9 @@ normalize_cols <- function(G) {
 }
 
 #' @export
-make_unique <- function(s, sep=".") {
+make_unique <- function(s, sep = ".") {
   s[is.na(s)] <- "NA"
-  make.unique(s, sep=sep)
+  make.unique(s, sep = sep)
 }
 
 #' add empty white spaces after name to make unique.
@@ -2413,8 +2414,8 @@ make_unique_ws <- function(s, sep = "", iter = 10 * length(s)) {
   dups <- unique(s[which(duplicated(s))])
   for (d in dups) {
     jj <- which(s == d)
-    ww <- sapply(1:length(jj),function(i) paste(rep(" ",i-1),collapse=""))
-    newx <- paste0(s[jj], ww)     ## add empty white spaces
+    ww <- sapply(1:length(jj), function(i) paste(rep(" ", i - 1), collapse = ""))
+    newx <- paste0(s[jj], ww) ## add empty white spaces
     s[jj] <- newx
   }
   ## here we recurse. this is dangerous if not controlled.
@@ -2499,7 +2500,7 @@ abbreviate_pheno <- function(pheno, minlength = 1, abbrev.colnames = FALSE) {
 #' @export
 colorscale <- function(x, gamma = 1) {
   colorsx <- gplots::colorpanel(255, low = "blue3", mid = "grey80", high = "red3")
-  x <- (x / max(abs(x),na.rm=TRUE))**gamma
+  x <- (x / max(abs(x), na.rm = TRUE))**gamma
   colorsx[128 + ceiling(x * 127)]
 }
 
@@ -2510,7 +2511,7 @@ substrmatch <- function(pattern, x) {
   matches <- regexpr(pattern, x)
   substr(x, matches, matches + attr(matches, "match.length") - 1)
 }
-  
+
 
 ## ==========================================================================
 ## ==================== END OF FILE =========================================

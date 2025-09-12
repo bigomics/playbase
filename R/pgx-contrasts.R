@@ -14,20 +14,20 @@
 #'
 #' @export
 fixContrastMatrix <- function(contrasts) {
-  for(i in 1:ncol(contrasts)) {
+  for (i in 1:ncol(contrasts)) {
     ct.name <- colnames(contrasts)[i]
-    ct <- contrasts[,i]
-    ct1 <- gsub(".*:|_vs_.*","",ct.name)
-    ct2 <- gsub(".*:|.*_vs_","",ct.name)    
-    ct1x <- c(ct1, strsplit(ct1,split='[.]')[[1]])
-    ct2x <- c(ct2, strsplit(ct2,split='[.]')[[1]])    
-    i0 <- which(!tolower(ct) %in% tolower(c(ct1x,ct2x)))
+    ct <- contrasts[, i]
+    ct1 <- gsub(".*:|_vs_.*", "", ct.name)
+    ct2 <- gsub(".*:|.*_vs_", "", ct.name)
+    ct1x <- c(ct1, strsplit(ct1, split = "[.]")[[1]])
+    ct2x <- c(ct2, strsplit(ct2, split = "[.]")[[1]])
+    i0 <- which(!tolower(ct) %in% tolower(c(ct1x, ct2x)))
     i1 <- which(tolower(ct) %in% tolower(ct1x))
-    i2 <- which(tolower(ct) %in% tolower(ct2x))    
+    i2 <- which(tolower(ct) %in% tolower(ct2x))
     ct[i0] <- NA
     ct[i1] <- ct1
-    ct[i2] <- ct2    
-    contrasts[,i] <- ct
+    ct[i2] <- ct2
+    contrasts[, i] <- ct
   }
   return(contrasts)
 }
@@ -94,11 +94,11 @@ pgx.getContrastGroups <- function(pgx, contrast, as.factor = TRUE) {
   return(grp)
 }
 
-pgx.getStatGroups <- function(pgx, contrast=NULL) {
+pgx.getStatGroups <- function(pgx, contrast = NULL) {
   exp.matrix <- pgx$model.parameters$exp.matrix
-  if(!is.null(contrast)) exp.matrix <- exp.matrix[,contrast,drop=FALSE]
+  if (!is.null(contrast)) exp.matrix <- exp.matrix[, contrast, drop = FALSE]
   lab.matrix <- contrasts.convertToLabelMatrix(exp.matrix, pgx$samples)
-  grp <- apply(lab.matrix, 1, paste, collapse="_")
+  grp <- apply(lab.matrix, 1, paste, collapse = "_")
   return(grp)
 }
 
@@ -466,9 +466,9 @@ pgx.makeAutoContrastsStratified <- function(df, strata.var, mingrp = 3, max.leve
 #' Stratify contrasts matrix within strata variable
 #'
 #' @export
-stratifyContrasts <- function(contrasts, strata, mingrp=2) {
-#  strata=samples$celltype
-#  dim(contrasts)
+stratifyContrasts <- function(contrasts, strata, mingrp = 2) {
+  #  strata=samples$celltype
+  #  dim(contrasts)
   strata.levels <- sort(unique(strata))
   s <- strata.levels[1]
   ct.all <- NULL
@@ -477,7 +477,7 @@ stratifyContrasts <- function(contrasts, strata, mingrp=2) {
     if (length(sel) < mingrp) next
     ct1 <- contrasts[sel, , drop = FALSE]
     colnames(ct1) <- paste0(s, ":", colnames(ct1))
-    ss = rownames(contrasts)[sel]
+    ss <- rownames(contrasts)[sel]
     if (is.null(ct.all)) {
       ct.all <- data.frame(sample = ss, ct1, check.names = FALSE)
     } else {
@@ -496,7 +496,7 @@ stratifyContrasts <- function(contrasts, strata, mingrp=2) {
   ct.all <- as.matrix(ct.all[, -1, drop = FALSE]) ## drop sample column
   ct.all <- ct.all[match(rownames(contrasts), rownames(ct.all)), , drop = FALSE]
   rownames(ct.all) <- rownames(contrasts)
-  ct.all[is.na(ct.all)] <- ''
+  ct.all[is.na(ct.all)] <- ""
   return(ct.all)
 }
 
@@ -1014,7 +1014,7 @@ makeContrastFromSamples <- function(samples, ref = NULL) {
 
 #' Autodetect 'time' variable in sample dataframe and expand contrasts matrix with interaction term.
 #'
-#' @title Expand contrast matrix with time-interaction terms 
+#' @title Expand contrast matrix with time-interaction terms
 #'
 #' @param contrasts Matrix of contrasts
 #' @param samples   Sample information dataframe
@@ -1029,23 +1029,23 @@ makeContrastFromSamples <- function(samples, ref = NULL) {
 #' where time-interaction (with or without spline) will be performed.
 #' @export
 contrasts.addTimeInteraction <- function(contrasts, samples) {
-
-  if (!all(rownames(samples) == rownames(contrasts)))
+  if (!all(rownames(samples) == rownames(contrasts))) {
     stop("[contrasts.addTimeInteraction] contrasts and samples must be aligned")
-  
+  }
+
   colnames(samples) <- tolower(colnames(samples))
   time.var <- playbase::get_timevars()
   sel.time <- grep(time.var, colnames(samples), ignore.case = TRUE)
   jj <- sel.time[1]
-  
-  if (length(sel.time) && length(unique(samples[,jj]))>1) {
-    
-    time <- unname(as.character(samples[,jj]))
+
+  if (length(sel.time) && length(unique(samples[, jj])) > 1) {
+    time <- unname(as.character(samples[, jj]))
     time <- gsub("\\D", "", time)
     if (length(unique(time)) == 1 && unique(time)[1] == "") { ## categorical time
-      i=1; valid.ia.ctx=c();
+      i <- 1
+      valid.ia.ctx <- c()
       for (i in 1:ncol(contrasts)) {
-        tt <- table(data.frame(ctx = contrasts[,i], time = samples[, jj]))
+        tt <- table(data.frame(ctx = contrasts[, i], time = samples[, jj]))
         zeros.obs <- apply(tt, 1, function(x) sum(x == 0))
         if (!any(zeros.obs)) {
           valid.ia.ctx <- c(valid.ia.ctx, colnames(contrasts)[i])
@@ -1054,28 +1054,25 @@ contrasts.addTimeInteraction <- function(contrasts, samples) {
       if (length(valid.ia.ctx)) {
         nn <- ncol(contrasts)
         contrasts <- cbind(contrasts, contrasts[, valid.ia.ctx, drop = FALSE])
-        colnames(contrasts)[(nn+1):ncol(contrasts)]  <- paste0("IA:", valid.ia.ctx)
+        colnames(contrasts)[(nn + 1):ncol(contrasts)] <- paste0("IA:", valid.ia.ctx)
       }
     } else {
-      i=1; valid.ia.spline.ctx=c();
+      i <- 1
+      valid.ia.spline.ctx <- c()
       for (i in 1:ncol(contrasts)) {
-        tt <- table(data.frame(ctx = contrasts[,i], time = samples[, jj]))
+        tt <- table(data.frame(ctx = contrasts[, i], time = samples[, jj]))
         zeros.obs <- apply(tt, 1, function(x) sum(x == 0))
-        if (!any(zeros.obs >= (ncol(tt)-1))) {
+        if (!any(zeros.obs >= (ncol(tt) - 1))) {
           valid.ia.spline.ctx <- c(valid.ia.spline.ctx, colnames(contrasts)[i])
         }
       }
       if (length(valid.ia.spline.ctx)) {
         nn <- ncol(contrasts)
         contrasts <- cbind(contrasts, contrasts[, valid.ia.spline.ctx, drop = FALSE])
-        colnames(contrasts)[(nn+1):ncol(contrasts)]  <- paste0("IA:", valid.ia.spline.ctx)
+        colnames(contrasts)[(nn + 1):ncol(contrasts)] <- paste0("IA:", valid.ia.spline.ctx)
       }
     }
-
   }
 
   return(contrasts)
-
 }
-
-

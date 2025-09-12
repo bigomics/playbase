@@ -284,7 +284,9 @@ pgx.getCategoricalPhenotypes <- function(df, min.ncat = 2, max.ncat = 20, remove
 #'
 #' @export
 getLevels <- function(Y) {
-  if (ncol(Y) == 0) return(NULL)
+  if (ncol(Y) == 0) {
+    return(NULL)
+  }
   yy <- Y
   is.grpvar <- apply(yy, 2, function(y) length(table(y)) >= 2)
   is.allunique <- apply(yy, 2, function(y) length(unique(y)) == length(y))

@@ -22,10 +22,9 @@ imputeMissing <- function(X,
                             "LLS", "bpca", "msImpute", "SVD", "SVD2", "NMF", "RF",
                             "knn", "QRILC", "MLE", "MinDet", "MinProb",
                             "min", "zero", "nbavg", "rowmeans", "Perseus"
-                          )[1:3], 
+                          )[1:3],
                           rf.ntree = 100, nv = 5, keep.limits = FALSE,
                           infinite.na = TRUE, plot = FALSE) {
-
   ## set infinite as NA
   if (infinite.na) X[is.infinite(X)] <- NA
 
@@ -47,7 +46,7 @@ imputeMissing <- function(X,
   if ("Perseus" %in% method) {
     impX[["Perseus"]] <- perseusImpute(X, shift = 1.8, width = 0.3, method = "sample", seed = NULL)
   }
-  
+
   ## ------------ msImpute --------------
   if ("msImpute" %in% method) {
     sel <- which(rowSums(!is.na(X)) >= 4)
@@ -92,7 +91,7 @@ imputeMissing <- function(X,
   }
 
   if ("SVD2" %in% method) {
-    impX[["SVD2"]] <- svdImpute2(X, nv = nv, init="5%")
+    impX[["SVD2"]] <- svdImpute2(X, nv = nv, init = "5%")
   }
 
   if ("NMF" %in% method) {
@@ -155,12 +154,12 @@ imputeMissing <- function(X,
   }
 
   ## constrain limits??
-  if(keep.limits) {
-    minx <- min(X, na.rm=TRUE)
-    maxx <- max(X, na.rm=TRUE)
-    impX <- lapply(impX, function(x) pmin(pmax(x,minx), maxx))
+  if (keep.limits) {
+    minx <- min(X, na.rm = TRUE)
+    maxx <- max(X, na.rm = TRUE)
+    impX <- lapply(impX, function(x) pmin(pmax(x, minx), maxx))
   }
-  
+
   metaX <- NULL
   if (length(impX) > 1) {
     ## ------------ meta --------------
@@ -223,9 +222,9 @@ svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
   nv <- min(nv, round(min(dim(X)) / 3))
 
   if (is.character(init) && grepl("%", init)) {
-    q <- as.numeric(sub("%", "", init)) 
-    init <- quantile(X[!is.na(X)], probs = q*0.01)[1]
-    message(paste0("setting initial values to ", q, "%. init=", round(init,4)))
+    q <- as.numeric(sub("%", "", init))
+    init <- quantile(X[!is.na(X)], probs = q * 0.01)[1]
+    message(paste0("setting initial values to ", q, "%. init=", round(init, 4)))
   }
 
   if (!is.null(init)) {
@@ -362,12 +361,14 @@ perseusImpute <- function(X,
                           width = 0.3,
                           method = c("sample", "global"),
                           seed = NULL) {
+  if (sum(is.na(X)) == 0) {
+    return(X)
+  }
 
-  if (sum(is.na(X)) == 0) return(X)
-
-  method = method[1]
-  if (!method %in% c("sample", "global"))
+  method <- method[1]
+  if (!method %in% c("sample", "global")) {
     stop("[playbase::imputeMissing perseusImpute: method must be 'sample' or 'global']")
+  }
 
   message("[perseusImpute: Performing Perseus-style imputation")
 
@@ -375,31 +376,30 @@ perseusImpute <- function(X,
   if (!is.null(seed)) set.seed(seed)
 
   min.pos <- min(impX, na.rm = TRUE)
-  
-  if (method == "sample") {    
+
+  if (method == "sample") {
     mu0 <- colMeans(impX, na.rm = TRUE)
     sdx0 <- matrixStats::colSds(impX, na.rm = TRUE)
     mu <- mu0 - shift * sdx0
     sdx <- width * sdx0
     na.samples <- apply(impX, 2, function(x) sum(is.na(x)))
-    na.samples <- names(na.samples[which(na.samples>0)])
+    na.samples <- names(na.samples[which(na.samples > 0)])
     mu <- unname(mu[match(na.samples, names(mu))])
     sdx <- unname(sdx[match(na.samples, names(sdx))])
-    i=1
-    for(i in 1:length(na.samples)) {
+    i <- 1
+    for (i in 1:length(na.samples)) {
       nas <- which(is.na(impX[, na.samples[i]]))
       impX[nas, na.samples[i]] <- pmax(rnorm(length(nas), mean = mu[i], sd = sdx[i]), min.pos)
     }
   } else if (method == "global") {
     mu0 <- mean(as.numeric(impX), na.rm = TRUE)
-    sdx0 <- sd(as.numeric(impX), na.rm = TRUE)    
+    sdx0 <- sd(as.numeric(impX), na.rm = TRUE)
     mu <- mu0 - shift * sdx0
     sdx <- width * sdx0
     impX[which(is.na(impX))] <- pmax(rnorm(sum(is.na(impX)), mean = mu, sd = sdx), min.pos)
   }
-  
-  return(impX)
 
+  return(impX)
 }
 
 
