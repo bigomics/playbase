@@ -39,11 +39,6 @@ pgx.getGEOseries <- function(accession,
 
   if (is.null(meta)) meta <- pgx.getGEOmetadata(id)
   if (is.null(meta)) message("[pgx.getGEOseries] WARNING: Metadata not retrieved.")
-  #if (source == "ArrayExpress") {
-  #  meta <- geo[["samples"]]
-  #} else {
-  #  meta <- pgx.getGEOmetadata(id)
-  #}
 
   ## conform matrices
   if (!is.null(meta)) {
