@@ -37,7 +37,15 @@ pgx.getGEOseries <- function(accession,
   }
 
   if (is.null(meta)) meta <- pgx.getGEOmetadata(id)
-  if (is.null(meta)) message("[pgx.getGEOseries] WARNING: Metadata not retrieved.")
+  if (!is.null(meta)) {
+    nn <- apply(meta, 2, function(x) length(unique(x)))
+    ex.vars <- names(nn)[which(nn == 1)]
+    if (length(ex.vars) > 0) {
+      meta <- meta[, !colnames(meta) %in% ex.vars, drop = FALSE]
+    }
+  } else {
+    message("[pgx.getGEOseries] WARNING: Metadata not retrieved.")
+  }
 
   ## conform matrices
   if (!is.null(meta)) {
