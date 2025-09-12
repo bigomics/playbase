@@ -634,8 +634,7 @@ ngs.fitContrastsWithLIMMA <- function(X,
       trend <- FALSE ## no need
     } else {
       vfit <- limma::lmFit(X1, design1)
-    }>>>>>>> devel
-728
+    }
 
     vfit <- limma::contrasts.fit(vfit, contrasts = contr1)
     efit <- limma::eBayes(vfit, trend = trend, robust = robust) ## robust YES
