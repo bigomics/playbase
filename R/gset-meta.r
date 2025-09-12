@@ -23,7 +23,7 @@
 #' @export
 gset.fitContrastsWithAllMethods <- function(gmt,
                                             X,
-                                            Y,  ## NOT USED???
+                                            Y, ## NOT USED???
                                             G,
                                             design,
                                             contr.matrix,
@@ -50,7 +50,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   }
   methods <- intersect(methods, ALL.GENESET.METHODS)
   message("calculating methods:", paste(methods, collapse = " "))
-  
+
   ## If degenerate set design to NULL
   if (!is.null(design) && ncol(design) >= ncol(X)) {
     ## "no-replicate" design!!!
@@ -69,7 +69,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
   ## some "normalization" for single-sample methods
   my.normalize <- function(zx) {
-    if (nrow(zx) <= 10) { 
+    if (nrow(zx) <= 10) {
       return(zx)
     }
     zx <- scale(limma::normalizeQuantiles(zx))
@@ -107,7 +107,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       zx.rnkcorr <- zx.rnkcorr[cm1, cm2, drop = FALSE] ## make sure..
       nas <- apply(zx.rnkcorr, 1, function(x) sum(is.na(x)))
       jj <- which(nas < ncol(zx.rnkcorr))
-      zx.rnkcorr <- zx.rnkcorr[jj, , drop = FALSE]      
+      zx.rnkcorr <- zx.rnkcorr[jj, , drop = FALSE]
 
       ## compute LIMMA
       all.results[["spearman"]] <- gset.fitContrastsWithLIMMA(
@@ -228,7 +228,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
           )
         ))
       }
-     
+
       which.up <- which(limma0[, "adj.P.Val"] <= fdr & limma0[, "logFC"] > lfc05)
       which.dn <- which(limma0[, "adj.P.Val"] <= fdr & limma0[, "logFC"] < -lfc05)
       genes.up <- rownames(limma0)[which.up]
@@ -280,7 +280,7 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       colnames(output) <- c("score", "p.value", "q.value", "NGenes", "Direction")
       res[["camera"]] <- output
     }
-    
+
     if ("fry" %in% method) {
       cdesign <- cbind(Intercept = 1, Group = yy)
       tt <- system.time(
@@ -302,8 +302,10 @@ gset.fitContrastsWithAllMethods <- function(gmt,
       rnk <- rnk + 1e-8 * stats::rnorm(length(rnk))
       if (any(is.na(rnk))) rnk <- rnk[which(!is.na(rnk))]
       tt <- system.time(
-        output <- fgsea::fgseaSimple(gmt, rnk, nperm = 10000,
-          minSize = 1, maxSize = 9999, nproc = 1) ## nproc0 fails!!!
+        output <- fgsea::fgseaSimple(gmt, rnk,
+          nperm = 10000,
+          minSize = 1, maxSize = 9999, nproc = 1
+        ) ## nproc0 fails!!!
       )
       timings <- rbind(timings, c("fgsea", tt))
       output <- as.data.frame(output)
@@ -316,7 +318,6 @@ gset.fitContrastsWithAllMethods <- function(gmt,
 
     res2 <- list(results = res, timings = timings)
     return(res2)
-
   }
 
   fitContrastsWithMethod <- function(method) {
@@ -351,13 +352,13 @@ gset.fitContrastsWithAllMethods <- function(gmt,
   ntest <- length(tests)
 
   # align if needed
-  for(m in 1:length(all.results)) {
-    for(k in 1:length(all.results[[m]])) {
+  for (m in 1:length(all.results)) {
+    for (k in 1:length(all.results[[m]])) {
       ii <- match(names(gmt), rownames(all.results[[m]][[k]]))
-      all.results[[m]][[k]] <- all.results[[m]][[k]][ii,]
+      all.results[[m]][[k]] <- all.results[[m]][[k]][ii, ]
     }
   }
-  
+
   # gather matrices
   P <- lapply(tests, function(k) do.call(cbind, lapply(all.results, function(x) x[[k]][, "p.value"])))
   Q <- lapply(tests, function(k) do.call(cbind, lapply(all.results, function(x) x[[k]][, "q.value"])))

@@ -77,7 +77,7 @@ pgx.checkINPUT <- function(
       zero.rows <- names(ANY_ROW_ZERO)
 
       # remove the rownames with all zeros
-      #df_clean <- df_clean[!(rownames(df_clean) %in% zero.rows), , drop = FALSE]
+      # df_clean <- df_clean[!(rownames(df_clean) %in% zero.rows), , drop = FALSE]
 
       nzerorows <- length(ANY_ROW_ZERO)
       err.mesg <- zero.rows
@@ -101,7 +101,7 @@ pgx.checkINPUT <- function(
 
     # check min amount of features
     n.features <- nrow(df_clean)
-    if(n.features < 3) {
+    if (n.features < 3) {
       check_return$e31 <- "Too few features detected. Minimum is 3."
       PASS <- FALSE
     }

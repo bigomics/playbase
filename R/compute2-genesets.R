@@ -111,9 +111,9 @@ compute_testGenesets <- function(pgx,
   F <- rename_by2(F, pgx$genes, "symbol")
   avgFC <- gset.averageFC(F, pgx$GMT)
   for (i in 1:nc) {
-    pgx$gset.meta$meta[[i]]$meta.fx <- avgFC[,i]
+    pgx$gset.meta$meta[[i]]$meta.fx <- avgFC[, i]
   }
-  
+
   ## -------------------------------------------------------
   ## calculate gset info and store as pgx$gset.meta
   ## -------------------------------------------------------
@@ -266,4 +266,3 @@ createSparseGenesetMatrix <- function(
 
   return(G)
 }
-

@@ -14,7 +14,7 @@
 #' @param test.methods The test methods to use for gene testing.
 #' @param use.design A logical value indicating whether to use the design matrix in the analysis.
 #' @param prune.samples A logical value indicating whether to prune samples with missing data.
-#' @param remove.outputs A logical value indicating whether to remove intermediate outputs. 
+#' @param remove.outputs A logical value indicating whether to remove intermediate outputs.
 #' @return An updated object with gene test results.
 #' @export
 compute_testGenes <- function(pgx,
@@ -25,11 +25,9 @@ compute_testGenes <- function(pgx,
                               use.design = FALSE,
                               prune.samples = TRUE,
                               remove.outputs = TRUE,
-                              timeseries = FALSE
-                              ) {
-
+                              timeseries = FALSE) {
   message("[compute_testGenes] detecting stat groups...")
-  
+
   ## -----------------------------------------------------------------------------
   ## Check parameters, decide group level
   ## -----------------------------------------------------------------------------
@@ -47,7 +45,7 @@ compute_testGenes <- function(pgx,
   }
 
   ## sanity check
-  if(NCOL(contr.matrix)==0) {
+  if (NCOL(contr.matrix) == 0) {
     stop("[compute_testGenes] FATAL: zero contrasts")
   }
 
@@ -74,13 +72,13 @@ compute_testGenes <- function(pgx,
     stat.group <- rownames(contr.matrix)
     names(stat.group) <- rownames(contr.matrix)
   }
-  
+
   message("[compute_testGenes] pruning unused contrasts")
   ## take out any empty comparisons
   sel <- which(Matrix::colSums(contr.matrix > 0) & Matrix::colSums(contr.matrix < 0))
   contr.matrix <- contr.matrix[, sel, drop = FALSE]
   contr.matrix[is.na(contr.matrix)] <- 0
-  
+
   ## -----------------------------------------------------------------------------
   ## normalize contrast matrix to zero mean and signed sums to one
   ## -----------------------------------------------------------------------------
@@ -150,7 +148,7 @@ compute_testGenes <- function(pgx,
   counts <- pgx$counts[gg, ss, drop = FALSE]
   samples <- pgx$samples[ss, ]
   X <- pgx$X[gg, ss, drop = FALSE]
-     
+
   ## -----------------------------------------------------------------------------
   ## Do the fitting
   ## -----------------------------------------------------------------------------
@@ -193,12 +191,10 @@ compute_testGenes <- function(pgx,
   pgx$gx.meta <- gx.meta
 
   ## remove large outputs.
-  #remove.outputs = FALSE
+  # remove.outputs = FALSE
   if (remove.outputs) pgx$gx.meta$outputs <- NULL
 
   message("[compute_testGenes] done!")
 
   return(pgx)
 }
-
-
