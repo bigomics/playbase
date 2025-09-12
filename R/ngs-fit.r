@@ -727,9 +727,9 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
                                                  trend = TRUE,
                                                  use.spline = NULL) {
 
-  library(splines)
+  LL=list(X=X,y=y,timeseries=timeseries,trend=trend,use.spline=use.spline); saveRDS(LL,"~/Desktop/LL.RDS")
+
   message("[ngs.fitContrastsWithLIMMA.timeseries] Fitting Limma with no design; time series analysis...")
-  
   if (!all(colnames(X) %in% names(timeseries)))
     stop("[ngs.fitContrastsWithLIMMA.timeseries] X and timeseries vector contain different set of samples.")
 
@@ -742,7 +742,6 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
   
   if (use.spline) {
     message("[ngs.fitContrastsWithLIMMA.timeseries]: Limma timeseries with interaction term & spline.")
-    require(splines)
     time0 <- as.numeric(time0)
   } else {
     message("[ngs.fitContrastsWithLIMMA.timeseries]: Limma timeseries with interaction term.")
@@ -774,7 +773,7 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
       if ("try-error" %in% class(top) || nrow(top) == 0) next else break;
     }
 
-    if ("try-error" %in% class(top)) {
+    if ("try-error" %in% class(top) || nrow(top) == 0) {
       top <- data.frame(matrix(NA, nrow=nrow(X), ncol=5))
       rownames(top) <- rownames(X)
       colnames(top) <- c("logFC", "AveExpr", "t", "P.Value", "adj.P.Val")
