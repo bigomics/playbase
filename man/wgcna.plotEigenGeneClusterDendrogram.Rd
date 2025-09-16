@@ -4,7 +4,17 @@
 \alias{wgcna.plotEigenGeneClusterDendrogram}
 \title{Plot cluster dendrogram with eigengenes and traits.}
 \usage{
-wgcna.plotEigenGeneClusterDendrogram(wgcna, add_traits = TRUE, main = NULL)
+wgcna.plotEigenGeneClusterDendrogram(
+  wgcna,
+  add_traits = TRUE,
+  horiz = FALSE,
+  setMargins = TRUE,
+  method = "wgcna",
+  showlabels = TRUE,
+  plot = TRUE,
+  multi = FALSE,
+  main = NULL
+)
 }
 \description{
 Plot cluster dendrogram with eigengenes and traits.

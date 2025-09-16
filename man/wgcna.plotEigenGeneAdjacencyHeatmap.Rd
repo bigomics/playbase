@@ -11,6 +11,21 @@ wgcna.plotEigenGeneAdjacencyHeatmap(
   add_traits = TRUE,
   marx = 1,
   main = NULL,
+  multi = FALSE,
+  colorlabel = TRUE,
+  text = FALSE,
+  pstar = TRUE,
+  setMargins = TRUE,
+  mar1 = c(5.5, 5, 1.6, 1),
+  mar2 = c(8, 10, 4, 2),
+  plotDendro = TRUE,
+  plotHeatmap = TRUE,
+  dendro.horiz = TRUE,
+  dendro.width = 0.3,
+  dendro.labels = TRUE,
+  method = 2,
+  nmax = -1,
+  mask.intra = FALSE,
   justdata = FALSE
 )
 }

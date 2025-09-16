@@ -7106,7 +7106,14 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
     value.name="rho"
     strip.prefix=FALSE
   }
-
+  
+  vattr <- vertex_attr_names(graph)
+  edgeattr <- edge_attr_names(graph)
+  if(!"rho" %in% edgeattr) message("WARNING: no rho in edge attributes!")
+  if(!"weight" %in% edgeattr) message("WARNING: no weight in edge attributes!")
+  if(!"value" %in% vattr) stop("ERROR: no value in edge attributes!")
+  if(!"layer" %in% vattr) stop("ERROR: no layer in edge attributes!")
+  
   if(is.null(layers)) layers <- unique(igraph::V(graph)$layer)
   layers <- setdiff(layers, c("SOURCE","SINK"))
   graph <- igraph::subgraph(graph, igraph::V(graph)$layer %in% layers)
@@ -7198,13 +7205,18 @@ plotMultiPartiteGraph2 <- function(graph, layers=NULL,
   max.wt <- max(ewt,na.rm=TRUE) + 1e-3
   ew <- (ewt / max.wt)**2
 
+  ## vertex size relative to centrality
   vx <- log(1000*igraph::page_rank(graph, weights=ewt)$vector)
-  #vx   <-  abs(y)
   vx <- (0.1+abs(vx)/max(abs(vx)))**1
   vcol <- c("blue2","red2")[ 1+1*(fc[vv] > 0)]
-    
-  ecol <- c("darkorange3","magenta4")[ 1+1*(igraph::E(graph)$weight>=0)]    
+
+  ## color edges by sign or correlation. set NA edges to grey
+  ecol <- c("darkorange3","magenta4")[ 1+1*(igraph::E(graph)$rho >= 0)]    
+  ii <- which(is.na(igraph::E(graph)$rho))
+  if(length(ii)) ecol[ii] <- "grey70"
   ecol <- adjustcolor(ecol, edge.alpha)
+  
+  ## add curvature for intra-edges
   ecurv <- c(-0.25,0)[1 + 1*grepl("->",igraph::E(graph)$connection_type)]
   #ecurv <- c(TRUE,FALSE)[1 + 1*grepl("->",igraph::E(graph)$connection_type)]
   
@@ -7328,7 +7340,7 @@ plotHivePlot <- function(X, f, group, groups=NULL,
   igraph::V(gr)$group <- group[igraph::V(gr)$name]
   
   if(length(gr)==0) {
-    message("[plotMultiPartiteGraph] ERROR. empty graph.")
+    message("[plotHivePlot] ERROR. empty graph.")
     return(NULL)
   }
   
