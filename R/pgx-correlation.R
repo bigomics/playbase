@@ -38,13 +38,13 @@
 #' matrix (precision matrix), and number of samples used are returned.
 #'
 #' @export
-pgx.computeGlassoAroundGene <- function(X, gene, lambda=0.01,  nmax = 100) {
+pgx.computeGlassoAroundGene <- function(X, gene, lambda = 0.01, nmax = 100) {
   rho <- stats::cor(t(X), t(X[gene, , drop = FALSE]))
   jj <- Matrix::head(order(-rowMeans(rho**2, na.rm = TRUE)), nmax)
   tX <- t(X[jj, ])
 
-  varX <- stats::var(tX, na.rm=TRUE)
-  res <- glasso::glasso(varX, rho=lambda)
+  varX <- stats::var(tX, na.rm = TRUE)
+  res <- glasso::glasso(varX, rho = lambda)
   res$cor <- Matrix::cov2cor(varX)
   res$sampleSize <- nrow(tX)
 
@@ -101,7 +101,7 @@ pgx.plotPartialCorrelationGraph <- function(res, gene, nsize = -1, main = "",
   utils::tail(sort(abs(P)), 20)
   rownames(R) <- colnames(R) <- nn
   rownames(P) <- colnames(P) <- nn
-  
+
   G <- igraph::graph_from_adjacency_matrix(
     abs(P),
     mode = "undirected", diag = FALSE, weighted = TRUE
@@ -122,21 +122,21 @@ pgx.plotPartialCorrelationGraph <- function(res, gene, nsize = -1, main = "",
   ee.colors <- c(omics_colors("red"), omics_colors("brand_blue"))
   ee.colors <- adjustcolor(ee.colors, alpha.f = edge.alpha)
   igraph::E(G)$color <- ee.colors[1 + 1 * (sign(R[ee]) > 0)]
-    
+
   ## delete weak edges
-  hist(abs(igraph::E(G)$weight),breaks=100)
-  if(rho.min < 1) {
+  hist(abs(igraph::E(G)$weight), breaks = 100)
+  if (rho.min < 1) {
     rho.min <- min(rho.min, max(abs(igraph::E(G)$weight)))
     del.edges <- which(abs(igraph::E(G)$weight) < rho.min)
     G <- igraph::delete_edges(G, del.edges)
   }
-  
-  if(nb < Inf) {
-    nn <- nb * length(igraph::V(G))  ## approx. number of neighbours
+
+  if (nb < Inf) {
+    nn <- nb * length(igraph::V(G)) ## approx. number of neighbours
     sel.edges <- head(order(-abs(igraph::E(G)$weight)), nn)
     del.edges <- setdiff(1:length(igraph::E(G)), sel.edges)
     G <- igraph::delete_edges(G, del.edges)
-  }   
+  }
 
   if (length(igraph::V(G)) <= 1) {
     return()

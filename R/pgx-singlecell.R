@@ -262,14 +262,14 @@ pgx.scBatchIntegrate <- function(X, batch,
   if ("CCA" %in% method) {
     message("[pgx.scBatchIntegrate] single-cell batch correction using CCA (Seurat)...")
     counts <- pmax(2**X - 1, 0)
-    CCA <- try(pgx.SeuratBatchIntegrate(counts, batch = batch))    
+    CCA <- try(pgx.SeuratBatchIntegrate(counts, batch = batch))
     if (!inherits(CCA, "try-error")) {
       res[["CCA"]] <- CCA
     }
   }
   if ("MNN" %in% method) {
     message("[pgx.scBatchIntegrate] single-cell batch correction using MNN...")
-    ##mnn <- try(batchelor::mnnCorrect(X, batch = batch, cos.norm.in = TRUE, cos.norm.out = FALSE))
+    ## mnn <- try(batchelor::mnnCorrect(X, batch = batch, cos.norm.in = TRUE, cos.norm.out = FALSE))
     mnn <- try(batchelor::mnnCorrect(X, batch = batch))
     if (!inherits(mnn, "try-error")) {
       res[["MNN"]] <- MultiAssayExperiment::assays(mnn)[["corrected"]]
@@ -473,16 +473,15 @@ pgx.read_singlecell_counts <- function(filename) {
 }
 
 #' @title SuperCell down sampling. Uniform down samplsing using gamma = 20.
-#' 
+#'
 #' @export
 pgx.supercell <- function(counts,
                           meta,
                           group = NULL,
                           gamma = 20,
                           log.transform = TRUE) {
-
   if (log.transform) { ## supercell uses log2 matrix
-    X <- logCPM(counts, total=1e4)
+    X <- logCPM(counts, total = 1e4)
   } else {
     X <- counts
   }
@@ -491,14 +490,14 @@ pgx.supercell <- function(counts,
     message("using group detected in meta\n")
     group <- meta[, "group"]
   }
-  
+
   SC <- SuperCell::SCimplify(X,
     gamma = gamma,
     n.var.genes = 1000,
     cell.split.condition = group
   )
   message("[pgx.supercell] SuperCell::SCimplify completed")
-  
+
   meta <- as.data.frame(meta)
   dsel <- which(sapply(meta, class) %in% c("factor", "character", "logical"))
   group.argmax <- function(x) tapply(x, SC$membership, function(x) names(which.max(table(x))))
@@ -507,12 +506,12 @@ pgx.supercell <- function(counts,
   csel <- which(sapply(meta, class) %in% c("numeric", "integer"))
   group.mean <- function(x) tapply(x, SC$membership, function(x) mean(x, na.rm = TRUE))
   cmeta <- apply(meta[, csel, drop = FALSE], 2, function(x) group.mean(x))
-  
+
   sc.meta <- data.frame(dmeta)
   if (length(csel) > 0) sc.meta <- cbind(sc.meta, cmeta)
   ii <- setdiff(match(colnames(meta), colnames(sc.meta)), NA)
-  sc.meta <- sc.meta[, ii, drop=FALSE]
-  
+  sc.meta <- sc.meta[, ii, drop = FALSE]
+
   ## Compute metacall expression as sum of counts
   counts <- as.matrix(counts)
   sc.counts <- SuperCell::supercell_GE(counts, mode = "sum", groups = SC$membership)
@@ -520,37 +519,36 @@ pgx.supercell <- function(counts,
   sc.membership <- paste0("mc", SC$membership)
   colnames(sc.counts) <- paste0("mc", 1:ncol(sc.counts))
   rownames(sc.meta) <- colnames(sc.counts)
-  
+
   list(counts = sc.counts, meta = sc.meta, membership = sc.membership)
 }
 
 
 #' @title SuperCell downsampling by group targeting equal sizes per group.
-#' 
+#'
 #' @export
 pgx.supercell2 <- function(counts, meta, group, target_n = 20) {
-
   ## metacell equal across celltype and phenotype
   g <- group[1]
-  sc.membership <- rep(NA,length(group))
+  sc.membership <- rep(NA, length(group))
   sc.counts <- c()
   sc.meta <- c()
-  for(g in unique(group)) {
+  for (g in unique(group)) {
     sel <- which(group == g)
     k <- max(1, length(sel) / target_n)
-    sc <- pgx.supercell( counts[,sel], samples[sel,], gamma=k)
+    sc <- pgx.supercell(counts[, sel], samples[sel, ], gamma = k)
     names(sc)
-    colnames(sc$counts) <- paste0(g,".",colnames(sc$counts))
+    colnames(sc$counts) <- paste0(g, ".", colnames(sc$counts))
     rownames(sc$meta) <- colnames(sc$counts)
     sc$meta$group <- g
-    sc$membership <- paste0(g,".",sc$membership)
+    sc$membership <- paste0(g, ".", sc$membership)
     sc.membership[sel] <- sc$membership
     sc.counts <- cbind(sc.counts, sc$counts)
     sc.meta <- rbind(sc.meta, sc$meta)
   }
   dim(sc.counts)
 
-  list(counts = sc.counts, meta = sc.meta, membership = sc.membership)  
+  list(counts = sc.counts, meta = sc.meta, membership = sc.membership)
 }
 
 
@@ -624,20 +622,19 @@ pgx.supercell_BIG <- function(counts, meta, group = NULL, gamma = 20, batch.size
   list(counts = sc.counts, meta = sc.meta, membership = sc.membership)
 }
 
-pgx.sc_anchors <- function( counts, sc.counts, sc.membership,
-                           sc.group = colnames(sc.counts) ) {
-  
+pgx.sc_anchors <- function(counts, sc.counts, sc.membership,
+                           sc.group = colnames(sc.counts)) {
   ## determine closest sample to metacell reference (aka anchor)
-  sc.ref <- rep(NA,ncol(sc.counts))
-  X1 <- logCPM(counts,1e4)
-  X2 <- as.matrix(logCPM(sc.counts,1e4))
-  i=1
-  for(i in 1:ncol(sc.counts)) {
+  sc.ref <- rep(NA, ncol(sc.counts))
+  X1 <- logCPM(counts, 1e4)
+  X2 <- as.matrix(logCPM(sc.counts, 1e4))
+  i <- 1
+  for (i in 1:ncol(sc.counts)) {
     mc <- sc.group[i]
     sel <- which(sc.membership == mc)
-    x1 <- as.matrix(X1[,sel,drop=FALSE])
+    x1 <- as.matrix(X1[, sel, drop = FALSE])
     colnames(x1) <- colnames(X1)[sel]
-    rmax <- which.max(cor(x1, X2[,i])[,1])
+    rmax <- which.max(cor(x1, X2[, i])[, 1])
     sc.ref[i] <- colnames(x1)[rmax]
   }
   sc.ref
@@ -657,22 +654,22 @@ pgx.createSeuratObject <- function(counts,
                                    cellcyclescores = TRUE,
                                    filter = TRUE,
                                    sc_compute_settings = list(),
-                                   preprocess = TRUE,                                   
+                                   preprocess = TRUE,
                                    method = "Harmony") {
-
   message("[pgx.createSingleCellPGX] Creating Seurat object ...")
 
   options(Seurat.object.assay.calcn = TRUE)
   getOption("Seurat.object.assay.calcn")
-        
-  if (is.null(samples))
+
+  if (is.null(samples)) {
     samples <- data.frame(row.names = colnames(counts))
+  }
 
   samples <- as.data.frame(samples)
   rownames(samples) <- colnames(counts)
-  if(!is.null(batch)) samples$batch <- batch
+  if (!is.null(batch)) samples$batch <- batch
   samples$nCount_RNA <- Matrix::colSums(counts, na.rm = TRUE)
-  samples$nFeature_RNA <- Matrix::colSums(counts>0, na.rm = TRUE)  
+  samples$nFeature_RNA <- Matrix::colSums(counts > 0, na.rm = TRUE)
   obj <- Seurat::CreateSeuratObject(counts = counts, meta.data = samples)
   obj <- Seurat::PercentageFeatureSet(obj, pattern = "^MT-|^Mt-", col.name = "percent.mt")
   obj <- Seurat::PercentageFeatureSet(obj, pattern = "^RP[LS]|^Rp[ls]", col.name = "percent.ribo")
@@ -685,7 +682,7 @@ pgx.createSeuratObject <- function(counts,
     counts <- obj@assays$RNA$counts
     totcounts <- Matrix::colSums(counts, na.rm = TRUE)
     cpm <- sweep(counts, 2, totcounts, FUN = "/") * 1e4
-    obj@assays$RNA$data <- log1p(cpm)    
+    obj@assays$RNA$data <- log1p(cpm)
     g2m.ff <- Seurat::cc.genes$g2m.genes
     s.ff <- Seurat::cc.genes$s.genes
     obj <- Seurat::CellCycleScoring(obj, s.features = s.ff, g2m.features = g2m.ff)
@@ -698,55 +695,57 @@ pgx.createSeuratObject <- function(counts,
     flts <- unlist(lapply(sc_compute_settings, function(x) isTRUE(x)))
 
     if (any(flts)) {
-
       flts <- names(flts)[which(flts)]
 
-      nfeat_thr = c(0, 1e200)
-      if ("nfeature_threshold" %in% flts)
-        nfeat_thr = sc_compute_settings[["nfeature_threshold"]]
-      
-      mt_thr = 100
-      if ("mt_threshold" %in% flts)
-        mt_thr = sc_compute_settings[["mt_threshold"]]
+      nfeat_thr <- c(0, 1e200)
+      if ("nfeature_threshold" %in% flts) {
+        nfeat_thr <- sc_compute_settings[["nfeature_threshold"]]
+      }
 
-      hb_thr = 100
-      if ("hb_threshold" %in% flts)
-        hb_thr = sc_compute_settings[["hb_threshold"]]
+      mt_thr <- 100
+      if ("mt_threshold" %in% flts) {
+        mt_thr <- sc_compute_settings[["mt_threshold"]]
+      }
 
-      obj <- subset(obj, subset =
-                           nFeature_RNA > nfeat_thr[1] &
-                           nFeature_RNA < nfeat_thr[2] &
-                           percent.mt < mt_thr &
-                           percent.hb < hb_thr)
+      hb_thr <- 100
+      if ("hb_threshold" %in% flts) {
+        hb_thr <- sc_compute_settings[["hb_threshold"]]
+      }
+
+      obj <- subset(obj,
+        subset =
+          nFeature_RNA > nfeat_thr[1] &
+            nFeature_RNA < nfeat_thr[2] &
+            percent.mt < mt_thr &
+            percent.hb < hb_thr
+      )
       ## probs <- c(0.01, 0.99)
       ## qN <- quantile(obj$nCount_RNA, probs = probs)
       ## qF <- quantile(obj$nFeature_RNA, probs = probs)
       ## obj <- subset(obj, subset =
-      ##                      nCount_RNA > qN[1] & nCount_RNA < qN[2] &                       
+      ##                      nCount_RNA > qN[1] & nCount_RNA < qN[2] &
       ##                      nFeature_RNA > qF[1] & nFeature_RNA < qF[2] &
       ##                      percent.mt < 5)
       ncells1 <- ncol(obj)
-      message("[pgx.createSeuratObject] Filtering cells: ", ncells0, " --> ", ncells1) 
+      message("[pgx.createSeuratObject] Filtering cells: ", ncells0, " --> ", ncells1)
     } else {
       message("[pgx.createSeuratObject]: No user-selected filters.")
       ncells1 <- ncol(obj)
-      message("[pgx.createSeuratObject] N. of cells: ", ncells0, " --> ", ncells1) 
+      message("[pgx.createSeuratObject] N. of cells: ", ncells0, " --> ", ncells1)
     }
-    
   }
-  
+
   if (preprocess) {
-    message("[pgx.createIntegratedSeuratObject] Preprocessing Seurat object")   
+    message("[pgx.createIntegratedSeuratObject] Preprocessing Seurat object")
     has.batch <- "batch" %in% tolower(colnames(obj@meta.data))
     if (!is.null(batch)) {
-      obj <- seurat.integrate(obj, 'batch', sct = TRUE, method = "Harmony") 
+      obj <- seurat.integrate(obj, "batch", sct = TRUE, method = "Harmony")
     } else {
       obj <- seurat.preprocess(obj, sc_compute_settings, sct = TRUE)
     }
   }
 
   return(obj)
-
 }
 
 #' @export
@@ -755,8 +754,7 @@ seurat.preprocess <- function(obj,
                               sct = FALSE,
                               tsne = TRUE,
                               umap = TRUE) {
-
-  options(future.globals.maxSize = 4*1024^4)
+  options(future.globals.maxSize = 4 * 1024^4)
 
   vars.to.regress <- NULL
   if (length(sc_compute_settings)) {
@@ -772,12 +770,14 @@ seurat.preprocess <- function(obj,
     if (sc_compute_settings[["regress_ccs"]]) {
       vars.to.regress <- c(vars.to.regress, "S.Score", "G2M.Score")
     }
-  }  
+  }
 
-  if(sct) {
+  if (sct) {
     message("[seurat.preprocess] Performing Seurat SCT normalization")
-    obj <- Seurat::SCTransform(obj, method = "glmGamPoi",
-      vars.to.regress = vars.to.regress, verbose = FALSE)
+    obj <- Seurat::SCTransform(obj,
+      method = "glmGamPoi",
+      vars.to.regress = vars.to.regress, verbose = FALSE
+    )
   } else {
     message("[seurat.preprocess] Performing Seurat standard Normalization, findVarFeatures, scaling")
     ## obj <- Seurat::NormalizeData(obj) causes "integer overflow" issue
@@ -793,37 +793,37 @@ seurat.preprocess <- function(obj,
   }
 
   message("[seurat.preprocess] Performing Seurat PCA")
-  npcs <- min(30, ncol(obj)/2)
+  npcs <- min(30, ncol(obj) / 2)
   obj <- Seurat::RunPCA(obj, npcs = npcs, verbose = FALSE)
-  
+
   # clustering using integrated data or original pca
   dr <- "pca"
-  nn <- min(30L, ncol(obj)/5)
+  nn <- min(30L, ncol(obj) / 5)
   message("[seurat.preprocess] Performing Seurat FindNeighbors & Clusters")
-  obj <- Seurat::FindNeighbors(obj, dims=1:npcs, reduction = dr, verbose = FALSE)
-  obj <- Seurat::FindClusters(obj, resolution = 1, verbose = FALSE) 
+  obj <- Seurat::FindNeighbors(obj, dims = 1:npcs, reduction = dr, verbose = FALSE)
+  obj <- Seurat::FindClusters(obj, resolution = 1, verbose = FALSE)
 
   if (tsne) {
     message("[seurat.preprocess] Performing Seurat 2D tSNE")
-    obj <- Seurat::RunTSNE(obj, dims=1:npcs, reduction = dr, verbose = FALSE)
+    obj <- Seurat::RunTSNE(obj, dims = 1:npcs, reduction = dr, verbose = FALSE)
   }
 
   if (umap) {
     message("[seurat.preprocess] Performing Seurat 2D UMAP")
-    obj <- Seurat::RunUMAP(obj, dims = 1:npcs,
-      n.neighbors = nn, reduction = dr, verbose = FALSE)
+    obj <- Seurat::RunUMAP(obj,
+      dims = 1:npcs,
+      n.neighbors = nn, reduction = dr, verbose = FALSE
+    )
   }
 
   return(obj)
-
 }
 
 #' @export
 seurat.integrate <- function(obj, batch, sct = TRUE, method = "Harmony") {
+  obj[["RNA"]] <- split(obj[["RNA"]], f = obj@meta.data[, batch])
 
-  obj[["RNA"]] <- split( obj[["RNA"]], f = obj@meta.data[,batch] )
-
-  if(sct) {
+  if (sct) {
     message("[seurat.integrate] normalization method = SCT")
     obj <- Seurat::SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
   } else {
@@ -832,20 +832,19 @@ seurat.integrate <- function(obj, batch, sct = TRUE, method = "Harmony") {
     obj <- Seurat::FindVariableFeatures(obj)
     obj <- Seurat::ScaleData(obj)
   }
-  
-  message("[seurat.integrate] Performing Seurat PCA")  
+
+  message("[seurat.integrate] Performing Seurat PCA")
   obj <- Seurat::RunPCA(obj, npcs = 30, verbose = FALSE)
 
   sel.method <- Seurat::HarmonyIntegration
-  sel.method <- switch(
-    method,
+  sel.method <- switch(method,
     CCA = Seurat::CCAIntegration,
     RPCA = Seurat::RPCAIntegration,
     Harmony = Seurat::HarmonyIntegration,
-    JointPCA = Seurat::JointPCAIntegration        
+    JointPCA = Seurat::JointPCAIntegration
   )
 
-  message("[seurat.integrate] integration method = ",method)
+  message("[seurat.integrate] integration method = ", method)
   obj <- Seurat::IntegrateLayers(
     object = obj,
     method = sel.method,
@@ -856,12 +855,12 @@ seurat.integrate <- function(obj, batch, sct = TRUE, method = "Harmony") {
 
   # re-join layers after integration
   obj[["RNA"]] <- JoinLayers(obj[["RNA"]])
-  
+
   # clustering using integrated data or original pca
   dr <- "integrated.dr"
   obj <- Seurat::FindNeighbors(obj, dims = 1:30, reduction = dr, verbose = FALSE)
-  obj <- Seurat::FindClusters(obj, resolution = 1, verbose = FALSE, ) 
-  obj <- Seurat::RunUMAP(obj, dims=1:30, reduction = dr, verbose = FALSE)
+  obj <- Seurat::FindClusters(obj, resolution = 1, verbose = FALSE, )
+  obj <- Seurat::RunUMAP(obj, dims = 1:30, reduction = dr, verbose = FALSE)
   ## obj <- Seurat::RunTSNE(obj, dims=1:30, reduction = dr, verbose = FALSE)
   obj
 }
@@ -870,8 +869,8 @@ seurat.integrate <- function(obj, batch, sct = TRUE, method = "Harmony") {
 #' @export
 pgx.runAzimuth <- function(counts, k.weight = NULL, reference = NULL) {
   require(Seurat)
-  ## options(future.globals.maxSize= 4*1024^3)  ## needed  
-  options(future.globals.maxSize= 4*1024^4) 
+  ## options(future.globals.maxSize= 4*1024^3)  ## needed
+  options(future.globals.maxSize = 4 * 1024^4)
   obj <- pgx.justSeuratObject(counts, samples = NULL)
   if (is.null(k.weight)) {
     k.weight <- 20
@@ -885,10 +884,10 @@ pgx.runAzimuth <- function(counts, k.weight = NULL, reference = NULL) {
   obj1 <- try(Azimuth::RunAzimuth(
     obj,
     reference = reference,
-    k.weight = k.weight, 
+    k.weight = k.weight,
     verbose = FALSE
   ))
-  if(!"try-error" %in% class(obj1)) {
+  if (!"try-error" %in% class(obj1)) {
     k1 <- !(colnames(obj1@meta.data) %in% colnames(obj@meta.data))
     k2 <- !grepl("score$|refAssay$", colnames(obj1@meta.data))
     meta1 <- obj1@meta.data[, (k1 & k2)]
@@ -901,113 +900,123 @@ pgx.runAzimuth <- function(counts, k.weight = NULL, reference = NULL) {
 
 
 #' @title Random downsampling by group targeting equal sizes per group.
-#' 
+#'
 #' @export
 pgx.downsample <- function(counts, meta, group, target_n = 20) {
   ## metacell equal across celltype and phenotype
   g <- group[1]
-  sc.membership <- rep(NA,length(group))
+  sc.membership <- rep(NA, length(group))
   sc.counts <- c()
   sc.meta <- c()
-  sel <- tapply( 1:ncol(counts), group, function(ii)
-    head( sample(ii), target_n) )
+  sel <- tapply(1:ncol(counts), group, function(ii) {
+    head(sample(ii), target_n)
+  })
   sel <- unlist(sel)
-  sc.counts  <- counts[,sel]
-  sc.meta    <- meta[sel,]
+  sc.counts <- counts[, sel]
+  sc.meta <- meta[sel, ]
   sc.meta$group <- group[sel]
-  list(counts = sc.counts, meta = sc.meta, membership=NULL)  
+  list(counts = sc.counts, meta = sc.meta, membership = NULL)
 }
 
 seurat.downsample <- function(obj, target_n = 1000, target_g = 20, group = NULL) {
-  if( ncol(obj) <= target_n ) return(obj)
-  if(is.null(group)) {
-    sub <- obj[ , sample(ncol(obj), target_n)]
+  if (ncol(obj) <= target_n) {
+    return(obj)
+  }
+  if (is.null(group)) {
+    sub <- obj[, sample(ncol(obj), target_n)]
     return(sub)
   }
   obj@meta.data$downsample.group <- group
   sel <- tapply(1:ncol(obj), group, function(ii) head(sample(ii), target_g))
-  sub <- obj[ , unlist(sel)]
+  sub <- obj[, unlist(sel)]
   return(sub)
 }
 
 
 #' Transfer labels from reference to query (Seurat objects)
-#' 
-seurat.transferLabels <- function(ref, query, labels, sct=TRUE) {
-
-  
+#'
+seurat.transferLabels <- function(ref, query, labels, sct = TRUE) {
   ## find anchors
   npcs <- ncol(ref@reductions[[1]])
-  nn <- min(30L, ncol(ref)/5)
+  nn <- min(30L, ncol(ref) / 5)
   anchors <- Seurat::FindTransferAnchors(
     reference = ref, query = query, dims = 1:npcs, k.score = nn,
     normalization.method = ifelse(sct, "SCT", "LogNormalize"),
-    reference.reduction = "pca")
+    reference.reduction = "pca"
+  )
 
   ## redudant??? MapQuery does the same??
-  if(length(labels)==1 && labels %in% colnames(ref@meta.dat)) {
-    refdata <- ref@meta.data[,labels]
+  if (length(labels) == 1 && labels %in% colnames(ref@meta.dat)) {
+    refdata <- ref@meta.data[, labels]
   } else {
-    refdata <- labels      
+    refdata <- labels
   }
   predictions <- Seurat::TransferData(anchorset = anchors, refdata = refdata, dims = 1:npcs)
-  query <- AddMetaData(query, metadata = predictions[,"predicted.id",drop=FALSE])
-  #table(query$predicted.id)
-  
-  ## UMAP projection  
-  ref <- Seurat::RunUMAP(ref, dims = 1:npcs, n.neighbors=nn,
-                         reduction = "pca", return.model = TRUE)
+  query <- AddMetaData(query, metadata = predictions[, "predicted.id", drop = FALSE])
+  # table(query$predicted.id)
+
+  ## UMAP projection
+  ref <- Seurat::RunUMAP(ref,
+    dims = 1:npcs, n.neighbors = nn,
+    reduction = "pca", return.model = TRUE
+  )
   n.anchors <- nrow(anchors@anchors)
   n.anchors
   query <- Seurat::MapQuery(
     anchorset = anchors, reference = ref, query = query,
-    refdata = list( label = labels ),
+    refdata = list(label = labels),
     reference.reduction = "pca", reduction.model = "umap",
-    transferdata.args = list( k.weight = min(n.anchors/2,50) )
+    transferdata.args = list(k.weight = min(n.anchors / 2, 50))
   )
-  
-  do.plot = FALSE
-  if(do.plot) {
+
+  do.plot <- FALSE
+  if (do.plot) {
     library(ggplot2)
     ref@meta.data$label <- labels
-    p1 <- DimPlot(ref, reduction = "umap", group.by = "label", label = TRUE,
-                  label.size = 3, repel = TRUE) + NoLegend() + ggtitle("Reference annotations")
-    p2 <- DimPlot(query, reduction = "ref.umap", group.by = "predicted.label",
-                  label = TRUE, label.size = 3, pt.size=0.3, repel = TRUE) + NoLegend() +
+    p1 <- DimPlot(ref,
+      reduction = "umap", group.by = "label", label = TRUE,
+      label.size = 3, repel = TRUE
+    ) + NoLegend() + ggtitle("Reference annotations")
+    p2 <- DimPlot(query,
+      reduction = "ref.umap", group.by = "predicted.label",
+      label = TRUE, label.size = 3, pt.size = 0.3, repel = TRUE
+    ) + NoLegend() +
       ggtitle("Query transferred labels")
-    p3 <- DimPlot(query, reduction = "umap", group.by = c("predicted.label","stim"),
-                  label = TRUE, label.size = 3, pt.size=0.3, repel = TRUE) + NoLegend() +
+    p3 <- DimPlot(query,
+      reduction = "umap", group.by = c("predicted.label", "stim"),
+      label = TRUE, label.size = 3, pt.size = 0.3, repel = TRUE
+    ) + NoLegend() +
       ggtitle("Query transferred labels")
-    (p1 + p2) / p3 
+    (p1 + p2) / p3
   }
 
   ## yes. this is redundant but which one is better?
-  predicted <- query@meta.data[,c("predicted.id","predicted.label")] 
+  predicted <- query@meta.data[, c("predicted.id", "predicted.label")]
 
-  list(ref=ref, query=query, predicted=predicted)
+  list(ref = ref, query = query, predicted = predicted)
 }
 
-#' Transfer labels from reference to query (matrices)  
+#' Transfer labels from reference to query (matrices)
 #'
 transferLabels <- function(ref.mat, query.mat, labels) {
   ref.meta <- data.frame(label = labels)
   rownames(ref.meta) <- colnames(ref.mat)
-  ref   <-  pgx.justSeuratObject(ref.mat, samples = ref.meta)
-  query <-  pgx.justSeuratObject(query.mat, samples=NULL)
-  sct=FALSE
+  ref <- pgx.justSeuratObject(ref.mat, samples = ref.meta)
+  query <- pgx.justSeuratObject(query.mat, samples = NULL)
+  sct <- FALSE
   ref <- seurat.preprocess(ref, sct = sct)
-  query <- seurat.preprocess(query, sct = sct)  
+  query <- seurat.preprocess(query, sct = sct)
   tf <- seurat.transferLabels(ref, query, ref$label, sct = sct)
   names(tf)
-  do.plot=FALSE
-  if(do.plot) {
+  do.plot <- FALSE
+  if (do.plot) {
     names(tf$ref@reductions)
-    names(tf$query@reductions)  
-    ref.pos <- tf$ref@reductions[['umap']]@cell.embeddings
-    query.pos <- tf$query@reductions[['ref.umap']]@cell.embeddings
-    query.pos2 <- tf$query@reductions[['umap']]@cell.embeddings  
-    par(mfrow=c(2,2))
-    plot(ref.pos, col = factor(tf$ref$label), main="REFERENCE")
+    names(tf$query@reductions)
+    ref.pos <- tf$ref@reductions[["umap"]]@cell.embeddings
+    query.pos <- tf$query@reductions[["ref.umap"]]@cell.embeddings
+    query.pos2 <- tf$query@reductions[["umap"]]@cell.embeddings
+    par(mfrow = c(2, 2))
+    plot(ref.pos, col = factor(tf$ref$label), main = "REFERENCE")
     plot(query.pos, col = factor(tf$query$predicted.label), main = "TRANSFERRED (ref.umap)")
     plot(query.pos2, col = factor(tf$query$predicted.label), main = "TRANSFERRED (umap)")
   }
@@ -1022,9 +1031,7 @@ pgx.createSingleCellPGX <- function(counts,
                                     organism,
                                     azimuth_ref,
                                     batch = NULL,
-                                    sc_compute_settings = list()
-                                    ) {
-
+                                    sc_compute_settings = list()) {
   message("[pgx.createSingleCellPGX]==========================================")
   message("[pgx.createSingleCellPGX]======= pgx.createSingleCellPGX ==========")
   message("[pgx.createSingleCellPGX]==========================================")
@@ -1035,14 +1042,17 @@ pgx.createSingleCellPGX <- function(counts,
     stop("[createPGX] FATAL: counts must be provided")
   }
 
-  if (is.null(samples))
+  if (is.null(samples)) {
     stop("[createSingleCellPGX] FATAL: samples must be provided")
-  
-  if (!all(colnames(counts) == rownames(samples)))
-    stop("colnames of counts and rownames of samples do not match\n")
+  }
 
-  if (is.null(organism))
+  if (!all(colnames(counts) == rownames(samples))) {
+    stop("colnames of counts and rownames of samples do not match\n")
+  }
+
+  if (is.null(organism)) {
     stop("[createSingleCellPGX] FATAL: organism must be provided")
+  }
 
   if (is.null(azimuth_ref)) {
     azimuth_ref <- "pbmcref"
@@ -1052,7 +1062,7 @@ pgx.createSingleCellPGX <- function(counts,
   }
 
   sc_params <- names(sc_compute_settings)
-  if(!is.null(sc_compute_settings) && length(sc_compute_settings)>0) {
+  if (!is.null(sc_compute_settings) && length(sc_compute_settings) > 0) {
     info("[createSingleCellPGX] scRNAseq parameters: ", sc_params)
   } else {
     sc_compute_settings <- list()
@@ -1062,10 +1072,10 @@ pgx.createSingleCellPGX <- function(counts,
   azm <- pgx.runAzimuth(counts, reference = azimuth_ref)
   azm <- azm[, grep("predicted", colnames(azm))]
   ntype <- apply(azm, 2, function(a) length(unique(a)))
-  sel <- ifelse(min(ntype) > 10, which.min(ntype), tail(which(ntype <= 10),1))
+  sel <- ifelse(min(ntype) > 10, which.min(ntype), tail(which(ntype <= 10), 1))
   samples <- as.data.frame(samples)
   samples$celltype <- azm[, sel]
-  
+
   ## because the samples get downsamples, also the sample and
   ## contrasts matrices get downsampled (by majority label).
   samplesx <- cbind(samples, contrasts)
@@ -1073,44 +1083,44 @@ pgx.createSingleCellPGX <- function(counts,
   sc.membership <- NULL
   do.supercells <- sc_compute_settings[["compute_supercells"]]
 
-  if (do.supercells || ncol(counts) > 10000) {  
-
-    if (do.supercells)
+  if (do.supercells || ncol(counts) > 10000) {
+    if (do.supercells) {
       message("[pgx.createSingleCellPGX] User choice: performing SuperCell")
-    if (ncol(counts) > 10000)
+    }
+    if (ncol(counts) > 10000) {
       message("[pgx.createSingleCellPGX] >10K cells: performing SuperCell")
-    
+    }
+
     ct <- samplesx[, "celltype"]
-    group <- paste0(ct, ":", apply(contrasts, 1, paste, collapse = '_'))
+    group <- paste0(ct, ":", apply(contrasts, 1, paste, collapse = "_"))
     ##  group <- paste0(samples[, "celltype"], ":", samples[, pheno])
-    if(!is.null(batch)) group <- paste0(group, ":", samples[, batch])
-    
-    q10 <- quantile(table(group), probs=0.25)
+    if (!is.null(batch)) group <- paste0(group, ":", samples[, batch])
+
+    q10 <- quantile(table(group), probs = 0.25)
     if (ncol(counts) > 2000) {
-      nb <- round( ncol(counts) / 2000 )
+      nb <- round(ncol(counts) / 2000)
     } else {
-      d <- round(ncol(counts)/8, 1)
-      nb <- round( ncol(counts) / d) ## temporary...
+      d <- round(ncol(counts) / 8, 1)
+      nb <- round(ncol(counts) / d) ## temporary...
     }
     ## nb <- ceiling(round( q10 / 20 ))
-    message("[pgx.createSingleCellPGX] running SuperCell. nb = ", nb)    
+    message("[pgx.createSingleCellPGX] running SuperCell. nb = ", nb)
     sc <- pgx.supercell(counts, samplesx, group = group, gamma = nb)
     message("[pgx.createSingleCellPGX] SuperCell done: ", ncol(counts), " -> ", ncol(sc$counts))
     counts <- sc$counts
     samplesx <- sc$meta
     sc.membership <- sc$membership
     remove(sc)
-
   }
 
   ## Create full Seurat object. Optionally integrate by batch.
-  batch.vec <- NULL  
+  batch.vec <- NULL
   if (!is.null(batch)) {
-    message("[pgx.createSingleCellPGX] Integrating by batch = ", batch)     
+    message("[pgx.createSingleCellPGX] Integrating by batch = ", batch)
     batch.vec <- as.vector(unlist(samplesx[, batch]))
-    #table(batch.vec)
+    # table(batch.vec)
   }
-  
+
   message("[pgx.createSingleCellPGX] Creating Seurat object ...")
   obj <- pgx.createSeuratObject(
     counts = counts,
@@ -1121,28 +1131,32 @@ pgx.createSingleCellPGX <- function(counts,
     sc_compute_settings = sc_compute_settings,
     preprocess = TRUE,
     method = "Harmony"
-  ) 
+  )
 
   r <- "pca"
   if (!is.null(batch)) r <- "integrated.dr"
 
   message("[pgx.createSingleCellPGX] Performing Seurat 2D and 3D t-SNE")
-  obj <- Seurat::RunTSNE(obj, dims=1:30, reduction = r, verbose = FALSE)
-  obj <- Seurat::RunTSNE(obj, dim.embed = 3L, dims=1:30,
-    reduction = r, reduction.name ="tsne.3d",
-    reduction.key ="tsne3d_", verbose = FALSE)
+  obj <- Seurat::RunTSNE(obj, dims = 1:30, reduction = r, verbose = FALSE)
+  obj <- Seurat::RunTSNE(obj,
+    dim.embed = 3L, dims = 1:30,
+    reduction = r, reduction.name = "tsne.3d",
+    reduction.key = "tsne3d_", verbose = FALSE
+  )
 
   message("[pgx.createSingleCellPGX] Performing Seurat 3D UMAP")
-  obj <- Seurat::RunUMAP(obj, n.components = 3L, dims=1:30,
-    reduction = r, reduction.name ="umap.3d",
-    reduction.key = "umap3d_",  verbose = FALSE)
-  
+  obj <- Seurat::RunUMAP(obj,
+    n.components = 3L, dims = 1:30,
+    reduction = r, reduction.name = "umap.3d",
+    reduction.key = "umap3d_", verbose = FALSE
+  )
+
   ## Create balanced down-sampled object.
   ## Target about n=20 cells per statistical condition, per celltype.
-  downsample = FALSE
-  if (!downsample) sub=obj;
+  downsample <- FALSE
+  if (!downsample) sub <- obj
   ## if (downsample) {
-  ##   message("[pgx.createSingleCellPGX] Down-sampling Seurat object ...")  
+  ##   message("[pgx.createSingleCellPGX] Down-sampling Seurat object ...")
   ##   meta.ct <- obj@meta.data[,colnames(contrasts)]
   ##   group <- paste0(obj@meta.data$celltype, ":", meta.ct)
   ##   table(group)
@@ -1150,13 +1164,13 @@ pgx.createSingleCellPGX <- function(counts,
   ## } else {
   ##   sub <- obj
   ## }
-  
+
   ## results for pgx.createPGX
   message("[pgx.createSingleCellPGX] Creating PGX object ...")
-  counts2 <- sub[['RNA']]$counts
+  counts2 <- sub[["RNA"]]$counts
   kk <- setdiff(colnames(sub@meta.data), colnames(contrasts))
   samples2 <- sub@meta.data[, kk]
-  
+
   ## stratify contrast matrix by celltype
   contrasts2 <- sub@meta.data[, colnames(contrasts), drop = FALSE]
   contrasts2 <- stratifyContrasts(contrasts2, samples2$celltype)
@@ -1184,7 +1198,7 @@ pgx.createSingleCellPGX <- function(counts,
     impX = NULL,
     norm_method = "CPM",
     is.logx = FALSE,
-    #batch.correct = FALSE,
+    # batch.correct = FALSE,
     batch.correct.method = "no_batch_correct", ## new
     batch.pars = "<autodetect>", ## new
     auto.scale = TRUE,
@@ -1200,25 +1214,25 @@ pgx.createSingleCellPGX <- function(counts,
 
   ## We take the clusterings from Seurat because
   ## these are 'integrated' (batch corrected).
-  cluster = list(
-    pca2d = sub@reductions[['pca']]@cell.embeddings[, 1:2],
-    pca3d = sub@reductions[['pca']]@cell.embeddings[, 1:3],
-    tsne2d = sub@reductions[['tsne']]@cell.embeddings,
-    tsne3d = sub@reductions[['tsne.3d']]@cell.embeddings,
-    umap2d = sub@reductions[['umap']]@cell.embeddings,
-    umap3d = sub@reductions[['umap.3d']]@cell.embeddings            
+  cluster <- list(
+    pca2d = sub@reductions[["pca"]]@cell.embeddings[, 1:2],
+    pca3d = sub@reductions[["pca"]]@cell.embeddings[, 1:3],
+    tsne2d = sub@reductions[["tsne"]]@cell.embeddings,
+    tsne3d = sub@reductions[["tsne.3d"]]@cell.embeddings,
+    umap2d = sub@reductions[["umap"]]@cell.embeddings,
+    umap3d = sub@reductions[["umap.3d"]]@cell.embeddings
   )
 
   if (!downsample) {
     cluster.full <- cluster
   } else {
-    cluster.full = list(
-      pca2d = obj@reductions[['pca']]@cell.embeddings[, 1:2],
-      pca3d = obj@reductions[['pca']]@cell.embeddings[, 1:3],
-      tsne2d = obj@reductions[['tsne']]@cell.embeddings,
-      tsne3d = obj@reductions[['tsne.3d']]@cell.embeddings,
-      umap2d = obj@reductions[['umap']]@cell.embeddings,
-      umap3d = obj@reductions[['umap.3d']]@cell.embeddings            
+    cluster.full <- list(
+      pca2d = obj@reductions[["pca"]]@cell.embeddings[, 1:2],
+      pca3d = obj@reductions[["pca"]]@cell.embeddings[, 1:3],
+      tsne2d = obj@reductions[["tsne"]]@cell.embeddings,
+      tsne3d = obj@reductions[["tsne.3d"]]@cell.embeddings,
+      umap2d = obj@reductions[["umap"]]@cell.embeddings,
+      umap3d = obj@reductions[["umap.3d"]]@cell.embeddings
     )
   }
 
@@ -1232,7 +1246,6 @@ pgx.createSingleCellPGX <- function(counts,
   message("\n\n")
 
   return(pgx)
-
 }
 ## =====================================================================================
 ## =========================== END OF FILE =============================================

@@ -42,7 +42,7 @@ MultiOmicsSAE <- R6::R6Class(
                           sd_weight = TRUE, device = "cpu") {
       if (!is.null(ntop) && ntop > 0) {
         message("reducing to maximum ", ntop, " features")
-        X <- lapply(X, function(x) head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)),,drop=FALSE ], ntop))
+        X <- lapply(X, function(x) head(x[order(-matrixStats::rowSds(x, na.rm = TRUE)), , drop = FALSE], ntop))
       }
 
       if (any(sapply(X, function(x) sum(is.na(x))) > 0)) {
@@ -84,8 +84,8 @@ MultiOmicsSAE <- R6::R6Class(
         r <- (1 - validation_ratio)
         xdim <- ncol(X[[1]])
         ii <- sample(1:xdim, r * xdim)
-        self$x_train <- lapply(X, function(x) t(x[, ii, drop=FALSE]))
-        self$x_test <- lapply(X, function(x) t(x[, -ii, drop=FALSE]))
+        self$x_train <- lapply(X, function(x) t(x[, ii, drop = FALSE]))
+        self$x_test <- lapply(X, function(x) t(x[, -ii, drop = FALSE]))
         self$y_train <- lapply(Y, function(y) torch::torch_tensor(y[ii]))
         self$y_test <- lapply(Y, function(y) torch::torch_tensor(y[-ii]))
       } else {
@@ -416,7 +416,7 @@ MultiBlockMultiTargetSAE_module <- torch::nn_module(
       dims <- num_layers[[1]]
       dims <- round(ifelse(dims < 1, dims * xdim, dims))
       dims <- pmax(dims, tail(dims, 1)) ## always larger than bottlenect
-      dims <- pmin(dims, ceiling(xdim/2))  ## always smaller than input (??)
+      dims <- pmin(dims, ceiling(xdim / 2)) ## always smaller than input (??)
       dims <- c(xdim, dims)
       nlayers <- length(dims)
       for (i in 1:(nlayers - 1)) {
@@ -625,7 +625,7 @@ SimpleSAE_module <- torch::nn_module(
 #'
 #' @export
 deep.plotBiomarkerHeatmap <- function(net, datatypes = NULL, balanced = TRUE,
-                                      annot = NULL, labels=NULL, ntop = 50, ...) {
+                                      annot = NULL, labels = NULL, ntop = 50, ...) {
   grad <- net$get_gradients()
 
   if (!is.null(datatypes)) {
@@ -646,9 +646,9 @@ deep.plotBiomarkerHeatmap <- function(net, datatypes = NULL, balanced = TRUE,
     }
     ## now we have ranking per datatype across multiple phenotypes
     rnk2 <- lapply(rnk, function(r) rownames(r)[order(rowMeans(r))])
-    rnk2 <- lapply(rnk2, function(x) head(rep(x,ntop),ntop))
-    rnk2 <- do.call(rbind,rnk2)    
-    sel  <- head(unique(as.vector(rnk2)),ntop)   
+    rnk2 <- lapply(rnk2, function(x) head(rep(x, ntop), ntop))
+    rnk2 <- do.call(rbind, rnk2)
+    sel <- head(unique(as.vector(rnk2)), ntop)
   } else {
     ## not balancing between datatypes. just largest gradient.
     mgrad <- lapply(grad, function(gr) mofa.merge_data(gr))
@@ -659,15 +659,15 @@ deep.plotBiomarkerHeatmap <- function(net, datatypes = NULL, balanced = TRUE,
   colnames(X) <- make_unique(colnames(X))
   X <- X[sel, ]
 
-  Y <- data.frame(net$Y, check.names=FALSE)
+  Y <- data.frame(net$Y, check.names = FALSE)
   rownames(Y) <- colnames(X)
   if (!is.null(annot)) {
     kk <- setdiff(colnames(annot), colnames(Y))
     Y <- cbind(Y, annot[, kk, drop = FALSE])
   }
-  
-  if(!is.null(labels)) {
-    rownames(X) <- labels[match(rownames(X),names(labels))]
+
+  if (!is.null(labels)) {
+    rownames(X) <- labels[match(rownames(X), names(labels))]
   }
 
   gx.splitmap(X,
@@ -760,13 +760,15 @@ deep.plotAutoEncoderReconstructions <- function(net, dtypes = NULL,
 #' @export
 deep.plotRedux <- function(net, pheno = NULL, method = "tsne", views = NULL, par = TRUE, cex = 1) {
   redux <- net$get_redux(xx = NULL)
-  if(any(sapply(redux,ncol)<2)) {
-    sel <- which(sapply(redux,ncol)<3)
-    message("[deep.plotRedux] warning: augmenting ",
-            paste(names(sel),collapse=" "))
-    for(j in sel) {
-      Rj <- do.call(cbind,rep(list(redux[[j]]),3))
-      Rj <- Rj + 1e-3*sd(Rj)*matrix(rnorm(length(Rj)),nrow(Rj),ncol(Rj))
+  if (any(sapply(redux, ncol) < 2)) {
+    sel <- which(sapply(redux, ncol) < 3)
+    message(
+      "[deep.plotRedux] warning: augmenting ",
+      paste(names(sel), collapse = " ")
+    )
+    for (j in sel) {
+      Rj <- do.call(cbind, rep(list(redux[[j]]), 3))
+      Rj <- Rj + 1e-3 * sd(Rj) * matrix(rnorm(length(Rj)), nrow(Rj), ncol(Rj))
       redux[[j]] <- cbind(redux[[j]], Rj)
     }
   }
@@ -825,7 +827,7 @@ deep.plotMultiOmicsGradients <- function(grad, n = 20, cex.names = 1,
 
       barplot(sort(gr), ylab = "gradient", las = 3, cex.names = cex.names)
       title(
-        paste0(colnames(grad[[1]])[k],"@", names(grad)[i]),
+        paste0(colnames(grad[[1]])[k], "@", names(grad)[i]),
         line = -0.5, cex.main = 1.15
       )
     }
@@ -889,7 +891,7 @@ deep.plotGradientVSFoldchange <- function(grad, fc, data = FALSE, par = TRUE) {
       xlab <- "logFC"
       plot(f, g, xlab = xlab, ylab = "network gradient")
       abline(h = 0, v = 0, lty = 2)
-      title(paste0(colnames(grad[[k]])[i],"@", k))
+      title(paste0(colnames(grad[[k]])[i], "@", k))
       sel <- unique(c(head(order(-f), 5), head(order(-g), 5)))
       text(f[sel], g[sel], labels = names(f)[sel], col = "red", pos = 2)
       sel <- unique(c(head(order(f), 5), head(order(g), 5)))
@@ -901,8 +903,7 @@ deep.plotGradientVSFoldchange <- function(grad, fc, data = FALSE, par = TRUE) {
 #'
 #'
 #' @export
-deep.plotNeuralNet <- function(net, svgfile = NULL, rm.files=TRUE, image=NULL) {
-  
+deep.plotNeuralNet <- function(net, svgfile = NULL, rm.files = TRUE, image = NULL) {
   if (!dir.exists("/opt/PlotNeuralNet")) {
     message("ERROR: please install PlotNeuralNet in /opt")
     return(NULL)
@@ -996,18 +997,22 @@ arch = [
     txt <- "    # Predictor layer {name}\n"
     for (i in 1:nlayer) {
       if (i == 1 && i != nlayer) {
-        txt <- paste0(txt, "    to_Conv('{pred[1]}', '{dims[1]}', '', offset='{offset}', to='(dense",
-          lastdense, "-east)', height=10, depth={w[1]}, width=2, caption='predictor'),\n")
+        txt <- paste0(
+          txt, "    to_Conv('{pred[1]}', '{dims[1]}', '', offset='{offset}', to='(dense",
+          lastdense, "-east)', height=10, depth={w[1]}, width=2, caption='predictor'),\n"
+        )
         txt <- paste0(txt, "    to_connection('dense", lastdense, "', '{pred[1]}'),\n")
       } else {
         if (i == nlayer && i != 1) {
           txt <- paste0(txt, "    to_ConvSoftMax( name='{pred[", i, "]}', s_filer = '{dims[", i, "]}', offset='(2,0,0)', to='({pred[", i - 1, "]}-east)', width=2, height=10, depth={w[", i, "]}, caption='{caption}'),\n")
         } else if (i == nlayer && i == 1) {
-          #txt <- paste0(txt, "    to_ConvSoftMax( name='{pred[", i, "]}', s_filer = '{dims[", i, "]}', offset='(2,0,0)', to='(dense", lastdense, "-east)', width=2, height=10, depth={w[", i, "]}, caption='{caption}'),\n")
-          txt <- paste0(txt, "    to_ConvSoftMax( name='{pred[", i, "]}', s_filer = '{dims[", i, "]}', offset='{offset}', to='(dense", lastdense, "-east)', width=2, height=10, depth={w[", i, "]}, caption='{caption}'),\n")          
+          # txt <- paste0(txt, "    to_ConvSoftMax( name='{pred[", i, "]}', s_filer = '{dims[", i, "]}', offset='(2,0,0)', to='(dense", lastdense, "-east)', width=2, height=10, depth={w[", i, "]}, caption='{caption}'),\n")
+          txt <- paste0(txt, "    to_ConvSoftMax( name='{pred[", i, "]}', s_filer = '{dims[", i, "]}', offset='{offset}', to='(dense", lastdense, "-east)', width=2, height=10, depth={w[", i, "]}, caption='{caption}'),\n")
         } else {
-          txt <- paste0(txt, "    to_Conv('{pred[", i, "]}', '{dims[", i, "]}', '', offset='(2,0,0)', to='({pred[",
-            i - 1, "]}-east)', height=10, depth={w[", i, "]}, width=2, caption=''),\n")
+          txt <- paste0(
+            txt, "    to_Conv('{pred[", i, "]}', '{dims[", i, "]}', '', offset='(2,0,0)', to='({pred[",
+            i - 1, "]}-east)', height=10, depth={w[", i, "]}, width=2, caption=''),\n"
+          )
         }
         ## add arrows
         if (i != 1) {
@@ -1042,36 +1047,36 @@ if __name__ == '__main__':
   net_dims <- net$get_dims()
   views <- rev(names(net$X))
   views <- iconv(views, "latin1", "ASCII", sub = "")
-  views <- gsub("[_\\$ ]","",views) ## latex special chars
+  views <- gsub("[_\\$ ]", "", views) ## latex special chars
   nview <- length(views)
 
   ## create input image if not given
-  if(is.null(image) || !file.exists(image)) {
+  if (is.null(image) || !file.exists(image)) {
     image <- c()
-    for(i in 1:nview) {
-      image[[i]] = paste0("/tmp/inputimage",i,".png")
+    for (i in 1:nview) {
+      image[[i]] <- paste0("/tmp/inputimage", i, ".png")
       x1 <- net$X[[i]]
-      x1 <- head(x1[order(-matrixStats::rowSds(x1,na.rm=TRUE)),,drop=FALSE],100)
-      x1 <- head(t(rowscale(x1)),100)
-      x1 <- 1*(x1 > mean(x1,na.rm=TRUE))
-      png(image[[i]],width=950,height=220)
-      par(mar=c(0,0,0,0))
-      gx.imagemap(x1, cex=0, col=grey.colors(64))
+      x1 <- head(x1[order(-matrixStats::rowSds(x1, na.rm = TRUE)), , drop = FALSE], 100)
+      x1 <- head(t(rowscale(x1)), 100)
+      x1 <- 1 * (x1 > mean(x1, na.rm = TRUE))
+      png(image[[i]], width = 950, height = 220)
+      par(mar = c(0, 0, 0, 0))
+      gx.imagemap(x1, cex = 0, col = grey.colors(64))
       dev.off()
     }
   }
-  if(length(image) < nview) {
-    image <- head(rep(image,nview),nview)
+  if (length(image) < nview) {
+    image <- head(rep(image, nview), nview)
   }
-  
+
   ## build code text
   ltx <- header_src
   redux <- net$get_redux()
   rdim <- ncol(redux[[1]]) ## bottleneck dimension
   targets <- names(net$Y)
   targets <- iconv(targets, "latin1", "ASCII", sub = "")
-  targets <- gsub("[_\\$ ]","",targets) ## latex special chars
-  
+  targets <- gsub("[_\\$ ]", "", targets) ## latex special chars
+
   ntargets <- length(targets)
   for (i in 1:length(views)) {
     at <- c(0, 0, (i - 1) * 22)
@@ -1095,7 +1100,7 @@ if __name__ == '__main__':
   ## predictors
   ntargets <- length(targets)
   lastdense <- length(net_dims$integrator)
-  i=1
+  i <- 1
   for (i in 1:ntargets) {
     offset <- c(3, 0, 8 * ((i - 1) - (ntargets - 1) / 2))
     dims <- net_dims[["predictor"]][[i]]
@@ -1117,16 +1122,16 @@ if __name__ == '__main__':
   write(ltx, file = pyfile)
 
   if (!file.exists(pyfile)) {
-    message("[deep.plotNeuralNet] WARNING. failed to create Python file ",pyfile)
+    message("[deep.plotNeuralNet] WARNING. failed to create Python file ", pyfile)
   }
 
   texfile <- sub("[.]py$", ".tex", pyfile)
   auxfile <- sub("[.]py$", ".aux", pyfile)
   logfile <- sub("[.]py$", ".log", pyfile)
   pdffile <- sub("[.]py$", ".pdf", pyfile)
-  if(is.null(svgfile)) {
+  if (is.null(svgfile)) {
     svgfile <- sub("[.]py$", ".svg", pyfile)
-    svgfile <- paste0("/tmp/",basename(svgfile)) ## write to /tmp
+    svgfile <- paste0("/tmp/", basename(svgfile)) ## write to /tmp
   }
 
   if (file.exists(pyfile)) {
@@ -1136,8 +1141,8 @@ if __name__ == '__main__':
       intern = FALSE, show.output.on.console = FALSE
     ))
     if (!file.exists(texfile)) {
-      message("[deep.plotNeuralNet] WARNING. failed to create TeX file ",texfile)
-      message("[deep.plotNeuralNet] python cmd = ",cmd)
+      message("[deep.plotNeuralNet] WARNING. failed to create TeX file ", texfile)
+      message("[deep.plotNeuralNet] python cmd = ", cmd)
     }
   }
 
@@ -1147,9 +1152,9 @@ if __name__ == '__main__':
       ignore.stdout = TRUE, ignore.stderr = TRUE,
       intern = FALSE, show.output.on.console = FALSE
     ))
-    if (!file.exists(pdffile)) {      
-      message("[deep.plotNeuralNet] WARNING. failed to create PDF file ",pdffile)
-      message("[deep.plotNeuralNet] pdflatex cmd = ",cmd)    
+    if (!file.exists(pdffile)) {
+      message("[deep.plotNeuralNet] WARNING. failed to create PDF file ", pdffile)
+      message("[deep.plotNeuralNet] pdflatex cmd = ", cmd)
     }
   }
 
@@ -1160,20 +1165,20 @@ if __name__ == '__main__':
       intern = FALSE, show.output.on.console = FALSE
     ))
     if (!file.exists(svgfile)) {
-      message("[deep.plotNeuralNet] WARNING. failed to create SVG file ",svgfile)
-      message("[deep.plotNeuralNet] pdf2svg cmd = ",cmd)    
+      message("[deep.plotNeuralNet] WARNING. failed to create SVG file ", svgfile)
+      message("[deep.plotNeuralNet] pdf2svg cmd = ", cmd)
     }
   }
 
-  
-  if(rm.files) {
+
+  if (rm.files) {
     if (file.exists(auxfile)) unlink(auxfile)
     if (file.exists(logfile)) unlink(logfile)
     if (file.exists(texfile)) unlink(texfile)
-    if (file.exists(pyfile))  unlink(pyfile)
+    if (file.exists(pyfile)) unlink(pyfile)
     if (file.exists(pdffile)) unlink(pdffile)
   }
-  
+
   if (file.exists(svgfile)) {
     return(svgfile)
   } else {

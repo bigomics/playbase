@@ -16,7 +16,7 @@ signedRank <- function(x) {
 #'
 #' @export
 colSignedRanks <- function(x) {
-  if(inherits(x,"dgCMatrix")) {
+  if (inherits(x, "dgCMatrix")) {
     rx <- sign(x) * Matrix::t(sparseMatrixStats::colRanks(
       abs(x),
       na.last = "keep",
@@ -344,8 +344,8 @@ uscale <- function(x, symm = FALSE) {
   uscale.func <- function(x) (x - min(x)) / (max(x) - min(x) + 1e-99)
   if (is.matrix(x)) {
     y <- apply(x, 2, uscale.func)
-    if(nrow(x)==1) {
-      y <- matrix(y,nrow=1)
+    if (nrow(x) == 1) {
+      y <- matrix(y, nrow = 1)
       dimnames(y) <- dimnames(x)
     }
   } else {
@@ -360,7 +360,7 @@ uscale <- function(x, symm = FALSE) {
 #' Test if rows or columns of sparse matrix are duplicated
 #'
 #' @export
-duplicated.dgCMatrix <- function (dgCMat, MARGIN) {
+duplicated.dgCMatrix <- function(dgCMat, MARGIN) {
   MARGIN <- as.integer(MARGIN)
   n <- nrow(dgCMat)
   p <- ncol(dgCMat)
@@ -383,15 +383,16 @@ duplicated.dgCMatrix <- function (dgCMat, MARGIN) {
     warning("invalid MARGIN; return NULL")
     result <- NULL
   }
-  
-  if(any(is_empty)){
-    out <- logical(if(MARGIN == 1L) n else p)
+
+  if (any(is_empty)) {
+    out <- logical(if (MARGIN == 1L) n else p)
     out[-is_empty] <- result
-    if(length(is_empty) > 1)
+    if (length(is_empty) > 1) {
       out[is_empty[-1]] <- TRUE
+    }
     result <- out
   }
-  
+
   result
 }
 
@@ -400,7 +401,7 @@ duplicated.dgCMatrix <- function (dgCMat, MARGIN) {
 #'
 #' @export
 rowsduplicated.dgCMatrix <- function(M) {
-  rowMeans(apply(M %*% matrix(rnorm(2*ncol(M)),ncol=2),2,duplicated))==1
+  rowMeans(apply(M %*% matrix(rnorm(2 * ncol(M)), ncol = 2), 2, duplicated)) == 1
 }
 
 
@@ -431,16 +432,17 @@ cor_sparse_matrix <- function(G, mat) {
 #' grouping matrix G (e.g. gene sets).
 #'
 #' @export
-matrix_onesample_ttest <- function(F, G) {  
-  sumG <- Matrix::colSums(G!=0)
-  sum_sq  <- Matrix::crossprod(G!=0, F^2) 
-  meanx <- Matrix::crossprod(G!=0, F) / (1e-8 + sumG)
-  sdx   <-  sqrt( (sum_sq - meanx^2 * sumG) / (sumG - 1))
+matrix_onesample_ttest <- function(F, G) {
+  sumG <- Matrix::colSums(G != 0)
+  sum_sq <- Matrix::crossprod(G != 0, F^2)
+  meanx <- Matrix::crossprod(G != 0, F) / (1e-8 + sumG)
+  sdx <- sqrt((sum_sq - meanx^2 * sumG) / (sumG - 1))
   f_stats <- meanx
   t_stats <- meanx / (1e-8 + sdx) * sqrt(sumG)
-  p_stats <- apply( abs(t_stats), 2, function(tv)
-    2*pt(tv,df=pmax(sumG-1,1),lower.tail=FALSE))
-  list(mean = as.matrix(f_stats), t = as.matrix(t_stats), p = p_stats)  
+  p_stats <- apply(abs(t_stats), 2, function(tv) {
+    2 * pt(tv, df = pmax(sumG - 1, 1), lower.tail = FALSE)
+  })
+  list(mean = as.matrix(f_stats), t = as.matrix(t_stats), p = p_stats)
 }
 
 #' Fast one sample t-test for matrix object X (e.g. expression) and
@@ -449,35 +451,36 @@ matrix_onesample_ttest <- function(F, G) {
 #' @export
 matrix_twosample_ttest <- function(X, G) {
   message("WARNING: WIP. PLEASE CHECK THIS FUNCTION.")
-  if(is.vector(X)) X <- cbind(X)
-  if(nrow(X)!=nrow(G)) stop("dimension mismatch")
+  if (is.vector(X)) X <- cbind(X)
+  if (nrow(X) != nrow(G)) stop("dimension mismatch")
   ## see e.g. https://people.umass.edu/bwdillon/.../TwoSampleT-Test.html
-  sum1 <- Matrix::colSums(G!=0)
-  # sum0 <- Matrix::colSums(G==0)  
+  sum1 <- Matrix::colSums(G != 0)
+  # sum0 <- Matrix::colSums(G==0)
   sum0 <- nrow(G) - sum1
 
   X2 <- X^2
   sum.X2 <- Matrix::colSums(X2)
-  ssq1 <- Matrix::crossprod(G!=0, X2)     
-  #ssq0 <- Matrix::crossprod(G==0, X2)
-  ssq0 <- sweep(-ssq1, 2, sum.X2, '+') # faster
+  ssq1 <- Matrix::crossprod(G != 0, X2)
+  # ssq0 <- Matrix::crossprod(G==0, X2)
+  ssq0 <- sweep(-ssq1, 2, sum.X2, "+") # faster
 
   sum.X <- Matrix::colSums(X)
-  mean1 <- Matrix::crossprod(G!=0, X) 
-  #mean0 <- Matrix::crossprod(G==0, X) 
-  mean0 <- sweep(-mean1, 2, sum.X, '+') 
+  mean1 <- Matrix::crossprod(G != 0, X)
+  # mean0 <- Matrix::crossprod(G==0, X)
+  mean0 <- sweep(-mean1, 2, sum.X, "+")
   mean1 <- mean1 / (1e-8 + sum1)
-  mean0 <- mean0 / (1e-8 + sum0)    
-  
-  var0 <-  (ssq0 - mean0^2 * sum0) / (sum0 - 1)
-  var1 <-  (ssq1 - mean1^2 * sum1) / (sum1 - 1)  
-  varsum <- ( var0 / sum0 + var1 / sum1 )
-  dof <- varsum^2 / ( var0 / sum0 * (sum0-1) + var1 / sum1 * (sum1 - 1) )
+  mean0 <- mean0 / (1e-8 + sum0)
+
+  var0 <- (ssq0 - mean0^2 * sum0) / (sum0 - 1)
+  var1 <- (ssq1 - mean1^2 * sum1) / (sum1 - 1)
+  varsum <- (var0 / sum0 + var1 / sum1)
+  dof <- varsum^2 / (var0 / sum0 * (sum0 - 1) + var1 / sum1 * (sum1 - 1))
   ## NEED CHECKING!!!!
   f_stats <- mean1 - mean0
   t_stats <- f_stats / sqrt(varsum)
-  p_stats <- sapply( 1:NCOL(X), function(i)
-    2 * pt( abs(t_stats[,i]), df = pmax(dof[,i],1), lower.tail=FALSE))
+  p_stats <- sapply(1:NCOL(X), function(i) {
+    2 * pt(abs(t_stats[, i]), df = pmax(dof[, i], 1), lower.tail = FALSE)
+  })
   res <- list(diff = as.matrix(f_stats), t = as.matrix(t_stats), p = p_stats)
   res
 }
@@ -486,21 +489,21 @@ matrix_twosample_ttest <- function(X, G) {
 #' method. Much faster than doing metap::sumlog() and metap::sumz()
 #'
 #' @export
-matrix_metap <- function(plist, method='stouffer') {
-  if(inherits(plist,"matrix")) {
+matrix_metap <- function(plist, method = "stouffer") {
+  if (inherits(plist, "matrix")) {
     plist <- as.list(data.frame(plist))
   }
-  if(method %in% c("fisher","sumlog")) {
-    chisq <- (-2) * Reduce('+', lapply(plist,log))
+  if (method %in% c("fisher", "sumlog")) {
+    chisq <- (-2) * Reduce("+", lapply(plist, log))
     df <- 2 * length(plist)
-    pv <- pchisq(chisq, df, lower.tail=FALSE)
-  } else if(method %in% c("stouffer","sumz")) {
+    pv <- pchisq(chisq, df, lower.tail = FALSE)
+  } else if (method %in% c("stouffer", "sumz")) {
     np <- length(plist)
-    zz <- lapply(plist, qnorm, lower.tail=FALSE) 
-    zz <- Reduce('+', zz) / sqrt(np)
-    pv <- pnorm(zz, lower.tail=FALSE)
+    zz <- lapply(plist, qnorm, lower.tail = FALSE)
+    zz <- Reduce("+", zz) / sqrt(np)
+    pv <- pnorm(zz, lower.tail = FALSE)
   } else {
-    stop("Invalid method: ",method)
+    stop("Invalid method: ", method)
   }
   dimnames(pv) <- dimnames(plist[[1]])
   return(pv)

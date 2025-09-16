@@ -244,7 +244,7 @@ double_center_scale_fast <- function(X) {
 #' @return CV (%) for each row (feature) of the input matrix.
 #' @export
 compute_CV <- function(counts) {
-  if (playbase::is_logged(counts)) counts = pmax(2**counts - 1, 0)
+  if (playbase::is_logged(counts)) counts <- pmax(2**counts - 1, 0)
   sdx <- matrixStats::rowSds(counts, na.rm = TRUE)
   avg <- matrixStats::rowMeans2(counts, na.rm = TRUE)
   cv <- (sdx / avg) * 100
@@ -252,9 +252,9 @@ compute_CV <- function(counts) {
 }
 
 iconv2utf8 <- function(s) {
-  iconv(s, to = "UTF-8//TRANSLIT", sub="")
+  iconv(s, to = "UTF-8//TRANSLIT", sub = "")
 }
 
 iconv2ascii <- function(s) {
-  iconv(s, to = "ascii//TRANSLIT", sub="")
+  iconv(s, to = "ascii//TRANSLIT", sub = "")
 }
