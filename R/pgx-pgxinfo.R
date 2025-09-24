@@ -431,6 +431,34 @@ pgxinfo.updateDatasetFolder <- function(pgx.dir,
     has.tsne <- FALSE
   }
 
+  ## ----------------------------------------------------------------------
+  ## Early check if signature/sig100.up/down is formated correctly
+  ## From Axel we see some weird cases where it gets broken
+  ## ----------------------------------------------------------------------
+  if (has.sigdb) {
+    h5 <- rhdf5::h5ls(sigdb.file)
+    has.sig100.up <- ("sig100.up" %in% h5$name)
+    has.sig100.dn <- ("sig100.dn" %in% h5$name)
+    if (has.sig100.up && has.sig100.dn) {
+      sig100.up <- rhdf5::h5read(sigdb.file, "signature/sig100.up")
+      sig100.dn <- rhdf5::h5read(sigdb.file, "signature/sig100.dn")
+    }
+      ## Check if sig100.up/down are properly formatted (should be character gene names, not numbers)
+      if (is.numeric(sig100.up) || is.numeric(sig100.dn)) {
+        dbg("[pgxinfo.updateDatasetFolder] ***WARNING*** sig100.up/dn are numeric, should be character gene names")
+        file.remove(sigdb.file)
+        has.sigdb <- FALSE  ## force recreation
+      } else if (is.character(sig100.up) && is.character(sig100.dn)) {
+        ## Check if they are numbers formatted as characters
+        up.numeric <- suppressWarnings(!is.na(as.numeric(sig100.up[1, 1])))
+        dn.numeric <- suppressWarnings(!is.na(as.numeric(sig100.dn[1, 1])))
+        if (up.numeric || dn.numeric) {
+          dbg("[pgxinfo.updateDatasetFolder] ***WARNING*** sig100.up/dn contain numeric values as characters, should be gene names")
+          file.remove(sigdb.file)
+          has.sigdb <- FALSE  ## force recreation
+        }
+      }
+  }
 
   ## ----------------------------------------------------------------------
   ## Check if all files are missing or have entries to be deleted
