@@ -1606,8 +1606,6 @@ wgcna.runConsensusWGCNA <- function(exprList,
   #power=6;minKME=0.5;cutheight=0.15;deepSplit=2;maxBlockSize=5000;verbose=1;calcMethod="fast";addCombined=0;ngenes=2000;minModuleSize=20;mergeCutHeight=0.15
   }
   
-  if(!is.null(power))  power <- as.numeric(power)
-  
   ## Alignt and reduce matrices if needed
   gg <- Reduce(intersect, lapply(exprList,rownames))
   exprList <- lapply(exprList, function(x) x[gg,])
@@ -3178,7 +3176,7 @@ wgcna.plotPowerAnalysis <- function(datExpr, networktype = "signed",
                                     cex=1, maxpower = 20, nmax = 2000,
                                     plots=c("sft.modelfit", "mean.k",
                                       "dendro.IQR"),
-                                    main=NULL,
+                                    main=NULL, optmethod = "sft",
                                     RsquaredCut = 0.85, setPar=TRUE) {
 
   RsquaredCut <- RsquaredCut[1]
@@ -3189,19 +3187,24 @@ wgcna.plotPowerAnalysis <- function(datExpr, networktype = "signed",
     powers <- c(powers, seq(from = 20, to = maxpower, by = 5))
   }
 
+  ## subsample for speed
+  if(ncol(datExpr) > nmax && nmax > 0) {
+    ii <- sample(1:ncol(datExpr),nmax)
+    datExpr <- datExpr[,ii]
+  }
+  
   ## Call the network topology analysis function
   sft <- WGCNA::pickSoftThreshold(
     datExpr,
     powerVector = powers,
     RsquaredCut = RsquaredCut, 
     networkType = networktype,
-    nmax = nmax,
     verbose = 0
   )
 
   ## This is more robust
   optPower <- wgcna.pickSoftThreshold(datExpr=NULL, sft=sft,
-    rcut=RsquaredCut, nmax=nmax, method="sft") 
+    rcut=RsquaredCut, nmax=-1, method = optmethod) 
   
   if(setPar) {
     np <- length(plots)

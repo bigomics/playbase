@@ -8,7 +8,8 @@ wgcna.pickSoftThreshold(
   datExpr,
   sft = NULL,
   rcut = 0.85,
-  plot = TRUE,
+  method = c("sft", "iqr")[1],
+  nmax = -1,
   powers = NULL,
   verbose = 1
 )
