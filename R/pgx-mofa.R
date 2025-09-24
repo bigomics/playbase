@@ -348,7 +348,7 @@ mofa.compute <- function(xdata,
       X, samples,
       minmodsize = 10,
       power = 6,
-      cutheight = 0.15,
+      mergeCutHeight = 0.15,
       deepsplit = 2,
       networktype = "signed",
       tomtype = "signed",
@@ -906,14 +906,16 @@ mofa.merge_data <- function(xx) {
 #' introduce NA in such non-matched cases.
 #'
 #' @export
-mofa.merge_data2 <- function(xdata, prefix.rows=TRUE, prefix.cols=FALSE) {
+mofa.merge_data2 <- function(xdata, prefix.rows=NULL, prefix.cols=NULL) {
   n1 <- length(Reduce(intersect,lapply(xdata,rownames)))
   n2 <- length(Reduce(intersect,lapply(xdata,colnames)))  
   c(n1,n2)
   if(n1 && n2) {
     message("WARNING: matrices are overlapping both in rows and columns")
   }
-  if(n1>0 || prefix.cols) {
+  if(is.null(prefix.cols)) prefix.cols <- (n1 > 0 && n2 > 0)
+  if(is.null(prefix.rows)) prefix.rows <- (n1 > 0 && n2 > 0)
+  if(prefix.cols) {
     ## if rows overlap (i.e. same genes), prefix the column names
     ## (i.e. different datasets)
     for(i in 1:length(xdata)) {
@@ -921,7 +923,7 @@ mofa.merge_data2 <- function(xdata, prefix.rows=TRUE, prefix.cols=FALSE) {
       colnames(xdata[[i]]) <- paste0(names(xdata)[i],":",nn)
     }
   }
-  if(n2>0 || prefix.rows) {
+  if(prefix.rows) {
     ## if columns overlap (i.e. same samples), prefix the feature
     ## names.
     for(i in 1:length(xdata)) {
@@ -2646,7 +2648,7 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
   if (pheno == "pheno") {
     Y <- expandPhenoMatrix(data$samples, drop.ref=FALSE)
   } else if (pheno == "expanded") {
-    Y <- data$samples
+    Y <- 1 * data$samples
   } else if (pheno == "contrasts") {
     if(!"contrasts" %in% names(data)) {
       message("ERROR: contrasts missing in data")
@@ -2677,8 +2679,11 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
   }
 
   ## what about not overlapping samples??
-  X <- mofa.merge_data2(xx, prefix.rows=TRUE)
+  X <- mofa.merge_data2(xx, prefix.rows=TRUE, prefix.cols=FALSE)
   ##remove(xx)
+  kk <- intersect(colnames(X),rownames(Y))
+  X <- X[,kk]
+  Y <- Y[kk,]
   
   ## add SOURCE/SINK
   if (add.sink) {
@@ -2695,7 +2700,7 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
     R[ii,] <- 1
     R[,ii] <- 1
   }
-
+  
   ## save 'pure' correlation
   corrR <- R  
   
@@ -2713,7 +2718,8 @@ lasagna.create_model <- function(data, pheno="pheno", ntop=1000, nc=20,
     message("conditioning edges...")
     rho <- cor(t(X), Y, use='pairwise.complete.obs')
     maxrho <- apply(abs(rho), 1, max, na.rm=TRUE)
-    maxrho[c("SOURCE","SINK")] <- 1
+    ii <- grep("SINK|SOURCE",names(maxrho))
+    if(length(ii)) maxrho[ii] <- 1
     rho.wt <- outer( maxrho, maxrho )
     R <- R * rho.wt
   }
@@ -2879,8 +2885,6 @@ lasagna.solve <- function(obj, pheno, max_edges = 100, value.type = "rho",
                           min_rho = 0, prune = TRUE, fc.weights = TRUE,
                           sp.weight = FALSE) {
   if (!pheno %in% colnames(obj$Y)) {
-    dbg("[lasagna.solve] pheno = ", pheno)
-    dbg("[lasagna.solve] colnames(obj$Y) = ", colnames(obj$Y))
     stop("pheno not in Y")
   }
   if (!"rho" %in% names(igraph::edge_attr(obj$graph))) {
@@ -2903,7 +2907,9 @@ lasagna.solve <- function(obj, pheno, max_edges = 100, value.type = "rho",
   rho <- cor(t(X), y, use="pairwise")[,1]
   i0 <- which( y <= 0 )
   i1 <- which( y > 0 )
-  fc <- rowMeans(X[,i1],na.rm=TRUE) - rowMeans(X[,i0],na.rm=TRUE)
+  m1 <- rowMeans(X[,i1,drop=FALSE],na.rm=TRUE)
+  m0 <- rowMeans(X[,i0,drop=FALSE],na.rm=TRUE)
+  fc <- m1 - m0
   rho[is.na(rho)] <- 0
 
   ## for PHENO nodes 'foldchange' does not make sense. replace with rho.
@@ -2999,6 +3005,9 @@ lasagna.prune_graph <- function(graph, ntop = 100, layers = NULL,
                                 edge.sign = "both", edge.type = "both",
                                 filter = NULL,
                                 prune = TRUE) {
+  
+  if (is.null(layers))
+    layers <- graph$layers
   if (is.null(layers)) layers <- unique(igraph::V(graph)$layer)
   layers <- setdiff(layers, c("SOURCE", "SINK"))
   graph <- igraph::subgraph(graph, igraph::V(graph)$layer %in% layers)
@@ -3044,18 +3053,36 @@ lasagna.prune_graph <- function(graph, ntop = 100, layers = NULL,
     if (length(ii)) igraph::E(graph)$weight[ii] <- 0
   }
 
-  if (edge.sign != "both") {
-    ewt <- igraph::E(graph)$weight
-    if (grepl("pos", edge.sign)) igraph::E(graph)$weight[ewt < 0] <- 0
-    if (grepl("neg", edge.sign)) igraph::E(graph)$weight[ewt > 0] <- 0
+  ewt <- igraph::E(graph)$weight
+  if (grepl("pos", edge.sign)) {
+    igraph::E(graph)$weight[ewt < 0] <- 0
+  } else if (grepl("neg", edge.sign)) {
+    igraph::E(graph)$weight[ewt > 0] <- 0
+  } else if(edge.sign == "consensus") {
+    layersign <- rep(1, length(layers))
+    names(layersign) <- layers
+    layersign[grep("^mi|^mir",layers)] <- -1
+    v1 <- igraph::as_edgelist(graph)[,1]
+    esign <- layersign[ igraph::V(graph)[v1]$layer ]
+    vsign <- sign(igraph::V(graph)[v1]$value)
+    igraph::E(graph)$weight <- ewt * (sign(ewt) == esign & vsign == esign)
   }
-  if (edge.type != "both") {
-    ic <- grepl("->", igraph::E(graph)$connection_type)
-    if (grepl("intra", edge.type)) igraph::E(graph)$weight[ic] <- 0
-    if (grepl("inter", edge.type)) igraph::E(graph)$weight[!ic] <- 0
+
+  ## delete intra or inter edges
+  ic <- grepl("->", igraph::E(graph)$connection_type)
+  if (edge.type == "inter") {
+    igraph::E(graph)$weight[!ic] <- 0
+  } else if (edge.type == "intra") {
+    igraph::E(graph)$weight[ic] <- 0
+  } else if (edge.type == "both2") {
+    sel <- (!ic & igraph::E(graph)$weight < 0)
+    igraph::E(graph)$weight[sel] <- 0
+  } else {
+    ## nop
   }
   graph <- igraph::delete_edges(graph, which(igraph::E(graph)$weight == 0))
 
+  
   if (prune) {
     graph <- igraph::subgraph_from_edges(graph, igraph::E(graph))
   }

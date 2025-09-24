@@ -6,12 +6,14 @@
 \usage{
 wgcna.plotDendroAndTraitCorrelation_cons(
   cons,
+  show.traits = TRUE,
   traits = NULL,
   main = NULL,
   rm.na = TRUE,
   use.tree = 0,
   marAll = c(0.2, 5, 1, 0.2),
-  setLayout = TRUE
+  setLayout = TRUE,
+  ...
 )
 }
 \description{

@@ -7,7 +7,7 @@ it can handle non-matched data by taking union of rownames or
 colnames and extending the final matrix. Be careful it can
 introduce NA in such non-matched cases.}
 \usage{
-mofa.merge_data2(xdata, prefix.rows = TRUE, prefix.cols = FALSE)
+mofa.merge_data2(xdata, prefix.rows = NULL, prefix.cols = NULL)
 }
 \description{
 This merges list of multi-omics data to a single matrix. Note that

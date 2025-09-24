@@ -1193,8 +1193,16 @@ getHumanOrtholog.biomart <- function(organism, symbols, verbose = 1) {
 #' @export
 probe2symbol <- function(probes, annot_table, query = c("symbol", "gene_name"),
                          key = NULL, fill_na = FALSE) {
-  # Prepare inputs
+
+  # Prepare inputs. add extra matching columns.
   annot_table <- cbind(rownames = rownames(annot_table), annot_table)
+  id.cols <- intersect(c("feature","gene_name","symbol"),colnames(annot_table))
+  if(length(id.cols)>0) {
+    stripped_annot <- apply(annot_table[,id.cols,drop=FALSE],2,function(a) sub("^[A-Za-z]+:","",a))
+    ##colnames(stripped_annot) <- paste0(colnames(stripped_annot),"_stripped")
+    annot_table <- cbind(annot_table, stripped_annot)
+  }
+  
   probes1 <- setdiff(probes, c(NA, ""))
   if (is.null(key) || !key %in% colnames(annot_table)) {
     key <- which.max(apply(annot_table, 2, function(a) sum(probes1 %in% a)))

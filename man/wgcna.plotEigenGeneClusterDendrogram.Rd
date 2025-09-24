@@ -5,7 +5,8 @@
 \title{Plot cluster dendrogram with eigengenes and traits.}
 \usage{
 wgcna.plotEigenGeneClusterDendrogram(
-  wgcna,
+  wgcna = NULL,
+  ME = NULL,
   add_traits = TRUE,
   horiz = FALSE,
   setMargins = TRUE,

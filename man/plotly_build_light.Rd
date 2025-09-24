@@ -33,10 +33,10 @@ specific cases although it takes more time.
 }
 \examples{
 # Generate random noise data
-time <- seq(0, 10, length.out=1000)
+time <- seq(0, 10, length.out = 1000)
 noise_fluct <- data.frame(
   time = time,
-  f500 = rnorm(1000, mean=0, sd=1)
+  f500 = rnorm(1000, mean = 0, sd = 1)
 )
 plotly_build_light(
   plotly::plot_ly(

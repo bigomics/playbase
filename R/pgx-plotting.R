@@ -7131,79 +7131,49 @@ plotMultiPartiteGraph2 <- function(graph, layers = NULL,
     edge.cex <- 1
     edge.alpha <- 0.33
     fc <- "value"
+    xdist = 1
+    normalize.edges = FALSE
+    yheight = 2
+    edge.sign = "both"     
     edge.type <- "both"
     labpos <- NULL
     layout <- c("parallel", "hive")[1]
     normalize.edges <- FALSE
     value.name <- "rho"
     strip.prefix <- FALSE
+    prune = FALSE
   }
   
-  vattr <- vertex_attr_names(graph)
-  edgeattr <- edge_attr_names(graph)
+  vattr <- igraph::vertex_attr_names(graph)
+  edgeattr <- igraph::edge_attr_names(graph)
   if(!"rho" %in% edgeattr) message("WARNING: no rho in edge attributes!")
   if(!"weight" %in% edgeattr) message("WARNING: no weight in edge attributes!")
-  if(!"value" %in% vattr) stop("ERROR: no value in edge attributes!")
-  if(!"layer" %in% vattr) stop("ERROR: no layer in edge attributes!")
+  if(!"value" %in% vattr) stop("ERROR: no value in vertex attributes!")
+  if(!"layer" %in% vattr) stop("ERROR: no layer in vertex attributes!")
   
-  if(is.null(layers)) layers <- unique(igraph::V(graph)$layer)
-  layers <- setdiff(layers, c("SOURCE","SINK"))
-  graph <- igraph::subgraph(graph, igraph::V(graph)$layer %in% layers)
-  if (!is.null(labpos) && length(labpos) < length(layers)) {
-    labpos <- head(rep(labpos, 99), length(layers))
-  }
+  graph <- lasagna.prune_graph(
+    graph,
+    ntop = ntop,
+    layers = layers,
+    normalize.edges = FALSE,
+    min.rho = min.rho,
+    edge.sign = edge.sign,
+    edge.type = edge.type,
+    filter = NULL,
+    prune = prune)
 
-  if (!"value" %in% names(igraph::vertex_attr(graph))) {
-    stop("vertex must have 'value' attribute")
-  }
+  layers <- graph$layers
+  layers <- setdiff(layers, c("SOURCE","SINK"))
+
   fc <- igraph::V(graph)$value
   names(fc) <- igraph::V(graph)$name
-
-  ## select ntop features
-  if (!is.null(ntop) && ntop > 0) {
-    ii <- tapply(
-      1:length(fc), igraph::V(graph)$layer,
-      function(i) head(i[order(-abs(fc[i]))], ntop)
-    )
-    ii <- unlist(ii[names(ii) %in% layers])
-    fc <- fc[ii]
-    graph <- igraph::subgraph(graph, igraph::V(graph)[ii])
-  }
-
-  if (normalize.edges) {
-    for (e in unique(igraph::E(graph)$connection_type)) {
-      ii <- which(igraph::E(graph)$connection_type == e)
-      max.wt <- max(abs(igraph::E(graph)$weight[ii]), na.rm = TRUE) + 1e-3
-      igraph::E(graph)$weight[ii] <- igraph::E(graph)$weight[ii] / max.wt
-    }
-  }
-
-  if (min.rho > 0) {
-    ii <- which(abs(igraph::E(graph)$weight) < min.rho)
-    if (length(ii)) igraph::E(graph)$weight[ii] <- 0
-  }
-
-  if (edge.sign != "both") {
-    ewt <- igraph::E(graph)$weight
-    if (grepl("pos", edge.sign)) igraph::E(graph)$weight[ewt < 0] <- 0
-    if (grepl("neg", edge.sign)) igraph::E(graph)$weight[ewt > 0] <- 0
-  }
-  if (edge.type != "both") {
-    ic <- grepl("->", igraph::E(graph)$connection_type)
-    if (grepl("intra", edge.type)) igraph::E(graph)$weight[ic] <- 0
-    if (grepl("inter", edge.type)) igraph::E(graph)$weight[!ic] <- 0
-  }
-  graph <- igraph::delete_edges(graph, which(igraph::E(graph)$weight == 0))
-
-  if (prune) {
-    graph <- igraph::subgraph_from_edges(graph, igraph::E(graph))
-  }
-
+  
   ## layout
   vlayer <- igraph::V(graph)$layer
   if (layout == "parallel") {
     if (is.null(xpos)) xpos <- c(0:(length(layers) - 1))
     xpos <- xpos * xdist
+    xpos <- head(rep(xpos,10),length(layers))
     x <- xpos[match(vlayer, layers)]
     y <- fc[igraph::V(graph)$name]
     layout.xy <- cbind(x = x, y = y)
@@ -7238,7 +7208,6 @@ plotMultiPartiteGraph2 <- function(graph, layers = NULL,
   ewt <- abs(igraph::E(graph)$weight)
   max.wt <- max(ewt, na.rm = TRUE) + 1e-3
   ew <- (ewt / max.wt)**2
-
 
   ## vertex size relative to centrality
   vx <- log(1000*igraph::page_rank(graph, weights=ewt)$vector)

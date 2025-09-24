@@ -6,7 +6,13 @@
 matrix checks for consistent sign and minimal threshold for each
 matrix. Optionally filters on consistent p-value.}
 \usage{
-wgcna.computeDistinctMatrix(matlist, psig = 0.05, min.diff = 0.3)
+wgcna.computeDistinctMatrix(
+  matlist,
+  ydim,
+  psig = 0.05,
+  min.diff = 0.3,
+  consmax = 0
+)
 }
 \description{
 Compute consensus matrix from list of matrices. The consensus

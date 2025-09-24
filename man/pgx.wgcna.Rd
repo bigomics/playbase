@@ -14,7 +14,7 @@ pgx.wgcna(
   networktype = "signed",
   tomtype = "signed",
   numericlabels = FALSE,
-  ngenes = 4000,
+  ngenes = 2000,
   maxBlockSize = 9999,
   gset.filter = "PATHWAY|HALLMARK|^GO|^C[1-9]",
   verbose = 1,
