@@ -1728,25 +1728,31 @@ get_model_parameters <- function(X, samples, pheno = NULL, contrasts = NULL) {
 
 
 #' @export
-compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
-                                            methods = c(
-                                              "uncorrected",
-                                              "ComBat", "limma",
-                                              "RUV", "SVA", "NPM"
-                                            ),
+compare_batchcorrection_methods <- function(X,
+                                            samples,
+                                            pheno,
+                                            contrasts,
+                                            methods = c("uncorrected",
+                                              "ComBat", "limma", "RUV", "SVA", "NPM"),
                                             batch.pars = "<autodetect>",
                                             clust.method = "tsne",
-                                            ntop = 4000, xlist.init = list(),
-                                            ref = NULL, evaluate = TRUE) {
+                                            ntop = 4000,
+                                            xlist.init = list(),
+                                            ref = NULL,
+                                            evaluate = TRUE) {
+
   ## methods <- c("uncorrected","ComBat","auto-ComBat","limma","RUV","SVA","NPM")
   ## ntop = 4000; xlist.init = list(); batch=NULL
+
   if (is.null(pheno) && is.null(contrasts)) {
     stop("must give either pheno vector or contrasts matrix")
   }
+
   pars <- get_model_parameters(X, samples, pheno = pheno, contrasts = contrasts)
   if (length(batch.pars) && batch.pars[1] %in% c("autodetect", "<autodetect>")) {
     batch.pars <- pars$batch.pars
   }
+
   batch.pars <- intersect(batch.pars, colnames(samples))
   if (!is.null(batch.pars) && length(batch.pars)) {
     B <- samples[, batch.pars, drop = FALSE]
@@ -1768,36 +1774,34 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
     sc = FALSE,
     remove.failed = TRUE
   )
-
+  
   if (length(xlist.init) > 0) xlist <- c(xlist.init, xlist)
   common_rows <- Reduce(intersect, lapply(xlist, rownames))
-  xlist <- c(
-    lapply(xlist, function(x) x[common_rows, , drop = FALSE])
-  )
+  xlist <- c(lapply(xlist, function(x) x[common_rows, , drop = FALSE]))
   xlist <- xlist[order(names(xlist))]
 
   ## PCA is faster than UMAP
   pos <- NULL
+  pca.varexp <- NULL
   t2 <- double_center_scale_fast
   if (clust.method == "tsne" && nmissing == 0) {
     message("Computing t-SNE clustering...")
     nb <- max(0.33, round(min(30, dim(X) / 5)))
-    if (ncol(X) <= 6) {
-      nb <- 0.5
-    }
+    if (ncol(X) <= 6) nb <- 0.5
     pos <- lapply(xlist, function(x) {
       Rtsne::Rtsne(t2(x), perplexity = nb, check_duplicates = FALSE)$Y
     })
   } else {
     message("Computing PCA clustering...")
-    pos <- lapply(xlist, function(x) {
-      set.seed(1234)
-      irlba::irlba(t2(x), nu = 2, nv = 2)$u[, 1:2]
-    })
+    for(i in 1:length(xlist)) {
+      set.seed(1234);
+      pca <- irlba::irlba(t2(xlist[[i]]), nu = 2, nv = 2)
+      pos[[names(xlist)[i]]] <- pca$u[, 1:2]
+      pca.varexp[[names(xlist)[i]]]  <- (pca$d^2 / sum(pca$d^2)) * 100
+    }
   }
-  for (i in 1:length(pos)) {
-    rownames(pos[[i]]) <- colnames(X)
-  }
+
+  for (i in 1:length(pos)) { rownames(pos[[i]]) <- colnames(X) }
 
   res <- NULL
   best.method <- ref
@@ -1828,6 +1832,7 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
   list(
     xlist = xlist,
     pos = pos,
+    pca.varexp = pca.varexp,
     scores = res$scores,
     pheno = pars$pheno,
     pars = pars,
