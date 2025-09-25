@@ -448,7 +448,11 @@ pgx.clusterMatrix <- function(X,
       rownames(pos) <- colnames(X)
       pos <- pos[1:dimx[2], , drop = FALSE] ## if augmented
       colnames(pos) <- paste0("PC-", c("x", "y"))
-      all.pos[["pca2d"]] <- pos
+      all.pos[["pca2d"]] <- pos      
+      varexp <- (res.svd$d^2 / sum(res.svd$d^2))*100
+      varexp <- round(varexp[1:2],1)
+      names(varexp) <- c("PC1", "PC2")
+      all.pos[["pca2d.varexp"]] <- varexp
     }
     if (3 %in% dims) {
       if (verbose > 0) message("[pgx.clusterMatrix] PCA 3D...")
