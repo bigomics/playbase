@@ -9,6 +9,8 @@ eigengenes.}
 wgcna.plotEigenGeneAdjacencyHeatmap(
   wgcna,
   add_traits = TRUE,
+  traits = NULL,
+  add_me = TRUE,
   marx = 1,
   main = NULL,
   multi = FALSE,

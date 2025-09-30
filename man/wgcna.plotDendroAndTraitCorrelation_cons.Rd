@@ -11,7 +11,7 @@ wgcna.plotDendroAndTraitCorrelation_cons(
   main = NULL,
   rm.na = TRUE,
   use.tree = 0,
-  marAll = c(0.2, 5, 1, 0.2),
+  marAll = c(0.2, 8, 2, 0.2),
   setLayout = TRUE,
   ...
 )

@@ -8,6 +8,9 @@ matrix. Optionally filters on consistent p-value.}
 \usage{
 wgcna.computeConsensusMatrix(matlist, ydim, psig = 0.05, consfun = "min")
 }
+\arguments{
+\item{ydim}{original dimension of data}
+}
 \description{
 Compute consensus matrix from list of matrices. The consensus
 matrix checks for consistent sign and minimal threshold for each

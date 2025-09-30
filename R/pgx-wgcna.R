@@ -122,7 +122,7 @@ pgx.wgcna <- function(
   message("computing module enrichment...")
   res.gse <- wgcna.computeModuleEnrichment(
     wgcna, pgx,
-    method = c("fisher", "gsetcor", "xcor"),
+    methods = c("fisher", "gsetcor", "xcor"),
     ntop = 1000,
     xtop = 100,
     filter = gset.filter
@@ -155,7 +155,7 @@ wgcna.compute <- function(X,
                           tomtype = "signed",
                           clustMethod = "average",
                           cutMethod = "hybrid",
-                          calcMethod = "full",
+                          calcMethod = "fast",
                           lowrank = 40,
                           numericlabels = FALSE,
                           maxBlockSize = 9999,
@@ -164,11 +164,38 @@ wgcna.compute <- function(X,
                           prefix = "ME",
                           sv.tom = 40,
                           drop.ref = FALSE,
+                          net = NULL,
+                          is.multiomics = NULL,
                           verbose = 0
                           ) {
-  
-  #minmodsize=20;power=12;mergeCutHeight=0.15;deepsplit=2;ngenes=2000;networktype="signed";tomtype="signed";numericlabels=FALSE;prefix="ME";minKME=0.3;maxBlockSize=5000;calcMethod="fast";lowrank=40
 
+  if(0) {
+    ngenes = 2000;
+    minmodsize = 20;
+    power = 12;
+    mergeCutHeight = 0.15;                          
+    deepsplit = 2;
+    minKME = 0.3;
+    treeCut = 0.99;
+    treeCutCeiling = 1;
+    networktype = "signed";
+    tomtype = "signed";
+    clustMethod = "average";
+    cutMethod = "hybrid";
+    calcMethod = "fast";
+    lowrank = 40;
+    numericlabels = FALSE;
+    maxBlockSize = 9999;
+    merge.dendro = TRUE;
+    compute.stats = TRUE;
+    prefix = "ME";
+    sv.tom = 40;
+    drop.ref = FALSE;
+    net = NULL;
+    is.multiomics = NULL;
+    verbose = 0
+  }
+    
   require(WGCNA)
 
   if(nchar(prefix)!=2) {
@@ -190,12 +217,12 @@ wgcna.compute <- function(X,
   
   ## restrict number of genes
   if (ngenes > 0 && nrow(X) > ngenes) {
-    is.multiomics <- all(grepl(":",rownames(X)))
+    if(is.null(is.multiomics)) is.multiomics <- all(grepl(":",rownames(X))) ## not robust!!
     if(is.multiomics) {
-      message("[wgcna.compute] multiomics topSD = ",ngenes)
+      message("[wgcna.compute] topSD = ",ngenes, " (multi-omics)")
       X <- mofa.topSD(X, ngenes)    
     } else {
-      message("[wgcna.compute] topSD = ", ngenes)
+      message("[wgcna.compute] topSD = ", ngenes, " (single omics)")
       sdx <- matrixStats::rowSds(X, na.rm = TRUE)
       X <- X[sdx > 0.1 * mean(sdx, na.rm = TRUE), ] ## filter low SD??
       X <- X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ]
@@ -205,12 +232,12 @@ wgcna.compute <- function(X,
 
   message("[wgcna.compute] dim(X) = ", paste(dim(X), collapse = " x "))
   message("[wgcna.compute] dim(samples) = ", paste(dim(samples), collapse = " x "))
-  
   datExpr <- t(X)
 
   ## adapt for small datasets (also done in WGCNA package)
   minmodsize <- min(minmodsize, ncol(datExpr) / 2)
-
+  if(!is.null(power)) power <- power[1]
+  
   message("[wgcna.compute] minmodsize = ", minmodsize)
   message("[wgcna.compute] number of features = ", nrow(X))
   message("[wgcna.compute] minKME = ", minKME)
@@ -219,27 +246,32 @@ wgcna.compute <- function(X,
   message("[wgcna.compute] calcMethod = ", calcMethod)  
   
   ##WGCNA::enableWGCNAThreads()
-  cor <- WGCNA::cor ## needed...
-  net <- wgcna.computeModules(
-    datExpr,
-    power = power,
-    networkType = networktype,
-    TOMType = tomtype,
-    calcMethod = calcMethod,  
-    lowrank = lowrank,
-    clustMethod = clustMethod,
-    cutMethod = cutMethod,
-    deepSplit = deepsplit,
-    minModuleSize = minmodsize,
-    mergeCutHeight = mergeCutHeight,
-    minKMEtoStay = minKME,
-    treeCut = treeCut,
-    treeCutCeiling = treeCutCeiling,      
-    numericLabels = numericlabels,
-    maxBlockSize = maxBlockSize,
-    returnTOM = TRUE,
-    verbose = verbose )
-  cor <- stats::cor
+  if(is.null(net)) {
+    net <- wgcna.computeModules(
+      datExpr,
+      power = power,
+      networkType = networktype,
+      TOMType = tomtype,
+      calcMethod = calcMethod,  
+      lowrank = lowrank,
+      clustMethod = clustMethod,
+      cutMethod = cutMethod,
+      deepSplit = deepsplit,
+      minModuleSize = minmodsize,
+      mergeCutHeight = mergeCutHeight,
+      minKMEtoStay = minKME,
+      treeCut = treeCut,
+      treeCutCeiling = treeCutCeiling,      
+      numericLabels = numericlabels,
+      maxBlockSize = maxBlockSize,
+      returnTOM = TRUE,
+      verbose = verbose
+    )
+  }
+
+  if(!"MEs" %in% names(net)) {
+    net$MEs = WGCNA::moduleEigengenes(datExpr, colors = net$colors)$eigengenes
+  }
   
   ## Substitue prefix="ME"
   if(prefix!="ME") names(net$MEs) <- sub("^ME", prefix, names(net$MEs))
@@ -256,6 +288,14 @@ wgcna.compute <- function(X,
   datTraits <- expandPhenoMatrix(datTraits, keep.numeric=TRUE,
     drop.ref=drop.ref)
 
+  if(is.null(datTraits)) {
+    message("WARNING:: no valid traits. creating random traits.")
+    ##random.trait <- sample(c(0,1), nrow(samples), replace=TRUE)
+    random.trait <- head(rep(c(0,1), nrow(samples)), nrow(samples))
+    datTraits <- data.frame( random = random.trait )
+    rownames(datTraits) <- rownames(samples)
+  }
+  
   ## list of genes in modules
   me.genes <- tapply(names(net$colors), net$colors, list)
   names(me.genes) <- paste0(prefix, names(me.genes))
@@ -372,34 +412,131 @@ wgcna.compute_multiomics <- function(dataX,
                                      GMT = NULL,
                                      gsetX = NULL,
                                      drop.ref = FALSE,
+                                     add.pheno = FALSE,
+                                     add.gsets = FALSE,
+                                     do.consensus = FALSE,
+                                     gset.methods = c("fisher","gsetcor","xcor"),
                                      verbose = 1,
                                      progress = NULL
                                      ) {
 
+  if(0) {
+    do.consensus = 1
+    cutMethod = "hybrid"
+    deepsplit = 2
+    power = 12
+    ngenes = 2000
+    minmodsize = 10
+    minKME = 0.3
+    compute.enrichment = TRUE
+    xtop = 100
+    annot = pgx$genes
+    GMT = pgx$GMT  ##??
+    gsetX = pgx$gsetX
+    progress = NULL
+  }
+  
   ## preprocessing
+  if(!is.null(annot)) {
+    dataX <- lapply(dataX, function(x) rename_by2(x, annot, "symbol"))    
+  }
+
+  ## add phenomatrix??
+  if(add.gsets) {
+    if(is.null(GMT)) {
+      GMT <- Matrix::t(playdata::GSETxGENE)
+    }
+    if(is.null(gsetX)) {
+      X <- do.call(rbind, dataX)
+      kk <- intersect(rownames(X), rownames(GMT))
+      if(length(kk)) {
+        gsetX <- plaid::plaid(X[kk,], GMT[kk,])
+      }
+    }
+    if(!is.null(gsetX)) {
+      dataX$gs <- gsetX
+    }
+  }
+
+  ## add phenomatrix??
+  if(add.pheno) {
+    phenoX <- expandPhenoMatrix(samples)
+    dataX$ph <- t(phenoX)
+  }
+
   dataX <- lapply(dataX, imputeMissing, method="SVD2")
   names(dataX) <- substring(names(dataX),1,2)
-  lapply(dataX, dim)
-  dataX <- mofa.topSD(dataX, ngenes)
 
+  lapply(dataX, dim)
+  #dataX <- mofa.topSD(dataX, ngenes)
+  
   if(!is.null(progress)) {
     progress$set(message = paste("computing WGCNA modules..."), value = 0.33)
   }
+
+  if(is.null(power)) power <- "sft"
+  if(as.character(power[1]) %in% c("sft","iqr")) {
+    ## Estimate best power
+    message("[wgcna.compute] estimating optimal power with method = ", power[1])
+    est.power <- rep(NA, length(dataX))    
+    i=1
+    for(i in 1:length(dataX)) {
+      p <- wgcna.pickSoftThreshold(
+        Matrix::t(dataX[[i]]), sft=NULL, rcut=0.85, powers = NULL,
+        method=power[1], nmax=1000, verbose=1)
+      if(length(p)==0 || is.null(p) ) p <- NA
+      est.power[i] <- p
+    }
+    est.power
+    power <- ifelse( is.na(est.power), 12, est.power)
+  } else {
+    power <- as.numeric(power)
+  }
+  nw <- length(dataX)
+  power <- head(rep(power, nw),nw)
+  names(power) <- names(dataX)
   
   ## This runs WGCNA on an expression list. 
   wgcna <- list()
-  for(dt in names(dataX)) {
-    cat("******** computing WGCNA for",dt,"********\n")
-    
+  has.gxpx <- all(c("gx","px") %in% names(dataX))
+  if( do.consensus && has.gxpx ) {
+    cat("----------- computing consensus WGCNA for GX+PX ------------\n")
+    gx <- dataX[['gx']]
+    px <- dataX[['px']]    
+    nn <- mean(rownames(gx) %in% rownames(px))
+    if( nn < 0.10) {
+      message("ERROR: gx and px features do not overlap")
+    } else {
+      wgcna <- wgcna.createConsensusLayers(
+        dataX[c('gx','px')],
+        samples = samples,
+        prefix = c('GX','PX'),
+        ngenes = ngenes,
+        power = power[c('gx','px')],
+        minModuleSize = minmodsize,
+        deepSplit = deepsplit,
+        mergeCutHeight = 0.15,
+        minKME = minKME,
+        maxBlockSize = 9999,
+        verbose = 1
+      )
+    }
+  }
+
+  names(wgcna)
+  dtlist <- setdiff(names(dataX), names(wgcna))
+  dtlist
+  for(dt in dtlist) {
+    cat("------------ computing WGCNA for",dt,"-------------\n")
     minKME <- ifelse(dt=='ph', 0, minKME)
     minmodsize <- ifelse( dt=='ph', 1, minmodsize)      
     
     wgcna[[dt]] <- wgcna.compute(
       X = dataX[[dt]],
       samples = samples, 
-      ngenes = -1,
+      ngenes = ngenes,
       calcMethod = "fast",
-      power = power,
+      power = power[dt],
       lowrank = 40,
       clustMethod = clustMethod,
       cutMethod = cutMethod,
@@ -411,10 +548,13 @@ wgcna.compute_multiomics <- function(dataX,
       sv.tom = 40,  
       prefix = toupper(dt),
       drop.ref = drop.ref,
+      is.multiomics = FALSE,
       verbose = verbose
     )
   }
 
+  wgcna <- wgcna[names(dataX)]
+  
   ## Compute enrichment
   if(compute.enrichment) {
     message("computing module enrichment...")
@@ -426,7 +566,7 @@ wgcna.compute_multiomics <- function(dataX,
       wgcna = wgcna,
       multi = TRUE,
       pgx = NULL,
-      method = c("fisher","gsetcor","xcor"),
+      methods = gset.methods,
       ntop = 400,
       xtop = xtop,
       annot = annot,      
@@ -457,7 +597,7 @@ wgcna.computeModules <- function(
   networkType = "signed",
   TOM = NULL,
   TOMType = "signed",
-  calcMethod = "full",  
+  calcMethod = "fast",  
   lowrank = 20,
   clustMethod = "average",
   cutMethod = "hybrid",  ## hybrid, tree, static
@@ -465,6 +605,7 @@ wgcna.computeModules <- function(
   treeCut = 0.99,
   treeCutCeiling = 1,  
   minModuleSize = 20,
+  minModuleSize2 = minModuleSize,
   mergeCutHeight = 0.15,
   minKMEtoStay = 0.3,
   numericLabels = FALSE, ## numeric or 'color' labels
@@ -511,10 +652,8 @@ wgcna.computeModules <- function(
   clustMethod <- sub("^ward$","ward.D",clustMethod)
   ## define distance matrix
   if(is.null(TOM)) {
-    
     adjacency <- WGCNA::adjacency(datExpr, power = power, type = networkType) 
     adjacency[is.na(adjacency)] <- 0
-    
     if(calcMethod == "fast") {
       if(verbose>0) message("Computing TOM matrix using fast method...")
       TOM <- fastTOMsimilarity(adjacency, tomtype=TOMType,
@@ -556,14 +695,6 @@ wgcna.computeModules <- function(
     treeCut <- qq[1] + treeCut * diff(qq)
   }
 
-  ## exception2
-  extest <- mad(geneTree$height) / median(geneTree$height)
-  if(extest < 0.01 ) {
-    cutMethod <- "static"
-    treeCut <- 0.9 * min(geneTree$height)
-    message("WARNING: very low similarity. Switching to static cut h=", treeCut)
-  }
-
   if(verbose>0) {
     message("Tree cut method: ", cutMethod)
     message("treeCut = ", treeCut)
@@ -580,8 +711,7 @@ wgcna.computeModules <- function(
       cutHeight = treeCut,
       distM = dissTOM,
       deepSplit = deepSplit,
-#      pamRespectsDendro = FALSE,
-      minClusterSize = minModuleSize
+      minClusterSize = minModuleSize2
     )
   } else if( cutMethod == "static" && treeCut <= 1 ) {
     if(verbose>0) message("Static cutting tree at fixed H = ", treeCut)    
@@ -768,6 +898,11 @@ wgcna.mergeCloseModules <- function(datExpr, colors, cutHeight, MEs=NULL) {
 #' 
 wgcna.computeGeneStats <- function(net, datExpr, datTraits, TOM) {
 
+  ## align
+  kk <- intersect(rownames(datExpr), rownames(datTraits))
+  datExpr <- datExpr[kk,]
+  datTraits <- datTraits[kk,]
+
   ## Define numbers of genes and samples
   nGenes <- ncol(datExpr)
   nSamples <- nrow(datExpr)
@@ -789,10 +924,13 @@ wgcna.computeGeneStats <- function(net, datExpr, datTraits, TOM) {
   foldChangePvalue <- NULL  
   is.binary <- apply(datTraits, 2, function(a) length(unique(a[!is.na(a)])) == 2)
   is.binary
+  binY <- NULL
   if(any(is.binary)) {
     binY <- datTraits[, which(is.binary), drop = FALSE]
     nmin <- apply(binY, 2, function(x) min(table(x)))
-    binY <- binY[,which(nmin>=3),drop=FALSE]
+    binY <- binY[,which(nmin>=2),drop=FALSE]
+  }
+  if(!is.null(binY) && NCOL(binY)>0) {
     lm <- list()
     i=1
     for(i in 1:ncol(binY)) {
@@ -871,10 +1009,12 @@ wgcna.computeGeneStats <- function(net, datExpr, datTraits, TOM) {
   ## force align. Sometime they are shorter for some reason...
   gg <- rownames(moduleMembership)
   matMatch <- function(m, gg) {
+    if(is.null(m)) return(NULL)
     m <- m[match(gg,rownames(m)),,drop=FALSE]
     rownames(m) <- gg
     return(m)
   }
+  
   ##moduleMembership <- matMatch(moduleMembership)
   MMPvalue <- matMatch(MMPvalue, gg)
   traitSignificance = matMatch(traitSignificance, gg)
@@ -914,6 +1054,15 @@ wgcna.getGeneStats <- function(wgcna, trait, module=NULL, plot = TRUE,
     stats <- wgcna$stats
   } else {
     stop("must supply wgcna or trait")
+  }
+
+  mean(labels %in% WGCNA::standardColors())
+  setdiff(labels, WGCNA::standardColors())
+
+  is.color <- mean(labels %in% c("grey",WGCNA::standardColors())) > 0.9
+  if(is.color) {
+    prefix <- substring(rownames(stats[['moduleTraitCor']]),1,2)[1]
+    labels <- paste0(prefix, labels)
   }
   
   p1 <- c("moduleMembership", "MMPvalue")
@@ -969,7 +1118,8 @@ wgcna.getGeneStats <- function(wgcna, trait, module=NULL, plot = TRUE,
   score <- exp(rowMeans(log(1e-8 + df1))) * sign(df[,"foldChange"])
 
   df <- data.frame(df[,1:2], score = score, df[,-c(1,2)])
-  df <- df[order(-df$score), ]
+  score.sign <- sign(median(df$score,na.rm=TRUE))
+  df <- df[order(-df$score * score.sign), ]
   
   if (!is.null(module)) {
     ##sel <- which(df$module == module)
@@ -994,14 +1144,17 @@ wgcna.getGeneStats <- function(wgcna, trait, module=NULL, plot = TRUE,
   df
 }
 
-#'
+#' Compute gene statistics with original datExpr but with consensus
+#' colors/labels for each layers. A separate function
+#' wgcna.getConsensusGeneStats() extracts clean tables from this
+#' results object.
 #'
 #' @export
-wgcna.computeConsensusGeneStats <- function(cons) {
-  k <- names(cons$netList)[1]
+wgcna.computeConsensusGeneStats <- function(cons) {  
+  k <- names(cons$layers)[1]
   stats <- list()
-  for(k in names(cons$netList)) {
-    w <- cons$netList[[k]]
+  for(k in names(cons$layers)) {
+    w <- cons$layers[[k]]
     colors <- cons$net$colors
     wMEs <- cons$net$multiMEs[[k]]$data
     wnet <- list( MEs = wMEs, colors = colors)
@@ -1100,7 +1253,7 @@ wgcna.getConsensusGeneStats <- function(cons, stats, trait, module=NULL) {
 wgcna.computeModuleEnrichment <- function(wgcna,
                                           pgx,
                                           multi = FALSE,
-                                          method = c("fisher","gsetcor","xcor"),
+                                          methods = c("fisher","gsetcor","xcor"),
                                           ntop = 200,
                                           xtop = 100,
                                           annot = NULL,
@@ -1119,7 +1272,6 @@ wgcna.computeModuleEnrichment <- function(wgcna,
   
   ## collapse features to symbol
   k <- intersect(c("gx","px"), names(wgcna))[1]
-  k
   geneX <- t(as.matrix(wgcna[[k]]$datExpr))
   symbol.col <- NULL
   if(!is.null(pgx)) {
@@ -1127,7 +1279,6 @@ wgcna.computeModuleEnrichment <- function(wgcna,
     gsetX <- pgx$gsetX
     annot <- pgx$genes
   }
-
   
   if(is.null(annot)) {
     gg <- lapply(wgcna, function(w) colnames(w$datExpr))
@@ -1136,17 +1287,22 @@ wgcna.computeModuleEnrichment <- function(wgcna,
     gg1 <- as.character(unlist(gg1))    
     annot <- data.frame(feature = gg1, symbol = gg)
   }
-  
-  symbol.col <- intersect(c("symbol","gene_name"),colnames(annot))[1]
-  symbol.col
-  geneX <- rename_by2(geneX, annot, symbol.col)
-  
+    
   if(is.null(GMT)) {
     message("Using playdata GSETxGENE genesets")
     GMT <- Matrix::t(playdata::GSETxGENE)
-    if(!is.null(annot)) GMT <- rename_by2( GMT, annot, symbol.col)
   }
 
+  if(!is.null(annot)) {
+    symbol.col <- intersect(c("symbol","gene_name"),colnames(annot))[1]
+    geneX <- rename_by2(geneX, annot, symbol.col)
+    GMT <- rename_by2( GMT, annot, symbol.col)
+  }
+  if(length(intersect(rownames(geneX),rownames(GMT)))==0) {
+    message("ERROR: no overlap for geneX and GMT features. Please add annotation.")
+    return(NULL)
+  }
+  
   bg <- rownames(geneX)
   bg <- intersect(bg, rownames(GMT))
   if (length(bg) == 0) {
@@ -1206,7 +1362,7 @@ wgcna.computeModuleEnrichment <- function(wgcna,
     G = G1,
     geneX = geneX,
     gsetX = gsetX,
-    method = method,
+    methods = methods,
     ntop = ntop
   )
   
@@ -1262,6 +1418,7 @@ wgcna.computeConsensusModuleEnrichment <-
   function(cons,
            GMT,
            annot,
+           methods = c("fisher","gsetcor","xcor"),
            min.genes = 10,
            ntop = 400 )
   {
@@ -1299,8 +1456,8 @@ wgcna.computeConsensusModuleEnrichment <-
     gsetX <- plaid::plaid(geneX, matG=GMT)
     dim(gsetX)
     
-  ## Create extended Eigengene matrix (ME). ME should be nicely
-    ## normalized/scaled so we just rbind. 
+    ## Create extended Eigengene matrix (ME). ME should be nicely
+    ## normalized/scaled so we just rbind across datasets
     ME <- lapply( cons$net$multiMEs, function(m) m$data)
     ME <- do.call(rbind, ME)
     dim(ME)
@@ -1316,17 +1473,19 @@ wgcna.computeConsensusModuleEnrichment <-
     colnames(scaledX) <- rownames(ME)
     colnames(gsetX) <- rownames(ME)
 
-    ##G=GMT;geneX=scaledX
+    geneX=scaledX    
+
     gseaX <- wgcna.run_enrichment_methods(
-      ME, me.genes = me.genes, G=GMT, geneX=scaledX, gsetX=gsetX,
+      ME, me.genes = me.genes, GMT=GMT,
+      geneX=scaledX, gsetX=gsetX, methods = methods,
       min.genes = min.genes, ntop = ntop)
     
     return(gseaX)
   }
 
 
-wgcna.run_enrichment_methods <- function(ME, me.genes, G, geneX, gsetX,
-                                         method = c("fisher","gsetcor","xcor"),
+wgcna.run_enrichment_methods <- function(ME, me.genes, GMT, geneX, gsetX,
+                                         methods = c("fisher","gsetcor","xcor"),
                                          ntop = 400, min.genes = 3
                                          )
 {
@@ -1335,15 +1494,15 @@ wgcna.run_enrichment_methods <- function(ME, me.genes, G, geneX, gsetX,
   pval.list <- list()
 
   ## align matrices
-  bg <- intersect(rownames(G), rownames(geneX))
-  ss <- intersect(colnames(G), rownames(gsetX))
-  G <- G[bg,ss]
+  bg <- intersect(rownames(GMT), rownames(geneX))
+  ss <- intersect(colnames(GMT), rownames(gsetX))
+  GMT <- GMT[bg,ss]
   geneX <- geneX[bg,]
   gsetX <- gsetX[ss,]
 
   ## select on minimum genes
-  sel <- which( Matrix::colSums(G!=0) >= min.genes )
-  G <- G[,ss]
+  sel <- which( Matrix::colSums(GMT!=0) >= min.genes )
+  GMT <- GMT[,ss]
   gsetX <- gsetX[ss,]
   
   message("Computing enrichment for ", length(ss), " genesets")
@@ -1351,13 +1510,13 @@ wgcna.run_enrichment_methods <- function(ME, me.genes, G, geneX, gsetX,
   ## Here we correlate geneset score (averageCLR) with the module
   ## eigengene (ME). This should select genesets correlated with the
   ## ME.
-  if ("gsetcor" %in% method && !is.null(gsetX)) {
+  if ("gsetcor" %in% methods && !is.null(gsetX)) {
     message("[wgcna.computeModuleEnrichment] calculating single-sample geneset correlation...")
-    rc.rho <- matrix(NA, ncol(G), ncol(ME))
-    rc.pvalue <- matrix(NA, ncol(G), ncol(ME))    
-    dimnames(rc.rho) <- list( colnames(G), colnames(ME))
-    dimnames(rc.pvalue) <- list( colnames(G), colnames(ME))    
-    jj <- which(rownames(gsetX) %in% colnames(G))
+    rc.rho <- matrix(NA, ncol(GMT), ncol(ME))
+    rc.pvalue <- matrix(NA, ncol(GMT), ncol(ME))    
+    dimnames(rc.rho) <- list( colnames(GMT), colnames(ME))
+    dimnames(rc.pvalue) <- list( colnames(GMT), colnames(ME))    
+    jj <- which(rownames(gsetX) %in% colnames(GMT))
     kk <- intersect(colnames(gsetX), rownames(ME)) ## common samples
     rho.jj <- cor(t(gsetX[jj,kk]), ME[kk,], use = "pairwise")
     #rc.pvalue <- cor.pvalue(rc.rho, n = length(kk))
@@ -1371,26 +1530,26 @@ wgcna.run_enrichment_methods <- function(ME, me.genes, G, geneX, gsetX,
 
   ## Here we correlate the module eigengene (ME) with genes and then
   ## do a gset.rankcor() on the ME correlation.
-  if ("xcor" %in% method) {
+  if ("xcor" %in% methods) {
     message("[wgcna.computeModuleEnrichment] calculating eigengene GBA correlation...")
     gba <- cor(t(geneX), ME, use = "pairwise")
-    rc <- gset.rankcor(gba, G, compute.p = TRUE) ## NEEDS CHECK!!!
+    rc <- gset.rankcor(gba, GMT, compute.p = TRUE) ## NEEDS CHECK!!!
     rho.list[["xcor"]] <- rc$rho
     pval.list[["xcor"]] <- rc$p.value
   }
 
-  gmt <- mat2gmt(G)
+  gmt <- mat2gmt(GMT)
   if(1) {
     ## we pre-select to make this faster
     Pmin <- sapply(pval.list, function(P) apply(P,1,min))
-    sel <- head(order(rowMeans(apply(Pmin, 2, rank))), 10*ntop)
+    sel <- head(order(rowMeans(apply(Pmin, 2, rank))), 5*ntop)
     message("[wgcna.computeModuleEnrichment] pre-selecting ",length(sel)," sets for fgsea/Fisher test...")
     sel <- rownames(Pmin)[sel]
     gmt <- gmt[sel]
   }    
     
   ## fGSEA
-  if ("fgsea" %in% method) {
+  if ("fgsea" %in% methods) {
     message("[wgcna.computeModuleEnrichment] calculating module fgsea...")
     xrho <- cor(t(geneX), ME, use = "pairwise")
     res <- list()
@@ -1410,7 +1569,8 @@ wgcna.run_enrichment_methods <- function(ME, me.genes, G, geneX, gsetX,
   }
   
   ## Perform fisher-test on ME genes
-  if ("fisher" %in% method) {
+  if ("fisher" %in% methods) {
+
     message("[wgcna.computeModuleEnrichment] calculating Fisher tests...")    
     rho <- matrix(NA, length(gmt), ncol(ME))
     pval <- matrix(NA, length(gmt), ncol(ME))    
@@ -1424,6 +1584,7 @@ wgcna.run_enrichment_methods <- function(ME, me.genes, G, geneX, gsetX,
       gg <- me.genes[[k]]      
       rr <- try(gset.fisher(gg, gmt, background = bg, fdr = 1,
         min.genes = -1, verbose = 0, sort.by='none', no.pass=1))
+
       if (!"try-error" %in% class(rr)) {        
         rr <- rr[match(rownames(rho), rownames(rr)), ]
         rho[,i] <- rr$odd.ratio
@@ -1555,32 +1716,6 @@ wgcna.merge_block_dendrograms <- function(net, X, method = 1) {
 ## CONSENSUS WGCNA
 ##=========================================================================
 
-wgcna.netReplaceColors <- function(net, newcolors) {
-  oldcolors <- net$colors
-  lut <- table(oldcolors, newcolors)
-  old2new <- colnames(lut)[max.col(lut)]
-  names(old2new) <- rownames(lut)
-
-  ## rename colors
-  ss <- names(net$colors)
-  if("colors" %in% names(net)) {    
-    net$colors <- old2new[net$colors]
-    names(net$colors) <- ss
-  }
-  ## rename unmergedColors
-  if("unmergedColors" %in% names(net)) {
-    net$unmergedColors <- old2new[net$unmergedColors]
-    names(net$unmergedColors) <- ss
-  }
-  ## rename MEs
-  if("MEs" %in% names(net)) {
-    klr <- sub("^ME","",colnames(net$MEs))
-    colnames(net$MEs) <- paste0("ME",old2new[klr])
-  }
-  return(net)
-}
-
-
 #'
 #'
 #' @export
@@ -1598,15 +1733,20 @@ wgcna.runConsensusWGCNA <- function(exprList,
                                     addCombined = FALSE,
                                     calcMethod = "fast",
                                     drop.ref = FALSE,
+                                    compute.stats = TRUE,
                                     compute.enrichment = TRUE,
                                     gsea.mingenes = 10,
+                                    gset.methods = c("fisher","gsetcor","xcor"),
                                     verbose = 1
                                     ) {
   if(0) {
-  #power=6;minKME=0.5;cutheight=0.15;deepSplit=2;maxBlockSize=5000;verbose=1;calcMethod="fast";addCombined=0;ngenes=2000;minModuleSize=20;mergeCutHeight=0.15
+    power=6;minKME=0.5;cutheight=0.15;deepSplit=2;maxBlockSize=5000;verbose=1;calcMethod="fast";addCombined=0;ngenes=2000;minModuleSize=20;mergeCutHeight=0.15
+    gsea.mingenes=20;gset.methods = c("fisher","gsetcor","xcor")
   }
+
+  colors <- NULL
   
-  ## Alignt and reduce matrices if needed
+  ## Align and reduce matrices if needed
   gg <- Reduce(intersect, lapply(exprList,rownames))
   exprList <- lapply(exprList, function(x) x[gg,])
   if( length(gg) > ngenes ) {
@@ -1633,13 +1773,14 @@ wgcna.runConsensusWGCNA <- function(exprList,
   }
 
   # run module detection procedure
-  netList <- list()
+  layers <- list()
   k=names(multiExpr)[1]
   for (i in 1:length(multiExpr)) {
     k <- names(multiExpr)[i]
     message("[wgcna.runConsensusWGCNA] >>> computing WGCNA for ", k)
-    netList[[k]] <- wgcna.compute(    
-      X = Matrix::t(multiExpr[[i]]$data),
+    X = Matrix::t(multiExpr[[i]]$data)
+    layers[[k]] <- wgcna.compute(    
+      X = X,
       samples = phenoData,
       ngenes = ngenes,
       power = power[i],
@@ -1650,6 +1791,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
       numericlabels = FALSE,
       minKME = minKME,
       maxBlockSize = maxBlockSize,
+      compute.stats = compute.stats,
       sv.tom = 40,
       verbose = verbose
     )
@@ -1657,16 +1799,13 @@ wgcna.runConsensusWGCNA <- function(exprList,
   
   # now we run automatic consensus module detection
   message("[wgcna.runConsensusWGCNA] >>> computing CONSENSUS modules...")
-  consensusPower <- unlist(sapply(netList, function(w) w$net$power))
+  consensusPower <- unlist(sapply(layers, function(w) w$net$power))
   if(is.null(consensusPower) && !is.null(power)) {
     consensusPower <- power
   }
   if(is.null(consensusPower)) {
-    consensusPower <- rep(12, length(netList))
+    consensusPower <- rep(12, length(layers))
   }
-
-  dbg("[wgcna.runConsensusWGCNA] consensusPower = ", consensusPower)
-  dbg("[wgcna.runConsensusWGCNA] deepSplit = ", deepSplit)  
   
   sel <- setdiff(names(multiExpr), c("Combined"))
   cons = WGCNA::blockwiseConsensusModules(
@@ -1686,17 +1825,15 @@ wgcna.runConsensusWGCNA <- function(exprList,
   cons$power = consensusPower
   
   ## create and match colors
-  old.colors <- sapply(netList, function(net) net$net$colors)
-  c0 <- cons$colors
-  matched.colors <- apply(old.colors, 2, function(k) WGCNA::matchLabels(k,c0))
-  colors <- cbind(Consensus=c0, matched.colors)
-
-  ## replace also colors in net solutions
-  for(i in 1:length(netList)) {
-    net <- netList[[i]]$net
-    netList[[i]]$net <- wgcna.netReplaceColors(net, matched.colors[,i]) 
+  i=1
+  for(i in 1:length(layers)) {
+    layers[[i]] <- wgcna.matchColors(layers[[i]], cons$colors) 
   }
-  
+
+  #
+  layers.colors <- sapply( layers, function(r) r$net$colors )
+  colors <- cbind( Consensus = cons$colors, layers.colors)
+    
   ## add labels to dendrogram
   for(i in 1:length(cons$dendrograms)) {
     ii <- which(cons$goodGenes & cons$blocks==i)
@@ -1737,7 +1874,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
   
   res <- list(
     net = cons,
-    netList = netList,
+    layers = layers,
     datExpr = datExpr,
     datTraits = datTraits,
     modTraits = consZ,
@@ -1757,36 +1894,209 @@ wgcna.runConsensusWGCNA <- function(exprList,
     message("[wgcna.runConsensusWGCNA] >>> computing module enrichment...")  
     if(is.null(GMT)) GMT <- Matrix::t(playdata::GSETxGENE)
     res$gsea <- wgcna.computeConsensusModuleEnrichment(
-      res, GMT = GMT, annot = annot, min.genes = gsea.mingenes) 
+      res, GMT = GMT, method = gset.methods,
+      annot = annot, min.genes = gsea.mingenes
+    ) 
   }
   
   res
 }
 
+
+wgcna.matchColors <- function(wgcna, refcolors) {
+ 
+  oldcolors <- wgcna$net$colors
+  newcolors <- WGCNA::matchLabels(oldcolors, refcolors)
+  lut <- table(oldcolors, newcolors)
+  old2new <- colnames(lut)[max.col(lut)]
+  names(old2new) <- rownames(lut)
+  prefix <- substring(names(wgcna$me.colors),1,2)[1]
+  old2newME <- paste0(prefix,old2new)
+  names(old2newME) <- paste0(prefix,names(old2new))
+  old2new <- c(old2new, old2newME)
+
+  newcol <- function(x) {
+    array( old2new[x], dimnames = list(names(x)))
+  }
+  
+  ## rename everything in net object
+  wgcna$net$colors <- newcol(wgcna$net$colors)
+  if("labels" %in% names(wgcna$net)) {
+    wgcna$net$labels <- newcol(wgcna$net$labels)
+  }
+
+  ## rename unmergedColors
+  if("unmergedColors" %in% names(wgcna$net)) {
+    wgcna$net$unmergedColors <- newcol(wgcna$net$unmergedColors)
+  }
+  names(wgcna$net$MEs) <- newcol(names(wgcna$net$MEs))
+  
+  ## rename everything in wgcna object
+  names(wgcna$me.genes) <- newcol(names(wgcna$me.genes))
+  wgcna$me.colors <- newcol(wgcna$me.colors)
+  names(wgcna$me.colors) <- newcol(names(wgcna$me.colors))
+  colnames(wgcna$W) <- newcol(colnames(wgcna$W))
+  rownames(wgcna$modTraits) <- newcol(rownames(wgcna$modTraits))
+
+  ## rename everything in stats object  
+  if("stats" %in% names(wgcna)) {
+    rownames(wgcna$stats[['moduleTraitCor']]) <- newcol(rownames(wgcna$stats[['moduleTraitCor']]))
+    rownames(wgcna$stats[['moduleTraitPvalue']]) <- newcol(rownames(wgcna$stats[['moduleTraitPvalue']]))
+    colnames(wgcna$stats[['moduleMembership']]) <- newcol(colnames(wgcna$stats[['moduleMembership']]))
+    colnames(wgcna$stats[['MMPvalue']]) <- newcol(colnames(wgcna$stats[['MMPvalue']]))
+  }
+  return(wgcna)
+}
+
+wgcna.createConsensusLayers <- function(exprList,
+                                        samples,
+                                        ngenes = 2000,
+                                        power = 12,
+                                        minModuleSize = 5,
+                                        deepSplit = 2,
+                                        mergeCutHeight = 0.15,
+                                        minKME = 0.3,
+                                        maxBlockSize = 9999,
+                                        prefix = NULL,
+                                        verbose = 1
+                                        ) {
+
+  if(0) {
+    ngenes = 2000
+    power = 12
+    minModuleSize = 5
+    deepSplit = 2
+    mergeCutHeight = 0.15
+    minKME = 0.3
+    maxBlockSize = 9999
+    verbose = 1
+    prefix=NULL
+  }
+
+  if(is.null(prefix)) prefix <- names(exprList)
+  nx <- length(exprList)
+  prefix <- head(rep(prefix, nx),nx)
+    
+  ## reduce
+  message("[wgcna.computeConsensusLayers] Aligning matrices...")
+  gg <- Reduce(intersect, lapply(exprList,rownames))
+  exprList <- lapply(exprList, function(x) x[gg,])
+
+  if( length(gg) > ngenes ) {
+    message("[wgcna.computeConsensusLayers] Reducing to ",ngenes," genes")    
+    sdx <- Reduce('*',lapply(exprList, function(x) matrixStats::rowSds(x)))
+    ii <- head(order(-sdx), ngenes)
+    exprList <- lapply(exprList, function(x) x[ii,])
+  }
+  multiExpr = WGCNA::list2multiData(lapply(exprList, Matrix::t))
+
+  ## determine power vector
+  if(is.null(power)) power <- "sft"
+  if(as.character(power[1]) %in% c("sft","iqr")) {
+    ## Estimate best power
+    power <- power[1]
+    message("[wgcna.createConsensusLayers] optimal power method = ", power)
+    est.power <- rep(NA, length(exprList))    
+    i=1
+    for(i in 1:length(exprList)) {
+      p <- wgcna.pickSoftThreshold(
+        Matrix::t(exprList[[i]]), sft=NULL, rcut=0.85, powers = NULL,
+        method=power, nmax=1000, verbose=0)
+      if(length(p)==0 || is.null(p) ) p <- NA
+      est.power[i] <- p
+    }
+    est.power
+    power <- ifelse( is.na(est.power), 12, est.power)
+  } else {
+    power <- as.numeric(power)
+  }
+  nw <- length(exprList)
+  power <- head(rep(power, nw),nw)
+  names(power) <- names(exprList)
+  
+  message("[wgcna.computeConsensusLayers] Computing consensus modules...")
+  cons = WGCNA::blockwiseConsensusModules(
+    multiExpr,
+    power = as.numeric(power), 
+    networkType = "signed",
+    TOMType = "signed",
+    minModuleSize = as.integer(minModuleSize),
+    deepSplit = as.integer(deepSplit),
+    mergeCutHeight = as.numeric(mergeCutHeight), 
+    numericLabels = FALSE,
+    minKMEtoStay = as.numeric(minKME),
+    maxBlockSize = as.integer(maxBlockSize),
+    saveTOMs = FALSE,
+    verbose = verbose
+  )
+  
+  ##
+  message("[wgcna.computeConsensusLayers] Creating consensus layers...")
+  aligned <- list()
+  i=1
+  for(i in 1:length(exprList)) {
+    k <- names(exprList)[i]
+    sel <- c("colors","unmergedColors","goodSamples","goodGenes",
+      "dendrograms","blockGenes","blocks")
+    net <- cons[sel]
+    net$power <- power[i]
+    X = exprList[[i]]
+    w <- wgcna.compute(
+      X = exprList[[i]],
+      samples,
+      prefix = prefix[i],
+      ngenes = -1,
+      net = net,
+      calcMethod = "fast",
+      sv.tom=0
+    )
+    aligned[[k]] <- w
+  }
+
+  return(aligned)
+}
+
+
 #' Compute consensus matrix from list of matrices. The consensus
 #' matrix checks for consistent sign and minimal threshold for each
 #' matrix. Optionally filters on consistent p-value.
 #'
+#' @param ydim original dimension of data
+#'
+#' 
 #' @export
 wgcna.computeConsensusMatrix <- function(matlist, ydim, psig = 0.05, consfun="min") {
 
   ## create consensus module-trait matrix
-  all.pos <- Reduce("*", lapply(matlist, function(z) (sign(z) == 1) ))
-  all.neg <- Reduce("*", lapply(matlist, function(z) (sign(z) == -1) )) 
-  disconcordant <- !(all.pos | all.neg)
+  matsign <- lapply(matlist, sign)
+  matsign <- lapply(matsign, function(x) {x[is.na(x)]=0; x})
+  all.pos <- Reduce("*", lapply(matsign, function(z) (z >= 0) ))
+  all.neg <- Reduce("*", lapply(matsign, function(z) (z <= 0) )) 
+  concordant <- (all.pos | all.neg)
 
-  zsign <- sign(Reduce("+", lapply(matlist, sign)))
-  if(consfun=="min") {
-    consZ <- Reduce(pmin, lapply(matlist, abs)) * zsign
+  matlistN <- Reduce("+", lapply(matlist, function(x) !is.na(x)))
+  matlist0 <- lapply(matlist, function(x) {x[is.na(x)]=0; x})
+  
+  zsign <- sign(Reduce("+", matsign)) ## mean sign??
+  if(consfun=="min") { 
+    pminFUN <- function(...) pmin(..., na.rm=TRUE)  
+    consZ <- Reduce(pminFUN, lapply(matlist, abs)) * zsign
+  } else if(consfun=="gmean") {
+    ## geometric mean
+    matlistG <- lapply(matlist, function(x) {x=log(abs(x));x[is.na(x)]=0;x})    
+    consZ <- exp(Reduce('+', matlistG) / matlistN)
+    consZ <- consZ * zsign
   } else {
     ## mean
-    consZ <- Reduce('+', matlist) / length(matlist)
+    consZ <- Reduce('+', matlist0) / matlistN
   }
-  consZ[disconcordant] <- NA
+  consZ[!concordant] <- NA
 
   if(psig < 1) {
+    if(length(ydim) == 1) ydim <- rep(ydim[1], length(matlist))
     pv <- mapply(function(z, n)
       WGCNA::corPvalueStudent(z, n), matlist, ydim, SIMPLIFY = FALSE)
+    for(i in 1:length(pv)) pv[[i]][is.na(pv[[i]])] <- 0 ## missing???
     all.sig <- Reduce("*", lapply(pv, function(p) 1 * (p < psig)))
     consZ[!all.sig] <- NA
   }
@@ -1829,8 +2139,46 @@ wgcna.computeDistinctMatrix <- function(matlist, ydim, psig = 0.05, min.diff=0.3
 
 
 #' @export
-wgcna.plotConsensusOverlapHeatmap <- function(net1, net2,
-                                              setLabels=NULL, setpar=TRUE) {
+wgcna.plotConsensusOverlapHeatmap <- function(net1, net2, 
+                                              setLabels=NULL,
+                                              lab.line = c(8,8),
+                                              plotDendro = FALSE,
+                                              setpar=TRUE) {
+
+  if(is.null(setLabels))
+    setLabels <- c("Set1","Set2")
+  if(length(setLabels)==1) setLabels <- paste0(setLabels,1:2)
+  
+  if(plotDendro) {
+
+    layout.matrix <- matrix( c(1,2,5,3,4,5), nrow = 3, ncol = 2)
+    layout(mat = layout.matrix, heights= c(0.8,0.2,2.5), widths = c(1,1))
+
+    WGCNA::plotDendroAndColors(
+      dendro = net1$dendrograms[[1]],
+      colors = net1$colors,
+      dendroLabels = FALSE,
+      hang = 0.03,
+      addGuide = FALSE,
+      guideHang = 0.05,
+      #marAll = marAll,
+      setLayout = FALSE,
+      main = setLabels[1]
+    )
+
+    WGCNA::plotDendroAndColors(
+      dendro = net2$dendrograms[[1]],
+      colors = net2$colors,
+      dendroLabels = FALSE,
+      hang = 0.03,
+      addGuide = FALSE,
+      guideHang = 0.05,
+      #marAll = marAll,
+      setLayout = FALSE,
+      main = setLabels[2]
+    )
+  }
+
   
   firstColors  <- wgcna.labels2colors(net1$colors)
   secondColors <- wgcna.labels2colors(net2$colors)
@@ -1840,9 +2188,6 @@ wgcna.plotConsensusOverlapHeatmap <- function(net1, net2,
   T1 = overlap$countTable
   T2 = table(firstColors, secondColors)
   T3 = table(net1$colors, net2$colors)
-
-  if(is.null(setLabels)) setLabels <- c("Set1","Set2")
-  if(length(setLabels)==1) setLabels <- paste0(setLabels,1:2)
 
   firstModTotals <- rowSums(overlap$countTable)
   secondModTotals <- colSums(overlap$countTable)
@@ -1875,9 +2220,334 @@ wgcna.plotConsensusOverlapHeatmap <- function(net1, net2,
     main = paste("Correspondence of",setLabels[1],"and ",
       setLabels[2],"modules"),
     cex.text = 1.0, cex.lab = 1.0, setStdMargins = FALSE);   
-  mtext(toupper(setLabels[1]), side=1, line=9, cex=1.6)
-  mtext(toupper(setLabels[2]), side=2, line=11, cex=1.6)
+  mtext(toupper(setLabels[1]), side=1, line=lab.line[1], cex=1.1)
+  mtext(toupper(setLabels[2]), side=2, line=lab.line[2], cex=1.1)
 
+}
+
+##=========================================================================
+## PRESERVATION WGCNA
+##=========================================================================
+
+#' @export
+wgcna.runPreservationWGCNA <- function(exprList, phenoData,
+                                       reference=1,
+                                       add.merged=FALSE,
+                                       ngenes = 2000,
+                                       annot = NULL,
+                                       compute.stats = TRUE,
+                                       compute.enrichment = TRUE
+                                       ) {
+
+  if(is.character(reference)) {
+    reference <- match(reference, names(exprList))
+  }
+  reference.name <- names(exprList)[reference]
+  
+  ## multiset WGCNA
+  pres <- wgcna.runConsensusWGCNA(
+    exprList,
+    phenoData,
+    GMT = NULL,
+    annot = NULL,
+    ngenes = ngenes,
+    power = 12,
+    minModuleSize = 20,
+    minKME = 0.3, 
+    mergeCutHeight = 0.15,
+    deepSplit = 2,
+    maxBlockSize = 9999,
+    addCombined = FALSE,
+    calcMethod = "fast",
+    drop.ref = FALSE,
+    compute.stats = TRUE,
+    compute.enrichment = FALSE,
+    gsea.mingenes = 10,
+    gset.methods = c("fisher","gsetcor","xcor")
+  )
+
+  colorList <- lapply(pres$layers, function(w) w$net$colors)
+  names(colorList) <- names(pres$layers)
+  exprList <- lapply( pres$layers, function(w) t(w$datExpr))
+  
+  if(add.merged || reference==0) {
+    message("[wgcna.runPreservationWGCNA] adding merged layer...")
+    cX <- lapply(exprList, function(x) x - rowMeans(x))
+    merged <- do.call( cbind, cX)
+    exprList$Merged <- NULL
+    exprList <- c( list( Merged = merged), exprList)
+    cons.colors <- pres$net$colors
+    colorList <- c( list( Consensus = cons.colors ), colorList)
+    reference <- reference + 1
+  }
+  
+  message("[wgcna.runPreservationWGCNA] running WGCNA::modulePreservation...")
+  multiExpr = WGCNA::list2multiData(lapply(exprList,Matrix::t))
+  mp <- WGCNA::modulePreservation(
+    multiExpr,
+    colorList,
+    referenceNetworks = reference,
+    nPermutations = 10,
+    networkType = "signed",
+    quickCor = 0,
+    verbose = 2, 
+    indent = 0
+  )
+
+  ## Zsummary heatmap
+  mp.tables <- mp$preservation$Z[[1]][-reference]
+  Z <- sapply(mp.tables, function(mat) mat[,"Zsummary.pres"])
+  rownames(Z) <- rownames(mp.tables[[1]])
+  rownames(Z) <- paste0("ME",rownames(Z))
+  colnames(Z) <- names(multiExpr)[-reference]
+  
+  moduleSize <- mp.tables[[1]][,"moduleSize"]
+  names(moduleSize) <- rownames(Z)
+  
+  ## median rank
+  mp.tables <- mp$preservation$observed[[1]][-reference]
+  M <- sapply(mp.tables, function(mat) mat[,"medianRank.pres"])
+  rownames(M) <- rownames(mp.tables[[1]])
+  rownames(M) <- paste0("ME",rownames(M))
+  colnames(M) <- names(multiExpr)[-reference]
+
+  ## module-traits. We need to recompute the MEs (module eigengenes)
+  ## using the color coding of the reference set.
+  refColors <- colorList[[1]]
+  MEx = lapply(exprList, function(x)
+    WGCNA::moduleEigengenes(t(x), colors = refColors)$eigengenes
+  )
+  names(MEx)
+  
+  Y <- lapply(pres$layers, function(w) w$datTraits)
+  names(Y)
+  if("Merged" %in% names(MEx) && !"Merged" %in% names(Y) ) {
+    kk <- rownames(MEx[['Merged']])
+    Y[['Merged']] <- pres$datTraits[kk,]
+    Y <-Y[names(MEx)]
+  }
+  kk <- Reduce( union, lapply(Y, colnames))
+  Y <- lapply(Y, function(y) y[,match(kk,colnames(y))])
+  for(i in 1:length(Y)) colnames(Y[[i]]) <- kk
+  R <- mapply(cor, MEx, Y, use="pairwise", SIMPLIFY=FALSE)
+  for(i in 1:length(R)) {
+    colnames(R[[i]]) <- paste0(names(R)[i],":",colnames(R[[i]]))
+  }
+  
+  ## gene statistics
+  if(compute.stats) {
+    message("[wgcna.runPreservationWGCNA] computing gene statistics...")
+    ref = reference.name
+    wnet <- list( MEs = MEx[[ref]], colors = pres$colors[,ref])
+    pres$stats <- wgcna.computeGeneStats(wnet, pres$datExpr[[ref]],
+      pres$datTraits, TOM=NULL)
+  }
+  
+  ## geneset enrichment
+  if(compute.enrichment) {
+    message("[wgcna.runPreservationWGCNA] computing geneset enrichment...")
+    pres$gsea <- wgcna.computeModuleEnrichment(
+      pres$layers[[ref]], pgx = NULL,
+      GMT = NULL, gsetX = NULL, annot = annot,
+      methods = c("fisher", "gsetcor", "xcor"),
+      ntop = 1000, xtop = 100, filter = NULL )
+  }
+  
+  pres$modulePreservation <- mp
+  pres$Zsummary <- Z
+  pres$medianRank <- M  
+  pres$moduleSize <- moduleSize
+  pres$modTraits <- R
+  pres$MEs <- MEx
+  
+  return(pres)
+}
+
+#' @export
+wgcna.plotPreservationSummaries <- function(pres, setpar=TRUE) {
+
+  # Create a simple bar plot of Zsummary:
+  Z <- pres$Zsummary
+  ntest <- ncol(Z)
+
+  if(setpar) {
+    par(mfrow=c(3, ntest), mar=c(5,5,4,1))
+  }
+  xylist <- list(
+    c("moduleSize", "Zsummary.pres"),
+    c("moduleSize", "medianRank.pres"),
+    c("Zsummary.pres", "medianRank.pres")  
+  )
+
+  for(xy in xylist) {
+    for(k in colnames(Z)) {
+      X <- data.frame(
+        color = substring(names(pres$moduleSize),3,99),
+        moduleSize = pres$moduleSize,
+        Zsummary.pres = pres$Zsummary[,k],
+        medianRank.pres = pres$medianRank[,k]
+      )
+      xvar <- xy[1]
+      yvar <- xy[2]
+      ylim <- c(0,max(X[,yvar]))
+      if(yvar == "medianRank.pres") ylim <- rev(ylim)
+      plot(
+        X[,xvar],
+        X[,yvar],
+        pch = 21,
+        cex=2,
+        bg = X$color,
+        ylim = ylim,
+        xlab = xvar,
+        ylab = yvar
+      )
+      title(yvar, cex.main=1.4, line=2.2)  
+      sub <- paste( k, "vs.", "reference")
+      title(sub, cex.main=1, line=0.9)  
+      if(yvar=="Zsummary.pres") abline(h = c(2,10), lty = 2)
+    }
+  }
+}
+
+#' @export
+wgcna.plotPreservationModuleTraits <- function(pres, subplots=FALSE,
+                                               setpar=TRUE, rm.na=FALSE) {  
+
+  if(setpar) {
+    par(mfrow=c(2,2), mar=c(14,12,4,2))
+    if(subplots) {
+      par(mfrow=c(3,3), mar=c(14,12,4,2))
+    }
+  }
+  
+  ##--------------------------------------
+  ## Zsummary heatmap
+  ##--------------------------------------
+
+  Z <- pres$Zsummary
+  WGCNA::labeledHeatmap(
+    Matrix = Z,
+    xLabels = colnames(Z),
+    yLabels = rownames(Z),
+    ySymbols = rownames(Z),
+    colors = tail(WGCNA::blueWhiteRed(100),50),
+    colorLabels = TRUE,
+    setStdMargins = FALSE
+  )
+  title("Module preservation (Zsummary)", line=1.2, cex.main=1.2)
+  
+  ##--------------------------------------
+  ## Merged Module-Trait
+  ##--------------------------------------
+
+  ## merge module-traits
+  R <- pres$modTraits
+  sel <- unique(unlist(lapply(R, function(x) which(colMeans(is.na(x))<1))))
+  R <- lapply(R, function(r) r[,sel,drop=FALSE])
+  R <- do.call(cbind, R)
+  
+  ii <- intersect(rownames(Z),rownames(R))
+  R <- R[ii,,drop=FALSE]
+  Z <- Z[ii,,drop=FALSE]  
+  ##R[is.na(R)] <- 0
+
+  ## collapse by consensus
+  group <- sub(":.*","",colnames(R))
+  cR <- tapply( 1:ncol(R), group, function(i) R[,i]) 
+  for(i in 1:length(cR)) colnames(cR[[i]]) <- sub(".*:","",colnames(cR[[i]]))
+  cR <- lapply(cR, function(x) x[,sort(colnames(cR[[1]]))])
+    
+  validcol <- function(R) which( colMeans(is.na(R)) < 1 &
+                                   matrixStats::colSds(R,na.rm=TRUE) > 0.01 )
+  ii <- 1:ncol(R)
+  if(rm.na) ii <- validcol(R)
+  
+  WGCNA::labeledHeatmap(
+    Matrix = R[,ii,drop=FALSE],
+    xLabels = colnames(R)[ii],
+    yLabels = rownames(R),
+    ySymbols = rownames(R),
+    colors = WGCNA::blueWhiteRed(100),
+    colorLabels = TRUE,
+    setStdMargins = FALSE
+  )
+  title("Module-Trait correlation", line=1.2, cex.main=1.2)
+
+  if(subplots) {
+    for(i in 1:length(cR)) {
+      ## set color scale
+      R1 <- cR[[i]]
+      clim <- max(abs(R1),na.rm=TRUE)
+      cval <- seq( -clim, clim, length.out=201)
+      ii <- which( cval >= min(R1,na.rm=TRUE) & cval <= max(R1,na.rm=TRUE) )
+      col1 <- WGCNA::blueWhiteRed(201)[ii]
+      jj <- 1:ncol(R1)
+      if(rm.na) jj <- validcol(R1)
+      WGCNA::labeledHeatmap(
+        Matrix = R1[,jj,drop=FALSE],
+        xLabels = colnames(R1)[jj],
+        yLabels = rownames(R1),
+        ySymbols = rownames(R1),
+        colors = col1,
+        colorLabels = TRUE,
+        setStdMargins = FALSE
+      )
+      title(names(cR)[i], line=1.2, cex.main=1.2)
+    }   
+  }
+
+  ##--------------------------------------
+  ## Consensus Module-Trait
+  ##--------------------------------------
+  ydim <- sapply(pres$layers, function(w) nrow(w$datTraits))
+  consZ <- wgcna.computeConsensusMatrix(cR, ydim, psig=1, consfun='gmean')
+  consZ <- consZ[rownames(cR[[1]]), colnames(cR[[1]])]
+
+  clim <- max(abs(consZ),na.rm=TRUE)
+  cval <- seq( -clim, clim, length.out=201)
+  ii <- which( cval >= min(consZ,na.rm=TRUE) & cval <= max(consZ,na.rm=TRUE) )
+  col2 <- WGCNA::blueWhiteRed(201)[ii]
+
+  jj <- 1:ncol(consZ)
+  if(rm.na) jj <- validcol(consZ)
+
+  WGCNA::labeledHeatmap(
+    Matrix = consZ[,jj,drop=FALSE],
+    xLabels = colnames(consZ)[jj],
+    yLabels = rownames(consZ),
+    ySymbols = rownames(consZ),
+    colors = col2,
+    colorLabels = TRUE,
+    setStdMargins = FALSE
+  )
+  title("Consensus Module-Traits", line=1.2, cex.main=1.2)
+
+  ##--------------------------------------
+  ## preservation-weighted COnsensus Module-Trait
+  ##--------------------------------------
+
+  wz <- rowMeans(Z**2, na.rm=TRUE)
+  wz <- wz / max(wz)
+  consW <- consZ * wz
+
+  clim <- max(abs(consW),na.rm=TRUE)
+  cval <- seq( -clim, clim, length.out=201)
+  ii <- which( cval >= min(consW,na.rm=TRUE) & cval <= max(consW,na.rm=TRUE) )
+  col2 <- WGCNA::blueWhiteRed(201)[ii]
+
+  jj <- 1:ncol(consW)
+  if(rm.na) jj <- validcol(consW)
+  
+  WGCNA::labeledHeatmap(
+    Matrix = consW[,jj,drop=FALSE],
+    xLabels = colnames(consW)[jj],
+    yLabels = rownames(consW),
+    ySymbols = rownames(consW),
+    colors = col2,
+    colorLabels = TRUE,
+    setStdMargins = FALSE
+  )
+  title("Preservation-weighted Consensus\nModule-Traits", line=1, cex.main=1.2)
 }
 
 
@@ -1885,6 +2555,48 @@ wgcna.plotConsensusOverlapHeatmap <- function(net1, net2,
 ##=========================================================================
 ## PLOTTING FUNCTIONS
 ##=========================================================================
+
+
+#'
+#'
+#' @export  
+wgcna.plotTopModules <- function(wgcna, trait, multi=FALSE,
+                                 nmax=16, setpar=TRUE) {
+
+  if(multi) {
+    MEx <- do.call(rbind, lapply(wgcna$MEs, as.matrix))
+  } else {
+    MEx <- wgcna$net$MEs
+  }
+  Y <- wgcna$datTrait
+  kk <- intersect(rownames(MEx), rownames(Y))
+  MEx <- MEx[kk,]
+  Y <- Y[kk,]
+  
+  rho <- cor(MEx, Y, use="pairwise")
+  sel <- order(-abs(rho[,trait]))
+  sel <- head(sel, nmax)
+  n <- length(sel)
+  nr <- ceiling(sqrt(n))
+  nc <- ceiling(n / nr)
+
+  if(setpar==1) par(mfrow=c(nr,nc), mgp=c(2.6,0.85,0), mar=c(4,4,2.5,1))
+  if(setpar==2) par(mfrow=c(nc,nr), mgp=c(2.6,0.85,0), mar=c(4,4,2.5,1))  
+
+  i=1
+  for(i in head(sel, nmax)) {
+    x <- Y[, trait]  
+    y <- MEx[,i]
+    label <- colnames(MEx)[i]
+    col <- substring(label, 3, 99)
+    col1 <- adjustcolor(col, alpha.f=0.66)
+    boxplot(y ~ x, main = label, col = col1,
+      xlab = trait, ylab = "ME score")
+    points(1 + x + 0.04*rnorm(length(x)), y,
+      pch=21, bg=col)
+  }
+
+}
 
 #'
 #'
@@ -1983,7 +2695,7 @@ wgcna.plotTOM <- function(wgcna, justdata = FALSE, block = NULL,
 #' @export
 wgcna.plotDendroAndColors <- function(wgcna, main=NULL, block=NULL,
                                       extra.colors=NULL,
-                                      marAll = c(0.2, 5, 1, 0.2),
+                                      marAll = c(0.2, 8, 2, 0.2),
                                       setLayout=TRUE) {
 
   if("net" %in% names(wgcna)) {
@@ -2050,14 +2762,14 @@ wgcna.plotDendroAndTraitCorrelation <- function(wgcna,
                                                 block=NULL,
                                                 rm.na = TRUE,
                                                 use.tree = 0,
-                                                marAll = c(0.2, 5, 1, 0.2),
+                                                marAll = c(0.2, 8, 2, 0.2),
                                                 setLayout=TRUE,
                                                 ... )
 {
 
   ## if consensus output do this
   is.cons <- ("class" %in% names(wgcna) && wgcna$class == "cons")
-  is.cons2 <- (all(c("netList","zlist") %in% names(wgcna)))
+  is.cons2 <- (all(c("layers","zlist") %in% names(wgcna)))
   if(is.cons || is.cons2) {
     wgcna.plotDendroAndTraitCorrelation_cons(
       cons = wgcna,
@@ -2089,6 +2801,7 @@ wgcna.plotDendroAndTraitCorrelation <- function(wgcna,
   }
   
   geneTree <- wgcna$net$dendrograms[[1]]
+  geneTree$labels <- names(wgcna$net$colors)
   colors <- colors[geneTree$labels, ]
   
   if(is.null(main)) main = "Gene Dendrogram, Modules and Trait Correlation"
@@ -2118,15 +2831,26 @@ wgcna.plotDendroAndTraitCorrelation_cons <- function(cons,
                                                      main = NULL,
                                                      rm.na = TRUE,
                                                      use.tree = 0,
-                                                     marAll = c(0.2, 5, 1, 0.2),
+                                                     marAll = c(0.2, 8, 2, 0.2),
                                                      setLayout=TRUE,
                                                      ... )
 {
 
+  if(0) {
+    show.traits = TRUE
+    traits = NULL
+    main = NULL
+    rm.na = TRUE
+    use.tree = 0
+    marAll = c(0.2, 8, 2, 0.2)
+    setLayout=TRUE
+  }
+  
   ## module colors
   colors <- cons$colors
   
   if(show.traits) {
+
     traitSig <- list()
     nsets <- length(cons$datExpr)
     i=1
@@ -2138,12 +2862,21 @@ wgcna.plotDendroAndTraitCorrelation_cons <- function(cons,
       kk <- intersect(rownames(X), rownames(Y))
       traitSig[[i]] <- cor(X[kk,], Y[kk,sel], use="pairwise")
     }
+    names(traitSig) <- names(cons$datExpr)
     
     if(rm.na) {
       for(i in 1:length(traitSig)) {
         sel <- colMeans(is.na(traitSig[[i]])) < 1
         traitSig[[i]] <- traitSig[[i]][, sel, drop=FALSE]
       }
+    }
+
+    ## remove empty
+    empty.trait <- (sapply(traitSig, ncol) == 0)
+    if(any(empty.trait)) {
+      k <- names(traitSig)[which(empty.trait)]
+      message(paste0("WARNING: removing empty trait block '",k,"'"))
+      traitSig <- traitSig[ !empty.trait ]
     }
     
     sets <- names(cons$datExpr)
@@ -2166,8 +2899,84 @@ wgcna.plotDendroAndTraitCorrelation_cons <- function(cons,
   if(use.tree == 0 || use.tree == '0') {
     geneTree <- cons$net$dendrograms[[1]]
   } else {
-    geneTree <- cons$netList[[use.tree]]$net$dendrograms[[1]]
+    geneTree <- cons$layers[[use.tree]]$net$dendrograms[[1]]
   }
+  
+  if(is.null(main)) main = "Gene Dendrogram, Modules and Trait Correlation"
+  
+  WGCNA::plotDendroAndColors(
+    geneTree,
+    colors = colors,
+    colnames(colors),
+    dendroLabels = FALSE,
+    hang = 0.03,
+    addGuide = TRUE,
+    guideHang = 0.05,
+    marAll = marAll,
+    main = main,
+    ...
+  )
+}
+
+
+#' @export
+wgcna.plotDendroAndTraitCorrelation_multi <- function(multi,
+                                                      show.traits = TRUE,
+                                                      traits = NULL,
+                                                      main = NULL,
+                                                      rm.na = TRUE,
+                                                      use.tree = 1,
+                                                      marAll = c(0.2, 8, 2, 0.2),
+                                                      setLayout=TRUE,
+                                                      ... )
+{
+
+  ## module colors  
+  colors <- sapply( multi, function(m) m$net$colors )
+
+  if(show.traits) {
+    traitSig <- list()
+    nsets <- length(multi)
+    i=1
+    for(i in 1:nsets) {
+      w <- multi[[i]]
+      Y <- w$datTraits
+      sel <- colnames(Y)
+      if(!is.null(traits)) sel <- intersect(sel, traits)
+      X <- w$datExpr
+      kk <- intersect(rownames(X), rownames(Y))
+      traitSig[[i]] <- cor(X[kk,], Y[kk,sel], use="pairwise")
+    }
+    
+    if(rm.na) {
+      for(i in 1:length(traitSig)) {
+        sel <- colMeans(is.na(traitSig[[i]])) < 1
+        traitSig[[i]] <- traitSig[[i]][, sel, drop=FALSE]
+      }
+    }
+    
+    sets <- names(multi)
+    ## prepend datatype/set name
+    for(i in 1:length(traitSig)) {
+      colnames(traitSig[[i]]) <- paste0(sets[i],":",colnames(traitSig[[i]]))
+    }
+    traitSig2 <- c()
+    for(i in 1:length(traitSig)) {
+      traitSig2 <- cbind(traitSig2, traitSig[[i]])
+      if(i < length(traitSig)) traitSig2 <- cbind(traitSig2, 0)
+    }
+    traitColors <- rho2bluered(traitSig2, f=0.95)
+    ii <- which(colnames(traitColors)=='')
+    if(length(ii)) traitColors[,ii] <- "#FFFFFF"
+    if(is.null(colors)) {
+      colors <- traitColors
+    } else {
+      colors <- cbind( colors, 0, traitColors)
+    }
+  }
+
+  use.tree=1
+  geneTree <- multi[[use.tree]]$net$dendrograms[[1]]
   
   if(is.null(main)) main = "Gene Dendrogram, Modules and Trait Correlation"
   
@@ -2185,6 +2994,7 @@ wgcna.plotDendroAndTraitCorrelation_cons <- function(cons,
   )
 
 }
+
 
 #' Converts correlation values [-1;1] to blue-white-red colors. Good
 #' for creating color labels for labeledHeatmaps that expect colors.
@@ -2319,7 +3129,8 @@ wgcna.plotMMvsGS <- function(wgcna, module, trait, abs = TRUE, par = TRUE,
 wgcna.plotModuleTraitHeatmap <- function(wgcna, setpar = TRUE, cluster = FALSE,
                                          multi = FALSE, main = NULL, justdata = FALSE,
                                          transpose = FALSE, colorlabel = TRUE,
-                                         nmax = -1, text = TRUE, pstar = TRUE) {
+                                         nmax = -1, tmax = -1,
+                                         text = TRUE, pstar = TRUE) {
   
   if(!multi) wgcna <- list(wgcna)
   nSamples <- nrow(wgcna[[1]]$datExpr)
@@ -2330,6 +3141,10 @@ wgcna.plotModuleTraitHeatmap <- function(wgcna, setpar = TRUE, cluster = FALSE,
   if(nmax > 0) {
     sel <- head(order(-apply(abs(moduleTraitCor), 1, max, na.rm=TRUE)),nmax)
     moduleTraitCor <- moduleTraitCor[sel,,drop=FALSE]
+  }
+  if(tmax > 0) {
+    sel <- head(order(-apply(abs(moduleTraitCor), 2, max, na.rm=TRUE)),tmax)
+    moduleTraitCor <- moduleTraitCor[,sel,drop=FALSE]
   }
 
   if(transpose) {
@@ -2422,7 +3237,10 @@ wgcna.plotEigenGeneClusterDendrogram <- function(wgcna = NULL,
 #' eigengenes.
 #'
 #' @export
-wgcna.plotEigenGeneAdjacencyHeatmap <- function(wgcna, add_traits = TRUE,
+wgcna.plotEigenGeneAdjacencyHeatmap <- function(wgcna,
+                                                add_traits = TRUE,
+                                                traits = NULL,
+                                                add_me = TRUE,
                                                 marx = 1, main = NULL,
                                                 multi = FALSE, 
                                                 phenotype = NULL,
@@ -2444,26 +3262,63 @@ wgcna.plotEigenGeneAdjacencyHeatmap <- function(wgcna, add_traits = TRUE,
                                                 mask.intra = FALSE,
                                                 justdata = FALSE) {
 
+  if(0) {
+    add_traits = TRUE;
+    traits = NULL;
+    marx = 1; main = NULL;
+    multi = FALSE; 
+    phenotype = NULL;
+    colorlabel = TRUE;
+    text = FALSE;
+    pstar = TRUE;
+    setMargins = TRUE;
+    mar1 = c(5.5, 5, 1.6, 1);
+    mar2 = c(8, 10, 4, 2);
+    cex.lab = 0.8;
+    cex.text = 0.7;
+    plotDendro = TRUE;
+    plotHeatmap = TRUE; 
+    dendro.horiz = TRUE;
+    dendro.width = 0.3;
+    dendro.labels = TRUE;
+    nmax = -1;
+    fixclust = FALSE;
+    mask.intra = FALSE;
+    justdata = FALSE
+    add_me = TRUE
+  }
+
+  
   if(!multi) wgcna <- list(gx=wgcna)
 
   # Matrix with eigengenes and traits
-  ME <- lapply(wgcna, function(w) as.matrix(w$net$MEs))
-  ME <- do.call(cbind, ME)
-  Y <- wgcna[[1]]$datTraits    
-
-  if (length(add_traits)==1 && is.logical(add_traits) && add_traits==TRUE) {
-    ME <- cbind(ME, Y)
-  } else if (length(add_traits) > 0 && !is.logical(add_traits)) {
-    sel <- intersect(add_traits, colnames(Y))
-    if(length(sel)) ME <- cbind(ME, Y[,sel])
+  ME <- c()
+  if(add_me) {
+    ME <- lapply(wgcna, function(w) as.matrix(w$net$MEs))
+    ME <- do.call(cbind, ME)
   }
+  Y <- wgcna[[1]]$datTraits    
+  
+  if (add_traits) {
+    sel <- colnames(Y)
+    if(!is.null(traits)) {
+      sel <- intersect(traits, sel)
+    }
+    ME <- cbind(ME, Y[,sel,drop=FALSE])
+  } 
+  
+  if (!add_traits && !is.null(phenotype)) {
+    ME <- cbind(ME, Y[,phenotype,drop=FALSE])
+  } 
   
   if (NCOL(ME) <= 2) ME <- cbind(ME, ME) ## error if ncol(ME)<=2 !!!!
 
   ## eigengene correlation
   R <- cor(ME, use="pairwise")
   R0 <- R
-  
+
+  ## If phenotype is given we condition the heatmap using the
+  ## correlation to the phenotype.
   if(!is.null(phenotype)) {
     ## proper sign in case of inhibitor layer (like miRNA)
     layersign <- rep(1, length(wgcna))
@@ -2471,11 +3326,12 @@ wgcna.plotEigenGeneAdjacencyHeatmap <- function(wgcna, add_traits = TRUE,
     layersign[grep("^mi",names(wgcna),ignore.case=TRUE)] <- -1
     ff <- list()
     for(k in names(wgcna)) {
-      ff[[k]] <- layersign[k] * wgcna[[k]]$modTraits[,phenotype]
+      rho <- cor(ME, Y[,phenotype], use="pairwise")[,1]
+      ##rho <- wgcna[[k]]$modTraits[,phenotype]      
+      ff[[k]] <- layersign[k] * rho
     }
     names(ff) <- NULL
     ff <- unlist(ff)
-    ##ff <- pmax(ff,0)
     ff <- 0.5 * (1 + ff)  ## signed...
     ff <- ff[match(rownames(R),names(ff))]
     names(ff) <- rownames(R)
@@ -2487,7 +3343,12 @@ wgcna.plotEigenGeneAdjacencyHeatmap <- function(wgcna, add_traits = TRUE,
   }
   
   if(nmax>0) {
-    ii <- head( order(-Matrix::rowMeans(abs(R))), nmax)
+    if(!is.null(phenotype)) {
+      rho <- cor(ME, Y[,phenotype], use="pairwise")[,1]
+      ii <- head(order(-abs(rho)), nmax)
+    } else {
+      ii <- head( order(-Matrix::rowMeans(R**2)), nmax)
+    }
     R <- R[ii,ii]
   }
   
@@ -2527,7 +3388,6 @@ wgcna.plotEigenGeneAdjacencyHeatmap <- function(wgcna, add_traits = TRUE,
     par(mar=mar2)
     wgcna.plotLabeledCorrelationHeatmap(
       R1,
-      #is.dist = TRUE,
       nSamples = nsamples,
       text = text,
       pstar = pstar,
@@ -2550,6 +3410,9 @@ wgcna.plotMultiEigengeneCorrelation <- function(wgcna, addtraits = TRUE,
 
   ## Show inter-correlation of modules
   me <- lapply(wgcna, function(w) w$net$MEs)        
+  if(length(me) == 1) {
+    me <- list(me[[1]], me[[1]])
+  }
   
   comb <- combn(length(me),2)
   ncomb <- ncol(comb)
@@ -2564,18 +3427,27 @@ wgcna.plotMultiEigengeneCorrelation <- function(wgcna, addtraits = TRUE,
     nr <- ceiling(ncomb / nc)
     par(mfrow=c(nr,nc), mar=c(8,10,3,1))
   }
-  
+
+  k=1
   for(k in 1:ncol(comb)) {
     i <- comb[1,k]
     j <- comb[2,k]
     M1 <- me[[i]]
     M2 <- me[[j]]
+
     if(addtraits) {
       M1 <- cbind(M1, Y)
       M2 <- cbind(M2, Y)
     }
+    if(FALSE && !addtraits && !is.null(phenotype)) {
+      y <- Y[,phenotype,drop=FALSE]
+      M1 <- cbind(M1, y)
+      M2 <- cbind(M2, y)
+    }
+
+
     R1 <- cor(M1, M2, use="pairwise.complete")
-    
+
     if(nmax > 0) {
       ii <- head(order(-apply(abs(R1), 1, max)), nmax)
       jj <- head(order(-apply(abs(R1), 2, max)), nmax)          
@@ -2590,16 +3462,13 @@ wgcna.plotMultiEigengeneCorrelation <- function(wgcna, addtraits = TRUE,
     ## This conditions the correlation on phenotype. Important.
     do.condition <- !is.null(phenotype)
     if(do.condition) {
-      w1 <- wgcna[[i]]$modTraits[,phenotype]
-      w2 <- wgcna[[j]]$modTraits[,phenotype]            
+      y <- Y[,phenotype]
+      w1 <- cor( M1[,rownames(R1)], y, use="pairwise")[,1]
+      w2 <- cor( M2[,colnames(R1)], y, use="pairwise")[,1]      
       if(msign[i]!=0) w1 <- msign[i] * w1
       if(msign[j]!=0) w2 <- msign[j] * w2            
       w1 <- pmax(w1,0)
       w2 <- pmax(w2,0)            
-      w1 <- w1[match(rownames(R1),names(w1))]
-      w2 <- w2[match(colnames(R1),names(w2))]      
-      w1[is.na(w1)] <- 1  ## ???
-      w2[is.na(w2)] <- 1  ## ???    
       ww <- outer(w1, w2)            
       ww <- ww / max(ww, na.rm=TRUE)
       R1 <- R1 * ww
@@ -2772,7 +3641,7 @@ wgcna.plotConsensusSampleDendroAndColors <- function(cons, i,
 {
 
   wgcna.plotSampleDendroAndColors(
-    wgcna = cons$netList[[i]],
+    wgcna = cons$layers[[i]],
     main = main,
     datExpr = cons$datExpr[[i]],
     datTraits = cons$datTraits,
@@ -2924,6 +3793,15 @@ wgcna.plotLabeledCorrelationHeatmap <- function(R, nSamples,
   if (setpar) par(mar = c(8, 8, 3, 3))
   if (is.null(main)) main <- "Correlation heatmap"
 
+  ## set colorscale. make sure 0 is white if non-symmetric
+  col1 <- WGCNA::blueWhiteRed(201)
+  rlim <- max(abs(R),na.rm=TRUE)
+  if(rlim>0) {
+    rval <- seq( -rlim, rlim, length.out=201)
+    ii <- which( rval >= min(R,na.rm=TRUE) & rval <= max(R,na.rm=TRUE) )
+    col1 <- WGCNA::blueWhiteRed(201)[ii]
+  }
+  
   ## Display the correlation values within a heatmap plot
   WGCNA::labeledHeatmap(
     Matrix = R,
@@ -2934,7 +3812,7 @@ wgcna.plotLabeledCorrelationHeatmap <- function(R, nSamples,
     xSymbols = colnames(R),
     ySymbols = rownames(R),
     colorLabels = TRUE,
-    colors = WGCNA::blueWhiteRed(50),
+    colors = col1,
     textMatrix = textMatrix,
     setStdMargins = FALSE,
     cex.text = cex.text,
@@ -2996,42 +3874,71 @@ wgcna.plotModuleHubGenes <- function(wgcna, modules = NULL,
   }
 }
 
-#' @title Map module colors to rainbow palette
-#'
-#' @description
-#' Maps the module colors from a WGCNA network to a rainbow palette.
-#'
-#' @param net A WGCNA network object.
-#'
-#' @details
-#' This function takes a WGCNA network object and maps the module colors
-#' to a rainbow palette based on the modules' hierarchical clustering order.
-#'
-#' It extracts the hierarchical clustering dendrogram order, gets the number
-#' of unique module colors, ranks the module color means based on the
-#' dendrogram order, and assigns rainbow colors accordingly.
-#'
-#' This allows easier visualization and interpretation of modules in the
-#' standard rainbow palette order.
-#'
-#' @return
-#' A named character vector mapping the original module colors to rainbow colors.
-#'
-labels2rainbow.BAK <- function(net) {
-  hc <- net$dendrograms[[1]]
-  nc <- length(unique(net$colors))
-  n <- length(net$colors)
-  ii <- rep(NA, n)
-  ii[net$goodGenes] <- hc$order
-  col1 <- WGCNA::labels2colors(net$colors)
-  col.rnk <- rank(tapply(1:n, col1[ii], mean))
-  new.col <- grDevices::rainbow(nc)[col.rnk]
-  names(new.col) <- names(col.rnk)
-  new.col["grey"] <- "#AAAAAA"
-  new.col <- new.col[col1]
-  names(new.col) <- net$colors
-  return(new.col)
+#' @export
+wgcna.plotGeneNetwork <- function(wgcna, genes, col=NULL,
+                                  edge.alpha = 0.3,
+                                  rgamma = 4,
+                                  edge.width = 6,
+                                  alpha = 0.5,
+                                  min.rho = 0.5,
+                                  setpar = TRUE) {
+
+  A <- cor(wgcna$datExpr[, genes])
+  A <- A * (abs(A) > min.rho)
+
+  gr <- igraph::graph_from_adjacency_matrix(
+    A, mode = "undirected", weighted = TRUE, diag = FALSE
+  )
+  vcex <- matrixStats::colVars(wgcna$datExpr[, genes])
+  vcex <- vcex / max(abs(vcex))
+  if(is.null(col)) {
+    col <- wgcna$net$color[genes]
+  }
+  col <- sub("black","grey40",col)
+  ecol <- c("darkred","darkgreen")[ 1 + 1*(igraph::E(gr)$weight > 0)]
+  table(ecol)  
+  ecol <- adjustcolor(ecol, alpha.f = edge.alpha)
+  ewt <- abs(igraph::E(gr)$weight)
+  ewt <- (ewt / max(abs(ewt)))**rgamma  
+  plot(gr,
+    layout = igraph::layout_in_circle,
+    edge.width = edge.width * ewt,
+    edge.color = ecol,
+    vertex.size = 5 + 20 * vcex,
+    vertex.color = adjustcolor(col, alpha.f = alpha),
+      vertex.frame.color = col
+  )
 }
+
+#' @export
+wgcna.plotModuleHeatmap <- function(wgcna, module, genes,
+                                    rgamma = 4, min.rho = 0,
+                                    main = "Module Heatmap",
+                                    cluster=TRUE) {
+
+  if(!is.null(module) && is.null(genes) ) {
+    genes <- wgcna$me.genes[[module]]
+  }
+  if(is.null(genes) || length(genes)==0) {
+    stop("must specify genes or module")
+  }
+
+  R <- cor(wgcna$datExpr[,genes])
+  R <- sign(R) * abs(R)**rgamma
+  
+  if(cluster) {
+    ii <- hclust(as.dist(1-R), method="average")$order
+    R <- R[ii,ii]
+  }
+  R[abs(R) < min.rho] <- NA
+  image(R)
+  mtext( rownames(R), side=4, at=seq(0,1,1/(nrow(R)-1)),
+    las=2, adj = 0, cex=0.7, line=0.5 )
+  if(!is.null(main) && main!="") {
+    title( main, line=2, cex.main=1.3)  
+  }
+}
+
 
 
 #' Filter color vector by minimum KME and mergeCutHeight. Set color of
@@ -3159,7 +4066,7 @@ wgcna.checkDendroHeights <- function(datExpr, n=200, powers=NULL, maxpower=20) {
   }
   names(ht) <- paste0("p=",powers)
   S <- sapply(ht, quantile, probs=c(0.25,0.5,0.75))
-  iqr <- S[3,] - S[1,]
+  iqr <- (S[3,] - S[1,])
   optK <- powers[which.max(iqr)]
 
   list(
@@ -3175,8 +4082,7 @@ wgcna.checkDendroHeights <- function(datExpr, n=200, powers=NULL, maxpower=20) {
 wgcna.plotPowerAnalysis <- function(datExpr, networktype = "signed",
                                     cex=1, maxpower = 20, nmax = 2000,
                                     plots=c("sft.modelfit", "mean.k",
-                                      "dendro.IQR"),
-                                    main=NULL, optmethod = "sft",
+                                      "dendro.IQR"), main=NULL, 
                                     RsquaredCut = 0.85, setPar=TRUE) {
 
   RsquaredCut <- RsquaredCut[1]
@@ -3203,8 +4109,6 @@ wgcna.plotPowerAnalysis <- function(datExpr, networktype = "signed",
   )
 
   ## This is more robust
-  optPower <- wgcna.pickSoftThreshold(datExpr=NULL, sft=sft,
-    rcut=RsquaredCut, nmax=-1, method = optmethod) 
   
   if(setPar) {
     np <- length(plots)
@@ -3232,7 +4136,7 @@ wgcna.plotPowerAnalysis <- function(datExpr, networktype = "signed",
     )
     ## this line corresponds to using an R^2 cut-off of h
     abline(h = RsquaredCut, col = "red", lty=2)
-    legend("bottomright", legend=paste("opt. power =",optPower))
+    ##if(legend) legend("bottomright", legend=paste("opt. power =",optPower))
   }
   
   ## Mean connectivity as a function of the soft-thresholding power
@@ -3249,7 +4153,7 @@ wgcna.plotPowerAnalysis <- function(datExpr, networktype = "signed",
 
   ht <- NULL
   if("dendro.IQR" %in% plots) {
-    ht <- wgcna.checkDendroHeights(datExpr, n=100, powers=powers)
+    ht <- wgcna.checkDendroHeights(datExpr, n=200, powers=powers)
     base::plot(
       sft$fitIndices[, 1], ht$IQR,
       type = "n",
@@ -3259,9 +4163,154 @@ wgcna.plotPowerAnalysis <- function(datExpr, networktype = "signed",
     )
     text(sft$fitIndices[, 1], ht$IQR, labels = powers,
       cex = cex, col = "red")
+  }  
+}
+
+#'
+#'
+#' @export
+wgcna.plotPowerAnalysis_multi <- function(exprList,
+                                          cex=1, maxpower = 20,
+                                          nmax = 2000,
+                                          networktype = "signed",
+                                          plots=c("sft.modelfit", "mean.k",
+                                            "dendro.IQR"),
+                                          main=NULL,
+                                          cex.legend = 1,
+                                          RsquaredCut = 0.85,
+                                          setPar=TRUE) {
+  if(0) {
+    networktype = "signed"
+    cex=1; maxpower = 20; nmax = 2000;
+    plots=c("sft.modelfit", "mean.k","dendro.IQR");
+    main=NULL; 
+    RsquaredCut = 0.85
   }
   
+  RsquaredCut <- RsquaredCut[1]
+  
+  ## Choose a set of soft-thresholding powers
+  powers <- c(c(1:10), seq(from = 12, to = 20, by = 2))
+  if(maxpower>20) {
+    powers <- c(powers, seq(from = 20, to = maxpower, by = 5))
+  }
+
+  ## process each list
+  sft <- list()
+  for(i in 1:length(exprList)) {
+    datExpr <- Matrix::t(exprList[[i]])
+
+    ## subsample for speed
+    if( nmax > 0 && nrow(exprList[[i]]) > nmax ) {
+      ii <- sample(1:ncol(datExpr),nmax)
+      datExpr <- datExpr[,ii]
+    }
+  
+    ## Call the network topology analysis function
+    k <- names(exprList)[i]
+    sft[[k]] <- WGCNA::pickSoftThreshold(
+      datExpr,
+      powerVector = powers,
+      RsquaredCut = RsquaredCut, 
+      networkType = networktype,
+      verbose = 0
+    )
+  }
+  
+  if(setPar) {
+    np <- length(plots)
+    par(mfrow = c(1, np), mar = c(3.8, 4.5, 3, 1), mgp = c(2.6, 0.95, 0))
+  }
+  
+  ## Plot the results:
+  if("sft.modelfit" %in% plots) {
+    ## Scale-free topology fit index as a function of the soft-thresholding power
+    Y <- c()
+    for(i in 1:length(sft)) {
+      y1 <- -sign(sft[[i]]$fitIndices[,"slope"]) * sft[[i]]$fitIndices[,"SFT.R.sq"]
+      Y <- cbind(Y, y1)
+    }
+    colnames(Y) <- names(sft)
+    x <- sft[[1]]$fitIndices[, "Power"]
+    Y <- pmax(Y,0)
+    matplot(
+      x = x,
+      y = Y,
+      ylim = c(0,1),      
+      type = "l",
+      col = 2:99,
+      lty = 1,
+      lwd = 0.6,
+      xlab = "Soft threshold (power)",
+      ylab = "SFT model fit (signed R^2)",
+      main = main
+    )
+    #abline(h = 0, col = "black", lty=1)
+    for(i in 1:ncol(Y)) {      
+      text(powers, Y[,i], labels = "█", cex=cex, col="white")      
+      text(powers, Y[,i], labels = powers, cex=cex, col = 1+i)
+    }
+    ## this line corresponds to using an R^2 cut-off of h
+    abline(h = RsquaredCut, col = "grey10", lty=2)
+    legend("bottomright", legend=colnames(Y), fill=2:10,
+      cex=cex.legend, y.intersp=0.9)
+    title("SFT model fit")
+  }
+  
+  ## Mean connectivity as a function of the soft-thresholding power
+  if("mean.k" %in% plots) {
+    Y <- sapply(sft, function(s) s$fitIndices[, "mean.k."])
+    matplot(
+      powers,
+      Y,
+      type = "l",
+      col = 2:99,
+      lty = 1,
+      lwd = 0.6,
+      xlab = "Soft threshold (power)",
+      ylab = "Mean connectivity",
+      main = main
+    )
+    for(i in 1:ncol(Y)) {
+      text(powers, Y[,i], labels = "█", cex=cex, col="white")            
+      text(powers, Y[,i], labels = powers, cex=cex, col = 1+i)
+    }
+    legend("topright", legend=colnames(Y), fill=2:10,
+      cex=cex.legend, y.intersp=0.9)
+    title("Mean connectivity")    
+  }
+
+  ht <- NULL
+  if("dendro.IQR" %in% plots) {
+    ht <- list()
+    for(i in 1:length(exprList)) {
+      ht[[i]] <- wgcna.checkDendroHeights(
+        Matrix::t(exprList[[i]]), n=200, powers=powers)
+    }
+    Y <- sapply(ht, function(h) h$IQR)
+    matplot(
+      powers,
+      Y,
+      type = "l",
+      col = 2:99,
+      lty = 1,
+      lwd = 0.6,
+      xlab = "Soft threshold (power)",
+      ylab = "Dendrogram height IQR",
+      main = main
+    )
+    for(i in 1:ncol(Y)) {
+      text(powers, Y[,i], labels = "█", cex=cex, col="white")            
+      text(powers, Y[,i], labels = powers, cex = cex, col = 1+i)
+    }
+    legend("bottomright", legend=names(exprList), fill=2:10,
+      cex=cex.legend, y.intersp=0.9)
+    title("Dendrogram IQR")    
+  }  
+
 }
+
+
 
 #' Better (?) method to pick soft threshold (aka power). 
 #'
@@ -3273,7 +4322,7 @@ wgcna.pickSoftThreshold <- function(datExpr, sft=NULL, rcut=0.85,
 
   if(is.null(powers)) {
     powers <- c(c(1:10), seq(from = 12, to = 20, by = 2))
-    powers <- c(powers, seq(from = 25, to = 50, by = 5))
+    # powers <- c(powers, seq(from = 25, to = 50, by = 5))
   }
 
   ## subsample for speed
@@ -3291,6 +4340,7 @@ wgcna.pickSoftThreshold <- function(datExpr, sft=NULL, rcut=0.85,
     )
   }
 
+  optPower <- NULL
   if(method == "sft") {
     ## Pick power according to scale-free (SFT) parameter
     sqr <- -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2]
@@ -3310,7 +4360,7 @@ wgcna.pickSoftThreshold <- function(datExpr, sft=NULL, rcut=0.85,
     }
   } else if(method == "iqr") {
     ## Pick power according to IQR
-    ht <- wgcna.checkDendroHeights(datExpr, n=100, powers=powers)
+    ht <- wgcna.checkDendroHeights(datExpr, n=200, powers = powers)
     ##base::plot( powers, ht$IQR)
     optPower <- powers[ which.max(ht$IQR) ]
   } else {
