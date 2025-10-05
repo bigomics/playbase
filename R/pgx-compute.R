@@ -74,6 +74,7 @@ pgx.createFromFiles <- function(counts.file,
     X = NULL,
     impX = NULL,
     is.logx = NULL,
+    dotimeseries = FALSE,
     batch.correct.method = "no_batch_correct",
     batch.pars = "<autodetect>",
     auto.scale = TRUE,
@@ -119,6 +120,7 @@ pgx.createFromFiles <- function(counts.file,
 #' @param contrasts Data frame defining sample contrasts.
 #' @param X (Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.
 #' @param is.logx Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.
+#' @param dotimeseries Logical indicating if timeseries analysis has been activated by the user at upload
 #' @param batch.correct.method BC method. Default is "no_batch_correct" (meaning no batch correction).
 #' @param batch.pars BC variable. Default "autodetect" as per QC/BC tab in upload.
 #' @param auto.scale Logical indicating whether to automatically scale/center genes. Default is TRUE.
@@ -173,6 +175,7 @@ pgx.createPGX <- function(counts,
                           impX = NULL,
                           norm_method = "CPM",
                           is.logx = NULL,
+                          dotimeseries = FALSE,
                           batch.correct.method = "no_batch_correct", ## new
                           batch.pars = "<autodetect>", ## new
                           auto.scale = TRUE,
@@ -189,6 +192,7 @@ pgx.createPGX <- function(counts,
                           add.gmt = TRUE,
                           settings = list(),
                           sc_compute_settings = list()) {
+
   message("[pgx.createPGX]===========================================")
   message("[pgx.createPGX]=========== pgx.createPGX =================")
   message("[pgx.createPGX]===========================================")
@@ -290,14 +294,10 @@ pgx.createPGX <- function(counts,
   contrasts <- fixContrastMatrix(contrasts)
 
   ## ---------------------------------------------------------------------
-  ## Time series
-  ## 1. check if time is categorical or not.
-  ## 2. check valid contrasts for time interaction analysis with spline.
-  ## 3. expand contrast matrix.
+  ## Time series conducted if user checked the box during upload
   ## ---------------------------------------------------------------------
-  contrasts <- contrasts.addTimeInteraction(contrasts, samples)
-  timeseries <- ifelse(any(grep("^IA:", colnames(contrasts))), TRUE, FALSE)
-
+  if (dotimeseries) contrasts <- contrasts.addTimeInteraction(contrasts, samples)
+  
   ## -------------------------------------------------------------------
   ## Auto-scaling (scale down huge values, often in proteomics)
   ## -------------------------------------------------------------------
@@ -668,6 +668,7 @@ pgx.computePGX <- function(pgx,
                            libx.dir = NULL,
                            progress = NULL,
                            user_input_dir = getwd()) {
+
   message("[pgx.computePGX]===========================================")
   message("[pgx.computePGX]========== pgx.computePGX =================")
   message("[pgx.computePGX]===========================================")
@@ -678,6 +679,7 @@ pgx.computePGX <- function(pgx,
   if (!"contrasts" %in% names(pgx)) {
     stop("[pgx.computePGX] FATAL:: no contrasts in object")
   }
+
   if (!all(grepl("_vs_", colnames(pgx$contrasts)))) {
     stop("[pgx.computePGX] FATAL:: all contrast names must include _vs_")
   }
