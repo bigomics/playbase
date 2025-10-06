@@ -6,7 +6,8 @@ env:
   DOCKER_TAG: bigomics/omicsplayground:devel
 jobs:
   unittest:
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       -
         name: Checkout
