@@ -387,8 +387,6 @@ pgx.clusterMatrix <- function(X,
     message("[pgx.clusterMatrix] reduce.pca = ", reduce.pca)
   }
 
-  saveRDS(X, "~/Desktop/X1.RDS")
-  
   ## Reduce dimensions by SD
   dimx <- dim(X) ## original dimensions
   namesx <- colnames(X)
@@ -411,7 +409,6 @@ pgx.clusterMatrix <- function(X,
     X <- X / matrixStats::rowSds(X, na.rm = TRUE)
   }
 
-  saveRDS(X, "~/Desktop/X2.RDS")
   if (ncol(X) <= 10) X <- do.call(cbind, rep(list(X), ceiling(10 / ncol(X))))
   if (nrow(X) <= 10) X <- do.call(rbind, rep(list(X), ceiling(10 / nrow(X))))
 
