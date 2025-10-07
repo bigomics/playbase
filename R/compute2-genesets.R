@@ -64,11 +64,7 @@ compute_testGenesets <- function(pgx,
   if (!all(rownames(X) %in% pgx$genes$symbol)) {
     X <- rename_by(X, pgx$genes, "symbol", unique = TRUE)
   }
-  impX <- pgx$impX
-  if (!all(rownames(impX) %in% pgx$genes$symbol)) {
-    impX <- rename_by(impX, pgx$genes, "symbol", unique = TRUE)
-  }
-
+  
   ## -----------------------------------------------------------
   ## Run methods
   ## -----------------------------------------------------------
@@ -82,9 +78,12 @@ compute_testGenesets <- function(pgx,
   Y <- pgx$samples
   gc()
 
+  X1 <- X;
+  if (any(is.na(X))) X1 <- playbase::imputeMissing(X, method = "SVD2")
+
   gset.meta <- gset.fitContrastsWithAllMethods(
     gmt = gmt,
-    X = if (is.null(impX)) X else impX,
+    X = X1,
     Y = Y,
     G = G,
     design = design,

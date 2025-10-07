@@ -46,11 +46,15 @@ pgx.clusterGenes <- function(pgx,
                              find.clusters = FALSE,
                              X = NULL,
                              umap.pkg = "uwot") {
+
   if (!is.null(X)) {
     message("[pgx.clusterGenes] Using normalized X matrix provided...")
   } else if (!is.null(pgx$X) && level == "gene") {
     message("[pgx.clusterGenes] Using normalized X matrix detected in pgx...")
     X <- pgx$X
+    saveRDS(X,"~/Desktop/X0.RDS")
+    nas <- apply(X, 1, function(x) sum(is.na(x)))
+    X <- X[which(nas == 0), , drop = FALSE]
   } else if (!is.null(pgx$gsetX) && level == "geneset") {
     message("[pgx.clusterGenes] Using expression geneset X matrix detected in pgx...")
     X <- pgx$gsetX
@@ -64,6 +68,9 @@ pgx.clusterGenes <- function(pgx,
     return(pgx)
   }
 
+  nas <- apply(X, 2, function(x) sum(is.na(x)))
+  X <- X[, which(nas == 0), drop = FALSE]
+  
   if (center.rows) {
     X <- X - rowMeans(X, na.rm = TRUE)
   }
@@ -179,9 +186,6 @@ pgx.clusterSamples <- function(pgx,
                                replace.orig = TRUE) {
   if (!is.null(X)) {
     message("using provided X matrix...")
-  } else if (!is.null(pgx$impX)) {
-    message("using imputed X (pgx$impX) matrix...")
-    X <- pgx$impX
   } else if (!is.null(pgx$X)) {
     message("[pgx.clusterSamples] Using normalized X pgx matrix (pgx$X).")
     X <- pgx$X
@@ -190,17 +194,8 @@ pgx.clusterSamples <- function(pgx,
     X <- logCPM(pgx$counts, total = NULL)
   }
 
-  if (any(is.na(X))) {
-    ## NEED RETHINK: We should use impX here if available. Some
-    ## datasets have missing values on all rows!!!
-    ## X <- X[complete.cases(X), , drop = FALSE]
-    if (!is.null(pgx$impX)) {
-      X <- pgx$impX ## AZ
-    } else {
-      X <- svdImpute2(X) ## IK
-    }
-  }
-
+  if (any(is.na(X))) X <- playbase::imputeMissing(X, method = "SVD2")
+  
   clust.pos <- pgx.clusterBigMatrix(
     X,
     methods = methods,
@@ -387,6 +382,7 @@ pgx.clusterMatrix <- function(X,
                               find.clusters = FALSE,
                               umap.pkg = "uwot",
                               verbose = 1) {
+
   methods <- intersect(methods, c("pca", "tsne", "umap", "pacmap"))
   if (length(methods) == 0) methods <- "pca"
 
@@ -396,6 +392,8 @@ pgx.clusterMatrix <- function(X,
     message("[pgx.clusterMatrix] reduce.pca = ", reduce.pca)
   }
 
+  saveRDS(X, "~/Desktop/X1.RDS")
+  
   ## Reduce dimensions by SD
   dimx <- dim(X) ## original dimensions
   namesx <- colnames(X)
@@ -418,6 +416,7 @@ pgx.clusterMatrix <- function(X,
     X <- X / matrixStats::rowSds(X, na.rm = TRUE)
   }
 
+  saveRDS(X, "~/Desktop/X2.RDS")
   if (ncol(X) <= 10) X <- do.call(cbind, rep(list(X), ceiling(10 / ncol(X))))
   if (nrow(X) <= 10) X <- do.call(rbind, rep(list(X), ceiling(10 / nrow(X))))
 
@@ -463,7 +462,7 @@ pgx.clusterMatrix <- function(X,
       all.pos[["pca3d"]] <- pos
     }
   }
-
+  
   if ("tsne" %in% methods && 2 %in% dims) {
     if (verbose > 0) message("[pgx.clusterMatrix] Calculating t-SNE 2D...")
     perplexity <- pmax(min(min(dimx) / 4, perplexity), 2)
@@ -481,7 +480,7 @@ pgx.clusterMatrix <- function(X,
     colnames(pos) <- paste0("tSNE-", c("x", "y"))
     all.pos[["tsne2d"]] <- pos
   }
-
+  
   if ("tsne" %in% methods && 3 %in% dims) {
     if (verbose > 0) message("[pgx.clusterMatrix] Calculating t-SNE 3D...")
     if (verbose > 0) message("[pgx.clusterMatrix] Perplexity = ", perplexity)

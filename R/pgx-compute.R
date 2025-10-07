@@ -72,7 +72,6 @@ pgx.createFromFiles <- function(counts.file,
     samples = samples,
     contrasts = contrasts,
     X = NULL,
-    impX = NULL,
     is.logx = NULL,
     batch.correct.method = "no_batch_correct",
     batch.pars = "<autodetect>",
@@ -170,7 +169,6 @@ pgx.createPGX <- function(counts,
                           creator = "unknown",
                           description = "No description provided.",
                           X = NULL,
-                          impX = NULL,
                           norm_method = "CPM",
                           is.logx = NULL,
                           batch.correct.method = "no_batch_correct", ## new
@@ -189,6 +187,7 @@ pgx.createPGX <- function(counts,
                           add.gmt = TRUE,
                           settings = list(),
                           sc_compute_settings = list()) {
+
   message("[pgx.createPGX]===========================================")
   message("[pgx.createPGX]=========== pgx.createPGX =================")
   message("[pgx.createPGX]===========================================")
@@ -209,12 +208,10 @@ pgx.createPGX <- function(counts,
       message("[pgx.createPGX] ", ndup, " duplicated feature(s) detected. Averaging....")
       counts <- playbase::counts.mergeDuplicateFeatures(counts, is.counts = TRUE)
       if (!is.null(X)) X <- playbase::counts.mergeDuplicateFeatures(X, is.counts = FALSE)
-      if (!is.null(impX)) impX <- playbase::counts.mergeDuplicateFeatures(impX, is.counts = FALSE)
     } else {
       message("[pgx.createPGX] ", ndup, " duplicated feature(s) detected. Making unique to keep all...")
       rownames(counts) <- playbase::make_unique(rownames(counts))
       if (!is.null(X)) rownames(X) <- playbase::make_unique(rownames(X))
-      if (!is.null(impX)) rownames(impX) <- playbase::make_unique(rownames(impX))
       if (!is.null(annot_table)) rownames(annot_table) <- rownames(counts)
     }
   }
@@ -255,13 +252,6 @@ pgx.createPGX <- function(counts,
 
   if (sum(is.na(X)) > 0) {
     message("[pgx.createPGX] X has ", sum(is.na(X)), " missing values")
-    if (!is.null(impX)) {
-      message("[pgx.createPGX] impX matrix also provided.")
-    } else {
-      message("[pgx.createPGX] creating impX matrix")
-      impX <- svdImpute2(X)
-    }
-    message("[pgx.createPGX] dim.impX: ", nrow(impX), " x ", ncol(impX))
   }
 
   if (!is.null(X) && !all(dim(counts) == dim(X))) {
@@ -324,11 +314,9 @@ pgx.createPGX <- function(counts,
   ## align samples
   kk <- intersect(colnames(counts), rownames(samples))
   kk <- intersect(kk, colnames(X))
-  if (!is.null(impX)) kk <- intersect(kk, colnames(impX))
   counts <- counts[, kk, drop = FALSE]
   X <- X[, kk, drop = FALSE]
   samples <- samples[kk, , drop = FALSE]
-  if (!is.null(impX)) impX <- impX[, kk, drop = FALSE]
   samples <- utils::type.convert(samples, as.is = TRUE) ## automatic type conversion
   if (all(kk %in% rownames(contrasts))) {
     contrasts <- contrasts[kk, , drop = FALSE]
@@ -350,7 +338,6 @@ pgx.createPGX <- function(counts,
     newnames <- make_unique(newnames)
     rownames(counts) <- newnames
     rownames(X) <- newnames
-    if (!is.null(impX)) rownames(impX) <- newnames
     if (!is.null(annot_table)) {
       rownames(annot_table) <- newnames
       pos.col <- grep("site|position|phosho", colnames(annot_table), ignore.case = TRUE)
@@ -399,7 +386,6 @@ pgx.createPGX <- function(counts,
     counts = as.matrix(counts),
     contrasts = contrasts,
     X = X,
-    impX = impX,
     norm_method = norm_method,
     total_counts = Matrix::colSums(counts, na.rm = TRUE),
     counts_multiplier = counts_multiplier,
@@ -477,9 +463,6 @@ pgx.createPGX <- function(counts,
     ## conform
     pgx$counts <- pgx$counts[rownames(pgx$genes), , drop = FALSE]
     pgx$X <- pgx$X[rownames(pgx$genes), , drop = FALSE]
-    if (!is.null(pgx$impX)) {
-      pgx$impX <- pgx$impX[rownames(pgx$genes), , drop = FALSE]
-    }
   }
 
   ## -------------------------------------------------------------------
@@ -505,7 +488,6 @@ pgx.createPGX <- function(counts,
     pgx$genes$feature <- new.names ## feature should also be renamed??
     rownames(pgx$counts) <- new.names
     rownames(pgx$X) <- new.names
-    if (!is.null(pgx$impX)) rownames(pgx$impX) <- new.names
   }
 
   ## -------------------------------------------------------------------
@@ -544,7 +526,6 @@ pgx.createPGX <- function(counts,
     mm <- batch.correct.method[1]
     if (length(batch.pars) == 0) batch.pars <- "<autodetect>"
     X <- pgx$X
-    impX <- pgx$impX
     samples <- pgx$samples
     contrasts <- pgx$contrasts
 
@@ -564,6 +545,7 @@ pgx.createPGX <- function(counts,
       xlist <- playbase::runBatchCorrectionMethods(X, batch, pheno, methods = mm, ntop = Inf)
       cX <- xlist[[mm]]
     } else {
+      impX <- playbase::imputeMissing(X, method = "SVD2")
       xlist <- playbase::runBatchCorrectionMethods(impX, batch, pheno, methods = mm, ntop = Inf)
       cX <- xlist[[mm]]
       jj <- which(is.na(X), arr.ind = TRUE)
@@ -600,7 +582,7 @@ pgx.createPGX <- function(counts,
     rm(xlist, cX, counts, corrected.counts)
   }
 
-  rm(counts, X, impX, samples, contrasts)
+  rm(counts, X, samples, contrasts)
 
   message("\n\n")
   message("[pgx.createPGX]======================================")
@@ -758,7 +740,7 @@ pgx.computePGX <- function(pgx,
     message("[pgx.computePGX] clustering genes...")
     mm <- "umap"
     if (pgx$datatype == "scRNAseq") mm <- c("pca", "tsne", "umap")
-    pgx <- pgx.clusterGenes(pgx, methods = mm, X = pgx$impX, level = "gene")
+    pgx <- pgx.clusterGenes(pgx, methods = mm, level = "gene")
   }
 
   ## -----------------------------------------------------------------------------
@@ -780,9 +762,6 @@ pgx.computePGX <- function(pgx,
   gg <- intersect(rownames(pgx$counts), rownames(pgx$X))
   pgx$counts <- pgx$counts[gg, ]
   pgx$X <- pgx$X[gg, ]
-  if (!is.null(pgx$impX)) {
-    pgx$impX <- pgx$impX[gg, ]
-  }
 
   ## ======================================================================
   ## ================= Run tests ==========================================
@@ -965,9 +944,6 @@ pgx.filterZeroCounts <- function(pgx) {
 
   pgx$counts <- pgx$counts[keep, , drop = FALSE]
   pgx$X <- pgx$X[keep, , drop = FALSE]
-  if (!is.null(pgx$impX)) {
-    pgx$impX <- pgx$impX[keep, , drop = FALSE]
-  }
   pgx$genes <- pgx$genes[keep, , drop = FALSE]
 
   pgx
