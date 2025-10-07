@@ -52,9 +52,7 @@ pgx.clusterGenes <- function(pgx,
   } else if (!is.null(pgx$X) && level == "gene") {
     message("[pgx.clusterGenes] Using normalized X matrix detected in pgx...")
     X <- pgx$X
-    saveRDS(X,"~/Desktop/X0.RDS")
-    nas <- apply(X, 1, function(x) sum(is.na(x)))
-    X <- X[which(nas == 0), , drop = FALSE]
+    if (any(is.na(X))) X <- playbase::imputeMissing(X, method = "SVD2")  ## just for safety
   } else if (!is.null(pgx$gsetX) && level == "geneset") {
     message("[pgx.clusterGenes] Using expression geneset X matrix detected in pgx...")
     X <- pgx$gsetX
@@ -67,9 +65,6 @@ pgx.clusterGenes <- function(pgx,
     message("[pgx.clusterGenes] WARNING: could not find matrix X")
     return(pgx)
   }
-
-  nas <- apply(X, 2, function(x) sum(is.na(x)))
-  X <- X[, which(nas == 0), drop = FALSE]
   
   if (center.rows) {
     X <- X - rowMeans(X, na.rm = TRUE)
