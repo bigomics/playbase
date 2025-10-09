@@ -46,11 +46,13 @@ pgx.clusterGenes <- function(pgx,
                              find.clusters = FALSE,
                              X = NULL,
                              umap.pkg = "uwot") {
+
   if (!is.null(X)) {
     message("[pgx.clusterGenes] Using normalized X matrix provided...")
   } else if (!is.null(pgx$X) && level == "gene") {
     message("[pgx.clusterGenes] Using normalized X matrix detected in pgx...")
     X <- pgx$X
+    if (any(is.na(X))) X <- playbase::imputeMissing(X, method = "SVD2")  ## just for safety
   } else if (!is.null(pgx$gsetX) && level == "geneset") {
     message("[pgx.clusterGenes] Using expression geneset X matrix detected in pgx...")
     X <- pgx$gsetX
@@ -63,7 +65,7 @@ pgx.clusterGenes <- function(pgx,
     message("[pgx.clusterGenes] WARNING: could not find matrix X")
     return(pgx)
   }
-
+  
   if (center.rows) {
     X <- X - rowMeans(X, na.rm = TRUE)
   }
@@ -179,9 +181,6 @@ pgx.clusterSamples <- function(pgx,
                                replace.orig = TRUE) {
   if (!is.null(X)) {
     message("using provided X matrix...")
-  } else if (!is.null(pgx$impX)) {
-    message("using imputed X (pgx$impX) matrix...")
-    X <- pgx$impX
   } else if (!is.null(pgx$X)) {
     message("[pgx.clusterSamples] Using normalized X pgx matrix (pgx$X).")
     X <- pgx$X
@@ -190,17 +189,8 @@ pgx.clusterSamples <- function(pgx,
     X <- logCPM(pgx$counts, total = NULL)
   }
 
-  if (any(is.na(X))) {
-    ## NEED RETHINK: We should use impX here if available. Some
-    ## datasets have missing values on all rows!!!
-    ## X <- X[complete.cases(X), , drop = FALSE]
-    if (!is.null(pgx$impX)) {
-      X <- pgx$impX ## AZ
-    } else {
-      X <- svdImpute2(X) ## IK
-    }
-  }
-
+  if (any(is.na(X))) X <- playbase::imputeMissing(X, method = "SVD2")
+  
   clust.pos <- pgx.clusterBigMatrix(
     X,
     methods = methods,
@@ -387,6 +377,7 @@ pgx.clusterMatrix <- function(X,
                               find.clusters = FALSE,
                               umap.pkg = "uwot",
                               verbose = 1) {
+
   methods <- intersect(methods, c("pca", "tsne", "umap", "pacmap"))
   if (length(methods) == 0) methods <- "pca"
 
@@ -463,7 +454,7 @@ pgx.clusterMatrix <- function(X,
       all.pos[["pca3d"]] <- pos
     }
   }
-
+  
   if ("tsne" %in% methods && 2 %in% dims) {
     if (verbose > 0) message("[pgx.clusterMatrix] Calculating t-SNE 2D...")
     perplexity <- pmax(min(min(dimx) / 4, perplexity), 2)
@@ -481,7 +472,7 @@ pgx.clusterMatrix <- function(X,
     colnames(pos) <- paste0("tSNE-", c("x", "y"))
     all.pos[["tsne2d"]] <- pos
   }
-
+  
   if ("tsne" %in% methods && 3 %in% dims) {
     if (verbose > 0) message("[pgx.clusterMatrix] Calculating t-SNE 3D...")
     if (verbose > 0) message("[pgx.clusterMatrix] Perplexity = ", perplexity)
