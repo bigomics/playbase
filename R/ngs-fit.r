@@ -727,7 +727,7 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
   if (!all(colnames(X) %in% names(timeseries))) {
     stop("[ngs.fitContrastsWithLIMMA.timeseries] X and timeseries vector contain different set of samples.")
   }
-
+  
   jj <- match(colnames(X), names(timeseries))
   time0 <- as.character(unname(timeseries[jj]))
   time0 <- gsub("\\D", "", time0)
@@ -756,7 +756,14 @@ ngs.fitContrastsWithLIMMA.timeseries <- function(X,
 
       design <- model.matrix(~ y * time.spline)
       fit <- limma::lmFit(X, design)
-      fit <- limma::eBayes(fit, trend = trend)
+      fit <- try(limma::eBayes(fit, trend = trend, robust = TRUE), silent = TRUE)
+      if ("try-error" %in% class(fit)) {
+        fit <- try(limma::eBayes(fit, trend = trend, robust = FALSE), silent = TRUE)
+        if ("try-error" %in% class(fit)) {
+          fit <- try(limma::eBayes(fit, trend = FALSE, robust = FALSE), silent = TRUE)
+        }
+      }
+      if ("try-error" %in% class(fit)) next()
 
       coefs <- apply(fit$t, 2, function(x) sum(is.na(x)))
       est.coefs <- names(coefs[coefs != nrow(fit$t)])
