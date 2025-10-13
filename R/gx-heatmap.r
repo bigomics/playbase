@@ -290,7 +290,7 @@ gx.splitmap <- function(gx, split = 5, splitx = NULL,
   ## give unique name if duplicated
   ndup <- sum(duplicated(rownames(gx)))
   if (ndup > 0) {
-    rownames(gx) <- tagDuplicates(rownames(gx))
+    rownames(gx) <- make.unique(rownames(gx))
     if (!is.null(row.annot)) rownames(row.annot) <- rownames(gx)
   }
 
