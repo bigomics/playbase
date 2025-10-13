@@ -120,7 +120,10 @@ pgx.wgcna <- function(
   ## ----------------------------------------------------
   message("computing module enrichment...")
   res.gse <- wgcna.computeModuleEnrichment(
-    wgcna, pgx,
+    wgcna,
+    annot = pgx$genes,
+    # GMT = pgx$GMT,
+    # gsetX = pgx$gsetX,
     methods = c("fisher", "gsetcor", "xcor"),
     ntop = 1000,
     xtop = 100,
@@ -564,7 +567,6 @@ wgcna.compute_multiomics <- function(dataX,
     gse <- wgcna.computeModuleEnrichment(
       wgcna = wgcna,
       multi = TRUE,
-      pgx = NULL,
       methods = gset.methods,
       ntop = 400,
       xtop = xtop,
@@ -1086,7 +1088,7 @@ wgcna.getGeneStats <- function(wgcna, trait, module=NULL, plot = TRUE,
   tt.cols <- colnames(stats[[p2[1]]])  
   if(is.null(trait)) trait <- tt.cols
   trait <- intersect(trait, tt.cols)
-
+  
   if (length(trait)>1) {
     A2 <- lapply(stats[p2], function(x) x[,trait])
     for(i in 1:length(A2)) colnames(A2[[i]]) <- paste0(names(A2)[i],".",colnames(A2[[i]]))
@@ -1100,7 +1102,6 @@ wgcna.getGeneStats <- function(wgcna, trait, module=NULL, plot = TRUE,
     message("[wgcna.getGeneStats] ERROR: trait not in stats object")
     return(NULL)
   }
-  dim(df)
   
   A3 <- stats[[p3]]
   if(!is.null(A3)) {
@@ -1137,7 +1138,7 @@ wgcna.getGeneStats <- function(wgcna, trait, module=NULL, plot = TRUE,
     title(main, line = 3, cex.main = 1.15)
   }
 
-  rownames(df) <- NULL
+  rownames(df) <- df$feature
   df
 }
 
@@ -1241,14 +1242,11 @@ wgcna.getConsensusGeneStats <- function(cons, stats, trait, module=NULL) {
 }
 
 
-
-
 ## ----------------------------------------------------
 ## Perform geneset analysis on modules
 ## ----------------------------------------------------
 
 wgcna.computeModuleEnrichment <- function(wgcna,
-                                          pgx,
                                           multi = FALSE,
                                           methods = c("fisher","gsetcor","xcor"),
                                           ntop = 200,
@@ -1271,11 +1269,6 @@ wgcna.computeModuleEnrichment <- function(wgcna,
   k <- intersect(c("gx","px"), names(wgcna))[1]
   geneX <- t(as.matrix(wgcna[[k]]$datExpr))
   symbol.col <- NULL
-  if(!is.null(pgx)) {
-    GMT <- pgx$GMT
-    gsetX <- pgx$gsetX
-    annot <- pgx$genes
-  }
   
   if(is.null(annot)) {
     gg <- lapply(wgcna, function(w) colnames(w$datExpr))
@@ -1891,8 +1884,11 @@ wgcna.runConsensusWGCNA <- function(exprList,
     message("[wgcna.runConsensusWGCNA] >>> computing module enrichment...")  
     if(is.null(GMT)) GMT <- Matrix::t(playdata::GSETxGENE)
     res$gsea <- wgcna.computeConsensusModuleEnrichment(
-      res, GMT = GMT, method = gset.methods,
-      annot = annot, min.genes = gsea.mingenes
+      res,
+      GMT = GMT,
+      method = gset.methods,
+      annot = annot,
+      min.genes = gsea.mingenes
     ) 
   }
   
@@ -2233,7 +2229,8 @@ wgcna.runPreservationWGCNA <- function(exprList, phenoData,
                                        ngenes = 2000,
                                        annot = NULL,
                                        compute.stats = TRUE,
-                                       compute.enrichment = TRUE
+                                       compute.enrichment = TRUE,
+                                       gset.methods = c("fisher","gsetcor","xcor")
                                        ) {
 
   if(is.character(reference)) {
@@ -2264,7 +2261,7 @@ wgcna.runPreservationWGCNA <- function(exprList, phenoData,
     compute.stats = FALSE,
     compute.enrichment = FALSE,
     gsea.mingenes = 10,
-    gset.methods = c("fisher","gsetcor","xcor")
+    gset.methods = gset.methods
   )
   
   colorList <- lapply(pres$layers, function(w) w$net$colors)
@@ -2295,13 +2292,14 @@ wgcna.runPreservationWGCNA <- function(exprList, phenoData,
     indent = 0
   )
 
-  ## Zsummary heatmap
+  ## Zsummary tables
   mp.tables <- mp$preservation$Z[[1]][-reference]
   Z <- sapply(mp.tables, function(mat) mat[,"Zsummary.pres"])
   rownames(Z) <- rownames(mp.tables[[1]])
   rownames(Z) <- paste0("ME",rownames(Z))
   colnames(Z) <- names(multiExpr)[-reference]
-  
+
+  ## module size
   moduleSize <- mp.tables[[1]][,"moduleSize"]
   names(moduleSize) <- rownames(Z)
   
@@ -2319,7 +2317,8 @@ wgcna.runPreservationWGCNA <- function(exprList, phenoData,
     WGCNA::moduleEigengenes(t(x), colors = refColors)$eigengenes
   )
   names(MEx)
-  
+
+  ## Compute module-trait correlation matrices
   Y <- lapply(pres$layers, function(w) w$datTraits)
   names(Y)
   if("Merged" %in% names(MEx) && !"Merged" %in% names(Y) ) {
@@ -2333,7 +2332,7 @@ wgcna.runPreservationWGCNA <- function(exprList, phenoData,
   R <- mapply(cor, MEx, Y, use="pairwise", SIMPLIFY=FALSE)
   ##for(i in 1:length(R)) colnames(R[[i]]) <- paste0(names(R)[i],":",colnames(R[[i]]))
   
-  ## gene statistics
+  ## gene statistics of reference layer
   if(compute.stats) {
     message("[wgcna.runPreservationWGCNA] computing gene statistics...")
     ref = reference.name
@@ -2342,14 +2341,19 @@ wgcna.runPreservationWGCNA <- function(exprList, phenoData,
       pres$datTraits, TOM=NULL)
   }
   
-  ## geneset enrichment
+  ## geneset enrichment of reference layer
   if(compute.enrichment) {
     message("[wgcna.runPreservationWGCNA] computing geneset enrichment...")
     pres$gsea <- wgcna.computeModuleEnrichment(
-      pres$layers[[ref]], pgx = NULL,
-      GMT = NULL, gsetX = NULL, annot = annot,
-      methods = c("fisher", "gsetcor", "xcor"),
-      ntop = 1000, xtop = 100, filter = NULL )
+      pres$layers[[ref]],
+      GMT = NULL,
+      gsetX = NULL,
+      annot = annot,
+      methods = gset.methods,
+      ntop = 1000,
+      xtop = 100,
+      filter = NULL
+    )
   }
   
   pres$modulePreservation <- mp
@@ -2557,8 +2561,14 @@ wgcna.plotTopModules <- function(wgcna, trait, nmax=16, setpar=TRUE) {
   if(setpar==1) par(mfrow=c(nr,nc), mgp=c(2.6,0.85,0), mar=c(4,4,2.5,1))
   if(setpar==2) par(mfrow=c(nc,nr), mgp=c(2.6,0.85,0), mar=c(4,4,2.5,1))  
 
-  i=1
+  yclass <- sapply(as.data.frame(Y), class)
+  is.binary <- apply(Y, 2, function(x) all(x %in% c(TRUE,FALSE,0,1,NA)))
+  yclass[which(is.binary)] <- "logical"
+  yclass
+  
+  i=sel[1]
   for(i in head(sel, nmax)) {
+
     x <- Y[, trait]  
     y <- MEx[,i]
     label <- colnames(MEx)[i]
@@ -2583,9 +2593,7 @@ wgcna.plotTopModules <- function(wgcna, trait, nmax=16, setpar=TRUE) {
         legend("bottomright", legend=paste("r=",round(r,3)))
       }
     }
-
   }
-
 }
 
 
@@ -2882,7 +2890,6 @@ wgcna.plotTraitCorrelationBarPlots <- function(res, trait, multi=FALSE,
     
   }
 }
-
 
 #'
 #'
@@ -3275,8 +3282,6 @@ wgcna.plotDendroAndTraitCorrelation_multi <- function(multi,
     }    
   }
 
-
-  
   message("using tree of layer: ", names(multi)[use.tree] )
   geneTree <- multi[[use.tree]]$net$dendrograms[[1]]
   
