@@ -16,6 +16,7 @@ gsea.enplot(
   lab.line = c(0.8, 2),
   cex.lab = 0.85,
   main.line = 0.3,
+  multiomics = FALSE,
   xlab = "Rank in ordered dataset",
   res = 1200,
   ylab = "Rank metric"

@@ -26,6 +26,6 @@ This function normalizes count data using the scaled
 \examples{
 \dontrun{
 counts <- matrix(rnbinom(100, mu = 10, size = 1), ncol = 10)
-norm_counts <- log1s(counts, q=0.01)
+norm_counts <- log1s(counts, q = 0.01)
 }
 }
