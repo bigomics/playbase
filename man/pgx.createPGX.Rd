@@ -21,9 +21,9 @@ pgx.createPGX(
   creator = "unknown",
   description = "No description provided.",
   X = NULL,
-  impX = NULL,
   norm_method = "CPM",
   is.logx = NULL,
+  dotimeseries = FALSE,
   batch.correct.method = "no_batch_correct",
   batch.pars = "<autodetect>",
   auto.scale = TRUE,
@@ -59,6 +59,8 @@ for the gene annotation table and the probe to symbol conversion.}
 \item{X}{(Optional) Matrix of normalized expression data. If NULL, will be calculated from counts.}
 
 \item{is.logx}{Logical indicating if count matrix is already log-transformed. If NULL, guessed automatically.}
+
+\item{dotimeseries}{Logical indicating if timeseries analysis has been activated by the user at upload}
 
 \item{batch.correct.method}{BC method. Default is "no_batch_correct" (meaning no batch correction).}
 
