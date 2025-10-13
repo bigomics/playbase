@@ -2312,6 +2312,29 @@ expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = 
 }
 
 
+#' Collapses an expanded (binarized) trait matrix to its original
+#' categorical phenotype with levels. Colnames must be "pheno1=A",
+#' "pheno1=B" etc.
+#'
+#' @export
+collapseTraitMatrix <- function(Y) {
+  if(sum(grepl("=",colnames(Y))) < 2) return(Y)
+  is.cat <- grepl("=",colnames(Y))
+  M <- Y[,which(!is.cat),drop=FALSE]  
+  categories <- unique(sub("=.*","",colnames(Y)[which(is.cat)]))
+  y=categories[1]
+  for(y in categories) {
+    ii <- which(sub("=.*","",colnames(Y)) == y)
+    Y1 <- Y[,ii]
+    colnames(Y1) <- sub(".*=","",colnames(Y1))
+    m1 <- colnames(Y1)[max.col(Y1)]
+    M <- cbind(M, m1)
+    colnames(M)[ncol(M)] <- y
+  }
+  return(M)
+}
+
+
 #' @title P-value for Pearson's Correlation Coefficient
 #'
 #' @description This function calculates the p-value for Pearson's correlation coefficient.
