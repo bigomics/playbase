@@ -52,7 +52,7 @@ pgx.clusterGenes <- function(pgx,
   } else if (!is.null(pgx$X) && level == "gene") {
     message("[pgx.clusterGenes] Using normalized X matrix detected in pgx...")
     X <- pgx$X
-    if (any(is.na(X))) X <- playbase::imputeMissing(X, method = "SVD2")  ## just for safety
+    ## if (any(is.na(X))) X <- playbase::imputeMissing(X, method = "SVD2")  ## just for safety
   } else if (!is.null(pgx$gsetX) && level == "geneset") {
     message("[pgx.clusterGenes] Using expression geneset X matrix detected in pgx...")
     X <- pgx$gsetX
@@ -73,7 +73,7 @@ pgx.clusterGenes <- function(pgx,
     X <- X / (1e-6 + matrixStats::rowSds(X, na.rm = TRUE))
   }
   if (rank.tf) {
-    X <- scale(apply(X, 2, rank))
+    X <- scale(apply(X, 2, rank, na.last = "keep"))
   }
 
   dims <- ifelse(ncol(X) > 2000, c(2), c(2, 3))
@@ -188,8 +188,6 @@ pgx.clusterSamples <- function(pgx,
     message("[pgx.clusterSamples] Using logCPM(pgx$counts)...")
     X <- logCPM(pgx$counts, total = NULL)
   }
-
-  if (any(is.na(X))) X <- playbase::imputeMissing(X, method = "SVD2")
   
   clust.pos <- pgx.clusterBigMatrix(
     X,
@@ -387,6 +385,8 @@ pgx.clusterMatrix <- function(X,
     message("[pgx.clusterMatrix] reduce.pca = ", reduce.pca)
   }
 
+  if (any(is.na(X))) X <- playbase::imputeMissing(X, method = "SVD2")
+  
   ## Reduce dimensions by SD
   dimx <- dim(X) ## original dimensions
   namesx <- colnames(X)
