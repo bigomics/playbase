@@ -1150,7 +1150,7 @@ ngs.fitContrastsWithEDGER <- function(counts,
                                                            timeseries,
                                                            use.spline = NULL,
                                                            robust = TRUE) {
-
+  
   if (!all(colnames(counts) %in% names(timeseries))) {
     message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries] Counts and timeseries vector contain different set of samples.")
   }
@@ -1168,7 +1168,6 @@ ngs.fitContrastsWithEDGER <- function(counts,
 
   if (use.spline) {
     message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries]: EdgeR timeseries with interaction & spline.")
-    require(splines)
     time0 <- as.numeric(time0)
   } else {
     message("[ngs.fitConstrastsWithEDGER.nodesign.timeseries]: EdgeR timeseries with interaction.")
@@ -1176,7 +1175,9 @@ ngs.fitContrastsWithEDGER <- function(counts,
   }
 
   y <- as.factor(as.character(y))
-
+  dge0 <- dge
+  res <- NULL
+  
   if (use.spline) {
     ## Iterate across df. Pick first valid run.
     idx <- 1:length(unique(time0))
@@ -1190,26 +1191,30 @@ ngs.fitContrastsWithEDGER <- function(counts,
       if ("try-error" %in% class(dge)) next
       sel <- grep("*:splines::ns*", colnames(design))
       if (method == "qlf") {
-        fit <- edgeR::glmQLFit(dge, design, robust = robust)
+        fit <- try(edgeR::glmQLFit(dge, design, robust = robust), silent = TRUE)
         # colnames(stats::coef(fit))[sel]
+        if ("try-error" %in% class(fit)) next
         res <- try(edgeR::glmQLFTest(fit, coef = sel), silent = TRUE)
         if ("try-error" %in% class(res)) next else break
       } else if (method == "lrt") {
-        fit <- edgeR::glmFit(dge, design, robust = robust)
+        fit <- try(edgeR::glmFit(dge, design, robust = robust), silent = TRUE)
+        if ("try-error" %in% class(fit)) next
         res <- try(edgeR::glmLRT(fit, coef = sel), silent = TRUE)
         if ("try-error" %in% class(res)) next else break
       }
     }
-  } else {
+  }
+
+  if (!use.spline | is.null(res)) {
     design <- model.matrix(~ y * time0)
-    dge <- edgeR::estimateDisp(dge, design = design, robust = robust)
+    dge0 <- edgeR::estimateDisp(dge0, design = design, robust = robust)
     # Test interaction terms directly
     sel <- grep("*:time0*", colnames(design)) ## ???? unclear.
     if (method == "qlf") {
-      fit <- edgeR::glmQLFit(dge, design, robust = robust)
+      fit <- edgeR::glmQLFit(dge0, design, robust = robust)
       res <- edgeR::glmQLFTest(fit, coef = sel)
     } else if (method == "lrt") {
-      fit <- edgeR::glmFit(dge, design, robust = robust)
+      fit <- edgeR::glmFit(dge0, design, robust = robust)
       res <- edgeR::glmLRT(fit, coef = sel)
     }
   }
