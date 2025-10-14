@@ -29,12 +29,13 @@ ai.ask <- function(question, model=DEFAULT_LLM, prompt=NULL) {
 }
 
 ai.genesets_summary <- function(gsets, pheno=NULL, model=DEFAULT_LLM,
-                                detail=1, verbose=1) {
-  q <- "Extract the main biological function of this list of gene sets that were found by doing geneset enrichment."
+                                detail=1, html=FALSE, verbose=1) {
+  q <- "Extract the main biological function of this list of gene sets that were found by doing geneset enrichment. Just give the answer. Do not acknowledge."
   if(!is.null(pheno)) q <- paste0(q, "Discuss in relation with the phenotype: '",pheno,"'.")
   if(detail==0) q <- paste(q, "Be very very short.")
   if(detail==1) q <- paste(q, "Describe in one short paragraph.")
-  if(detail>=2) q <- paste(q, "Describe in detail.")  
+  if(detail>=2) q <- paste(q, "Describe in detail.")
+  if(html) q <- paste(q, "Use HTML formatting.")  
   if(verbose>0) cat("Question:",q,"... \n")
   ss <- paste(gsets, collapse='; ')
   q <- paste(q, "These are the genesets: <list>",ss,"</list>. ")

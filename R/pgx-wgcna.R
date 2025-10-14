@@ -43,6 +43,7 @@ pgx.wgcna <- function(
     maxBlockSize = 9999,
     gset.filter = "PATHWAY|HALLMARK|^GO|^C[1-9]",
     ai_summary = FALSE,
+    ai_model = DEFAULT_LLM,
     verbose = 1,
     progress = NULL
     ) {
@@ -137,7 +138,7 @@ pgx.wgcna <- function(
     if(!is.null(progress)) progress$set(message = "Describing modules...", value=0.6)
     message("Describing modules using AI/LLM...")    
     wgcna$summary <- wgcna.describeModules(
-      wgcna, ntop=25, model=DEFAULT_LLM) 
+      wgcna, ntop=25, model=ai_model) 
   }
 
   
@@ -2008,7 +2009,7 @@ wgcna.createConsensusLayers <- function(exprList,
                                         samples,
                                         ngenes = 2000,
                                         power = 12,
-                                        minModuleSize = 5,
+                                        minModuleSize = 20,
                                         deepSplit = 2,
                                         mergeCutHeight = 0.15,
                                         minKME = 0.3,
@@ -2286,10 +2287,14 @@ wgcna.plotConsensusOverlapHeatmap <- function(net1, net2,
 ##=========================================================================
 
 #' @export
-wgcna.runPreservationWGCNA <- function(exprList, phenoData,
+wgcna.runPreservationWGCNA <- function(exprList,
+                                       phenoData,
+                                       power = 12,
                                        reference = 1,
                                        add.merged=FALSE,
                                        ngenes = 2000,
+                                       minModuleSize = 20,
+                                       deepSplit = 2,
                                        annot = NULL,
                                        compute.stats = TRUE,
                                        compute.enrichment = TRUE,
@@ -2312,11 +2317,11 @@ wgcna.runPreservationWGCNA <- function(exprList, phenoData,
     GMT = NULL,
     annot = NULL,
     ngenes = ngenes,
-    power = 12,
-    minModuleSize = 20,
+    power = power,
+    minModuleSize = minModuleSize,
     minKME = 0.3, 
     mergeCutHeight = 0.15,
-    deepSplit = 2,
+    deepSplit = deepSplit,
     maxBlockSize = 9999,
     addCombined = FALSE,
     calcMethod = "fast",
@@ -4824,42 +4829,50 @@ wgcna.scaleTOMs <- function(TOMs, scaleP=0.95) {
   return(TOMs)
 }
 
-
-ntop=20
-wgcna.getTopGenesAndSets <- function(wgcna, ntop=20) {
+#' @export
+wgcna.getTopGenesAndSets <- function(wgcna, module=NULL, ntop=20) {
   if(!"stats" %in% names(wgcna)) stop("object has no stats")
-  if(!"gse" %in% names(wgcna)) stop("object has no enrichment results (gse)")  
-
-  mm <- wgcna$stats$moduleMembership
+  if(!"gse" %in% names(wgcna)) stop("object has no enrichment results (gse)")    
+  
+  ## get top genes (highest kME)
+  mm <- wgcna$stats$moduleMembership  
   ##mm <- cor( wgcna$datExpr, wgcna$net$MEs )
-  topgenes <- apply(mm,2,function(x) head(order(-x),ntop),simplify=FALSE)
-  topgenes <- lapply(topgenes, function(i) rownames(mm)[i])
-  topgenes
+  gg <- rownames(mm)
+  mm <- as.list(data.frame(mm))
+  if(!is.null(module)) mm <- mm[module]
+  topgenes <- lapply(mm, function(x) head(order(-x),ntop) )
+  topgenes <- lapply(topgenes, function(i) gg[i])
 
+  ## top genesets
   ee <- wgcna$gse
+  if(!is.null(module)) ee <- ee[module]  
   topsets <- lapply(ee,function(x) head(rownames(x),ntop))
   topmembers <- lapply(ee, function(x) {
     names(head(sort(-table(unlist(strsplit(x$genes,split="\\|")))),ntop))
   })
-  topmembers
 
+  M <- wgcna$modTraits
+  toppheno <- apply(M, 1, function(x) names(which(x > 0.8*max(x))))
+  
   ## take intersection (high MM, high set membership)
-  topgenes <- mapply(intersect, topmembers, topgenes)
+  topgenes <- mapply(intersect, topmembers, topgenes, SIMPLIFY=FALSE)
 
-  list( sets = topsets, genes = topgenes )
+  list( sets = topsets, genes = topgenes, pheno=toppheno )
 }
 
-
-ntop=25
 wgcna.describeModules <- function(wgcna, ntop=25, model="gpt-5-nano") {
 
   top <- wgcna.getTopGenesAndSets(wgcna, ntop=ntop) 
+
   desc <- list()
   module=names(top$genes)[1]
   for(module in names(top$genes)) {
     ss <- paste( top$sets[[module]], collapse=';')
     gg <- paste( top$genes[[module]], collapse=';')
-    q <- paste("Give a short summary of the main underlying biological function of the following top enriched genesets. They belong to Module",module,"of a WGCNA analysis. Discuss potential involvement of the listed genes. Mention few genes if there is good evidence, otherwise skip. Use one short paragraph.\n\nHere is the list of genes: ", gg,"\n\nHere is list of top enriched genesets: ", ss)
+    pp <- paste( top$pheno[[module]], collapse=';')
+
+    q <- paste0("Give a short summary of the main underlying biological function of the following top enriched genesets belonging to module", module, "of a WGCNA analysis. Discuss the possible relationship with the phenotypes:", pp, ". Use maximum one paragraph. No bullet points. After that discuss shortly if any of the key genes might be involved in the biological function.\n\nHere is list of enriched gene sets: ", ss, "\n\nHere is list of key genes: ", gg)
+
     answer <- ai.ask(q, model=model)
     desc[[module]] <- answer
   }
