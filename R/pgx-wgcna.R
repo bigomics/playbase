@@ -42,6 +42,7 @@ pgx.wgcna <- function(
     ngenes = 2000,
     maxBlockSize = 9999,
     gset.filter = "PATHWAY|HALLMARK|^GO|^C[1-9]",
+    ai_summary = FALSE,
     verbose = 1,
     progress = NULL
     ) {
@@ -82,6 +83,7 @@ pgx.wgcna <- function(
     X <- playbase::normalizeMultiOmics(X, method = "combat")
   }
 
+  if(!is.null(progress)) progress$set(message = "Calculating WGCNA...", value=0.2)
   message("[pgx.wgcna] start wgcna.compute...")
   wgcna <- wgcna.compute(
     X = X,
@@ -118,8 +120,9 @@ pgx.wgcna <- function(
   ## ----------------------------------------------------
   ## Do geneset analysis
   ## ----------------------------------------------------
+  if(!is.null(progress)) progress$set(message = "Computing enrichment...", value=0.4)
   message("computing module enrichment...")
-  res.gse <- wgcna.computeModuleEnrichment(
+  wgcna$gse <- wgcna.computeModuleEnrichment(
     wgcna,
     annot = pgx$genes,
     # GMT = pgx$GMT,
@@ -130,16 +133,21 @@ pgx.wgcna <- function(
     filter = gset.filter
   )
 
+  if(ai_summary) {
+    if(!is.null(progress)) progress$set(message = "Describing modules...", value=0.6)
+    message("Describing modules using AI/LLM...")    
+    wgcna$summary <- wgcna.describeModules(
+      wgcna, ntop=25, model=DEFAULT_LLM) 
+  }
+
+  
   ## add to results object
-  wgcna$gse <- res.gse
   wgcna$clust <- clust
   wgcna$networktype <- networktype
   wgcna$tomtype <- tomtype
 
   return(wgcna)
 }
-
-
 
 
 #' @export
@@ -1261,7 +1269,8 @@ wgcna.computeModuleEnrichment <- function(wgcna,
                                           annot = NULL,
                                           GMT = NULL,
                                           gsetX = NULL,
-                                          filter = "^PATHWAY|^HALLMARK|^GO|^C[1-9]") {
+                                          filter = NULL
+                                          ) {
 
   if(!multi) {
     wgcna <- list(gx = wgcna)
@@ -1362,7 +1371,7 @@ wgcna.computeModuleEnrichment <- function(wgcna,
     methods = methods,
     ntop = ntop
   )
-  
+
   return(gse)
 }
 
@@ -1549,7 +1558,7 @@ wgcna.run_enrichment_methods <- function(ME, me.genes, GMT, geneX, gsetX,
   ## eigengene (ME). This should select genesets correlated with the
   ## ME.
   if ("gsetcor" %in% methods && !is.null(gsetX)) {
-    message("[wgcna.computeModuleEnrichment] calculating single-sample geneset correlation...")
+    message("[wgcna.run_enrichment_methods] calculating single-sample geneset correlation...")
     rc.rho <- matrix(NA, ncol(GMT), ncol(ME))
     rc.pvalue <- matrix(NA, ncol(GMT), ncol(ME))    
     dimnames(rc.rho) <- list( colnames(GMT), colnames(ME))
@@ -1569,7 +1578,7 @@ wgcna.run_enrichment_methods <- function(ME, me.genes, GMT, geneX, gsetX,
   ## Here we correlate the module eigengene (ME) with genes and then
   ## do a gset.rankcor() on the ME correlation.
   if ("xcor" %in% methods) {
-    message("[wgcna.computeModuleEnrichment] calculating eigengene GBA correlation...")
+    message("[wgcna.run_enrichment_methods] calculating eigengene GBA correlation...")
     gba <- cor(t(geneX), ME, use = "pairwise")
     rc <- gset.rankcor(gba, GMT, compute.p = TRUE) ## NEEDS CHECK!!!
     rho.list[["xcor"]] <- rc$rho
@@ -1581,14 +1590,14 @@ wgcna.run_enrichment_methods <- function(ME, me.genes, GMT, geneX, gsetX,
     ## we pre-select to make this faster
     Pmin <- sapply(pval.list, function(P) apply(P,1,min))
     sel <- head(order(rowMeans(apply(Pmin, 2, rank))), 5*ntop)
-    message("[wgcna.computeModuleEnrichment] pre-selecting ",length(sel)," sets for fgsea/Fisher test...")
+    message("[wgcna.run_enrichment_methods] pre-selecting ",length(sel)," sets for fgsea/Fisher test...")
     sel <- rownames(Pmin)[sel]
     gmt <- gmt[sel]
   }    
     
   ## fGSEA
   if ("fgsea" %in% methods) {
-    message("[wgcna.computeModuleEnrichment] calculating module fgsea...")
+    message("[wgcna.run_enrichment_methods] calculating module fgsea...")
     xrho <- cor(t(geneX), ME, use = "pairwise")
     res <- list()
     i=1
@@ -1609,7 +1618,7 @@ wgcna.run_enrichment_methods <- function(ME, me.genes, GMT, geneX, gsetX,
   ## Perform fisher-test on ME genes
   if ("fisher" %in% methods) {
 
-    message("[wgcna.computeModuleEnrichment] calculating Fisher tests...")    
+    message("[wgcna.run_enrichment_methods] calculating Fisher tests...")    
     rho <- matrix(NA, length(gmt), ncol(ME))
     pval <- matrix(NA, length(gmt), ncol(ME))    
     dimnames(rho) <- list( names(gmt), colnames(ME))
@@ -1663,7 +1672,7 @@ wgcna.run_enrichment_methods <- function(ME, me.genes, GMT, geneX, gsetX,
   meta.rnk <- Reduce('+', rnk.NAZERO) / rnk.NSUM
 
   ## create dataframe by module
-  message("[wgcna.computeModuleEnrichment] creating dataframes...")
+  message("[wgcna.run_enrichment_methods] creating dataframes...")
   gse.list <- list()
   i <- 1
   for (i in 1:ncol(meta.p)) {
@@ -4815,3 +4824,45 @@ wgcna.scaleTOMs <- function(TOMs, scaleP=0.95) {
   return(TOMs)
 }
 
+
+ntop=20
+wgcna.getTopGenesAndSets <- function(wgcna, ntop=20) {
+  if(!"stats" %in% names(wgcna)) stop("object has no stats")
+  if(!"gse" %in% names(wgcna)) stop("object has no enrichment results (gse)")  
+
+  mm <- wgcna$stats$moduleMembership
+  ##mm <- cor( wgcna$datExpr, wgcna$net$MEs )
+  topgenes <- apply(mm,2,function(x) head(order(-x),ntop),simplify=FALSE)
+  topgenes <- lapply(topgenes, function(i) rownames(mm)[i])
+  topgenes
+
+  ee <- wgcna$gse
+  topsets <- lapply(ee,function(x) head(rownames(x),ntop))
+  topmembers <- lapply(ee, function(x) {
+    names(head(sort(-table(unlist(strsplit(x$genes,split="\\|")))),ntop))
+  })
+  topmembers
+
+  ## take intersection (high MM, high set membership)
+  topgenes <- mapply(intersect, topmembers, topgenes)
+
+  list( sets = topsets, genes = topgenes )
+}
+
+
+ntop=25
+wgcna.describeModules <- function(wgcna, ntop=25, model="gpt-5-nano") {
+
+  top <- wgcna.getTopGenesAndSets(wgcna, ntop=ntop) 
+  desc <- list()
+  module=names(top$genes)[1]
+  for(module in names(top$genes)) {
+    ss <- paste( top$sets[[module]], collapse=';')
+    gg <- paste( top$genes[[module]], collapse=';')
+    q <- paste("Give a short summary of the main underlying biological function of the following top enriched genesets. They belong to Module",module,"of a WGCNA analysis. Discuss potential involvement of the listed genes. Mention few genes if there is good evidence, otherwise skip. Use one short paragraph.\n\nHere is the list of genes: ", gg,"\n\nHere is list of top enriched genesets: ", ss)
+    answer <- ai.ask(q, model=model)
+    desc[[module]] <- answer
+  }
+
+  return(desc)
+}
