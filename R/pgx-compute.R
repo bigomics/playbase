@@ -741,9 +741,10 @@ pgx.computePGX <- function(pgx,
     message("[pgx.computePGX] clustering genes...")
     mm <- "umap"
     if (pgx$datatype == "scRNAseq") mm <- c("pca", "tsne", "umap")
-    X1 <- pgx$X
-    if (any(is.na(X1))) X1 <- playbase::imputeMissing(X1, method = "SVD2")
-    pgx <- pgx.clusterGenes(pgx, methods = mm, X = X1, level = "gene")
+    ## X1 <- pgx$X
+    ## if (any(is.na(X1))) X1 <- playbase::imputeMissing(X1, method = "SVD2")
+    ## pgx <- pgx.clusterGenes(pgx, methods = mm, X = X1, level = "gene")
+    pgx <- pgx.clusterGenes(pgx, methods = mm, level = "gene")
   }
 
   ## -----------------------------------------------------------------------------
