@@ -1568,7 +1568,8 @@ ngs.fitContrastsWithDESEQ2 <- function(counts,
         dds <- DESeq2::DESeqDataSetFromMatrix(counts, colData, design)
         dds <- DESeq2::estimateSizeFactors(dds)
         disp.type <- ifelse(test == "glmGamPoi", "glmGamPoi", "DESeq2")
-        dds <- DESeq2::estimateDispersionsGeneEst(dds, type = disp.type)
+        dds <- try(DESeq2::estimateDispersionsGeneEst(dds, type = disp.type), silent = TRUE)
+        if ("try-error" %in% class(dds)) next
         DESeq2::dispersions(dds) <- GenomicRanges::mcols(dds)$dispGeneEst
         if (test == "LRT") {
           dds <- try(DESeq2::nbinomLRT(dds, reduced = red.design), silent = TRUE)
