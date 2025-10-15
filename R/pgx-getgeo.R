@@ -43,6 +43,8 @@ pgx.getGEOseries <- function(accession,
     if (length(ex.vars) > 0) {
       meta <- meta[, !colnames(meta) %in% ex.vars, drop = FALSE]
     }
+    hh <- grep("characteristics_ch", colnames(meta))
+    if (any(hh)) meta <- meta[, -hh, drop = FALSE]
   } else {
     message("[pgx.getGEOseries] WARNING: Metadata not retrieved.")
   }
