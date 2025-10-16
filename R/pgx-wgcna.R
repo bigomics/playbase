@@ -136,7 +136,7 @@ pgx.wgcna <- function(
 
   if(ai_summary) {
     if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
-    message("Annotating modules using LLM: ", ai_model)    
+    message("Annotating modules using ", ai_model)    
     wgcna$summary <- wgcna.describeModules(
       wgcna, ntop=25, model=ai_model,
       annot = pgx$genes,
@@ -1054,7 +1054,7 @@ wgcna.computeGeneStats <- function(net, datExpr, datTraits, TOM) {
 #'
 #' @export
 wgcna.getGeneStats <- function(wgcna, trait, module=NULL, plot = TRUE,
-                               stats = NULL, labels = NULL,
+                               stats = NULL, labels = NULL, showlogFC = TRUE,
                                col = NULL, main = NULL) {
 
   if(!is.null(stats)) {
@@ -1136,7 +1136,10 @@ wgcna.getGeneStats <- function(wgcna, trait, module=NULL, plot = TRUE,
   df <- df[order(-df$score * score.sign), ]
   
   if (plot) {
-    cols <- c("moduleMembership", "traitSignificance", "foldChange", "centrality")
+    cols <- c("moduleMembership", "traitSignificance")
+    if(showlogFC) {
+      cols <- c(cols, "foldChange", "centrality")
+    }
     cols <- intersect(cols, colnames(df))
     df1 <- df[, cols]
     col1 <- wgcna.labels2colors(labels[rownames(df1)])
@@ -1966,7 +1969,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
     )
     if(ai_summary) {
       if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
-      message("Annotating modules using LLM: ", ai_model)    
+      message("Annotating modules using ", ai_model)    
       res$summary <- wgcna.describeModules(
         res, multi = TRUE, ntop = 25, model = ai_model,
         annot = annot, experiment = ai_experiment,
@@ -2691,10 +2694,14 @@ wgcna.plotTopModules_multi <- function(multi, trait, nmax=16, collapse=FALSE,
                                        plotlib = "base", setpar=TRUE)
 {
 
+  if(!"MEs" %in% names(multi)) {
+    multi$MEs <- lapply( multi$net$multiMEs, function(m) m$data)
+  }
+  
   ## we 'just' concatenate the ME matrices
   MEx <- do.call(rbind, lapply(multi$MEs, as.matrix))
   me.samples <- lapply(multi$MEs, rownames)
-  Y <- multi$datTrait
+  Y <- multi$datTraits
 
   batch <- max.col(sapply(me.samples, function(s) rownames(Y) %in% s))
   batch <- names(multi$MEs)[batch]
