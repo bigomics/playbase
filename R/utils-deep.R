@@ -6,22 +6,31 @@ ai.get_ollama_models <- function() {
 
 OLLAMA_MODELS = ai.get_ollama_models()
 OLLAMA_MODELS
-
-GPT_MINI_MODELS = c("gpt-5-nano")
+TINY_MODELS = c("llama3.2:1b","granite4:micro","gemma3:1b")
 DEFAULT_LLM = "gpt-5-nano"
 
+if(0) {
+  model="gpt-5-nano";prompt=NULL
+  model="gemma3:1b";prompt=NULL
+  model="grok-4-fast-non-reasoning";prompt=NULL
+}
+
 ai.ask <- function(question, model=DEFAULT_LLM, prompt=NULL) {
+  chat <- NULL
   if (model %in% OLLAMA_MODELS) {
     chat <- ellmer::chat_ollama(model = model, system_prompt = prompt)
-  } else if (grepl("^gpt",model)) {
-    if(!model %in% GPT_MINI_MODELS) {
-      message("warning: using large GPT model:", model)
-    }
+  } else if (grepl("^gpt",model) && Sys.getenv("OPENAI_API_KEY")!="") {
+    message("warning: using remote GPT model:", model)
     chat <- ellmer::chat_openai(model = model, system_prompt = prompt)
-  } else {
-    message("ERROR. unknown model", model)
-    message("valid models: ", paste(c(OLLAMA_MODELS, GPT_MINI_MODELS),
-      collapse = ", "))
+  } else if (grepl("^grok",model) && Sys.getenv("XAI_API_KEY")!="") {
+    chat <- ellmer::chat_openai(
+      model = model, system_prompt = prompt,
+      api_key = Sys.getenv("XAI_API_KEY"),
+      base_url="https://api.x.ai/v1/")
+  }  
+  
+  if(is.null(chat)) {
+    message("ERROR. could not create model", model)
     return(NULL)
   }
   . <- chat$chat(question, echo=FALSE)  

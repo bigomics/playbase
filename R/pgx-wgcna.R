@@ -123,7 +123,7 @@ pgx.wgcna <- function(
   ## ----------------------------------------------------
   if(!is.null(progress)) progress$set(message = "Computing enrichment...", value=0.4)
   message("computing module enrichment...")
-  wgcna$gse <- wgcna.computeModuleEnrichment(
+  wgcna$gsea <- wgcna.computeModuleEnrichment(
     wgcna,
     annot = pgx$genes,
     # GMT = pgx$GMT,
@@ -135,10 +135,12 @@ pgx.wgcna <- function(
   )
 
   if(ai_summary) {
-    if(!is.null(progress)) progress$set(message = "Describing modules...", value=0.6)
-    message("Describing modules using AI/LLM...")    
+    if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
+    message("Annotating modules using LLM: ", model)    
     wgcna$summary <- wgcna.describeModules(
-      wgcna, ntop=25, model=ai_model) 
+      wgcna, ntop=25, model=ai_model,
+      annot = pgx$genes, experiment=pgx$description,
+      verbose=0) 
   }
 
   
@@ -1066,9 +1068,6 @@ wgcna.getGeneStats <- function(wgcna, trait, module=NULL, plot = TRUE,
     stop("must supply wgcna or trait")
   }
 
-  mean(labels %in% WGCNA::standardColors())
-  setdiff(labels, WGCNA::standardColors())
-
   is.color <- mean(labels %in% c("grey",WGCNA::standardColors())) > 0.9
   if(is.color) {
     prefix <- substring(rownames(stats[['moduleTraitCor']]),1,2)[1]
@@ -1123,10 +1122,7 @@ wgcna.getGeneStats <- function(wgcna, trait, module=NULL, plot = TRUE,
   #df1 <- pmax(as.matrix(df[, sel]), 1e-8)
   df1 <- as.matrix(abs(df[, sel]))
   score <- exp(rowMeans(log(1e-8 + df1))) * sign(df[,"foldChange"])
-
   df <- data.frame(df[,1:2], score = score, df[,-c(1,2)])
-  score.sign <- sign(median(df$score,na.rm=TRUE))
-  df <- df[order(-df$score * score.sign), ]
   
   if (!is.null(module)) {
     ##sel <- which(df$module == module)
@@ -1134,6 +1130,10 @@ wgcna.getGeneStats <- function(wgcna, trait, module=NULL, plot = TRUE,
     df <- df[sel, , drop = FALSE]
   }
 
+  ## reorder, sort on score
+  score.sign <- sign(median(df$score, na.rm=TRUE))
+  df <- df[order(-df$score * score.sign), ]
+  
   if (plot) {
     cols <- c("moduleMembership", "traitSignificance", "foldChange", "centrality")
     cols <- intersect(cols, colnames(df))
@@ -1363,7 +1363,7 @@ wgcna.computeModuleEnrichment <- function(wgcna,
   ## make single ME matrix
   MEx <- do.call(cbind, ME)
 
-  gse <- wgcna.run_enrichment_methods(
+  gsea <- wgcna.run_enrichment_methods(
     ME = MEx,
     me.genes = me.genes,
     G = G1,
@@ -1373,7 +1373,7 @@ wgcna.computeModuleEnrichment <- function(wgcna,
     ntop = ntop
   )
 
-  return(gse)
+  return(gsea)
 }
 
 #'
@@ -1783,10 +1783,14 @@ wgcna.runConsensusWGCNA <- function(exprList,
                                     drop.ref = FALSE,
                                     compute.stats = TRUE,
                                     compute.enrichment = TRUE,
+                                    ai_summary = FALSE,
+                                    ai_model = "llama3.2:1b",
+                                    ai_experiment = "",
                                     gsea.mingenes = 10,
                                     gsea.ntop = 1000,
                                     gset.methods = c("fisher","gsetcor","xcor"),
-                                    verbose = 1
+                                    verbose = 1,
+                                    progress = NULL
                                     ) {
   if(0) {
     power=6;minKME=0.5;cutheight=0.15;deepSplit=2;maxBlockSize=5000;verbose=1;calcMethod="fast";addCombined=0;ngenes=2000;minModuleSize=20;mergeCutHeight=0.15
@@ -1824,6 +1828,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
   # run module detection procedure
   layers <- list()
   k=names(multiExpr)[1]
+  if(!is.null(progress)) progress$inc(0.1, "Computing layers...")
   for (i in 1:length(multiExpr)) {
     k <- names(multiExpr)[i]
     message("[wgcna.runConsensusWGCNA] >>> computing WGCNA for ", k)
@@ -1848,6 +1853,7 @@ wgcna.runConsensusWGCNA <- function(exprList,
   
   # now we run automatic consensus module detection
   message("[wgcna.runConsensusWGCNA] >>> computing CONSENSUS modules...")
+  if(!is.null(progress)) progress$inc(0.1, "Computing consensus...")  
   consensusPower <- unlist(sapply(layers, function(w) w$net$power))
   if(is.null(consensusPower) && !is.null(power)) {
     consensusPower <- power
@@ -1939,11 +1945,14 @@ wgcna.runConsensusWGCNA <- function(exprList,
   )
 
   ## run stats
-  message("[wgcna.runConsensusWGCNA] >>> computing gene statistics...")  
-  res$stats <- wgcna.computeConsensusGeneStats(res)
-
+  if(compute.stats) {
+    message("[wgcna.runConsensusWGCNA] >>> computing gene statistics...")  
+    res$stats <- wgcna.computeConsensusGeneStats(res)
+  }
+  
   ## run enrichment
   if(compute.enrichment) {
+    if(!is.null(progress)) progress$inc(0.2, "Computing enrichment...")
     message("[wgcna.runConsensusWGCNA] >>> computing module enrichment...")  
     if(is.null(GMT)) GMT <- Matrix::t(playdata::GSETxGENE)
     res$gsea <- wgcna.computeConsensusModuleEnrichment(
@@ -1953,7 +1962,15 @@ wgcna.runConsensusWGCNA <- function(exprList,
       annot = annot,
       min.genes = gsea.mingenes,
       ntop = gsea.ntop
-    ) 
+    )
+    if(ai_summary) {
+      if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
+      message("Annotating modules using LLM: ", ai_model)    
+      res$summary <- wgcna.describeModules(
+        res, multi = TRUE, ntop = 25, model = ai_model,
+        annot = annot, experiment = ai_experiment
+      ) 
+    }
   }
   
   res
@@ -4830,25 +4847,32 @@ wgcna.scaleTOMs <- function(TOMs, scaleP=0.95) {
 }
 
 #' @export
-wgcna.getTopGenesAndSets <- function(wgcna, module=NULL, ntop=20) {
+wgcna.getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=25) {
   if(!"stats" %in% names(wgcna)) stop("object has no stats")
-  if(!"gse" %in% names(wgcna)) stop("object has no enrichment results (gse)")    
+  if(!"gsea" %in% names(wgcna)) stop("object has no enrichment results (gsea)")    
+
+  if("layers" %in% names(wgcna) && class(wgcna$datExpr) == "list") {
+    cons <- wgcna.getConsensusTopGenesAndSets(wgcna, annot=annot, module=module,
+      ntop=ntop) 
+    return(cons)
+  }
   
   ## get top genes (highest kME)
   mm <- wgcna$stats$moduleMembership  
   ##mm <- cor( wgcna$datExpr, wgcna$net$MEs )
+  if(!is.null(annot)) mm <- rename_by2(mm, annot)
   gg <- rownames(mm)
   mm <- as.list(data.frame(mm))
   if(!is.null(module)) mm <- mm[module]
-  topgenes <- lapply(mm, function(x) head(order(-x),ntop) )
-  topgenes <- lapply(topgenes, function(i) gg[i])
+  sel.topgenes <- lapply(mm, function(x) head(order(-x),2*ntop) )
+  topgenes <- lapply( sel.topgenes, function(i) gg[i])
 
   ## top genesets
-  ee <- wgcna$gse
+  ee <- wgcna$gsea
   if(!is.null(module)) ee <- ee[module]  
   topsets <- lapply(ee,function(x) head(rownames(x),ntop))
   topmembers <- lapply(ee, function(x) {
-    names(head(sort(-table(unlist(strsplit(x$genes,split="\\|")))),ntop))
+    names(head(sort(-table(unlist(strsplit(x$genes,split="\\|")))),2*ntop))
   })
 
   M <- wgcna$modTraits
@@ -4856,25 +4880,92 @@ wgcna.getTopGenesAndSets <- function(wgcna, module=NULL, ntop=20) {
   
   ## take intersection (high MM, high set membership)
   topgenes <- mapply(intersect, topmembers, topgenes, SIMPLIFY=FALSE)
-
+  topgenes <- lapply(topgenes, head, ntop)
+  
   list( sets = topsets, genes = topgenes, pheno=toppheno )
 }
 
-wgcna.describeModules <- function(wgcna, ntop=25, model="gpt-5-nano") {
+#' @export
+wgcna.getConsensusTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=20) {
+  if(!"stats" %in% names(wgcna)) stop("object has no stats")
+  if(!"gsea" %in% names(wgcna)) stop("object has no enrichment results (gsea)")    
+  
+  ## get top genes (highest kME)
+  topgenesx <- list()
+  for(i in 1:length(wgcna$stats)) {
+    mm <- wgcna$stats[[i]]$moduleMembership
+    if(!is.null(annot)) mm <- rename_by2(mm, annot, "symbol")
+    gg <- rownames(mm)
+    mm <- as.list(data.frame(mm))
+    if(!is.null(module)) mm <- mm[module]
+    sel.topgenes <- lapply(mm, function(x) head(order(-x), 3*ntop) )
+    topgenesx[[i]] <- lapply(sel.topgenes, function(i) gg[i])
+  }
+  topgenes <- topgenesx[[1]]
+  k=2
+  for(k in 2:length(topgenesx)) {
+    topgenes <- mapply(intersect, topgenes, topgenesx[[k]], SIMPLIFY=FALSE)
+  }
+  
+  ## top genesets (as symbol!)
+  ee <- wgcna$gsea
+  if(!is.null(module)) ee <- ee[module]  
+  topsets <- lapply(ee,function(x) head(rownames(x),ntop))
+  topmembers <- lapply(ee, function(x) {
+    names(head(sort(-table(unlist(strsplit(x$genes,split="\\|")))),3*ntop))
+  })
 
-  top <- wgcna.getTopGenesAndSets(wgcna, ntop=ntop) 
+  ## module traits
+  M <- lapply(wgcna$net$multiMEs, function(x) as.matrix(x$data))
+  Y <- lapply(M, function(m) wgcna$datTraits[rownames(m),])
+  R <- mapply( function(x,y) abs(cor(x,y,use="pairwise")), M, Y, SIMPLIFY=FALSE)
+  R <- Reduce('+', R)
+  toppheno <- apply(R, 1, function(x) names(which(x > 0.9*max(x,na.rm=TRUE))))
+  toppheno
+  
+  ## take intersection (high MM, high set membership)
+  topgenes <- mapply(intersect, topmembers, topgenes, SIMPLIFY=FALSE)
+  topgenes <- lapply(topgenes, head, ntop)
+  
+  list( sets = topsets, genes = topgenes, pheno=toppheno )
+}
 
+wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE, 
+                                  experiment=NULL, verbose=1, model="gpt-5-nano",
+                                  modules=NULL)  {
+  if(multi) {
+    top <- wgcna.getConsensusTopGenesAndSets(wgcna, annot=annot, ntop=ntop)
+  } else {
+    top <- wgcna.getTopGenesAndSets(wgcna, annot=annot, ntop=ntop)
+  }
+
+  if(is.null(modules)) modules <- names(top$genes)
+  modules <- intersect(modules, names(top$genes))
+
+  prompt <- "Give a short summary of the main overall biological function of the following top enriched genesets belonging to module <MODULE> of a WGCNA analysis. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about <EXPERIMENT>. Use maximum one paragraph. Do not use bullet points. \n\nHere is list of enriched gene sets: <GENESETS>\n"
+  if(verbose) cat(prompt)
+  
   desc <- list()
-  module=names(top$genes)[1]
-  for(module in names(top$genes)) {
-    ss <- paste( top$sets[[module]], collapse=';')
-    gg <- paste( top$genes[[module]], collapse=';')
-    pp <- paste( top$pheno[[module]], collapse=';')
+  for(m in modules) {
+    ss <- paste( top$sets[[m]], collapse=';')
+    gg <- paste( top$genes[[m]], collapse=';')
+    pp <- paste( top$pheno[[m]], collapse=';')
 
-    q <- paste0("Give a short summary of the main underlying biological function of the following top enriched genesets belonging to module", module, "of a WGCNA analysis. Discuss the possible relationship with the phenotypes:", pp, ". Use maximum one paragraph. No bullet points. After that discuss shortly if any of the key genes might be involved in the biological function.\n\nHere is list of enriched gene sets: ", ss, "\n\nHere is list of key genes: ", gg)
-
-    answer <- ai.ask(q, model=model)
-    desc[[module]] <- answer
+    q <- prompt
+    if(length(top$genes[[m]])>0) {
+      q <- paste(q, "\n\nAfter that, shortly discuss if any of these key genes might be involved in the biological function. No need to mention all genes, just a few. Here is list of key genes: <KEYGENES>")
+    }
+    if(verbose) cat(q)
+    
+    q <- sub("<MODULE>", m, q)
+    q <- sub("<PHENOTYPES>", pp, q)
+    q <- sub("<EXPERIMENT>", experiment, q)
+    q <- sub("<GENESETS>", ss, q)
+    q <- sub("<KEYGENES>", gg, q)    
+    
+    answer <- ai.ask(q, model=model)    
+    answer <- paste0(answer, "\n\n[AI generated using ",model,"]")
+    desc[[m]] <- answer
   }
 
   return(desc)
