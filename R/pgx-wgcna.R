@@ -136,10 +136,11 @@ pgx.wgcna <- function(
 
   if(ai_summary) {
     if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
-    message("Annotating modules using LLM: ", model)    
+    message("Annotating modules using LLM: ", ai_model)    
     wgcna$summary <- wgcna.describeModules(
       wgcna, ntop=25, model=ai_model,
-      annot = pgx$genes, experiment=pgx$description,
+      annot = pgx$genes,
+      experiment=pgx$description,
       verbose = 0) 
   }
 
