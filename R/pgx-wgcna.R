@@ -140,7 +140,7 @@ pgx.wgcna <- function(
     wgcna$summary <- wgcna.describeModules(
       wgcna, ntop=25, model=ai_model,
       annot = pgx$genes, experiment=pgx$description,
-      verbose=0) 
+      verbose = 0) 
   }
 
   
@@ -1968,7 +1968,8 @@ wgcna.runConsensusWGCNA <- function(exprList,
       message("Annotating modules using LLM: ", ai_model)    
       res$summary <- wgcna.describeModules(
         res, multi = TRUE, ntop = 25, model = ai_model,
-        annot = annot, experiment = ai_experiment
+        annot = annot, experiment = ai_experiment,
+        verbose = 0
       ) 
     }
   }
