@@ -4,7 +4,6 @@
 ##
 
 
-
 #' Check if RefMet server is alive
 #'
 mx.ping_refmet <- function() {
@@ -1029,7 +1028,6 @@ mx.prefix_id <- function(id, uppercase=TRUE, return.prefix=FALSE) {
   idx
 }
 
-prefix=NULL
 ramp.annotate_metabolites <- function(id) {
 
   idx <- iconv2utf8(id)
@@ -1052,7 +1050,6 @@ ramp.annotate_metabolites <- function(id) {
   
   ## RaMP does not like quotes inside IDs
   idx <- gsub("['`\"]","",idx)
-#  idx <- iconv2ascii(idx)
   idx <- iconv2utf8(idx)
   
   ## chem properties
