@@ -2695,25 +2695,19 @@ wgcna.plotTopModules_multi <- function(multi, trait, nmax=16, collapse=FALSE,
 {
 
   if(!"MEs" %in% names(multi)) {
-    multi$MEs <- lapply( multi$net$multiMEs, function(m) m$data)
+    multi$MEs <- lapply(multi$net$multiMEs, function(m) m$data)
   }
   
   ## we 'just' concatenate the ME matrices
-  MEx <- do.call(rbind, lapply(multi$MEs, as.matrix))
-  me.samples <- lapply(multi$MEs, rownames)
-  Y <- multi$datTraits
-
-  batch <- max.col(sapply(me.samples, function(s) rownames(Y) %in% s))
-  batch <- names(multi$MEs)[batch]
+  multi$MEs <- lapply(multi$MEs, as.matrix)
+  MEx <- as.matrix(mofa.merge_data(multi$MEs))
+  Y <- lapply(multi$MEs, function(m) multi$datTraits[rownames(m),,drop=FALSE])
+  Y <- mofa.merge_data(Y)
+  
+  batch <- sub(":.*","",rownames(Y))
   names(batch) <- rownames(Y)
-
-  ## align
-  kk <- intersect(rownames(MEx), rownames(Y))
-  MEx <- MEx[kk,]
-  Y <- Y[kk,]
-  batch <- batch[kk]
   nbatch <- length(multi$MEs)
-
+  
   ## select top modules
   rho <- cor(MEx, Y, use="pairwise")
   sel <- names(sort(-abs(rho[,trait])))
@@ -2755,33 +2749,32 @@ wgcna.plotTopModules_multi <- function(multi, trait, nmax=16, collapse=FALSE,
       df <- data.frame(x=x, y=y, group=factor(batch))
     
       par(mgp=c(2.4,0.9,0))
-      
-      aa <- seq(0.45, 0.1, length.out=nbatch)
+      aa <- c(0.15, 0.55)
       col1 <- sapply(aa, function(a) adjustcolor(col, alpha.f=a))
       
       nb <- nbatch
-      atx <- c(1,2, 4,5)
       atx <- c( seq(1,2, length.out=nb), seq(4,5, length.out=nb) )
-      atmid <- c(2, 4)
+      atx <- unlist(sapply(1:nbatch, function(i) i + c(-0.15, 0.15),simplify=FALSE))
+      atmid <- 1:nbatch
       
       boxplot(
-        #df$y ~ df$x + df$group,
-        df$y ~ df$group + df$x,        
-        #df$y ~ df$x,        
+        df$y ~ df$x + df$group,
+        #df$y ~ df$group + df$x,        
         at = atx,
+        xlim = c(0.6, nbatch+0.4),
         cols = col1,
         main = label,
         col = col1,
-        boxwex=0.8,
+        boxwex = 0.24,
         xaxt = 'n',
-        xlab = trait,
+        xlab = '',
         ylab = "ME score"
       )
       
-      mtext( c("FALSE","TRUE"), side=1, line=0.75, cex=0.75, at=atmid)
-      bb <- names(multi$MEs)
-      legend("topright", legend=bb, fill=col1, cex=0.9,
-        y.intersp=0.85)        
+      mtext( levels(df$group), side=1, line=0.6, cex=1.15, at=atmid)
+      bb <- c("FALSE","TRUE")
+      legend("topright", legend=bb, fill = col1,
+        cex=0.9, y.intersp=0.82, title=trait, title.cex=1.1)        
 
     }  ## end of if factor
 
