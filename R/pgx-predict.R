@@ -18,8 +18,7 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
                                    select_samples = NULL,
                                    nfeatures = 60,
                                    multiomics = 2,
-                                   niter = 1
-                                   ) {
+                                   niter = 1) {
   if (0) {
     level <- "genes"
     filter_features <- NULL
@@ -31,10 +30,10 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
 
   ft <- ifelse(is.null(filter_features), "<all>", filter_features)
   sel <- select_features
-  if(!is.null(sel)) {
+  if (!is.null(sel)) {
     ft <- "<custom>"
   }
-  
+
   if (!(pheno %in% colnames(pgx$samples))) {
     message("ERROR. pheno not in pgx$samples")
     return(NULL)
@@ -47,20 +46,18 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     y <- y[names(y) %in% select_samples]
   }
   y <- y[!is.na(y)]
-  
+
   ## -------------------------------------------
   ## select features
   ## -------------------------------------------
   if (FALSE && level == "geneset") {
-    X <- pgx$gsetX  ## NB: this will augment
+    X <- pgx$gsetX ## NB: this will augment
     if (any(is.na(X))) {
       X <- X[complete.cases(X), , drop = FALSE]
     }
   } else {
-    X <- pgx$X     ## NB: this will augment
-    if (any(is.na(X))) {
-      X <- pgx$impX
-    }
+    X <- pgx$X ## NB: this will augment
+    if (any(is.na(X))) X <- playbase::imputeMissing(X, method = "SVD2")
   }
 
   ## ----------- filter with selected features
@@ -75,7 +72,7 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     }
   } else if (is.family) {
     pp <- rownames(X)
-    if (ft == '<all>') {
+    if (ft == "<all>") {
       pp <- rownames(X)
     } else if (ft %in% names(pgx$families)) {
       gg <- pgx$families[[ft]]
@@ -90,16 +87,16 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
 
   ## ----------- restrict to top SD -----------
   is.multiomics <- (pgx$datatype == "multi-omics")
-  if(is.multiomics) {
+  if (is.multiomics) {
     X <- mofa.topSD(X, 10 * nfeatures) ## top 100
   } else {
     sdx <- matrixStats::rowSds(X, na.rm = TRUE)
     X <- head(X[order(-sdx), , drop = FALSE], 10 * nfeatures) ## top 100
   }
 
-  ##----------------------------------------
+  ## ----------------------------------------
   ## augment
-  ##----------------------------------------
+  ## ----------------------------------------
   ## augment to at least 100 samples per level :)
   ii <- tapply(1:length(y), y, function(ii) {
     sample(c(ii, ii), size = 100, replace = TRUE)
@@ -114,25 +111,26 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
   ## determine is dataset is multi-omics
   has.mofa <- "mofa" %in% names(pgx)
   is.multiomics <- (pgx$datatype == "multi-omics" && has.mofa)
-  
+
   P <- NULL
-  if (is.multiomics && multiomics>0) {
+  if (is.multiomics && multiomics > 0) {
     ## compute variable importance for MULTI-OMICS. We need not to
     ## use the augmented data.
-    message("Computing multi-omics MOFA variable importance")    
+    message("Computing multi-omics MOFA variable importance")
     kernels <- c(
       "mofa", "pca", "nmf", "nmf2", "mcia", "wgcna", "diablo", "rgcca",
       "rgcca,rgcca", "rgcca.rgccda", "rgcca.mcoa"
     )
     P <- pgx.compute_mofa_importance(
-      pgx, pheno, numfactors = 8, use.sdwt = TRUE, kernels = kernels
+      pgx, pheno,
+      numfactors = 8, use.sdwt = TRUE, kernels = kernels
     )
 
-    if(multiomics==2) {
+    if (multiomics == 2) {
       ## compute variable importance for 2nd pass using top scoring
       ## from mofa_importance.
-      sel <- head(intersect(rownames(P), rownames(X)), 4*nfeatures) ## TUNE TOP
-      X <- X[sel,]
+      sel <- head(intersect(rownames(P), rownames(X)), 4 * nfeatures) ## TUNE TOP
+      X <- X[sel, ]
     } else {
       ## Only single pass with MOFA is not using augmented data.
       X <- pgx$X
@@ -140,23 +138,25 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
       names(y) <- rownames(pgx$samples)
     }
   }
-  
-  if( !is.multiomics || multiomics != 1) {
+
+  if (!is.multiomics || multiomics != 1) {
     ## compute variable importance using ML methods. We use the
     ## augmented data.
 
     ## add some noise
     sdx0 <- matrixStats::rowSds(X, na.rm = TRUE)
     sdx1 <- 0.5 * sdx0 + 0.5 * mean(sdx0, na.rm = TRUE)
-    
-    methods <- c("glmnet", "randomforest", "xgboost", "splsda",
-                 "correlation", "ftest")
+
+    methods <- c(
+      "glmnet", "randomforest", "xgboost", "splsda",
+      "correlation", "ftest"
+    )
     message("Computing ML variable importance...")
     P <- 0
-    i=1
-    for(i in 1:niter) {
+    i <- 1
+    for (i in 1:niter) {
       X1 <- X + 0.25 * sdx1 * matrix(rnorm(length(X)), nrow(X), ncol(X))
-      y1 <- y 
+      y1 <- y
       names(y1) <- colnames(X1) <- paste0("x", 1:ncol(X))
       res <- pgx.variableImportance(
         X1,
@@ -172,7 +172,7 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
     P <- P / niter
     remove(X1, y1)
   }
-  
+
   ## normalize importance measures
   P <- abs(P) ## sometimes negative according to sign
   P[is.na(P)] <- 0
@@ -187,18 +187,18 @@ pgx.compute_importance <- function(pgx, pheno, level = "genes",
   sel <- head(rownames(R), nfeatures) ## top features
   R <- R[sel, , drop = FALSE]
   X <- X[sel, , drop = FALSE]
-  
+
   ## reduce R and y (from augmented set)
   kk <- names(y)[which(!duplicated(names(y)))]
   X <- X[, kk, drop = FALSE]
   y <- y[kk]
-  
+
   ## make partition tree
   rf <- makePartitionTree(X, y, add.splits = 0)
 
   ## rf = NULL
   res <- list(R = R, y = y, X = X, rf = rf)
-  
+
   return(res)
 }
 

@@ -52,6 +52,7 @@ pgx.clusterGenes <- function(pgx,
   } else if (!is.null(pgx$X) && level == "gene") {
     message("[pgx.clusterGenes] Using normalized X matrix detected in pgx...")
     X <- pgx$X
+    if (any(is.na(X))) X <- playbase::imputeMissing(X, method = "SVD2")  ## just for safety
   } else if (!is.null(pgx$gsetX) && level == "geneset") {
     message("[pgx.clusterGenes] Using expression geneset X matrix detected in pgx...")
     X <- pgx$gsetX
@@ -64,13 +65,19 @@ pgx.clusterGenes <- function(pgx,
     message("[pgx.clusterGenes] WARNING: could not find matrix X")
     return(pgx)
   }
-
-  if (center.rows) { X <- X - rowMeans(X, na.rm = TRUE) }
-  if (scale.rows) { X <- X / (1e-6 + matrixStats::rowSds(X, na.rm = TRUE)) }
-  if (rank.tf) { X <- scale(apply(X, 2, rank)) }
-
-  dims <- ifelse(ncol(X) > 2000, c(2), c(2,3))
   
+  if (center.rows) {
+    X <- X - rowMeans(X, na.rm = TRUE)
+  }
+  if (scale.rows) {
+    X <- X / (1e-6 + matrixStats::rowSds(X, na.rm = TRUE))
+  }
+  if (rank.tf) {
+    X <- scale(apply(X, 2, rank))
+  }
+
+  dims <- ifelse(ncol(X) > 2000, c(2), c(2, 3))
+
   ## Do dimensionality reduction
   message("[pgx.clusterGenes] computing dimensionality reductions...")
   clust <- pgx.clusterBigMatrix(
@@ -89,18 +96,20 @@ pgx.clusterGenes <- function(pgx,
   ## Find clusters
   clust$membership <- NULL
   clust.index <- NULL
-  if(find.clusters) {
+  if (find.clusters) {
     message("[pgx.clusterGenes] finding clusters using Louvain...")
     posx <- do.call(cbind, clust)
-    posx <- apply(posx,2,scale)
+    posx <- apply(posx, 2, scale)
     rownames(posx) <- rownames(X)
     dim(posx)
     clust.index <- pgx.findLouvainClusters(
-      posx, graph.method="knn", knn=200, level=1,
-      prefix="M", small.zero=0.01)
-    names(clust.index) <- rownames(posx)    
+      posx,
+      graph.method = "knn", knn = 200, level = 1,
+      prefix = "M", small.zero = 0.01
+    )
+    names(clust.index) <- rownames(posx)
   }
-  
+
   ## remove empty space in tSNE/UMAP
   ii <- grep("tsne|umap", names(clust))
   if (length(ii) > 0) {
@@ -170,12 +179,8 @@ pgx.clusterSamples <- function(pgx,
                                X = NULL,
                                umap.pkg = "uwot",
                                replace.orig = TRUE) {
-
   if (!is.null(X)) {
     message("using provided X matrix...")
-  } else if (!is.null(pgx$impX)) {
-    message("using imputed X (pgx$impX) matrix...")
-    X <- pgx$impX
   } else if (!is.null(pgx$X)) {
     message("[pgx.clusterSamples] Using normalized X pgx matrix (pgx$X).")
     X <- pgx$X
@@ -184,17 +189,8 @@ pgx.clusterSamples <- function(pgx,
     X <- logCPM(pgx$counts, total = NULL)
   }
 
-  if (any(is.na(X))) {
-    ## NEED RETHINK: We should use impX here if available. Some
-    ## datasets have missing values on all rows!!!
-    ## X <- X[complete.cases(X), , drop = FALSE]
-    if (!is.null(pgx$impX)) {
-      X <- pgx$impX ## AZ
-    } else {
-      X <- svdImpute2(X) ## IK
-    }
-  }
-
+  if (any(is.na(X))) X <- playbase::imputeMissing(X, method = "SVD2")
+  
   clust.pos <- pgx.clusterBigMatrix(
     X,
     methods = methods,
@@ -254,8 +250,7 @@ pgx.FindClusters <- function(X,
                              method = c("kmeans", "hclust", "louvain", "meta"),
                              top.sd = 1000, npca = 50,
                              km.sizes = c(2, 3, 4, 5, 7, 10, 15, 20, 25, 50, 100),
-                             scale=TRUE) {
-
+                             scale = TRUE) {
   message("[pgx.FindClusters] called...")
 
   if (length(method) == 1 && method[1] == "meta") {
@@ -265,7 +260,7 @@ pgx.FindClusters <- function(X,
   ## reduce dimensions
   ## X <- Matrix::head(X[order(apply(X, 1, stats::sd, na.rm = TRUE)), ], top.sd)
   X <- Matrix::head(X[order(matrixStats::rowSds(X, na.rm = TRUE)), ], top.sd)
-  if(scale) {
+  if (scale) {
     X <- t(scale(t(X))) ## scale features??
   }
 
@@ -277,9 +272,9 @@ pgx.FindClusters <- function(X,
     X <- t(out$v)
   }
 
-  ##km.sizes <- c(2, 3, 4, 5, 7, 10, 15, 20, 25, 50, 100)
+  ## km.sizes <- c(2, 3, 4, 5, 7, 10, 15, 20, 25, 50, 100)
   km.sizes <- km.sizes[which(km.sizes < ncol(X))]
-  
+
   index <- list()
 
   ## perform K-means
@@ -381,17 +376,17 @@ pgx.clusterMatrix <- function(X,
                               scale.features = FALSE,
                               find.clusters = FALSE,
                               umap.pkg = "uwot",
-                              verbose=1) {
+                              verbose = 1) {
 
   methods <- intersect(methods, c("pca", "tsne", "umap", "pacmap"))
   if (length(methods) == 0) methods <- "pca"
 
-  if(verbose>0) {
-    message("[pgx.clusterMatrix] methods: ", paste0(methods, collapse=", "))
+  if (verbose > 0) {
+    message("[pgx.clusterMatrix] methods: ", paste0(methods, collapse = ", "))
     message("[pgx.clusterMatrix] reduce.sd = ", reduce.sd)
     message("[pgx.clusterMatrix] reduce.pca = ", reduce.pca)
   }
-  
+
   ## Reduce dimensions by SD
   dimx <- dim(X) ## original dimensions
   namesx <- colnames(X)
@@ -399,23 +394,23 @@ pgx.clusterMatrix <- function(X,
     sdx <- matrixStats::rowSds(X, na.rm = TRUE)
     is.constant <- all(abs(sdx - mean(sdx, na.rm = TRUE)) < 1e-8, na.rm = TRUE)
     if (is.constant) {
-      if(verbose>0) message("[pgx.clusterMatrix] WARNING:: SD is constant. Skipping SD reduction...")
+      if (verbose > 0) message("[pgx.clusterMatrix] WARNING:: SD is constant. Skipping SD reduction...")
     } else {
-      if(verbose>0) message("[pgx.clusterMatrix] Reducing to ", reduce.sd, " max SD features...")
+      if (verbose > 0) message("[pgx.clusterMatrix] Reducing to ", reduce.sd, " max SD features...")
       X <- X[utils::head(order(-sdx), reduce.sd), ]
     }
   }
 
   ## scale and augment if few samples
-  if (center.features && NCOL(X)>=2) {
+  if (center.features && NCOL(X) >= 2) {
     X <- X - rowMeans(X, na.rm = TRUE) ## do??
   }
-  if (scale.features && NCOL(X)>=2) {
+  if (scale.features && NCOL(X) >= 2) {
     X <- X / matrixStats::rowSds(X, na.rm = TRUE)
   }
 
-  if (ncol(X) <= 10) X <- do.call(cbind, rep(list(X),ceiling(10/ncol(X))))
-  if (nrow(X) <= 10) X <- do.call(rbind, rep(list(X),ceiling(10/nrow(X))))
+  if (ncol(X) <= 10) X <- do.call(cbind, rep(list(X), ceiling(10 / ncol(X))))
+  if (nrow(X) <= 10) X <- do.call(rbind, rep(list(X), ceiling(10 / nrow(X))))
 
   ## add small variation...
   X <- X + 1e-3 * matrix(stats::rnorm(length(X)), nrow(X), ncol(X))
@@ -424,7 +419,7 @@ pgx.clusterMatrix <- function(X,
   res.svd <- NULL
   if (reduce.pca > 0) {
     reduce.pca <- max(3, min(c(reduce.pca, dim(X) - 1)))
-    if(verbose>0) message("Reducing to ", reduce.pca, " PCA dimensions...")
+    if (verbose > 0) message("Reducing to ", reduce.pca, " PCA dimensions...")
     cnx <- colnames(X)
     suppressMessages(suppressWarnings(res.svd <- irlba::irlba(X, nv = reduce.pca)))
     X <- t(res.svd$v) * res.svd$d ## really weight with D??
@@ -432,33 +427,37 @@ pgx.clusterMatrix <- function(X,
   }
 
   all.pos <- list()
-    
+
   if ("pca" %in% methods) {
-    if(verbose>0) message("[pgx.clusterMatrix] Calculating PCA...")
+    if (verbose > 0) message("[pgx.clusterMatrix] Calculating PCA...")
     if (is.null(res.svd)) {
       suppressMessages(suppressWarnings(res.svd <- irlba::irlba(X, nv = 3)))
     }
-    if(2 %in% dims) {
-      if(verbose>0) message("[pgx.clusterMatrix] PCA 2D...")
+    if (2 %in% dims) {
+      if (verbose > 0) message("[pgx.clusterMatrix] PCA 2D...")
       pos <- res.svd$v[, 1:2]
       rownames(pos) <- colnames(X)
-      pos <- pos[1:dimx[2], ,drop=FALSE] ## if augmented
+      pos <- pos[1:dimx[2], , drop = FALSE] ## if augmented
       colnames(pos) <- paste0("PC-", c("x", "y"))
-      all.pos[["pca2d"]] <- pos
+      all.pos[["pca2d"]] <- pos      
+      varexp <- (res.svd$d^2 / sum(res.svd$d^2))*100
+      varexp <- round(varexp[1:2],1)
+      names(varexp) <- c("PC1", "PC2")
+      all.pos[["pca2d.varexp"]] <- varexp
     }
-    if(3 %in% dims) {
-      if(verbose>0) message("[pgx.clusterMatrix] PCA 3D...")
+    if (3 %in% dims) {
+      if (verbose > 0) message("[pgx.clusterMatrix] PCA 3D...")
       pos <- res.svd$v[, 1:3]
       rownames(pos) <- colnames(X)
-      pos <- pos[1:dimx[2], ,drop=FALSE] ## if augmented
+      pos <- pos[1:dimx[2], , drop = FALSE] ## if augmented
       colnames(pos) <- paste0("PC-", c("x", "y", "z"))
       all.pos[["pca3d"]] <- pos
     }
   }
-
+  
   if ("tsne" %in% methods && 2 %in% dims) {
-    if(verbose>0) message("[pgx.clusterMatrix] Calculating t-SNE 2D...")
-    perplexity <- pmax(min( min(dimx) / 4, perplexity), 2)
+    if (verbose > 0) message("[pgx.clusterMatrix] Calculating t-SNE 2D...")
+    perplexity <- pmax(min(min(dimx) / 4, perplexity), 2)
     res1 <- Rtsne::Rtsne(
       t(X),
       dims = 2,
@@ -469,14 +468,14 @@ pgx.clusterMatrix <- function(X,
     )
     pos <- res1$Y
     rownames(pos) <- colnames(X)
-    pos <- pos[1:dimx[2], ,drop=FALSE] ## if augmented
+    pos <- pos[1:dimx[2], , drop = FALSE] ## if augmented
     colnames(pos) <- paste0("tSNE-", c("x", "y"))
-    all.pos[["tsne2d"]] <- pos     
+    all.pos[["tsne2d"]] <- pos
   }
-
+  
   if ("tsne" %in% methods && 3 %in% dims) {
-    if(verbose>0) message("[pgx.clusterMatrix] Calculating t-SNE 3D...")
-    if(verbose>0) message("[pgx.clusterMatrix] Perplexity = ", perplexity)
+    if (verbose > 0) message("[pgx.clusterMatrix] Calculating t-SNE 3D...")
+    if (verbose > 0) message("[pgx.clusterMatrix] Perplexity = ", perplexity)
     perplexity <- pmax(min(min(dimx) / 4, perplexity), 2)
     pos <- Rtsne::Rtsne(
       t(X),
@@ -484,15 +483,16 @@ pgx.clusterMatrix <- function(X,
       is_distance = FALSE,
       check_duplicates = FALSE,
       perplexity = perplexity,
-      num_threads = 2)$Y
+      num_threads = 2
+    )$Y
     rownames(pos) <- colnames(X)
-    pos <- pos[1:dimx[2], ,drop=FALSE ] ## if augmented
+    pos <- pos[1:dimx[2], , drop = FALSE] ## if augmented
     colnames(pos) <- paste0("tSNE-", c("x", "y", "z"))
     all.pos[["tsne3d"]] <- pos
   }
 
   if ("umap" %in% methods && 2 %in% dims) {
-    if(verbose>0) message("calculating UMAP 2D...")
+    if (verbose > 0) message("calculating UMAP 2D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
       pos <- uwot::tumap(t(X),
@@ -507,13 +507,13 @@ pgx.clusterMatrix <- function(X,
       pos <- umap::umap(t(X), custom.config)$layout
     }
     rownames(pos) <- colnames(X)
-    pos <- pos[1:dimx[2], ,drop=FALSE] ## if augmented
+    pos <- pos[1:dimx[2], , drop = FALSE] ## if augmented
     colnames(pos) <- paste0("UMAP-", c("x", "y"))
     all.pos[["umap2d"]] <- pos
   }
 
   if ("umap" %in% methods && 3 %in% dims) {
-    if(verbose>0) message("[pgx.clusterMatrix] Calculating UMAP 3D...")
+    if (verbose > 0) message("[pgx.clusterMatrix] Calculating UMAP 3D...")
     if (umap.pkg == "uwot") {
       nb <- ceiling(pmax(min(dimx[2] / 4, perplexity), 2))
       pos <- uwot::tumap(
@@ -529,7 +529,7 @@ pgx.clusterMatrix <- function(X,
       pos <- umap::umap(t(X), custom.config)$layout
     }
     rownames(pos) <- colnames(X)
-    pos <- pos[1:dimx[2], ,drop=FALSE] ## if augmented
+    pos <- pos[1:dimx[2], , drop = FALSE] ## if augmented
     colnames(pos) <- paste0("UMAP-", c("x", "y", "z"))
     all.pos[["umap3d"]] <- pos
   }
@@ -544,7 +544,6 @@ pgx.clusterMatrix <- function(X,
 
   gc()
   return(all.pos)
-
 }
 
 #' @export
@@ -578,15 +577,14 @@ pgx.findLouvainClusters <- function(X,
                                     knn = 100,
                                     gamma = 1,
                                     small.zero = 0.01) {
-
   ## find clusters from t-SNE positions
   idx <- NULL
 
-  if(is.null(graph.method)) {
-    graph.method <- ifelse(ncol(X)>2000, "snn", "dist")
+  if (is.null(graph.method)) {
+    graph.method <- ifelse(ncol(X) > 2000, "snn", "dist")
   }
   message("[pgx.findLouvainClusters]: graph.method:", graph.method)
-  
+
   if (graph.method == "dist") {
     dist <- stats::as.dist(stats::dist(scale(X))) ## slow for large matrices (scRNA-seq)
     adjmatrix <- as.matrix(1.0 / dist**gamma)
@@ -598,7 +596,7 @@ pgx.findLouvainClusters <- function(X,
   } else {
     stop("FATAL: unknown graph method ", graph.method)
   }
-  
+
   ## should we iteratively cluster (louvain)???
   hc <- hclustGraph(gr, k = level)
   idx <- hc[, min(level, ncol(hc))]
@@ -640,9 +638,9 @@ pacmap <- function(X, n_components = 2L, ...) {
 graph_from_knn <- function(pos, k = 10) {
   ## return: edge weight are distances
   if (is.null(rownames(pos))) stop("pos must have rownames")
-#  if (ncol(pos) > 3 || NCOL(pos) == 1) {
-#    stop("positions must be 2 or 3 columns\n")
-#  }
+  #  if (ncol(pos) > 3 || NCOL(pos) == 1) {
+  #    stop("positions must be 2 or 3 columns\n")
+  #  }
   ## use fast KNN package
   res <- FNN::get.knn(pos, k = k)
   idx <- res$nn.index
@@ -653,6 +651,6 @@ graph_from_knn <- function(pos, k = 10) {
   sp <- (sp + Matrix::t(sp)) / 2
   rownames(sp) <- colnames(sp) <- rownames(pos)
   g <- igraph::graph_from_adjacency_matrix(sp, mode = "undirected", diag = FALSE, weighted = TRUE)
-#  g$layout <- pos
+  #  g$layout <- pos
   return(g)
 }

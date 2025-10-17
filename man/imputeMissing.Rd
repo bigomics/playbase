@@ -11,6 +11,7 @@ imputeMissing(
   rf.ntree = 100,
   nv = 5,
   keep.limits = FALSE,
+  infinite.na = TRUE,
   plot = FALSE
 )
 }

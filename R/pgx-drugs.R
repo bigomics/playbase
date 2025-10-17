@@ -70,7 +70,7 @@ pgx.computeDrugEnrichment <- function(pgx, X, xdrugs, drug_info = NULL,
   ## X       : drugs profiles (may have multiple for one drug)
   ## xdrugs  : drug associated with profile
 
-  if(!all(c("gx.meta","genes") %in% names(pgx))) {
+  if (!all(c("gx.meta", "genes") %in% names(pgx))) {
     stop("[pgx.computeDrugEnrichment] FATAL. not a pgx object")
   }
 
@@ -78,17 +78,17 @@ pgx.computeDrugEnrichment <- function(pgx, X, xdrugs, drug_info = NULL,
     X <- playdata::L1000_ACTIVITYS_N20D1011
     dim(X)
   }
-  
+
   FC <- pgx.getMetaMatrix(pgx)$fc
   FC <- FC[!duplicated(rownames(FC)), , drop = FALSE]
   FC <- collapse_by_humansymbol(FC, annot = pgx$genes)
-  
+
   if (is.null(contrast)) {
     contrast <- colnames(FC)
   }
   contrast <- intersect(contrast, colnames(FC))
   FC <- FC[, contrast, drop = FALSE]
-  
+
   ## test for overlap
   gg <- intersect(rownames(X), rownames(FC))
   if (length(gg) < 20) {

@@ -31,7 +31,7 @@ test_that("pgx.clusterSamples2 performs dimensionality reduction", {
   expect_true("cluster" %in% names(ngs))
 
   # Expect number of test performed
-  expect_equal(length(ngs$cluster$pos), length(clustering_tests))
+  expect_equal(length(ngs$cluster$pos), length(clustering_tests) + 1)
 
   # Expect dimensions
   expected_clusts <- paste0(clustering_tests, 2, "d")
@@ -47,7 +47,7 @@ idx <- playbase::pgx.findLouvainClusters(posx, level = 1, prefix = "c", small.ze
 
 test_that("pgx.findLouvainClusters runs correctly", {
   # Expect number of test performed
-  expect_equal(length(ngs$cluster$pos), length(clustering_tests))
+  expect_equal(length(ngs$cluster$pos), length(clustering_tests) + 1)
 
   # Expect dimensions
   expect_equal(length(idx), nrow(posx))

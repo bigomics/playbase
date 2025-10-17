@@ -1135,13 +1135,13 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
     methods <- NULL
     remove.failed <- TRUE
   }
-  
+
   mod <- model.matrix(~ factor(y))
   nlevel <- length(unique(y[!is.na(y)]))
   if (ntop < Inf) {
     X <- head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], ntop) ## faster
   }
-  
+
   if (is.null(methods)) {
     methods <- c(
       "uncorrected", "normalized_to_control",
@@ -1149,7 +1149,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
       "superBC", "PCA", "RUV", "SVA", "NPM", "MNN", "Harmony"
     )
   }
-  
+
   xlist <- list()
 
   if ("uncorrected" %in% methods) {
@@ -1233,7 +1233,7 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
   if ("SVA" %in% methods) {
     xlist[["SVA"]] <- try(svaCorrect(X, y))
   }
-  
+
   if ("NPM" %in% methods) {
     ## xlist[["NNM"]] <- gx.nnmcorrect(X, y)$X
     xlist[["NPM"]] <- nnmCorrect(X, y, use.design = TRUE)
@@ -1265,14 +1265,14 @@ runBatchCorrectionMethods <- function(X, batch, y, controls = NULL, ntop = 2000,
       }
     }
   }
-  
+
   if (remove.failed) {
     is.error <- sapply(xlist, function(x) ("try-error" %in% class(x)))
     is.nullrow <- sapply(sapply(xlist, nrow), is.null)
     is.xnull <- sapply(xlist, is.null)
     xlist <- xlist[which(!is.xnull & !is.nullrow & !is.error)]
   }
-  
+
   names(xlist) <- paste0(prefix, names(xlist))
   xlist
 }
@@ -1702,18 +1702,18 @@ get_model_parameters <- function(X, samples, pheno = NULL, contrasts = NULL) {
   ## we need to use the discretized phenotype matrix because we do not
   ## want create continuous levels.
   dsamples <- expandPhenoMatrix(samples)
-  dsamples.pars <- sub("=.*","",colnames(dsamples))
-  
+  dsamples.pars <- sub("=.*", "", colnames(dsamples))
+
   batch.vec <- NULL
   if (length(batch.pars)) {
-    ##batch.vec <- apply(samples[, batch.pars, drop = FALSE], 1, paste, collapse = "_")
+    ## batch.vec <- apply(samples[, batch.pars, drop = FALSE], 1, paste, collapse = "_")
     sel <- which(dsamples.pars %in% batch.pars)
     pheno.vec <- apply(dsamples[, sel, drop = FALSE], 1, paste, collapse = "_")
   }
 
   pheno.vec <- NULL
   if (length(pheno.pars)) {
-    ##pheno.vec <- apply(samples[, pheno.pars, drop = FALSE], 1, paste, collapse = "_")
+    ## pheno.vec <- apply(samples[, pheno.pars, drop = FALSE], 1, paste, collapse = "_")
     sel <- which(dsamples.pars %in% pheno.pars)
     pheno.vec <- apply(dsamples[, sel, drop = FALSE], 1, paste, collapse = "_")
   }
@@ -1728,25 +1728,31 @@ get_model_parameters <- function(X, samples, pheno = NULL, contrasts = NULL) {
 
 
 #' @export
-compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
-                                            methods = c(
-                                              "uncorrected",
-                                              "ComBat", "limma",
-                                              "RUV", "SVA", "NPM"
-                                            ),
+compare_batchcorrection_methods <- function(X,
+                                            samples,
+                                            pheno,
+                                            contrasts,
+                                            methods = c("uncorrected",
+                                              "ComBat", "limma", "RUV", "SVA", "NPM"),
                                             batch.pars = "<autodetect>",
                                             clust.method = "tsne",
-                                            ntop = 4000, xlist.init = list(),
-                                            ref = NULL, evaluate = TRUE) {
+                                            ntop = 4000,
+                                            xlist.init = list(),
+                                            ref = NULL,
+                                            evaluate = TRUE) {
+
   ## methods <- c("uncorrected","ComBat","auto-ComBat","limma","RUV","SVA","NPM")
   ## ntop = 4000; xlist.init = list(); batch=NULL
+
   if (is.null(pheno) && is.null(contrasts)) {
     stop("must give either pheno vector or contrasts matrix")
   }
+
   pars <- get_model_parameters(X, samples, pheno = pheno, contrasts = contrasts)
   if (length(batch.pars) && batch.pars[1] %in% c("autodetect", "<autodetect>")) {
     batch.pars <- pars$batch.pars
   }
+
   batch.pars <- intersect(batch.pars, colnames(samples))
   if (!is.null(batch.pars) && length(batch.pars)) {
     B <- samples[, batch.pars, drop = FALSE]
@@ -1768,35 +1774,34 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
     sc = FALSE,
     remove.failed = TRUE
   )
-
+  
   if (length(xlist.init) > 0) xlist <- c(xlist.init, xlist)
   common_rows <- Reduce(intersect, lapply(xlist, rownames))
-  xlist <- c(
-    lapply(xlist, function(x) x[common_rows, , drop = FALSE])
-  )
+  xlist <- c(lapply(xlist, function(x) x[common_rows, , drop = FALSE]))
   xlist <- xlist[order(names(xlist))]
 
   ## PCA is faster than UMAP
   pos <- NULL
+  pca.varexp <- NULL
   t2 <- double_center_scale_fast
   if (clust.method == "tsne" && nmissing == 0) {
     message("Computing t-SNE clustering...")
     nb <- max(0.33, round(min(30, dim(X) / 5)))
-    if (ncol(X) <= 6) {
-      nb <- 0.5
-    }
+    if (ncol(X) <= 6) nb <- 0.5
     pos <- lapply(xlist, function(x) {
       Rtsne::Rtsne(t2(x), perplexity = nb, check_duplicates = FALSE)$Y
     })
   } else {
     message("Computing PCA clustering...")
-    pos <- lapply(xlist, function(x) { 
-      set.seed(1234); irlba::irlba(t2(x), nu = 2, nv = 2)$u[, 1:2]
-    })
+    for(i in 1:length(xlist)) {
+      set.seed(1234);
+      pca <- irlba::irlba(t2(xlist[[i]]), nu = 2, nv = 2)
+      pos[[names(xlist)[i]]] <- pca$u[, 1:2]
+      pca.varexp[[names(xlist)[i]]]  <- (pca$d^2 / sum(pca$d^2)) * 100
+    }
   }
-  for (i in 1:length(pos)) {
-    rownames(pos[[i]]) <- colnames(X)
-  }
+
+  for (i in 1:length(pos)) { rownames(pos[[i]]) <- colnames(X) }
 
   res <- NULL
   best.method <- ref
@@ -1827,6 +1832,7 @@ compare_batchcorrection_methods <- function(X, samples, pheno, contrasts,
   list(
     xlist = xlist,
     pos = pos,
+    pca.varexp = pca.varexp,
     scores = res$scores,
     pheno = pars$pheno,
     pars = pars,
@@ -2002,7 +2008,7 @@ combatCorrect <- function(X, B, y = NULL, auto.detect = FALSE) {
 
 
 #' @export
-svaCorrect <- function(X, y, n.sv=NULL, nsd=1000, return.sv=FALSE) {
+svaCorrect <- function(X, y, n.sv = NULL, nsd = 1000, return.sv = FALSE) {
   ##
   ## This is a combination of methods from SVA and SmartSVA
   ## because of speed.
@@ -2021,19 +2027,19 @@ svaCorrect <- function(X, y, n.sv=NULL, nsd=1000, return.sv=FALSE) {
   mod1x <- model.matrix(~ 1 + y)
   mod0x <- mod1x[, 1, drop = FALSE] ## just ones...
 
-  if(is.null(n.sv)) {
+  if (is.null(n.sv)) {
     ## fast method using SmartSVA
     #  pp <- paste0(model.par, collapse = "+")
     #  lm.expr <- paste0("lm(t(X) ~ ", pp, ", data=pheno)")
-    X.r <- t(stats::resid(lm(t(X) ~ y)))  
+    X.r <- t(stats::resid(lm(t(X) ~ y)))
     ## n.sv <- isva::EstDimRMT(X.r, FALSE)$dim + 1
     n.sv <- isva::EstDimRMT(X.r, FALSE)$dim
-    n.sv <- pmax(n.sv - 1,1)
+    n.sv <- pmax(n.sv - 1, 1)
   }
 
   ## top 1000 genes only (faster)
   X1 <- X
-  if(!is.null(nsd) && nsd > 0) {
+  if (!is.null(nsd) && nsd > 0) {
     X1 <- Matrix::head(X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ], 1000)
   }
   ## add a little bit of noise to avoid singular error
@@ -2042,7 +2048,7 @@ svaCorrect <- function(X, y, n.sv=NULL, nsd=1000, return.sv=FALSE) {
   X1 <- X1 + a * matrix(stats::rnorm(length(X1)), nrow(X1), ncol(X1))
   sv <- try(sva::sva(X1, mod1x, mod0 = mod0x, n.sv = n.sv)$sv)
   class(sv)
-    
+
   if (!any(class(sv) == "try-error")) {
     message("[svaCorrect] Performing SVA correction...")
     rownames(sv) <- colnames(X)
@@ -2053,9 +2059,9 @@ svaCorrect <- function(X, y, n.sv=NULL, nsd=1000, return.sv=FALSE) {
     sv <- NULL
   }
   X <- X[, 1:dimx] ## reduce to original dim
-  if(return.sv) {
-    if(!is.null(sv)) sv <- sv[1:dimx,]
-    return(list(X=X,sv=sv))
+  if (return.sv) {
+    if (!is.null(sv)) sv <- sv[1:dimx, ]
+    return(list(X = X, sv = sv))
   }
   X
 }
@@ -2499,22 +2505,22 @@ nnmCorrect <- function(X, y, dist.method = "cor", center.x = TRUE, center.m = TR
   }
   ## remove(dX)
   D[is.na(D)] <- 0 ## might have NA
-  
+
   ## find neighbours
-  B <- matrix(0,0,0)
+  B <- matrix(0, 0, 0)
   if (knn > 1) {
     message(paste0("[nnmCorrect] finding ", knn, "-nearest neighbours..."))
     bb <- apply(D, 1, function(r) tapply(r, y1, function(s) head(names(sort(s)), knn)))
     B <- do.call(rbind, lapply(bb, function(x) unlist(x)))
     colnames(B) <- unlist(mapply(rep, names(bb[[1]]), sapply(bb[[1]], length)), use.names = FALSE)
   }
-  if(knn==1 || nrow(B)!=ncol(X) ) {
+  if (knn == 1 || nrow(B) != ncol(X)) {
     message("[nnmCorrect] finding nearest neighbours...")
     B <- t(apply(D, 1, function(r) tapply(r, y1, function(s) names(which.min(s)))))
   }
 
   ## sanity check. bail out
-  if(nrow(B)!=ncol(X)) {
+  if (nrow(B) != ncol(X)) {
     message("[nnmCorrect] WARNING. FATAL ERROR. returning uncorrected X.")
     return(X)
   }
@@ -2740,15 +2746,15 @@ gx.nnmcorrect2 <- function(...) nnmCorrect2(..., return.B = TRUE)
 #' matrix X.
 #'
 #' @export
-estimateBatchCorrectionVectors <- function(cX, X, k=NULL, threshold=0.8) {
+estimateBatchCorrectionVectors <- function(cX, X, k = NULL, threshold = 0.8) {
   res <- svd(X - cX)
   cumcv <- (cumsum(res$d**2) / sum(res$d**2))
   cumcv
-  if(is.null(k)) {
+  if (is.null(k)) {
     k <- min(which(cumcv >= threshold))
   }
   ## return batch vectors
-  res$V[,1:k,drop=FALSE]
+  res$V[, 1:k, drop = FALSE]
 }
 
 

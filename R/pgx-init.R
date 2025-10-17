@@ -233,17 +233,17 @@ pgx.initialize <- function(pgx) {
   ## Recompute geneset meta.fx as average fold-change of genes
   ## -----------------------------------------------------------------------------
 
-  ## Only for compatibility. This should not be needed in newer PGX. 
+  ## Only for compatibility. This should not be needed in newer PGX.
   if (!is.null(pgx$gset.meta) && nrow(pgx$GMT) > 0) {
     message("[pgx.initialize] Recomputing geneset fold-changes")
     nc <- length(pgx$gset.meta$meta)
     F <- pgx.getMetaMatrix(pgx)$fc
     F <- rename_by2(F, pgx$genes, "symbol")
     gset.fc <- gset.averageFC(F, pgx$GMT)
-    ii <- match(rownames(pgx$gset.meta$meta[[1]]),rownames(gset.fc))
-    gset.fc <- gset.fc[ii,,drop=FALSE]
+    ii <- match(rownames(pgx$gset.meta$meta[[1]]), rownames(gset.fc))
+    gset.fc <- gset.fc[ii, , drop = FALSE]
     for (i in 1:nc) {
-      pgx$gset.meta$meta[[i]]$meta.fx <- gset.fc[,i]
+      pgx$gset.meta$meta[[i]]$meta.fx <- gset.fc[, i]
     }
   } else {
     message("[pgx.initialize] No genematrix found")
@@ -329,9 +329,9 @@ pgx.initialize <- function(pgx) {
   ## ----------------------------------------------------------------
   ## Must haves
   ## ----------------------------------------------------------------
-  if(is.null(pgx$creator)) pgx$creator <- "unknown"
-  if(is.null(pgx$datatype)) pgx$datatype <- "unknown"
-  
+  if (is.null(pgx$creator)) pgx$creator <- "unknown"
+  if (is.null(pgx$datatype)) pgx$datatype <- "unknown"
+
   ## -----------------------------------------------------------------------------
   ## remove large deprecated outputs from objects
   ## -----------------------------------------------------------------------------

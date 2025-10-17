@@ -31,17 +31,17 @@ pgx.addGeneAnnotation <- function(pgx, annot_table = NULL) {
   stopifnot(is.list(pgx))
 
   dbg("[pgx.addGeneAnnotation] *** DEPRECATED ***")
-  
+
   probes <- rownames(pgx$counts)
   datatype <- pgx$datatype
   organism <- pgx$organism
   probe_type <- pgx$probe_type
-  
+
   genes <- getProbeAnnotation(
     organism,
     probes,
     datatype,
-    probetype = probe_type,    
+    probetype = probe_type,
     annot_table = annot_table
   )
 
@@ -61,30 +61,30 @@ ngs.getGeneAnnotation <- function(...) {
 
 #' Merges any missing annotation in df with non-missing annotation of
 #' annot_table.
-#' 
-merge_annot_table <- function(df, df2, priority=1) {
-#  df2 <- df2[match(rownames(df), rownames(df2)), ]
-#  rownames(df2) <- rownames(df)
-  if(nrow(df) != nrow(df2)) stop("df and df2 not same size")
+#'
+merge_annot_table <- function(df, df2, priority = 1) {
+  #  df2 <- df2[match(rownames(df), rownames(df2)), ]
+  #  rownames(df2) <- rownames(df)
+  if (nrow(df) != nrow(df2)) stop("df and df2 not same size")
   if (inherits(df2, "matrix")) {
     df2 <- as.data.frame(df2)
   }
   ## add columns by filling missing values in df or df2
-  cols <- union(colnames(df),colnames(df2))
-  for(k in setdiff(cols,colnames(df))) df[[k]] <- NA
-  for(k in setdiff(cols,colnames(df2))) df2[[k]] <- NA
-    
-  ## merge common columns by filling missing values in df2  
-  for(k in cols) {
-    a <- df[,k]
-    b <- df2[,k]
-    na.chars <- c(NA,"NA","","-","---","unknown")
-    if(priority==1) {
+  cols <- union(colnames(df), colnames(df2))
+  for (k in setdiff(cols, colnames(df))) df[[k]] <- NA
+  for (k in setdiff(cols, colnames(df2))) df2[[k]] <- NA
+
+  ## merge common columns by filling missing values in df2
+  for (k in cols) {
+    a <- df[, k]
+    b <- df2[, k]
+    na.chars <- c(NA, "NA", "", "-", "---", "unknown")
+    if (priority == 1) {
       replace.a <- (a %in% na.chars) & !(b %in% na.chars)
     } else {
-      replace.a <- !(b %in% na.chars)  ## always replace
+      replace.a <- !(b %in% na.chars) ## always replace
     }
-    if(any(replace.a)) df[,k] <- ifelse(replace.a, b, a)
+    if (any(replace.a)) df[, k] <- ifelse(replace.a, b, a)
   }
 
   return(df)
@@ -98,66 +98,77 @@ merge_annot_table <- function(df, df2, priority=1) {
 getProbeAnnotation <- function(organism,
                                probes,
                                datatype,
-                               #probetype = "",
-                               probetype = NULL,
-                               annot_table = NULL
-                               ) {
+                               probetype = "",
+                               annot_table = NULL) {
+  if (is.null(datatype)) datatype <- "unknown"
+  if (is.null(probetype)) probetype <- "unknown"
 
-  ##probetype = NULL;annot_table=NULL
-  
-  if(is.null(datatype)) datatype <- "unknown"  
-  if(is.null(probetype) || probetype=="") probetype <- "unknown"
-
-  unknown.organism <- (tolower(organism) %in% c("no organism","custom","unkown"))
-  unknown.datatype <- (datatype %in% c("custom","unkown"))
-  unknown.probetype <- (probetype %in% c("custom","unkown",""))  
+  unknown.organism <- (tolower(organism) %in% c("no organism", "custom", "unkown"))
+  unknown.datatype <- (datatype %in% c("custom", "unkown"))
+  unknown.probetype <- (probetype %in% c("custom", "unkown"))
   annot.unknown <- unknown.organism || unknown.datatype || unknown.probetype
   annot.unknown
   
   ## clean probe names
   probes <- trimws(probes)
-  probes[probes=="" | is.na(probes)] <- 'NA'
-  probes0 <- make_unique(probes)  ## make unique but do not clean
-  if(!is.null(annot_table)) {
+  probes[probes == "" | is.na(probes)] <- "NA"
+  probes0 <- make_unique(probes) ## make unique but do not clean
+  #  probes <- make_unique(clean_probe_names(probes0))  ## NEED RETHINK!! really???
+  if (!is.null(annot_table)) {
     rownames(annot_table) <- make_unique(rownames(annot_table))
   }
 
-  dbg("[getProbeAnnotation] organism = ", organism)
-  dbg("[getProbeAnnotation] annotating ", length(probes)," probes")
-  
   genes <- NULL
   if (annot.unknown) {
     # annotation table is mandatory for 'No organism' (until server side
     # can handle missing genesets)
     info("[getProbeAnnotation] annotating with custom annotation")
-    genes <- getCustomAnnotation2( probes0, annot_table )
-  } else if (datatype %in% c("metabolomics","lipidomics")) {
-    genes <- getMetaboliteAnnotation(probes, extra_annot=TRUE,
-      annot_table=NULL)
-    if(!is.null(genes)) genes$data_type <- datatype
+    genes <- getCustomAnnotation2(probes0, annot_table)
+  } else if (datatype == "metabolomics") {
+    dbg("[getProbeAnnotation] annotating for metabolomics")
+    mx.check <- mx.check_mapping(
+      probes,
+      all.db = c("playdata", "annothub", "refmet"), check.first = TRUE
+    )
+    mx.check <- mean(!is.na(mx.check)) > 0.01
+    mx.check
+    if (mx.check) {
+      ## Directly annotate if probes are recognized
+      genes <- getMetaboliteAnnotation(probes,
+        add_id = TRUE, extra_annot = TRUE,
+        annot_table = NULL
+      )
+    } else {
+      ## Fallback on custom
+      dbg("[getProbeAnnotation] WARNING: not able to map metabolomics probes")
+    }
   } else if (datatype == "multi-omics") {
     dbg("[getProbeAnnotation] annotating for multi-omics")
     genes <- getMultiOmicsProbeAnnotation(organism, probes)
   } else {
     dbg("[getProbeAnnotation] annotating for transcriptomics")
-    genes <- getGeneAnnotation( organism = organism, probes = probes )
+    genes <- getGeneAnnotation(organism = organism, probes = probes)
   }
-  
+
   ## final fallback is genes==NULL
-  if(is.null(genes)) {
+  if (is.null(genes)) {
     dbg("[getProbeAnnotation] WARNING: fallback to UNKNOWN probes")
-    genes <- getCustomAnnotation( probes0, custom_annot = NULL )
+    genes <- getCustomAnnotation(probes0, custom_annot = NULL)
   }
   
   ## if annot_table is provided we (priority) override our annotation
   ## and append any extra columns.
   if (!is.null(genes) && !is.null(annot_table)) {
     dbg("[getProbeAnnotation] merging custom annotation table")
-    colnames(annot_table) <- sub("^ortholog$","human_ortholog",
-      colnames(annot_table),ignore.case=TRUE)
-    colnames(annot_table) <- sub("^Symbol$|^gene$|^gene_name$","symbol",
-      colnames(annot_table),ignore.case=TRUE)
-    genes <- merge_annot_table(genes, annot_table, priority=2) 
+    colnames(annot_table) <- sub("^ortholog$", "human_ortholog",
+      colnames(annot_table),
+      ignore.case = TRUE
+    )
+    colnames(annot_table) <- sub("^Symbol$|^gene$|^gene_name$", "symbol",
+      colnames(annot_table),
+      ignore.case = TRUE
+    )
+    genes <- merge_annot_table(genes, annot_table, priority = 2)
   }
 
   ## ensure full dimensions
@@ -168,9 +179,8 @@ getProbeAnnotation <- function(organism,
 
   ## cleanup entries and reorder columns
   genes <- cleanupAnnotation(genes)
-  
-  return(genes)
 
+  return(genes)
 }
 
 #' Get gene annotation data using annothub or orthogene.
@@ -181,32 +191,29 @@ getGeneAnnotation <- function(
     probes,
     use.ah = NULL,
     verbose = TRUE,
-    methods = c("annothub", "gprofiler")
-    ) {
-
+    methods = c("annothub", "gprofiler")) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
   if (tolower(organism) == "dog") organism <- "Canis familiaris"
 
   probes <- trimws(probes)
-  probes[probes=="" | is.na(probes)] <- 'NA'
-  
-  if(mean(grepl("[:]",probes)) > 0.98) {
+  probes[probes == "" | is.na(probes)] <- "NA"
+
+  if (mean(grepl("[:]", probes)) > 0.98) {
     message("[getGeneAnnotation] WARNING. stripping multi-omics prefix")
     probes <- sub("^[a-zA-Z0-9]+:", "", probes)
   }
 
   # init empty (all missings)
-  annot <- data.frame(feature=probes, stringsAsFactors=FALSE)
+  annot <- data.frame(feature = probes, stringsAsFactors = FALSE)
   missing <- rep(TRUE, length(probes))
 
   for (method in methods) {
     if (any(missing)) {
       # annotation for current method
       missing_probes <- probes[which(missing)]
-      missing_annot <- try(switch(
-        method,
+      missing_annot <- try(switch(method,
         "annothub" = getGeneAnnotation.ANNOTHUB(
           organism = organism,
           probes = missing_probes,
@@ -230,7 +237,7 @@ getGeneAnnotation <- function(
           for (col in new_cols) annot[[col]] <- NA
         }
         mm <- merge_annot_table(annot[missing, ], missing_annot)
-        annot[missing, ] <- mm[,colnames(annot)]
+        annot[missing, ] <- mm[, colnames(annot)]
         missing <- is.na(annot$symbol) | annot$symbol == ""
       }
     }
@@ -240,9 +247,9 @@ getGeneAnnotation <- function(
     message("[getGeneAnnotation] WARNING. all missing??? missing.ratio=", mean(missing))
     annot <- NULL
   }
-  
+
   ## clean up
-  if(!is.null(annot)) {
+  if (!is.null(annot)) {
     annot <- cleanupAnnotation(annot)
   }
 
@@ -294,14 +301,14 @@ getGeneAnnotation.ANNOTHUB <- function(
     probe_type = NULL,
     second.pass = TRUE,
     verbose = TRUE) {
-
   if (is.null(organism)) {
     warning("[getGeneAnnotation.ANNOTHUB] Please specify organism")
     return(NULL)
   }
 
-  if (verbose)
+  if (verbose) {
     message("[getGeneAnnotation.ANNOTHUB] Retrieving gene annotation...")
+  }
 
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
@@ -310,18 +317,18 @@ getGeneAnnotation.ANNOTHUB <- function(
   genes <- NULL
 
   ## get correct OrgDb database for this organism
-  orgdb <- getOrgDb(organism, use.ah = use.ah)  
-  if(is.null(orgdb)) {
-    message("[getGeneAnnotation.ANNOTHUB] ERROR: orgdb == NULL: ", is.null(orgdb) )
+  orgdb <- getOrgDb(organism, use.ah = use.ah)
+  if (is.null(orgdb)) {
+    message("[getGeneAnnotation.ANNOTHUB] ERROR: orgdb == NULL: ", is.null(orgdb))
     return(NULL)
   } else {
     message("[getGeneAnnotation.ANNOTHUB] OrgDb database retrieved...")
-  }  
-  
+  }
+
   if (is.null(probes)) probes <- AnnotationDbi::keys(orgdb)
 
   ## Backup probes as probes0, give names of probes the original name.
-  probes[is.na(probes) | probes==""] <- "NA"
+  probes[is.na(probes) | probes == ""] <- "NA"
   probes0 <- make.unique(probes)
   names(probes) <- probes0
 
@@ -330,7 +337,7 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   if (is.null(probe_type)) {
     probe_type <- detect_probetype(organism, probes, orgdb = orgdb)
-    if (is.null(probe_type) || is.na(probe_type) ) {
+    if (is.null(probe_type) || is.na(probe_type)) {
       message("ERROR: could not determine probe_type.")
       message("WARNING. returning empty annotation.")
       annot <- data.frame(feature = probes, symbol = "")
@@ -343,7 +350,7 @@ getGeneAnnotation.ANNOTHUB <- function(
     dbg("[getGeneAnnotation.ANNOTHUB] probe_type = GPROFILER; skipping annothub")
     return(NULL)
   }
-  
+
   ## Match to clean probe names (???)
   probes <- match_probe_names(probes, orgdb, probe_type)
 
@@ -351,7 +358,7 @@ getGeneAnnotation.ANNOTHUB <- function(
   ## retrieve table
   ## --------------------------------------------
   cols <- c("SYMBOL", "GENENAME", "GENETYPE", "MAP", "ALIAS", "UNIPROT")
-  #cols <- c("SYMBOL", "GENENAME", "GENETYPE", "MAP")  
+  # cols <- c("SYMBOL", "GENENAME", "GENETYPE", "MAP")
   cols <- intersect(cols, AnnotationDbi::keytypes(orgdb))
 
   if (organism %in% c("Mus musculus", "Rattus norvegicus")) {
@@ -360,7 +367,7 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   dbg("[getGeneAnnotation.ANNOTHUB] annotation columns:", cols)
   dbg("[getGeneAnnotation.ANNOTHUB] probe_type =  ", probe_type)
-  dbg("[getGeneAnnotation.ANNOTHUB] retrieving annotation for ",length(probes),"features.")  
+  dbg("[getGeneAnnotation.ANNOTHUB] retrieving annotation for ", length(probes), "features.")
   suppressMessages(suppressWarnings(
     annot <- AnnotationDbi::select(
       orgdb,
@@ -372,9 +379,9 @@ getGeneAnnotation.ANNOTHUB <- function(
 
   # some organisms do not provide symbol but rather gene name (e.g. yeast)
   if ("SYMBOL" %in% cols) {
-    symbols <- AnnotationDbi::keys(orgdb, keytype="SYMBOL")
+    symbols <- AnnotationDbi::keys(orgdb, keytype = "SYMBOL")
   } else if ("GENENAME" %in% cols) {
-    symbols <- AnnotationDbi::keys(orgdb, keytype="GENENAME")
+    symbols <- AnnotationDbi::keys(orgdb, keytype = "GENENAME")
   }
 
   if (!"SYMBOL" %in% colnames(annot)) {
@@ -382,12 +389,12 @@ getGeneAnnotation.ANNOTHUB <- function(
     annot$GENENAME <- annot$ALIAS
   } else {
     not.symbols <- !(annot$SYMBOL %in% symbols)
-    if(length(not.symbols)) annot$SYMBOL[not.symbols] <- NA
+    if (length(not.symbols)) annot$SYMBOL[not.symbols] <- NA
   }
 
   ##  annot$ALIAS <- NULL
   annot$SYMBOL[is.na(annot$SYMBOL)] <- ""
-  
+
   ## Attempt to retrieve chr map via org.Mm.egCHRLOC / org.Rn.egCHRLOC.
   if (organism %in% c("Mus musculus", "Rattus norvegicus")) {
     if (organism == "Mus musculus") {
@@ -408,17 +415,20 @@ getGeneAnnotation.ANNOTHUB <- function(
     cls <- setdiff(colnames(annot), "ENTREZID")
     annot <- annot[, cls, drop = FALSE]
   }
-  
+
   ## match annotation table to probes
   info("got", length(unique(annot$SYMBOL)), "unique SYMBOLs")
   key <- annot[, probe_type]
-  dfA <- apply(annot,2,function(a) tapply(a,key,function(b)
-    paste(setdiff(unique(b),c(NA,"")),collapse=';')))
-  annot <- data.frame(dfA, check.names=FALSE)
-  annot <- annot[match(probes,rownames(annot)),]
+  dfA <- apply(annot, 2, function(a) {
+    tapply(a, key, function(b) {
+      paste(setdiff(unique(b), c(NA, "")), collapse = ";")
+    })
+  })
+  annot <- data.frame(dfA, check.names = FALSE)
+  annot <- annot[match(probes, rownames(annot)), ]
   rownames(annot) <- names(probes)
   annot$PROBE <- names(probes) ## original probe names
-  
+
   ## -----------------------------------------------------------------------------
   ## Second pass for missing symbols. Still trying annothub but
   ## missing symbols may map to different keytype. NEED RETHINK:
@@ -426,23 +436,25 @@ getGeneAnnotation.ANNOTHUB <- function(
   ## -----------------------------------------------------------------------------
   is.missing <- (is.na(annot$SYMBOL) | annot$SYMBOL == "")
   missing.probes <- probes[which(is.missing)] ## probes match annot!
-  missing.probes <- missing.probes[!is.na(missing.probes)]  
+  missing.probes <- missing.probes[!is.na(missing.probes)]
   length(missing.probes)
   if (second.pass && length(missing.probes)) {
-    dbg("[getGeneAnnotation.ANNOTHUB] second pass: retrying missing",
-        length(missing.probes), "symbols...")
+    dbg(
+      "[getGeneAnnotation.ANNOTHUB] second pass: retrying missing",
+      length(missing.probes), "symbols..."
+    )
     suppressWarnings(suppressMessages(
       missing.probe_type <- detect_probetype(organism, missing.probes, orgdb = orgdb)
     ))
     dbg("[getGeneAnnotation.ANNOTHUB] missing.probe_type=", missing.probe_type)
 
     ## only do second try if missing.probetype is different
-    
+
     if (!is.null(missing.probe_type) &&
-          !is.na(missing.probe_type) &&
-           missing.probe_type != probe_type &&
-           missing.probe_type %in% AnnotationDbi::keytypes(orgdb)
-        ) {      
+      !is.na(missing.probe_type) &&
+      missing.probe_type != probe_type &&
+      missing.probe_type %in% AnnotationDbi::keytypes(orgdb)
+    ) {
       missing.probes1 <- match_probe_names(missing.probes, orgdb, missing.probe_type)
       suppressMessages(suppressWarnings(
         missing.annot <- AnnotationDbi::select(orgdb,
@@ -452,13 +464,16 @@ getGeneAnnotation.ANNOTHUB <- function(
         )
       ))
       missing.key <- missing.annot[, missing.probe_type]
-      dfA <- apply(missing.annot,2,function(a) tapply(a,missing.key,function(b)
-        paste(setdiff(unique(b),c(NA,"")),collapse=';')))
-      missing.annot <- data.frame(dfA, check.names=FALSE)
-      missing.annot <- missing.annot[match(missing.probes1,rownames(missing.annot)),]
+      dfA <- apply(missing.annot, 2, function(a) {
+        tapply(a, missing.key, function(b) {
+          paste(setdiff(unique(b), c(NA, "")), collapse = ";")
+        })
+      })
+      missing.annot <- data.frame(dfA, check.names = FALSE)
+      missing.annot <- missing.annot[match(missing.probes1, rownames(missing.annot)), ]
       rownames(missing.annot) <- names(missing.probes)
       missing.annot$PROBE <- names(missing.probes)
-      
+
       # some organisms do not provide SYMBOL but rather GENENAME (e.g. yeast)
       if (!"SYMBOL" %in% colnames(missing.annot)) {
         missing.annot$SYMBOL <- missing.annot$GENENAME
@@ -466,23 +481,23 @@ getGeneAnnotation.ANNOTHUB <- function(
       }
       if ("SYMBOL" %in% colnames(missing.annot)) {
         not.symbols <- !(missing.annot$SYMBOL %in% symbols)
-        if(length(not.symbols)) missing.annot$SYMBOL[not.symbols] <- NA
+        if (length(not.symbols)) missing.annot$SYMBOL[not.symbols] <- NA
       }
-      
-      for(k in setdiff(colnames(annot),colnames(missing.annot))) {
+
+      for (k in setdiff(colnames(annot), colnames(missing.annot))) {
         missing.annot[[k]] <- NA
       }
-      kk <- match(colnames(annot),colnames(missing.annot))
-      missing.annot <- missing.annot[,kk,drop=FALSE]
+      kk <- match(colnames(annot), colnames(missing.annot))
+      missing.annot <- missing.annot[, kk, drop = FALSE]
       jj <- match(missing.annot$PROBE, probes)
       ii <- which(!is.na(jj))
-      annot[jj[ii], ] <- missing.annot[ii,]
+      annot[jj[ii], ] <- missing.annot[ii, ]
     }
   }
 
   ## get human ortholog using 'orthogene'
   message("[getGeneAnnotation.ANNOTHUB] getting human orthologs...")
-  ortho_organism <- getOrthoSpecies(organism, use="map")
+  ortho_organism <- getOrthoSpecies(organism, use = "map")
   annot$ORTHOGENE <- getHumanOrtholog(ortho_organism, annot$SYMBOL)$human
 
   ## Return as standardized data.frame and in the same order as input
@@ -490,9 +505,9 @@ getGeneAnnotation.ANNOTHUB <- function(
   pkgname <- orgdb$packageName
   if (length(pkgname) == 0) pkgname <- "OrgDb"
   annot$SOURCE <- pkgname[1]
-  
+
   annot.cols <- c(
-    "PROBE", "SYMBOL", "ORTHOGENE", "UNIPROT", "GENENAME", 
+    "PROBE", "SYMBOL", "ORTHOGENE", "UNIPROT", "GENENAME",
     ## "GENETYPE", "MAP", "CHR", "POS", "TXLEN", "SOURCE"
     "MAP", "SOURCE"
   )
@@ -500,16 +515,16 @@ getGeneAnnotation.ANNOTHUB <- function(
   missing.cols
 
   ## create genes data.frame
-  genes <- annot 
+  genes <- annot
   for (a in missing.cols) genes[[a]] <- NA
   genes <- genes[, annot.cols]
   new.names <- c(
-    "feature", "symbol", "human_ortholog", "uniprot", "gene_title", 
+    "feature", "symbol", "human_ortholog", "uniprot", "gene_title",
     ## "gene_biotype", "map", "chr", "pos", "tx_len", "source"
     "chr", "source"
   )
   colnames(genes) <- new.names
-  genes <- as.data.frame(genes)  
+  genes <- as.data.frame(genes)
   if (!all(probes0 %in% genes$feature)) {
     message("WARNING: not all probes could be annotated")
   }
@@ -525,11 +540,11 @@ getGeneAnnotation.ANNOTHUB <- function(
   return(genes)
 }
 
-getOrthoSpecies <- function(organism, use=c("table","map")[1]) {
-  if(use == "map") {
+getOrthoSpecies <- function(organism, use = c("table", "map")[1]) {
+  if (use == "map") {
     species <- try(orthogene::map_species(organism, method = "gprofiler", verbose = FALSE))
   }
-  if(use == "table") {  
+  if (use == "table") {
     S <- playbase::SPECIES_TABLE
     df <- data.frame(rownames(S), S[, c("species", "species_name", "ortho_species")])
     match <- colSums(apply(df, 2, tolower) == tolower(organism), na.rm = TRUE)
@@ -549,24 +564,31 @@ getOrthoSpecies <- function(organism, use=c("table","map")[1]) {
 #' @export
 gene2uniprot <- function(genes, organism) {
   gp.organism <- orthogene::map_species(
-    species = organism, method = "gprofiler", output_format = "id", verbose = FALSE)
-  out <- try(gprofiler2::gconvert(genes, organism = gp.organism, target="UNIPROT_GN_ACC"))
-  if(is.null(out) || "try-error" %in% class(out)) return(NULL)
-  res <- tapply(out$target, out$input, function(s)
-    paste(setdiff(unique(s),c(NA,"")),collapse=';'))
+    species = organism, method = "gprofiler", output_format = "id", verbose = FALSE
+  )
+  out <- try(gprofiler2::gconvert(genes, organism = gp.organism, target = "UNIPROT_GN_ACC"))
+  if (is.null(out) || "try-error" %in% class(out)) {
+    return(NULL)
+  }
+  res <- tapply(out$target, out$input, function(s) {
+    paste(setdiff(unique(s), c(NA, "")), collapse = ";")
+  })
   ii <- match(genes, names(res))
   ## seems input is uppercase!
-  ii <- ifelse(is.na(ii), match(toupper(genes),toupper(names(res))), ii)
+  ii <- ifelse(is.na(ii), match(toupper(genes), toupper(names(res))), ii)
   res[ii]
 }
 
 #' @export
 uniprot2gene <- function(uniprots, organism) {
   gp.organism <- orthogene::map_species(
-    species = organism, method = "gprofiler", output_format = "id", verbose = FALSE)
-  out <- try(gprofiler2::gconvert(uniprots, organism = gp.organism, target="ENSG"))
-  if(is.null(out) || "try-error" %in% class(out)) return(NULL)
-  res <- tapply(out$name, out$input, function(s) paste(setdiff(unique(s),c(NA,"")),collapse=';'))
+    species = organism, method = "gprofiler", output_format = "id", verbose = FALSE
+  )
+  out <- try(gprofiler2::gconvert(uniprots, organism = gp.organism, target = "ENSG"))
+  if (is.null(out) || "try-error" %in% class(out)) {
+    return(NULL)
+  }
+  res <- tapply(out$name, out$input, function(s) paste(setdiff(unique(s), c(NA, "")), collapse = ";"))
   res[uniprots]
 }
 
@@ -581,15 +603,15 @@ uniprot2gene <- function(uniprots, organism) {
 
 #' non-greedy removal of numerical postfix. Postfix is defined as (1)
 #' last numerical substring after - (minus), or (2) any substring
-#' after special separators [_.]. 
+#' after special separators [_.].
 #'
-strip_postfix <- function(s) {  
-  stripFUN <- function(s) {  
-    sub(paste0("[._].*$|[-][0-9.]+$"),"",s)
+strip_postfix <- function(s) {
+  stripFUN <- function(s) {
+    sub(paste0("[._].*$|[-][0-9.]+$"), "", s)
   }
-  ss <- strsplit(s,split=';')
+  ss <- strsplit(s, split = ";")
   ss <- lapply(ss, function(s) stripFUN(s))
-  sapply(ss, paste, collapse=';')
+  sapply(ss, paste, collapse = ";")
 }
 
 
@@ -597,13 +619,13 @@ strip_postfix <- function(s) {
 #' alphanumerical substring (no spaces, no special chars) before the
 #' matching colon character :.
 #'
-strip_prefix <- function(s) {  
-  stripFUN <- function(s) {  
-    sub("^[0-9a-zA-Z]+:","",s)
+strip_prefix <- function(s) {
+  stripFUN <- function(s) {
+    sub("^[0-9a-zA-Z]+:", "", s)
   }
-  ss <- strsplit(s,split=';')
+  ss <- strsplit(s, split = ";")
   ss <- lapply(ss, function(s) stripFUN(s))
-  sapply(ss, paste, collapse=';')
+  sapply(ss, paste, collapse = ";")
 }
 
 #' Cleanup symbols names from postfixes and prefixes. Take only first
@@ -612,7 +634,7 @@ strip_prefix <- function(s) {
 #'
 #' @export
 clean_symbols <- function(symbols) {
-  strip_prefix(strip_postfix(sub(";.*","",trimws(symbols))))
+  strip_prefix(strip_postfix(sub(";.*", "", trimws(symbols))))
 }
 
 #' Cleanup probe names from postfixes or version numbers. Retains
@@ -621,12 +643,12 @@ clean_symbols <- function(symbols) {
 #' @export
 clean_probe_names <- function(probes, sep = "_.-") {
   probes0 <- trimws(probes)
-  probes[is.na(probes)] <- ""  
-  ## strip multiple probes  
-  probes <- sub("[;].*","",probes) 
+  probes[is.na(probes)] <- ""
+  ## strip multiple probes
+  probes <- sub("[;].*", "", probes)
   ## strip away anything postfix after a 'dot' or 'underscore'
   probes <- sub(paste0("[", sep, "].*"), "", probes)
-  ##probes <- strip_postfix(probes)
+  ## probes <- strip_postfix(probes)
   return(probes)
 }
 
@@ -636,14 +658,16 @@ clean_probe_names <- function(probes, sep = "_.-") {
 match_probe_names <- function(probes, orgdb, probe_type = NULL) {
   if (is.character(orgdb)) orgdb <- getOrgDb(orgdb)
   if (is.null(orgdb)) {
-    message("[match_probe_names] ERROR could not get orgdb!" )
+    message("[match_probe_names] ERROR could not get orgdb!")
     return(NULL)
   }
   if (is.null(probe_type)) {
     probe_type <- detect_probetype(organism = "custom", probes, orgdb = orgdb)
   }
   ## bail out if not annothub keytypes
-  if(!probe_type %in% AnnotationDbi::keytypes(orgdb)) return(probes)
+  if (!probe_type %in% AnnotationDbi::keytypes(orgdb)) {
+    return(probes)
+  }
 
   probe.names <- names(probes)
   all.keys <- AnnotationDbi::keys(orgdb, probe_type)
@@ -669,11 +693,10 @@ match_probe_names <- function(probes, orgdb, probe_type = NULL) {
 #' Cleanup annotation
 #'
 cleanupAnnotation <- function(genes) {
-
-  if(is.null(genes)) {
+  if (is.null(genes)) {
     return(NULL)
   }
-  
+
   ## add missing columns if needed, then reorder
   columns <- c(
     "feature", "symbol", "human_ortholog", "gene_title", ## "gene_biotype",
@@ -710,7 +733,7 @@ cleanupAnnotation <- function(genes) {
   # if organism is human, human_ortholog should be NA (matching old
   # playbase annot). NEED RETHINK (this is not very consistent).
   if (is.null(genes$human_ortholog)) genes$human_ortholog <- NA
-  
+
   ## reorder
   ordered.cols <- c(columns, setdiff(colnames(genes), columns))
   genes <- genes[, ordered.cols]
@@ -718,7 +741,7 @@ cleanupAnnotation <- function(genes) {
   ## Attempt: remove "pos", "tx_len"
   ##  keep <- colnames(genes)[!colnames(genes) %in% c("pos", "tx_len")]
   ##  genes <- genes[, keep]
-  
+
   genes
 }
 
@@ -769,7 +792,7 @@ getCustomAnnotation <- function(probes, custom_annot) {
   if (!"feature" %in% colnames(custom_annot) && !is.null(rownames(custom_annot))) {
     custom_annot$feature <- rownames(custom_annot)
   }
-  
+
   annot_map <- list(
     "human_ortholog" = "",
     "gene_title" = "unknown",
@@ -793,7 +816,7 @@ getCustomAnnotation <- function(probes, custom_annot) {
 
   ##  if (!is.null(custom_annot) && num_annot > 1 && required_in_annot) {
   num_annot <- sum(probes %in% custom_annot$feature)
-  if (!is.null(custom_annot) && num_annot > 1) {  
+  if (!is.null(custom_annot) && num_annot > 1) {
     message("[getCustomAnnotation] Cleaning custom annotation table...")
     # remove all NA columns, otherwise the for loop below will not work
     custom_annot <- custom_annot[, !apply(custom_annot, 2, function(x) all(is.na(x)))]
@@ -804,14 +827,14 @@ getCustomAnnotation <- function(probes, custom_annot) {
 
     # filter annotated table by probes using match
     custom_annot <- custom_annot[match(probes, custom_annot$feature), ]
-    
+
     # if row was missing from annotation table (NA from match call
     # above), input NA based on probes
     rownames(custom_annot) <- probes
     nr <- nrow(custom_annot)
-    if(is.null(custom_annot$feature)) custom_annot$feature <- rep(NA,nr)
-    if(is.null(custom_annot$symbol)) custom_annot$symbol <- rep(NA,nr)
-    if(is.null(custom_annot$gene_name)) custom_annot$gene_name <- rep(NA,nr)    
+    if (is.null(custom_annot$feature)) custom_annot$feature <- rep(NA, nr)
+    if (is.null(custom_annot$symbol)) custom_annot$symbol <- rep(NA, nr)
+    if (is.null(custom_annot$gene_name)) custom_annot$gene_name <- rep(NA, nr)
     cname <- rownames(custom_annot)
     custom_annot$feature <- ifelse(is.na(custom_annot$feature), cname, custom_annot$feature)
     custom_annot$symbol <- ifelse(is.na(custom_annot$symbol), cname, custom_annot$symbol)
@@ -820,12 +843,11 @@ getCustomAnnotation <- function(probes, custom_annot) {
     # Fill NA values with corresponding values from annot_map
     res <- lapply(names(annot_map), function(x) {
       ifelse(is.na(custom_annot[[x]]), annot_map[[x]], custom_annot[[x]])
-    })    
+    })
     names(res) <- names(annot_map)
     res <- as.data.frame(res)
     res$source <- ifelse(res$source == "custom", "custom", paste0("custom+", res$source))
     custom_annot[, names(annot_map)] <- res[, names(annot_map)]
-    
   } else {
     # Create custom gene table from probe names
     message("[getCustomAnnotation] Creating annotation table from probe names...")
@@ -840,8 +862,8 @@ getCustomAnnotation <- function(probes, custom_annot) {
     )
     rownames(custom_annot) <- probes
   }
-  
-  custom_annot <- custom_annot[, table_col_order, drop=FALSE]
+
+  custom_annot <- custom_annot[, table_col_order, drop = FALSE]
   custom_annot <- cleanupAnnotation(custom_annot)
 
   return(custom_annot)
@@ -850,15 +872,14 @@ getCustomAnnotation <- function(probes, custom_annot) {
 #' Like getCustomAnnotation() but allows custom column names mapping
 #' to feature, symbol and title. Also simplified
 #' implementation. Should eventually replace getCustomAnnotation().
-#' 
+#'
 #' @export
-getCustomAnnotation2 <- function(probes, custom_annot, feature.col='feature',
-                                 symbol.col='symbol', gene_title.col='gene_title',
-                                 ortholog.col='human_ortholog',
+getCustomAnnotation2 <- function(probes, custom_annot, feature.col = "feature",
+                                 symbol.col = "symbol", gene_title.col = "gene_title",
+                                 ortholog.col = "human_ortholog",
                                  extra.columns = TRUE) {
+  #  feature.col='feature';symbol.col='symbol';gene_title.col='gene_title';ortholog.col='human_ortholog';extra.columns = TRUE
 
-#  feature.col='feature';symbol.col='symbol';gene_title.col='gene_title';ortholog.col='human_ortholog';extra.columns = TRUE
-  
   message("[getCustomAnnotation2] Adding custom annotation table...")
   # Create custom gene table from probe names
   message("[getCustomAnnotation2] Creating annotation table from probe names...")
@@ -873,85 +894,89 @@ getCustomAnnotation2 <- function(probes, custom_annot, feature.col='feature',
   )
   rownames(annot) <- probes
   required.columns <- colnames(annot)
-  
+
   # If the user has provided a custom gene table, check it and use it
-  if(!is.null(custom_annot)) {
+  if (!is.null(custom_annot)) {
+    custom_annot <- data.frame(custom_annot, check.names = FALSE)
 
-    custom_annot <- data.frame(custom_annot, check.names=FALSE)
-
-    if(!feature.col %in% colnames(custom_annot)) {
-      if(!is.null(rownames(custom_annot))) {
+    if (!feature.col %in% colnames(custom_annot)) {
+      if (!is.null(rownames(custom_annot))) {
         custom_annot$rownames <- rownames(custom_annot)
       }
-      fsum <- apply(custom_annot,2,function(a) mean(probes %in% a,na.rm=TRUE))
+      fsum <- apply(custom_annot, 2, function(a) mean(probes %in% a, na.rm = TRUE))
       feature.col <- NULL
-      if(max(fsum)>0.9) feature.col <- names(which.max(fsum))
-      if(length(feature.col)==0) {
+      if (max(fsum) > 0.9) feature.col <- names(which.max(fsum))
+      if (length(feature.col) == 0) {
         custom_annot$feature <- probes
         feature.col <- "feature"
       }
     }
-    if(!symbol.col %in% colnames(custom_annot)) {
+    if (!symbol.col %in% colnames(custom_annot)) {
       symbol.col <- head(grep("symbol|name|gene|protein|alias",
-        setdiff(colnames(custom_annot),feature.col),
-        ignore.case=TRUE, value=TRUE),1)
-      if(length(symbol.col)==0) symbol.col <- NA
+        setdiff(colnames(custom_annot), feature.col),
+        ignore.case = TRUE, value = TRUE
+      ), 1)
+      if (length(symbol.col) == 0) symbol.col <- NA
     }
-    if(!gene_title.col %in% colnames(custom_annot)) {
+    if (!gene_title.col %in% colnames(custom_annot)) {
       gene_title.col <- head(grep("title|description|name",
-        setdiff(colnames(custom_annot),c(feature.col,symbol.col)),
-        ignore.case=TRUE, value=TRUE),1)
-      if(length(gene_title.col)==0) gene_title.col <- NA
+        setdiff(colnames(custom_annot), c(feature.col, symbol.col)),
+        ignore.case = TRUE, value = TRUE
+      ), 1)
+      if (length(gene_title.col) == 0) gene_title.col <- NA
     }
-    if(!ortholog.col %in% colnames(custom_annot)) {
+    if (!ortholog.col %in% colnames(custom_annot)) {
       ortholog.col <- head(grep("ortholog|human|hgnc",
-        setdiff(colnames(custom_annot),c(feature.col,symbol.col)),
-        ignore.case=TRUE, value=TRUE),1)
-      if(length(ortholog.col)==0) ortholog.col <- NA
+        setdiff(colnames(custom_annot), c(feature.col, symbol.col)),
+        ignore.case = TRUE, value = TRUE
+      ), 1)
+      if (length(ortholog.col) == 0) ortholog.col <- NA
     }
     dbg("[getCustomAnnotation2] feature.col = ", feature.col)
     dbg("[getCustomAnnotation2] symbol.col = ", symbol.col)
     dbg("[getCustomAnnotation2] title.col = ", gene_title.col)
-    dbg("[getCustomAnnotation2] ortholog.col = ", ortholog.col)    
+    dbg("[getCustomAnnotation2] ortholog.col = ", ortholog.col)
 
-    features <- custom_annot[,feature.col]
-    custom_annot <- custom_annot[match(probes, features),]
+    features <- custom_annot[, feature.col]
+    custom_annot <- custom_annot[match(probes, features), ]
 
     # Rename columns
-    newcols <- c("feature" = feature.col, "symbol" = symbol.col,
-                 "gene_title" = gene_title.col,
-                 "human_ortholog" = ortholog.col)
+    newcols <- c(
+      "feature" = feature.col, "symbol" = symbol.col,
+      "gene_title" = gene_title.col,
+      "human_ortholog" = ortholog.col
+    )
     newcols <- newcols[which(newcols != names(newcols))]
     newcols <- newcols[which(newcols %in% colnames(custom_annot))]
-    if(length(newcols)) {
+    if (length(newcols)) {
       custom_annot <- dplyr::rename(custom_annot, all_of(newcols))
     }
-    
-    if("feature" %in% colnames(custom_annot)) {
-      annot$feature <- custom_annot[,"feature"]
+
+    if ("feature" %in% colnames(custom_annot)) {
+      annot$feature <- custom_annot[, "feature"]
     }
-    if("symbol" %in% colnames(custom_annot)) {
-      annot$symbol  <- custom_annot[,"symbol"]
+    if ("symbol" %in% colnames(custom_annot)) {
+      annot$symbol <- custom_annot[, "symbol"]
     }
-    if("gene_title" %in% colnames(custom_annot)) {    
-      annot$gene_title <- custom_annot[,"gene_title"]
+    if ("gene_title" %in% colnames(custom_annot)) {
+      annot$gene_title <- custom_annot[, "gene_title"]
     }
 
     ##  if (!is.null(custom_annot) && num_annot > 1 && required_in_annot) {
     # remove all NA columns, otherwise the for loop below will not work
-    custom_annot <- custom_annot[, colMeans(is.na(custom_annot))!=1, drop=FALSE]
+    custom_annot <- custom_annot[, colMeans(is.na(custom_annot)) != 1, drop = FALSE]
 
     # identify missing columns and fill them with annot_map
-    missing_cols <- setdiff( colnames(custom_annot), colnames(annot))
+    missing_cols <- setdiff(colnames(custom_annot), colnames(annot))
     missing_cols <- setdiff(missing_cols, c(NA))
-    annot <- cbind(annot, custom_annot[,missing_cols,drop=FALSE])
+    annot <- cbind(annot, custom_annot[, missing_cols, drop = FALSE])
   }
 
-  if(!extra.columns) {
+  if (!extra.columns) {
     sel <- (colnames(annot) %in% required.columns)
-    annot <- annot[,sel]
+    annot <- annot[, sel]
   }
-  
+
   message("[getCustomAnnotation2] Cleaning custom annotation table...")
   annot <- cleanupAnnotation(annot)
   return(annot)
@@ -967,22 +992,21 @@ getCustomAnnotation2 <- function(probes, custom_annot, feature.col='feature',
 #'
 #' @export
 getHumanOrtholog <- function(organism, symbols,
-                             ortho.methods=c("homologene", "gprofiler", "babelgene"),
-                             verbose=1) {
-
+                             ortho.methods = c("homologene", "gprofiler", "babelgene"),
+                             verbose = 1) {
   orthogenes <- rep(NA, length(symbols))
-  orthosource <- rep(NA, length(symbols))    
+  orthosource <- rep(NA, length(symbols))
 
   ## clean symbols
   orig.symbols <- symbols
   symbols <- clean_symbols(symbols)
-  
-  ## Try mapping with orthogene's databases 
-  ##ortho.methods <- c("gprofiler", "homologene", "babelgene") ## mapping methods
+
+  ## Try mapping with orthogene's databases
+  ## ortho.methods <- c("gprofiler", "homologene", "babelgene") ## mapping methods
   ortho_organism <- getOrthoSpecies(organism)
   ortho.found <- FALSE
-  i=1
-  while(i <= length(ortho.methods) && !ortho.found) {
+  i <- 1
+  while (i <= length(ortho.methods) && !ortho.found) {
     ortho.out <- try(orthogene::convert_orthologs(
       gene_df = c("---", unique(symbols[!is.na(symbols)])),
       input_species = ortho_organism,
@@ -990,47 +1014,47 @@ getHumanOrtholog <- function(organism, symbols,
       method = ortho.methods[i],
       non121_strategy = "drop_both_species",
       verbose = FALSE
-    ), silent=TRUE)
+    ), silent = TRUE)
     class(ortho.out)
     results.ok <- (!"try-error" %in% class(ortho.out) &&
-                     inherits(ortho.out, "data.frame") &&
-                     nrow(ortho.out) > 0)
+      inherits(ortho.out, "data.frame") &&
+      nrow(ortho.out) > 0)
     results.ok
     if (results.ok) {
       ii <- which(is.na(orthogenes))
-      ##ii <- head(which(is.na(orthogenes)),10)      
+      ## ii <- head(which(is.na(orthogenes)),10)
       jj <- match(symbols[ii], ortho.out$input_gene)
       kk <- ii[which(!is.na(jj))]
       jj <- jj[which(!is.na(jj))]
-      if(verbose>0) message("[getHumanOrtholog] mapping ",length(kk)," symbols with ", ortho.methods[i])
+      if (verbose > 0) message("[getHumanOrtholog] mapping ", length(kk), " symbols with ", ortho.methods[i])
       orthogenes[kk] <- rownames(ortho.out)[jj]
       orthosource[kk] <- ortho.methods[i]
     } else {
-      if(verbose>0) message("[getHumanOrtholog] failed lookup: ", ortho.methods[i])
+      if (verbose > 0) message("[getHumanOrtholog] failed lookup: ", ortho.methods[i])
     }
     ortho.found <- all(!is.na(orthogenes))
     i <- i + 1
   }
 
   table(is.na(orthogenes))
-  mean.mapped <- round( 100*mean(!is.na(orthogenes)), digits=4)
+  mean.mapped <- round(100 * mean(!is.na(orthogenes)), digits = 4)
   orthogene.failed <- (mean.mapped < 10.0)
   orthogene.failed
   if (orthogene.failed) {
-    if(verbose>0) message("[getHumanOrtholog] ratio mapped using orthogene = ", mean.mapped,"%")
-    if(verbose>0) message("[getHumanOrtholog] Trying biomart...")
+    if (verbose > 0) message("[getHumanOrtholog] ratio mapped using orthogene = ", mean.mapped, "%")
+    if (verbose > 0) message("[getHumanOrtholog] Trying biomart...")
     ## test if biomart is reachable
     ii <- which(is.na(symbols))
-    res.biomart <- try(getHumanOrtholog.biomart(organism, symbols[ii]), silent=TRUE)
+    res.biomart <- try(getHumanOrtholog.biomart(organism, symbols[ii]), silent = TRUE)
     class(res.biomart)
     if (!"try-error" %in% class(res.biomart)) {
       jj <- which(is.na(res.biomart))
       ii <- ii[jj]
       orthogenes[ii] <- res.biomart[jj]
-      orthosource[ii] <- 'biomart'
+      orthosource[ii] <- "biomart"
     }
   } else {
-    if(verbose>0) message("[getHumanOrtholog] skipping biomart...")
+    if (verbose > 0) message("[getHumanOrtholog] skipping biomart...")
   }
 
   ## Map any missing symbols that look like human genes
@@ -1038,12 +1062,12 @@ getHumanOrtholog <- function(organism, symbols,
   ii <- which(is.na(orthogenes) & toupper(symbols) %in% human.genes)
   orthogenes[ii] <- toupper(symbols[ii])
 
-  mean.mapped <- round( 100*mean(!is.na(orthogenes)), digits=4)  
-  if(verbose>0) message("[getHumanOrtholog] total ratio mapped  = ", mean.mapped,"%")
-  
+  mean.mapped <- round(100 * mean(!is.na(orthogenes)), digits = 4)
+  if (verbose > 0) message("[getHumanOrtholog] total ratio mapped  = ", mean.mapped, "%")
+
   ## return dataframe. First column organism symbols, second column
   ## human ortholog. NA if missing.
-  df <- data.frame(input=orig.symbols, symbols, "human"=orthogenes, source=orthosource)
+  df <- data.frame(input = orig.symbols, symbols, "human" = orthogenes, source = orthosource)
   colnames(df)[2] <- organism
   return(df)
 }
@@ -1054,41 +1078,40 @@ getHumanOrtholog <- function(organism, symbols,
 #' Unfortunately, biomart is *much* less reliable than orthogene (often down).
 #'
 #' @export
-getHumanOrtholog.biomart <- function(organism, symbols, verbose=1) {
-
+getHumanOrtholog.biomart <- function(organism, symbols, verbose = 1) {
   if (tolower(organism) == "human") organism <- "Homo sapiens"
   if (tolower(organism) == "mouse") organism <- "Mus musculus"
   if (tolower(organism) == "rat") organism <- "Rattus norvegicus"
-  if (tolower(organism) %in% c("dog","canis familiaris")) organism <- "Canis LFamiliaris"  
+  if (tolower(organism) %in% c("dog", "canis familiaris")) organism <- "Canis LFamiliaris"
 
-  if(verbose>0) message("[getHumanOrtholog.biomart] Mapping ", organism, " genes with biomart.")
+  if (verbose > 0) message("[getHumanOrtholog.biomart] Mapping ", organism, " genes with biomart.")
   require(biomaRt)
-  s1 <- tolower(substring(organism,1,1))
+  s1 <- tolower(substring(organism, 1, 1))
   s2 <- tolower(strsplit(organism, " ")[[1]][2])
   organism0 <- paste0(s1, s2)
   organism0
-  if(verbose>0) message("[getHumanOrtholog.biomart] Searching biomart for '", organism0,"'")
+  if (verbose > 0) message("[getHumanOrtholog.biomart] Searching biomart for '", organism0, "'")
   dd <- listDatasets(useEnsembl(biomart = "genes"))
   hh <- grep(organism0, dd$dataset)
   hh
-  if(length(hh)==0) {
-    message("ERROR: ",paste0(organism, " not found in biomart databases. Exiting."))
+  if (length(hh) == 0) {
+    message("ERROR: ", paste0(organism, " not found in biomart databases. Exiting."))
     return(NULL)
   }
 
   dataset <- dd$dataset[hh]
-  if(verbose>0) message("[getHumanOrtholog.biomart] found matching dataset '", dataset,"'")
+  if (verbose > 0) message("[getHumanOrtholog.biomart] found matching dataset '", dataset, "'")
   organism_mart <- NULL
-  human_mart <- NULL    
+  human_mart <- NULL
   organism_mart <- biomaRt::useEnsembl(biomart = "genes", dataset = dataset)
   human_mart <- biomaRt::useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl")
   mart1.ok <- (!is.null(organism_mart) && !"try-error" %in% class(organism_mart) &&
-                 class(organism_mart) == "Mart")
+    class(organism_mart) == "Mart")
   mart2.ok <- (!is.null(human_mart) && !"try-error" %in% class(human_mart) &&
-                 class(human_mart) == "Mart")
-  if(verbose>0) dbg("[getHumanOrtholog.biomart] organism mart OK -> ", mart1.ok)
-  if(verbose>0) dbg("[getHumanOrtholog.biomart] human mart OK -> ", mart2.ok)    
-  if(!(mart1.ok && mart2.ok)) {
+    class(human_mart) == "Mart")
+  if (verbose > 0) dbg("[getHumanOrtholog.biomart] organism mart OK -> ", mart1.ok)
+  if (verbose > 0) dbg("[getHumanOrtholog.biomart] human mart OK -> ", mart2.ok)
+  if (!(mart1.ok && mart2.ok)) {
     message("[getHumanOrtholog.biomart] ERROR: Could not create Marts...")
     return(NULL)
   }
@@ -1100,8 +1123,8 @@ getHumanOrtholog.biomart <- function(organism, symbols, verbose=1) {
     attrs <- c("ensembl_gene_id", "external_gene_name")
     flt <- "external_gene_name"
   }
-  if(verbose>0) message("[getHumanOrtholog.biomart] Testing if biomart is reachable...")
-  nz.symbols <- symbols[!is.na(symbols) & symbols!='']
+  if (verbose > 0) message("[getHumanOrtholog.biomart] Testing if biomart is reachable...")
+  nz.symbols <- symbols[!is.na(symbols) & symbols != ""]
   res.biomart <- try(biomaRt::getLDS(
     attributes = attrs,
     filters = flt,
@@ -1110,7 +1133,7 @@ getHumanOrtholog.biomart <- function(organism, symbols, verbose=1) {
     mart = organism_mart,
     attributesL = c("ensembl_gene_id", "hgnc_symbol"),
     martL = human_mart
-  ), silent=TRUE)
+  ), silent = TRUE)
   class(res.biomart)
   if ("try-error" %in% class(res.biomart)) {
     message("[getHumanOrtholog] ERROR: biomart::getLDS failed to contact server")
@@ -1125,9 +1148,9 @@ getHumanOrtholog.biomart <- function(organism, symbols, verbose=1) {
     mart = organism_mart,
     attributesL = c("ensembl_gene_id", "hgnc_symbol"),
     martL = human_mart
-  ), silent=TRUE)
+  ), silent = TRUE)
   class(orthogenes)
-  
+
   if ("try-error" %in% class(res.biomart)) {
     message("[getHumanOrtholog] ERROR: full biomart::getLDS query failed")
     return(NULL)
@@ -1269,7 +1292,7 @@ getOrgDb <- function(organism, use.ah = NULL) {
   organism
   orgdb <- .getOrgDb(organism, use.ah = use.ah)
   if (is.null(orgdb)) {
-    message("[getOrgDb] ERROR: could not get orgdb")    
+    message("[getOrgDb] ERROR: could not get orgdb")
     return(NULL)
   }
 
@@ -1425,11 +1448,13 @@ detect_probetype <- function(organism, probes, orgdb = NULL,
       message("WARNING: Probe type not found. Valid probe types: ", paste(keytypes, collapse = " "))
     }
     # fallback before giving up; try gprofiler to convert to UNIPROT
-    gp.organism <- orthogene::map_species(species = organism, method = "gprofiler", 
-      output_format = "id", verbose = FALSE)
-    gp.out <- gprofiler2::gconvert(probesx, organism = gp.organism, target="UNIPROT_GN_ACC")
+    gp.organism <- orthogene::map_species(
+      species = organism, method = "gprofiler",
+      output_format = "id", verbose = FALSE
+    )
+    gp.out <- gprofiler2::gconvert(probesx, organism = gp.organism, target = "UNIPROT_GN_ACC")
     if (!is.null(gp.out)) {
-      key_matches['GPROFILER'] <- length(unique(gp.out$input)) / length(probesx)
+      key_matches["GPROFILER"] <- length(unique(gp.out$input)) / length(probesx)
     }
   }
 
@@ -1459,9 +1484,9 @@ collapse_by_humansymbol <- function(obj, annot) {
   } else {
     ## call rename_by with target column
     k <- target[1]
-    sel.na <- which(annot[,k] %in% c(NA,"","-","---","NA"))
-    annot[sel.na,k] <- '---'
-    annot[,k] <- toupper(annot[,k])  ## all uppercase??
+    sel.na <- which(annot[, k] %in% c(NA, "", "-", "---", "NA"))
+    annot[sel.na, k] <- "---"
+    annot[, k] <- toupper(annot[, k]) ## all uppercase??
     map.obj <- rename_by(obj, annot_table = annot, new_id = target[1])
   }
   if (!is.null(dim(map.obj))) rownames(map.obj) <- toupper(rownames(map.obj))
@@ -1635,7 +1660,7 @@ getOrganismGO <- function(organism, use.ah = NULL, orgdb = NULL) {
     message("[getOrganismGO] WARNING unsupported organism? ", organism)
     return(NULL)
   }
-  
+
   go.gmt <- list()
   ont_classes <- c("BP", "CC", "MF")
   if (!"GOALL" %in% AnnotationDbi::keytypes(orgdb)) {
@@ -1646,19 +1671,21 @@ getOrganismGO <- function(organism, use.ah = NULL, orgdb = NULL) {
     ont_classes <- c("BP", "CC", "MF")
     k <- "BP"
     for (k in ont_classes) {
-      gene.column <- intersect( c("SYMBOL","GENENAME","MGI","ALIAS"), AnnotationDbi::columns(orgdb))
-      gene.column <- head(gene.column,1)
-      if(length(gene.column)>0) {
+      gene.column <- intersect(c("SYMBOL", "GENENAME", "MGI", "ALIAS"), AnnotationDbi::columns(orgdb))
+      gene.column <- head(gene.column, 1)
+      if (length(gene.column) > 0) {
         suppressMessages(suppressWarnings(
           go_id <- AnnotationDbi::mapIds(
-            orgdb, keys = k, keytype = "ONTOLOGY",
+            orgdb,
+            keys = k, keytype = "ONTOLOGY",
             column = "GO", multiVals = "list"
           )[[1]]
         ))
         go_id <- unique(go_id)
         suppressMessages(suppressWarnings(
           sets <- AnnotationDbi::mapIds(
-            orgdb, keys = go_id, keytype = "GOALL",
+            orgdb,
+            keys = go_id, keytype = "GOALL",
             column = gene.column, multiVals = "list"
           )
         ))
@@ -1669,7 +1696,7 @@ getOrganismGO <- function(organism, use.ah = NULL, orgdb = NULL) {
         go <- sapply(GO.db::GOTERM[names(sets)], AnnotationDbi::Term)
         new_names <- paste0("GO_", k, ":", go, " (", sub("GO:", "GO_", names(sets)), ")")
         names(sets) <- new_names
-        
+
         ## add to list
         go.gmt <- c(go.gmt, sets)
       }
@@ -1691,12 +1718,11 @@ getGeneAnnotation.ORTHOGENE <- function(
     organism,
     probes,
     verbose = TRUE) {
-
   ## correct organism names different from OrgDb
-  organism <- sub("Canis familiaris","Canis lupus familiaris",organism,fixed=TRUE)
+  organism <- sub("Canis familiaris", "Canis lupus familiaris", organism, fixed = TRUE)
 
   ## map given organism to ORTHOGENE species name
-  species <- getOrthoSpecies(organism, use="map")
+  species <- getOrthoSpecies(organism, use = "map")
   if ("try-error" %in% class(species)) {
     message("[getGeneAnnotation.ORTHOGENE] *WARNING* could not connect to server")
     return(NULL)
@@ -1707,15 +1733,15 @@ getGeneAnnotation.ORTHOGENE <- function(
   }
   message("[getGeneAnnotation.ORTHOGENE] mapping to species: ", species)
   probes <- make_unique(probes)
-  probes[is.na(probes) | probes==""] <- "NA"
+  probes[is.na(probes) | probes == ""] <- "NA"
   probes <- make.unique(probes)
-  probes1 <- clean_probe_names(probes)  ## CHECK dots!!
+  probes1 <- clean_probe_names(probes) ## CHECK dots!!
 
   gene.out <- try(orthogene::map_genes(
     genes = probes1,
     species = species,
     verbose = FALSE
-  ), silent=TRUE)
+  ), silent = TRUE)
 
   df <- data.frame(
     feature = probes,
@@ -1728,20 +1754,22 @@ getGeneAnnotation.ORTHOGENE <- function(
     gene_name = probes
   )
   rownames(df) <- probes
-  
+
   if (!inherits(gene.out, "try-error")) {
     gene.out <- gene.out[match(probes1, gene.out$input), ]
 
     ## add extra uniprot id
-    gp.organism <- orthogene::map_species(species = species, method = "gprofiler", 
-      output_format = "id", verbose = FALSE)
+    gp.organism <- orthogene::map_species(
+      species = species, method = "gprofiler",
+      output_format = "id", verbose = FALSE
+    )
     gp.organism
-    gp.out <- try(gprofiler2::gconvert(probes1, organism = gp.organism, target="UNIPROT_GN_ACC"))
-    if(!is.null(gp.out) && !inherits(gp.out, "try-error")) {
-      uniprot <- tapply(gp.out$target, gp.out$input, function(x) paste(x,collapse=";"))
-      uniprot <- as.character(uniprot[match(probes1,names(uniprot))])
+    gp.out <- try(gprofiler2::gconvert(probes1, organism = gp.organism, target = "UNIPROT_GN_ACC"))
+    if (!is.null(gp.out) && !inherits(gp.out, "try-error")) {
+      uniprot <- tapply(gp.out$target, gp.out$input, function(x) paste(x, collapse = ";"))
+      uniprot <- as.character(uniprot[match(probes1, names(uniprot))])
     } else {
-      uniprot <- rep(NA,length(probes1))
+      uniprot <- rep(NA, length(probes1))
     }
 
     df$symbol <- gene.out$name
@@ -1750,7 +1778,7 @@ getGeneAnnotation.ORTHOGENE <- function(
     df$uniprot <- uniprot
     df$source <- "gprofiler2"
   }
-  
+
   return(df)
 }
 
@@ -1802,16 +1830,16 @@ check_probetype <- function(organism, probes) {
 #' export
 combine_feature_names <- function(annot, target) {
   annot$rownames <- rownames(annot)
-  new.feature <- strsplit(annot[,target[1]],split=';')
+  new.feature <- strsplit(annot[, target[1]], split = ";")
   for (i in 2:length(target)) {
     if (target[i] %in% colnames(annot)) {
       new.feature <- mapply(paste0, new.feature, annot[, target[i]])
     } else {
       ## some character
-      new.feature <- mapply(paste0, new.feature, target[i])      
+      new.feature <- mapply(paste0, new.feature, target[i])
     }
   }
-  new.feature <- sapply(new.feature, paste0, collapse=";")
+  new.feature <- sapply(new.feature, paste0, collapse = ";")
   if (sum(duplicated(new.feature)) > 0) {
     new.feature <- make_unique(new.feature)
   }
@@ -1821,53 +1849,53 @@ combine_feature_names <- function(annot, target) {
 
 #' @export
 pgx.getFeatureInfo <- function(pgx, feature) {
-
   if (is.null(feature) || length(feature) == 0) {
     return(NULL)
   }
   if (is.na(feature) || feature == "") {
     return(NULL)
   }
-  
-  annot <- as.list( pgx$genes[feature,] )
-  names(annot) <- sub("uniprot","protein",names(annot))
+
+  annot <- as.list(pgx$genes[feature, ])
+  names(annot) <- sub("uniprot", "protein", names(annot))
   annot$gene_name <- NULL
   annot$chr <- NULL
   annot$pos <- NULL
   annot$tx_len <- NULL
 
   datatype <- pgx$datatype
-  if(pgx$datatype == "multi-omics") {
-    ##dtype <- c("mx"="metabolomics","px"="proteomics","gx"="transcriptomics")
-    datatype <- ifelse(grepl("^mx:|metabolomics",feature), "metabolomics", datatype)
+  if (pgx$datatype == "multi-omics") {
+    ## dtype <- c("mx"="metabolomics","px"="proteomics","gx"="transcriptomics")
+    datatype <- ifelse(grepl("^mx:|metabolomics", feature), "metabolomics", datatype)
   }
-  
-  if(!"protein" %in% names(annot) && datatype!="metabolomics") {
+
+  if (!"protein" %in% names(annot) && datatype != "metabolomics") {
     annot[["protein"]] <- gene2uniprot(annot$symbol, pgx$organism)
   }
-  
-  if(annot$human_ortholog %in% names(playdata::GENE_SUMMARY)) {
+
+  if (annot$human_ortholog %in% names(playdata::GENE_SUMMARY)) {
     annot.summary <- playdata::GENE_SUMMARY[annot$human_ortholog]
     annot.summary <- gsub("Publication Note.*|##.*", "", annot.summary)
     annot[["summary"]] <- annot.summary
   }
-  
-##  annot[["GO"]] <- pgx.get_goterms(pgx, annot$symbol) 
-  if(datatype == "metabolomics") {
+
+  ##  annot[["GO"]] <- pgx.get_goterms(pgx, annot$symbol)
+  if (datatype == "metabolomics") {
     annot <- getMetaboliteInfo(
       organism = pgx$organism,
       id = annot$symbol,
-      info = annot)
+      info = annot
+    )
   } else {
     annot <- info.add_hyperlinks(
-      annot, feature, datatype, 
-      nm.symbol='symbol',
-      nm.prot='protein',
-      nm.ortholog='human_ortholog',
-      as.link=TRUE, add.summary=FALSE
+      annot, feature, datatype,
+      nm.symbol = "symbol",
+      nm.prot = "protein",
+      nm.ortholog = "human_ortholog",
+      as.link = TRUE, add.summary = FALSE
     )
   }
-  
+
   if (!is.null(annot)) {
     annot <- annot[!duplicated(names(annot))]
     ## reorder
@@ -1879,7 +1907,7 @@ pgx.getFeatureInfo <- function(pgx, feature) {
       names(annot)
     )
     nn2 <- setdiff(names(annot), nn1)
-    annot <- annot[c(nn1,nn2)]
+    annot <- annot[c(nn1, nn2)]
     names(annot) <- sub("gene_symbol", "symbol", names(annot))
     names(annot) <- sub("uniprot", "protein", names(annot))
     names(annot) <- sub("map_location", "genome location", names(annot))
@@ -1887,14 +1915,13 @@ pgx.getFeatureInfo <- function(pgx, feature) {
     annot <- list()
     annot$summary <- "(no info available)"
   }
-  
-  return(annot)
 
+  return(annot)
 }
 
 #' Retrieve gene information from different databases (AnnotHub,
 #' orgdb) and wrap hyperlinks.
-#' 
+#'
 #' @export
 getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype,
                            as.link = TRUE) {
@@ -1907,7 +1934,7 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype,
 
   orgdb <- getOrgDb(organism, use.ah = NULL)
   if (is.null(orgdb)) {
-    message("[getOrgGeneInfo] WARNING could not get orgdb!" )
+    message("[getOrgGeneInfo] WARNING could not get orgdb!")
     return(NULL)
   }
   cols <- c("SYMBOL", "UNIPROT", "GENENAME", "MAP", "OMIM", "PATH", "GO")
@@ -1945,21 +1972,21 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype,
       }
     )
   })
-  
+
   annot <- AnnotationDbi::select(
     orgdb,
     keys = gene,
     keytype = keytype,
     columns = cols
   )
-  
+
   names(info) <- cols
 
   ## take out duplicates
   info <- lapply(info, unique)
 
   info[["ORGANISM"]] <- organism
-  info <- info.add_hyperlinks(info, feature, datatype, as.link = TRUE)   
+  info <- info.add_hyperlinks(info, feature, datatype, as.link = TRUE)
 
   ## rename
   tags <- c(
@@ -1979,51 +2006,52 @@ getOrgGeneInfo <- function(organism, gene, feature, ortholog, datatype,
 }
 
 pgx.get_goterms <- function(pgx, symbol) {
-  if(!symbol %in% rownames(pgx$GMT)) return(NULL)
-  jj <- grep("^GO",colnames(pgx$GMT),value=TRUE)
-  terms <- names(which( pgx$GMT[symbol,jj] !=0 ))
-  go_ids <- paste0("GO:",gsub(".*\\(GO_|\\)","",terms))
+  if (!symbol %in% rownames(pgx$GMT)) {
+    return(NULL)
+  }
+  jj <- grep("^GO", colnames(pgx$GMT), value = TRUE)
+  terms <- names(which(pgx$GMT[symbol, jj] != 0))
+  go_ids <- paste0("GO:", gsub(".*\\(GO_|\\)", "", terms))
   go_ids
 }
 
 info.add_hyperlinks <- function(info, feature, datatype,
-                                nm.symbol='SYMBOL', nm.prot='UNIPROT',
-                                nm.ortholog='ORTHOLOG',
-                                as.link=TRUE, add.summary=TRUE) {
+                                nm.symbol = "SYMBOL", nm.prot = "UNIPROT",
+                                nm.ortholog = "ORTHOLOG",
+                                as.link = TRUE, add.summary = TRUE) {
+  ## nm.symbol='SYMBOL';nm.prot='UNIPROT';nm.ortholog='ORTHOLOG';as.link=TRUE;add.summary=TRUE
+  ## nm.symbol='symbol';nm.prot='protein';nm.ortholog='human_ortholog';as.link=TRUE;add.summary=TRUE
 
-  ##nm.symbol='SYMBOL';nm.prot='UNIPROT';nm.ortholog='ORTHOLOG';as.link=TRUE;add.summary=TRUE
-  ##nm.symbol='symbol';nm.prot='protein';nm.ortholog='human_ortholog';as.link=TRUE;add.summary=TRUE
-  
-  symbol  <- info[[nm.symbol]]
-  ortholog  <- info[[nm.ortholog]]
+  symbol <- info[[nm.symbol]]
+  ortholog <- info[[nm.ortholog]]
   uniprot <- info[[nm.prot]]
-  
+
   if (length(uniprot) == 0) {
     this.uniprot <- NULL
-  } else if(length(uniprot) == 1 && uniprot[1]=="" || is.na(uniprot[1])) {
+  } else if (length(uniprot) == 1 && uniprot[1] == "" || is.na(uniprot[1])) {
     this.uniprot <- NULL
   } else {
-    uniprot <- sort(unique(unlist(strsplit(uniprot, split=';'))))
+    uniprot <- sort(unique(unlist(strsplit(uniprot, split = ";"))))
     this.uniprot <- uniprot[which(sapply(uniprot, function(p) grepl(p, feature)))]
     if (length(this.uniprot) == 0) this.uniprot <- rev(uniprot)[1]
   }
-  
+
   if (as.link && length(symbol)) {
     gene.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GENE</a>"
     gene.link <- sapply(symbol, function(s) gsub("GENE", s, gene.link))
-    info[[ nm.symbol ]] <- paste(gene.link, collapse = ", ")
+    info[[nm.symbol]] <- paste(gene.link, collapse = ", ")
   }
-  
+
   if (as.link && length(ortholog)) {
     gene.link <- "<a href='https://www.genecards.org/cgi-bin/carddisp.pl?gene=GENE' target='_blank'>GENE</a>"
     ortho.link <- sapply(ortholog, function(s) gsub("GENE", s, gene.link))
-    info[[ nm.ortholog ]] <- paste(ortho.link, collapse = ", ")
+    info[[nm.ortholog]] <- paste(ortho.link, collapse = ", ")
   }
-  
+
   if (as.link && length(uniprot)) {
     prot.link <- "<a href='https://www.uniprot.org/uniprotkb/UNIPROT' target='_blank'>UNIPROT</a>"
     prot.link <- sapply(uniprot, function(s) gsub("UNIPROT", s, prot.link))
-    info[[ nm.prot ]] <- paste(prot.link, collapse = ", ")
+    info[[nm.prot]] <- paste(prot.link, collapse = ", ")
   }
 
   ## create link to external databases: OMIM, GeneCards, Uniprot
@@ -2033,10 +2061,10 @@ info.add_hyperlinks <- function(info, feature, datatype,
     if (length(symbol)) genecards.link <- sub("GENE", symbol[1], genecards.link)
     if (length(this.uniprot)) uniprot.link <- sub("UNIPROT", this.uniprot, uniprot.link)
     db.links <- paste(c(genecards.link, uniprot.link), collapse = ", ")
-    if(db.links=="") db.links <- NULL
+    if (db.links == "") db.links <- NULL
     info[["DATABASES"]] <- db.links
   }
-  
+
   if (length(this.uniprot) && grepl("proteomics", datatype, ignore.case = TRUE)) {
     ## create link to PhosphoSitePlus
     phosphositeplus.link <- "<a href='https://www.phosphosite.org/simpleSearchSubmitAction.action?searchStr=GENE' target='_blank'>PhosphoSitePlus</a>"
@@ -2050,13 +2078,13 @@ info.add_hyperlinks <- function(info, feature, datatype,
     ## phosphoELM.link <- sub("UNIPROT", uniprot, phosphoELM.link)
     ## info[["DATABASES"]] <- paste(c(info[["DATABASES"]], phosphoELM.link), collapse = ", ")
   }
-  
+
   ## create link to OMIM
   if (as.link && length(info[["OMIM"]])) {
     omim.link <- "<a href='https://www.omim.org/entry/OMIM' target='_blank'>OMIM</a>"
     info[["OMIM"]] <- sapply(info[["OMIM"]], function(x) gsub("OMIM", x, omim.link))
   }
-  
+
   ## create link to KEGG
   if (as.link && length(info[["PATH"]])) {
     kegg.link <- "<a href='https://www.genome.jp/kegg-bin/show_pathway?map=hsaKEGGID&show_description=show' target='_blank'>KEGGNAME (KEGGID)</a>"
@@ -2073,12 +2101,13 @@ info.add_hyperlinks <- function(info, feature, datatype,
       }
     }
   }
-  
+
   ## create link to GO
   if (length(info[["GO"]]) && !is.na(info[["GO"]][1])) {
     ## sometimes GO.db is broken...
     suppressWarnings(try.out <- try(AnnotationDbi::Term(AnnotationDbi::mget("GO:0000001",
-      envir = GO.db::GOTERM, ifnotfound = NA )[[1]])))
+      envir = GO.db::GOTERM, ifnotfound = NA
+    )[[1]])))
     go.ok <- (!"try-error" %in% class(try.out))
     if (go.ok) {
       amigo.link <- "<a href='http://amigo.geneontology.org/amigo/term/GOID' target='_blank'>GOTERM (GOID)</a>"
@@ -2101,8 +2130,8 @@ info.add_hyperlinks <- function(info, feature, datatype,
       info[["GO"]] <- NULL
     }
   }
-  
-  if(add.summary) {
+
+  if (add.summary) {
     ## pull summary
     info[["SUMMARY"]] <- "(no info available)"
     ortholog <- info[[nm.ortholog]]
@@ -2111,7 +2140,7 @@ info.add_hyperlinks <- function(info, feature, datatype,
       info[["SUMMARY"]] <- gsub("Publication Note.*|##.*", "", info[["SUMMARY"]])
     }
   }
-  
+
   return(info)
 }
 
@@ -2124,12 +2153,11 @@ check_species_probetype <- function(
     probes,
     test_species = c("Human", "Mouse", "Rat"),
     datatype = NULL, annot.cols = NULL) {
-
   ## No check if custom
-  custom_datatype <- !is.null(datatype) && tolower(datatype) %in% c("custom","unknown","")
-  custom_organism <- any(tolower(test_species) %in% c("custom","unknown","no organism"))
+  custom_datatype <- !is.null(datatype) && tolower(datatype) %in% c("custom", "unknown", "")
+  custom_organism <- any(tolower(test_species) %in% c("custom", "unknown", "no organism"))
 
-  if(custom_datatype || custom_organism) {
+  if (custom_datatype || custom_organism) {
     out <- rep("custom", length(test_species))
     names(out) <- test_species
     return(as.list(out))
@@ -2290,9 +2318,8 @@ convert_probetype <- function(organism, probes, target_id, from_id = NULL,
 #' data type unless classical transcriptomics/proteomics.
 #'
 getMultiOmicsProbeAnnotation <- function(organism, probes) {
-  
-  if(all(grepl("^[A-Za-z]+:",probes))) {
-    dtype <- sub(":.*","",probes)
+  if (all(grepl("^[A-Za-z]+:", probes))) {
+    dtype <- sub(":.*", "", probes)
   } else {
     ## no colon in names it is single type probes. try to guess by
     ## matching.
@@ -2393,8 +2420,7 @@ getMultiOmicsProbeAnnotation <- function(organism, probes) {
 #' data type unless classical transcriptomics/proteomics.
 #'
 getMultiSpeciesProbeAnnotation <- function(probes, organisms, probetype,
-                                           datatype = "rna-seq") {  
-  
+                                           datatype = "rna-seq") {
   ## FILL ME!!!
   annot <- data.frame()
   return(annot)

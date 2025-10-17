@@ -414,7 +414,6 @@ read_contrasts <- function(file) {
 #' @return data matrix (features on rows; samples on columns)
 #' @export
 read_Olink_NPX <- function(NPX_data) {
-
   NPX <- try(OlinkAnalyze::read_NPX(NPX_data), silent = TRUE)
   if (!inherits(NPX, "try-error")) {
     NPX <- as.data.frame(NPX)
@@ -450,7 +449,7 @@ read_Olink_NPX <- function(NPX_data) {
     dbg("[read_Olink_NPX] The uploaded Olink NPX file does not contain the variable SampleID")
     return(NULL)
   }
-  
+
   # Convert to matrix
   fm <- as.formula(paste0(feature.id, "~", sample.id))
   counts.df <- reshape2::dcast(NPX, fm, value.var = npx.id, fun.aggregate = mean)
@@ -458,7 +457,6 @@ read_Olink_NPX <- function(NPX_data) {
   rownames(counts) <- counts.df[, feature.id]
 
   return(counts)
-  
 }
 
 #' Read Olink NPX data and automatically create samples dataframe
@@ -466,7 +464,6 @@ read_Olink_NPX <- function(NPX_data) {
 #' @return dataframe with the metadata
 #' @export
 read_Olink_samples <- function(NPX_data) {
-
   NPX <- try(OlinkAnalyze::read_NPX(NPX_data), silent = TRUE)
   if (!inherits(NPX, "try-error")) {
     NPX <- as.data.frame(NPX)
@@ -482,30 +479,29 @@ read_Olink_samples <- function(NPX_data) {
     dbg("[read_Olink_NPX] The uploaded Olink NPX file does not contain the variable SampleID")
     return(NULL)
   }
-  
-  #https://cran.r-project.org/web/packages/OlinkAnalyze/vignettes/Vignett.html
+
+  # https://cran.r-project.org/web/packages/OlinkAnalyze/vignettes/Vignett.html
   exclude.vars <- ""
   hh <- grepl("uniprot|olinkid|assay|npx|freq|lod", tolower(colnames(NPX)))
   if (any(hh)) exclude.vars <- colnames(NPX)[hh]
   samples <- matrix(NA, nrow = length(samples.id), ncol = sum(!hh))
   samples <- data.frame(samples, row.names = samples.id)
   colnames(samples) <- colnames(NPX)[!hh]
-  
+
   hh <- grep("SampleID", colnames(NPX), ignore.case = TRUE)
-  i=1
-  for(i in 1:nrow(samples)) {
-    t=1
-    for(t in 1:ncol(samples)) {
-      jj <- match(rownames(samples)[i], NPX[,hh[1]])
+  i <- 1
+  for (i in 1:nrow(samples)) {
+    t <- 1
+    for (t in 1:ncol(samples)) {
+      jj <- match(rownames(samples)[i], NPX[, hh[1]])
       jx <- match(colnames(samples)[t], colnames(NPX))
-      if(!any(jj) | !any(jx)) next
-      samples[i,t] <- NPX[jj, jx]
+      if (!any(jj) | !any(jx)) next
+      samples[i, t] <- NPX[jj, jx]
     }
   }
-  samples <- samples[,-hh[1]]
+  samples <- samples[, -hh[1]]
 
   return(samples)
-  
 }
 
 
