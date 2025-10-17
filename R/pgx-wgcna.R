@@ -2771,10 +2771,10 @@ wgcna.plotTopModules_multi <- function(multi, trait, nmax=16, collapse=FALSE,
         ylab = "ME score"
       )
       
-      mtext( levels(df$group), side=1, line=0.6, cex=1.15, at=atmid)
+      mtext( levels(df$group), side=1, line=0.6, cex=1.0, at=atmid)
       bb <- c("FALSE","TRUE")
       legend("topright", legend=bb, fill = col1,
-        cex=0.9, y.intersp=0.82, title=trait, title.cex=1.1)        
+        cex=0.8, y.intersp=0.82, title=trait, title.cex=1.1)        
 
     }  ## end of if factor
 
@@ -4944,7 +4944,7 @@ wgcna.describeModules <- function(wgcna, ntop=25, annot=NULL, multi=FALSE,
   if(is.null(modules)) modules <- names(top$genes)
   modules <- intersect(modules, names(top$genes))
 
-  prompt <- "Give a short summary of the main overall biological function of the following top enriched genesets belonging to module <MODULE> of a WGCNA analysis. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about <EXPERIMENT>. Use maximum one paragraph. Do not use bullet points. \n\nHere is list of enriched gene sets: <GENESETS>\n"
+  prompt <- "Give a short summary of the main overall biological function of the following top enriched genesets belonging to module <MODULE>. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about <EXPERIMENT>. Use maximum one paragraph. Do not use bullet points. \n\nHere is list of enriched gene sets: <GENESETS>\n"
   if(verbose) cat(prompt)
   
   desc <- list()
