@@ -265,6 +265,7 @@ getMetaboliteAnnotation <- function(probes,
       }
     }
 
+    ## ----------------- RefMET -------------------------
     ## RefMet also handles metabolite/lipid long names, so this is
     ## convenient to call first.
     if( d == "refmet" && curl::has_internet() && no.name) {
