@@ -51,7 +51,6 @@ mx.check_mapping <- function(probes,
 #' Detect metabolomics ID type.
 #'
 #' @export
-
 mx.detect_probetype <- function(probes, min.match=0.2) {
   aa <- playdata::METABOLITE_ID
   probes <- setdiff(probes, c("", "-", NA))
@@ -175,21 +174,18 @@ mx.convert_probe <- function(probes, probe_type = NULL, target_id = "ID") {
 #'
 #'
 #' @export
-getMetaboliteAnnotation <- function(probes, add_id=FALSE, 
-                                    db = c("refmet","playdata","annothub"),
-                                    extra_annot = FALSE, annot_table = NULL ) {
-  ##add_id=TRUE;db=c("refmet","playdata","annothub") 
+getMetaboliteAnnotation <- function(probes,
+                                    db = c("lipids","refmet","playdata","annothub"),
+                                    extra_annot = TRUE,
+                                    annot_table = NULL,
+                                    prefix.symbol = FALSE
+                                    ) {
+
+  #extra_annot=FALSE;annot_table=NULL;prefix.symbol=FALSE;
+
+  ## save original probes
   orig.probes <- probes
-
-  ## strip multi-omics prefix
-  has.prefix <- all(grepl("^[A-Za-z]+:", tolower(probes)))
-  has.prefix
-  if (has.prefix) {
-    probes <- sub("^[A-Za-z0-9]+:", "", probes)
-  }
-  probes <- trimws(probes)
-  names(probes) <- orig.probes
-
+  
   ## check for cross annotation table
   has.id <- FALSE
   if (!is.null(annot_table)) {
@@ -197,7 +193,7 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
     ## best matches any column in METABOLITE_ID and takes that column
     ## as new probe names.
     annot_table <- annot_table[match(orig.probes,rownames(annot_table)),]
-    rownames(annot_table) <- orig.probes    
+    #rownames(annot_table) <- orig.probes    
     MX <- playdata::METABOLITE_ID
     id.match <- apply(annot_table, 2, function(a) {
       max(apply(MX, 2, function(m) mean(a %in% m, na.rm=TRUE)))
@@ -209,25 +205,31 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
       id.col <- which.max(id.match)
       dbg("[getMetaboliteAnnotation] cross-annot column: ",colnames(annot_table)[id.col])
       probes <- annot_table[, id.col]
-      names(probes) <- orig.probes
     }
   }
-  has.id
 
+  ## strip multi-omics or datatype prefix
+  probes <- trimws(probes)
+  has.prefix <- all(grepl("^[A-Za-z]+:", probes))
+  has.prefix
+  if (has.prefix) {
+    probes <- sub("^[A-Za-z]+:", "", probes)
+  }
+  probes <- trimws(probes)
+  probes[probes %in% c("","-","NA",NA)] <- '-'
+  ##names(probes) <- orig.probes
+  names(orig.probes) <- probes
+
+  ## check for duplicated probes
   sum(duplicated(probes))
   if (sum(duplicated(probes))) {
-    message("WARNING duplicated probes. result will not match length")
+    message("WARNING duplicated probes. result may not match length")
     probes <- probes[!duplicated(probes)]
   }
-  probes[probes %in% c("", "-", "NA")] <- NA
-  if (any(is.na(probes))) {
-    message("WARNING NA probes. result will not match length")
-    probes <- probes[!is.na(probes)]
-  }
 
-  colnames(playdata::METABOLITE_METADATA)
+  #colnames(playdata::METABOLITE_METADATA)
   COLS <- c(
-    "ID", "feature", "name",
+    "feature", "symbol", "name",
     "super_class", "main_class", "sub_class", "formula", "exactmass",
     "definition", "source"
   )
@@ -238,12 +240,34 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
 
   d <- db[1]
   for (d in db) {
+
+    message("querying database ",d,"...")
+    
     no.name <- any(is.na(metadata$name))
     no.name
+    
+    ## Annotate lipids using Refmet and rgoslin 
+    if (d == "lipids" && curl::has_internet() && no.name) {
+      ii <- which(!is.na(probes) & is.na(metadata$name) )
+      aa <- mx.annotateLipids(probes[ii], two.pass=TRUE) 
+      aa$definition <- '-'
+      sel.col <- c("Input.name","Input.name","Standardized.name", 
+        "Super.class", "Main.class", "Sub.class",
+        "Formula", "Exact.mass", 'definition','Source')
+      res <- aa[,sel.col]
+      colnames(res) <- COLS
+      
+      ## only fill missing entries
+      jj <- which(res != "-" & !is.na(res) & is.na(metadata[ii, ]), arr.ind = TRUE)
+      if (length(jj)) {
+        message("annotating ",nrow(jj)," entries with RefMet/rgoslin")
+        metadata[ii, ][jj] <- res[jj]
+      }
+    }
 
     ## ----------------- RefMET -------------------------
     ## RefMet also handles metabolite/lipid long names, so this is
-    ## convenient
+    ## convenient to call first.
     if( d == "refmet" && curl::has_internet() && no.name) {
       refmet.alive <- mx.ping_refmet()
       if(!refmet.alive && "refmet" %in% db) {
@@ -252,24 +276,30 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
         message("[getMetaboliteAnnotation] annotating with RefMet server...")
         ii <- which(!is.na(probes) & is.na(metadata$name) )
         if(length(ii)) {
-          probes1 <- probes[ii]
-          res <- RefMet::refmet_map_df(probes1)  ## request on API server
+          id <- probes[ii]
+          ## refmet wants prefix for chebi id's
+          if(all(grepl("^[0-9]+",id))) id <- paste0("CHEBI:",id)
+          res <- RefMet::refmet_map_df(id)  ## request on API server
           res$definition <- '-'   ## fill it??
-          res$ID <- res$ChEBI_ID
+          res$symbol <- res$ChEBI_ID
           res$source <- ifelse(res$RefMet_ID!='-', "RefMet", NA)
-          cols <- c("ID","Input.name","Standardized.name","Super.class","Main.class","Sub.class","Formula","Exact.mass","definition","source")
+          cols <- c("Input.name","symbol","Standardized.name","Super.class","Main.class",
+            "Sub.class","Formula","Exact.mass","definition","source")
           res <- res[,cols]
           colnames(res) <- COLS
           ## only fill missing entries
           jj <- which( res != '-' & !is.na(res) & is.na(metadata[ii,]), arr.ind=TRUE)
-          if(length(jj)) metadata[ii,][jj] <- res[jj]
+          if(length(jj)) {
+            message("annotating ",nrow(jj)," entries with RefMet")
+            metadata[ii,][jj] <- res[jj]
+          }
         }
       }
     }
 
-    ## ----------------- internal playdata  -------------------------
-    ## this uses internal datatable. maybe we can get rid of it in
-    ## future and use only online annotation.
+    ## This uses internal datatable but requires mapping to ChEBI
+    ## exists. Maybe we can get rid of it in future and use only
+    ## online annotation.
     if (d == "playdata" && no.name) {
       # get annotation for probes
       message("[getMetaboliteAnnotation] annotating with METABOLITE_METADATA...")
@@ -277,77 +307,78 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
       no.name <- is.na(metadata$name) | is.na(metadata$definition) | is.na(metadata$ID)
       ii <- which(!id %in% c("", NA, "-") & no.name)
       if (length(ii)) {
-        mm <- playdata::METABOLITE_METADATA
-        mm <- mm[match(id[ii], mm$ID), ]
-        mm$feature <- probes[ii]
-        mm$ID <- id[ii]
-        mm$source <- ifelse(id[ii] %in% mm$ID, "ChEBI", NA)
-        mm <- mm[, COLS]
+        M <- playdata::METABOLITE_METADATA
+        M <- M[match(id[ii], M$ID), ]
+        M$feature <- probes[ii]
+        M$symbol <- id[ii]
+        M$source <- ifelse(id[ii] %in% M$ID, "ChEBI", NA)
+        M <- M[, COLS]
         ## only fill missing entries
-        jj <- which(!is.na(mm) & is.na(metadata[ii, , drop = FALSE]), arr.ind = TRUE)
-        if (length(jj)) metadata[ii, ][jj] <- mm[jj]
+        jj <- which(!is.na(M) & is.na(metadata[ii, , drop = FALSE]), arr.ind = TRUE)
+        if (length(jj)) {
+          message("annotating ",nrow(jj)," entries with METABOLITE_METADATA")
+          metadata[ii, ][jj] <- M[jj]
+        }
       }
     }
 
-    ## ----------------- metaboliteIDmapping  -------------------------
-    ## this uses metaboliteIDmapping through AnnotHub. The first time
-    ## retrieval of the database can take some time for caching. Needs
-    ## internet for first time download.
+    ## this uses 'metaboliteIDmapping' through AnnotHub. The first
+    ## time retrieval of the database can take some time for
+    ## caching. Needs internet for first time download.
     if (d == "annothub" && curl::has_internet() && no.name) {
       message("[getMetaboliteAnnotation] annotating with AnnotHub ...")
-      adb <- AnnotationHub::AnnotationHub()
-      ah <- adb[["AH91792"]]
-      ii <- which(is.na(metadata$name))
-      nmatch <- sapply(ah, function(a) sum(probes %in% a))
-      if (max(nmatch) == 0) {
-        message("[getMetaboliteAnnotation] WARNING: could not match ID column")
+      ah <- AnnotationHub::AnnotationHub()
+      #AnnotationHub::query( ah, "metaboliteIDmapping")
+      # AH79817 represents the original ID mapping containing 9 different ID formats
+      # AH83115 mapping table which also includes common names for each compound
+      # AH91792 current version of the mapping table that also accounts for tautomers
+      #map <- ah[["AH91792"]]  ## 1012267 rows
+      map <- ah[["AH83115"]]  ## 1116049 rows
+      map <- map[setdiff(colnames(map),c("SID","CID"))] ## these are numeric
+      nx <- apply(map, 1, function(m) sum(probes %in% m))
+      sum(nx>0)
+      if (all(nx == 0)) {
+        message("[getMetaboliteAnnotation] WARNING: could not match any ID")
       } else {
-        match.col <- which.max(nmatch)
-        jj <- match(probes[ii], ah[[match.col]])
-        res <- as.data.frame(ah[jj, ])
-        res$feature <- probes[ii]
-        res$ID <- res$ChEBI
-        res$Super.class <- "-"
-        res$Main.class <- "-"
-        res$Sub.class <- "-"
-        res$Formula <- "-"
-        res$Exact.mass <- "-"
-        # res$INCHI_KEY <- "-"
-        res$definition <- "-" ## fill it?
-        res$lipidmaps <- "-"
-        res$refmet <- "-"
-        res$source <- ifelse(!is.na(jj), "metIDmap", NA)
-        cols <- c(
-          "ID", "feature", "Name", "Super.class", "Main.class",
-          "Sub.class", "Formula", "Exact.mass", "definition", "source"
-        )
-        res <- res[, cols]
-        colnames(res) <- COLS
-        ## only fill missing entries
-        jj <- which(res != "-" & !is.na(res) & is.na(metadata[ii, ]), arr.ind = TRUE)
-        if (length(jj)) metadata[ii, ][jj] <- res[jj]
+        map1 <- as.data.frame(map[which(nx > 0),])
+        ii <- which(is.na(metadata$name))
+        res <- match.dataframe(probes[ii], map1)
+        if(!is.null(res) && nrow(res)>0) {
+          res$feature <- probes[ii]
+          res$symbol <- probes[ii]
+          res$Super.class <- "-"
+          res$Main.class <- "-"
+          res$Sub.class <- "-"
+          res$Formula <- "-"
+          res$Exact.mass <- "-"
+          res$definition <- "-" ## fill it?
+          res$lipidmaps <- "-"
+          res$refmet <- "-"
+          res$source <- ifelse( is.na(res$Name), '-', 'AH83115')
+          cols <- c(
+            "feature", "symbol", "Name", "Super.class", "Main.class",
+            "Sub.class", "Formula", "Exact.mass", "definition", "source"
+          )
+          res <- res[, cols]
+          colnames(res) <- COLS
+          ## only fill missing entries
+          jj <- which(res != "-" & !is.na(res) & is.na(metadata[ii, ]), arr.ind = TRUE)
+          if (length(jj)) {
+            message("annotating ",nrow(jj)," entries with AnnotHub")
+            metadata[ii, ][jj] <- res[jj]
+          }
+        }
       }
     }
-  } ## for db
-
-
-  ## Fill empty symbols with something. Many lipids are not mapped to
-  ## our standard ChEBI id.
-  fill_no_symbol = TRUE
-  if(fill_no_symbol) {
-    ii <- which(is.na(metadata$ID))
-    if(length(ii))  metadata$ID[ii] <- paste0("{",metadata$feature[ii],"}")
-    ii <- which(is.na(metadata$name) | metadata$name=="-")
-    if(length(ii))  metadata$name[ii] <- metadata$feature[ii]
+  } ## end of for db
+  
+  ## Harmonize lipid class names. Different databases have different
+  ## namings.
+  if("sub_class" %in% colnames(metadata)) {
+    metadata$sub_class <- mx.harmonizeSubclassNames(metadata$sub_class)
   }
-
-  ## Let's annotate the title with more info
-  add_lipid_details=TRUE
-  if(add_lipid_details) {
-    details <- paste0("(",metadata$main_class,"/",metadata$sub_class,";",
-      metadata$formula,")")
-    ii <- which(!is.na(metadata$main_class) & metadata$main_class!="-")
-    metadata$name[ii] <- paste(metadata$name, details)[ii]
+  if("super_class" %in% colnames(metadata)) {  
+    metadata$super_class <- mx.harmonizeSuperclassNames(metadata$super_class)
   }
   
   ## This sets the default data.frame structure for metabolites. Note
@@ -355,51 +386,250 @@ getMetaboliteAnnotation <- function(probes, add_id=FALSE,
   rownames(metadata) <- NULL
   df <- data.frame(
     feature = probes,
-    symbol = metadata$ID,          ## not sure about this... (IK)
-    human_ortholog = metadata$ID,  ## not sure about this... (IK)
+    symbol = rep(NA,length(probes)),
+    human_ortholog = rep(NA,length(probes)),
     gene_title = metadata$name,
     source = metadata$source,
-    gene_name = metadata$ID,
+    gene_name = metadata$feature,
     data_type = "metabolomics"
   )
   rownames(df) <- as.character(probes)
-
+  
   if(extra_annot) {
     extra_cols <- setdiff(colnames(metadata),colnames(df))
-    extra_cols <- setdiff( extra_cols, c("ID","name","source","feature"))
-    df <- cbind(df, metadata[,extra_cols])
+    extra_cols <- setdiff(extra_cols, c("symbol","name","source","feature"))
+    extra_cols
+    if(length(extra_cols)) df <- cbind(df, metadata[,extra_cols])
   }
 
-  ## add ID table. Need rethink METABOLITE_ID is not always complete.
-  if(add_id) {
-    id_table <- playdata::METABOLITE_ID
-    ii <- match( df$symbol, id_table$ID )
-    kk <- setdiff(colnames(id_table), c("ID","NAME"))
-    id_table <- id_table[ii,kk]
-    colnames(id_table) <- paste0(sub("_ID","",colnames(id_table)),"_ID")
-    if("ChEBI_ID" %in% colnames(id_table)) {
-      ## fill missing ChEBI entries with internal CHEBI id (in symbol column)
-      ii <- is.na(id_table$ChEBI_ID) & !is.na(df$symbol) & !grepl("^[{]",df$symbol)
-      id_table$ChEBI_ID[ii] <- df$symbol[ii]
+  ## add ID reference table. Need rethink METABOLITE_ID is not always
+  ## complete.
+  message("Creating ID conversion (mapping) table...")
+  idtable <- mx.get_metabolite_mapping(
+    probes,
+    method=c("refmet","playdata","annhub")
+  ) 
+  df <- cbind(df, idtable)   
+
+  ## For metabolomics we use any 'best' ID as symbol. Not only CHEBI
+  ## but if CHEBI not exists any other ID. If no ID exists we fill
+  ## with '{feature}'
+  df$symbol <- idtable$mapping_ID
+  #df$human_ortholog <- sub("^[A-Za-z]+:", "",df$symbol)  ## always without
+  df$human_ortholog <- df$HMDB_ID ## human
+  
+  ## Fill empty symbols with something. Many lipids are not mapped to
+  ## our standard ChEBI id.
+  fill_no_symbol = TRUE
+  if(fill_no_symbol) {
+    ii <- which(is.na(df$symbol))
+    if(length(ii)) {
+      df$symbol[ii] <- paste0("FEATURE:{",df$feature[ii],"}")
+      df$name[ii] <- df$feature[ii]
+      df$source[ii] <-"-"
     }
-    df <- cbind( df, id_table )   
   }
 
-  if (has.id) {
-    ii <- match(orig.probes, names(probes))
-    df <- df[ii, ]
-    df$feature <- orig.probes
-    df$gene_name <- orig.probes
-    rownames(df) <- orig.probes
+  ## strip or leave the prefix of symbols??
+  if(prefix.symbol == FALSE) {
+    df$symbol <- sub("^[A-Za-z]+:", "", df$symbol)
   }
+
+  ## Replace/add title and definition if we have more info in our
+  ## METABOLITE_METADATA.
+  message("Adding extra names and definitions...")
+  M <- playdata::METABOLITE_METADATA
+  chebi_id <- trimws(df$CHEBI_ID)
+  M <- M[match(chebi_id,M$ID),]
+  ii <- which(!is.na(M$name))
+  same.name <- which(tolower(df$gene_title[ii]) == tolower(M$name[ii]))
+  if(length(same.name)) {
+    ## if names are same, discard first
+    jj <- ii[same.name]
+    df$gene_title[jj] <- '-'
+  }
+  df$gene_title[ii] <- ifelse(
+    df$gene_title[ii] %in% c(NA,'NA','','-'),
+    M$name[ii],
+    paste(df$gene_title[ii], M$name[ii], sep=" | ")
+  )
+  ## we fill empty titles with the symbol
+  jj <- which(df$gene_title %in% c(NA,'NA','','-'))  
+  if(length(jj)) {
+    ##df$gene_title[jj] <- '-'
+    df$gene_title[jj] <- gsub("^\\{|\\}$","",df$symbol[jj]) ## remove brackets
+  }
+  
+  ii <- which(!is.na(M$definition))
+  df$definition[ii] <- ifelse(
+    df$definition[ii] %in% c(NA,'NA','','-'),
+    M$definition[ii],
+    paste(df$definition[ii], M$definition[ii], sep=". ")
+  )
+  jj <- which(df$definition %in% c(NA,'NA','','-'))
+  if(length(jj)) df$definition[jj] <- '-'
+  
+  ## Let's annotate the title with extra info
+  if(extra_annot) {
+    details <- paste0("(class=",df$sub_class,
+      ";formula=",trimws(df$formula),";mass=",df$exactmass, ")")
+    df$definition <- paste(df$definition, details)
+  }
+  
+  ## remove unneeded columns
+  df$input_ID <- NULL
+  df$mapping_ID <- NULL    
+  
+  ## match original probe names
+  df <- df[ match(names(orig.probes), df$feature), ]
+  df$feature <- orig.probes
+  df$gene_name <- orig.probes
+  rownames(df) <- make_unique(orig.probes)
 
   if (extra_annot && !is.null(annot_table)) {
     extra_cols <- setdiff(colnames(annot_table),colnames(df))
-    extra_cols <- setdiff( extra_cols, c("ID","name","source","feature"))
+    extra_cols <- setdiff( extra_cols, c("ID","symbol","name","source","feature"))
     df <- cbind(df, annot_table[,extra_cols])
   }
 
+  ## conform empty cells
+  for(k in colnames(df)) {
+    jj <- which(df[[k]] %in% c(NA,'NA','','-'))
+    if(length(jj)) df[[k]][jj] <- '-'
+  }
+
+  ## cleanup
+  char.cols <- which(sapply(df,class) == "character")
+  for(k in char.cols) df[[k]] <- trimws(df[[k]])
+  
+  rownames(df) <- NULL
   return(df)
+}
+
+mx.formula2chebi <- function(f, prefix=TRUE) {
+  meta <- playdata::METABOLITE_METADATA
+  ii <- match(f, meta[,"formula"])
+  chebi <- meta[ii, "ID"]
+  if(prefix) chebi <- paste("CHEBI:",chebi) ## chebi
+  chebi
+}
+
+#' This uses different databases to create a ID mapping table for
+#' given 'id' to other ID types (ChEBI, HMDB, LIPIDMAPS, KEGG,
+#' REFMET).
+#'
+#' 
+mx.get_metabolite_mapping <- function(id, method=c("refmet","playdata","annhub")) {
+
+  COLS <- c("CHEBI","HMDB","LIPIDMAPS","KEGG","REFMET","Formula")
+  map <- data.frame(matrix(NA, length(id), length(COLS)))
+  colnames(map) <- COLS
+
+  ## strip prefix. 
+  orig.id <- id
+  id <- sub("^[A-Za-z]+:","",id)
+  prefix <- mx.prefix_id(id, return.prefix=TRUE)
+  table(prefix)
+
+  # retain prefix for chebi for refmet
+  id2 <- ifelse(prefix=="CHEBI", paste0("CHEBI:",id), id)
+  
+  method
+  for(m in method) {
+    
+    if(m == "refmet") {
+      df <- RefMet::refmet_map_df(id2)
+      sel <- c("ChEBI_ID","HMDB_ID","LM_ID","KEGG_ID","RefMet_ID","Formula")
+      df <- df[,sel]
+      colnames(df) <- COLS      
+      ii <- which(is.na(map) & df != '-', arr.ind=TRUE)
+      if(length(ii)) {
+        message("mapping ", nrow(ii), " entries using RefMet")
+        map[ii] <- df[ii]
+      }
+    }
+    
+    if(m == "playdata") {
+      df <- playdata::METABOLITE_ID
+      df$Formula <- '-'
+      sel <- c("ChEBI","HMDB","LIPIDMAPS", "KEGG","REFMET","Formula")
+      df <- df[,sel]
+      colnames(df) <- COLS
+      nmatch <- sum(id %in% unlist(df))
+      if(nmatch > 0) {
+        df <- match.dataframe(id, df)
+        df[is.na(df)] <- '-'
+        ii <- which(is.na(map) & df != '-', arr.ind=TRUE)
+        if(length(ii)) {
+          message("mapping ", nrow(ii), " entries using METABOLITE_ID")
+          map[ii] <- df[ii]
+        }
+      }
+    }
+
+    if(m == "annhub") {
+      suppressMessages(ah <- AnnotationHub::AnnotationHub())
+      #AnnotationHub::query( ah, "metaboliteIDmapping")
+      #AH79817 represents the original ID mapping containing 9 different ID formats
+      #AH83115 mapping table which also includes common names for each compound
+      #AH91792 current version of the mapping table that also accounts for tautomers
+      #map <- ah[["AH91792"]]  ## 1012267 rows
+      suppressMessages(df <- ah[["AH83115"]])  ## 1116049 rows
+      df$LIPIDMAPS <- '-'
+      df$Formula <- '-'      
+      df$REFMET <- '-'
+      sel <- c("ChEBI","HMDB","LIPIDMAPS", "KEGG","REFMET","Formula")
+      df <- as.data.frame(df[,sel])
+      colnames(df) <- COLS
+      nmatch <- sum(id %in% unlist(df))
+      if(nmatch > 0) {
+        df1 <- match.dataframe(id, df, parallel=TRUE)
+        df1[is.na(df1)] <- '-'
+        ii <- which(is.na(map) & df1 != '-', arr.ind=TRUE)
+        if(length(ii)) {
+          message("mapping ", nrow(ii), " entries using AnnotationHub")
+          map[ii] <- df1[ii]
+        }
+      }
+    }
+  }
+
+  ## map contains complete mapping
+  dim(map)
+  head(map)
+  map[is.na(map)] <- '-'
+  
+  ## check and transfer if known ID
+  ii <- which(prefix=="HMDB" & map$HMDB=='-')
+  if(length(ii)) map$HMDB[ii] <- sub("HMDB:","",id[ii])
+  ii <- which(prefix=="CHEBI" & map$CHEBI=='-')
+  if(length(ii)) map$CHEBI[ii] <- sub("CHEBI:","",id[ii])
+  ii <- which(prefix=="LIPIDMAPS" & map$LIPIDMAPS=='-')
+  if(length(ii)) map$LIPIDMAPS[ii] <- sub("LIPIDMAPS:","",id[ii])
+  ii <- which(prefix=="KEGG" & map$KEGG=='-')
+  if(length(ii)) map$KEGG[ii] <- sub("KEGG:","",id[ii])
+  ii <- which(prefix=="REFMET" & map$REFMET=='-')
+  if(length(ii)) map$REFMET[ii] <- sub("REFMET:","",id[ii])
+
+  ## determine optimal mapping ID
+  mapx <- map[,order(colSums(map=='-'))]
+  mapx$Formula <- NULL
+  idx.argmax <- max.col(mapx != '-', ties.method='first')
+  idx.type <- colnames(mapx)[idx.argmax]
+  idx  <- mapx[cbind(1:nrow(mapx),idx.argmax)]
+  idx.na <- rowSums(mapx != '-')==0
+  idx <- paste0(idx.type,":",idx)
+  idx[idx.na] <- NA
+  #idx[idx.na] <- paste0("{",map$formula[idx.na],"}")
+  #idx[idx.na] <- paste0("FORMULA:",map$formula[idx.na])  
+  idx[idx.na] <- paste0("{",id[idx.na],"}")
+
+  ## cleanup
+  map$Formula <- NULL
+  map1 <- cbind(input = id, mapping = idx, map)
+  colnames(map1) <- paste0(colnames(map1),"_ID")
+  
+  return(map1)
 }
 
 
@@ -464,76 +694,6 @@ getMetaboliteInfo <- function(organism = "Human", id, info = NULL) {
   info <- info[setdiff(names(info),id.cols)]
   
   return(info)
-}
-
-#' Given a ChEBI id this provides information about the metabolite
-#' using internal annotation databases METABOLITE_METADATA and
-#' METABOLITE_ID. Also provides links to external metabolite
-#' databases.
-#'
-#' @export
-getMetaboliteInfo.SAVE <- function(organism = "Human", id) {
-  if (is.null(id) || length(id) == 0) {
-    return(NULL)
-  }
-  if (is.na(id) || id == "") {
-    return(NULL)
-  }
-
-  metabolite_metadata <- playdata::METABOLITE_METADATA
-  annot <- playdata::METABOLITE_ID
-
-  inf <- list()
-  inf[["name"]] <- metabolite_metadata[metabolite_metadata$ID == id, "name"]
-  inf[["summary"]] <- metabolite_metadata[metabolite_metadata$ID == id, "definition"]
-  inf[["organism"]] <- organism
-
-  # remove summary if it is null
-  if (is.null(inf[["summary"]])) inf[["summary"]] <- "Summary not available for this metabolite."
-  if (inf[["summary"]] == "null") inf[["summary"]] <- "Summary not available for this metabolite."
-
-  # get annotation for a given metabolite id
-  annotation <- annot[annot$ID == id, ]
-
-  # remove NA columns from annotation
-  annotation <- annotation[, colSums(is.na(annotation)) < nrow(annotation)]
-  cols <- colnames(annotation)[-1] ## exclude chebi IDS as we already have it
-
-  ## get info from different environments
-  res <- lapply(cols, function(k) {
-    link <- NULL
-    matched_id <- annotation[annotation$ID == id, k]
-    if (k == "HMDB") link <- glue::glue("<a href='https://hmdb.ca/metabolites/{matched_id}' target='_blank'>{matched_id}</a>")
-    if (k == "KEGG") link <- glue::glue("<a href='https://www.kegg.jp/dbget-bin/www_bget?{matched_id}' target='_blank'>{matched_id}</a>")
-    if (k == "PubChem") link <- glue::glue("<a href='https://pubchem.ncbi.nlm.nih.gov/compound/{matched_id}' target='_blank'>{matched_id}</a>")
-    if (k == "ChEBI") link <- glue::glue("<a href='https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:{matched_id}' target='_blank'>{matched_id}</a>")
-    if (k == "PATHBANK") link <- glue::glue("<a href='https://moldb.wishartlab.com/molecules/{matched_id}/curation.html' target='_blank'>{matched_id}</a>")
-    #    if (k == "METLIN") link <- matched_id # METLIN is offline at the time of this request, needs to be updated
-    #    if (k == "SMILES") link <- matched_id
-    return(link)
-  })
-
-  # merge all info
-  names(res) <- cols
-  inf <- c(inf, res)
-
-  ## create link to external databases: these libraries are not always
-  ## available for a given chebi id
-  hmdb.link <- NULL
-  kegg.link <- NULL
-  pubchem.link <- NULL
-  if (!is.null(inf[["HMDB"]])) hmdb.link <- glue::glue("<a href='https://hmdb.ca/metabolites/{annotation[,'HMDB']}' target='_blank'>HMDB</a>")
-  if (!is.null(inf[["KEGG"]])) kegg.link <- glue::glue("<a href='https://www.kegg.jp/dbget-bin/www_bget?{annotation[,'KEGG']}' target='_blank'>KEGG</a>")
-  if (!is.null(inf[["PubChem"]])) pubchem.link <- glue::glue("<a href='https://pubchem.ncbi.nlm.nih.gov/compound/{annotation[,'PubChem']}' target='_blank'>PubChem</a>")
-  
-  # these libraries are always available
-  chebi <- annotation[annotation$ID == id, "ChEBI"]
-  chebi.link <- glue::glue("<a href='https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:{chebi}' target='_blank'>ChEBI</a>")
-  reactome.link <- glue::glue("<a href='https://reactome.org/content/query?q=chebi%3A{chebi}' target='_blank'>Reactome</a>")
-
-  inf[["databases"]] <- paste(c(hmdb.link, kegg.link, reactome.link, pubchem.link, chebi.link), collapse = ", ")
-
-  return(inf)
 }
 
 
@@ -644,36 +804,544 @@ extend_metabolite_sets2 <- function(M, ppi, add=TRUE, postfix="(extended)", maxc
   return(extM)
 }
 
+
+##======================================================================
+##==================== LIPIDOMICS ======================================
+##======================================================================
+
+
+## detectLipidID <- function(id, min.match=0.5) {
+##   if(mean(grepl("^HMDB",id,ignore.case=TRUE)) > min.match) return("HMDB")
+##   if(mean(grepl("^CHEBI",id,ignore.case=TRUE)) > min.match) return("CHEBI")
+##   if(mean(grepl("^RM",id,ignore.case=TRUE)) > min.match) return("RefMet")
+##   if(mean(grepl("^LM",id,ignore.case=TRUE)) > min.match) return("LIPID_MAPS")
+##   if(mean(grepl("^C[0-9]+",id,ignore.case=TRUE)) > min.match) return("KEGG")    
+##   if(mean(grepl("^[A-Z].*[0-9]+[:][0-9]+", id)) > min.match) return("LION")
+##   ## try with 
+##   MX <- apply(playdata::METABOLITE_ID, 2, function(s) sub("[A-Za-z]+","",s))
+##   idx <- gsub("^[A-Za-z]+[:]*","",id)
+##   nmatch <- apply(MX[,-1], 2, function(x) mean(idx %in% x))
+##   if(max(nmatch,na.rm=TRUE) > min.match) {
+##     max.id <- names(which.max(nmatch))
+##     message("matched METABOLITE_ID column: ", max.id)
+##     return(max.id)
+##   }  
+##   return("unknown")
+## }
+
+#' Two-pass annotation of lipids using RefMet and rgoslin. This is a
+#' two-pass approach where missing annotations are retried using
+#' synonyms IDs of the original ID. This can improve annotation
+#' coverage.
+#'
+#' 
+mx.annotateLipids <- function(id, two.pass=TRUE) {
+  db1 <- c("refmet","rgoslin","ramp")
+  db2 <- c("refmet","ramp")
+
+  ## remove multi-byte chars
+  id <- iconv2utf8(id)
+  id[is.na(id)] <- "NA"
+  
+  ## First we try annotating with their original IDs.
+  aa <- mx.annotateLipids.000(id, db=db1, add_id = TRUE)
+  id.cols <- c("CHEBI_ID","HMDB_ID","LIPIDMAPS_ID","KEGG_ID","REFMET_ID")
+
+  ## If there are still unmapped IDs, we try with their synonyms.
+  ii <- which( aa$Standardized.name == '-')
+  if(two.pass && length(ii)>0) {
+    idx <- aa$Input.name[ii]
+    mxmap <- aa[ii, id.cols]
+    S <- cbind(idx, unlist(mxmap))
+    colnames(S) <- c("inputID","synonymID")
+    S <- S[S[,"synonymID"]!='-',]
+    S <- S[which(!S[,"synonymID"] %in% S[,"inputID"]),,drop=FALSE ]
+    if(nrow(S)>0) {
+      synonyms <- S[,"synonymID"]
+      bb <- mx.annotateLipids.000(synonyms, db=db2, add_id = FALSE)    
+      bb <- cbind( inputID=S[,"inputID"], bb )
+      bb <- bb[order(rowSums(bb == '-')),]
+      bb <- bb[match(idx, bb$inputID),]
+      bb <- bb[,which(colnames(bb) %in% colnames(aa))]
+      kk <- match(colnames(bb),colnames(aa))
+      jj <- which(aa[ii,kk]=='-' & bb!='-', arr.ind=TRUE)
+      if(length(jj)) {
+        message("filled ", nrow(jj), " entries with synonym IDs")
+        aa[ii,kk][jj] <- bb[jj]
+      }
+    }
+  }
+  
+  return(aa)
+}
+
+#' Annotate lipids using RefMet and rgoslin. One-pass method. Only
+#' annotate with given ID.
+#' 
+mx.annotateLipids.000 <- function(id, db = c("refmet","rgoslin","ramp"),
+                                 add_id = TRUE) {
+  ## Remove any datatype prefix??
+  #id <- sub("^[A-Za-z_]+:","",id)
+  id <- iconv2utf8(id)
+  
+  COLS <- c("Input.name","Standardized.name","Formula","Exact.mass",
+    "Super.class","Main.class","Sub.class","Source")
+  df <- as.data.frame(matrix('-',nrow=length(id),ncol=length(COLS)))
+  colnames(df) <- COLS
+  df$Input.name <- id
+  
+  ## 1: We use first RefMet because it handles non-standard names
+  ## better.
+  refmet.online <- mx.ping_refmet()
+  refmet.online
+  if("refmet" %in% db && refmet.online) {
+    message("matching ",length(id), " IDs with RefMet...")
+    id2 <- id
+    if(all(grepl("^[0-9]+",id))) id2 <- paste0("CHEBI:",id)  
+    df <- RefMet::refmet_map_df(id2)  ## request on API server
+    df$Source <- ifelse(df$Formula=='-', '-', "RefMet")
+    df$Input.name <- id
+    sel.cols <- c("Input.name","Standardized.name","Formula","Exact.mass",
+      "Super.class","Main.class","Sub.class","Source")
+    df <- df[,sel.cols]
+    colnames(df) <- COLS
+  }
+    
+  ## 2: Any missing annotation will be attempted with rgoslin. Only
+  ## works if ID is common lipid name.
+  missing <- (df$Formula %in% c(NA,"","-"))
+  if("rgoslin" %in% db && any(missing)) {
+    id.missing <- id[which(missing)]
+    aa <- suppressMessages(suppressWarnings(rgoslin::parseLipidNames(id.missing)))
+    nparse <- sum(!is.na(aa$Normalized.Name))
+    if(nparse>0) {
+      sel.cols <- c("Original.Name","Normalized.Name","Sum.Formula","Mass",
+        "Lipid.Maps.Category","Lipid.Maps.Main.Class","Functional.Class.Abbr",
+        "Source")
+      for(k in setdiff(sel.cols,colnames(aa))) aa[[k]] <- "-"
+      aa$Functional.Class.Abbr <- gsub("\\]|\\[","",aa$Functional.Class.Abbr)
+      aa$Source <- "rgoslin"
+      aa <- aa[,sel.cols]
+      colnames(aa) <- COLS
+      jj <- which(!aa$Formula %in% c(NA,"","-"))
+      message("matching ",length(jj), " missing IDs with rgoslin...")      
+      if(length(jj)) {
+        ii <- which(missing)[jj]
+        df[ii,] <- aa[jj,]
+      }
+    }
+  }
+
+  ## 3: Attempt with RAMP
+  missing <- (df$Formula %in% c(NA,"","-"))
+  if("ramp" %in% db && any(missing)) {
+    id.missing <- id[which(missing)]
+    aa <- ramp.annotate_metabolites(id.missing)
+    if(!is.null(aa) && nrow(aa)) {
+      aa$Source <- "RaMP"
+      sel.cols <- c("Input.name","Standardized.name","Formula","Exact.mass",
+        "Super.class","Main.class","Sub.class","Source")
+      for(k in setdiff(sel.cols,colnames(aa))) aa[[k]] <- "-"
+      aa <- aa[,sel.cols]
+      colnames(aa) <- colnames(df)    
+      jj <- which(!aa$Formula %in% c(NA,"","-"))
+      message("matching ",length(jj), " missing IDs with RaMP...")          
+      if(length(jj)>0) {
+        ii <- which(missing)[jj]
+        df[ii,] <- aa[jj,]
+      }
+    }
+  }
+    
+  missing <- (df$Formula %in% c(NA,"","-"))
+  if(sum(missing)) message("warning: could not annotate ",sum(missing), " features")
+
+  ## abbreviate subclass
+  df$Sub.class <- mx.harmonizeSubclassNames(df$Sub.class)
+  df$Super.class <- mx.harmonizeSuperclassNames(df$Super.class)
+
+  ## Retrieve cross-reference mapping to other IDs
+  if(add_id) {
+    xref <- mx.get_metabolite_mapping(id, method=c("refmet","playdata","annhub"))
+    table( xref$input_ID == df$Input.name)
+    xref$input_ID <- NULL
+    df <- cbind(df, xref)
+  }
+  
+  return(df)
+}
+
+
+mx.harmonizeSubclassNames <- function(name) {
+  subclass <- c(
+    "Glycerophosphates" = "PA",
+    "Glycerophosphocholines" = "PC",
+    "Glycerophosphoethanolamines" = "PE",
+    "Glycerophosphoglycerols" = "PG",
+    "Glycerophosphoserines" = "PS",
+    "Chol. esters" = "CE",
+    "Cholesteryl esters" = "CE",
+    "Diradylglycerols" = "DG",
+    "Triacylglycerols" = "TG",
+    "DAG" = "DG", #??
+    "TAG" = "TG"
+  )
+  name <- ifelse( name %in% names(subclass),
+    subclass[name], name )
+  return(name)
+}
+  
+mx.harmonizeSuperclassNames <- function(name) {
+  ## substitute abbreviated superclass
+  superclass <- c(
+    "FA"="Fatty acyls",
+    "GL"="Glycerolipids",
+    "GP"="Glycerophospholipids",
+    "SP"="Sphingolipids",
+    "ST"="Sterol lipids",
+    "PR"="PrenolLipids",
+    "SL"="Saccharolipids",
+    "PK"="Polyketides")
+  name <- ifelse( name %in% names(superclass),
+    superclass[name], name )
+  return(name)
+}
+
+mx.prefix_id <- function(id, uppercase=TRUE, return.prefix=FALSE) {
+
+  ## clean up, remove prefix
+  # id <- iconv2ascii(id)
+  id <- iconv2utf8(id)
+  id <- sub("[A-Za-z]+:","",id, useBytes = TRUE)
+
+  prefix <- rep("symbol",length(id))  ## default
+  prefix[grep("^[0-9]+$",id)] <- "chebi"
+  prefix[grep("^HMDB[0-9]{7}",id)] <- "hmdb"
+  prefix[grep("^LM[A-Z]{2}[0-9]{8}",id)] <- "lipidmaps"
+  prefix[grep("^C[0-9]{5}",id)] <- "kegg"
+  prefix[grep("^RM[0-9]{7}",id)] <- "refmet"    
+  #prefix[grep("^ENS[A-Z]+[0-9]+$",id)] <- "ensembl"
+  prefix[grep("[}{]",id)] <- "generic"
+  prefix[grep("[A-Za-z1-9]+ [0-9]+:[0-9]+[;]*[0-9]*$",id)] <- "shorthand"
+  prefix[grep("[A-Za-z1-9]+[ \\(].*[0-9]+:[0-9]+.*",id)] <- "shorthand"    
+
+  table(prefix)  
+  if(uppercase) prefix <- toupper(prefix)
+  if(return.prefix) return(prefix)
+  idx <- paste0(prefix,":",id)  
+  idx
+}
+
+prefix=NULL
+ramp.annotate_metabolites <- function(id) {
+
+  idx <- iconv2utf8(id)
+  idx <- mx.prefix_id(idx, uppercase=FALSE)
+  idx <- sub("^symbol:","gene_symbol:",idx,ignore.case=TRUE)
+  idx <- sub("^lipidmaps:","LIPIDMAPS:",idx,ignore.case=TRUE)  
+  idx <- sub("^gene:","gene_symbol:",idx,ignore.case=TRUE)  
+  
+  pfx <- mx.prefix_id(id, uppercase=FALSE, return.prefix=TRUE)  
+  table(pfx)
+  
+  ## check connection
+  res <- try(suppressMessages(suppressWarnings(
+    RaMP::getChemicalProperties("chebi:12345")
+  )))
+  if("try-error" %in% class(res)) {
+    message("WARNING:: failed to connect github server")
+    return(NULL)
+  }
+  
+  ## RaMP does not like quotes inside IDs
+  idx <- gsub("['`\"]","",idx)
+#  idx <- iconv2ascii(idx)
+  idx <- iconv2utf8(idx)
+  
+  ## chem properties
+  suppressMessages(chemprop <- RaMP::getChemicalProperties(idx))
+  chemdata <- chemprop$chem_props
+  colnames(chemdata)
+  sel.chem <- c("chem_source_id","common_name","mol_formula","monoisotop_mass")
+  ii <- match(idx, chemdata$chem_source_id)
+  annot <- data.frame(input_id=id, chemdata[ii,sel.chem])
+  colnames(annot) <- c("Input.name","Matched.name","Standardized.name","Formula","Exact.mass")
+  rownames(annot) <- NULL
+  head(annot)
+  
+  ## add lipid class info
+  chem <- suppressMessages(RaMP::getChemClass(mets = idx, inferIdMapping = TRUE))
+  metclass <- chem$met_classes
+  dim(metclass)
+  if(nrow(metclass)) {
+    table(metclass$class_level_name)
+    CFclasses <- c("ClassyFire_super_class","ClassyFire_class","ClassyFire_sub_class")
+    LMclasses <- c("LipidMaps_category","LipidMaps_main_class","LipidMaps_sub_class")
+    nCF <- sum(metclass$class_level_name %in% CFclasses)
+    nLM <- sum(metclass$class_level_name %in% LMclasses)
+    ## take 'best' classification. we cannot use both.
+    if(nLM > nCF) {
+      classes <- LMclasses
+    } else {
+      classes <- CFclasses
+    }
+    classdata <- list()
+    a=classes[1]
+    for(a in classes) {
+      ii <- which(metclass$class_level_name == a)
+      aa <- metclass[ii,]
+      aa <- aa[ match(idx, aa$sourceId), "class_name"]
+      classdata[[a]] <- aa
+    }
+    classdata <- data.frame(classdata)
+    colnames(classdata) <- c("Super.class","Main.class","Sub.class")
+
+    ## If a name is found, fill if still missing
+    common_name <- metclass$common_names[match(idx, metclass$sourceId)]
+    ii <- which(is.na(annot$Matched.name) & !common_name %in% c(NA,'','-'))
+    if(length(ii)) annot$Matched.name[ii] <- common_name[ii]
+
+    annot <- cbind(annot, classdata)
+  }
+  
+  rownames(annot) <- NULL
+  return(annot)
+}
+
+
+#' This function maps rownames of matrix M to corresponding symbol as
+#' given in annotation dataframe 'annot'. This is for example useful
+#' if M is a sparse geneset matrix with non-standard identifiers as
+#' rownames and we want to convert to specific symbols as defined by
+#' the annotation dataframe 'annot'. 
+#'
+#' @no-export
+map2symbol <- function(M, annot, target.symbol=NULL) {
+  if(is.null(target.symbol)) target.symbol <- annot$symbol
+  id.cols <- c("feature","symbol","gene_name",grep("_ID$",colnames(annot),value=TRUE))
+  id.cols
+  idmat <- as.matrix(annot[,id.cols])
+  symbol.gmt <- apply(idmat, 1, function(m) unique(m), simplify=FALSE)
+  symbol.gmt <- lapply(symbol.gmt, function(m) setdiff(m,c("-","",NA)))
+  symbol.gmt <- lapply(symbol.gmt, function(m) sub("^[A-Za-z]+:","",m))
+  symbol.gmt <- lapply(symbol.gmt, function(m) unique(m))
+  names(symbol.gmt) <- target.symbol
+  
+  symbol.map <- lapply(names(symbol.gmt), function(i) cbind(symbol.gmt[[i]],i) )
+  symbol.map <- symbol.map[sapply(symbol.map,ncol)==2]
+  symbol.map <- do.call(rbind, symbol.map)
+  
+  id <- rownames(M)
+  idx <- sub("^[A-Za-z]+:","",id)
+  names(idx) <- id
+  jj <- match(idx, symbol.map[,1])
+  ii <- which(!is.na(jj))
+  if(length(ii)==0) {
+    message("WARNING: no synonyms match input probes")
+    return(NULL)
+  }
+  M1 <- M[ii,]
+  matched.symbol <- symbol.map[jj[ii],2]
+  rownames(M1) <- matched.symbol
+  M1 <- M1[, Matrix::colSums(M1!=0)>0, drop=FALSE]
+  return(M1)
+}
+
+
 #' This adds some 'gene sets' based on the species class of the lipids
 #' according to the annotation table.
 #'
 #' @export
-pgx.get_lipidomics_sets <- function(pgx, as_matrix=TRUE) {
+mx.create_metabolite_sets <- function(annot, gmin=0, metmin=5,
+                                   as_matrix=FALSE) {
 
-  if (!"symbol" %in% colnames(pgx$genes)) {
-    message(paste(
-      "[pgx.add_lipidomics_sets] WARNING: could not find 'main_class' column.",
-    ))
-    return(pgx)
+  sel <- which(!annot$symbol %in% c(NA, '-', ''))
+  annot <- annot[sel,,drop=FALSE]
+  if(nrow(annot) == 0) {
+    message("WARNING. empty annotation")
+    return(list())
+  }
+  
+  gmt <- list()
+  
+  orig.symbol <- annot$symbol
+  ANNOT_SYMBOL <- mx.prefix_id(annot$symbol)
+  names(orig.symbol) <- ANNOT_SYMBOL
+
+  ## This uses the genesets/pathways from playdata::MSETxMETABOLITE
+  ## these were compiled using the graphite R package.
+  if(TRUE) {
+    M <- Matrix::t(playdata::MSETxMETABOLITE)
+    M1 <- map2symbol(M, annot, target.symbol=ANNOT_SYMBOL) 
+    if(!is.null(M1) && nrow(M1) && ncol(M1) ) {
+      gmt1 <- mat2gmt(M1)
+      names(gmt1) <- sub("^METABOLITE:","METABOLITE_PATHWAY:",names(gmt1))
+      message("[create_metabolite_sets] adding ",length(gmt1)," sets from MSETxMETABOLITE")
+      gmt <- c(gmt, gmt1)
+    }
+  }
+    
+  ## Create class sets from metabolite class annotation.
+  if (any(grepl("_class",colnames(annot)))) {
+    classes <- grep("_class",colnames(annot),value=TRUE)
+    classes
+    gmt1 <- list()
+    for(k in classes) {
+      cv <- annot[,k]
+      cv[cv=='-'] <- NA
+      if(!all(is.na(cv))) {
+        gmt2 <- tapply(ANNOT_SYMBOL, cv, c)
+        names(gmt2) <- paste0(names(gmt2), " (",k,")")
+        gmt1 <- c(gmt1, gmt2)
+      }
+    }
+    if(length(gmt1)>0) {
+      message("[create_metabolite_sets] adding ",length(gmt1),
+        " sets from metabolite classes")
+      names(gmt1) <- paste0("METABOLITE_CLASS:", names(gmt1))
+      gmt <- c(gmt, gmt1)
+    }
   }
 
-  ## -----------------------------------------------------------
-  ## Load Geneset matrix and filter genes by gene or homologous
-  ## -----------------------------------------------------------
-  message("[pgx.add_lipidomics_sets] Creating GMT matrix... ")
-  gmt.main_class <- tapply(pgx$genes$symbol, pgx$genes$main_class, c)
-  gmt.sub_class <- tapply(pgx$genes$symbol, pgx$genes$sub_class, c)
+  ## Create class/pathway/ontology sets using RaMP. Some sets are
+  ## probably duplicated from MSETxMETABOLITE as graphite also
+  ## includes reactome/wiki metabolic pathways.
+  gmt2 <- ramp.get_metabolite_sets(
+    id = ANNOT_SYMBOL,
+    db = c("pathway","onto","class"),
+    gmin = gmin,
+    metmin = metmin,
+    as.orig = TRUE
+  ) 
+  if(length(gmt2)) {
+    message("[create_metabolite_sets] adding ",length(gmt2)," sets from RaMP database")
+    gmt <- c(gmt, gmt2)
+  }
 
-  names(gmt.main_class) <- paste0("LIPID_CLASS:",names(gmt.main_class))
-  names(gmt.sub_class) <- paste0("LIPID_SUBCLASS:",names(gmt.sub_class))
-  gmt <- c(gmt.main_class, gmt.sub_class)
+  ## order on size, take out duplicated pathways
+  gmt <- gmt[order(-sapply(gmt,length))]
+  gmt <- gmt[!duplicated(names(gmt))]
+  pw.id <- gsub(".*\\[|\\]","",names(gmt))
+  pw.id[!grepl("PATHWAY",names(gmt))] <- NA
+  sel <- which( is.na(pw.id) | !duplicated(pw.id))
+  gmt <- gmt[sel]
   
+  ## Filter on size
+  G <- gmt2mat(gmt, bg = ANNOT_SYMBOL)
+  table(sub(":.*","",rownames(G)))
+  i0 <- grepl("SYMBOL|GENE|NAME|^px|^gx",rownames(G))
+  i1 <- grepl("CHEBI|LIPID|HMDB|KEGG|REFMET|SHORT|^mx",rownames(G))
+  n0 <- Matrix::colSums(G[i0,,drop=FALSE])
+  n1 <- Matrix::colSums(G[i1,,drop=FALSE])  
+  sel <- which(n0 >= gmin & n1 >= metmin)
+  G <- G[,sel,drop=FALSE]
+
+  # restore original symbols
+  rownames(G) <- orig.symbol[rownames(G)]
+  ##rownames(G) <- as.character(rownames(G))
+
   if(!as_matrix) {
+    gmt <- mat2gmt(G)
     return(gmt)
   }
   
-  G <- gmt2mat(gmt, bg=pgx$genes$symbol)
   # normalize columns (required for some methods downstream)log2foldchange
   G <- normalize_cols(G) ## ??? 
   return(G)
+}
+
+ramp.get_metabolite_sets <- function(id, db=c("pathway","onto","class"),
+                                     gmin=0, metmin=5, as.orig=TRUE) {
+
+  ## This adds automatically a prefix because RaMP needs identifiers
+  ## with prefix.
+  idx <- mx.prefix_id(id, uppercase=FALSE)  
+  idx <- sub("^symbol:","gene_symbol:",idx,ignore.case=TRUE)
+  idx <- sub("^lipidmaps","LIPIDMAPS",idx,ignore.case=TRUE)  
+  idx <- sub("^gene:","gene_symbol:",idx,ignore.case=TRUE)  
+  names(id) <- idx
+
+  ## check if there are no genes but threshold is set
+  ngenes <- sum(grepl("ensembl|gene|symbol|uniprot",idx))  
+  if(ngenes==0 && gmin>0) {
+    message("WARNING: gmin>0 but no genes in id list. Setting gmin=0")
+    gmin <- 0
+  }
+
+  ## Query RaMP for patways
+  gmt.pathway <- list()
+  if("pathway" %in% db) {
+    suppressMessages(pw <- RaMP::getPathwayFromAnalyte(
+      analytes = idx,
+      findSynonym = FALSE,
+      namesOrIds = "ids",
+      includeRaMPids = FALSE,
+      includeSmpdb = FALSE,
+      minPathwaySize = (metmin+gmin),
+      maxPathwaySize = 400,
+    ))
+    if(!is.null(pw) && nrow(pw)>0) {
+      pathway_id <- paste0(pw$pathwayName, " [", pw$pathwayId, "]")
+      gmt.pathway <- tapply(pw$inputId, pathway_id, c) 
+      names(gmt.pathway) <- paste0("METABOLITE_PATHWAY:",names(gmt.pathway))
+    }
+  }
+
+  ## Query RaMP for Ontology
+  gmt.onto <- list()
+  if("onto" %in% db) {
+    suppressMessages(onto <- RaMP::getOntoFromMeta(mets = idx))
+    if(!is.null(onto) && nrow(onto)) {
+      onto_id <- paste0(onto$Ontology, " [", onto$HMDBOntologyType, "]")
+      gmt.onto <- tapply(onto$sourceId, onto_id, function(s) unique(s)) 
+      names(gmt.onto) <- paste0("METABOLITE_ONTOLOGY:",names(gmt.onto))
+    }
+  }
+  
+  ## Query RaMP chemical/lipid class
+  gmt.class <- list()
+  if("class" %in% db) {
+    suppressMessages(
+      chem <- RaMP::getChemClass(
+        mets = idx,
+        inferIdMapping = TRUE
+      )
+    )
+    metclass <- chem$met_classes
+    dim(metclass)
+    if(!is.null(metclass) && nrow(metclass)) {
+      levels <- unique(metclass$class_level_name)
+      levels
+      gmt.class <- list()
+      for(lev in levels) {
+        ii <- which( metclass$class_level_name == lev )
+        levclass <- metclass[ii,]
+        levgmt <- tapply( levclass$sourceId, levclass$class_name, function(s) unique(s))
+        lev <- sub("ClassyFire_","CF ",lev)
+        lev <- sub("LipidMaps_","LM ",lev)
+        names(levgmt) <- paste0(names(levgmt), " (",lev,")")
+        gmt.class <- c(gmt.class, levgmt)
+      }
+      names(gmt.class) <- paste0("METABOLITE_CHEMCLASS:",names(gmt.class))
+    }
+  }
+  
+  ## merge all gmt
+  gmt <- c(gmt.pathway, gmt.onto, gmt.class)
+  ##hist(sapply(gmt, length), breaks=100)
+  
+  ## filter on size
+  filter <- (gmin > 0 || metmin > 0)
+  if(filter) {
+    n0 <- sapply( gmt, function(s) sum(grepl("ensembl|gene_symbol",s)))
+    n1 <- sapply( gmt, function(s) sum(grepl("chebi|hmdb|kegg|LIPIDMAPS|refmet",s)))  
+    gmt <- gmt[which(n0 >= gmin & n1 >= metmin)]
+  }
+
+  ## convert to original id
+  if(as.orig) {
+    gmt <- lapply(gmt, function(s) as.vector(id[s]))
+  }
+  
+  return(gmt)
 }

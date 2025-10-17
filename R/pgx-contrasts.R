@@ -7,6 +7,30 @@
 ## Auto-detection helper functions
 ## ----------------------------------------------------------------------
 
+#' Fix a contrast matrix by checking and conforming column entries
+#' with the contrast name 'c:a_vs_b' so that all column entries are
+#' strictly in {a,b}. Checks ignoring case. For multi-class column,
+#' 'c:a_vs_b1.b2' will replace any b1, b2 or b1.b2 to class 'b1.b2'.
+#'
+#' @export
+fixContrastMatrix <- function(contrasts) {
+  for(i in 1:ncol(contrasts)) {
+    ct.name <- colnames(contrasts)[i]
+    ct <- contrasts[,i]
+    ct1 <- gsub(".*:|_vs_.*","",ct.name)
+    ct2 <- gsub(".*:|.*_vs_","",ct.name)    
+    ct1x <- c(ct1, strsplit(ct1,split='[.]')[[1]])
+    ct2x <- c(ct2, strsplit(ct2,split='[.]')[[1]])    
+    i0 <- which(!tolower(ct) %in% tolower(c(ct1x,ct2x)))
+    i1 <- which(tolower(ct) %in% tolower(ct1x))
+    i2 <- which(tolower(ct) %in% tolower(ct2x))    
+    ct[i0] <- NA
+    ct[i1] <- ct1
+    ct[i2] <- ct2    
+    contrasts[,i] <- ct
+  }
+  return(contrasts)
+}
 
 #' @export
 contrasts2pheno <- function(contrasts, samples) {
@@ -1053,3 +1077,5 @@ contrasts.addTimeInteraction <- function(contrasts, samples) {
   return(contrasts)
 
 }
+
+

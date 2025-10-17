@@ -23,7 +23,12 @@ imputeMissing <- function(X,
                             "knn", "QRILC", "MLE", "MinDet", "MinProb",
                             "min", "zero", "nbavg", "rowmeans", "Perseus"
                           )[1:3], 
-                          rf.ntree = 100, nv = 5, keep.limits = FALSE, plot = FALSE) {
+                          rf.ntree = 100, nv = 5, keep.limits = FALSE,
+                          infinite.na = TRUE, plot = FALSE) {
+
+  ## set infinite as NA
+  if (infinite.na) X[is.infinite(X)] <- NA
+
   impX <- list()
 
   ## ------------ simple rowmeans -----------
@@ -202,7 +207,7 @@ imputeMissing <- function(X,
 #' @export
 svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
                        maxSteps = 100, fill.empty = "median",
-                       infinite.na = FALSE, randomize.init = FALSE,
+                       infinite.na = TRUE, randomize.init = FALSE,
                        verbose = FALSE) {
   ## nv=3;threshold=0.001;init=NULL;maxSteps=100;fill.empty="median";verbose=FALSE
 

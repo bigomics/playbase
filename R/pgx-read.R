@@ -160,13 +160,34 @@ read.as_matrix <- function(file, skip_row_check = FALSE, as.char = TRUE,
 
 #' Detect delimiter of text file from header (or first line)
 #'
-detect_delim <- function(file) {
-  hdr <- readLines(file, n = 1)
-  n_commas <- length(setdiff(gregexpr(",", hdr, fixed = TRUE)[[1]], -1))
-  n_semicolons <- length(setdiff(gregexpr(";", hdr, fixed = TRUE)[[1]], -1))
-  n_tabs <- length(setdiff(gregexpr("\t", hdr, fixed = TRUE)[[1]], -1))
-  delim <- c(",", ";", "\t")[which.max(c(n_commas, n_semicolons, n_tabs))]
-  delim
+detect_delim <- function(file, delims = c(",", "\t", " ", "|", ":", ";")) {
+  # Code extracted from vroom:::guess_delim (version 1.5.7)
+  lines <- readLines(file, n = 1)
+  # blank text within quotes
+  lines <- gsub('"[^"]*"', "", lines)
+
+  splits <- lapply(delims, strsplit, x = lines, useBytes = TRUE, fixed = TRUE)
+
+  counts <- lapply(splits, function(x) table(lengths(x)))
+
+  num_fields <- vapply(counts, function(x) as.integer(names(x)[[1]]), integer(1))
+
+  num_lines <- vapply(counts, function(x) (x)[[1]], integer(1))
+
+  top_lines <- 0
+  top_idx <- 0
+  for (i in seq_along(delims)) {
+    if (num_fields[[i]] >= 2 && num_lines[[i]] > top_lines ||
+      (top_lines == num_lines[[i]] && (top_idx <= 0 || num_fields[[top_idx]] < num_fields[[i]]))) {
+      top_lines <- num_lines[[i]]
+      top_idx <- i
+    }
+  }
+  if (top_idx == 0) {
+    return(",") # default to comma
+  }
+
+  delims[[top_idx]]
 }
 
 #' Detect delimiter of text file from first 10 lines. Assumes there is

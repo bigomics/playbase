@@ -20,6 +20,8 @@ pgx.splitHeatmapFromMatrix(
   rowcex = 1,
   colcex = 1,
   show_legend = TRUE,
+  zlim = NULL,
+  symm = NULL,
   return_x_matrix = FALSE
 )
 }
