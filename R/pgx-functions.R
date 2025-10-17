@@ -1503,6 +1503,9 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   from_id <- names(which.max(probe_match))
   from_id
 
+  if(new_id=="symbol" && !"symbol" %in% colnames(annot_table) &&
+    "gene_name" %in% colnames(annot_table)) new_id <- "gene_name"
+
   ## dummy do-noting return
   if (new_id == from_id) {
     return(counts)
@@ -1558,6 +1561,9 @@ rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
   if (is.vector(counts)) {
     probes <- names(counts)
   }
+
+  if(new_id=="symbol" && !"symbol" %in% colnames(annot_table) &&
+    "gene_name" %in% colnames(annot_table)) new_id <- "gene_name"
   symbol <- annot_table[probes, new_id]
 
   # Guard against NA
