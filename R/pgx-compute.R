@@ -1231,7 +1231,7 @@ pgx.add_GMT <- function(pgx, custom.geneset = NULL, max.genesets = 20000) {
   }
 
   # add random genesets if G is too small
-  if (is.null(G) || ncol(G) < 50 || nrow(G) < 3) {
+  if (is.null(G) || ncol(G) < 30 || nrow(G) < 3) {
     add.gmt <- NULL
     rr <- sample(3:400, 50)
     gg <- pgx$genes$symbol

@@ -134,8 +134,9 @@ getProbeAnnotation <- function(organism,
     mx.check
     if (mx.check) {
       ## Directly annotate if probes are recognized
-      genes <- getMetaboliteAnnotation(probes,
-        add_id = TRUE, extra_annot = TRUE,
+      genes <- getMetaboliteAnnotation(
+        probes,
+        extra_annot = TRUE,
         annot_table = NULL
       )
     } else {
