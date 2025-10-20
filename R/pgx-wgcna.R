@@ -478,7 +478,6 @@ wgcna.compute_multiomics <- function(dataX,
     dataX$ph <- t(phenoX)
   }
 
-  ## Don't run imputation is no NAs.
   dt.na <- which(unlist(lapply(dataX, function(x) sum(is.na(x)))) > 0)
   if (any(dt.na)) {
     dataX[dt.na] <- lapply(dataX[dt.na], imputeMissing, method="SVD2")
