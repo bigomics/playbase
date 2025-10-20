@@ -478,10 +478,12 @@ wgcna.compute_multiomics <- function(dataX,
     dataX$ph <- t(phenoX)
   }
 
-  dataX <- lapply(dataX, imputeMissing, method="SVD2")
+  ## Don't run imputation is no NAs.
+  dt.na <- which(unlist(lapply(dataX, function(x) sum(is.na(x)))) > 0)
+  if (any(dt.na)) {
+    dataX[dt.na] <- lapply(dataX[dt.na], imputeMissing, method="SVD2")
+  }
   names(dataX) <- substring(names(dataX),1,2)
-
-  lapply(dataX, dim)
   #dataX <- mofa.topSD(dataX, ngenes)
   
   if(!is.null(progress)) {
