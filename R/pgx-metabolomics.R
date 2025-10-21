@@ -517,22 +517,23 @@ mx.formula2chebi <- function(f, prefix=TRUE) {
 #' REFMET).
 #'
 #' 
-mx.get_metabolite_mapping <- function(id, method=c("refmet","playdata","annhub"),
+mx.get_metabolite_mapping <- function(met, method=c("refmet","playdata","annhub"),
                                       verbose=1) {
 
   COLS <- c("CHEBI","HMDB","LIPIDMAPS","KEGG","REFMET","Formula")
-  map <- data.frame(matrix(NA, length(id), length(COLS)))
+  map <- data.frame(matrix(NA, length(met), length(COLS)))
   colnames(map) <- COLS
 
   ## strip prefix. 
-  orig.id <- id
-  id <- sub("^[A-Za-z]+:","",id)
-  prefix <- mx.prefix_id(id, return.prefix=TRUE)
+  orig.id <- met
+  met <- sub("^[A-Za-z]+:","",met)
+  prefix <- mx.prefix_id(met, return.prefix=TRUE)
   table(prefix)
 
   # retain prefix for chebi for refmet
-  id2 <- ifelse(prefix=="CHEBI", paste0("CHEBI:",id), id)
-  
+  id2 <- ifelse(prefix=="CHEBI", paste0("CHEBI:",met), met)
+  id2[id2 %in% c(NA,"")] <- "-"
+    
   method
   for(m in method) {
     
@@ -554,9 +555,9 @@ mx.get_metabolite_mapping <- function(id, method=c("refmet","playdata","annhub")
       sel <- c("ChEBI","HMDB","LIPIDMAPS", "KEGG","REFMET","Formula")
       df <- df[,sel]
       colnames(df) <- COLS
-      nmatch <- sum(id %in% unlist(df))
+      nmatch <- sum(met %in% unlist(df))
       if(nmatch > 0) {
-        df <- match.dataframe(id, df)
+        df <- match.dataframe(met, df)
         df[is.na(df)] <- '-'
         ii <- which(is.na(map) & df != '-', arr.ind=TRUE)
         if(length(ii)) {
@@ -580,9 +581,9 @@ mx.get_metabolite_mapping <- function(id, method=c("refmet","playdata","annhub")
       sel <- c("ChEBI","HMDB","LIPIDMAPS", "KEGG","REFMET","Formula")
       df <- as.data.frame(df[,sel])
       colnames(df) <- COLS
-      nmatch <- sum(id %in% unlist(df))
+      nmatch <- sum(met %in% unlist(df))
       if(nmatch > 0) {
-        df1 <- match.dataframe(id, df, parallel=TRUE)
+        df1 <- match.dataframe(met, df, parallel=TRUE)
         df1[is.na(df1)] <- '-'
         ii <- which(is.na(map) & df1 != '-', arr.ind=TRUE)
         if(length(ii)) {
@@ -594,21 +595,19 @@ mx.get_metabolite_mapping <- function(id, method=c("refmet","playdata","annhub")
   }
 
   ## map contains complete mapping
-  dim(map)
-  head(map)
   map[is.na(map)] <- '-'
   
   ## check and transfer if known ID
   ii <- which(prefix=="HMDB" & map$HMDB=='-')
-  if(length(ii)) map$HMDB[ii] <- sub("HMDB:","",id[ii])
+  if(length(ii)) map$HMDB[ii] <- sub("HMDB:","",met[ii])
   ii <- which(prefix=="CHEBI" & map$CHEBI=='-')
-  if(length(ii)) map$CHEBI[ii] <- sub("CHEBI:","",id[ii])
+  if(length(ii)) map$CHEBI[ii] <- sub("CHEBI:","",met[ii])
   ii <- which(prefix=="LIPIDMAPS" & map$LIPIDMAPS=='-')
-  if(length(ii)) map$LIPIDMAPS[ii] <- sub("LIPIDMAPS:","",id[ii])
+  if(length(ii)) map$LIPIDMAPS[ii] <- sub("LIPIDMAPS:","",met[ii])
   ii <- which(prefix=="KEGG" & map$KEGG=='-')
-  if(length(ii)) map$KEGG[ii] <- sub("KEGG:","",id[ii])
+  if(length(ii)) map$KEGG[ii] <- sub("KEGG:","",met[ii])
   ii <- which(prefix=="REFMET" & map$REFMET=='-')
-  if(length(ii)) map$REFMET[ii] <- sub("REFMET:","",id[ii])
+  if(length(ii)) map$REFMET[ii] <- sub("REFMET:","",met[ii])
 
   ## determine optimal mapping ID
   mapx <- map[,order(colSums(map=='-'))]
@@ -621,11 +620,11 @@ mx.get_metabolite_mapping <- function(id, method=c("refmet","playdata","annhub")
   idx[idx.na] <- NA
   #idx[idx.na] <- paste0("{",map$formula[idx.na],"}")
   #idx[idx.na] <- paste0("FORMULA:",map$formula[idx.na])  
-  idx[idx.na] <- paste0("{",id[idx.na],"}")
+  idx[idx.na] <- paste0("{",met[idx.na],"}")
 
   ## cleanup
   map$Formula <- NULL
-  map1 <- cbind(input = id, mapping = idx, map)
+  map1 <- cbind(input = met, mapping = idx, map)
   colnames(map1) <- paste0(colnames(map1),"_ID")
   
   return(map1)
@@ -834,14 +833,23 @@ extend_metabolite_sets2 <- function(M, ppi, add = TRUE, postfix = "(extended)", 
 #' coverage.
 #'
 #' 
-mx.annotateLipids <- function(id, db=c("rgoslin","refmet","ramp"), two.pass=TRUE) {
+mx.annotateLipids <- function(name, db=c("rgoslin","refmet","ramp"),
+                              harmonize=TRUE, two.pass=TRUE) {
 
   ## remove multi-byte chars
-  id <- iconv2utf8(id)
-  id[is.na(id)] <- "NA"
-  
+  name <- iconv2utf8(name)
+  name[is.na(name)] <- "NA"
+  name <- as.character(name)
+
+  ## strip away postfix from unique names. REALLY??
+  orig.name <- name
+  name <- sub("[.][1-9]$","",name)
+  names(name) <- orig.name
+
+    
   ## First we try annotating with their original IDs.
-  aa <- mx.annotateLipids.000(id, db=db, add_id = TRUE)
+  aa <- mx.annotateLipids.000(name, db=db, harmonize=harmonize,
+                              add_id = TRUE)
   id.cols <- c("CHEBI_ID","HMDB_ID","LIPIDMAPS_ID","KEGG_ID","REFMET_ID")
 
   ## If there are still unmapped IDs, we try with their synonyms.
@@ -856,7 +864,8 @@ mx.annotateLipids <- function(id, db=c("rgoslin","refmet","ramp"), two.pass=TRUE
     if(nrow(S)>0) {
       synonyms <- S[,"synonymID"]
       db2 <- setdiff(db, "rgoslin")
-      bb <- mx.annotateLipids.000(synonyms, db=db2, add_id = FALSE)    
+      bb <- mx.annotateLipids.000(synonyms, db=db2, harmonize=harmonize,
+                                  add_id = FALSE)    
       bb <- cbind( inputID=S[,"inputID"], bb )
       bb <- bb[order(rowSums(bb == '-')),]
       bb <- bb[match(idx, bb$inputID),]
@@ -877,11 +886,8 @@ mx.annotateLipids <- function(id, db=c("rgoslin","refmet","ramp"), two.pass=TRUE
 #' annotate with given ID.
 #' 
 mx.annotateLipids.000 <- function(name, db = c("rgoslin","refmet","ramp"),
-                                 add_id=TRUE, verbose=1) {
-  ## Remove any datatype prefix??
-  #name <- sub("^[A-Za-z_]+:","",name)
-  name <- iconv2utf8(name)
-  
+                                 add_id=TRUE, harmonize=TRUE, verbose=1) {
+    
   COLS <- c("Input.name","Standardized.name","Formula","Exact.mass",
     "Super.class","Main.class","Sub.class","Source")
   df <- as.data.frame(matrix('-',nrow=length(name),ncol=length(COLS)))
@@ -890,14 +896,14 @@ mx.annotateLipids.000 <- function(name, db = c("rgoslin","refmet","ramp"),
     
   for(d in db) {   
 
-    missing <- (df$Formula %in% c(NA,"","-"))  
+    missing <- (df$Formula %in% c(NA,"","-") & !name %in% c(NA,"","-"))  
       
     ## 1: We use first RefMet because it handles non-standard names
     ## better.
     refmet.online <- mx.ping_refmet()
     refmet.online
     if(d == "refmet" && refmet.online && any(missing)) {
-
+        
       id2 <- name[which(missing)]
       if(all(grepl("^[0-9]+",name))) id2 <- paste0("CHEBI:",name)  
       aa <- RefMet::refmet_map_df(id2)  ## request on API server
@@ -961,25 +967,27 @@ mx.annotateLipids.000 <- function(name, db = c("rgoslin","refmet","ramp"),
             df[ii,] <- aa[jj,]
         }
       }
-    }
-      
+    }      
   }
 
+#  df$Input.name <- orig.name
+    
   missing <- (df$Formula %in% c(NA,"","-"))
   if(verbose>0) message("annotated ",sum(!missing),"/",nrow(df)," features")
 
   ## Harmonize class names. Class names are quite different between
   ## MetRef and rgoslin annotations.
-  df$Sub.class <- mx.harmonizeSubclassNames(df$Sub.class)
-  df$Main.class <- mx.harmonizeMainclassNames(df$Main.class)
-  df$Super.class <- mx.harmonizeSuperclassNames(df$Super.class)
+  if(harmonize) {
+    df$Sub.class <- mx.harmonizeSubclassNames(df$Sub.class)
+    df$Main.class <- mx.harmonizeMainclassNames(df$Main.class)
+    df$Super.class <- mx.harmonizeSuperclassNames(df$Super.class)
+  }
     
   ## Retrieve cross-reference mapping to other IDs
   if(add_id) {
-      xref <- mx.get_metabolite_mapping(
-          name, method=c("refmet","playdata","annhub"),
-          verbose=verbose-1)
-    table( xref$input_ID == df$Input.name)
+    xref <- mx.get_metabolite_mapping(
+        name, method=c("refmet","playdata","annhub"),
+        verbose=verbose-1)
     xref$input_ID <- NULL
     df <- cbind(df, xref)
   }
@@ -987,45 +995,12 @@ mx.annotateLipids.000 <- function(name, db = c("rgoslin","refmet","ramp"),
   return(df)
 }
 
-
-mx.harmonizeMainclassNames <- function(name) {
-  subclass <- c(
-    "TG" = "Triradylglycerols",
-    "DG" = "Diradylglycerols",
-    "LPC" = "Glycerophosphocholines",
-    "Cer" = "Ceramides",
-    "Glycerophosphoserines" = "PS",
-    "SE 27:1" = "Sterol esters",
-    "Cholesteryl esters" = "CE"
-  )
-  name <- ifelse( name %in% names(subclass),
-    subclass[name], name )
-  return(name)
-}
-
-mx.harmonizeSubclassNames <- function(name) {
-  subclass <- c(
-    "Glycerophosphates" = "PA",
-    "Glycerophosphocholines" = "PC",
-    "Glycerophosphoethanolamines" = "PE",
-    "Glycerophosphoglycerols" = "PG",
-    "Glycerophosphoserines" = "PS",
-    "Chol. esters" = "CE",
-    "Cholesteryl esters" = "CE",
-    "Diradylglycerols" = "DG",
-    "Triacylglycerols" = "TG",
-    "DAG" = "DG", #??
-    "TAG" = "TG"
-  )
-  name <- ifelse( name %in% names(subclass),
-    subclass[name], name )
-  return(name)
-}
-
+#' Translates rgoslin lipid classes to RefMet lipid classes
+#' 
 mx.harmonizeSuperclassNames <- function(name) {
   ## substitute abbreviated superclass
   superclass <- c(
-    "FA"="Fatty acyls",
+    "FA"="Fatty Acyls",
     "GL"="Glycerolipids",
     "GP"="Glycerophospholipids",
     "SP"="Sphingolipids",
@@ -1035,6 +1010,55 @@ mx.harmonizeSuperclassNames <- function(name) {
     "PK"="Polyketides")
   name <- ifelse( name %in% names(superclass),
     superclass[name], name )
+  return(name)
+}
+
+#' Translates rgoslin lipid classes to RefMet lipid classes
+#' 
+mx.harmonizeMainclassNames <- function(name) {
+  mainclass <- c(
+    "TG"="Triradylglycerols",
+    "DG"="Diradylglycerols",
+    "LPC"="Glycerophosphocholines",
+    "Cer"="Ceramides",
+    "SE 27:1"="Sterol esters",
+    "CE"="Cholesteryl esters",
+    "FA"="Fatty acids",
+    "LPE"="Glycerophosphoethanolamines",
+    "LPI"="Glycerophosphoinositols",    
+    "SM"="Phosphosphingolipids",
+    "CAR"="Fatty esters",
+    "PC"="Glycerophosphocholines",
+    "PE"="Glycerophosphoethanolamines",
+    "PI"="Glycerophosphoinositols",
+    "PG"="Glycerophosphoglycerols",
+    "PA"="Glycerophosphates",
+    "PS"="Glycerophosphoserines"
+  )
+  name <- ifelse( name %in% names(mainclass),
+    mainclass[name], name )
+  return(name)
+}
+
+#' Translates rgoslin lipid classes to RefMet lipid classes
+#' 
+mx.harmonizeSubclassNames <- function(name) {
+  subclass <- c(
+    "Glycerophosphates"="PA",
+    "Glycerophosphocholines"="PC",
+    "Glycerophosphoethanolamines"="PE",
+    "Glycerophosphoglycerols"="PG",
+    "Glycerophosphoserines"="PS",
+    "Chol. esters"="CE",
+    "Cholesteryl esters"="CE",
+    "Diradylglycerols"="DG",
+    "Triacylglycerols"="TG",
+    "DAG"="DG", #??
+    "TAG"="TG",
+    "Acyl carnitines"="CAR"
+  )
+  name <- ifelse( name %in% names(subclass),
+    subclass[name], name )
   return(name)
 }
 
