@@ -491,8 +491,7 @@ wgcna.compute_multiomics <- function(dataX,
 
   if(is.null(power)) power <- "sft"
   if(as.character(power[1]) %in% c("sft","iqr")) {
-    ## Estimate best power
-    message("[wgcna.compute] estimating optimal power with method = ", power[1])
+    message("[wgcna.compute_multiomics] estimating optimal power with method = ", power[1])
     est.power <- rep(NA, length(dataX))    
     i=1
     for(i in 1:length(dataX)) {
@@ -503,7 +502,7 @@ wgcna.compute_multiomics <- function(dataX,
       est.power[i] <- p
     }
     est.power
-    power <- ifelse( is.na(est.power), 12, est.power)
+    power <- ifelse (is.na(est.power), 12, est.power)
   } else {
     power <- as.numeric(power)
   }
@@ -514,13 +513,13 @@ wgcna.compute_multiomics <- function(dataX,
   ## This runs WGCNA on an expression list. 
   wgcna <- list()
   has.gxpx <- all(c("gx","px") %in% names(dataX))
-  if( do.consensus && has.gxpx ) {
+  if (do.consensus && has.gxpx) {
     cat("----------- computing consensus WGCNA for GX+PX ------------\n")
     gx <- dataX[['gx']]
     px <- dataX[['px']]    
     nn <- mean(rownames(gx) %in% rownames(px))
-    if( nn < 0.10) {
-      message("ERROR: gx and px features do not overlap")
+    if (nn < 0.10) {
+      message("[wgcna.compute_multiomics] ERROR: gx and px features do not overlap")
     } else {
       wgcna <- wgcna.createConsensusLayers(
         dataX[c('gx','px')],
@@ -544,7 +543,7 @@ wgcna.compute_multiomics <- function(dataX,
   for(dt in dtlist) {
     cat("------------ computing WGCNA for",dt,"-------------\n")
     minKME <- ifelse(dt=='ph', 0, minKME)
-    minmodsize <- ifelse( dt=='ph', 1, minmodsize)      
+    minmodsize <- ifelse(dt=='ph', 1, minmodsize)      
     
     wgcna[[dt]] <- wgcna.compute(
       X = dataX[[dt]],
@@ -572,7 +571,9 @@ wgcna.compute_multiomics <- function(dataX,
   
   ## Compute enrichment
   if(compute.enrichment) {
-    message("computing module enrichment...")
+
+    message("[wgcna.compute_multiomics] computing module enrichment...")
+
     if(!is.null(progress)) {
       progress$set(message = paste("computing module enrichment..."), value = 0.66)
     }
@@ -595,7 +596,8 @@ wgcna.compute_multiomics <- function(dataX,
       mm <- names(wgcna[[k]]$me.genes)
       wgcna[[k]]$gsea <- gse[mm]
     }
-  } ## end if-compute-enrichment
+
+  }
 
   return(wgcna)
 }
