@@ -1510,6 +1510,9 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
   from_id <- names(which.max(probe_match))
   from_id
 
+  if(new_id=="symbol" && !"symbol" %in% colnames(annot_table) &&
+    "gene_name" %in% colnames(annot_table)) new_id <- "gene_name"
+
   ## dummy do-noting return
   if (new_id == from_id) {
     sel <- which(probes %in% annot_table[,from_id])
@@ -1568,6 +1571,9 @@ rename_by <- function(counts, annot_table, new_id = "symbol", unique = TRUE) {
   if (is.vector(counts)) {
     probes <- names(counts)
   }
+
+  if(new_id=="symbol" && !"symbol" %in% colnames(annot_table) &&
+    "gene_name" %in% colnames(annot_table)) new_id <- "gene_name"
   symbol <- annot_table[probes, new_id]
 
   # Guard against NA
@@ -2319,6 +2325,29 @@ expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = 
   colnames(m1) <- sub("=#", "", colnames(m1))
   rownames(m1) <- rownames(M)
   return(m1)
+}
+
+
+#' Collapses an expanded (binarized) trait matrix to its original
+#' categorical phenotype with levels. Colnames must be "pheno1=A",
+#' "pheno1=B" etc.
+#'
+#' @export
+collapseTraitMatrix <- function(Y) {
+  if(sum(grepl("=",colnames(Y))) < 2) return(Y)
+  is.cat <- grepl("=",colnames(Y))
+  M <- Y[,which(!is.cat),drop=FALSE]  
+  categories <- unique(sub("=.*","",colnames(Y)[which(is.cat)]))
+  y=categories[1]
+  for(y in categories) {
+    ii <- which(sub("=.*","",colnames(Y)) == y)
+    Y1 <- Y[,ii]
+    colnames(Y1) <- sub(".*=","",colnames(Y1))
+    m1 <- colnames(Y1)[max.col(Y1)]
+    M <- cbind(M, m1)
+    colnames(M)[ncol(M)] <- y
+  }
+  return(M)
 }
 
 
