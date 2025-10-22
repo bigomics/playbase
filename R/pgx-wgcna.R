@@ -1003,7 +1003,7 @@ wgcna.computeGeneStats <- function(net, datExpr, datTraits, TOM) {
   if(!is.null(TOM)) {
     if(is.null(dimnames(TOM))) dimnames(TOM) <- list(colnames(datExpr),colnames(datExpr))
     adj <- TOM
-    diag(adj) <- NA
+    diag(adj) <- 0
     adj[which(abs(adj) < 0.01)] <- 0
     gr <- igraph::graph_from_adjacency_matrix(
       adj, mode = "undirected", weighted = TRUE, diag = FALSE
@@ -4265,11 +4265,10 @@ wgcna.plotModuleHubGenes <- function(wgcna, modules = NULL,
     mm.score <- head(sort(mm, decreasing = TRUE), 30)
     topgenes <- names(mm.score)
     A <- cor(wgcna$datExpr[, topgenes])
-    diag(A) <- NA
+    diag(A) <- 0
     A <- (A - min(A, na.rm = TRUE)) / (max(A, na.rm = TRUE) - min(A, na.rm = TRUE))
     gr <- igraph::graph_from_adjacency_matrix(
-      A,
-      mode = "undirected", weighted = TRUE, diag = FALSE
+      A, mode = "undirected", weighted = TRUE, diag = FALSE
     )
     norm.mm.score <- (mm.score - min(mm.score)) / (max(mm.score) - min(mm.score))
     clr <- sub("ME", "", k)
@@ -4297,7 +4296,6 @@ wgcna.plotGeneNetwork <- function(wgcna, genes, col=NULL,
 
   A <- cor(wgcna$datExpr[, genes])
   A <- A * (abs(A) > min.rho)
-
   gr <- igraph::graph_from_adjacency_matrix(
     A, mode = "undirected", weighted = TRUE, diag = FALSE
   )
